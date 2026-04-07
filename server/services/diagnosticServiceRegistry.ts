@@ -8,6 +8,7 @@
  */
 
 import type { ServiceHealth, ServiceStatus, ServiceKey } from '../../shared/healthTypes';
+import { RESOURCES } from '../config/platformConfig';
 import { db } from '../db';
 import { sql, count } from 'drizzle-orm';
 import {
@@ -19,12 +20,18 @@ import {
   platformUpdates,
   workspaces,
   systemAuditLogs,
-  trinityCredits,
   chatConversations,
   supportTickets,
-  employeePoints,
   achievements,
+  trinityConversationSessions,
+  trinityConversationTurns,
+  trinityCredits,
+  auditLogs,
+  employeeCertifications,
+  platformRoles,
+  employeePoints
 } from '@shared/schema';
+import { typedCount } from '../lib/typedSql';
 
 export interface DiagnosticService {
   id: ServiceKey;
@@ -101,7 +108,7 @@ function createQuickCheck(
           service: id,
           status: 'down',
           isCritical: options.isCritical ?? false,
-          message: `${name} check failed: ${error.message}`,
+          message: `${name} check failed: ${(error instanceof Error ? error.message : String(error))}`,
           lastChecked: new Date().toISOString(),
           latencyMs: Date.now() - startTime,
         };
@@ -116,8 +123,9 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   // ============================================================================
   createQuickCheck('database', 'PostgreSQL Database', 'infrastructure', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public'`);
-    const tableCount = Number(result.rows[0]?.table_count || 0);
+    // CATEGORY C — Raw SQL retained: information_schema | Tables: information_schema | Verified: 2026-03-23
+    const result = await typedCount(sql`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = 'public'`);
+    const tableCount = Number(result || 0);
     return { 
       ok: tableCount > 0, 
       message: `Database responding - ${tableCount} tables in schema`,
@@ -128,8 +136,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('session_store', 'Session Store', 'infrastructure', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as session_count FROM trinity_conversation_sessions WHERE created_at > NOW() - INTERVAL '24 hours'`);
-    const sessionCount = Number(result.rows[0]?.session_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ sessionCount: sql<number>`count(*)::int` })
+      .from(trinityConversationSessions)
+      .where(sql`${trinityConversationSessions.createdAt} > NOW() - INTERVAL '24 hours'`);
+    const sessionCount = Number(result?.sessionCount || 0);
     const hasSecret = !!process.env.SESSION_SECRET;
     return { 
       ok: hasSecret, 
@@ -141,8 +153,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('websocket_server', 'WebSocket Server', 'infrastructure', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as chat_count FROM chat_conversations WHERE created_at > NOW() - INTERVAL '1 hour'`);
-    const recentChats = Number(result.rows[0]?.chat_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ chatCount: sql<number>`count(*)::int` })
+      .from(chatConversations)
+      .where(sql`${chatConversations.createdAt} > NOW() - INTERVAL '1 hour'`);
+    const recentChats = Number(result?.chatCount || 0);
     return { 
       ok: true, 
       message: `WebSocket server operational - ${recentChats} recent conversations`,
@@ -153,7 +169,7 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('rate_limiter', 'Rate Limiter', 'infrastructure', async () => {
     const memUsage = process.memoryUsage();
-    const limitActive = memUsage.heapUsed < memUsage.heapTotal * 0.9;
+    const limitActive = memUsage.heapUsed < memUsage.heapTotal * RESOURCES.memoryPressureThreshold;
     return { 
       ok: limitActive, 
       message: limitActive ? 'Rate limiting active - memory within bounds' : 'Memory pressure detected',
@@ -204,11 +220,15 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('trinity_ai', 'Trinity AI Mascot', 'ai_brain', async () => {
     const hasGemini = !!process.env.GEMINI_API_KEY;
-    const result = await db.execute(sql`SELECT COUNT(*) as turn_count FROM trinity_conversation_turns WHERE created_at > NOW() - INTERVAL '24 hours'`);
-    const recentTurns = Number(result.rows[0]?.turn_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ turnCount: sql<number>`count(*)::int` })
+      .from(trinityConversationTurns)
+      .where(sql`${trinityConversationTurns.createdAt} > NOW() - INTERVAL '24 hours'`);
+    const recentTurns = Number(result?.turnCount || 0);
     return { 
       ok: hasGemini, 
-      message: hasGemini ? `Trinity AI active - ${recentTurns} conversation turns in 24h` : 'Trinity requires Gemini API',
+      message: hasGemini ? `AI active — ${recentTurns} conversation turns in 24h` : 'Gemini API key required',
       metadata: { recentTurns, hasGemini }
     };
   }, { tier: 'essential', description: 'AI mascot with contextual thoughts' }),
@@ -231,7 +251,7 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
     } catch {
       return { ok: true, message: 'Platform Action Hub available', latencyMs: Date.now() - start };
     }
-  }, { tier: 'essential', description: 'Trinity AI Brain action infrastructure' }),
+  }, { tier: 'essential', description: 'AI Brain action infrastructure' }),
 
   createQuickCheck('subagent_supervisor', 'Subagent Supervisor', 'ai_brain', async () => {
     const start = Date.now();
@@ -259,8 +279,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   }, { tier: 'extended', description: 'Intelligent query routing' }),
 
   createQuickCheck('fast_mode', 'Trinity FAST Mode', 'ai_brain', async () => {
-    const result = await db.execute(sql`SELECT COUNT(*) as count FROM trinity_credits WHERE balance > 0`);
-    const accountsWithCredits = Number(result.rows[0]?.count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(trinityCredits)
+      .where(sql`${trinityCredits.balance} > 0`);
+    const accountsWithCredits = Number(result?.count || 0);
     return { 
       ok: true, 
       message: `FAST mode available - ${accountsWithCredits} accounts with credits`,
@@ -311,8 +335,11 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('chat_hub', 'Chat Server Hub', 'communication', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as room_count FROM chat_conversations`);
-    const totalRooms = Number(result.rows[0]?.room_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ roomCount: sql<number>`count(*)::int` })
+      .from(chatConversations);
+    const totalRooms = Number(result?.roomCount || 0);
     return { 
       ok: true, 
       message: `Chat hub operational - ${totalRooms} total conversations`,
@@ -323,8 +350,11 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('notification_ws', 'Notification WebSocket', 'communication', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as notif_count FROM notifications`);
-    const totalNotifications = Number(result.rows[0]?.notif_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ notifCount: sql<number>`count(*)::int` })
+      .from(notifications);
+    const totalNotifications = Number(result?.notifCount || 0);
     return { 
       ok: true, 
       message: `Real-time notifications ready - ${totalNotifications} total delivered`,
@@ -338,8 +368,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   // ============================================================================
   createQuickCheck('scheduling_engine', 'Scheduling Engine', 'scheduling', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as shift_count FROM shifts WHERE start_time > NOW()`);
-    const upcomingShifts = Number(result.rows[0]?.shift_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ shiftCount: sql<number>`count(*)::int` })
+      .from(shifts)
+      .where(sql`${shifts.startTime} > NOW()`);
+    const upcomingShifts = Number(result?.shiftCount || 0);
     return { 
       ok: true, 
       message: `Scheduling engine active - ${upcomingShifts} upcoming shifts`,
@@ -360,8 +394,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('calendar_sync', 'Calendar Sync', 'scheduling', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(DISTINCT employee_id) as emp_count FROM shifts WHERE start_time > NOW() AND start_time < NOW() + INTERVAL '7 days'`);
-    const scheduledEmployees = Number(result.rows[0]?.emp_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ empCount: sql<number>`count(distinct ${shifts.employeeId})::int` })
+      .from(shifts)
+      .where(sql`${shifts.startTime} > NOW() AND ${shifts.startTime} < NOW() + INTERVAL '7 days'`);
+    const scheduledEmployees = Number(result?.empCount || 0);
     return { 
       ok: true, 
       message: `Calendar sync ready - ${scheduledEmployees} employees with shifts this week`,
@@ -372,8 +410,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('availability_service', 'Availability Service', 'scheduling', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as emp_count FROM employees WHERE status = 'active'`);
-    const activeEmployees = Number(result.rows[0]?.emp_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ empCount: sql<number>`count(*)::int` })
+      .from(employees)
+      .where(sql`${employees.status} = 'active'`);
+    const activeEmployees = Number(result?.empCount || 0);
     return { 
       ok: true, 
       message: `Availability tracking for ${activeEmployees} active employees`,
@@ -408,8 +450,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('payroll_service', 'Payroll Service', 'billing', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as run_count FROM payroll_runs WHERE created_at > NOW() - INTERVAL '30 days'`);
-    const recentRuns = Number(result.rows[0]?.run_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ runCount: sql<number>`count(*)::int` })
+      .from(payrollRuns)
+      .where(sql`${payrollRuns.createdAt} > NOW() - INTERVAL '30 days'`);
+    const recentRuns = Number(result?.runCount || 0);
     return { 
       ok: true, 
       message: `Payroll service ready - ${recentRuns} runs in last 30 days`,
@@ -420,8 +466,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('invoicing', 'Invoice Generation', 'billing', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as invoice_count FROM invoices WHERE created_at > NOW() - INTERVAL '30 days'`);
-    const recentInvoices = Number(result.rows[0]?.invoice_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ invoiceCount: sql<number>`count(*)::int` })
+      .from(invoices)
+      .where(sql`${invoices.createdAt} > NOW() - INTERVAL '30 days'`);
+    const recentInvoices = Number(result?.invoiceCount || 0);
     return { 
       ok: true, 
       message: `Invoicing ready - ${recentInvoices} invoices in last 30 days`,
@@ -432,12 +482,15 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('credit_system', 'AI Credit System', 'billing', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT 
-      COUNT(*) as total_accounts,
-      COALESCE(SUM(balance), 0) as total_balance
-      FROM trinity_credits`);
-    const accounts = Number(result.rows[0]?.total_accounts || 0);
-    const totalBalance = Number(result.rows[0]?.total_balance || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ 
+        totalAccounts: sql<number>`count(*)::int`,
+        totalBalance: sql<number>`coalesce(sum(${trinityCredits.balance}), 0)::int`
+      })
+      .from(trinityCredits);
+    const accounts = Number(result?.totalAccounts || 0);
+    const totalBalance = Number(result?.totalBalance || 0);
     return { 
       ok: true, 
       message: `Credit system active - ${accounts} accounts, ${totalBalance} credits available`,
@@ -451,8 +504,11 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   // ============================================================================
   createQuickCheck('analytics_engine', 'Analytics Engine', 'analytics', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as workspace_count FROM workspaces`);
-    const workspaceCount = Number(result.rows[0]?.workspace_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ workspaceCount: sql<number>`count(*)::int` })
+      .from(workspaces);
+    const workspaceCount = Number(result?.workspaceCount || 0);
     return { 
       ok: true, 
       message: `Analytics processing ${workspaceCount} workspaces`,
@@ -472,8 +528,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('usage_analytics', 'Usage Analytics', 'analytics', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as log_count FROM system_audit_logs WHERE timestamp > NOW() - INTERVAL '24 hours'`);
-    const recentLogs = Number(result.rows[0]?.log_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ logCount: sql<number>`count(*)::int` })
+      .from(auditLogs)
+      .where(sql`${auditLogs.source} = 'system' AND ${auditLogs.timestamp} > NOW() - INTERVAL '24 hours'`);
+    const recentLogs = Number(result?.logCount || 0);
     return { 
       ok: true, 
       message: `Usage tracking active - ${recentLogs} events in 24h`,
@@ -487,8 +547,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   // ============================================================================
   createQuickCheck('compliance_monitor', 'Compliance Monitor', 'compliance', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as cert_count FROM employee_certifications WHERE expiry_date > NOW()`);
-    const activeCerts = Number(result.rows[0]?.cert_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ certCount: sql<number>`count(*)::int` })
+      .from(employeeCertifications)
+      .where(sql`${employeeCertifications.expirationDate} > NOW()`);
+    const activeCerts = Number(result?.certCount || 0);
     return { 
       ok: true, 
       message: `Compliance monitoring ${activeCerts} active certifications`,
@@ -499,8 +563,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('audit_logger', 'Audit Logger', 'compliance', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as log_count FROM system_audit_logs`);
-    const totalLogs = Number(result.rows[0]?.log_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ logCount: sql<number>`count(*)::int` })
+      .from(auditLogs)
+      .where(sql`${auditLogs.source} = 'system'`);
+    const totalLogs = Number(result?.logCount || 0);
     return { 
       ok: totalLogs > 0, 
       message: `Audit logging active - ${totalLogs} total records`,
@@ -511,8 +579,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('dispute_resolution', 'Dispute Resolution', 'compliance', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as ticket_count FROM support_tickets WHERE status != 'closed'`);
-    const openTickets = Number(result.rows[0]?.ticket_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ ticketCount: sql<number>`count(*)::int` })
+      .from(supportTickets)
+      .where(sql`${supportTickets.status} != 'closed'`);
+    const openTickets = Number(result?.ticketCount || 0);
     const hasGemini = !!process.env.GEMINI_API_KEY;
     return { 
       ok: hasGemini, 
@@ -546,8 +618,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('platform_monitor', 'Platform Change Monitor', 'automation', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as update_count FROM platform_updates WHERE created_at > NOW() - INTERVAL '24 hours'`);
-    const recentUpdates = Number(result.rows[0]?.update_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ updateCount: sql<number>`count(*)::int` })
+      .from(platformUpdates)
+      .where(sql`${platformUpdates.createdAt} > NOW() - INTERVAL '24 hours'`);
+    const recentUpdates = Number(result?.updateCount || 0);
     return { 
       ok: true, 
       message: `Change detection active - ${recentUpdates} updates in 24h`,
@@ -584,8 +660,11 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   // ============================================================================
   createQuickCheck('notification_service', 'Notification Service', 'notifications', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as total_count FROM notifications`);
-    const totalNotifications = Number(result.rows[0]?.total_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ totalCount: sql<number>`count(*)::int` })
+      .from(notifications);
+    const totalNotifications = Number(result?.totalCount || 0);
     return { 
       ok: true, 
       message: `Notification service active - ${totalNotifications} total notifications`,
@@ -596,8 +675,12 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
 
   createQuickCheck('whats_new', "What's New System", 'notifications', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(*) as update_count FROM platform_updates WHERE is_new = true`);
-    const newUpdates = Number(result.rows[0]?.update_count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ updateCount: sql<number>`count(*)::int` })
+      .from(platformUpdates)
+      .where(sql`${platformUpdates.isNew} = true`);
+    const newUpdates = Number(result?.updateCount || 0);
     return { 
       ok: true, 
       message: `What's New tracking - ${newUpdates} unread platform updates`,
@@ -627,15 +710,18 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   // ============================================================================
   createQuickCheck('rbac_service', 'RBAC Service', 'security', async () => {
     const start = Date.now();
-    const result = await db.execute(sql`SELECT COUNT(DISTINCT role) as role_count FROM platform_roles`);
-    const roleCount = Number(result.rows[0]?.role_count || 0);
-    const platformRoles = 8;
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [result] = await db
+      .select({ roleCount: sql<number>`count(distinct ${platformRoles.role})::int` })
+      .from(platformRoles);
+    const roleCount = Number(result?.roleCount || 0);
+    const platformRolesCount = 8;
     const workspaceRoles = 7;
     return { 
       ok: true, 
-      message: `RBAC active - ${platformRoles} platform roles, ${workspaceRoles} workspace roles`,
+      message: `RBAC active - ${platformRolesCount} platform roles, ${workspaceRoles} workspace roles`,
       latencyMs: Date.now() - start,
-      metadata: { platformRoles, workspaceRoles, dbRoles: roleCount }
+      metadata: { platformRoles: platformRolesCount, workspaceRoles, dbRoles: roleCount }
     };
   }, { tier: 'core', isCritical: true, description: '8-tier role hierarchy' }),
 
@@ -663,11 +749,20 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
   // ============================================================================
   createQuickCheck('gamification', 'Gamification Engine', 'gamification', async () => {
     const start = Date.now();
-    const pointsResult = await db.execute(sql`SELECT COUNT(*) as count, COALESCE(SUM(points), 0) as total FROM employee_points`);
-    const achievementResult = await db.execute(sql`SELECT COUNT(*) as count FROM achievements`);
-    const pointRecords = Number(pointsResult.rows[0]?.count || 0);
-    const totalPoints = Number(pointsResult.rows[0]?.total || 0);
-    const achievementCount = Number(achievementResult.rows[0]?.count || 0);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [pointsResult] = await db
+      .select({ 
+        count: sql<number>`count(*)::int`, 
+        total: sql<number>`coalesce(sum(${employeePoints.points}), 0)::int` 
+      })
+      .from(employeePoints);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [achievementResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(achievements);
+    const pointRecords = Number(pointsResult?.count || 0);
+    const totalPoints = Number(pointsResult?.total || 0);
+    const achievementCount = Number(achievementResult?.count || 0);
     return { 
       ok: true, 
       message: `Gamification active - ${achievementCount} achievements, ${totalPoints} points awarded`,

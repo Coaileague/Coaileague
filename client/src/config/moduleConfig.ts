@@ -13,7 +13,7 @@ export interface ModuleDefinition {
   route: string;
   enabled: boolean;
   category: 'core' | 'advanced' | 'integration' | 'admin';
-  requiredTier: 'free' | 'starter' | 'professional' | 'enterprise';
+  requiredTier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   features: string[];
 }
 
@@ -142,8 +142,8 @@ export function getModule(moduleId: string): ModuleDefinition | undefined {
 /**
  * Get all enabled modules for a subscription tier
  */
-export function getModulesByTier(tier: 'free' | 'starter' | 'professional' | 'enterprise'): ModuleDefinition[] {
-  const tierRanks = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+export function getModulesByTier(tier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic'): ModuleDefinition[] {
+  const tierRanks = { free: 0, trial: 0, starter: 1, professional: 2, business: 3, enterprise: 4, strategic: 5 };
   const userRank = tierRanks[tier];
   
   return Object.values(moduleRegistry).filter(
@@ -161,11 +161,11 @@ export function getModulesByCategory(category: 'core' | 'advanced' | 'integratio
 /**
  * Check if a module is available for a user's tier
  */
-export function isModuleAvailable(moduleId: string, userTier: 'free' | 'starter' | 'professional' | 'enterprise'): boolean {
+export function isModuleAvailable(moduleId: string, userTier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic'): boolean {
   const module = getModule(moduleId);
   if (!module || !module.enabled) return false;
   
-  const tierRanks = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+  const tierRanks = { free: 0, trial: 0, starter: 1, professional: 2, business: 3, enterprise: 4, strategic: 5 };
   return tierRanks[module.requiredTier] <= tierRanks[userTier];
 }
 

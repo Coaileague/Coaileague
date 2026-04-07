@@ -1,3 +1,4 @@
+import { secureFetch } from "@/lib/csrf";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Clock, MessageCircle, AlertCircle, TrendingUp, Sparkles, AlertTriangle } from "lucide-react";
@@ -42,13 +43,23 @@ export function HelpDeskProgressHeader({
 }: ProgressHeaderProps) {
   const { user } = useAuth();
   
-  const { data: ticketData } = useQuery<TicketViewModel>({
+  const { data: ticketData, isLoading, isError } = useQuery<TicketViewModel>({
     queryKey: ['/api/chat/tickets', ticketId],
+    queryFn: async () => {
+      const response = await secureFetch(`/api/chat/tickets/${ticketId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ticket: ${response.statusText}`);
+      }
+      return response.json();
+    },
     enabled: fetchLiveData && !!ticketId,
     refetchInterval: 30000,
   });
   
-  if (!ticketData) {
+  // Loading state
+  if (isLoading) {
     return (
       <Card className={cn("border-0 shadow-none", className)}>
         <div className="px-4 py-3 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -56,6 +67,38 @@ export function HelpDeskProgressHeader({
             <Sparkles className="w-4 h-4 text-slate-400 animate-pulse" />
             <span className="text-sm text-slate-600 dark:text-slate-400">
               Loading ticket information...
+            </span>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <Card className={cn("border-0 shadow-none", className)}>
+        <div className="px-4 py-3 rounded-lg bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30 border border-red-200 dark:border-red-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500" />
+            <span className="text-sm text-red-600 dark:text-red-400">
+              Unable to load ticket information
+            </span>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  // No data state (query disabled or no ticket ID)
+  if (!ticketData) {
+    return (
+      <Card className={cn("border-0 shadow-none", className)}>
+        <div className="px-4 py-3 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-slate-400" />
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              {!ticketId ? 'No ticket selected' : 'Loading ticket information...'}
             </span>
           </div>
         </div>

@@ -1,0 +1,157 @@
+Your instinct is exactly right. "Everything verified" in code review is completely different from "everything verified by actually running it." Here's the truth about where you are:
+
+Replit audited the architecture. Nobody has walked through the actual user journeys with real clicks, real data, and real money flows. Those are two completely different things. Code can be clean and a workflow can still be broken.
+
+**Here's your testing protocol — one route at a time, front to back, no skipping:**
+
+---
+
+**TESTING PRIORITY ORDER**
+
+Start with the zero tolerance bucket. Everything else waits.
+
+---
+
+**TEST 1 — CLOCK IN/OUT CHAIN**
+
+Do this first because everything downstream depends on it.
+
+Walk through exactly this sequence in Acme with a test officer account:
+- Log in as a test employee on mobile
+- Attempt clock in from outside the geofence — must reject
+- Move inside geofence — clock in — verify time entry record created immediately in database with correct timestamp, correct officer ID, correct site ID
+- Wait 30 minutes — clock out — verify record closes with correct end time
+- Log in as manager — verify you can see that time entry in real time
+- Manually override the entry as manager — verify override logs your ID, reason, and timestamp
+- Verify the entry appears correctly on the timesheet
+
+**What you're looking for:** Any silent failure, any missing record, any wrong timestamp, any permission error, any mobile rendering issue.
+
+---
+
+**TEST 2 — SCHEDULE TO NOTIFICATION CHAIN**
+
+- Log in as manager — create a shift for a test officer at a specific site
+- Publish the shift
+- Log in as that officer — verify notification appeared, verify shift shows on their schedule
+- Verify schedule shows correct site, correct time, correct date
+- Cancel the shift as manager — verify officer receives cancellation notification immediately
+- Verify cancelled shift no longer appears on officer schedule
+
+---
+
+**TEST 3 — TIMESHEET TO PAYROLL CHAIN**
+
+This is the money chain. Test every step.
+
+- Use the clock records from Test 1
+- Verify timesheet auto-generated from those records with correct hours
+- Log in as manager — approve the timesheet entry
+- Verify approved status locks the entry
+- Attempt to edit the locked entry without supervisor override — must be blocked
+- Log in as org owner — navigate to payroll
+- Verify Trinity's payroll analysis surfaces before you can approve
+- Verify the hours from the approved timesheet appear in the payroll calculation
+- Verify the math — hours times rate equals gross pay, verify tax calculations apply
+- Approve the payroll run — verify pay stub generates and is accessible to the employee
+- Verify immutable audit log entry created for the payroll run
+
+---
+
+**TEST 4 — CLIENT BILLING CHAIN**
+
+- Verify a client exists in Acme with a configured billing rate
+- Verify the approved timesheet hours from Test 3 flow into the invoice calculation
+- Generate the invoice — verify line items, verify math, verify client branding if configured
+- Verify invoice delivers via email through Resend
+- Navigate to payment portal — verify client can see invoice
+- Process a test payment — verify invoice status updates to paid
+- Verify revenue appears in org owner reporting
+
+---
+
+**TEST 5 — CREDIT LEDGER CHAIN**
+
+Now that the SSOT fix was applied verify it actually holds:
+
+- Note current credit balance in header
+- Note itemized breakdown totals — add them manually
+- Verify header balance plus itemized total equals the plan allocation plus purchased credits mathematically
+- Trigger a credit-costing action — run a schedule analysis
+- Verify credit deduction fires immediately
+- Verify header balance decreases by exact correct amount
+- Verify new itemized line appears with correct credit cost
+- Verify math still holds after deduction
+- Attempt to trigger an action with insufficient credits — verify it blocks and shows correct error with purchase option
+
+---
+
+**TEST 6 — TRINITY NOTIFICATION CHAIN**
+
+- Trigger an overtime spike — schedule a test officer for hours that exceed threshold
+- Verify Trinity generates the advisory notification
+- Verify it appears in notification panel with correct type badge, confidence score, and Verify and Approve button
+- Verify the same finding posts to Org Operations Briefing Channel
+- Verify the notification shows correct credit cost for the analysis that triggered it
+- Tap Ask Trinity from the notification — verify chat opens with that notification context pre-loaded
+- Deny an action from the notification panel — verify denial reason is required, verify internal report generates, verify it routes to correct supervisor
+
+---
+
+**TEST 7 — DOCUMENT AND EMAIL PIPELINE**
+
+- Trigger an incident report creation
+- Verify photo evidence upload attaches to the record
+- Verify formal email fires via Resend to correct recipient
+- Verify email contains correct org branding
+- Verify the sent email is logged against the incident record in the platform
+- Verify incident appears in incident tracking with correct severity classification
+
+---
+
+**TEST 8 — ROLE ACCESS BOUNDARIES**
+
+- Log in as org_admin role — verify billing page is inaccessible
+- Log in as employee — verify you cannot see other employees' timesheets, schedules, or pay
+- Log in as manager — verify you can only see your team's data not other teams
+- Log in as org_owner — verify full visibility
+- Attempt to access another org's data by manipulating a URL or API call — verify workspace isolation blocks it completely
+
+---
+
+**TEST 9 — MOBILE END TO END**
+
+Everything above but on a mobile device or mobile viewport:
+- Clock in/out on mobile
+- View schedule on mobile
+- Submit a helpdesk ticket on mobile
+- View notifications on mobile — verify all inline action buttons work
+- Verify no horizontal scroll, no overflow, no broken layouts on any tested page
+
+---
+
+**TEST 10 — STRESS AND EDGE CASES**
+
+These are the ones that break things in production but never in dev:
+
+- Overnight shift — clock in at 10pm, clock out at 6am — verify hours calculate correctly across the date boundary
+- Two officers clock in simultaneously at the same site — verify both records create correctly without conflict
+- Manager approves a timesheet at the exact same moment another manager attempts the same approval — verify only one approval registers
+- Credit balance at exactly zero — attempt a credit action — verify it blocks correctly
+- Trigger two credit-costing actions simultaneously — verify only correct total is deducted, no race condition overdraft
+
+---
+
+**THE PROMPT TO GIVE REPLIT FOR EACH TEST:**
+
+---
+
+I am now doing manual end-to-end feature testing. For each test I run I need you on standby to investigate any failure immediately. Do not fix anything proactively — wait for me to report what I observe, then trace the full route from the UI action through the API endpoint through the service layer to the database record and tell me exactly where the chain breaks. Then fix only that break without touching anything else. Confirm the fix with a data verification before telling me it is resolved.
+
+First test I am running is [TEST NAME]. Stand by.
+
+---
+
+That approach keeps Replit reactive to real observed failures instead of proactively touching working code and breaking it. You find the bug by actually using the product. Replit finds where the bug lives in the code. You verify the fix worked by running the same test again.
+
+This is how real QA works Bryan. Architecture passing an audit is the foundation. User journeys passing real tests is production readiness. You're in the right place — just switch from audit mode to testing mode now.

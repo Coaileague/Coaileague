@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { WorkspaceLayout } from "@/components/workspace-layout";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -16,7 +16,6 @@ import {
   Users,
   AlertTriangle,
   Brain,
-  RefreshCcw,
   CheckCircle,
   BarChart3,
   ArrowUpRight,
@@ -24,7 +23,11 @@ import {
   Sparkles,
   Building2,
   Clock,
-  Wallet
+  Wallet,
+  GitBranch,
+  MapPin,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -99,6 +102,20 @@ interface ClientProfitability {
   isUnderperforming: boolean;
 }
 
+interface ConsolidatedBranch {
+  workspaceId: string;
+  workspaceName: string;
+  subOrgLabel: string | null;
+  operatingStates: string[];
+  primaryOperatingState: string | null;
+  summary: PLSummary;
+}
+
+interface ConsolidatedPL {
+  combined: PLSummary;
+  branches: ConsolidatedBranch[];
+}
+
 interface FinancialAlert {
   id: string;
   severity: 'critical' | 'warning' | 'info';
@@ -120,11 +137,13 @@ function formatCurrency(amount: number): string {
   return `$${amount.toFixed(0)}`;
 }
 
+import { CHART_PALETTE, CHART_SERIES } from "@/lib/chartPalette";
+
 function formatFullCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
-const COLORS = ['#2dd4bf', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+const COLORS = CHART_SERIES;
 
 function MetricCard({ 
   label, 
@@ -144,7 +163,7 @@ function MetricCard({
   return (
     <Card className={cn("hover-elevate", className)} data-testid={`card-metric-${label.toLowerCase().replace(/\s/g, '-')}`}>
       <CardContent className="p-4">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <p className="text-sm text-muted-foreground font-medium mb-1">{label}</p>
             <p className="text-2xl font-bold font-mono">{value}</p>
@@ -217,26 +236,26 @@ function PLOverviewTab({ summary }: { summary: PLSummary }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-cyan-500" />
                   <span className="text-sm font-medium">Invoiced</span>
                 </div>
                 <span className="font-mono font-semibold">{formatFullCurrency(summary.invoicedAmount)}</span>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-emerald-500" />
                   <span className="text-sm font-medium">Collected</span>
                 </div>
                 <span className="font-mono font-semibold">{formatFullCurrency(summary.collectedAmount)}</span>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-teal-500/10 border border-teal-500/20">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-500" />
+                  <Clock className="h-4 w-4 text-teal-500" />
                   <span className="text-sm font-medium">Outstanding</span>
                 </div>
-                <span className="font-mono font-semibold text-amber-600">{formatFullCurrency(summary.outstandingAmount)}</span>
+                <span className="font-mono font-semibold text-teal-600">{formatFullCurrency(summary.outstandingAmount)}</span>
               </div>
             </div>
           </CardContent>
@@ -277,11 +296,11 @@ function PLOverviewTab({ summary }: { summary: PLSummary }) {
       </div>
 
       {summary.aiInsights && summary.aiInsights.length > 0 && (
-        <Card className="border-purple-500/20 bg-gradient-to-r from-purple-500/5 to-cyan-500/5" data-testid="card-ai-insights">
+        <Card className="border-blue-500/20 bg-gradient-to-r from-blue-500/5 to-cyan-500/5" data-testid="card-ai-insights">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Brain className="h-5 w-5 text-purple-500" />
-              <span className="bg-gradient-to-r from-purple-500 to-cyan-500 bg-clip-text text-transparent">
+              <Brain className="h-5 w-5 text-blue-500" />
+              <span className="bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
                 Trinity AI Insights
               </span>
             </CardTitle>
@@ -290,7 +309,7 @@ function PLOverviewTab({ summary }: { summary: PLSummary }) {
             <ul className="space-y-3">
               {summary.aiInsights.map((insight, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <Sparkles className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
+                  <Sparkles className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                   <span>{insight}</span>
                 </li>
               ))}
@@ -345,8 +364,8 @@ function TrendsTab() {
                 <YAxis tickFormatter={(v) => formatCurrency(v)} />
                 <Tooltip formatter={(value: number) => formatFullCurrency(value)} />
                 <Legend />
-                <Bar dataKey="Revenue" fill="#2dd4bf" />
-                <Bar dataKey="Expenses" fill="#ef4444" />
+                <Bar dataKey="Revenue" fill={CHART_PALETTE.SUCCESS} />
+                <Bar dataKey="Expenses" fill={CHART_PALETTE.DANGER} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -376,8 +395,8 @@ function TrendsTab() {
                   name === 'Margin' ? `${value.toFixed(1)}%` : formatFullCurrency(value)
                 } />
                 <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="Profit" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
-                <Line yAxisId="right" type="monotone" dataKey="Margin" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} />
+                <Line yAxisId="left" type="monotone" dataKey="Profit" stroke={CHART_PALETTE.SUCCESS} strokeWidth={2} dot={{ r: 4 }} />
+                <Line yAxisId="right" type="monotone" dataKey="Margin" stroke={CHART_PALETTE.SECONDARY} strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -484,6 +503,219 @@ function ClientsTab() {
   );
 }
 
+function ConsolidatedTab() {
+  const [viewMode, setViewMode] = useState<'individual' | 'combined'>('individual');
+  
+  const { data: response, isLoading } = useQuery<{ success: boolean; data: ConsolidatedPL }>({
+    queryKey: ['/api/finance/pl/consolidated'],
+  });
+
+  const consolidated = response?.data;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-24" />
+        <div className="grid md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-40" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (!consolidated || consolidated.branches.length <= 1) {
+    return (
+      <Card data-testid="card-no-suborgs">
+        <CardContent className="py-12 text-center">
+          <GitBranch className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">No sub-organizations found</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Create sub-orgs (branches) to see consolidated P&L across your organization
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const stateGroups: Record<string, ConsolidatedBranch[]> = {};
+  for (const branch of consolidated.branches) {
+    const state = branch.primaryOperatingState || 'Other';
+    if (!stateGroups[state]) stateGroups[state] = [];
+    stateGroups[state].push(branch);
+  }
+  const sortedStates = Object.keys(stateGroups).sort();
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <GitBranch className="h-4 w-4" />
+          <span>{consolidated.branches.length} branches across {sortedStates.length} state{sortedStates.length !== 1 ? 's' : ''}</span>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setViewMode(viewMode === 'individual' ? 'combined' : 'individual')}
+          data-testid="button-toggle-view-mode"
+        >
+          {viewMode === 'individual' ? <ToggleLeft className="h-4 w-4 mr-2" /> : <ToggleRight className="h-4 w-4 mr-2" />}
+          {viewMode === 'individual' ? 'Per-Branch' : 'Combined'}
+        </Button>
+      </div>
+
+      {viewMode === 'combined' ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              label="Total Revenue"
+              value={formatCurrency(consolidated.combined.revenueTotal)}
+              subValue={`${consolidated.branches.length} branches`}
+              icon={DollarSign}
+              positive
+            />
+            <MetricCard
+              label="Total Payroll"
+              value={formatCurrency(consolidated.combined.payrollTotal)}
+              subValue={`OT: ${formatCurrency(consolidated.combined.expenseBreakdown.overtime)}`}
+              icon={Users}
+              positive={false}
+            />
+            <MetricCard
+              label="Combined Net Profit"
+              value={formatCurrency(consolidated.combined.netProfit)}
+              subValue={`Gross: ${formatCurrency(consolidated.combined.grossProfit)}`}
+              icon={consolidated.combined.netProfit >= 0 ? TrendingUp : TrendingDown}
+              positive={consolidated.combined.netProfit >= 0}
+            />
+            <MetricCard
+              label="Combined Margin"
+              value={`${consolidated.combined.marginPercent.toFixed(1)}%`}
+              subValue={consolidated.combined.marginPercent >= 15 ? 'Above target' : 'Below 15% target'}
+              icon={PieChart}
+              positive={consolidated.combined.marginPercent >= 15}
+            />
+          </div>
+
+          <Card data-testid="card-combined-bar">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-cyan-500" />
+                Revenue by Branch
+              </CardTitle>
+              <CardDescription>Contribution per branch</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={consolidated.branches.map(b => ({
+                  name: b.subOrgLabel || b.workspaceName,
+                  Revenue: b.summary.revenueTotal,
+                  Expenses: b.summary.payrollTotal + b.summary.expenseTotal,
+                  Profit: b.summary.netProfit,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="name" />
+                  <YAxis tickFormatter={(v) => formatCurrency(v)} />
+                  <Tooltip formatter={(value: number) => formatFullCurrency(value)} />
+                  <Legend />
+                  <Bar dataKey="Revenue" fill={CHART_PALETTE.BRAND} />
+                  <Bar dataKey="Expenses" fill={CHART_PALETTE.DANGER} />
+                  <Bar dataKey="Profit" fill={CHART_PALETTE.SUCCESS} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {sortedStates.map(state => (
+            <div key={state} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+                  {state === 'Other' ? 'No State Assigned' : state}
+                </h3>
+                <Badge variant="secondary">{stateGroups[state].length}</Badge>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                {stateGroups[state].map(branch => {
+                  const s = branch.summary;
+                  const profitPositive = s.netProfit >= 0;
+                  const marginGood = s.marginPercent >= 15;
+                  return (
+                    <Card
+                      key={branch.workspaceId}
+                      className="hover-elevate"
+                      data-testid={`card-branch-${branch.workspaceId}`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <CardTitle className="text-base">
+                              {branch.subOrgLabel || branch.workspaceName}
+                            </CardTitle>
+                            {branch.operatingStates.length > 0 && (
+                              <CardDescription className="flex items-center gap-1 flex-wrap mt-1">
+                                {branch.operatingStates.map(st => (
+                                  <Badge key={st} variant="outline" className="text-xs">{st}</Badge>
+                                ))}
+                              </CardDescription>
+                            )}
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              marginGood
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                                : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                            )}
+                          >
+                            {s.marginPercent.toFixed(1)}%
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Revenue</p>
+                            <p className="font-mono font-semibold">{formatCurrency(s.revenueTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Expenses</p>
+                            <p className="font-mono font-semibold">{formatCurrency(s.payrollTotal + s.expenseTotal)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Net Profit</p>
+                            <p className={cn(
+                              "font-mono font-semibold flex items-center gap-1",
+                              profitPositive ? "text-emerald-600" : "text-red-600"
+                            )}>
+                              {profitPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                              {formatCurrency(s.netProfit)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Margin</p>
+                            <p className={cn(
+                              "font-mono font-semibold",
+                              marginGood ? "text-emerald-600" : "text-amber-600"
+                            )}>
+                              {s.marginPercent.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AlertsTab() {
   const { toast } = useToast();
   const { data: response, isLoading } = useQuery<{ success: boolean; data: FinancialAlert[] }>({
@@ -526,7 +758,7 @@ function AlertsTab() {
 
   const severityConfig = {
     critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-500', icon: AlertTriangle },
-    warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-500', icon: AlertTriangle },
+    warning: { bg: 'bg-teal-500/10', border: 'border-teal-500/30', text: 'text-teal-500', icon: AlertTriangle },
     info: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-500', icon: Brain },
   };
 
@@ -558,7 +790,7 @@ function AlertsTab() {
                   <p className="text-sm text-muted-foreground">{alert.message}</p>
                   {alert.actionSuggestion && (
                     <p className="text-sm text-foreground mt-2 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-purple-500" />
+                      <Sparkles className="h-3 w-3 text-blue-500" />
                       {alert.actionSuggestion}
                     </p>
                   )}
@@ -585,7 +817,7 @@ export default function FinancialIntelligence() {
   const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
   
-  const { data: response, isLoading, refetch, isRefetching } = useQuery<{ success: boolean; data: PLSummary }>({
+  const { data: response, isLoading } = useQuery<{ success: boolean; data: PLSummary }>({
     queryKey: ['/api/finance/pl/summary'],
   });
 
@@ -611,41 +843,29 @@ export default function FinancialIntelligence() {
 
   const summary = response?.data;
 
+  const actionButtons = (
+    <Button
+      variant="default"
+      onClick={() => generateInsightsMutation.mutate()}
+      disabled={generateInsightsMutation.isPending || !summary}
+      className="bg-gradient-to-r from-blue-500 to-cyan-500"
+      data-testid="button-generate-insights"
+    >
+      <Brain className="h-4 w-4 mr-2" />
+      {generateInsightsMutation.isPending ? "Analyzing..." : "Generate Insights"}
+    </Button>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'financial-intelligence',
+    title: 'Financial Intelligence',
+    subtitle: 'Real-time P&L analysis with Trinity AI insights',
+    category: 'workspace',
+    headerActions: actionButtons,
+  };
+
   return (
-    <WorkspaceLayout>
-      <div className="container max-w-7xl py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
-              <PieChart className="h-6 w-6 text-cyan-500" />
-              Financial Intelligence
-            </h1>
-            <p className="text-muted-foreground">
-              Real-time P&L analysis with Trinity AI insights
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isRefetching}
-              data-testid="button-refresh"
-            >
-              <RefreshCcw className={cn("h-4 w-4 mr-2", isRefetching && "animate-spin")} />
-              Refresh
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => generateInsightsMutation.mutate()}
-              disabled={generateInsightsMutation.isPending || !summary}
-              className="bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600"
-              data-testid="button-generate-insights"
-            >
-              <Brain className="h-4 w-4 mr-2" />
-              {generateInsightsMutation.isPending ? "Analyzing..." : "Generate Insights"}
-            </Button>
-          </div>
-        </div>
+    <CanvasHubPage config={pageConfig}>
 
         {isLoading ? (
           <div className="space-y-6">
@@ -660,6 +880,10 @@ export default function FinancialIntelligence() {
               <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
               <TabsTrigger value="trends" data-testid="tab-trends">Trends</TabsTrigger>
               <TabsTrigger value="clients" data-testid="tab-clients">Client Profitability</TabsTrigger>
+              <TabsTrigger value="consolidated" data-testid="tab-consolidated">
+                <GitBranch className="h-4 w-4 mr-1" />
+                Consolidated
+              </TabsTrigger>
               <TabsTrigger value="alerts" data-testid="tab-alerts">
                 Alerts
                 {summary.alerts && summary.alerts.length > 0 && (
@@ -682,6 +906,10 @@ export default function FinancialIntelligence() {
               <ClientsTab />
             </TabsContent>
             
+            <TabsContent value="consolidated" className="mt-6">
+              <ConsolidatedTab />
+            </TabsContent>
+            
             <TabsContent value="alerts" className="mt-6">
               <AlertsTab />
             </TabsContent>
@@ -698,24 +926,23 @@ export default function FinancialIntelligence() {
           </Card>
         )}
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-4 border-t border-border">
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant="outline" 
-              className={cn(
-                summary?.quickbooksStatus === 'connected' 
-                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                  : "bg-slate-500/10 text-slate-500 border-slate-500/30"
-              )}
-            >
-              QuickBooks {summary?.quickbooksStatus === 'connected' ? 'Connected' : 'Not Connected'}
-            </Badge>
-          </div>
-          {summary?.lastUpdated && (
-            <span>Last updated: {new Date(summary.lastUpdated).toLocaleString()}</span>
-          )}
+      <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground pt-4 border-t border-border">
+        <div className="flex items-center gap-2">
+          <Badge 
+            variant="outline" 
+            className={cn(
+              summary?.quickbooksStatus === 'connected' 
+                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                : "bg-slate-500/10 text-slate-500 border-slate-500/30"
+            )}
+          >
+            QuickBooks {summary?.quickbooksStatus === 'connected' ? 'Connected' : 'Not Connected'}
+          </Badge>
         </div>
+        {summary?.lastUpdated && (
+          <span>Last updated: {new Date(summary.lastUpdated).toLocaleString()}</span>
+        )}
       </div>
-    </WorkspaceLayout>
+    </CanvasHubPage>
   );
 }

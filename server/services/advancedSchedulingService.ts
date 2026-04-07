@@ -19,6 +19,54 @@ import {
 import { eq, and, gte, lte, desc, sql, or, isNull, inArray } from 'drizzle-orm';
 import { addDays, addWeeks, addMonths, format, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns';
 import { platformEventBus } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+const log = createLogger('advancedSchedulingService');
+
+
+// Human-readable titles and descriptions for scheduling events
+// These are used as fallbacks when AI enrichment fails
+const schedulingEventMessages: Record<string, { title: string; description: string }> = {
+  recurring_pattern_created: {
+    title: 'Recurring Schedule Created',
+    description: 'A new recurring shift pattern has been set up. Shifts will automatically generate based on this pattern.',
+  },
+  recurring_pattern_deleted: {
+    title: 'Recurring Schedule Removed',
+    description: 'A recurring shift pattern has been removed. Future auto-generated shifts from this pattern have been cancelled.',
+  },
+  shifts_generated: {
+    title: 'Shifts Auto-Generated',
+    description: 'New shifts have been automatically created from your recurring schedule patterns.',
+  },
+  swap_requested: {
+    title: 'Shift Swap Requested',
+    description: 'An employee has requested to swap their shift with another team member.',
+  },
+  swap_approved: {
+    title: 'Shift Swap Approved',
+    description: 'A shift swap has been approved. The schedule has been updated with the new assignments.',
+  },
+  swap_rejected: {
+    title: 'Shift Swap Declined',
+    description: 'A shift swap request was declined. The original schedule remains in place.',
+  },
+  swap_cancelled: {
+    title: 'Shift Swap Cancelled',
+    description: 'A shift swap request was cancelled by the requester.',
+  },
+  shift_duplicated: {
+    title: 'Shift Copied Successfully',
+    description: 'A shift has been duplicated to a new date. Review the schedule to confirm the new assignment.',
+  },
+  week_duplicated: {
+    title: 'Week Schedule Copied',
+    description: 'An entire week of shifts has been copied to a new week. Check the schedule for the duplicated assignments.',
+  },
+  conflict_detected: {
+    title: 'Schedule Conflict Found',
+    description: 'I detected a potential scheduling conflict that may need your attention.',
+  },
+};
 
 async function emitSchedulingEvent(
   eventType: 'recurring_pattern_created' | 'recurring_pattern_deleted' | 'shifts_generated' | 
@@ -28,22 +76,34 @@ async function emitSchedulingEvent(
   metadata: Record<string, any>
 ): Promise<void> {
   try {
+    // Use human-readable messages as fallbacks when AI enrichment fails
+    const messages = schedulingEventMessages[eventType] || {
+      title: `Schedule ${eventType.replace(/_/g, ' ')}`,
+      description: `A scheduling action was completed: ${eventType.replace(/_/g, ' ')}.`,
+    };
+    
     await platformEventBus.publish({
       type: 'automation_completed',
       category: 'improvement',
-      title: `Schedule ${eventType.replace(/_/g, ' ')}`,
-      description: `Advanced scheduling action: ${eventType}`,
+      title: messages.title,
+      description: messages.description,
       workspaceId,
       metadata: {
         ...metadata,
         eventType,
         service: 'advancedScheduling',
         timestamp: new Date().toISOString(),
+        // Provide context for AI enrichment
+        schedulingContext: {
+          action: eventType,
+          targetDate: metadata.targetDate,
+          employeeId: metadata.employeeId,
+        },
       },
       visibility: 'manager',
     });
   } catch (error) {
-    console.error(`[AdvancedScheduling] Failed to emit event ${eventType}:`, error);
+    log.error(`[AdvancedScheduling] Failed to emit event ${eventType}:`, error);
   }
 }
 
@@ -110,7 +170,7 @@ export async function createRecurringPattern(
     })
     .returning();
   
-  console.log(`📅 [RecurringPattern] Created pattern ${pattern.id} for workspace ${pattern.workspaceId}`);
+  log.info(`📅 [RecurringPattern] Created pattern ${pattern.id} for workspace ${pattern.workspaceId}`);
   
   await emitSchedulingEvent('recurring_pattern_created', pattern.workspaceId, {
     patternId: pattern.id,
@@ -168,23 +228,25 @@ export async function deleteRecurringPattern(
   }
   
   let shiftsDeleted = 0;
+
+  await db.transaction(async (tx) => {
+    if (options?.deleteFutureShifts) {
+      const now = new Date();
+      const result = await tx.delete(shifts)
+        .where(and(
+          eq(shifts.workspaceId, workspaceId),
+          eq(shifts.title, pattern.title),
+          gte(shifts.startTime, now)
+        ))
+        .returning();
+      shiftsDeleted = result.length;
+    }
+
+    await tx.delete(recurringShiftPatterns)
+      .where(eq(recurringShiftPatterns.id, patternId));
+  });
   
-  if (options?.deleteFutureShifts) {
-    const now = new Date();
-    const result = await db.delete(shifts)
-      .where(and(
-        eq(shifts.workspaceId, workspaceId),
-        eq(shifts.title, pattern.title),
-        gte(shifts.startTime, now)
-      ))
-      .returning();
-    shiftsDeleted = result.length;
-  }
-  
-  await db.delete(recurringShiftPatterns)
-    .where(eq(recurringShiftPatterns.id, patternId));
-  
-  console.log(`📅 [RecurringPattern] Deleted pattern ${patternId}, ${shiftsDeleted} future shifts deleted`);
+  log.info(`📅 [RecurringPattern] Deleted pattern ${patternId}, ${shiftsDeleted} future shifts deleted`);
   
   await emitSchedulingEvent('recurring_pattern_deleted', workspaceId, {
     patternId,
@@ -362,7 +424,7 @@ export async function requestShiftSwap(
     })
     .returning();
 
-  console.log(`🔄 [ShiftSwap] Request ${swapRequest.id} created for shift ${shiftId}`);
+  log.info(`🔄 [ShiftSwap] Request ${swapRequest.id} created for shift ${shiftId}`);
 
   await emitSchedulingEvent('swap_requested', workspaceId, {
     swapRequestId: swapRequest.id,
@@ -381,53 +443,66 @@ export async function approveShiftSwap(
   targetEmployeeId?: string,
   responseMessage?: string
 ): Promise<ShiftSwapRequest> {
-  const swapRequest = await db.query.shiftSwapRequests.findFirst({
-    where: and(
-      eq(shiftSwapRequests.id, swapRequestId),
-      eq(shiftSwapRequests.workspaceId, workspaceId)
-    ),
+  const updated = await db.transaction(async (tx) => {
+    const [swapRequest] = await tx.select()
+      .from(shiftSwapRequests)
+      .where(and(
+        eq(shiftSwapRequests.id, swapRequestId),
+        eq(shiftSwapRequests.workspaceId, workspaceId)
+      ))
+      .for('update')
+      .limit(1);
+
+    if (!swapRequest) {
+      throw new Error('Swap request not found');
+    }
+
+    if (swapRequest.status !== 'pending') {
+      throw new Error('Swap request has already been processed');
+    }
+
+    const finalTargetEmployeeId = targetEmployeeId || swapRequest.targetEmployeeId;
+
+    if (!finalTargetEmployeeId) {
+      throw new Error('Target employee must be specified for approval');
+    }
+
+    await tx.update(shifts)
+      .set({
+        employeeId: finalTargetEmployeeId,
+        updatedAt: new Date(),
+      })
+      .where(eq(shifts.id, swapRequest.shiftId));
+
+    const [result] = await tx.update(shiftSwapRequests)
+      .set({
+        status: 'approved',
+        targetEmployeeId: finalTargetEmployeeId,
+        respondedBy: responderId,
+        responseMessage: responseMessage || null,
+        respondedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(shiftSwapRequests.id, swapRequestId),
+        eq(shiftSwapRequests.status, 'pending')
+      ))
+      .returning();
+
+    if (!result) {
+      throw new Error('Swap request was already processed by another user');
+    }
+
+    return result;
   });
 
-  if (!swapRequest) {
-    throw new Error('Swap request not found');
-  }
-
-  if (swapRequest.status !== 'pending') {
-    throw new Error('Swap request has already been processed');
-  }
-
-  const finalTargetEmployeeId = targetEmployeeId || swapRequest.targetEmployeeId;
-  
-  if (!finalTargetEmployeeId) {
-    throw new Error('Target employee must be specified for approval');
-  }
-
-  await db.update(shifts)
-    .set({
-      employeeId: finalTargetEmployeeId,
-      updatedAt: new Date(),
-    })
-    .where(eq(shifts.id, swapRequest.shiftId));
-
-  const [updated] = await db.update(shiftSwapRequests)
-    .set({
-      status: 'approved',
-      targetEmployeeId: finalTargetEmployeeId,
-      respondedBy: responderId,
-      responseMessage: responseMessage || null,
-      respondedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(shiftSwapRequests.id, swapRequestId))
-    .returning();
-
-  console.log(`✅ [ShiftSwap] Request ${swapRequestId} approved, shift reassigned to ${finalTargetEmployeeId}`);
+  log.info(`[ShiftSwap] Request ${swapRequestId} approved, shift reassigned to ${updated.targetEmployeeId}`);
 
   await emitSchedulingEvent('swap_approved', workspaceId, {
     swapRequestId,
-    shiftId: swapRequest.shiftId,
-    originalEmployeeId: swapRequest.requesterId,
-    newEmployeeId: finalTargetEmployeeId,
+    shiftId: updated.shiftId,
+    originalEmployeeId: updated.requesterId,
+    newEmployeeId: updated.targetEmployeeId!,
     respondedBy: responderId,
   });
 
@@ -466,7 +541,7 @@ export async function rejectShiftSwap(
     .where(eq(shiftSwapRequests.id, swapRequestId))
     .returning();
 
-  console.log(`❌ [ShiftSwap] Request ${swapRequestId} rejected`);
+  log.info(`❌ [ShiftSwap] Request ${swapRequestId} rejected`);
 
   await emitSchedulingEvent('swap_rejected', workspaceId, {
     swapRequestId,
@@ -511,7 +586,7 @@ export async function cancelSwapRequest(
     .where(eq(shiftSwapRequests.id, swapRequestId))
     .returning();
 
-  console.log(`🚫 [ShiftSwap] Request ${swapRequestId} cancelled by requester`);
+  log.info(`🚫 [ShiftSwap] Request ${swapRequestId} cancelled by requester`);
 
   await emitSchedulingEvent('swap_cancelled', workspaceId, {
     swapRequestId,
@@ -663,7 +738,7 @@ export async function duplicateShift(
     })
     .returning();
 
-  console.log(`📋 [ShiftDuplicate] Shift ${shiftId} duplicated to ${newShift.id} on ${format(newStartTime, 'yyyy-MM-dd')}`);
+  log.info(`📋 [ShiftDuplicate] Shift ${shiftId} duplicated to ${newShift.id} on ${format(newStartTime, 'yyyy-MM-dd')}`);
 
   await emitSchedulingEvent('shift_duplicated', workspaceId, {
     sourceShiftId: shiftId,
@@ -754,7 +829,7 @@ export async function duplicateWeekSchedule(
     }
   }
 
-  console.log(`📅 [WeekDuplicate] Copied ${copiedShifts} shifts from ${format(sourceStart, 'yyyy-MM-dd')} to ${format(targetStart, 'yyyy-MM-dd')}`);
+  log.info(`📅 [WeekDuplicate] Copied ${copiedShifts} shifts from ${format(sourceStart, 'yyyy-MM-dd')} to ${format(targetStart, 'yyyy-MM-dd')}`);
 
   await emitSchedulingEvent('week_duplicated', workspaceId, {
     sourceWeekStart: format(sourceStart, 'yyyy-MM-dd'),

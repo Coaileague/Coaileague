@@ -1,4 +1,13 @@
 import { UniversalErrorPage } from "@/components/universal-error-page";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+
+const error500Config: CanvasPageConfig = {
+  id: 'error-500',
+  title: 'Server Error',
+  category: 'system',
+  variant: 'centered',
+  showHeader: false,
+};
 
 export default function Error500() {
   const errorDetails = [
@@ -11,5 +20,9 @@ export default function Error500() {
     'Note: This is a navigated error page. For stack traces, check GlobalErrorBoundary logs.'
   ].join('\n');
 
-  return <UniversalErrorPage type="500" errorDetails={errorDetails} />;
+  return (
+    <CanvasHubPage config={error500Config}>
+      <UniversalErrorPage type="500" errorDetails={errorDetails} />
+    </CanvasHubPage>
+  );
 }

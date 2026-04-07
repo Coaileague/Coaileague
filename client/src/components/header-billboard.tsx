@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Sparkles, PartyPopper, Gift, Cake, Zap, Star, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+
 interface Announcement {
   id: string;
   message: string;
@@ -27,7 +29,7 @@ export function HeaderBillboard() {
   });
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
-  const workspaceName = workspace?.name || 'CoAIleague';
+  const workspaceName = workspace?.name || "CoAIleague";
 
   // Update greeting based on time of day
   useEffect(() => {
@@ -75,10 +77,10 @@ export function HeaderBillboard() {
       content: (
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Cake className="h-5 w-5 text-yellow-300 animate-bounce" />
-            <PartyPopper className="h-3 w-3 text-pink-400 absolute -top-1 -right-1 animate-pulse" />
+            <Cake className="h-5 w-5 text-cyan-300 animate-bounce" />
+            <PartyPopper className="h-3 w-3 text-blue-400 absolute -top-1 -right-1 animate-pulse" />
           </div>
-          <span className="font-bold bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
+          <span className="font-bold bg-gradient-to-r from-cyan-300 via-blue-300 to-teal-300 bg-clip-text text-transparent">
             Happy Birthday, {firstName}!
           </span>
           <Gift className="h-4 w-4 text-primary animate-pulse" />
@@ -140,18 +142,18 @@ export function HeaderBillboard() {
 
   const currentSlideData = slides[currentSlide] || slides[0];
   
-  let bgClass = 'bg-gradient-to-r from-primary/10 to-green-500/10 border-primary/20';
+  let bgClass = 'bg-gradient-to-r from-primary/10 to-emerald-500/10 border-primary/20';
   if (currentSlideData.type === 'celebration') {
-    bgClass = 'bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-yellow-500/10 border-pink-500/20';
+    bgClass = 'bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-teal-500/10 border-cyan-500/20';
   } else if (currentSlideData.type === 'alert') {
-    bgClass = 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/20';
+    bgClass = 'bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border-cyan-500/20';
   } else if (currentSlideData.type === 'update') {
     bgClass = 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20';
   }
 
   return (
     <div 
-      className={`relative px-4 py-2 rounded-xl ${bgClass} border backdrop-blur-sm overflow-hidden`}
+      className={`relative px-4 py-2 rounded-md ${bgClass} border backdrop-blur-sm overflow-hidden`}
       data-testid="header-billboard"
     >
       {/* Birthday confetti background */}

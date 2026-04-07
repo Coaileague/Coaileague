@@ -23,10 +23,16 @@ import {
   workspaces,
   schedules,
   quickbooksOnboardingFlows,
+  quickbooksMigrationRuns,
   partnerDataMappings,
 } from '@shared/schema';
 import { eq, and, ne, inArray } from 'drizzle-orm';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { quickbooksOAuthService } from '../oauth/quickbooks';
+import { publishEvent } from './pipelineErrorHandler';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('onboardingQuickBooksFlow');
+
 
 export type FlowStage = 
   | 'oauth_initiated'
@@ -76,22 +82,22 @@ class OnboardingQuickBooksFlow {
   }
 
   private subscribeToEvents() {
-    platformEventBus.subscribe('quickbooks_oauth_complete', async (event) => {
-      const { workspaceId, userId, connectionId, realmId } = event.payload;
+    platformEventBus.subscribe('quickbooks_oauth_complete', { name: 'OnboardingQBFlow-OAuthComplete', handler: async (event) => {
+      const { workspaceId, userId, connectionId, realmId } = event.payload || {};
       await this.startFlow({ workspaceId, userId, connectionId, realmId });
-    });
+    }});
 
-    platformEventBus.subscribe('partner_sync_complete', async (event) => {
+    platformEventBus.subscribe('partner_sync_complete', { name: 'OnboardingQBFlow-PartnerSyncComplete', handler: async (event) => {
       const flow = this.getFlowByWorkspace(event.workspaceId);
       if (flow && flow.stage === 'initial_sync_running') {
-        await this.handleSyncComplete(flow.flowId, event.payload);
+        await this.handleSyncComplete(flow.flowId, event.payload || {});
       }
-    });
+    }});
   }
 
   private registerActions() {
-    helpaiOrchestrator.registerAction({
-      actionId: 'quickbooks_flow.start',
+    (helpaiOrchestrator.registerAction as any)({
+      actionId: 'quickbooks.flow_start',
       name: 'Start QuickBooks Onboarding Flow',
       category: 'integrations',
       description: 'Initiate the QuickBooks onboarding automation workflow',
@@ -108,8 +114,8 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'quickbooks_flow.get_status',
+    (helpaiOrchestrator.registerAction as any)({
+      actionId: 'quickbooks.flow_status',
       name: 'Get QuickBooks Flow Status',
       category: 'integrations',
       description: 'Check the current status of QuickBooks onboarding flow',
@@ -129,8 +135,8 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'quickbooks_flow.retry_stage',
+    (helpaiOrchestrator.registerAction as any)({
+      actionId: 'quickbooks.flow_retry_stage',
       name: 'Retry Failed Flow Stage',
       category: 'integrations',
       description: 'Retry a failed stage in the QuickBooks onboarding flow',
@@ -146,8 +152,8 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'quickbooks_flow.configure_automation',
+    (helpaiOrchestrator.registerAction as any)({
+      actionId: 'quickbooks.flow_configure',
       name: 'Configure Automation Settings',
       category: 'integrations',
       description: 'Configure which automations to enable after QuickBooks connection',
@@ -177,8 +183,8 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'quickbooks_flow.skip_stage',
+    (helpaiOrchestrator.registerAction as any)({
+      actionId: 'quickbooks.flow_skip_stage',
       name: 'Skip Optional Stage',
       category: 'integrations',
       description: 'Skip an optional stage in the onboarding flow',
@@ -195,8 +201,8 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'quickbooks_flow.get_stats',
+    (helpaiOrchestrator.registerAction as any)({
+      actionId: 'quickbooks.flow_stats',
       name: 'Get QuickBooks Flow Statistics',
       category: 'integrations',
       description: 'Get aggregated statistics for all QuickBooks onboarding flows',
@@ -209,11 +215,28 @@ class OnboardingQuickBooksFlow {
       },
     });
 
-    console.log('[OnboardingQuickBooksFlow] Registered 6 AI Brain actions');
+    (helpaiOrchestrator.registerAction as any)({
+      actionId: 'quickbooks.flow_reset',
+      name: 'Reset QuickBooks Flow',
+      category: 'integrations',
+      description: 'Completely reset the QuickBooks onboarding flow for a workspace, allowing user to start fresh',
+      parameters: {
+        type: 'object',
+        properties: {
+          workspaceId: { type: 'string', description: 'Workspace ID to reset flow for' },
+        },
+        required: ['workspaceId'],
+      },
+      handler: async (params) => {
+        return await this.resetFlow(params.workspaceId);
+      },
+    });
+
+    log.info('[OnboardingQuickBooksFlow] Registered 7 AI Brain actions');
   }
 
   async initiateOAuth(workspaceId: string, userId: string): Promise<{ authUrl: string; flowId: string }> {
-    const flowId = `qb-flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const flowId = `qb-flow-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     
     const flow: QuickBooksFlowState = {
       flowId,
@@ -235,14 +258,16 @@ class OnboardingQuickBooksFlow {
     this.flows.set(flowId, flow);
     await this.persistFlow(flow);
 
-    const callbackUrl = `${process.env.REPLIT_DEV_DOMAIN || ''}/api/oauth/quickbooks/callback?flowId=${flowId}`;
-    const authUrl = this.buildQuickBooksAuthUrl(callbackUrl);
+    const { url: authUrl } = await quickbooksOAuthService.generateAuthorizationUrl(workspaceId);
 
-    platformEventBus.publish({
-      type: 'quickbooks_flow_initiated',
-      workspaceId,
-      payload: { flowId, userId },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'quickbooks_flow_initiated',
+        workspaceId,
+        payload: { flowId, userId },
+      }),
+      '[OnboardingQuickBooksFlow] event publish',
+    );
 
     return { authUrl, flowId };
   }
@@ -256,7 +281,7 @@ class OnboardingQuickBooksFlow {
     const { workspaceId, userId, connectionId, realmId } = params;
     
     const existingFlow = this.getFlowByWorkspace(workspaceId);
-    const flowId = existingFlow?.flowId || `qb-flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const flowId = existingFlow?.flowId || `qb-flow-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
 
     const flow: QuickBooksFlowState = existingFlow || {
       flowId,
@@ -292,11 +317,14 @@ class OnboardingQuickBooksFlow {
       metadata: { provider: 'quickbooks', connectionId },
     });
 
-    platformEventBus.publish({
-      type: 'quickbooks_connected',
-      workspaceId,
-      payload: { flowId, connectionId, realmId },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'quickbooks_connected',
+        workspaceId,
+        payload: { flowId, connectionId, realmId },
+      }),
+      '[OnboardingQuickBooksFlow] event publish',
+    );
 
     this.runInitialSync(flowId);
 
@@ -312,7 +340,7 @@ class OnboardingQuickBooksFlow {
     await this.persistFlow(flow);
 
     try {
-      console.log(`[OnboardingQuickBooksFlow] Starting initial sync for flow ${flowId}`);
+      log.info(`[OnboardingQuickBooksFlow] Starting initial sync for flow ${flowId}`);
       
       const syncResult = await quickbooksSyncService.runInitialSync(
         flow.workspaceId,
@@ -329,16 +357,19 @@ class OnboardingQuickBooksFlow {
         await this.persistFlow(flow);
       }
     } catch (error: any) {
-      console.error(`[OnboardingQuickBooksFlow] Initial sync failed:`, error);
-      flow.errors.push(`Initial sync failed: ${error.message}`);
+      log.error(`[OnboardingQuickBooksFlow] Initial sync failed:`, error);
+      flow.errors.push(`Initial sync failed: ${(error instanceof Error ? error.message : String(error))}`);
       flow.stage = 'flow_failed';
       await this.persistFlow(flow);
 
-      platformEventBus.publish({
-        type: 'quickbooks_flow_error',
-        workspaceId: flow.workspaceId,
-        payload: { flowId, stage: 'initial_sync', error: error.message },
-      });
+      publishEvent(
+        () => platformEventBus.publish({
+          type: 'quickbooks_flow_error',
+          workspaceId: flow.workspaceId,
+          payload: { flowId, stage: 'initial_sync', error: (error instanceof Error ? error.message : String(error)) },
+        }),
+        '[OnboardingQuickBooksFlow] event publish',
+      );
     }
   }
 
@@ -350,7 +381,7 @@ class OnboardingQuickBooksFlow {
     flow.lastUpdatedAt = new Date();
     await this.persistFlow(flow);
 
-    console.log(`[OnboardingQuickBooksFlow] Sync complete: ${syncResult.recordsProcessed} records processed`);
+    log.info(`[OnboardingQuickBooksFlow] Sync complete: ${syncResult.recordsProcessed} records processed`);
 
     await this.runDataMapping(flowId);
   }
@@ -364,7 +395,7 @@ class OnboardingQuickBooksFlow {
     await this.persistFlow(flow);
 
     try {
-      console.log(`[OnboardingQuickBooksFlow] Running data mapping for flow ${flowId}`);
+      log.info(`[OnboardingQuickBooksFlow] Running data mapping for flow ${flowId}`);
 
       flow.stage = 'data_mapping_complete';
       flow.lastUpdatedAt = new Date();
@@ -372,8 +403,8 @@ class OnboardingQuickBooksFlow {
 
       await this.importEmployees(flowId);
     } catch (error: any) {
-      console.error(`[OnboardingQuickBooksFlow] Data mapping failed:`, error);
-      flow.warnings.push(`Data mapping partially failed: ${error.message}`);
+      log.error(`[OnboardingQuickBooksFlow] Data mapping failed:`, error);
+      flow.warnings.push(`Data mapping partially failed: ${(error instanceof Error ? error.message : String(error))}`);
       await this.importEmployees(flowId);
     }
   }
@@ -387,7 +418,7 @@ class OnboardingQuickBooksFlow {
     await this.persistFlow(flow);
 
     try {
-      console.log(`[OnboardingQuickBooksFlow] Importing employees for flow ${flowId}`);
+      log.info(`[OnboardingQuickBooksFlow] Importing employees for flow ${flowId}`);
 
       const existingEmployees = await db.select()
         .from(employees)
@@ -411,8 +442,8 @@ class OnboardingQuickBooksFlow {
         await this.configureAutomation(flowId);
       }
     } catch (error: any) {
-      console.error(`[OnboardingQuickBooksFlow] Employee import failed:`, error);
-      flow.errors.push(`Employee import failed: ${error.message}`);
+      log.error(`[OnboardingQuickBooksFlow] Employee import failed:`, error);
+      flow.errors.push(`Employee import failed: ${(error instanceof Error ? error.message : String(error))}`);
       flow.stage = 'flow_failed';
       await this.persistFlow(flow);
     }
@@ -427,7 +458,7 @@ class OnboardingQuickBooksFlow {
     await this.persistFlow(flow);
 
     try {
-      console.log(`[OnboardingQuickBooksFlow] Generating first schedule for flow ${flowId}`);
+      log.info(`[OnboardingQuickBooksFlow] Generating first schedule for flow ${flowId}`);
 
       const today = new Date();
       const nextMonday = new Date(today);
@@ -446,8 +477,8 @@ class OnboardingQuickBooksFlow {
 
       await this.configureAutomation(flowId);
     } catch (error: any) {
-      console.error(`[OnboardingQuickBooksFlow] Schedule generation failed:`, error);
-      flow.warnings.push(`Schedule generation skipped: ${error.message}`);
+      log.error(`[OnboardingQuickBooksFlow] Schedule generation failed:`, error);
+      flow.warnings.push(`Schedule generation skipped: ${(error instanceof Error ? error.message : String(error))}`);
       await this.configureAutomation(flowId);
     }
   }
@@ -461,7 +492,7 @@ class OnboardingQuickBooksFlow {
     await this.persistFlow(flow);
 
     try {
-      console.log(`[OnboardingQuickBooksFlow] Configuring automation for flow ${flowId}`);
+      log.info(`[OnboardingQuickBooksFlow] Configuring automation for flow ${flowId}`);
 
       flow.stage = 'automation_configured';
       flow.lastUpdatedAt = new Date();
@@ -469,8 +500,8 @@ class OnboardingQuickBooksFlow {
 
       await this.completeFlow(flowId);
     } catch (error: any) {
-      console.error(`[OnboardingQuickBooksFlow] Automation configuration failed:`, error);
-      flow.warnings.push(`Automation partially configured: ${error.message}`);
+      log.error(`[OnboardingQuickBooksFlow] Automation configuration failed:`, error);
+      flow.warnings.push(`Automation partially configured: ${(error instanceof Error ? error.message : String(error))}`);
       await this.completeFlow(flowId);
     }
   }
@@ -491,18 +522,21 @@ class OnboardingQuickBooksFlow {
       userId: flow.userId,
     });
 
-    platformEventBus.publish({
-      type: 'quickbooks_flow_complete',
-      workspaceId: flow.workspaceId,
-      payload: {
-        flowId,
-        importedEmployeeCount: flow.importedEmployeeCount,
-        automationSettings: flow.automationSettings,
-        durationMs: flow.completedAt.getTime() - flow.startedAt.getTime(),
-      },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'quickbooks_flow_complete',
+        workspaceId: flow.workspaceId,
+        payload: {
+          flowId,
+          importedEmployeeCount: flow.importedEmployeeCount,
+          automationSettings: flow.automationSettings,
+          durationMs: flow.completedAt.getTime() - flow.startedAt.getTime(),
+        },
+      }),
+      '[OnboardingQuickBooksFlow] event publish',
+    );
 
-    console.log(`[OnboardingQuickBooksFlow] Flow ${flowId} completed successfully`);
+    log.info(`[OnboardingQuickBooksFlow] Flow ${flowId} completed successfully`);
   }
 
   async retryFailedStage(flowId: string): Promise<{ success: boolean; message: string }> {
@@ -551,6 +585,74 @@ class OnboardingQuickBooksFlow {
     await this.completeFlow(flowId);
 
     return { success: true, message: `Stage ${stage} skipped` };
+  }
+
+  /**
+   * Reset and clear the QuickBooks onboarding flow for a workspace.
+   * Removes from memory and database, allowing a fresh start.
+   */
+  async resetFlow(workspaceId: string): Promise<{ success: boolean; message: string; clearedFlows: number }> {
+    try {
+      let clearedCount = 0;
+      
+      // Find and remove from in-memory map
+      const flowsToRemove: string[] = [];
+      for (const [flowId, flow] of this.flows.entries()) {
+        if (flow.workspaceId === workspaceId) {
+          flowsToRemove.push(flowId);
+        }
+      }
+      
+      for (const flowId of flowsToRemove) {
+        this.flows.delete(flowId);
+        clearedCount++;
+      }
+      
+      // Delete from database
+      const deleted = await db.delete(quickbooksOnboardingFlows)
+        .where(eq(quickbooksOnboardingFlows.workspaceId, workspaceId))
+        .returning({ id: quickbooksOnboardingFlows.id });
+      
+      const dbDeletedCount = deleted.length;
+      
+      // Also clear any partner data mappings for QuickBooks
+      await db.delete(partnerDataMappings)
+        .where(
+          and(
+            eq(partnerDataMappings.workspaceId, workspaceId),
+            eq(partnerDataMappings.partnerType, 'quickbooks')
+          )
+        );
+      
+      // CRITICAL: Clear migration runs - this is what tracks the active migration state
+      const deletedMigrations = await db.delete(quickbooksMigrationRuns)
+        .where(eq(quickbooksMigrationRuns.workspaceId, workspaceId))
+        .returning({ id: quickbooksMigrationRuns.id });
+      
+      log.info(`[OnboardingQuickBooksFlow] Reset complete for workspace ${workspaceId}: ${clearedCount} in-memory, ${dbDeletedCount} flows, ${deletedMigrations.length} migration runs from database`);
+      
+      publishEvent(
+        () => platformEventBus.publish({
+          type: 'quickbooks_flow_reset',
+          workspaceId,
+          payload: { clearedFlows: Math.max(clearedCount, dbDeletedCount) },
+        }),
+        '[OnboardingQuickBooksFlow] event publish',
+      );
+      
+      return {
+        success: true,
+        message: 'QuickBooks onboarding flow reset. You can now start a fresh migration.',
+        clearedFlows: Math.max(clearedCount, dbDeletedCount),
+      };
+    } catch (error: any) {
+      log.error('[OnboardingQuickBooksFlow] Reset failed:', error);
+      return {
+        success: false,
+        message: `Reset failed: ${(error instanceof Error ? error.message : String(error))}`,
+        clearedFlows: 0,
+      };
+    }
   }
 
   private getFlowByWorkspace(workspaceId: string): QuickBooksFlowState | undefined {
@@ -603,14 +705,6 @@ class OnboardingQuickBooksFlow {
     return stats;
   }
 
-  private buildQuickBooksAuthUrl(callbackUrl: string): string {
-    const clientId = process.env.QUICKBOOKS_CLIENT_ID || '';
-    // Use centralized config - NO HARDCODED VALUES
-    const scope = `${INTEGRATIONS.quickbooks.scopes.accounting} ${INTEGRATIONS.quickbooks.scopes.payment}`;
-    const state = Math.random().toString(36).substr(2, 9);
-    
-    return `${INTEGRATIONS.quickbooks.oauthUrls.authorization}?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}`;
-  }
 
   private serializeFlowData(flow: QuickBooksFlowState): Record<string, any> {
     return {
@@ -677,7 +771,7 @@ class OnboardingQuickBooksFlow {
         });
       }
     } catch (error) {
-      console.error('[OnboardingQuickBooksFlow] Persistence failed:', error);
+      log.error('[OnboardingQuickBooksFlow] Persistence failed:', error);
     }
   }
 
@@ -719,9 +813,9 @@ class OnboardingQuickBooksFlow {
         }
       }
       
-      console.log(`[OnboardingQuickBooksFlow] Loaded ${this.flows.size} active flows from database`);
+      log.info(`[OnboardingQuickBooksFlow] Loaded ${this.flows.size} active flows from database`);
     } catch (error) {
-      console.log('[OnboardingQuickBooksFlow] No persisted flows to load');
+      log.info('[OnboardingQuickBooksFlow] No persisted flows to load');
     }
   }
 
@@ -807,7 +901,7 @@ class OnboardingQuickBooksFlow {
           });
 
           if (existingByQbId) {
-            console.log(`[QB Import] Employee ${emp.displayName} already exists by QB ID, skipping`);
+            log.info(`[QB Import] Employee ${emp.displayName} already exists by QB ID, skipping`);
             results.skipped++;
             continue;
           }
@@ -824,7 +918,7 @@ class OnboardingQuickBooksFlow {
                 .set({ quickbooksEmployeeId: emp.qbId })
                 .where(eq(employees.id, existingByEmail.id));
               results.imported++;
-              console.log(`[QB Import] Linked existing employee ${emp.displayName} to QB ID`);
+              log.info(`[QB Import] Linked existing employee ${emp.displayName} to QB ID`);
               continue;
             }
           }
@@ -843,15 +937,15 @@ class OnboardingQuickBooksFlow {
           });
 
           results.imported++;
-          console.log(`[QB Import] Imported employee: ${emp.firstName} ${emp.lastName}`);
+          log.info(`[QB Import] Imported employee: ${emp.firstName} ${emp.lastName}`);
         } catch (error: any) {
-          results.errors.push(`${emp.displayName}: ${error.message}`);
+          results.errors.push(`${emp.displayName}: ${(error instanceof Error ? error.message : String(error))}`);
           results.failed++;
         }
       }
     }
 
-    console.log(`[QB Import] Complete - Imported: ${results.imported}, Skipped: ${results.skipped}, Failed: ${results.failed}`);
+    log.info(`[QB Import] Complete - Imported: ${results.imported}, Skipped: ${results.skipped}, Failed: ${results.failed}`);
     return results;
   }
 }

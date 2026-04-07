@@ -1,0 +1,111 @@
+User-agent: *
+# Allow public marketing and informational pages
+Allow: /$
+Allow: /features
+Allow: /pricing
+Allow: /trinity-features
+Allow: /compare
+Allow: /compare/
+Allow: /roi-calculator
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /sms-terms
+Allow: /sms-consent
+Allow: /status
+Allow: /support
+Allow: /templates
+Allow: /og-image.png
+Allow: /favicon.svg
+
+# Disallow authenticated application routes
+Disallow: /dashboard
+Disallow: /worker
+Disallow: /worker/
+Disallow: /schedule
+Disallow: /workspace
+Disallow: /command-center
+Disallow: /commands
+Disallow: /employees
+Disallow: /timekeeping
+Disallow: /payroll
+Disallow: /incidents
+Disallow: /clients
+Disallow: /billing
+Disallow: /settings
+Disallow: /analytics
+Disallow: /reports
+Disallow: /notifications
+Disallow: /admin
+Disallow: /admin/
+Disallow: /onboarding
+Disallow: /onboarding/
+
+# Disallow auth/portal routes (private or noindex)
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /auditor/login
+Disallow: /create-org
+Disallow: /org-unavailable
+
+# Disallow token-gated and signed-link routes
+Disallow: /sign/
+Disallow: /accept-handoff/
+Disallow: /accept-offer/
+Disallow: /client-portal/
+Disallow: /contract-portal/
+Disallow: /sps-packet/
+Disallow: /packet-portal/
+Disallow: /pay-invoice/
+Disallow: /regulator-portal/
+Disallow: /client-signup
+Disallow: /sps-document-safe
+Disallow: /sps-client-pipeline
+Disallow: /chat/
+
+# Disallow API routes
+Disallow: /api/
+
+# Disallow application sub-routes
+Disallow: /sales
+Disallow: /sales-crm
+Disallow: /outreach
+Disallow: /behavior-scoring
+Disallow: /trinity-memory
+Disallow: /trinity-chat
+Disallow: /briefing-channel
+Disallow: /broadcasts
+Disallow: /chatrooms
+Disallow: /shift-marketplace
+Disallow: /shifts/
+Disallow: /workflow-approvals
+Disallow: /approvals-hub
+Disallow: /ai-brain-dashboard
+Disallow: /ai-command-center
+Disallow: /ai-integrations
+Disallow: /ai-audit-log-viewer
+Disallow: /automation-audit-log
+Disallow: /automation-control
+Disallow: /automation-settings
+Disallow: /audit-logs
+Disallow: /account-manager
+Disallow: /api-access
+Disallow: /budgeting
+Disallow: /alert-settings
+Disallow: /alert-configuration
+Disallow: /availability
+Disallow: /background-checks
+Disallow: /armory-management
+Disallow: /mileage
+Disallow: /field-reports
+Disallow: /safety-check
+Disallow: /employee-file-cabinet
+Disallow: /accounting-integrations
+Disallow: /diagnostics
+Disallow: /mobile-hub
+Disallow: /mobile-more
+
+# Sitemap location
+Sitemap: https://coaileague.com/sitemap.xml

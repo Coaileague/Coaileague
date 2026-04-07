@@ -1,0 +1,118 @@
+Good read on everything. Here's the full picture of what was accomplished and then the storage answer directly.
+
+---
+
+## What Was Completed This Session
+
+Solid progress across 6 major audit sweeps:
+
+**Bugs Fixed (Code):** 3 confirmed — dead labeled statement in chat reactions, voice support tables invisible to Drizzle, officer reactivation silently skipping compliance checks.
+
+**Financial System:** 6 disconnected fee paths wired — payroll fees, invoice fees, connect payout fees, QB sync fees were all charging Stripe but writing nothing to internal ledgers. Now all three layers (Stripe charge, DB ledger, platform revenue) fire together.
+
+**Tier Guards:** 7 missing — contract pipeline, document vault, RFP pipeline, financial intelligence, BI analytics, multi-workspace, and enterprise features were all accessible below their intended tier. All locked down.
+
+**Architectural notes resolved:** Duplicate middleware stripped, 7 latent Trinity brain actions registered (insurance, gate duty, recognition now fully wired).
+
+---
+
+## The Storage Question — Replit's 100GB Is Not the Constraint
+
+The 100GB Replit limit is for **your app code and database**, not tenant files. All file storage already routes to **Google Cloud Storage (GCS)** — your audit confirmed `uploadFileToObjectStorage()` is the write path. GCS is billed separately and scales to petabytes. Replit's disk never sees a tenant's photo, email attachment, or PDF.
+
+So the real question is: what do you charge tenants for, and when do you cut them off?
+
+---
+
+## The Agent's Recommendation Was Correct — Go With Option B
+
+Category-based sub-limits. Here's why it's the only right choice for security companies specifically:
+
+The **audit reserve** is non-negotiable. Security companies face subpoenas. A guard company that loses a 4-year-old incident report because email crowded it out is a liability. That protected floor — 1GB on Starter, 3GB on Professional — can never be consumed by anything else. Signed contracts, incident evidence, DARs are always safe.
+
+The numbers the agent sized are reasonable. Here's what I'd lock in:
+
+| Tier | Email | Documents | Media/Photos | Audit Reserve | Total |
+|---|---|---|---|---|---|
+| Trial | 300 MB | 800 MB | 800 MB | 100 MB | 2 GB |
+| Starter $299 | 3 GB | 5 GB | 6 GB | 1 GB | 15 GB |
+| Professional $999 | 12 GB | 20 GB | 25 GB | 3 GB | 60 GB |
+| Business $2,999 | 35 GB | 70 GB | 80 GB | 15 GB | 200 GB |
+| Enterprise $7,999 | 120 GB | 220 GB | 230 GB | 30 GB | 600 GB |
+
+Add-ons the agent listed are priced right — keep them.
+
+---
+
+## What Needs to Happen Next (Send to Agent)
+
+The skeleton already exists (`quotaEnforcementService.ts`, `recordStorageUsage()`). It just needs to be wired. Send this:
+
+```
+TASK: Complete the storage quota enforcement system using Option B — 
+category-based sub-limits.
+
+The skeleton already exists in quotaEnforcementService.ts with 
+checkStorageQuota() and recordStorageUsage(). Neither is currently called.
+The upload middleware has a 25MB per-file cap but no workspace quota check.
+
+IMPLEMENT all of the following:
+
+1. BILLING CONFIG — Add to billingConfig.ts as single source of truth:
+   Storage quotas per tier and category exactly as follows:
+   Trial: email 300MB, documents 800MB, media 800MB, audit_reserve 100MB
+   Starter: email 3GB, documents 5GB, media 6GB, audit_reserve 1GB
+   Professional: email 12GB, documents 20GB, media 25GB, audit_reserve 3GB
+   Business: email 35GB, documents 70GB, media 80GB, audit_reserve 15GB
+   Enterprise: email 120GB, documents 220GB, media 230GB, audit_reserve 30GB
+   Strategic: email 400GB, documents 700GB, media 800GB, audit_reserve 100GB
+   Audit reserve is a protected floor — never counts against other categories.
+
+2. SCHEMA — Add storage_usage table:
+   workspace_id, category (email|documents|media|audit_reserve),
+   bytes_used bigint, updated_at
+   Composite unique on (workspace_id, category)
+
+3. PRE-UPLOAD CHECK — Wrap uploadFileToObjectStorage():
+   Before any write: call checkStorageQuota(workspace_id, category, file_size)
+   If at or above category limit AND not audit_reserve category: reject with 507
+   If audit_reserve category: always allow (protected floor)
+   After successful upload: call recordStorageUsage(workspace_id, category, bytes)
+
+4. EMAIL ATTACHMENT ENFORCEMENT — In inbound email processor:
+   Before storing an attachment: check email category quota
+   If over email limit: store email record without attachment, flag as 
+   ATTACHMENT_REJECTED, log size and filename
+
+5. WARNING EVENTS via NDS:
+   After every upload: check total workspace usage percentage
+   At 80%: fire NDS notification to org owner — "You have used 80% of your 
+   storage. Upgrade or purchase an add-on to avoid interruption."
+   At 95%: fire NDS critical alert — "You are nearly at your storage limit."
+   Warning events must be idempotent — fire once per threshold crossing, 
+   not on every upload after the threshold
+
+6. STRIPE ADD-ON SKUs — Add to billingConfig.ts:
+   +10 GB Document pack: $5/month (Starter+)
+   +25 GB Media pack: $8/month (Starter+)
+   +50 GB Email archive: $12/month (Professional+)
+   +100 GB Everything bundle: $22/month (Business+)
+
+7. DASHBOARD — Add storage usage display to org settings page:
+   Ring or bar chart per category showing used vs limit
+   Display in GB, warn color at 80%, danger color at 95%
+   Link to upgrade/add-on purchase if above 80%
+
+DO NOT touch audit_reserve items during any cleanup or enforcement action.
+Audit reserve files (incident reports, signed contracts, DARs) are NEVER
+blocked, NEVER auto-deleted, NEVER counted against other category limits.
+
+CONFIRM: Show the updated quota config, the pre-upload check wrapper,
+and the warning event idempotency logic.
+```
+
+---
+
+## Your Replit Storage Reality
+
+Your **app + database** on Replit is nowhere near 100GB — your codebase, schema, and DB records are likely under 5GB even at full production load with many tenants. Tenant binary files (the big stuff) live entirely in GCS and never touch Replit's disk. You're fine.

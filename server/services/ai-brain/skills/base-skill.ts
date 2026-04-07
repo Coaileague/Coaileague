@@ -5,6 +5,9 @@ import type {
   SkillEvent,
   SkillConfig,
 } from './types';
+import { createLogger } from '../../../lib/logger';
+
+const log = createLogger('Skill');
 
 /**
  * Abstract base class for all AI Brain Skills
@@ -49,7 +52,7 @@ export abstract class BaseSkill {
     if (config) {
       this.config = { ...this.config, ...config };
     }
-    console.log(`[Skill] Initialized: ${this.getManifest().id}`);
+    log.info(`[Skill] Initialized: ${this.getManifest().id}`);
   }
 
   /**
@@ -106,7 +109,7 @@ export abstract class BaseSkill {
       try {
         await handler(event);
       } catch (error) {
-        console.error(`[Skill] Event handler error for ${eventType}:`, error);
+        log.error(`[Skill] Event handler error for ${eventType}:`, error);
       }
     }
   }
@@ -133,7 +136,7 @@ export abstract class BaseSkill {
    */
   async cleanup(): Promise<void> {
     this.eventHandlers.clear();
-    console.log(`[Skill] Cleaned up: ${this.getManifest().id}`);
+    log.info(`[Skill] Cleaned up: ${this.getManifest().id}`);
   }
 
   /**

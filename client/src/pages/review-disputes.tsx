@@ -8,6 +8,7 @@
  * - Human always has final say
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +16,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Brain, CheckCircle2, XCircle, AlertTriangle, Sparkles, FileText, Clock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface Dispute {
   id: string;
@@ -60,7 +62,7 @@ export default function ReviewDisputes() {
       decision: string;
       notes: string;
     }) => {
-      const response = await fetch(`/api/disputes/${disputeId}/review`, {
+      const response = await secureFetch(`/api/disputes/${disputeId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ decision, reviewerNotes: notes }),
@@ -97,27 +99,24 @@ export default function ReviewDisputes() {
     });
   };
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'review-disputes',
+    title: 'Review Grievances',
+    subtitle: 'Review employee disputes with AI assistance',
+    category: 'operations',
+  };
+
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <CanvasHubPage config={pageConfig}>
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-96 w-full" />
-      </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <FileText className="w-8 h-8" />
-          Review Grievances
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Review employee disputes with AI assistance
-        </p>
-      </div>
+    <CanvasHubPage config={pageConfig}>
 
       {/* Disputes Table */}
       <Card>
@@ -129,6 +128,8 @@ export default function ReviewDisputes() {
         </CardHeader>
         <CardContent>
           {disputes && disputes.length > 0 ? (
+            <>
+            <div className="hidden sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -206,6 +207,57 @@ export default function ReviewDisputes() {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            <div className="sm:hidden space-y-3">
+              {disputes.map((dispute: any) => (
+                <div
+                  key={dispute.id}
+                  className="border rounded-lg p-3 space-y-2 hover-elevate cursor-pointer"
+                  onClick={() => setSelectedDispute(dispute)}
+                  data-testid={`card-dispute-mobile-${dispute.id}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium line-clamp-2">{dispute.title}</p>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <User className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{dispute.filedByName || 'Employee'}</span>
+                      </div>
+                    </div>
+                    {dispute.aiRecommendation ? (
+                      <Badge
+                        variant={
+                          dispute.aiRecommendation === 'approve' ? 'default' :
+                          dispute.aiRecommendation === 'reject' ? 'destructive' : 'secondary'
+                        }
+                        className="gap-1 shrink-0 text-[10px]"
+                      >
+                        <Brain className="w-3 h-3" />
+                        {dispute.aiRecommendation}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1 shrink-0 text-[10px]">
+                        <Sparkles className="w-3 h-3" />
+                        Pending
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="text-[10px]">{dispute.disputeType.replace('_', ' ')}</Badge>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {format(new Date(dispute.filedAt), 'MMM dd')}
+                      </span>
+                    </div>
+                    <Button size="sm" onClick={() => setSelectedDispute(dispute)} data-testid={`button-review-mobile-${dispute.id}`}>
+                      Review
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           ) : (
             <div className="text-center py-8">
               <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-2" />
@@ -218,17 +270,17 @@ export default function ReviewDisputes() {
       </Card>
 
       {/* Dispute Review Dialog */}
-      <Dialog open={!!selectedDispute} onOpenChange={() => setSelectedDispute(null)}>
-        <DialogContent size="full" className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <UniversalModal open={!!selectedDispute} onOpenChange={() => setSelectedDispute(null)}>
+        <UniversalModalContent size="full" className="max-h-[90vh] overflow-y-auto">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Review Grievance: {selectedDispute?.title}
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               Review employee grievance with AI assistance and make a decision
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
 
           {selectedDispute && (
             <div className="space-y-6">
@@ -394,7 +446,7 @@ export default function ReviewDisputes() {
             </div>
           )}
 
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button
               variant="outline"
               onClick={() => {
@@ -413,9 +465,9 @@ export default function ReviewDisputes() {
             >
               {reviewMutation.isPending ? 'Submitting...' : 'Submit Decision'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

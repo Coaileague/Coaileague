@@ -20,27 +20,35 @@
  * });
  */
 
+import { createLogger } from '../../lib/logger';
 import { GoogleGenerativeAI, GenerativeModel, GenerationConfig } from '@google/generative-ai';
 import { aiCreditGateway } from './aiCreditGateway';
 import { usageMeteringService } from './usageMetering';
 
+const log = createLogger('meteredGeminiClient');
 const apiKey = process.env.GEMINI_API_KEY || '';
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 export interface MeteredGenerateOptions {
   workspaceId: string;
-  userId?: string | null;
+  userId?: string;
   featureKey: string;
   prompt: string;
   systemInstruction?: string;
-  // Accept any string so callers can use newer Gemini model names without
-  // editing this union every time Google ships a model. Validated at runtime
-  // by the Google SDK.
-  model?: string;
+  model?: 'gemini-2.5-flash-lite' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-exp-1206';
   temperature?: number;
   maxOutputTokens?: number;
   metadata?: Record<string, any>;
+  /** When true, forces the model to return valid JSON (responseMimeType: application/json) */
+  jsonMode?: boolean;
 }
+
+// Model tier mapping for cost optimization
+export const GEMINI_MODEL_TIERS = {
+  FLASH: 'gemini-2.5-flash',           // Fast, cost-effective (5 credits)
+  PRO: 'gemini-2.5-pro',               // Advanced reasoning (15 credits)
+  EXPERIMENTAL: 'gemini-exp-1206',     // Gemini 3 experimental (20 credits)
+} as const;
 
 export interface MeteredGenerateResult {
   success: boolean;
@@ -64,7 +72,7 @@ class MeteredGeminiClient {
 
   private getModel(modelName: string, systemInstruction?: string): GenerativeModel | null {
     if (!genAI) {
-      console.warn('[MeteredGemini] Gemini API not configured');
+      log.warn('[MeteredGemini] Gemini API not configured');
       return null;
     }
 
@@ -88,40 +96,27 @@ class MeteredGeminiClient {
   async generate(options: MeteredGenerateOptions): Promise<MeteredGenerateResult> {
     const {
       workspaceId,
-      // Default userId to null (not "system") because ai_usage_events.user_id
-      // is a FK to users.id and the literal string "system" violates the
-      // constraint. Callers without a real user (system-internal calls) get
-      // null and the metering row is still recorded for billing.
-      userId = null,
+      userId = 'system',
       featureKey,
       prompt,
       systemInstruction,
-      // Default to gemini-2.5-flash. The previous default `gemini-1.5-flash`
-      // was deprecated and returns 404 from generativelanguage.googleapis.com.
       model = 'gemini-2.5-flash',
       temperature = 0.7,
       maxOutputTokens = 2048,
       metadata = {}
     } = options;
-    // Normalize empty/legacy "system" sentinel to null at this layer so we
-    // never pass it to recordUsage / preAuthorize.
-    const effectiveUserId = userId && userId !== 'system' ? userId : null;
 
-    console.log(`[MeteredGemini] Request: workspace=${workspaceId}, feature=${featureKey}`);
+    log.info(`[MeteredGemini] Request: workspace=${workspaceId}, feature=${featureKey}`);
 
     // Step 1: Pre-authorize the request
-    // preAuthorize/finalizeBilling expect a string userId for credit lookups;
-    // empty string is safe (no user matches '') and avoids the FK violation
-    // that would happen if we wrote 'system' into ai_usage_events.
-    const userIdForGateway = effectiveUserId ?? '';
     const authResult = await aiCreditGateway.preAuthorize(
       workspaceId,
-      userIdForGateway,
+      userId,
       featureKey
     );
 
     if (!authResult.authorized) {
-      console.warn(`[MeteredGemini] BLOCKED: ${authResult.reason}`);
+      log.warn(`[MeteredGemini] BLOCKED: ${authResult.reason}`);
       return {
         success: false,
         text: '',
@@ -155,13 +150,17 @@ class MeteredGeminiClient {
 
     // Step 3: Execute the AI call
     const startTime = Date.now();
+    const { jsonMode } = options;
     try {
       const generationConfig: GenerationConfig = {
         temperature,
         maxOutputTokens,
+        // NOTE: responseMimeType: 'application/json' was removed — SDK v0.24.1 causes
+        // truncated responses (only first ~7 tokens returned). JSON output is enforced
+        // via the system prompt instead. The parseAIResponse parser handles code fences.
       };
 
-      const result = await geminiModel.generateContent({
+      const result = await geminiModel.generateContent({ // withGemini
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig
       });
@@ -169,15 +168,15 @@ class MeteredGeminiClient {
       const response = result.response;
       const text = response.text();
       
-      // Estimate tokens (Gemini doesn't always return exact counts)
-      const inputTokens = Math.ceil(prompt.length / 4);
-      const outputTokens = Math.ceil(text.length / 4);
+      // Prefer actual token counts from API; fall back to character-length estimate
+      const inputTokens = response.usageMetadata?.promptTokenCount || Math.ceil(prompt.length / 4);
+      const outputTokens = response.usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
       const totalTokens = inputTokens + outputTokens;
 
       // Step 4: Finalize billing
       const billingResult = await aiCreditGateway.finalizeBilling(
         workspaceId,
-        userIdForGateway,
+        userId,
         featureKey,
         totalTokens,
         {
@@ -189,7 +188,21 @@ class MeteredGeminiClient {
         }
       );
 
-      console.log(`[MeteredGemini] SUCCESS: ${totalTokens} tokens, ${billingResult.creditsDeducted} credits charged`);
+      log.info(`[MeteredGemini] SUCCESS: ${totalTokens} tokens, ${billingResult.creditsDeducted} credits charged`);
+
+      if (workspaceId) {
+        import('./aiMeteringService').then(({ aiMeteringService }) => {
+          aiMeteringService.recordAiCall({
+            workspaceId: workspaceId!,
+            modelName: model,
+            callType: featureKey || 'gemini_metered',
+            inputTokens,
+            outputTokens,
+            triggeredByUserId: userId,
+            responseTimeMs: Date.now() - startTime,
+          });
+        }).catch(() => {});
+      }
 
       return {
         success: true,
@@ -208,18 +221,18 @@ class MeteredGeminiClient {
       };
 
     } catch (error: any) {
-      console.error(`[MeteredGemini] ERROR: ${error.message}`);
+      log.error(`[MeteredGemini] ERROR: ${(error instanceof Error ? error.message : String(error))}`);
       
       // Still record the attempt for audit
       await usageMeteringService.recordUsage({
         workspaceId,
-        userId: effectiveUserId,
+        userId,
         featureKey,
         usageType: 'api_call',
         usageAmount: 1,
         usageUnit: 'failed_call',
         metadata: {
-          error: error.message,
+          error: (error instanceof Error ? error.message : String(error)),
           model,
           durationMs: Date.now() - startTime
         }

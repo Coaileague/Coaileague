@@ -1,0 +1,428 @@
+This is the right question. Your manager is going to be the heaviest daily user — scheduling, timesheets, payroll approvals, incidents, shift coverage. If anything breaks for them it breaks operations. Copy everything below this line:
+
+---
+
+COAILEAGUE — MANAGER ONBOARDING READINESS VERIFICATION
+Before your manager touches this platform for the first time verify every
+single thing they will do on day one, day two, and every day after that.
+Read everything before testing. Test with real data. Fix anything that fails.
+Your manager cannot have a bad experience on day one.
+
+---
+
+WHAT YOUR MANAGER WILL DO EVERY SINGLE DAY — TEST ALL OF IT
+
+---
+
+DAY ONE MANAGER EXPERIENCE
+
+FIRST LOGIN:
+Log in as a manager-role user right now in a test workspace.
+Report exactly what they see on the dashboard.
+Is the manager command center view the landing page?
+It must show without any navigation:
+Today's shift coverage — which officers are on shift, who has clocked in, who has not.
+Pending actions — timesheets waiting for approval, incidents to review, documents to sign.
+Active alerts — any officer not clocked in for a shift that already started,
+any open call-offs, any compliance flags on their team.
+Trinity morning briefing summary — top 3 items from today's brief.
+If the manager lands on a blank dashboard or a generic page that is a day one failure.
+Fix the manager landing page to show all of the above immediately on login.
+
+MANAGER SEES THEIR TEAM ONLY:
+Confirm the manager only sees employees assigned to their supervision.
+If the workspace has 50 employees and the manager supervises 12
+they must see only their 12 in every view — scheduling, timesheets, payroll, compliance.
+If managers see all employees across the org that is a privacy and confusion issue.
+Confirm this scope is enforced in every query the manager view makes.
+
+---
+
+DAILY SCHEDULING WORKFLOW — TEST END TO END
+
+BUILD A WEEK SCHEDULE:
+Log in as manager and navigate to the schedule builder.
+Build a full week of shifts for a 5-officer team across 2 client sites.
+Confirm the schedule builder loads without delay on both desktop and mobile.
+Confirm conflicts are flagged in real time — if the same officer is scheduled
+for two overlapping shifts confirm the conflict appears before publishing.
+Confirm an officer cannot be scheduled during a period they have approved time off.
+Confirm an officer with an expired license cannot be scheduled.
+Confirm an officer who has not signed post orders for a site cannot be scheduled there.
+All three compliance gates must fire during schedule building — not after publishing.
+
+PUBLISH THE SCHEDULE:
+Click publish.
+Confirm every assigned officer receives an in-platform notification within 60 seconds.
+Confirm every assigned officer receives a schedule email with their individual shifts.
+Confirm the email shows only their shifts — no other officer's information.
+Confirm the schedule is locked from further edits after publishing
+or confirm the manager receives a warning before editing a published schedule.
+
+SCHEDULE CHANGES AFTER PUBLISHING:
+Change one shift after the schedule is published.
+Confirm the affected officer receives a change notification immediately.
+Confirm the original shift notification is not duplicated — only the change is sent.
+If the manager removes an officer from a shift confirm the officer is notified of removal.
+
+TRINITY SCHEDULE ASSISTANCE:
+Ask Trinity: "who is available to cover Saturday night at Lone Star?"
+Confirm Trinity returns a real list of available officers based on:
+Who is not already scheduled that shift.
+Who has an active license.
+Who has signed post orders for that site.
+Who has not exceeded overtime threshold for the week.
+The list must be ranked by suitability — not random.
+If Trinity returns a generic answer without real officer names that is a failure.
+
+---
+
+DAILY CLOCK-IN MONITORING — TEST END TO END
+
+LIVE CLOCK-IN DASHBOARD:
+Manager is watching the dashboard at shift start time.
+One officer clocks in via GPS.
+Confirm the manager dashboard updates within 2 seconds without a page refresh.
+The update must show: officer name, site, clock-in time, GPS confirmation status.
+
+MISSED CLOCK-IN ALERT:
+Create a shift that starts right now and do not clock in.
+Wait 15 minutes after shift start time.
+Confirm Trinity fires a missed clock-in alert to the manager.
+The alert must include: officer name, site, scheduled start time, how many minutes late.
+Confirm the alert comes via in-platform notification AND email.
+Confirm Trinity also suggests the manager use ClockBot for a supervised override.
+
+NCNS — NO CALL NO SHOW:
+If the missed clock-in alert is not acknowledged after 30 minutes
+confirm Trinity escalates to NCNS status.
+Confirm Trinity automatically begins the coverage pipeline:
+Scanning for available replacement officers.
+Sending broadcast emails to qualified officers.
+Alerting the manager with a ranked replacement list.
+Confirm this entire sequence fires without the manager having to initiate it.
+
+---
+
+CALL-OFF MANAGEMENT — TEST END TO END
+
+OFFICER SUBMITS CALL-OFF:
+Have a test officer submit a call-off for a shift starting in 2 hours.
+Confirm the manager receives an immediate notification with:
+Officer name, shift date, site, time, reason if provided.
+Trinity's top 3 replacement candidates ranked by availability and qualifications.
+A one-tap assign button for each candidate.
+
+MANAGER ASSIGNS REPLACEMENT:
+Manager taps assign next to the top candidate.
+Confirm the replacement officer receives a notification immediately.
+Confirm the replacement officer receives an email with shift details and an accept link.
+Confirm when the replacement accepts the shift is updated and the manager is notified.
+Confirm the original officer's call-off is logged in the audit trail with timestamp and reason.
+
+TRINITY HANDLES NO AVAILABLE REPLACEMENT:
+If no qualified officer is available confirm Trinity tells the manager explicitly:
+"No available qualified officers found for this shift. Here are your options:"
+And presents: contact an officer directly, post to a staffing agency, contact org_owner.
+Trinity must not silently fail when no replacement is found.
+
+---
+
+TIMESHEET MANAGEMENT — TEST END TO END
+
+TIMESHEET AUTO-GENERATION:
+After officers have clocked in and out for a week advance the pay period.
+Confirm timesheets auto-generate for every officer with approved time entries.
+Confirm each timesheet shows: officer name, each shift with date and hours,
+total hours for the period, any GPS-disabled entries flagged with a warning.
+
+MANAGER APPROVAL FLOW:
+Manager sees the pending approvals on their dashboard.
+Manager opens one timesheet and reviews it.
+Confirm the manager can see the individual clock-in and clock-out times per shift.
+Confirm the manager can see GPS verification status per entry.
+Confirm the manager can add a note before approving.
+Confirm the manager can reject a specific entry and send it back to the officer with a reason.
+Confirm when the manager approves a timesheet the officer is notified.
+Confirm the approved timesheet is locked from further edits.
+
+TIMESHEET APPROVAL DEADLINE:
+48 hours before the payroll run needs to process confirm Trinity sends
+the manager a reminder listing every pending timesheet by officer name.
+The reminder must include a direct link to the approval queue.
+Confirm this reminder fires automatically — manager does not have to request it.
+
+---
+
+INCIDENT MANAGEMENT — TEST END TO END
+
+INCIDENT FROM SHIFT ROOM:
+An officer posts an incident in their shift room.
+Confirm the manager receives a notification within 30 seconds.
+The notification must include: officer name, site, time, and a preview of the incident message.
+Confirm the manager can click directly to the shift room from the notification.
+Confirm the incident appears in the compliance dashboard under that site.
+
+INCIDENT REPORT FORM — STANDALONE:
+Manager can also create an incident report manually from the dashboard.
+Confirm the standalone incident report form exists and is accessible.
+Confirm it captures: date, time, site, officer, incident type, description,
+parties involved, actions taken, emergency services contacted yes or no,
+follow-up required yes or no.
+Confirm the completed report is saved to the document safe under Incidents.
+Confirm the org_owner receives a notification when an incident report is submitted.
+
+INCIDENT REPORT TO CLIENT:
+Manager can send the incident report to the client contact.
+Confirm the send to client button exists on the incident report.
+Confirm the email uses Track B branding — client sees security company name, not CoAIleague.
+Confirm the sent report is logged in the audit trail with who sent it and when.
+
+---
+
+COMPLIANCE MONITORING — TEST END TO END
+
+MANAGER COMPLIANCE VIEW:
+Manager navigates to the compliance section.
+Confirm they see every officer on their team with:
+License status — active, expiring in X days, or expired.
+Certification status — First Aid, CPR, Firearms if applicable.
+Onboarding status — complete or pending with which documents are missing.
+Post orders acknowledgment status per site.
+This view must load with real data — not placeholder or empty states.
+
+LICENSE EXPIRY NOTIFICATION:
+Set one officer's license to expire in 28 days.
+Confirm the manager sees a 30-day warning on that officer's compliance card.
+Confirm the officer received a notification.
+Confirm the officer appears in Trinity's morning briefing compliance section.
+
+SCHEDULING GATE ENFORCEMENT:
+Attempt to schedule the officer with the 28-day expiry for a shift on day 29.
+The officer is still eligible at 28 days — the hard block is on expiration date.
+Confirm Trinity allows the scheduling but flags it with a warning:
+"This officer's license expires before this shift date."
+The manager must see this warning and consciously confirm the assignment.
+Auto-confirm without the manager seeing the warning is a compliance risk.
+
+---
+
+DOCUMENT MANAGEMENT — TEST END TO END
+
+MANAGER DOCUMENT VISIBILITY:
+Manager navigates to the document section.
+Confirm they can see:
+All executed onboarding documents for officers on their team.
+Status summaries — which documents are pending signature.
+Post orders for their assigned sites.
+Incident reports.
+Shift reports generated by ReportBot.
+Meeting summaries.
+Confirm they CANNOT see:
+Billing records, invoices, payroll details, credit balances.
+Documents belonging to officers outside their supervision.
+
+SEND DOCUMENT FOR SIGNATURE:
+Manager creates a disciplinary action form for one officer.
+Confirm the document is generated with the officer's data pre-populated.
+Confirm the manager signs first.
+Confirm the officer receives a Sign Now notification and email.
+Confirm the officer cannot sign until the manager has signed.
+Confirm after both sign the document is saved to both document safes.
+Confirm the officer receives a copy in their personal portal.
+
+POST ORDERS SEND AND ACKNOWLEDGMENT:
+Manager creates post orders for a new client site.
+Confirm Trinity automatically sends post orders to all officers assigned to that site.
+Confirm each officer receives a notification and email with a Sign Now button.
+Confirm the manager can see who has signed and who has not.
+Confirm Trinity blocks scheduling at that site for officers who have not signed.
+
+---
+
+TRINITY AS MANAGER'S CO-PILOT — TEST ALL INTELLIGENCE LAYERS
+
+Ask Trinity these questions as a manager and verify every response uses real data:
+
+"What shifts do I have uncovered this week?"
+Trinity must return actual unassigned shifts for the current week with site and time.
+
+"Which of my officers are at risk of overtime?"
+Trinity must calculate actual hours for each officer this week and rank by proximity to 40.
+
+"I have three timesheets to approve — walk me through them."
+Trinity must retrieve the actual three pending timesheets and present each one with hours.
+
+"One of my officers just called off for tonight. What are my options?"
+Trinity must retrieve the actual open shift, scan actual available officers,
+and present a ranked list with names and why each is recommended.
+
+"Generate a shift report for last night at Lone Star."
+Trinity must retrieve the actual shift room data from last night at Lone Star
+and either present the ReportBot-generated report or compile one from the room data.
+
+"Do any of my officers have licenses expiring this month?"
+Trinity must query the actual certification records and return the real list.
+
+"What incidents were reported at my sites this week?"
+Trinity must retrieve actual incident records from the compliance system.
+
+Every single response must contain real data from the database.
+If any response is generic or uses placeholder data that is a Trinity failure.
+Fix the specific data query that is not returning real information.
+
+---
+
+MOBILE EXPERIENCE FOR MANAGER — TEST ON ACTUAL DEVICE
+
+Managers often approve timesheets and check shift coverage from their phone.
+
+MOBILE DASHBOARD:
+Open the platform on a mobile device at 375px.
+Confirm the manager dashboard loads correctly on mobile.
+Confirm today's coverage is visible without horizontal scrolling.
+Confirm pending approvals are tappable and load the timesheet correctly.
+Confirm Trinity is accessible from mobile and responds to questions.
+
+MOBILE TIMESHEET APPROVAL:
+Open a pending timesheet on mobile.
+Confirm all the information is readable without zooming.
+Confirm the approve and reject buttons are minimum 44px height and tappable.
+Confirm the approval action completes and the officer is notified.
+
+MOBILE ALERT RESPONSE:
+Receive a missed clock-in alert on mobile.
+Confirm the notification deep links directly to the shift and officer record.
+Confirm the manager can take action — use ClockBot or call officer — from the mobile alert.
+
+---
+
+NOTIFICATION SETTINGS AND PREFERENCES
+
+MANAGER NOTIFICATION CONTROL:
+Confirm the manager can configure which notifications they receive.
+At minimum they must be able to set preferences for:
+Missed clock-in alerts — immediate versus batched.
+Call-off notifications — immediate always (this cannot be delayed).
+Timesheet approval reminders — daily digest or individual.
+Incident escalations — immediate always (this cannot be delayed).
+Compliance alerts — daily briefing or immediate.
+Confirm notification preferences persist across sessions and server restarts.
+
+DO NOT DISTURB:
+Can the manager set a do not disturb window (midnight to 6am for example)?
+If yes: confirm call-off and NCNS alerts still fire during DND — these are critical.
+Only non-urgent notifications should respect DND.
+Life-safety and coverage gaps must always get through.
+
+---
+
+EDGE CASES YOUR MANAGER WILL HIT IN WEEK ONE
+
+EDGE CASE 1 — OFFICER CLOCKS IN FROM WRONG LOCATION:
+Officer clocks in but GPS shows them outside the site geofence.
+Confirm the clock-in is rejected and the officer sees a clear message.
+Confirm the manager sees a failed clock-in attempt in their dashboard.
+Confirm the manager can use ClockBot to create a supervised override if the
+officer is actually on site and having a GPS issue.
+
+EDGE CASE 2 — SCHEDULE PUBLISHED WITH AN ERROR:
+Manager publishes a schedule then realizes an officer is double-booked.
+Confirm the manager can edit the published schedule.
+Confirm only the affected officers receive a change notification — not the entire team.
+Confirm the correction is logged in the audit trail.
+
+EDGE CASE 3 — OFFICER CLOCKED IN BUT SITE WRONG:
+Officer clocks in at the right time but at the wrong site.
+Confirm the time entry is created but flagged with a site mismatch warning.
+Confirm the manager can correct the site on the time entry before timesheet approval.
+Confirm the correction is logged in the audit trail with who made it and when.
+
+EDGE CASE 4 — TIMESHEET DISPUTE:
+Officer disputes the hours on their approved timesheet.
+Confirm there is a dispute mechanism — officer can flag a timesheet and add a note.
+Confirm the manager is notified of the dispute.
+Confirm the manager can unlock and correct the timesheet with an audit trail entry.
+The correction must preserve the original values and show what was changed.
+
+EDGE CASE 5 — MANAGER LEAVES MID-SHIFT:
+Manager is reviewing shift coverage and their session expires.
+Confirm they are redirected to login and return to the same view after logging back in.
+Confirm no data was lost or corrupted during the session break.
+
+EDGE CASE 6 — DUPLICATE SHIFT ASSIGNMENT:
+Manager accidentally assigns the same officer to two simultaneous shifts.
+Confirm the conflict detection catches this before the schedule is saved.
+The conflict must be flagged at the time of assignment — not at clock-in.
+
+---
+
+FINAL MANAGER READINESS REPORT
+
+After all tests above complete produce this report:
+
+MANAGER DASHBOARD:
+Landing page shows command center view: yes or no.
+Today's coverage visible without navigation: yes or no.
+Pending actions visible without navigation: yes or no.
+Active alerts visible without navigation: yes or no.
+
+SCHEDULING:
+Conflict detection fires before publishing: yes or no.
+Compliance gates fire during scheduling: yes or no.
+Officers notified within 60 seconds of publish: yes or no.
+Trinity returns real officer recommendations: yes or no.
+
+CLOCK-IN MONITORING:
+Dashboard updates within 2 seconds of clock-in: yes or no.
+Missed clock-in alert fires at 15 minutes: yes or no.
+NCNS coverage pipeline fires at 30 minutes: yes or no.
+ClockBot available for supervised override: yes or no.
+
+CALL-OFF MANAGEMENT:
+Manager notified immediately on call-off: yes or no.
+Trinity replacement candidates surfaced automatically: yes or no.
+Broadcast emails fire to qualified officers: yes or no.
+No available replacement — explicit message not silent failure: yes or no.
+
+TIMESHEET MANAGEMENT:
+Timesheets auto-generate from clock records: yes or no.
+Manager can approve reject and add notes: yes or no.
+Approval reminder fires 48 hours before payroll: yes or no.
+Approved timesheets are WORM locked: yes or no.
+
+INCIDENT MANAGEMENT:
+Shift room incident escalation within 30 seconds: yes or no.
+Standalone incident form exists and saves correctly: yes or no.
+Send to client with Track B branding works: yes or no.
+
+COMPLIANCE:
+License expiry visible on officer cards: yes or no.
+Scheduling gate fires on license expiry date: yes or no.
+Pre-expiry warning on shift date conflict: yes or no.
+
+DOCUMENT MANAGEMENT:
+Manager sees correct scoped documents: yes or no.
+Post orders auto-send to assigned officers: yes or no.
+Scheduling blocked until post orders signed: yes or no.
+
+TRINITY CO-PILOT:
+All 7 real-data questions return real data: yes or no — list any that failed.
+
+MOBILE EXPERIENCE:
+Dashboard loads correctly at 375px: yes or no.
+Timesheet approval works on mobile: yes or no.
+Alert deep links work on mobile: yes or no.
+
+EDGE CASES:
+List each edge case as handled or gap.
+
+ANY REMAINING GAPS:
+List in priority order. These get fixed before your manager starts.
+
+MANAGER READINESS VERDICT:
+READY — your manager can start using the platform today with no issues.
+NOT READY — exact list of what must be fixed first.
+
+Your manager's first experience sets the tone for everything.
+It must be flawless.

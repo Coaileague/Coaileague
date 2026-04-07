@@ -1,0 +1,1248 @@
+Paste this into Replit Agent:
+
+---
+
+```
+STRIPE FULL SYNC + PRICING VERIFICATION SPRINT
+ZERO TOLERANCE FOR MISMATCHED PRICES
+
+PRIME DIRECTIVE:
+Every price displayed on the platform must
+match every price in Stripe must match every
+price in the platform config must match every
+price in the billing middleware must match
+every price in the feature gating logic.
+
+One source of truth. Everything synced.
+No exceptions. No approximations.
+Exact cent-level match across all systems.
+
+DO NOT STOP until every system agrees
+on every number simultaneously.
+
+═══════════════════════════════════════════════
+PHASE 0 — FULL AUDIT BEFORE TOUCHING ANYTHING
+═══════════════════════════════════════════════
+
+Read and document every price reference
+in every location before changing anything.
+
+Find and list every price that appears in:
+
+1. Platform pricing config file(s)
+   List every tier, every price, every fee
+
+2. Stripe dashboard / existing products
+   List every product name and ID
+   List every price name, ID, and amount
+   List every metered price and unit amount
+   Flag any archived or inactive products
+
+3. Pricing page UI component
+   List every number displayed
+
+4. Features page UI component
+   List every price or fee mentioned
+
+5. ROI calculator
+   List every rate used in calculations
+
+6. Billing middleware
+   List every fee rate used for metering
+
+7. Feature gating middleware
+   List every tier name and limit
+
+8. Webhook handlers
+   List every price ID referenced
+
+9. Subscription creation code
+   List every price ID used
+
+10. Any other file with a dollar amount,
+    percentage rate, or per-unit fee
+
+Present a complete price inventory table:
+Location | Current Value | Should Be
+(fill in current values from audit)
+(fill in should-be from master list below)
+
+Flag every mismatch before touching anything.
+Count total mismatches.
+Report: X locations audited, Y mismatches found.
+
+Then fix all mismatches in order.
+
+═══════════════════════════════════════════════
+MASTER PRICE LIST — SINGLE SOURCE OF TRUTH
+This is the authoritative price for every
+number in the entire platform.
+Every system must match this exactly.
+═══════════════════════════════════════════════
+
+───────────────────────────────────────────────
+FREE TRIAL
+───────────────────────────────────────────────
+Duration: 14 days
+Base price: $0.00
+Seats included: 10
+Sites included: 2
+Clients included: 3
+Interaction cap: 500 (total for trial period)
+Hard cap: 500 (same as cap — no overages in trial)
+Per seat overage: NOT AVAILABLE (blocked)
+Per site overage: NOT AVAILABLE (blocked)
+Per interaction overage: NOT AVAILABLE (blocked)
+Auto-upgrade on expiry: NO (account pauses)
+Credit card required to start: NO
+
+───────────────────────────────────────────────
+STARTER TIER
+───────────────────────────────────────────────
+Base monthly price: $199.00
+Base annual price: $1,990.00
+  (10 months price — 2 months free)
+Seats included: 10
+Sites included: 3
+Clients included: 5
+Interactions included monthly: 5,000
+Hard cap monthly: 8,000
+Per seat overage monthly: $20.00/seat
+Per site overage monthly: $49.00/site
+Per interaction overage: $0.15/interaction
+  (billed monthly in arrears above hard cap)
+
+Payroll fees: NOT AVAILABLE on Starter
+Invoicing fees: NOT AVAILABLE on Starter
+Voice system: NOT AVAILABLE on Starter
+API access: NOT AVAILABLE on Starter
+
+───────────────────────────────────────────────
+PROFESSIONAL TIER
+───────────────────────────────────────────────
+Base monthly price: $749.00
+Base annual price: $7,490.00
+  (10 months price — 2 months free)
+Seats included: 30
+Sites included: 10
+Clients included: 20
+Interactions included monthly: 20,000
+Hard cap monthly: 35,000
+Per seat overage monthly: $25.00/seat
+Per site overage monthly: $49.00/site
+Per interaction overage: $0.12/interaction
+
+Payroll service fees:
+  Per employee per payroll run: $2.50
+  Direct deposit per transaction: $0.25
+  Quarterly tax filing per filing: $49.00
+  Year-end W2 or 1099 per form: $5.00
+
+Invoicing and payment collection fees:
+  Card payment rate: 2.4%
+  Card payment flat fee: $0.25/transaction
+  ACH bank transfer: $0.50/transaction
+
+───────────────────────────────────────────────
+BUSINESS TIER
+───────────────────────────────────────────────
+Base monthly price: $2,249.00
+Base annual price: $22,490.00
+  (10 months price — 2 months free)
+Seats included: 75
+Sites included: 25
+Clients included: unlimited
+Interactions included monthly: 60,000
+Hard cap monthly: 120,000
+Per seat overage monthly: $30.00/seat
+Per site overage monthly: $39.00/site
+Per interaction overage: $0.10/interaction
+
+Payroll service fees:
+  Per employee per payroll run: $1.75
+  Direct deposit per transaction: $0.20
+  Quarterly tax filing per filing: $39.00
+  Year-end W2 or 1099 per form: $4.00
+
+Invoicing and payment collection fees:
+  Card payment rate: 2.2%
+  Card payment flat fee: $0.20/transaction
+  ACH bank transfer: $0.40/transaction
+
+───────────────────────────────────────────────
+ENTERPRISE TIER
+───────────────────────────────────────────────
+Base monthly price: $6,999.00
+Base annual price: $69,990.00
+  (10 months price — 2 months free)
+Seats included: 200
+Sites included: 75
+Clients included: unlimited
+Interactions included monthly: 200,000
+Hard cap monthly: 400,000
+Per seat overage monthly: $35.00/seat
+Per site overage monthly: $29.00/site
+Per interaction overage: $0.08/interaction
+Emergency event flat fee: $1,000.00/event
+
+Payroll service fees:
+  Per employee per payroll run: $1.50
+  Direct deposit per transaction: $0.15
+  Quarterly tax filing per filing: $29.00
+  Year-end W2 or 1099 per form: $3.00
+
+Invoicing and payment collection fees:
+  Card payment rate: 2.0%
+  Card payment flat fee: $0.15/transaction
+  ACH bank transfer: $0.30/transaction
+
+───────────────────────────────────────────────
+STRATEGIC TIER
+───────────────────────────────────────────────
+Published price: NONE — contact required
+Minimum monthly: $15,000.00
+Officers 300-1,000: $45.00/seat/month
+Officers 1,001-5,000: $55.00/seat/month
+Officers 5,001+: $65.00/seat/month
+Emergency event flat fee: $2,500.00/event
+Hard cap: custom per contract
+Interaction overage: custom per contract
+All payroll and invoicing fees: custom
+
+═══════════════════════════════════════════════
+PHASE 1 — STRIPE PRODUCT AND PRICE REBUILD
+═══════════════════════════════════════════════
+
+Step 1: Archive all existing Stripe products
+that do not match the new structure.
+List every product being archived with its ID.
+Confirm archiving does not cancel any active
+subscriptions — check for active subscribers
+before archiving anything.
+If active subscribers exist on old products:
+  Migrate them to equivalent new product first
+  Then archive old product
+  Document every migration
+
+Step 2: Create new Stripe products exactly
+as specified below.
+Store every product ID and price ID created
+in platform config for reference.
+
+────────────────────────────────────────────
+STRIPE PRODUCT: CoAIleague Free Trial
+────────────────────────────────────────────
+Product name: CoAIleague Free Trial
+Product description: 14-day full platform
+  access for up to 10 seats
+Metadata:
+  tier: trial
+  seats_included: 10
+  duration_days: 14
+
+Prices to create:
+trial_free:
+  Amount: $0.00
+  Billing: one-time or 14-day subscription
+  Trial period: 14 days
+  Cancel behavior: pause account on expiry
+  No automatic upgrade
+  No automatic charge
+
+────────────────────────────────────────────
+STRIPE PRODUCT: CoAIleague Starter
+────────────────────────────────────────────
+Product name: CoAIleague Starter
+Product description: AI-powered security
+  workforce management — up to 10 seats
+Metadata:
+  tier: starter
+  seats_included: 10
+  sites_included: 3
+  interactions_monthly: 5000
+  hard_cap: 8000
+
+Prices to create:
+
+starter_monthly:
+  Amount: $199.00
+  Currency: USD
+  Interval: month
+  Billing: recurring
+
+starter_annual:
+  Amount: $1,990.00
+  Currency: USD
+  Interval: year
+  Billing: recurring
+
+starter_seat_overage:
+  Amount: $20.00
+  Currency: USD
+  Interval: month
+  Billing: recurring metered
+  Meter: per seat above 10
+  Aggregate: max (peak seats in period)
+  Metadata: fee_type: seat_overage, tier: starter
+
+starter_site_overage:
+  Amount: $49.00
+  Currency: USD
+  Interval: month
+  Billing: recurring metered
+  Meter: per site above 3
+  Aggregate: max
+  Metadata: fee_type: site_overage, tier: starter
+
+starter_interaction_overage:
+  Amount: $0.15
+  Currency: USD
+  Billing: metered monthly in arrears
+  Meter: per interaction above 8000
+  Aggregate: sum
+  Metadata: fee_type: interaction_overage,
+    tier: starter
+
+────────────────────────────────────────────
+STRIPE PRODUCT: CoAIleague Professional
+────────────────────────────────────────────
+Product name: CoAIleague Professional
+Product description: Full AI operations
+  platform — up to 30 seats
+Metadata:
+  tier: professional
+  seats_included: 30
+  sites_included: 10
+  interactions_monthly: 20000
+  hard_cap: 35000
+
+Prices to create:
+
+professional_monthly:
+  Amount: $749.00
+  Interval: month
+  Billing: recurring
+
+professional_annual:
+  Amount: $7,490.00
+  Interval: year
+  Billing: recurring
+
+professional_seat_overage:
+  Amount: $25.00
+  Interval: month
+  Billing: metered
+  Meter: per seat above 30
+  Aggregate: max
+  Metadata: fee_type: seat_overage,
+    tier: professional
+
+professional_site_overage:
+  Amount: $49.00
+  Interval: month
+  Billing: metered
+  Meter: per site above 10
+  Aggregate: max
+  Metadata: fee_type: site_overage,
+    tier: professional
+
+professional_interaction_overage:
+  Amount: $0.12
+  Billing: metered monthly in arrears
+  Meter: per interaction above 35000
+  Aggregate: sum
+  Metadata: fee_type: interaction_overage,
+    tier: professional
+
+professional_payroll_per_employee:
+  Amount: $2.50
+  Billing: metered monthly in arrears
+  Meter: per employee per payroll run
+  Aggregate: sum
+  Metadata: fee_type: payroll_per_employee,
+    tier: professional
+
+professional_direct_deposit:
+  Amount: $0.25
+  Billing: metered monthly in arrears
+  Meter: per direct deposit transaction
+  Aggregate: sum
+  Metadata: fee_type: direct_deposit,
+    tier: professional
+
+professional_tax_filing:
+  Amount: $49.00
+  Billing: metered monthly in arrears
+  Meter: per quarterly filing
+  Aggregate: sum
+  Metadata: fee_type: tax_filing,
+    tier: professional
+
+professional_year_end_form:
+  Amount: $5.00
+  Billing: metered monthly in arrears
+  Meter: per W2 or 1099 form
+  Aggregate: sum
+  Metadata: fee_type: year_end_form,
+    tier: professional
+
+professional_ach_collection:
+  Amount: $0.50
+  Billing: metered monthly in arrears
+  Meter: per ACH payment collected
+  Aggregate: sum
+  Metadata: fee_type: ach_collection,
+    tier: professional
+
+────────────────────────────────────────────
+STRIPE PRODUCT: CoAIleague Business
+────────────────────────────────────────────
+Product name: CoAIleague Business
+Product description: Advanced AI operations
+  for established companies — up to 75 seats
+Metadata:
+  tier: business
+  seats_included: 75
+  sites_included: 25
+  interactions_monthly: 60000
+  hard_cap: 120000
+
+Prices to create:
+
+business_monthly:
+  Amount: $2,249.00
+  Interval: month
+  Billing: recurring
+
+business_annual:
+  Amount: $22,490.00
+  Interval: year
+  Billing: recurring
+
+business_seat_overage:
+  Amount: $30.00
+  Interval: month
+  Billing: metered
+  Meter: per seat above 75
+  Aggregate: max
+  Metadata: fee_type: seat_overage,
+    tier: business
+
+business_site_overage:
+  Amount: $39.00
+  Interval: month
+  Billing: metered
+  Meter: per site above 25
+  Aggregate: max
+  Metadata: fee_type: site_overage,
+    tier: business
+
+business_interaction_overage:
+  Amount: $0.10
+  Billing: metered monthly in arrears
+  Meter: per interaction above 120000
+  Aggregate: sum
+  Metadata: fee_type: interaction_overage,
+    tier: business
+
+business_payroll_per_employee:
+  Amount: $1.75
+  Billing: metered
+  Meter: per employee per payroll run
+  Aggregate: sum
+  Metadata: fee_type: payroll_per_employee,
+    tier: business
+
+business_direct_deposit:
+  Amount: $0.20
+  Billing: metered
+  Meter: per direct deposit transaction
+  Aggregate: sum
+  Metadata: fee_type: direct_deposit,
+    tier: business
+
+business_tax_filing:
+  Amount: $39.00
+  Billing: metered
+  Meter: per quarterly filing
+  Aggregate: sum
+  Metadata: fee_type: tax_filing,
+    tier: business
+
+business_year_end_form:
+  Amount: $4.00
+  Billing: metered
+  Meter: per W2 or 1099 form
+  Aggregate: sum
+  Metadata: fee_type: year_end_form,
+    tier: business
+
+business_ach_collection:
+  Amount: $0.40
+  Billing: metered
+  Meter: per ACH payment collected
+  Aggregate: sum
+  Metadata: fee_type: ach_collection,
+    tier: business
+
+────────────────────────────────────────────
+STRIPE PRODUCT: CoAIleague Enterprise
+────────────────────────────────────────────
+Product name: CoAIleague Enterprise
+Product description: Maximum Trinity AI
+  for large security operations — up to 200 seats
+Metadata:
+  tier: enterprise
+  seats_included: 200
+  sites_included: 75
+  interactions_monthly: 200000
+  hard_cap: 400000
+
+Prices to create:
+
+enterprise_monthly:
+  Amount: $6,999.00
+  Interval: month
+  Billing: recurring
+
+enterprise_annual:
+  Amount: $69,990.00
+  Interval: year
+  Billing: recurring
+
+enterprise_seat_overage:
+  Amount: $35.00
+  Interval: month
+  Billing: metered
+  Meter: per seat above 200
+  Aggregate: max
+  Metadata: fee_type: seat_overage,
+    tier: enterprise
+
+enterprise_site_overage:
+  Amount: $29.00
+  Interval: month
+  Billing: metered
+  Meter: per site above 75
+  Aggregate: max
+  Metadata: fee_type: site_overage,
+    tier: enterprise
+
+enterprise_interaction_overage:
+  Amount: $0.08
+  Billing: metered monthly in arrears
+  Meter: per interaction above 400000
+  Aggregate: sum
+  Metadata: fee_type: interaction_overage,
+    tier: enterprise
+
+enterprise_emergency_event:
+  Amount: $1,000.00
+  Billing: metered monthly in arrears
+  Meter: per declared emergency event
+  Aggregate: sum
+  Metadata: fee_type: emergency_event,
+    tier: enterprise
+
+enterprise_payroll_per_employee:
+  Amount: $1.50
+  Billing: metered
+  Meter: per employee per payroll run
+  Aggregate: sum
+  Metadata: fee_type: payroll_per_employee,
+    tier: enterprise
+
+enterprise_direct_deposit:
+  Amount: $0.15
+  Billing: metered
+  Meter: per direct deposit transaction
+  Aggregate: sum
+  Metadata: fee_type: direct_deposit,
+    tier: enterprise
+
+enterprise_tax_filing:
+  Amount: $29.00
+  Billing: metered
+  Meter: per quarterly filing
+  Aggregate: sum
+  Metadata: fee_type: tax_filing,
+    tier: enterprise
+
+enterprise_year_end_form:
+  Amount: $3.00
+  Billing: metered
+  Meter: per W2 or 1099 form
+  Aggregate: sum
+  Metadata: fee_type: year_end_form,
+    tier: enterprise
+
+enterprise_ach_collection:
+  Amount: $0.30
+  Billing: metered
+  Meter: per ACH payment collected
+  Aggregate: sum
+  Metadata: fee_type: ach_collection,
+    tier: enterprise
+
+────────────────────────────────────────────
+STRIPE PRODUCT: CoAIleague Strategic
+────────────────────────────────────────────
+Product name: CoAIleague Strategic
+Product description: Custom enterprise
+  solution for national security operations
+Metadata:
+  tier: strategic
+  contact_required: true
+  minimum_monthly: 15000
+  no_public_price: true
+
+Prices to create:
+No public prices — all pricing custom per contract
+
+strategic_emergency_event:
+  Amount: $2,500.00
+  Billing: metered monthly in arrears
+  Meter: per declared emergency event
+  Aggregate: sum
+  Metadata: fee_type: emergency_event,
+    tier: strategic
+
+Note: All other Strategic prices created
+as custom one-off items per contract negotiation.
+Strategic subscriptions created manually
+by CoAIleague team — not via checkout flow.
+
+═══════════════════════════════════════════════
+PHASE 2 — PLATFORM CONFIG SYNC
+═══════════════════════════════════════════════
+
+After Stripe products are created, update
+platform pricing config to match exactly.
+
+Store in platform config:
+1. Every Stripe product ID
+2. Every Stripe price ID
+3. Every tier limit (seats, sites, interactions)
+4. Every overage rate
+5. Every payroll fee rate
+6. Every invoicing fee rate
+
+Config structure required:
+
+pricing_config:
+  trial:
+    stripe_product_id: [created ID]
+    stripe_price_id: [trial_free ID]
+    seats_included: 10
+    sites_included: 2
+    interactions_cap: 500
+    duration_days: 14
+
+  starter:
+    stripe_product_id: [created ID]
+    stripe_price_monthly_id: [ID]
+    stripe_price_annual_id: [ID]
+    stripe_seat_overage_price_id: [ID]
+    stripe_site_overage_price_id: [ID]
+    stripe_interaction_overage_price_id: [ID]
+    base_monthly_cents: 19900
+    base_annual_cents: 199000
+    seats_included: 10
+    sites_included: 3
+    clients_included: 5
+    interactions_monthly: 5000
+    hard_cap: 8000
+    seat_overage_cents: 2000
+    site_overage_cents: 4900
+    interaction_overage_cents: 15
+
+  professional:
+    stripe_product_id: [created ID]
+    stripe_price_monthly_id: [ID]
+    stripe_price_annual_id: [ID]
+    stripe_seat_overage_price_id: [ID]
+    stripe_site_overage_price_id: [ID]
+    stripe_interaction_overage_price_id: [ID]
+    stripe_payroll_per_employee_price_id: [ID]
+    stripe_direct_deposit_price_id: [ID]
+    stripe_tax_filing_price_id: [ID]
+    stripe_year_end_form_price_id: [ID]
+    stripe_ach_collection_price_id: [ID]
+    base_monthly_cents: 74900
+    base_annual_cents: 749000
+    seats_included: 30
+    sites_included: 10
+    clients_included: 20
+    interactions_monthly: 20000
+    hard_cap: 35000
+    seat_overage_cents: 2500
+    site_overage_cents: 4900
+    interaction_overage_cents: 12
+    payroll_per_employee_cents: 250
+    direct_deposit_cents: 25
+    tax_filing_cents: 4900
+    year_end_form_cents: 500
+    ach_collection_cents: 50
+    card_rate_basis_points: 240
+    card_flat_cents: 25
+
+  business:
+    stripe_product_id: [created ID]
+    stripe_price_monthly_id: [ID]
+    stripe_price_annual_id: [ID]
+    stripe_seat_overage_price_id: [ID]
+    stripe_site_overage_price_id: [ID]
+    stripe_interaction_overage_price_id: [ID]
+    stripe_payroll_per_employee_price_id: [ID]
+    stripe_direct_deposit_price_id: [ID]
+    stripe_tax_filing_price_id: [ID]
+    stripe_year_end_form_price_id: [ID]
+    stripe_ach_collection_price_id: [ID]
+    base_monthly_cents: 224900
+    base_annual_cents: 2249000
+    seats_included: 75
+    sites_included: 25
+    clients_included: unlimited
+    interactions_monthly: 60000
+    hard_cap: 120000
+    seat_overage_cents: 3000
+    site_overage_cents: 3900
+    interaction_overage_cents: 10
+    payroll_per_employee_cents: 175
+    direct_deposit_cents: 20
+    tax_filing_cents: 3900
+    year_end_form_cents: 400
+    ach_collection_cents: 40
+    card_rate_basis_points: 220
+    card_flat_cents: 20
+
+  enterprise:
+    stripe_product_id: [created ID]
+    stripe_price_monthly_id: [ID]
+    stripe_price_annual_id: [ID]
+    stripe_seat_overage_price_id: [ID]
+    stripe_site_overage_price_id: [ID]
+    stripe_interaction_overage_price_id: [ID]
+    stripe_emergency_event_price_id: [ID]
+    stripe_payroll_per_employee_price_id: [ID]
+    stripe_direct_deposit_price_id: [ID]
+    stripe_tax_filing_price_id: [ID]
+    stripe_year_end_form_price_id: [ID]
+    stripe_ach_collection_price_id: [ID]
+    base_monthly_cents: 699900
+    base_annual_cents: 6999000
+    seats_included: 200
+    sites_included: 75
+    clients_included: unlimited
+    interactions_monthly: 200000
+    hard_cap: 400000
+    seat_overage_cents: 3500
+    site_overage_cents: 2900
+    interaction_overage_cents: 8
+    emergency_event_cents: 100000
+    payroll_per_employee_cents: 150
+    direct_deposit_cents: 15
+    tax_filing_cents: 2900
+    year_end_form_cents: 300
+    ach_collection_cents: 30
+    card_rate_basis_points: 200
+    card_flat_cents: 15
+
+  strategic:
+    stripe_product_id: [created ID]
+    stripe_emergency_event_price_id: [ID]
+    contact_required: true
+    no_public_price: true
+    minimum_monthly_cents: 1500000
+    tier_300_to_1000_per_seat_cents: 4500
+    tier_1001_to_5000_per_seat_cents: 5500
+    tier_5001_plus_per_seat_cents: 6500
+    emergency_event_cents: 250000
+
+═══════════════════════════════════════════════
+PHASE 3 — BILLING MIDDLEWARE SYNC
+═══════════════════════════════════════════════
+
+Update all billing middleware to read
+fees EXCLUSIVELY from platform pricing config.
+No hardcoded dollar amounts anywhere in middleware.
+All rates must come from config lookup by tier.
+
+Verify and update these middleware functions:
+
+SeatCountingService:
+  Reads seat_overage_cents from config by tier
+  Reports overage to correct Stripe price ID
+    from config by tier
+  Verify: config lookup works for all 4 tiers
+
+SiteCountingService:
+  Reads site_overage_cents from config by tier
+  Reports to correct Stripe price ID from config
+  Verify: config lookup works for all 4 tiers
+
+InteractionCountingService:
+  Reads hard_cap from config by tier
+  Reads interaction_overage_cents from config
+  Reports to correct Stripe price ID from config
+  Verify: config lookup works for all 4 tiers
+
+PayrollMeteringService:
+  Reads payroll_per_employee_cents from config
+  Reads direct_deposit_cents from config
+  Reads tax_filing_cents from config
+  Reads year_end_form_cents from config
+  Reports to correct Stripe price IDs from config
+  Verify: only fires for Professional and above
+
+InvoicingMeteringService:
+  Reads ach_collection_cents from config
+  Reads card_rate_basis_points from config
+  Reads card_flat_cents from config
+  Reports to correct Stripe price IDs from config
+  Verify: only fires for Professional and above
+
+EmergencyEventService:
+  Reads emergency_event_cents from config
+  Reports to correct Stripe price ID from config
+  Verify: only fires for Enterprise and above
+
+All middleware:
+  Must check tier from workspace subscription
+  Must read ALL rates from config not hardcode
+  Must use Stripe price IDs from config
+  Must log every metered report:
+    workspace_id, tier, fee_type, quantity,
+    stripe_price_id, amount_cents, timestamp
+
+═══════════════════════════════════════════════
+PHASE 4 — WEBHOOK HANDLER SYNC
+═══════════════════════════════════════════════
+
+Update all Stripe webhook handlers to use
+price IDs from platform config only.
+No hardcoded price IDs in webhook handlers.
+
+Verify each webhook:
+
+customer.subscription.created:
+  Reads tier from subscription metadata
+  Loads tier config from pricing config
+  Sets workspace limits from config:
+    seats_included
+    sites_included
+    clients_included
+    interactions_monthly
+    hard_cap
+    all overage rates
+  Creates workspace_usage_tracking record
+    with correct values from config
+  Confirm: new workspace gets correct limits
+
+customer.subscription.updated:
+  Detects tier change
+  Loads new tier config
+  Updates all workspace limits
+  If upgrade: immediately unlocks features
+  If downgrade: flags if over new limits
+  Confirm: tier change updates all limits
+
+invoice.paid:
+  Resets interactions_used_current_period to 0
+  Resets overage counters to 0
+  Updates billing_period_start and end
+  Releases queued autonomous tasks
+  Confirm: reset fires correctly each period
+
+invoice.payment_failed:
+  Day 0: immediate owner notification
+  Day 7: critical operations only mode
+  Day 14: read-only mode
+  Never deletes data
+  Confirm: grace period logic correct
+
+checkout.session.completed:
+  Creates workspace from correct tier
+  Initializes usage tracking with config values
+  Fires Trinity workspace initialization
+  Sends welcome sequence
+  Confirm: new signups provision correctly
+
+═══════════════════════════════════════════════
+PHASE 5 — FEATURE GATING SYNC
+═══════════════════════════════════════════════
+
+Update all feature gating middleware to use
+tier definitions from platform pricing config.
+No hardcoded tier names or feature lists
+in middleware — all from config.
+
+Feature gates by tier — verify each:
+
+STARTER — confirm these are BLOCKED:
+  POST /api/payroll/* — all payroll routes
+  POST /api/invoices/generate — invoice generation
+  GET/POST /api/voice/* — voice system
+  GET /api/compliance/multi-state — multi-state
+  GET /api/client-portal/* — client portal
+  GET /api/auditor-portal/* — auditor portal
+  POST /api/rfp/* — RFP generation
+  GET /api/analytics/advanced — advanced analytics
+  GET /api/analytics/predictive — predictive brain
+  GET /api/financial-intelligence/* — fin intel
+  GET/POST /api/v1/* — API access
+
+PROFESSIONAL — confirm these are BLOCKED:
+  GET /api/multi-workspace/* — multi-workspace
+  GET /api/financial-intelligence/advanced/*
+  GET /api/social-graph/* — social graph
+  GET/POST /api/v1/advanced/* — advanced API
+  GET /api/reports/custom/* — custom reports
+
+BUSINESS — confirm these are BLOCKED:
+  GET /api/white-label/* — white label
+  POST /api/integrations/custom/* — custom integrations
+  GET /api/multi-agent-advanced/* — advanced agents
+  GET /api/compliance/federal/* — federal compliance
+  GET /api/reports/executive/* — executive reports
+
+ENTERPRISE AND ABOVE — confirm AVAILABLE:
+  All routes above unlocked
+  Emergency event declaration available
+  Custom integration routes available
+
+STRATEGIC — confirm AVAILABLE:
+  Everything in Enterprise plus
+  Custom fine-tuning routes
+  On-site implementation routes
+
+Seat limit enforcement:
+  Workspace_usage_tracking.seats_active
+    checked against seats_included + overage
+  Adding users never blocked —
+    flags overage billing only
+  Confirm: users can always be added
+
+Interaction limit enforcement:
+  hard_cap from config loaded per workspace
+  When hit: queue non-critical autonomous tasks
+  Critical operations NEVER blocked:
+    panic alerts
+    incident reporting
+    compliance enforcement
+    HelpAI officer commands (tier 0)
+    schedule emergencies
+  Confirm: hard cap does not stop critical ops
+
+═══════════════════════════════════════════════
+PHASE 6 — UI PRICE SYNC
+═══════════════════════════════════════════════
+
+Update pricing page and features page to
+read prices from platform config wherever
+possible rather than hardcoding in UI.
+
+Where prices are hardcoded in UI components:
+Replace with config-driven values so that
+changing config automatically updates UI.
+
+Verify every displayed price:
+
+PRICING PAGE — verify these exact numbers:
+
+Trial: $0.00, 14 days, 10 seats ✓
+Starter monthly: $199.00 ✓
+Starter annual: $1,990.00 ✓
+Starter seats: 10 included ✓
+Starter per seat overage: $20.00 ✓
+Starter per site overage: $49.00 ✓
+Starter interactions: 5,000/month ✓
+Starter hard cap: 8,000/month ✓
+Starter interaction overage: $0.15 ✓
+
+Professional monthly: $749.00 ✓
+Professional annual: $7,490.00 ✓
+Professional seats: 30 included ✓
+Professional per seat overage: $25.00 ✓
+Professional per site overage: $49.00 ✓
+Professional interactions: 20,000/month ✓
+Professional hard cap: 35,000/month ✓
+Professional interaction overage: $0.12 ✓
+Professional payroll per employee: $2.50 ✓
+Professional direct deposit: $0.25 ✓
+Professional tax filing: $49.00 ✓
+Professional year end form: $5.00 ✓
+Professional ACH: $0.50 ✓
+Professional card rate: 2.4% + $0.25 ✓
+
+Business monthly: $2,249.00 ✓
+Business annual: $22,490.00 ✓
+Business seats: 75 included ✓
+Business per seat overage: $30.00 ✓
+Business per site overage: $39.00 ✓
+Business interactions: 60,000/month ✓
+Business hard cap: 120,000/month ✓
+Business interaction overage: $0.10 ✓
+Business payroll per employee: $1.75 ✓
+Business direct deposit: $0.20 ✓
+Business tax filing: $39.00 ✓
+Business year end form: $4.00 ✓
+Business ACH: $0.40 ✓
+Business card rate: 2.2% + $0.20 ✓
+
+Enterprise monthly: $6,999.00 ✓
+Enterprise annual: $69,990.00 ✓
+Enterprise seats: 200 included ✓
+Enterprise per seat overage: $35.00 ✓
+Enterprise per site overage: $29.00 ✓
+Enterprise interactions: 200,000/month ✓
+Enterprise hard cap: 400,000/month ✓
+Enterprise interaction overage: $0.08 ✓
+Enterprise emergency event: $1,000.00 ✓
+Enterprise payroll per employee: $1.50 ✓
+Enterprise direct deposit: $0.15 ✓
+Enterprise tax filing: $29.00 ✓
+Enterprise year end form: $3.00 ✓
+Enterprise ACH: $0.30 ✓
+Enterprise card rate: 2.0% + $0.15 ✓
+
+Strategic: No published price ✓
+Strategic: Contact Us CTA ✓
+Strategic emergency event: $2,500.00 ✓
+
+ROI CALCULATOR — verify these rates:
+Uses tier seat prices for recommended tier
+Uses payroll fee rates from config by tier
+Uses invoicing fee rates from config by tier
+Compares correctly to competitor rates:
+  QuickBooks payroll: $6-10/employee/run
+  Gusto payroll: $6-12/employee/run
+  ADP payroll: $8-15/employee/run
+  Paychex payroll: $7-12/employee/run
+  Standard card rate: 2.9% + $0.30
+  Standard ACH: $1.50/transaction
+
+═══════════════════════════════════════════════
+PHASE 7 — SUBSCRIPTION CREATION FLOW SYNC
+═══════════════════════════════════════════════
+
+Update checkout and subscription creation
+to use price IDs from platform config.
+
+Checkout flow for each tier:
+
+Free Trial checkout:
+  Uses trial_free price ID from config
+  Sets trial_end 14 days from now
+  No payment method required
+  On success: provisions workspace as trial tier
+  On expiry: pauses account, prompts upgrade
+
+Starter checkout:
+  Monthly: uses starter_monthly price ID
+  Annual: uses starter_annual price ID
+  Also attaches metered prices:
+    starter_seat_overage price ID
+    starter_site_overage price ID
+    starter_interaction_overage price ID
+  On success: provisions workspace as starter
+
+Professional checkout:
+  Monthly: uses professional_monthly price ID
+  Annual: uses professional_annual price ID
+  Also attaches metered prices:
+    professional_seat_overage price ID
+    professional_site_overage price ID
+    professional_interaction_overage price ID
+    professional_payroll_per_employee price ID
+    professional_direct_deposit price ID
+    professional_tax_filing price ID
+    professional_year_end_form price ID
+    professional_ach_collection price ID
+  On success: provisions workspace as professional
+
+Business checkout:
+  Monthly: uses business_monthly price ID
+  Annual: uses business_annual price ID
+  Attaches all business metered price IDs
+  On success: provisions workspace as business
+
+Enterprise checkout:
+  Monthly: uses enterprise_monthly price ID
+  Annual: uses enterprise_annual price ID
+  Attaches all enterprise metered price IDs
+    including enterprise_emergency_event
+  On success: provisions workspace as enterprise
+
+Strategic:
+  No checkout flow — manual provisioning
+  CoAIleague team creates subscription manually
+  Custom prices created per contract
+
+Confirm for each tier:
+  Correct price ID used for base subscription
+  All metered prices attached correctly
+  Workspace provisioned with correct limits
+  workspace_usage_tracking created correctly
+
+═══════════════════════════════════════════════
+PHASE 8 — COMPLETE SYNC VERIFICATION
+═══════════════════════════════════════════════
+
+Run a complete cross-system price verification.
+For every price in the master list, verify
+it matches in every system simultaneously.
+
+Create a verification matrix and check
+every cell. Report MATCH or MISMATCH.
+
+VERIFICATION MATRIX:
+
+For each tier and each fee type:
+| Fee | Config | Stripe | Middleware | UI | Match |
+|---|---|---|---|---|---|
+| Starter base monthly | $199 | $199 | $199 | $199 | ✓ |
+| Starter seat overage | $20 | $20 | $20 | $20 | ✓ |
+[... complete for every price ...]
+
+Every row must show ✓ MATCH.
+Any MISMATCH: fix immediately and recheck.
+Do not proceed to next phase until
+all rows show MATCH.
+
+After matrix is complete and all MATCH:
+
+Run live tests:
+
+TEST 1 — New Starter Signup:
+Create a test checkout session for Starter monthly.
+Verify price ID is starter_monthly.
+Verify amount is $199.00.
+Verify metered prices are all attached.
+Verify workspace provisions with:
+  seats_included: 10
+  sites_included: 3
+  interactions_monthly: 5000
+  hard_cap: 8000
+  seat_overage_cents: 2000
+  site_overage_cents: 4900
+  interaction_overage_cents: 15
+
+TEST 2 — Seat Overage Report:
+Simulate workspace with 15 active seats on Starter.
+Verify overage count: 5 seats.
+Verify Stripe metered report: 5 units
+  to starter_seat_overage price ID.
+Verify amount to be charged: 5 × $20 = $100.
+
+TEST 3 — Interaction Overage Report:
+Simulate workspace hitting 9,000 interactions
+  on Starter (hard cap: 8,000).
+Verify overage count: 1,000 interactions.
+Verify critical operations not blocked.
+Verify autonomous tasks queued.
+Verify Stripe metered report: 1,000 units
+  to starter_interaction_overage price ID.
+Verify amount: 1,000 × $0.15 = $150.00.
+
+TEST 4 — Payroll Fee Report (Professional):
+Simulate payroll run for 50 employees
+  on Professional workspace.
+Verify Stripe metered report: 50 units
+  to professional_payroll_per_employee price ID.
+Verify amount: 50 × $2.50 = $125.00.
+
+TEST 5 — ACH Collection Fee (Business):
+Simulate 10 ACH payments collected
+  on Business workspace.
+Verify Stripe metered report: 10 units
+  to business_ach_collection price ID.
+Verify amount: 10 × $0.40 = $4.00.
+
+TEST 6 — Enterprise Emergency Event:
+Simulate emergency event declaration
+  on Enterprise workspace.
+Verify Stripe metered report: 1 unit
+  to enterprise_emergency_event price ID.
+Verify amount: $1,000.00.
+
+All 6 tests must pass before declaring sync complete.
+
+═══════════════════════════════════════════════
+FINAL REPORT
+═══════════════════════════════════════════════
+
+After all phases complete deliver:
+
+SECTION 1 — STRIPE PRODUCTS CREATED:
+List every product created:
+Product name | Stripe Product ID | Status
+
+SECTION 2 — STRIPE PRICES CREATED:
+List every price created:
+Price name | Stripe Price ID | Amount | Type
+
+SECTION 3 — PRICES ARCHIVED:
+List every old product/price archived:
+Old name | Old ID | Reason archived
+
+SECTION 4 — ACTIVE SUBSCRIPTION MIGRATIONS:
+List any active subscriptions migrated:
+Customer | Old product | New product | Date
+
+SECTION 5 — MISMATCH FIXES:
+List every mismatch found and fixed:
+Location | Old value | New value | Fixed ✓
+
+SECTION 6 — VERIFICATION MATRIX RESULT:
+Total prices verified: [number]
+All match: YES / NO
+Any remaining mismatches: [list or NONE]
+
+SECTION 7 — LIVE TEST RESULTS:
+Test 1 Starter signup: PASS / FAIL
+Test 2 Seat overage: PASS / FAIL
+Test 3 Interaction overage: PASS / FAIL
+Test 4 Payroll fee: PASS / FAIL
+Test 5 ACH fee: PASS / FAIL
+Test 6 Emergency event: PASS / FAIL
+
+SECTION 8 — SYNC STATUS:
+Platform config: SYNCED ✓
+Stripe products: SYNCED ✓
+Stripe prices: SYNCED ✓
+Billing middleware: SYNCED ✓
+Webhook handlers: SYNCED ✓
+Feature gating: SYNCED ✓
+Pricing page UI: SYNCED ✓
+Features page UI: SYNCED ✓
+ROI calculator: SYNCED ✓
+Subscription flow: SYNCED ✓
+
+SECTION 9 — BOOT STATUS:
+Server boots clean: YES / NO
+Zero pricing errors in boot log: YES / NO
+All webhook handlers registered: YES / NO
+
+FINAL DECLARATION:
+Every price in every system matches
+the master price list exactly.
+Stripe, config, middleware, webhooks,
+feature gates, and UI are fully synced.
+The platform is ready to process
+real payments for real tenants.
+
+DO NOT DECLARE COMPLETE UNTIL:
+All 6 live tests pass
+All verification matrix rows show MATCH
+Server boots clean with zero errors
+All 10 systems show SYNCED status
+```
+
+---
+
+Bryan this prompt does one thing the previous prompts didn't — it audits existing prices first and builds a mismatch report before touching anything. That means Agent knows exactly what's wrong before it changes anything and fixes only what needs fixing rather than rebuilding things that were already correct.
+
+The verification matrix at the end is the key. Every price checked in every system simultaneously. If even one number is off anywhere it gets caught and fixed before you go live.
+
+Run it. Bring the sync report back and we verify every price ID before Statewide onboards.

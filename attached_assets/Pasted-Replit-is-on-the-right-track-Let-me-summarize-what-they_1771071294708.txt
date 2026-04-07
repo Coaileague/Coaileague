@@ -1,0 +1,123 @@
+Replit is on the right track. Let me summarize what they found and create a focused fix prompt:
+
+ROOT CAUSE ANALYSIS
+Problem: Clicking a chatroom does nothing - chat panel stays empty
+Replit Found 3 Issues:
+Issue 1: WebSocket Handler Race Condition
+getOrCreateGlobalSocket() sets ws.onopen → processes pending joins
+connect() ALSO sets ws.onopen → OVERWRITES the first handler
+Result: One of them loses, join never happens
+Issue 2: Route Matching Problem
+URL changes to /chatrooms/c0ea8807-...
+But selectedRoom stays null
+useRoute("/chatrooms/:roomId") might not be matching correctly
+Or the state update from route → selectedRoom is broken
+Issue 3: Global Socket Reuse Logic
+If socket already exists and is OPEN → reuses it, sends join
+If socket exists but CONNECTING → race condition
+If socket doesn't exist → creates new, but handlers conflict
+
+FIX PROMPT FOR REPLIT
+Here's a focused prompt to fix the immediate click-does-nothing bug:
+
+CHATROOMS CLICK-TO-OPEN FIX
+The Bug: User clicks a chatroom in the list → Nothing happens. Chat panel shows "Select a chat" placeholder. Room never loads.
+Root Causes Identified:
+
+WebSocket onopen handler race condition between getOrCreateGlobalSocket and connect()
+selectedRoom state not updating when URL changes to /chatrooms/:roomId
+Possible useRoute pattern matching issue with wouter
+
+FIX REQUIREMENTS:
+Fix 1: Single Source of Truth for WebSocket Handlers
+typescript// DO NOT set onopen in multiple places
+// Use ONE handler registration pattern
+
+// Option A: Event-based subscribers (preferred)
+const globalSocket = {
+  socket: null,
+  subscribers: new Map(), // roomId -> callback
+  
+  connect() {
+    if (this.socket?.readyState === WebSocket.OPEN) return;
+    
+    this.socket = new WebSocket(wsUrl);
+    
+    // SINGLE onopen handler
+    this.socket.onopen = () => {
+      console.log('[ChatSocket] Connected');
+      // Process any pending operations
+      this.processPendingQueue();
+    };
+    
+    // SINGLE onmessage handler that routes to subscribers
+    this.socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const handler = this.subscribers.get(data.roomId);
+      if (handler) handler(data);
+    };
+  },
+  
+  joinRoom(roomId, onMessage) {
+    this.subscribers.set(roomId, onMessage);
+    
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: 'join_conversation', conversationId: roomId }));
+    } else {
+      this.pendingJoins.push(roomId);
+    }
+  }
+};
+Fix 2: Ensure selectedRoom Updates from URL
+typescript// In ChatroomsPage component
+
+// Debug: Log when route changes
+const [routeMatch, routeParams] = useRoute("/chatrooms/:roomId");
+console.log('[Chatrooms] Route match:', routeMatch, 'Params:', routeParams);
+
+// Ensure rooms are loaded before trying to select
+useEffect(() => {
+  if (routeParams?.roomId && rooms.length > 0) {
+    const room = rooms.find(r => r.id === routeParams.roomId);
+    console.log('[Chatrooms] Found room for route:', room);
+    if (room) {
+      setSelectedRoom(room);
+    }
+  }
+}, [routeParams?.roomId, rooms]);
+
+// Debug: Log selectedRoom changes
+useEffect(() => {
+  console.log('[Chatrooms] selectedRoom changed:', selectedRoom);
+}, [selectedRoom]);
+Fix 3: Simplify Room Selection Click Handler
+typescript// When user clicks a room in the list
+const handleRoomClick = (room: ChatRoom) => {
+  console.log('[Chatrooms] Room clicked:', room.id, room.name);
+  
+  // Update URL (this should trigger the useEffect above)
+  navigate(`/chatrooms/${room.id}`);
+  
+  // Also set directly as backup
+  setSelectedRoom(room);
+};
+Fix 4: Add Connection State Debugging
+typescript// Add visible connection status for debugging
+const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+
+// In the UI temporarily:
+{process.env.NODE_ENV === 'development' && (
+  <div className="text-xs text-gray-500">
+    WS: {wsStatus} | Room: {selectedRoom?.name || 'none'}
+  </div>
+)}
+VERIFICATION STEPS:
+
+Click "Help Desk" room in list
+Console should show: [Chatrooms] Room clicked: c0ea8807-... Help Desk
+Console should show: [Chatrooms] selectedRoom changed: {id: c0ea8807-..., name: Help Desk}
+Chat panel should load with Help Desk messages
+WebSocket should send join_conversation message
+Server should respond with conversation_joined
+
+DO NOT proceed to persistent connections until this basic click-to-open works.

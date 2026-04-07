@@ -1,0 +1,118 @@
+Good catch. Send this immediately after the Phase 21 prompt:
+
+---
+
+**PHASE 21B — MULTI-STATE COMPLIANCE ADDENDUM**
+
+CoAIleague is not a Texas-only platform. Statewide Protective Services and future client companies may operate across multiple states, each with its own regulatory body, license requirements, renewal intervals, and reporting formats. The platform must be architected for multi-state compliance — not retrofitted later. This addendum extends Phase 21 to ensure the compliance engine, Trinity, and all regulatory systems work correctly across every state the platform serves.
+
+**NOTHING LEFT BEHIND RULE applies to this addendum identically.**
+
+---
+
+**STEP 1 — MULTI-STATE INVENTORY**
+
+Before touching anything produce a complete inventory of where state-specific logic currently exists:
+- Which states are currently hardcoded or configured in the platform
+- Where Texas-specific logic exists that would break for another state
+- What `stateRegulatoryKnowledgeBase` currently contains — which states, which fields, which rules
+- Whether the certification type registry from Phase 17 is Texas-only or multi-state
+- Whether the DPS export format is hardcoded for Texas or parameterized by state
+- Any hardcoded references to "DPS", "TCOLE", "Texas", or "TX" in compliance logic that should be state-configurable
+
+Flag every location where state-specific logic is hardcoded rather than data-driven.
+
+---
+
+**STEP 2 — STATE REGULATORY KNOWLEDGE BASE EXPANSION**
+
+The `stateRegulatoryKnowledgeBase` must cover every state the platform operates in:
+- For each state confirm the following are defined: regulatory body name, license types required, renewal intervals per license type, reporting format, audit requirements, armed vs unarmed distinction, minimum training hours
+- States to verify and expand at minimum: Texas (DPS/TCOLE), Florida (FDLE), California (BSIS), Georgia (Georgia Secretary of State), Nevada (PILB), Arizona (DPS), New York (DCJS), Illinois (IDFPR), North Carolina (NCPPSB), Virginia (DCJS)
+- Each state entry must include: state_code, regulatory_body, license_types[], renewal_days, export_format, audit_fields[], armed_requires_separate_license (boolean)
+- State knowledge base is data-driven — adding a new state requires only a data entry, not a code change
+- Trinity has access to the full state knowledge base — can answer questions about any state's requirements
+
+---
+
+**STEP 3 — LICENSE AND CERTIFICATION MULTI-STATE SUPPORT**
+
+Officer licenses must be tracked per state — an officer may hold licenses in multiple states:
+- License records include `state_code` field — confirmed present and required
+- License type validated against the canonical list for that specific state — not a global list
+- Expiration intervals vary by state — renewal alert timing configurable per state
+- DPS-style export parameterized by state — `GET /api/compliance/licenses/export/:stateCode/csv`
+- Scheduling enforcement aware of which state the post is in — enforces that state's license requirements
+- Officer working a post in Florida must hold a valid Florida license — not just a Texas license
+- Cross-state license validation at assignment time — if post is in a different state than the officer's primary license, flag it
+
+---
+
+**STEP 4 — MULTI-STATE REGULATORY REPORTING**
+
+Reports must be generated in the correct format for each state:
+- Report generation accepts `state_code` parameter — produces state-specific format
+- Each state's required fields confirmed against `stateRegulatoryKnowledgeBase`
+- Report delivery routes to the correct state regulatory body contact if configured
+- Regulatory portal supports multi-state — auditor access scoped to specific state within the workspace
+- State-specific audit fields exported correctly for each state auditor
+- Failed state-specific report generation alerts compliance officer with the specific state that failed
+
+---
+
+**STEP 5 — TRINITY MULTI-STATE AWARENESS**
+
+Trinity must be able to operate correctly across all states:
+- Trinity can answer questions about any state's licensing requirements using `stateRegulatoryKnowledgeBase`
+- Trinity compliance actions accept `state_code` parameter — `compliance.report` generates state-specific report
+- Trinity can identify when an officer's license is valid in one state but not another
+- Trinity proactive scanner checks license validity per state for every assigned post
+- Trinity knows when a workspace operates in multiple states and applies the correct rules per post location
+- Trinity can generate a multi-state compliance summary for workspaces operating across state lines
+
+---
+
+**STEP 6 — WORKSPACE MULTI-STATE CONFIGURATION**
+
+Each workspace must be able to declare which states it operates in:
+- Workspace settings include an `operating_states` array — list of state codes the company operates in
+- Compliance engine applies all relevant state rules for every state in `operating_states`
+- License dashboard shows compliance status per state — not just overall
+- Renewal alerts include the state the license belongs to in the alert content
+- Compliance officer can filter violations and reports by state
+- Adding a new operating state to a workspace triggers a compliance audit for all officers — flags any officer missing the newly required state license
+
+---
+
+**STEP 7 — CROSS-STATE SCHEDULING ENFORCEMENT**
+
+Post location determines which state's rules apply:
+- Post records include `state_code` field — required, not optional
+- At assignment time the system checks: does the officer hold a valid license for the state this post is in
+- If the officer lacks the required state license — assignment is blocked with explicit error naming the missing license type and state
+- Autonomous scheduler enforces cross-state license requirements — not just manual assignment
+- Clock-in enforcement checks state license at the post's state — not the officer's home state
+- Violations for cross-state license gaps produce compliance records with state_code populated
+
+---
+
+**STEP 8 — VERIFICATION ADDENDUM CHECKS**
+
+These checks are added to the Phase 21 verification table:
+
+- Check 21: `stateRegulatoryKnowledgeBase` contains at minimum 10 states with all required fields per state
+- Check 22: License records have `state_code` field — confirmed present and required in schema
+- Check 23: DPS export endpoint parameterized by state — `GET /api/compliance/licenses/export/:stateCode/csv` confirmed
+- Check 24: Post records have `state_code` field — scheduling enforcement uses it at assignment and clock-in
+- Check 25: Cross-state license validation blocks assignment when officer lacks the post's state license
+- Check 26: Trinity can answer a question about a non-Texas state's licensing requirements using the knowledge base
+- Check 27: Workspace `operating_states` configuration exists and compliance engine applies correct rules per state
+- Check 28: Multi-state compliance summary generatable by Trinity for a workspace operating across state lines
+- Check 29: Nothing Left Behind reconciliation table expanded to 29 rows — all green with evidence
+- Check 30: Server starts clean with zero TypeScript errors across all multi-state compliance files
+
+**Phase 21 now has 30 checks total. Nothing Left Behind applies to all 30.**
+
+---
+
+Paste both prompts back to back — Phase 21 first, Phase 21B immediately after. The agent now has the full scope before writing a single line. Let it run.

@@ -5,9 +5,14 @@
  * and hotfix management for support and root admin roles.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { platformHealthMonitor, type PlatformIssue } from '../services/ai-brain/platformHealthMonitor';
 import { requirePlatformStaff, requirePlatformAdmin, requirePlatformRole } from '../rbac';
+import { quickbooksTokenRefresh } from '../services/integrations/quickbooksTokenRefresh';
+import { createLogger } from '../lib/logger';
+const log = createLogger('TrinityMaintenance');
+
 
 // Middleware for hotfix approval - only root_admin, deputy_admin, support_manager can approve
 const requireHotfixApprover = requirePlatformRole(['root_admin', 'deputy_admin', 'support_manager']);
@@ -29,9 +34,46 @@ router.get('/health', requirePlatformStaff, async (req: Request, res: Response) 
       health,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Health check error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Health check error:', error);
     res.status(500).json({ error: 'Failed to check platform health' });
+  }
+});
+
+/**
+ * POST /api/trinity/maintenance/quickbooks/refresh
+ * Force refresh QuickBooks OAuth tokens for all workspaces
+ * Requires platform admin role
+ */
+router.post('/quickbooks/refresh', requirePlatformAdmin, async (req: Request, res: Response) => {
+  try {
+    const { workspaceId } = req.body;
+    
+    if (workspaceId) {
+      // Refresh specific workspace
+      const result = await quickbooksTokenRefresh.forceRefresh(workspaceId);
+      return res.json({
+        success: result.success,
+        message: result.success 
+          ? 'QuickBooks token refreshed successfully'
+          : result.error,
+        workspaceId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
+    // If no workspace specified, trigger the daemon check for all expiring tokens
+    const status = quickbooksTokenRefresh.getStatus();
+    
+    res.json({
+      success: true,
+      message: 'QuickBooks token refresh daemon status retrieved',
+      daemonStatus: status,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] QuickBooks refresh error:', error);
+    res.status(500).json({ error: 'Failed to refresh QuickBooks tokens' });
   }
 });
 
@@ -49,8 +91,8 @@ router.get('/insight', requirePlatformStaff, async (req: Request, res: Response)
       insight,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Insight error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Insight error:', error);
     res.status(500).json({ error: 'Failed to get health insight' });
   }
 });
@@ -69,8 +111,8 @@ router.get('/issues', requirePlatformStaff, async (req: Request, res: Response) 
       issues,
       count: issues.length,
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Issues error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Issues error:', error);
     res.status(500).json({ error: 'Failed to get issues' });
   }
 });
@@ -100,8 +142,8 @@ router.post('/issues', requirePlatformStaff, async (req: Request, res: Response)
       issue,
       message: 'Issue reported successfully',
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Report issue error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Report issue error:', error);
     res.status(500).json({ error: 'Failed to report issue' });
   }
 });
@@ -120,8 +162,8 @@ router.get('/hotfixes', requirePlatformStaff, async (req: Request, res: Response
       hotfixes,
       count: hotfixes.length,
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Hotfixes error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Hotfixes error:', error);
     res.status(500).json({ error: 'Failed to get hotfixes' });
   }
 });
@@ -154,8 +196,8 @@ router.post('/hotfixes', requirePlatformStaff, async (req: Request, res: Respons
       hotfix,
       message: 'Hotfix suggestion created',
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Suggest hotfix error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Suggest hotfix error:', error);
     res.status(500).json({ error: 'Failed to suggest hotfix' });
   }
 });
@@ -167,7 +209,7 @@ router.post('/hotfixes', requirePlatformStaff, async (req: Request, res: Respons
  */
 router.post('/hotfixes/:id/approve', requireHotfixApprover, async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     const hotfixId = req.params.id;
 
     // User already verified via requireHotfixApprover middleware
@@ -182,8 +224,8 @@ router.post('/hotfixes/:id/approve', requireHotfixApprover, async (req: Request,
       hotfix,
       message: 'Hotfix approved. Ready for execution.',
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Approve hotfix error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Approve hotfix error:', error);
     res.status(500).json({ error: 'Failed to approve hotfix' });
   }
 });
@@ -195,7 +237,7 @@ router.post('/hotfixes/:id/approve', requireHotfixApprover, async (req: Request,
  */
 router.post('/hotfixes/:id/reject', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     const hotfixId = req.params.id;
 
     const hotfix = platformHealthMonitor.rejectHotfix(hotfixId, user.id);
@@ -209,8 +251,8 @@ router.post('/hotfixes/:id/reject', requirePlatformStaff, async (req: Request, r
       hotfix,
       message: 'Hotfix rejected.',
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Reject hotfix error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Reject hotfix error:', error);
     res.status(500).json({ error: 'Failed to reject hotfix' });
   }
 });
@@ -237,8 +279,8 @@ router.post('/hotfixes/:id/execute', requirePlatformRole(['root_admin', 'deputy_
       hotfix,
       message: 'Hotfix executed successfully. Changes applied.',
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Execute hotfix error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Execute hotfix error:', error);
     res.status(500).json({ error: 'Failed to execute hotfix' });
   }
 });
@@ -291,8 +333,8 @@ router.post('/diagnose', requirePlatformStaff, async (req: Request, res: Respons
       },
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[Trinity Maintenance] Diagnose error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Maintenance] Diagnose error:', error);
     res.status(500).json({ error: 'Failed to run diagnosis' });
   }
 });
@@ -307,7 +349,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
   
   try {
     const { message } = req.body;
-    const user = (req as any).user;
+    const user = req.user;
     
     // Derive role from authenticated session only - never trust client input
     if (!user?.id) {
@@ -320,7 +362,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
     const userId = user.id;
     // Only use authenticated user's role from session, not from request body
     const userRole = user.platformRole || user.role || 'employee';
-    const workspaceId = (req as any).workspaceId || user.workspaceId || 'default';
+    const workspaceId = req.workspaceId || user.currentWorkspaceId || user.workspaceId || 'default';
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ 
@@ -329,17 +371,20 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
       });
     }
 
-    console.log(`[Trinity Command] Processing: "${message.substring(0, 50)}..." from ${userRole}`);
+    log.info(`[Trinity Command] Processing: "${message.substring(0, 50)}..." from ${userRole}`);
 
     // RBAC role hierarchy for server-side enforcement
     const ROLE_PERMISSIONS: Record<string, number> = {
       'employee': 1,
-      'support': 2,
+      'support_agent': 2,
+      'support_manager': 2,
       'manager': 3,
-      'admin': 4,
-      'super_admin': 5,
+      'org_admin': 4,
+      'co_owner': 5,
+      'org_owner': 5,
+      'sysop': 7,
+      'deputy_admin': 8,
       'root_admin': 9,
-      'root': 9
     };
     
     // Commands that require elevated roles
@@ -354,7 +399,7 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
     const userPermissionLevel = ROLE_PERMISSIONS[userRole] || 1;
 
     // Import the HelpAI orchestrator dynamically
-    const { helpaiOrchestrator } = await import('../services/ai-brain/helpaiOrchestrator');
+    const { helpAIOrchestrator: helpaiOrchestrator } = await import('../services/helpai/helpAIOrchestrator');
     
     // Check for slash commands first
     if (message.startsWith('/')) {
@@ -498,12 +543,15 @@ Never claim you can execute actions directly - always guide to slash commands.
 
 Respond helpfully and concisely.`;
 
-      const response = await unifiedGeminiClient.generateContent({
+      const response = await unifiedGeminiClient.generateContent({ // withGemini
         prompt: message,
         systemInstruction: systemPrompt,
         modelTier: ModelTier.FLASH,
         maxTokens: 1000,
         temperature: 0.7,
+        workspaceId,
+        userId,
+        featureKey: 'trinity_chat_response',
       });
 
       return res.json({
@@ -516,8 +564,8 @@ Respond helpfully and concisely.`;
         permissionLevel: userPermissionLevel,
         availableCommands
       });
-    } catch (aiError: any) {
-      console.error('[Trinity Command] AI error:', aiError);
+    } catch (aiError: unknown) {
+      log.error('[Trinity Command] AI error:', aiError);
       
       // Role-aware fallback response
       const availableCommands = ['/health', '/help', '/list'];
@@ -530,12 +578,12 @@ Respond helpfully and concisely.`;
         outputType: 'text'
       });
     }
-  } catch (error: any) {
-    console.error('[Trinity Command] Error:', error);
+  } catch (error: unknown) {
+    log.error('[Trinity Command] Error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to process command',
-      message: error.message,
+      message: sanitizeError(error),
       executionTimeMs: Date.now() - startTime
     });
   }

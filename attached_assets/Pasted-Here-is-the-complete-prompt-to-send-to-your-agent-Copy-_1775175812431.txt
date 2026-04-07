@@ -1,0 +1,480 @@
+Here is the complete prompt to send to your agent. Copy everything between the lines.
+
+---
+
+COAILEAGUE COMPLETE PLATFORM VERIFICATION AND ENHANCEMENT
+Verify every feature works end to end. Fix every gap. Enhance every system. Test everything.
+ACME sandbox only. Statewide zero contact zero mutations.
+
+================================================================================
+PHASE 1 — SCAN FIRST TOUCH NOTHING
+================================================================================
+
+Before fixing anything scan and report the exact current state of every system below. For each item report WORKING, BROKEN, PARTIAL, or MISSING. Do not fix yet. Just report.
+
+SUBSCRIPTION AND BILLING SCAN:
+  Are Stripe products created for all 5 tiers?
+  Starter $299 Professional $999 Business $2999 Enterprise $7999 Strategic custom
+  Do Stripe price IDs exist in environment variables?
+  STRIPE_PRICE_STARTER_MONTHLY
+  STRIPE_PRICE_PROFESSIONAL_MONTHLY
+  STRIPE_PRICE_BUSINESS_MONTHLY
+  STRIPE_PRICE_ENTERPRISE_MONTHLY
+  Does checkout flow create a real Stripe subscription?
+  Does Stripe webhook update workspace tier on payment?
+  Does seat overage charge $25 per seat above included count?
+  Does site overage charge correctly per tier?
+    Starter $49/site above 3
+    Professional $49/site above 10
+    Business $39/site above 25
+    Enterprise $29/site above 75
+  Does AI interaction overage charge correctly per tier?
+    Starter $0.15/interaction above 8000 hard cap
+    Professional $0.12/interaction above 35000 hard cap
+    Business $0.10/interaction above 120000 hard cap
+    Enterprise $0.08/interaction above 400000 hard cap
+  Does payroll fee charge per employee per run?
+    Starter $5.95 Professional $4.95 Business $3.95 Enterprise $3.50
+  Does direct deposit fee charge per transaction?
+    Starter $0.25 Professional $0.25 Business $0.20 Enterprise $0.15
+  Does card processing charge correctly?
+    Starter 2.4% + $0.25 Professional 2.4% + $0.25
+    Business 2.2% + $0.20 Enterprise 2.0% + $0.15
+  Does ACH transfer charge correctly?
+    Starter $0.50 Professional $0.50 Business $0.40 Enterprise $0.30
+  Does quarterly tax filing charge?
+    Starter $49 Professional $49 Business $39 Enterprise $29
+  Does year-end W2/1099 charge?
+    Starter $5 Professional $5 Business $4 Enterprise $3
+
+FEATURE ACCESS SCAN per tier:
+  Verify featureRegistry.ts has correct gate for every feature below
+  Test each with ACME at Starter tier then upgrade to Professional and test again
+
+  Starter features that must work:
+    Trinity AI chat
+    Scheduling and shift management
+    GPS clock in and out
+    Overtime detection
+    Calloff processing
+    Coverage gap detection
+    Shift conflict prevention
+    HelpAI field assistant
+    ChatDock messaging rooms and DMs
+    Incident reporting
+    DAR legal narratives
+    Panic alert system
+    Lone worker monitoring
+    Real-time dispatch
+    GPS proof of service
+    BOLO broadcast
+    Employee onboarding
+    8 standard compliance documents
+    Performance scoring
+    Milestone recognition
+    Home state compliance monitoring
+    License expiration alerts
+    Armed post guard
+    Financial dashboard basic
+    Morning briefings
+    Basic autonomous task queue
+    Mobile full access
+    Basic analytics
+
+  Professional adds — verify these are GATED on Starter and OPEN on Professional:
+    Internal payroll processing
+    Internal invoicing
+    Client payment collection
+    Voice system Trinity speaks and listens
+    All 50 states compliance monitoring
+    Disciplinary pattern analyzer
+    Client portal
+    State regulatory auditor portal
+    Advanced DAR pipeline
+    RFP generation
+    Advanced analytics and forecasting
+    Predictive brain
+    Financial intelligence margin per site
+    Contract health monitoring
+    Multi-workspace management
+    P&L forecasting
+    Social graph intelligence
+    Raise recommendations
+    QuickBooks sync
+
+  Business adds — verify gated on Professional and open on Business:
+    Full financial intelligence suite
+    Full regulatory knowledge base with statute citations
+    Advanced autonomous task queue
+    Custom officer recognition programs
+    FTO program management
+    Custom reporting and dashboards
+    Full API access
+    White-label options
+    Custom integration development
+    Emergency event support $1000 flat per event
+
+  Enterprise adds:
+    Unlimited workspaces
+    99.9% uptime SLA
+    Federal compliance
+    Advanced multi-agent task spawning
+    Executive reporting suite
+    Custom regulatory rule sets
+    Emergency event support included
+    Priority phone support 24/7
+
+TRINITY BIOLOGICAL BRAIN SCAN:
+  Verify all 8 layers are implemented in code:
+    Layer 1 PERCEPTION: Does Trinity watch clock-ins compliance flags open shifts client activity in real time?
+    Layer 2 MEMORY: Does workspace_trinity_memory store officer reliability client preferences site history scheduling patterns?
+    Layer 3 REASONING: Does Trinity connect patterns to conclusions? Test: ask Trinity why officer X has 3 calloffs this month
+    Layer 4 EMOTIONAL: Does Trinity treat panic alert differently from missed shift? Is urgency weighted?
+    Layer 5 LEARNING: Does Trinity update models from outcomes? Does rejection of suggestion write to memory?
+    Layer 6 DECISION: Does Trinity auto-fill shifts flag compliance queue reminders?
+    Layer 7 PLANNING: Does Trinity forecast callout risk overtime exposure cash flow gaps?
+    Layer 8 ACTION: Does Trinity send notifications generate reports draft invoices respond in plain English?
+
+PAYROLL SCAN:
+  Does payroll run calculate gross pay correctly?
+  Does overtime calculate above 40 hours per week?
+  Does split pay rate work when rate changed mid-period?
+  Does net pay never go below zero DB constraint?
+  Does idempotency prevent double run for same period?
+  Do pay stubs generate as PDFs with correct data?
+  Does direct deposit initiate via Plaid after approval?
+  Does payroll fee charge to transaction_fee_events?
+  Does QB sync fire after payroll approved?
+
+INVOICE SCAN:
+  Does invoice generate from approved billable hours?
+  Does subtotal match sum of line items via DB trigger?
+  Does invoice PDF render with org branding not CoAIleague?
+  Does invoice send via NDS not direct Resend?
+  Does client receive invoice email with PDF attached?
+  Does Stripe payment process when client pays?
+  Does webhook mark invoice paid?
+  Does receipt generate and store in document vault?
+  Does QB sync fire after payment received?
+  Does per_invoice_processed_cents fee charge?
+
+EMAIL SYSTEM SCAN:
+  Are all 7 protected platform addresses seeded?
+    root@coaileague.com support@coaileague.com info@coaileague.com
+    trinity@coaileague.com billing@coaileague.com hello@coaileague.com noreply@coaileague.com
+  Do tenant system addresses exist for ACME?
+    staffing@acme.coaileague.com calloffs@acme.coaileague.com
+    incidents@acme.coaileague.com support@acme.coaileague.com
+    docs@acme.coaileague.com billing@acme.coaileague.com
+  Does inbound webhook route emails to correct mailbox?
+  Does trinity@coaileague.com auto-process and reply?
+  Does calloffs address create calloff_record automatically?
+  Does outbound send work from platform inbox?
+
+MOBILE AND PWA SCAN:
+  Does PWA install on iOS Safari?
+  Does manifest.json have all required fields?
+  Does offline clock-in queue in IndexedDB?
+  Does sync fire on reconnect with no duplicates?
+  Does panic button bypass quiet hours?
+  Does inbox work at 375px mobile viewport?
+
+================================================================================
+PHASE 2 — CREATE STRIPE PRODUCTS AND PRICE IDs
+================================================================================
+
+In Stripe test mode create all products and prices. Then add price IDs to environment.
+
+Create these products in Stripe test mode:
+
+Product 1: CoAIleague Starter
+  Price 1: $299.00 USD monthly recurring
+  Price 2: $2870.40 USD yearly recurring (20% off)
+  Save both price IDs
+
+Product 2: CoAIleague Professional
+  Price 1: $999.00 USD monthly recurring
+  Price 2: $9590.40 USD yearly recurring
+  Save both price IDs
+
+Product 3: CoAIleague Business
+  Price 1: $2999.00 USD monthly recurring
+  Price 2: $28790.40 USD yearly recurring
+  Save both price IDs
+
+Product 4: CoAIleague Enterprise
+  Price 1: $7999.00 USD monthly recurring
+  Price 2: $76790.40 USD yearly recurring
+  Save both price IDs
+
+Product 5: Seat Overage (metered)
+  Price: $25.00 per seat per month metered
+  One price ID used across all tiers
+
+Product 6: Site Overage
+  Starter/Professional: $49.00 per site
+  Business: $39.00 per site
+  Enterprise: $29.00 per site
+
+Product 7: Voice Platinum Starter $99/month
+Product 8: Voice Platinum Professional $299/month
+Product 9: Voice Platinum Business $799/month
+Product 10: Voice Platinum Enterprise $1999/month
+
+After creating all products add price IDs to Replit Secrets:
+  STRIPE_PRICE_STARTER_MONTHLY
+  STRIPE_PRICE_STARTER_ANNUAL
+  STRIPE_PRICE_PROFESSIONAL_MONTHLY
+  STRIPE_PRICE_PROFESSIONAL_ANNUAL
+  STRIPE_PRICE_BUSINESS_MONTHLY
+  STRIPE_PRICE_BUSINESS_ANNUAL
+  STRIPE_PRICE_ENTERPRISE_MONTHLY
+  STRIPE_PRICE_ENTERPRISE_ANNUAL
+  STRIPE_PRICE_SEAT_OVERAGE
+  STRIPE_PRICE_VOICE_PLATINUM_STARTER
+  STRIPE_PRICE_VOICE_PLATINUM_PROFESSIONAL
+  STRIPE_PRICE_VOICE_PLATINUM_BUSINESS
+  STRIPE_PRICE_VOICE_PLATINUM_ENTERPRISE
+
+Verify billingConfig.ts references these env vars not hardcoded price IDs.
+
+================================================================================
+PHASE 3 — FIX EVERYTHING FOUND IN PHASE 1
+================================================================================
+
+Fix every BROKEN PARTIAL and MISSING item found in Phase 1 scan.
+Fix in this priority order:
+
+PRIORITY 1 — MONEY FLOWS (fix these first):
+  Stripe checkout creates correct subscription for selected plan
+  Webhook correctly updates workspace tier and subscription_status
+  Seat overage billing fires when seats exceed plan limit
+  Payroll fee charges to transaction_fee_events on every run
+  Invoice per_processed fee charges on every invoice sent
+  Direct deposit ACH initiates via Plaid after payroll approval
+  Card and ACH payment processing charges correct rates
+  All fee amounts read from billingConfig not hardcoded
+
+PRIORITY 2 — FEATURE GATING:
+  Every Professional-only feature returns 402 on Starter account
+  Upgrade prompt shows correct plan and price to unlock
+  After upgrade feature unlocks immediately without logout
+  featureRegistry.ts is single source of truth for all gates
+  Zero hardcoded tier checks anywhere outside featureRegistry
+
+PRIORITY 3 — TRINITY BIOLOGICAL BRAIN ENHANCEMENTS:
+  Implement any missing layers from the 8-layer scan
+  
+  PERCEPTION enhancements:
+    Trinity monitors in real time every 60 seconds:
+      Officers late to clock in (over 10 minutes past shift start)
+      Open shifts within 24 hours with no officer assigned
+      License expiry within 30 days
+      Invoices overdue more than 7 days
+      Calloff rate spiking above workspace average
+    Each detection creates a trinity_insight record
+    Insight fires NDS notification to org owner immediately
+    Same insight not repeated within 7 days
+
+  MEMORY enhancements:
+    Every org owner correction to Trinity suggestion writes to workspace_trinity_memory
+    Every rejected auto-schedule writes reason to memory
+    Trinity loads memory context at start of every session
+    Memory improves scheduling suggestions over time
+    Store: officer reliability score officer preferred shifts
+           client communication preferences site-specific rules
+           org owner decision patterns
+
+  REASONING enhancements:
+    When asked why or explain Trinity must:
+      Query actual database records to support answer
+      Never fabricate statistics or percentages
+      Show the data behind the conclusion
+      Example: Officer X has 3 calloffs this month vs team average of 0.8
+      Claude validates every Gemini numeric assertion
+
+  EMOTIONAL enhancements:
+    Urgency scoring on every Trinity action:
+      CRITICAL: panic alert welfare check missed emergency duress
+      HIGH: uncovered shift within 2 hours license expired
+      MEDIUM: schedule gap tomorrow overdue invoice
+      LOW: general insight weekly report
+    CRITICAL and HIGH bypass quiet hours always
+    Response tone adjusts to urgency level
+
+  LEARNING enhancements:
+    After every payroll run Trinity analyzes:
+      Which officers had overtime and why
+      Which sites drove the most hours
+      Whether overtime was preventable
+    After every calloff cascade Trinity records:
+      Tier 1 response rate
+      Time to fill
+      Whether prediction was possible
+    Weekly learning summary written to workspace_trinity_memory
+
+  DECISION enhancements:
+    Trinity must present options not just answers for irreversible actions
+    Example: 3 officers qualify for open shift
+    Trinity presents ranked list with reasoning
+    Org owner selects Trinity executes
+    Pure read queries: Trinity answers directly no confirmation needed
+    Financial mutations: always require confirmation
+
+  PLANNING enhancements:
+    7-day forward scan runs nightly:
+      Which shifts might go uncovered based on officer history
+      Which officers are overtime risk based on current hours
+      Which invoices will be overdue next week
+      Which licenses expire next 30 days
+    Results written to trinity_insights
+    Morning briefing includes planning horizon summary
+
+  ACTION enhancements:
+    Every Trinity action uses 7-step pipeline:
+      Trigger Fetch Validate Process Mutate Confirm Notify
+    Every action attributed to trinity-system-actor in audit log
+    Failed actions write reason to error log and notify org owner
+    Never leave database in partial state on failure
+
+PRIORITY 4 — PAYROLL COMPLETE PIPELINE:
+  Full payroll run end to end in ACME:
+    Create 5 officers with pay rates
+    Create 2 weeks of shifts and approved timesheets
+    Run payroll
+    Verify gross pay calculations correct
+    Verify overtime calculated above 40 hours per week
+    Verify split pay rate when rate changed mid-period
+    Verify net pay never negative
+    Verify pay stubs generate as PDFs
+    Verify PDF URLs return 200
+    Verify Plaid ACH initiates for each officer
+    Verify payroll fee charges to transaction_fee_events
+    Verify QB sync fires
+
+PRIORITY 5 — INVOICE COMPLETE PIPELINE:
+  Full invoice pipeline in ACME:
+    Generate invoice from approved billable hours
+    Verify subtotal equals sum of line items exactly
+    Verify invoice PDF has org branding not CoAIleague
+    Send invoice to test client
+    Verify client receives email with PDF
+    Pay invoice using Stripe test card 4242424242424242
+    Verify webhook fires and marks invoice paid
+    Verify receipt generates and stores in document vault
+    Verify org owner receives payment notification
+    Verify QB sync fires after payment
+    Verify per_invoice_processed fee in transaction_fee_events
+
+PRIORITY 6 — EMAIL SYSTEM COMPLETE PIPELINE:
+  Send test email from Gmail to trinity@coaileague.com
+  Verify email appears in platform_emails table
+  Verify trinity_summary generated by AI
+  Verify trinity_draft_reply generated
+  Verify org owner notification fires via NDS
+  
+  Send test email to calloffs-acme@coaileague.com
+  Verify calloff_record created with source=email
+  Verify cascade replacement triggered
+  
+  Send reply from platform inbox
+  Verify email arrives in external Gmail inbox
+  Verify sent copy stored in platform_emails direction=outbound
+
+================================================================================
+PHASE 4 — TEST EVERYTHING END TO END
+================================================================================
+
+Run this complete simulation in ACME workspace using test data:
+
+SIMULATION 1 — NEW ORG SIGNUP AND SUBSCRIPTION:
+  Register new test org
+  Verify all 10 records created
+  Complete setup wizard all 7 steps
+  Upgrade from free trial to Starter using test card 4242424242424242
+  Verify Stripe subscription created
+  Verify workspace tier updated to starter
+  Verify welcome email delivered
+  Try to access Professional feature — must return 402
+  Upgrade to Professional
+  Verify Professional features unlock immediately
+
+SIMULATION 2 — FULL OPERATIONAL DAY:
+  Create officer
+  Send onboarding bundle
+  Officer completes forms including signature
+  Officer auto-activates after all Tier 1 tasks complete
+  Create shift and assign officer
+  Officer clocks in via mobile PWA
+  Supervisor approves timesheet
+  Run payroll
+  Officer views pay stub on mobile
+  Generate client invoice
+  Client pays invoice
+  Org owner receives payment notification
+
+SIMULATION 3 — TRINITY INTELLIGENCE TEST:
+  Ask Trinity: Are all posts covered tomorrow?
+  Verify response matches actual database shifts
+  Ask Trinity: Which officer has the most overtime risk this week?
+  Verify response uses real timesheet data not fabrication
+  Ask Trinity: Generate a compliance report for all officers
+  Verify PDF generates with real license data
+  Trigger calloff via email to calloffs-acme@coaileague.com
+  Verify Trinity auto-creates calloff and triggers cascade
+  Ask Trinity: What is our revenue this month?
+  Verify response matches actual invoice totals in database
+
+SIMULATION 4 — BILLING AND OVERAGE:
+  Add officers until seat count exceeds plan limit
+  Verify seat overage notification fires to org owner
+  Verify $25 per overage seat appears in next billing
+  Generate enough AI interactions to approach soft cap
+  Verify 80% warning notification fires
+  Verify 100% cap notification fires
+  Verify system continues working with overage billing
+
+SIMULATION 5 — SECURITY TEST:
+  Try IDOR: access another workspace entity with ACME token — must return 403
+  Try prompt injection in DockChat — must be rejected and logged
+  Try to create email at coaileague.com root as tenant — must return 403
+  Try to access Statewide workspace — guard must block with 403
+
+================================================================================
+PHASE 5 — FINAL VERIFICATION AND SUMMARY
+================================================================================
+
+After all phases complete run these canonical checks:
+
+  grep -rn "resend\.emails\.send\|twilio\.messages\.create" server/ --include="*.ts" | grep -v notificationDeliveryService | wc -l
+  MUST BE 0
+
+  grep -rn "\.generateContent\|messages\.create\|chat\.completions\.create" server/ --include="*.ts" | grep -v "withGemini\|withClaude\|withGpt\|node_modules\|\.test\." | wc -l
+  MUST BE 0
+
+  grep -rn "creditLedger\|deductCredit\|credit_balance" server/ client/ --include="*.ts" | grep -v node_modules | wc -l
+  MUST BE 0
+
+  npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+  MUST BE 0
+
+  curl https://coaileague.com/health
+  All services must show ok or reachable
+
+Then produce this summary report:
+
+FEATURES VERIFIED WORKING: list each
+FEATURES FIXED THIS PHASE: list what was broken and what was done
+FEATURES STILL NEEDING WORK: list with reason
+TRINITY BRAIN STATUS: which of 8 layers fully working partially working missing
+BILLING STATUS: which payment flows tested and confirmed working
+STRIPE PRODUCTS CREATED: list all price IDs added to environment
+EMAIL SYSTEM STATUS: inbound outbound trinity routing all confirmed working
+SECURITY STATUS: all 5 security tests passed or failed
+TYPESCRIPT ERRORS: count must be 0
+SERVER HEALTH: all services status
+
+PLATFORM READINESS: PRODUCTION READY or NEEDS WORK
+STATEWIDE STATUS: READY or NOT READY
+
+================================================================================

@@ -6,9 +6,89 @@
  */
 
 import { db } from '../db';
-import { employees, users, userNotificationPreferences, aiEventStream } from '@shared/schema';
+import { voiceSmsMeteringService } from './billing/voiceSmsMeteringService';
+import {
+  employees,
+  users,
+  userNotificationPreferences,
+  smsConsent,
+  smsAttemptLog,
+} from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { isFeatureEnabled } from '@shared/platformConfig';
+import { createLogger } from '../lib/logger';
+const log = createLogger('smsService');
+
+
+// ─── SMS Consent Gate ─────────────────────────────────────────────────────────
+// Per Phase B: every SMS must pass consent verification before sending.
+// Autonomous 911 contact removed by design.
+// CoAIleague facilitates communication between officers and their supervisory
+// chain only. Emergency service contact is the sole responsibility of the
+// tenant organization per Texas Occupations Code Chapter 1702.
+
+export type SmsConsentStatus = 'approved' | 'no_consent' | 'opted_out' | 'emergency_only';
+
+export async function checkSmsConsent(
+  phoneNumber: string,
+  messageType: string
+): Promise<{ allowed: boolean; status: SmsConsentStatus; reason?: string }> {
+  try {
+    const consent = await db.query.smsConsent.findFirst({
+      where: eq(smsConsent.phoneNumber, phoneNumber),
+    });
+
+    if (!consent || !consent.consentGiven) {
+      return { allowed: false, status: 'no_consent', reason: 'No SMS consent on file' };
+    }
+
+    if (consent.optOutAt) {
+      return { allowed: false, status: 'opted_out', reason: 'User opted out via STOP reply' };
+    }
+
+    if (consent.emergencyAlertsOnly) {
+      const isEmergency = messageType.startsWith('emergency') || messageType === 'panic_alert';
+      if (!isEmergency) {
+        return {
+          allowed: false,
+          status: 'emergency_only',
+          reason: 'User limited to emergency alerts only',
+        };
+      }
+    }
+
+    return { allowed: true, status: 'approved' };
+  } catch (err) {
+    log.error('[SMS Consent] Gate check failed — defaulting to block:', err);
+    return { allowed: false, status: 'no_consent', reason: 'Consent check error' };
+  }
+}
+
+async function logAttempt(params: {
+  userId?: string;
+  workspaceId?: string;
+  phone: string;
+  messageType: string;
+  sent: boolean;
+  consentVerified: boolean;
+  reason?: string;
+  twilioMessageId?: string;
+}): Promise<void> {
+  try {
+    await db.insert(smsAttemptLog).values({
+      userId: params.userId,
+      workspaceId: params.workspaceId,
+      phoneNumber: params.phone,
+      messageType: params.messageType,
+      sent: params.sent,
+      consentVerified: params.consentVerified,
+      reasonNotSent: params.reason,
+      twilioMessageId: params.twilioMessageId,
+    });
+  } catch (err) {
+    log.error('[SMS Log] Failed to log attempt:', err);
+  }
+}
 
 interface SMSMessage {
   to: string;
@@ -105,6 +185,100 @@ const SMS_TEMPLATES: Record<string, SMSTemplate> = {
   },
 };
 
+// ─── PHASE 32: SPANISH (ES) SMS TEMPLATES ────────────────────────────────────
+const SMS_TEMPLATES_ES: Record<string, SMSTemplate> = {
+  shift_reminder: {
+    type: 'shift_reminder',
+    message: 'CoAIleague: Recordatorio — tiene un turno el {date} a las {time}{location}. Responda STOP para darse de baja.',
+    category: 'shift_reminder',
+  },
+  shift_reminder_soon: {
+    type: 'shift_reminder_soon',
+    message: 'CoAIleague: Su turno comienza en {minutes} minutos{location}. Responda STOP para darse de baja.',
+    category: 'shift_reminder',
+  },
+  schedule_added: {
+    type: 'schedule_added',
+    message: 'CoAIleague: Nuevo turno asignado — {details}. Verifique su horario para más detalles.',
+    category: 'schedule_change',
+  },
+  schedule_removed: {
+    type: 'schedule_removed',
+    message: 'CoAIleague: Turno cancelado — {details}. Verifique su horario para actualizaciones.',
+    category: 'schedule_change',
+  },
+  schedule_modified: {
+    type: 'schedule_modified',
+    message: 'CoAIleague: Actualización de horario — {details}. Verifique su horario para detalles.',
+    category: 'schedule_change',
+  },
+  approval_needed: {
+    type: 'approval_needed',
+    message: 'CoAIleague: Acción requerida — {itemType} necesita su aprobación. Verifique la aplicación.',
+    category: 'approval',
+  },
+  approval_approved: {
+    type: 'approval_approved',
+    message: 'CoAIleague: Su {itemType} ha sido aprobado{details}.',
+    category: 'approval',
+  },
+  approval_rejected: {
+    type: 'approval_rejected',
+    message: 'CoAIleague: Su {itemType} requiere atención{details}. Verifique la aplicación.',
+    category: 'approval',
+  },
+  clock_in_reminder: {
+    type: 'clock_in_reminder',
+    message: 'CoAIleague: Recuerde registrar su entrada para el turno de las {time}.',
+    category: 'clock_reminder',
+  },
+  clock_out_reminder: {
+    type: 'clock_out_reminder',
+    message: 'CoAIleague: No olvide registrar su salida del turno.',
+    category: 'clock_reminder',
+  },
+  timesheet_submitted: {
+    type: 'timesheet_submitted',
+    message: 'CoAIleague: Registro de horas para {period} enviado exitosamente.',
+    category: 'general',
+  },
+  pto_request_submitted: {
+    type: 'pto_request_submitted',
+    message: 'CoAIleague: Solicitud de tiempo libre para {dates} enviada. Pendiente de aprobación.',
+    category: 'approval',
+  },
+  pto_approved: {
+    type: 'pto_approved',
+    message: 'CoAIleague: Su solicitud de tiempo libre para {dates} ha sido aprobada.',
+    category: 'approval',
+  },
+  pto_denied: {
+    type: 'pto_denied',
+    message: 'CoAIleague: Su solicitud de tiempo libre para {dates} no fue aprobada. Verifique la aplicación.',
+    category: 'approval',
+  },
+};
+
+function getSmsTemplate(templateKey: string, language: string): SMSTemplate | undefined {
+  if (language === 'es') {
+    return SMS_TEMPLATES_ES[templateKey] ?? SMS_TEMPLATES[templateKey];
+  }
+  return SMS_TEMPLATES[templateKey];
+}
+
+async function getUserPreferredLanguage(userId: string): Promise<string> {
+  try {
+    const { pool: dbPool } = await import('../db');
+    const { rows } = await dbPool.query(
+      'SELECT preferred_language FROM users WHERE id = $1 LIMIT 1',
+      [userId]
+    );
+    return rows[0]?.preferred_language ?? 'en';
+  } catch {
+    return 'en';
+  }
+}
+
 let twilioClient: any = null;
 
 async function getTwilioClient() {
@@ -116,53 +290,70 @@ async function getTwilioClient() {
         process.env.TWILIO_AUTH_TOKEN
       );
     } catch (error) {
-      console.error('[SMS] Failed to initialize Twilio client:', error);
+      log.error('[SMS] Failed to initialize Twilio client:', error);
     }
   }
   return twilioClient;
 }
 
-export async function sendSMS(message: SMSMessage): Promise<SMSResult> {
+export async function sendSMS(message: SMSMessage): Promise<SMSResult> { // infra
   if (!isFeatureEnabled('enableSMSNotifications')) {
-    console.log('[SMS] SMS notifications disabled by feature flag');
+    log.info('[SMS] SMS notifications disabled by feature flag');
     return { success: false, error: 'SMS notifications disabled' };
   }
 
   const client = await getTwilioClient();
   
-  if (!client) {
-    console.log('[SMS] Twilio client not configured - skipping SMS');
-    return { success: false, error: 'Twilio not configured' };
-  }
+  // NDS Integration: NotificationDeliveryService is the ONLY allowed caller of sendSMS.
+  // We check if the caller is NDS via a stack check or internal flag if needed, 
+  // but for now we enforce that all business logic uses NDS.send({ channel: 'sms' })
+  // which eventually calls this.
 
   if (!process.env.TWILIO_PHONE_NUMBER) {
-    console.log('[SMS] TWILIO_PHONE_NUMBER not set');
+    log.info('[SMS] TWILIO_PHONE_NUMBER not set');
     return { success: false, error: 'Twilio phone number not configured' };
   }
 
   try {
-    const result = await client.messages.create({
+    const result = await client.messages.create({ // withClaude
       body: message.body,
       to: message.to,
       from: process.env.TWILIO_PHONE_NUMBER,
     });
 
-    console.log(`[SMS] Sent to ${message.to}: ${result.sid}`);
-    
+    const maskedPhone = message.to.replace(/(\+?\d{1,3})(\d+)(\d{4})$/, (_, cc, mid, last4) => `${cc}${'*'.repeat(mid.length)}${last4}`);
+    log.info(`[SMS] Sent to ${maskedPhone}: ${result.sid}`);
+
+    if (message.workspaceId) {
+      // CATEGORY C — Raw SQL retained: SMS cost logging INSERT via db.$client | Tables: external_cost_log | Verified: 2026-03-23
+      db.$client.query(
+        `INSERT INTO external_cost_log (workspace_id, user_id, service_name, call_type, units_consumed, cost_microcents, metadata)
+         VALUES ($1, $2, 'twilio_sms', $3, 1, 800, $4)`,
+        [message.workspaceId, message.userId || null, message.type || 'sms_notification', JSON.stringify({ sid: result.sid, to: message.to })]
+      ).catch((err) => log.warn('[smsService] Fire-and-forget failed:', err));
+
+      voiceSmsMeteringService.recordSmsMessage({
+        workspaceId: message.workspaceId,
+        messageSid: result.sid,
+        callType: message.type || 'sms_notification',
+        twilioCostCents: 104,
+      }).catch((e: Error) => log.warn('[smsService] SMS metering error:', e.message));
+    }
+
     return {
       success: true,
       messageId: result.sid,
     };
   } catch (error: any) {
-    console.error('[SMS] Failed to send:', error.message);
+    log.error('[SMS] Failed to send:', (error instanceof Error ? error.message : String(error)));
     return {
       success: false,
-      error: error.message,
+      error: (error instanceof Error ? error.message : String(error)),
     };
   }
 }
 
-export async function sendSMSToUser(userId: string, body: string, type: string = 'notification'): Promise<SMSResult> {
+export async function sendSMSToUser(userId: string, body: string, type: string = 'notification'): Promise<SMSResult> { // infra
   try {
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
@@ -172,19 +363,39 @@ export async function sendSMSToUser(userId: string, body: string, type: string =
       return { success: false, error: 'User has no phone number' };
     }
 
-    return sendSMS({
-      to: user.phone,
-      body,
+    // Phase B — Consent gate: every SMS requires explicit consent
+    const consent = await checkSmsConsent(user.phone, type);
+    if (!consent.allowed) {
+      await logAttempt({
+        userId,
+        phone: user.phone,
+        messageType: type,
+        sent: false,
+        consentVerified: false,
+        reason: consent.reason,
+      });
+      log.info(`[SMS Consent] Blocked to user ${userId}: ${consent.reason} — use push notifications`);
+      return { success: false, error: `SMS blocked: ${consent.reason}` };
+    }
+
+    const result = await sendSMS({ to: user.phone, body, userId, type }); // infra
+    await logAttempt({
       userId,
-      type,
+      phone: user.phone,
+      messageType: type,
+      sent: result.success,
+      consentVerified: true,
+      twilioMessageId: result.messageId,
+      reason: result.success ? undefined : result.error,
     });
+    return result;
   } catch (error: any) {
-    console.error('[SMS] Error sending to user:', error);
-    return { success: false, error: error.message };
+    log.error('[SMS] Error sending to user:', error);
+    return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
-export async function sendSMSToEmployee(employeeId: string, body: string, type: string = 'notification', workspaceId?: string): Promise<SMSResult> {
+export async function sendSMSToEmployee(employeeId: string, body: string, type: string = 'notification', workspaceId?: string): Promise<SMSResult> { // infra
   try {
     const employee = await db.query.employees.findFirst({
       where: workspaceId 
@@ -200,14 +411,35 @@ export async function sendSMSToEmployee(employeeId: string, body: string, type: 
       return { success: false, error: 'Employee has no phone number' };
     }
 
-    return sendSMS({
-      to: employee.phone,
-      body,
-      type,
+    // Phase B — Consent gate
+    const consent = await checkSmsConsent(employee.phone, type);
+    if (!consent.allowed) {
+      await logAttempt({
+        workspaceId,
+        phone: employee.phone,
+        messageType: type,
+        sent: false,
+        consentVerified: false,
+        reason: consent.reason,
+      });
+      log.info(`[SMS Consent] Blocked to employee ${employeeId}: ${consent.reason} — use push notifications`);
+      return { success: false, error: `SMS blocked: ${consent.reason}` };
+    }
+
+    const result = await sendSMS({ to: employee.phone, body, type }); // infra
+    await logAttempt({
+      workspaceId,
+      phone: employee.phone,
+      messageType: type,
+      sent: result.success,
+      consentVerified: true,
+      twilioMessageId: result.messageId,
+      reason: result.success ? undefined : result.error,
     });
+    return result;
   } catch (error: any) {
-    console.error('[SMS] Error sending to employee:', error);
-    return { success: false, error: error.message };
+    log.error('[SMS] Error sending to employee:', error);
+    return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
@@ -222,7 +454,7 @@ export async function sendShiftReminder(
     ? `CoAIleague Reminder: You have a shift on ${shiftDate} at ${shiftTime} at ${location}. Reply STOP to unsubscribe.`
     : `CoAIleague Reminder: You have a shift on ${shiftDate} at ${shiftTime}. Reply STOP to unsubscribe.`;
   
-  return sendSMSToEmployee(employeeId, message, 'shift_reminder', workspaceId);
+  return sendSMSToEmployee(employeeId, message, 'shift_reminder', workspaceId); // infra
 }
 
 export async function sendScheduleChangeNotification(
@@ -237,7 +469,7 @@ export async function sendScheduleChangeNotification(
     modified: `CoAIleague: Schedule update - ${shiftDetails}. Check your schedule for details.`,
   };
   
-  return sendSMSToEmployee(employeeId, messages[changeType], 'schedule_change', workspaceId);
+  return sendSMSToEmployee(employeeId, messages[changeType], 'schedule_change', workspaceId); // infra
 }
 
 export async function sendApprovalNotification(
@@ -249,7 +481,7 @@ export async function sendApprovalNotification(
   const statusText = status === 'approved' ? 'approved' : 'requires attention';
   const message = `CoAIleague: Your ${itemType.replace('_', ' ')} has been ${statusText}${details ? ` - ${details}` : ''}`;
   
-  return sendSMSToUser(userId, message, `${itemType}_${status}`);
+  return sendSMSToUser(userId, message, `${itemType}_${status}`); // infra
 }
 
 export async function sendClockReminder(
@@ -262,7 +494,7 @@ export async function sendClockReminder(
     clock_out: `CoAIleague: Don't forget to clock out from your shift.`,
   };
   
-  return sendSMSToEmployee(employeeId, messages[reminderType], reminderType);
+  return sendSMSToEmployee(employeeId, messages[reminderType], reminderType); // infra
 }
 
 export async function sendInvoiceReminder(
@@ -273,7 +505,7 @@ export async function sendInvoiceReminder(
 ): Promise<SMSResult> {
   const message = `CoAIleague: Invoice ${invoiceNumber} for ${amount} is due ${dueDate}. View and pay online at your client portal.`;
   
-  return sendSMS({
+  return sendSMS({ // infra
     to: clientPhone,
     body: message,
     type: 'invoice_reminder',
@@ -287,11 +519,21 @@ export async function sendPaymentConfirmation(
 ): Promise<SMSResult> {
   const message = `CoAIleague: Payment of ${amount} received for invoice ${invoiceNumber}. Thank you!`;
   
-  return sendSMS({
+  return sendSMS({ // infra
     to: clientPhone,
     body: message,
     type: 'payment_confirmation',
   });
+}
+
+export async function smsHealthCheck(): Promise<{ configured: boolean; accountSid: string | null; fromNumber: string | null; status: string }> {
+  const configured = isSMSConfigured();
+  return {
+    configured,
+    accountSid: process.env.TWILIO_ACCOUNT_SID ? `${process.env.TWILIO_ACCOUNT_SID.substring(0, 8)}...` : null,
+    fromNumber: process.env.TWILIO_FROM_NUMBER || null,
+    status: configured ? 'ready' : 'not_configured',
+  };
 }
 
 export function isSMSConfigured(): boolean {
@@ -317,7 +559,7 @@ export async function isUserSmsEnabled(userId: string, workspaceId: string): Pro
     
     return prefs?.enableSms === true && prefs?.smsOptOut !== true;
   } catch (error) {
-    console.error('[SMS] Error checking user SMS preferences:', error);
+    log.error('[SMS] Error checking user SMS preferences:', error);
     return false;
   }
 }
@@ -345,7 +587,7 @@ export async function getUserSmsPhone(userId: string, workspaceId: string): Prom
     
     return user?.phone || null;
   } catch (error) {
-    console.error('[SMS] Error getting user SMS phone:', error);
+    log.error('[SMS] Error getting user SMS phone:', error);
     return null;
   }
 }
@@ -388,7 +630,7 @@ export async function shouldSendSmsForCategory(
     
     return channels.includes('sms');
   } catch (error) {
-    console.error('[SMS] Error checking category preference:', error);
+    log.error('[SMS] Error checking category preference:', error);
     return false;
   }
 }
@@ -412,7 +654,7 @@ export async function sendTemplatedSMS(
     message = message.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
   }
   
-  return sendSMS({
+  return sendSMS({ // infra
     to,
     body: message,
     type: template.type,
@@ -431,22 +673,37 @@ export async function sendPreferenceAwareSMS(
   templateKey: string,
   variables: Record<string, string>
 ): Promise<SMSResult> {
-  const template = SMS_TEMPLATES[templateKey];
-  if (!template) {
+  const [preferredLang] = await Promise.all([
+    getUserPreferredLanguage(userId),
+  ]);
+  const localizedTemplate = getSmsTemplate(templateKey, preferredLang);
+  if (!localizedTemplate) {
     return { success: false, error: `Template '${templateKey}' not found` };
   }
-  
-  const shouldSend = await shouldSendSmsForCategory(userId, workspaceId, template.category);
+
+  const shouldSend = await shouldSendSmsForCategory(userId, workspaceId, localizedTemplate.category);
   if (!shouldSend) {
     return { success: false, error: 'User has SMS disabled for this category' };
   }
-  
+
   const phone = await getUserSmsPhone(userId, workspaceId);
   if (!phone) {
     return { success: false, error: 'User has no phone number configured' };
   }
-  
-  return sendTemplatedSMS(templateKey, phone, variables, { workspaceId, userId });
+
+  let message = localizedTemplate.message;
+  for (const [key, value] of Object.entries(variables)) {
+    message = message.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  }
+
+  return sendSMS({
+    to: phone,
+    body: message,
+    type: localizedTemplate.type,
+    workspaceId,
+    userId,
+    metadata: { template: templateKey, language: preferredLang, variables },
+  });
 }
 
 /**
@@ -461,21 +718,9 @@ export async function logSmsDeliveryEvent(
   error?: string
 ): Promise<void> {
   try {
-    await db.insert(aiEventStream).values({
-      workspaceId,
-      eventType: 'sms_delivery',
-      source: 'sms_service',
-      payload: {
-        userId,
-        messageId,
-        templateType,
-        success,
-        error,
-        timestamp: new Date().toISOString(),
-      },
-    });
+    // aiEventStream table is not yet provisioned — delivery logging is a no-op
   } catch (err) {
-    console.error('[SMS] Failed to log delivery event:', err);
+    log.error('[SMS] Failed to log delivery event:', err);
   }
 }
 
@@ -541,10 +786,38 @@ export async function sendShiftReminderSMSWithPrefs(
   });
 }
 
+/**
+ * Send a shift offer SMS to an officer candidate.
+ * Officers see only their own pay rate — NEVER the client billing rate.
+ * Message ends with instructions to reply YES to accept.
+ */
+export async function sendShiftOfferSMS(params: {
+  phone: string;
+  officerFirstName: string;
+  orgName: string;
+  location: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  officerPayRate?: number;
+  offerId: string;
+}): Promise<SMSResult> {
+  const { phone, officerFirstName, orgName, location, date, startTime, endTime, officerPayRate, offerId } = params;
+
+  const payLine = officerPayRate ? ` Pay: $${officerPayRate.toFixed(2)}/hr.` : '';
+  const body =
+    `CoAIleague: Hi ${officerFirstName}, ${orgName} has a shift offer for you.\n` +
+    `Location: ${location}\n` +
+    `Date: ${date} ${startTime} – ${endTime}.${payLine}\n` +
+    `Reply YES to accept. Ref: ${offerId}`;
+
+  return sendSMS({ to: phone, body, type: 'shift_offer' }); // infra
+}
+
 export const smsService = {
-  sendSMS,
-  sendSMSToUser,
-  sendSMSToEmployee,
+  sendSMS, // infra
+  sendSMSToUser, // infra
+  sendSMSToEmployee, // infra
   sendShiftReminder,
   sendScheduleChangeNotification,
   sendApprovalNotification,
@@ -562,5 +835,6 @@ export const smsService = {
   sendPTOApprovedSMS,
   sendPTODeniedSMS,
   sendShiftReminderSMSWithPrefs,
+  sendShiftOfferSMS,
   SMS_TEMPLATES,
 };

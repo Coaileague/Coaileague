@@ -1,0 +1,1054 @@
+# COAILEAGUE - EXHAUSTIVE BUG HUNT & CODE QUALITY AUDIT
+
+## MISSION: ZERO ISSUES FOR LAUNCH
+
+This is a **SCORCHED EARTH** audit. Find EVERY bug, issue, inconsistency, dead code, race condition, unwired handler, missing import, timing issue, 500 error, and broken feature.
+
+**USE ARCHITECT MODE** if needed. This may take multiple phases. Document EVERYTHING.
+
+---
+
+# PHASE 1: SYSTEMATIC CODE SCANNING
+
+## 1.1 Dead Imports & Unused Variables
+
+```bash
+# Find ALL imports and check if they're used
+# Dead imports cause bundle bloat and indicate incomplete code
+
+# Step 1: List all imports
+grep -rn "^import\|^import {" --include="*.tsx" --include="*.ts" client/src/ server/
+
+# Step 2: For each import, check if it's used in the file
+# This script finds potentially dead imports:
+for file in $(find client/src server -name "*.tsx" -o -name "*.ts" 2>/dev/null); do
+  # Extract imports
+  imports=$(grep -oP "import \{ \K[^}]+" "$file" 2>/dev/null | tr ',' '\n' | tr -d ' ')
+  for imp in $imports; do
+    # Count usage (excluding the import line itself)
+    count=$(grep -c "\b$imp\b" "$file" 2>/dev/null)
+    if [ "$count" -le 1 ]; then
+      echo "DEAD IMPORT: $imp in $file"
+    fi
+  done
+done
+
+# Alternative: Use TypeScript compiler
+npx tsc --noEmit 2>&1 | grep -i "declared but"
+```
+
+**CHECK THESE SPECIFIC FILES (user reported):**
+```
+[ ] dashboard.tsx - Has dead import (FIND IT)
+[ ] ProgressiveHeader.tsx - Check all imports
+[ ] command-palette.tsx - Check all imports
+```
+
+**Document ALL dead imports:**
+```
+| File | Dead Import | Line | Action |
+|------|-------------|------|--------|
+| dashboard.tsx | ??? | ??? | Remove |
+| ... | ... | ... | ... |
+```
+
+## 1.2 Unwired Function Calls
+
+```bash
+# Find functions that are called but may not be properly connected
+
+# Pattern 1: Functions called without proper context/props
+grep -rn "performLogout\|handleLogout\|logout" --include="*.tsx" client/src/
+
+# Pattern 2: onClick handlers that reference undefined functions
+grep -rn "onClick={[a-zA-Z]" --include="*.tsx" client/src/
+
+# Pattern 3: Functions defined but never called
+grep -rn "const handle\|function handle\|const on\|function on" --include="*.tsx" client/src/
+```
+
+**SPECIFIC ISSUES TO FIX:**
+
+```
+ISSUE: performLogout() called without transition wiring
+
+FILES AFFECTED:
+[ ] ProgressiveHeader.tsx - Find performLogout call, wire transition
+[ ] command-palette.tsx - Find performLogout call, wire transition
+[ ] Any other file calling performLogout
+
+WHAT TO CHECK:
+1. Is performLogout imported correctly?
+2. Is useLogoutTransition hook used?
+3. Is startLogoutTransition called before performLogout?
+4. Is the transition state connected to UI?
+
+CORRECT PATTERN:
+const { startLogoutTransition, isLoggingOut } = useLogoutTransition();
+
+const handleLogout = async () => {
+  startLogoutTransition();
+  await performLogout();
+};
+```
+
+## 1.3 Race Conditions & Timing Issues
+
+```bash
+# Find potential race conditions
+
+# Pattern 1: setTimeout/setInterval without cleanup
+grep -rn "setTimeout\|setInterval" --include="*.tsx" --include="*.ts" client/src/ server/
+
+# Pattern 2: Async operations without proper await
+grep -rn "async.*{" --include="*.tsx" --include="*.ts" | head -100
+
+# Pattern 3: State updates after unmount
+grep -rn "useState\|setState" --include="*.tsx" client/src/
+
+# Pattern 4: Promise.race without proper timeout handling
+grep -rn "Promise\.race\|Promise\.all" --include="*.ts" --include="*.tsx"
+```
+
+**SPECIFIC TIMING ISSUE TO FIX:**
+
+```typescript
+/**
+ * LOGOUT HANDLER RACE TIMEOUT FIX
+ * 
+ * Current issue: Race timeout cuts off animation
+ * 
+ * Animation breakdown:
+ * - minDuration: 1200ms (minimum time before complete())
+ * - After complete():
+ *   - remainingTime to reach 100%
+ *   - 300ms animate to 100%
+ *   - 150ms exit delay
+ * 
+ * REQUIRED TIMEOUT: 1200 + 300 + 150 + 500 (buffer) = 2150ms minimum
+ * RECOMMENDED: 2500ms to be safe
+ * 
+ * FIND AND FIX:
+ * - Search for race timeout in logout logic
+ * - Update timeout to 2500ms minimum
+ * - Ensure cleanup happens AFTER animation completes
+ */
+
+// BAD:
+const RACE_TIMEOUT = 1500; // Too short!
+
+// GOOD:
+const RACE_TIMEOUT = 2500; // Accounts for full animation
+
+// Search command:
+grep -rn "timeout\|TIMEOUT\|race\|Race" --include="*.ts" --include="*.tsx" client/src/ | grep -i logout
+```
+
+## 1.4 500 Errors - Root Cause Analysis
+
+```bash
+# Find all potential sources of 500 errors
+
+# Pattern 1: Unhandled errors in route handlers
+grep -rn "router\.\(get\|post\|put\|delete\)" --include="*.ts" server/routes/
+
+# For each route, verify:
+# - try/catch exists
+# - catch sends proper error response
+# - No uncaught promise rejections
+
+# Pattern 2: Missing error handling in async functions
+grep -rn "async.*=>" --include="*.ts" server/
+
+# Pattern 3: Database queries without error handling
+grep -rn "db\.\|drizzle\.\|\.findFirst\|\.findMany\|\.insert\|\.update\|\.delete" --include="*.ts" server/
+
+# Pattern 4: External API calls without error handling
+grep -rn "fetch\|axios\|\.post\|\.get" --include="*.ts" server/
+```
+
+**500 ERROR CHECKLIST:**
+
+```
+For EVERY route handler, verify:
+
+[ ] Try/catch wraps entire handler
+[ ] Catch block sends response (not just logs)
+[ ] Response includes proper status code
+[ ] Response includes error message
+[ ] No uncaught promise rejections
+[ ] Database errors handled
+[ ] External API errors handled
+[ ] Validation errors return 400, not 500
+[ ] Auth errors return 401/403, not 500
+
+TEMPLATE FOR PROPER ERROR HANDLING:
+
+router.get('/api/something/:id', async (req, res) => {
+  try {
+    // Validate input
+    if (!req.params.id) {
+      return res.status(400).json({ success: false, error: 'ID required' });
+    }
+    
+    // Check auth
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    
+    // Database operation with workspace isolation
+    const result = await db.query.something.findFirst({
+      where: and(
+        eq(something.id, req.params.id),
+        eq(something.workspaceId, req.user.workspaceId) // CRITICAL
+      )
+    });
+    
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Not found' });
+    }
+    
+    return res.json({ success: true, data: result });
+    
+  } catch (error) {
+    console.error('Error in /api/something/:id:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      // Don't expose error details in production
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+  }
+});
+```
+
+---
+
+# PHASE 2: BUTTON & HANDLER AUDIT
+
+## 2.1 Find ALL Buttons
+
+```bash
+# Extract every button in the codebase
+grep -rn "<Button\|<button\|onClick=" --include="*.tsx" client/src/ > /tmp/all_buttons.txt
+
+# Count total buttons
+wc -l /tmp/all_buttons.txt
+```
+
+## 2.2 Button Handler Verification
+
+**For EVERY button, check:**
+
+```
+BUTTON VERIFICATION CHECKLIST:
+
+1. HANDLER EXISTS:
+   [ ] onClick references a defined function
+   [ ] Function is not empty
+   [ ] Function is not just console.log
+
+2. HANDLER WORKS:
+   [ ] Function performs intended action
+   [ ] API calls are made correctly
+   [ ] State updates correctly
+   [ ] Loading state shown during async
+
+3. ERROR HANDLING:
+   [ ] Errors caught
+   [ ] User notified of errors
+   [ ] UI doesn't break on error
+
+4. LOADING STATE:
+   [ ] Button disabled during loading
+   [ ] Loading indicator shown
+   [ ] Prevents double-click
+
+5. SUCCESS FEEDBACK:
+   [ ] User notified of success
+   [ ] UI updates to reflect change
+   [ ] Navigation happens (if applicable)
+```
+
+## 2.3 Common Button Issues
+
+```bash
+# Issue 1: Empty handlers
+grep -rn "onClick={() => {}}\|onClick={()=>{}}\|onClick={() => {\s*}}" --include="*.tsx" client/src/
+
+# Issue 2: Console.log only handlers
+grep -rn "onClick={() => console\|onClick={()=>console" --include="*.tsx" client/src/
+
+# Issue 3: Undefined function references
+grep -rn "onClick={handle" --include="*.tsx" client/src/ | while read line; do
+  file=$(echo $line | cut -d: -f1)
+  handler=$(echo $line | grep -oP "onClick=\{[a-zA-Z]+")
+  func=$(echo $handler | sed 's/onClick={//')
+  if ! grep -q "const $func\|function $func" "$file"; then
+    echo "UNDEFINED HANDLER: $func in $file"
+  fi
+done
+
+# Issue 4: Missing await on async handlers
+grep -rn "onClick={async" --include="*.tsx" client/src/
+```
+
+---
+
+# PHASE 3: LINK & NAVIGATION AUDIT
+
+## 3.1 Find ALL Links
+
+```bash
+# Extract every link
+grep -rn "<Link\|<NavLink\|<a href\|to=\"\|to={" --include="*.tsx" client/src/ > /tmp/all_links.txt
+
+# Extract all route definitions
+grep -rn "path=\"\|path={" --include="*.tsx" client/src/
+```
+
+## 3.2 Link Verification
+
+```
+For EVERY link, verify:
+
+[ ] Target route exists
+[ ] Route component renders
+[ ] No 404 when clicked
+[ ] Dynamic params work (:id, :slug, etc.)
+[ ] Query params preserved
+[ ] Navigation works on mobile
+```
+
+## 3.3 Broken Link Detection
+
+```bash
+# Find links to routes that don't exist
+# Step 1: Extract all route paths
+grep -rn "path=\"" --include="*.tsx" client/src/ | grep -oP 'path="[^"]+' | sed 's/path="//' | sort -u > /tmp/routes.txt
+
+# Step 2: Extract all link targets
+grep -rn "to=\"\|href=\"" --include="*.tsx" client/src/ | grep -oP '(to|href)="[^"]+' | sed 's/(to|href)="//' | sort -u > /tmp/links.txt
+
+# Step 3: Find links that don't match any route
+comm -23 /tmp/links.txt /tmp/routes.txt
+```
+
+---
+
+# PHASE 4: API CALL AUDIT
+
+## 4.1 Find ALL Frontend API Calls
+
+```bash
+# Find every API call from frontend
+grep -rn "fetch\|axios\|useMutation\|useQuery\|apiClient\|api\." --include="*.tsx" --include="*.ts" client/src/
+
+# Group by endpoint
+grep -rn "/api/" --include="*.tsx" --include="*.ts" client/src/ | sort | uniq -c | sort -rn
+```
+
+## 4.2 API Call Verification
+
+```
+For EVERY frontend API call:
+
+ENDPOINT: _______________
+FILE: _______________
+METHOD: _______________
+
+FRONTEND:
+[ ] Correct endpoint URL
+[ ] Correct HTTP method
+[ ] Request body formatted correctly
+[ ] Auth token/cookie included
+[ ] workspaceId NOT in body (uses session)
+
+BACKEND:
+[ ] Route exists
+[ ] Handler implemented
+[ ] Auth middleware applied
+[ ] workspaceId extracted from session
+[ ] Returns expected format
+
+ERROR HANDLING:
+[ ] Network error handled
+[ ] 4xx errors handled
+[ ] 5xx errors handled
+[ ] Timeout handled
+[ ] Loading state managed
+
+RESPONSE:
+[ ] Success response parsed
+[ ] Data used correctly
+[ ] UI updates
+```
+
+## 4.3 Missing API Endpoints
+
+```bash
+# Find frontend calls to non-existent backends
+# Step 1: Extract all frontend API calls
+grep -rn "/api/[a-zA-Z]" --include="*.tsx" --include="*.ts" client/src/ | \
+  grep -oP "/api/[a-zA-Z0-9/_-]+" | sort -u > /tmp/frontend_apis.txt
+
+# Step 2: Extract all backend routes
+grep -rn "router\.\|app\.\(get\|post\|put\|patch\|delete\)" --include="*.ts" server/ | \
+  grep -oP "'/api/[^']+'" | tr -d "'" | sort -u > /tmp/backend_routes.txt
+
+# Step 3: Find mismatches
+echo "=== Frontend calls with no backend ==="
+comm -23 /tmp/frontend_apis.txt /tmp/backend_routes.txt
+
+echo "=== Backend routes never called from frontend ==="
+comm -13 /tmp/frontend_apis.txt /tmp/backend_routes.txt
+```
+
+---
+
+# PHASE 5: IMPORT & DEPENDENCY AUDIT
+
+## 5.1 Find ALL Broken Imports
+
+```bash
+# TypeScript will catch most import errors
+npx tsc --noEmit 2>&1 | grep -E "Cannot find module|has no exported member|is not a module"
+
+# Find imports from deleted files
+grep -rn "from '\.\./\|from '\.\/" --include="*.ts" --include="*.tsx" | while read line; do
+  file=$(echo $line | cut -d: -f1)
+  dir=$(dirname $file)
+  import_path=$(echo $line | grep -oP "from '[^']+'" | tr -d "'" | sed 's/from //')
+  
+  # Resolve relative path
+  if [[ $import_path == ../* ]] || [[ $import_path == ./* ]]; then
+    resolved="$dir/$import_path"
+    # Check if file exists (with .ts, .tsx, or /index.ts)
+    if [ ! -f "${resolved}.ts" ] && [ ! -f "${resolved}.tsx" ] && [ ! -f "${resolved}/index.ts" ] && [ ! -f "${resolved}/index.tsx" ]; then
+      echo "BROKEN IMPORT: $import_path in $file"
+    fi
+  fi
+done
+```
+
+## 5.2 Circular Dependencies
+
+```bash
+# Find potential circular imports
+npx madge --circular --extensions ts,tsx client/src/
+npx madge --circular --extensions ts server/
+```
+
+## 5.3 Missing Dependencies
+
+```bash
+# Check for imports from packages not in package.json
+grep -rh "from '[a-z@]" --include="*.ts" --include="*.tsx" | \
+  grep -oP "from '[a-z@][^']+'" | \
+  sed "s/from '//;s/'.*//" | \
+  cut -d'/' -f1-2 | \
+  sort -u > /tmp/used_packages.txt
+
+# Compare with package.json
+cat package.json | jq -r '.dependencies, .devDependencies | keys[]' | sort -u > /tmp/installed_packages.txt
+
+comm -23 /tmp/used_packages.txt /tmp/installed_packages.txt
+```
+
+---
+
+# PHASE 6: STATE MANAGEMENT AUDIT
+
+## 6.1 Find ALL State
+
+```bash
+# Find all useState hooks
+grep -rn "useState" --include="*.tsx" client/src/ | wc -l
+
+# Find all useContext
+grep -rn "useContext" --include="*.tsx" client/src/
+
+# Find all Zustand/Redux stores
+grep -rn "create\|useStore\|useSelector" --include="*.ts" --include="*.tsx" client/src/
+```
+
+## 6.2 State Issues to Find
+
+```bash
+# Issue 1: setState on unmounted component
+# Look for missing cleanup in useEffect
+grep -rn "useEffect" --include="*.tsx" client/src/ -A 10 | grep -B 5 "setState\|set[A-Z]"
+
+# Issue 2: Missing dependencies in useEffect
+# TypeScript will warn, but double-check
+grep -rn "useEffect.*\[\]" --include="*.tsx" client/src/
+
+# Issue 3: Stale closures
+grep -rn "useCallback.*\[\]" --include="*.tsx" client/src/
+```
+
+## 6.3 Context Provider Issues
+
+```bash
+# Find all context providers
+grep -rn "createContext\|\.Provider" --include="*.tsx" client/src/
+
+# Ensure providers wrap app correctly
+grep -rn "Provider" --include="*.tsx" client/src/App.tsx client/src/main.tsx
+```
+
+---
+
+# PHASE 7: ASYNC/AWAIT AUDIT
+
+## 7.1 Find ALL Async Functions
+
+```bash
+# Count all async functions
+grep -rn "async " --include="*.ts" --include="*.tsx" | wc -l
+
+# Find async functions in components
+grep -rn "async " --include="*.tsx" client/src/
+```
+
+## 7.2 Async Issues to Find
+
+```bash
+# Issue 1: Missing await
+grep -rn "async.*{" --include="*.ts" --include="*.tsx" -A 20 | grep -B 5 "[^await ]fetch\|[^await ]axios\|[^await ]db\."
+
+# Issue 2: Unhandled promise rejection
+grep -rn "\.then\|\.catch" --include="*.ts" --include="*.tsx" | grep -v "\.catch"
+
+# Issue 3: Async in useEffect without cleanup
+grep -rn "useEffect.*async" --include="*.tsx" client/src/
+
+# Issue 4: Race condition in async setState
+grep -rn "async.*setState\|await.*setState" --include="*.tsx" client/src/
+```
+
+## 7.3 Promise Patterns
+
+```bash
+# Find all Promise.all (check for proper error handling)
+grep -rn "Promise\.all" --include="*.ts" --include="*.tsx"
+
+# Find all Promise.race (check timeouts)
+grep -rn "Promise\.race" --include="*.ts" --include="*.tsx"
+
+# Find floating promises (no await, no .then)
+# These are potential bugs
+```
+
+---
+
+# PHASE 8: ERROR BOUNDARY AUDIT
+
+## 8.1 Find Error Boundaries
+
+```bash
+# Find all error boundaries
+grep -rn "ErrorBoundary\|componentDidCatch\|getDerivedStateFromError" --include="*.tsx" client/src/
+
+# Check if error boundaries exist
+ls -la client/src/components/*error* 2>/dev/null
+ls -la client/src/components/*Error* 2>/dev/null
+```
+
+## 8.2 Error Boundary Coverage
+
+```
+ERROR BOUNDARY CHECKLIST:
+
+[ ] Root error boundary exists (wraps entire app)
+[ ] Route-level error boundaries exist
+[ ] Critical feature error boundaries exist
+[ ] Error boundaries show user-friendly messages
+[ ] Error boundaries offer recovery options
+[ ] Errors logged to monitoring service
+```
+
+---
+
+# PHASE 9: FORM VALIDATION AUDIT
+
+## 9.1 Find ALL Forms
+
+```bash
+# Find all forms
+grep -rn "<form\|useForm\|handleSubmit\|onSubmit" --include="*.tsx" client/src/
+
+# Find all input fields
+grep -rn "<input\|<Input\|<textarea\|<select\|<Select" --include="*.tsx" client/src/
+```
+
+## 9.2 Form Validation Issues
+
+```bash
+# Issue 1: Forms without validation
+grep -rn "onSubmit" --include="*.tsx" client/src/ -B 5 -A 10 | grep -v "validate\|schema\|required"
+
+# Issue 2: Client-side only validation (no server validation)
+grep -rn "z\.object\|yup\.\|Joi\." --include="*.ts" server/
+
+# Issue 3: Missing required fields
+grep -rn "required" --include="*.tsx" client/src/
+```
+
+---
+
+# PHASE 10: WEBSOCKET AUDIT
+
+## 10.1 WebSocket Connection Issues
+
+```bash
+# Find all WebSocket code
+grep -rn "WebSocket\|socket\|Socket\|\.io\(" --include="*.ts" --include="*.tsx"
+
+# Find connection handlers
+grep -rn "onopen\|onclose\|onerror\|onmessage\|\.on\(" --include="*.ts" --include="*.tsx"
+```
+
+## 10.2 WebSocket Issues to Check
+
+```
+WEBSOCKET CHECKLIST:
+
+CONNECTION:
+[ ] Single socket per user (no connection storms)
+[ ] Reconnection logic with backoff
+[ ] Max retry limit
+[ ] Connection state tracked
+
+MESSAGES:
+[ ] Message types defined
+[ ] Message validation
+[ ] Error messages handled
+[ ] Acknowledgments work
+
+CLEANUP:
+[ ] Socket closed on unmount
+[ ] Socket closed on logout
+[ ] Listeners removed on cleanup
+
+ROOMS/CHANNELS:
+[ ] Room subscription works
+[ ] Room unsubscription works
+[ ] No orphaned subscriptions
+```
+
+---
+
+# PHASE 11: DATABASE QUERY AUDIT
+
+## 11.1 Find ALL Database Queries
+
+```bash
+# Find all database operations
+grep -rn "db\.\|drizzle\.\|\.findFirst\|\.findMany\|\.insert\|\.update\|\.delete\|\.execute" --include="*.ts" server/
+
+# Count queries per file
+grep -rn "db\." --include="*.ts" server/ | cut -d: -f1 | sort | uniq -c | sort -rn
+```
+
+## 11.2 Query Issues to Find
+
+```bash
+# Issue 1: Missing workspaceId filter (CRITICAL)
+grep -rn "\.findFirst\|\.findMany" --include="*.ts" server/ | grep -v "workspaceId"
+
+# Issue 2: N+1 queries
+grep -rn "for.*await\|forEach.*await\|map.*await" --include="*.ts" server/
+
+# Issue 3: Missing indexes (check schema)
+grep -rn "index\|\.index" shared/schema.ts
+
+# Issue 4: Unbounded queries (no limit)
+grep -rn "\.findMany" --include="*.ts" server/ | grep -v "limit"
+```
+
+## 11.3 Transaction Issues
+
+```bash
+# Find operations that should use transactions
+grep -rn "\.insert.*\.update\|\.update.*\.delete\|\.delete.*\.insert" --include="*.ts" server/
+
+# Find existing transactions
+grep -rn "transaction\|\.transaction" --include="*.ts" server/
+```
+
+---
+
+# PHASE 12: AUTH & SESSION AUDIT
+
+## 12.1 Auth Issues
+
+```bash
+# Find all auth-related code
+grep -rn "auth\|Auth\|session\|Session\|token\|Token\|jwt\|JWT" --include="*.ts" server/
+
+# Find unprotected routes
+grep -rn "router\.\(get\|post\|put\|delete\)" --include="*.ts" server/routes/ | grep -v "auth\|middleware"
+```
+
+## 12.2 Session Issues
+
+```bash
+# Find session access
+grep -rn "req\.session\|req\.user\|getSession\|useSession" --include="*.ts" --include="*.tsx"
+
+# Find session modification
+grep -rn "session\.\|req\.session\." --include="*.ts" server/
+```
+
+## 12.3 Auth Checklist
+
+```
+AUTH CHECKLIST:
+
+LOGIN:
+[ ] Password hashed correctly
+[ ] Session created on success
+[ ] Token generated (if JWT)
+[ ] Login attempts rate-limited
+[ ] Failed attempts logged
+
+SESSION:
+[ ] Session stored securely
+[ ] Session expires appropriately
+[ ] Session invalidated on logout
+[ ] Session tied to user correctly
+[ ] workspaceId in session
+
+PROTECTED ROUTES:
+[ ] Auth middleware on all protected routes
+[ ] User extracted from session
+[ ] workspaceId extracted from user
+[ ] 401 returned if not authenticated
+[ ] 403 returned if not authorized
+
+LOGOUT:
+[ ] Session destroyed
+[ ] Token invalidated
+[ ] Client state cleared
+[ ] Redirect to login
+```
+
+---
+
+# PHASE 13: SPECIFIC ISSUE HUNT
+
+## 13.1 The Issues You Reported
+
+```bash
+# Issue 1: ProgressiveHeader.tsx - performLogout without transition
+grep -n "performLogout\|logout\|Logout" client/src/**/ProgressiveHeader.tsx
+grep -n "useLogoutTransition\|startLogout" client/src/**/ProgressiveHeader.tsx
+# FIX: Wire useLogoutTransition hook
+
+# Issue 2: command-palette.tsx - performLogout without transition  
+grep -n "performLogout\|logout\|Logout" client/src/**/command-palette.tsx
+grep -n "useLogoutTransition\|startLogout" client/src/**/command-palette.tsx
+# FIX: Wire useLogoutTransition hook
+
+# Issue 3: dashboard.tsx - dead import
+grep -n "^import" client/src/**/dashboard.tsx
+# FIX: Remove unused import
+
+# Issue 4: Race timeout too short
+grep -rn "timeout\|TIMEOUT\|1200\|1500\|2000" --include="*.ts" --include="*.tsx" client/src/ | grep -i logout
+# FIX: Increase to 2500ms minimum
+```
+
+## 13.2 Search for Similar Issues
+
+```bash
+# Find ALL places performLogout is called
+grep -rn "performLogout\|handleLogout" --include="*.tsx" client/src/
+
+# For each, check if transition is wired
+# Should have: useLogoutTransition hook, startLogoutTransition call
+
+# Find ALL timeout values
+grep -rn "setTimeout.*[0-9]\|TIMEOUT.*=.*[0-9]" --include="*.ts" --include="*.tsx"
+
+# Find ALL animation durations
+grep -rn "duration.*[0-9]\|delay.*[0-9]\|transition.*[0-9]" --include="*.ts" --include="*.tsx" --include="*.css"
+```
+
+---
+
+# PHASE 14: COMPLETE FILE-BY-FILE AUDIT
+
+## 14.1 Critical Files to Audit
+
+```
+AUTHENTICATION FILES:
+[ ] server/routes/auth.ts - Every route, every handler
+[ ] client/src/pages/login.tsx - Form, submission, errors
+[ ] client/src/pages/register.tsx - Form, submission, errors
+[ ] client/src/hooks/useAuth.ts - All auth logic
+[ ] client/src/contexts/AuthContext.tsx - Provider, state
+
+LAYOUT FILES:
+[ ] client/src/components/ProgressiveHeader.tsx - All buttons, logout
+[ ] client/src/components/Sidebar.tsx - All links, navigation
+[ ] client/src/components/command-palette.tsx - All commands
+
+CORE PAGES:
+[ ] client/src/pages/dashboard.tsx - Imports, data loading
+[ ] client/src/pages/employees/index.tsx - List, CRUD
+[ ] client/src/pages/employees/[id].tsx - Detail, edit
+[ ] client/src/pages/clients/index.tsx - List, CRUD
+[ ] client/src/pages/clients/[id].tsx - Detail, edit
+[ ] client/src/pages/schedule/index.tsx - Calendar, shifts
+[ ] client/src/pages/timeclock/index.tsx - Clock in/out
+
+API ROUTES:
+[ ] server/routes/employees.ts - All endpoints
+[ ] server/routes/clients.ts - All endpoints
+[ ] server/routes/shifts.ts - All endpoints
+[ ] server/routes/timeclock.ts - All endpoints
+[ ] server/routes/invoices.ts - All endpoints
+[ ] server/routes/contracts.ts - All endpoints
+
+AI FILES:
+[ ] server/services/ai/trinity.ts - All AI logic
+[ ] server/services/ai/orchestration.ts - Model routing
+```
+
+## 14.2 Audit Template Per File
+
+```
+FILE: _______________
+
+IMPORTS:
+[ ] All imports resolve
+[ ] No dead imports
+[ ] No circular dependencies
+
+EXPORTS:
+[ ] Correct exports
+[ ] Types exported if needed
+
+FUNCTIONS:
+[ ] All functions implemented
+[ ] All functions have error handling
+[ ] All async functions awaited properly
+
+HANDLERS:
+[ ] All handlers wired to UI
+[ ] All handlers work correctly
+[ ] All handlers have loading states
+
+STATE:
+[ ] State initialized correctly
+[ ] State updates correctly
+[ ] No stale state issues
+
+EFFECTS:
+[ ] Cleanup functions exist
+[ ] Dependencies correct
+[ ] No infinite loops
+
+API CALLS:
+[ ] Correct endpoints
+[ ] Correct methods
+[ ] Error handling exists
+[ ] Loading states exist
+
+RENDERING:
+[ ] No conditional hook calls
+[ ] Keys on list items
+[ ] No React warnings
+```
+
+---
+
+# PHASE 15: AUTOMATED TESTING
+
+## 15.1 Run All Existing Tests
+
+```bash
+# Run unit tests
+npm test 2>&1 | tee /tmp/test_results.txt
+
+# Run e2e tests if available
+npm run test:e2e 2>&1 | tee /tmp/e2e_results.txt
+
+# Check test coverage
+npm run test:coverage 2>&1 | tee /tmp/coverage.txt
+```
+
+## 15.2 Manual Test Checklist
+
+```
+CRITICAL PATH TESTING:
+
+AUTHENTICATION:
+[ ] Login with valid credentials → Success
+[ ] Login with invalid credentials → Error shown
+[ ] Logout → Session cleared, redirected
+[ ] Password reset → Email sent
+
+NAVIGATION:
+[ ] Every sidebar link → Correct page loads
+[ ] Every breadcrumb → Navigation works
+[ ] Back button → Previous page
+[ ] Direct URL access → Page loads (if auth ok)
+
+CRUD (for each entity):
+[ ] Create → Record saved, appears in list
+[ ] Read (list) → Data loads, pagination works
+[ ] Read (detail) → All fields shown
+[ ] Update → Changes saved, UI reflects
+[ ] Delete → Confirmation, record removed
+
+TIME CLOCK:
+[ ] Clock in → Entry created, GPS captured
+[ ] Clock out → Entry completed, hours calculated
+
+SCHEDULING:
+[ ] Create shift → Shift appears
+[ ] Assign employee → Assignment saved
+[ ] Delete shift → Shift removed
+
+AI FEATURES:
+[ ] Trinity chat → Response received
+[ ] Auto-schedule → Schedule proposed
+```
+
+---
+
+# OUTPUT FORMAT
+
+```markdown
+# EXHAUSTIVE BUG HUNT REPORT
+
+## Date: [DATE]
+## Total Issues Found: [NUMBER]
+## Critical: [NUMBER]
+## High: [NUMBER]
+## Medium: [NUMBER]
+## Low: [NUMBER]
+
+---
+
+## CRITICAL ISSUES (Blocks launch)
+
+| # | Category | File | Line | Issue | Fix |
+|---|----------|------|------|-------|-----|
+| 1 | Race Condition | logout-handler.ts | 45 | Timeout too short (1500ms) | Increase to 2500ms |
+| 2 | Unwired Handler | ProgressiveHeader.tsx | 89 | performLogout not wired to transition | Add useLogoutTransition |
+| 3 | Unwired Handler | command-palette.tsx | 234 | performLogout not wired to transition | Add useLogoutTransition |
+| 4 | Dead Import | dashboard.tsx | 12 | Unused import 'X' | Remove import |
+| ... | ... | ... | ... | ... | ... |
+
+---
+
+## HIGH PRIORITY (Fix before launch)
+
+| # | Category | File | Line | Issue | Fix |
+|---|----------|------|------|-------|-----|
+| ... | ... | ... | ... | ... | ... |
+
+---
+
+## MEDIUM PRIORITY (Fix within week 1)
+
+| # | Category | File | Line | Issue | Fix |
+|---|----------|------|------|-------|-----|
+| ... | ... | ... | ... | ... | ... |
+
+---
+
+## LOW PRIORITY (Technical debt)
+
+| # | Category | File | Line | Issue | Fix |
+|---|----------|------|------|-------|-----|
+| ... | ... | ... | ... | ... | ... |
+
+---
+
+## ISSUES BY CATEGORY
+
+### Dead Imports
+| File | Import | Line |
+|------|--------|------|
+
+### Unwired Handlers
+| File | Handler | Line |
+|------|---------|------|
+
+### Race Conditions
+| File | Issue | Fix |
+|------|-------|-----|
+
+### 500 Errors
+| Endpoint | Cause | Fix |
+|----------|-------|-----|
+
+### Missing Error Handling
+| File | Function | Line |
+|------|----------|------|
+
+### Broken Links
+| File | Link Target | Line |
+|------|-------------|------|
+
+### API Mismatches
+| Frontend Call | Backend Route | Issue |
+|---------------|---------------|-------|
+
+### Auth Issues
+| File | Issue | Fix |
+|------|-------|-----|
+
+### Database Issues
+| Query Location | Issue | Fix |
+|----------------|-------|-----|
+
+---
+
+## FIX ORDER
+
+1. [Critical #1] - [reason]
+2. [Critical #2] - [reason]
+3. [Critical #3] - [reason]
+...
+
+---
+
+## VERIFICATION AFTER FIXES
+
+[ ] All critical issues fixed
+[ ] All high priority fixed
+[ ] TypeScript compiles without errors
+[ ] No console errors in browser
+[ ] All tests pass
+[ ] Manual testing complete
+
+---
+
+## SIGN-OFF
+
+[ ] Zero critical issues remaining
+[ ] Zero high priority issues remaining
+[ ] Platform ready for launch
+```
+
+---
+
+# EXECUTION INSTRUCTIONS
+
+1. **USE ARCHITECT MODE** for comprehensive analysis
+2. Run EVERY bash command in this document
+3. Document EVERY issue found - no matter how small
+4. Prioritize by impact (Critical → High → Medium → Low)
+5. Fix in order of priority
+6. Re-run checks after fixes
+7. Do NOT mark complete until ZERO critical/high issues remain
+
+**THE GOAL: ZERO ISSUES FOR LAUNCH**
+
+**BEGIN EXHAUSTIVE BUG HUNT NOW.**

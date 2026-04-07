@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Activity,
-  RefreshCw,
   UserCog,
   Calendar,
   Mail,
@@ -32,21 +31,21 @@ import {
   XCircle,
   Eye,
   ExternalLink,
-  Home
+  Home,
+  Radio,
+  RefreshCw,
+  TrendingUp,
+  ClipboardList,
+  Building,
+  Siren,
+  ClockAlert,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import {
   Select,
   SelectContent,
@@ -81,6 +80,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface LeaderStats {
   headcount: {
@@ -157,7 +157,7 @@ const escalationSchema = z.object({
 export default function LeadersHub() {
   const { toast } = useToast();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("command-center");
   const [searchQuery, setSearchQuery] = useState("");
   
   // Dialog states
@@ -166,6 +166,32 @@ export default function LeadersHub() {
   const [updateContactDialog, setUpdateContactDialog] = useState(false);
   const [escalationDialog, setEscalationDialog] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+
+  // Trinity welcome greeting on first login (from invite accept flow)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('firstLogin') === '1') {
+      const name = params.get('name') || 'there';
+      const org = params.get('org') || 'your organization';
+      const role = params.get('role') || 'Manager';
+      const firstName = name.split(' ')[0];
+      toast({
+        title: `Welcome, ${firstName}!`,
+        description: `You're now logged in as ${role} at ${org}. Your Command Center is ready.`,
+        duration: 6000,
+      });
+      // Clean up the URL params without a full reload
+      const clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    }
+  }, []);
+
+  // Fetch Manager Command Center
+  const { data: commandCenter, isLoading: commandCenterLoading, refetch: refetchCommandCenter } = useQuery<any>({
+    queryKey: ['/api/manager/command-center'],
+    refetchInterval: 30000,
+    retry: false,
+  });
 
   // Fetch leader dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery<LeaderStats>({
@@ -183,8 +209,9 @@ export default function LeadersHub() {
   });
 
   // Fetch employees (for People tab)
-  const { data: employees = [] } = useQuery<any[]>({
+  const { data: employees = [] } = useQuery<{ data: any[] }, Error, any[]>({
     queryKey: ['/api/employees'],
+    select: (res) => res?.data ?? [],
   });
 
   // Fetch escalation tickets
@@ -316,55 +343,264 @@ export default function LeadersHub() {
     emp.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <UserCog className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-leaders-hub-title">Leaders Hub</h1>
-            <p className="text-sm text-muted-foreground">
-              Self-service employee management · Approvals · Support escalation
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setRefreshKey(prev => prev + 1)}
-          data-testid="button-refresh-leaders"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'leaders-hub',
+    title: 'Leaders Hub',
+    subtitle: 'Self-service employee management · Approvals · Support escalation',
+    category: 'operations',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Tabbed Interface */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5" data-testid="tabs-leaders-hub">
-          <TabsTrigger value="dashboard" data-testid="tab-dashboard">
-            <Home className="h-4 w-4 mr-2" />
-            Dashboard
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6" data-testid="tabs-leaders-hub">
+          <TabsTrigger value="command-center" className="text-xs sm:text-sm" data-testid="tab-command-center">
+            <Radio className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
+            <span className="truncate">Command</span>
           </TabsTrigger>
-          <TabsTrigger value="people" data-testid="tab-people">
-            <Users className="h-4 w-4 mr-2" />
-            People
+          <TabsTrigger value="dashboard" className="text-xs sm:text-sm" data-testid="tab-dashboard">
+            <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
+            <span className="truncate">Dashboard</span>
           </TabsTrigger>
-          <TabsTrigger value="scheduling" data-testid="tab-scheduling">
-            <Calendar className="h-4 w-4 mr-2" />
-            Scheduling
+          <TabsTrigger value="people" className="text-xs sm:text-sm" data-testid="tab-people">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
+            <span className="truncate">People</span>
           </TabsTrigger>
-          <TabsTrigger value="issues" data-testid="tab-issues">
-            <AlertOctagon className="h-4 w-4 mr-2" />
-            Issues
+          <TabsTrigger value="scheduling" className="text-xs sm:text-sm" data-testid="tab-scheduling">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
+            <span className="truncate">Schedule</span>
           </TabsTrigger>
-          <TabsTrigger value="reports" data-testid="tab-reports">
-            <FileText className="h-4 w-4 mr-2" />
-            Reports
+          <TabsTrigger value="issues" className="text-xs sm:text-sm" data-testid="tab-issues">
+            <AlertOctagon className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
+            <span className="truncate">Issues</span>
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="text-xs sm:text-sm" data-testid="tab-reports">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0" />
+            <span className="truncate">Reports</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* Command Center Tab */}
+        <TabsContent value="command-center" className="space-y-6 mt-6">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 className="text-base font-semibold" data-testid="text-command-center-heading">Manager Command Center</h3>
+              <p className="text-xs text-muted-foreground">Live operations overview — refreshes every 30 seconds</p>
+            </div>
+            <Button size="icon" variant="ghost" onClick={() => refetchCommandCenter()} data-testid="button-refresh-command-center">
+              <RefreshCw className={`h-4 w-4 ${commandCenterLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+
+          {commandCenterLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-40 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : commandCenter ? (
+            <>
+              {/* Active Alerts Banner */}
+              {commandCenter.activeAlerts?.count > 0 && (
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 flex items-start gap-3" data-testid="alert-active-alerts">
+                  <Siren className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-destructive">{commandCenter.activeAlerts.count} Active Alert{commandCenter.activeAlerts.count !== 1 ? 's' : ''}</p>
+                    {commandCenter.activeAlerts.missedClockIns?.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {commandCenter.activeAlerts.missedClockIns.length} officer{commandCenter.activeAlerts.missedClockIns.length !== 1 ? 's' : ''} missed clock-in
+                      </p>
+                    )}
+                    {commandCenter.activeAlerts.openIncidents?.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {commandCenter.activeAlerts.openIncidents.length} open incident{commandCenter.activeAlerts.openIncidents.length !== 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Coverage */}
+                <Card data-testid="card-coverage">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2 space-y-0">
+                    <CardTitle className="text-sm font-medium">Shift Coverage</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold" data-testid="stat-clocked-in">{commandCenter.todayShifts?.clockedIn ?? 0}</div>
+                    <p className="text-xs text-muted-foreground">of {commandCenter.todayShifts?.total ?? 0} shifts clocked in</p>
+                    {commandCenter.todayShifts?.notClockedIn > 0 && (
+                      <Badge variant="destructive" className="mt-2 text-xs" data-testid="badge-not-clocked-in">
+                        {commandCenter.todayShifts.notClockedIn} not clocked in
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Pending Actions */}
+                <Card data-testid="card-pending-actions">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2 space-y-0">
+                    <CardTitle className="text-sm font-medium">Pending Actions</CardTitle>
+                    <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold" data-testid="stat-pending-total">{commandCenter.pendingActions?.total ?? 0}</div>
+                    <div className="space-y-1 mt-2">
+                      {commandCenter.pendingActions?.timesheets > 0 && (
+                        <p className="text-xs text-muted-foreground flex justify-between">
+                          <span>Timesheets</span>
+                          <span className="font-medium text-foreground">{commandCenter.pendingActions.timesheets}</span>
+                        </p>
+                      )}
+                      {commandCenter.pendingActions?.incidents > 0 && (
+                        <p className="text-xs text-muted-foreground flex justify-between">
+                          <span>Incidents</span>
+                          <span className="font-medium text-foreground">{commandCenter.pendingActions.incidents}</span>
+                        </p>
+                      )}
+                      {commandCenter.pendingActions?.documentsToSign > 0 && (
+                        <p className="text-xs text-muted-foreground flex justify-between">
+                          <span>Docs to sign</span>
+                          <span className="font-medium text-foreground">{commandCenter.pendingActions.documentsToSign}</span>
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Missed Clock-ins */}
+                <Card data-testid="card-missed-clockins">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2 space-y-0">
+                    <CardTitle className="text-sm font-medium">Missed Clock-ins</CardTitle>
+                    <ClockAlert className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${(commandCenter.activeAlerts?.missedClockIns?.length ?? 0) > 0 ? 'text-destructive' : ''}`} data-testid="stat-missed-clockins">
+                      {commandCenter.activeAlerts?.missedClockIns?.length ?? 0}
+                    </div>
+                    {commandCenter.activeAlerts?.missedClockIns?.length > 0 ? (
+                      <div className="mt-2 space-y-1">
+                        {commandCenter.activeAlerts.missedClockIns.slice(0, 3).map((m: any, i: number) => (
+                          <p key={i} className="text-xs text-muted-foreground">
+                            Site: {m.siteName || 'Unknown'} — <span className="text-destructive">{m.minutesLate}m late</span>
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-emerald-600 mt-1 dark:text-emerald-400">All officers clocked in on time</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Open Incidents */}
+                <Card data-testid="card-open-incidents">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2 space-y-0">
+                    <CardTitle className="text-sm font-medium">Open Incidents</CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${(commandCenter.pendingActions?.incidents ?? 0) > 0 ? 'text-amber-500' : ''}`} data-testid="stat-open-incidents">
+                      {commandCenter.pendingActions?.incidents ?? 0}
+                    </div>
+                    {commandCenter.activeAlerts?.openIncidents?.length > 0 ? (
+                      <div className="mt-2 space-y-1">
+                        {commandCenter.activeAlerts.openIncidents.slice(0, 3).map((inc: any, i: number) => (
+                          <p key={i} className="text-xs text-muted-foreground truncate">
+                            {inc.title}
+                            {inc.severity && <Badge variant="outline" className="ml-1 text-xs">{inc.severity}</Badge>}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-emerald-600 mt-1 dark:text-emerald-400">No open incidents</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Trinity Brief */}
+              {commandCenter.trinityBrief?.items?.length > 0 && (
+                <Card data-testid="card-trinity-brief">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      <div>
+                        <CardTitle className="text-sm">Trinity Morning Brief</CardTitle>
+                        <CardDescription className="text-xs">Top items from today's AI summary</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {commandCenter.trinityBrief.items.map((item: any, i: number) => (
+                      <div key={i} className="flex items-start gap-2.5 text-sm" data-testid={`trinity-brief-item-${i}`}>
+                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-xs">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">{item.message}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Today's Officers Table */}
+              {commandCenter.todayShifts?.officers?.length > 0 && (
+                <Card data-testid="card-todays-officers">
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-3">
+                        <Building className="h-5 w-5 text-primary" />
+                        <div>
+                          <CardTitle className="text-sm">Today's Officers</CardTitle>
+                          <CardDescription className="text-xs">{commandCenter.todayShifts.total} scheduled shifts</CardDescription>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1.5">
+                      {commandCenter.todayShifts.officers.slice(0, 10).map((officer: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/40 text-xs" data-testid={`officer-row-${i}`}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full shrink-0 ${officer.clockedIn ? 'bg-emerald-500' : officer.missedAlert ? 'bg-destructive' : 'bg-muted-foreground'}`} />
+                            <span className="text-muted-foreground">{officer.siteName || 'Unknown Site'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">
+                              {officer.startTime ? new Date(officer.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                            <Badge variant={officer.clockedIn ? 'default' : officer.missedAlert ? 'destructive' : 'secondary'} className="text-xs">
+                              {officer.clockedIn ? 'Clocked In' : officer.missedAlert ? 'Alert' : 'Pending'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                      {commandCenter.todayShifts.total > 10 && (
+                        <p className="text-xs text-muted-foreground text-center pt-1">+ {commandCenter.todayShifts.total - 10} more shifts</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {commandCenter.todayShifts?.total === 0 && (
+                <div className="text-center py-12 text-muted-foreground" data-testid="empty-no-shifts">
+                  <Calendar className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">No shifts scheduled for today</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Radio className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">Command center data unavailable</p>
+              <p className="text-xs mt-1">Make sure you have manager permissions</p>
+            </div>
+          )}
+        </TabsContent>
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-6 mt-6">
@@ -506,7 +742,7 @@ export default function LeadersHub() {
                                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                     <div className="flex items-center gap-1">
                                       <UserX className="h-3 w-3" />
-                                      {task.employee.name}
+                                      {task.employee.firstName ? `${task.employee.firstName} ${task.employee.lastName || ''}`.trim() : task.employee.email}
                                     </div>
                                     <div className="flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
@@ -806,14 +1042,14 @@ export default function LeadersHub() {
       </Tabs>
 
       {/* Reset Password Dialog */}
-      <Dialog open={resetPasswordDialog} onOpenChange={setResetPasswordDialog}>
-        <DialogContent size="md" data-testid="dialog-reset-password">
-          <DialogHeader>
-            <DialogTitle>Reset Employee Password</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={resetPasswordDialog} onOpenChange={setResetPasswordDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-reset-password">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Reset Employee Password</UniversalModalTitle>
+            <UniversalModalDescription>
               Reset the password for the selected employee. A new temporary password will be generated.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <Form {...resetPasswordForm}>
             <form onSubmit={resetPasswordForm.handleSubmit((data) => resetPasswordMutation.mutate(data))} className="space-y-4">
               <FormField
@@ -857,28 +1093,28 @@ export default function LeadersHub() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              <UniversalModalFooter>
                 <Button type="button" variant="outline" onClick={() => setResetPasswordDialog(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={resetPasswordMutation.isPending} data-testid="button-confirm-reset">
                   {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
                 </Button>
-              </DialogFooter>
+              </UniversalModalFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Unlock Account Dialog */}
-      <Dialog open={unlockAccountDialog} onOpenChange={setUnlockAccountDialog}>
-        <DialogContent size="md" data-testid="dialog-unlock-account">
-          <DialogHeader>
-            <DialogTitle>Unlock Employee Account</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={unlockAccountDialog} onOpenChange={setUnlockAccountDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-unlock-account">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Unlock Employee Account</UniversalModalTitle>
+            <UniversalModalDescription>
               Unlock the account for the selected employee who has been locked due to failed login attempts.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <Form {...unlockAccountForm}>
             <form onSubmit={unlockAccountForm.handleSubmit((data) => unlockAccountMutation.mutate(data))} className="space-y-4">
               <FormField
@@ -922,28 +1158,28 @@ export default function LeadersHub() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              <UniversalModalFooter>
                 <Button type="button" variant="outline" onClick={() => setUnlockAccountDialog(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={unlockAccountMutation.isPending} data-testid="button-confirm-unlock">
                   {unlockAccountMutation.isPending ? "Unlocking..." : "Unlock Account"}
                 </Button>
-              </DialogFooter>
+              </UniversalModalFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Update Contact Dialog */}
-      <Dialog open={updateContactDialog} onOpenChange={setUpdateContactDialog}>
-        <DialogContent size="md" data-testid="dialog-update-contact">
-          <DialogHeader>
-            <DialogTitle>Update Contact Information</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={updateContactDialog} onOpenChange={setUpdateContactDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-update-contact">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Update Contact Information</UniversalModalTitle>
+            <UniversalModalDescription>
               Update phone number or address for the selected employee.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <Form {...updateContactForm}>
             <form onSubmit={updateContactForm.handleSubmit((data) => updateContactMutation.mutate(data))} className="space-y-4">
               <FormField
@@ -977,7 +1213,7 @@ export default function LeadersHub() {
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="(555) 123-4567" {...field} data-testid="input-phone" />
+                      <Input placeholder="Enter phone number" {...field} data-testid="input-phone" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1013,28 +1249,28 @@ export default function LeadersHub() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              <UniversalModalFooter>
                 <Button type="button" variant="outline" onClick={() => setUpdateContactDialog(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={updateContactMutation.isPending} data-testid="button-confirm-update">
                   {updateContactMutation.isPending ? "Updating..." : "Update Contact"}
                 </Button>
-              </DialogFooter>
+              </UniversalModalFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Escalation Dialog */}
-      <Dialog open={escalationDialog} onOpenChange={setEscalationDialog}>
-        <DialogContent size="xl" data-testid="dialog-escalation">
-          <DialogHeader>
-            <DialogTitle>Create Escalation Ticket</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={escalationDialog} onOpenChange={setEscalationDialog}>
+        <UniversalModalContent size="xl" data-testid="dialog-escalation">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Create Escalation Ticket</UniversalModalTitle>
+            <UniversalModalDescription>
               Escalate an issue to platform support. All fields are required for proper routing.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <Form {...escalationForm}>
             <form onSubmit={escalationForm.handleSubmit((data) => escalationMutation.mutate(data))} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1120,18 +1356,18 @@ export default function LeadersHub() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              <UniversalModalFooter>
                 <Button type="button" variant="outline" onClick={() => setEscalationDialog(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={escalationMutation.isPending} data-testid="button-confirm-escalation">
                   {escalationMutation.isPending ? "Creating..." : "Create Escalation"}
                 </Button>
-              </DialogFooter>
+              </UniversalModalFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

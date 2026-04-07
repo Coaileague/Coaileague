@@ -23,7 +23,11 @@ import {
   employees
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, isNull, sum, count } from 'drizzle-orm';
-import { meteredGemini } from '../../../billing/meteredGeminiClient';
+import { createLogger } from '../../../lib/logger';
+import { meteredGemini } from '../../billing/meteredGeminiClient';
+import { PLATFORM } from '../../../config/platformConfig';
+
+const log = createLogger('InvoiceReconciliation');
 
 interface InvoiceReconciliationParams {
   workspaceId: string;
@@ -76,10 +80,10 @@ export class InvoiceReconciliationSkill extends BaseSkill {
       name: 'Invoice Reconciliation & Gap Analysis',
       version: '1.0.0',
       description: 'AI-powered invoice validation and revenue gap detection using Gemini 3 Pro',
-      author: 'CoAIleague AI Brain',
+      author: PLATFORM.name + " AI Brain",
       category: 'invoicing',
       requiredTier: 'professional',
-      requiredRole: ['owner', 'admin'],
+      requiredRole: ['org_owner', 'co_owner', 'manager'],
       capabilities: [
         'billable-hours-verification',
         'rate-validation',
@@ -191,12 +195,12 @@ export class InvoiceReconciliationSkill extends BaseSkill {
       };
 
     } catch (error: any) {
-      logs.push(`[InvoiceReconciliation] Error: ${error.message}`);
+      logs.push(`[InvoiceReconciliation] Error: ${(error instanceof Error ? error.message : String(error))}`);
       return {
         success: false,
         error: {
           code: 'INVOICE_RECONCILIATION_ERROR',
-          message: error.message,
+          message: (error instanceof Error ? error.message : String(error)),
         },
         logs,
         tokensUsed: 0,
@@ -209,10 +213,10 @@ export class InvoiceReconciliationSkill extends BaseSkill {
     return await db
       .select({
         id: clients.id,
-        name: clients.name,
+        name: clients.companyName,
         email: clients.email,
-        status: clients.status,
-        billingRate: clients.defaultHourlyRate,
+        isActive: clients.isActive,
+        billingRate: clients.contractRate,
       })
       .from(clients)
       .where(eq(clients.workspaceId, workspaceId));
@@ -248,11 +252,10 @@ export class InvoiceReconciliationSkill extends BaseSkill {
         id: invoices.id,
         clientId: invoices.clientId,
         invoiceNumber: invoices.invoiceNumber,
-        amount: invoices.amount,
+        amount: invoices.total,
         status: invoices.status,
         dueDate: invoices.dueDate,
         issueDate: invoices.issueDate,
-        totalHours: invoices.totalHours,
       })
       .from(invoices)
       .where(
@@ -270,8 +273,8 @@ export class InvoiceReconciliationSkill extends BaseSkill {
       .select({
         id: clients.id,
         clientId: clients.id,
-        hourlyRate: clients.defaultHourlyRate,
-        status: clients.status,
+        hourlyRate: clients.contractRate,
+        isActive: clients.isActive,
       })
       .from(clients)
       .where(eq(clients.workspaceId, workspaceId));
@@ -332,7 +335,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
     const contractRates = new Map<string, number>();
     
     for (const contract of contractData) {
-      if (contract.status === 'active') {
+      if (contract.isActive) {
         contractRates.set(contract.clientId, parseFloat(contract.hourlyRate) || 0);
       }
     }
@@ -402,7 +405,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
     timesheetData: any[]
   ): ReconciliationIssue[] {
     const issues: ReconciliationIssue[] = [];
-    const clientsWithContracts = new Set(contractData.filter(c => c.status === 'active').map(c => c.clientId));
+    const clientsWithContracts = new Set(contractData.filter(c => c.isActive).map(c => c.clientId));
     const clientsWithWork = new Set(timesheetData.map(t => t.clientId).filter(Boolean));
 
     for (const client of clientData) {
@@ -411,7 +414,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
           severity: 'warning',
           category: 'missing_contract',
           clientId: client.id,
-          clientName: client.name,
+          clientName: client.companyName || `${client.firstName || ""} ${client.lastName || ""}`.trim() || "Unknown",
           description: `Billable work exists but no active contract found`,
           suggestedFix: 'Create or activate contract for this client',
           autoFixable: false,
@@ -432,15 +435,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
     context: SkillContext
   ): Promise<string> {
     try {
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODELS.BRAIN,
-        generationConfig: {
-          maxOutputTokens: ANTI_YAP_PRESETS.diagnostics.maxTokens,
-          temperature: ANTI_YAP_PRESETS.diagnostics.temperature,
-        },
-      });
-
-      const prompt = `You are an AI Billing Analyst for CoAIleague. Analyze these invoice reconciliation results and provide revenue optimization insights.
+      const prompt = `You are an AI Billing Analyst for ${PLATFORM.name}. Analyze these invoice reconciliation results and provide revenue optimization insights.
 
 SUMMARY:
 - Active Clients: ${summary.totalClients}
@@ -455,10 +450,19 @@ ${issues.slice(0, 8).map(i => `- [${i.severity.toUpperCase()}] ${i.category}: ${
 
 Provide 2-3 sentences of actionable revenue optimization insights. Focus on recovering unbilled revenue and reducing overdue invoices.`;
 
-      const result = await model.generateContent(prompt);
-      return result.response.text();
+      const result = await meteredGemini.generate({
+        workspaceId: context.workspaceId,
+        userId: context.userId,
+        featureKey: 'invoice_reconciliation_insights',
+        prompt,
+        model: 'gemini-2.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 500,
+      });
+
+      return result.success ? result.text : 'AI insights unavailable. Review unbilled hours and overdue invoices for revenue recovery opportunities.';
     } catch (error) {
-      console.error('[InvoiceReconciliation] AI insights generation failed:', error);
+      log.error('[InvoiceReconciliation] AI insights generation failed:', error);
       return 'AI insights unavailable. Review unbilled hours and overdue invoices for revenue recovery opportunities.';
     }
   }

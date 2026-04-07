@@ -22,6 +22,8 @@ import { platformEventBus } from '../platformEventBus';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityFrontierCapabilities');
 
 // ============================================================================
 // TYPES - AGENTIC INTEROPERABILITY PROTOCOL (AIP)
@@ -416,7 +418,7 @@ class TrinityFrontierCapabilities {
   
   private constructor() {
     FRONTIER_CAPABILITIES.forEach(cap => this.capabilities.set(cap.id, cap));
-    console.log('[TrinityFrontier] Initialized with 5 frontier capabilities');
+    log.info('[TrinityFrontier] Initialized with 5 frontier capabilities');
   }
   
   static getInstance(): TrinityFrontierCapabilities {
@@ -457,7 +459,7 @@ class TrinityFrontierCapabilities {
     });
     
     platformEventBus.emit('trinity:external_agent_registered', profile);
-    console.log(`[AIP] Registered external agent: ${profile.name} (${profile.provider})`);
+    log.info(`[AIP] Registered external agent: ${profile.name} (${profile.provider})`);
   }
   
   getExternalAgents(): ExternalAgentProfile[] {
@@ -467,7 +469,7 @@ class TrinityFrontierCapabilities {
   async hireExternalAgent(request: AgentHireRequest): Promise<ExternalAgentProfile | null> {
     const capability = this.capabilities.get('aip_external_agents');
     if (!capability?.enabled) {
-      console.log('[AIP] External agent hiring is disabled');
+      log.info('[AIP] External agent hiring is disabled');
       return null;
     }
     
@@ -479,7 +481,7 @@ class TrinityFrontierCapabilities {
       );
     
     if (matchingAgents.length === 0) {
-      console.log('[AIP] No matching external agents available');
+      log.info('[AIP] No matching external agents available');
       return null;
     }
     
@@ -586,13 +588,13 @@ class TrinityFrontierCapabilities {
   ): Promise<EvolutionProposal | null> {
     const capability = this.capabilities.get('evolution_blueprint_proposal');
     if (!capability?.enabled) {
-      console.log('[Evolution] Cognitive evolution is disabled');
+      log.info('[Evolution] Cognitive evolution is disabled');
       return null;
     }
     
     const currentBlueprint = this.getActiveBlueprint();
     if (!currentBlueprint) {
-      console.log('[Evolution] No active blueprint to evolve from');
+      log.info('[Evolution] No active blueprint to evolve from');
       return null;
     }
     
@@ -834,7 +836,7 @@ class TrinityFrontierCapabilities {
         userAgent: 'TrinityFrontierCapabilities',
       });
     } catch (error) {
-      console.error('[TrinityFrontier] Audit log failed:', error);
+      log.error('[TrinityFrontier] Audit log failed:', error);
     }
   }
   

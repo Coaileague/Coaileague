@@ -30,11 +30,12 @@ import {
   Bell,
   type LucideIcon 
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { performLogout } from "@/lib/logoutHandler";
-import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import { UniversalModal, UniversalModalTrigger, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
+import { performLogout, setLogoutTransitionLoader } from "@/lib/logoutHandler";
+import { useTransitionLoaderIfMounted } from "@/components/canvas-hub";
+import { TrinityLogo } from "@/components/trinity-logo";
 import TrinityRedesign from "@/components/trinity-redesign";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 
 interface NavItemProps {
@@ -63,7 +64,7 @@ function WorkerNavItem({ icon: Icon, label, href, isActive, badge, urgent }: Nav
         "flex flex-col items-center justify-center rounded-lg transition-all duration-150 relative",
         "min-h-[52px] flex-1 py-2 px-1",
         isActive 
-          ? "text-cyan-400 bg-cyan-400/10" 
+          ? "text-amber-400 bg-amber-400/10" 
           : "text-slate-400 active:text-white"
       )}
       style={{ WebkitTapHighlightColor: 'transparent' }}
@@ -82,7 +83,7 @@ function WorkerNavItem({ icon: Icon, label, href, isActive, badge, urgent }: Nav
         {badge !== undefined && badge > 0 && (
           <span className={cn(
             "absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] rounded-full text-[10px] font-bold flex items-center justify-center",
-            urgent ? "bg-red-500 text-white animate-pulse" : "bg-cyan-500 text-white"
+            urgent ? "bg-red-500 text-white animate-pulse" : "bg-amber-500 text-white"
           )}>
             {badge > 99 ? '99+' : badge}
           </span>
@@ -90,7 +91,7 @@ function WorkerNavItem({ icon: Icon, label, href, isActive, badge, urgent }: Nav
       </div>
       <span className={cn(
         "text-[10px] font-medium mt-1 leading-tight truncate max-w-full",
-        isActive ? "font-semibold text-cyan-400" : ""
+        isActive ? "font-semibold text-amber-400" : ""
       )}>
         {label}
       </span>
@@ -111,24 +112,24 @@ function WorkerTrinityMenuItem({ onClose }: { onClose: () => void }) {
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
       className={cn(
-        "w-full relative flex items-center justify-center gap-3 p-4 rounded-xl transition-all duration-200",
-        "bg-gradient-to-r from-purple-900/40 via-slate-800/60 to-cyan-900/40",
-        "border border-purple-500/20",
-        isPressed ? "scale-[0.98] ring-2 ring-cyan-400/40" : "active:scale-[0.98]"
+        "w-full relative flex items-center justify-center gap-3 p-4 rounded-md transition-all duration-200",
+        "bg-gradient-to-r from-slate-800/60 to-amber-900/40",
+        "border border-amber-500/20",
+        isPressed ? "scale-[0.98] ring-2 ring-amber-400/40" : "active:scale-[0.98]"
       )}
       style={{ WebkitTapHighlightColor: 'transparent' }}
       data-testid="worker-menu-ask-trinity"
     >
-      <div className="absolute inset-0 rounded-xl bg-gradient-radial from-cyan-400/10 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 rounded-md bg-gradient-radial from-amber-400/10 via-transparent to-transparent pointer-events-none" />
       
       {isPressed ? (
         <Suspense fallback={<div className="w-6 h-6" />}>
           <TrinityRedesign size={24} mode="THINKING" />
         </Suspense>
       ) : (
-        <TrinityMascotIcon size="sm" />
+        <TrinityLogo size={24} />
       )}
-      <span className="text-sm font-medium bg-gradient-to-r from-purple-300 via-cyan-300 to-amber-300 bg-clip-text text-transparent">
+      <span className="text-sm font-medium bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">
         Ask Trinity AI
       </span>
     </button>
@@ -140,19 +141,19 @@ function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
   
   // Notifications removed - now accessed via bell icon in header
   const menuItems = [
-    { icon: HelpCircle, label: "Help", href: "/support" },
+    { icon: HelpCircle, label: "HelpDesk", href: "/helpdesk" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
   
   return (
-    <SheetContent 
+    <UniversalModalContent 
       side="bottom" 
-      className="rounded-t-2xl bg-slate-900 border-slate-700 px-4 pt-4"
+      className="rounded-t-2xl px-4 pt-4"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 16px)' }}
+      showHomeButton={false}
     >
-      <SheetTitle className="sr-only">More Options</SheetTitle>
+      <UniversalModalTitle className="sr-only">More Options</UniversalModalTitle>
       
-      {/* Trinity AI - Featured prominently */}
       <div className="mb-3">
         <WorkerTrinityMenuItem onClose={onClose} />
       </div>
@@ -162,26 +163,30 @@ function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
           <button
             key={item.href}
             onClick={() => { setLocation(item.href); onClose(); }}
-            className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/50 active:bg-slate-700 transition-colors"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+            className="flex flex-col items-center justify-center p-4 rounded-md bg-muted/50 active-elevate-2 transition-colors"
+            style={{ 
+              WebkitTapHighlightColor: 'transparent',
+              minHeight: '72px',
+              minWidth: '72px',
+            }}
             data-testid={`worker-menu-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
           >
-            <item.icon className="w-6 h-6 text-cyan-400 mb-2" />
-            <span className="text-xs text-slate-300 font-medium">{item.label}</span>
+            <item.icon className="w-7 h-7 text-primary mb-1.5" />
+            <span className="text-xs text-muted-foreground font-medium leading-tight text-center">{item.label}</span>
           </button>
         ))}
       </div>
       
       <button
         onClick={() => performLogout()}
-        className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-red-950/30 border border-red-900/50 text-red-400 active:bg-red-900/40 transition-colors"
+        className="w-full flex items-center justify-center gap-2 p-4 rounded-md bg-destructive/10 border border-destructive/20 text-destructive active-elevate-2 transition-colors"
         style={{ WebkitTapHighlightColor: 'transparent' }}
         data-testid="worker-nav-logout"
       >
         <LogOut className="w-5 h-5" />
         <span className="text-sm font-medium">Log Out</span>
       </button>
-    </SheetContent>
+    </UniversalModalContent>
   );
 }
 
@@ -200,6 +205,12 @@ export function MobileWorkerLayout({
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isEmployee, workspaceRole, isLoading: identityLoading } = useIdentity();
+  const transitionLoader = useTransitionLoaderIfMounted();
+  useEffect(() => {
+    if (transitionLoader) {
+      setLogoutTransitionLoader(transitionLoader);
+    }
+  }, [transitionLoader]);
   
   // Role-based gating: Only show worker layout for field workers
   // Uses authoritative isEmployee flag from RBAC identity system
@@ -264,13 +275,13 @@ export function MobileWorkerLayout({
             />
           ))}
           
-          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-            <SheetTrigger asChild>
+          <UniversalModal open={menuOpen} onOpenChange={setMenuOpen}>
+            <UniversalModalTrigger asChild>
               <button
                 className={cn(
                   "flex flex-col items-center justify-center rounded-lg transition-all duration-150",
-                  "min-h-[52px] w-14 py-2 px-1",
-                  menuOpen ? "text-cyan-400" : "text-slate-400 active:text-white"
+                  "min-h-[52px] min-w-[52px] py-2 px-1",
+                  menuOpen ? "text-amber-400" : "text-slate-400 active:text-white"
                 )}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
                 data-testid="worker-nav-more"
@@ -279,9 +290,9 @@ export function MobileWorkerLayout({
                 <Menu className="w-5 h-5" strokeWidth={2} />
                 <span className="text-[10px] font-medium mt-1 leading-tight">More</span>
               </button>
-            </SheetTrigger>
+            </UniversalModalTrigger>
             <WorkerMoreMenu onClose={() => setMenuOpen(false)} />
-          </Sheet>
+          </UniversalModal>
         </div>
       </nav>
     </div>

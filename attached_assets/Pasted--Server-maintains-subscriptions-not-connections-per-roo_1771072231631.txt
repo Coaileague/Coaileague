@@ -1,0 +1,141 @@
+// Server maintains subscriptions, not connections per room
+
+class ChatServer {
+  // userId -> their WebSocket
+  private connections = new Map<string, WebSocket>();
+  
+  // userId -> Set of roomIds they're in
+  private subscriptions = new Map<string, Set<string>>();
+  
+  handleConnection(ws: WebSocket, userId: string) {
+    // Store the ONE connection for this user
+    this.connections.set(userId, ws);
+    
+    // Load their room memberships from DB
+    const rooms = await db.getUserRooms(userId);
+    this.subscriptions.set(userId, new Set(rooms.map(r => r.id)));
+    
+    // Send them recent messages for ALL their rooms
+    for (const room of rooms) {
+      const recentMessages = await db.getRecentMessages(room.id, 50);
+      ws.send(JSON.stringify({
+        type: 'room_history',
+        roomId: room.id,
+        messages: recentMessages
+      }));
+    }
+  }
+  
+  // When anyone sends a message
+  async broadcastMessage(roomId: string, message: Message) {
+    // Find ALL users subscribed to this room
+    const members = await db.getRoomMembers(roomId);
+    
+    for (const member of members) {
+      const ws = this.connections.get(member.userId);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'message',
+          roomId: roomId,
+          message: message
+        }));
+      } else {
+        // User offline - queue for push notification
+        await this.sendPushNotification(member.userId, roomId, message);
+      }
+    }
+  }
+}
+```
+
+---
+
+## THE KEY DIFFERENCES
+
+| Aspect | Current (Broken) | WhatsApp/MSN (Correct) |
+|--------|-----------------|----------------------|
+| Socket lifecycle | Per room | Per user session |
+| Connection trigger | Enter room | Login |
+| Disconnect trigger | Leave room | Logout |
+| Message routing | Client joins room to receive | Server pushes to subscribed users |
+| Room switching | Reconnect | Just filter UI |
+| Unread counts | Can't track (not connected) | Always accurate |
+| Offline messages | Lost | Queued + push notification |
+| Server connections | N connections × M rooms | N connections total |
+
+---
+
+## WHY MSN/WHATSAPP FEELS INSTANT
+```
+User has 10 chats open
+
+WhatsApp approach:
+- 1 WebSocket connection
+- Server tracks: "User123 is in rooms A,B,C,D,E,F,G,H,I,J"
+- Message to Room F → Server pushes to User123's ONE socket
+- User sees badge update instantly
+- User taps Room F → UI filters to show Room F messages
+- ZERO network activity on room switch
+
+Current CoAIleague approach:
+- User viewing Room A
+- Message sent to Room F
+- User doesn't receive it (not connected to Room F!)
+- User switches to Room F
+- Disconnect from A, connect to F (network round trip)
+- Finally sees the message
+- Meanwhile missed messages in A, B, C, D, E, G, H, I, J
+```
+
+---
+
+## THE FIX FOR COAILEAGUE
+
+**This requires an architectural shift, not just bug fixes:**
+
+1. **Move socket to app level** (not chatroom page level)
+2. **Connect on login** (not on room enter)
+3. **Server tracks subscriptions** (which rooms each user is in)
+4. **Server pushes to user** (not user pulls from room)
+5. **Client stores all messages** (in memory, by room)
+6. **Room view is just a filter** (not a connection)
+
+---
+
+## PROMPT FOR REPLIT
+```
+CHATROOM ARCHITECTURE REWRITE
+
+Current: One socket per room (broken)
+Required: One socket per user (WhatsApp model)
+
+CHANGES NEEDED:
+
+1. MOVE WebSocket to App level
+   - ChatConnectionProvider wraps entire app
+   - Connects on login, disconnects on logout
+   - NEVER reconnects on room switch
+
+2. SERVER subscription model
+   - On connect: Load user's room memberships
+   - Store: userId -> Set<roomId>
+   - On message: Push to ALL subscribed users
+
+3. CLIENT message store
+   - Global: Map<roomId, Message[]>
+   - Global: Map<roomId, unreadCount>
+   - Update store on ANY incoming message
+   - Room view just reads from store
+
+4. ROOM VIEW is stateless
+   - Reads messages from global store
+   - Sends messages through global socket
+   - NO socket management in room component
+
+5. UNREAD COUNTS
+   - Increment when message arrives for non-active room
+   - Decrement when user views room
+   - Always accurate because always connected
+
+This is a significant refactor but it's the ONLY way
+to match WhatsApp/MSN reliability.

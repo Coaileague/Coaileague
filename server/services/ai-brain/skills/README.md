@@ -56,7 +56,7 @@ export default class MySkill extends BaseSkill {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }
@@ -185,6 +185,9 @@ vim server/services/ai-brain/skills/my-skill/index.ts
 
 ```typescript
 import { skillRegistry } from './skill-registry';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('README.md');
+
 
 const context = {
   userId: 'test-user',
@@ -198,7 +201,7 @@ const result = await skillRegistry.executeSkill(
   { input: 'test' }
 );
 
-console.log(result);
+log.info(result);
 ```
 
 ## Health Monitoring
@@ -207,7 +210,7 @@ Check skill system health:
 
 ```typescript
 const health = await skillRegistry.getHealth();
-console.log(health);
+log.info(health);
 // {
 //   totalSkills: 5,
 //   healthySkills: 4,

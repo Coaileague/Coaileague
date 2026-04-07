@@ -14,8 +14,16 @@
  */
 
 import { db } from '../../db';
+import { approvalGates } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { trinityActionReasoner } from '../ai-brain/trinityActionReasoner';
+import { typedExec, typedQuery } from '../../lib/typedSql';
+import { publishEvent } from './pipelineErrorHandler';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('approvalGateEnforcement');
+
 
 export type ApprovalCategory = 
   | 'payroll'
@@ -69,7 +77,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'payroll',
     riskThreshold: 30,
     autoApproveBelow: 20,
-    requiredApproverRoles: ['admin', 'super_admin', 'owner'],
+    requiredApproverRoles: ['org_owner', 'co_owner', 'manager'],
     expirationHours: 48,
     maxEscalationLevel: 3,
     reminderIntervalHours: 12,
@@ -78,7 +86,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'invoicing',
     riskThreshold: 40,
     autoApproveBelow: 25,
-    requiredApproverRoles: ['admin', 'super_admin', 'owner', 'manager'],
+    requiredApproverRoles: ['org_owner', 'co_owner', 'manager'],
     expirationHours: 72,
     maxEscalationLevel: 2,
     reminderIntervalHours: 24,
@@ -87,7 +95,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'scheduling',
     riskThreshold: 50,
     autoApproveBelow: 40,
-    requiredApproverRoles: ['admin', 'super_admin', 'owner', 'manager'],
+    requiredApproverRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     expirationHours: 24,
     maxEscalationLevel: 2,
     reminderIntervalHours: 8,
@@ -96,7 +104,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'autofix',
     riskThreshold: 20,
     autoApproveBelow: 10,
-    requiredApproverRoles: ['super_admin'],
+    requiredApproverRoles: ['org_owner', 'co_owner'],
     expirationHours: 24,
     maxEscalationLevel: 1,
     reminderIntervalHours: 4,
@@ -105,7 +113,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'credit_adjustment',
     riskThreshold: 25,
     autoApproveBelow: 15,
-    requiredApproverRoles: ['admin', 'super_admin'],
+    requiredApproverRoles: ['org_owner', 'co_owner'],
     expirationHours: 48,
     maxEscalationLevel: 2,
     reminderIntervalHours: 12,
@@ -114,7 +122,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'data_export',
     riskThreshold: 35,
     autoApproveBelow: 20,
-    requiredApproverRoles: ['admin', 'super_admin', 'owner'],
+    requiredApproverRoles: ['org_owner', 'co_owner', 'manager'],
     expirationHours: 24,
     maxEscalationLevel: 2,
     reminderIntervalHours: 6,
@@ -123,7 +131,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'integration_sync',
     riskThreshold: 45,
     autoApproveBelow: 30,
-    requiredApproverRoles: ['admin', 'super_admin'],
+    requiredApproverRoles: ['org_owner', 'co_owner'],
     expirationHours: 48,
     maxEscalationLevel: 2,
     reminderIntervalHours: 12,
@@ -132,7 +140,7 @@ const DEFAULT_POLICIES: ApprovalPolicy[] = [
     category: 'compliance_override',
     riskThreshold: 15,
     autoApproveBelow: 0,
-    requiredApproverRoles: ['super_admin'],
+    requiredApproverRoles: ['org_owner', 'co_owner'],
     expirationHours: 24,
     maxEscalationLevel: 3,
     reminderIntervalHours: 4,
@@ -150,6 +158,156 @@ class ApprovalGateEnforcementService {
     });
 
     this.expirationCheckInterval = setInterval(() => this.checkExpirations(), 3600000);
+  }
+
+  /**
+   * Compute a risk score (0–100) for an action based on category, payload values, and context.
+   * This replaces the hardcoded default of 50 for all unspecified requests.
+   */
+  computeRiskScore(
+    category: ApprovalCategory,
+    payload: Record<string, any>,
+    requestedBy?: string,
+  ): { score: number; factors: string[] } {
+    const factors: string[] = [];
+    let score = 0;
+
+    // === CATEGORY BASE RISK ===
+    const categoryBaseRisk: Record<ApprovalCategory, number> = {
+      payroll: 35,
+      invoicing: 30,
+      scheduling: 20,
+      autofix: 15,
+      credit_adjustment: 40,
+      data_export: 25,
+      integration_sync: 20,
+      compliance_override: 55,
+    };
+    score += categoryBaseRisk[category] ?? 25;
+
+    // === FINANCIAL MAGNITUDE ===
+    const amount = payload.amount || payload.totalAmount || payload.netPay || payload.subtotal || 0;
+    if (amount > 0) {
+      if (amount > 100000) { score += 30; factors.push(`high_value:$${Math.round(amount).toLocaleString()}`); }
+      else if (amount > 25000) { score += 20; factors.push(`elevated_value:$${Math.round(amount).toLocaleString()}`); }
+      else if (amount > 5000) { score += 10; factors.push(`moderate_value:$${Math.round(amount).toLocaleString()}`); }
+    }
+
+    // === EMPLOYEE/RECORD COUNT ===
+    const recordCount = payload.employeeCount || payload.guardCount || payload.recordCount || payload.lineItems?.length || 0;
+    if (recordCount > 100) { score += 15; factors.push(`bulk_operation:${recordCount}_records`); }
+    else if (recordCount > 20) { score += 8; factors.push(`batch_operation:${recordCount}_records`); }
+
+    // === OFF-HOURS PENALTY (unusual execution times raise risk) ===
+    const hour = new Date().getHours();
+    if (hour >= 22 || hour < 6) {
+      score += 12;
+      factors.push('off_hours_execution');
+    }
+
+    // === RETROACTIVE / BACKDATED ACTIONS ===
+    const targetDate = payload.periodStart || payload.shiftDate || payload.invoiceDate;
+    if (targetDate) {
+      const ageMs = Date.now() - new Date(targetDate).getTime();
+      const ageDays = ageMs / 86400000;
+      if (ageDays > 60) { score += 15; factors.push(`retroactive_90d`); }
+      else if (ageDays > 30) { score += 8; factors.push('retroactive_30d'); }
+    }
+
+    // === BULK OVERRIDE / FORCE FLAGS ===
+    if (payload.force === true || payload.override === true) {
+      score += 20;
+      factors.push('force_override_flag');
+    }
+    if (payload.skipValidation === true || payload.bypassCompliance === true) {
+      score += 25;
+      factors.push('compliance_bypass_requested');
+    }
+
+    // === DATA SENSITIVITY ===
+    if (category === 'data_export') {
+      const exportType = (payload.exportType || '').toLowerCase();
+      if (['payroll', 'ssn', 'tax', 'w2', '1099', 'personal'].some(t => exportType.includes(t))) {
+        score += 20;
+        factors.push('sensitive_data_export');
+      }
+    }
+
+    // === COMPLIANCE OVERRIDE DETAIL ===
+    if (category === 'compliance_override') {
+      factors.push('compliance_bypass_requested');
+      score += 15;
+    }
+
+    // Cap at 100
+    return { score: Math.min(100, score), factors };
+  }
+
+  /**
+   * AI-augmented risk assessment using Trinity's reasoning pipeline.
+   * Combines heuristic computeRiskScore (70%) with Trinity's qualitative
+   * reasoning (30%, capped ±15 points) for a final blended risk score.
+   * Graceful fallback: if AI reasoning fails, heuristic score is used as-is.
+   */
+  private async reasonAboutRisk(
+    category: ApprovalCategory,
+    payload: Record<string, any>,
+    workspaceId: string,
+    heuristicScore: number,
+    heuristicFactors: string[]
+  ): Promise<{ finalScore: number; finalFactors: string[]; aiImpactSummary: string }> {
+    try {
+      const domainMap: Record<ApprovalCategory, import('../ai-brain/trinityActionReasoner').ActionDomain> = {
+        payroll: 'payroll_execute',
+        invoicing: 'invoice_generate',
+        scheduling: 'scheduling_fill',
+        autofix: 'compliance_check',
+        credit_adjustment: 'compliance_check',
+        data_export: 'compliance_check',
+        integration_sync: 'compliance_check',
+        compliance_override: 'compliance_check',
+      };
+
+      const reasoning = await trinityActionReasoner.reason({
+        domain: domainMap[category] || 'compliance_check',
+        workspaceId,
+        actionSummary: `Approval gate risk assessment for category "${category}"`,
+        payload,
+        riskSignals: heuristicFactors,
+      });
+
+      // Blend: 70% heuristic + 30% AI adjustment, capped at ±15 points
+      const aiRiskHint = reasoning.decision === 'block' ? 85
+        : reasoning.decision === 'escalate' ? heuristicScore + 12
+        : heuristicScore - 5;
+      const aiWeight = 0.30;
+      const blend = Math.round(heuristicScore * 0.70 + aiRiskHint * aiWeight);
+      const finalScore = Math.max(0, Math.min(100,
+        blend,
+        heuristicScore + 15,
+        Math.max(heuristicScore - 15, blend)
+      ));
+
+      const aiFactors = reasoning.laborLawFlags.map(f => `ai:${f}`);
+      if (reasoning.decision === 'escalate') aiFactors.push('ai:escalation_recommended');
+      if (reasoning.decision === 'block') aiFactors.push('ai:block_recommended');
+
+      const aiImpactSummary = reasoning.reasoning
+        ? `${reasoning.profitImpact.detail ? `[Profit: ${reasoning.profitImpact.detail}] ` : ''}${reasoning.reasoning}`
+        : '';
+
+      return {
+        finalScore,
+        finalFactors: [...heuristicFactors, ...aiFactors],
+        aiImpactSummary,
+      };
+    } catch {
+      return {
+        finalScore: heuristicScore,
+        finalFactors: heuristicFactors,
+        aiImpactSummary: '',
+      };
+    }
   }
 
   async requestApproval(params: {
@@ -170,10 +328,30 @@ class ApprovalGateEnforcementService {
       actionName,
       requestedBy,
       payload,
-      riskScore = 50,
-      riskFactors = [],
+      riskScore: providedRiskScore,
+      riskFactors: providedRiskFactors,
       impactSummary = '',
     } = params;
+
+    // Step 1: Compute heuristic risk score
+    let riskScore = providedRiskScore ?? -1;
+    let riskFactors = providedRiskFactors ?? [];
+    if (riskScore < 0 || (riskScore === 50 && riskFactors.length === 0)) {
+      const computed = this.computeRiskScore(category, payload, requestedBy);
+      riskScore = computed.score;
+      riskFactors = [...riskFactors, ...computed.factors];
+    }
+
+    // Step 2: Augment with AI reasoning (non-blocking — falls back to heuristic)
+    let aiImpactSummary = '';
+    try {
+      const augmented = await this.reasonAboutRisk(category, payload, workspaceId, riskScore, riskFactors);
+      riskScore = augmented.finalScore;
+      riskFactors = augmented.finalFactors;
+      aiImpactSummary = augmented.aiImpactSummary;
+    } catch {
+      // Heuristic score stands
+    }
 
     const policy = this.policies.get(category);
     if (!policy) {
@@ -209,7 +387,7 @@ class ApprovalGateEnforcementService {
       this.gates.set(gateId, gate);
       await this.persistGate(gate);
 
-      console.log(`[ApprovalGate] Auto-approved ${actionName} (risk: ${riskScore})`);
+      log.info(`[ApprovalGate] Auto-approved ${actionName} (risk: ${riskScore})`);
       return {
         gateId,
         status: 'auto_approved',
@@ -231,7 +409,7 @@ class ApprovalGateEnforcementService {
       riskScore,
       riskFactors,
       payload,
-      impactSummary: impactSummary || this.generateImpactSummary(category, payload),
+      impactSummary: impactSummary || aiImpactSummary || this.generateImpactSummary(category, payload),
       requiredApproverRole: policy.requiredApproverRoles[0],
       escalationLevel: 0,
       remindersSent: 0,
@@ -240,22 +418,28 @@ class ApprovalGateEnforcementService {
     this.gates.set(gateId, gate);
     await this.persistGate(gate);
 
-    platformEventBus.publish({
-      type: 'approval_requested',
-      workspaceId,
-      payload: {
-        gateId,
-        category,
-        actionName,
-        riskScore,
-        impactSummary: gate.impactSummary,
-        expiresAt: gate.expiresAt,
-        requiredRole: gate.requiredApproverRole,
-      },
-      metadata: { source: 'ApprovalGateEnforcement', priority: 'high' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'approval_requested',
+        title: `Approval Required: ${actionName}`,
+        description: gate.impactSummary || `${actionName} requires ${gate.requiredApproverRole} approval (risk: ${riskScore})`,
+        category: 'announcement',
+        workspaceId,
+        payload: {
+          gateId,
+          category,
+          actionName,
+          riskScore,
+          impactSummary: gate.impactSummary,
+          expiresAt: gate.expiresAt,
+          requiredRole: gate.requiredApproverRole,
+        },
+        metadata: { source: 'ApprovalGateEnforcement', priority: 'high' },
+      }),
+      '[ApprovalGateEnforcement] event publish',
+    );
 
-    console.log(`[ApprovalGate] Approval requested for ${actionName} (risk: ${riskScore}, gate: ${gateId})`);
+    log.info(`[ApprovalGate] Approval requested for ${actionName} (risk: ${riskScore}, gate: ${gateId})`);
 
     return {
       gateId,
@@ -296,20 +480,26 @@ class ApprovalGateEnforcementService {
     this.gates.set(gateId, gate);
     await this.persistGate(gate);
 
-    platformEventBus.publish({
-      type: 'approval_granted',
-      workspaceId: gate.workspaceId,
-      payload: {
-        gateId,
-        actionId: gate.actionId,
-        actionName: gate.actionName,
-        approvedBy: approverId,
-        notes,
-      },
-      metadata: { source: 'ApprovalGateEnforcement' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'approval_granted',
+        category: 'announcement',
+        title: `Approved: ${gate.actionName}`,
+        description: `${gate.actionName} approved by ${approverId}${notes ? ` — ${notes}` : ''}`,
+        workspaceId: gate.workspaceId,
+        payload: {
+          gateId,
+          actionId: gate.actionId,
+          actionName: gate.actionName,
+          approvedBy: approverId,
+          notes,
+        },
+        metadata: { source: 'ApprovalGateEnforcement' },
+      }),
+      '[ApprovalGateEnforcement] event publish',
+    );
 
-    console.log(`[ApprovalGate] Approved: ${gate.actionName} by ${approverId}`);
+    log.info(`[ApprovalGate] Approved: ${gate.actionName} by ${approverId}`);
 
     return { success: true, message: 'Approval granted' };
   }
@@ -338,20 +528,26 @@ class ApprovalGateEnforcementService {
     this.gates.set(gateId, gate);
     await this.persistGate(gate);
 
-    platformEventBus.publish({
-      type: 'approval_rejected',
-      workspaceId: gate.workspaceId,
-      payload: {
-        gateId,
-        actionId: gate.actionId,
-        actionName: gate.actionName,
-        rejectedBy: rejectorId,
-        reason,
-      },
-      metadata: { source: 'ApprovalGateEnforcement' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'approval_rejected',
+        category: 'announcement',
+        title: `Rejected: ${gate.actionName}`,
+        description: `${gate.actionName} rejected by ${rejectorId}: ${reason}`,
+        workspaceId: gate.workspaceId,
+        payload: {
+          gateId,
+          actionId: gate.actionId,
+          actionName: gate.actionName,
+          rejectedBy: rejectorId,
+          reason,
+        },
+        metadata: { source: 'ApprovalGateEnforcement' },
+      }),
+      '[ApprovalGateEnforcement] event publish',
+    );
 
-    console.log(`[ApprovalGate] Rejected: ${gate.actionName} by ${rejectorId} - ${reason}`);
+    log.info(`[ApprovalGate] Rejected: ${gate.actionName} by ${rejectorId} - ${reason}`);
 
     return { success: true, message: 'Approval rejected' };
   }
@@ -388,19 +584,25 @@ class ApprovalGateEnforcementService {
     this.gates.set(gateId, gate);
     await this.persistGate(gate);
 
-    platformEventBus.publish({
-      type: 'approval_escalated',
-      workspaceId: gate.workspaceId,
-      payload: {
-        gateId,
-        actionName: gate.actionName,
-        newLevel: gate.escalationLevel,
-        riskScore: gate.riskScore,
-      },
-      metadata: { source: 'ApprovalGateEnforcement', priority: 'critical' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'approval_escalated',
+        category: 'announcement',
+        title: `Escalated to Level ${gate.escalationLevel}: ${gate.actionName}`,
+        description: `${gate.actionName} approval escalated to level ${gate.escalationLevel} (risk: ${gate.riskScore}) — higher authority required`,
+        workspaceId: gate.workspaceId,
+        payload: {
+          gateId,
+          actionName: gate.actionName,
+          newLevel: gate.escalationLevel,
+          riskScore: gate.riskScore,
+        },
+        metadata: { source: 'ApprovalGateEnforcement', priority: 'critical' },
+      }),
+      '[ApprovalGateEnforcement] event publish',
+    );
 
-    console.log(`[ApprovalGate] Escalated: ${gate.actionName} to level ${gate.escalationLevel}`);
+    log.info(`[ApprovalGate] Escalated: ${gate.actionName} to level ${gate.escalationLevel}`);
 
     return { success: true, newLevel: gate.escalationLevel };
   }
@@ -414,24 +616,30 @@ class ApprovalGateEnforcementService {
         this.gates.set(gateId, gate);
         await this.persistGate(gate);
 
-        platformEventBus.publish({
-          type: 'approval_expired',
-          workspaceId: gate.workspaceId,
-          payload: {
-            gateId,
-            actionName: gate.actionName,
-            requestedBy: gate.requestedBy,
-          },
-          metadata: { source: 'ApprovalGateEnforcement' },
-        });
+        publishEvent(
+          () => platformEventBus.publish({
+            type: 'approval_expired',
+            category: 'announcement',
+            title: `Approval Window Closed: ${gate.actionName}`,
+            description: `${gate.actionName} approval request expired without a decision — operation blocked`,
+            workspaceId: gate.workspaceId,
+            payload: {
+              gateId,
+              actionName: gate.actionName,
+              requestedBy: gate.requestedBy,
+            },
+            metadata: { source: 'ApprovalGateEnforcement' },
+          }),
+          '[ApprovalGateEnforcement] event publish',
+        );
 
-        console.log(`[ApprovalGate] Expired: ${gate.actionName}`);
+        log.info(`[ApprovalGate] Expired: ${gate.actionName}`);
       }
     }
   }
 
   private generateGateId(): string {
-    return `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `gate-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
   }
 
   private generateImpactSummary(category: ApprovalCategory, payload: Record<string, any>): string {
@@ -451,13 +659,57 @@ class ApprovalGateEnforcementService {
 
   private async persistGate(gate: ApprovalGate): Promise<void> {
     try {
-      await db.execute(`
-        INSERT INTO approval_gates (id, workspace_id, gate_data, updated_at)
-        VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (id) DO UPDATE SET gate_data = $3, updated_at = NOW()
-      `, [gate.id, gate.workspaceId, JSON.stringify(gate)]);
-    } catch (error) {
-      console.warn('[ApprovalGate] Failed to persist gate (table may not exist):', error);
+      const gateJson = JSON.stringify(gate);
+      // Converted to Drizzle ORM: ON CONFLICT
+      await db.insert(approvalGates).values({
+        id: gate.id,
+        workspaceId: gate.workspaceId,
+        gateData: gateJson,
+        createdAt: sql`now()`,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: approvalGates.id,
+        set: { gateData: gateJson, updatedAt: sql`now()` },
+      });
+    } catch (error: any) {
+      log.error('[ApprovalGate] Failed to persist gate:', (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  /**
+   * Load pending gates from DB into memory on server restart.
+   * Returns the list of gates rehydrated so callers can rebuild their in-memory indices.
+   */
+  async loadPendingGates(): Promise<ApprovalGate[]> {
+    try {
+      // Converted to Drizzle ORM: loadPendingGates → INTERVAL
+      const { approvalGates } = await import('@shared/schema');
+      const { and, gt, sql: drizzleSql } = await import('drizzle-orm');
+      const results = await db
+        .select({ gateData: approvalGates.gateData })
+        .from(approvalGates)
+        .where(and(
+          drizzleSql`(${approvalGates.gateData}->>'status') = 'pending'`,
+          gt(approvalGates.updatedAt, drizzleSql`NOW() - INTERVAL '7 days'`),
+        ));
+
+      const gates: ApprovalGate[] = [];
+      for (const row of results) {
+        try {
+          const gate: ApprovalGate = typeof row.gateData === 'string'
+            ? JSON.parse(row.gateData)
+            : row.gateData;
+          this.gates.set(gate.id, gate);
+          gates.push(gate);
+        } catch { /* skip malformed rows */ }
+      }
+      if (gates.length > 0) {
+        log.info(`[ApprovalGate] Recovered ${gates.length} pending gate(s) from DB on startup`);
+      }
+      return gates;
+    } catch (error: any) {
+      log.warn('[ApprovalGate] Could not load pending gates from DB:', (error instanceof Error ? error.message : String(error)));
+      return [];
     }
   }
 
@@ -504,7 +756,7 @@ export function registerApprovalGateActions(orchestrator: typeof helpaiOrchestra
     name: 'Request Approval',
     category: 'automation',
     description: 'Request approval for a high-risk operation',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { category, actionId, actionName, payload, riskScore, riskFactors, impactSummary } = request.payload || {};
       
@@ -544,7 +796,7 @@ export function registerApprovalGateActions(orchestrator: typeof helpaiOrchestra
     name: 'Approve Request',
     category: 'automation',
     description: 'Approve a pending approval request',
-    requiredRoles: ['admin', 'super_admin', 'owner', 'manager'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { gateId, notes } = request.payload || {};
 
@@ -578,7 +830,7 @@ export function registerApprovalGateActions(orchestrator: typeof helpaiOrchestra
     name: 'Reject Request',
     category: 'automation',
     description: 'Reject a pending approval request',
-    requiredRoles: ['admin', 'super_admin', 'owner', 'manager'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { gateId, reason } = request.payload || {};
 
@@ -611,7 +863,7 @@ export function registerApprovalGateActions(orchestrator: typeof helpaiOrchestra
     name: 'Check Approval Status',
     category: 'automation',
     description: 'Check the status of an approval request',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { gateId } = request.payload || {};
 
@@ -641,7 +893,7 @@ export function registerApprovalGateActions(orchestrator: typeof helpaiOrchestra
     name: 'Get Pending Approvals',
     category: 'automation',
     description: 'Get all pending approval requests for a workspace',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       if (!request.workspaceId) {
         return {
@@ -669,7 +921,7 @@ export function registerApprovalGateActions(orchestrator: typeof helpaiOrchestra
     name: 'Get Approval Stats',
     category: 'analytics',
     description: 'Get platform-wide approval statistics',
-    requiredRoles: ['support', 'admin', 'super_admin'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request) => {
       const stats = approvalGateEnforcementService.getStats();
       return {
@@ -682,5 +934,5 @@ export function registerApprovalGateActions(orchestrator: typeof helpaiOrchestra
     },
   });
 
-  console.log('[ApprovalGateEnforcement] Registered 6 AI Brain actions');
+  log.info('[ApprovalGateEnforcement] Registered 6 AI Brain actions');
 }

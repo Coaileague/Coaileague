@@ -1,0 +1,379 @@
+Here is everything the agent needs to understand the complete email system vision and execute the setup.
+
+---
+
+**THE VISION — WHAT WE ARE BUILDING**
+
+CoAIleague becomes its own complete email system powered by Resend as the backend infrastructure. No Google Workspace. No Zoho. One platform handles everything. Resend acts as the postmaster — sending outbound and receiving inbound — while CoAIleague stores and displays all email in the inbox UI that is already built.
+
+---
+
+**WHAT ALREADY EXISTS IN THE PLATFORM**
+
+```
+- Mailbox UI already built per tenant workspace
+- Inbox renders for org owner
+- Officer personal inbox exists
+- Client portal inbox exists
+- Messages store in the database
+- Inbound email handler partially built
+- Resend already wired for outbound notifications
+- All tenant system addresses already exist using
+  mail.coaileague.com subdomain (needs to change to coaileague.com)
+```
+
+---
+
+**THE COMPLETE ADDRESS STRUCTURE**
+
+```
+PLATFORM LEVEL — protected, cannot be created by tenants:
+  trinity@coaileague.com
+  support@coaileague.com
+  billing@coaileague.com
+  hello@coaileague.com
+  noreply@coaileague.com
+
+PER TENANT — auto-created on registration, always active, free:
+  staffing-{slug}@coaileague.com
+  calloffs-{slug}@coaileague.com
+  incidents-{slug}@coaileague.com
+  support-{slug}@coaileague.com
+  docs-{slug}@coaileague.com
+  billing-{slug}@coaileague.com
+
+PER USER — reserved on creation, activated by org owner at $3/seat/month:
+  john.smith@{slug}.coaileague.com
+  jane.doe@{slug}.coaileague.com
+
+PER CLIENT — reserved on creation, activated at $3/seat/month:
+  cityofsa@{slug}.coaileague.com
+
+PROTECTED SUPPORT SUBDOMAIN — platform staff only:
+  {name}@support.coaileague.com
+  Tenants cannot create addresses here ever.
+```
+
+---
+
+**THE BILLING MODEL**
+
+```
+$3.00 per activated email seat per month — all tiers flat rate
+500 emails per seat per month included fair use
+$0.001 per email over 500 fair use cap
+Resend Pro $20/month fixed infrastructure cost
+Margin: 96-99%
+50-58% cheaper than Google Workspace
+Includes Trinity intelligent inbox assistant
+```
+
+---
+
+**HOW IT WORKS TECHNICALLY**
+
+```
+SENDING (outbound):
+  User hits Send in platform inbox UI
+  Platform calls Resend API
+  Resend delivers email from @coaileague.com address
+  Sent copy stored in platform_emails table direction=outbound
+  Thread linked via message_id and in_reply_to
+
+RECEIVING (inbound):
+  Someone sends email to any @coaileague.com address
+  Resend catches it via MX records
+  Resend fires webhook to POST /api/inbound/email
+  Platform looks up email_routing table by to address
+  Routes to correct user mailbox or Trinity for auto-processing
+  Stored in platform_emails table direction=inbound
+  User sees email in platform inbox via WebSocket
+  Trinity generates one-line summary and draft reply
+
+AUTO-PROCESSING by Trinity:
+  calloffs-acme@coaileague.com → creates calloff_record
+  incidents-acme@coaileague.com → creates incident_report
+  support-acme@coaileague.com → creates support_ticket
+  docs-acme@coaileague.com → stores in document vault
+  trinity@coaileague.com → Trinity responds directly
+```
+
+---
+
+**THE DNS CHANGES NEEDED**
+
+This is what needs to change in the domain registrar for coaileague.com. Do these in the exact order listed. DO NOT change MX records until everything else is tested and working.
+
+```
+STEP 1 — UPDATE SPF RECORD (edit existing do not create new):
+  Current value is probably:
+    v=spf1 include:_spf.google.com ~all
+  Change to:
+    v=spf1 include:amazonses.com ~all
+  Remove Google. Add Resend which uses Amazon SES.
+  Confirm exact include value in Resend dashboard
+  under Domains settings.
+
+STEP 2 — ADD RESEND DKIM RECORD (new record):
+  Type: TXT
+  Name/Host: resend._domainkey.coaileague.com
+  Value: get exact value from Resend Dashboard
+         Domains > coaileague.com > DKIM section
+  Also DELETE Google's DKIM entry:
+    google._domainkey.coaileague.com — remove it entirely
+
+STEP 3 — CREATE DMARC RECORD:
+  Type: TXT
+  Name/Host: _dmarc.coaileague.com
+  Value: v=DMARC1; p=quarantine; rua=mailto:dmarc@coaileague.com; pct=100
+
+STEP 4 — VERIFY coaileague.com IN RESEND:
+  Resend Dashboard > Domains > Add Domain
+  Enter coaileague.com
+  Add each DNS record Resend provides
+  Wait for Verified status before touching MX records
+
+STEP 5 — ENABLE INBOUND ROUTING IN RESEND:
+  Resend Dashboard > Inbound
+  Enable wildcard routing for *.coaileague.com
+  Set webhook URL:
+    https://app.coaileague.com/api/inbound/email
+
+STEP 6 — CHANGE MX RECORDS (do this LAST after everything tested):
+  DELETE all existing Google Workspace MX records
+  ADD Resend inbound MX records from Resend dashboard
+  Go to: Resend Dashboard > Domains > coaileague.com > Inbound
+  Copy exact MX hostname and priority Resend provides
+
+STEP 7 — AFTER MX CHANGE:
+  Remove mail.coaileague.com subdomain from DNS
+  Remove mail.coaileague.com from Resend domain list
+  coaileague.com becomes the only sending domain
+```
+
+---
+
+**WHAT THE AGENT NEEDS TO BUILD IN CODE**
+
+```
+DATABASE — create these tables if not already existing:
+  platform_email_addresses
+    id, workspace_id, user_id, client_id, address,
+    local_part, subdomain, display_name, address_type,
+    is_active, is_protected, is_outbound_only,
+    activated_at, activated_by, billing_seat_id,
+    fair_use_monthly_limit (default 500),
+    emails_sent_this_period, auto_trinity_process,
+    trinity_calltype, created_at
+
+  email_routing
+    id, address, email_address_id, route_type,
+    target_workspace_id, target_user_id,
+    auto_process, process_as, is_active, created_at
+
+  platform_emails (may already exist as messages table)
+    id, workspace_id, resend_email_id (unique for dedup),
+    message_id, in_reply_to, direction,
+    from_address, to_addresses[], cc_addresses[],
+    subject, body_html, body_text, snippet,
+    owner_user_id, folder (inbox/sent/archive/trash),
+    is_read, is_starred, trinity_processed,
+    trinity_summary, trinity_draft_reply,
+    trinity_category, trinity_priority,
+    received_at, sent_at, created_at
+
+  email_attachments
+    id, email_id, filename, content_type,
+    size_bytes, storage_url, sha256_hash, created_at
+
+  email_drafts
+    id, workspace_id, user_id, reply_to_email_id,
+    from_address, to_addresses[], subject,
+    body_html, body_text, last_saved_at, created_at
+
+ADD COLUMNS to existing tables:
+  workspaces: email_domain VARCHAR
+  users: platform_email VARCHAR, email_activated BOOLEAN
+  clients: platform_email VARCHAR, email_activated BOOLEAN
+
+SEED protected platform addresses:
+  trinity@coaileague.com
+  support@coaileague.com
+  billing@coaileague.com
+  hello@coaileague.com
+  noreply@coaileague.com
+
+SERVICE — emailProvisioningService.ts:
+  provisionWorkspaceAddresses(workspaceId, emailSlug)
+    Called after workspace registration
+    Creates all 6 system addresses as active
+    Creates email_routing entries for all 6
+
+  reserveUserEmailAddress(workspaceId, userId, firstName, lastName, emailSlug)
+    Called after officer creation
+    Creates address as inactive (reserved not billed)
+    Updates users.platform_email
+
+  reserveClientEmailAddress(workspaceId, clientId, clientName, emailSlug)
+    Called after client creation
+    Creates address as inactive
+    Updates clients.platform_email
+
+  activateEmailAddress(emailAddressId, activatedByUserId, stripeItemId)
+    Called when org owner activates a seat
+    Sets is_active=true
+    Creates Stripe subscription item at $3/month
+    Creates email_routing record
+    Writes audit log
+
+  deactivateEmailAddress(emailAddressId, userId)
+    Sets is_active=false
+    Cancels Stripe subscription item
+
+INBOUND WEBHOOK — extend POST /api/inbound/email:
+  Verify Resend HMAC signature first
+  Deduplicate by resend_email_id
+  Parse from, to, subject, body, attachments
+  Look up email_routing by to address
+  If no route: return 200 silently (no bounce)
+  Store in platform_emails
+  If auto_process=true: Trinity processes async
+  If user_inbox: WebSocket broadcast + NDS notification
+  Return 200 immediately
+
+TRINITY EMAIL PROCESSING:
+  calloff address → INSERT calloff_records, trigger cascade
+  incident address → INSERT incident_reports
+  support address → INSERT support_tickets
+  Any address → summarize with withGemini, generate draft reply
+
+OUTBOUND SEND API:
+  POST /api/email/send
+    Validate from address belongs to user workspace
+    Validate address is active and not outbound-only
+    Call Resend API to deliver
+    Store sent copy in platform_emails direction=outbound
+    Link thread via in_reply_to
+    Increment emails_sent_this_period
+
+EMAIL MANAGEMENT API:
+  GET /api/email/management
+    All workspace addresses with status and usage
+  POST /api/email/addresses/:id/activate
+    Activate + create Stripe item
+  POST /api/email/addresses/:id/deactivate
+    Deactivate + cancel Stripe item
+  POST /api/email/activate-all
+    Bulk activate all officers
+  GET /api/email/inbox
+    Paginated emails with trinity_summary
+  GET /api/email/:id
+    Full email marks as read
+  POST /api/email/:id/reply
+    Creates reply with thread linking
+  PATCH /api/email/:id
+    Update is_read is_starred folder
+  DELETE /api/email/:id
+    Soft delete sets folder=trash
+
+EMAIL MANAGEMENT UI — settings page:
+  Show all workspace system addresses (always on free)
+  Show all officer addresses with activate/deactivate toggle
+  Show all client addresses with activate/deactivate toggle
+  Monthly cost calculator: active seats x $3
+  Fair use status per address
+  Bulk activate all officers button
+  All prices read from billingConfig.EMAIL_PRICING
+
+BILLING CONFIG — add to billingConfig.ts:
+  EMAIL_PRICING = {
+    perSeatMonthlyCents: 300,
+    fairUseEmailsPerSeatMonthly: 500,
+    overagePerEmailCents: 0.1,
+    resendMonthlyCostCents: 2000,
+  }
+
+NDS TEMPLATES — add these notification types:
+  new_email_received
+  trinity_email_processed
+  email_seat_activated
+  email_seat_deactivated
+  email_fair_use_warning
+
+REMOVE ALL mail.coaileague.com REFERENCES:
+  grep -rn "mail\.coaileague\.com" server/ client/ shared/
+    --include="*.ts" --include="*.tsx"
+  Replace every result with coaileague.com
+  UPDATE workspaces SET
+    staffing_email = REPLACE(staffing_email,
+      '@mail.coaileague.com', '@coaileague.com')
+  Do same for all email columns in workspaces table
+```
+
+---
+
+**WHAT TO ADD TO REPLIT SECRETS**
+
+```
+RESEND_API_KEY
+  Where: Resend Dashboard > API Keys
+  Value starts with: re_
+  Already may be set — verify it is there
+
+RESEND_WEBHOOK_SECRET
+  Where: Resend Dashboard > Webhooks
+  After creating webhook pointing to /api/inbound/email
+  Copy the signing secret
+
+RESEND_FROM_DOMAIN
+  Value: coaileague.com
+
+RESEND_FROM_EMAIL
+  Value: noreply@coaileague.com
+```
+
+---
+
+**BEFORE CANCELLING GOOGLE WORKSPACE AND ZOHO**
+
+```
+1. Export all emails from Google Workspace
+   Google Takeout: takeout.google.com
+   Download your Gmail archive
+
+2. Export contacts from Zoho and Google
+
+3. Note down any important email addresses
+   that have active communications
+
+4. Do NOT cancel either service until:
+   - MX records changed to Resend
+   - Test email to your @coaileague.com address
+     arrives in platform inbox successfully
+   - Reply from platform inbox arrives in external Gmail
+   - At least 2 weeks of stable operation
+
+5. Keep Google Workspace active for 30 days after
+   MX change as insurance in case rollback needed
+```
+
+---
+
+**ROLLBACK PLAN IF SOMETHING GOES WRONG**
+
+```
+Set DNS TTL to 300 seconds 24 hours before MX change
+This means if anything breaks:
+  Change MX records back to Google
+  Takes effect in 5 minutes not 48 hours
+  Email instantly flows back to Google
+  Platform inbox stops receiving until fixed
+```
+
+---
+
+**THE SINGLE MOST IMPORTANT RULE**
+
+Do not change MX records until the inbound webhook is fully tested and working. Test it by temporarily routing one address through Resend while Google still handles the rest. Confirm emails arrive in the platform inbox before cutting over completely.
+
+Send this entire message to your agent as the email system build instruction. The agent has everything it needs to build the complete system from database to UI to DNS.

@@ -1,0 +1,621 @@
+Paste this into Replit:
+
+---
+
+**OFFICER TRAINING CERTIFICATION SYSTEM — CANONICAL BUILD | READ BEFORE TOUCH | NO DUPLICATION | 7-STEP PIPELINE**
+
+Before building anything — audit what already exists. Read every file related to training, certificates, documents, employee scoring, and post orders before writing a single line of new code.
+
+---
+
+**PRE-BUILD AUDIT — READ ONLY FIRST**
+
+Search the entire codebase and report:
+
+- Any existing training module, quiz, or certificate table or schema
+- Any existing training routes or service files
+- Any existing certificate generation code
+- Any existing employee scoring or desirability score system
+- Any existing flashcard or course content system
+- Any existing post orders acknowledgment tracking beyond what is in `trinityPostOrdersSafetyActions.ts`
+- The current `employeeScore` or `schedulingScore` field — where it lives, how it is currently calculated
+- The current document signing pipeline — what provider, what files
+- The current PDF generation library in use
+- The current `document_type` enum values — list all
+
+Report everything found. Then proceed. Build only what does not exist. Wire everything into what does exist.
+
+---
+
+**SECTION 1 — SCHEMA (ONLY ADD WHAT IS MISSING)**
+
+After reading existing schema — add only the tables and columns that do not exist:
+
+**`training_modules` table (if not exists):**
+```sql
+CREATE TABLE IF NOT EXISTS training_modules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar,
+  is_platform_default boolean DEFAULT true,
+  title varchar(255) NOT NULL,
+  description text,
+  category varchar(100) NOT NULL,
+  passing_score integer DEFAULT 80,
+  certificate_valid_days integer DEFAULT 365,
+  is_required boolean DEFAULT false,
+  affects_employee_score boolean DEFAULT true,
+  score_penalty_per_day_overdue integer DEFAULT 1,
+  max_attempts_before_intervention integer DEFAULT 2,
+  state_credit_hours decimal(4,2) DEFAULT 0,
+  order_index integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+```
+
+**`training_sections` table (flashcard sections within a module):**
+```sql
+CREATE TABLE IF NOT EXISTS training_sections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  module_id uuid NOT NULL REFERENCES training_modules(id) ON DELETE CASCADE,
+  title varchar(255) NOT NULL,
+  content_body text NOT NULL,
+  flashcard_data jsonb,
+  order_index integer DEFAULT 0,
+  section_quiz_required boolean DEFAULT true
+);
+```
+
+**`training_questions` table (if not exists):**
+```sql
+CREATE TABLE IF NOT EXISTS training_questions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  module_id uuid NOT NULL REFERENCES training_modules(id) ON DELETE CASCADE,
+  section_id uuid REFERENCES training_sections(id),
+  question_text text NOT NULL,
+  options jsonb NOT NULL,
+  correct_answer varchar(255) NOT NULL,
+  explanation text,
+  is_final_exam boolean DEFAULT false,
+  order_index integer DEFAULT 0
+);
+```
+
+**`training_attempts` table (if not exists):**
+```sql
+CREATE TABLE IF NOT EXISTS training_attempts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL,
+  employee_id varchar NOT NULL,
+  module_id uuid NOT NULL REFERENCES training_modules(id),
+  attempt_number integer NOT NULL DEFAULT 1,
+  attempt_type varchar(50) DEFAULT 'annual',
+  started_at timestamptz DEFAULT now(),
+  completed_at timestamptz,
+  current_section_index integer DEFAULT 0,
+  section_scores jsonb DEFAULT '{}',
+  final_exam_score integer,
+  overall_score integer,
+  passed boolean DEFAULT false,
+  answers jsonb DEFAULT '{}',
+  time_spent_seconds integer DEFAULT 0,
+  flagged_for_intervention boolean DEFAULT false,
+  intervention_required_at timestamptz,
+  ip_address varchar(100)
+);
+CREATE INDEX IF NOT EXISTS idx_training_attempts_workspace ON training_attempts(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_training_attempts_employee ON training_attempts(employee_id);
+CREATE INDEX IF NOT EXISTS idx_training_attempts_module ON training_attempts(module_id);
+```
+
+**`training_certificates` table (if not exists):**
+```sql
+CREATE TABLE IF NOT EXISTS training_certificates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL,
+  employee_id varchar NOT NULL,
+  module_id uuid NOT NULL REFERENCES training_modules(id),
+  attempt_id uuid NOT NULL REFERENCES training_attempts(id),
+  certificate_number varchar(100) UNIQUE NOT NULL,
+  issued_at timestamptz DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  overall_score integer NOT NULL,
+  is_valid boolean DEFAULT true,
+  pdf_url text,
+  document_id varchar
+);
+CREATE INDEX IF NOT EXISTS idx_certificates_workspace ON training_certificates(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_employee ON training_certificates(employee_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_expires ON training_certificates(expires_at);
+```
+
+**`training_interventions` table (if not exists):**
+```sql
+CREATE TABLE IF NOT EXISTS training_interventions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL,
+  employee_id varchar NOT NULL,
+  module_id uuid NOT NULL,
+  attempt_id uuid NOT NULL,
+  flagged_at timestamptz DEFAULT now(),
+  consistently_missed_topics jsonb,
+  assigned_to_manager varchar(255),
+  completed boolean DEFAULT false,
+  completed_at timestamptz,
+  conducted_by varchar(255),
+  duration_minutes integer,
+  notes text,
+  outcome varchar(100)
+);
+```
+
+**Add to `document_type` enum (only values not already present):**
+```sql
+DO $$ BEGIN
+  ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'training_certificate';
+  ALTER TYPE document_type ADD VALUE IF NOT EXISTS 'training_intervention_record';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+```
+
+**Employee score impact — check if `schedulingScore` or equivalent already exists on employees table. If it does — extend the calculation logic. If not:**
+```sql
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS compliance_score integer DEFAULT 100;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS compliance_score_updated_at timestamptz;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS training_completion_percentage integer DEFAULT 0;
+```
+
+Update Drizzle schema to match all additions.
+
+---
+
+**SECTION 2 — SEED PLATFORM DEFAULT TRAINING MODULES**
+
+Create `server/services/training/trainingModuleSeeder.ts`
+
+Check if platform default modules already exist before inserting. Use `INSERT ... WHERE NOT EXISTS` pattern — never duplicate.
+
+Seed these 10 modules with real content sections and questions:
+
+**Module 1 — Legal Authority of Private Security**
+Sections: What is private security, Legal authority vs law enforcement, Trespass and removal authority, Citizen's arrest — when and how, Documentation requirements
+Final exam: 15 questions covering all sections
+
+**Module 2 — Use of Force Continuum**
+Sections: Levels of force, Proportional response, Verbal commands and presence, Defensive techniques, Deadly force justification as private citizen, Post-incident documentation
+Final exam: 15 questions
+
+**Module 3 — De-escalation Techniques**
+Sections: Reading situations, Verbal de-escalation, Body language and positioning, Disengagement strategies, Mental health awareness, When to call for backup
+Final exam: 10 questions
+
+**Module 4 — Observation and Report Writing**
+Sections: What to observe, Objective vs subjective language, Incident report structure, Timing and documentation, Evidence handling basics
+Final exam: 10 questions
+
+**Module 5 — Customer Service and Professional Conduct**
+Sections: Professional appearance, Communication standards, Handling complaints professionally, Representing the client, Social media conduct policy
+Final exam: 10 questions
+
+**Module 6 — Cultural Diversity and Sensitivity**
+Sections: Implicit bias awareness, Equitable treatment standards, Cultural competency, Avoiding discrimination, Documentation when bias is alleged
+Final exam: 10 questions
+
+**Module 7 — Emergency Procedures**
+Sections: Active threat response, Medical emergency basics, Fire and evacuation, When to call 911, Post-emergency documentation
+Final exam: 10 questions
+
+**Module 8 — Handcuffing and Restraint**
+Sections: Legal authority to restrain, Proper technique overview, Liability when restraint causes harm, Documentation requirements, When NOT to restrain
+Final exam: 10 questions
+
+**Module 9 — Workplace Violence Prevention**
+Sections: Warning signs and risk factors, Prevention strategies, Reporting procedures, Post-incident support
+Final exam: 8 questions
+
+**Module 10 — Sexual Harassment Prevention**
+Sections: Definitions and examples, Reporting procedures, Officer responsibilities, Bystander intervention
+Final exam: 8 questions
+
+Each section must include:
+- A `content_body` with 2-4 paragraphs of real educational content
+- `flashcard_data` array with 3-5 key concept cards: `[{ front: "concept", back: "explanation" }]`
+- 3-5 section quiz questions before advancing to next section
+
+---
+
+**SECTION 3 — TRAINING ROUTES**
+
+Create `server/routes/trainingRoutes.ts` — mount at `/api/training` with `requireAuth` at mount level.
+
+**`GET /api/training/modules`**
+Returns all modules available to the workspace — platform defaults plus workspace custom modules. Include completion status per employee if `employeeId` query param provided.
+
+**`GET /api/training/modules/:id`**
+Returns module with sections. Does NOT return correct answers — only question text and options.
+
+**`POST /api/training/attempts/start`**
+```
+Body: { moduleId, employeeId }
+7-Step:
+1. TRIGGER — Employee or manager initiates training
+2. FETCH — Get module, check existing attempts, verify not already certified for current period
+3. VALIDATE — Confirm workspace match, confirm employee is active, confirm no valid unexpired certificate exists (cannot retake until anniversary)
+4. PROCESS — Calculate attempt number, set attempt_type
+5. MUTATE — INSERT training_attempt record with started_at
+6. CONFIRM — Return attempt ID with first section content
+7. NOTIFY — No notification on start
+```
+
+**`POST /api/training/attempts/:id/submit-section`**
+```
+Body: { sectionId, answers: { questionId: selectedAnswer }[] }
+7-Step:
+1. TRIGGER — Employee submits section quiz
+2. FETCH — Get section questions with correct answers, get attempt record
+3. VALIDATE — Verify attempt belongs to employee and workspace, verify section not already submitted
+4. PROCESS — Calculate section score, identify missed questions
+5. MUTATE — Update attempt.section_scores with this section result, update current_section_index
+6. CONFIRM — Return score and whether to advance or review
+7. NOTIFY — No notification on section completion
+Return: { sectionScore, passed, missedTopics, nextSection or 'final_exam' }
+```
+
+**`POST /api/training/attempts/:id/submit-final`**
+```
+Body: { answers: { questionId: selectedAnswer }[] }
+7-Step:
+1. TRIGGER — Employee submits final exam
+2. FETCH — Get all final exam questions, get all section scores, get attempt record
+3. VALIDATE — Verify all sections completed first, verify attempt is in progress
+4. PROCESS — Calculate final exam score, calculate overall score (weighted: sections 40%, final 60%), determine passed
+5. MUTATE:
+   IF PASSED:
+   - UPDATE attempt: passed=true, overall_score, completed_at
+   - Generate certificate number: `CERT-[WORKSPACE-4]-[EMPLOYEE-4]-[MODULE-4]-[TIMESTAMP]`
+   - Set expires_at = completed_at + module.certificateValidDays
+   - Generate certificate PDF (see Section 4)
+   - INSERT training_certificates record
+   - INSERT document record linking certificate to employee document safe
+   - UPDATE employee: training_completion_percentage, compliance_score
+   IF FAILED:
+   - UPDATE attempt: passed=false, overall_score, completed_at
+   - Increment attempt_number
+   - IF attempt_number >= module.maxAttemptsBeforeIntervention:
+     - Set flagged_for_intervention = true
+     - INSERT training_interventions record
+     - UPDATE employee compliance_score -= 5
+6. CONFIRM — Verify certificate stored if passed
+7. NOTIFY:
+   IF PASSED: notify employee + org owner, publish training_certificate_earned
+   IF FAILED + INTERVENTION: notify manager + owner, publish training_intervention_required
+   IF FAILED + NO INTERVENTION YET: notify employee of failed attempt, attempts remaining
+```
+
+**`GET /api/training/employees/:employeeId/transcript`**
+Returns complete training history — all modules, all attempts, all certificates, all interventions. Workspace scoped.
+
+**`GET /api/training/compliance-report`**
+Returns workspace-wide report — per employee completion status, certificates valid/expired, upcoming renewals, intervention flags, total hours, compliance percentage.
+
+**`POST /api/training/interventions/:id/complete`**
+Logs completed intervention — who conducted it, duration, notes, outcome. Notifies employee they can retake.
+
+**`GET /api/training/certificates/:certificateNumber/verify`**
+Public endpoint — no auth required. Returns certificate validity, employee name (first name + last initial only), module name, issue date, expiry. Used for QR code verification.
+
+---
+
+**SECTION 4 — CERTIFICATE PDF GENERATION**
+
+Use the existing PDF generation library already in the codebase — do not install a new one.
+
+Create `server/services/training/certificateGenerator.ts`:
+
+Generate certificate PDF with:
+- Organization name as header (large, centered)
+- "Certificate of Completion" subtitle
+- Decorative border appropriate for a professional certificate
+- "This certifies that" [Employee Full Name]
+- "has successfully completed" [Module Title]
+- Issued by: [Organization Name]
+- Issue Date: [formatted date]
+- Expiration Date: [formatted date — one year from issue]
+- Score: [X]% — Passing Score: [passing_score]%
+- Certificate Number: [CERT-XXXXX] (small, bottom)
+- Training Hours: [state_credit_hours] hours
+- Signature line with org owner name pre-populated (read from workspace settings — ownerName field)
+- QR code linking to `/api/training/certificates/[certificateNumber]/verify`
+- CoAIleague platform watermark (subtle, bottom right)
+
+Store in employee document safe under `document_type: 'training_certificate'`.
+Update `training_certificates.pdf_url` and `document_id`.
+
+---
+
+**SECTION 5 — EMPLOYEE COMPLIANCE SCORE INTEGRATION**
+
+Read the existing employee scoring system before touching it. Extend it — do not replace it.
+
+**Compliance score calculation (add to existing scoring logic):**
+
+The compliance score (0-100) is reduced by:
+- Each required training module not completed: -5 points
+- Each day a required training is overdue past due date: -1 point per day (configurable)
+- Each unacknowledged post order or SOP past 24 hours of assignment: -3 points
+- Each unsigned required document past 48 hours of assignment: -2 points
+- Each training intervention flag not yet resolved: -10 points
+- Each expired certificate not renewed within 30 days of expiry: -5 points
+
+The compliance score recovers when:
+- Training is completed: +5 points
+- Document is signed: +2 points
+- Post order is acknowledged: +3 points
+- Intervention is resolved and test passed: +10 points
+
+**Wire compliance score to scheduling:**
+- Score 90-100: Preferred officer — appears first in auto-fill candidates
+- Score 70-89: Standard — normal priority
+- Score 50-69: Discouraged — appears last in auto-fill, manager sees amber warning badge
+- Below 50: Flagged — manager sees red warning badge, Trinity includes in morning brief
+- Score never blocks shift assignment — it only affects priority and shows warnings
+
+**Add to employee list and profile:**
+- Compliance score badge next to employee name
+- Tooltip showing what is reducing the score with direct links to fix each item
+
+---
+
+**SECTION 6 — ANNIVERSARY RENEWAL SYSTEM**
+
+Create `server/services/training/trainingRenewalService.ts`:
+
+Daily cron — check all valid certificates:
+- If `expires_at` is within 30 days — send reminder to employee: "Your [Module] certificate expires in [N] days. Complete renewal training to maintain your compliance score."
+- If `expires_at` has passed — mark certificate `is_valid = false`, reduce employee compliance score, notify employee and manager
+- If expired and not renewed within 30 days — add to morning brief as intervention item
+
+On certificate expiry:
+- Employee can start a new attempt (anniversary allows retake)
+- Previous passing score displayed for reference
+- If they pass renewal — new certificate issued, score recovered
+
+Register cron in `initializeSchedulers()`. Write completion record to `cron_run_log`.
+
+---
+
+**SECTION 7 — TRINITY ORCHESTRATION WIRING**
+
+**Add Trinity actions (check registry first — only add if not present):**
+
+`training.assign_module` — assign module to employee or group, emit `training_module_assigned`
+`training.check_compliance` — scan all employees for training gaps, return report
+`training.send_reminder` — send renewal or completion reminder to specific employee
+`training.flag_intervention` — flag employee for intervention, notify management
+`training.generate_compliance_report` — generate and store PDF compliance report
+
+**Add platformEventBus subscribers (check for duplicates first):**
+
+`training_certificate_earned`:
+```typescript
+// Update employee compliance score
+// Add to Trinity org intelligence: "[Employee] completed [Module] — score [X]%"
+// Add to morning brief: "Completed training: [Employee] — [Module]"
+// Check if all required modules now complete — if yes notify owner
+```
+
+`training_intervention_required`:
+```typescript
+// Create HIGH priority notification to owner and all managers
+// Add to morning brief under "Attention Required"
+// Log to Trinity intelligence: "[Employee] struggling with [Module] — topics: [list]"
+// Include in scheduling score reduction
+```
+
+`training_certificate_expired`:
+```typescript
+// Reduce compliance score
+// Notify employee and manager
+// Add to morning brief
+// If 30+ days past expiry — flag for intervention
+```
+
+**Morning brief training section:**
+```
+TRAINING STATUS:
+- Certificates expiring within 30 days: [list with employee names and module names]
+- Overdue renewals: [list]
+- Interventions pending: [list with days pending]
+- Recently completed: [list from past 24 hours]
+- Employees with no training started: [list]
+- Overall workspace training compliance: [X]%
+```
+
+**Pre-scheduling awareness (non-blocking):**
+```typescript
+// In scheduling scoring — when scoring an officer candidate:
+// If any required certificate is expired — add note to candidate object:
+//   "Warning: [Module] certificate expired [N] days ago"
+// If compliance score below 70 — add note: "Compliance score: [X] — review recommended"
+// These are advisory only — never block assignment
+```
+
+**Post orders and SOP acknowledgment — wire to compliance score:**
+- When post orders assigned to employee — set 24-hour acknowledgment deadline
+- If not acknowledged within 24 hours — reduce compliance score by 3 points
+- Trinity includes in morning brief: "[Employee] has not acknowledged post orders for [Client Site]"
+- If not acknowledged within 48 hours — notify manager directly
+
+---
+
+**SECTION 8 — LEGAL EVIDENCE PACKET INTEGRATION**
+
+Read the existing legal evidence packet generator. Extend it — do not replace it.
+
+Add "Training and Certification Record" section to the packet:
+
+```
+OFFICER TRAINING TRANSCRIPT
+As of: [packet generation date]
+
+ACTIVE CERTIFICATIONS:
+[list each: Module | Score | Issued | Expires | Certificate #]
+
+EXPIRED CERTIFICATIONS:
+[list each with expiry date]
+
+TRAINING ATTEMPT HISTORY:
+[list each attempt: Module | Attempt # | Score | Date | Passed/Failed]
+
+INTERVENTION RECORDS:
+[list each: Module | Flagged Date | Intervention Date | Conducted By | Outcome]
+
+TRAINING SUMMARY:
+- Total modules completed: N of N required
+- Total training hours: X hours
+- State minimum required: X hours  
+- Hours above state minimum: X hours
+- Overall compliance score at time of incident: X/100
+
+PLATFORM DEFAULT MODULES COMPLETED:
+[list all 10 modules with completion dates]
+```
+
+---
+
+**SECTION 9 — EMPLOYEE HANDBOOK LANGUAGE UPDATE**
+
+Read the current employee handbook template in the codebase.
+
+Search for and replace:
+- Every "shall" in context of public obligations → "may" or "is encouraged to"
+- Every "must protect" or "required to protect" → "is authorized to observe and report"
+- Every "will intervene" → "may use judgment to respond"
+- Every "duty to the public" → remove entirely or replace with "contractual obligation to the client"
+- Every "responsible for public safety" → "assigned to monitor and report"
+
+Add this preamble to the handbook:
+```
+IMPORTANT LEGAL NOTICE:
+Security officers employed by or contracted through this organization are 
+private citizens performing a contractual service for our clients. Officers 
+have no special legal authority beyond that of any private citizen and bear 
+no legal duty to members of the public beyond what is required of any private 
+citizen under applicable state law. All actions taken by security officers 
+are discretionary and represent training and guidance, not legal obligation.
+```
+
+Save as a new handbook version — do not overwrite the existing one. Version the document with date.
+
+---
+
+**SECTION 10 — FRONTEND UI**
+
+**Training hub page (`/training`):**
+- Overview cards: My Certificates (valid), Modules In Progress, Modules To Complete, Compliance Score
+- Module list organized by category
+- Status per module: Not Started (gray), In Progress (blue), Passed (green), Expired (orange), Failed (red)
+- "Start" or "Continue" or "Renew" button per module
+
+**Module learning page (`/training/modules/:id`):**
+
+Phase 1 — Content and flashcards:
+- Section navigation sidebar showing all sections and completion status
+- Section content displayed with clean readable layout
+- Flashcard component — flip animation, front shows concept, back shows explanation
+- "I understand this section" button advances to section quiz
+- Section quiz: one question at a time, progress indicator, submit answer, show correct/incorrect with explanation
+- Must pass section quiz (configurable threshold) to unlock next section
+- Progress auto-saved — can leave and return to same position
+
+Phase 2 — Final exam (unlocked after all sections complete):
+- "You have completed all sections. Take the final exam." screen
+- Final exam: all final exam questions, shuffled, one at a time, no going back
+- Submit exam → score reveal screen
+- If passed: certificate preview with confetti animation, download button, "Share with your organization" note
+- If failed: score breakdown, topics to review highlighted, "Review Material" and "Retake" buttons
+- If intervention triggered: message explaining manager has been notified and will reach out
+
+**Certificate display:**
+- Professional certificate design with org name, officer name, module, dates, score, certificate number, QR code
+- Downloadable as PDF
+- Shareable link that shows verification page
+
+**Compliance dashboard (manager/owner view):**
+- Per-employee compliance score with color coding
+- Click through to see what is reducing each employee's score
+- Training compliance report export
+- Intervention management — view flagged, log completion, clear flags
+
+**Mobile:**
+- Entire training flow completable on mobile
+- Flashcards swipeable on mobile
+- Test questions large tap targets
+- Certificate downloadable on mobile
+
+---
+
+**SECTION 11 — SMOKE TEST**
+
+Execute this sequence:
+
+1. Verify 10 platform default modules seeded with sections and questions
+2. Assign module to test employee — confirm they appear in employee training list
+3. Employee starts module — reads section 1 content — flips flashcards
+4. Employee takes section 1 quiz and passes — confirm section marked complete
+5. Employee completes all sections — final exam unlocked
+6. Employee submits failing final exam — confirm score recorded, attempts noted
+7. Second failed attempt — confirm intervention triggered, manager notified
+8. Log intervention completion
+9. Employee retakes — submits passing answers — confirm certificate generated
+10. Confirm certificate PDF saved to document safe
+11. Verify certificate QR code links to valid verification page
+12. Check employee compliance score increased after passing
+13. Set certificate to expired — confirm compliance score decreases
+14. Confirm morning brief includes training status
+15. Generate legal evidence packet — confirm training transcript section included
+16. Assign post orders to employee — wait (or simulate) 24 hours — confirm compliance score decreases and manager notified
+17. Employee acknowledges post orders — confirm score recovers
+18. Check scheduling auto-fill — confirm high compliance score employee appears first in candidates
+19. Verify handbook version updated with corrected language
+20. Verify no duplicate module records after running seeder twice
+
+Report PASS or FAIL for all 20 steps.
+
+---
+
+**RUNNING GAP COUNT**
+
+```
+Pre-build audit:          existing items found: N | new builds needed: N
+Section 1 — Schema:       N additions made
+Section 2 — Seed data:    N modules seeded
+Section 3 — Routes:       N routes created
+Section 4 — Certificates: built Y/N
+Section 5 — Score system: N score factors wired
+Section 6 — Renewals:     cron registered Y/N
+Section 7 — Trinity:      N actions | N subscribers wired
+Section 8 — Evidence:     training section added Y/N
+Section 9 — Handbook:     N replacements made
+Section 10 — Frontend:    N components built
+Section 11 — Smoke test:  N/20 passing
+```
+
+---
+
+**COMPLETION CRITERIA**
+
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Smoke test 20/20 passing
+5. No duplicate tables, routes, or actions created
+6. All new code wired into existing event bus, document safe, employee scoring, morning brief, legal evidence packet
+7. Trinity aware of all training events and compliance scores
+
+**PRODUCTION READY — TRAINING SYSTEM VERIFIED**
+
+Stop and wait.
+
+---
+
+Paste results back when Replit finishes. When 20/20 passes you have a legally defensible training system that no other security platform in the market has.

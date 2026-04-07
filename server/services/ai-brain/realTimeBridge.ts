@@ -10,6 +10,8 @@
 
 import { aiBrainEvents } from './internalEventEmitter';
 import { RunStatus } from './workflowLedger';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('realTimeBridge');
 
 export type BroadcastChannel = 'workflow' | 'notification' | 'mascot' | 'helpai' | 'system';
 
@@ -173,7 +175,7 @@ class RealTimeBridgeService {
         try {
           callback(data);
         } catch (error) {
-          console.error(`[RealTimeBridge] Subscriber error on ${channel}:`, error);
+          log.error(`[RealTimeBridge] Subscriber error on ${channel}:`, error);
         }
       });
     }

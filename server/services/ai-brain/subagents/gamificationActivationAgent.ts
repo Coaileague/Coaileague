@@ -13,16 +13,17 @@
  */
 
 import { db } from '../../../db';
-import { 
+import {
   achievements,
-  employeePoints,
   employeeAchievements,
   employees,
   workspaces,
-  type InsertAchievement,
+  type InsertAchievement
 } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { GamificationService, DEFAULT_ACHIEVEMENTS } from '../../gamification/gamificationService';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('gamificationActivationAgent');
 
 export interface ActivationResult {
   success: boolean;
@@ -232,12 +233,12 @@ class GamificationActivationAgent {
       result.activatedFeatures.push('welcome_badge_awarded');
 
     } catch (error: any) {
-      console.error('[GamificationActivationAgent] Activation failed:', error);
+      log.error('[GamificationActivationAgent] Activation failed:', error);
       result.success = false;
-      result.errors.push(error.message);
+      result.errors.push((error instanceof Error ? error.message : String(error)));
     }
 
-    console.log(`[GamificationActivationAgent] Activated for workspace ${workspaceId}:`, result);
+    log.info(`[GamificationActivationAgent] Activated for workspace ${workspaceId}:`, result);
     return result;
   }
 
@@ -292,7 +293,7 @@ class GamificationActivationAgent {
     };
     this.configCache.set(workspaceId, config);
 
-    console.log(`[GamificationActivationAgent] Points config updated for ${workspaceId}`);
+    log.info(`[GamificationActivationAgent] Points config updated for ${workspaceId}`);
     return true;
   }
 
@@ -313,7 +314,7 @@ class GamificationActivationAgent {
     };
     this.configCache.set(workspaceId, config);
 
-    console.log(`[GamificationActivationAgent] Leaderboards enabled for ${workspaceId}`);
+    log.info(`[GamificationActivationAgent] Leaderboards enabled for ${workspaceId}`);
     return true;
   }
 
@@ -336,7 +337,7 @@ class GamificationActivationAgent {
     this.configCache.set(workspaceId, config);
 
     if (unlockedGates.length > 0) {
-      console.log(`[GamificationActivationAgent] Unlocked gates for ${workspaceId}:`, unlockedGates);
+      log.info(`[GamificationActivationAgent] Unlocked gates for ${workspaceId}:`, unlockedGates);
     }
 
     return unlockedGates;
@@ -377,16 +378,23 @@ class GamificationActivationAgent {
           .limit(1);
 
         if (existing.length === 0) {
-          await db.insert(employeeAchievements).values({
+          // Use onConflictDoNothing to handle race conditions
+          // The unique constraint on (employeeId, achievementId) prevents duplicates
+          const [inserted] = await db.insert(employeeAchievements).values({
             workspaceId,
             employeeId,
             achievementId: welcomeAchievement.id,
             earnedAt: new Date(),
-          });
-          assigned++;
+          })
+          .onConflictDoNothing({ target: [employeeAchievements.employeeId, employeeAchievements.achievementId] })
+          .returning();
+
+          if (inserted) {
+            assigned++;
+          }
         }
       } catch (error: any) {
-        errors.push(`Failed to assign badge to ${employeeId}: ${error.message}`);
+        errors.push(`Failed to assign badge to ${employeeId}: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
 
@@ -479,7 +487,7 @@ class GamificationActivationAgent {
           created++;
         }
       } catch (error) {
-        console.error(`[GamificationActivationAgent] Failed to create badge ${badge.name}:`, error);
+        log.error(`[GamificationActivationAgent] Failed to create badge ${badge.name}:`, error);
       }
     }
 
@@ -491,7 +499,7 @@ class GamificationActivationAgent {
     config.enabled = true;
     config.activatedAt = new Date().toISOString();
     this.configCache.set(workspaceId, config);
-    console.log(`[GamificationActivationAgent] Gamification enabled for ${workspaceId}`);
+    log.info(`[GamificationActivationAgent] Gamification enabled for ${workspaceId}`);
   }
 
   private async initializeEmployeePoints(workspaceId: string): Promise<number> {

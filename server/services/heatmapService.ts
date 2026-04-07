@@ -10,6 +10,7 @@
 import { db } from "../db";
 import { shifts, timeEntries, employees, clients } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, isNotNull } from "drizzle-orm";
+import { platformEventBus } from './platformEventBus';
 
 export interface HeatmapCell {
   dayOfWeek: number;
@@ -250,7 +251,7 @@ export class HeatmapService {
    */
   async getHeatmapByClient(workspaceId: string, period?: string): Promise<Map<string, HeatmapData>> {
     const clientList = await db
-      .select({ id: clients.id, name: clients.name })
+      .select({ id: clients.id, name: clients.companyName })
       .from(clients)
       .where(eq(clients.workspaceId, workspaceId));
 
@@ -277,7 +278,7 @@ export class HeatmapService {
     const clientsWithLocations = await db
       .select({ 
         id: clients.id, 
-        name: clients.name,
+        name: clients.companyName,
         address: clients.address
       })
       .from(clients)
@@ -436,6 +437,18 @@ export class HeatmapService {
       const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];
     });
+
+    const criticalGaps = recommendations.filter(r => r.priority === 'critical').length;
+    if (recommendations.length > 0) {
+      platformEventBus.publish({
+        type: 'staffing_analysis_completed',
+        category: 'scheduling',
+        title: 'AI Staffing Analysis Completed',
+        description: `Staffing analysis found ${recommendations.length} recommendation(s) for workspace (${criticalGaps} critical gaps)`,
+        workspaceId,
+        metadata: { recommendationCount: recommendations.length, criticalGaps, understaffedCount: understaffedPeriods.length },
+      });
+    }
 
     return {
       recommendations: recommendations.slice(0, 20),

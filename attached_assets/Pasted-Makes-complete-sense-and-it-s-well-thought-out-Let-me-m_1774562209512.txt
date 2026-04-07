@@ -1,0 +1,100 @@
+Makes complete sense and it's well thought out. Let me map it out clearly so you can send it to Replit with confidence.
+
+---
+
+**CoAIleague Per-Seat Pricing Logic**
+
+The model is simple: every active officer on the platform is a billable seat at $25/month. The tier determines how many seats are included in the base price and what features are unlocked. Going over the seat limit triggers per-seat overage billing automatically.
+
+**Revised tier structure:**
+
+| Tier | Base Price | Included Seats | Per-Seat Overage | Target Customer |
+|------|-----------|---------------|-----------------|-----------------|
+| Starter | $199/mo | 10 seats | $25/seat | Small independent operators |
+| Professional | $749/mo | 100 seats | $25/seat | Companies like Statewide |
+| Business | $2,249/mo | 300 seats | $25/seat | Regional security companies |
+| Enterprise | $6,999/mo | 1,000 seats | $25/seat | Securitas, Allied, GuardWorld scale |
+| Strategic | Custom | Custom | $25/seat | Enterprise partnerships, state contracts |
+
+**The overhead math behind $25/seat:**
+
+At $25 per active officer per month the platform covers: Replit hosting and compute, OpenAI/Claude/Gemini API calls (Trinity, HelpAI, voice, document parsing), Resend email delivery, SMS via Twilio, push notification delivery, QuickBooks API calls, document storage, and all other external services — while maintaining 50-90% gross margins as originally designed.
+
+**Overage billing logic:**
+
+When a workspace's active officer count exceeds their tier's included seat count — for example a Professional workspace at 100 seats adds officer #101 — the overage kicks in automatically. The extra officers are billed at $25/seat/month prorated from the date of activation. Stripe handles the proration calculation. The org_owner sees a real-time seat counter showing current/included and a projected overage charge before confirming activation.
+
+**Hard cap vs soft cap:**
+
+The included seats are a soft cap — you can go over, you just pay overage. The only hard cap scenario is if the org_owner has explicitly set a spending limit in their workspace settings. If they set a hard cap Replit stops activation at the limit and shows an upgrade prompt instead of allowing overage.
+
+**This is systematic and stays canonical with Phase 30** — which is exactly the right phase for this. Phase 30 owns tier enforcement and feature gating. The per-seat overage logic is part of Phase 30's seat limit enforcement and Phase 41's workspace subscription lifecycle.
+
+---
+
+Send this to the Replit Agent:
+
+---
+
+**PER-SEAT PRICING LOGIC UPDATE — Verify and align with Phase 30**
+
+CoAIleague's billing model is per-seat at $25 per active officer per month. The tier determines included seats and feature access. This must be verified and enforced consistently with Phase 30 tier enforcement work.
+
+**Correct tier definitions — update tierDefinitions.ts:**
+
+```
+Starter:      $199/mo  — 10 seats included    — $25/seat overage
+Professional: $749/mo  — 100 seats included   — $25/seat overage  
+Business:     $2,249/mo — 300 seats included  — $25/seat overage
+Enterprise:   $6,999/mo — 1,000 seats included — $25/seat overage
+Strategic:    Custom    — Custom seats         — $25/seat overage
+```
+
+**Seat counting logic:**
+- Only ACTIVE officers count as billable seats
+- Deactivated, suspended, or pending officers do not count
+- The $25/seat rate applies to every active officer above the included seat count
+- Seat count is calculated in real time — not cached
+
+**Overage billing logic:**
+- When an org_owner activates an officer that would exceed their included seat count — show a confirmation prompt displaying the projected overage charge before activation completes
+- Overage charged via Stripe at end of billing cycle — prorated from activation date
+- Org_owner can set a hard cap in workspace settings — if set, activation is blocked at the limit instead of allowing overage
+- Hard cap defaults to OFF — overage is allowed by default
+
+**Seat counter UI:**
+- Visible to org_owner in workspace settings and dashboard
+- Shows: X seats used / Y seats included / Z overage seats (if any)
+- Shows projected overage charge for current billing cycle
+- Color coded: green under 80%, amber 80-99%, red at or over limit
+
+**Enterprise seat floor:**
+- Enterprise tier starts at 1,000 included seats — designed for large national companies (Securitas, Allied Universal, GuardWorld scale)
+- Professional tier starts at 100 included seats — designed for regional companies like Statewide Protective Services
+
+**All overhead included in the $25/seat rate:**
+- Replit hosting and compute
+- AI API costs (OpenAI, Claude, Gemini — Trinity, HelpAI, voice, document parsing)
+- Resend email delivery
+- SMS delivery
+- Push notification delivery
+- QuickBooks API calls
+- Document vault storage
+- All other external service costs
+
+Target gross margin: 50-90% maintained across all tiers.
+
+**Verify the following:**
+1. tierDefinitions.ts reflects the correct seat counts per tier (10, 100, 300, 1000)
+2. Stripe subscription configuration matches these seat counts
+3. Overage billing logic exists in the subscription service — $25/seat above included count
+4. Seat counter UI visible to org_owner showing real-time usage
+5. Statewide Protective Services permanent Enterprise exemption still intact
+6. Legacy credit system UI completely removed — no credit references in billing pages
+7. Server starts clean after all changes
+
+Report findings before making changes. Stay canonical with Phase 30 — this is part of the same tier enforcement work, not a separate task.
+
+---
+
+This keeps everything systematic and in Phase 30 scope where it belongs. The agent now has the complete pricing logic with the correct seat counts, overage rules, and the Enterprise floor at 1,000 seats. Nothing jumps out of sequence.

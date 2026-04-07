@@ -1,0 +1,178 @@
+# WORKSPACE ISOLATION & PRODUCTION DATA INTEGRITY — CRITICAL PRE-LAUNCH
+
+## THE PROBLEM
+
+CoAIleague has THREE types of workspaces that must be completely isolated from each other. Sandbox test data was found seeded into the real production org (Statewide Protective Services). This MUST be resolved before launch. Real money, real employees, real clients — zero tolerance for test contamination.
+
+## THE THREE WORKSPACE TYPES
+
+### 1. DEV SANDBOX WORKSPACES (Test/Demo Data)
+- Purpose: Development, testing, demos, Trinity training
+- Examples: `dev-acme-security-ws`, `dev-metroplex-cleaning-ws`, and any other `dev-*` prefixed workspaces
+- Data: Fake clients, fake employees, simulated shifts, test invoices
+- Rules:
+  - Sandbox data can be created, deleted, reset, wiped at any time
+  - Seed scripts and training tools can run freely here
+  - Trinity trains and experiments here
+  - This data should NEVER appear in production workspaces
+  - These workspaces should NEVER process real payments or generate real invoices
+
+### 2. PRODUCTION ORG: STATEWIDE PROTECTIVE SERVICES (Real Business)
+- Purpose: Bryan's real security company, first production client, pilot org
+- Workspace ID: [whatever the actual Statewide workspace ID is — FIND IT AND REPORT IT]
+- Data: Real clients, real employees, real contracts, real money
+- Rules:
+  - This workspace must be COMPLETELY CLEAN — zero sandbox/seed/test/demo data
+  - No fake employees, no fake clients, no test shifts, no demo invoices
+  - Every record in this workspace must be real or entered by Bryan
+  - Seed scripts must NEVER touch this workspace
+  - Training tools must NEVER write to this workspace
+  - The productionSeed.ts script must NEVER run against this workspace
+  - Trinity operates here with real consequences — real invoices sent to real clients, real payroll for real employees
+
+### 3. PLATFORM SUPPORT ORG: CoAIleague (CoAI)
+- Purpose: Platform support operations
+- Members: Bryan (support agent), Trinity AI, HelpAI
+- Rules:
+  - This workspace is persistent — never reset, never seeded, never wiped
+  - Syncs with the platform and stays current
+  - This is the org that handles support tickets, platform issues, customer communications
+  - Must always exist and always function regardless of what happens to dev or production workspaces
+
+---
+
+## IMMEDIATE AUDIT REQUIRED
+
+### Step 1: Identify all workspaces
+Query the workspaces table. List every workspace with:
+- workspace ID
+- workspace name/slug  
+- type/category if it exists
+- is_suspended, is_frozen status
+- subscription status
+- count of clients, employees, shifts, time_entries, invoices, payroll_runs
+
+### Step 2: Identify the Statewide workspace
+Find the workspace for Statewide Protective Services. Report its ID and current data state.
+
+### Step 3: Check Statewide for contamination
+In the Statewide workspace, look for ANY of the following contamination signs:
+- Clients that don't belong to Statewide (fake/test client names like "TechCorp", "Acme", "Demo Client")
+- Employees with fake names or test data patterns
+- Shifts with `isTrainingShift = true`
+- Time entries linked to test/demo shifts
+- Invoices generated from test data
+- Any record with created_at timestamps that match known seed script runs
+- Any data that looks like it was bulk-inserted (same created_at timestamp across many records)
+
+### Step 4: Report contamination
+If contamination is found, list EVERY contaminated record with:
+- Table name
+- Record count
+- Example record IDs
+- How it likely got there (which seed script or training tool)
+
+### Step 5: Clean Statewide
+Remove ALL contaminated records from Statewide. This workspace must be factory-fresh:
+- Zero fake clients
+- Zero fake employees  
+- Zero test shifts
+- Zero test time entries
+- Zero test invoices
+- Zero test payroll records
+- The ONLY data that should exist is data Bryan entered manually or data that will be entered when real operations begin
+
+### Step 6: Verify CoAI support org
+Confirm the CoAI/CoAIleague support workspace exists, is not suspended/frozen, has Bryan as a member, and has Trinity/HelpAI configured. This workspace must survive any seed/reset operations.
+
+---
+
+## PERMANENT SAFEGUARDS TO IMPLEMENT
+
+### Safeguard 1: Workspace type classification
+Add a `workspace_type` field to the workspaces table if it doesn't exist:
+- `sandbox` — dev/test/demo workspaces, seed scripts allowed
+- `production` — real business workspaces, seed scripts BLOCKED
+- `platform` — CoAI support org, persistent, never reset
+
+### Safeguard 2: Seed script workspace guard
+Every seed script, training tool, and data reset function must check workspace type FIRST:
+
+```typescript
+// At the top of EVERY seed/reset/training function:
+async function guardAgainstProduction(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId);
+  
+  if (workspace.workspaceType === 'production') {
+    throw new Error(
+      `BLOCKED: Cannot run seed/reset/training operations on production workspace "${workspace.name}". ` +
+      `This workspace contains real business data. Use a sandbox workspace instead.`
+    );
+  }
+  
+  if (workspace.workspaceType === 'platform') {
+    throw new Error(
+      `BLOCKED: Cannot run seed/reset/training operations on platform workspace "${workspace.name}". ` +
+      `This is the CoAIleague support org and must remain persistent.`
+    );
+  }
+  
+  // Only sandbox workspaces reach this point
+  console.log(`[Seed Guard] Workspace "${workspace.name}" is sandbox — proceeding.`);
+}
+```
+
+### Safeguard 3: Production workspace creation flow
+When a new org signs up in production:
+- Their workspace is created with `workspace_type: 'production'`
+- Zero seed data is inserted
+- The workspace starts completely empty
+- Bryan (or the org owner) adds their own clients, employees, and settings
+- Trinity begins learning from scratch for that org
+
+### Safeguard 4: Environment-level protection
+```typescript
+// In seed scripts:
+if (process.env.NODE_ENV === 'production') {
+  console.error('BLOCKED: Seed scripts cannot run in production environment.');
+  process.exit(1);
+}
+```
+
+### Safeguard 5: Seed script logging
+Every time a seed script runs (even in dev), log:
+- Which workspace it targeted
+- What was deleted (table + count)
+- What was created (table + count)
+- Timestamp
+- Who triggered it (user ID or 'system')
+
+This creates an audit trail so if contamination happens again, you can trace exactly what script caused it and when.
+
+---
+
+## WHAT "PRODUCTION READY" MEANS FOR STATEWIDE
+
+When Bryan opens the Statewide workspace, he should see:
+- Zero clients (he'll add his real clients)
+- Zero employees (he'll add his real guards)
+- Zero shifts (Trinity will generate from real client demands)
+- Zero invoices (Trinity will generate from real time entries)
+- Zero payroll (Trinity will calculate from real hours worked)
+- His org settings configured (company name, tax rates, billing preferences, etc.)
+- Trinity ready to learn HIS business from scratch
+
+This is a fresh start with a proven engine. Trinity's code is verified. The pipeline works. Now it runs on real data entered by a real business owner for real operations.
+
+---
+
+## DO THIS NOW
+
+1. Run the workspace audit (Steps 1-6 above)
+2. Clean Statewide if contaminated
+3. Implement the workspace_type safeguard
+4. Add the guardAgainstProduction check to ALL seed/reset/training functions
+5. Verify CoAI support org is healthy
+6. Report results with before/after data counts for Statewide
+
+**Do NOT skip the audit. Do NOT assume Statewide is clean. Query the data and prove it.**

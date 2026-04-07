@@ -7,6 +7,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { HOME_BUTTON_CONFIG, getHomeButtonConfig } from "@/config/homeButton"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -20,7 +21,7 @@ const AlertDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-[10000] bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -29,23 +30,27 @@ const AlertDialogOverlay = React.forwardRef<
 ))
 AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 
-const alertDialogContentVariants = cva(
-  "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background p-3 md:p-4 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl max-h-[min(90vh,600px)] overflow-y-auto",
+const desktopVariants = cva(
+  "fixed left-[50%] top-[50%] z-[10001] grid translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background p-5 shadow-sm duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-md max-h-[90dvh] overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch] box-border w-[calc(100vw-2rem)]",
   {
     variants: {
       size: {
-        sm: "w-[min(92vw,20rem)] max-w-none",
-        md: "w-[min(92vw,24rem)] max-w-none",
-        default: "w-[min(92vw,26rem)] max-w-none",
-        lg: "w-[min(92vw,30rem)] max-w-none",
+        sm: "max-w-xs",
+        md: "max-w-sm",
+        default: "max-w-sm",
+        lg: "max-w-md",
       },
     },
+    defaultVariants: { size: "default" },
   }
 )
 
-interface AlertDialogContentProps 
+const mobileClasses =
+  "fixed bottom-0 left-0 right-0 z-[10001] w-full rounded-t-md border-t bg-background pt-2 pb-[env(safe-area-inset-bottom,16px)] px-4 shadow-sm duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom max-h-[92dvh] overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch]"
+
+interface AlertDialogContentProps
   extends React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>,
-    VariantProps<typeof alertDialogContentVariants> {
+    VariantProps<typeof desktopVariants> {
   showHomeButton?: boolean;
   homeButtonPath?: string;
   isGuest?: boolean;
@@ -56,6 +61,7 @@ const AlertDialogContent = React.forwardRef<
   AlertDialogContentProps
 >(({ className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, size, ...props }, ref) => {
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
   const config = getHomeButtonConfig(isGuest);
   const navPath = homeButtonPath || config.navigationPath;
 
@@ -69,13 +75,9 @@ const AlertDialogContent = React.forwardRef<
 
   React.useEffect(() => {
     if (!HOME_BUTTON_CONFIG.escapeKeyEnabled) return;
-    
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showHomeButton) {
-        handleHomeClick();
-      }
+      if (e.key === 'Escape' && showHomeButton) handleHomeClick();
     };
-    
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [showHomeButton, navPath]);
@@ -85,13 +87,21 @@ const AlertDialogContent = React.forwardRef<
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         ref={ref}
-        className={cn(alertDialogContentVariants({ size }), className)}
+        className={cn(
+          isMobile ? mobileClasses : desktopVariants({ size }),
+          className
+        )}
         {...props}
       >
+        {isMobile && (
+          <div className="flex justify-center mb-3">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+        )}
         {showHomeButton && (
           <button
             onClick={handleHomeClick}
-            className="absolute right-1.5 top-1.5 sm:right-2 sm:top-2 flex items-center justify-center rounded-md min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent active:bg-accent/80"
+            className="absolute right-2 top-3 flex items-center justify-center rounded-md min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             data-testid={config.testId}
             title={config.tooltip}
             aria-label={config.ariaLabel}
@@ -113,7 +123,7 @@ const AlertDialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left pr-14 sm:pr-12",
+      "flex flex-col space-y-2 text-left pr-24 sm:pr-28",
       className
     )}
     {...props}
@@ -127,7 +137,7 @@ const AlertDialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-2",
       className
     )}
     {...props}
@@ -141,7 +151,7 @@ const AlertDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold", className)}
+    className={cn("text-base font-semibold", className)}
     {...props}
   />
 ))
@@ -157,8 +167,7 @@ const AlertDialogDescription = React.forwardRef<
     {...props}
   />
 ))
-AlertDialogDescription.displayName =
-  AlertDialogPrimitive.Description.displayName
+AlertDialogDescription.displayName = AlertDialogPrimitive.Description.displayName
 
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
@@ -178,11 +187,7 @@ const AlertDialogCancel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
-    className={cn(
-      buttonVariants({ variant: "outline" }),
-      "mt-2 sm:mt-0",
-      className
-    )}
+    className={cn(buttonVariants({ variant: "outline" }), className)}
     {...props}
   />
 ))

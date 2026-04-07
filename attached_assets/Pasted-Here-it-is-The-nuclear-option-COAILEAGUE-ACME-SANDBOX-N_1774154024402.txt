@@ -1,0 +1,300 @@
+Here it is. The nuclear option.
+
+---
+
+**COAILEAGUE — ACME SANDBOX NUCLEAR ARCHITECTURE AUDIT**
+*Domain Specialist Loop Scan | Full Trace | Zero Escape Guarantee*
+
+---
+
+This is not a checklist. This is a controlled detonation of the entire CoAIleague architecture using the ACME dev sandbox and its full corpus of real simulated data. Every agent is a domain specialist. Every agent loops — meaning after a full pass, it resets and scans again from a different angle until it produces two consecutive clean passes with no new findings. Agents share a live findings bus. Every fix made by any agent triggers a re-scan cascade in every adjacent domain. Nothing is assumed working. Everything must be proven working.
+
+The standard is not "no critical bugs." The standard is zero issues of any kind, at any layer, at any severity.
+
+---
+
+**EXECUTION ENVIRONMENT**
+
+Before any agent begins, establish the following baseline in the ACME sandbox:
+
+- Confirm at least one fully configured org workspace exists with: owner, managers, supervisors, officers, clients, pay rates, pay types, positions, pay cycle, billing settings, staffing email routing, and subscription tier set
+- Confirm employee roster has at least 10 employees across multiple pay types and positions
+- Confirm at least 5 clients exist with addresses, billing schedules, and client-specific pay rates
+- Confirm at least 30 days of historical shift data exists across multiple clients and employees
+- Confirm at least one complete payroll run exists in history
+- Confirm at least one complete invoice cycle exists in history
+- Confirm Trinity has ingested at least one org document and has org context established
+- Confirm all bot identities (ReportBot, HelpBot, ClockBot, MeetingBot) are registered and active under Trinity orchestration
+- Confirm inbound email routing is active for all four addresses
+
+If any of the above is missing, generate it now before agents deploy. The sandbox must be fully loaded before the audit begins. A scan against an empty sandbox proves nothing.
+
+---
+
+**AGENT DEPLOYMENT — DOMAIN SPECIALIST MANIFEST**
+
+All agents deploy simultaneously against the live ACME sandbox. Each agent loops until two consecutive clean passes. All agents share a findings bus. Every fix cascades.
+
+---
+
+**AGENT 1 — CRUD COMPLETIONIST**
+*Specialty: Every create, read, update, and delete operation across every entity in the system*
+
+This agent does not trust that a feature works because it rendered. It executes every CRUD operation directly and traces the result from API call to database write to UI reflection.
+
+Loop through every entity in the system:
+
+Employees — create a new employee record with full profile, pay rate, pay type, position, and role. Read it back from the API. Update every editable field one at a time. Confirm each update writes to the correct DB column and reflects in the UI immediately. Soft delete and confirm the record is hidden from active rosters but retrievable in archived state. Hard confirm the workspace_id is present and correct on every read.
+
+Clients — create a new client with address, billing schedule, and client-specific pay rate. Read it back. Update billing schedule and rate. Confirm changes propagate to any open invoices or scheduled shifts associated with that client. Delete and confirm cascade behavior on associated records.
+
+Shifts — create a shift with a specific employee, client, position, start time, and end time. Read it back from the schedule view and the API. Update the shift time and confirm the overlap check fires correctly. Assign a different employee and confirm the original employee's schedule clears. Delete the shift and confirm it disappears from all views and does not appear in payroll calculations.
+
+Invoices — create an invoice manually. Add line items. Edit a line item amount and confirm the total recalculates server-side. Change the due date. Update the status through every stage: draft → sent → paid → overdue. Confirm each status transition persists and reflects correctly in the invoice list, aging buckets, and client record.
+
+Payroll entries — create a manual payroll entry. Edit hours. Edit rate. Confirm gross pay recalculates correctly. Approve the entry. Confirm it locks and cannot be edited post-approval without an override. Mark as paid. Confirm pay stub generates and attaches to the employee record.
+
+Documents — upload a document to an employee record. Read it back. Update the document metadata. Delete it and confirm it is removed from storage and the record.
+
+For every CRUD operation above: confirm the write hits the DB, confirm the read returns the written value (not cached state), confirm the UI reflects the DB value after hard refresh, and confirm no other workspace can read the record.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 2 — FINANCIAL ACCURACY SPECIALIST**
+*Specialty: Every number the platform produces must be mathematically provable*
+
+This agent does not accept "looks right." It proves every figure against independent calculation.
+
+Run the following financial stress tests against ACME sandbox data:
+
+Payroll calculation suite — pull 10 real employee records with varying pay types. For each, manually calculate expected gross pay based on their hours, rate, and pay type. Run the platform's payroll calculation for the same period. Compare output line by line. Flag any discrepancy at any decimal place. Test overtime threshold behavior: employees at exactly 40 hours, at 40.5 hours, and at 60 hours. Confirm overtime multiplier applies at the correct threshold and to the correct hours only.
+
+Pay type matrix — confirm hourly, salary, and contract pay types each calculate correctly. Confirm a salary employee's per-period amount does not fluctuate based on hours logged unless overtime rules apply. Confirm a contract employee's amount is based on the agreed rate, not an hourly derivation.
+
+Invoice calculation suite — pull 5 real client invoices. For each, independently calculate the expected total based on shifts worked, client pay rate, and any applied adjustments. Compare to platform output. Confirm rounding is consistent (never rounds in the platform's favor). Confirm line item totals sum to invoice total with no floating-point drift.
+
+Edge case battery — zero-hour week for an active employee: confirm $0 payroll entry generates cleanly with no errors. Mid-period pay rate change: confirm hours before the change use old rate, hours after use new rate, not blended. Retroactive shift addition to a closed payroll period: confirm the platform either blocks it cleanly or processes a correction entry, never silently modifies a closed run. Duplicate invoice prevention: submit the same invoice generation request twice within 500ms and confirm exactly one invoice is created.
+
+All financial documents — every pay stub, payroll summary, and invoice PDF generated during this pass must be opened and verified: figures match the records, employee/client names are correct, org branding is present, no placeholder text remains, and the document saves to the correct record and persists after session reset.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 3 — TRINITY ACTIONS EXHAUSTION SPECIALIST**
+*Specialty: Every single Trinity action in the registry, executed fully, with real payloads, verified end-to-end*
+
+Pull the complete Trinity action registry. This agent executes every action. Not a sample. Every one.
+
+For each action:
+
+Execute it with a real simulated payload drawn from ACME sandbox data. Confirm the action receives the correct input parameters. Confirm the action executes its full logic without partial execution. Confirm the output payload is generated completely and correctly. Confirm the payload or document is saved to the correct record — employee, client, org, or shift. Confirm the saved output is retrievable after session reset. Confirm Trinity's internal state reflects the action as completed.
+
+Additionally test:
+
+Action chaining — trigger a sequence where one Trinity action's output is the input for the next. Confirm state passes cleanly between chained actions with no data loss.
+
+Action interruption — begin a multi-step Trinity action sequence and simulate a session timeout mid-execution. Confirm Trinity resumes the sequence correctly on reconnect with full awareness of what was and was not completed.
+
+Concurrent action execution — trigger three Trinity actions simultaneously from different user sessions in the same workspace. Confirm all three complete correctly, no outputs are mixed between sessions, and no action corrupts another's state.
+
+Natural language instruction execution — issue ten real org management instructions to Trinity in natural language: add a client, assign a shift, generate an invoice, create a schedule, update an employee's position, send a staffing alert, pull a payroll summary, flag an open shift, onboard a new user, and update org pay cycle settings. Confirm Trinity interprets and executes each correctly against real sandbox data, not fabricated values.
+
+Every output document or payload generated by Trinity during this pass must persist to the correct record and survive a hard refresh.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 4 — ORCHESTRATION & BOT ECOSYSTEM SPECIALIST**
+*Specialty: Trinity's full orchestration layer and every bot under her command*
+
+Trinity is the brain. This agent confirms every nerve in her network fires correctly.
+
+Trinity ↔ ReportBot — trigger a report generation event. Confirm Trinity routes the request to ReportBot correctly. Confirm ReportBot generates the report with real sandbox data. Confirm Trinity receives the result and surfaces it correctly to the requesting user. Confirm the report saves to the correct org record and persists.
+
+Trinity ↔ HelpBot — submit a help request from an end user. Confirm Trinity routes to HelpBot. Confirm HelpBot responds with contextually accurate information based on the org's actual configuration, not generic responses. Confirm the interaction is logged.
+
+Trinity ↔ ClockBot — simulate a clock-in event. Confirm ClockBot captures the timestamp with GPS data if available. Confirm Trinity receives the clock event and updates the active shift record. Confirm the time entry persists to the timesheet. Simulate a missed clock-out and confirm Trinity's proactive scanner detects it and alerts the correct manager.
+
+Trinity ↔ MeetingBot — schedule a meeting through Trinity. Confirm MeetingBot creates the event, notifies the correct participants, and the event persists to the org calendar. Confirm meeting notes or outputs from MeetingBot are routed back through Trinity and saved.
+
+Inbound email pipeline — send a simulated calloff email to calloffs@. Confirm the email is received, routed to Trinity, parsed for relevant shift and employee data, matched to the correct sandbox records, and Trinity initiates a fill sequence for the open shift. Send a simulated incident report to incidents@. Confirm Trinity processes it, creates an incident record, and notifies the appropriate personnel. Send to docs@ and support@ and confirm each routes correctly.
+
+Proactive scanner — confirm Trinity's proactive scanner is actively running. Force a condition it should detect: leave a shift unstaffed inside the scheduling window, create an invoice past its due date, and create a compliance gap on an employee record. Confirm Trinity detects all three, generates the correct alerts, and routes them to the correct users without manual prompting.
+
+All bot-to-Trinity and Trinity-to-user communications must be logged, traceable, and persistent.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 5 — PIPELINE & WORKFLOW EXHAUSTION SPECIALIST**
+*Specialty: Every pipeline, workflow, and automation in the system, run to completion with real data*
+
+No pipeline is skipped. No stage is assumed. Every automation is triggered.
+
+Hiring pipeline — inject a new applicant into the top of the hiring pipeline with a full simulated profile. Drive the record through every stage: application received → screening → interview scheduled → interview completed → offer extended → offer accepted → background check → onboarded. At each stage confirm: correct status transition, correct data carried forward, correct notification triggered, correct UI state reflected, and the record persists at each stage. Confirm the fully onboarded employee appears in the active roster with all profile fields intact.
+
+Onboarding pipeline — take the newly hired employee through the full onboarding workflow. Confirm document generation fires: offer letter, W-4, direct deposit authorization, and any org-specific forms. Confirm each document is routed to the employee for signature or acknowledgment. Confirm completed documents attach to the employee record permanently. Confirm onboarding checklist completion state persists.
+
+Scheduling pipeline — trigger the auto-schedule generator for a full week using real client demand and employee availability from the ACME sandbox. Confirm the generated schedule respects position requirements, pay type, availability, and client-specific rules. Confirm the schedule publishes and each affected employee receives notification. Confirm the schedule entries persist and appear correctly in both the org view and individual employee views.
+
+Auto-fill pipeline — create an open shift with no assigned employee. Confirm Trinity's auto-fill logic activates, scans the eligible employee pool, selects a qualified candidate based on position and availability, and fills the shift. Confirm the fill persists to the shift record, the selected employee's schedule updates, and the client record reflects coverage.
+
+Invoice pipeline — run the full invoice generation workflow for one client: pull billable shifts for the period, generate the invoice with correct line items and totals, route for internal approval, mark as sent, receive a simulated payment, and close the invoice as paid. Confirm every stage persists and the client's billing history reflects the completed cycle.
+
+Payroll pipeline — run the full payroll workflow for the current period: pull all timesheets, calculate gross pay for every employee, apply deductions, generate pay stubs, route for approval, approve, and mark as paid. Confirm every employee's pay stub is generated, attached to their record, and the payroll run is locked and immutable post-approval.
+
+Document semantic pipeline — upload an org document, a client contract, and an employee onboarding packet. Confirm Trinity's document processing pipeline ingests each, extracts relevant data, updates her org knowledge context, and makes that context available in subsequent Trinity actions. Confirm extracted data is accurate to the source document.
+
+Every pipeline must complete fully. No stalled stages, no orphaned records, no missing notifications, no data that fails to carry forward.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 6 — PERSISTENCE & SYNC EXHAUSTION SPECIALIST**
+*Specialty: Every piece of data that is created must survive and stay consistent across every access point*
+
+This agent's only job is to break persistence. It tries every method to make data disappear or fall out of sync.
+
+Write a record from the API directly. Read it back from the UI. Hard refresh the page. Read it again. Log out. Log back in. Read it again. Switch workspaces and switch back. Read it again. All four reads must return identical values matching what was written.
+
+Write a record from the UI. Read it back from the API directly. Confirm the API returns the exact value that was entered in the UI with no transformation, truncation, or encoding artifact.
+
+Update a record that is currently displayed in two open browser tabs simultaneously. Confirm both tabs reflect the update within an acceptable sync window. Confirm neither tab shows stale data after the other has received the update.
+
+Write a record mid-session. Simulate a server restart. Read the record. It must be present and unchanged.
+
+Create a Trinity action output. Close the browser entirely. Reopen and navigate to the associated record. The output must be present, complete, and correctly attributed.
+
+Run a payroll calculation. Before approving it, simulate a session timeout. Log back in. Confirm the calculation state is exactly where it was left.
+
+Generate an invoice PDF. Navigate away from the page. Navigate back. The PDF must still be present, attached, and openable.
+
+Test every real-time sync surface: schedule board, active shift monitor, Trinity chat, notification feed. Make a backend change while each surface is open and confirm it reflects without requiring a manual refresh.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 7 — AUTHENTICATION & AUTHORIZATION PENETRATION SPECIALIST**
+*Specialty: Every access control boundary must hold under adversarial conditions*
+
+This agent attempts to break into things it shouldn't be able to reach.
+
+Session attacks — expire a session token manually and attempt to continue making authenticated API calls. Confirm every call returns 401 and no data is returned. Attempt to reuse an old session token after logout. Confirm it is invalidated.
+
+Role escalation — authenticate as an officer-level user. Attempt to call every endpoint that requires manager or owner role directly via API. Confirm every call returns 403 with no data exposure. Attempt to access owner-only settings pages by navigating directly to the URL. Confirm redirect fires before any data loads.
+
+Cross-tenant intrusion — authenticate as a valid user in Workspace A. Manually construct API requests substituting Workspace B's IDs for employees, shifts, invoices, and clients. Confirm every request returns either 403 or 404 with zero data from Workspace B returned in any response body or error message.
+
+Subscription bypass — configure a workspace on trial tier. Attempt to access enterprise-tier features by calling their API endpoints directly. Confirm hard server-side blocks fire. Confirm no feature data is returned regardless of how the request is constructed.
+
+Trinity action authorization — attempt to trigger a Trinity action that requires owner permission from a manager session. Confirm Trinity refuses and logs the attempt.
+
+Bot endpoint security — attempt to call any bot API endpoint (ReportBot, ClockBot, HelpBot, MeetingBot) without the correct internal service token. Confirm all return 401. Attempt token replay — use a previously observed valid token after its intended request window. Confirm it is rejected.
+
+Input injection — submit SQL injection strings, XSS payloads, and oversized inputs into every form field in the UI. Confirm all are sanitized before reaching the database. Confirm no injected content is rendered in any UI surface.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 8 — UI/UX TRUTH SPECIALIST**
+*Specialty: Every pixel the user sees must be an accurate real-time reflection of backend truth*
+
+This agent operates exclusively from the user's perspective and is not satisfied until every screen is honest.
+
+Navigate every page in the application with real ACME sandbox data loaded. On each page confirm: all displayed values match the current database state, no placeholder text or mock data is visible, all loading states resolve within acceptable time, empty states display correctly when there is genuinely no data, and error states display correctly and helpfully when operations fail.
+
+Test every form in the application: required field validation fires on submit, field-level validation fires on blur, success confirmation appears after a successful write, error messaging is specific and actionable (not "something went wrong"), and the form resets correctly after submission.
+
+Test every data table and list: sorting works on every sortable column and produces correct order, filtering works and scopes results accurately, pagination works and does not skip or repeat records, and search returns accurate results matching the actual database state.
+
+Test every financial display surface: all currency values display with correct formatting and precision, all totals match their constituent line items, all status badges reflect current DB status and not cached state, and all date displays use the org's configured timezone.
+
+Test Trinity's UI surfaces: the Trinity chat window opens and closes cleanly, message history persists across navigation events, Trinity's responses reference real org data (not generic placeholders), action confirmations display correctly, and Trinity's progress indicators accurately reflect execution state.
+
+Test mobile responsiveness on every critical workflow: shift clock-in, schedule view, Trinity chat, payroll approval, and invoice review must all be fully functional and readable on a small screen viewport.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 9 — DATA INTEGRITY & TRACE SPECIALIST**
+*Specialty: Follows every piece of data from origin to final resting place and verifies every transformation is honest*
+
+This agent traces. It does not assume data arrives correctly — it watches it travel.
+
+For each of the following data types, trace the complete lifecycle from creation event to every downstream system that touches it:
+
+Employee record — created via invite acceptance → written to employees table → appears in roster → Trinity indexes it → available in scheduling engine → available in payroll engine → available in document generation → appears in client assignment pool → pay rate flows to shift cost calculation → pay rate flows to payroll calculation → appears correctly in every relevant UI view.
+
+Shift record — created via schedule or auto-fill → written to shifts table → appears on schedule board → associated employee notified → clock-in event updates shift status → clock-out event closes shift and generates time entry → time entry flows to payroll calculation → shift hours flow to client invoice calculation → completed shift appears in shift history → Trinity can reference it in reporting actions.
+
+Invoice record — generated from billable shifts → line items calculated from client rate × hours → total calculated server-side → PDF generated and stored → PDF attached to invoice record → invoice appears in client billing history → status transitions persist → payment receipt updates status and org revenue figures → Trinity financial intelligence reflects updated totals.
+
+Payroll run — initiated for pay period → all eligible timesheets pulled → gross pay calculated per employee → pay stubs generated → run routed for approval → approval locks the run → locked run cannot be modified → pay stubs attach to employee records → Trinity payroll summaries reflect the completed run → run appears in payroll history immutably.
+
+Trinity-generated document — action triggered with org data input → document generated using real org values → document saved to storage → document associated with correct record → document accessible from associated record → document survives session reset → document content is accurate to the data that was input.
+
+For every trace above: flag any point where data is transformed without validation, assumed rather than queried, or stored in a location inconsistent with the canonical source of truth.
+
+Loop until two consecutive clean passes.
+
+---
+
+**AGENT 10 — SUBSCRIPTION, FTC & LEGAL BOUNDARY SPECIALIST**
+*Specialty: Every feature gate, every claim, every billing boundary must be enforced and defensible*
+
+Subscription enforcement — map every feature in the application to its subscription tier. Test each feature from one tier below its requirement. Confirm server-side rejection fires before any processing occurs. Confirm the rejection message is clear and routes the user to upgrade, not to a dead end. Confirm no partial execution occurs on a blocked feature request.
+
+Trial boundary enforcement — create a fresh trial workspace. Drive it to its trial limits on every metered dimension: user seats, client count, shift volume, document storage, Trinity actions. Confirm limit enforcement fires at the correct threshold with clear messaging. Confirm no overages are silently permitted. Confirm the upgrade path from the limit message is functional.
+
+Billing accuracy — confirm the subscription tier recorded in the database matches what the payment processor has on file. Confirm a successful payment event correctly provisions the correct tier. Confirm a failed payment event correctly restricts access without destroying org data. Confirm a cancellation event correctly restricts access while preserving all historical data for the configured retention period.
+
+FTC compliance sweep — review every piece of platform-facing copy, Trinity dialogue, onboarding text, email communication, and generated document against what demonstrably executes in the sandbox. Flag every instance where capability language exceeds what was proven to work during this audit. Flag every financial or compliance claim that is not substantiated by the platform's actual execution. Flag every trial or billing disclosure that does not meet clear and conspicuous standards. Produce replacement language for every flagged item that is accurate, defensible, and still compelling to a prospective customer.
+
+Loop until two consecutive clean passes.
+
+---
+
+**LOOP EXECUTION PROTOCOL**
+
+Every agent runs its full domain pass. At the end of each pass, each agent reports its finding count to the shared findings bus. If finding count is zero, the agent resets and runs a second full pass from a different entry point. If the second pass also returns zero findings, the agent is certified clean and stands down. If any pass produces findings, the agent fixes, notifies affected peer agents, and restarts its loop from the beginning. No agent is certified until two consecutive zero-finding passes are confirmed.
+
+---
+
+**FINDINGS BUS SCHEMA**
+
+Every issue logged must include:
+
+- **Issue ID** — sequential, prefixed by agent number
+- **Severity** — P0 (financial/security/data loss), P1 (functional break), P2 (data inconsistency or sync gap), P3 (UX/cosmetic), P4 (legal/compliance)
+- **Domain** — which agent owns it
+- **Location** — exact file, endpoint, component, DB table, or UI surface
+- **Description** — what is broken, missing, or inconsistent and the precise failure condition
+- **Reproduction steps** — exact sequence that produces the failure in the ACME sandbox
+- **Cascading notifications** — which peer agents were triggered and what they found
+- **Fix applied** — exact change made with file and line reference, or architectural prescription if a larger change is required
+- **Peer verification** — each notified agent confirms their domain is clean after the fix before the issue is closed
+
+---
+
+**FINAL CERTIFICATION DELIVERABLE**
+
+When all ten agents achieve two consecutive clean passes:
+
+Produce a domain-by-domain certification matrix with the following for each agent: total issues found, total issues fixed, total issues with confirmed peer-verification clean, and final pass/fail status.
+
+Produce a production readiness verdict with no ambiguity: green light with all ten domains certified clean, or hold with a prioritized list of every remaining item by severity, location, and prescribed resolution.
+
+A green light requires every agent to have achieved two consecutive clean passes. There are no exceptions. The ACME sandbox with full real simulated data is the proof. If it works there under this level of scrutiny, it works in production.
+
+---
+
+Load the sandbox. Deploy all ten. Let them loop. Bring the findings bus back here when they're done.

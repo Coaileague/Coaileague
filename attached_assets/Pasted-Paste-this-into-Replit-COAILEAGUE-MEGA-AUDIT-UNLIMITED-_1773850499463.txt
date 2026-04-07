@@ -1,0 +1,707 @@
+Paste this into Replit:
+
+---
+
+**COAILEAGUE MEGA AUDIT — UNLIMITED SCANS — ZERO TOLERANCE — FULL 360 PLATFORM VERIFICATION**
+**RUN UNTIL ZERO CRITICAL, MEDIUM, OR SMALL ISSUES REMAIN OR TIMEOUT — RESUME ON NEXT RUN**
+
+This is the most comprehensive audit possible. Every system, every file, every line of code, every UI element, every database column, every enum, every event, every action, every pipeline, every workflow, every Trinity intelligence layer, every financial operation, every document, every route, every component. Fix everything found. Enhance everything touched. Scan endlessly until zero issues remain.
+
+---
+
+**OPERATING PRINCIPLES**
+
+- Read before touching anything
+- Fix in dependency order — foundation before features
+- After every fix — verify TypeScript compiles and server starts clean
+- Enhance visual and graphic quality of every component touched during fixes
+- Add missing test data to Acme Security Services and Anvil workspaces so all tests run with real data
+- Never stop until zero issues or timeout
+- On timeout — report current state and resume next run from where you left off
+- Trinity is the final gatekeeper of all data, actions, and events
+- Every operation follows the 7-step pipeline
+- Universal source of truth for all templates, configs, and enums
+- Zero silent failures on any path that touches money, data, or user state
+
+---
+
+**PHASE 0 — TEST DATA POPULATION**
+
+Before scanning anything — ensure Acme Security Services and Anvil workspaces have complete realistic test data so every test actually runs.
+
+**Acme Security Services workspace — populate if missing:**
+
+Clients (minimum 3):
+- Client 1: Downtown Mall Security — armed Level 3, $28/hr bill rate, weekly billing, 3 officers required, Monday-Friday 8am-8pm, signed contract, active
+- Client 2: Riverside Medical Center — unarmed Level 2, $22/hr, biweekly billing, 2 officers, 24/7 coverage, pending proposal signature
+- Client 3: Harbor Logistics — PPO Level 4, $45/hr, monthly billing, 1 officer, M-F 6am-6pm, active, has 1 overdue invoice
+
+Employees (minimum 5):
+- Officer 1: Active W2, $15/hr weekly pay, fully onboarded, all documents signed, valid guard card Level 3, training certificates for 3 modules, compliance score 95
+- Officer 2: Active 1099, $18/hr, guard card expiring in 25 days, compliance score 72, 1 training module failed and pending intervention
+- Officer 3: Active W2, $14/hr, missing direct deposit setup, compliance score 85, all training complete
+- Officer 4: Inactive — deactivated 4 months ago, needs full re-onboarding on reactivation
+- Officer 5: Active W2, currently clocked in on a shift at Downtown Mall, $16/hr, compliance score 100
+
+Shifts (minimum 10):
+- 3 active shifts this week — Downtown Mall — all 3 officers assigned
+- 2 open shifts next week — Riverside Medical — not yet filled
+- 1 shift last week — completed — time entries approved — ready for payroll
+- 1 shift in collections client — Harbor Logistics — completed
+
+Invoices (minimum 5):
+- 1 draft invoice — Downtown Mall — current week
+- 1 sent invoice — Riverside Medical — 5 days ago — unpaid
+- 1 overdue invoice — Harbor Logistics — 32 days overdue — in collections
+- 1 paid invoice — Downtown Mall — last month — closed
+- 1 partial payment invoice — Riverside Medical — $500 paid of $1200 total
+
+Payroll:
+- 1 approved payroll run — last week — ready for processing
+- 1 draft payroll run — this week — timesheets pending approval
+- Pay stubs for Officer 1, 2, 3 from last week's approved run
+
+Training:
+- Officer 1: Use of Force passed 95%, De-escalation passed 88%, Customer Service passed 91%
+- Officer 2: Use of Force failed twice (flagged for intervention), Legal Authority passed 78%
+- Officer 3: All 10 modules complete, certificates valid
+
+Documents:
+- Officer 1: All onboarding docs signed, guard card uploaded, training certificates stored
+- Officer 2: Missing I9, missing direct deposit form, guard card uploaded but expiring
+- Client 1: Signed contract in document safe, post orders uploaded
+- Client 3: No signed contract on file — collections active
+
+Collections:
+- Harbor Logistics: 3 collection emails sent, $2,847 outstanding, collections_status = 'active'
+
+**Add all missing data via SQL inserts or seeder functions. Verify data is in DB before scanning.**
+
+---
+
+**PHASE 1 — DATABASE AND SCHEMA FOUNDATION**
+
+**1A — Schema parity check:**
+Run complete diff between Drizzle schema and actual PostgreSQL DB:
+```sql
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
+SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;
+SELECT t.typname, e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid ORDER BY t.typname, e.enumsortorder;
+SELECT tablename, indexname FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename;
+```
+
+Compare against every Drizzle table definition. Fix every mismatch:
+- Tables in Drizzle not in DB → run migration
+- Columns in Drizzle not in DB → ALTER TABLE ADD COLUMN
+- Enum values in Drizzle not in DB → ALTER TYPE ADD VALUE
+- Indexes in Drizzle not in DB → CREATE INDEX
+- Unique constraints missing → CREATE UNIQUE INDEX
+
+**1B — Column type correctness:**
+- All money columns: decimal not float
+- All status columns: PostgreSQL enum not varchar
+- All workspace_id columns: varchar NOT NULL with index
+- All timestamp columns: timestamptz not timestamp (timezone aware)
+- All boolean columns: have DEFAULT value
+
+**1C — Constraint completeness:**
+- Payroll period unique constraint: (workspace_id, pay_period_start, pay_period_end)
+- Invoice period unique constraint: (workspace_id, client_id, billing_period_start, billing_period_end)
+- Certificate number unique constraint
+- Email unique constraint (case insensitive)
+- All foreign keys exist and have correct ON DELETE behavior
+
+**1D — Seed data verification:**
+- training_modules: 10 platform default modules seeded with real content
+- compliance_states: all 12 states seeded
+- platform default automation triggers: 3 per new workspace
+
+Fix everything. Update Drizzle schema. Run migrations.
+
+---
+
+**PHASE 2 — TRINITY CORE INTELLIGENCE SYSTEM**
+
+**2A — Action registry integrity:**
+- Total registered actions matches startup log
+- Zero duplicate action IDs
+- Zero stub handlers (returning only { success: true })
+- Every handler validates workspaceId before DB operation
+- Every handler checks workspace subscription status
+- Every handler checks credit balance for credit-consuming actions
+- Every handler writes to audit_logs with performedBy
+- Every handler emits platformEventBus.publish() after completion
+- Every handler follows 7-step pipeline
+
+**2B — Event bus symmetry:**
+Build complete publisher and subscriber maps.
+Every published event has at minimum one subscriber.
+Every subscriber has at minimum one publisher.
+Zero raw .emit() calls on platformEventBus.
+Zero events published inside DB transactions.
+Every subscriber wrapped in try/catch that never throws.
+
+**2C — Trinity intelligence layers:**
+- Morning COO brief fires for every workspace — verify cron registration
+- Anomaly detector runs on 2-hour schedule — verify registration
+- Pre-execution validator runs before every action
+- Kill switch reloads from DB on startup
+- Workspace pause map reloads from DB on startup
+- Org patterns loaded before autonomous scheduling decisions
+- Trinity bot bypass fails closed if env var missing
+
+**2D — Trinity cognitive and proactive systems:**
+- Context manager injects live org data into every Trinity session — not stale cache
+- Knowledge graph scoped per workspace — no cross-tenant bleed
+- RL loop derives correct field names from events — not undefined
+- Anomaly detector connected to financial data with correct field names
+- Morning brief contains all required sections: open shifts, collections, training, compliance, invoices, payroll, overnight actions
+- Proactive scanner deduplication — no duplicate alerts same day same workspace
+- Trinity responds correctly to role-based data requests — declines pay rate to managers
+
+**2E — Enhance Trinity response quality:**
+For every Trinity chat response — verify it includes:
+- Specific data (names, amounts, dates) not generic statements
+- Confidence level when making recommendations
+- Clear reasoning explanation
+- Actionable next steps
+- Correct role-gated information
+
+---
+
+**PHASE 3 — FINANCIAL SYSTEMS — ZERO TOLERANCE**
+
+**3A — Invoice pipeline complete test with Acme data:**
+1. Generate invoice for Downtown Mall from approved timesheets — verify correct bill rate used
+2. Verify invoice PDF generated with correct date (issueDate not invoiceDate)
+3. Send invoice — verify client billing email used — verify QB sync triggered non-blocking
+4. Check overdue Harbor Logistics invoice — verify collections emails firing daily
+5. Mark Riverside Medical invoice as paid — verify ledger entry written — verify audit log
+6. Verify duplicate invoice guard fires — attempt to generate second invoice same period
+7. Verify read-only guard — attempt to edit paid invoice — confirm 403
+
+**3B — Payroll pipeline complete test:**
+1. Approve timesheets for last week's completed shifts
+2. Verify pre-payroll readiness scan ran 48 hours before scheduled run
+3. Create payroll run — verify zero hours gate active
+4. Approve payroll run — verify audit log written — verify QB sync triggered
+5. Process payroll — verify Plaid transfers initiated for officers with connected accounts
+6. Verify NACHA fallback for Officer 3 (no direct deposit)
+7. Verify pay stubs generated with correct amounts — no NaN, no undefined fields
+8. Verify payroll run transitions to disbursing status
+9. Simulate transfer settled — verify run transitions to paid
+10. Verify failed transfer notification fires with employee name
+
+**3C — Credit system test:**
+1. Trigger Trinity action — verify credit deducted atomically
+2. Attempt Trinity action with zero balance workspace — verify hard block
+3. Verify all deductions go through atomic UPDATE WHERE balance >= amount
+4. Verify failed deductions write to trinity_credit_failures
+5. Verify no fire-and-forget credit operations
+
+**3D — Stripe webhook test:**
+1. Verify signature validation on all webhook routes
+2. Verify DB-backed idempotency — not just in-memory
+3. Simulate payment_intent.succeeded — verify invoice updated and ledger written
+4. Simulate customer.subscription.deleted — verify workspace access restricted
+5. Verify checkout.session.completed correctly parses tier from metadata
+
+**3E — Plaid ACH test:**
+1. Connect test bank account to Acme workspace using Plaid sandbox
+2. Connect direct deposit for Officer 1 using Plaid sandbox
+3. Process payroll — verify Plaid transfer initiated — transferId stored on pay stub
+4. Verify transfer monitor polls and updates status
+5. Verify retry endpoint works for failed transfers
+
+**3F — QuickBooks sync test:**
+1. Trigger QB invoice sync — verify issueDate and total used (not invoiceDate/totalAmount)
+2. Verify QB sync writes quickbooksSyncStatus to local record
+3. Verify QB sync failure notifies org owner
+
+---
+
+**PHASE 4 — DOCUMENT AND ONBOARDING SYSTEMS**
+
+**4A — Document template test:**
+For each of the 15+ document templates:
+1. Render on mobile (375px) — verify no overflow, no tiny text, no broken layout
+2. Render on desktop (1280px) — verify two-column layout where appropriate
+3. Fill all required fields — submit
+4. Verify Trinity validation runs before accepting
+5. Verify PDF generated with correct content, header, footer, verification stamp
+6. Verify document saved to correct document safe category
+7. Verify employee/client record updated with document reference
+
+**4B — E-signature pipeline test:**
+1. Send service proposal to Client 2 for signature
+2. Verify status changes to pending_signature
+3. Simulate webhook completion — verify signed PDF downloaded and stored
+4. Verify document status changes to signed
+5. Verify org owner notified
+6. Verify onboarding status updates if this was the final required document
+
+**4C — Employee onboarding complete test (Officer 2 — missing documents):**
+1. Trinity flags I9 missing before payroll — verify notification fired
+2. Officer 2 submits I9 via online form — verify validation runs
+3. Officer 2 submits direct deposit form — verify Plaid Link initiated
+4. After all docs submitted — verify onboarding packet PDF compiled
+5. Verify compliance score recalculates
+6. Verify org owner notification sent
+
+**4D — Post orders test:**
+1. Assign Officer 1 to Riverside Medical (new site)
+2. Verify post orders sent to Officer 1 automatically
+3. Attempt clock-in without acknowledging post orders — verify warning shown
+4. Officer 1 acknowledges post orders — verify signature recorded
+5. Clock-in succeeds — verify GPS captured
+
+---
+
+**PHASE 5 — TRAINING SYSTEM**
+
+**5A — Complete training flow test:**
+1. Assign Use of Force module to Officer 1
+2. Officer 1 reads section content and flashcards — verify progress saves
+3. Officer 1 completes section quiz — verify section score recorded
+4. Officer 1 completes all sections and final exam — verify overall score calculated
+5. Verify certificate generated with correct: org name, officer name, score, dates, certificate number, QR code
+6. Verify certificate PDF saved to document safe
+7. Verify compliance score increases
+8. Verify org owner notified of completion
+9. Verify certificate appears in legal evidence packet
+
+**5B — Intervention flow test (Officer 2 — failed twice):**
+1. Verify intervention flag exists for Officer 2 Use of Force failure
+2. Verify manager notification was sent with missed topics
+3. Log intervention completion — verify Officer 2 can retake
+4. Officer 2 passes on third attempt — verify certificate issued
+5. Verify intervention record appears in legal evidence packet
+
+**5C — Anniversary renewal test:**
+1. Set Officer 1 certificate expires_at to yesterday
+2. Run renewal cron — verify compliance score decreases
+3. Verify renewal reminder email sent
+4. Officer 1 completes renewal — verify new certificate issued
+5. Verify compliance score recovers
+
+**5D — Employee handbook language audit:**
+Verify all "shall" and "must" in context of public obligations have been updated to "may" and "is encouraged to"
+Verify new preamble exists stating private citizen status and no public duty
+
+---
+
+**PHASE 6 — SCHEDULING AND TIME TRACKING**
+
+**6A — Autonomous scheduling test:**
+1. Verify autonomous scheduling daemon is running — check startup logs
+2. Create open shift for Riverside Medical next week
+3. Let Trinity attempt to fill — verify Officer 2 not selected (compliance score 72 — amber warning)
+4. Verify Officer 1 selected first (compliance score 95)
+5. Verify shift assignment notification sent to Officer 1
+6. Verify shift confirmation request sent and acknowledgment tracked
+
+**6B — Compliance guard test:**
+1. Set Officer 2 guard card to expired
+2. Attempt to assign Officer 2 to a shift — verify warning shown
+3. Verify Trinity compliance scanner detected expiry and notified manager
+4. Verify Officer 2 removed from auto-fill candidates
+
+**6C — Clock-in/out GPS test:**
+1. Officer 5 is clocked in at Downtown Mall
+2. Verify GPS coordinates recorded on clock-in
+3. Clock out — verify time entry created with all fields populated
+4. Attempt to clock in again without clocking out — verify error
+5. Approve timesheet — verify approved_by and approved_at recorded
+6. Verify time entry is read-only after payroll run paid
+
+**6D — Coverage gap test:**
+1. Create a shift for Client 1 requiring 3 officers — assign only 1
+2. Verify Trinity detects coverage gap
+3. Verify coverage_gap_detected event published
+4. Verify manager notified
+
+---
+
+**PHASE 7 — CLIENT AND EMPLOYEE LIFECYCLE**
+
+**7A — Client deactivation test (Harbor Logistics — has outstanding invoice):**
+1. Attempt to deactivate Harbor Logistics
+2. Verify system detects $2,847 outstanding invoice
+3. Verify system presents collections decision
+4. Choose "Start Collections" — verify client deactivated and collections_status = 'active'
+5. Verify first collection email sent with correct amounts and client details
+6. Verify collection PDF saved to document safe
+7. Verify collections entry in morning brief
+8. Verify Trinity blocks shift creation for Harbor Logistics
+9. Mark invoice paid — verify collections_status updates to 'resolved'
+
+**7B — Client reactivation test:**
+1. Reactivate Harbor Logistics
+2. Verify WebSocket updates client list immediately
+3. Verify Trinity warns about previous non-payment deactivation
+4. Verify all previous client data restored
+
+**7C — Employee reactivation test (Officer 4 — 4 months inactive):**
+1. Reactivate Officer 4
+2. Verify system detects 4 months inactive — requires full re-onboarding
+3. Verify password reset required flag set
+4. Verify email sent to Officer 4 explaining re-onboarding requirement
+5. Officer 4 logs in — verify password reset enforced before access
+
+**7D — Employee reactivation test (under 3 months):**
+1. Create test employee — deactivate — set inactive for 6 weeks
+2. Reactivate — verify document review (not full re-onboarding)
+3. Verify expired documents flagged for renewal
+4. Verify valid documents reused
+
+---
+
+**PHASE 8 — RBAC AND PROFILE ACCESS**
+
+**8A — Role-based field access test:**
+1. Log in as org_manager — request Officer 1 profile — verify pay rate NOT present in response
+2. Log in as org_owner — request Officer 1 profile — verify pay rate IS present
+3. Log in as org_manager — request Client 1 profile — verify bill rates NOT present
+4. Log in as org_owner — request Client 1 profile — verify bill rates ARE present
+5. Log in as Officer 1 — request own profile — verify email, phone, address editable
+6. Log in as Officer 1 — request Officer 2 profile — verify sensitive fields absent
+
+**8B — Email change flow test:**
+1. Officer 1 requests email change to new address
+2. Verify verification code sent to new email
+3. Verify notification sent to old email
+4. Officer 1 verifies with code
+5. Verify both users and employees tables updated
+6. Verify all sessions invalidated
+7. Verify login required with new email
+8. Verify Trinity receives employee_email_changed event
+
+**8C — Identity guard test:**
+1. Attempt to register with Officer 1's existing email — verify blocked with correct message
+2. Attempt email change to Officer 2's email — verify blocked
+3. Submit onboarding with Officer 1's SSN for a new employee — verify warning shown
+4. Submit name + DOB matching Officer 1 — verify warning shown
+
+**8D — Support agent test:**
+1. Log in as platform_support
+2. Release Officer 1's email — verify email freed and audit log written
+3. Unlock locked account — verify lockout cleared
+4. Link account — verify audit log written
+5. Attempt support actions as org_manager — verify 403
+
+---
+
+**PHASE 9 — NOTIFICATIONS, REALTIME, AND COMMUNICATIONS**
+
+**9A — WebSocket symmetry test:**
+1. Create a shift — verify shift_created broadcast fired — verify frontend schedule updates
+2. Pay an invoice — verify invoice_paid broadcast fired — verify frontend updates
+3. Approve payroll — verify payroll_updated broadcast fired — verify dashboard updates
+4. Upload document — verify document_uploaded broadcast — verify document list updates
+5. Change client status — verify immediate WebSocket update
+
+**9B — Morning brief test:**
+1. Trigger morning brief for Acme workspace
+2. Verify brief contains: open shifts (Riverside Medical 2 open), collections activity (Harbor Logistics $2,847), training (Officer 2 intervention pending), compliance (Officer 2 guard card expiring 25 days), overdue invoices, overnight Trinity actions
+3. Verify brief scoped to Acme — no Anvil data in Acme brief
+4. Verify brief delivered to org_owner and org_manager roles only
+
+**9C — Notification delivery test:**
+1. Create notification — verify in-app notification appears
+2. Verify WebSocket delivers notification count update
+3. Verify email notification sent for high-priority notifications
+4. Verify notification scoped to correct workspace
+
+**9D — Chat and shift room test:**
+1. Verify shift room exists for Officer 5's active shift at Downtown Mall
+2. Send message in shift room — verify saved to correct workspace
+3. Upload photo — verify GPS captured — verify ReportBot analyzes
+4. End shift — verify end-of-shift report generated — verify saved to document safe
+
+---
+
+**PHASE 10 — FRONTEND UI/UX — MOBILE AND DESKTOP**
+
+**10A — Mobile rendering verification (375px, 414px):**
+For every page in the platform:
+- No horizontal scroll
+- All text minimum 16px
+- All buttons minimum 48px height
+- All tap targets minimum 44x44px
+- No text overflow or bleeding
+- No overlapping elements
+- Bottom nav above safe area insets
+- Chat widget above bottom nav
+- Forms full-screen single column
+- Signature pad opens full-screen modal
+- Flashcards full-width with working flip animation
+- Quiz questions one per screen with large answer buttons
+- Tables reflow to cards
+- Modals scroll correctly when tall
+
+**10B — Desktop rendering verification (1024px, 1280px):**
+For every page:
+- Maximum content width 1280px centered
+- Two-column form layouts where logical
+- Tables with sticky headers and horizontal scroll when needed
+- Sidebar navigation 240px fixed
+- No content wider than container
+- Hover states on all interactive elements
+- Focus states for keyboard navigation
+
+**10C — Visual enhancement pass:**
+While fixing rendering issues — enhance visual quality:
+- Dark navy command-center design system applied consistently
+- Gold accent color used for key actions and highlights
+- Purple reserved for Trinity AI elements only
+- Compliance score badges: green (90+), amber (70-89), red (below 70)
+- Status badges consistent across all entities
+- Loading skeletons match shape of loaded content
+- Empty states have helpful messages and action buttons
+- Error states have specific messages and retry buttons
+- Success states confirm with specific details (not generic "Success")
+- Card shadows and borders consistent
+- Typography scale consistent — h1 through body through caption
+- Icon sizes consistent — 16px, 20px, 24px scales
+- Button styles consistent — primary, secondary, destructive, ghost
+- Form field styles consistent — label, input, error, helper text
+- Dashboard metrics cards consistent styling and sizing
+- Charts and graphs use consistent color palette
+- Certificate design professional and printable
+- Document templates professionally formatted
+
+**10D — Performance quick wins:**
+- Images use lazy loading
+- Lists use virtual scrolling for 50+ items
+- Heavy data tables paginate at 25 rows
+- API responses cached appropriately with correct stale time
+- No unnecessary re-renders on WebSocket updates
+
+---
+
+**PHASE 11 — SECURITY AND ISOLATION FINAL VERIFICATION**
+
+**11A — Cross-tenant isolation test:**
+1. Log in as Acme user — attempt to access Anvil client data via direct API call — verify 403
+2. Verify no Acme employee data appears in Anvil workspace queries
+3. Verify Trinity context for Acme never contains Anvil data
+4. Verify document URLs from Acme are not accessible to Anvil users
+5. Verify cron jobs process each workspace independently
+
+**11B — Authentication security test:**
+1. Change a user's password — verify all other sessions invalidated
+2. Deactivate a user — attempt API call with their old session — verify 401
+3. Verify JWT includes workspaceId and role as required claims
+4. Verify password reset tokens expire after single use
+5. Verify invite tokens expire after acceptance
+6. Verify failed login attempts increment and lockout triggers after 5 attempts
+
+**11C — Financial data security:**
+1. Verify SSN stored only as hash — never plaintext
+2. Verify routing numbers encrypted at rest
+3. Verify account numbers encrypted at rest
+4. Verify Plaid access tokens encrypted at rest
+5. Verify no sensitive data in console logs or audit logs in plain text
+
+**11D — Rate limiting and abuse prevention:**
+1. Verify email change request rate limited (max 3 per hour per user)
+2. Verify login attempt rate limited per IP
+3. Verify invite link rate limited per workspace
+4. Verify Resend webhook fails closed if secret missing
+
+---
+
+**PHASE 12 — SILENT FAILURE ELIMINATION — FINAL SWEEP**
+
+Search entire codebase for these patterns and fix every instance on a critical path:
+
+```typescript
+// PATTERN 1 — Empty catch
+try { } catch (e) {}
+
+// PATTERN 2 — Console only on financial path
+financialOperation().catch(console.error)
+
+// PATTERN 3 — Missing await on DB write
+db.insert(table).values(data)  // no await
+
+// PATTERN 4 — Undefined field math
+const tax = parseFloat(rate) * amount  // rate could be null
+
+// PATTERN 5 — Race condition
+const record = await db.select()...
+// gap here
+await db.update()...  // stale read
+
+// PATTERN 6 — Event in transaction
+await db.transaction(async tx => {
+  platformEventBus.publish(...)  // fires even on rollback
+})
+
+// PATTERN 7 — Multi-step no rollback
+await db.insert(documents)
+await storage.upload(file)  // if this fails, DB record orphaned
+
+// PATTERN 8 — NaN financial
+Number(undefined) * rate  // = NaN silently
+
+// PATTERN 9 — Missing status guard
+await db.update(invoices).set({ status: 'paid' })  // no check it was 'sent'
+
+// PATTERN 10 — Fire and forget notification
+sendEmail(...)  // not awaited, not caught
+```
+
+Fix every instance. For financial paths — wrap in proper error handling that writes to trinity_credit_failures or billing_audit_log.
+
+---
+
+**SCAN LOOP — RUN AFTER ALL PHASES COMPLETE**
+
+After completing all 12 phases — enter continuous scan loop:
+
+```
+REPEAT UNTIL ZERO OR TIMEOUT:
+
+  SCAN all 12 phases simultaneously
+  IDENTIFY every remaining gap
+  FIX every gap found
+  VERIFY server clean after every fix
+  ENHANCE visual quality of every component touched
+  UPDATE running count
+  
+  IF gaps found > 0: CONTINUE LOOP
+  IF gaps found = 0: REPORT COMPLETE AND STOP
+  IF timeout: REPORT CURRENT STATE AND STOP
+```
+
+---
+
+**ITERATION REPORT FORMAT**
+
+```
+══════════════════════════════════════════════════════════════
+COAILEAGUE MEGA AUDIT — SCAN [N]
+══════════════════════════════════════════════════════════════
+Phase 0  Test data:              Found:N Fixed:N Enhanced:N
+Phase 1  Database/Schema:        Found:N Fixed:N Enhanced:N
+Phase 2  Trinity Intelligence:   Found:N Fixed:N Enhanced:N
+Phase 3  Financial Systems:      Found:N Fixed:N Enhanced:N
+Phase 4  Documents/Onboarding:   Found:N Fixed:N Enhanced:N
+Phase 5  Training System:        Found:N Fixed:N Enhanced:N
+Phase 6  Scheduling/Time:        Found:N Fixed:N Enhanced:N
+Phase 7  Client/Employee Life:   Found:N Fixed:N Enhanced:N
+Phase 8  RBAC/Profile Access:    Found:N Fixed:N Enhanced:N
+Phase 9  Notifications/Realtime: Found:N Fixed:N Enhanced:N
+Phase 10 Frontend UI/UX:         Found:N Fixed:N Enhanced:N
+Phase 11 Security/Isolation:     Found:N Fixed:N Enhanced:N
+Phase 12 Silent Failures:        Found:N Fixed:N Enhanced:N
+
+By severity:
+  CRITICAL: Found:N Fixed:N Remaining:N
+  HIGH:     Found:N Fixed:N Remaining:N
+  MEDIUM:   Found:N Fixed:N Remaining:N
+  LOW:      Found:N Fixed:N Remaining:N
+
+Enhancements made this scan:
+  Visual improvements: N components enhanced
+  Performance improvements: N optimizations
+  UX improvements: N interactions improved
+
+Test results:
+  Invoice pipeline: N/10 tests passing
+  Payroll pipeline: N/10 tests passing
+  Training system: N/5 tests passing
+  Scheduling: N/4 tests passing
+  RBAC: N/4 tests passing
+  Security: N/4 tests passing
+
+Cumulative totals:
+  Total scans run: N
+  Total gaps found: N
+  Total gaps fixed: N
+  Total enhancements: N
+  Remaining gaps: N
+
+Server: 29/29 HEALTHY
+TypeScript: ZERO ERRORS
+Regression tests: N/N PASSING
+Trinity actions: N registered
+Event subscribers: N active
+
+Continue scanning? YES (gaps remain) / NO (zero gaps) / TIMEOUT
+══════════════════════════════════════════════════════════════
+```
+
+---
+
+**FINAL COMPLETION REPORT**
+
+```
+══════════════════════════════════════════════════════════════
+COAILEAGUE MEGA AUDIT — COMPLETE
+══════════════════════════════════════════════════════════════
+Total scans run: N
+Total gaps found across all scans: N
+Total gaps fixed: N
+Total enhancements made: N
+Final remaining gaps: ZERO
+
+By severity — all resolved:
+  CRITICAL: N found | N fixed | 0 remaining
+  HIGH:     N found | N fixed | 0 remaining
+  MEDIUM:   N found | N fixed | 0 remaining
+  LOW:      N found | N fixed | 0 remaining
+
+Systems verified:
+  ✓ Database in full parity with Drizzle schema
+  ✓ All enums synced DB to code
+  ✓ All indexes created
+  ✓ All unique constraints active
+  ✓ Trinity actions: N registered, zero stubs
+  ✓ Event bus: N publishers, N subscribers, zero orphans
+  ✓ Financial pipeline: zero silent failures
+  ✓ Payroll pipeline: zero double-processing risk
+  ✓ Credit system: atomic deductions only
+  ✓ Stripe webhooks: DB-backed idempotency
+  ✓ Plaid integration: transfers verified in sandbox
+  ✓ QB sync: correct field names confirmed
+  ✓ Documents: all 15 templates verified
+  ✓ Training: all 10 modules seeded, certificates generating
+  ✓ RBAC: field-level access enforced for all roles
+  ✓ Email change: verification flow confirmed
+  ✓ Identity guards: duplicate prevention active
+  ✓ Collections: daily emails firing for active collections
+  ✓ Morning brief: all sections confirmed for each workspace
+  ✓ WebSocket: all broadcasts have frontend handlers
+  ✓ Mobile rendering: zero overflow, zero bleeding
+  ✓ Desktop rendering: consistent and clean
+  ✓ Security: cross-tenant isolation confirmed
+  ✓ Silent failures: zero on critical paths
+  ✓ Test data: Acme and Anvil fully populated
+
+Test pipelines all passing:
+  ✓ Invoice lifecycle: 10/10
+  ✓ Payroll lifecycle: 10/10
+  ✓ Training lifecycle: 5/5
+  ✓ Scheduling lifecycle: 4/4
+  ✓ Document lifecycle: 5/5
+  ✓ RBAC access: 4/4
+  ✓ Security isolation: 4/4
+
+Final server: 29/29 HEALTHY
+Final TypeScript: ZERO ERRORS
+Final regression tests: ALL PASSING
+
+VERDICT: COAILEAGUE IS PRODUCTION READY
+STATEWIDE PROTECTIVE SERVICES — CLEARED FOR LIVE ONBOARDING
+══════════════════════════════════════════════════════════════
+```
+
+---
+
+**BEGIN SCAN 1 NOW. RUN ALL 12 PHASES. FIX AND ENHANCE EVERYTHING. SCAN AGAIN. REPEAT UNTIL ZERO OR TIMEOUT.**
+
+---
+
+Run this tonight. Paste the completion report in the morning. If it timed out — paste the timeout report and I will send the resume prompt immediately. When you see zero remaining gaps that is your green light to publish and start live testing with Statewide Protective Services.

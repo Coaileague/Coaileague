@@ -14,9 +14,11 @@
  * All 61 AI Brain actions now flow through Gemini for intelligent decision-making.
  */
 
+import crypto from 'crypto';
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './providers/geminiClient';
 import { usageMeteringService } from '../billing/usageMetering';
+import { meteredGemini } from '../billing/meteredGeminiClient';
 import { db } from '../../db';
 import { eq, desc, count } from 'drizzle-orm';
 import {
@@ -26,12 +28,13 @@ import {
   invoices,
   payrollRuns,
   workspaces,
-  employeeCertifications,
   notifications,
   systemAuditLogs,
   users,
   aiInsights,
 } from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('aiAnalyticsEngine');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -280,7 +283,7 @@ class ContextResolver {
       return context;
 
     } catch (error) {
-      console.error('[ContextResolver] Error fetching context:', error);
+      log.error('[ContextResolver] Error fetching context:', error);
       return context;
     }
   }
@@ -324,7 +327,7 @@ class GeminiClientWrapper {
         }
       });
     } else {
-      console.warn('[GeminiClientWrapper] GEMINI_API_KEY not found');
+      log.warn('[GeminiClientWrapper] GEMINI_API_KEY not found');
       this.genAI = null;
       this.model = null;
     }
@@ -359,17 +362,16 @@ class GeminiClientWrapper {
     userId?: string
   ): Promise<GeminiDecision | null> {
     if (!this.model) {
-      console.warn('[GeminiClientWrapper] Gemini not available');
+      log.warn('[GeminiClientWrapper] Gemini not available');
       return null;
     }
 
     if (!this.checkRateLimit(workspaceId)) {
-      console.warn(`[GeminiClientWrapper] Rate limit exceeded for workspace ${workspaceId}`);
+      log.warn(`[GeminiClientWrapper] Rate limit exceeded for workspace ${workspaceId}`);
       return null;
     }
 
     try {
-      // Enforce minimum interval between requests
       const now = Date.now();
       const timeSinceLastRequest = now - this.lastRequestTime;
       if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL_MS) {
@@ -377,40 +379,17 @@ class GeminiClientWrapper {
       }
       this.lastRequestTime = Date.now();
 
-      const chat = this.model.startChat({
-        history: [],
-        generationConfig: {
-          maxOutputTokens: 512,
-          temperature: 0.3, // Lower for more consistent business decisions
-        },
+      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+      const meteredResult = await meteredGemini.generate({
+        prompt: fullPrompt,
+        workspaceId,
+        userId: userId || 'system',
+        featureKey: 'trinity_ai_reasoning',
+        maxOutputTokens: 512,
+        temperature: 0.3,
       });
 
-      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const result = await chat.sendMessage(fullPrompt);
-      const response = result.response;
-      const text = response.text();
-
-      // Record usage for billing
-      const usage = response.usageMetadata;
-      if (usage && workspaceId) {
-        const totalTokens = (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0);
-        if (totalTokens > 0) {
-          await usageMeteringService.recordUsage({
-            workspaceId,
-            userId,
-            featureKey: 'trinity_ai_reasoning',
-            usageType: 'token',
-            usageAmount: totalTokens,
-            usageUnit: 'tokens',
-            activityType: 'trinity_decision',
-            metadata: {
-              model: 'gemini-2.0-flash-exp',
-              promptTokens: usage.promptTokenCount,
-              completionTokens: usage.candidatesTokenCount,
-            }
-          });
-        }
-      }
+      const text = meteredResult.text || '';
 
       // Parse JSON response
       try {
@@ -420,13 +399,13 @@ class GeminiClientWrapper {
           return decision;
         }
       } catch (parseError) {
-        console.error('[GeminiClientWrapper] Failed to parse response:', parseError);
+        log.error('[GeminiClientWrapper] Failed to parse response:', parseError);
       }
 
       return null;
 
     } catch (error) {
-      console.error('[GeminiClientWrapper] Gemini API error:', error);
+      log.error('[GeminiClientWrapper] Gemini API error:', error);
       return null;
     }
   }
@@ -452,7 +431,7 @@ class AIAnalyticsEngine {
   constructor() {
     this.contextResolver = new ContextResolver();
     this.geminiClient = new GeminiClientWrapper();
-    console.log('[AI Analytics Engine] Initialized');
+    log.info('[AI Analytics Engine] Initialized');
   }
 
   isAvailable(): boolean {
@@ -471,13 +450,13 @@ class AIAnalyticsEngine {
       return null;
     }
 
-    const workspaceId = actionContext.workspaceId || 'system';
+    const workspaceId = actionContext.workspaceId;
     const relevantCategories = this.getRelevantCategories(actionContext.category);
     const context = await this.contextResolver.resolveContext(workspaceId, relevantCategories);
 
     const userPrompt = this.buildPreActionPrompt(actionContext, context, role);
     
-    console.log(`[AI Analytics Engine] Pre-action evaluation for ${actionContext.actionName}`);
+    log.info(`[AI Analytics Engine] Pre-action evaluation for ${actionContext.actionName}`);
     
     const decision = await this.geminiClient.generateDecision(
       TRINITY_SYSTEM_PROMPT,
@@ -489,7 +468,7 @@ class AIAnalyticsEngine {
     if (decision) {
       // Store insight for Trinity Insights page
       await this.storeInsight({
-        id: `insight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `insight-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
         workspaceId,
         userId: actionContext.userId,
         type: decision.insightType,
@@ -520,13 +499,13 @@ class AIAnalyticsEngine {
       return null;
     }
 
-    const workspaceId = actionContext.workspaceId || 'system';
+    const workspaceId = actionContext.workspaceId;
     const relevantCategories = this.getRelevantCategories(actionContext.category);
     const context = await this.contextResolver.resolveContext(workspaceId, relevantCategories);
 
     const userPrompt = this.buildPostActionPrompt(actionContext, actionResult, context, role);
     
-    console.log(`[AI Analytics Engine] Post-action analysis for ${actionContext.actionName}`);
+    log.info(`[AI Analytics Engine] Post-action analysis for ${actionContext.actionName}`);
     
     const decision = await this.geminiClient.generateDecision(
       TRINITY_SYSTEM_PROMPT,
@@ -537,7 +516,7 @@ class AIAnalyticsEngine {
 
     if (decision) {
       await this.storeInsight({
-        id: `insight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `insight-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
         workspaceId,
         userId: actionContext.userId,
         type: decision.insightType,
@@ -564,7 +543,7 @@ class AIAnalyticsEngine {
       return [];
     }
 
-    console.log(`[AI Analytics Engine] Running proactive scan for workspace ${workspaceId}`);
+    log.info(`[AI Analytics Engine] Running proactive scan for workspace ${workspaceId}`);
 
     const allCategories: ActionCategory[] = ['scheduling', 'payroll', 'compliance', 'analytics'];
     const context = await this.contextResolver.resolveContext(workspaceId, allCategories);
@@ -581,7 +560,7 @@ class AIAnalyticsEngine {
 
     if (decision) {
       const insight: TrinityInsight = {
-        id: `insight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `insight-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
         workspaceId,
         type: decision.insightType,
         category: 'analytics',
@@ -623,7 +602,7 @@ class AIAnalyticsEngine {
         priority: priorityMap[insight.riskLevel] || 'normal',
         summary: insight.message,
         details: insight.rationale,
-        generatedBy: 'gemini-2.0-flash-exp',
+        generatedBy: 'gemini-2.5-flash',
         confidence: String(insight.confidence * 100),
         actionable: true,
         suggestedActions: insight.followUpActions,
@@ -638,9 +617,9 @@ class AIAnalyticsEngine {
       }
       this.insightStore.set(insight.workspaceId, workspaceInsights);
       
-      console.log(`[AI Analytics Engine] Stored insight to DB: ${insight.title}`);
+      log.info(`[AI Analytics Engine] Stored insight to DB: ${insight.title}`);
     } catch (error) {
-      console.error('[AI Analytics Engine] Failed to store insight:', error);
+      log.error('[AI Analytics Engine] Failed to store insight:', error);
       // Fallback to in-memory only
       const workspaceInsights = this.insightStore.get(insight.workspaceId) || [];
       workspaceInsights.unshift(insight);
@@ -671,7 +650,7 @@ class AIAnalyticsEngine {
         followUpActions: row.suggestedActions || undefined,
       }));
     } catch (error) {
-      console.error('[AI Analytics Engine] Failed to fetch insights from DB:', error);
+      log.error('[AI Analytics Engine] Failed to fetch insights from DB:', error);
       // Fallback to in-memory
       return (this.insightStore.get(workspaceId) || []).slice(0, limit);
     }
@@ -724,7 +703,7 @@ class AIAnalyticsEngine {
         createdAt: row.createdAt || new Date(),
       }));
     } catch (error) {
-      console.error('[AI Analytics Engine] Failed to fetch all insights:', error);
+      log.error('[AI Analytics Engine] Failed to fetch all insights:', error);
       const allInsights: TrinityInsight[] = [];
       for (const insights of this.insightStore.values()) {
         allInsights.push(...insights.filter(i => !i.userId || i.userId === userId));
@@ -750,7 +729,7 @@ class AIAnalyticsEngine {
       }
       return true;
     } catch (error) {
-      console.error('[AI Analytics Engine] Failed to mark insight as read:', error);
+      log.error('[AI Analytics Engine] Failed to mark insight as read:', error);
       // Fallback to in-memory
       for (const insights of this.insightStore.values()) {
         const insight = insights.find(i => i.id === insightId);

@@ -1,0 +1,182 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 15 — PAYROLL ENGINE HARDENING**
+
+This phase owns the complete payroll lifecycle from confirmed hours through officer payment. Payroll errors have direct legal and financial consequences for every officer on the platform. Zero tolerance for silent failures, miscalculations, or untracked mutations. Report all findings before fixing anything. No exceptions. Same discipline as Phase 11 and Phase 14.
+
+---
+
+**STEP 1 — PAYROLL SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, scheduled job, and Trinity action that touches payroll. Include:
+- Pay period calculation and boundary enforcement
+- Hours aggregation from time entries
+- Regular and overtime rate calculation
+- Deduction processing pipeline
+- Pay stub generation and storage
+- Payroll run lifecycle and state machine
+- Payroll correction and amendment flow
+- Direct deposit and export pipeline
+- Payroll approval and four-eyes enforcement
+- Any cron or scheduled job that reads or writes payroll records
+
+Flag any file that mutates payroll records without a corresponding audit trail write.
+
+---
+
+**STEP 2 — PAY PERIOD BOUNDARY VERIFICATION**
+
+Pay period boundaries must be mathematically precise:
+- Weekly, bi-weekly, and semi-monthly period types all calculate correctly
+- Bi-weekly UTC fix confirmed still intact from Phase 11 — verify with grep
+- No gap between consecutive periods — every hour belongs to exactly one period
+- No overlap between consecutive periods — same hour cannot appear in two periods
+- `assertNoPeriodOverlap` DB guard confirmed active on every payroll run creation
+- Period boundaries displayed correctly in UI — officers and managers see the same period dates
+- Late-approved time entries correctly assigned to the period they belong to — not silently dropped
+
+---
+
+**STEP 3 — HOURS AGGREGATION VERIFICATION**
+
+Every confirmed hour must flow into payroll correctly:
+- Only supervisor-approved time entries are included in payroll runs — pending or disputed entries excluded
+- Clock-in and clock-out timestamps used for actual hours — not scheduled shift hours
+- Break deductions applied correctly per workspace configuration
+- Split shifts (same officer, same day, multiple entries) aggregated correctly as one continuous block for OT calculation purposes
+- Officers who worked across midnight have their hours correctly attributed to the correct calendar day
+- Verify no time entry can be included in two different payroll runs — `payrolledAt` lock confirmed
+- Time entries modified after payroll lock are flagged — not silently re-processed
+
+---
+
+**STEP 4 — RATE CALCULATION VERIFICATION**
+
+Every dollar must be calculated correctly:
+- Base rate per officer applied from the rate snapshot at clock-in time — not the current rate at run time
+- FLSA overtime calculated correctly: hours over 40 in a workweek at 1.5x base rate
+- Weighted average overtime rate applied correctly for officers who worked multiple posts at different rates in the same week
+- Split shift premium applied where applicable
+- Holiday pay applied only on qualifying dates — verify against the holiday calendar
+- Night shift, weekend, and hazard differentials applied as distinct line items in the earnings breakdown
+- All differential types confirmed tracked as distinct fields in `earningsBreakdown` (confirmed in Phase 11 — regression check)
+- Post-specific rate overrides take precedence over base rates — verify the precedence chain
+- Zero-rate hard block confirmed still active (confirmed in Phase 11 — regression check)
+
+---
+
+**STEP 5 — DEDUCTION PIPELINE VERIFICATION**
+
+Every deduction must apply in the correct legal order:
+- Deduction order enforced: pre-tax deductions → 401k → statutory (federal/state/FICA) → post-tax deductions → garnishments
+- Each deduction type has a corresponding line item in the pay stub
+- Deductions cannot reduce net pay below zero — hard floor enforced
+- Garnishment limits respected — cannot exceed federal maximums
+- Deduction configuration changes effective-date correctly — mid-period rate changes do not retroactively alter locked periods
+- Missing deduction configuration produces an explicit error — not a silent zero deduction
+
+---
+
+**STEP 6 — PAYROLL RUN LIFECYCLE VERIFICATION**
+
+Trace the complete payroll run state machine:
+- Valid states: `draft → pending_approval → approved → processing → processed → paid → amended`
+- No invalid state transitions permitted — jumping from draft to processed must be blocked
+- Four-eyes approval confirmed — the officer who creates the run cannot approve it
+- Triple idempotency confirmed still active: request header key + `assertNoPeriodOverlap` ledger guard + DB unique constraint (regression check from Phase 11)
+- Run locked after `processed` state — no modifications to included time entries after this point
+- `paid` state transition records payment method, reference number, and timestamp
+- Every state transition writes an audit record
+
+---
+
+**STEP 7 — PAYROLL CORRECTION AND AMENDMENT FLOW**
+
+Off-cycle corrections must be airtight:
+- Amendment route blocks on `paid` runs — cannot amend a disbursed payroll (confirmed Phase 11 — regression check)
+- Off-cycle run creates a new run record — does not modify the original
+- Off-cycle run clearly flagged as `amended` with reference to the original run_id
+- Officers receive a notification when an amendment affects their pay
+- Amendment audit trail: who initiated, what changed, original values, corrected values, timestamp
+- Negative adjustment handling — what happens when a correction results in a net reduction
+
+---
+
+**STEP 8 — PAY STUB GENERATION AND ACCESS**
+
+Every officer must receive an accurate pay stub:
+- Pay stub generated for every officer in the run with confirmed hours
+- Pay stub contains: officer name, pay period, regular hours and rate, overtime hours and rate, all deduction line items, gross pay, net pay, employer name, pay stub number
+- Pay stub stored in private object storage with correct workspace and officer scoping
+- Pay stub accessible only to the officer it belongs to and authorized managers — not visible to other officers
+- Officer notified via NDS when pay stub is available
+- Pay stub audit record written on generation (confirmed Phase 11 — regression check)
+- Historical pay stubs retrievable — officer can access all prior periods
+
+---
+
+**STEP 9 — EXPORT AND DIRECT DEPOSIT PIPELINE**
+
+Payroll export must be reliable:
+- CSV and direct deposit export formats verified correct
+- Export contains all required fields for ADP, Gusto, or direct deposit processor
+- Export is workspace-scoped — confirmed service-layer workspaceId guard (regression check from Phase 11)
+- Export idempotent — re-exporting the same run produces the same file, not a new record
+- Export audit record written: run_id, exported_by, format, timestamp
+- Failed export does not corrupt the payroll run state
+- Re-export after failure is possible without manual intervention
+
+---
+
+**STEP 10 — ORPHANED RUN DETECTION**
+
+Verify the Phase 11 orphaned run detector is working:
+- `detectOrphanedPayrollRuns()` runs on its defined schedule
+- A processed run with zero pay stubs is correctly identified as orphaned
+- Orphaned run detection fires an owner notification
+- Owner can trigger stub regeneration from the platform without rerunning the full payroll calculation
+- Orphaned run detection does not false-positive on legitimately zero-officer runs
+
+---
+
+**STEP 11 — PAYROLL ROUTE SECURITY**
+
+Every payroll endpoint must be locked:
+- All payroll routes require authentication
+- Officers cannot access other officers' pay stubs or payroll runs
+- Clients cannot access any payroll data
+- Workspace isolation confirmed on every payroll query — service-layer guard confirmed (regression check)
+- Four-eyes enforcement cannot be bypassed by any role including org_owner
+- Rate limiting applied to payroll endpoints
+
+---
+
+**STEP 12 — VERIFICATION**
+
+Run all checks before Phase 15 is marked complete:
+- Check 1: Pay period boundaries correct for weekly, bi-weekly, and semi-monthly — no gaps, no overlaps
+- Check 2: UTC bi-weekly fix still intact — grep confirms `setUTCHours` not `setHours`
+- Check 3: Only approved time entries included — pending and disputed entries excluded
+- Check 4: `payrolledAt` lock prevents double-inclusion — confirmed with grep
+- Check 5: FLSA overtime correct — hours over 40 at 1.5x, weighted average for multi-rate officers
+- Check 6: All differential types (night shift, weekend, hazard) appear as distinct earningsBreakdown fields — regression check
+- Check 7: Zero-rate hard block still active — regression check from Phase 11
+- Check 8: Deduction order enforced — pre-tax → 401k → statutory → post-tax → garnishments
+- Check 9: Net pay cannot go below zero — hard floor confirmed
+- Check 10: Triple idempotency confirmed — all three layers active
+- Check 11: Four-eyes approval cannot be bypassed — creator cannot approve their own run
+- Check 12: Amendment blocks on paid runs — regression check
+- Check 13: Pay stub contains all required fields — verify against a real generated stub
+- Check 14: Pay stub access scoped to owning officer and authorized managers only
+- Check 15: Export service-layer workspaceId guard confirmed — regression check
+- Check 16: Orphaned run detection fires correctly — no false positives on zero-officer runs
+- Check 17: All payroll mutations have audit trail entries — grep confirms zero untracked writes
+- Check 18: Server starts clean with zero TypeScript errors across all payroll files
+
+Do not mark Phase 15 complete until all 18 checks pass. Produce a structured findings report — every component investigated, pass or gap — before beginning any fixes. Findings first. Full picture assembled. Then fixes. Every gap from low to critical gets fixed before this phase closes.
+
+---
+
+Paste that and hold the same standard. This is officer pay. Every calculation, every deduction, every stub has to be right.

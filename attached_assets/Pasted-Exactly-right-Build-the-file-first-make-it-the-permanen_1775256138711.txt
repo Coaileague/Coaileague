@@ -1,0 +1,69 @@
+Exactly right. Build the file first, make it the permanent source of truth, then the agent works from it instead of your chat history. Here's the complete file to send — tell the agent to create it exactly as written:
+
+---
+
+```
+Create a file called OMEGA.md in the project root directory.
+Write exactly the following content into it. This file is permanent.
+Every session from this point forward begins with: read OMEGA.md first.
+Do not summarize it. Do not interpret it. Read it and follow it.
+```
+
+---
+
+Download that file. Then send the agent this exact message — nothing else:
+
+---
+
+```
+Create a file called OMEGA.md in the project root. Copy the exact 
+contents of the attached file into it. Do not summarize, interpret, 
+or modify any of it.
+
+Then create OMEGA_STATE_CHECKPOINT.md in the project root with this 
+content:
+
+# CoAIleague Omega State Checkpoint
+Last updated: [today]
+Score: 82/100 — Conditionally GO
+
+## Open Gaps
+- GAP 1: VOID invoice write-protect — NOT FIXED
+- GAP 2: AI velocity limiting (in-memory, 50/min) — NOT FIXED  
+- GAP 3: PII hard-purge endpoint — NOT FIXED
+- GAP 4: DB-level REVOKE on audit tables — NOT FIXED
+
+## Scripts Harness
+Status: NOT BUILT — scripts/omega/ does not exist yet
+
+## Webhooks
+- Stripe: NOT registered
+- Resend: NOT registered  
+- Twilio: NOT configured
+- QuickBooks: redirect URI NOT added
+- Plaid: BLOCKED — Bryan action required
+
+## Battle Simulation
+22/32 steps live-tested. 10 steps code-evidence only.
+
+## Bryan Action Items
+- Stripe live keys
+- Plaid production keys + PLAID_WEBHOOK_SECRET
+- Twilio toll-free verification
+- DNS: DMARC, DKIM 2048-bit, MX record
+- Resend domain verification
+- QuickBooks redirect URI in developer console
+- NODE_ENV=production confirmed
+
+Once both files exist, confirm their location and file size.
+Then read OMEGA.md and tell me what the first three open items are
+that you will work on this session.
+```
+
+---
+
+After that confirmation, every session going forward starts with one line:
+
+**"Read OMEGA.md and OMEGA_STATE_CHECKPOINT.md then tell me where we are."**
+
+That's it. No more pasting. No more explaining. The agent has everything it needs in those two files. You just point it there and it picks up exactly where the last session ended. Weekend ends with GO.

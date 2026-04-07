@@ -1,0 +1,370 @@
+This is the final gate before real users and real money. Copy everything below this line:
+
+---
+
+COAILEAGUE — FINAL SEMANTIC LOGIC AND COORDINATION AUDIT
+Documents work. Email works. Trinity is wired. 743 actions confirmed.
+The question now is not whether individual systems work in isolation.
+The question is whether they work TOGETHER as one coherent platform.
+Does the semantic logic hold end to end? Does data flow correctly between systems?
+Does every workflow complete or does it break at a handoff point?
+Read everything. Test the seams between systems. Report before fixing.
+
+---
+
+WHAT TO AUDIT — THE SEAMS BETWEEN SYSTEMS
+
+Every major failure in a production platform happens at the handoff between
+two systems that each work fine individually. Find every handoff and test it.
+
+---
+
+SEAM 1 — SIGNUP → WORKSPACE → CREDITS → WELCOME
+
+Walk the exact code path from the moment a new user submits the signup form
+to the moment they see the platform for the first time.
+
+Verify in order:
+User record is created with hashed password and email.
+Workspace record is created with unique workspace_id.
+workspace_members record is created with org_owner role — not users.role, workspace_members.role.
+orgSubscriptions record is created with free_trial tier and active status.
+credit_transactions record is created with exactly 500 credits, transaction_type=system_grant, no stripe_payment_intent_id, no stripe_invoice_id.
+workspace_credits record shows current_balance = 500.
+sendWorkspaceWelcomeEmail fires with the correct org name and owner name.
+sendWelcomeOrgNotification fires and the notification appears in the panel.
+Trinity session initializes correctly for a brand new org with zero historical data — she must not crash or return errors when there is no data to query yet.
+The org_owner lands on a useful first-time experience, not a blank dashboard.
+
+If any of these 10 steps fails or is out of order that is a seam failure.
+Fix the exact step that breaks without touching the steps that work.
+
+---
+
+SEAM 2 — EMPLOYEE CREATED → ONBOARDING PACKET AUTO-TRIGGERS
+
+When a new employee record is created the onboarding packet must fire automatically.
+Trace the exact path:
+
+Employee record created in employees table.
+entityCreationNotifier detects the creation event.
+employeeDocumentOnboardingService receives the trigger.
+All 14 Texas PSB required documents are generated within 5 minutes.
+Each document is routed to the correct first signer.
+The employee receives the invite email with the Accept Invitation button.
+The org_owner receives a notification that onboarding was initiated.
+The employee appears in the onboarding dashboard with status pending.
+Trinity is aware that this employee cannot be scheduled until onboarding completes.
+
+Test this by creating a new employee in the Acme workspace right now.
+Watch what actually happens. Do not assume the code path fires correctly.
+Report exactly which steps executed and which did not.
+
+---
+
+SEAM 3 — DOCUMENT EXECUTION → SCHEDULING ELIGIBILITY
+
+When all onboarding documents reach Executed status the employee must
+become scheduling-eligible. This handoff is critical — if it breaks,
+fully onboarded employees cannot be scheduled.
+
+Trace the exact path:
+Last required document reaches Executed status.
+documentSigningService marks the packet as complete.
+Employee onboarding_status field updates to completed.
+intelligentScheduler.ts checks onboarding_status before allowing assignment.
+Trinity becomes aware the employee is now scheduling-eligible.
+Manager can assign shifts to this employee without Trinity blocking them.
+
+Test this with Marcus Johnson from the Acme simulation.
+Attempt to schedule him before onboarding is complete — confirm Trinity blocks.
+Complete all documents. Attempt to schedule him again — confirm Trinity allows.
+Report exactly what happens at each attempt with the specific message Trinity returns.
+
+---
+
+SEAM 4 — CLOCK-IN → TIME ENTRY → TIMESHEET → PAYROLL
+
+This is the core financial chain. Every step must hand off correctly
+to the next or hours get lost and pay is wrong.
+
+Trace the exact path:
+Officer clocks in — time_entry record created with status active,
+clockInTime, clockInLatitude, clockInLongitude, employeeId, shiftId, siteId.
+Officer clocks out — time_entry record updated with clockOutTime,
+totalHours calculated server-side not client-side, status changes to completed.
+Pay period closes — timesheets auto-generate from all completed time_entries
+for that pay period. Confirm no time entry is missed or double-counted.
+Timesheet shows correct total hours for each employee matching the sum
+of their individual time_entry records exactly.
+Manager approves timesheet — timesheet status locks, cannot be edited.
+Payroll calculation runs from approved timesheets — gross pay equals
+total approved hours multiplied by pay_rate from the employee record.
+Confirm the pay_rate used is from the employee record at time of calculation
+not a hardcoded value and not a rate that could have been changed mid-period.
+Pay stub generates with correct gross pay, hours, pay period dates, and employee name.
+Pay stub notification email fires to the employee with the correct pay period.
+
+Test this entire chain with one Acme employee doing a full cycle right now.
+A discrepancy anywhere in this chain means officers get paid wrong amounts.
+That is a payroll liability. Find and fix any discrepancy before go-live.
+
+---
+
+SEAM 5 — INVOICE → EMAIL DELIVERY → PAYMENT → REVENUE LEDGER
+
+The money chain. Every step must complete or revenue is lost.
+
+Trace the exact path:
+Invoice generated from approved timesheets — invoice amount equals
+billable hours multiplied by client billing_rate.
+Confirm the billing_rate used is from the client record not hardcoded.
+Invoice email sends to client contact email via Track B branded Resend email.
+delivery_confirmed updates to true when Resend delivery webhook fires.
+Client clicks Pay Now link — Stripe payment intent created.
+Client completes payment — paymentIntent.status becomes succeeded.
+Invoice status updates to paid with payment timestamp and Stripe reference.
+Revenue ledger entry created with invoice ID, client ID, amount, payment date.
+org_owner revenue widget updates in real time via WebSocket broadcast.
+Audit trail logs the payment event with all relevant identifiers.
+Collections escalation service is notified that this invoice is now paid
+and removes it from any pending escalation queue.
+
+Test this with a real Stripe test payment right now.
+Walk every step and verify the database after each one.
+If the revenue ledger entry is not created or the widget does not update
+that is a revenue visibility gap that will confuse org_owners immediately.
+
+---
+
+SEAM 6 — COMPLIANCE SCAN → SCHEDULING ENFORCEMENT
+
+The compliance system must actually block scheduling, not just send alerts.
+Alerts without enforcement are cosmetic. Test the enforcement gate.
+
+Trace the exact path:
+trinityComplianceEngine runs and detects an expired license.
+Employee compliance status updates in the employee_certifications table.
+When manager attempts to assign an expired-license officer to a shift
+the scheduling layer checks compliance status before allowing the assignment.
+The check must happen in the database route handler not just the UI.
+The block message must tell the manager exactly why the assignment failed
+including the officer name, what expired, and when it expired.
+The manager cannot bypass this block from the UI under any circumstance.
+A direct API call to assign the shift must also be blocked at the route level.
+
+Test this now with Robert Williams who has the expired license in the Acme data.
+Attempt to assign him to a shift via the UI. Confirm the block message.
+Attempt to assign him via direct API call bypassing the UI. Confirm the block holds.
+If the API call succeeds while the UI blocks that is a critical compliance failure.
+
+---
+
+SEAM 7 — PROPOSAL → CONTRACT → CLIENT ACTIVATION
+
+The sales pipeline must complete and create a real operational client.
+
+Trace the exact path:
+Lead created in pipeline dashboard at Stage 1.
+Proposal generated from template with all org and lead data populated.
+Proposal email sends to client with Acme branding not CoAIleague branding.
+Client accepts — proposal marked accepted in the platform.
+Service agreement auto-generates from accepted proposal terms.
+No re-entry of terms — everything carries over from the proposal.
+org_owner signs. Contract sent to client.
+Client signs. Contract executes. Document safe receives master copy.
+Trinity automatically creates:
+  The client record in the clients table.
+  The site records for all sites in the contract.
+  A billing rate configured from the contract terms.
+  A task list for the org_owner to set up post orders and geofences.
+Pipeline card moves to active_client stage.
+Client now appears in the active clients list for scheduling and billing.
+Trinity includes new client in next morning briefing.
+
+Test this entire flow with the Lone Star Industrial Park lead in Acme.
+If client activation does not auto-create the client and site records
+the org_owner has to manually re-enter everything they just put in the proposal.
+That is a critical UX failure that will cause churn immediately.
+
+---
+
+SEAM 8 — TRINITY BRIEFING → REAL DATA ACCURACY
+
+The morning briefing must contain real numbers. Test every data source.
+
+Trigger the morning briefing generation manually right now.
+Read the actual generated briefing content.
+Verify every number against the actual database:
+
+Shifts scheduled today — count the shifts table records for today.
+Does the briefing number match the database count exactly?
+
+Pending timesheet approvals — count timesheets with status pending_approval.
+Does the briefing number match?
+
+Officers with expiring credentials in 90 days — run the compliance query.
+Does the briefing list match the actual at-risk officers?
+
+Open call-offs needing coverage — count unassigned shifts from call-offs.
+Does the briefing reflect the real gap count?
+
+Credit usage percentage — calculate from workspace_credits table.
+Does the briefing show the correct percentage?
+
+If any briefing number does not match the actual database value Trinity
+is reporting false intelligence to the org_owner. That destroys trust immediately.
+Find every data source that is returning wrong numbers and fix the query.
+
+---
+
+SEAM 9 — WEBSOCKET EVENTS → CORRECT RECIPIENTS
+
+Every WebSocket event must go to the correct person and no one else.
+Test each event for both delivery and isolation.
+
+Clock-in event:
+Officer clocks in. Confirm the manager dashboard updates.
+Confirm a different org's manager dashboard does NOT update.
+Confirm the clocking officer's own view updates.
+Confirm a different officer in the same org does NOT see this event.
+
+Credit deduction event:
+Credits deduct in workspace A. Confirm workspace A org_owner widget updates.
+Confirm workspace B org_owner widget does NOT update.
+
+Trinity briefing event:
+Briefing posts in workspace A. Confirm workspace A manager sees it.
+Confirm workspace A employee does NOT see the briefing.
+Confirm workspace B manager does NOT see it.
+
+If any event reaches the wrong recipient or the wrong workspace that is a
+live data isolation failure. Security company operators cannot see each other's
+operational data under any circumstances.
+
+---
+
+SEAM 10 — STRIPE WEBHOOK → CREDIT ALLOCATION IDEMPOTENCY
+
+Stripe delivers webhooks at least once — sometimes more than once.
+The platform must handle duplicate delivery without crediting twice.
+
+Test:
+Send the same invoice.payment_succeeded webhook event twice with identical event ID.
+Confirm credits are allocated exactly once.
+Confirm the second delivery returns HTTP 200 but creates no new ledger entry.
+Confirm the idempotency_keys table has exactly one record for this event ID.
+
+Test subscription upgrade crediting:
+Upgrade from Starter to Professional.
+Confirm credits update from 5000 to 10000.
+Confirm the credit ledger shows the delta of 5000 additional credits allocated
+not a full 10000 new allocation on top of existing balance.
+If the upgrade allocates 10000 on top of an existing 5000 the org starts
+with 15000 credits instead of 10000. That is a billing error.
+
+---
+
+SEAM 11 — STATEWIDE EXEMPTION UNDER LOAD
+
+The founder exemption must hold under every possible condition.
+Test the exemption survives these edge cases:
+
+Server restarts: confirm ensureStatewideExemption fires on every restart
+and the flags are still set correctly after each restart.
+
+Direct database manipulation attempt: if someone manually sets billing_exempt
+to false in the database, confirm ensureStatewideExemption corrects it
+on the next server startup.
+
+Concurrent credit deductions: simulate 10 concurrent Trinity actions
+in the Statewide workspace simultaneously. Confirm zero credits are deducted
+across all 10 and all 10 log as EXEMPTED in the audit trail.
+
+Stripe webhook for Statewide: confirm if a Stripe webhook accidentally
+references the Statewide workspace it does not create a charge or
+modify the subscription status.
+
+---
+
+FINAL SEMANTIC LOGIC QUESTIONS — ANSWER EACH FROM CODE NOT ASSUMPTION
+
+Read the code and answer every one of these precisely:
+
+1. If an org_owner deletes an employee who has signed onboarding documents,
+   are the executed documents preserved in the document safe or deleted with the employee?
+
+2. If a manager approves a timesheet that contains a clock-in with null GPS coordinates,
+   does the payroll system use those hours or reject them as invalid?
+
+3. If a client is marked inactive, do their historical invoices remain accessible
+   to the org_owner or do they disappear from the billing view?
+
+4. If Trinity generates a schedule recommendation and the manager does not approve
+   or reject it within 48 hours, what happens? Does it expire? Does it auto-approve?
+
+5. If an employee's session expires while they are clocked in and they cannot
+   log back in until after their shift ends, is their clock-out captured automatically
+   or is their time entry left as active indefinitely?
+
+6. If a Stripe subscription payment fails and the org enters grace period,
+   can Trinity still execute credit-gated actions during the grace period?
+   What is the grace period length in the code?
+
+7. If two managers approve the same timesheet simultaneously in two browser tabs,
+   does the system create two approval records or does a race condition guard prevent it?
+
+8. If the Resend API is down when an invoice email is supposed to fire,
+   does the invoice still get created in the database or does the whole
+   invoice creation transaction roll back?
+
+9. If an officer is assigned to a shift and then their license expires before
+   the shift date, does Trinity flag this proactively or only discover it
+   when the officer tries to clock in?
+
+10. If the org_owner upgrades from Starter to Professional mid-billing-cycle,
+    are the additional credits prorated or do they receive the full 10000
+    immediately regardless of where they are in the cycle?
+
+---
+
+AFTER THE AUDIT — FINAL GO-LIVE CHECKLIST
+
+After every seam above is tested and every question is answered from code,
+produce a final go-live report in this exact format:
+
+SEAM AUDIT RESULTS:
+For each of the 11 seams: PASS or FAIL with specific evidence.
+For any FAIL: the exact fix applied with before and after.
+
+SEMANTIC LOGIC ANSWERS:
+Answer all 10 questions with the exact code behavior confirmed.
+For any answer that reveals a bug: the fix applied.
+
+REMAINING MANUAL TESTS (require a real browser):
+List only what cannot be tested programmatically.
+Be specific about what to click and what to look for.
+
+PRODUCTION DEPLOYMENT CHECKLIST:
+STRIPE_SECRET_KEY is sk_live not sk_test — confirmed or not confirmed.
+STRIPE_WEBHOOK_SECRET is the live signing secret — confirmed or not confirmed.
+RESEND_API_KEY is production key — confirmed or not confirmed.
+DATABASE_URL points to production database — confirmed or not confirmed.
+NODE_ENV is set to production — confirmed or not confirmed.
+SESSION_SECRET is a strong unique string — confirmed or not confirmed.
+All AI API keys present — confirmed or not confirmed.
+Dev routes blocked in production environment — confirmed or not confirmed.
+
+STATEWIDE GO-LIVE READINESS:
+Is the platform ready for Bryan to import real Statewide employee and client data?
+What are the exact steps Bryan must take in order before the first real employee
+receives an invite email from Statewide Protective Services?
+
+GRAND OPENING READINESS:
+Is the platform ready for the first real paying customer who is not Statewide?
+What is the exact remaining work if any before the first real non-Statewide
+org signs up and pays real money?
+
+The answer to the last two questions is either YES with the exact go-live steps,
+or NOT YET with the exact list of what remains.
+No ambiguity. No assumptions. Code-confirmed answers only.

@@ -1,0 +1,47 @@
+You are right to catch this. Here is exactly what happened.
+
+The action consolidation audit was done — Replit produced the full report showing 753 actions, 126 domain prefixes, all the duplicate groups identified. Then we pivoted to the RBAC cleanup because the P0 security bug was more urgent. The RBAC work took over and the actual action consolidation never executed. The count went from 753 to 743 — that tiny drop is just phantom role-related entries that got cleaned up as a side effect of the RBAC work. The real consolidation targeting 480 actions never happened.
+
+The approved plan was to go from 753 to approximately 480 by removing confirmed duplicates. That work is still sitting unapproved and unexecuted. Send this to Replit now:
+
+---
+
+The RBAC cleanup is complete. Now execute the Trinity action consolidation that was audited and approved earlier. The audit identified these confirmed duplicate groups. Work through them in priority order. Do not start the next group until the previous one is done, server restarted, and all 15 domains confirmed healthy.
+
+**Before starting anything read the current platformActionHub.ts in full.** The RBAC work may have changed some action definitions. Get a fresh count of the current state before touching anything.
+
+**Group 1 — frontier.* removal (7 actions).**
+guru.* is the canonical set. Remove all 7 frontier.* actions from the registry. Verify each guru.* equivalent works before removing the frontier.* version. After removal confirm the count dropped by exactly 7.
+
+**Group 2 — code.* removal (13 actions).**
+coding.* is the canonical set. Remove all 13 code.* duplicate actions. Same verification process. Confirm count drops by 13.
+
+**Group 3 — notifications.* merge into notify.* (9 actions).**
+For each action in notifications.* find its notify.* equivalent. If the equivalent exists and works remove the notifications.* version. If no equivalent exists keep it and rename it to notify.*. Target is one prefix not two.
+
+**Group 4 — schedule domain consolidation (62 actions down to approximately 22).**
+Three prefixes currently: scheduling.*, schedule.*, schedule_lifecycle.*
+Canonical prefix going forward: scheduling.*
+Process: list every action across all three prefixes. Identify true duplicates — same function different name. Keep the scheduling.* version of each duplicate. Remove the schedule.* and schedule_lifecycle.* duplicates. For any action in schedule.* or schedule_lifecycle.* that has no scheduling.* equivalent rename it to scheduling.* and keep it. After this group only scheduling.* exists for scheduling operations.
+
+**Group 5 — financial domain consolidation (63 actions down to approximately 30).**
+Five prefixes currently: billing.*, finance.*, invoice.*, invoices.*, qb.*, quickbooks.*, quickbooks_flow.*
+Canonical prefixes going forward: billing.* for all client billing and invoicing, quickbooks.* for all QuickBooks integration.
+Process same as Group 4. Identify duplicates, keep canonical versions, rename orphans, remove the rest. finance.*, invoice.*, invoices.*, billing_exception.*, bi.* as standalone prefixes must be gone after this group.
+
+**Group 6 — one-off domain absorption (15 singleton prefixes).**
+These prefixes each have only 1 or 2 actions and should be absorbed into existing domains: broadcast, ops, mileage, meetingbot, sms, clockbot, hr, field, export, monitoring, live, judge, chat, marketplace, shiftroom.
+For each one move the action into the most logical existing domain with a correct domain.verb naming convention. Example: meetingbot.generate_summary stays as meetingbot.generate_summary — meetingbot is a real system that deserves its own prefix. But ops.fill_open_shift should become scheduling.fill_open_shift. Use judgment on each one.
+
+**After all 6 groups complete:**
+Report the final action count.
+Report the final domain prefix count.
+Confirm it is below 500 actions and below 50 domain prefixes.
+Run the full regression suite.
+Confirm all 15 domains healthy.
+Confirm all 4 regression tests pass.
+Confirm every user-facing feature that uses Trinity still works — scheduling assistant, compliance scan, document generation, payroll analysis, shift escalation, ReportBot, HelpAI, ClockBot, MeetingBot, morning briefing.
+Confirm Statewide exemption still active.
+Confirm no credit deductions changed as a side effect of renaming actions.
+
+The target is a clean registry where every action has one name, one handler, one purpose, and no duplicates. That is what we approved in the audit report. Execute it now.

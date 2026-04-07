@@ -13,6 +13,8 @@ import { workflowLedger, RunStatus } from './workflowLedger';
 import { commitmentManager } from './commitmentManager';
 import { realTimeBridge } from './realTimeBridge';
 import { aiBrainEvents } from './internalEventEmitter';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('supervisoryAgent');
 
 export interface SupervisoryConfig {
   checkIntervalMs: number;
@@ -61,7 +63,7 @@ class SupervisoryAgentService {
     if (this.isRunning) return;
 
     this.isRunning = true;
-    console.log('[SupervisoryAgent] Starting supervision...');
+    log.info('[SupervisoryAgent] Starting supervision...');
 
     this.recoverIncompleteWorkflows();
 
@@ -86,7 +88,7 @@ class SupervisoryAgentService {
       this.checkInterval = null;
     }
     this.isRunning = false;
-    console.log('[SupervisoryAgent] Stopped supervision');
+    log.info('[SupervisoryAgent] Stopped supervision');
   }
 
   private async recoverIncompleteWorkflows() {
@@ -96,7 +98,7 @@ class SupervisoryAgentService {
       const incompleteRuns = await workflowLedger.getIncompleteRuns();
       
       for (const run of incompleteRuns) {
-        console.log(`[SupervisoryAgent] Recovering run ${run.id} (${run.actionId})`);
+        log.info(`[SupervisoryAgent] Recovering run ${run.id} (${run.actionId})`);
 
         if (run.status === 'running') {
           const timeSinceStart = run.startedAt 
@@ -116,13 +118,17 @@ class SupervisoryAgentService {
         }
       }
 
-      console.log(`[SupervisoryAgent] Recovered ${incompleteRuns.length} workflows`);
+      log.info(`[SupervisoryAgent] Recovered ${incompleteRuns.length} workflows`);
     } catch (error) {
-      console.error('[SupervisoryAgent] Recovery failed:', error);
+      log.error('[SupervisoryAgent] Recovery failed:', error);
     }
   }
 
   private async performHealthCheck() {
+    try {
+      const { isDbCircuitOpen } = await import('../../db');
+      if (isDbCircuitOpen()) return;
+    } catch { /* ignore */ }
     try {
       const health = await this.getHealth();
 
@@ -152,13 +158,13 @@ class SupervisoryAgentService {
         }
       }
 
-    } catch (error) {
-      console.error('[SupervisoryAgent] Health check failed:', error);
+    } catch (error: any) {
+      log.warn('[SupervisoryAgent] Health check failed (will retry next interval):', error?.message || 'unknown');
     }
   }
 
   private async handleWorkflowFailure(data: { runId: string; actionId: string; error: string; retryCount: number }) {
-    console.log(`[SupervisoryAgent] Handling failure for ${data.runId}: ${data.error}`);
+    log.info(`[SupervisoryAgent] Handling failure for ${data.runId}: ${data.error}`);
 
     const run = await workflowLedger.getRun(data.runId);
     if (!run) return;
@@ -182,7 +188,7 @@ class SupervisoryAgentService {
   }
 
   private async handleSLABreach(data: { runId: string; actionId: string; durationMs: number }) {
-    console.log(`[SupervisoryAgent] SLA breach for ${data.runId}: ${data.durationMs}ms`);
+    log.info(`[SupervisoryAgent] SLA breach for ${data.runId}: ${data.durationMs}ms`);
 
     realTimeBridge.sendSystemAlert('warning', `SLA breach: ${data.actionId} took ${Math.round(data.durationMs / 1000)}s`, {
       runId: data.runId,
@@ -250,7 +256,7 @@ class SupervisoryAgentService {
 
       return true;
     } catch (error) {
-      console.error(`[SupervisoryAgent] Rollback failed for ${runId}:`, error);
+      log.error(`[SupervisoryAgent] Rollback failed for ${runId}:`, error);
       return false;
     }
   }

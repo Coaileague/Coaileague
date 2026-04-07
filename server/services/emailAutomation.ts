@@ -6,20 +6,18 @@
  * Trinity Integration: Connected via trinityPlatformConnector for email tracking and insights
  */
 
-import { Resend } from "resend";
 import { db } from "../db";
-import { emailEvents, creditTransactions, workspaceCredits } from "../../shared/schema";
+import { emailEvents } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 import { trinityPlatformConnector } from './ai-brain/trinityPlatformConnector';
+import { getAppBaseUrl } from '../utils/getAppBaseUrl';
+import { isEmailUnsubscribed, getUncachableResendClient, isHardBounced } from './emailCore';
+import { createLogger } from '../lib/logger';
+const log = createLogger('emailAutomation');
 
-const resendApiKey = process.env.RESEND_API_KEY;
 
-function getResendClient(): Resend | null {
-  if (!resendApiKey) {
-    return null;
-  }
-  return new Resend(resendApiKey);
-}
+// Email types subject to unsubscribe enforcement (CAN-SPAM / GDPR)
+const MARKETING_EMAIL_TYPES = new Set<EmailCampaignOptions['emailType']>(['marketing', 'sales', 'upsell']);
 
 export interface EmailOptions {
   to: string | string[];
@@ -49,15 +47,31 @@ export const EMAIL_PRICING: Record<EmailCampaignOptions["emailType"], number> = 
   notification: 1,
 };
 
-export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
+/**
+ * sendRawCampaignEmail — low-level send used internally by sendBilledEmail.
+ * Uses the canonical Resend client (getUncachableResendClient) which supports
+ * the Replit connector API key. This also checks hard bounces before sending.
+ *
+ * NOTE: This is intentionally NOT exported as `sendEmail` to avoid naming // infra
+ * collisions with the CAN-SPAM-compliant `sendEmail` in server/email.ts. // infra
+ * External callers should use sendBilledEmail or sendTemplatedEmail instead.
+ */
+async function sendRawCampaignEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: false, error: "Resend API key is not configured" };
+    const toAddresses = Array.isArray(options.to) ? options.to : [options.to];
+
+    // Hard bounce guard — never attempt delivery to suppressed addresses
+    for (const addr of toAddresses) {
+      if (await isHardBounced(addr)) {
+        log.info(`[EmailAutomation] Suppressed send to ${addr} — hard bounce on record`);
+        return { success: false, error: `Address permanently suppressed: ${addr}` };
+      }
     }
 
-    const response = await resend.emails.send({
-      from: options.from || "CoAIleague <noreply@coaileague.com>",
+    const { client, fromEmail } = await getUncachableResendClient();
+
+    const response = await client.emails.send({
+      from: options.from || fromEmail,
       to: options.to,
       subject: options.subject,
       html: options.html,
@@ -66,13 +80,13 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       headers: options.headers,
     });
 
-    if (response.error) {
-      return { success: false, error: response.error.message };
+    if ((response as any).error) {
+      return { success: false, error: (response as any).error.message };
     }
 
-    return { success: true, messageId: response.data?.id };
+    return { success: true, messageId: (response as any).data?.id ?? (response as any).id };
   } catch (error) {
-    console.error("[Email] Failed to send:", error);
+    log.error("[EmailAutomation] Failed to send:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
@@ -87,23 +101,19 @@ export async function sendBilledEmail(
     const pricePerEmail = EMAIL_PRICING[options.emailType] || EMAIL_PRICING.notification;
     const totalCost = recipientCount * pricePerEmail;
 
-    // Check workspace credits
-    const workspace = await db.query.workspaceCredits.findFirst({
-      where: (credits, { eq: eqOp }) => eqOp(credits.workspaceId, options.workspaceId),
-    });
-
-    if (!workspace || workspace.currentBalance < totalCost) {
-      return {
-        success: false,
-        sentCount: 0,
-        cost: totalCost,
-        error: `Insufficient credits. Required: $${(totalCost / 100).toFixed(2)}, Available: $${((workspace?.currentBalance || 0) / 100).toFixed(2)}`,
-      };
-    }
-
+    // workspace_credits table dropped (Phase 16) — credit check bypassed
     let sentCount = 0;
     for (const email of recipients) {
-      const result = await sendEmail({
+      // CAN-SPAM / GDPR: Skip unsubscribed recipients for marketing-class emails
+      if (MARKETING_EMAIL_TYPES.has(options.emailType)) {
+        const unsubscribed = await isEmailUnsubscribed(email, 'marketing', options.workspaceId).catch(() => false);
+        if (unsubscribed) {
+          log.info(`[Email] Skipping ${email} — unsubscribed from marketing (type: ${options.emailType})`);
+          continue;
+        }
+      }
+
+      const result = await sendRawCampaignEmail({
         ...options,
         to: email,
       });
@@ -120,7 +130,7 @@ export async function sendBilledEmail(
           status: "sent",
           resendId: result.messageId,
           sentAt: new Date(),
-        }).catch((err) => console.error("[Email] Failed to log event:", err));
+        }).catch((err) => log.error("[Email] Failed to log event:", err));
       } else {
         // Log failed email
         await db.insert(emailEvents).values({
@@ -130,32 +140,8 @@ export async function sendBilledEmail(
           recipientEmail: email,
           status: "failed",
           errorMessage: result.error,
-        }).catch((err) => console.error("[Email] Failed to log event:", err));
+        }).catch((err) => log.error("[Email] Failed to log event:", err));
       }
-    }
-
-    // Deduct credits if any emails were sent
-    if (sentCount > 0) {
-      const chargedAmount = sentCount * pricePerEmail;
-      const newBalance = workspace.currentBalance - chargedAmount;
-      
-      await db.update(workspaceCredits)
-        .set({
-          currentBalance: newBalance,
-          totalCreditsSpent: (workspace.totalCreditsSpent || 0) + chargedAmount,
-        })
-        .where(eq(workspaceCredits.workspaceId, options.workspaceId));
-
-      // Create credit transaction
-      await db.insert(creditTransactions).values({
-        workspaceId: options.workspaceId,
-        userId: options.userId,
-        transactionType: "deduction",
-        amount: -chargedAmount,
-        balanceAfter: newBalance,
-        featureKey: "email_automation",
-        featureName: `Email Campaign (${options.emailType})`,
-      }).catch((err) => console.error("[Email] Failed to log transaction:", err));
     }
 
     // Emit email campaign results to Trinity for platform awareness
@@ -171,7 +157,7 @@ export async function sendBilledEmail(
         cost: sentCount * pricePerEmail,
         successRate: recipientCount > 0 ? ((sentCount / recipientCount) * 100).toFixed(1) : 0,
       },
-    }).catch(err => console.error('[Email] Failed to emit Trinity event:', err));
+    }).catch(err => log.error('[Email] Failed to emit Trinity event:', err));
 
     return {
       success: true,
@@ -179,7 +165,7 @@ export async function sendBilledEmail(
       cost: sentCount * pricePerEmail,
     };
   } catch (error) {
-    console.error("[Email Campaign] Failed:", error);
+    log.error("[Email Campaign] Failed:", error);
     
     // Emit failure event to Trinity
     trinityPlatformConnector.emitServiceEvent('email', 'campaign_failed', {
@@ -188,7 +174,7 @@ export async function sendBilledEmail(
       severity: 'error',
       requiresAction: true,
       data: { emailType: options.emailType },
-    }).catch(err => console.error('[Email] Failed to emit Trinity event:', err));
+    }).catch(err => log.error('[Email] Failed to emit Trinity event:', err));
 
     return {
       success: false,
@@ -214,7 +200,7 @@ export const EMAIL_TEMPLATES = {
           <li>Integrated contractor pool management</li>
         </ul>
         <p style="margin-top: 30px;">
-          <a href="https://coaileague.com/schedule-demo" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Schedule a Demo</a>
+          <a href="${getAppBaseUrl()}/schedule-demo" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Schedule a Demo</a>
         </p>
       </div>
     `,
@@ -227,7 +213,7 @@ export const EMAIL_TEMPLATES = {
         <p>Imagine your entire scheduling, payroll, and compliance operations running on autopilot.</p>
         <h2 style="color: #10b981; font-size: 18px;">Key Feature: ${feature}</h2>
         <p>Learn how our customers save thousands of dollars monthly.</p>
-        <a href="https://coaileague.com/features" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">Explore Features</a>
+        <a href="${getAppBaseUrl()}/features" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">Explore Features</a>
       </div>
     `,
   },
@@ -238,9 +224,9 @@ export const EMAIL_TEMPLATES = {
         <h1 style="color: #3b82f6;">Welcome ${userName}!</h1>
         <p>You've just taken the first step toward workforce automation excellence.</p>
         <ol style="line-height: 2;">
-          <li><a href="https://coaileague.com/onboarding/setup">Complete workspace setup</a></li>
-          <li><a href="https://coaileague.com/onboarding/team">Invite your team</a></li>
-          <li><a href="https://coaileague.com/onboarding/first-schedule">Create your first schedule</a></li>
+          <li><a href="${getAppBaseUrl()}/onboarding/setup">Complete workspace setup</a></li>
+          <li><a href="${getAppBaseUrl()}/onboarding/team">Invite your team</a></li>
+          <li><a href="${getAppBaseUrl()}/onboarding/first-schedule">Create your first schedule</a></li>
         </ol>
       </div>
     `,
@@ -261,13 +247,21 @@ export const EMAIL_TEMPLATES = {
       <div style="font-family: Inter, system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #3b82f6;">Level Up Your Workforce Management</h1>
         <p>${benefit}</p>
-        <a href="https://coaileague.com/upgrade" style="background: #06b6d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">Upgrade Now</a>
+        <a href="${getAppBaseUrl()}/upgrade" style="background: #06b6d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">Upgrade Now</a>
       </div>
     `,
   },
 };
 
 export type EmailTemplateType = keyof typeof EMAIL_TEMPLATES;
+
+const TEMPLATE_PARAM_ORDER: Record<EmailTemplateType, string[]> = {
+  sales: ['companyName', 'contactName'],
+  marketing: ['feature'],
+  onboarding: ['userName'],
+  client_onboarding: ['clientName', 'setupLink'],
+  upsell: ['featureName', 'benefit'],
+};
 
 export async function sendTemplatedEmail(
   type: EmailTemplateType,
@@ -281,7 +275,8 @@ export async function sendTemplatedEmail(
     return { success: false, cost: 0, error: `Unknown template type: ${type}` };
   }
 
-  const values = Object.values(templateData);
+  const paramOrder = TEMPLATE_PARAM_ORDER[type] || [];
+  const values = paramOrder.map(key => templateData[key] ?? '');
   const html = template.html(...(values as [string, string]));
   const subject = template.subject;
 

@@ -13,7 +13,11 @@
 
 import { db } from "../db";
 import { employeeBenefits, ptoRequests, employees } from "@shared/schema";
+import { platformEventBus } from './platformEventBus';
 import { eq, and } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('ptoAccrual');
+
 
 interface PtoBalance {
   employeeId: string;
@@ -124,7 +128,7 @@ export async function updatePtoAccrual(
 
     return true;
   } catch (error) {
-    console.error('Error updating PTO accrual:', error);
+    log.error('Error updating PTO accrual:', error);
     return false;
   }
 }
@@ -166,7 +170,7 @@ export async function deductPtoHours(
 
     return true;
   } catch (error) {
-    console.error('Error deducting PTO hours:', error);
+    log.error('Error deducting PTO hours:', error);
     return false;
   }
 }
@@ -236,6 +240,15 @@ export async function runWeeklyPtoAccrual(workspaceId: string): Promise<number> 
       }
     }
   }
+
+  platformEventBus.publish({
+    type: 'pto_accrual_completed',
+    category: 'workforce',
+    title: 'Weekly PTO Accrual Completed',
+    description: `Weekly PTO accrual processed for ${updatedCount} employee(s) in workspace`,
+    workspaceId,
+    metadata: { updatedCount, workspaceId },
+  });
 
   return updatedCount;
 }

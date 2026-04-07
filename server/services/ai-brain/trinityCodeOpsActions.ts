@@ -8,12 +8,14 @@
 import { trinityCodeOps } from './trinityCodeOps';
 import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityCodeOpsActions');
 
 /**
  * Register Trinity Code Ops actions with the orchestrator
  */
 export function registerTrinityCodeOpsActions(orchestrator: any): void {
-  console.log('[TrinityCodeOps] Registering autonomous coding actions...');
+  log.info('[TrinityCodeOps] Registering autonomous coding actions...');
 
   // ============================================================================
   // CODE SEARCH ACTIONS
@@ -24,7 +26,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'AI Code Search',
     category: 'coding',
     description: 'Search codebase using patterns, regex, or natural language descriptions',
-    requiredRoles: ['developer', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { pattern, isRegex, caseSensitive, filePattern, directory, contextLines, maxResults } = request.payload || {};
@@ -63,7 +65,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Find Code Definition',
     category: 'coding',
     description: 'Find where a function, class, or variable is defined',
-    requiredRoles: ['developer', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { identifier, type = 'any' } = request.payload || {};
@@ -119,7 +121,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Find Code Usages',
     category: 'coding',
     description: 'Find all usages of a function, class, or variable',
-    requiredRoles: ['developer', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { identifier, excludeDefinitions = true } = request.payload || {};
@@ -171,24 +173,24 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Apply Code Patch',
     category: 'coding',
     description: 'Apply structured code changes with diff preview and rollback capability',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { patches, commitMessage, autoCommit = false, reasoning } = request.payload || {};
 
-      if (!patches || !Array.isArray(patches) || patches.length === 0) {
+      if (!patches || !Array.isArray(patches) || patches.length === 0 || !request.workspaceId || !request.userId) {
         return {
           success: false,
           actionId: request.actionId,
-          message: 'Missing required field: patches (array of patch operations)',
+          message: 'Missing required fields: patches (array), workspaceId, userId',
           executionTimeMs: Date.now() - startTime
         };
       }
 
       const result = await trinityCodeOps.applyPatch({
         operationId: crypto.randomUUID(),
-        workspaceId: request.workspaceId!,
-        userId: request.userId!,
+        workspaceId: request.workspaceId,
+        userId: request.userId,
         patches,
         commitMessage,
         autoCommit,
@@ -213,7 +215,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Preview Code Patch',
     category: 'coding',
     description: 'Generate a diff preview without applying changes',
-    requiredRoles: ['developer', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { file, oldContent, newContent } = request.payload || {};
@@ -244,7 +246,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Rollback Code Changes',
     category: 'coding',
     description: 'Rollback a previous patch operation',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { operationId } = request.payload || {};
@@ -278,23 +280,23 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Commit Code Changes',
     category: 'coding',
     description: 'Commit staged or specified files with a message',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { files, message, coAuthors } = request.payload || {};
 
-      if (!files || !message) {
+      if (!files || !message || !request.workspaceId || !request.userId) {
         return {
           success: false,
           actionId: request.actionId,
-          message: 'Missing required fields: files, message',
+          message: 'Missing required fields: files, message, workspaceId, userId',
           executionTimeMs: Date.now() - startTime
         };
       }
 
       const result = await trinityCodeOps.commitChanges({
-        workspaceId: request.workspaceId!,
-        userId: request.userId!,
+        workspaceId: request.workspaceId,
+        userId: request.userId,
         files,
         message,
         author: 'Trinity AI <trinity@coaileague.ai>',
@@ -318,7 +320,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Get Git Diff',
     category: 'coding',
     description: 'Get the current git diff for modified files',
-    requiredRoles: ['developer', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { files } = request.payload || {};
@@ -340,7 +342,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Get Git Status',
     category: 'coding',
     description: 'Get the current git status (modified, staged, untracked files)',
-    requiredRoles: ['developer', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
 
@@ -366,21 +368,21 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Approve Pending Change',
     category: 'coding',
     description: 'Approve a pending code change request',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { approvalId } = request.payload || {};
 
-      if (!approvalId) {
+      if (!approvalId || !request.userId) {
         return {
           success: false,
           actionId: request.actionId,
-          message: 'Missing required field: approvalId',
+          message: 'Missing required field: approvalId, userId',
           executionTimeMs: Date.now() - startTime
         };
       }
 
-      const success = await trinityCodeOps.approveRequest(approvalId, request.userId!);
+      const success = await trinityCodeOps.approveRequest(approvalId, request.userId);
 
       return {
         success,
@@ -396,21 +398,21 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'Reject Pending Change',
     category: 'coding',
     description: 'Reject a pending code change request',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { approvalId, reason } = request.payload || {};
 
-      if (!approvalId) {
+      if (!approvalId || !request.userId) {
         return {
           success: false,
           actionId: request.actionId,
-          message: 'Missing required field: approvalId',
+          message: 'Missing required field: approvalId, userId',
           executionTimeMs: Date.now() - startTime
         };
       }
 
-      const success = await trinityCodeOps.rejectRequest(approvalId, request.userId!, reason);
+      const success = await trinityCodeOps.rejectRequest(approvalId, request.userId, reason);
 
       return {
         success,
@@ -426,7 +428,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'List Pending Approvals',
     category: 'coding',
     description: 'List all pending code change approval requests',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
 
@@ -451,7 +453,7 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     name: 'FAST Mode Parallel Execution',
     category: 'coding',
     description: 'Execute multiple code operations in parallel for maximum speed',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { operations } = request.payload || {};
@@ -477,5 +479,5 @@ export function registerTrinityCodeOpsActions(orchestrator: any): void {
     }
   });
 
-  console.log('[TrinityCodeOps] Registered 14 autonomous coding actions');
+  log.info('[TrinityCodeOps] Registered 14 autonomous coding actions');
 }

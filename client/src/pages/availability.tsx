@@ -1,9 +1,10 @@
-import { PageHeader } from "@/components/page-header";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Plus, Trash2, Clock, Users, AlertTriangle, Check, X, Loader2, Save, RefreshCw } from "lucide-react";
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import React, { useState, useEffect } from "react";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,6 +85,7 @@ export default function AvailabilityPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { workspaceRole, platformRole } = useIdentity();
+  const isMobile = useIsMobile();
   const isManager = workspaceRole === 'org_owner' || 
                    workspaceRole === 'manager' || 
                    platformRole === 'root_admin' || 
@@ -198,7 +200,7 @@ export default function AvailabilityPage() {
   });
 
   const handleAddSlot = () => {
-    setEditingSlots([...editingSlots, { ...newSlot }]);
+    setEditingSlots(prev => [...prev, { ...newSlot }]);
     setHasChanges(true);
     setAddSlotDialogOpen(false);
     setNewSlot({
@@ -256,9 +258,11 @@ export default function AvailabilityPage() {
     }
   };
 
-  if (availabilityData && editingSlots.length === 0 && !hasChanges) {
-    initializeEditingSlots();
-  }
+  useEffect(() => {
+    if (availabilityData && editingSlots.length === 0 && !hasChanges) {
+      initializeEditingSlots();
+    }
+  }, [availabilityData]);
 
   const getSlotsByDay = (slots: AvailabilitySlot[], day: number) => {
     return slots.filter((s) => s.dayOfWeek === day);
@@ -273,163 +277,170 @@ export default function AvailabilityPage() {
     }
   };
 
-  return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
-      <PageHeader
-        title="Availability Management"
-        description="Set your work schedule and manage time-off requests"
-        align="center"
-      >
-        <div className="flex gap-2">
-          {activeTab === "my-availability" && hasChanges && (
-            <>
+  const headerAction = (
+    <div className="flex gap-2 flex-wrap">
+      {activeTab === "my-availability" && hasChanges && (
+        <>
+          <Button
+            variant="outline"
+            onClick={handleResetChanges}
+            data-testid="button-reset-availability"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {!isMobile && "Reset"}
+          </Button>
+          <Button
+            onClick={handleSaveAvailability}
+            disabled={saveAvailabilityMutation.isPending}
+            data-testid="button-save-availability"
+          >
+            {saveAvailabilityMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {!isMobile && "Save Changes"}
+          </Button>
+        </>
+      )}
+      {activeTab === "exceptions" && (
+        <UniversalModal open={exceptionDialogOpen} onOpenChange={setExceptionDialogOpen}>
+          <UniversalModalTrigger asChild>
+            <Button data-testid="button-add-exception">
+              <Plus className="h-4 w-4 mr-2" />
+              {!isMobile && "Request Time Off"}
+            </Button>
+          </UniversalModalTrigger>
+          <UniversalModalContent size="md" data-testid="dialog-add-exception">
+            <UniversalModalHeader>
+              <UniversalModalTitle>Request Time Off</UniversalModalTitle>
+              <UniversalModalDescription>
+                Submit a time off request for vacation, sick leave, or personal days
+              </UniversalModalDescription>
+            </UniversalModalHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="exception-type">Type</Label>
+                <Select
+                  value={newException.requestType}
+                  onValueChange={(value) =>
+                    setNewException({ ...newException, requestType: value as any })
+                  }
+                >
+                  <SelectTrigger data-testid="select-exception-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXCEPTION_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="exception-start">Start Date</Label>
+                  <Input
+                    id="exception-start"
+                    type="date"
+                    value={newException.startDate}
+                    onChange={(e) =>
+                      setNewException({ ...newException, startDate: e.target.value })
+                    }
+                    data-testid="input-exception-start"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="exception-end">End Date</Label>
+                  <Input
+                    id="exception-end"
+                    type="date"
+                    value={newException.endDate}
+                    onChange={(e) =>
+                      setNewException({ ...newException, endDate: e.target.value })
+                    }
+                    data-testid="input-exception-end"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="exception-reason">Reason</Label>
+                <Textarea
+                  id="exception-reason"
+                  placeholder="Brief reason for time off..."
+                  value={newException.reason}
+                  onChange={(e) =>
+                    setNewException({ ...newException, reason: e.target.value })
+                  }
+                  data-testid="input-exception-reason"
+                />
+              </div>
+              <div>
+                <Label htmlFor="exception-notes">Additional Notes</Label>
+                <Textarea
+                  id="exception-notes"
+                  placeholder="Any additional information..."
+                  value={newException.notes}
+                  onChange={(e) =>
+                    setNewException({ ...newException, notes: e.target.value })
+                  }
+                  data-testid="input-exception-notes"
+                />
+              </div>
+            </div>
+            <UniversalModalFooter>
               <Button
                 variant="outline"
-                onClick={handleResetChanges}
-                data-testid="button-reset-availability"
+                onClick={() => setExceptionDialogOpen(false)}
+                data-testid="button-cancel-exception"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Reset
+                Cancel
               </Button>
               <Button
-                onClick={handleSaveAvailability}
-                disabled={saveAvailabilityMutation.isPending}
-                data-testid="button-save-availability"
+                onClick={() => createExceptionMutation.mutate(newException)}
+                disabled={
+                  createExceptionMutation.isPending ||
+                  !newException.startDate ||
+                  !newException.endDate
+                }
+                data-testid="button-submit-exception"
               >
-                {saveAvailabilityMutation.isPending ? (
+                {createExceptionMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Save Changes
+                ) : null}
+                Submit Request
               </Button>
-            </>
-          )}
-          {activeTab === "exceptions" && (
-            <Dialog open={exceptionDialogOpen} onOpenChange={setExceptionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-exception">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Request Time Off
-                </Button>
-              </DialogTrigger>
-              <DialogContent size="md" data-testid="dialog-add-exception">
-                <DialogHeader>
-                  <DialogTitle>Request Time Off</DialogTitle>
-                  <DialogDescription>
-                    Submit a time off request for vacation, sick leave, or personal days
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="exception-type">Type</Label>
-                    <Select
-                      value={newException.requestType}
-                      onValueChange={(value) =>
-                        setNewException({ ...newException, requestType: value as any })
-                      }
-                    >
-                      <SelectTrigger data-testid="select-exception-type">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EXCEPTION_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="exception-start">Start Date</Label>
-                      <Input
-                        id="exception-start"
-                        type="date"
-                        value={newException.startDate}
-                        onChange={(e) =>
-                          setNewException({ ...newException, startDate: e.target.value })
-                        }
-                        data-testid="input-exception-start"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="exception-end">End Date</Label>
-                      <Input
-                        id="exception-end"
-                        type="date"
-                        value={newException.endDate}
-                        onChange={(e) =>
-                          setNewException({ ...newException, endDate: e.target.value })
-                        }
-                        data-testid="input-exception-end"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="exception-reason">Reason</Label>
-                    <Textarea
-                      id="exception-reason"
-                      placeholder="Brief reason for time off..."
-                      value={newException.reason}
-                      onChange={(e) =>
-                        setNewException({ ...newException, reason: e.target.value })
-                      }
-                      data-testid="input-exception-reason"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="exception-notes">Additional Notes</Label>
-                    <Textarea
-                      id="exception-notes"
-                      placeholder="Any additional information..."
-                      value={newException.notes}
-                      onChange={(e) =>
-                        setNewException({ ...newException, notes: e.target.value })
-                      }
-                      data-testid="input-exception-notes"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setExceptionDialogOpen(false)}
-                    data-testid="button-cancel-exception"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => createExceptionMutation.mutate(newException)}
-                    disabled={
-                      createExceptionMutation.isPending ||
-                      !newException.startDate ||
-                      !newException.endDate
-                    }
-                    data-testid="button-submit-exception"
-                  >
-                    {createExceptionMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : null}
-                    Submit Request
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-      </PageHeader>
+            </UniversalModalFooter>
+          </UniversalModalContent>
+        </UniversalModal>
+      )}
+    </div>
+  );
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'availability',
+    title: 'Availability Management',
+    subtitle: 'Set your work schedule and manage time-off requests',
+    category: 'operations',
+    headerActions: headerAction,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-        className="mt-6"
+        className="mt-2"
       >
-        <TabsList className="grid w-full max-w-md grid-cols-3 mx-auto" data-testid="tabs-availability">
+        <TabsList className={cn(
+          "grid w-full mx-auto",
+          isManager ? "max-w-md grid-cols-3" : "max-w-xs grid-cols-2"
+        )} data-testid="tabs-availability">
           <TabsTrigger value="my-availability" data-testid="tab-my-availability">
             <Clock className="h-4 w-4 mr-2" />
-            My Availability
+            {!isMobile && "My"} Availability
           </TabsTrigger>
           <TabsTrigger value="exceptions" data-testid="tab-exceptions">
             <Calendar className="h-4 w-4 mr-2" />
@@ -438,7 +449,7 @@ export default function AvailabilityPage() {
           {isManager && (
             <TabsTrigger value="team" data-testid="tab-team">
               <Users className="h-4 w-4 mr-2" />
-              Team View
+              Team{!isMobile && " View"}
             </TabsTrigger>
           )}
         </TabsList>
@@ -453,20 +464,20 @@ export default function AvailabilityPage() {
                     Set your recurring weekly schedule. These times will be used for shift scheduling.
                   </CardDescription>
                 </div>
-                <Dialog open={addSlotDialogOpen} onOpenChange={setAddSlotDialogOpen}>
-                  <DialogTrigger asChild>
+                <UniversalModal open={addSlotDialogOpen} onOpenChange={setAddSlotDialogOpen}>
+                  <UniversalModalTrigger asChild>
                     <Button data-testid="button-add-slot">
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Time Slot
+                      {!isMobile && "Add Time Slot"}
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent size="md" data-testid="dialog-add-slot">
-                    <DialogHeader>
-                      <DialogTitle>Add Availability Slot</DialogTitle>
-                      <DialogDescription>
+                  </UniversalModalTrigger>
+                  <UniversalModalContent size="md" data-testid="dialog-add-slot">
+                    <UniversalModalHeader>
+                      <UniversalModalTitle>Add Availability Slot</UniversalModalTitle>
+                      <UniversalModalDescription>
                         Add a time slot when you're available to work
-                      </DialogDescription>
-                    </DialogHeader>
+                      </UniversalModalDescription>
+                    </UniversalModalHeader>
                     <div className="space-y-4">
                       <div>
                         <Label>Day of Week</Label>
@@ -488,7 +499,7 @@ export default function AvailabilityPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label>Start Time</Label>
                           <Select
@@ -556,7 +567,7 @@ export default function AvailabilityPage() {
                         <Label>Recurring weekly</Label>
                       </div>
                     </div>
-                    <DialogFooter>
+                    <UniversalModalFooter>
                       <Button
                         variant="outline"
                         onClick={() => setAddSlotDialogOpen(false)}
@@ -567,9 +578,9 @@ export default function AvailabilityPage() {
                       <Button onClick={handleAddSlot} data-testid="button-confirm-slot">
                         Add Slot
                       </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                    </UniversalModalFooter>
+                  </UniversalModalContent>
+                </UniversalModal>
               </div>
             </CardHeader>
             <CardContent>
@@ -578,14 +589,19 @@ export default function AvailabilityPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+                <div className={cn(
+                  "grid gap-4",
+                  isMobile ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-7"
+                )}>
                   {DAYS_OF_WEEK.map((day) => (
                     <div
                       key={day.value}
-                      className="border rounded-lg p-4 min-h-[200px]"
+                      className="border rounded-lg p-3 md:p-4 min-h-[150px] md:min-h-[200px]"
                       data-testid={`day-column-${day.value}`}
                     >
-                      <div className="font-medium text-sm mb-3 text-center">{day.label}</div>
+                      <div className="font-medium text-xs md:text-sm mb-2 md:mb-3 text-center">
+                        {isMobile ? day.short : day.label}
+                      </div>
                       <div className="space-y-2">
                         {getSlotsByDay(editingSlots, day.value).map((slot, index) => {
                           const slotIndex = editingSlots.findIndex(
@@ -603,10 +619,10 @@ export default function AvailabilityPage() {
                               )}
                               data-testid={`slot-${day.value}-${index}`}
                             >
-                              <div className="font-medium">
+                              <div className="font-medium text-[10px] md:text-xs">
                                 {slot.startTime} - {slot.endTime}
                               </div>
-                              <div className="text-muted-foreground capitalize">{slot.status}</div>
+                              <div className="text-muted-foreground capitalize text-[10px] md:text-xs">{slot.status}</div>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -620,8 +636,8 @@ export default function AvailabilityPage() {
                           );
                         })}
                         {getSlotsByDay(editingSlots, day.value).length === 0 && (
-                          <div className="text-xs text-muted-foreground text-center py-4">
-                            No availability set
+                          <div className="text-[10px] md:text-xs text-muted-foreground text-center py-4">
+                            No availability
                           </div>
                         )}
                       </div>
@@ -630,22 +646,22 @@ export default function AvailabilityPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-4 mt-6 justify-center">
+              <div className="flex flex-wrap gap-3 md:gap-4 mt-4 md:mt-6 justify-center">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="text-sm text-muted-foreground">Available</span>
+                  <span className="text-xs md:text-sm text-muted-foreground">Available</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-cyan-400" />
-                  <span className="text-sm text-muted-foreground">Preferred</span>
+                  <span className="text-xs md:text-sm text-muted-foreground">Preferred</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-sm text-muted-foreground">Limited</span>
+                  <span className="text-xs md:text-sm text-muted-foreground">Limited</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span className="text-sm text-muted-foreground">Unavailable</span>
+                  <span className="text-xs md:text-sm text-muted-foreground">Unavailable</span>
                 </div>
               </div>
             </CardContent>
@@ -686,7 +702,7 @@ export default function AvailabilityPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {understaffingAlerts.map((alert) => (
                       <div
                         key={alert.dayOfWeek}
@@ -700,24 +716,9 @@ export default function AvailabilityPage() {
                           {DAYS_OF_WEEK.find((d) => d.value === alert.dayOfWeek)?.label}
                         </div>
                         <div className="text-sm mt-1">
-                          {alert.availableStaff} of {alert.requiredStaff} required staff available
+                          Need {alert.requiredStaff} staff, have {alert.availableStaff}
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={cn("mt-2", getSeverityColor(alert.severity))}
-                        >
-                          {alert.severity.toUpperCase()}
-                        </Badge>
-                        {alert.suggestions.length > 0 && (
-                          <ul className="mt-2 text-xs space-y-1">
-                            {alert.suggestions.map((suggestion, i) => (
-                              <li key={i} className="flex items-start gap-1">
-                                <span className="shrink-0">•</span>
-                                {suggestion}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                        <Badge className="mt-2 capitalize">{alert.severity}</Badge>
                       </div>
                     ))}
                   </div>
@@ -729,7 +730,7 @@ export default function AvailabilityPage() {
               <CardHeader>
                 <CardTitle>Team Availability Overview</CardTitle>
                 <CardDescription>
-                  View availability for all team members
+                  View all team members' availability at a glance
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -742,13 +743,13 @@ export default function AvailabilityPage() {
                     {teamData.map((member) => (
                       <div
                         key={member.employeeId}
-                        className="border rounded-lg p-4"
+                        className="p-4 border rounded-lg"
                         data-testid={`team-member-${member.employeeId}`}
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center justify-between gap-2 mb-2">
                           <div className="font-medium">{member.employeeName}</div>
                           <Badge variant="outline">
-                            {member.totalAvailableHours.toFixed(1)} hrs/week
+                            {member.totalAvailableHours}h/week
                           </Badge>
                         </div>
                         <div className="grid grid-cols-7 gap-1">
@@ -756,9 +757,7 @@ export default function AvailabilityPage() {
                             const daySlots = member.availability.filter(
                               (a) => a.dayOfWeek === day.value
                             );
-                            const hasAvailability = daySlots.some(
-                              (s) => s.status === "available" || s.status === "preferred"
-                            );
+                            const hasAvailability = daySlots.length > 0;
                             return (
                               <div
                                 key={day.value}
@@ -799,6 +798,6 @@ export default function AvailabilityPage() {
           </TabsContent>
         )}
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }

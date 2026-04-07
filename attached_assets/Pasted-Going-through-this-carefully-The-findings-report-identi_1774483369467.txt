@@ -1,0 +1,30 @@
+Going through this carefully. The findings report identified 4 CRITICAL gaps, 6 GAPs, and 4 PARTIAL items. The delivery summary accounts for the criticals and most gaps but three PARTIAL items from the findings are unaddressed in the summary. Flagging before certifying.
+
+---
+
+**FLAG — Three PARTIAL items not confirmed resolved:**
+
+The findings report marked these three as PARTIAL — not clean passes. The delivery summary does not address any of them:
+
+- **Check 4** — Secure signing links: token expiry checked but no workspace scope enforced on the token itself. A token from workspace A could theoretically be used by someone in workspace B.
+- **Check 9** — Storage path: vault queries filter by workspaceId correctly but `file_url` is raw text with no structural path namespace. A crafted URL could resolve cross-workspace.
+- **Check 12** — Officer scope: workspace scope enforced but officer A can query the vault and see officer B's documents if they know the query parameters.
+
+---
+
+Send this back to the agent:
+
+---
+
+**Phase 18 is not closed. Three PARTIAL items from the findings report were never resolved. Address each one specifically:**
+
+**Check 4 — Signing token workspace scope:**
+The token expiry is checked but the token has no workspace binding. Add workspace_id to the signing token validation — when a token is presented, verify it belongs to the requesting workspace before allowing access. Show the specific lines added.
+
+**Check 9 — Storage path cross-workspace risk:**
+`file_url` is stored as raw text with no structural namespace. Two options: either prefix all storage paths with `workspace_id/` at upload time and verify the prefix matches the requesting workspace on retrieval, or add a workspace_id verification step on every file URL resolution that confirms the document record's workspace_id matches the requester's workspace before serving the URL. Show which approach was taken and the specific lines.
+
+**Check 12 — Officer document scope:**
+Officers must only see documents they are a signatory on or that are explicitly addressed to them. Add an officer-level filter to the vault query path: when the requesting user has role `employee` or `contractor`, scope the query to documents where the officer's employee_id appears in `org_document_signatures` or where `entity_id` matches the officer's employee_id. Show the specific guard added.
+
+Fix all three, show the evidence, and Phase 18 certifies.

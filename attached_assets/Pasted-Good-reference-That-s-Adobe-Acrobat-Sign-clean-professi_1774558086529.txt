@@ -1,0 +1,71 @@
+Good reference. That's Adobe Acrobat Sign — clean, professional, mobile-optimized, with clear field placement and a guided signing flow. Let me assess honestly what Phase 18 confirmed and what needs upgrading.
+
+**What Phase 18 confirmed exists:**
+- E-SIGN compliant signing flow
+- Signature recording with timestamp and IP
+- Countersignature logic
+- SHA-256 integrity hash
+- Document vault storage
+- Status state machine
+- Secure portal links
+
+**What Phase 18 did NOT verify to this quality standard:**
+- The actual visual rendering of documents on mobile — whether they look like what you're showing or like a raw PDF dump
+- Field placement UI — designated signature zones, date fields, initials fields, required field indicators
+- Guided signing flow — "Next field" navigation button like the one in your screenshot
+- Recipient field assignment — who needs to fill what, visually indicated
+- Mobile full-screen document view with proper text sizing and no overflow
+- Yellow/colored highlight indicators for fields requiring attention
+- Multi-recipient field tracking — showing which fields belong to which signer
+- Completion progress — "3 of 5 fields remaining" type indicator
+- The overall polish and professionalism of the signing experience
+
+**The honest answer:** The backend signing infrastructure is solid but the frontend signing experience was never verified to this quality level. This needs a dedicated enhancement.
+
+Here's what I'd add to Phase 18 as a retroactive enhancement that gets addressed in Phase 23 (UI/UX) and Phase 48 (Onboarding) since both touch document presentation:
+
+---
+
+Send this to the Replit Agent as a replit.md addendum while Phase 29 runs:
+
+---
+
+**DOCUMENT SIGNING UX ENHANCEMENT — Add to Phase 18 and Phase 23 notes in replit.md:**
+
+The document signing experience must match enterprise-grade signing platforms in visual quality and mobile usability. Reference standard: Adobe Acrobat Sign / DocuSign quality on mobile.
+
+**Required signing experience features — to be built or verified in Phase 23:**
+
+**Mobile document viewer:**
+Full-screen document rendering on mobile — document fills the viewport correctly, text is readable at default zoom without pinching, pages scroll vertically with smooth momentum scrolling. Document never overflows horizontally. Page indicator visible (Page 1 of 3). Navigation arrows or swipe between pages. Zoom in/out supported without breaking layout.
+
+**Guided field navigation:**
+Prominent "Next" button in the top-right corner (matches the reference UI) that jumps the user to the next required field in sequence. Fields highlighted in a distinct color (amber/gold for required, blue for optional) so the signer immediately knows where to go. "Start Signing" button that begins the guided flow from the first required field. Progress indicator showing fields completed vs remaining.
+
+**Field types rendered correctly:**
+- Signature field: clearly demarcated box with "Click to Sign" or "Tap to Sign" CTA, signer's name shown below the field
+- Date field: auto-populated with today's date, editable, shown in correct format
+- Initials field: smaller version of signature field
+- Text field: clearly bordered input with label above
+- Checkbox field: touch-friendly minimum 44x44px tap target
+- Required field indicator: asterisk or red border until completed
+
+**Recipient field assignment:**
+Each field visually attributed to a specific recipient — color-coded by signer (Signer 1 in blue, Signer 2 in green, etc.). Fields assigned to the current signer are active and interactive. Fields assigned to other recipients shown as read-only with that recipient's name/color. Platform staff or document creator can assign fields to recipients during document preparation — drag-and-drop field placement on desktop, tap-to-place on mobile.
+
+**Document preparation mode:**
+When creating a document for signing the preparer gets a document editor view where they can: place signature fields by tapping/clicking the desired location, assign each field to a specific recipient by name, mark fields as required or optional, add instructional tooltips to complex fields, preview the document as each recipient will see it. This is the equivalent of the yellow highlighted sections in the reference — the preparer defines what needs attention.
+
+**Signing completion:**
+After all fields complete — clear confirmation screen: "Document signed successfully", document title, date and time, a summary of all signatories and their completion status. Option to download a copy immediately. NDS notification fires to all parties confirming execution. Executed document available in portal immediately.
+
+**Typography and layout:**
+Document text renders at minimum 14px on mobile — never smaller. Line height comfortable for reading (1.5). Font clean and professional — not monospaced or distorted. Headers, body text, and field labels visually distinct. No text truncation on any field label.
+
+**This enhancement is tracked in Phase 23 UI/UX audit Check 27 (retroactive addition): Document signing mobile experience verified to match enterprise signing platform quality standard.**
+
+---
+
+Paste that to the agent now. It registers the enhancement in the plan while Phase 29 runs. When we get to Phase 23 retrospective cleanup or if the agent touches document signing before then it knows exactly what quality bar to hit.
+
+The backend is solid Bryan — the signing logic, the audit trail, the SHA-256 hashing, the countersignature — all certified. What this adds is the front-end experience that makes it feel as professional as what your CPA firm just sent you. That's the difference between a platform that works and a platform that impresses.

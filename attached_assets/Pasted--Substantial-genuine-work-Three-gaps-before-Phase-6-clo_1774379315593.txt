@@ -1,0 +1,102 @@
+**Substantial genuine work. Three gaps before Phase 6 closes.**
+
+---
+
+**WHAT IS GENUINELY SOLID**
+
+12 route files found with native financial arithmetic and fixed — `scheduleosRoutes`, `schedulerRoutes`, `schedulesRoutes`, `mileageRoutes`, `reportsRoutes`, `workspaceInlineRoutes`, `stripeInlineRoutes`, `time-entry-routes`, `qbReportsRoutes`. The `qbReportsRoutes` sort fix deserves specific recognition — when `revenue` changed from a number to a string the `.sort((a, b) => b.revenue - a.revenue)` would have silently broken. Caught and fixed correctly. Test C expected value corrected from `196.0313` to `196.0312` with correct mathematical justification — half-even rounds down when the last kept digit is even. 12/12 calculation tests pass. Calculation audit trail on `payroll_entries` confirmed in the database.
+
+---
+
+**THREE GAPS BEFORE PHASE 6 CLOSES**
+
+**Gap 1 — TypeScript never confirmed.**
+Timed out again. This is the third phase in a row where TypeScript was not confirmed. The recurring avoidance pattern ends here. After 12 route files were edited, TypeScript must be verified before Phase 6 closes.
+
+**Gap 2 — ACME sandbox end-to-end payroll verification not done.**
+Step 4 required pulling 5 real ACME employees with varying pay types and comparing platform calculations against independent calculations. This was not reported. Specifically required: hourly at exactly 40 hours, hourly at 42.5 hours with overtime, salaried employee, employee with pre-tax deductions, employee with both pre-tax and post-tax deductions.
+
+**Gap 3 — ACME sandbox end-to-end invoice verification not done.**
+Step 5 required pulling 3 real ACME invoices and verifying totals match independent sums. This was not reported either.
+
+Both Step 4 and Step 5 are not optional — they are the proof that the calculator works correctly against real production data, not just the test script.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Three gaps before Phase 6 closes. All three in the same session right now.
+
+**Gap 1 — TypeScript:**
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | head -30` and paste the exact output. If it times out run it scoped to only the 12 modified files:
+
+```bash
+npx tsc --noEmit --skipLibCheck \
+  server/routes/scheduleosRoutes.ts \
+  server/routes/schedulerRoutes.ts \
+  server/routes/schedulesRoutes.ts \
+  server/routes/mileageRoutes.ts \
+  server/routes/reportsRoutes.ts \
+  server/routes/workspaceInlineRoutes.ts \
+  server/routes/stripeInlineRoutes.ts \
+  server/routes/time-entry-routes.ts \
+  server/routes/qbReportsRoutes.ts \
+  server/routes/payStubRoutes.ts \
+  server/routes/trinityRevenueRoutes.ts \
+  server/routes/dashboardRoutes.ts \
+  2>&1 | grep "error TS" | head -30
+```
+
+Report the exact output. Fix every error found. Report the final count.
+
+**Gap 2 — ACME sandbox payroll end-to-end:**
+Query the ACME sandbox database directly for 5 real employees covering these pay types. For each one run the payroll calculation and compare:
+
+```sql
+-- Get employees with different pay types for testing
+SELECT id, first_name, last_name, pay_type, hourly_rate 
+FROM employees 
+WHERE workspace_id = 'dev-acme-security-ws' 
+AND status = 'active'
+LIMIT 10;
+
+-- Get their time entries for current or most recent period
+SELECT employee_id, SUM(hours_worked) as total_hours
+FROM time_entries
+WHERE workspace_id = 'dev-acme-security-ws'
+GROUP BY employee_id
+LIMIT 10;
+```
+
+For each of the 5 employees independently calculate the expected gross pay using `calculateGrossPay` from the verification script. Compare against what the platform calculates. Report: employee ID, pay type, hours, rate, expected gross, platform gross, match yes/no.
+
+If fewer than 5 employees exist in ACME with real time entries use what exists and document it. Do not fabricate data.
+
+**Gap 3 — ACME sandbox invoice end-to-end:**
+Query 3 real invoices from ACME:
+
+```sql
+SELECT i.id, i.total_amount, COUNT(il.id) as line_count
+FROM invoices i
+JOIN invoice_line_items il ON il.invoice_id = i.id
+WHERE i.workspace_id = 'dev-acme-security-ws'
+GROUP BY i.id, i.total_amount
+HAVING COUNT(il.id) >= 2
+LIMIT 3;
+```
+
+For each invoice independently sum the line items using `calculateInvoiceTotal`. Compare against the stored `total_amount`. Report: invoice ID, line item count, expected total from line item sum, stored total, match yes/no.
+
+Also report the stored `calculation_inputs` JSON from one real `payroll_entries` record to confirm the audit trail is populated:
+
+```sql
+SELECT id, gross_pay, net_pay, calculation_inputs 
+FROM payroll_entries 
+WHERE workspace_id = 'dev-acme-security-ws' 
+AND calculation_inputs IS NOT NULL 
+LIMIT 1;
+```
+
+Report all three gaps with specific data. When all three return clean Phase 6 is certified closed and Phase 7 goes in immediately.

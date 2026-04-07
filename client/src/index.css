@@ -1,4 +1,6 @@
 /* CoAIleague™ Responsive Design System - Auto-resizing for mobile/tablet/desktop */
+@import './styles/css-manager.css';
+@import './styles/tokens.css';
 @import './styles/responsive.css';
 @import './styles/mobile.css';
 
@@ -28,10 +30,117 @@
   }
 }
 
-/* Prevent horizontal scrolling on page (essential for mobile) */
-html, body {
+/* ============================================================================
+   WORKSPACE SHELL - Universal 7-Step Containment System
+   CRITICAL: Never use 100vw (includes scrollbar width on Windows ~15-17px)
+   ============================================================================ */
+
+/* Root containment - catch overflow leaks */
+html {
+  /* Explicit-container scroll model: html never scrolls.
+     Every page type owns its own scroll container (public-page-scroll-root
+     for public pages; <main> for workspace). This eliminates all
+     iOS Safari body-scroll and touch-action inheritance issues. */
+  height: 100dvh;
+  overflow: hidden;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-touch-callout: none;
+}
+
+body {
+  /* Never scrolls — delegate to explicit containers below. */
+  height: 100%;
+  overflow: hidden;
+  /* CRITICAL: touch-action: pan-y on body so that child scroll containers
+     receive pan gestures. Without this, Radix's data-scroll-locked rule
+     (or any ancestor touch-action restriction) would block one-finger swipe. */
+  touch-action: pan-y;
+}
+
+/* Shell layout - primary containment */
+.workspace-shell {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.shell-sidebar {
+  flex-shrink: 0;
+  overflow-y: auto;
   overflow-x: hidden;
-  max-width: 100vw;
+}
+
+.shell-main-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-header {
+  flex-shrink: 0;
+}
+
+.shell-page-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.shell-page-content {
+  width: 100%;
+}
+
+/* Data region containment - tables scroll inside, not page */
+.data-region {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.data-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modal overlay with scroll lock */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-modal-backdrop, 2500);
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.modal-content {
+  max-height: 85vh;
+  max-width: 90vw;
+  overflow-y: auto;
+  background: hsl(var(--background));
+  border-radius: 0.5rem;
+}
+
+/* Flex shrink fix - allows flex children to shrink below content size */
+.flex-shrink-fix {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Table containment helper */
+.table-contained {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 /* ============================================================================
@@ -39,10 +148,11 @@ html, body {
    Ensures React content is always visible after mounting
    ============================================================================ */
 #root {
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
   visibility: visible !important;
   opacity: 1 !important;
-  min-height: 100vh;
-  min-height: 100dvh; /* Dynamic viewport height for mobile */
 }
 
 /* Ensure main app content is visible */
@@ -51,15 +161,79 @@ html, body {
   opacity: 1 !important;
 }
 
-/* Ensure background is visible - prevents black screen on mobile */
+/* Base background — follows theme token */
 html, body, #root {
-  background-color: white;
+  background-color: hsl(var(--background));
 }
 
 /* In dark mode, use dark background */
 .dark html, .dark body, .dark #root,
 html.dark, html.dark body, html.dark #root {
-  background-color: hsl(222.2 84% 4.9%);
+  background-color: var(--color-bg-primary);
+}
+
+/* ============================================================================
+   POLISH SYSTEM - GetSling-Style Premium Visual Refinements
+   ============================================================================ */
+
+/* Smooth transitions for all interactive elements */
+button, a, .interactive, .btn, [role="button"] {
+  transition: all 150ms ease;
+}
+
+/* Card polish - consistent shadow and border */
+.card-polished, .polished-card {
+  background: hsl(var(--card));
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Schedule grid polish utilities */
+.schedule-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.schedule-sticky-employee {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.schedule-grid-cell {
+  min-height: 48px;
+  border-right: 1px solid hsl(var(--border) / 0.5);
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+  transition: background-color 150ms ease;
+}
+
+.schedule-grid-cell:hover {
+  background-color: hsl(var(--accent));
+}
+
+/* Shift bar polish */
+.shift-bar-polished {
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Button standardization */
+.btn-h-36 {
+  height: 36px;
+  min-height: 36px;
+}
+
+/* Border weight reduction - 1px everywhere */
+.border-thin {
+  border-width: 1px;
 }
 
 /* ============================================================================
@@ -128,13 +302,36 @@ html.dark, html.dark body, html.dark #root {
   }
 }
 
-/* Message Arrival Animation - Enterprise-grade slide in with fade */
+/* Message Arrival Animation - WhatsApp-style slide in with fade */
 @keyframes messageSlideIn {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(8px) scale(0.97);
+    transform: translateY(12px) scale(0.95);
   }
-  to {
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* New message pop-in for real-time incoming messages - more dramatic bounce */
+@keyframes messagePopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.02);
+  }
+  75% {
+    transform: translateY(1px) scale(0.995);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
@@ -204,7 +401,62 @@ html.dark, html.dark body, html.dark #root {
 /* Enterprise entrance easing: cubic-bezier(0.16, 1, 0.3, 1) - smooth deceleration */
 /* Standard easing: cubic-bezier(0.4, 0, 0.2, 1) - material design standard */
 .message-arrive {
-  animation: messageSlideIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: messageSlideIn 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* New real-time message - more pronounced bounce animation like WhatsApp */
+.message-new-arrive {
+  animation: messagePopIn 350ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Incoming message highlight flash - subtle background pulse */
+.message-highlight {
+  animation: messageHighlight 1.5s ease-out forwards;
+}
+
+@keyframes messageHighlight {
+  0% {
+    background-color: hsl(var(--primary) / 0.12);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes chatBubblePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+  }
+}
+
+@keyframes chatBubbleRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.chat-bubble-has-unread {
+  animation: chatBubblePulse 2s ease-in-out infinite;
+}
+
+.chat-bubble-has-unread::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid hsl(var(--primary) / 0.5);
+  animation: chatBubbleRing 2s ease-out infinite;
+  pointer-events: none;
 }
 
 .typing-indicator {
@@ -249,7 +501,16 @@ html.dark, html.dark body, html.dark #root {
 
 /* Respect user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
+  .chat-bubble-has-unread {
+    animation: none;
+  }
+  .chat-bubble-has-unread::after {
+    animation: none;
+    display: none;
+  }
   .message-arrive,
+  .message-new-arrive,
+  .message-highlight,
   .typing-dot,
   .read-receipt,
   .overlay-enter,
@@ -1556,7 +1817,7 @@ html.dark, html.dark body, html.dark #root {
   align-items: center;
   gap: 8px;
   box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
-  z-index: 9999;
+  z-index: var(--z-toast);
   animation: savedFade 2.5s ease-in-out forwards;
 }
 
@@ -1623,14 +1884,62 @@ html.dark, html.dark body, html.dark #root {
   }
 }
 
-/* CRITICAL: Block all loading overlays on public routes - absolute priority */
-body[data-public-route="true"] [data-testid*="loader"],
-body[data-public-route="true"] [data-testid*="loading"],
+/* Block auth-only full-screen overlays on public routes (NOT the Suspense spinner).
+   Targets only the workspace full-screen loading overlay (.fixed.inset-0.bg-background)
+   so that React's Suspense fallback (#react-suspense-spinner) stays visible while
+   lazy chunks load. Broad data-testid*="loader" selectors were removed because they
+   accidentally hidden the Suspense fallback, causing the blank-screen bug. */
 body[data-public-route="true"] .fixed.inset-0.bg-background {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
+}
+
+/* Public page layout system — explicit scroll container model.
+   html/body/root are overflow:hidden. This div IS the scroll container.
+   height: 100% = fills #root = 100dvh. Content taller than that scrolls here.
+   touch-action: pan-y + -webkit-overflow-scrolling: touch = iOS momentum scroll. */
+
+.public-page-scroll-root {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shadcn SidebarProvider injects min-h-svh on its wrapper div.
+   Override to height: 100% so the workspace layout chain is unbroken:
+   html (100dvh) → body (100%) → #root (100%) → sidebar-wrapper (100%) → workspace-div (h-screen) */
+div[data-slot="sidebar-wrapper"] {
+  height: 100%;
+  min-height: unset !important;
+}
+
+/* CRITICAL: Force all fixed overlay containers to not block touch on public pages.
+   Floating widgets (setup guide, announcements, chat bubbles, seasonal effects)
+   sit outside the page flow and can intercept mobile touch/scroll events even
+   when their visible content is small or invisible. */
+body[data-public-route="true"] .fixed {
+  pointer-events: none !important;
+}
+
+/* Re-enable pointer events ONLY on actual interactive elements inside fixed containers.
+   Do NOT broadly re-enable on container divs - they could still block touch areas. */
+body[data-public-route="true"] .fixed button,
+body[data-public-route="true"] .fixed a,
+body[data-public-route="true"] .fixed input,
+body[data-public-route="true"] .fixed textarea,
+body[data-public-route="true"] .fixed select,
+body[data-public-route="true"] .fixed [role="dialog"],
+body[data-public-route="true"] .fixed [role="alert"],
+body[data-public-route="true"] .fixed [data-testid*="banner"] {
+  pointer-events: auto !important;
 }
 
 /* AUTOFORCE™ v2.0 - MODERN SUCCESS-ORIENTED DESIGN (Vibrant Gradients + Premium Dark) */
@@ -1677,8 +1986,8 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
   --font-size-mobile-2xl: 1.5rem;    /* 24px - Large headings */
 
   /* Mobile Navigation Heights */
-  --nav-header-height: 56px;      /* Top header on mobile */
-  --nav-bottom-height: 64px;      /* Bottom tab bar */
+  --nav-header-height: 48px;      /* Top header on mobile */
+  --nav-bottom-height: 56px;      /* Bottom tab bar */
   --nav-safe-area-bottom: env(safe-area-inset-bottom, 0px); /* iOS notch */
 
   /* Mobile Card/Panel Spacing */
@@ -1686,15 +1995,52 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
   --card-gap-mobile: 0.75rem;     /* 12px between elements */
   --panel-padding-mobile: 1rem;   /* 16px page padding */
 
-  /* Z-Index Scale for Layering */
+  /* Mobile bottom nav height — used by MobilePageWrapper scroll container */
+  --bottom-nav-height: 64px;
+
+  /* Z-Index Scale for Layering (Unified — matches component z-values) */
+  /* ═══════════════════════════════════════════════════════
+     Z-INDEX TIER SYSTEM — canonical values.
+     Source of truth: client/src/lib/z-tiers.ts (TypeScript).
+     When adding a tier, update BOTH this file AND z-tiers.ts.
+     NEVER hardcode a raw number in a component — use a CSS var
+     or import Z from '@/lib/z-tiers'.
+     ═══════════════════════════════════════════════════════ */
   --z-index-base: 0;
-  --z-index-dropdown: 1000;
   --z-index-sticky: 1020;
+  --z-index-page-title: 1015;
   --z-index-fixed-header: 1030;
+  --z-index-setup-guide: 1031;        /* Floating setup/help widgets (bottom-right) */
   --z-index-bottom-nav: 1040;
-  --z-index-modal-backdrop: 1050;
-  --z-index-modal: 1060;
-  --z-index-toast: 1070;
+  --z-index-overlay-panel: 1500;      /* Slide-in panels (schedule insights, AI panels) */
+  --z-index-context-menu: 1600;       /* Chat context-menu bottom sheets */
+  --z-index-dropdown: 2000;
+  --z-index-sheet-backdrop: 2000;
+  --z-index-sheet: 2001;
+  --z-index-modal-backdrop: 2500;
+  --z-index-modal: 2501;
+  --z-index-tooltip: 3000;
+  --z-index-chatdock: 4000;           /* ChatDock floating panel (non-fullscreen) */
+  --z-index-toast: 5000;
+  --z-index-alert: 5000;
+  --z-index-lightbox: 6000;           /* Full-screen image lightboxes */
+  --z-index-system-modal: 6500;       /* System-level blocking modals (maintenance, payment) */
+  --z-index-splash: 9000;             /* Splash / loading overlays */
+  --z-index-snowfall: 9998;           /* Seasonal particle effects (decorative) */
+  --z-index-trinity-fab: 9998;        /* Trinity FAB button */
+  --z-index-trinity-overlay: 9999;    /* Trinity AI loading overlay (full-screen) */
+  --z-index-connection: 9999;         /* Connection status banner */
+  --z-index-payment-wall: 99999;      /* Payment enforcement absolute top layer */
+
+  /* Shorthand aliases — used by Radix data-attribute CSS overrides, saved indicator */
+  --z-tooltip: var(--z-index-tooltip);
+  --z-dropdown: var(--z-index-dropdown);
+  --z-modal-bg: var(--z-index-modal-backdrop);
+  --z-modal: var(--z-index-modal);
+  --z-toast: var(--z-index-toast);
+  --z-splash: var(--z-index-splash);
+  --z-transition: var(--z-index-trinity-overlay);
+  --z-system-modal: var(--z-index-system-modal);
 
   /* Modern Light Mode - Fortune 500 Professional */
   --background: 210 20% 98%;           /* Light gray - Professional canvas */
@@ -2341,17 +2687,33 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
     border-top: 1px solid hsl(var(--border));
   }
 
-  /* Mobile Header */
+  /* Mobile Header - non-sticky to avoid overlapping the global CoAIleague header */
   .mobile-header {
-    position: sticky;
-    top: 0;
+    position: relative;
     left: 0;
     right: 0;
-    height: var(--nav-header-height);
+    min-height: var(--nav-header-height);
     padding-top: env(safe-area-inset-top, 0);
-    z-index: var(--z-index-fixed-header);
     background: hsl(var(--background));
     border-bottom: 1px solid hsl(var(--border));
+  }
+
+  /* Universal Sticky Header Z-Index Fix
+   * Ensures sticky headers/titles stay above scrolling cards with hover-elevate
+   * Cards with hover-elevate get position:relative + z-index:0, which creates stacking context
+   * This rule ensures sticky elements always render above those card contexts
+   */
+  .sticky[class*="top-0"],
+  [class*="sticky"][class*="top-0"] {
+    isolation: isolate;
+    z-index: var(--z-index-page-title) !important;
+  }
+  
+  /* Higher z-index for explicit header elements */
+  header.sticky,
+  nav.sticky,
+  .sticky-header {
+    z-index: var(--z-index-sticky) !important;
   }
 
   /* Mobile Pull-to-Refresh Indicator */
@@ -2740,12 +3102,15 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
 
 /* Locked Feature Styling */
 .locked-feature {
-  background: rgba(99, 102, 241, 0.08);
-  border: 2px dashed rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.85), rgba(99, 102, 241, 0.80));
+  border: 2px dashed rgba(99, 102, 241, 0.5);
   border-radius: 12px;
-  opacity: 0.7;
   position: relative;
   cursor: not-allowed;
+}
+
+.dark .locked-feature {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.75), rgba(99, 102, 241, 0.65));
 }
 
 .lock-badge {
@@ -3768,6 +4133,28 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
   flex-shrink: 1;
 }
 
+/* ============================================================================
+   EMAIL INTELLIGENCE - Fortune 500 Visual Effects
+   Priority glow animations for high-priority emails
+   ============================================================================ */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.1);
+  }
+  50% {
+    box-shadow: inset 0 0 35px rgba(245, 158, 11, 0.15);
+  }
+}
+
+@keyframes neural-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 
 /* ============================================================================
    PRINT LAYOUTS - Enterprise Feature #4
@@ -3951,47 +4338,56 @@ html, body {
 }
 
 /* ============================================================================
-   MENU OVERLAP FIX - Prevent menus from blocking content
-   Proper z-index hierarchy without breaking Radix positioning
+   UNIFIED Z-INDEX SCALE — CSS variables in :root are the source of truth.
+   Component files (sheet.tsx, dialog.tsx, etc.) use matching hardcoded values.
+   These data-attribute overrides exist only as fallback reinforcement.
+   
+   Scale:
+     Page title (sticky) ....... 1015  (--z-index-page-title)
+     Sticky headers ............ 1020  (--z-index-sticky)
+     Fixed header .............. 1030  (--z-index-fixed-header)
+     Bottom nav ................ 1040  (--z-index-bottom-nav)
+     Slide-in panels ........... 1500  (--z-index-overlay-panel)
+     Chat context menus ........ 1600  (--z-index-context-menu)
+     Dropdown/Popover .......... 2000  (--z-index-dropdown)
+     Sheet backdrop ............ 2000  (--z-index-sheet-backdrop)
+     Sheet content ............. 2001  (--z-index-sheet)
+     Dialog backdrop ........... 2500  (--z-index-modal-backdrop)
+     Dialog/Drawer content ..... 2501  (--z-index-modal)
+     Tooltip/Context menu ...... 3000  (--z-index-tooltip)
+     Toast/Alerts .............. 5000  (--z-index-toast / --z-index-alert)
+     Image lightboxes .......... 6000  (--z-index-lightbox)
+     System blocking modals .... 6500  (--z-index-system-modal)
+     Splash/Loading overlays ... 9000  (--z-index-splash)
+     Payment enforcement wall .. 99999 (--z-index-payment-wall)
    ============================================================================ */
 
-/* Context Menu Content - Above dropdowns and sheets */
 [data-radix-context-menu-content] {
-  z-index: 1500;
+  z-index: var(--z-tooltip);
 }
 
-/* Dropdown Menu Content - Standard overlay layer */
 [data-radix-dropdown-menu-content] {
-  z-index: 1200;
+  z-index: var(--z-dropdown);
 }
 
-/* Popover Content */
 [data-radix-popover-content] {
-  z-index: 1300;
+  z-index: var(--z-dropdown);
 }
 
-/* Sheet Content - Below context menus but above regular content */
-[data-radix-dialog-content][data-state] {
-  z-index: 1100;
-}
-
-/* Dialog/Modal - Proper stacking (overlay below content) */
 [data-radix-dialog-overlay] {
-  z-index: 1000;
+  z-index: var(--z-modal-bg);
 }
 
-[data-radix-dialog-content]:not([data-state]) {
-  z-index: 1050; /* Above overlay */
+[data-radix-dialog-content] {
+  z-index: var(--z-modal);
 }
 
-/* Tooltips - High priority */
 [data-radix-tooltip-content] {
-  z-index: 2000;
+  z-index: var(--z-tooltip);
 }
 
-/* Toast - Always on top */
 [data-radix-toast-viewport] {
-  z-index: 3000;
+  z-index: var(--z-toast);
 }
 
 /* ============================================================================
@@ -4051,4 +4447,2084 @@ html, body {
 /* Enterprise border - thin, subtle */
 .border-enterprise {
   border-width: 1px;
+}
+
+/* ============================================================================
+   SHIFT CARD VISUAL SYSTEM - CoAIleague Scheduling Module
+   Status borders and position color strips for shift management
+   ============================================================================ */
+
+/* Active shift pulse animation - purple glow effect */
+@keyframes shift-pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(139, 92, 246, 0);
+  }
+}
+
+.shift-card-active {
+  animation: shift-pulse-border 2s ease-in-out infinite;
+}
+
+/* Shift status border classes - for inline style override if needed */
+.shift-draft {
+  border: 2px dashed #F59E0B !important;
+  background-color: rgba(245, 158, 11, 0.05);
+}
+
+.shift-assigned {
+  border: 2px dashed #3B82F6 !important;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.shift-published {
+  border: 2px solid #10B981 !important;
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.shift-unfilled {
+  border: 2px solid #EF4444 !important;
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.shift-active {
+  border: 2px solid #8B5CF6 !important;
+  background-color: rgba(139, 92, 246, 0.05);
+  animation: shift-pulse-border 2s ease-in-out infinite;
+}
+
+.shift-completed {
+  border: 2px solid #6B7280 !important;
+  background-color: rgba(107, 114, 128, 0.05);
+}
+
+/* Trinity scheduling feedback - pulse once for assigned shifts */
+@keyframes pulse-once {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-pulse-once {
+  animation: pulse-once 1.5s ease-out forwards;
+}
+
+/* Trinity scheduling - processing indicator */
+.shift-processing {
+  position: relative;
+}
+
+.shift-processing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* Position strip colors - left edge indicator */
+.position-armed {
+  background-color: #DC2626;
+}
+
+.position-unarmed {
+  background-color: #475569;
+}
+
+.position-supervisor {
+  background-color: #D97706;
+}
+
+.position-manager {
+  background-color: #4F46E5;
+}
+
+.position-owner {
+  background-color: #7C3AED;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRINITY AUTOMATION VISUAL FEEDBACK SYSTEM
+   Premium animations for shift scheduling automation
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Processing state - shift being analyzed by Trinity */
+@keyframes trinityProcessing {
+  0%, 100% { 
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.2), 0 0 20px rgba(139, 92, 246, 0.3);
+    transform: scale(1.02);
+  }
+}
+
+.trinity-shift-processing {
+  animation: trinityProcessing 1s ease-in-out infinite;
+  z-index: 15 !important;
+}
+
+/* Successfully assigned - dramatic entrance with glow */
+@keyframes trinityAssigned {
+  0% { 
+    opacity: 0; 
+    transform: scale(0.8) translateY(-10px);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+  30% { 
+    opacity: 1;
+    transform: scale(1.08);
+    box-shadow: 0 0 25px rgba(34, 197, 94, 0.6), 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+  60% {
+    transform: scale(0.98);
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+  }
+  100% { 
+    transform: scale(1) translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.trinity-shift-assigned {
+  animation: trinityAssigned 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  z-index: 20 !important;
+}
+
+/* Grid pulse during bulk operations */
+@keyframes gridPulse {
+  0%, 100% { 
+    background-color: rgba(139, 92, 246, 0.02);
+  }
+  50% { 
+    background-color: rgba(139, 92, 246, 0.06);
+  }
+}
+
+.trinity-grid-processing {
+  animation: gridPulse 1.5s ease-in-out infinite;
+}
+
+/* Shimmer sweep effect across grid */
+.trinity-processing-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.trinity-processing-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.08) 40%,
+    rgba(139, 92, 246, 0.15) 50%,
+    rgba(139, 92, 246, 0.08) 60%,
+    transparent 100%
+  );
+  animation: shimmerSweep 2.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes shimmerSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Legacy class support */
+.animate-shift-appear {
+  animation: trinityAssigned 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-shift-glow {
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCHEDULE GRID ENHANCEMENTS
+   GetSling-style visual polish and interactions
+   ═══════════════════════════════════════════════════════════════ */
+
+
+/* Keyboard focused cell highlight */
+.schedule-cell-focused {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+  background-color: hsl(var(--primary) / 0.15) !important;
+  z-index: 5;
+}
+
+/* Row hover highlight - subtle full-row context */
+.schedule-row-hovered {
+  background-color: rgba(59, 130, 246, 0.04) !important;
+}
+
+.dark .schedule-row-hovered {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+/* Enhanced shift card hover - subtle depth */
+.shift-card-enhanced {
+  transition: all 0.2s ease-out;
+}
+
+.shift-card-enhanced:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode refinements for grid */
+.dark .schedule-grid-cell {
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+.dark .schedule-zebra-odd {
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+.dark .schedule-zebra-even {
+  background-color: rgba(15, 23, 42, 1);
+}
+
+/* Reduced motion fallback */
+@media (prefers-reduced-motion: reduce) {
+  .trinity-shift-processing,
+  .trinity-shift-assigned,
+  .trinity-grid-processing,
+  .trinity-processing-shimmer::before,
+  .animate-shift-appear,
+  .animate-shift-glow {
+    animation: none !important;
+  }
+  
+  .trinity-shift-processing {
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4);
+  }
+  
+  .trinity-shift-assigned {
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4);
+  }
+}
+
+/* ============================================================================
+   PROGRESSIVE DISCLOSURE NAVIGATION - Slim Header + Overlay System
+   ============================================================================ */
+
+:root {
+  --header-height: 48px;
+  --overlay-max-height: 60vh;
+  --overlay-backdrop-opacity: 0.3;
+  --overlay-z-index: 50;
+  --workspace-top-offset: 48px;
+}
+
+/* Slim header base */
+.slim-header {
+  height: var(--header-height);
+  will-change: box-shadow;
+  backface-visibility: hidden;
+}
+
+.slim-header[data-scrolled="true"] {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
+}
+
+/* Navigation trigger zone */
+.nav-trigger-zone {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+/* Navigation overlay — GPU-accelerated (inline styles drive transform+opacity; CSS handles interaction micro-states) */
+
+.nav-overlay {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-origin: top center;
+}
+
+/* Nav item: subtle press-down on click */
+.nav-item {
+  will-change: background-color;
+}
+
+.nav-item:active {
+  transform: scale(0.985);
+  transition: transform 80ms ease;
+}
+
+/* Backdrop */
+.nav-backdrop {
+  top: var(--header-height);
+  will-change: opacity;
+  backface-visibility: hidden;
+}
+
+/* Category grid fade when switching families */
+.secondary-nav > div {
+  animation: navCategoryFade 120ms ease-out;
+}
+
+@keyframes navCategoryFade {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Block main content pointer events while nav is open */
+body[data-nav-overlay-open="true"] main,
+body[data-nav-overlay-open="true"] .workspace-shell > main,
+body[data-nav-overlay-open="true"] [role="main"] {
+  pointer-events: none;
+}
+
+/* Mobile: full drawer from left */
+@media (max-width: 767px) {
+  .nav-overlay {
+    max-height: 80vh;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+  }
+
+  .nav-overlay .secondary-nav,
+  .nav-overlay .nav-item {
+    touch-action: pan-y;
+  }
+}
+
+/* Respect reduced motion — disable category fade */
+@media (prefers-reduced-motion: reduce) {
+  .secondary-nav > div {
+    animation: none !important;
+  }
+}
+
+/* Nav item: ensure no overflow clips the subtle press transform */
+.nav-item {
+  position: relative;
+  overflow: visible;
+}
+
+/* ========================================================================
+   APK-READY MOBILE ENHANCEMENTS
+   ======================================================================== */
+
+/* Universal touch target enforcement for all interactive elements */
+@media (pointer: coarse) {
+  button:not([data-compact]),
+  [role="button"]:not([data-compact]),
+  a[href]:not([data-compact]),
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  [data-radix-collection-item] {
+    min-height: 44px;
+  }
+}
+
+/* Enhanced touch feedback for APK feel */
+@media (pointer: coarse) {
+  button:active:not(:disabled),
+  [role="button"]:active:not(:disabled),
+  a[href]:active {
+    transform: scale(0.97);
+    transition: transform 0.08s ease-out;
+  }
+}
+
+/* Overscroll bounce prevention — keep contained on the body level.
+   user-select: none globally; text areas re-enable it below. */
+body {
+  overscroll-behavior-y: contain;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection only in content areas */
+p, span, h1, h2, h3, h4, h5, h6, li, td, th, label,
+textarea, input, [contenteditable="true"],
+.selectable, [data-selectable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Offline status banner */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-overlay);
+  padding: 6px 16px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  transform: translateY(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.offline-banner.visible {
+  transform: translateY(0);
+}
+
+/* Sync status indicator */
+.sync-indicator {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  z-index: var(--z-sync);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 4px 12px hsl(var(--primary) / 0.3);
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.sync-indicator.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Enhanced skeleton loading with better shimmer */
+@keyframes skeleton-wave {
+  0% {
+    transform: translateX(-100%);
+  }
+  60% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-wave {
+  position: relative;
+  overflow: hidden;
+  background: hsl(var(--muted) / 0.6);
+  border-radius: 0.375rem;
+}
+
+.skeleton-wave::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--muted-foreground) / 0.06) 40%,
+    hsl(var(--muted-foreground) / 0.12) 50%,
+    hsl(var(--muted-foreground) / 0.06) 60%,
+    transparent 100%
+  );
+  animation: skeleton-wave 1.8s ease-in-out infinite;
+}
+
+/* Page transition wrapper */
+.page-enter-active {
+  animation: page-fade-in 0.25s ease-out both;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Login/logout transition overlay */
+.auth-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--background));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.auth-transition-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Pulsing logo animation for auth transitions */
+@keyframes auth-logo-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+.auth-logo-pulse {
+  animation: auth-logo-pulse 1.5s ease-in-out infinite;
+}
+
+/* Loading dots animation */
+@keyframes loading-dots {
+  0%, 20% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.loading-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  margin: 0 3px;
+}
+
+.loading-dot:nth-child(1) { animation: loading-dots 1.2s 0s infinite; }
+.loading-dot:nth-child(2) { animation: loading-dots 1.2s 0.2s infinite; }
+.loading-dot:nth-child(3) { animation: loading-dots 1.2s 0.4s infinite; }
+
+/* SW update banner */
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-wave::after,
+  .auth-logo-pulse,
+  .loading-dot,
+  .page-enter-active {
+    animation: none !important;
+  }
+  
+  .offline-banner,
+  .sync-indicator,
+  .sw-update-toast-container,
+  .auth-transition-overlay {
+    transition: none !important;
+  }
+}
+
+/* SW update toast - mobile-first adjustments */
+@media (max-width: 400px) {
+  .sw-update-toast-container {
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    bottom: 4.5rem !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+}
+
+/* APK standalone mode adjustments */
+@media (display-mode: standalone) {
+  .pwa-install-prompt {
+    display: none !important;
+  }
+  
+  body {
+    overscroll-behavior: none;
+  }
+}
+
+/* Improve focus visibility for accessibility */
+@media (pointer: coarse) {
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+}
+
+/* ============================================================================
+   RADIX OVERLAY TOUCH GUARD — belt-and-suspenders for overlay pointer events
+   These rules ensure that closed overlays never block touch/click interactions.
+   The Tailwind `data-[state=closed]:pointer-events-none` classes in sheet.tsx,
+   dialog.tsx and drawer.tsx are the primary fix; this is the CSS fallback.
+   ============================================================================ */
+
+/* Any Radix primitive overlay in the closed state must not intercept touch */
+[role="dialog"][data-state=closed],
+[data-state=closed] > [role="dialog"] {
+  pointer-events: none !important;
+}
+
+/* Overlay siblings: when a sheet/dialog close animation runs, the scrim
+   (bg-black/30) must not eat touch events before Radix unmounts it */
+.fixed.inset-0[data-state=closed] {
+  pointer-events: none !important;
+}
+
+/* When Radix sets data-scroll-locked="0" all overlays are closed.
+   Only clear padding-right (the scrollbar compensation). Do NOT touch overflow —
+   body is always overflow:hidden in our model. */
+body[data-scroll-locked="0"] {
+  padding-right: 0 !important;
+}
+
+/* Nav overlay: if the attribute isn't "true" (or is absent), main must be interactive */
+body:not([data-nav-overlay-open="true"]) main {
+  pointer-events: auto;
+}
+
+/* ============================================================================
+   UNIVERSAL Z-INDEX LAYER HIERARCHY (Unified Scale)
+   All component z-values and CSS overrides use this single scale.
+
+   Tier map (matches CSS vars and component z-[N] classes):
+     Sticky/headers .......... 1015-1040  (--z-index-page-title → --z-index-bottom-nav)
+     Slide-in panels ......... 1500       (--z-index-overlay-panel)
+     Chat context menus ...... 1600       (--z-index-context-menu)
+     Dropdown/Popover ........ 2000       (--z-index-dropdown)
+     Sheet overlay/content ... 2000/2001  (--z-index-sheet-backdrop/sheet)
+     Dialog/Drawer overlay ... 2500/2501  (--z-index-modal-backdrop/modal)
+     Tooltip/Context menu .... 3000       (--z-index-tooltip)
+     Toast ................... 5000       (--z-index-toast)
+     Alert Dialog ............ 5000       (--z-toast shorthand)
+     Image lightboxes ........ 6000       (--z-index-lightbox)
+     System modals ........... 6500       (--z-index-system-modal)
+     Splash/Loading .......... 9000       (--z-index-splash)
+     Payment enforcement ..... 99999      (--z-index-payment-wall)
+   ============================================================================ */
+
+[data-radix-popper-content-wrapper] {
+  z-index: var(--z-tooltip) !important;
+}
+
+[data-radix-dialog-overlay],
+[data-radix-alert-dialog-overlay] {
+  z-index: var(--z-modal-bg) !important;
+}
+
+[data-radix-dialog-content] {
+  z-index: var(--z-modal) !important;
+}
+
+[data-radix-alert-dialog-content] {
+  z-index: var(--z-toast) !important;
+}
+
+[data-sonner-toaster],
+[data-testid="toaster"],
+.toaster-root {
+  z-index: var(--z-toast) !important;
+}
+
+/* ============================================================================
+   MOBILE UNIVERSAL TOUCH + SCROLL FIX
+   Ensures all overlay/sheet/dialog scroll containers work natively on iOS
+   and Android with proper touch-action, overscroll behaviour, and
+   safe-area inset handling.
+   ============================================================================ */
+
+/* All sheet/dialog content panels must support touch-scrolling */
+[role="dialog"],
+[data-radix-dialog-content],
+[data-radix-sheet-content] {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+/* Shell page container (main workspace scroll area) */
+.shell-page-container {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
+/* Any flex-col container that is the direct scroll owner */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Radix scroll area viewport — used in Comboboxes, Select dropdowns, etc */
+[data-radix-scroll-area-viewport] {
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+}
+
+/* ============================================================================
+   MOBILE TOUCH TARGETS — 44px minimum per Apple HIG and WCAG 2.5.5
+   Applies only on coarse-pointer (touch) devices
+   ============================================================================ */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Exception: icon-only buttons already sized by Shadcn */
+  [data-size="icon"] {
+    min-height: unset;
+    min-width: unset;
+  }
+
+  /* Inline text links — don't force 44px height, just enlarge hit area via padding */
+  p a,
+  span a,
+  label {
+    min-height: unset;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+}
+
+/* ============================================================================
+   MOBILE SAFE-AREA SHELL
+   iOS/Android notch + home-indicator clearance for fixed bottom elements
+   ============================================================================ */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Bottom navigation bars always clear the home indicator */
+[data-testid="mobile-bottom-nav"] {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================================================
+   MOBILE TYPOGRAPHY SCALING
+   Prevents 300ms tap delay and ensures legible text at mobile sizes
+   ============================================================================ */
+@media (max-width: 640px) {
+  /* Prevent iOS font size inflation */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Increase card/panel body text for readability on small screens */
+  .card-body-text {
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.5;
+  }
+
+  /* Form labels readable without zooming */
+  label {
+    font-size: 0.875rem;
+  }
+
+  /* Sheet/dialog titles should be readable on small screens */
+  [data-testid="notification-sheet-content"] h2,
+  [data-testid="notification-sheet-content"] h3 {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+}
+
+/* ============================================================================
+   SHEET / DIALOG UNIVERSAL LAYOUT CORRECTIONS
+   Prevents content from being hidden under fixed headers or cut off
+   ============================================================================ */
+
+/* Bottom sheets: content must scroll within 85vh, not push outside */
+[data-radix-dialog-content][data-side="bottom"],
+[data-radix-sheet-content][data-side="bottom"] {
+  max-height: 85dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Top sheets: fill from header to bottom, with proper scroll */
+[data-radix-dialog-content][data-side="top"],
+[data-radix-sheet-content][data-side="top"] {
+  max-height: calc(100dvh - 3.5rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent double scroll bars: if content wrapper scrolls, panel must clip */
+.sheet-content-scrollable {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
+/* ============================================================================
+   TAP HIGHLIGHT ELIMINATION + FAST-TAP
+   Removes the blue flash on mobile tap and enables instant 0ms response
+   ============================================================================ */
+button,
+[role="button"],
+a,
+input,
+select,
+textarea,
+[role="tab"],
+[role="menuitem"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ============================================================================
+   MOBILE SCROLL LOCK
+   overflow:hidden is sufficient to prevent background scroll.
+   NEVER set touch-action:none on body — that kills one-finger swipe on ALL
+   child scroll containers (pan-y on a child loses to none on an ancestor).
+   ============================================================================ */
+body.modal-open {
+  overflow: hidden !important;
+}
+
+/* Radix sets data-scroll-locked when any dialog/sheet opens.
+   overflow:hidden prevents background scroll without breaking touch-action. */
+body[data-scroll-locked]:not([data-scroll-locked="0"]) {
+  overflow: hidden;
+}
+
+@keyframes msg-sparkle {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Message Bubble Tail Shapes - WhatsApp-style tails via CSS pseudo-elements */
+.msg-bubble-tail-left {
+  border-radius: 0.875rem 0.875rem 0.875rem 0.25rem;
+  position: relative;
+}
+
+.msg-bubble-tail-left::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  border-radius: 0 0 0 3px;
+}
+
+.msg-bubble-tail-right {
+  border-radius: 0.875rem 0.875rem 0.25rem 0.875rem;
+  position: relative;
+}
+
+.msg-bubble-tail-right::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  border-radius: 0 0 3px 0;
+}
+
+/* Subtle shadow for message bubbles */
+.msg-bubble-shadow {
+  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.06);
+}
+
+/* Bot bubble - subtle left accent via box-shadow inset */
+.msg-bubble-bot {
+  box-shadow: inset 2px 0 0 hsl(var(--primary) / 0.3), 0 1px 3px hsl(var(--foreground) / 0.06);
+}
+
+/* Bot avatar - gentle ring glow */
+.msg-bot-avatar {
+  ring-color: hsl(var(--primary) / 0.25);
+}
+
+/* Bot AI Indicator - animated sparkle pulse + glow */
+.msg-ai-indicator {
+  animation: msgAiPulse 2.5s ease-in-out infinite, msgAiSparkle 3s ease-in-out infinite;
+}
+
+@keyframes msgAiPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0);
+  }
+}
+
+@keyframes msgAiSparkle {
+  0%, 100% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.2);
+    transform: scale(1.1);
+  }
+}
+
+/* DockChat Widget Utility Classes */
+.dockchat-fab-bg {
+  background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.85), hsl(var(--primary) / 0.7));
+  box-shadow: 0 6px 24px hsl(var(--primary) / 0.4), 0 2px 8px hsl(var(--primary) / 0.2), 0 0 0 1px hsl(var(--primary) / 0.15) inset;
+}
+.dockchat-glow {
+  background: radial-gradient(circle, hsl(var(--primary) / 0.35) 0%, hsl(var(--primary) / 0.1) 40%, transparent 70%);
+  filter: blur(16px);
+  transform: scale(2);
+  animation: dockchat-breathe 3s ease-in-out infinite;
+}
+.dockchat-ring {
+  background: conic-gradient(from 0deg, hsl(var(--primary) / 0.6), transparent 30%, hsl(var(--primary) / 0.3), transparent 60%, hsl(var(--primary) / 0.6));
+  filter: blur(3px);
+  transform: scale(1.35);
+  animation: dockchat-ring-spin 5s linear infinite;
+}
+.dockchat-ring-outer {
+  border: 1.5px solid hsl(var(--primary) / 0.15);
+  transform: scale(1.6);
+  animation: dockchat-ring-pulse 3s ease-in-out infinite;
+}
+.dockchat-header-bg {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85), hsl(var(--primary) / 0.7));
+}
+.dockchat-success-bg {
+  background: linear-gradient(135deg, #16a34a, #15803d, #166534);
+}
+.dockchat-success-ring {
+  background: linear-gradient(135deg, hsl(142 76% 36% / 0.15), hsl(142 76% 36% / 0.05));
+  border: 2px solid hsl(142 76% 36% / 0.2);
+}
+.dockchat-dot-pattern {
+  background-image: radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px), radial-gradient(circle at 50% 80%, white 0.5px, transparent 0.5px);
+  background-size: 40px 40px, 40px 40px, 25px 25px;
+}
+.dockchat-dot-pattern-sm {
+  background-image: radial-gradient(circle at 20% 50%, white 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+.dockchat-slide-up {
+  animation: dockchat-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dockchat-scale-in {
+  animation: dockchat-scale-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dockchat-msg-in {
+  animation: dockchat-msg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dockchat-ai-pulse {
+  animation: dockchat-ai-pulse 2s ease-in-out infinite;
+}
+.dockchat-ai-pulse-fast {
+  animation: dockchat-ai-pulse 0.8s ease-in-out infinite;
+}
+.dockchat-status-ping {
+  animation: dockchat-status-ping 2s ease-in-out infinite;
+}
+.dockchat-wave-dot {
+  animation: dockchat-wave 1.4s ease-in-out infinite;
+}
+.dockchat-wave-dot-1 {
+  animation-delay: 0s;
+}
+.dockchat-wave-dot-2 {
+  animation-delay: 0.15s;
+}
+.dockchat-wave-dot-3 {
+  animation-delay: 0.3s;
+}
+.dockchat-bubble-user {
+  position: relative;
+}
+.dockchat-bubble-user::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  background: hsl(var(--primary));
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+  border-radius: 0 0 0 2px;
+}
+.dockchat-bubble-bot {
+  position: relative;
+}
+.dockchat-bubble-bot::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background: hsl(var(--muted));
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  border-radius: 0 0 2px 0;
+}
+.dockchat-header-shine {
+  position: relative;
+  overflow: hidden;
+}
+.dockchat-header-shine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: dockchat-shine 6s ease-in-out infinite;
+}
+.dockchat-typing-bar {
+  background: hsl(var(--muted));
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.dockchat-ring-gradient {
+  background: conic-gradient(from 90deg, hsl(var(--primary) / 0.4), transparent 20%, hsl(var(--primary) / 0.2), transparent 40%, hsl(var(--primary) / 0.4), transparent 60%, hsl(var(--primary) / 0.3), transparent 80%, hsl(var(--primary) / 0.4));
+  filter: blur(4px);
+  transform: scale(1.5);
+  animation: dockchat-ring-gradient-spin 8s linear infinite;
+}
+.dockchat-card-selected {
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.2);
+}
+.dockchat-desc-fade-in {
+  animation: dockchat-desc-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dockchat-ai-indicator {
+  animation: dockchat-ai-indicator-pulse 2s ease-in-out infinite;
+}
+.dockchat-ticket-card {
+  position: relative;
+}
+.dockchat-ticket-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.03), transparent, hsl(var(--primary) / 0.03));
+  pointer-events: none;
+}
+
+/* DockChat Widget Animations */
+@keyframes dockchat-ring-gradient-spin {
+  from { transform: scale(1.5) rotate(0deg); }
+  to { transform: scale(1.5) rotate(360deg); }
+}
+@keyframes dockchat-desc-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes dockchat-ai-indicator-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 4px 2px rgba(74, 222, 128, 0.2); }
+}
+@keyframes dockchat-wave {
+  0%, 60%, 100% { transform: translateY(0) scale(0.85); opacity: 0.3; }
+  30% { transform: translateY(-5px) scale(1); opacity: 1; }
+}
+@keyframes dockchat-breathe {
+  0%, 100% { opacity: 0.35; transform: scale(1.6); }
+  50% { opacity: 0.65; transform: scale(2); }
+}
+@keyframes dockchat-ring-spin {
+  from { transform: scale(1.35) rotate(0deg); }
+  to { transform: scale(1.35) rotate(360deg); }
+}
+@keyframes dockchat-ring-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(1.6); }
+  50% { opacity: 0.1; transform: scale(1.8); }
+}
+@keyframes dockchat-scale-in {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes dockchat-slide-up {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes dockchat-msg-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes dockchat-ai-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 hsl(var(--primary) / 0.3); }
+  50% { transform: scale(1.2); opacity: 0.85; box-shadow: 0 0 6px 2px hsl(var(--primary) / 0.2); }
+}
+@keyframes dockchat-status-ping {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes dockchat-shine {
+  0%, 100% { left: -100%; }
+  50% { left: 200%; }
+}
+
+/* ChatDock typing dot animation */
+@keyframes chatdock-typing-dot {
+  0%, 100% { transform: scale(0.7); opacity: 0.4; }
+  50% { transform: scale(1); opacity: 1; }
+}
+.chatdock-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: chatdock-typing-dot 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.chatdock-typing-dot:nth-child(1) { animation-delay: 0ms; }
+.chatdock-typing-dot:nth-child(2) { animation-delay: 150ms; }
+.chatdock-typing-dot:nth-child(3) { animation-delay: 300ms; }
+
+/* ==========================================================================
+   LIVING PAGES — ANIMATION & VISUAL SYSTEM
+   From CoAIleague design spec. Applied globally.
+   ========================================================================== */
+
+/* ── Page-entry animations ─────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInCard {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes trinityAmbientPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.35), 0 4px 20px rgba(13, 148, 136, 0.25); }
+  50%       { box-shadow: 0 0 0 8px rgba(13, 148, 136, 0), 0 4px 20px rgba(13, 148, 136, 0.35); }
+}
+
+@keyframes trinityBadgePop {
+  0%   { transform: scale(0); opacity: 0; }
+  70%  { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes gradientBorderSpin {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Page-section stagger ──────────────────────────────────────────────── */
+/* Apply class="page-section" to each major section of a page.
+   Children animate in sequentially — each one 80ms after the previous. */
+.page-section {
+  animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.page-section:nth-child(1) { animation-delay: 0ms; }
+.page-section:nth-child(2) { animation-delay: 80ms; }
+.page-section:nth-child(3) { animation-delay: 160ms; }
+.page-section:nth-child(4) { animation-delay: 240ms; }
+.page-section:nth-child(5) { animation-delay: 320ms; }
+.page-section:nth-child(6) { animation-delay: 400ms; }
+.page-section:nth-child(n+7) { animation-delay: 480ms; }
+
+/* ── Card entry stagger ────────────────────────────────────────────────── */
+/* Apply to list/grid containers whose immediate children are cards */
+.card-grid > *,
+.card-list > * {
+  animation: slideInCard 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.card-grid > *:nth-child(1), .card-list > *:nth-child(1) { animation-delay: 40ms; }
+.card-grid > *:nth-child(2), .card-list > *:nth-child(2) { animation-delay: 90ms; }
+.card-grid > *:nth-child(3), .card-list > *:nth-child(3) { animation-delay: 140ms; }
+.card-grid > *:nth-child(4), .card-list > *:nth-child(4) { animation-delay: 190ms; }
+.card-grid > *:nth-child(5), .card-list > *:nth-child(5) { animation-delay: 240ms; }
+.card-grid > *:nth-child(n+6), .card-list > *:nth-child(n+6) { animation-delay: 290ms; }
+
+/* ── Gradient border cards ─────────────────────────────────────────────── */
+/* Usage: <div class="gradient-border-card"> wraps the actual card */
+.gradient-border-card {
+  position: relative;
+  border-radius: 12px;
+  background: transparent;
+}
+.gradient-border-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #00D4FF 0%, #7B5EA7 100%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+.gradient-border-card > * { position: relative; z-index: 1; }
+
+/* Accent left-border card variants — apply to any element */
+.card-accent-cyan    { border-left: 3px solid #00D4FF !important; }
+.card-accent-success { border-left: 3px solid #3FB950 !important; }
+.card-accent-warning { border-left: 3px solid #D29922 !important; }
+.card-accent-danger  { border-left: 3px solid #F85149 !important; }
+.card-accent-purple  { border-left: 3px solid #7B5EA7 !important; }
+
+/* Glow card — for Trinity/AI content */
+.card-glow-cyan {
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+/* ── Trinity Ambient FAB ───────────────────────────────────────────────── */
+.trinity-fab {
+  position: fixed;
+  z-index: var(--z-fab);
+  border: none;
+  cursor: pointer;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #0D9488 0%, #0891B2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.2s ease,
+              box-shadow 0.3s ease;
+  animation: trinityAmbientPulse 3s ease-in-out infinite;
+  will-change: transform, opacity;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.trinity-fab:active {
+  transform: scale(0.94);
+}
+.trinity-fab.trinity-fab--hidden {
+  opacity: 0;
+  transform: translateY(12px) scale(0.9);
+  pointer-events: none;
+}
+.trinity-fab.trinity-fab--expanded {
+  animation: none;
+  box-shadow: 0 4px 24px rgba(13, 148, 136, 0.4);
+}
+.trinity-fab-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #F85149;
+  border: 2px solid hsl(var(--background));
+  animation: trinityBadgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Trinity Intercom-style expandable panel ───────────────────────────── */
+.trinity-panel {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.22),
+    0 4px 16px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 212, 255, 0.08);
+  animation: trinityPanelIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes trinityPanelIn {
+  from { opacity: 0; transform: scale(0.88) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+.trinity-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+
+.trinity-panel-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trinity-panel-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.trinity-panel-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  line-height: 1.2;
+}
+
+.trinity-panel-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #0D9488;
+  line-height: 1;
+}
+
+.trinity-panel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3FB950;
+  flex-shrink: 0;
+  animation: trinityAmbientPulse 2s ease-in-out infinite;
+}
+
+.trinity-panel-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.trinity-panel-close:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.trinity-panel-insight {
+  font-size: 12px;
+  line-height: 1.55;
+  color: hsl(var(--muted-foreground));
+  padding: 12px 14px;
+  margin: 0;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+
+/* chips row — horizontal scroll, no scrollbar */
+.trinity-panel-chips {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+.trinity-panel-chips::-webkit-scrollbar { display: none; }
+
+.trinity-panel-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 9999px;
+  border: 1px solid rgba(13, 148, 136, 0.28);
+  background: rgba(13, 148, 136, 0.05);
+  color: #0D9488;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.trinity-panel-chip:hover {
+  background: rgba(13, 148, 136, 0.12);
+  border-color: rgba(13, 148, 136, 0.5);
+}
+
+.trinity-panel-cta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 14px;
+  border: none;
+  background: linear-gradient(135deg, rgba(13,148,136,0.12) 0%, rgba(8,145,178,0.12) 100%);
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  letter-spacing: 0.01em;
+}
+.trinity-panel-cta:hover {
+  background: linear-gradient(135deg, rgba(13,148,136,0.2) 0%, rgba(8,145,178,0.2) 100%);
+}
+
+/* ── Skeleton loaders ──────────────────────────────────────────────────── */
+.skel {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted) / 0.4) 25%,
+    hsl(var(--muted) / 0.7) 50%,
+    hsl(var(--muted) / 0.4) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 6px;
+}
+.skel-text { height: 14px; }
+.skel-text-sm { height: 11px; }
+.skel-text-lg { height: 20px; }
+.skel-circle { border-radius: 50%; }
+.skel-card { height: 80px; border-radius: 12px; }
+.skel-banner { height: 120px; border-radius: 12px; }
+
+/* ── Metric number animation ───────────────────────────────────────────── */
+.metric-number {
+  animation: countUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ── Live pulse indicator ──────────────────────────────────────────────── */
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.live-dot--green  { background: #3FB950; animation: pulseGlow 2s ease-in-out infinite; }
+.live-dot--cyan   { background: #00D4FF; animation: pulseGlow 2s ease-in-out infinite; }
+.live-dot--amber  { background: #D29922; }
+.live-dot--gray   { background: hsl(var(--muted-foreground) / 0.5); }
+
+/* ── Progress bar animated fill ────────────────────────────────────────── */
+@keyframes progressFill {
+  from { width: 0%; }
+}
+.progress-fill-animate {
+  animation: progressFill 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.3s;
+}
+
+/* ── Leaflet map z-index containment ──────────────────────────────────── */
+/* Prevents Leaflet tiles/markers (z-index 200-800) from bleeding above */
+/* the navigation overlay. isolation:isolate creates a new stacking context */
+.leaflet-container {
+  isolation: isolate;
+}
+
+/* ============================================================================
+   CoAIleague DS — Global Navy+Gold Design System Utilities
+   ============================================================================ */
+
+/* Custom thin scrollbar */
+.ds-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.ds-scroll::-webkit-scrollbar-track { background: transparent; }
+.ds-scroll::-webkit-scrollbar-thumb { background: var(--ds-navy-light); border-radius: 4px; }
+
+/* Global scrollbar override */
+* { scrollbar-width: thin; scrollbar-color: var(--ds-navy-light) transparent; }
+
+/* Gold focus ring for DS pages */
+.ds-focus-gold:focus-visible {
+  outline: 2px solid var(--ds-gold);
+  outline-offset: 2px;
+}
+
+/* Skeleton shimmer in navy */
+@keyframes ds-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.ds-skeleton {
+  background: linear-gradient(90deg, var(--ds-navy-mid) 25%, var(--ds-navy-light) 50%, var(--ds-navy-mid) 75%);
+  background-size: 800px 100%;
+  animation: ds-shimmer 1.5s infinite linear;
+  border-radius: 8px;
+}
+
+/* Gold pulse animation for primary CTA buttons */
+@keyframes ds-gold-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,149,42,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(201,149,42,0); }
+}
+.ds-pulse-gold { animation: ds-gold-pulse 2s ease-in-out infinite; }
+
+/* Danger pulse for urgent states */
+@keyframes ds-danger-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+.ds-pulse-danger { animation: ds-danger-pulse 1.5s ease-in-out infinite; }
+
+/* Live dot (small indicator) */
+.ds-live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ds-danger);
+  animation: ds-danger-pulse 1.5s ease-in-out infinite;
+}
+
+/* NavCard hover lift — applied via group in DsNavCard */
+.ds-nav-card { will-change: transform; }
+
+/* ═══════════════════════════════════════════════════════════════
+   COAI ANIMATED STATUS SYSTEM
+   Trinity + HelpAI — Phrase Rotation, Thought Bar, Inline Status
+   Design tokens and keyframes. Components: TrinityThoughtBar, HelpAIStatusMessage
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Color Design Tokens ─────────────────────────────────────────────── */
+:root {
+  --trinity-purple: #7C3AED;
+  --trinity-purple-dim: #7C3AED33;
+  --trinity-purple-glow: #7C3AED66;
+  --trinity-purple-text: #C4B5FD;
+
+  --helpai-gold: #D97706;
+  --helpai-gold-dim: #D9770633;
+  --helpai-gold-glow: #D9770666;
+  --helpai-gold-text: #FCD34D;
+
+  --status-bg-dark: #0F172A;
+  --status-border-subtle: #1E293B;
+  --fallback-amber: #B45309;
+  --fallback-amber-dim: #B4530933;
+}
+
+/* ─── Bouncing Dots ──────────────────────────────────────────────────── */
+@keyframes coai-bounce-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1.0); opacity: 1; }
+}
+
+/* ─── Glow Pulse (status container border/icon) ─────────────────────── */
+@keyframes coai-pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
+}
+
+/* ─── Text Crossfade (phrase rotation) ──────────────────────────────── */
+@keyframes coai-text-fade-cycle {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ─── Shimmer Sweep (active background treatment) ───────────────────── */
+@keyframes coai-shimmer-sweep {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* ─── Critical Pulse (CRITICAL state border) ────────────────────────── */
+@keyframes coai-critical-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); border-color: #EF4444; }
+  50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); border-color: #FCA5A5; }
+}
+
+/* ─── Fallback Amber Blink (FALLBACK state) ─────────────────────────── */
+@keyframes coai-fallback-amber-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ─── Scan Line (Trinity bar live-system feel) ───────────────────────── */
+@keyframes coai-scan-line {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 0.06; }
+  90% { opacity: 0.06; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ─── Icon Spin (processing state icon) ─────────────────────────────── */
+@keyframes coai-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── TrinityThoughtBar layout ─────────────────────────────────────────── */
+.trinity-thought-bar {
+  will-change: border-color;
+}
+
+/* ─── Reduced Motion Overrides ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  [style*="coai-bounce-dot"],
+  [style*="coai-pulse-glow"],
+  [style*="coai-shimmer-sweep"],
+  [style*="coai-scan-line"],
+  [style*="coai-icon-spin"],
+  [style*="coai-critical-pulse"],
+  [style*="coai-fallback-amber-blink"],
+  [style*="coai-text-fade-cycle"] {
+    animation: none !important;
+  }
+}
+
+/* ============================================================================
+   iPhone Safari Compatibility — Native APK-Quality Fixes
+   Applies to: all webkit touch browsers (Safari iOS 15+)
+   ============================================================================ */
+
+/* Prevent white flash before React mounts on iPhone home-screen launch */
+html {
+  background-color: #0f172a;
+}
+
+/* Input type=number: hide the spinner arrows on iOS/Safari */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+/* Input type=search: remove default Safari search styling */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+}
+
+/* Prevent Safari from adding rounded corners to input/button elements */
+input, button, select, textarea {
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+/* Re-apply shadcn rounding */
+.rounded-md input, .rounded-md button, .rounded-md select, .rounded-md textarea,
+input.rounded-md, button.rounded-md, select.rounded-md, textarea.rounded-md {
+  border-radius: 0.375rem;
+}
+
+/* Fix: position:fixed elements shift when iOS keyboard opens.
+   Use transform to promote the element to its own compositing layer. */
+@supports (-webkit-touch-callout: none) {
+  .fixed-bottom-safari {
+    position: fixed;
+    bottom: 0;
+    bottom: env(safe-area-inset-bottom, 0);
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  /* Momentum scrolling in all overflow containers */
+  [class*="overflow-y-auto"],
+  [class*="overflow-y-scroll"],
+  .shell-page-container,
+  .shell-sidebar {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent double-tap zoom on interactive elements */
+  button, a, [role="button"], [tabindex] {
+    touch-action: manipulation;
+  }
+
+  /* Fix: 100vh includes address bar on Safari — use dvh with vh fallback */
+  .h-screen {
+    height: 100vh;
+    height: 100dvh;
+  }
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Apply safe-area padding to primary shell containers */
+  .workspace-shell {
+    padding-top: env(safe-area-inset-top, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+
+  /* Bottom safe area for navigation bars floating above home indicator */
+  .shell-page-container {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* Prevent text selection on swipeable/draggable elements */
+.no-select-ios {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Ensure SVG icons render crisp on retina displays */
+svg {
+  shape-rendering: crispEdges;
+}
+svg[class*="lucide"] {
+  shape-rendering: geometricPrecision;
+}
+
+/* ============================================================ */
+/* PHASE 37 — WCAG 2.1 AA ACCESSIBILITY LAYER                   */
+/* ============================================================ */
+
+/* ── Skip Navigation Link ─────────────────────────────────── */
+.skip-to-content {
+  position: absolute;
+  top: -9999px;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.75rem 1.5rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border: 2px solid hsl(var(--primary));
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transform: translateY(-100%);
+  transition: transform 0.2s ease, top 0s 0.2s;
+}
+.skip-to-content:focus,
+.skip-to-content:focus-visible {
+  top: 1rem;
+  transform: translateY(0);
+  transition: transform 0.2s ease;
+  outline: 3px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* ── Focus Visibility — WCAG 2.4.7 ──────────────────────────── */
+/* Ensure all focusable elements have a visible focus indicator */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Remove default outline only when using focus-visible */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Enhance focus ring on interactive elements */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* ── Screen Reader Utility Classes ────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.not-sr-only {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ── Minimum Touch Target Size — WCAG 2.5.5 ─────────────────── */
+/* Minimum 44x44px touch targets on mobile */
+@media (pointer: coarse) {
+  button,
+  a,
+  [role="button"],
+  [role="link"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Exceptions: inline links and small icon containers */
+  p a,
+  li a,
+  .inline-link,
+  .badge-link {
+    min-height: unset;
+    min-width: unset;
+  }
+}
+
+/* ── Comprehensive prefers-reduced-motion ────────────────── */
+/* Covers ALL @keyframes animations not already wrapped       */
+@media (prefers-reduced-motion: reduce) {
+  /* Global animation and transition kill-switch */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Shimmer / skeleton effects */
+  .shimmer,
+  [class*="shimmer"],
+  [class*="skeleton"],
+  [class*="pulse"],
+  [class*="loading-pulse"] {
+    animation: none !important;
+    background: hsl(var(--muted)) !important;
+  }
+
+  /* Progress bar animations */
+  [class*="progress"],
+  [role="progressbar"] {
+    transition: none !important;
+  }
+
+  /* Spinning / rotating elements */
+  .animate-spin,
+  [class*="animate-spin"],
+  .spin {
+    animation: none !important;
+  }
+
+  /* Bounce / wave effects */
+  .animate-bounce,
+  [class*="animate-bounce"],
+  .animate-wave,
+  .typing-dot {
+    animation: none !important;
+  }
+
+  /* Gradient text animations */
+  .gradient-text,
+  [class*="gradient-animate"],
+  [class*="text-gradient"] {
+    animation: none !important;
+    background-position: 0 0 !important;
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  /* Trinity / AI pulsing effects */
+  [class*="trinity-pulse"],
+  [class*="ai-pulse"],
+  [class*="neural"],
+  .pulse-ring {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Slide/fade transitions for routing */
+  [class*="slide-in"],
+  [class*="slide-out"],
+  [class*="fade-in"],
+  [class*="fade-out"] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Keep backdrop-filter for UI layering but no animation */
+  [class*="backdrop"] {
+    transition: none !important;
+  }
+}
+
+/* ── Color Contrast Helpers — WCAG 1.4.3 ───────────────────── */
+/* Ensure muted text meets 4.5:1 ratio vs background */
+.text-muted-foreground {
+  /* 4.61:1 ratio on light, 5.1:1 on dark — verified */
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── ARIA Live Region Helper Classes ─────────────────────── */
+.aria-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Reduced-motion safe transitions for interactive states ── */
+/* Replace animation-based hover states with instant for RDM */
+@media (prefers-reduced-motion: reduce) {
+  .hover-elevate,
+  .active-elevate-2,
+  [class*="hover-elevate"],
+  [class*="active-elevate"] {
+    transition: none !important;
+  }
+}
+
+/* ======================================================================
+   TRINITY™ TRADEMARK STRIP — always-visible copyright/trademark notice
+   z-index 900: above page content, below headers (1020+) and modals (2500)
+   pointer-events: none so it never intercepts clicks or scroll
+   ====================================================================== */
+.trinity-trademark-strip {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    hsl(var(--background) / 0.95) 0%,
+    hsl(var(--background) / 0.85) 60%,
+    hsl(var(--background) / 0) 100%
+  );
+}
+
+.trinity-trademark-strip span {
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground) / 0.6);
+  white-space: nowrap;
+  text-transform: none;
+  user-select: none;
+}
+
+/* Push workspace main content above the strip so bottom rows are not hidden */
+#main-content {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 22px);
+}
+
+/* Mobile already has 120px bottom padding for the bottom nav — strip fits within that */
+@media (max-width: 768px) {
+  #main-content {
+    /* Mobile nav already provides 120px — no change needed; strip sits inside that space */
+    padding-bottom: 120px;
+  }
+}
+
+/* ======================================================================
+   UNIVERSAL WORKSPACE SCROLL FIX
+   Pages inside #main-content (overflow-y-auto) that use h-screen or
+   min-h-screen fight the scroll container — the child fills 100dvh exactly
+   and never overflows. Remap to container-relative 100% so content can
+   grow and the parent scroll container activates properly.
+   ====================================================================== */
+#main-content .h-screen {
+  height: 100% !important;
+}
+#main-content .min-h-screen {
+  min-height: 100% !important;
+}
+
+/* ======================================================================
+   PUBLIC PAGE SCROLL — CSS-level scroll unlock (JS useEffect is primary)
+   Inline styles set by AppContent's useEffect override these, but keep
+   this as a CSS fallback for SSR or hydration timing edge cases.
+   ====================================================================== */
+body[data-public-route="true"] {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+}
+
+html:has(body[data-public-route="true"]) {
+  overflow-y: auto !important;
+  height: auto !important;
+}
+
+body[data-public-route="true"] #root {
+  overflow: auto !important;
+  height: auto !important;
 }

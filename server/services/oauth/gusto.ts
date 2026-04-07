@@ -3,6 +3,9 @@ import { db } from '../../db';
 import { partnerConnections, oauthStates } from '@shared/schema';
 import { eq, and, lt } from 'drizzle-orm';
 import { encryptToken, decryptToken } from '../../security/tokenEncryption';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('gusto');
+
 
 /**
  * Gusto OAuth 2.0 Service
@@ -40,7 +43,7 @@ export class GustoOAuthService {
     this.redirectUri = process.env.GUSTO_REDIRECT_URI || '';
 
     if (!this.clientId || !this.clientSecret) {
-      console.warn('⚠️  Gusto OAuth not configured - missing GUSTO_CLIENT_ID or GUSTO_CLIENT_SECRET');
+      log.warn('⚠️  Gusto OAuth not configured - missing GUSTO_CLIENT_ID or GUSTO_CLIENT_SECRET');
     }
   }
 
@@ -113,6 +116,7 @@ export class GustoOAuthService {
     // Exchange code for tokens
     const response = await fetch(this.tokenEndpoint, {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -230,6 +234,7 @@ export class GustoOAuthService {
 
     const response = await fetch(this.tokenEndpoint, {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',

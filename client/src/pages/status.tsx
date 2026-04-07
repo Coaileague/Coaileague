@@ -3,7 +3,8 @@ import { AlertTriangle, CheckCircle, Clock, RefreshCw, Server, Shield } from "lu
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Helmet } from "react-helmet-async";
+import { SEO, PAGE_SEO } from '@/components/seo';
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface MaintenanceStatus {
   success: boolean;
@@ -44,24 +45,24 @@ export default function StatusPage() {
     return `${hours}h ${minutes}m`;
   };
 
+  const pageConfig: CanvasPageConfig = {
+    id: "system-status",
+    title: "System Status",
+    subtitle: "Current operational status of CoAIleague services",
+    category: "admin",
+    maxWidth: "4xl",
+  };
+
   return (
     <>
-      <Helmet>
-        <title>System Status | CoAIleague</title>
-        <meta name="description" content="Check the current operational status of CoAIleague platform and services." />
-      </Helmet>
+      <SEO
+        title={PAGE_SEO.status.title}
+        description={PAGE_SEO.status.description}
+        canonical="https://coaileague.com/status"
+      />
 
-      <div className="min-h-screen bg-background">
-        <div className="container max-w-4xl mx-auto px-4 py-12">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              System Status
-            </h1>
-            <p className="text-muted-foreground">
-              Current operational status of CoAIleague services
-            </p>
-          </div>
-
+      <CanvasHubPage config={pageConfig}>
+        <div className="space-y-6">
           {isUnderMaintenance && (
             <Card className="mb-6 border-amber-500 bg-amber-500/10">
               <CardHeader className="pb-2">
@@ -88,7 +89,7 @@ export default function StatusPage() {
 
                 {maintenanceStatus && maintenanceStatus.progressPercent > 0 && (
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between gap-2 text-sm">
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium">{maintenanceStatus.progressPercent}%</span>
                     </div>
@@ -136,7 +137,7 @@ export default function StatusPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Server className="h-5 w-5 text-muted-foreground" />
                     <CardTitle className="text-base">Platform Services</CardTitle>
@@ -150,20 +151,20 @@ export default function StatusPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Database</span>
                   <Badge variant={healthStatus?.checks?.database ? 'default' : 'destructive'}>
                     {healthStatus?.checks?.database ? 'Connected' : 'Offline'}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Memory</span>
                   <Badge variant={healthStatus?.checks?.memory ? 'default' : 'destructive'}>
                     {healthStatus?.checks?.memory ? 'Normal' : 'High'}
                   </Badge>
                 </div>
                 {healthStatus?.checks?.uptime && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-muted-foreground">Uptime</span>
                     <span className="text-foreground">{formatUptime(healthStatus.checks.uptime)}</span>
                   </div>
@@ -179,15 +180,15 @@ export default function StatusPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Authentication</span>
                   <Badge variant="default">Secured</Badge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Data Encryption</span>
                   <Badge variant="default">AES-256</Badge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">API Protection</span>
                   <Badge variant="default">Active</Badge>
                 </div>
@@ -205,7 +206,7 @@ export default function StatusPage() {
             </p>
           </div>
         </div>
-      </div>
+      </CanvasHubPage>
     </>
   );
 }

@@ -4,12 +4,12 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["jq", "chromium", "glib", "nss", "nspr", "atk", "gtk3", "pango", "cairo", "dbus", "libdrm", "mesa", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "alsa-lib", "cups", "libxkbcommon", "openjdk"]
+packages = ["jq", "chromium", "glib", "nss", "nspr", "atk", "gtk3", "pango", "cairo", "dbus", "libdrm", "mesa", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "alsa-lib", "cups", "libxkbcommon", "openjdk", "unzip", "zip", "nodejs_20"]
 
 [deployment]
-deploymentTarget = "autoscale"
-build = ["sh", "-c", "./deploy-build.sh"]
-run = ["npm", "run", "start"]
+deploymentTarget = "vm"
+build = ["npm", "run", "build"]
+run = ["node", "dist/index.js"]
 
 [[ports]]
 localPort = 5000
@@ -51,6 +51,9 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0", "javascript_openai_ai_integrations:1.0.0", "javascript_object_storage:1.0.0", "github:1.0.0"]
 
@@ -58,27 +61,95 @@ integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.
 
 [userenv.development]
 TRINITY_DIALOGUE_ENABLED = "false"
-QUICKBOOKS_ENVIRONMENT = "sandbox"
-EMAIL_SIMULATION_MODE = "true"
 TEST_USERNAME = "statewide-qa@test.local"
 TEST_PASSWORD = "TestPassword123!"
+PLAYWRIGHT_TEST_KEY = "playwright-e2e-test-dev-only-2026"
 
 [userenv.shared]
 DISABLE_SEASONAL_THEMING = "true"
-STRIPE_STARTER_MONTHLY_PRICE_ID = "price_1SjqRT8XHrr8nNEqJu0nQMUX"
-STRIPE_STARTER_YEARLY_PRICE_ID = "price_1SjqRT8XHrr8nNEqdpGsuSe4"
-STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID = "price_1SjqRU8XHrr8nNEq6ICvb1lV"
-STRIPE_PROFESSIONAL_YEARLY_PRICE_ID = "price_1SjqRU8XHrr8nNEqeHP06nJx"
-STRIPE_EMPLOYEE_SEAT_PRICE_ID = "price_1SjqRV8XHrr8nNEq7ZUQeUq4"
-STRIPE_MANAGER_SEAT_PRICE_ID = "price_1SjqRW8XHrr8nNEqEZUNHOfF"
-STRIPE_EMPLOYEE_OVERAGE_PRICE_ID = "price_1SjqRV8XHrr8nNEq7ZUQeUq4"
+STRIPE_STARTER_MONTHLY_PRICE_ID = "price_1THsqORxI7qfKUt6fOwfD6Xx"
+STRIPE_STARTER_YEARLY_PRICE_ID = "price_1THsqPRxI7qfKUt6DYPnNt1S"
+STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID = "price_1THsqPRxI7qfKUt6WabLfhDP"
+STRIPE_PROFESSIONAL_YEARLY_PRICE_ID = "price_1THsqQRxI7qfKUt6d7tZJrXx"
+STRIPE_EMPLOYEE_SEAT_PRICE_ID = "price_1T9xPC8XHrr8nNEqsCDYQP6l"
+STRIPE_MANAGER_SEAT_PRICE_ID = "price_1T9xPC8XHrr8nNEq8r7VyhEs"
+STRIPE_EMPLOYEE_OVERAGE_PRICE_ID = "price_1T9xPB8XHrr8nNEqofZzWEnm"
 STRIPE_CREDITS_STARTER_PRICE_ID = "price_1SijQe8XHrr8nNEqFkUQZ2DB"
 STRIPE_CREDITS_STANDARD_PRICE_ID = "price_1SijQf8XHrr8nNEqI1DsvIfA"
 STRIPE_CREDITS_PROFESSIONAL_PRICE_ID = "price_1SijQf8XHrr8nNEqXnATS6N9"
 STRIPE_CREDITS_ENTERPRISE_PRICE_ID = "price_1SijQg8XHrr8nNEqWeWyDk6E"
-STRIPE_ADDON_CREDITS_PRICE_ID = "price_1SijQf8XHrr8nNEqI1DsvIfA"
-STRIPE_SETUP_STARTER_PRICE_ID = "price_1SoTz88XHrr8nNEqxSTqByE0"
-STRIPE_SETUP_PROFESSIONAL_PRICE_ID = "price_1SoTz98XHrr8nNEqQcb1FEEb"
-STRIPE_SETUP_ENTERPRISE_PRICE_ID = "price_1SoTz98XHrr8nNEqngStjpQt"
+STRIPE_ADDON_CREDITS_PRICE_ID = "price_1T9xPF8XHrr8nNEq4gSjvRgl"
+STRIPE_SETUP_STARTER_PRICE_ID = "price_1T9xPF8XHrr8nNEq0nczuTMw"
+STRIPE_SETUP_PROFESSIONAL_PRICE_ID = "price_1T9xPG8XHrr8nNEq2v8NepRW"
+STRIPE_SETUP_ENTERPRISE_PRICE_ID = "price_1T9xPG8XHrr8nNEqcDPvMFF8"
 MAINTENANCE_BYPASS_SECRET = "f8160ba9000995c2f31660d2805b46fff6dbf71a577121b5633f23065d26ff72"
 GITHUB_REPO_URL = "https://github.com/6-7Development/Coaileague.git"
+STRIPE_ENTERPRISE_MONTHLY_PRICE_ID = "price_1THsqRRxI7qfKUt6cOyU5mR3"
+STRIPE_ENTERPRISE_YEARLY_PRICE_ID = "price_1THsqSRxI7qfKUt6gdfyet5H"
+PLATFORM_DEFAULT_WORKSPACE_ID = "demo-workspace-00000000"
+GEMINI_API_KEY = "AIzaSyD2WBmwJyziaAkZ9T-OhSPYELztzV_05sQ"
+RESEND_FROM_EMAIL = "noreply@coaileague.com"
+STRIPE_STARTER_OVERAGE_PRICE_ID = "price_1T9xPA8XHrr8nNEqhgylc1T9"
+STRIPE_PROFESSIONAL_OVERAGE_PRICE_ID = "price_1T9xPB8XHrr8nNEqSPjM8E3u"
+STRIPE_ENTERPRISE_SEAT_PRICE_ID = "price_1T9xPB8XHrr8nNEqQwvbb00F"
+STRIPE_AI_CREDIT_OVERAGE_PRICE_ID = "price_1T9xPD8XHrr8nNEq3snc9sup"
+STRIPE_MIDDLEWARE_PAYROLL_PRICE_ID = "price_1T9xPD8XHrr8nNEqhAePoUjX"
+STRIPE_MIDDLEWARE_INVOICE_PRICE_ID = "price_1T9xPD8XHrr8nNEqDSexoK2G"
+STRIPE_MIDDLEWARE_ACH_PRICE_ID = "price_1T9xPE8XHrr8nNEqC0Kt4WFq"
+STRIPE_MIDDLEWARE_PAYOUT_PRODUCT_ID = "prod_U8DqqrpbvQCXt4"
+STRIPE_ADDON_CLAUDE_PREMIUM_PRICE_ID = "price_1T9xPF8XHrr8nNEq5uyps1em"
+STRIPE_SUB_ORG_PRICE_ID = "price_1T9xPH8XHrr8nNEqm2ERRJsR"
+STATEWIDE_WORKSPACE_ID = "37a04d24-51bd-4856-9fae-d26a2fe82094"
+JWT_SECRET = "6ce87914d8bf8cee633af989b3904828c1c9d1419db66fc1567e65831ef0b9cda4bc040a7dab936506af39e434993c236a454a81d103f0549d286aa33969d20f"
+BASE_URL = "https://coaileague.com"
+STRIPE_PRODUCT_ID_TRIAL = "prod_UGPf3KM6Votcok"
+STRIPE_PRICE_ID_TRIAL_FREE = "price_1THsqORxI7qfKUt6xXoZ6p72"
+STRIPE_PRODUCT_ID_STARTER = "prod_UGPfXxPUNk7Ob8"
+STRIPE_PRICE_ID_STARTER_MONTHLY = "price_1THsqORxI7qfKUt6fOwfD6Xx"
+STRIPE_PRICE_ID_STARTER_ANNUAL = "price_1THsqPRxI7qfKUt6DYPnNt1S"
+STRIPE_PRODUCT_ID_PROFESSIONAL = "prod_UGPfkrmIkKJiJK"
+STRIPE_PRICE_ID_PROFESSIONAL_MONTHLY = "price_1THsqPRxI7qfKUt6WabLfhDP"
+STRIPE_PRICE_ID_PROFESSIONAL_ANNUAL = "price_1THsqQRxI7qfKUt6d7tZJrXx"
+STRIPE_PRODUCT_ID_BUSINESS = "prod_UGPfByTED4vcO8"
+STRIPE_PRICE_ID_BUSINESS_MONTHLY = "price_1THsqQRxI7qfKUt6V2qO9n43"
+STRIPE_PRICE_ID_BUSINESS_ANNUAL = "price_1THsqRRxI7qfKUt6SZRWthf5"
+STRIPE_PRODUCT_ID_ENTERPRISE = "prod_UGPfzhXCPBpdCA"
+STRIPE_PRICE_ID_ENTERPRISE_MONTHLY = "price_1THsqRRxI7qfKUt6cOyU5mR3"
+STRIPE_PRICE_ID_ENTERPRISE_ANNUAL = "price_1THsqSRxI7qfKUt6gdfyet5H"
+STRIPE_PRODUCT_ID_STRATEGIC = "prod_UGPfTDAuXDemSC"
+STRIPE_BUSINESS_MONTHLY_PRICE_ID = "price_1THsqQRxI7qfKUt6V2qO9n43"
+STRIPE_BUSINESS_YEARLY_PRICE_ID = "price_1THsqRRxI7qfKUt6SZRWthf5"
+STRIPE_PRICE_STARTER_MONTHLY = "price_1THsqORxI7qfKUt6fOwfD6Xx"
+STRIPE_PRICE_STARTER_ANNUAL = "price_1THsqPRxI7qfKUt6DYPnNt1S"
+STRIPE_PRICE_PROFESSIONAL_MONTHLY = "price_1THsqPRxI7qfKUt6WabLfhDP"
+STRIPE_PRICE_PROFESSIONAL_ANNUAL = "price_1THsqQRxI7qfKUt6d7tZJrXx"
+STRIPE_PRICE_BUSINESS_MONTHLY = "price_1THsqQRxI7qfKUt6V2qO9n43"
+STRIPE_PRICE_BUSINESS_ANNUAL = "price_1THsqRRxI7qfKUt6SZRWthf5"
+STRIPE_PRICE_ENTERPRISE_MONTHLY = "price_1THsqRRxI7qfKUt6cOyU5mR3"
+STRIPE_PRICE_ENTERPRISE_ANNUAL = "price_1THsqSRxI7qfKUt6gdfyet5H"
+STRIPE_TEST_PRICE_ID_TRIAL_FREE = "price_1THtzB4ZHgvZGDgJrVBCbF1x"
+STRIPE_TEST_PRICE_ID_STARTER_MONTHLY = "price_1THtzB4ZHgvZGDgJzrvZyH1u"
+STRIPE_TEST_PRICE_ID_STARTER_ANNUAL = "price_1THtzC4ZHgvZGDgJHAgFj1zq"
+STRIPE_TEST_PRICE_ID_PROFESSIONAL_MONTHLY = "price_1THtzC4ZHgvZGDgJIXYTKwmc"
+STRIPE_TEST_PRICE_ID_PROFESSIONAL_ANNUAL = "price_1THtzC4ZHgvZGDgJO3MsLVMe"
+STRIPE_TEST_PRICE_ID_BUSINESS_MONTHLY = "price_1THtzD4ZHgvZGDgJI1zCZ8k2"
+STRIPE_TEST_PRICE_ID_BUSINESS_ANNUAL = "price_1THtzD4ZHgvZGDgJtDlUnKfm"
+STRIPE_TEST_PRICE_ID_ENTERPRISE_MONTHLY = "price_1THtzE4ZHgvZGDgJLez7iYq9"
+STRIPE_TEST_PRICE_ID_ENTERPRISE_ANNUAL = "price_1THtzE4ZHgvZGDgJD7djjzBm"
+STRIPE_TEST_PRICE_ID_OVERAGE = "price_1THtzE4ZHgvZGDgJM9K0dHGg"
+RESEND_FROM_DOMAIN = "coaileague.com"
+EMAIL_SIMULATION_MODE = "false"
+STRIPE_PRICE_VOICE_PLATINUM_STARTER = "price_1THvefRxI7qfKUt6Wi1vV16C"
+STRIPE_PRICE_VOICE_PLATINUM_PROFESSIONAL = "price_1THvefRxI7qfKUt6yKaEWPzW"
+STRIPE_PRICE_VOICE_PLATINUM_BUSINESS = "price_1THvefRxI7qfKUt6As9VEY0x"
+STRIPE_PRICE_VOICE_PLATINUM_ENTERPRISE = "price_1THvegRxI7qfKUt6ducfq4ID"
+STRIPE_PRICE_SEAT_OVERAGE = "price_1THvegRxI7qfKUt64SDgR0qR"
+
+[userenv.production]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-ba88e5c1-1507-4dff-af10-a268378161f6"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 300000

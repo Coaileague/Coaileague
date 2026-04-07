@@ -1,0 +1,235 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 24 — API SECURITY AND ABUSE PREVENTION HARDENING**
+
+This phase owns the complete security surface of the platform. Every endpoint, every authentication flow, every token, every header, and every input validation point must be hardened against abuse. A platform handling payroll data, legal documents, and compliance records for regulated security companies is a high-value target. Security is not a feature — it is the foundation everything else stands on. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row. Every row green before Phase 24 closes.
+
+---
+
+**STEP 1 — SECURITY SURFACE INVENTORY**
+
+Before touching anything produce a complete inventory of the security surface:
+- All authentication mechanisms: session tokens, JWT, magic links, portal tokens, auditor tokens, Trinity bot token
+- All rate limiting implementations — what exists, what endpoints are covered, what limits are set
+- All input validation layers — Zod schemas, custom validators, sanitization
+- All CORS configurations
+- All security headers currently set
+- All brute force protections
+- API key management — what keys exist, how they are stored, how they are rotated
+- Any endpoint that accepts external input without authentication
+- Any endpoint that returns sensitive data (PII, financial, credentials)
+
+Flag every endpoint that has no rate limiting, no authentication, or no input validation.
+
+---
+
+**STEP 2 — AUTHENTICATION HARDENING**
+
+Every authentication mechanism must be airtight:
+- Session tokens: secure, httpOnly, sameSite=strict cookies confirmed — no tokens in localStorage
+- Session expiry enforced — idle sessions expire after defined timeout
+- Session fixation prevented — new session ID generated on login
+- Magic link tokens: single-use confirmed, expiry enforced, workspace-scoped
+- Portal tokens: expiry enforced, workspace-scoped (regression check from Phase 18)
+- Auditor tokens: expiry enforced, workspace-scoped (regression check from Phase 20)
+- Trinity bot token: never in logs or API responses (regression check from Phase 19)
+- Password requirements enforced: minimum length, complexity, breach database check
+- Password reset flow: token single-use, expiry enforced, old password invalidated on reset
+- Account lockout after N failed login attempts — brute force protection confirmed
+- Multi-factor authentication available for org_owner and platform staff roles
+- OAuth tokens (QuickBooks): encrypted at rest (regression check from Phase 16)
+
+---
+
+**STEP 3 — RATE LIMITING AUDIT**
+
+Every endpoint must have appropriate rate limiting:
+- Auth endpoints (login, register, password reset, magic link): strictest limits — maximum 5 attempts per minute per IP
+- Financial endpoints (invoice, payroll, billing): strict limits — maximum 30 requests per minute per workspace
+- Portal endpoints (client portal, officer portal): moderate limits — maximum 60 requests per minute per token
+- General API endpoints: standard limits — maximum 100 requests per minute per workspace
+- Trinity/AI endpoints: limits per workspace per minute — prevent runaway AI costs
+- Inbound webhook endpoints: rate limited per source IP
+- Export endpoints (CSV, PDF): limits preventing bulk data scraping
+- Rate limit responses return 429 with Retry-After header — not 403 or 500
+- Rate limit state stored in Redis or equivalent — not in-memory only
+- Rate limits configurable per workspace tier — enterprise workspaces get higher limits
+- Rate limit violations logged — repeated violations trigger admin alert
+
+---
+
+**STEP 4 — INPUT VALIDATION AND SANITIZATION**
+
+Every input must be validated before processing:
+- All route handlers have Zod schema validation on request body — no raw `req.body` access
+- All URL parameters validated — no raw `req.params.id` passed directly to DB queries
+- All query parameters validated — no raw `req.query` used in DB queries without validation
+- SQL injection surface reviewed — all DB queries use parameterized queries via Drizzle ORM — no raw SQL string concatenation
+- XSS prevention confirmed — all user-supplied content escaped before rendering
+- HTML injection prevented — no `dangerouslySetInnerHTML` with user content
+- File upload validation: file type whitelist enforced, file size limits enforced, filename sanitized
+- JSON payload size limits enforced — no unbounded request body sizes
+- Numeric inputs validated — no NaN, no negative values where prohibited, no values exceeding business logic limits
+- Date inputs validated — no invalid dates, no dates outside acceptable ranges
+
+---
+
+**STEP 5 — SECURITY HEADERS AUDIT**
+
+Every HTTP response must include correct security headers:
+- `Strict-Transport-Security` (HSTS): max-age minimum 1 year, includeSubDomains confirmed
+- `Content-Security-Policy` (CSP): defined and enforced — no wildcard sources
+- `X-Frame-Options`: DENY or SAMEORIGIN — clickjacking prevented
+- `X-Content-Type-Options`: nosniff confirmed
+- `Referrer-Policy`: strict-origin-when-cross-origin or stricter
+- `Permissions-Policy`: camera, microphone, geolocation permissions scoped correctly for field operations use
+- `Cache-Control`: sensitive endpoints return no-store, no-cache
+- No server version disclosure — `X-Powered-By` header removed
+- No unnecessary headers exposing internal infrastructure details
+- HTTPS enforced — HTTP requests redirected to HTTPS
+
+---
+
+**STEP 6 — CORS CONFIGURATION AUDIT**
+
+CORS must be restrictive and correct:
+- Allowed origins explicitly defined — no wildcard `*` on authenticated endpoints
+- Allowed methods restricted to what each endpoint needs — not blanket allow all
+- Credentials flag correct — `Access-Control-Allow-Credentials: true` only where explicitly needed
+- Preflight caching defined — `Access-Control-Max-Age` set appropriately
+- CORS configuration not bypassed by any endpoint — confirm no manual CORS header overrides
+- Inbound webhook endpoints have CORS appropriate to their source
+
+---
+
+**STEP 7 — API KEY AND SECRET MANAGEMENT**
+
+Secrets must be managed correctly:
+- All secrets stored in environment variables — no hardcoded secrets in codebase (grep confirms)
+- No secrets in git history — confirm clean
+- API keys never returned in API responses — grep confirms
+- API keys never logged — grep confirms
+- Secret rotation procedure defined — what happens when a key is rotated
+- VAPID keys for push notifications stored securely — not hardcoded
+- Stripe webhook secret validated on every webhook — signature verification confirmed (regression check from Phase 11)
+- Resend webhook secret validated on every inbound email — HMAC verification confirmed (regression check from Phase 13)
+- QuickBooks OAuth tokens encrypted at rest — regression check from Phase 16
+- Database credentials never in application logs
+
+---
+
+**STEP 8 — AUTHORIZATION AUDIT**
+
+Authorization must be enforced at every layer:
+- Every route confirmed requiring authentication — no accidentally public endpoints
+- Every route confirmed having correct role guard — no under-permissioned or over-permissioned endpoints
+- Workspace isolation confirmed on every query — no missing workspaceId scopes (regression check from sync audit)
+- IDOR (Insecure Direct Object Reference) prevention confirmed — accessing resource by ID requires ownership or role verification
+- Horizontal privilege escalation impossible — user A cannot access user B's resources even within same workspace
+- Vertical privilege escalation impossible — no role can promote itself or assign higher roles than it holds
+- Trinity system context cannot be spoofed (regression check from Phase 9)
+- Permission matrix enforced server-side — not just hidden in UI (regression check from Phase 9B)
+
+---
+
+**STEP 9 — PENETRATION TEST SIMULATION**
+
+Run targeted security tests against the platform:
+
+**Test 1 — Brute force protection:** Attempt 10 rapid login requests with wrong password. Confirm account lockout or rate limit fires after defined threshold.
+
+**Test 2 — SQL injection attempt:** Submit a crafted payload `'; DROP TABLE users; --` in a text input field. Confirm Drizzle ORM parameterization prevents execution.
+
+**Test 3 — XSS attempt:** Submit `<script>alert('xss')</script>` in a text field. Confirm it is escaped and not executed.
+
+**Test 4 — IDOR attempt:** Authenticate as user A, then attempt to access a resource belonging to user B by manipulating the ID in the URL. Confirm 403 or 404 returned.
+
+**Test 5 — Role escalation attempt:** As an officer-role user, attempt to call a manager-only endpoint directly. Confirm 403 returned.
+
+**Test 6 — Token reuse attempt:** Use an expired portal token or magic link. Confirm 401 or 403 returned with clear message.
+
+**Test 7 — Rate limit test:** Send 100 rapid requests to a rate-limited endpoint. Confirm 429 returned with Retry-After header after threshold exceeded.
+
+**Test 8 — Webhook replay attack:** Submit the same Stripe webhook payload twice. Confirm idempotency prevents double-processing (regression check from Phase 11).
+
+All 8 tests must pass before Phase 24 closes.
+
+---
+
+**STEP 10 — SENSITIVE DATA PROTECTION**
+
+Sensitive data must be protected at rest and in transit:
+- PII fields (SSN, date of birth, bank account) confirmed encrypted at rest or masked in API responses
+- Financial amounts not exposed to unauthorized roles — payroll data hidden from officers and clients
+- Password hashes confirmed using bcrypt or Argon2 — no MD5 or SHA1
+- Audit logs confirmed not containing sensitive field values in plaintext — PII scrubbed (confirmed Phase 11 — regression check)
+- Document vault URLs confirmed workspace-scoped and time-bounded (regression check from Phase 18)
+- Pay stub URLs confirmed scoped to owning officer (regression check from Phase 15)
+- Log files confirmed not containing tokens, passwords, or raw PII
+
+---
+
+**STEP 11 — DEPENDENCY AND SUPPLY CHAIN SECURITY**
+
+Third-party dependencies must be reviewed:
+- `npm audit` run — all critical and high vulnerabilities identified
+- Any critical vulnerabilities patched or documented with mitigation
+- No known-malicious packages in dependency tree
+- Outdated packages with known CVEs updated
+- Lock file (`package-lock.json` or `yarn.lock`) committed — no floating versions
+
+---
+
+**STEP 12 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check in reconciliation table
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. Every CRITICAL fixed with grep or test evidence
+6. All 8 penetration tests documented with input and result
+7. All rows green before summary written
+
+---
+
+**STEP 13 — VERIFICATION**
+
+Run all checks before Phase 24 is marked complete:
+- Check 1: Session tokens in secure httpOnly cookies — not localStorage
+- Check 2: Session expiry and fixation prevention confirmed
+- Check 3: Magic link tokens single-use and expiry enforced
+- Check 4: Account lockout after failed login attempts confirmed
+- Check 5: OAuth tokens encrypted at rest — regression check
+- Check 6: Auth endpoints rate limited at 5 requests per minute per IP
+- Check 7: Financial endpoints rate limited — 30 per minute per workspace
+- Check 8: Rate limit returns 429 with Retry-After header
+- Check 9: Rate limit violations logged and admin alerted on repeat violations
+- Check 10: All route handlers have Zod validation — no raw req.body access
+- Check 11: All DB queries parameterized — no raw SQL string concatenation
+- Check 12: XSS prevention confirmed — no dangerouslySetInnerHTML with user content
+- Check 13: File upload validation — type whitelist, size limit, filename sanitized
+- Check 14: All 6 security headers present and correctly configured
+- Check 15: CORS allowed origins explicitly defined — no wildcard on authenticated endpoints
+- Check 16: No hardcoded secrets in codebase — grep confirms zero matches
+- Check 17: API keys never in API responses or logs — grep confirms
+- Check 18: Stripe and Resend webhook signatures verified — regression check
+- Check 19: Every route has authentication and correct role guard confirmed
+- Check 20: IDOR prevention confirmed — resource access requires ownership verification
+- Check 21: All 8 penetration tests passed and documented
+- Check 22: PII fields encrypted or masked — not in plaintext in API responses
+- Check 23: Password hashes using bcrypt or Argon2 — confirmed
+- Check 24: npm audit run — critical and high vulnerabilities addressed
+- Check 25: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 26: Server starts clean with zero TypeScript errors
+
+Do not mark Phase 24 complete until all 26 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. Nothing left behind.
+
+---
+
+Paste that and hold the line. Security is not negotiable — a platform handling payroll, compliance records, and legal documents for regulated security companies must be hardened against every attack surface. Same zero tolerance standard.

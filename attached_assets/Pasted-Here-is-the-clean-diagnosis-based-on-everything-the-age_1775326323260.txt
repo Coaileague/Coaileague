@@ -1,0 +1,123 @@
+Here is the clean diagnosis based on everything the agent has found.
+
+---
+
+**WHAT IS ACTUALLY HAPPENING**
+
+```
+AppContent renders correctly — confirmed 4 times
+isPublicRoute=true on all renders — correct
+public-page-scroll-root JSX is returned — correct
+But the element never appears in DOM — the problem
+
+The content renders then disappears.
+Something removes it after the initial paint.
+```
+
+**THE EXACT CULPRIT**
+
+```
+useLayerManager hook inside CanvasHubPage
+Called inside Homepage which loads inside AppContent
+If this hook throws an actual error (not a Promise):
+  Suspense does NOT catch it (Suspense only catches Promises)
+  ErrorBoundary DOES catch it
+  ErrorBoundary renders its fallback
+  But the fallback is invisible (no visible CSS)
+  Result: blank screen with 5 empty children in #root
+  
+This matches every symptom exactly.
+```
+
+---
+
+**SEND THIS TO AGENT — FOUR FIXES IN ORDER**
+
+---
+
+Do all four of these right now. Stop theorizing. Execute.
+
+FIX 1 — Make the error boundary show the actual error. Find GlobalErrorBoundary and change its fallback to this temporarily:
+
+```jsx
+if (this.state.hasError) {
+  return (
+    <div style={{position:'fixed',top:0,left:0,width:'100vw',
+      height:'100vh',background:'red',color:'white',
+      fontSize:'20px',padding:'20px',zIndex:999999}}>
+      CAUGHT ERROR: {this.state.error?.message}
+      <pre style={{fontSize:'12px',overflow:'auto'}}>
+        {this.state.error?.stack}
+      </pre>
+    </div>
+  );
+}
+```
+
+Deploy and reload the page. If you see a red screen with an error message that is the exact root cause. Read it and report the error message back.
+
+FIX 2 — Guard useLayerManager against missing provider. Find the useLayerManager hook and wrap it in a try-catch or add a null check:
+
+```typescript
+// In useLayerManager hook definition:
+export function useLayerManager() {
+  const context = useContext(LayerManagerContext);
+  if (!context) {
+    // Return safe defaults instead of throwing
+    console.warn('useLayerManager called outside LayerManagerProvider');
+    return {
+      layers: [],
+      addLayer: () => {},
+      removeLayer: () => {},
+      // add whatever other fields the hook normally returns as safe defaults
+    };
+  }
+  return context;
+}
+```
+
+This prevents the hook from throwing and crashing the entire render tree.
+
+FIX 3 — Wrap CanvasHubPage in its own error boundary inside Homepage:
+
+```jsx
+// In Homepage component wherever CanvasHubPage is rendered:
+<ErrorBoundary fallback={<div>Canvas unavailable</div>}>
+  <CanvasHubPage />
+</ErrorBoundary>
+```
+
+This isolates any Canvas errors from crashing the entire page render.
+
+FIX 4 — Check if OMEGA laws introduced any synchronous code at module level:
+
+```bash
+grep -rn "OMEGA\|omegaLaw\|universalLaw\|CanvasHub\|LayerManager" \
+  client/src/ --include="*.tsx" --include="*.ts" | \
+  grep -v "node_modules\|\.test\." | \
+  grep "import\|export\|const.*=.*require" | head -20
+```
+
+Look for any import that could fail at module load time. A missing export or circular import would cause exactly this silent crash.
+
+After applying FIX 1 report back the exact error message from the red screen. That single piece of information tells us the exact line to fix. Everything else is guessing until we see that error message.
+
+---
+
+**IF NOTHING WORKS IN 30 MINUTES**
+
+Do this emergency rollback:
+
+```bash
+# Find last working commit before OMEGA
+git log --oneline | head -20
+
+# Revert just the OMEGA-related files
+git checkout [pre-omega-hash] -- client/src/components/canvas/
+git checkout [pre-omega-hash] -- client/src/hooks/useLayerManager.ts
+
+# Keep everything else
+# Rebuild and test
+```
+
+The app was working before OMEGA. OMEGA broke it. Reverting just the OMEGA files restores the working state without losing any other work.

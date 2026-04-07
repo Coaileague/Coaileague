@@ -19,6 +19,9 @@ import { systemAuditLogs, workspaces, employees } from '@shared/schema';
 import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { universalAudit, AUDIT_ACTIONS } from '../universalAuditService';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('cognitiveOnboardingService');
 
 // ============================================================================
 // TYPES - THIRD-PARTY INTEGRATIONS
@@ -386,6 +389,7 @@ class CognitiveOnboardingService {
 
       const tokenResponse = await fetch(config.tokenUrl, {
         method: 'POST',
+        signal: AbortSignal.timeout(15000),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
@@ -455,15 +459,26 @@ class CognitiveOnboardingService {
           companyName: connection.companyName,
           dataTypes: connection.dataTypes,
         },
-      });
+      }).catch((err) => log.warn('[cognitiveOnboardingService] Fire-and-forget failed:', err));
 
-      console.log(`[CognitiveOnboarding] ${provider} connected for workspace ${workspaceId}`);
+      universalAudit.log({
+        workspaceId,
+        actorType: 'system',
+        action: AUDIT_ACTIONS.ONBOARDING_COGNITIVE_API_CONNECTED,
+        entityType: 'integration',
+        entityId: `${workspaceId}-${provider}`,
+        entityName: `${provider} API`,
+        changeType: 'create',
+        metadata: { provider, companyName: connection.companyName, dataTypes: connection.dataTypes },
+      }).catch((err) => log.warn('[cognitiveOnboardingService] Fire-and-forget failed:', err));
+
+      log.info(`[CognitiveOnboarding] ${provider} connected for workspace ${workspaceId}`);
 
       return { success: true, connection };
 
     } catch (error: any) {
-      console.error(`[CognitiveOnboarding] OAuth callback failed:`, error);
-      return { success: false, error: error.message };
+      log.error(`[CognitiveOnboarding] OAuth callback failed:`, error);
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -526,9 +541,9 @@ class CognitiveOnboardingService {
       const rawData = await this.fetchProviderData(credentials, provider, dataType, options);
       result.recordsExtracted = Array.isArray(rawData) ? rawData.length : 0;
 
-      // Use AI to map fields to our schema
+      // Use AI to map fields to our schema (billed to org)
       if (aiMapping && rawData.length > 0) {
-        const mappedData = await this.aiFieldMapping(provider, dataType, rawData);
+        const mappedData = await this.aiFieldMapping(provider, dataType, rawData, workspaceId);
         result.aiMappingConfidence = mappedData.confidence;
         
         switch (dataType) {
@@ -547,8 +562,8 @@ class CognitiveOnboardingService {
       result.success = true;
 
     } catch (error: any) {
-      console.error(`[CognitiveOnboarding] Data extraction failed:`, error);
-      result.errors.push(error.message);
+      log.error(`[CognitiveOnboarding] Data extraction failed:`, error);
+      result.errors.push((error instanceof Error ? error.message : String(error)));
     }
 
     result.durationMs = Date.now() - startTime;
@@ -564,6 +579,24 @@ class CognitiveOnboardingService {
         aiConfidence: result.aiMappingConfidence,
       },
     });
+
+    universalAudit.log({
+      workspaceId,
+      actorType: 'trinity',
+      actorBot: 'CognitiveOnboarding',
+      action: AUDIT_ACTIONS.ONBOARDING_COGNITIVE_DATA_EXTRACTED,
+      entityType: 'integration_data',
+      entityId: `${provider}-${dataType}`,
+      changeType: 'action',
+      metadata: {
+        provider,
+        dataType,
+        recordsExtracted: result.recordsExtracted,
+        aiMappingConfidence: result.aiMappingConfidence,
+        success: result.success,
+        durationMs: result.durationMs,
+      },
+    }).catch((err) => log.warn('[cognitiveOnboardingService] Fire-and-forget failed:', err));
 
     return result;
   }
@@ -590,6 +623,7 @@ class CognitiveOnboardingService {
     const url = `${config.apiBaseUrl}${endpoint}`;
 
     const response = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Authorization': `Bearer ${credentials.accessToken}`,
         'Accept': 'application/json',
@@ -615,11 +649,13 @@ class CognitiveOnboardingService {
 
   /**
    * Use AI to map provider-specific fields to our schema
+   * @param workspaceId - Required: The org to bill for AI mapping
    */
   private async aiFieldMapping(
     provider: IntegrationProvider,
     dataType: DataSyncType,
-    rawData: any[]
+    rawData: any[],
+    workspaceId: string
   ): Promise<{ data: any[]; confidence: number }> {
     const sampleRecord = rawData[0];
     const fields = Object.keys(sampleRecord);
@@ -651,7 +687,7 @@ Return JSON with:
       const response = await aiBrainService.processRequest({
         type: 'field_mapping',
         userId: 'system',
-        workspaceId: 'system',
+        workspaceId, // Billed to org doing the onboarding
         messages: [{ role: 'user', content: prompt }],
         contextLevel: 'minimal',
       });
@@ -661,12 +697,31 @@ Return JSON with:
       // Apply mapping to all records
       const mappedData = rawData.map(record => this.applyMapping(record, mapping.fieldMapping));
 
+      universalAudit.log({
+        workspaceId,
+        actorType: 'trinity',
+        actorBot: 'CognitiveOnboarding',
+        action: AUDIT_ACTIONS.ONBOARDING_COGNITIVE_FIELD_MAPPED,
+        entityType: 'integration_mapping',
+        entityId: `${provider}-${dataType}`,
+        changeType: 'action',
+        metadata: {
+          provider,
+          dataType,
+          fieldsCount: fields.length,
+          mappedCount: Object.keys(mapping.fieldMapping || {}).length,
+          unmappedCount: (mapping.unmappedFields || []).length,
+          confidence: mapping.confidence || 0.8,
+          recordsMapped: mappedData.length,
+        },
+      }).catch((err) => log.warn('[cognitiveOnboardingService] Fire-and-forget failed:', err));
+
       return {
         data: mappedData,
         confidence: mapping.confidence || 0.8,
       };
     } catch (error: any) {
-      console.warn('[CognitiveOnboarding] AI mapping failed, using default mapping:', error.message);
+      log.warn('[CognitiveOnboarding] AI mapping failed, using default mapping:', (error instanceof Error ? error.message : String(error)));
       return {
         data: rawData.map(r => this.defaultMapping(r, dataType)),
         confidence: 0.5,
@@ -770,6 +825,7 @@ Return JSON with:
 
     const response = await fetch(config.tokenUrl, {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
@@ -798,7 +854,7 @@ Return JSON with:
       : undefined;
 
     this.credentials.set(credentialKey, credentials);
-    console.log(`[CognitiveOnboarding] Token refreshed for ${provider}`);
+    log.info(`[CognitiveOnboarding] Token refreshed for ${provider}`);
   }
 
   // ============================================================================
@@ -833,7 +889,7 @@ Return JSON with:
     const { workspaceId, userId, integrations, options = {} } = params;
     const { autoImport = true, notifyOnComplete = true } = options;
 
-    console.log(`[CognitiveOnboarding] Starting API-driven onboarding for workspace ${workspaceId}`);
+    log.info(`[CognitiveOnboarding] Starting API-driven onboarding for workspace ${workspaceId}`);
 
     const results: ExtractionResult[] = [];
     const errors: string[] = [];
@@ -894,10 +950,10 @@ Return JSON with:
           invoices,
           success: readyForOperations,
         },
-      });
+      }).catch((err) => log.warn('[cognitiveOnboardingService] Fire-and-forget failed:', err));
     }
 
-    console.log(`[CognitiveOnboarding] Onboarding complete:`, {
+    log.info(`[CognitiveOnboarding] Onboarding complete:`, {
       workspaceId,
       employeesExtracted,
       payrollRecords,
@@ -935,22 +991,19 @@ Return JSON with:
           try {
             await db.insert(employees).values({
               id: crypto.randomUUID(),
-              userId: crypto.randomUUID(), // Will link later
+              userId: crypto.randomUUID(),
               workspaceId,
               firstName: emp.firstName,
               lastName: emp.lastName,
               email: emp.email || `${emp.firstName.toLowerCase()}.${emp.lastName.toLowerCase()}@imported.local`,
               role: 'staff',
-              department: emp.department || 'General',
-              position: emp.position || 'Employee',
-              payRate: emp.payRate?.toString() || '0',
+              hourlyRate: emp.payRate?.toString() || '0',
               payType: emp.payType || 'hourly',
-              status: 'active',
-              employmentType: emp.employmentType || 'full_time',
-              startDate: emp.startDate || new Date(),
+              isActive: true,
+              hireDate: emp.startDate || new Date(),
             }).onConflictDoNothing();
           } catch (error) {
-            console.warn(`[CognitiveOnboarding] Failed to import employee ${emp.firstName}:`, error);
+            log.warn(`[CognitiveOnboarding] Failed to import employee ${emp.firstName}:`, error);
           }
         }
       }
@@ -974,17 +1027,15 @@ Return JSON with:
         workspaceId: params.workspaceId,
         userId: 'system',
         action: `integration.${params.action}`,
-        resourceType: 'integration',
-        resourceId: params.provider,
+        metadata: { resourceType: 'integration', resourceId: params.provider,
         details: {
           provider: params.provider,
           success: params.success,
           ...params.details,
-        },
-        timestamp: new Date(),
+        }, timestamp: new Date() },
       });
     } catch (error) {
-      console.error('[CognitiveOnboarding] Failed to log event:', error);
+      log.error('[CognitiveOnboarding] Failed to log event:', error);
     }
   }
 
@@ -1039,4 +1090,4 @@ Return JSON with:
 
 export const cognitiveOnboardingService = CognitiveOnboardingService.getInstance();
 
-console.log('[CognitiveOnboardingService] Third-party API integration service initialized');
+log.info('[CognitiveOnboardingService] Third-party API integration service initialized');

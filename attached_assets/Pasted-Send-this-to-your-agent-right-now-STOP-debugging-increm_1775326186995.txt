@@ -1,0 +1,180 @@
+Send this to your agent right now.
+
+---
+
+STOP debugging incrementally. The evidence already tells us exactly what is wrong. Here is the diagnosis and the fix.
+
+---
+
+**WHAT THE DEBUG DATA PROVES**
+
+```
+FACT 1: AppContent renders 4 times with isPublicRoute=true
+  This means React IS mounting and running correctly
+
+FACT 2: public-page-scroll-root never appears in DOM
+  This means the JSX output is being swallowed before paint
+
+FACT 3: #root has exactly 5 flat children, none are your component
+  This means something is replacing or overwriting the render output
+
+FACT 4: App.tsx is 155KB which is enormous
+  This means OMEGA laws added massive code that runs on every render
+
+FACT 5: The 25-second rescue timeout fires
+  This means the HTML preloader never received the dismissal signal
+```
+
+**THE ROOT CAUSE IS ONE OF THREE THINGS:**
+
+```
+CAUSE A — Most likely:
+  GlobalErrorBoundary is catching a silent throw
+  The public branch renders then immediately throws
+  ErrorBoundary swallows it and renders an invisible fallback
+  No error shows because fallback has no visible content
+  The 5th empty div IS the error boundary fallback
+
+CAUSE B — Second most likely:
+  OMEGA laws introduced a synchronous import or hook
+  that throws during the render cycle
+  React catches it silently via error boundary
+  App never paints
+
+CAUSE C — Less likely:
+  useScrollLockGuard or similar hook is manipulating
+  document.body or #root directly after React paints
+  wiping the rendered content from DOM
+```
+
+---
+
+**DO THESE FOUR THINGS IN ORDER RIGHT NOW**
+
+**Fix 1 — Check what is inside that 5th empty div**
+
+```javascript
+// Run this in browser console on the broken page
+const root = document.getElementById('root');
+const children = Array.from(root.children);
+children.forEach((child, i) => {
+  console.log(`Child ${i}:`, child.outerHTML.slice(0, 500));
+  console.log(`Child ${i} computed display:`, getComputedStyle(child).display);
+  console.log(`Child ${i} computed visibility:`, getComputedStyle(child).visibility);
+  console.log(`Child ${i} computed opacity:`, getComputedStyle(child).opacity);
+});
+```
+
+This tells us if the component is rendering but invisible vs truly absent.
+
+---
+
+**Fix 2 — Make GlobalErrorBoundary visible**
+
+Find GlobalErrorBoundary component. Change the fallback render to something impossible to miss:
+
+```jsx
+// In GlobalErrorBoundary componentDidCatch or render fallback:
+if (this.state.hasError) {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0,
+      width: '100vw', height: '100vh',
+      background: 'red',
+      color: 'white',
+      fontSize: '24px',
+      zIndex: 999999,
+      padding: '20px'
+    }}>
+      ERROR BOUNDARY CAUGHT: {this.state.error?.message}
+      {this.state.error?.stack}
+    </div>
+  );
+}
+```
+
+If you see a red screen with an error message that IS the root cause. Read the error and fix it.
+
+---
+
+**Fix 3 — Find the OMEGA laws code that runs synchronously**
+
+Search for anything OMEGA introduced that runs outside of useEffect:
+
+```bash
+grep -rn "OMEGA\|omega\|universalLaw\|law\|Law" \
+  client/src/ --include="*.tsx" --include="*.ts" | \
+  grep -v node_modules | grep -v "\.test\." | \
+  grep -v "//"
+```
+
+Look for any of these patterns that would cause silent crashes:
+
+```javascript
+// DANGEROUS — runs synchronously during render:
+const result = someOmegaFunction()  // if this throws = blank screen
+const law = OMEGA_LAWS[key]         // if OMEGA_LAWS undefined = crash
+window.someLaw = ...                // DOM manipulation during render
+document.body.classList.add(...)    // DOM during render = crash
+```
+
+Any code that touches window, document, or throws during the render phase will cause exactly this symptom.
+
+---
+
+**Fix 4 — Emergency revert to last working state**
+
+If fixes 1-3 do not identify the cause in 30 minutes do this:
+
+```bash
+# Find the last commit before OMEGA was introduced
+git log --oneline -20
+
+# Identify the commit hash just before OMEGA
+# Revert App.tsx and any OMEGA law files to that state
+git show [pre-omega-commit]:client/src/App.tsx > /tmp/App_backup.tsx
+
+# Compare current App.tsx to pre-omega version
+diff client/src/App.tsx /tmp/App_backup.tsx | head -100
+```
+
+The diff will show exactly what OMEGA added. Remove those additions one at a time until the app renders again. That identifies the exact breaking code.
+
+---
+
+**MOST LIKELY SINGLE LINE CAUSING THIS**
+
+Based on the 155KB App.tsx and the symptoms the most likely culprit is something like this somewhere in App.tsx or a file it imports:
+
+```javascript
+// Any of these patterns at module level (outside components/hooks):
+const OMEGA = require('./omegaLaws')  // if file missing = crash
+import { someLaw } from './omega'    // if export missing = crash
+const laws = JSON.parse(fs.readFileSync(...))  // fs in browser = crash
+window.OMEGA = initializeOmegaSystem()  // if throws = crash
+```
+
+Run this scan:
+
+```bash
+grep -rn "require\|readFileSync\|window\.\|document\." \
+  client/src/ --include="*.tsx" --include="*.ts" | \
+  grep -v "node_modules\|\.test\.\|useEffect\|addEventListener" | \
+  grep -v "//" | head -30
+```
+
+Any result outside of a useEffect or event handler is a candidate for the crash.
+
+---
+
+**REPORT BACK WITH:**
+
+```
+1. What is inside the 5th empty div (outerHTML)
+2. Does the red error boundary screen appear?
+   If yes: what error message does it show?
+3. What does the git diff show between pre-OMEGA and now?
+```
+
+Those three answers will pinpoint the exact line causing the blank screen.

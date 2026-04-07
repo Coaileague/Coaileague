@@ -1,0 +1,418 @@
+Enormous session Bryan. Here is what was built and then the final massive audit. Read the summary first then copy the prompt.
+
+**What shipped in this session:**
+
+Document Safe fully restructured into 4 logical tabs — Company credentials, Staff packets with 8-dot completeness indicators, Reports filterable by client, and Auditor tab mirroring exactly what regulators see. Backend routes for all four tabs confirmed live.
+
+Regulatory compliance system completed — 12 states seeded, auditor portal 6-step wizard, full compliance dashboard with all 11 sections, officer expandable cards with personal details, Section 11 audit report upload tab, schema expanded with dateOfBirth and placeOfBirth.
+
+30-day credential enrollment system — every person in an org including non-officer owners must submit a TX DPS credential within 30 days. All 5 credential types supported. Global countdown banner across the entire app. Enrollment wizard with 4 steps.
+
+**Pattern of every bug this session:** column names that don't exist in the actual schema, routes registered in mobile switch but not desktop switch, route catch-alls swallowing new endpoints, import paths pointing to wrong locations. Every single session the same category of bugs appears. That is what the final audit must systematically eliminate.
+
+---
+
+Copy everything below this line:
+
+---
+
+COAILEAGUE — FINAL MASSIVE TRUTH AUDIT
+Every session we find the same categories of bugs:
+Schema columns that exist in code but not in the database.
+Routes registered in mobile switch but missing from desktop switch.
+Catch-all routes swallowing new endpoints before they can respond.
+Import paths that are wrong and cause silent module failures.
+Catch blocks that only log and never alert anyone.
+Frontend pages that load but call APIs that return 500 because of wrong column names.
+This audit eliminates every instance of every one of these patterns across the entire codebase.
+One time. Permanently. Before any real user touches this platform.
+Read everything before touching anything. Fix nothing until the full report is written.
+
+---
+
+AUDIT CATEGORY 1 — SCHEMA TRUTH AUDIT
+The most recurring bug in this entire build. Code references columns that do not exist.
+
+Run this exact process:
+Query the live database and get the actual column list for every table.
+Search the entire codebase for every database query — every select, insert, update, where clause.
+For every column name referenced in code verify it exists in the actual database schema.
+Report every mismatch — column referenced in code that does not exist in the database.
+
+Tables that have had column mismatch bugs confirmed in recent sessions — check these first:
+employees table — recent mismatches: guardLicenseNumber, guardLicenseExpiry,
+taxClassification, addressStreet, addressCity, addressState, addressZip,
+employmentType, employmentStatus. Verify what columns actually exist.
+workspaces table — recent mismatches: businessLicense, insuranceCertUrl,
+payrollSchedule. Verify actual columns.
+invoices table — recent mismatch: amountPaid was blank after Stripe payment.
+Verify amountPaid exists and is being written correctly.
+time_entries table — verify all columns used in payroll calculation exist.
+workspace_credits table — verify current_balance and monthly_allocation exist.
+compliance_enrollments table — just created this session, verify all columns landed.
+regulatory_violations table — verify all WORM fields exist.
+employee_certifications table — verify all columns used in compliance scoring exist.
+
+For every mismatch found:
+Either add the missing column via migration with the correct type and default.
+Or fix the code to use the column that actually exists.
+Never leave a mismatch — it will cause a 500 the first time a real user triggers that code path.
+
+After fixing every mismatch run a final verification query confirming
+every column referenced in every query exists in the live schema.
+Report the total count of mismatches found and fixed.
+
+---
+
+AUDIT CATEGORY 2 — ROUTING TRUTH AUDIT
+Every route registered in mobile switch but missing from desktop switch.
+Every route registered in one router but swallowed by a catch-all in another.
+
+Find every route in App.tsx.
+For every route in the mobile Switch confirm it also exists in the desktop Switch
+with the identical path and component.
+For every route in the desktop Switch confirm it also exists in the mobile Switch.
+Report every route that is in one switch but not the other.
+Add the missing registrations.
+
+Find every router in the backend that has a parameterized catch-all route like /:id.
+For every such router list all routes registered on that same router.
+Identify any routes that would be swallowed by the catch-all because
+they come after it in registration order or because their path pattern
+matches the catch-all before the specific path.
+Fix every such case by either moving the specific routes before the catch-all
+or extracting them to a separate router mounted at a different prefix.
+
+Find every frontend page component.
+For every page confirm it is registered as a route in App.tsx.
+Report any page component that exists but has no route registration.
+These are pages that were built but can never be navigated to.
+
+Find every route registered in App.tsx.
+For every route confirm the component it references actually exists in the codebase.
+Report any route pointing to a component that does not exist.
+These cause runtime errors when navigated to.
+
+---
+
+AUDIT CATEGORY 3 — IMPORT PATH TRUTH AUDIT
+Wrong import paths cause silent module failures that are hard to detect.
+
+Find every import statement in every server-side file.
+For every relative import path verify the file it points to actually exists.
+Report every import that points to a non-existent file.
+
+Specifically check these known problem areas:
+All bot files importing from Trinity services — verify paths are correct.
+All compliance files importing from schema — verify column names are imported.
+All email files importing from emailCore — verify function names match exports.
+All Stripe files importing webhook handlers — verify paths.
+All route files importing middleware like requireAuth, requireOwner — verify paths.
+
+Find every re-export barrel file (files that export from multiple other files).
+Verify every item exported from the barrel actually exists in the source file.
+A barrel that exports a function that was renamed or moved causes silent import failures.
+
+---
+
+AUDIT CATEGORY 4 — SILENT FAILURE TRUTH AUDIT
+Every catch block that only logs. Every unhandled promise. Every fire-and-forget.
+
+Search the entire codebase for these patterns:
+
+Pattern: catch(err) { console.error(...) } or catch(err) { logger.error(...) }
+with no notification, no retry, no audit trail entry after the log.
+For every match assess: if this fails at 2am on a Tuesday, does anyone find out?
+If the answer is no, add at minimum: an audit trail entry with the error,
+and if it is a user-facing operation add a notification to platform_staff.
+
+Pattern: async function calls without await in a context where the result matters.
+These create race conditions and silent failures.
+Every async operation that affects data must be awaited.
+
+Pattern: Promise chains without .catch() handlers.
+Every unhandled promise rejection in production is a silent failure.
+
+Pattern: email sends where failure is caught and swallowed.
+If Resend fails the caller must know. The operation must be retried or queued.
+Specifically check: every sendCanSpamCompliantEmail call,
+every sendBrandedEmail call, every individual email function in emailCore.
+
+Pattern: WebSocket broadcasts where failure is not handled.
+If a broadcast fails the recipients never know an event occurred.
+Add error handling to every broadcastToWorkspace call.
+
+Pattern: document safe writes where failure is caught and swallowed.
+If a shift report or compliance document fails to save to the document safe
+the manager gets a notification that it was saved when it was not.
+Every document safe write must either succeed with confirmation or fail with an alert.
+
+Report total count of silent failure patterns found and fixed.
+
+---
+
+AUDIT CATEGORY 5 — API RESPONSE TRUTH AUDIT
+Every API endpoint must return the correct status code and a useful response body.
+
+Find every API endpoint in every route file.
+For each endpoint verify:
+
+On success: returns the correct 2xx status with a response body that contains
+the actual data the frontend needs — not just {success: true}.
+
+On validation failure: returns 400 with a specific message identifying
+which field failed and why — not a generic error.
+
+On auth failure: returns 401 with a message that does not expose internals.
+
+On permission failure: returns 403 with a message that does not expose
+the internal role name — use the sanitized message from the RBAC fix.
+
+On not found: returns 404 with a message identifying what was not found.
+
+On server error: returns 500 with a generic message that never includes
+a stack trace, file path, or internal variable names.
+
+Confirm the global error handler in production mode strips all stack traces.
+Test this right now by triggering a deliberate server error and confirming
+the response contains no stack trace, no file path, no internal detail.
+
+---
+
+AUDIT CATEGORY 6 — WEBSOCKET EVENT TRUTH AUDIT
+Every event must reach the right person and only the right person.
+
+List every broadcastToWorkspace call in the entire codebase.
+For each one verify:
+The workspaceId passed is from the authenticated session — not from request body.
+The event type is a recognized event type that the client knows how to handle.
+The payload contains only the fields the client needs — no sensitive data in the payload.
+
+List every event type the client WebSocket handler listens for.
+For each event type verify there is a corresponding broadcastToWorkspace call
+somewhere in the server that actually fires this event.
+Report any event type the client listens for that is never actually broadcast.
+These are dead listeners — the frontend waits for events that never arrive.
+
+Report any broadcastToWorkspace calls that fire event types the client does not handle.
+These are lost events — the server fires them but the client ignores them.
+
+---
+
+AUDIT CATEGORY 7 — TRINITY ACTION TRUTH AUDIT
+Every registered Trinity action must have a real implementation.
+
+Get the list of all 750+ registered Trinity actions.
+For each action verify:
+The handler function it points to actually exists.
+The handler function actually executes something meaningful — not just returns true.
+The handler function has error handling.
+The handler function deducts the correct credit amount.
+The credit deduction uses the correct action cost from the billing config.
+
+Find every action that is a stub — registered but the handler is empty,
+returns a hardcoded response, or just logs without doing real work.
+These are features listed in the registry that do not actually function.
+For every stub either build the real implementation or remove the action
+and remove it from any pricing page feature list that references it.
+
+Report the total count of real implementations versus stubs.
+
+---
+
+AUDIT CATEGORY 8 — DOCUMENT PIPELINE TRUTH AUDIT
+Every document workflow must complete without human intervention at any step.
+
+Trace each document type from trigger to WORM-locked PDF in the document safe:
+
+Employee onboarding packet (10 documents):
+Trigger: new employee created.
+Does the trigger actually fire within 5 minutes? Test it right now.
+Do all 10 documents generate with real employee data? No blank fields?
+Does each document route to the correct first signer?
+Does the signer receive an email with a working Sign Now button?
+Does the signing sequence enforce order — document 2 cannot be signed before document 1?
+After all 10 execute does onboarding_status update to completed?
+Does Trinity become aware of the completion and allow scheduling?
+Does the document safe receive all 10 executed PDFs?
+Does the employee personal portal receive all 10 copies?
+
+Shift report (ReportBot):
+Trigger: shift end time arrives.
+Does ReportBot actually compile the report within 5 minutes of shift end?
+Does Trinity's AI rewrite officer messages into professional language?
+Is the quality scan running and correcting spelling?
+Does the PDF generate with the correct format?
+Does it save to the document safe under Shifts category?
+Is it WORM locked immediately on save?
+Does the manager receive the notification with the send to client option?
+
+Regulatory violation report (ReportBot):
+Trigger: end of month OR on demand.
+Does it generate with real violation data?
+Does it include the correct statute citations?
+Does Trinity's AI narrative contain real pattern analysis?
+Does it save to document safe under Regulatory Compliance?
+
+Sales proposal (Trinity):
+Trigger: org_owner clicks Generate Proposal on a lead.
+Does Trinity populate all fields from existing org data?
+Does the proposal email deliver with Track B branding?
+Does the pipeline stage update to proposal_sent?
+Does the Day 5 follow-up draft appear for org_owner approval?
+
+For every document type report: FULLY WIRED, PARTIAL, or STUB.
+Fix every partial and stub.
+
+---
+
+AUDIT CATEGORY 9 — COMPLIANCE ENROLLMENT TRUTH AUDIT
+Just built this session. Verify it works completely.
+
+Create a new test workspace right now.
+Confirm the compliance enrollment deadline is set to 30 days from workspace creation.
+Log in as the org_owner.
+Confirm the global countdown banner appears immediately.
+Confirm the banner shows the correct days remaining.
+Navigate to /compliance/regulatory-enrollment.
+Confirm the 4-step wizard loads correctly on both desktop and mobile.
+Complete the wizard selecting Manager Card as the credential type.
+Upload a test image as the credential.
+Confirm the submission is saved to compliance_enrollments table.
+Confirm the org_owner can see the submission in the team review panel.
+Approve the submission.
+Confirm the banner disappears for that user after approval.
+Confirm an unapproved user still sees the banner.
+Set the deadline to yesterday.
+Confirm the banner turns red and shows OVERDUE.
+Confirm Trinity includes the overdue enrollment in the morning briefing.
+
+---
+
+AUDIT CATEGORY 10 — FINANCIAL CHAIN FINAL VERIFICATION
+Money cannot be wrong. Run this one last time after all schema fixes are applied.
+
+After all schema fixes from Category 1 are applied re-run these checks:
+
+Invoice amount accuracy:
+Generate a test invoice for a client with billing rate $26.00/hour.
+Create time entries for exactly 7.5 hours.
+Confirm the invoice total is exactly $195.00.
+Not $194.99. Not $195.01. Exactly $195.00.
+Confirm the billing rate used came from the client record not a hardcoded value.
+
+amountPaid after Stripe payment:
+Use a Stripe test payment on the test invoice.
+After payment confirm invoice.amountPaid equals invoice.totalAmount exactly.
+This was a bug fixed earlier — confirm the fix is still working after all the
+schema changes from Category 1.
+
+Credit ledger balance:
+For the Acme workspace query: sum of all positive credit_transactions.
+Sum of all negative credit_transactions.
+Net must equal workspace_credits.current_balance exactly.
+If they do not match there is a ledger leak somewhere in the recent builds.
+Find it and fix it.
+
+Payroll period detection:
+Create a test payroll run for a workspace with payrollCycle set to weekly.
+Confirm the period spans exactly 7 days.
+Set it to monthly. Confirm the period spans exactly the calendar month.
+This was a bug fixed earlier — confirm it survived all subsequent changes.
+
+---
+
+AUDIT CATEGORY 11 — FIRST REAL USER READINESS
+Bryan is about to invite his manager. Run this exact sequence.
+
+In the Statewide workspace:
+Navigate to the invite flow.
+Confirm the role selector is present with Manager as the default.
+Send a real invite to a real email address you control.
+Confirm the email arrives within 60 seconds.
+Confirm the email shows Statewide Protective Services as the org name.
+Confirm it shows Manager as the assigned role.
+Confirm the Accept Invitation button links to a working page.
+Click the link.
+Confirm the landing page shows org name and role — not a blank page.
+Set a password.
+Confirm auto-login after acceptance.
+Confirm the landing page is the manager command center — not a generic dashboard.
+Confirm Trinity greets the manager with their name and org name.
+Confirm all 7 first-action items work without any errors.
+
+If anything in this sequence fails it is the highest priority fix.
+Bryan sends the real invite the moment this test passes.
+
+---
+
+FINAL REPORT FORMAT
+
+After completing all 11 audit categories produce this report:
+
+SCHEMA TRUTH:
+Total column mismatches found: [number]
+Total column mismatches fixed: [number]
+Tables that are now fully verified: [list]
+
+ROUTING TRUTH:
+Routes in mobile but not desktop: [number found and fixed]
+Routes in desktop but not mobile: [number found and fixed]
+Routes swallowed by catch-alls: [number found and fixed]
+Orphaned page components with no route: [number found and fixed]
+Routes pointing to non-existent components: [number found and fixed]
+
+IMPORT PATH TRUTH:
+Broken import paths found and fixed: [number]
+Barrel export mismatches found and fixed: [number]
+
+SILENT FAILURE TRUTH:
+Catch blocks improved: [number]
+Unhandled promises fixed: [number]
+Email failure handling added: [number]
+Document save failure handling added: [number]
+
+API RESPONSE TRUTH:
+Endpoints returning wrong status codes: [number fixed]
+Endpoints leaking internal detail in errors: [number fixed]
+Stack traces confirmed stripped in production: [confirmed or gap]
+
+WEBSOCKET TRUTH:
+Dead listeners found: [number fixed]
+Lost events found: [number fixed]
+Cross-workspace leakage confirmed absent: [confirmed]
+
+TRINITY ACTION TRUTH:
+Total actions registered: [number]
+Real implementations: [number]
+Stubs found: [number]
+Stubs removed or built out: [number]
+
+DOCUMENT PIPELINE TRUTH:
+Employee onboarding packet: FULLY WIRED or gaps [list]
+Shift report pipeline: FULLY WIRED or gaps [list]
+Violation report pipeline: FULLY WIRED or gaps [list]
+Sales proposal pipeline: FULLY WIRED or gaps [list]
+
+COMPLIANCE ENROLLMENT TRUTH:
+All 9 verification steps: pass or fail [list]
+
+FINANCIAL CHAIN TRUTH:
+Invoice amount accuracy: confirmed exact or gap
+amountPaid after Stripe: confirmed or gap
+Credit ledger balance: confirmed balanced or gap with amount
+Payroll period detection: confirmed or gap
+
+FIRST REAL USER READINESS:
+Invite flow: all steps pass or list failures
+Manager first login: all steps pass or list failures
+
+OVERALL PLATFORM VERDICT:
+Total bugs found this audit: [number]
+Total bugs fixed this audit: [number]
+Any remaining items that need human action before go-live: [list or none]
+READY TO INVITE BRYAN'S MANAGER: YES or NO
+READY FOR FIRST REAL PAYING CUSTOMER: YES or NO
+
+When both are YES the platform opens.
+That is the finish line. This audit gets us there.

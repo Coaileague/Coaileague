@@ -1,0 +1,1506 @@
+This is the right time to address all of this together. Let me break this into a clear comprehensive prompt covering every system needed.
+
+---
+
+Send this to the agent:
+
+---
+
+**MEGA PHASE SPRINT — EMAIL SYSTEM AUDIT + LEGAL PROTECTION + CONSENT MANAGEMENT + ONBOARDING PIPELINE + INLINE FORMS + INTERVIEW CHATROOMS**
+
+Read everything completely before writing a single line of code. This sprint has dependencies — build in the correct order. Architect is gatekeeper on all work.
+
+**BUILD ORDER:**
+1. Email system audit and gap fill
+2. Legal protection and consent framework
+3. Opt-in consent for Trinity communications
+4. Inline forms system
+5. Dynamic interview chatroom
+6. Full onboarding pipeline end-to-end
+7. Welcome and account activation flow
+
+---
+
+**PART 1 — EMAIL SYSTEM FULL AUDIT**
+
+Before building anything verify exactly what exists:
+
+```bash
+# 1A: What inbound addresses are configured and active?
+grep -rn "calloffs@\|incidents@\|docs@\|support@\|staffing@\|verify@\|careers@\|trinity@\|info@" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# 1B: What does Resend currently handle?
+grep -rn "RESEND\|resend\|Resend" server/ --include="*.ts" | grep -v node_modules | head -20
+
+# 1C: Does Trinity have an outbound email address she sends FROM?
+grep -rn "TRINITY_EMAIL\|trinity@\|from.*trinity\|trinity.*from" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 1D: Can Trinity receive and process inbound emails?
+grep -rn "inboundEmail\|processInbound\|emailWebhook\|inbound.*route" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 1E: What email routing exists per org?
+SELECT column_name, table_name 
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND column_name LIKE '%email%'
+ORDER BY table_name, column_name;
+
+# 1F: Does each org have a dedicated inbound email?
+grep -rn "staffing.*orgname\|org.*email.*subdomain\|workspace.*email" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 1G: Can Trinity reply to inbound emails maintaining thread context?
+grep -rn "threadId\|thread_id\|inReplyTo\|in_reply_to\|emailThread" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 1H: What email templates exist?
+ls server/templates/ 2>/dev/null || \
+grep -rn "emailTemplate\|templateId\|template.*email" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+```
+
+**Report exactly:**
+1. How many inbound email addresses exist and what each does
+2. Does Trinity have her own FROM address
+3. Can Trinity reply maintaining thread context
+4. Does each org have isolated email routing
+5. What is missing
+
+**EMAIL ARCHITECTURE REQUIRED:**
+
+Each org needs these email addresses automatically provisioned on workspace creation:
+
+```
+[orgslug]@mail.coaileague.com          → Main org inbox (Trinity monitors)
+trinity.[orgslug]@mail.coaileague.com  → Trinity's personal address for that org
+careers.[orgslug]@mail.coaileague.com  → Applications and recruiting
+verify.[orgslug]@mail.coaileague.com   → Employment verification requests
+support.[orgslug]@mail.coaileague.com  → Client support inbound
+calloffs.[orgslug]@mail.coaileague.com → Officer calloff documentation
+```
+
+Trinity's global platform address:
+```
+trinity@mail.coaileague.com → Platform-level Trinity communications
+```
+
+**If these do not exist — add to workspace creation flow:**
+
+```sql
+ALTER TABLE workspaces 
+ADD COLUMN IF NOT EXISTS email_slug VARCHAR(100) UNIQUE,
+ADD COLUMN IF NOT EXISTS trinity_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS careers_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS verify_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS support_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS calloffs_email VARCHAR(255);
+
+-- Auto-generate on workspace creation
+CREATE OR REPLACE FUNCTION trg_auto_workspace_emails()
+RETURNS TRIGGER AS $$
+DECLARE
+  slug TEXT;
+BEGIN
+  -- Generate URL-safe slug from company name
+  slug := LOWER(REGEXP_REPLACE(NEW.company_name, '[^A-Za-z0-9]', '', 'g'));
+  slug := LEFT(slug, 20);
+  
+  -- Ensure uniqueness
+  WHILE EXISTS (SELECT 1 FROM workspaces WHERE email_slug = slug) LOOP
+    slug := slug || FLOOR(RANDOM() * 9)::TEXT;
+  END LOOP;
+  
+  NEW.email_slug := slug;
+  NEW.trinity_email := 'trinity.' || slug || '@mail.coaileague.com';
+  NEW.careers_email := 'careers.' || slug || '@mail.coaileague.com';
+  NEW.verify_email := 'verify.' || slug || '@mail.coaileague.com';
+  NEW.support_email := 'support.' || slug || '@mail.coaileague.com';
+  NEW.calloffs_email := 'calloffs.' || slug || '@mail.coaileague.com';
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_workspace_emails
+BEFORE INSERT ON workspaces
+FOR EACH ROW EXECUTE FUNCTION trg_auto_workspace_emails();
+```
+
+**Backfill existing workspaces:**
+```sql
+DO $$
+DECLARE r RECORD;
+DECLARE slug TEXT;
+BEGIN
+  FOR r IN SELECT id, company_name FROM workspaces WHERE email_slug IS NULL LOOP
+    slug := LOWER(REGEXP_REPLACE(r.company_name, '[^A-Za-z0-9]', '', 'g'));
+    slug := LEFT(slug, 20);
+    WHILE EXISTS (SELECT 1 FROM workspaces WHERE email_slug = slug AND id != r.id) LOOP
+      slug := slug || FLOOR(RANDOM() * 9)::TEXT;
+    END LOOP;
+    UPDATE workspaces SET
+      email_slug = slug,
+      trinity_email = 'trinity.' || slug || '@mail.coaileague.com',
+      careers_email = 'careers.' || slug || '@mail.coaileague.com',
+      verify_email = 'verify.' || slug || '@mail.coaileague.com',
+      support_email = 'support.' || slug || '@mail.coaileague.com',
+      calloffs_email = 'calloffs.' || slug || '@mail.coaileague.com'
+    WHERE id = r.id;
+  END LOOP;
+END $$;
+```
+
+**Trinity Email Intelligence Layer:**
+
+Build `server/services/trinityEmailProcessor.ts`:
+
+```typescript
+// Processes all inbound emails routed to any Trinity-managed address
+// Routes to correct handler based on TO address
+
+export class TrinityEmailProcessor {
+  
+  async processInbound(emailData: {
+    to: string;
+    from: string;
+    subject: string;
+    body: string;
+    htmlBody?: string;
+    attachments?: any[];
+    messageId: string;
+    inReplyTo?: string;
+    threadId?: string;
+  }) {
+    // 1. Identify workspace from TO address
+    const workspace = await this.resolveWorkspaceFromEmail(emailData.to);
+    if (!workspace) {
+      // Unknown address — log and ignore or bounce
+      logger.warn(`Inbound email to unknown address: ${emailData.to}`);
+      return;
+    }
+    
+    // 2. Identify sender
+    const sender = await this.identifySender(emailData.from, workspace.id);
+    
+    // 3. Store email in database
+    const storedEmail = await this.storeInboundEmail(emailData, workspace.id, sender);
+    
+    // 4. Route to correct Trinity handler based on TO address pattern
+    const addressType = this.getAddressType(emailData.to, workspace);
+    
+    switch(addressType) {
+      case 'careers':
+        await this.handleCareersEmail(storedEmail, workspace, sender);
+        break;
+      case 'verify':
+        await this.handleVerificationEmail(storedEmail, workspace, sender);
+        break;
+      case 'support':
+        await this.handleSupportEmail(storedEmail, workspace, sender);
+        break;
+      case 'calloffs':
+        await this.handleCalloffEmail(storedEmail, workspace, sender);
+        break;
+      case 'trinity':
+        await this.handleTrinityDirectEmail(storedEmail, workspace, sender);
+        break;
+      case 'main':
+        await this.handleMainInboxEmail(storedEmail, workspace, sender);
+        break;
+    }
+  }
+  
+  // Trinity replies maintaining thread context
+  async replyToEmail(params: {
+    originalMessageId: string;
+    toAddress: string;
+    fromAddress: string; // Trinity's workspace email
+    subject: string;
+    body: string;
+    workspaceId: string;
+    templateId?: string;
+  }) {
+    // Send via Resend maintaining thread
+    await resend.emails.send({
+      from: params.fromAddress,
+      to: params.toAddress,
+      subject: params.subject.startsWith('Re:') ? params.subject : `Re: ${params.subject}`,
+      html: params.body,
+      headers: {
+        'In-Reply-To': params.originalMessageId,
+        'References': params.originalMessageId
+      }
+    });
+    
+    // Log in NDS
+    await notificationDeliveryService.trackEmailSent({
+      workspaceId: params.workspaceId,
+      to: params.toAddress,
+      from: params.fromAddress,
+      subject: params.subject,
+      sentBy: 'trinity-system-actor-000000000000'
+    });
+  }
+  
+  getAddressType(toAddress: string, workspace: any): string {
+    if (toAddress === workspace.careers_email) return 'careers';
+    if (toAddress === workspace.verify_email) return 'verify';
+    if (toAddress === workspace.support_email) return 'support';
+    if (toAddress === workspace.calloffs_email) return 'calloffs';
+    if (toAddress === workspace.trinity_email) return 'trinity';
+    return 'main';
+  }
+  
+  async resolveWorkspaceFromEmail(toAddress: string) {
+    return await db.query(`
+      SELECT * FROM workspaces 
+      WHERE trinity_email = $1 
+        OR careers_email = $1 
+        OR verify_email = $1 
+        OR support_email = $1 
+        OR calloffs_email = $1
+      LIMIT 1
+    `, [toAddress]).then(r => r.rows[0]);
+  }
+}
+```
+
+---
+
+**PART 2 — LEGAL PROTECTION AND CONSENT FRAMEWORK**
+
+This is critical. CoAIleague and Trinity are automation tools. The humans (org owners, managers) are always responsible for final decisions. We must make this absolutely clear and legally documented.
+
+**Schema:**
+
+```sql
+CREATE TABLE IF NOT EXISTS legal_agreements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agreement_type VARCHAR(100) NOT NULL,
+  -- 'platform_terms', 'privacy_policy', 'trinity_consent', 
+  -- 'voice_consent', 'sms_consent', 'email_consent',
+  -- 'interview_consent', 'document_consent', 'auditor_terms',
+  -- 'client_terms', 'officer_onboarding_consent'
+  version VARCHAR(20) NOT NULL,
+  -- Increment when terms change: '1.0', '1.1', '2.0'
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  effective_date DATE NOT NULL,
+  is_current BOOLEAN DEFAULT true,
+  requires_explicit_signature BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_legal_acceptances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  -- NULL for non-user acceptances (external candidates, verifiers)
+  external_email VARCHAR(255),
+  -- For external parties who accepted terms
+  workspace_id UUID REFERENCES workspaces(id),
+  agreement_id UUID NOT NULL REFERENCES legal_agreements(id),
+  agreement_type VARCHAR(100) NOT NULL,
+  version_accepted VARCHAR(20) NOT NULL,
+  accepted_at TIMESTAMPTZ DEFAULT NOW(),
+  ip_address INET,
+  user_agent TEXT,
+  acceptance_method VARCHAR(50) NOT NULL,
+  -- 'checkbox', 'signature', 'voice_verbal', 'typed_name'
+  signature_data TEXT,
+  -- Base64 of drawn signature if applicable
+  typed_name VARCHAR(255),
+  -- If they typed their name to accept
+  verbal_consent_recording_url TEXT,
+  -- For voice consent
+  call_sid VARCHAR(100),
+  -- Twilio call reference if verbal
+  revoked_at TIMESTAMPTZ,
+  revoked_reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS consent_preferences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  external_email VARCHAR(255),
+  workspace_id UUID REFERENCES workspaces(id),
+  -- Trinity communication consents
+  trinity_voice_calls BOOLEAN DEFAULT false,
+  trinity_sms BOOLEAN DEFAULT false,
+  trinity_email BOOLEAN DEFAULT false,
+  trinity_interview_calls BOOLEAN DEFAULT false,
+  trinity_document_delivery BOOLEAN DEFAULT false,
+  trinity_onboarding_comms BOOLEAN DEFAULT false,
+  trinity_employment_verification BOOLEAN DEFAULT false,
+  trinity_sales_outreach BOOLEAN DEFAULT false,
+  -- Platform communication consents
+  platform_updates BOOLEAN DEFAULT true,
+  platform_billing BOOLEAN DEFAULT true,
+  platform_security BOOLEAN DEFAULT true,
+  -- Marketing consents
+  marketing_emails BOOLEAN DEFAULT false,
+  -- Opt-out timestamp for each channel
+  voice_opted_out_at TIMESTAMPTZ,
+  sms_opted_out_at TIMESTAMPTZ,
+  email_opted_out_at TIMESTAMPTZ,
+  -- Global opt-out
+  all_opted_out BOOLEAN DEFAULT false,
+  all_opted_out_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Legal Agreement Content — Insert Core Agreements:**
+
+```sql
+-- Platform Terms of Service
+INSERT INTO legal_agreements 
+(agreement_type, version, title, content, effective_date, requires_explicit_signature)
+VALUES (
+  'platform_terms',
+  '1.0',
+  'CoAIleague Platform Terms of Service',
+  '
+COAILEAGUE PLATFORM TERMS OF SERVICE
+
+Effective Date: March 29, 2026
+
+AUTOMATION DISCLAIMER — PLEASE READ CAREFULLY
+
+CoAIleague and Trinity AI are automation and assistance tools only. They do not replace human judgment, supervision, or decision-making authority.
+
+1. HUMAN OVERSIGHT REQUIRED
+All automated actions taken by Trinity AI, including but not limited to: scheduling decisions, compliance recommendations, communication drafts, document generation, payroll calculations, and candidate evaluations — require human review and approval by authorized personnel. CoAIleague and Trinity AI do not constitute licensed professionals in any field including law, accounting, human resources, or security services.
+
+2. NO DUTY OF CARE
+CoAIleague LLC and Trinity AI do not assume any duty of care, supervisory responsibility, or liability for actions taken or not taken based on platform recommendations. Organization owners, managers, and supervisors remain solely responsible for all personnel decisions, compliance obligations, and operational outcomes.
+
+3. AUTOMATION ACKNOWLEDGMENT
+By using this platform you acknowledge that: (a) automated outputs are tools to assist human decision-makers, not replacements for them; (b) final authority for all consequential decisions rests with designated human personnel; (c) you will maintain appropriate human oversight of all automated processes.
+
+4. INDEMNIFICATION
+You agree to indemnify and hold harmless CoAIleague LLC, its officers, directors, employees, and agents from any claims arising from your use of the platform, reliance on automated outputs, or failure to maintain adequate human oversight.
+
+5. LIMITATION OF LIABILITY
+IN NO EVENT SHALL COAILEAGUE LLC BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOST PROFITS, ARISING FROM YOUR USE OF THE PLATFORM.
+
+[Full terms continue...]
+  ',
+  CURRENT_DATE,
+  true
+);
+
+-- Trinity AI Consent Agreement
+INSERT INTO legal_agreements
+(agreement_type, version, title, content, effective_date, requires_explicit_signature)
+VALUES (
+  'trinity_consent',
+  '1.0',
+  'Trinity AI Communication Consent',
+  '
+TRINITY AI COMMUNICATION CONSENT
+
+By accepting this agreement you consent to receive automated communications from Trinity AI on behalf of [ORGANIZATION NAME] including:
+
+VOICE CALLS
+Trinity AI may call you for: onboarding interviews, employment verification, calloff processing, scheduling updates, and account support. Calls may be recorded for quality assurance and legal compliance. You may opt out of voice calls at any time by saying "stop" during any call or by updating your preferences in the platform.
+
+TEXT MESSAGES (SMS)
+Trinity AI may send you text messages for: shift confirmations, schedule updates, compliance reminders, onboarding steps, and urgent operational notices. Message and data rates may apply. Reply STOP to any message to opt out.
+
+EMAIL
+Trinity AI may send you emails for: document delivery, interview correspondence, onboarding materials, compliance notices, and employment verification. You may unsubscribe from non-critical emails at any time.
+
+DOCUMENT DELIVERY
+You consent to receive legally binding documents electronically including: employment agreements, tax forms, compliance certifications, and onboarding documents. Electronic delivery and signature is legally equivalent to physical documents under the ESIGN Act and UETA.
+
+AUTOMATION NOTICE
+All Trinity AI communications are automated. Trinity AI is not a human representative. For matters requiring human attention please contact your designated manager or supervisor directly.
+
+OPT-OUT RIGHTS
+You may withdraw any consent at any time. Opting out of operational communications (shift alerts, compliance notices) may affect your ability to use certain platform features.
+  ',
+  CURRENT_DATE,
+  true
+);
+
+-- Auditor/SRA Terms
+INSERT INTO legal_agreements
+(agreement_type, version, title, content, effective_date, requires_explicit_signature)
+VALUES (
+  'auditor_terms',
+  '1.0', 
+  'Regulatory Auditor Portal Terms',
+  '
+REGULATORY AUDITOR ACCESS TERMS
+
+Access to this regulatory audit portal is restricted to authorized state regulatory personnel only. By accessing this portal you certify that: (a) you are an authorized regulatory auditor with jurisdiction over the audited organization; (b) all information accessed will be used solely for regulatory compliance purposes; (c) unauthorized disclosure of accessed information is prohibited; (d) all access is logged and may be subject to audit.
+
+Automated Advisory Notice: Trinity AI provides advisory summaries within this portal. All AI-generated summaries are for informational purposes only and do not constitute official regulatory findings. Human auditors are solely responsible for all regulatory determinations.
+  ',
+  CURRENT_DATE,
+  true
+);
+```
+
+**Legal Consent Modal Component:**
+
+Build `client/src/components/legal/ConsentModal.tsx`:
+
+```tsx
+// Shown to every new user before accessing the platform
+// Cannot be dismissed without accepting
+// Different content shown based on user role
+
+interface ConsentModalProps {
+  userRole: 'org_owner' | 'org_admin' | 'officer' | 'client' | 'sra_auditor' | 'candidate';
+  onAccept: (acceptanceData: AcceptanceData) => void;
+  workspaceName?: string;
+}
+
+// Modal shows:
+// 1. Platform Terms of Service (full text, scrollable — must scroll to bottom)
+// 2. Privacy Policy summary with link to full
+// 3. Trinity AI consent checkboxes (each channel separate)
+// 4. "I agree" typed name field
+// 5. Accept button (disabled until all required boxes checked and name typed)
+// 6. "Download copy of agreements" button
+// 7. Timestamp shown: "You are agreeing on [date/time] from IP [ip]"
+
+// For officers — additional:
+// 8. Consent to receive Trinity voice calls for interviews and onboarding
+// 9. Consent to Trinity SMS for operational updates
+// 10. Consent to electronic document delivery and signature
+
+// For auditors — shows auditor-specific terms instead
+
+// CANNOT be bypassed
+// On accept: POST /api/legal/accept-agreements
+// Stores in user_legal_acceptances with IP, user agent, timestamp
+// On reject: user is logged out — cannot access platform
+```
+
+**Consent API Routes:**
+
+```typescript
+// server/routes/legalRoutes.ts
+
+// Get agreements requiring acceptance for this user
+router.get('/api/legal/pending-agreements', requireAuth, async (req, res) => {
+  const { userId, role } = req.user;
+  
+  // Check which current agreements user has not accepted
+  const pending = await db.query(`
+    SELECT la.* FROM legal_agreements la
+    WHERE la.is_current = true
+    AND la.agreement_type = ANY($1::text[])
+    AND NOT EXISTS (
+      SELECT 1 FROM user_legal_acceptances ula
+      WHERE ula.user_id = $2
+      AND ula.agreement_type = la.agreement_type
+      AND ula.version_accepted = la.version
+      AND ula.revoked_at IS NULL
+    )
+    ORDER BY la.agreement_type
+  `, [getRequiredAgreementsForRole(role), userId]);
+  
+  res.json(pending.rows);
+});
+
+// Accept agreements
+router.post('/api/legal/accept-agreements', requireAuth, async (req, res) => {
+  const { userId, workspaceId } = req.user;
+  const { agreements, typedName, consentPreferences } = req.body;
+  const ip = req.ip;
+  const userAgent = req.headers['user-agent'];
+  
+  // Store each acceptance
+  for (const agreement of agreements) {
+    await db.query(`
+      INSERT INTO user_legal_acceptances
+      (user_id, workspace_id, agreement_id, agreement_type, version_accepted,
+       accepted_at, ip_address, user_agent, acceptance_method, typed_name)
+      VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, 'typed_name', $8)
+    `, [userId, workspaceId, agreement.id, agreement.type, agreement.version, ip, userAgent, typedName]);
+  }
+  
+  // Store consent preferences
+  await db.query(`
+    INSERT INTO consent_preferences
+    (user_id, workspace_id, trinity_voice_calls, trinity_sms, trinity_email,
+     trinity_interview_calls, trinity_document_delivery, trinity_onboarding_comms)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    ON CONFLICT (user_id, workspace_id) DO UPDATE SET
+    trinity_voice_calls = EXCLUDED.trinity_voice_calls,
+    trinity_sms = EXCLUDED.trinity_sms,
+    updated_at = NOW()
+  `, [userId, workspaceId, ...Object.values(consentPreferences)]);
+  
+  // Write audit record
+  await universalAuditService.log({
+    workspaceId,
+    actorId: userId,
+    entityType: 'legal_acceptance',
+    action: 'agreements_accepted',
+    data: { agreements: agreements.map(a => a.type), typedName, ip }
+  });
+  
+  res.json({ success: true });
+});
+
+// Check consent before Trinity sends communication
+router.get('/api/legal/consent-check/:userId/:channel', requireAuth, async (req, res) => {
+  const { userId, channel } = req.params;
+  // channel: 'voice', 'sms', 'email', 'document'
+  
+  const consent = await db.query(`
+    SELECT trinity_voice_calls, trinity_sms, trinity_email, trinity_document_delivery,
+           all_opted_out, voice_opted_out_at, sms_opted_out_at, email_opted_out_at
+    FROM consent_preferences
+    WHERE user_id = $1
+  `, [userId]);
+  
+  res.json(consent.rows[0] || { consented: false });
+});
+
+// Opt-out endpoint (must always work — even without auth for SMS STOP)
+router.post('/api/legal/opt-out', async (req, res) => {
+  const { email, phone, channel } = req.body;
+  // channel: 'all', 'voice', 'sms', 'email'
+  
+  await db.query(`
+    UPDATE consent_preferences SET
+    ${channel === 'all' ? 'all_opted_out = true, all_opted_out_at = NOW()' : ''}
+    ${channel === 'sms' ? 'trinity_sms = false, sms_opted_out_at = NOW()' : ''}
+    ${channel === 'voice' ? 'trinity_voice_calls = false, voice_opted_out_at = NOW()' : ''}
+    ${channel === 'email' ? 'trinity_email = false, email_opted_out_at = NOW()' : ''}
+    WHERE user_id = (SELECT id FROM users WHERE email = $1 OR phone = $2)
+  `, [email, phone]);
+  
+  res.json({ success: true, message: 'Opt-out recorded. You will no longer receive these communications.' });
+});
+```
+
+**NDS Consent Check Integration:**
+
+Every NDS send must check consent before delivery:
+
+```typescript
+// In notificationDeliveryService.ts — add consent check
+async function checkConsentBeforeSend(userId: string, channel: string): Promise<boolean> {
+  // Critical operational messages bypass consent check
+  // (panic alerts, security incidents, payment failures)
+  const EXEMPT_TYPES = ['panic_alert', 'duress_emergency', 'payment_failed', 'security_breach'];
+  
+  const consent = await db.query(`
+    SELECT trinity_voice_calls, trinity_sms, trinity_email, all_opted_out
+    FROM consent_preferences WHERE user_id = $1
+  `, [userId]);
+  
+  if (!consent.rows[0]) return false; // No consent record = no consent
+  if (consent.rows[0].all_opted_out) return false;
+  
+  switch(channel) {
+    case 'sms': return consent.rows[0].trinity_sms;
+    case 'voice': return consent.rows[0].trinity_voice_calls;
+    case 'email': return consent.rows[0].trinity_email;
+    default: return true; // In-app notifications always allowed
+  }
+}
+```
+
+---
+
+**PART 3 — INLINE FORMS SYSTEM**
+
+Every workflow that needs external input must use a form link. Candidates fill out applications. Officers complete onboarding documents. Clients sign service agreements. All online, all tracked, all persisted.
+
+**Schema:**
+
+```sql
+CREATE TABLE IF NOT EXISTS platform_forms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID REFERENCES workspaces(id),
+  -- NULL = platform global form template
+  form_type VARCHAR(100) NOT NULL,
+  -- 'job_application', 'onboarding_personal_info', 'onboarding_tax_w4',
+  -- 'onboarding_direct_deposit', 'onboarding_i9_section1',
+  -- 'client_intake', 'employment_verification_request',
+  -- 'interview_availability', 'custom'
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  fields JSONB NOT NULL DEFAULT '[]',
+  -- Array of { id, label, type, required, options, validation, order }
+  submit_action VARCHAR(100),
+  -- 'create_candidate', 'complete_onboarding_task', 'create_verification_request'
+  redirect_url TEXT,
+  -- Where to send after submission
+  success_message TEXT,
+  is_active BOOLEAN DEFAULT true,
+  requires_auth BOOLEAN DEFAULT false,
+  -- If true: must be logged in to submit
+  expires_at TIMESTAMPTZ,
+  -- For time-limited forms
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS form_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  form_id UUID NOT NULL REFERENCES platform_forms(id),
+  token VARCHAR(100) UNIQUE NOT NULL DEFAULT gen_random_uuid()::TEXT,
+  -- Secure token for public form access
+  sent_to_email VARCHAR(255),
+  sent_to_phone VARCHAR(20),
+  sent_by_user_id UUID REFERENCES users(id),
+  sent_by_trinity BOOLEAN DEFAULT false,
+  context_type VARCHAR(100),
+  -- 'candidate', 'new_employee', 'new_client', 'verification_request'
+  context_id UUID,
+  -- ID of the related entity (candidate_id, employee_id, etc.)
+  status VARCHAR(50) DEFAULT 'sent',
+  -- 'sent', 'opened', 'submitted', 'expired'
+  opened_at TIMESTAMPTZ,
+  submitted_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '7 days',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS form_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL,
+  form_id UUID NOT NULL REFERENCES platform_forms(id),
+  invitation_id UUID REFERENCES form_invitations(id),
+  submitted_by_user_id UUID REFERENCES users(id),
+  submitted_by_email VARCHAR(255),
+  data JSONB NOT NULL DEFAULT '{}',
+  -- All field values
+  ip_address INET,
+  user_agent TEXT,
+  signature_data TEXT,
+  -- Base64 drawn signature if required
+  submitted_at TIMESTAMPTZ DEFAULT NOW(),
+  processed_at TIMESTAMPTZ,
+  processed_by VARCHAR(50),
+  -- 'trinity_auto' or user_id
+  trinity_action_taken TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Form Builder Routes:**
+
+```typescript
+// server/routes/platformFormsRoutes.ts
+
+// Create a form (org admins)
+router.post('/api/forms', requireAuth, requirePlan('professional'), async (req, res) => {
+  const { workspaceId } = req.user;
+  const form = await db.query(`
+    INSERT INTO platform_forms (workspace_id, form_type, title, description, fields, submit_action)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `, [workspaceId, req.body.formType, req.body.title, req.body.description, 
+      JSON.stringify(req.body.fields), req.body.submitAction]);
+  res.json(form.rows[0]);
+});
+
+// Send form invitation
+router.post('/api/forms/:formId/invite', requireAuth, async (req, res) => {
+  const { workspaceId, userId } = req.user;
+  const { email, phone, contextType, contextId, expiresHours = 168 } = req.body;
+  
+  const invitation = await db.query(`
+    INSERT INTO form_invitations 
+    (workspace_id, form_id, token, sent_to_email, sent_to_phone, 
+     sent_by_user_id, context_type, context_id, expires_at)
+    VALUES ($1, $2, gen_random_uuid()::TEXT, $3, $4, $5, $6, $7, NOW() + INTERVAL '${expiresHours} hours')
+    RETURNING *
+  `, [workspaceId, req.params.formId, email, phone, userId, contextType, contextId]);
+  
+  const formUrl = `${process.env.BASE_URL}/forms/${invitation.rows[0].token}`;
+  
+  // Send via NDS
+  await notificationDeliveryService.send({
+    workspaceId,
+    type: 'form_invitation',
+    data: { formUrl, expiresHours },
+    toEmail: email,
+    toPhone: phone
+  });
+  
+  res.json({ invitation: invitation.rows[0], formUrl });
+});
+
+// Public form access (no auth required — token based)
+router.get('/api/forms/public/:token', async (req, res) => {
+  const invitation = await db.query(`
+    SELECT fi.*, pf.title, pf.description, pf.fields, pf.requires_auth
+    FROM form_invitations fi
+    JOIN platform_forms pf ON pf.id = fi.form_id
+    WHERE fi.token = $1
+    AND fi.expires_at > NOW()
+    AND fi.status != 'expired'
+  `, [req.params.token]);
+  
+  if (!invitation.rows[0]) {
+    return res.status(404).json({ error: 'Form not found or expired' });
+  }
+  
+  // Mark as opened
+  await db.query(
+    'UPDATE form_invitations SET status = $1, opened_at = NOW() WHERE token = $2',
+    ['opened', req.params.token]
+  );
+  
+  res.json(invitation.rows[0]);
+});
+
+// Submit form (public — token based)
+router.post('/api/forms/public/:token/submit', async (req, res) => {
+  const invitation = await db.query(`
+    SELECT fi.*, pf.submit_action, pf.workspace_id
+    FROM form_invitations fi
+    JOIN platform_forms pf ON pf.id = fi.form_id
+    WHERE fi.token = $1 AND fi.expires_at > NOW()
+  `, [req.params.token]);
+  
+  if (!invitation.rows[0]) {
+    return res.status(410).json({ error: 'This form has expired' });
+  }
+  
+  const inv = invitation.rows[0];
+  
+  // Store submission
+  const submission = await db.query(`
+    INSERT INTO form_submissions
+    (workspace_id, form_id, invitation_id, submitted_by_email, data, ip_address, user_agent, submitted_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+    RETURNING *
+  `, [inv.workspace_id, inv.form_id, inv.id, inv.sent_to_email, 
+      JSON.stringify(req.body.data), req.ip, req.headers['user-agent']]);
+  
+  // Mark invitation submitted
+  await db.query(
+    'UPDATE form_invitations SET status = $1, submitted_at = NOW() WHERE id = $2',
+    ['submitted', inv.id]
+  );
+  
+  // Trigger Trinity processing based on submit_action
+  await trinityEmailProcessor.processFormSubmission(
+    submission.rows[0],
+    inv.submit_action,
+    inv.context_type,
+    inv.context_id
+  );
+  
+  res.json({ success: true, message: 'Form submitted successfully' });
+});
+```
+
+**Public Form Page:**
+
+Build `client/src/pages/forms/[token]/index.tsx`:
+```tsx
+// Publicly accessible at /forms/:token
+// No login required
+// Renders dynamic form based on form.fields array
+// Field types: text, email, phone, date, select, radio, checkbox, signature, file_upload
+// Shows expiry countdown
+// On submit: confirmation page with what happens next
+// Mobile optimized — candidates fill this on their phone
+```
+
+---
+
+**PART 4 — DYNAMIC INTERVIEW CHATROOM**
+
+Each candidate interview gets their own isolated chatroom. Trinity is the primary interviewer. A human can co-pilot in real time seeing Trinity's scoring whispers.
+
+**Schema:**
+
+```sql
+CREATE TABLE IF NOT EXISTS interview_chatrooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  candidate_id UUID NOT NULL REFERENCES interview_candidates(id),
+  session_id UUID REFERENCES interview_sessions(id),
+  room_type VARCHAR(50) DEFAULT 'structured_interview',
+  -- 'structured_interview', 'informal_chat', 'panel'
+  status VARCHAR(50) DEFAULT 'pending',
+  -- 'pending', 'active', 'completed', 'abandoned'
+  trinity_active BOOLEAN DEFAULT true,
+  human_copilot_user_id UUID REFERENCES users(id),
+  -- Manager watching the interview
+  current_question_index INTEGER DEFAULT 0,
+  questions_asked JSONB DEFAULT '[]',
+  responses_received JSONB DEFAULT '[]',
+  trinity_scores JSONB DEFAULT '[]',
+  -- Real-time scores per response
+  trinity_whispers JSONB DEFAULT '[]',
+  -- Co-pilot messages visible only to human
+  overall_score INTEGER,
+  -- 0-100 composite
+  trinity_recommendation VARCHAR(50),
+  -- 'strong_hire', 'hire', 'maybe', 'no_hire'
+  human_decision VARCHAR(50),
+  human_notes TEXT,
+  transcript TEXT,
+  pdf_scorecard_url TEXT,
+  pdf_generated_at TIMESTAMPTZ,
+  access_token VARCHAR(100) UNIQUE,
+  -- For candidate to access their interview room
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS interview_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chatroom_id UUID NOT NULL REFERENCES interview_chatrooms(id),
+  workspace_id UUID NOT NULL,
+  sender_type VARCHAR(50) NOT NULL,
+  -- 'trinity', 'candidate', 'human_copilot_whisper', 'system'
+  sender_id VARCHAR(255),
+  -- 'trinity-system-actor', candidate email, or user_id
+  message_text TEXT NOT NULL,
+  is_visible_to_candidate BOOLEAN DEFAULT true,
+  -- false for co-pilot whispers
+  trinity_score_for_response INTEGER,
+  -- Score Trinity gave this candidate response
+  response_flags JSONB DEFAULT '[]',
+  -- ['evasive', 'strong_answer', 'red_flag', 'keyword_match']
+  sent_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Interview Chatroom Flow:**
+
+```typescript
+// server/services/interviewChatOrchestrator.ts
+
+export class InterviewChatOrchestrator {
+  
+  // Trinity sends first message when candidate joins
+  async startInterview(chatroomId: string) {
+    const room = await this.getChatroom(chatroomId);
+    const candidate = await this.getCandidate(room.candidate_id);
+    const questions = await this.getQuestionsForPosition(room.workspace_id, candidate.position_applied);
+    
+    // Update chatroom with questions
+    await db.query(
+      'UPDATE interview_chatrooms SET questions_asked = $1, status = $2, started_at = NOW() WHERE id = $3',
+      [JSON.stringify(questions), 'active', chatroomId]
+    );
+    
+    // Trinity sends welcome
+    await this.sendTrinityMessage(chatroomId, `
+      Hello ${candidate.full_name}! 
+      
+      I'm Trinity, the AI assistant for ${room.workspace_name}. 
+      I'll be conducting your initial interview today for the ${candidate.position_applied} position.
+      
+      This interview should take about 10-15 minutes. I'll ask you several questions and 
+      your responses will be shared with our hiring team for review.
+      
+      Please answer as naturally and completely as you can. There are no trick questions.
+      
+      Let's begin. ${questions[0].question_text}
+    `);
+    
+    // Notify human co-pilot if assigned
+    if (room.human_copilot_user_id) {
+      await this.sendCopilotWhisper(chatroomId, `
+        Interview started. Candidate: ${candidate.full_name}
+        Position: ${candidate.position_applied}
+        ${questions.length} questions queued.
+        Initial score: Pending first response.
+      `);
+    }
+  }
+  
+  // Process candidate response
+  async processCandidateResponse(chatroomId: string, responseText: string) {
+    const room = await this.getChatroom(chatroomId);
+    const currentQuestion = room.questions_asked[room.current_question_index];
+    
+    // Score the response using AI
+    const score = await this.scorResponse(responseText, currentQuestion);
+    
+    // Store response with score
+    const responses = [...room.responses_received, {
+      questionId: currentQuestion.id,
+      questionText: currentQuestion.question_text,
+      response: responseText,
+      score: score.score,
+      flags: score.flags,
+      scoredAt: new Date().toISOString()
+    }];
+    
+    // Send co-pilot whisper with scoring
+    if (room.human_copilot_user_id) {
+      await this.sendCopilotWhisper(chatroomId, `
+        ⚡ Trinity Scoring: ${score.score}/10
+        Flags: ${score.flags.join(', ') || 'None'}
+        Assessment: ${score.assessment}
+        Suggested follow-up: "${score.suggestedFollowUp}"
+      `);
+    }
+    
+    // Move to next question or close
+    const nextIndex = room.current_question_index + 1;
+    
+    if (nextIndex >= room.questions_asked.length) {
+      // Interview complete
+      await this.completeInterview(chatroomId, responses);
+    } else {
+      // Ask next question (adaptive based on score)
+      const nextQuestion = this.getAdaptiveNextQuestion(
+        room.questions_asked, nextIndex, score
+      );
+      
+      await db.query(`
+        UPDATE interview_chatrooms 
+        SET current_question_index = $1, responses_received = $2
+        WHERE id = $3
+      `, [nextIndex, JSON.stringify(responses), chatroomId]);
+      
+      await this.sendTrinityMessage(chatroomId, nextQuestion.question_text);
+    }
+  }
+  
+  // Score response using AI
+  async scorResponse(response: string, question: any): Promise<ScoringResult> {
+    const prompt = `
+      Interview question: "${question.question_text}"
+      Ideal response criteria: ${JSON.stringify(question.scoring_criteria)}
+      Candidate response: "${response}"
+      
+      Score this response 1-10 and identify any flags.
+      Return JSON: { score: number, flags: string[], assessment: string, suggestedFollowUp: string }
+    `;
+    
+    const result = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
+    });
+    
+    return JSON.parse(result.choices[0].message.content);
+  }
+  
+  // Complete interview and generate scorecard
+  async completeInterview(chatroomId: string, responses: any[]) {
+    const room = await this.getChatroom(chatroomId);
+    const candidate = await this.getCandidate(room.candidate_id);
+    
+    // Calculate overall score
+    const scores = responses.map(r => r.score);
+    const overallScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10);
+    
+    // Generate recommendation
+    const recommendation = 
+      overallScore >= 80 ? 'strong_hire' :
+      overallScore >= 65 ? 'hire' :
+      overallScore >= 50 ? 'maybe' : 'no_hire';
+    
+    // Generate scorecard PDF
+    const pdfUrl = await this.generateScorecardPdf(room, responses, overallScore, recommendation);
+    
+    // Update chatroom
+    await db.query(`
+      UPDATE interview_chatrooms SET
+        status = 'completed',
+        overall_score = $1,
+        trinity_recommendation = $2,
+        pdf_scorecard_url = $3,
+        pdf_generated_at = NOW(),
+        completed_at = NOW(),
+        responses_received = $4
+      WHERE id = $5
+    `, [overallScore, recommendation, pdfUrl, JSON.stringify(responses), chatroomId]);
+    
+    // Trinity closing message to candidate
+    await this.sendTrinityMessage(chatroomId, `
+      Thank you ${candidate.full_name} for your time today! 
+      
+      Your interview is now complete. Our hiring team will review your responses 
+      and be in touch within 2-3 business days.
+      
+      We appreciate your interest in joining ${room.workspace_name}!
+    `);
+    
+    // Notify org with scorecard
+    await notificationDeliveryService.send({
+      workspaceId: room.workspace_id,
+      type: 'interview_complete',
+      data: {
+        candidateName: candidate.full_name,
+        position: candidate.position_applied,
+        score: overallScore,
+        recommendation,
+        scorecardUrl: pdfUrl
+      },
+      targetRoles: ['org_owner', 'org_admin']
+    });
+    
+    // Advance candidate stage
+    await db.query(
+      'UPDATE interview_candidates SET stage = $1 WHERE id = $2',
+      ['awaiting_decision', room.candidate_id]
+    );
+  }
+}
+```
+
+---
+
+**PART 5 — FULL ONBOARDING PIPELINE**
+
+From first contact to fully active account — every step tracked, every document generated, every task completed.
+
+**Schema additions:**
+
+```sql
+CREATE TABLE IF NOT EXISTS onboarding_pipelines (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  pipeline_type VARCHAR(50) NOT NULL,
+  -- 'new_employee', 'new_client', 'new_candidate'
+  entity_type VARCHAR(50) NOT NULL,
+  entity_id UUID NOT NULL,
+  -- employee_id, client_id, or candidate_id
+  status VARCHAR(50) DEFAULT 'not_started',
+  -- 'not_started', 'in_progress', 'awaiting_documents', 
+  -- 'awaiting_approval', 'complete', 'abandoned'
+  current_step INTEGER DEFAULT 0,
+  total_steps INTEGER,
+  steps JSONB DEFAULT '[]',
+  -- Array of { id, title, type, status, completedAt, data }
+  assigned_to_user_id UUID REFERENCES users(id),
+  trinity_monitoring BOOLEAN DEFAULT true,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Employee Onboarding Pipeline Steps:**
+
+```typescript
+const EMPLOYEE_ONBOARDING_STEPS = [
+  // Stage 1: Pre-hire (candidate → offer)
+  { id: 'offer_generated', title: 'Offer Letter Generated', type: 'document', tier: 0 },
+  { id: 'offer_accepted', title: 'Offer Letter Signed', type: 'signature', tier: 0 },
+  
+  // Stage 2: Paperwork (blocking — must complete before shift assignment)
+  { id: 'w4_completed', title: 'W-4 Tax Form', type: 'form', tier: 1, blocking: true },
+  { id: 'i9_section1', title: 'I-9 Section 1', type: 'form', tier: 1, blocking: true },
+  { id: 'direct_deposit', title: 'Direct Deposit Authorization', type: 'form', tier: 1, blocking: true },
+  { id: 'handbook_signed', title: 'Employee Handbook Acknowledgment', type: 'signature', tier: 1, blocking: true },
+  { id: 'background_consent', title: 'Background Check Authorization', type: 'form', tier: 1, blocking: true },
+  
+  // Stage 3: Compliance documents
+  { id: 'license_uploaded', title: 'Security License Upload', type: 'upload', tier: 2 },
+  { id: 'id_uploaded', title: 'Government ID Upload', type: 'upload', tier: 2 },
+  { id: 'certifications_uploaded', title: 'Certifications Upload', type: 'upload', tier: 2 },
+  
+  // Stage 4: Platform setup
+  { id: 'pin_set', title: 'Clock-In PIN Created', type: 'action', tier: 3 },
+  { id: 'profile_completed', title: 'Profile Photo and Info', type: 'form', tier: 3 },
+  { id: 'notification_prefs', title: 'Notification Preferences', type: 'form', tier: 3 },
+  { id: 'trinity_consent', title: 'Trinity AI Consent', type: 'consent', tier: 3 },
+];
+```
+
+**Welcome and Account Activation Flow:**
+
+```typescript
+// server/services/onboardingOrchestrator.ts
+
+export class OnboardingOrchestrator {
+  
+  // Triggered when org_owner hires a candidate (clicks "Hire" on scorecard)
+  async initiateEmployeeOnboarding(candidateId: string, workspaceId: string, hiredBy: string) {
+    const candidate = await this.getCandidate(candidateId);
+    
+    // 1. Create employee record from candidate data
+    const employee = await db.query(`
+      INSERT INTO employees 
+      (workspace_id, first_name, last_name, email, phone, 
+       position, source, status, hired_at, hired_by)
+      VALUES ($1, $2, $3, $4, $5, $6, 'recruitment_pipeline', 'pending', NOW(), $7)
+      RETURNING *
+    `, [workspaceId, ...candidateNameParts(candidate.full_name), 
+        candidate.email, candidate.phone, candidate.position_applied, hiredBy]);
+    
+    const emp = employee.rows[0];
+    
+    // 2. Create user account
+    const tempPassword = generateSecureToken(12);
+    const user = await db.query(`
+      INSERT INTO users (workspace_id, email, role, status, employee_id)
+      VALUES ($1, $2, 'officer', 'pending', $3)
+      RETURNING *
+    `, [workspaceId, candidate.email, emp.id]);
+    
+    // 3. Create onboarding pipeline
+    const pipeline = await db.query(`
+      INSERT INTO onboarding_pipelines
+      (workspace_id, pipeline_type, entity_type, entity_id, total_steps, steps, status)
+      VALUES ($1, 'new_employee', 'employee', $2, $3, $4, 'in_progress')
+      RETURNING *
+    `, [workspaceId, emp.id, EMPLOYEE_ONBOARDING_STEPS.length, 
+        JSON.stringify(EMPLOYEE_ONBOARDING_STEPS.map(s => ({ ...s, status: 'pending' })))]);
+    
+    // 4. Generate initial documents
+    // Offer letter with initial pay offer from org_owner
+    const offerLetter = await documentVaultService.generate({
+      templateId: 'offer_letter',
+      workspaceId,
+      employeeId: emp.id,
+      data: {
+        candidateName: candidate.full_name,
+        position: candidate.position_applied,
+        payRate: candidate.offered_pay_rate,
+        startDate: candidate.proposed_start_date
+      }
+    });
+    
+    // 5. Send welcome email with platform access
+    await notificationDeliveryService.send({
+      workspaceId,
+      type: 'new_employee_welcome',
+      toEmail: candidate.email,
+      data: {
+        candidateName: candidate.full_name,
+        workspaceName: await this.getWorkspaceName(workspaceId),
+        loginUrl: `${process.env.BASE_URL}/login`,
+        tempPassword,
+        offerLetterUrl: offerLetter.url,
+        onboardingUrl: `${process.env.BASE_URL}/onboarding/${pipeline.rows[0].id}`
+      }
+    });
+    
+    // 6. Send form invitations for each document
+    await this.sendOnboardingFormInvitations(emp, workspaceId, pipeline.rows[0].id);
+    
+    // 7. Trinity introduces herself via DockChat
+    await this.trinityWelcomeToDockChat(emp.id, workspaceId);
+    
+    // 8. Create welcome task checklist
+    await this.createWelcomeTasklist(emp.id, workspaceId);
+    
+    return { employee: emp, user: user.rows[0], pipeline: pipeline.rows[0] };
+  }
+  
+  // Trinity's DockChat welcome message
+  async trinityWelcomeToDockChat(employeeId: string, workspaceId: string) {
+    const emp = await this.getEmployee(employeeId);
+    const workspace = await this.getWorkspace(workspaceId);
+    const supervisor = await this.getAssignedSupervisor(employeeId);
+    
+    // Find or create a DockChat direct message channel for this employee
+    const chatRoom = await this.findOrCreateWelcomeRoom(employeeId, workspaceId);
+    
+    await this.sendChatMessage(chatRoom.id, {
+      senderId: 'trinity-system-actor-000000000000',
+      text: `
+👋 Welcome to ${workspace.company_name}, ${emp.first_name}!
+
+I'm Trinity, your AI assistant. I'll help guide you through getting set up on the platform.
+
+Here's what needs to be done to get you fully active:
+
+📋 **Your Onboarding Checklist:**
+${EMPLOYEE_ONBOARDING_STEPS.filter(s => s.tier <= 1).map(s => `• ${s.title}`).join('\n')}
+
+I'll send you links to complete each item. Most can be done right from your phone.
+
+${supervisor ? `Your supervisor is **${supervisor.first_name} ${supervisor.last_name}**. They'll be in touch soon with your schedule and post assignments.` : ''}
+
+Questions? Just type them here and I'll help. Let's get started! 🚀
+      `
+    });
+  }
+  
+  // Welcome task list on dashboard
+  async createWelcomeTasklist(employeeId: string, workspaceId: string) {
+    const tasks = EMPLOYEE_ONBOARDING_STEPS.map((step, index) => ({
+      workspaceId,
+      employeeId,
+      taskTitle: step.title,
+      taskType: step.type,
+      tier: step.tier,
+      isBlocking: step.blocking || false,
+      order: index,
+      status: 'pending'
+    }));
+    
+    for (const task of tasks) {
+      await db.query(`
+        INSERT INTO onboarding_tasks 
+        (workspace_id, employee_id, task_title, task_type, tier, is_blocking, sort_order, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+      `, [task.workspaceId, task.employeeId, task.taskTitle, task.taskType, 
+          task.tier, task.isBlocking, task.order]);
+    }
+  }
+}
+```
+
+**Client Onboarding Pipeline:**
+
+Similar flow for new clients:
+
+```typescript
+async initiateClientOnboarding(clientData: any, workspaceId: string) {
+  // 1. Create client record
+  // 2. Create portal account for client contact
+  // 3. Send service agreement for signature
+  // 4. Trinity introduces herself via email
+  // 5. Configure: posts, billing rates, notification preferences
+  // 6. Welcome email with portal access
+  // 7. DockChat introduction with account manager
+  // 8. First invoice preview generated
+}
+```
+
+**Onboarding Progress Dashboard:**
+
+Build `client/src/pages/onboarding-progress/[pipelineId]/index.tsx`:
+
+```tsx
+// Public page — accessible via token
+// Shows visual progress tracker
+// Each step shows: complete ✅, in progress ⏳, or pending ○
+// Clicking incomplete step shows: description + action button
+// "Complete Now" → opens inline form or document
+// Progress bar at top: "7 of 14 steps complete"
+// Estimated time remaining
+// Trinity chat widget at bottom for questions
+// Mobile optimized
+```
+
+---
+
+**PART 6 — ACCOUNT CREATION AND WELCOME NOTIFICATIONS**
+
+After all onboarding documents are complete:
+
+```typescript
+// Triggered when all Tier 1 tasks are complete
+async activateNewEmployee(employeeId: string, workspaceId: string) {
+  // 1. Update status to active
+  await db.query(
+    'UPDATE employees SET status = $1 WHERE id = $2',
+    ['active', employeeId]
+  );
+  
+  // 2. Increment workspace seat count
+  await db.query(
+    'UPDATE workspaces SET current_seat_count = current_seat_count + 1 WHERE id = $1',
+    [workspaceId]
+  );
+  
+  // 3. Grant full platform access
+  await db.query(
+    'UPDATE users SET status = $1 WHERE employee_id = $2',
+    ['active', employeeId]
+  );
+  
+  // 4. Trinity congratulations message via DockChat
+  await trinityMessage(employeeId, workspaceId, `
+    🎉 You're all set, ${emp.first_name}!
+    
+    Your account is now fully active. Here's what you can do:
+    
+    📅 **View your schedule** → tap Schedule in the menu
+    💰 **Check your pay** → tap Payroll when your first check is ready  
+    📋 **Read your post orders** → tap Documents
+    🆘 **Need help?** → I'm always here. Just type your question.
+    
+    Your employee number is **${emp.employee_number}** — you'll use this for voice clock-in.
+    
+    Welcome to the team! 🌟
+  `);
+  
+  // 5. Send activation email
+  await notificationDeliveryService.send({
+    workspaceId,
+    type: 'account_activated',
+    toEmail: emp.email,
+    data: { employeeName: emp.first_name, dashboardUrl: process.env.BASE_URL }
+  });
+  
+  // 6. Notify org_owner
+  await notificationDeliveryService.send({
+    workspaceId,
+    type: 'new_employee_fully_onboarded',
+    targetRoles: ['org_owner', 'org_admin'],
+    data: { employeeName: `${emp.first_name} ${emp.last_name}`, employeeNumber: emp.employee_number }
+  });
+  
+  // 7. WebSocket broadcast to update dashboard
+  broadcastToWorkspace(workspaceId, {
+    type: 'employee_activated',
+    data: { employeeId, employeeName: `${emp.first_name} ${emp.last_name}` }
+  });
+}
+```
+
+---
+
+**PART 7 — TERMS ACCEPTANCE BEFORE PLATFORM USE**
+
+**Middleware — block access until terms accepted:**
+
+```typescript
+// server/middleware/requireLegalAcceptance.ts
+export async function requireLegalAcceptance(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) return next(); // Auth middleware handles this
+  
+  // Skip for legal routes themselves
+  const exemptPaths = ['/api/legal', '/api/auth', '/health', '/status'];
+  if (exemptPaths.some(p => req.path.startsWith(p))) return next();
+  
+  // Check if user has accepted current agreements
+  const pending = await db.query(`
+    SELECT la.id FROM legal_agreements la
+    WHERE la.is_current = true
+    AND la.agreement_type = ANY($1::text[])
+    AND NOT EXISTS (
+      SELECT 1 FROM user_legal_acceptances ula
+      WHERE ula.user_id = $2
+      AND ula.agreement_type = la.agreement_type
+      AND ula.version_accepted = la.version
+      AND ula.revoked_at IS NULL
+    )
+    LIMIT 1
+  `, [getRequiredAgreementsForRole(req.user.role), req.user.id]);
+  
+  if (pending.rows.length > 0) {
+    return res.status(403).json({ 
+      error: 'LEGAL_ACCEPTANCE_REQUIRED',
+      message: 'Please accept the required agreements to continue'
+    });
+  }
+  
+  next();
+}
+```
+
+**Frontend legal gate:**
+
+```typescript
+// In App.tsx or root layout — wrap all protected routes
+// If user.needsLegalAcceptance = true → show ConsentModal overlay
+// Cannot access any page until accepted
+// Check on every app load — if new version released force re-acceptance
+```
+
+---
+
+**VERIFICATION AFTER ALL PARTS:**
+
+```bash
+# Email system
+SELECT email_slug, trinity_email, careers_email FROM workspaces LIMIT 5;
+# All must show generated emails
+
+# Legal agreements
+SELECT agreement_type, version, is_current FROM legal_agreements;
+# Must show all 6 agreement types
+
+# Form system
+SELECT form_type, COUNT(*) FROM platform_forms GROUP BY form_type;
+# Must show platform default forms
+
+# Interview chatrooms
+SELECT COUNT(*) FROM interview_chatrooms;
+# Must show 0 (will populate when interviews happen)
+
+# Onboarding pipelines
+SELECT COUNT(*) FROM onboarding_pipelines WHERE workspace_id = '[acme_id]';
+
+# Consent preferences
+SELECT COUNT(*) FROM consent_preferences WHERE workspace_id = '[acme_id]';
+
+# Test: Consent modal blocks access
+# Create test user without legal acceptance
+# Attempt to access /api/employees → must return 403 LEGAL_ACCEPTANCE_REQUIRED
+
+# Test: Email routing resolves workspace
+# POST /api/inbound-email with to: trinity.acmsecurity@mail.coaileague.com
+# Must resolve to ACME workspace
+
+# Test: Form invitation works
+# POST /api/forms/:id/invite with email
+# GET /api/forms/public/:token → must return form
+# POST /api/forms/public/:token/submit → must create submission
+
+# TypeScript
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+# Must be 0
+
+# Server
+# Must start clean with all new routes mounted
+```
+
+---
+
+**CERTIFICATION:**
+
+```
+THIS SPRINT IS COMPLETE WHEN:
+
+EMAIL SYSTEM:
+✅ Every workspace has 6 auto-generated email addresses
+✅ Trinity can receive and reply to emails maintaining thread context
+✅ Inbound routing resolves correct workspace from TO address
+✅ Trinity processes each email type correctly (careers, verify, support, calloffs)
+
+LEGAL PROTECTION:
+✅ All required agreements created in DB
+✅ Consent modal blocks platform access until accepted
+✅ Typed name + checkbox + IP + timestamp stored on acceptance
+✅ Opt-out endpoint works without auth (SMS STOP compliance)
+✅ NDS checks consent before every non-critical send
+✅ Automation disclaimer in all templates
+
+FORMS:
+✅ Platform default forms created for all onboarding types
+✅ Form invitation system generates secure token links
+✅ Public form accessible without auth via token
+✅ Submission processed by Trinity based on submit_action
+✅ Mobile optimized form renderer
+
+INTERVIEW CHATROOM:
+✅ Dynamic chatroom created per candidate
+✅ Trinity conducts structured interview
+✅ Co-pilot whispers visible only to human observer
+✅ Responses scored in real time
+✅ Scorecard PDF generated on completion
+✅ Org_owner notified with recommendation
+
+ONBOARDING PIPELINE:
+✅ Hire button creates employee + user + pipeline
+✅ Form invitations sent for each document
+✅ Trinity welcome message in DockChat
+✅ Progress tracker page accessible to new employee
+✅ Tier 1 completion triggers account activation
+✅ Activation triggers Trinity congratulations + notifications
+
+TypeScript: 0 errors
+Server: Clean startup
+All new routes mounted and auth-protected where required
+```
+
+---
+
+Paste that. This sprint completes the email intelligence layer, legal protection framework, consent management, inline forms, interview chatrooms, and the full onboarding pipeline from candidate to active employee. When this merges CoAIleague has one of the most complete end-to-end workforce management and onboarding systems on the market.

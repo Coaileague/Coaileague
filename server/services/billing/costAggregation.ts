@@ -1,6 +1,6 @@
 import { db } from '../../db';
+import { PLATFORM } from '../../config/platformConfig';
 import {
-  partnerApiUsageEvents,
   aiUsageEvents,
   workspaces,
   billingAuditLog,
@@ -261,7 +261,7 @@ export class CostAggregationService {
     // Add summary line if multiple categories
     if (lineItems.length > 1) {
       lineItems.push({
-        description: `CoAIleague Platform Markup (${costSummary.markupRate * 100}% - ${costSummary.workspaceTier.toUpperCase()} tier)`,
+        description: `${PLATFORM.name} Platform Markup (${costSummary.markupRate * 100}% - ${costSummary.workspaceTier.toUpperCase()} tier)`,
         amount: 0, // Markup is already included in individual line items
         quantity: 1,
         metadata: {

@@ -1,0 +1,170 @@
+Outstanding. The platform is in excellent shape. Here is the clean summary of exactly what you need to do right now.
+
+---
+
+**PLATFORM STATUS — PRODUCTION READY**
+
+```
+TypeScript errors:          0 ✅
+All 20 domains audited:     ✅
+382 employees active:       ✅
+3,317 shifts in system:     ✅
+78,877 automations at 99.7% success: ✅
+$14M+ in tracked invoices:  ✅
+Trinity all AI providers healthy:    ✅
+Gemini 2332ms Claude 1602ms OpenAI 445ms
+200+ Action Hub actions registered:  ✅
+Statewide guard active:     ✅
+Email system fully working: ✅
+mail.coaileague.com deleted: ✅
+```
+
+---
+
+**YOUR 5 REMAINING ACTIONS — IN ORDER**
+
+**Action 1 — CRITICAL — Plaid credentials (blocks payroll disbursement)**
+
+```
+Go to: plaid.com > Dashboard > Team > Keys
+Add to Replit Secrets:
+
+PLAID_CLIENT_ID    your client ID from Plaid dashboard
+PLAID_SECRET       your production secret from Plaid dashboard
+PLAID_ENV          production
+```
+
+Without this officers cannot receive direct deposit payments.
+
+---
+
+**Action 2 — CRITICAL — Twilio webhook URLs**
+
+You saw this on the Twilio configure screen earlier. Go back to Twilio Console > Phone Numbers > +18664644151 > Configure tab and set exactly these four URLs:
+
+```
+Voice — A call comes in:
+  https://coaileague.com/api/voice/inbound
+  HTTP POST
+
+Voice — Call status changes:
+  https://coaileague.com/api/voice/status-callback
+  HTTP POST
+
+SMS — A message comes in:
+  https://coaileague.com/api/voice/sms-inbound
+  HTTP POST
+
+SMS — Status callback:
+  https://coaileague.com/api/voice/sms-status
+  HTTP POST
+```
+
+Note the audit confirmed the correct paths are status-callback and sms-inbound. Make sure these match exactly.
+
+---
+
+**Action 3 — CRITICAL — ALLOWED_ORIGINS (locks down security)**
+
+```
+Add to Replit Secrets:
+
+ALLOWED_ORIGINS
+https://coaileague.com,https://app.coaileague.com
+```
+
+Without this CORS is using a fallback and your API is not properly locked to your domain.
+
+---
+
+**Action 4 — MEDIUM — Delete neo1._domainkey from DNS**
+
+```
+Go to your domain registrar DNS panel
+Find: TXT  neo1._domainkey  (old Zoho/Neo record)
+Delete it entirely
+```
+
+---
+
+**Action 5 — MEDIUM — Wildcard MX record for tenant email subdomains**
+
+```
+Go to your domain registrar DNS panel
+Add this record:
+
+Type: MX
+Host: *
+Value: inbound-smtp.us-east-1.amazonaws.com
+Priority: 10
+```
+
+This makes staffing@acme.coaileague.com style addresses work. Current staffing-acme@coaileague.com format works but the subdomain format is cleaner.
+
+---
+
+**SEND THIS TO AGENT**
+
+---
+
+Three things to fix immediately based on audit results:
+
+ONE — Remove all references to trinity_credits and credit wallet system from codebase. The audit shows credit wallets were initialized for workspaces but we confirmed the legacy credit system must be zero references. Verify:
+
+```
+grep -rn "trinity_credits\|credit_wallet\|creditLedger\|deductCredit" \
+  server/ client/ --include="*.ts" --include="*.tsx" | grep -v node_modules
+```
+
+If any results exist outside of migration files remove them. All AI usage tracking goes through workspace_ai_usage and ai_call_log only.
+
+TWO — Set ALLOWED_ORIGINS environment variable. Add this to validateEnvironment.ts as a required variable:
+
+```
+ALLOWED_ORIGINS
+Required value: https://coaileague.com,https://app.coaileague.com
+```
+
+Update CORS configuration to use this variable not the Replit domain fallback.
+
+THREE — Verify all 4 Twilio webhook paths are correct in the codebase. The audit confirmed these routes exist but verify the exact paths match what Twilio will call:
+
+```
+POST /api/voice/inbound          -- call arrives
+POST /api/voice/status-callback  -- call ends
+POST /api/voice/sms-inbound      -- SMS arrives
+POST /api/voice/sms-status       -- SMS delivery status
+```
+
+Confirm each route is mounted and returns correct TwiML or 200 response. Test each with a curl POST and verify no 404 responses.
+
+After these three fixes run final canonical check:
+
+```
+grep -rn "trinity_credits\|credit_wallet" server/ --include="*.ts" | grep -v node_modules | wc -l
+# Must be 0
+
+curl -s -o /dev/null -w "%{http_code}" -X POST https://coaileague.com/api/voice/inbound
+# Must not return 404
+
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+# Must be 0
+```
+
+Report results.
+
+---
+
+**BOTTOM LINE**
+
+You have three actions to do yourself right now taking about 15 minutes total:
+
+```
+1. Add PLAID_CLIENT_ID PLAID_SECRET PLAID_ENV to Replit Secrets
+2. Update 4 Twilio webhook URLs in Twilio Console
+3. Add ALLOWED_ORIGINS to Replit Secrets
+4. Delete neo1._domainkey from DNS registrar
+5. Add wildcard MX * record to DNS registrar
+```
+
+After those five manual steps and the agent fixes the three code items the platform is fully production locked and ready for Statewide to go live.

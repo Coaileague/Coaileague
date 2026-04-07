@@ -14,13 +14,17 @@
  * - Penalty Queue: Denied assignments send employee to back of pool
  */
 
-import OpenAI from 'openai';
+import { getMeteredOpenAICompletion } from '../services/billing/universalAIBillingInterceptor';
+import { checkShiftMargin } from '../lib/businessRules';
 import { db } from "../db";
 import { 
   employees, shifts, timeEntries, clients, performanceReviews,
   timeEntryDiscrepancies, onboardingApplications, employeeAvailability
 } from "@shared/schema";
-import { eq, and, gte, lte, sql, desc, count } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, count, isNull } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('scheduleos');
+
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -130,15 +134,7 @@ interface ScheduleResult {
 // ============================================================================
 
 export class SchedulingAI {
-  private openai: OpenAI;
-
   constructor() {
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-    
-    this.openai = new OpenAI({
-      apiKey,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-    });
   }
 
   /**
@@ -148,7 +144,7 @@ export class SchedulingAI {
   async generateSchedule(request: ScheduleRequest): Promise<ScheduleResult> {
     const startTime = Date.now();
     
-    console.log(`[AI Scheduling™] Generating intelligent schedule for week ${request.weekStartDate.toISOString()}`);
+    log.info(`[AI Scheduling™] Generating intelligent schedule for week ${request.weekStartDate.toISOString()}`);
     
     // 1. Get comprehensive employee intelligence from all systems
     const employeeIntelligence = await this.gatherEmployeeIntelligence(
@@ -156,7 +152,7 @@ export class SchedulingAI {
       request.weekStartDate
     );
     
-    console.log(`[AI Scheduling™] Analyzed ${employeeIntelligence.length} employees across all systems`);
+    log.info(`[AI Scheduling™] Analyzed ${employeeIntelligence.length} employees across all systems`);
     
     // 2. Get job site data for location-based assignment
     const jobSites = await this.getJobSiteData(request.clientIds || [], request.workspaceId);
@@ -177,7 +173,7 @@ export class SchedulingAI {
       );
 
     // 4. CONSTRAINT SOLVER: Generate optimal schedule using proper CSP solving
-    console.log(`[AI Scheduling™] Running constraint solver for optimal scheduling...`);
+    log.info(`[AI Scheduling™] Running constraint solver for optimal scheduling...`);
     const solverStartTime = Date.now();
     
     const solvedSchedule = await this.constraintSolver(
@@ -188,18 +184,24 @@ export class SchedulingAI {
     );
     
     const solverTimeMs = Date.now() - solverStartTime;
-    console.log(`[AI Scheduling™] Constraint solver completed in ${solverTimeMs}ms`);
+    log.info(`[AI Scheduling™] Constraint solver completed in ${solverTimeMs}ms`);
 
     // 5. GPT-4 VALIDATION: Verify solution quality and generate explanations
-    console.log(`[AI Scheduling™] Using GPT-4 to validate and explain schedule...`);
+    log.info(`[AI Scheduling™] Using GPT-4 to validate and explain schedule...`);
     const aiPrompt = this.buildValidationPrompt(
       employeeIntelligence,
       request.shiftRequirements,
       solvedSchedule
     );
 
-    const aiResponse = await this.openai.chat.completions.create({
-      model: 'gpt-4',
+    if (!request.workspaceId) {
+      throw new Error('Workspace ID required for AI scheduling - cannot process unbilled operations');
+    }
+    const wsId = request.workspaceId;
+    const aiResult = await getMeteredOpenAICompletion({
+      workspaceId: wsId,
+      userId: request.userId,
+      featureKey: 'scheduleos_ai_generation',
       messages: [
         {
           role: 'system',
@@ -216,37 +218,25 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
           content: aiPrompt,
         },
       ],
-      response_format: { type: 'json_object' },
+      model: 'gpt-4o-mini',
       temperature: 0.3,
+      jsonMode: true,
     });
 
-    // USAGE-BASED BILLING: Track AI token usage for customer billing
-    const { usageMeteringService } = await import('../services/billing/usageMetering');
-    const tokenUsage = aiResponse.usage;
-    if (tokenUsage && request.workspaceId) {
-      await usageMeteringService.recordUsage({
-        workspaceId: request.workspaceId,
-        userId: request.userId,
-        featureKey: 'scheduleos_ai_generation',
-        usageType: 'token',
-        usageAmount: tokenUsage.total_tokens,
-        usageUnit: 'tokens',
-        metadata: {
-          model: 'gpt-4',
-          promptTokens: tokenUsage.prompt_tokens,
-          completionTokens: tokenUsage.completion_tokens,
-          shiftsGenerated: request.shiftRequirements.length,
-        },
-      });
-      console.log(`[AI Scheduling™] Billed ${tokenUsage.total_tokens} tokens to workspace ${request.workspaceId}`);
+    if (!aiResult.success) {
+      if (aiResult.blocked) {
+        throw new Error(`Insufficient credits for AI scheduling: ${aiResult.error}`);
+      }
+      throw new Error(`AI scheduling validation failed: ${aiResult.error}`);
     }
 
-    // 6. Parse GPT-4 validation response
-    const validationResult = JSON.parse(aiResponse.choices[0].message.content || '{}');
+    log.info(`[AI Scheduling] Billed ${aiResult.tokensUsed} tokens to workspace ${wsId}`);
+
+    const validationResult = JSON.parse(aiResult.content || '{}');
 
     // FAIL FAST: If GPT-4 validation fails, reject the schedule
     if (validationResult.valid === false) {
-      console.error(`[AI Scheduling™] GPT-4 validation failed. Rejecting schedule.`);
+      log.error(`[AI Scheduling™] GPT-4 validation failed. Rejecting schedule.`);
       throw new Error(`Schedule validation failed: ${validationResult.warnings?.join(', ') || 'Unknown validation errors'}`);
     }
 
@@ -276,7 +266,7 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
 
     const processingTimeMs = Date.now() - startTime;
 
-    console.log(`[AI Scheduling™] Generated ${generatedShifts.length} optimal shifts in ${processingTimeMs}ms`);
+    log.info(`[AI Scheduling™] Generated ${generatedShifts.length} optimal shifts in ${processingTimeMs}ms`);
 
     return {
       success: true,
@@ -402,8 +392,9 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
     // SOFT CONSTRAINT: Proximity to job site
     let distance: number | undefined;
     if (shift.jobSiteLatitude && shift.jobSiteLongitude) {
-      // Calculate distance (simplified - would use real geo calculation)
-      distance = Math.random() * 50; // Placeholder
+      // Default distance when employee coordinates are not available
+      // Employee locations are stored as addresses without lat/lng
+      distance = 10;
       
       if (distance > 30) {
         score -= 10;
@@ -960,7 +951,7 @@ RESPONSE FORMAT (JSON)
     processingTimeMs: number;
   }> {
     const startTime = Date.now();
-    console.log(`[AI Scheduling™] Filling open shifts for workspace ${workspaceId}`);
+    log.info(`[AI Scheduling™] Filling open shifts for workspace ${workspaceId}`);
 
     // 1. Find all open shifts (no employee assigned, status = published)
     const openShifts = await db
@@ -986,15 +977,15 @@ RESPONSE FORMAT (JSON)
       };
     }
 
-    console.log(`[AI Scheduling™] Found ${openShifts.length} open shifts to fill`);
+    log.info(`[AI Scheduling™] Found ${openShifts.length} open shifts to fill`);
 
     // 2. Gather employee intelligence
     const employeeIntel = await this.gatherEmployeeIntelligence(workspaceId, new Date());
-    console.log(`[AI Scheduling™] Analyzed ${employeeIntel.length} available employees`);
+    log.info(`[AI Scheduling™] Analyzed ${employeeIntel.length} available employees`);
 
-    // 3. Get employee skills for matching
+    // 3. Get employee skills for matching — scoped to this workspace only
     const { employeeSkills } = await import('@shared/schema');
-    const allSkills = await db.select().from(employeeSkills);
+    const allSkills = await db.select().from(employeeSkills).where(eq(employeeSkills.workspaceId, workspaceId));
     const skillsByEmployee = new Map<string, string[]>();
     for (const skill of allSkills) {
       const existing = skillsByEmployee.get(skill.employeeId) || [];
@@ -1002,7 +993,76 @@ RESPONSE FORMAT (JSON)
       skillsByEmployee.set(skill.employeeId, existing);
     }
 
-    // 4. Match employees to shifts
+    // 3b. Load all EXISTING assigned shifts for the relevant time window so we can
+    //     detect schedule conflicts and track weekly hours before making new assignments.
+    // Get the week key (Sun-based) for a date — OT resets per week
+    // Phase 46: Use setUTCHours so workweek boundary is Sunday midnight UTC (shifts stored in UTC)
+    const getWeekKey = (d: Date): string => {
+      const sun = new Date(d);
+      sun.setUTCDate(d.getUTCDate() - d.getUTCDay());
+      sun.setUTCHours(0, 0, 0, 0);
+      return sun.toISOString();
+    };
+
+    // Build window covering ALL weeks that contain open shifts
+    const allWeekTimestamps = openShifts.map(s => {
+      const d = new Date(s.startTime);
+      d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+      d.setUTCHours(0, 0, 0, 0);
+      return d.getTime();
+    });
+    const windowStart = new Date(Math.min(...allWeekTimestamps));
+    const windowEnd   = new Date(Math.max(...allWeekTimestamps));
+    windowEnd.setDate(windowEnd.getDate() + 7);
+
+    const existingAssigned = await db.select({
+      employeeId: shifts.employeeId,
+      startTime: shifts.startTime,
+      endTime: shifts.endTime,
+    }).from(shifts).where(
+      and(
+        eq(shifts.workspaceId, workspaceId),
+        sql`${shifts.employeeId} IS NOT NULL`,
+        gte(shifts.startTime, windowStart),
+        lte(shifts.startTime, windowEnd)
+      )
+    );
+
+    // Per-employee, per-week hours map: empId -> weekKey -> hours
+    const empWeekHoursMap = new Map<string, Map<string, number>>();
+    // Per-employee all-time slots for conflict checking (across all weeks)
+    const empSlots = new Map<string, Array<{ start: Date; end: Date }>>();
+
+    for (const s of existingAssigned) {
+      const empId  = s.employeeId!;
+      const st     = new Date(s.startTime!);
+      const et     = new Date(s.endTime!);
+      const shiftH = (et.getTime() - st.getTime()) / (1000 * 60 * 60);
+      const wk     = getWeekKey(st);
+
+      const weekMap = empWeekHoursMap.get(empId) ?? new Map<string, number>();
+      weekMap.set(wk, (weekMap.get(wk) ?? 0) + shiftH);
+      empWeekHoursMap.set(empId, weekMap);
+
+      const slots = empSlots.get(empId) ?? [];
+      slots.push({ start: st, end: et });
+      empSlots.set(empId, slots);
+    }
+
+    // Helper: overlap check
+    const overlaps = (a: { start: Date; end: Date }, b: { start: Date; end: Date }) =>
+      a.start < b.end && a.end > b.start;
+
+    // Load is_1099_eligible per employee (contractors have higher OT threshold)
+    const empRecords = await db.select({ id: employees.id, is1099: employees.is1099Eligible }).from(employees).where(
+      and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true))
+    );
+    const emp1099Map = new Map<string, boolean>(empRecords.map(e => [e.id, !!(e.is1099 as boolean)]));
+
+    // Sort open shifts by start time so chronologically earlier shifts are filled first
+    openShifts.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    // 4. Match employees to shifts (allowing multi-shift assignment with conflict/OT checks)
     const assignments: Array<{
       shiftId: string;
       shiftTitle: string;
@@ -1012,12 +1072,14 @@ RESPONSE FORMAT (JSON)
       matchReasons: string[];
     }> = [];
     const unfilled: Array<{ shiftId: string; title: string; reason: string }> = [];
-    const assignedEmployeeIds = new Set<string>(); // Prevent double-booking
 
     for (const shift of openShifts) {
-      const shiftDay = new Date(shift.startTime).getDay(); // 0-6
-      const shiftStartHour = new Date(shift.startTime).getHours();
-      const shiftEndHour = new Date(shift.endTime).getHours();
+      const shiftStart = new Date(shift.startTime);
+      const shiftEnd   = new Date(shift.endTime);
+      const shiftH     = (shiftEnd.getTime() - shiftStart.getTime()) / (1000 * 60 * 60);
+      const shiftDay   = shiftStart.getDay(); // 0-6
+      const shiftStartHour = shiftStart.getHours();
+      const shiftEndHour   = shiftEnd.getHours();
       
       // Parse skill requirements from description
       const requiredSkills = this.parseSkillsFromDescription(shift.description || '');
@@ -1029,11 +1091,31 @@ RESPONSE FORMAT (JSON)
         reasons: string[];
       }> = [];
 
+      const shiftWeekKey = getWeekKey(shiftStart);
+
       for (const emp of employeeIntel) {
-        if (assignedEmployeeIds.has(emp.employeeId)) continue; // Already assigned
+        const is1099 = emp1099Map.get(emp.employeeId) ?? false;
+        // W-2 hard cap 40h regular; 1099 contractors tolerate up to 60h
+        const weeklyLimit = is1099 ? 60 : 40;
+        const weekMap     = empWeekHoursMap.get(emp.employeeId);
+        const currentHours = weekMap?.get(shiftWeekKey) ?? 0;
+        if (currentHours + shiftH > weeklyLimit) continue; // Would exceed weekly limit
+
+        // Check for time conflict with existing slots (existing + already-queued in this run)
+        const occupied = empSlots.get(emp.employeeId) ?? [];
+        if (occupied.some(slot => overlaps(slot, { start: shiftStart, end: shiftEnd }))) continue;
 
         const reasons: string[] = [];
         let score = 50; // Base score
+
+        // Prefer employees with more remaining capacity (fewer hours = less OT risk)
+        const remainingH = weeklyLimit - currentHours;
+        if (remainingH >= 32) {
+          reasons.push('High remaining capacity');
+          score += 20;
+        } else if (remainingH >= 16) {
+          score += 10;
+        }
 
         // Check day availability
         const dayAvail = this.getDayAvailability(emp.availability, shiftDay);
@@ -1099,21 +1181,28 @@ RESPONSE FORMAT (JSON)
           confidenceScore: Math.min(best.score / 100, 1),
           matchReasons: best.reasons,
         });
-        assignedEmployeeIds.add(best.employee.employeeId);
+        // Update in-memory tracking so subsequent shifts see this assignment
+        const bestEmpId   = best.employee.employeeId;
+        const updatedWkMap = empWeekHoursMap.get(bestEmpId) ?? new Map<string, number>();
+        updatedWkMap.set(shiftWeekKey, (updatedWkMap.get(shiftWeekKey) ?? 0) + shiftH);
+        empWeekHoursMap.set(bestEmpId, updatedWkMap);
+        const updatedSlots = empSlots.get(bestEmpId) ?? [];
+        updatedSlots.push({ start: shiftStart, end: shiftEnd });
+        empSlots.set(bestEmpId, updatedSlots);
       } else {
         unfilled.push({
           shiftId: shift.id,
           title: shift.title || 'Untitled Shift',
           reason: candidates.length === 0 
-            ? 'No available employees' 
+            ? 'No available employees within hours limits' 
             : 'No suitable match found (score too low)',
         });
       }
     }
 
-    // 5. Apply assignments to database
+    // 5. Apply assignments to database (atomic: only assign if still unassigned)
     for (const assignment of assignments) {
-      await db
+      const result = await db
         .update(shifts)
         .set({
           employeeId: assignment.employeeId,
@@ -1122,11 +1211,75 @@ RESPONSE FORMAT (JSON)
           aiConfidenceScore: String(assignment.confidenceScore),
           updatedAt: new Date(),
         })
-        .where(eq(shifts.id, assignment.shiftId));
+        .where(and(
+          eq(shifts.id, assignment.shiftId),
+          isNull(shifts.employeeId)
+        ))
+        .returning();
+
+      if (result.length === 0) {
+        log.warn(`[AI Scheduling™] Shift ${assignment.shiftId} was already assigned, skipping`);
+      }
     }
 
     const processingTimeMs = Date.now() - startTime;
-    console.log(`[AI Scheduling™] Filled ${assignments.length}/${openShifts.length} shifts in ${processingTimeMs}ms`);
+    log.info(`[AI Scheduling™] Filled ${assignments.length}/${openShifts.length} shifts in ${processingTimeMs}ms`);
+
+    // Step 7 (Phase 5): Margin check — non-blocking. Warn when employee pay rate
+    // exceeds client billing rate so org owners are aware of loss-generating shifts.
+    const marginWarnings: Array<{
+      shiftId: string;
+      shiftTitle: string;
+      employeeId: string;
+      code: string;
+      message: string;
+      impact: string;
+    }> = [];
+
+    if (assignments.length > 0) {
+      const assignedShiftIds = assignments.map(a => a.shiftId);
+      const assignedEmpIds   = assignments.map(a => a.employeeId);
+
+      const [empRates, shiftClients] = await Promise.all([
+        db.select({ id: employees.id, hourlyRate: employees.hourlyRate })
+          .from(employees)
+          .where(sql`${employees.id} = ANY(ARRAY[${sql.join(assignedEmpIds.map(id => sql`${id}::uuid`), sql`, `)}])`),
+        db.select({ id: shifts.id, clientId: shifts.clientId })
+          .from(shifts)
+          .where(sql`${shifts.id} = ANY(ARRAY[${sql.join(assignedShiftIds.map(id => sql`${id}::uuid`), sql`, `)}])`),
+      ]);
+
+      const clientIds = [...new Set(shiftClients.map(s => s.clientId).filter(Boolean))] as string[];
+      const clientRates = clientIds.length > 0
+        ? await db.select({ id: clients.id, billableRate: (clients as any).billableRate })
+            .from(clients)
+            .where(sql`${clients.id} = ANY(ARRAY[${sql.join(clientIds.map(id => sql`${id}::uuid`), sql`, `)}])`)
+        : [];
+
+      const empRateMap   = new Map(empRates.map(e => [e.id, e.hourlyRate]));
+      const shiftClientMap = new Map(shiftClients.map(s => [s.id, s.clientId]));
+      const clientRateMap  = new Map(clientRates.map(c => [c.id, c.billableRate]));
+
+      for (const assignment of assignments) {
+        const employeePayRate  = empRateMap.get(assignment.employeeId);
+        const clientId         = shiftClientMap.get(assignment.shiftId);
+        const clientBillingRate = clientId ? clientRateMap.get(clientId) : null;
+
+        if (employeePayRate && clientBillingRate) {
+          const marginCheck = checkShiftMargin(employeePayRate, clientBillingRate);
+          if (marginCheck.isNegativeMargin) {
+            marginWarnings.push({
+              shiftId: assignment.shiftId,
+              shiftTitle: assignment.shiftTitle,
+              employeeId: assignment.employeeId,
+              code: 'NEGATIVE_MARGIN_SHIFT',
+              message: `This shift has a negative margin. Employee pay rate ($${marginCheck.employeePayRate}/hr) exceeds client billing rate ($${marginCheck.clientBillingRate}/hr).`,
+              impact: `Loss per hour: $${marginCheck.lossPerHour}`,
+            });
+          }
+        }
+      }
+    }
 
     return {
       success: true,
@@ -1136,6 +1289,7 @@ RESPONSE FORMAT (JSON)
       assignments,
       unfilled,
       processingTimeMs,
+      warnings: marginWarnings.length > 0 ? marginWarnings : undefined,
     };
   }
 

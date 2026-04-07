@@ -1,3 +1,4 @@
+import { secureFetch } from "@/lib/csrf";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -12,14 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, CheckCircle2, XCircle, Clock, MapPin, Camera, DollarSign, Calendar, Filter, User, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 
 interface TimeEntry {
   id: string;
@@ -74,8 +70,9 @@ export default function PendingTimeEntries() {
   const { toast } = useToast();
 
   // Fetch all employees for filter dropdown
-  const { data: allEmployees = [] } = useQuery<Employee[]>({
+  const { data: allEmployees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
+    select: (res) => res?.data ?? [],
   });
 
   // Fetch all clients for filter dropdown
@@ -95,7 +92,7 @@ export default function PendingTimeEntries() {
     queryKey: ['/api/time-entries/pending', queryParams.toString()],
     queryFn: async () => {
       const url = `/api/time-entries/pending${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await fetch(url, {
+      const response = await secureFetch(url, {
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Failed to fetch pending entries');
@@ -106,7 +103,7 @@ export default function PendingTimeEntries() {
   // Bulk approve mutation
   const bulkApproveMutation = useMutation({
     mutationFn: async (timeEntryIds: string[]) => {
-      return await apiRequest('/api/time-entries/bulk-approve', 'POST', { timeEntryIds });
+      return await apiRequest('POST', '/api/time-entries/bulk-approve', { timeEntryIds });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/time-entries/pending'] });
@@ -128,7 +125,7 @@ export default function PendingTimeEntries() {
   // Single approve mutation
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/time-entries/${id}/approve`, 'PATCH');
+      return await apiRequest('PATCH', `/api/time-entries/${id}/approve`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/time-entries/pending'] });
@@ -150,7 +147,7 @@ export default function PendingTimeEntries() {
   // Reject mutation
   const rejectMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      return await apiRequest(`/api/time-entries/${id}/reject`, 'PATCH', { reason });
+      return await apiRequest('PATCH', `/api/time-entries/${id}/reject`, { reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/time-entries/pending'] });
@@ -238,18 +235,15 @@ export default function PendingTimeEntries() {
   const allSelected = entries.length > 0 && selectedEntries.size === entries.length;
   const someSelected = selectedEntries.size > 0 && selectedEntries.size < entries.length;
 
-  return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-page-title">
-          Time Entry Approvals
-        </h1>
-        <p className="text-muted-foreground">
-          Review and approve pending time entries before automated invoicing and payroll
-        </p>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'pending-time-entries',
+    title: 'Time Entry Approvals',
+    subtitle: 'Review and approve pending time entries before automated invoicing and payroll',
+    category: 'operations',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Filters */}
       <Card className="mb-6">
         <CardHeader>
@@ -464,7 +458,7 @@ export default function PendingTimeEntries() {
                               {entry.client ? (
                                 <div className="flex items-center gap-2">
                                   <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                                  <span>{entry.client.name}</span>
+                                  <span>{entry.client.companyName || `${entry.client.firstName || ''} ${entry.client.lastName || ''}`.trim() || 'Unknown Client'}</span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
@@ -641,14 +635,14 @@ export default function PendingTimeEntries() {
       )}
 
       {/* Reject Drawer */}
-      <Sheet open={!!selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Reject Time Entry</SheetTitle>
-            <SheetDescription>
+      <UniversalModal open={!!selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)}>
+        <UniversalModalContent className="sm:max-w-md">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Reject Time Entry</UniversalModalTitle>
+            <UniversalModalDescription>
               Provide a reason for rejecting this time entry
-            </SheetDescription>
-          </SheetHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           {selectedEntry && (
             <div className="space-y-4 mt-6">
               <div className="bg-muted/50 p-4 rounded-lg space-y-2">
@@ -660,7 +654,7 @@ export default function PendingTimeEntries() {
                 </p>
                 {selectedEntry.client && (
                   <p className="text-sm">
-                    Client: {selectedEntry.client.name}
+                    Client: {selectedEntry.client.companyName || `${selectedEntry.client.firstName || ''} ${selectedEntry.client.lastName || ''}`.trim() || 'Unknown Client'}
                   </p>
                 )}
               </div>
@@ -711,8 +705,8 @@ export default function PendingTimeEntries() {
               </div>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

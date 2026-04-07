@@ -17,12 +17,18 @@
 import { db } from '../../db';
 import { workspaces, subscriptions, users, notifications } from '@shared/schema';
 import { eq, and, lte, gte, isNotNull, isNull } from 'drizzle-orm';
-import { TrialManager } from './trialManager';
-import { SubscriptionManager, type SubscriptionTier, type BillingCycle } from './subscriptionManager';
+import { trialManager } from './trialManager';
+import { subscriptionManager, type SubscriptionTier, type BillingCycle } from './subscriptionManager';
 import { CreditManager } from './creditManager';
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { PLATFORM } from '../../config/platformConfig';
 import { BILLING } from '@shared/billingConfig';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+import { createLogger } from '../../lib/logger';
+import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
+
+const log = createLogger('TrialConversionOrchestrator');
 
 const GRACE_PERIOD_DAYS = 7;
 const WARNING_DAYS_BEFORE_EXPIRY = [7, 3, 1];
@@ -47,13 +53,9 @@ interface TrialExpiryCheck {
 
 class TrialConversionOrchestrator {
   private static instance: TrialConversionOrchestrator;
-  private trialManager: TrialManager;
-  private subscriptionManager: SubscriptionManager;
   private creditManager: CreditManager;
 
   private constructor() {
-    this.trialManager = TrialManager.getInstance();
-    this.subscriptionManager = SubscriptionManager.getInstance();
     this.creditManager = new CreditManager();
   }
 
@@ -76,7 +78,7 @@ class TrialConversionOrchestrator {
     notified: number;
     errors: string[];
   }> {
-    console.log('[TrialConversion] Processing expiring trials...');
+    log.info('Processing expiring trials');
     
     const results = { processed: 0, converted: 0, gracePeriod: 0, suspended: 0, notified: 0, errors: [] as string[] };
 
@@ -96,25 +98,25 @@ class TrialConversionOrchestrator {
             case 'notified': results.notified++; break;
           }
         } catch (error: any) {
-          results.errors.push(`${workspace.workspaceId}: ${error.message}`);
+          results.errors.push(`${workspace.workspaceId}: ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
 
-      console.log(`[TrialConversion] Processed ${results.processed} workspaces:`, results);
+      log.info('Processed expiring workspaces', { processed: results.processed, converted: results.converted, gracePeriod: results.gracePeriod, suspended: results.suspended, notified: results.notified });
       
       await platformEventBus.publish({
         type: 'trial_processing_complete',
-        category: 'billing',
+        category: 'announcement',
         title: 'Trial Expiry Processing Complete',
         description: `Processed ${results.processed} trials: ${results.converted} converted, ${results.gracePeriod} grace period, ${results.suspended} suspended`,
         metadata: results,
-        visibility: 'admin',
+        visibility: 'org_leadership',
       });
 
       return results;
     } catch (error: any) {
-      console.error('[TrialConversion] Processing failed:', error);
-      results.errors.push(error.message);
+      log.error('Processing failed', { error: (error instanceof Error ? error.message : String(error)) });
+      results.errors.push((error instanceof Error ? error.message : String(error)));
       return results;
     }
   }
@@ -150,6 +152,13 @@ class TrialConversionOrchestrator {
         .limit(1);
 
       if (!workspace) continue;
+
+      // FOUNDER EXEMPTION: skip billing-exempt workspaces (e.g. Statewide Protective Services)
+      if (isBillingExemptByRecord(workspace)) {
+        await logExemptedAction({ workspaceId: workspace.id, action: 'trial_conversion_scan_skipped', metadata: { reason: 'founder_exemption' } });
+        log.info('Skipping trial conversion scan for founder-exempt workspace', { workspaceId: workspace.id });
+        continue;
+      }
 
       const [owner] = await db.select()
         .from(users)
@@ -197,8 +206,8 @@ class TrialConversionOrchestrator {
     }
 
     if (daysRemaining <= -GRACE_PERIOD_DAYS) {
-      await this.suspendWorkspace(trial);
-      return { success: true, workspaceId, action: 'suspended', message: 'Suspended after grace period' };
+      await this.downgradeToFreeAfterExpiry(trial);
+      return { success: true, workspaceId, action: 'suspended', message: 'Downgraded to free after grace period' };
     }
 
     return { success: true, workspaceId, action: 'skipped', message: 'No action needed' };
@@ -211,7 +220,7 @@ class TrialConversionOrchestrator {
     const { workspaceId, selectedTier } = trial;
 
     try {
-      const result = await this.subscriptionManager.createSubscription({
+      const result = await subscriptionManager.createSubscription({
         workspaceId,
         tier: selectedTier || 'starter',
         billingCycle: 'monthly',
@@ -224,11 +233,12 @@ class TrialConversionOrchestrator {
 
         await platformEventBus.publish({
           type: 'trial_converted',
-          category: 'billing',
+          category: 'announcement',
           title: 'Trial Converted to Paid',
           description: `Workspace ${trial.workspaceName} converted to ${selectedTier} plan`,
+          workspaceId,
           metadata: { workspaceId, tier: selectedTier },
-          visibility: 'admin',
+          visibility: 'org_leadership',
         });
 
         return {
@@ -253,7 +263,7 @@ class TrialConversionOrchestrator {
         workspaceId,
         action: 'grace_period',
         message: 'Conversion error',
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }
@@ -276,21 +286,47 @@ class TrialConversionOrchestrator {
       ? 'Your payment method is on file and you\'ll be charged automatically.'
       : 'Please add a payment method to continue your service.';
 
-    await db.insert(notifications).values({
-      userId: workspace.ownerId,
+    // CLASS B FIX: Idempotency guard for trial expiry warnings
+    // Check if we've already warned for this specific threshold day
+    const lastWarnedAt = workspace.metadata?.last_trial_warning_day;
+    if (lastWarnedAt === daysRemaining) {
+      log.info(`[TrialConversionOrchestrator] Skipping duplicate ${daysRemaining}-day warning for workspace ${workspaceId}`);
+      return;
+    }
+
+    // Route through Trinity AI for contextual enrichment
+    await universalNotificationEngine.sendNotification({
       workspaceId,
+      userId: workspace.ownerId!,
       type: 'system',
-      title: `Trial expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
-      message: `Your free trial for ${workspaceName} will expire soon. ${paymentPrompt}`,
-      priority: urgency,
-      actionUrl: '/settings/billing',
+      title: `Free Trial Ending Soon - ${daysRemaining} Day${daysRemaining === 1 ? '' : 's'} Remaining`,
+      message: `Your ${PLATFORM.name} trial for ${workspaceName} expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. ${paymentPrompt} Upgrade now to keep all your data and continue using the platform.`,
+      severity: daysRemaining === 1 ? 'critical' : daysRemaining <= 3 ? 'warning' : 'info',
+      actionUrl: '/settings',
+      metadata: {
+        daysRemaining,
+        hasPaymentMethod,
+        workspaceName,
+        source: 'trial_conversion_orchestrator',
+      },
     });
+
+    // Update last warned day in metadata
+    await db.update(workspaces)
+      .set({ 
+        metadata: { 
+          ...(workspace.metadata || {}), 
+          last_trial_warning_day: daysRemaining 
+        } 
+      })
+      .where(eq(workspaces.id, workspaceId));
 
     await platformEventBus.publish({
       type: 'trial_expiry_warning',
-      category: 'billing',
+      category: 'announcement',
       title: `Trial Expiry Warning (${daysRemaining} days)`,
       description: `${workspaceName} trial expires in ${daysRemaining} days`,
+      workspaceId,
       metadata: { workspaceId, daysRemaining, hasPaymentMethod },
       visibility: 'workspace',
     });
@@ -314,19 +350,50 @@ class TrialConversionOrchestrator {
 
     await platformEventBus.publish({
       type: 'trial_grace_period',
-      category: 'billing',
+      category: 'announcement',
       title: 'Trial Entered Grace Period',
       description: `${workspaceName} has ${graceDaysRemaining} days to add payment method`,
+      workspaceId,
       metadata: { workspaceId, graceDaysRemaining },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     });
   }
 
   /**
-   * Suspend workspace after grace period expires or manual action
-   * @param trial - Trial check info
-   * @param reason - Reason for suspension (default: 'trial_expired')
+   * Downgrade an expired-trial workspace to the free tier instead of suspending.
+   * Keeps the workspace accessible under free-tier limits rather than locking users out.
    */
+  private async downgradeToFreeAfterExpiry(trial: TrialExpiryCheck): Promise<void> {
+    const { workspaceId, workspaceName } = trial;
+
+    await db.update(subscriptions)
+      .set({ status: 'active', tier: 'free' as any })
+      .where(eq(subscriptions.workspaceId, workspaceId));
+
+    await db.update(workspaces)
+      .set({ subscriptionStatus: 'active', subscriptionTier: 'free', isSuspended: false })
+      .where(eq(workspaces.id, workspaceId));
+
+    // Reset credits to free-tier allowance
+    try {
+      const { CreditManager } = await import('./creditManager');
+      await CreditManager.getInstance().initializeCredits(workspaceId, 'free');
+    } catch (err) {
+      log.warn('Credit reset failed during free-tier downgrade', { workspaceId, err });
+    }
+
+    await platformEventBus.publish({
+      type: 'workspace_downgraded',
+      category: 'announcement',
+      title: 'Workspace Downgraded to Free Tier',
+      description: `${workspaceName} trial expired — downgraded to free tier (no payment method on file)`,
+      metadata: { workspaceId, reason: 'trial_expired_no_payment' },
+      visibility: 'org_leadership',
+    });
+
+    log.info('Workspace downgraded to free after trial expiry', { workspaceId });
+  }
+
   private async suspendWorkspace(trial: TrialExpiryCheck, reason: string = 'trial_expired'): Promise<void> {
     const { workspaceId, workspaceName } = trial;
 
@@ -335,7 +402,7 @@ class TrialConversionOrchestrator {
       .where(eq(subscriptions.workspaceId, workspaceId));
 
     await db.update(workspaces)
-      .set({ subscriptionStatus: 'suspended', isActive: false, isSuspended: true })
+      .set({ subscriptionStatus: 'suspended', isSuspended: true })
       .where(eq(workspaces.id, workspaceId));
 
     const reasonDescriptions: Record<string, string> = {
@@ -347,14 +414,14 @@ class TrialConversionOrchestrator {
 
     await platformEventBus.publish({
       type: 'workspace_suspended',
-      category: 'billing',
+      category: 'announcement',
       title: 'Workspace Suspended',
       description: `${workspaceName} suspended: ${reasonDescriptions[reason] || reason}`,
       metadata: { workspaceId, reason },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     });
     
-    console.log(`[TrialSubscription] Workspace ${workspaceId} suspended: ${reason}`);
+    log.info('Workspace suspended', { workspaceId, reason });
   }
 
   /**
@@ -375,35 +442,83 @@ class TrialConversionOrchestrator {
       if (tier !== 'free') {
         if (workspace.stripeSubscriptionId) {
           // Resume existing Stripe subscription
-          const stripeResult = await this.subscriptionManager.resumeSubscription(workspaceId, tier);
+          const stripeResult = await subscriptionManager.resumeSubscription(workspaceId, tier);
           
           if (!stripeResult.success) {
-            // Stripe resume failed - abort reactivation to prevent state divergence
             const errorMessage = stripeResult.error || 'Stripe subscription resume failed';
-            console.error(`[TrialSubscription] Reactivation aborted - Stripe resume failed: ${errorMessage}`);
-            
-            await platformEventBus.publish({
-              type: 'reactivation_failed',
-              category: 'billing',
-              title: 'Workspace Reactivation Failed',
-              description: `${workspace.name} reactivation failed: ${errorMessage}`,
-              metadata: { 
-                workspaceId, 
-                tier, 
-                reason: 'stripe_resume_failed', 
-                error: errorMessage,
-                stripeSubscriptionId: stripeResult.subscriptionId || workspace.stripeSubscriptionId,
-              },
-              visibility: 'admin',
-            });
-            
-            return { success: false, message: `Stripe resume failed: ${errorMessage}` };
+
+            // If the subscription is fully cancelled in Stripe (status = canceled /
+            // incomplete_expired), resuming is impossible. Fall back to creating a
+            // brand-new subscription rather than aborting reactivation entirely.
+            const isFullyCancelled =
+              errorMessage.includes('fully cancelled') ||
+              errorMessage.includes('fully canceled');
+
+            if (isFullyCancelled) {
+              log.warn('Subscription fully cancelled in Stripe — falling back to createSubscription', {
+                workspaceId,
+                staleSubscriptionId: workspace.stripeSubscriptionId,
+                tier,
+              });
+
+              // Clear the stale subscription reference on the workspace so
+              // createSubscription does not attempt another resume internally.
+              await db
+                .update(workspaces)
+                .set({ stripeSubscriptionId: null })
+                .where(eq(workspaces.id, workspaceId));
+
+              const createResult = await subscriptionManager.createSubscription({
+                workspaceId,
+                tier,
+                billingCycle: 'monthly',
+              });
+
+              if (!createResult.success) {
+                const createError = createResult.error || 'Stripe subscription creation failed';
+                log.error('Reactivation aborted — create fallback also failed', { workspaceId, createError });
+
+                await platformEventBus.publish({
+                  type: 'reactivation_failed',
+                  category: 'announcement',
+                  title: 'Workspace Reactivation Failed',
+                  description: `${workspace.name} reactivation failed (create fallback): ${createError}`,
+                  metadata: { workspaceId, tier, reason: 'stripe_create_fallback_failed', error: createError },
+                  visibility: 'org_leadership',
+                });
+
+                return { success: false, message: `Stripe create fallback failed: ${createError}` };
+              }
+
+              log.info('Stripe subscription created via fallback after full cancellation', { workspaceId });
+              // Fall through — local activation continues below
+            } else {
+              // Non-cancellation failure (e.g. payment required) — abort to prevent divergence
+              log.error('Reactivation aborted - Stripe resume failed', { workspaceId, errorMessage });
+
+              await platformEventBus.publish({
+                type: 'reactivation_failed',
+                category: 'announcement',
+                title: 'Workspace Reactivation Failed',
+                description: `${workspace.name} reactivation failed: ${errorMessage}`,
+                metadata: {
+                  workspaceId,
+                  tier,
+                  reason: 'stripe_resume_failed',
+                  error: errorMessage,
+                  stripeSubscriptionId: stripeResult.subscriptionId || workspace.stripeSubscriptionId,
+                },
+                visibility: 'org_leadership',
+              });
+
+              return { success: false, message: `Stripe resume failed: ${errorMessage}` };
+            }
           }
           
-          console.log(`[TrialSubscription] Stripe subscription resumed for workspace ${workspaceId}`);
+          log.info('Stripe subscription resumed', { workspaceId });
         } else {
           // No existing subscription - create a new one
-          const stripeResult = await this.subscriptionManager.createSubscription({
+          const stripeResult = await subscriptionManager.createSubscription({
             workspaceId,
             tier,
             billingCycle: 'monthly',
@@ -412,11 +527,11 @@ class TrialConversionOrchestrator {
           if (!stripeResult.success) {
             // Stripe creation failed - abort reactivation to prevent state divergence
             const errorMessage = stripeResult.error || 'Stripe subscription creation failed';
-            console.error(`[TrialSubscription] Reactivation aborted - Stripe creation failed: ${errorMessage}`);
+            log.error('Reactivation aborted - Stripe creation failed', { workspaceId, errorMessage });
             
             await platformEventBus.publish({
               type: 'reactivation_failed',
-              category: 'billing',
+              category: 'announcement',
               title: 'Workspace Reactivation Failed',
               description: `${workspace.name} reactivation failed: ${errorMessage}`,
               metadata: { 
@@ -426,13 +541,13 @@ class TrialConversionOrchestrator {
                 error: errorMessage,
                 stripeCustomerId: workspace.stripeCustomerId,
               },
-              visibility: 'admin',
+              visibility: 'org_leadership',
             });
             
             return { success: false, message: `Stripe subscription creation failed: ${errorMessage}` };
           }
           
-          console.log(`[TrialSubscription] New Stripe subscription created for workspace ${workspaceId}`);
+          log.info('New Stripe subscription created', { workspaceId });
         }
       }
       
@@ -442,7 +557,6 @@ class TrialConversionOrchestrator {
       await db.update(workspaces).set({
         subscriptionStatus: 'active',
         subscriptionTier: tier,
-        isActive: true,
         isSuspended: false,
       }).where(eq(workspaces.id, workspaceId));
 
@@ -456,29 +570,29 @@ class TrialConversionOrchestrator {
 
       await platformEventBus.publish({
         type: 'workspace_reactivated',
-        category: 'billing',
+        category: 'announcement',
         title: 'Workspace Reactivated',
         description: `${workspace.name} reactivated with ${tier} plan`,
         metadata: { workspaceId, tier, stripeCoordinated: tier !== 'free' },
-        visibility: 'admin',
+        visibility: 'org_leadership',
       });
 
-      console.log(`[TrialSubscription] Workspace ${workspaceId} reactivated with ${tier} tier`);
+      log.info('Workspace reactivated', { workspaceId, tier });
       return { success: true, message: `Workspace reactivated with ${tier} plan` };
     } catch (error: any) {
-      console.error('[TrialSubscription] Reactivation failed:', error);
+      log.error('Reactivation failed', { error: (error instanceof Error ? error.message : String(error)), workspaceId });
       
       // Emit failure event for visibility
       await platformEventBus.publish({
         type: 'reactivation_failed',
-        category: 'billing',
+        category: 'announcement',
         title: 'Workspace Reactivation Failed',
-        description: `Reactivation failed: ${error.message}`,
-        metadata: { workspaceId, reason: 'exception', error: error.message },
-        visibility: 'admin',
+        description: `Reactivation failed: ${(error instanceof Error ? error.message : String(error))}`,
+        metadata: { workspaceId, reason: 'exception', error: (error instanceof Error ? error.message : String(error)) },
+        visibility: 'org_leadership',
       });
       
-      return { success: false, message: error.message };
+      return { success: false, message: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -494,7 +608,7 @@ class TrialConversionOrchestrator {
 
       await db.update(workspaces).set({
         subscriptionStatus: 'cancelled',
-        isActive: false,
+        isSuspended: true,
       }).where(eq(workspaces.id, workspaceId));
 
       await db.update(subscriptions).set({
@@ -503,18 +617,18 @@ class TrialConversionOrchestrator {
 
       await platformEventBus.publish({
         type: 'subscription_cancelled',
-        category: 'billing',
+        category: 'announcement',
         title: 'Subscription Cancelled',
         description: `${workspace.name} subscription cancelled${reason ? `: ${reason}` : ''}`,
         metadata: { workspaceId, reason },
-        visibility: 'admin',
+        visibility: 'org_leadership',
       });
 
-      console.log(`[TrialConversion] Subscription cancelled for workspace ${workspaceId}`);
+      log.info('Subscription cancelled', { workspaceId });
       return { success: true, message: 'Subscription cancelled' };
     } catch (error: any) {
-      console.error('[TrialConversion] Cancellation failed:', error);
-      return { success: false, message: error.message };
+      log.error('Cancellation failed', { error: (error instanceof Error ? error.message : String(error)), workspaceId });
+      return { success: false, message: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -567,9 +681,9 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'trial.process_expiring',
       name: 'Process Expiring Trials',
-      category: 'billing',
+      category: 'announcement',
       description: 'Process all trials approaching expiry or expired',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const result = await this.processExpiringTrials();
         return { success: true, actionId: request.actionId, message: 'Trial processing complete', data: result };
@@ -579,11 +693,11 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'trial.check_status',
       name: 'Check Trial Status',
-      category: 'billing',
+      category: 'announcement',
       description: 'Check trial status for a workspace',
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
-        const status = await this.trialManager.getTrialStatus(request.payload.workspaceId);
+        const status = await trialManager.getTrialStatus(request.payload.workspaceId);
         return { success: true, actionId: request.actionId, message: 'Trial status retrieved', data: status };
       },
     });
@@ -591,12 +705,12 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'trial.extend',
       name: 'Extend Trial',
-      category: 'billing',
+      category: 'announcement',
       description: 'Extend trial period for a workspace',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { workspaceId, days } = request.payload;
-        const result = await this.trialManager.extendTrial(workspaceId, days || 7);
+        const result = await trialManager.extendTrial(workspaceId, days || 7);
         return { success: result.success, actionId: request.actionId, message: result.success ? 'Trial extended' : result.error, data: result };
       },
     });
@@ -604,12 +718,12 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'trial.start',
       name: 'Start Trial',
-      category: 'billing',
+      category: 'announcement',
       description: 'Start a new trial for a workspace',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { workspaceId } = request.payload;
-        const result = await this.trialManager.startTrial(workspaceId);
+        const result = await trialManager.startTrial(workspaceId);
         return { success: result.success, actionId: request.actionId, message: result.success ? 'Trial started' : result.error, data: result };
       },
     });
@@ -618,9 +732,9 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'subscription.reactivate',
       name: 'Reactivate Subscription',
-      category: 'billing',
+      category: 'announcement',
       description: 'Reactivate a suspended workspace after payment',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { workspaceId, tier } = request.payload;
         const result = await this.reactivateWorkspace(workspaceId, tier);
@@ -631,9 +745,9 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'subscription.cancel',
       name: 'Cancel Subscription',
-      category: 'billing',
+      category: 'announcement',
       description: 'Cancel a workspace subscription',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { workspaceId, reason } = request.payload;
         const result = await this.cancelSubscription(workspaceId, reason);
@@ -644,9 +758,9 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'subscription.get_all_status',
       name: 'Get All Subscription Statuses',
-      category: 'billing',
+      category: 'announcement',
       description: 'Get status summary of all subscriptions for monitoring',
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const data = await this.getAllSubscriptionStatuses();
         return { success: true, actionId: request.actionId, message: 'Subscription statuses retrieved', data };
@@ -656,13 +770,17 @@ class TrialConversionOrchestrator {
     helpaiOrchestrator.registerAction({
       actionId: 'subscription.suspend',
       name: 'Suspend Subscription',
-      category: 'billing',
+      category: 'announcement',
       description: 'Manually suspend a workspace subscription',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { workspaceId, reason } = request.payload;
-        // Fetch workspace name for accurate event logging
         const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        if (!workspace) return { success: false, actionId: request.actionId, message: `Workspace ${workspaceId} not found` };
+        if (isBillingExemptByRecord(workspace)) {
+          await logExemptedAction({ workspaceId, action: 'subscription.suspend_trinity_action_blocked', metadata: { reason: 'founder_exemption', requestedReason: reason } });
+          return { success: false, actionId: request.actionId, message: `Workspace ${workspaceId} is founder-exempt and cannot be suspended` };
+        }
         await this.suspendWorkspace({
           workspaceId,
           workspaceName: workspace?.name || 'Unknown Workspace',
@@ -674,16 +792,34 @@ class TrialConversionOrchestrator {
       },
     });
 
-    console.log('[TrialSubscription] Registered 8 AI Brain actions (4 trial + 4 subscription lifecycle)');
+    log.info('Registered 8 AI Brain actions (4 trial + 4 subscription lifecycle)');
   }
 }
 
 export const trialConversionOrchestrator = TrialConversionOrchestrator.getInstance();
 
 export async function initializeTrialConversionOrchestrator(): Promise<void> {
-  console.log('[TrialConversion] Initializing Trial Conversion Orchestrator...');
+  log.info('Initializing Trial Conversion Orchestrator');
   trialConversionOrchestrator.registerActions();
-  console.log('[TrialConversion] Trial Conversion Orchestrator initialized');
+
+  const { withDistributedLock, LOCK_KEYS } = await import('../distributedLock');
+
+  const runDailyCheck = async () => {
+    try {
+      await withDistributedLock(
+        LOCK_KEYS.TRIAL_EXPIRY,
+        'TrialExpiryCheck',
+        () => trialConversionOrchestrator.processExpiringTrials()
+      );
+    } catch (err: any) {
+      log.error('Daily trial expiry check failed', { error: err?.message });
+    }
+  };
+
+  setTimeout(runDailyCheck, 30_000).unref();
+  setInterval(runDailyCheck, 24 * 60 * 60 * 1000).unref();
+
+  log.info('Trial Conversion Orchestrator initialized — daily expiry scheduler active');
 }
 
 export { TrialConversionOrchestrator };

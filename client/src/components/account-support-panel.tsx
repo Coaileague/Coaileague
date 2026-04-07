@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalTitle, UniversalModalClose, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,17 +50,16 @@ export function AccountSupportPanel({
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(accountInfo || {} as AccountInfo);
 
-  // Mock account data if none provided
   const defaultAccount: AccountInfo = {
-    id: 'user-12345',
-    name: accountInfo?.name || 'John Doe',
-    email: accountInfo?.email || 'john.doe@company.com',
-    phone: '+1 (555) 123-4567',
-    status: 'active',
-    tier: 'professional',
-    lastLogin: '2 hours ago',
-    accountAge: '6 months',
-    ticketCount: 3
+    id: accountInfo?.id || '',
+    name: accountInfo?.name || 'Unknown',
+    email: accountInfo?.email || 'Not available',
+    phone: accountInfo?.phone || 'Not provided',
+    status: accountInfo?.status || 'active',
+    tier: accountInfo?.tier || 'free',
+    lastLogin: accountInfo?.lastLogin || 'Unknown',
+    accountAge: accountInfo?.accountAge || 'Unknown',
+    ticketCount: accountInfo?.ticketCount || 0
   };
 
   const account = accountInfo || defaultAccount;
@@ -106,26 +105,26 @@ export function AccountSupportPanel({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent size="full" className="max-h-[90vh] p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-          <DialogTitle className="flex items-center gap-3 text-2xl">
+    <UniversalModal open={isOpen} onOpenChange={onClose}>
+      <UniversalModalContent size="full" hideBuiltInClose className="max-h-[90vh] p-0 overflow-hidden">
+        <DialogStyledHeader variant="info" className="p-5 sm:p-6">
+          <UniversalModalTitle className="flex items-center gap-3 text-xl sm:text-2xl text-inherit">
             <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-              <User className="w-6 h-6" />
+              <User className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             Account Support Tools
-          </DialogTitle>
-          <p className="text-blue-100 text-sm mt-2">Manage account details, security, and support actions</p>
-        </DialogHeader>
+          </UniversalModalTitle>
+          <p className="text-white/80 text-xs sm:text-sm mt-2">Manage account details, security, and support actions</p>
+        </DialogStyledHeader>
 
         <ScrollArea className="max-h-[calc(90vh-120px)]">
           <div className="p-6 space-y-6">
             {/* Account Overview Card */}
             <Card>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <User className="w-5 h-5 text-blue-600" />
+                    <User className="w-5 h-5 text-primary" />
                     Account Information
                   </CardTitle>
                   <div className="flex items-center gap-2">
@@ -264,7 +263,7 @@ export function AccountSupportPanel({
                       {/* Lock Account */}
                       <Button 
                         variant="outline" 
-                        className="justify-start text-blue-700 border-blue-300"
+                        className="justify-start text-primary border-primary/50"
                         onClick={() => handleAction('lock_account')}
                         data-testid="button-lock-account"
                       >
@@ -311,13 +310,13 @@ export function AccountSupportPanel({
             )}
 
             {/* Quick Info Card */}
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-blue-900">Support Tip</p>
-                    <p className="text-xs text-blue-700">
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Support Tip</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
                       {isStaff 
                         ? "All account actions are logged. Use password reset for authentication issues. Lock accounts if suspicious activity is detected."
                         : "If you need to update your email or phone number, contact support. For security reasons, these changes require verification."
@@ -329,7 +328,7 @@ export function AccountSupportPanel({
             </Card>
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, XCircle, Clock, Calendar, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface TimesheetEditRequest {
   id: string;
@@ -40,7 +41,17 @@ export default function TimesheetApprovals() {
 
   const reviewMutation = useMutation({
     mutationFn: async ({ requestId, approved, reviewNotes }: { requestId: string; approved: boolean; reviewNotes?: string }) => {
-      return await apiPatch('timeEntries.approveEdit', { requestId, approved, reviewNotes });
+      const res = await fetch(`/api/timesheet-edit-requests/${requestId}/review`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ approved, reviewNotes }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to process request');
+      }
+      return res.json();
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.list(1, 100) });
@@ -106,17 +117,15 @@ export default function TimesheetApprovals() {
 
   const pendingCount = requests?.length || 0;
 
-  return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-page-title">
-          Timesheet Edit Approvals
-        </h1>
-        <p className="text-muted-foreground">
-          Review and approve timesheet edit requests from employees
-        </p>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'timesheet-approvals',
+    title: 'Timesheet Edit Approvals',
+    subtitle: 'Review and approve timesheet edit requests from employees',
+    category: 'operations',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Stats Card */}
       <Card className="mb-6">
         <CardHeader>
@@ -209,7 +218,7 @@ export default function TimesheetApprovals() {
           </div>
         </div>
       )}
-    </div>
+    </CanvasHubPage>
   );
 }
 
@@ -243,7 +252,7 @@ function RequestCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <CardTitle className="text-lg flex items-center gap-2">
               <Calendar className="h-4 w-4" />

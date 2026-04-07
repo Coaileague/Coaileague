@@ -2,53 +2,54 @@
 import { db } from './db';
 import { users, workspaces, platformRoles, employees } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
 
 export async function seedRootUser() {
-  console.log('Creating root user for Operations organization...');
+  console.log('Creating root user for CoAIleague Platform organization...');
 
   // Create root user
-  // ⚠️ SECURITY WARNING: Update credentials before going live!
-  // Current temp credentials: root@getdc360.com / admin123@*
+  // ⚠️ SECURITY WARNING: Change default credentials immediately after first login!
   const ROOT_USER_ID = 'root-user-00000000';
+  const DEFAULT_ROOT_PASSWORD = process.env.ROOT_INITIAL_PASSWORD || 'change-me-on-first-login';
   let rootUser = await db.select().from(users).where(eq(users.id, ROOT_USER_ID)).limit(1);
   
   if (!rootUser.length) {
     const bcrypt = await import('bcryptjs');
-    const hashedPassword = await bcrypt.hash('admin123@*', 10);
+    const hashedPassword = await bcrypt.hash(DEFAULT_ROOT_PASSWORD, 10);
     
     await db.insert(users).values({
       id: ROOT_USER_ID,
-      email: 'root@getdc360.com',
+      email: process.env.ROOT_ADMIN_EMAIL || 'root@coaileague.local',
       passwordHash: hashedPassword,
       firstName: 'Root',
       lastName: 'Administrator',
-      role: 'admin',
+      role: 'root_admin',
     });
-    console.log('✅ Root user created with email: root@getdc360.com');
+    console.log('✅ Root user created with email:', process.env.ROOT_ADMIN_EMAIL || 'root@coaileague.local');
     console.log('⚠️  WARNING: Change password before going live!');
   } else {
     console.log('Root user already exists');
   }
 
-  // Create Operations workspace
-  const OPS_WORKSPACE_ID = 'ops-workspace-00000000';
+  // Create CoAIleague Platform workspace
+  const OPS_WORKSPACE_ID = PLATFORM_WORKSPACE_ID;
   let opsWorkspace = await db.select().from(workspaces).where(eq(workspaces.id, OPS_WORKSPACE_ID)).limit(1);
   
   if (!opsWorkspace.length) {
     await db.insert(workspaces).values({
       id: OPS_WORKSPACE_ID,
-      name: 'Operations',
+      name: 'CoAIleague Platform',
       ownerId: ROOT_USER_ID,
-      companyName: 'CoAIleague Operations',
+      companyName: 'CoAIleague Platform',
       subscriptionTier: 'enterprise',
       subscriptionStatus: 'active',
       maxEmployees: 99999,
       maxClients: 99999,
       platformFeePercentage: '0.00', // Operations doesn't pay fees
     });
-    console.log('✅ Operations workspace created');
+    console.log('✅ CoAIleague Platform workspace created');
   } else {
-    console.log('Operations workspace already exists');
+    console.log('CoAIleague Platform workspace already exists');
   }
 
   // Grant platform Root role
@@ -75,10 +76,10 @@ export async function seedRootUser() {
     const [newEmployee] = await db.insert(employees).values({
       workspaceId: OPS_WORKSPACE_ID,
       userId: ROOT_USER_ID,
-      employeeNumber: 'ROOT-001',
+      employeeNumber: 'EMP-COAI-00001',
       firstName: 'Root',
       lastName: 'Administrator',
-      email: 'root@getdc360.com',
+      email: process.env.ROOT_ADMIN_EMAIL || 'root@coaileague.local',
       workspaceRole: 'org_owner',
       hourlyRate: '0.00',
       onboardingStatus: 'completed',
@@ -94,7 +95,7 @@ export async function seedRootUser() {
   const { externalIdentifiers } = await import('@shared/schema');
   const { and } = await import('drizzle-orm');
   
-  // Create Operations workspace external ID (ORG-SUPT)
+  // Create CoAIleague Platform workspace external ID (ORG-COAI)
   const existingOrgId = await db.select().from(externalIdentifiers)
     .where(and(
       eq(externalIdentifiers.entityType, 'org'),
@@ -106,13 +107,13 @@ export async function seedRootUser() {
     await db.insert(externalIdentifiers).values({
       entityType: 'org',
       entityId: OPS_WORKSPACE_ID,
-      externalId: 'ORG-SUPT',
+      externalId: 'ORG-COAI',
       isPrimary: true,
     });
-    console.log('✅ Operations workspace external ID created: ORG-SUPT');
+    console.log('✅ CoAIleague Platform workspace external ID created: ORG-COAI');
   }
   
-  // Create root employee external ID (EMP-SUPT-00001)
+  // Create root employee external ID (EMP-COAI-00001)
   const existingEmpId = await db.select().from(externalIdentifiers)
     .where(and(
       eq(externalIdentifiers.entityType, 'employee'),
@@ -124,17 +125,17 @@ export async function seedRootUser() {
     await db.insert(externalIdentifiers).values({
       entityType: 'employee',
       entityId: employeeId,
-      externalId: 'EMP-SUPT-00001',
+      externalId: 'EMP-COAI-00001',
       orgId: OPS_WORKSPACE_ID,
       isPrimary: true,
     });
     
     // Update employee number to match external ID
     await db.update(employees)
-      .set({ employeeNumber: 'EMP-SUPT-00001' })
+      .set({ employeeNumber: 'EMP-COAI-00001' })
       .where(eq(employees.id, employeeId));
     
-    console.log('✅ Root employee external ID created: EMP-SUPT-00001');
+    console.log('✅ Root employee external ID created: EMP-COAI-00001');
   }
 
   console.log('\n🎉 Root user setup complete!');

@@ -1,0 +1,73 @@
+**PERFECT. This is great news.**
+
+AppContent is working perfectly. The problem is in what AppContent renders for the public route. Send this to agent now.
+
+---
+
+AppContent is confirmed working:
+- isPublicRoute: true
+- pathname: /
+- isLoading: false
+- isAuthenticated: false
+
+All correct. The problem is the JSX that AppContent returns for the public branch is broken or invisible. The debug div replaced it and works fine. Now restore the real public route JSX but fix what is breaking it.
+
+Do this in order:
+
+STEP 1 — Remove the blue debug div from AppContent. Restore the original public branch JSX.
+
+STEP 2 — Find the public branch return in AppContent. It looks something like this:
+
+```tsx
+if (isPublicRoute) {
+  return (
+    <div className="public-page-scroll-root" ...>
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
+    </div>
+  );
+}
+```
+
+Replace it with this stripped down version that removes ALL wrappers except the bare minimum:
+
+```tsx
+if (isPublicRoute) {
+  return (
+    <div style={{minHeight: '100vh', width: '100%'}}>
+      <Suspense fallback={<div style={{padding:'20px'}}>Loading...</div>}>
+        {children}
+      </Suspense>
+    </div>
+  );
+}
+```
+
+Deploy. Does the homepage content show now? YES or NO.
+
+STEP 3 — If YES then the problem is one of the wrappers or className values on the public branch. Add them back one at a time until it breaks again. The wrapper that breaks it is the bug.
+
+STEP 4 — If NO then the problem is inside the children themselves. The homepage component is throwing during render. Add this around the children:
+
+```tsx
+if (isPublicRoute) {
+  return (
+    <div style={{minHeight: '100vh', width: '100%'}}>
+      <ErrorBoundary fallback={
+        <div style={{padding:'20px', background:'orange', color:'black', fontSize:'18px'}}>
+          PUBLIC PAGE ERROR - CHECK CONSOLE
+        </div>
+      }>
+        <Suspense fallback={<div style={{padding:'20px'}}>Loading...</div>}>
+          {children}
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  );
+}
+```
+
+Deploy. Do you see orange error box or actual homepage content?
+
+Report YES or NO for step 2 immediately. That is the only answer needed right now.

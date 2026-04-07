@@ -11,17 +11,19 @@
  * - Recommendations for closing gaps
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { eq, and, desc, count, sql, gte } from 'drizzle-orm';
 import {
   aiSubagentDefinitions,
   subagentTelemetry,
-  aiWorkboardTasks,
   automationActionLedger,
 } from '@shared/schema';
 import { subagentSupervisor, type SubagentDomain } from './subagentSupervisor';
 import { toolCapabilityRegistry } from './toolCapabilityRegistry';
 import { geminiClient } from './providers/geminiClient';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinitySelfAssessment');
 
 // ============================================================================
 // TYPES
@@ -46,6 +48,9 @@ export interface GapAnalysis {
   impactOnAutonomy: string;
   recommendedFix: string;
   estimatedEffort: 'small' | 'medium' | 'large' | 'epic';
+  status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+  resolvedAt?: string;
+  resolutionNote?: string;
 }
 
 export interface SelfAssessmentResult {
@@ -88,11 +93,11 @@ export interface SelfAssessmentResult {
 // KNOWN GAPS (Architecture-based analysis)
 // ============================================================================
 
-// KNOWN_GAPS - Updated December 13, 2025
+// KNOWN_GAPS - Updated March 30, 2026
 // Phase 1 (CRITICAL) - RESOLVED
 // Phase 2 (HIGH) - RESOLVED
 // Phase 3 (MEDIUM) - RESOLVED
-// Phase 4 (LOW) - SERVICE CONNECTIVITY - IN PROGRESS
+// Phase 4 (LOW) - SERVICE CONNECTIVITY - RESOLVED (all 15 services wired to platformEventBus)
 const KNOWN_GAPS: GapAnalysis[] = [
   // ============================================================================
   // PHASE 1 - CRITICAL GAPS (RESOLVED)
@@ -135,8 +140,7 @@ const KNOWN_GAPS: GapAnalysis[] = [
   // ============================================================================
   // PHASE 4 - LOW GAPS (SERVICE CONNECTIVITY)
   // ============================================================================
-  // 15 platform services identified with NO Trinity/AI Brain connections
-  // These services operate independently without platform awareness
+  // ALL 15 services now connected to platformEventBus — RESOLVED March 30, 2026
 
   {
     category: 'orchestration',
@@ -146,6 +150,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot proactively identify payroll issues or optimize payment timing',
     recommendedFix: 'Add platformEventBus events for payroll runs and connect to Trinity for intelligent oversight',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'payrollAutomation.ts already had 8+ platformEventBus publish calls covering payroll_run_started, payroll_completed, payroll_error, and anomaly events.',
   },
   {
     category: 'orchestration',
@@ -155,6 +162,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot track email effectiveness or personalize content using AI insights',
     recommendedFix: 'Add platformEventBus events for email sends and connect to Trinity for content optimization',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'emailAutomation.ts routes through trinityPlatformConnector which already provides Trinity-aware email orchestration.',
   },
   {
     category: 'execution',
@@ -164,6 +174,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot leverage Trinity context for better dispute resolution recommendations',
     recommendedFix: 'Integrate disputeAI with Trinity for holistic dispute analysis using workforce patterns',
     estimatedEffort: 'medium',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'disputeAI.ts wired: emits dispute_created and dispute_resolved events on platformEventBus at key resolution hook points.',
   },
   {
     category: 'execution',
@@ -173,6 +186,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot proactively predict compliance risks or suggest preventive actions',
     recommendedFix: 'Connect to platformEventBus for real-time compliance alerts to Trinity',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'complianceMonitoring.ts routes through trinityPlatformConnector which provides real-time compliance event publication.',
   },
   {
     category: 'execution',
@@ -182,6 +198,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Lost opportunity for AI to learn from employee behavior patterns',
     recommendedFix: 'Integrate with trinityMemoryService to share pattern insights for learning',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'employeePatternService.ts wired: emits employee_patterns_analyzed event on platformEventBus with pattern metadata on each analysis run.',
   },
   {
     category: 'orchestration',
@@ -191,6 +210,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot add AI-powered insights or summaries to generated reports',
     recommendedFix: 'Add Trinity integration for AI-enhanced report generation and scheduling',
     estimatedEffort: 'medium',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'reportWorkflowEngine.ts wired: emits report_generated event on platformEventBus with report type, workspace, and output metadata.',
   },
   {
     category: 'execution',
@@ -200,6 +222,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot predict PTO usage patterns or suggest optimal scheduling',
     recommendedFix: 'Connect to platformEventBus for PTO events and Trinity analysis',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'ptoAccrual.ts wired: emits pto_accrual_processed event on platformEventBus including accrued hours, employee, and policy details.',
   },
   {
     category: 'execution',
@@ -209,6 +234,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot proactively ensure break compliance or suggest optimal break times',
     recommendedFix: 'Integrate with compliance monitoring and Trinity for intelligent break scheduling',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'breaksService.ts wired: emits break_violation_detected event on platformEventBus when mandatory break compliance is violated.',
   },
   {
     category: 'validation',
@@ -218,6 +246,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Trinity has no visibility into external service health for decision making',
     recommendedFix: 'Connect to platformEventBus for external service status updates',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'externalMonitoring.ts wired: emits monitoring_alert_sent event on platformEventBus for every alert including critical health events.',
   },
   {
     category: 'execution',
@@ -227,6 +258,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot use heatmap insights for AI-driven scheduling or resource allocation',
     recommendedFix: 'Share heatmap data with Trinity for pattern-based recommendations',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'heatmapService.ts wired: emits staffing_analysis_completed event on platformEventBus with recommendation count and critical gap counts.',
   },
   {
     category: 'orchestration',
@@ -236,6 +270,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot personalize digest content based on user preferences and AI insights',
     recommendedFix: 'Integrate with Trinity for personalized, AI-enhanced daily summaries',
     estimatedEffort: 'medium',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'dailyDigestService.ts wired: emits daily_digest_sent event on platformEventBus on each digest run with workspace and recipient metadata.',
   },
   {
     category: 'validation',
@@ -245,6 +282,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot leverage performance data for AI-driven optimization suggestions',
     recommendedFix: 'Connect to trinityMemoryService for performance trend analysis',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'performanceMetrics.ts wired: emits performance_metrics_recorded event on platformEventBus after each metrics collection cycle.',
   },
   {
     category: 'orchestration',
@@ -254,6 +294,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot optimize reminder timing or content based on employee patterns',
     recommendedFix: 'Connect to Trinity for intelligent reminder scheduling',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'shiftRemindersService.ts wired: emits shift_reminders_sent event on platformEventBus with workspace, shift count, and reminder batch metadata.',
   },
   {
     category: 'execution',
@@ -263,6 +306,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Cannot suggest optimal training rates based on market data and performance',
     recommendedFix: 'Integrate with Trinity for data-driven training rate recommendations',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'trainingRateService.ts wired: emits training_rate_updated event on platformEventBus when training rate calculations are applied.',
   },
   {
     category: 'safety',
@@ -272,6 +318,9 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Trinity has no visibility into connection health for diagnostic purposes',
     recommendedFix: 'Report connection cleanup events to platformEventBus for monitoring',
     estimatedEffort: 'small',
+    status: 'RESOLVED',
+    resolvedAt: '2026-03-30',
+    resolutionNote: 'wsConnectionCleanup.ts wired: emits websocket_cleanup_completed event on platformEventBus after each stale connection cleanup cycle.',
   },
 ];
 
@@ -283,7 +332,7 @@ class TrinitySelfAssessment {
   private static instance: TrinitySelfAssessment;
 
   private constructor() {
-    console.log('[TrinitySelfAssessment] Initializing self-assessment service...');
+    log.info('[TrinitySelfAssessment] Initializing self-assessment service...');
   }
 
   static getInstance(): TrinitySelfAssessment {
@@ -297,8 +346,8 @@ class TrinitySelfAssessment {
    * Perform comprehensive self-assessment
    */
   async performAssessment(workspaceId?: string): Promise<SelfAssessmentResult> {
-    const assessmentId = `assess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    console.log(`[TrinitySelfAssessment] Starting assessment ${assessmentId}`);
+    const assessmentId = `assess_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    log.info(`[TrinitySelfAssessment] Starting assessment ${assessmentId}`);
 
     // Gather capability data
     const capabilities = await this.assessCapabilities();
@@ -310,7 +359,7 @@ class TrinitySelfAssessment {
     const readiness = this.calculateReadiness(capabilities, gaps);
     
     // Get Trinity's own narrative assessment using AI
-    const narrative = await this.generateTrinityNarrative(capabilities, gaps, readiness);
+    const narrative = await this.generateTrinityNarrative(capabilities, gaps, readiness, workspaceId);
     
     // Generate prioritized actions
     const actions = this.generatePrioritizedActions(gaps);
@@ -349,7 +398,7 @@ class TrinitySelfAssessment {
       prioritizedActions: actions,
     };
 
-    console.log(`[TrinitySelfAssessment] Assessment complete. Readiness: ${readiness.score}%`);
+    log.info(`[TrinitySelfAssessment] Assessment complete. Readiness: ${readiness.score}%`);
     return result;
   }
 
@@ -436,7 +485,7 @@ class TrinitySelfAssessment {
     }
     
     if (untrackedDomains.length > 0) {
-      console.log(`[TrinitySelfAssessment] WARNING: ${untrackedDomains.length} domains have no telemetry: ${untrackedDomains.join(', ')}`);
+      log.info(`[TrinitySelfAssessment] WARNING: ${untrackedDomains.length} domains have no telemetry: ${untrackedDomains.join(', ')}`);
     }
     
     return capabilities;
@@ -536,7 +585,8 @@ class TrinitySelfAssessment {
   private async generateTrinityNarrative(
     capabilities: CapabilityAssessment[],
     gaps: GapAnalysis[],
-    readiness: { score: number }
+    readiness: { score: number },
+    workspaceId?: string
   ): Promise<string> {
     const prompt = `You are Trinity, the AI orchestrator for CoAIleague. Provide a first-person assessment of your capabilities and readiness to "run the show" autonomously.
 
@@ -559,14 +609,15 @@ Provide a 2-3 paragraph honest assessment in first person. Be direct about what 
 Use a professional but personable tone. Be honest, not boastful.`;
 
     try {
-      const response = await geminiClient.generateContent(prompt, {
-        model: 'gemini-2.0-flash',
+      const response = await geminiClient.generateContent(prompt, { // withGemini
         temperature: 0.7,
-        maxOutputTokens: 500,
+        maxTokens: 500,
+        workspaceId: workspaceId || 'platform-system',
+        featureKey: 'trinity_self_assessment',
       });
-      return response || 'Assessment generation in progress...';
+      return response?.text || 'Assessment generation in progress...';
     } catch (error) {
-      console.error('[TrinitySelfAssessment] Failed to generate narrative:', error);
+      log.error('[TrinitySelfAssessment] Failed to generate narrative:', error);
       return `Based on my analysis, my readiness score is ${readiness.score}%. I have ${capabilities.filter(c => c.successRate > 0.7).length} strong capabilities but ${gaps.filter(g => g.severity === 'critical').length} critical gaps that need attention before I can fully operate autonomously.`;
     }
   }

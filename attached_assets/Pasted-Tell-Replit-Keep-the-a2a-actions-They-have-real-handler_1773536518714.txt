@@ -1,0 +1,53 @@
+Tell Replit:
+
+**Keep the a2a.* actions. They have real handlers calling agentToAgentProtocol and they live in their own file — that's intentional architecture, not dead weight. Do not touch cognitiveBrainActions.ts.**
+
+Then paste this for Wave 3:
+
+---
+
+**WAVE 3 — NAMESPACE UNIFICATION | READ BEFORE TOUCH | NO NEW FEATURES**
+
+Three targeted fixes. Execute in order, read before each touch.
+
+---
+
+**GROUP 1 — revenue.* audit before removal**
+
+Read `server/actions/domainSupervisorActions.ts` and list what each `revenue.*` handler actually does:
+`revenue.generate_invoice`, `revenue.process_payment`, `revenue.process_payroll`, `revenue.reconcile_payments`, `revenue.detect_anomalies`, `revenue.validate_credits`
+
+Then search the entire codebase for any `executeAction('revenue.` calls. If zero callers found AND the billing.* namespace already has equivalent actions, remove all 6 revenue.* registrations from domainSupervisorActions.ts. If any caller exists or no billing.* equivalent exists for a given action, stop and report that specific one before removing it.
+
+---
+
+**GROUP 2 — analytics.* consolidation**
+
+`analytics.employee_performance`, `analytics.generate_insights`, `analytics.payroll_summary`, `analytics.workforce_summary` are currently registered in `trinityCommsProactiveActions.ts`.
+
+`analytics.client_health_score`, `analytics.compliance_rate`, `analytics.overtime_risk`, `analytics.revenue_forecast`, `analytics.shift_profitability` are in `trinityReportAnalyticsActions.ts`.
+
+Move the 4 actions from trinityCommsProactiveActions.ts into trinityReportAnalyticsActions.ts so all analytics.* live in one file. Do not change handler logic — copy the registration blocks exactly, then remove from trinityCommsProactiveActions.ts.
+
+---
+
+**GROUP 3 — qb.* parity upgrade**
+
+Read both files:
+- `quickbooks.push_invoice` handler in `platformActionHub.ts`
+- `qb.create_invoice` handler in `trinityInfraActions.ts`
+
+Upgrade `qb.create_invoice` to include: connection-checking, DB logging, graceful fallback, and clientId support — matching the full capability of `quickbooks.push_invoice`. Then do the same comparison and upgrade for `qb.sync_status` vs `quickbooks.sync_payroll` and `qb.review_conflicts` vs `quickbooks.get_balance`. Once all three qb.* handlers are at full parity, remove the three `quickbooks.*` registrations from `platformActionHub.ts`.
+
+---
+
+**COMPLETION CRITERIA**
+
+1. Restart server after all three groups
+2. Confirm clean start, zero errors
+3. Report final total registered action count
+4. Stop and wait
+
+---
+
+Paste results back and I'll give you the production readiness sign-off.

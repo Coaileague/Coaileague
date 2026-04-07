@@ -11,6 +11,7 @@
  * - Gap detection and optimization suggestions
  */
 
+import crypto from 'crypto';
 import { modelRoutingEngine, recordModelResult } from './modelRoutingEngine';
 import { geminiClient, GeminiModelTier } from './providers/geminiClient';
 import { runHealthCheck, getHealthStatus, PlatformHealthSummary, reportIssue } from './platformHealthMonitor';
@@ -24,10 +25,12 @@ import {
   systemAuditLogs, 
   notifications,
   platformUpdates,
-  aiWorkboardTasks,
   trinityConversationSessions,
   supportTickets
 } from '@shared/schema';
+import { typedCount } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityFastDiagnostic');
 
 // ============================================================================
 // DIAGNOSTIC RESULT TYPES
@@ -70,31 +73,32 @@ export interface DiagnosticReport {
 async function collectDatabaseMetrics(): Promise<Record<string, any>> {
   try {
     // Check table counts and recent activity
-    const auditResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM system_audit_logs 
-      WHERE created_at > NOW() - INTERVAL '24 hours'
+    // CATEGORY C — Raw SQL retained: Count( | Tables: audit_logs | Verified: 2026-03-23
+    const auditResult = await typedCount(sql`
+      SELECT COUNT(*) as count FROM audit_logs WHERE source = 'system' AND created_at > NOW() - INTERVAL '24 hours'
     `);
     
-    const errorResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM system_audit_logs 
-      WHERE action LIKE '%error%' AND created_at > NOW() - INTERVAL '24 hours'
+    // CATEGORY C — Raw SQL retained: Count( | Tables: audit_logs | Verified: 2026-03-23
+    const errorResult = await typedCount(sql`
+      SELECT COUNT(*) as count FROM audit_logs WHERE source = 'system' AND action LIKE '%error%' AND created_at > NOW() - INTERVAL '24 hours'
     `);
 
-    const taskResult = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: Count( | Tables: ai_workboard_tasks | Verified: 2026-03-23
+    const taskResult = await typedCount(sql`
       SELECT COUNT(*) as count FROM ai_workboard_tasks 
       WHERE status IN ('pending', 'queued')
     `);
 
     return {
-      recentAuditLogs: (auditResult.rows?.[0] as any)?.count || 0,
-      recentErrors: (errorResult.rows?.[0] as any)?.count || 0,
-      pendingAITasks: (taskResult.rows?.[0] as any)?.count || 0,
+      recentAuditLogs: auditResult,
+      recentErrors: errorResult,
+      pendingAITasks: taskResult,
       databaseStatus: 'connected'
     };
   } catch (error: any) {
     return {
       databaseStatus: 'error',
-      error: error.message
+      error: (error instanceof Error ? error.message : String(error))
     };
   }
 }
@@ -112,7 +116,7 @@ async function collectSubagentMetrics(): Promise<Record<string, any>> {
   } catch (error: any) {
     return {
       subagentStatus: 'error',
-      error: error.message
+      error: (error instanceof Error ? error.message : String(error))
     };
   }
 }
@@ -130,26 +134,27 @@ async function collectToolMetrics(): Promise<Record<string, any>> {
   } catch (error: any) {
     return {
       toolStatus: 'error',
-      error: error.message
+      error: (error instanceof Error ? error.message : String(error))
     };
   }
 }
 
 async function collectNotificationMetrics(): Promise<Record<string, any>> {
   try {
-    const result = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: Count( | Tables: notifications | Verified: 2026-03-23
+    const result = await typedCount(sql`
       SELECT COUNT(*) as count FROM notifications 
       WHERE is_read = false AND created_at > NOW() - INTERVAL '7 days'
     `);
 
     return {
-      unreadNotifications: (result.rows?.[0] as any)?.count || 0,
+      unreadNotifications: result,
       notificationSystem: 'operational'
     };
   } catch (error: any) {
     return {
       notificationSystem: 'error',
-      error: error.message
+      error: (error instanceof Error ? error.message : String(error))
     };
   }
 }
@@ -161,7 +166,8 @@ async function collectNotificationMetrics(): Promise<Record<string, any>> {
 async function analyzeWithGemini(
   healthSummary: PlatformHealthSummary,
   metrics: Record<string, any>,
-  tier: GeminiModelTier
+  tier: GeminiModelTier,
+  workspaceId?: string
 ): Promise<{ analysis: string; findings: DiagnosticFinding[]; recommendations: string[] }> {
   const startTime = Date.now();
   
@@ -189,6 +195,7 @@ Be concise but thorough. Focus on actionable insights. Format your response with
 
     const response = await geminiClient.generate({
       featureKey: 'trinity_fast_diagnostic',
+      workspaceId,
       systemPrompt: 'You are Trinity, the AI diagnostic agent for CoAIleague platform.',
       userMessage: prompt,
       modelTier: tier,
@@ -247,15 +254,15 @@ Be concise but thorough. Focus on actionable insights. Format your response with
     return { analysis, findings, recommendations };
   } catch (error: any) {
     const executionTime = Date.now() - startTime;
-    recordModelResult(tier, false, executionTime, error.message);
+    recordModelResult(tier, false, executionTime, (error instanceof Error ? error.message : String(error)));
     
     return {
-      analysis: `Diagnostic analysis failed: ${error.message}`,
+      analysis: `Diagnostic analysis failed: ${(error instanceof Error ? error.message : String(error))}`,
       findings: [{
         category: 'error',
         severity: 'high',
         title: 'AI Analysis Failed',
-        description: error.message,
+        description: (error instanceof Error ? error.message : String(error)),
         affectedArea: 'AI Brain',
         autoFixAvailable: false,
       }],
@@ -291,7 +298,7 @@ async function applySelfHealing(findings: DiagnosticFinding[]): Promise<string[]
       }
       finding.fixApplied = true;
     } catch (error: any) {
-      actions.push(`Failed to fix ${finding.title}: ${error.message}`);
+      actions.push(`Failed to fix ${finding.title}: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
 
@@ -318,7 +325,7 @@ async function sendDiagnosticReport(report: DiagnosticReport): Promise<void> {
         criticalIssues: report.findings.filter(f => f.severity === 'critical').length,
         recommendations: report.recommendations,
       }
-    });
+    }).catch((err) => log.warn('[trinityFastDiagnostic] Fire-and-forget failed:', err));
 
     // Send critical findings as individual notifications to support via platform updates
     const criticalFindings = report.findings.filter(f => f.severity === 'critical' || f.severity === 'high');
@@ -327,6 +334,7 @@ async function sendDiagnosticReport(report: DiagnosticReport): Promise<void> {
     for (const finding of criticalFindings) {
       try {
         await db.insert(systemAuditLogs).values({
+          workspaceId: 'system',
           action: 'diagnostic_finding',
           entityType: 'diagnostic',
           entityId: report.id,
@@ -345,9 +353,9 @@ async function sendDiagnosticReport(report: DiagnosticReport): Promise<void> {
       }
     }
 
-    console.log(`[TrinityDiagnostic] Report sent to notification system: ${report.id}`);
+    log.info(`[TrinityDiagnostic] Report sent to notification system: ${report.id}`);
   } catch (error: any) {
-    console.error('[TrinityDiagnostic] Failed to send report:', error.message);
+    log.error('[TrinityDiagnostic] Failed to send report:', (error instanceof Error ? error.message : String(error)));
   }
 }
 
@@ -362,9 +370,9 @@ export async function runFastPlatformDiagnostic(options: {
   applySelfHealing?: boolean;
 } = {}): Promise<DiagnosticReport> {
   const startTime = Date.now();
-  const diagnosticId = `diag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const diagnosticId = `diag-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
 
-  console.log(`[TrinityDiagnostic] Starting FAST platform diagnostic: ${diagnosticId}`);
+  log.info(`[TrinityDiagnostic] Starting FAST platform diagnostic: ${diagnosticId}`);
 
   // Use DIAGNOSTICS tier for comprehensive analysis (Gemini 3 Pro)
   const modelTier: GeminiModelTier = 'DIAGNOSTICS';
@@ -391,7 +399,8 @@ export async function runFastPlatformDiagnostic(options: {
   const { analysis, findings, recommendations } = await analyzeWithGemini(
     healthSummary,
     allMetrics,
-    modelTier
+    modelTier,
+    options.workspaceId
   );
 
   // Step 4: Apply self-healing if enabled
@@ -431,6 +440,7 @@ export async function runFastPlatformDiagnostic(options: {
   if (options.userId && options.userId !== 'system') {
     try {
       await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
         action: 'platform_diagnostic',
         entityType: 'diagnostic',
         entityId: diagnosticId,
@@ -444,12 +454,12 @@ export async function runFastPlatformDiagnostic(options: {
         createdAt: new Date(),
       });
     } catch (error) {
-      console.error('[TrinityDiagnostic] Failed to log audit:', error);
+      log.error('[TrinityDiagnostic] Failed to log audit:', error);
     }
   }
 
-  console.log(`[TrinityDiagnostic] FAST diagnostic complete: ${diagnosticId}`);
-  console.log(`[TrinityDiagnostic] Health: ${report.overallHealth}, Findings: ${report.findings.length}, Auto-fixed: ${report.statistics.autoFixed}`);
+  log.info(`[TrinityDiagnostic] FAST diagnostic complete: ${diagnosticId}`);
+  log.info(`[TrinityDiagnostic] Health: ${report.overallHealth}, Findings: ${report.findings.length}, Auto-fixed: ${report.statistics.autoFixed}`);
 
   return report;
 }

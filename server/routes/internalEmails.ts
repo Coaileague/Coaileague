@@ -13,7 +13,7 @@ import {
   internalEmails,
   internalEmailFolders,
   internalEmailRecipients,
-  internalEmailAudit,
+  auditLogs,
   employees,
   workspaces,
   users,
@@ -21,11 +21,73 @@ import {
   type InsertInternalEmail,
   type InsertInternalEmailFolder,
   type InsertInternalEmailRecipient,
-  type InsertInternalEmailAudit,
 } from "@shared/schema";
-import { eq, and, desc, asc, sql, inArray, isNull, or, ilike, isNotNull, like } from "drizzle-orm";
+import { eq, ne, and, desc, asc, sql, inArray, isNull, or, ilike, isNotNull, like } from "drizzle-orm";
 import { requireAuth } from "../auth";
-import { getUncachableResendClient, isResendConfigured } from "../email";
+import { emailService } from "../services/emailService";
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+const log = createLogger('InternalEmails');
+
+
+/**
+ * ALL folders provisioned for every mailbox.
+ * Standard + Operational (matching WORKSPACE_SYSTEM_TYPES from emailProvisioningService).
+ * Trinity folder is support-staff-only and shows AI automated activity.
+ */
+const ALL_MAILBOX_FOLDERS = [
+  // Standard system folders
+  { name: "Inbox",     folderType: "inbox"     as const, sortOrder: 0,  isSystem: true },
+  { name: "Sent",      folderType: "sent"       as const, sortOrder: 1,  isSystem: true },
+  { name: "Drafts",    folderType: "drafts"     as const, sortOrder: 2,  isSystem: true },
+  { name: "Starred",   folderType: "starred"    as const, sortOrder: 3,  isSystem: true },
+  { name: "Archive",   folderType: "archive"    as const, sortOrder: 4,  isSystem: true },
+  { name: "Trash",     folderType: "trash"      as const, sortOrder: 5,  isSystem: true },
+  // Operational folders — map to workspace sub-address functions
+  { name: "Support",   folderType: "support"    as const, sortOrder: 10, isSystem: true },
+  { name: "Billing",   folderType: "billing"    as const, sortOrder: 11, isSystem: true },
+  { name: "Staffing",  folderType: "staffing"   as const, sortOrder: 12, isSystem: true },
+  { name: "Call-Offs", folderType: "calloffs"   as const, sortOrder: 13, isSystem: true },
+  { name: "Incidents", folderType: "incidents"  as const, sortOrder: 14, isSystem: true },
+  { name: "Docs",      folderType: "docs"       as const, sortOrder: 15, isSystem: true },
+  // Trinity AI inbox — read-only monitoring
+  { name: "Trinity AI",folderType: "trinity"    as const, sortOrder: 20, isSystem: true },
+];
+
+/**
+ * Resolve which folder type an email should land in based on the recipient address.
+ * e.g. "support@acme.coaileague.com" → "support"
+ *      "billing-acme@coaileague.com" → "billing"
+ *      "john.doe@acme.coaileague.com" → "inbox" (default)
+ */
+function resolveRoutingFolderType(toAddress: string): string {
+  const local = toAddress.split('@')[0]?.toLowerCase() || '';
+  // Support sub-address format: function@slug.domain OR function-slug@domain
+  const OPERATIONAL_PREFIXES = ['support', 'billing', 'staffing', 'calloffs', 'incidents', 'docs', 'trinity'];
+  for (const prefix of OPERATIONAL_PREFIXES) {
+    if (local === prefix || local.startsWith(`${prefix}.`) || local.startsWith(`${prefix}-`)) {
+      return prefix;
+    }
+  }
+  return 'inbox';
+}
+
+async function findRecipientAcrossMailboxes(userId: string, emailId: string) {
+  const userMailboxes = await db.query.internalMailboxes.findMany({
+    where: eq(internalMailboxes.userId, userId),
+  });
+  if (!userMailboxes.length) return { mailbox: null, recipient: null, allMailboxes: [] as typeof userMailboxes };
+  for (const mb of userMailboxes) {
+    const found = await db.query.internalEmailRecipients.findFirst({
+      where: and(
+        eq(internalEmailRecipients.emailId, emailId),
+        eq(internalEmailRecipients.mailboxId, mb.id)
+      ),
+    });
+    if (found) return { mailbox: mb, recipient: found, allMailboxes: userMailboxes };
+  }
+  return { mailbox: null, recipient: null, allMailboxes: userMailboxes };
+}
 
 // Support roles that can permanently delete emails (platform and workspace roles)
 const PERMANENT_DELETE_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
@@ -66,12 +128,32 @@ async function hasAuthoritativeSupportRole(
   return { canPermanentlyDelete: false, role: 'end_user' };
 }
 
-// Helper to log audit entries
-async function logEmailAudit(data: Omit<InsertInternalEmailAudit, 'id' | 'createdAt'>) {
+// Helper to log audit entries — writes to canonical audit_logs table
+async function logEmailAudit(data: Record<string, any>) {
   try {
-    await db.insert(internalEmailAudit).values(data);
+    await db.insert(auditLogs).values({
+      workspaceId: data.workspaceId || 'system',
+      userId: data.actorId,
+      entityType: 'internal_email',
+      entityId: data.emailId,
+      rawAction: data.action,
+      actionDescription: `email_audit: ${data.action}`,
+      userRole: data.actorRole,
+      userEmail: data.actorEmail,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+      reason: data.reason,
+      metadata: {
+        recipientId: data.recipientId,
+        mailboxId: data.mailboxId,
+        previousValue: data.previousValue,
+        newValue: data.newValue,
+        trinityActionId: data.trinityActionId,
+        sessionId: data.sessionId,
+      },
+    });
   } catch (error) {
-    console.error('Failed to log email audit:', error);
+    log.error('Failed to log email audit:', error);
   }
 }
 
@@ -108,7 +190,7 @@ const attachmentSchema = z.object({
   type: z.string(),
 });
 
-const sendEmailSchema = z.object({
+const sendEmailSchema = z.object({ // infra
   to: z.array(z.string()),
   cc: z.array(z.string()).optional(),
   bcc: z.array(z.string()).optional(),
@@ -163,7 +245,7 @@ router.get("/mailbox", requireAuth, async (req: Request, res: Response) => {
 
     res.json({ mailbox });
   } catch (error) {
-    console.error("Error fetching mailbox:", error);
+    log.error("Error fetching mailbox:", error);
     res.status(500).json({ error: "Failed to fetch mailbox" });
   }
 });
@@ -185,40 +267,33 @@ router.post("/mailbox", requireAuth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Email address already in use" });
     }
 
-    const [mailbox] = await db.insert(internalMailboxes).values({
-      userId: user.id,
-      workspaceId: user.currentWorkspaceId || null,
-      emailAddress: validated.emailAddress,
-      displayName: validated.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-      mailboxType: validated.mailboxType || 'personal',
-      signature: validated.signature,
-    }).returning();
+    const mailbox = await db.transaction(async (tx) => {
+      const [mb] = await tx.insert(internalMailboxes).values({
+        userId: user.id,
+        workspaceId: user.currentWorkspaceId || null,
+        emailAddress: validated.emailAddress,
+        displayName: validated.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+        mailboxType: validated.mailboxType || 'personal',
+        signature: validated.signature,
+      }).returning();
+      await tx.insert(internalEmailFolders).values(
+        ALL_MAILBOX_FOLDERS.map((folder) => ({
+          mailboxId: mb.id,
+          name: folder.name,
+          folderType: folder.folderType,
+          sortOrder: folder.sortOrder,
+          isSystem: folder.isSystem,
+        }))
+      );
+      return mb;
+    });
 
-    const systemFolders = [
-      { name: "Inbox", folderType: "inbox" as const, sortOrder: 0, isSystem: true },
-      { name: "Sent", folderType: "sent" as const, sortOrder: 1, isSystem: true },
-      { name: "Drafts", folderType: "drafts" as const, sortOrder: 2, isSystem: true },
-      { name: "Starred", folderType: "starred" as const, sortOrder: 3, isSystem: true },
-      { name: "Archive", folderType: "archive" as const, sortOrder: 4, isSystem: true },
-      { name: "Trash", folderType: "trash" as const, sortOrder: 5, isSystem: true },
-    ];
-
-    await db.insert(internalEmailFolders).values(
-      systemFolders.map((folder) => ({
-        mailboxId: mailbox.id,
-        name: folder.name,
-        folderType: folder.folderType,
-        sortOrder: folder.sortOrder,
-        isSystem: folder.isSystem,
-      }))
-    );
-
-    res.json({ mailbox, message: "Mailbox created with default folders" });
+    res.json({ mailbox, message: "Mailbox created with all folders" });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error("Error creating mailbox:", error);
+    log.error("Error creating mailbox:", error);
     res.status(500).json({ error: "Failed to create mailbox" });
   }
 });
@@ -230,47 +305,40 @@ router.get("/mailbox/auto-create", requireAuth, async (req: Request, res: Respon
       return res.status(401).json({ error: "Authentication required" });
     }
 
+    // UNIVERSAL MAILBOX: One mailbox per user, works across all workspaces
+    // Find ANY existing personal mailbox for this user (not per-workspace)
     let mailbox = await db.query.internalMailboxes.findFirst({
       where: and(
         eq(internalMailboxes.userId, user.id),
-        user.currentWorkspaceId 
-          ? eq(internalMailboxes.workspaceId, user.currentWorkspaceId)
-          : isNull(internalMailboxes.workspaceId)
+        eq(internalMailboxes.mailboxType, 'personal')
       ),
+      orderBy: [desc(internalMailboxes.createdAt)],
     });
 
     if (!mailbox) {
-      const emailPrefix = user.email?.split('@')[0] || `user-${user.id.substring(0, 8)}`;
-      const baseAddress = `${emailPrefix}@coaileague.internal`;
-      
-      // Check if this email already exists (for a different user/workspace combo)
-      const existingWithEmail = await db.query.internalMailboxes.findFirst({
-        where: eq(internalMailboxes.emailAddress, baseAddress),
-      });
-      
-      // If email exists for different user, create unique address
-      const internalAddress = existingWithEmail 
-        ? `${emailPrefix}-${user.id.substring(0, 8)}@coaileague.internal`
-        : baseAddress;
+      // Create ONE universal mailbox for this user
+      // Use format: {emailPrefix}-{userId}@coaileague.internal for uniqueness
+      const emailPrefix = user.email?.split('@')[0] || `user`;
+      const internalAddress = `${emailPrefix}-${user.id}@coaileague.internal`;
 
       try {
+        const userWorkspaceId = req.workspaceId || user.currentWorkspaceId || PLATFORM_WORKSPACE_ID;
         [mailbox] = await db.insert(internalMailboxes).values({
           userId: user.id,
-          workspaceId: user.currentWorkspaceId || null,
+          workspaceId: userWorkspaceId,
           emailAddress: internalAddress,
           displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User',
           mailboxType: 'personal',
         }).returning();
-      } catch (insertError: any) {
+      } catch (insertError: unknown) {
         // Handle race condition - mailbox may have been created by another request
         if (insertError?.code === '23505') {
           mailbox = await db.query.internalMailboxes.findFirst({
             where: and(
               eq(internalMailboxes.userId, user.id),
-              user.currentWorkspaceId 
-                ? eq(internalMailboxes.workspaceId, user.currentWorkspaceId)
-                : isNull(internalMailboxes.workspaceId)
+              eq(internalMailboxes.mailboxType, 'personal')
             ),
+            orderBy: [desc(internalMailboxes.createdAt)],
           });
           if (mailbox) {
             return res.json({ mailbox });
@@ -279,17 +347,8 @@ router.get("/mailbox/auto-create", requireAuth, async (req: Request, res: Respon
         throw insertError;
       }
 
-      const systemFolders = [
-        { name: "Inbox", folderType: "inbox" as const, sortOrder: 0, isSystem: true },
-        { name: "Sent", folderType: "sent" as const, sortOrder: 1, isSystem: true },
-        { name: "Drafts", folderType: "drafts" as const, sortOrder: 2, isSystem: true },
-        { name: "Starred", folderType: "starred" as const, sortOrder: 3, isSystem: true },
-        { name: "Archive", folderType: "archive" as const, sortOrder: 4, isSystem: true },
-        { name: "Trash", folderType: "trash" as const, sortOrder: 5, isSystem: true },
-      ];
-
       await db.insert(internalEmailFolders).values(
-        systemFolders.map((folder) => ({
+        ALL_MAILBOX_FOLDERS.map((folder) => ({
           mailboxId: mailbox!.id,
           name: folder.name,
           folderType: folder.folderType,
@@ -307,9 +366,26 @@ router.get("/mailbox/auto-create", requireAuth, async (req: Request, res: Respon
       });
     }
 
-    res.json({ mailbox });
+    const [actualUnread] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(internalEmailRecipients)
+      .where(
+        and(
+          eq(internalEmailRecipients.mailboxId, mailbox!.id),
+          eq(internalEmailRecipients.isRead, false),
+          ne(internalEmailRecipients.status, 'deleted')
+        )
+      );
+    const computedUnread = Number(actualUnread?.count || 0);
+    if (mailbox!.unreadCount !== computedUnread) {
+      await db.update(internalMailboxes)
+        .set({ unreadCount: computedUnread })
+        .where(eq(internalMailboxes.id, mailbox!.id));
+    }
+
+    res.json({ mailbox: { ...mailbox, unreadCount: computedUnread } });
   } catch (error) {
-    console.error("Error auto-creating mailbox:", error);
+    log.error("Error auto-creating mailbox:", error);
     res.status(500).json({ error: "Failed to get or create mailbox" });
   }
 });
@@ -338,16 +414,39 @@ router.get("/folders", requireAuth, async (req: Request, res: Response) => {
       orderBy: [asc(internalEmailFolders.sortOrder)],
     });
 
-    res.json({ folders });
+    const unreadRows = await db
+      .select({
+        folderId: internalEmailRecipients.folderId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(internalEmailRecipients)
+      .where(
+        and(
+          eq(internalEmailRecipients.mailboxId, mailbox.id),
+          eq(internalEmailRecipients.isRead, false),
+          ne(internalEmailRecipients.status, 'deleted'),
+          isNotNull(internalEmailRecipients.folderId),
+        )
+      )
+      .groupBy(internalEmailRecipients.folderId);
+
+    const unreadMap = Object.fromEntries(unreadRows.map(r => [r.folderId, r.count]));
+
+    const foldersWithCounts = folders.map(f => ({
+      ...f,
+      unreadCount: unreadMap[f.id] ?? 0,
+    }));
+
+    res.json({ folders: foldersWithCounts, totalUnread: mailbox.unreadCount ?? 0 });
   } catch (error) {
-    console.error("Error fetching folders:", error);
+    log.error("Error fetching folders:", error);
     res.status(500).json({ error: "Failed to fetch folders" });
   }
 });
 
 router.post("/folders", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as { id?: string };
+    const user = req.user as { id?: string; currentWorkspaceId?: string };
     if (!user?.id) {
       return res.status(401).json({ error: "Authentication required" });
     }
@@ -368,6 +467,7 @@ router.post("/folders", requireAuth, async (req: Request, res: Response) => {
     });
 
     const [folder] = await db.insert(internalEmailFolders).values({
+      workspaceId: mailbox.workspaceId ?? user.currentWorkspaceId ?? null,
       mailboxId: mailbox.id,
       name: validated.name,
       folderType: validated.folderType || 'custom',
@@ -383,7 +483,7 @@ router.post("/folders", requireAuth, async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error("Error creating folder:", error);
+    log.error("Error creating folder:", error);
     res.status(500).json({ error: "Failed to create folder" });
   }
 });
@@ -404,12 +504,17 @@ router.get("/inbox", requireAuth, async (req: Request, res: Response) => {
     const limitNum = Math.min(parseInt(limit as string, 10), 100);
     const offset = (pageNum - 1) * limitNum;
 
+    // UNIVERSAL MAILBOX: Find user's single personal mailbox (not workspace-specific)
     const mailbox = await db.query.internalMailboxes.findFirst({
-      where: eq(internalMailboxes.userId, user.id),
+      where: and(
+        eq(internalMailboxes.userId, user.id),
+        eq(internalMailboxes.mailboxType, 'personal')
+      ),
+      orderBy: [desc(internalMailboxes.createdAt)],
     });
 
     if (!mailbox) {
-      return res.status(404).json({ error: "No mailbox found", emails: [], total: 0 });
+      return res.status(404).json({ error: "No mailbox found. Visit any page to auto-create your mailbox.", emails: [], total: 0 });
     }
 
     let folderRecord = await db.query.internalEmailFolders.findFirst({
@@ -438,12 +543,18 @@ router.get("/inbox", requireAuth, async (req: Request, res: Response) => {
         isImportant: internalEmailRecipients.isImportant,
         recipientId: internalEmailRecipients.id,
         status: internalEmailRecipients.status,
+        aiSummary: internalEmails.aiSummary,
+        aiCategory: internalEmails.aiCategory,
+        aiPriority: internalEmails.aiPriority,
+        aiSentiment: internalEmails.aiSentiment,
+        aiActionItems: internalEmails.aiActionItems,
       })
       .from(internalEmailRecipients)
       .innerJoin(internalEmails, eq(internalEmailRecipients.emailId, internalEmails.id))
       .where(
         and(
           eq(internalEmailRecipients.mailboxId, mailbox.id),
+          ne(internalEmailRecipients.status, 'deleted'),
           folderRecord ? eq(internalEmailRecipients.folderId, folderRecord.id) : sql`1=1`,
           search ? or(
             ilike(internalEmails.subject, `%${search}%`),
@@ -474,7 +585,7 @@ router.get("/inbox", requireAuth, async (req: Request, res: Response) => {
       hasMore: offset + emails.length < (countResult?.count || 0),
     });
   } catch (error) {
-    console.error("Error fetching inbox:", error);
+    log.error("Error fetching inbox:", error);
     res.status(500).json({ error: "Failed to fetch emails" });
   }
 });
@@ -502,8 +613,176 @@ router.get("/sent", requireAuth, async (req: Request, res: Response) => {
 
     res.json({ emails });
   } catch (error) {
-    console.error("Error fetching sent emails:", error);
+    log.error("Error fetching sent emails:", error);
     res.status(500).json({ error: "Failed to fetch sent emails" });
+  }
+});
+
+// ============================================================================
+// SEARCH EMAILS (Full-text search)
+// ============================================================================
+
+router.get("/search/query", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as { id?: string };
+    if (!user?.id) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const { q, folder, includeDeleted, page = '1', limit = '20' } = req.query;
+    
+    if (!q || typeof q !== 'string' || q.trim().length < 2) {
+      return res.status(400).json({ error: "Search query must be at least 2 characters" });
+    }
+
+    const mailbox = await db.query.internalMailboxes.findFirst({
+      where: eq(internalMailboxes.userId, user.id),
+    });
+
+    if (!mailbox) {
+      return res.json({ emails: [], total: 0 });
+    }
+
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+    const offset = (pageNum - 1) * limitNum;
+
+    const searchTerm = `%${q.toLowerCase()}%`;
+
+    const emails = await db
+      .select({
+        id: internalEmails.id,
+        fromAddress: internalEmails.fromAddress,
+        fromName: internalEmails.fromName,
+        toAddresses: internalEmails.toAddresses,
+        subject: internalEmails.subject,
+        bodyText: internalEmails.bodyText,
+        priority: internalEmails.priority,
+        sentAt: internalEmails.sentAt,
+        createdAt: internalEmails.createdAt,
+        threadId: internalEmails.threadId,
+        isRead: internalEmailRecipients.isRead,
+        isStarred: internalEmailRecipients.isStarred,
+        recipientId: internalEmailRecipients.id,
+        status: internalEmailRecipients.status,
+        deletedAt: internalEmailRecipients.deletedAt,
+      })
+      .from(internalEmails)
+      .innerJoin(
+        internalEmailRecipients,
+        eq(internalEmailRecipients.emailId, internalEmails.id)
+      )
+      .where(
+        and(
+          eq(internalEmailRecipients.mailboxId, mailbox.id),
+          includeDeleted !== 'true' ? isNull(internalEmailRecipients.deletedAt) : sql`1=1`,
+          or(
+            ilike(internalEmails.subject, searchTerm),
+            ilike(internalEmails.bodyText, searchTerm),
+            ilike(internalEmails.fromAddress, searchTerm),
+            ilike(internalEmails.fromName, searchTerm)
+          )
+        )
+      )
+      .orderBy(desc(internalEmails.sentAt))
+      .limit(limitNum)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(internalEmails)
+      .innerJoin(
+        internalEmailRecipients,
+        eq(internalEmailRecipients.emailId, internalEmails.id)
+      )
+      .where(
+        and(
+          eq(internalEmailRecipients.mailboxId, mailbox.id),
+          includeDeleted !== 'true' ? isNull(internalEmailRecipients.deletedAt) : sql`1=1`,
+          or(
+            ilike(internalEmails.subject, searchTerm),
+            ilike(internalEmails.bodyText, searchTerm),
+            ilike(internalEmails.fromAddress, searchTerm),
+            ilike(internalEmails.fromName, searchTerm)
+          )
+        )
+      );
+
+    res.json({
+      emails,
+      total: countResult?.count || 0,
+      page: pageNum,
+      limit: limitNum,
+      query: q,
+    });
+  } catch (error) {
+    log.error("Error searching emails:", error);
+    res.status(500).json({ error: "Failed to search emails" });
+  }
+});
+
+router.get("/contacts/search", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as { id?: string; currentWorkspaceId?: string };
+    if (!user?.id) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const { q } = req.query;
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({ error: "Search query required" });
+    }
+
+    const mailboxes = await db
+      .select({
+        id: internalMailboxes.id,
+        emailAddress: internalMailboxes.emailAddress,
+        displayName: internalMailboxes.displayName,
+        mailboxType: internalMailboxes.mailboxType,
+      })
+      .from(internalMailboxes)
+      .where(
+        and(
+          or(
+            ilike(internalMailboxes.emailAddress, `%${q}%`),
+            ilike(internalMailboxes.displayName, `%${q}%`)
+          ),
+          eq(internalMailboxes.isActive, true)
+        )
+      )
+      .limit(20);
+
+    res.json({ contacts: mailboxes });
+  } catch (error) {
+    log.error("Error searching contacts:", error);
+    res.status(500).json({ error: "Failed to search contacts" });
+  }
+});
+
+router.get("/trinity/stats", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as { id?: string; currentWorkspaceId?: string };
+    if (!user?.currentWorkspaceId) {
+      return res.status(403).json({ error: "Workspace required" });
+    }
+
+    const stats = await db
+      .select({
+        total: sql<number>`count(*)`,
+        processed: sql<number>`count(*) filter (where enhanced_by_trinity = true)`,
+        unprocessed: sql<number>`count(*) filter (where enhanced_by_trinity = false or enhanced_by_trinity is null)`,
+        highPriority: sql<number>`count(*) filter (where ai_priority >= 8)`,
+        actionRequired: sql<number>`count(*) filter (where ai_action_items is not null and ai_action_items != '[]')`,
+      })
+      .from(internalEmails);
+
+    res.json({
+      success: true,
+      stats: stats[0] || { total: 0, processed: 0, unprocessed: 0, highPriority: 0, actionRequired: 0 },
+    });
+  } catch (error) {
+    log.error("Error fetching Trinity stats:", error);
+    res.status(500).json({ error: "Failed to fetch Trinity email stats" });
   }
 });
 
@@ -516,13 +795,7 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
 
     const { id } = req.params;
 
-    const mailbox = await db.query.internalMailboxes.findFirst({
-      where: eq(internalMailboxes.userId, user.id),
-    });
-
-    if (!mailbox) {
-      return res.status(404).json({ error: "No mailbox found" });
-    }
+    const { mailbox, recipient } = await findRecipientAcrossMailboxes(user.id, id);
 
     const email = await db.query.internalEmails.findFirst({
       where: eq(internalEmails.id, id),
@@ -532,21 +805,22 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Email not found" });
     }
 
-    const recipient = await db.query.internalEmailRecipients.findFirst({
-      where: and(
-        eq(internalEmailRecipients.emailId, id),
-        eq(internalEmailRecipients.mailboxId, mailbox.id)
-      ),
-    });
+    if (recipient && mailbox && !recipient.isRead) {
+      await db.transaction(async (tx) => {
+        const [updated] = await tx.update(internalEmailRecipients)
+          .set({ isRead: true, readAt: new Date() })
+          .where(and(
+            eq(internalEmailRecipients.id, recipient.id),
+            eq(internalEmailRecipients.isRead, false)
+          ))
+          .returning();
 
-    if (recipient && !recipient.isRead) {
-      await db.update(internalEmailRecipients)
-        .set({ isRead: true, readAt: new Date() })
-        .where(eq(internalEmailRecipients.id, recipient.id));
-
-      await db.update(internalMailboxes)
-        .set({ unreadCount: sql`GREATEST(0, ${internalMailboxes.unreadCount} - 1)` })
-        .where(eq(internalMailboxes.id, mailbox.id));
+        if (updated) {
+          await tx.update(internalMailboxes)
+            .set({ unreadCount: sql`GREATEST(0, ${internalMailboxes.unreadCount} - 1)` })
+            .where(eq(internalMailboxes.id, mailbox.id));
+        }
+      });
     }
 
     res.json({
@@ -554,7 +828,7 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
       recipientStatus: recipient,
     });
   } catch (error) {
-    console.error("Error fetching email:", error);
+    log.error("Error fetching email:", error);
     res.status(500).json({ error: "Failed to fetch email" });
   }
 });
@@ -565,8 +839,9 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
     if (!user?.id) {
       return res.status(401).json({ error: "Authentication required" });
     }
+    const workspaceId = req.workspaceId || req.user?.workspaceId || user.currentWorkspaceId || null;
 
-    const validated = sendEmailSchema.parse(req.body);
+    const validated = sendEmailSchema.parse(req.body); // infra
 
     const mailbox = await db.query.internalMailboxes.findFirst({
       where: eq(internalMailboxes.userId, user.id),
@@ -578,47 +853,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
 
     const threadId = validated.inReplyTo 
       ? (await db.query.internalEmails.findFirst({ where: eq(internalEmails.id, validated.inReplyTo) }))?.threadId || validated.inReplyTo
-      : `thread-${Date.now()}-${Math.random().toString(36).substring(2)}`;
-
-    const [email] = await db.insert(internalEmails).values({
-      fromMailboxId: mailbox.id,
-      fromAddress: mailbox.emailAddress,
-      fromName: mailbox.displayName,
-      toAddresses: JSON.stringify(validated.to),
-      ccAddresses: validated.cc ? JSON.stringify(validated.cc) : null,
-      bccAddresses: validated.bcc ? JSON.stringify(validated.bcc) : null,
-      subject: validated.subject,
-      bodyText: validated.bodyText,
-      bodyHtml: validated.bodyHtml,
-      priority: validated.priority || 'normal',
-      isInternal: !validated.sendExternal,
-      inReplyTo: validated.inReplyTo,
-      threadId,
-      sentAt: new Date(),
-      attachments: validated.attachments ? JSON.stringify(validated.attachments) : null,
-    }).returning();
-
-    await db.update(internalMailboxes)
-      .set({ totalMessages: sql`${internalMailboxes.totalMessages} + 1` })
-      .where(eq(internalMailboxes.id, mailbox.id));
-
-    const senderSentFolder = await db.query.internalEmailFolders.findFirst({
-      where: and(
-        eq(internalEmailFolders.mailboxId, mailbox.id),
-        eq(internalEmailFolders.folderType, 'sent')
-      ),
-    });
-
-    if (senderSentFolder) {
-      await db.insert(internalEmailRecipients).values({
-        emailId: email.id,
-        mailboxId: mailbox.id,
-        recipientType: 'from',
-        folderId: senderSentFolder.id,
-        status: 'sent',
-        isRead: true,
-      });
-    }
+      : `thread-${Date.now()}-${crypto.randomUUID()}`;
 
     const allRecipients = [
       ...validated.to.map(addr => ({ address: addr, type: 'to' })),
@@ -629,69 +864,135 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
     let externalRecipients: string[] = [];
     let internalDelivered = 0;
 
-    for (const recipient of allRecipients) {
-      if (recipient.address.endsWith('@coaileague.internal')) {
-        const recipientMailbox = await db.query.internalMailboxes.findFirst({
-          where: eq(internalMailboxes.emailAddress, recipient.address),
+    const email = await db.transaction(async (tx) => {
+      const [insertedEmail] = await tx.insert(internalEmails).values({
+        workspaceId: workspaceId,
+        fromMailboxId: mailbox.id,
+        fromAddress: mailbox.emailAddress,
+        fromName: mailbox.displayName,
+        toAddresses: JSON.stringify(validated.to),
+        ccAddresses: validated.cc ? JSON.stringify(validated.cc) : null,
+        bccAddresses: validated.bcc ? JSON.stringify(validated.bcc) : null,
+        subject: validated.subject,
+        bodyText: validated.bodyText,
+        bodyHtml: validated.bodyHtml,
+        priority: validated.priority || 'normal',
+        isInternal: !validated.sendExternal,
+        inReplyTo: validated.inReplyTo,
+        threadId,
+        sentAt: new Date(),
+        attachments: validated.attachments ? JSON.stringify(validated.attachments) : null,
+      }).returning();
+
+      await tx.update(internalMailboxes)
+        .set({ totalMessages: sql`${internalMailboxes.totalMessages} + 1` })
+        .where(eq(internalMailboxes.id, mailbox.id));
+
+      const [senderSentFolder] = await tx.select()
+        .from(internalEmailFolders)
+        .where(and(
+          eq(internalEmailFolders.mailboxId, mailbox.id),
+          eq(internalEmailFolders.folderType, 'sent')
+        ))
+        .limit(1);
+
+      if (senderSentFolder) {
+        await tx.insert(internalEmailRecipients).values({
+          workspaceId: workspaceId,
+          emailId: insertedEmail.id,
+          mailboxId: mailbox.id,
+          recipientType: 'from',
+          folderId: senderSentFolder.id,
+          status: 'sent',
+          isRead: true,
         });
-
-        if (recipientMailbox) {
-          const recipientInboxFolder = await db.query.internalEmailFolders.findFirst({
-            where: and(
-              eq(internalEmailFolders.mailboxId, recipientMailbox.id),
-              eq(internalEmailFolders.folderType, 'inbox')
-            ),
-          });
-
-          await db.insert(internalEmailRecipients).values({
-            emailId: email.id,
-            mailboxId: recipientMailbox.id,
-            recipientType: recipient.type,
-            folderId: recipientInboxFolder?.id || null,
-            status: 'delivered',
-            isRead: false,
-          });
-
-          await db.update(internalMailboxes)
-            .set({ 
-              unreadCount: sql`${internalMailboxes.unreadCount} + 1`,
-              totalMessages: sql`${internalMailboxes.totalMessages} + 1`
-            })
-            .where(eq(internalMailboxes.id, recipientMailbox.id));
-
-          internalDelivered++;
-        }
-      } else {
-        externalRecipients.push(recipient.address);
       }
-    }
+
+      for (const recipient of allRecipients) {
+        if (recipient.address.endsWith('@coaileague.internal')) {
+          const [recipientMailbox] = await tx.select()
+            .from(internalMailboxes)
+            .where(eq(internalMailboxes.emailAddress, recipient.address))
+            .limit(1);
+
+          if (recipientMailbox) {
+            // Smart routing: resolve folder based on to-address prefix
+            const targetFolderType = resolveRoutingFolderType(recipient.address);
+            const [recipientTargetFolder] = await tx.select()
+              .from(internalEmailFolders)
+              .where(and(
+                eq(internalEmailFolders.mailboxId, recipientMailbox.id),
+                eq(internalEmailFolders.folderType, targetFolderType)
+              ))
+              .limit(1);
+
+            // Fallback to inbox if the operational folder doesn't exist yet
+            const folderId = recipientTargetFolder?.id || (await tx.select()
+              .from(internalEmailFolders)
+              .where(and(
+                eq(internalEmailFolders.mailboxId, recipientMailbox.id),
+                eq(internalEmailFolders.folderType, 'inbox')
+              ))
+              .limit(1)
+              .then(r => r[0]?.id || null));
+
+            await tx.insert(internalEmailRecipients).values({
+              workspaceId: workspaceId,
+              emailId: insertedEmail.id,
+              mailboxId: recipientMailbox.id,
+              recipientType: recipient.type,
+              folderId,
+              status: 'delivered',
+              isRead: false,
+            });
+
+            await tx.update(internalMailboxes)
+              .set({
+                unreadCount: sql`${internalMailboxes.unreadCount} + 1`,
+                totalMessages: sql`${internalMailboxes.totalMessages} + 1`,
+              })
+              .where(eq(internalMailboxes.id, recipientMailbox.id));
+
+            internalDelivered++;
+          }
+        } else {
+          externalRecipients.push(recipient.address);
+        }
+      }
+
+      return insertedEmail;
+    });
 
     let externalResult = null;
-    if (validated.sendExternal && externalRecipients.length > 0 && isResendConfigured()) {
+    if (validated.sendExternal && externalRecipients.length > 0) {
       try {
-        const resend = await getUncachableResendClient();
-        const result = await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || 'noreply@coaileague.com',
-          to: externalRecipients,
-          subject: validated.subject,
-          html: validated.bodyHtml || `<pre>${validated.bodyText}</pre>`,
-          text: validated.bodyText,
-        });
+        const emailHtml = validated.bodyHtml || `<pre>${validated.bodyText}</pre>`;
+        let lastMessageId: string | undefined;
+        for (const recipient of externalRecipients) {
+          const result = await emailService.sendCustomEmail( // infra
+            recipient,
+            validated.subject,
+            emailHtml,
+            'internal_external',
+            workspaceId
+          );
+          if (result.messageId) lastMessageId = result.messageId;
+        }
 
         externalResult = {
           sent: true,
-          messageId: result.data?.id,
+          messageId: lastMessageId,
           recipients: externalRecipients.length,
         };
 
         await db.update(internalEmails)
           .set({
-            externalId: result.data?.id,
+            externalId: lastMessageId,
             externalStatus: 'sent',
           })
           .where(eq(internalEmails.id, email.id));
       } catch (externalError) {
-        console.error("Error sending external email:", externalError);
+        log.error("Error sending external email:", externalError);
         externalResult = {
           sent: false,
           error: "Failed to send to external recipients",
@@ -718,6 +1019,34 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
       userAgent: req.get('user-agent') || null,
     });
 
+    // Send push + in-app notifications to internal email recipients
+    if (internalDelivered > 0) {
+      try {
+        const { universalNotificationEngine } = await import('../services/universalNotificationEngine');
+        for (const recipient of allRecipients) {
+          if (recipient.address.endsWith('@coaileague.internal')) {
+            const recipientMailbox = await db.query.internalMailboxes.findFirst({
+              where: eq(internalMailboxes.emailAddress, recipient.address),
+              columns: { userId: true },
+            });
+            if (recipientMailbox?.userId && recipientMailbox.userId !== user.id) {
+              universalNotificationEngine.sendInternalEmailNotification({
+                recipientUserId: recipientMailbox.userId,
+                workspaceId: req.workspaceId || req.user?.workspaceId || user.currentWorkspaceId || '',
+                senderName: mailbox.displayName || mailbox.emailAddress,
+                subject: validated.subject,
+                emailId: email.id,
+                preview: validated.bodyText?.substring(0, 100),
+                priority: validated.priority as any,
+              });
+            }
+          }
+        }
+      } catch (notifError) {
+        log.error('Failed to send email push notifications (non-fatal):', notifError);
+      }
+    }
+
     // Emit Trinity event for email sent
     await emitTrinityEmailEvent('email_sent', {
       emailId: email.id,
@@ -727,6 +1056,35 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
       internalDelivered,
       externalRecipients: externalRecipients.length,
     });
+
+    // Notify HelpAI when email lands in the support folder (non-blocking)
+    const hasSupportRecipient = validated.to.some(addr => {
+      const local = addr.split('@')[0]?.toLowerCase() || '';
+      return local === 'support' || local.startsWith('support.') || local.startsWith('support-');
+    });
+    if (hasSupportRecipient && internalDelivered > 0) {
+      try {
+        const { trinityHelpaiCommandBus: commandBus } = await import('../services/helpai/trinityHelpaiCommandBus');
+        commandBus.sendRequest({
+          workspace_id: workspaceId || null,
+          request_type: 'platform_data',
+          details: `Support email received — subject: "${validated.subject}" from: ${mailbox.emailAddress}. HelpAI should review and prepare a draft response.`,
+          input_payload: {
+            email_id: email.id,
+            from_address: mailbox.emailAddress,
+            from_name: mailbox.displayName,
+            subject: validated.subject,
+            preview: validated.bodyText?.substring(0, 200),
+            folder: 'support',
+            channel: 'email',
+          },
+          conversation_id: email.threadId,
+        }).catch(() => {});
+        log.info(`[SupportEmailGap] HelpAI notified of support email: ${email.id}`);
+      } catch {
+        // Non-fatal: command bus unavailable
+      }
+    }
 
     res.json({
       success: true,
@@ -739,7 +1097,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error("Error sending email:", error);
+    log.error("Error sending email:", error);
     res.status(500).json({ error: "Failed to send email" });
   }
 });
@@ -754,20 +1112,11 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     const { id } = req.params;
     const validated = updateEmailSchema.parse(req.body);
 
-    const mailbox = await db.query.internalMailboxes.findFirst({
-      where: eq(internalMailboxes.userId, user.id),
-    });
+    const { mailbox, recipient } = await findRecipientAcrossMailboxes(user.id, id);
 
     if (!mailbox) {
       return res.status(404).json({ error: "No mailbox found" });
     }
-
-    const recipient = await db.query.internalEmailRecipients.findFirst({
-      where: and(
-        eq(internalEmailRecipients.emailId, id),
-        eq(internalEmailRecipients.mailboxId, mailbox.id)
-      ),
-    });
 
     if (!recipient) {
       return res.status(404).json({ error: "Email not found in your mailbox" });
@@ -793,17 +1142,21 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
       status: recipient.status,
     });
 
-    const [updated] = await db.update(internalEmailRecipients)
-      .set(updateData)
-      .where(eq(internalEmailRecipients.id, recipient.id))
-      .returning();
+    const updated = await db.transaction(async (tx) => {
+      const [result] = await tx.update(internalEmailRecipients)
+        .set(updateData)
+        .where(eq(internalEmailRecipients.id, recipient.id))
+        .returning();
 
-    if (validated.isRead !== undefined && validated.isRead !== recipient.isRead) {
-      const increment = validated.isRead ? -1 : 1;
-      await db.update(internalMailboxes)
-        .set({ unreadCount: sql`GREATEST(0, ${internalMailboxes.unreadCount} + ${increment})` })
-        .where(eq(internalMailboxes.id, mailbox.id));
-    }
+      if (validated.isRead !== undefined && validated.isRead !== recipient.isRead) {
+        const increment = validated.isRead ? -1 : 1;
+        await tx.update(internalMailboxes)
+          .set({ unreadCount: sql`GREATEST(0, ${internalMailboxes.unreadCount} + ${increment})` })
+          .where(eq(internalMailboxes.id, mailbox.id));
+      }
+
+      return result;
+    });
 
     // Audit logging for state changes
     let auditAction: 'read' | 'unread' | 'starred' | 'unstarred' | 'moved' | 'archived' | null = null;
@@ -847,7 +1200,7 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error("Error updating email:", error);
+    log.error("Error updating email:", error);
     res.status(500).json({ error: "Failed to update email" });
   }
 });
@@ -861,20 +1214,11 @@ router.post("/:id/summarize", requireAuth, async (req: Request, res: Response) =
 
     const { id } = req.params;
 
-    const mailbox = await db.query.internalMailboxes.findFirst({
-      where: eq(internalMailboxes.userId, user.id),
-    });
+    const { mailbox, recipient } = await findRecipientAcrossMailboxes(user.id, id);
 
     if (!mailbox) {
       return res.status(404).json({ error: "No mailbox found" });
     }
-
-    const recipient = await db.query.internalEmailRecipients.findFirst({
-      where: and(
-        eq(internalEmailRecipients.emailId, id),
-        eq(internalEmailRecipients.mailboxId, mailbox.id)
-      ),
-    });
 
     if (!recipient) {
       return res.status(404).json({ error: "Email not found in your mailbox" });
@@ -896,15 +1240,8 @@ router.post("/:id/summarize", requireAuth, async (req: Request, res: Response) =
     }
 
     try {
-      const { GoogleGenerativeAI } = await import("@google/generative-ai");
-      const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        return res.json({ summary: emailContent.substring(0, 200) + (emailContent.length > 200 ? '...' : '') });
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-8b" });
+      const { meteredGemini } = await import('../services/billing/meteredGeminiClient');
+      const userObj = req.user as { id?: string; currentWorkspaceId?: string };
 
       const prompt = `Summarize this email in 2-3 concise sentences. Focus on key points and action items.
 
@@ -912,17 +1249,28 @@ Subject: ${subject}
 
 ${emailContent.substring(0, 3000)}`;
 
-      const result = await model.generateContent(prompt);
-      const summary = result.response.text();
+      const result = await meteredGemini.generate({
+        workspaceId: userObj?.currentWorkspaceId || 'system',
+        featureKey: 'email_ai_summarization',
+        prompt,
+        model: 'gemini-2.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 500,
+      });
 
-      res.json({ summary });
+      if (!result.success) {
+        const fallbackSummary = emailContent.substring(0, 200) + (emailContent.length > 200 ? '...' : '');
+        return res.json({ summary: fallbackSummary });
+      }
+
+      res.json({ summary: result.text });
     } catch (aiError) {
-      console.error("AI summarization failed, using fallback:", aiError);
+      log.error("AI summarization failed, using fallback:", aiError);
       const fallbackSummary = emailContent.substring(0, 200) + (emailContent.length > 200 ? '...' : '');
       res.json({ summary: fallbackSummary });
     }
   } catch (error) {
-    console.error("Error summarizing email:", error);
+    log.error("Error summarizing email:", error);
     res.status(500).json({ error: "Failed to summarize email" });
   }
 });
@@ -937,20 +1285,11 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { permanent, reason } = req.query;
 
-    const mailbox = await db.query.internalMailboxes.findFirst({
-      where: eq(internalMailboxes.userId, user.id),
-    });
+    const { mailbox, recipient } = await findRecipientAcrossMailboxes(user.id, id);
 
     if (!mailbox) {
       return res.status(404).json({ error: "No mailbox found" });
     }
-
-    const recipient = await db.query.internalEmailRecipients.findFirst({
-      where: and(
-        eq(internalEmailRecipients.emailId, id),
-        eq(internalEmailRecipients.mailboxId, mailbox.id)
-      ),
-    });
 
     if (!recipient) {
       return res.status(404).json({ error: "Email not found in your mailbox" });
@@ -1046,7 +1385,7 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
       res.json({ success: true, message: "Email moved to trash" });
     }
   } catch (error) {
-    console.error("Error deleting email:", error);
+    log.error("Error deleting email:", error);
     res.status(500).json({ error: "Failed to delete email" });
   }
 });
@@ -1064,20 +1403,11 @@ router.post("/:id/restore", requireAuth, async (req: Request, res: Response) => 
 
     const { id } = req.params;
 
-    const mailbox = await db.query.internalMailboxes.findFirst({
-      where: eq(internalMailboxes.userId, user.id),
-    });
+    const { mailbox, recipient } = await findRecipientAcrossMailboxes(user.id, id);
 
     if (!mailbox) {
       return res.status(404).json({ error: "No mailbox found" });
     }
-
-    const recipient = await db.query.internalEmailRecipients.findFirst({
-      where: and(
-        eq(internalEmailRecipients.emailId, id),
-        eq(internalEmailRecipients.mailboxId, mailbox.id)
-      ),
-    });
 
     if (!recipient) {
       return res.status(404).json({ error: "Email not found in your mailbox" });
@@ -1133,114 +1463,11 @@ router.post("/:id/restore", requireAuth, async (req: Request, res: Response) => 
 
     res.json({ success: true, message: "Email restored to inbox" });
   } catch (error) {
-    console.error("Error restoring email:", error);
+    log.error("Error restoring email:", error);
     res.status(500).json({ error: "Failed to restore email" });
   }
 });
 
-// ============================================================================
-// SEARCH EMAILS (Full-text search)
-// ============================================================================
-
-router.get("/search/query", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const user = req.user as { id?: string };
-    if (!user?.id) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
-    const { q, folder, includeDeleted, page = '1', limit = '20' } = req.query;
-    
-    if (!q || typeof q !== 'string' || q.trim().length < 2) {
-      return res.status(400).json({ error: "Search query must be at least 2 characters" });
-    }
-
-    const mailbox = await db.query.internalMailboxes.findFirst({
-      where: eq(internalMailboxes.userId, user.id),
-    });
-
-    if (!mailbox) {
-      return res.json({ emails: [], total: 0 });
-    }
-
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
-    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
-    const offset = (pageNum - 1) * limitNum;
-
-    const searchTerm = `%${q.toLowerCase()}%`;
-
-    // Search in subject, body, from address
-    const emails = await db
-      .select({
-        id: internalEmails.id,
-        fromAddress: internalEmails.fromAddress,
-        fromName: internalEmails.fromName,
-        toAddresses: internalEmails.toAddresses,
-        subject: internalEmails.subject,
-        bodyText: internalEmails.bodyText,
-        priority: internalEmails.priority,
-        sentAt: internalEmails.sentAt,
-        createdAt: internalEmails.createdAt,
-        threadId: internalEmails.threadId,
-        isRead: internalEmailRecipients.isRead,
-        isStarred: internalEmailRecipients.isStarred,
-        recipientId: internalEmailRecipients.id,
-        status: internalEmailRecipients.status,
-        deletedAt: internalEmailRecipients.deletedAt,
-      })
-      .from(internalEmails)
-      .innerJoin(
-        internalEmailRecipients,
-        eq(internalEmailRecipients.emailId, internalEmails.id)
-      )
-      .where(
-        and(
-          eq(internalEmailRecipients.mailboxId, mailbox.id),
-          includeDeleted !== 'true' ? isNull(internalEmailRecipients.deletedAt) : sql`1=1`,
-          or(
-            ilike(internalEmails.subject, searchTerm),
-            ilike(internalEmails.bodyText, searchTerm),
-            ilike(internalEmails.fromAddress, searchTerm),
-            ilike(internalEmails.fromName, searchTerm)
-          )
-        )
-      )
-      .orderBy(desc(internalEmails.sentAt))
-      .limit(limitNum)
-      .offset(offset);
-
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(internalEmails)
-      .innerJoin(
-        internalEmailRecipients,
-        eq(internalEmailRecipients.emailId, internalEmails.id)
-      )
-      .where(
-        and(
-          eq(internalEmailRecipients.mailboxId, mailbox.id),
-          includeDeleted !== 'true' ? isNull(internalEmailRecipients.deletedAt) : sql`1=1`,
-          or(
-            ilike(internalEmails.subject, searchTerm),
-            ilike(internalEmails.bodyText, searchTerm),
-            ilike(internalEmails.fromAddress, searchTerm),
-            ilike(internalEmails.fromName, searchTerm)
-          )
-        )
-      );
-
-    res.json({
-      emails,
-      total: countResult?.count || 0,
-      page: pageNum,
-      limit: limitNum,
-      query: q,
-    });
-  } catch (error) {
-    console.error("Error searching emails:", error);
-    res.status(500).json({ error: "Failed to search emails" });
-  }
-});
 
 // ============================================================================
 // AUDIT TRAIL (Support staff only)
@@ -1263,53 +1490,169 @@ router.get("/audit/:emailId", requireAuth, async (req: Request, res: Response) =
 
     const { emailId } = req.params;
 
-    const auditEntries = await db.query.internalEmailAudit.findMany({
-      where: eq(internalEmailAudit.emailId, emailId),
-      orderBy: [desc(internalEmailAudit.createdAt)],
-    });
+    const auditEntries = await db.select().from(auditLogs)
+      .where(and(
+        eq(auditLogs.entityType, 'internal_email'),
+        eq(auditLogs.entityId, emailId)
+      ))
+      .orderBy(desc(auditLogs.createdAt));
 
     res.json({ audit: auditEntries });
   } catch (error) {
-    console.error("Error fetching audit trail:", error);
+    log.error("Error fetching audit trail:", error);
     res.status(500).json({ error: "Failed to fetch audit trail" });
   }
 });
 
-router.get("/contacts/search", requireAuth, async (req: Request, res: Response) => {
+
+// ============================================================================
+// TRINITY AI EMAIL ORCHESTRATION
+// ============================================================================
+
+router.post("/trinity/process", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as { id?: string; currentWorkspaceId?: string };
-    if (!user?.id) {
-      return res.status(401).json({ error: "Authentication required" });
+    if (!user?.currentWorkspaceId) {
+      return res.status(403).json({ error: "Workspace required" });
     }
 
-    const { q } = req.query;
-    if (!q || typeof q !== 'string') {
-      return res.status(400).json({ error: "Search query required" });
-    }
+    const { emailId, batchSize } = req.body;
 
-    const mailboxes = await db
-      .select({
-        id: internalMailboxes.id,
-        emailAddress: internalMailboxes.emailAddress,
-        displayName: internalMailboxes.displayName,
-        mailboxType: internalMailboxes.mailboxType,
-      })
-      .from(internalMailboxes)
-      .where(
-        and(
-          or(
-            ilike(internalMailboxes.emailAddress, `%${q}%`),
-            ilike(internalMailboxes.displayName, `%${q}%`)
-          ),
-          eq(internalMailboxes.isActive, true)
-        )
-      )
-      .limit(20);
+    const { runTrinityEmailOrchestration } = await import("../services/trinityEmailOrchestration");
+    
+    const result = await runTrinityEmailOrchestration(user.currentWorkspaceId, {
+      emailId,
+      batchSize: batchSize || 50,
+    });
 
-    res.json({ contacts: mailboxes });
+    res.json({
+      success: true,
+      result,
+    });
   } catch (error) {
-    console.error("Error searching contacts:", error);
-    res.status(500).json({ error: "Failed to search contacts" });
+    log.error("Trinity email orchestration error:", error);
+    res.status(500).json({ error: "Failed to process emails with Trinity AI" });
+  }
+});
+
+
+// ============================================================================
+// TRINITY INBOX — Authorized support staff monitoring view + halt control
+// ============================================================================
+
+/**
+ * GET /api/internal-email/trinity-inbox
+ * Returns Trinity AI automated email activity for the current workspace.
+ * Requires platform support or admin role.
+ */
+router.get("/trinity-inbox", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as { id?: string; role?: string; currentWorkspaceId?: string };
+    if (!user?.id) return res.status(401).json({ error: "Authentication required" });
+    const { page = '1', limit = '30' } = req.query;
+    const pageNum = Math.max(1, parseInt(page as string));
+    const pageLimit = Math.min(100, parseInt(limit as string));
+    const offset = (pageNum - 1) * pageLimit;
+
+    // Trinity emails: from trinity@ address or system-flagged
+    const emails = await db.select({
+      id: internalEmails.id,
+      fromAddress: internalEmails.fromAddress,
+      fromName: internalEmails.fromName,
+      toAddresses: internalEmails.toAddresses,
+      subject: internalEmails.subject,
+      bodyText: internalEmails.bodyText,
+      sentAt: internalEmails.sentAt,
+      createdAt: internalEmails.createdAt,
+      priority: internalEmails.priority,
+      enhancedByTrinity: internalEmails.enhancedByTrinity,
+    })
+    .from(internalEmails)
+    .where(
+      or(
+        like(internalEmails.fromAddress, 'trinity@%'),
+        like(internalEmails.fromAddress, '%@coaileague.com'),
+        eq(internalEmails.enhancedByTrinity, true)
+      )
+    )
+    .orderBy(desc(internalEmails.sentAt))
+    .limit(pageLimit)
+    .offset(offset);
+
+    res.json({ emails, page: pageNum, limit: pageLimit });
+  } catch (error) {
+    log.error("Error fetching Trinity inbox:", error);
+    res.status(500).json({ error: "Failed to fetch Trinity inbox" });
+  }
+});
+
+/**
+ * POST /api/internal-email/trinity-halt
+ * Toggle Trinity AI email automation for the workspace.
+ * Body: { halted: boolean }
+ */
+router.post("/trinity-halt", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as { id?: string; role?: string; currentWorkspaceId?: string };
+    if (!user?.id) return res.status(401).json({ error: "Authentication required" });
+    if (!PERMANENT_DELETE_ROLES.includes(user.role || '')) {
+      return res.status(403).json({ error: "Only authorized support staff can halt Trinity" });
+    }
+    const { halted } = req.body as { halted: boolean };
+    const workspaceId = req.workspaceId || user.currentWorkspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+
+    await db.update(workspaces)
+      .set({ trinityEmailHalted: halted } as any)
+      .where(eq(workspaces.id, workspaceId));
+
+    log.info(`[TrinityInbox] Trinity email ${halted ? 'HALTED' : 'RESUMED'} for workspace ${workspaceId} by ${user.id}`);
+    res.json({ success: true, halted, message: halted ? 'Trinity email automation halted' : 'Trinity email automation resumed' });
+  } catch (error) {
+    log.error("Error toggling Trinity halt:", error);
+    res.status(500).json({ error: "Failed to toggle Trinity halt" });
+  }
+});
+
+/**
+ * POST /api/internal-email/mailbox/ensure-folders
+ * Backfill: ensures all operational folders exist for the current user's mailbox.
+ * Idempotent — safe to call multiple times (uses ON CONFLICT DO NOTHING via unique index).
+ */
+router.post("/mailbox/ensure-folders", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as { id?: string };
+    if (!user?.id) return res.status(401).json({ error: "Authentication required" });
+
+    const mailbox = await db.query.internalMailboxes.findFirst({
+      where: and(eq(internalMailboxes.userId, user.id), eq(internalMailboxes.mailboxType, 'personal')),
+    });
+    if (!mailbox) return res.status(404).json({ error: "No mailbox found" });
+
+    const existingFolders = await db.select({ folderType: internalEmailFolders.folderType })
+      .from(internalEmailFolders)
+      .where(eq(internalEmailFolders.mailboxId, mailbox.id));
+    
+    const existingTypes = new Set(existingFolders.map(f => f.folderType));
+    const missingFolders = ALL_MAILBOX_FOLDERS.filter(f => !existingTypes.has(f.folderType));
+
+    if (missingFolders.length > 0) {
+      await db.insert(internalEmailFolders).values(
+        missingFolders.map(f => ({
+          mailboxId: mailbox.id,
+          name: f.name,
+          folderType: f.folderType,
+          sortOrder: f.sortOrder,
+          isSystem: f.isSystem,
+        }))
+      );
+      log.info(`[EnsureFolders] Created ${missingFolders.length} missing folders for mailbox ${mailbox.id}`);
+    }
+
+    res.json({ success: true, added: missingFolders.length, message: `${missingFolders.length} new folders added` });
+  } catch (error) {
+    log.error("Error ensuring folders:", error);
+    res.status(500).json({ error: "Failed to ensure folders" });
   }
 });
 

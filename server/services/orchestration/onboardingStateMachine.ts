@@ -15,8 +15,15 @@
  */
 
 import { db } from '../../db';
+import { workspaceOnboardingStates } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { universalAudit, AUDIT_ACTIONS } from '../universalAuditService';
+import { typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('onboardingStateMachine');
+
 
 export type OnboardingStep = 
   | 'org_created'
@@ -78,9 +85,14 @@ class OnboardingStateMachine {
   private states = new Map<string, OnboardingState>();
   private stalledCheckInterval: NodeJS.Timeout | null = null;
   private readonly STALLED_THRESHOLD_HOURS = 24;
+  private readonly DEADLINE_DAYS = 15;
+  private readonly DEADLINE_WARNING_DAYS = 12;
 
   constructor() {
-    this.stalledCheckInterval = setInterval(() => this.checkForStalledOnboardings(), 3600000);
+    this.stalledCheckInterval = setInterval(() => {
+      this.checkForStalledOnboardings();
+      this.enforceOnboardingDeadlines();
+    }, 3600000);
   }
 
   async initializeOnboarding(params: {
@@ -124,9 +136,21 @@ class OnboardingStateMachine {
         checklist: state.checklist,
       },
       metadata: { source: 'OnboardingStateMachine' },
-    });
+    }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
 
-    console.log(`[OnboardingStateMachine] Initialized onboarding for workspace ${workspaceId}`);
+    universalAudit.log({
+      workspaceId,
+      actorId: ownerId,
+      actorType: 'user',
+      action: AUDIT_ACTIONS.ONBOARDING_INITIALIZED,
+      entityType: 'workspace',
+      entityId: workspaceId,
+      entityName: `Onboarding: ${organizationId}`,
+      changeType: 'create',
+      metadata: { organizationId, totalSteps: state.checklist.length, requiredSteps: state.checklist.filter(i => i.required).length },
+    }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+    log.info(`[OnboardingStateMachine] Initialized onboarding for workspace ${workspaceId}`);
     return state;
   }
 
@@ -142,14 +166,14 @@ class OnboardingStateMachine {
     if (!state) {
       state = await this.loadState(workspaceId);
       if (!state) {
-        console.warn(`[OnboardingStateMachine] No onboarding state found for workspace ${workspaceId}`);
+        log.warn(`[OnboardingStateMachine] No onboarding state found for workspace ${workspaceId}`);
         return null;
       }
     }
 
     const itemIndex = state.checklist.findIndex(item => item.step === step);
     if (itemIndex === -1) {
-      console.warn(`[OnboardingStateMachine] Unknown step: ${step}`);
+      log.warn(`[OnboardingStateMachine] Unknown step: ${step}`);
       return state;
     }
 
@@ -202,7 +226,19 @@ class OnboardingStateMachine {
         isComplete: state.status === 'completed',
       },
       metadata: { source: 'OnboardingStateMachine' },
-    });
+    }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+    universalAudit.log({
+      workspaceId,
+      actorId: userId,
+      actorType: 'user',
+      action: AUDIT_ACTIONS.ONBOARDING_STEP_COMPLETED,
+      entityType: 'onboarding_step',
+      entityId: step,
+      entityName: state.checklist[itemIndex]?.label || step,
+      changeType: 'update',
+      metadata: { step, completionPercentage: state.completionPercentage, isComplete: state.status === 'completed', ...(metadata || {}) },
+    }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
 
     if (state.status === 'completed') {
       await this.triggerOnboardingComplete(state);
@@ -248,6 +284,17 @@ class OnboardingStateMachine {
     const contextMessage = question || `Help me complete: ${stepInfo?.label || currentStep}`;
 
     const response = await this.generateOnboardingGuidance(currentStep, contextMessage);
+
+    universalAudit.log({
+      workspaceId,
+      actorId: userId,
+      actorType: 'user',
+      action: AUDIT_ACTIONS.ONBOARDING_HELP_REQUESTED,
+      entityType: 'onboarding_session',
+      entityId: sessionId,
+      changeType: 'action',
+      metadata: { currentStep, question: question || null },
+    }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
 
     return { sessionId, response };
   }
@@ -296,55 +343,152 @@ class OnboardingStateMachine {
             stalledReason: state.stalledReason,
           },
           metadata: { source: 'OnboardingStateMachine', escalate: true },
-        });
+        }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
 
-        console.log(`[OnboardingStateMachine] Onboarding stalled for workspace ${workspaceId}`);
+        universalAudit.log({
+          workspaceId,
+          actorType: 'system',
+          action: AUDIT_ACTIONS.ONBOARDING_STALLED,
+          entityType: 'workspace',
+          entityId: workspaceId,
+          changeType: 'update',
+          metadata: { currentStep: state.currentStep, completionPercentage: state.completionPercentage, stalledReason: state.stalledReason },
+        }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+        log.info(`[OnboardingStateMachine] Onboarding stalled for workspace ${workspaceId}`);
+      }
+    }
+  }
+
+  private async enforceOnboardingDeadlines(): Promise<void> {
+    const now = new Date();
+    const deadlineMs = this.DEADLINE_DAYS * 24 * 3600000;
+    const warningMs = this.DEADLINE_WARNING_DAYS * 24 * 3600000;
+
+    for (const [workspaceId, state] of this.states.entries()) {
+      if (state.status === 'completed' || state.status === 'abandoned') continue;
+
+      const elapsed = now.getTime() - state.startedAt.getTime();
+      const daysElapsed = Math.floor(elapsed / (24 * 3600000));
+
+      if (elapsed >= deadlineMs) {
+        state.status = 'abandoned';
+        state.stalledReason = `Onboarding deadline exceeded (${this.DEADLINE_DAYS} days). Started ${daysElapsed} days ago with ${state.completionPercentage}% completion.`;
+        this.states.set(workspaceId, state);
+
+        platformEventBus.publish({
+          type: 'onboarding_abandoned',
+          workspaceId,
+          payload: {
+            currentStep: state.currentStep,
+            completionPercentage: state.completionPercentage,
+            startedAt: state.startedAt,
+            daysElapsed,
+            deadline: this.DEADLINE_DAYS,
+          },
+          metadata: { source: 'OnboardingStateMachine', escalate: true, priority: 'critical' },
+        }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+        universalAudit.log({
+          workspaceId,
+          actorType: 'system',
+          action: AUDIT_ACTIONS.ONBOARDING_ABANDONED,
+          entityType: 'workspace',
+          entityId: workspaceId,
+          changeType: 'update',
+          metadata: { currentStep: state.currentStep, completionPercentage: state.completionPercentage, daysElapsed, deadline: this.DEADLINE_DAYS },
+        }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+        log.info(`[OnboardingStateMachine] Onboarding ABANDONED for workspace ${workspaceId} - ${daysElapsed} days elapsed, ${state.completionPercentage}% complete`);
+      } else if (elapsed >= warningMs && state.status !== 'stalled') {
+        const daysRemaining = this.DEADLINE_DAYS - daysElapsed;
+
+        platformEventBus.publish({
+          type: 'onboarding_deadline_warning',
+          workspaceId,
+          payload: {
+            currentStep: state.currentStep,
+            completionPercentage: state.completionPercentage,
+            daysRemaining,
+            daysElapsed,
+          },
+          metadata: { source: 'OnboardingStateMachine', escalate: true },
+        }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+        universalAudit.log({
+          workspaceId,
+          actorType: 'system',
+          action: AUDIT_ACTIONS.ONBOARDING_DEADLINE_WARNING,
+          entityType: 'workspace',
+          entityId: workspaceId,
+          changeType: 'action',
+          metadata: { currentStep: state.currentStep, completionPercentage: state.completionPercentage, daysRemaining, daysElapsed },
+        }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+        log.info(`[OnboardingStateMachine] Onboarding deadline warning for workspace ${workspaceId} - ${daysRemaining} days remaining`);
       }
     }
   }
 
   private async triggerOnboardingComplete(state: OnboardingState): Promise<void> {
+    const durationMs = state.completedAt ? state.completedAt.getTime() - state.startedAt.getTime() : 0;
+
     platformEventBus.publish({
       type: 'onboarding_completed',
       workspaceId: state.workspaceId,
       payload: {
         organizationId: state.organizationId,
         completedAt: state.completedAt,
-        duration: state.completedAt
-          ? state.completedAt.getTime() - state.startedAt.getTime()
-          : 0,
+        duration: durationMs,
       },
       metadata: { source: 'OnboardingStateMachine' },
-    });
+    }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
 
-    console.log(`[OnboardingStateMachine] Onboarding completed for workspace ${state.workspaceId}`);
+    universalAudit.log({
+      workspaceId: state.workspaceId,
+      actorId: state.assignedTo || null,
+      actorType: 'user',
+      action: AUDIT_ACTIONS.ONBOARDING_COMPLETED,
+      entityType: 'workspace',
+      entityId: state.workspaceId,
+      changeType: 'update',
+      metadata: { organizationId: state.organizationId, durationMs, completionPercentage: 100 },
+    }).catch((err) => log.warn('[OnboardingStateMachine] Fire-and-forget notification failed:', err));
+
+    log.info(`[OnboardingStateMachine] Onboarding completed for workspace ${state.workspaceId}`);
   }
 
   private async persistState(state: OnboardingState): Promise<void> {
     try {
-      await db.execute(`
-        INSERT INTO workspace_onboarding_states (workspace_id, state_data, updated_at)
-        VALUES ($1, $2, NOW())
-        ON CONFLICT (workspace_id) DO UPDATE SET state_data = $2, updated_at = NOW()
-      `, [state.workspaceId, JSON.stringify(state)]);
+      // Converted to Drizzle ORM: ON CONFLICT
+      const stateJson = JSON.stringify(state);
+      await db.insert(workspaceOnboardingStates).values({
+        workspaceId: state.workspaceId,
+        stateData: stateJson,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: workspaceOnboardingStates.workspaceId,
+        set: { stateData: stateJson, updatedAt: sql`now()` },
+      });
     } catch (error) {
-      console.warn('[OnboardingStateMachine] Failed to persist state (table may not exist):', error);
+      log.warn('[OnboardingStateMachine] Failed to persist state (table may not exist):', error);
     }
   }
 
   private async loadState(workspaceId: string): Promise<OnboardingState | null> {
     try {
-      const result = await db.execute(`
+      // CATEGORY C — Raw SQL retained: Orchestration state loader | Tables: workspace_onboarding_states | Verified: 2026-03-23
+      const result = await typedQuery(`
         SELECT state_data FROM workspace_onboarding_states WHERE workspace_id = $1
       `, [workspaceId]);
       
-      if (result.rows && result.rows.length > 0) {
-        const state = JSON.parse(result.rows[0].state_data as string) as OnboardingState;
+      if (result && (result as any[]).length > 0) {
+        const state = JSON.parse((result as any[])[0].state_data as string) as OnboardingState;
         this.states.set(workspaceId, state);
         return state;
       }
     } catch (error) {
-      console.warn('[OnboardingStateMachine] Failed to load state:', error);
+      log.warn('[OnboardingStateMachine] Failed to load state:', error);
     }
     return null;
   }
@@ -389,7 +533,7 @@ export function registerOnboardingActions(orchestrator: typeof helpaiOrchestrato
     name: 'Initialize Onboarding',
     category: 'automation',
     description: 'Start the onboarding process for a new workspace',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request) => {
       const { organizationId } = request.payload || {};
       if (!request.workspaceId || !organizationId) {
@@ -422,7 +566,7 @@ export function registerOnboardingActions(orchestrator: typeof helpaiOrchestrato
     name: 'Complete Onboarding Step',
     category: 'automation',
     description: 'Mark an onboarding step as complete',
-    requiredRoles: ['admin', 'super_admin', 'owner', 'manager'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { step, metadata } = request.payload || {};
       if (!request.workspaceId || !step) {
@@ -456,7 +600,7 @@ export function registerOnboardingActions(orchestrator: typeof helpaiOrchestrato
     name: 'Get Onboarding State',
     category: 'automation',
     description: 'Get the current onboarding state and checklist',
-    requiredRoles: ['admin', 'super_admin', 'owner', 'manager', 'employee'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       if (!request.workspaceId) {
         return {
@@ -484,7 +628,7 @@ export function registerOnboardingActions(orchestrator: typeof helpaiOrchestrato
     name: 'Request Onboarding Help',
     category: 'user_assistance',
     description: 'Get AI assistance with onboarding',
-    requiredRoles: ['admin', 'super_admin', 'owner', 'manager'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { currentStep, question } = request.payload || {};
       if (!request.workspaceId) {
@@ -518,7 +662,7 @@ export function registerOnboardingActions(orchestrator: typeof helpaiOrchestrato
     name: 'Get Onboarding Stats',
     category: 'analytics',
     description: 'Get platform-wide onboarding statistics',
-    requiredRoles: ['support', 'admin', 'super_admin'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request) => {
       const stats = onboardingStateMachine.getStats();
       return {
@@ -531,5 +675,5 @@ export function registerOnboardingActions(orchestrator: typeof helpaiOrchestrato
     },
   });
 
-  console.log('[OnboardingStateMachine] Registered 5 AI Brain actions');
+  log.info('[OnboardingStateMachine] Registered 5 AI Brain actions');
 }

@@ -1,0 +1,37 @@
+The screenshot tells us exactly what is wrong. Look at the second red error:
+
+**`Failed to load resource: /src/components/cookie-banner.tsx — net::ERR_BLOCKED_BY_CLIENT`**
+
+Your browser or a browser extension (uBlock Origin, AdBlock, Privacy Badger, or similar) is blocking the file because it contains the word "cookie-banner" — which matches ad blocker filter lists. This is what is causing the white screen. The component fails to load, React crashes trying to import it, and the entire app white-screens.
+
+The other errors (manifest, WebSocket, preload warnings) are all non-fatal and irrelevant.
+
+Send this to the agent:
+
+---
+
+**WHITE SCREEN ROOT CAUSE FOUND — Fix cookie-banner component name**
+
+The white screen is caused by ad blockers blocking `/src/components/cookie-banner.tsx` because the filename matches common ad blocker filter lists (EasyPrivacy, uBlock filters). The file fails to load, the React import chain breaks, and the app white-screens.
+
+**Fix — rename the file and all imports:**
+
+1. Rename `client/src/components/cookie-banner.tsx` → `client/src/components/consent-manager.tsx`
+2. Rename the exported component from `CookieBanner` to `ConsentManager`
+3. Update every import across the codebase: `grep -rn "cookie-banner\|CookieBanner" client/src/ --include="*.tsx" --include="*.ts"` — update all found imports to reference `consent-manager` and `ConsentManager`
+4. Update any route or lazy import referencing the old name
+5. Restart the server and confirm the platform loads
+
+**Also add a top-level error boundary to main.tsx** so a single failed component import never white-screens the entire platform again. Wrap the entire React tree in an `<ErrorBoundary>` that shows a "Something went wrong — refresh to try again" screen instead of a blank white page.
+
+**Verify:**
+- Platform loads and dashboard renders after renaming
+- No `ERR_BLOCKED_BY_CLIENT` errors in browser console
+- 56/56 tests still green
+- TypeScript zero errors
+
+Do not proceed to any new phases until the platform loads reliably on a fresh browser refresh.
+
+---
+
+Paste that now. This is a simple rename fix — should take the agent under 5 minutes.

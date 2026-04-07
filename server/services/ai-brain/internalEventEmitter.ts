@@ -1,3 +1,6 @@
+import { createLogger } from '../../lib/logger';
+const log = createLogger('internalEventEmitter');
+
 /**
  * Internal Event Emitter for AI Brain services
  * 
@@ -32,7 +35,7 @@ class InternalEventEmitter {
         try {
           handler(data);
         } catch (error) {
-          console.error(`[InternalEventEmitter] Error in handler for ${event}:`, error);
+          log.error(`[InternalEventEmitter] Error in handler for ${event}:`, error);
         }
       });
     }
@@ -43,7 +46,7 @@ class InternalEventEmitter {
         try {
           handler({ event, data });
         } catch (error) {
-          console.error(`[InternalEventEmitter] Error in wildcard handler:`, error);
+          log.error(`[InternalEventEmitter] Error in wildcard handler:`, error);
         }
       });
     }

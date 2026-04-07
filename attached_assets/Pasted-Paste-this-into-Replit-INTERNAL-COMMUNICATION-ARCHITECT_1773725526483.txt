@@ -1,0 +1,190 @@
+Paste this into Replit:
+
+---
+
+**INTERNAL COMMUNICATION ARCHITECTURE AUDIT — CANONICAL WIRING VERIFICATION | READ ONLY | REPORT ONLY**
+
+Use Acme Security Services workspace data for all live tests. Do not fix anything yet. Verify every internal communication bridge and report findings.
+
+---
+
+**AUDIT 1 — EVENT BUS CANONICAL WIRING**
+
+Verify the platformEventBus is the single source of truth for all inter-service communication:
+
+- Map every service that publishes to platformEventBus — list the service name, event types it publishes, and whether workspaceId is always present at the top level of every publish call
+- Map every service that subscribes to platformEventBus — list the service name, event types it handles, and whether each handler is workspace-scoped
+- Find any service that communicates with another service through direct function imports instead of the event bus — flag every direct cross-service call that bypasses the event bus and should go through it
+- Find any service that uses Node's native EventEmitter, a custom emitter, or any mechanism other than platformEventBus for inter-service signals — flag every one
+- Confirm the wildcard subscriber in aiBrainMasterOrchestrator receives every event type and routes it correctly to Trinity's intelligence layer
+
+Report: total publishers, total subscribers, direct cross-service calls that bypass the bus, non-canonical emitters found.
+
+---
+
+**AUDIT 2 — TRINITY DATA ACCESS COMPLETENESS**
+
+Verify Trinity has access to all data she needs for autonomous decisions. Using the Acme workspace, test each data access path:
+
+- When Trinity's autonomous scheduler runs for Acme — does it have access to: active employees with their compliance status, active clients with their coverage requirements, current open shifts, current week's approved timesheets, each employee's availability patterns?
+- When Trinity generates an invoice for Acme — does it have access to: client bill rates, approved timesheet hours for the billing period, previous invoice history for the client, client billing cycle setting?
+- When Trinity builds a payroll run for Acme — does it have access to: each employee's pay rate, employment type (W2/1099), approved hours for the pay period, direct deposit status, last payroll run amount for anomaly comparison?
+- When Trinity's morning COO brief runs for Acme — does it pull: outstanding invoice totals, overdue amounts, upcoming payroll obligations, open shift gaps, expiring officer licenses, cash flow projection?
+- When Trinity detects a compliance issue — does it have access to: officer license expiry dates, certification status, state-specific requirements for Texas, hard block rules?
+
+For each data access path — confirm the query exists, runs without error against Acme data, and returns the expected shape. Report any path that returns empty, undefined, or errors.
+
+---
+
+**AUDIT 3 — ORCHESTRATION BRIDGE INTEGRITY**
+
+Verify every orchestration bridge connects correctly end to end:
+
+**Billing bridge:**
+- Does `billingOrchestrationService` correctly hand off to `weeklyBillingRunService` for batch invoice generation?
+- Does the weekly billing run correctly read from approved timesheets and write completed invoices?
+- Does completed invoice creation trigger the QB sync bridge?
+- Does the QB sync bridge correctly call `qb.create_invoice` and handle failure with retry?
+
+**Payroll bridge:**
+- Does `orchestratedPayroll` correctly aggregate approved timesheets into a payroll run?
+- Does payroll approval correctly trigger the disbursement bridge?
+- Does the disbursement bridge correctly route to Plaid transfer or NACHA fallback based on employee setup?
+- Does transfer completion correctly close the payroll run and notify employees?
+
+**Scheduling bridge:**
+- Does the autonomous scheduler correctly read open shifts and available officers?
+- Does officer assignment correctly trigger shift confirmation requests?
+- Does shift confirmation correctly update the shift record and notify the client?
+- Does shift completion correctly trigger timesheet creation for payroll?
+
+**Compliance bridge:**
+- Does license expiry detection correctly trigger the hard block?
+- Does hard block correctly unassign the officer from future shifts?
+- Does unassignment correctly trigger open shift creation for coverage?
+- Does open shift creation correctly trigger Trinity's auto-fill pipeline?
+
+For each bridge — trace the full chain and report any broken link, missing trigger, or silent handoff failure.
+
+---
+
+**AUDIT 4 — DATA PERSISTENCE INTEGRITY**
+
+Verify every state change persists correctly and survives a server restart:
+
+- Create a test shift in Acme — restart the server — confirm the shift still exists with all fields intact
+- Create a test invoice in Acme — restart the server — confirm invoice exists with correct status
+- Initiate a payroll run in Acme — restart the server — confirm run status is preserved
+- Set a Trinity workspace pause for Acme — restart the server — confirm pause is still active (loaded from DB not just memory)
+- Trigger a compliance hard block on a test officer in Acme — restart the server — confirm block is still active
+- Check every `new Map()` at module level across all services — confirm each one reloads from DB on startup
+
+Report: any state that was lost after restart, any Map that does not reload from DB.
+
+---
+
+**AUDIT 5 — TRINITY PROACTIVE PIPELINE LIVE TEST**
+
+Using Acme workspace, trigger and trace each proactive pipeline end to end:
+
+**Test 1 — Open shift auto-fill:**
+Create an open shift in Acme with no assigned officer. Wait for or manually trigger Trinity's shift monitoring cycle. Trace: was the open shift detected, did Trinity score available officers, was an assignment attempted, was a confirmation request sent, was the result logged?
+
+**Test 2 — Invoice auto-generation:**
+Set a test client in Acme to billing cycle end. Manually trigger the billing automation. Trace: did Trinity read approved timesheets, did it generate an invoice with correct amounts, did it send to client email, did QB sync trigger?
+
+**Test 3 — Morning COO brief:**
+Manually trigger the morning brief for Acme workspace. Trace: did it pull real org data, did it include specific numbers (not generic text), was it delivered to the correct role-scoped recipients, what did the brief contain?
+
+**Test 4 — Compliance scan:**
+Set a test officer in Acme to have a license expiring in 29 days. Trigger the compliance scanner. Trace: was the expiry detected, was the officer flagged, was a notification sent to the manager, was the hard block scheduled?
+
+**Test 5 — Payroll readiness scan:**
+Set a test employee in Acme with no direct deposit account. Trigger the 48h readiness scan. Trace: was the missing account detected, was the org owner notified with the employee's name, was the correct data included?
+
+For each test — report what happened at each step. Flag any step where the trace goes silent or the expected output does not appear.
+
+---
+
+**AUDIT 6 — WEBSOCKET REAL-TIME SYNC VERIFICATION**
+
+Verify real-time updates flow correctly from backend mutations to frontend:
+
+- Update a shift in Acme via API — confirm `schedules_updated` WebSocket event fires and carries the correct workspaceId
+- Approve an invoice in Acme via API — confirm `invoice_updated` WebSocket event fires
+- Process payroll in Acme via API — confirm `payroll_updated` WebSocket event fires
+- Trigger a compliance hard block — confirm `compliance_updated` WebSocket event fires
+- Send a notification in Acme — confirm `notification_new` WebSocket event fires to the correct user
+
+For each — confirm the event fires, carries workspaceId, carries enough data for the frontend to update without a full page refresh, and does not broadcast to other workspaces.
+
+---
+
+**AUDIT 7 — CANONICAL SOURCE OF TRUTH VERIFICATION**
+
+Verify every domain has a single canonical source that all other services read from:
+
+- **Billing settings** — is there one canonical location where billing cycle, bill rates, and invoice settings live? Do all billing services read from the same place or are there multiple sources that can drift?
+- **Employee pay rates** — is there one canonical location? Does payroll, Trinity's anomaly detector, the financial briefing, and the QB sync all read from the same source?
+- **Client coverage requirements** — is there one canonical location? Does scheduling, compliance, and invoice generation all read from the same source?
+- **Workspace subscription status** — is there one canonical location? Do credit checks, feature gates, and Trinity's authorization all read from the same source?
+- **Officer compliance status** — is there one canonical location? Does scheduling, compliance portal, and the regulatory auditor dashboard all read from the same source?
+
+For each domain — report the canonical source table and column, and list any service that reads from a different location creating a potential drift.
+
+---
+
+**AUDIT 8 — SILENT FAILURE DETECTION IN LIVE PIPELINES**
+
+Using Acme workspace, deliberately trigger each known failure scenario and confirm it surfaces correctly:
+
+- Attempt to assign a terminated employee to a shift — confirm hard block fires and org owner is notified
+- Attempt to send an invoice to a client with no email — confirm it blocks with a clear error message
+- Attempt to run payroll with zero approved hours — confirm 400 error with clear message
+- Trigger a credit deduction that would overdraw the balance — confirm hard stop fires and org owner is notified
+- Disconnect the QB connection for Acme — trigger an invoice sync — confirm failure is caught, logged, and org owner is notified with retry option
+
+For each scenario — report exactly what happened: was it blocked, was it notified, was it logged, was it recoverable?
+
+---
+
+**OUTPUT FORMAT**
+
+For each audit section report:
+
+```
+AUDIT N — [Name]
+Status: PASS / FAIL / PARTIAL
+Findings:
+  [SEVERITY] Description > File:Line if applicable
+  Impact:
+  
+Live test results (where applicable):
+  Test N: PASS/FAIL — [what happened]
+```
+
+At the bottom:
+
+```
+COMMUNICATION ARCHITECTURE SCORE:
+Audit 1 — Event Bus Wiring: PASS/FAIL/PARTIAL
+Audit 2 — Trinity Data Access: PASS/FAIL/PARTIAL
+Audit 3 — Orchestration Bridges: PASS/FAIL/PARTIAL
+Audit 4 — Data Persistence: PASS/FAIL/PARTIAL
+Audit 5 — Proactive Pipeline: PASS/FAIL/PARTIAL
+Audit 6 — WebSocket Sync: PASS/FAIL/PARTIAL
+Audit 7 — Canonical Sources: PASS/FAIL/PARTIAL
+Audit 8 — Silent Failure Detection: PASS/FAIL/PARTIAL
+
+OVERALL: X/8 PASSING
+```
+
+Then two lists:
+**Gaps that break Trinity's autonomous ability today**
+**Gaps that reduce quality but do not break core workflows**
+
+Stop and wait. Do not fix anything.
+
+---
+
+Paste the full results back here and I'll build the targeted fix prompt based on what the live Acme tests actually reveal.

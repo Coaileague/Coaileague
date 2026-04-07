@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
@@ -14,7 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { CheckCircle2, AlertCircle, FileText, CreditCard, Clock, Building2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface InvoicePaymentStatus {
   invoiceId: string;
@@ -52,12 +54,13 @@ function PaymentForm({
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isElementReady, setIsElementReady] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!stripe || !elements) {
-      onError('Payment system not ready. Please try again.');
+    if (!stripe || !elements || !isElementReady) {
+      onError('Payment system not ready. Please wait for the card form to load.');
       return;
     }
 
@@ -107,20 +110,33 @@ function PaymentForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border p-4 bg-muted/30">
-            <PaymentElement />
+          <div className="rounded-lg border p-4 bg-muted/30 min-h-[200px] relative">
+            {!isElementReady && (
+              <div className="absolute inset-0 flex items-center justify-center gap-2 text-muted-foreground bg-muted/30 z-10">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Loading payment form...</span>
+              </div>
+            )}
+            <div className={isElementReady ? 'opacity-100' : 'opacity-0'}>
+              <PaymentElement 
+                onReady={() => setIsElementReady(true)}
+                options={{
+                  layout: 'tabs',
+                }}
+              />
+            </div>
           </div>
         </CardContent>
         <CardFooter>
           <Button
             data-testid="button-complete-payment"
             type="submit"
-            disabled={!stripe || !elements || isProcessing}
+            disabled={!stripe || !elements || !isElementReady || isProcessing}
             className="w-full"
             size="lg"
           >
             {isProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isProcessing ? "Processing..." : `Pay $${invoice.total}`}
+            {!isElementReady ? "Loading payment form..." : isProcessing ? "Processing..." : `Pay $${invoice.total}`}
           </Button>
         </CardFooter>
       </Card>
@@ -146,7 +162,7 @@ export default function PayInvoice() {
   const { data: stripeConfig, isLoading: isLoadingStripeConfig } = useQuery({
     queryKey: ['/api/stripe/config'],
     queryFn: async () => {
-      const response = await fetch('/api/stripe/config');
+      const response = await secureFetch('/api/stripe/config');
       if (!response.ok) {
         throw new Error('Failed to load Stripe configuration');
       }
@@ -170,7 +186,7 @@ export default function PayInvoice() {
   const { data: invoiceData, isLoading: isLoadingInvoice, refetch } = useQuery<InvoicePaymentStatus>({
     queryKey: ['/api/invoices', invoiceId, 'payment-status'],
     queryFn: async () => {
-      const response = await fetch(`/api/invoices/${invoiceId}/payment-status`);
+      const response = await secureFetch(`/api/invoices/${invoiceId}/payment-status`);
       if (!response.ok) {
         throw new Error('Invoice not found');
       }
@@ -191,7 +207,7 @@ export default function PayInvoice() {
         throw new Error('Invoice is already paid');
       }
 
-      const response = await fetch(`/api/invoices/${invoiceId}/create-payment`, {
+      const response = await secureFetch(`/api/invoices/${invoiceId}/create-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -244,10 +260,40 @@ export default function PayInvoice() {
     });
   };
 
+  const loadingConfig: CanvasPageConfig = {
+    id: 'pay-invoice-loading',
+    title: 'Invoice Payment',
+    subtitle: 'Loading...',
+    category: 'public',
+    withBottomNav: false,
+    showSeasonalBanner: false,
+    showSeasonalEffects: false,
+  };
+
+  const errorConfig: CanvasPageConfig = {
+    id: 'pay-invoice-error',
+    title: 'Invoice Payment',
+    subtitle: 'Configuration Error',
+    category: 'public',
+    withBottomNav: false,
+    showSeasonalBanner: false,
+    showSeasonalEffects: false,
+  };
+
+  const notFoundConfig: CanvasPageConfig = {
+    id: 'pay-invoice-not-found',
+    title: 'Invoice Payment',
+    subtitle: 'Invoice Not Found',
+    category: 'public',
+    withBottomNav: false,
+    showSeasonalBanner: false,
+    showSeasonalEffects: false,
+  };
+
   if (isLoadingStripeConfig || isLoadingInvoice) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
+      <CanvasHubPage config={loadingConfig}>
+        <Card className="w-full max-w-2xl mx-auto">
           <CardHeader>
             <Skeleton className="h-8 w-64" />
             <Skeleton className="h-4 w-48 mt-2" />
@@ -257,14 +303,14 @@ export default function PayInvoice() {
             <Skeleton className="h-40 w-full" />
           </CardContent>
         </Card>
-      </div>
+      </CanvasHubPage>
     );
   }
 
   if (stripeConfigError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <CanvasHubPage config={errorConfig}>
+        <Card className="w-full max-w-md mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
@@ -273,14 +319,14 @@ export default function PayInvoice() {
             <CardDescription>{stripeConfigError}</CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </CanvasHubPage>
     );
   }
 
   if (!invoiceData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <CanvasHubPage config={notFoundConfig}>
+        <Card className="w-full max-w-md mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
@@ -291,30 +337,35 @@ export default function PayInvoice() {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </CanvasHubPage>
     );
   }
 
   const isPaid = invoiceData.status === 'paid';
   const isOverdue = invoiceData.status === 'overdue';
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'pay-invoice',
+    title: `Invoice #${invoiceData.invoiceNumber}`,
+    subtitle: 'Invoice Payment Portal',
+    category: 'public',
+    withBottomNav: false,
+    showSeasonalBanner: false,
+    showSeasonalEffects: false,
+  };
+
   return (
-    <div className="min-h-screen bg-background py-8 px-4" data-testid="page-pay-invoice">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <CanvasHubPage config={pageConfig}>
+      <div className="max-w-3xl mx-auto space-y-6" data-testid="page-pay-invoice">
         {/* CoAIleague Branding */}
         <div className="text-center space-y-4">
-          <CoAIleagueLogo 
-            width={240} 
-            height={60} 
-            showTagline={true}
-            showWordmark={true}
-          />
+          <UnifiedBrandLogo size="xl" showTagline={true} />
         </div>
 
         {/* Invoice Details Card */}
         <Card data-testid="card-invoice-details">
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-2">
               <div className="space-y-1">
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <FileText className="h-6 w-6" />
@@ -362,7 +413,7 @@ export default function PayInvoice() {
                   {invoiceData.payments.map((payment) => (
                     <div
                       key={payment.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                      className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-muted/30"
                       data-testid={`payment-${payment.id}`}
                     >
                       <div className="space-y-1">
@@ -423,7 +474,7 @@ export default function PayInvoice() {
                     <Input
                       id="payer-name"
                       data-testid="input-payer-name"
-                      placeholder="John Doe"
+                      placeholder="Enter your full name"
                       value={payerName}
                       onChange={(e) => setPayerName(e.target.value)}
                       required
@@ -435,7 +486,7 @@ export default function PayInvoice() {
                       id="payer-email"
                       data-testid="input-payer-email"
                       type="email"
-                      placeholder="john@example.com"
+                      placeholder="Enter your email address"
                       value={payerEmail}
                       onChange={(e) => setPayerEmail(e.target.value)}
                       required
@@ -524,6 +575,6 @@ export default function PayInvoice() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
+import { TrinityLogo } from "@/components/trinity-logo";
 import { Shield, FileText, AlertCircle } from "lucide-react";
 
 interface ChatAgreementModalProps {
@@ -37,7 +37,7 @@ BY ACCESSING THIS SUPPORT CHAT, YOU AGREE TO THE FOLLOWING TERMS:
 By clicking "I Agree" and entering this support chat, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. If you do not agree, you must exit immediately.
 
 2. SERVICE DESCRIPTION & LIMITATIONS
-This CoAIleague Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries. This is a professional business communication channel operated by CoAIleague.
+This Support Chat ("Service") provides real-time customer support, technical assistance, and general inquiries. This is a professional business communication channel operated by your service provider.
 
 IMPORTANT: We do NOT guarantee that every issue will be resolved immediately or at all. Some issues may require:
 • Platform upgrades or updates
@@ -165,12 +165,12 @@ This is a legally binding agreement. Your acceptance creates enforceable obligat
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-slate-800 border-2 border-primary/40 rounded-xl shadow-2xl w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-slate-800 border border-primary/40 rounded-md shadow-sm w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header - Compact for mobile */}
         <div className="p-3 sm:p-4 border-b border-primary/30 bg-slate-900 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-primary rounded-lg">
-              <CoAIleagueStaticLogo className="h-5 w-5 sm:h-6 sm:w-6" variant="icon" />
+            <div className="p-1.5 bg-primary rounded-md">
+              <TrinityLogo size={24} />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-base sm:text-lg font-bold text-white truncate">Terms & Conditions</h2>

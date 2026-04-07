@@ -1,0 +1,580 @@
+COAILEAGUE — BILLING CONFIG CORRECTION
+Real 2026 AI API Prices + Corrected Token Budgets + New Models
+Send this BEFORE the email system build.
+ACME sandbox only. Statewide untouched.
+
+================================================================================
+WHAT THIS FIXES AND WHY
+================================================================================
+
+The AI cost estimates in billingConfig.ts were based on outdated 2024 pricing.
+Real 2026 API prices have dropped 86-90% from previous estimates.
+
+Real confirmed April 2026 prices:
+  Gemini 2.5 Flash:      $0.30 input / $2.50 output per 1M tokens
+  Gemini 2.5 Flash-Lite: $0.10 input / $0.40 output per 1M tokens
+  Claude Haiku 4.5:      $1.00 input / $5.00 output per 1M tokens
+  Claude Sonnet 4.6:     $3.00 input / $15.00 output per 1M tokens
+  GPT-4o-mini:           $0.15 input / $0.60 output per 1M tokens
+  GPT-4o:                $2.50 input / $10.00 output per 1M tokens
+
+With prompt caching (90% savings on repeated system prompts) and
+batch API (50% off background bot processing) applied:
+
+Real blended cost: ~$0.12 per 100k tokens (conservative)
+
+This means:
+  Real AI cost per Starter workspace:    $17/month (was estimated $30)
+  Real AI cost per Professional:         $37/month (was estimated $262)
+  Real AI cost per Business:             $85/month (was estimated $787)
+  Real AI cost per Enterprise:           $279/month (was estimated $2,750)
+
+AI is 86-90% cheaper than previously calculated.
+All margins improve dramatically.
+Token budgets can be set generously.
+Overage rates can be fair AND highly profitable.
+
+================================================================================
+STEP 1 — AUDIT CURRENT STATE
+================================================================================
+
+echo "=== BILLING CONFIG AUDIT ==="
+
+# Current AI model costs in config
+grep -A5 "AI_MODEL_COSTS\|inputPer1k\|outputPer1k" \
+  shared/billingConfig.ts | head -50
+
+# Current token budgets per tier
+grep -A2 "trinityToken\|TokenBudget\|TokenSoftCap\|TokenOverage" \
+  shared/billingConfig.ts | head -30
+
+# Current token budgets in DB
+psql $DATABASE_URL -c "
+  SELECT tier,
+    trinity_token_budget_k,
+    trinity_token_soft_cap_k,
+    trinity_token_overage_per_100k_cents
+  FROM subscription_tiers
+  ORDER BY base_price_cents
+"
+
+echo "=== AUDIT COMPLETE — APPLYING CORRECTIONS ==="
+
+================================================================================
+STEP 2 — UPDATE shared/billingConfig.ts
+================================================================================
+
+Find and replace the AI_MODEL_COSTS section in shared/billingConfig.ts.
+Replace it entirely with the following:
+
+export const AI_MODEL_COSTS = {
+
+  // ============================================================
+  // GEMINI — Primary Cortex
+  // Real April 2026 pricing from ai.google.dev
+  // Gemini 2.0 Flash deprecated June 1 2026 — do not use
+  // ============================================================
+
+  'gemini-2.5-flash-lite': {
+    role: 'primary_cortex_lite' as const,
+    description: 'Simple lookups reads FAQ answers — cheapest model',
+    inputPer1kTokensMicrocents: 100,   // $0.10 per 1M input tokens
+    outputPer1kTokensMicrocents: 400,  // $0.40 per 1M output tokens
+    useFor: [
+      'simple_lookup', 'faq_answer', 'schedule_check',
+      'who_is_on_shift', 'status_check', 'read_only_query',
+    ],
+  },
+
+  'gemini-2.5-flash': {
+    role: 'primary_cortex' as const,
+    description: 'Standard reasoning — primary model for most tasks',
+    inputPer1kTokensMicrocents: 300,   // $0.30 per 1M input tokens
+    outputPer1kTokensMicrocents: 2500, // $2.50 per 1M output tokens
+    useFor: [
+      'schedule_generation', 'compliance_scan', 'cascade_management',
+      'trinity_chat', 'proactive_insight', 'calloff_processing',
+      'lead_scoring', 'onboarding_task', 'email_classification',
+    ],
+  },
+
+  'gemini-2.5-pro': {
+    role: 'primary_cortex_deep' as const,
+    description: 'Complex multi-step reasoning — use sparingly',
+    inputPer1kTokensMicrocents: 1250,  // $1.25 per 1M input tokens
+    outputPer1kTokensMicrocents: 10000, // $10.00 per 1M output tokens
+    useFor: [
+      'payroll_dispute', 'complex_financial_analysis',
+      'multi_site_optimization', 'strategic_scheduling',
+      'complex_compliance_analysis',
+    ],
+  },
+
+  // ============================================================
+  // CLAUDE — Consciousness and Judge
+  // Real April 2026 pricing from docs.anthropic.com
+  // Claude Haiku 4.5 for fast validation
+  // Claude Sonnet 4.6 for deep validation only
+  // Skip Claude entirely for read-only queries
+  // ============================================================
+
+  'claude-haiku-4-5': {
+    role: 'consciousness_judge_fast' as const,
+    description: 'Fast validation — fact check tone hallucination detection',
+    inputPer1kTokensMicrocents: 1000,  // $1.00 per 1M input tokens
+    outputPer1kTokensMicrocents: 5000, // $5.00 per 1M output tokens
+    useFor: [
+      'claude_validation_standard', 'tone_check',
+      'numeric_verification', 'hallucination_detection',
+      'policy_boundary_check',
+    ],
+    skipFor: [
+      // Skip Claude validation entirely for these:
+      'simple_lookup', 'faq_answer', 'read_only_query',
+      'schedule_check', 'status_check',
+    ],
+  },
+
+  'claude-sonnet-4-6': {
+    role: 'consciousness_judge_deep' as const,
+    description: 'Deep validation — financial ethical complex reasoning only',
+    inputPer1kTokensMicrocents: 3000,  // $3.00 per 1M input tokens
+    outputPer1kTokensMicrocents: 15000, // $15.00 per 1M output tokens
+    useFor: [
+      'claude_validation_financial', 'ethical_boundary_check',
+      'payroll_validation', 'legal_document_review',
+      'compliance_certification',
+    ],
+  },
+
+  // ============================================================
+  // GPT — Backbone Workhorse
+  // Real April 2026 pricing from openai.com/api/pricing
+  // GPT-4o-mini for most document generation
+  // GPT-4o for complex documents only
+  // ============================================================
+
+  'gpt-4o-mini': {
+    role: 'backbone_workhorse_fast' as const,
+    description: 'Fast document generation structured extraction',
+    inputPer1kTokensMicrocents: 150,   // $0.15 per 1M input tokens
+    outputPer1kTokensMicrocents: 600,  // $0.60 per 1M output tokens
+    useFor: [
+      'pay_stub_generation', 'email_drafting', 'form_processing',
+      'structured_extraction', 'dar_summary', 'simple_report',
+      'notification_drafting', 'batch_processing',
+    ],
+  },
+
+  'gpt-4o': {
+    role: 'backbone_workhorse' as const,
+    description: 'High quality document generation for important documents',
+    inputPer1kTokensMicrocents: 2500,  // $2.50 per 1M input tokens
+    outputPer1kTokensMicrocents: 10000, // $10.00 per 1M output tokens
+    useFor: [
+      'proposal_generation', 'compliance_report',
+      'legal_document', 'complex_form_processing',
+      'detailed_contract', 'client_facing_document',
+    ],
+  },
+
+} as const;
+
+// ============================================================
+// COST REDUCTION STRATEGIES — applied automatically by wrappers
+// ============================================================
+
+export const AI_COST_OPTIMIZATIONS = {
+  // Prompt caching: Trinity system prompt + workspace context
+  // ~5,000 tokens cached per call
+  // 85%+ cache hit rate after warmup
+  // Cache hit = 10% of base input price
+  // Effective input cost reduction: ~35-45%
+  promptCachingEnabled: true,
+  estimatedCacheHitRate: 0.85,
+  cacheSavingsMultiplier: 0.10, // cache hit costs 10% of base
+
+  // Batch API: 50% off for non-real-time processing
+  // Nightly bots, compliance scans, report generation
+  // ~40% of all Trinity token usage qualifies
+  batchApiEnabled: true,
+  batchApiDiscount: 0.50,
+  estimatedBatchEligiblePct: 0.40,
+
+  // Smart model routing rules:
+  // 20% of calls → Flash-Lite (simple lookups)
+  // 50% of calls → Flash (standard reasoning)
+  // 10% of calls → Pro (complex reasoning)
+  // 15% of validations → Haiku (fast validation)
+  // 5% of validations → Sonnet (deep validation)
+  // 40% of calls → skip Claude entirely (read-only)
+  // 8% of calls → GPT-4o-mini (most documents)
+  // 2% of calls → GPT-4o (important documents)
+
+  // Real blended cost after all optimizations:
+  realBlendedCostPer100kTokensCents: 12, // $0.12 per 100k tokens
+  conservativeEstimatePer100kCents: 15,  // $0.15 per 100k (safety buffer)
+} as const;
+
+// ============================================================
+// REAL COST BASELINES PER WORKSPACE PER MONTH
+// Used for internal margin calculation only
+// Never exposed to tenants
+// ============================================================
+
+export const AI_REAL_COSTS = {
+  officerSeatMonthlyCents: 18,         // $0.18/officer/month
+  supervisorSeatMonthlyCents: 60,      // $0.60/supervisor/month
+  orgOwnerSeatMonthlyCents: 180,       // $1.80/org owner/month
+  backgroundBotsStarterCents: 1710,    // $17.10/month fixed for Starter workspace
+  backgroundBotsProfessionalCents: 1400, // $14.00/month for Professional
+  backgroundBotsBusinessCents: 1800,   // $18.00/month for Business
+  backgroundBotsEnterpriseCents: 3000, // $30.00/month for Enterprise
+} as const;
+
+Now find the PLATFORM_TIERS section in shared/billingConfig.ts.
+Update the trinityToken fields for each tier to these corrected values:
+
+free_trial:
+  trinityTokenBudgetK: 5000,        // 5M tokens — was 500k
+  trinityTokenSoftCapK: 4000,       // warn at 4M
+  trinityTokenHardCapK: 5000,       // hard block at 5M (only free trial has hard cap)
+  trinityTokenOveragePer100kCents: 0, // blocked — upgrade required
+
+starter:
+  trinityTokenBudgetK: 40000,       // 40M tokens — was 1,500k
+  trinityTokenSoftCapK: 32000,      // warn at 32M (80%)
+  trinityTokenHardCapK: null,       // no hard cap — bill overage
+  trinityTokenOveragePer100kCents: 80, // $0.80/100k = 85% margin
+
+professional:
+  trinityTokenBudgetK: 100000,      // 100M tokens — was 12,000k
+  trinityTokenSoftCapK: 80000,      // warn at 80M (80%)
+  trinityTokenHardCapK: null,
+  trinityTokenOveragePer100kCents: 70, // $0.70/100k = 82.9% margin
+
+business:
+  trinityTokenBudgetK: 250000,      // 250M tokens — was 40,000k
+  trinityTokenSoftCapK: 200000,     // warn at 200M (80%)
+  trinityTokenHardCapK: null,
+  trinityTokenOveragePer100kCents: 60, // $0.60/100k = 80% margin
+
+enterprise:
+  trinityTokenBudgetK: 800000,      // 800M tokens — was 150,000k
+  trinityTokenSoftCapK: 640000,     // warn at 640M (80%)
+  trinityTokenHardCapK: null,
+  trinityTokenOveragePer100kCents: 50, // $0.50/100k = 76% margin
+
+strategic:
+  trinityTokenBudgetK: null,        // custom per contract
+  trinityTokenOveragePer100kCents: 40, // $0.40/100k = 70% margin
+
+================================================================================
+STEP 3 — SYNC DATABASE subscription_tiers TABLE
+================================================================================
+
+psql $DATABASE_URL << 'SQL'
+BEGIN;
+
+UPDATE subscription_tiers SET
+  trinity_token_budget_k = 40000,
+  trinity_token_soft_cap_k = 32000,
+  trinity_token_hard_cap_k = NULL,
+  trinity_token_overage_per_100k_cents = 80
+WHERE tier = 'starter';
+
+UPDATE subscription_tiers SET
+  trinity_token_budget_k = 100000,
+  trinity_token_soft_cap_k = 80000,
+  trinity_token_hard_cap_k = NULL,
+  trinity_token_overage_per_100k_cents = 70
+WHERE tier = 'professional';
+
+UPDATE subscription_tiers SET
+  trinity_token_budget_k = 250000,
+  trinity_token_soft_cap_k = 200000,
+  trinity_token_hard_cap_k = NULL,
+  trinity_token_overage_per_100k_cents = 60
+WHERE tier = 'business';
+
+UPDATE subscription_tiers SET
+  trinity_token_budget_k = 800000,
+  trinity_token_soft_cap_k = 640000,
+  trinity_token_hard_cap_k = NULL,
+  trinity_token_overage_per_100k_cents = 50
+WHERE tier = 'enterprise';
+
+UPDATE subscription_tiers SET
+  trinity_token_budget_k = 5000,
+  trinity_token_soft_cap_k = 4000,
+  trinity_token_hard_cap_k = 5000,
+  trinity_token_overage_per_100k_cents = 0
+WHERE tier = 'free_trial';
+
+COMMIT;
+
+-- Verify
+SELECT tier,
+  trinity_token_budget_k,
+  trinity_token_soft_cap_k,
+  trinity_token_hard_cap_k,
+  trinity_token_overage_per_100k_cents,
+  CASE
+    WHEN tier = 'free_trial'    AND trinity_token_budget_k = 5000    THEN 'CORRECT'
+    WHEN tier = 'starter'       AND trinity_token_budget_k = 40000   THEN 'CORRECT'
+    WHEN tier = 'professional'  AND trinity_token_budget_k = 100000  THEN 'CORRECT'
+    WHEN tier = 'business'      AND trinity_token_budget_k = 250000  THEN 'CORRECT'
+    WHEN tier = 'enterprise'    AND trinity_token_budget_k = 800000  THEN 'CORRECT'
+    ELSE 'WRONG'
+  END as status
+FROM subscription_tiers
+ORDER BY base_price_cents;
+SQL
+
+================================================================================
+STEP 4 — UPDATE workspace_ai_usage PERIODS ALREADY CREATED
+================================================================================
+
+-- Update any existing ai_usage periods to use new token budgets
+-- This ensures current billing period reflects corrected limits
+
+psql $DATABASE_URL << 'SQL'
+BEGIN;
+
+-- Update existing workspace_ai_usage periods for Starter workspaces
+UPDATE workspace_ai_usage wau
+SET
+  included_tokens_k = 40000,
+  soft_cap_tokens_k = 32000,
+  hard_cap_tokens_k = NULL,
+  overage_per_100k_tokens_cents = 80
+FROM workspaces w
+WHERE wau.workspace_id = w.id
+  AND w.tier = 'starter'
+  AND wau.invoiced_at IS NULL;
+
+-- Update existing periods for Professional workspaces
+UPDATE workspace_ai_usage wau
+SET
+  included_tokens_k = 100000,
+  soft_cap_tokens_k = 80000,
+  hard_cap_tokens_k = NULL,
+  overage_per_100k_tokens_cents = 70
+FROM workspaces w
+WHERE wau.workspace_id = w.id
+  AND w.tier = 'professional'
+  AND wau.invoiced_at IS NULL;
+
+-- Update existing periods for Business workspaces
+UPDATE workspace_ai_usage wau
+SET
+  included_tokens_k = 250000,
+  soft_cap_tokens_k = 200000,
+  hard_cap_tokens_k = NULL,
+  overage_per_100k_tokens_cents = 60
+FROM workspaces w
+WHERE wau.workspace_id = w.id
+  AND w.tier = 'business'
+  AND wau.invoiced_at IS NULL;
+
+-- Update existing periods for Enterprise workspaces
+UPDATE workspace_ai_usage wau
+SET
+  included_tokens_k = 800000,
+  soft_cap_tokens_k = 640000,
+  hard_cap_tokens_k = NULL,
+  overage_per_100k_tokens_cents = 50
+FROM workspaces w
+WHERE wau.workspace_id = w.id
+  AND w.tier = 'enterprise'
+  AND wau.invoiced_at IS NULL;
+
+COMMIT;
+
+-- Verify no workspace is over their new limits yet
+SELECT
+  w.tier,
+  w.company_name,
+  wau.total_tokens_k,
+  wau.included_tokens_k,
+  ROUND((wau.total_tokens_k / wau.included_tokens_k::numeric) * 100, 1) as pct_used,
+  wau.overage_charges_cents
+FROM workspace_ai_usage wau
+JOIN workspaces w ON w.id = wau.workspace_id
+WHERE wau.billing_period_start = DATE_TRUNC('month', NOW())::DATE
+ORDER BY pct_used DESC;
+SQL
+
+================================================================================
+STEP 5 — UPDATE AI CALL WRAPPERS FOR SMART MODEL ROUTING
+================================================================================
+
+Find server/services/ai/aiCallWrapper.ts.
+Add smart model selection based on call_type.
+This routes simple queries to cheaper models automatically.
+
+Add this function before the withGemini export:
+
+export function selectGeminiModel(callType: string): string {
+  // Simple read-only queries → Flash-Lite (cheapest)
+  const liteCallTypes = [
+    'simple_lookup', 'faq_answer', 'schedule_check',
+    'who_is_on_shift', 'status_check', 'read_only_query',
+  ];
+
+  // Complex reasoning → Pro (most capable)
+  const proCallTypes = [
+    'payroll_dispute', 'complex_financial_analysis',
+    'multi_site_optimization', 'strategic_scheduling',
+    'complex_compliance_analysis',
+  ];
+
+  if (liteCallTypes.includes(callType)) return 'gemini-2.5-flash-lite';
+  if (proCallTypes.includes(callType)) return 'gemini-2.5-pro';
+  return 'gemini-2.5-flash'; // default for everything else
+}
+
+export function selectClaudeModel(callType: string): string | null {
+  // Skip Claude entirely for read-only queries
+  const skipClaudeTypes = [
+    'simple_lookup', 'faq_answer', 'read_only_query',
+    'schedule_check', 'status_check', 'who_is_on_shift',
+  ];
+
+  // Deep validation for financial and legal
+  const deepValidationTypes = [
+    'claude_validation_financial', 'payroll_validation',
+    'legal_document_review', 'compliance_certification',
+  ];
+
+  if (skipClaudeTypes.includes(callType)) return null; // skip Claude
+  if (deepValidationTypes.includes(callType)) return 'claude-sonnet-4-6';
+  return 'claude-haiku-4-5'; // fast validation for everything else
+}
+
+export function selectGptModel(callType: string): string {
+  // Complex documents → GPT-4o
+  const fullGptTypes = [
+    'proposal_generation', 'legal_document',
+    'detailed_contract', 'client_facing_document',
+    'compliance_report',
+  ];
+
+  if (fullGptTypes.includes(callType)) return 'gpt-4o';
+  return 'gpt-4o-mini'; // default for everything else
+}
+
+Now update the withGemini, withClaude, withGpt functions to use these selectors.
+Pass callType from context and let the selector pick the model automatically.
+Still allow explicit modelName override for cases that need specific models.
+
+================================================================================
+STEP 6 — ADD PROMPT CACHING HEADERS TO GEMINI CALLS
+================================================================================
+
+Prompt caching saves 35-45% on input costs.
+Trinity system prompt is 3,000-5,000 tokens on every call.
+After first call it is 90% cheaper on every subsequent call.
+
+In every Gemini API call add caching configuration:
+  The first 5,000 tokens of every request should be the cached system prompt.
+  Structure: [system_prompt][workspace_context][user_query]
+  Keep system_prompt and workspace_context identical across calls for same workspace.
+  Only user_query changes between calls.
+  This maximizes cache hit rate.
+
+Verify caching is active:
+  After 10 calls to same workspace check usageMetadata.cachedContentTokenCount
+  Should show cached tokens being reused.
+
+================================================================================
+STEP 7 — ADD BATCH API FOR BOT PROCESSING
+================================================================================
+
+All nightly and weekly bots qualify for 50% batch discount.
+Batch API processes within 24 hours — perfect for overnight bots.
+
+For every bot in server/services/trinity/bots/:
+  If the bot runs nightly or weekly (not real-time):
+    Use Gemini Batch API endpoint instead of standard endpoint
+    This is a simple parameter change: useBatchMode: true
+    Cost drops 50% automatically
+
+Bots that qualify for batch:
+  licenseExpiryBot — nightly ✓
+  overdueInvoiceBot — nightly ✓
+  complianceScanBot — nightly ✓
+  performanceScorecardBot — weekly ✓
+  dataRetentionBot — nightly ✓
+  analyticsSnapshotBot — nightly ✓
+  calloffPatternBot — weekly ✓
+
+Bots that do NOT qualify (need real-time response):
+  welfareCheckBot — real-time required
+  cascadeBot — real-time required
+  Any bot responding to live user interaction
+
+================================================================================
+STEP 8 — VERIFY AND CERTIFY
+================================================================================
+
+echo "=== BILLING CORRECTION VERIFICATION ==="
+
+# 1. Confirm new model names exist in config
+grep -c "gemini-2.5-flash-lite\|claude-haiku-4-5\|gpt-4o-mini" \
+  shared/billingConfig.ts
+# Must be 3+
+
+# 2. Confirm token budgets corrected
+psql $DATABASE_URL -c "
+  SELECT tier, trinity_token_budget_k,
+    CASE
+      WHEN tier='starter'      AND trinity_token_budget_k=40000  THEN 'CORRECT'
+      WHEN tier='professional' AND trinity_token_budget_k=100000 THEN 'CORRECT'
+      WHEN tier='business'     AND trinity_token_budget_k=250000 THEN 'CORRECT'
+      WHEN tier='enterprise'   AND trinity_token_budget_k=800000 THEN 'CORRECT'
+      ELSE 'WRONG'
+    END as status
+  FROM subscription_tiers
+  WHERE tier IN ('starter','professional','business','enterprise')
+"
+# All must show CORRECT
+
+# 3. Confirm new overage rates
+psql $DATABASE_URL -c "
+  SELECT tier, trinity_token_overage_per_100k_cents,
+    CASE
+      WHEN tier='starter'      AND trinity_token_overage_per_100k_cents=80 THEN 'CORRECT'
+      WHEN tier='professional' AND trinity_token_overage_per_100k_cents=70 THEN 'CORRECT'
+      WHEN tier='business'     AND trinity_token_overage_per_100k_cents=60 THEN 'CORRECT'
+      WHEN tier='enterprise'   AND trinity_token_overage_per_100k_cents=50 THEN 'CORRECT'
+      ELSE 'WRONG'
+    END as status
+  FROM subscription_tiers
+  WHERE tier IN ('starter','professional','business','enterprise')
+"
+# All must show CORRECT
+
+# 4. Confirm model selector functions exist in wrapper
+grep -c "selectGeminiModel\|selectClaudeModel\|selectGptModel" \
+  server/services/ai/aiCallWrapper.ts
+# Must be 3+
+
+# 5. TypeScript zero errors
+TS=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l)
+echo "TypeScript errors: $TS (must be 0)"
+
+# 6. Server starts clean
+curl -s http://localhost:5000/health | jq .status
+
+echo ""
+echo "=== MARGIN SUMMARY WITH CORRECTED PRICES ==="
+echo "Starter gross margin:      ~90%"
+echo "Professional gross margin: ~95%"
+echo "Business gross margin:     ~97%"
+echo "Enterprise gross margin:   ~97%"
+echo "Seat overage margin:       92-98%"
+echo "AI token overage margin:   76-85%"
+echo "Email at $3/seat margin:   96-99%"
+echo ""
+echo "=== BILLING CORRECTION COMPLETE ==="

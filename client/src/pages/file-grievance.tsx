@@ -13,9 +13,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
-import { apiGet, apiPost } from "@/lib/apiClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { queryKeys } from "@/config/queryKeys";
 import { navConfig } from "@/config/navigationConfig";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle, FileText, Send } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLocation } from "wouter";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const fileGrievanceSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(200),
@@ -44,10 +45,9 @@ export default function FileGrievance() {
   const [, setLocation] = useLocation();
   const [submittedId, setSubmittedId] = useState<string | null>(null);
 
-  // Fetch potential items to dispute (reviews, write-ups)
   const { data: disputeableItems } = useQuery({
-    queryKey: queryKeys.grievances.all,
-    queryFn: () => apiGet('grievances.disputeable'),
+    queryKey: ['/api/disputes/my-disputes'],
+    queryFn: () => apiFetch('/api/disputes/my-disputes', AnyResponse),
   });
 
   const form = useForm<FileGrievanceForm>({
@@ -64,14 +64,15 @@ export default function FileGrievance() {
 
   const fileGrievanceMutation = useMutation({
     mutationFn: async (data: FileGrievanceForm) => {
-      return apiPost('grievances.file', data);
+      const res = await apiRequest('POST', '/api/disputes', data);
+      return res.json();
     },
     onSuccess: (data: any) => {
       toast({
         title: "Grievance Filed Successfully",
         description: "Your grievance has been submitted for review. You will be notified of the decision.",
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.grievances.all });
+      queryClient.invalidateQueries({ queryKey: ['/api/disputes/my-disputes'] });
       setSubmittedId(data.id);
       form.reset();
     },
@@ -88,17 +89,25 @@ export default function FileGrievance() {
     fileGrievanceMutation.mutate(data);
   };
 
+  const submittedPageConfig: CanvasPageConfig = {
+    id: 'file-grievance-submitted',
+    title: 'Grievance Filed',
+    subtitle: 'Your grievance has been submitted',
+    category: 'operations',
+  };
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'file-grievance',
+    title: 'File a Grievance',
+    subtitle: 'Submit a formal complaint or dispute for review',
+    category: 'operations',
+  };
+
   if (submittedId) {
     return (
-      <div className="container mx-auto p-6 max-w-2xl">
+      <CanvasHubPage config={submittedPageConfig}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <FileText className="w-6 h-6" />
-              Grievance Filed
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <p>Your grievance has been submitted for review. You can track its status in the disputes page.</p>
             <div className="flex gap-2">
               <Button onClick={() => setLocation(navConfig.misc.disputes)} data-testid="button-view-disputes">
@@ -110,23 +119,12 @@ export default function FileGrievance() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-2xl space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <FileText className="w-8 h-8" />
-          File a Grievance
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Challenge write-ups, performance reviews, or report labor law violations
-        </p>
-      </div>
-
+    <CanvasHubPage config={pageConfig}>
       {/* Info Alert */}
       <Alert>
         <AlertCircle className="w-4 h-4" />
@@ -298,6 +296,6 @@ export default function FileGrievance() {
           </Form>
         </CardContent>
       </Card>
-    </div>
+    </CanvasHubPage>
   );
 }

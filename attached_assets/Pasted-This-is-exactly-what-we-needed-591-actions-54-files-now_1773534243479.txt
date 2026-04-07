@@ -1,0 +1,56 @@
+This is exactly what we needed. 591 actions, 54 files — now we can see the real picture. Here's the full consolidation plan, organized by risk and priority:
+
+---
+
+## The Three Waves
+
+### Wave 1 — True Duplicates (Zero Risk, Do First)
+These are confirmed same-operation, two-name problems. Pick one, remove the other.
+
+**qb.\* vs quickbooks.\*** — 6 actions doing identical QB operations under two namespaces. `quickbooks.*` in platformActionHub, `qb.*` in trinityInfraActions. **Keep `qb.*`, remove `quickbooks.*` three.** Replit prompt:
+
+> In `platformActionHub.ts`, remove the three `quickbooks.*` action registrations (`quickbooks.get_balance`, `quickbooks.push_invoice`, `quickbooks.sync_payroll`). Before removing, confirm that `qb.create_invoice`, `qb.review_conflicts`, and `qb.sync_status` in `trinityInfraActions.ts` cover equivalent functionality. Show me a before/after count of registered actions in both files, then stop.
+
+**session.guardian.\* vs session.\*** — `aiBrainMasterOrchestrator.ts` registers `session.guardian.diagnose`, `session.guardian.elevate`, `session.guardian.revoke`, `session.guardian.heal`, `session.guardian.status` alongside flat `session.*` equivalents already in `elevatedSessionGuardian.ts`. This is the latent non-determinism conflict flagged in the manifest. **Remove the `session.guardian.*` variants from aiBrainMasterOrchestrator.** Replit prompt:
+
+> In `aiBrainMasterOrchestrator.ts`, remove the five `session.guardian.*` action registrations. The canonical versions (`session.diagnose`, `session.elevate`, `session.revoke`, `session.auto_heal`, `session.validate`) already exist in `elevatedSessionGuardian.ts`. Show before/after count, then stop.
+
+**scheduling near-duplicates** — three pairs:
+
+| Remove | Keep |
+|--------|------|
+| `scheduling.create_recurring_shift` (aiBrainMasterOrchestrator) | `scheduling.create_recurring` (trinityScheduleTimeclockActions) |
+| `scheduling.publish_shifts` (trinitySchedulingPlatformActions) | `scheduling.publish` (trinityScheduleTimeclockActions) |
+| `scheduling.resolve_conflicts` (coreSubagentOrchestration) | `scheduling.resolve_conflict` (trinityScheduleTimeclockActions) |
+
+---
+
+### Wave 2 — Orphan Namespace Purge (Low Risk)
+All unknown call frequency, all pure LLM-routable, all in aiBrainMasterOrchestrator. These are architectural ambition that never got wired up. **Total removal candidates: ~35 actions.**
+
+| Namespace | Count | Reason to remove |
+|-----------|-------|-----------------|
+| `filesystem.*` | 7 | Trinity shouldn't have direct filesystem write access — that's Replit's domain |
+| `recovery.*` | 4 | Orphaned, overlaps with `health.*` and `session.*` |
+| `routing.*` | 2 | No callers, routing is handled by Trinity's internal pipeline |
+| `sentinel.*` | 4 | Overlaps with `escalation.*` and `health.*` |
+| `gamification.*` | 4 | Feature not built, no callers |
+| `a2a.*` | 4 | Agent-to-agent framework never activated |
+
+Build one batched Replit prompt for all six namespace purges together, not six separate prompts.
+
+---
+
+### Wave 3 — Namespace Unification (Medium Risk, Do Last)
+**`revenue.*` vs `billing.*`** — domainSupervisorActions has `revenue.generate_invoice`, `revenue.process_payment`, `revenue.process_payroll`, `revenue.reconcile_payments`, `revenue.detect_anomalies`, `revenue.validate_credits`. These are conceptually `billing.*` operations registered under a different namespace in a different file. Before removing, Replit needs to confirm no Trinity prompt or route references the `revenue.*` names specifically.
+
+**`analytics.*` split** — 4 analytics actions in trinityCommsProactiveActions, 5 in trinityReportAnalyticsActions. They should all live in one file. Low risk move, just a file consolidation.
+
+---
+
+### Do Not Touch
+`scheduling.lifecycle.*`, `scheduling.notify_*`, `safety.*`, `postorders.*`, `hiring.*`, `compliance.*`, `billing.*` core ops, `document.*`, `notify.*`, `approval_gate.*` — all confirmed active.
+
+---
+
+**Ready to draft the Wave 1 batch prompt?** That's the right starting point — zero risk, immediate reduction of ~11 actions, and it fixes the session conflict that's currently causing non-deterministic routing behavior.

@@ -39,7 +39,7 @@ export function AgentProgressTracker({ progress, isExecuting, hasError }: AgentP
     <Card data-testid="panel-progress-tracker">
       <CardContent className="pt-4">
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               {isComplete ? (
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -62,7 +62,7 @@ export function AgentProgressTracker({ progress, isExecuting, hasError }: AgentP
             className={`h-2 ${hasError ? '[&>div]:bg-destructive' : isComplete ? '[&>div]:bg-emerald-500' : ''}`}
           />
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
             <span className="truncate max-w-[200px]" title={progress?.currentAction}>
               {progress?.currentAction || 'Initializing...'}
             </span>

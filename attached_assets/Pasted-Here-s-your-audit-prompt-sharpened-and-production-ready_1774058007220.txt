@@ -1,0 +1,109 @@
+Here's your audit prompt, sharpened and production-ready:
+
+---
+
+**COAILEAGUE — GRAND OPENING FINAL SYSTEM AUDIT**
+*Full-Stack End-to-End Stress Test | Pre-Production Certification*
+
+---
+
+Conduct a **complete, uncompromising end-to-end audit** of the CoAIleague platform using real simulated data across every layer — frontend UI, backend logic, database persistence, Trinity orchestration, and subscription enforcement. This is the final certification gate before the first paying tenant goes live. Leave nothing untested. Document every finding and fix as you go.
+
+---
+
+**PHASE 1 — TENANT ONBOARDING & ORG SETUP**
+
+Simulate a brand new organization registering for the first time:
+
+- Trial signup and plan selection flow — does it complete, provision the workspace, and set subscription tier correctly?
+- Org settings: pay cycle configuration, payment method capture, staffing email setup, and all platform-required org-level settings — do they save, persist, and sync across sessions?
+- Confirm workspace is fully isolated (multi-tenant data separation enforced at every query level)
+
+---
+
+**PHASE 2 — USER MANAGEMENT & END-USER ONBOARDING**
+
+- Org owner invites an end user — does the invite flow complete end-to-end?
+- New user accepts invite and completes personal setup: pay rate, pay type, position, and role assignment — do all fields save, persist, and reflect correctly in the org roster and Trinity's awareness?
+- Confirm RBAC guards are enforced — users only see and access what their role permits
+
+---
+
+**PHASE 3 — CLIENT SETUP**
+
+- Org adds a new client with full configuration: client pay rate, address, billing schedule, and all relevant settings
+- Confirm client data persists, syncs, and is accessible to Trinity and all relevant platform features
+- Test that client records are properly scoped to the org workspace
+
+---
+
+**PHASE 4 — TRINITY ONBOARDING & LEARNING**
+
+- Org owner uploads organizational documents for Trinity to scan and ingest — does the document processing pipeline execute, does Trinity learn and retain org context?
+- Org owner instructs Trinity via natural language to add clients and configure them — does Trinity execute, confirm progress, and track completion state?
+- Trinity's progress tracking must be persistent — if a session ends mid-onboarding, Trinity must resume with full awareness of what was and wasn't completed
+
+---
+
+**PHASE 5 — SCHEDULING, AUTO-FILL & STAFFING INTELLIGENCE**
+
+- Trinity must demonstrate ability to pull from org data (clients, employees, positions, pay types) to generate an auto-schedule
+- Simulate open shifts from client demand — does Trinity proactively identify coverage gaps and fill them?
+- Simulate an inbound staffing email (calloffs@, incidents@) — does Trinity parse, process, and autonomously respond by filling the shift or escalating?
+- Confirm auto-fill logic respects pay rates, positions, availability, and org rules
+
+---
+
+**PHASE 6 — PIPELINES, WORKFLOWS & AUTOMATIONS**
+
+Stress test every active pipeline with real simulated data:
+
+- Hiring pipeline — full flow from applicant to onboarded employee
+- All other active pipelines and workflow automations
+- Confirm each stage transitions correctly, triggers the right actions, and does not stall or orphan records
+
+---
+
+**PHASE 7 — TRINITY ACTIONS & PAYLOAD GENERATION**
+
+- Execute every registered Trinity action in the action registry
+- Each action must produce its expected payload, document, or mutation
+- All outputs must save and correctly append to the associated end user or org record
+- Confirm persistence — data must survive session resets and page refreshes
+- Confirm sync — data must reflect in real time across all relevant views without stale state
+
+---
+
+**PHASE 8 — SUBSCRIPTION ENFORCEMENT & FEATURE GUARDS**
+
+- Simulate access attempts for features outside the active subscription tier
+- Confirm guards block access cleanly with appropriate messaging — no silent failures, no unauthorized data exposure
+- Confirm trial limits, feature flags, and role-based restrictions all enforce correctly in tandem
+
+---
+
+**PHASE 9 — PERSISTENCE, SYNC & DATA INTEGRITY (GLOBAL)**
+
+Across every phase above, validate:
+
+- All data written to the database is queryable, accurate, and workspace-scoped
+- No orphaned records, null foreign keys, or missing workspace_id references
+- All UI state reflects backend state after hard refresh
+- Trinity's memory and context of org data is consistent across actions and sessions
+
+---
+
+**DELIVERABLE**
+
+Produce a structured findings report organized as:
+
+1. **What is working end-to-end** — confirmed green, no action needed
+2. **What is partially wired** — functional but missing persistence, sync, or UI feedback
+3. **What has gaps or is broken** — root cause identified, fix applied or fix prescribed
+4. **Production Readiness Verdict** — Is CoAIleague ready to onboard the first paying tenant? What, if anything, must be resolved before go-live?
+
+Apply fixes inline where possible. Flag anything requiring architectural review. Do not skip steps. Do not summarize without testing.
+
+---
+
+That's your prompt, Bryan. Paste that straight into Replit Agent and let it run the full sweep. When it comes back with findings, drop the output here and we'll triage together.

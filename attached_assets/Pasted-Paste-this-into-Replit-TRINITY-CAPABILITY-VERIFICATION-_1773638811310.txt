@@ -1,0 +1,137 @@
+Paste this into Replit:
+
+---
+
+**TRINITY CAPABILITY VERIFICATION AUDIT — READ ONLY | REPORT ONLY | NO FIXES**
+
+Answer every question below with PASS, FAIL, or PARTIAL and one sentence explaining why. Be brutally honest — check actual code, not intentions. If a feature exists in a service file but is never called or triggered, that is a FAIL not a PASS.
+
+---
+
+**SECTION 1 — SHIFT & SCHEDULING AUTONOMY**
+
+- Does Trinity automatically detect open shifts and attempt to fill them without a manager doing anything?
+- Does Trinity scan for upcoming shifts with no assigned officer and trigger coverage requests proactively?
+- When an officer calls out or a shift goes uncovered, does Trinity automatically find a replacement from available qualified officers?
+- Does Trinity confirm shift assignments with officers and track acknowledgment without manager involvement?
+- Does Trinity enforce compliance hard blocks — preventing assignment of an officer with expired license to any shift automatically?
+- Does Trinity publish schedule changes to all affected parties via notification automatically?
+- Does Trinity handle shift swaps end to end — request, match, approve, notify — without manager manually approving each step?
+- Is the autonomous scheduling daemon actually running at startup or is it deliberately disabled pending verification?
+
+---
+
+**SECTION 2 — CLIENT INVOICE AUTONOMY**
+
+- Does Trinity automatically generate invoices for all active clients at the end of their billing cycle without a manager triggering it?
+- Does Trinity pull billable hours directly from approved timesheets to build invoice line items — with no manual data entry?
+- Does Trinity send invoices to the correct client billing email automatically after generation?
+- Does Trinity track invoice aging and send reminder emails at 7, 14, and 30 day overdue milestones automatically?
+- Does Trinity escalate to a collections flag after final notice with no manager involvement?
+- When a client pays, does the payment automatically reconcile against the invoice and close it without manual matching?
+- Does Stripe Connect automatically route client payments to the org's bank account — or does someone manually transfer funds?
+- Can the full invoice lifecycle — generate, send, remind, collect, reconcile — complete with zero manager action if all client data is populated?
+
+---
+
+**SECTION 3 — PAYROLL AUTONOMY**
+
+- Does Trinity automatically build a payroll run from approved timesheets at the end of each pay period without a manager initiating it?
+- Does Trinity flag missing pay rates, missing direct deposit accounts, or unapproved timesheets 48 hours before payroll is due?
+- Is owner approval required before payroll disburses — is there a hard gate that prevents autonomous disbursement without explicit approval?
+- After owner approval, does payroll currently disburse to employee bank accounts automatically — or does it stop at NACHA file generation requiring manual bank upload?
+- With Plaid not yet integrated, what is the exact last automated step in the current payroll flow?
+- Does Trinity notify every employee when their pay has been processed?
+- Does Trinity handle contractor 1099 payments separately from W2 employee payroll in the current flow?
+
+---
+
+**SECTION 4 — FINANCIAL INTELLIGENCE**
+
+- Can Trinity produce a profit/loss report for any date range on demand when asked in chat?
+- Does Trinity proactively surface cash flow risk — flagging when outstanding invoices plus upcoming payroll would result in a negative cash position?
+- Does Trinity identify which clients are operating at a loss for the org — bill rate minus officer pay rate minus platform fees?
+- Does Trinity detect payroll anomalies — unusual overtime, hours significantly above or below average — before a run is approved?
+- Does Trinity proactively alert the org owner to revenue opportunities — clients with expired contracts, rate adjustments needed, underutilized officers?
+- Is the daily COO intelligence brief actually firing for each workspace and delivering actionable financial insights?
+
+---
+
+**SECTION 5 — COMPLIANCE AUTONOMY**
+
+- Does Trinity automatically scan all officer licenses and certifications and flag expiring ones before they expire?
+- Does Trinity automatically hard-block an expired officer from being assigned to any shift?
+- Does Trinity automatically notify the officer and manager when a license is expiring with enough lead time to renew?
+- Does Trinity automatically trigger the hiring pipeline when a compliance gap creates a staffing shortage?
+- Is the regulatory auditor portal fully functional — can a state auditor request access, verify credentials, and view org compliance data without org owner involvement?
+
+---
+
+**SECTION 6 — MULTI-TENANT ISOLATION**
+
+- Is every single DB query in every route scoped with workspace_id from the JWT — confirmed with zero exceptions?
+- Can an org owner or manager from Workspace A access any data from Workspace B through any API route?
+- Are Trinity's autonomous actions — cron jobs, event subscribers, background scans — all scoped to individual workspaces so one workspace's data never influences another?
+- Is Statewide Protective Services data fully isolated from Acme Security Services (dev sandbox) with zero possibility of bleed?
+
+---
+
+**SECTION 7 — DATA PERSISTENCE & LIVE SYNC**
+
+- When an org owner updates a client bill rate, does every open draft invoice automatically recalculate?
+- When a manager updates an employee pay rate, do open payroll drafts automatically update?
+- When a schedule is published, do all assigned officers receive real-time notifications without polling?
+- When Trinity takes an autonomous action, is it logged with full attribution — what action, what workspace, what triggered it, what the outcome was — in a queryable audit table?
+- When a server restarts, does every active operational state — welfare checks, Trinity pause states, active automations — reload from DB correctly with nothing lost?
+
+---
+
+**SECTION 8 — PLAID / ACH GAP (honest assessment)**
+
+- Is Plaid currently integrated anywhere in the codebase?
+- Is there any mechanism today that actually pushes money to employee bank accounts — or does payroll stop at NACHA file generation?
+- Is Stripe Treasury implemented or referenced anywhere?
+- What is the exact current state of the payroll disbursement — what is the last thing that happens automatically and what requires a manual step?
+
+---
+
+**SECTION 9 — TRINITY INTELLIGENCE LAYERS**
+
+- Is the wildcard event subscriber in aiBrainMasterOrchestrator actually receiving and routing all platform events?
+- Does Trinity's morning COO brief actually fire for each workspace on schedule and deliver to the correct role-scoped recipients?
+- Does Trinity's anomaly detector actually run every 2 hours and surface real findings or is it returning empty results?
+- Does Trinity have access to all org data it needs — client settings, employee pay rates, shift history, invoice history — to make intelligent autonomous decisions?
+- When Trinity takes an action autonomously, can the org owner see what Trinity did, why she did it, and override it if needed?
+- Is there a working Trinity chat interface where an org owner can ask questions and get answers about their own org data?
+
+---
+
+**SECTION 10 — ONBOARDING TO FIRST AUTONOMOUS CYCLE**
+
+- Can a brand new org complete full onboarding — create account, add clients, add employees, set pay rates, set bill rates, set coverage schedules — entirely within CoAIleague with no external tools?
+- After onboarding is complete, will Trinity autonomously handle the first billing cycle — schedule shifts, track hours, generate invoice, send to client — without the org owner doing anything beyond initial setup?
+- Is there a clear onboarding checklist that tells a new org owner exactly what data Trinity needs to run autonomously?
+- What is the minimum data an org must enter before Trinity can take her first autonomous action?
+
+---
+
+**OUTPUT FORMAT**
+
+Answer every question. PASS, FAIL, or PARTIAL with one sentence.
+
+At the bottom produce two lists:
+
+**Fully autonomous today — PASS items that work end to end with zero manual steps**
+
+**Gaps before full autonomy — every FAIL and PARTIAL, grouped by section, with one sentence on what specifically needs to be built or wired**
+
+Then give a single honest verdict:
+```
+AUTONOMOUS READINESS SCORE: X/Y questions passing
+```
+
+Stop and wait. Do not fix anything.
+
+---
+
+Paste the results back here. That report becomes your product roadmap — everything passing is a feature you can sell today, everything failing is your next sprint.

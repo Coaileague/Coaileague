@@ -1,0 +1,342 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — POST EMAIL BARREL FIX VERIFICATION AND REMAINING GAP CLOSURE
+The email barrel file was the most critical discovery in the platform's history.
+Every Resend-dependent flow was silently failing. Now that it exists every single
+email pipeline must be tested with real sends. Code that imports correctly is not
+the same as email that actually arrives. Verify every flow end to end before
+marking anything production ready.
+
+Read everything before touching anything. Test with real data. Report results before fixing.
+
+---
+
+PHASE 1 — EMAIL PIPELINE VERIFICATION
+Every Resend-dependent flow must be tested with a real send and confirmed delivery.
+A resolved import is not a delivered email. Test each one explicitly.
+
+INVOICE DELIVERY — HIGHEST PRIORITY:
+464 invoices were silently failing because the email barrel did not exist.
+Those invoices are real money owed to real clients.
+First test the current invoice delivery by sending a test invoice to a real email address.
+Confirm it arrives. Confirm the payment link inside it is functional and points to a real payment page.
+Confirm the payment link contains the correct invoice ID and org details.
+Then make a decision on the 464 previously undelivered invoices:
+Does the platform have a retry mechanism to resend previously failed invoices?
+If not build one now — a bulk resend job that processes invoices with status sent
+but no confirmed delivery, resends them via Resend, and logs each resend event
+in the audit trail with reason: initial delivery failed, resent after email fix.
+This is real revenue. Do not leave it unaddressed.
+
+EMPLOYEE INVITE EMAIL:
+Trigger an employee invite from the platform.
+Confirm the invite email arrives at the target address.
+Confirm the invite token in the email is valid and has not expired.
+Confirm clicking the accept link in the email creates the employee record correctly.
+Confirm the invited employee lands on a working onboarding screen not a 404.
+
+ONBOARDING WORKFLOW EMAIL SEQUENCE:
+Trigger a new employee onboarding flow.
+Confirm every email in the sequence fires in the correct order.
+Confirm each email arrives with correct employee name, org name, and relevant details.
+Confirm no email in the sequence is skipped or fires with null content.
+
+PASSWORD RESET:
+Request a password reset for a test account.
+Confirm the reset email arrives.
+Confirm the reset token in the email is validated server-side when clicked.
+Confirm the token expires correctly after use and cannot be reused.
+Confirm the new password is actually written to the DB.
+
+CREDIT THRESHOLD WARNING EMAILS:
+Trigger a credit threshold crossing on a test org.
+Confirm the Resend email fires alongside the in-platform notification.
+Confirm the email arrives with correct credit balance, tier name, and action required.
+Confirm all three channels fire simultaneously: notification panel, Org Operations
+Briefing Channel, and Resend email — not independently and not with delays between them.
+
+PAYROLL PAY STUB NOTIFICATION:
+Approve a payroll run on the test workspace.
+Confirm each employee receives a notification that their pay stub is ready.
+Confirm the notification contains a deep link to their pay stub.
+Confirm the pay stub is accessible at that link and displays correct hours and earnings.
+
+OVERDUE INVOICE COLLECTIONS ALERT:
+The 1 overdue invoice at $3.12K needs a collections escalation sequence.
+Confirm Trinity is now generating the collections alert since the email barrel is fixed.
+If the collections escalation sequence does not exist build it now:
+1 day past due: reminder email to client with payment link.
+7 days past due: escalation email to client, alert to org_owner via all three channels.
+30 days past due: Trinity flags for org_owner with recommended action and draft demand letter.
+Each escalation step must be logged in the audit trail with timestamp and recipient.
+
+WELCOME EMAIL FOR NEW ORG SIGNUP:
+Trigger a new org signup on the test environment.
+Confirm the welcome email arrives with correct org name and getting started guidance.
+Confirm the 500 trial credits are allocated in the ledger on signup completion.
+Confirm the welcome notification fires in the platform simultaneously with the email.
+
+---
+
+PHASE 2 — THE 464 UNDELIVERED INVOICES DECISION
+
+This needs a definitive answer before go-live.
+
+Pull every invoice with status sent that has no confirmed Resend delivery receipt.
+Count them. Total the dollar amount represented.
+These invoices were sent to clients who never received them.
+From the client's perspective they were never billed.
+
+Build the resend job:
+Query all invoices where status = sent AND delivery_confirmed = false
+AND created_at is before the email barrel fix date.
+For each invoice: generate a fresh email via Resend with the original invoice data,
+mark it with resent_after_delivery_failure = true in the invoice record,
+log the resend event in the audit trail,
+update delivery_confirmed to true on Resend webhook confirmation.
+Run this job once manually with org_owner awareness.
+Do not run it as an automatic background process without human sign-off first
+because clients receiving invoices for old work need context.
+
+Before running the resend job for Statewide specifically:
+Bryan must review and approve which invoices get resent.
+Statewide is production. Do not bulk resend Statewide invoices without his explicit approval.
+Build the job and surface the list for review. Do not auto-execute on production.
+
+---
+
+PHASE 3 — 26 PENDING COMPLIANCE DOCUMENTS END TO END
+
+26 pending compliance documents exist in the system. 0 are expired which is good.
+But pending means incomplete. Walk through the complete compliance document workflow:
+
+Can an org_owner or manager upload a new compliance document from the UI?
+Does the upload store the file correctly with org scoping?
+Does the document appear in the compliance queue for review?
+Can a manager approve the document?
+On approval does the document status change correctly?
+Is the WORM lock enforced after approval — meaning can a previously approved
+document be edited or deleted? This must be blocked at the DB level not just the UI.
+Test this explicitly: approve a test document then attempt to edit it via direct API call.
+If the API allows editing an approved locked document that is a compliance failure.
+
+For the 26 pending documents: notify the relevant org_owners that documents
+are awaiting action. This notification was likely never sent because the email barrel was missing.
+Send it now.
+
+---
+
+PHASE 4 — WEBSOCKET REAL-TIME WITH SIMULTANEOUS CONNECTIONS
+
+Phase 7 was audited at code level but not tested with live connections.
+Open two browser sessions simultaneously — one as org_owner, one as manager.
+Then test each of these events and verify the second session updates in real time
+without a page refresh:
+
+Employee clocks in on session 1 — manager dashboard on session 2 updates.
+New incident submitted on session 1 — manager notification badge on session 2 increments.
+Shift assigned on session 1 — affected employee session updates their schedule.
+Invoice paid on session 1 — org_owner revenue widget on session 2 updates.
+Credit balance changes on session 1 — credits widget on session 2 reflects new balance.
+Trinity posts a briefing — Briefing Channel on session 2 shows it without refresh.
+New notification created — badge count on session 2 updates within 2 seconds.
+
+For each test document: did the update fire, how many seconds did it take,
+did it require a page refresh. Any event requiring a refresh is a broken WebSocket.
+
+Also test disconnection and reconnection:
+Close session 2 browser tab. Trigger 3 events on session 1.
+Reopen session 2. Verify the 3 missed events are received on reconnect.
+If missed events are lost on reconnect that is a gap that needs buffering logic.
+
+---
+
+PHASE 5 — MOBILE END TO END WALKTHROUGH
+
+This phase has not been executed. Security officers are not at desks.
+If mobile does not work reliably Statewide cannot go live.
+Test every mobile flow on an actual mobile device or smallest viewport.
+
+GPS CLOCK-IN FULL FLOW:
+Open the platform on mobile as an employee.
+Attempt to clock in.
+Confirm GPS coordinates are captured at the moment of clock-in.
+Confirm the geofence check fires — is the employee within range of their assigned site?
+Test clocking in from outside the geofence — what happens?
+Options are: hard block with message, soft warning with log, or allow with flag.
+Document which behavior is currently implemented and whether it matches the intent.
+Confirm the clock-in record in the DB contains GPS coordinates, timestamp,
+employee ID, and site ID — not just some of these.
+Confirm the manager sees a real-time notification of the clock-in.
+
+OVERNIGHT SHIFT HANDLING:
+Create a test shift that starts at 10pm and ends at 6am crossing midnight.
+Have the test employee clock in at 10pm and clock out at 6am.
+Verify the time entry is created as a single record spanning midnight —
+not split into two separate entries.
+Verify the hours calculated are correct — 8 hours not 2 hours or 30 hours.
+This is a known edge case that breaks naive time calculation.
+
+DUPLICATE CLOCK-IN PREVENTION:
+Have the test employee clock in.
+Without clocking out attempt to clock in again.
+Verify the platform blocks the second clock-in with a clear message.
+Verify no duplicate time entry is created in the DB.
+
+SHIFT SWAP FROM MOBILE:
+As employee A on mobile request a swap with employee B.
+Confirm employee B receives a notification on their mobile.
+As employee B accept the swap.
+Confirm the manager receives an approval request.
+As manager approve the swap.
+Confirm both employees receive confirmation.
+Confirm the schedule in the DB reflects the swap correctly.
+
+CALL-OFF FROM MOBILE:
+As an employee submit a call-off with a reason.
+Confirm the manager receives an immediate notification.
+Confirm Trinity receives the call-off trigger and begins finding a replacement.
+Confirm Trinity presents a ranked replacement list to the manager.
+Confirm the manager can assign the replacement with one tap.
+Confirm the replacement officer receives a notification of the new shift.
+
+INCIDENT REPORT FROM MOBILE:
+Submit an incident report from mobile with a photo attached.
+Confirm the photo uploads successfully on mobile bandwidth.
+Confirm GPS auto-populates the location field.
+Confirm the report saves with all required fields.
+Confirm the manager receives a real-time notification with a deep link to the report.
+
+SCHEDULE VIEW FROM MOBILE:
+As an employee view your schedule on mobile.
+Confirm the next shift is prominently displayed at the top.
+Confirm the shift details include site address, post orders, and supervisor contact.
+Confirm scrolling to future shifts works smoothly.
+Confirm the UI is readable on small screen without horizontal scrolling.
+
+---
+
+PHASE 6 — INBOUND EMAIL ROUTING GAP DOCUMENTATION
+
+The outbound email pipeline is now fixed. The inbound email pipeline
+— calloffs@, incidents@, docs@, support@ — has not been built yet.
+This session's goal is not to build it but to document exactly what is needed
+so it can be built cleanly in a dedicated session.
+
+Document the following:
+What email addresses need to receive inbound mail?
+calloffs@ coaileague.com — creates a call-off record
+incidents@ coaileague.com — creates an incident record
+docs@ coaileague.com — attaches a document to a record
+support@ coaileague.com — creates a support ticket
+
+What Resend or third-party routing configuration is needed to receive inbound email?
+What parsing logic is needed to extract org identity, employee identity,
+and content from an incoming email?
+What DB records need to be created for each address type?
+What notifications need to fire when each inbound email is processed?
+What happens when an inbound email cannot be matched to a known org or employee?
+
+Document all of this clearly and flag it as a dedicated future session.
+Do not attempt to build it now. Get the documentation right first.
+
+---
+
+PHASE 7 — CREDIT AND BILLING SYSTEM FULL REBUILD
+
+The credit and billing prompt has been written but not yet executed.
+This is the final major structural gap before production.
+Run the complete credit and billing rebuild now.
+
+The canonical values are:
+
+Free Trial: 500 credits total hard cap, 14 day expiration, 5 employees plus 1 manager max.
+Starter: $899/month, 5000 credits/month hard cap, 15 base seats plus $10/seat above 15.
+Professional: $1999/month, 10000 credits/month soft cap, overage at $0.01/credit,
+50 base seats plus $8/seat above 50, premium actions cost 2x credits.
+Enterprise: $9999/month base plus $15/seat all seats, 22000 credits/month soft cap,
+overage at $0.01/credit, premium actions cost 2x credits.
+AI Credits Pack: $59 per pack, exactly 5000 credits, never expire, cost $0.0118/credit
+which is intentionally above the $0.01 overage rate to incentivize tier upgrades.
+
+Hard cap tiers (Trial and Starter) block completely at zero.
+Soft cap tiers (Professional and Enterprise) enter overage mode at zero —
+meter every credit at $0.01, show real-time accumulator, charge end of cycle via Stripe.
+
+Scheduling session fee is a double charge — eliminate it.
+Roll session overhead into the schedule generation cost of 300 credits.
+One action one charge.
+
+All 10 verification tests from the credit system prompt must pass before
+this phase is marked complete.
+
+---
+
+PHASE 8 — FINAL PRODUCTION READINESS CHECKLIST
+
+Do not mark CoAIleague production ready until every item below is confirmed:
+
+BUILD AND STARTUP:
+Clean build exit 0 zero errors.
+Server startup zero unhandled rejections zero missing module errors.
+Trinity startup 736 plus actions drift=0 15/15 domains 28/28 services.
+Zero dynamic imports pointing to missing files.
+Zero setTimeout calls replacing real API calls.
+
+EMAIL PIPELINE:
+Test invoice sent and confirmed delivered with working payment link.
+Test employee invite sent and confirmed delivered with working accept link.
+Test password reset sent and confirmed delivered with working token.
+Test credit warning email fires alongside in-platform notification.
+Test pay stub notification fires after payroll approval.
+464 previously undelivered invoices — resend job built, Bryan reviewed and approved.
+
+COMPLIANCE:
+26 pending documents — org owners notified of pending action.
+WORM lock tested — approved documents cannot be edited via API.
+
+REAL-TIME:
+WebSocket verified with two simultaneous live sessions.
+All 7 event types update without page refresh.
+Missed events received on reconnect.
+
+MOBILE:
+GPS clock-in tested on real device with GPS coordinates confirmed in DB.
+Overnight shift tested — single time entry crossing midnight with correct hours.
+Duplicate clock-in blocked.
+Call-off and replacement flow tested end to end.
+Incident report with photo tested on mobile.
+
+CREDIT AND BILLING:
+Hard cap blocks on Trial and Starter — verified with race condition test.
+Soft cap overage mode on Professional and Enterprise — verified with real overage.
+Overage charge fires via Stripe at end of cycle.
+Seat billing fires for all tiers at end of cycle.
+Credits pack allocates exactly 5000 credits on confirmed Stripe payment.
+Ledger math: sum allocations minus sum deductions equals displayed balance for every org.
+All 10 credit verification tests passing.
+
+AUTH AND DATA:
+Zero routes missing auth where auth is required.
+Zero queries missing workspace_id filter where isolation is required.
+Statewide write protection active in all seed and test scripts.
+Dev routes blocked in production environment.
+
+STRIPE:
+All products exist in test and production with correct prices and metadata.
+Webhook signature verification active on all webhook endpoints.
+Idempotency enforced — same webhook event twice creates zero duplicate records.
+
+ENVIRONMENT:
+All required environment variables documented and present.
+Production uses production keys not test keys.
+Rate limiting active on all auth endpoints.
+500 errors return generic messages never stack traces.
+
+---
+
+When every item on this checklist is confirmed with data not assumption
+CoAIleague is ready for Statewide to go live.
+That is the finish line. Run toward it.

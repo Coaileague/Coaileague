@@ -11,8 +11,15 @@
  */
 
 import { db } from '../../db';
+import { trackedNotifications } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { typedQuery } from '../../lib/typedSql';
+import { publishEvent } from './pipelineErrorHandler';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('notificationAcknowledgmentService');
+
 
 export type NotificationChannel = 'in_app' | 'email' | 'sms' | 'push' | 'webhook';
 
@@ -72,7 +79,7 @@ const DEFAULT_ESCALATION_POLICIES: EscalationPolicy[] = [
     initialDeadlineMinutes: 15,
     maxEscalationLevel: 3,
     escalationIntervalMinutes: 10,
-    escalationTargets: ['manager', 'admin', 'super_admin'],
+    escalationTargets: ['manager', 'org_admin', 'root_admin'],
     channels: ['in_app', 'email', 'sms', 'push'],
   },
   {
@@ -84,7 +91,7 @@ const DEFAULT_ESCALATION_POLICIES: EscalationPolicy[] = [
     channels: ['in_app', 'email', 'push'],
   },
   {
-    priority: 'normal',
+    priority: 'medium',
     initialDeadlineMinutes: 240,
     maxEscalationLevel: 1,
     escalationIntervalMinutes: 120,
@@ -177,7 +184,7 @@ class NotificationAcknowledgmentService {
     this.notifications.set(id, notification);
     await this.persistNotification(notification);
 
-    console.log(`[AcknowledgmentService] Tracking notification: ${id} (${priority}) to ${recipientId}`);
+    log.info(`[AcknowledgmentService] Tracking notification: ${id} (${priority}) to ${recipientId}`);
 
     return notification;
   }
@@ -223,19 +230,22 @@ class NotificationAcknowledgmentService {
     this.notifications.set(notificationId, notification);
     await this.persistNotification(notification);
 
-    platformEventBus.publish({
-      type: 'notification_acknowledged',
-      workspaceId: notification.workspaceId,
-      payload: {
-        notificationId,
-        acknowledgedBy: userId,
-        title: notification.title,
-        priority: notification.priority,
-      },
-      metadata: { source: 'NotificationAcknowledgmentService' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'notification_acknowledged',
+        workspaceId: notification.workspaceId,
+        payload: {
+          notificationId,
+          acknowledgedBy: userId,
+          title: notification.title,
+          priority: notification.priority,
+        },
+        metadata: { source: 'NotificationAcknowledgmentService' },
+      }),
+      '[NotificationAcknowledgmentService] event publish',
+    );
 
-    console.log(`[AcknowledgmentService] Acknowledged: ${notificationId} by ${userId}`);
+    log.info(`[AcknowledgmentService] Acknowledged: ${notificationId} by ${userId}`);
 
     return true;
   }
@@ -253,17 +263,20 @@ class NotificationAcknowledgmentService {
     this.notifications.set(notificationId, notification);
     await this.persistNotification(notification);
 
-    platformEventBus.publish({
-      type: 'notification_actioned',
-      workspaceId: notification.workspaceId,
-      payload: {
-        notificationId,
-        actionedBy: userId,
-        actionTaken,
-        title: notification.title,
-      },
-      metadata: { source: 'NotificationAcknowledgmentService' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'notification_actioned',
+        workspaceId: notification.workspaceId,
+        payload: {
+          notificationId,
+          actionedBy: userId,
+          actionTaken,
+          title: notification.title,
+        },
+        metadata: { source: 'NotificationAcknowledgmentService' },
+      }),
+      '[NotificationAcknowledgmentService] event publish',
+    );
 
     return true;
   }
@@ -279,18 +292,21 @@ class NotificationAcknowledgmentService {
     if (notification.retryCount >= this.MAX_RETRIES) {
       notification.status = 'failed';
       
-      platformEventBus.publish({
-        type: 'notification_failed',
-        workspaceId: notification.workspaceId,
-        payload: {
-          notificationId,
-          recipientId: notification.recipientId,
-          title: notification.title,
-          reason,
-          retryCount: notification.retryCount,
-        },
-        metadata: { source: 'NotificationAcknowledgmentService', priority: 'high' },
-      });
+      publishEvent(
+        () => platformEventBus.publish({
+          type: 'notification_failed',
+          workspaceId: notification.workspaceId,
+          payload: {
+            notificationId,
+            recipientId: notification.recipientId,
+            title: notification.title,
+            reason,
+            retryCount: notification.retryCount,
+          },
+          metadata: { source: 'NotificationAcknowledgmentService', priority: 'high' },
+        }),
+        '[NotificationAcknowledgmentService] event publish',
+      );
     }
 
     this.notifications.set(notificationId, notification);
@@ -378,38 +394,47 @@ class NotificationAcknowledgmentService {
         this.notifications.set(id, notification);
         await this.persistNotification(notification);
 
-        platformEventBus.publish({
-          type: 'notification_escalated',
-          workspaceId: notification.workspaceId,
-          payload: {
-            notificationId: id,
-            title: notification.title,
-            priority: notification.priority,
-            escalationLevel: notification.escalationLevel,
-            escalatedTo: notification.escalatedTo,
-            originalRecipient: notification.recipientId,
-          },
-          metadata: { source: 'NotificationAcknowledgmentService', priority: 'high' },
-        });
+        publishEvent(
+          () => platformEventBus.publish({
+            type: 'notification_escalated',
+            workspaceId: notification.workspaceId,
+            payload: {
+              notificationId: id,
+              title: notification.title,
+              priority: notification.priority,
+              escalationLevel: notification.escalationLevel,
+              escalatedTo: notification.escalatedTo,
+              originalRecipient: notification.recipientId,
+            },
+            metadata: { source: 'NotificationAcknowledgmentService', priority: 'high' },
+          }),
+          '[NotificationAcknowledgmentService] event publish',
+        );
 
-        console.log(`[AcknowledgmentService] Escalated: ${id} to level ${notification.escalationLevel}`);
+        log.info(`[AcknowledgmentService] Escalated: ${id} to level ${notification.escalationLevel}`);
       }
     }
   }
 
   private generateNotificationId(): string {
-    return `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `notif-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
   }
 
   private async persistNotification(notification: TrackedNotification): Promise<void> {
     try {
-      await db.execute(`
-        INSERT INTO tracked_notifications (id, workspace_id, notification_data, updated_at)
-        VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (id) DO UPDATE SET notification_data = $3, updated_at = NOW()
-      `, [notification.id, notification.workspaceId, JSON.stringify(notification)]);
+      // Converted to Drizzle ORM: ON CONFLICT
+      const notifJson = JSON.stringify(notification);
+      await db.insert(trackedNotifications).values({
+        id: notification.id,
+        workspaceId: notification.workspaceId,
+        notificationData: notifJson,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: trackedNotifications.id,
+        set: { notificationData: notifJson, updatedAt: sql`now()` },
+      });
     } catch (error) {
-      console.warn('[AcknowledgmentService] Failed to persist notification (table may not exist):', error);
+      log.warn('[AcknowledgmentService] Failed to persist notification (table may not exist):', error);
     }
   }
 
@@ -460,7 +485,7 @@ export function registerNotificationAckActions(orchestrator: typeof helpaiOrches
     name: 'Track Notification',
     category: 'notifications',
     description: 'Track a notification for acknowledgment',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner', 'Bot'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { recipientId, channel, priority, title, body, actionUrl, actionRequired, expiresInMinutes, metadata } = request.payload || {};
 
@@ -501,7 +526,7 @@ export function registerNotificationAckActions(orchestrator: typeof helpaiOrches
     name: 'Acknowledge Notification',
     category: 'notifications',
     description: 'Acknowledge receipt of a notification',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { notificationId } = request.payload || {};
 
@@ -530,7 +555,7 @@ export function registerNotificationAckActions(orchestrator: typeof helpaiOrches
     name: 'Mark Notification Actioned',
     category: 'notifications',
     description: 'Mark a notification as actioned',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { notificationId, actionTaken } = request.payload || {};
 
@@ -559,7 +584,7 @@ export function registerNotificationAckActions(orchestrator: typeof helpaiOrches
     name: 'Get Unacknowledged Notifications',
     category: 'notifications',
     description: 'Get all unacknowledged notifications',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { recipientId } = request.payload || {};
 
@@ -592,7 +617,7 @@ export function registerNotificationAckActions(orchestrator: typeof helpaiOrches
     name: 'Get Escalation Status',
     category: 'notifications',
     description: 'Get notification escalation status for workspace',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       if (!request.workspaceId) {
         return {
@@ -620,7 +645,7 @@ export function registerNotificationAckActions(orchestrator: typeof helpaiOrches
     name: 'Get Notification Acknowledgment Stats',
     category: 'analytics',
     description: 'Get platform-wide notification acknowledgment statistics',
-    requiredRoles: ['support', 'admin', 'super_admin'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request) => {
       const stats = notificationAcknowledgmentService.getStats();
       return {
@@ -633,5 +658,5 @@ export function registerNotificationAckActions(orchestrator: typeof helpaiOrches
     },
   });
 
-  console.log('[NotificationAcknowledgmentService] Registered 6 AI Brain actions');
+  log.info('[NotificationAcknowledgmentService] Registered 6 AI Brain actions');
 }

@@ -19,11 +19,14 @@ import {
   workspaces,
 } from '@shared/schema';
 import { eq, and, inArray, isNotNull } from 'drizzle-orm';
+import { OWNER_ROLES } from '@shared/platformConfig';
 import { sendAutomationEmail } from '../emailService';
 import { createNotification } from '../notificationService';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { trinityThoughtEngine } from './trinityThoughtEngine';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('approvalResumeOrchestrator');
 
 // ============================================================================
 // TYPES
@@ -57,7 +60,7 @@ class ApprovalResumeOrchestrator {
   private isRunning = false;
 
   constructor() {
-    console.log('[ApprovalResumeOrchestrator] Initializing...');
+    log.info('[ApprovalResumeOrchestrator] Initializing...');
   }
 
   /**
@@ -74,7 +77,7 @@ class ApprovalResumeOrchestrator {
 
     const workspaceName = workspace?.name || 'Unknown Workspace';
 
-    // Get approvers (org_owner and org_admin)
+    // Get approvers (org_owner and co_owner)
     const approvers = await db.select({
       userId: employees.userId,
       email: users.email,
@@ -86,12 +89,12 @@ class ApprovalResumeOrchestrator {
       .where(
         and(
           eq(employees.workspaceId, workspaceId),
-          inArray(employees.workspaceRole, ['org_owner', 'org_admin'])
+          inArray(employees.workspaceRole, [...OWNER_ROLES])
         )
       );
 
     if (approvers.length === 0) {
-      console.warn(`[ApprovalResumeOrchestrator] No approvers found for workspace ${workspaceId}`);
+      log.warn(`[ApprovalResumeOrchestrator] No approvers found for workspace ${workspaceId}`);
       return approvalId;
     }
 
@@ -103,6 +106,7 @@ class ApprovalResumeOrchestrator {
 
     if (existingApproval.length === 0) {
       await db.insert(aiWorkflowApprovals).values({
+        workspaceId: 'system',
         id: approvalId,
         title: `${domain.toUpperCase()} Automation Approval Required`,
         description,
@@ -110,7 +114,7 @@ class ApprovalResumeOrchestrator {
         riskLevel,
         impactScope: request.estimatedImpact || 'workspace',
         status: 'pending',
-        requiredRole: 'org_admin',
+        requiredRole: 'co_owner',
         requiredApprovers: 1,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
@@ -132,9 +136,9 @@ class ApprovalResumeOrchestrator {
             expiresIn: '24 hours',
           });
           
-          console.log(`[ApprovalResumeOrchestrator] Sent approval email to ${approver.email}`);
+          log.info(`[ApprovalResumeOrchestrator] Sent approval email to ${approver.email}`);
         } catch (error) {
-          console.error(`[ApprovalResumeOrchestrator] Failed to send email to ${approver.email}:`, error);
+          log.error(`[ApprovalResumeOrchestrator] Failed to send email to ${approver.email}:`, error);
         }
       }
 
@@ -164,7 +168,7 @@ class ApprovalResumeOrchestrator {
       { workspaceId, relatedActionId: approvalId }
     );
 
-    console.log(`[ApprovalResumeOrchestrator] Approval requested: ${approvalId}, notified ${approvers.length} approvers`);
+    log.info(`[ApprovalResumeOrchestrator] Approval requested: ${approvalId}, notified ${approvers.length} approvers`);
     return approvalId;
   }
 
@@ -216,12 +220,20 @@ class ApprovalResumeOrchestrator {
         { relatedActionId: approvalId }
       );
 
-      // Emit event
-      platformEventBus.emit({
-        type: 'approval_granted',
-        payload: { approvalId, approvedBy: userId },
-        timestamp: now,
-      });
+      // Fix: was .emit() — approval_granted never reached subscribers (autonomousFixPipeline subscribes
+      // to 'approval_approved' not 'approval_granted', and emit() doesn't reach subscribe() handlers anyway).
+      // Now publish() with correct type 'approval_approved' so the fix pipeline resumes paused jobs.
+      platformEventBus.publish({
+        type: 'approval_approved',
+        category: 'automation',
+        title: 'Approval Granted — Resuming Workflow',
+        description: `Approval ${approvalId} granted by user ${userId}. Queued jobs will now resume.`,
+        metadata: {
+          approvalId,
+          approvedBy: userId,
+          audience: 'manager',
+        },
+      }).catch((err: any) => log.warn('[ApprovalResumeOrchestrator] Failed to publish approval_approved:', err.message));
 
       return { approved: true, approvedBy: userId, executedAt: now };
     } else {
@@ -281,19 +293,23 @@ class ApprovalResumeOrchestrator {
           })
           .where(eq(idempotencyKeys.id, key.id));
 
-        console.log(`[ApprovalResumeOrchestrator] Marked job ${key.id} for retry after approval`);
+        log.info(`[ApprovalResumeOrchestrator] Marked job ${key.id} for retry after approval`);
 
-        // Emit event for scheduler to pick up
-        platformEventBus.emit({
+        // Fix: was .emit() — job_resume_approved never reached any scheduler subscriber.
+        // Now .publish() so the approval_approved pipeline picks up the retry job.
+        platformEventBus.publish({
           type: 'job_resume_approved',
-          payload: {
+          category: 'automation',
+          title: 'Paused Job Cleared for Retry',
+          description: `Job ${key.id} (${key.operationType}) approved for retry after approval gate ${approvalId}`,
+          workspaceId: key.workspaceId || undefined,
+          metadata: {
             idempotencyKeyId: key.id,
             operationType: key.operationType,
-            workspaceId: key.workspaceId,
             approvalId,
+            audience: 'manager',
           },
-          timestamp: new Date(),
-        });
+        }).catch((err: any) => log.warn('[ApprovalResumeOrchestrator] Failed to publish job_resume_approved:', err.message));
       }
     }
   }
@@ -321,7 +337,7 @@ class ApprovalResumeOrchestrator {
           })
           .where(eq(idempotencyKeys.id, key.id));
 
-        console.log(`[ApprovalResumeOrchestrator] Marked job ${key.id} as rejected`);
+        log.info(`[ApprovalResumeOrchestrator] Marked job ${key.id} as rejected`);
       }
     }
   }
@@ -352,7 +368,7 @@ class ApprovalResumeOrchestrator {
 
         await this.markJobRejected(approval.id, 'Approval expired');
 
-        console.log(`[ApprovalResumeOrchestrator] Approval ${approval.id} expired`);
+        log.info(`[ApprovalResumeOrchestrator] Approval ${approval.id} expired`);
       }
     }
   }
@@ -381,13 +397,17 @@ class ApprovalResumeOrchestrator {
     if (this.isRunning) return;
     
     this.isRunning = true;
-    this.checkInterval = setInterval(() => {
+    this.checkInterval = setInterval(async () => {
+      try {
+        const { isDbCircuitOpen } = await import('../../db');
+        if (isDbCircuitOpen()) return;
+      } catch { /* ignore */ }
       this.checkExpiredApprovals().catch(err => {
-        console.error('[ApprovalResumeOrchestrator] Error checking expired approvals:', err);
+        log.warn('[ApprovalResumeOrchestrator] Check cycle failed (will retry next interval):', err?.message || err);
       });
-    }, 60000); // Check every minute
+    }, 60000);
 
-    console.log('[ApprovalResumeOrchestrator] Started monitoring approvals');
+    log.info('[ApprovalResumeOrchestrator] Started monitoring approvals');
   }
 
   /**
@@ -399,7 +419,7 @@ class ApprovalResumeOrchestrator {
       this.checkInterval = null;
     }
     this.isRunning = false;
-    console.log('[ApprovalResumeOrchestrator] Stopped monitoring');
+    log.info('[ApprovalResumeOrchestrator] Stopped monitoring');
   }
 }
 
@@ -416,17 +436,17 @@ export const approvalResumeOrchestrator = new ApprovalResumeOrchestrator();
 export function registerApprovalResumeActions() {
   const actions = [
     {
-      id: 'approval.request',
-      name: 'Request Approval',
-      description: 'Request human approval for an automation action',
+      id: 'resume_approval.request',
+      name: 'Request Resume Approval',
+      description: 'Request human approval for resuming an interrupted automation workflow',
       handler: async (params: any) => {
         return approvalResumeOrchestrator.requestApproval(params);
       },
     },
     {
-      id: 'approval.decide',
-      name: 'Process Decision',
-      description: 'Process an approval or rejection decision',
+      id: 'resume_approval.decide',
+      name: 'Process Resume Decision',
+      description: 'Process an approval or rejection decision for workflow resumption',
       handler: async (params: any) => {
         return approvalResumeOrchestrator.processDecision(
           params.approvalId,
@@ -437,17 +457,17 @@ export function registerApprovalResumeActions() {
       },
     },
     {
-      id: 'approval.get_pending',
-      name: 'Get Pending Approvals',
-      description: 'Get list of pending approvals',
+      id: 'resume_approval.get_pending',
+      name: 'Get Pending Resume Approvals',
+      description: 'Get list of pending workflow resume approvals',
       handler: async (params: any) => {
         return approvalResumeOrchestrator.getPendingApprovals(params.workspaceId);
       },
     },
     {
-      id: 'approval.check_expired',
-      name: 'Check Expired Approvals',
-      description: 'Check and expire old pending approvals',
+      id: 'resume_approval.check_expired',
+      name: 'Check Expired Resume Approvals',
+      description: 'Check and expire old pending resume approvals',
       handler: async () => {
         await approvalResumeOrchestrator.checkExpiredApprovals();
         return { checked: true };
@@ -461,7 +481,7 @@ export function registerApprovalResumeActions() {
       name: action.name,
       category: 'automation',
       description: action.description,
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const startTime = Date.now();
         const result = await action.handler(request.payload || {});
@@ -476,5 +496,5 @@ export function registerApprovalResumeActions() {
     });
   }
 
-  console.log(`[ApprovalResumeOrchestrator] Registered ${actions.length} approval actions`);
+  log.info(`[ApprovalResumeOrchestrator] Registered ${actions.length} resume_approval.* actions`);
 }

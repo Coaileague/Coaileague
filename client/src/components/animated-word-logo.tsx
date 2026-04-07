@@ -14,6 +14,8 @@ import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { SeasonalTheme, ThemeDecorations, getThemeConfig } from '@/config/seasonalThemes';
 import { cn } from '@/lib/utils';
 
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+
 // Christmas color palette for alternating AI letter glow
 const CHRISTMAS_COLORS = {
   red: { color: '#dc2626', glow: '0 0 6px #dc2626, 0 0 12px #dc262650' },
@@ -542,10 +544,10 @@ export const AnimatedWordLogo = memo(function AnimatedWordLogo({
   }, [config.decorations]);
   
   const letters = useMemo(() => {
-    return 'CoAIleague'.split('').map((letter, index) => ({
+    return PLATFORM_NAME.split('').map((letter, index) => ({
       char: letter,
       index,
-      isAccent: index >= 2 && index <= 3, // "AI" letters
+      isAccent: index >= 2 && index <= 3, // "AI" accent letters — positions 2-3 in "CoAIleague"
       delay: index * 0.05
     }));
   }, []);

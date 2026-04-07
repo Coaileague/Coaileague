@@ -1,0 +1,116 @@
+Found it! This is the root cause:
+
+THE REAL PROBLEM: ID MISMATCH
+Frontend sends: Room slug from URL (c0ea8807-...)
+Server returns: Conversation UUID (2ba4e086-...)
+Filter compares: c0ea8807-... !== 2ba4e086-... → REJECTED
+URL: /chatrooms/c0ea8807-4b8a-4f2e-9c1d-abc123
+                ↑ This is the SLUG
+
+Server message: { conversationId: "2ba4e086-5d7f-4a3b-8e2c-def456", ... }
+                                   ↑ This is the actual UUID
+
+Hook filter: if (data.conversationId !== "c0ea8807-...") REJECT
+                                          ↑ Comparing apples to oranges
+
+THREE ISSUES TO FIX
+Issue 1: Slug vs UUID Mismatch
+typescript// CURRENT (broken)
+// Frontend uses slug from URL
+const conversationId = routeParams.roomId; // "c0ea8807-..."
+
+// Server returns actual UUID in messages
+{ conversationId: "2ba4e086-..." }
+
+// Filter rejects everything
+if (data.conversationId !== conversationId) return; // Always true!
+typescript// FIX: Resolve slug to UUID before filtering
+const [resolvedConversationId, setResolvedConversationId] = useState<string | null>(null);
+
+useEffect(() => {
+  // When room slug changes, look up the actual UUID
+  const room = rooms.find(r => r.slug === routeParams.roomId || r.id === routeParams.roomId);
+  if (room) {
+    setResolvedConversationId(room.id); // Use the actual UUID
+  }
+}, [routeParams.roomId, rooms]);
+
+// Then filter uses the resolved UUID
+if (data.conversationId !== resolvedConversationId) return;
+Issue 2: mark-as-read Spam
+typescript// CURRENT (broken) - fires on EVERY message
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  chatManager.markAsRead(conversationId); // Called for EVERY message!
+};
+typescript// FIX: Only mark as read once when entering room, and debounce
+const markAsReadDebounced = useMemo(
+  () => debounce((roomId: string) => {
+    chatManager.markAsRead(roomId);
+  }, 5000), // Max once per 5 seconds
+  []
+);
+
+// Call once when room loads, not on every message
+useEffect(() => {
+  if (resolvedConversationId) {
+    markAsReadDebounced(resolvedConversationId);
+  }
+}, [resolvedConversationId]);
+Issue 3: Connection Flood (20 max exceeded)
+typescript// Root cause: Multiple effects creating sockets
+// + Reconnect logic creating more sockets
+// + No cleanup closing old sockets
+
+// FIX: Strict single-socket enforcement
+function getOrCreateGlobalSocket(userId: string) {
+  // If ANY socket exists for this user, return it
+  if (globalWSState.socket && globalWSState.userId === userId) {
+    // Don't create new one, even if connecting
+    if (globalWSState.socket.readyState === WebSocket.CONNECTING) {
+      return globalWSState.socket; // Wait for it
+    }
+    if (globalWSState.socket.readyState === WebSocket.OPEN) {
+      return globalWSState.socket; // Reuse it
+    }
+    // Only if CLOSED or CLOSING, create new
+  }
+  
+  // Create new socket
+  const ws = new WebSocket(url);
+  globalWSState.socket = ws;
+  globalWSState.userId = userId;
+  return ws;
+}
+
+THE FIX ORDER
+
+First: Fix the slug → UUID resolution so messages aren't rejected
+Second: Debounce mark-as-read to stop the spam
+Third: Enforce single socket to prevent connection flood
+
+
+QUICK DIAGNOSTIC
+Add this logging to see what's happening:
+typescript// In message handler
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('[WS] Message received:', {
+    messageConversationId: data.conversationId,
+    hookConversationId: conversationId,
+    resolvedId: resolvedConversationId,
+    match: data.conversationId === resolvedConversationId
+  });
+};
+```
+
+Expected output:
+```
+[WS] Message received: {
+  messageConversationId: "2ba4e086-...",  // Server's UUID
+  hookConversationId: "c0ea8807-...",     // URL slug (WRONG to compare)
+  resolvedId: "2ba4e086-...",             // Resolved UUID (CORRECT)
+  match: true                              // Should match now
+}
+
+Is Replit seeing where the slug vs UUID resolution happens? The rooms list probably has both id (UUID) and slug, and the URL uses the slug, but the server uses the UUID.

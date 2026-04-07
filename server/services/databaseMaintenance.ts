@@ -10,7 +10,7 @@
  * All cleanup operations are logged for compliance auditing.
  */
 
-import { db } from '../db';
+import { db, pool } from '../db';
 import { 
   auditLogs, 
   chatMessages, 
@@ -19,6 +19,11 @@ import {
   billingAuditLog
 } from '@shared/schema';
 import { lt, and, eq, sql, isNotNull } from 'drizzle-orm';
+import { typedPoolExec } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+const log = createLogger('databaseMaintenance');
+
 
 interface MaintenanceResult {
   job: string;
@@ -38,8 +43,6 @@ const RETENTION_PERIODS = {
   timeEntries: 730,
   sessionLogs: 14,
 };
-
-const PLATFORM_WORKSPACE_ID = 'coaileague-platform-workspace';
 
 async function logMaintenanceEvent(result: MaintenanceResult) {
   try {
@@ -61,12 +64,12 @@ async function logMaintenanceEvent(result: MaintenanceResult) {
       },
     });
   } catch (error) {
-    console.error('[DB MAINTENANCE] Failed to log maintenance event:', error);
+    log.error('[DB MAINTENANCE] Failed to log maintenance event:', error);
   }
 }
 
 export async function runAuditLogArchival(): Promise<MaintenanceResult> {
-  console.log('📦 [DB MAINTENANCE] Starting audit log archival...');
+  log.info('📦 [DB MAINTENANCE] Starting audit log archival...');
   const startTime = Date.now();
   
   try {
@@ -81,7 +84,7 @@ export async function runAuditLogArchival(): Promise<MaintenanceResult> {
     const recordsArchived = result.length;
     const duration = Date.now() - startTime;
     
-    console.log(`📦 [DB MAINTENANCE] Audit log archival complete: ${recordsArchived} records older than ${RETENTION_PERIODS.auditLogs} days removed in ${duration}ms`);
+    log.info(`📦 [DB MAINTENANCE] Audit log archival complete: ${recordsArchived} records older than ${RETENTION_PERIODS.auditLogs} days removed in ${duration}ms`);
     
     const maintenanceResult: MaintenanceResult = {
       job: 'audit_log_archival',
@@ -97,7 +100,7 @@ export async function runAuditLogArchival(): Promise<MaintenanceResult> {
     
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error('📦 [DB MAINTENANCE] Audit log archival failed:', error);
+    log.error('📦 [DB MAINTENANCE] Audit log archival failed:', error);
     
     const maintenanceResult: MaintenanceResult = {
       job: 'audit_log_archival',
@@ -114,7 +117,7 @@ export async function runAuditLogArchival(): Promise<MaintenanceResult> {
 }
 
 export async function runChatMessageCleanup(): Promise<MaintenanceResult> {
-  console.log('💬 [DB MAINTENANCE] Starting chat message cleanup...');
+  log.info('💬 [DB MAINTENANCE] Starting chat message cleanup...');
   const startTime = Date.now();
   
   try {
@@ -134,7 +137,7 @@ export async function runChatMessageCleanup(): Promise<MaintenanceResult> {
     const recordsDeleted = result.length;
     const duration = Date.now() - startTime;
     
-    console.log(`💬 [DB MAINTENANCE] Chat message cleanup complete: ${recordsDeleted} system messages older than ${RETENTION_PERIODS.chatMessages} days removed in ${duration}ms`);
+    log.info(`💬 [DB MAINTENANCE] Chat message cleanup complete: ${recordsDeleted} system messages older than ${RETENTION_PERIODS.chatMessages} days removed in ${duration}ms`);
     
     const maintenanceResult: MaintenanceResult = {
       job: 'chat_message_cleanup',
@@ -150,7 +153,7 @@ export async function runChatMessageCleanup(): Promise<MaintenanceResult> {
     
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error('💬 [DB MAINTENANCE] Chat message cleanup failed:', error);
+    log.error('💬 [DB MAINTENANCE] Chat message cleanup failed:', error);
     
     const maintenanceResult: MaintenanceResult = {
       job: 'chat_message_cleanup',
@@ -167,7 +170,7 @@ export async function runChatMessageCleanup(): Promise<MaintenanceResult> {
 }
 
 export async function runNotificationTrimming(): Promise<MaintenanceResult> {
-  console.log('🔔 [DB MAINTENANCE] Starting notification trimming...');
+  log.info('🔔 [DB MAINTENANCE] Starting notification trimming...');
   const startTime = Date.now();
   
   try {
@@ -188,7 +191,7 @@ export async function runNotificationTrimming(): Promise<MaintenanceResult> {
     const recordsDeleted = result.length;
     const duration = Date.now() - startTime;
     
-    console.log(`🔔 [DB MAINTENANCE] Notification trimming complete: ${recordsDeleted} read/cleared notifications older than ${RETENTION_PERIODS.notifications} days removed in ${duration}ms`);
+    log.info(`🔔 [DB MAINTENANCE] Notification trimming complete: ${recordsDeleted} read/cleared notifications older than ${RETENTION_PERIODS.notifications} days removed in ${duration}ms`);
     
     const maintenanceResult: MaintenanceResult = {
       job: 'notification_trimming',
@@ -204,7 +207,7 @@ export async function runNotificationTrimming(): Promise<MaintenanceResult> {
     
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error('🔔 [DB MAINTENANCE] Notification trimming failed:', error);
+    log.error('🔔 [DB MAINTENANCE] Notification trimming failed:', error);
     
     const maintenanceResult: MaintenanceResult = {
       job: 'notification_trimming',
@@ -220,35 +223,119 @@ export async function runNotificationTrimming(): Promise<MaintenanceResult> {
   }
 }
 
+export async function runTrinityMemoryOptimization(): Promise<MaintenanceResult> {
+  log.info('[DB MAINTENANCE] Starting Trinity memory optimization...');
+  const startTime = Date.now();
+
+  try {
+    const { trinityMemoryOptimizer } = await import('./ai-brain/trinityMemoryOptimizer');
+    const results = await trinityMemoryOptimizer.runFullOptimization(false);
+
+    const totalDeleted = results.reduce((s, r) => s + r.recordsDeleted, 0);
+    const totalDecayed = results.reduce((s, r) => s + r.recordsDecayed, 0);
+    const totalConsolidated = results.reduce((s, r) => s + r.recordsConsolidated, 0);
+    const totalProcessed = results.reduce((s, r) => s + r.recordsProcessed, 0);
+    const failures = results.filter(r => !r.success);
+    const duration = Date.now() - startTime;
+
+    log.info(`[DB MAINTENANCE] Trinity memory optimization complete: ${totalDeleted} deleted, ${totalDecayed} decayed, ${totalConsolidated} consolidated in ${duration}ms`);
+
+    const maintenanceResult: MaintenanceResult = {
+      job: 'trinity_memory_optimization',
+      success: failures.length === 0,
+      recordsProcessed: totalProcessed,
+      recordsDeleted: totalDeleted,
+      duration,
+      timestamp: new Date(),
+      error: failures.length > 0 ? `${failures.length} sub-jobs failed: ${failures.map(f => f.job).join(', ')}` : undefined,
+    };
+
+    await logMaintenanceEvent(maintenanceResult);
+    return maintenanceResult;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    log.error('[DB MAINTENANCE] Trinity memory optimization failed:', error);
+
+    const maintenanceResult: MaintenanceResult = {
+      job: 'trinity_memory_optimization',
+      success: false,
+      recordsProcessed: 0,
+      duration,
+      timestamp: new Date(),
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+
+    await logMaintenanceEvent(maintenanceResult);
+    return maintenanceResult;
+  }
+}
+
+export async function runBoloExpiryCleanup(): Promise<MaintenanceResult> {
+  const start = Date.now();
+  try {
+    // CATEGORY C — Raw SQL retained: IS NOT NULL | Tables: bolo_alerts | Verified: 2026-03-23
+    const result = await typedPoolExec(
+      `UPDATE bolo_alerts SET is_active = false, updated_at = NOW()
+       WHERE is_active = true AND expires_at IS NOT NULL AND expires_at < NOW()`
+    );
+    const count = result.rowCount || 0;
+    const maintenanceResult: MaintenanceResult = {
+      job: 'BOLO Expiry Cleanup',
+      success: true,
+      recordsProcessed: count,
+      recordsDeleted: count,
+      duration: Date.now() - start,
+      timestamp: new Date(),
+    };
+    if (count > 0) log.info(`[DB MAINTENANCE] BOLO Expiry: deactivated ${count} expired alert(s)`);
+    await logMaintenanceEvent(maintenanceResult);
+    return maintenanceResult;
+  } catch (error) {
+    const duration = Date.now() - start;
+    const maintenanceResult: MaintenanceResult = {
+      job: 'BOLO Expiry Cleanup',
+      success: false,
+      recordsProcessed: 0,
+      duration,
+      timestamp: new Date(),
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+    await logMaintenanceEvent(maintenanceResult);
+    return maintenanceResult;
+  }
+}
+
 export async function runAllMaintenanceJobs(): Promise<MaintenanceResult[]> {
-  console.log('=================================================');
-  console.log('🧹 DATABASE MAINTENANCE SUITE - START');
-  console.log(`Timestamp: ${new Date().toISOString()}`);
-  console.log('=================================================');
+  log.info('=================================================');
+  log.info('[DB MAINTENANCE] DATABASE MAINTENANCE SUITE - START');
+  log.info(`Timestamp: ${new Date().toISOString()}`);
+  log.info('=================================================');
   
   const results: MaintenanceResult[] = [];
   
   results.push(await runAuditLogArchival());
   results.push(await runChatMessageCleanup());
   results.push(await runNotificationTrimming());
+  results.push(await runTrinityMemoryOptimization());
+  results.push(await runBoloExpiryCleanup());
   
   const totalRecords = results.reduce((sum, r) => sum + r.recordsProcessed, 0);
   const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
   const successCount = results.filter(r => r.success).length;
   
-  console.log('=================================================');
-  console.log(`🧹 DATABASE MAINTENANCE COMPLETE`);
-  console.log(`   Jobs Run: ${results.length}`);
-  console.log(`   Successful: ${successCount}/${results.length}`);
-  console.log(`   Total Records: ${totalRecords}`);
-  console.log(`   Total Duration: ${totalDuration}ms`);
-  console.log('=================================================\n');
+  log.info('=================================================');
+  log.info(`[DB MAINTENANCE] DATABASE MAINTENANCE COMPLETE`);
+  log.info(`   Jobs Run: ${results.length}`);
+  log.info(`   Successful: ${successCount}/${results.length}`);
+  log.info(`   Total Records: ${totalRecords}`);
+  log.info(`   Total Duration: ${totalDuration}ms`);
+  log.info('=================================================\n');
   
   return results;
 }
 
 export const maintenanceConfig = {
   schedule: '0 3 * * 0',
-  description: 'Weekly database maintenance (audit logs, chat messages, notifications)',
+  description: 'Weekly database maintenance (audit logs, chat messages, notifications, Trinity memory optimization)',
   retentionPeriods: RETENTION_PERIODS,
 };

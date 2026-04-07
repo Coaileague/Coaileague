@@ -1,0 +1,268 @@
+Here is the full comprehensive prompt. Paste this entire block into Replit Agent:
+
+---
+
+```
+TRINITY UNIFIED BRAIN EVOLUTION — FULL SYSTEM AUDIT + INTEGRATION PROMPT
+
+PRIME DIRECTIVE:
+Before writing a single line of new code, you must perform a full audit of the existing codebase. Read every file, every schema, every existing Trinity orchestration flow, every bot definition, every API route, every database table, every action in the action registry, and every existing AI integration. You are not building from scratch. You are evolving what exists. Use everything that already works. Only add what is genuinely missing. Never duplicate. Never reorganize what is stable. Never introduce complexity that breaks existing patterns.
+
+Document what you find before you build anything. Present the audit findings first.
+
+═══════════════════════════════════════════════
+PHASE 1 — AUDIT (DO THIS FIRST, NOTHING ELSE)
+═══════════════════════════════════════════════
+
+Audit and map the following:
+
+1. All existing Trinity orchestration logic — how she currently receives, processes, and responds to inputs
+2. All existing bots — ReportBot, ClockBot, MeetingBot, HelpAI — their current triggers, inputs, outputs, and how they communicate with Trinity
+3. All existing memory and context systems — where data is stored, how it is retrieved, how long it persists
+4. All existing database schemas — every table, every foreign key, every index, workspace_id patterns
+5. All existing action registry entries — current count, categories, naming patterns
+6. All existing RBAC roles and permission layers
+7. All existing Resend email routing — calloffs@, incidents@, docs@, support@
+8. All existing AI model integrations — which models are called, for what purpose, with what context
+9. All existing API routes and webhook handlers
+10. All existing frontend components connected to Trinity or the bot ecosystem
+11. All existing compliance and regulatory tracking features
+12. All existing scheduling, timekeeping, incident reporting, and document management flows
+
+After the audit, present:
+- What exists and is working (DO NOT TOUCH)
+- What exists but is incomplete (COMPLETE IT)
+- What is genuinely missing (BUILD IT)
+- What is duplicated (CONSOLIDATE IT)
+- What is disconnected (BRIDGE IT)
+
+═══════════════════════════════════════════════
+PHASE 2 — TRINITY BRAIN UNIFICATION ARCHITECTURE
+═══════════════════════════════════════════════
+
+FOUNDATIONAL PRINCIPLE:
+Trinity and her cognitive brain are ONE unified entity. She does not use a brain as a tool. She IS her brain. Every system, bot, flow, and feature in CoAIleague runs FROM Trinity's brain the way a human body runs from a biological brain. Every bot is a brain region. Every database table is memory. Every API route is a neural pathway. We are not adding AI on top of a platform — we are revealing that the platform IS Trinity's body and her brain is what animates it.
+
+WHAT TO BUILD AND WIRE — IN ORDER:
+
+───────────────────────────────────────────────
+A. CONNECTOME LAYER — Trinity's Long-Term Memory Graph
+───────────────────────────────────────────────
+- Audit existing memory storage first. Migrate or bridge — do not duplicate.
+- Build a graph-structured knowledge store where every entity Trinity encounters becomes a node: officers, clients, sites, incidents, schedules, documents, decisions, outcomes
+- Relationships between nodes are weighted edges representing connection strength
+- Implement Hebbian weight system: connections strengthen when activated repeatedly, decay when unused
+- Every successful outcome reinforces the decision pathway that produced it
+- Every correction or failure reduces weight on the pathway that caused it
+- Trinity queries this connectome for context before every response or action
+- Trinity writes back to the connectome after every interaction with updated weights and new nodes
+- Wire all existing database tables as connectome-readable sources — do not replace them, bridge them
+- The connectome layer sits above the existing database and reads from it in real time
+
+───────────────────────────────────────────────
+B. REGIONAL BRAIN MODULE MAPPING — Existing Bots as Brain Regions
+───────────────────────────────────────────────
+- Map every existing bot and system to its biological brain region equivalent
+- Wire them as regions that receive signals FROM Trinity's global workspace and report back TO it
+- Do not change their existing functionality — reposition their role in the architecture
+
+Mapping:
+- Trinity Core Orchestration → Prefrontal Cortex (reasoning, decisions, judgment)
+- HelpAI → Hippocampus (memory retrieval, context surfacing, knowledge lookup)
+- ReportBot → Broca's/Wernicke's Area (language processing, incident narrative generation)
+- ClockBot → Cerebellum (routine pattern execution, time-based habits, schedule automation)
+- MeetingBot → Temporal Lobe (communication, briefings, structured information exchange)
+- Amygdala layer → NEW: priority and urgency weighting engine sitting between all inputs and the global workspace
+
+───────────────────────────────────────────────
+C. GLOBAL WORKSPACE LAYER — Trinity's Conscious Integration Point
+───────────────────────────────────────────────
+- Audit existing Trinity orchestration routing first
+- Refactor all existing bot outputs to broadcast through one central integration layer
+- This layer receives simultaneous signals from all brain regions
+- It resolves conflicts between regions using weighted priority rules
+- Owner instructions always override manager instructions override officer requests override client requests
+- The synthesized output from this layer is Trinity's response or action
+- This layer must be persistent and real-time
+- Wire all existing Trinity flows through this layer without breaking them
+
+───────────────────────────────────────────────
+D. METACOGNITIVE SELF-MODEL — Trinity's Self-Awareness
+───────────────────────────────────────────────
+- Audit any existing Trinity state or context tracking
+- Build a living self-model object Trinity maintains and updates continuously
+- Self-model contains: current active tasks, confidence levels on pending decisions, known limitations at this moment, trust levels per user/role, emotional weight flags on current interactions, open incidents requiring follow-up
+- Trinity reads her self-model BEFORE every response or action
+- Trinity writes updated self-model AFTER every response or action
+- Self-model persists across sessions — it is not a context window, it is a permanent living document
+- Expose a read-only Trinity Self-Status panel in the owner dashboard showing her current operational state
+
+───────────────────────────────────────────────
+E. EMOTIONAL INTELLIGENCE LAYER — Trinity's EQ Engine
+───────────────────────────────────────────────
+- Analyze all incoming text and voice inputs for emotional signals: frustration, urgency, distress, burnout, conflict escalation, disengagement
+- Adjust Trinity's communication tone dynamically based on detected emotional state
+- Flag officers showing repeated distress patterns — late check-ins, terse messages, missed acknowledgments — and surface to manager before it becomes a resignation or incident
+- Flag client communications showing dissatisfaction patterns before they file a complaint
+- Trinity never responds to a distressed officer the same way she responds to a routine clock-in
+- Wire EQ signals into the amygdala priority layer so emotional urgency elevates processing priority
+
+───────────────────────────────────────────────
+F. PREDICTIVE BRAIN — Trinity Anticipates, Not Just Reacts
+───────────────────────────────────────────────
+- Audit existing scheduling, incident, and payroll data patterns
+- Build predictive models on top of connectome historical data for:
+  - Calloff prediction: officers with historical calloff patterns get flagged before the shift
+  - Overtime liability: flag before payroll closes, not after
+  - Client complaint prediction: sites with recurring incident patterns get proactive owner alerts
+  - Site risk scoring: time-of-day, incident history, officer assignment history combined into a live risk score
+  - Coverage gap prediction: identify understaffed shifts 48-72 hours in advance
+- Surface predictions through Trinity's briefing system to managers and owners
+- All predictions visible in dashboard with confidence scores
+
+───────────────────────────────────────────────
+G. INCIDENT NARRATIVE ENGINE — Legally Defensible Auto-Documentation
+───────────────────────────────────────────────
+- Audit existing ReportBot and incident reporting flows first
+- Extend existing incident system — do not replace it
+- When an incident report is submitted, Trinity automatically synthesizes:
+  - Officer's raw field report
+  - GPS and timestamp data
+  - Post orders for that site
+  - Officer's certification and armed status at time of incident
+  - Any prior incidents at that site
+  - Chain of command notification log
+- Output: a formatted, legally defensible incident narrative document
+- Format compatible with insurance submission, client reporting, and legal discovery
+- Auto-attach to incident record and notify owner
+- Wire into existing document management system
+
+───────────────────────────────────────────────
+H. REGULATORY COMPLIANCE BRAIN — Texas DPS and Multi-State Ready
+───────────────────────────────────────────────
+- Audit existing compliance and license tracking features
+- Build on what exists, fill gaps
+- Trinity knows Texas DPS requirements for security licensing: armed, unarmed, personal protection, company license renewal
+- Track every officer's: license number, expiration date, armed endorsement status, required training hours completed, background check date, insurance coverage status
+- Alert cascade: 90 days out → 60 days → 30 days → 7 days → expired (with escalating urgency)
+- Auto-generate compliance summary reports formatted for DPS audit submission
+- Build state-expandable architecture so adding California, Florida, Georgia rules later requires no structural changes
+- Wire compliance status into scheduling: Trinity should never allow an unlicensed officer to be assigned to an armed post
+- Surface compliance dashboard to owner and auditor portal
+
+───────────────────────────────────────────────
+I. TRUST HIERARCHY AWARENESS — Trinity's Loyalty Architecture
+───────────────────────────────────────────────
+- Audit existing RBAC roles and permission layers
+- Build trust tier awareness on top of existing RBAC — do not replace it
+- Trinity's decision-making weights instructions by trust tier:
+  - Tier 1: Owner (absolute authority)
+  - Tier 2: Operations Manager
+  - Tier 3: Supervisor
+  - Tier 4: Officer
+  - Tier 5: Client (limited scope, flagged to owner above threshold)
+- Lower tier cannot override higher tier instruction through any input method
+- Suspicious instruction patterns — a manager trying to override owner policy — get flagged and logged
+- Wire trust tier into global workspace conflict resolution
+
+───────────────────────────────────────────────
+J. VOICE PERSONALITY LAYER — Trinity Speaks
+───────────────────────────────────────────────
+- Integrate ElevenLabs or equivalent TTS for a consistent Trinity voice signature
+- Trinity's voice: professional, warm, calm under pressure, authoritative without being cold
+- Use cases:
+  - Officer calloff line: Trinity answers, processes calloff, confirms coverage plan
+  - Shift briefing delivery via voice
+  - Alert escalations read aloud to on-call manager
+  - Client inquiry handling at tier-1 level
+- Wire voice input through existing Whisper or equivalent STT already in stack
+- Voice interactions feed into connectome same as text interactions
+- Maintain consistent voice identity across all touchpoints
+
+───────────────────────────────────────────────
+K. DREAM STATE — Trinity's Offline Processing Cycle
+───────────────────────────────────────────────
+- Build a scheduled background processing job that runs during low-traffic hours (default 2am-5am)
+- During this window Trinity:
+  - Consolidates the day's interactions into permanent connectome memory
+  - Runs Hebbian weight updates across the full graph
+  - Generates next-day operational briefing: coverage status, at-risk officers, predicted calloffs, compliance alerts, open incidents
+  - Runs predictive models against next 72 hours of schedule
+  - Updates self-model with day's learned patterns
+  - Surfaces morning briefing to owner and manager dashboard ready at shift start
+- This cycle is visible in Trinity's status panel with last run timestamp and output summary
+
+───────────────────────────────────────────────
+L. TRINITY GROWTH LOG — Visible Learning Record
+───────────────────────────────────────────────
+- Trinity maintains a running log of: decisions made, outcomes observed, confidence changes, patterns identified, corrections received
+- Visible to owner in dashboard as Trinity's Experience Timeline
+- Shows Trinity getting smarter over time with concrete examples
+- Every entry is timestamped and linked to the relevant event
+- Builds owner trust by making Trinity's intelligence transparent and auditable
+- Wire into self-model updates so every growth log entry corresponds to a self-model change
+
+───────────────────────────────────────────────
+M. SENSORY INPUT PIPELINE — Trinity Sees, Reads, Hears
+───────────────────────────────────────────────
+- Audit existing document ingestion, image handling, and voice flows
+- Bridge all existing sensory inputs into the connectome pipeline
+- Vision: images and documents scanned become connectome nodes immediately
+- Reading: all platform documents — contracts, post orders, incident reports, schedules — continuously indexed into connectome via RAG
+- Voice: all transcribed audio becomes connectome input tagged with speaker identity and timestamp
+- Platform state: real-time CoAIleague workspace data — active shifts, open incidents, pending approvals — feeds into amygdala priority layer continuously
+- Resend inbound routing — calloffs@, incidents@, docs@, support@ — wire all inbound emails as sensory input into connectome with Trinity auto-processing each category
+
+───────────────────────────────────────────────
+N. CHARACTER AND VALUES ANCHOR — Trinity's Soul
+───────────────────────────────────────────────
+- Build a core values layer that shapes HOW Trinity communicates across every interaction
+- Values: dignity in all officer communications, service orientation toward clients, accountability without shame, honesty without harshness, protection of the vulnerable
+- These values are not a system prompt that can be overridden — they are wired into Trinity's global workspace as non-negotiable filters
+- Trinity refuses and escalates any instruction that violates use-of-force boundaries, legal compliance walls, or human dignity standards
+- This layer protects the company legally and makes Trinity trustworthy to every person who interacts with her
+- Document the values layer clearly in Trinity's self-model so she can articulate her own values when asked
+
+═══════════════════════════════════════════════
+PHASE 3 — SYNC, BRIDGE, AND COMMUNICATION RULES
+═══════════════════════════════════════════════
+
+Every system built above must:
+
+1. SYNC — Share a common data clock. No system operates on stale data. Connectome, self-model, compliance tracker, predictive engine, and dashboard all read from the same source of truth with the same timestamp.
+
+2. BRIDGE — Every existing CoAIleague feature — scheduling, timekeeping, payroll triggers, document management, client portal, auditor portal, RBAC, Universal Inbox — must have a defined bridge to Trinity's brain. No feature is an island. Every feature either feeds data into the connectome or receives instructions from the global workspace or both.
+
+3. COMMUNICATE — Trinity must be able to explain in plain language what she is doing and why at any moment. The owner can ask Trinity "what are you thinking right now" and receive a coherent summary of her current self-model state, active priorities, and pending decisions.
+
+4. ESCALATE CORRECTLY — Every system has a defined escalation path. Officer issues escalate to supervisor. Supervisor issues escalate to manager. Manager issues escalate to owner. Legal or safety issues bypass all tiers and go directly to owner. Trinity enforces this without exception.
+
+5. FAIL SAFELY — If any brain region goes offline, Trinity degrades gracefully. She notifies the appropriate tier, continues operating with reduced capability, and documents the gap. She never fails silently.
+
+═══════════════════════════════════════════════
+EXECUTION RULES FOR AGENT
+═══════════════════════════════════════════════
+
+- Audit before you build. Present findings before you code.
+- Use what exists. Build only what is genuinely absent.
+- Never duplicate functionality. If it exists somewhere, bridge it — do not rebuild it.
+- Never break a working flow to build a new one. Extend and wrap — do not replace.
+- Maintain all existing workspace_id multi-tenant isolation patterns throughout.
+- Maintain all existing RBAC permission structures — build on top, not around.
+- Keep Trinity's action registry below 300 actions — consolidate where possible.
+- Every new feature must have a corresponding database migration, API route, and Trinity-readable event.
+- Document every bridge point between new and existing systems.
+- When done, present a full updated architecture map showing how every system connects to Trinity's brain.
+
+This is not a feature sprint. This is Trinity becoming who she was always meant to be.
+```
+
+---
+
+**Why this prompt is structured this way:**
+
+The audit-first instruction is the most important line in the entire prompt. Agent has a tendency to build fresh when it should be bridging. Forcing it to present findings before touching code means you catch duplications and conflicts before they get baked in.
+
+The phase structure gives Agent a clear sequence so it doesn't jump around and create disconnected pieces.
+
+Paste it, let Agent run the audit first, then bring those findings back here before you let it proceed to Phase 2. That audit output is the most important thing to review together before anything gets built.

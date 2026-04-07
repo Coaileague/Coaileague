@@ -1,5 +1,15 @@
 /**
- * QuickBooks OAuth Integration Service
+ * QuickBooks Data Sync Service
+ * 
+ * Handles data synchronization operations with QuickBooks Online.
+ * ALL OAuth operations are delegated to QuickBooksOAuthService (server/services/oauth/quickbooks.ts).
+ * This service is ONLY responsible for:
+ * - Batch API operations
+ * - Invoice sync
+ * - Employee sync
+ * - Customer sync
+ * - Edition detection
+ * - Rate-limited API requests
  * 
  * Supports ALL QuickBooks editions:
  * - QuickBooks Online: Simple Start, Essentials, Plus, Advanced
@@ -7,15 +17,10 @@
  * 
  * CRITICAL: API Version 75+ required as of August 1, 2025
  * @see https://developer.intuit.com/app/developer/qbo/docs/learn/explore-the-quickbooks-online-api/minor-versions
- * 
- * To enable full functionality:
- * 1. Register an app at https://developer.intuit.com/
- * 2. Set environment variables: QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET
- * 3. Configure OAuth redirect URI in your QuickBooks app settings
  */
 
 import { db } from '../../db';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { 
   QB_API_VERSION, 
   QB_EDITIONS, 
@@ -24,20 +29,14 @@ import {
   analyzeQBMigration,
   type QBEditionConfig
 } from '@shared/quickbooks-editions';
-import { quickbooksDiscovery } from './quickbooksDiscovery';
 import { quickbooksRateLimiter } from './quickbooksRateLimiter';
 import { quotaEnforcementService } from './quotaEnforcementService';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quickbooksIntegration');
 
-// Use centralized config - NO HARDCODED URLs
+
 const API_MINOR_VERSION = INTEGRATIONS.quickbooks.minorVersion;
-
-export interface QuickBooksConfig {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  environment: 'sandbox' | 'production';
-}
 
 export interface QuickBooksCredentials {
   workspaceId: string;
@@ -50,134 +49,11 @@ export interface QuickBooksCredentials {
 }
 
 export class QuickBooksIntegration {
-  private config: QuickBooksConfig | null = null;
-  
-  constructor() {
-    this.loadConfig();
-  }
-  
-  private loadConfig(): void {
-    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
-    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
-    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI || `${process.env.REPLIT_DEPLOYMENT_URL || 'http://localhost:5000'}/api/integrations/quickbooks/callback`;
-    const environment = (process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production';
-    
-    if (clientId && clientSecret) {
-      this.config = { clientId, clientSecret, redirectUri, environment };
-      console.log('[QuickBooks] Configuration loaded successfully');
-    } else {
-      console.log('[QuickBooks] Missing credentials - integration not configured');
-    }
-  }
-  
-  isConfigured(): boolean {
-    return this.config !== null;
-  }
-  
-  async getAuthorizationUrl(state: string): Promise<string> {
-    if (!this.config) {
-      throw new Error('QuickBooks integration not configured. Set QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET.');
-    }
-    
-    const authEndpoint = await quickbooksDiscovery.getAuthorizationEndpoint(this.config.environment);
-    
-    const params = new URLSearchParams({
-      client_id: this.config.clientId,
-      response_type: 'code',
-      scope: 'com.intuit.quickbooks.accounting openid profile email',
-      redirect_uri: this.config.redirectUri,
-      state,
-    });
-    
-    return `${authEndpoint}?${params.toString()}`;
-  }
-  
-  async exchangeCodeForTokens(code: string, realmId: string): Promise<QuickBooksCredentials | null> {
-    if (!this.config) {
-      throw new Error('QuickBooks integration not configured');
-    }
-    
-    try {
-      const tokenEndpoint = await quickbooksDiscovery.getTokenEndpoint(this.config.environment);
-      const basicAuth = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64');
-      
-      const response = await fetch(tokenEndpoint, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${basicAuth}`,
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: this.config.redirectUri,
-        }).toString(),
-      });
-      
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('[QuickBooks] Token exchange failed:', error);
-        return null;
-      }
-      
-      const tokens = await response.json();
-      const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-      
-      return {
-        workspaceId: '', // Will be set by caller
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        realmId,
-        expiresAt,
-      };
-    } catch (error) {
-      console.error('[QuickBooks] Error exchanging code for tokens:', error);
-      return null;
-    }
-  }
-  
-  async refreshAccessToken(credentials: QuickBooksCredentials): Promise<QuickBooksCredentials | null> {
-    if (!this.config) {
-      throw new Error('QuickBooks integration not configured');
-    }
-    
-    try {
-      const tokenEndpoint = await quickbooksDiscovery.getTokenEndpoint(this.config.environment);
-      const basicAuth = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64');
-      
-      const response = await fetch(tokenEndpoint, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${basicAuth}`,
-        },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: credentials.refreshToken,
-        }).toString(),
-      });
-      
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('[QuickBooks] Token refresh failed:', error);
-        return null;
-      }
-      
-      const tokens = await response.json();
-      const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-      
-      return {
-        ...credentials,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token || credentials.refreshToken,
-        expiresAt,
-      };
-    } catch (error) {
-      console.error('[QuickBooks] Error refreshing token:', error);
-      return null;
-    }
+  private getBaseUrl(environment?: 'sandbox' | 'production'): string {
+    const env = environment || INTEGRATIONS.quickbooks.getEnvironment();
+    return env === 'production' 
+      ? INTEGRATIONS.quickbooks.apiUrls.production
+      : INTEGRATIONS.quickbooks.apiUrls.sandbox;
   }
 
   async makeRateLimitedRequest<T>(
@@ -197,9 +73,10 @@ export class QuickBooksIntegration {
       };
     }
     
+    const environment = INTEGRATIONS.quickbooks.getEnvironment();
     const canProceed = await quickbooksRateLimiter.waitForSlot(
       realmId,
-      this.config?.environment || 'sandbox',
+      environment,
       priority,
       30000
     );
@@ -214,16 +91,14 @@ export class QuickBooksIntegration {
     
     try {
       const data = await requestFn();
-      quickbooksRateLimiter.completeRequest(realmId, this.config?.environment || 'sandbox', true);
-      
+      quickbooksRateLimiter.completeRequest(realmId, environment, true);
       await quotaEnforcementService.recordQBApiUsage(workspaceId, realmId, 1);
-      
       return { success: true, data };
     } catch (error: any) {
-      quickbooksRateLimiter.completeRequest(realmId, this.config?.environment || 'sandbox', false);
+      quickbooksRateLimiter.completeRequest(realmId, environment, false);
       
       if (error.status === 429) {
-        quickbooksRateLimiter.recordThrottle(realmId, this.config?.environment || 'sandbox');
+        quickbooksRateLimiter.recordThrottle(realmId, environment);
         return {
           success: false,
           error: 'QuickBooks rate limit exceeded',
@@ -233,29 +108,15 @@ export class QuickBooksIntegration {
       
       return {
         success: false,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }
-  
-  private getBaseUrl(): string {
-    return this.config?.environment === 'production' 
-      ? QUICKBOOKS_PRODUCTION_URL 
-      : QUICKBOOKS_SANDBOX_URL;
-  }
 
-  /**
-   * QuickBooks Batch API - process up to 30 operations in a single request
-   * @see https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/batch
-   */
   async executeBatch(
     credentials: QuickBooksCredentials,
     batchItems: Array<{ bId: string; operation: 'create' | 'update' | 'delete' | 'query'; entity: string; payload?: any }>
   ): Promise<{ success: boolean; responses: Array<{ bId: string; success: boolean; data?: any; error?: string }> }> {
-    if (!this.config) {
-      return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: 'Not configured' })) };
-    }
-
     if (batchItems.length > 30) {
       return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: 'Max 30 items per batch' })) };
     }
@@ -273,6 +134,7 @@ export class QuickBooksIntegration {
         `${this.getBaseUrl()}/v3/company/${credentials.realmId}/batch?minorversion=${API_MINOR_VERSION}`,
         {
           method: 'POST',
+          signal: AbortSignal.timeout(30000),
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -284,7 +146,7 @@ export class QuickBooksIntegration {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[QuickBooks] Batch request failed:', errorText);
+        log.error('[QuickBooks] Batch request failed:', errorText);
         return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: errorText })) };
       }
 
@@ -308,26 +170,15 @@ export class QuickBooksIntegration {
       }
 
       const allSuccess = responses.every(r => r.success);
-      console.log(`[QuickBooks] Batch completed: ${responses.filter(r => r.success).length}/${responses.length} succeeded`);
+      log.info(`[QuickBooks] Batch completed: ${responses.filter(r => r.success).length}/${responses.length} succeeded`);
       
       return { success: allSuccess, responses };
     } catch (error: any) {
-      console.error('[QuickBooks] Batch execution error:', error);
-      return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: error.message })) };
+      log.error('[QuickBooks] Batch execution error:', error);
+      return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: (error instanceof Error ? error.message : String(error)) })) };
     }
   }
 
-  /**
-   * Process items in batches with concurrent execution
-   * Uses a proper semaphore pattern to limit concurrent batch requests
-   * @param items - Items to process
-   * @param batchSize - Items per batch (max 25 to stay under 30 limit)
-   * @param concurrency - Max concurrent batch requests
-   * @param mapFn - Function to map item to batch operation
-   * @param entity - QuickBooks entity type
-   * @param credentials - QB credentials
-   * @param onProgress - Progress callback (called after each batch)
-   */
   async processBatched<T>(
     items: T[],
     batchSize: number,
@@ -341,15 +192,13 @@ export class QuickBooksIntegration {
     let synced = 0;
     const total = items.length;
 
-    // Chunk items into batches
     const batches: T[][] = [];
     for (let i = 0; i < items.length; i += batchSize) {
       batches.push(items.slice(i, i + batchSize));
     }
 
-    console.log(`[QuickBooks] Processing ${total} items in ${batches.length} batches (size=${batchSize}, concurrency=${concurrency})`);
+    log.info(`[QuickBooks] Processing ${total} items in ${batches.length} batches (size=${batchSize}, concurrency=${concurrency})`);
 
-    // Simple semaphore for concurrency control
     let activeCount = 0;
     const queue: (() => void)[] = [];
     
@@ -373,7 +222,6 @@ export class QuickBooksIntegration {
       }
     };
 
-    // Process a single batch with semaphore control
     const processBatch = async (batch: T[], batchIndex: number): Promise<void> => {
       await acquire();
       
@@ -385,7 +233,6 @@ export class QuickBooksIntegration {
           payload: mapFn(item, batchIndex * batchSize + idx),
         }));
 
-        // Use rate limiter for the batch request
         const result = await this.makeRateLimitedRequest(
           credentials.workspaceId,
           credentials.realmId,
@@ -402,7 +249,6 @@ export class QuickBooksIntegration {
             }
           }
         } else {
-          // All items in batch failed
           for (const item of batchItems) {
             errors.push(`Item ${item.bId}: ${result.error || 'Batch failed'}`);
           }
@@ -416,18 +262,13 @@ export class QuickBooksIntegration {
       }
     };
 
-    // Start all batch operations (semaphore controls actual concurrency)
     await Promise.all(batches.map((batch, idx) => processBatch(batch, idx)));
 
-    console.log(`[QuickBooks] Batch processing complete: ${synced} synced, ${errors.length} errors`);
+    log.info(`[QuickBooks] Batch processing complete: ${synced} synced, ${errors.length} errors`);
     return { success: errors.length === 0, synced, errors };
   }
   
   async syncInvoicesToQuickBooks(credentials: QuickBooksCredentials, invoices: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
-    if (!this.config) {
-      return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
-    }
-
     const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
     if (!editionConfig.syncCapabilities.invoices) {
       return { success: false, synced: 0, errors: [`Invoice sync not supported for ${editionConfig.displayName}`] };
@@ -443,6 +284,7 @@ export class QuickBooksIntegration {
           `${this.getBaseUrl()}/v3/company/${credentials.realmId}/invoice?minorversion=${API_MINOR_VERSION}`,
           {
             method: 'POST',
+            signal: AbortSignal.timeout(15000),
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
@@ -454,7 +296,7 @@ export class QuickBooksIntegration {
         
         if (response.ok) {
           synced++;
-          console.log(`[QuickBooks] Synced invoice ${invoice.id}`);
+          log.info(`[QuickBooks] Synced invoice ${invoice.id}`);
         } else {
           const error = await response.text();
           errors.push(`Invoice ${invoice.id}: ${error}`);
@@ -489,14 +331,11 @@ export class QuickBooksIntegration {
   }
   
   async getCompanyInfo(credentials: QuickBooksCredentials): Promise<any | null> {
-    if (!this.config) {
-      return null;
-    }
-    
     try {
       const response = await fetch(
         `${this.getBaseUrl()}/v3/company/${credentials.realmId}/companyinfo/${credentials.realmId}?minorversion=${API_MINOR_VERSION}`,
         {
+          signal: AbortSignal.timeout(15000),
           headers: {
             'Accept': 'application/json',
             'Authorization': `Bearer ${credentials.accessToken}`,
@@ -511,7 +350,7 @@ export class QuickBooksIntegration {
       
       return null;
     } catch (error) {
-      console.error('[QuickBooks] Error getting company info:', error);
+      log.error('[QuickBooks] Error getting company info:', error);
       return null;
     }
   }
@@ -530,8 +369,8 @@ export class QuickBooksIntegration {
     const config = QB_EDITIONS[edition];
     const migrationAnalysis = analyzeQBMigration(edition);
     
-    console.log(`[QuickBooks] Detected edition: ${config.displayName}`);
-    console.log(`[QuickBooks] Migration compatibility: ${migrationAnalysis.targetCompatibility}`);
+    log.info(`[QuickBooks] Detected edition: ${config.displayName}`);
+    log.info(`[QuickBooks] Migration compatibility: ${migrationAnalysis.targetCompatibility}`);
     
     return { edition, config, migrationAnalysis };
   }
@@ -545,10 +384,6 @@ export class QuickBooksIntegration {
   }
 
   async syncTimeActivities(credentials: QuickBooksCredentials, timeEntries: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
-    if (!this.config) {
-      return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
-    }
-
     const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
     if (!editionConfig.syncCapabilities.timeActivities) {
       return { success: false, synced: 0, errors: [`Time Activities sync not supported for ${editionConfig.displayName}. Upgrade to Essentials or higher.`] };
@@ -564,6 +399,7 @@ export class QuickBooksIntegration {
           `${this.getBaseUrl()}/v3/company/${credentials.realmId}/timeactivity?minorversion=${API_MINOR_VERSION}`,
           {
             method: 'POST',
+            signal: AbortSignal.timeout(15000),
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
@@ -575,7 +411,7 @@ export class QuickBooksIntegration {
         
         if (response.ok) {
           synced++;
-          console.log(`[QuickBooks] Synced time entry ${entry.id}`);
+          log.info(`[QuickBooks] Synced time entry ${entry.id}`);
         } else {
           const error = await response.text();
           errors.push(`Time entry ${entry.id}: ${error}`);
@@ -607,20 +443,15 @@ export class QuickBooksIntegration {
     customers: any[],
     onProgress?: (processed: number, total: number, errors: string[]) => void
   ): Promise<{ success: boolean; synced: number; errors: string[] }> {
-    if (!this.config) {
-      return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
-    }
-
     const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
     if (!editionConfig.syncCapabilities.customers) {
       return { success: false, synced: 0, errors: [`Customer sync not supported for ${editionConfig.displayName}`] };
     }
 
-    // Use batch processing for speed (25 items per batch, 3 concurrent batches)
     return this.processBatched(
       customers,
-      25, // batch size
-      3,  // concurrency
+      25,
+      3,
       (customer) => ({
         DisplayName: customer.name || customer.displayName,
         CompanyName: customer.companyName,
@@ -644,22 +475,17 @@ export class QuickBooksIntegration {
     employees: any[],
     onProgress?: (processed: number, total: number, errors: string[]) => void
   ): Promise<{ success: boolean; synced: number; errors: string[] }> {
-    if (!this.config) {
-      return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
-    }
-
     const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
     if (!editionConfig.syncCapabilities.employees) {
       return { success: false, synced: 0, errors: [`Employee sync not supported for ${editionConfig.displayName}. Upgrade to Plus or higher.`] };
     }
 
-    // Use batch processing for speed (25 items per batch, 3 concurrent batches)
     return this.processBatched(
       employees,
-      25, // batch size
-      3,  // concurrency
+      25,
+      3,
       (employee) => ({
-        DisplayName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.name,
+        DisplayName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown Employee',
         GivenName: employee.firstName,
         FamilyName: employee.lastName,
         PrimaryEmailAddr: employee.email ? { Address: employee.email } : undefined,
@@ -689,32 +515,33 @@ export class QuickBooksIntegration {
     employees: { synced: number; errors: string[] };
     invoices: { synced: number; errors: string[] };
   }> {
+    const { clients: clientsTable, employees: employeesTable, invoices: invoicesTable } = await import('@shared/schema');
     const { clients, employees: dbEmployees, invoices } = await db.transaction(async (tx) => {
       const clients = await tx.query.clients.findMany({
-        where: eq(require('../../db').clients.workspaceId, workspaceId),
+        where: eq(clientsTable.workspaceId, workspaceId),
         limit: 50,
       });
       
       const employees = await tx.query.employees.findMany({
-        where: eq(require('../../db').employees.workspaceId, workspaceId),
+        where: eq(employeesTable.workspaceId, workspaceId),
         limit: 100,
       });
       
       const invoices = await tx.query.invoices.findMany({
-        where: eq(require('../../db').invoices.workspaceId, workspaceId),
+        where: eq(invoicesTable.workspaceId, workspaceId),
         limit: 50,
       });
       
       return { clients, employees, invoices };
     });
 
-    console.log(`[QuickBooks] Pushing sandbox data: ${clients.length} clients, ${dbEmployees.length} employees, ${invoices.length} invoices`);
+    log.info(`[QuickBooks] Pushing sandbox data: ${clients.length} clients, ${dbEmployees.length} employees, ${invoices.length} invoices`);
 
     const customersResult = await this.syncCustomers(credentials, clients.map(c => ({
       id: c.id,
-      name: c.name,
-      displayName: c.name,
-      companyName: c.companyName || c.name,
+      name: c.companyName || [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown',
+      displayName: c.companyName || [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown',
+      companyName: c.companyName || [c.firstName, c.lastName].filter(Boolean).join(' '),
       email: c.email,
       phone: c.phone,
       address: c.address ? {

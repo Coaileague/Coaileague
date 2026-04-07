@@ -4,10 +4,10 @@
  * Works on both mobile and desktop platforms
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal'
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -39,14 +39,13 @@ export function UserDiagnosticsPanel({
     staleTime: 30000, // Cache for 30 seconds
     queryFn: async () => {
       if (!userId) return null;
-      const response = await fetch(`/api/helpdesk/user-context/${userId}`, {
+      const response = await secureFetch(`/api/helpdesk/user-context/${userId}`, {
         credentials: 'include',
       });
       if (!response.ok) {
         throw new Error(`Failed to fetch user context: ${response.statusText}`);
       }
       const data = await response.json();
-      console.log('📊 UserContext Data:', data);
       return data;
     },
   });
@@ -246,7 +245,7 @@ export function UserDiagnosticsPanel({
                 <div className="space-y-2">
                   {userContext.chatHistory.slice(0, 5).map((msg: any, idx: number) => (
                     <div key={idx} className="text-xs p-2 bg-card rounded border">
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between gap-1 mb-1">
                         <span className="font-medium">{msg.roomSlug || 'main'}</span>
                         <span className="text-muted-foreground">
                           {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
@@ -280,36 +279,36 @@ export function UserDiagnosticsPanel({
   // Mobile variant uses Sheet (slide-in from bottom)
   if (variant === 'mobile') {
     return (
-      <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <SheetContent side="bottom" className="h-[90vh] flex flex-col overflow-hidden">
-          <SheetHeader className="flex-shrink-0">
-            <SheetTitle className="flex items-center gap-2">
+      <UniversalModal open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <UniversalModalContent side="bottom" className="h-[90vh] flex flex-col overflow-hidden sm:max-w-3xl" showHomeButton={false}>
+          <UniversalModalHeader className="flex-shrink-0">
+            <UniversalModalTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
               User Diagnostics - AI Diagnostics™
-            </SheetTitle>
-          </SheetHeader>
+            </UniversalModalTitle>
+          </UniversalModalHeader>
           <div className="flex-1 overflow-y-auto mt-4 pr-2">
             {content}
           </div>
-        </SheetContent>
-      </Sheet>
+        </UniversalModalContent>
+      </UniversalModal>
     );
   }
 
   // Desktop variant uses Dialog (modal)
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent size="xl" className="max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
+    <UniversalModal open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <UniversalModalContent size="xl" className="flex flex-col overflow-hidden">
+        <UniversalModalHeader className="flex-shrink-0">
+          <UniversalModalTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
             User Diagnostics - AI Diagnostics™
-          </DialogTitle>
-        </DialogHeader>
+          </UniversalModalTitle>
+        </UniversalModalHeader>
         <div className="flex-1 overflow-y-auto pr-2">
           {content}
         </div>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

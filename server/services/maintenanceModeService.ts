@@ -15,6 +15,9 @@ import { trinityRuntimeFlagsService } from './featureFlagsService';
 import { db } from '../db';
 import { trinityRuntimeFlags } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { createLogger } from '../lib/logger';
+const log = createLogger('maintenanceModeService');
+
 
 export interface MaintenanceWindow {
   isActive: boolean;
@@ -136,7 +139,7 @@ export const maintenanceModeService = {
       'maintenance_mode'
     );
 
-    console.log(`[MaintenanceMode] ACTIVATED by ${params.activatedBy?.type}:${params.activatedBy?.id} - ${params.reason}`);
+    log.info(`[MaintenanceMode] ACTIVATED by ${params.activatedBy?.type}:${params.activatedBy?.id} - ${params.reason}`);
     
     return { success: true, window };
   },
@@ -171,7 +174,7 @@ export const maintenanceModeService = {
       'maintenance_mode'
     );
 
-    console.log(`[MaintenanceMode] DEACTIVATED by ${deactivatedBy?.type}:${deactivatedBy?.id}`);
+    log.info(`[MaintenanceMode] DEACTIVATED by ${deactivatedBy?.type}:${deactivatedBy?.id}`);
     
     return { success: true };
   },

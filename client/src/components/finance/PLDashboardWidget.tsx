@@ -178,7 +178,7 @@ export function PLDashboardWidget({ compact = false }: { compact?: boolean }) {
             )}
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-2xl font-bold font-mono">{formatCurrency(summary.netProfit)}</p>
                 <p className="text-xs text-muted-foreground">Net Profit</p>
@@ -270,7 +270,7 @@ export function PLDashboardWidget({ compact = false }: { compact?: boolean }) {
 
         {alertCount > 0 && (
           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
                 <span className="text-sm font-medium text-amber-500">
@@ -286,7 +286,7 @@ export function PLDashboardWidget({ compact = false }: { compact?: boolean }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-border">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>Outstanding: {formatCurrency(summary.outstandingAmount)}</span>
             <span>•</span>

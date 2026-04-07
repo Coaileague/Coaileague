@@ -5,9 +5,28 @@
  * Eliminates hardcoded values and enables dynamic updates.
  */
 
-import { Briefcase, Heart, Zap, type LucideIcon } from 'lucide-react';
+import { Briefcase, Heart, Shield, type LucideIcon } from 'lucide-react';
 
-export type ConversationMode = 'business' | 'personal' | 'integrated';
+/**
+ * TRINITY CONVERSATION MODES
+ * ==========================
+ * 
+ * Business Mode: Standard operational mode for all users
+ * - Data-driven insights, metrics, scheduling, invoicing
+ * - Uses Gemini Flash for efficiency on routine queries
+ * 
+ * Personal/Buddy Mode: Human element with intelligent multi-AI routing
+ * - Personal development, coaching, accountability
+ * - Routes to best AI: Gemini for simple, GPT for balanced, Claude for meta-cognitive
+ * - Org pays for token usage - gets best AI when thought is truly needed
+ * 
+ * Guru Mode: Reserved for authenticated support agents ONLY
+ * - Deep platform expertise, troubleshooting, diagnostics
+ * - Only responds after verifying support agent authentication
+ * - Uses Claude for complex analysis and recommendations
+ */
+
+export type ConversationMode = 'business' | 'personal' | 'guru';
 export type SpiritualGuidance = 'none' | 'general' | 'christian';
 export type AccountabilityLevel = 'gentle' | 'balanced' | 'challenging';
 
@@ -16,6 +35,8 @@ export interface ModeConfig {
   label: string;
   description: string;
   icon: LucideIcon;
+  requiresSupportAgent?: boolean;  // Guru mode requires verified support agent
+  aiRouting?: 'gemini' | 'gpt' | 'claude' | 'intelligent';  // Which AI to use
   colors: {
     gradient: string;
     badge: string;
@@ -41,6 +62,7 @@ export const TRINITY_MODES: Record<ConversationMode, ModeConfig> = {
     label: 'Business',
     description: 'Data-driven insights with live metrics',
     icon: Briefcase,
+    aiRouting: 'gemini',  // Efficient for routine business queries
     colors: {
       gradient: 'from-blue-500 to-cyan-500',
       badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -49,22 +71,25 @@ export const TRINITY_MODES: Record<ConversationMode, ModeConfig> = {
   },
   personal: {
     id: 'personal',
-    label: 'Personal',
-    description: 'BUDDY personal development coaching',
+    label: 'Buddy',
+    description: 'Personal coaching with intelligent AI routing',
     icon: Heart,
+    aiRouting: 'intelligent',  // Routes to best AI based on query complexity
     colors: {
       gradient: 'from-emerald-500 to-teal-500',
       badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
       text: 'text-emerald-500',
     },
   },
-  integrated: {
-    id: 'integrated',
-    label: 'Integrated',
-    description: 'Full context across business and personal',
-    icon: Zap,
+  guru: {
+    id: 'guru',
+    label: 'Guru',
+    description: 'Expert support mode (support agents only)',
+    icon: Shield,
+    requiresSupportAgent: true,  // Only available to verified support agents
+    aiRouting: 'claude',  // Uses Claude for deep analysis
     colors: {
-      gradient: 'from-purple-500 to-pink-500',
+      gradient: 'from-purple-500 to-violet-500',
       badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
       text: 'text-purple-500',
     },
@@ -117,7 +142,7 @@ export const TRINITY_API_ENDPOINTS = {
 
 export const TRINITY_ALLOWED_ROLES = {
   // Match actual workspace roles from useWorkspaceAccess
-  orgRoles: ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager'] as const,
+  orgRoles: ['org_owner', 'co_owner', 'manager', 'department_manager'] as const,
   // Match ALL platform staff roles from useWorkspaceAccess
   platformRoles: ['root_admin', 'co_admin', 'deputy_admin', 'sysops', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'] as const,
 };
@@ -149,9 +174,9 @@ export const TRINITY_BRANDING = {
 export const TRINITY_MOBILE_CONFIG = {
   // Height modes for bottom sheet (use larger values for better mobile UX)
   heights: {
-    peek: '35vh',      // Minimized - show quick input
-    split: '65vh',     // Mid - show messages + input
-    immersive: '92vh', // Full screen - leave room for status bar
+    peek: '25vh',       // Minimized - show greeting + recent context chip
+    split: '50vh',      // Default - full conversation, scrollable
+    immersive: '85vh',  // Expanded - near-fullscreen, keyboard-aware
   } as const,
   // Swipe gesture configuration
   swipe: {

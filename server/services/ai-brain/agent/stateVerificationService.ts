@@ -8,8 +8,10 @@
  */
 
 import { db } from '@/db';
-import { shifts, employees, clients, timesheets } from '@shared/schema';
+import { shifts, employees, clients, timeEntries } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('stateVerificationService');
 
 export interface VerificationResult {
   verified: boolean;
@@ -83,7 +85,7 @@ class StateVerificationService {
       };
 
     } catch (error) {
-      console.error('[StateVerification] Error verifying action:', error);
+      log.error('[StateVerification] Error verifying action:', error);
       return {
         verified: false,
         needsRollback: false,
@@ -147,8 +149,8 @@ class StateVerificationService {
             .select()
             .from(shifts)
             .where(and(
-              eq(shifts.id, parseInt(targetId)),
-              eq(shifts.workspaceId, parseInt(workspaceId))
+              eq(shifts.id, targetId),
+              eq(shifts.workspaceId, workspaceId)
             ))
             .limit(1);
           return shift || null;
@@ -161,8 +163,8 @@ class StateVerificationService {
             .select()
             .from(shifts)
             .where(and(
-              eq(shifts.id, parseInt(targetId)),
-              eq(shifts.workspaceId, parseInt(workspaceId))
+              eq(shifts.id, targetId),
+              eq(shifts.workspaceId, workspaceId)
             ))
             .limit(1);
           return shift || null;
@@ -173,7 +175,7 @@ class StateVerificationService {
           const [shift] = await db
             .select()
             .from(shifts)
-            .where(eq(shifts.id, parseInt(targetId)))
+            .where(eq(shifts.id, targetId))
             .limit(1);
           return shift ? { exists: true, ...shift } : { exists: false };
         }
@@ -185,8 +187,8 @@ class StateVerificationService {
             .select()
             .from(employees)
             .where(and(
-              eq(employees.id, parseInt(targetId)),
-              eq(employees.workspaceId, parseInt(workspaceId))
+              eq(employees.id, targetId),
+              eq(employees.workspaceId, workspaceId)
             ))
             .limit(1);
           return employee || null;
@@ -195,15 +197,15 @@ class StateVerificationService {
         case 'CREATE_TIMESHEET':
         case 'UPDATE_TIMESHEET': {
           if (!targetId) return null;
-          const [timesheet] = await db
+          const [timeEntry] = await db
             .select()
-            .from(timesheets)
+            .from(timeEntries)
             .where(and(
-              eq(timesheets.id, parseInt(targetId)),
-              eq(timesheets.workspaceId, parseInt(workspaceId))
+              eq(timeEntries.id, targetId),
+              eq(timeEntries.workspaceId, workspaceId)
             ))
             .limit(1);
-          return timesheet || null;
+          return timeEntry || null;
         }
 
         case 'UPDATE_CLIENT':
@@ -213,19 +215,19 @@ class StateVerificationService {
             .select()
             .from(clients)
             .where(and(
-              eq(clients.id, parseInt(targetId)),
-              eq(clients.workspaceId, parseInt(workspaceId))
+              eq(clients.id, targetId),
+              eq(clients.workspaceId, workspaceId)
             ))
             .limit(1);
           return client || null;
         }
 
         default:
-          console.log(`[StateVerification] Unknown action type: ${type}`);
+          log.info(`[StateVerification] Unknown action type: ${type}`);
           return { verified_manually: true };
       }
     } catch (error) {
-      console.error(`[StateVerification] DB query failed for ${type}:`, error);
+      log.error(`[StateVerification] DB query failed for ${type}:`, error);
       return null;
     }
   }

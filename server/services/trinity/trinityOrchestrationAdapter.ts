@@ -14,6 +14,9 @@
 
 import { aiBrainEvents } from '../ai-brain/internalEventEmitter';
 import { platformEventBus, PlatformEventType, EventCategory } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityOrchestrationAdapter');
+
 
 // ============================================================================
 // TRINITY EVENT CONTRACT V1 - Standardized Payload Schemas
@@ -252,7 +255,7 @@ class TrinityOrchestrationAdapter {
   }
 
   private generateCorrelationId(): string {
-    return `corr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `corr-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
   }
 
   /**
@@ -344,9 +347,11 @@ class TrinityOrchestrationAdapter {
           aiBrainEvents.emit('trinity_alert', fullEvent);
         }
 
-        console.log(`[TrinityOrchestration] ${event.domain}.${event.eventType} [${event.phase}]`);
+        if (event.severity === 'warning' || event.severity === 'error' || event.severity === 'critical') {
+          log.info(`[TrinityOrchestration] ${event.domain}.${event.eventType} [${event.phase}]`);
+        }
       } catch (error) {
-        console.error('[TrinityOrchestration] Failed to emit event:', error);
+        log.error('[TrinityOrchestration] Failed to emit event:', error);
       }
     });
   }

@@ -11,13 +11,18 @@
  */
 
 import { db } from '../../../db';
-import { 
-  notifications, 
-  users, 
+import {
+  notifications,
+  users,
   employees,
   userNotificationPreferences
 } from '@shared/schema';
 import { eq, and, gte, desc, inArray, sql } from 'drizzle-orm';
+import { universalNotificationEngine } from '../../universalNotificationEngine';
+import { emailService } from '../../emailService';
+import { NotificationDeliveryService } from '../../notificationDeliveryService';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('notificationSubagent');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -255,7 +260,7 @@ class NotificationSubagentService {
     failed: number;
     channels: NotificationChannel[];
   }> {
-    console.log(`[NotificationSubagent] Sending P0 CRITICAL alert to ${userIds.length} users`);
+    log.info(`[NotificationSubagent] Sending P0 CRITICAL alert to ${userIds.length} users`);
 
     const payload: NotificationPayload = {
       priority: 'P0',
@@ -378,7 +383,7 @@ class NotificationSubagentService {
     );
 
     this.bundleQueue.delete(bundleKey);
-    console.log(`[NotificationSubagent] Flushed bundle ${bundleKey} with ${bundle.notifications.length} notifications`);
+    log.info(`[NotificationSubagent] Flushed bundle ${bundleKey} with ${bundle.notifications.length} notifications`);
   }
 
   private formatBundleMessage(notifications: NotificationPayload[]): string {
@@ -492,30 +497,64 @@ class NotificationSubagentService {
     const deliveredVia: NotificationChannel[] = [];
 
     try {
-      // Always deliver in-app
+      // Always deliver in-app via UniversalNotificationEngine for Trinity AI enrichment and validation
       if (tier.channels.includes('in_app')) {
-        await db.insert(notifications).values({
-          workspaceId,
-          userId,
+        await universalNotificationEngine.sendNotification({
           type: payload.type as any,
           title: payload.title,
           message: payload.message,
-          actionUrl: payload.actionUrl,
-          relatedEntityType: payload.relatedEntityType,
-          relatedEntityId: payload.relatedEntityId,
+          workspaceId,
+          targetUserIds: [userId],
+          severity: payload.priority === 'P0' ? 'critical' : payload.priority === 'P1' ? 'high' : 'medium',
+          source: 'notification_subagent',
           metadata: {
             ...payload.metadata,
             priority: payload.priority,
+            actionUrl: payload.actionUrl,
+            relatedEntityType: payload.relatedEntityType,
+            relatedEntityId: payload.relatedEntityId,
           },
-          isRead: false,
         });
         deliveredVia.push('in_app');
       }
 
-      // Email for P0 and P1
+      // Email for P0 and P1 - Actually send the email
       if (tier.channels.includes('email') && (payload.priority === 'P0' || payload.priority === 'P1')) {
-        // Email delivery handled by existing notification service
-        deliveredVia.push('email');
+        try {
+          // Get user email
+          const [user] = await db.select({ email: users.email, firstName: users.firstName })
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+
+          if (user?.email) {
+            const priorityLabel = payload.priority === 'P0' ? '🚨 CRITICAL' : '⚠️ URGENT';
+            await NotificationDeliveryService.send({
+              type: 'ai_brain_email',
+              workspaceId: workspaceId || 'system',
+              recipientUserId: userId,
+              channel: 'email',
+              body: {
+                to: user.email,
+                subject: `${priorityLabel}: ${payload.title}`,
+                html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: ${payload.priority === 'P0' ? '#dc2626' : '#f59e0b'};">${payload.title}</h2>
+                  <p>${payload.message}</p>
+                  ${payload.actionUrl ? `<p><a href="${payload.actionUrl}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Details</a></p>` : ''}
+                  <hr style="margin-top: 20px; border: none; border-top: 1px solid #e5e7eb;">
+                  <p style="font-size: 12px; color: #6b7280;">This is an automated ${payload.priority} priority notification from CoAIleague.</p>
+                </div>
+              `,
+              },
+            });
+            deliveredVia.push('email');
+            log.info(`[NotificationSubagent] ${payload.priority} email sent to ${user.email}`);
+          }
+        } catch (emailError: any) {
+          log.error(`[NotificationSubagent] Email delivery failed:`, emailError.message);
+          // Don't fail the notification if email fails - in-app still works
+        }
       }
 
       // Update frequency state
@@ -528,12 +567,12 @@ class NotificationSubagentService {
       };
 
     } catch (error: any) {
-      console.error(`[NotificationSubagent] Delivery failed:`, error.message);
+      log.error(`[NotificationSubagent] Delivery failed:`, (error instanceof Error ? error.message : String(error)));
       return {
         success: false,
         bundled: false,
         deliveredVia: [],
-        suppressedReason: error.message,
+        suppressedReason: (error instanceof Error ? error.message : String(error)),
       };
     }
   }
@@ -558,7 +597,7 @@ class NotificationSubagentService {
     // Map roles to workspace roles
     const workspaceRoles = roles.map(r => {
       if (r === 'owner') return 'org_owner';
-      if (r === 'admin') return 'admin';
+      if (r === 'admin') return 'org_admin';
       if (r === 'manager') return 'manager';
       return 'employee';
     });

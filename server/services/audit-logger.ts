@@ -13,10 +13,14 @@
 import crypto from 'crypto';
 import { storage } from '../storage';
 import type { 
-  InsertAuditEvent, 
+  InsertAuditLog,
   InsertIdRegistry, 
   InsertWriteAheadLog 
 } from '@shared/schema';
+import { createLogger } from '../lib/logger';
+import { PLATFORM } from '../config/platformConfig';
+const log = createLogger('audit-logger');
+
 
 // Actor Types
 export type ActorType = 'END_USER' | 'SUPPORT_STAFF' | 'AI_AGENT' | 'SYSTEM';
@@ -82,7 +86,7 @@ export class AuditLogger {
       let actionHash: string | undefined;
       if (options?.generateHash || actorType === 'AI_AGENT') {
         const hashInput = JSON.stringify({
-          eventType,
+          rawAction: eventType,
           aggregateId,
           aggregateType,
           actorId,
@@ -92,27 +96,25 @@ export class AuditLogger {
       }
 
       // Create audit event
-      const auditEvent: InsertAuditEvent = {
+      const auditEvent: InsertAuditLog = {
         eventType,
-        actorId,
+        userId: actorId,
         actorType,
-        actorName: actorName || undefined,
+        userName: actorName || undefined,
         workspaceId: workspaceId || undefined,
-        aggregateId,
-        aggregateType,
+        entityId: aggregateId,
+        entityType: aggregateType,
         payload,
         changes: changes || undefined,
         actionHash,
-        status: options?.autoCommit ? 'committed' : 'pending',
+        eventStatus: options?.autoCommit ? 'committed' : 'pending',
         metadata: {
           ipAddress,
           userAgent,
-          sessionId,
           requestId,
         },
         ipAddress: ipAddress || undefined,
         userAgent: userAgent || undefined,
-        sessionId: sessionId || undefined,
         requestId: requestId || undefined,
       };
 
@@ -125,7 +127,7 @@ export class AuditLogger {
 
       return eventId;
     } catch (error) {
-      console.error('[AuditLogger] Failed to log event:', error);
+      log.error('[AuditLogger] Failed to log event:', error);
       throw error;
     }
   }
@@ -158,7 +160,7 @@ export class AuditLogger {
       await storage.registerID(registryEntry);
     } catch (error) {
       // ID might already be registered - that's OK
-      console.warn('[AuditLogger] ID registration warning:', error);
+      log.warn('[AuditLogger] ID registration warning:', error);
     }
   }
 
@@ -195,7 +197,7 @@ export class AuditLogger {
 
       return transactionId;
     } catch (error) {
-      console.error('[AuditLogger] Failed to prepare transaction:', error);
+      log.error('[AuditLogger] Failed to prepare transaction:', error);
       throw error;
     }
   }
@@ -207,7 +209,7 @@ export class AuditLogger {
     try {
       await storage.markWALCommitted(transactionId);
     } catch (error) {
-      console.error('[AuditLogger] Failed to commit transaction:', error);
+      log.error('[AuditLogger] Failed to commit transaction:', error);
       throw error;
     }
   }
@@ -219,7 +221,7 @@ export class AuditLogger {
     try {
       await storage.markWALRolledBack(transactionId, errorMessage);
     } catch (error) {
-      console.error('[AuditLogger] Failed to rollback transaction:', error);
+      log.error('[AuditLogger] Failed to rollback transaction:', error);
       throw error;
     }
   }
@@ -397,7 +399,7 @@ export class AuditLogger {
       }
 
       if (event.actionHash !== expectedHash) {
-        console.error('[AuditLogger] Hash mismatch for AI action:', {
+        log.error('[AuditLogger] Hash mismatch for AI action:', {
           eventId,
           expected: expectedHash,
           actual: event.actionHash,
@@ -409,7 +411,7 @@ export class AuditLogger {
       await storage.verifyAuditEvent(eventId, expectedHash);
       return true;
     } catch (error) {
-      console.error('[AuditLogger] Failed to verify AI action:', error);
+      log.error('[AuditLogger] Failed to verify AI action:', error);
       return false;
     }
   }
@@ -430,7 +432,7 @@ export class AuditLogger {
     const context: AuditContext = {
       actorId: 'system',
       actorType: 'SYSTEM',
-      actorName: 'CoAIleague System',
+      actorName: PLATFORM.name + " System",
       workspaceId: action.workspaceId,
       requestId: `sys_${Date.now()}`,
     };
@@ -445,6 +447,43 @@ export class AuditLogger {
       },
       { autoCommit: true }
     );
+
+    return eventId;
+  }
+
+  /**
+   * Log a Class A Production Blocker Failure
+   * These are critical security or integrity violations that must be alerted immediately.
+   */
+  async logClassAFailure(
+    context: AuditContext,
+    failure: {
+      type: string;
+      description: string;
+      metadata?: Record<string, any>;
+    }
+  ): Promise<string> {
+    const eventId = await this.logEvent(
+      context,
+      {
+        eventType: `CLASS_A_FAILURE_${failure.type}`,
+        aggregateId: 'platform',
+        aggregateType: 'PLATFORM_SECURITY',
+        payload: {
+          description: failure.description,
+          ...failure.metadata,
+        },
+      },
+      { autoCommit: true }
+    );
+
+    // Trigger critical alert
+    log.error(`[MONITORING] CRITICAL ALERT: Class A Production Blocker - ${failure.type}: ${failure.description}`, {
+      eventId,
+      workspaceId: context.workspaceId,
+      actorId: context.actorId,
+      ...failure.metadata,
+    });
 
     return eventId;
   }

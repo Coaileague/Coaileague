@@ -1,5 +1,8 @@
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db } from "../db";
+import { broadcastToWorkspace } from "../websocket";
+import { roomPresence } from "../services/ircEventRegistry";
 import { 
   chatConversations, 
   chatParticipants, 
@@ -12,12 +15,88 @@ import {
   supportRooms,
   organizationChatRooms,
   organizationRoomMembers,
+  workspaces,
+  conversationUserState,
 } from "@shared/schema";
-import { eq, and, or, sql, inArray, count, desc, gte, isNull } from "drizzle-orm";
+import { eq, and, or, sql, inArray, notInArray, count, desc, gte, isNull, isNotNull, ne } from "drizzle-orm";
 import { AuthenticatedRequest } from "../rbac";
+import { ROLES, OWNER_ROLES, ADMIN_ROLES } from "@shared/platformConfig";
 import rateLimit from "express-rate-limit";
+import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('ChatRooms');
+
 
 const router = Router();
+
+router.use(requireAuth);
+
+async function getLastMessagePreview(conversationId: string | null): Promise<{ lastMessage: string | null; lastMessageSender: string | null }> {
+  if (!conversationId) return { lastMessage: null, lastMessageSender: null };
+  try {
+    const [lastMsg] = await db
+      .select({
+        message: chatMessages.message,
+        senderName: chatMessages.senderName,
+      })
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(1);
+    if (lastMsg) {
+      const preview = (lastMsg.message || '').slice(0, 100);
+      return { lastMessage: preview, lastMessageSender: lastMsg.senderName || null };
+    }
+  } catch (err) {
+    log.warn('[Chat] Failed to get last message preview for conversation:', conversationId, err);
+  }
+  return { lastMessage: null, lastMessageSender: null };
+}
+
+async function getConversationUnreadCount(conversationId: string | null, userId: string): Promise<number> {
+  if (!conversationId || !userId) return 0;
+  try {
+    const [result] = await db
+      .select({ count: count() })
+      .from(chatMessages)
+      .where(and(
+        eq(chatMessages.conversationId, conversationId),
+        isNull(chatMessages.readAt),
+        ne(chatMessages.senderId, userId)
+      ));
+    return result?.count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function getLeftConversationIds(userId: string): Promise<Set<string>> {
+  try {
+    const leftRows = await db
+      .select({ conversationId: conversationUserState.conversationId })
+      .from(conversationUserState)
+      .where(and(
+        eq(conversationUserState.userId, userId),
+        eq(conversationUserState.hasLeft, true)
+      ));
+    return new Set(leftRows.map(r => r.conversationId));
+  } catch {
+    return new Set();
+  }
+}
+
+async function batchGetLastMessagePreviews(conversationIds: (string | null)[]): Promise<Map<string, { lastMessage: string; lastMessageSender: string | null }>> {
+  const validIds = conversationIds.filter((id): id is string => !!id);
+  const result = new Map<string, { lastMessage: string; lastMessageSender: string | null }>();
+  if (validIds.length === 0) return result;
+  const previews = await Promise.all(validIds.map(id => getLastMessagePreview(id).then(p => ({ id, ...p }))));
+  for (const p of previews) {
+    if (p.lastMessage) {
+      result.set(p.id, { lastMessage: p.lastMessage, lastMessageSender: p.lastMessageSender });
+    }
+  }
+  return result;
+}
 
 // Rate limiting for room operations
 const roomLimiter = rateLimit({
@@ -66,8 +145,8 @@ async function canManageRoom(
   workspaceId: string,
   workspaceRole?: string
 ): Promise<boolean> {
-  // Workspace owner/admin can manage all rooms
-  if (workspaceRole && ["owner", "admin"].includes(workspaceRole)) {
+  // Workspace manager+ can manage all rooms
+  if (workspaceRole && ['org_owner', 'co_owner', 'org_manager', 'manager', 'department_manager'].includes(workspaceRole)) {
     return true;
   }
 
@@ -80,7 +159,7 @@ async function canManageRoom(
         eq(chatParticipants.conversationId, conversationId),
         eq(chatParticipants.participantId, userId),
         eq(chatParticipants.isActive, true), // CRITICAL: Must be active
-        inArray(chatParticipants.participantRole, ["owner", "admin"])
+        inArray(chatParticipants.participantRole, [...ADMIN_ROLES])
       )
     )
     .limit(1);
@@ -105,7 +184,8 @@ async function resolveRoomToConversationId(
         eq(supportRooms.id, roomId),
         or(
           eq(supportRooms.workspaceId, workspaceId),
-          isNull(supportRooms.workspaceId) // Platform-wide support rooms
+          isNull(supportRooms.workspaceId), // Platform-wide support rooms (null)
+          eq(supportRooms.workspaceId, 'system') // Platform-wide support rooms (system marker)
         )
       )
     )
@@ -175,7 +255,9 @@ router.post(
         ? `${authReq.user.firstName} ${authReq.user.lastName}`
         : authReq.user?.email || "Unknown User";
 
+
       if (!workspaceId || !userId) {
+        log.error(`[ChatRoom CREATE] FAILED - No workspace context. userId: ${userId}, workspaceId: ${workspaceId}`);
         return res.status(403).json({ error: "No workspace context" });
       }
 
@@ -192,8 +274,36 @@ router.post(
       }
 
       // Only owner/admin can create public rooms
-      if (visibility === 'public' && !["owner", "admin"].includes(authReq.workspaceRole || "")) {
+      if (visibility === 'public' && !(ADMIN_ROLES as readonly string[]).includes(authReq.workspaceRole || "")) {
         return res.status(403).json({ error: "Only workspace owners/admins can create public rooms" });
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // RESERVED ROOM NAME GUARD
+      // These names are reserved for system-created platform rooms only.
+      // Support agents and platform admins are exempt.
+      // ─────────────────────────────────────────────────────────────────────
+      const RESERVED_ROOM_NAMES = [
+        'help desk', 'helpdesk', 'help-desk',
+        // Add additional system room names here if needed
+      ];
+      const SUPPORT_EXEMPT_ROLES = [
+        'root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent',
+        'org_admin', 'org_owner',
+      ];
+      const requestedName = (subject || '').trim().toLowerCase();
+      const isReservedName = RESERVED_ROOM_NAMES.some(
+        r => requestedName === r || requestedName.startsWith(r)
+      );
+      const _userPlatformRole = (authReq.user as any)?.platformRole || (authReq.user as any)?.role || '';
+      const isSupportExempt = SUPPORT_EXEMPT_ROLES.includes(authReq.workspaceRole || '') ||
+                              SUPPORT_EXEMPT_ROLES.includes(_userPlatformRole);
+      if (isReservedName && !isSupportExempt) {
+        log.warn(`[ChatRoom CREATE] Blocked reserved room name "${subject}" by user ${userId} (role: ${authReq.workspaceRole})`);
+        return res.status(403).json({
+          error: 'This room name is reserved for the platform support team. Please choose a different name.',
+          code: 'RESERVED_ROOM_NAME',
+        });
       }
 
       // If shift-based, verify shift exists and belongs to workspace
@@ -225,8 +335,38 @@ router.post(
         }
       }
 
-      // Create the conversation
+      // Deduplication: Check if user already created a room with same name in last 30 seconds
       const roomName = subject || (shiftData ? `Shift: ${shiftData.title}` : "New Workroom");
+      const thirtySecondsAgo = new Date(Date.now() - 30000);
+      const [existingRecent] = await db
+        .select()
+        .from(chatConversations)
+        .where(
+          and(
+            eq(chatConversations.workspaceId, workspaceId),
+            eq(chatConversations.subject, roomName),
+            eq(chatConversations.customerId, userId),
+            gte(chatConversations.createdAt, thirtySecondsAgo)
+          )
+        )
+        .limit(1);
+
+      if (existingRecent) {
+        return res.status(201).json({
+          success: true,
+          conversation: {
+            id: existingRecent.id,
+            subject: existingRecent.subject,
+            conversationType: existingRecent.conversationType,
+            visibility: existingRecent.visibility,
+            shiftId: existingRecent.shiftId,
+            autoCloseAt: existingRecent.autoCloseAt,
+          },
+          deduplicated: true,
+        });
+      }
+
+      // Create the conversation
       const [conversation] = await db
         .insert(chatConversations)
         .values({
@@ -307,13 +447,77 @@ router.post(
         }
       }
 
+      // Send welcome system message for the new room
+      const roomDisplayName = conversation.subject || roomName;
+      const roomTypeLabel = conversation.conversationType === 'shift_chat' ? 'shift' : 'team';
+      const welcomeText = `Welcome to ${roomDisplayName}! This ${roomTypeLabel} chat was created by ${userName}. Invite your team members and start collaborating.`;
+      
+      await storage.createChatMessage({
+        conversationId: conversation.id,
+        senderId: null,
+        senderName: 'System',
+        senderType: 'system',
+        message: welcomeText,
+        isSystemMessage: true,
+      });
+
+      // Auto-deploy bots based on room type
+      const isMeetingRoom = /meeting|stand.?up|sync|huddle/i.test(roomName);
+      const isFieldRoom = conversation.conversationType === 'shift_chat';
+      const activeBots: string[] = [];
+
+      try {
+        const { botPool } = await import('../bots');
+        const { BOT_REGISTRY } = await import('../bots/registry');
+
+        if (isMeetingRoom) {
+          await botPool.deployBot('meetingbot', conversation.id, workspaceId);
+          activeBots.push('meetingbot');
+          await storage.createChatMessage({
+            conversationId: conversation.id,
+            senderId: 'meetingbot',
+            senderName: BOT_REGISTRY.meetingbot.name,
+            senderType: 'bot',
+            message: `MeetingBot has joined this room. I'll help record and summarize your meeting.\n\nAvailable commands:\n  /meetingstart [title] - Start recording\n  /meetingend - End meeting & generate summary\n  /actionitem <task> @user - Add action item\n  /decision <text> - Record a decision\n  /note <text> - Add a note\n\nType /meetingstart to begin!`,
+            messageType: 'text',
+          });
+          log.info(`[BotDeploy] MeetingBot auto-deployed to room ${conversation.id}`);
+        }
+
+        if (isFieldRoom) {
+          await botPool.deployBot('reportbot', conversation.id, workspaceId);
+          activeBots.push('reportbot');
+          await botPool.deployBot('clockbot', conversation.id, workspaceId);
+          activeBots.push('clockbot');
+          await storage.createChatMessage({
+            conversationId: conversation.id,
+            senderId: 'reportbot',
+            senderName: BOT_REGISTRY.reportbot.name,
+            senderType: 'bot',
+            message: `ReportBot and ClockBot are active in this shift room.\n\nReport commands: /report, /incident <type>, /endreport, /analyzereports\nClock commands: /clockme <in|out>, /clockstatus\n\nType /help for the full list.`,
+            messageType: 'text',
+          });
+          log.info(`[BotDeploy] ReportBot + ClockBot auto-deployed to shift room ${conversation.id}`);
+        }
+
+        // Merge active bots into existing room metadata (preserves modes, etc.)
+        if (activeBots.length > 0) {
+          const botMetaPatch = JSON.stringify({ activeBots, botDeployedAt: new Date().toISOString() });
+          await db.update(chatConversations)
+            .set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${botMetaPatch}::jsonb` })
+            .where(eq(chatConversations.id, conversation.id));
+        }
+      } catch (botErr: unknown) {
+        log.error('[BotDeploy] Auto-deploy failed (non-blocking):', (botErr as any)?.message);
+      }
+
       // Create audit event
       await createRoomEvent(
         workspaceId,
         conversation.id,
         userId,
         userName,
-        authReq.workspaceRole || "employee",
+        authReq.workspaceRole || ROLES.EMPLOYEE,
         "room_created",
         `${userName} created workroom: ${conversation.subject}`,
         {
@@ -321,6 +525,7 @@ router.post(
           visibility: conversation.visibility,
           shiftId: shiftId || undefined,
           participantCount: participants?.length || 0,
+          activeBots,
         },
         authReq.ip,
         authReq.get("user-agent")
@@ -337,8 +542,8 @@ router.post(
           autoCloseAt: conversation.autoCloseAt,
         },
       });
-    } catch (error: any) {
-      console.error("Error creating room:", error);
+    } catch (error: unknown) {
+      log.error("Error creating room:", error);
       res.status(500).json({ error: "Failed to create room" });
     }
   }
@@ -354,12 +559,15 @@ router.get(
     const authReq = req as AuthenticatedRequest;
     try {
       const workspaceId = authReq.workspaceId;
-      // Try multiple sources for userId (session, user object, request)
-      const userId = authReq.user?.id || (req as any).session?.userId || authReq.user?.email;
+      const userId = authReq.user?.id || req.session?.userId || authReq.user?.email;
 
-      // PUBLIC ACCESS: Allow unauthenticated users to see platform-wide rooms (HelpDesk)
-      // This enables guests, end-users, and support roles to access HelpDesk 24/7
-      const isAuthenticated = !!userId;
+      const requireAuth = !!userId;
+
+      const platformRole = (authReq.user as any)?.platformRole || (authReq.user as any)?.role;
+      const { hasPlatformWideAccess } = await import('../rbac');
+      const isPlatformAdmin = platformRole && hasPlatformWideAccess(platformRole);
+
+      const leftConversationIds = requireAuth ? await getLeftConversationIds(userId!) : new Set<string>();
 
       const rooms: any[] = [];
 
@@ -367,20 +575,28 @@ router.get(
       // 1. SUPPORT ROOMS (type: 'support') - Always include platform-wide rooms
       // ========================================================================
       try {
-        // Build query conditions based on workspace context
-        const supportRoomConditions = workspaceId
-          ? or(
-              eq(supportRooms.workspaceId, workspaceId),
-              isNull(supportRooms.workspaceId) // Platform-wide support rooms
-            )
-          : isNull(supportRooms.workspaceId); // Only platform-wide when no workspace
+        const isPlatformWide = or(
+          isNull(supportRooms.workspaceId),
+          eq(supportRooms.workspaceId, 'system')
+        );
+        const supportRoomConditions = isPlatformAdmin
+          ? undefined
+          : workspaceId
+            ? or(
+                eq(supportRooms.workspaceId, workspaceId),
+                isPlatformWide
+              )
+            : isPlatformWide;
 
         const supportRoomsList = await db
           .select({
             id: supportRooms.id,
             slug: supportRooms.slug,
             name: supportRooms.name,
+            description: supportRooms.description,
             status: supportRooms.status,
+            statusMessage: supportRooms.statusMessage,
+            workspaceId: supportRooms.workspaceId,
             conversationId: supportRooms.conversationId,
             lastMessageAt: chatConversations.lastMessageAt,
           })
@@ -392,7 +608,17 @@ router.get(
           .where(supportRoomConditions);
 
         for (const room of supportRoomsList) {
-          // Count participants from associated conversation
+          const isPlatformWide = !room.workspaceId || room.workspaceId === 'system';
+
+          // The universal Help Desk room (slug='helpdesk') is the canonical CoAIleague support room.
+          // It is platform-wide and visible to ALL authenticated users — HelpAI is always present.
+          // All other platform-wide rooms are still staff-only.
+          const isUniversalHelpDesk = room.slug === 'helpdesk';
+          if (isPlatformWide && !isPlatformAdmin && !isUniversalHelpDesk) continue;
+
+          const userLeftThis = room.conversationId && leftConversationIds.has(room.conversationId);
+          if (userLeftThis && !isPlatformWide) continue;
+
           let participantsCount = 0;
           if (room.conversationId) {
             const [countResult] = await db
@@ -404,29 +630,118 @@ router.get(
                   eq(chatParticipants.isActive, true)
                 )
               );
-            participantsCount = countResult?.count || 0;
+            const dbCount = countResult?.count || 0;
+            // Override with live WebSocket presence count when available (more accurate)
+            const liveCount = room.conversationId ? roomPresence.getMemberCount(room.conversationId) : 0;
+            participantsCount = Math.max(dbCount, liveCount);
           }
+
+          const preview = await getLastMessagePreview(room.conversationId);
+          const unreadCount = requireAuth ? await getConversationUnreadCount(room.conversationId, userId!) : 0;
 
           rooms.push({
             roomId: room.id,
             name: room.name,
             slug: room.slug,
             type: 'support',
+            description: room.description || 'Professional platform support available 24/7',
             participantsCount,
             lastMessageAt: room.lastMessageAt,
+            lastMessage: preview.lastMessage,
+            lastMessageSender: preview.lastMessageSender,
+            unreadCount,
             status: room.status,
+            statusMessage: room.statusMessage,
             roomType: 'support_room',
+            isPlatformOwned: isPlatformWide,
+            isPersistent: true,
           });
         }
       } catch (error) {
-        console.error("[GET /api/chat/rooms] Error fetching support rooms:", error);
+        log.error("[GET /api/chat/rooms] Error fetching support rooms:", error);
       }
 
       // ========================================================================
-      // 2. ORGANIZATION CHAT ROOMS (type: 'org') - Only when workspace context exists
+      // 1b. USER'S PERSONAL SUPPORT TICKET (dm_support) - End users only
+      // Each user gets their own private support conversation. It stays visible
+      // for 24 hours after the last message (WhatsApp-style: if ticket is open
+      // and they rejoin, triage continues; otherwise fresh ticket on next visit).
+      // Platform staff see the full shared queue above — they don't need this.
       // ========================================================================
-      if (workspaceId) {
+      if (!isPlatformAdmin && requireAuth && userId) {
+        try {
+          const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+          const userTickets = await db
+            .select({
+              id: chatConversations.id,
+              subject: chatConversations.subject,
+              status: chatConversations.status,
+              lastMessageAt: chatConversations.lastMessageAt,
+              createdAt: chatConversations.createdAt,
+              workspaceId: chatConversations.workspaceId,
+            })
+            .from(chatConversations)
+            .innerJoin(
+              chatParticipants,
+              and(
+                eq(chatParticipants.conversationId, chatConversations.id),
+                eq(chatParticipants.participantId, userId),
+                eq(chatParticipants.isActive, true)
+              )
+            )
+            .where(
+              and(
+                eq(chatConversations.conversationType, 'dm_support'),
+                // Only show open/active tickets; closed/resolved ones are done
+                sql`${chatConversations.status} NOT IN ('closed', 'resolved')`,
+                // 24-hour freshness window: ticket must have activity or be newly created
+                or(
+                  gte(chatConversations.lastMessageAt, twentyFourHoursAgo),
+                  gte(chatConversations.createdAt, twentyFourHoursAgo)
+                )
+              )
+            )
+            .orderBy(desc(chatConversations.lastMessageAt))
+            .limit(1);
+
+          for (const ticket of userTickets) {
+            const preview = await getLastMessagePreview(ticket.id);
+            const unreadCount = await getConversationUnreadCount(ticket.id, userId);
+            rooms.push({
+              roomId: ticket.id,
+              name: 'My Support Ticket',
+              slug: 'my-support-ticket',
+              type: 'support',
+              description: ticket.subject || 'Your open support session with HelpAI',
+              participantsCount: 2,
+              lastMessageAt: ticket.lastMessageAt,
+              lastMessage: preview.lastMessage,
+              lastMessageSender: preview.lastMessageSender,
+              unreadCount,
+              status: ticket.status,
+              statusMessage: null,
+              roomType: 'support_ticket',
+              isPlatformOwned: true,
+              isPersistent: false,
+              isUserTicket: true,
+              conversationType: 'dm_support',
+            });
+          }
+        } catch (error) {
+          log.error("[GET /api/chat/rooms] Error fetching user support ticket:", error);
+        }
+      }
+
+      // ========================================================================
+      // 2. ORGANIZATION CHAT ROOMS (type: 'org') - Workspace-scoped or all for platform admins
+      // ========================================================================
+      if (workspaceId || isPlatformAdmin) {
       try {
+        const orgRoomCondition = isPlatformAdmin
+          ? undefined
+          : eq(organizationChatRooms.workspaceId, workspaceId!);
+
         const orgRooms = await db
           .select({
             id: organizationChatRooms.id,
@@ -441,37 +756,77 @@ router.get(
             chatConversations,
             eq(organizationChatRooms.conversationId, chatConversations.id)
           )
-          .where(eq(organizationChatRooms.workspaceId, workspaceId));
+          .where(orgRoomCondition);
 
         for (const room of orgRooms) {
-          // Count participants from organization room members
+          if (!isPlatformAdmin && room.conversationId && leftConversationIds.has(room.conversationId)) continue;
+
           const [countResult] = await db
             .select({ count: count() })
             .from(organizationRoomMembers)
             .where(eq(organizationRoomMembers.roomId, room.id));
           const participantsCount = countResult?.count || 0;
 
+          const preview = await getLastMessagePreview(room.conversationId);
+          const unreadCount = await getConversationUnreadCount(room.conversationId, userId!);
+
           rooms.push({
             roomId: room.id,
             name: room.roomName,
             slug: room.roomSlug,
             type: 'org',
+            description: 'Organization workspace chatroom',
             participantsCount,
             lastMessageAt: room.lastMessageAt,
+            lastMessage: preview.lastMessage,
+            lastMessageSender: preview.lastMessageSender,
+            unreadCount,
             status: room.status,
             roomType: 'organization_room',
+            isPlatformOwned: false,
+            isPersistent: false,
+            isDynamic: true,
           });
         }
       } catch (error) {
-        console.error("[GET /api/chat/rooms] Error fetching org rooms:", error);
+        log.error("[GET /api/chat/rooms] Error fetching org rooms:", error);
       }
       } // End of workspaceId check for org rooms
 
       // ========================================================================
-      // 3. GENERAL CHAT CONVERSATIONS (work, meeting rooms) - Only when workspace context exists
+      // 3. GENERAL CHAT CONVERSATIONS (work, meeting rooms) - Workspace-scoped or all for platform admins
       // ========================================================================
-      if (workspaceId) {
+      if (workspaceId || isPlatformAdmin) {
       try {
+        // Exclude any conversations already shown as support rooms (prevents duplicates)
+        const supportRoomConvRows = await db
+          .select({ conversationId: supportRooms.conversationId })
+          .from(supportRooms)
+          .where(isNotNull(supportRooms.conversationId));
+        const supportConvIds = supportRoomConvRows
+          .map(r => r.conversationId)
+          .filter(Boolean) as string[];
+
+        const generalRoomConditions = isPlatformAdmin
+          ? and(
+              eq(chatConversations.status, 'active'),
+              inArray(chatConversations.conversationType, ['open_chat', 'dm_user', 'shift_chat']),
+              supportConvIds.length > 0 ? notInArray(chatConversations.id, supportConvIds) : undefined,
+            )
+          : and(
+              eq(chatConversations.workspaceId, workspaceId!),
+              eq(chatConversations.status, 'active'),
+              inArray(chatConversations.conversationType, ['open_chat', 'dm_user', 'shift_chat']),
+              supportConvIds.length > 0 ? notInArray(chatConversations.id, supportConvIds) : undefined,
+              or(
+                and(
+                  eq(chatParticipants.participantId, userId),
+                  eq(chatParticipants.isActive, true)
+                ),
+                inArray(chatConversations.visibility, ['public', 'workspace'])
+              )
+            );
+
         const generalRooms = await db
           .select({
             conversation: chatConversations,
@@ -486,26 +841,11 @@ router.get(
               eq(chatParticipants.isActive, true)
             )
           )
-          .where(
-            and(
-              eq(chatConversations.workspaceId, workspaceId),
-              eq(chatConversations.status, 'active'),
-              // Exclude shift chats and support chats
-              inArray(chatConversations.conversationType, ['open_chat', 'dm_user']),
-              or(
-                // User is an active participant
-                and(
-                  eq(chatParticipants.participantId, userId),
-                  eq(chatParticipants.isActive, true)
-                ),
-                // Room is public or workspace-visible
-                inArray(chatConversations.visibility, ['public', 'workspace'])
-              )
-            )
-          );
+          .where(generalRoomConditions);
 
         for (const item of generalRooms) {
           const conv = item.conversation;
+          if (!isPlatformAdmin && leftConversationIds.has(conv.id)) continue;
           // Count participants from chat participants
           const [countResult] = await db
             .select({ count: count() })
@@ -518,31 +858,62 @@ router.get(
             );
           const participantsCount = countResult?.count || 0;
 
-          // Determine room type (work vs meeting)
-          // If subject contains "meeting", "team", or explicit markers, type is 'meeting'
-          let roomType = 'work';
+          const isDMConversation = conv.conversationType === 'dm_user';
+          let roomType = isDMConversation ? 'dm' : 'work';
           if (
+            !isDMConversation &&
             conv.subject &&
             /meeting|stand.?up|team|sync|huddle/i.test(conv.subject)
           ) {
             roomType = 'meeting';
           }
 
+          const isShiftRoom = conv.conversationType === 'shift_chat';
+          
+          const preview = await getLastMessagePreview(conv.id);
+          const unreadCount = await getConversationUnreadCount(conv.id, userId!);
+
+          let displayName = conv.subject || 'Untitled';
+          if (isDMConversation) {
+            const otherParticipantId = conv.customerId === userId ? conv.supportAgentId : conv.customerId;
+            if (otherParticipantId) {
+              const [otherUser] = await db
+                .select({ firstName: users.firstName, lastName: users.lastName, email: users.email })
+                .from(users)
+                .where(eq(users.id, otherParticipantId))
+                .limit(1);
+              if (otherUser) {
+                displayName = `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim() || otherUser.email || 'User';
+              }
+            }
+          }
+
           rooms.push({
             roomId: conv.id,
-            name: conv.subject || 'Untitled',
-            slug: conv.id.toLowerCase().slice(0, 20), // Use ID prefix as slug for general rooms
+            name: displayName,
+            slug: conv.id.toLowerCase().slice(0, 20),
             type: roomType,
+            description: isShiftRoom 
+              ? 'Shift coordination chat - closes when shift ends'
+              : isDMConversation ? 'Direct message' : 'Team conversation',
             participantsCount,
             lastMessageAt: conv.lastMessageAt,
+            lastMessage: preview.lastMessage,
+            lastMessageSender: preview.lastMessageSender,
+            unreadCount,
             status: conv.status,
             roomType: 'conversation',
             isParticipant: !!item.participant,
             participantRole: item.participant?.participantRole || null,
+            isPlatformOwned: false,
+            isPersistent: false,
+            isDynamic: true,
+            isShiftRoom,
+            conversationType: conv.conversationType,
           });
         }
       } catch (error) {
-        console.error("[GET /api/chat/rooms] Error fetching general rooms:", error);
+        log.error("[GET /api/chat/rooms] Error fetching general rooms:", error);
       }
       } // End of workspaceId check for general rooms
 
@@ -558,8 +929,8 @@ router.get(
         rooms,
         totalRooms: rooms.length,
       });
-    } catch (error: any) {
-      console.error("[GET /api/chat/rooms] Error listing rooms:", error);
+    } catch (error: unknown) {
+      log.error("[GET /api/chat/rooms] Error listing rooms:", error);
       res.status(500).json({ error: "Failed to list rooms" });
     }
   }
@@ -631,7 +1002,7 @@ router.post(
           roomId,
           userId,
           userName,
-          authReq.workspaceRole || "employee",
+          authReq.workspaceRole || ROLES.EMPLOYEE,
           "user_joined",
           `${userName} joined the room`,
           { participantRole: invitation.participantRole },
@@ -689,7 +1060,7 @@ router.post(
           roomId,
           userId,
           userName,
-          authReq.workspaceRole || "employee",
+          authReq.workspaceRole || ROLES.EMPLOYEE,
           "user_rejoined",
           `${userName} rejoined the room`,
           { participantRole: previous.participantRole },
@@ -721,7 +1092,7 @@ router.post(
         roomId,
         userId,
         userName,
-        authReq.workspaceRole || "employee",
+        authReq.workspaceRole || ROLES.EMPLOYEE,
         "user_joined",
         `${userName} joined the room`,
         { participantRole: 'member' },
@@ -730,8 +1101,8 @@ router.post(
       );
 
       res.json({ success: true, message: "Joined room successfully" });
-    } catch (error: any) {
-      console.error("Error joining room:", error);
+    } catch (error: unknown) {
+      log.error("Error joining room:", error);
       res.status(500).json({ error: "Failed to join room" });
     }
   }
@@ -819,7 +1190,7 @@ router.post(
           participantRole: role || 'member',
           canSendMessages: true,
           canViewHistory: true,
-          canInviteOthers: role === 'admin',
+          canInviteOthers: role === 'org_admin' || role === 'org_owner' || role === 'co_owner',
           invitedBy: userId,
           isActive: true,
         });
@@ -834,7 +1205,7 @@ router.post(
           roomId,
           userId,
           userName,
-          authReq.workspaceRole || "employee",
+          authReq.workspaceRole || ROLES.EMPLOYEE,
           "participants_added",
           `${userName} added ${addedParticipants.length} participant(s)`,
           { participantIds: addedParticipants, role: role || 'member' },
@@ -848,8 +1219,8 @@ router.post(
         added: addedParticipants.length,
         message: `Added ${addedParticipants.length} participant(s)` 
       });
-    } catch (error: any) {
-      console.error("Error adding participants:", error);
+    } catch (error: unknown) {
+      log.error("Error adding participants:", error);
       res.status(500).json({ error: "Failed to add participants" });
     }
   }
@@ -935,7 +1306,7 @@ router.delete(
         roomId,
         userId,
         userName,
-        authReq.workspaceRole || "employee",
+        authReq.workspaceRole || ROLES.EMPLOYEE,
         isSelf ? "user_left" : "user_removed",
         isSelf 
           ? `${userName} left the room`
@@ -949,8 +1320,8 @@ router.delete(
       );
 
       res.json({ success: true, message: "Participant removed successfully" });
-    } catch (error: any) {
-      console.error("Error removing participant:", error);
+    } catch (error: unknown) {
+      log.error("Error removing participant:", error);
       res.status(500).json({ error: "Failed to remove participant" });
     }
   }
@@ -1046,7 +1417,7 @@ router.post(
             roomId,
             userId,
             userName,
-            authReq.workspaceRole || "employee",
+            authReq.workspaceRole || ROLES.EMPLOYEE,
             "user_joined",
             `${userName} joined the room`,
             {},
@@ -1059,10 +1430,10 @@ router.post(
             status: 'joined',
             message: 'Successfully joined room',
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           errors.push({
             roomId,
-            error: error.message || 'Failed to join room',
+            error: sanitizeError(error) || 'Failed to join room',
           });
         }
       }
@@ -1072,8 +1443,8 @@ router.post(
         results,
         errors: errors.length > 0 ? errors : undefined,
       });
-    } catch (error: any) {
-      console.error("Error bulk joining rooms:", error);
+    } catch (error: unknown) {
+      log.error("Error bulk joining rooms:", error);
       res.status(500).json({ error: "Failed to join rooms" });
     }
   }
@@ -1280,8 +1651,8 @@ router.get(
           timestamp: event.createdAt
         }))
       });
-    } catch (error: any) {
-      console.error("Error fetching room stats:", error);
+    } catch (error: unknown) {
+      log.error("Error fetching room stats:", error);
       res.status(500).json({ error: "Failed to fetch room statistics" });
     }
   }
@@ -1355,7 +1726,7 @@ router.patch(
 
       if (visibility && visibility !== conversation.visibility) {
         // Only workspace admin or owner can change visibility
-        if (!["owner", "admin"].includes(authReq.workspaceRole || "")) {
+        if (!(ADMIN_ROLES as readonly string[]).includes(authReq.workspaceRole || "")) {
           return res.status(403).json({ error: "Only workspace admins can change visibility" });
         }
         updateData.visibility = visibility;
@@ -1389,7 +1760,7 @@ router.patch(
         roomId,
         userId,
         userName,
-        authReq.workspaceRole || "employee",
+        authReq.workspaceRole || ROLES.EMPLOYEE,
         "room_settings_updated",
         `${userName} updated room settings: ${changes.join(', ')}`,
         updateData,
@@ -1403,8 +1774,8 @@ router.patch(
         changes: changes.length,
         updatedFields: Object.keys(updateData)
       });
-    } catch (error: any) {
-      console.error("Error updating room:", error);
+    } catch (error: unknown) {
+      log.error("Error updating room:", error);
       res.status(500).json({ error: "Failed to update room" });
     }
   }
@@ -1431,55 +1802,63 @@ router.delete(
         return res.status(403).json({ error: "No workspace context" });
       }
 
-      // Get conversation with multi-tenant filtering
-      const [conversation] = await db
-        .select()
-        .from(chatConversations)
-        .where(
-          and(
-            eq(chatConversations.id, roomId),
-            eq(chatConversations.workspaceId, workspaceId)
-          )
-        )
-        .limit(1);
-
-      if (!conversation) {
+      const resolved = await resolveRoomToConversationId(roomId, workspaceId);
+      if (!resolved) {
         return res.status(404).json({ error: "Room not found" });
       }
 
-      // Check permissions - only workspace admin or room owner can delete
-      const canManage = await canManageRoom(roomId, userId, workspaceId, authReq.workspaceRole);
-      const isWorkspaceAdmin = ["owner", "admin"].includes(authReq.workspaceRole || "");
+      const conversationId = resolved.conversationId;
 
-      if (!canManage && !isWorkspaceAdmin) {
+      const [conversation] = await db
+        .select()
+        .from(chatConversations)
+        .where(eq(chatConversations.id, conversationId))
+        .limit(1);
+
+      const isWorkspaceAdmin = (ADMIN_ROLES as readonly string[]).includes(authReq.workspaceRole || "");
+      const user = authReq.user as any;
+      const platformRole = user.platformRole || user.role;
+      const { hasPlatformWideAccess } = await import('../rbac');
+
+      if (!conversation) {
+        if (!isWorkspaceAdmin && !hasPlatformWideAccess(platformRole)) {
+          return res.status(403).json({ error: "Only workspace admins can clean up orphaned rooms" });
+        }
+        if (resolved.roomType === 'org') {
+          await db.delete(organizationRoomMembers).where(eq(organizationRoomMembers.roomId, roomId));
+          await db.delete(organizationChatRooms).where(eq(organizationChatRooms.id, roomId));
+        }
+        return res.json({
+          success: true,
+          message: "Orphaned room cleaned up successfully",
+          deletedRoom: { id: roomId, name: 'Orphaned Room', participantCount: 0 }
+        });
+      }
+
+      const canManage = await canManageRoom(conversationId, userId, workspaceId, authReq.workspaceRole);
+
+      if (!canManage && !isWorkspaceAdmin && !hasPlatformWideAccess(platformRole)) {
         return res.status(403).json({ error: "Only workspace admins or room owners can delete rooms" });
       }
 
-      // Store room info for audit
       const roomName = conversation.subject || 'Untitled Room';
       const participantCount = (await db
         .select({ count: count() })
         .from(chatParticipants)
-        .where(eq(chatParticipants.conversationId, roomId)))[0]?.count || 0;
+        .where(eq(chatParticipants.conversationId, conversationId)))[0]?.count || 0;
 
-      // Delete associated data (cascaded via foreign keys)
-      // But we'll manually handle this to ensure consistency
-      
-      // 1. Delete room events
       await db
         .delete(roomEvents)
-        .where(eq(roomEvents.conversationId, roomId));
+        .where(eq(roomEvents.conversationId, conversationId));
 
-      // 2. Delete typing indicators
       await db
         .delete(typingIndicators)
-        .where(eq(typingIndicators.conversationId, roomId));
+        .where(eq(typingIndicators.conversationId, conversationId));
 
-      // 3. Delete message reactions
       const messages = await db
         .select({ id: chatMessages.id })
         .from(chatMessages)
-        .where(eq(chatMessages.conversationId, roomId));
+        .where(eq(chatMessages.conversationId, conversationId));
 
       if (messages.length > 0) {
         const messageIds = messages.map(m => m.id);
@@ -1488,39 +1867,56 @@ router.delete(
           .where(inArray(messageReactions.messageId, messageIds));
       }
 
-      // 4. Delete messages
       await db
         .delete(chatMessages)
-        .where(eq(chatMessages.conversationId, roomId));
+        .where(eq(chatMessages.conversationId, conversationId));
 
-      // 5. Delete participants
       await db
         .delete(chatParticipants)
-        .where(eq(chatParticipants.conversationId, roomId));
+        .where(eq(chatParticipants.conversationId, conversationId));
 
-      // 6. Delete the conversation
+      if (resolved.roomType === 'org') {
+        await db
+          .delete(organizationRoomMembers)
+          .where(eq(organizationRoomMembers.roomId, roomId));
+        await db
+          .delete(organizationChatRooms)
+          .where(eq(organizationChatRooms.id, roomId));
+      }
+
       await db
         .delete(chatConversations)
-        .where(eq(chatConversations.id, roomId));
+        .where(eq(chatConversations.id, conversationId));
 
-      // Create audit event for deletion
-      await createRoomEvent(
-        workspaceId,
+      try {
+        await createRoomEvent(
+          workspaceId,
+          conversationId,
+          userId,
+          userName,
+          authReq.workspaceRole || ROLES.EMPLOYEE,
+          "room_deleted",
+          `${userName} deleted room: ${roomName} (${participantCount} participants)`,
+          {
+            roomName,
+            participantCount,
+            conversationType: conversation.conversationType,
+            visibility: conversation.visibility
+          },
+          authReq.ip,
+          authReq.get("user-agent")
+        );
+      } catch (auditErr) {
+        log.warn("[Room Delete] Audit event failed (room already deleted):", auditErr);
+      }
+
+      broadcastToWorkspace(workspaceId, {
+        type: 'room_deleted',
         roomId,
-        userId,
-        userName,
-        authReq.workspaceRole || "employee",
-        "room_deleted",
-        `${userName} deleted room: ${roomName} (${participantCount} participants)`,
-        {
-          roomName,
-          participantCount,
-          conversationType: conversation.conversationType,
-          visibility: conversation.visibility
-        },
-        authReq.ip,
-        authReq.get("user-agent")
-      );
+        conversationId,
+        roomName,
+        deletedBy: userId,
+      });
 
       res.json({
         success: true,
@@ -1531,8 +1927,8 @@ router.delete(
           participantCount
         }
       });
-    } catch (error: any) {
-      console.error("Error deleting room:", error);
+    } catch (error: unknown) {
+      log.error("Error deleting room:", error);
       res.status(500).json({ error: "Failed to delete room" });
     }
   }
@@ -1662,8 +2058,8 @@ router.get(
           statusFilter: statusFilter || 'all',
         }
       });
-    } catch (error: any) {
-      console.error("[GET /api/chat/rooms/platform/all] Error:", error);
+    } catch (error: unknown) {
+      log.error("[GET /api/chat/rooms/platform/all] Error:", error);
       res.status(500).json({ error: "Failed to list platform rooms" });
     }
   }
@@ -1768,9 +2164,173 @@ router.post(
           reason,
         }
       });
-    } catch (error: any) {
-      console.error("Error moderating room:", error);
+    } catch (error: unknown) {
+      log.error("Error moderating room:", error);
       res.status(500).json({ error: "Failed to moderate room" });
+    }
+  }
+);
+
+// ============================================================================
+// CLOSE ROOM - POST /api/chat/rooms/:roomId/close (Manager+ Only)
+// ============================================================================
+// Allows org owners and managers to force-close a room using 7-step pipeline
+router.post(
+  "/:roomId/close",
+  roomLimiter,
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const { roomId } = req.params;
+      const { reason } = req.body;
+      const userId = authReq.user?.id;
+      const workspaceId = authReq.workspaceId;
+
+      if (!userId) {
+        return res.status(403).json({ error: "Authentication required" });
+      }
+
+      if (!workspaceId) {
+        return res.status(403).json({ error: "Organization membership required" });
+      }
+
+      const resolved = await resolveRoomToConversationId(roomId, workspaceId);
+      if (!resolved) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      const user = authReq.user as any;
+      const { hasManagerAccess } = await import('../rbac');
+      const workspaceRole = authReq.workspaceRole || user.workspaceRole || 'employee';
+      
+      const platformRole = user.platformRole || user.role;
+      const { hasPlatformWideAccess } = await import('../rbac');
+
+      if (resolved.roomType === 'support') {
+        if (!hasPlatformWideAccess(platformRole)) {
+          return res.status(403).json({ error: "Only support staff can close platform channels" });
+        }
+      } else if (!hasManagerAccess(workspaceRole) && !hasPlatformWideAccess(platformRole)) {
+        return res.status(403).json({ error: "Manager or higher role required to close rooms" });
+      }
+
+      const userName = user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.email || "Manager";
+
+      const { closeRoom } = await import('../services/roomLifecycleService');
+      const result = await closeRoom({
+        roomId: resolved.conversationId,
+        workspaceId,
+        actorId: userId,
+        actorName: userName,
+        actorRole: workspaceRole,
+        reason: reason || undefined,
+        initiatorType: 'user',
+        ipAddress: authReq.ip,
+        userAgent: authReq.get("user-agent"),
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      if (resolved.roomType === 'org') {
+        await db.update(organizationChatRooms)
+          .set({ status: 'suspended', suspendedReason: reason || 'Closed by manager' })
+          .where(eq(organizationChatRooms.id, roomId));
+      }
+
+      res.json({
+        success: true,
+        message: "Room closed successfully",
+        ...result.result,
+      });
+    } catch (error: unknown) {
+      log.error("Error closing room:", error);
+      res.status(500).json({ error: "Failed to close room" });
+    }
+  }
+);
+
+// ============================================================================
+// REOPEN ROOM - POST /api/chat/rooms/:roomId/reopen (Manager+ Only)
+// ============================================================================
+// Allows org owners and managers to reopen a closed room using 7-step pipeline
+router.post(
+  "/:roomId/reopen",
+  roomLimiter,
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const { roomId } = req.params;
+      const { reason } = req.body;
+      const userId = authReq.user?.id;
+      const workspaceId = authReq.workspaceId;
+
+      if (!userId) {
+        return res.status(403).json({ error: "Authentication required" });
+      }
+
+      if (!workspaceId) {
+        return res.status(403).json({ error: "Organization membership required" });
+      }
+
+      const resolved = await resolveRoomToConversationId(roomId, workspaceId);
+      if (!resolved) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      const user = authReq.user as any;
+      const { hasManagerAccess } = await import('../rbac');
+      const workspaceRole = authReq.workspaceRole || user.workspaceRole || 'employee';
+      
+      const platformRole = user.platformRole || user.role;
+      const { hasPlatformWideAccess } = await import('../rbac');
+
+      if (resolved.roomType === 'support') {
+        if (!hasPlatformWideAccess(platformRole)) {
+          return res.status(403).json({ error: "Only support staff can reopen platform channels" });
+        }
+      } else if (!hasManagerAccess(workspaceRole) && !hasPlatformWideAccess(platformRole)) {
+        return res.status(403).json({ error: "Manager or higher role required to reopen rooms" });
+      }
+
+      const userName = user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user.email || "Manager";
+
+      const { reopenRoom } = await import('../services/roomLifecycleService');
+      const result = await reopenRoom({
+        roomId: resolved.conversationId,
+        workspaceId,
+        actorId: userId,
+        actorName: userName,
+        actorRole: workspaceRole,
+        reason: reason || undefined,
+        initiatorType: 'user',
+        ipAddress: authReq.ip,
+        userAgent: authReq.get("user-agent"),
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      if (resolved.roomType === 'org') {
+        await db.update(organizationChatRooms)
+          .set({ status: 'active', suspendedReason: null, suspendedAt: null, suspendedBy: null })
+          .where(eq(organizationChatRooms.id, roomId));
+      }
+
+      res.json({
+        success: true,
+        message: "Room reopened successfully",
+        ...result.result,
+      });
+    } catch (error: unknown) {
+      log.error("Error reopening room:", error);
+      res.status(500).json({ error: "Failed to reopen room" });
     }
   }
 );
@@ -1792,9 +2352,6 @@ router.get(
         return res.status(403).json({ error: "Support staff access required" });
       }
 
-      // Import workspaces table
-      const { workspaces } = await import("@shared/schema");
-
       const workspacesList = await db
         .select({
           id: workspaces.id,
@@ -1808,8 +2365,8 @@ router.get(
         success: true,
         workspaces: workspacesList,
       });
-    } catch (error: any) {
-      console.error("Error fetching workspaces:", error);
+    } catch (error: unknown) {
+      log.error("Error fetching workspaces:", error);
       res.status(500).json({ error: "Failed to fetch workspaces" });
     }
   }
@@ -1829,8 +2386,6 @@ router.get(
       if (!platformRole || !supportRoles.includes(platformRole)) {
         return res.status(403).json({ error: "Support staff access required" });
       }
-
-      const { workspaces } = await import("@shared/schema");
 
       const rooms = await db
         .select({
@@ -1866,9 +2421,87 @@ router.get(
       );
 
       res.json({ success: true, rooms: roomsWithDetails });
-    } catch (error: any) {
-      console.error("Error fetching all org chatrooms:", error);
+    } catch (error: unknown) {
+      log.error("Error fetching all org chatrooms:", error);
       res.status(500).json({ error: "Failed to fetch chatrooms" });
+    }
+  }
+);
+
+// ============================================================================
+// HELPAI TICKET CHECK - GET /api/chat/rooms/:roomId/tickets (Check open tickets on room entry)
+// ============================================================================
+router.get(
+  "/:roomId/tickets",
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
+    const { roomId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { helpAIBotService } = await import("../services/helpai/helpAIBotService");
+      
+      const workspaceId = authReq.workspaceId;
+      const ticketResult = await helpAIBotService.checkOpenTicketsForUser(userId, workspaceId);
+      
+      res.json({
+        success: true,
+        roomId,
+        hasOpenTickets: ticketResult.hasOpenTickets,
+        tickets: ticketResult.tickets,
+        greeting: ticketResult.message,
+      });
+    } catch (error: unknown) {
+      log.error("Error checking tickets:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to check tickets",
+        greeting: "Welcome! How can I help you today?"
+      });
+    }
+  }
+);
+
+// ============================================================================
+// HELPAI USER ROLE VERIFICATION - GET /api/chat/rooms/:roomId/verify-role
+// ============================================================================
+router.get(
+  "/:roomId/verify-role",
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId;
+    const workspaceId = authReq.workspaceId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { helpAIBotService } = await import("../services/helpai/helpAIBotService");
+      
+      if (!workspaceId) {
+        return res.status(400).json({ success: false, error: 'workspaceId required for role verification' });
+      }
+      const roleResult = await helpAIBotService.verifyUserOrgRole(userId, workspaceId);
+      
+      res.json({
+        success: true,
+        ...roleResult,
+      });
+    } catch (error: unknown) {
+      log.error("Error verifying role:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to verify role",
+        isVerified: false,
+        role: null,
+        canAccessQueue: false,
+        canEscalate: false,
+      });
     }
   }
 );
@@ -1921,9 +2554,172 @@ router.get(
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="chat-export-${roomId}-${Date.now()}.json"`);
       res.json(exportData);
-    } catch (error: any) {
-      console.error("Error exporting chat history:", error);
+    } catch (error: unknown) {
+      log.error("Error exporting chat history:", error);
       res.status(500).json({ error: "Failed to export chat history" });
+    }
+  }
+);
+
+// ============================================================================
+// NUKE ROOM - POST /api/chat/rooms/:roomId/nuke (Platform Staff Only)
+// Archives all messages, removes participants, resets room to clean state
+// ============================================================================
+router.post(
+  "/:roomId/nuke",
+  async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.userId;
+      const userPlatformRole = authReq.platformRole;
+
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const platformStaffRoles = ['root_admin', 'deputy_admin', 'sysop', 'platform_admin'];
+      if (!platformStaffRoles.includes(userPlatformRole || '')) {
+        return res.status(403).json({ error: "Only platform staff (root/deputy_admin) can nuke rooms" });
+      }
+
+      const { roomId } = req.params;
+      const { reason } = req.body;
+
+      if (!reason) {
+        return res.status(400).json({ error: "Reason is required for room nuke" });
+      }
+
+      const [room] = await db
+        .select({ workspaceId: chatConversations.workspaceId })
+        .from(chatConversations)
+        .where(eq(chatConversations.id, roomId))
+        .limit(1);
+
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      const { chatParityService } = await import('../services/chatParityService');
+
+      const nukeResult = await chatParityService.nukeRoom(roomId, room.workspaceId, userId, reason);
+
+      if (nukeResult.success) {
+        res.json({
+          message: "Room nuked and reset successfully",
+          archivedMessageCount: nukeResult.archivedMessageCount,
+        });
+      } else {
+        res.status(500).json({ error: "Failed to nuke room" });
+      }
+    } catch (error: unknown) {
+      log.error("Error nuking room:", error);
+      res.status(500).json({ error: "Failed to nuke room" });
+    }
+  }
+);
+
+// ============================================================================
+// CLOSE WITH MUTE - POST /api/chat/rooms/:roomId/close-with-mute
+// Closes conversation and mutes end users (agent/management only)
+// ============================================================================
+router.post(
+  "/:roomId/close-with-mute",
+  async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.userId;
+
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { roomId } = req.params;
+      const { reason } = req.body;
+
+      const [room] = await db
+        .select({ workspaceId: chatConversations.workspaceId })
+        .from(chatConversations)
+        .where(eq(chatConversations.id, roomId))
+        .limit(1);
+
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      const [user] = await db
+        .select({ firstName: users.firstName, lastName: users.lastName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown';
+
+      const { chatParityService } = await import('../services/chatParityService');
+      const result = await chatParityService.closeConversationWithMute(
+        roomId, room.workspaceId, userId, actorName, reason
+      );
+
+      if (result.success) {
+        res.json({ message: "Conversation closed and end users muted" });
+      } else {
+        res.status(500).json({ error: result.error || "Failed to close conversation" });
+      }
+    } catch (error: unknown) {
+      log.error("Error closing with mute:", error);
+      res.status(500).json({ error: "Failed to close conversation" });
+    }
+  }
+);
+
+// ============================================================================
+// SYSTEM BUG ESCALATION - POST /api/chat/rooms/escalate-system-bug
+// Escalates system bugs directly to root/deputy_root
+// ============================================================================
+router.post(
+  "/escalate-system-bug",
+  async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.userId;
+
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const workspaceId = authReq.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "No workspace found" });
+
+      const { description, errorContext, sessionId, conversationId } = req.body;
+
+      if (!description) {
+        return res.status(400).json({ error: "Description is required" });
+      }
+
+      const [user] = await db
+        .select({ firstName: users.firstName, lastName: users.lastName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown';
+
+      const { chatParityService } = await import('../services/chatParityService');
+      const result = await chatParityService.escalateSystemBug({
+        workspaceId,
+        reportedBy: userId,
+        reportedByName: userName,
+        description,
+        errorContext,
+        sessionId,
+        conversationId,
+      });
+
+      if (result) {
+        res.json({
+          message: "System bug escalated to root administrators",
+          ticketNumber: result.ticketNumber,
+          ticketId: result.ticketId,
+        });
+      } else {
+        res.status(500).json({ error: "Failed to create escalation ticket" });
+      }
+    } catch (error: unknown) {
+      log.error("Error escalating system bug:", error);
+      res.status(500).json({ error: "Failed to escalate system bug" });
     }
   }
 );

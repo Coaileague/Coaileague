@@ -9,8 +9,7 @@
 import { useEffect, useCallback } from 'react';
 import { thoughtManager, type TrinityNotificationCallback } from '@/lib/mascot/ThoughtManager';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface UseTrinityNotificationRoutingOptions {
   enabled?: boolean;

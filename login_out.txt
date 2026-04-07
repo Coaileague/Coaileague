@@ -1,0 +1,31 @@
+HTTP/1.1 200 OK
+X-Request-ID: 156486e3-e252-46da-abbd-51ace6799eb7
+Content-Security-Policy: default-src 'self';script-src 'self' 'unsafe-inline' https://unpkg.com;style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com;font-src 'self' https://fonts.gstatic.com;img-src 'self' data: blob: https: https://*.tile.openstreetmap.org;connect-src 'self' wss: https://api.resend.com https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://*.replit.dev https://*.replit.app https://*.repl.co;media-src 'self' blob:;worker-src 'self' blob:;frame-src 'self' https:;frame-ancestors 'self' https://*.replit.dev https://*.replit.app https://*.repl.co;object-src 'none';base-uri 'self';form-action 'self';upgrade-insecure-requests;script-src-attr 'none'
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: cross-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin, Accept-Encoding
+Access-Control-Allow-Credentials: true
+x-trace-id: a3ba141b0fed417d8a6402719c601861
+X-RateLimit-Remaining: 273
+X-RateLimit-Reset: 1774768075
+X-RateLimit-Burst-Remaining: 50
+RateLimit-Policy: 1000;w=900
+RateLimit-Limit: 1000
+RateLimit-Remaining: 875
+RateLimit-Reset: 444
+Content-Type: application/json; charset=utf-8
+Content-Length: 328
+ETag: W/"148-AE/au23KA7DdULxy+INjjuE9lOw"
+Date: Sun, 29 Mar 2026 07:07:17 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"message":"Dev login successful","csrfToken":"ad255b59d1f3f6c2ef2fc3dbe0b187bd9a1c5e48b291ff8ff62fc3e4e5a74e5c","user":{"id":"dev-owner-001","email":"owner@acme-security.test","firstName":"Marcus","lastName":"Rivera","role":"platform-admin","emailVerified":true,"platformRole":null,"currentWorkspaceId":"dev-acme-security-ws"}}

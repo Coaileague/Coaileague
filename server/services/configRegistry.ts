@@ -9,6 +9,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { featureToggles } from '@shared/config/featureToggles';
 import { emitFeatureToggleChange } from '../../shared/config/featureToggleAccess';
+import { createLogger } from '../lib/logger';
+const log = createLogger('configRegistry');
+
 
 // ============================================================================
 // ZOD SCHEMAS FOR VALIDATION
@@ -66,7 +69,7 @@ class ConfigRegistry {
       this.cache = { ...freshConfig };
       return this.cache;
     } catch (error) {
-      console.error('[ConfigRegistry] Failed to load config:', error);
+      log.error('[ConfigRegistry] Failed to load config:', error);
       throw new Error('Failed to load configuration');
     }
   }
@@ -153,7 +156,7 @@ class ConfigRegistry {
     // Emit change event to notify subscribers
     emitFeatureToggleChange();
     
-    console.log(`[ConfigRegistry] Successfully applied ${changes.length} changes`);
+    log.info(`[ConfigRegistry] Successfully applied ${changes.length} changes`);
   }
 
   /**
@@ -171,9 +174,9 @@ class ConfigRegistry {
       // Write to file
       await fs.writeFile(this.configFilePath, fileContent, 'utf-8');
 
-      console.log(`[ConfigRegistry] Successfully persisted config to ${this.configFilePath}`);
+      log.info(`[ConfigRegistry] Successfully persisted config to ${this.configFilePath}`);
     } catch (error) {
-      console.error('[ConfigRegistry] Failed to persist config:', error);
+      log.error('[ConfigRegistry] Failed to persist config:', error);
       throw new Error('Failed to persist configuration changes');
     }
   }

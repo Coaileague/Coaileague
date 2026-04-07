@@ -27,7 +27,7 @@ export const FEATURE_TOGGLES = {
   core: {
     scheduling: true,
     timeTracking: true,
-    payroll: false,
+    payroll: true,
     billing: true,
     invoicing: true,
     employees: true,

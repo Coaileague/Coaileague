@@ -6,18 +6,22 @@ import crypto from "crypto";
 import type { Express, RequestHandler } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { db } from "./db";
-import { users } from "@shared/schema";
+import { db, isDbCircuitOpen } from "./db";
+import { users, authSessions } from "@shared/schema";
 import { eq, and, gt } from "drizzle-orm";
-import "./types"; // Import session type extensions
+import "./types";
 import { trinityOrchestration } from "./services/trinity/trinityOrchestrationAdapter";
+import { createLogger } from './lib/logger';
+import { AUTH } from './config/platformConfig';
+
+const log = createLogger('auth');
 
 // ============================================================================
 // Password Security
 // ============================================================================
 
 const SALT_ROUNDS = 12; // High security, slower hashing
-const MAX_LOGIN_ATTEMPTS = 5;
+const MAX_LOGIN_ATTEMPTS = AUTH.maxLoginAttempts;
 const LOCK_DURATION_MINUTES = 15;
 
 export async function hashPassword(password: string): Promise<string> {
@@ -135,6 +139,7 @@ export async function recordFailedLogin(userId: string): Promise<void> {
     const lockUntil = new Date();
     lockUntil.setMinutes(lockUntil.getMinutes() + LOCK_DURATION_MINUTES);
     updates.lockedUntil = lockUntil;
+    log.warn(`[Auth] ACCOUNT LOCKED: userId=${userId} after ${attempts} failed attempts — locked until ${lockUntil.toISOString()}`);
   }
 
   await db.update(users).set(updates).where(eq(users.id, userId));
@@ -156,24 +161,135 @@ export async function recordSuccessfulLogin(userId: string): Promise<void> {
 // Session Management
 // ============================================================================
 
+/**
+ * FaultTolerantSessionStore wraps connect-pg-simple with a hard timeout.
+ * When the DB is unavailable, store operations resolve immediately (returning
+ * null for get, no-op for set/destroy) so requests are never blocked.
+ * Timeout is intentionally short: 1500ms.
+ *
+ * Includes an in-memory LRU-style cache so sessions survive 30-second DB
+ * circuit-breaker outages without forcing users to re-login.
+ * Cache: max 1000 entries, 15-minute TTL, pruned every 5 minutes.
+ */
+interface CacheEntry { data: session.SessionData; expiresAt: number; }
+
+class FaultTolerantStore extends session.Store {
+  private inner: any;
+  private timeoutMs: number;
+  private cache = new Map<string, CacheEntry>();
+  private readonly CACHE_TTL_MS = 15 * 60 * 1000;
+  private readonly CACHE_MAX = 1000;
+
+  constructor(inner: any, timeoutMs = 1500) {
+    super();
+    this.inner = inner;
+    this.timeoutMs = timeoutMs;
+    setInterval(() => this.pruneCache(), 5 * 60 * 1000).unref();
+  }
+
+  private pruneCache(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.expiresAt <= now) this.cache.delete(key);
+    }
+  }
+
+  private cacheSet(sid: string, data: session.SessionData): void {
+    if (this.cache.size >= this.CACHE_MAX) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) this.cache.delete(firstKey);
+    }
+    this.cache.set(sid, { data, expiresAt: Date.now() + this.CACHE_TTL_MS });
+  }
+
+  private cacheGet(sid: string): session.SessionData | undefined {
+    const entry = this.cache.get(sid);
+    if (!entry) return undefined;
+    if (entry.expiresAt <= Date.now()) { this.cache.delete(sid); return undefined; }
+    return entry.data;
+  }
+
+  private withTimeout<T>(
+    fn: (cb: (err: any, result?: T) => void) => void,
+    cb: (err: any, result?: T) => void
+  ): void {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true;
+        cb(null, undefined); // graceful no-op on timeout
+      }
+    }, this.timeoutMs);
+
+    fn((err, result) => {
+      if (!done) {
+        done = true;
+        clearTimeout(timer);
+        cb(err, result);
+      }
+    });
+  }
+
+  get(sid: string, cb: (err: any, session?: session.SessionData | null) => void): void {
+    this.withTimeout<session.SessionData | null>(
+      (done) => this.inner.get(sid, done),
+      (err, result) => {
+        if (result) {
+          this.cacheSet(sid, result);
+          cb(err, result);
+        } else {
+          const cached = this.cacheGet(sid);
+          cb(null, cached ?? null);
+        }
+      }
+    );
+  }
+
+  set(sid: string, sess: session.SessionData, cb?: (err?: any) => void): void {
+    this.cacheSet(sid, sess);
+    this.withTimeout(
+      (done) => this.inner.set(sid, sess, done),
+      (err) => cb?.(err)
+    );
+  }
+
+  destroy(sid: string, cb?: (err?: any) => void): void {
+    this.cache.delete(sid);
+    this.withTimeout(
+      (done) => this.inner.destroy(sid, done),
+      (err) => cb?.(err)
+    );
+  }
+
+  touch(sid: string, sess: session.SessionData, cb?: () => void): void {
+    this.cacheSet(sid, sess);
+    if (typeof this.inner.touch === 'function') {
+      this.withTimeout(
+        (done) => this.inner.touch(sid, sess, done),
+        () => cb?.()
+      );
+    } else {
+      cb?.();
+    }
+  }
+}
+
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
+  const sessionTtl = AUTH.sessionTtlMs; // 1 week
+  const PgStore = connectPg(session);
+  const pgStoreInstance = new PgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
   });
 
-  // Detect if running behind a TLS-terminating reverse proxy (Replit, Railway,
-  // Render, Heroku, Vercel, etc. all front the app with HTTPS). When true,
-  // session cookies must be `secure: true` and Express must trust the proxy.
-  const isReplit = !!process.env.REPLIT_DOMAINS || !!process.env.REPL_ID;
-  const isRailway = !!process.env.RAILWAY_ENVIRONMENT || !!process.env.RAILWAY_PUBLIC_DOMAIN;
-  const isProduction = process.env.NODE_ENV === "production";
-  const behindHttpsProxy = isReplit || isRailway || isProduction;
+  const sessionStore = new FaultTolerantStore(pgStoreInstance, 1500);
 
+  // Detect if running on Replit (always HTTPS) or locally
+  const isReplit = !!process.env.REPLIT_DOMAINS || !!process.env.REPL_ID;
+  const isProduction = process.env.NODE_ENV === "production";
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -181,13 +297,13 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      // All hosted environments terminate TLS upstream — cookies must be Secure
-      secure: behindHttpsProxy,
+      // Replit always uses HTTPS, so secure should be true when on Replit
+      secure: isReplit || isProduction,
       maxAge: sessionTtl,
-      sameSite: "lax",
+      sameSite: "strict",
     },
-    // Trust upstream reverse proxy so req.secure / req.ip are honest
-    proxy: behindHttpsProxy,
+    // Trust proxy for Replit's reverse proxy
+    proxy: isReplit,
   } as any);
 }
 
@@ -196,6 +312,128 @@ export function getSession() {
 // ============================================================================
 
 const TEST_MODE_SECRET = process.env.DIAG_BYPASS_SECRET || process.env.TEST_MODE_SECRET;
+// Playwright test key for development E2E testing - only works in development
+const PLAYWRIGHT_TEST_KEY = process.env.PLAYWRIGHT_TEST_KEY;
+const IS_DEVELOPMENT = process.env.NODE_ENV !== 'production';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// ============================================================================
+// Trinity Bot / System Actor Bypass
+// ============================================================================
+//
+// Allows Trinity autonomous pipelines (cron jobs, event handlers, subagents)
+// to make authenticated internal HTTP calls without a human user session.
+// The token is an HMAC secret stored in TRINITY_BOT_TOKEN env var.
+//
+// Header: x-trinity-bot-token
+// Identity set on the request: platformRole='Bot', isTrinityBot=true
+// Works in all environments (unlike x-test-key which is dev-only).
+// Routes that should accept Bot actors must include 'Bot' in their
+// requirePlatformRole([...]) allowed-roles list.
+//
+const TRINITY_BOT_TOKEN = process.env.TRINITY_BOT_TOKEN;
+
+function validateTrinityBotToken(token: string | undefined): boolean {
+  if (!token || !TRINITY_BOT_TOKEN) return false;
+  try {
+    const a = Buffer.from(token);
+    const b = Buffer.from(TRINITY_BOT_TOKEN);
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+// Synthetic Bot user record attached to req.user when the bot bypass fires.
+// It has no real DB row — it is only used within the request lifecycle.
+const TRINITY_BOT_USER = {
+  id: 'trinity-bot-system',
+  email: 'system@trinity.internal',
+  firstName: 'Trinity',
+  lastName: 'Bot',
+  role: 'Bot',
+  emailVerified: true,
+  workspaceId: null,
+  currentWorkspaceId: null,
+  platformRole: 'Bot',
+  employeeId: null,
+} as const;
+
+// Dev bypass identifiers — Acme Security sandbox org (DFW, TX)
+// Used for all test/diagnostic access in development only
+const TEST_MODE_USER_ID = 'dev-owner-001';
+const TEST_MODE_WORKSPACE_ID = 'dev-acme-security-ws';
+const TEST_MODE_EMPLOYEE_ID = 'dev-acme-emp-004';
+
+// Rate limiting for test mode access
+interface TestModeRateLimitEntry {
+  count: number;
+  windowStart: number;
+}
+const testModeRateLimits = new Map<string, TestModeRateLimitEntry>();
+const TEST_MODE_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
+const TEST_MODE_RATE_LIMIT_MAX_REQUESTS = AUTH.testModeRateLimitMax; // Max requests per minute per IP
+
+// Auth failure tracking by IP
+const authFailuresByIp = new Map<string, { count: number; lastFailure: number }>();
+const IP_AUTH_FAILURE_THRESHOLD = 20; // Alert if 20 failures from same IP
+const IP_AUTH_FAILURE_WINDOW = 60 * 60 * 1000; // 1 hour window
+
+/**
+ * Record a failed login attempt from an IP address
+ */
+export function recordIpAuthFailure(ip: string): void {
+  const now = Date.now();
+  const entry = authFailuresByIp.get(ip) || { count: 0, lastFailure: now };
+  
+  if (now - entry.lastFailure > IP_AUTH_FAILURE_WINDOW) {
+    entry.count = 1;
+  } else {
+    entry.count++;
+  }
+  entry.lastFailure = now;
+  authFailuresByIp.set(ip, entry);
+
+  if (entry.count >= IP_AUTH_FAILURE_THRESHOLD) {
+    log.error(`[Auth] CRITICAL ALERT: Repeated auth failures from same IP (${ip}): ${entry.count} attempts in the last hour`);
+  }
+}
+
+/**
+ * Check rate limit for test mode access
+ */
+function checkTestModeRateLimit(ipAddress: string): { allowed: boolean; remaining: number } {
+  // In development the bypass is used by agents and automated tests — no rate cap.
+  if (IS_DEVELOPMENT) {
+    return { allowed: true, remaining: 9999 };
+  }
+
+  const now = Date.now();
+  const entry = testModeRateLimits.get(ipAddress);
+
+  if (!entry || now - entry.windowStart > TEST_MODE_RATE_LIMIT_WINDOW_MS) {
+    testModeRateLimits.set(ipAddress, { count: 1, windowStart: now });
+    return { allowed: true, remaining: TEST_MODE_RATE_LIMIT_MAX_REQUESTS - 1 };
+  }
+
+  if (entry.count >= TEST_MODE_RATE_LIMIT_MAX_REQUESTS) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  entry.count++;
+  return { allowed: true, remaining: TEST_MODE_RATE_LIMIT_MAX_REQUESTS - entry.count };
+}
+
+// Clean up old rate limit entries periodically (every 5 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of testModeRateLimits.entries()) {
+    if (now - entry.windowStart > TEST_MODE_RATE_LIMIT_WINDOW_MS * 2) {
+      testModeRateLimits.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
 
 interface TestModeContext {
   isTestMode: boolean;
@@ -219,11 +457,24 @@ const TEST_MODE_ALLOWED_ROUTES = [
 /**
  * Validate x-test-key header for crawler/diagnostic access
  * Returns true if the key is valid and test mode should be enabled
+ * Supports both DIAG_BYPASS_SECRET (production) and PLAYWRIGHT_TEST_KEY (development)
  */
 export function validateTestKey(testKey: string | undefined): boolean {
-  if (!testKey || !TEST_MODE_SECRET) {
+  if (!testKey) {
     return false;
   }
+  
+  // Check playwright test key first (development only)
+  if (IS_DEVELOPMENT && PLAYWRIGHT_TEST_KEY && testKey === PLAYWRIGHT_TEST_KEY) {
+    log.info('Playwright test key validated for development testing');
+    return true;
+  }
+  
+  // Check diagnostic bypass secret
+  if (!TEST_MODE_SECRET) {
+    return false;
+  }
+  
   // Use timing-safe comparison to prevent timing attacks
   try {
     const keyBuffer = Buffer.from(testKey);
@@ -242,67 +493,179 @@ export function validateTestKey(testKey: string | undefined): boolean {
 // ============================================================================
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
-  const endpoint = req.path;
+  try {
+  const endpoint = req.originalUrl?.split('?')[0] || req.path;
   const method = req.method;
-  const ipAddress = req.ip || req.socket?.remoteAddress;
+  const ipAddress = req.ip || req.socket?.remoteAddress || 'unknown';
+  const userAgent = req.get('user-agent') || 'unknown';
 
   // Check for test mode (x-test-key header) - allows crawlers to bypass auth
   const testKey = req.get('x-test-key');
-  if (validateTestKey(testKey)) {
+
+  if (testKey && validateTestKey(testKey)) {
+    // CRITICAL SECURITY: Block test mode in production environment
+    // Test mode MUST ONLY work in development/test environments
+    if (IS_PRODUCTION) {
+      log.error('SECURITY ALERT: Test mode authentication attempted in PRODUCTION', {
+        ip: ipAddress,
+        userAgent,
+        endpoint,
+        method,
+        xForwardedFor: req.get('x-forwarded-for'),
+        xRealIp: req.get('x-real-ip'),
+      });
+      return res.status(403).json({ message: "Test mode is disabled in production" });
+    }
+
+    // Apply rate limiting for test mode access
+    const rateLimitResult = checkTestModeRateLimit(ipAddress);
+    if (!rateLimitResult.allowed) {
+      log.warn('Test mode RATE LIMITED', {
+        ip: ipAddress,
+        endpoint,
+        method,
+      });
+      res.setHeader('X-RateLimit-Remaining', '0');
+      res.setHeader('Retry-After', '60');
+      return res.status(429).json({ message: "Test mode rate limit exceeded. Try again later." });
+    }
+    res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+
     // Check if route is allowed in test mode
     const isAllowedRoute = TEST_MODE_ALLOWED_ROUTES.some(pattern => pattern.test(endpoint));
     if (!isAllowedRoute && method !== 'GET') {
-      console.warn(`[Auth] Test mode blocked for ${method} ${endpoint} - not in allowed routes`);
+      log.warn('Test mode blocked - not in allowed routes', {
+        method,
+        endpoint,
+        ip: ipAddress,
+      });
       return res.status(403).json({ message: "Test mode not allowed for this endpoint" });
     }
-    
-    // Create test mode user with full access including workspace context
-    // Use REAL user ID and workspace ID from the database for proper testing
-    // This solves workspace membership checks - the test user is a real user with real access
-    const testWorkspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
-    const testUserId = '48003611'; // Real user ID from database (txpsinvestigations@gmail.com)
-    const testEmployeeId = '1ec71001-fe48-4da2-92ac-40e763bd59f7'; // Real employee ID (Andre Brown)
-    
+
+    // SECURITY: x-test-workspace header is NOT supported
+    // All test mode access uses the dedicated synthetic test workspace
+    // This prevents attackers from accessing arbitrary workspaces
+    const testWorkspaceHeader = req.get('x-test-workspace');
+    if (testWorkspaceHeader) {
+      log.warn('Rejected x-test-workspace header override attempt', {
+        ip: ipAddress,
+        attemptedWorkspace: testWorkspaceHeader,
+        endpoint,
+      });
+      // Silently ignore the header - do not use it
+    }
+
+    // Bypass uses Acme Security sandbox org (DFW TX) — dev-owner-001
     const testUser = {
-      id: testUserId,
-      email: 'txpsinvestigations@gmail.com',
-      firstName: 'Diagnostic',
-      lastName: 'Crawler',
+      id: TEST_MODE_USER_ID,
+      email: 'owner@acmesecurity.com',
+      firstName: 'Acme',
+      lastName: 'Owner',
       role: 'org_owner',
       emailVerified: true,
-      currentWorkspaceId: testWorkspaceId,
-      platformRole: 'root_admin',
-      employeeId: testEmployeeId,
+      workspaceId: TEST_MODE_WORKSPACE_ID,
+      currentWorkspaceId: TEST_MODE_WORKSPACE_ID,
+      platformRole: 'none',
+      employeeId: TEST_MODE_EMPLOYEE_ID,
     };
-    
-    console.log(`[Auth] Test mode access granted for ${method} ${endpoint}`);
-    (req as any).user = testUser;
-    (req as any).userId = testUser.id;  // Many endpoints use req.userId directly
-    (req as any).isTestMode = true;
-    (req as any).workspaceId = testWorkspaceId;
-    (req as any).workspaceRole = 'org_owner';
-    (req as any).platformRole = 'root_admin';
-    
-    // Mock session data for endpoints that access req.session.userId
+
+    log.warn('DEV BYPASS access granted (Acme Security)', {
+      ip: ipAddress,
+      userAgent,
+      endpoint,
+      method,
+      userId: TEST_MODE_USER_ID,
+      workspaceId: TEST_MODE_WORKSPACE_ID,
+      role: testUser.role,
+      rateLimitRemaining: rateLimitResult.remaining,
+    });
+
+    req.user = testUser;
+    req.userId = testUser.id;
+    req.isTestMode = true;
+    req.workspaceId = TEST_MODE_WORKSPACE_ID;
+    req.workspaceRole = 'org_owner';
+    req.platformRole = 'none';
+
+    // Populate session so ensureWorkspaceAccess fast-path fires without a DB lookup
     if (!req.session) {
-      (req as any).session = {};
+      req.session = {};
     }
     (req.session as any).userId = testUser.id;
-    (req.session as any).workspaceId = testWorkspaceId;
-    
+    (req.session as any).workspaceId = TEST_MODE_WORKSPACE_ID;
+    (req.session as any).workspaceRole = 'org_owner';
+    (req.session as any).employeeId = TEST_MODE_EMPLOYEE_ID;
+
     return next();
   }
 
-  if (!req.session?.userId) {
+  // ── Trinity Bot / System Actor bypass ────────────────────────────────────
+  // Allows Trinity autonomous pipelines to make authenticated internal calls
+  // without a human user session.  The TRINITY_BOT_TOKEN env var must be set;
+  // if it is not set the bypass is disabled (fail-closed).
+  const botToken = req.get('x-trinity-bot-token');
+  if (botToken && validateTrinityBotToken(botToken)) {
+    log.info('Trinity bot bypass granted', { endpoint, method, ip: ipAddress });
+    req.user = TRINITY_BOT_USER;
+    req.userId = TRINITY_BOT_USER.id;
+    req.platformRole = 'Bot';
+    req.workspaceRole = undefined;
+    req.isTrinityBot = true;
+    return next();
+  }
+
+  // Support session-based auth, Passport auth, and auth_token cookie
+  let authenticatedUserId = req.session?.userId;
+  
+  // Fallback: check auth_token cookie (set during login for non-session auth)
+  if (!authenticatedUserId && req.cookies?.auth_token) {
+    try {
+      const { authService } = await import('./services/authService');
+      const tokenResult = await authService.validateSession(req.cookies.auth_token);
+      if (tokenResult.success && tokenResult.user) {
+        authenticatedUserId = tokenResult.user.id;
+        if (req.session) {
+          req.session.userId = authenticatedUserId;
+        }
+      }
+    } catch (e) {
+      log.warn('[requireAuth] auth_token cookie validation error (treating as unauthenticated):', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  if (!authenticatedUserId) {
     trinityOrchestration.auth.requestUnauthenticated(endpoint, method, 'no_session', ipAddress);
     return res.status(401).json({ message: "Unauthorized - Please login" });
+  }
+
+  // Guard: if DB circuit is open, serve from session data instead of hanging.
+  // This keeps the user logged in and shows a degraded-mode banner instead of
+  // a white screen.  The /api/auth/me handler has a matching fast-path that
+  // returns _dbDegraded:true so the frontend knows to show the amber banner.
+  if (isDbCircuitOpen()) {
+    const wsId = (req.session as any)?.workspaceId || (req.session as any)?.currentWorkspaceId || null;
+    const degradedUser: any = {
+      id: authenticatedUserId,
+      email: '',
+      firstName: null,
+      lastName: null,
+      username: null,
+      role: 'employee',
+      currentWorkspaceId: wsId,
+      _dbDegraded: true,
+    };
+    req.user = degradedUser;
+    req.userId = authenticatedUserId;
+    if (wsId && !req.workspaceId) req.workspaceId = wsId;
+    log.warn('[requireAuth] DB circuit open — using session-based degraded auth', { userId: authenticatedUserId, path: endpoint });
+    return next();
   }
 
   // Verify user still exists
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.id, req.session.userId))
+    .where(eq(users.id, authenticatedUserId))
     .limit(1);
 
   if (!user) {
@@ -322,7 +685,37 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
   // Attach user to request
   req.user = user;
+
+  if (req.session && !req.session.activeWorkspaceId) {
+    const wsId = req.session.workspaceId || user.currentWorkspaceId;
+    if (wsId) {
+      req.session.activeWorkspaceId = wsId;
+      if (!req.session.workspaceId) {
+        req.session.workspaceId = wsId;
+      }
+    }
+  }
+
+  // Ensure req.workspaceId is set even for routes that don't use RBAC middleware
+  if (!req.workspaceId) {
+    const wsId = (req.session as any)?.workspaceId || user.currentWorkspaceId;
+    if (wsId) req.workspaceId = wsId;
+  }
+
+  // Propagate workspaceId onto req.user so routes reading req.user.workspaceId work correctly.
+  // The user DB model has 'currentWorkspaceId' but many routes expect 'req.user.workspaceId'.
+  if (req.workspaceId && !(req.user as any).workspaceId) {
+    (req.user as any).workspaceId = req.workspaceId;
+  }
+
   next();
+  } catch (err: any) {
+    if (err?.message?.includes('CircuitBreaker') || err?.message?.includes('circuit is open')) {
+      return res.status(503).json({ message: "Database temporarily unavailable — please try again shortly" });
+    }
+    log.error('requireAuth unexpected error', { error: err?.message, path: req.path });
+    return res.status(500).json({ message: "Authentication error" });
+  }
 };
 
 /**
@@ -367,13 +760,13 @@ export const requireAuthWithElevation: RequestHandler = async (req, res, next) =
         // Revoke elevation for locked accounts to prevent reuse
         if (elevationContext.elevationId) {
           await revokeElevation(elevationContext.elevationId, userId, 'account_locked');
-          console.log(`[Auth] Revoked elevation ${elevationContext.elevationId} due to locked account`);
+          log.info('Revoked elevation due to locked account', { elevationId: elevationContext.elevationId });
         }
         return res.status(403).json({ message: lockStatus.message });
       }
 
       req.user = user;
-      (req as any).authContext = {
+      req.authContext = {
         isSupportElevated: true,
         elevationId: elevationContext.elevationId,
         platformRole: elevationContext.platformRole,
@@ -383,7 +776,7 @@ export const requireAuthWithElevation: RequestHandler = async (req, res, next) =
     }
   } catch (error) {
     // Fall through to normal auth if elevation check fails
-    console.warn('[Auth] Elevation check failed, using standard auth:', error);
+    log.warn('Elevation check failed, using standard auth', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
   }
 
   // Standard auth flow
@@ -404,7 +797,7 @@ export const requireAuthWithElevation: RequestHandler = async (req, res, next) =
   }
 
   req.user = user;
-  (req as any).authContext = { isSupportElevated: false };
+  req.authContext = { isSupportElevated: false };
   next();
 };
 
@@ -419,7 +812,7 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
     .where(eq(users.id, req.session.userId))
     .limit(1);
 
-  if (!user || user.role !== "admin") {
+  if (!user || !["platform-admin", "platform_staff", "root_admin", "sysop"].includes(user.role || "")) {
     return res.status(403).json({ message: "Admin access required" });
   }
 
@@ -438,7 +831,7 @@ export const requireSupportStaff: RequestHandler = async (req, res, next) => {
     .where(eq(users.id, req.session.userId))
     .limit(1);
 
-  if (!user || !["admin", "support_staff"].includes(user.role || "")) {
+  if (!user || !["platform-admin", "platform_staff", "support_staff", "root_admin", "sysop", "support_manager", "support_agent"].includes(user.role || "")) {
     return res
       .status(403)
       .json({ message: "Support staff access required" });
@@ -446,6 +839,30 @@ export const requireSupportStaff: RequestHandler = async (req, res, next) => {
 
   req.user = user;
   next();
+};
+
+// Dual auth middleware: Supports both session-based AND Replit OAuth
+export const requireAnyAuth: RequestHandler = async (req: any, res, next) => {
+  // Try session-based auth first
+  if (req.session?.userId) {
+    const [user] = await db.select().from(users).where(eq(users.id, req.session.userId)).limit(1);
+    if (user) {
+      req.user = user;
+      return next();
+    }
+  }
+  
+  // Try Replit OAuth
+  if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+    const userId = req.user?.id || req.user?.claims?.sub;
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (user) {
+      req.user = user;
+      return next();
+    }
+  }
+  
+  return res.status(401).json({ message: "Unauthorized" });
 };
 
 // ============================================================================
@@ -537,7 +954,7 @@ export async function createPasswordResetToken(
 export async function resetPassword(
   token: string,
   newPassword: string
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{ success: boolean; message?: string; userId?: string }> {
   const [user] = await db
     .select()
     .from(users)
@@ -572,7 +989,18 @@ export async function resetPassword(
     })
     .where(eq(users.id, user.id));
 
-  return { success: true };
+  // SECURITY: Invalidate all active sessions after a password reset.
+  // A stolen session must not survive a credential change.
+  try {
+    await db
+      .update(authSessions)
+      .set({ isValid: false })
+      .where(eq(authSessions.userId, user.id));
+  } catch (sessionErr: unknown) {
+    log.error('[auth] Failed to invalidate sessions after password reset:', sessionErr);
+  }
+
+  return { success: true, userId: user.id };
 }
 
 // ============================================================================

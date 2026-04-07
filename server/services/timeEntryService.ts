@@ -4,7 +4,7 @@
  */
 
 import { db } from "../db";
-import { timeEntries, employees } from "@shared/schema";
+import { timeEntries, employees, clients } from "@shared/schema";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
 import type { InsertTimeEntry, TimeEntry } from "@shared/schema";
 
@@ -130,10 +130,20 @@ export async function validateTimeEntry(
 
 /**
  * Create a new time entry (clock in)
+ * GPS coordinates are validated at the service layer for defense-in-depth
  */
 export async function createTimeEntry(
   workspaceId: string,
-  data: { employeeId: string; clockIn: Date; clockOut?: Date | null; status?: string }
+  data: { 
+    employeeId: string; 
+    clockIn: Date; 
+    clockOut?: Date | null; 
+    status?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    shiftId?: string | null;
+    clientId?: string | null;
+  }
 ): Promise<TimeEntry> {
   const validation = await validateTimeEntry(
     workspaceId,
@@ -146,18 +156,79 @@ export async function createTimeEntry(
     throw new Error(`Time entry validation failed: ${validation.errors.join(", ")}`);
   }
 
+  if (data.latitude != null && data.longitude != null) {
+    const gpsValidation = validateGPSCoordinates(data.latitude, data.longitude);
+    if (!gpsValidation.valid) {
+      throw new Error(`GPS validation failed: ${gpsValidation.error}`);
+    }
+  }
+
+  // Snapshot current rates at insert time — locks billing/pay rates so
+  // later rate changes don't silently rewrite completed work
+  let capturedPayRate: string | null = null;
+  let capturedBillRate: string | null = null;
+
+  const [empRecord] = await db
+    .select({ hourlyRate: employees.hourlyRate })
+    .from(employees)
+    .where(eq(employees.id, data.employeeId))
+    .limit(1);
+  capturedPayRate = empRecord?.hourlyRate || null;
+
+  if (data.clientId) {
+    const [clientRecord] = await db
+      .select({ contractRate: clients.contractRate })
+      .from(clients)
+      .where(eq(clients.id, data.clientId))
+      .limit(1);
+    capturedBillRate = clientRecord?.contractRate || null;
+  }
+
+  const insertValues: Record<string, any> = {
+    workspaceId,
+    employeeId: data.employeeId,
+    clockIn: data.clockIn,
+    clockOut: data.clockOut || null,
+    status: data.status || "pending",
+    // Automatically mark as billable when a client is associated.
+    // Officers clock in on-site (GPS-verified); any entry linked to a client
+    // is billable by definition — billing aggregator requires this flag.
+    billableToClient: data.clientId ? true : false,
+    capturedPayRate,
+    capturedBillRate,
+  };
+
+  if (data.latitude != null) insertValues.clockInLatitude = data.latitude;
+  if (data.longitude != null) insertValues.clockInLongitude = data.longitude;
+  if (data.shiftId) insertValues.shiftId = data.shiftId;
+  if (data.clientId) insertValues.clientId = data.clientId;
+
   const result = await db
     .insert(timeEntries)
-    .values({ 
-      workspaceId,
-      employeeId: data.employeeId,
-      clockIn: data.clockIn,
-      clockOut: data.clockOut || null,
-      status: data.status || "pending"
-    })
+    .values(insertValues)
     .returning();
 
   return result[0];
+}
+
+/**
+ * Validate GPS coordinates are within valid ranges
+ * Defense-in-depth: coordinates checked at service layer independent of route validation
+ */
+export function validateGPSCoordinates(
+  latitude: number,
+  longitude: number
+): { valid: boolean; error?: string } {
+  if (typeof latitude !== 'number' || isNaN(latitude) || latitude < -90 || latitude > 90) {
+    return { valid: false, error: 'Latitude must be between -90 and 90' };
+  }
+  if (typeof longitude !== 'number' || isNaN(longitude) || longitude < -180 || longitude > 180) {
+    return { valid: false, error: 'Longitude must be between -180 and 180' };
+  }
+  if (latitude === 0 && longitude === 0) {
+    return { valid: false, error: 'GPS coordinates appear to be default/null island (0,0)' };
+  }
+  return { valid: true };
 }
 
 /**
@@ -217,12 +288,13 @@ export async function getPendingTimeEntries(
       eq(timeEntries.workspaceId, workspaceId),
       eq(timeEntries.status, "pending")
     ),
-    orderBy: [desc(timeEntries.clockInTime)],
+    orderBy: [desc(timeEntries.clockIn)],
   });
 }
 
 /**
  * Calculate total hours for payroll period
+ * Missing 8hr/day threshold required by A3 spec — added daily OT calculation
  */
 export async function calculatePayrollHours(
   employeeId: string,
@@ -236,19 +308,37 @@ export async function calculatePayrollHours(
   const entries = await getTimeEntriesByEmployee(employeeId, startDate, endDate);
 
   let totalMinutes = 0;
+  let dailyOvertimeMinutes = 0;
+  const entriesByDay: Record<string, number> = {};
 
   for (const entry of entries) {
-    const billable = calculateBillableHours(entry);
-    totalMinutes += billable * 60;
+    const billableHours = calculateBillableHours(entry);
+    const billableMinutes = billableHours * 60;
+    totalMinutes += billableMinutes;
+
+    const dayKey = new Date(entry.clockIn).toISOString().split('T')[0];
+    entriesByDay[dayKey] = (entriesByDay[dayKey] || 0) + billableMinutes;
+  }
+
+  // Calculate daily overtime (any hours over 8 per day)
+  for (const dayKey in entriesByDay) {
+    const dayMinutes = entriesByDay[dayKey];
+    if (dayMinutes > 480) { // 8 hours * 60 minutes
+      dailyOvertimeMinutes += (dayMinutes - 480);
+    }
   }
 
   const totalHours = totalMinutes / 60;
-  const regularHours = Math.min(40, totalHours);
-  const overtimeHours = Math.max(0, totalHours - 40);
+  const weeklyOvertimeMinutes = Math.max(0, totalMinutes - 2400); // 40 hours * 60 minutes
+  
+  // Overtime is the greater of (total hours over 40/week) or (sum of daily hours over 8)
+  // This is a common labor law standard (e.g., California)
+  const overtimeMinutes = Math.max(weeklyOvertimeMinutes, dailyOvertimeMinutes);
+  const regularMinutes = totalMinutes - overtimeMinutes;
 
   return {
-    regularHours,
-    overtimeHours,
+    regularHours: regularMinutes / 60,
+    overtimeHours: overtimeMinutes / 60,
     totalHours,
   };
 }

@@ -13,6 +13,9 @@
 import { randomUUID } from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('rateLimiting');
+
 
 export interface RateLimitConfig {
   windowMs: number; // Time window in ms
@@ -23,7 +26,7 @@ export interface RateLimitConfig {
 
 export interface TenantQuota {
   tenantId: string;
-  plan: 'free' | 'starter' | 'professional' | 'enterprise';
+  plan: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   config: RateLimitConfig;
   currentUsage: number;
   burstTokens: number;
@@ -53,9 +56,9 @@ export interface RateLimitStats {
 const PLAN_LIMITS: Record<string, RateLimitConfig> = {
   free: {
     windowMs: 60000, // 1 minute
-    maxRequests: 60,
-    burstLimit: 10,
-    burstRefillRate: 1
+    maxRequests: (!process.env.REPLIT_DEPLOYMENT && process.env.NODE_ENV !== 'production') ? 300 : 60,
+    burstLimit: (!process.env.REPLIT_DEPLOYMENT && process.env.NODE_ENV !== 'production') ? 50 : 10,
+    burstRefillRate: (!process.env.REPLIT_DEPLOYMENT && process.env.NODE_ENV !== 'production') ? 5 : 1
   },
   starter: {
     windowMs: 60000,
@@ -100,11 +103,18 @@ class RateLimitingService {
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
-    // Clean up expired quotas periodically
     this.cleanupInterval = setInterval(() => this.cleanupExpiredQuotas(), 60000);
 
     this.isInitialized = true;
-    console.log('[RateLimiting] Service initialized');
+    log.info('[RateLimiting] Service initialized');
+  }
+
+  stop(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.isInitialized = false;
   }
 
   /**
@@ -216,7 +226,7 @@ class RateLimitingService {
       quota.config = newConfig;
     }
 
-    console.log(`[RateLimiting] Custom limit set for tenant ${tenantId}`);
+    log.info(`[RateLimiting] Custom limit set for tenant ${tenantId}`);
   }
 
   /**
@@ -300,23 +310,30 @@ class RateLimitingService {
 
   private async logRateLimitExceeded(tenantId: string, quota: TenantQuota): Promise<void> {
     try {
+      const isValidWorkspaceId = tenantId && tenantId.length > 10 && !tenantId.match(/^\d+\.\d+\.\d+\.\d+$/);
+      if (!isValidWorkspaceId) {
+        log.warn(`[RateLimiting] Rate limit exceeded for non-workspace tenant: ${tenantId} (skipping audit log)`);
+        return;
+      }
       await db.insert(systemAuditLogs).values({
         id: randomUUID(),
-        eventType: 'rate_limit_exceeded',
-        severity: 'warn',
-        source: 'rate_limiting',
-        message: `Rate limit exceeded for tenant ${tenantId}`,
+        action: 'rate_limit_exceeded',
+        userId: 'system-coaileague',
+        workspaceId: tenantId,
+        entityType: 'rate_limit',
+        entityId: tenantId,
         metadata: {
+          source: 'rate_limiting',
+          message: `Rate limit exceeded for tenant ${tenantId}`,
           tenantId,
           plan: quota.plan,
           currentUsage: quota.currentUsage,
           maxRequests: quota.config.maxRequests,
           blockedUntil: quota.blockedUntil
         },
-        timestamp: new Date()
       });
     } catch (error) {
-      console.error('[RateLimiting] Failed to log rate limit exceeded:', error);
+      log.error('[RateLimiting] Failed to log rate limit exceeded:', error);
     }
   }
 
@@ -337,7 +354,7 @@ class RateLimitingService {
     }
     this.tenantQuotas.clear();
     this.customLimits.clear();
-    console.log('[RateLimiting] Service shut down');
+    log.info('[RateLimiting] Service shut down');
   }
 }
 
@@ -362,7 +379,6 @@ export function rateLimitMiddleware(getTenantId: (req: any) => string, getPlan?:
     if (!result.allowed) {
       res.status(429).json({
         error: 'Too Many Requests',
-        message: 'Rate limit exceeded. Please try again later.',
         retryAfter: result.retryAfter
       });
       return;

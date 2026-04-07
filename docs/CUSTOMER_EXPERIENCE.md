@@ -117,7 +117,7 @@ This document explains what different users see when they login to WorkforceOS a
    - Receive updates and responses
 
 4. **Alternative Support Channels:**
-   - Email: support@workforceos.com
+   - Email: support@coaileague.com
    - Phone: 1-800-WORKFORCE (Mon-Fri 9AM-6PM EST)
    - Live Chat: Enterprise plans only
 
@@ -362,7 +362,7 @@ This document explains what different users see when they login to WorkforceOS a
 
 ### For Customers:
 - **Support Portal:** `/support` (in-app)
-- **Email:** support@workforceos.com
+- **Email:** support@coaileague.com
 - **Phone:** 1-800-WORKFORCE (Mon-Fri 9AM-6PM EST)
 - **Live Chat:** Enterprise plans (in-app)
 

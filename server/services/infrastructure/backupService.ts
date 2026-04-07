@@ -14,9 +14,13 @@
  */
 
 import { db } from '../../db';
-import { systemAuditLogs } from '@shared/schema';
-import { sql } from 'drizzle-orm';
+import { systemAuditLogs, backupRecords } from '@shared/schema';
+import { sql, eq, and, lt, inArray } from 'drizzle-orm';
 import crypto from 'crypto';
+import { typedCount, typedExec, typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('backupService');
+
 
 // ============================================================================
 // TYPES
@@ -72,8 +76,7 @@ class BackupService {
     criticalTables: [
       'users',
       'workspaces',
-      'organizations',
-      'system_audit_logs',
+      'audit_logs',
       'automation_action_ledger',
       'employees',
       'schedules',
@@ -103,15 +106,16 @@ class BackupService {
       this.startScheduledBackups();
       
       this.initialized = true;
-      console.log('[BackupService] Initialized with automated scheduling');
+      log.info('[BackupService] Initialized with automated scheduling');
     } catch (error) {
-      console.error('[BackupService] Failed to initialize:', error);
+      log.error('[BackupService] Failed to initialize:', error);
     }
   }
 
   private async ensureTableExists(): Promise<void> {
     try {
-      await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: CREATE TABLE | Tables:  | Verified: 2026-03-23
+      await typedExec(sql`
         CREATE TABLE IF NOT EXISTS backup_records (
           id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
           type VARCHAR(20) NOT NULL,
@@ -132,7 +136,7 @@ class BackupService {
         CREATE INDEX IF NOT EXISTS idx_backup_records_started_at ON backup_records(started_at DESC);
       `);
     } catch (error) {
-      console.error('[BackupService] Failed to create backup_records table:', error);
+      log.error('[BackupService] Failed to create backup_records table:', error);
     }
   }
 
@@ -143,7 +147,7 @@ class BackupService {
         await this.performBackup('incremental');
       }, 60 * 60 * 1000); // 1 hour
       
-      console.log('[BackupService] Hourly incremental backups enabled');
+      log.info('[BackupService] Hourly incremental backups enabled');
     }
 
     // Daily full backups at 2 AM
@@ -164,7 +168,7 @@ class BackupService {
           scheduleDaily(); // Reschedule for next day
         }, delay);
         
-        console.log(`[BackupService] Next full backup scheduled for ${next2AM.toISOString()}`);
+        log.info(`[BackupService] Next full backup scheduled for ${next2AM.toISOString()}`);
       };
       
       scheduleDaily();
@@ -178,28 +182,28 @@ class BackupService {
     const backupId = crypto.randomUUID();
     const startedAt = new Date();
     
-    console.log(`[BackupService] Starting ${type} backup ${backupId}`);
+    log.info(`[BackupService] Starting ${type} backup ${backupId}`);
     
     // Create backup record - cast tables array properly for PostgreSQL
     const tablesArray = `{${this.config.criticalTables.join(',')}}`;
-    await db.execute(sql`
-      INSERT INTO backup_records (id, type, status, started_at, tables_included, metadata)
-      VALUES (
-        ${backupId}, 
-        ${type}, 
-        'running', 
-        ${startedAt}, 
-        ${tablesArray}::text[],
-        ${JSON.stringify({ initiatedBy: 'scheduled', config: this.config })}::jsonb
-      )
-    `);
+    // CATEGORY C — Raw SQL retained: ::text | Tables: backup_records | Verified: 2026-03-23
+    await db.insert(backupRecords).values({
+      id: backupId,
+      workspaceId: 'system',
+      type: type,
+      status: 'running',
+      startedAt: startedAt,
+      tablesIncluded: tablesArray,
+      metadata: { initiatedBy: 'scheduled', config: this.config },
+    });
 
     try {
       // Get database size estimate
-      const sizeResult = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: pg_database_size() system function | Tables: none | Verified: 2026-03-23
+      const sizeResult = await typedQuery(sql`
         SELECT pg_database_size(current_database()) as size_bytes
       `);
-      const sizeBytes = (sizeResult.rows as any[])[0]?.size_bytes || 0;
+      const sizeBytes = (sizeResult as any[])[0]?.size_bytes || 0;
 
       // For Neon/Postgres, we rely on built-in PITR - log the backup point
       const walPosition = await this.getWALPosition();
@@ -210,22 +214,18 @@ class BackupService {
       
       const completedAt = new Date();
       
-      // Update backup record
-      await db.execute(sql`
-        UPDATE backup_records 
-        SET 
-          status = 'completed',
-          completed_at = ${completedAt},
-          size_bytes = ${sizeBytes},
-          checksum = ${checksum},
-          storage_path = ${`wal://${walPosition}`},
-          metadata = metadata || ${JSON.stringify({
-            walPosition,
-            verification: verificationResults,
-            durationMs: completedAt.getTime() - startedAt.getTime(),
-          })}::jsonb
-        WHERE id = ${backupId}
-      `);
+      await db.update(backupRecords).set({
+        status: 'completed',
+        completedAt,
+        sizeBytes: sizeBytes,
+        checksum,
+        storagePath: `wal://${walPosition}`,
+        metadata: sql`${backupRecords.metadata} || ${JSON.stringify({
+          walPosition,
+          verification: verificationResults,
+          durationMs: completedAt.getTime() - startedAt.getTime(),
+        })}::jsonb`,
+      }).where(eq(backupRecords.id, backupId));
 
       // Log to audit trail
       await db.insert(systemAuditLogs).values({
@@ -241,7 +241,7 @@ class BackupService {
         },
       });
 
-      console.log(`[BackupService] ${type} backup ${backupId} completed successfully`);
+      log.info(`[BackupService] ${type} backup ${backupId} completed successfully`);
 
       // Verify if configured
       if (this.config.verifyAfterBackup) {
@@ -265,19 +265,19 @@ class BackupService {
       };
 
     } catch (error: any) {
-      console.error(`[BackupService] Backup ${backupId} failed:`, error);
+      log.error(`[BackupService] Backup ${backupId} failed:`, error);
       
-      await db.execute(sql`
-        UPDATE backup_records 
-        SET status = 'failed', error = ${error.message}, completed_at = ${new Date()}
-        WHERE id = ${backupId}
-      `);
+      await db.update(backupRecords).set({
+        status: 'failed',
+        error: (error instanceof Error ? error.message : String(error)),
+        completedAt: new Date(),
+      }).where(eq(backupRecords.id, backupId));
 
       await db.insert(systemAuditLogs).values({
         action: 'backup_failed',
         entityType: 'backup',
         entityId: backupId,
-        metadata: { type, error: error.message },
+        metadata: { type, error: (error instanceof Error ? error.message : String(error)) },
       });
 
       return {
@@ -295,8 +295,9 @@ class BackupService {
 
   private async getWALPosition(): Promise<string> {
     try {
-      const result = await db.execute(sql`SELECT pg_current_wal_lsn()::text as lsn`);
-      return (result.rows as any[])[0]?.lsn || 'unknown';
+      // CATEGORY C — Raw SQL retained: ::text | Tables:  | Verified: 2026-03-23
+      const result = await typedQuery(sql`SELECT pg_current_wal_lsn()::text as lsn`);
+      return (result as any[])[0]?.lsn || 'unknown';
     } catch {
       return `checkpoint-${Date.now()}`;
     }
@@ -311,8 +312,9 @@ class BackupService {
     
     for (const table of this.config.criticalTables) {
       try {
-        const countResult = await db.execute(sql.raw(`SELECT COUNT(*)::int as count FROM "${table}"`));
-        const count = (countResult.rows as any[])[0]?.count || 0;
+        // CATEGORY C — Raw SQL retained: COUNT( | Tables:  | Verified: 2026-03-23
+        const countResult = await typedQuery(sql.raw(`SELECT COUNT(*)::int as count FROM "${table}"`));
+        const count = (countResult as any[])[0]?.count || 0;
         results.push({ table, rowCount: count, verified: true });
       } catch {
         results.push({ table, rowCount: 0, verified: false });
@@ -327,13 +329,11 @@ class BackupService {
    */
   async verifyBackup(backupId: string): Promise<boolean> {
     try {
-      const result = await db.execute(sql`
-        SELECT * FROM backup_records WHERE id = ${backupId}
-      `);
+      const result = await db.select().from(backupRecords).where(eq(backupRecords.id, backupId));
       
       const backup = (result.rows as any[])[0];
       if (!backup) {
-        console.warn(`[BackupService] Backup ${backupId} not found for verification`);
+        log.warn(`[BackupService] Backup ${backupId} not found for verification`);
         return false;
       }
 
@@ -342,17 +342,17 @@ class BackupService {
       const allTablesVerified = verification.every(v => v.verified);
       
       if (allTablesVerified) {
-        await db.execute(sql`
-          UPDATE backup_records SET status = 'verified' WHERE id = ${backupId}
-        `);
-        console.log(`[BackupService] Backup ${backupId} verified successfully`);
+        await db.update(backupRecords).set({
+          status: 'verified',
+        }).where(eq(backupRecords.id, backupId));
+        log.info(`[BackupService] Backup ${backupId} verified successfully`);
         return true;
       }
       
-      console.warn(`[BackupService] Backup ${backupId} verification failed`);
+      log.warn(`[BackupService] Backup ${backupId} verification failed`);
       return false;
     } catch (error) {
-      console.error(`[BackupService] Verification error for ${backupId}:`, error);
+      log.error(`[BackupService] Verification error for ${backupId}:`, error);
       return false;
     }
   }
@@ -364,19 +364,20 @@ class BackupService {
     const cutoffDate = new Date(Date.now() - this.config.retentionDays * 24 * 60 * 60 * 1000);
     
     try {
-      const result = await db.execute(sql`
-        DELETE FROM backup_records 
-        WHERE started_at < ${cutoffDate}
-          AND status IN ('completed', 'verified')
-        RETURNING id
-      `);
-      
-      const deleted = (result.rows as any[])?.length || 0;
-      if (deleted > 0) {
-        console.log(`[BackupService] Cleaned up ${deleted} old backup records`);
+      const deletedRows = await db
+        .delete(backupRecords)
+        .where(
+          and(
+            lt(backupRecords.startedAt, cutoffDate),
+            inArray(backupRecords.status, ['completed', 'verified']),
+          )
+        )
+        .returning({ id: backupRecords.id });
+      if (deletedRows.length > 0) {
+        log.info(`[BackupService] Cleaned up ${deletedRows.length} old backup records`);
       }
     } catch (error) {
-      console.error('[BackupService] Cleanup error:', error);
+      log.error('[BackupService] Cleanup error:', error);
     }
   }
 
@@ -385,29 +386,29 @@ class BackupService {
    */
   async getStats(): Promise<BackupStats> {
     try {
-      const result = await db.execute(sql`
-        SELECT 
-          COUNT(*)::int as total_backups,
-          SUM(COALESCE(size_bytes, 0))::bigint as total_size_bytes,
-          MIN(started_at) as oldest_backup,
-          MAX(started_at) as newest_backup,
-          MAX(CASE WHEN status IN ('completed', 'verified') THEN completed_at END) as last_successful,
-          MAX(CASE WHEN status = 'failed' THEN completed_at END) as last_failed
-        FROM backup_records
-      `);
+      // Converted to Drizzle ORM: CASE WHEN → sql fragment
+      const statsResult = await db.select({
+        totalBackups: sql<number>`count(*)::int`,
+        totalSizeBytes: sql<number>`sum(coalesce(${backupRecords.sizeBytes}, 0))::bigint`,
+        oldestBackup: sql<Date>`min(${backupRecords.startedAt})`,
+        newestBackup: sql<Date>`max(${backupRecords.startedAt})`,
+        lastSuccessful: sql<Date>`max(case when ${backupRecords.status} in ('completed', 'verified') then ${backupRecords.completedAt} end)`,
+        lastFailed: sql<Date>`max(case when ${backupRecords.status} = 'failed' then ${backupRecords.completedAt} end)`
+      })
+      .from(backupRecords);
       
-      const row = (result.rows as any[])[0] || {};
+      const row = statsResult[0] || {};
       
       return {
-        totalBackups: row.total_backups || 0,
-        totalSizeBytes: parseInt(row.total_size_bytes) || 0,
-        oldestBackup: row.oldest_backup ? new Date(row.oldest_backup) : undefined,
-        newestBackup: row.newest_backup ? new Date(row.newest_backup) : undefined,
-        lastSuccessfulBackup: row.last_successful ? new Date(row.last_successful) : undefined,
-        lastFailedBackup: row.last_failed ? new Date(row.last_failed) : undefined,
+        totalBackups: row.totalBackups || 0,
+        totalSizeBytes: Number(row.totalSizeBytes) || 0,
+        oldestBackup: row.oldestBackup ? new Date(row.oldestBackup) : undefined,
+        newestBackup: row.newestBackup ? new Date(row.newestBackup) : undefined,
+        lastSuccessfulBackup: row.lastSuccessful ? new Date(row.lastSuccessful) : undefined,
+        lastFailedBackup: row.lastFailed ? new Date(row.lastFailed) : undefined,
       };
     } catch (error) {
-      console.error('[BackupService] Failed to get stats:', error);
+      log.error('[BackupService] Failed to get stats:', error);
       return { totalBackups: 0, totalSizeBytes: 0 };
     }
   }
@@ -417,13 +418,14 @@ class BackupService {
    */
   async getRecentBackups(limit: number = 10): Promise<BackupRecord[]> {
     try {
-      const result = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: ORDER BY | Tables: backup_records | Verified: 2026-03-23
+      const result = await typedQuery(sql`
         SELECT * FROM backup_records 
         ORDER BY started_at DESC 
         LIMIT ${limit}
       `);
       
-      return ((result.rows as any[]) || []).map(row => ({
+      return result.map((row: any) => ({
         id: row.id,
         type: row.type,
         status: row.status,
@@ -437,7 +439,7 @@ class BackupService {
         metadata: row.metadata || {},
       }));
     } catch (error) {
-      console.error('[BackupService] Failed to get recent backups:', error);
+      log.error('[BackupService] Failed to get recent backups:', error);
       return [];
     }
   }
@@ -446,7 +448,7 @@ class BackupService {
    * Trigger manual backup
    */
   async triggerManualBackup(userId?: string): Promise<BackupRecord> {
-    console.log(`[BackupService] Manual backup triggered${userId ? ` by user ${userId}` : ''}`);
+    log.info(`[BackupService] Manual backup triggered${userId ? ` by user ${userId}` : ''}`);
     
     const backup = await this.performBackup('manual');
     
@@ -454,8 +456,8 @@ class BackupService {
       await db.insert(systemAuditLogs).values({
         userId,
         action: 'manual_backup_triggered',
-        resource: 'database',
-        details: { backupId: backup.id, status: backup.status },
+        entityId: 'database',
+        metadata: { backupId: backup.id, status: backup.status },
       });
     }
     
@@ -467,7 +469,7 @@ class BackupService {
    */
   updateConfig(updates: Partial<BackupConfig>): BackupConfig {
     this.config = { ...this.config, ...updates };
-    console.log('[BackupService] Configuration updated:', this.config);
+    log.info('[BackupService] Configuration updated:', this.config);
     return this.config;
   }
 
@@ -480,7 +482,7 @@ class BackupService {
       clearInterval(this.hourlyInterval);
       this.hourlyInterval = null;
     }
-    console.log('[BackupService] Service shutdown');
+    log.info('[BackupService] Service shutdown');
   }
 }
 

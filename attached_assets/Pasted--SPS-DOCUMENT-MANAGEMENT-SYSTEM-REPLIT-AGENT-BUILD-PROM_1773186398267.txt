@@ -1,0 +1,749 @@
+# SPS DOCUMENT MANAGEMENT SYSTEM — REPLIT AGENT BUILD PROMPT
+## CoAIleague Integration | Statewide Protective Services
+---
+
+## ROLE
+You are building a full-stack DocuSign-style document execution system embedded inside the CoAIleague platform for Statewide Protective Services (SPS). This system handles two primary workflows: (1) New Employee/Officer Onboarding Packets and (2) New Client Contract Proposals with AI-assisted negotiation.
+
+Read every instruction fully before writing a single line of code. Do not declare victory until every section is working end-to-end with real data flow.
+
+---
+
+## TECH STACK
+- **Frontend**: React + Tailwind CSS (existing CoAIleague stack)
+- **Backend**: Node.js / Express (existing CoAIleague API)
+- **Database**: PostgreSQL via Supabase (existing CoAIleague DB)
+- **File Storage**: Supabase Storage buckets
+- **Email**: Resend (existing pipeline — use calloffs@, incidents@, docs@, support@ routing)
+- **AI**: Trinity (Claude primary, GPT fallback, Gemini fallback) via existing orchestration layer
+- **Signing**: Canvas-based signature capture (NO external DocuSign dependency)
+- **PDF Generation**: react-pdf or pdfmake for final sealed documents
+
+---
+
+## DATABASE SCHEMA — CREATE THESE TABLES
+
+```sql
+-- Document Templates
+CREATE TABLE sps_document_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  template_type TEXT NOT NULL CHECK (template_type IN ('employee_packet', 'client_contract', 'proposal')),
+  template_name TEXT NOT NULL,
+  version TEXT DEFAULT '1.0',
+  content JSONB NOT NULL, -- field definitions, sections, logic
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Document Instances (active/completed docs)
+CREATE TABLE sps_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  template_id UUID REFERENCES sps_document_templates(id),
+  document_type TEXT NOT NULL CHECK (document_type IN ('employee_packet', 'client_contract', 'proposal')),
+  document_number TEXT UNIQUE NOT NULL, -- e.g. EMP-2025-0042, CON-2025-0017
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','sent','viewed','partially_signed','completed','voided','expired')),
+  
+  -- Parties
+  org_signer_name TEXT,
+  org_signer_email TEXT,
+  recipient_name TEXT NOT NULL,
+  recipient_email TEXT NOT NULL,
+  
+  -- Employee-specific fields
+  employee_dob DATE,
+  employee_pob TEXT, -- place of birth (city, state)
+  employee_ssn_last4 TEXT, -- last 4 only stored
+  employee_address TEXT,
+  employee_phone TEXT,
+  guard_license_number TEXT,
+  guard_license_expiry DATE,
+  guard_license_type TEXT CHECK (guard_license_type IN ('commissioned','non_commissioned','armed','unarmed')),
+  assignment_site TEXT,
+  assignment_address TEXT,
+  hire_date DATE,
+  position TEXT,
+  pay_rate DECIMAL(8,2),
+  uniform_size TEXT,
+  
+  -- Client-specific fields
+  client_company_name TEXT,
+  client_address TEXT,
+  client_contact_name TEXT,
+  client_ein TEXT,
+  service_type TEXT CHECK (service_type IN ('armed','unarmed','ppo','patrol','mixed')),
+  rate_primary DECIMAL(8,2),
+  rate_additional DECIMAL(8,2),
+  service_location TEXT,
+  service_hours TEXT,
+  contract_start_date DATE,
+  contract_term TEXT,
+  officers_required INTEGER,
+  
+  -- Document data (all form fields as JSON)
+  form_data JSONB DEFAULT '{}',
+  
+  -- Signature data
+  signatures JSONB DEFAULT '{}', -- {field_id: {svg_data, timestamp, ip_address, user_agent}}
+  initials JSONB DEFAULT '{}',
+  
+  -- Audit trail
+  audit_log JSONB DEFAULT '[]',
+  
+  -- ID verification
+  id_upload_url TEXT,
+  id_verification_status TEXT DEFAULT 'pending' CHECK (id_verification_status IN ('pending','verified','failed','manual_review')),
+  id_verification_data JSONB DEFAULT '{}', -- Trinity scan results
+  
+  -- Timestamps
+  sent_at TIMESTAMPTZ,
+  viewed_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Document Negotiation Thread (client ↔ org messages before contract)
+CREATE TABLE sps_negotiation_threads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  document_id UUID REFERENCES sps_documents(id),
+  proposal_number TEXT UNIQUE NOT NULL,
+  client_name TEXT NOT NULL,
+  client_email TEXT NOT NULL,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active','agreed','declined','converted_to_contract','expired')),
+  agreed_terms JSONB DEFAULT '{}', -- final agreed pricing/terms snapshot
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE sps_negotiation_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  thread_id UUID NOT NULL REFERENCES sps_negotiation_threads(id),
+  sender_type TEXT NOT NULL CHECK (sender_type IN ('org','client')),
+  sender_name TEXT NOT NULL,
+  sender_email TEXT NOT NULL,
+  message_raw TEXT NOT NULL, -- original typed message
+  message_ai_enhanced TEXT, -- Trinity polished version
+  ai_suggestion_used BOOLEAN DEFAULT false,
+  proposed_terms JSONB DEFAULT '{}', -- any terms mentioned in this message
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Document Safe (sealed PDFs + uploads)
+CREATE TABLE sps_document_safe (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  document_id UUID NOT NULL REFERENCES sps_documents(id),
+  file_name TEXT NOT NULL,
+  file_url TEXT NOT NULL, -- Supabase storage URL
+  file_type TEXT NOT NULL CHECK (file_type IN ('signed_packet','signed_contract','id_upload','guard_card','supporting_doc','proposal_pdf')),
+  uploaded_by TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- State Regulatory Requirements
+CREATE TABLE sps_state_requirements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  state_code TEXT NOT NULL, -- 'TX', 'CA', etc.
+  document_type TEXT NOT NULL,
+  required_fields JSONB NOT NULL, -- array of field names required by state
+  required_documents JSONB NOT NULL, -- array of doc types required
+  regulatory_body TEXT,
+  license_renewal_period_months INTEGER,
+  notes TEXT,
+  effective_date DATE,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Insert Texas requirements
+INSERT INTO sps_state_requirements (state_code, document_type, required_fields, required_documents, regulatory_body, license_renewal_period_months, notes)
+VALUES (
+  'TX',
+  'employee_packet',
+  '["full_legal_name","date_of_birth","place_of_birth","current_address","ssn","guard_license_number","guard_license_expiry","guard_license_type","hire_date","assignment_site","assignment_address","position","w4_filing_status","i9_document_type","direct_deposit_bank","direct_deposit_routing","direct_deposit_account","drug_acknowledgement","handbook_acknowledgement","uniform_size"]',
+  '["guard_card_front","guard_card_back","government_id_front","government_id_back","social_security_card"]',
+  'Texas Department of Public Safety - Private Security Bureau',
+  24,
+  'License # C11608501 must appear on all documents. Guards must be registered under agency license on TOPS portal.'
+);
+```
+
+---
+
+## CORE ARCHITECTURE
+
+### File Structure to Create
+```
+/src
+  /modules
+    /documents
+      /components
+        SignaturePad.jsx          -- Canvas signature capture
+        InitialsPad.jsx           -- Initials capture
+        DocumentViewer.jsx        -- Full document renderer with field overlays
+        FieldOverlay.jsx          -- Positioned form fields on document
+        IDUploadScanner.jsx       -- Upload + Trinity verify ID
+        DocumentSafe.jsx          -- File storage viewer
+        ProposalBuilder.jsx       -- Client proposal form
+        NegotiationThread.jsx     -- Back-and-forth messaging with Trinity
+        EmployeePacketForm.jsx    -- Full onboarding packet
+        ClientContractForm.jsx    -- Contract form
+        AuditTrail.jsx            -- Signature audit log viewer
+      /hooks
+        useDocumentSigning.js
+        useNegotiation.js
+        useIDVerification.js
+      /utils
+        generateDocumentNumber.js
+        sealDocument.js
+        stateRequirements.js
+      /api
+        documents.api.js
+        negotiation.api.js
+        docSafe.api.js
+  /emails
+    DocumentSentEmail.jsx         -- Resend email templates
+    NegotiationMessageEmail.jsx
+    ContractCompletedEmail.jsx
+```
+
+---
+
+## SECTION 1: EMPLOYEE ONBOARDING PACKET
+
+### Fields Required (Texas Regulatory Compliant)
+
+**Section 1 — Identity & Personal Info**
+- Full Legal Name (as appears on Guard Card) — TEXT, required
+- Date of Birth — DATE, required (stored, shown on audit only)
+- Place of Birth (City, State/Country) — TEXT, required
+- Current Address (full: street, city, state, zip) — TEXT, required
+- Phone Number — TEXT
+- Personal Email — EMAIL
+
+**Section 2 — Assignment Details**
+- Hire Date — DATE, required
+- Position — DROPDOWN: [Non-Commissioned Officer, Commissioned Officer, Armed Officer, Patrol Officer, Supervisor/Corporal, Sergeant, Lieutenant, Captain, PPO]
+- Assignment Site / Place of Work — TEXT, required
+- Assignment Address — TEXT, required
+- Pay Rate ($/hr) — NUMBER, required (pre-filled from offer letter)
+- Uniform Size — DROPDOWN: [XS, S, M, L, XL, 2XL, 3XL]
+
+**Section 3 — License Information**
+- Texas Guard Card / License Number — TEXT, required
+- License Type — DROPDOWN: [Non-Commissioned, Commissioned, Armed]
+- License Expiration Date — DATE, required
+- License Status verified on TOPS: [Yes/No checkbox]
+
+**Section 4 — Tax Forms (W-4)**
+- First Name, Middle Initial, Last Name — TEXT
+- Address — TEXT
+- City, State, ZIP — TEXT
+- SSN (encrypted, displayed as XXX-XX-####) — TEXT
+- Filing Status — RADIO: [Single/MFS, MFJ/QSS, Head of Household]
+- Qualifying children under 17 x $2,000 — NUMBER
+- Other dependents x $500 — NUMBER
+- Other income (not from jobs) — NUMBER
+- Deductions — NUMBER
+- Extra withholding — NUMBER
+- Employer EIN: 84-4563658 (pre-filled, read-only)
+- First date of employment (pre-filled from hire date)
+- Employee Signature + Date — SIGNATURE field
+
+**Section 5 — I-9 Employment Eligibility**
+- Last Name, First Name, Middle Initial — TEXT
+- Address, City, State, ZIP — TEXT
+- DOB — DATE (pre-filled)
+- SSN — TEXT (encrypted)
+- Email — EMAIL (pre-filled)
+- Phone — TEXT (pre-filled)
+- Citizenship Status — RADIO: [US Citizen, Noncitizen National, Lawful Permanent Resident, Authorized Noncitizen]
+- USCIS/A-Number (if applicable) — TEXT conditional
+- I-94 Number (if applicable) — TEXT conditional
+- Employee Signature + Date — SIGNATURE field
+- Section 2 Employer fields (org auto-fills): Document Title, Issuing Authority, Document Number, Expiration Date, First Day of Employment, Employer Name/Address/EIN
+- Employer Signature + Date — SIGNATURE field (org side)
+
+**Section 6 — Direct Deposit**
+- Name, DOB, SSN (pre-filled) — TEXT (encrypted display)
+- Address (pre-filled) — TEXT
+- Bank Name — TEXT
+- Account Number — TEXT (masked after entry)
+- 9-Digit Routing Number — TEXT (validated with Luhn-style check)
+- Amount Type — RADIO: [Specific $, Specific %, Entire Paycheck]
+- Account Type — RADIO: [Checking, Savings]
+- Employee Signature + Date — SIGNATURE field
+
+**Section 7 — Offer Letter**
+- Position (pre-filled) — READ-ONLY
+- Start Date (pre-filled) — READ-ONLY
+- Salary/Rate (pre-filled) — READ-ONLY
+- 90-day probationary notice — READ-ONLY text block
+- Pay period info — READ-ONLY text block
+- Employee Name + Date — SIGNATURE field
+- SPS Representative (org auto-signs) — SIGNATURE field
+
+**Section 8 — SOP Handbook Acknowledgement**
+- Display handbook summary (key policies)
+- "I have read and understand the SPS Employee Handbook/SOP" — CHECKBOX required
+- Employee Signature + Date — SIGNATURE field
+
+**Section 9 — Drug-Free Workplace Acknowledgement**
+- Display policy text
+- Employee Signature + Date — SIGNATURE field
+
+**Section 10 — Employee Responsibility & Liability Clause**
+- Display full clause text
+- Employee Name — TEXT (typed)
+- Employee Signature + Date — SIGNATURE field
+- Employer Name (pre-filled: Brigido Guillen) — READ-ONLY
+- Employer Signature (org auto-signs) — SIGNATURE field
+
+**Section 11 — Uniform & Equipment Receipt**
+- Items issued (pre-populated: 1 Uniform Shirt + SPS ID TAG)
+- Uniform size (pre-filled from Section 1)
+- Initials for each item — INITIALS field
+- Employee Name + Date — SIGNATURE field
+- Deduction acknowledgement checkbox
+
+**Section 12 — Document Uploads Required**
+- Copy of ID front — FILE UPLOAD (image/pdf)
+- Copy of ID back — FILE UPLOAD
+- Guard Card front — FILE UPLOAD
+- Guard Card back — FILE UPLOAD
+- Social Security Card — FILE UPLOAD
+- Training Certificate (if not yet licensed) — FILE UPLOAD (optional)
+
+Each upload triggers **Trinity ID Scan** (see Section below).
+
+---
+
+## SECTION 2: CLIENT CONTRACT & PROPOSAL SYSTEM
+
+### 2A. Proposal Builder
+
+When org wants to send a proposal to a potential client, they fill out:
+
+**Proposal Header (org-visible)**
+- Proposal Number — AUTO-GENERATED: PRO-{YYYY}-{####}
+- Client Company Name — TEXT
+- Client Primary Contact Name — TEXT
+- Client Email — EMAIL
+- Client Address — TEXT
+- Client Phone — TEXT
+- Service Location (where guards will work) — TEXT
+- Service Location Address — TEXT
+
+**Service Configuration (visible in proposal)**
+- Service Type — DROPDOWN with MULTI-SELECT:
+  - Armed Security Officer ($__ /hr)
+  - Unarmed/Non-Commissioned Officer ($__ /hr)
+  - Personal Protection Officer (PPO) ($__ /hr)
+  - Mobile Patrol Service ($__ /hr)
+  - Event Security ($__ /hr)
+- Rate per type — NUMBER input per selected service type
+- Primary officer rate — NUMBER (first officer, higher rate)
+- Additional officer rate — NUMBER (beyond first, lower rate)
+- Minimum officers required — NUMBER
+- Schedule — MULTI-SELECT: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+- Shift times — TIME range per day
+- Contract term — DROPDOWN: [30-day trial, 60-day, 90-day, 6-month, 1-year, Month-to-month]
+
+**Proposal Legal Block (auto-populated, non-negotiable)**
+- SPS License #: C11608501
+- SPS Address: 3700 Fredericksburg Rd., San Antonio, TX 78201
+- Insurance coverage statement
+- Late fee terms ($25/day)
+- 90-day trial period language
+- Emergency response 25% surcharge clause
+- Mutual aid clause
+- Liability limits
+
+**Advertising Compliance Block (Texas DPS requirement)**
+- Company name in full: Statewide Protective Services / Statewide Public Safety Services LLC
+- Full address
+- License number prominently displayed
+- Rates displayed per service type
+- "Services regulated under Chapter 1702 of the Texas Occupations Code" statement
+
+### 2B. Negotiation Thread (Trinity-Assisted)
+
+Once proposal is sent to client email:
+
+1. **Client receives email** with secure link to view proposal
+2. **Client can reply** via embedded message form on proposal page (no login required for client)
+3. **Org receives notification** in CoAIleague dashboard
+4. **Before org sends ANY message**, Trinity offers an AI-enhanced version:
+   - Shows original typed message
+   - Shows Trinity-polished version
+   - "Use Trinity's version" / "Use my version" / "Edit suggestion" buttons
+   - Trinity prompt: "You are a professional security company sales consultant for Statewide Protective Services. Polish this message to be professional, clear, legally appropriate, and persuasive while maintaining the core intent. Keep it concise. Do not change pricing unless instructed."
+5. **Terms extraction**: Trinity scans incoming client messages and extracts:
+   - Proposed rate changes
+   - Schedule modifications
+   - Officer count changes
+   - Special requests
+   - Concerns/objections
+   Displays extracted terms as tags: "Client proposes: $25/hr unarmed | Fri-Sun only | 2 officers"
+6. **Agreement detection**: When Trinity detects agreement language ("that works", "we accept", "agreed", "let's move forward"), it flags the thread:
+   - "Agreement detected — ready to convert to contract?"
+   - Shows snapshot of agreed terms
+   - [Convert to Contract] button
+
+### 2C. Contract Generation from Agreed Proposal
+
+When org clicks [Convert to Contract]:
+1. Pre-fills all contract fields from agreed terms in negotiation thread
+2. Generates Contract Number: CON-{YYYY}-{####}
+3. Links back to proposal number
+4. Both parties must sign:
+   - Client signs: signature + initials on liability clauses + date
+   - SPS signs: org signature auto-filled or org manually signs in dashboard
+5. ID verification required for client (upload driver's license or state ID)
+
+### 2D. Full Contract Sections (from uploaded document)
+
+Render ALL 21 sections of the General Contract for Services:
+1. General Provisions (a-n) — READ-ONLY with agreed values filled
+2. Payment Section 2A — FILLED with agreed primary rate
+3. Payment Section 2B — FILLED with agreed additional rate
+4. Payment terms — READ-ONLY
+5. Late fee clause — READ-ONLY
+6. Term — FILLED with agreed term, initials required
+7. Confidentiality — initials required
+8. Insurance — initials required
+9. Indemnification/Limits of Liability — **BOLD initials required** (key liability section)
+10. Warranty — initials required
+11. Default — initials required
+12. Remedies — initials required
+13. Force Majeure — initials required
+14. Governing Law (Texas) — READ-ONLY, initials
+15. Notice — initials
+16. Waiver — initials
+17. Attorney's Fees — initials
+18. Construction — initials
+19. Assignment — initials
+20. Emergency Response 25% clause — initials required
+21. Mutual Aid clause — initials required
+- Client Signature + Date — SIGNATURE field
+- SPS Representative Signature + Date — SIGNATURE field
+
+---
+
+## SECTION 3: DOCUMENT VIEWER & SIGNING ENGINE
+
+### DocumentViewer Component Logic
+
+```
+DocumentViewer renders a full-page document experience:
+- Paper-style white background, shadow
+- Sections scroll naturally
+- Each signature/initial/checkbox field is rendered as an interactive overlay
+- Fields are color-coded:
+  - YELLOW = needs action by current signer
+  - GREEN = completed
+  - GRAY = completed by other party
+  - RED = required and missed (on submission attempt)
+- Progress bar at top: "8 of 23 fields complete"
+- Navigation sidebar: jump to any section
+- Mobile responsive — signature fields full-width on mobile
+```
+
+### SignaturePad Component
+
+```javascript
+// Use react-signature-canvas or build with native Canvas API
+// On sign:
+//   1. Capture SVG/PNG of signature
+//   2. Record: timestamp, IP (from req headers), user agent, geolocation if permitted
+//   3. Store in document.signatures[field_id]
+//   4. Add to audit_log: { action: 'signed', field_id, timestamp, ip, user_agent }
+//   5. Show sealed indicator (lock icon + timestamp)
+// Clear button available until submission
+// Typed signature option: type name → auto-cursive font render
+```
+
+### Submission & Sealing
+
+When all required fields complete:
+1. [Complete & Submit] button activates
+2. Show summary: "You are about to sign [Document Name]. This is legally binding."
+3. On confirm:
+   - Set document.status = 'completed'
+   - Seal signatures (no further editing)
+   - Generate PDF via pdfmake with all data embedded
+   - Upload sealed PDF to Supabase Storage under: `/{workspace_id}/documents/{document_id}/sealed_{document_number}.pdf`
+   - Save record in sps_document_safe
+   - Send completion emails to all parties via Resend (docs@ routing)
+   - Add final audit log entry
+
+---
+
+## SECTION 4: TRINITY ID VERIFICATION
+
+### IDUploadScanner Component
+
+When employee/client uploads an ID document:
+
+```javascript
+// 1. Accept image (jpg/png) or PDF
+// 2. Show preview
+// 3. Auto-trigger Trinity scan:
+
+const trinityIDScan = async (imageBase64, documentType) => {
+  const prompt = `
+You are an ID verification assistant for a licensed Texas security company. 
+Analyze this ${documentType} image and extract the following information.
+Return ONLY valid JSON, no markdown.
+
+Extract:
+{
+  "document_type": "drivers_license|state_id|passport|guard_card",
+  "issuing_state": "string",
+  "full_name": "string",
+  "date_of_birth": "YYYY-MM-DD",
+  "id_number": "string",
+  "expiration_date": "YYYY-MM-DD",
+  "address": "string",
+  "is_expired": boolean,
+  "authenticity_indicators": {
+    "has_state_seal": boolean,
+    "has_hologram_indicators": boolean,
+    "text_consistent": boolean,
+    "format_matches_state": boolean
+  },
+  "verification_confidence": "high|medium|low",
+  "flags": ["any concerns or anomalies"],
+  "license_type_if_guard_card": "non_commissioned|commissioned|armed",
+  "license_number_if_guard_card": "string",
+  "guard_card_expiry_if_applicable": "YYYY-MM-DD"
+}
+
+If this is a guard card, also confirm it appears to be an official Texas DPS Private Security Bureau card.
+`;
+
+  // Send to Trinity (Claude primary)
+  const result = await callTrinityAPI({ 
+    prompt, 
+    imageBase64, 
+    model: 'claude', 
+    fallback: 'gpt' 
+  });
+  
+  return JSON.parse(result);
+};
+
+// 4. Auto-populate form fields from scan results
+// 5. Show verification status badge
+// 6. Store scan results in document.id_verification_data
+// 7. If confidence = 'low' or flags exist → set id_verification_status = 'manual_review'
+//    Notify org via dashboard notification
+```
+
+---
+
+## SECTION 5: EMAIL PIPELINE
+
+Use Resend with routing through `docs@statewideprotective.com`.
+
+### Emails to Build
+
+**1. Employee Packet Invitation**
+```
+To: [employee_email]
+From: docs@statewideprotective.com  
+Subject: Action Required — Complete Your SPS Onboarding Packet [{document_number}]
+
+- Welcome message
+- What they need to complete
+- Secure link to their packet (token-based, expires 7 days)
+- What to have ready (IDs, bank info, guard card)
+- Contact info for questions: admin@statewideprotective.com
+```
+
+**2. Proposal Sent to Client**
+```
+To: [client_email]
+From: docs@statewideprotective.com
+Subject: Security Services Proposal — Statewide Protective Services [PRO-{year}-{####}]
+
+- Professional proposal summary
+- Rates, services, schedule
+- [View & Respond to Proposal] button
+- SPS contact info
+- License disclosure (Texas DPS requirement)
+```
+
+**3. Negotiation Message (org → client)**
+```
+To: [client_email]
+Subject: Re: Your Security Services Proposal [{proposal_number}]
+- Message content
+- [Reply] button (opens secure thread)
+```
+
+**4. Agreement Detected — Convert to Contract**
+```
+To: [org_internal]
+Subject: ⚡ Agreement Reached with {client_name} — Ready to Generate Contract
+- Summary of agreed terms
+- [Generate Contract Now] CTA
+```
+
+**5. Contract Ready for Signature**
+```
+To: [client_email]
+Subject: Security Services Contract Ready for Signature — {client_company_name}
+- Contract summary
+- [Review & Sign Contract] button
+- Expiration notice (7 days)
+```
+
+**6. Document Completed**
+```
+To: [both parties]
+Subject: ✅ Signed Document — {document_number} | Statewide Protective Services
+- Confirmation message  
+- Attached: sealed PDF
+- Document reference number
+- "This document is stored in your document safe"
+```
+
+---
+
+## SECTION 6: DOCUMENT SAFE
+
+### UI Features
+- List view with search (by name, document number, date, type)
+- Filter by: type (employee_packet, client_contract, proposal), status, date range
+- Each document row shows: name, doc#, type, status badge, date, [View] [Download] [Void]
+- Click document → opens DocumentViewer in read-only sealed mode with audit trail
+- Org internal search: search by employee name, client name, contract number, guard license number
+- Export: bulk PDF download, CSV export of document list
+
+---
+
+## SECTION 7: STATE REGULATORY COMPLIANCE MODULE
+
+Build a `StateRequirementsChecker` utility:
+
+```javascript
+// Before rendering any form, check state requirements
+const getRequiredFields = async (stateCode, documentType) => {
+  const req = await db.query(
+    'SELECT * FROM sps_state_requirements WHERE state_code = $1 AND document_type = $2',
+    [stateCode, documentType]
+  );
+  return req.rows[0];
+};
+
+// Mark fields as required/optional based on state
+// Show state-specific notices (e.g., Texas TOPS portal requirement)
+// For multi-state operations: show which state's requirements are being applied
+// Alert if a guard card is from a different state than assignment
+```
+
+**Texas-Specific Requirements to Enforce:**
+- Guard card must be registered under agency LIC# C11608501 on TOPS portal
+- Non-commissioned officers cannot carry firearms (enforce in form — disable weapon-related fields)
+- License expiry tracked — auto-alert org 60 days before expiry
+- DOB and POB mandatory for regulatory audits
+- Assignment site must be recorded with full address (not just name)
+
+---
+
+## SECTION 8: SECURITY & ACCESS CONTROL
+
+```javascript
+// Token-based access for external signers (no CoAIleague account required)
+// Token format: JWT with { document_id, signer_role, expires_at }
+// Token expiry: 7 days for employees, 14 days for clients
+// Token stored in sps_documents.access_token (hashed)
+// Rate limit: 10 requests/minute per token
+// All signing actions log IP + user agent
+
+// Internal access (org users):
+// - Admin: full access to all documents
+// - HR role: employee packets only
+// - Operations role: contracts + proposals
+// - View-only role: read-only document safe access
+
+// SSN/sensitive data:
+// - Store encrypted (AES-256) 
+// - Display masked: XXX-XX-1234
+// - Only last 4 stored in plaintext column
+// - Full SSN only accessible to Admin + HR with audit log entry
+```
+
+---
+
+## SECTION 9: UI/UX SPECIFICATIONS
+
+### Document Signing Experience
+- Clean white document aesthetic — professional legal document feel
+- SPS logo and branding at top of every document
+- Progress indicator: step number + section name
+- Each section has a colored header with section number
+- Signature fields rendered as dashed bordered boxes with pen icon
+- On signature capture: smooth ink animation, then seal with timestamp
+- Mobile: signature pad full screen modal
+- Completed sections have a subtle green check
+- "Save Progress" auto-saves every 2 minutes
+
+### Proposal/Contract Builder (Org Side)
+- Clean form with SPS navy/gold color scheme
+- Service type cards with pricing inputs (not a plain dropdown — visual cards)
+- Live preview panel: shows what client will see as you type
+- Trinity AI button: "✨ Enhance with Trinity" on message compose areas
+- Negotiation thread: WhatsApp-style chat bubbles, Trinity suggestions shown in purple
+- "Terms Tracker" sidebar: shows live extracted terms from conversation
+
+### Dashboard Integration
+- Document Safe widget on home dashboard: recent docs, pending signatures
+- Notification badges: "3 documents awaiting signature", "New client reply on proposal PRO-2025-0042"
+- Quick actions: [New Employee Packet] [New Client Proposal] [View Document Safe]
+
+---
+
+## SECTION 10: EXECUTION ORDER
+
+Build in this exact sequence — do not skip ahead:
+
+1. **Database** — Create all tables above. Seed Texas state requirements.
+2. **API routes** — CRUD for documents, negotiations, document safe
+3. **Token system** — External signer token generation and validation
+4. **SignaturePad + InitialsPad** — Core signing components, test with mock doc
+5. **DocumentViewer** — Render a static document with live interactive fields
+6. **Employee Packet Form** — All 12 sections, field validation, state requirements
+7. **IDUploadScanner** — Upload → Trinity scan → auto-populate → verification badge
+8. **Email pipeline** — All 6 email templates via Resend, test each trigger
+9. **Proposal Builder** — Org-side proposal form with pricing dropdowns
+10. **Negotiation Thread** — Messaging UI + Trinity enhancement + terms extraction
+11. **Agreement detection → Contract generation**
+12. **Client Contract Form** — All 21 sections with initials fields
+13. **PDF sealing + Document Safe** — Generate sealed PDF, upload, store record
+14. **Document Safe UI** — Search, filter, view, download
+15. **Dashboard integration** — Widgets, notifications, quick actions
+16. **State compliance module** — Requirements checker, Texas TOPS alerts
+17. **Access control** — Role-based permissions, token expiry, audit logs
+18. **End-to-end test** — Full employee onboarding, full client contract, full proposal→contract flow
+
+---
+
+## CRITICAL RULES FOR REPLIT AGENT
+
+- Do NOT use any external DocuSign, HelloSign, or PandaDoc APIs. Build the signing engine natively.
+- Do NOT store full SSN in plaintext anywhere. Always encrypt.
+- Do NOT skip the Texas regulatory fields (DOB, POB, assignment site address). These are audit requirements.
+- Do NOT let a document be marked 'completed' unless ALL required fields for that state are filled.
+- DO keep the CoAIleague workspace_id scoped on every query — never allow cross-workspace data access.
+- DO maintain the 7-step pipeline (Trigger → Validate → Process → Persist → Propagate → Notify → Confirm) on every document action.
+- DO test the Trinity API fallback chain — if Claude fails, try GPT, then Gemini.
+- DO generate document numbers sequentially and uniquely: EMP-{YYYY}-{####}, CON-{YYYY}-{####}, PRO-{YYYY}-{####}
+- DO separate Statewide Protective Services (production) org data from Acme Security Services (dev sandbox) data at all times.
+- After each section is complete, run a verification check before moving to the next section. Do not self-report success without confirming the feature works with real data.

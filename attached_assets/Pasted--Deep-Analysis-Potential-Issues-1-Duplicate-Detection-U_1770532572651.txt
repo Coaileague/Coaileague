@@ -1,0 +1,91 @@
+**Deep Analysis - Potential Issues:**
+
+---
+
+**1. Duplicate Detection**
+- User creates "ABC Security" in CoAIleague
+- "ABC Security LLC" already exists in QuickBooks (from before migration)
+- Trinity creates a duplicate in QB
+- **Ask Replit:** Before creating, search QB for existing records by name/email. If match found, link instead of create.
+
+---
+
+**2. Required Fields Mismatch**
+- CoAIleague might let you create a client with just a name
+- QuickBooks might require email, address, or tax ID for certain operations
+- **Ask Replit:** What fields does QB require for Customer, Employee, Vendor creation? Validate CoAIleague records have required fields before attempting QB create. Surface clear error if missing.
+
+---
+
+**3. Employee vs Contractor Classification**
+- In CoAIleague they might both be "workers"
+- In QuickBooks: Employees → QB Payroll, Contractors → Vendors (1099)
+- **Ask Replit:** How does CoAIleague distinguish employee vs contractor? Ensure correct QB record type is created.
+
+---
+
+**4. Partial Failure State**
+- Trinity creates customer in QB successfully
+- Saving the QB ID back to CoAIleague fails (DB error, timeout)
+- Next run: Trinity creates ANOTHER duplicate
+- **Ask Replit:** Wrap QB create + local ID save in a transaction. If local save fails, consider QB record orphaned and handle gracefully.
+
+---
+
+**5. Sandbox vs Production Records**
+- You test in sandbox, Trinity creates records there
+- Switch to production, those records don't exist
+- **Ask Replit:** Store `quickbooksCustomerId` with environment context (sandbox vs production). Don't assume IDs transfer between environments.
+
+---
+
+**6. Two-Way Edit Conflicts**
+- Client address updated in CoAIleague
+- Same client address updated differently in QuickBooks
+- Which one wins?
+- **Ask Replit:** Define CoAIleague as source of truth for operational data. When Trinity provisions, it pushes CoAIleague data to QB, overwriting if needed. Or flag conflicts for review.
+
+---
+
+**7. Deletion Handling**
+- Client deleted in CoAIleague but exists in QB with invoices
+- Or deleted in QB but still referenced in CoAIleague
+- **Ask Replit:** Soft delete in CoAIleague (mark inactive). Don't delete QB records - just unlink. QB records with financial history can't be deleted anyway.
+
+---
+
+**8. Rate Limits**
+- Trinity batch-processing 50 new employees at once
+- QB API rate limit hit mid-process
+- **Ask Replit:** Implement rate limiting/queuing for bulk operations. Handle 429 errors with exponential backoff.
+
+---
+
+**9. Multi-Company QuickBooks**
+- Org has multiple QB companies (e.g., per region)
+- Which one does Trinity create records in?
+- **Ask Replit:** Is multi-company QB supported? If yes, how is the correct company determined per client/employee?
+
+---
+
+**Add this to your Replit prompt:**
+
+---
+
+**Also analyze these edge cases:**
+
+1. **Duplicate detection** - Before creating in QB, search for existing records by name/email and link if found
+2. **Required fields** - What does QB require for Customer/Employee/Vendor? Validate before create
+3. **Employee vs Contractor** - Ensure correct QB record type based on CoAIleague classification  
+4. **Partial failures** - If QB create succeeds but saving ID to CoAIleague fails, how do we prevent duplicates?
+5. **Sandbox vs Production** - QB IDs are environment-specific, don't mix them
+6. **Edit conflicts** - Define which system is source of truth for which fields
+7. **Deletions** - How to handle records deleted in one system but not the other
+8. **Rate limits** - Handle QB API throttling for bulk operations
+9. **Multi-company** - Is this supported? How does it affect record creation?
+
+**Report which of these are already handled, which need work, and propose solutions.**
+
+---
+
+This should cover the gotchas that would bite you later.

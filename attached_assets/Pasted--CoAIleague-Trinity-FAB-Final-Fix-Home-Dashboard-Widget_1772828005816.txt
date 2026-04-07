@@ -1,0 +1,312 @@
+# CoAIleague — Trinity FAB Final Fix + Home Dashboard Widget
+## Stop Floating Over Content. Give Trinity Her Own Space.
+
+---
+
+## THE PROBLEM
+
+Trinity's FAB has been colliding with the + button and covering page content on every page because it has no awareness of what else is on screen. This ends now.
+
+## THE SOLUTION — Two Trinity Modes
+
+**Mode 1 — Home Dashboard:** Trinity gets a dedicated widget card in the page layout. Not floating. Her own section with real estate between Earnings and the grid tiles.
+
+**Mode 2 — All Other Pages:** Compact FAB, bottom LEFT, hides on scroll. Never competes with + button again.
+
+---
+
+## FIX 1 — GLOBAL FAB RULE (All Pages Except Home)
+
+Move Trinity FAB to BOTTOM LEFT permanently. The + button owns bottom right.
+
+```css
+/* Trinity FAB — BOTTOM LEFT on all pages except /dashboard */
+.trinity-fab {
+  position: fixed !important;
+  bottom: 96px !important;        /* above bottom nav */
+  left: 20px !important;          /* LEFT side always */
+  right: auto !important;         /* never right */
+  z-index: 9999 !important;
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #00D4FF 0%, #7B5EA7 100%) !important;
+  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+/* Hide on scroll down, show on scroll up */
+.trinity-fab--hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0.8) translateY(8px) !important;
+}
+
+/* + button stays bottom RIGHT always */
+.add-fab, [class*="plus-fab"], [class*="add-button"] {
+  position: fixed !important;
+  bottom: 96px !important;
+  right: 20px !important;
+  left: auto !important;
+  z-index: 9998 !important;
+}
+
+/* Landing page — Trinity FAB hides entirely, she doesn't belong on marketing pages */
+body[data-route="/"], 
+body[data-route="/landing"] {
+  .trinity-fab { display: none !important; }
+}
+```
+
+```typescript
+// Scroll hide/show logic — add to TrinityWidget.tsx
+useEffect(() => {
+  let lastScrollY = window.scrollY;
+  let ticking = false;
+
+  const handleScroll = () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        setFabVisible(currentScrollY < lastScrollY || currentScrollY < 80);
+        lastScrollY = currentScrollY;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
+```
+
+---
+
+## FIX 2 — TRINITY HOME DASHBOARD WIDGET
+
+On the home/dashboard page ONLY — hide the FAB entirely and replace it with this dedicated widget card placed between the Earnings card and the grid tiles section.
+
+Trinity has her own home. She doesn't need to float here.
+
+```tsx
+// TrinityHomeWidget.tsx
+// Place between EarningsCard and the grid sections
+
+const TrinityHomeWidget = ({ orgId, userId, userName }) => {
+  const [insight, setInsight] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch Trinity's proactive insight on mount
+  useEffect(() => {
+    fetchTrinityDailyInsight(orgId).then(data => {
+      setInsight(data);
+      setLoading(false);
+    });
+  }, [orgId]);
+
+  return (
+    <div style={{
+      position: 'relative',
+      borderRadius: '16px',
+      padding: '16px',
+      marginBottom: '16px',
+      overflow: 'hidden',
+      background: 'var(--color-bg-secondary)',
+    }}>
+      {/* Gradient border */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '16px',
+        padding: '1.5px',
+        background: 'linear-gradient(135deg, #00D4FF 0%, #7B5EA7 100%)',
+        WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+        WebkitMaskComposite: 'xor',
+        maskComposite: 'exclude',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Header row */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '12px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Trinity Logo/Avatar */}
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, #00D4FF 0%, #7B5EA7 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '18px',
+          }}>
+            ✦
+          </div>
+          <div>
+            <div style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              color: 'var(--color-text-primary)',
+            }}>
+              Trinity
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: '#00D4FF',
+            }}>
+              AI Assistant · Online
+            </div>
+          </div>
+        </div>
+
+        {/* Pulse indicator — Trinity is active */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '11px',
+          color: '#3FB950',
+        }}>
+          <div style={{
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            background: '#3FB950',
+            animation: 'pulse 2s infinite',
+          }} />
+          Active
+        </div>
+      </div>
+
+      {/* Trinity's insight for today */}
+      <div style={{
+        fontSize: '13px',
+        color: 'var(--color-text-secondary)',
+        lineHeight: '1.5',
+        marginBottom: '14px',
+        minHeight: '40px',
+      }}>
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div className="skeleton" style={{ height: '14px', width: '90%', borderRadius: '4px' }} />
+            <div className="skeleton" style={{ height: '14px', width: '70%', borderRadius: '4px' }} />
+          </div>
+        ) : (
+          insight?.message || `Good to see you, ${userName}. Everything looks on track today.`
+        )}
+      </div>
+
+      {/* Quick action chips — horizontal scroll */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        overflowX: 'auto',
+        paddingBottom: '2px',
+        scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch',
+      }}>
+        {[
+          { label: "Today's shifts", icon: '📅' },
+          { label: 'Pending approvals', icon: '✅' },
+          { label: 'Team status', icon: '👥' },
+          { label: 'Ask Trinity', icon: '💬' },
+        ].map((chip) => (
+          <button
+            key={chip.label}
+            style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '6px 12px',
+              borderRadius: '9999px',
+              border: '1px solid rgba(0, 212, 255, 0.3)',
+              background: 'rgba(0, 212, 255, 0.05)',
+              color: '#00D4FF',
+              fontSize: '12px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>{chip.icon}</span>
+            <span>{chip.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## DASHBOARD PAGE LAYOUT ORDER
+
+This is the exact order of elements on the home dashboard. Do not deviate.
+
+```
+1. Greeting Banner          ← dark navy, user name, status, next shift
+2. Earnings Widget          ← $360.00, progress bar, pay period
+3. Trinity Home Widget      ← ✦ dedicated card, insight, quick chips  ← NEW
+4. TIME & SCHEDULE section  ← grid tiles
+5. TEAM MANAGEMENT section  ← grid tiles  
+6. FIELD REPORTS section    ← grid tiles
+7. COMMUNICATION section    ← grid tiles
+```
+
+Trinity FAB on home page: **HIDDEN** — she already has her widget card above.
+
+---
+
+## LANDING PAGE (logged out)
+
+Trinity FAB: **HIDDEN entirely** on `/` and `/landing`
+
+She does not belong on marketing pages. Remove her.
+
+The Trinity reference on the landing page is already handled by the "Powered by Trinity AI" badge and the copy. The FAB covering "Get Started Free" kills conversions.
+
+---
+
+## ALL OTHER PAGES — FAB Position Summary
+
+| Page | Trinity FAB | Position | Notes |
+|------|------------|----------|-------|
+| `/` landing | Hidden | — | Not needed on marketing |
+| `/dashboard` | Hidden | — | Has dedicated widget card |
+| `/schedule` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/time-tracking` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/timesheets` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/payroll` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/compliance` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/team` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/reports` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/settings` | Visible | Bottom LEFT, 96px | Hides on scroll |
+| `/billing` | Visible | Bottom LEFT, 96px | Hides on scroll |
+
+**+ button always bottom RIGHT. Trinity always bottom LEFT. They never meet.**
+
+---
+
+## VERIFICATION
+
+- [ ] Landing page: Trinity FAB is completely hidden
+- [ ] Dashboard: Trinity FAB hidden, Trinity widget card visible in layout
+- [ ] Trinity widget card has gradient border, logo, online indicator, insight text, quick chips
+- [ ] All other pages: Trinity FAB bottom LEFT at left: 20px
+- [ ] + button bottom RIGHT at right: 20px on all pages
+- [ ] Trinity FAB hides when scrolling down, reappears when scrolling stops
+- [ ] No overlap between Trinity FAB and any other element on any page
+- [ ] Quick chips in Trinity widget are horizontally scrollable

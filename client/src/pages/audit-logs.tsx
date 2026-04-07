@@ -1,3 +1,4 @@
+import { secureFetch } from "@/lib/csrf";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,7 @@ import {
 import { Shield, Search, Filter, Download, Calendar, User, FileText, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { WorkspaceLayout, WorkspaceSection } from "@/components/workspace-layout";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface AuditLog {
   id: string;
@@ -35,15 +36,19 @@ export default function AuditLogs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [actorFilter, setActorFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const { data: auditLogs, isLoading } = useQuery<AuditLog[]>({
-    queryKey: ['/api/audit-logs', actorFilter, statusFilter],
+    queryKey: ['/api/governance/audit-logs', actorFilter, statusFilter, page],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (actorFilter !== 'all') params.append('actorType', actorFilter);
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      const url = `/api/audit-logs${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(url);
+      params.append('page', page.toString());
+      params.append('limit', '50');
+      const url = `/api/audit-logs?${params.toString()}`;
+      const response = await secureFetch(url);
       if (!response.ok) throw new Error('Failed to fetch audit logs');
       return response.json();
     },
@@ -62,10 +67,10 @@ export default function AuditLogs() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'failure': return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      default: return null;
+      case 'success': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
+      case 'failure': return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
+      case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
+      default: return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -90,21 +95,16 @@ export default function AuditLogs() {
     return matchesSearch && matchesActor && matchesStatus;
   });
 
-  return (
-    <WorkspaceLayout maxWidth="7xl">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">AI Compliance</h1>
-              <p className="text-sm text-muted-foreground">AI-powered compliance and activity tracking</p>
-            </div>
-          </div>
-        </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'audit-logs',
+    title: 'AI Compliance',
+    subtitle: 'AI-powered compliance and activity tracking',
+    category: 'admin',
+    maxWidth: '7xl',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -125,7 +125,7 @@ export default function AuditLogs() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="text-xs font-medium">Success Rate</CardDescription>
-            <CardTitle className="text-2xl text-green-600" data-testid="stat-success-rate">
+            <CardTitle className="text-2xl text-green-600 dark:text-green-400" data-testid="stat-success-rate">
               {auditLogs && auditLogs.length > 0
                 ? Math.round((auditLogs.filter(log => log.status === 'success').length / auditLogs.length) * 100)
                 : 0}%
@@ -136,7 +136,7 @@ export default function AuditLogs() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="text-xs font-medium">Warnings</CardDescription>
-            <CardTitle className="text-2xl text-yellow-600" data-testid="stat-warnings">
+            <CardTitle className="text-2xl text-yellow-600 dark:text-yellow-400" data-testid="stat-warnings">
               {auditLogs?.filter(log => log.status === 'warning').length || 0}
             </CardTitle>
           </CardHeader>
@@ -199,79 +199,112 @@ export default function AuditLogs() {
 
           <div className="space-y-3">
             {isLoading ? (
+              <div className="space-y-1">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="flex gap-4 py-3 border-b border-border animate-pulse">
+                    <div className="h-4 bg-muted rounded w-32" />
+                    <div className="h-4 bg-muted rounded flex-1" />
+                    <div className="h-4 bg-muted rounded w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredLogs && filteredLogs.length > 0 ? (
               <>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Card key={i}>
+                {filteredLogs.map((log) => (
+                  <Card key={log.id} className="hover-elevate" data-testid={`audit-log-${log.id}`}>
                     <CardContent className="p-4">
-                      <Skeleton className="h-20 w-full" />
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant={getActorBadgeVariant(log.actorType)} className="text-xs" data-testid={`badge-actor-${log.id}`}>
+                              {log.actorType === 'AI_AGENT' && '🤖 '}
+                              {log.actorType === 'END_USER' && '👤 '}
+                              {log.actorType === 'SUPPORT_STAFF' && '🛟 '}
+                              {log.actorType === 'SYSTEM' && '⚙️ '}
+                              {log.actorType.replace('_', ' ')}
+                            </Badge>
+                            <Badge variant={getStatusBadgeVariant(log.status)} className="text-xs" data-testid={`badge-status-${log.id}`}>
+                              {getStatusIcon(log.status)}
+                              <span className="ml-1">{log.status.toUpperCase()}</span>
+                            </Badge>
+                            {log.verificationHash && (
+                              <Badge variant="outline" className="text-xs" data-testid={`badge-verified-${log.id}`}>
+                                <Shield className="h-3 w-3 mr-1" />
+                                Verified
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <p className="font-semibold text-sm text-foreground" data-testid={`text-action-${log.id}`}>{log.action}</p>
+                            <p className="text-xs text-muted-foreground mt-1" data-testid={`text-details-${log.id}`}>{log.details}</p>
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              <span data-testid={`text-actor-name-${log.id}`}>{log.actorName}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <FileText className="h-3 w-3" />
+                              <span data-testid={`text-resource-${log.id}`}>{log.resourceType}: {log.resourceId}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span data-testid={`text-timestamp-${log.id}`}>{new Date(log.timestamp).toLocaleString()}</span>
+                          </div>
+                          {log.ipAddress && (
+                            <span className="text-xs" data-testid={`text-ip-${log.id}`}>IP: {log.ipAddress}</span>
+                          )}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
+                
+                <div className="flex items-center justify-between mt-6 px-2">
+                  <div className="text-sm text-muted-foreground">
+                    Page {page}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                      disabled={page === 1}
+                      data-testid="button-pagination-prev"
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(prev => prev + 1)}
+                      disabled={filteredLogs.length < PAGE_SIZE}
+                      data-testid="button-pagination-next"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               </>
-            ) : filteredLogs && filteredLogs.length > 0 ? (
-              filteredLogs.map((log) => (
-                <Card key={log.id} className="hover-elevate" data-testid={`audit-log-${log.id}`}>
-                  <CardContent className="p-4">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={getActorBadgeVariant(log.actorType)} className="text-xs" data-testid={`badge-actor-${log.id}`}>
-                            {log.actorType === 'AI_AGENT' && '🤖 '}
-                            {log.actorType === 'END_USER' && '👤 '}
-                            {log.actorType === 'SUPPORT_STAFF' && '🛟 '}
-                            {log.actorType === 'SYSTEM' && '⚙️ '}
-                            {log.actorType.replace('_', ' ')}
-                          </Badge>
-                          <Badge variant={getStatusBadgeVariant(log.status)} className="text-xs" data-testid={`badge-status-${log.id}`}>
-                            {getStatusIcon(log.status)}
-                            <span className="ml-1">{log.status.toUpperCase()}</span>
-                          </Badge>
-                          {log.verificationHash && (
-                            <Badge variant="outline" className="text-xs" data-testid={`badge-verified-${log.id}`}>
-                              <Shield className="h-3 w-3 mr-1" />
-                              Verified
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <p className="font-semibold text-sm text-foreground" data-testid={`text-action-${log.id}`}>{log.action}</p>
-                          <p className="text-xs text-muted-foreground mt-1" data-testid={`text-details-${log.id}`}>{log.details}</p>
-                        </div>
-                        
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            <span data-testid={`text-actor-name-${log.id}`}>{log.actorName}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
-                            <span data-testid={`text-resource-${log.id}`}>{log.resourceType}: {log.resourceId}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span data-testid={`text-timestamp-${log.id}`}>{new Date(log.timestamp).toLocaleString()}</span>
-                        </div>
-                        {log.ipAddress && (
-                          <span className="text-xs" data-testid={`text-ip-${log.id}`}>IP: {log.ipAddress}</span>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
             ) : (
-              <Card>
+              <Card className="border-2 border-dashed">
                 <CardContent className="p-12 text-center">
                   <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    {searchQuery || actorFilter !== "all" || statusFilter !== "all"
+                      ? "No matching logs"
+                      : "No audit logs yet"}
+                  </h3>
                   <p className="text-muted-foreground">
                     {searchQuery || actorFilter !== "all" || statusFilter !== "all"
-                      ? "No audit logs match your filters"
-                      : "No audit logs found. Activity will appear here as actions are performed."}
+                      ? "Try adjusting your filters to find what you're looking for"
+                      : "Activity will appear here as actions are performed in the system"}
                   </p>
                 </CardContent>
               </Card>
@@ -279,7 +312,6 @@ export default function AuditLogs() {
           </div>
         </CardContent>
       </Card>
-      </div>
-    </WorkspaceLayout>
+    </CanvasHubPage>
   );
 }

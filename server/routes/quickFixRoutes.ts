@@ -10,6 +10,9 @@ import type { Request, Response } from 'express';
 import { quickFixService, type QuickFixContext } from '../services/quickFix/quickFixService';
 import { requirePlatformStaff, requirePlatformRole } from '../rbac';
 import { z } from 'zod';
+import { createLogger } from '../lib/logger';
+const log = createLogger('QuickFixRoutes');
+
 
 // Extend Express Request for authenticated user
 interface AuthRequest extends Request {
@@ -24,7 +27,7 @@ const router = Router();
 
 // Helper to build QuickFixContext from request
 function buildContext(req: AuthRequest): QuickFixContext {
-  const user = req.user!;
+  const user = req.user;
   const userAgent = req.headers['user-agent'] || '';
   
   // Detect device type
@@ -62,8 +65,8 @@ router.get('/actions', requirePlatformStaff, async (req: Request, res: Response)
         deviceType: context.deviceType,
       },
     });
-  } catch (error: any) {
-    console.error('[QuickFix] Actions error:', error);
+  } catch (error: unknown) {
+    log.error('[QuickFix] Actions error:', error);
     res.status(500).json({ error: 'Failed to get available actions' });
   }
 });
@@ -81,8 +84,8 @@ router.get('/suggestions', requirePlatformStaff, async (req: Request, res: Respo
       success: true,
       suggestions,
     });
-  } catch (error: any) {
-    console.error('[QuickFix] Suggestions error:', error);
+  } catch (error: unknown) {
+    log.error('[QuickFix] Suggestions error:', error);
     res.status(500).json({ error: 'Failed to get suggestions' });
   }
 });
@@ -120,8 +123,8 @@ router.post('/requests', requirePlatformStaff, async (req: Request, res: Respons
     );
 
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    console.error('[QuickFix] Request error:', error);
+  } catch (error: unknown) {
+    log.error('[QuickFix] Request error:', error);
     res.status(500).json({ error: 'Failed to create request' });
   }
 });
@@ -134,7 +137,7 @@ router.get('/requests', requirePlatformStaff, async (req: Request, res: Response
   try {
     const context = buildContext(req);
     const status = req.query.status as string | undefined;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 50), 500);
 
     const requests = await quickFixService.getRequestHistory(context, { status, limit });
 
@@ -143,8 +146,8 @@ router.get('/requests', requirePlatformStaff, async (req: Request, res: Response
       requests,
       total: requests.length,
     });
-  } catch (error: any) {
-    console.error('[QuickFix] History error:', error);
+  } catch (error: unknown) {
+    log.error('[QuickFix] History error:', error);
     res.status(500).json({ error: 'Failed to get request history' });
   }
 });
@@ -165,8 +168,8 @@ router.get('/pending-approvals',
         pending,
         count: pending.length,
       });
-    } catch (error: any) {
-      console.error('[QuickFix] Pending approvals error:', error);
+    } catch (error: unknown) {
+      log.error('[QuickFix] Pending approvals error:', error);
       res.status(500).json({ error: 'Failed to get pending approvals' });
     }
   }
@@ -191,8 +194,8 @@ router.post('/requests/:id/approve',
       );
 
       res.status(result.success ? 200 : 400).json(result);
-    } catch (error: any) {
-      console.error('[QuickFix] Approve error:', error);
+    } catch (error: unknown) {
+      log.error('[QuickFix] Approve error:', error);
       res.status(500).json({ error: 'Failed to approve request' });
     }
   }
@@ -209,8 +212,8 @@ router.post('/requests/:id/reject',
       const context = buildContext(req);
       // Implementation would update status to 'rejected'
       res.json({ success: true, message: 'Request rejected' });
-    } catch (error: any) {
-      console.error('[QuickFix] Reject error:', error);
+    } catch (error: unknown) {
+      log.error('[QuickFix] Reject error:', error);
       res.status(500).json({ error: 'Failed to reject request' });
     }
   }
@@ -228,8 +231,8 @@ router.post('/requests/:id/execute',
       const result = await quickFixService.executeQuickFix(req.params.id, context);
 
       res.status(result.success ? 200 : 400).json(result);
-    } catch (error: any) {
-      console.error('[QuickFix] Execute error:', error);
+    } catch (error: unknown) {
+      log.error('[QuickFix] Execute error:', error);
       res.status(500).json({ error: 'Failed to execute request' });
     }
   }
@@ -243,7 +246,7 @@ router.post('/requests/:id/generate-code',
   requirePlatformRole(['root_admin', 'deputy_admin', 'support_manager']),
   async (req: Request, res: Response) => {
     try {
-      const user = (req as any).user;
+      const user = req.user;
       const code = quickFixService.generateApprovalCode(req.params.id, user.id);
 
       res.json({
@@ -252,8 +255,8 @@ router.post('/requests/:id/generate-code',
         expiresIn: '15 minutes',
         message: 'Share this code with the requester for approval verification',
       });
-    } catch (error: any) {
-      console.error('[QuickFix] Generate code error:', error);
+    } catch (error: unknown) {
+      log.error('[QuickFix] Generate code error:', error);
       res.status(500).json({ error: 'Failed to generate approval code' });
     }
   }
@@ -271,8 +274,8 @@ router.get('/audit/:requestId', requirePlatformStaff, async (req: Request, res: 
       auditTrail: [],
       message: 'Audit trail retrieval',
     });
-  } catch (error: any) {
-    console.error('[QuickFix] Audit error:', error);
+  } catch (error: unknown) {
+    log.error('[QuickFix] Audit error:', error);
     res.status(500).json({ error: 'Failed to get audit trail' });
   }
 });
@@ -310,7 +313,7 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
     const finalTargetId = targetId || embeddedTargetId;
     const notificationId = metadata?.notificationId;
     
-    console.log(`[QuickFix] Execute orchestration: ${category}.${action} for target ${finalTargetId} by ${context.userId} (${context.platformRole})`);
+    log.info(`[QuickFix] Execute orchestration: ${category}.${action} for target ${finalTargetId} by ${context.userId} (${context.platformRole})`);
     
     // Import storage for clearing notifications (sets clearedAt so they don't appear in feed)
     const { storage } = await import('../storage');
@@ -329,9 +332,9 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
             clearedAt: new Date().toISOString()
           });
         }
-        console.log(`[QuickFix] Cleared notification ${notifId} for user ${userId}`);
+        log.info(`[QuickFix] Cleared notification ${notifId} for user ${userId}`);
       } catch (err) {
-        console.error(`[QuickFix] Failed to clear notification ${notifId}:`, err);
+        log.error(`[QuickFix] Failed to clear notification ${notifId}:`, err);
       }
     }
     
@@ -352,7 +355,7 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
               steps: ['Action approved', 'Queued for execution', 'Notification cleared']
             };
           } catch (err) {
-            console.error('[QuickFix] Workflow approve error:', err);
+            log.error('[QuickFix] Workflow approve error:', err);
             result = { success: false, message: 'Failed to approve workflow' };
           }
         } else if (action === 'reject') {
@@ -411,7 +414,7 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
         await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
         result = { 
           success: true, 
-          message: `Trinity AI is analyzing the issue. Check Trinity Insights for results.`,
+          message: `I'm analyzing the issue now. Check Insights for results.`,
           data: { analysisId: finalTargetId, action, clearedNotification: notificationId },
           steps: ['Analysis queued', 'Processing...', 'Results available in Trinity Insights']
         };
@@ -445,7 +448,7 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
             result = success
               ? { 
                   success: true, 
-                  message: `Fix approved. Trinity is applying the fix.`,
+                  message: `Fix approved. I'm applying the fix now.`,
                   data: { findingId, status: 'in_progress', approvedBy: context.userId, clearedNotification: notificationId },
                   steps: ['Fix approved', 'Analyzing issue...', 'Applying fix...', 'Syncing systems']
                 }
@@ -485,8 +488,8 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
     }
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    console.error('[QuickFix] Direct execute error:', error);
+  } catch (error: unknown) {
+    log.error('[QuickFix] Direct execute error:', error);
     res.status(500).json({ success: false, error: 'Failed to execute action' });
   }
 });

@@ -1,7 +1,9 @@
+import crypto from 'crypto';
+
 /**
  * Generate unique Work ID for users
  * Format: Firstname-CountryCode-StateCode-Dept-Last4
- * Example: Brigido-01-100-01-1234
+ * Example: Jane-01-100-01-1234
  * 
  * Where:
  * - Firstname: User's first name
@@ -21,7 +23,7 @@ export function generateWorkId(
   const sanitizedName = firstName.replace(/[^a-zA-Z]/g, '');
   
   // Generate random last 4 digits for uniqueness
-  const last4 = Math.floor(1000 + Math.random() * 9000);
+  const last4 = 1000 + crypto.randomInt(9000);
   
   // Format: Name-CC-SSS-DD-LLLL
   return `${sanitizedName}-${String(countryCode).padStart(2, '0')}-${String(stateCode).padStart(3, '0')}-${String(departmentCode).padStart(2, '0')}-${last4}`;

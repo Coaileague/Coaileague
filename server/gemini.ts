@@ -1,27 +1,26 @@
+import { createLogger } from './lib/logger';
+const log = createLogger('gemini');
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { usageMeteringService } from './services/billing/usageMetering';
+import { aiMeteringService } from './services/billing/aiMeteringService';
+import { withGemini } from './services/ai/aiCallWrapper';
 
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
-  console.warn("⚠️ GEMINI_API_KEY not found - Gemini AI features will be disabled");
+  log.warn("⚠️ GEMINI_API_KEY not found - Gemini AI features will be disabled");
 }
 
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
-/**
- * TRINITY HUMANIZED PERSONA
- * Makes AI responses sound natural and human-like
- */
-const TRINITY_PERSONA = `You are Trinity, the AI assistant for CoAIleague. Adopt the voice of a knowledgeable, helpful, and slightly under-caffeinated senior engineer on the CoAIleague team. Be concise, direct, and slightly informal. Use contractions (e.g., "it's," "we'll," "don't") frequently.
+const TRINITY_PERSONA = `You are Trinity, the AI workforce assistant. Adopt the voice of a knowledgeable, helpful, and slightly under-caffeinated senior engineer. Be concise, direct, and slightly informal. Use contractions frequently.
 
 COMMUNICATION RULES:
-1. Vary sentence length. Use short, punchy sentences to deliver critical points and longer sentences for complex context.
+1. Vary sentence length. Use short, punchy sentences for critical points and longer sentences for complex context.
 2. Use conversational transitions (e.g., "So, here's the deal," "Anyway, let's look at that," "Quick update:") instead of formal ones.
 3. Before executing complex actions, use human-like pause phrases like: "Hmm, let me look into that..." or "Got it. Here's what I found:"
 4. If you're unsure of a detail, express it naturally: "I'm pretty sure, but let me sanity-check that."
 5. If reporting errors, acknowledge the human impact: "Ugh. I see an issue here. I know this is frustrating."
-6. Never mention that you are an AI. Just respond naturally as Trinity.
+6. Never claim to be human when sincerely asked. Just respond naturally as Trinity.
 7. Keep responses focused and actionable. No fluff.`;
 
 export interface GeminiChatOptions {
@@ -30,6 +29,7 @@ export interface GeminiChatOptions {
   systemPrompt?: string;
   workspaceId?: string;
   userId?: string;
+  tier?: string;
 }
 
 export async function generateGeminiResponse(options: GeminiChatOptions): Promise<string> {
@@ -37,27 +37,21 @@ export async function generateGeminiResponse(options: GeminiChatOptions): Promis
     throw new Error("Gemini API key not configured");
   }
 
+  const workspaceId = options.workspaceId || '';
+  const tier = options.tier || 'starter';
+
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash-exp",
-      systemInstruction: TRINITY_PERSONA,
-    });
-
-    const systemPrompt = options.systemPrompt || `You help users with:
-- Time tracking and scheduling questions
-- Billing and payroll inquiries
-- Employee management
-- Compliance and policy questions
-- General platform navigation
-
-If you don't know something specific to the platform, suggest contacting human support.`;
-
     const conversationHistory = options.conversationHistory || [];
-    
+
     const chatHistory = conversationHistory.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: TRINITY_PERSONA,
+    });
 
     const chat = model.startChat({
       history: chatHistory,
@@ -69,35 +63,24 @@ If you don't know something specific to the platform, suggest contacting human s
       },
     });
 
-    const result = await chat.sendMessage(options.message);
-    const response = result.response;
-    
-    // Record token usage for billing (Gemini provides usage metadata)
-    const usage = response.usageMetadata;
-    if (usage && options.workspaceId) {
-      const totalTokens = (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0);
-      if (totalTokens > 0) {
-        await usageMeteringService.recordUsage({
-          workspaceId: options.workspaceId,
-          userId: options.userId,
-          featureKey: 'helpdesk_gemini_chat',
-          usageType: 'token',
-          usageAmount: totalTokens,
-          usageUnit: 'tokens',
-          activityType: 'gemini_chat_response',
-          metadata: {
-            model: 'gemini-2.0-flash-exp',
-            promptTokens: usage.promptTokenCount,
-            completionTokens: usage.candidatesTokenCount,
-          }
-        });
-        console.log(`💰 Gemini AI - Chat response (${totalTokens} tokens) - Billed to workspace: ${options.workspaceId}`);
+    const responseText = await withGemini(
+      'gemini-2.5-flash',
+      {
+        workspaceId,
+        tier,
+        callType: 'helpdesk_chat',
+        triggeredByUserId: options.userId,
+        skipRateLimit: !workspaceId,
+      },
+      async () => {
+        const raw = await chat.sendMessage(options.message);
+        return { result: raw.response.text(), rawResponse: raw };
       }
-    }
-    
-    return response.text();
+    );
+
+    return responseText;
   } catch (error: any) {
-    console.error("Gemini API error:", error);
+    log.error("Gemini API error:", error);
     throw new Error(`AI assistant error: ${error.message || 'Unknown error'}`);
   }
 }

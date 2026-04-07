@@ -7,7 +7,8 @@ import { useLocation } from "wouter"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { HOME_BUTTON_CONFIG, getHomeButtonConfig } from "@/config/homeButton"
+import { HOME_BUTTON_CONFIG, MODAL_BUTTON_STYLES, getHomeButtonConfig } from "@/config/homeButton"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 
 const Dialog = DialogPrimitive.Root
 
@@ -24,7 +25,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0",
+      "fixed inset-0 z-[2500] bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=closed]:pointer-events-none",
       className
     )}
     {...props}
@@ -33,17 +34,20 @@ const DialogOverlay = React.forwardRef<
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const dialogContentVariants = cva(
-  "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background/95 backdrop-blur-md p-4 shadow-2xl duration-150 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl max-h-[min(90vh,800px)] overflow-y-auto",
+  "fixed left-[50%] top-[50%] z-[2501] grid max-w-none translate-x-[-50%] translate-y-[-50%] gap-2 border bg-background/95 backdrop-blur-md p-3 sm:p-4 shadow-sm duration-150 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 rounded-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch] box-border",
   {
     variants: {
       size: {
-        sm: "w-[min(92vw,22rem)] max-w-none",
-        md: "w-[min(92vw,26rem)] max-w-none",
-        default: "w-[min(92vw,28rem)] max-w-none",
-        lg: "w-[min(92vw,32rem)] max-w-none",
-        xl: "w-[min(92vw,42rem)] max-w-none",
-        full: "w-[min(95vw,56rem)] max-w-none",
+        sm: "w-[min(92vw,22rem)]",
+        md: "w-[min(92vw,26rem)]",
+        default: "w-[min(92vw,28rem)]",
+        lg: "w-[min(92vw,32rem)]",
+        xl: "w-[min(92vw,42rem)]",
+        full: "w-[min(95vw,56rem)]",
       },
+    },
+    defaultVariants: {
+      size: "default",
     },
   }
 )
@@ -54,12 +58,13 @@ interface DialogContentProps
   showHomeButton?: boolean;
   homeButtonPath?: string;
   isGuest?: boolean;
+  hideBuiltInClose?: boolean;
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, size, ...props }, ref) => {
+>(({ className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, size, hideBuiltInClose = false, ...props }, ref) => {
   const [, setLocation] = useLocation();
   const config = getHomeButtonConfig(isGuest);
   const navPath = homeButtonPath || config.navigationPath;
@@ -72,46 +77,41 @@ const DialogContent = React.forwardRef<
     }
   };
 
-  React.useEffect(() => {
-    if (!HOME_BUTTON_CONFIG.escapeKeyEnabled) return;
-    
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showHomeButton) {
-        handleHomeClick();
-      }
-    };
-    
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [showHomeButton, navPath]);
-
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
+        aria-label="Dialog"
+        aria-describedby={undefined}
         className={cn(dialogContentVariants({ size }), className)}
         {...props}
       >
+        <VisuallyHidden>
+          <DialogPrimitive.Title>Dialog</DialogPrimitive.Title>
+          <DialogPrimitive.Description>Dialog content</DialogPrimitive.Description>
+        </VisuallyHidden>
         {children}
-        <div className="absolute right-1.5 top-1.5 sm:right-2 sm:top-2 flex items-center gap-0.5">
-          {showHomeButton && (
-            <button
-              onClick={handleHomeClick}
-              className="flex items-center justify-center rounded-md min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent active:bg-accent/80"
-              data-testid={config.testId}
-              title={config.tooltip}
-              aria-label={config.ariaLabel}
-            >
-              <Home className="h-5 w-5 sm:h-4 sm:w-4" />
-              <span className="sr-only">{config.ariaLabel}</span>
-            </button>
-          )}
-          <DialogPrimitive.Close className="flex items-center justify-center rounded-md min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:bg-accent active:bg-accent/80">
-            <X className="h-5 w-5 sm:h-4 sm:w-4" />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        </div>
+        {!hideBuiltInClose && (
+          <div className={cn("absolute right-3 top-3 sm:right-4 sm:top-4 flex items-center z-10", MODAL_BUTTON_STYLES.buttonGap)}>
+            {showHomeButton && (
+              <DialogPrimitive.Close
+                onClick={handleHomeClick}
+                className={cn(MODAL_BUTTON_STYLES.homeButton.className, MODAL_BUTTON_STYLES.desktop.minSize)}
+                data-testid={config.testId}
+                title={config.tooltip}
+                aria-label={config.ariaLabel}
+              >
+                <Home className={MODAL_BUTTON_STYLES.homeButton.iconSize} />
+                <span className="sr-only">{config.ariaLabel}</span>
+              </DialogPrimitive.Close>
+            )}
+            <DialogPrimitive.Close className={cn(MODAL_BUTTON_STYLES.closeButton.className, MODAL_BUTTON_STYLES.desktop.minSize)}>
+              <X className={MODAL_BUTTON_STYLES.closeButton.iconSize} />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          </div>
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   );
@@ -124,7 +124,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-1 text-center sm:text-left pr-24 sm:pr-20",
+      "flex flex-col space-y-0.5 text-center sm:text-left px-3 py-2 sm:px-5 sm:py-4 pr-24 sm:pr-28 shrink-0 min-h-0",
       className
     )}
     {...props}
@@ -132,13 +132,80 @@ const DialogHeader = ({
 )
 DialogHeader.displayName = "DialogHeader"
 
+/**
+ * DialogStyledHeader - A header with integrated close button for colored/gradient headers
+ * Use this when you need a styled header background with the close button visually inside it
+ */
+interface DialogStyledHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'gradient';
+  showClose?: boolean;
+  onClose?: () => void;
+}
+
+const DialogStyledHeader = React.forwardRef<HTMLDivElement, DialogStyledHeaderProps>(
+  ({ className, variant = 'primary', showClose = true, onClose, children, ...props }, ref) => {
+    const variantStyles = {
+      primary: 'bg-primary text-primary-foreground',
+      success: 'bg-green-500 text-white',
+      warning: 'bg-amber-500 text-white',
+      danger: 'bg-red-500 text-white',
+      info: 'bg-blue-500 text-white',
+      gradient: 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground',
+    };
+
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "relative flex items-start justify-between gap-2 px-3 py-2.5 sm:px-5 sm:py-4 rounded-t-xl",
+          variantStyles[variant],
+          className
+        )}
+        {...props}
+      >
+        <div className="flex flex-col space-y-1 min-w-0 flex-1 pr-2">
+          {children}
+        </div>
+        {showClose && (
+          <DialogPrimitive.Close 
+            onClick={onClose}
+            className="shrink-0 flex items-center justify-center rounded-md h-8 w-8 sm:h-9 sm:w-9 bg-white/20 text-inherit ring-offset-background transition-all hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 active:bg-white/40"
+            data-testid="button-dialog-close"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
+      </div>
+    );
+  }
+);
+DialogStyledHeader.displayName = "DialogStyledHeader"
+
+/**
+ * DialogBody - Proper content area with padding for dialog content
+ */
+const DialogBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5",
+      className
+    )}
+    {...props}
+  />
+)
+DialogBody.displayName = "DialogBody"
+
 const DialogFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2",
+      "flex flex-row flex-wrap justify-end gap-2 px-3 py-3 sm:px-5 sm:py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0",
       className
     )}
     {...props}
@@ -153,7 +220,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-base font-semibold leading-none tracking-tight",
+      "text-base sm:text-lg font-semibold leading-tight tracking-tight",
       className
     )}
     {...props}
@@ -167,7 +234,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-xs text-muted-foreground", className)}
+    className={cn("text-xs sm:text-sm text-muted-foreground leading-snug", className)}
     {...props}
   />
 ))
@@ -181,6 +248,8 @@ export {
   DialogTrigger,
   DialogContent,
   DialogHeader,
+  DialogStyledHeader,
+  DialogBody,
   DialogFooter,
   DialogTitle,
   DialogDescription,

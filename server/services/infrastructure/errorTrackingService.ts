@@ -14,10 +14,14 @@
  */
 
 import { db } from '../../db';
-import { systemAuditLogs } from '@shared/schema';
+import { systemAuditLogs, errorOccurrences, alertRules } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
+import { typedCount, typedExec, typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('errorTrackingService');
+
 
 // ============================================================================
 // TYPES
@@ -101,15 +105,16 @@ class ErrorTrackingService {
       this.startAlertChecking();
       
       this.initialized = true;
-      console.log('[ErrorTracking] Service initialized');
+      log.info('[ErrorTracking] Service initialized');
     } catch (error) {
-      console.error('[ErrorTracking] Failed to initialize:', error);
+      log.error('[ErrorTracking] Failed to initialize:', error);
     }
   }
 
   private async ensureTableExists(): Promise<void> {
     try {
-      await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: CREATE TABLE | Tables:  | Verified: 2026-03-23
+      await typedExec(sql`
         CREATE TABLE IF NOT EXISTS error_events (
           id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
           fingerprint VARCHAR(64) NOT NULL,
@@ -154,7 +159,7 @@ class ErrorTrackingService {
         );
       `);
     } catch (error) {
-      console.error('[ErrorTracking] Failed to create tables:', error);
+      log.error('[ErrorTracking] Failed to create tables:', error);
     }
   }
 
@@ -191,10 +196,14 @@ class ErrorTrackingService {
 
   private startAlertChecking(): void {
     this.checkInterval = setInterval(async () => {
-      await this.checkAlertRules();
-    }, 60000); // Check every minute
+      try {
+        await this.checkAlertRules();
+      } catch (error: any) {
+        log.warn('[ErrorTracking] Alert check cycle failed (will retry next interval):', error?.message || error);
+      }
+    }, 60000);
     
-    console.log('[ErrorTracking] Alert checking started');
+    log.info('[ErrorTracking] Alert checking started');
   }
 
   /**
@@ -222,31 +231,39 @@ class ErrorTrackingService {
     const now = new Date();
 
     try {
-      // Upsert error event (increment count if exists)
-      await db.execute(sql`
-        INSERT INTO error_events (
-          fingerprint, message, severity, source, stack, context, tags, 
-          occurrence_count, first_seen, last_seen
-        ) VALUES (
-          ${fingerprint}, ${params.message}, ${severity}, ${source}, ${stack || null},
-          ${JSON.stringify(context)}::jsonb, ${JSON.stringify(tags)}::jsonb,
-          1, ${now}, ${now}
-        )
-        ON CONFLICT (fingerprint) DO UPDATE SET
-          occurrence_count = error_events.occurrence_count + 1,
-          last_seen = ${now},
-          context = ${JSON.stringify(context)}::jsonb,
-          severity = CASE 
-            WHEN ${severity} IN ('critical', 'fatal') THEN ${severity}
-            ELSE error_events.severity 
-          END
-      `);
+      // Converted to Drizzle ORM: CASE WHEN → sql fragment
+      await db.insert(errorEvents).values({
+        fingerprint,
+        message: params.message,
+        severity,
+        source,
+        stack: stack || null,
+        context,
+        tags,
+        occurrenceCount: 1,
+        firstSeen: now,
+        lastSeen: now,
+      }).onConflictDoUpdate({
+        target: errorEvents.fingerprint,
+        set: {
+          occurrenceCount: sql`${errorEvents.occurrenceCount} + 1`,
+          lastSeen: now,
+          context: sql`${JSON.stringify(context)}::jsonb`,
+          severity: sql`
+            case 
+              when ${severity} in ('critical', 'fatal') then ${severity}
+              else ${errorEvents.severity}
+            end
+          `
+        }
+      });
 
       // Log individual occurrence for detailed analysis
-      await db.execute(sql`
-        INSERT INTO error_occurrences (fingerprint, context)
-        VALUES (${fingerprint}, ${JSON.stringify(context)}::jsonb)
-      `);
+      // CATEGORY C — Raw SQL retained: ::jsonb | Tables: error_occurrences | Verified: 2026-03-23
+      await db.insert(errorOccurrences).values({
+        fingerprint: fingerprint,
+        context: context,
+      });
 
       // Cache in memory for quick access
       const errorEvent: ErrorEvent = {
@@ -268,32 +285,32 @@ class ErrorTrackingService {
       // Log critical errors to audit trail
       if (severity === 'critical' || severity === 'fatal') {
         await db.insert(systemAuditLogs).values({
-          userId: context.userId,
-          action: 'critical_error_captured',
-          resource: 'system',
+        userId: context.userId,
+        action: 'critical_error_captured',
+        metadata: { resource: 'system',
           details: {
             fingerprint,
             message: params.message,
             source,
             severity,
-          },
-        });
+          } },
+      });
       }
 
-      // Emit event for real-time monitoring
+      // Emit event for real-time monitoring (fire-and-forget — must not block error capture)
       platformEventBus.publish({
         type: 'error_captured',
         category: 'feature',
         title: `${severity.toUpperCase()}: ${params.message.slice(0, 50)}`,
         description: params.message,
         metadata: { fingerprint, severity, source },
-      });
+      }).catch((err: Error) => log.warn('[ErrorTracking] Event bus publish failed (error captured):', err.message));
 
-      console.log(`[ErrorTracking] Captured ${severity} error: ${params.message.slice(0, 100)}`);
+      log.info(`[ErrorTracking] Captured ${severity} error: ${params.message.slice(0, 100)}`);
       return fingerprint;
 
     } catch (dbError) {
-      console.error('[ErrorTracking] Failed to capture error:', dbError);
+      log.error('[ErrorTracking] Failed to capture error:', dbError);
       return fingerprint;
     }
   }
@@ -340,7 +357,7 @@ class ErrorTrackingService {
           await this.triggerAlert(rule);
         }
       } catch (error) {
-        console.error(`[ErrorTracking] Failed to evaluate rule ${rule.id}:`, error);
+        log.error(`[ErrorTracking] Failed to evaluate rule ${rule.id}:`, error);
       }
     }
   }
@@ -379,8 +396,10 @@ class ErrorTrackingService {
         return false;
     }
 
-    const result = await db.execute(query);
-    const count = (result.rows as any[])[0]?.count || 0;
+    // CATEGORY C — Raw SQL retained: Dynamic query execution for error tracking | Tables: dynamic | Verified: 2026-03-23
+    const result = await typedQuery(query);
+    const rows = Array.isArray(result) ? result : ((result as any).rows || []);
+    const count = (rows as any[])[0]?.count || 0;
     
     if (rule.condition === 'error_rate') {
       const rate = count / rule.windowMinutes;
@@ -391,7 +410,7 @@ class ErrorTrackingService {
   }
 
   private async triggerAlert(rule: AlertRule): Promise<void> {
-    console.warn(`[ErrorTracking] Alert triggered: ${rule.name}`);
+    log.warn(`[ErrorTracking] Alert triggered: ${rule.name}`);
     
     platformEventBus.publish({
       type: 'error_alert_triggered',
@@ -399,13 +418,12 @@ class ErrorTrackingService {
       title: `Alert: ${rule.name}`,
       description: `Alert rule "${rule.name}" threshold exceeded`,
       metadata: { ruleId: rule.id, condition: rule.condition, threshold: rule.threshold },
-    });
+    }).catch((err: Error) => log.warn('[ErrorTracking] Event bus publish failed (alert triggered):', err.message));
 
     await db.insert(systemAuditLogs).values({
-      action: 'error_alert_triggered',
-      resource: 'monitoring',
-      details: { rule },
-    });
+        action: 'error_alert_triggered',
+        metadata: { resource: 'monitoring', details: { rule } },
+      });
   }
 
   /**
@@ -415,18 +433,21 @@ class ErrorTrackingService {
     const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000);
     
     try {
-      const totalResult = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: Count( | Tables: error_occurrences | Verified: 2026-03-23
+      const totalResult = await typedCount(sql`
         SELECT COUNT(*)::int as total FROM error_occurrences WHERE created_at > ${windowStart}
       `);
       
-      const criticalResult = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: Count( | Tables: error_occurrences, error_events | Verified: 2026-03-23
+      const criticalResult = await typedCount(sql`
         SELECT COUNT(*)::int as total 
         FROM error_occurrences o
         JOIN error_events e ON o.fingerprint = e.fingerprint
         WHERE o.created_at > ${windowStart} AND e.severity IN ('critical', 'fatal')
       `);
       
-      const topResult = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: GROUP BY | Tables: error_occurrences, error_events | Verified: 2026-03-23
+      const topResult = await typedQuery(sql`
         SELECT e.fingerprint, e.message, COUNT(*)::int as count
         FROM error_occurrences o
         JOIN error_events e ON o.fingerprint = e.fingerprint
@@ -436,7 +457,8 @@ class ErrorTrackingService {
         LIMIT 10
       `);
       
-      const bySourceResult = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: GROUP BY | Tables: error_occurrences, error_events | Verified: 2026-03-23
+      const bySourceResult = await typedQuery(sql`
         SELECT e.source, COUNT(*)::int as count
         FROM error_occurrences o
         JOIN error_events e ON o.fingerprint = e.fingerprint
@@ -444,7 +466,8 @@ class ErrorTrackingService {
         GROUP BY e.source
       `);
       
-      const bySeverityResult = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: GROUP BY | Tables: error_occurrences, error_events | Verified: 2026-03-23
+      const bySeverityResult = await typedQuery(sql`
         SELECT e.severity, COUNT(*)::int as count
         FROM error_occurrences o
         JOIN error_events e ON o.fingerprint = e.fingerprint
@@ -478,7 +501,7 @@ class ErrorTrackingService {
         errorsBySeverity: errorsBySeverity as Record<ErrorSeverity, number>,
       };
     } catch (error) {
-      console.error('[ErrorTracking] Failed to get stats:', error);
+      log.error('[ErrorTracking] Failed to get stats:', error);
       return {
         totalErrors: 0,
         criticalErrors: 0,
@@ -495,13 +518,14 @@ class ErrorTrackingService {
    */
   async getRecentErrors(limit: number = 50): Promise<ErrorEvent[]> {
     try {
-      const result = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: ORDER BY | Tables: error_events | Verified: 2026-03-23
+      const result = await typedQuery(sql`
         SELECT * FROM error_events 
         ORDER BY last_seen DESC 
         LIMIT ${limit}
       `);
       
-      return ((result.rows as any[]) || []).map(row => ({
+      return result.map((row: any) => ({
         id: row.id,
         fingerprint: row.fingerprint,
         message: row.message,
@@ -516,7 +540,7 @@ class ErrorTrackingService {
         lastSeen: new Date(row.last_seen),
       }));
     } catch (error) {
-      console.error('[ErrorTracking] Failed to get recent errors:', error);
+      log.error('[ErrorTracking] Failed to get recent errors:', error);
       return [];
     }
   }
@@ -529,11 +553,16 @@ class ErrorTrackingService {
     const newRule: AlertRule = { id, ...rule };
     this.alertRules.push(newRule);
     
-    await db.execute(sql`
-      INSERT INTO alert_rules (id, name, condition, threshold, window_minutes, severity, source, enabled)
-      VALUES (${id}, ${rule.name}, ${rule.condition}, ${rule.threshold}, ${rule.windowMinutes}, 
-              ${rule.severity || null}, ${rule.source || null}, ${rule.enabled})
-    `);
+    await db.insert(alertRules).values({
+      id: id,
+      name: rule.name,
+      condition: rule.condition,
+      threshold: rule.threshold,
+      windowMinutes: rule.windowMinutes,
+      severity: rule.severity || null,
+      source: rule.source || null,
+      enabled: rule.enabled,
+    });
     
     return newRule;
   }
@@ -547,7 +576,7 @@ class ErrorTrackingService {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
     }
-    console.log('[ErrorTracking] Service shutdown');
+    log.info('[ErrorTracking] Service shutdown');
   }
 }
 

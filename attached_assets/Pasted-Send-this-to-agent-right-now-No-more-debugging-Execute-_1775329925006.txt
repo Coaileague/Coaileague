@@ -1,0 +1,92 @@
+Send this to agent right now. No more debugging. Execute only.
+
+---
+
+EMERGENCY FIX — APP NOT LOADING — EXECUTE IN ORDER — NO ANALYSIS
+
+STEP 1 — Run this in browser console on the broken page right now:
+
+```javascript
+console.log('ROOT CHILDREN:', document.getElementById('root').innerHTML.slice(0, 2000));
+console.log('SPLASH STATE:', localStorage.getItem('splash_shown'));
+console.log('ALL LOCAL STORAGE:', JSON.stringify(localStorage));
+console.log('ERRORS:', window.__errors || 'none captured');
+```
+
+Paste output here immediately.
+
+STEP 2 — While waiting for console output do this in code:
+
+Find App.tsx. Find where SplashScreen renders. Comment it out entirely right now:
+
+```tsx
+{/* TEMPORARILY DISABLED FOR DEBUGGING
+{showSplash && <SplashScreen onDismiss={dismissSplash} />}
+*/}
+```
+
+Deploy. Does app load now? YES or NO.
+
+STEP 3 — If still broken after removing SplashScreen find AppContent in App.tsx and replace the entire return with this temporary debug render:
+
+```tsx
+// TEMPORARY DEBUG — replace entire AppContent return with:
+return (
+  <div style={{
+    position: 'fixed', top: 0, left: 0,
+    width: '100vw', height: '100vh',
+    background: 'blue', color: 'white',
+    fontSize: '24px', zIndex: 9999999,
+    padding: '20px', overflow: 'auto'
+  }}>
+    APP CONTENT REACHED
+    isPublicRoute: {String(isPublicRoute)}
+    pathname: {window.location.pathname}
+  </div>
+);
+```
+
+Deploy. Do you see blue screen? YES or NO.
+
+STEP 4 — If blue screen does NOT appear then the problem is ABOVE AppContent. Find the root App component and add this as the very first line of its return:
+
+```tsx
+return (
+  <>
+    <div style={{
+      position: 'fixed', top: 0, left: 0,
+      width: '100vw', height: '100vh',
+      background: 'green', color: 'white',
+      fontSize: '24px', zIndex: 99999999,
+      padding: '20px'
+    }}>
+      ROOT APP RENDERED
+    </div>
+    {/* rest of existing JSX */}
+  </>
+);
+```
+
+Deploy. Do you see green screen? YES or NO.
+
+STEP 5 — If green screen does NOT appear either then the JavaScript bundle is not executing at all. Check this in browser:
+
+Open browser dev tools Network tab. Reload page. Look for any red failed requests. Look for main.js or index.js or any chunk file. Are they loading with 200 status or failing?
+
+Report what color screen you see and what the network tab shows. That tells us exactly where the break is.
+
+STEP 6 — Emergency nuclear option if all above fails:
+
+```bash
+# In Replit shell:
+cd client
+rm -rf node_modules/.vite
+rm -rf dist
+npm run build 2>&1 | tail -50
+```
+
+If build fails paste the error output. The build error IS the fix.
+
+---
+
+Report back with answers to each step. Do not skip any step. The first YES answer tells us exactly where the problem is.

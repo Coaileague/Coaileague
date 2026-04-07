@@ -1,0 +1,299 @@
+**Phase 6 is certified closed. The data tells the correct story.**
+
+The three FAIL rows on payroll are not calculator failures — PostgreSQL native arithmetic independently confirms the calculator's answer is correct. The stored values are floating-point artifacts from seed data created before Phase 6. The calculator caught them. That is exactly what Phase 6 was built to do.
+
+The `dev-inv-004` invoice failure is a seed data inconsistency — line items sum to `$6688.40` but the stored subtotal is `$6080.00`. The two real UUID invoices with 16 line items each pass perfectly. Again the calculator identified the discrepancy correctly.
+
+72 pre-Phase-6 payroll entries have NULL `calculation_inputs` which is expected and documented. Every new entry will carry the full audit trail.
+
+TypeScript zero errors. 12/12 calculation tests pass. Server clean.
+
+---
+
+**Phase 6 is done. Phase 7 goes in now.**
+
+---
+
+**COAILEAGUE — PHASE 7: DATABASE TRANSACTION COMPLETENESS & CONCURRENCY SAFETY**
+*Syncs Into Phases 1 Through 6 | No Shortcuts | No Partial Coverage | No Deferrals | Fully Verified Before Phase 8*
+
+---
+
+**READ THIS ENTIRE SECTION BEFORE TOUCHING A SINGLE FILE**
+
+Phase 1 verified every column is real. Phase 2 established `db.transaction()` for multi-table financial writes and the shift overlap exclusion constraint. Phase 6 verified every calculation is precise and auditable. Phase 7 now does what Phase 2 started but could not complete in one pass — a comprehensive audit of every multi-table write sequence in the entire codebase to ensure atomicity is enforced everywhere it is required, and every resource contended by concurrent operations is protected.
+
+Phase 2 fixed the sequences it found during its targeted scan of payroll, invoice, employee, and shift domains. Phase 7 runs a full codebase audit covering every domain — hiring pipeline, document management, Trinity orchestration, workspace management, billing, compliance, CAD dispatch, and all others. Any sequence that writes to more than one table as a single logical unit and is not already inside `db.transaction()` is a partial write waiting to happen.
+
+**SHORTCUT PATTERNS THAT WILL BE REJECTED**
+
+**REJECTED — Checking only the five domains from Phase 2.** Phase 2 targeted payroll, invoice, employee, shift, and onboarding. Phase 7 audits every route file and every service file. The hiring pipeline, document management, compliance, CAD, and Trinity action files were not in Phase 2's scope.
+
+**REJECTED — Assuming a try-catch is equivalent to a transaction.** A try-catch that catches a failure after the first write and attempts to clean up is not atomic. If the cleanup write also fails the database is in an unknown state. `db.transaction()` rolls back automatically. Manual cleanup does not.
+
+**REJECTED — Wrapping unrelated writes in one transaction to reduce the count.** A transaction must contain only writes that are logically coupled — they must all succeed or all fail together. Bundling unrelated writes into one transaction to meet a metric creates artificial dependencies that cause unnecessary rollbacks.
+
+**REJECTED — Skipping files because they seem low-risk.** Every multi-table write sequence is audited. The Phase 1 phantom column discoveries and Phase 6 seed data inconsistencies both came from files that seemed low-risk. There are no low-risk files in this audit.
+
+**REJECTED — Transaction wrapping without verifying tx is used for all inner calls.** A `db.transaction(async (tx) => { db.insert(...) })` that uses the global `db` instead of `tx` inside the transaction is not transactional. The inner write executes outside the transaction. Every database call inside every transaction block must use `tx`.
+
+---
+
+**PHASE 1 THROUGH 6 SYNC VERIFICATION — BEFORE ANY PHASE 7 WORK BEGINS**
+
+Confirm every one of the following before writing a single line:
+
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` — zero errors.
+
+Run `grep -rn "parseFloat\|Math\.round\|Math\.floor" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|financialCalculator\|isNaN\|businessRules" | grep -i "rate\|pay\|amount\|cost\|fee\|wage" | wc -l` — must return 0.
+
+Confirm `server/lib/businessRules.ts` exports 15+ functions.
+
+Confirm `server/services/financialCalculator.ts` exports 18 functions.
+
+Confirm `payroll_entries.calculation_inputs` column exists in the live database.
+
+Confirm server starts with 30/30 background services and zero failures.
+
+Record this as the Phase 7 Sync Confirmation and append to replit.md. Then proceed.
+
+---
+
+**BASELINE RECORD**
+
+Record as the Phase 7 Baseline Document: total route files, total service files, current `db.transaction()` call count across all files, server startup 30/30, TypeScript zero errors. Append to replit.md. After every step re-run baseline checks and confirm zero regressions.
+
+---
+
+**STEP 1 — FULL CODEBASE MULTI-TABLE WRITE AUDIT**
+
+This step produces the work order for all subsequent steps. Do not make any fixes in this step. Audit only.
+
+Run the following scan to find every file with two or more database write operations:
+
+```bash
+grep -rn "db\.insert\|db\.update\|db\.delete\|tx\.insert\|tx\.update\|tx\.delete" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|test\|spec" | awk -F: '{print $1}' | sort | uniq -c | sort -rn | head -40
+```
+
+For every file with 2 or more write operations: open the file and read every write sequence. Classify each sequence as:
+
+**ATOMIC** — the writes are already inside `db.transaction()` and every inner call uses `tx` not global `db`.
+
+**NEEDS TRANSACTION** — two or more writes are logically coupled (both must succeed or both must fail) and are not inside `db.transaction()`. These are Phase 7 fixes.
+
+**INDEPENDENT** — two writes that are logically independent — the second does not depend on the first, and a failure of one does not corrupt the other. These do not need a transaction.
+
+**VERIFY TX USAGE** — already inside `db.transaction()` but inner calls may use global `db` instead of `tx`. Must verify.
+
+Produce the complete audit table with file name, write count, and classification for every sequence before making any fix. Report total counts per classification.
+
+---
+
+**STEP 2 — FIX ALL NEEDS TRANSACTION SEQUENCES**
+
+For every sequence classified NEEDS TRANSACTION in Step 1 apply `db.transaction()`:
+
+The canonical pattern — identical to what Phase 2 established:
+
+```typescript
+const result = await db.transaction(async (tx) => {
+  const [primaryRecord] = await tx
+    .insert(primaryTable)
+    .values(primaryData)
+    .returning();
+
+  await tx
+    .insert(relatedTable)
+    .values({ 
+      ...relatedData, 
+      primaryId: primaryRecord.id,
+      workspaceId: primaryRecord.workspaceId 
+    });
+
+  return primaryRecord;
+});
+```
+
+Rules that must hold for every transaction:
+- Every database call inside the transaction uses `tx` not global `db`
+- Every inserted record includes `workspaceId` from the workspace context
+- The transaction returns a meaningful result to the caller
+- Only logically coupled writes are inside the same transaction
+- No business logic or external API calls inside a transaction block — compute values before entering the transaction, write them inside
+
+After every file is fixed run the server and confirm it starts clean. Do not batch multiple files without verification between them.
+
+---
+
+**STEP 3 — FIX ALL VERIFY TX USAGE SEQUENCES**
+
+For every sequence classified VERIFY TX USAGE in Step 1 open the transaction block and inspect every database call inside it:
+
+```bash
+# Find transactions that may use global db inside
+grep -rn "db\.transaction" server/routes server/services --include="*.ts" -A 20 | grep -B 5 "await db\." | grep -v "tx\." | grep -v "node_modules\|//" | head -30
+```
+
+For every transaction block where global `db` is called instead of `tx`:
+
+```typescript
+// WRONG — db.insert inside a transaction block uses global db, not tx
+await db.transaction(async (tx) => {
+  const [record] = await tx.insert(table1).values(data1).returning();
+  await db.insert(table2).values(data2); // BUG — not transactional
+});
+
+// CORRECT — all calls use tx
+await db.transaction(async (tx) => {
+  const [record] = await tx.insert(table1).values(data1).returning();
+  await tx.insert(table2).values(data2); // Correct — part of transaction
+});
+```
+
+Fix every instance where global `db` is called inside a transaction block.
+
+---
+
+**STEP 4 — CONCURRENT OPERATION PROTECTION AUDIT**
+
+Phase 2 added the PostgreSQL exclusion constraint for shift overlap. Phase 7 audits every other domain for concurrent write risks that have no protection.
+
+For each of the following operations identify whether a concurrent duplicate would cause a financial or data integrity error, and if so what protection exists:
+
+**Payroll run initiation** — if two managers click "Run Payroll" for the same period simultaneously can two payroll runs be created for the same period? Check whether the payroll run creation has a unique constraint on `(workspace_id, period_start, period_end)` or an operation lock that prevents this.
+
+**Invoice generation** — if two users trigger invoice generation for the same client and period simultaneously can two invoices be created for the same period? Check whether invoice creation has duplicate prevention.
+
+**Credit balance operations** — if two operations deduct credits simultaneously can the balance go negative? Check whether credit deductions use a row-level lock or atomic update.
+
+**Workspace creation** — can the same workspace be created twice by concurrent requests? Check the unique constraint on workspace identifiers.
+
+**Employee invite acceptance** — can the same invite be accepted twice by concurrent requests? Check whether invite tokens are atomically consumed.
+
+For each operation report: the risk, what protection currently exists (constraint, lock, or none), and whether additional protection is needed. For every operation with no protection add it now:
+
+```typescript
+// Row-level lock pattern for credit deductions
+await db.transaction(async (tx) => {
+  // Lock the credit balance row before reading
+  const [balance] = await tx
+    .select()
+    .from(creditBalances)
+    .where(eq(creditBalances.workspaceId, workspaceId))
+    .for('update');  // PostgreSQL FOR UPDATE
+    
+  if (new Decimal(balance.available).lessThan(deductionAmount)) {
+    throw new Error('Insufficient credits');
+  }
+  
+  await tx
+    .update(creditBalances)
+    .set({ 
+      available: subtractFinancialValues(balance.available, deductionAmount) 
+    })
+    .where(eq(creditBalances.workspaceId, workspaceId));
+});
+```
+
+```sql
+-- Unique constraint on payroll runs to prevent duplicate periods
+ALTER TABLE payroll_runs 
+ADD CONSTRAINT unique_payroll_period 
+UNIQUE (workspace_id, period_start, period_end);
+```
+
+---
+
+**STEP 5 — HIRING PIPELINE TRANSACTION AUDIT**
+
+The hiring pipeline was outside Phase 2's scope. It has multiple stage transitions each of which writes to more than one table. Audit it completely.
+
+Open every file related to the hiring pipeline: `server/routes/hiringRoutes.ts`, `server/routes/atsRoutes.ts`, `server/routes/publicHiringRoutes.ts`.
+
+For every stage transition — application received, screening, interview scheduled, interview completed, offer extended, offer accepted, background check, onboarded — verify the write sequence is atomic:
+
+- Applicant status update + event creation must be in one transaction
+- Offer creation + notification creation must be in one transaction  
+- Onboarding trigger + employee record creation must be in one transaction
+
+Every hiring pipeline stage transition that writes to more than one table gets a `db.transaction()` wrapper. Report every transition found and its transaction status before and after.
+
+---
+
+**STEP 6 — DOCUMENT MANAGEMENT TRANSACTION AUDIT**
+
+Document operations involve both a storage write (file upload) and a database reference write. If the database write fails after a successful storage upload an orphaned file exists in storage with no record. If the storage write fails before the database write a record exists pointing to a file that does not exist.
+
+The `DocumentService` established in the systems hardening prompts should handle this atomically. Verify it does:
+
+Open every file that performs document operations. For every document creation:
+
+Confirm the pattern is: attempt storage upload → if upload fails return error before touching database → if upload succeeds write database reference → if database write fails delete uploaded file → only both or neither persists.
+
+If any document operation does not follow this pattern fix it now. This is not a `db.transaction()` fix because file storage is external to the database transaction — it requires the explicit compensating action pattern described above.
+
+Report every document write operation found and confirm each follows the atomic pattern.
+
+---
+
+**STEP 7 — TRINITY ACTION TRANSACTION AUDIT**
+
+Trinity actions that write to multiple tables must be atomic. An action that creates a document record and updates an employee record must either complete both or complete neither.
+
+Open every Trinity action file that performs database writes. For every action that writes to more than one table verify the writes are inside `db.transaction()`. Pay special attention to:
+
+- Actions that generate a document and create a record linking to it
+- Actions that update an employee record and create an audit log entry
+- Actions that create a shift assignment and update a coverage tracking record
+- Actions that send a notification and update a notification status record
+
+For every Trinity action with unprotected multi-table writes apply `db.transaction()`. Report every action found, its current transaction status, and what was changed.
+
+---
+
+**FINAL VERIFICATION**
+
+Run after all seven steps complete:
+
+**Transaction coverage scan:**
+```bash
+# Count sequences needing transaction that were found and fixed
+grep -rn "db\.transaction" server/routes server/services --include="*.ts" | grep -v "node_modules\|//" | wc -l
+```
+
+Report the count before Phase 7 and after Phase 7. The after count must be higher than before by at least the count of NEEDS TRANSACTION sequences found in Step 1.
+
+**Global db inside transaction scan — must return zero:**
+```bash
+grep -rn "db\.transaction" server/routes server/services --include="*.ts" -A 15 | grep "await db\." | grep -v "await db\.transaction\|node_modules\|//" | head -20
+```
+
+**Forced rollback test:**
+For three of the sequences fixed in Step 2: add a temporary `throw new Error('forced rollback test')` as the last operation inside the transaction. Execute the operation. Confirm the server returns an error response. Query every table the transaction writes to and confirm zero records from the failed operation exist. Remove the forced throw. Execute again and confirm all records create correctly.
+
+**Concurrent operation test:**
+For payroll run initiation: fire 3 concurrent POST requests for the same period simultaneously. Confirm exactly one succeeds and the others return a clean conflict response. For credit balance deduction: fire 5 concurrent deduction requests simultaneously. Confirm the final balance equals the starting balance minus exactly one deduction amount (or the correct total if all are independent).
+
+**TypeScript verification:**
+Zero errors.
+
+**Server verification:**
+30/30 background services. All ten baseline operations pass.
+
+---
+
+**PHASE 7 COMPLETION REPORT**
+
+Produce and append to replit.md:
+
+Total sequences audited. Count per classification: ATOMIC, NEEDS TRANSACTION fixed, INDEPENDENT, VERIFY TX USAGE fixed. Concurrent operation protections added per domain. Hiring pipeline stage transitions confirmed atomic. Document management atomic pattern confirmed. Trinity action transactions confirmed. Forced rollback test results for 3 sequences.
+
+Phase 7 sync statement: *"Phase 7 database transaction completeness and concurrency safety is complete. Every multi-table write sequence that forms a single logical unit is wrapped in db.transaction() with tx used for all inner calls. Concurrent operation risks — payroll run duplication, credit deduction races, and invoice generation duplicates — are protected by database constraints and row-level locks. The Phase 1 through Phase 7 chain is complete: verified columns → precise arithmetic → business rules → atomic transactions → resilient UI → validated contracts → auditable calculations → concurrent safety. Phase 8 can begin on a platform where data cannot be partially written, concurrently corrupted, or left in an inconsistent state."*
+
+---
+
+**PHASE 7 IS COMPLETE WHEN:**
+
+Full audit table from Step 1 produced and reported. All NEEDS TRANSACTION sequences wrapped. Zero global `db` calls inside transaction blocks. Concurrent operation protections verified. Forced rollback tests pass for 3 sequences. Zero TypeScript errors. All ten baseline operations pass. Completion report and sync statement in replit.md.
+
+Bring the Phase 7 completion report here before Phase 8 goes in.

@@ -14,8 +14,12 @@
 import { db } from '../db';
 import { employees, users, workspaces, shifts, timeEntries, clients } from '@shared/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
+import { AI_BRAIN } from '../config/platformConfig';
 import { eventBus } from './trinity/eventBus';
 import { sessionSyncService } from './ai-brain/sessionSyncService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('crossDeviceSyncService');
+
 
 interface SyncState {
   userId: string;
@@ -36,6 +40,7 @@ interface SyncPayload {
     timeEntries?: any[];
     clients?: any[];
     notifications?: any[];
+    platformUpdates?: any[];
   };
   deletions?: {
     entity: string;
@@ -56,6 +61,8 @@ class CrossDeviceSyncService {
   private syncStates: Map<string, SyncState> = new Map();
   private pendingPushes: Map<string, SyncPayload[]> = new Map();
   private initialized = false;
+  private entityBatch: Map<string, Map<string, any[]>> = new Map();
+  private debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -69,6 +76,12 @@ class CrossDeviceSyncService {
     eventBus.on('time_entry_updated', this.handleEntityChange.bind(this, 'timeEntries'));
     eventBus.on('client_created', this.handleEntityChange.bind(this, 'clients'));
     eventBus.on('client_updated', this.handleEntityChange.bind(this, 'clients'));
+    
+    // Notification and platform update sync events for mobile/desktop consistency
+    eventBus.on('notification_created', this.handleEntityChange.bind(this, 'notifications'));
+    eventBus.on('notification_read', this.handleEntityChange.bind(this, 'notifications'));
+    eventBus.on('platform_update_created', this.handleEntityChange.bind(this, 'platformUpdates'));
+    eventBus.on('notifications_cleared', this.handleEntityChange.bind(this, 'notifications'));
 
     sessionSyncService.onDeviceDisconnect((userId, workspaceId, deviceId) => {
       this.unregisterDevice(userId, workspaceId, deviceId);
@@ -76,10 +89,10 @@ class CrossDeviceSyncService {
 
     sessionSyncService.onWorkspaceSwitch((userId, oldWorkspaceId, newWorkspaceId, deviceId) => {
       this.unregisterDevice(userId, oldWorkspaceId, deviceId);
-      console.log(`[CrossDeviceSync] Workspace switch: user ${userId} moved from ${oldWorkspaceId} to ${newWorkspaceId}`);
+      log.info(`[CrossDeviceSync] Workspace switch: user ${userId} moved from ${oldWorkspaceId} to ${newWorkspaceId}`);
     });
 
-    console.log('[CrossDeviceSync] Service initialized - listening for data changes');
+    log.info('[CrossDeviceSync] Service initialized - listening for data changes');
     this.initialized = true;
   }
 
@@ -104,7 +117,7 @@ class CrossDeviceSyncService {
 
     const pendingUpdates = await this.drainPendingPushes(userId, workspaceId, deviceId);
 
-    console.log(`[CrossDeviceSync] Device registered: ${deviceType} (${deviceId}) for user ${userId} in workspace ${workspaceId}, ${pendingUpdates.length} pending updates delivered`);
+    log.info(`[CrossDeviceSync] Device registered: ${deviceType} (${deviceId}) for user ${userId} in workspace ${workspaceId}, ${pendingUpdates.length} pending updates delivered`);
 
     return { ...state, pendingUpdates };
   }
@@ -143,14 +156,14 @@ class CrossDeviceSyncService {
       userTimeEntries,
     ] = await Promise.all([
       db.select().from(employees).where(eq(employees.workspaceId, workspaceId)),
-      db.select().from(shifts).where(eq(shifts.workspaceId, workspaceId)).limit(500),
+      db.select().from(shifts).where(eq(shifts.workspaceId, workspaceId)).limit(AI_BRAIN.crossDeviceSyncShifts),
       db.select().from(clients).where(eq(clients.workspaceId, workspaceId)),
       db.select().from(timeEntries).where(
         and(
           eq(timeEntries.workspaceId, workspaceId),
           gte(timeEntries.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
         )
-      ).limit(1000),
+      ).limit(AI_BRAIN.crossDeviceSyncTimeEntries),
     ]);
 
     return {
@@ -259,7 +272,7 @@ class CrossDeviceSyncService {
       }
     }
 
-    console.log(`[CrossDeviceSync] Pushed sync update to workspace ${workspaceId}`);
+    log.info(`[CrossDeviceSync] Pushed sync update to workspace ${workspaceId}`);
   }
 
   unregisterDevice(userId: string, workspaceId: string, deviceId: string): void {
@@ -269,7 +282,7 @@ class CrossDeviceSyncService {
     const pendingKey = `${userId}:${workspaceId}:${deviceId}:pending`;
     this.pendingPushes.delete(pendingKey);
     
-    console.log(`[CrossDeviceSync] Device unregistered: ${deviceId} for user ${userId} in workspace ${workspaceId}`);
+    log.info(`[CrossDeviceSync] Device unregistered: ${deviceId} for user ${userId} in workspace ${workspaceId}`);
   }
 
   clearUserWorkspaceDevices(userId: string, workspaceId: string): void {
@@ -292,7 +305,7 @@ class CrossDeviceSyncService {
       }
     }
     
-    console.log(`[CrossDeviceSync] Cleared ${keysToDelete.length} devices for user ${userId} in workspace ${workspaceId}`);
+    log.info(`[CrossDeviceSync] Cleared ${keysToDelete.length} devices for user ${userId} in workspace ${workspaceId}`);
   }
 
   async syncOfflineChanges(
@@ -317,11 +330,11 @@ class CrossDeviceSyncService {
           conflicts.push(result.conflict);
         }
       } catch (error: any) {
-        errors.push(`Failed to apply change: ${error.message}`);
+        errors.push(`Failed to apply change: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
 
-    console.log(`[CrossDeviceSync] Synced ${applied} offline changes, ${conflicts.length} conflicts, ${errors.length} errors`);
+    log.info(`[CrossDeviceSync] Synced ${applied} offline changes, ${conflicts.length} conflicts, ${errors.length} errors`);
 
     return { applied, conflicts, errors };
   }
@@ -386,22 +399,48 @@ class CrossDeviceSyncService {
     return { success: true };
   }
 
-  private async handleEntityChange(entityType: string, data: any): Promise<void> {
+  private handleEntityChange(entityType: string, data: any): void {
     if (!data.workspaceId) return;
+    const wid = data.workspaceId;
 
-    const workspaceUsers = await db
-      .select({ userId: employees.userId })
-      .from(employees)
-      .where(eq(employees.workspaceId, data.workspaceId));
+    if (!this.entityBatch.has(wid)) {
+      this.entityBatch.set(wid, new Map());
+    }
+    const batch = this.entityBatch.get(wid)!;
+    if (!batch.has(entityType)) batch.set(entityType, []);
+    batch.get(entityType)!.push(data);
 
-    for (const { userId } of workspaceUsers) {
-      if (userId) {
-        await this.pushToAllDevices(userId, data.workspaceId, {
-          changes: {
-            [entityType]: [data],
-          },
-        });
+    const existing = this.debounceTimers.get(wid);
+    if (existing) clearTimeout(existing);
+    this.debounceTimers.set(wid, setTimeout(() => this.flushEntityBatch(wid), 500));
+  }
+
+  private async flushEntityBatch(workspaceId: string): Promise<void> {
+    this.debounceTimers.delete(workspaceId);
+    const batch = this.entityBatch.get(workspaceId);
+    if (!batch || batch.size === 0) return;
+    this.entityBatch.delete(workspaceId);
+
+    const changes: Record<string, any[]> = {};
+    for (const [entityType, items] of batch.entries()) {
+      changes[entityType] = items;
+    }
+
+    try {
+      const workspaceUsers = await db
+        .select({ userId: employees.userId })
+        .from(employees)
+        .where(eq(employees.workspaceId, workspaceId));
+
+      for (const { userId } of workspaceUsers) {
+        if (userId) {
+          await this.pushToAllDevices(userId, workspaceId, { changes });
+        }
       }
+
+      log.info(`[CrossDeviceSync] Batch flush for workspace ${workspaceId}: ${Object.keys(changes).join(', ')} (${workspaceUsers.length} users)`);
+    } catch (err: any) {
+      log.warn(`[CrossDeviceSync] Batch flush failed for workspace ${workspaceId}:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -418,7 +457,7 @@ class CrossDeviceSyncService {
       },
     });
 
-    console.log(`[CrossDeviceSync] Pushed role change to user ${data.userId}: ${data.newRole}`);
+    log.info(`[CrossDeviceSync] Pushed role change to user ${data.userId}: ${data.newRole}`);
   }
 
   async getPendingSync(userId: string, workspaceId: string): Promise<SyncPayload[]> {

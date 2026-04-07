@@ -1,7 +1,9 @@
+import { secureFetch } from "@/lib/csrf";
 import { createContext, useContext, type ReactNode } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import type { HealthSummary, ServiceHealth, ServiceIncidentReportPayload } from '@shared/healthTypes';
+import { useAuth } from '@/hooks/useAuth';
 
 // ============================================================================
 // SERVICE HEALTH CONTEXT
@@ -40,6 +42,8 @@ interface ServiceHealthProviderProps {
 }
 
 export function ServiceHealthProvider({ children, enablePolling = true }: ServiceHealthProviderProps) {
+  const { isAuthenticated } = useAuth();
+
   // Query health summary with smart polling
   const {
     data: healthSummary,
@@ -53,11 +57,14 @@ export function ServiceHealthProvider({ children, enablePolling = true }: Servic
     // Explicit queryFn to ensure health data is fetched correctly
     queryFn: async () => {
       try {
-        const response = await fetch('/api/health/summary', {
+        const response = await secureFetch('/api/health/summary', {
           credentials: 'include',
         });
         
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            return null as any;
+          }
           const errorText = await response.text();
           console.error('[ServiceHealth] Health endpoint returned non-ok status:', {
             status: response.status,
@@ -68,63 +75,37 @@ export function ServiceHealthProvider({ children, enablePolling = true }: Servic
         }
         
         const data: HealthSummary = await response.json();
-        console.log('[ServiceHealth] Successfully fetched health summary:', {
-          overall: data.overall,
-          timestamp: data.timestamp,
-          serviceCount: data.services.length,
-        });
         return data;
       } catch (err) {
         console.error('[ServiceHealth] Failed to fetch health summary:', err instanceof Error ? err.message : String(err));
         throw err;
       }
     },
+    enabled: isAuthenticated,
     // Smart refetch interval based on health status
     refetchInterval: (query) => {
-      if (!enablePolling) {
-        console.log('[ServiceHealth] Polling disabled');
+      if (!enablePolling || !isAuthenticated) {
         return false;
       }
       
       const data = query.state.data;
-      const queryStatus = query.state.status;
-      const queryError = query.state.error;
       
       if (!data) {
-        if (queryError) {
-          console.error('[ServiceHealth] Query error - No data yet', {
-            error: queryError instanceof Error ? queryError.message : String(queryError),
-            status: queryStatus,
-          });
-        } else {
-          console.log('[ServiceHealth] No data yet, polling every 30s', {
-            status: queryStatus,
-            fetching: query.state.fetchStatus,
-          });
-        }
-        return 30000; // 30s default
+        return false;
       }
       
       // If any service is down or degraded, poll more frequently
       if (data.overall === 'down' || data.overall === 'degraded') {
-        console.log('[ServiceHealth] System degraded/down, polling every 5s', {
-          overall: data.overall,
-          services: data.services.map(s => ({ service: s.service, status: s.status })),
-        });
         return 5000; // 5s for failures
       }
       
-      console.log('[ServiceHealth] System operational, polling every 30s', {
-        overall: data.overall,
-        operationalCount: data.operationalServicesCount,
-      });
       return 30000; // 30s for healthy
     },
     // TanStack Query v5 requires staleTime to be a number, not a callback
     // Using conservative 5s to ensure fresh data for critical services
     staleTime: 5000,
-    refetchOnWindowFocus: true,
-    retry: 3,
+    refetchOnWindowFocus: isAuthenticated,
+    retry: false,
   });
 
   // Log errors and data issues
@@ -177,8 +158,8 @@ export function ServiceHealthProvider({ children, enablePolling = true }: Servic
         formData.append('screenshot', screenshot);
       }
 
-      // Use fetch directly for multipart/form-data
-      const response = await fetch('/api/support/service-incidents', {
+      // Use secureFetch for multipart/form-data
+      const response = await secureFetch('/api/support/service-incidents', {
         method: 'POST',
         body: formData,
         credentials: 'include',

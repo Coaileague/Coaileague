@@ -3,11 +3,11 @@
  * Each command is a visual box with logo, controls, and actions
  */
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalTitle, UniversalModalClose, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import {
   MessageSquare, Users, Shield, Zap, Settings, AlertCircle, 
   UserPlus, Lock, Unlock, UserX, RefreshCw, Bell, Flag,
@@ -96,37 +96,27 @@ export function HelpCommandPanel({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent size="full" className="max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-blue-500/30">
+    <UniversalModal open={open} onOpenChange={onClose}>
+      <UniversalModalContent size="full" hideBuiltInClose className="max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 border border-blue-500/30">
         {/* Header with Logo and Close */}
-        <DialogHeader className="relative p-6 pb-4 flex-shrink-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-b-2 border-blue-400/50">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="absolute top-4 right-4 h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 text-white"
-            data-testid="button-close-help"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-          
+        <DialogStyledHeader variant="info" showClose={true} className="p-5 sm:p-6 border-b-2 border-blue-400/50">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <CoAIleagueAFLogo size="sm" variant="icon" />
+              <UnifiedBrandLogo size="sm" variant="icon" />
             </div>
             <div>
-              <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
+              <UniversalModalTitle className="text-xl sm:text-2xl font-bold text-inherit flex items-center gap-2">
                 Command Center
                 <Badge className="bg-white/20 text-white border-white/30">
                   HelpAI
                 </Badge>
-              </DialogTitle>
-              <p className="text-sm text-blue-100 mt-1">
+              </UniversalModalTitle>
+              <p className="text-xs sm:text-sm text-white/80 mt-1">
                 Click any command box to execute - Quick access to all support tools
               </p>
             </div>
           </div>
-        </DialogHeader>
+        </DialogStyledHeader>
 
         {/* Command Grid */}
         <ScrollArea className="flex-1 p-6">
@@ -137,10 +127,10 @@ export function HelpCommandPanel({
                 className="relative group"
               >
                 {/* Command Box Card */}
-                <div className="relative overflow-hidden rounded-xl border-2 border-slate-600/50 bg-slate-800/50 backdrop-blur-sm transition-all hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1">
+                <div className="relative overflow-hidden rounded-md border border-slate-600/50 bg-slate-800/50 backdrop-blur-sm transition-all hover:border-blue-500/50 hover:shadow-sm hover:shadow-blue-500/20 hover:-translate-y-1">
                   {/* Logo Badge */}
                   <div className="absolute top-2 left-2 z-10 scale-50">
-                    <CoAIleagueAFLogo size="sm" variant="icon" className="opacity-50" />
+                    <UnifiedBrandLogo size="sm" variant="icon" className="opacity-50" />
                   </div>
                   
                   {/* Close X (decorative) */}
@@ -152,7 +142,7 @@ export function HelpCommandPanel({
 
                   {/* Gradient Header */}
                   <div className={`h-20 bg-gradient-to-br ${cmd.color} flex items-center justify-center relative`}>
-                    <cmd.icon className="w-10 h-10 text-white drop-shadow-lg" />
+                    <cmd.icon className="w-10 h-10 text-white drop-shadow-sm" />
                     {cmd.staffOnly && (
                       <Badge className="absolute top-2 left-1/2 -translate-x-1/2 text-xs bg-black/30 text-white border-white/30">
                         Staff
@@ -210,7 +200,7 @@ export function HelpCommandPanel({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-4 border-t-2 border-slate-700 bg-slate-900/80 flex justify-between items-center">
+        <div className="p-4 border-t-2 border-slate-700 bg-slate-900/80 flex justify-between gap-2 items-center">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="bg-blue-500/20 text-blue-300 border-blue-500/50">
               {filteredCommands.length} Commands
@@ -227,7 +217,7 @@ export function HelpCommandPanel({
             Exit Panel
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

@@ -16,6 +16,13 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { maintenanceModeService } from '../services/maintenanceModeService';
+import { isDbCircuitOpen } from '../db';
+import { createLogger } from '../lib/logger';
+const log = createLogger('maintenanceMiddleware');
+
+let maintenanceStatusCache: { isActive: boolean; cachedAt: number } | null = null;
+const CACHE_TTL_MS = 30_000; // 30 seconds
+const CIRCUIT_OPEN_CACHE_TTL_MS = 120_000; // 2 minutes when DB circuit is open
 
 const PUBLIC_ROUTES = [
   '/',
@@ -102,7 +109,7 @@ function logBypassAccess(req: Request, user: any): void {
   const path = req.path;
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
   
-  console.log(`[MAINTENANCE-BYPASS-AUDIT] ${timestamp} | User: ${userId} (${userEmail}) | ${method} ${path} | IP: ${ip}`);
+  log.info(`[MAINTENANCE-BYPASS-AUDIT] ${timestamp} | User: ${userId} (${userEmail}) | ${method} ${path} | IP: ${ip}`);
 }
 
 export async function maintenanceMiddleware(
@@ -111,7 +118,49 @@ export async function maintenanceMiddleware(
   next: NextFunction
 ): Promise<void> {
   try {
-    const isActive = await maintenanceModeService.isMaintenanceActive();
+    let isActive = false;
+    let checkFailed = false;
+
+    const cacheTtl = isDbCircuitOpen() ? CIRCUIT_OPEN_CACHE_TTL_MS : CACHE_TTL_MS;
+    if (maintenanceStatusCache && (Date.now() - maintenanceStatusCache.cachedAt) < cacheTtl) {
+      isActive = maintenanceStatusCache.isActive;
+    } else if (isDbCircuitOpen()) {
+      // DB is unavailable — default to not-in-maintenance, cache result
+      maintenanceStatusCache = { isActive: false, cachedAt: Date.now() };
+    } else {
+      const timeoutMs = 3000;
+      const timeoutPromise = new Promise<boolean>((_, reject) => 
+        setTimeout(() => reject(new Error('Maintenance check timeout')), timeoutMs)
+      );
+
+      try {
+        isActive = await Promise.race([
+          maintenanceModeService.isMaintenanceActive(),
+          timeoutPromise
+        ]);
+        maintenanceStatusCache = { isActive, cachedAt: Date.now() };
+      } catch (timeoutError) {
+        log.warn('[MaintenanceMiddleware] Timeout checking maintenance status');
+        maintenanceStatusCache = { isActive: false, cachedAt: Date.now() }; // cache the failure
+        checkFailed = true;
+      }
+    }
+    
+    // If check failed and this is a protected route, fail-closed with 503
+    // This maintains the "sealed airlock" security model
+    if (checkFailed) {
+      const path = req.path;
+      if (isProtectedAppRoute(path)) {
+        res.status(503).json({
+          success: false,
+          error: 'service_unavailable',
+          message: 'Unable to verify system status. Please try again.'
+        });
+        return;
+      }
+      // For non-protected routes (public pages, health checks), allow through
+      return next();
+    }
     
     if (!isActive) {
       return next();
@@ -166,8 +215,7 @@ export async function maintenanceMiddleware(
     }
 
     if (path.startsWith('/api/auth/login') || 
-        path.startsWith('/api/auth/register') ||
-        path.startsWith('/api/replit-auth')) {
+        path.startsWith('/api/auth/register')) {
       const status = await maintenanceModeService.getPublicStatus();
       res.status(503).json({
         success: false,
@@ -200,7 +248,7 @@ export async function maintenanceMiddleware(
     next();
     
   } catch (error) {
-    console.error('[MaintenanceMiddleware] Error:', error);
+    log.error('[MaintenanceMiddleware] Error:', error);
     next();
   }
 }
@@ -210,14 +258,12 @@ export function maintenanceStatusHeader(
   res: Response,
   next: NextFunction
 ): void {
-  maintenanceModeService.isMaintenanceActive()
-    .then(isActive => {
-      if (isActive) {
-        res.setHeader('X-Maintenance-Mode', 'true');
-      }
-      next();
-    })
-    .catch(() => next());
+  // Use the shared in-module cache populated by maintenanceMiddleware.
+  // Never query the DB independently — that causes a per-request hang when DB is down.
+  if (maintenanceStatusCache?.isActive) {
+    res.setHeader('X-Maintenance-Mode', 'true');
+  }
+  next();
 }
 
 export async function sealedAirlockCheck(
@@ -251,7 +297,7 @@ export async function sealedAirlockCheck(
     });
     
   } catch (error) {
-    console.error('[SealedAirlock] Error:', error);
+    log.error('[SealedAirlock] Error:', error);
     next();
   }
 }

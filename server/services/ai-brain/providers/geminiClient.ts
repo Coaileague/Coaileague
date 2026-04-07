@@ -21,12 +21,29 @@
  * - Self-selling platform promotion
  */
 
+import crypto from 'crypto';
 import { GoogleGenerativeAI, GenerativeModel, FunctionDeclarationsTool, FunctionDeclaration, SchemaType, Content, Part } from "@google/generative-ai";
-import { usageMeteringService } from '../../billing/usageMetering';
 import { aiGuardRails, type AIRequestContext } from '../../aiGuardRails';
+import { creditManager, CREDIT_COSTS, CREDIT_EXEMPT_FEATURES } from '../../billing/creditManager';
 import { db } from '../../../db';
-import { helposFaqs, supportTickets, workspaces, employees, shifts, invoices, payrollRuns } from '@shared/schema';
-import { eq, ilike, or, desc, sql, and, gte, lte, count } from 'drizzle-orm';
+import {
+  helposFaqs,
+  supportTickets,
+  workspaces,
+  employees,
+  shifts,
+  invoices,
+  payrollRuns,
+  timeEntries,
+  clients,
+  securityIncidents,
+  complianceScores,
+  guardTours,
+  equipmentItems,
+  equipmentAssignments,
+  systemAuditLogs
+} from '@shared/schema';
+import { eq, ilike, or, desc, sql, and, gte, lte, count, isNotNull, sum } from 'drizzle-orm';
 import { 
   PERSONA_SYSTEM_INSTRUCTION, 
   HUMANIZED_GENERATION_CONFIG,
@@ -34,11 +51,16 @@ import {
   formatTrinityResponse,
   checkHumanParity
 } from '../trinityPersona';
+import { trinityCrossDomainIntelligence } from '../trinityCrossDomainIntelligence';
+import { createLogger } from '../../../lib/logger';
+import { PLATFORM } from '../../../config/platformConfig';
+
+const log = createLogger('AIBrain');
 
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
-  console.warn("⚠️ GEMINI_API_KEY not found - AI Brain features will be disabled");
+  log.warn("⚠️ GEMINI_API_KEY not found - AI Brain features will be disabled");
 }
 
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
@@ -85,9 +107,9 @@ export const GEMINI_MODELS = {
   ONBOARDING: 'gemini-2.5-flash',          // Onboarding assistance
   
   // Tier 3: Fast and efficient for simple tasks
-  SIMPLE: 'gemini-2.0-flash',           // Quick status checks (ultra-fast)
-  NOTIFICATION: 'gemini-2.0-flash',     // Notification generation
-  LOOKUP: 'gemini-2.0-flash',           // FAQ and data lookups
+  SIMPLE: 'gemini-2.5-flash-lite',      // Quick status checks (ultra-fast)
+  NOTIFICATION: 'gemini-2.5-flash-lite', // Notification generation
+  LOOKUP: 'gemini-2.5-flash-lite',      // FAQ and data lookups
 } as const;
 
 export type GeminiModelTier = keyof typeof GEMINI_MODELS;
@@ -278,7 +300,6 @@ export interface GeminiRequest {
   maxTokens?: number;
   tools?: FunctionDeclarationsTool[];
   enableToolCalling?: boolean;
-  // NEW: Tiered architecture support
   modelTier?: GeminiModelTier;
   antiYapPreset?: AntiYapPreset;
 }
@@ -385,6 +406,273 @@ const AI_BRAIN_TOOLS: FunctionDeclaration[] = [
       },
       required: ["question", "answer"]
     }
+  },
+  {
+    name: "lookup_employee_schedule",
+    description: "Look up upcoming shifts and schedule for a specific employee or the entire workspace. Use when users ask about their schedule, upcoming shifts, who is working, or coverage gaps.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        employeeId: { type: SchemaType.STRING, description: "Specific employee ID (optional - omit for all employees)" },
+        daysAhead: { type: SchemaType.NUMBER, description: "How many days ahead to look (default 7)" },
+        includeOpenShifts: { type: SchemaType.BOOLEAN, description: "Include unassigned/open shifts" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_timesheet_summary",
+    description: "Get timesheet and hours worked summary for employees. Use when users ask about hours, overtime, clock-in/out records, or attendance.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        employeeId: { type: SchemaType.STRING, description: "Specific employee ID (optional)" },
+        periodDays: { type: SchemaType.NUMBER, description: "How many days back to summarize (default 7)" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_payroll_status",
+    description: "Check payroll run status, pending approvals, and payment information. Use when users ask about payroll, pay, or payment processing.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        payrollRunId: { type: SchemaType.STRING, description: "Specific payroll run ID (optional)" },
+        status: { type: SchemaType.STRING, description: "Filter by status: draft, pending, approved, processing, completed" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_invoice_status",
+    description: "Check invoice status, amounts, and payment tracking. Understands agency/subcontract invoicing with external reference numbers. Use when users ask about invoicing, billing, client payments, or agency invoice references.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        invoiceId: { type: SchemaType.STRING, description: "Specific invoice ID (optional)" },
+        status: { type: SchemaType.STRING, description: "Filter by status: draft, sent, paid, overdue, cancelled" },
+        clientId: { type: SchemaType.STRING, description: "Filter by client ID" },
+        clientName: { type: SchemaType.STRING, description: "Search by client or agency name" },
+        externalNumber: { type: SchemaType.STRING, description: "Search by agency/external invoice number" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_employee_info",
+    description: "Look up employee details, certifications, and status. Use when users ask about team members, roles, or employee records.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        employeeId: { type: SchemaType.STRING, description: "Specific employee ID (optional)" },
+        searchName: { type: SchemaType.STRING, description: "Search by employee name" },
+        includeStats: { type: SchemaType.BOOLEAN, description: "Include performance and attendance stats" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "detect_scheduling_conflicts",
+    description: "Analyze the schedule for conflicts: double-bookings, overtime violations, uncovered shifts, certification gaps. Use when users ask about scheduling problems or coverage issues.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        daysAhead: { type: SchemaType.NUMBER, description: "How many days ahead to analyze (default 7)" },
+        includeRecommendations: { type: SchemaType.BOOLEAN, description: "Include AI fix recommendations" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "analyze_sentiment",
+    description: "Analyze the emotional tone and urgency of a message to determine if escalation is needed. Use internally when processing support conversations.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        message: { type: SchemaType.STRING, description: "The message to analyze" },
+        context: { type: SchemaType.STRING, description: "Additional context about the conversation" }
+      },
+      required: ["message"]
+    }
+  },
+  {
+    name: "lookup_incidents",
+    description: "Look up security incidents, reports, and RMS records. Use when users ask about incidents, reports, security events, or what happened at a site.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        siteId: { type: SchemaType.STRING, description: "Filter by site/location ID" },
+        status: { type: SchemaType.STRING, description: "Filter by status: open, in_progress, resolved, closed" },
+        daysBack: { type: SchemaType.NUMBER, description: "How many days back to search (default 30)" },
+        severity: { type: SchemaType.STRING, description: "Filter by severity: low, medium, high, critical" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_certifications",
+    description: "Look up employee certifications, licenses, training status, and expiration dates. Use when users ask about guard licenses, certifications, compliance training, or qualification status.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        employeeId: { type: SchemaType.STRING, description: "Specific employee ID" },
+        certificationType: { type: SchemaType.STRING, description: "Type of certification to look up" },
+        includeExpired: { type: SchemaType.BOOLEAN, description: "Include expired certifications" },
+        expiringWithinDays: { type: SchemaType.NUMBER, description: "Find certs expiring within N days" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_clients",
+    description: "Look up client/customer information, contracts, and site details. Use when users ask about clients, customer accounts, sites, or client-specific data.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        clientName: { type: SchemaType.STRING, description: "Search by client name" },
+        clientId: { type: SchemaType.STRING, description: "Specific client ID" },
+        includeContracts: { type: SchemaType.BOOLEAN, description: "Include contract details" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_compliance_score",
+    description: "Check organization compliance scores, audit status, and regulatory standing. Use when users ask about compliance, audit findings, or regulatory status.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        state: { type: SchemaType.STRING, description: "Filter by state for state-specific compliance" },
+        includeHistory: { type: SchemaType.BOOLEAN, description: "Include historical compliance scores" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_guard_tours",
+    description: "Look up guard tour records, checkpoint scans, and patrol status. Use when users ask about tours, patrols, checkpoint completions, or guard rounds.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        guardId: { type: SchemaType.STRING, description: "Specific guard/employee ID" },
+        siteId: { type: SchemaType.STRING, description: "Filter by site" },
+        status: { type: SchemaType.STRING, description: "Filter: active, completed, missed, incomplete" },
+        daysBack: { type: SchemaType.NUMBER, description: "How many days back (default 7)" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "lookup_equipment",
+    description: "Look up equipment inventory, checkout status, and maintenance schedules. Use when users ask about equipment, radios, vehicles, gear, or supplies.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        category: { type: SchemaType.STRING, description: "Equipment category: radio, vehicle, weapon, uniform, tech" },
+        status: { type: SchemaType.STRING, description: "Filter: available, checked_out, maintenance, retired" },
+        assignedTo: { type: SchemaType.STRING, description: "Employee ID who has the equipment" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "list_available_actions",
+    description: "List all platform actions currently registered in the Action Hub that you can execute. Call this before execute_platform_action when you are unsure of the exact actionId. Returns actionId, description, category, and required parameters for every registered action.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        category: { type: SchemaType.STRING, description: "Optional: filter by category (e.g. 'scheduling', 'payroll', 'compliance', 'quickbooks'). Omit to get all actions." }
+      },
+      required: []
+    }
+  },
+  {
+    name: "execute_platform_action",
+    description: "Execute a registered platform action through the Action Hub. Use for operations like creating shifts, running payroll, syncing QuickBooks, dispatching units, or any action registered in the Platform Action Hub. Call list_available_actions first if you are unsure of the exact actionId.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        actionId: { type: SchemaType.STRING, description: "The action ID (e.g., 'scheduling.generate_ai_schedule', 'quickbooks.push_invoice', 'rms.create_incident')" },
+        payload: { type: SchemaType.STRING, description: "JSON string of action parameters" }
+      },
+      required: ["actionId"]
+    }
+  },
+  {
+    name: "get_financial_analysis",
+    description: "Get detailed financial analysis including P&L summary, labor cost ratios, revenue trends, and forecasting. Use when users ask about profitability, costs, margins, financial health, or business performance.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        analysisType: {
+          type: SchemaType.STRING,
+          description: "Type: pnl_summary, labor_cost_ratio, revenue_trend, cashflow_forecast, overtime_analysis"
+        },
+        timeframe: { type: SchemaType.STRING, description: "weekly, monthly, quarterly, yearly" },
+        compareToLast: { type: SchemaType.BOOLEAN, description: "Compare to previous period" }
+      },
+      required: ["analysisType"]
+    }
+  },
+  {
+    name: "analyze_cross_domain",
+    description: "Chain queries across financial, scheduling, and compliance domains to produce correlated insights. Use when users ask about cross-functional analysis, overall business health, or how different areas affect each other (e.g. how overtime affects profitability, or how compliance gaps impact scheduling).",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        domains: { type: SchemaType.STRING, description: "Comma-separated domains to analyze: profitability, overtime, compliance, labor_forecast, trends. Omit for full analysis." },
+        focusArea: { type: SchemaType.STRING, description: "Optional focus area to emphasize in the analysis" }
+      },
+      required: []
+    }
+  },
+  {
+    name: "detect_anomalies_on_demand",
+    description: "Run anomaly detection for the workspace on demand. Scans for overtime spikes, attendance issues, profitability declines, compliance gaps, and scheduling coverage holes. Use when users ask to check for problems, anomalies, or issues across the organization.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        anomalyTypes: { type: SchemaType.STRING, description: "Comma-separated types: overtime, compliance, profitability, all. Defaults to all." },
+        severityThreshold: { type: SchemaType.STRING, description: "Minimum severity to report: info, warning, critical. Defaults to info." }
+      },
+      required: []
+    }
+  },
+  {
+    name: "explain_reasoning",
+    description: "Provide transparent step-by-step reasoning for any Trinity analysis or decision. Use when users ask 'why' or 'how did you determine that' or want to understand the logic behind a recommendation.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        analysisType: { type: SchemaType.STRING, description: "Which analysis to explain: profitability, overtime, compliance, labor_forecast, trends, full" },
+        detailLevel: { type: SchemaType.STRING, description: "Level of detail: summary, detailed, technical. Defaults to detailed." }
+      },
+      required: ["analysisType"]
+    }
+  },
+  {
+    name: "forecast_trends",
+    description: "Project labor costs, revenue, and compliance status forward in time. Use when users ask about future projections, forecasting, what to expect next month, or planning ahead.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        forecastType: { type: SchemaType.STRING, description: "What to forecast: labor_costs, revenue, compliance, all" },
+        weeksAhead: { type: SchemaType.NUMBER, description: "How many weeks to project forward (default 4, max 12)" }
+      },
+      required: ["forecastType"]
+    }
+  },
+  {
+    name: "get_temporal_trends",
+    description: "Get week-over-week and month-over-month comparisons for key metrics including hours worked, revenue, and employee activity. Use when users ask about trends, changes over time, or period comparisons.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        includeDetails: { type: SchemaType.BOOLEAN, description: "Include detailed breakdown of each metric" }
+      },
+      required: []
+    }
   }
 ];
 
@@ -404,18 +692,90 @@ interface ToolExecutionContext {
   userId?: string;
 }
 
-/**
- * Execute a Gemini function call and return the result
- * This is Step 4 of the 8-step function calling workflow
- */
+const TOOL_REQUIRED_FIELDS: Record<string, string[]> = {
+  search_faqs: ['query'],
+  create_support_ticket: ['subject', 'description'],
+  get_business_insights: ['insightType'],
+  suggest_automation: ['currentProcess'],
+  recommend_platform_feature: ['userNeed'],
+  update_faq: ['question', 'answer'],
+  analyze_sentiment: ['message'],
+  list_available_actions: [],
+  execute_platform_action: ['actionId'],
+  get_financial_analysis: ['analysisType'],
+  explain_reasoning: ['analysisType'],
+  forecast_trends: ['forecastType'],
+};
+
+function sanitizeToolArgs(args: Record<string, any>): Record<string, any> {
+  const sanitized: Record<string, any> = {};
+  for (const [key, value] of Object.entries(args)) {
+    if (typeof value === 'string' && value.length > 500) {
+      sanitized[key] = value.substring(0, 500) + '...[truncated]';
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+function validateToolArgs(toolName: string, args: Record<string, any>): string | null {
+  const required = TOOL_REQUIRED_FIELDS[toolName];
+  if (!required || required.length === 0) return null;
+  const missing = required.filter(field => args[field] === undefined || args[field] === null || args[field] === '');
+  if (missing.length > 0) {
+    return `Missing required fields for ${toolName}: ${missing.join(', ')}`;
+  }
+  return null;
+}
+
+async function logToolCallFailure(
+  toolName: string,
+  args: Record<string, any>,
+  errorMessage: string,
+  context: ToolExecutionContext
+): Promise<void> {
+  try {
+    await db.insert(systemAuditLogs).values({
+      userId: context.userId || null,
+      action: 'ai_tool_call_failed',
+      entityType: 'ai_tool',
+      entityId: toolName,
+      workspaceId: context.workspaceId || null,
+      changes: null,
+      metadata: {
+        toolName,
+        args: sanitizeToolArgs(args),
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (logErr) {
+    log.error(`⚠️ [AI Brain] Failed to log tool failure to audit log:`, logErr);
+  }
+}
+
 async function executeToolCall(
   toolName: string,
   args: Record<string, any>,
   context: ToolExecutionContext
 ): Promise<ToolResult> {
-  console.log(`🔧 [AI Brain] Executing tool: ${toolName}`, args);
+  log.info(`🔧 [AI Brain] Executing tool: ${toolName}`, args);
   
-  try {
+  const validationError = validateToolArgs(toolName, args);
+  if (validationError) {
+    log.error(`❌ [AI Brain] Tool validation failed for ${toolName}: ${validationError}`);
+    await logToolCallFailure(toolName, args, validationError, context);
+    return {
+      success: false,
+      data: null,
+      error: validationError,
+    };
+  }
+
+  const TOOL_TIMEOUT_MS = 30_000;
+  
+  const toolExecution = async (): Promise<ToolResult> => {
     switch (toolName) {
       case 'search_faqs':
         return await executeSearchFaqs(args as { query: string; category?: string; limit?: number }, context);
@@ -435,6 +795,69 @@ async function executeToolCall(
       case 'update_faq':
         return await executeUpdateFaq(args as { question: string; answer: string; category?: string; tags?: string }, context);
       
+      case 'lookup_employee_schedule':
+        return await executeLookupSchedule(args, context);
+      
+      case 'lookup_timesheet_summary':
+        return await executeLookupTimesheets(args, context);
+      
+      case 'lookup_payroll_status':
+        return await executeLookupPayroll(args, context);
+      
+      case 'lookup_invoice_status':
+        return await executeLookupInvoices(args, context);
+      
+      case 'lookup_employee_info':
+        return await executeLookupEmployees(args, context);
+      
+      case 'detect_scheduling_conflicts':
+        return await executeDetectSchedulingConflicts(args, context);
+      
+      case 'analyze_sentiment':
+        return await executeAnalyzeSentiment(args, context);
+      
+      case 'lookup_incidents':
+        return await executeLookupIncidents(args, context);
+      
+      case 'lookup_certifications':
+        return await executeLookupCertifications(args, context);
+      
+      case 'lookup_clients':
+        return await executeLookupClients(args, context);
+      
+      case 'lookup_compliance_score':
+        return await executeLookupComplianceScore(args, context);
+      
+      case 'lookup_guard_tours':
+        return await executeLookupGuardTours(args, context);
+      
+      case 'lookup_equipment':
+        return await executeLookupEquipment(args, context);
+      
+      case 'list_available_actions':
+        return await executeListAvailableActions(args, context);
+      
+      case 'execute_platform_action':
+        return await executePlatformAction(args, context);
+      
+      case 'get_financial_analysis':
+        return await executeFinancialAnalysis(args, context);
+      
+      case 'analyze_cross_domain':
+        return await executeAnalyzeCrossDomain(args, context);
+      
+      case 'detect_anomalies_on_demand':
+        return await executeDetectAnomaliesOnDemand(args, context);
+      
+      case 'explain_reasoning':
+        return await executeExplainReasoning(args, context);
+      
+      case 'forecast_trends':
+        return await executeForecastTrends(args, context);
+      
+      case 'get_temporal_trends':
+        return await executeGetTemporalTrends(args, context);
+      
       default:
         return {
           success: false,
@@ -442,12 +865,21 @@ async function executeToolCall(
           error: `Unknown tool: ${toolName}`
         };
     }
+  };
+
+  try {
+    const timeoutPromise = new Promise<ToolResult>((_, reject) => {
+      setTimeout(() => reject(new Error(`Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s`)), TOOL_TIMEOUT_MS);
+    });
+    return await Promise.race([toolExecution(), timeoutPromise]);
   } catch (error: any) {
-    console.error(`❌ [AI Brain] Tool execution failed for ${toolName}:`, error);
+    const errorMessage = (error instanceof Error ? error.message : String(error)) || 'Tool execution failed';
+    log.error(`❌ [AI Brain] Tool execution failed for ${toolName}:`, error);
+    await logToolCallFailure(toolName, args, errorMessage, context);
     return {
       success: false,
       data: null,
-      error: error.message || 'Tool execution failed'
+      error: errorMessage,
     };
   }
 }
@@ -485,7 +917,7 @@ async function executeSearchFaqs(
     .orderBy(desc(helposFaqs.viewCount))
     .limit(limit);
     
-    console.log(`✅ [AI Brain] Found ${results.length} FAQs for query: "${args.query}"`);
+    log.info(`✅ [AI Brain] Found ${results.length} FAQs for query: "${args.query}"`);
     
     return {
       success: true,
@@ -499,7 +931,7 @@ async function executeSearchFaqs(
     return {
       success: false,
       data: null,
-      error: `FAQ search failed: ${error.message}`
+      error: `FAQ search failed: ${(error instanceof Error ? error.message : String(error))}`
     };
   }
 }
@@ -520,7 +952,7 @@ async function executeCreateSupportTicket(
       };
     }
     
-    const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     
     const [ticket] = await db.insert(supportTickets).values({
       workspaceId: context.workspaceId,
@@ -533,7 +965,7 @@ async function executeCreateSupportTicket(
       employeeId: context.userId,
     }).returning();
     
-    console.log(`✅ [AI Brain] Created support ticket: ${ticketNumber}`);
+    log.info(`✅ [AI Brain] Created support ticket: ${ticketNumber}`);
     
     return {
       success: true,
@@ -548,7 +980,7 @@ async function executeCreateSupportTicket(
     return {
       success: false,
       data: null,
-      error: `Failed to create support ticket: ${error.message}`
+      error: `Failed to create support ticket: ${(error instanceof Error ? error.message : String(error))}`
     };
   }
 }
@@ -584,7 +1016,7 @@ async function executeGetBusinessInsights(
         if (context.workspaceId) {
           const [invoiceStats] = await db.select({
             totalInvoices: count(),
-            totalRevenue: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`,
+            totalRevenue: sql<number>`COALESCE(SUM(CAST(total AS DECIMAL)), 0)`,
           }).from(invoices).where(
             and(
               eq(invoices.workspaceId, context.workspaceId),
@@ -678,7 +1110,7 @@ async function executeGetBusinessInsights(
         };
     }
     
-    console.log(`✅ [AI Brain] Generated ${args.insightType} insights`);
+    log.info(`✅ [AI Brain] Generated ${args.insightType} insights`);
     
     return {
       success: true,
@@ -688,7 +1120,7 @@ async function executeGetBusinessInsights(
     return {
       success: false,
       data: null,
-      error: `Failed to generate insights: ${error.message}`
+      error: `Failed to generate insights: ${(error instanceof Error ? error.message : String(error))}`
     };
   }
 }
@@ -818,7 +1250,7 @@ async function executeRecommendPlatformFeature(
   
   if (recommendations.length === 0) {
     recommendations.push({
-      feature: 'CoAIleague Platform',
+      feature: PLATFORM.name + " Platform",
       description: 'Comprehensive workforce management with AI-powered features',
       tier: 'Contact Sales',
       benefit: 'Custom solution for your specific needs'
@@ -858,7 +1290,7 @@ async function executeUpdateFaq(
         })
         .where(eq(helposFaqs.id, existingFaq[0].id));
       
-      console.log(`✅ [AI Brain] Updated existing FAQ: ${existingFaq[0].id}`);
+      log.info(`✅ [AI Brain] Updated existing FAQ: ${existingFaq[0].id}`);
       
       return {
         success: true,
@@ -871,6 +1303,7 @@ async function executeUpdateFaq(
     } else {
       const tagsArray = args.tags ? args.tags.split(',').map(t => t.trim()) : [];
       const [newFaq] = await db.insert(helposFaqs).values({
+        workspaceId: 'system',
         question: args.question,
         answer: args.answer,
         category: args.category || 'general',
@@ -881,7 +1314,7 @@ async function executeUpdateFaq(
         notHelpfulCount: 0,
       }).returning();
       
-      console.log(`✅ [AI Brain] Created new FAQ: ${newFaq.id}`);
+      log.info(`✅ [AI Brain] Created new FAQ: ${newFaq.id}`);
       
       return {
         success: true,
@@ -896,8 +1329,1121 @@ async function executeUpdateFaq(
     return {
       success: false,
       data: null,
-      error: `Failed to update FAQ: ${error.message}`
+      error: `Failed to update FAQ: ${(error instanceof Error ? error.message : String(error))}`
     };
+  }
+}
+
+// ============================================================================
+// DOMAIN DATA LOOKUP HANDLERS - Real Intelligence Data Access
+// These give Trinity the ability to look up actual platform data
+// ============================================================================
+
+async function executeLookupSchedule(
+  args: { employeeId?: string; daysAhead?: number; includeOpenShifts?: boolean },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    if (!context.workspaceId) {
+      return { success: false, data: null, error: 'Workspace context required' };
+    }
+    const daysAhead = args.daysAhead || 7;
+    const now = new Date();
+    const endDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+
+    const conditions = [
+      eq(shifts.workspaceId, context.workspaceId),
+      gte(shifts.startTime, now),
+      lte(shifts.startTime, endDate),
+    ];
+
+    if (args.employeeId) {
+      conditions.push(eq(shifts.employeeId, args.employeeId));
+    }
+    if (!args.includeOpenShifts) {
+      conditions.push(isNotNull(shifts.employeeId));
+    }
+
+    const results = await db.select({
+      id: shifts.id,
+      title: shifts.title,
+      employeeId: shifts.employeeId,
+      clientId: shifts.clientId,
+      startTime: shifts.startTime,
+      endTime: shifts.endTime,
+      status: shifts.status,
+      billRate: shifts.billRate,
+      payRate: shifts.payRate,
+    })
+    .from(shifts)
+    .where(and(...conditions))
+    .orderBy(shifts.startTime)
+    .limit(50);
+
+    const openShifts = results.filter(s => !s.employeeId).length;
+    const assignedShifts = results.filter(s => s.employeeId).length;
+
+    return {
+      success: true,
+      data: {
+        shifts: results,
+        summary: {
+          totalShifts: results.length,
+          assignedShifts,
+          openShifts,
+          periodDays: daysAhead,
+          periodStart: now.toISOString(),
+          periodEnd: endDate.toISOString(),
+        }
+      }
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: `Schedule lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
+  }
+}
+
+async function executeLookupTimesheets(
+  args: { employeeId?: string; periodDays?: number },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    if (!context.workspaceId) {
+      return { success: false, data: null, error: 'Workspace context required' };
+    }
+    const periodDays = args.periodDays || 7;
+    const startDate = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
+
+    const conditions: any[] = [
+      eq(timeEntries.workspaceId, context.workspaceId),
+      gte(timeEntries.clockIn, startDate),
+    ];
+
+    if (args.employeeId) {
+      conditions.push(eq(timeEntries.employeeId, args.employeeId));
+    }
+
+    const results = await db.select({
+      employeeId: timeEntries.employeeId,
+      totalEntries: count(),
+      totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.clockOut} - ${timeEntries.clockIn})) / 3600.0), 0)`,
+    })
+    .from(timeEntries)
+    .where(and(...conditions))
+    .groupBy(timeEntries.employeeId)
+    .limit(100);
+
+    const totalHoursAll = results.reduce((sum, r) => sum + Number(r.totalHours || 0), 0);
+    const overtimeEmployees = results.filter(r => Number(r.totalHours || 0) > 40);
+
+    return {
+      success: true,
+      data: {
+        employeeSummaries: results.map(r => ({
+          employeeId: r.employeeId,
+          totalEntries: r.totalEntries,
+          totalHours: Math.round(Number(r.totalHours) * 100) / 100,
+          overtime: Number(r.totalHours) > 40,
+          overtimeHours: Math.max(0, Math.round((Number(r.totalHours) - 40) * 100) / 100),
+        })),
+        summary: {
+          totalEmployeesTracked: results.length,
+          totalHours: Math.round(totalHoursAll * 100) / 100,
+          employeesInOvertime: overtimeEmployees.length,
+          periodDays,
+        }
+      }
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: `Timesheet lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
+  }
+}
+
+async function executeLookupPayroll(
+  args: { payrollRunId?: string; status?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    if (!context.workspaceId) {
+      return { success: false, data: null, error: 'Workspace context required' };
+    }
+
+    const conditions: any[] = [eq(payrollRuns.workspaceId, context.workspaceId)];
+
+    if (args.payrollRunId) {
+      conditions.push(eq(payrollRuns.id, args.payrollRunId));
+    }
+    if (args.status) {
+      conditions.push(eq(payrollRuns.status, args.status as any));
+    }
+
+    const results = await db.select({
+      id: payrollRuns.id,
+      periodStart: payrollRuns.periodStart,
+      periodEnd: payrollRuns.periodEnd,
+      status: payrollRuns.status,
+      totalGrossPay: payrollRuns.totalGrossPay,
+      totalTaxes: payrollRuns.totalTaxes,
+      createdAt: payrollRuns.createdAt,
+    })
+    .from(payrollRuns)
+    .where(and(...conditions))
+    .orderBy(desc(payrollRuns.createdAt))
+    .limit(10);
+
+    const pendingRuns = results.filter(r => r.status === 'pending' || r.status === 'draft');
+    const totalGross = results.reduce((sum, r) => sum + Number(r.totalGrossPay || 0), 0);
+
+    return {
+      success: true,
+      data: {
+        payrollRuns: results,
+        summary: {
+          totalRuns: results.length,
+          pendingApproval: pendingRuns.length,
+          totalGrossPay: Math.round(totalGross * 100) / 100,
+        }
+      }
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: `Payroll lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
+  }
+}
+
+async function executeLookupInvoices(
+  args: { invoiceId?: string; status?: string; clientId?: string; clientName?: string; externalNumber?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    if (!context.workspaceId) {
+      return { success: false, data: null, error: 'Workspace context required' };
+    }
+
+    if (args.clientName || args.externalNumber) {
+      try {
+        const { trinityBusinessIntelligence } = await import('../trinityBusinessIntelligence');
+        const biResult = await trinityBusinessIntelligence.searchInvoices(context.workspaceId, {
+          clientName: args.clientName,
+          externalNumber: args.externalNumber,
+          status: args.status,
+          limit: 20,
+        });
+        return {
+          success: true,
+          data: {
+            invoices: biResult.invoices.map((inv: any) => ({
+              id: inv.id,
+              invoiceNumber: inv.invoiceNumber,
+              externalInvoiceNumber: inv.externalInvoiceNumber,
+              client: inv.client,
+              status: inv.status,
+              total: inv.total,
+              dueDate: inv.dueDate,
+              lineItemCount: inv.lineItems?.length || 0,
+            })),
+            summary: {
+              totalInvoices: biResult.total,
+              confidence: biResult.metacognition.confidence,
+            }
+          }
+        };
+      } catch (biError: any) {
+        log.warn('[AI Brain] BI search fallback to standard query:', biError.message);
+      }
+    }
+
+    const conditions: any[] = [eq(invoices.workspaceId, context.workspaceId)];
+
+    if (args.invoiceId) {
+      conditions.push(eq(invoices.id, args.invoiceId));
+    }
+    if (args.status) {
+      conditions.push(eq(invoices.status, args.status as any));
+    }
+    if (args.clientId) {
+      conditions.push(eq(invoices.clientId, args.clientId));
+    }
+
+    const results = await db.select({
+      id: invoices.id,
+      invoiceNumber: invoices.invoiceNumber,
+      clientId: invoices.clientId,
+      status: invoices.status,
+      total: invoices.total,
+      dueDate: invoices.dueDate,
+      paidAt: invoices.paidAt,
+      createdAt: invoices.createdAt,
+    })
+    .from(invoices)
+    .where(and(...conditions))
+    .orderBy(desc(invoices.createdAt))
+    .limit(20);
+
+    const totalOutstanding = results
+      .filter(r => r.status === 'sent' || r.status === 'overdue')
+      .reduce((sum, r) => sum + Number(r.total || 0), 0);
+    const overdueCount = results.filter(r => r.status === 'overdue').length;
+
+    return {
+      success: true,
+      data: {
+        invoices: results,
+        summary: {
+          totalInvoices: results.length,
+          totalOutstanding: Math.round(totalOutstanding * 100) / 100,
+          overdueCount,
+          paidCount: results.filter(r => r.status === 'paid').length,
+        }
+      }
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: `Invoice lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
+  }
+}
+
+async function executeLookupEmployees(
+  args: { employeeId?: string; searchName?: string; includeStats?: boolean },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    if (!context.workspaceId) {
+      return { success: false, data: null, error: 'Workspace context required' };
+    }
+
+    const conditions: any[] = [eq(employees.workspaceId, context.workspaceId)];
+
+    if (args.employeeId) {
+      conditions.push(eq(employees.id, args.employeeId));
+    }
+    if (args.searchName) {
+      conditions.push(
+        or(
+          ilike(employees.firstName, `%${args.searchName}%`),
+          ilike(employees.lastName, `%${args.searchName}%`)
+        )
+      );
+    }
+
+    const results = await db.select({
+      id: employees.id,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      email: employees.email,
+      phone: employees.phone,
+      role: employees.role,
+      isActive: employees.isActive,
+      hireDate: employees.hireDate,
+    })
+    .from(employees)
+    .where(and(...conditions))
+    .limit(25);
+
+    const activeCount = results.filter(r => r.isActive).length;
+
+    return {
+      success: true,
+      data: {
+        employees: results.map(e => ({
+          id: e.id,
+          name: `${e.firstName} ${e.lastName}`,
+          email: e.email,
+          phone: e.phone,
+          role: e.role,
+          isActive: e.isActive,
+          hireDate: e.hireDate,
+        })),
+        summary: {
+          totalEmployees: results.length,
+          activeEmployees: activeCount,
+          inactiveEmployees: results.length - activeCount,
+        }
+      }
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: `Employee lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
+  }
+}
+
+async function executeDetectSchedulingConflicts(
+  args: { daysAhead?: number; includeRecommendations?: boolean },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    if (!context.workspaceId) {
+      return { success: false, data: null, error: 'Workspace context required' };
+    }
+    const daysAhead = args.daysAhead || 7;
+    const now = new Date();
+    const endDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+
+    const upcomingShifts = await db.select({
+      id: shifts.id,
+      employeeId: shifts.employeeId,
+      startTime: shifts.startTime,
+      endTime: shifts.endTime,
+      title: shifts.title,
+      status: shifts.status,
+    })
+    .from(shifts)
+    .where(and(
+      eq(shifts.workspaceId, context.workspaceId),
+      gte(shifts.startTime, now),
+      lte(shifts.startTime, endDate),
+    ))
+    .orderBy(shifts.startTime)
+    .limit(200);
+
+    const conflicts: Array<{ type: string; severity: string; description: string; shiftIds: string[]; recommendation?: string }> = [];
+
+    const employeeShifts = new Map<string, typeof upcomingShifts>();
+    for (const shift of upcomingShifts) {
+      if (!shift.employeeId) continue;
+      const existing = employeeShifts.get(shift.employeeId) || [];
+      existing.push(shift);
+      employeeShifts.set(shift.employeeId, existing);
+    }
+
+    for (const [empId, empShifts] of employeeShifts) {
+      for (let i = 0; i < empShifts.length; i++) {
+        for (let j = i + 1; j < empShifts.length; j++) {
+          const a = empShifts[i];
+          const b = empShifts[j];
+          if (a.startTime && b.startTime && a.endTime && b.endTime) {
+            if (a.startTime < b.endTime && b.startTime < a.endTime) {
+              conflicts.push({
+                type: 'double_booking',
+                severity: 'critical',
+                description: `Employee ${empId} is double-booked: "${a.title || 'Shift'}" overlaps with "${b.title || 'Shift'}"`,
+                shiftIds: [a.id, b.id],
+                recommendation: args.includeRecommendations ? 'Reassign one of the overlapping shifts to another available employee' : undefined,
+              });
+            }
+          }
+        }
+
+        const dailyHours = empShifts
+          .filter(s => s.startTime && s.endTime && s.startTime.toDateString() === empShifts[i].startTime?.toDateString())
+          .reduce((sum, s) => sum + ((s.endTime!.getTime() - s.startTime!.getTime()) / 3600000), 0);
+        
+        if (dailyHours > 12 && i === 0) {
+          conflicts.push({
+            type: 'overtime_risk',
+            severity: 'warning',
+            description: `Employee ${empId} has ${Math.round(dailyHours)}+ hours scheduled on ${empShifts[i].startTime?.toDateString()}`,
+            shiftIds: empShifts.filter(s => s.startTime?.toDateString() === empShifts[i].startTime?.toDateString()).map(s => s.id),
+            recommendation: args.includeRecommendations ? 'Consider splitting shifts across multiple employees to avoid overtime' : undefined,
+          });
+        }
+      }
+    }
+
+    const openShifts = upcomingShifts.filter(s => !s.employeeId);
+    if (openShifts.length > 0) {
+      conflicts.push({
+        type: 'uncovered_shifts',
+        severity: openShifts.length > 3 ? 'critical' : 'warning',
+        description: `${openShifts.length} shift(s) have no employee assigned`,
+        shiftIds: openShifts.map(s => s.id),
+        recommendation: args.includeRecommendations ? 'Use AI Smart Scheduling to auto-assign available employees based on skills and proximity' : undefined,
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        conflicts,
+        summary: {
+          totalConflicts: conflicts.length,
+          criticalConflicts: conflicts.filter(c => c.severity === 'critical').length,
+          warningConflicts: conflicts.filter(c => c.severity === 'warning').length,
+          totalShiftsAnalyzed: upcomingShifts.length,
+          uncoveredShifts: openShifts.length,
+          periodDays: daysAhead,
+        }
+      }
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: `Conflict detection failed: ${(error instanceof Error ? error.message : String(error))}` };
+  }
+}
+
+async function executeAnalyzeSentiment(
+  args: { message: string; context?: string },
+  _context: ToolExecutionContext
+): Promise<ToolResult> {
+  const message = args.message.toLowerCase();
+  
+  const frustrationKeywords = ['frustrated', 'angry', 'furious', 'terrible', 'horrible', 'worst', 'unacceptable', 'ridiculous', 'waste', 'broken', 'useless', 'hate', 'awful', 'disgusted'];
+  const urgencyKeywords = ['urgent', 'asap', 'emergency', 'immediately', 'critical', 'deadline', 'now', 'help!', 'right now', 'can\'t wait'];
+  const positiveKeywords = ['thanks', 'great', 'awesome', 'perfect', 'love', 'excellent', 'wonderful', 'appreciate', 'helpful'];
+  const confusionKeywords = ['confused', 'don\'t understand', 'how do i', 'where is', 'can\'t find', 'lost', 'stuck', 'help me'];
+  
+  let frustrationScore = 0;
+  let urgencyScore = 0;
+  let positiveScore = 0;
+  let confusionScore = 0;
+  
+  for (const kw of frustrationKeywords) { if (message.includes(kw)) frustrationScore += 1; }
+  for (const kw of urgencyKeywords) { if (message.includes(kw)) urgencyScore += 1; }
+  for (const kw of positiveKeywords) { if (message.includes(kw)) positiveScore += 1; }
+  for (const kw of confusionKeywords) { if (message.includes(kw)) confusionScore += 1; }
+  
+  const hasExclamation = (message.match(/!/g) || []).length;
+  const hasAllCaps = (args.message.match(/[A-Z]{3,}/g) || []).length;
+  frustrationScore += hasAllCaps * 0.5;
+  urgencyScore += hasExclamation * 0.2;
+  
+  let sentiment: 'positive' | 'neutral' | 'negative' | 'frustrated' = 'neutral';
+  if (frustrationScore >= 2) sentiment = 'frustrated';
+  else if (frustrationScore >= 1) sentiment = 'negative';
+  else if (positiveScore >= 1) sentiment = 'positive';
+  
+  const shouldEscalate = frustrationScore >= 2 || urgencyScore >= 2;
+  
+  return {
+    success: true,
+    data: {
+      sentiment,
+      scores: {
+        frustration: Math.min(frustrationScore / 3, 1),
+        urgency: Math.min(urgencyScore / 2, 1),
+        positivity: Math.min(positiveScore / 2, 1),
+        confusion: Math.min(confusionScore / 2, 1),
+      },
+      shouldEscalate,
+      escalationReason: shouldEscalate
+        ? (frustrationScore >= 2 ? 'High frustration detected' : 'High urgency detected')
+        : null,
+      suggestedTone: sentiment === 'frustrated'
+        ? 'empathetic_and_action_oriented'
+        : sentiment === 'negative'
+        ? 'reassuring_and_helpful'
+        : 'friendly_and_professional',
+    }
+  };
+}
+
+// ============================================================================
+// T002: EXPANDED TOOL HANDLERS — Incidents, Certs, Clients, Compliance,
+//       Guard Tours, Equipment, Platform Actions, Financial Analysis
+// ============================================================================
+
+async function executeLookupIncidents(
+  args: { siteId?: string; status?: string; daysBack?: number; severity?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const daysBack = args.daysBack || 30;
+    const cutoff = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+    const conditions: any[] = [gte(securityIncidents.reportedAt, cutoff)];
+    if (context.workspaceId) conditions.push(eq(securityIncidents.workspaceId, context.workspaceId));
+    if (args.status) conditions.push(eq(securityIncidents.status, args.status as any));
+    if (args.severity) conditions.push(eq(securityIncidents.severity, args.severity as any));
+    if (args.siteId) conditions.push(eq(securityIncidents.clientId, args.siteId));
+
+    const incidents = await db
+      .select({
+        id: securityIncidents.id,
+        type: securityIncidents.type,
+        severity: securityIncidents.severity,
+        status: securityIncidents.status,
+        description: securityIncidents.description,
+        location: securityIncidents.location,
+        reportedAt: securityIncidents.reportedAt,
+        resolvedAt: securityIncidents.resolvedAt,
+      })
+      .from(securityIncidents)
+      .where(and(...conditions))
+      .orderBy(desc(securityIncidents.reportedAt))
+      .limit(25);
+
+    return { success: true, data: { incidents, total: incidents.length, daysBack } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeLookupCertifications(
+  args: { employeeId?: string; certificationType?: string; includeExpired?: boolean; expiringWithinDays?: number },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const conditions: any[] = [];
+    if (context.workspaceId) conditions.push(eq(employeeCertifications.workspaceId, context.workspaceId));
+    if (args.employeeId) conditions.push(eq(employeeCertifications.employeeId, args.employeeId));
+    if (args.certificationType) conditions.push(eq(employeeCertifications.certificationType, args.certificationType));
+    if (!args.includeExpired) {
+      conditions.push(or(
+        gte(employeeCertifications.expirationDate, new Date()),
+        sql`${employeeCertifications.expirationDate} IS NULL`
+      ));
+    }
+    if (args.expiringWithinDays) {
+      const expiryWindow = new Date(Date.now() + args.expiringWithinDays * 24 * 60 * 60 * 1000);
+      conditions.push(lte(employeeCertifications.expirationDate, expiryWindow));
+      conditions.push(gte(employeeCertifications.expirationDate, new Date()));
+    }
+
+    const certs = await db
+      .select({
+        id: employeeCertifications.id,
+        employeeId: employeeCertifications.employeeId,
+        certificationType: employeeCertifications.certificationType,
+        certificationName: employeeCertifications.certificationName,
+        certificationNumber: employeeCertifications.certificationNumber,
+        issuingAuthority: employeeCertifications.issuingAuthority,
+        issuedDate: employeeCertifications.issuedDate,
+        expirationDate: employeeCertifications.expirationDate,
+        status: employeeCertifications.status,
+        isRequired: employeeCertifications.isRequired,
+      })
+      .from(employeeCertifications)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(employeeCertifications.expirationDate)
+      .limit(50);
+
+    const expiringSoon = certs.filter(c => {
+      if (!c.expirationDate) return false;
+      const daysUntil = (new Date(c.expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+      return daysUntil > 0 && daysUntil <= 30;
+    });
+
+    return { success: true, data: { certifications: certs, total: certs.length, expiringSoon: expiringSoon.length } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeLookupClients(
+  args: { clientName?: string; clientId?: string; includeContracts?: boolean },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const conditions: any[] = [];
+    if (context.workspaceId) conditions.push(eq(clients.workspaceId, context.workspaceId));
+    if (args.clientId) conditions.push(eq(clients.id, args.clientId));
+    if (args.clientName) {
+      conditions.push(or(
+        ilike(clients.companyName, `%${args.clientName}%`),
+        ilike(clients.firstName, `%${args.clientName}%`),
+        ilike(clients.lastName, `%${args.clientName}%`)
+      ));
+    }
+
+    const clientList = await db
+      .select({
+        id: clients.id,
+        firstName: clients.firstName,
+        lastName: clients.lastName,
+        companyName: clients.companyName,
+        email: clients.email,
+        phone: clients.phone,
+        city: clients.city,
+        state: clients.state,
+        clientCode: clients.clientCode,
+      })
+      .from(clients)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .limit(25);
+
+    return { success: true, data: { clients: clientList, total: clientList.length } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeLookupComplianceScore(
+  args: { state?: string; includeHistory?: boolean },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const conditions: any[] = [];
+    if (context.workspaceId) conditions.push(eq(complianceScores.workspaceId, context.workspaceId));
+    if (args.state) conditions.push(eq(complianceScores.stateId, args.state));
+
+    const scores = await db
+      .select({
+        id: complianceScores.id,
+        scoreType: complianceScores.scoreType,
+        overallScore: complianceScores.overallScore,
+        documentScore: complianceScores.documentScore,
+        expirationScore: complianceScores.expirationScore,
+        auditReadinessScore: complianceScores.auditReadinessScore,
+        trainingScore: complianceScores.trainingScore,
+        totalRequirements: complianceScores.totalRequirements,
+        completedRequirements: complianceScores.completedRequirements,
+        expiredItems: complianceScores.expiredItems,
+      })
+      .from(complianceScores)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(complianceScores.id))
+      .limit(args.includeHistory ? 50 : 5);
+
+    const avgScore = scores.length > 0
+      ? Math.round(scores.reduce((s, c) => s + (c.overallScore || 0), 0) / scores.length)
+      : 0;
+
+    return { success: true, data: { scores, total: scores.length, averageScore: avgScore } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeLookupGuardTours(
+  args: { guardId?: string; siteId?: string; status?: string; daysBack?: number },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const conditions: any[] = [];
+    if (context.workspaceId) conditions.push(eq(guardTours.workspaceId, context.workspaceId));
+    if (args.guardId) conditions.push(eq(guardTours.assignedEmployeeId, args.guardId));
+    if (args.siteId) conditions.push(eq(guardTours.clientId, args.siteId));
+    if (args.status) conditions.push(eq(guardTours.status, args.status as any));
+
+    const tours = await db
+      .select({
+        id: guardTours.id,
+        name: guardTours.name,
+        description: guardTours.description,
+        assignedEmployeeId: guardTours.assignedEmployeeId,
+        status: guardTours.status,
+        intervalMinutes: guardTours.intervalMinutes,
+        startTime: guardTours.startTime,
+        endTime: guardTours.endTime,
+        siteAddress: guardTours.siteAddress,
+      })
+      .from(guardTours)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .limit(25);
+
+    return { success: true, data: { tours, total: tours.length } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeLookupEquipment(
+  args: { category?: string; status?: string; assignedTo?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const conditions: any[] = [];
+    if (context.workspaceId) conditions.push(eq(equipmentItems.workspaceId, context.workspaceId));
+    if (args.category) conditions.push(eq(equipmentItems.category, args.category as any));
+    if (args.status) conditions.push(eq(equipmentItems.status, args.status as any));
+
+    const items = await db
+      .select({
+        id: equipmentItems.id,
+        name: equipmentItems.name,
+        serialNumber: equipmentItems.serialNumber,
+        category: equipmentItems.category,
+        status: equipmentItems.status,
+        description: equipmentItems.description,
+      })
+      .from(equipmentItems)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .limit(50);
+
+    const statusSummary: Record<string, number> = {};
+    items.forEach(item => {
+      const s = item.status || 'unknown';
+      statusSummary[s] = (statusSummary[s] || 0) + 1;
+    });
+
+    return { success: true, data: { equipment: items, total: items.length, statusSummary } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeListAvailableActions(
+  args: { category?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const { platformActionHub } = await import('../../helpai/platformActionHub');
+    const userRole = (context as any).userRole || 'system';
+    const allActions = platformActionHub.getAvailableActions(userRole);
+    const filtered = args.category
+      ? allActions.filter((a) => a.category === args.category || a.actionId.startsWith(args.category + '.'))
+      : allActions;
+    const summary = filtered.map((a) => ({
+      actionId: a.actionId,
+      category: a.category,
+      name: a.name,
+      description: a.description,
+      requiredRoles: a.requiredRoles,
+    }));
+    return {
+      success: true,
+      data: {
+        totalActions: summary.length,
+        actions: summary,
+        usage: 'Pass the actionId to execute_platform_action to invoke an action.',
+      },
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executePlatformAction(
+  args: { actionId: string; payload?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const { platformActionHub } = await import('../../helpai/platformActionHub');
+    const payload = args.payload ? JSON.parse(args.payload) : {};
+    const parts = args.actionId.split('.');
+    const category = parts[0] || 'system';
+    const name = parts.slice(1).join('.') || args.actionId;
+    if (!context.workspaceId) {
+      return { success: false, data: null, error: 'Missing workspaceId — cannot execute action without workspace context' };
+    }
+    const result = await platformActionHub.executeAction({
+      actionId: args.actionId,
+      category: category as any,
+      name,
+      payload,
+      workspaceId: context.workspaceId,
+      userId: context.userId || 'trinity-ai',
+      userRole: 'system',
+    });
+    return { success: result.success, data: result.data || result, error: result.error };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeFinancialAnalysis(
+  args: { analysisType: string; timeframe?: string; compareToLast?: boolean },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const wsId = context.workspaceId;
+    if (!wsId) return { success: false, data: null, error: 'No workspace context for financial analysis' };
+
+    const timeframe = args.timeframe || 'monthly';
+    const now = new Date();
+    let periodStart: Date;
+    let prevStart: Date;
+    let prevEnd: Date;
+
+    switch (timeframe) {
+      case 'weekly':
+        periodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(periodStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+        prevEnd = periodStart;
+        break;
+      case 'quarterly':
+        periodStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(periodStart.getTime() - 90 * 24 * 60 * 60 * 1000);
+        prevEnd = periodStart;
+        break;
+      case 'yearly':
+        periodStart = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(periodStart.getTime() - 365 * 24 * 60 * 60 * 1000);
+        prevEnd = periodStart;
+        break;
+      default:
+        periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(periodStart.getTime() - 30 * 24 * 60 * 60 * 1000);
+        prevEnd = periodStart;
+    }
+
+    const [currentRevenue] = await db
+      .select({ total: sql<string>`COALESCE(SUM(CAST(${invoices.total} AS DECIMAL)), 0)` })
+      .from(invoices)
+      .where(and(
+        eq(invoices.workspaceId, wsId),
+        gte(invoices.createdAt, periodStart),
+        eq(invoices.status, 'paid')
+      ));
+
+    const [prevRevenue] = args.compareToLast ? await db
+      .select({ total: sql<string>`COALESCE(SUM(CAST(${invoices.total} AS DECIMAL)), 0)` })
+      .from(invoices)
+      .where(and(
+        eq(invoices.workspaceId, wsId),
+        gte(invoices.createdAt, prevStart),
+        lte(invoices.createdAt, prevEnd),
+        eq(invoices.status, 'paid')
+      )) : [{ total: '0' }];
+
+    const [laborCost] = await db
+      .select({ total: sql<string>`COALESCE(SUM(CAST(${payrollRuns.totalGrossPay} AS DECIMAL)), 0)` })
+      .from(payrollRuns)
+      .where(and(
+        eq(payrollRuns.workspaceId, wsId),
+        gte(payrollRuns.createdAt, periodStart)
+      ));
+
+    const [invoiceCounts] = await db
+      .select({
+        total: count(),
+        paid: sql<number>`COUNT(*) FILTER (WHERE ${invoices.status} = 'paid')`,
+        overdue: sql<number>`COUNT(*) FILTER (WHERE ${invoices.status} = 'overdue')`,
+        pending: sql<number>`COUNT(*) FILTER (WHERE ${invoices.status} = 'pending')`,
+      })
+      .from(invoices)
+      .where(and(
+        eq(invoices.workspaceId, wsId),
+        gte(invoices.createdAt, periodStart)
+      ));
+
+    const revenue = parseFloat(currentRevenue?.total || '0');
+    const labor = parseFloat(laborCost?.total || '0');
+    const prevRev = parseFloat(prevRevenue?.total || '0');
+    const profit = revenue - labor;
+    const margin = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0';
+    const laborRatio = revenue > 0 ? ((labor / revenue) * 100).toFixed(1) : '0';
+    const revenueChange = prevRev > 0 ? (((revenue - prevRev) / prevRev) * 100).toFixed(1) : 'N/A';
+
+    const analysis: any = {
+      timeframe,
+      period: { start: periodStart.toISOString(), end: now.toISOString() },
+      revenue: { current: revenue, previous: prevRev, changePercent: revenueChange },
+      laborCost: { total: labor, ratio: `${laborRatio}%` },
+      profitAndLoss: { grossProfit: profit, margin: `${margin}%` },
+      invoices: invoiceCounts,
+    };
+
+    if (args.analysisType === 'overtime_analysis') {
+      const [overtime] = await db
+        .select({
+          totalEntries: count(),
+          totalHours: sql<string>`COALESCE(SUM(CAST(${timeEntries.totalHours} AS DECIMAL)), 0)`,
+        })
+        .from(timeEntries)
+        .where(and(
+          eq(timeEntries.workspaceId, wsId),
+          gte(timeEntries.clockIn, periodStart),
+          sql`CAST(${timeEntries.totalHours} AS DECIMAL) > 8`
+        ));
+
+      analysis.overtime = {
+        entries: overtime?.totalEntries || 0,
+        totalOvertimeHours: parseFloat(overtime?.totalHours || '0'),
+      };
+    }
+
+    return { success: true, data: analysis };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeAnalyzeCrossDomain(
+  args: { domains?: string; focusArea?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const wsId = context.workspaceId;
+    if (!wsId) return { success: false, data: null, error: 'No workspace context for cross-domain analysis' };
+
+    const requestedDomains = args.domains ? args.domains.split(',').map(d => d.trim()) : ['all'];
+    const runAll = requestedDomains.includes('all');
+
+    const results: any = { domains: requestedDomains, focusArea: args.focusArea };
+    const allInsights: any[] = [];
+
+    if (runAll || requestedDomains.includes('profitability')) {
+      const insights = await trinityCrossDomainIntelligence.analyzeClientProfitability(wsId);
+      allInsights.push(...insights);
+      results.profitability = { insightCount: insights.length, insights: insights.slice(0, 5) };
+    }
+    if (runAll || requestedDomains.includes('overtime')) {
+      const insights = await trinityCrossDomainIntelligence.detectOvertimeTrends(wsId);
+      allInsights.push(...insights);
+      results.overtime = { insightCount: insights.length, insights: insights.slice(0, 5) };
+    }
+    if (runAll || requestedDomains.includes('compliance')) {
+      const insights = await trinityCrossDomainIntelligence.identifyComplianceRisks(wsId);
+      allInsights.push(...insights);
+      results.compliance = { insightCount: insights.length, insights: insights.slice(0, 5) };
+    }
+    if (runAll || requestedDomains.includes('labor_forecast')) {
+      const insights = await trinityCrossDomainIntelligence.forecastLaborCosts(wsId);
+      allInsights.push(...insights);
+      results.laborForecast = { insightCount: insights.length, insights: insights.slice(0, 5) };
+    }
+    if (runAll || requestedDomains.includes('trends')) {
+      const insights = await trinityCrossDomainIntelligence.getTemporalTrends(wsId);
+      allInsights.push(...insights);
+      results.trends = { insightCount: insights.length, insights: insights.slice(0, 5) };
+    }
+
+    const criticalCount = allInsights.filter(i => i.severity === 'critical').length;
+    const warningCount = allInsights.filter(i => i.severity === 'warning').length;
+    results.summary = {
+      totalInsights: allInsights.length,
+      critical: criticalCount,
+      warnings: warningCount,
+      overallHealth: criticalCount > 0 ? 'critical' : warningCount >= 3 ? 'attention_needed' : 'healthy',
+    };
+
+    return { success: true, data: results };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeDetectAnomaliesOnDemand(
+  args: { anomalyTypes?: string; severityThreshold?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const wsId = context.workspaceId;
+    if (!wsId) return { success: false, data: null, error: 'No workspace context for anomaly detection' };
+
+    const types = args.anomalyTypes ? args.anomalyTypes.split(',').map(t => t.trim()) : ['all'];
+    const threshold = args.severityThreshold || 'info';
+    const runAll = types.includes('all');
+
+    const allInsights: any[] = [];
+
+    if (runAll || types.includes('overtime')) {
+      allInsights.push(...await trinityCrossDomainIntelligence.detectOvertimeTrends(wsId));
+    }
+    if (runAll || types.includes('compliance')) {
+      allInsights.push(...await trinityCrossDomainIntelligence.identifyComplianceRisks(wsId));
+    }
+    if (runAll || types.includes('profitability')) {
+      allInsights.push(...await trinityCrossDomainIntelligence.analyzeClientProfitability(wsId));
+    }
+
+    const severityOrder = { info: 0, warning: 1, critical: 2 };
+    const thresholdLevel = severityOrder[threshold as keyof typeof severityOrder] ?? 0;
+    const filtered = allInsights.filter(i => (severityOrder[i.severity as keyof typeof severityOrder] ?? 0) >= thresholdLevel);
+
+    return {
+      success: true,
+      data: {
+        anomaliesDetected: filtered.length,
+        severityThreshold: threshold,
+        anomalies: filtered.map(i => ({
+          type: i.type,
+          severity: i.severity,
+          confidence: i.confidence,
+          title: i.title,
+          summary: i.summary,
+          recommendedActions: i.recommendedActions,
+        })),
+      },
+    };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeExplainReasoning(
+  args: { analysisType: string; detailLevel?: string },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const wsId = context.workspaceId;
+    if (!wsId) return { success: false, data: null, error: 'No workspace context for reasoning explanation' };
+
+    const detailLevel = args.detailLevel || 'detailed';
+    let insights: any[] = [];
+
+    switch (args.analysisType) {
+      case 'profitability':
+        insights = await trinityCrossDomainIntelligence.analyzeClientProfitability(wsId);
+        break;
+      case 'overtime':
+        insights = await trinityCrossDomainIntelligence.detectOvertimeTrends(wsId);
+        break;
+      case 'compliance':
+        insights = await trinityCrossDomainIntelligence.identifyComplianceRisks(wsId);
+        break;
+      case 'labor_forecast':
+        insights = await trinityCrossDomainIntelligence.forecastLaborCosts(wsId);
+        break;
+      case 'trends':
+        insights = await trinityCrossDomainIntelligence.getTemporalTrends(wsId);
+        break;
+      case 'full':
+        const fullResult = await trinityCrossDomainIntelligence.generateFullAnalysis(wsId);
+        insights = fullResult.insights;
+        break;
+      default:
+        return { success: false, data: null, error: `Unknown analysis type: ${args.analysisType}` };
+    }
+
+    const explanations = insights.map(insight => {
+      const explanation = trinityCrossDomainIntelligence.explainReasoning(insight);
+      if (detailLevel === 'summary') {
+        return { title: insight.title, confidence: insight.confidence, severity: insight.severity, summary: insight.summary };
+      }
+      if (detailLevel === 'technical') {
+        return { title: insight.title, fullExplanation: explanation, dataPoints: insight.dataPoints, reasoningChain: insight.reasoningChain };
+      }
+      return { title: insight.title, confidence: insight.confidence, severity: insight.severity, explanation };
+    });
+
+    return { success: true, data: { analysisType: args.analysisType, detailLevel, explanations } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeForecastTrends(
+  args: { forecastType: string; weeksAhead?: number },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const wsId = context.workspaceId;
+    if (!wsId) return { success: false, data: null, error: 'No workspace context for forecasting' };
+
+    const weeksAhead = Math.min(Math.max(args.weeksAhead || 4, 1), 12);
+    const forecastType = args.forecastType || 'all';
+    const results: any = { forecastType, weeksAhead };
+
+    if (forecastType === 'labor_costs' || forecastType === 'all') {
+      const laborInsights = await trinityCrossDomainIntelligence.forecastLaborCosts(wsId, weeksAhead);
+      results.laborCosts = laborInsights.map(i => ({ title: i.title, summary: i.summary, dataPoints: i.dataPoints, confidence: i.confidence }));
+    }
+
+    if (forecastType === 'compliance' || forecastType === 'all') {
+      const complianceInsights = await trinityCrossDomainIntelligence.identifyComplianceRisks(wsId);
+      results.compliance = complianceInsights.map(i => ({ title: i.title, summary: i.summary, severity: i.severity, confidence: i.confidence }));
+    }
+
+    if (forecastType === 'revenue' || forecastType === 'all') {
+      const trendInsights = await trinityCrossDomainIntelligence.getTemporalTrends(wsId);
+      results.revenue = trendInsights.map(i => ({ title: i.title, summary: i.summary, dataPoints: i.dataPoints, confidence: i.confidence }));
+    }
+
+    return { success: true, data: results };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
+  }
+}
+
+async function executeGetTemporalTrends(
+  args: { includeDetails?: boolean },
+  context: ToolExecutionContext
+): Promise<ToolResult> {
+  try {
+    const wsId = context.workspaceId;
+    if (!wsId) return { success: false, data: null, error: 'No workspace context for temporal trends' };
+
+    const insights = await trinityCrossDomainIntelligence.getTemporalTrends(wsId);
+
+    const data = insights.map(i => {
+      const base: any = { title: i.title, summary: i.summary, severity: i.severity, confidence: i.confidence };
+      if (args.includeDetails) {
+        base.dataPoints = i.dataPoints;
+        base.reasoningChain = i.reasoningChain;
+        base.recommendedActions = i.recommendedActions;
+      }
+      return base;
+    });
+
+    return { success: true, data: { trends: data, count: data.length } };
+  } catch (error: any) {
+    return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
@@ -949,7 +2495,91 @@ export class UnifiedGeminiClient {
       }
     }) : null;
     
-    console.log('[AI Brain] UnifiedGeminiClient initialized with tiered architecture + humanized persona');
+    log.info('[AI Brain] UnifiedGeminiClient initialized with tiered architecture + humanized persona');
+  }
+
+  /**
+   * UNIVERSAL CREDIT ENFORCEMENT - Pre-check before any AI operation
+   * Returns true if the operation can proceed, false if credits insufficient
+   * 
+   * ZERO TOKEN LOSS POLICY (Feb 2026):
+   * - Missing workspaceId: Log warning + track as unbilled usage (allowed for system operations)
+   * - Unknown featureKey: Use default 'ai_general' cost instead of silently allowing free usage
+   * - Every AI call is tracked even if billing check fails
+   */
+  private async enforceCreditPreCheck(
+    workspaceId: string | undefined,
+    userId: string | undefined,
+    featureKey: string
+  ): Promise<{ allowed: boolean; errorMessage?: string }> {
+    try {
+      const safeFeatureKey = featureKey || 'ai_general';
+      const { aiCreditGateway } = await import('../../billing/aiCreditGateway');
+      const result = await aiCreditGateway.preAuthorize(workspaceId, userId, safeFeatureKey);
+      if (!result.authorized) {
+        return { allowed: false, errorMessage: result.reason };
+      }
+      return { allowed: true };
+    } catch (err: any) {
+      log.error(`[BillingGate] Pre-check FAILED for ${featureKey}: ${(err instanceof Error ? err.message : String(err))} - BLOCKING`);
+      return { allowed: false, errorMessage: `Billing system error: ${(err instanceof Error ? err.message : String(err))}` };
+    }
+  }
+
+  /**
+   * UNIVERSAL CREDIT ENFORCEMENT - Post-deduction after successful AI operation
+   * Routes through the single aiCreditGateway.finalizeBilling() gate.
+   * No silent failures - all errors logged as BILLING_LEAK.
+   */
+  private async enforceCreditDeduction(
+    workspaceId: string | undefined,
+    userId: string | undefined,
+    featureKey: string,
+    tokenData?: { inputTokens?: number; outputTokens?: number; model?: string }
+  ): Promise<void> {
+    try {
+      const { aiCreditGateway } = await import('../../billing/aiCreditGateway');
+      const tokensTotal = (tokenData?.inputTokens || 0) + (tokenData?.outputTokens || 0);
+      await aiCreditGateway.finalizeBilling(workspaceId, userId, featureKey, tokensTotal, {
+        inputTokens: tokenData?.inputTokens || 0,
+        outputTokens: tokenData?.outputTokens || 0,
+        model: tokenData?.model || 'gemini',
+      });
+    } catch (err: any) {
+      log.error(`[BillingGate] BILLING_LEAK: Deduction crashed for ${featureKey} workspace=${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
+    }
+  }
+
+  private async _legacyEnforceCreditDeduction_UNUSED(
+    workspaceId: string | undefined,
+    userId: string | undefined,
+    featureKey: string
+  ): Promise<void> {
+    if (!workspaceId) return;
+
+    if (CREDIT_EXEMPT_FEATURES.has(featureKey)) return;
+
+    const creditKey = (featureKey in CREDIT_COSTS) 
+      ? featureKey as keyof typeof CREDIT_COSTS 
+      : 'ai_general' as keyof typeof CREDIT_COSTS;
+
+    try {
+      const result = await creditManager.deductCredits({
+        workspaceId,
+        userId: userId || 'system-gemini',
+        featureKey: creditKey,
+        featureName: featureKey,
+        description: `AI operation: ${featureKey}`,
+      });
+
+      if (result.success) {
+        log.info(`[CreditEnforcer] Deducted credits for ${featureKey} → balance: ${result.newBalance}`);
+      } else {
+        log.warn(`[CreditEnforcer] Deduction failed for ${featureKey}: ${result.errorMessage}`);
+      }
+    } catch (err: any) {
+      log.error(`[CreditEnforcer] Post-deduction error for ${featureKey}:`, (err instanceof Error ? err.message : String(err)));
+    }
   }
 
   /**
@@ -961,11 +2591,16 @@ export class UnifiedGeminiClient {
       return { data: null, tokensUsed: 0, error: "JSON model not available" };
     }
 
+    const creditCheck = await this.enforceCreditPreCheck(request.workspaceId, request.userId, request.featureKey);
+    if (!creditCheck.allowed) {
+      return { data: null, tokensUsed: 0, error: creditCheck.errorMessage };
+    }
+
     const requestContext: AIRequestContext = {
-      workspaceId: request.workspaceId || 'unknown',
-      userId: request.userId || 'unknown',
+      workspaceId: request.workspaceId || 'platform-unattributed',
+      userId: request.userId || 'system',
       organizationId: 'platform',
-      requestId: Math.random().toString(36).substring(7),
+      requestId: crypto.randomBytes(6).toString('hex'),
       timestamp: new Date(),
       operation: request.featureKey
     };
@@ -975,19 +2610,36 @@ export class UnifiedGeminiClient {
         ? `\n\nRespond with valid JSON matching this schema: ${request.jsonSchema}` 
         : '\n\nRespond with valid JSON only.';
       
-      const result = await this.jsonModel.generateContent(request.systemPrompt + schemaInstruction + "\n\nUser: " + request.userMessage);
+      const result = await this.jsonModel.generateContent(request.systemPrompt + schemaInstruction + "\n\nUser: " + request.userMessage); // withGemini
       const response = result.response;
       const text = response.text();
-      const tokensUsed = (response.usageMetadata?.promptTokenCount || 0) + (response.usageMetadata?.candidatesTokenCount || 0);
+      const inputTokens = response.usageMetadata?.promptTokenCount || 0;
+      const outputTokens = response.usageMetadata?.candidatesTokenCount || 0;
+      const tokensUsed = inputTokens + outputTokens;
+
+      if (request.workspaceId && (inputTokens > 0 || outputTokens > 0)) {
+        import('../../billing/aiMeteringService').then(({ aiMeteringService }) => {
+          aiMeteringService.recordAiCall({
+            workspaceId: request.workspaceId!,
+            modelName: GEMINI_MODELS.SUPERVISOR,
+            callType: request.featureKey || 'gemini_json',
+            inputTokens,
+            outputTokens,
+            triggeredByUserId: request.userId,
+          });
+         }).catch((err: any) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+      }
 
       try {
         const data = JSON.parse(text) as T;
+        await this.enforceCreditDeduction(request.workspaceId, request.userId, request.featureKey);
         return { data, tokensUsed };
       } catch {
+        await this.enforceCreditDeduction(request.workspaceId, request.userId, request.featureKey);
         return { data: null, tokensUsed, error: "Failed to parse JSON response" };
       }
     } catch (error: any) {
-      return { data: null, tokensUsed: 0, error: error.message };
+      return { data: null, tokensUsed: 0, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -1009,11 +2661,20 @@ export class UnifiedGeminiClient {
       throw new Error("Gemini API not configured - AI Brain disabled");
     }
 
+    const creditCheck = await this.enforceCreditPreCheck(request.workspaceId, request.userId, request.featureKey);
+    if (!creditCheck.allowed) {
+      return {
+        text: creditCheck.errorMessage || 'Insufficient credits',
+        tokensUsed: 0,
+        metadata: { creditBlocked: true }
+      };
+    }
+
     const requestContext: AIRequestContext = {
-      workspaceId: request.workspaceId || 'unknown',
-      userId: request.userId || 'unknown',
+      workspaceId: request.workspaceId || 'platform-unattributed',
+      userId: request.userId || 'system',
       organizationId: 'platform',
-      requestId: Math.random().toString(36).substring(7),
+      requestId: crypto.randomBytes(6).toString('hex'),
       timestamp: new Date(),
       operation: request.featureKey
     };
@@ -1027,7 +2688,7 @@ export class UnifiedGeminiClient {
     }
 
     try {
-      console.log(`🧠 [AI Brain] Processing ${request.featureKey} request with 8-step workflow`);
+      log.info(`🧠 [AI Brain] Processing ${request.featureKey || 'health_check'} request with 8-step workflow`);
       
       const history = (request.conversationHistory || []).map(msg => ({
         role: msg.role === 'user' ? 'user' as const : 'model' as const,
@@ -1036,6 +2697,7 @@ export class UnifiedGeminiClient {
 
       // STEP 2: Use tools model if tool calling enabled
       const modelToUse = request.enableToolCalling ? this.toolsModel : this.model;
+      const activeModelName = request.enableToolCalling ? GEMINI_MODELS.ORCHESTRATOR : GEMINI_MODELS.HELLOS;
       if (!modelToUse) throw new Error("Model not available");
 
       const chat = modelToUse.startChat({
@@ -1047,6 +2709,8 @@ export class UnifiedGeminiClient {
       });
 
       let totalTokensUsed = 0;
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
       let attempts = 0;
       const maxAttempts = 3;
       const maxToolIterations = 5; // Prevent infinite loops
@@ -1058,9 +2722,13 @@ export class UnifiedGeminiClient {
           let result = await chat.sendMessage(validation.sanitizedInput);
           let response = result.response;
           
-          // Track tokens
+          // Track tokens (separately for accurate cost calculation)
           const initialUsage = response.usageMetadata;
-          totalTokensUsed += (initialUsage?.promptTokenCount || 0) + (initialUsage?.candidatesTokenCount || 0);
+          const initialInput = initialUsage?.promptTokenCount || 0;
+          const initialOutput = initialUsage?.candidatesTokenCount || 0;
+          totalInputTokens += initialInput;
+          totalOutputTokens += initialOutput;
+          totalTokensUsed += initialInput + initialOutput;
 
           // STEP 3: Extract function calls if present
           let functionCalls: Array<{ name: string; args: any }> = [];
@@ -1083,13 +2751,13 @@ export class UnifiedGeminiClient {
           
           while (functionCalls.length > 0 && toolIterations < maxToolIterations) {
             toolIterations++;
-            console.log(`🔄 [AI Brain] Tool iteration ${toolIterations}: ${functionCalls.length} function call(s) to execute`);
+            log.info(`🔄 [AI Brain] Tool iteration ${toolIterations}: ${functionCalls.length} function call(s) to execute`);
 
             // STEP 4: Execute each tool and collect results
             const toolResults: Array<{ name: string; response: any }> = [];
             
             for (const fc of functionCalls) {
-              console.log(`🔧 [AI Brain] Executing tool: ${fc.name}`);
+              log.info(`🔧 [AI Brain] Executing tool: ${fc.name}`);
               
               const toolResult = await executeToolCall(fc.name, fc.args, {
                 workspaceId: request.workspaceId,
@@ -1107,7 +2775,7 @@ export class UnifiedGeminiClient {
                 result: toolResult
               });
               
-              console.log(`✅ [AI Brain] Tool ${fc.name} completed:`, toolResult.success ? 'success' : 'failed');
+              log.info(`✅ [AI Brain] Tool ${fc.name} completed:`, toolResult.success ? 'success' : 'failed');
             }
 
             // STEP 5: Send tool results back to Gemini
@@ -1119,15 +2787,19 @@ export class UnifiedGeminiClient {
               }
             }));
 
-            console.log(`📤 [AI Brain] Sending ${toolResults.length} tool result(s) back to Gemini`);
+            log.info(`📤 [AI Brain] Sending ${toolResults.length} tool result(s) back to Gemini`);
             
             // STEP 6: Send results and get next response
             result = await chat.sendMessage(functionResponseParts);
             response = result.response;
             
-            // Track additional tokens
+            // Track additional tokens (separately for accurate cost calculation)
             const iterationUsage = response.usageMetadata;
-            totalTokensUsed += (iterationUsage?.promptTokenCount || 0) + (iterationUsage?.candidatesTokenCount || 0);
+            const iterInput = iterationUsage?.promptTokenCount || 0;
+            const iterOutput = iterationUsage?.candidatesTokenCount || 0;
+            totalInputTokens += iterInput;
+            totalOutputTokens += iterOutput;
+            totalTokensUsed += iterInput + iterOutput;
 
             // STEP 7: Check if Gemini needs more tools or has final response
             functionCalls = [];
@@ -1145,9 +2817,9 @@ export class UnifiedGeminiClient {
             }
             
             if (functionCalls.length === 0) {
-              console.log(`✨ [AI Brain] Multi-turn loop complete after ${toolIterations} iteration(s)`);
+              log.info(`✨ [AI Brain] Multi-turn loop complete after ${toolIterations} iteration(s)`);
             } else if (toolIterations >= maxToolIterations) {
-              console.warn(`⚠️ [AI Brain] Max tool iterations (${maxToolIterations}) reached, forcing final response`);
+              log.warn(`⚠️ [AI Brain] Max tool iterations (${maxToolIterations}) reached, forcing final response`);
               functionCalls = []; // Clear remaining calls to exit loop
             }
           }
@@ -1239,27 +2911,7 @@ export class UnifiedGeminiClient {
             continue;
           }
 
-          // Record usage
-          if (totalTokensUsed > 0 && request.workspaceId) {
-            await usageMeteringService.recordUsage({
-              workspaceId: request.workspaceId,
-              userId: request.userId,
-              featureKey: request.featureKey,
-              usageType: 'token',
-              usageAmount: totalTokensUsed,
-              usageUnit: 'tokens',
-              activityType: 'ai_brain_inference',
-              metadata: {
-                model: 'gemini-2.0-flash-exp',
-                feature: request.featureKey,
-                toolsExecuted: allFunctionCalls.length,
-                toolIterations: toolIterations,
-                hasFunctionCalls: allFunctionCalls.length > 0
-              }
-            });
-            
-            console.log(`💰 [AI Brain] ${request.featureKey} - ${totalTokensUsed} tokens billed (${allFunctionCalls.length} tools executed)`);
-          }
+          log.info(`[AI Brain] ${request.featureKey} - ${totalTokensUsed} tokens (${allFunctionCalls.length} tools executed)`);
 
           // Log operation
           aiGuardRails.logAIOperation(requestContext, validation.sanitizedInput, responseText, {
@@ -1268,6 +2920,22 @@ export class UnifiedGeminiClient {
             tokensUsed: totalTokensUsed,
             duration: Date.now() - requestContext.timestamp.getTime()
           });
+
+          await this.enforceCreditDeduction(request.workspaceId, request.userId, request.featureKey);
+
+          if (request.workspaceId) {
+            import('../../billing/aiMeteringService').then(({ aiMeteringService }) => {
+              aiMeteringService.recordAiCall({
+                workspaceId: request.workspaceId!,
+                modelName: activeModelName,
+                callType: request.featureKey || 'gemini_generate',
+                inputTokens: totalInputTokens,
+                outputTokens: totalOutputTokens,
+                triggeredByUserId: request.userId,
+                trinityActionId: undefined,
+              });
+             }).catch((err: any) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+          }
 
           return {
             text: responseText,
@@ -1281,7 +2949,7 @@ export class UnifiedGeminiClient {
               }))
             } : undefined,
             metadata: {
-              model: 'gemini-2.0-flash-exp',
+              model: 'gemini-2.5-flash',
               timestamp: new Date().toISOString(),
               attempts: attempts + 1,
               toolIterations: toolIterations,
@@ -1292,7 +2960,7 @@ export class UnifiedGeminiClient {
         } catch (error: any) {
           attempts++;
           lastError = error;
-          console.warn(`⚠️ [AI Brain] Attempt ${attempts}/${maxAttempts} failed:`, error.message);
+          log.warn(`⚠️ [AI Brain] Attempt ${attempts}/${maxAttempts} failed:`, (error instanceof Error ? error.message : String(error)));
           
           if (attempts >= maxAttempts) break;
           
@@ -1304,8 +2972,8 @@ export class UnifiedGeminiClient {
       throw lastError || new Error('All retry attempts failed');
 
     } catch (error: any) {
-      console.error(`❌ [AI Brain] Gemini error for ${request.featureKey}:`, error);
-      throw new Error(`AI Brain inference failed: ${error.message || 'Unknown error'}`);
+      log.error(`❌ [AI Brain] Gemini error for ${request.featureKey}:`, error);
+      throw new Error(`AI Brain inference failed: ${(error instanceof Error ? error.message : String(error)) || 'Unknown error'}`);
     }
   }
 
@@ -1317,6 +2985,83 @@ export class UnifiedGeminiClient {
       ...request,
       enableToolCalling: true
     });
+  }
+
+  /**
+   * UNIVERSAL GATE: generateContent - metered wrapper for all content generation
+   * Routes through credit enforcement so no AI tokens leak unbilled.
+   * Accepts either { prompt, purpose } or raw Google SDK { contents, generationConfig } format.
+   */
+  async generateContent(
+    requestOrPrompt: string | { prompt?: string; purpose?: string; featureKey?: string; contents?: any[]; generationConfig?: any; workspaceId?: string; userId?: string },
+    options?: { temperature?: number; maxTokens?: number; workspaceId?: string; userId?: string; featureKey?: string }
+  ): Promise<{ text?: string; response?: { text: () => string }; tokensUsed?: number }> {
+    let prompt: string;
+    let workspaceId: string | undefined;
+    let userId: string | undefined;
+    let featureKey = 'ai_general';
+    let temperature = 0.7;
+    let maxTokens = 1024;
+
+    if (typeof requestOrPrompt === 'string') {
+      prompt = requestOrPrompt;
+      workspaceId = options?.workspaceId;
+      userId = options?.userId;
+      if (options?.featureKey) featureKey = options.featureKey;
+      if (options?.temperature) temperature = options.temperature;
+      if (options?.maxTokens) maxTokens = options.maxTokens;
+    } else {
+      if (requestOrPrompt.contents) {
+        prompt = requestOrPrompt.contents
+          .map((c: any) => c.parts?.map((p: any) => p.text).join(' ') || '')
+          .join('\n');
+      } else {
+        prompt = requestOrPrompt.prompt || '';
+      }
+      workspaceId = requestOrPrompt.workspaceId || options?.workspaceId;
+      userId = requestOrPrompt.userId || options?.userId;
+      featureKey = requestOrPrompt.featureKey || requestOrPrompt.purpose || 'ai_general';
+      if (requestOrPrompt.generationConfig?.temperature) temperature = requestOrPrompt.generationConfig.temperature;
+    }
+
+    const response = await this.generate({
+      userMessage: prompt,
+      workspaceId,
+      userId,
+      featureKey,
+      temperature,
+      maxTokens,
+    });
+
+    const responseText = response.text || '';
+    return {
+      text: responseText,
+      response: { text: () => responseText },
+      tokensUsed: response.tokensUsed,
+    };
+  }
+
+  /**
+   * UNIVERSAL GATE: generateDecision - metered wrapper for AI decision-making
+   * Routes through credit enforcement so no AI tokens leak unbilled.
+   */
+  async generateDecision(
+    prompt: string,
+    context: { workspaceId?: string; userId?: string; purpose?: string } = {}
+  ): Promise<{ text: string; tokensUsed: number }> {
+    const response = await this.generate({
+      userMessage: prompt,
+      workspaceId: context.workspaceId,
+      userId: context.userId,
+      featureKey: context.purpose || 'ai_decision',
+      temperature: 0.3,
+      maxTokens: 500,
+    });
+
+    return {
+      text: response.text || '',
+      tokensUsed: response.tokensUsed || 0,
+    };
   }
 
   /**
@@ -1468,6 +3213,15 @@ Guidelines:
       throw new Error("Gemini API not configured");
     }
 
+    const creditCheck = await this.enforceCreditPreCheck(request.workspaceId, request.userId, request.featureKey);
+    if (!creditCheck.allowed) {
+      return {
+        text: creditCheck.errorMessage || 'Insufficient credits',
+        tokensUsed: 0,
+        metadata: { creditBlocked: true }
+      };
+    }
+
     try {
       const visionModel = genAI!.getGenerativeModel({ 
         model: GEMINI_MODELS.DIAGNOSTICS,
@@ -1477,7 +3231,7 @@ Guidelines:
         }
       });
       
-      const result = await visionModel.generateContent([
+      const result = await visionModel.generateContent([ // withGemini
         request.systemPrompt + "\n\n" + request.userMessage,
         {
           inlineData: {
@@ -1492,20 +3246,19 @@ Guidelines:
       const usage = response.usageMetadata;
       const tokensUsed = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
 
-      if (tokensUsed > 0 && request.workspaceId) {
-        await usageMeteringService.recordUsage({
-          workspaceId: request.workspaceId,
-          userId: request.userId,
-          featureKey: request.featureKey,
-          usageType: 'token',
-          usageAmount: tokensUsed,
-          usageUnit: 'tokens',
-          activityType: 'ai_brain_vision',
-          metadata: {
-            model: GEMINI_MODELS.DIAGNOSTICS,
-            hasImage: true
-          }
-        });
+      await this.enforceCreditDeduction(request.workspaceId, request.userId, request.featureKey);
+
+      if (request.workspaceId && tokensUsed > 0) {
+        import('../../billing/aiMeteringService').then(({ aiMeteringService }) => {
+          aiMeteringService.recordAiCall({
+            workspaceId: request.workspaceId!,
+            modelName: GEMINI_MODELS.DIAGNOSTICS,
+            callType: request.featureKey || 'gemini_vision',
+            inputTokens: usage?.promptTokenCount ?? 0,
+            outputTokens: usage?.candidatesTokenCount ?? 0,
+            triggeredByUserId: request.userId,
+          });
+         }).catch((err: any) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
       }
 
       return {
@@ -1514,8 +3267,8 @@ Guidelines:
       };
 
     } catch (error: any) {
-      console.error(`❌ [AI Brain] Vision error:`, error);
-      throw new Error(`AI Brain vision failed: ${error.message}`);
+      log.error(`❌ [AI Brain] Vision error:`, error);
+      throw new Error(`AI Brain vision failed: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
 
@@ -1539,7 +3292,13 @@ Guidelines:
    */
   async generateTrinityThought(request: QuickThoughtRequest): Promise<string | null> {
     if (!genAI) {
-      console.warn('[Trinity AI] Gemini not available for thought generation');
+      log.warn('[Trinity AI] Gemini not available for thought generation');
+      return null;
+    }
+
+    const creditCheck = await this.enforceCreditPreCheck(request.workspaceId, undefined, 'trinity_thought');
+    if (!creditCheck.allowed) {
+      log.warn(`[Trinity AI] Credit check failed: ${creditCheck.errorMessage}`);
       return null;
     }
 
@@ -1597,7 +3356,7 @@ RULES:
 
 Generate ONE thought for ${greeting}:`;
 
-      const result = await model.generateContent({
+      const result = await model.generateContent({ // withGemini
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
         systemInstruction: systemPrompt,
         generationConfig: {
@@ -1611,29 +3370,25 @@ Generate ONE thought for ${greeting}:`;
       const usage = response.usageMetadata;
       const tokensUsed = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
 
-      console.log(`[Trinity AI] Generated thought (${tokensUsed} tokens): ${text.substring(0, 50)}...`);
+      log.info(`[Trinity AI] Generated thought (${tokensUsed} tokens): ${text.substring(0, 50)}...`);
 
-      // Record usage for billing
-      if (tokensUsed > 0 && request.workspaceId) {
-        await usageMeteringService.recordUsage({
-          workspaceId: request.workspaceId,
-          userId: undefined,
-          featureKey: 'trinity_thought',
-          usageType: 'token',
-          usageAmount: tokensUsed,
-          usageUnit: 'tokens',
-          activityType: 'ai_brain_thought',
-          metadata: {
-            model: GEMINI_MODELS.CONVERSATIONAL,
-            mode: request.mode || 'demo',
-            preset: 'mascot'
-          }
-        });
+      await this.enforceCreditDeduction(request.workspaceId, undefined, 'trinity_thought');
+
+      if (request.workspaceId && tokensUsed > 0) {
+        import('../../billing/aiMeteringService').then(({ aiMeteringService }) => {
+          aiMeteringService.recordAiCall({
+            workspaceId: request.workspaceId!,
+            modelName: GEMINI_MODELS.CONVERSATIONAL,
+            callType: 'trinity_thought',
+            inputTokens: usage?.promptTokenCount ?? 0,
+            outputTokens: usage?.candidatesTokenCount ?? 0,
+          });
+         }).catch((err: any) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
       }
 
       return text || null;
     } catch (error: any) {
-      console.error('[Trinity AI] Thought generation failed:', error.message);
+      log.error('[Trinity AI] Thought generation failed:', (error instanceof Error ? error.message : String(error)));
       return null;
     }
   }
@@ -1642,8 +3397,13 @@ Generate ONE thought for ${greeting}:`;
    * Generate a quick status insight for dashboards
    * Uses simple preset for ultra-brief responses
    */
-  async generateQuickInsight(topic: string, data: string): Promise<string | null> {
+  async generateQuickInsight(topic: string, data: string, workspaceId?: string): Promise<string | null> {
     if (!genAI) return null;
+
+    const creditCheck = await this.enforceCreditPreCheck(workspaceId, undefined, 'trinity_insight');
+    if (!creditCheck.allowed) {
+      return null;
+    }
 
     try {
       const config = ANTI_YAP_PRESETS.simple;
@@ -1651,7 +3411,7 @@ Generate ONE thought for ${greeting}:`;
         model: GEMINI_MODELS.SIMPLE 
       });
 
-      const result = await model.generateContent({
+      const result = await model.generateContent({ // withGemini
         contents: [{ 
           role: 'user', 
           parts: [{ text: `One sentence insight about ${topic}: ${data}` }] 
@@ -1662,9 +3422,24 @@ Generate ONE thought for ${greeting}:`;
         },
       });
 
+      const insightUsage = result.response.usageMetadata;
+      await this.enforceCreditDeduction(workspaceId, undefined, 'trinity_insight');
+
+      if (workspaceId && ((insightUsage?.promptTokenCount ?? 0) + (insightUsage?.candidatesTokenCount ?? 0)) > 0) {
+        import('../../billing/aiMeteringService').then(({ aiMeteringService }) => {
+          aiMeteringService.recordAiCall({
+            workspaceId: workspaceId!,
+            modelName: GEMINI_MODELS.SIMPLE,
+            callType: 'trinity_insight',
+            inputTokens: insightUsage?.promptTokenCount ?? 0,
+            outputTokens: insightUsage?.candidatesTokenCount ?? 0,
+          });
+         }).catch((err: any) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+      }
+
       return result.response.text().trim() || null;
     } catch (error: any) {
-      console.error('[AI Brain] Quick insight failed:', error.message);
+      log.error('[AI Brain] Quick insight failed:', (error instanceof Error ? error.message : String(error)));
       return null;
     }
   }

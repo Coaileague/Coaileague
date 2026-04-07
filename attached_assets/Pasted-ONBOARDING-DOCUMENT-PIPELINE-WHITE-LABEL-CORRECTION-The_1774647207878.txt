@@ -1,0 +1,129 @@
+ONBOARDING DOCUMENT PIPELINE — WHITE LABEL CORRECTION
+The onboarding document templates built in the previous prompt contain hardcoded references to "Statewide Protective Services," "SPS," "Chief B. Guillen," and company-specific language. This is wrong. Every document in the onboarding pipeline must be fully white-labeled — no company name, logo, license number, or personnel reference is ever hardcoded into a template.
+This is a platform-level correction. Apply it now before any further onboarding work proceeds.
+
+RULE — Permanent Architecture Truth. Add to replit.md:
+All document templates in CoAIleague are white-labeled. No template may contain any hardcoded company name, personnel name, license number, logo, or company-specific language. Every company-specific field is a template variable populated at document generation time from the workspace record. A security company in Florida, California, or New York must receive a document that looks like it was built for them — not for Statewide Protective Services.
+
+STEP 1 — AUDIT AND PURGE ALL HARDCODED REFERENCES
+Search every template file, templateRegistry.ts, and any document generation service for the following strings and remove or replace with template variables:
+
+"Statewide Protective Services" → {{company_name}}
+"Statewide Public Safety Services LLC" → {{company_legal_name}}
+"SPS" → {{company_abbreviation}} or remove entirely if contextual
+"Chief B. Guillen" → {{verified_by_name}}
+"C11608501" → {{company_license_number}}
+"3700 Fredericksburg Rd., San Antonio, TX 78201" → {{company_address}}
+"84-4563658" → {{company_ein}}
+"admin@statewideprotective.com" → {{company_support_email}}
+"Brigido Guillen, Jr." → {{ceo_name}}
+"Janette Dawn Guillen" → {{coa_name}}
+"Chief of Operations" → {{ceo_title}}
+"Chief of Administration" → {{coa_title}}
+Any TOPS portal reference specific to Texas → moved to state-conditional block (Texas only)
+Any reference to Sling, WhatsApp, QuickBooks, or DocuSign → removed entirely (CoAIleague is the platform)
+
+Run: grep -rn "Statewide\|SPS\|Guillen\|C11608501\|Fredericksburg\|84-4563658\|statewideprotective" server/services/documents/ client/src/ | grep -v node_modules | grep -v ".git" — confirm zero results after cleanup.
+
+STEP 2 — TEMPLATE VARIABLE REGISTRY
+Every document template pulls from this standardized variable set populated at generation time from the workspace record:
+Workspace variables:
+
+{{company_name}} — workspace display name
+{{company_legal_name}} — workspace legal entity name
+{{company_abbreviation}} — short name or abbreviation (optional, generated from company_name if not set)
+{{company_license_number}} — state security license number (from workspace compliance record)
+{{company_address}} — workspace primary address
+{{company_city_state_zip}} — formatted city, state, zip
+{{company_ein}} — employer identification number (stored encrypted)
+{{company_support_email}} — workspace support or admin email
+{{company_logo_url}} — workspace logo for document header
+{{company_phone}} — workspace phone number
+
+Signatory variables:
+
+{{verified_by_name}} — name of the manager or owner completing the verification
+{{verified_by_title}} — title of the verifier
+{{ceo_name}} — org_owner full name
+{{ceo_title}} — org_owner title (configurable per workspace)
+{{signing_rep_name}} — org representative signing documents (org_owner or designated signer)
+{{signing_rep_title}} — title of the signing representative
+
+Officer variables:
+
+{{officer_full_name}} — full legal name
+{{officer_address}} — current address
+{{officer_city_state_zip}} — formatted
+{{officer_dob}} — date of birth
+{{officer_place_of_birth}} — place of birth
+{{officer_hire_date}} — hire date
+{{officer_position}} — position title
+{{officer_license_number}} — guard card or security license number
+{{officer_license_expiry}} — license expiry date
+{{officer_post_assignment}} — primary post assignment
+{{officer_post_address}} — post address
+{{officer_uniform_size}} — captured during onboarding
+{{officer_pay_rate}} — hourly rate or salary from offer letter
+
+Document variables:
+
+{{document_date}} — date document is generated
+{{document_version}} — template version number
+{{esign_envelope_id}} — DocuSign or CoAIleague envelope ID for audit trail
+
+
+STEP 3 — STATE-CONDITIONAL CONTENT
+Some content in the onboarding packet is state-specific. The template engine must support conditional blocks that render only when the workspace's primary state matches:
+Texas-only content:
+{{#if state_code == "TX"}}
+On TOPS, make sure to add your guard card to our company license — License # {{company_license_number}}. You can visit TOPS at www.tops.portal.texas.gov.
+{{/if}}
+California-only content:
+BSIS registration instructions, specific training hour requirements.
+Florida-only content:
+FDLE registration, D license requirements.
+All state-specific blocks reference stateRegulatoryKnowledgeBase for their content — not hardcoded text. As new states are added to the knowledge base the state-conditional content expands automatically.
+
+STEP 4 — DOCUMENT HEADER AND BRANDING
+Every generated document header must show:
+
+Workspace logo (from {{company_logo_url}}) — left aligned
+Company name (from {{company_name}}) — centered, bold
+Company legal name (from {{company_legal_name}}) — centered, smaller
+Company license number (from {{company_license_number}}) — centered below legal name
+Document title — centered below company info
+
+If a workspace has not uploaded a logo the header falls back to the platform's generic document header with the company name in text only. Never substitute another company's logo or name.
+
+STEP 5 — WELCOME LETTER WHITE-LABEL CORRECTION
+The welcome letter currently references Sling, WhatsApp, and DocuSign by name. Replace all third-party tool references with platform-native equivalents:
+Remove: "Download the Sling app" → "Download the {{company_name}} app from the App Store or Google Play to access your schedule, clock in and out, and communicate with your team."
+Remove: "Download WhatsApp" → Removed entirely. CoAIleague DockChat handles internal communications (Phase 35C).
+Remove: "one from QuickBooks (for your payroll), one from Sling, and one from DocuSign" → "You will receive your onboarding documents through our platform. Please complete all required forms and upload all requested documents before your start date."
+Remove: Any reference to Formstacks → "All incident reports and daily activity reports are completed through the {{company_name}} platform."
+
+STEP 6 — HANDBOOK AND SOP TEMPLATE
+The Employee/Contractor Handbook is a workspace-configured document — not a platform document. CoAIleague provides:
+
+A default handbook template with all standard sections: General Employment Policies, Anti-Discrimination and Harassment, Benefits, SOPs, Use of Force Policy, Acknowledgment Form
+All company-specific references use template variables
+Workspace can upload their own custom handbook PDF OR use the CoAIleague template
+If workspace uploads their own handbook it replaces the template for that workspace
+Handbook version is tracked — when org_owner uploads a new version all active officers are prompted to re-acknowledge
+
+The Use of Force Policy section must reference the officer's state-specific regulations via stateRegulatoryKnowledgeBase — not Texas-specific language for non-Texas workspaces.
+
+STEP 7 — VERIFICATION
+
+Check 1: grep confirms zero hardcoded SPS, Statewide, Guillen, or company-specific references in any template file
+Check 2: All 8 document templates use only template variables from the registry
+Check 3: Document header renders with workspace logo and name — not any default company name
+Check 4: Welcome letter contains zero references to Sling, WhatsApp, DocuSign, QuickBooks, or Formstacks
+Check 5: State-conditional blocks render correctly — Texas TOPS instruction shows for TX workspaces, hidden for all others
+Check 6: Handbook template uses template variables throughout — org_owner can upload custom handbook
+Check 7: Template preview in the document management UI shows correct workspace branding
+Check 8: Statewide Protective Services workspace generates correctly branded documents using their own workspace data — not hardcoded values
+Check 9: TypeScript zero errors
+Check 10: Server startup clean
+
+This is a permanent platform standard. No template in CoAIleague may ever contain a hardcoded company name, personnel name, or company-specific reference. Every workspace gets documents that look built for them. Nothing left behind.

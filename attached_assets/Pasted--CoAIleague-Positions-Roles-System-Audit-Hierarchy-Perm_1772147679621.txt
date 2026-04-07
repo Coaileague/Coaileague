@@ -1,0 +1,336 @@
+# CoAIleague Positions & Roles System Audit
+## Hierarchy, Permissions, Color Coding, and Schedule Integration
+
+**Date:** February 26, 2026  
+**Focus:** Position/Role management must be live, persistent, and semantically integrated across the platform
+
+---
+
+## THE REQUIREMENT
+
+Positions and roles need to be:
+- **Associated** with every employee
+- **Promotable/changeable** within the system
+- **Live and persistent** - changes reflect immediately everywhere
+- **Color-coded** on schedule and team views
+- **Filterable** by position or role
+- **Authority-aware** - each role has defined platform permissions
+
+---
+
+## PART 1: POSITION & ROLE HIERARCHY
+
+### Executive Leadership (ORANGE color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Chief of Operations | 1 (Org Owner) | Everything | N/A |
+| Assistant Chief | 2 | Almost everything | Chief |
+| Deputy Chief | 3 | Most settings, all staff below | Chief/Asst Chief |
+
+### Administrative Command Staff (PURPLE color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Captain | 4 | Staff, schedules, operations | Deputy Chief+ |
+| Commander | 5 | Staff, schedules, field ops | Captain+ |
+| Lieutenant | 6 | Field supervisors, staff, schedules | Commander+ |
+
+### Field Supervisors (suggest BLUE or GREEN color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Sergeant (Sgt) | 7 | Staff under them, field reports | Lieutenant+ |
+| Corporal (Cpl) | 8 | Limited staff edits, reports | Sergeant+ |
+| Field Training Officer (FTO) | 8 | Training records, evaluations | Sergeant+ |
+
+### Specialized Administrative Roles (suggest TEAL or GRAY color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Tech Officer | Varies | System settings, integrations | Command Staff |
+| Fleet Officer | Varies | Vehicle records, assignments | Command Staff |
+| Records Officer | Varies | Documentation, compliance | Command Staff |
+| HR Personnel | Varies | Employee records, onboarding | Command Staff |
+| AP/AR | Varies | Financial records, invoices | Command Staff |
+| Administrative Assistant | Varies | Scheduling support, comms | Command Staff |
+| Sales/Marketing Staff | Varies | Client outreach, proposals | Command Staff |
+
+### Case Managers (suggest YELLOW or GOLD color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Case Manager | Varies | Assigned client records, reports | Captain+ |
+
+### Dispatchers (suggest CYAN color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Dispatcher | 9 | CAD, incident assignment | Lieutenant+ |
+
+### Field Staff - Armed (RED color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Patrol Officer (Armed) | 10 | Own reports, clock, availability | Field Supervisors |
+| Staff (Armed) | 10 | Own reports, clock, availability | Field Supervisors |
+
+### Field Staff - Unarmed (BROWN color)
+| Position | Authority Level | Can Edit | Reports To |
+|----------|-----------------|----------|------------|
+| Patrol Officer (Unarmed) | 10 | Own reports, clock, availability | Field Supervisors |
+| Staff (Unarmed) | 10 | Own reports, clock, availability | Field Supervisors |
+
+---
+
+## PART 2: COLOR CODING REQUIREMENTS
+
+### Schedule View Colors
+
+| Role Category | Color | Hex Code (suggested) | Border/Fill |
+|---------------|-------|---------------------|-------------|
+| Chiefs (Chief, Asst Chief, Deputy Chief) | ORANGE | #FF8C00 | Border |
+| Admin Command (Captain, Commander, Lieutenant) | PURPLE | #8B5CF6 | Border |
+| Field Supervisors (Sgt, Cpl, FTO) | BLUE | #3B82F6 | Border |
+| Case Managers | GOLD/YELLOW | #F59E0B | Border |
+| Dispatchers | CYAN | #06B6D4 | Border |
+| Admin Staff (Tech, Fleet, HR, AP/AR, etc.) | GRAY | #6B7280 | Border |
+| Staff Armed | RED | #DC2626 | Fill or Border |
+| Staff Unarmed | BROWN | #92400E | Fill or Border |
+| Patrol Armed | RED | #DC2626 | Fill or Border |
+| Patrol Unarmed | BROWN | #92400E | Fill or Border |
+
+### Visual Implementation (like GetSling)
+```
+┌─────────────────────────────────────┐
+│ ████ John Smith - Armed Officer     │  ← RED border
+├─────────────────────────────────────┤
+│ ████ Jane Doe - Unarmed Staff       │  ← BROWN border
+├─────────────────────────────────────┤
+│ ████ Mike Johnson - Sergeant        │  ← BLUE border
+├─────────────────────────────────────┤
+│ ████ Sarah Williams - Dispatcher    │  ← CYAN border
+├─────────────────────────────────────┤
+│ ████ Bob Anderson - Captain         │  ← PURPLE border
+└─────────────────────────────────────┘
+```
+
+---
+
+## PART 3: EMPLOYEE MANAGEMENT FEATURES
+
+### Required Actions on Employee Records
+
+| Action | Who Can Do It | Live Update? | Audit Logged? |
+|--------|---------------|--------------|---------------|
+| View Employee | Role-based (supervisors+) | N/A | ? |
+| Activate Employee | Command Staff+ | YES - must be instant | YES |
+| Deactivate Employee | Command Staff+ | YES - must be instant | YES |
+| Send Invitation | Admin+ | YES | YES |
+| Edit Pay Rate | HR, AP/AR, Command+ | YES | YES |
+| Edit Address | HR, Employee (self), Command+ | YES | YES |
+| Edit Personal Info | HR, Employee (self), Command+ | YES | YES |
+| Edit Position | Command Staff+ | YES - must reflect everywhere | YES |
+| Edit Role | Command Staff+ | YES - must reflect everywhere | YES |
+| Promote | Command Staff+ | YES | YES |
+| Demote | Command Staff+ | YES | YES |
+| Assign to Site/Client | Supervisors+ | YES | YES |
+| View Pay History | HR, AP/AR, Command+ | N/A | YES |
+| View Time Records | Supervisors+ | N/A | YES |
+
+### Employee Profile Fields
+
+**Required Fields:**
+- [ ] Full Name
+- [ ] Position (from hierarchy list)
+- [ ] Role Category (Armed/Unarmed/Admin/etc.)
+- [ ] Status (Active/Inactive/Pending Invite)
+- [ ] Email
+- [ ] Phone
+- [ ] Address
+- [ ] Pay Rate
+- [ ] Pay Type (Hourly/Salary)
+- [ ] Hire Date
+- [ ] Certifications/Licenses
+- [ ] Emergency Contact
+- [ ] Photo
+
+**Position/Role Fields:**
+- [ ] Current Position (dropdown from hierarchy)
+- [ ] Armed Status (Yes/No)
+- [ ] Authority Level (auto-calculated from position)
+- [ ] Reports To (auto-suggested based on hierarchy)
+- [ ] Can Supervise (list of positions below them)
+- [ ] Color Code (auto-assigned based on position)
+
+---
+
+## PART 4: FILTERING & VIEWS
+
+### Schedule Filtering Requirements
+
+| Filter Type | Options | Working? |
+|-------------|---------|----------|
+| By Position | All positions in hierarchy | |
+| By Role Category | Chiefs, Command, Supervisors, Staff, etc. | |
+| By Armed Status | Armed, Unarmed, All | |
+| By Status | Active, Inactive, All | |
+| By Site/Client | List of assigned sites | |
+| By Supervisor | List of supervisors | |
+
+### Team View Filtering
+
+| Filter Type | Options | Working? |
+|-------------|---------|----------|
+| By Position | Dropdown of all positions | |
+| By Authority Level | 1-10 | |
+| By Department | Operations, Admin, Field | |
+| By Status | Active, Inactive | |
+
+### Visual Filtering
+- [ ] Can filter schedule to show only specific position colors?
+- [ ] Can filter team list by position?
+- [ ] Does filtering persist across session?
+- [ ] Can save filter presets?
+
+---
+
+## PART 5: PERMISSION MATRIX
+
+### Who Can Edit Whom
+
+```
+EDITOR →           Chief  AsstChief  DepChief  Captain  Commander  Lieutenant  Sgt  Cpl  Staff
+TARGET ↓
+─────────────────────────────────────────────────────────────────────────────────────────────
+Chief               SELF     ✗          ✗         ✗        ✗          ✗        ✗    ✗     ✗
+Asst Chief           ✓      SELF        ✗         ✗        ✗          ✗        ✗    ✗     ✗
+Deputy Chief         ✓       ✓         SELF       ✗        ✗          ✗        ✗    ✗     ✗
+Captain              ✓       ✓          ✓        SELF      ✗          ✗        ✗    ✗     ✗
+Commander            ✓       ✓          ✓         ✓       SELF        ✗        ✗    ✗     ✗
+Lieutenant           ✓       ✓          ✓         ✓        ✓         SELF      ✗    ✗     ✗
+Sergeant             ✓       ✓          ✓         ✓        ✓          ✓       SELF  ✗     ✗
+Corporal             ✓       ✓          ✓         ✓        ✓          ✓        ✓   SELF   ✗
+FTO                  ✓       ✓          ✓         ✓        ✓          ✓        ✓    ✓     ✗
+Staff (any)          ✓       ✓          ✓         ✓        ✓          ✓        ✓    ✓    SELF
+```
+
+### Platform Feature Permissions
+
+| Feature | Chief | Asst/Dep | Captain | Lt | Sgt | Cpl | Dispatcher | Staff |
+|---------|-------|----------|---------|-----|-----|-----|------------|-------|
+| Edit Org Settings | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Manage Billing | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Add/Remove Users | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Edit All Schedules | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Edit Own Schedule | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| View All Reports | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Submit Reports | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| CAD Full Access | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✗ |
+| CAD View Only | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Edit Clients | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| View Clients | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Payroll Access | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| QB Integration | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| View Own Pay | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| DockChat Admin | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Trinity Full Access | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+
+---
+
+## PART 6: AUDIT CHECKLIST
+
+### Semantic Issues to Find
+
+| Check | Status | Issue Found |
+|-------|--------|-------------|
+| Is position stored as canonical reference (not string)? | | |
+| Does position change propagate to all views? | | |
+| Is authority level calculated correctly? | | |
+| Does "reports to" update when position changes? | | |
+| Is color code tied to position (not manually set)? | | |
+| Do permissions update immediately on position change? | | |
+
+### Systematic Issues to Find
+
+| Check | Status | Issue Found |
+|-------|--------|-------------|
+| Can a user be promoted past their supervisor? | | |
+| Can a user edit someone above them? | | |
+| Is there validation on position changes? | | |
+| Are inactive users excluded from scheduling? | | |
+| Do deactivated users lose access immediately? | | |
+
+### Canonical Issues to Find
+
+| Check | Status | Issue Found |
+|-------|--------|-------------|
+| Is position defined in ONE place? | | |
+| Is the hierarchy defined canonically? | | |
+| Are colors defined centrally (not per-view)? | | |
+| Is authority level from single source? | | |
+
+### Race Conditions to Find
+
+| Check | Status | Issue Found |
+|-------|--------|-------------|
+| Two admins promote same person simultaneously | | |
+| Position change while user is clocked in | | |
+| Deactivation while user is in active shift | | |
+| Permission check during position update | | |
+
+### Live/Persistence Issues to Find
+
+| Check | Status | Issue Found |
+|-------|--------|-------------|
+| Position change reflects on schedule immediately? | | |
+| Color updates on schedule without refresh? | | |
+| Other users see change without refresh? | | |
+| Mobile and desktop sync position changes? | | |
+| Position persists after logout/login? | | |
+
+---
+
+## PART 7: WHAT REPLIT NEEDS TO REPORT
+
+### Deliverables:
+
+1. **Position System Status**
+   - Are all positions from hierarchy defined? YES/NO
+   - Is authority level working? YES/NO
+   - Is permission matrix enforced? YES/NO
+
+2. **Color Coding Status**
+   - Are colors defined and working? YES/NO
+   - Do they show on schedule? YES/NO
+   - Do they update live? YES/NO
+
+3. **Filtering Status**
+   - Can filter by position? YES/NO
+   - Can filter by armed status? YES/NO
+   - Do filters work on schedule and team views? YES/NO
+
+4. **Live Update Status**
+   - Do position changes propagate immediately? YES/NO
+   - Do all connected users see updates? YES/NO
+   - Does mobile sync properly? YES/NO
+
+5. **Gaps Found**
+   - List missing positions
+   - List broken permissions
+   - List color coding issues
+   - List filter issues
+   - List sync/persistence issues
+
+6. **Fix Plan**
+   - What needs to be added?
+   - What needs to be fixed?
+   - Priority order
+   - Effort estimate
+
+---
+
+## SUMMARY
+
+The position/role system is the **backbone of authority and visibility** in CoAIleague. Every employee must have:
+
+1. A **position** from the defined hierarchy
+2. An **authority level** that determines what they can do
+3. A **color code** that makes them identifiable on schedule
+4. **Live updates** when anything changes
+5. **Proper permissions** enforced everywhere
+
+**Audit this. Find the gaps. Report back.**

@@ -6,6 +6,9 @@
  */
 
 import { startOfDay, differenceInCalendarDays, addDays, subDays } from 'date-fns';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('scheduling-utils');
 
 /**
  * Check if a biweekly job should run today based on anchor date
@@ -22,7 +25,7 @@ export function shouldRunBiweekly(
 ): boolean {
   // Guard: Anchor must be set
   if (!anchor) {
-    console.log('   ⚠️  Biweekly anchor not set - skipping');
+    log.info('Biweekly anchor not set - skipping');
     return false;
   }
 
@@ -32,7 +35,7 @@ export function shouldRunBiweekly(
 
   // Guard: Anchor in future - reset needed (edge case)
   if (anchorStart > todayStart) {
-    console.log('   ⚠️  Biweekly anchor is in the future - needs reset');
+    log.info('Biweekly anchor is in the future - needs reset');
     return false;
   }
 
@@ -51,7 +54,7 @@ export function shouldRunBiweekly(
 
   // Log for debugging
   if (shouldRun) {
-    console.log(`   ✅ Biweekly match: ${daysSinceAnchor} days / ${weeksSinceAnchor} weeks since anchor`);
+    log.info(`Biweekly match: ${daysSinceAnchor} days / ${weeksSinceAnchor} weeks since anchor`);
   }
 
   return shouldRun;
@@ -88,8 +91,8 @@ export function seedAnchor(
   // Seed 14 days before most recent occurrence to ensure next occurrence runs
   const anchor = subDays(refStart, daysToSubtract + 14);
   
-  console.log(`   🌱 Seeding biweekly anchor: ${anchor.toISOString()} (target weekday: ${targetDayOfWeek})`);
-  console.log(`   (Seeded 2 weeks back so next occurrence runs immediately)`);
+  log.info(`Seeding biweekly anchor: ${anchor.toISOString()} (target weekday: ${targetDayOfWeek})`);
+  log.info('(Seeded 2 weeks back so next occurrence runs immediately)');
   
   return anchor;
 }
@@ -104,7 +107,7 @@ export function seedAnchor(
  */
 export function advanceAnchor(currentAnchor: Date): Date {
   const newAnchor = addDays(currentAnchor, 14);
-  console.log(`   📅 Advancing biweekly anchor: ${currentAnchor.toISOString()} → ${newAnchor.toISOString()}`);
+  log.info(`Advancing biweekly anchor: ${currentAnchor.toISOString()} → ${newAnchor.toISOString()}`);
   return newAnchor;
 }
 
@@ -129,7 +132,7 @@ export function detectAnchorDrift(
   const daysBehind = differenceInCalendarDays(todayStart, anchorStart);
 
   if (daysBehind > 30) {
-    console.log(`   ⚠️  DRIFT DETECTED: Anchor is ${daysBehind} days behind (>30 days)`);
+    log.info(`DRIFT DETECTED: Anchor is ${daysBehind} days behind (>30 days)`);
     return true;
   }
 

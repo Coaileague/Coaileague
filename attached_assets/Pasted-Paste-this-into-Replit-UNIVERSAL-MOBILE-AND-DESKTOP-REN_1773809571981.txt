@@ -1,0 +1,408 @@
+Paste this into Replit:
+
+---
+
+**UNIVERSAL MOBILE AND DESKTOP RENDERING AUDIT — 10-PASS SCAN | FIX EVERYTHING | NO BLEEDING NO OVERLAP NO OVERFLOW**
+
+Scan every UI component, page, and feature added or modified in recent sessions. Fix every rendering issue found. Run 10 complete passes. Each pass scans everything. Fix all findings before next pass.
+
+---
+
+**WHAT TO SCAN EVERY PASS**
+
+Every component related to these systems added in recent sessions:
+- Training module pages and flashcards
+- Training quiz and final exam
+- Training certificate display and download
+- Document templates and universal form renderer
+- Signature capture fields
+- Document safe views
+- Client deactivation and reactivation modals
+- Employee reactivation modal
+- Collections status displays
+- Onboarding wizard steps
+- Post orders acknowledgment flow
+- Plaid bank connection flow
+- Payroll dashboard
+- Invoice views
+- Schedule and shift views
+- Chat and shift room
+- Morning brief display
+- Compliance score badges
+- Employee and client list views
+- Settings pages
+- Navigation and bottom bar
+
+---
+
+**MOBILE RULES — ENFORCE ON EVERY COMPONENT**
+
+```
+TYPOGRAPHY:
+- Minimum font size: 16px for body text (prevents iOS auto-zoom)
+- Minimum font size: 14px for labels and captions
+- No text smaller than 12px anywhere
+- Line height minimum 1.5 for body text
+- No text truncation without visible ellipsis
+- No text overflow outside its container
+- No text bleeding over images or other elements
+- Heading sizes scale down proportionally on mobile
+
+SPACING AND LAYOUT:
+- All fields full width on mobile (max-width: 100%)
+- No side-by-side fields on screens under 480px
+- Padding minimum 16px on all card and container sides
+- No negative margins that cause overflow
+- No fixed-width elements wider than viewport
+- All flex containers wrap on mobile — no overflow scroll unless intentional
+
+BUTTONS AND TAP TARGETS:
+- Minimum height: 48px for all buttons
+- Minimum width: 48px for all icon buttons
+- Minimum tap target: 44x44px for any interactive element
+- No buttons with text that overflows the button boundary
+- No overlapping buttons
+- Button text never truncated — button grows to fit text
+- Sufficient spacing between adjacent buttons — minimum 8px
+- Destructive buttons (delete, deactivate) visually distinct
+
+FORMS AND INPUTS:
+- Input height minimum 48px on mobile
+- Input font size minimum 16px (prevents iOS zoom)
+- Label above every input — never placeholder-only
+- Error messages below field — never overlapping
+- Error text in red with sufficient contrast
+- Required field indicator visible
+- Character counter visible when maxLength set
+- Dropdown uses native select on mobile
+- Date fields use native mobile date picker
+
+NAVIGATION:
+- Bottom navigation bar minimum 64px height
+- Bottom navigation above safe-area-inset-bottom
+- No content hidden behind bottom navigation
+- Active tab clearly indicated
+- Tab icons minimum 24px
+- Tab labels minimum 10px and visible
+
+MODALS AND SHEETS:
+- Modals maximum 95vw width on mobile
+- Modals maximum 90vh height with internal scroll
+- Modal close button minimum 44x44px tap target
+- Bottom sheets slide up from above bottom navigation
+- Bottom sheets have handle indicator at top
+- Bottom sheet content scrollable
+- No modal content overflowing the modal boundary
+
+CARDS AND LISTS:
+- Cards full width on mobile
+- Card content never overflows card boundary
+- List items minimum 56px height for touch
+- List item actions accessible on mobile
+- Swipe actions labeled and visible
+- Badge and chip text never overflows
+
+IMAGES AND MEDIA:
+- All images max-width: 100%
+- Images maintain aspect ratio
+- No images overflowing their container
+- Avatar images perfect circle with proper clip
+- Icon sizes consistent — 16px, 20px, 24px scales
+
+SCROLLING:
+- Vertical scroll only — no unintentional horizontal scroll
+- Scroll containers have -webkit-overflow-scrolling: touch on iOS
+- Fixed elements account for safe area insets
+- No content hidden below the fold without scroll indicator
+
+SPECIAL COMPONENTS:
+- Signature pad: full-screen modal on mobile with clear instructions
+- Flashcard: full-width card with flip animation, large text
+- Quiz questions: one per screen, full width, large answer buttons
+- Document viewer: full-screen with pinch zoom support
+- PDF viewer: full-screen with mobile-optimized controls
+- Camera upload: shows camera icon prominently, handles permissions gracefully
+- GPS capture: clear permission prompt, graceful fallback
+```
+
+---
+
+**DESKTOP RULES — ENFORCE ON EVERY COMPONENT**
+
+```
+LAYOUT:
+- Maximum content width 1280px centered
+- Sidebar navigation 240-280px fixed width
+- Main content area uses remaining width
+- Two-column form layouts where logical
+- Card grids use responsive columns — 3-4 on large, 2 on medium
+- No content wider than its container
+- Tables have horizontal scroll when too wide — not layout break
+
+TYPOGRAPHY:
+- Body text 14-16px
+- Labels 13-14px
+- Headings use proper h1-h6 hierarchy
+- No text smaller than 12px
+- Consistent font weight usage
+
+FORMS:
+- Form max-width 720px for readability
+- Label + field vertical or horizontal as designed
+- Inline validation as user types
+- Tab order logical
+
+MODALS:
+- Centered on screen
+- Maximum width 600px for forms, 900px for content
+- Backdrop click closes modal (with unsaved changes warning)
+- ESC key closes modal
+
+TABLES:
+- Sticky header on scroll
+- Sortable columns indicated with icon
+- Row hover state visible
+- Action buttons appear on row hover or are always visible
+- Pagination controls at bottom
+
+HOVER STATES:
+- All interactive elements have visible hover state
+- Cursor pointer on all clickable elements
+- Focus states visible for keyboard navigation
+```
+
+---
+
+**SPECIFIC COMPONENTS TO AUDIT DEEPLY**
+
+**Training Module Page:**
+Mobile:
+- Section navigation collapses to top progress bar
+- Flashcard fills full screen width
+- Flip animation works on touch
+- Front and back text readable at 16px minimum
+- "Next Card" button full width, 48px height
+- Section quiz questions one per screen
+- Answer options full width buttons with 16px text
+- Submit answer button fixed at bottom
+- Progress indicator visible at top
+- "Continue to Next Section" button full width
+
+Desktop:
+- Section list sidebar left, content right
+- Flashcard centered, max-width 640px
+- Answer options in 2-column grid if short text, 1-column if long
+- Keyboard navigation works for quiz
+
+**Certificate Display:**
+Mobile:
+- Certificate scales to fit screen width
+- All text readable — no tiny text
+- Download button full width below certificate
+- QR code minimum 80x80px and scannable
+- Org name, officer name, module name, dates all visible without scrolling
+- Certificate rendered as image or PDF — not raw HTML that breaks on mobile
+
+Desktop:
+- Certificate rendered at standard letter size ratio
+- Print button works correctly
+- Download generates correct PDF
+
+**Signature Capture:**
+Mobile:
+- Opens full-screen modal
+- Canvas takes full modal size minus header and buttons
+- Clear instruction: "Sign with your finger"
+- Clear and Done buttons full width at bottom
+- Signature saves correctly and shows preview in form
+
+Desktop:
+- Inline canvas 400x200px minimum
+- Mouse draw works smoothly
+- Clear and confirm buttons below canvas
+
+**Document Forms (all templates):**
+Mobile:
+- Full-screen single-column layout
+- Section title visible at top
+- Fields stacked vertically, full width
+- Acknowledgment text scrollable with visible scroll indicator
+- "I have read and understand" checkbox enables only after scroll to bottom
+- Initials field compact but tappable (minimum 48x48px box)
+- Navigation buttons fixed at bottom — Back and Continue always visible
+- Save for Later button accessible
+- Progress bar at top showing section completion
+- Address block fields stacked vertically
+
+Desktop:
+- Two-column layout for short fields (first name + last name)
+- Single column for long fields (address, notes)
+- Sidebar showing all sections with completion checkmarks
+- Section jump navigation works
+
+**Flashcard Component:**
+- Front of card shows term or concept in large text (minimum 20px)
+- Back of card shows explanation in readable text (minimum 16px)
+- Flip triggered by tap on mobile, click on desktop
+- Flip animation smooth (CSS 3D transform, not janky)
+- Card counter visible (Card 3 of 7)
+- Previous and Next navigation accessible
+- Card content never overflows card boundary
+
+**Post Orders Acknowledgment:**
+Mobile:
+- Post orders text displays in full-screen scrollable view
+- Scroll progress indicator visible
+- "I have read and acknowledge" button only enables after scroll to bottom
+- Initials field and signature field after acknowledgment
+- Submit confirmation screen
+
+**Plaid Bank Connection:**
+Mobile:
+- "Connect Bank Account" button full width
+- Plaid Link opens correctly on mobile
+- After connection — masked account number displayed clearly
+- Disconnect button accessible
+
+**Payroll Dashboard:**
+Mobile:
+- Run list shows as cards not table
+- Each card shows: pay period, status, total amount, employee count
+- Action buttons on card (Approve, Mark Paid) full width
+- Status badge clearly visible
+- Amounts readable — not truncated
+
+**Client and Employee Lists:**
+Mobile:
+- List items render as cards
+- Key info visible: name, status badge, key metric
+- Action buttons accessible via tap — not hidden in hover-only menus
+- Search bar full width at top
+- Filter accessible via bottom sheet
+
+**Collections Status:**
+Mobile:
+- Collections badge visible on client card
+- Amount displayed clearly
+- View collections log accessible
+- "Send Demand Letter" button accessible
+
+**Morning Brief:**
+Mobile:
+- Brief sections collapsible
+- Each section header tappable to expand
+- Content within sections readable at 16px
+- Links and action items tappable
+
+---
+
+**PASS EXECUTION**
+
+Each pass must:
+
+1. Read every file listed in the specific component audit
+2. Check every rule in mobile rules and desktop rules
+3. Fix every violation found
+4. Restart server and verify no TypeScript errors
+5. Check rendered output at 375px, 414px, 768px (mobile), 1024px, 1280px (desktop)
+6. Verify no console errors related to layout
+7. Count and categorize all findings
+
+---
+
+**PASS REPORT FORMAT**
+
+```
+══════════════════════════════════════
+MOBILE/DESKTOP RENDERING AUDIT — PASS [N]
+══════════════════════════════════════
+Components scanned: N
+Issues found this pass:
+  CRITICAL (broken/unusable): N
+  HIGH (significant UX harm): N
+  MEDIUM (noticeable issues): N
+  LOW (polish/minor): N
+  TOTAL: N
+
+Issues fixed this pass: N
+
+By component:
+  Training Module:      N found | N fixed
+  Certificates:         N found | N fixed
+  Signature Capture:    N found | N fixed
+  Document Forms:       N found | N fixed
+  Flashcards:           N found | N fixed
+  Post Orders:          N found | N fixed
+  Plaid Connection:     N found | N fixed
+  Payroll Dashboard:    N found | N fixed
+  Client/Employee Lists:N found | N fixed
+  Collections:          N found | N fixed
+  Morning Brief:        N found | N fixed
+  Navigation:           N found | N fixed
+  Modals/Sheets:        N found | N fixed
+  Settings Pages:       N found | N fixed
+  Other:                N found | N fixed
+
+Cumulative totals:
+  Total found all passes: N
+  Total fixed all passes: N
+  Remaining: N
+
+Server: CLEAN
+TypeScript: ZERO ERRORS
+
+Continue to Pass [N+1]? YES / NO
+══════════════════════════════════════
+```
+
+---
+
+**FINAL REPORT (after Pass 10 or zero gaps)**
+
+```
+══════════════════════════════════════
+MOBILE/DESKTOP RENDERING AUDIT — COMPLETE
+══════════════════════════════════════
+Total passes run: N
+Total issues found: N
+Total issues fixed: N
+Remaining: ZERO
+
+By severity:
+  CRITICAL: N fixed | 0 remaining
+  HIGH:     N fixed | 0 remaining
+  MEDIUM:   N fixed | 0 remaining
+  LOW:      N fixed | 0 remaining
+
+By component: [N fixed per component]
+
+Verified viewports:
+  375px (iPhone SE):    PASS
+  414px (iPhone Pro):   PASS
+  768px (iPad):         PASS
+  1024px (Desktop SM):  PASS
+  1280px (Desktop LG):  PASS
+
+No text overflow: CONFIRMED
+No bleeding text: CONFIRMED
+No overlapping elements: CONFIRMED
+All tap targets minimum 44px: CONFIRMED
+All buttons minimum 48px height: CONFIRMED
+All inputs minimum 16px font: CONFIRMED
+Bottom nav above safe area: CONFIRMED
+No horizontal scroll: CONFIRMED
+Signature capture full-screen mobile: CONFIRMED
+Flashcards full-width mobile: CONFIRMED
+Document forms full-screen mobile: CONFIRMED
+
+VERDICT: MOBILE AND DESKTOP RENDERING VERIFIED
+══════════════════════════════════════
+```
+
+---
+
+**BEGIN PASS 1 NOW. SCAN ALL COMPONENTS. FIX EVERYTHING. RUN ALL 10 PASSES.**
+
+---
+
+Paste pass reports back here as they complete. When Pass 10 reports zero remaining the rendering system is production ready.

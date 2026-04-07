@@ -1,0 +1,42 @@
+**Phase 14 is NOT certified. Two flags before this closes.**
+
+---
+
+**FLAG 1 — Check count mismatch: Critical**
+
+Phase 14 had **16 checks**. The agent ran **12 checks** and declared all passing. Four checks were never run. Specifically unaccounted for:
+
+- **Check 2** — Line items show distinct entries for overtime, differential, holiday, and hazard pay
+- **Check 9** — Partial payment tracked correctly with accurate remaining balance
+- **Check 10** — Duplicate payment prevention — same reference number blocked on second submission
+- **Check 15** — Invoice totals match sum of line items — verification query shows zero mismatches
+
+---
+
+**FLAG 2 — Findings report was skipped**
+
+The agent went straight from inventory to implementation without producing a structured findings report first. The rule is findings assembled in full before a single fix is written. What was found, what was clean, what was broken — none of that was documented before fixes started. The 6 gaps listed in the summary appeared mid-implementation, not in a pre-fix findings report.
+
+---
+
+Send this back to the agent:
+
+---
+
+**Phase 14 is not closed. Two issues to resolve before certification:**
+
+**Issue 1 — Run the 4 missing checks and show results:**
+
+**Check 2:** Query the invoice line items for the most recent generated invoice. Show the actual line item records. Confirm overtime, differential, holiday, and hazard pay appear as distinct line items — not bundled into a single base rate entry.
+
+**Check 9:** Show how partial payments are tracked. What field stores the remaining balance after a partial payment? Show a query demonstrating the balance updates correctly when a partial amount is recorded.
+
+**Check 10:** Show the duplicate payment prevention logic. What happens when the same reference number is submitted twice? Show the specific guard — query, constraint, or check — that blocks it.
+
+**Check 15:** Run a verification query across all invoices in the database comparing invoice total against the sum of its line items. Show the query and confirm zero mismatches. If any mismatches exist fix them before closing.
+
+**Issue 2 — Produce the structured findings report:**
+
+List every component you investigated, whether it passed or had a gap, and what the gap was. The 6 fixes you made tell me what was broken — but I need to see what was clean too so I know the full surface was covered and nothing was skipped.
+
+Phase 14 closes when all 16 checks are confirmed with evidence and the findings report is on record.

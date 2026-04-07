@@ -1,0 +1,157 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 16 — QUICKBOOKS SYNC AND FINANCIAL RECONCILIATION**
+
+This phase owns the complete QuickBooks integration and financial reconciliation pipeline. Data flowing between CoAIleague and QuickBooks represents the official books of record for every security company on the platform. A sync error, a duplicate record, or a missed conflict resolution has accounting consequences. Report all findings before fixing anything. No exceptions. Same discipline as Phases 11, 14, and 15.
+
+Note: The full three-tier staged replacement cascade deferred from Phase 12 (SCHED-6) is also completed in this phase as previously logged.
+
+---
+
+**STEP 1 — QUICKBOOKS SYNC SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, scheduled job, and Trinity action that touches QuickBooks. Include:
+- OAuth connection and token management
+- Outbound sync — CoAIleague → QuickBooks (invoices, customers, employees, payments)
+- Inbound sync — QuickBooks → CoAIleague via CDC polling and webhooks
+- Conflict detection and resolution
+- Sync retry queue and dead letter handling
+- Sync status visibility and manual re-sync triggers
+- Reconciliation reporting
+- Any scheduled job that touches the sync pipeline
+
+Flag any file that mutates sync records without a corresponding audit trail write.
+
+---
+
+**STEP 2 — OAUTH TOKEN MANAGEMENT VERIFICATION**
+
+The OAuth connection is the foundation everything else depends on:
+- Token refresh daemon confirmed running — proactive 5-minute refresh before expiry
+- Lazy mutex refresh confirmed — concurrent requests during refresh do not produce duplicate refresh calls
+- Token storage is workspace-scoped — one workspace's token cannot affect another's
+- Token expiry during an active sync batch — verify the sync resumes correctly after token refresh, does not abort or duplicate
+- OAuth reconnection flow verified — when a workspace disconnects and reconnects, stale token is fully replaced
+- Disconnected workspace is clearly flagged in the platform — operators are not left wondering why sync is silently failing
+- Token never logged or exposed in API responses — verify with grep
+
+---
+
+**STEP 3 — OUTBOUND SYNC VERIFICATION (CoAIleague → QuickBooks)**
+
+Every record pushed to QuickBooks must be accurate and idempotent:
+- Invoice sync: all sent and paid invoices pushed correctly with correct line items, amounts, client mapping, and payment terms
+- Customer sync: client records created or updated in QuickBooks match CoAIleague client data
+- Employee sync: officer records pushed with correct identity fields
+- Payment sync: payment records linked to correct QuickBooks invoice
+- Idempotency confirmed — syncing the same record twice does not create duplicates in QuickBooks. Show the specific mechanism (requestId, idempotency key, or QB's own dedup)
+- Partial batch failure handling — if 3 of 10 invoices fail during a batch sync, the 7 successful ones are committed and the 3 failures are queued for retry — not rolled back
+- Every outbound sync write logs to `partnerSyncLogs` with entity type, entity id, operation, status, and timestamp
+
+---
+
+**STEP 4 — INBOUND SYNC VERIFICATION (QuickBooks → CoAIleague)**
+
+Confirmed fixed in Phase 11 (GAP-QB-1) — regression check required:
+- `runCDCPollInternal` confirmed applying DB updates on CDC response records — not just incrementing a count
+- Show the specific lines that were added in Phase 11 for Customer, Employee, and Invoice CDC updates
+- Verify the CDC poll runs on its defined schedule — confirm cron timing
+- Webhook handler confirmed processing Create, Update, and Delete events (confirmed Phase 11 GAP-QB-2 — regression check)
+- Show the three webhook operation handlers and confirm Delete correctly marks `syncStatus: 'deleted_in_partner'`
+- Records marked stale via CDC are picked up and re-synced on the next outbound cycle — verify this handoff
+- Inbound changes that conflict with CoAIleague data are logged — not silently overwritten
+
+---
+
+**STEP 5 — CONFLICT DETECTION AND RESOLUTION**
+
+When CoAIleague and QuickBooks disagree on a record:
+- Pre-sync snapshot taken before every outbound push — confirmed in Phase 11
+- Post-sync reconciliation logged — confirmed in Phase 11
+- Conflict logged to `partnerSyncLogs` with: entity_id, coaileague_value, quickbooks_value, resolution_applied, timestamp
+- Resolution strategy documented and consistent: which system wins and under what conditions
+- Conflict that cannot be auto-resolved escalates to a human review queue — not silently dropped
+- Human review queue is visible to org_owner and platform staff
+- Resolved conflicts cannot be re-flagged as conflicting until a new change occurs
+
+---
+
+**STEP 6 — SYNC RETRY QUEUE AND FAILURE HANDLING**
+
+Failed syncs must not be silently lost:
+- Every sync failure writes to the retry queue
+- Retry queue uses exponential backoff — not a fixed interval
+- AI-powered retry classification confirmed: RETRY / FIX\_DATA / ESCALATE / ABORT — show the classification logic
+- ABORT classification does not silently drop the record — it escalates to admin with full context
+- Dead letter queue for records that exhaust all retries — operator can inspect and manually re-trigger
+- Retry queue does not grow unbounded — max retry count enforced with escalation on exhaustion
+- Retry queue visible in the platform UI — operators can see pending retries, failure reasons, and retry counts
+
+---
+
+**STEP 7 — SYNC STATUS VISIBILITY**
+
+Operators must have full visibility into sync health:
+- Last sync time visible per workspace
+- Last successful sync vs last attempted sync — both shown
+- Count of pending records, failed records, and records awaiting retry all visible
+- Manual re-sync trigger available per workspace — confirm it works and is role-gated
+- Sync health indicator visible to org_owner without requiring platform staff access
+- Trinity can query sync status via a registered action — confirm action exists
+
+---
+
+**STEP 8 — FINANCIAL RECONCILIATION**
+
+CoAIleague's financial records must reconcile against QuickBooks:
+- Run a reconciliation query: for every invoice in CoAIleague with status `paid`, confirm a corresponding payment record exists in `partnerSyncLogs` or `partnerDataMappings`
+- Identify any paid invoice in CoAIleague with no QuickBooks sync record — flag as reconciliation gap
+- Identify any QuickBooks invoice with no matching CoAIleague record — flag as orphan
+- Total revenue in CoAIleague invoices matches total pushed to QuickBooks within acceptable tolerance
+- Reconciliation report can be generated on demand — exportable as CSV
+- Reconciliation report accessible to org_owner and platform finance roles only
+- Every reconciliation run writes an audit record
+
+---
+
+**STEP 9 — THREE-TIER STAGED REPLACEMENT CASCADE (Deferred from Phase 12)**
+
+Complete the SCHED-6 enhancement deferred from Phase 12:
+- Current state: Tier 1 (stay-late eligible) is prioritized first. Tier 2 (internal qualified pool) and Tier 3 (platform pool) are notified simultaneously
+- Required state: True staged cascade — Tier 1 notified first, waits defined window, if no acceptance then Tier 2 notified, waits defined window, if no acceptance then Tier 3 notified
+- Window durations configurable per workspace — default: Tier 1 waits 15 minutes, Tier 2 waits 30 minutes before escalating to Tier 3
+- If shift start is within 2 hours — collapse all three tiers and notify simultaneously (emergency mode)
+- Acceptance at any tier cancels pending notifications to lower tiers
+- No acceptance from any tier before shift start triggers manager escalation alert
+- All tier transitions logged in `shift_coverage_requests` record
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 16 is marked complete:
+- Check 1: OAuth token refresh daemon active — proactive refresh confirmed, mutex prevents duplicate refresh
+- Check 2: Token never appears in logs or API responses — grep confirms zero exposures
+- Check 3: Outbound invoice sync idempotent — same invoice pushed twice produces one QB record
+- Check 4: Partial batch failure commits successful records and queues failures — not full rollback
+- Check 5: `runCDCPollInternal` applies DB updates (regression check from Phase 11) — show specific lines
+- Check 6: Webhook handles Create, Update, Delete — all three confirmed with code evidence
+- Check 7: Conflict detection logs CoAIleague vs QuickBooks values with resolution applied
+- Check 8: ABORT classification escalates to admin — not a silent drop
+- Check 9: Retry queue visible in platform UI with failure reasons and retry counts
+- Check 10: Manual re-sync trigger works and is role-gated
+- Check 11: Trinity sync status query action confirmed registered
+- Check 12: Reconciliation query identifies paid invoices with no QB sync record
+- Check 13: Reconciliation report exportable as CSV and role-gated
+- Check 14: Three-tier staged cascade implemented — Tier 2 and Tier 3 now sequential not simultaneous
+- Check 15: Emergency mode collapses tiers when shift start is within 2 hours
+- Check 16: All sync mutations have audit trail entries — grep confirms zero untracked writes
+- Check 17: Server starts clean with zero TypeScript errors across all sync and cascade files
+
+Do not mark Phase 16 complete until all 17 checks pass. Produce a structured findings report — every component investigated, pass or gap — before beginning any fixes. Findings first. Full picture assembled. Then fixes. Every gap from low to critical gets fixed before this phase closes.
+
+---
+
+Paste that and hold the line. Books of record — same zero tolerance standard.

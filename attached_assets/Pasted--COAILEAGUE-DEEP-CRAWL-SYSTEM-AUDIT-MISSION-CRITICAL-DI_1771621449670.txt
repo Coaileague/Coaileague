@@ -1,0 +1,1410 @@
+# COAILEAGUE - DEEP CRAWL SYSTEM AUDIT
+
+## MISSION CRITICAL DIRECTIVE
+
+This is a **ZERO-TOLERANCE** audit. Every API call, AI execution, database operation, workflow, button, link, and data flow must be traced end-to-end. The goal is to ensure:
+
+1. **NO BROKEN API CALLS** - Every endpoint works and returns expected data
+2. **NO BROKEN AI EXECUTIONS** - Trinity, Claude, Gemini, OpenAI all respond correctly
+3. **NO SEMANTIC WORKFLOW GAPS** - Every automation triggers and completes
+4. **NO CANONICAL ISSUES** - Consistent naming, routing, data structures
+5. **NO DATA LEAKS** - Workspace isolation is absolute
+6. **NO SESSION ISSUES** - User data persists correctly
+7. **NO ORPHANED OPERATIONS** - Every action has a result
+
+**METHODOLOGY:** Parallel sub-agents, systematic tracing, document EVERYTHING before fixing.
+
+---
+
+## PHASE 1: API ENDPOINT DEEP CRAWL
+
+### 1.1 Route Discovery & Verification
+
+```bash
+# STEP 1: Find ALL route files
+find server -name "*.ts" -path "*/routes/*" | sort
+
+# STEP 2: Extract ALL endpoints
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" --include="*.ts" server/routes/
+
+# STEP 3: Extract ALL app-level routes
+grep -rn "app\.\(get\|post\|put\|patch\|delete\)" --include="*.ts" server/
+
+# STEP 4: Find route mounting
+grep -rn "app\.use\|router\.use" --include="*.ts" server/
+```
+
+**For EACH endpoint discovered, verify:**
+
+```
+ENDPOINT: [METHOD] [PATH]
+FILE: [location]
+LINE: [number]
+
+CHECKS:
+[ ] Handler function exists (not empty/stub)
+[ ] Handler function is implemented (not just TODO)
+[ ] Handler has try/catch error handling
+[ ] Handler returns proper status codes
+[ ] Handler returns consistent response format: { success: boolean, data?: any, error?: string }
+
+AUTHENTICATION:
+[ ] Auth middleware applied (if required)
+[ ] User extracted from session/token (not from request body)
+[ ] userId available in handler
+
+WORKSPACE ISOLATION:
+[ ] workspaceId extracted from authenticated user
+[ ] ALL queries filter by workspaceId
+[ ] NO cross-tenant data exposure possible
+[ ] workspaceId NOT accepted from request body/params for security
+
+INPUT VALIDATION:
+[ ] Request body validated (zod schema or manual)
+[ ] Required fields checked
+[ ] Data types validated
+[ ] SQL injection prevented (parameterized queries)
+[ ] XSS prevented (sanitized output)
+
+DATABASE OPERATIONS:
+[ ] Query executes without error
+[ ] Returns expected data structure
+[ ] Handles empty results gracefully
+[ ] Handles database errors gracefully
+
+FRONTEND INTEGRATION:
+[ ] Frontend actually calls this endpoint
+[ ] Frontend handles success response
+[ ] Frontend handles error response
+[ ] Loading state shown during request
+```
+
+### 1.2 API Call Tracing (Frontend → Backend → Database)
+
+**For EACH feature area, trace the complete flow:**
+
+```
+FEATURE: _______________
+
+FRONTEND CALL:
+File: _______________
+Function: _______________
+HTTP Method: _______________
+Endpoint: _______________
+Request Body: _______________
+
+BACKEND HANDLER:
+File: _______________
+Function: _______________
+Middleware: _______________
+Validation: _______________
+
+DATABASE OPERATION:
+Table(s): _______________
+Operation: _______________
+Query: _______________
+Returns: _______________
+
+RESPONSE HANDLING:
+Success path works: [ ]
+Error path works: [ ]
+UI updates correctly: [ ]
+Toast/notification shown: [ ]
+```
+
+### 1.3 Endpoint Testing Matrix
+
+**Create test matrix for EVERY endpoint:**
+
+```
+| Endpoint | Auth | Valid Input | Invalid Input | Empty DB | Error Handling | Response Format |
+|----------|------|-------------|---------------|----------|----------------|-----------------|
+| GET /api/employees | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| POST /api/employees | ✓/✗ | ✓/✗ | ✓/✗ | N/A | ✓/✗ | ✓/✗ |
+| ... | ... | ... | ... | ... | ... | ... |
+```
+
+---
+
+## PHASE 2: AI EXECUTION DEEP CRAWL
+
+### 2.1 AI Integration Discovery
+
+```bash
+# Find ALL AI-related code
+grep -rn "openai\|anthropic\|claude\|gemini\|gpt\|trinity" --include="*.ts" server/
+grep -rn "createCompletion\|chat\.completions\|messages\.create" --include="*.ts" server/
+
+# Find AI service files
+find server -name "*ai*" -o -name "*trinity*" -o -name "*llm*" | grep -v node_modules
+
+# Find AI configuration
+grep -rn "OPENAI_API_KEY\|ANTHROPIC_API_KEY\|GEMINI_API_KEY" --include="*.ts" server/
+```
+
+### 2.2 AI Call Verification
+
+**For EACH AI integration:**
+
+```
+AI SYSTEM: [Trinity/Claude/Gemini/OpenAI]
+FILE: _______________
+FUNCTION: _______________
+PURPOSE: _______________
+
+CONFIGURATION:
+[ ] API key loaded from environment
+[ ] API key exists and is valid
+[ ] Model specified correctly
+[ ] Temperature/parameters appropriate
+[ ] Max tokens set appropriately
+
+REQUEST STRUCTURE:
+[ ] System prompt defined
+[ ] User prompt constructed correctly
+[ ] Context included appropriately
+[ ] Workspace data properly scoped
+
+ERROR HANDLING:
+[ ] Rate limit handling
+[ ] Timeout handling
+[ ] Invalid response handling
+[ ] API error handling
+[ ] Fallback to alternative model (if configured)
+
+RESPONSE PROCESSING:
+[ ] Response parsed correctly
+[ ] JSON extraction works (if structured output)
+[ ] Handles malformed AI responses
+[ ] Result stored/used appropriately
+
+COST TRACKING:
+[ ] Tokens counted
+[ ] Cost calculated
+[ ] Attributed to workspace
+[ ] Logged for billing
+```
+
+### 2.3 Trinity AI Orchestration Audit
+
+```
+TRINITY ORCHESTRATION CHECKS:
+
+MULTI-MODEL ROUTING:
+[ ] Model selection logic exists
+[ ] Fallback chain configured (Gemini → Claude → OpenAI)
+[ ] Confidence scoring implemented
+[ ] Model switch triggers correctly on failure
+
+CONTEXT MANAGEMENT:
+[ ] Conversation history retrieved
+[ ] Workspace context loaded
+[ ] Client intelligence accessed
+[ ] Staff intelligence accessed
+[ ] Org context included
+
+MEMORY PERSISTENCE:
+[ ] Conversations stored
+[ ] Learned patterns saved
+[ ] Intelligence updates propagate
+[ ] Cross-session context works
+
+SCHEDULING INTEGRATION:
+[ ] Trinity can access contract data
+[ ] Trinity can access employee data
+[ ] Trinity can access site requirements
+[ ] Trinity generates valid schedules
+[ ] Schedule proposals stored correctly
+
+COST PROTECTION:
+[ ] Per-workspace limits enforced
+[ ] Rate limiting works
+[ ] Cost alerts trigger
+[ ] Overage handling works
+```
+
+### 2.4 AI Feature Testing Matrix
+
+```
+| AI Feature | Endpoint | Model | Input Valid | Output Valid | Error Handled | Cost Tracked |
+|------------|----------|-------|-------------|--------------|---------------|--------------|
+| Chat completion | /api/trinity/chat | Gemini | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Auto-schedule | /api/trinity/schedule | Claude | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Document analysis | /api/trinity/analyze | GPT-4 | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| ... | ... | ... | ... | ... | ... | ... |
+```
+
+---
+
+## PHASE 3: DATABASE OPERATION DEEP CRAWL
+
+### 3.1 Schema Verification
+
+```bash
+# Get current schema
+cat shared/schema.ts
+
+# Find ALL table definitions
+grep -n "pgTable\|createTable" shared/schema.ts
+
+# Find ALL relations
+grep -n "references\|foreignKey" shared/schema.ts
+
+# Find ALL enums
+grep -n "pgEnum" shared/schema.ts
+```
+
+### 3.2 Table-by-Table Audit
+
+**For EACH table:**
+
+```
+TABLE: _______________
+
+STRUCTURE:
+[ ] Primary key defined (UUID)
+[ ] created_at timestamp exists
+[ ] updated_at timestamp exists
+[ ] workspaceId exists (if tenant-specific)
+[ ] Foreign keys properly defined
+[ ] Indexes exist for query patterns
+
+CRUD OPERATIONS:
+CREATE:
+  [ ] API endpoint exists
+  [ ] Frontend form exists
+  [ ] Validation works
+  [ ] workspaceId auto-assigned (not from client)
+  [ ] created_at auto-set
+  [ ] Returns created record
+
+READ (List):
+  [ ] API endpoint exists
+  [ ] Filters by workspaceId
+  [ ] Pagination implemented
+  [ ] Search/filter works
+  [ ] Returns consistent format
+
+READ (Single):
+  [ ] API endpoint exists
+  [ ] Validates user access
+  [ ] Returns single record
+  [ ] 404 if not found
+
+UPDATE:
+  [ ] API endpoint exists
+  [ ] Validates ownership
+  [ ] Updates updated_at
+  [ ] Returns updated record
+  [ ] Handles concurrent updates
+
+DELETE:
+  [ ] API endpoint exists
+  [ ] Validates ownership
+  [ ] Handles cascades
+  [ ] Soft delete or hard delete
+  [ ] Returns confirmation
+
+DATA INTEGRITY:
+[ ] NOT NULL constraints correct
+[ ] UNIQUE constraints enforced
+[ ] CHECK constraints work
+[ ] Default values appropriate
+[ ] No orphan records possible
+```
+
+### 3.3 Workspace Isolation Verification
+
+**CRITICAL SECURITY CHECK:**
+
+```bash
+# Find ALL database queries
+grep -rn "db\.\|drizzle\.\|prisma\.\|query\|select\|insert\|update\|delete" --include="*.ts" server/
+
+# For EACH query, verify workspaceId filter
+```
+
+**For EVERY database query:**
+
+```
+QUERY LOCATION: [file:line]
+OPERATION: [select/insert/update/delete]
+TABLE: _______________
+
+WORKSPACE ISOLATION:
+[ ] Query includes WHERE workspaceId = ?
+[ ] workspaceId comes from authenticated user (NOT request)
+[ ] JOIN queries also filter by workspaceId
+[ ] Subqueries filter by workspaceId
+[ ] No way to access other workspace data
+
+TEST: 
+1. Log in as User A (Workspace 1)
+2. Attempt to access data from Workspace 2
+3. MUST return empty/403, NEVER return Workspace 2 data
+```
+
+### 3.4 Data Persistence Verification
+
+```
+USER SESSION DATA PERSISTENCE:
+
+LOGIN:
+[ ] Session created on successful auth
+[ ] User data stored in session
+[ ] workspaceId stored in session
+[ ] Token generated (if JWT)
+[ ] Cookie set correctly
+
+DURING SESSION:
+[ ] Session persists across page navigation
+[ ] Session persists across browser refresh
+[ ] Session data accessible in all routes
+[ ] workspaceId available in all handlers
+
+LOGOUT:
+[ ] Session destroyed
+[ ] Cookies cleared
+[ ] Token invalidated
+[ ] Redirect to login
+
+SESSION EXPIRY:
+[ ] Sessions expire appropriately
+[ ] Expired sessions redirect to login
+[ ] No stale session data accessible
+```
+
+---
+
+## PHASE 4: WORKFLOW & AUTOMATION DEEP CRAWL
+
+### 4.1 Workflow Discovery
+
+```bash
+# Find workflow/automation related code
+grep -rn "workflow\|automation\|trigger\|cron\|schedule\|job\|queue" --include="*.ts" server/
+
+# Find event emitters/handlers
+grep -rn "emit\|on\(\|addEventListener\|eventEmitter" --include="*.ts" server/
+
+# Find webhook handlers
+grep -rn "webhook" --include="*.ts" server/
+```
+
+### 4.2 Workflow Tracing
+
+**For EACH automated workflow:**
+
+```
+WORKFLOW: _______________
+TRIGGER: _______________
+FILE: _______________
+
+TRIGGER VERIFICATION:
+[ ] Trigger event fires correctly
+[ ] Trigger conditions evaluated properly
+[ ] Trigger data passed to handler
+
+STEP EXECUTION:
+For each step in workflow:
+  Step 1: _______________
+    [ ] Executes correctly
+    [ ] Handles errors
+    [ ] Passes data to next step
+  
+  Step 2: _______________
+    [ ] Receives data from previous step
+    [ ] Executes correctly
+    [ ] Handles errors
+  
+  (Continue for all steps)
+
+COMPLETION:
+[ ] Final step completes
+[ ] Result stored/recorded
+[ ] Notifications sent (if applicable)
+[ ] Audit log created
+
+ERROR RECOVERY:
+[ ] Failed step doesn't break workflow
+[ ] Retry logic works
+[ ] Admin notified of failures
+[ ] Workflow can be resumed/retried
+
+IDEMPOTENCY:
+[ ] Same trigger twice doesn't duplicate work
+[ ] Workflow can be safely re-run
+```
+
+### 4.3 Core Workflow Audit Checklist
+
+**CLIENT ONBOARDING WORKFLOW:**
+```
+Trigger: Client contract signed
+
+[ ] Contract status updated to 'signed'
+[ ] Client record created (if not exists)
+[ ] Site records created from contract sites
+[ ] Schedule requirements created
+[ ] Trinity notified to build schedule
+[ ] Welcome email sent to client
+[ ] Recurring invoice schedule created
+[ ] Compliance tracking initialized
+[ ] Activity logged
+```
+
+**EMPLOYEE ONBOARDING WORKFLOW:**
+```
+Trigger: Onboarding packet approved
+
+[ ] Employee record created
+[ ] User account created (if applicable)
+[ ] Credentials copied to employee record
+[ ] Compliance status initialized
+[ ] Training requirements set based on state
+[ ] Scheduling eligibility calculated
+[ ] Welcome email sent
+[ ] Manager notified
+[ ] Activity logged
+```
+
+**SHIFT ASSIGNMENT WORKFLOW:**
+```
+Trigger: Shift assigned to employee
+
+[ ] Employee eligibility verified
+[ ] Credential requirements met
+[ ] No scheduling conflicts
+[ ] Shift record updated
+[ ] Employee notified
+[ ] Client notified (if applicable)
+[ ] Calendar updated
+[ ] Activity logged
+```
+
+**TIME CLOCK WORKFLOW:**
+```
+Trigger: Employee clocks in
+
+[ ] GPS location captured
+[ ] Geofence validated
+[ ] Time entry created
+[ ] Clock-in time recorded
+[ ] Manager notified (if configured)
+[ ] Activity logged
+
+Trigger: Employee clocks out
+
+[ ] GPS location captured
+[ ] Time entry completed
+[ ] Hours calculated
+[ ] Overtime detected
+[ ] Timesheet updated
+[ ] Activity logged
+```
+
+**PAYROLL WORKFLOW:**
+```
+Trigger: Payroll period closes
+
+[ ] All time entries collected
+[ ] Hours calculated per employee
+[ ] Overtime calculated
+[ ] Pay rates applied
+[ ] Deductions applied
+[ ] Gross/net calculated
+[ ] Payroll records created
+[ ] Approval workflow triggered
+[ ] Notifications sent
+```
+
+**INVOICE WORKFLOW:**
+```
+Trigger: Invoice generation (manual or scheduled)
+
+[ ] Time entries collected
+[ ] Billable hours calculated
+[ ] Rates applied from contract
+[ ] Line items created
+[ ] Invoice totals calculated
+[ ] Invoice record created
+[ ] PDF generated
+[ ] Email sent (if configured)
+[ ] QuickBooks synced (if connected)
+```
+
+**CREDENTIAL EXPIRATION WORKFLOW:**
+```
+Trigger: Daily cron job
+
+[ ] Expiring credentials identified
+[ ] 30-day warnings sent
+[ ] 7-day warnings sent
+[ ] Expired credentials flagged
+[ ] Scheduling eligibility updated
+[ ] Admin notified
+[ ] Activity logged
+```
+
+---
+
+## PHASE 5: FRONTEND-BACKEND INTEGRATION DEEP CRAWL
+
+### 5.1 API Hook Discovery
+
+```bash
+# Find ALL API calls in frontend
+grep -rn "fetch\|axios\|useMutation\|useQuery\|api\." --include="*.tsx" --include="*.ts" client/src/
+
+# Find ALL custom hooks
+find client/src/hooks -name "*.ts" -o -name "*.tsx"
+
+# Find API client configuration
+grep -rn "baseURL\|apiClient\|createClient" --include="*.ts" client/src/
+```
+
+### 5.2 API Call Verification
+
+**For EACH frontend API call:**
+
+```
+FRONTEND LOCATION: [file:line]
+COMPONENT: _______________
+HOOK/FUNCTION: _______________
+
+API CALL:
+Method: _______________
+Endpoint: _______________
+Request Body: _______________
+Headers: _______________
+
+VERIFICATION:
+[ ] Endpoint exists in backend
+[ ] Request format matches backend expectation
+[ ] Auth token/cookie included
+[ ] workspaceId NOT sent in body (uses session)
+
+RESPONSE HANDLING:
+[ ] Success response handled
+[ ] Error response handled
+[ ] Loading state managed
+[ ] UI updates after response
+[ ] Toast/notification shown
+
+ERROR SCENARIOS:
+[ ] 400 Bad Request handled
+[ ] 401 Unauthorized handled (redirect to login)
+[ ] 403 Forbidden handled
+[ ] 404 Not Found handled
+[ ] 500 Server Error handled
+[ ] Network error handled
+[ ] Timeout handled
+```
+
+### 5.3 State Management Audit
+
+```bash
+# Find state management
+grep -rn "useState\|useReducer\|useContext\|zustand\|redux\|recoil" --include="*.tsx" client/src/
+
+# Find context providers
+grep -rn "createContext\|Provider" --include="*.tsx" client/src/
+```
+
+**For EACH state store:**
+
+```
+STATE STORE: _______________
+FILE: _______________
+TYPE: [useState/Context/Zustand/Redux]
+
+STATE SHAPE:
+_______________
+
+MUTATIONS:
+[ ] All mutations identified
+[ ] Mutations update state correctly
+[ ] Side effects handled (API calls)
+[ ] Optimistic updates (if applicable)
+
+PERSISTENCE:
+[ ] State persists across navigation
+[ ] State cleared on logout
+[ ] State hydrated on page load (if needed)
+
+WORKSPACE SCOPING:
+[ ] State scoped to current workspace
+[ ] State cleared on workspace switch
+[ ] No cross-workspace state pollution
+```
+
+---
+
+## PHASE 6: BUTTON & ACTION DEEP CRAWL
+
+### 6.1 Button Discovery
+
+```bash
+# Find ALL buttons
+grep -rn "<Button\|<button\|onClick" --include="*.tsx" client/src/
+
+# Find ALL form submissions
+grep -rn "onSubmit\|handleSubmit" --include="*.tsx" client/src/
+
+# Find ALL action handlers
+grep -rn "handle[A-Z]\|on[A-Z]" --include="*.tsx" client/src/
+```
+
+### 6.2 Button Verification Matrix
+
+**For EVERY button/action:**
+
+```
+BUTTON: _______________
+FILE: [file:line]
+COMPONENT: _______________
+LABEL/TEXT: _______________
+
+HANDLER:
+[ ] onClick handler exists
+[ ] Handler is NOT empty
+[ ] Handler is NOT just console.log
+[ ] Handler performs actual action
+
+ACTION TYPE:
+[ ] Navigation (Link/redirect)
+[ ] API call
+[ ] State mutation
+[ ] Modal open/close
+[ ] Form submission
+[ ] Download/export
+[ ] Other: _______________
+
+IF API CALL:
+[ ] Endpoint correct
+[ ] Request format correct
+[ ] Response handled
+[ ] Error handled
+[ ] Loading state shown
+[ ] Success feedback shown
+
+IF NAVIGATION:
+[ ] Target route exists
+[ ] Route renders correctly
+[ ] Back navigation works
+
+IF FORM SUBMISSION:
+[ ] Validation runs
+[ ] Valid data submitted
+[ ] Invalid data shows errors
+[ ] Success feedback shown
+```
+
+### 6.3 Critical Button Audit
+
+**Buttons that MUST work:**
+
+```
+AUTHENTICATION:
+[ ] Login button → authenticates user
+[ ] Logout button → destroys session, redirects
+[ ] Register button → creates account
+[ ] Forgot password button → sends reset email
+
+CRUD OPERATIONS (for each entity):
+[ ] Create/Add button → opens form or creates record
+[ ] Edit button → opens edit mode
+[ ] Save button → saves changes
+[ ] Delete button → shows confirmation, deletes
+[ ] Cancel button → discards changes
+
+NAVIGATION:
+[ ] All sidebar menu items → navigate correctly
+[ ] All breadcrumb links → navigate correctly
+[ ] All table row clicks → open detail view
+[ ] Back buttons → return to previous page
+
+FORMS:
+[ ] All Submit buttons → submit forms
+[ ] All Cancel buttons → close/reset forms
+[ ] All Upload buttons → open file picker
+
+AI FEATURES:
+[ ] "Enhance" buttons → call AI, show result
+[ ] "Generate" buttons → call AI, show result
+[ ] "Analyze" buttons → call AI, show result
+
+EXPORTS:
+[ ] "Export" buttons → download file
+[ ] "Print" buttons → open print dialog
+[ ] "Download" buttons → download file
+
+INTEGRATIONS:
+[ ] "Connect" buttons → initiate OAuth
+[ ] "Disconnect" buttons → revoke connection
+[ ] "Sync" buttons → trigger sync
+```
+
+---
+
+## PHASE 7: NAVIGATION & ROUTING DEEP CRAWL
+
+### 7.1 Route Discovery
+
+```bash
+# Find ALL route definitions
+grep -rn "Route\|path=\|to=" --include="*.tsx" client/src/
+
+# Find router configuration
+cat client/src/App.tsx
+# or
+cat client/src/routes.tsx
+
+# Find ALL Link components
+grep -rn "<Link\|<NavLink" --include="*.tsx" client/src/
+
+# Find programmatic navigation
+grep -rn "navigate\(\|useNavigate\|router\.push" --include="*.tsx" client/src/
+```
+
+### 7.2 Route Testing Matrix
+
+**For EVERY route:**
+
+```
+ROUTE: _______________
+FILE: _______________
+AUTH REQUIRED: [Yes/No]
+
+DIRECT ACCESS:
+[ ] Route loads when navigating directly (typing URL)
+[ ] Auth redirect works (if required)
+[ ] 404 shown for invalid routes
+
+NAVIGATION TO:
+[ ] Can navigate from sidebar
+[ ] Can navigate from breadcrumbs
+[ ] Can navigate from links in content
+
+NAVIGATION FROM:
+[ ] Back button works
+[ ] Breadcrumbs navigate correctly
+[ ] Links to other pages work
+
+STATE:
+[ ] Query params preserved
+[ ] Scroll position maintained
+[ ] Form data preserved (if applicable)
+
+MOBILE:
+[ ] Route works on mobile
+[ ] Mobile navigation reaches this route
+```
+
+### 7.3 Breadcrumb Verification
+
+```bash
+# Find breadcrumb implementations
+grep -rn "Breadcrumb\|breadcrumb" --include="*.tsx" client/src/
+```
+
+**For EACH page with breadcrumbs:**
+
+```
+PAGE: _______________
+EXPECTED BREADCRUMBS: Home > Section > Subsection > Current
+
+[ ] Breadcrumbs display correctly
+[ ] Each breadcrumb segment is clickable
+[ ] Each breadcrumb navigates correctly
+[ ] Current page is not clickable (or styled differently)
+[ ] Mobile breadcrumbs work (truncated or collapsed)
+```
+
+---
+
+## PHASE 8: DATA FLOW & CONSISTENCY DEEP CRAWL
+
+### 8.1 Entity Relationship Verification
+
+```
+For EACH entity relationship:
+
+RELATIONSHIP: _______________
+PARENT TABLE: _______________
+CHILD TABLE: _______________
+FOREIGN KEY: _______________
+
+INTEGRITY:
+[ ] Foreign key constraint exists
+[ ] ON DELETE behavior defined
+[ ] ON UPDATE behavior defined
+[ ] No orphan records possible
+
+UI CONSISTENCY:
+[ ] Parent shows related children
+[ ] Child shows parent reference
+[ ] Deleting parent handles children
+[ ] Creating child links to parent
+```
+
+### 8.2 Data Synchronization Verification
+
+```
+SYNCHRONIZATION POINTS:
+
+REAL-TIME (WebSocket):
+[ ] WebSocket connection established
+[ ] Messages received correctly
+[ ] UI updates in real-time
+[ ] Reconnection works after disconnect
+[ ] Multiple tabs handle correctly
+
+POLLING (if used):
+[ ] Polling interval appropriate
+[ ] Data refreshes correctly
+[ ] Polling stops when not needed
+
+CACHE:
+[ ] Cached data invalidated on updates
+[ ] Cache cleared on logout
+[ ] Cache scoped to workspace
+
+OPTIMISTIC UPDATES:
+[ ] UI updates immediately
+[ ] Rollback on error
+[ ] Final state matches server
+```
+
+### 8.3 Cross-Feature Data Consistency
+
+**Verify data stays consistent across features:**
+
+```
+EMPLOYEE DATA CONSISTENCY:
+[ ] Employee list shows same data as employee detail
+[ ] Employee data in schedule matches employee profile
+[ ] Employee credentials in onboarding match compliance view
+[ ] Employee pay rate matches payroll calculations
+
+CLIENT DATA CONSISTENCY:
+[ ] Client list shows same data as client detail
+[ ] Client data in contracts matches client profile
+[ ] Client billing info matches invoice generation
+
+SHIFT DATA CONSISTENCY:
+[ ] Shift in schedule matches shift detail
+[ ] Shift times match time entries
+[ ] Shift location matches site data
+
+FINANCIAL DATA CONSISTENCY:
+[ ] Time entries match timesheet
+[ ] Timesheet hours match payroll
+[ ] Invoice hours match time entries
+[ ] QuickBooks data matches platform data
+```
+
+---
+
+## PHASE 9: SEMANTIC & CANONICAL DEEP CRAWL
+
+### 9.1 Naming Convention Audit
+
+```bash
+# Check for inconsistent naming
+grep -rn "employee\|staff\|worker\|officer\|guard" --include="*.ts" --include="*.tsx" | head -100
+grep -rn "client\|customer\|account" --include="*.ts" --include="*.tsx" | head -100
+grep -rn "site\|location\|post\|property" --include="*.ts" --include="*.tsx" | head -100
+grep -rn "shift\|schedule\|assignment" --include="*.ts" --include="*.tsx" | head -100
+grep -rn "workspace\|organization\|company\|tenant" --include="*.ts" --include="*.tsx" | head -100
+```
+
+**CANONICAL TERMS (enforce everywhere):**
+
+```
+TERM STANDARDIZATION:
+| Concept | Canonical Term | Found Variants | Action Needed |
+|---------|----------------|----------------|---------------|
+| Workers | Employee | staff, worker, officer, guard | Replace all with "employee" |
+| Customers | Client | customer, account | Replace all with "client" |
+| Work Locations | Site | location, post, property | Replace all with "site" |
+| Work Periods | Shift | schedule item, assignment | Replace all with "shift" |
+| Tenant | Workspace | organization, company, tenant | Replace all with "workspace" |
+```
+
+### 9.2 URL/Route Canonicalization
+
+```
+ROUTE CONSISTENCY:
+| Pattern | Correct | Found Variants |
+|---------|---------|----------------|
+| List | /employees | /employee, /staff |
+| Detail | /employees/:id | /employee/:id |
+| Create | /employees/new | /employees/create, /employee/add |
+| Edit | /employees/:id/edit | /employees/edit/:id |
+```
+
+### 9.3 API Endpoint Canonicalization
+
+```
+API CONSISTENCY:
+| Pattern | Correct | Found Variants |
+|---------|---------|----------------|
+| List | GET /api/employees | GET /api/employee |
+| Get one | GET /api/employees/:id | GET /api/employee/:id |
+| Create | POST /api/employees | POST /api/employee |
+| Update | PUT /api/employees/:id | PATCH /api/employees/:id |
+| Delete | DELETE /api/employees/:id | POST /api/employees/:id/delete |
+```
+
+### 9.4 Response Format Canonicalization
+
+```
+ALL API responses MUST follow this format:
+
+SUCCESS:
+{
+  "success": true,
+  "data": { ... } or [ ... ],
+  "meta": {
+    "total": number,      // For paginated lists
+    "page": number,
+    "pageSize": number
+  }
+}
+
+ERROR:
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable message"
+  }
+}
+
+VERIFY:
+[ ] All endpoints return consistent format
+[ ] No endpoints return raw data without wrapper
+[ ] No endpoints return different error formats
+```
+
+---
+
+## PHASE 10: SECURITY DEEP CRAWL
+
+### 10.1 Authentication Verification
+
+```
+AUTHENTICATION CHECKS:
+
+LOGIN:
+[ ] Password hashed (bcrypt/argon2)
+[ ] Brute force protection
+[ ] Account lockout after failures
+[ ] Secure session creation
+[ ] HTTPS enforced
+
+SESSION:
+[ ] Session token secure (HttpOnly, Secure, SameSite)
+[ ] Session expires appropriately
+[ ] Session validated on each request
+[ ] Session invalidated on logout
+[ ] Session invalidated on password change
+
+PASSWORD:
+[ ] Password strength requirements enforced
+[ ] Password reset flow secure
+[ ] Reset tokens expire
+[ ] Reset tokens single-use
+[ ] Old passwords invalidated
+```
+
+### 10.2 Authorization Verification
+
+```
+AUTHORIZATION CHECKS:
+
+WORKSPACE ISOLATION:
+[ ] Users can ONLY access their workspace
+[ ] No endpoint leaks cross-workspace data
+[ ] Admin endpoints restricted
+[ ] Platform admin separated from org admin
+
+ROLE-BASED ACCESS:
+[ ] Roles defined (admin, manager, employee)
+[ ] Permissions enforced on endpoints
+[ ] UI hides unauthorized actions
+[ ] Backend validates even if UI hidden
+
+RESOURCE OWNERSHIP:
+[ ] Users can only edit own profile
+[ ] Managers can only edit their employees
+[ ] Admins can edit workspace settings
+```
+
+### 10.3 Data Exposure Verification
+
+```
+SENSITIVE DATA HANDLING:
+
+SSN:
+[ ] Encrypted at rest
+[ ] Never returned in API responses (except masked)
+[ ] Masked in UI (XXX-XX-1234)
+[ ] Logged only as "SSN updated" (not value)
+
+BANK ACCOUNTS:
+[ ] Encrypted at rest
+[ ] Only last 4 digits returned
+[ ] Never logged
+
+PASSWORDS:
+[ ] Never returned in API
+[ ] Never logged
+[ ] Hashed in database
+
+API KEYS:
+[ ] Never logged
+[ ] Encrypted at rest
+[ ] Masked in UI after creation
+```
+
+---
+
+## PHASE 11: ERROR HANDLING DEEP CRAWL
+
+### 11.1 Frontend Error Handling
+
+```bash
+# Find error boundaries
+grep -rn "ErrorBoundary\|componentDidCatch" --include="*.tsx" client/src/
+
+# Find try/catch blocks
+grep -rn "try\s*{" --include="*.tsx" client/src/
+
+# Find .catch() handlers
+grep -rn "\.catch\(" --include="*.tsx" --include="*.ts" client/src/
+```
+
+**Verify error handling:**
+
+```
+ERROR TYPE | HANDLED | UI FEEDBACK | RECOVERY
+-----------|---------|-------------|----------
+API 400 | ✓/✗ | ✓/✗ | ✓/✗
+API 401 | ✓/✗ | ✓/✗ | Redirect to login
+API 403 | ✓/✗ | ✓/✗ | ✓/✗
+API 404 | ✓/✗ | ✓/✗ | ✓/✗
+API 500 | ✓/✗ | ✓/✗ | ✓/✗
+Network Error | ✓/✗ | ✓/✗ | ✓/✗
+Timeout | ✓/✗ | ✓/✗ | ✓/✗
+JSON Parse Error | ✓/✗ | ✓/✗ | ✓/✗
+Render Error | ✓/✗ | ✓/✗ | Error boundary
+```
+
+### 11.2 Backend Error Handling
+
+```bash
+# Find all throw statements
+grep -rn "throw new\|throw \$" --include="*.ts" server/
+
+# Find error middleware
+grep -rn "errorHandler\|error\s*,\s*req\s*,\s*res\|err\s*,\s*req\s*,\s*res" --include="*.ts" server/
+```
+
+**Verify:**
+
+```
+[ ] Global error handler exists
+[ ] Unhandled exceptions caught
+[ ] Errors logged (not exposed to client)
+[ ] Proper status codes returned
+[ ] No stack traces in production responses
+```
+
+---
+
+## PHASE 12: INTEGRATION DEEP CRAWL
+
+### 12.1 QuickBooks Integration
+
+```
+QUICKBOOKS OAUTH:
+[ ] OAuth initiation works
+[ ] Callback handles tokens
+[ ] Tokens stored securely
+[ ] Token refresh works
+[ ] Disconnect works
+
+QUICKBOOKS SYNC:
+[ ] Customer sync works
+[ ] Employee sync works
+[ ] Invoice sync works
+[ ] Payment sync works
+[ ] Error handling for failed syncs
+[ ] Conflict resolution
+[ ] Sync status visible to user
+```
+
+### 12.2 Email Integration (Resend)
+
+```
+EMAIL SENDING:
+[ ] Resend API configured
+[ ] Templates exist
+[ ] Variables populate correctly
+[ ] From address correct
+[ ] Delivery tracking works
+
+EMAIL TYPES:
+[ ] Invite emails send
+[ ] Reminder emails send
+[ ] Notification emails send
+[ ] Report emails send
+```
+
+### 12.3 WebSocket Integration
+
+```
+WEBSOCKET ARCHITECTURE:
+[ ] Single socket per user (WhatsApp model)
+[ ] Socket persists across navigation
+[ ] Socket reconnects on disconnect
+[ ] No connection storms
+[ ] Room subscriptions work
+
+WEBSOCKET FEATURES:
+[ ] Real-time messages
+[ ] Typing indicators
+[ ] Read receipts
+[ ] Unread counts
+[ ] Presence (online/offline)
+```
+
+---
+
+## PHASE 13: MOBILE RESPONSIVE DEEP CRAWL
+
+### 13.1 Viewport Testing
+
+**Test EVERY page at these widths:**
+
+```
+320px (iPhone SE)
+375px (iPhone X)
+390px (iPhone 12/13)
+768px (iPad portrait)
+1024px (iPad landscape)
+1280px (Laptop)
+```
+
+### 13.2 Mobile-Specific Issues
+
+```
+For EACH page:
+
+[ ] No horizontal scroll
+[ ] Text readable
+[ ] Touch targets ≥44px
+[ ] Forms usable
+[ ] Modals fit viewport
+[ ] Tables responsive
+[ ] Navigation accessible
+[ ] Fixed elements don't overlap content
+```
+
+---
+
+## PHASE 14: PERFORMANCE DEEP CRAWL
+
+### 14.1 API Performance
+
+```
+ENDPOINT BENCHMARKS:
+| Endpoint | Target | Actual | Status |
+|----------|--------|--------|--------|
+| GET /api/employees | <500ms | ___ms | ✓/✗ |
+| POST /api/employees | <500ms | ___ms | ✓/✗ |
+| GET /api/shifts | <500ms | ___ms | ✓/✗ |
+| GET /api/reports/... | <2000ms | ___ms | ✓/✗ |
+```
+
+### 14.2 Database Performance
+
+```
+QUERY OPTIMIZATION:
+[ ] N+1 queries eliminated
+[ ] Indexes on foreign keys
+[ ] Indexes on frequently filtered columns
+[ ] Pagination implemented
+[ ] Large queries optimized
+```
+
+---
+
+## PHASE 15: NEW FEATURES DEEP CRAWL
+
+### 15.1 Client Contract System
+
+```
+CONTRACT CRUD:
+[ ] Create contract → saves all fields
+[ ] Read contract list → shows all contracts
+[ ] Read contract detail → shows all data
+[ ] Update contract → saves changes
+[ ] Delete draft contract → removes record
+
+CONTRACT WORKFLOW:
+[ ] Send for signature → status changes, email sent
+[ ] View signing page → public, no auth required
+[ ] Submit signature → captures signature, IP, timestamp
+[ ] Complete signing → generates PDF, triggers workflow
+
+POST-SIGNATURE WORKFLOW:
+[ ] Client created → record exists
+[ ] Sites created → records exist
+[ ] Schedule requirements created → records exist
+[ ] Trinity notified → scheduling data available
+[ ] Welcome email sent → email delivered
+[ ] Invoice schedule created → recurring invoices
+
+CONTRACT-TRINITY INTEGRATION:
+[ ] Trinity can read contract pricing
+[ ] Trinity can read site requirements
+[ ] Trinity calculates profitability
+[ ] Trinity generates schedules
+```
+
+### 15.2 Employee Onboarding System
+
+```
+ONBOARDING CRUD:
+[ ] Send invite → email sent, packet created
+[ ] Open invite → validates token, loads wizard
+[ ] Save progress → data persists
+[ ] Upload documents → files stored
+[ ] Submit packet → status changes
+
+WIZARD SECTIONS:
+[ ] Personal info → saves correctly
+[ ] Emergency contacts → saves correctly
+[ ] I-9 Section 1 → captures signature
+[ ] Tax forms → W-4 saves, state form dynamic
+[ ] Direct deposit → encrypts sensitive data
+[ ] Security license → state-specific fields
+[ ] Background consent → captures signature
+[ ] Drug test consent → captures signature
+[ ] Agreements → captures signatures
+
+STATE-SPECIFIC LOGIC:
+[ ] No income tax states skip state tax form
+[ ] No license states skip license section
+[ ] Armed position shows firearms section
+[ ] Requirements match state data
+
+DEADLINE ENFORCEMENT:
+[ ] 15-day deadline calculated
+[ ] Reminders sent on schedule
+[ ] UI warnings display
+[ ] Frozen state blocks scheduling
+
+APPROVAL WORKFLOW:
+[ ] Admin can review → all data visible
+[ ] Admin can approve → employee created
+[ ] Admin can reject → reason captured
+[ ] Employee created → user account works
+```
+
+---
+
+## OUTPUT FORMAT
+
+```markdown
+# COAILEAGUE DEEP CRAWL AUDIT REPORT
+Date: [DATE]
+Auditor: Replit Agent Team
+Duration: [HOURS]
+
+## EXECUTIVE SUMMARY
+- Total items audited: X
+- Critical issues: X
+- High priority: X
+- Medium priority: X
+- Low priority: X
+- LAUNCH READY: YES / NO
+
+## CRITICAL BLOCKERS (Stop everything, fix immediately)
+| # | Category | Issue | Location | Impact | Fix |
+|---|----------|-------|----------|--------|-----|
+| 1 | API | Endpoint returns 500 | server/routes/x.ts:45 | Users can't load X | Add error handling |
+
+## HIGH PRIORITY (Fix before launch)
+| # | Category | Issue | Location | Impact | Fix |
+|---|----------|-------|----------|--------|-----|
+
+## MEDIUM PRIORITY (Fix within first week)
+| # | Category | Issue | Location | Impact | Fix |
+|---|----------|-------|----------|--------|-----|
+
+## LOW PRIORITY (Technical debt)
+| # | Category | Issue | Location | Impact | Fix |
+|---|----------|-------|----------|--------|-----|
+
+## BROKEN API CALLS
+| Endpoint | Frontend Call | Issue | Status Code | Fix |
+|----------|---------------|-------|-------------|-----|
+
+## BROKEN AI EXECUTIONS
+| Feature | Model | Issue | Error | Fix |
+|---------|-------|-------|-------|-----|
+
+## BROKEN WORKFLOWS
+| Workflow | Trigger | Step Failed | Issue | Fix |
+|----------|---------|-------------|-------|-----|
+
+## DATA ISOLATION ISSUES
+| Query | Location | Issue | Risk Level |
+|-------|----------|-------|------------|
+
+## UNWIRED BUTTONS
+| Button | Location | Issue |
+|--------|----------|-------|
+
+## BROKEN ROUTES
+| Route | Issue |
+|-------|-------|
+
+## SEMANTIC INCONSISTENCIES
+| Term | Location | Should Be |
+|------|----------|-----------|
+
+## RECOMMENDED FIX ORDER
+1. [Critical #1] - Because...
+2. [Critical #2] - Because...
+3. ...
+
+## ESTIMATED EFFORT
+- Critical: X hours
+- High: X hours
+- Medium: X hours
+- Total: X hours
+
+## SIGN-OFF
+[ ] All critical issues fixed
+[ ] All high priority fixed
+[ ] Testing completed
+[ ] Ready for production
+```
+
+---
+
+## EXECUTION INSTRUCTIONS
+
+1. **Run in PARALLEL** - Use multiple sub-agents for different phases
+2. **DOCUMENT everything** - Don't fix without documenting first
+3. **PRIORITIZE** - Critical → High → Medium → Low
+4. **VERIFY fixes** - After fixing, re-test to confirm
+5. **NO ASSUMPTIONS** - Test every path, don't assume it works
+6. **FULL TRACES** - For every issue, trace frontend → backend → database
+
+**BEGIN DEEP CRAWL AUDIT NOW. LEAVE NO STONE UNTURNED.**

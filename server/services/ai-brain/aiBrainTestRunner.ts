@@ -12,11 +12,16 @@
  * Results are logged and can trigger alerts or notifications.
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { broadcastToAllClients } from '../../websocket';
 import { aiBrainFileSystemTools } from './aiBrainFileSystemTools';
+import { typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('aiBrainTestRunner');
 
 export type TestStatus = 'pending' | 'running' | 'passed' | 'failed' | 'skipped' | 'error';
 export type TestSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
@@ -92,7 +97,8 @@ class AIBrainTestRunner {
       run: async () => {
         const start = Date.now();
         try {
-          const response = await fetch('http://localhost:5000/health');
+          const { getAppBaseUrl } = await import('../../utils/getAppBaseUrl');
+          const response = await fetch(`${getAppBaseUrl()}/health`);
           const data = await response.json();
           return {
             testId: 'api-health',
@@ -114,7 +120,7 @@ class AIBrainTestRunner {
             startedAt: new Date(start),
             completedAt: new Date(),
             duration: Date.now() - start,
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
           };
         }
       },
@@ -130,6 +136,7 @@ class AIBrainTestRunner {
       run: async () => {
         const start = Date.now();
         try {
+          // Converted to Drizzle ORM: health check ping
           const result = await db.execute(sql`SELECT 1 as test`);
           return {
             testId: 'db-connectivity',
@@ -140,7 +147,7 @@ class AIBrainTestRunner {
             completedAt: new Date(),
             duration: Date.now() - start,
             message: 'Database connection successful',
-            details: { rows: result.rows?.length || 0 },
+            details: { rows: result.length || 0 },
           };
         } catch (error: any) {
           return {
@@ -151,7 +158,7 @@ class AIBrainTestRunner {
             startedAt: new Date(start),
             completedAt: new Date(),
             duration: Date.now() - start,
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
           };
         }
       },
@@ -187,7 +194,7 @@ class AIBrainTestRunner {
             startedAt: new Date(start),
             completedAt: new Date(),
             duration: Date.now() - start,
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
           };
         }
       },
@@ -223,7 +230,7 @@ class AIBrainTestRunner {
             startedAt: new Date(start),
             completedAt: new Date(),
             duration: Date.now() - start,
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
           };
         }
       },
@@ -262,7 +269,7 @@ class AIBrainTestRunner {
             startedAt: new Date(start),
             completedAt: new Date(),
             duration: Date.now() - start,
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
           };
         }
       },
@@ -346,7 +353,7 @@ class AIBrainTestRunner {
             startedAt: new Date(start),
             completedAt: new Date(),
             duration: Date.now() - start,
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
           };
         }
       },
@@ -364,7 +371,8 @@ class AIBrainTestRunner {
         const threshold = 1000;
         try {
           const apiStart = Date.now();
-          await fetch('http://localhost:5000/api/auth/me');
+          const { getAppBaseUrl } = await import('../../utils/getAppBaseUrl');
+          await fetch(`${getAppBaseUrl()}/api/auth/me`);
           const responseTime = Date.now() - apiStart;
           
           return {
@@ -387,18 +395,18 @@ class AIBrainTestRunner {
             startedAt: new Date(start),
             completedAt: new Date(),
             duration: Date.now() - start,
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
           };
         }
       },
     });
 
-    console.log(`[TestRunner] Registered ${this.tests.size} built-in tests`);
+    log.info(`[TestRunner] Registered ${this.tests.size} built-in tests`);
   }
 
   registerTest(test: TestCase): void {
     this.tests.set(test.id, test);
-    console.log(`[TestRunner] Registered test: ${test.id}`);
+    log.info(`[TestRunner] Registered test: ${test.id}`);
   }
 
   getTest(testId: string): TestCase | undefined {
@@ -437,7 +445,7 @@ class AIBrainTestRunner {
       };
     }
 
-    console.log(`[TestRunner] Running test: ${test.name}`);
+    log.info(`[TestRunner] Running test: ${test.name}`);
 
     try {
       const result = await Promise.race([
@@ -459,7 +467,7 @@ class AIBrainTestRunner {
         startedAt: new Date(),
         completedAt: new Date(),
         duration: 0,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
         stackTrace: error.stack,
       };
 
@@ -490,11 +498,11 @@ class AIBrainTestRunner {
   }
 
   async runTestSuite(suiteName: string, testIds: string[], triggeredBy: string): Promise<TestSuiteResult> {
-    const suiteId = `suite-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const suiteId = `suite-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
     const startedAt = new Date();
     const results: TestResult[] = [];
 
-    console.log(`[TestRunner] Starting test suite: ${suiteName} (${testIds.length} tests)`);
+    log.info(`[TestRunner] Starting test suite: ${suiteName} (${testIds.length} tests)`);
 
     broadcastToAllClients({
       type: 'test:suite_started',
@@ -528,7 +536,7 @@ class AIBrainTestRunner {
           startedAt: new Date(),
           completedAt: new Date(),
           duration: 0,
-          error: error.message,
+          error: (error instanceof Error ? error.message : String(error)),
         });
       }
     }
@@ -569,7 +577,7 @@ class AIBrainTestRunner {
 
     await this.logSuiteResult(suiteResult);
 
-    console.log(`[TestRunner] Suite completed: ${suiteName} - ${summary.passed}/${summary.total} passed (${summary.passRate}%)`);
+    log.info(`[TestRunner] Suite completed: ${suiteName} - ${summary.passed}/${summary.total} passed (${summary.passRate}%)`);
 
     return suiteResult;
   }
@@ -586,7 +594,7 @@ class AIBrainTestRunner {
   private async logTestResult(result: TestResult, triggeredBy: string): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        workspaceId: 'coaileague-platform-workspace',
+        workspaceId: PLATFORM_WORKSPACE_ID,
         userId: triggeredBy,
         action: `ai_brain_test:${result.status}`,
         entityType: 'test',
@@ -603,14 +611,14 @@ class AIBrainTestRunner {
         ipAddress: 'ai-brain-internal',
       });
     } catch (error) {
-      console.error('[TestRunner] Failed to log test result:', error);
+      log.error('[TestRunner] Failed to log test result:', error);
     }
   }
 
   private async logSuiteResult(result: TestSuiteResult): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        workspaceId: 'coaileague-platform-workspace',
+        workspaceId: PLATFORM_WORKSPACE_ID,
         userId: result.triggeredBy,
         action: 'ai_brain_test:suite_completed',
         entityType: 'test_suite',
@@ -624,7 +632,7 @@ class AIBrainTestRunner {
         ipAddress: 'ai-brain-internal',
       });
     } catch (error) {
-      console.error('[TestRunner] Failed to log suite result:', error);
+      log.error('[TestRunner] Failed to log suite result:', error);
     }
   }
 }

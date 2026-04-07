@@ -1,0 +1,31 @@
+I already built this — you sent it twice. Here's the complete spec:
+
+This was already built from your first send. Here's what's in it:
+
+**Part 1 — Shift Rooms:** Auto-created DockChat group DMs when shifts start or first officer clocks in. RBAC enforced — only assigned officers, supervisors, managers, and system bots can see them. Every message, photo, and voice note stored permanently with GPS + timestamp. Photos go to permanent cloud storage, never device-dependent. Nothing gets lost.
+
+**Part 2 — Proof of Service PDF:** Auto-generated at end of every shift. Chronological activity log with embedded photos, GPS coordinates, clock in/out verification, hourly check-ins, and any incidents. Cover page with officer info, site address, total hours, check-in counts. This is the document you hand a client who claims guards didn't show up.
+
+**Part 3 — System Bots (5 total):**
+- **ClockBot** — monitors clock-ins, late detection (DM at 5min, warning at 15min, force clock-in at 20min with merit deduction), geofence verification, hourly check-in enforcement, OT detection
+- **ReportBot** — detects incident keywords in shift rooms, joins and asks follow-up questions, builds professional reports from raw officer input + photos, compiles proof of service PDFs
+- **MeetingBot** — auto-joins meeting rooms, silently captures discussion, generates meeting minutes PDF with decisions and action items when room closes
+- **GuardBot** — passive compliance monitoring (silence detection, break compliance, patrol route tracking)
+- **HelpBot** — already exists
+
+**Part 4 — Approval Pipeline:** Everything flows through: Created → Pending Review → Approved → Delivered to Client → Stored in Document Vault. Manager review screen with quick-approve for routine items.
+
+**Part 5 — Evidence Chain:** Covers all four scenarios — client refuses to pay, wage claims, incident disputes, employee misconduct. Every scenario answered with GPS-verified, timestamped, searchable proof.
+
+**Key design principle:** Capturing evidence is ALWAYS free (0 credits). Photos, messages, check-ins cost nothing. AI processing (report polishing, PDF generation, meeting minutes) costs credits. You never want an org to hesitate about posting a photo because it costs them.
+
+**Your complete document arsenal is now:**
+
+| Doc | What It Covers |
+|-----|----------------|
+| Mobile UI Polish | 4 critical bugs + 16 page fixes + design system |
+| Money Flow Audit | 5 blockers + 5 high + 4 medium for payments |
+| Feature Roadmap v1 | Doc Signing, QB Reports, Incident Pipeline, Form Builder, DockChat Bridges, RFP Pipeline, Desktop Polish |
+| DockChat/Bots Spec | Shift Rooms, Proof of Service, 5 System Bots, Approval Pipeline, Evidence Chain |
+
+That's your entire platform blueprint. Feed them to the Replit agent in order of what matters most to you right now.

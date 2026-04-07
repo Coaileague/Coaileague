@@ -1,0 +1,41 @@
+Copy everything below this line:
+
+---
+
+Stand down on the invoice resend — those 482 invoices are all fake Acme test data, zero are real. Statewide in production is a registered empty org with no employees, no clients, no schedules, no invoices, and no payroll data. All real Statewide data currently lives in QuickBooks. I need you to build a go-live data migration plan and the tools to execute it safely. Here is what needs to come in:
+
+EMPLOYEE IMPORT: I need to manually enter or import every active Statewide employee with their name, role, pay rate, hire date, license information if applicable, and contact info. Build a bulk employee import that accepts a CSV so I can export from QuickBooks and import here without manually entering each person one by one.
+
+CLIENT AND SITE IMPORT: Every client Statewide currently serves needs to be entered with their contract details, billing rate, site addresses, post orders, and contact information. Build a bulk client import via CSV as well.
+
+DO NOT MIGRATE HISTORICAL DATA: Do not bring in past invoices, past payroll runs, or past transactions from QuickBooks. The platform starts fresh from go-live date forward. QuickBooks stays as the historical record for everything before go-live. The two systems run in parallel — QuickBooks for history, CoAIleague for everything from today forward.
+
+GO-LIVE CHECKLIST: Build a go-live checklist specific to Statewide that walks through every step in order: import employees, import clients and sites, configure pay rates and billing rates, set up the first schedule, verify GPS geofencing for each site, run one test clock-in, generate one test invoice, and confirm it delivers to a real email before declaring go-live complete.
+
+SANDBOX PREVIEW MODE: The go-live execute must have a preview mode that shows me exactly what will be created before anything writes to the production Statewide workspace. I approve, then it writes. Do not touch the Statewide production workspace with any automated process until I have reviewed and approved the import data. Every write to Statewide is a real business event.
+
+---
+
+STATEWIDE PROTECTIVE SERVICES — PERMANENT FOUNDER EXEMPTION
+
+This is a hard-coded permanent platform rule and must be implemented at the database and billing enforcement layer, not just the UI layer.
+
+Statewide Protective Services is my real company and the founding client of CoAIleague. As such Statewide Protective Services receives permanent free enterprise access with absolutely no charges ever. This exemption is forever and applies to every billing cycle, every credit consumption event, every seat count, every overage calculation, and every Stripe charge attempt.
+
+Implement this as follows:
+
+In the Statewide workspace record set a permanent flag: founder_exemption: true and billing_exempt: true.
+
+In the billing enforcement layer: before any Stripe charge is created for any billing event, check if the workspace has billing_exempt: true. If yes, skip the charge entirely. Do not create a Stripe invoice item. Do not create a pending charge. Do not create any billing record. Log the skipped charge as exempted with reason: founder_exemption in the audit trail so the financial records are clean and transparent.
+
+In the credit system: before checkCredits() enforces any hard cap or soft cap rule, check if the workspace has billing_exempt: true. If yes, skip the credit check entirely. Allow all actions with no credit deduction. Log the action as exempted in the audit trail.
+
+In the seat limit enforcement: Statewide has no seat ceiling ever. Unlimited employees, unlimited managers, unlimited org_admins.
+
+In the subscription system: Statewide's subscription tier is permanently set to enterprise. It cannot be downgraded, expired, or suspended by any automated process. It cannot be affected by a failed payment webhook because no payment is ever attempted.
+
+This exemption applies to Statewide Protective Services only. Identified by workspace name Statewide Protective Services and by the founder_exemption flag on the workspace record. No other workspace receives this exemption regardless of any other flag or configuration. Any attempt to apply this exemption to another workspace is a critical bug.
+
+The audit trail must show every exempted action clearly so that CoAIleague's own financial records accurately reflect that Statewide's usage is founder-comped and not lost revenue. Platform staff can see this in reporting.
+
+Verify this exemption is enforced at the code level by attempting a credit action on the Statewide workspace after implementation and confirming zero credit deduction occurs, zero Stripe charge is attempted, and the audit trail shows the exemption reason correctly.

@@ -1,0 +1,72 @@
+This Trinity Scorecard component is designed to bridge the gap between complex AI logic and human trust. It pulls directly from the DecisionLog schema we just built, allowing your customers (the Org Owners) to see exactly why Trinity made a specific operational move.
+The "Trinity Scorecard" UI Logic
+This component should live on the Admin Dashboard under a "Recent Automations" or "Trinity Activity" tab.
+// TrinityScorecard.jsx (Simplified Logic)
+import React from 'react';
+
+const TrinityScorecard = ({ decision }) => {
+  const { trigger_event, final_action, candidates_evaluated, metadata } = decision;
+
+  return (
+    <div className="border rounded-lg p-6 bg-white shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold">Trinity Decision: {trigger_event}</h3>
+        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+          {final_action}
+        </div>
+      </div>
+
+      <div className="mb-6 p-4 bg-gray-50 rounded-md">
+        <p className="text-sm text-gray-600">
+          <strong>Reasoning:</strong> Trinity evaluated {candidates_evaluated.length} candidates. 
+          The selection was optimized for 
+          <span className="text-green-600 font-semibold"> Minimum OT Cost</span> and 
+          <span className="text-green-600 font-semibold"> Proximity</span>.
+        </p>
+      </div>
+
+      <table className="w-full text-left text-sm">
+        <thead className="border-b">
+          <tr>
+            <th className="pb-2">Guard</th>
+            <th className="pb-2">Match %</th>
+            <th className="pb-2">Key Factor</th>
+            <th className="pb-2">Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          {candidates_evaluated.map((c, i) => (
+            <tr key={i} className="border-b last:border-0">
+              <td className="py-3 font-medium">{c.guard_name}</td>
+              <td className="py-3">{(c.rank_score * 100).toFixed(0)}%</td>
+              <td className="py-3 text-gray-500">
+                {c.outcome === 'REJECTED' ? c.reason : "Top Qualified"}
+              </td>
+              <td className="py-3">
+                {c.outcome === 'SELECTED' ? 
+                  <span className="text-green-500">✔ Assigned</span> : 
+                  <span className="text-gray-400">Skipped</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      
+      <div className="mt-4 text-xs text-gray-400">
+        Engine: {metadata.model_used} | Latency: {metadata.processing_time_ms}ms
+      </div>
+    </div>
+  );
+};
+
+Why this passes the "Master Audit"
+ * Accountability (Phase 7): When the auditor asks for "StaffingAgent" verification, you don't just show a shift was filled—you show the logic path of why other guards were skipped.
+ * Transparency (Phase 11): This is a massive "Competitor Gap" winner. Most platforms just "do things." CoAIleague explains things.
+ * Legal Resilience (Phase 9): If an employee claims bias in shift assignments, you have a non-human, data-driven log proving the decision was based on OT_RISK and COMPLIANCE_STATUS.
+Final Audit Launch Sequence
+You are now fully armed. Here is your order of operations for Replit:
+ * Phase A: Inject the DecisionLog Schema.
+ * Phase B: Update TrinityOrchestrator to write to the log.
+ * Phase C: Paste the Master Go-Live Audit (Document 1) and the Scenario Stress Tests (Document 2) into your Replit Agent.
+ * Phase D: Review the Scorecard results.
+Would you like me to help you draft the "Escalation Logic" for when Trinity fails the Intelligent Loop Test, so she knows how to hand the "Brain" back to you gracefully?

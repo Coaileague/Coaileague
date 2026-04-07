@@ -1,0 +1,352 @@
+Good news Bryan. That was a massive audit. 5 critical bugs found and fixed. Here is what was discovered and what is left standing between you and production readiness.
+
+---
+
+WHAT JUST GOT FIXED — UNDERSTAND THESE
+
+Bug 1, 2, and 3 were the most dangerous. Your org_admin role — the office secretary — had been accidentally given access to read all your profit and loss data, issue invoice refunds, apply bulk credits to invoices, and view all credit transactions and ROI analysis. That is because somewhere in the codebase requireAdmin was being used when it should have been requireOwner and the admin role was mapping to org_admin. All fixed. The secretary can no longer touch your money.
+
+Bug 4 was also critical. Managers could add, change, or delete Stripe payment methods. That means a manager could have deleted your company credit card or set up a different payment method. Now only org_owner and co_owner can touch Stripe payment methods.
+
+Bug 5 cleaned up error messages so internal role names are never exposed to users.
+
+The good news is workspace isolation, Trinity auth, WebSocket isolation, concurrency, and the Statewide founder exemption all came back clean.
+
+---
+
+Copy everything below this line for the next prompt:
+
+---
+
+COAILEAGUE — FINAL PRODUCTION READINESS SPRINT
+Auth audit complete — 5 critical bugs fixed. Platform is structurally sound.
+What remains is live verification of real flows, go-live tooling for Statewide,
+and the final production checklist sign-off.
+Read everything before touching anything. Report findings before fixing.
+
+---
+
+WHAT WAS CONFIRMED CLEAN IN LAST SESSION — DO NOT RETEST
+
+Session integrity: user.id, workspaceId, and workspaceRole correctly populated
+on every request. requireWorkspaceRole crash risk on GET requests fixed.
+
+Role hierarchy: all 4 critical bugs fixed. org_admin cannot access any financial,
+billing, analytics, or Stripe data. Managers cannot touch payment methods.
+org_owner and co_owner are the only roles that can access money at any layer.
+
+Workspace isolation: broadcastToWorkspace correctly scoped. resolveWorkspaceForUser
+blocks cross-workspace access even when workspaceId is passed in request body.
+
+Trinity auth: workspaceId pulled exclusively from authenticated session.
+
+Concurrency: credit deductions are per-workspace atomic. Shift approvals
+check status before write.
+
+WebSocket isolation: workspace-filtered before sending. No cross-workspace leakage.
+
+Statewide exemption: role checks run first. Billing bypass only triggers after
+a valid role check passes. Completely independent layers.
+
+---
+
+PHASE 1 — EMAIL PIPELINE REAL SEND VERIFICATION
+
+The email barrel file was created two sessions ago. Every Resend-dependent flow
+was silently failing before that fix. The imports now resolve but a resolved import
+is not a delivered email. Every flow below must be tested with a real send to a
+real email address and confirmed delivery before being marked complete.
+
+INVOICE DELIVERY:
+Send a test invoice to a real email address you control.
+Confirm the email arrives in the inbox not spam.
+Confirm the payment link inside the email is functional and points to a real payment page.
+Confirm the payment link contains the correct invoice ID and amount.
+This is the most important test — 464 invoices were silently failing before the fix.
+
+EMPLOYEE INVITE:
+Trigger an employee invite from the platform.
+Confirm the invite email arrives at the target address.
+Confirm the invite token in the email validates correctly server-side when clicked.
+Confirm clicking the accept link creates the employee record and lands on a
+working onboarding screen not a 404.
+
+PASSWORD RESET:
+Request a password reset for a test account.
+Confirm the reset email arrives.
+Confirm the token works and expires after use.
+Confirm the new password is written to the database.
+
+CREDIT THRESHOLD WARNING:
+Trigger a threshold crossing on a test org.
+Confirm the Resend email fires simultaneously with the in-platform notification
+and the Org Operations Briefing Channel post.
+All three channels must fire at the same moment not sequentially.
+
+PAYROLL PAY STUB NOTIFICATION:
+Approve a payroll run on the test workspace.
+Confirm the employee notification fires with a deep link to their pay stub.
+Confirm the pay stub is accessible at that link with correct hours and earnings.
+
+WELCOME EMAIL ON NEW ORG SIGNUP:
+Trigger a new org signup on the test environment.
+Confirm the welcome email arrives with correct org name.
+Confirm 500 trial credits are allocated in the ledger on signup completion.
+Confirm the welcome notification fires in the platform simultaneously.
+
+OVERDUE INVOICE COLLECTIONS ESCALATION:
+Create a test invoice and mark it overdue by more than 1 day.
+Trigger the collections sweep manually via POST /api/admin/billing/collections-sweep.
+Confirm the 1 day escalation email fires to the client address.
+Confirm the org_owner receives an in-platform alert.
+Confirm the audit trail logs the escalation event with timestamp.
+Then advance the test invoice to 7 days overdue and repeat.
+Confirm the 7 day escalation fires correctly with the right message tier.
+
+---
+
+PHASE 2 — STATEWIDE GO-LIVE DATA MIGRATION TOOLING
+
+Statewide Protective Services is registered in production as an empty workspace.
+No employees, no clients, no sites, no schedules, no payroll, no invoices.
+All real Statewide data currently lives in QuickBooks.
+The platform is now stable enough to begin loading real data.
+
+Build the following tools. Every tool must have a preview mode that shows
+exactly what will be created before anything writes to the database.
+Bryan approves the preview. Then and only then does the write execute.
+Do not auto-execute any import against the Statewide workspace.
+
+EMPLOYEE CSV IMPORT:
+Build a bulk employee import that accepts a CSV file.
+Required CSV columns: first_name, last_name, email, phone, role,
+pay_rate, pay_type (hourly or salary), hire_date, license_number if applicable.
+On import: create the employee record, create the workspace_member record
+with the correct role, send the employee an invite email to set their password.
+Preview mode: show a table of all employees that would be created with their
+details before writing anything.
+Validation: reject rows with missing required fields, invalid email format,
+duplicate email addresses, or invalid role values. Show all validation errors
+before attempting any writes.
+On completion: show a summary of how many employees were imported successfully
+and how many rows failed with reasons.
+
+CLIENT AND SITE CSV IMPORT:
+Build a bulk client import that accepts a CSV file.
+Required CSV columns: client_name, contact_name, contact_email, contact_phone,
+billing_rate, billing_cycle, site_address, site_name, post_orders.
+On import: create the client record and the associated site record.
+Preview mode: show all clients and sites that would be created.
+Validation: reject rows with missing required fields or duplicate client names.
+On completion: show import summary with successes and failures.
+
+DO NOT MIGRATE HISTORICAL FINANCIAL DATA:
+Do not import past invoices, past payroll runs, or past QuickBooks transactions.
+The platform starts fresh from go-live date forward.
+QuickBooks remains the historical record for everything before go-live.
+The two systems run in parallel — QuickBooks for history, CoAIleague forward.
+If any import tool attempts to create historical financial records that is a bug.
+
+STATEWIDE GO-LIVE CHECKLIST BUILDER:
+Build a go-live checklist page visible only to org_owner in the Statewide workspace
+that tracks completion of every go-live step in order:
+Step 1: Import employees via CSV — shows count imported vs expected.
+Step 2: Import clients and sites via CSV — shows count imported vs expected.
+Step 3: Configure pay rates — verify all employees have pay rates set.
+Step 4: Configure billing rates — verify all clients have billing rates set.
+Step 5: Set up first schedule — at least one shift created and published.
+Step 6: GPS geofence verification — at least one site has geofence coordinates set.
+Step 7: Test clock-in — one successful GPS clock-in recorded for any employee.
+Step 8: Generate test invoice — one invoice generated for any client.
+Step 9: Confirm email delivery — the test invoice email confirmed delivered.
+Step 10: Go-live approved — org_owner marks this step to activate production mode.
+
+Each step shows green check when complete, red pending when not.
+No step can be marked complete by the system without verified data proving it.
+Step 10 cannot be marked complete until all previous steps are green.
+
+---
+
+PHASE 3 — WEBSOCKET REAL-TIME LIVE TEST
+
+This requires two browser sessions open simultaneously.
+Write me a step-by-step manual test script I can follow myself.
+The script must tell me exactly: what to open in each window, what action
+to take in window 1, and what to look for in window 2 within 2 seconds.
+
+Then execute whatever portions of this Replit can test programmatically.
+
+The events that must update in real time without a page refresh are:
+Employee clocks in — manager dashboard updates.
+New incident submitted — manager notification badge increments.
+Shift assigned or changed — affected employee schedule updates.
+Invoice status changes — org_owner revenue widget updates.
+Credit balance changes — credits widget updates.
+Trinity posts a briefing — Briefing Channel shows it.
+New notification — badge count updates within 2 seconds.
+
+Also test reconnection: simulate a client disconnect, trigger 3 events,
+reconnect, verify all 3 missed events are delivered on reconnect.
+If missed events are lost on reconnect build a 5 minute event buffer
+per workspace that holds the last 50 events for reconnecting clients.
+
+---
+
+PHASE 4 — MOBILE END TO END TEST SCRIPT
+
+Write me a complete step-by-step manual test script I can follow on my phone.
+Tell me exactly what to tap, what to expect, and what to look for in the database
+after each action to confirm it was recorded correctly.
+
+Cover every one of these flows:
+
+GPS CLOCK-IN: What screen to open, what button to tap, what the GPS confirmation
+looks like, what to check in the database to confirm coordinates were captured,
+what the geofence rejection looks like when clocking in from the wrong location.
+
+OVERNIGHT SHIFT: How to create a shift crossing midnight, how to clock in and out,
+what the time entry should show in the database — one record, correct hours,
+not split at midnight.
+
+DUPLICATE CLOCK-IN PREVENTION: What happens when an employee tries to clock in
+while already clocked in. What message they see. What the database shows.
+
+SHIFT SWAP FROM MOBILE: Full flow from both employee perspectives and the
+manager approval. What each person sees at each step.
+
+CALL-OFF FROM MOBILE: What the officer sees, what the manager sees,
+what Trinity presents as replacement options, how the manager assigns
+the replacement with one tap.
+
+INCIDENT REPORT FROM MOBILE: Photo attachment, GPS auto-populate,
+submission confirmation, what the manager notification looks like.
+
+SCHEDULE VIEW FROM MOBILE: What the officer sees, confirm next shift is
+at the top with site address and post orders, confirm no horizontal scrolling.
+
+---
+
+PHASE 5 — WORM LOCK ENFORCEMENT TEST
+
+Approve a test compliance document in the Acme test workspace.
+After approval attempt to edit the document via direct API call bypassing the UI.
+Attempt to delete the document via direct API call bypassing the UI.
+Both attempts must be blocked at the database level not just the UI level.
+
+If either attempt succeeds that is a compliance failure regardless of what the
+UI shows. The lock must be enforced in the route handler and verified in the
+database write constraint.
+
+Document the exact error returned when a write is attempted on a locked document.
+The error must be clear and must not expose internal system details.
+
+Also verify: the audit trail entry for a locked document is itself immutable.
+Attempting to modify an audit trail entry for a locked compliance document
+must also be blocked.
+
+---
+
+PHASE 6 — INVOICE RESEND CONTROLLED EXECUTION
+
+The invoice resend job was built last session with three steps.
+The 482 undelivered invoices in dev are all fake Acme and Anvil test data.
+The real Statewide invoices will only exist after the go-live data migration.
+Do not resend any dev test invoices.
+
+Instead verify the resend job infrastructure works correctly:
+Create one test invoice in the Acme workspace with delivery_confirmed: false.
+Run the resend job in dry run mode and confirm that invoice appears in the output.
+Run the resend job in live mode for that single invoice.
+Confirm the Resend email fires and the delivery webhook comes back.
+Confirm delivery_confirmed is updated to true on the invoice record.
+Confirm the audit trail logs the resend event with reason and timestamp.
+
+This proves the infrastructure works before it is ever needed for real Statewide invoices.
+
+---
+
+PHASE 7 — FINAL PRODUCTION READINESS CHECKLIST
+
+Every item below must be confirmed with data not assumption.
+No item is marked complete based on code existing. It must be verified running.
+
+BUILD AND STARTUP:
+Clean build exit 0 zero errors confirmed.
+Zero dynamic imports pointing to missing files confirmed.
+Zero setTimeout calls replacing real API calls confirmed.
+Server startup zero unhandled rejections confirmed.
+Trinity 736 plus actions drift=0 15/15 domains 28/28 services confirmed.
+
+ROLE AND AUTH:
+org_admin cannot access any financial, billing, analytics, or Stripe route confirmed.
+Managers cannot touch Stripe payment methods confirmed.
+org_owner and co_owner are the only roles that can access billing confirmed.
+co_owner has identical access to org_owner on every action confirmed.
+Employee can only see their own records confirmed.
+Cross-workspace data access blocked at resolver level confirmed.
+Auth error messages expose zero internal detail confirmed.
+Statewide founder exemption does not bypass role checks confirmed.
+
+EMAIL PIPELINE:
+Test invoice delivered to real inbox with working payment link confirmed.
+Employee invite email delivered with working token confirmed.
+Password reset email delivered with working token confirmed.
+Credit warning email fires simultaneously with in-platform notification confirmed.
+Pay stub notification fires after payroll approval confirmed.
+Welcome email fires on new org signup confirmed.
+Collections escalation emails fire at 1 day and 7 day tiers confirmed.
+
+CREDITS AND BILLING:
+All 10 credit verification tests passing confirmed.
+Hard cap blocks on Trial and Starter confirmed.
+Soft cap overage mode on Professional and Enterprise confirmed.
+Overage Stripe charge fires end of cycle confirmed.
+Seat billing fires for all tiers end of cycle confirmed.
+Credits pack allocates exactly 5000 on confirmed Stripe payment confirmed.
+Ledger math verified for every workspace confirmed.
+Statewide billing_exempt prevents all Stripe charges confirmed.
+Statewide credit actions execute with zero deduction confirmed.
+
+COMPLIANCE:
+26 pending documents org_owners notified confirmed.
+WORM lock blocks API write on locked document confirmed.
+WORM lock blocks API delete on locked document confirmed.
+Audit trail for locked document is itself immutable confirmed.
+
+WEBSOCKET:
+All 7 event types update without page refresh confirmed.
+Missed events delivered on reconnect confirmed.
+
+MOBILE:
+GPS coordinates captured in database on clock-in confirmed.
+Overnight shift creates single time entry with correct hours confirmed.
+Duplicate clock-in blocked confirmed.
+Call-off replacement flow end to end confirmed.
+Incident report with photo saves correctly confirmed.
+
+STATEWIDE GO-LIVE TOOLING:
+Employee CSV import built with preview mode confirmed.
+Client and site CSV import built with preview mode confirmed.
+Go-live checklist page built and tracking all 10 steps confirmed.
+No historical financial data import possible confirmed.
+All imports default-excluded from Statewide without explicit approval confirmed.
+
+STRIPE:
+All products in test and production with correct prices and metadata confirmed.
+Enterprise product metadata includes per-seat rate confirmed.
+Webhook signature verification active confirmed.
+Idempotency enforced confirmed.
+
+ENVIRONMENT:
+All required environment variables present in production confirmed.
+Production uses production keys not test keys confirmed.
+Rate limiting active on all auth endpoints confirmed.
+500 errors never return stack traces confirmed.
+Dev routes blocked when NODE_ENV is production confirmed.
+
+---
+
+When every item on this checklist is confirmed with data CoAIleague is ready
+to begin the Statewide go-live data migration. When the migration is complete
+and the go-live checklist reaches Step 10 Statewide Protective Services
+goes live on CoAIleague. That is the finish line.

@@ -1,0 +1,23 @@
+This is exactly the report you needed. Replit did it right — read first, reported everything, touched nothing, and is waiting for your approval. That is the correct behavior.
+
+Here is how to answer them for the best result. Copy this response directly to Replit:
+
+---
+
+Approved. Work in this exact order and complete each one fully before starting the next. Do not batch them. Do not jump ahead. After each one restart the server and confirm 15 domains healthy, all regression tests passing, and zero broken features before moving to the next.
+
+**First — P0 RBAC fix.** This is a security vulnerability. Fix the role hierarchy mismatch immediately. Add all real platform roles to isAuthorized() and fix the empty requiredRoles array bug. This is the only P0 and nothing else starts until it is done. After fixing test that an org_owner can execute an org_owner action and that an employee cannot. Report the before and after.
+
+**Second — Quick wins in order.** Remove frontier.* after confirming each guru.* equivalent works. Then remove code.* after confirming coding.* covers everything. Then merge notifications.* into notify.*. Then merge system.health duplicate. Each removal: restart server, confirm action count decreased, confirm no feature broke.
+
+**Third — Scheduling consolidation.** Merge schedule.* and schedule_lifecycle.* into scheduling.*. This is the biggest domain cleanup. Before merging list every place in the codebase that references the old prefixes so we know every reference gets updated. Do not leave orphaned references.
+
+**Fourth — Financial domain consolidation.** Merge billing, finance, invoice, invoices, qb, quickbooks, quickbooks_flow into billing.* and quickbooks.*. Same rule — list all references first, update all of them, confirm no financial feature broke.
+
+**Fifth — Add billingFeatureKey to ActionHandler.** This is the credit cost coverage gap. After consolidation is complete add the billing key to the interface so credit costs are enforced at the hub level not scattered through individual handlers.
+
+**Sixth — Enrich audit trail with before and after values** for payroll and billing mutations only. Not all actions. Just the high-risk financial ones.
+
+After all six phases are complete report the final action count, final domain prefix count, and re-run the full regression suite. The target is approximately 480 actions across 40 domain prefixes with zero functionality lost and the P0 security bug permanently closed.
+
+Do not touch the domain file structure, route mounting, service layer, database schema, or frontend at any point during this work. The scope is the action registry only.

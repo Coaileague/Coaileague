@@ -10,6 +10,8 @@
  * - Security event logging
  * - Compliance checking
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('securityHardeningService');
 
 type ThreatSeverity = 'low' | 'medium' | 'high' | 'critical';
 type ThreatType = 'brute_force' | 'sql_injection' | 'xss' | 'csrf' | 'unauthorized_access' | 'data_exfiltration' | 'suspicious_pattern';
@@ -98,7 +100,7 @@ class SecurityHardeningService {
     this.startBlockCleanup();
     
     this.initialized = true;
-    console.log('[SecurityHardening] Service initialized with threat detection active');
+    log.info('[SecurityHardening] Service initialized with threat detection active');
   }
   
   /**
@@ -164,7 +166,7 @@ class SecurityHardeningService {
     metadata?: Record<string, any>
   ): ThreatEvent {
     const threat: ThreatEvent = {
-      id: `threat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `threat-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
       timestamp: new Date(),
       type,
       severity,
@@ -184,7 +186,7 @@ class SecurityHardeningService {
       this.blockEntity('ip', source, 'Critical threat detected', 24 * 60 * 60 * 1000);
     }
     
-    console.log(`[SecurityHardening] Threat detected: ${type} (${severity}) from ${source}`);
+    log.info(`[SecurityHardening] Threat detected: ${type} (${severity}) from ${source}`);
     
     return threat;
   }
@@ -212,7 +214,7 @@ class SecurityHardeningService {
     
     // Internal event: entity_blocked
     
-    console.log(`[SecurityHardening] Blocked ${type}: ${value} - ${reason}`);
+    log.info(`[SecurityHardening] Blocked ${type}: ${value} - ${reason}`);
     
     return entity;
   }
@@ -224,7 +226,7 @@ class SecurityHardeningService {
     const key = `${type}:${value}`;
     if (this.blockedEntities.has(key)) {
       this.blockedEntities.delete(key);
-      console.log(`[SecurityHardening] Unblocked ${type}: ${value}`);
+      log.info(`[SecurityHardening] Unblocked ${type}: ${value}`);
       return true;
     }
     return false;
@@ -271,7 +273,7 @@ class SecurityHardeningService {
       scan.status = 'completed';
     } catch (error: any) {
       scan.status = 'failed';
-      console.error('[SecurityHardening] Vulnerability scan failed:', error);
+      log.error('[SecurityHardening] Vulnerability scan failed:', error);
     }
     
     scan.completedAt = new Date();
@@ -397,7 +399,7 @@ class SecurityHardeningService {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    console.log('[SecurityHardening] Service shut down');
+    log.info('[SecurityHardening] Service shut down');
   }
   
   // Private methods
@@ -443,7 +445,7 @@ class SecurityHardeningService {
     
     for (const p of patterns) {
       this.threatPatterns.set(p.name, {
-        id: `pattern-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        id: `pattern-${Date.now()}-${crypto.randomUUID().slice(0, 5)}`,
         name: p.name,
         pattern: p.pattern,
         type: p.type,
@@ -452,7 +454,7 @@ class SecurityHardeningService {
       });
     }
     
-    console.log(`[SecurityHardening] Registered ${patterns.length} threat patterns`);
+    log.info(`[SecurityHardening] Registered ${patterns.length} threat patterns`);
   }
   
   private trackAttempt(source: string): void {
@@ -485,7 +487,7 @@ class SecurityHardeningService {
       for (const [key, entity] of this.blockedEntities.entries()) {
         if (entity.expiresAt && entity.expiresAt.getTime() < now) {
           this.blockedEntities.delete(key);
-          console.log(`[SecurityHardening] Block expired for ${entity.type}: ${entity.value}`);
+          log.info(`[SecurityHardening] Block expired for ${entity.type}: ${entity.value}`);
         }
       }
     }, 60000); // Check every minute

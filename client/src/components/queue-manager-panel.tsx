@@ -9,19 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import {
   Users, MessageSquare, Ticket, Clock, AlertCircle, 
   CheckCircle, UserX, Volume2, VolumeX, Star,
   ArrowRight, Eye, UserCog, Sparkles
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { sanitizeMessage } from "@/lib/sanitize";
 
 interface QueueUser {
@@ -52,55 +46,7 @@ export function QueueManagerPanel({
 }: QueueManagerPanelProps) {
   const [selectedUser, setSelectedUser] = useState<QueueUser | null>(null);
 
-  // Mock data for demonstration
-  const mockQueue: QueueUser[] = queueUsers.length > 0 ? queueUsers : [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      type: 'chat',
-      email: 'sarah@company.com',
-      waitTime: 2,
-      status: 'priority',
-      tier: 'enterprise',
-      position: 1,
-      lastMessage: 'Need help with billing issue'
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      type: 'ticket',
-      ticketNumber: 'TKT-012345',
-      email: 'mchen@email.com',
-      waitTime: 5,
-      status: 'waiting',
-      tier: 'professional',
-      position: 2,
-      lastMessage: 'Cannot access my account'
-    },
-    {
-      id: '3',
-      name: 'Emily Rodriguez',
-      type: 'chat',
-      email: 'emily.r@work.com',
-      waitTime: 12,
-      status: 'silenced',
-      tier: 'free',
-      position: 3,
-      lastMessage: 'Hello? Anyone there?'
-    },
-    {
-      id: '4',
-      name: 'David Park',
-      type: 'ticket',
-      ticketNumber: 'TKT-012346',
-      email: 'dpark@business.net',
-      waitTime: 8,
-      status: 'vip',
-      tier: 'elite',
-      position: 4,
-      lastMessage: 'VIP customer - urgent payroll issue'
-    },
-  ];
+  const activeQueue: QueueUser[] = queueUsers;
 
   const getStatusColor = (status: QueueUser['status']) => {
     switch (status) {
@@ -139,40 +85,40 @@ export function QueueManagerPanel({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent size="full" className="max-h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+      <UniversalModal open={isOpen} onOpenChange={onClose}>
+        <UniversalModalContent size="full" className="max-h-[90vh] flex flex-col">
+          <UniversalModalHeader className="flex-shrink-0">
             <div className="flex items-center gap-3 mb-2">
-              <CoAIleagueAFLogo size="sm" variant="icon" />
+              <UnifiedBrandLogo size="sm" variant="icon" />
               <div>
-                <DialogTitle className="flex items-center gap-2">
+                <UniversalModalTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-600" />
                   Support Queue Manager
-                </DialogTitle>
-                <DialogDescription>
+                </UniversalModalTitle>
+                <UniversalModalDescription>
                   View all users waiting for help - chat and ticket system
-                </DialogDescription>
+                </UniversalModalDescription>
               </div>
             </div>
-          </DialogHeader>
+          </UniversalModalHeader>
 
           <div className="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
             {/* Queue List */}
             <div className="col-span-7">
               <Card className="h-full">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center justify-between">
-                    <span>Waiting Users ({mockQueue.length})</span>
+                  <CardTitle className="text-sm flex items-center justify-between gap-2">
+                    <span>Waiting Users ({activeQueue.length})</span>
                     <Badge variant="outline" className="font-normal">
                       <Clock className="w-3 h-3 mr-1" />
-                      Avg: {Math.round(mockQueue.reduce((acc, u) => acc + u.waitTime, 0) / mockQueue.length)}m
+                      Avg: {activeQueue.length > 0 ? Math.round(activeQueue.reduce((acc, u) => acc + u.waitTime, 0) / activeQueue.length) : 0}m
                     </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <ScrollArea className="flex-1">
                     <div className="space-y-2 p-4">
-                      {mockQueue.map((user) => (
+                      {activeQueue.map((user) => (
                         <button
                           key={user.id}
                           onClick={() => setSelectedUser(user)}
@@ -245,7 +191,7 @@ export function QueueManagerPanel({
                     <div className="space-y-4">
                       {/* Selected User Info */}
                       <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start justify-between gap-2 mb-3">
                           <div>
                             <h3 className="font-bold text-lg">{selectedUser.name}</h3>
                             <p className="text-sm text-muted-foreground">
@@ -346,27 +292,27 @@ export function QueueManagerPanel({
           </div>
 
           {/* Footer Stats */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
                 <MessageSquare className="w-3 h-3" />
-                <span>{mockQueue.filter(u => u.type === 'chat').length} chat</span>
+                <span>{activeQueue.filter(u => u.type === 'chat').length} chat</span>
               </div>
               <div className="flex items-center gap-1">
                 <Ticket className="w-3 h-3" />
-                <span>{mockQueue.filter(u => u.type === 'ticket').length} tickets</span>
+                <span>{activeQueue.filter(u => u.type === 'ticket').length} tickets</span>
               </div>
               <div className="flex items-center gap-1">
                 <VolumeX className="w-3 h-3" />
-                <span>{mockQueue.filter(u => u.status === 'silenced').length} silenced</span>
+                <span>{activeQueue.filter(u => u.status === 'silenced').length} silenced</span>
               </div>
             </div>
             <Button size="sm" variant="outline" onClick={onClose}>
               Close
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
     </>
   );
 }

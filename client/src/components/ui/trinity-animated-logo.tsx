@@ -29,9 +29,9 @@ const sizeMap = {
 };
 
 const modeColors = {
-  business: { gold: "#FFD700", teal: "#00BFFF", core: "#00BFFF" },
-  personal: { gold: "#10B981", teal: "#14B8A6", core: "#10B981" },
-  integrated: { gold: "#A855F7", teal: "#8B5CF6", core: "#8B5CF6" },
+  business: { gold: "var(--ds-trinity-gold)", teal: "var(--ds-trinity-teal)", core: "var(--ds-trinity-teal)" },
+  personal: { gold: "var(--ds-success)", teal: "var(--ds-success)", core: "var(--ds-success)" },
+  integrated: { gold: "var(--ds-trinity)", teal: "var(--ds-trinity)", core: "var(--ds-trinity)" },
 };
 
 export function TrinityAnimatedLogo({ 
@@ -71,17 +71,17 @@ export function TrinityAnimatedLogo({
     >
       <defs>
         <radialGradient id={ids.core} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FFFFE0" />
+          <stop offset="0%" stopColor="var(--ds-trinity-core-light)" />
           <stop offset="50%" stopColor={colors.core} />
-          <stop offset="100%" stopColor="#006699" />
+          <stop offset="100%" stopColor="var(--ds-trinity-core-deep)" />
         </radialGradient>
         <linearGradient id={ids.ribbonGold} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={colors.gold} />
-          <stop offset="100%" stopColor="#FFA500" />
+          <stop offset="100%" stopColor="var(--ds-trinity-gold-end)" />
         </linearGradient>
         <linearGradient id={ids.ribbonTeal} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={colors.teal} />
-          <stop offset="100%" stopColor="#008B8B" />
+          <stop offset="100%" stopColor="var(--ds-trinity-teal-end)" />
         </linearGradient>
         <filter id={ids.glow}>
           <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
@@ -131,7 +131,7 @@ export function TrinityAnimatedLogo({
         cx="50" 
         cy="50" 
         r="5" 
-        fill="#FFFFE0" 
+        fill="var(--ds-trinity-core-light)" 
         opacity="0.9"
       />
     </svg>

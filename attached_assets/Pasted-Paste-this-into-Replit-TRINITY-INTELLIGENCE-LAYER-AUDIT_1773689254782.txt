@@ -1,0 +1,108 @@
+Paste this into Replit:
+
+---
+
+**TRINITY INTELLIGENCE LAYER AUDIT — ANALYZE, VERIFY, FIX, SUMMARIZE | READ BEFORE TOUCH**
+
+Answer every question below by reading the actual code. For each question — if the answer is PASS leave it alone. If FAIL or PARTIAL — fix it immediately, then report what was fixed. Do not just report and wait.
+
+---
+
+**SECTION 1 — CONTEXT INJECTION: DOES TRINITY KNOW WHO SHE IS TALKING TO?**
+
+- When an org owner opens a Trinity chat session, does Trinity's system prompt include actual org-specific data — org name, number of active employees, number of active clients, current open shifts, current outstanding invoices, current credit balance — pulled live from the DB at session start?
+- When Trinity responds to a question like "how is my business doing?", does she query real org data to answer or does she respond generically?
+- When Trinity is making an autonomous scheduling decision, does her reasoning context include the specific client's coverage requirements, not just generic scheduling logic?
+- Is the context manager re-fetching fresh org data on every conversation turn or only at session initialization — meaning can Trinity work with stale data if the session has been open for hours?
+- Does Trinity know the org owner's name and role when responding — is that injected into the prompt or does she address everyone generically?
+
+For any FAIL or PARTIAL — fix the context injection to pull live data at session start and refresh on significant state changes.
+
+---
+
+**SECTION 2 — PROACTIVE SCANNER: ARE ALERTS REAL OR GENERIC?**
+
+- When the proactive scanner fires for a workspace, does it generate alerts based on that workspace's actual data — specific employee names, specific client names, specific dollar amounts — or does it generate templated generic alerts like "you have open shifts" with no specifics?
+- Does the morning COO brief include actual numbers — "Client ABC has an invoice $4,200 overdue by 14 days" — or generic statements — "you have overdue invoices"?
+- Does the proactive scanner deduplicate — if the same open shift has been flagged for 3 days in a row, does it escalate rather than sending the same alert repeatedly?
+- Does the proactive scanner prioritize by severity — critical compliance issues surfaced before low-priority reminders — or does everything come out at the same priority level?
+- When the proactive scanner finds nothing actionable for a workspace, does it stay silent or does it send a "no issues found" notification that adds noise?
+
+For any FAIL or PARTIAL — fix the scanner to use real data with specific names and amounts, add deduplication with escalation, add priority sorting, and suppress no-issue notifications.
+
+---
+
+**SECTION 3 — MEMORY CONTINUITY: DOES TRINITY REMEMBER?**
+
+- When an org owner tells Trinity something in a Monday session — "we are adding a new client next week" — does Trinity reference that on Tuesday without being reminded?
+- Does Trinity's knowledge graph persist cross-session corrections — if an org owner says "you got that wrong, our payroll runs on Thursdays not Fridays" does Trinity apply that correction in all future sessions?
+- When Trinity takes an autonomous action, does she log what she did and why in a way that she can reference in a future conversation — "I filled that open shift because the assigned officer called out at 6am"?
+- Does Trinity track unresolved items across sessions — if she flagged an issue on Monday and the org owner hasn't addressed it by Wednesday, does she follow up proactively?
+- Is there a maximum memory window — does Trinity forget things after N days, and if so is that window appropriate?
+
+For any FAIL or PARTIAL — fix memory persistence so corrections and key facts survive across sessions, autonomous actions are logged with reasoning, and unresolved items trigger follow-up.
+
+---
+
+**SECTION 4 — COGNITION QUALITY: DOES TRINITY REASON OR JUST RETRIEVE?**
+
+- When Trinity is asked "should I hire another officer?", does she reason from actual data — current coverage gaps, projected client growth, current overtime costs — or does she give a generic answer?
+- When Trinity detects an anomaly — an invoice 3x higher than usual — does she explain her reasoning or just flag the number?
+- Does Trinity connect dots across domains — does she notice that an officer's upcoming license expiry will create a coverage gap for a specific client two weeks from now and surface that proactively before it becomes a crisis?
+- When Trinity makes a recommendation, does she explain her confidence level and what data she based it on?
+- Does Trinity distinguish between facts she knows with certainty versus inferences she is making from patterns?
+
+For any FAIL or PARTIAL — fix the cognition layer to include data-grounded reasoning, cross-domain connection, and explicit confidence attribution in responses.
+
+---
+
+**SECTION 5 — CROSS-DOMAIN INTELLIGENCE: DOES TRINITY SEE THE WHOLE PICTURE?**
+
+- Does Trinity connect payroll costs to invoice revenue to calculate real-time margin per client — and surface clients where the org is losing money?
+- Does Trinity connect compliance status to scheduling — knowing that losing Officer X to a license expiry will leave Client Y uncovered and proactively starting the hiring pipeline?
+- Does Trinity connect cash flow to payroll timing — knowing that if Client Z's invoice is 30 days overdue the org may not have enough to cover Friday's payroll and alerting early?
+- Does Trinity connect officer performance patterns to scheduling quality — preferring officers with better attendance records for critical client sites?
+- Does Trinity connect contract renewal dates to staffing planning — knowing a client contract renews in 30 days and the org needs to confirm rates before then?
+
+For any FAIL or PARTIAL — fix cross-domain connections by wiring the relevant data queries into Trinity's decision context before she responds to questions in each domain.
+
+---
+
+**SECTION 6 — AUTONOMY GAPS: WHAT TRINITY SHOULD DO BUT DOESN'T**
+
+- When a new client is added with all required data, does Trinity automatically initialize their billing profile, schedule their first coverage, and queue their first invoice run — or does she wait to be asked?
+- When an officer's license expires, does Trinity automatically start the replacement hiring pipeline without being asked — or does she only alert?
+- When an invoice goes 30 days overdue, does Trinity automatically escalate to a collections sequence — calls, final notice, collections flag — or does she only send reminders?
+- When a pay period ends, does Trinity automatically build the payroll run from approved timesheets and submit it for owner approval — or does she wait for the owner to initiate?
+- When a shift goes uncovered 4 hours before start time, does Trinity automatically contact available officers in priority order, track responses, and escalate if none respond — or does she only alert the manager?
+
+For any FAIL or PARTIAL — fix Trinity to take the autonomous action described, not just alert. The org owner should only need to approve, not initiate.
+
+---
+
+**COMPLETION CRITERIA**
+
+After all fixes:
+1. TypeScript compile — zero errors
+2. Server restart — clean start
+3. For each section report:
+   - How many questions were PASS before fixes
+   - How many were FAIL or PARTIAL and what was fixed
+   - What specifically changed in the code
+4. Produce a final intelligence score:
+```
+TRINITY INTELLIGENCE SCORE:
+Context Injection: X/5
+Proactive Scanner: X/5
+Memory Continuity: X/5
+Cognition Quality: X/5
+Cross-Domain Intelligence: X/5
+Autonomy: X/5
+TOTAL: X/30
+```
+5. List anything that could not be fixed and why
+6. Stop and wait
+
+---
+
+Paste the full results back here and I'll give you the final intelligence readiness verdict.

@@ -13,14 +13,14 @@
 
 import { db } from '../../db';
 import { 
-  aiWorkboardTasks,
-  trinityCredits,
-  trinityCreditTransactions,
   AiWorkboardTask
 } from '@shared/schema';
+import { creditManager } from '../../services/billing/creditManager';
 import { eq, sql, desc, and, gte } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { getTrinityVelocityEngine, VelocityExecutionResult } from './trinityVelocityEngine';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('fastModeService');
 
 // WebSocket broadcaster type
 type WebSocketBroadcaster = (event: string, data: any) => void;
@@ -28,7 +28,7 @@ let wsBroadcaster: WebSocketBroadcaster | null = null;
 
 export function registerFastModeBroadcaster(broadcaster: WebSocketBroadcaster) {
   wsBroadcaster = broadcaster;
-  console.log('[FastModeService] WebSocket broadcaster registered');
+  log.info('[FastModeService] WebSocket broadcaster registered');
 }
 
 // Fast Mode Priority Tiers - Different value propositions
@@ -243,12 +243,13 @@ class FastModeService {
   private executionStatus: Map<string, FastModeExecutionStatus> = new Map();
   private resultCache: Map<string, CacheEntry> = new Map();
   private activeTasksPerWorkspace: Map<string, Set<string>> = new Map();
+  private cacheCleanupInterval: ReturnType<typeof setInterval> | null = null;
   
   private constructor() {
-    console.log('[FastModeService] Initializing Trinity Fast Mode Service...');
+    log.info('[FastModeService] Initializing Trinity Fast Mode Service...');
     
     // Clean old cache entries periodically
-    setInterval(() => this.cleanCache(), 60000);
+    this.cacheCleanupInterval = setInterval(() => this.cleanCache(), 60000);
   }
   
   static getInstance(): FastModeService {
@@ -269,12 +270,7 @@ class FastModeService {
     maxConcurrent: number;
   }> {
     // Check credit balance
-    const [credits] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, workspaceId))
-      .limit(1);
-    
-    const balance = credits?.balance || 0;
+    const balance = await creditManager.getBalance(workspaceId);
     const requiredCredits = Math.ceil(estimatedCredits * FAST_MODE_CONFIG.creditMultiplier);
     
     if (balance < requiredCredits) {
@@ -321,7 +317,7 @@ class FastModeService {
     const { taskId, workspaceId, userId, content, requestType, metadata } = params;
     const startTime = Date.now();
     
-    console.log('[FastModeService] Starting parallel execution:', taskId);
+    log.info('[FastModeService] Starting parallel execution:', taskId);
     
     // Initialize execution status
     const status: FastModeExecutionStatus = {
@@ -347,7 +343,7 @@ class FastModeService {
       const cacheKey = this.generateCacheKey(workspaceId, content);
       const cached = this.getFromCache(cacheKey);
       if (cached) {
-        console.log('[FastModeService] Cache hit for task:', taskId);
+        log.info('[FastModeService] Cache hit for task:', taskId);
         this.updateStatus(taskId, { status: 'completed', progress: 100 });
         this.untrackActiveTask(workspaceId, taskId);
         
@@ -490,7 +486,7 @@ class FastModeService {
         });
         
         if (slaRefund.refunded) {
-          console.log('[FastModeService] SLA breach refund processed:', slaRefund);
+          log.info('[FastModeService] SLA breach refund processed:', slaRefund);
         }
       }
       
@@ -501,7 +497,7 @@ class FastModeService {
       
       const summary = this.generateSummary(agentResults, aggregatedResult);
       
-      console.log('[FastModeService] Parallel execution completed:', {
+      log.info('[FastModeService] Parallel execution completed:', {
         taskId,
         executionTimeMs,
         agentsUsed: agentResults.length,
@@ -523,7 +519,7 @@ class FastModeService {
       };
       
     } catch (error) {
-      console.error('[FastModeService] Execution error:', error);
+      log.error('[FastModeService] Execution error:', error);
       
       this.updateStatus(taskId, { status: 'failed', progress: 0 });
       this.untrackActiveTask(workspaceId, taskId);
@@ -650,7 +646,7 @@ class FastModeService {
     const { taskId, workspaceId, userId, content, availableAgents } = params;
     const startTime = Date.now();
 
-    console.log('[FastModeService] Starting Velocity Engine execution:', taskId);
+    log.info('[FastModeService] Starting Velocity Engine execution:', taskId);
 
     // Default available agents if not specified
     const agents = availableAgents || [
@@ -696,11 +692,11 @@ class FastModeService {
         
         if (slaRefund.refunded) {
           creditsUsed = creditsUsed - slaRefund.refundAmount;
-          console.log('[FastModeService] Velocity SLA breach refund:', slaRefund);
+          log.info('[FastModeService] Velocity SLA breach refund:', slaRefund);
         }
       }
 
-      console.log('[FastModeService] Velocity execution completed:', {
+      log.info('[FastModeService] Velocity execution completed:', {
         taskId,
         status: result.status,
         totalTimeMs: result.totalTimeMs,
@@ -718,7 +714,7 @@ class FastModeService {
       };
 
     } catch (error) {
-      console.error('[FastModeService] Velocity execution error:', error);
+      log.error('[FastModeService] Velocity execution error:', error);
 
       return {
         success: false,
@@ -1037,12 +1033,7 @@ class FastModeService {
     const { workspaceId, content, tier = 'turbo', selectedAgents } = params;
     
     // Get current credit balance
-    const [credits] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, workspaceId))
-      .limit(1);
-    
-    const currentBalance = credits?.balance || 0;
+    const currentBalance = await creditManager.getBalance(workspaceId);
     const tierConfig = FAST_MODE_TIERS[tier];
     
     // Estimate complexity and agents needed
@@ -1135,16 +1126,12 @@ class FastModeService {
       return duration <= 15000; // 15 second SLA
     }).length;
     
-    // Get refunds issued
-    const refundTransactions = await db.select()
-      .from(trinityCreditTransactions)
-      .where(and(
-        eq(trinityCreditTransactions.workspaceId, workspaceId),
-        eq(trinityCreditTransactions.transactionType, 'refund'),
-        gte(trinityCreditTransactions.createdAt, periodStart)
-      ));
-    
-    const refundsIssued = refundTransactions.reduce((sum, t) => sum + Math.abs(t.credits), 0);
+    // Get refunds issued via creditManager transaction history
+    const allTransactions = await creditManager.getTransactionHistory(workspaceId, 200, 0);
+    const refundTransactions = allTransactions.filter(
+      t => t.transactionType === 'refund' && t.createdAt && new Date(t.createdAt) >= periodStart
+    );
+    const refundsIssued = refundTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
     // Top agents used
     const agentCounts: Record<string, number> = {};
@@ -1235,36 +1222,17 @@ class FastModeService {
     const refundAmount = Math.ceil(creditsCharged * refundPercentage);
     
     if (refundAmount > 0) {
-      // Get current balance to calculate balanceAfter
-      const [currentCredits] = await db.select()
-        .from(trinityCredits)
-        .where(eq(trinityCredits.workspaceId, workspaceId))
-        .limit(1);
-      
-      const currentBalance = currentCredits?.balance || 0;
-      const newBalance = currentBalance + refundAmount;
-      
-      // Issue refund
-      await db.insert(trinityCreditTransactions).values({
+      const refundResult = await creditManager.refundCredits({
         workspaceId,
-        transactionType: 'refund',
-        credits: refundAmount,
-        balanceAfter: newBalance,
-        description: `SLA breach refund for task ${taskId}`,
-        actionType: 'sla_refund',
-        actionId: taskId,
-        metadata: { taskId, tier, actualTimeMs, slaTargetMs, ratio }
+        amount: refundAmount,
+        reason: `SLA breach refund for task ${taskId}`,
+        issuedByUserId: 'system',
+        issuedByName: 'FastModeService',
+        relatedEntityType: 'sla_refund',
+        relatedEntityId: taskId,
       });
       
-      // Update balance
-      await db.update(trinityCredits)
-        .set({ 
-          balance: sql`${trinityCredits.balance} + ${refundAmount}`,
-          updatedAt: new Date()
-        })
-        .where(eq(trinityCredits.workspaceId, workspaceId));
-      
-      console.log('[FastModeService] SLA breach refund issued:', { taskId, refundAmount, reason });
+      log.info('[FastModeService] SLA breach refund issued:', { taskId, refundAmount, reason });
       
       // Broadcast refund notification
       if (wsBroadcaster) {

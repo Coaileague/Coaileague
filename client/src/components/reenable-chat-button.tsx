@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+
 export function ReenableChatButton() {
   const [isChatClosed, setIsChatClosed] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -52,7 +54,7 @@ export function ReenableChatButton() {
   };
 
   // Don't show on chat pages
-  if (location === "/helpdesk" || location.startsWith("/helpdesk/") || location === "/chat" || location === "/mobile-chat") {
+  if (location === "/helpdesk" || location.startsWith("/helpdesk/") || location === "/chat" || location.startsWith("/chatrooms") || location === "/mobile-chat") {
     return null;
   }
 
@@ -66,7 +68,7 @@ export function ReenableChatButton() {
     return (
       <button
         onClick={handleExpand}
-        className="fixed bottom-20 md:bottom-6 right-4 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-lg hover:shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center border-2 border-primary/80/30 animate-in slide-in-from-right-5 fade-in"
+        className="fixed bottom-20 md:bottom-6 right-4 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-sm hover:shadow-sm hover:scale-110 transition-all duration-300 flex items-center justify-center border border-primary/80/30 animate-in slide-in-from-right-5 fade-in"
         data-testid="button-expand-chat"
         aria-label="Expand live support"
       >
@@ -81,11 +83,11 @@ export function ReenableChatButton() {
       className="fixed bottom-20 md:bottom-6 right-4 z-50 animate-in slide-in-from-right-5 fade-in duration-500"
       data-testid="container-reenable-chat"
     >
-      <div className="relative bg-gradient-to-br from-slate-900/95 to-slate-950/95 backdrop-blur-sm border border-primary/30 rounded-2xl shadow-2xl p-4 max-w-[280px] md:max-w-sm">
+      <div className="relative bg-gradient-to-br from-slate-900/95 to-slate-950/95 backdrop-blur-sm border border-primary/30 rounded-md shadow-sm p-4 max-w-[280px] md:max-w-sm">
         {/* Close/Minimize button - Larger touch target for accessibility */}
         <button
           onClick={handleMinimize}
-          className="absolute -top-3 -right-3 h-10 w-10 rounded-full bg-slate-800 border-2 border-primary/30 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors flex items-center justify-center shadow-lg mobile-touch-target"
+          className="absolute -top-3 -right-3 h-10 w-10 rounded-full bg-slate-800 border border-primary/30 text-slate-400 hover-elevate active-elevate-2 transition-colors flex items-center justify-center shadow-sm mobile-touch-target"
           data-testid="button-minimize-chat"
           aria-label="Minimize"
         >
@@ -99,11 +101,11 @@ export function ReenableChatButton() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white mb-1">Need Help?</p>
-            <p className="text-xs text-slate-300 mb-3 leading-relaxed">Connect with our CoAIleague support team</p>
+            <p className="text-xs text-slate-300 mb-3 leading-relaxed">Connect with our {PLATFORM_NAME} support team</p>
             <Button
               onClick={handleReenableChat}
               size="sm"
-              className="w-full bg-primary hover:bg-muted/30 text-white border-primary/30 shadow-md"
+              className="w-full bg-primary text-white border-primary/30 shadow-md"
               data-testid="button-reenable-chat"
             >
               <MessageSquare className="h-3 w-3 mr-2" />

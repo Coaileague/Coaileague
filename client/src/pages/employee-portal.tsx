@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,12 +29,14 @@ import {
   Award,
   UserPlus,
   HelpCircle,
+  ClipboardList,
+  XCircle,
+  AlertTriangle,
+  ShieldCheck,
 } from "lucide-react";
 import type { Employee, Shift, TimeEntry } from "@shared/schema";
-import { ResponsiveSection } from "@/components/dashboard-shell";
-import { WorkspaceLayout } from "@/components/workspace-layout";
 import { MetricsCardsSkeleton, TableSkeleton } from "@/components/loading-indicators/skeletons";
-import { SmartEmptyState } from "@/components/smart-empty-state";
+import { UniversalEmptyState } from "@/components/universal";
 
 function EmployeePortalSkeleton() {
   return (
@@ -59,20 +64,29 @@ function EmployeePortalSkeleton() {
 }
 
 export default function EmployeePortal() {
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch employee data
-  const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
+  const { data: employees = [], isLoading: employeesLoading } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ["/api/employees"],
+    select: (res) => res?.data ?? [],
   });
 
-  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
+  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<{ data: Shift[] }, Error, Shift[]>({
     queryKey: ["/api/shifts"],
+    select: (res) => res?.data ?? [],
   });
 
-  const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
+  const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<{ data: TimeEntry[] }, Error, TimeEntry[]>({
     queryKey: ["/api/time-entries"],
+    select: (res) => res?.data ?? [],
+  });
+
+  const { data: onboardingStatus, isLoading: onboardingLoading } = useQuery<any>({
+    queryKey: ["/api/employee-onboarding/me"],
   });
 
   const isLoading = employeesLoading || shiftsLoading || entriesLoading;
@@ -116,76 +130,85 @@ export default function EmployeePortal() {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
+  const loadingConfig: CanvasPageConfig = {
+    id: 'employee-portal',
+    title: 'Employee Portal',
+    subtitle: 'Loading...',
+    category: 'operations',
+  };
+
+  const errorConfig: CanvasPageConfig = {
+    id: 'employee-portal',
+    title: 'Employee Portal',
+    subtitle: 'Profile not found',
+    category: 'operations',
+  };
+
   if (isLoading) {
     return (
-      <WorkspaceLayout maxWidth="7xl">
-        <ResponsiveSection spacing="lg">
-          <EmployeePortalSkeleton />
-        </ResponsiveSection>
-      </WorkspaceLayout>
+      <CanvasHubPage config={loadingConfig}>
+        <EmployeePortalSkeleton />
+      </CanvasHubPage>
     );
   }
 
   if (!currentEmployee) {
     return (
-      <WorkspaceLayout maxWidth="7xl">
-        <ResponsiveSection spacing="lg">
-          <SmartEmptyState
-            icon={<UserPlus className="h-full w-full" />}
-            title="Employee Profile Not Found"
-            description="Your account isn't linked to an employee profile yet. Contact your manager or HR to get set up in the system."
-            size="lg"
-            actions={[
-              {
-                label: "Contact HR",
-                onClick: () => window.location.href = "/contact",
-                variant: "default",
-                icon: <Mail className="h-4 w-4" />,
-              },
-              {
-                label: "Learn More",
-                onClick: () => window.location.href = "/help",
-                variant: "outline",
-                icon: <HelpCircle className="h-4 w-4" />,
-              },
-            ]}
-          />
-        </ResponsiveSection>
-      </WorkspaceLayout>
+      <CanvasHubPage config={errorConfig}>
+        <UniversalEmptyState
+          icon={<UserPlus size={32} />}
+          title="Employee Profile Not Found"
+          description="Your account isn't linked to an employee profile yet. Contact your manager or HR to get set up in the system."
+          size="lg"
+          action={{
+            label: "Contact HR",
+            onClick: () => { setLocation("/contact"); },
+          }}
+        />
+      </CanvasHubPage>
     );
   }
 
   const initials = `${currentEmployee.firstName?.[0] || ''}${currentEmployee.lastName?.[0] || ''}`.toUpperCase();
 
-  return (
-    <WorkspaceLayout maxWidth="7xl">
-      <ResponsiveSection spacing="lg">
-          <div className="flex items-center gap-4 mb-4">
-            <Avatar className="h-16 w-16 border-2 border-primary">
-              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xl font-bold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold">
-                Welcome, {currentEmployee.firstName}!
-              </h1>
-              <p className="text-muted-foreground">
-                Employee Portal · {currentEmployee.role || "Team Member"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon">
-                <Bell className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+  const headerAction = (
+    <Button variant="outline" size="icon" data-testid="button-notifications">
+      <Bell className="h-4 w-4" />
+    </Button>
+  );
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  const pageConfig: CanvasPageConfig = {
+    id: 'employee-portal',
+    title: `Welcome, ${currentEmployee.firstName}!`,
+    subtitle: `Employee Portal · ${currentEmployee.role || "Team Member"}`,
+    category: 'operations',
+    headerActions: headerAction,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
+      {!isMobile && (
+        <div className="flex items-center gap-4 mb-4">
+          <Avatar className="h-16 w-16 border-2 border-primary">
+            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xl font-bold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold">
+              {currentEmployee.firstName} {currentEmployee.lastName}
+            </h2>
+            <p className="text-muted-foreground">
+              {currentEmployee.role || "Team Member"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <Card className="border-l-4 border-l-indigo-500">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <Clock className="h-5 w-5 text-indigo-500" />
                   <Badge variant="secondary">This Week</Badge>
                 </div>
@@ -196,7 +219,7 @@ export default function EmployeePortal() {
 
             <Card className="border-l-4 border-l-primary">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <DollarSign className="h-5 w-5 text-primary" />
                   <Badge variant="secondary">Total</Badge>
                 </div>
@@ -207,7 +230,7 @@ export default function EmployeePortal() {
 
             <Card className="border-l-4 border-l-blue-500">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <Calendar className="h-5 w-5 text-blue-500" />
                   <Badge variant="secondary">This Week</Badge>
                 </div>
@@ -218,7 +241,7 @@ export default function EmployeePortal() {
 
             <Card className="border-l-4 border-l-violet-500">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <Award className="h-5 w-5 text-violet-500" />
                   <Badge variant="secondary" className="bg-muted/10 text-primary">
                     Active
@@ -231,16 +254,17 @@ export default function EmployeePortal() {
               </CardContent>
             </Card>
           </div>
-      </ResponsiveSection>
 
-      {/* Main Content */}
-      <ResponsiveSection>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} lg:w-auto`}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="schedule">My Schedule</TabsTrigger>
-            <TabsTrigger value="time">Time Entries</TabsTrigger>
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            <TabsTrigger value="time">Time</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="onboarding" data-testid="tab-onboarding">
+              <ClipboardList className="h-3.5 w-3.5 mr-1" />
+              Onboarding
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
@@ -296,19 +320,19 @@ export default function EmployeePortal() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">Total Shifts Worked</span>
                     <Badge variant="secondary">{shifts.filter(s => s.employeeId === currentEmployee.id).length}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">Total Hours</span>
                     <Badge variant="secondary">{myTimeEntries.reduce((sum, e) => sum + Number(e.totalHours || 0), 0).toFixed(1)}h</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">Total Earnings</span>
                     <Badge variant="secondary">${totalEarnings.toFixed(2)}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">Status</span>
                     <Badge className="bg-muted/10 text-primary border-0">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -338,7 +362,7 @@ export default function EmployeePortal() {
                       {myShifts.map((shift) => (
                         <div
                           key={shift.id}
-                          className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                          className="flex items-center justify-between gap-2 p-4 rounded-lg border border-border hover-elevate transition-colors"
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
@@ -379,7 +403,7 @@ export default function EmployeePortal() {
                       {myTimeEntries.slice(0, 20).map((entry) => (
                         <div
                           key={entry.id}
-                          className="flex items-center justify-between p-4 rounded-lg border border-border"
+                          className="flex items-center justify-between gap-2 p-4 rounded-lg border border-border"
                         >
                           <div className="flex-1">
                             <p className="font-semibold mb-1">
@@ -409,60 +433,269 @@ export default function EmployeePortal() {
           </TabsContent>
 
           <TabsContent value="documents" className="mt-6">
+            <EmployeeTaxDocuments />
+          </TabsContent>
+
+          {/* ── ONBOARDING CHECKLIST ─────────────────────────────────────── */}
+          <TabsContent value="onboarding" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Documents & Payslips</CardTitle>
-                <CardDescription>Access your employment documents</CardDescription>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <ClipboardList className="h-5 w-5" />
+                      Onboarding Checklist
+                    </CardTitle>
+                    <CardDescription>Complete all required documents to become eligible for shift assignments</CardDescription>
+                  </div>
+                  {onboardingStatus && (
+                    <div className="flex items-center gap-2">
+                      {onboardingStatus.isWorkEligible ? (
+                        <Badge className="bg-green-500/10 text-green-700 border-green-300 dark:text-green-400 dark:border-green-700">
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          Work Eligible
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-500/10 text-amber-700 border-amber-300 dark:text-amber-400 dark:border-amber-700">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Ineligible for Work
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <p className="font-medium">Employment Contract</p>
-                        <p className="text-sm text-muted-foreground">Signed on onboarding</p>
+                {onboardingLoading ? (
+                  <div className="space-y-3">
+                    {[1,2,3,4].map(i => <div key={i} className="h-14 rounded-md bg-muted animate-pulse" />)}
+                  </div>
+                ) : !onboardingStatus ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-40" />
+                    <p>Onboarding status not available</p>
+                    <p className="text-sm mt-1">Please contact your manager for assistance</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Progress overview */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-md bg-muted/50 p-3 text-center">
+                        <p className="text-2xl font-bold text-primary">{onboardingStatus.completionPercentage ?? 0}%</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Complete</p>
+                      </div>
+                      <div className="rounded-md bg-muted/50 p-3 text-center">
+                        <p className="text-2xl font-bold">{onboardingStatus.totalDocumentsCompleted ?? 0}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Approved</p>
+                      </div>
+                      <div className="rounded-md bg-muted/50 p-3 text-center">
+                        <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{onboardingStatus.criticalDocumentsMissing ?? 0}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Critical Missing</p>
                       </div>
                     </div>
-                    <Button size="sm" variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-medium">Tax Documents (W-4/W-9)</p>
-                        <p className="text-sm text-muted-foreground">On file</p>
+                    {/* Blocked reasons */}
+                    {onboardingStatus.blockedReasons?.length > 0 && (
+                      <div className="rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-1">
+                        {onboardingStatus.blockedReasons.map((reason: string, i: number) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                            <p className="text-sm text-amber-700 dark:text-amber-300">{reason}</p>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
+                    )}
 
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border opacity-50">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <p className="font-medium">Latest Payslip</p>
-                        <p className="text-sm text-muted-foreground">Available after payroll processing</p>
+                    {/* Document statuses */}
+                    {onboardingStatus.documentStatuses?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Required Documents</p>
+                        <div className="space-y-2">
+                          {onboardingStatus.documentStatuses.map((doc: any, i: number) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-3 p-3 rounded-md bg-muted/30"
+                              data-testid={`onboarding-doc-${i}`}
+                            >
+                              <div className="shrink-0">
+                                {doc.status === 'approved' ? (
+                                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                ) : doc.status === 'pending' ? (
+                                  <Clock className="h-5 w-5 text-amber-500" />
+                                ) : doc.status === 'rejected' ? (
+                                  <XCircle className="h-5 w-5 text-red-500" />
+                                ) : doc.status === 'expired' ? (
+                                  <AlertCircle className="h-5 w-5 text-orange-500" />
+                                ) : (
+                                  <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{doc.requirement?.name || doc.documentType}</p>
+                                {doc.requirement?.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">{doc.requirement.description}</p>
+                                )}
+                                {doc.rejectionReason && (
+                                  <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{doc.rejectionReason}</p>
+                                )}
+                              </div>
+                              <div className="shrink-0">
+                                <Badge
+                                  variant="secondary"
+                                  className={
+                                    doc.status === 'approved'
+                                      ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-0 text-xs'
+                                      : doc.status === 'pending'
+                                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-0 text-xs'
+                                      : doc.status === 'rejected'
+                                      ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-0 text-xs'
+                                      : doc.status === 'expired'
+                                      ? 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-0 text-xs'
+                                      : 'text-xs'
+                                  }
+                                >
+                                  {doc.status === 'not_submitted' ? 'Not Submitted' : doc.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <Button size="sm" variant="outline" disabled>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
+                    )}
+
+                    {/* Deadline */}
+                    {onboardingStatus.onboardingDeadline && (
+                      <div className="rounded-md bg-muted/50 p-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-sm">
+                            <span className="font-medium">Onboarding deadline: </span>
+                            <span className={onboardingStatus.onboardingDeadline.isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-muted-foreground'}>
+                              {onboardingStatus.onboardingDeadline.isOverdue
+                                ? `${Math.abs(onboardingStatus.onboardingDeadline.daysRemaining)} days overdue`
+                                : `${onboardingStatus.onboardingDeadline.daysRemaining} days remaining`}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-      </ResponsiveSection>
-    </WorkspaceLayout>
+    </CanvasHubPage>
+  );
+}
+
+function EmployeeTaxDocuments() {
+  const { data: taxForms, isLoading: taxFormsLoading } = useQuery<{
+    employeeId: string;
+    employeeName: string;
+    forms: Array<{
+      id: string;
+      formType: string;
+      taxYear: number;
+      wages: string;
+      federalTaxWithheld: string;
+      stateTaxWithheld: string;
+      generatedAt: string;
+      isActive: boolean;
+    }>;
+  }>({
+    queryKey: ['/api/payroll/my-tax-forms'],
+  });
+
+  const handleDownload = async (formId: string, formType: string, taxYear: number) => {
+    try {
+      const response = await fetch(`/api/payroll/my-tax-forms/${formId}/download`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${formType.toUpperCase()}-${taxYear}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Download failed:', err);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle data-testid="text-documents-title">Tax Documents & Payslips</CardTitle>
+        <CardDescription>Download your W-2, 1099-NEC, and other tax documents</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {taxFormsLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : taxForms?.forms && taxForms.forms.length > 0 ? (
+            taxForms.forms.map((form) => (
+              <div
+                key={form.id}
+                data-testid={`card-tax-form-${form.id}`}
+                className="flex items-center justify-between gap-2 p-4 rounded-lg border border-border"
+              >
+                <div className="flex items-center gap-3 flex-wrap">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">
+                      {form.formType === 'w2' ? 'Form W-2' : 'Form 1099-NEC'} — Tax Year {form.taxYear}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Wages: ${parseFloat(form.wages || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {form.federalTaxWithheld && ` | Federal Tax: $${parseFloat(form.federalTaxWithheld).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                    </p>
+                    {form.generatedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Generated {new Date(form.generatedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid={`button-download-tax-form-${form.id}`}
+                  onClick={() => handleDownload(form.id, form.formType, form.taxYear)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+              </div>
+            ))
+          ) : (
+            <UniversalEmptyState
+              icon={<FileText size={32} />}
+              title="No Tax Documents"
+              description="No tax documents have been generated yet. W-2 or 1099-NEC forms will appear here once your employer generates them for the tax year."
+            />
+          )}
+
+          <div className="flex items-center justify-between gap-2 p-4 rounded-lg border border-border">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-blue-500" />
+              <div>
+                <p className="font-medium">Employment Contract</p>
+                <p className="text-sm text-muted-foreground">Signed on onboarding</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" data-testid="button-download-contract">
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

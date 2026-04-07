@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -25,14 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Textarea } from '@/components/ui/textarea';
 
 interface Exception {
@@ -123,7 +118,7 @@ export default function ResolutionInboxPage() {
   const { data: exceptions, isLoading: exceptionsLoading, refetch } = useQuery<Exception[]>({
     queryKey: ['/api/exceptions', filter],
     queryFn: async () => {
-      const response = await fetch(`/api/exceptions?filter=${encodeURIComponent(filter)}`, {
+      const response = await secureFetch(`/api/exceptions?filter=${encodeURIComponent(filter)}`, {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch exceptions');
@@ -133,10 +128,7 @@ export default function ResolutionInboxPage() {
 
   const resolveMutation = useMutation({
     mutationFn: async ({ id, action, notes }: { id: string; action: string; notes: string }) => {
-      return apiRequest(`/api/exceptions/${id}/resolve`, {
-        method: 'POST',
-        body: JSON.stringify({ action, notes }),
-      });
+      return apiRequest('POST', `/api/exceptions/${id}/resolve`, { action, notes });
     },
     onSuccess: () => {
       toast({ title: 'Exception resolved', description: 'The exception has been marked as resolved.' });
@@ -153,7 +145,7 @@ export default function ResolutionInboxPage() {
 
   const retryMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/exceptions/${id}/retry`, { method: 'POST' });
+      return apiRequest('POST', `/api/exceptions/${id}/retry`);
     },
     onSuccess: () => {
       toast({ title: 'Retry scheduled', description: 'The operation will be retried.' });
@@ -175,22 +167,17 @@ export default function ResolutionInboxPage() {
     return `${days}d ago`;
   };
 
-  return (
-    <div className="container mx-auto p-6 max-w-7xl" data-testid="page-resolution-inbox">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Resolution Inbox</h1>
-          <p className="text-muted-foreground">
-            Manage exceptions and ensure automation health
-          </p>
-        </div>
-        <Button onClick={() => refetch()} variant="outline" data-testid="button-refresh">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'resolution-inbox',
+    title: 'Resolution Inbox',
+    subtitle: 'Manage exceptions and ensure automation health',
+    category: 'operations',
+  };
 
-      <Card className="mb-6" data-testid="card-automation-health">
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div data-testid="page-resolution-inbox" className="space-y-6">
+      <Card data-testid="card-automation-health">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Shield className="w-5 h-5" />
@@ -207,20 +194,23 @@ export default function ResolutionInboxPage() {
               <span>Checking automation health...</span>
             </div>
           ) : healthData ? (
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
               <div className="flex items-center gap-3">
-                <div className={`w-4 h-4 rounded-full ${
+                <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full shrink-0 ${
                   healthData.status === 'GREEN' ? 'bg-green-500' :
                   healthData.status === 'YELLOW' ? 'bg-yellow-500' : 'bg-red-500'
                 }`} data-testid="status-health-indicator" />
-                <span className="font-semibold text-lg" data-testid="text-health-status">
+                <span className="font-semibold text-sm sm:text-lg" data-testid="text-health-status">
                   {healthData.status}
                 </span>
+                <span className="text-xs sm:text-sm text-muted-foreground sm:hidden">
+                  {healthData.message}
+                </span>
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground hidden sm:block">
                 {healthData.message}
               </div>
-              <div className="flex gap-4 ml-auto text-sm">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 sm:ml-auto text-xs sm:text-sm">
                 <div>
                   <span className="text-muted-foreground">Pending: </span>
                   <span className="font-medium" data-testid="text-pending-count">{healthData.pendingExceptions}</span>
@@ -231,7 +221,7 @@ export default function ResolutionInboxPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Token: </span>
-                  <Badge variant={healthData.tokenHealth === 'valid' ? 'default' : 'destructive'}>
+                  <Badge variant={healthData.tokenHealth === 'valid' ? 'default' : 'destructive'} className="text-[10px] sm:text-xs">
                     {healthData.tokenHealth}
                   </Badge>
                 </div>
@@ -243,48 +233,48 @@ export default function ResolutionInboxPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-6">
         <Card data-testid="card-stat-pending">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{statsData?.pending || 0}</p>
+          <CardContent className="pt-3 sm:pt-4 pb-3 sm:pb-4 px-3 sm:px-4">
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
+                <p className="text-lg sm:text-2xl font-bold">{statsData?.pending || 0}</p>
               </div>
-              <Clock className="w-8 h-8 text-yellow-500" />
+              <Clock className="w-5 h-5 sm:w-8 sm:h-8 text-yellow-500 shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card data-testid="card-stat-in-review">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">In Review</p>
-                <p className="text-2xl font-bold">{statsData?.inReview || 0}</p>
+          <CardContent className="pt-3 sm:pt-4 pb-3 sm:pb-4 px-3 sm:px-4">
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">In Review</p>
+                <p className="text-lg sm:text-2xl font-bold">{statsData?.inReview || 0}</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-orange-500" />
+              <AlertTriangle className="w-5 h-5 sm:w-8 sm:h-8 text-orange-500 shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card data-testid="card-stat-resolved">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Resolved</p>
-                <p className="text-2xl font-bold">{statsData?.resolved || 0}</p>
+          <CardContent className="pt-3 sm:pt-4 pb-3 sm:pb-4 px-3 sm:px-4">
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Resolved</p>
+                <p className="text-lg sm:text-2xl font-bold">{statsData?.resolved || 0}</p>
               </div>
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
+              <CheckCircle2 className="w-5 h-5 sm:w-8 sm:h-8 text-green-500 shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card data-testid="card-stat-escalated">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Escalated</p>
-                <p className="text-2xl font-bold">{statsData?.escalated || 0}</p>
+          <CardContent className="pt-3 sm:pt-4 pb-3 sm:pb-4 px-3 sm:px-4">
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Escalated</p>
+                <p className="text-lg sm:text-2xl font-bold">{statsData?.escalated || 0}</p>
               </div>
-              <XCircle className="w-8 h-8 text-red-500" />
+              <XCircle className="w-5 h-5 sm:w-8 sm:h-8 text-red-500 shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -292,22 +282,22 @@ export default function ResolutionInboxPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle>Exception Queue</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <CardTitle className="text-base sm:text-lg">Exception Queue</CardTitle>
             <div className="flex items-center gap-2">
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search exceptions..."
+                  placeholder="Search..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 w-64"
+                  className="pl-9 w-full sm:w-48 md:w-64"
                   data-testid="input-search"
                 />
               </div>
               <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-36" data-testid="select-filter">
-                  <Filter className="w-4 h-4 mr-2" />
+                <SelectTrigger className="w-20 sm:w-36" data-testid="select-filter">
+                  <Filter className="w-4 h-4 sm:mr-2" />
                   <SelectValue placeholder="Filter" />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,29 +329,29 @@ export default function ResolutionInboxPage() {
                 return (
                   <div
                     key={exception.id}
-                    className="flex items-center gap-4 p-4 border rounded-lg hover-elevate cursor-pointer"
+                    className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4 border rounded-lg hover-elevate cursor-pointer"
                     onClick={() => setSelectedException(exception)}
                     data-testid={`exception-row-${exception.id}`}
                   >
-                    <div className={`w-2 h-2 rounded-full ${PRIORITY_COLORS[exception.priority || 'medium']}`} />
-                    <Icon className="w-5 h-5 text-muted-foreground" />
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_COLORS[exception.priority || 'medium']}`} />
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0 hidden sm:block" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="font-medium text-xs sm:text-sm truncate">
                           {ERROR_TYPE_LABELS[exception.errorType] || exception.errorType}
                         </span>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">
                           {exception.status}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
                         {exception.errorMessage}
                       </p>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs sm:text-sm text-muted-foreground shrink-0 hidden sm:block">
                       {getAgeDisplay(exception.createdAt)}
                     </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                   </div>
                 );
               })}
@@ -370,10 +360,10 @@ export default function ResolutionInboxPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedException} onOpenChange={() => setSelectedException(null)}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <UniversalModal open={!!selectedException} onOpenChange={() => setSelectedException(null)}>
+        <UniversalModalContent size="lg">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
               {selectedException && ERROR_TYPE_ICONS[selectedException.errorType] && (
                 (() => {
                   const Icon = ERROR_TYPE_ICONS[selectedException.errorType];
@@ -381,11 +371,11 @@ export default function ResolutionInboxPage() {
                 })()
               )}
               {selectedException && (ERROR_TYPE_LABELS[selectedException.errorType] || selectedException.errorType)}
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               Review and resolve this exception
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           
           {selectedException && (
             <div className="space-y-4">
@@ -435,7 +425,7 @@ export default function ResolutionInboxPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <UniversalModalFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -469,9 +459,10 @@ export default function ResolutionInboxPage() {
               )}
               Mark Resolved
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+      </div>
+    </CanvasHubPage>
   );
 }

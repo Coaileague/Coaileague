@@ -126,7 +126,7 @@ export function MessageTextWithIcons({ text, className = "" }) {
 
 **Usage:**
 - Replaces `🔨` in **system announcement text**
-- Works for messages like: "*** 🔨 Root Brigido has joined the HelpDesk"
+- Works for messages like: "*** 🔨 Root Admin has joined the HelpDesk"
 - Displays actual gavel icon inline
 
 ---
@@ -160,7 +160,7 @@ export function MessageTextWithIcons({ text, className = "" }) {
 
 ### ✅ System Announcements
 ```
-*** [🔨icon] Root Brigido has joined the HelpDesk
+*** [🔨icon] Root Admin has joined the HelpDesk
 *** [🔨icon] Admin Sarah has left the room
 ```
 
@@ -186,7 +186,7 @@ Online:
 ```
 Backend (formatUserDisplayName)
   ↓
-Sends: "🔨 Root Brigido"
+Sends: "🔨 Root Admin"
   ↓
 Frontend receives message
   ↓
@@ -194,7 +194,7 @@ Detects 🔨 marker
   ↓
 Replaces with <img src="gavel.png" />
   ↓
-User sees: [tiny gavel icon] Root Brigido
+User sees: [tiny gavel icon] Root Admin
 ```
 
 ---
@@ -258,11 +258,11 @@ User sees: [tiny gavel icon] Root Brigido
 
 ### System Message:
 ```
-*** 🔨 Root Brigido has joined the HelpDesk
+*** 🔨 Root Admin has joined the HelpDesk
 ```
 ↓ Becomes ↓
 ```
-*** [gavel icon] Root Brigido has joined the HelpDesk
+*** [gavel icon] Root Admin has joined the HelpDesk
 ```
 
 ### Chat Message:
@@ -276,7 +276,7 @@ User sees: [tiny gavel icon] Root Brigido
 
 ### Console Log:
 ```
-✅ 🔨 Root Brigido joined HelpDesk (platform staff - root)
+✅ 🔨 Root Admin joined HelpDesk (platform staff - root)
 ```
 (Stays as-is in console - readable marker!)
 

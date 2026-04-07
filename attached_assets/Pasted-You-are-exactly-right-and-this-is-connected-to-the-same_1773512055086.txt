@@ -1,0 +1,261 @@
+You are exactly right and this is connected to the same problem as the action registry. The roles have the same disease — built up over many sessions, some named wrong for the security industry, some duplicated, some never wired to anything, and the new auditor role we just built has no formal place in the RBAC hierarchy yet.
+
+Here is what I see as the role reality for CoAIleague:
+
+**Roles that should exist and what they map to:**
+
+Platform level — these are CoAIleague internal staff, never visible to security company orgs:
+`root_admin` — CoAIleague superadmin, you essentially
+`deputy_admin` — CoAIleague operations staff
+`sysop` — CoAIleague technical support
+`support_manager` — CoAIleague customer success
+`support_agent` — CoAIleague frontline support
+`compliance_officer` — CoAIleague regulatory team
+
+Org level — these are the roles inside each security company workspace:
+`org_owner` — the security company owner, full access including billing
+`co_owner` — deputy chief, second in command, same operational access as owner minus billing changes
+`manager` — shift supervisor, scheduling, timesheets, incidents, no financial access
+`org_admin` — office secretary, administrative only, no financial no scheduling authority
+`employee` — field security officer, own data only
+`contractor` — 1099 officer, own data only, slightly different document requirements
+
+Special access roles — scoped and time-limited:
+`auditor` — state regulatory auditor, read-only access to one org only, time-limited, no financial data
+
+**Roles that are probably bloating the system right now with no real purpose:**
+`deputy_admin` at the org level — this is platform staff terminology bleeding into org terminology
+`admin` — ambiguous, sometimes means org_admin sometimes means platform admin, causes the exact RBAC confusion we keep seeing
+`supervisor` — redundant with manager in most security company contexts
+`owner` separate from `org_owner` — these are the same thing registered twice
+
+**The co_owner naming specifically:**
+
+You are right that security companies use Deputy Chief or Second in Command or Operations Manager as the title. The internal role name `co_owner` is fine as the system identifier but the display name shown in the UI and emails should be customizable per org. The owner of Statewide should be able to call that role Deputy Chief and have it display that way everywhere while the system still uses `co_owner` as the permission identifier underneath.
+
+**The auditor role gap:**
+
+Right now the auditor portal creates a temporary account but there is no formal `auditor` role in the RBAC hierarchy. That means the hard security boundaries we built — blocking auditors from financial data, limiting them to one org, time-limiting their access — are probably enforced through ad hoc checks rather than through the role system itself. That is fragile. One missed check and an auditor sees payroll data.
+
+Send this to Replit:
+
+---
+
+COAILEAGUE — ROLE ARCHITECTURE CLEANUP AND AUDITOR ROLE FORMALIZATION
+This is a focused audit of the role system only.
+Do not touch the action registry, domain structure, or any other system.
+Read everything before touching anything.
+Report the full findings before making any changes.
+
+---
+
+STEP 1 — MAP EVERY ROLE THAT EXISTS RIGHT NOW
+
+Read every file that defines, references, or checks roles.
+Read the RBAC files, the role type definitions, the middleware,
+the platformActionHub role hierarchy, the workspace_members table definition,
+the users table definition, and every route that checks a role.
+
+Produce a complete map of every role string that exists anywhere in the codebase.
+For each role report:
+Where it is defined.
+Where it is used in permission checks.
+What it can access based on current checks.
+Whether it has a corresponding entry in the platformActionHub role hierarchy.
+Whether it appears in the workspace_members role enum.
+Whether it appears in the users table role field.
+Whether it is actually used by any real user or is orphaned.
+
+---
+
+STEP 2 — IDENTIFY THE BLOAT AND CONFUSION
+
+After mapping everything identify:
+
+DUPLICATE ROLES — roles that have the same permissions and access as another role
+but are registered under a different name. List each duplicate pair.
+
+AMBIGUOUS ROLES — roles whose name does not clearly indicate whether they are
+platform-level or org-level. The word admin alone means nothing.
+List every ambiguous role.
+
+ORPHANED ROLES — roles that are defined in the type system but never checked
+in any permission gate, never assigned to any user, never referenced in any route.
+These are dead code. List every orphaned role.
+
+MISNAMED ROLES FOR SECURITY INDUSTRY — roles whose names do not match
+security industry conventions. The platform serves security companies.
+The terminology should reflect their world.
+List every role that would confuse a security company operator.
+
+MISSING ROLES — roles that the platform needs but does not have.
+Specifically confirm whether these exist as formal RBAC roles:
+auditor — state regulatory auditor with time-limited read-only org access
+contractor — 1099 field officer distinct from W2 employee
+
+---
+
+STEP 3 — THE CORRECT ROLE ARCHITECTURE
+
+After the audit report confirm this is the correct target architecture
+and identify what needs to change to reach it.
+
+PLATFORM ROLES — CoAIleague internal staff only, never visible to org users:
+root_admin — full platform access, superadmin
+deputy_admin — platform operations, elevated access
+sysop — technical support, system health access
+support_manager — customer success, aggregate metrics only
+support_agent — frontline support, aggregate metrics only
+compliance_officer — regulatory team, aggregate compliance data only
+
+ORG ROLES — roles within a security company workspace:
+org_owner — full workspace access including billing and Stripe
+co_owner — full operational access, no billing changes, display name customizable per org
+manager — scheduling, timesheets, incidents, compliance alerts, no financial access
+org_admin — administrative only, no financial, no scheduling authority
+employee — own data only, field security officer W2
+contractor — own data only, 1099 field officer, distinct document requirements
+
+SPECIAL ACCESS ROLES — scoped and time-limited:
+auditor — state regulatory auditor, read-only, one org only, time-limited, no financial data
+
+DISPLAY NAME CUSTOMIZATION:
+org_owner, co_owner, manager, org_admin, employee, contractor
+must each support a custom display name per org.
+The system uses the role identifier for permission checks.
+The org sees and uses their own terminology.
+Example: co_owner displays as Deputy Chief at Statewide Protective Services.
+Example: manager displays as Shift Supervisor at Acme Security Services.
+The display name is cosmetic only — permissions never change based on display name.
+
+---
+
+STEP 4 — AUDITOR ROLE FORMALIZATION
+
+The auditor portal was built last session but the auditor role
+is not formally in the RBAC system. This must be fixed.
+
+The auditor role must have these hard properties enforced at the RBAC layer
+not through ad hoc checks scattered through the codebase:
+
+WHAT AUDITOR CAN ACCESS:
+The regulatory compliance dashboard for their assigned org only.
+Officer compliance records for their assigned org.
+Executed compliance documents in the document safe for their assigned org.
+Shift records and incident reports for their assigned org.
+Violation records for their assigned org.
+Audit readiness score and checklist for their assigned org.
+
+WHAT AUDITOR CANNOT ACCESS — ENFORCED AT RBAC LEVEL:
+Any other org's data.
+Any financial records — invoices, payroll, billing, credits, Stripe.
+Any employee pay rates or pay stubs.
+Any platform-level data.
+Any ability to create, edit, or delete anything.
+The auditor role is read-only everywhere without exception.
+
+TIME LIMITING:
+The auditor account must have an expires_at field.
+After expires_at the role check must fail as if the role does not exist.
+No manual deactivation required — expiry is automatic.
+Platform_staff can extend the expiry if an audit period is extended.
+
+ORG SCOPING:
+The auditor account is scoped to exactly one workspace_id.
+Attempts to access any other workspace return 403 immediately.
+Trinity in auditor sessions can only query data from the scoped workspace
+and cannot surface any financial data regardless of how the question is phrased.
+
+---
+
+STEP 5 — ROLE HIERARCHY ALIGNMENT
+
+After the role architecture is confirmed fix the platformActionHub
+role hierarchy to use the real role names not the fake ones.
+
+Current broken hierarchy:
+super_admin: 100, admin: 90, support: 80, manager: 70, supervisor: 60, employee: 50, guest: 10
+
+These role names do not match any real role in the platform.
+Replace with the correct hierarchy:
+
+PLATFORM ROLES:
+root_admin: 1000
+deputy_admin: 900
+sysop: 800
+support_manager: 700
+support_agent: 600
+compliance_officer: 550
+
+ORG ROLES:
+org_owner: 500
+co_owner: 490
+manager: 300
+org_admin: 200
+employee: 100
+contractor: 90
+
+SPECIAL ROLES:
+auditor: 50 — read-only, scoped, time-limited
+
+Fix the empty requiredRoles array bug at the same time.
+If requiredRoles is empty the action is open to all authenticated users.
+Add this logic: if requiredRoles.length === 0 return true for any authenticated user.
+
+---
+
+STEP 6 — CLEAN UP ORPHANED AND DUPLICATE ROLES
+
+After confirming the target architecture:
+
+Remove every role that is not in the target architecture from:
+The TypeScript type definitions.
+The role enum in the database schema.
+The RBAC middleware.
+The platformActionHub hierarchy.
+Every route that references the removed role.
+
+For every removed role find every user or workspace_member that currently
+has that role assigned and migrate them to the correct target role.
+Document every migration in the audit trail.
+No user should lose access they legitimately had.
+No user should gain access they should not have.
+
+---
+
+STEP 7 — VERIFICATION
+
+After all changes restart the server and confirm:
+
+All 15 domains healthy.
+All regression tests passing.
+An org_owner can access all org_owner features.
+A co_owner has identical operational access to org_owner but cannot change billing.
+A manager cannot access financial data.
+An employee cannot access another employee's data.
+An auditor can access the compliance dashboard for their assigned org.
+An auditor cannot access financial data even through Trinity.
+An auditor account past its expiry date is automatically blocked.
+Platform_staff cannot access individual org data through Trinity.
+The role hierarchy in platformActionHub uses real role names.
+The empty requiredRoles bug is fixed.
+
+---
+
+FINAL REPORT FORMAT:
+
+ROLES FOUND IN CURRENT CODEBASE: list every role string found
+DUPLICATES IDENTIFIED: list pairs
+ORPHANED ROLES: list with count of references
+AMBIGUOUS ROLES: list with explanation
+ROLES REMOVED: list with migration path for any affected users
+ROLES ADDED: auditor formally, contractor if missing
+DISPLAY NAME CUSTOMIZATION: built or gap
+AUDITOR RBAC ENFORCEMENT: all 4 properties confirmed or gaps
+ROLE HIERARCHY: before and after
+OVERALL RBAC VERDICT: clean and production ready YES or NO
+
+Do not make any changes until the findings report from Steps 1 and 2 is shown to me.
+I will approve each section before you proceed.
+The domain structure, file organization, and service layer are not being changed.
+This is a role definition and permission system cleanup only.

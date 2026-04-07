@@ -31,10 +31,12 @@ import {
   Database,
   RefreshCw,
   Link2,
+  ShieldAlert,
 } from 'lucide-react';
 
+import type { WorkspaceRole } from '@/lib/roleHierarchy';
+export type { WorkspaceRole };
 export type PlatformRole = 'root_admin' | 'root' | 'sysop' | 'deputy_admin' | 'deputy_assistant' | 'bot' | 'guest' | 'support_manager' | 'support_agent' | 'none';
-export type WorkspaceRole = 'owner' | 'admin' | 'manager' | 'employee';
 export type DevicePlatform = 'mobile' | 'tablet' | 'desktop';
 
 export interface QuickAction {
@@ -163,7 +165,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'org-chatrooms',
     label: 'Team Chat',
     icon: MessageSquare,
-    color: 'text-blue-400',
+    color: 'text-foreground',
     category: 'support',
     desktopPath: '/chatrooms',
     mobilePath: '/chatrooms',
@@ -177,10 +179,22 @@ export const quickActionsRegistry: QuickAction[] = [
     icon: Mail,
     color: 'text-primary',
     category: 'support',
-    desktopPath: '/support',
+    desktopPath: '/helpdesk',
     isExternal: false,
     testId: 'quick-email',
-    description: 'Contact support via email or ticket'
+    description: 'Get help from HelpAI or a support agent'
+  },
+  {
+    id: 'support-console',
+    label: 'Support Console',
+    icon: ShieldAlert,
+    color: 'text-yellow-600',
+    category: 'support',
+    desktopPath: '/admin/support-console',
+    requiresPlatformRoles: ['root_admin', 'sysop', 'deputy_admin'],
+    requiresAuth: true,
+    testId: 'quick-support-console',
+    description: 'Platform-wide support ops — Trinity + human agents, ticket triage, workspace deep-dive'
   },
 
   // ========================================
@@ -192,7 +206,7 @@ export const quickActionsRegistry: QuickAction[] = [
     icon: Users,
     color: 'text-primary',
     category: 'platform',
-    desktopPath: '/platform-users',
+    desktopPath: '/admin/end-user-controls',
     requiresPlatformRoles: ['root_admin', 'sysop'],
     requiresAuth: true,
     testId: 'quick-users',
@@ -202,7 +216,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'platform-workspaces',
     label: 'Workspaces',
     icon: Building2,
-    color: 'text-blue-400',
+    color: 'text-foreground',
     category: 'platform',
     desktopPath: '/platform-admin',
     requiresPlatformRoles: ['root_admin', 'sysop'],
@@ -214,7 +228,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'audit-logs',
     label: 'Audit Logs',
     icon: ScrollText,
-    color: 'text-blue-400',
+    color: 'text-foreground',
     category: 'platform',
     desktopPath: '/my-audit-record',
     requiresAuth: true,
@@ -225,13 +239,26 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'feature-flags',
     label: 'Feature Flags',
     icon: Flag,
-    color: 'text-blue-500',
+    color: 'text-foreground',
     category: 'platform',
     desktopPath: '/settings',
     requiresPlatformRoles: ['root_admin', 'sysop'],
     requiresAuth: true,
     testId: 'quick-flags',
     description: 'Manage feature flags and rollouts'
+  },
+
+  {
+    id: 'breach-response',
+    label: 'Breach Response',
+    icon: ShieldAlert,
+    color: 'text-red-500 dark:text-red-400',
+    category: 'platform',
+    desktopPath: '/admin/breach-response',
+    requiresPlatformRoles: ['root_admin', 'sysop'],
+    requiresAuth: true,
+    testId: 'quick-breach-response',
+    description: 'Security incident response SOP — open an incident, review procedures'
   },
 
   // ========================================
@@ -267,7 +294,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'performance',
     label: 'Performance',
     icon: Activity,
-    color: 'text-blue-400',
+    color: 'text-foreground',
     category: 'operations',
     desktopPath: '/root-admin-dashboard#system-stats',
     isHashAnchor: true,
@@ -280,7 +307,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'webhooks',
     label: 'Webhooks',
     icon: Webhook,
-    color: 'text-blue-400',
+    color: 'text-foreground',
     category: 'operations',
     desktopPath: '/settings',
     requiresPlatformRoles: ['root_admin', 'sysop', 'deputy_admin'],
@@ -320,7 +347,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'time-tracking',
     label: 'Time Clock',
     icon: Clock,
-    color: 'text-blue-400',
+    color: 'text-foreground',
     category: 'core',
     desktopPath: '/time-tracking',
     requiresAuth: true,
@@ -331,7 +358,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'invoices',
     label: 'Invoices',
     icon: Receipt,
-    color: 'text-blue-400',
+    color: 'text-foreground',
     category: 'core',
     desktopPath: '/invoices',
     requiresAuth: true,
@@ -353,7 +380,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'hiring',
     label: 'Hiring',
     icon: UserPlus,
-    color: 'text-blue-500',
+    color: 'text-foreground',
     category: 'core',
     desktopPath: '/employees',
     requiresAuth: true,
@@ -364,7 +391,7 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'training',
     label: 'Training',
     icon: GraduationCap,
-    color: 'text-blue-500',
+    color: 'text-foreground',
     category: 'core',
     desktopPath: '/training',
     requiresAuth: true,
@@ -404,7 +431,7 @@ export const quickActionsRegistry: QuickAction[] = [
     color: 'text-green-500',
     category: 'operations',
     desktopPath: '/integrations',
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-connect-quickbooks',
     description: 'Connect your QuickBooks account for automated billing and payroll'
@@ -413,10 +440,10 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'run-data-sync',
     label: 'Sync Data',
     icon: Users,
-    color: 'text-blue-500',
+    color: 'text-foreground',
     category: 'operations',
     desktopPath: '/integrations',
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-run-sync',
     description: 'Run initial data sync from connected integrations'
@@ -428,7 +455,7 @@ export const quickActionsRegistry: QuickAction[] = [
     color: 'text-primary',
     category: 'core',
     desktopPath: '/onboarding',
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-onboarding-progress',
     description: 'View your workspace setup checklist and progress'
@@ -440,7 +467,7 @@ export const quickActionsRegistry: QuickAction[] = [
     color: 'text-primary',
     category: 'core',
     desktopPath: '/employees',
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-import-employees',
     description: 'Import employees from QuickBooks or spreadsheet'
@@ -452,7 +479,7 @@ export const quickActionsRegistry: QuickAction[] = [
     color: 'text-green-400',
     category: 'operations',
     desktopPath: '/integrations',
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-integration-health',
     description: 'Monitor connected integration status and health'
@@ -464,7 +491,7 @@ export const quickActionsRegistry: QuickAction[] = [
     color: 'text-green-500',
     category: 'core',
     desktopPath: '/accounting-integrations',
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-connect-quickbooks',
     description: 'Connect QuickBooks for automated billing and payroll sync'
@@ -473,11 +500,11 @@ export const quickActionsRegistry: QuickAction[] = [
     id: 'run-data-sync',
     label: 'Run Data Sync',
     icon: RefreshCw,
-    color: 'text-blue-500',
+    color: 'text-foreground',
     category: 'core',
     desktopPath: '/accounting-integrations#sync',
     isHashAnchor: true,
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-run-data-sync',
     description: 'Manually trigger data synchronization with connected integrations'
@@ -489,7 +516,7 @@ export const quickActionsRegistry: QuickAction[] = [
     color: 'text-purple-500',
     category: 'core',
     desktopPath: '/workspace-onboarding',
-    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresWorkspaceRoles: ['org_owner', 'co_owner', 'org_manager'],
     requiresAuth: true,
     testId: 'quick-migration-status',
     description: 'View data migration progress and automation setup status'

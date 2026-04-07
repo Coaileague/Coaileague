@@ -16,6 +16,16 @@ import { geminiClient } from './providers/geminiClient';
 import { db } from '../../db';
 import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
+import { typedCount, typedQuery } from '../../lib/typedSql';
+import {
+  notifications,
+  maintenanceAlerts,
+  maintenanceAcknowledgments,
+  platformUpdates,
+  userPlatformUpdateViews
+} from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('notificationDiagnostics');
 
 // ============================================================================
 // DIAGNOSTIC TYPES
@@ -62,100 +72,109 @@ export interface NotificationIssue {
 async function collectNotificationMetrics(): Promise<Record<string, any>> {
   try {
     // Count unread notifications
-    const unreadResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM notifications WHERE is_read = false
-    `);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [unreadResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(sql`${notifications.isRead} = false`);
     
     // Count notifications by type in last 24h
-    const recentResult = await db.execute(sql`
-      SELECT type, COUNT(*) as count FROM notifications 
-      WHERE created_at > NOW() - INTERVAL '24 hours'
-      GROUP BY type
-    `);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const recentResult = await db
+      .select({ 
+        type: notifications.type, 
+        count: sql<number>`count(*)::int` 
+      })
+      .from(notifications)
+      .where(sql`${notifications.createdAt} > NOW() - INTERVAL '24 hours'`)
+      .groupBy(notifications.type);
 
     return {
-      unreadCount: parseInt((unreadResult.rows?.[0] as any)?.count || '0'),
-      recent24h: recentResult.rows || [],
+      unreadCount: Number(unreadResult?.count || 0),
+      recent24h: recentResult || [],
       status: 'collected'
     };
   } catch (error: any) {
-    return { status: 'error', error: error.message };
+    return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
 async function collectMaintenanceAlertMetrics(): Promise<Record<string, any>> {
   try {
     // Active maintenance alerts
-    const activeResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM maintenance_alerts 
-      WHERE is_active = true 
-      AND (expires_at IS NULL OR expires_at > NOW())
-    `);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [activeResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(maintenanceAlerts)
+      .where(sql`${maintenanceAlerts.isActive} = true AND (${maintenanceAlerts.expiresAt} IS NULL OR ${maintenanceAlerts.expiresAt} > NOW())`);
 
     // Acknowledgment rate
-    const ackResult = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: COUNT( | Tables: maintenance_acknowledgments, maintenance_alerts | Verified: 2026-03-23
+    const ackResult = await typedQuery(sql`
       SELECT 
         (SELECT COUNT(DISTINCT user_id) FROM maintenance_acknowledgments) as acknowledged_users,
         (SELECT COUNT(*) FROM maintenance_alerts WHERE is_active = true) as active_alerts
     `);
 
     return {
-      activeAlerts: parseInt((activeResult.rows?.[0] as any)?.count || '0'),
-      acknowledgedUsers: parseInt((ackResult.rows?.[0] as any)?.acknowledged_users || '0'),
+      activeAlerts: Number(activeResult?.count || 0),
+      acknowledgedUsers: parseInt((ackResult as any[])[0]?.acknowledged_users || '0'),
       status: 'collected'
     };
   } catch (error: any) {
-    return { status: 'error', error: error.message };
+    return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
 async function collectWhatsNewMetrics(): Promise<Record<string, any>> {
   try {
     // Unviewed entries
-    const entriesResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM whats_new_entries 
-      WHERE is_active = true
-    `);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [entriesResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(platformUpdates)
+      .where(sql`${platformUpdates.isNew} = true`);
 
-    // Recent views
-    const viewsResult = await db.execute(sql`
-      SELECT COUNT(DISTINCT user_id) as unique_viewers 
-      FROM whats_new_views 
-      WHERE viewed_at > NOW() - INTERVAL '24 hours'
-    `);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [viewsResult] = await db
+      .select({ uniqueViewers: sql<number>`count(distinct ${userPlatformUpdateViews.userId})::int` })
+      .from(userPlatformUpdateViews)
+      .where(sql`${userPlatformUpdateViews.viewedAt} > NOW() - INTERVAL '24 hours'`);
 
     return {
-      activeEntries: parseInt((entriesResult.rows?.[0] as any)?.count || '0'),
-      recentViewers: parseInt((viewsResult.rows?.[0] as any)?.unique_viewers || '0'),
+      activeEntries: Number(entriesResult?.count || 0),
+      recentViewers: Number(viewsResult?.uniqueViewers || 0),
       status: 'collected'
     };
   } catch (error: any) {
-    return { status: 'error', error: error.message };
+    return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
 async function collectClearOperationMetrics(): Promise<Record<string, any>> {
   try {
     // Recent acknowledgments (indicates clear operations working)
-    const recentAcks = await db.execute(sql`
-      SELECT COUNT(*) as count FROM maintenance_acknowledgments 
-      WHERE acknowledged_at > NOW() - INTERVAL '1 hour'
-    `);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [recentAcks] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(maintenanceAcknowledgments)
+      .where(sql`${maintenanceAcknowledgments.acknowledgedAt} > NOW() - INTERVAL '1 hour'`);
 
     // Recent read notifications
-    const recentReads = await db.execute(sql`
-      SELECT COUNT(*) as count FROM notifications 
-      WHERE is_read = true AND updated_at > NOW() - INTERVAL '1 hour'
-    `);
+    // Converted to Drizzle ORM: COUNT/GROUP BY → sql<number>`count(*)::int`
+    const [recentReads] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(sql`${notifications.isRead} = true AND ${notifications.updatedAt} > NOW() - INTERVAL '1 hour'`);
 
     return {
-      recentAcknowledgments: parseInt((recentAcks.rows?.[0] as any)?.count || '0'),
-      recentReads: parseInt((recentReads.rows?.[0] as any)?.count || '0'),
+      recentAcknowledgments: Number(recentAcks?.count || 0),
+      recentReads: Number(recentReads?.count || 0),
       clearOperationsWorking: true,
       status: 'collected'
     };
   } catch (error: any) {
-    return { status: 'error', error: error.message };
+    return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
@@ -227,7 +246,8 @@ async function analyzeClearOperationIssues(metrics: Record<string, any>): Promis
 
 async function performGeminiRootCauseAnalysis(
   issues: NotificationIssue[],
-  metrics: Record<string, any>
+  metrics: Record<string, any>,
+  workspaceId?: string
 ): Promise<{ analysis: string; recommendations: string[] }> {
   if (issues.length === 0) {
     return {
@@ -261,6 +281,7 @@ Provide:
 Format as a clear diagnostic report.`;
 
     const response = await geminiClient.generate({
+      workspaceId,
       featureKey: 'notification_diagnostics',
       systemPrompt: 'You are Trinity, an expert AI diagnostic agent.',
       userMessage: prompt,
@@ -278,7 +299,7 @@ Format as a clear diagnostic report.`;
     };
   } catch (error: any) {
     return {
-      analysis: `Gemini analysis unavailable: ${error.message}`,
+      analysis: `Gemini analysis unavailable: ${(error instanceof Error ? error.message : String(error))}`,
       recommendations: ['Run manual verification of notification endpoints']
     };
   }
@@ -288,7 +309,7 @@ Format as a clear diagnostic report.`;
 // MAIN DIAGNOSTIC FUNCTION
 // ============================================================================
 
-export async function runNotificationDiagnostics(): Promise<NotificationDiagnosticResult> {
+export async function runNotificationDiagnostics(workspaceId?: string): Promise<NotificationDiagnosticResult> {
   const startTime = Date.now();
   
   // Collect all metrics in parallel
@@ -320,7 +341,7 @@ export async function runNotificationDiagnostics(): Promise<NotificationDiagnost
   }
 
   // Get Gemini root cause analysis
-  const { analysis, recommendations } = await performGeminiRootCauseAnalysis(allIssues, allMetrics);
+  const { analysis, recommendations } = await performGeminiRootCauseAnalysis(allIssues, allMetrics, workspaceId);
 
   // Build component health reports
   const now = new Date();
@@ -379,9 +400,9 @@ export async function handleNotificationDiagnosticRequest(
   userId?: number,
   workspaceId?: string
 ): Promise<{ success: boolean; diagnostic: NotificationDiagnosticResult }> {
-  console.log('[NotificationDiagnostics] Running diagnostic for user:', userId);
+  log.info('[NotificationDiagnostics] Running diagnostic for user:', userId);
   
-  const diagnostic = await runNotificationDiagnostics();
+  const diagnostic = await runNotificationDiagnostics(workspaceId);
   
   // Report issues via platform event bus for Trinity awareness
   if (diagnostic.issues.length > 0) {
@@ -400,8 +421,8 @@ export async function handleNotificationDiagnosticRequest(
       },
       source: 'NotificationDiagnostics',
       timestamp: new Date()
-    });
-    console.log(`[NotificationDiagnostics] Found ${diagnostic.issues.length} issues, reported to event bus`);
+    }).catch((err) => log.warn('[notificationDiagnostics] Fire-and-forget failed:', err));
+    log.info(`[NotificationDiagnostics] Found ${diagnostic.issues.length} issues, reported to event bus`);
   }
 
   return { success: true, diagnostic };

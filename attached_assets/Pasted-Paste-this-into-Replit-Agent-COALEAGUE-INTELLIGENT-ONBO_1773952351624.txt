@@ -1,0 +1,1479 @@
+Paste this into Replit Agent:
+
+---
+
+```
+COALEAGUE INTELLIGENT ONBOARDING PROGRESS SYSTEM
+TENANT + ENDUSER AUTOMATED ONBOARDING WITH
+TRINITY GUIDANCE + DOCUMENT COLLECTION +
+PROGRESS TRACKING + SIMULATED TESTING
+
+PRIME DIRECTIVE:
+Audit every existing onboarding implementation
+before touching anything.
+Read all onboarding routes, components,
+document management, and employee onboarding files.
+Map what exists vs what is missing.
+Build only what is genuinely absent.
+Then test everything with real simulated data
+in the Acme or Anvil dev workspace.
+Confirm every step produces real viewable
+documents saved to the database.
+
+═══════════════════════════════════════════════
+PHASE 0 — AUDIT FIRST
+═══════════════════════════════════════════════
+
+Read and map every existing file related to:
+1. Tenant workspace onboarding flow
+2. Employee onboarding checklist
+3. Document upload and storage system
+4. Document generation system
+5. ChatDock welcome message system
+6. Progress tracking or checklist components
+7. Milestone detection system
+8. Any existing invitation flow
+9. Any existing signature or acknowledgment system
+10. Current seed data for Acme/Anvil workspace
+
+Present findings:
+- What onboarding already exists and works
+- What is incomplete
+- What is missing entirely
+- What needs to be extended vs rebuilt
+- Current state of simulated documents
+  in Acme/Anvil — do they exist and open?
+
+═══════════════════════════════════════════════
+PHASE 1 — ONBOARDING DATABASE TABLES
+═══════════════════════════════════════════════
+
+Create these tables if they do not exist.
+Extend existing tables if they do exist.
+
+tenant_onboarding_progress table:
+- id, workspace_id (unique)
+- overall_progress_pct (0-100)
+- status (not_started | in_progress |
+  blocked | complete)
+- current_step (which step they are on)
+- steps_completed (jsonb array of step ids)
+- steps_remaining (jsonb array of step ids)
+- trinity_welcome_sent (boolean)
+- trinity_welcome_sent_at
+- last_trinity_nudge_at
+- company_profile_complete (boolean)
+- company_documents_complete (boolean)
+- billing_setup_complete (boolean)
+- first_client_added (boolean)
+- first_officer_added (boolean)
+- data_import_complete (boolean)
+- first_schedule_published (boolean)
+- compliance_setup_complete (boolean)
+- ready_for_operations (boolean)
+- completed_at
+- last_updated_at
+
+tenant_onboarding_steps table:
+- id
+- step_key (unique identifier for this step)
+- step_number (order in sequence)
+- title
+- description
+- required (boolean — blocks 100% if incomplete)
+- category (company | documents | team |
+  clients | billing | compliance | operations)
+- applies_to_tier (jsonb array — which tiers
+  need this step)
+- completion_trigger (what action marks complete)
+- trinity_prompt_template (what Trinity says
+  when guiding this step)
+- estimated_minutes (how long this takes)
+- depends_on_step (step_key of prerequisite)
+
+employee_onboarding_progress table:
+- id, workspace_id, employee_id (unique pair)
+- overall_progress_pct (0-100)
+- status (invited | started | in_progress |
+  blocked | complete)
+- trinity_welcome_sent (boolean)
+- trinity_welcome_sent_at
+- invitation_sent_at, invitation_accepted_at
+- steps_completed (jsonb array)
+- steps_remaining (jsonb array)
+- profile_complete (boolean)
+- photo_uploaded (boolean)
+- guard_card_uploaded (boolean)
+- state_id_uploaded (boolean)
+- employment_application_complete (boolean)
+- i9_complete (boolean)
+- w4_complete (boolean)
+- direct_deposit_complete (boolean)
+- drug_free_acknowledged (boolean)
+- background_check_authorized (boolean)
+- employee_handbook_signed (boolean)
+- sop_acknowledged (boolean)
+- equipment_issued (boolean)
+- emergency_contact_added (boolean)
+- references_submitted (boolean)
+- completed_at
+- last_updated_at
+
+employee_onboarding_steps table:
+- id
+- step_key (unique)
+- step_number
+- title
+- description
+- required (boolean)
+- category (identity | tax | compliance |
+  policy | equipment | emergency)
+- document_type (guard_card | state_id | ssn |
+  i9 | w4 | w9 | drug_free | background |
+  handbook | sop | equipment | application |
+  reference | emergency_contact | photo)
+- upload_required (boolean)
+- signature_required (boolean)
+- acknowledgment_required (boolean)
+- trinity_prompt_template
+- estimated_minutes
+- depends_on_step
+
+onboarding_documents table:
+- id, workspace_id
+- entity_type (tenant | employee)
+- entity_id (workspace_id or employee_id)
+- document_type (from list above)
+- document_category (identity | tax |
+  compliance | policy | company_license |
+  insurance | equipment | application)
+- title
+- description
+- status (pending | uploaded | generated |
+  signed | verified | expired)
+- file_path (actual file location)
+- file_size_bytes
+- file_type (pdf | jpg | png | docx)
+- original_filename
+- generated_by (trinity | employee | manager |
+  system)
+- uploaded_at
+- signed_at
+- signed_by
+- verified_at
+- verified_by
+- expiration_date
+- acknowledgment_text (for acknowledgments)
+- acknowledged_at
+- acknowledged_by
+- version (integer)
+- is_current_version (boolean)
+- previous_version_id
+- sha256_hash (tamper detection)
+- metadata (jsonb — any additional data)
+- workspace_id (always present — isolation)
+
+document_signatures table:
+- id, document_id
+- signer_user_id
+- signer_name
+- signer_role
+- signer_email
+- signature_type (electronic_acknowledgment)
+- ip_address
+- signed_at
+- signature_text (typed name as signature)
+- acknowledgment_statement (what they agreed to)
+- workspace_id
+
+═══════════════════════════════════════════════
+PHASE 2 — TENANT ONBOARDING STEPS DEFINITION
+═══════════════════════════════════════════════
+
+Seed tenant_onboarding_steps with these steps.
+These are the tasks the COMPANY must complete.
+
+STEP T01 — Company Profile
+step_key: company_profile
+step_number: 1
+title: "Company Information"
+description: "Add your company name, address,
+  phone, email, and basic business information"
+required: true
+category: company
+completion_trigger: workspace profile fields
+  are all populated
+estimated_minutes: 5
+trinity_prompt:
+  "Let us start with your company information.
+  I need your business name, address, phone,
+  and email. This appears on all your documents
+  and invoices."
+
+STEP T02 — Company License
+step_key: company_license
+step_number: 2
+title: "Security Company License"
+description: "Upload your Texas DPS security
+  company license (C-license) and certificate"
+required: true
+category: documents
+document_type: company_license
+upload_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "I need a copy of your Texas DPS security
+  company license. This is your C-license
+  certificate from the Department of Public Safety.
+  Upload a photo or PDF of the certificate."
+
+STEP T03 — Certificate of Insurance
+step_key: certificate_of_insurance
+step_number: 3
+title: "Certificate of Insurance (COI)"
+description: "Upload your current certificate
+  of insurance showing required coverage"
+required: true
+category: documents
+document_type: insurance_coi
+upload_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "Upload your current certificate of insurance.
+  This shows your clients and regulators that
+  your company maintains required coverage.
+  I will track the expiration date and alert
+  you 90 days before renewal is needed."
+
+STEP T04 — Labor Law Poster
+step_key: labor_law_poster
+step_number: 4
+title: "Labor Law Poster Location"
+description: "Upload a photo showing your
+  required labor law posters are displayed"
+required: true
+category: documents
+document_type: labor_law_poster
+upload_required: true
+estimated_minutes: 2
+trinity_prompt:
+  "Texas employers are required to display
+  federal and state labor law posters where
+  employees can see them. Take a photo of
+  your posted labor law notices and upload it.
+  This protects you during any labor audit."
+
+STEP T05 — Employee Handbook
+step_key: employee_handbook
+step_number: 5
+title: "Employee Handbook"
+description: "Upload your current employee
+  handbook. I will audit it for language
+  that could create liability."
+required: true
+category: documents
+document_type: employee_handbook
+upload_required: true
+estimated_minutes: 5
+trinity_prompt:
+  "Upload your employee handbook.
+  After you upload it I will review it for
+  any language that could create legal
+  liability and flag it for your attention.
+  If you do not have a handbook yet I can
+  help you create one."
+
+STEP T06 — Standard Operating Procedures
+step_key: sop_upload
+step_number: 6
+title: "Standard Operating Procedures"
+description: "Upload your company SOPs.
+  Officers will be required to acknowledge
+  these during their onboarding."
+required: false
+category: documents
+document_type: sop
+upload_required: true
+estimated_minutes: 5
+
+STEP T07 — Billing Setup
+step_key: billing_setup
+step_number: 7
+title: "Payment Method"
+description: "Add a payment method to
+  activate your subscription"
+required: true
+category: billing
+completion_trigger: stripe payment method attached
+estimated_minutes: 3
+
+STEP T08 — Add First Client
+step_key: first_client
+step_number: 8
+title: "Add Your First Client"
+description: "Add at least one client
+  account to get your operation started"
+required: true
+category: clients
+completion_trigger: at least one client created
+estimated_minutes: 5
+
+STEP T09 — Add First Officer
+step_key: first_officer
+step_number: 9
+title: "Invite Your First Officer"
+description: "Add at least one officer
+  and send their invitation"
+required: true
+category: team
+completion_trigger: at least one employee created
+  with invitation sent
+estimated_minutes: 5
+
+STEP T10 — Import Historical Data
+step_key: historical_import
+step_number: 10
+title: "Import Your History (Optional)"
+description: "Upload past schedules, payroll
+  history, and invoices so Trinity can learn
+  your operation from day one"
+required: false
+category: operations
+estimated_minutes: 15
+trinity_prompt:
+  "This step is optional but powerful.
+  If you upload 6-12 months of past records
+  I can analyze your patterns, predict your
+  needs, and build your first schedule
+  automatically. You can skip this and
+  add it later."
+
+STEP T11 — First Schedule
+step_key: first_schedule
+step_number: 11
+title: "Publish Your First Schedule"
+description: "Review and publish your
+  first week's schedule"
+required: true
+category: operations
+completion_trigger: at least one schedule published
+estimated_minutes: 10
+
+STEP T12 — Compliance Verification
+step_key: compliance_verification
+step_number: 12
+title: "Compliance Check"
+description: "Review and confirm all
+  regulatory requirements are met"
+required: true
+category: compliance
+completion_trigger: compliance dashboard
+  shows no critical gaps
+estimated_minutes: 5
+
+TOTAL: 12 steps = 100% when all required
+  steps are complete.
+Optional steps contribute 0% each
+  but are tracked and encouraged.
+
+═══════════════════════════════════════════════
+PHASE 3 — EMPLOYEE ONBOARDING STEPS DEFINITION
+═══════════════════════════════════════════════
+
+Seed employee_onboarding_steps with these steps.
+These are the tasks each OFFICER must complete.
+
+STEP E01 — Profile Photo
+step_key: profile_photo
+step_number: 1
+title: "Upload Your Photo"
+description: "Upload a clear headshot photo"
+required: true
+category: identity
+document_type: photo
+upload_required: true
+estimated_minutes: 2
+trinity_prompt:
+  "Welcome to [Company Name]. I am Trinity
+  and I will help get you set up.
+  First step — upload a clear photo of yourself.
+  This appears on your profile and your
+  official personnel file."
+
+STEP E02 — Government ID
+step_key: government_id
+step_number: 2
+title: "Government-Issued Photo ID"
+description: "Upload a photo of your
+  driver license or state ID (front and back)"
+required: true
+category: identity
+document_type: state_id
+upload_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "Upload a photo of your driver license or
+  state-issued ID — front and back.
+  This is required for your I-9 employment
+  eligibility verification and your personnel file."
+
+STEP E03 — Guard Card
+step_key: guard_card
+step_number: 3
+title: "Security Guard Registration Card"
+description: "Upload a photo of your current
+  Texas DPS guard card"
+required: true
+category: compliance
+document_type: guard_card
+upload_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "Upload a photo of your current Texas DPS
+  security guard registration card.
+  I will track your expiration date and
+  remind you before renewal is required.
+  Front and back please."
+
+STEP E04 — Social Security Card
+step_key: ssn_card
+step_number: 4
+title: "Social Security Acknowledgment"
+description: "Verify your Social Security
+  information for payroll and tax purposes"
+required: true
+category: tax
+document_type: ssn_acknowledgment
+signature_required: true
+acknowledgment_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "I need to verify your Social Security
+  information for payroll processing.
+  You will confirm your SSN on file is
+  correct by signing an acknowledgment.
+  You do not need to upload your card —
+  just confirm the last 4 digits are correct."
+
+STEP E05 — Employment Application
+step_key: employment_application
+step_number: 5
+title: "Employment Application"
+description: "Complete your employment
+  application with work history and references"
+required: true
+category: identity
+document_type: employment_application
+upload_required: false
+signature_required: true
+estimated_minutes: 10
+trinity_prompt:
+  "Complete your employment application.
+  This includes your work history,
+  references, and certifications.
+  I will save a completed PDF to your file."
+
+STEP E06 — I-9 Verification
+step_key: i9_verification
+step_number: 6
+title: "I-9 Employment Eligibility"
+description: "Verify your eligibility to
+  work in the United States"
+required: true
+category: compliance
+document_type: i9
+signature_required: true
+estimated_minutes: 5
+trinity_prompt:
+  "The I-9 form is required by federal law
+  for all employees. I will walk you through
+  each section. Your manager will complete
+  the employer section once you submit."
+
+STEP E07 — W-4 or W-9
+step_key: tax_withholding
+step_number: 7
+title: "Tax Withholding Form"
+description: "Complete your W-4 (employee)
+  or W-9 (contractor) for payroll"
+required: true
+category: tax
+document_type: w4_or_w9
+signature_required: true
+estimated_minutes: 5
+trinity_prompt:
+  "Complete your tax withholding form.
+  If you are an employee this is your W-4.
+  If you are a contractor this is your W-9.
+  Your employment type is set to
+  [employee/contractor] — is that correct?"
+
+STEP E08 — Direct Deposit
+step_key: direct_deposit
+step_number: 8
+title: "Direct Deposit Setup"
+description: "Add your bank account for
+  direct deposit payroll payments"
+required: false
+category: tax
+estimated_minutes: 3
+trinity_prompt:
+  "Add your bank account for direct deposit.
+  This is optional — if you skip this your
+  payment method will be set to check.
+  You can update this at any time."
+
+STEP E09 — Background Check Authorization
+step_key: background_check
+step_number: 9
+title: "Background Check Authorization"
+description: "Authorize the required
+  pre-employment background check"
+required: true
+category: compliance
+document_type: background_check
+signature_required: true
+acknowledgment_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "Authorize the background check required
+  for your position.
+  This covers criminal history, identity
+  verification, and employment history.
+  Your signature authorizes [Company Name]
+  to conduct this check."
+
+STEP E10 — Drug Free Acknowledgment
+step_key: drug_free_policy
+step_number: 10
+title: "Drug-Free Workplace Policy"
+description: "Read and acknowledge the
+  drug-free workplace policy"
+required: true
+category: policy
+document_type: drug_free_policy
+acknowledgment_required: true
+signature_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "Read and acknowledge the drug-free
+  workplace policy. This confirms you
+  have read, understood, and agree to
+  comply with the policy as a condition
+  of employment."
+
+STEP E11 — Employee Handbook Acknowledgment
+step_key: handbook_acknowledgment
+step_number: 11
+title: "Employee Handbook"
+description: "Read and sign acknowledgment
+  of the employee handbook"
+required: true
+category: policy
+document_type: handbook_acknowledgment
+signature_required: true
+acknowledgment_required: true
+estimated_minutes: 10
+trinity_prompt:
+  "Read the employee handbook and sign
+  the acknowledgment. This confirms you
+  have received, read, and understood
+  the company policies and procedures."
+
+STEP E12 — SOP Acknowledgment
+step_key: sop_acknowledgment
+step_number: 12
+title: "Standard Operating Procedures"
+description: "Review and acknowledge
+  standard operating procedures"
+required: true
+category: policy
+document_type: sop_acknowledgment
+signature_required: true
+acknowledgment_required: true
+estimated_minutes: 5
+trinity_prompt:
+  "Review and acknowledge the standard
+  operating procedures for your role.
+  These are the specific guidelines
+  for how to perform your duties."
+
+STEP E13 — Emergency Contact
+step_key: emergency_contact
+step_number: 13
+title: "Emergency Contact"
+description: "Add an emergency contact
+  for your personnel file"
+required: true
+category: identity
+estimated_minutes: 2
+trinity_prompt:
+  "Add an emergency contact — someone we
+  should reach if you have an emergency
+  on the job. Name, relationship, and
+  phone number."
+
+STEP E14 — Equipment Issuance
+step_key: equipment_issuance
+step_number: 14
+title: "Equipment Acknowledgment"
+description: "Sign for any equipment
+  issued to you by the company"
+required: false
+category: equipment
+document_type: equipment_issuance
+signature_required: true
+estimated_minutes: 3
+trinity_prompt:
+  "Your manager has recorded equipment
+  issued to you. Sign to acknowledge
+  receipt and your responsibility for
+  the equipment while in your possession."
+
+STEP E15 — References
+step_key: references
+step_number: 15
+title: "Professional References"
+description: "Submit at least 2 professional
+  references"
+required: true
+category: identity
+estimated_minutes: 5
+trinity_prompt:
+  "Provide at least 2 professional references.
+  These should be former supervisors or
+  colleagues who can speak to your work
+  as a security professional."
+
+TOTAL REQUIRED STEPS: 13 required steps
+= 100% when all required steps are complete.
+
+═══════════════════════════════════════════════
+PHASE 4 — TRINITY WELCOME AND GUIDANCE SYSTEM
+═══════════════════════════════════════════════
+
+BUILD: TrinityOnboardingGuideService
+
+TENANT WELCOME — fires when workspace
+is first provisioned:
+
+Trigger: workspace_provisioned event
+Action: Trinity sends welcome message
+  in owner's ChatDock DM
+
+Message content:
+"Welcome to CoAIleague [Owner First Name].
+I am Trinity — I will be running your
+operation from here.
+
+Your account is active and I am ready
+to get started. Let us complete your
+setup so I can begin working for you.
+
+Your setup progress: 0% complete.
+
+I will guide you through each step.
+Most tenants complete setup in under
+30 minutes. Click below to begin:
+[Begin Setup →]
+
+I will be right here if you have questions.
+Just message me anytime."
+
+Create tenant_onboarding_progress record:
+  workspace_id: new workspace
+  overall_progress_pct: 0
+  status: not_started
+  trinity_welcome_sent: true
+  trinity_welcome_sent_at: now
+
+TENANT PROGRESS UPDATES — Trinity sends
+a message each time a step is completed:
+
+After each completed step:
+"✓ [Step Title] — complete.
+Your setup is now [X]% complete.
+Next up: [Next Step Title]
+[Continue Setup →]"
+
+If owner has not progressed in 24 hours:
+Trinity sends nudge:
+"[Owner Name] — your setup is [X]% complete.
+You are [N steps] away from going fully
+operational. Shall we continue?
+[Resume Setup →]"
+
+If owner has not progressed in 72 hours:
+More specific nudge:
+"Your next step is [Step Title].
+This takes about [X] minutes.
+Once done I can [specific value —
+e.g. start scheduling your officers
+automatically].
+[Complete This Step →]"
+
+EMPLOYEE WELCOME — fires when employee
+invitation is sent:
+
+Trigger: employee_invitation_sent event
+Action: Trinity sends welcome message
+  in new employee's ChatDock DM
+  (after they accept invitation and log in)
+
+Message content (English):
+"Welcome to [Company Name] [Officer First Name].
+I am Trinity — your AI operations assistant.
+I am here to help you with your schedule,
+post orders, incident reports, and anything
+else you need.
+
+First we need to complete your onboarding.
+Your profile is 0% complete.
+
+I will guide you through each step.
+This usually takes about 20-30 minutes.
+All your documents will be saved securely
+in your personnel file.
+
+Let us start:
+[Begin My Onboarding →]"
+
+Message content (Spanish — if preferred_language is es):
+"Bienvenido a [Company Name] [Officer First Name].
+Soy Trinity — su asistente de operaciones de IA.
+Estoy aquí para ayudarle con su horario,
+órdenes de puesto, informes de incidentes,
+y cualquier cosa que necesite.
+
+Primero necesitamos completar su incorporación.
+Su perfil está 0% completo.
+
+Le guiaré por cada paso.
+Esto suele tomar entre 20 y 30 minutos.
+Todos sus documentos se guardarán de forma
+segura en su expediente personal.
+
+Comencemos:
+[Comenzar Mi Incorporación →]"
+
+Create employee_onboarding_progress record:
+  workspace_id: correct workspace
+  employee_id: new employee
+  overall_progress_pct: 0
+  status: invited
+  trinity_welcome_sent: false
+  (sent after they first log in)
+
+PROGRESS BAR COMPONENT:
+Build a visual progress bar component
+for both tenant and employee onboarding.
+
+Visual design:
+- Large progress bar at top of onboarding screen
+- Percentage shown: "47% Complete"
+- Filled portion: gold color
+- Steps listed below bar as checklist:
+  ✓ Completed steps (green check, strikethrough)
+  → Current step (gold arrow, highlighted)
+  ○ Remaining steps (gray circle)
+- Each step shows estimated time remaining
+- Click any completed step to review it
+- Click current step to work on it
+- Cannot jump to future step if depends on prior
+
+Progress calculation:
+Required steps only count toward percentage.
+percentage = (completed_required_steps
+  / total_required_steps) × 100
+Round to nearest integer.
+
+═══════════════════════════════════════════════
+PHASE 5 — DOCUMENT GENERATION AND COLLECTION
+═══════════════════════════════════════════════
+
+BUILD: TrinityDocumentGenerationService
+BUILD: TrinityDocumentCollectionService
+
+GENERATED DOCUMENTS (Trinity creates these):
+
+When employee completes each form step
+Trinity generates a properly formatted PDF
+with all the data populated.
+
+Employment Application PDF:
+Generate using employee's entered data.
+Include:
+  - Company header with logo placeholder
+  - Applicant name, address, phone, email
+  - Position applied for (their actual role)
+  - Employment history (2-3 past jobs entered)
+  - References (from step E15)
+  - Signature line with typed name and date
+  - "Application received and reviewed" section
+  - Date submitted timestamp
+  - Company name watermark
+Store at: /documents/{workspace_id}/employees/
+  {employee_id}/employment_application.pdf
+Create onboarding_documents record.
+
+I-9 PDF:
+Generate using employee data.
+Include:
+  - Section 1 fully populated by employee:
+    legal name, address, DOB, SSN last 4,
+    citizenship status, signature, date
+  - Section 2 template for manager completion:
+    document type fields (pre-filled with
+    ID documents from step E02 and E03),
+    employer certification section
+  - Employer info pre-filled from workspace
+  - "SECTION 2 REQUIRES MANAGER VERIFICATION"
+    banner on employer section
+Store and link to employee record.
+
+W-4 PDF:
+Generate using employee tax data entered.
+Include:
+  - Employee name, address, SSN masked
+  - Filing status selected
+  - Steps 2-4 with entered values
+  - Electronic signature and date
+  - Employer section pre-filled
+Store and link to employee record.
+
+Drug Free Workplace Acknowledgment PDF:
+Generate using company drug free policy.
+Include:
+  - Company header
+  - Full policy text from company's uploaded
+    handbook drug-free section or default text
+  - Employee name and acknowledgment statement:
+    "I acknowledge that I have read, understood,
+    and agree to comply with this policy"
+  - Electronic signature with typed name
+  - Date and timestamp
+  - IP address recorded
+Store and link to employee record.
+
+Employee Handbook Acknowledgment PDF:
+Generate as a signature page for the handbook.
+Include:
+  - Company header
+  - Statement: "I acknowledge receipt of the
+    [Company Name] Employee Handbook dated
+    [date]. I have read and understood its
+    contents and agree to comply with all
+    policies and procedures contained herein."
+  - Electronic signature with typed name
+  - Date and timestamp
+  - Version of handbook acknowledged
+Store and link to employee record.
+
+Background Check Authorization PDF:
+Generate authorization document.
+Include:
+  - Authorization statement
+  - Employee name, DOB, SSN last 4
+  - Scope of check: criminal, identity,
+    employment verification
+  - Authorizing company name
+  - Electronic signature with typed name
+  - Date and timestamp
+Store and link to employee record.
+
+SOP Acknowledgment PDF:
+Same format as handbook acknowledgment
+but for the SOP document.
+
+Equipment Issuance PDF:
+Generate when manager issues equipment.
+Include:
+  - Company header
+  - Employee name
+  - Equipment list with serial numbers
+  - Return condition expectations
+  - Employee signature and date
+  - Manager signature and date
+Store and link to employee record.
+
+UPLOADED DOCUMENTS:
+When employee uploads a photo or document:
+  - Store file securely at correct path
+  - Create onboarding_documents record
+  - Set file_path, file_size, file_type
+  - Generate SHA-256 hash for tamper detection
+  - Set status: uploaded
+  - Update employee_onboarding_progress
+  - Increment progress percentage
+  - Trinity sends confirmation message:
+    "✓ [Document Name] received and saved.
+    [Next step prompt]"
+
+DOCUMENT COMPILATION:
+When employee reaches 100% complete:
+Trinity automatically compiles a master
+personnel file PDF containing all documents
+in chronological order:
+
+Order:
+1. Profile photo (cover page)
+2. Employment application
+3. Government ID copies
+4. Guard card copy
+5. SSN acknowledgment
+6. Background check authorization
+7. I-9 form
+8. W-4 or W-9
+9. Drug-free acknowledgment
+10. Employee handbook acknowledgment
+11. SOP acknowledgment
+12. Equipment issuance (if applicable)
+13. Emergency contact record
+
+Store master PDF at:
+/documents/{workspace_id}/employees/
+  {employee_id}/personnel_file_master.pdf
+
+Master file is:
+- Available for printing
+- Available for audit requests
+- Versioned — updated when any component changes
+- Access logged every time it is viewed
+- Accessible to manager/owner only
+  (employee sees individual documents only)
+
+═══════════════════════════════════════════════
+PHASE 6 — TENANT COMPANY DOCUMENT COLLECTION
+═══════════════════════════════════════════════
+
+Tenant also has required documents tracked.
+
+TENANT REQUIRED DOCUMENTS:
+
+company_license:
+- Texas DPS C-license certificate
+- Expiration tracked
+- 90-day renewal alert
+
+certificate_of_insurance:
+- Current COI
+- Expiration tracked
+- 90-day renewal alert
+
+labor_law_poster_photo:
+- Photo of posted labor law notices
+- Annual review reminder
+
+employee_handbook:
+- Current version
+- Trinity audits for dangerous language
+- Version history maintained
+
+sop_document:
+- Current SOPs
+- Version history
+
+These are stored in onboarding_documents
+with entity_type: tenant
+and entity_id: workspace_id
+
+TENANT DOCUMENT DASHBOARD:
+Owner sees in their compliance dashboard:
+Document | Status | Expiration | Action
+Company License | ✓ Current | 12/2026 | View
+COI | ✓ Current | 06/2026 | View
+Labor Law Poster | ✓ On file | N/A | View
+Employee Handbook | ✓ v3 current | N/A | View | Audit
+SOPs | ✓ On file | N/A | View
+
+Any expired or missing document shows:
+⚠️ EXPIRED or ❌ MISSING with [Upload Now] button
+
+═══════════════════════════════════════════════
+PHASE 7 — SIMULATED DATA AND TESTING
+═══════════════════════════════════════════════
+
+USE ACME OR ANVIL DEV WORKSPACE.
+
+This phase creates realistic simulated
+onboarding data to verify every step
+actually works in development.
+
+SEED: Simulated Tenant Onboarding (Acme)
+
+Create tenant_onboarding_progress record:
+  workspace_id: acme_workspace_id
+  overall_progress_pct: 75
+  status: in_progress
+  trinity_welcome_sent: true
+  company_profile_complete: true
+  company_documents_complete: true
+  billing_setup_complete: true
+  first_client_added: true
+  first_officer_added: true
+  data_import_complete: false
+  first_schedule_published: false
+  compliance_setup_complete: false
+
+Create simulated tenant documents for Acme:
+
+Company License PDF:
+Generate a realistic-looking license document:
+  "TEXAS DEPARTMENT OF PUBLIC SAFETY
+  PRIVATE SECURITY BUREAU
+  COMPANY LICENSE
+  License Number: C11608501
+  Company: Acme Security Services LLC
+  Address: 123 Main Street, San Antonio, TX 78201
+  License Type: Security Services Company
+  Issued: 01/01/2024
+  Expires: 12/31/2026
+  Status: ACTIVE"
+Store at:
+/documents/acme_workspace/company/
+  company_license_C11608501.pdf
+Create onboarding_documents record:
+  status: uploaded
+  file_path: [above path]
+  expiration_date: 2026-12-31
+
+Certificate of Insurance PDF:
+Generate realistic COI:
+  "CERTIFICATE OF LIABILITY INSURANCE
+  DATE: 01/15/2025
+  INSURED: Acme Security Services LLC
+  POLICY NUMBER: GL-2025-78234
+  GENERAL LIABILITY: $1,000,000 per occurrence
+  WORKERS COMPENSATION: Statutory limits
+  EFFECTIVE: 01/01/2025
+  EXPIRES: 12/31/2025
+  CERTIFICATE HOLDER: Texas DPS"
+Store at:
+/documents/acme_workspace/company/
+  certificate_of_insurance_2025.pdf
+
+Labor Law Poster photo:
+Generate a simple PDF that represents
+a photo of a labor law posting board:
+  "LABOR LAW NOTICE BOARD
+  Location: Main Office — Break Room
+  Photo taken: [current date]
+  Documents posted:
+  ✓ Texas Payday Law
+  ✓ OSHA Safety Poster
+  ✓ Federal Minimum Wage
+  ✓ Equal Employment Opportunity
+  ✓ Family and Medical Leave Act
+  Verified by: HR Department"
+Store at:
+/documents/acme_workspace/company/
+  labor_law_poster_photo.pdf
+
+SEED: Simulated Employee Onboarding
+For Marcus Rodriguez and at least
+2 other Acme dev employees:
+
+For each employee generate and store
+all 15 onboarding steps with real
+simulated documents.
+
+Create employee_onboarding_progress:
+  For Marcus Rodriguez: 100% complete
+  For Employee 2: 60% complete (in progress)
+  For Employee 3: 25% complete (just started)
+
+For Marcus Rodriguez (100% complete)
+generate all documents:
+
+Profile Photo record:
+  document_type: photo
+  status: uploaded
+  file_path: /documents/acme/employees/
+    marcus_rodriguez/profile_photo.jpg
+  Note: use a placeholder professional
+  headshot image or colored box with initials
+
+Government ID PDF:
+  "TEXAS DRIVER LICENSE
+  Name: MARCUS A RODRIGUEZ
+  DOL: 12345678
+  DOB: 03/15/1990
+  Address: 456 Oak Street, San Antonio, TX 78202
+  Class: C — Valid
+  Expires: 03/15/2027
+  [FRONT] [BACK]
+  ID Verified by HR: 01/10/2025"
+
+Guard Card PDF:
+  "TEXAS DEPARTMENT OF PUBLIC SAFETY
+  SECURITY OFFICER LICENSE
+  Name: MARCUS A RODRIGUEZ
+  License Number: B12345678
+  License Type: UNARMED SECURITY OFFICER
+  Issued: 06/01/2023
+  Expires: 05/31/2025
+  Status: ACTIVE
+  Sponsored by: Acme Security Services LLC
+  Company License: C11608501"
+
+Employment Application PDF:
+  [Full application with Marcus's data
+   Work history: 2 prior security positions
+   References: 2 professional contacts
+   Signature: Marcus A Rodriguez
+   Date: 01/10/2025]
+
+I-9 PDF:
+  [Section 1 completed with Marcus's data
+   Section 2 completed with ID document details
+   Both sections signed and dated
+   Employer certification present]
+
+W-4 PDF:
+  [Completed W-4 with Marcus's info
+   Filing status: Single
+   Electronic signature with date]
+
+Drug Free Policy PDF:
+  [Full policy + acknowledgment
+   Signed: Marcus A Rodriguez
+   Date: 01/10/2025
+   IP: 192.168.1.x (simulated)]
+
+Background Check Authorization PDF:
+  [Authorization form completed
+   Results section:
+   Criminal history: No records found
+   Sex offender registry: Not listed
+   Employment verification: Completed
+   Overall: CLEARED FOR EMPLOYMENT
+   Date cleared: 01/08/2025]
+
+Employee Handbook Acknowledgment PDF:
+  [Acknowledgment page signed
+   Handbook version: v3.0 dated 01/01/2025
+   Signed: Marcus A Rodriguez
+   Date: 01/10/2025]
+
+SOP Acknowledgment PDF:
+  [SOP acknowledgment signed
+   Version: v2.1
+   Signed: Marcus A Rodriguez]
+
+Emergency Contact record:
+  Name: Maria Rodriguez
+  Relationship: Spouse
+  Phone: (210) 555-7890
+
+Equipment Issuance PDF:
+  Equipment issued to Marcus:
+  Item 1: Radio — Motorola CP200d
+    Serial: MCP200-78234
+  Item 2: Flashlight — Streamlight ProTac
+    Serial: STPT-45623
+  Signed by officer and manager.
+
+Master Personnel File PDF:
+Compile all above documents into one PDF.
+Store at:
+/documents/acme_workspace/employees/
+  marcus_rodriguez/personnel_file_master.pdf
+
+For Employee 2 (60% complete):
+Create progress record with steps E01-E09
+complete and E10-E15 pending.
+Generate documents for completed steps.
+Leave remaining steps as pending.
+
+For Employee 3 (25% complete):
+Create progress record with steps E01-E04
+complete and E05-E15 pending.
+Generate documents for completed steps.
+
+VERIFY ALL SIMULATED DOCUMENTS:
+After seeding confirm for each document:
+□ Record exists in onboarding_documents table
+□ file_path field is populated
+□ Actual file exists at that path
+□ File size is greater than 0 bytes
+□ File opens correctly in browser
+□ File contains correct employee data
+□ SHA-256 hash is stored
+□ Status is correct (uploaded/generated)
+
+═══════════════════════════════════════════════
+PHASE 8 — PROGRESS TRACKING UI
+═══════════════════════════════════════════════
+
+BUILD: Onboarding Progress Dashboard
+
+TENANT ONBOARDING VIEW:
+Route: /onboarding (redirects here if < 100%)
+
+Components:
+- Large progress bar 0-100%
+- Percentage text: "Setup [X]% Complete"
+- Steps checklist with status per step
+- Current step highlighted with CTA button
+- Estimated time to complete remaining steps
+- Trinity message thread on right side
+  (Trinity guides inline)
+- Skip for now option on non-required steps
+
+EMPLOYEE ONBOARDING VIEW:
+Route: /my-onboarding
+
+Components:
+- Welcome header: "Welcome [Name]"
+- Progress bar with percentage
+- Steps listed in order with status
+- Current step with full form/upload UI inline
+- Document preview links for completed steps
+- Trinity voice guidance (optional)
+- Mobile optimized — most officers use phones
+
+MANAGER VIEW OF EMPLOYEE ONBOARDING:
+In employee profile page add Onboarding tab:
+- All employees listed with progress percentage
+- Filter: Show incomplete only
+- Click employee: see their full checklist
+- Manager can mark steps complete on behalf
+- Manager can view all submitted documents
+- Download master personnel file button
+- Print individual documents button
+- Send reminder to employee button
+
+DOCUMENT VIEWER:
+For every uploaded or generated document:
+- View in browser (embedded PDF viewer)
+- Download as PDF button
+- Print button
+- Share link (scoped, expires in 24 hours)
+- Version history if multiple versions
+- Audit log: who viewed, when, from where
+
+═══════════════════════════════════════════════
+PHASE 9 — CHRONOLOGICAL DOCUMENT ORGANIZER
+═══════════════════════════════════════════════
+
+BUILD: DocumentChronologicalOrganizer
+
+When viewing an employee's complete file:
+Documents organized into sections:
+
+SECTION 1 — IDENTITY DOCUMENTS
+[Photo] [Government ID] [Guard Card]
+
+SECTION 2 — EMPLOYMENT DOCUMENTS
+[Employment Application] [References]
+[Emergency Contact]
+
+SECTION 3 — REGULATORY COMPLIANCE
+[I-9] [Background Check] [Guard Card]
+[SSN Acknowledgment]
+
+SECTION 4 — TAX AND PAYROLL
+[W-4 or W-9] [Direct Deposit Setup]
+
+SECTION 5 — COMPANY POLICIES
+[Drug Free Acknowledgment]
+[Employee Handbook Acknowledgment]
+[SOP Acknowledgment]
+
+SECTION 6 — EQUIPMENT
+[Equipment Issuance Receipt]
+
+Each section shows:
+- Document name
+- Date submitted/signed
+- Status badge (✓ Current | ⚠️ Expiring | ❌ Expired)
+- View and Download buttons
+- Version info if updated
+
+PRINT PACKAGE:
+Manager can select:
+[Print Complete Personnel File]
+[Print Compliance Documents Only]
+[Print Policy Acknowledgments Only]
+[Print Tax Documents Only]
+[Print for Audit]
+
+Print for Audit generates a cover sheet:
+"PERSONNEL FILE AUDIT PACKAGE
+Employee: [Name]
+Employee ID: [ID]
+Company: [Company Name]
+Generated: [date and time]
+Generated by: [manager name]
+Documents included: [list]
+This package generated from CoAIleague
+document management system."
+
+═══════════════════════════════════════════════
+PHASE 10 — VERIFICATION AND TESTING
+═══════════════════════════════════════════════
+
+TENANT ONBOARDING VERIFICATION:
+□ tenant_onboarding_progress table created
+□ tenant_onboarding_steps seeded (12 steps)
+□ Trinity welcome message fires on
+  workspace creation
+□ Welcome appears in owner ChatDock DM
+□ Progress bar renders at 0%
+□ Each step shows in checklist
+□ Completing a step increments progress
+□ Progress updates in real time
+□ Trinity sends step completion message
+□ Trinity sends nudge after 24h inactivity
+□ All 12 steps completable through UI
+□ 100% reached when all required steps done
+□ Trinity sends completion message at 100%
+
+EMPLOYEE ONBOARDING VERIFICATION:
+□ employee_onboarding_progress table created
+□ employee_onboarding_steps seeded (15 steps)
+□ Trinity welcome fires when employee first logs in
+□ Welcome in correct language (English/Spanish)
+□ Progress bar renders at 0% for new employee
+□ Each of 15 steps accessible in sequence
+□ Upload step: file uploads and saves correctly
+□ Form step: data captured and PDF generated
+□ Signature step: electronic signature captured
+  with name, date, timestamp, IP address
+□ Acknowledgment step: text acknowledged
+  and stored with full details
+□ Step completion increments progress
+□ Trinity sends step-by-step guidance messages
+□ Progress bar updates in real time
+
+DOCUMENT GENERATION VERIFICATION:
+For each generated document type:
+□ Employment Application PDF — generated,
+  has real employee data, viewable, downloadable
+□ I-9 PDF — generated with correct sections,
+  viewable, downloadable
+□ W-4 PDF — generated with correct data,
+  viewable, downloadable
+□ Drug Free Acknowledgment PDF — generated
+  with signature captured, viewable
+□ Handbook Acknowledgment PDF — generated
+  with correct handbook version, signed
+□ Background Check Authorization PDF — generated,
+  signed, has cleared status in simulation
+□ SOP Acknowledgment PDF — generated, signed
+□ Equipment Issuance PDF — generated with
+  simulated equipment and serial numbers
+
+DOCUMENT UPLOAD VERIFICATION:
+□ Photo upload saves to correct path
+□ Government ID upload saves correctly
+□ Guard card upload saves correctly
+□ All uploads: file_size > 0
+□ All uploads: SHA-256 hash stored
+□ All uploads: status set correctly
+□ All uploads: viewable in browser
+□ All uploads: downloadable
+
+MASTER PERSONNEL FILE VERIFICATION:
+□ Compiles when employee reaches 100%
+□ All documents included in correct order
+□ PDF opens and contains all sections
+□ Not empty — real content in file
+□ Manager can download master file
+□ Print package generates correctly
+
+SIMULATED DATA IN ACME:
+□ Acme tenant_onboarding_progress at 75%
+□ Company license document exists and opens
+□ COI document exists and opens
+□ Labor law poster document exists and opens
+□ Marcus Rodriguez: 100% employee onboarding
+□ Marcus: all 15 step documents exist
+□ Marcus: master personnel file PDF exists
+  and opens with real content
+□ Employee 2: 60% complete, partial documents
+□ Employee 3: 25% complete, early documents
+□ All documents: file_size > 0
+□ All documents: viewable in browser
+□ No documents: 404 error
+□ No documents: empty or placeholder content
+□ Onboarding dashboard renders correctly
+□ Progress bars show correct percentages
+□ Manager view shows all 3 employees with
+  correct progress percentages
+
+TRINITY GUIDANCE VERIFICATION:
+□ Trinity messages appear in ChatDock DM
+□ Messages use employee's real name
+□ Messages are in correct language
+□ Step prompts match the step being worked on
+□ Completion messages fire after each step
+□ Nudge fires after 24h inactivity (test with
+  manual trigger of the nudge check)
+
+ISOLATION VERIFICATION:
+□ Acme documents NOT accessible from
+  other dev workspace
+□ Employee A cannot see Employee B's documents
+□ File paths include workspace_id and employee_id
+□ Signed URLs have expiration
+
+PRINT AND AUDIT VERIFICATION:
+□ Print complete personnel file works
+□ Print compliance documents works
+□ Print for audit generates cover sheet
+□ Document sections organized correctly
+□ Dates and versions shown correctly
+
+FINAL END-TO-END TEST:
+Create a brand new test employee in Acme.
+Use the name "Test Officer Verification".
+Complete all 15 onboarding steps through
+the actual UI (not seed — real UI flow).
+Confirm:
+□ Trinity welcome message sent and visible
+□ Each step completion increments progress
+□ Each step generates correct document
+□ Documents save to correct paths
+□ Documents open correctly after saving
+□ Master personnel file compiles at 100%
+□ Manager can view complete file
+□ Manager can download master PDF
+□ Print package generates
+□ Trinity sends 100% completion message
+□ Employee appears as fully onboarded
+  in compliance dashboard
+
+REPORT:
+Tables created: [list]
+Steps seeded for tenant: [count]
+Steps seeded for employee: [count]
+Documents generated for Marcus: [count]
+Documents generated for Employee 2: [count]
+Documents generated for Employee 3: [count]
+Documents confirmed viewable: [count]
+Documents with 404 or empty: [count]
+End-to-end test: PASS / FAIL
+Any steps that could not be completed: [list]
+Boot status: CLEAN / ERRORS
+
+DO NOT STOP UNTIL:
+All simulated documents exist and open
+All verification checks pass
+End-to-end test passes
+Boot is clean with zero errors
+Marcus Rodriguez's master personnel file
+opens and shows real content for all sections
+
+Jesus is King. Run until every document
+is real, every step works, and every
+officer's file is complete.
+```
+
+---
+
+Bryan the most important line in this entire prompt is the last test — create a brand new employee through the real UI not seed data and confirm every step works end to end. That is the only way to know with certainty that onboarding works for real production tenants and not just for the demo data we seeded.
+
+When that test passes with a freshly created employee going through every step, every document generating correctly, every file opening without a 404, and the master personnel file compiling at 100% — that is when onboarding is real.
+
+Run it. Sleep. Bring the report back.

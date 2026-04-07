@@ -1,0 +1,235 @@
+This is one of the most dangerous categories of bug in any platform because it never throws a loud error — it just silently returns nothing, saves nothing, or queries the wrong thing entirely. Here's the nuclear prompt for it.
+
+---
+
+**COAILEAGUE — NUCLEAR SCHEMA PARITY AUDIT**
+*Naming Convention Enforcement | Schema-to-Database Truth Verification | Silent Failure Elimination*
+
+---
+
+This audit has one mission: ensure that every name used to reference data anywhere in the codebase — table names, column names, relation names, query field names, API response keys, and frontend property accessors — exactly matches what exists in the live database with zero tolerance for deviation. A single character difference between what the code expects and what the database contains produces a silent failure that neither TypeScript nor the ORM will surface as an error. These are the most dangerous bugs in the system because they look like working code.
+
+---
+
+**THE THREE FAILURE PATTERNS THIS AUDIT TARGETS**
+
+Before deployment, every agent must internalize these three patterns. Every finding will fall into one of them.
+
+**Pattern 1 — Case Convention Mismatch**
+The database uses snake_case. TypeScript and JavaScript use camelCase. Drizzle ORM is supposed to bridge this gap but only if the mapping is explicitly and correctly defined. Any column reference that assumes automatic translation without an explicit mapping is a latent bug.
+
+Examples of this failure:
+- Code references `workspaceId` but the column is `workspace_id`
+- Code references `payrollCycle` but the column is `payroll_cycle`
+- Code references `enableHelpOSBot` but the column is `enable_help_os_bot`
+- Code references `createdAt` but the column is `created_at`
+
+**Pattern 2 — Plural vs Singular Inconsistency**
+Table names, relation names, and entity references are inconsistent across the codebase. Some files treat the employees table as `employees`, others reference it as `employee`. Some relations are defined as `employeeRelations`, others as `employeesRelation`. The ORM silently fails to resolve the relation and returns undefined instead of data.
+
+Examples of this failure:
+- Table defined as `employees` in schema but queried as `employee` in a route
+- Relation defined as `workspaces` but referenced as `workspace` in a join
+- Foreign key defined on `client_id` but the relation resolver looks for `clients_id`
+- API response returns `shifts` array but frontend destructures it as `shift`
+
+**Pattern 3 — Schema Definition vs Migration vs Live Database Drift**
+The Drizzle schema file says one thing. The migration that was actually run said something slightly different. The live database reflects the migration, not the current schema file. Now the schema file is lying about what columns exist and every query built from it is operating on false assumptions.
+
+Examples of this failure:
+- Schema file defines column as `pay_rate` but an old migration created it as `payRate`
+- Schema file adds a new column `direct_deposit_enabled` but the migration was never run so the column does not exist in the live database
+- A column was renamed in a migration but the schema file still uses the old name
+- A table was added to the schema file but no migration exists for it
+
+---
+
+**AGENT DEPLOYMENT MANIFEST**
+
+All agents deploy simultaneously. Every agent shares a findings bus. Every fix cascades to all adjacent agents for re-verification.
+
+---
+
+**AGENT 1 — GROUND TRUTH EXTRACTOR**
+*Establishes the single authoritative source of truth for every name in the system*
+
+This agent runs first and its output becomes the reference document that every other agent validates against. It does not fix anything. It only establishes truth.
+
+Step 1 — Extract the live database schema in full. Connect to the production-equivalent database and run a complete introspection. For every table: record its exact name as the database knows it. For every column in every table: record its exact name, data type, nullable status, default value, and any constraints. For every index: record its exact name and the columns it covers. For every foreign key: record the exact column name on each side of the relationship. Store this as the Database Truth Document.
+
+Step 2 — Extract the Drizzle schema definitions in full. Parse every file in the schema directory. For every table definition: record the JavaScript object name used to define it and the string name passed to the Drizzle table constructor. For every column definition: record the JavaScript property name used in the schema object and the string name passed to the Drizzle column constructor if one is specified. For every relation definition: record the relation name and every field reference within it. Store this as the Schema Definition Document.
+
+Step 3 — Extract every migration file in chronological order. Parse each migration for every CREATE TABLE, ALTER TABLE, ADD COLUMN, RENAME COLUMN, DROP COLUMN, and RENAME TABLE statement. Build a complete timeline of every name change that has ever been applied to the database. Store this as the Migration History Document.
+
+Step 4 — Produce a Master Name Registry containing three columns for every entity: what the live database calls it, what the current Drizzle schema calls it, and whether they match exactly. Flag every row where they do not match as a Parity Violation. This registry is the input for every other agent.
+
+---
+
+**AGENT 2 — ORM MAPPING VALIDATOR**
+*Confirms every Drizzle column definition correctly maps JavaScript property names to database column names*
+
+Using the Master Name Registry from Agent 1, this agent validates that the ORM bridge is explicitly and correctly defined at every column.
+
+For every column in every table: confirm the Drizzle column definition explicitly specifies the database column name as a string argument where the JavaScript property name differs from the database column name. A column defined as `workspaceId: uuid('workspace_id')` is correct — the database name is explicitly declared. A column defined as `workspaceId: uuid()` with no string argument is a parity assumption — Drizzle will attempt to infer the column name and may fail silently depending on version and configuration.
+
+Audit specifically:
+
+Every column whose JavaScript property name is camelCase — confirm it has an explicit snake_case string name passed to the column constructor.
+
+Every relation definition — confirm every `fields` array and `references` array uses the exact JavaScript property names from the schema object, not the database column names, not string literals that might not match.
+
+Every `with` clause in a Drizzle query — confirm the relation name used in `with` exactly matches a relation defined in the schema's relation object, including exact case and exact spelling.
+
+Every raw SQL fragment embedded in a Drizzle query — these bypass ORM mapping entirely and must use exact database column names in snake_case. Flag every raw SQL fragment for manual review.
+
+Every `.where()` clause — confirm every column reference in every where condition uses the schema object's JavaScript property, not a raw string that assumes a column name.
+
+For every violation found: document the file, line number, JavaScript property name used, database column name expected, and the exact fix required.
+
+---
+
+**AGENT 3 — ROUTE LAYER NAME CONSISTENCY AUDITOR**
+*Confirms every API route handler references schema properties and returns API keys that match frontend expectations*
+
+The ORM may map correctly but the route layer can still introduce name mismatches by destructuring, renaming, or reconstructing objects incorrectly.
+
+For every API route in the system:
+
+Audit every destructuring of a database query result — `const { workspaceId, payrollCycle } = employee` — confirm every destructured property name exactly matches the JavaScript property name in the Drizzle schema definition.
+
+Audit every object constructed for an API response — confirm the key names in the response object match what the frontend expects to receive. If the route returns `{ workspace_id: row.workspaceId }` but the frontend expects `{ workspaceId }` the data arrives but is inaccessible.
+
+Audit every `req.body` destructuring — confirm the field names the route expects in the request body exactly match the field names the frontend sends. A form that submits `payroll_cycle` to a route that reads `req.body.payrollCycle` silently discards the submitted value.
+
+Audit every query parameter reference — `req.query.workspaceId` vs `req.query.workspace_id` — confirm consistent convention across all routes.
+
+Audit every `INSERT` and `UPDATE` statement's value object — confirm every key in the values object exactly matches the JavaScript property name in the Drizzle schema, including case and spelling.
+
+Flag every instance where a name is transformed, aliased, or reconstructed between the database read and the API response without explicit documentation of the transformation.
+
+---
+
+**AGENT 4 — FRONTEND PROPERTY ACCESS AUDITOR**
+*Confirms every frontend component accesses API response data using the exact key names the API returns*
+
+This agent operates at the React component and service layer. It confirms that what the API sends and what the frontend reads are the same names.
+
+For every API call made from the frontend:
+
+Audit the service or hook that makes the call — confirm the response is typed or destructured using the exact key names the API route returns. If the API returns `payrollCycle` and the component reads `response.payroll_cycle`, the value is undefined and no error is thrown.
+
+Audit every TypeScript interface or type definition for API responses — confirm every property name in the interface matches the actual key name in the API response. An interface is documentation of intent, not enforcement of reality. If the interface says `workspaceId: string` but the API returns `workspace_id: string`, TypeScript will not catch this because the response is typed `as ApiResponse` without runtime validation.
+
+Audit every React Query `useQuery` and `useMutation` call — confirm the `queryKey` array uses consistent identifiers for the same resource across all components. Inconsistent query keys cause cache misses that force unnecessary refetches or, worse, serve stale data when fresh data has been fetched under a different key.
+
+Audit every form's `defaultValues` object — confirm every field name in `defaultValues` exactly matches the `name` attribute of the corresponding form input. A mismatch means the field initializes empty even when data exists.
+
+Audit every `react-hook-form` field registration — confirm the `name` prop on every input exactly matches the key expected by the form's submit handler and the API route that receives the submission.
+
+Flag every component that accesses a property on an API response object using a name that differs by case, underscore convention, or spelling from what the API demonstrably returns.
+
+---
+
+**AGENT 5 — RELATION & JOIN INTEGRITY SPECIALIST**
+*Confirms every database relationship is correctly defined and resolvable end-to-end*
+
+Relation failures are the most common source of silent undefined returns in Drizzle. This agent validates every relationship in the system.
+
+For every relation defined in the schema:
+
+Confirm the relation name is used consistently across the schema definition file, every route that queries with that relation, and every frontend type that expects the joined data to be present.
+
+Confirm the `fields` array references columns that actually exist on the table with exactly the correct JavaScript property names from the schema.
+
+Confirm the `references` array references columns that actually exist on the referenced table with exactly the correct JavaScript property names from that table's schema.
+
+Confirm the foreign key column exists in the live database with the exact name the schema defines. A relation defined on `workspaceId` that points to a database column named `workspace_id` with no explicit mapping will silently fail to join.
+
+For every `with` clause in every Drizzle query across all route files: confirm the relation name in the `with` clause exactly matches a relation defined in the relations object for that table. A single character difference means the join is silently skipped and the nested data returns undefined.
+
+For every joined query result accessed in a route handler or frontend component: confirm the nested property name used to access the joined data exactly matches the relation name as defined, including case. If the relation is defined as `employeeShifts` but accessed as `employee.shifts`, the data is undefined.
+
+---
+
+**AGENT 6 — TRINITY & ACTION REGISTRY NAME VALIDATOR**
+*Confirms every Trinity action, bot command, and orchestration instruction uses consistent names that resolve correctly*
+
+Trinity's action registry, bot routing logic, and orchestration layer all reference table names, column names, and entity identifiers. A name mismatch here means Trinity executes successfully but writes to nothing or reads nothing.
+
+For every action in the Trinity action registry:
+
+Confirm every database table referenced by name in the action's execution logic uses the exact snake_case table name as it exists in the live database.
+
+Confirm every column referenced in the action's query or mutation uses the exact column name as defined in the Drizzle schema's JavaScript property — or, for raw SQL within actions, the exact snake_case database column name.
+
+Confirm every entity identifier Trinity uses to associate action outputs with records (employee IDs, client IDs, workspace IDs, shift IDs) is read from a verified database field, not constructed from a name assumption.
+
+For every bot command handler: confirm the workspace routing key, the action dispatch key, and the response routing key all use consistent names that resolve to real registered handlers. A bot command that dispatches to `fill_shift` when the handler is registered as `fillShift` silently drops the command.
+
+For every Trinity proactive scanner alert: confirm the condition it checks references real column names and the alert payload it generates uses key names that the notification system can actually route and display.
+
+For every Trinity-generated document: confirm the template variable names used in the document match the exact field names from which values are pulled. A template variable `{{employeeName}}` pulling from a field named `employee_name` with no interpolation mapping produces a document with a blank field.
+
+---
+
+**AGENT 7 — MIGRATION DRIFT DETECTOR**
+*Confirms the live database exactly matches what the current schema file describes, with no drift from missed or partial migrations*
+
+This agent compares the Migration History Document and Database Truth Document from Agent 1 against the current Drizzle schema file and identifies every point of drift.
+
+For every table in the Drizzle schema file: confirm a corresponding table exists in the live database with the exact same name. Flag any table that exists in the schema but not in the database — it means a migration was never run.
+
+For every column in every table in the Drizzle schema file: confirm the column exists in the live database table with the exact same name and compatible data type. Flag any column that exists in the schema but not in the database. Flag any column whose type in the schema differs from its type in the database.
+
+For every column in the live database: confirm a corresponding column exists in the Drizzle schema file. Flag any column that exists in the database but not in the schema — it means either a manual database change was made outside the migration system, or a migration added something the schema file was never updated to reflect. Either condition means the schema file cannot be trusted as documentation of the database.
+
+For every index in the Drizzle schema file: confirm the index exists in the live database with the same column coverage. A missing index is not a naming bug but a missing index on `workspace_id` is a performance and isolation risk.
+
+For every column that appears in both the schema and the database but with different names (one camelCase, one snake_case, or one plural, one singular): flag as a critical parity violation requiring an explicit migration to align.
+
+Produce a Drift Report listing every discrepancy between the current schema file and the live database, categorized as: missing in database, missing in schema, type mismatch, or name mismatch.
+
+---
+
+**FINDINGS BUS SCHEMA**
+
+Every issue must include:
+
+- **Issue ID** — agent prefix + sequential number
+- **Severity** — P0 (data written to wrong column or silently discarded), P1 (relation or join silently returns undefined), P2 (name inconsistency that does not currently cause failure but will on schema change), P3 (documentation or convention inconsistency only)
+- **Pattern** — which of the three failure patterns applies: Case Convention Mismatch, Plural/Singular Inconsistency, or Schema/Migration/Database Drift
+- **Location** — exact file path, line number, and the specific name that is wrong
+- **Wrong name** — exactly what the code currently says
+- **Correct name** — exactly what it must say to match the database truth
+- **Fix** — the exact change required, including whether a migration is needed or only a code change
+- **Cascade** — which other agents must re-verify after this fix is applied
+
+---
+
+**FIX EXECUTION RULES**
+
+Fixes fall into two categories and must never be confused:
+
+**Code-only fix** — the database column name is correct and the code reference is wrong. Change the code to match the database. Do not touch the database or create a migration.
+
+**Migration-required fix** — the database column name is wrong (or missing) and the schema file is correct. Create and run a migration to rename or add the column. Then update all code references to match. Never rename a database column by editing only the schema file — the migration must run or the rename does not happen.
+
+For every rename migration: confirm it is additive-safe — the old column name must remain readable during the deployment window if any in-flight requests might still reference it. Flag any rename that would cause a zero-downtime deployment issue.
+
+---
+
+**FINAL DELIVERABLE**
+
+When all seven agents achieve two consecutive clean passes:
+
+Produce a Schema Parity Certification containing: total parity violations found, total fixed by code change only, total fixed by migration, total requiring deployment sequencing, and final clean/fail status per agent.
+
+Produce a canonical Name Convention Reference Document listing: every table name as it exists in the live database, every column name per table as it exists in the live database, the corresponding JavaScript property name used in the Drizzle schema for each, and the corresponding key name used in API responses. This document becomes the permanent reference for every developer and every future Replit Agent session working on CoAIleague so this class of bug never re-enters the codebase.
+
+Produce a zero-drift verdict: either the schema file, migration history, and live database are in complete agreement with zero undocumented deviations, or list every deviation with its exact resolution path.
+
+No parity violation of P0 or P1 severity may remain open. Silent data loss and silent undefined returns are production-blocking defects. The first tenant's payroll and invoicing data cannot afford to travel through a name mismatch.
+
+---
+
+That's the nuclear option for schema parity, Bryan. The Name Convention Reference Document it produces at the end is just as valuable as the fixes — it becomes a permanent guard against this class of bug re-entering the codebase every time Replit Agent touches a new feature.

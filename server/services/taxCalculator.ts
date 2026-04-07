@@ -5,6 +5,9 @@
  */
 
 import { db } from "../db";
+import { createLogger } from '../lib/logger';
+const log = createLogger('taxCalculator');
+
 
 // Cache tax rates for 24 hours to minimize API calls
 const taxRateCache = new Map<string, { rate: number; timestamp: number }>();
@@ -41,7 +44,7 @@ export async function calculateStateTax(
     
     return taxRate;
   } catch (error) {
-    console.error('[TaxCalculator] Error calculating tax:', error);
+    log.error('[TaxCalculator] Error calculating tax:', error);
     return 0; // Safe fallback
   }
 }
@@ -59,8 +62,7 @@ export async function calculateBonusTaxation(
     // Federal withholding at flat 37% for bonuses (IRS standard)
     const federalWithholding = bonusAmount * 0.37;
     
-    // State withholding based on state tax rate
-    const stateTaxRate = getStateTaxRate(state);
+    const stateTaxRate = getStateIncomeTaxRate(state);
     const stateWithholding = bonusAmount * stateTaxRate;
     
     const totalWithholding = federalWithholding + stateWithholding;
@@ -73,7 +75,7 @@ export async function calculateBonusTaxation(
       netBonus
     };
   } catch (error) {
-    console.error('[TaxCalculator] Error calculating bonus taxation:', error);
+    log.error('[TaxCalculator] Error calculating bonus taxation:', error);
     return {
       grossBonus: bonusAmount,
       federalWithholding: bonusAmount * 0.37,
@@ -84,32 +86,128 @@ export async function calculateBonusTaxation(
 }
 
 /**
- * Get state tax rate from lookup table
- * Production: Replace with TaxJar API call
+ * Get state SALES TAX rate — used for client invoicing.
+ * Security guard services are taxable in most states that levy sales tax
+ * on services. Texas specifically taxes security services at 6.25%.
+ * The `isTaxExempt` flag on individual clients handles per-client exemptions
+ * (e.g., government contracts). This function returns the state rate only.
  */
 function getStateTaxRate(state: string): number {
-  // Federal tax rates by state (simplified rates for MVP)
-  // Production should use real tax API
-  const stateTaxRates: Record<string, number> = {
-    'CA': 0.0725, // California
-    'NY': 0.04, // New York
-    'TX': 0, // Texas (no state income tax)
-    'FL': 0, // Florida (no state income tax)
-    'WA': 0, // Washington (no state income tax)
-    'IL': 0.0495, // Illinois
-    'PA': 0.0307, // Pennsylvania
-    'OH': 0.0555, // Ohio
-    'GA': 0.055, // Georgia
-    'MI': 0.0425, // Michigan
-    'CO': 0.04, // Colorado
-    'MA': 0.05, // Massachusetts
-    'NJ': 0.06875, // New Jersey
-    'VA': 0.0575, // Virginia
-    'AZ': 0.0545, // Arizona
-    'OR': 0.0495, // Oregon
+  const upper = state?.toUpperCase() || '';
+
+  const stateSalesTaxRates: Record<string, number> = {
+    'AL': 0.04,
+    'AK': 0,
+    'AZ': 0.056,
+    'AR': 0.065,
+    'CA': 0.0725,
+    'CO': 0.029,
+    'CT': 0.0635,
+    'DE': 0,
+    'FL': 0.06,
+    'GA': 0.04,
+    'HI': 0.04,
+    'ID': 0.06,
+    'IL': 0.0625,
+    'IN': 0.07,
+    'IA': 0.06,
+    'KS': 0.065,
+    'KY': 0.06,
+    'LA': 0.0445,
+    'ME': 0.055,
+    'MD': 0.06,
+    'MA': 0.0625,
+    'MI': 0.06,
+    'MN': 0.06875,
+    'MS': 0.07,
+    'MO': 0.04225,
+    'MT': 0,
+    'NE': 0.055,
+    'NV': 0.0685,
+    'NH': 0,
+    'NJ': 0.06625,
+    'NM': 0.05125,
+    'NY': 0.04,
+    'NC': 0.0475,
+    'ND': 0.05,
+    'OH': 0.0575,
+    'OK': 0.045,
+    'OR': 0,
+    'PA': 0.06,
+    'RI': 0.07,
+    'SC': 0.06,
+    'SD': 0.045,
+    'TN': 0.07,
+    'TX': 0.0625,
+    'UT': 0.061,
+    'VT': 0.06,
+    'VA': 0.053,
+    'WA': 0.065,
+    'WV': 0.06,
+    'WI': 0.05,
+    'WY': 0.04,
+    'DC': 0.06,
   };
 
-  return stateTaxRates[state?.toUpperCase() || ''] || 0.05; // Default 5% if state not found
+  return stateSalesTaxRates[upper] ?? 0;
+}
+
+function getStateIncomeTaxRate(state: string): number {
+  const stateIncomeTaxRates: Record<string, number> = {
+    'CA': 0.0725,
+    'NY': 0.04,
+    'TX': 0,
+    'FL': 0,
+    'WA': 0,
+    'IL': 0.0495,
+    'PA': 0.0307,
+    'OH': 0.0555,
+    'GA': 0.055,
+    'MI': 0.0425,
+    'CO': 0.04,
+    'MA': 0.05,
+    'NJ': 0.06875,
+    'VA': 0.0575,
+    'AZ': 0.0545,
+    'OR': 0.0495,
+    'NC': 0.0475,
+    'MN': 0.0535,
+    'WI': 0.0465,
+    'SC': 0.065,
+    'AL': 0.05,
+    'LA': 0.0425,
+    'KY': 0.045,
+    'OK': 0.0475,
+    'IA': 0.06,
+    'KS': 0.057,
+    'AR': 0.055,
+    'UT': 0.0465,
+    'NE': 0.0684,
+    'WV': 0.065,
+    'ID': 0.058,
+    'ME': 0.0715,
+    'HI': 0.0825,
+    'VT': 0.066,
+    'MT': 0.0675,
+    'ND': 0.029,
+    'CT': 0.0699,
+    'RI': 0.0599,
+    'DE': 0.066,
+    'NM': 0.059,
+    'MS': 0.05,
+    'MO': 0.054,
+    'IN': 0.0305,
+    'MD': 0.0575,
+    'DC': 0.0895,
+    'NV': 0,
+    'NH': 0,
+    'SD': 0,
+    'TN': 0,
+    'WY': 0,
+    'AK': 0,
+  };
+
+  return stateIncomeTaxRates[state?.toUpperCase() || ''] || 0.05;
 }
 
 /**

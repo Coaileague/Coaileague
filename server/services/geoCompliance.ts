@@ -8,7 +8,7 @@ import { db } from "../db";
 import { eq, and } from "drizzle-orm";
 import {
   timeEntryDiscrepancies,
-  auditTrail,
+  auditLogs,
   shifts,
   clients,
 } from "../../shared/schema";
@@ -226,12 +226,12 @@ export class GeoComplianceService {
       });
     }
 
-    await db.insert(auditTrail).values({
+    await db.insert(auditLogs).values({
       workspaceId,
       userId,
       userName,
       userRole,
-      action,
+      rawAction: action,
       entityType,
       entityId,
       entityDescription,
@@ -239,7 +239,7 @@ export class GeoComplianceService {
       changesAfter,
       fieldChanges,
       ipAddress,
-      userAgent: 'CoAIleague™ API', // Can be enhanced to capture actual user agent
+      userAgent: 'CoAIleague™ API',
     });
   }
 

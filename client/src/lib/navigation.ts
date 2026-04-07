@@ -16,7 +16,7 @@ import {
 
 export type WorkspaceRole = 
   | 'org_owner' 
-  | 'org_admin' 
+  | 'co_owner' 
   | 'department_manager' 
   | 'supervisor' 
   | 'staff' 
@@ -32,7 +32,7 @@ export type PlatformRole =
   | 'compliance_officer' 
   | 'none';
 
-export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'enterprise';
+export type SubscriptionTier = 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
 
 export interface NavItem {
   label: string;
@@ -51,7 +51,7 @@ export interface NavSection {
 
 export const roleHierarchy: Record<WorkspaceRole, number> = {
   org_owner: 100,
-  org_admin: 90,
+  co_owner: 90,
   department_manager: 80,
   supervisor: 60,
   staff: 40,
@@ -60,9 +60,12 @@ export const roleHierarchy: Record<WorkspaceRole, number> = {
 };
 
 export const tierHierarchy: Record<SubscriptionTier, number> = {
-  enterprise: 4,
-  professional: 3,
-  starter: 2,
+  strategic: 7,
+  enterprise: 6,
+  business: 5,
+  professional: 4,
+  starter: 3,
+  trial: 2,
   free: 1,
 };
 
@@ -107,13 +110,13 @@ export const mainNavigation: NavSection[] = [
     items: [
       {
         label: "Schedules",
-        href: "/schedules",
+        href: "/schedule",
         icon: Calendar,
         description: "View and manage work schedules",
       },
       {
         label: "Timesheets",
-        href: "/timesheets",
+        href: "/timesheets/pending",
         icon: Clock,
         description: "Track and approve hours",
       },
@@ -134,14 +137,14 @@ export const mainNavigation: NavSection[] = [
         label: "Invoices",
         href: "/invoices",
         icon: FileText,
-        requiredRoles: ['org_owner', 'org_admin', 'department_manager'],
+        requiredRoles: ['org_owner', 'co_owner', 'department_manager'],
         description: "Client billing and invoices",
       },
       {
         label: "Payroll",
         href: "/payroll",
         icon: DollarSign,
-        requiredRoles: ['org_owner', 'org_admin'],
+        requiredRoles: ['org_owner', 'co_owner'],
         requiredTier: 'professional',
         description: "Employee payroll processing",
       },
@@ -154,14 +157,14 @@ export const mainNavigation: NavSection[] = [
         label: "Employees",
         href: "/employees",
         icon: Users,
-        requiredRoles: ['org_owner', 'org_admin', 'department_manager'],
+        requiredRoles: ['org_owner', 'co_owner', 'department_manager'],
         description: "Manage workforce",
       },
       {
         label: "Clients",
         href: "/clients",
         icon: Building2,
-        requiredRoles: ['org_owner', 'org_admin', 'department_manager'],
+        requiredRoles: ['org_owner', 'co_owner', 'department_manager'],
         description: "Manage client relationships",
       },
     ],
@@ -173,14 +176,14 @@ export const mainNavigation: NavSection[] = [
         label: "Reports",
         href: "/reports",
         icon: BarChart3,
-        requiredRoles: ['org_owner', 'org_admin', 'department_manager'],
+        requiredRoles: ['org_owner', 'co_owner', 'department_manager'],
         description: "Analytics and insights",
       },
       {
         label: "Advanced Analytics",
         href: "/analytics",
         icon: BarChart3,
-        requiredRoles: ['org_owner', 'org_admin'],
+        requiredRoles: ['org_owner', 'co_owner'],
         requiredTier: 'enterprise',
         badge: "Enterprise",
         description: "AI-powered predictive analytics",
@@ -205,7 +208,7 @@ export const mainNavigation: NavSection[] = [
         label: "Audit Logs",
         href: "/audit-logs",
         icon: Shield,
-        requiredRoles: ['org_owner', 'org_admin', 'auditor'],
+        requiredRoles: ['org_owner', 'co_owner', 'auditor'],
         description: "Compliance and activity tracking",
       },
     ],
@@ -217,7 +220,7 @@ export const mainNavigation: NavSection[] = [
         label: "Workspace Settings",
         href: "/settings",
         icon: Settings,
-        requiredRoles: ['org_owner', 'org_admin'],
+        requiredRoles: ['org_owner', 'co_owner'],
         description: "Configure workspace preferences",
       },
       {
@@ -242,13 +245,13 @@ export const platformNavigation: NavSection[] = [
       },
       {
         label: "All Workspaces",
-        href: "/support/workspaces",
+        href: "/org-management",
         icon: Building2,
         description: "Browse all organizations",
       },
       {
         label: "System Monitoring",
-        href: "/support/monitoring",
+        href: "/system-health",
         icon: BarChart3,
         description: "Platform health and metrics",
       },
@@ -316,7 +319,16 @@ export function getTierUpgradePath(currentTier: SubscriptionTier): {
         'Smart shift scheduling',
         'Advanced time tracking',
       ],
-      estimatedPrice: '$49/month',
+      estimatedPrice: '$199/month',
+    },
+    trial: {
+      nextTier: 'starter',
+      newFeatures: [
+        'Full platform access beyond trial',
+        'Unlimited AI interactions',
+        'Automated payroll and invoicing',
+      ],
+      estimatedPrice: '$199/month',
     },
     starter: {
       nextTier: 'professional',
@@ -326,20 +338,40 @@ export function getTierUpgradePath(currentTier: SubscriptionTier): {
         'Advanced reporting',
         'Custom branding',
       ],
-      estimatedPrice: '$99/month',
+      estimatedPrice: '$749/month',
     },
     professional: {
+      nextTier: 'business',
+      newFeatures: [
+        'Up to 75 officers',
+        '60K AI interactions/month',
+        'Priority support',
+        'Advanced analytics',
+      ],
+      estimatedPrice: '$2,249/month',
+    },
+    business: {
       nextTier: 'enterprise',
       newFeatures: [
-        'Predictive analytics',
-        'API access',
+        'Up to 200 officers',
+        '120K AI interactions/month',
         'White-label customization',
-        'Dedicated support',
+        'Dedicated account manager',
         'SLA guarantees',
+      ],
+      estimatedPrice: '$6,999/month',
+    },
+    enterprise: {
+      nextTier: 'strategic',
+      newFeatures: [
+        '300+ officers',
+        '500K+ AI interactions/month',
+        'Custom integrations',
+        'Dedicated infrastructure',
       ],
       estimatedPrice: 'Contact sales',
     },
-    enterprise: {
+    strategic: {
       nextTier: null,
       newFeatures: [],
       estimatedPrice: '',

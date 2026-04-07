@@ -1,0 +1,374 @@
+Paste this into Replit:
+
+---
+
+**DOCUMENT SYSTEM DEEP AUDIT — ALL LAYERS | MULTI-PASS SCAN | READ BEFORE TOUCH | FIX EVERYTHING**
+
+This is a multi-pass audit of the entire document management system. Run every pass completely before moving to the next. Keep a running count of all gaps found across all passes. Fix everything found in each pass before starting the next pass. Stop only when a full pass returns zero new findings.
+
+---
+
+**WHAT IS BEING AUDITED**
+
+Every system that touches documents — creation, upload, signing, assignment, storage, retrieval, search, querying, the document safe, online forms, e-signature workflows, 7-step execution pipeline, Trinity document actions, event bus document events, WebSocket document broadcasts, and frontend document UI components.
+
+---
+
+**PASS 1 — STRUCTURAL DISCOVERY**
+
+Before fixing anything, map the full document system architecture.
+
+Read and report:
+
+**Backend inventory:**
+- Every route file that handles document operations — list file name and what routes it contains
+- Every service file related to documents — list file name and purpose
+- Every DB table related to documents — list table name, key columns, and what it stores
+- Every Trinity action with `document` in the action ID — list all
+- Every platformEventBus event type containing `document` — list every publish and subscribe
+- Every storage method related to documents — list function names
+- The document safe — what table stores it, how is it scoped per workspace
+
+**Frontend inventory:**
+- Every page or component that renders document lists, document uploads, or document signing
+- Every `useQuery` that fetches documents — list the API endpoint it calls
+- Every `useMutation` that creates, updates, or deletes documents — list the API endpoint
+- Every WebSocket handler that listens for document events
+
+**7-step pipeline inventory:**
+- Does a document 7-step pipeline exist — Trigger → Fetch → Validate → Process → Mutate → Confirm → Notify?
+- If yes — where is it implemented and what file?
+- If no — what is the current document processing flow?
+
+Report everything found. Do not fix yet. Then proceed to Pass 2.
+
+---
+
+**PASS 2 — ROUTE AND WIRING AUDIT**
+
+Fix every gap found in this pass before Pass 3.
+
+**Route completeness:**
+- Does a route exist for document upload? What path? Is it mounted in the main router?
+- Does a route exist for document download? What path?
+- Does a route exist for document list — fetchable by workspace, by employee, by client, by document type?
+- Does a route exist for document search — searchable by name, type, date range, assigned entity?
+- Does a route exist for document delete with soft delete preservation?
+- Does a route exist for document assignment — assigning a document to a specific employee, client, or org?
+- Does a route exist for document status update — draft, pending signature, signed, expired, archived?
+- Does a route exist for the document safe — fetching all documents for a workspace organized by category?
+- Does a route exist for triggering e-signature — sending a document for signing?
+- Does a route exist for e-signature webhook — receiving signature completion callback?
+
+**For every missing route — create it.**
+
+**Auth and isolation on every route:**
+- Is `requireAuth` middleware applied to every document route?
+- Does every document query include `WHERE workspace_id = $workspaceId` from the JWT?
+- Can a user from Workspace A access a document belonging to Workspace B through any route? Test and confirm zero cross-workspace access.
+- Are employee documents scoped so only the employee themselves and org admins can access them?
+- Are client documents scoped so only org admins and managers can access them?
+
+**Fix every isolation gap found.**
+
+**Route to frontend wiring:**
+- For every document API route — verify there is a corresponding frontend query or mutation calling it
+- For every frontend document query — verify the backend route exists and is mounted
+- List every mismatch — frontend calls a path that does not exist, or backend route exists but frontend never calls it
+
+**Fix every mismatch.**
+
+---
+
+**PASS 3 — DOCUMENT ASSIGNMENT AUDIT**
+
+Fix every gap found in this pass before Pass 4.
+
+**Employee document assignment:**
+- When a document is uploaded and assigned to an employee — is the `employeeId` and `workspaceId` stored on the document record?
+- Does the employee profile page show all documents assigned to that employee?
+- When an employee completes onboarding — are their required documents (W4/W9, I9, direct deposit form, offer letter) automatically assigned to them?
+- Can Trinity assign a document to an employee via a Trinity action?
+- Is there a way to mark which documents are required per employee type (W2 vs 1099)?
+- When a required document is missing — does Trinity flag it proactively?
+
+**Client document assignment:**
+- When a contract or document is uploaded and assigned to a client — is the `clientId` and `workspaceId` stored on the document record?
+- Does the client profile page show all documents assigned to that client?
+- When a contract is executed — does the document automatically move to `signed` status and save to the client's document safe?
+
+**Org document assignment:**
+- When an org uploads a compliance document (license certificate, insurance, labor law poster) — is it stored in the org document safe under the correct category?
+- Does the regulatory auditor portal correctly read from the org document safe?
+- Is there a document category enum — and does it include all required types?
+
+**Document safe routing:**
+- When a document is saved — is it automatically routed to the correct safe (employee safe, client safe, org safe) based on its assignment?
+- Is there a single function that determines safe routing — or is it scattered across multiple files?
+- If scattered — consolidate into a single `routeToDocumentSafe(document)` function
+
+**Fix every gap found.**
+
+---
+
+**PASS 4 — E-SIGNATURE PIPELINE AUDIT**
+
+Fix every gap found in this pass before Pass 5.
+
+**Signature flow completeness:**
+- Is there an e-signature service — DocuSign, Adobe Sign, or internal implementation?
+- Read the signature service and report what provider is used
+- Is the signature request creation wired end to end — document → signature request → sent to signer → signer receives email → signer signs → webhook fires → document status updated → document saved to safe?
+- Does each step of this flow have error handling — what happens if the email fails to send? What happens if the webhook never fires?
+- Is there a signature status polling fallback — in case the webhook is missed?
+
+**Signature webhook:**
+- Does the signature webhook endpoint exist?
+- Does it verify the webhook signature before processing?
+- Is it idempotent — can the same completion event fire twice without duplicating the signed document?
+- After signature completion — does the signed document get saved to the correct safe automatically?
+- Does Trinity receive a `document_signed` event after completion?
+- Does the org owner and the signer both receive a notification when signing is complete?
+
+**Signature assignment:**
+- Can a document be sent for signature to a specific employee by email?
+- Can a document be sent for signature to a client contact by email?
+- Is the signer's identity verified — does the platform confirm who signed?
+- Is a signature audit trail preserved — timestamp, IP address, signer identity?
+
+**Fix every gap found.**
+
+---
+
+**PASS 5 — 7-STEP PIPELINE AUDIT**
+
+Fix every gap found in this pass before Pass 6.
+
+Every document operation must follow the 7-step universal pipeline:
+
+```
+Step 1 — TRIGGER: What initiates the document operation?
+Step 2 — FETCH: What data is retrieved to process the document?
+Step 3 — VALIDATE: What validation runs before mutation?
+Step 4 — PROCESS: What transformation or preparation happens?
+Step 5 — MUTATE: What DB write or external API call executes?
+Step 6 — CONFIRM: What confirms the operation succeeded?
+Step 7 — NOTIFY: Who is notified and how?
+```
+
+Audit each of these document operations against the 7-step pipeline:
+
+**Document upload:**
+- Step 1: Upload triggered by user or Trinity
+- Step 2: Fetch workspace settings, document category config, required field rules
+- Step 3: Validate file type, file size, required metadata (name, category, assignedTo)
+- Step 4: Process file — virus scan if configured, generate preview thumbnail, extract metadata
+- Step 5: Write to storage, write DB record with all assignment fields
+- Step 6: Confirm DB record created, confirm file is retrievable at stored URL
+- Step 7: Notify assigned entity (employee or client), notify org admin, emit `document_uploaded` to platformEventBus
+
+**Document signing request:**
+- Step 1: Manager or Trinity triggers signature request
+- Step 2: Fetch document, fetch signer contact info, fetch workspace e-signature settings
+- Step 3: Validate document is in correct state for signing, validate signer has email
+- Step 4: Prepare signature request payload for provider
+- Step 5: Call e-signature provider API, update document status to `pending_signature`
+- Step 6: Confirm provider accepted the request, confirm signer received email
+- Step 7: Notify org owner that signature was requested, emit `document_signature_requested`
+
+**Document signed (webhook callback):**
+- Step 1: Webhook fires from e-signature provider
+- Step 2: Fetch local document record by provider document ID
+- Step 3: Validate webhook signature, validate document is in `pending_signature` state
+- Step 4: Process signed document — download signed PDF from provider
+- Step 5: Update document status to `signed`, store signed PDF, write audit trail
+- Step 6: Confirm signed document is stored and retrievable
+- Step 7: Notify org owner and signer, route to document safe, emit `document_signed`
+
+For every step that is missing or incomplete — implement it.
+
+---
+
+**PASS 6 — SEARCH AND QUERY AUDIT**
+
+Fix every gap found in this pass before Pass 7.
+
+**Search completeness:**
+- Can documents be searched by name — full text search?
+- Can documents be searched by type/category?
+- Can documents be searched by date range — uploaded between X and Y?
+- Can documents be searched by assigned entity — all documents for Employee X?
+- Can documents be searched by status — all pending signature documents?
+- Can documents be searched by expiry — all documents expiring within 30 days?
+
+**Query performance:**
+- Does the documents table have indexes on `workspace_id`, `employee_id`, `client_id`, `document_type`, `status`, `created_at`, `expires_at`?
+- Run this SQL and report results:
+```sql
+SELECT indexname, indexdef 
+FROM pg_indexes 
+WHERE tablename = 'documents' 
+ORDER BY indexname;
+```
+- For every missing index — add it
+
+**Trinity document queries:**
+- Can Trinity fetch all documents for a specific employee when asked?
+- Can Trinity identify documents expiring within 30 days?
+- Can Trinity identify employees with missing required documents?
+- Can Trinity search documents by content or metadata?
+- Does Trinity's document query go through the 7-step pipeline?
+
+**Fix every gap found.**
+
+---
+
+**PASS 7 — EVENT BUS AND REAL-TIME SYNC AUDIT**
+
+Fix every gap found in this pass before Pass 8.
+
+**Event completeness:**
+For each of these document events — confirm it is published to platformEventBus AND has at least one subscriber:
+
+- `document_uploaded` — published? subscriber?
+- `document_signed` — published? subscriber?
+- `document_signature_requested` — published? subscriber?
+- `document_expired` — published? subscriber?
+- `document_deleted` — published? subscriber?
+- `document_assigned` — published? subscriber?
+- `document_bridged` — published? subscriber?
+- `compliance_document_uploaded` — published? subscriber?
+
+For every event with no publisher — add the publish call at the correct mutation point.
+For every event with no subscriber — add a subscriber that at minimum logs to audit trail and sends the appropriate notification.
+
+**WebSocket real-time sync:**
+- When a document is uploaded — does the document list update in real time without page refresh?
+- When a document is signed — does the document status update in real time?
+- When Trinity assigns a document — does the employee's document list update in real time?
+- Are `broadcastToWorkspace()` calls present after every document mutation?
+- Does the frontend have WebSocket handlers for all document broadcast events?
+
+**Fix every gap found.**
+
+---
+
+**PASS 8 — SILENT FAILURE AUDIT**
+
+Fix every gap found in this pass before Pass 9.
+
+**Upload silent failures:**
+- If file storage fails — does the DB record still get created with a broken URL? Must not — storage and DB write must be atomic
+- If the DB write fails after storage succeeds — is the orphaned file cleaned up?
+- If document assignment fails — is the upload still accessible? Must be rolled back together
+
+**Signature silent failures:**
+- If the e-signature provider API call fails — does the document get stuck in `pending_signature` with no notification?
+- If the webhook never fires — is there a polling fallback that checks signature status periodically?
+- If the signed PDF download fails — is the document status still updated to `signed` with no actual file?
+
+**Notification silent failures:**
+- If document notification fails — is the document operation still completed?
+- Are document notification failures logged to `trinity_credit_failures` or equivalent?
+
+**Search silent failures:**
+- If a full text search returns zero results — is it because the query is wrong or because data is missing?
+- Are there documents in the DB that are not findable by search due to missing indexed fields?
+
+**Fix every gap found.**
+
+---
+
+**PASS 9 — UI/UX COMPLETENESS AUDIT**
+
+Fix every gap found in this pass before Pass 10.
+
+**Document list UI:**
+- Does the document list show: name, type, status, assigned to, upload date, expiry date, actions (download, sign, delete)?
+- Can documents be filtered by type, status, and assigned entity from the UI?
+- Can documents be sorted by date, name, and status?
+- Is there a loading state while documents fetch?
+- Is there an empty state message when no documents exist?
+- Is there an error state when the fetch fails?
+
+**Document upload UI:**
+- Is there a clear upload button with file type restrictions shown?
+- Does the upload show progress?
+- After upload succeeds — does the document immediately appear in the list?
+- If upload fails — does the UI show a specific error not a generic failure?
+- Can the user assign the document to an employee or client during upload?
+
+**Document signing UI:**
+- Is there a "Send for Signature" button on documents in draft status?
+- After sending for signature — does the document status update immediately in the UI?
+- Can the signer sign directly in the platform — or are they redirected to the provider?
+- Is there a signature status indicator — pending, signed, declined?
+- Can the signed document be downloaded from the UI after completion?
+
+**Document safe UI:**
+- Is there a document safe view per workspace?
+- Is it organized by category — compliance docs, employee docs, client contracts, tax documents?
+- Can each category be expanded and collapsed?
+- Is there a search bar within the document safe?
+
+**Fix every gap found.**
+
+---
+
+**PASS 10 — FINAL VERIFICATION PASS**
+
+Run a complete end-to-end test of the document system:
+
+**Test sequence:**
+1. Upload a test document — assign to a test employee — confirm it appears in employee profile and document safe
+2. Upload a test document — assign to a test client — confirm it appears in client profile and document safe
+3. Upload an org compliance document — confirm it appears in the org document safe under the correct category
+4. Send a test document for e-signature — confirm the signer receives an email — confirm document status changes to `pending_signature`
+5. Simulate webhook completion — confirm document status changes to `signed` — confirm signed document is stored
+6. Search for the document by name — confirm it is returned
+7. Search for all documents expiring within 30 days — confirm results are correct
+8. Request Trinity to fetch all documents for the test employee — confirm Trinity returns the correct list
+9. Delete a document — confirm soft delete — confirm it no longer appears in search but audit log preserves it
+10. Confirm cross-workspace isolation — document uploaded to Workspace A is not accessible from Workspace B
+
+Report PASS or FAIL for each test with exact response.
+
+---
+
+**RUNNING GAP COUNT**
+
+Maintain this count throughout all passes — update after each pass:
+
+```
+Pass 1  — Structural discovery:     N gaps found | N fixed
+Pass 2  — Route and wiring:         N gaps found | N fixed
+Pass 3  — Document assignment:      N gaps found | N fixed
+Pass 4  — E-signature pipeline:     N gaps found | N fixed
+Pass 5  — 7-step pipeline:          N gaps found | N fixed
+Pass 6  — Search and query:         N gaps found | N fixed
+Pass 7  — Event bus and real-time:  N gaps found | N fixed
+Pass 8  — Silent failures:          N gaps found | N fixed
+Pass 9  — UI/UX completeness:       N gaps found | N fixed
+Pass 10 — Final verification:       N/10 tests passing
+
+TOTAL GAPS FOUND ACROSS ALL PASSES: N
+TOTAL GAPS FIXED: N
+REMAINING UNFIXED: N
+```
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 10 passes:
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Pass 10 smoke test — 10/10 tests passing
+5. Running gap count — remaining unfixed = 0
+6. If remaining = 0 and Pass 10 = 10/10 — state: **DOCUMENT SYSTEM VERIFIED — PRODUCTION READY**
+7. Stop and wait
+
+---
+
+Paste results pass by pass as Replit completes them. When Pass 10 hits 10/10 and remaining gaps hit zero the document system is production ready.

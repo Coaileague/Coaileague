@@ -20,6 +20,11 @@ import {
   interactiveOnboardingState
 } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { requireAuth } from '../auth';
+import { normalizeAiBrainActorType } from '../constants/enumTypes';
+import { createLogger } from '../lib/logger';
+const log = createLogger('ExperienceRoutes');
+
 
 interface AuthRequest extends Request {
   user?: {
@@ -44,6 +49,8 @@ function broadcastToClients(event: string, data: any, workspaceId?: string) {
 
 const router = Router();
 
+router.use(requireAuth);
+
 router.get('/smart-replies/templates', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
@@ -56,8 +63,8 @@ router.get('/smart-replies/templates', async (req: Request, res: Response) => {
     const templates = await smartReplyService.getTemplates(userId);
     
     res.json({ success: true, templates });
-  } catch (error: any) {
-    console.error('[SmartReply] Templates error:', error);
+  } catch (error: unknown) {
+    log.error('[SmartReply] Templates error:', error);
     res.status(500).json({ error: 'Failed to get templates' });
   }
 });
@@ -85,8 +92,8 @@ router.post('/smart-replies/generate', async (req: Request, res: Response) => {
       const suggestions = await smartReplyService.generateSuggestions(message, enrichedContext);
       res.json({ success: true, suggestions });
     }
-  } catch (error: any) {
-    console.error('[SmartReply] Generate error:', error);
+  } catch (error: unknown) {
+    log.error('[SmartReply] Generate error:', error);
     res.status(500).json({ error: 'Failed to generate suggestions' });
   }
 });
@@ -102,7 +109,7 @@ router.post('/smart-replies/usage', async (req: Request, res: Response) => {
     }
     
     res.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.json({ success: true });
   }
 });
@@ -142,7 +149,7 @@ router.get('/role-theme/:role', async (req: Request, res: Response) => {
     const theme = themes[role] || themes.default;
     
     res.json({ success: true, theme });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to get theme' });
   }
 });
@@ -154,7 +161,7 @@ router.get('/notification-preferences', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
-    const workspaceId = authReq.user?.currentWorkspaceId || 'global';
+    const workspaceId = (authReq as any).workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId || 'global';
     
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -205,7 +212,7 @@ router.get('/notification-preferences', async (req: Request, res: Response) => {
     };
     
     res.json({ success: true, preferences: defaults });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to get preferences' });
   }
 });
@@ -214,7 +221,7 @@ router.post('/notification-preferences', async (req: Request, res: Response) => 
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
-    const workspaceId = authReq.user?.currentWorkspaceId || 'global';
+    const workspaceId = (authReq as any).workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId || 'global';
     const preferences = req.body;
     
     if (!userId) {
@@ -247,7 +254,7 @@ router.post('/notification-preferences', async (req: Request, res: Response) => 
           }
         });
     } catch (e) {
-      console.log('[Preferences] DB persistence failed, using in-memory fallback');
+      log.warn('[ExperienceRoutes] Failed to persist preference:', e);
     }
     
     // Broadcast preference change to all tabs/devices
@@ -258,10 +265,8 @@ router.post('/notification-preferences', async (req: Request, res: Response) => 
       timestamp: new Date().toISOString(),
     }, workspaceId !== 'global' ? workspaceId : undefined);
     
-    console.log(`[Preferences] Saved notification preferences for ${userId} in workspace ${workspaceId}`);
-    
     res.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to save preferences' });
   }
 });
@@ -270,10 +275,8 @@ router.post('/haptic-trigger', async (req: Request, res: Response) => {
   try {
     const { type, userId, deviceType } = req.body;
     
-    console.log(`[Haptic] Triggered ${type} for ${userId} on ${deviceType}`);
-    
     res.json({ success: true, triggered: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to trigger haptic' });
   }
 });
@@ -292,7 +295,10 @@ const onboardingProgressMemory = new Map<string, Record<string, { completed: boo
 router.get('/onboarding/progress', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
-    const workspaceId = req.query.workspaceId as string || authReq.user?.currentWorkspaceId;
+    // FIX: Never accept workspaceId from the query string — it would allow any authenticated
+    // user to read onboarding progress for a workspace they don't belong to.
+    // Always resolve workspace from the session only.
+    const workspaceId = (authReq as any).workspaceId || authReq.user?.currentWorkspaceId;
     const userId = authReq.user?.id;
     
     if (!userId) {
@@ -344,7 +350,7 @@ router.get('/onboarding/progress', async (req: Request, res: Response) => {
       isComplete: pendingSteps === 0,
       estimatedMinutesRemaining: pendingSteps * 3,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to get onboarding progress' });
   }
 });
@@ -353,7 +359,7 @@ router.post('/onboarding/steps/:stepId/complete', async (req: Request, res: Resp
   try {
     const authReq = req as AuthRequest;
     const { stepId } = req.params;
-    const workspaceId = authReq.user?.currentWorkspaceId;
+    const workspaceId = (authReq as any).workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
     const userId = authReq.user?.id;
     
     if (!userId) {
@@ -389,7 +395,7 @@ router.post('/onboarding/steps/:stepId/complete', async (req: Request, res: Resp
           }
         });
     } catch (e) {
-      console.log('[Onboarding] DB persistence failed, using memory');
+      log.warn('[ExperienceRoutes] Failed to persist onboarding step:', e);
     }
     
     // Broadcast to all connected clients for live sync
@@ -401,10 +407,8 @@ router.post('/onboarding/steps/:stepId/complete', async (req: Request, res: Resp
       timestamp: new Date().toISOString(),
     }, workspaceId || undefined);
     
-    console.log(`[Onboarding] Step ${stepId} completed by ${userId}`);
-    
     res.json({ success: true, stepId, status: 'completed' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to complete step' });
   }
 });
@@ -413,7 +417,7 @@ router.post('/onboarding/steps/:stepId/skip', async (req: Request, res: Response
   try {
     const authReq = req as AuthRequest;
     const { stepId } = req.params;
-    const workspaceId = authReq.user?.currentWorkspaceId;
+    const workspaceId = (authReq as any).workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
     const userId = authReq.user?.id;
     
     if (!userId) {
@@ -449,7 +453,7 @@ router.post('/onboarding/steps/:stepId/skip', async (req: Request, res: Response
           }
         });
     } catch (e) {
-      console.log('[Onboarding] DB persistence failed, using memory');
+      log.warn('[ExperienceRoutes] Failed to persist skipped step:', e);
     }
     
     // Broadcast to all connected clients
@@ -461,10 +465,8 @@ router.post('/onboarding/steps/:stepId/skip', async (req: Request, res: Response
       timestamp: new Date().toISOString(),
     }, workspaceId || undefined);
     
-    console.log(`[Onboarding] Step ${stepId} skipped by ${userId}`);
-    
     res.json({ success: true, stepId, status: 'skipped' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to skip step' });
   }
 });
@@ -477,14 +479,14 @@ router.post('/ai-brain/events', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
-    const workspaceId = authReq.user?.currentWorkspaceId;
+    const workspaceId = (authReq as any).workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
     const { actorType, actionType, actionCategory, title, description, payload, metadata, severity, isGlobal, targetUserIds, targetRoles } = req.body;
     
     if (!actionType || !title) {
       return res.status(400).json({ error: 'actionType and title are required' });
     }
     
-    const eventId = `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const eventId = `event-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     
     // Try to persist to database
     let dbEventId = eventId;
@@ -492,7 +494,7 @@ router.post('/ai-brain/events', async (req: Request, res: Response) => {
       const [event] = await db.insert(aiBrainLiveEvents)
         .values({
           workspaceId: workspaceId || null,
-          actorType: actorType || 'system',
+          actorType: normalizeAiBrainActorType(actorType || 'system'),
           actorId: userId,
           actorName: authReq.user?.platformRole || 'User',
           actionType,
@@ -511,7 +513,7 @@ router.post('/ai-brain/events', async (req: Request, res: Response) => {
       
       dbEventId = event.id;
     } catch (e) {
-      console.log('[AIBrainEvents] DB persistence failed:', e);
+      log.warn('[ExperienceRoutes] Failed to persist live event:', e);
     }
     
     // Broadcast to all connected clients
@@ -538,11 +540,9 @@ router.post('/ai-brain/events', async (req: Request, res: Response) => {
       broadcastToClients('ai_brain:live_event', eventData, workspaceId || undefined);
     }
     
-    console.log(`[AIBrainEvents] Published: ${actionType} - ${title}`);
-    
     res.json({ success: true, eventId: dbEventId });
-  } catch (error: any) {
-    console.error('[AIBrainEvents] Error:', error);
+  } catch (error: unknown) {
+    log.error('[AIBrainEvents] Error:', error);
     res.status(500).json({ error: 'Failed to publish event' });
   }
 });
@@ -550,7 +550,8 @@ router.post('/ai-brain/events', async (req: Request, res: Response) => {
 router.get('/ai-brain/events', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
-    const workspaceId = authReq.user?.currentWorkspaceId;
+    const workspaceId = (authReq as any).workspaceId || authReq.user?.workspaceId || authReq.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     
     // Try to get from database - return workspace-scoped events OR global events
@@ -583,11 +584,11 @@ router.get('/ai-brain/events', async (req: Request, res: Response) => {
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, limit);
     } catch (e) {
-      console.log('[AIBrainEvents] DB query failed - returning empty events');
+      log.warn('[ExperienceRoutes] Failed to fetch live events:', e);
     }
     
     res.json({ success: true, events });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to get events' });
   }
 });

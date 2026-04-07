@@ -10,17 +10,22 @@
  * - Resolve session
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { supportSessionService } from '../services/supportSessionService';
 import { AuthenticatedRequest, requirePlatformStaff } from '../rbac';
+import { storage } from '../storage';
 import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('SupportChat');
+
 
 const router = Router();
 
 router.post('/session', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const { guestEmail, guestName, userAgent, url, workspaceId } = req.body;
+    const { guestEmail, guestName, userAgent, url, workspaceId, issueDescription, quickbooksId } = req.body;
     
     const session = await supportSessionService.createSession({
       userId: authReq.userId,
@@ -29,6 +34,8 @@ router.post('/session', async (req: Request, res: Response) => {
       userAgent: userAgent || req.headers['user-agent'],
       url,
       workspaceId: authReq.workspaceId || workspaceId,
+      issueDescription,
+      quickbooksId,
     });
 
     res.json({
@@ -40,9 +47,9 @@ router.post('/session', async (req: Request, res: Response) => {
         ticketNumber: session.ticketNumber,
       },
     });
-  } catch (error: any) {
-    console.error('[SupportChat] Failed to create session:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportChat] Failed to create session:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -68,9 +75,9 @@ router.post('/session/:sessionId/message', async (req: Request, res: Response) =
         staffName: session.staffName,
       } : undefined,
     });
-  } catch (error: any) {
-    console.error('[SupportChat] Failed to process message:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportChat] Failed to process message:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -94,8 +101,8 @@ router.get('/session/:sessionId', async (req: Request, res: Response) => {
         createdAt: session.createdAt,
       },
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -115,12 +122,12 @@ router.post('/session/:sessionId/escalate', async (req: Request, res: Response) 
         messages: session.messages.slice(-3),
       },
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.get('/queue', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
+router.get('/queue', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const queue = supportSessionService.getWaitingQueue();
     const stats = supportSessionService.getStats();
@@ -139,16 +146,24 @@ router.get('/queue', requireAuth, requirePlatformStaff, async (req: Request, res
       })),
       stats,
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/session/:sessionId/join', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/session/:sessionId/join', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
     const staffId = req.userId!;
-    const staffName = req.body.staffName || 'Support Agent';
+    const staffInfo = await storage.getUserDisplayInfo(staffId);
+    const { formatStaffDisplayNameForEndUser } = await import('../utils/formatUserDisplayName');
+    const staffName = staffInfo
+      ? formatStaffDisplayNameForEndUser({
+          firstName: staffInfo.firstName,
+          lastName: staffInfo.lastName,
+          email: staffInfo.email || undefined,
+        })
+      : 'Support';
 
     const session = await supportSessionService.staffJoinSession(sessionId, staffId, staffName);
 
@@ -161,12 +176,12 @@ router.post('/session/:sessionId/join', requireAuth, requirePlatformStaff, async
         ticketNumber: session.ticketNumber,
       },
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/session/:sessionId/staff-message', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/session/:sessionId/staff-message', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
     const { content } = req.body;
@@ -182,8 +197,8 @@ router.post('/session/:sessionId/staff-message', requireAuth, requirePlatformSta
       success: true,
       message,
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -202,21 +217,63 @@ router.post('/session/:sessionId/resolve', async (req: Request, res: Response) =
         ticketNumber: session.ticketNumber,
       },
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.get('/stats', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
+router.get('/stats', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    const stats = supportSessionService.getStats();
+    const stats = supportSessionService.getSessionStats();
     res.json({ success: true, stats });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.get('/my-sessions', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/session/:sessionId/feedback', async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const { rating, comment } = req.body;
+
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, error: 'Rating must be 1-5' });
+    }
+
+    await supportSessionService.submitFeedback(sessionId, rating, comment);
+
+    res.json({
+      success: true,
+      message: 'Thank you for your feedback!',
+    });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
+router.get('/sessions/all', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const sessions = await supportSessionService.getAllSessionsForSupport();
+    res.json({
+      success: true,
+      sessions: sessions.map(s => ({
+        id: s.id,
+        status: s.status,
+        ticketNumber: s.ticketNumber,
+        userName: s.guestName || s.userId || 'Anonymous',
+        workspaceId: s.workspaceId,
+        staffName: s.staffName,
+        messageCount: s.messages.length,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+      })),
+    });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
+router.get('/my-sessions', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const sessions = supportSessionService.getActiveStaffSessions(req.userId!);
     
@@ -232,8 +289,8 @@ router.get('/my-sessions', requireAuth, requirePlatformStaff, async (req: Authen
         updatedAt: s.updatedAt,
       })),
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -251,8 +308,27 @@ router.post('/guest-ticket', async (req: Request, res: Response) => {
     }
 
     const { db } = await import('../db');
-    const { supportTickets } = await import('@shared/schema');
+    const { supportTickets, workspaces } = await import('@shared/schema');
+    const { eq } = await import('drizzle-orm');
     const { randomUUID } = await import('crypto');
+
+    // Get or create a platform workspace for guest tickets
+    // First try to find an existing platform workspace
+    let platformWorkspaceId: string;
+    
+    // Look for existing platform/system workspace
+    const existingWorkspace = await db.select()
+      .from(workspaces)
+      .where(eq(workspaces.name, 'Platform Support'))
+      .limit(1);
+    
+    if (existingWorkspace.length > 0) {
+      platformWorkspaceId = existingWorkspace[0].id;
+    } else {
+      // Use sandbox workspace as fallback for guest tickets
+      const { getSandboxWorkspaceId } = await import('@shared/config/sandboxConfig');
+      platformWorkspaceId = getSandboxWorkspaceId();
+    }
 
     const ticketId = randomUUID();
     const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}`;
@@ -260,24 +336,23 @@ router.post('/guest-ticket', async (req: Request, res: Response) => {
     await db.insert(supportTickets).values({
       id: ticketId,
       ticketNumber,
+      workspaceId: platformWorkspaceId,
+      type: 'support',
       subject,
       description: `From: ${name} <${email}>\n\n${message}`,
       status: 'open',
       priority: 'medium',
-      source: 'guest_form',
-      reportedBy: null,
-      category: 'general',
-    } as any);
+    });
 
-    console.log(`[SupportChat] Guest ticket created: ${ticketNumber} from ${email}`);
+    log.info(`[SupportChat] Guest ticket created: ${ticketNumber} from ${email}`);
 
     res.json({
       success: true,
       ticketNumber,
       message: 'Your request has been submitted. We will respond to your email shortly.',
     });
-  } catch (error: any) {
-    console.error('[SupportChat] Failed to create guest ticket:', error);
+  } catch (error: unknown) {
+    log.error('[SupportChat] Failed to create guest ticket:', error);
     res.status(500).json({ success: false, error: 'Failed to submit ticket' });
   }
 });
@@ -292,7 +367,7 @@ router.get('/my-tickets', requireAuth, async (req: AuthenticatedRequest, res: Re
     
     const tickets = await db.select()
       .from(supportTickets)
-      .where(eq(supportTickets.reportedBy, userId))
+      .where(eq(supportTickets.requestedBy, userId))
       .orderBy(desc(supportTickets.createdAt))
       .limit(100);
 
@@ -311,9 +386,9 @@ router.get('/my-tickets', requireAuth, async (req: AuthenticatedRequest, res: Re
         resolution: t.resolution,
       })),
     });
-  } catch (error: any) {
-    console.error('[SupportChat] Failed to get user tickets:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportChat] Failed to get user tickets:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 

@@ -3,6 +3,10 @@
 
 import { storage } from '../storage';
 import { getServiceHealth } from './healthCheck';
+import { TIMEOUTS } from '../config/platformConfig';
+import { createLogger } from '../lib/logger';
+const log = createLogger('trinityDataIntegrityScanner');
+
 
 export interface DeadConnection {
   id: string;
@@ -170,7 +174,7 @@ class TrinityDataIntegrityScanner {
   private scanInterval: NodeJS.Timeout | null = null;
 
   async scan(): Promise<DataIntegrityScanResult> {
-    const scanId = `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const scanId = `scan-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
     const deadConnections: DeadConnection[] = [];
     const liveDataSources = buildLiveDataSources();
 
@@ -220,7 +224,7 @@ class TrinityDataIntegrityScanner {
         });
       } else if (result.status === 'rejected') {
         // If the check itself failed, log it but don't add as dead connection
-        console.warn('[DataIntegrityScanner] Check failed:', result.reason);
+        log.warn('[DataIntegrityScanner] Check failed:', result.reason);
       }
     }
 
@@ -327,7 +331,7 @@ class TrinityDataIntegrityScanner {
     return this.lastScan;
   }
 
-  startPeriodicScanning(intervalMs: number = 300000): void {
+  startPeriodicScanning(intervalMs: number = TIMEOUTS.dataScanIntervalMs): void {
     if (this.scanInterval) {
       clearInterval(this.scanInterval);
     }

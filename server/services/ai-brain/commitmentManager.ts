@@ -17,6 +17,8 @@ import {
 } from '@shared/schema';
 import { eq, and, lte, inArray, sql } from 'drizzle-orm';
 import { aiBrainEvents } from './internalEventEmitter';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('commitmentManager');
 
 export type CommitmentType = 'intent' | 'lock' | 'reservation' | 'approval_pending' | 'committed' | 'rolled_back';
 export type CommitmentStatus = 'pending' | 'active' | 'fulfilled' | 'cancelled' | 'compensated';
@@ -49,8 +51,25 @@ class CommitmentManagerService {
   }
 
   private startLockCleanup() {
+    let consecutiveFailures = 0;
+    let backoffUntil = 0;
     setInterval(async () => {
-      await this.cleanupExpiredLocks();
+      if (Date.now() < backoffUntil) return;
+      try {
+        const { probeDbConnection } = await import('../../db');
+        const dbOk = await probeDbConnection();
+        if (!dbOk) return;
+        await this.cleanupExpiredLocks();
+        consecutiveFailures = 0;
+        backoffUntil = 0;
+      } catch (error: any) {
+        consecutiveFailures++;
+        const backoffMs = Math.min(60000 * Math.pow(2, consecutiveFailures - 1), 300000);
+        backoffUntil = Date.now() + backoffMs;
+        if (consecutiveFailures <= 2) {
+          log.warn('[CommitmentManager] Lock cleanup failed (will retry):', error?.message || 'unknown');
+        }
+      }
     }, 60000);
   }
 
@@ -73,7 +92,7 @@ class CommitmentManagerService {
       status: 'pending',
     }).returning();
 
-    console.log(`[CommitmentManager] Intent declared: ${resourceType}/${resourceId}`);
+    log.info(`[CommitmentManager] Intent declared: ${resourceType}/${resourceId}`);
     return commitment;
   }
 
@@ -99,7 +118,7 @@ class CommitmentManagerService {
     if (existingLock.length > 0) {
       const lock = existingLock[0];
       if (lock.expiresAt && new Date(lock.expiresAt) > new Date()) {
-        console.log(`[CommitmentManager] Lock already held for ${lockKey}`);
+        log.info(`[CommitmentManager] Lock already held for ${lockKey}`);
         return null;
       }
       await this.releaseLock(lock.id);
@@ -118,7 +137,7 @@ class CommitmentManagerService {
     }).returning();
 
     this.activeLocks.set(lockKey, lock.id);
-    console.log(`[CommitmentManager] Lock acquired: ${lockKey} (expires: ${expiresAt.toISOString()})`);
+    log.info(`[CommitmentManager] Lock acquired: ${lockKey} (expires: ${expiresAt.toISOString()})`);
     
     return lock;
   }
@@ -140,7 +159,7 @@ class CommitmentManagerService {
     if (lock) {
       const lockKey = `${lock.resourceType}:${lock.resourceId}`;
       this.activeLocks.delete(lockKey);
-      console.log(`[CommitmentManager] Lock released: ${lockKey}`);
+      log.info(`[CommitmentManager] Lock released: ${lockKey}`);
       return true;
     }
 
@@ -204,7 +223,7 @@ class CommitmentManagerService {
       .where(eq(commitmentLedger.id, commitmentId))
       .returning();
 
-    console.log(`[CommitmentManager] Rolled back: ${commitment.resourceType}/${commitment.resourceId}`);
+    log.info(`[CommitmentManager] Rolled back: ${commitment.resourceType}/${commitment.resourceId}`);
     return updated;
   }
 
@@ -370,7 +389,7 @@ class CommitmentManagerService {
       ));
 
     if (result.rowCount && result.rowCount > 0) {
-      console.log(`[CommitmentManager] Cleaned up ${result.rowCount} expired locks`);
+      log.info(`[CommitmentManager] Cleaned up ${result.rowCount} expired locks`);
     }
 
     return result.rowCount || 0;

@@ -1,0 +1,222 @@
+This is not covered anywhere in the 55-phase plan. There are scattered references to an `rfpPipelineRoutes.ts` file that showed up in the Phase 28 IDOR fix — meaning some early skeleton exists — but nothing close to what you're describing.
+
+What you're describing is a full autonomous sales and business development engine. That is a significant platform capability that deserves its own dedicated phase with full scope.
+
+Let me assess what likely exists vs what needs to be built:
+
+---
+
+**What likely exists (from prior phase references):**
+- `rfpPipelineRoutes.ts` — some RFP pipeline route skeleton
+- `inboundOpportunityAgent.ts` — confirmed built, processes inbound contractor shift extraction
+- Client record creation — confirmed from Phase 31 lifecycle work
+- Contract generation and signing — confirmed from Phase 18 document pipeline
+- NDS email delivery — confirmed from Phase 8 and 27
+
+**What does NOT exist as a confirmed build:**
+- Sales lead capture and pipeline UI
+- Autonomous Trinity outbound email sequences to prospects
+- Proposal generation from template with pricing and scope
+- Proposal approval workflow with org_owner signature
+- Contract pipeline triggered automatically on proposal approval
+- Client onboarding triggered automatically on contract execution
+- Post configuration data gathering by Trinity
+- Sales pipeline tracking dashboard with visual kanban or funnel
+- Lead scoring and prioritization
+- Email conversation threading linked to pipeline stage
+- CRM-style contact management for prospects vs active clients
+- Win/loss tracking and analytics
+
+---
+
+**This becomes Phase 35B** — slotting between Phase 35 (Global Search) and Phase 36 (Data Export) since it builds on the document pipeline (Phase 18), contract system (Phase 18), client lifecycle (Phase 31), NDS (Phase 8), and Trinity orchestration (Phase 19).
+
+Here is the full scope — send this to the agent as a master plan addition:
+
+---
+
+**MASTER PLAN UPDATE — Add Phase 35B to replit.md**
+
+Slot Phase 35B between Phase 35 (Global Search) and Phase 36 (Data Export and Privacy Compliance).
+
+---
+
+**Phase 35B — Autonomous Sales Engine, RFP Pipeline, and Business Development**
+
+This phase builds the complete autonomous sales and business development system. Trinity serves as the primary sales agent — she identifies prospects, initiates outreach, conducts email conversations, generates proposals, manages the approval chain, and hands off executed contracts to the operations pipeline automatically. The org_owner focuses on strategy and relationships while Trinity handles the mechanics of growing the business.
+
+**Syncs with: Phases 8, 14, 18, 19, 23, 27, 31, 34**
+
+---
+
+**PIPELINE ARCHITECTURE — 8 stages:**
+
+```
+Lead Captured → Qualified → Outreach Active → Proposal Sent → 
+Proposal Approved → Contract Sent → Contract Executed → Client Onboarded
+```
+
+Every lead moves through these stages. Every stage transition is logged. Nothing falls through the cracks.
+
+---
+
+**SCHEMA — new tables:**
+
+**`sales_leads` table:**
+- `id`, `workspace_id`, `company_name`, `contact_name`, `contact_email`, `contact_phone`
+- `lead_source` — enum: manual_entry, inbound_inquiry, referral, linkedin, event, cold_outreach, other
+- `stage` — enum: captured, qualified, outreach_active, proposal_sent, proposal_approved, contract_sent, contract_executed, onboarded, lost
+- `lost_reason` — text, populated when stage = lost
+- `lead_score` — integer 0-100, Trinity-calculated
+- `assigned_to` — user_id of the sales rep or manager responsible
+- `estimated_contract_value` — decimal
+- `estimated_officers_needed` — integer
+- `primary_post_type` — text (armed, unarmed, event, etc.)
+- `operating_states` — text array
+- `notes` — text
+- `trinity_context` — jsonb, Trinity's memory for this lead's conversation history
+- `created_at`, `updated_at`, `last_contacted_at`, `expected_close_date`
+
+**`sales_activities` table:**
+- Every action taken on a lead: email sent, email received, call logged, meeting scheduled, proposal generated, stage changed
+- `id`, `lead_id`, `workspace_id`, `activity_type`, `direction` (inbound/outbound), `subject`, `body`, `actor_id` (user or Trinity), `timestamp`
+
+**`sales_proposals` table:**
+- `id`, `lead_id`, `workspace_id`, `proposal_number`, `status` (draft, sent, viewed, approved, rejected, expired)
+- `services_description`, `estimated_officers`, `post_locations`, `coverage_schedule`
+- `monthly_rate`, `setup_fee`, `contract_term_months`
+- `document_url` — generated proposal PDF in document vault
+- `org_owner_signed_at`, `prospect_signed_at`
+- `valid_until` — proposal expiry date
+- `created_at`, `updated_at`, `sent_at`, `approved_at`
+
+**`sales_email_threads` table:**
+- Links email conversations to leads
+- `id`, `lead_id`, `workspace_id`, `thread_id` (Resend or email provider thread reference), `from_email`, `to_email`, `subject`, `direction`, `body`, `trinity_generated` (boolean), `sent_at`
+
+---
+
+**TRINITY AUTONOMOUS SALES FLOW:**
+
+**Stage 1 — Lead Capture:**
+- Manual entry by manager/owner via sales pipeline UI
+- Inbound inquiry via support@ or a dedicated sales@ email address
+- Trinity parses inbound inquiries and automatically creates a lead record
+- Lead score calculated immediately: company size signals, urgency language, geographic fit, post type match
+
+**Stage 2 — Qualification:**
+- Trinity reviews the lead data and scores it 0-100
+- High score (70+): Trinity recommends immediate outreach, drafts first email for org_owner review
+- Medium score (40-69): Trinity flags for manual qualification review
+- Low score (below 40): Trinity marks as low priority, suggests nurture sequence
+- Org_owner approves or modifies Trinity's recommendation before any outreach
+
+**Stage 3 — Outreach Active:**
+- Trinity initiates a personalized outreach email sequence
+- Email 1: Introduction and value proposition — sent from org_owner's email address via NDS
+- Email 2 (3 days later if no response): Follow-up with a specific differentiator relevant to the prospect's industry or location
+- Email 3 (7 days later if no response): Final outreach with a specific offer or call-to-action
+- All emails personalized using lead data — company name, contact name, location, post type needs
+- Prospect responses received via inbound email routing — Trinity reads and classifies the response
+- Positive response: Trinity drafts a reply and flags for org_owner review before sending
+- Request for proposal: Trinity automatically advances to Stage 4
+- Not interested: Trinity marks lead as lost with reason, moves to nurture list
+- No response after 3 emails: Trinity marks as cold, schedules re-engagement in 30 days
+
+**Stage 4 — Proposal Generation:**
+- Trinity gathers required information: estimated officer count, post locations, coverage schedule, contract term, requested services
+- If information is incomplete Trinity asks the prospect via email to provide missing details
+- Trinity generates a professional proposal document using the workspace's proposal template
+- Proposal includes: executive summary, scope of services, staffing plan, pricing breakdown, terms and conditions, org_owner signature block, prospect signature block
+- Proposal PDF generated with SHA-256 hash, stored in document vault
+- Org_owner receives NDS notification: "Trinity has generated a proposal for [Company Name] — review and approve before sending"
+- Org_owner reviews in portal, can edit pricing or scope, then approves
+- On org_owner approval: proposal digitally signed by org_owner, sent to prospect via NDS with secure signing link
+
+**Stage 5 — Proposal Approval:**
+- Prospect receives proposal via email with secure link to view and sign
+- Prospect signs in the portal signing flow (Phase 18 infrastructure)
+- Proposal status transitions: sent → viewed → approved or rejected
+- On approval: Trinity immediately advances to contract generation
+- On rejection: Trinity sends a follow-up asking for feedback, logs the reason, marks stage appropriately
+
+**Stage 6 — Contract Generation and Execution:**
+- Trinity generates the service contract from the approved proposal data
+- Contract includes all commercial terms from the proposal plus standard legal terms
+- Same signing flow as proposal — org_owner signs first, then prospect
+- On full execution: contract stored in document vault with SHA-256 hash
+- Client record automatically created in CoAIleague using prospect data
+- Billing activated on Stripe with contract terms
+- Client portal provisioned and access link sent to client contact
+
+**Stage 7 — Client Onboarding Handoff:**
+- Trinity sends a welcome email to the new client introducing their dedicated contact
+- Trinity initiates the data gathering flow for operations setup:
+  - Sends a structured questionnaire to the client: post addresses, entry procedures, emergency contacts, post-specific instructions, parking and access information, key holder contacts
+  - Receives completed questionnaire responses
+  - Creates post records in CoAIleague from questionnaire data
+  - Configures GPS geofences for each post
+  - Generates post order documents from the provided information
+  - Creates the initial schedule template based on contracted coverage
+- Org_owner receives a handoff summary: new client profile complete, posts configured, first invoice scheduled
+- Lead marked as `onboarded` — sales cycle complete
+
+---
+
+**SALES PIPELINE UI:**
+
+**Kanban board view:**
+- Columns for each stage
+- Lead cards show: company name, estimated value, contact name, last activity date, Trinity activity indicator (pulsing when Trinity is actively working this lead)
+- Drag-and-drop stage advancement with confirmation
+- Quick actions on each card: view detail, log activity, generate proposal, mark lost
+
+**List view:**
+- Sortable by: stage, estimated value, last contacted, lead score, expected close date
+- Filter by: stage, assigned rep, lead source, operating state
+- Bulk actions: reassign, advance stage, export
+
+**Lead detail view:**
+- Full lead information panel
+- Activity timeline: every email, call, proposal, stage change in chronological order
+- Email thread viewer: full conversation history with Trinity-generated vs human-written emails visually distinguished
+- Proposal status card: current proposal with status, view/download, re-send option
+- Trinity control panel: what Trinity is currently doing for this lead, next scheduled action, ability to pause or override Trinity
+- Notes and manual activity log
+
+**Pipeline analytics (integrates with Phase 34):**
+- Total pipeline value by stage
+- Conversion rate stage to stage
+- Average time in each stage
+- Win rate by lead source
+- Revenue closed by period
+- Trinity performance: proposals sent, signed, conversion rate
+
+---
+
+**TRINITY SALES INTELLIGENCE:**
+
+- Trinity learns from every won and lost deal — adjusts proposal pricing recommendations based on win/loss data
+- Trinity identifies patterns: leads from referrals close 40% faster, armed security inquiries have higher average contract value
+- Trinity flags at-risk proposals: "This proposal has been viewed 3 times but not signed in 5 days — would you like me to send a follow-up?"
+- Trinity can answer questions: "What is our current pipeline value?" "Which leads haven't been contacted in over 7 days?" "What is our win rate this quarter?"
+- Trinity respects org_owner approval gate — no outreach, no proposal, no contract sent without explicit approval or pre-configured automation rules
+
+---
+
+**INTEGRATION POINTS:**
+
+- Phase 8 (NDS) — all outreach emails route through NDS with delivery tracking
+- Phase 13 (Inbound Email) — sales@ and prospect replies routed through Trinity
+- Phase 14 (Invoice Engine) — first invoice generated from contract terms automatically
+- Phase 18 (Document Pipeline) — proposal and contract use existing signing infrastructure
+- Phase 19 (Trinity) — sales actions registered in action registry
+- Phase 27 (Notifications) — all sales notifications through NDS
+- Phase 31 (Client Lifecycle) — client onboarding triggered on contract execution
+- Phase 34 (Analytics) — pipeline analytics integrated into BI dashboard
+
+---
+
+Paste that master plan addition to the agent now. Phase 35B is properly scoped, properly sequenced, and properly integrated with all prior work.
+
+When we get to Phase 35B I'll write the full implementation prompt. For now — Phase 34 (BI and Analytics) is still running. Standing by for those results.

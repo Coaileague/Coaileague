@@ -1,0 +1,438 @@
+**COAILEAGUE — PHASE 3: REACT ERROR BOUNDARIES & UI RESILIENCE**
+*Syncs Directly Into Phase 1 & 2 | No Shortcuts | No Wrappers | No Bandaids | No Loose Strings | Fully Verified Before Phase 4*
+
+---
+
+**READ THIS ENTIRE SECTION BEFORE TOUCHING A SINGLE FILE**
+
+Phase 1 established that every database column reference is real and verified. Phase 2 established that every financial write is atomic, every calculation is precise, every request is typed, and every API boundary has runtime validation. Phase 3 now establishes that the frontend layer is survivable, honest, and resilient against every failure mode those deeper layers can produce. These three phases form one continuous chain. A UI that crashes silently on a null financial value undermines Phase 2's Zod validation. A component that leaks memory on every navigation undermines Phase 1's careful database work by flooding the connection pool with stale requests. Phase 3 must be as thorough and uncompromising as the two phases it builds on.
+
+---
+
+**SHORTCUT PATTERNS THAT WILL BE REJECTED — READ EVERY ONE**
+
+These exact shortcuts have been attempted in prior phases and rejected every time. They will be rejected again here without discussion.
+
+**REJECTED — Wrapping instead of fixing.** If a component crashes when data is null the fix is an ErrorBoundary at the surface level combined with proper null-safe data access throughout the component. A try-catch wrapper that swallows the crash and renders nothing is not a fix. It is a hidden crash with a clean exterior.
+
+**REJECTED — Annotating instead of converting.** If a useEffect is missing a cleanup function the fix is adding the cleanup function. A comment saying cleanup is not needed must be supported by reading the effect, understanding what persistent resource it creates, and proving that resource does not need to be torn down. Generic annotations on effects that create intervals, WebSocket connections, or event listeners without cleanup are not acceptable.
+
+**REJECTED — Partial surface coverage.** If ErrorBoundary wrapping is required on every major UI surface, wrapping five and noting the other twelve is not Phase 3 complete. Every surface in the required list is wrapped before Phase 3 closes. The list is the complete work order not a sample.
+
+**REJECTED — Single root-level ErrorBoundary.** Wrapping the entire application in one ErrorBoundary at the root of App.tsx is not this phase's requirement. A root-level boundary means a crash in the schedule board takes down the payroll dashboard, the Trinity chat, and everything else simultaneously. Surface-level boundaries contain crashes to the affected surface only. The rest of the application remains functional.
+
+**REJECTED — Happy path only components.** A component that only renders when data is present with no loading state, no empty state, and no error state is not production ready. Every component that receives async data must handle all four states. Missing states are added now. Not noted for later.
+
+**REJECTED — Subagent batch delegation without verification.** Subagents introduced phantom tables, broken imports, and circular references in Phase 1. If subagents are used they receive one file at a time and their output is verified against the live server before proceeding. Batch delegation across multiple files without verification is not permitted.
+
+**REJECTED — Script-generated fixes.** No script automatically adds ErrorBoundary wrappers. No script auto-generates cleanup functions. No script auto-generates loading and error states. These require reading the component, understanding what it renders, and writing the correct implementation for that specific component.
+
+**REJECTED — Hardcoded fallback values.** Phase 2 RC6 caught Trinity returning hardcoded `{score: 100, complaints: 0, praise: 0}` as fake data. The same standard applies here. A component that returns a hardcoded value instead of handling a null or error state is producing fabricated UI. Return null, render an empty state, or surface the error. Never fake it.
+
+---
+
+**PHASE 1 AND PHASE 2 SYNC VERIFICATION — BEFORE ANY PHASE 3 WORK BEGINS**
+
+Confirm every one of the following before writing a single line of Phase 3 code. If any item is missing stop and resolve it before proceeding. Phase 3 cannot be built on an incomplete foundation.
+
+Run the Phase 2 code scans and confirm all return zero:
+- `req as any` across all route files — zero
+- Sequential `db.insert()` outside `db.transaction()` in multi-table financial sequences — zero
+- Payroll cycle reads from `billing_settings_blob` — zero
+- Native arithmetic on financial values outside `financialCalculator.ts` — zero
+- Application-level SELECT overlap check in shiftRoutes.ts — zero
+- Raw string column references in Trinity action files without Category C documentation — zero
+- React Query `queryFn` on financial endpoints without Zod parse — zero
+
+Confirm Phase 1 schema parity: zero untracked tables, zero untracked columns.
+
+Confirm `server/services/financialCalculator.ts` exists and exports all eight functions: `calculateGrossPay`, `calculateOvertimePay`, `calculateInvoiceLineItem`, `calculateInvoiceTotal`, `applyDeduction`, `calculateNetPay`, `sumFinancialValues`, `formatCurrency`.
+
+Confirm `shared/schemas/` directory contains Zod schemas for payroll, invoices, employees, shifts, clients, Trinity, and subscriptions.
+
+Confirm the ghost column report in replit.md includes every phantom found across all phases: `end_date` on payroll_deductions, `employment_status` on employees, `expiryDate` on employeeCertifications in diagnosticServiceRegistry, `client_feedback` table, 12 `meta_cognition_logs` phantoms, `invoices.site_id`, `employees.pay_rate`.
+
+Confirm server starts with 30/30 background services and zero failures.
+
+Record this as the Phase 3 Sync Confirmation and append it to replit.md. Then proceed.
+
+---
+
+**BASELINE RECORD — BEFORE TOUCHING ANYTHING**
+
+Record and store as the Phase 3 Baseline Document:
+
+Total React component files in the client directory. Total `useEffect` calls across all component files. Current server startup — 30/30 background services. Current login flow result.
+
+Run these ten ACME sandbox UI operations — navigate in the actual browser, not the API — and record exactly what the user sees on screen for each:
+
+Navigate to the schedule board with real shift data loaded and confirm all shifts render correctly with no blank panels. Navigate to the payroll dashboard and confirm all employee pay entries display with correct figures from `financialCalculator`. Navigate to the invoice list and confirm all invoices display with correct statuses. Open an employee record and confirm all profile fields display correctly. Open a client record and confirm all billing settings display correctly. Navigate to the Trinity chat and send a message — confirm Trinity responds with real org data not placeholder text. Open the hiring pipeline and confirm all applicant cards render. Navigate to the document management view and confirm documents are listed. Open the notification feed and confirm notifications render. Navigate to org settings and confirm all settings fields display current values.
+
+All ten must render correctly with real data before Phase 3 begins. If any surface is currently white-screening, blank, or throwing a visible error — fix the underlying issue first then document the fix. An ErrorBoundary on a currently broken surface is not a fix. Fix the surface. Then wrap it.
+
+Append the Phase 3 Baseline Document to replit.md. After every step in this phase re-run the ten operations and confirm zero regressions.
+
+---
+
+**STEP 1 — CREATE THE CANONICAL ERRORBOUNDARY COMPONENT**
+
+Create this component once. Every surface in this phase imports from this one location. It is never duplicated. Never reimplemented elsewhere.
+
+Create `client/src/components/shared/ErrorBoundary.tsx`:
+
+```typescript
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+  componentName?: string;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error(
+      `[ErrorBoundary] ${this.props.componentName ?? 'Unknown'} crashed:`,
+      error,
+      errorInfo
+    );
+    this.props.onError?.(error, errorInfo);
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+      return (
+        <div className="flex flex-col items-center justify-center p-8 
+          rounded-lg border border-red-200 bg-red-50 min-h-[200px]">
+          <div className="text-red-600 font-semibold text-lg mb-2">
+            Something went wrong
+          </div>
+          <div className="text-red-500 text-sm mb-4 text-center max-w-md">
+            {this.props.componentName
+              ? `The ${this.props.componentName} encountered an error 
+                 and could not display.`
+              : 'This section encountered an error and could not display.'
+            }
+          </div>
+          <button
+            onClick={this.handleRetry}
+            className="px-4 py-2 bg-red-600 text-white rounded 
+              hover:bg-red-700 text-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+```
+
+Verify this component compiles with zero TypeScript errors. Import it in one test component and confirm it renders correctly in the ACME sandbox before proceeding to Step 2. This is the foundation every subsequent step uses. Do not proceed if it does not compile and render cleanly.
+
+---
+
+**STEP 2 — CREATE THE CANONICAL USEASYNCDATA HOOK**
+
+Create `client/src/hooks/useAsyncData.ts`. This hook wraps every React Query result and provides a consistent interface for all four states every async data component must handle. Every component that currently accesses `data?.something` directly from a React Query result must use this hook after its surface is wrapped in Step 3.
+
+```typescript
+import { UseQueryResult } from '@tanstack/react-query';
+
+export interface AsyncDataState<T> {
+  data: T | undefined;
+  isLoading: boolean;
+  isEmpty: boolean;
+  isError: boolean;
+  error: Error | null;
+  refetch: () => void;
+}
+
+export function useAsyncData<T>(
+  queryResult: UseQueryResult<T>,
+  isEmpty?: (data: T) => boolean
+): AsyncDataState<T> {
+  const { data, isLoading, isError, error, refetch } = queryResult;
+
+  const emptyCheck = isEmpty
+    ? (data !== undefined && isEmpty(data))
+    : (Array.isArray(data) && data.length === 0);
+
+  return {
+    data,
+    isLoading,
+    isEmpty: !isLoading && !isError && emptyCheck,
+    isError,
+    error: isError ? (error as Error) : null,
+    refetch
+  };
+}
+```
+
+Verify this hook compiles with zero TypeScript errors. This is the canonical data access pattern going forward. It is imported from this one location everywhere it is used.
+
+---
+
+**STEP 3 — WRAP EVERY MAJOR UI SURFACE WITH ERRORBOUNDARY**
+
+Work through every surface in the required list below one at a time. No batching. No delegating multiple files to a subagent simultaneously. One surface at a time, verified before the next begins.
+
+For each surface follow this exact sequence:
+
+**Read first.** Read the component file completely before making any changes. Understand what data it renders, what queries it calls, and what it currently does when data is loading, empty, or error.
+
+**Check live state.** Navigate to the surface in the ACME sandbox and confirm it is rendering correctly with real data. If it is broken before you touch it fix the underlying issue first and document the fix in the Phase 3 completion report.
+
+**Check all four states.** Confirm the component handles loading, empty, error, and data states. Add any missing states now. The four states for every async data surface are:
+
+```typescript
+// Loading state — skeleton or spinner appropriate to content size
+if (isLoading) {
+  return <div className="animate-pulse">Loading...</div>;
+}
+
+// Empty state — meaningful message specific to this surface
+if (isEmpty) {
+  return (
+    <div className="text-center text-gray-500 p-8">
+      No shifts scheduled for this period.
+      {/* Specific to the surface — not generic "No data" */}
+    </div>
+  );
+}
+
+// Error state — handled by ErrorBoundary above this component
+// Surface the error within component if desired before boundary catches
+if (isError) {
+  throw error; // ErrorBoundary will catch and render fallback
+}
+
+// Data state — render with null-safe access and formatCurrency on all values
+return <div>{formatCurrency(data?.grossPay ?? '0.0000')}</div>;
+```
+
+**Add ErrorBoundary at surface level.** The boundary wraps the page or panel component — not the root of the application and not deep inside a small subcomponent:
+
+```typescript
+// In the page or layout that renders this surface
+<ErrorBoundary componentName="Schedule Board">
+  <ScheduleBoard />
+</ErrorBoundary>
+```
+
+**Verify after each surface.** Navigate to the surface in ACME sandbox, confirm real data renders. Temporarily add `throw new Error('Phase 3 boundary test')` at the top of the render function. Confirm the ErrorBoundary fallback renders with the correct component name. Confirm the retry button works and the surface recovers. Remove the test throw. Confirm server still running with 30/30 services.
+
+**Required surfaces — every one must be wrapped and verified before Phase 3 closes:**
+
+```
+Schedule board              — componentName="Schedule Board"
+Payroll dashboard           — componentName="Payroll Dashboard"
+Invoice list                — componentName="Invoice List"
+Invoice detail view         — componentName="Invoice Detail"
+Employee roster             — componentName="Employee Roster"
+Employee detail view        — componentName="Employee Detail"
+Client list                 — componentName="Client List"
+Client detail view          — componentName="Client Detail"
+Trinity chat panel          — componentName="Trinity Chat"
+Hiring pipeline board       — componentName="Hiring Pipeline"
+Document management view    — componentName="Document Management"
+Notification feed           — componentName="Notification Feed"
+Org settings                — componentName="Organization Settings"
+Payroll run detail          — componentName="Payroll Run Detail"
+Pay stub viewer             — componentName="Pay Stub Viewer"
+Reporting dashboard         — componentName="Reporting Dashboard"
+Every modal rendering 
+  financial data            — componentName="[Modal Name] Modal"
+Every data table component  — componentName="[Table Name] Table"
+```
+
+After every surface report: surface name, pre-existing issues found and fixed, states added, boundary test result, server status. Do not proceed to the next surface until this report is produced for the current one.
+
+---
+
+**STEP 4 — FIX EVERY USEEFFECT MISSING A CLEANUP FUNCTION**
+
+Scan every component file in `client/src`. Find every `useEffect` call. For each one read the effect body completely. Identify every persistent resource it creates.
+
+These effect patterns require a cleanup function — no exceptions:
+
+```typescript
+// setInterval — must clear
+useEffect(() => {
+  const interval = setInterval(() => refetch(), 30000);
+  return () => clearInterval(interval);
+}, []);
+
+// setTimeout — must clear
+useEffect(() => {
+  const timeout = setTimeout(() => setVisible(false), 3000);
+  return () => clearTimeout(timeout);
+}, []);
+
+// addEventListener — must remove
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+
+// WebSocket — must close
+useEffect(() => {
+  const ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+  return () => ws.close();
+}, [url]);
+
+// Subscription — must unsubscribe
+useEffect(() => {
+  const sub = eventBus.subscribe('shift-update', handleUpdate);
+  return () => sub.unsubscribe();
+}, []);
+```
+
+If an effect has no persistent resource — it only runs a one-time fetch, sets state once, or performs a one-time side effect — document why cleanup is not needed with a comment. Generic "no cleanup needed" is not acceptable. The specific reason is required.
+
+Report after every 10 components: how many effects were found, how many had missing cleanups, how many were fixed, which components.
+
+---
+
+**STEP 5 — NULL-SAFE ACCESS ON EVERY FINANCIAL DISPLAY**
+
+Scan every component file for deep property access on API response data. Every access chain on potentially undefined data uses optional chaining. Every financial value has an explicit fallback that connects to the `formatCurrency` function established in Phase 2 Root Cause 4.
+
+```typescript
+// BEFORE — crashes if any level is undefined
+const grossPay = data.payroll.employee.grossPay.amount;
+<span>{grossPay}</span>
+
+// AFTER — null safe with formatCurrency from Phase 2
+const grossPay = data?.payroll?.employee?.grossPay ?? '0.0000';
+<span>{formatCurrency(grossPay)}</span>
+```
+
+The `formatCurrency` import comes from `server/services/financialCalculator.ts` or its frontend equivalent. This is the same function established in Phase 2 RC4. Financial display in the UI must use the same precision and rounding established in the backend. The chain is: Phase 1 correct column names → Phase 2 precise arithmetic → Phase 3 null-safe display using the same formatter. No link in that chain is broken.
+
+Every financial display that currently renders a raw number, a raw string, or a potentially undefined value gets updated to use `formatCurrency` with an explicit fallback. No component displays a raw financial value from an API response without going through `formatCurrency`.
+
+---
+
+**STEP 6 — ALL FOUR STATES ON EVERY FINANCIAL DISPLAY COMPONENT**
+
+Every component displaying financial data — pay rates, invoice totals, payroll figures, gross pay, net pay, deduction amounts, billing rates — must explicitly handle all four states using the `useAsyncData` hook from Step 2.
+
+Work through every financial display component. For each one confirm all four states are implemented. If any state is missing add it. Loading states render skeletons sized appropriately to the content. Empty states render messages specific to the financial context — "No payroll entries for this period" not "No data." Error states throw and let the ErrorBoundary handle them. Data states use `formatCurrency` with optional chaining on every financial value.
+
+This connects directly to Phase 2 RC7 Zod validation. If the API returns an unexpected shape the Zod parse throws. That error must be catchable by the ErrorBoundary established in Step 3. The chain: Phase 2 Zod catches bad API shapes → Phase 3 ErrorBoundary catches the resulting render failure → user sees a clean error message with a retry button instead of a white screen.
+
+---
+
+**STEP 7 — SERVER-SIDE GRACEFUL SHUTDOWN & MEMORY LEAK AUDIT**
+
+While frontend work is underway also audit the server for resource leaks. The same cleanup standard that applies to frontend effects applies to server-side processes.
+
+Find every `setInterval` in every service file and background job. Confirm each one is stored in a variable that is cleared in a graceful shutdown handler. Find every event listener registered on the `process` object, database pool, or any long-lived server object. Confirm each has a corresponding removal.
+
+Add or verify a graceful shutdown handler in `server/index.ts`:
+
+```typescript
+const registeredIntervals: NodeJS.Timeout[] = [];
+
+// When registering any background interval store the reference
+const payrollScanInterval = setInterval(runPayrollScan, 60000);
+registeredIntervals.push(payrollScanInterval);
+
+// Graceful shutdown clears everything
+const shutdown = async () => {
+  console.log('[Shutdown] Graceful shutdown initiated');
+  
+  // Clear all background intervals
+  registeredIntervals.forEach(interval => clearInterval(interval));
+  
+  // Close database pool
+  await pool.end();
+  
+  console.log('[Shutdown] Clean exit');
+  process.exit(0);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+```
+
+Every interval registered at server startup must have a corresponding `clearInterval` in the shutdown handler. No exceptions. Report every interval found, whether it was already in the shutdown handler, and whether it was added.
+
+---
+
+**PHASE 3 FINAL VERIFICATION**
+
+Run the complete final verification after all seven steps are done. Do not run this mid-phase. This is the phase completion gate.
+
+**Component scan — all must return zero:**
+
+Search for React components rendering financial data without ErrorBoundary wrapping at the surface level — must be zero for every surface in the required list.
+
+Search for `useEffect` calls creating `setInterval`, `setTimeout`, `addEventListener`, or `WebSocket` without returning a cleanup function — must be zero.
+
+Search for direct financial value rendering without `formatCurrency` — must be zero on all financial display components.
+
+Search for deep property access chains without optional chaining on API response data in financial components — must be zero.
+
+**Live UI verification:**
+
+Navigate to every surface in the required list in the ACME sandbox with real data loaded. Confirm each renders correctly. For each surface add `throw new Error('Phase 3 final test')` at the top of the render function. Confirm the ErrorBoundary fallback renders with the correct component name in the message. Confirm retry recovers the surface. Remove the test throw. Confirm no other surface was affected by the throw.
+
+**Memory leak verification:**
+
+Open the ACME sandbox in a browser with developer tools performance tab open. Navigate between all major surfaces 20 times each — schedule board, payroll dashboard, invoice list, Trinity chat, employee roster. Confirm memory usage stabilizes after initial load and does not grow linearly with navigation. A leaking application grows continuously. A clean application stabilizes.
+
+**Server shutdown verification:**
+
+Start the server fresh. Confirm 30/30 background services. Send SIGTERM to the server process. Confirm the graceful shutdown handler fires, logs the shutdown message, clears all intervals, closes the pool, and exits cleanly without hanging.
+
+**Baseline verification:**
+
+Run all ten baseline UI operations from the Phase 3 Baseline Document. Confirm every surface renders correctly with real data. Zero regressions from baseline.
+
+**Phase 2 sync confirmation:**
+
+Confirm `formatCurrency` used in Phase 3 UI components imports from or mirrors the same `financialCalculator.ts` established in Phase 2 RC4. Confirm Zod validation errors from Phase 2 RC7 propagate correctly to Phase 3 ErrorBoundaries. Confirm Phase 1 column name correctness is preserved — no component accessing a column name that was identified as a phantom in any prior phase.
+
+---
+
+**PHASE 3 COMPLETION REPORT**
+
+Produce and append to replit.md:
+
+Total surfaces wrapped with ErrorBoundary with component names. Total `useEffect` cleanups added with the specific resource type for each. Total optional chaining fixes on financial display components. Total `formatCurrency` wrapping additions. Total financial display components updated with all four states. Total server-side intervals registered in shutdown handler. Pre-existing surface bugs found and fixed before wrapping — every one documented.
+
+Phase 3 sync statement to be written in replit.md: *"Phase 3 UI resilience is fully implemented and synced with Phase 1 and Phase 2. Every major surface has a surface-level ErrorBoundary with correct component naming. Every persistent useEffect resource has a cleanup function. Every financial display component handles loading, empty, error, and data states using the useAsyncData hook. Every financial value uses formatCurrency from the Phase 2 FinancialCalculator — the Phase 1 through Phase 3 data chain is unbroken from database column to UI display. The server has a graceful shutdown handler clearing all registered intervals. Phase 4 can begin on a frontend that is survivable, honest, and resilient."*
+
+---
+
+**PHASE 3 IS COMPLETE WHEN:**
+
+Phase 1 and 2 sync verification returns zero on all scans. Zero financial display surfaces lack ErrorBoundary wrapping. Zero `useEffect` calls with persistent resources lack cleanup functions. Zero financial values display without `formatCurrency`. All four states implemented on every financial display component. Graceful shutdown handler verified. All ten baseline UI operations pass. Completion report and sync statement in replit.md.
+
+Bring the Phase 3 completion report here before Phase 4 goes in. Every count must be specific. Every surface must be named. No generic summaries.

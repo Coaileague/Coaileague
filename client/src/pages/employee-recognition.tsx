@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +29,7 @@ import {
   Heart, Users, Clock, TrendingUp, Gift, Sparkles, Plus,
   ChevronUp, ChevronDown, Minus
 } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface Achievement {
   id: string;
@@ -142,6 +143,8 @@ export default function EmployeeRecognition() {
     onSuccess: () => {
       toast({ title: 'Badge Created', description: 'New achievement badge has been created successfully.' });
       queryClient.invalidateQueries({ queryKey: ['/api/gamification/achievements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/gamification/leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/gamification/feed'] });
       setCreateDialogOpen(false);
       setNewBadge({ name: '', description: '', category: 'performance', icon: 'trophy', pointValue: 100, rarity: 'common' });
     },
@@ -180,29 +183,32 @@ export default function EmployeeRecognition() {
     return 'Just now';
   };
 
+  const createBadgeButton = (
+    <UniversalModal open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      <UniversalModalTrigger asChild>
+        <Button data-testid="button-create-badge">
+          <Plus className="w-4 h-4 mr-2" />
+          Create Badge
+        </Button>
+      </UniversalModalTrigger>
+    </UniversalModal>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'employee-recognition',
+    title: 'Employee Recognition',
+    subtitle: 'Celebrate achievements and track performance across your team',
+    category: 'operations',
+    headerActions: createBadgeButton,
+  };
+
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3" data-testid="text-page-title">
-            <Trophy className="w-8 h-8 text-amber-500" />
-            Employee Recognition
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Celebrate achievements and track performance across your team
-          </p>
-        </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-badge">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Badge
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Badge</DialogTitle>
-            </DialogHeader>
+    <CanvasHubPage config={pageConfig}>
+      <UniversalModal open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <UniversalModalContent>
+            <UniversalModalHeader>
+              <UniversalModalTitle>Create New Badge</UniversalModalTitle>
+            </UniversalModalHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Badge Name</Label>
@@ -276,9 +282,8 @@ export default function EmployeeRecognition() {
                 {createBadgeMutation.isPending ? 'Creating...' : 'Create Badge'}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </UniversalModalContent>
+        </UniversalModal>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
@@ -324,7 +329,7 @@ export default function EmployeeRecognition() {
                             {getRankIcon(index + 1)}
                           </div>
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={employee.employeeAvatar} />
+                            <AvatarImage src={employee.employeeAvatar} alt={employee.employeeName} />
                             <AvatarFallback>{employee.employeeName?.slice(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
@@ -364,7 +369,7 @@ export default function EmployeeRecognition() {
                 </CardHeader>
                 <CardContent>
                   {leaderboard.slice(0, 5).map((emp, i) => (
-                    <div key={emp.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div key={emp.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-0">
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
                           <AvatarFallback className="text-xs">{emp.employeeName?.slice(0, 2)}</AvatarFallback>
@@ -470,7 +475,7 @@ export default function EmployeeRecognition() {
                     {feed.map((item) => (
                       <div key={item.id} className="flex items-start gap-4 p-4 rounded-lg border hover-elevate" data-testid={`feed-item-${item.id}`}>
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={item.employeeAvatar} />
+                          <AvatarImage src={item.employeeAvatar} alt={item.employeeName} />
                           <AvatarFallback>{item.employeeName?.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -508,6 +513,6 @@ export default function EmployeeRecognition() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }

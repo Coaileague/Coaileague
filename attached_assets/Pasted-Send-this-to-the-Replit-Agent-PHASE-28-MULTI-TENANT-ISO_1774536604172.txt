@@ -1,0 +1,188 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 28 — MULTI-TENANT ISOLATION AND SECURITY HARDENING**
+
+This phase owns the complete multi-tenant isolation architecture. CoAIleague serves multiple security companies simultaneously — each workspace must be completely isolated from every other. A data leak between tenants is not a bug — it is a catastrophic trust failure that ends the platform. Every query, every API response, every file URL, every WebSocket event, every Trinity action must be scoped to the correct workspace and only that workspace. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row — query results, grep output, or test results. Every row green before Phase 28 closes.
+
+---
+
+**STEP 1 — ISOLATION ARCHITECTURE INVENTORY**
+
+Before touching anything produce a complete inventory of the isolation architecture:
+- Every middleware that enforces workspace scoping — list each with its position in the middleware chain
+- Every table that has a `workspace_id` column — confirm index exists on each
+- Every table that does NOT have a `workspace_id` column — categorize as: platform-wide (intentional), shared reference data (intentional), or missing scope (gap)
+- Every query pattern used for workspace scoping — `eq(table.workspaceId, workspaceId)` vs alternatives
+- Any query that uses a JOIN across workspace boundaries — flag for review
+- Super-admin bypass mechanism — confirm it exists, confirm it requires explicit elevation, confirm it is logged
+
+---
+
+**STEP 2 — QUERY-LEVEL ISOLATION AUDIT**
+
+Every data query must be workspace-scoped:
+- Run a systematic grep across all route files and service files for DB queries missing `workspaceId` scope
+- Focus on: `.select()`, `.update()`, `.delete()`, `.insert()` calls that reference workspace-scoped tables
+- For each unscoped query found: determine if it is intentionally platform-wide or a gap
+- Financial queries confirmed scoped: invoices, payroll_runs, payroll_entries, payment_records — all require workspace_id (regression check from Phase 11)
+- Scheduling queries confirmed scoped: shifts, time_entries, shift_coverage_requests — all require workspace_id (regression check from Phase 12)
+- Document queries confirmed scoped: document_vault, org_document_signatures — all require workspace_id (regression check from Phase 18)
+- Compliance queries confirmed scoped: compliance_violations, employee_certifications — all require workspace_id (regression check from Phase 21)
+- Any query that accepts a user-supplied ID and fetches a record must verify the record belongs to the requesting workspace before returning it — IDOR prevention
+
+---
+
+**STEP 3 — API RESPONSE ISOLATION AUDIT**
+
+Every API response must only contain data from the requesting workspace:
+- Run targeted tests: authenticate as workspace A, attempt to fetch records belonging to workspace B by manipulating IDs
+- Invoice endpoint: fetch invoice by ID — confirm 404 or 403 if invoice belongs to different workspace
+- Employee endpoint: fetch employee by ID — confirm 404 or 403 if employee belongs to different workspace
+- Document endpoint: fetch document by ID — confirm 404 or 403 if document belongs to different workspace
+- Shift endpoint: fetch shift by ID — confirm 404 or 403 if shift belongs to different workspace
+- Payroll endpoint: fetch payroll run by ID — confirm 404 or 403 if run belongs to different workspace
+- Support ticket endpoint: fetch ticket by ID — confirm 404 or 403 if ticket belongs to different workspace
+- Audit log endpoint: confirm only returns records for requesting workspace — no platform-wide audit leak
+
+---
+
+**STEP 4 — FILE AND STORAGE ISOLATION AUDIT**
+
+Every stored file must be inaccessible outside its workspace:
+- Document vault URLs confirmed workspace-scoped — storage path includes workspace_id as segment (regression check from Phase 18)
+- Pay stub URLs confirmed scoped to owning officer and workspace (regression check from Phase 15)
+- Export files (CSV, PDF) confirmed not cached or accessible after download session expires
+- Inbound email attachments confirmed stored with workspace_id scope (regression check from Phase 13)
+- License document uploads confirmed workspace-scoped (regression check from Phase 17)
+- Any presigned URL mechanism — confirm expiry is enforced, workspace scope is verified before generation
+
+---
+
+**STEP 5 — WEBSOCKET ISOLATION AUDIT**
+
+Real-time events must never cross workspace boundaries:
+- Every `broadcastToWorkspace` call confirmed using workspace_id filter before pushing
+- WebSocket connection authentication confirmed — unauthenticated connections cannot receive workspace events
+- WebSocket room/channel assignment confirmed at connection time — workspace derived from authenticated session, not client-supplied parameter
+- Permission matrix update broadcasts confirmed scoped to the correct workspace
+- Trinity proactive scanner broadcasts confirmed workspace-scoped
+- Panic/duress alert broadcasts confirmed scoped — workspace A's panic does not alert workspace B's supervisors
+
+---
+
+**STEP 6 — TRINITY AND AI ISOLATION AUDIT**
+
+Trinity must never cross workspace boundaries:
+- Trinity memory confirmed workspace-scoped — long-term memory query always filters by workspace_id
+- Trinity action execution confirmed always includes workspace_id from the authenticated session — not from user-supplied input
+- Trinity conscience confirmed checking workspace context before every action
+- HelpAI delegation confirmed respecting workspace scope — delegated actions cannot cross workspace
+- Trinity proactive scanner confirmed running per-workspace — cannot access another workspace's data
+- Trinity bot token confirmed not exposable to end users — platform-wide bypass requires validated token
+- Per-organization issue history confirmed isolated — workspace A's HelpAI history not accessible from workspace B
+
+---
+
+**STEP 7 — AUTHENTICATION AND SESSION ISOLATION**
+
+Sessions must be workspace-bound:
+- Session creation confirmed binding workspace_id at login — not derivable from URL parameters
+- Workspace switching (if supported) confirmed invalidating prior workspace session data
+- JWT or session token confirmed not containing exploitable workspace claims that can be forged
+- Portal tokens (client portal, auditor portal) confirmed workspace-scoped and time-bounded (regression check from Phase 20)
+- SRA (State Regulatory Auditor) session confirmed scoped to specific workspace and audit period (Phase 33 scope — flag current state)
+- Multi-workspace users (platform staff) confirmed requiring explicit workspace selection — not defaulting to first workspace
+
+---
+
+**STEP 8 — PLATFORM STAFF SUPER-ADMIN AUDIT**
+
+Platform staff access to workspace data must be controlled and logged:
+- Every platform staff endpoint that accesses workspace data confirmed requiring explicit workspace context parameter
+- Platform staff queries confirmed logged — every cross-workspace data access by platform staff produces an audit entry
+- Super-admin bypass confirmed requiring elevated token or explicit flag — not available on all requests by default
+- Trinity bot token confirmed only usable by server-side processes — not by authenticated end users
+- Permission matrix platform staff access confirmed logged with `source: platform_staff` (regression check from Phase 9B)
+- Admin permission routes confirmed writing audit records (regression check from sync audit G1)
+
+---
+
+**STEP 9 — PENETRATION TEST — CROSS-TENANT ISOLATION**
+
+Run targeted cross-tenant isolation tests:
+
+**Test 1 — Direct ID manipulation:** Authenticate as workspace A user. Attempt to fetch an invoice, employee, shift, and document belonging to workspace B by supplying workspace B's record IDs directly. Confirm 404 or 403 on all four attempts.
+
+**Test 2 — WebSocket cross-workspace injection:** Connect two WebSocket sessions for workspace A and workspace B. Trigger an event in workspace A. Confirm workspace B session receives nothing.
+
+**Test 3 — URL manipulation:** Construct a document vault URL using workspace B's path structure while authenticated as workspace A. Confirm access denied.
+
+**Test 4 — Trinity cross-workspace query:** As a workspace A user ask Trinity to retrieve data from workspace B by name or ID. Confirm Trinity conscience blocks it and logs the block.
+
+**Test 5 — Portal token reuse:** Use workspace A's client portal token to attempt access to workspace B's portal endpoint. Confirm 401 or 403.
+
+**Test 6 — Session workspace hijack:** Attempt to supply a different workspace_id in a request body or query parameter while authenticated. Confirm middleware-validated workspace_id from session takes precedence — not the user-supplied value.
+
+All 6 tests must pass before Phase 28 closes.
+
+---
+
+**STEP 10 — ISOLATION GAP REMEDIATION**
+
+For every isolation gap found:
+- Fix the specific query or endpoint
+- Add a workspace_id assertion at the service layer — not just the route layer
+- Add or verify a database constraint where possible
+- Re-run the detection test to confirm zero leakage after fix
+- Document the root cause so it cannot be reintroduced
+
+---
+
+**STEP 11 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with root cause closed and re-test confirming zero leakage
+4. Every PARTIAL fully resolved
+5. All 6 penetration tests documented with input and result
+6. All rows green before summary written
+
+---
+
+**STEP 12 — VERIFICATION**
+
+Run all checks before Phase 28 is marked complete:
+- Check 1: Complete isolation architecture inventory produced — all middleware listed, all workspace_id tables confirmed indexed
+- Check 2: Zero unscoped queries on workspace-scoped tables — grep confirms
+- Check 3: Financial query workspace scoping regression check — all confirmed
+- Check 4: Scheduling query workspace scoping regression check — all confirmed
+- Check 5: Document query workspace scoping regression check — all confirmed
+- Check 6: Invoice fetch by ID returns 404/403 for wrong-workspace request
+- Check 7: Employee fetch by ID returns 404/403 for wrong-workspace request
+- Check 8: Document fetch by ID returns 404/403 for wrong-workspace request
+- Check 9: Document vault URL confirmed workspace-scoped with path segment
+- Check 10: Pay stub URL confirmed scoped to owning officer and workspace
+- Check 11: Every WebSocket broadcast confirmed workspace-scoped
+- Check 12: WebSocket connection workspace derived from session — not client parameter
+- Check 13: Trinity memory confirmed workspace-scoped — cross-workspace query blocked
+- Check 14: Trinity conscience confirmed checking workspace context before action
+- Check 15: Session workspace_id from authenticated session takes precedence over user-supplied value
+- Check 16: Portal tokens workspace-scoped and time-bounded — regression check
+- Check 17: Platform staff cross-workspace access confirmed logged with audit entry
+- Check 18: Admin permission mutations confirmed writing audit records — sync audit regression check
+- Check 19: All 6 penetration tests passed and documented with inputs and results
+- Check 20: All isolation gaps found have root causes closed — re-test confirms zero leakage
+- Check 21: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 22: Server starts clean with zero TypeScript errors after all isolation fixes applied
+
+Do not mark Phase 28 complete until all 22 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence including penetration test results. Findings first. Full picture assembled. Then fixes. Root causes closed. Nothing left behind.
+
+---
+
+Paste that. Cross-tenant isolation is non-negotiable — this phase gets the same zero tolerance standard as the financial phases.

@@ -1,0 +1,291 @@
+Perfect timing. Before you push, make sure this is airtight. Copy everything below this line:
+
+---
+
+COAILEAGUE — INVITE FLOW AND ROLE MANAGEMENT AUDIT AND FIX
+Bryan is about to invite his first real manager to Statewide Protective Services.
+This must work perfectly on the first try. Read everything before touching anything.
+Find every file related to invites, role assignment, and RBAC sync.
+Report what exists. Fix what is broken. Build what is missing.
+
+---
+
+STEP 1 — READ AND MAP BEFORE TOUCHING ANYTHING
+
+Find and read every file related to:
+Employee invite flow — how invites are created, sent, accepted, and how
+the user account is created from the invite token.
+Role assignment on invite — can the org_owner select a role when sending the invite?
+Role editing after account creation — can the org_owner change a user's role?
+RBAC live sync — when a role changes does the user's active session update
+immediately without requiring them to log out and back in?
+Workspace_members table — how roles are stored and enforced.
+
+Report the exact current state of each:
+
+INVITE CREATION:
+What fields does the invite form capture today?
+Is there a role selector on the invite form?
+What roles can be assigned on invite? List them exactly.
+What is the default role if none is selected?
+
+INVITE EMAIL:
+What does the invite email look like today?
+Does it show the org name and what role the person is being invited as?
+Does the Accept Invitation button link to a working onboarding page?
+Does the invite token expire and if yes how long is the window?
+
+INVITE ACCEPTANCE:
+When the invited user clicks Accept Invitation what happens?
+Do they set a password on the same page?
+Are they asked for their name and basic profile info?
+Is the role from the invite automatically assigned to their workspace_members record?
+Where exactly does the workspace_members record get created?
+Does the role on the invite match the role stored in workspace_members?
+
+ROLE EDITING AFTER CREATION:
+Can the org_owner go to an employee's profile and change their role?
+When the role is changed in the database does the user's current session
+immediately reflect the new role without logging out?
+If not — if the user has to log out and back in to get their new role —
+that is a gap. Build live RBAC sync.
+
+---
+
+STEP 2 — FIX THE INVITE FLOW COMPLETELY
+
+After reading the current state apply every fix needed so this works
+perfectly when Bryan sends the invite right now.
+
+ROLE SELECTOR ON INVITE FORM:
+The invite form must have a role dropdown that org_owner fills out before sending.
+Roles available to assign via invite:
+manager — the most common invite role for security supervisors
+co_owner — second in command, same access as org_owner
+org_admin — administrative only, no financial access
+employee — field officer, most restricted access
+The role selector must default to manager since that is the most common invite.
+The selected role must be stored on the invite record.
+When the invited user accepts the invite the stored role is assigned to their
+workspace_members record automatically — they do not select their own role.
+An invited person cannot self-assign a higher role than what was in the invite.
+This is a critical security rule — enforce it server-side not just in the UI.
+
+INVITE EMAIL CONTENT:
+The invite email must clearly show:
+The name of the person inviting them if available, otherwise the org name.
+The org name — "You have been invited to join Statewide Protective Services."
+The role they are being invited as — "You are being invited as a Manager."
+A prominent Accept Invitation button as the dominant element of the email.
+The invite expiration — "This invite expires in 7 days."
+The email must use Track A CoAIleague branding.
+The Accept button must link directly to the onboarding page with the token in the URL.
+
+INVITE ACCEPTANCE AND ONBOARDING PAGE:
+When the invited user clicks Accept Invitation they land on a page that:
+Shows the org name and their assigned role so they know what they are accepting.
+Asks for their full name if not already on the invite.
+Asks them to set a password with confirmation.
+Does NOT ask them to select their own role — it is already set from the invite.
+On form submission:
+Create the user account with the provided name and password.
+Create the workspace_members record with the role from the invite token.
+Mark the invite as accepted so it cannot be reused.
+Log the user in automatically — they should not have to log in again after accepting.
+Redirect them directly to their role-appropriate landing page:
+Manager role → manager command center dashboard.
+co_owner role → org_owner dashboard.
+employee role → employee schedule view.
+org_admin role → admin panel.
+If the invite token is expired show a clear friendly message:
+"This invitation has expired. Please ask [Org Name] to send a new invite."
+Do not show a generic 404 or error page.
+
+ROLE DISPLAY ON MANAGER DASHBOARD:
+After the manager accepts the invite and lands on the dashboard
+confirm their name and role are displayed correctly in the navigation header.
+Confirm Trinity greets them with their name and role context:
+"Welcome to CoAIleague, [Name]. You are logged in as Manager at Statewide Protective Services.
+Here is your team's status for today."
+If Trinity's greeting is generic and does not include their name and org that is a gap.
+
+---
+
+STEP 3 — ROLE MANAGEMENT AND LIVE RBAC SYNC
+
+ROLE EDITING UI:
+org_owner must be able to change any team member's role from their profile page.
+The role change UI must:
+Show the current role clearly.
+Show a dropdown with available roles to change to.
+Require a confirmation before applying — "Are you sure you want to change
+[Name]'s role from Manager to co_owner? This will change their access immediately."
+Apply the change to workspace_members.role immediately on confirmation.
+
+ROLES ORG_OWNER CAN ASSIGN:
+org_owner can assign any role below or equal to co_owner.
+org_owner can assign: co_owner, manager, org_admin, employee.
+org_owner cannot assign platform_staff roles — those are CoAIleague internal only.
+co_owner has the same assignment permissions as org_owner.
+manager cannot change anyone's role — read their current role, that is all.
+
+LIVE RBAC SYNC — CRITICAL:
+When a role is changed the following must happen immediately:
+The workspace_members.role field is updated in the database.
+A WebSocket event fires to any active session belonging to that user:
+Event type: role_updated
+Payload: new role, workspace_id, effective_immediately: true
+The client receives this event and updates the session context without requiring logout.
+The navigation items, page access, and Trinity mode all update immediately
+based on the new role.
+The user sees a notification: "Your role has been updated to [New Role] by [Org Owner Name]."
+If the role was downgraded and the user is currently on a page they no longer
+have access to they are redirected to their new role's landing page.
+If the role was upgraded they gain access to new pages immediately.
+This live sync must work even if the user is actively using the platform
+when the role change happens.
+
+ROLE CHANGE AUDIT TRAIL:
+Every role change must be logged in the universal audit trail with:
+Who made the change (actor_id and name).
+Whose role was changed (target_user_id and name).
+What the role was before and what it is now.
+Timestamp.
+Workspace ID.
+This creates accountability for every role change ever made in the platform.
+
+---
+
+STEP 4 — SPECIFIC TEST FOR BRYAN'S MANAGER INVITE
+
+Run this exact test before Bryan sends the real invite:
+
+Create a test invite in the Statewide workspace for a test email address you control.
+Set the role to manager on the invite form.
+Send the invite.
+Confirm the invite email arrives at the test address within 60 seconds.
+Confirm the email shows:
+Statewide Protective Services as the org name.
+Manager as the assigned role.
+A working Accept Invitation button.
+A 7-day expiration notice.
+Click the Accept Invitation button.
+Confirm the landing page shows the org name and role.
+Fill in a name and set a password.
+Submit the form.
+Confirm the user is automatically logged in — no second login required.
+Confirm they land on the manager command center dashboard — not a blank page.
+Confirm their name appears in the navigation header.
+Confirm their workspace_members record in the database shows role = manager.
+Confirm Trinity greets them with their name and org name.
+
+Now as the org_owner change their role from manager to co_owner.
+Confirm the change applies immediately.
+Confirm the user (in the other browser tab or session) receives a notification
+about the role change without logging out.
+Confirm they gain co_owner access immediately.
+Confirm the audit trail has the role change event with Bryan as the actor.
+
+Change the role back to manager.
+Confirm the downgrade fires immediately.
+Confirm the user is redirected away from any co_owner-only pages they are on.
+Confirm the audit trail has the second role change event.
+
+If every step in this test passes the invite flow is production ready.
+If any step fails fix it before Bryan sends the real invite.
+
+---
+
+STEP 5 — RESEND DELIVERY VERIFICATION
+
+Before Bryan sends the real invite confirm the Resend pipeline is working.
+
+Check the RESEND_API_KEY is set in the production environment.
+Send one test email to Bryan's email address right now using the invite email template.
+Confirm it arrives in the inbox not spam within 60 seconds.
+Confirm the email renders correctly on mobile.
+Confirm the Accept Invitation button is visible and prominent.
+Confirm the link in the button goes to the correct URL with a valid token.
+
+If the email goes to spam add these to the email headers if not already present:
+List-Unsubscribe header.
+A reply-to address pointing to a valid address at the security company domain.
+SPF and DKIM alignment with the sending domain in Resend.
+These are the three most common reasons invite emails land in spam.
+
+---
+
+STEP 6 — WHAT HAPPENS AFTER THE MANAGER LOGS IN
+
+Make sure the manager's first 10 minutes are guided and successful.
+
+FIRST LOGIN EXPERIENCE:
+After accepting the invite and landing on the manager dashboard
+Trinity must proactively greet them and offer a brief orientation:
+"Hi [Name], welcome to CoAIleague. You are set up as Manager at Statewide Protective Services.
+Here is what you can do from this dashboard:"
+Then Trinity lists 3 immediate actions relevant to the current state of the org:
+If there are employees — "You have [X] employees on your team. View your team."
+If there are shifts today — "You have [X] shifts running today. View coverage."
+If there are pending approvals — "You have [X] items waiting for your approval."
+If the org is brand new with no data yet — "Let's start by adding your first employee."
+This orientation must use real data — not a static welcome message.
+
+MANAGER FIRST ACTIONS — ALL MUST WORK:
+Confirm every action the manager is likely to take in the first 10 minutes works:
+
+View team: navigate to the employee list and see their assigned officers.
+View schedule: navigate to the schedule and see today's and this week's shifts.
+Build a shift: create one test shift and assign one employee to it.
+Confirm shift notification fires to the employee.
+Approve a timesheet: if any timesheets are pending, approve one.
+Chat with Trinity: ask Trinity a question about their team.
+Confirm Trinity answers with real data.
+View the shift room: if any shifts are active, enter the shift room.
+Confirm ReportBot is present and greets the manager.
+
+All 7 of these must work on the first try with no errors and no blank pages.
+Any blank page, any 404, any error message is a blocker.
+Fix all blockers before Bryan sends the invite.
+
+---
+
+DELIVERY REPORT
+
+After all steps above produce:
+
+INVITE FLOW STATUS:
+Role selector on invite form: present or built.
+Invite email delivers within 60 seconds: confirmed.
+Invite email shows org name, role, and working button: confirmed.
+Accept page shows org and role context: confirmed.
+Password set and account created on accept: confirmed.
+Auto-login after accept: confirmed.
+Role-appropriate landing page: confirmed.
+workspace_members.role matches invite role: confirmed.
+
+ROLE MANAGEMENT STATUS:
+org_owner can change roles from profile page: confirmed.
+Live RBAC sync fires via WebSocket: confirmed.
+User notified of role change without logout: confirmed.
+Downgrade redirects from restricted pages: confirmed.
+Role change audit trail entry created: confirmed.
+Role cannot be self-assigned higher than invite: confirmed.
+
+RESEND DELIVERY:
+Test invite email delivered to real inbox: confirmed.
+Not in spam: confirmed.
+Renders correctly on mobile: confirmed.
+Accept button links to working page: confirmed.
+
+MANAGER FIRST 10 MINUTES:
+Trinity greeting with real data: confirmed.
+All 7 first actions work without errors: confirmed.
+
+OVERALL VERDICT:
+READY — Bryan can send the real invite now.
+NOT READY — exact items to fix first listed in priority order.
+
+When this report shows READY Bryan sends the invite.
+His manager gets the email, accepts, logs in, and has a great first experience.
+That is the moment CoAIleague becomes real.

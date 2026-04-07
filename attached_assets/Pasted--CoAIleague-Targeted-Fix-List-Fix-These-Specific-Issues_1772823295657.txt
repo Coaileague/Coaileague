@@ -1,0 +1,340 @@
+# CoAIleague — Targeted Fix List
+## Fix These Specific Issues Right Now — In This Order
+
+---
+
+## ⛔ BEFORE ANYTHING ELSE
+
+Do not start new features. Do not redesign anything from scratch.
+Fix the specific issues listed below, in order, one at a time.
+
+---
+
+## FIX 1 — WRONG THEME (HIGHEST PRIORITY)
+
+The entire app is rendering in a LIGHT gray/white theme.
+This is wrong. The platform uses a DARK navy theme.
+
+Apply this globally right now:
+
+```css
+/* Global — index.css or globals.css */
+html, body, #root {
+  background-color: #0D1117 !important;
+  color: #F0F6FC !important;
+}
+
+/* Override any light theme remnants */
+.bg-white, .bg-gray-50, .bg-gray-100, 
+[class*="bg-white"], [class*="bg-light"] {
+  background-color: #161B22 !important;
+}
+
+/* Text that appears dark on light should be light on dark */
+.text-gray-900, .text-black, .text-dark {
+  color: #F0F6FC !important;
+}
+
+.text-gray-500, .text-gray-600 {
+  color: #8B949E !important;
+}
+```
+
+After applying — verify the dashboard background is deep navy.
+Do not proceed to Fix 2 until the dark theme is confirmed.
+
+---
+
+## FIX 2 — TRINITY FAB FLOATING POSITION
+
+The Trinity widget is sitting inside cards and overlapping content.
+It needs to float ABOVE everything on the page.
+
+```css
+/* Trinity FAB — must be fixed position above all content */
+.trinity-fab,
+[class*="trinity-widget"],
+[class*="fab-button"],
+[data-trinity-widget] {
+  position: fixed !important;
+  bottom: 88px !important;   /* above bottom nav */
+  right: 20px !important;
+  z-index: 9999 !important;  /* above everything */
+  pointer-events: auto !important;
+}
+
+/* Desktop */
+@media (min-width: 768px) {
+  .trinity-fab,
+  [class*="trinity-widget"] {
+    bottom: 24px !important;
+    right: 24px !important;
+  }
+}
+```
+
+The FAB must NEVER be inside a card container.
+Find the component and ensure it renders at the ROOT level of the app — not inside any page component. It should be rendered directly in `App.tsx` or the root layout, outside of all page content.
+
+```tsx
+// App.tsx — correct placement
+return (
+  <Router>
+    <UniversalLayout>
+      <Routes>
+        {/* all routes */}
+      </Routes>
+    </UniversalLayout>
+    <TrinityWidget />  {/* ← OUTSIDE layout, renders above everything */}
+  </Router>
+);
+```
+
+---
+
+## FIX 3 — DASHBOARD GREETING BANNER
+
+The dashboard has no greeting. Replace the current static profile banner with this:
+
+```tsx
+// Dynamic greeting based on time of day
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+};
+
+// Banner component
+<div style={{
+  background: 'linear-gradient(135deg, #1a2035 0%, #0d1117 100%)',
+  borderLeft: '3px solid #00D4FF',
+  borderRadius: '14px',
+  padding: '20px',
+  marginBottom: '16px'
+}}>
+  {/* Row 1 — Avatar + Name */}
+  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div style={{
+      width: '48px', height: '48px',
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, #00D4FF, #7B5EA7)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '18px', fontWeight: '700', color: 'white'
+    }}>
+      {userInitials}
+    </div>
+    <div>
+      <div style={{ fontSize: '20px', fontWeight: '700', color: '#F0F6FC' }}>
+        {getGreeting()}, {firstName} 👋
+      </div>
+      <div style={{ fontSize: '13px', color: '#8B949E' }}>
+        {orgName} · {userRole}
+      </div>
+    </div>
+  </div>
+
+  {/* Row 2 — Status + Next Shift */}
+  <div style={{ 
+    marginTop: '12px', 
+    paddingTop: '12px',
+    borderTop: '1px solid #21262D',
+    display: 'flex', 
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  }}>
+    {/* Current status */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{
+        width: '8px', height: '8px', borderRadius: '50%',
+        background: isOnShift ? '#3FB950' : '#484F58'
+      }} />
+      <span style={{ fontSize: '13px', color: isOnShift ? '#3FB950' : '#8B949E' }}>
+        {isOnShift ? 'On Shift' : 'Off Shift'}
+      </span>
+    </div>
+    {/* Next shift */}
+    <div style={{ fontSize: '12px', color: '#8B949E' }}>
+      {nextShift ? `Next: ${nextShift}` : 'No upcoming shifts'}
+    </div>
+  </div>
+</div>
+```
+
+---
+
+## FIX 4 — EARNINGS WIDGET
+
+Add this card directly below the greeting banner:
+
+```tsx
+<div style={{
+  position: 'relative',
+  background: '#161B22',
+  borderRadius: '14px',
+  padding: '20px',
+  marginBottom: '16px',
+  overflow: 'hidden'
+}}>
+  {/* Gradient border */}
+  <div style={{
+    position: 'absolute', inset: 0,
+    borderRadius: '14px',
+    padding: '1.5px',
+    background: 'linear-gradient(135deg, #00D4FF, #7B5EA7)',
+    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+    WebkitMaskComposite: 'xor',
+    maskComposite: 'exclude',
+    pointerEvents: 'none'
+  }} />
+
+  {/* Content */}
+  <div style={{ fontSize: '12px', color: '#8B949E', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+    💰 My Earnings
+  </div>
+  
+  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
+    <span style={{ fontSize: '32px', fontWeight: '700', color: '#F0F6FC' }}>
+      ${earnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+    </span>
+    <span style={{ fontSize: '13px', color: '#8B949E' }}>
+      {payPeriodStart} – {payPeriodEnd}
+    </span>
+  </div>
+
+  {/* Progress bar */}
+  <div style={{ 
+    height: '4px', 
+    background: '#21262D', 
+    borderRadius: '9999px',
+    marginBottom: '8px',
+    overflow: 'hidden'
+  }}>
+    <div style={{
+      height: '100%',
+      width: `${progressPercent}%`,
+      background: 'linear-gradient(90deg, #00D4FF, #7B5EA7)',
+      borderRadius: '9999px',
+      transition: 'width 0.6s ease'
+    }} />
+  </div>
+
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'space-between',
+    fontSize: '12px', 
+    color: '#8B949E',
+    marginBottom: '16px'
+  }}>
+    <span>{hoursWorked} hrs worked</span>
+    <span>{hoursRemaining} hrs remaining</span>
+  </div>
+
+  <a href="/payroll" style={{ 
+    color: '#00D4FF', 
+    fontSize: '13px',
+    textDecoration: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
+  }}>
+    View Earnings Details →
+  </a>
+</div>
+```
+
+Data to pull (READ ONLY — no schema changes):
+- `earnings` = SUM(hours_worked × hourly_rate) for current pay period
+- `payPeriodStart/End` = from pay_periods table
+- `hoursWorked` = approved timesheet hours this period
+- `hoursRemaining` = scheduled hours remaining
+
+---
+
+## FIX 5 — DASHBOARD GRID TILE TEXT OVERFLOW
+
+The grid tiles are STILL wrapping text. Fix this right now:
+
+```css
+/* Grid tile labels — MUST be single line */
+.grid-tile-label,
+[class*="tile"] span,
+[class*="tile"] p,
+[class*="card"] span {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-align: center !important;
+  max-width: 100% !important;
+}
+
+/* Grid tile cards — uniform size */
+.grid-tile,
+[class*="feature-card"],
+[class*="nav-tile"] {
+  height: 96px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  background: #161B22 !important;
+  border: 1px solid #21262D !important;
+  border-radius: 12px !important;
+}
+
+/* Icon container */
+.grid-tile-icon {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+```
+
+Specific tiles that are broken — fix these label texts:
+- "Clock In/Out" → fine as-is if single line, add `white-space: nowrap`
+- "Daily Report" → wrapping to two lines, must be one line, reduce font size if needed
+- "My Schedule" → check this too
+
+---
+
+## VERIFICATION — DO NOT SKIP
+
+After all 5 fixes are applied, verify each one:
+
+**Fix 1 — Dark theme:**
+- [ ] Dashboard background is deep navy (#0D1117)
+- [ ] Card backgrounds are #161B22
+- [ ] Text is white/near-white, not black
+
+**Fix 2 — Trinity FAB:**
+- [ ] FAB floats above ALL content, nothing behind it
+- [ ] FAB does not overlap or embed into any card
+- [ ] FAB visible in bottom right corner
+- [ ] FAB is above bottom nav (88px from bottom on mobile)
+
+**Fix 3 — Greeting:**
+- [ ] "Good morning/afternoon/evening, [Name] 👋" visible at top
+- [ ] Current status indicator (on/off shift)
+- [ ] Next shift info displayed
+
+**Fix 4 — Earnings widget:**
+- [ ] Earnings card visible below greeting
+- [ ] Dollar amount displaying
+- [ ] Progress bar visible
+- [ ] "View Earnings Details →" link present
+
+**Fix 5 — Text overflow:**
+- [ ] "Daily Report" on ONE line
+- [ ] "Clock In/Out" on ONE line
+- [ ] All grid tiles same height
+- [ ] No text wrapping in any grid tile
+
+---
+
+Do not show me a screenshot until all 5 fixes pass their verification.

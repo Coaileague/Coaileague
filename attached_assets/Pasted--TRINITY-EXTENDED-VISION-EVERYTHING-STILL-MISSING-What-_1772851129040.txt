@@ -1,0 +1,942 @@
+# TRINITY EXTENDED VISION — EVERYTHING STILL MISSING
+## What a Real Security Company Actually Needs to Run
+### CoAIleague · March 2026 · Full Imagination Audit
+
+---
+
+## HOW TO READ THIS DOCUMENT
+
+The previous gap analyses covered wiring and autonomous operations.
+This document covers everything else — the things nobody wrote down yet
+because they're so embedded in how a security company actually operates
+that they feel invisible until they're missing.
+
+These are the things that cause an owner to say:
+"The platform does payroll but I still need three spreadsheets."
+"The schedule is built but I had to make 12 phone calls to fill two shifts."
+"Trinity is smart but she doesn't know this business like I do yet."
+
+This is how you close that gap permanently.
+
+---
+
+## CATEGORY 1: THE NEW HIRE PIPELINE
+### From "I Need Someone" to "Licensed Officer on Schedule"
+
+This is one of the most painful operational workflows in the security industry
+and CoAIleague has almost none of it built. Right now the platform assumes
+officers already exist and are already licensed. The real world doesn't work that way.
+
+### 1A — RECRUITING TRIGGER
+
+```
+WHEN TRINITY DETECTS:
+  - Officer headcount falls below org's minimum bench threshold
+  - A site is consistently hard to fill (3+ consecutive weeks of open shifts)
+  - An officer gives notice or is terminated
+  - A new client contract is won and requires additional officers
+
+TRINITY SHOULD:
+  - Alert owner: "You need [n] additional [level] officers for [site/region]"
+  - Generate a job posting draft based on the position requirements
+  - Post to integrated job boards if connected (Indeed, ZipRecruiter, etc.)
+  - Track applicants in a pipeline with status
+```
+
+### 1B — APPLICANT TRACKING
+
+```
+Trinity needs an applicant pipeline:
+  Applied → Screened → Background Initiated → Licensed → Onboarding → Active
+
+Trinity actions needed:
+  hiring.create_posting
+  hiring.track_applicant
+  hiring.initiate_background_check  ← integrate Checkr or Sterling
+  hiring.update_applicant_status
+  hiring.generate_offer_letter
+  hiring.send_offer
+```
+
+### 1C — BACKGROUND CHECK INTEGRATION
+
+```
+Security industry requires criminal background checks.
+Most states require them before licensing.
+Texas DPS requires criminal history for PERC.
+
+Integration needed: Checkr, Sterling Talent Solutions, or Accurate Background
+
+Trinity actions:
+  background.initiate_check(applicantId, checkType)
+  background.get_status(checkId)
+  background.review_results(checkId)
+  background.flag_disqualifying_finding(checkId)
+
+Trinity intelligence:
+  - Know which findings are disqualifying per state
+  - Know which findings require individualized assessment
+  - Know FCRA adverse action requirements before rejecting
+```
+
+### 1D — LICENSING & TRAINING PIPELINE MANAGEMENT
+
+```
+This is the biggest gap in the entire platform.
+A new hire in Texas cannot work until they have a PERC card.
+Getting a PERC card requires:
+  1. Criminal background check (DPS)
+  2. 6-hour pre-assignment training (Level II)
+  3. DPS application and fee
+  4. Fingerprinting
+  5. DPS processing (2-6 weeks)
+
+Trinity needs to manage this entire pipeline:
+
+  onboarding.initiate_perc_application(employeeId)
+  onboarding.schedule_pre_assignment_training(employeeId)
+  onboarding.track_dps_application(employeeId)
+  onboarding.confirm_license_received(employeeId)
+  onboarding.mark_schedule_eligible(employeeId)
+
+Trinity proactive behavior:
+  - Tracks each new hire's pipeline stage
+  - Alerts when application is taking longer than expected
+  - Estimates when officer will be schedule-eligible
+  - Flags if training slot is needed
+```
+
+### 1E — ELECTRONIC ONBOARDING DOCUMENTS
+
+```
+Every new hire needs:
+  - I-9 Employment Eligibility Verification (federal requirement)
+  - W-4 Federal Tax Withholding
+  - State tax withholding form
+  - Texas New Hire Reporting (state requirement — within 20 days of hire)
+  - Direct deposit authorization
+  - Emergency contact information
+  - Uniform acknowledgment
+  - Policy handbook acknowledgment
+  - Post order acknowledgment (site-specific)
+  - Non-disclosure agreement (if applicable)
+
+Trinity actions:
+  onboarding.send_document_packet(employeeId)
+  onboarding.track_completion(employeeId)
+  onboarding.flag_missing_documents(employeeId)
+  onboarding.submit_new_hire_report_to_state(employeeId)  ← legal requirement
+  onboarding.confirm_i9_complete(employeeId)
+```
+
+---
+
+## CATEGORY 2: POST ORDERS — THE MOST CRITICAL MISSING DOCUMENT
+
+Post orders are the legal document that governs officer behavior at each site.
+They define exactly what an officer is authorized to do at that specific location.
+They are the most important document in the security industry from a liability perspective.
+CoAIleague apparently has no post orders module.
+
+This is a significant platform gap.
+
+### 2A — WHAT POST ORDERS MUST CONTAIN
+
+```
+Per site, per client, Trinity should be able to generate and manage:
+
+SITE INFORMATION:
+  - Property address and contact
+  - Client contact and emergency contacts
+  - Site hours of operation
+  - Access control procedures
+
+OFFICER DUTIES:
+  - Specific patrol routes and timing
+  - Access control procedures
+  - Visitor management procedures
+  - Package/delivery handling
+  - Key control procedures
+
+AUTHORITY AND LIMITATIONS:
+  - What the officer IS authorized to do at this site
+  - What the officer is NOT authorized to do
+  - Detention authority (has the client authorized shopkeeper's privilege?)
+  - Trespass authority (is the officer authorized to give criminal trespass warnings?)
+  - Weapons authorization (armed? what type?)
+
+EMERGENCY PROCEDURES:
+  - Fire/evacuation procedure
+  - Medical emergency procedure
+  - Active threat procedure
+  - Natural disaster procedure
+  - Who to call in each scenario
+
+REPORTING REQUIREMENTS:
+  - What must be reported to client
+  - What must be reported to company
+  - Report format and timing
+
+PROHIBITED ITEMS/BEHAVIORS:
+  - What is not allowed on this property
+  - How to handle violations
+```
+
+### 2B — TRINITY'S POST ORDERS CAPABILITY
+
+```
+Trinity actions needed:
+  postorders.generate_from_client_profile(clientId, siteId)
+  postorders.assign_to_officer(officerId, siteId)
+  postorders.confirm_officer_read_and_acknowledged(officerId, siteId)
+  postorders.get_for_shift(shiftId)   ← Trinity reads these before answering site questions
+  postorders.flag_deviation(incidentId, postOrderSection)
+  postorders.update_section(siteId, section, content)
+  postorders.version_history(siteId)  ← track changes, who signed what version
+
+Trinity intelligence:
+  When an officer asks "what am I supposed to do if someone refuses to leave?"
+  Trinity pulls the post orders for their current assignment and answers from those,
+  not from generic security knowledge. The answer for Pinnacle Tower may differ
+  from Heritage National Bank.
+```
+
+---
+
+## CATEGORY 3: LEAVE & ABSENCE MANAGEMENT
+
+Currently the platform has availability but no formal leave management.
+These are very different things.
+
+```
+LEAVE TYPES TRINITY MUST TRACK:
+  - Requested time off (PTO if offered)
+  - FMLA (federal — must track carefully, 12 weeks protected)
+  - Military leave (USERRA — fully protected, complex rules)
+  - Jury duty
+  - Bereavement
+  - Personal leave (unpaid)
+  - Medical leave (ADA accommodation may apply)
+  - Workers comp leave (injury-related)
+
+Trinity actions needed:
+  leave.submit_request(employeeId, type, dates, reason)
+  leave.approve_request(leaveId, managerId)
+  leave.deny_request(leaveId, reason)
+  leave.track_fmla_balance(employeeId)  ← 12 weeks/year federal limit
+  leave.flag_military_leave(employeeId) ← USERRA protections apply
+  leave.coordinate_with_schedule(leaveId) ← auto-open shifts during leave
+
+Trinity intelligence:
+  - Know when FMLA applies and what protections that triggers
+  - Know USERRA military leave rights
+  - Know Texas workers comp leave rules
+  - Flag when someone's leave pattern looks like it may trigger ADA
+  - Never schedule someone on approved leave (sounds obvious, currently not enforced)
+```
+
+---
+
+## CATEGORY 4: COMPENSATION INTELLIGENCE BEYOND BASIC PAY
+
+### 4A — SHIFT DIFFERENTIALS
+
+```
+Most security companies pay more for:
+  - Night shifts (after 10pm or 11pm)
+  - Weekend shifts
+  - Holiday shifts
+  - Hazardous duty assignments
+  - Armed vs unarmed premiums (some pay this as a differential, not a separate rate)
+  - Supervisor differential (not always a different base rate — sometimes an add-on)
+
+Trinity needs to:
+  - Read shift differential rules from org settings
+  - Apply them automatically at payroll calculation
+  - Show the breakdown on pay stubs
+  - Factor differentials into billing rates (if armed differential = cost increase, bill rate must cover it)
+
+compensaton.get_differential_rules(orgId)
+compensation.apply_differentials(timesheetEntry)
+compensation.calculate_blended_rate(employeeId, period)
+```
+
+### 4B — ON-CALL COMPENSATION
+
+```
+Officers on the on-call pool may have a right to on-call pay in some states.
+TX doesn't require it but some org policies provide it.
+
+Trinity should:
+  - Track who is designated on-call each week
+  - Apply on-call compensation per org policy
+  - Track and compensate if on-call officer is actually called in
+```
+
+### 4C — MILEAGE AND EXPENSE TRACKING
+
+```
+Officers who travel between multiple sites in a day may be entitled to mileage reimbursement.
+(IRS 2026 rate applies)
+
+Trinity actions:
+  expense.submit_mileage(officerId, date, fromSite, toSite, miles)
+  expense.submit_expense(officerId, type, amount, receipt)
+  expense.approve_expense(expenseId, managerId)
+  expense.include_in_payroll(expenseId)
+  expense.generate_expense_report(orgId, period)
+```
+
+### 4D — GARNISHMENTS AND INVOLUNTARY DEDUCTIONS
+
+```
+When an officer has a court-ordered garnishment (child support, tax levy, bankruptcy),
+the employer is legally required to withhold and remit it.
+Failure is a federal/state violation.
+
+Trinity actions:
+  payroll.add_garnishment(employeeId, garnishmentDetails)
+  payroll.calculate_garnishment(employeeId, grossPay)  ← must respect disposable income limits
+  payroll.remit_garnishment(garnishmentId, payPeriod)
+  payroll.generate_garnishment_report(period)
+
+Trinity intelligence:
+  - Know federal Consumer Credit Protection Act limits on garnishments
+  - Know Texas exemptions (TX is very protective of employees from wage garnishment)
+  - Flag if garnishment would reduce pay below minimum wage
+  - Know priority order when multiple garnishments exist (child support first)
+```
+
+---
+
+## CATEGORY 5: OFFICER SAFETY — THE LONE WORKER PROBLEM
+
+Security officers often work alone. Nights. Remote locations. High-risk environments.
+This is a significant liability gap and a genuine safety issue.
+
+### 5A — WELFARE CHECK SYSTEM
+
+```
+Trinity monitors officer safety during active shifts:
+
+  WELFARE CHECK PROTOCOL:
+  - At configurable intervals (every 1 hour, every 2 hours) during solo shifts
+  - Trinity sends officer a check-in prompt: "Check-in required — respond OK"
+  - Officer responds via app
+  - If no response in [configurable window — 15 minutes]:
+    → Trinity attempts second contact
+    → If still no response → alerts supervisor immediately
+    → Supervisor attempts contact
+    → If supervisor can't reach: → contact emergency services at site location
+
+Trinity actions:
+  safety.initiate_welfare_check(officerId, shiftId)
+  safety.receive_checkin_response(officerId)
+  safety.escalate_missed_checkin(officerId, shiftId, missedCount)
+  safety.log_safety_event(officerId, type, notes)
+
+This feature alone could be the reason a client chooses CoAIleague.
+It directly addresses officer safety liability.
+```
+
+### 5B — PANIC BUTTON / DURESS ALERT
+
+```
+Officer in danger presses emergency button in the app.
+
+Trinity receives duress alert and simultaneously:
+  1. Notifies supervisor with GPS location
+  2. Notifies client emergency contact
+  3. Initiates 911 call guidance for nearest responder
+  4. Begins recording audio if phone permits and officer has enabled
+  5. Logs everything with timestamps for incident record
+
+safety.receive_panic_alert(officerId, location, timestamp)
+safety.initiate_emergency_protocol(officerId)
+safety.notify_emergency_chain(officerId, location)
+```
+
+### 5C — VEHICLE PATROL TRACKING
+
+```
+Officers conducting vehicle patrols need route tracking.
+Trinity should:
+  - Track GPS route during patrol
+  - Flag if officer deviates significantly from patrol route
+  - Log patrol completion for client reporting
+  - Detect if vehicle is stationary too long during patrol (officer may be in distress)
+```
+
+---
+
+## CATEGORY 6: CLIENT ACQUISITION PIPELINE
+### From Prospect to Signed Contract to Staffed Site
+
+CoAIleague helps run existing security operations.
+It should also help WIN new security operations.
+
+### 6A — PROPOSAL AND QUOTE GENERATION
+
+```
+When a security company gets an RFP or a new client inquiry:
+
+Trinity should be able to:
+  1. Intake the client's requirements (site, hours, level, headcount needed)
+  2. Calculate the staffing cost (pay rates × hours × burden)
+  3. Apply desired margin to generate a bill rate
+  4. Generate a professional proposal document
+  5. Include org's licensing credentials, insurance info, references
+  6. Track the proposal status
+
+Trinity actions:
+  sales.create_prospect(prospectDetails)
+  sales.calculate_quote(requirements, targetMargin)
+  sales.generate_proposal(prospectId, quoteId)
+  sales.send_proposal(prospectId, contactEmail)
+  sales.track_proposal_status(proposalId)
+  sales.convert_prospect_to_client(prospectId)
+  sales.onboard_new_client(clientId)
+
+Trinity intelligence:
+  - Know current market bill rates for security in the region
+  - Know the org's current cost structure to protect margin
+  - Flag if quoted bill rate would create negative margin at proposed staffing
+  - Generate competitive but profitable quotes automatically
+```
+
+### 6B — CLIENT ONBOARDING WORKFLOW
+
+```
+When a prospect signs and becomes a client:
+
+Trinity initiates an onboarding checklist:
+  □ Site survey scheduled
+  □ Post orders drafted and approved by client
+  □ Key control and access procedures documented
+  □ Officer requirements confirmed (armed? level? specific people?)
+  □ Billing contact and invoice preferences confirmed
+  □ Certificate of insurance sent to client
+  □ W-9 sent to client
+  □ First schedule built
+  □ Officers briefed on site
+  □ Client kickoff confirmed
+
+onboarding.initiate_client_workflow(clientId)
+onboarding.track_client_checklist(clientId)
+onboarding.generate_site_survey_form(siteId)
+onboarding.confirm_client_ready(clientId)
+```
+
+---
+
+## CATEGORY 7: TRAINING AND CERTIFICATION MANAGEMENT
+### Not Just Tracking — Actually Managing the Pipeline
+
+Currently the platform tracks license expiration dates.
+It does not manage the training pipeline that keeps those licenses current.
+
+### 7A — TRAINING RECORDS
+
+```
+Every security officer needs training. Trinity should track:
+  - Pre-assignment training (6hrs TX, varies by state)
+  - On-the-job training (16hrs within 30 days in some states)
+  - Annual refresher training (8hrs in CA, required in many states)
+  - Firearms qualification (every 6 months for armed officers)
+  - First aid/CPR certification
+  - Site-specific training (client required training)
+  - Company policy training
+  - De-escalation training
+  - AED certification
+
+training.assign_required_training(employeeId, requirements)
+training.record_completion(employeeId, trainingType, date, provider)
+training.track_firearms_qualification(employeeId, qualDate, nextDue)
+training.generate_training_report(orgId)
+training.flag_overdue_training(orgId)
+```
+
+### 7B — TRAINING COORDINATION
+
+```
+Trinity should proactively:
+  - Alert officers 30 days before any required training expires
+  - Identify training providers in the area for required courses
+  - Track group training sessions (multiple officers at once)
+  - Coordinate firearms range qualification appointments
+  - Track continuing education credits if applicable
+
+training.find_providers(trainingType, location)
+training.schedule_group_session(trainingType, officers, date)
+training.send_training_reminder(officerId, trainingType, dueDate)
+```
+
+---
+
+## CATEGORY 8: EQUIPMENT AND ASSET MANAGEMENT
+
+Security companies issue equipment. Nobody tracks it properly.
+
+```
+EQUIPMENT TYPES TRINITY SHOULD TRACK:
+  - Uniforms (shirts, pants, boots, belt, hat) — issued per officer
+  - Badge and credential holder
+  - Radio/communication device
+  - Flashlight
+  - Handcuffs (if authorized)
+  - Body camera (if used)
+  - Vehicle (if company vehicle)
+  - Laptop/tablet (if issued)
+  - Access control cards/keys
+
+Trinity actions:
+  equipment.issue_to_officer(equipmentId, officerId, issueDate)
+  equipment.track_condition(equipmentId, conditionNotes)
+  equipment.flag_unreturned(officerId, terminationDate)
+  equipment.generate_inventory_report(orgId)
+  equipment.track_vehicle(vehicleId, assignedOfficer, mileage)
+  equipment.log_vehicle_inspection(vehicleId, date, findings)
+
+Trinity proactive:
+  - Alert when officer terminates and has unreturned equipment
+  - Track uniform sizes for reorder planning
+  - Flag equipment due for replacement/inspection
+  - Deduct unreturned equipment from final paycheck if org policy allows
+    (with proper written authorization — must follow TX wage deduction rules)
+```
+
+---
+
+## CATEGORY 9: FINANCIAL INTELLIGENCE BEYOND PAYROLL
+
+### 9A — TRUE PROFITABILITY ANALYSIS
+
+```
+Most security companies don't actually know which clients make them money.
+Trinity should calculate and surface:
+
+  Per client:
+  - Total revenue billed
+  - Total labor cost (pay + burden)
+  - Gross profit and margin %
+  - Change over time (is this client getting less profitable?)
+  - Cost of turnover at this site (onboarding cost of replacement officers)
+
+  Per site:
+  - Revenue per hour
+  - Labor cost per hour
+  - Net margin per hour
+  - OT cost impact on margin
+
+  Per officer:
+  - Revenue generated (sites they cover × bill rate)
+  - Labor cost (pay rate + burden + training cost)
+  - Net value contribution
+  - OT frequency impact on cost
+
+analytics.client_profitability(clientId, period)
+analytics.site_profitability(siteId, period)
+analytics.officer_value_analysis(officerId, period)
+analytics.margin_trend(orgId, periods)
+```
+
+### 9B — CASH FLOW INTELLIGENCE
+
+```
+Security companies have a dangerous cash flow gap:
+  - They PAY officers weekly or biweekly
+  - They INVOICE clients monthly with net 30 terms
+  - That's a 6-8 week cash gap per billing cycle
+
+Trinity should:
+  - Calculate projected cash flow gap for next 90 days
+  - Alert when incoming receivables won't cover upcoming payroll
+  - Track AR aging and flag when collection risk threatens payroll
+  - Suggest optimal invoice timing to minimize cash gap
+
+finance.cash_flow_projection(orgId, days)
+finance.payroll_coverage_check(orgId, nextPayDate)
+finance.flag_ar_payroll_risk(orgId)
+```
+
+### 9C — BUDGET VS. ACTUAL
+
+```
+Trinity should track org against budget:
+  labor_budget.set(orgId, period, amount)
+  labor_budget.track_actual(orgId, period)
+  labor_budget.variance_report(orgId, period)
+  overhead_budget.set(orgId, period, category, amount)
+  finance.budget_vs_actual_report(orgId, period)
+```
+
+### 9D — WORKERS COMP CLAIM MANAGEMENT
+
+```
+When an officer is injured on duty:
+  - First report of injury must be filed with Texas DWC within 8 days
+  - Claims affect experience modification rate
+  - Managed correctly they cost less
+
+Trinity actions:
+  wc.initiate_claim(employeeId, incidentId)
+  wc.file_first_report_of_injury(claimId)  ← TX DWC-001 form
+  wc.track_claim_status(claimId)
+  wc.coordinate_return_to_work(claimId)
+  wc.calculate_mod_rate_impact(claimId)
+  wc.generate_claims_report(orgId, period)
+```
+
+---
+
+## CATEGORY 10: INTELLIGENCE TRINITY NEEDS ABOUT PEOPLE
+
+### 10A — OFFICER RETENTION PREDICTION
+
+```
+Trinity should identify officers at risk of leaving before they leave.
+
+RETENTION RISK SIGNALS:
+  - Hours dropped significantly from previous weeks
+  - Multiple calloffs in a month
+  - Requested schedule changes to reduce availability
+  - Not picking up open shifts (when they used to)
+  - Complaints or incidents filed
+  - Not completing check-ins
+  - Applying for PERC transfer (indicates job shopping)
+  - Long response time to shift offers
+  - Compensation hasn't increased in 12+ months
+
+Trinity action:
+  analytics.officer_retention_risk(orgId)
+  → Returns: [ { officerId, riskScore, signals, recommendation } ]
+
+When high risk detected:
+  → Alert manager: "Richard Jackson shows 4 retention risk signals.
+     Recommend a check-in conversation. His last pay increase was 14 months ago."
+```
+
+### 10B — CLIENT RETENTION PREDICTION
+
+```
+Clients leave for predictable reasons. Trinity should catch them early.
+
+CLIENT CHURN RISK SIGNALS:
+  - Coverage gaps at their sites (unfilled shifts)
+  - Multiple incident reports in short period
+  - Officer turnover at their site above threshold
+  - Complaints sent to management email
+  - Late invoice payments (financial stress = contract review)
+  - Renewal date approaching with no renewal discussion started
+  - Key client contact changed (new decision maker)
+  - No direct communication in 30+ days
+
+Trinity action:
+  analytics.client_churn_risk(orgId)
+  → Alert owner 90 days before contract expiration
+  → Alert on any combination of 3+ risk signals
+  → Suggest proactive outreach with talking points
+```
+
+### 10C — PERFORMANCE IMPROVEMENT PLANS
+
+```
+Trinity should support formal PIP process:
+  hr.create_pip(employeeId, issues, goals, timeline)
+  hr.log_pip_checkin(pipId, date, progress, notes)
+  hr.complete_pip(pipId, outcome)  // successful or unsuccessful
+  hr.generate_pip_document(pipId)  // paper trail for termination defense
+```
+
+---
+
+## CATEGORY 11: MULTI-STATE AND MULTI-ENTITY INTELLIGENCE
+
+As CoAIleague grows and serves companies operating in multiple states:
+
+### 11A — MULTI-STATE COMPLIANCE RULES ENGINE
+
+```
+When an officer is assigned to work in a state different from their home state:
+  - Are they licensed in the destination state? (most states require this)
+  - Does the destination state recognize reciprocity with home state?
+  - What is the OT rule in the destination state? (CA daily OT applies even to visitors)
+  - What workers comp jurisdiction applies?
+
+compliance.check_multistate_eligibility(officerId, destinationState)
+compliance.apply_state_ot_rules(timesheetEntry, workState)
+compliance.flag_licensing_gap(officerId, scheduledState)
+```
+
+### 11B — MULTI-ENTITY / FRANCHISE SUPPORT
+
+```
+If Bryan or clients run multiple security companies under CoAIleague:
+  - Separate org settings per entity
+  - Consolidated reporting across entities
+  - Shared officer pool with proper entity attribution
+  - Separate payroll and invoicing per entity
+  - Consolidated owner dashboard across all entities
+
+org.create_entity(parentOrgId, entityDetails)
+org.consolidated_dashboard(parentOrgId)
+org.cross_entity_officer_assignment(officerId, fromOrg, toOrg, shiftId)
+```
+
+---
+
+## CATEGORY 12: REGULATORY FILING INTELLIGENCE
+
+### 12A — STATE AGENCY FILINGS
+
+```
+Security companies have recurring regulatory obligations. Trinity should know and track:
+
+TEXAS SPECIFICALLY:
+  - Annual company license renewal with DPS (TDL)
+  - Qualifying agent re-certification
+  - New hire reporting to Texas Workforce Commission (within 20 days)
+  - Quarterly UI tax filing (TWC Form C-3)
+  - Annual workers comp report to Texas DWC (if self-insured)
+
+FEDERAL:
+  - Quarterly 941 payroll tax deposit and filing
+  - Annual FUTA (Form 940)
+  - W-2 distribution by January 31
+  - 1099 for independent contractors by January 31
+  - I-9 retention (3 years from hire or 1 year after termination, whichever is later)
+
+Trinity actions:
+  compliance.track_filing_deadlines(orgId)
+  compliance.flag_upcoming_filings(orgId, daysAhead)
+  compliance.generate_filing_reminder(orgId, filingType)
+  compliance.log_filing_completed(orgId, filingType, date, confirmationNumber)
+```
+
+### 12B — INSURANCE CERTIFICATE MANAGEMENT
+
+```
+Clients require Certificates of Insurance (COI).
+These need to be issued, tracked, and renewed annually.
+
+insurance.generate_coi(clientId, coverageDetails)
+insurance.track_coi_expiration(clientId)
+insurance.send_renewed_coi(clientId)
+insurance.track_coverage_limits(orgId)  // alert if coverage drops below client requirement
+```
+
+---
+
+## CATEGORY 13: WHAT TRINITY KNOWS ABOUT HER OWN PLATFORM
+
+Trinity should be able to answer questions about CoAIleague itself.
+
+```
+CURRENT GAP: Trinity knows security operations deeply.
+She may not know how to navigate her own platform features.
+
+Trinity should know:
+  - How to use every feature in CoAIleague
+  - Where to find every setting
+  - How to troubleshoot common issues
+  - What each role can and cannot do
+  - How to onboard a new user
+  - How integrations work and how to configure them
+  - What each notification means
+  - How to read each report
+
+This requires a platform knowledge base indexed and available to Trinity.
+Not just her prompt — an actual searchable KB she can query.
+
+platform.search_knowledge_base(query)
+platform.get_feature_guide(featureName)
+platform.get_troubleshooting_steps(issueType)
+platform.get_setup_guide(integrationName)
+```
+
+---
+
+## CATEGORY 14: MULTI-LANGUAGE SUPPORT
+
+The security workforce in Texas is significantly Spanish-speaking.
+If Trinity can't communicate in Spanish she fails a large portion of CoAIleague's end users.
+
+```
+WHAT THIS REQUIRES:
+  - Language preference setting per officer profile
+  - Trinity detects language from message automatically
+  - Trinity responds in officer's preferred language
+  - All notifications sent in officer's preferred language
+  - Compliance alerts, schedule notifications, paycheck summaries — all bilingual
+
+trinity.detect_language(message)
+trinity.respond_in_language(response, language)
+officer.set_language_preference(officerId, language)
+notify.send_in_preferred_language(officerId, message)
+
+LANGUAGES TO SUPPORT AT MINIMUM:
+  - English
+  - Spanish
+  - (Future: Portuguese, Haitian Creole for FL market)
+```
+
+---
+
+## CATEGORY 15: PLATFORM API FOR CLIENTS
+
+Large clients want to pull their own data.
+
+```
+A Tier 1 client like Heritage National Bank may want:
+  - Their own dashboard showing officer hours at their sites
+  - Real-time clock-in status for their sites
+  - Incident reports for their properties
+  - Monthly billing detail before invoice arrives
+  - SLA compliance metrics
+
+This requires:
+  - A client-facing API with org-scoped auth
+  - A client portal UI (noted in roadmap)
+  - A client-specific Trinity instance that only knows about their sites
+  - Rate limiting and security appropriate for external access
+
+api.generate_client_api_key(clientId)
+api.get_client_dashboard_data(clientId)
+api.get_client_site_status(clientId, siteId)
+api.get_client_incident_reports(clientId, period)
+```
+
+---
+
+## CATEGORY 16: WHAT TRINITY STILL CAN'T DO THAT SHE SHOULD
+
+These are capability gaps that don't fit other categories:
+
+```
+16A — DISPUTE RESOLUTION INTELLIGENCE
+When an officer disputes a timesheet or pay amount:
+  Trinity should not just log the dispute.
+  Trinity should investigate it:
+  - Pull the original clock entry
+  - Pull the schedule
+  - Pull the supervisor sign-off (if any)
+  - Pull GPS data from clock-in
+  - Compare all four against each other
+  - Produce a recommendation: "The dispute appears valid — recommend correction"
+    or "The timesheet matches GPS and clock data — dispute appears unfounded"
+  - Present to manager with full evidence
+
+dispute.investigate(disputeId)  ← Trinity does the detective work
+dispute.generate_recommendation(disputeId)
+dispute.present_to_manager(disputeId, recommendation)
+
+
+16B — VENDOR MANAGEMENT
+  - Uniform suppliers
+  - Training providers
+  - Background check vendors
+  - Insurance brokers
+  - Payroll tax filing services
+  
+vendor.track_vendor(vendorId, type, contact, contract)
+vendor.log_payment(vendorId, amount, date)
+vendor.generate_vendor_spend_report(orgId, period)
+
+
+16C — DOCUMENT INTELLIGENCE
+Trinity can receive documents. She should extract data from them.
+  - Upload a PERC card photo → Trinity extracts license number and expiry, updates record
+  - Upload an insurance certificate → Trinity extracts coverage amounts, updates record
+  - Upload a client contract → Trinity extracts billing rates, sites, terms
+  - Upload a W-9 → Trinity extracts EIN/SSN, updates vendor record
+
+document.extract_perc_data(imageFile)
+document.extract_insurance_data(pdfFile)
+document.extract_contract_terms(pdfFile)
+
+
+16D — VOICE INTERFACE FOR FIELD OFFICERS
+Officers on patrol cannot type.
+Trinity needs a push-to-talk voice interface where:
+  - Officer holds button, speaks
+  - Trinity transcribes and processes
+  - Trinity responds via text-to-speech or text
+  
+This is a mobile feature that changes everything for field operations.
+voice.process_audio(audioBuffer, officerId)
+voice.generate_spoken_response(text, officerId)
+
+
+16E — SHIFT BIDDING SYSTEM
+Some organizations allow officers to bid on preferred shifts.
+  - Post available shifts with bid window
+  - Officers submit bids (with seniority/preference weighting)
+  - System awards based on rules (seniority, performance, hours balance)
+  
+bidding.open_shift_for_bid(shiftId, bidWindowClose)
+bidding.submit_bid(officerId, shiftId, preferenceScore)
+bidding.award_shift(shiftId)  ← Trinity runs bid logic automatically
+
+
+16F — OFFICER FEEDBACK AND SATISFACTION
+  - Post-shift pulse check (1-5 rating, optional comment)
+  - Monthly satisfaction survey
+  - Anonymous feedback channel
+  - Aggregate satisfaction trend per site/supervisor
+  
+feedback.send_post_shift_survey(officerId, shiftId)
+feedback.analyze_sentiment(orgId, period)
+feedback.flag_site_with_low_satisfaction(siteId)
+```
+
+---
+
+## THE SUMMARY — WHAT'S TRULY MISSING
+
+If you had to rank by business impact, the things that would most change
+what CoAIleague can credibly promise and deliver are:
+
+**1. New hire to licensed officer pipeline**
+Without this, growth requires manual work outside the platform.
+
+**2. Post orders management**
+Without this, the platform has a liability gap and officers have no site-specific guidance Trinity can use.
+
+**3. Officer welfare checks and panic button**
+Without this, you cannot credibly sell to risk-conscious enterprise clients.
+
+**4. True profitability analysis per client/site**
+Without this, owners are flying blind on which business to keep and which to lose.
+
+**5. Client acquisition pipeline**
+Without this, CoAIleague only manages existing business — it doesn't help win new business.
+
+**6. Spanish language support**
+Without this, 30-40% of the TX security workforce can't fully use the platform.
+
+**7. Regulatory filing calendar and reminders**
+Without this, operators miss deadlines and face penalties.
+
+**8. Cash flow intelligence**
+Without this, owners can be profitable on paper and unable to make payroll.
+
+**9. Training coordination — not just tracking**
+Without this, compliance tracking is only half the job.
+
+**10. Post orders + document intelligence**
+Without this, Trinity can't give site-specific answers to officers in the field.
+
+---
+
+Every item in this document represents something a real security company owner
+deals with and currently handles outside the platform with spreadsheets,
+phone calls, memory, and prayer.
+
+Trinity's job is to be the platform that eliminates all of that.
+This is what that actually requires.
+
+---
+
+*CoAIleague · Trinity Extended Vision · March 2026 · Confidential*
+*This document represents the full operational surface of a security company.*
+*Build toward it systematically. Every capability added is a reason a customer stays forever.*

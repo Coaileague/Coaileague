@@ -1,0 +1,1205 @@
+# COAILEAGUE - COMPREHENSIVE RACE CONDITION AUDIT
+
+## WHAT ARE RACE CONDITIONS?
+
+Race conditions occur when **two or more operations** try to access/modify the **same resource** at the **same time**, and the outcome depends on the **order of execution**.
+
+**IN YOUR PLATFORM, THIS MEANS:**
+- Two users assign the same shift → Both succeed, data corrupted
+- User double-clicks submit → Duplicate records created
+- Clock in called twice quickly → Two time entries
+- Two tabs update same employee → One update lost
+- WebSocket reconnects during message send → Message lost or duplicated
+- Session expires during API call → Partial operation completed
+
+---
+
+# PART 1: DATABASE RACE CONDITIONS
+
+## 1.1 The Classic Read-Modify-Write Race
+
+```typescript
+// ❌ RACE CONDITION - Check then act
+async function assignShift(shiftId: string, employeeId: string) {
+  // Step 1: Read
+  const shift = await db.query.shifts.findFirst({
+    where: eq(shifts.id, shiftId)
+  });
+  
+  // ⚠️ RACE WINDOW: Another request could assign between read and write!
+  
+  if (shift.assignedEmployeeId) {
+    throw new Error('Shift already assigned');
+  }
+  
+  // Step 2: Write
+  await db.update(shifts)
+    .set({ assignedEmployeeId: employeeId })
+    .where(eq(shifts.id, shiftId));
+}
+
+// ✅ FIXED - Atomic operation with condition
+async function assignShiftSafe(shiftId: string, employeeId: string) {
+  const result = await db.update(shifts)
+    .set({ assignedEmployeeId: employeeId })
+    .where(and(
+      eq(shifts.id, shiftId),
+      isNull(shifts.assignedEmployeeId)  // Condition in WHERE
+    ))
+    .returning();
+  
+  if (result.length === 0) {
+    throw new Error('Shift already assigned or not found');
+  }
+  
+  return result[0];
+}
+```
+
+## 1.2 Find All Read-Modify-Write Patterns
+
+```bash
+#!/bin/bash
+# find_read_modify_write.sh
+
+echo "=== FINDING READ-MODIFY-WRITE RACE CONDITIONS ==="
+
+# Pattern: findFirst/findOne followed by update/insert
+grep -rn "findFirst\|findOne\|findUnique" --include="*.ts" server/ -A 20 | \
+  grep -B 10 "\.update\|\.insert" | \
+  grep -l "findFirst\|update" | \
+  sort -u
+
+# Pattern: SELECT then UPDATE (raw SQL)
+grep -rn "SELECT.*FROM" --include="*.ts" server/ -A 10 | \
+  grep -B 5 "UPDATE\|INSERT"
+
+# Pattern: Check if exists, then create
+grep -rn "if.*!.*find\|if.*null\|if.*undefined" --include="*.ts" server/ -A 5 | \
+  grep "insert\|create"
+```
+
+## 1.3 Specific Race Conditions to Find
+
+### Shift Assignment Race
+
+```bash
+# Find shift assignment code
+grep -rn "assignedEmployeeId\|assign.*shift\|shift.*assign" --include="*.ts" server/
+
+# Check if it uses atomic update or read-then-write
+```
+
+### Time Clock Race (Double Clock-In)
+
+```bash
+# Find clock in/out code
+grep -rn "clock.*in\|clockIn\|clock_in" --include="*.ts" server/
+
+# Check for duplicate prevention
+```
+
+### User Creation Race (Duplicate Email)
+
+```bash
+# Find user creation
+grep -rn "insert.*users\|create.*user" --include="*.ts" server/
+
+# Check for unique constraint handling
+```
+
+### Invoice Number Race
+
+```bash
+# Find invoice number generation
+grep -rn "invoice.*number\|invoiceNumber\|nextInvoice" --include="*.ts" server/
+
+# Check for atomic increment
+```
+
+---
+
+# PART 2: API RACE CONDITIONS
+
+## 2.1 Double Submission Race
+
+```typescript
+// ❌ RACE CONDITION - No idempotency
+router.post('/api/employees', async (req, res) => {
+  // User double-clicks, two requests arrive
+  const employee = await db.insert(employees).values(req.body);
+  // RESULT: Two identical employees created!
+  res.json(employee);
+});
+
+// ✅ FIXED - Idempotency key
+router.post('/api/employees', async (req, res) => {
+  const idempotencyKey = req.headers['x-idempotency-key'];
+  
+  if (idempotencyKey) {
+    // Check if we've seen this request before
+    const existing = await redis.get(`idempotency:${idempotencyKey}`);
+    if (existing) {
+      return res.json(JSON.parse(existing));
+    }
+  }
+  
+  const employee = await db.insert(employees).values(req.body).returning();
+  
+  if (idempotencyKey) {
+    // Store result for duplicate requests
+    await redis.setex(`idempotency:${idempotencyKey}`, 3600, JSON.stringify(employee));
+  }
+  
+  res.json(employee);
+});
+```
+
+## 2.2 Find Double Submission Vulnerabilities
+
+```bash
+#!/bin/bash
+# find_double_submit.sh
+
+echo "=== FINDING DOUBLE SUBMISSION VULNERABILITIES ==="
+
+# POST routes without idempotency check
+grep -rn "router\.post\|app\.post" --include="*.ts" server/routes/ | while read line; do
+  file=$(echo "$line" | cut -d: -f1)
+  
+  # Check if file has idempotency handling
+  if ! grep -q "idempotency\|idempotent\|x-idempotency" "$file"; then
+    echo "⚠️  NO IDEMPOTENCY: $file"
+  fi
+done
+
+# Insert operations in POST handlers
+grep -rn "router\.post" --include="*.ts" server/ -A 30 | \
+  grep -B 10 "\.insert(" | \
+  grep "router\.post"
+```
+
+## 2.3 Concurrent Update Race
+
+```typescript
+// ❌ RACE CONDITION - Lost update
+router.put('/api/employees/:id', async (req, res) => {
+  // Two users editing same employee
+  // User A reads version 1, User B reads version 1
+  // User A saves, version becomes 2
+  // User B saves with version 1 data, overwrites User A's changes!
+  
+  await db.update(employees)
+    .set(req.body)
+    .where(eq(employees.id, req.params.id));
+});
+
+// ✅ FIXED - Optimistic locking with version
+router.put('/api/employees/:id', async (req, res) => {
+  const { version, ...data } = req.body;
+  
+  const result = await db.update(employees)
+    .set({ 
+      ...data, 
+      version: sql`version + 1`,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(employees.id, req.params.id),
+      eq(employees.version, version)  // Only update if version matches
+    ))
+    .returning();
+  
+  if (result.length === 0) {
+    return res.status(409).json({
+      error: 'CONFLICT',
+      message: 'Record was modified by another user. Please refresh and try again.'
+    });
+  }
+  
+  res.json(result[0]);
+});
+```
+
+## 2.4 Find Missing Version Checks
+
+```bash
+#!/bin/bash
+# find_missing_version.sh
+
+echo "=== FINDING MISSING OPTIMISTIC LOCKING ==="
+
+# Update operations without version check
+grep -rn "\.update(" --include="*.ts" server/ | while read line; do
+  file=$(echo "$line" | cut -d: -f1)
+  linenum=$(echo "$line" | cut -d: -f2)
+  
+  # Check if version is in the where clause (within 10 lines)
+  context=$(sed -n "${linenum},$((linenum+10))p" "$file")
+  
+  if ! echo "$context" | grep -q "version"; then
+    echo "⚠️  NO VERSION CHECK: $line"
+  fi
+done
+
+# Tables that should have version column
+echo ""
+echo "Tables without version column:"
+grep -n "pgTable" shared/schema.ts -A 30 | \
+  grep -B 20 "});" | \
+  grep -v "version:" | \
+  grep "export const"
+```
+
+---
+
+# PART 3: FRONTEND RACE CONDITIONS
+
+## 3.1 State Update Race
+
+```typescript
+// ❌ RACE CONDITION - Stale closure
+function EmployeeList() {
+  const [employees, setEmployees] = useState([]);
+  
+  const addEmployee = async (data) => {
+    const newEmployee = await api.createEmployee(data);
+    // If another addEmployee is in progress, this uses stale 'employees'
+    setEmployees([...employees, newEmployee]);  // RACE!
+  };
+}
+
+// ✅ FIXED - Functional update
+function EmployeeList() {
+  const [employees, setEmployees] = useState([]);
+  
+  const addEmployee = async (data) => {
+    const newEmployee = await api.createEmployee(data);
+    // Functional update always has latest state
+    setEmployees(prev => [...prev, newEmployee]);
+  };
+}
+```
+
+## 3.2 Find Stale Closure Issues
+
+```bash
+#!/bin/bash
+# find_stale_closures.sh
+
+echo "=== FINDING STALE CLOSURE RACE CONDITIONS ==="
+
+# setState using current state directly (not functional update)
+grep -rn "set[A-Z].*\[\.\.\..*\]" --include="*.tsx" client/src/
+
+# setState with array spread without prev
+grep -rn "setState\(\[" --include="*.tsx" client/src/
+grep -rn "set[A-Z][a-zA-Z]*\(\[" --include="*.tsx" client/src/
+
+# Check for functional updates (good pattern)
+echo ""
+echo "Files with functional updates (good):"
+grep -rn "prev =>" --include="*.tsx" client/src/ | wc -l
+```
+
+## 3.3 Async State Race
+
+```typescript
+// ❌ RACE CONDITION - Response arrives after component changed
+function EmployeeDetail({ employeeId }) {
+  const [employee, setEmployee] = useState(null);
+  
+  useEffect(() => {
+    fetchEmployee(employeeId).then(data => {
+      // If employeeId changed while fetching, we set wrong data!
+      setEmployee(data);
+    });
+  }, [employeeId]);
+}
+
+// ✅ FIXED - Abort controller / cleanup
+function EmployeeDetail({ employeeId }) {
+  const [employee, setEmployee] = useState(null);
+  
+  useEffect(() => {
+    const controller = new AbortController();
+    
+    fetchEmployee(employeeId, { signal: controller.signal })
+      .then(data => setEmployee(data))
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+        }
+      });
+    
+    return () => controller.abort();  // Cancel if employeeId changes
+  }, [employeeId]);
+}
+```
+
+## 3.4 Find Missing Abort Controllers
+
+```bash
+#!/bin/bash
+# find_missing_abort.sh
+
+echo "=== FINDING MISSING ABORT CONTROLLERS ==="
+
+# useEffect with fetch but no abort
+grep -rn "useEffect" --include="*.tsx" client/src/ -A 20 | \
+  grep -B 15 "fetch\|axios\|api\." | \
+  grep -v "AbortController\|abort\|cancel" | \
+  grep "useEffect"
+
+# Async operations in useEffect without cleanup
+grep -rn "useEffect.*async\|useEffect.*=>" --include="*.tsx" client/src/ -A 15 | \
+  grep -v "return.*=>" | \
+  grep "useEffect"
+```
+
+## 3.5 Button Disable Race
+
+```typescript
+// ❌ RACE CONDITION - Button not disabled fast enough
+function SubmitButton() {
+  const [loading, setLoading] = useState(false);
+  
+  const handleClick = async () => {
+    setLoading(true);  // State update is async!
+    // User can click again before loading becomes true
+    await submitForm();
+    setLoading(false);
+  };
+  
+  return <button disabled={loading} onClick={handleClick}>Submit</button>;
+}
+
+// ✅ FIXED - Use ref for immediate disable
+function SubmitButton() {
+  const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
+  
+  const handleClick = async () => {
+    if (submittingRef.current) return;  // Immediate check
+    submittingRef.current = true;
+    setLoading(true);
+    
+    try {
+      await submitForm();
+    } finally {
+      submittingRef.current = false;
+      setLoading(false);
+    }
+  };
+  
+  return <button disabled={loading} onClick={handleClick}>Submit</button>;
+}
+```
+
+## 3.6 Find Missing Button Disable
+
+```bash
+#!/bin/bash
+# find_missing_disable.sh
+
+echo "=== FINDING BUTTONS WITHOUT PROPER DISABLE ==="
+
+# onClick with async but no disabled check
+grep -rn "onClick.*async\|onClick={async" --include="*.tsx" client/src/ | \
+  while read line; do
+    file=$(echo "$line" | cut -d: -f1)
+    linenum=$(echo "$line" | cut -d: -f2)
+    
+    # Check if button has disabled prop nearby
+    context=$(sed -n "$((linenum-5)),$((linenum+5))p" "$file")
+    
+    if ! echo "$context" | grep -q "disabled"; then
+      echo "⚠️  NO DISABLE: $line"
+    fi
+  done
+```
+
+---
+
+# PART 4: WEBSOCKET RACE CONDITIONS
+
+## 4.1 Connection State Race
+
+```typescript
+// ❌ RACE CONDITION - Send during reconnect
+function useChat() {
+  const socketRef = useRef(null);
+  
+  const sendMessage = (msg) => {
+    // Socket might be reconnecting!
+    socketRef.current.emit('message', msg);  // FAILS
+  };
+}
+
+// ✅ FIXED - Queue messages during reconnect
+function useChat() {
+  const socketRef = useRef(null);
+  const queueRef = useRef([]);
+  const [connected, setConnected] = useState(false);
+  
+  useEffect(() => {
+    const socket = io();
+    socketRef.current = socket;
+    
+    socket.on('connect', () => {
+      setConnected(true);
+      // Flush queued messages
+      while (queueRef.current.length > 0) {
+        const msg = queueRef.current.shift();
+        socket.emit('message', msg);
+      }
+    });
+    
+    socket.on('disconnect', () => setConnected(false));
+    
+    return () => socket.disconnect();
+  }, []);
+  
+  const sendMessage = (msg) => {
+    if (connected && socketRef.current?.connected) {
+      socketRef.current.emit('message', msg);
+    } else {
+      queueRef.current.push(msg);  // Queue for later
+    }
+  };
+  
+  return { sendMessage, connected };
+}
+```
+
+## 4.2 Message Ordering Race
+
+```typescript
+// ❌ RACE CONDITION - Messages arrive out of order
+socket.on('message', (msg) => {
+  setMessages(prev => [...prev, msg]);  // May be wrong order
+});
+
+// ✅ FIXED - Sort by timestamp
+socket.on('message', (msg) => {
+  setMessages(prev => {
+    const updated = [...prev, msg];
+    return updated.sort((a, b) => 
+      new Date(a.timestamp) - new Date(b.timestamp)
+    );
+  });
+});
+```
+
+## 4.3 Find WebSocket Race Conditions
+
+```bash
+#!/bin/bash
+# find_websocket_races.sh
+
+echo "=== FINDING WEBSOCKET RACE CONDITIONS ==="
+
+# Emit without connection check
+grep -rn "socket\.emit\|\.emit(" --include="*.tsx" --include="*.ts" client/src/ | \
+  while read line; do
+    file=$(echo "$line" | cut -d: -f1)
+    
+    # Check if file has connection check
+    if ! grep -q "connected\|\.connected\|isConnected" "$file"; then
+      echo "⚠️  EMIT WITHOUT CONNECTION CHECK: $file"
+    fi
+  done
+
+# Socket events without cleanup
+grep -rn "socket\.on" --include="*.tsx" client/src/ | \
+  while read line; do
+    file=$(echo "$line" | cut -d: -f1)
+    
+    if ! grep -q "socket\.off" "$file"; then
+      echo "⚠️  NO SOCKET CLEANUP: $file"
+    fi
+  done
+```
+
+---
+
+# PART 5: TIMER RACE CONDITIONS
+
+## 5.1 Overlapping Interval Race
+
+```typescript
+// ❌ RACE CONDITION - Intervals overlap
+useEffect(() => {
+  const interval = setInterval(async () => {
+    // If fetch takes longer than interval, they overlap!
+    await fetchUpdates();
+  }, 5000);
+  
+  return () => clearInterval(interval);
+}, []);
+
+// ✅ FIXED - Wait for completion before next run
+useEffect(() => {
+  let timeoutId;
+  let cancelled = false;
+  
+  const poll = async () => {
+    if (cancelled) return;
+    
+    try {
+      await fetchUpdates();
+    } finally {
+      if (!cancelled) {
+        timeoutId = setTimeout(poll, 5000);  // Schedule AFTER completion
+      }
+    }
+  };
+  
+  poll();
+  
+  return () => {
+    cancelled = true;
+    clearTimeout(timeoutId);
+  };
+}, []);
+```
+
+## 5.2 Debounce Race
+
+```typescript
+// ❌ RACE CONDITION - Multiple debounces running
+function SearchInput() {
+  const [query, setQuery] = useState('');
+  
+  const search = async (q) => {
+    const results = await api.search(q);
+    setResults(results);  // Older query might resolve after newer one!
+  };
+  
+  useEffect(() => {
+    const timer = setTimeout(() => search(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+}
+
+// ✅ FIXED - Track latest request
+function SearchInput() {
+  const [query, setQuery] = useState('');
+  const latestRequestRef = useRef(0);
+  
+  useEffect(() => {
+    const requestId = ++latestRequestRef.current;
+    
+    const timer = setTimeout(async () => {
+      const results = await api.search(query);
+      
+      // Only update if this is still the latest request
+      if (requestId === latestRequestRef.current) {
+        setResults(results);
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [query]);
+}
+```
+
+## 5.3 Find Timer Race Conditions
+
+```bash
+#!/bin/bash
+# find_timer_races.sh
+
+echo "=== FINDING TIMER RACE CONDITIONS ==="
+
+# setInterval with async callback
+grep -rn "setInterval.*async\|setInterval.*await" --include="*.tsx" --include="*.ts" client/src/
+
+# setTimeout in useEffect without tracking
+grep -rn "setTimeout" --include="*.tsx" client/src/ -B 5 -A 10 | \
+  grep -v "useRef\|latestRequest\|requestId"
+```
+
+---
+
+# PART 6: AUTHENTICATION RACE CONDITIONS
+
+## 6.1 Token Refresh Race
+
+```typescript
+// ❌ RACE CONDITION - Multiple refresh attempts
+async function fetchWithAuth(url) {
+  try {
+    return await fetch(url, { headers: { Authorization: token } });
+  } catch (err) {
+    if (err.status === 401) {
+      await refreshToken();  // Two 401s trigger two refreshes!
+      return fetchWithAuth(url);
+    }
+  }
+}
+
+// ✅ FIXED - Single refresh with queue
+let refreshPromise = null;
+
+async function refreshTokenOnce() {
+  if (!refreshPromise) {
+    refreshPromise = refreshToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+async function fetchWithAuth(url) {
+  try {
+    return await fetch(url, { headers: { Authorization: token } });
+  } catch (err) {
+    if (err.status === 401) {
+      await refreshTokenOnce();  // All 401s share one refresh
+      return fetchWithAuth(url);
+    }
+  }
+}
+```
+
+## 6.2 Session Invalidation Race
+
+```typescript
+// ❌ RACE CONDITION - Operation continues after logout
+async function performAction() {
+  // User clicks logout while this runs
+  const data = await step1();
+  // Logout completes here, session invalid
+  await step2(data);  // FAILS or uses invalid session
+}
+
+// ✅ FIXED - Check session at each step
+async function performAction(signal) {
+  if (!isAuthenticated()) throw new Error('Not authenticated');
+  const data = await step1();
+  
+  if (!isAuthenticated()) throw new Error('Session expired');
+  await step2(data);
+}
+```
+
+## 6.3 Find Auth Race Conditions
+
+```bash
+#!/bin/bash
+# find_auth_races.sh
+
+echo "=== FINDING AUTH RACE CONDITIONS ==="
+
+# Multiple sequential API calls without session check
+grep -rn "await.*await.*await" --include="*.ts" server/ | \
+  grep -v "transaction" | \
+  head -20
+
+# Token refresh without deduplication
+grep -rn "refreshToken\|refresh.*token" --include="*.ts" --include="*.tsx" | \
+  grep -v "refreshPromise\|refreshing"
+```
+
+---
+
+# PART 7: SPECIFIC PLATFORM RACE CONDITIONS
+
+## 7.1 Shift Assignment Race
+
+```bash
+# Find shift assignment code and check for race conditions
+echo "=== SHIFT ASSIGNMENT RACE ==="
+
+grep -rn "assign.*shift\|shift.*assign" --include="*.ts" server/ -A 20 | \
+  grep -B 10 "update\|insert"
+
+# Should use: WHERE assignedEmployeeId IS NULL in the UPDATE
+```
+
+**EXPECTED FIX:**
+```typescript
+// Atomic assignment - only succeeds if shift is unassigned
+const result = await db.update(shifts)
+  .set({ 
+    assignedEmployeeId: employeeId,
+    assignedAt: new Date(),
+    status: 'assigned'
+  })
+  .where(and(
+    eq(shifts.id, shiftId),
+    isNull(shifts.assignedEmployeeId),
+    eq(shifts.status, 'open')
+  ))
+  .returning();
+
+if (result.length === 0) {
+  throw new ConflictError('Shift is no longer available');
+}
+```
+
+## 7.2 Time Clock Race (Double Punch)
+
+```bash
+# Find clock in/out code
+echo "=== TIME CLOCK RACE ==="
+
+grep -rn "clockIn\|clock_in\|clock.*in" --include="*.ts" server/ -A 20
+```
+
+**EXPECTED FIX:**
+```typescript
+// Use unique constraint or check in transaction
+async function clockIn(employeeId: string, shiftId: string) {
+  return await db.transaction(async (tx) => {
+    // Check for existing active entry
+    const existing = await tx.query.timeEntries.findFirst({
+      where: and(
+        eq(timeEntries.employeeId, employeeId),
+        isNull(timeEntries.clockOut),
+        gte(timeEntries.clockIn, startOfDay(new Date()))
+      )
+    });
+    
+    if (existing) {
+      throw new ConflictError('Already clocked in');
+    }
+    
+    // Create entry with unique constraint as backup
+    return await tx.insert(timeEntries).values({
+      employeeId,
+      shiftId,
+      clockIn: new Date(),
+    }).returning();
+  });
+}
+```
+
+## 7.3 Invoice Number Race
+
+```bash
+# Find invoice number generation
+echo "=== INVOICE NUMBER RACE ==="
+
+grep -rn "invoice.*number\|invoiceNumber\|nextInvoice" --include="*.ts" server/
+```
+
+**EXPECTED FIX:**
+```typescript
+// Use database sequence or atomic increment
+async function getNextInvoiceNumber(workspaceId: string) {
+  // Option 1: Database sequence
+  const result = await db.execute(sql`
+    SELECT nextval('invoice_number_seq_${workspaceId}')
+  `);
+  
+  // Option 2: Atomic increment with retry
+  let attempts = 0;
+  while (attempts < 5) {
+    const current = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+      columns: { lastInvoiceNumber: true }
+    });
+    
+    const next = (current.lastInvoiceNumber || 0) + 1;
+    
+    const updated = await db.update(workspaces)
+      .set({ lastInvoiceNumber: next })
+      .where(and(
+        eq(workspaces.id, workspaceId),
+        eq(workspaces.lastInvoiceNumber, current.lastInvoiceNumber)
+      ))
+      .returning();
+    
+    if (updated.length > 0) {
+      return `INV-${String(next).padStart(6, '0')}`;
+    }
+    
+    attempts++;
+  }
+  
+  throw new Error('Failed to generate invoice number');
+}
+```
+
+## 7.4 Contract Signing Race
+
+```bash
+# Find contract signing code
+echo "=== CONTRACT SIGNING RACE ==="
+
+grep -rn "sign.*contract\|contract.*sign" --include="*.ts" server/ -A 20
+```
+
+**EXPECTED FIX:**
+```typescript
+// Only allow signing if contract is in correct state
+async function signContract(contractId: string, signature: any) {
+  const result = await db.update(contracts)
+    .set({
+      status: 'signed',
+      signedAt: new Date(),
+      signature: signature,
+    })
+    .where(and(
+      eq(contracts.id, contractId),
+      eq(contracts.status, 'sent'),  // Must be in 'sent' status
+      isNull(contracts.signedAt)     // Must not already be signed
+    ))
+    .returning();
+  
+  if (result.length === 0) {
+    throw new ConflictError('Contract is no longer available for signing');
+  }
+  
+  // Trigger post-sign workflow
+  await processSignedContract(result[0]);
+}
+```
+
+## 7.5 Employee Onboarding Race
+
+```bash
+# Find onboarding approval code
+echo "=== ONBOARDING APPROVAL RACE ==="
+
+grep -rn "approve.*onboarding\|onboarding.*approve" --include="*.ts" server/
+```
+
+**EXPECTED FIX:**
+```typescript
+// Prevent double approval
+async function approveOnboarding(packetId: string, approverId: string) {
+  return await db.transaction(async (tx) => {
+    const result = await tx.update(onboardingPackets)
+      .set({
+        status: 'approved',
+        approvedAt: new Date(),
+        approvedBy: approverId,
+      })
+      .where(and(
+        eq(onboardingPackets.id, packetId),
+        eq(onboardingPackets.status, 'submitted'),  // Must be submitted
+        isNull(onboardingPackets.approvedAt)        // Not already approved
+      ))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new ConflictError('Packet already processed');
+    }
+    
+    // Create employee record (only happens once due to transaction)
+    const employee = await tx.insert(employees).values({
+      // ... employee data from packet
+    }).returning();
+    
+    return { packet: result[0], employee: employee[0] };
+  });
+}
+```
+
+---
+
+# PART 8: COMPREHENSIVE RACE CONDITION DETECTION
+
+## 8.1 Master Detection Script
+
+```bash
+#!/bin/bash
+# detect_all_races.sh
+
+echo "=============================================="
+echo "COMPREHENSIVE RACE CONDITION DETECTION"
+echo "=============================================="
+
+ISSUES=0
+
+# 1. Read-Modify-Write without transaction
+echo ""
+echo "=== 1. READ-MODIFY-WRITE WITHOUT TRANSACTION ==="
+grep -rn "findFirst\|findOne" --include="*.ts" server/ -A 10 | \
+  grep -B 5 "\.update\|\.insert" | \
+  grep -v "transaction" | \
+  grep "findFirst\|findOne" | head -20
+
+# 2. Updates without version/condition check
+echo ""
+echo "=== 2. UPDATES WITHOUT CONFLICT PROTECTION ==="
+grep -rn "\.update(" --include="*.ts" server/ | \
+  grep -v "version\|isNull\|status\|AND" | head -20
+
+# 3. Inserts that should check for duplicates
+echo ""
+echo "=== 3. INSERTS WITHOUT DUPLICATE CHECK ==="
+grep -rn "\.insert(" --include="*.ts" server/ | \
+  grep -v "transaction\|onConflict\|conflict" | head -20
+
+# 4. setState without functional update
+echo ""
+echo "=== 4. SETSTATE WITHOUT FUNCTIONAL UPDATE ==="
+grep -rn "set[A-Z].*(\[" --include="*.tsx" client/src/ | \
+  grep -v "prev\|=>" | head -20
+
+# 5. useEffect with async but no cleanup
+echo ""
+echo "=== 5. USEEFFECT WITHOUT CLEANUP ==="
+grep -rn "useEffect.*async\|useEffect.*fetch\|useEffect.*api\." --include="*.tsx" client/src/ | \
+  grep -v "return\|cleanup\|abort" | head -20
+
+# 6. setInterval with async
+echo ""
+echo "=== 6. SETINTERVAL WITH ASYNC (OVERLAP RISK) ==="
+grep -rn "setInterval.*async\|setInterval.*await" --include="*.tsx" --include="*.ts" client/src/
+
+# 7. Socket emit without connection check
+echo ""
+echo "=== 7. SOCKET EMIT WITHOUT CONNECTION CHECK ==="
+grep -rn "socket\.emit\|\.emit(" --include="*.tsx" client/src/ | \
+  grep -v "connected\|isConnected" | head -20
+
+# 8. Multiple await without transaction
+echo ""
+echo "=== 8. MULTIPLE DB OPERATIONS WITHOUT TRANSACTION ==="
+grep -rn "await db\." --include="*.ts" server/ | \
+  cut -d: -f1 | sort | uniq -c | sort -rn | \
+  while read count file; do
+    if [ "$count" -gt 3 ]; then
+      if ! grep -q "transaction" "$file"; then
+        echo "⚠️  $count operations, no transaction: $file"
+      fi
+    fi
+  done
+
+# 9. onClick async without disable
+echo ""
+echo "=== 9. ASYNC ONCLICK WITHOUT DISABLE ==="
+grep -rn "onClick={async\|onClick.*async" --include="*.tsx" client/src/ -B 2 | \
+  grep -v "disabled" | head -20
+
+# 10. Token/session operations without mutex
+echo ""
+echo "=== 10. TOKEN REFRESH WITHOUT MUTEX ==="
+grep -rn "refreshToken\|refresh.*Token" --include="*.ts" --include="*.tsx" | \
+  grep -v "refreshing\|refreshPromise\|isRefreshing"
+
+echo ""
+echo "=============================================="
+echo "Detection complete. Review findings above."
+echo "=============================================="
+```
+
+## 8.2 Database-Specific Queries
+
+```sql
+-- Find tables without version column (need optimistic locking)
+SELECT table_name
+FROM information_schema.tables t
+WHERE table_schema = 'public'
+  AND table_type = 'BASE TABLE'
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name
+      AND c.column_name = 'version'
+  )
+ORDER BY table_name;
+
+-- Find tables without unique constraints (duplicate risk)
+SELECT t.table_name
+FROM information_schema.tables t
+WHERE t.table_schema = 'public'
+  AND t.table_type = 'BASE TABLE'
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints tc
+    WHERE tc.table_name = t.table_name
+      AND tc.constraint_type = 'UNIQUE'
+  )
+ORDER BY t.table_name;
+```
+
+---
+
+# PART 9: FIX TEMPLATES
+
+## 9.1 Transaction Template
+
+```typescript
+// Use for any multi-step database operation
+async function multiStepOperation() {
+  return await db.transaction(async (tx) => {
+    // All operations use 'tx' not 'db'
+    const step1 = await tx.insert(table1).values({...}).returning();
+    const step2 = await tx.update(table2).set({...}).returning();
+    const step3 = await tx.insert(table3).values({...}).returning();
+    
+    // If any step fails, ALL are rolled back
+    return { step1, step2, step3 };
+  });
+}
+```
+
+## 9.2 Atomic Update Template
+
+```typescript
+// Use for any status/assignment change
+async function atomicStatusChange(id: string, fromStatus: string, toStatus: string) {
+  const result = await db.update(table)
+    .set({ status: toStatus, updatedAt: new Date() })
+    .where(and(
+      eq(table.id, id),
+      eq(table.status, fromStatus)  // Only if current status matches
+    ))
+    .returning();
+  
+  if (result.length === 0) {
+    throw new ConflictError(`Cannot change status: current status is not '${fromStatus}'`);
+  }
+  
+  return result[0];
+}
+```
+
+## 9.3 Idempotent Insert Template
+
+```typescript
+// Use for any creation that could be duplicated
+async function idempotentCreate(data: any, uniqueKey: string) {
+  // Try to find existing
+  const existing = await db.query.table.findFirst({
+    where: eq(table.uniqueField, uniqueKey)
+  });
+  
+  if (existing) {
+    return existing;  // Return existing instead of creating duplicate
+  }
+  
+  // Create with conflict handling
+  const result = await db.insert(table)
+    .values(data)
+    .onConflictDoNothing()  // Or onConflictDoUpdate
+    .returning();
+  
+  // If insert was skipped due to conflict, fetch existing
+  if (result.length === 0) {
+    return await db.query.table.findFirst({
+      where: eq(table.uniqueField, uniqueKey)
+    });
+  }
+  
+  return result[0];
+}
+```
+
+## 9.4 Frontend Async Handler Template
+
+```typescript
+// Use for any button that triggers async operation
+function SafeAsyncButton({ onClick, children }) {
+  const [loading, setLoading] = useState(false);
+  const processingRef = useRef(false);
+  
+  const handleClick = async () => {
+    // Immediate guard with ref
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setLoading(true);
+    
+    try {
+      await onClick();
+    } catch (error) {
+      // Handle error
+    } finally {
+      processingRef.current = false;
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <button 
+      onClick={handleClick} 
+      disabled={loading}
+    >
+      {loading ? <Spinner /> : children}
+    </button>
+  );
+}
+```
+
+---
+
+# PART 10: OUTPUT FORMAT
+
+```markdown
+# RACE CONDITION AUDIT REPORT
+
+## Date: [DATE]
+## Total Race Conditions Found: [NUMBER]
+
+---
+
+## CRITICAL (Data Corruption Risk)
+
+| Location | Type | Issue | Fix |
+|----------|------|-------|-----|
+| routes/shifts.ts:145 | Read-Modify-Write | Shift assignment without atomic check | Add WHERE condition |
+| routes/timeclock.ts:89 | Double Submit | No duplicate entry prevention | Add transaction + check |
+
+---
+
+## HIGH (Inconsistent State Risk)
+
+| Location | Type | Issue | Fix |
+|----------|------|-------|-----|
+| components/Form.tsx:34 | Double Click | No button disable | Add ref guard |
+| hooks/useSocket.ts:23 | Connection Race | Emit without check | Add connection queue |
+
+---
+
+## MEDIUM (Potential Issues)
+
+| Location | Type | Issue | Fix |
+|----------|------|-------|-----|
+| pages/employees.tsx:56 | Stale Closure | setState without functional update | Use prev => |
+
+---
+
+## TABLES NEEDING VERSION COLUMN
+
+| Table | Current | Fix |
+|-------|---------|-----|
+| employees | No version | Add version column |
+| shifts | No version | Add version column |
+
+---
+
+## OPERATIONS NEEDING TRANSACTIONS
+
+| File | Operations | Current | Fix |
+|------|------------|---------|-----|
+| routes/contracts.ts | 4 inserts | No transaction | Wrap in transaction |
+| routes/onboarding.ts | 3 inserts + 2 updates | No transaction | Wrap in transaction |
+
+---
+
+## VERIFICATION
+
+[ ] All critical race conditions fixed
+[ ] All multi-step operations use transactions
+[ ] All status changes use atomic updates
+[ ] All buttons have double-click protection
+[ ] All WebSocket operations check connection state
+```
+
+---
+
+# EXECUTION PRIORITY
+
+1. **CRITICAL**: Database race conditions (data corruption)
+2. **HIGH**: Double submission (duplicates)
+3. **HIGH**: Session/auth races (security)
+4. **MEDIUM**: Frontend state races (UX issues)
+5. **LOW**: Timer races (usually minor)
+
+**FIX CRITICAL RACES FIRST - THEY CORRUPT DATA.**
+
+**BEGIN RACE CONDITION AUDIT NOW.**

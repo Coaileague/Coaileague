@@ -1,0 +1,76 @@
+9954129c7dd6dc22.js:2 Unrecognized feature: 'publickey-credentials'.
+
+9954129c7dd6dc22.js:2 Unrecognized feature: 'speaker-selection'.
+9954129c7dd6dc22.js:2 Unrecognized feature: 'unoptimized-images'.
+9954129c7dd6dc22.js:2 Unrecognized feature: 'unsized-media'.
+9954129c7dd6dc22.js:2 Unrecognized feature: 'pointer-lock'.
+9954129c7dd6dc22.js:2 Allow attribute will take precedence over 'allowfullscreen'.
+9954129c7dd6dc22.js:2 Allow attribute will take precedence over 'allowpaymentrequest'.
+2056d9e9f43c5dbc.js:14 Extension Error: An error occurred while loading the extension manifest: Manifest does not exist for extension ce79e410-37c7-48d9-88ee-d28b6a4efcd9 
+Object
+2056d9e9f43c5dbc.js:14 Extension Error: An error occurred while loading the extension manifest: Manifest does not exist for extension 7429c16f-3b87-492e-a0d0-cd9aa93313df 
+Object
+stallwart.build.js:1 stallwart: failed ping 1
+4
+CoAIleague:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+49
+2056d9e9f43c5dbc.js:14 Failed when connecting: Connection closed (code: 1006)
+/data/repls/db56a2c0…nnection_metadata:1 
+ Failed to load resource: the server responded with a status of 429 ()
+a59b2d38f189d1ac.js:2 Uncaught (in promise) CustomSentryError: Too many tokens created, Please try again in one minute.
+    at h (a59b2d38f189d1ac.js:2:18204)
+    at async 53877dc4789b8ea1.js:2307:51397
+2056d9e9f43c5dbc.js:14 Failed when connecting: Connection closed (code: 1006)
+/data/repls/db56a2c0…nnection_metadata:1 
+ Failed to load resource: the server responded with a status of 429 ()
+a59b2d38f189d1ac.js:2 Uncaught (in promise) CustomSentryError: Too many tokens created, Please try again in one minute.
+    at h (a59b2d38f189d1ac.js:2:18204)
+    at async 53877dc4789b8ea1.js:2307:51397
+2056d9e9f43c5dbc.js:14 [Coframe] Mutation callback infinite loop protection triggered, disconnecting mutation observer 
+Object
+attached_assets/Reco…1771070996866.gif:1 
+ Failed to load resource: the server responded with a status of 404 ()
+72
+2056d9e9f43c5dbc.js:14 Failed when connecting: Connection closed (code: 1006)
+/data/repls/db56a2c0…nnection_metadata:1 
+ Failed to load resource: the server responded with a status of 429 ()
+a59b2d38f189d1ac.js:2 Uncaught (in promise) CustomSentryError: Too many tokens created, Please try again in one minute.
+    at h (a59b2d38f189d1ac.js:2:18204)
+    at async 53877dc4789b8ea1.js:2307:51397
+50
+2056d9e9f43c5dbc.js:14 Failed when connecting: Connection closed (code: 1006)
+/data/repls/db56a2c0…nnection_metadata:1 
+ Failed to load resource: the server responded with a status of 429 ()
+a59b2d38f189d1ac.js:2 Uncaught (in promise) CustomSentryError: Too many tokens created, Please try again in one minute.
+    at h (a59b2d38f189d1ac.js:2:18204)
+    at async 53877dc4789b8ea1.js:2307:51397
+service-worker.js:494 [SW] Service Worker loaded - v3.7.0 (Rich Push Notifications + Offline + Navigation Preload)
+2
+service-worker.js:118 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request scheme 'chrome-extension' is unsupported
+    at service-worker.js:118:21
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'battery'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.htm…2F&id=%3Ar1lo%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+2
+service-worker.js:118 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request scheme 'chrome-extension' is unsupported
+    at service-worker.js:118:21
+client:536 WebSocket connection to 'wss://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/?token=_kqtYFitCyAn' failed: 
+injected.js:37 [CoAIleague] SW registered: https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/
+injected.js:37 [ForceRefresh] WebSocket connected
+injected.js:37 [TRINITY-WS] WebSocket connected
+injected.js:37 WebSocket error: Conversation not found
+chatrooms:1 The resource https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/favicon.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+chatrooms:1 The resource https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/favicon.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+﻿
+

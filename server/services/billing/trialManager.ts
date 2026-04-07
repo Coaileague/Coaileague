@@ -2,18 +2,23 @@
  * Trial Management Service
  * 
  * Manages free trial signups and expiration
- * - 30-day free trial for new users
+ * - 14-day free trial for new users
  * - Automatic trial expiration
  * - Upgrade prompts before trial ends
  * - Email notifications
  */
 
+import { createLogger } from '../../lib/logger';
 import { db } from '../../db';
 import { workspaces, users, subscriptions } from '@shared/schema';
 import { eq, and, lte, isNotNull, isNull } from 'drizzle-orm';
 import { BILLING } from '@shared/billingConfig';
 import { CreditManager } from './creditManager';
+import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
+import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
+import { PLATFORM } from '../../config/platformConfig';
 
+const log = createLogger('trialManager');
 const TRIAL_DAYS = BILLING.tiers.free.trialDays;
 const WARNING_DAYS = BILLING.settings.trialWarningDays;
 
@@ -27,21 +32,10 @@ export interface TrialStatus {
 }
 
 export class TrialManager {
-  private static instance: TrialManager;
   private creditManager: CreditManager;
 
   constructor() {
     this.creditManager = new CreditManager();
-  }
-
-  /**
-   * Get singleton instance
-   */
-  static getInstance(): TrialManager {
-    if (!TrialManager.instance) {
-      TrialManager.instance = new TrialManager();
-    }
-    return TrialManager.instance;
   }
 
   /**
@@ -50,17 +44,29 @@ export class TrialManager {
   async startTrial(workspaceId: string): Promise<{ success: boolean; trialEndsAt: Date; error?: string }> {
     try {
       const [workspace] = await db
-        .select()
-        .from(workspaces)
-        .where(eq(workspaces.id, workspaceId))
-        .limit(1);
+      .select({
+        id: workspaces.id,
+        subscriptionTier: workspaces.subscriptionTier,
+        subscriptionStatus: workspaces.subscriptionStatus,
+        billingExempt: workspaces.billingExempt,
+        founderExemption: workspaces.founderExemption
+      })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
 
-      if (!workspace) {
-        return { success: false, trialEndsAt: new Date(), error: 'Workspace not found' };
-      }
+    if (!workspace) {
+      return { success: false, trialEndsAt: new Date(), error: 'Workspace not found' };
+    }
 
-      // Check if already on a paid plan
-      if (workspace.subscriptionTier && workspace.subscriptionTier !== 'free') {
+    // FOUNDER EXEMPTION: Never start trial for billing-exempt workspaces (e.g. Statewide Protective Services)
+    if (isBillingExemptByRecord(workspace)) {
+      log.info(`[TrialManager] EXEMPTED: skipping trial start for founder workspace ${workspaceId}`);
+      return { success: true, trialEndsAt: new Date() };
+    }
+
+    // Check if already on a paid plan
+    if (workspace.subscriptionTier && workspace.subscriptionTier !== 'free') {
         return { success: false, trialEndsAt: new Date(), error: 'Workspace already has a subscription' };
       }
 
@@ -114,12 +120,12 @@ export class TrialManager {
       // Initialize free tier credits
       await this.creditManager.initializeCredits(workspaceId, 'free');
 
-      console.log(`[TrialManager] Started trial for workspace ${workspaceId}, ends ${trialEndsAt.toISOString()}`);
+      log.info(`[TrialManager] Started trial for workspace ${workspaceId}, ends ${trialEndsAt.toISOString()}`);
 
       return { success: true, trialEndsAt };
     } catch (error: any) {
-      console.error('[TrialManager] Failed to start trial:', error);
-      return { success: false, trialEndsAt: new Date(), error: error.message };
+      log.error('[TrialManager] Failed to start trial:', error);
+      return { success: false, trialEndsAt: new Date(), error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -185,7 +191,7 @@ export class TrialManager {
    * Called by daily job to expire trials and notify users
    */
   async processExpiredTrials(): Promise<{ processed: number; expired: number }> {
-    console.log('[TrialManager] Processing expired trials...');
+    log.info('[TrialManager] Processing expired trials...');
 
     const now = new Date();
     
@@ -205,6 +211,15 @@ export class TrialManager {
 
     for (const subscription of expiredTrials) {
       try {
+        // FOUNDER EXEMPTION: Never suspend billing-exempt workspaces (e.g. Statewide Protective Services)
+        const [wsRecord] = await db.select({ billingExempt: workspaces.billingExempt, founderExemption: workspaces.founderExemption })
+          .from(workspaces).where(eq(workspaces.id, subscription.workspaceId)).limit(1);
+        if (wsRecord && isBillingExemptByRecord(wsRecord)) {
+          await logExemptedAction({ workspaceId: subscription.workspaceId, action: 'trial_expiry_suspension_skipped', metadata: { reason: 'founder_exemption' } });
+          log.info(`[TrialManager] EXEMPTED: skipping trial suspension for founder workspace ${subscription.workspaceId}`);
+          continue;
+        }
+
         // Update subscription status
         await db.update(subscriptions)
           .set({
@@ -223,13 +238,13 @@ export class TrialManager {
         await this.sendTrialExpiredEmail(subscription.workspaceId);
 
         expired++;
-        console.log(`[TrialManager] Expired trial for workspace ${subscription.workspaceId}`);
+        log.info(`[TrialManager] Expired trial for workspace ${subscription.workspaceId}`);
       } catch (error) {
-        console.error(`[TrialManager] Failed to expire trial for ${subscription.workspaceId}:`, error);
+        log.error(`[TrialManager] Failed to expire trial for ${subscription.workspaceId}:`, error);
       }
     }
 
-    console.log(`[TrialManager] Processed ${expiredTrials.length} trials, expired ${expired}`);
+    log.info(`[TrialManager] Processed ${expiredTrials.length} trials, expired ${expired}`);
     return { processed: expiredTrials.length, expired };
   }
 
@@ -237,7 +252,7 @@ export class TrialManager {
    * Send warning emails for trials ending soon
    */
   async sendTrialWarnings(): Promise<{ sent: number }> {
-    console.log('[TrialManager] Sending trial warning emails...');
+    log.info('[TrialManager] Sending trial warning emails...');
 
     const now = new Date();
     const warningDate = new Date();
@@ -265,11 +280,11 @@ export class TrialManager {
           sent++;
         }
       } catch (error) {
-        console.error(`[TrialManager] Failed to send warning for ${subscription.workspaceId}:`, error);
+        log.error(`[TrialManager] Failed to send warning for ${subscription.workspaceId}:`, error);
       }
     }
 
-    console.log(`[TrialManager] Sent ${sent} trial warning emails`);
+    log.info(`[TrialManager] Sent ${sent} trial warning emails`);
     return { sent };
   }
 
@@ -290,17 +305,17 @@ export class TrialManager {
       await sendBilledEmail({
         to: owner.email,
         workspaceId,
-        subject: `Your CoAIleague trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
+        subject: `Your ${PLATFORM.name} trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
         templateId: 'trial-warning',
         templateData: {
           recipientName: ownerName,
           daysRemaining,
           workspaceName: workspace.name,
-          upgradeUrl: `${process.env.APP_URL || 'https://coaileague.replit.app'}/billing?tab=subscription`,
+          upgradeUrl: `${getAppBaseUrl()}/billing?tab=subscription`,
         },
       });
     } catch (error) {
-      console.error('[TrialManager] Failed to send warning email:', error);
+      log.error('[TrialManager] Failed to send warning email:', error);
     }
   }
 
@@ -321,16 +336,16 @@ export class TrialManager {
       await sendBilledEmail({
         to: owner.email,
         workspaceId,
-        subject: 'Your CoAIleague trial has ended',
+        subject: `Your ${PLATFORM.name} trial has ended`,
         templateId: 'trial-expired',
         templateData: {
           recipientName: ownerName,
           workspaceName: workspace.name,
-          upgradeUrl: `${process.env.APP_URL || 'https://coaileague.replit.app'}/billing?tab=subscription`,
+          upgradeUrl: `${getAppBaseUrl()}/billing?tab=subscription`,
         },
       });
     } catch (error) {
-      console.error('[TrialManager] Failed to send expired email:', error);
+      log.error('[TrialManager] Failed to send expired email:', error);
     }
   }
 
@@ -370,12 +385,12 @@ export class TrialManager {
         })
         .where(eq(workspaces.id, workspaceId));
 
-      console.log(`[TrialManager] Extended trial for ${workspaceId} by ${days} days to ${newEndsAt.toISOString()}`);
+      log.info(`[TrialManager] Extended trial for ${workspaceId} by ${days} days to ${newEndsAt.toISOString()}`);
 
       return { success: true, newEndsAt };
     } catch (error: any) {
-      console.error('[TrialManager] Failed to extend trial:', error);
-      return { success: false, newEndsAt: new Date(), error: error.message };
+      log.error('[TrialManager] Failed to extend trial:', error);
+      return { success: false, newEndsAt: new Date(), error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 }

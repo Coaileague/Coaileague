@@ -1,0 +1,331 @@
+You are right. Let me put that clarification front and center so Replit cannot possibly mix them up. Copy everything below this line:
+
+---
+
+COAILEAGUE — DEEP AUTH ROLE AND SESSION ISOLATION AUDIT
+Multi-tenant platform with many orgs, many users, many roles, many concurrent sessions.
+Every denied action, every missing userId, every missing workspaceId, every wrong role
+check is a broken user experience in production. Hunt every instance and fix permanently.
+Read everything before touching anything. Report all findings before fixing.
+
+---
+
+CRITICAL ROLE CLARIFICATION — READ THIS FIRST BEFORE TOUCHING ANYTHING
+
+There are two roles that sound similar and must never be confused:
+
+org_owner — this is the security company operator. The boss. The person who owns
+the security company and pays for CoAIleague. They have full access to everything
+in their workspace including billing, credits, Trinity COO, payroll, scheduling,
+clients, and all financial data. This is the most powerful workspace-level role.
+
+org_admin — this is an administrative secretary role. Internal office staff.
+They have NO billing access, NO credit access, NO financial data access,
+NO platform staff access, NO Stripe access. Their UI label is Administrative Internal.
+This role is explicitly restricted from money and billing at every layer.
+
+These two roles are completely different in permission level. org_owner is the top
+of the workspace hierarchy. org_admin is a limited internal support role.
+Every role check in the codebase must reflect this distinction exactly.
+If any route or action grants org_admin the same access as org_owner that is a
+critical security bug. If any route or action denies org_owner access that org_admin
+has that is also a bug. They are not interchangeable in any context ever.
+
+---
+
+THE CORE PROBLEM TO ELIMINATE
+
+This platform is multi-tenant. Every request carries three critical identity pieces:
+the authenticated user, their role, and their workspace. If any one of these three is
+missing or misread on any request the action fails, silently misbehaves, or worse
+exposes data across workspace boundaries. This audit finds every place where any of
+these three can be undefined, mismatched, stale, or incorrectly checked and fixes
+all of them permanently.
+
+---
+
+PHASE 1 — SESSION INTEGRITY SCAN
+
+Check every authentication middleware file and session handling code.
+
+For every protected route verify the middleware correctly extracts and validates
+all three of these before the handler runs:
+req.user.id — the authenticated user ID, never undefined, never null
+req.user.role — the user platform-level role, never undefined
+req.user.workspaceId — the workspace this request belongs to, never undefined
+
+If any of these three can reach a route handler as undefined or null that is a
+critical bug. The handler will either crash, skip authorization, or query without
+a workspace filter and potentially return cross-tenant data.
+
+Specifically check:
+Does session expiry correctly clear all three values and redirect to login?
+Does token refresh correctly carry all three values forward to the new token?
+On a fresh login does the session correctly populate all three values before
+the first request is processed?
+If a user belongs to multiple workspaces does switching workspaces correctly
+update the workspaceId in the session for all subsequent requests?
+Is there any code path where req.user exists but req.user.workspaceId is undefined?
+This is the most common source of workspace isolation failures.
+
+---
+
+PHASE 2 — ROLE HIERARCHY ENFORCEMENT SCAN
+
+The canonical role hierarchy is as follows. Memorize this and check every role
+gate in the codebase against it:
+
+PLATFORM LEVEL ROLES — cross-workspace, CoAIleague internal only:
+platform_staff — CoAIleague operations, zero access to any client org data
+support_agent — limited support visibility, no financial data, no PII beyond support needs
+
+WORKSPACE LEVEL ROLES — scoped entirely within one workspace:
+org_owner — THE SECURITY COMPANY OPERATOR. Full access to their workspace.
+             Billing access, credit access, Trinity COO access, payroll access,
+             scheduling access, client access, all financial data. Top of hierarchy.
+co_owner — identical permissions to org_owner. Secondary founder role.
+            Every single place org_owner is authorized co_owner must also be authorized.
+            These two roles are peers.
+manager — scheduling, timesheets, payroll review, client management.
+          NO billing access. NO credit management. NO Stripe access.
+org_admin — Administrative Internal. Office secretary role.
+             NO billing access. NO credit access. NO financial data.
+             NO platform staff access. NO Stripe access. NO payroll calculation access.
+             Can see operational summaries only. Cannot touch money at any layer.
+employee — own schedule only, own timesheets only, own pay stubs only.
+            Cannot see any other employee data. Cannot see client data.
+            Cannot see financial data. Cannot access Trinity COO interface.
+
+For every role-gated action in the codebase verify:
+
+The role check uses the workspace-scoped role from workspace_members.role
+NOT the platform-level role from users.role for all workspace actions.
+Checking users.role for a workspace action returns the wrong role type and
+either blocks legitimate users or grants unauthorized access. This is a
+critical and common bug. Find every instance and fix it.
+
+The role check handles all valid role values. If a role exists in the database
+enum but is missing from a role check array that role will be denied on every
+action with a confusing silent failure. Verify every role check array in every
+file includes all current valid role values.
+
+co_owner must be included everywhere org_owner is included. No exceptions.
+A co-owner locked out of their own company platform is a production emergency.
+
+org_admin must be explicitly excluded from every billing route, every credit route,
+every Stripe route, and every financial data route. Verify this exclusion exists
+at the route level not just the UI level.
+
+employee role must never access another employee record. Every query returning
+employee data must filter by the requesting user own ID when the requester
+is the employee role. This filter must exist at the query level not the UI level.
+
+---
+
+PHASE 3 — WORKSPACE ISOLATION QUERY AUDIT
+
+Scan every database query in every service file, every route handler, and
+every Trinity action.
+
+For every query touching these tables verify workspace_id is in the WHERE clause:
+employees, workspace_members, schedules, shifts, time_entries, timesheets,
+payroll_runs, payroll_entries, invoices, clients, sites, incidents,
+compliance_documents, equipment, vehicles, notifications, credit_ledger,
+workspace_credits, audit_trail, ai_proactive_alerts, chat_messages,
+org_operations_briefing, and any other table containing org-specific data.
+
+The only tables that may query without workspace_id filter are:
+users table for authentication lookups only
+platform_staff actions scoped to their own platform role
+public landing page data with zero org data
+
+For every query found without a workspace_id filter that should have one:
+Add the workspace_id filter immediately.
+Verify the workspace_id comes from the authenticated session only —
+never from a URL parameter or request body alone. A user sending
+workspaceId: "other-org" in the request body must not be able to query
+another org data. The workspace must always come from the session.
+
+---
+
+PHASE 4 — TRINITY ACTION AUTH VERIFICATION
+
+Trinity executes 736 registered actions. Every action must verify workspace and role
+before executing.
+
+For every Trinity action verify:
+The action receives workspaceId from the authenticated session context,
+not from the action payload alone.
+The action checks that the requesting user role is authorized for that action type.
+An employee cannot trigger payroll actions.
+A manager cannot trigger billing actions.
+An org_admin cannot trigger credit management actions.
+Only org_owner and co_owner can invoke COO-level Trinity strategic analysis.
+The action database mutations include workspace_id in every write.
+The action database reads include workspace_id in every query.
+
+Trinity must never execute an action against workspace A because workspace B
+sent a request. Cross-workspace Trinity execution is a critical bug.
+
+---
+
+PHASE 5 — CONCURRENT SESSION AND RACE CONDITION AUDIT
+
+Check for these specific race condition scenarios:
+
+Two managers in the same workspace both approve the same shift swap simultaneously.
+The approval must be atomic. The second approval must receive a clear message
+that it was already processed. Verify this is enforced at the database level.
+
+Two org_owners in different workspaces both trigger a credit action simultaneously.
+Their credit balances must be completely independent. Verify the credit deduction
+is workspace-scoped and row-locked.
+
+A user session expires mid-action. Verify the action fails cleanly with a session
+expired message and does not partially execute leaving the database in an
+inconsistent state. Partial writes without completion are data corruption.
+
+A user logs out while a Trinity action is processing. Verify the Trinity action
+either completes correctly or rolls back completely. It must not continue
+executing after the session is terminated and must not leave orphaned records.
+
+A user switches workspace during an active session. Verify all subsequent requests
+use the new workspace context and no in-flight request accidentally uses the
+previous workspace context.
+
+---
+
+PHASE 6 — WEBSOCKET SESSION ISOLATION VERIFICATION
+
+For every WebSocket event emission verify:
+The event is emitted only to connections belonging to the correct workspace.
+A connection from workspace A never receives an event from workspace B.
+When a user session expires the WebSocket connection is terminated cleanly
+and the client is redirected to login.
+When a user reconnects after session expiry the new WebSocket connection
+correctly re-establishes the workspace context before any events are received.
+The server does not hold stale workspace references for disconnected clients.
+
+---
+
+PHASE 7 — ERROR MESSAGE AUDIT FOR AUTH FAILURES
+
+For every auth-gated action verify the error response:
+Returns a clear human-readable message explaining why the action was denied.
+Does NOT expose internal role names, table names, or system architecture.
+Does NOT return a stack trace under any circumstance.
+For role mismatch: returns "You do not have permission to perform this action.
+Contact your org owner if you believe this is incorrect."
+For missing session: returns "Your session has expired. Please log in again."
+For workspace mismatch: returns a generic permission denied with no internal detail.
+
+Trinity must handle auth failures gracefully. If Trinity attempts an action and
+receives an auth error it must surface a clear message through the notification
+panel rather than silently failing or returning a raw error object.
+
+---
+
+PHASE 8 — HIGH RISK ROUTES TO CHECK EXPLICITLY
+
+Payroll routes: require org_owner or co_owner or manager role AND workspace_id.
+An employee hitting a payroll route receives a clean permission denied.
+
+Credit and billing routes: require org_owner or co_owner only.
+Manager cannot access billing. org_admin cannot access billing.
+Employee cannot access billing. This is absolute with no exceptions.
+
+Admin routes under /api/admin: require platform_staff role only.
+No workspace-level role should ever reach these routes.
+
+Trinity COO routes: require org_owner or co_owner only.
+Managers can receive Trinity recommendations but cannot invoke
+COO-level strategic analysis directly.
+
+Invoice and client billing routes: require org_owner or co_owner or manager.
+Employee cannot see client billing data ever.
+
+Document vault routes: locked WORM documents cannot be written by any role
+at any level. The lock is absolute and enforced at the database level.
+
+Reporting and export routes: exported data is always scoped to the requesting
+workspace. A manager exporting a payroll report only receives their own
+workspace data even if another workspaceId is passed in the request.
+
+---
+
+PHASE 9 — STATEWIDE FOUNDER EXEMPTION DOES NOT AFFECT ROLES
+
+Statewide Protective Services has founder_exemption: true and billing_exempt: true.
+This exemption affects billing and credits only.
+
+It does NOT bypass role checks. An employee at Statewide still cannot access
+payroll data. A manager at Statewide still cannot access billing. org_admin at
+Statewide still cannot access financial data. The role hierarchy is enforced
+identically at Statewide as at every other workspace without exception.
+
+The exemption does NOT bypass workspace isolation. Statewide data is scoped to
+Statewide workspace_id exactly like every other org. Being billing_exempt does
+not grant cross-workspace data access.
+
+The founder exemption check must be completely separate from the auth and role
+check code paths. They are independent layers that must never interfere with
+each other.
+
+---
+
+VERIFICATION TESTS — RUN ALL AFTER FIXES
+
+Test 1 — Missing workspaceId rejection:
+Send an authenticated request with workspaceId stripped from the session.
+Verify request is rejected with a clean error.
+Verify no database query executes without a workspace filter.
+
+Test 2 — Wrong role rejection:
+As employee attempt to access a payroll route. Verify clean permission denied.
+As manager attempt to access a billing route. Verify clean permission denied.
+As org_admin attempt to access a credit management route. Verify clean permission denied.
+
+Test 3 — Cross-workspace isolation:
+As authenticated user in workspace A pass workspace B ID in the request body.
+Verify the system uses the session workspace not the request body workspace.
+Verify no workspace B data is returned.
+
+Test 4 — co_owner access parity with org_owner:
+As co_owner attempt every action that org_owner can perform.
+Verify zero actions are denied that org_owner would be permitted.
+
+Test 5 — Session expiry mid-action:
+Begin a multi-step action, expire the session mid-way, attempt to complete.
+Verify clean session expired message. Verify no partial database writes remain.
+
+Test 6 — Concurrent approval race condition:
+Simultaneously submit two approvals for the same pending item from two sessions.
+Verify exactly one succeeds and the second receives a clear already processed message.
+Verify the database record shows exactly one approval not two.
+
+Test 7 — Trinity workspace scoping:
+Trigger a Trinity action from workspace A.
+Verify Trinity only queries and mutates workspace A data.
+Verify the Trinity audit trail entry contains workspace A workspace_id.
+
+Test 8 — WebSocket workspace isolation:
+Connect two WebSocket sessions from different workspaces.
+Trigger an event in workspace A.
+Verify workspace B connection does not receive the event.
+
+Test 9 — Statewide exemption does not bypass roles:
+As an employee in Statewide attempt a payroll action.
+Verify it is denied by role check despite the founder exemption.
+Verify the denial is a role check failure not a billing check failure.
+
+Test 10 — Auth error messages are clean:
+Trigger a role mismatch error, a session expiry error, and a workspace mismatch error.
+Verify all three return human-readable messages with zero stack traces
+and zero internal system detail exposed to the client.
+
+---
+
+Document every finding from every phase. Document every fix applied.
+Nothing is marked complete without the corresponding verification test passing.
+The goal is zero auth failures, zero missing session context, zero cross-tenant
+data leakage, and zero silent permission denials anywhere in the platform.

@@ -1,11 +1,17 @@
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { workspaces, employees, notifications } from '../../shared/schema';
 import { eq, and } from 'drizzle-orm';
-import { requirePlatformAdmin, type AuthenticatedRequest } from '../rbac';
+import { requirePlatformAdmin, requirePlatformStaff, type AuthenticatedRequest, getPlatformRoleLevel } from '../rbac';
 import { broadcastToWorkspace } from '../websocket';
+import { universalNotificationEngine } from '../services/universalNotificationEngine';
 import { aiBrainAuthorizationService } from '../services/ai-brain/aiBrainAuthorizationService';
+import { storage } from '../storage';
 import { z } from 'zod';
+import { createLogger } from '../lib/logger';
+const log = createLogger('ServiceControl');
+
 
 const router = Router();
 
@@ -37,36 +43,24 @@ async function broadcastServiceNotification(
       ? `${serviceLabel} has been suspended for this workspace. Reason: ${reason || 'Investigation pending'}`
       : `${serviceLabel} has been restored and is now available.`;
     
-    const workspaceEmployees = await db.query.employees.findMany({
-      where: and(
-        eq(employees.workspaceId, workspaceId),
-        eq(employees.isActive, true)
-      ),
-      columns: { userId: true },
+    // Route through UNE for AI enrichment and unified handling
+    const result = await universalNotificationEngine.sendNotification({
+      workspaceId,
+      type: 'system',
+      title,
+      message,
+      severity: action === 'suspended' ? 'warning' : 'info',
+      actionUrl: '/settings',
+      metadata: {
+        service: serviceName,
+        serviceLabel,
+        action,
+        reason,
+        skipFeatureCheck: true, // System-level notifications bypass feature validation
+      },
     });
     
-    let recipientCount = 0;
-    
-    for (const emp of workspaceEmployees) {
-      if (emp.userId) {
-        await db.insert(notifications).values({
-          workspaceId,
-          userId: emp.userId,
-          type: 'system',
-          title,
-          message,
-          metadata: {
-            service: serviceName,
-            action,
-            reason,
-            severity: action === 'suspended' ? 'warning' : 'info',
-          },
-          isRead: false,
-        });
-        recipientCount++;
-      }
-    }
-    
+    // Also broadcast real-time WebSocket event for immediate UI update
     broadcastToWorkspace(workspaceId, {
       type: 'service_control',
       action,
@@ -77,16 +71,16 @@ async function broadcastServiceNotification(
       timestamp: new Date().toISOString(),
     });
     
-    console.log(`[ServiceControl] Notified ${recipientCount} users about ${serviceName} ${action}`);
-    return recipientCount;
+    log.info(`[ServiceControl] UNE notified ${result.recipientCount} users about ${serviceName} ${action}`);
+    return result.recipientCount;
   } catch (error) {
-    console.error('[ServiceControl] Failed to broadcast notification:', error);
+    log.error('[ServiceControl] Failed to broadcast notification:', error);
     return 0;
   }
 }
 
-// Get workspace service status
-router.get('/workspaces/:workspaceId/service-status', requirePlatformAdmin, async (req: Request, res: Response) => {
+// Get workspace service status — accessible to all platform staff (support_agent+)
+router.get('/workspaces/:workspaceId/service-status', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
     
@@ -145,19 +139,25 @@ router.get('/workspaces/:workspaceId/service-status', requirePlatformAdmin, asyn
         },
       },
     });
-  } catch (error: any) {
-    console.error('Error fetching workspace service status:', error);
+  } catch (error: unknown) {
+    log.error('Error fetching workspace service status:', error);
     res.status(500).json({ error: 'Failed to fetch service status' });
   }
 });
 
-// Suspend a service for a workspace (Trinity, chat, automations, or AI Brain)
-router.post('/workspaces/:workspaceId/services/:service/suspend', requirePlatformAdmin, async (req: Request, res: Response) => {
+// Suspend a service for a workspace — requires support_manager+ (level 4)
+// Destructive action: routed through approval system, audit-logged
+router.post('/workspaces/:workspaceId/services/:service/suspend', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { workspaceId, service } = req.params;
     const adminId = authReq.user!.id;
-    const adminRole = authReq.user!.platformRole || 'none';
+    const adminRole = authReq.platformRole || 'none';
+    const roleLevel = getPlatformRoleLevel(adminRole);
+
+    if (roleLevel < 4) {
+      return res.status(403).json({ error: 'Service suspension requires support_manager or higher authority' });
+    }
     
     const serviceValidation = ValidServiceSchema.safeParse(service);
     if (!serviceValidation.success) {
@@ -170,6 +170,16 @@ router.post('/workspaces/:workspaceId/services/:service/suspend', requirePlatfor
     }
     
     const { reason } = bodyValidation.data;
+
+    await storage.createAuditLog({
+      userId: adminId,
+      workspaceId,
+      action: 'service_suspend_initiated',
+      entityType: 'service',
+      entityId: `${workspaceId}/${service}`,
+      details: { service, reason, executorRole: adminRole, executorLevel: roleLevel },
+      ipAddress: req.ip || req.socket?.remoteAddress,
+    });
     
     const approvalResult = await aiBrainAuthorizationService.requestApprovalForDestructiveAction({
       actionType: 'suspend_workspace',
@@ -229,7 +239,7 @@ router.post('/workspaces/:workspaceId/services/:service/suspend', requirePlatfor
       return res.status(404).json({ error: 'Workspace not found' });
     }
     
-    console.log(`[ServiceControl] ${service} suspended for workspace ${workspaceId} by ${adminId}. Reason: ${reason}`);
+    log.info(`[ServiceControl] ${service} suspended for workspace ${workspaceId} by ${adminId}. Reason: ${reason}`);
     
     const notifiedCount = await broadcastServiceNotification(workspaceId, service, 'suspended', reason);
     
@@ -242,18 +252,29 @@ router.post('/workspaces/:workspaceId/services/:service/suspend', requirePlatfor
       suspendedAt: now,
       notifiedUsers: notifiedCount,
     });
-  } catch (error: any) {
-    console.error('Error suspending service:', error);
+  } catch (error: unknown) {
+    log.error('Error suspending service:', error);
     res.status(500).json({ error: 'Failed to suspend service' });
   }
 });
 
-// Restore a service for a workspace
-router.post('/workspaces/:workspaceId/services/:service/restore', requirePlatformAdmin, async (req: Request, res: Response) => {
+// Restore a service — restorative action, support_agent+ (level 3) can restore
+router.post('/workspaces/:workspaceId/services/:service/restore', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { workspaceId, service } = req.params;
     const adminId = authReq.user!.id;
+    const adminRole = authReq.platformRole || 'none';
+
+    await storage.createAuditLog({
+      userId: adminId,
+      workspaceId,
+      action: 'service_restore_executed',
+      entityType: 'service',
+      entityId: `${workspaceId}/${service}`,
+      details: { service, executorRole: adminRole },
+      ipAddress: req.ip || req.socket?.remoteAddress,
+    });
     
     const serviceValidation = ValidServiceSchema.safeParse(service);
     if (!serviceValidation.success) {
@@ -299,7 +320,7 @@ router.post('/workspaces/:workspaceId/services/:service/restore', requirePlatfor
       return res.status(404).json({ error: 'Workspace not found' });
     }
     
-    console.log(`[ServiceControl] ${service} restored for workspace ${workspaceId} by ${adminId}`);
+    log.info(`[ServiceControl] ${service} restored for workspace ${workspaceId} by ${adminId}`);
     
     const notifiedCount = await broadcastServiceNotification(workspaceId, service, 'restored');
     
@@ -310,8 +331,8 @@ router.post('/workspaces/:workspaceId/services/:service/restore', requirePlatfor
       service,
       notifiedUsers: notifiedCount,
     });
-  } catch (error: any) {
-    console.error('Error restoring service:', error);
+  } catch (error: unknown) {
+    log.error('Error restoring service:', error);
     res.status(500).json({ error: 'Failed to restore service' });
   }
 });
@@ -357,7 +378,7 @@ router.post('/workspaces/:workspaceId/services/suspend-all', requirePlatformAdmi
       return res.status(404).json({ error: 'Workspace not found' });
     }
     
-    console.log(`[ServiceControl] ALL SERVICES suspended for workspace ${workspaceId} by ${adminId}. Reason: ${reason}`);
+    log.info(`[ServiceControl] ALL SERVICES suspended for workspace ${workspaceId} by ${adminId}. Reason: ${reason}`);
     
     const services = ['trinity', 'chat', 'automations', 'aiBrain'];
     let totalNotified = 0;
@@ -374,14 +395,14 @@ router.post('/workspaces/:workspaceId/services/suspend-all', requirePlatformAdmi
       suspendedAt: now,
       notifiedUsers: totalNotified / services.length, // Average per service
     });
-  } catch (error: any) {
-    console.error('Error suspending all services:', error);
+  } catch (error: unknown) {
+    log.error('Error suspending all services:', error);
     res.status(500).json({ error: 'Failed to suspend all services' });
   }
 });
 
-// Bulk restore all services for a workspace
-router.post('/workspaces/:workspaceId/services/restore-all', requirePlatformAdmin, async (req: Request, res: Response) => {
+// Bulk restore all services — restorative, support_manager+ (level 4) for bulk
+router.post('/workspaces/:workspaceId/services/restore-all', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { workspaceId } = req.params;
@@ -414,7 +435,7 @@ router.post('/workspaces/:workspaceId/services/restore-all', requirePlatformAdmi
       return res.status(404).json({ error: 'Workspace not found' });
     }
     
-    console.log(`[ServiceControl] ALL SERVICES restored for workspace ${workspaceId} by ${adminId}`);
+    log.info(`[ServiceControl] ALL SERVICES restored for workspace ${workspaceId} by ${adminId}`);
     
     const services = ['trinity', 'chat', 'automations', 'aiBrain'];
     let totalNotified = 0;
@@ -429,10 +450,67 @@ router.post('/workspaces/:workspaceId/services/restore-all', requirePlatformAdmi
       services,
       notifiedUsers: totalNotified / services.length,
     });
-  } catch (error: any) {
-    console.error('Error restoring all services:', error);
+  } catch (error: unknown) {
+    log.error('Error restoring all services:', error);
     res.status(500).json({ error: 'Failed to restore all services' });
   }
 });
+
+// ── Per-workspace Trinity authorization pause/resume ──────────────────────────
+// These operate on the in-memory workspacePauseMap inside aiBrainAuthorizationService.
+// They complement the DB-level trinitySuspended field: the DB field sends notifications
+// and persists across restarts; the pause map provides a faster zero-DB hot kill.
+// Requires: platform_admin (same level as kill switch activation).
+
+router.post(
+  '/workspaces/:workspaceId/trinity/pause',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { workspaceId } = req.params;
+      const adminId = authReq.user!.id;
+      const { reason } = req.body;
+      if (!reason) return res.status(400).json({ error: 'reason is required' });
+
+      const result = aiBrainAuthorizationService.pauseWorkspaceTrinity(workspaceId, adminId, reason);
+      log.info(`[ServiceControl] Trinity PAUSED in workspace ${workspaceId} by ${adminId}`);
+      res.json({ ...result, workspaceId, pausedBy: adminId });
+    } catch (error: unknown) {
+      res.status(500).json({ error: sanitizeError(error) });
+    }
+  }
+);
+
+router.post(
+  '/workspaces/:workspaceId/trinity/resume',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { workspaceId } = req.params;
+      const adminId = authReq.user!.id;
+
+      const result = aiBrainAuthorizationService.resumeWorkspaceTrinity(workspaceId, adminId);
+      log.info(`[ServiceControl] Trinity RESUMED in workspace ${workspaceId} by ${adminId}`);
+      res.json({ ...result, workspaceId, resumedBy: adminId });
+    } catch (error: unknown) {
+      res.status(500).json({ error: sanitizeError(error) });
+    }
+  }
+);
+
+router.get(
+  '/trinity/paused-workspaces',
+  requirePlatformAdmin,
+  async (_req: Request, res: Response) => {
+    try {
+      const paused = aiBrainAuthorizationService.listPausedWorkspaces();
+      res.json({ success: true, count: paused.length, pausedWorkspaces: paused });
+    } catch (error: unknown) {
+      res.status(500).json({ error: sanitizeError(error) });
+    }
+  }
+);
 
 export default router;

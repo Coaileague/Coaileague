@@ -4,16 +4,17 @@ import {
   employees,
   auditLogs,
   workspaces,
-  employeeCertifications,
   scheduledBreaks,
   laborLawRules,
   complianceReports,
   type Shift,
-  type Employee,
   type ComplianceReport,
 } from '@shared/schema';
 import { eq, and, gte, lte, desc, sql, isNotNull, lt, count } from 'drizzle-orm';
 import { addYears, format, startOfMonth, endOfMonth } from 'date-fns';
+import { createLogger } from '../lib/logger';
+const log = createLogger('complianceReports');
+
 
 /**
  * MONOPOLISTIC FEATURE: Compliance Report Generation
@@ -723,7 +724,7 @@ export async function generateComplianceReport(options: GenerateReportOptions): 
       .where(eq(complianceReports.id, report.id))
       .returning();
 
-    console.log(`[ComplianceReports] Generated ${reportType} report for workspace ${workspaceId}`);
+    log.info(`[ComplianceReports] Generated ${reportType} report for workspace ${workspaceId}`);
     return updatedReport;
 
   } catch (error) {
@@ -735,7 +736,7 @@ export async function generateComplianceReport(options: GenerateReportOptions): 
       })
       .where(eq(complianceReports.id, report.id));
 
-    console.error(`[ComplianceReports] Failed to generate ${reportType}:`, error);
+    log.error(`[ComplianceReports] Failed to generate ${reportType}:`, error);
     throw error;
   }
 }

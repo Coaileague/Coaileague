@@ -1,0 +1,964 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# 🚨 COAILEAGUE FINAL GO-LIVE AUDIT & ARCHITECTURAL COMMAND 🚨
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ROLE: You are the Lead Systems Architect and QA Engineer for CoAIleague.
+#
+# OBJECTIVE: Perform a full-stack audit across 11 phases, implement the
+# Decision Log with Triad Intelligence, build the Premium Scorecard UI,
+# and produce a Go-Live Readiness Report with a PASS/FAIL verdict.
+#
+# RULES:
+# 1. Do NOT skip phases. Work through each one sequentially.
+# 2. For every check, answer with the FILE PATH and LINE NUMBER or MISSING.
+# 3. Do NOT say "looks good" without showing proof from the actual code.
+# 4. Every FAIL must include: what's wrong, what file, and how to fix it.
+# 5. DO NOT PROCEED TO PUBLIC DEPLOY UNTIL MULTI-TENANT ISOLATION IS VERIFIED.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 1: ARCHITECTURAL UPGRADES — BUILD BEFORE AUDITING
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+## 1A. Create the Decision Log Schema
+
+Every AI decision Trinity makes must be logged. This is non-negotiable for
+enterprise customers who need audit trails and for us to improve Trinity's
+intelligence over time.
+
+**Create or update the `decision_logs` table with these fields:**
+
+```
+decision_logs:
+  id                  UUID PRIMARY KEY
+  timestamp           TIMESTAMP NOT NULL DEFAULT NOW()
+  org_id              UUID NOT NULL (INDEXED — critical for multi-tenancy)
+  workspace_id        UUID NOT NULL
+  trigger_event       VARCHAR — what kicked this off ("calloff", "auto_schedule",
+                      "compliance_check", "invoice_generate", "shift_fill")
+  task_type           VARCHAR — classification ("scheduling", "compliance",
+                      "payroll", "invoicing", "reporting", "communication")
+  task_complexity     VARCHAR — ("simple", "operational", "strategic", "complex")
+  
+  # What Trinity considered
+  context_data        JSONB — full context: the original request, relevant data
+                      pulled, constraints identified
+  candidates_evaluated JSONB — array of candidates with scoring:
+                      [{
+                        candidate_id: UUID,
+                        name: STRING,
+                        rank_score: FLOAT (0-1),
+                        proximity_miles: FLOAT,
+                        ot_risk: BOOLEAN,
+                        ot_hours_projected: FLOAT,
+                        compliance_status: "clear" | "expiring" | "expired" | "missing",
+                        reliability_score: FLOAT (0-1),
+                        cost_impact: FLOAT,
+                        reasoning: STRING
+                      }]
+  
+  # What Trinity decided
+  selected_candidate_id  UUID (nullable — null if no selection made)
+  decision_reasoning     TEXT — Trinity's explanation of why she chose this option
+  confidence_score       FLOAT (0-1)
+  
+  # Triad Justice Layer — Claude as the Judge
+  triad_review_triggered BOOLEAN DEFAULT FALSE
+  judge_model            VARCHAR — "claude" or "openai" (whoever judged)
+  original_score         FLOAT — Trinity's original confidence
+  claude_verdict         VARCHAR — "AFFIRM", "OVERRIDE", "ESCALATE"
+  claude_reasoning       TEXT — Claude's deliberation on why he agreed or overrode
+  claude_suggested_alternative UUID (nullable — if OVERRIDE, who did Claude suggest?)
+  
+  # Outcome tracking (for learning)
+  outcome_status         VARCHAR — "pending", "executed", "failed", "overridden_by_human"
+  human_override         BOOLEAN DEFAULT FALSE
+  human_override_by      UUID (nullable — who overrode)
+  human_override_reason  TEXT (nullable)
+  
+  # Cost tracking
+  primary_model          VARCHAR — "gemini", "claude", "openai"
+  tokens_used            INTEGER
+  cost_usd               FLOAT
+  fallback_chain_used    BOOLEAN DEFAULT FALSE
+  models_attempted       JSONB — ["gemini", "claude"] if fallback occurred
+
+  created_at             TIMESTAMP DEFAULT NOW()
+  updated_at             TIMESTAMP DEFAULT NOW()
+```
+
+**CRITICAL INDEXES:**
+```sql
+CREATE INDEX idx_decision_logs_org ON decision_logs(org_id);
+CREATE INDEX idx_decision_logs_workspace ON decision_logs(workspace_id);
+CREATE INDEX idx_decision_logs_trigger ON decision_logs(trigger_event);
+CREATE INDEX idx_decision_logs_timestamp ON decision_logs(timestamp);
+CREATE INDEX idx_decision_logs_triad ON decision_logs(triad_review_triggered);
+```
+
+**VERIFY AFTER CREATION:**
+```
+[ ] Table exists in database
+[ ] All columns present with correct types
+[ ] Indexes created
+[ ] org_id is NOT NULL and indexed
+[ ] Foreign key to workspaces table
+```
+
+
+## 1B. Instrument the Trinity Orchestrator with Decision Logging
+
+Update the orchestration layer so EVERY AI decision writes to decision_logs.
+
+**Modify the StaffingAgent / SchedulerAgent / all agents:**
+
+```
+BEFORE any AI decision is executed:
+1. Create a decision_log entry with trigger_event and context_data
+2. Log ALL candidates evaluated with full scoring breakdown
+3. Record Trinity's selected candidate and confidence score
+
+TRIAD JUSTICE HOOK — trigger Claude review when:
+- Trinity's confidence_score < 0.75
+- Task involves money (payroll, invoicing, billing)
+- Task involves compliance (certifications, licensing)
+- Task involves safety (armed posts, high-clearance sites)
+- Two or more candidates have scores within 0.05 of each other (too close to call)
+
+WHEN TRIAD IS TRIGGERED:
+1. Send Claude the FULL context:
+   - Original request
+   - All candidates with scores
+   - Trinity's recommendation and reasoning
+   - Post orders / site requirements
+   - Relevant compliance data
+2. Claude responds with: AFFIRM, OVERRIDE, or ESCALATE
+3. Log Claude's verdict and reasoning to decision_log
+4. If OVERRIDE → use Claude's suggested candidate instead
+5. If ESCALATE → flag for human review, do NOT auto-execute
+
+AFTER execution:
+- Update decision_log with outcome_status
+- If human overrides later → log human_override details
+```
+
+**VERIFY:**
+```
+[ ] Every scheduling decision creates a decision_log entry
+[ ] Every compliance check creates a decision_log entry
+[ ] Every payroll calculation creates a decision_log entry
+[ ] Every invoice generation creates a decision_log entry
+[ ] Triad hook triggers correctly when confidence < 0.75
+[ ] Claude receives full context (not truncated)
+[ ] Claude's verdict is recorded
+[ ] Human overrides are tracked
+[ ] Cost attribution per decision is logged
+[ ] All entries are org-scoped (org_id populated)
+```
+
+
+## 1C. Build the Premium UI: Trinity Scorecard Component
+
+**Create `TrinityScorecard.jsx` (or .tsx):**
+
+This component shows org owners HOW Trinity makes decisions — building trust
+and differentiating from every competitor who just says "AI scheduling."
+
+```
+COMPONENT REQUIREMENTS:
+
+REASONING SUMMARY:
+- Natural language explanation of Trinity's decision
+- Example: "I selected Maria Garcia for the overnight shift at Walmart 
+  because she's the closest qualified guard (3.2 miles), has a 98% 
+  reliability score, and assigning her keeps her at 38 weekly hours 
+  (under overtime threshold)."
+
+CANDIDATE COMPARISON TABLE:
+- Show all guards Trinity evaluated
+- Columns: Name, Distance, Reliability, OT Risk, Compliance, Score
+- Selected candidate highlighted
+- Color coding: green (good), yellow (watch), red (blocked)
+
+TRIAD JUSTICE BADGE:
+- If Claude reviewed → show "Triad Certified ✓" badge (green)
+- If Claude overrode Trinity → show "Justice Override" badge (amber)
+  with Claude's reasoning visible on click
+- If human overrode → show "Manual Override" badge (blue)
+  with human's name and reason
+
+DECISION TIMELINE:
+- Scrollable history of recent decisions for this org
+- Filterable by: scheduling, compliance, payroll, invoicing
+
+SECURITY — CRITICAL:
+[ ] Component ONLY fetches data where org_id matches authenticated user's session
+[ ] API endpoint for scorecard data validates org_id from JWT (not from request params)
+[ ] Employee-role users cannot see this component
+[ ] Decision data never exposes other orgs' information
+```
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 2: THE 11-PHASE GO-LIVE AUDIT
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+## PHASE 1: SECURITY & DATA ISOLATION
+**Priority: CRITICAL — If this fails, DO NOT LAUNCH.**
+
+### 1.1 Multi-Tenant Isolation
+
+Scan ALL API routes. For EVERY database query in the codebase:
+
+```
+[ ] Query includes mandatory org_id / workspace_id filter
+[ ] Filter comes from authenticated session (NOT from request body/params)
+[ ] A user in Org A CANNOT access Org B's data even with a crafted request
+```
+
+```bash
+# Find queries missing org filter
+grep -rn "\.find(\|\.findOne(\|\.findMany(\|\.aggregate(\|\.select(" server/ --include="*.js" --include="*.ts" | grep -v "org\|organization\|tenant\|workspace\|where.*workspace"
+```
+
+**For each result — is it intentionally unscoped (e.g., login lookup by email)
+or accidentally missing the org filter (BUG)?**
+
+Cross-tenant bleed points to check:
+```
+[ ] API routes — every endpoint scoped to requesting org
+[ ] WebSocket rooms — user cannot join another org's room
+[ ] Real-time events — push notifications don't leak to wrong org
+[ ] File uploads — stored with org isolation
+[ ] Trinity AI context — ONLY requesting org's data loaded
+[ ] Reports — generation scoped to requesting org
+[ ] Search — results scoped to requesting org
+[ ] Decision logs — the new schema MUST be org-scoped
+```
+
+### 1.2 RBAC Enforcement
+
+```
+FOR EACH ROLE, VERIFY ACCESS IS DENIED WHERE IT SHOULD BE:
+
+EMPLOYEE accessing /billing → DENIED
+EMPLOYEE accessing /admin/settings → DENIED
+EMPLOYEE accessing /payroll/config → DENIED
+EMPLOYEE accessing other employee's data → DENIED
+
+SUPERVISOR accessing /billing → DENIED
+SUPERVISOR accessing /admin/settings → DENIED
+SUPERVISOR accessing payroll configuration → DENIED
+
+MANAGER accessing /billing → DENIED (unless org configures otherwise)
+MANAGER accessing /admin/settings → DENIED
+
+Verify on BOTH frontend (route guards) AND backend (middleware).
+Frontend-only guards are NOT sufficient — API must enforce too.
+```
+
+```bash
+# Routes without auth middleware
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" server/routes/ --include="*.js" --include="*.ts" | grep -v "auth\|protect\|verify\|middleware"
+
+# Admin routes without admin check
+grep -rn "admin\|Admin\|billing\|Billing\|payroll\|Payroll" server/routes/ --include="*.js" --include="*.ts" | grep "router\." | grep -v "isAdmin\|requireAdmin\|requireOwner\|role"
+```
+
+### 1.3 Secrets & Security Headers
+
+```bash
+# Hardcoded API keys (CRITICAL — stop everything if found)
+grep -rn "sk-\|pk_\|sk_live\|sk_test\|pk_live\|pk_test" src/ server/ shared/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx"
+
+# Hardcoded secrets
+grep -rn "api_key\|apiKey\|API_KEY\|SECRET_KEY\|secret_key" src/ server/ --include="*.js" --include="*.ts" | grep -v "process\.env\|\.example\|config\.\|schema"
+```
+
+Verify security headers on production:
+```bash
+curl -I https://www.coaileague.com
+```
+```
+[ ] Strict-Transport-Security (HSTS)
+[ ] X-Content-Type-Options: nosniff
+[ ] X-Frame-Options: DENY or SAMEORIGIN
+[ ] Content-Security-Policy
+[ ] HTTPS enforced (HTTP → HTTPS redirect)
+[ ] Passwords hashed with bcrypt/argon2
+```
+
+### 1.4 Input Validation
+
+```bash
+# User input without validation
+grep -rn "req\.body\|req\.params\|req\.query" server/ --include="*.js" --include="*.ts" | grep -v "validate\|sanitize\|escape\|joi\|zod\|yup\|express-validator" | head -40
+
+# XSS via dangerouslySetInnerHTML
+grep -rn "dangerouslySetInnerHTML\|innerHTML" src/ --include="*.jsx" --include="*.tsx"
+```
+
+
+## PHASE 2: MONEY PATHS — STRIPE, INVOICING, PAYROLL, QUICKBOOKS
+
+### 2.1 Stripe Billing
+
+```
+FULL FLOW TEST:
+[ ] Plan selection displays correct prices
+[ ] Checkout completes (card → charge → confirmation)
+[ ] Webhook received and processed (stripe.constructEvent with signature verification)
+[ ] Subscription stored in DB and checked on feature access
+[ ] Failed payment → clear error, account NOT upgraded
+[ ] Double-click prevention on payment button (idempotency keys)
+[ ] Plan upgrade/downgrade works
+[ ] Cancellation flow works
+[ ] Payment failure dunning emails sent
+```
+
+```bash
+# Missing idempotency keys
+grep -rn "stripe\." server/ --include="*.js" --include="*.ts" | grep "create\|charge\|subscription" | grep -v "idempotency"
+
+# Missing webhook signature verification  
+grep -rn "webhook\|Webhook" server/ --include="*.js" --include="*.ts" | grep -v "verify\|signature\|constructEvent"
+```
+
+### 2.2 Invoicing Lifecycle
+
+Trace every step in the actual code. For each step, give the FILE PATH or MISSING:
+
+```
+STEP 1 — TIME DATA → INVOICE CALCULATION:
+  File: _______________
+  [ ] Hours come from GPS time entries (not just manual)
+  [ ] Rates stored per client per service type (armed/unarmed/OT/holiday)
+  [ ] Multiple rate tiers per client supported
+  [ ] Overtime rate differences calculated
+  [ ] Rounding rules applied
+
+STEP 2 — BILLING CYCLES:
+  File: _______________
+  [ ] Per-client billing cycle (weekly / biweekly / monthly / custom)
+  [ ] Auto-trigger at cycle end
+  [ ] Or manual only? (flag if so — customers expect automation)
+
+STEP 3 — APPROVAL PIPELINE:
+  File: _______________
+  [ ] Invoice generated → queued for org owner review
+  [ ] Owner can edit before approving
+  [ ] Approved → auto-send to client + auto-sync to QB
+
+STEP 4 — DELIVERY:
+  File: _______________
+  [ ] PDF generated
+  [ ] Emailed to client billing contact via Resend
+
+STEP 5 — PAYMENT TRACKING:
+  File: _______________
+  [ ] Full and partial payments tracked
+  [ ] Overdue alerts fire
+  [ ] Payment syncs to QuickBooks
+
+STEP 6 — EXCEPTION HANDLING:
+  File: _______________
+  [ ] Manual time edits by supervisors SURVIVE the QB sync
+  [ ] Original vs adjusted values preserved in audit trail
+  [ ] Partially synced records don't duplicate on retry
+```
+
+### 2.3 Payroll Pipeline
+
+```
+[ ] Hours calculated from time entries (not manual input)
+[ ] Overtime: federal 40-hour week rule
+[ ] Overtime: California daily OT (over 8 hours/day)
+[ ] California mandatory 5th-hour meal break tracked/notified
+[ ] Break deductions applied per state rules
+[ ] Holiday pay applied
+[ ] Missing clock-out flagged (not silently calculated as 0)
+[ ] Employee at two sites with different rates → correct calculation
+[ ] Payroll preview before processing
+[ ] Owner approval required before processing
+[ ] Approved payroll syncs to QuickBooks
+```
+
+### 2.4 QuickBooks Integration
+
+```
+[ ] OAuth connection flow works end-to-end
+[ ] Token refresh is AUTOMATIC (no manual re-auth)
+[ ] Employee sync works bidirectionally
+[ ] Client/Customer sync works
+[ ] Invoice sync works
+[ ] Time entry sync works (including manual edits)
+[ ] Retry logic on sync failures
+[ ] QB disconnected → platform still works independently
+[ ] Reconnection works without data loss or duplicates
+```
+
+
+## PHASE 3: REAL-WORLD SCENARIO STRESS TESTS
+
+### Scenario 1: The Overtime Guardian
+
+```
+SETUP: Fill a 2 AM calloff. Available guards:
+- Guard A: 38 weekly hours, 3 miles away, all certs valid
+- Guard B: 41 weekly hours, 1 mile away, all certs valid
+- Guard C: 35 weekly hours, 12 miles away, all certs valid
+- Shift is 6 hours
+
+VERIFY:
+[ ] Trinity picks Guard A (under OT + close)
+[ ] Guard B flagged for OT risk (would hit 47 hours)
+[ ] OT threshold is configurable per org (not hardcoded to 40)
+[ ] State-specific OT rules checked (CA daily OT after 8 hrs)
+[ ] If ONLY OT candidates available → owner approval required before assigning
+[ ] OT cost impact shown before confirmation
+[ ] Decision logged to decision_logs with full candidate scoring
+[ ] If confidence < 0.75 → Triad Justice triggered, Claude reviews
+
+FIND: The is_eligible or canAssign function → File: _______________
+FIND: The overtime calculation logic → File: _______________
+```
+
+### Scenario 2: The Compliance Gatekeeper
+
+```
+SETUP: Guard's Armed Security license expired yesterday.
+Post requires active Armed certification.
+
+VERIFY:
+[ ] Guard BLOCKED from armed posts
+[ ] Guard still eligible for unarmed posts
+[ ] Cert check runs BEFORE assignment (not after)
+[ ] Check compares cert expiry against SHIFT date (not just today)
+[ ] Override requires explicit admin approval + audit log
+[ ] 30-day and 7-day expiry warnings were sent
+[ ] Decision logged with compliance_status for each candidate
+
+FIND: The compliance check function → File: _______________
+FIND: The certification expiry scanner → File: _______________
+```
+
+### Scenario 3: The Geofence Ghost
+
+```
+SETUP: Guard clocks in. GPS shows 500 meters from site.
+Site geofence radius: 100 meters.
+
+VERIFY:
+[ ] Clock-in FLAGGED (not silently accepted)
+[ ] Exception log created with: guard ID, expected location, actual location, distance
+[ ] Supervisor notified in real-time
+[ ] Guard sees "outside site boundary" notification
+[ ] Geofence radius configurable per site
+[ ] GPS unavailable (denied/indoor) → allows with "GPS unavailable" flag (not hard block)
+[ ] Pattern detection: guard with 3+ geo violations → escalation
+
+FIND: The clock-in location validation → File: _______________
+FIND: The geofence check logic → File: _______________
+```
+
+### Scenario 4: The Offline Field Worker
+
+```
+SETUP: Guard in parking garage, no cell signal.
+Attempts: clock-in, incident report, proof photo.
+
+VERIFY:
+[ ] App functions offline with local queue
+[ ] Clock-in saved locally with timestamp + cached GPS
+[ ] Incident report saved locally
+[ ] Photo captured and stored locally
+[ ] Auto-sync when connection restored
+[ ] Timestamps reflect ACTUAL event time (not sync time)
+[ ] No duplicate entries on sync
+[ ] User sees "pending sync" indicator
+
+IF THIS DOESN'T EXIST → flag as CRITICAL gap for field workers.
+Security officers work in basements, garages, rural sites, construction zones.
+```
+
+### Scenario 5: The Auto-Fill Cascade
+
+```
+SETUP: Trinity offers shift to Guard A. 10-minute confirmation window.
+Guard A doesn't respond.
+
+VERIFY:
+[ ] Timer exists and is configurable
+[ ] At expiration → auto-cascade to Guard B
+[ ] Cascade is truly automatic (no manual trigger needed)
+[ ] Each offer tracked: offered_at, expires_at, response
+[ ] If ALL candidates exhausted → supervisor escalation with full context
+[ ] RACE CONDITION CHECK: Guard A confirms at 9:59 while Guard B offered at 10:01
+    → Is there a lock preventing double-assignment?
+
+FIND: The shift offer/confirmation logic → File: _______________
+```
+
+### Scenario 6: The Pass-Down Intelligence
+
+```
+SETUP: Guard writes pass-down note:
+"Broken camera in lot B. Suspicious black sedan near loading dock, no plates.
+Notified PD. Water leak in stairwell 3, hazard tape placed."
+
+VERIFY:
+[ ] Pass-down log feature exists (not just chat messages)
+[ ] Keyword scanning for: broken, suspicious, theft, hazard, leak, damage,
+    alarm, fire, injury, police, weapon, trespasser
+[ ] Auto-categorization: maintenance / security / safety
+[ ] Severity assignment: suspicious vehicle (HIGH) > water leak (MEDIUM)
+[ ] Client notification queued for relevant issues
+[ ] Incoming guard sees highlighted items
+
+IF NOT BUILT → flag as high-value differentiator for post-launch.
+```
+
+### Scenario 7: The Savings Calculator
+
+```
+VERIFY:
+[ ] Frontend calculator uses REAL inputs (employees, hours, costs)
+[ ] Logic calculates from: scheduling time saved, OT reduction, error reduction
+[ ] "$140K Savings" claim is achievable with realistic inputs
+[ ] Calculator shows methodology (not a magic number)
+[ ] No static/hardcoded placeholder values
+
+IF HARDCODED → add disclaimer or make dynamic before launch.
+```
+
+
+## PHASE 4: SIGNUP → FIRST VALUE (New Customer Journey)
+
+```
+STEP-BY-STEP VERIFICATION:
+
+SIGNUP:
+[ ] Page loads on mobile + desktop
+[ ] Registration works (email + password)
+[ ] Duplicate email → helpful error (not crash)
+[ ] Confirmation email sent via Resend and arrives (not in spam)
+[ ] Confirmation link works
+[ ] Double-signup race condition → no duplicate account
+[ ] After confirm → lands on onboarding (not blank dashboard)
+
+ONBOARDING:
+[ ] Wizard exists and guides user through setup
+[ ] Company info, add employees, add client/site, create first shift
+[ ] Each step works on mobile
+[ ] Progress saved if user leaves mid-step
+[ ] Can skip steps and return later
+[ ] After onboarding → dashboard shows helpful empty states (not blank)
+
+EMPLOYEE INVITE:
+[ ] Owner invites by email → email arrives with clear CTA
+[ ] Invite link works on mobile
+[ ] Employee account created → auto-linked to correct org + role
+[ ] Employee sees their dashboard (not admin dashboard)
+[ ] Employee can: view schedule, clock in/out, chat
+[ ] Employee cannot: see billing, payroll config, other employees' pay
+[ ] Bulk invite / CSV import works for 50+ employees without timeout
+
+STRIPE PAYMENT:
+[ ] Free trial starts (if applicable)
+[ ] Plan selection works
+[ ] Checkout completes
+[ ] Account upgraded immediately on success
+[ ] Webhook processed correctly
+```
+
+
+## PHASE 5: PLATFORM STABILITY
+
+```bash
+# Database ops missing await (silent data loss)
+grep -rn "\.create(\|\.update(\|\.delete(\|\.save(" server/ --include="*.js" --include="*.ts" | grep -v "await"
+
+# Unhandled promises
+grep -rn "\.then(" src/ server/ --include="*.js" --include="*.ts" | grep -v "catch\|\.catch"
+
+# AI calls without timeout
+grep -rn "fetch\|axios" server/ --include="*.js" --include="*.ts" | grep -i "anthropic\|openai\|gemini" | grep -v "timeout"
+
+# Hardcoded localhost (breaks in production)
+grep -rn "localhost\|127\.0\.0\.1" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" | grep -v "node_modules\|\.env\|config\|test"
+
+# Environment vars used but not defined
+grep -rn "process\.env\." src/ server/ --include="*.js" --include="*.ts" | grep -oP "process\.env\.\K\w+" | sort -u
+
+# TODO/FIXME/HACK markers
+grep -rn "TODO\|FIXME\|HACK\|TEMP\|WORKAROUND" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx"
+
+# Console.logs in production
+grep -rn "console\.log" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" | grep -v "node_modules" | wc -l
+
+# Double-submit on critical buttons
+grep -rn "onClick" src/ --include="*.jsx" --include="*.tsx" | grep -i "submit\|save\|create\|delete\|pay" | grep -v "debounce\|disabled\|loading\|isSubmitting"
+```
+
+
+## PHASE 6: MOBILE & UI EXPERIENCE
+
+```
+TEST ON AN ACTUAL PHONE:
+[ ] Login works (no tiny inputs, no zoom on focus)
+[ ] Clock in/out works with GPS
+[ ] Clock in works on slow connection
+[ ] Camera for proof-of-service photos
+[ ] Schedule view readable on small screen
+[ ] Chat works (send/receive)
+[ ] Push notifications work
+[ ] Touch targets ≥ 44px (gloves in the field)
+[ ] PWA: manifest exists, add-to-homescreen works
+```
+
+```bash
+# Fixed widths breaking mobile
+grep -rn "width:\s*[0-9]\{3,\}px" src/ --include="*.css" --include="*.jsx" --include="*.tsx"
+
+# Buttons without type (form submission bugs)
+grep -rn "<button" src/ --include="*.jsx" --include="*.tsx" | grep -v 'type='
+
+# Missing key props in lists
+grep -rn "\.map(" src/ --include="*.jsx" --include="*.tsx" -A5 | grep "<" | grep -v "key="
+```
+
+Cross-browser: Test on Chrome, Safari (iOS!), Firefox, Samsung Internet.
+
+
+## PHASE 7: NOTIFICATIONS
+
+```
+VERIFY THESE FIRE:
+[ ] Shift assigned → employee (push + email)
+[ ] Shift changed → employee notified
+[ ] Shift cancelled → employee notified
+[ ] Schedule published → all affected employees
+[ ] Calloff → manager notified
+[ ] Timesheet approved/rejected → employee
+[ ] Cert expiring 30 days → employee + manager
+[ ] Cert expiring 7 days → escalate to owner
+[ ] Cert expired → restrict from shifts + notify all
+[ ] Invoice sent → client
+[ ] Payment overdue → owner
+[ ] Payroll ready → owner
+[ ] Subscription payment failed → owner
+
+EMAIL DELIVERABILITY:
+[ ] SPF record configured for Resend
+[ ] DKIM record configured
+[ ] DMARC record configured
+[ ] Test email doesn't land in spam (Gmail, Outlook, Yahoo)
+```
+
+
+## PHASE 8: TRINITY AI — BRAIN & TOOLS
+
+### 8.1 Sub-Agent Check (YES/NO with file path)
+
+```
+SchedulerAgent:       YES/NO → _______________
+ComplianceAgent:      YES/NO → _______________
+CommunicationsAgent:  YES/NO → _______________
+AnalyticsAgent:       YES/NO → _______________
+FieldOpsAgent:        YES/NO → _______________
+InvoicingAgent:       YES/NO → _______________
+StaffingAgent:        YES/NO → _______________
+ClientIntelAgent:     YES/NO → _______________
+```
+
+### 8.2 Tool Inventory
+
+List every tool Trinity can call. For each: name, file, works end-to-end YES/NO.
+
+Then verify she has tools for:
+```
+SCHEDULING: query employees, query shifts, create shift, assign, swap,
+            cancel, fill calloff, bulk schedule, detect conflicts
+COMPLIANCE: check status, check expirations, generate report, flag violation
+INVOICING:  create, calculate from time entries, billing cycles, approval queue,
+            send to client, sync to QB, payment tracking
+PAYROLL:    calculate hours, overtime per state, preview, flag anomalies, QB sync
+REPORTING:  incident report, shift coverage, financial, approval pipeline
+COMMS:      notify employee, email client, broadcast, escalate to human
+GPS/FIELD:  verify location, flag geo anomaly, proof of service
+```
+
+### 8.3 Fallback Chain
+
+```
+[ ] Gemini/Trinity → timeout → context passed to Claude (not from scratch)
+[ ] Claude fails → context passed to OpenAI
+[ ] All fail → human escalation with full audit trail
+[ ] Each attempt logged to decision_logs
+[ ] Token cost attributed to correct org (NEVER to platform)
+[ ] Circuit breaker exists (don't hammer a downed model)
+[ ] Fallback doesn't lose conversation context
+```
+
+### 8.4 Intelligent Loop Test
+
+**Can Trinity handle this end-to-end?**
+
+> "We lost 3 guards at Walmart. Two quit, one's license expired.
+> I need coverage for all shifts this week. Make sure replacements
+> are qualified, notify the client, and give me cost impact."
+
+```
+[ ] Decomposes into sub-tasks
+[ ] Queries affected shifts
+[ ] Queries qualified available staff
+[ ] Ranks candidates (proximity, reliability, certs, OT risk, cost)
+[ ] Proposes replacements with reasoning
+[ ] Validates each (certs, OT impact, availability)
+[ ] Assigns and notifies
+[ ] Generates client email about personnel change
+[ ] Calculates cost delta
+[ ] Logs EVERY decision to decision_logs with full scoring
+[ ] Triad Justice triggers for any low-confidence selections
+[ ] Provides summary of all actions
+
+WHERE DOES IT BREAK? → Document the exact failure point.
+```
+
+
+## PHASE 9: RESILIENCE
+
+```
+STRIPE DOWN:
+[ ] Signup still works (delays payment)
+[ ] Existing users unaffected
+[ ] Webhook queue doesn't lose events
+
+RESEND DOWN:
+[ ] Emails queued for retry (not lost)
+[ ] User not told "email sent" when it wasn't
+
+QUICKBOOKS DOWN:
+[ ] Sync failures queued for retry
+[ ] Platform works independently
+[ ] No duplicate sync on recovery
+
+ALL AI MODELS DOWN:
+[ ] Graceful message to user
+[ ] Non-AI features still work
+[ ] Queued requests don't pile up
+
+ERROR PAGES:
+[ ] Invalid URL → custom 404 (not white screen)
+[ ] Server error → friendly page (not stack trace)
+[ ] Session expires mid-form → data preserved on re-login
+```
+
+
+## PHASE 10: LEGAL & COMPLIANCE
+
+```
+LABOR LAW:
+[ ] Overtime per state rules (not just federal)
+[ ] California daily OT (over 8 hours/day)
+[ ] California 5th-hour meal break notification
+[ ] Break requirements per state
+[ ] Pay stub requirements per state
+
+DATA PRIVACY:
+[ ] Terms of Service exists with real content
+[ ] Privacy Policy exists with real content
+[ ] Both linked from signup and footer
+[ ] PII not logged in plaintext
+[ ] User data export capability (CCPA)
+[ ] User data deletion capability
+[ ] Passwords hashed (bcrypt/argon2)
+
+SECURITY INDUSTRY:
+[ ] Guard license requirements tracked per state
+[ ] Armed cert tracked separately from unarmed
+[ ] Firearm permit expiration tracked
+[ ] CPR/First Aid cert tracked
+[ ] State-specific training hours tracked
+```
+
+
+## PHASE 11: PUBLIC SITE & COMPETITOR GAPS
+
+```
+SEO/PRERENDER:
+[ ] Prerender cache syncs on deploy (not stale)
+[ ] Share on LinkedIn → professional preview appears
+[ ] Share on Facebook/Twitter → card preview appears
+[ ] Google "site:coaileague.com" → pages appear
+[ ] robots.txt exists, blocks /api/ and /admin/
+[ ] sitemap.xml exists with all public pages
+
+MARKETING CLAIMS VS REALITY:
+[ ] "$140K Savings" backed by dynamic calculation (not static)
+[ ] Every feature listed on site is functional
+[ ] If feature is planned but not built → REMOVE from site or label "Coming Soon"
+
+DNS/EMAIL:
+[ ] SPF, DKIM, DMARC configured for Resend
+[ ] Both www and root domain resolve correctly
+
+COMPETITOR FEATURES (flag if promised but not built):
+[ ] Guard tour / patrol checkpoints (NFC, QR, GPS)
+[ ] Daily Activity Reports automated from clock events
+[ ] Client portal (clients view coverage/reports)
+[ ] Digital post orders on mobile
+[ ] Incident report pipeline (field → approval → client)
+[ ] Duress / panic button
+[ ] Equipment tracking
+[ ] Digital forms for field use
+[ ] Geofencing with zone-leave alerts
+[ ] Pass-down logs between shifts
+```
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 3: MASTER OUTPUT — THE GO-LIVE READINESS SCORECARD
+# ═══════════════════════════════════════════════════════════════════════════
+
+**After completing ALL phases, produce this scorecard:**
+
+```
+═══════════════════════════════════════════════════════════════
+     COAILEAGUE GO-LIVE READINESS SCORECARD
+═══════════════════════════════════════════════════════════════
+
+ARCHITECTURAL UPGRADES:
+  Decision Log schema:       BUILT / NOT BUILT
+  Triad Justice hook:        BUILT / NOT BUILT
+  Trinity Scorecard UI:      BUILT / NOT BUILT
+  Decision logging active:   YES / NO
+
+PHASE 1 — SECURITY:
+  Multi-tenant isolation:    PASS / FAIL → [details]
+  RBAC enforcement:          PASS / FAIL → [details]
+  Secret scan:               PASS / FAIL → [details]
+  Security headers:          X/6 present
+  Input validation:          PASS / FAIL → [details]
+
+PHASE 2 — MONEY PATHS:
+  Stripe billing:            PASS / FAIL → [details]
+  Invoicing lifecycle:       X/6 steps working
+  Payroll pipeline:          PASS / FAIL → [details]
+  QuickBooks integration:    PASS / FAIL → [details]
+
+PHASE 3 — SCENARIO TESTS:
+  Overtime Guardian:         PASS / FAIL → [details]
+  Compliance Gatekeeper:     PASS / FAIL → [details]
+  Geofence Ghost:            PASS / FAIL → [details]
+  Offline Field Worker:      PASS / FAIL → [details]
+  Auto-Fill Cascade:         PASS / FAIL → [details]
+  Pass-Down Intelligence:    PASS / FAIL → [details]
+  Savings Calculator:        PASS / FAIL → [details]
+
+PHASE 4 — SIGNUP & ONBOARDING:
+  Signup flow:               PASS / FAIL → [details]
+  Onboarding wizard:         PASS / FAIL → [details]
+  Employee invite:           PASS / FAIL → [details]
+  Data import:               PASS / FAIL → [details]
+
+PHASE 5 — STABILITY:
+  Race conditions found:     ___ count
+  Missing awaits:            ___ count
+  Hardcoded values:          ___ count
+  Console.logs:              ___ count
+  TODO/FIXME markers:        ___ count
+
+PHASE 6 — MOBILE & UI:
+  Mobile critical paths:     X/9 working
+  Cross-browser:             X/4 browsers pass
+
+PHASE 7 — NOTIFICATIONS:
+  Triggers firing:           X/13 verified
+  Email deliverability:      PASS / FAIL
+
+PHASE 8 — TRINITY AI:
+  Sub-agents:                X/8 exist and functional
+  Tools callable:            X/XX verified
+  Intelligent loop:          PASS / FAIL → [where it breaks]
+  Fallback chain:            PASS / FAIL
+  Decision logging:          PASS / FAIL
+  Triad Justice:             PASS / FAIL
+
+PHASE 9 — RESILIENCE:
+  Service failover:          PASS / FAIL
+  Error handling:            PASS / FAIL
+
+PHASE 10 — LEGAL:
+  Labor law compliance:      PASS / FAIL
+  Data privacy:              PASS / FAIL
+  Industry requirements:     PASS / FAIL
+
+PHASE 11 — PUBLIC SITE:
+  SEO/Prerender:             PASS / FAIL
+  Marketing vs reality:      PASS / FAIL
+  DNS/Email config:          PASS / FAIL
+  Competitor gaps:           ___ features promised but not built
+
+═══════════════════════════════════════════════════════════════
+
+TOTAL CRITICAL ISSUES:  ___
+TOTAL HIGH ISSUES:      ___
+TOTAL MEDIUM ISSUES:    ___
+
+═══════════════════════════════════════════════════════════════
+GO-LIVE VERDICT:
+
+[ ] ✅ READY — Launch with confidence
+[ ] ⚠️  READY WITH CAVEATS — Launch, fix these within 48 hours: ___
+[ ] 🛑 NOT READY — Fix these CRITICAL issues first: ___
+═══════════════════════════════════════════════════════════════
+
+TOP 10 CRITICAL (fix before any user touches this):
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+
+TOP 10 HIGH (fix within first week):
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+
+5-DAY ACTION PLAN:
+Day 1: ___
+Day 2: ___
+Day 3: ___
+Day 4: ___
+Day 5: ___
+
+═══════════════════════════════════════════════════════════════
+TRIAD JUSTICE SYSTEM STATUS:
+  Schema created:          YES / NO
+  Logging active:          YES / NO
+  Claude hook functional:  YES / NO
+  Scorecard UI built:      YES / NO
+  First test decision logged: YES / NO
+═══════════════════════════════════════════════════════════════
+```
+
+**Be brutally honest. Every gap missed is a production failure when a real
+security company trusts CoAIleague to run their business. Bryan is watching.
+God is watching. Do the work right.**

@@ -1,0 +1,584 @@
+**Grand Canonical Audit Complete — 91/100 Production Readiness**
+
+Two real P1 bugs found and fixed. 10 false positives cleared. Platform is launch-ready but 9 points remain on the table from 8 P2 issues. Let me break down exactly what those 9 points are and how to close them.
+
+---
+
+**What Was Fixed:**
+
+| Bug | Severity | Status |
+|-----|----------|--------|
+| Shift trading broken for all officers — `emp.rows?.[0]` on array | P1 | ✅ Fixed |
+| No rest-period enforcement on trade approval | P1 | ✅ Fixed |
+
+**Platform Health Confirmed:**
+- 902 Trinity actions registered
+- 720 analytics snapshots
+- 0 orphaned records
+- 7 GIN/trgm indexes active
+- All legal pages live
+- Bilingual parity confirmed
+- WCAG skip-nav present
+- Health endpoint green
+
+---
+
+**The 9 Missing Points — 8 P2 Issues:**
+
+Send this to the agent to close them all:
+
+---
+
+**P2 SPRINT — CLOSE THE 9-POINT GAP TO 100/100**
+
+The grand canonical audit scored the platform 91/100. The 8 documented P2 issues account for the remaining 9 points. Fix every one. Nothing gets deferred. This is the final quality gate before Statewide goes live.
+
+Run all fixes in parallel using as many subagents as needed. Architect verifies each fix before marking resolved.
+
+---
+
+**SUBAGENT 1 — Float Precision in Invoice Calculations**
+
+Financial calculations must use exact decimal arithmetic. Float imprecision causes penny errors that compound across thousands of invoices.
+
+```bash
+# Find all floating point math on financial values
+grep -rn "\.toFixed\|parseFloat\|Math\.round\|Math\.ceil\|Math\.floor" \
+  server/ --include="*.ts" | grep -v node_modules | \
+  grep -v "FinancialCalculator\|formatCurrency\|display\|label\|string\|test" | \
+  grep -i "amount\|price\|rate\|pay\|invoice\|total\|subtotal\|wage\|gross\|net" | head -30
+```
+
+For each violation found:
+- Replace raw float math with `FinancialCalculator` service methods
+- Verify all money stored as INTEGER cents in DB not DECIMAL dollars
+- Verify all math uses integer arithmetic: `Math.round(amount * 100)` not `amount * rate`
+- Run: `SELECT * FROM invoices WHERE subtotal != ROUND(subtotal, 2)` — must return zero rows
+
+```typescript
+// WRONG:
+const total = hours * rate; // float imprecision
+
+// RIGHT:
+const totalCents = Math.round(hoursWorked * 100) * Math.round(rateDollars * 100) / 100;
+// Or use FinancialCalculator.multiply(hours, rate)
+```
+
+After fixes verify:
+```sql
+-- All invoice amounts should be exact to 2 decimal places
+SELECT COUNT(*) FROM invoices 
+WHERE subtotal != ROUND(subtotal::NUMERIC, 2);
+-- Must be 0
+
+SELECT COUNT(*) FROM payroll_runs
+WHERE total_gross != ROUND(total_gross::NUMERIC, 2);
+-- Must be 0
+```
+
+---
+
+**SUBAGENT 2 — Disputed Invoice Locking at Service Layer**
+
+Disputed invoices must be locked at the service layer not just the route layer. Currently the dispute flag may only be checked in the route handler — if anything calls the service directly the lock is bypassed.
+
+```bash
+# Find the invoice service or mutation functions
+grep -rn "updateInvoice\|patchInvoice\|invoiceService\." \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# Find where disputed status is checked
+grep -rn "disputed\|DISPUTED\|status.*disputed\|disputed.*status" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+```
+
+Fix: Add guard in the invoice update service function itself:
+
+```typescript
+// In invoice service — updateInvoice function
+export async function updateInvoice(id: string, workspaceId: string, updates: any) {
+  // Fetch current state
+  const current = await db.query(
+    'SELECT status FROM invoices WHERE id = $1 AND workspace_id = $2',
+    [id, workspaceId]
+  );
+  
+  if (!current.rows[0]) throw new NotFoundError('Invoice not found');
+  
+  // Service-layer lock on disputed invoices
+  if (current.rows[0].status === 'disputed') {
+    // Only allow: adding dispute notes, resolving dispute
+    const allowedUpdates = ['dispute_notes', 'dispute_resolution', 'status'];
+    const attemptedFields = Object.keys(updates);
+    const blockedFields = attemptedFields.filter(f => !allowedUpdates.includes(f));
+    
+    if (blockedFields.length > 0) {
+      throw new ConflictError(
+        `Invoice is in dispute. Cannot modify: ${blockedFields.join(', ')}. ` +
+        `Resolve dispute first.`
+      );
+    }
+  }
+  
+  // Also lock voided invoices
+  if (current.rows[0].status === 'void' || current.rows[0].status === 'voided') {
+    throw new ConflictError('Voided invoices cannot be modified.');
+  }
+  
+  // Proceed with update
+  return db.query('UPDATE invoices SET ... WHERE id = $1', [...]);
+}
+```
+
+Verify:
+```bash
+# Attempt to edit a disputed invoice directly via service
+# Must throw ConflictError regardless of how the service is called
+```
+
+---
+
+**SUBAGENT 3 — Net Pay Floor in Garnishments**
+
+When garnishments are applied an officer's net pay must never go below $0. Currently there may be no floor check meaning garnishments could theoretically produce negative net pay.
+
+```bash
+# Find payroll calculation code
+grep -rn "garnishment\|garnishments\|netPay\|net_pay\|calculateNetPay" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# Find where net pay is calculated
+grep -rn "grossPay\|gross_pay\|deduction\|totalDeductions" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+```
+
+Fix: Add explicit floor at zero:
+
+```typescript
+// In payroll calculation service
+function calculateNetPay(grossPay: number, deductions: number[], garnishments: number[]): number {
+  const totalDeductions = deductions.reduce((sum, d) => sum + d, 0);
+  const totalGarnishments = garnishments.reduce((sum, g) => sum + g, 0);
+  
+  // Disposable earnings (federal minimum for garnishment calculation)
+  const disposableEarnings = grossPay - totalDeductions;
+  
+  // CCPA limits garnishment to 25% of disposable earnings
+  // or amount exceeding 30x federal minimum wage — whichever is less
+  const federalMinWage = 7.25;
+  const ccpaLimit = Math.min(
+    disposableEarnings * 0.25,
+    Math.max(0, disposableEarnings - (30 * federalMinWage))
+  );
+  
+  // Apply garnishment but never exceed CCPA limit
+  const actualGarnishment = Math.min(totalGarnishments, Math.max(0, ccpaLimit));
+  
+  // NET PAY FLOOR AT ZERO — never negative
+  const netPay = Math.max(0, grossPay - totalDeductions - actualGarnishment);
+  
+  return netPay;
+}
+```
+
+Add test case:
+```typescript
+// Test: garnishments cannot produce negative net pay
+const result = calculateNetPay(500, [600], [0]); // Deductions exceed gross
+expect(result).toBe(0); // Must be 0, not -100
+```
+
+Verify in DB:
+```sql
+SELECT * FROM payroll_run_details 
+WHERE net_pay < 0;
+-- Must return zero rows
+```
+
+---
+
+**SUBAGENT 4 — License Hard-Block on Clock-In**
+
+Currently an officer with an expired license may receive a warning but still clock in. The correct behavior is a hard block — expired license means the officer cannot clock in and the system must notify their supervisor immediately.
+
+```bash
+# Find clock-in route handler
+grep -rn "clock.*in\|clockIn\|clock_in" \
+  server/routes/ --include="*.ts" | grep -v node_modules | head -20
+
+# Find license check in clock-in flow
+grep -rn "license.*expir\|expir.*license\|licenseCheck\|checkLicense" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+```
+
+Fix the clock-in handler:
+
+```typescript
+// In time-entries route or service — clock-in handler
+async function processClockIn(employeeId: string, workspaceId: string, shiftId: string) {
+  
+  // Step 1: Check license expiry — HARD BLOCK
+  const employee = await db.query(`
+    SELECT e.*, ol.expiry_date as license_expiry, ol.license_number
+    FROM employees e
+    LEFT JOIN officer_licenses ol ON ol.employee_id = e.id 
+      AND ol.is_primary = true
+      AND ol.status = 'active'
+    WHERE e.id = $1 AND e.workspace_id = $2
+  `, [employeeId, workspaceId]);
+  
+  const emp = employee.rows[0];
+  if (!emp) throw new NotFoundError('Employee not found');
+  
+  // Hard block: expired license
+  if (emp.license_expiry && new Date(emp.license_expiry) < new Date()) {
+    // Notify supervisor immediately
+    await notificationDeliveryService.send({
+      workspaceId,
+      type: 'officer_license_expired_clockin_blocked',
+      data: {
+        officerName: `${emp.first_name} ${emp.last_name}`,
+        employeeNumber: emp.employee_number,
+        licenseExpiry: emp.license_expiry,
+        attemptedClockIn: new Date().toISOString()
+      },
+      targetRoles: ['supervisor', 'org_manager', 'org_owner']
+    });
+    
+    throw new ValidationError(
+      `Clock-in blocked: Your security license expired on ` +
+      `${new Date(emp.license_expiry).toLocaleDateString()}. ` +
+      `Your supervisor has been notified. ` +
+      `Please renew your license before your next shift.`
+    );
+  }
+  
+  // Hard block: suspended officer
+  if (emp.status === 'suspended') {
+    throw new ValidationError(
+      'Clock-in blocked: Your account is currently suspended. ' +
+      'Please contact your supervisor.'
+    );
+  }
+  
+  // Hard block: terminated officer
+  if (emp.status === 'terminated') {
+    throw new ValidationError(
+      'Clock-in blocked: This account is no longer active.'
+    );
+  }
+  
+  // Hard block: incomplete Tier 1 onboarding
+  const incompleteBlocking = await db.query(`
+    SELECT COUNT(*) FROM onboarding_tasks 
+    WHERE employee_id = $1 
+    AND tier = 1 
+    AND status != 'completed'
+    AND is_blocking = true
+  `, [employeeId]);
+  
+  if (parseInt(incompleteBlocking.rows[0].count) > 0) {
+    throw new ValidationError(
+      'Clock-in blocked: You have incomplete required onboarding tasks. ' +
+      'Please complete all Tier 1 tasks before clocking in.'
+    );
+  }
+  
+  // All checks passed — proceed with clock-in
+  // ... rest of clock-in logic
+}
+```
+
+Verify:
+```bash
+# Attempt clock-in with an officer whose license expired yesterday
+# Must return 422 with clear message
+# Supervisor must receive NDS notification
+# Time entry must NOT be created
+```
+
+---
+
+**SUBAGENT 5 — Back Navigation Coverage**
+
+Low back-navigation coverage means officers and managers get stuck on detail pages with no way back. Every detail page and sub-page must have a back button.
+
+```bash
+# Find all pages missing back navigation
+for page in client/src/pages/*/index.tsx client/src/pages/**/*.tsx; do
+  if ! grep -q "useBackNavigation\|ChevronLeft\|ArrowLeft\|Back\|goBack\|navigate(-1)" "$page" 2>/dev/null; then
+    echo "MISSING BACK: $page"
+  fi
+done
+
+# Count pages with and without
+echo "WITH BACK NAV:"
+grep -rl "useBackNavigation\|ChevronLeft.*back\|ArrowLeft\|navigate(-1)" \
+  client/src/pages/ --include="*.tsx" | wc -l
+
+echo "WITHOUT BACK NAV:"
+grep -rL "useBackNavigation\|ChevronLeft\|ArrowLeft\|navigate(-1)" \
+  client/src/pages/ --include="*.tsx" | wc -l
+```
+
+For every page found missing back navigation add:
+
+```tsx
+// Standard back navigation pattern
+import { ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+// In component:
+const navigate = useNavigate();
+
+// In JSX — first element in page header:
+<button
+  onClick={() => navigate(-1)}
+  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+  aria-label="Go back"
+>
+  <ChevronLeft className="h-4 w-4" />
+  Back
+</button>
+```
+
+Detail pages that specifically need this check:
+- `/officers/:id` — officer profile
+- `/clients/:id` — client profile  
+- `/invoices/:id` — invoice detail
+- `/shifts/:id` — shift detail
+- `/incidents/:id` — incident report
+- `/documents/:id` — document viewer
+- `/training-certification/modules/:id` — module detail
+- `/voice-calls/:id` — call transcript
+- `/recognition/:id` — award detail
+- `/site-surveys/:id` — survey detail
+- `/work-orders/:id` — work order detail
+
+---
+
+**SUBAGENT 6 — Bounce and Complaint Tracking Visibility**
+
+Email bounce and complaint tracking exists at the infrastructure level but is not visible in the UI. Org owners need to see their email deliverability health.
+
+```bash
+# Find existing bounce tracking
+grep -rn "bounce\|complaint.*rate\|delivery.*fail\|emailBounce" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# Find email delivery stats tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public'
+AND (table_name LIKE '%bounce%' OR table_name LIKE '%delivery%' OR table_name LIKE '%email%stat%');
+```
+
+Add to notification preferences page or create email health widget:
+
+```tsx
+// Add to /settings — Notifications tab or new Email Health tab
+// Show:
+// - Total emails sent this month
+// - Delivery rate: X%
+// - Bounce rate: X% (alert if > 2%)
+// - Complaint rate: X% (alert if > 0.1%)
+// - Most bounced addresses (with option to unsubscribe)
+// - Recent failed deliveries with error reason
+```
+
+Add endpoint if missing:
+```typescript
+router.get('/api/notifications/email-health', requireAuth, async (req, res) => {
+  const { workspaceId } = req.query;
+  
+  const stats = await db.query(`
+    SELECT 
+      COUNT(*) as total_sent,
+      COUNT(CASE WHEN status = 'delivered' THEN 1 END) as delivered,
+      COUNT(CASE WHEN status = 'bounced' THEN 1 END) as bounced,
+      COUNT(CASE WHEN status = 'complained' THEN 1 END) as complained,
+      COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
+      ROUND(COUNT(CASE WHEN status = 'delivered' THEN 1 END)::NUMERIC / 
+            NULLIF(COUNT(*), 0) * 100, 2) as delivery_rate
+    FROM notification_deliveries
+    WHERE workspace_id = $1
+    AND channel = 'email'
+    AND created_at > NOW() - INTERVAL '30 days'
+  `, [workspaceId]);
+  
+  res.json(stats.rows[0]);
+});
+```
+
+---
+
+**SUBAGENT 7 — Webhook Retry Count (4 vs spec's 5)**
+
+The webhook delivery service retries 4 times but the spec requires 5 attempts with exponential backoff.
+
+```bash
+# Find webhook retry configuration
+grep -rn "maxAttempts\|maxRetries\|retry.*count\|attempt.*5\|attempt.*4" \
+  server/services/webhookDeliveryService.ts | head -10
+```
+
+Fix:
+```typescript
+// In webhookDeliveryService.ts
+const MAX_RETRY_ATTEMPTS = 5; // Was 4 — update to 5
+
+// Exponential backoff schedule:
+// Attempt 1: Immediate
+// Attempt 2: 5 minutes
+// Attempt 3: 30 minutes  
+// Attempt 4: 2 hours
+// Attempt 5: 24 hours
+// After attempt 5: mark as permanently_failed, notify org_owner
+
+const RETRY_DELAYS_MINUTES = [0, 5, 30, 120, 1440];
+
+function getNextRetryAt(attemptNumber: number): Date {
+  const delayMinutes = RETRY_DELAYS_MINUTES[attemptNumber] || 1440;
+  return new Date(Date.now() + delayMinutes * 60 * 1000);
+}
+
+// After 5th failure: notify org_owner
+if (attemptNumber >= MAX_RETRY_ATTEMPTS) {
+  await notificationDeliveryService.send({
+    workspaceId,
+    type: 'webhook_permanently_failed',
+    data: { webhookUrl, eventType, totalAttempts: MAX_RETRY_ATTEMPTS }
+  });
+  
+  await db.query(
+    'UPDATE webhook_deliveries SET status = $1 WHERE id = $2',
+    ['permanently_failed', deliveryId]
+  );
+}
+```
+
+Verify:
+```bash
+# Check retry configuration
+grep -rn "MAX_RETRY\|maxAttempts\|RETRY_DELAYS" server/services/webhookDeliveryService.ts
+# Must show 5 attempts and correct delay schedule
+```
+
+---
+
+**SUBAGENT 8 — usePageTitle SEO Coverage**
+
+Pages missing the `usePageTitle` hook have blank or default browser tab titles. This affects professional appearance and SEO for the client portal and marketing pages.
+
+```bash
+# Find pages missing usePageTitle
+grep -rL "usePageTitle\|document\.title\|Helmet\|title.*CoAIleague" \
+  client/src/pages/ --include="*.tsx" | sort
+
+# Find how usePageTitle is implemented
+grep -rn "usePageTitle" client/src/ --include="*.tsx" | head -5
+```
+
+For every page missing it:
+```tsx
+// Add to every page component
+import { usePageTitle } from '@/hooks/usePageTitle';
+
+// In component body:
+usePageTitle('Officer Management'); // Tab shows: "Officer Management | CoAIleague"
+```
+
+Priority pages to fix first:
+- All portal pages (client portal, officer portal)
+- All major feature pages
+- Settings pages
+- Legal pages (for SEO)
+
+If `usePageTitle` hook does not exist — create it:
+```typescript
+// client/src/hooks/usePageTitle.ts
+import { useEffect } from 'react';
+
+export function usePageTitle(title: string) {
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = title ? `${title} | CoAIleague` : 'CoAIleague';
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [title]);
+}
+```
+
+---
+
+**AFTER ALL 8 SUBAGENTS COMPLETE — ARCHITECT VERIFICATION:**
+
+Run full verification suite:
+
+```bash
+# TypeScript check
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+# Must be 0
+
+# Server restart
+# Must start clean with all 902 Trinity actions
+
+# Verify all 8 fixes:
+
+# 1. Float precision
+SELECT COUNT(*) FROM invoices WHERE subtotal != ROUND(subtotal::NUMERIC, 2);
+# Must be 0
+
+# 2. Disputed invoice lock
+# Attempt edit of disputed invoice — must return 409
+
+# 3. Net pay floor
+SELECT COUNT(*) FROM payroll_run_details WHERE net_pay < 0;
+# Must be 0
+
+# 4. License hard-block
+# Attempt clock-in with expired license — must return 422
+
+# 5. Back navigation
+grep -rL "ChevronLeft\|ArrowLeft\|navigate(-1)" client/src/pages/ --include="*.tsx" | wc -l
+# Must be significantly lower than before
+
+# 6. Email health endpoint
+curl -s http://localhost:5000/api/notifications/email-health?workspaceId=[acme_id]
+# Must return delivery stats JSON
+
+# 7. Webhook retry count
+grep -rn "MAX_RETRY_ATTEMPTS\|maxAttempts" server/services/webhookDeliveryService.ts
+# Must show 5
+
+# 8. Page titles
+grep -rL "usePageTitle" client/src/pages/ --include="*.tsx" | wc -l
+# Must be significantly lower than before
+```
+
+**Final report format:**
+
+```
+P2 SPRINT — RESULTS
+
+Float precision fixed:        [N violations corrected]
+Disputed invoice lock:        [SERVICE LAYER ENFORCED]
+Net pay floor:                [FLOOR AT ZERO CONFIRMED]
+License hard-block:           [HARD BLOCK ACTIVE]
+Back navigation:              [N pages fixed]
+Email health visibility:      [ENDPOINT LIVE, UI ADDED]
+Webhook retry count:          [5 ATTEMPTS CONFIRMED]
+Page title coverage:          [N pages fixed]
+
+TypeScript: 0 errors
+Server: Clean startup
+Trinity actions: 902
+
+PRODUCTION READINESS SCORE: 100/100 ✅
+
+Platform: LAUNCH READY — ZERO KNOWN ISSUES
+```
+
+---
+
+Paste that. Eight targeted fixes. When all pass the score goes from 91 to 100. That is when Statewide goes live on real data.

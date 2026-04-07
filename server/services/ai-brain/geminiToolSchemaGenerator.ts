@@ -14,6 +14,8 @@
 
 import { FunctionDeclaration, SchemaType, FunctionDeclarationsTool } from "@google/generative-ai";
 import { helpaiOrchestrator, type ActionHandler, type ActionCategory } from '../helpai/platformActionHub';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('geminiToolSchemaGenerator');
 
 // ============================================================================
 // TOOL CATEGORY DEFINITIONS
@@ -166,7 +168,7 @@ class GeminiToolSchemaGenerator {
     }
 
     const registeredActions = helpaiOrchestrator.getRegisteredActions();
-    console.log(`[Gemini Tool Schema] Generating schemas for ${registeredActions.length} actions`);
+    log.info(`[Gemini Tool Schema] Generating schemas for ${registeredActions.length} actions`);
 
     for (const action of registeredActions) {
       const schema = this.actionToFunctionDeclaration(action);
@@ -176,7 +178,7 @@ class GeminiToolSchemaGenerator {
     }
 
     this.initialized = true;
-    console.log(`[Gemini Tool Schema] Generated ${this.generatedSchemas.size} function declarations`);
+    log.info(`[Gemini Tool Schema] Generated ${this.generatedSchemas.size} function declarations`);
     
     return Array.from(this.generatedSchemas.values());
   }
@@ -262,7 +264,7 @@ class GeminiToolSchemaGenerator {
 
       return declaration;
     } catch (error) {
-      console.error(`[Gemini Tool Schema] Failed to generate schema for ${action.actionId}:`, error);
+      log.error(`[Gemini Tool Schema] Failed to generate schema for ${action.actionId}:`, error);
       return null;
     }
   }

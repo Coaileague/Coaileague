@@ -1,0 +1,359 @@
+You just completed the most important database cleanup in CoAIleague's history — 589 tables clean, NULL workspace_ids eliminated, type mismatches fixed, billing chains verified. Now we need to make sure the APPLICATION LAYER is as solid as the database layer.
+
+This is a FULL SYSTEM INTEGRITY AUDIT. You are verifying that every workflow, every pipeline, every API route, every automation, and every Trinity capability works correctly end-to-end after the database changes. Nothing should be silently failing, incorrectly wired, or missing connections.
+
+DO NOT FIX ANYTHING DURING THIS AUDIT. Document everything first. Then we fix in priority order.
+
+═══════════════════════════════════════════════════
+PHASE 1: SILENT FAILURE SCAN
+═══════════════════════════════════════════════════
+
+1A. Find every try/catch block that swallows errors silently:
+
+grep -rn "catch" server/ --include="*.ts" --include="*.js" -A 5 | grep -B 1 "console\.\(log\|error\|warn\)" | grep -v "node_modules"
+
+Count them. These are places where something fails and nobody knows.
+
+1B. Find every catch block that returns null/false/empty (disguises failure as "no result"):
+
+grep -rn "catch" server/ --include="*.ts" --include="*.js" -A 3 | grep "return\s*\(null\|undefined\|false\|\[\]\|{}\)" | grep -v "node_modules"
+
+1C. Find every cron job / scheduled task and verify it has error handling that NOTIFIES someone (not just console.log):
+
+grep -rn "cron\|schedule\|setInterval" server/ --include="*.ts" --include="*.js" | grep -v "node_modules"
+
+For each one found, check: does it have a catch block that sends a notification or writes to audit_log? If it only console.logs errors, that's a silent failure.
+
+1D. Find every database write (insert/update/delete) that lacks error handling:
+
+grep -rn "db\.\(insert\|update\|delete\)\|\.insert(\|\.update(\|\.delete(" server/ --include="*.ts" --include="*.js" | grep -v "node_modules" | grep -v "test"
+
+For each one, verify it's wrapped in try/catch with proper error response.
+
+REPORT FORMAT for Phase 1:
+  Total silent failure points found: ___
+  Critical (financial operations): ___
+  High (user-facing features): ___
+  Medium (background tasks): ___
+  List each one with file path and line number.
+
+═══════════════════════════════════════════════════
+PHASE 2: TRINITY ORCHESTRATION VERIFICATION
+═══════════════════════════════════════════════════
+
+Trinity is the brain of the platform. Verify she has everything she needs.
+
+2A. DATA ACCESS — Can Trinity read all the data she needs?
+
+For each of these, verify there is a working query or service method Trinity can call:
+  □ Employee records (names, roles, pay rates, certifications, operating state)
+  □ Employee availability (weekly schedule preferences)
+  □ Employee behavior scores
+  □ Shift schedule (all shifts across all sites, assigned and open)
+  □ Client/site information (address, bill rate, geofence, requirements)
+  □ Clock records (in/out times, GPS coordinates, geofence status)
+  □ Time entries / approved timesheets
+  □ Invoice data (amounts, status, aging)
+  □ Payroll data (gross, net, taxes, history)
+  □ Incident reports
+  □ Credit balance (current balance, consumption rate)
+  □ Org subscription and tier (limits, features, pricing)
+  □ Org settings (which automations are enabled)
+
+For each one: find the actual service method or database query. If it doesn't exist, flag it as MISSING.
+
+2B. ACTION CAPABILITIES — Can Trinity execute these actions?
+
+For each, trace the code path from trigger to completion:
+  □ Create a shift and assign an employee
+  □ Fill an open shift by selecting the best candidate
+  □ Send a notification to a user or role
+  □ Generate an invoice from time entries
+  □ Run payroll calculations
+  □ Deduct credits from the org's balance
+  □ Record a financial processing fee
+  □ Trigger a bot (ClockBot, ReportBot, etc.)
+  □ Log an action to the audit trail
+
+For each one: trace the actual code. Does the function exist? Does it accept workspace_id? Does it handle errors? Does it log to audit trail?
+
+2C. MULTI-MODEL ORCHESTRATION — Does the triad brain work?
+
+  □ Gemini Flash is configured and callable (API key present, endpoint works)
+  □ Claude Sonnet is configured and callable
+  □ OpenAI GPT is configured and callable
+  □ Fallback chain works: if Gemini fails, does it try Claude? Then OpenAI?
+  □ Model routing logic exists: simple tasks → Gemini, complex → Claude
+  □ Token usage is tracked per request (model, tokens in/out, cost, workspace_id)
+  □ All AI calls include workspace_id in their context
+  □ All AI calls deduct credits on success (not on failure)
+  □ All AI calls have timeout handling (what if the model takes 30+ seconds?)
+  □ Rate limiting is handled (what if we hit Gemini's rate limit?)
+
+2D. EVENT AWARENESS — Does Trinity see platform events?
+
+  □ Is there an event bus or event system?
+  □ Do services emit events when things happen (clock in, shift created, invoice overdue)?
+  □ Does Trinity subscribe to and react to any events?
+  □ List every event Trinity currently reacts to
+  □ List events that SHOULD trigger Trinity but don't have handlers
+
+═══════════════════════════════════════════════════
+PHASE 3: WORKFLOW PIPELINE VERIFICATION
+═══════════════════════════════════════════════════
+
+For EACH workflow below, trace every step through the actual code. Find exactly where each pipeline completes or breaks.
+
+3A. AI SCHEDULING PIPELINE:
+  Step 1: What triggers Trinity to generate a schedule? (cron? manual? event?)
+  Step 2: Does Trinity query all open/unfilled shifts?
+  Step 3: Does Trinity query employee availability?
+  Step 4: Does Trinity query employee certifications and skills?
+  Step 5: Does Trinity query behavior scores for ranking?
+  Step 6: Does Trinity check overtime thresholds before assigning?
+  Step 7: Does Trinity actually create shift assignments in the database?
+  Step 8: Are credits deducted for the scheduling action?
+  Step 9: Are assigned employees notified?
+  Step 10: Does the schedule UI update to reflect new assignments?
+  WHERE DOES IT BREAK? ___
+  WHAT'S MISSING? ___
+
+3B. AUTO INVOICING PIPELINE:
+  Step 1: What triggers invoice generation? (cron? toggle? manual?)
+  Step 2: Does it query approved time entries for the billing period?
+  Step 3: Does it calculate hours × bill rate correctly?
+  Step 4: Does it apply service tax where required (TX yes, CA no)?
+  Step 5: Does it create the invoice record with workspace_id?
+  Step 6: Does it create invoice line items?
+  Step 7: Does it record a financial processing fee (dollar fee, NOT credit)?
+  Step 8: Does it notify the manager for review?
+  Step 9: Can the manager approve and send to client?
+  Step 10: Does the invoice page UI reflect the new invoice?
+  WHERE DOES IT BREAK? ___
+  WHAT'S MISSING? ___
+
+3C. AUTO PAYROLL PIPELINE:
+  Step 1: What triggers payroll calculation? (cron? toggle? manual?)
+  Step 2: Does it query clock records for the pay period?
+  Step 3: Does it calculate regular hours correctly?
+  Step 4: Does it calculate overtime per the correct state rules?
+        (TX = weekly >40, CA = daily >8 AND weekly >40, etc.)
+  Step 5: Does it calculate gross = (regular × rate) + (OT × rate × 1.5)?
+  Step 6: Does it calculate federal tax withholdings?
+  Step 7: Does it calculate state tax withholdings per operating state?
+  Step 8: Does it calculate SS (6.2%) + Medicare (1.45%)?
+  Step 9: Does it create payroll run + payroll entry records with workspace_id?
+  Step 10: Does it record a financial processing fee per employee?
+  Step 11: Does it send to manager approval gate?
+  Step 12: After approval, does it sync to QuickBooks (if connected)?
+  Step 13: Does the employee see the paycheck in My Paychecks?
+  WHERE DOES IT BREAK? ___
+  WHAT'S MISSING? ___
+
+3D. SHIFT REMINDERS PIPELINE:
+  Step 1: What triggers reminders? (cron checking upcoming shifts?)
+  Step 2: Does it find shifts starting within the reminder window?
+  Step 3: Does it identify the assigned employee?
+  Step 4: Does it create and send the notification?
+  Step 5: Does the notification contain correct shift details (time, site, role)?
+  WHERE DOES IT BREAK? ___
+
+3E. BREAK COMPLIANCE PIPELINE:
+  Step 1: What monitors active shifts for break compliance?
+  Step 2: Does it calculate time since last break?
+  Step 3: Does it know the correct break rules per state?
+  Step 4: Does it alert the officer when break is due?
+  Step 5: Does it alert the manager if break is missed?
+  Step 6: Is the compliance event logged?
+  WHERE DOES IT BREAK? ___
+
+3F. INCIDENT REPORT → AI ANALYSIS PIPELINE:
+  Step 1: Officer submits incident report — record created with workspace_id?
+  Step 2: "Analyze with ReportBot AI" button — what does it call?
+  Step 3: Does the AI model receive the raw report text?
+  Step 4: Does it return a polished version?
+  Step 5: Are credits deducted (10 credits)?
+  Step 6: Is the polished version saved to the incident record?
+  Step 7: Does it appear in the manager's approval queue?
+  Step 8: Can the manager approve and send to client?
+  WHERE DOES IT BREAK? ___
+
+3G. BEHAVIOR SCORING PIPELINE:
+  Step 1: What events trigger score changes (clock in on time, late, missed)?
+  Step 2: Does the scoring logic exist?
+  Step 3: Are points correctly added/deducted?
+  Step 4: Is the score record updated in the database?
+  Step 5: Does Trinity read scores when making scheduling decisions?
+  Step 6: Is the score visible on the employee profile in the UI?
+  WHERE DOES IT BREAK? ___
+
+3H. CREDIT CONSUMPTION PIPELINE:
+  Step 1: When an AI action occurs, is the credit cost known?
+  Step 2: Is the balance checked BEFORE the action executes?
+  Step 3: Are credits deducted using SELECT FOR UPDATE (locked transaction)?
+  Step 4: Is a credit_transaction record created?
+  Step 5: If credits are 0, does Trinity gracefully degrade (not crash)?
+  Step 6: Is the org notified when credits are low?
+  Step 7: Is the org notified when credits are depleted?
+  Step 8: Can the org purchase more credits?
+  WHERE DOES IT BREAK? ___
+
+3I. MONTHLY PLATFORM BILLING PIPELINE:
+  Step 1: What triggers monthly bill generation?
+  Step 2: Does it count active employees correctly (is_active=true, not is_deleted)?
+  Step 3: Does it aggregate financial processing fees for the cycle?
+  Step 4: Does it calculate employee overage charges?
+  Step 5: Does it include credit pack purchases?
+  Step 6: Does it create the platform_invoice record?
+  Step 7: Does linkFeesToBill() actually link fees to the invoice?
+  Step 8: Is the total calculated correctly (subscription + fees + overage)?
+  Step 9: For mother-orgs: does it aggregate across sub-orgs?
+  Step 10: Can the owner view the invoice?
+  WHERE DOES IT BREAK? ___
+
+═══════════════════════════════════════════════════
+PHASE 4: API ROUTE INTEGRITY
+═══════════════════════════════════════════════════
+
+4A. List every API route in the application:
+
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)\|app\.\(get\|post\|put\|patch\|delete\)" server/ --include="*.ts" --include="*.js" | grep -v "node_modules" | sort
+
+4B. For EACH route, verify these 5 things:
+  1. Does it extract workspace_id from the authenticated user?
+  2. Does every database query filter by workspace_id?
+  3. Does it have try/catch with proper error responses (not just console.log)?
+  4. Does it validate input before processing?
+  5. For mutation routes (POST/PUT/DELETE): does it log to audit trail?
+
+4C. Count the results:
+  Total routes: ___
+  Routes passing all 5 checks: ___
+  Routes missing workspace_id scoping: ___ (CRITICAL — data leaks between orgs)
+  Routes missing error handling: ___
+  Routes missing input validation: ___
+  Routes missing audit logging: ___
+
+═══════════════════════════════════════════════════
+PHASE 5: FEATURE TOGGLE VERIFICATION
+═══════════════════════════════════════════════════
+
+The Settings page has these toggles. Verify each one actually controls something:
+
+  □ Email Notifications — does toggling OFF actually stop emails?
+  □ Push Notifications — does toggling OFF stop push alerts?
+  □ SMS — does toggling OFF stop SMS?
+  □ AI Scheduling — does toggling ON actually enable Trinity scheduling?
+                     does toggling OFF actually stop it?
+  □ AI Summarization — does toggling ON generate summaries?
+  □ Auto Invoicing — does toggling ON trigger automatic invoice generation?
+  □ Auto Payroll — does toggling ON trigger automatic payroll processing?
+  □ Break Compliance — does toggling ON monitor break times?
+  □ Shift Reminders — does toggling ON send pre-shift reminders?
+
+For each toggle:
+  - Find where the setting is read in the code
+  - Trace to the feature it controls
+  - Verify the toggle actually enables/disables the feature
+  - If the toggle exists in the UI but controls nothing in the code, flag it as DISCONNECTED
+
+═══════════════════════════════════════════════════
+PHASE 6: DRIZZLE ↔ DATABASE FINAL PARITY CHECK
+═══════════════════════════════════════════════════
+
+After all the ALTER TABLE changes we just made:
+
+6A. Verify the Drizzle schema file (shared/schema.ts or wherever it lives) matches the actual database:
+  - Every table in the database must be defined in Drizzle
+  - Every column must match (name, type, nullable, default)
+  - Every index must be defined
+  - The workspace_id type must be varchar (not uuid) in Drizzle
+
+6B. Run drizzle-kit push --dry-run (if available) to see if Drizzle thinks anything needs to change. If it wants to make changes, those represent mismatches between schema and reality.
+
+6C. If mismatches exist, update the Drizzle schema to match the database — NOT the other way around. The database is the source of truth after today's work.
+
+═══════════════════════════════════════════════════
+PHASE 7: TRINITY PERSONALITY & INTELLIGENCE CHECK
+═══════════════════════════════════════════════════
+
+7A. Does Trinity have a system prompt / personality configuration?
+  - Find the file that defines Trinity's personality, tone, and behavior
+  - If it doesn't exist, flag as MISSING — Trinity needs a personality.ts file
+  - Trinity should speak with warmth, use emojis naturally, use the owner's name,
+    speak in direct confident sentences, show enthusiasm for wins, empathy for problems
+
+7B. Does Trinity have access to org-specific context when she speaks?
+  - Can she reference the org name, owner name, current metrics?
+  - Does she know which state the org operates in?
+  - Does she know the subscription tier and credit balance?
+
+7C. Are Trinity's emojis stored in an emoji map (not hardcoded in source files)?
+  - Emojis in .ts source files can cause encoding errors
+  - They should be in a constants file or database config
+
+7D. Does Trinity's system prompt get injected into EVERY AI call?
+  - Find every place where Gemini/Claude/OpenAI is called
+  - Verify the system prompt includes Trinity's personality
+  - If some calls skip the personality prompt, Trinity will sound inconsistent
+
+═══════════════════════════════════════════════════
+PHASE 8: COMPILE FINAL REPORT
+═══════════════════════════════════════════════════
+
+After running all 7 phases, compile this report:
+
+DATABASE HEALTH (from today's work):
+  Tables cleaned: 589
+  NOT NULL constraints applied: ___
+  Type mismatches fixed: ___
+  Billing chains verified: 3 workspaces
+
+SILENT FAILURES:
+  Total silent failure points: ___
+  Critical (financial): ___
+  High (user-facing): ___
+  Medium (background): ___
+
+TRINITY ORCHESTRATION:
+  Data access methods working: ___ / 13
+  Action capabilities working: ___ / 9
+  Multi-model triad verified: YES / NO
+  Event awareness: ___ events handled
+
+WORKFLOW PIPELINES:
+  AI Scheduling: COMPLETE / BREAKS AT STEP ___
+  Auto Invoicing: COMPLETE / BREAKS AT STEP ___
+  Auto Payroll: COMPLETE / BREAKS AT STEP ___
+  Shift Reminders: COMPLETE / BREAKS AT STEP ___
+  Break Compliance: COMPLETE / BREAKS AT STEP ___
+  Incident → AI: COMPLETE / BREAKS AT STEP ___
+  Behavior Scoring: COMPLETE / BREAKS AT STEP ___
+  Credit Consumption: COMPLETE / BREAKS AT STEP ___
+  Monthly Billing: COMPLETE / BREAKS AT STEP ___
+
+API ROUTES:
+  Total routes: ___
+  Fully passing: ___
+  Missing workspace scoping: ___
+  Missing error handling: ___
+
+FEATURE TOGGLES:
+  Connected and working: ___ / 9
+  Disconnected (UI only): ___
+
+DRIZZLE PARITY:
+  Mismatches remaining: ___
+
+TRINITY PERSONALITY:
+  System prompt exists: YES / NO
+  Emoji map exists: YES / NO
+  Personality consistent across calls: YES / NO
+
+PRIORITY FIX LIST (ordered by impact):
+  1. ___
+  2. ___
+  3. ___
+  ...
+
+SHOW ME THE COMPLETE REPORT. Do not summarize. I need every detail.

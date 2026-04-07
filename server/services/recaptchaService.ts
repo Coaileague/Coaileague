@@ -6,6 +6,8 @@
  * - Score 1.0 = definitely human
  * - Threshold of 0.5 is recommended (we use 0.3 to be lenient)
  */
+import { createLogger } from '../lib/logger';
+const log = createLogger('recaptchaService');
 
 const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '';
 const SCORE_THRESHOLD = 0.3; // Low threshold - only blocks obvious bots
@@ -43,7 +45,7 @@ export async function verifyRecaptcha(
   const headerValid = bypassEnabled && diagnosticsHeader === bypassSecret;
   
   if (headerValid) {
-    console.log('[reCAPTCHA] Diagnostics bypass active - secret verified');
+    log.info('[reCAPTCHA] Diagnostics bypass active - secret verified');
     return {
       success: true,
       score: 1.0,
@@ -52,9 +54,13 @@ export async function verifyRecaptcha(
     };
   }
   
-  // If no secret key configured, skip verification (development mode)
   if (!RECAPTCHA_SECRET_KEY) {
-    console.log('[reCAPTCHA] No secret key configured - allowing request');
+    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.REPLIT_DEPLOYMENT;
+    if (isProduction) {
+      log.warn('[reCAPTCHA] WARNING: No secret key configured in PRODUCTION - bot protection disabled. Set RECAPTCHA_SECRET_KEY for security.');
+    } else {
+      log.info('[reCAPTCHA] No secret key configured (development) - allowing request');
+    }
     return {
       success: true,
       score: 1.0,
@@ -65,7 +71,7 @@ export async function verifyRecaptcha(
 
   // If no token provided, allow but log (graceful degradation)
   if (!token) {
-    console.log('[reCAPTCHA] No token provided - allowing request (graceful degradation)');
+    log.info('[reCAPTCHA] No token provided - allowing request (graceful degradation)');
     return {
       success: true,
       score: 0.7, // Neutral score
@@ -88,7 +94,7 @@ export async function verifyRecaptcha(
     const data: RecaptchaResponse = await response.json();
 
     if (!data.success) {
-      console.warn('[reCAPTCHA] Verification failed:', data['error-codes']);
+      log.warn('[reCAPTCHA] Verification failed:', data['error-codes']);
       return {
         success: false,
         score: 0,
@@ -102,12 +108,12 @@ export async function verifyRecaptcha(
 
     // Log suspicious activity
     if (!isHuman) {
-      console.warn(`[reCAPTCHA] Suspicious activity detected - Score: ${score}, Action: ${data.action}`);
+      log.warn(`[reCAPTCHA] Suspicious activity detected - Score: ${score}, Action: ${data.action}`);
     }
 
     // Verify action matches if expected action provided
     if (expectedAction && data.action !== expectedAction) {
-      console.warn(`[reCAPTCHA] Action mismatch - Expected: ${expectedAction}, Got: ${data.action}`);
+      log.warn(`[reCAPTCHA] Action mismatch - Expected: ${expectedAction}, Got: ${data.action}`);
       // Still allow but log the mismatch
     }
 
@@ -118,7 +124,7 @@ export async function verifyRecaptcha(
       action: data.action,
     };
   } catch (error) {
-    console.error('[reCAPTCHA] Server error:', error);
+    log.error('[reCAPTCHA] Server error:', error);
     // Allow on error (don't block legitimate users due to service issues)
     return {
       success: true,

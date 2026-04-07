@@ -1,12 +1,16 @@
 import { Router, Request, Response } from "express";
+import { requireAuth } from '../auth';
 import { db } from "../db";
 import { employees, users, timeEntries } from "@shared/schema";
 import { eq, and, desc, sql, count, sum, gte } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('GamificationRoutes');
+
 
 const router = Router();
 
 // Get user's gamification stats
-router.get("/stats", async (req: Request, res: Response) => {
+router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
     if (!user?.id) {
@@ -14,8 +18,13 @@ router.get("/stats", async (req: Request, res: Response) => {
     }
     
     // Platform admins can view any workspace via query param, or their own if set
-    const isPlatformAdmin = ['root_admin', 'super_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.workspaceId;
+    const isPlatformAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
+    const queryWorkspaceId = req.query.workspaceId as string;
+    const workspaceId = (isPlatformAdmin && queryWorkspaceId) || (req as any).workspaceId || user?.workspaceId;
+    
+    if (workspaceId && workspaceId !== (req as any).workspaceId && !isPlatformAdmin) {
+      return res.status(403).json({ error: "Unauthorized workspace access" });
+    }
     
     if (!workspaceId) {
       // For platform admins without a workspace context, return default gamification data
@@ -31,7 +40,7 @@ router.get("/stats", async (req: Request, res: Response) => {
           message: 'No workspace context. Select a workspace to view gamification stats.'
         });
       }
-      return res.status(401).json({ error: "Workspace context required" });
+      return res.status(403).json({ error: "Workspace context required" });
     }
 
     // Get employee record
@@ -81,21 +90,20 @@ router.get("/stats", async (req: Request, res: Response) => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    // Get time entries for streak calculation
     const recentEntriesResult = await db
       .select({ 
-        date: timeEntries.date,
-        totalMinutes: sum(timeEntries.duration)
+        date: sql<string>`DATE(${timeEntries.clockIn})::text`,
+        totalMinutes: sql<string>`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float) * 60), 0)`
       })
       .from(timeEntries)
       .where(
         and(
           eq(timeEntries.employeeId, employee?.id || ''),
-          gte(timeEntries.date, weekAgo.toISOString().split('T')[0])
+          gte(timeEntries.clockIn, weekAgo)
         )
       )
-      .groupBy(timeEntries.date)
-      .orderBy(desc(timeEntries.date));
+      .groupBy(sql`DATE(${timeEntries.clockIn})`)
+      .orderBy(sql`DATE(${timeEntries.clockIn}) DESC`);
 
     // Calculate streak (consecutive days with time entries)
     let streak = 0;
@@ -112,14 +120,12 @@ router.get("/stats", async (req: Request, res: Response) => {
       }
     }
 
-    // Calculate total hours for points
     const totalHoursResult = await db
-      .select({ totalMinutes: sum(timeEntries.duration) })
+      .select({ totalHours: sql<string>`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float)), 0)` })
       .from(timeEntries)
       .where(eq(timeEntries.employeeId, employee?.id || ''));
 
-    const totalMinutes = Number(totalHoursResult[0]?.totalMinutes || 0);
-    const totalHours = Math.floor(totalMinutes / 60);
+    const totalHours = Math.floor(parseFloat(String(totalHoursResult[0]?.totalHours || '0')));
     
     // Points calculation: 10 points per hour + streak bonuses
     const basePoints = totalHours * 10;
@@ -129,16 +135,15 @@ router.get("/stats", async (req: Request, res: Response) => {
     // Level calculation: every 500 points = 1 level
     const level = Math.floor(points / 500) + 1;
 
-    // Get rank among workspace employees
     const allEmployeesResult = await db
       .select({
         employeeId: timeEntries.employeeId,
-        totalMinutes: sum(timeEntries.duration)
+        totalHoursSum: sql<string>`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float)), 0)`
       })
       .from(timeEntries)
       .where(eq(timeEntries.workspaceId, workspaceId))
       .groupBy(timeEntries.employeeId)
-      .orderBy(desc(sum(timeEntries.duration)));
+      .orderBy(sql`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float)), 0) DESC`);
 
     const rank = allEmployeesResult.findIndex(e => e.employeeId === employee?.id) + 1;
     const totalUsers = allEmployeesResult.length || 1;
@@ -208,38 +213,46 @@ router.get("/stats", async (req: Request, res: Response) => {
       recentAchievements,
     });
   } catch (error) {
-    console.error("[Gamification] Error fetching stats:", error);
+    log.error("[Gamification] Error fetching stats:", error);
     res.status(500).json({ error: "Failed to fetch gamification stats" });
   }
 });
 
 // Get leaderboard
-router.get("/leaderboard", async (req: Request, res: Response) => {
+router.get("/leaderboard", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
     if (!user?.id || !user?.workspaceId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Get all employees with their time entries
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
     const leaderboardResult = await db
       .select({
         employeeId: employees.id,
         firstName: employees.firstName,
         lastName: employees.lastName,
         userId: employees.userId,
-        totalMinutes: sql<number>`COALESCE(SUM(${timeEntries.duration}), 0)::int`
+        totalHoursSum: sql<string>`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float)), 0)`,
+        recentHours: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntries.date} >= ${thirtyDaysAgo.toISOString()} THEN CAST(${timeEntries.totalHours} AS float) ELSE 0 END), 0)`,
+        priorHours: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntries.date} >= ${sixtyDaysAgo.toISOString()} AND ${timeEntries.date} < ${thirtyDaysAgo.toISOString()} THEN CAST(${timeEntries.totalHours} AS float) ELSE 0 END), 0)`,
       })
       .from(employees)
       .leftJoin(timeEntries, eq(employees.id, timeEntries.employeeId))
       .where(eq(employees.workspaceId, user.workspaceId))
       .groupBy(employees.id, employees.firstName, employees.lastName, employees.userId)
-      .orderBy(desc(sql`COALESCE(SUM(${timeEntries.duration}), 0)`))
+      .orderBy(sql`COALESCE(SUM(CAST(${timeEntries.totalHours} AS float)), 0) DESC`)
       .limit(10);
 
     const users = leaderboardResult.map((entry, index) => {
-      const totalHours = Math.floor(Number(entry.totalMinutes || 0) / 60);
+      const totalHours = Math.floor(parseFloat(String(entry.totalHoursSum || '0')));
       const points = totalHours * 10;
+      const recent = parseFloat(String(entry.recentHours || '0'));
+      const prior = parseFloat(String(entry.priorHours || '0'));
+      const trend = recent > prior ? 'up' : recent < prior ? 'down' : 'same';
       
       return {
         id: entry.employeeId,
@@ -247,20 +260,20 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
         points,
         rank: index + 1,
         avatar: null,
-        trend: Math.random() > 0.5 ? 'up' : 'same',
+        trend,
         isCurrentUser: entry.userId === user.id,
       };
     });
 
     res.json({ users });
   } catch (error) {
-    console.error("[Gamification] Error fetching leaderboard:", error);
+    log.error("[Gamification] Error fetching leaderboard:", error);
     res.status(500).json({ error: "Failed to fetch leaderboard" });
   }
 });
 
 // Award points to user
-router.post("/award-points", async (req: Request, res: Response) => {
+router.post("/award-points", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
     if (!user?.id) {
@@ -270,11 +283,11 @@ router.post("/award-points", async (req: Request, res: Response) => {
     const { points, reason } = req.body;
     
     // Log the point award - in production, would persist to DB
-    console.log(`[Gamification] Awarded ${points} points to user ${user.id}: ${reason}`);
+    log.info(`[Gamification] Awarded ${points} points to user ${user.id}: ${reason}`);
 
     res.json({ success: true, message: `Awarded ${points} points` });
   } catch (error) {
-    console.error("[Gamification] Error awarding points:", error);
+    log.error("[Gamification] Error awarding points:", error);
     res.status(500).json({ error: "Failed to award points" });
   }
 });

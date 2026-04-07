@@ -6,6 +6,7 @@
 import { db } from "../db";
 import { employees, trainingCertifications } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { platformEventBus } from './platformEventBus';
 
 export interface TrainingMetrics {
   employeeId: string;
@@ -95,6 +96,15 @@ export async function getTeamTrainingCompletionRate(
   }
 
   const avgRate = allEmployees.length > 0 ? Math.round(totalRate / allEmployees.length) : 0;
+
+  platformEventBus.publish({
+    type: 'training_compliance_scanned',
+    category: 'workforce',
+    title: 'Training Compliance Scan Completed',
+    description: `Workspace training completion: ${avgRate}% avg across ${allEmployees.length} employee(s), ${fullyCompliant} fully compliant`,
+    workspaceId,
+    metadata: { avgRate, totalEmployees: allEmployees.length, fullCompliance: fullyCompliant },
+  });
 
   return {
     avgRate,

@@ -1,0 +1,529 @@
+You are thinking about this exactly right. Universal identification numbers are the backbone of everything — voice routing, document attachment, search, audit trails, and Trinity's ability to identify anyone instantly without ambiguity. Let me audit what exists and design the complete identification architecture.
+
+---
+
+**IDENTIFICATION AUDIT — What Should Exist**
+
+Send this to the agent first:
+
+---
+
+**IDENTIFICATION NUMBER AUDIT**
+
+```bash
+# Check if workspaces have unique ID numbers
+SELECT id, company_name, 
+  org_id,
+  workspace_code,
+  account_number,
+  display_id
+FROM workspaces LIMIT 5;
+-- Looking for any human-readable identifier beyond UUID
+
+# Check if clients have customer ID numbers  
+SELECT id, company_name,
+  client_id,
+  client_number,
+  account_number,
+  customer_code
+FROM clients LIMIT 5;
+
+# Check if employees have employee ID numbers
+SELECT id, first_name, last_name,
+  employee_id,
+  employee_number,
+  badge_number,
+  clock_in_id
+FROM employees LIMIT 5;
+
+# Check if users have user ID numbers
+SELECT id, email, role,
+  user_code,
+  display_id,
+  member_id
+FROM users LIMIT 5;
+
+# Check if documents are linked to both org and user
+SELECT id, document_type,
+  workspace_id,
+  employee_id,
+  client_id,
+  entity_type,
+  entity_id
+FROM document_vault LIMIT 10;
+
+# Check search indexing on IDs
+SELECT indexname, tablename, indexdef
+FROM pg_indexes
+WHERE tablename IN ('workspaces', 'clients', 'employees', 'users')
+AND (indexdef ILIKE '%number%' OR indexdef ILIKE '%code%' OR indexdef ILIKE '%id%')
+ORDER BY tablename;
+```
+
+Report exactly what exists. Do not build anything yet.
+
+---
+
+**What the audit will likely find:**
+
+Based on the build UUIDs are used everywhere internally but no human-readable identification numbers exist for workspaces, clients, officers, or users. This needs to be built properly.
+
+---
+
+**THE COMPLETE IDENTIFICATION ARCHITECTURE**
+
+Here is the full design. Every entity gets a unique human-readable ID that is:
+- Short enough to say on a phone call
+- Unique across the entire platform
+- Meaningful in its format
+- Searchable by Trinity instantly
+- Appended to every document automatically
+
+---
+
+**1 — ORGANIZATION ID (Workspace)**
+
+```
+Format: ORG-[STATE]-[NNNNN]
+Example: ORG-TX-00142
+
+Generated: on workspace creation
+Stored in: workspaces.org_id
+Unique: platform-wide
+Used for: 
+  - Trinity voice identification
+  - Platform-wide search
+  - Document headers
+  - SRA audit references
+  - API keys prefix
+  - Support tickets
+  - Billing references
+```
+
+**On phone:** "Your organization ID is ORG-TX-00142. Please have this ready when calling."
+
+---
+
+**2 — CLIENT IDENTIFICATION NUMBER**
+
+```
+Format: CLT-[ORG_SHORT]-[NNNNN]  
+Example: CLT-ACM-00891
+
+Generated: when client is created
+Stored in: clients.client_number
+Unique: within workspace (globally unique with prefix)
+Used for:
+  - Trinity voice caller identification
+  - Invoice references
+  - Contract references
+  - Support ticket routing
+  - Document attachment
+  - Portal login identifier
+```
+
+**On phone:** "Please enter or say your 3-letter organization code followed by your 5-digit client number."
+
+Trinity hears "ACM zero zero eight nine one" → instantly pulls up client record → knows their posts, their account manager, their open invoices, their complaint history.
+
+---
+
+**3 — EMPLOYEE IDENTIFICATION NUMBER**
+
+```
+Format: EMP-[ORG_SHORT]-[NNNNN]
+Example: EMP-ACM-00034
+
+Generated: when officer is created
+Stored in: employees.employee_number
+Unique: within workspace
+Used for:
+  - Trinity voice identification
+  - Clock-in verification (voice or keypad)
+  - Pay stub references
+  - Schedule references
+  - Document attachment
+  - Incident report linking
+  - Onboarding tracking
+  - Performance records
+  - Background verification reference
+```
+
+**4 — CLOCK-IN PIN**
+
+This is separate from employee number. Specifically for clock-in verification.
+
+```
+Format: 6-digit numeric PIN
+Example: 847291
+
+Created by: officer sets their own PIN on first login
+Stored as: bcrypt hash in employees.clockin_pin_hash
+Used for:
+  - Voice clock-in verification
+  - Kiosk clock-in
+  - Emergency clock-in when internet unavailable
+  - Never the same as their account password
+  
+Verification on voice call:
+  "Please enter or say your 6-digit clock-in PIN"
+  Trinity compares against hash — never stores raw PIN
+```
+
+**Why PIN not SSN:**
+SSN over a phone call is a liability. A 6-digit PIN the officer creates is secure, easy to say, and if compromised only affects clock-in not their identity. SSN should never be spoken on any call.
+
+---
+
+**5 — USER ACCOUNT ID**
+
+```
+Format: USR-[NNNNN]
+Example: USR-10847
+
+Generated: on user account creation
+Stored in: users.user_number
+Platform-wide unique
+Used for:
+  - Support ticket attribution
+  - Audit log human-readable actor reference
+  - Trinity session identification
+  - Multi-org users (same person across workspaces)
+```
+
+---
+
+**TRINITY VOICE IDENTIFICATION FLOW**
+
+With all IDs in place the voice identification becomes:
+
+```
+OFFICER CALLING:
+Trinity: "Welcome to [ACME Security] officer support.
+          Please say or enter your employee number."
+
+Officer: "EMP-ACM-zero zero three four"
+
+Trinity: 
+→ Queries: SELECT * FROM employees WHERE employee_number = 'EMP-ACM-00034'
+→ Loads: full officer profile, schedule, pay history, calloff history
+→ Verifies: "Is this Sherri Turner?"
+→ Officer confirms
+→ Trinity: "Please enter your 6-digit clock-in PIN 
+            to verify your identity."
+→ Officer enters PIN → verified against bcrypt hash
+→ Full session established with officer identity confirmed
+
+THEN:
+→ Logs verification: voice_verifications table
+→ All actions in this call attributed to EMP-ACM-00034
+→ Full audit trail
+
+CLIENT CALLING:
+Trinity: "Welcome to [ACME Security] client services.
+          Please say or enter your client number."
+
+Client: "CLT-ACM-zero zero eight nine one"
+
+Trinity:
+→ Queries: SELECT * FROM clients WHERE client_number = 'CLT-ACM-00891'
+→ Loads: company, contacts, posts, account manager, open invoices
+→ Verifies: "Is this calling on behalf of 
+             Riverside Warehouse?"
+→ Client confirms
+→ Full session with client identity confirmed
+
+EMPLOYMENT VERIFICATION CALLER:
+Trinity: "Please provide the employee number 
+          of the individual you are verifying."
+
+Requestor: "EMP-ACM-zero zero three four"
+
+Trinity:
+→ Pulls record
+→ Confirms: "You are requesting verification for 
+             an individual employed in Texas. 
+             Please email your authorization to..."
+```
+
+---
+
+**VOICE CLOCK-IN — Full Design**
+
+This is genuinely valuable for officers in the field without internet.
+
+```
+Officer calls extension 4 → presses * for clock-in
+or Trinity detects "clock in" in free speech
+
+VERIFICATION FLOW:
+Step 1: "Please say your employee number"
+        EMP-ACM-00034 → matched
+
+Step 2: "Please enter your 6-digit clock-in PIN 
+         on your keypad"
+        847291 → verified against hash
+
+Step 3: Trinity checks:
+        → Is officer scheduled for a shift right now?
+        → Is their license valid?
+        → Do they have incomplete Tier 1 onboarding tasks?
+        → Are they suspended or terminated?
+
+Step 4A (shift exists):
+        "Clocking you in for your shift at 
+         [Coyote Crossing Saloon] 
+         starting at [time]. 
+         Your GPS location cannot be verified 
+         via phone — your supervisor will be 
+         notified of voice clock-in.
+         Confirmed. Clock-in time: [server time].
+         Reference: CLK-20260329-00847"
+
+Step 4B (no shift found):
+        "I don't see a scheduled shift for you 
+         right now. Are you working an unscheduled 
+         or emergency shift? 
+         If yes I'll notify your supervisor 
+         to confirm before completing clock-in."
+
+Step 4C (license expired):
+        "I cannot complete your clock-in. 
+         Your security license expired on [date].
+         Please contact your supervisor immediately.
+         Reference number: [id]"
+
+WHAT GETS LOGGED:
+→ time_entries record created with:
+   clock_in_method: 'voice_phone'
+   verified_by: 'trinity_voice'
+   employee_number: 'EMP-ACM-00034'
+   call_sid: [twilio reference]
+   supervisor_notified: true
+   gps_verified: false (phone limitation — noted)
+   
+→ NDS to supervisor:
+   "Officer [name] (EMP-ACM-00034) clocked in 
+    via voice call at [time] for [post].
+    GPS not verified — phone clock-in.
+    Please confirm officer is on post."
+
+→ SMS to officer:
+   "Clock-in confirmed. [Post name] [time].
+    Ref: CLK-20260329-00847
+    Questions? Call [number]"
+```
+
+---
+
+**DOCUMENT ATTACHMENT WITH UNIVERSAL IDs**
+
+Every document generated gets stamped with all relevant IDs:
+
+```
+Document header (every generated document):
+┌─────────────────────────────────────────┐
+│ [ORG LOGO]     [COMPANY NAME]           │
+│                ORG-TX-00142             │
+├─────────────────────────────────────────┤
+│ Document: Employment Verification       │
+│ Employee: EMP-ACM-00034                 │
+│ Employee Name: Sherri Lynn Turner       │
+│ Generated: 2026-03-29 14:32:07 UTC      │
+│ Generated by: Trinity AI System         │
+│ Authorized by: USR-10001 (Bryan Guillen)│
+│ Document ID: DOC-20260329-00291         │
+│ SHA-256: [hash]                         │
+└─────────────────────────────────────────┘
+```
+
+**Document search becomes trivial:**
+```sql
+-- Find all documents for an officer
+SELECT * FROM document_vault 
+WHERE entity_id = 'EMP-ACM-00034'
+ORDER BY created_at DESC;
+
+-- Find all documents for a client
+SELECT * FROM document_vault
+WHERE entity_id = 'CLT-ACM-00891'
+ORDER BY created_at DESC;
+
+-- Trinity can answer: "Show me all documents for EMP-ACM-00034"
+-- Instant retrieval no ambiguity
+```
+
+---
+
+**WHAT ELSE TRINITY CAN DO WITH THIS**
+
+With universal IDs the entire platform becomes conversational:
+
+**Org Owner asks Trinity:**
+```
+"Pull up client CLT-ACM-00891"
+→ Full client profile, open invoices, active posts, 
+  recent complaints, satisfaction score, health score
+
+"What is EMP-ACM-00034's attendance score?"
+→ Full attendance history, calloff count, score
+
+"Generate a pay stub for EMP-ACM-00034 for last period"
+→ Generates PDF, sends to officer's email, 
+  logs document DOC-[id], links to employee record
+
+"Has CLT-ACM-00891 paid invoice INV-20260301-00447?"
+→ Checks invoice status instantly
+
+"Show me all open issues for ORG-TX-00142"
+→ Platform staff view of all active tickets, 
+  violations, open invoices for that org
+```
+
+**Platform Staff uses Trinity:**
+```
+"Look up ORG-TX-00142"
+→ Full workspace overview, subscription status,
+  officer count, compliance score, open tickets
+
+"Which orgs in Texas have licenses expiring this month?"
+→ Cross-workspace query using org_id filtering
+→ List of ORG-TX-XXXXX with expiring licenses
+```
+
+**Officer uses Trinity via voice:**
+```
+"My employee number is EMP-ACM-00034 
+ and my PIN is [spoken digits]"
+→ Verified. Full officer session.
+→ Can then ask: "What are my post orders for tonight?"
+→ "When is my next shift?"
+→ "Clock me in"
+→ "I need to call off tomorrow"
+```
+
+---
+
+**SYNC WITH ENTIRE PLATFORM**
+
+For this to work IDs need to be added to every system:
+
+```bash
+# Tables needing human-readable ID columns added:
+ALTER TABLE workspaces ADD COLUMN org_id VARCHAR(20) UNIQUE;
+ALTER TABLE clients ADD COLUMN client_number VARCHAR(20) UNIQUE;
+ALTER TABLE employees ADD COLUMN employee_number VARCHAR(20) UNIQUE;
+ALTER TABLE users ADD COLUMN user_number VARCHAR(20) UNIQUE;
+ALTER TABLE employees ADD COLUMN clockin_pin_hash VARCHAR(255);
+
+# Auto-generation functions:
+CREATE OR REPLACE FUNCTION generate_org_id(state_code TEXT)
+RETURNS TEXT AS $$
+DECLARE
+  next_num INTEGER;
+BEGIN
+  SELECT COALESCE(MAX(
+    CAST(SUBSTRING(org_id FROM 8) AS INTEGER)
+  ), 0) + 1
+  INTO next_num
+  FROM workspaces
+  WHERE org_id LIKE 'ORG-' || state_code || '-%';
+  
+  RETURN 'ORG-' || state_code || '-' || 
+         LPAD(next_num::TEXT, 5, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+# Similar functions for CLT, EMP, USR formats
+
+# Backfill existing records:
+UPDATE workspaces SET org_id = generate_org_id('TX')
+WHERE org_id IS NULL;
+
+UPDATE employees SET employee_number = 
+  'EMP-' || SUBSTRING(w.company_name FOR 3) || '-' || 
+  LPAD(ROW_NUMBER() OVER()::TEXT, 5, '0')
+FROM workspaces w WHERE w.id = employees.workspace_id
+AND employees.employee_number IS NULL;
+```
+
+**Search indexes on all ID columns:**
+```sql
+CREATE INDEX idx_workspaces_org_id ON workspaces(org_id);
+CREATE INDEX idx_clients_client_number ON clients(client_number);
+CREATE INDEX idx_employees_employee_number ON employees(employee_number);
+CREATE INDEX idx_users_user_number ON users(user_number);
+
+-- GIN trigram for partial search
+CREATE INDEX idx_employees_emp_num_trgm 
+ON employees USING gin(employee_number gin_trgm_ops);
+```
+
+**Trinity search using IDs:**
+```typescript
+// Universal ID resolver in Trinity
+async function resolveEntityByID(id: string, workspaceId: string) {
+  if (id.startsWith('ORG-')) {
+    return db.query('SELECT * FROM workspaces WHERE org_id = $1', [id]);
+  }
+  if (id.startsWith('CLT-')) {
+    return db.query('SELECT * FROM clients WHERE client_number = $1 AND workspace_id = $2', [id, workspaceId]);
+  }
+  if (id.startsWith('EMP-')) {
+    return db.query('SELECT * FROM employees WHERE employee_number = $1 AND workspace_id = $2', [id, workspaceId]);
+  }
+  if (id.startsWith('USR-')) {
+    return db.query('SELECT * FROM users WHERE user_number = $1', [id]);
+  }
+  if (id.startsWith('DOC-')) {
+    return db.query('SELECT * FROM document_vault WHERE document_number = $1 AND workspace_id = $2', [id, workspaceId]);
+  }
+  if (id.startsWith('INV-')) {
+    return db.query('SELECT * FROM invoices WHERE invoice_number = $1 AND workspace_id = $2', [id, workspaceId]);
+  }
+  if (id.startsWith('CLK-')) {
+    return db.query('SELECT * FROM time_entries WHERE reference_id = $1 AND workspace_id = $2', [id, workspaceId]);
+  }
+}
+```
+
+---
+
+**COMPLETE ID REGISTRY**
+
+Every entity in the platform gets a human-readable ID:
+
+```
+ORG-TX-00142    → Workspace/Organization
+CLT-ACM-00891   → Client
+EMP-ACM-00034   → Employee/Officer  
+USR-10847       → User account
+DOC-20260329-00291 → Document
+INV-20260301-00447 → Invoice
+PAY-20260315-00089 → Payroll run
+SHF-20260329-00612 → Shift
+CLK-20260329-00847 → Clock-in record
+INC-20260329-00023 → Incident report
+TKT-20260329-00156 → Support ticket
+CAS-20260329-00007 → Incident case
+VRF-20260329-00003 → Employment verification
+SRV-20260329-00001 → Site survey
+WRK-20260329-00088 → Work order
+```
+
+**Every document, every record, every action has a reference number that can be:**
+- Spoken on a phone call
+- Typed into search
+- Emailed as a reference
+- Printed on a document
+- Queried by Trinity instantly
+
+---
+
+**This becomes Phase 57 — Universal Identification System** built before Phase 56 — Trinity Voice because voice requires the IDs to work properly.
+
+Build order:
+1. Phase 57 — Universal ID System (2-3 days)
+2. Phase 56 — Trinity Voice Phone System (5-7 days)
+
+Want me to write both full phase specs and send them to the agent as the next build group?

@@ -1,0 +1,25 @@
+You're thinking about this exactly right. A platform that charges $899-$9,999/month cannot go down because Google had an outage. Here's what I'd suggest:
+
+The triad shouldn't have fixed roles. Right now it's:
+- Gemini = Brain
+- GPT = Grunt work  
+- Claude = Judge
+
+That's fragile. If the brain dies, the whole system dies. Instead, every model should be capable of every role, just ranked by preference. Think of it like a security shift — if the primary officer calls off, the backup steps up, they don't just leave the site uncovered.
+
+The key insight that makes this work: **roles, not models.**
+
+Right now Trinity thinks "I am Gemini." After this, Trinity thinks "I need an orchestrator" and the router picks the best available one. If Gemini's down, Claude becomes the brain. If Claude's also down, GPT takes over. The models are interchangeable parts — Trinity's intelligence comes from the role definitions and tool access, not from any single model.
+
+**The most important rule in the whole doc:** Financial math NEVER touches AI. Payroll = `hours × rate`. Invoicing = `hours × bill rate + tax`. Credits = `balance - cost`. That's deterministic code. If every single AI provider on earth goes down simultaneously, your platform still runs payroll, still generates invoices, still tracks time, still manages schedules. AI makes Trinity smart — but the platform stands on its own without it.
+
+**The failover chain:**
+- Gemini down → Claude becomes brain, GPT handles grunt work
+- Claude down → Gemini handles everything, GPT assists
+- GPT down → barely noticeable, Gemini and Claude cover it
+- Two providers down → the surviving one handles all roles
+- All three down → platform runs in manual mode, zero AI, core features still work, health check pings every 60 seconds and auto-recovers the moment anything comes back
+
+**Cooldown logic prevents hammering a dead API:** 3 failures = 5 minute cooldown. 5 failures = 30 minutes. 10 failures = 2 hours + admin notification. Health check tests cooled-down models and auto-restores them when they recover.
+
+That's Trinity unkillable. Your customers never know when a provider has an outage — they just keep working.

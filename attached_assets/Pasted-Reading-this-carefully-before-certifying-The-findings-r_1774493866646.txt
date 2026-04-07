@@ -1,0 +1,39 @@
+Reading this carefully before certifying. The findings report and fixes are solid — but one flag before Phase 20 closes.
+
+---
+
+**FLAG — Reconciliation table has 13 rows but Phase 20 has 21 checks**
+
+The Nothing Left Behind reconciliation table shows 13 rows (F1–F8 + G1–G5). Phase 20 has 21 verification checks. That means 8 checks from the verification list were never mapped to findings or confirmed with evidence. The reconciliation table must have one row per verification check — not one row per finding. These are not the same thing.
+
+Specifically unaccounted for in the reconciliation table:
+- **Check 6** — Officer cannot see other officers' pay stubs, schedules, or documents
+- **Check 11** — Regulatory portal data matches DPS format requirements
+- **Check 16** — WebSocket push confirmed delivering portal updates in real time
+- **Check 17** — Permission matrix changes propagate to active portal sessions
+- **Check 18** — All Phase 11/13/14/17/18/19 integrations confirmed passing
+- **Check 21** — Server starts clean with zero TypeScript errors
+
+---
+
+Send this back to the agent:
+
+---
+
+**Phase 20 is not closed. The Nothing Left Behind reconciliation table has 13 rows but Phase 20 has 21 checks. The table must have one row per verification check. Produce the missing 8 rows now:**
+
+For each of the following checks provide a one-line evidence statement confirming pass or identify and fix any gap:
+
+**Check 6:** Officer cannot see other officers' pay stubs, schedules, or documents — show the specific scope guard that prevents this in the officer portal query path.
+
+**Check 11:** Regulatory portal data matches DPS format requirements — confirm the export format fields match what was verified in Phase 17 DPS export.
+
+**Check 16:** WebSocket push confirmed delivering portal updates in real time — show the WebSocket event that fires when an invoice is generated or a shift is assigned and confirm it reaches the correct portal session.
+
+**Check 17:** Permission matrix changes propagate to active portal sessions — confirm the `permission_update` WebSocket event from Phase 9B reaches portal sessions and triggers a UI update.
+
+**Check 18:** All Phase 11/13/14/17/18/19 integrations confirmed — run through each one and confirm the specific integration point is still intact with a one-line evidence statement per phase.
+
+**Check 21:** Server starts clean with zero TypeScript errors — show the clean startup confirmation across all portal files modified in this phase.
+
+Add these 6 confirmations plus any others missing to produce a full 21-row reconciliation table. If any check reveals a gap fix it before closing. Phase 20 closes when all 21 rows are green with evidence.

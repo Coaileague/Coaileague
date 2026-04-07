@@ -1,17 +1,10 @@
 import { useState, useEffect } from "react";
 import { Bot, Loader2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,13 +28,14 @@ export function CoAIleagueAiTester() {
   // Fetch all workspaces user has access to
   const { data: workspaces = [] } = useQuery({
     queryKey: ['/api/workspaces/all'],
-    enabled: !!user && open, // Only fetch when dialog opens
+    enabled: !!user && open,
+    queryFn: () => apiFetch('/api/workspaces/all', AnyResponse),
   });
 
   // Switch workspace mutation
   const switchWorkspaceMutation = useMutation({
     mutationFn: async (workspaceId: string) => {
-      await apiRequest(`/api/workspace/switch/${workspaceId}`, "POST");
+      await apiRequest("POST", `/api/workspace/switch/${workspaceId}`);
       // CRITICAL: invalidateQueries AND WAIT for fresh data
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       // Give React Query time to refetch (it's triggered by invalidation above)
@@ -87,7 +81,7 @@ export function CoAIleagueAiTester() {
         throw new Error("Please select a workspace first using the workspace switcher");
       }
       
-      const response = await apiRequest("/api/support/helpos-chat", "POST", {
+      const response = await apiRequest("POST", "/api/support/helpos-chat", {
         message: testMessage,
         // Always send workspace ID if user is authenticated
         ...(workspaceId ? { workspaceId } : {}),
@@ -118,11 +112,11 @@ export function CoAIleagueAiTester() {
   return (
     <>
       {/* Floating Test Button */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
+      <UniversalModal open={open} onOpenChange={setOpen}>
+        <UniversalModalTrigger asChild>
           <Button
             size="icon"
-            className="fixed bottom-20 right-6 z-50 h-14 w-14 rounded-full shadow-2xl"
+            className="fixed bottom-20 right-6 z-50 h-14 w-14 rounded-full shadow-sm"
             style={{
               background: "linear-gradient(135deg, #3b82f6 0%, #22d3ee 100%)",
             }}
@@ -130,18 +124,18 @@ export function CoAIleagueAiTester() {
           >
             <Bot className="h-6 w-6 text-white" />
           </Button>
-        </DialogTrigger>
+        </UniversalModalTrigger>
 
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5" style={{ color: "#3b82f6" }} />
+        <UniversalModalContent size="xl">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-blue-500" />
               Trinity™ Intelligence Tester
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               Test Trinity's intelligent support automation system
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
 
           <div className="space-y-4 py-4">
             {/* Workspace Selector - shown for multi-workspace users OR users without currentWorkspaceId */}
@@ -218,7 +212,7 @@ export function CoAIleagueAiTester() {
             )}
           </div>
 
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button
               onClick={handleTest}
               disabled={
@@ -245,9 +239,9 @@ export function CoAIleagueAiTester() {
                 </>
               )}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
     </>
   );
 }

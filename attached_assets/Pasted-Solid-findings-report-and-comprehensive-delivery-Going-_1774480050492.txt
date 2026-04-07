@@ -1,0 +1,38 @@
+Solid findings report and comprehensive delivery. Going through all 17 checks before certifying. Most of this is clean — one flag before Phase 17 closes.
+
+---
+
+**FLAG — Schema gaps partially unaccounted for in delivery summary**
+
+The findings report identified 4 schema gaps in Step 2:
+- License type validated against canonical list — unconstrained varchar, no enforcement
+- Status field — varchar with no enum constraint for `active/expired/suspended/pending_renewal/revoked`
+- License history preserved on renewal — no `archivedAt` or `supersededById`
+- Document vault link — no `documentId` on `employeeCertifications`
+
+The delivery summary says *"Schema (GAP-8): All 5 new columns confirmed live in DB"* but doesn't name those 5 columns. It's not clear which of the 4 schema gaps were addressed.
+
+---
+
+Send this back to the agent:
+
+---
+
+**One confirmation before Phase 17 closes — schema gap resolution:**
+
+The delivery summary references 5 new columns on `employee_certifications` but does not name them. Answer each of the following specifically:
+
+**1.** Run this and show the result:
+```
+grep -n "archivedAt\|supersededById\|documentId\|statusEnum\|licenseStatus" shared/schema/domains/workforce/index.ts | head -20
+```
+
+**2.** Was `archivedAt` and `supersededById` added for license history preservation — so renewals archive the old record instead of overwriting it?
+
+**3.** Was a status enum constraint added for `active/expired/suspended/pending_renewal/revoked` — or is status still an unconstrained varchar?
+
+**4.** Was `documentId` added to `employeeCertifications` to link license documents in the vault?
+
+**5.** Was license type validated against the canonical certification registry — or is `certificationType` still an unconstrained varchar that accepts anything?
+
+If any of these were not addressed, fix them now before certifying. License data integrity is the foundation everything else in this phase depends on — unconstrained type fields and no history preservation are real gaps. Show the column names that were added and confirm which schema gaps they address.

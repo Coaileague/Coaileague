@@ -1,4 +1,4 @@
-import { Zap, DollarSign, Palette, FileText, Users, Calendar, TrendingUp, Shield, Briefcase } from "lucide-react";
+import { Zap, DollarSign, Palette, FileText, Users, Calendar, TrendingUp, Shield, Briefcase, ArrowRightLeft } from "lucide-react";
 
 export interface PremiumFeature {
   id: string;
@@ -29,7 +29,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Starter+ plans
     savings: {
-      label: 'Automates scheduling coordinator tasks (up to $77.5K potential savings)*',
+      label: 'Reduces scheduling coordination workload — actual savings vary by organization',
       value: 77500,
     },
     benefits: [
@@ -53,7 +53,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Starter+ plans
     savings: {
-      label: 'Automates payroll processing tasks (up to $90K potential savings)*',
+      label: 'Reduces payroll processing time — actual savings vary by organization',
       value: 90000,
     },
     benefits: [
@@ -77,7 +77,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     price: 0, // Included in Enterprise plan
     savings: {
       label: 'Charge clients your own markup',
-      value: 84012, // ($50/employee × 200 employees × 12 months) - $2,999/mo
+      value: 84012, // ($50/employee × 200 employees × 12 months) - $4,999/mo base
     },
     benefits: [
       'Custom color palette (5+ colors)',
@@ -100,7 +100,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Starter+ plans
     savings: {
-      label: 'Automates billing tasks (up to $85K potential savings)*',
+      label: 'Reduces billing administration workload — actual savings vary by organization',
       value: 85000,
     },
     benefits: [
@@ -124,7 +124,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Streamlines HR recruiting workflows (up to $30K potential savings)*',
+      label: 'Streamlines HR recruiting workflows — actual savings vary by organization',
       value: 30000, // Partial value attribution
     },
     benefits: [
@@ -147,7 +147,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Automates reporting tasks (up to $40K potential savings)*',
+      label: 'Reduces manual reporting effort — actual savings vary by organization',
       value: 40000, // Partial value attribution
     },
     benefits: [
@@ -170,7 +170,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Streamlines benefits management (up to $30K potential savings)*',
+      label: 'Streamlines benefits management workflows — actual savings vary by organization',
       value: 30000, // Partial value attribution
     },
     benefits: [
@@ -194,7 +194,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'enterprise',
     price: 0, // Included in Enterprise plan
     savings: {
-      label: 'Reduces regional admin overhead (up to $250K potential savings)*',
+      label: 'Reduces regional admin overhead — actual savings vary by organization',
       value: 250000, // Typical enterprise efficiency gains
     },
     benefits: [
@@ -217,7 +217,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Streamlines training management (up to $22K potential savings)*',
+      label: 'Streamlines training management workflows — actual savings vary by organization',
       value: 22000, // Partial value attribution
     },
     benefits: [
@@ -231,6 +231,30 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
       costsSaved: 22000,
     },
     status: 'available',
+  },
+  {
+    id: 'pass-down-intelligence',
+    name: 'Pass-Down Intelligence',
+    description: 'AI-powered keyword scanning and severity assignment for shift-to-shift handoff notes, ensuring critical information is never lost between shifts',
+    icon: ArrowRightLeft,
+    tier: 'professional',
+    price: 0,
+    savings: {
+      label: 'Reduces information gaps between shifts — actual savings vary by organization',
+      value: 35000,
+    },
+    benefits: [
+      'AI keyword scanning for critical issues',
+      'Auto-severity assignment on pass-down notes',
+      'Smart categorization of handoff items',
+      'Priority escalation for safety concerns',
+      'Searchable pass-down history with AI tags',
+    ],
+    roi: {
+      timesSaved: 5,
+      costsSaved: 35000,
+    },
+    status: 'coming_soon',
   },
 ];
 

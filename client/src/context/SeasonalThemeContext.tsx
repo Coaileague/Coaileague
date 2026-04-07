@@ -175,7 +175,6 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
       if (currentTheme !== 'dark') {
         htmlElement.classList.add('dark');
         darkModeAppliedRef.current = true;
-        console.log('[SeasonalTheme] Forced dark mode for', profile.seasonId);
       }
     } else if (!shouldForceDark && darkModeAppliedRef.current) {
       if (previousThemeRef.current === 'light') {
@@ -183,7 +182,6 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
       }
       darkModeAppliedRef.current = false;
       previousThemeRef.current = null;
-      console.log('[SeasonalTheme] Restored original theme');
     }
   }, [profile?.theme.forceDarkMode, profile?.seasonId]);
   
@@ -207,7 +205,6 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     const isEnabled = profile.isHoliday && profile.seasonId !== 'default';
     
     setGlobalSeasonalState(isEnabled, holidayKey);
-    console.log('[SeasonalTheme] Global state synced:', { enabled: isEnabled, seasonId: holidayKey });
     
     // Cleanup: reset to default on unmount
     return () => {

@@ -11,13 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AlertCircle, TrendingUp, TrendingDown, Users, Heart, MessageSquare, Award, AlertTriangle, Star } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ResponsiveLoading } from "@/components/loading-indicators";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface EmployeeHealthScore {
   id: string;
@@ -94,6 +95,9 @@ export default function EngagementDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState<EmployerRating | null>(null);
+  const [actionNotesDialogOpen, setActionNotesDialogOpen] = useState(false);
+  const [actionNotes, setActionNotes] = useState("");
+  const [actionTargetId, setActionTargetId] = useState<string | null>(null);
 
   // Fetch health scores
   const { data: healthScores, isLoading: loadingHealthScores } = useQuery<EmployeeHealthScore[]>({
@@ -122,12 +126,40 @@ export default function EngagementDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/engagement/health-scores'] });
-    }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Take Action Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const handleTakeAction = (scoreId: string, notes: string) => {
     takeActionMutation.mutate({ id: scoreId, actionNotes: notes });
   };
+
+  const calculateHealthMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", '/api/engagement/health-scores/calculate', {});
+      return await res.json();
+    },
+    onSuccess: (data: { message?: string; calculated?: number; total?: number }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/engagement/health-scores'] });
+      toast({
+        title: "Calculations Complete",
+        description: data?.message || "Health scores have been calculated for all employees",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Calculation Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   // Dispute filing mutation
   const fileDisputeMutation = useMutation({
@@ -190,6 +222,13 @@ export default function EngagementDashboard() {
 
   const latestBenchmark = benchmarks && benchmarks.length > 0 ? benchmarks[0] : null;
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'engagement-dashboard',
+    title: 'EngagementOS™',
+    subtitle: 'Employee engagement intelligence & health monitoring',
+    category: 'dashboard',
+  };
+
   if (loadingHealthScores || loadingBenchmarks || loadingRecognitions) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -199,15 +238,7 @@ export default function EngagementDashboard() {
   }
 
   return (
-    <div className="h-full overflow-auto mobile-scroll safe-bottom" data-testid="page-engagement-dashboard">
-      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
-      {/* Mobile-optimized header */}
-      <div className="flex items-center justify-between safe-top">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate" data-testid="text-page-title">EngagementOS™</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Employee engagement intelligence & health monitoring</p>
-        </div>
-      </div>
+    <CanvasHubPage config={pageConfig}>
 
       {/* Mobile-optimized Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
@@ -274,7 +305,7 @@ export default function EngagementDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="action-queue" data-testid="tab-action-queue">
             Action Queue
@@ -317,7 +348,14 @@ export default function EngagementDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    No health scores calculated yet. Run calculations to see employee engagement health.
+                    <p className="mb-4">No health scores calculated yet. Run calculations to see employee engagement health.</p>
+                    <Button 
+                      onClick={() => calculateHealthMutation.mutate()} 
+                      disabled={calculateHealthMutation.isPending}
+                      data-testid="button-run-calculations"
+                    >
+                      {calculateHealthMutation.isPending ? 'Calculating...' : 'Run Calculations'}
+                    </Button>
                   </div>
                 )}
               </div>
@@ -377,7 +415,7 @@ export default function EngagementDashboard() {
                     .filter(s => s.requiresManagerAction && !s.actionTaken)
                     .map((score) => (
                       <div key={score.id} className="border rounded-lg p-4 space-y-3" data-testid={`card-health-score-${score.employeeId}`}>
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="font-medium">Employee ID: {score.employeeId.slice(0, 8)}...</div>
                             <div className="text-sm text-muted-foreground">
@@ -416,10 +454,9 @@ export default function EngagementDashboard() {
                         <Button
                           size="sm"
                           onClick={() => {
-                            const notes = prompt("Enter action notes (what did you do?):");
-                            if (notes) {
-                              handleTakeAction(score.id, notes);
-                            }
+                            setActionNotes("");
+                            setActionTargetId(score.id);
+                            setActionNotesDialogOpen(true);
                           }}
                           data-testid={`button-take-action-${score.employeeId}`}
                         >
@@ -448,7 +485,7 @@ export default function EngagementDashboard() {
                 {benchmarks && benchmarks.length > 0 ? (
                   benchmarks.map((benchmark) => (
                     <div key={benchmark.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start justify-between gap-2 mb-3">
                         <div>
                           <div className="font-medium">{benchmark.targetName}</div>
                           <div className="text-sm text-muted-foreground capitalize">{benchmark.benchmarkType}</div>
@@ -458,7 +495,7 @@ export default function EngagementDashboard() {
                         </Badge>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                         <div>
                           <div className="text-muted-foreground">Your Score</div>
                           <div className="text-xl font-bold">{parseFloat(benchmark.overallScore).toFixed(1)}/5.0</div>
@@ -619,15 +656,15 @@ export default function EngagementDashboard() {
       </Tabs>
 
       {/* Dispute Filing Dialog */}
-      <Dialog open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
-        <DialogContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6">
+      <UniversalModal open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
+        <UniversalModalContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6">
           <div className="h-full overflow-y-auto p-4 sm:p-0">
-          <DialogHeader>
-            <DialogTitle>File Dispute - Employer Rating</DialogTitle>
-            <DialogDescription>
+          <UniversalModalHeader>
+            <UniversalModalTitle>File Dispute - Employer Rating</UniversalModalTitle>
+            <UniversalModalDescription>
               Explain why you believe this rating is inaccurate or unfair. Support will investigate and respond.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <Form {...disputeForm}>
             <form onSubmit={disputeForm.handleSubmit(onDisputeSubmit)} className="space-y-4">
               {selectedRating && (
@@ -731,9 +768,47 @@ export default function EngagementDashboard() {
             </form>
           </Form>
           </div>
-        </DialogContent>
-      </Dialog>
-      </div>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+
+      {/* Action Notes Dialog */}
+      <UniversalModal open={actionNotesDialogOpen} onOpenChange={setActionNotesDialogOpen}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Record Action Taken</UniversalModalTitle>
+            <UniversalModalDescription>
+              Describe what action you took for this employee's engagement score.
+            </UniversalModalDescription>
+          </UniversalModalHeader>
+          <div className="py-4 space-y-2">
+            <Label htmlFor="action-notes-input">Action Notes</Label>
+            <Textarea
+              id="action-notes-input"
+              placeholder="e.g. Scheduled 1-on-1 check-in, sent recognition message..."
+              value={actionNotes}
+              onChange={e => setActionNotes(e.target.value)}
+              rows={3}
+              data-testid="input-action-notes"
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setActionNotesDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (actionTargetId && actionNotes.trim()) {
+                  handleTakeAction(actionTargetId, actionNotes);
+                  setActionNotesDialogOpen(false);
+                }
+              }}
+              disabled={takeActionMutation.isPending || !actionNotes.trim()}
+              data-testid="button-confirm-action"
+            >
+              {takeActionMutation.isPending ? "Saving..." : "Save Action"}
+            </Button>
+          </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

@@ -553,8 +553,8 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
             handleDismiss();
           }}
           className={`
-            rounded-full bg-white border-2 border-red-500 flex items-center justify-center 
-            shadow-lg hover:bg-red-50 active:bg-red-100 transition-colors
+            rounded-full bg-white border border-red-500 flex items-center justify-center 
+            shadow-sm hover:bg-red-50 active:bg-red-100 transition-colors
             ${isMobile ? 'w-11 h-11' : 'w-7 h-7'}
           `}
           style={{ 

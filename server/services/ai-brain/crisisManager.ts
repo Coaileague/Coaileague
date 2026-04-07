@@ -11,16 +11,17 @@
  * Trinity switches from "Helpful Mascot" to "Tactical Incident Commander"
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { eq, and, gte, sql, desc } from 'drizzle-orm';
 import {
   users,
   workspaces,
   employees,
-  trinityCredits,
-  trinityCreditTransactions,
-  aiWorkboardTasks,
 } from '@shared/schema';
+import { creditManager } from '../../services/billing/creditManager';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('crisisManager');
 
 // Guru-mode roles that can execute crisis protocols
 const GURU_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'] as const;
@@ -87,11 +88,11 @@ class CrisisManagerService {
   }> = [];
 
   constructor() {
-    console.log('[CrisisManager] Crisis Management Module initialized');
+    log.info('[CrisisManager] Crisis Management Module initialized');
   }
 
   private logAudit(action: string, userId: string, targetId: string, details: Record<string, unknown>): string {
-    const id = `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = `audit-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
     this.auditTrail.push({
       id,
       action,
@@ -100,7 +101,7 @@ class CrisisManagerService {
       details,
       timestamp: new Date().toISOString(),
     });
-    console.log(`[CrisisManager] Audit: ${action} by ${userId} on ${targetId}`);
+    log.info(`[CrisisManager] Audit: ${action} by ${userId} on ${targetId}`);
     return id;
   }
 
@@ -118,11 +119,11 @@ class CrisisManagerService {
       throw new Error('ACCESS DENIED: Insufficient privileges for lockdown');
     }
 
-    const crisisId = `lockdown-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const crisisId = `lockdown-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const actions: string[] = [];
 
     try {
-      console.log(`[CRISIS] Initiating LOCKDOWN for User ${targetUserId}`);
+      log.info(`[CRISIS] Initiating LOCKDOWN for User ${targetUserId}`);
       
       // 1. Lock user account by setting lockedUntil far in the future
       const lockUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year lockout
@@ -179,7 +180,7 @@ class CrisisManagerService {
       };
       this.activeCrises.set(crisisId, crisis);
 
-      console.log(`[CRISIS] LOCKDOWN COMPLETE for ${targetUserId}: ${actions.join(', ')}`);
+      log.info(`[CRISIS] LOCKDOWN COMPLETE for ${targetUserId}: ${actions.join(', ')}`);
 
       return {
         status: 'SECURE',
@@ -188,7 +189,7 @@ class CrisisManagerService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('[CRISIS] Lockdown failed:', error);
+      log.error('[CRISIS] Lockdown failed:', error);
       throw new Error(`Lockdown failed: ${error}`);
     }
   }
@@ -232,14 +233,14 @@ class CrisisManagerService {
         }
       }
 
-      console.log(`[CRISIS] Lockdown RELEASED for ${targetUserId}`);
+      log.info(`[CRISIS] Lockdown RELEASED for ${targetUserId}`);
 
       return {
         status: 'UNLOCKED',
         message: `Account ${targetUserId} has been restored. User may now log in.`,
       };
     } catch (error) {
-      console.error('[CRISIS] Release lockdown failed:', error);
+      log.error('[CRISIS] Release lockdown failed:', error);
       throw error;
     }
   }
@@ -270,7 +271,7 @@ class CrisisManagerService {
       message: this.getBlackoutMessage(level, affectedServices, etaMinutes),
     };
 
-    console.log(`[CRISIS] BLACKOUT Level ${level} initiated by ${initiatedBy}`);
+    log.info(`[CRISIS] BLACKOUT Level ${level} initiated by ${initiatedBy}`);
     
     this.logAudit('CRISIS_BLACKOUT_INITIATED', initiatedBy, 'platform', JSON.parse(JSON.stringify(this.blackoutStatus)));
 
@@ -295,7 +296,7 @@ class CrisisManagerService {
 
     this.logAudit('CRISIS_BLACKOUT_RESOLVED', initiatedBy, 'platform', { resolution });
 
-    console.log(`[CRISIS] BLACKOUT RESOLVED by ${initiatedBy}`);
+    log.info(`[CRISIS] BLACKOUT RESOLVED by ${initiatedBy}`);
 
     return {
       status: 'RESOLVED',
@@ -332,7 +333,7 @@ class CrisisManagerService {
       throw new Error('ACCESS DENIED: Insufficient privileges for dispute resolution');
     }
 
-    const incidentId = `dispute-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const incidentId = `dispute-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
     try {
       // 1. Forensic scan - check for system errors in recent tasks
@@ -362,32 +363,16 @@ class CrisisManagerService {
         const goodwillBonus = refundAmount * 0.25;
         const totalCredits = Math.round((refundAmount + goodwillBonus) * 100); // In credits
 
-        // 2. Issue credit to workspace
-        const [creditRecord] = await db
-          .select()
-          .from(trinityCredits)
-          .where(eq(trinityCredits.workspaceId, workspaceId))
-          .limit(1);
-
-        if (creditRecord) {
-          const newBalance = (creditRecord.balance || 0) + totalCredits;
-          await db.update(trinityCredits)
-            .set({ 
-              balance: newBalance,
-              updatedAt: new Date(),
-            })
-            .where(eq(trinityCredits.workspaceId, workspaceId));
-
-          // Record transaction with correct schema
-          await db.insert(trinityCreditTransactions).values({
-            workspaceId,
-            transactionType: 'refund',
-            credits: totalCredits,
-            balanceAfter: newBalance,
-            description: `Dispute Resolution: ${incidentId} - System fault reimbursement + goodwill bonus`,
-            createdAt: new Date(),
-          });
-        }
+        // 2. Issue credit to workspace via creditManager
+        const refundResult = await creditManager.refundCredits({
+          workspaceId,
+          amount: totalCredits,
+          reason: `Dispute Resolution: ${incidentId} - System fault reimbursement + goodwill bonus`,
+          issuedByUserId: initiatedBy,
+          issuedByName: 'Crisis Manager',
+          relatedEntityType: 'dispute',
+          relatedEntityId: incidentId,
+        });
 
         // 3. Create audit log
         this.logAudit('CRISIS_DISPUTE_APPROVED', initiatedBy, workspaceId, {
@@ -400,7 +385,7 @@ class CrisisManagerService {
           incidentDescription,
         });
 
-        console.log(`[CRISIS] Dispute APPROVED: $${refundAmount + goodwillBonus} credited to ${workspaceId}`);
+        log.info(`[CRISIS] Dispute APPROVED: $${refundAmount + goodwillBonus} credited to ${workspaceId}`);
 
         return {
           status: 'REFUND_APPROVED',
@@ -412,7 +397,7 @@ class CrisisManagerService {
       }
 
       // No system fault found
-      console.log(`[CRISIS] Dispute DENIED: No system fault detected for ${workspaceId}`);
+      log.info(`[CRISIS] Dispute DENIED: No system fault detected for ${workspaceId}`);
 
       this.logAudit('CRISIS_DISPUTE_DENIED', initiatedBy, workspaceId, {
         incidentId,
@@ -427,7 +412,7 @@ class CrisisManagerService {
         incidentId,
       };
     } catch (error) {
-      console.error('[CRISIS] Dispute processing failed:', error);
+      log.error('[CRISIS] Dispute processing failed:', error);
       return {
         status: 'PENDING_REVIEW',
         reason: `Error during analysis. Escalated for manual review: ${error}`,
@@ -446,11 +431,11 @@ class CrisisManagerService {
     initiatedBy: string,
     platformRole: string
   ): Promise<PurgeResult> {
-    const auditTrailId = `purge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const auditTrailId = `purge-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
     // 1. Verify Root Privileges
     if (!ROOT_ONLY_ROLES.includes(platformRole as typeof ROOT_ONLY_ROLES[number])) {
-      console.warn(`[CRISIS] PURGE ACCESS DENIED for ${initiatedBy} (role: ${platformRole})`);
+      log.warn(`[CRISIS] PURGE ACCESS DENIED for ${initiatedBy} (role: ${platformRole})`);
       return {
         status: 'ACCESS_DENIED',
         targetOrgId,
@@ -465,7 +450,7 @@ class CrisisManagerService {
       throw new Error(`CONFIRMATION PHRASE MISMATCH. Expected: "${expectedPhrase}"`);
     }
 
-    console.warn(`[CRISIS] EXECUTING PURGE ON ORG ${targetOrgId}`);
+    log.warn(`[CRISIS] EXECUTING PURGE ON ORG ${targetOrgId}`);
     
     let recordsDeleted = 0;
 
@@ -490,7 +475,7 @@ class CrisisManagerService {
         irreversible: true,
       });
 
-      console.warn(`[CRISIS] PURGE COMPLETE: ${recordsDeleted} records deleted from ${targetOrgId}`);
+      log.warn(`[CRISIS] PURGE COMPLETE: ${recordsDeleted} records deleted from ${targetOrgId}`);
 
       return {
         status: 'PURGE_COMPLETE',
@@ -499,7 +484,7 @@ class CrisisManagerService {
         auditTrailId,
       };
     } catch (error) {
-      console.error('[CRISIS] Purge failed:', error);
+      log.error('[CRISIS] Purge failed:', error);
       
       this.logAudit('CRISIS_NUCLEAR_PURGE_FAILED', initiatedBy, targetOrgId, {
         targetOrgId,

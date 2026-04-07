@@ -1,5 +1,8 @@
 import type { BaseSkill } from './base-skill';
 import type { SkillManifest, SkillContext, SkillResult, SkillEvent } from './types';
+import { createLogger } from '../../../lib/logger';
+
+const log = createLogger('SkillRegistry');
 
 /**
  * Skill Registry - Central registry for all AI Brain Skills
@@ -42,7 +45,7 @@ export class SkillRegistry {
     await skill.initialize();
     this.skills.set(manifest.id, skill);
     
-    console.log(`✅ [SkillRegistry] Registered: ${manifest.id} v${manifest.version}`);
+    log.info(`✅ [SkillRegistry] Registered: ${manifest.id} v${manifest.version}`);
   }
 
   /**
@@ -53,7 +56,7 @@ export class SkillRegistry {
     if (skill) {
       await skill.cleanup();
       this.skills.delete(skillId);
-      console.log(`🗑️  [SkillRegistry] Unregistered: ${skillId}`);
+      log.info(`🗑️  [SkillRegistry] Unregistered: ${skillId}`);
     }
   }
 
@@ -133,10 +136,10 @@ export class SkillRegistry {
       const result = await skill.execute(context, params);
       return result;
     } catch (error: any) {
-      console.error(`[SkillRegistry] Error executing ${skillId}:`, error);
+      log.error(`[SkillRegistry] Error executing ${skillId}:`, error);
       return {
         success: false,
-        error: error.message || 'Skill execution failed',
+        error: (error instanceof Error ? error.message : String(error)) || 'Skill execution failed',
       };
     }
   }

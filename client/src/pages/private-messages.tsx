@@ -1,20 +1,20 @@
 import { useState, useEffect, useRef } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal'
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
-import { WorkspaceLayout } from "@/components/workspace-layout";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -144,7 +144,7 @@ export default function PrivateMessages() {
   const { data: searchResults = [], isLoading: searchLoading } = useQuery({
     queryKey: ['/api/users/search', searchQuery],
     queryFn: async () => {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
+      const res = await secureFetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Search failed');
@@ -165,7 +165,7 @@ export default function PrivateMessages() {
       attachmentUrl?: string;
       attachmentName?: string;
     }) => {
-      return await apiRequest('/api/private-messages/send', 'POST', {
+      return await apiRequest('POST', '/api/private-messages/send', {
         recipientId,
         message,
         attachmentUrl,
@@ -192,7 +192,7 @@ export default function PrivateMessages() {
   // Start new conversation
   const startConversationMutation = useMutation({
     mutationFn: async (recipientId: string) => {
-      return await apiRequest('/api/private-messages/start', 'POST', { recipientId });
+      return await apiRequest('POST', '/api/private-messages/start', { recipientId });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/private-messages/conversations'] });
@@ -212,7 +212,7 @@ export default function PrivateMessages() {
   // Mark messages as read
   const markAsReadMutation = useMutation({
     mutationFn: async (conversationId: string) => {
-      return await apiRequest(`/api/private-messages/${conversationId}/mark-read`, 'POST', {});
+      return await apiRequest('POST', `/api/private-messages/${conversationId}/mark-read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/private-messages/conversations'] });
@@ -274,7 +274,7 @@ export default function PrivateMessages() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/private-messages/upload', {
+      const response = await secureFetch('/api/private-messages/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -374,9 +374,9 @@ export default function PrivateMessages() {
       )}>
         {/* Sidebar Header */}
         <div className="p-4 border-b space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
                 <Lock className="h-4 w-4 text-white" />
               </div>
               <h2 className="font-semibold text-lg">Private Messages</h2>
@@ -440,7 +440,7 @@ export default function PrivateMessages() {
                   <div className="flex items-start gap-3">
                     <div className="relative">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                        <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
                           {conv.recipientName.split(" ").map((n) => n[0]).join("").toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -500,7 +500,7 @@ export default function PrivateMessages() {
           <>
             {/* Chat Header */}
             <div className={cn(
-              "h-16 border-b px-4 flex items-center justify-between bg-purple-500/5",
+              "h-16 border-b px-4 flex items-center justify-between gap-2 bg-purple-500/5",
               isIOS && "mobile-safe-area-top"
             )}>
               <div className="flex items-center gap-3">
@@ -516,7 +516,7 @@ export default function PrivateMessages() {
                 )}
                 <div className="relative">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+                    <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
                       {currentConversation?.recipientName.split(" ").map((n) => n[0]).join("").toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -572,10 +572,10 @@ export default function PrivateMessages() {
                     return (
                       <div key={msg.id} className={`flex gap-3 ${isOwnMessage ? "flex-row-reverse" : ""}`}>
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback className={`text-xs ${
+                          <AvatarFallback className={`text-sm font-semibold ${
                             isOwnMessage 
-                              ? "bg-purple-600 text-white" 
-                              : "bg-gradient-to-br from-purple-500 to-pink-600 text-white"
+                              ? "bg-blue-600 text-white" 
+                              : "bg-gradient-to-br from-cyan-500 to-blue-600 text-white"
                           }`}>
                             {msg.senderName.split(" ").map((n) => n[0]).join("").toUpperCase()}
                           </AvatarFallback>
@@ -700,7 +700,7 @@ export default function PrivateMessages() {
                     type="submit"
                     disabled={(!messageText.trim() && !attachedFile) || sendMessageMutation.isPending || uploadingFile}
                     data-testid="button-send-message"
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-purple-600"
                   >
                     {uploadingFile ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -725,14 +725,14 @@ export default function PrivateMessages() {
       </div>
 
       {/* New Chat Dialog (Desktop) */}
-      <Dialog open={showNewChatDialog && !isMobileDevice} onOpenChange={setShowNewChatDialog}>
-        <DialogContent size="md" data-testid="dialog-new-chat">
-          <DialogHeader>
-            <DialogTitle>Start New Private Chat</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showNewChatDialog && !isMobileDevice} onOpenChange={setShowNewChatDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-new-chat">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Start New Private Chat</UniversalModalTitle>
+            <UniversalModalDescription>
               Search for a user to start a private conversation
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -770,7 +770,7 @@ export default function PrivateMessages() {
                       >
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarFallback className="text-xs">
+                            <AvatarFallback className="text-sm font-semibold">
                               {result.firstName?.[0]}{result.lastName?.[0]}
                             </AvatarFallback>
                           </Avatar>
@@ -797,23 +797,23 @@ export default function PrivateMessages() {
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* New Chat Bottom Sheet (Mobile) */}
-      <Sheet open={showNewChatSheet} onOpenChange={(open) => setShowNewChatSheet(open)}>
-        <SheetContent 
+      <UniversalModal open={showNewChatSheet} onOpenChange={(open) => setShowNewChatSheet(open)}>
+        <UniversalModalContent 
           side="bottom" 
           showHomeButton={false}
-          className="max-h-[85vh] overflow-y-auto rounded-t-2xl"
+          className="overflow-y-auto rounded-t-2xl"
           data-testid="sheet-new-chat"
         >
-          <SheetHeader>
-            <SheetTitle>Start New Private Chat</SheetTitle>
-            <SheetDescription className="sr-only">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Start New Private Chat</UniversalModalTitle>
+            <UniversalModalDescription className="sr-only">
               Search for users to start a new private conversation
-            </SheetDescription>
-          </SheetHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4 mt-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -854,7 +854,7 @@ export default function PrivateMessages() {
                       >
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarFallback className="text-xs">
+                            <AvatarFallback className="text-sm font-semibold">
                               {result.firstName?.[0]}{result.lastName?.[0]}
                             </AvatarFallback>
                           </Avatar>
@@ -881,22 +881,22 @@ export default function PrivateMessages() {
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </UniversalModalContent>
+      </UniversalModal>
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <WorkspaceLayout>
-        {pageContent}
-      </WorkspaceLayout>
-    );
-  }
+  const pageConfig: CanvasPageConfig = {
+    id: 'private-messages',
+    title: 'Private Messages',
+    category: 'communication',
+    enablePullToRefresh: false,
+    maxWidth: '7xl',
+  };
 
   return (
-    <WorkspaceLayout maxWidth="7xl">
+    <CanvasHubPage config={pageConfig}>
       {pageContent}
-    </WorkspaceLayout>
+    </CanvasHubPage>
   );
 }

@@ -21,6 +21,7 @@ import { AlertCircle, Calendar, Clock, FileText, Lock, Shield, AlertTriangle, Ch
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface AuditData {
   shifts?: any[];
@@ -41,35 +42,31 @@ export default function MyAuditRecord() {
     queryKey: ['/api/employee/audit-record'],
   });
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'my-audit-record',
+    title: 'My Audit Record',
+    subtitle: 'Complete work history and compliance records (protected for 7 years)',
+    category: 'operations',
+    headerActions: (
+      <Badge variant="outline" className="gap-1">
+        <Lock className="w-3 h-3" />
+        Read-Only
+      </Badge>
+    ),
+  };
+
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <CanvasHubPage config={pageConfig}>
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-96 w-full" />
-      </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Shield className="w-8 h-8" />
-            My Audit Record
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Complete work history and compliance records (protected for 7 years)
-          </p>
-        </div>
-        <Badge variant="outline" className="gap-1">
-          <Lock className="w-3 h-3" />
-          Read-Only
-        </Badge>
-      </div>
-
-      {/* Labor Law Protection Notice */}
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6">
       <Alert>
         <Shield className="w-4 h-4" />
         <AlertTitle>Your Rights Are Protected</AlertTitle>
@@ -81,7 +78,7 @@ export default function MyAuditRecord() {
 
       {/* Tabs for different record types */}
       <Tabs defaultValue="shifts" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
           <TabsTrigger value="shifts" data-testid="tab-shifts">
             <Clock className="w-4 h-4 mr-1" />
             Work History
@@ -381,6 +378,7 @@ export default function MyAuditRecord() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </CanvasHubPage>
   );
 }

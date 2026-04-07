@@ -9,20 +9,24 @@
  * - AI decision audit queries
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { 
   coaileagueEmployeeProfiles, 
   employeeEventLog,
   employeeScoreSnapshots,
-  scoringWeightProfiles,
   aiDecisionAudit,
+  scoringWeightProfiles,
   schedulerNotificationEvents,
   shiftAcceptanceRecords,
   publishedSchedules,
   scheduleSnapshots,
+  shifts,
+  timeEntries,
+  employees,
 } from '@shared/schema';
-import { eq, and, desc, sql, gte, lte, count } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, lte, count, isNull, lt, isNotNull, notInArray } from 'drizzle-orm';
 import { 
   coaileagueScoringService, 
   ScoringEventType, 
@@ -30,14 +34,21 @@ import {
   SchedulerAccessDeniedError 
 } from '../services/automation/coaileagueScoringService';
 import { scheduleRollbackService } from '../services/scheduleRollbackService';
+import { requireAuth } from '../auth';
+import { calculateInvoiceLineItem, calculateGrossPay, toFinancialString } from '../services/financialCalculator';
+import { createLogger } from '../lib/logger';
+const log = createLogger('SchedulerRoutes');
+
 
 const router = Router();
+
+router.use(requireAuth);
 
 /**
  * Helper to handle scheduler errors consistently
  */
 function handleSchedulerError(error: unknown, res: Response, defaultMessage: string) {
-  console.error('[Scheduler API]', defaultMessage, error);
+  log.error('[Scheduler API]', defaultMessage, error);
   
   if (error instanceof SchedulerNotFoundError) {
     return res.status(404).json({ error: 'Resource not found in this workspace' });
@@ -59,14 +70,18 @@ function handleSchedulerError(error: unknown, res: Response, defaultMessage: str
  */
 router.get('/profiles', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
+
+    const { limit = '500' } = req.query;
+    const parsedLimit = Math.min(Math.max(parseInt(limit as string) || 500, 1), 1000);
 
     const profiles = await db.query.coaileagueEmployeeProfiles.findMany({
       where: eq(coaileagueEmployeeProfiles.workspaceId, workspaceId),
       orderBy: desc(coaileagueEmployeeProfiles.overallScore),
+      limit: parsedLimit,
     });
 
     res.json(profiles);
@@ -81,9 +96,9 @@ router.get('/profiles', async (req: Request, res: Response) => {
  */
 router.get('/profiles/:employeeId', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { employeeId } = req.params;
@@ -100,9 +115,9 @@ router.get('/profiles/:employeeId', async (req: Request, res: Response) => {
  */
 router.post('/profiles/:employeeId/pool', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { employeeId } = req.params;
@@ -142,9 +157,9 @@ router.post('/profiles/:employeeId/pool', async (req: Request, res: Response) =>
  */
 router.post('/events', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { employeeId, eventType, referenceId, referenceType, metadata, triggeredBy, isAutomatic } = req.body;
@@ -188,9 +203,9 @@ router.post('/events', async (req: Request, res: Response) => {
  */
 router.get('/events/:employeeId', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { employeeId } = req.params;
@@ -222,9 +237,9 @@ router.get('/events/:employeeId', async (req: Request, res: Response) => {
  */
 router.post('/snapshots', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { employeeId, periodType, periodStart, periodEnd } = req.body;
@@ -253,9 +268,9 @@ router.post('/snapshots', async (req: Request, res: Response) => {
  */
 router.get('/snapshots/:employeeId', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { employeeId } = req.params;
@@ -291,9 +306,9 @@ router.get('/snapshots/:employeeId', async (req: Request, res: Response) => {
  */
 router.get('/weight-profiles', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const profiles = await db.query.scoringWeightProfiles.findMany({
@@ -313,12 +328,12 @@ router.get('/weight-profiles', async (req: Request, res: Response) => {
  */
 router.post('/weight-profiles', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
-    const userId = (req.session as any)?.userId;
+    const userId = req.user?.id || (req.session as any)?.userId;
     const { profileName, description, isDefault, ...weights } = req.body;
 
     if (!profileName) {
@@ -360,9 +375,9 @@ router.post('/weight-profiles', async (req: Request, res: Response) => {
  */
 router.get('/ai-decisions', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { decisionType, employeeId, limit = '50', offset = '0' } = req.query;
@@ -398,9 +413,9 @@ router.get('/ai-decisions', async (req: Request, res: Response) => {
  */
 router.get('/acceptances/:shiftId', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { shiftId } = req.params;
@@ -425,9 +440,9 @@ router.get('/acceptances/:shiftId', async (req: Request, res: Response) => {
  */
 router.post('/acceptances/:recordId/respond', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { recordId } = req.params;
@@ -494,12 +509,15 @@ router.post('/acceptances/:recordId/respond', async (req: Request, res: Response
  */
 router.get('/notifications', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
-    const { severity, recipientUserId, limit = '50' } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 25, 200);
+    const offset = (page - 1) * limit;
+    const { severity, recipientUserId } = req.query;
 
     const whereConditions = [eq(schedulerNotificationEvents.workspaceId, workspaceId)];
     if (severity) {
@@ -509,13 +527,24 @@ router.get('/notifications', async (req: Request, res: Response) => {
       whereConditions.push(eq(schedulerNotificationEvents.recipientUserId, recipientUserId as string));
     }
 
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schedulerNotificationEvents)
+      .where(and(...whereConditions));
+    
+    const total = countResult?.count || 0;
+
     const notifications = await db.query.schedulerNotificationEvents.findMany({
       where: and(...whereConditions),
       orderBy: desc(schedulerNotificationEvents.createdAt),
-      limit: parseInt(limit as string),
+      limit,
+      offset,
     });
 
-    res.json(notifications);
+    res.json({
+      data: notifications,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (error) {
     return handleSchedulerError(error, res, 'Failed to fetch notifications');
   }
@@ -531,9 +560,9 @@ router.get('/notifications', async (req: Request, res: Response) => {
  */
 router.get('/analytics/reliability-trend/:employeeId', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { employeeId } = req.params;
@@ -563,9 +592,9 @@ router.get('/analytics/reliability-trend/:employeeId', async (req: Request, res:
  */
 router.get('/analytics/leaderboard', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { limit = '10', sortBy = 'overallScore' } = req.query;
@@ -607,9 +636,9 @@ router.get('/analytics/leaderboard', async (req: Request, res: Response) => {
  */
 router.get('/schedules/published', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const published = await db.query.publishedSchedules.findMany({
@@ -640,9 +669,9 @@ router.get('/schedules/published', async (req: Request, res: Response) => {
  */
 router.get('/schedules/:scheduleId/snapshots', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
     if (!workspaceId) {
-      return res.status(401).json({ error: 'Workspace not identified' });
+      return res.status(403).json({ error: 'Workspace not identified' });
     }
 
     const { scheduleId } = req.params;
@@ -671,15 +700,15 @@ router.get('/schedules/:scheduleId/snapshots', async (req: Request, res: Respons
  */
 router.post('/schedules/:scheduleId/rollback', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req.session as any)?.workspaceId;
-    const userId = (req.session as any)?.userId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId || (req.session as any)?.workspaceId;
+    const userId = req.user?.id || (req.session as any)?.userId;
     const userRole = (req.session as any)?.role;
     
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const allowedRoles = ['owner', 'root_admin', 'deputy_admin', 'manager'];
+    const allowedRoles = ['org_owner', 'co_owner', 'org_admin', 'manager', 'root_admin', 'deputy_admin', 'sysop'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'Only admins and managers can rollback schedules' });
     }
@@ -725,6 +754,130 @@ router.post('/schedules/:scheduleId/rollback', async (req: Request, res: Respons
     });
   } catch (error) {
     return handleSchedulerError(error, res, 'Failed to rollback schedule');
+  }
+});
+
+/**
+ * POST /api/scheduler/dev/simulate-clockins
+ * DEV-ONLY: Creates approved time_entries for all past assigned shifts that
+ * don't already have a time_entry. This closes Gap 3 — without clock-in data
+ * there are no time_entries, so invoice and payroll generation have nothing to process.
+ *
+ * Skipped in production (NODE_ENV=production).
+ */
+router.post('/dev/simulate-clockins', async (req: any, res: Response) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Dev simulation not available in production' });
+  }
+
+  const workspaceId = req.workspaceId || req.user?.workspaceId;
+  if (!workspaceId) {
+    return res.status(400).json({ error: 'No workspace context in session' });
+  }
+
+  try {
+    const now = new Date();
+
+    // 1. Find all assigned past shifts with no time_entry
+    const shiftsWithEntries = await db
+      .select({ shiftId: timeEntries.shiftId })
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.workspaceId, workspaceId),
+        isNotNull(timeEntries.shiftId)
+      ));
+    const coveredShiftIds = shiftsWithEntries.map(r => r.shiftId!).filter(Boolean);
+
+    const pastShifts = await db
+      .select()
+      .from(shifts)
+      .where(and(
+        eq(shifts.workspaceId, workspaceId),
+        isNotNull(shifts.employeeId),
+        lt(shifts.endTime, now),
+        ...(coveredShiftIds.length > 0 ? [notInArray(shifts.id, coveredShiftIds)] : [])
+      ));
+
+    if (pastShifts.length === 0) {
+      return res.json({ success: true, created: 0, message: 'No uncovered past shifts found' });
+    }
+
+    // 2. Load employees for pay rate lookup
+    const empIds = [...new Set(pastShifts.map(s => s.employeeId!).filter(Boolean))];
+    const empRecords = await db.select().from(employees).where(
+      and(eq(employees.workspaceId, workspaceId))
+    );
+    const empMap = new Map(empRecords.map(e => [e.id, e]));
+
+    // 3. Build time_entry rows
+    let created = 0;
+    const errors: string[] = [];
+
+    for (const shift of pastShifts) {
+      try {
+        if (!shift.employeeId || !shift.startTime || !shift.endTime) continue;
+
+        const emp = empMap.get(shift.employeeId);
+        const clockIn = new Date(shift.startTime);
+        const clockOut = new Date(shift.endTime);
+        const totalHoursNum = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+        const regularHours = Math.min(totalHoursNum, 8);
+        const overtimeHours = Math.max(0, totalHoursNum - 8);
+
+        const billRateRaw = parseFloat(shift.billRate || '0') || 0;
+        const payRateRaw = parseFloat(shift.payRate || (emp as any)?.hourlyRate || '0') || 0;
+
+        const billableAmountStr = billRateRaw > 0
+          ? calculateInvoiceLineItem(toFinancialString(totalHoursNum), toFinancialString(billRateRaw))
+          : null;
+        const payableAmountStr = payRateRaw > 0
+          ? calculateGrossPay(toFinancialString(regularHours), toFinancialString(overtimeHours), toFinancialString(payRateRaw))
+          : null;
+
+        await db.insert(timeEntries).values({
+          workspaceId,
+          shiftId: shift.id,
+          employeeId: shift.employeeId,
+          clientId: shift.clientId || null,
+          clockIn,
+          clockOut,
+          totalHours: toFinancialString(totalHoursNum),
+          regularHours: toFinancialString(regularHours),
+          overtimeHours: toFinancialString(overtimeHours),
+          capturedBillRate: billRateRaw > 0 ? toFinancialString(billRateRaw) : null,
+          capturedPayRate: payRateRaw > 0 ? toFinancialString(payRateRaw) : null,
+          hourlyRate: payRateRaw > 0 ? toFinancialString(payRateRaw) : (billRateRaw > 0 ? toFinancialString(billRateRaw) : null),
+          billableAmount: billableAmountStr,
+          payableAmount: payableAmountStr,
+          totalAmount: billableAmountStr,
+          billableToClient: true,
+          status: 'approved',
+          approvedBy: 'system-sim',
+          approvedAt: now,
+          notes: '[DEV] Auto-generated by simulate-clockins endpoint',
+        });
+
+        // Mark shift as completed
+        await db.update(shifts)
+          .set({ status: 'completed' })
+          .where(eq(shifts.id, shift.id));
+
+        created++;
+      } catch (rowErr: unknown) {
+        errors.push(`shift ${shift.id}: ${rowErr.message}`);
+      }
+    }
+
+    return res.json({
+      success: true,
+      created,
+      total: pastShifts.length,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Created ${created} approved time entries from ${pastShifts.length} past shifts`,
+    });
+  } catch (err: unknown) {
+    log.error('[Dev simulate-clockins]', err);
+    return res.status(500).json({ error: sanitizeError(err) });
   }
 });
 

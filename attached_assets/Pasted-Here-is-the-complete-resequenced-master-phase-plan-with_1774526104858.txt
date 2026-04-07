@@ -1,0 +1,207 @@
+Here is the complete resequenced master phase plan with everything slotted correctly and the new Regulatory State Auditor Partner Portal fully documented. Send this to the agent as a master plan update before Phase 24 closes:
+
+---
+
+**MASTER PHASE PLAN UPDATE — FULL 43-PHASE ROSTER**
+
+Update `replit.md` with this complete phase sequence. Every new phase syncs with prior certified work. No phase operates in isolation.
+
+---
+
+**CERTIFIED — Phases 1–23B**
+All prior certified work stands. Architecture truths unchanged.
+
+**RUNNING — Phase 24**
+API Security and Abuse Prevention Hardening.
+
+---
+
+**REMAINING PHASES — 25 through 43**
+
+---
+
+**Phase 25 — Data Integrity and Cross-Table Consistency Sweep**
+Orphaned record detection, workspace_id scoping on every query, financial records matched to audit trail entries, shift records matched to payroll entries, document records matched to signing events, notification_deliveries matched to triggered events. Every inconsistency repaired and root cause closed.
+*Syncs with: Phases 11, 12, 14, 15, 18*
+
+---
+
+**Phase 26 — Cron Jobs and Scheduled Task Verification**
+Every time-based automation catalogued. Payroll triggers, invoice schedules, license expiration checks, compliance report generation, autonomous scheduler cycles — all verified to fire exactly once, handle failures gracefully, log execution, alert on missed runs, and recover without manual intervention.
+*Syncs with: Phases 13, 14, 15, 17, 21*
+
+---
+
+**Phase 27 — Notification and Communication Pipeline End-to-End**
+NDS verified across all 47 notification types. Email, SMS, and WebSocket push confirmed. Retry backoff verified. Idempotency confirmed. Delivery tracking in notification_deliveries for every type. Full three-tier staged replacement cascade verified. Inbound routing responses from Phase 13 integrated.
+*Syncs with: Phases 8, 12, 13, 16*
+
+---
+
+**Phase 28 — Multi-Tenant Isolation and Security Hardening**
+Full workspace isolation audit. No query returns data outside its workspace_id without explicit super-admin flag. Cross-tenant leakage test. Auth token isolation. Session workspace binding. No workspace can access another's financial, schedule, document, or officer data under any request path.
+*Syncs with: Phases 9, 24, sync audit*
+
+---
+
+**Phase 29 — Email Deliverability Hardening**
+This phase is operationally critical — without it every NDS email lands in spam. SPF record configured and verified for the sending domain. DKIM keys generated, DNS records published, signature verification confirmed. DMARC policy set to at minimum `p=quarantine`, ideally `p=reject`. Sending domain reputation verified — not on any blocklists. Resend deliverability dashboard confirmed. Test emails verified landing in inbox across Gmail, Outlook, Apple Mail, and Yahoo. Bounce handling confirmed — hard bounces remove the address, soft bounces retry. Unsubscribe handling confirmed for non-transactional emails. BIMI record optional but documented for brand trust. Every NDS email channel confirmed deliverable before platform goes live.
+*Syncs with: Phases 8, 13, 27*
+
+---
+
+**Phase 30 — Pricing Tier Enforcement and Feature Gating**
+Starter ($199, 10 seats), Professional ($749, 30 seats), Business ($2,249, 75 seats), Enterprise ($6,999, 200 seats) — all tier boundaries enforced server-side, not just in UI. A Starter workspace cannot call an Enterprise-only endpoint. Seat limits enforced at officer activation — attempting to activate beyond tier limit blocked with clear upgrade prompt. Feature registry from Phase 9B maps features to minimum tier. Tier check runs on every feature-gated request. Tier upgrade and downgrade transitions handled correctly — features enabled or disabled immediately on tier change. Usage metering confirmed — seat count accurate in real time. Trinity cannot bypass tier gates. Platform staff can override tier for specific workspaces with audit record.
+*Syncs with: Phases 9B, 32*
+
+---
+
+**Phase 31 — Client and Officer Lifecycle Management**
+Officer onboarding already verified in Phase 10. This phase owns the offboarding and transition flows that were never given a dedicated phase.
+
+Officer offboarding — termination triggers: final timesheet approved and locked, final paycheck calculated and staged, all active shift assignments removed and open shifts created, access revoked immediately, license records archived with termination date, documents retained per retention policy, NDS notification to officer and supervisor.
+
+Officer reactivation — rehire flow: prior records surfaced, license validity re-checked, new onboarding documents generated if required, access restored with correct role.
+
+Client onboarding — guided setup: initial contract generated and routed for signing, billing activated on Stripe, portal provisioned with access link, rate table configured, first invoice schedule set.
+
+Client offboarding — contract termination: final invoice generated, all outstanding invoices flagged for collection, portal access deactivated, data export package generated, workspace data retained per retention policy, QuickBooks final sync triggered.
+*Syncs with: Phases 10, 12, 14, 17, 18, 20, 32*
+
+---
+
+**Phase 32 — Bilingual Support Verification**
+HelpAI was designed as bilingual from the beginning. This phase verifies the entire platform delivers correctly in both English and Spanish.
+
+Language preference stored per user — officer selects preferred language on profile. All NDS notifications delivered in the officer's preferred language — shift alerts, panic confirmations, pay stub availability, compliance alerts. HelpAI responds in the user's language automatically — no manual switch required. Document templates available in both languages — onboarding docs, contracts, post orders. Push notifications deliver in correct language. Voice commands recognized in Spanish — Trinity Whisper transcription handles Spanish input. Error messages and UI labels translated — no English-only hardcoded strings in officer-facing views. Language fallback defined — if a translation is missing, falls back to English with a flag for the translation team.
+*Syncs with: Phases 8, 19, 22, 23B*
+
+---
+
+**Phase 33 — State Regulatory Auditor Partner Portal**
+
+This is one of the most strategically important phases in the entire build. The goal is to make CoAIleague the platform that state regulatory bodies trust and partner with — starting with Texas DPS and TCOLE and expanding to all 57 states in the knowledge base. A state auditor who can conduct a full, verified, frictionless audit through CoAIleague is a state auditor who recommends CoAIleague to every security company they regulate.
+
+**Architecture:**
+
+State Regulatory Authority (SRA) accounts are a completely separate account type from workspace users. They are not org_owners, managers, or officers. They are verified external principals with time-bounded, scope-limited, read-only access to specific workspaces they are authorized to audit.
+
+**Identity Verification Flow:**
+
+When a state auditor requests access to audit a workspace, they submit: their full legal name, badge number, regulatory body (e.g. Texas DPS, FDLE), state, authorization letter (uploaded PDF), and government-issued ID. Trinity receives this package and runs verification: confirms the regulatory body is in the state knowledge base, validates the authorization letter format against known regulatory document templates, extracts the audit scope (which company, which period, which license types), flags any inconsistency for human review. Platform staff reviews Trinity's analysis and approves or denies the SRA account creation. On approval an SRA account is created with a unique credential set — username format `SRA-[StateCode]-[BadgeNumber]`, password generated and delivered via verified government email. Trinity logs the full identity verification chain with all submitted documents stored in a secure SRA vault.
+
+**SRA Login and Session:**
+
+SRA users log in through a dedicated portal at `/regulatory-audit` — completely separate from the main platform login. Two-factor authentication required on every login. Session is time-bounded to the audit period specified in the authorization letter. Session is workspace-scoped to the specific company being audited. SRA cannot navigate to any other workspace. SRA session logs every action: page viewed, document opened, data exported, chat message sent — with timestamp, IP address, and action type. Org_owner is notified via NDS the moment an SRA auditor logs in, including auditor identity and stated purpose.
+
+**What SRA Can See — Read-Only:**
+
+- Officer roster: names, license numbers, license types, license expiration dates, certification status, hire dates, post assignments — matching DPS audit requirements for that state
+- License and certification records: full history, renewal dates, document vault entries
+- Compliance records: violations, resolutions, compliance scores, audit reports
+- Incident reports: all incidents within the audit period for the workspace
+- Document vault: executed contracts, onboarding documents, compliance packets — filtered to audit-relevant types only
+- Schedule history: post coverage records, shift logs, clock-in/out records for the audit period
+- Training records: if applicable for the state's requirements
+- Proof of service logs: GPS-stamped activity records
+
+**What SRA Cannot See:**
+
+- Payroll amounts, pay rates, or financial data beyond what is required for compliance
+- Internal platform communications between staff
+- Other workspaces — complete isolation
+- System configuration or platform settings
+- Other auditors' sessions or findings
+
+**SRA Communication:**
+
+SRA auditor can initiate a chat session with the workspace's org_owner and designated managers. Chat is mediated through the platform — not email. All messages logged immutably as part of the audit record. Org_owner can respond in real time or asynchronously. Trinity monitors the chat for requests that require document retrieval — if the auditor asks for a specific record, Trinity can surface it from the vault directly in the chat. SRA can submit formal findings and evidence requests through the platform — each request creates a structured record with: request type, description, urgency, requested documents, response deadline. Workspace receives NDS notification of each formal request.
+
+**SRA Evidence Package:**
+
+At any point during or after the audit, SRA can generate an evidence package: a structured export of all data they viewed during the audit, all documents they accessed, all communications, and their formal findings. This package is generated as a PDF with SHA-256 integrity hash. CoAIleague retains a copy of every evidence package in the SRA vault. Workspace receives a copy automatically.
+
+**Multi-State Operation:**
+
+Each SRA account is scoped to one state. A Texas DPS auditor cannot see California BSIS data. State-specific audit fields pulled from `stateRegulatoryKnowledgeBase` — each state's auditor sees exactly the fields their regulatory body requires, no more. State knowledge base defines what each regulatory body is authorized to view in CoAIleague. Future partnership agreements with state regulatory bodies formalized as state configurations in the knowledge base.
+
+**Partnership Vision:**
+
+The goal is for CoAIleague to become the official audit platform preferred by state regulatory bodies. When a regulator completes a frictionless, fully documented, AI-assisted audit through CoAIleague, they have a reason to recommend it. Trinity's role is to make the auditor's job easier — surfacing relevant records proactively, answering regulatory questions about the company's compliance history, and producing audit-ready exports in the exact format the regulatory body needs.
+
+*Syncs with: Phases 17, 18, 20, 21, 21B, 24, 28*
+
+---
+
+**Phase 34 — Business Intelligence and Analytics**
+Revenue trends over time, officer retention rates, client churn risk signals, compliance score trends, post coverage rates, overtime cost analysis, calloff frequency by officer and post, incident type distribution. Owner-facing analytics dashboard with date range filtering, exportable reports, and Trinity-queryable data. BI data read-only — never modifies operational records. Analytics queries optimized — no full-table scans on large tables.
+*Syncs with: Phases 14, 15, 21, 36*
+
+---
+
+**Phase 35 — Global Search and Discovery**
+Unified search across officers, shifts, invoices, documents, incidents, tickets, and compliance records. Search results scoped to requesting user's workspace and role — officer cannot search other officers. Search indexed for performance — no full-table scans. Fuzzy matching for names. Filter by entity type. Deep link from search result to correct page. Trinity can execute searches on behalf of authorized users via registered action.
+*Syncs with: Phases 9, 20, 23B*
+
+---
+
+**Phase 36 — Data Export, Portability, and Privacy Compliance**
+Officer right-to-access: officer can request all personal data held by the platform — generates a structured export within defined SLA. Workspace data portability: departing workspace can export all their data before account closure — officers, schedules, invoices, documents, compliance records. Data deletion procedure: defined and coded — what is deleted, what is retained for legal/compliance purposes, what the retention periods are. GDPR Article 17 (right to erasure) handled correctly — PII removed, audit records anonymized not deleted. CCPA compliance for California-based officers and clients. Data retention policies enforced by code — automated deletion jobs for expired data. Privacy policy and terms of service linkable from the platform.
+*Syncs with: Phases 11, 18, 25, 31*
+
+---
+
+**Phase 37 — Accessibility and WCAG 2.1 AA Compliance**
+Screen reader compatibility across all primary views — ARIA labels on all interactive elements. Keyboard navigation complete — every action achievable without a mouse. Color contrast ratios meet WCAG AA minimums — 4.5:1 for normal text, 3:1 for large text. Focus indicators visible on all focusable elements. Error messages linked to their fields via `aria-describedby`. Images have alt text. Videos have captions if applicable. Touch targets minimum 44x44px confirmed (regression from Phase 22). Form labels correctly associated with inputs. No content that flashes more than 3 times per second.
+*Syncs with: Phases 22, 23*
+
+---
+
+**Phase 38 — Automated Test Suite**
+Critical path automated tests written and passing: officer clock-in flow, calloff and replacement cascade, payroll run end-to-end, invoice generation and delivery, document signing flow, compliance violation detection, Trinity action execution with role enforcement, portal access and token expiry. Tests run on every deployment — CI/CD integration. Test coverage report generated. Flaky tests identified and stabilized. Test database seeded correctly — tests do not touch production data. Regression test for every critical bug fixed across Phases 1–37.
+*Syncs with: All prior phases — this is the regression safety net*
+
+---
+
+**Phase 39 — Performance and Stability Under Load**
+Concurrent user simulation, database query performance under realistic load, slow query identification and indexing, WebSocket connection stability under volume, NDS queue depth management, Trinity response latency under load, rate limit behavior under burst traffic, memory leak detection on long-running processes.
+*Syncs with: Phases 24, 27, 28*
+
+---
+
+**Phase 40 — Disaster Recovery and Failover Verification**
+NDS failure modes. Trinity failover. Database connection loss and reconnect. Cron missed-fire recovery. Failed payroll run recovery. Document pipeline recovery on storage failure. Retry dead letter queue behavior. Graceful degradation — platform degrades to read-only safely rather than crashing.
+*Syncs with: Phases 26, 27, 29*
+
+---
+
+**Phase 41 — Workspace Subscription Lifecycle**
+Trial start, subscription activation, tier enforcement in production, upgrade/downgrade events, subscription expiry read-only degradation, workspace cancellation, data retention and export on offboarding. Stripe payment failure, dunning, graceful degradation, reactivation flow.
+*Syncs with: Phases 30, 32, 36*
+
+---
+
+**Phase 42 — Production Deployment Readiness**
+Environment separation confirmed: dev, staging, production — no shared secrets or databases. CI/CD pipeline configured — every merge to main runs automated tests before deploy. Database migration strategy for production — zero-downtime migrations confirmed. Rollback procedure defined and tested — can revert a deployment within defined RTO. Environment variable management — all secrets in vault, none in code. Secrets rotation procedure documented and tested. External uptime monitoring configured — alerts on downtime within 1 minute. Error tracking configured (Sentry or equivalent) — every unhandled exception captured with context. Performance monitoring configured — response time and query time tracked. Log aggregation configured — structured logs queryable. Deployment checklist documented in replit.md — every step required to safely deploy a new version.
+*Syncs with: Phases 24, 38, 39, 40*
+
+---
+
+**Phase 43 — Grand Launch Certification**
+Full end-to-end smoke test across every system simultaneously. One complete operational cycle: officer onboarded → license recorded → scheduled → calloff submitted via email → replacement cascade fires → officer clocks in from field → incident reported → shift closes → hours confirmed → invoice generated → QuickBooks synced → client views invoice in portal → payroll run → pay stub generated → compliance report generated → state auditor logs in and reviews → Trinity queried for summary → audit trail confirmed unbroken from first event to last. All 42 prior phase checks green. SRA portal demo-ready. Go-live approved.
+
+---
+
+**UPDATED ROSTER: 43 PHASES TOTAL**
+
+Phases 1–23B: Certified
+Phase 24: Running
+Phases 25–43: Queued in sequence
+
+Every phase syncs with prior work. Every phase has defined integration points. Nothing ships until Phase 43 certifies clean.
+
+Update replit.md with this complete roster now. This is the living build plan for the entire platform.
+
+---
+
+Paste that to the agent now. It will update replit.md with the full 43-phase roster while Phase 24 finishes running. When Phase 24 comes back paste the results and we move to Phase 25.

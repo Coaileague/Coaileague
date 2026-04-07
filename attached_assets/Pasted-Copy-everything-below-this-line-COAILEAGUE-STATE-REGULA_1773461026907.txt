@@ -1,0 +1,578 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — STATE REGULATORY COMPLIANCE AND AUDITOR PORTAL
+This is a new platform-level system. Read everything before touching anything.
+This system has three distinct layers that must all work together:
+Layer 1 — Intelligent compliance scoring that informs scheduling without over-blocking.
+Layer 2 — Violation tracking when compliance is manually overridden.
+Layer 3 — State auditor portal with verified access and read-only org visibility.
+Understand the full architecture before writing a single line.
+
+---
+
+THE CORE PHILOSOPHY — SOFT GATES AND HARD BLOCKS
+
+Security workforce compliance is not binary. There is a spectrum.
+Trinity must understand this spectrum and apply it correctly.
+
+HARD BLOCKS — regulatory requirements that cannot be bypassed without violation:
+Expired security officer license (guard card) — armed or unarmed.
+This is a state regulatory requirement in every jurisdiction.
+An officer with an expired guard card cannot legally perform security work.
+Trinity must never allow scheduling of an expired-license officer.
+If management manually overrides this hard block the system must:
+Allow the override to proceed since management has the authority.
+Record it immediately as a regulatory violation event.
+Log every detail: who overrode, which officer, which shift, which site,
+what client, what time, what the license expiration date was at time of override.
+Generate a violation record that is immutable — WORM locked.
+Notify the org_owner that a regulatory violation has been recorded.
+Include this violation in the auditor-facing compliance report.
+
+Other hard blocks that constitute regulatory violations:
+Operating an armed officer without an active firearms qualification.
+Assigning an officer to a post requiring a specific license class
+they do not hold.
+Any state-specific hard requirement confirmed by Trinity's regulatory knowledge base.
+
+SOFT GATES — compliance factors that affect scheduling preference not eligibility:
+Incomplete onboarding documents — officer is less favorable but not blocked
+until their first scheduled shift date arrives.
+Missing non-required certifications for posts that recommend but do not require them.
+Low punctuality score — history of late clock-ins makes the officer less favorable.
+Incomplete post orders acknowledgment for a site they have not worked before.
+GPS clock-in failures — history of GPS issues at specific sites.
+Disciplinary actions on file — active disciplinary record reduces scheduling priority.
+Outstanding document signatures — not a hard block but reduces favorability.
+
+OFFICER COMPLIANCE SCORE — TRINITY CALCULATES THIS:
+Every officer has a compliance score from 0 to 100.
+100 is fully compliant across all variables.
+The score is calculated by Trinity in real time from actual database records.
+
+Score components and weights:
+License active and not expiring within 30 days: 40 points.
+License expiring within 30 days: 20 points (reduced but not zero).
+License expired: 0 points AND hard block applied.
+Onboarding documents complete: 20 points.
+Onboarding documents pending: 10 points.
+Post orders signed for assigned sites: 15 points.
+Post orders pending for assigned sites: 8 points.
+No active disciplinary actions: 15 points.
+Active disciplinary action: 8 points.
+GPS clock-in reliability above 90 percent: 10 points.
+GPS reliability below 90 percent: 5 points.
+
+Score interpretation:
+85 to 100: highly favorable — Trinity selects these officers first.
+70 to 84: favorable — good candidate, minor gaps.
+50 to 69: less favorable — used when better options unavailable.
+30 to 49: low priority — used only when no better option exists.
+0 to 29: minimum priority — Trinity flags to manager for attention.
+0 with expired license: hard blocked regardless of score.
+
+SCHEDULING ENGINE WITH COMPLIANCE SCORING:
+Trinity ranks candidates by compliance score first, then availability,
+site familiarity, overtime proximity, and certification match.
+Trinity shows the manager the compliance score and reasoning next to every candidate.
+Full transparency — Trinity never hides the compliance reasoning.
+
+---
+
+VIOLATION TRACKING SYSTEM
+
+Every time a hard block is manually overridden a violation record is created.
+
+VIOLATION RECORD SCHEMA:
+violation_id, workspace_id, officer_id, override_by_user_id, violation_type,
+shift_id, site_id, client_id, officer_license_number, license_expiration_date,
+shift_date, shift_start_time, shift_end_time, override_reason (required),
+override_timestamp, was_corrected, correction_timestamp,
+state_license_authority, regulatory_reference (statute citation), created_at.
+All violation records are WORM locked immediately on creation.
+No violation record can ever be edited or deleted by anyone.
+
+VIOLATION NOTIFICATION CHAIN:
+In-platform notification to org_owner with full violation details.
+Email to org_owner via Resend.
+Entry in org regulatory compliance dashboard under Violations.
+
+VIOLATION SUMMARY REPORT — REPORTBOT GENERATES THIS:
+Generated automatically at end of each month, on demand, and when auditor logs in.
+Contains: executive summary, violation detail table, compliance trend chart,
+officer compliance score summary, Trinity AI narrative, regulatory citations,
+corrective action log.
+Saved to document safe under Regulatory Compliance. WORM locked.
+
+---
+
+AUDITOR PORTAL — FULL SPECIFICATION
+
+AUDITOR PORTAL PAGE:
+Public-facing at coaileague.com/regulatory or audit.coaileague.com.
+Professional design clearly branded for regulatory use.
+Completely separate from main platform login.
+
+AUDITOR VERIFICATION FLOW — 6 STEPS:
+
+Step 1 — Company lookup:
+Auditor enters the security company's state license number.
+Trinity searches for an org with that license number.
+If found Trinity shows company name and state for confirmation.
+If not found Trinity returns a clear not found message.
+
+Step 2 — Auditor credentials submission:
+Full name, state agency name, official agency email address,
+auditor badge number or employee ID, purpose of audit
+(routine, complaint-based, random, or renewal inspection),
+upload of official audit authorization document — PDF of audit order or
+state-issued authorization letter.
+
+Step 3 — Trinity automated verification:
+Does the email domain match the known regulatory agency domain for that state?
+Trinity maintains a registry of all US state security regulatory agency email domains.
+Does the uploaded authorization PDF contain:
+Auditor name matching submitted name.
+License number matching the company being audited.
+State agency letterhead or seal.
+Audit authorization date within the last 30 days.
+If all checks pass: marked verified_pending.
+If any check fails: specific reason returned with correction request.
+
+Step 4 — Org_owner notification:
+Trinity immediately notifies the org_owner via in-platform notification and email:
+Agency name, auditor name, audit type, and that credentials were verified.
+Org_owner has 24 hours to dispute. No dispute means access is granted automatically.
+Disputes escalate to CoAIleague platform_staff for manual review.
+
+Step 5 — Auditor account creation:
+After 24 hours with no dispute access is granted.
+Temporary login credentials sent to auditor's official state email address.
+Account scoped to that specific org only — no other org visible.
+Read-only — no edits, no deletions, no data changes possible under any circumstance.
+Time-limited — expires at end of audit period (14 days default).
+
+Step 6 — Audit completion:
+Auditor uploads their official audit report PDF to the platform.
+Trinity reads it, extracts findings, violations noted, corrective actions required,
+compliance status determination, and required deadlines.
+Trinity generates a corrective action plan for the org_owner.
+Org_owner notified of audit report upload and corrective action plan.
+Auditor account auto-deactivates on expiry.
+Full access log permanently stored in audit trail.
+
+---
+
+AUDITOR COMPLIANCE DASHBOARD — COMPLETE SPECIFICATION
+
+When the auditor logs in they see the Regulatory Compliance Dashboard exclusively.
+This dashboard is not visible to org_owner, managers, or employees under any circumstance.
+It is the most comprehensive view of an organization's regulatory standing.
+
+SECTION 1 — COMPANY OVERVIEW:
+Company legal name and DBA if applicable.
+State security company license number and license class.
+License issue date and expiration date — highlighted red if within 90 days of expiry.
+Upload slot for the official security company license certificate PDF — org uploads this.
+License certificate display: if uploaded show the document inline for auditor review.
+If not uploaded flag as MISSING — REQUIRED FOR AUDIT.
+Owner full name, title, contact phone, contact email.
+Physical business address — street, city, state, zip.
+Number of active employees and contractors broken down by license class.
+Number of active client contracts with site count.
+Date the company registered on CoAIleague.
+Overall organizational compliance score calculated by Trinity.
+
+SECTION 2 — INSURANCE DOCUMENTATION:
+Company insurance certificate — org_owner uploads this as a required document.
+Fields displayed: insurance provider name, policy number, coverage types and limits,
+policy effective date, policy expiration date.
+Expiration date highlighted red if within 60 days of expiry.
+If expired flagged as CRITICAL — INSURANCE LAPSED.
+If not uploaded flagged as MISSING — REQUIRED FOR AUDIT.
+Certificate of insurance PDF displayed inline for auditor review.
+Workers compensation insurance — separate upload slot.
+General liability insurance — separate upload slot.
+Any state-mandated coverage specific to security companies in that state.
+Trinity cross-references insurance expiration against the state regulatory knowledge base
+to confirm the coverage levels meet the minimum requirements for that state.
+
+SECTION 3 — REGULATORY POSTING COMPLIANCE:
+Labor law posting — org uploads a photograph of their labor law posters on the wall.
+The photograph must show:
+The posters are visibly displayed in a location accessible to all employees.
+Federal required posters visible: FLSA, FMLA, Equal Employment, OSHA, NLRA.
+State required posters visible: varies by state — Trinity lists what is required per state.
+Upload slot accepts a clear photograph.
+Trinity analyzes the photo using vision AI to confirm posters are visible and readable.
+If posters are confirmed: marked compliant with upload timestamp.
+If photo is unclear or posters are missing: Trinity flags specifically what is missing.
+If not uploaded: flagged as MISSING — REQUIRED FOR AUDIT.
+Upload date is recorded — auditor can see when the photo was uploaded
+to verify it was not uploaded the moment an audit was requested.
+
+SECTION 4 — COMPANY UNIFORM COMPLIANCE:
+Org uploads a photograph of the official company security uniform.
+Regulatory requirements visible in the photograph must include:
+The word SECURITY clearly visible on the uniform.
+The company name clearly visible on the uniform.
+State-specific badge or patch requirements if applicable.
+Uniform must not be confused with law enforcement uniform.
+Trinity analyzes the photo using vision AI to confirm:
+SECURITY text is visible.
+Company name is visible.
+The uniform is not deceptively similar to a law enforcement uniform.
+If confirmed: marked compliant.
+If any element is missing or unclear: Trinity flags the specific gap.
+Upload slot with date recorded.
+If not uploaded: flagged as MISSING — REQUIRED FOR AUDIT.
+
+SECTION 5 — PATROL VEHICLE DOCUMENTATION (IF APPLICABLE):
+Upload slot for photograph of patrol vehicle or vehicles.
+Regulatory requirements for security patrol vehicles typically include:
+Vehicle markings clearly showing company name.
+The word SECURITY visible on the vehicle.
+No markings that could be confused with law enforcement vehicles.
+License plate photograph for each vehicle.
+Trinity analyzes the photo for compliance with vehicle marking requirements.
+If the company does not use patrol vehicles: org_owner can mark as Not Applicable.
+This selection is logged — auditor can see the org_owner acknowledged no vehicles are used.
+If Not Applicable is selected and shifts show mobile patrol assignments Trinity flags
+the inconsistency for auditor review.
+
+SECTION 6 — OFFICER COMPLIANCE STATUS — DETAILED:
+Full roster of every active employee and contractor in the organization.
+For each officer the auditor sees:
+
+PERSONAL AND IDENTIFICATION:
+Full legal name.
+Date of birth.
+Place of birth — city, state or country.
+Full residential address — street, city, state, zip.
+Phone number.
+Emergency contact name and phone.
+
+LICENSING AND CREDENTIALS:
+State security officer license number.
+License class (armed, unarmed, etc).
+License issue date.
+License expiration date — red if expired or within 30 days.
+Current license status: active, expiring, expired, suspended, revoked.
+Guard card uploaded — yes or no with upload date.
+If uploaded: document displayed inline for auditor review.
+If not uploaded: flagged as MISSING.
+State where licensed — flag if working in a state other than the one that issued the license.
+Firearms qualification status if applicable — active, expired, or not applicable.
+Firearms qualification expiration date.
+
+EMPLOYMENT DOCUMENTATION:
+Hire date.
+Position title.
+Employment type: W-2 employee or 1099 contractor.
+Employee application on file — yes or no. If yes display document.
+Background check authorization on file — yes or no. If yes display document.
+Background check completion date if recorded.
+Drug free workplace acknowledgment — signed document on file with date.
+If not on file: flagged as MISSING — REQUIRED.
+I-9 on file — yes or no. If yes display document.
+W-4 on file (W-2 employees) or W-9 on file (1099 contractors) — yes or no.
+
+COMPLIANCE SCORE:
+Current compliance score 0 to 100.
+Score breakdown showing each component.
+Any active flags or warnings.
+
+TRAINING AND CERTIFICATIONS:
+Every certification on file with issue date and expiration date.
+First Aid, CPR, AED, Firearms, Defensive Tactics, De-escalation — any that are uploaded.
+State-mandated continuing education hours if tracked.
+
+DISCIPLINARY RECORD:
+Any active disciplinary actions with dates.
+Disciplinary documents available for auditor review.
+
+SECTION 7 — VIOLATION RECORD:
+Every hard block override that resulted in a violation during the audit period.
+Full violation detail for each: officer, site, shift date, override reason,
+who authorized the override, statute violated, whether it was corrected before shift start.
+Trinity AI narrative explaining the violation pattern if multiple violations exist.
+This section cannot be hidden or minimized — it is always visible to the auditor.
+
+SECTION 8 — SHIFT AND ASSIGNMENT RECORDS:
+Complete shift history for the audit period.
+Each shift record shows: date, site name, client name, assigned officer,
+scheduled start and end, actual clock-in and clock-out times,
+GPS verification status, hours worked, any compliance flags on that shift.
+Filter by date range, by officer, by site, by client.
+Export to PDF or CSV available to the auditor.
+
+SECTION 9 — INCIDENT REPORTS:
+All incident reports filed during the audit period.
+Each report shows: date, time, site, officer, incident type, description,
+whether emergency services were contacted, resolution.
+Incident reports are read-only for the auditor.
+Export available.
+
+SECTION 10 — DOCUMENT SAFE — AUDITOR VIEW:
+Auditor can view and download these document categories:
+License certificates (company and officers).
+Insurance certificates.
+Onboarding compliance documents (applications, I-9s, W-4s, W-9s, NDAs, background authorizations).
+Drug free workplace acknowledgments.
+Post orders acknowledgments.
+Employee handbook acknowledgments.
+Executed employment agreements.
+Disciplinary action forms.
+Shift reports.
+Incident reports.
+Violation summary reports.
+Labor law and uniform compliance photographs.
+
+Auditor CANNOT view under any circumstance:
+Employee pay rates or pay stubs.
+Payroll records.
+Client invoices or billing amounts.
+Company revenue or financial records.
+Credit balances or platform billing.
+These are outside the scope of a security regulatory audit and must be
+completely hidden from the auditor role — no navigation, no API access,
+no Trinity response will surface this data to an auditor.
+
+SECTION 11 — AUDIT UPLOAD AND FINDINGS:
+After completing their review the auditor uploads their official audit report.
+The upload is saved to the org's Regulatory Compliance folder permanently.
+Trinity reads the uploaded report and extracts:
+Overall compliance determination: compliant, conditional, or non-compliant.
+Specific violations noted by the auditor.
+Corrective actions required with deadlines.
+Any license suspension or revocation actions initiated.
+Trinity generates a corrective action plan and presents it to the org_owner.
+The org_owner receives the plan with specific steps, owners, and deadlines.
+Trinity tracks corrective action completion and follows up if deadlines are missed.
+
+---
+
+REQUIRED DOCUMENT UPLOAD SYSTEM FOR ORGS
+
+Before an audit can be completed cleanly the org must have these documents uploaded.
+Build a regulatory document checklist in the org's compliance settings:
+
+COMPANY-LEVEL REQUIRED UPLOADS:
+Security company state license certificate — PDF.
+Certificate of general liability insurance — PDF.
+Certificate of workers compensation insurance — PDF.
+Labor law poster compliance photograph — image file.
+Company uniform compliance photograph — image file.
+Patrol vehicle photographs if applicable — image files or Not Applicable selection.
+Drug free workplace policy — PDF.
+Company employee handbook — PDF (converts to online form).
+
+OFFICER-LEVEL REQUIRED UPLOADS PER EMPLOYEE:
+Guard card / security officer license — image or PDF.
+Photo ID (drivers license or state ID) — image.
+Employee application — generated by the platform or uploaded.
+Background check authorization — generated by the platform.
+Drug free workplace acknowledgment — signed document from onboarding packet.
+I-9 Employment Eligibility Verification — generated by the platform.
+W-4 (W-2 employees) or W-9 (1099 contractors) — generated by the platform.
+Any applicable certification cards — First Aid, CPR, Firearms, etc.
+
+Trinity tracks which of these are on file and which are missing.
+The regulatory document checklist shows the org_owner their audit readiness score:
+100 percent means every required document is uploaded and current.
+Below 100 percent Trinity shows exactly what is missing with upload prompts.
+An org with an audit readiness score below 100 percent receives a daily reminder
+in the morning briefing until all required documents are uploaded.
+
+---
+
+STATE REGULATORY KNOWLEDGE BASE
+
+Trinity maintains a knowledge base of regulatory requirements per state.
+
+FIELDS PER STATE:
+State name and abbreviation.
+Regulatory agency full name.
+Regulatory agency official website.
+Regulatory agency email domain for auditor verification.
+License types issued with descriptions.
+License renewal period.
+Continuing education hours required for renewal.
+Minimum age for licensure.
+Background check requirements.
+Firearm qualification requirements and renewal period.
+Required labor law posters (federal and state-specific).
+Uniform requirements by statute.
+Vehicle marking requirements if applicable.
+Key statutes with citations.
+State-specific hard block rules.
+Minimum insurance coverage requirements.
+
+PRE-POPULATED STATES:
+
+Texas:
+Agency: Texas Department of Public Safety — Private Security Bureau.
+Email domain: @dps.texas.gov
+License types: Class A (armed), Class B (unarmed), Class C (company), commissioned.
+Key statute: Texas Occupations Code Chapter 1702.
+Renewal: 2 years.
+Hard blocks: expired license, armed without active firearms qualification,
+company operating without valid Class C license.
+Minimum insurance: $100,000 general liability per occurrence.
+Uniform requirement: must display SECURITY and company name, Chapter 1702.
+
+California:
+Agency: Bureau of Security and Investigative Services, California DOJ.
+Email domain: @doj.ca.gov
+License types: Guard card, exposed firearm permit, proprietary private security.
+Key statute: California Business and Professions Code 7580 through 7599.8.
+Renewal: 2 years with 32 hours continuing education.
+
+Florida:
+Agency: Florida Department of Agriculture and Consumer Services.
+Email domain: @fdacs.gov
+License types: Class D (unarmed), Class G (armed statewide), Class B (agency).
+Key statute: Florida Statutes Chapter 493.
+Renewal: 2 years.
+
+Georgia, New York, Arizona, Nevada, Colorado, Illinois,
+North Carolina, Virginia, Washington:
+Add each with agency name, email domain, license types, key statutes, renewal period.
+
+All other states: Trinity stores agency name and falls back to manual
+platform_staff verification for auditor credential validation.
+
+The knowledge base is updateable by platform_staff without a code deploy.
+When regulations change Trinity immediately applies the updated rules.
+
+---
+
+TRINITY REGULATORY INTELLIGENCE BEHAVIORS
+
+Trinity cites the exact statute when creating violation records.
+Trinity explains hard blocks to managers in plain language with renewal guidance.
+Trinity generates regulatory guidance for officers approaching license expiration
+with instructions specific to the correct state agency.
+Trinity alerts org_owners when company-level licenses approach expiration.
+Trinity tracks the org's audit readiness score daily and includes it in the
+morning briefing if below 100 percent.
+Trinity can answer auditor questions about the platform and about the org's
+compliance status — all responses are within the read-only scope.
+Trinity never surfaces financial data to auditors regardless of how the question is phrased.
+
+PARTNER POSITIONING:
+CoAIleague becomes the compliance infrastructure layer for state regulatory bodies.
+Auditors complete reviews faster because records are verified, timestamped, and organized.
+Compliant companies are always audit-ready with no scrambling.
+Clean audit history becomes a competitive differentiator for government contract bids.
+CoAIleague approaches state agencies beginning with Texas PSB using Statewide
+Protective Services as the proof of concept.
+
+---
+
+SIMULATION TEST — TEXAS REGULATORY AUDIT FOR ACME
+
+SETUP:
+Org_owner uploads all required company documents:
+Texas Class C license certificate PDF.
+Insurance certificate PDF.
+Labor law poster photograph.
+Company uniform photograph.
+Patrol vehicle photograph or marks Not Applicable.
+Drug free workplace policy PDF.
+
+For Robert Williams set license as expired.
+Create a manual override assigning Robert to a shift.
+Confirm violation record created with Texas Occupations Code Chapter 1702 citation.
+Confirm WORM lock applied immediately.
+Confirm org_owner notification fires.
+
+AUDIT READINESS SCORE:
+Navigate to the regulatory document checklist.
+Confirm it shows each required document as uploaded or missing.
+Confirm the overall audit readiness percentage is calculated correctly.
+Confirm Trinity includes the score in the morning briefing.
+
+VIOLATION REPORT:
+Trigger ReportBot to generate the regulatory violation summary report.
+Confirm Texas statute citation appears.
+Confirm Trinity AI narrative is professional and data-driven.
+Confirm PDF saved to document safe under Regulatory Compliance.
+
+AUDITOR PORTAL FLOW:
+Navigate to the auditor portal.
+Enter Acme's Texas license number.
+Confirm Trinity finds Acme.
+Submit credentials for Inspector Sarah Chen, @dps.texas.gov, badge PSB-4421.
+Upload simulated audit authorization PDF with correct fields.
+Confirm Trinity verifies email domain against Texas PSB entry in knowledge base.
+Confirm Trinity reads the PDF and extracts auditor name and license number.
+Confirm Acme org_owner receives the 24-hour notice.
+Simulate 24 hours or org_owner acknowledgment.
+Confirm auditor account created and login email fires.
+
+AUDITOR DASHBOARD VERIFICATION:
+Log in as the auditor.
+Confirm landing page is the Regulatory Compliance Dashboard.
+Confirm Section 1 shows Acme company details and license certificate.
+Confirm Section 2 shows insurance certificate with expiration date.
+Confirm Section 3 shows the labor law poster photograph with Trinity analysis.
+Confirm Section 4 shows the uniform photograph with Trinity compliance analysis.
+Confirm Section 5 shows the patrol vehicle photograph or Not Applicable selection.
+Confirm Section 6 shows every officer with full personal details:
+Date of birth, place of birth, full address, guard card, drug free workplace
+acknowledgment, employee application, I-9, background check authorization.
+Confirm Robert Williams appears with expired license and violation record.
+Confirm Section 7 shows the full violation record with Texas statute citation.
+Confirm Section 8 shows all shift records for the audit period.
+Confirm Section 9 shows all incident reports.
+Confirm Section 10 shows all compliance documents available for download.
+Confirm pay rates, payroll, invoices, and financial data are completely invisible.
+Confirm Trinity refuses to answer any financial questions from the auditor session.
+
+AUDIT REPORT UPLOAD:
+Auditor uploads a simulated official Texas PSB audit report PDF.
+Confirm Trinity reads it and extracts findings.
+Confirm Trinity generates a corrective action plan for org_owner.
+Confirm org_owner receives notification with the plan.
+
+ACCOUNT EXPIRY:
+Simulate 14 days passing.
+Confirm auditor account is automatically deactivated.
+Confirm auditor receives expiry notification email.
+Confirm access log is permanently stored.
+Confirm org_owner can view the access log.
+
+REPORT ALL SIMULATION RESULTS:
+Each step pass or fail with specific evidence.
+Any failure is a bug — fix before production ready.
+
+---
+
+COMPLETION CRITERIA
+
+Compliance scoring: every officer has a real-time score, Trinity ranks by score,
+hard blocks create violation records, soft gates reduce priority without blocking.
+
+Violation tracking: every hard block override creates immutable WORM-locked record
+with statute citation, org_owner notified, ReportBot generates monthly report.
+
+Required document uploads: all company-level and officer-level upload slots built,
+audit readiness score calculated, Trinity reminds daily when below 100 percent.
+
+Auditor portal: license number lookup works, credential verification against
+state knowledge base works, 24-hour org_owner notice works, time-limited
+read-only account created, full compliance dashboard visible including
+all personal officer details, company documents, and violation records,
+financial data completely invisible, audit report upload and Trinity corrective
+action plan work, account auto-expires.
+
+Regulatory knowledge base: Texas fully configured, 10 additional states configured,
+all others fall back to manual verification, updateable without code deploy.
+
+When all criteria are met CoAIleague is ready to approach the Texas PSB
+as a regulatory compliance infrastructure partner.
+Statewide Protective Services is the proof of concept.
+Every security company on CoAIleague becomes audit-ready from day one.

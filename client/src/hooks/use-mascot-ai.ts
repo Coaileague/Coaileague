@@ -8,6 +8,7 @@
  * - Task suggestions for onboarding
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { thoughtManager } from '@/lib/mascot/ThoughtManager';
@@ -52,7 +53,7 @@ interface HolidayStatus {
 }
 
 async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: 'include' });
+  const res = await secureFetch(url, { credentials: 'include' });
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {
       return { insights: [], faqs: [], tasks: [], isHoliday: false } as T;
@@ -149,23 +150,31 @@ export function useMascotAIIntegration(workspaceId?: string, isAuthenticated: bo
   const { data: holidayData } = useHolidayStatus(isAuthenticated);
   
   useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null;
     if (insightsData?.insights && insightsData.insights.length > 0) {
       const highPriorityInsight = insightsData.insights.find(i => i.priority === 'high');
       if (highPriorityInsight) {
-        setTimeout(() => {
+        timeout = setTimeout(() => {
           thoughtManager.triggerAIInsight(highPriorityInsight.message, 'high');
         }, 5000);
       }
     }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [insightsData]);
   
   useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null;
     if (tasksData?.tasks && tasksData.tasks.length > 0) {
       const firstTask = tasksData.tasks[0];
-      setTimeout(() => {
+      timeout = setTimeout(() => {
         thoughtManager.triggerTaskSuggestion(firstTask.title);
       }, 15000);
     }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [tasksData]);
   
   return {

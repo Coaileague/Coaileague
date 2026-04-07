@@ -6,7 +6,7 @@
  * Events handled:
  * - payment_intent.succeeded → Mark invoice paid, unlock features
  * - payment_intent.payment_failed → Trigger escalation workflow
- * - invoice.paid → Update subscription status
+ * - invoice.paid → Update subscription status + reset credits on subscription_cycle renewal
  * - invoice.payment_failed → Enter grace period, send warnings
  * - subscription.created → Initialize billing tracking
  * - subscription.updated → Sync tier changes
@@ -26,9 +26,13 @@ import { eq, and } from 'drizzle-orm';
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { AccountStateService } from './accountState';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('StripeEventBridge');
 
 const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover', timeout: 10000, maxNetworkRetries: 2 })
   : null;
 
 interface StripeEventResult {
@@ -69,15 +73,15 @@ class StripeEventBridge {
    * Includes idempotency check to prevent duplicate processing
    */
   async processEvent(event: Stripe.Event): Promise<StripeEventResult> {
-    console.log(`[StripeEventBridge] Processing event: ${event.type} (${event.id})`);
+    log.info('Processing event', { eventType: event.type, eventId: event.id });
 
     if (!stripe) {
-      console.warn('[StripeEventBridge] Stripe not configured, skipping event');
+      log.warn('Stripe not configured, skipping event');
       return { success: false, eventType: event.type, action: 'skipped', message: 'Stripe not configured', error: 'STRIPE_SECRET_KEY not set' };
     }
 
     if (this.processedEvents.has(event.id)) {
-      console.log(`[StripeEventBridge] Duplicate event ${event.id}, skipping`);
+      log.info('Duplicate event, skipping', { eventId: event.id });
       return { success: true, eventType: event.type, action: 'skipped', message: 'Duplicate event (idempotency check)' };
     }
 
@@ -109,13 +113,13 @@ class StripeEventBridge {
           return { success: true, eventType: event.type, action: 'ignored', message: 'Event type not handled' };
       }
     } catch (error: any) {
-      console.error(`[StripeEventBridge] Error processing ${event.type}:`, error);
+      log.error('Error processing event', { eventType: event.type, error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
         eventType: event.type,
         action: 'error',
         message: 'Event processing failed',
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }
@@ -135,9 +139,9 @@ class StripeEventBridge {
       type: 'payment_succeeded',
       category: 'billing',
       title: 'Payment Successful',
-      description: `Payment of $${(paymentIntent.amount / 100).toFixed(2)} received for ${workspace.name}`,
+      description: `Payment of $${((paymentIntent.amount || 0) / 100).toFixed(2)} received for ${workspace.name}`,
+      workspaceId: workspace.id,
       metadata: {
-        workspaceId: workspace.id,
         amount: paymentIntent.amount,
         paymentIntentId: paymentIntent.id,
       },
@@ -147,8 +151,8 @@ class StripeEventBridge {
     await this.notifyWorkspaceOwner(workspace.id, {
       type: 'billing',
       title: 'Payment Successful',
-      message: `Your payment of $${(paymentIntent.amount / 100).toFixed(2)} has been processed successfully.`,
-      priority: 'normal',
+      message: `Your payment of $${((paymentIntent.amount || 0) / 100).toFixed(2)} has been processed successfully.`,
+      priority: 'medium',
     });
 
     return {
@@ -156,7 +160,7 @@ class StripeEventBridge {
       eventType: 'payment_intent.succeeded',
       workspaceId: workspace.id,
       action: 'payment_recorded',
-      message: `Payment of $${(paymentIntent.amount / 100).toFixed(2)} recorded`,
+      message: `Payment of $${((paymentIntent.amount || 0) / 100).toFixed(2)} recorded`,
     };
   }
 
@@ -178,31 +182,31 @@ class StripeEventBridge {
       category: 'billing',
       title: 'Payment Failed',
       description: `Payment failed for ${workspace.name}: ${failureMessage}`,
+      workspaceId: workspace.id,
       metadata: {
-        workspaceId: workspace.id,
         amount: paymentIntent.amount,
         failureReason: failureMessage,
       },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     });
 
     await this.notifyWorkspaceOwner(workspace.id, {
       type: 'billing',
       title: 'Payment Failed',
-      message: `Your payment of $${(paymentIntent.amount / 100).toFixed(2)} failed. Please update your payment method.`,
+      message: `Your payment of $${((paymentIntent.amount || 0) / 100).toFixed(2)} failed. Please update your payment method.`,
       priority: 'urgent',
-      actionUrl: '/settings/billing',
+      actionUrl: '/settings',
     });
 
     try {
-      await helpaiOrchestrator.executeAction('approval.request', {
+      await helpaiOrchestrator.executeAction('resume_approval.request', {
         title: 'Payment Failure - Human Review Required',
         description: `Payment failed for workspace ${workspace.name}. Reason: ${failureMessage}`,
         riskLevel: 'medium',
         workspaceId: workspace.id,
-      }, { userId: 'system', userRole: 'platform_admin', workspaceId: workspace.id });
+      }, { userId: 'system', userRole: 'sysop', workspaceId: workspace.id });
     } catch (error) {
-      console.warn('[StripeEventBridge] Could not create approval request:', error);
+      log.warn('Could not create resume approval request', { error: (error as any).message });
     }
 
     return {
@@ -216,6 +220,11 @@ class StripeEventBridge {
 
   /**
    * Handle invoice paid
+   * For subscription renewal invoices (billing_reason = 'subscription_cycle'):
+   *   → Trigger credit reset so the org receives their new monthly allocation
+   *   → Reset overage accumulator to 0 (weekly billing already charged it via Stripe)
+   * For one-time invoices (billing_reason = 'manual' or 'subscription_create'):
+   *   → Just activate the subscription, no credit reset needed
    */
   private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<StripeEventResult> {
     const customerId = invoice.customer as string;
@@ -233,15 +242,39 @@ class StripeEventBridge {
       .set({ status: 'active' })
       .where(eq(subscriptions.workspaceId, workspace.id));
 
+    // CREDIT RESET — fires on subscription renewal events only.
+    // Guarantees credits reset is tied to actual Stripe payment, not just a cron date.
+    // 'subscription_cycle' = renewal; 'subscription_create' = first payment (no reset yet).
+    const billingReason = (invoice as any).billing_reason as string | undefined;
+    const isRenewal = billingReason === 'subscription_cycle';
+    if (isRenewal) {
+      try {
+        const { resetCreditsNow } = await import('./creditResetCron');
+        await resetCreditsNow(workspace.id);
+        log.info('[StripeEventBridge] Credit reset triggered on subscription renewal', {
+          workspaceId: workspace.id,
+          invoiceId: invoice.id,
+          billingReason,
+        });
+      } catch (resetErr: any) {
+        log.warn('[StripeEventBridge] Credit reset failed on invoice.paid — cron fallback will handle on 1st of month', {
+          workspaceId: workspace.id,
+          error: resetErr.message,
+        });
+      }
+    }
+
     await platformEventBus.publish({
       type: 'invoice_paid',
       category: 'billing',
       title: 'Invoice Paid',
       description: `Invoice ${invoice.number} paid for ${workspace.name}`,
+      workspaceId: workspace.id,
       metadata: {
-        workspaceId: workspace.id,
         invoiceId: invoice.id,
         amount: invoice.amount_paid,
+        billingReason,
+        creditResetTriggered: isRenewal,
       },
       visibility: 'workspace',
     });
@@ -250,8 +283,8 @@ class StripeEventBridge {
       success: true,
       eventType: 'invoice.paid',
       workspaceId: workspace.id,
-      action: 'subscription_activated',
-      message: `Invoice ${invoice.number} paid, subscription active`,
+      action: isRenewal ? 'subscription_renewed_credits_reset' : 'subscription_activated',
+      message: `Invoice ${invoice.number} paid, subscription active${isRenewal ? ', credits reset to new monthly allocation' : ''}`,
     };
   }
 
@@ -279,7 +312,7 @@ class StripeEventBridge {
       title: 'Invoice Payment Failed',
       message: `Your invoice payment failed. Please update your payment method to avoid service interruption.`,
       priority: 'urgent',
-      actionUrl: '/settings/billing',
+      actionUrl: '/settings',
     });
 
     await platformEventBus.publish({
@@ -287,12 +320,12 @@ class StripeEventBridge {
       category: 'billing',
       title: 'Invoice Payment Failed',
       description: `Invoice ${invoice.number} payment failed for ${workspace.name}`,
+      workspaceId: workspace.id,
       metadata: {
-        workspaceId: workspace.id,
         invoiceId: invoice.id,
         attemptCount: invoice.attempt_count,
       },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     });
 
     return {
@@ -327,12 +360,12 @@ class StripeEventBridge {
       category: 'billing',
       title: 'Subscription Created',
       description: `New subscription created for ${workspace.name}`,
+      workspaceId: workspace.id,
       metadata: {
-        workspaceId: workspace.id,
         subscriptionId: subscription.id,
         status: subscription.status,
       },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     });
 
     return {
@@ -394,17 +427,21 @@ class StripeEventBridge {
       .set({ status: 'canceled' })
       .where(eq(subscriptions.workspaceId, workspace.id));
 
+    // GAP-10 FIX: Clear credits on cancellation
+    const { creditManager } = await import('./creditManager');
+    await creditManager.downgradeCreditsOnCancellation(workspace.id);
+
     await platformEventBus.publish({
       type: 'subscription_canceled',
       category: 'billing',
       title: 'Subscription Canceled',
       description: `Subscription canceled for ${workspace.name}`,
+      workspaceId: workspace.id,
       metadata: {
-        workspaceId: workspace.id,
         subscriptionId: subscription.id,
         cancelReason: subscription.cancellation_details?.reason,
       },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     });
 
     return {
@@ -435,7 +472,7 @@ class StripeEventBridge {
       title: 'Trial Ending Soon',
       message: `Your free trial ends in ${daysRemaining} days. Add a payment method to continue your service.`,
       priority: 'high',
-      actionUrl: '/settings/billing',
+      actionUrl: '/settings',
     });
 
     return {
@@ -480,14 +517,19 @@ class StripeEventBridge {
 
     if (!workspace) return;
 
-    await db.insert(notifications).values({
-      userId: workspace.ownerId,
+    // Route through Trinity AI for contextual enrichment
+    await universalNotificationEngine.sendNotification({
       workspaceId,
-      type: notification.type,
+      userId: workspace.ownerId,
+      type: 'system',
       title: notification.title,
       message: notification.message,
-      priority: notification.priority,
+      severity: notification.priority === 'urgent' ? 'critical' : notification.priority === 'high' ? 'warning' : 'info',
       actionUrl: notification.actionUrl,
+      metadata: {
+        notificationType: notification.type,
+        source: 'stripe_event_bridge',
+      },
     });
   }
 
@@ -500,7 +542,7 @@ class StripeEventBridge {
       name: 'Process Stripe Event',
       category: 'billing',
       description: 'Process a Stripe webhook event through the event bridge',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         return { success: true, actionId: request.actionId, message: 'Use webhook endpoint for Stripe events' };
       },
@@ -511,7 +553,7 @@ class StripeEventBridge {
       name: 'Sync Subscription',
       category: 'billing',
       description: 'Sync subscription status from Stripe',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { workspaceId } = request.payload;
         const [workspace] = await db.select()
@@ -532,16 +574,16 @@ class StripeEventBridge {
       },
     });
 
-    console.log('[StripeEventBridge] Registered 2 AI Brain actions');
+    log.info('Registered 2 AI Brain actions');
   }
 }
 
 export const stripeEventBridge = StripeEventBridge.getInstance();
 
 export async function initializeStripeEventBridge(): Promise<void> {
-  console.log('[StripeEventBridge] Initializing Stripe Event Bridge...');
+  log.info('Initializing Stripe Event Bridge');
   stripeEventBridge.registerActions();
-  console.log('[StripeEventBridge] Stripe Event Bridge initialized');
+  log.info('Stripe Event Bridge initialized');
 }
 
 export { StripeEventBridge };

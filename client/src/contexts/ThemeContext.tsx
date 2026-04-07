@@ -3,19 +3,32 @@ import { useQuery } from "@tanstack/react-query";
 import type { WorkspaceTheme } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 
-interface ThemeContextValue {
+/**
+ * WorkspaceBrandProvider — manages per-workspace brand CSS variables.
+ *
+ * DISTINCT from ThemeProvider (@/components/theme-provider) which manages
+ * the system-level dark/light/auto color mode.
+ *
+ * This provider fetches the authenticated org's brand settings from the API
+ * and applies them as CSS custom properties on documentElement so all
+ * workspace pages inherit the correct primary color, fonts, and favicon.
+ *
+ * It is a NO-OP for unauthenticated (public) routes — it simply passes
+ * children through without fetching or applying anything.
+ */
+
+interface WorkspaceBrandContextValue {
   theme: WorkspaceTheme | null;
   isLoading: boolean;
   applyTheme: (theme: WorkspaceTheme | null) => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
+const WorkspaceBrandContext = createContext<WorkspaceBrandContextValue | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function WorkspaceBrandProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [appliedTheme, setAppliedTheme] = useState<WorkspaceTheme | null>(null);
 
-  // Only fetch workspace theme when user is authenticated
   const { data: theme, isLoading } = useQuery<WorkspaceTheme | null>({
     queryKey: ["/api/workspace/theme"],
     enabled: !!user,
@@ -37,53 +50,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     );
 
     if (newTheme.primaryColor) {
-      document.documentElement.style.setProperty(
-        "--cad-blue",
-        newTheme.primaryColor
-      );
-      document.documentElement.style.setProperty(
-        "--primary",
-        newTheme.primaryColor
-      );
+      document.documentElement.style.setProperty("--cad-blue", newTheme.primaryColor);
+      document.documentElement.style.setProperty("--primary", newTheme.primaryColor);
     }
 
     if (newTheme.successColor) {
-      document.documentElement.style.setProperty(
-        "--cad-green",
-        newTheme.successColor
-      );
+      document.documentElement.style.setProperty("--cad-green", newTheme.successColor);
     }
 
     if (newTheme.warningColor) {
-      document.documentElement.style.setProperty(
-        "--cad-orange",
-        newTheme.warningColor
-      );
+      document.documentElement.style.setProperty("--cad-orange", newTheme.warningColor);
     }
 
     if (newTheme.errorColor) {
-      document.documentElement.style.setProperty(
-        "--cad-red",
-        newTheme.errorColor
-      );
-      document.documentElement.style.setProperty(
-        "--destructive",
-        newTheme.errorColor
-      );
+      document.documentElement.style.setProperty("--cad-red", newTheme.errorColor);
+      document.documentElement.style.setProperty("--destructive", newTheme.errorColor);
     }
 
     if (newTheme.secondaryColor) {
-      document.documentElement.style.setProperty(
-        "--secondary",
-        newTheme.secondaryColor
-      );
+      document.documentElement.style.setProperty("--secondary", newTheme.secondaryColor);
     }
 
     if (newTheme.fontFamily) {
-      document.documentElement.style.setProperty(
-        "--font-sans",
-        newTheme.fontFamily
-      );
+      document.documentElement.style.setProperty("--font-sans", newTheme.fontFamily);
     }
 
     if (newTheme.faviconUrl) {
@@ -100,24 +89,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (theme) {
-      applyTheme(theme);
-    }
+    if (theme) applyTheme(theme);
   }, [theme]);
 
   return (
-    <ThemeContext.Provider
+    <WorkspaceBrandContext.Provider
       value={{ theme: appliedTheme || theme || null, isLoading, applyTheme }}
     >
       {children}
-    </ThemeContext.Provider>
+    </WorkspaceBrandContext.Provider>
   );
 }
 
-export function useTheme() {
-  const context = useContext(ThemeContext);
+export function useWorkspaceBrand() {
+  const context = useContext(WorkspaceBrandContext);
   if (context === undefined) {
-    throw new Error("useTheme must be used within ThemeProvider");
+    throw new Error("useWorkspaceBrand must be used within WorkspaceBrandProvider");
   }
   return context;
 }
+
+/**
+ * @deprecated Use WorkspaceBrandProvider and useWorkspaceBrand instead.
+ * Kept as aliases to avoid breaking existing consumers during migration.
+ */
+export const ThemeProvider = WorkspaceBrandProvider;
+export const useTheme = useWorkspaceBrand;

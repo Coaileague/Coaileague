@@ -94,7 +94,7 @@ export function TrinityAgentPanel({
       
       <div className={`flex-1 flex overflow-hidden ${showSidebar ? 'flex-row' : 'flex-col'}`}>
         <div className={`flex-1 flex flex-col overflow-hidden ${showSidebar ? 'border-r' : ''}`}>
-          <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/30">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Agent Execution</span>
@@ -130,7 +130,7 @@ export function TrinityAgentPanel({
           </div>
           
           {confidence && (
-            <div className="px-3 py-2 border-t bg-muted/30 flex items-center justify-between">
+            <div className="px-3 py-2 border-t bg-muted/30 flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Confidence</span>
               <div className="flex items-center gap-2">
                 <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
@@ -220,7 +220,7 @@ export function TrinityAgentWrapper({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-primary/5">
+      <div className="flex items-center justify-between gap-2 px-4 py-2 border-b bg-primary/5">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">Agent Mode Active</span>

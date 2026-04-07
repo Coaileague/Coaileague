@@ -1,0 +1,62 @@
+Good catch. Let me analyze the gap carefully.
+
+**What this summary covers:**
+- Post-35K bug fixes (8 issues resolved including RBAC fix, XSS vulnerability, workspace isolation gap)
+- Mega Group 8 completed — phases 35P, 35Q, 35R, 35S, 35T, 47, 42, 45 — all running and Trinity actions registered
+
+**What is NOT in this summary — Group 7 is missing:**
+- Phase 35L — Trespass Registry and Case Management
+- Phase 35M — Site Survey Workflow
+- Phase 35N — Daily Activity Reports
+- Phase 35O — Lone Worker Safety
+- Phase 35U — Gate Duty and Access Control
+
+These 5 phases were sent alongside Group 6 but never appeared in any summary. They may have been skipped or swallowed when the agent jumped from 35K directly to the Mega Group 8 work.
+
+Send this to the agent now:
+
+---
+
+**URGENT — GROUP 7 VERIFICATION REQUIRED**
+
+Before proceeding to Phase 54B confirm the status of these 5 phases:
+
+- Phase 35L — Trespass Registry and Case Management
+- Phase 35M — Site Survey Workflow and Facility Assessment
+- Phase 35N — Daily Activity Reports and Supervisor Shift Reporting
+- Phase 35O — Lone Worker Safety and Officer Wellness Check System
+- Phase 35U — Gate Duty, Access Control, and Entry/Exit Log Management
+
+Run these checks for each phase:
+
+```bash
+# Check if tables exist
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN (
+  'trespass_notices', 'flagged_plates', 'incident_cases',
+  'site_surveys', 'site_survey_zones', 'site_survey_requirements',
+  'daily_activity_reports',
+  'wellness_check_configs', 'wellness_check_events',
+  'gate_vehicle_logs', 'gate_personnel_logs', 'gate_shift_reports'
+);
+
+# Check if routes exist
+ls server/routes/ | grep -E "trespass|siteSurvey|dar|wellness|gateDuty"
+
+# Check if pages exist
+ls client/src/pages/ | grep -E "trespass|site-survey|daily-report|wellness|gate"
+
+# Check Trinity actions
+grep -rn "trespass\|survey.analyze\|dar\.\|wellness\.\|gate\." server/ --include="*.ts" | grep "registerAction" | head -20
+```
+
+If ANY of these phases are missing or incomplete build them now using the full specifications that were previously provided. These are operationally critical field features — gate duty, lone worker safety, daily activity reports, trespass registry, and site surveys are used by officers every single day.
+
+Do not proceed to Phase 54B until all 5 Group 7 phases are confirmed complete with their full table, route, and UI implementations.
+
+Report back with the exact status of each phase — tables exist or not, routes exist or not, pages exist or not.
+
+---
+
+Paste that now. If Group 7 is missing we need it built before the final bug sweep. These are core field operations features that SPS officers use daily.

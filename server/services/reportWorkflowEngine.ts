@@ -9,10 +9,15 @@
  * - Cross-referencing with Employee/Shift/Client data
  */
 
+import { NotificationDeliveryService } from './notificationDeliveryService';
 import { storage } from "../storage";
 import crypto from "crypto";
 import { emailService } from "./emailService";
+import { platformEventBus } from './platformEventBus';
 import { workflowConfig } from "@shared/config/workflowConfig";
+import { createLogger } from '../lib/logger';
+const log = createLogger('reportWorkflowEngine');
+
 
 // ============================================================================
 // WORKFLOW INITIALIZATION
@@ -227,6 +232,15 @@ async function finalizeWorkflow(
       await notifySubmitter(submissionId, 'approved');
       break;
   }
+
+  platformEventBus.publish({
+    type: 'report_workflow_finalized',
+    category: 'operations',
+    title: 'Report Workflow Finalized',
+    description: `Report submission ${submissionId} finalized via ${workflow.finalDestination}`,
+    workspaceId,
+    metadata: { submissionId, finalDestination: workflow.finalDestination },
+  });
 }
 
 /**
@@ -303,7 +317,7 @@ async function sendReportToClient(
 
   // Verify client has email
   if (!client.email) {
-    console.warn(`[WORKFLOW] Client ${client.name} has no email address. Cannot send report.`);
+    log.warn(`[WORKFLOW] Client ${client.companyName || `${client.firstName} ${client.lastName}`} has no email address. Cannot send report.`);
     throw new Error('Client has no email address on file');
   }
 
@@ -318,21 +332,9 @@ async function sendReportToClient(
   });
 
   // Send report delivery email via EmailService
-  const emailResult = await emailService.sendReportDelivery(
-    workspaceId,
-    client.email,
-    {
-      reportNumber: submission.reportNumber,
-      reportTitle,
-      clientName: client.name,
-    }
-  );
-
-  if (!emailResult.success) {
-    console.error(`[WORKFLOW] Failed to send report email to ${client.email}:`, emailResult.error);
-  } else {
-    console.log(`[WORKFLOW] Report ${submission.reportNumber} sent to client ${client.name} (${client.email}) - Resend ID: ${emailResult.resendId}`);
-  }
+  const _reportEmail = emailService.buildReportDelivery(client.email, { reportNumber: submission.reportNumber, reportTitle, clientName: client.companyName || `${client.firstName} ${client.lastName}` });
+  await NotificationDeliveryService.send({ type: 'report_delivery', workspaceId: workspaceId || 'system', recipientUserId: client.email, channel: 'email', body: _reportEmail });
+  log.info(`[WORKFLOW] Report ${submission.reportNumber} queued via NDS to ${client.email}`);
 }
 
 // ============================================================================
@@ -380,7 +382,7 @@ async function notifyNextApprover(
     },
   });
 
-  console.log(`[WORKFLOW NOTIFICATION] ${notificationMessage}`);
+  log.info(`[WORKFLOW NOTIFICATION] ${notificationMessage}`);
   
   // Future: Integration with SupportOS™ push notifications
   // await sendPushNotification(pendingStep.assignedTo, notificationMessage);
@@ -413,7 +415,7 @@ async function notifySubmitter(
     },
   });
 
-  console.log(`[WORKFLOW NOTIFICATION] ${notificationMessage} to employee ${submission.employeeId}`);
+  log.info(`[WORKFLOW NOTIFICATION] ${notificationMessage} to employee ${submission.employeeId}`);
   
   // Future: Integration with SupportOS™ push notifications
   // await sendPushNotification(submission.employeeId, notificationMessage);

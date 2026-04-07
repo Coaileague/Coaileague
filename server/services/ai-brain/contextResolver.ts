@@ -10,6 +10,8 @@
 
 import { storage } from '../../storage';
 import { aiBrainEvents } from './internalEventEmitter';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('contextResolver');
 
 export interface ResolvedContext {
   userId?: string;
@@ -42,7 +44,7 @@ class ContextResolverService {
   private cacheTTL = 60000;
 
   private constructor() {
-    setInterval(() => this.cleanupCache(), 30000);
+    setInterval(() => this.cleanupCache(), 30000).unref();
   }
 
   static getInstance(): ContextResolverService {
@@ -138,8 +140,25 @@ class ContextResolverService {
 
       context.permissions = this.buildPermissions(context);
 
+      if (context.workspaceId) {
+        try {
+          const { workspaceContextService } = await import('./workspaceContextService');
+          const wsCtx = await workspaceContextService.getFullContext(context.workspaceId);
+          context.metadata.workspaceSummary = wsCtx.summary;
+          context.metadata.workspaceStats = {
+            employees: wsCtx.workforce.activeEmployees,
+            clients: wsCtx.clients.activeClients,
+            shiftsThisWeek: wsCtx.scheduling.shiftsThisWeek,
+            openShifts: wsCtx.scheduling.openShifts,
+            roles: wsCtx.workforce.roles,
+          };
+        } catch (wsErr) {
+          log.warn(`[ContextResolver] Workspace context enrichment failed for ${context.workspaceId}:`, wsErr instanceof Error ? wsErr.message : wsErr);
+        }
+      }
+
     } catch (error) {
-      console.error('[ContextResolver] Error building context:', error);
+      log.error('[ContextResolver] Error building context:', error);
     }
 
     return context;
@@ -179,7 +198,7 @@ class ContextResolverService {
     if (workspaceRole) {
       switch (workspaceRole) {
         case 'org_owner':
-        case 'org_admin':
+        case 'co_owner':
           permissions.push(
             'workspace.manage',
             'employees.manage',
@@ -233,7 +252,7 @@ class ContextResolverService {
     payload: Record<string, any>
   ): Promise<void> {
     if (!context.hasEscalationRights && !context.isPlatformAdmin) {
-      console.warn('[ContextResolver] Escalation attempted without rights');
+      log.warn('[ContextResolver] Escalation attempted without rights');
       return;
     }
 

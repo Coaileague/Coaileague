@@ -7,14 +7,21 @@
  * - Pending approvals across all features
  * - Token usage and costs
  * - Automation logs and audit trail
+ * - Agent Activity (Agent Spawning System — Phase 6)
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Brain, 
   TrendingUp, 
@@ -27,87 +34,179 @@ import {
   Sparkles,
   Activity,
   Shield,
-  Globe
+  Globe,
+  Bot,
+  ListChecks,
+  AlertTriangle,
+  RotateCcw,
+  ThumbsUp,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Layers,
+  Lock,
 } from "lucide-react";
 import { format } from "date-fns";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface HealthJobs {
+  total: number;
+  completed: number;
+  failed: number;
+  avgExecutionTime: number;
+  totalTokens: number;
+}
+
+interface HealthData {
+  jobs: HealthJobs;
+  globalPatterns: number;
+  solutions: number;
+}
+
+interface Approval {
+  id: string;
+  skill: string;
+  status: string;
+  createdAt: string;
+  summary?: string;
+}
+
+interface Pattern {
+  id: string;
+  name: string;
+  confidence: number;
+  appliedCount: number;
+  category: string;
+}
+
+interface Job {
+  id: string;
+  skill: string;
+  status: string;
+  createdAt: string;
+  executionTimeMs?: number;
+}
+
+interface AgentTask {
+  id: string;
+  agent_key: string;
+  agent_name?: string;
+  task_type: string;
+  status: string;
+  retry_count?: number;
+  max_retries?: number;
+  completion_score?: number;
+  confidence_level?: string;
+  evaluation_result?: string;
+  trinity_evaluation?: string;
+  flags?: string[];
+  related_entity_type?: string;
+  related_entity_id?: string;
+  spawned_at: string;
+  completed_at?: string;
+  evaluated_at?: string;
+  spawned_by?: string;
+}
+
+interface AgentRegistryEntry {
+  id: string;
+  agent_key: string;
+  agent_name: string;
+  domain: string;
+  completion_criteria?: { min_score?: number };
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const pageConfig: CanvasPageConfig = {
+  id: "ai-command-center",
+  title: "AI Command Center",
+  subtitle: "Powered by Trinity\u2122 - Learning from all organizations",
+  category: "admin",
+};
+
+const TASK_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+  in_progress: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  re_tasked: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+  complete: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+  escalated: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+  failed: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function AICommandCenter() {
-  // Fetch Trinity™ health metrics
-  const { data: healthData, isLoading: healthLoading } = useQuery({
+  const { user } = useAuth();
+  const workspaceRole = (user as any)?.workspaceRole || '';
+
+  const isFullAccess = ['org_owner', 'co_owner'].includes(workspaceRole);
+  const isManagement = ['org_owner', 'co_owner', 'department_manager'].includes(workspaceRole);
+  const isSupervisor = workspaceRole === 'supervisor';
+  const canViewAgentActivity = isManagement || isSupervisor;
+
+  const { data: healthData, isLoading: healthLoading } = useQuery<HealthData>({
     queryKey: ['/api/ai-brain/health'],
   });
 
-  // Fetch pending approvals
-  const { data: approvals, isLoading: approvalsLoading } = useQuery({
+  const { data: approvals, isLoading: approvalsLoading } = useQuery<Approval[]>({
     queryKey: ['/api/ai-brain/approvals'],
   });
 
-  // Fetch global patterns
-  const { data: patterns, isLoading: patternsLoading } = useQuery({
+  const { data: patterns, isLoading: patternsLoading } = useQuery<Pattern[]>({
     queryKey: ['/api/ai-brain/patterns'],
   });
 
-  // Fetch recent jobs
-  const { data: recentJobs, isLoading: jobsLoading } = useQuery({
+  const { data: recentJobs, isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ['/api/ai-brain/jobs/recent'],
   });
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Hero Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
-              <Brain className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold">AI Command Center</h1>
-              <p className="text-blue-100 text-sm lg:text-base">
-                Powered by Trinity™ - Learning from all organizations
-              </p>
-            </div>
-          </div>
+  const { data: escalationCount } = useQuery<{ count: number }>({
+    queryKey: ['/api/agent-activity/escalations/count'],
+    enabled: isManagement,
+  });
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mt-6">
-            <StatCard
-              icon={<Activity className="w-5 h-5" />}
-              label="Total Jobs"
-              value={healthData?.jobs?.total || 0}
-              loading={healthLoading}
-            />
-            <StatCard
-              icon={<CheckCircle className="w-5 h-5" />}
-              label="Success Rate"
-              value={healthData?.jobs?.total > 0 
-                ? `${Math.round((healthData.jobs.completed / healthData.jobs.total) * 100)}%`
-                : '0%'}
-              loading={healthLoading}
-            />
-            <StatCard
-              icon={<Globe className="w-5 h-5" />}
-              label="Global Patterns"
-              value={healthData?.globalPatterns || 0}
-              loading={healthLoading}
-            />
-            <StatCard
-              icon={<Sparkles className="w-5 h-5" />}
-              label="Validated Solutions"
-              value={healthData?.solutions || 0}
-              loading={healthLoading}
-            />
-          </div>
-        </div>
+  return (
+    <CanvasHubPage config={pageConfig}>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-6">
+        <StatCard
+          icon={<Activity className="w-5 h-5" />}
+          label="Total Jobs"
+          value={healthData?.jobs?.total || 0}
+          loading={healthLoading}
+        />
+        <StatCard
+          icon={<CheckCircle className="w-5 h-5" />}
+          label="Success Rate"
+          value={(healthData?.jobs?.total ?? 0) > 0 
+            ? `${Math.round(((healthData?.jobs?.completed ?? 0) / (healthData?.jobs?.total ?? 1)) * 100)}%`
+            : '0%'}
+          loading={healthLoading}
+        />
+        <StatCard
+          icon={<Globe className="w-5 h-5" />}
+          label="Global Patterns"
+          value={healthData?.globalPatterns || 0}
+          loading={healthLoading}
+        />
+        <StatCard
+          icon={<Sparkles className="w-5 h-5" />}
+          label="Validated Solutions"
+          value={healthData?.solutions || 0}
+          loading={healthLoading}
+        />
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4 lg:p-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="space-y-6">
           
           {/* Tabs for different views */}
           <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+            <TabsList className={`grid w-full ${canViewAgentActivity ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'} lg:w-auto`}>
               <TabsTrigger value="overview" data-testid="tab-overview">
                 Overview
               </TabsTrigger>
@@ -123,6 +222,15 @@ export default function AICommandCenter() {
               <TabsTrigger value="jobs" data-testid="tab-jobs">
                 Jobs
               </TabsTrigger>
+              {canViewAgentActivity && (
+                <TabsTrigger value="agent-activity" data-testid="tab-agent-activity">
+                  <Bot className="w-3.5 h-3.5 mr-1" />
+                  Agents
+                  {(escalationCount?.count ?? 0) > 0 && (
+                    <Badge variant="destructive" className="ml-2">{escalationCount!.count}</Badge>
+                  )}
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Overview Tab */}
@@ -130,17 +238,17 @@ export default function AICommandCenter() {
               {/* Trinity™ Health */}
               <Card data-testid="card-brain-health">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div>
                       <CardTitle className="flex items-center space-x-2">
-                        <Shield className="w-5 h-5 text-blue-600" />
+                        <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         <span>Trinity™ Health</span>
                       </CardTitle>
                       <CardDescription>
                         System status and performance metrics
                       </CardDescription>
                     </div>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <Badge variant="outline" className="bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
                       <Activity className="w-3 h-3 mr-1" />
                       Operational
                     </Badge>
@@ -156,19 +264,19 @@ export default function AICommandCenter() {
                       <MetricCard
                         label="Completed Jobs"
                         value={healthData?.jobs?.completed || 0}
-                        icon={<CheckCircle className="w-4 h-4 text-green-600" />}
+                        icon={<CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />}
                       />
                       <MetricCard
                         label="Failed Jobs"
                         value={healthData?.jobs?.failed || 0}
-                        icon={<AlertCircle className="w-4 h-4 text-red-600" />}
+                        icon={<AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />}
                       />
                       <MetricCard
                         label="Avg Execution Time"
                         value={healthData?.jobs?.avgExecutionTime 
                           ? `${Math.round(healthData.jobs.avgExecutionTime)}ms`
                           : 'N/A'}
-                        icon={<Clock className="w-4 h-4 text-blue-600" />}
+                        icon={<Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                       />
                     </div>
                   )}
@@ -179,7 +287,7 @@ export default function AICommandCenter() {
               <Card data-testid="card-token-usage">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Zap className="w-5 h-5 text-amber-600" />
+                    <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     <span>Token Usage</span>
                   </CardTitle>
                   <CardDescription>
@@ -189,21 +297,21 @@ export default function AICommandCenter() {
                 <CardContent>
                   {healthLoading ? (
                     <div className="h-20 flex items-center justify-center">
-                      <div className="text-sm text-gray-500">Loading...</div>
+                      <div className="text-sm text-muted-foreground">Loading...</div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-3xl font-bold text-gray-900">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-xl sm:text-3xl font-bold text-foreground truncate">
                           {(healthData?.jobs?.totalTokens || 0).toLocaleString()}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
                           Total tokens processed
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-600">Model</div>
-                        <div className="font-medium text-gray-900">Trinity AI Engine</div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs sm:text-sm text-muted-foreground">Model</div>
+                        <div className="text-xs sm:text-base font-medium text-foreground">Trinity AI</div>
                       </div>
                     </div>
                   )}
@@ -233,9 +341,9 @@ export default function AICommandCenter() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                      <p className="text-gray-600 font-medium">All caught up!</p>
-                      <p className="text-sm text-gray-500">No pending approvals</p>
+                      <CheckCircle className="w-12 h-12 text-green-500 dark:text-green-400 mx-auto mb-3" />
+                      <p className="text-muted-foreground font-medium">All caught up!</p>
+                      <p className="text-sm text-muted-foreground">No pending approvals</p>
                     </div>
                   )}
                 </CardContent>
@@ -247,7 +355,7 @@ export default function AICommandCenter() {
               <Card data-testid="card-global-learnings">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Globe className="w-5 h-5 text-blue-600" />
+                    <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     <span>Cross-Organizational Learnings</span>
                   </CardTitle>
                   <CardDescription>
@@ -268,8 +376,8 @@ export default function AICommandCenter() {
                   ) : (
                     <div className="text-center py-12">
                       <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600">No patterns discovered yet</p>
-                      <p className="text-sm text-gray-500">Trinity™ is learning...</p>
+                      <p className="text-muted-foreground">No patterns discovered yet</p>
+                      <p className="text-sm text-muted-foreground">Trinity™ is learning...</p>
                     </div>
                   )}
                 </CardContent>
@@ -299,73 +407,415 @@ export default function AICommandCenter() {
                   ) : (
                     <div className="text-center py-12">
                       <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600">No recent jobs</p>
+                      <p className="text-muted-foreground">No recent jobs</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Agent Activity Tab */}
+            {canViewAgentActivity && (
+              <TabsContent value="agent-activity" className="space-y-4">
+                <AgentActivityTab
+                  isFullAccess={isFullAccess}
+                  isManagement={isManagement}
+                  isSupervisor={isSupervisor}
+                />
+              </TabsContent>
+            )}
           </Tabs>
-        </div>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }
 
-// Stat Card Component (used in header)
-function StatCard({ icon, label, value, loading }: any) {
+// ─── Agent Activity Tab ───────────────────────────────────────────────────────
+
+function AgentActivityTab({
+  isFullAccess,
+  isManagement,
+  isSupervisor,
+}: {
+  isFullAccess: boolean;
+  isManagement: boolean;
+  isSupervisor: boolean;
+}) {
+  const { toast } = useToast();
+
+  const { data: activeTasks, isLoading: activeLoading } = useQuery<AgentTask[]>({
+    queryKey: ['/api/agent-activity/active'],
+    enabled: isManagement,
+    refetchInterval: 15000,
+  });
+
+  const { data: completions, isLoading: completionsLoading } = useQuery<AgentTask[]>({
+    queryKey: ['/api/agent-activity/completions'],
+    refetchInterval: 30000,
+  });
+
+  const { data: escalations, isLoading: escalationsLoading } = useQuery<AgentTask[]>({
+    queryKey: ['/api/agent-activity/escalations'],
+    enabled: isManagement,
+  });
+
+  const { data: registry, isLoading: registryLoading } = useQuery<AgentRegistryEntry[]>({
+    queryKey: ['/api/agent-activity/registry'],
+    enabled: isFullAccess,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (taskId: string) =>
+      apiRequest('POST', `/api/agent-activity/escalations/${taskId}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-activity/escalations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-activity/escalations/count'] });
+      toast({ title: 'Task approved', description: 'Agent decision approved by management.' });
+    },
+    onError: () => toast({ title: 'Error', description: 'Failed to approve task.', variant: 'destructive' }),
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: (taskId: string) =>
+      apiRequest('POST', `/api/agent-activity/escalations/${taskId}/dismiss`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-activity/escalations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-activity/escalations/count'] });
+      toast({ title: 'Task dismissed', description: 'Escalation dismissed.' });
+    },
+    onError: () => toast({ title: 'Error', description: 'Failed to dismiss task.', variant: 'destructive' }),
+  });
+
+  const retaskMutation = useMutation({
+    mutationFn: (taskId: string) =>
+      apiRequest('POST', `/api/agent-activity/escalations/${taskId}/retask`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-activity/escalations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-activity/active'] });
+      toast({ title: 'Agent retasked', description: 'A new task has been spawned.' });
+    },
+    onError: () => toast({ title: 'Error', description: 'Failed to retask agent.', variant: 'destructive' }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ agentKey, isActive }: { agentKey: string; isActive: boolean }) =>
+      apiRequest('PATCH', `/api/agent-activity/registry/${agentKey}/toggle`, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-activity/registry'] });
+      toast({ title: 'Agent updated', description: 'Agent status changed.' });
+    },
+    onError: () => toast({ title: 'Error', description: 'Failed to toggle agent.', variant: 'destructive' }),
+  });
+
   return (
-    <div className="bg-white/10 backdrop-blur rounded-lg p-3 lg:p-4">
-      <div className="flex items-center space-x-2 mb-1">
-        {icon}
-        <span className="text-xs lg:text-sm text-blue-100">{label}</span>
-      </div>
-      {loading ? (
-        <div className="h-8 flex items-center">
-          <div className="text-sm text-blue-100">Loading...</div>
-        </div>
-      ) : (
-        <div className="text-2xl lg:text-3xl font-bold">{value}</div>
+    <div className="space-y-4">
+      {/* Panel 1: Active Tasks (management only) */}
+      {isManagement && (
+        <Card data-testid="card-active-agent-tasks">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <span>Active Agent Tasks</span>
+            </CardTitle>
+            <CardDescription>Tasks currently running or queued</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {activeLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : activeTasks && activeTasks.length > 0 ? (
+              <div className="space-y-2">
+                {activeTasks.map((task) => (
+                  <AgentTaskRow key={task.id} task={task} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <ListChecks className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No active tasks right now</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Panel 2: Recent Completions (all roles) */}
+      <Card data-testid="card-agent-completions">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <span>Recent Completions</span>
+          </CardTitle>
+          <CardDescription>Last 20 completed or escalated agent tasks</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {completionsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : completions && completions.length > 0 ? (
+            <div className="space-y-2">
+              {completions.map((task) => (
+                <AgentTaskRow key={task.id} task={task} showScore />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Bot className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No completed tasks yet</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Panel 3: Escalations (management only) */}
+      {isManagement && (
+        <Card data-testid="card-agent-escalations">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500 dark:text-orange-400" />
+              <span>Escalated to Management</span>
+            </CardTitle>
+            <CardDescription>Tasks the agent could not resolve — your action needed</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {escalationsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+              </div>
+            ) : escalations && escalations.length > 0 ? (
+              <div className="space-y-3">
+                {escalations.map((task) => (
+                  <div key={task.id}
+                    className="border border-orange-200 dark:border-orange-900/50 rounded-md p-4 space-y-3"
+                    data-testid={`escalation-${task.id}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <Badge variant="outline">{task.agent_name || task.agent_key}</Badge>
+                      <Badge variant="outline" className="text-xs">{task.task_type.replace(/_/g, ' ')}</Badge>
+                      {task.completion_score != null && (
+                        <Badge variant="secondary" className="text-xs">
+                          Score: {task.completion_score}
+                        </Badge>
+                      )}
+                    </div>
+                    {task.trinity_evaluation && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{task.trinity_evaluation}</p>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      {task.evaluated_at
+                        ? format(new Date(task.evaluated_at), 'MMM dd, yyyy h:mm a')
+                        : format(new Date(task.spawned_at), 'MMM dd, yyyy h:mm a')}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        data-testid={`button-approve-escalation-${task.id}`}
+                        onClick={() => approveMutation.mutate(task.id)}
+                        disabled={approveMutation.isPending}
+                      >
+                        <ThumbsUp className="w-3.5 h-3.5 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid={`button-retask-escalation-${task.id}`}
+                        onClick={() => retaskMutation.mutate(task.id)}
+                        disabled={retaskMutation.isPending}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                        Retask
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid={`button-dismiss-escalation-${task.id}`}
+                        onClick={() => dismissMutation.mutate(task.id)}
+                        disabled={dismissMutation.isPending}
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" />
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No escalations pending</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Panel 4: Agent Registry (org_owner / co_owner only) */}
+      {isFullAccess && (
+        <Card data-testid="card-agent-registry">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Layers className="w-5 h-5 text-primary" />
+              <span>Agent Registry</span>
+            </CardTitle>
+            <CardDescription>Manage which agents are active for your organization</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {registryLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : registry && registry.length > 0 ? (
+              <div className="space-y-2">
+                {registry.map((agent) => (
+                  <div key={agent.id}
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/30 rounded-md"
+                    data-testid={`registry-agent-${agent.agent_key}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-foreground truncate">{agent.agent_name}</span>
+                        {agent.is_default && (
+                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">{agent.domain}</Badge>
+                      </div>
+                      {agent.completion_criteria?.min_score != null && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Min score: {agent.completion_criteria.min_score}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={agent.is_active ? 'default' : 'outline'}
+                      data-testid={`button-toggle-agent-${agent.agent_key}`}
+                      onClick={() => toggleMutation.mutate({ agentKey: agent.agent_key, isActive: !agent.is_active })}
+                      disabled={toggleMutation.isPending}
+                    >
+                      {agent.is_active ? 'Active' : 'Inactive'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Bot className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No agents registered</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Supervisor: locked panels notice */}
+      {isSupervisor && !isManagement && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center gap-3 py-6">
+            <Lock className="w-5 h-5 text-muted-foreground shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Active tasks, escalations, and agent registry are available to managers and above.
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
 }
 
-// Metric Card Component
-function MetricCard({ label, value, icon }: any) {
+// ─── Agent Task Row ───────────────────────────────────────────────────────────
+
+function AgentTaskRow({ task, showScore }: { task: AgentTask; showScore?: boolean }) {
+  const statusClass = TASK_STATUS_COLORS[task.status] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+
   return (
-    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-      <div className="flex-shrink-0">{icon}</div>
-      <div>
-        <div className="text-xs text-gray-600">{label}</div>
-        <div className="text-xl font-bold text-gray-900">{value}</div>
+    <div
+      className="flex items-center justify-between gap-2 p-3 bg-muted/30 rounded-md"
+      data-testid={`agent-task-${task.id}`}
+    >
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-foreground truncate">
+            {task.agent_name || task.agent_key}
+          </span>
+          <Badge className={`text-xs ${statusClass}`}>
+            {task.status.replace(/_/g, ' ')}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {task.task_type.replace(/_/g, ' ')}
+          </Badge>
+          {showScore && task.completion_score != null && (
+            <Badge variant="secondary" className="text-xs">
+              {task.completion_score}%
+            </Badge>
+          )}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {format(new Date(task.spawned_at), 'MMM dd, h:mm a')}
+          {task.related_entity_type && (
+            <span className="ml-2">&middot; {task.related_entity_type}</span>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// Approval Card Component
+// ─── Shared Sub-Components ────────────────────────────────────────────────────
+
+function StatCard({ icon, label, value, loading }: any) {
+  return (
+    <Card className="p-3 lg:p-4">
+      <div className="flex items-center space-x-2 mb-1">
+        <span className="text-primary">{icon}</span>
+        <span className="text-xs lg:text-sm text-muted-foreground">{label}</span>
+      </div>
+      {loading ? (
+        <div className="h-8 flex items-center">
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </div>
+      ) : (
+        <div className="text-lg sm:text-2xl lg:text-3xl font-bold text-foreground truncate">{value}</div>
+      )}
+    </Card>
+  );
+}
+
+function MetricCard({ label, value, icon }: any) {
+  return (
+    <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0">{icon}</div>
+      <div>
+        <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{label}</div>
+        <div className="text-base sm:text-xl font-bold text-foreground truncate">{value}</div>
+      </div>
+    </div>
+  );
+}
+
 function ApprovalCard({ approval }: { approval: any }) {
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors" data-testid={`approval-${approval.id}`}>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
+          <div className="flex items-center space-x-2 mb-2 flex-wrap gap-1">
             <Badge variant="outline">{approval.skill.replace('_', ' ')}</Badge>
             <Badge variant="secondary">
               Confidence: {(approval.confidenceScore * 100).toFixed(0)}%
             </Badge>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             Created {format(new Date(approval.createdAt), 'MMM dd, yyyy h:mm a')}
           </div>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" data-testid={`button-approve-${approval.id}`}>
+        <div className="flex space-x-2 flex-wrap gap-1">
+          <Button variant="default" size="sm" className="bg-green-600" data-testid={`button-approve-${approval.id}`}>
             <CheckCircle className="w-4 h-4 mr-1" />
             Approve
           </Button>
-          <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" data-testid={`button-reject-${approval.id}`}>
+          <Button variant="outline" size="sm" className="text-red-600" data-testid={`button-reject-${approval.id}`}>
             <AlertCircle className="w-4 h-4 mr-1" />
             Reject
           </Button>
@@ -375,22 +825,21 @@ function ApprovalCard({ approval }: { approval: any }) {
   );
 }
 
-// Pattern Card Component
 function PatternCard({ pattern }: { pattern: any }) {
   return (
     <div className="border border-gray-200 rounded-lg p-4" data-testid={`pattern-${pattern.id}`}>
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-1">
+          <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
             <Badge variant="outline">{pattern.patternType}</Badge>
             {pattern.validated && (
               <Badge variant="default" className="bg-green-600">Validated</Badge>
             )}
           </div>
-          <p className="text-sm text-gray-900 font-medium">{pattern.description}</p>
+          <p className="text-sm text-foreground font-medium">{pattern.description}</p>
         </div>
       </div>
-      <div className="flex items-center space-x-4 text-xs text-gray-600 mt-3">
+      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-3 flex-wrap gap-2">
         <div className="flex items-center space-x-1">
           <Users className="w-3 h-3" />
           <span>{pattern.occurrences} occurrences</span>
@@ -400,7 +849,7 @@ function PatternCard({ pattern }: { pattern: any }) {
           <span>{pattern.affectedWorkspaces} workspaces</span>
         </div>
         {pattern.hasSolution && (
-          <div className="flex items-center space-x-1 text-green-600">
+          <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
             <Sparkles className="w-3 h-3" />
             <span>Solution available</span>
           </div>
@@ -410,31 +859,30 @@ function PatternCard({ pattern }: { pattern: any }) {
   );
 }
 
-// Job Card Component
-function JobCard({ job }: { job: any }) {
-  const statusColors = {
-    completed: 'bg-green-100 text-green-700',
-    failed: 'bg-red-100 text-red-700',
-    pending: 'bg-yellow-100 text-yellow-700',
-    running: 'bg-blue-100 text-blue-700',
-    requires_approval: 'bg-orange-100 text-orange-700'
+function JobCard({ job }: { job: Job }) {
+  const statusColors: Record<string, string> = {
+    completed: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    failed: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+    pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+    running: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    requires_approval: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
   };
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200" data-testid={`job-${job.id}`}>
+    <div className="flex items-center justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700" data-testid={`job-${job.id}`}>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center space-x-2 mb-1">
+        <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
           <Badge variant="outline" className="text-xs">{job.skill.replace('_', ' ')}</Badge>
-          <Badge className={`text-xs ${statusColors[job.status] || 'bg-gray-100 text-gray-700'}`}>
+          <Badge className={`text-xs ${statusColors[job.status] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
             {job.status.replace('_', ' ')}
           </Badge>
         </div>
-        <div className="text-xs text-gray-600 truncate">
+        <div className="text-xs text-muted-foreground truncate">
           {format(new Date(job.createdAt), 'MMM dd, h:mm a')}
         </div>
       </div>
       {job.executionTimeMs && (
-        <div className="text-xs text-gray-600 ml-4">
+        <div className="text-xs text-muted-foreground ml-4">
           {job.executionTimeMs}ms
         </div>
       )}

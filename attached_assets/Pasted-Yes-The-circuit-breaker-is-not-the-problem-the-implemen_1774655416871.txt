@@ -1,0 +1,97 @@
+Yes. The circuit breaker is not the problem — the implementation of it is. A properly configured circuit breaker should be invisible to the end user. What's happening is the circuit breaker opens on the first connection hiccup at startup, then blocks all DB queries for 30 seconds including auth, causing the white screen. It's configured too aggressively.
+Send this to the agent:
+
+DB CIRCUIT BREAKER — Analysis and Complete Rewrite
+The current circuit breaker implementation is causing more harm than the DB instability it was meant to protect against. It opens too aggressively at startup, blocks auth queries that could succeed, and gives users a white screen instead of a degraded-but-functional experience. Rewrite it correctly.
+ROOT CAUSE ANALYSIS — Run these diagnostics first:
+bashgrep -rn "circuit\|CircuitBreaker\|isDbCircuitOpen\|circuitBreaker" server/ --include="*.ts" | grep -v node_modules
+Document every place the circuit breaker is referenced, opened, closed, or checked. Show the current configuration values: failure threshold, reset timeout, half-open probe interval.
+
+THE CORRECT CIRCUIT BREAKER DESIGN:
+A circuit breaker for a database connection should have three states:
+CLOSED (normal operation): All queries pass through. Failures are counted. If failures exceed threshold within a time window the circuit opens.
+OPEN (DB unavailable): Queries that can be served from cache are served from cache. Queries that cannot are rejected with a specific error code — not a generic 500. The circuit attempts a probe query every 10 seconds (not 30) to check if DB has recovered.
+HALF-OPEN (testing recovery): One probe query allowed through. If it succeeds the circuit closes. If it fails the circuit stays open and resets the probe timer.
+Current problems to fix:
+Problem 1 — Failure threshold too low:
+The circuit is opening after too few failures. At Replit startup the DB connection pool initializes and the first 1-2 queries may fail as the pool warms up. This should not open the circuit. Set failure threshold to 5 failures within a 60-second window before opening.
+Problem 2 — Reset timeout too long:
+30 seconds of circuit-open state means 30 seconds of white screen for every user. Set probe interval to 10 seconds.
+Problem 3 — Auth queries not handled specially:
+/api/auth/me must never return a 500 when the circuit is open. If the circuit is open and a valid session exists in the session store return the session data without hitting the DB. The session store (Redis or memory) should be the source of truth for auth status when DB is temporarily unavailable.
+Problem 4 — WebSocket auth fails when circuit is open:
+The ws_authenticate handler queries the DB for user validation. When the circuit is open this throws and disconnects the WebSocket. Fix: if circuit is open and session token is valid return the cached session user without DB query.
+Problem 5 — No exponential backoff on reconnection:
+The connection pool should use exponential backoff on reconnection attempts: 1s, 2s, 4s, 8s, 16s, max 30s. Not a fixed 30-second wait.
+
+THE REWRITE:
+Step 1 — Rewrite the circuit breaker configuration:
+typescriptconst CIRCUIT_CONFIG = {
+  failureThreshold: 5,        // Open after 5 failures
+  failureWindowMs: 60_000,    // Within 60 seconds
+  probeIntervalMs: 10_000,    // Probe every 10 seconds
+  successThreshold: 2,        // Close after 2 consecutive successes
+  halfOpenMaxRequests: 1      // Only 1 request in half-open state
+};
+Step 2 — Add session-first auth fallback:
+In /api/auth/me handler — check circuit state first:
+typescriptif (isDbCircuitOpen()) {
+  // Circuit is open — serve from session store
+  const sessionUser = req.session?.user;
+  if (sessionUser) {
+    return res.json({ 
+      ...sessionUser, 
+      _fromCache: true,
+      _dbDegraded: true 
+    });
+  }
+  // No session — return 503 with retry header
+  return res.status(503)
+    .set('Retry-After', '10')
+    .json({ error: 'DB_TEMPORARILY_UNAVAILABLE', retryAfter: 10 });
+}
+Step 3 — Fix the React auth hook to handle 503:
+In useAuth hook — when /api/auth/me returns 503 do not mark as unauthenticated. Instead show a "Platform temporarily unavailable — retrying..." banner and retry every 10 seconds:
+typescriptretry: (failureCount, error) => {
+  if (error?.status === 503) return failureCount < 10; // retry up to 10 times
+  if (error?.status === 401) return false; // not authenticated, don't retry
+  if (error?.status >= 500) return failureCount < 3;
+  return false;
+},
+retryDelay: (failureCount) => Math.min(1000 * 2 ** failureCount, 10_000),
+Step 4 — Add a DB status banner instead of white screen:
+When auth returns _dbDegraded: true show a slim amber banner at the top of the platform: "Platform running in limited mode — some features may be slow. Reconnecting..." This is infinitely better than a white screen.
+Step 5 — Fix WebSocket auth during circuit open:
+typescript// In ws_authenticate handler
+if (isDbCircuitOpen()) {
+  const sessionUser = getSessionUser(token); // from in-memory session cache
+  if (sessionUser) {
+    ws.user = sessionUser;
+    ws.authenticated = true;
+    return; // Allow connection without DB query
+  }
+  ws.close(1013, 'DB_TEMPORARILY_UNAVAILABLE');
+  return;
+}
+Step 6 — Add connection pool health endpoint:
+GET /api/health/db — returns current circuit state, pool stats, last failure reason, time until next probe. Platform staff can see DB health without needing server access. Also wire this into the Phase 51 platform status page at /admin/platform-status.
+Step 7 — Startup sequence fix:
+The circuit breaker must not start in CLOSED state at server startup until the first successful DB query completes. Start in HALF-OPEN state at startup — this allows the first query through, and if it succeeds the circuit closes normally. This prevents the startup race condition where the pool hasn't warmed up yet and the circuit opens immediately.
+
+VERIFICATION:
+
+Check 1: Circuit opens after 5 failures in 60-second window — not on first failure
+Check 2: Probe interval is 10 seconds — not 30
+Check 3: /api/auth/me returns session data from session store when circuit is open — confirmed with curl test
+Check 4: /api/auth/me returns 503 with Retry-After header when circuit open and no session — not 500
+Check 5: React auth hook retries on 503 — does not show white screen
+Check 6: DB degraded banner shows instead of white screen during circuit-open state
+Check 7: WebSocket auth uses cached session when circuit is open — no disconnection
+Check 8: Server starts in HALF-OPEN state — first query warms up the pool correctly
+Check 9: /api/health/db endpoint returns circuit state and pool stats
+Check 10: Platform loads correctly within 5 seconds of server start — confirmed with fresh browser load
+Check 11: Simulate 5 rapid DB failures — confirm circuit opens correctly then recovers within 10 seconds
+Check 12: TypeScript zero errors
+Check 13: 56/56 tests still green
+
+Do not proceed to any new phases until the platform loads reliably within 5 seconds of server start on every fresh browser load. This is the single most important stability fix in the entire build.

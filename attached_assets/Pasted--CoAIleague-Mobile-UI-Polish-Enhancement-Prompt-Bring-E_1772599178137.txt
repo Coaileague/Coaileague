@@ -1,0 +1,389 @@
+# CoAIleague Mobile UI Polish & Enhancement Prompt
+## Bring Every Screen to Life — Enterprise-Grade, Not Prototype-Grade
+
+**Date:** March 3, 2026
+**Context:** The platform is functionally complete. The architecture, data flow, and features work. What's missing is visual polish, personality, and the feeling that this is a $899-$9,999/mo enterprise product — not a developer's side project. Every screen should feel like it belongs in the same family as the Invoices page (which is already good).
+
+**IMPORTANT RULES:**
+- Do NOT change any routing, data flow, API calls, or business logic
+- Do NOT break any existing functionality
+- Do NOT touch Trinity scheduling logic or credit/billing services
+- ONLY enhance visual presentation, spacing, typography, color, micro-interactions
+- Keep the existing dark theme — just make it richer and more intentional
+- All changes must maintain mobile responsiveness
+
+---
+
+## CRITICAL LAYOUT BUGS — FIX BEFORE ANY POLISH
+
+These are functional bugs that prevent users from interacting with the app. Fix all of these FIRST.
+
+### BUG 1: Bottom Nav Overlapping Content (Multiple Pages)
+The bottom navigation bar (Home, Schedule, Clock, Mail, More) and the floating action button (FAB) are overlapping tappable content on nearly every page. This makes buttons, toggles, and menu items physically impossible to tap.
+
+**Root cause:** Pages are not accounting for the bottom nav bar height + FAB size in their scroll padding. Every scrollable page needs `padding-bottom` of at least `calc(bottom-nav-height + FAB-size + safe-area-inset-bottom + 16px)` — typically around 140-160px total.
+
+**Affected pages (confirmed from screenshots):**
+- Profile/Account sheet: "Logout" and "Cancel" buttons hidden behind bottom nav
+- More menu: "LOG OUT" text literally cut off mid-word, HELPDESK row unreachable behind FAB
+- Settings → Automation: "Shift Reminders" toggle covered by FAB — cannot be tapped
+- Settings → Quick Toggles: Bottom toggles partially obscured by FAB
+- Employees list: Last employee card clipped by FAB
+- Shift Marketplace: Second shift card's "Pick Up" button hidden behind FAB
+- Invoices: AR Aging chart data covered by FAB
+- My Paychecks: Pay History card corner covered by FAB
+- Availability: Saturday card partially cut off
+
+**Fix:** Add a global bottom padding/margin to ALL scrollable page containers. The value should be at minimum 80px (nav bar ~56px + 24px breathing room), plus additional space if the FAB is present on that page. Approach:
+
+```css
+/* Apply to every main scrollable content area */
+.page-content {
+  padding-bottom: 160px; /* nav bar (56) + FAB (56) + badge (20) + spacing (28) */
+}
+
+/* For bottom sheets specifically (profile, More menu) */
+.bottom-sheet-content {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 80px);
+}
+```
+
+Alternatively, if using a layout wrapper component, add the padding there once and it propagates everywhere.
+
+### BUG 2: FAB Positioning
+The FAB with the red "8" badge sits in the bottom-right corner and overlaps interactive elements on every page. Two options:
+
+**Option A (Recommended):** Move the FAB higher — position it above the bottom nav bar, not overlapping it. Use `bottom: calc(nav-bar-height + 16px)` so it floats in clear space.
+
+**Option B:** Make the FAB contextual — only show it on pages where a primary creation action exists (Schedule → Create Shift, Messages → New Message, Reports → New Report). Hide it on pages where it doesn't serve a purpose (Settings, Paychecks, More menu). This also cleans up the visual clutter.
+
+### BUG 3: Safety Checklist Checkboxes Not Rendering
+On the Safety Checklist page, all checkboxes render as plain white/gray squares with no visible check state. Users cannot tell which items are checked vs unchecked. This is a component rendering bug — likely the custom checkbox CSS or the checked state prop isn't being applied.
+
+**Fix:** Inspect the checkbox component. Ensure:
+- Unchecked state: Dark outlined square with transparent/dark fill
+- Checked state: Blue/teal filled square with white checkmark icon
+- Tappable area: The entire row should be tappable (not just the tiny checkbox)
+- Visual feedback: Row background should subtly change when checked (e.g., slight green tint or opacity reduction on the label text)
+
+### BUG 4: More Menu "LOG OUT" Text Truncated
+At the very bottom of the More menu (Image 17), "LOG OUT" is visibly cut off — you can see "LOG OU..." before it disappears behind the bottom nav. This is the same padding issue as Bug 1 but specifically bad here because:
+1. Users NEED to be able to log out
+2. If an examiner or prospect is evaluating the app and can't find logout, it looks broken
+3. It's a security concern — officers sharing devices need reliable logout access
+
+---
+
+## GLOBAL DESIGN SYSTEM UPGRADES
+
+### Color Palette Enhancement
+The current palette is too monochrome — almost everything is the same dark blue-gray card on a slightly darker background. Add depth with these additions:
+
+```
+EXISTING (keep):
+  Background:       #0a0f1a (dark navy)
+  Card:             #111827 (slightly lighter)
+  Primary Accent:   #3b82f6 (blue)
+  Success:          #10b981 (green)
+  Warning:          #f59e0b (amber)
+  Danger:           #ef4444 (red)
+
+ADD:
+  Card Elevated:    #1a2332 (for cards that need to pop)
+  Card Interactive: #162033 with 1px border #2a3a52 on hover
+  Subtle Gradient:  linear-gradient(135deg, #1a2332 0%, #111827 100%) for hero cards
+  Accent Teal:      #06b6d4 (already used in availability — use more broadly)
+  Accent Purple:    #8b5cf6 (for AI/Trinity features)
+  Accent Amber:     #f59e0b (for financial/billing features)
+  Text Primary:     #f1f5f9
+  Text Secondary:   #94a3b8
+  Text Muted:       #64748b
+  Border Subtle:    #1e293b
+  Border Active:    #3b82f6
+```
+
+### Card System
+Every card in the app should follow one of these 3 levels:
+
+**Level 1 — Container Card** (sections, forms):
+```css
+background: #111827;
+border: 1px solid #1e293b;
+border-radius: 12px;
+padding: 16px;
+```
+
+**Level 2 — Interactive Card** (employee cards, shift cards, notification cards):
+```css
+background: #1a2332;
+border: 1px solid #2a3a52;
+border-radius: 12px;
+padding: 16px;
+transition: border-color 0.2s, transform 0.1s;
+/* On press/hover: border-color: #3b82f6; transform: scale(0.98); */
+```
+
+**Level 3 — Hero/Summary Card** (stats, KPI displays):
+```css
+background: linear-gradient(135deg, #1a2332 0%, #0f172a 100%);
+border: 1px solid #2a3a52;
+border-radius: 16px;
+padding: 20px;
+/* Add subtle inner glow for important stats */
+box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+```
+
+### Typography Scale
+```
+Page Title:      20px, font-weight 700, text-primary
+Section Header:  14px, font-weight 600, text-secondary, uppercase, letter-spacing 0.05em
+Card Title:      16px, font-weight 600, text-primary
+Body:            14px, font-weight 400, text-primary
+Caption/Meta:    12px, font-weight 400, text-muted
+Stat Number:     28px, font-weight 700, text-primary
+Stat Label:      12px, font-weight 500, text-secondary
+```
+
+---
+
+## PAGE-SPECIFIC ENHANCEMENTS
+
+### 1. DASHBOARD / HOME PAGE
+**Current:** 2x2 grid of identical dark tiles with small icons
+**Target:** Visual hierarchy where the most important actions are prominent
+
+Changes:
+- Make Clock In/Out tile LARGER (span full width) with a gradient background (blue→purple) and a large clock icon. This is the #1 action for 90% of users. Add subtle pulse animation if there's an active shift.
+- My Schedule tile: Add a mini preview showing today's shift info (time, location) directly on the tile instead of just an icon + label
+- Below the 2x2 grid, add a "Today's Summary" card:
+  - Current shift status (On shift / Off duty / Upcoming in 2hrs)
+  - Hours this week (progress bar toward 40hr target)
+  - Next shift preview
+- The section headers (TIME & SCHEDULE, TEAM MANAGEMENT, BUSINESS OPERATIONS) should use the Section Header typography with a subtle left border accent (3px solid #3b82f6)
+
+### 2. MY SCHEDULE (Personal View)
+**Current:** Good bones, but "Day off" rows are plain text
+**Target:** 
+
+Changes:
+- "Day off" rows: Light gray text with a subtle moon/rest icon, reduce visual weight so work days pop
+- "No shift today": Same treatment — de-emphasize
+- PUBLISHED badge: Keep green. Add CONFIRMED (blue), IN PROGRESS (amber), COMPLETED (muted green) badge variants
+- Each shift row: Add a thin left border colored by shift type (Day=blue, Evening=amber, Night=purple, Overnight=dark purple)
+- The week header dots (indicating shifts exist) are good — make them slightly larger and colored by shift count (1 shift = single dot, 2+ = accent colored)
+
+### 3. FULL TEAM SCHEDULE
+**Current:** Clean list, works well
+**Target:** Minor polish only
+
+Changes:
+- Add employee avatar circles (colored initials are fine) to the left of each row for faster visual scanning
+- COMPLETED badge could be slightly more muted (it's a past-tense status, shouldn't demand attention)
+- The swap icon (⇄) on the right: Make it slightly more visible with a subtle background circle
+
+### 4. NOTIFICATIONS
+**Current:** Good information density, Trinity insights are impressive
+**Target:** Polish the card hierarchy
+
+Changes:
+- Trinity Alert cards: Add a subtle purple left border (Trinity's color) and the Trinity logo icon should be slightly larger
+- Different notification types should have different left-border colors: Trinity=purple, Billing=amber, System=blue, Alert=red
+- The NEW badge is good — keep it
+- Add a subtle entrance animation (fade-in + slight slide up) for new notifications
+
+### 5. MESSAGES / DOCKCHAT
+**Current:** Emptiest screen in the app
+**Target:** Feel alive even with minimal conversations
+
+Changes:
+- Empty state: Replace the blank white space with a friendly illustration or message: "Start a conversation with your team" with prominent "New Message" button
+- The filter chips (All, DMs, Rooms, Shift, Support) are good — add an unread count badge on each relevant chip
+- Each conversation preview: Add the last message timestamp more prominently, and show first line of last message as preview text
+- Online status indicators (green dot) on user avatars in conversation list
+
+### 6. MY PAYCHECKS
+**Current:** Weakest screen — $0.00 boxes with no personality
+**Target:** Feel like a polished payroll dashboard even with empty data
+
+Changes:
+- Total Earned card: Make it a Hero Card (Level 3) with larger font for the dollar amount. Add a subtle up-arrow icon for positive trend or a sparkline chart placeholder
+- Total Hours card: Add a simple progress ring showing hours vs typical period (even if estimated)
+- Latest Pay Rate card: Show the rate prominently with "per hour" in smaller text below
+- Pay History section: The empty state message is fine, but add a subtle timeline/calendar visual behind it to indicate where data will appear
+- When data IS present: Show each paycheck as an expandable card with: Date, Gross, Deductions breakdown, Net, and a "View Pay Stub" action
+
+### 7. INCIDENT REPORT FORM
+**Current:** Plain form with basic inputs
+**Target:** Guided, professional report entry
+
+Changes:
+- Add a red/amber gradient header bar with the warning icon — this is a serious document, it should feel urgent
+- Severity selector: Use colored chips instead of a dropdown (Low=gray, Medium=amber, High=orange, Critical=red) — tapping a chip is faster than opening a dropdown
+- Incident Type: Same approach — use visual icon chips (Trespass, Theft, Vandalism, Medical, Fire, Disturbance, Other) with small icons
+- Description field: Make it taller (at least 4 lines visible). Add a microphone icon for voice-to-text input (officers in the field need this)
+- "Analyze with ReportBot AI" button: Make this more prominent — gradient background, AI sparkle icon. This is a premium feature, show it off
+- Add an "Attach Photos" section with camera icon and gallery picker
+- Add "Witness Information" expandable section
+- Location Captured: Show the actual address/coordinates, not just "Location Captured" text
+
+### 8. DAILY REPORT FORM
+**Current:** Minimal — Title + Description + Submit
+**Target:** Structured end-of-shift summary
+
+Changes:
+- Pre-fill title with "Daily Report — [Site Name] — [Date]" from the shift context
+- Add structured fields above the free-text description:
+  - "Shift Summary" (1-2 sentence auto-generated from clock data: "8-hour shift at Pinnacle Tower, 12:00AM-8:00AM")
+  - "Activity Count" quick inputs: Patrols completed, Visitors logged, Incidents (number)
+  - "Issues or Concerns" toggle → expands detail field
+- "Analyze with ReportBot AI" should be present here too
+- Voice-to-text input button prominently placed
+
+### 9. SAFETY CHECKLIST
+**Current:** Broken checkbox styling (white squares, no check state)
+**Target:** Tap-friendly checklist with clear states
+
+Changes:
+- FIX: Checkboxes need proper checked/unchecked states — use custom styled checkboxes (rounded square, blue fill with white check when checked, dark outline when unchecked)
+- Make each checklist item a full-width tappable row (not just the tiny checkbox)
+- When checked: Row gets a subtle green-tinted background and the text gets a subtle strikethrough or muted color
+- Add a completion counter at the top: "3 of 5 completed"
+- Group items by category if there are many (Fire Safety, Access Control, Environmental)
+
+### 10. EMPLOYEES LIST
+**Current:** Functional but flat
+**Target:** Scannable roster
+
+Changes:
+- Avatar circles: Use distinct colors per role (field_worker=blue, supervisor=purple, manager=amber, admin=teal)
+- Status badge: "Not Started" in yellow feels wrong for a security employee — is this onboarding status? If so, rename to "Pending Onboarding" or "New Hire"
+- Pay rate: De-emphasize slightly (managers see this, employees shouldn't if it's a shared view)
+- Add quick-action buttons on swipe or long-press: Message, Schedule, View Profile
+- The grouping dropdown is good — add "By Site", "By Role", "By Status" as preset options
+
+### 11. INVOICES PAGE
+**Current:** BEST PAGE IN THE APP — this is the design standard
+**Target:** Minor polish only
+
+Changes:
+- The 4-stat grid (Total Value, Paid, Outstanding, Overdue) is excellent. Replicate this pattern on other summary pages
+- The Accounts Receivable Aging chart is great
+- Add subtle animations: Overdue amount in red should have a gentle pulse if > $0
+- "72 Drafts Pending Review" banner: Consider making this dismissible or adding a "Review All" action
+
+### 12. EXPENSEOS
+**Current:** Clean empty state
+**Target:** Add visual warmth
+
+Changes:
+- The expense icon is good but could be larger and colored
+- Add category quick-select chips below "New Expense": Mileage, Meals, Equipment, Uniform, Training, Other
+- When expenses exist: Show a running total card at top and a simple bar chart of expenses by category
+
+### 13. SETTINGS PAGE
+**Current:** Well-organized with smart patterns
+**Target:** Minor enhancement
+
+Changes:
+- The status chips at top are great — add a subtle animation when toggling (smooth slide + color change)
+- "Easy View Mode" toggle: Add a brief description of what changes
+- Group the Quick Toggles with subtle divider lines and section labels
+
+### 14. MORE MENU
+**Current:** Comprehensive feature list organized by category
+**Target:** This is your "wow" moment — prospects scroll this and see the depth
+
+Changes:
+- Each menu item: Add a subtle right-side indicator showing status (active/configured/needs setup) using small colored dots
+- ASK TRINITY AI: Make this visually distinct — purple text, AI icon, maybe a subtle gradient background. This is your crown jewel feature
+- Add badge counts where relevant: Team Chat (unread), Approvals (pending), Incidents (new)
+- Section headers: Add the left-border accent treatment (3px colored border) matching category theme (Communications=blue, Operations=teal, Security=red, Finance=amber)
+- Consider adding small descriptive subtitles under each item (like "Real-time team messaging" under TEAM CHAT) for prospects who don't know what each feature does
+
+### 15. PROFILE / ACCOUNT SHEET
+**Current:** Minimal bottom sheet with Settings, Inbox, Logout
+**Target:** 
+
+Changes:
+- Show the user's role badge (org owner, manager, field worker) more prominently
+- Add "My Profile" link to edit personal info
+- Add "Help & Support" link
+- Show subscription tier badge if org owner (e.g., "Professional Plan")
+- Logout should be red text, separated from other items with spacing
+
+### 16. SHIFT MARKETPLACE / PENDING
+**Current:** Cards with "Pick Up" button work well
+**Target:**
+
+Changes:
+- Add distance from officer's location to the site (if GPS available): "2.3 miles away"
+- Show pay rate on the card (officers want to know what a shift pays before claiming)
+- "OPEN" status text: Make it a proper badge with green background
+- Shift urgency: If the shift starts within 4 hours, add a red "URGENT" badge
+
+---
+
+## GLOBAL MICRO-INTERACTIONS TO ADD
+
+1. **Pull-to-refresh** on all list pages with a CoAIleague-branded loading animation (the logo icon spinning)
+2. **Skeleton loading states** instead of blank screens — show gray placeholder cards that pulse while data loads
+3. **Haptic feedback** on button presses (if the platform supports it in the webview)
+4. **Smooth page transitions** — slight slide-in from right when navigating deeper, slide from left when going back
+5. **Toast notifications** for successful actions (report submitted, shift claimed, etc.) — brief, non-blocking, at the top of the screen with a check icon
+6. **Empty state illustrations** for all pages that can be empty (Expenses, Messages, Paychecks, Reports). Use simple line art or icons with helpful text and a CTA button
+
+---
+
+## THE FLOATING ACTION BUTTON (FAB)
+
+The teal "+" FAB with the red "8" badge appears on every page. This needs refinement:
+
+- The badge count (8) likely represents pending items — make it contextual to the current page
+- On the Schedule page: FAB should open "Create Shift" or "Request Time Off"
+- On the Messages page: FAB should open "New Conversation"
+- On the Reports page: FAB should open "New Report"
+- On the Employees page: FAB should open "Add Employee"
+- If the FAB does the same thing everywhere (like "Quick Actions"), make it expand into a speed-dial menu with context-appropriate actions
+
+---
+
+## PRIORITY ORDER
+
+Implement in this order (highest impact first):
+
+**PHASE 0 — CRITICAL BUGS (do these before anything else):**
+1. **Bottom padding on ALL pages** — fix the nav bar / FAB content overlap globally
+2. **FAB repositioning** — move above nav bar or make contextual per page
+3. **Safety checklist checkboxes** — fix rendering so checked/unchecked states are visible
+4. **More menu + Profile sheet** — ensure Logout is always reachable
+
+**PHASE 1 — Highest Visual Impact:**
+5. **Global card system + color palette** (affects every page instantly)
+6. **Dashboard/Home** redesign (first thing every user sees)
+7. **Incident Report + Daily Report** enhancements (field officers use these daily)
+
+**PHASE 2 — User-Facing Polish:**
+8. **My Paychecks** polish (employees check this constantly)
+9. **More Menu** enhancement (prospects evaluate here)
+10. **Empty states** for all pages
+11. **Messages/DockChat** warmth
+
+**PHASE 3 — Refinement:**
+12. **Employees list** visual upgrade
+13. **Micro-interactions** (loading states, transitions, toasts)
+14. **FAB context-aware actions** per page
+
+---
+
+## WHAT NOT TO CHANGE
+
+- Schedule pages (both views) — these are already good, only minor tweaks
+- Invoice page — this is the gold standard, don't regress it
+- Notification cards — working well
+- Settings page — well-organized already
+- Availability grid — clean and functional
+- Conflict resolution cards — enterprise-grade already
+
+---
+
+END OF UI POLISH PROMPT

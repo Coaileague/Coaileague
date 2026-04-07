@@ -1,16 +1,11 @@
-/**
- * GPS Geofence Validation Service
- * ================================
- * Validates employee clock-in/out locations against assigned site geofences.
- * Prevents timesheet fraud by ensuring employees are physically at work sites.
- * 
- * Core Value Prop: "Prevents $5K+/month in timesheet fraud"
- */
-
 import { db } from '../db';
-import { timeEntries, shifts, employees, clients, notifications } from '@shared/schema';
+import { timeEntries, shifts, employees, clients, gpsLocations } from '@shared/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { platformEventBus } from './platformEventBus';
+import { universalNotificationEngine } from './universalNotificationEngine';
+import { createLogger } from '../lib/logger';
+const log = createLogger('gpsGeofenceService');
+
 
 export interface GPSLocation {
   latitude: number;
@@ -23,7 +18,8 @@ export interface GeofenceValidationResult {
   distanceMeters?: number;
   siteVerified?: string;
   location?: GPSLocation;
-  violationType?: 'too_far' | 'no_shift' | 'site_unknown';
+  violationType?: 'too_far' | 'no_shift' | 'site_unknown' | 'low_accuracy';
+  accuracyWarning?: string;
 }
 
 export interface GPSViolation {
@@ -41,12 +37,17 @@ export interface GPSViolation {
   action: 'clock_in' | 'clock_out';
 }
 
-const GEOFENCE_RADIUS_METERS = 100;
+export interface BreadcrumbEntry {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number;
+  timestamp: Date;
+}
 
-/**
- * Calculate distance between two GPS coordinates using Haversine formula
- * Returns distance in meters
- */
+const DEFAULT_GEOFENCE_RADIUS_METERS = 200; // Spec says >200m = Out-of-Bounds
+const GPS_ACCURACY_REJECT_THRESHOLD = 150;
+const GPS_ACCURACY_WARN_THRESHOLD = 50;
+
 export function calculateDistance(point1: GPSLocation, point2: GPSLocation): number {
   const R = 6371e3;
   const φ1 = (point1.latitude * Math.PI) / 180;
@@ -62,9 +63,6 @@ export function calculateDistance(point1: GPSLocation, point2: GPSLocation): num
   return R * c;
 }
 
-/**
- * Get the current shift for an employee at this moment
- */
 async function getCurrentShift(employeeId: string, workspaceId: string) {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -81,12 +79,11 @@ async function getCurrentShift(employeeId: string, workspaceId: string) {
   return currentShift;
 }
 
-/**
- * Get client site location
- */
-async function getSiteLocation(clientId: string): Promise<{ latitude: number; longitude: number; name: string } | null> {
+async function getSiteLocation(clientId: string, workspaceId?: string): Promise<{ latitude: number; longitude: number; name: string; geofenceRadiusMeters: number } | null> {
   const client = await db.query.clients.findFirst({
-    where: eq(clients.id, clientId),
+    where: workspaceId
+      ? and(eq(clients.id, clientId), eq(clients.workspaceId, workspaceId))
+      : eq(clients.id, clientId),
   });
 
   if (!client) return null;
@@ -98,18 +95,18 @@ async function getSiteLocation(clientId: string): Promise<{ latitude: number; lo
     return null;
   }
 
+  const geofenceRadius = (client as any).geofenceRadiusMeters ?? DEFAULT_GEOFENCE_RADIUS_METERS;
+
   return {
     latitude: parseFloat(latitude),
     longitude: parseFloat(longitude),
-    name: client.companyName || client.name || 'Unknown Site',
+    name: client.companyName || `${client.firstName} ${client.lastName}` || 'Unknown Site',
+    geofenceRadiusMeters: geofenceRadius,
   };
 }
 
-/**
- * Log GPS violation to database and notify manager
- */
 async function logGPSViolation(violation: GPSViolation): Promise<void> {
-  console.log(`[GPS] VIOLATION: ${violation.employeeName} attempted clock ${violation.action} at ${Math.round(violation.distanceMeters)}m from ${violation.siteName}`);
+  log.info(`[GPS] VIOLATION: ${violation.employeeName} attempted clock ${violation.action} at ${Math.round(violation.distanceMeters)}m from ${violation.siteName}`);
 
   await platformEventBus.publish({
     type: 'trinity_issue_detected',
@@ -129,38 +126,47 @@ async function logGPSViolation(violation: GPSViolation): Promise<void> {
   });
 }
 
-/**
- * Notify manager of GPS violation
- */
 async function notifyManager(workspaceId: string, employeeId: string, message: string): Promise<void> {
   const employee = await db.query.employees.findFirst({
-    where: eq(employees.id, employeeId),
+    where: and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)),
   });
 
   if (!employee?.supervisorId) {
-    console.log('[GPS] No supervisor assigned for GPS violation notification');
+    log.info('[GPS] No supervisor assigned for GPS violation notification');
     return;
   }
 
-  await db.insert(notifications).values({
+  await universalNotificationEngine.sendNotification({
     workspaceId,
     userId: employee.supervisorId,
-    type: 'gps_violation',
-    title: 'GPS Violation Alert',
-    message,
-    priority: 'high',
-    data: { employeeId, timestamp: new Date().toISOString() },
+    type: 'issue_detected',
+    title: `GPS Location Violation Detected`,
+    message: `Employee location verification failed. ${message}`,
+    severity: 'warning',
+    metadata: { 
+      employeeId, 
+      timestamp: new Date().toISOString(),
+      violationType: 'gps_violation',
+      source: 'gps_geofence_service',
+    },
   });
 }
 
-/**
- * Validate clock-in location against assigned shift geofence
- */
 export async function validateClockIn(
   workspaceId: string,
   employeeId: string,
-  location: GPSLocation
+  location: GPSLocation,
+  accuracyMeters?: number
 ): Promise<GeofenceValidationResult> {
+  if (accuracyMeters !== undefined && accuracyMeters > GPS_ACCURACY_REJECT_THRESHOLD) {
+    return {
+      allowed: false,
+      reason: `GPS accuracy too low (${Math.round(accuracyMeters)}m). Please move to an area with better GPS signal and try again.`,
+      violationType: 'low_accuracy',
+      location,
+    };
+  }
+
   const currentShift = await getCurrentShift(employeeId, workspaceId);
 
   if (!currentShift) {
@@ -180,7 +186,7 @@ export async function validateClockIn(
     };
   }
 
-  const site = await getSiteLocation(clientId);
+  const site = await getSiteLocation(clientId, workspaceId);
 
   if (!site) {
     return {
@@ -190,11 +196,12 @@ export async function validateClockIn(
     };
   }
 
+  const geofenceRadius = site.geofenceRadiusMeters;
   const distanceMeters = calculateDistance(location, { latitude: site.latitude, longitude: site.longitude });
 
-  if (distanceMeters > GEOFENCE_RADIUS_METERS) {
+  if (distanceMeters > geofenceRadius) {
     const employee = await db.query.employees.findFirst({
-      where: eq(employees.id, employeeId),
+      where: and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)),
     });
 
     const violation: GPSViolation = {
@@ -211,6 +218,24 @@ export async function validateClockIn(
       action: 'clock_in',
     };
 
+    // GAP-L3-GEO: Ensure scheduling_audit_log is written BEFORE mutation completes.
+    try {
+      const { typedPoolExec } = await import('../lib/typedSql');
+      await typedPoolExec(
+        `INSERT INTO scheduling_audit_log (workspace_id, shift_id, action, performed_by, details, created_at)
+         VALUES ($1, $2, 'gps_violation', $3, $4, NOW())`,
+        [workspaceId, currentShift.id, employeeId, JSON.stringify({
+          action: 'clock_in',
+          distance: distanceMeters,
+          radius: geofenceRadius,
+          location,
+          site: site.name
+        })]
+      );
+    } catch (auditErr: any) {
+      log.warn('[GPS] Failed to write scheduling audit log:', auditErr.message);
+    }
+
     await logGPSViolation(violation);
 
     await notifyManager(
@@ -221,43 +246,47 @@ export async function validateClockIn(
 
     return {
       allowed: false,
-      reason: `You must be within ${GEOFENCE_RADIUS_METERS}m of ${site.name} to clock in. You are ${Math.round(distanceMeters)}m away.`,
+      reason: `You must be within ${geofenceRadius}m of ${site.name} to clock in. You are ${Math.round(distanceMeters)}m away.`,
       distanceMeters,
       violationType: 'too_far',
     };
   }
 
-  return {
+  const result: GeofenceValidationResult = {
     allowed: true,
     reason: 'Location verified',
     location,
     siteVerified: site.name,
     distanceMeters,
   };
+
+  if (accuracyMeters !== undefined && accuracyMeters > GPS_ACCURACY_WARN_THRESHOLD) {
+    result.accuracyWarning = `GPS accuracy is ${Math.round(accuracyMeters)}m. Location verified but accuracy is moderate.`;
+  }
+
+  return result;
 }
 
-/**
- * Validate clock-out location
- */
 export async function validateClockOut(
   workspaceId: string,
   employeeId: string,
-  location: GPSLocation
+  location: GPSLocation,
+  accuracyMeters?: number
 ): Promise<GeofenceValidationResult> {
-  const result = await validateClockIn(workspaceId, employeeId, location);
+  const result = await validateClockIn(workspaceId, employeeId, location, accuracyMeters);
   
   if (!result.allowed && result.violationType === 'too_far') {
     result.reason = result.reason.replace('clock in', 'clock out');
     
     const employee = await db.query.employees.findFirst({
-      where: eq(employees.id, employeeId),
+      where: and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)),
     });
 
     if (employee) {
       const currentShift = await getCurrentShift(employeeId, workspaceId);
       if (currentShift) {
         const clientId = currentShift.clientId || (currentShift as any).siteId;
-        const site = await getSiteLocation(clientId);
+        const site = await getSiteLocation(clientId, workspaceId);
         
         if (site && result.distanceMeters) {
           await logGPSViolation({
@@ -281,16 +310,60 @@ export async function validateClockOut(
   return result;
 }
 
-/**
- * Get GPS violations for a workspace (for Trinity insights)
- */
+export async function recordBreadcrumb(
+  workspaceId: string,
+  employeeId: string,
+  timeEntryId: string,
+  location: GPSLocation,
+  accuracyMeters?: number
+): Promise<{ id: string }> {
+  const [record] = await db.insert(gpsLocations).values({
+    workspaceId,
+    employeeId,
+    timeEntryId,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    accuracy: accuracyMeters?.toString() ?? null,
+    timestamp: new Date(),
+  }).returning({ id: gpsLocations.id });
+
+  return record;
+}
+
+export async function getShiftBreadcrumbs(
+  workspaceId: string,
+  timeEntryId: string
+): Promise<Array<{
+  id: string;
+  latitude: number;
+  longitude: number;
+  accuracy: string | null;
+  timestamp: Date;
+}>> {
+  const breadcrumbs = await db
+    .select({
+      id: gpsLocations.id,
+      latitude: gpsLocations.latitude,
+      longitude: gpsLocations.longitude,
+      accuracy: gpsLocations.accuracy,
+      timestamp: gpsLocations.timestamp,
+    })
+    .from(gpsLocations)
+    .where(
+      and(
+        eq(gpsLocations.workspaceId, workspaceId),
+        eq(gpsLocations.timeEntryId, timeEntryId)
+      )
+    )
+    .orderBy(gpsLocations.timestamp);
+
+  return breadcrumbs;
+}
+
 export async function getGPSViolations(workspaceId: string, days: number = 7): Promise<number> {
   return 0;
 }
 
-/**
- * Check if GPS validation is required for a workspace
- */
 export async function isGPSValidationEnabled(workspaceId: string): Promise<boolean> {
   return true;
 }
@@ -301,4 +374,6 @@ export const gpsGeofenceService = {
   calculateDistance,
   getGPSViolations,
   isGPSValidationEnabled,
+  recordBreadcrumb,
+  getShiftBreadcrumbs,
 };

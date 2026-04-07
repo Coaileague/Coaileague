@@ -4,14 +4,15 @@
  */
 
 import { db } from "../db";
-import { chatMessages } from "@shared/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { chatMessages, chatParticipants } from "@shared/schema";
+import { eq, and, isNull, ne, sql, count, inArray } from "drizzle-orm";
+import { TIMEOUTS } from '../config/platformConfig';
 
 const unreadCache = new Map<string, { count: number; timestamp: number }>();
-const CACHE_TTL = 30000; // 30 seconds
+const CACHE_TTL = TIMEOUTS.unreadMessageCacheTtlMs;
 
 /**
- * Get unread message count for a conversation (optimized with caching)
+ * Get unread message count for a conversation (optimized with caching + COUNT query)
  */
 export async function getUnreadCount(conversationId: string, userId: string): Promise<number> {
   const cacheKey = `${conversationId}:${userId}`;
@@ -21,29 +22,25 @@ export async function getUnreadCount(conversationId: string, userId: string): Pr
     return cached.count;
   }
 
-  const unreadCount = await db
-    .select()
+  const [result] = await db
+    .select({ count: count() })
     .from(chatMessages)
     .where(and(
       eq(chatMessages.conversationId, conversationId),
       isNull(chatMessages.readAt),
-      // Exclude user's own messages from unread count
-      (db) => db.sql`sender_id != ${userId}`
+      ne(chatMessages.senderId, userId)
     ));
 
-  const count = unreadCount.length;
+  const total = result?.count ?? 0;
+  unreadCache.set(cacheKey, { count: total, timestamp: Date.now() });
 
-  // Cache the result
-  unreadCache.set(cacheKey, { count, timestamp: Date.now() });
-
-  return count;
+  return total;
 }
 
 /**
- * Get total unread messages across all conversations for a user
+ * Get total unread messages across all conversations the user participates in
  */
 export async function getTotalUnreadCount(userId: string): Promise<number> {
-  // Check cache first for total
   const cacheKey = `total:${userId}`;
   const cached = unreadCache.get(cacheKey);
 
@@ -51,18 +48,34 @@ export async function getTotalUnreadCount(userId: string): Promise<number> {
     return cached.count;
   }
 
-  const unreadMessages = await db
-    .select()
-    .from(chatMessages)
+  const userConversations = await db
+    .select({ conversationId: chatParticipants.conversationId })
+    .from(chatParticipants)
     .where(and(
-      isNull(chatMessages.readAt),
-      (db) => db.sql`sender_id != ${userId}`
+      eq(chatParticipants.participantId, userId),
+      eq(chatParticipants.isActive, true)
     ));
 
-  const count = unreadMessages.length;
-  unreadCache.set(cacheKey, { count, timestamp: Date.now() });
+  if (userConversations.length === 0) {
+    unreadCache.set(cacheKey, { count: 0, timestamp: Date.now() });
+    return 0;
+  }
 
-  return count;
+  const conversationIds = userConversations.map(c => c.conversationId).filter(Boolean) as string[];
+
+  const [result] = await db
+    .select({ count: count() })
+    .from(chatMessages)
+    .where(and(
+      inArray(chatMessages.conversationId, conversationIds),
+      isNull(chatMessages.readAt),
+      ne(chatMessages.senderId, userId)
+    ));
+
+  const total = result?.count ?? 0;
+  unreadCache.set(cacheKey, { count: total, timestamp: Date.now() });
+
+  return total;
 }
 
 /**

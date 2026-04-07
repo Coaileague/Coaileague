@@ -154,7 +154,7 @@ export function TrinityMascotAnimated({
   showSparkles = true
 }: TrinityMascotProps) {
   // DEPRECATED: Log warning in development
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.MODE === 'development') {
     console.warn(
       '[DEPRECATED] TrinityMascotAnimated is deprecated. Use TrinityRedesign from "@/components/trinity-redesign" instead.\n' +
       'Migration: <TrinityRedesign size={64} mode="THINKING" />'

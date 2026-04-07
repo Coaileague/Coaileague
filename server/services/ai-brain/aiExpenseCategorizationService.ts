@@ -22,6 +22,17 @@ import {
   employees,
 } from '@shared/schema';
 import { usageMeteringService } from '../billing/usageMetering';
+import { meteredGemini } from '../billing/meteredGeminiClient';
+import { aiCreditGateway } from '../billing/aiCreditGateway';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('aiExpenseCategorizationService');
+
+const AI_CONFIDENCE_THRESHOLDS = {
+  AUTO_APPLY: 80,
+  RECEIPT_MATCH: 60,
+  RECEIPT_AUTO_LINK: 85,
+  LOW_CONFIDENCE_FLAG: 50,
+} as const;
 
 export interface ReceiptExtractionResult {
   success: boolean;
@@ -74,7 +85,7 @@ class AIExpenseCategorizationService {
     try {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        console.warn('[AIExpenseCategorization] GEMINI_API_KEY not configured');
+        log.warn('[AIExpenseCategorization] GEMINI_API_KEY not configured');
         return;
       }
 
@@ -94,9 +105,9 @@ class AIExpenseCategorizationService {
         }
       });
       this.initialized = true;
-      console.log('[AIExpenseCategorization] Service initialized');
+      log.info('[AIExpenseCategorization] Service initialized');
     } catch (error: any) {
-      console.error('[AIExpenseCategorization] Initialization failed:', error.message);
+      log.error('[AIExpenseCategorization] Initialization failed:', (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -113,6 +124,15 @@ class AIExpenseCategorizationService {
     }
 
     try {
+      const authResult = await aiCreditGateway.preAuthorize(
+        workspaceId,
+        userId,
+        'ai_expense_ocr'
+      );
+      if (!authResult.authorized) {
+        return { success: false, confidence: 0, error: `Credit check failed: ${authResult.reason}` };
+      }
+
       const prompt = `Analyze this receipt image and extract the following information in JSON format:
 {
   "merchant": "store/vendor name",
@@ -124,7 +144,7 @@ class AIExpenseCategorizationService {
 
 If any field cannot be determined, use null. Focus on accuracy over completeness.`;
 
-      const result = await this.visionModel.generateContent([
+      const result = await this.visionModel.generateContent([ // withGemini
         prompt,
         {
           inlineData: {
@@ -137,15 +157,25 @@ If any field cannot be determined, use null. Focus on accuracy over completeness
       const response = await result.response;
       const text = response.text();
 
-      if (workspaceId && userId) {
-        await usageMeteringService.recordUsage({
+      const ocrUsage = response.usageMetadata;
+      const totalTokens = (ocrUsage?.promptTokenCount || 0) + (ocrUsage?.candidatesTokenCount || 0);
+      await aiCreditGateway.finalizeBilling(
+        workspaceId,
+        userId,
+        'ai_expense_ocr',
+        totalTokens,
+        { model: GEMINI_MODELS.SUPERVISOR, promptTokens: ocrUsage?.promptTokenCount, completionTokens: ocrUsage?.candidatesTokenCount }
+      ).catch(err => log.error('[AIExpenseCategorization] Billing error:', err));
+
+      if (workspaceId) {
+        const { aiMeteringService } = await import('../billing/aiMeteringService');
+        aiMeteringService.recordAiCall({
           workspaceId,
-          userId,
-          featureKey: 'ai_expense_ocr',
-          usageType: 'token',
-          usageAmount: 500,
-          usageUnit: 'tokens',
-          metadata: { source: 'ai_expense_categorization' }
+          modelName: GEMINI_MODELS.SUPERVISOR,
+          callType: 'expense_receipt_ocr',
+          inputTokens: ocrUsage?.promptTokenCount ?? 0,
+          outputTokens: ocrUsage?.candidatesTokenCount ?? 0,
+          triggeredByUserId: userId,
         });
       }
 
@@ -165,8 +195,8 @@ If any field cannot be determined, use null. Focus on accuracy over completeness
 
       return { success: false, confidence: 0, rawText: text, error: 'Could not parse receipt data' };
     } catch (error: any) {
-      console.error('[AIExpenseCategorization] Receipt extraction error:', error.message);
-      return { success: false, confidence: 0, error: error.message };
+      log.error('[AIExpenseCategorization] Receipt extraction error:', (error instanceof Error ? error.message : String(error)));
+      return { success: false, confidence: 0, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -221,23 +251,19 @@ Respond in JSON format with top 3 category suggestions:
 
 Rank by confidence (0-100). Be specific in reasoning.`;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const result = await meteredGemini.generate({
+        workspaceId: workspaceId,
+        userId,
+        featureKey: 'ai_expense_categorization',
+        prompt,
+        model: 'gemini-2.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 500,
+      });
 
-      if (userId) {
-        await usageMeteringService.recordUsage({
-          workspaceId,
-          userId,
-          featureKey: 'ai_expense_categorization',
-          usageType: 'token',
-          usageAmount: 200,
-          usageUnit: 'tokens',
-          metadata: { source: 'ai_expense_categorization' }
-        });
-      }
+      if (!result.success) return [];
 
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonMatch = result.text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         return parsed.suggestions || [];
@@ -245,7 +271,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
 
       return [];
     } catch (error: any) {
-      console.error('[AIExpenseCategorization] Category suggestion error:', error.message);
+      log.error('[AIExpenseCategorization] Category suggestion error:', (error instanceof Error ? error.message : String(error)));
       return [];
     }
   }
@@ -314,7 +340,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
         duplicateWarning
       };
     } catch (error: any) {
-      console.error('[AIExpenseCategorization] Categorize expense error:', error.message);
+      log.error('[AIExpenseCategorization] Categorize expense error:', (error instanceof Error ? error.message : String(error)));
       return null;
     }
   }
@@ -347,10 +373,33 @@ Rank by confidence (0-100). Be specific in reasoning.`;
       if (result) {
         results.push(result);
         
-        if (result.suggestedCategory.confidence >= 80) {
+        const confidence = result.suggestedCategory.confidence;
+        
+        if (confidence >= AI_CONFIDENCE_THRESHOLDS.AUTO_APPLY && result.suggestedCategory.categoryId) {
           successfullyCategized++;
+          try {
+            await db.update(expenses)
+              .set({
+                categoryId: result.suggestedCategory.categoryId,
+                status: 'categorized',
+                notes: `Auto-categorized by AI (confidence: ${confidence}%). Category: ${result.suggestedCategory.categoryName}. ${result.suggestedCategory.reasoning}`,
+              })
+              .where(eq(expenses.id, expense.id));
+          } catch (err: any) {
+            log.error(`[AIExpenseCategorization] Failed to auto-apply category for expense ${expense.id}:`, (err instanceof Error ? err.message : String(err)));
+          }
         } else {
           requiresReview++;
+          try {
+            await db.update(expenses)
+              .set({
+                status: 'needs_review',
+                notes: `AI categorization confidence too low (${confidence}%) for auto-apply (threshold: ${AI_CONFIDENCE_THRESHOLDS.AUTO_APPLY}%). Suggested: ${result.suggestedCategory.categoryName}. ${result.suggestedCategory.reasoning}`,
+              })
+              .where(eq(expenses.id, expense.id));
+          } catch (err: any) {
+            log.error(`[AIExpenseCategorization] Failed to flag expense ${expense.id} for review:`, (err instanceof Error ? err.message : String(err)));
+          }
         }
         
         if (result.anomalyFlags.length > 0) {
@@ -437,23 +486,26 @@ Rank by confidence (0-100). Be specific in reasoning.`;
         }
       }
 
-      if (bestMatch && bestMatch.score >= 60) {
+      if (bestMatch && bestMatch.score >= AI_CONFIDENCE_THRESHOLDS.RECEIPT_MATCH) {
+        const autoLinked = bestMatch.score >= AI_CONFIDENCE_THRESHOLDS.RECEIPT_AUTO_LINK;
         return {
           matched: true,
           expenseId: bestMatch.expense.id,
           confidence: bestMatch.score,
-          reason: `Matched based on amount ($${receiptAmount.toFixed(2)}) and date proximity`
+          reason: autoLinked
+            ? `Auto-linked: high confidence match ($${receiptAmount.toFixed(2)}, score: ${bestMatch.score}%)`
+            : `Suggested match ($${receiptAmount.toFixed(2)}, score: ${bestMatch.score}%) — requires human confirmation`
         };
       }
 
       return {
         matched: false,
         confidence: bestMatch?.score || 0,
-        reason: 'No confident match found - manual review required'
+        reason: `No confident match found (best score: ${bestMatch?.score || 0}%, threshold: ${AI_CONFIDENCE_THRESHOLDS.RECEIPT_MATCH}%) — manual review required`
       };
     } catch (error: any) {
-      console.error('[AIExpenseCategorization] Receipt matching error:', error.message);
-      return { matched: false, confidence: 0, reason: error.message };
+      log.error('[AIExpenseCategorization] Receipt matching error:', (error instanceof Error ? error.message : String(error)));
+      return { matched: false, confidence: 0, reason: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -542,7 +594,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
         insights
       };
     } catch (error: any) {
-      console.error('[AIExpenseCategorization] Pattern analysis error:', error.message);
+      log.error('[AIExpenseCategorization] Pattern analysis error:', (error instanceof Error ? error.message : String(error)));
       return {
         topCategories: [],
         topMerchants: [],

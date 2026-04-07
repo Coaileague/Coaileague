@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,21 +17,27 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { selectSidebarFamilies } from "@/lib/sidebarModules";
-import { useTransition } from "@/contexts/transition-context";
-import { showLogoutTransition } from "@/lib/transition-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { performLogout } from "@/lib/logoutHandler";
+import { performLogout, setLogoutTransitionLoader } from "@/lib/logoutHandler";
+import { useTransitionLoaderIfMounted } from "@/components/canvas-hub";
 import { UnifiedBrandLogo, IconLogo } from "@/components/unified-brand-logo";
+import { OfficerScoreBadge } from "@/components/officer-score-badge";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
-  const transition = useTransition();
+  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading, positionCapabilities } = useWorkspaceAccess();
   const { state } = useSidebar();
   const isMobile = useIsMobile();
+  const transitionLoader = useTransitionLoaderIfMounted();
+
+  useEffect(() => {
+    if (transitionLoader) {
+      setLogoutTransitionLoader(transitionLoader);
+    }
+  }, [transitionLoader]);
   
   if (isMobile) {
     return null;
@@ -39,9 +45,8 @@ export function AppSidebar() {
 
   const rawFamilies = isLoading 
     ? [] 
-    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities);
   
-  // Filter out mobileOnly routes since sidebar is desktop-only
   const families = rawFamilies.map(family => ({
     ...family,
     routes: family.routes.filter(route => !route.mobileOnly)
@@ -50,7 +55,8 @@ export function AppSidebar() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     families.forEach(family => {
-      initial[family.id] = family.id === 'platform';
+      const hasActiveRoute = family.routes.some(route => location === route.href);
+      initial[family.id] = hasActiveRoute || family.id === 'platform';
     });
     return initial;
   });
@@ -68,7 +74,6 @@ export function AppSidebar() {
   };
 
   const handleLogout = async () => {
-    showLogoutTransition(transition);
     await performLogout();
   };
 
@@ -76,10 +81,10 @@ export function AppSidebar() {
     <Sidebar 
       variant="floating" 
       collapsible="offcanvas" 
-      className="bg-slate-900 border-r border-slate-700/50"
+      className="bg-sidebar border-r border-border"
+      aria-label="Main navigation"
     >
-      {/* Header - Unified Brand Logo */}
-      <SidebarHeader className="p-5 border-b border-slate-700/50">
+      <SidebarHeader className="p-5 border-b border-border">
         <Link href="/dashboard" className="flex items-center" data-testid="link-dashboard-logo">
           {state === 'collapsed' ? (
             <IconLogo size="sm" />
@@ -95,28 +100,30 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      {/* Navigation - Clean Sections */}
       <SidebarContent className="px-3 py-4 space-y-1 overflow-y-auto">
         {families.map((family) => (
           <SidebarGroup key={family.id} className="mb-2">
-            {/* Section Header */}
             <SidebarGroupLabel asChild>
               <button
                 onClick={() => toggleSection(family.id)}
-                className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-slate-300 transition-colors"
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider transition-colors"
                 data-testid={`toggle-section-${family.id}`}
               >
                 <span>{family.label}</span>
                 {expandedSections[family.id] ? 
-                  <ChevronDown size={12} className="text-slate-500" /> : 
-                  <ChevronRight size={12} className="text-slate-500" />
+                  <ChevronDown size={12} className="text-muted-foreground/60" /> : 
+                  <ChevronRight size={12} className="text-muted-foreground/60" />
                 }
               </button>
             </SidebarGroupLabel>
 
-            {/* Section Items */}
-            {expandedSections[family.id] && (
-              <SidebarGroupContent>
+            <SidebarGroupContent
+              className="overflow-hidden transition-all duration-200"
+              style={{
+                maxHeight: expandedSections[family.id] ? `${(family.routes.length + family.locked.length) * 44 + 20}px` : '0px',
+                opacity: expandedSections[family.id] ? 1 : 0,
+              }}
+            >
                 <SidebarMenu className="mt-1 space-y-0.5">
                   {family.routes.map((route) => {
                     const Icon = route.icon;
@@ -128,13 +135,13 @@ export function AppSidebar() {
                             href={route.href}
                             className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
                               isActive 
-                                ? 'bg-slate-800 text-white' 
-                                : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+                                : 'text-sidebar-foreground/80 hover-elevate'
                             }`}
                             data-testid={`link-${route.id}`}
                           >
                             <Icon size={18} className={`shrink-0 ${
-                              isActive ? 'text-cyan-400' : 'text-slate-400 group-hover:text-cyan-400'
+                              isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'
                             }`} />
                             <span className="flex-1 text-sm font-medium truncate">
                               {route.label}
@@ -158,18 +165,17 @@ export function AppSidebar() {
                     );
                   })}
 
-                  {/* Locked routes */}
                   {family.locked.map((route) => {
                     const Icon = route.icon;
                     return (
                       <SidebarMenuItem key={route.id}>
                         <SidebarMenuButton disabled>
                           <div className="flex items-center gap-3 px-3 py-2 opacity-50 cursor-not-allowed">
-                            <Icon size={18} className="text-slate-500 shrink-0" />
-                            <span className="flex-1 text-sm font-medium text-slate-500 truncate">
+                            <Icon size={18} className="text-muted-foreground/50 shrink-0" />
+                            <span className="flex-1 text-sm font-medium text-muted-foreground/50 truncate">
                               {route.label}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-700/50 text-slate-500 border border-slate-600/30">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground/50 border border-border">
                               {route.badge}
                             </span>
                           </div>
@@ -178,35 +184,29 @@ export function AppSidebar() {
                     );
                   })}
                 </SidebarMenu>
-              </SidebarGroupContent>
-            )}
+            </SidebarGroupContent>
           </SidebarGroup>
         ))}
 
-        {/* More Button */}
-        <div className="pt-2 border-t border-slate-700/50">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors">
-            <MoreHorizontal size={18} />
-            <span className="text-sm font-medium">More</span>
-          </button>
-        </div>
       </SidebarContent>
 
-      {/* Footer - User Profile */}
-      <SidebarFooter className="p-4 border-t border-slate-700/50">
+      <SidebarFooter className="p-4 border-t border-border">
         <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10 border-2 border-slate-600">
+          <Avatar className="h-10 w-10 border border-border">
             <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
-            <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-sm font-bold">
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-bold">
               {getInitials(user?.firstName, user?.lastName)}
             </AvatarFallback>
           </Avatar>
           {state !== 'collapsed' && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs text-slate-400 truncate">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate">
+                  {user?.firstName} {user?.lastName}
+                </p>
+                <OfficerScoreBadge compact />
+              </div>
+              <p className="text-xs text-muted-foreground truncate">
                 {user?.email}
               </p>
             </div>
@@ -217,11 +217,12 @@ export function AppSidebar() {
           variant="ghost"
           size={state === 'collapsed' ? 'icon' : 'sm'}
           onClick={handleLogout}
-          className={`w-full mt-3 text-slate-400 hover:text-white hover:bg-slate-800 ${state !== 'collapsed' ? 'justify-start' : 'justify-center'}`}
+          className={`w-full mt-3 text-muted-foreground ${state !== 'collapsed' ? 'justify-start' : 'justify-center'}`}
           data-testid="button-logout-footer"
           title="Sign Out"
         >
-          {state === 'collapsed' ? 'X' : 'Sign Out'}
+          <LogOut size={16} className="shrink-0" />
+          {state !== 'collapsed' && <span>Sign Out</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>

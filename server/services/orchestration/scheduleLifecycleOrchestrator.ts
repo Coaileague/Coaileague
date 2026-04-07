@@ -12,9 +12,15 @@
  */
 
 import { db } from '../../db';
+import { scheduleLifecycles, orchestratedSwapRequests } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { crossDomainExceptionService } from './crossDomainExceptionService';
+import { typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('scheduleLifecycleOrchestrator');
+
 
 export type ScheduleStatus = 'draft' | 'pending_review' | 'approved' | 'published' | 'archived';
 
@@ -147,9 +153,9 @@ class ScheduleLifecycleOrchestrator {
         periodEnd,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Created: ${id} for schedule ${scheduleId}`);
+    log.info(`[ScheduleLifecycle] Created: ${id} for schedule ${scheduleId}`);
 
     return lifecycle;
   }
@@ -210,9 +216,9 @@ class ScheduleLifecycleOrchestrator {
         complianceIssues: validation.complianceIssues,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Submitted for review: ${lifecycleId}`);
+    log.info(`[ScheduleLifecycle] Submitted for review: ${lifecycleId}`);
 
     return {
       success: true,
@@ -261,9 +267,9 @@ class ScheduleLifecycleOrchestrator {
         approvedBy: approverId,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Approved: ${lifecycleId} by ${approverId}`);
+    log.info(`[ScheduleLifecycle] Approved: ${lifecycleId} by ${approverId}`);
 
     return { success: true, message: 'Schedule approved' };
   }
@@ -309,9 +315,9 @@ class ScheduleLifecycleOrchestrator {
         notifyEmployees,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator', priority: 'high' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Published: ${lifecycleId} by ${publisherId}`);
+    log.info(`[ScheduleLifecycle] Published: ${lifecycleId} by ${publisherId}`);
 
     return { success: true, message: 'Schedule published' };
   }
@@ -353,9 +359,9 @@ class ScheduleLifecycleOrchestrator {
         reason,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Rejected: ${lifecycleId} by ${rejectorId} - ${reason}`);
+    log.info(`[ScheduleLifecycle] Rejected: ${lifecycleId} by ${rejectorId} - ${reason}`);
 
     return { success: true, message: 'Schedule rejected and returned to draft' };
   }
@@ -429,9 +435,9 @@ class ScheduleLifecycleOrchestrator {
         expiresAt: request.expiresAt,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Shift swap requested: ${id} by ${requesterName}`);
+    log.info(`[ScheduleLifecycle] Shift swap requested: ${id} by ${requesterName}`);
 
     return request;
   }
@@ -478,9 +484,9 @@ class ScheduleLifecycleOrchestrator {
         approvedBy: approverId,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Shift swap approved: ${swapId} by ${approverId}`);
+    log.info(`[ScheduleLifecycle] Shift swap approved: ${swapId} by ${approverId}`);
 
     return { success: true, message: 'Swap approved' };
   }
@@ -527,9 +533,9 @@ class ScheduleLifecycleOrchestrator {
         reason,
       },
       metadata: { source: 'ScheduleLifecycleOrchestrator' },
-    });
+    }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-    console.log(`[ScheduleLifecycle] Shift swap rejected: ${swapId} by ${rejectorId}`);
+    log.info(`[ScheduleLifecycle] Shift swap rejected: ${swapId} by ${rejectorId}`);
 
     return { success: true, message: 'Swap rejected' };
   }
@@ -588,38 +594,97 @@ class ScheduleLifecycleOrchestrator {
             shiftDetails: request.shiftDetails,
           },
           metadata: { source: 'ScheduleLifecycleOrchestrator' },
-        });
+        }).catch((err) => log.warn('[ScheduleLifecycle] Fire-and-forget notification failed:', err));
 
-        console.log(`[ScheduleLifecycle] Shift swap expired: ${id}`);
+        log.info(`[ScheduleLifecycle] Shift swap expired: ${id}`);
       }
     }
   }
 
   private generateId(prefix: string): string {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${prefix}-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
   }
 
   private async persistSchedule(lifecycle: ScheduleLifecycle): Promise<void> {
     try {
-      await db.execute(`
-        INSERT INTO schedule_lifecycles (id, workspace_id, lifecycle_data, updated_at)
-        VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (id) DO UPDATE SET lifecycle_data = $3, updated_at = NOW()
-      `, [lifecycle.id, lifecycle.workspaceId, JSON.stringify(lifecycle)]);
+      // Converted to Drizzle ORM: ON CONFLICT
+      const lifecycleJson = JSON.stringify(lifecycle);
+      await db.insert(scheduleLifecycles).values({
+        id: lifecycle.id,
+        workspaceId: lifecycle.workspaceId,
+        lifecycleData: lifecycleJson,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: scheduleLifecycles.id,
+        set: { lifecycleData: lifecycleJson, updatedAt: sql`now()` },
+      });
     } catch (error) {
-      console.warn('[ScheduleLifecycle] Failed to persist lifecycle (table may not exist):', error);
+      log.warn('[ScheduleLifecycle] Failed to persist lifecycle (table may not exist):', error);
     }
   }
 
   private async persistSwapRequest(request: ShiftSwapRequest): Promise<void> {
     try {
-      await db.execute(`
-        INSERT INTO orchestrated_swap_requests (id, workspace_id, request_data, updated_at)
-        VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (id) DO UPDATE SET request_data = $3, updated_at = NOW()
-      `, [request.id, request.workspaceId, JSON.stringify(request)]);
+      // Converted to Drizzle ORM: ON CONFLICT
+      const requestJson = JSON.stringify(request);
+      await db.insert(orchestratedSwapRequests).values({
+        id: request.id,
+        workspaceId: request.workspaceId,
+        requestData: requestJson,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: orchestratedSwapRequests.id,
+        set: { requestData: requestJson, updatedAt: sql`now()` },
+      });
     } catch (error) {
-      console.warn('[ScheduleLifecycle] Failed to persist swap request (table may not exist):', error);
+      log.warn('[ScheduleLifecycle] Failed to persist swap request (table may not exist):', error);
+    }
+  }
+
+  /**
+   * Queue pattern analysis for Trinity AI to process
+   * Called when historical schedules are imported or analysis is requested
+   */
+  async queuePatternAnalysis(params: {
+    workspaceId: string;
+    source: 'prior_import' | 'manual_request';
+    shiftCount: number;
+    dateRange?: { start: string; end: string };
+    lookbackDays?: number;
+    preBuildWeeks?: number;
+    autoGenerateSchedules?: boolean;
+    priority?: 'low' | 'normal' | 'high';
+  }): Promise<void> {
+    const analysisId = this.generateId('analysis');
+
+    platformEventBus.publish({
+      type: 'schedule.pattern_analysis_queued',
+      category: 'scheduling',
+      title: 'Schedule Pattern Analysis Queued',
+      description: `Pattern analysis queued from ${params.source}: ${params.shiftCount} shifts${params.dateRange ? ` (${params.dateRange.start} – ${params.dateRange.end})` : ''}`,
+      workspaceId: params.workspaceId,
+      metadata: {
+        analysisId,
+        source: params.source,
+        shiftCount: params.shiftCount,
+        dateRange: params.dateRange,
+        lookbackDays: params.lookbackDays,
+        preBuildWeeks: params.preBuildWeeks,
+        autoGenerateSchedules: params.autoGenerateSchedules,
+        priority: params.priority || 'normal',
+        queuedAt: new Date().toISOString(),
+      },
+    });
+
+    if (params.priority === 'high' && params.autoGenerateSchedules) {
+      platformEventBus.publish({
+        type: 'schedule.auto_generate_requested',
+        category: 'scheduling',
+        title: 'High-Priority Schedule Auto-Generate Requested',
+        description: `High priority pattern analysis requesting auto-schedule generation for workspace ${params.workspaceId}`,
+        workspaceId: params.workspaceId,
+        metadata: { analysisId, preBuildWeeks: params.preBuildWeeks, triggeredBy: params.source },
+      });
     }
   }
 
@@ -661,11 +726,11 @@ export const scheduleLifecycleOrchestrator = new ScheduleLifecycleOrchestrator()
 
 export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrchestrator): void {
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.create',
+    actionId: 'scheduling.lifecycle_create',
     name: 'Create Schedule Lifecycle',
     category: 'scheduling',
     description: 'Create a new schedule lifecycle for tracking',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { scheduleId, scheduleName, periodStart, periodEnd, employeeCount, shiftCount } = request.payload || {};
 
@@ -700,11 +765,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.submit_for_review',
+    actionId: 'scheduling.lifecycle_submit_for_review',
     name: 'Submit Schedule for Review',
     category: 'scheduling',
     description: 'Submit a draft schedule for review',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { lifecycleId, notes } = request.payload || {};
 
@@ -734,11 +799,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.approve',
+    actionId: 'scheduling.lifecycle_approve',
     name: 'Approve Schedule',
     category: 'scheduling',
     description: 'Approve a schedule pending review',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request) => {
       const { lifecycleId, notes } = request.payload || {};
 
@@ -767,11 +832,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.publish',
+    actionId: 'scheduling.lifecycle_publish',
     name: 'Publish Schedule',
     category: 'scheduling',
     description: 'Publish an approved schedule',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request) => {
       const { lifecycleId, notifyEmployees } = request.payload || {};
 
@@ -800,11 +865,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.reject',
+    actionId: 'scheduling.lifecycle_reject',
     name: 'Reject Schedule',
     category: 'scheduling',
     description: 'Reject a schedule and return to draft',
-    requiredRoles: ['admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request) => {
       const { lifecycleId, reason } = request.payload || {};
 
@@ -833,11 +898,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.request_swap',
+    actionId: 'scheduling.lifecycle_request_swap',
     name: 'Request Shift Swap',
     category: 'scheduling',
     description: 'Request to swap a shift',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { scheduleId, shiftId, requesterName, targetEmployeeId, targetEmployeeName, reason, shiftDetails } = request.payload || {};
 
@@ -873,11 +938,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.approve_swap',
+    actionId: 'scheduling.lifecycle_approve_swap',
     name: 'Approve Shift Swap',
     category: 'scheduling',
     description: 'Approve a shift swap request',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { swapId, notes } = request.payload || {};
 
@@ -906,11 +971,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.reject_swap',
+    actionId: 'scheduling.lifecycle_reject_swap',
     name: 'Reject Shift Swap',
     category: 'scheduling',
     description: 'Reject a shift swap request',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { swapId, reason } = request.payload || {};
 
@@ -939,11 +1004,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.get_pending_swaps',
+    actionId: 'scheduling.lifecycle_get_pending_swaps',
     name: 'Get Pending Swap Requests',
     category: 'scheduling',
     description: 'Get all pending shift swap requests',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       if (!request.workspaceId) {
         return {
@@ -967,11 +1032,11 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
   });
 
   orchestrator.registerAction({
-    actionId: 'schedule_lifecycle.get_stats',
+    actionId: 'scheduling.lifecycle_get_stats',
     name: 'Get Schedule Lifecycle Stats',
     category: 'analytics',
     description: 'Get schedule lifecycle statistics',
-    requiredRoles: ['support', 'admin', 'super_admin'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request) => {
       const stats = scheduleLifecycleOrchestrator.getStats();
       return {
@@ -984,5 +1049,5 @@ export function registerScheduleLifecycleActions(orchestrator: typeof helpaiOrch
     },
   });
 
-  console.log('[ScheduleLifecycleOrchestrator] Registered 10 AI Brain actions');
+  log.info('[ScheduleLifecycleOrchestrator] Registered 10 AI Brain actions');
 }

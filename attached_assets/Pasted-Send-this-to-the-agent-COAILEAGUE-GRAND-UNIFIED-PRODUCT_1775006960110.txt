@@ -1,0 +1,1868 @@
+Send this to the agent:
+
+---
+
+**COAILEAGUE GRAND UNIFIED PRODUCTION READINESS AUDIT**
+
+You are the Architect and Gatekeeper. This is the most comprehensive audit the platform has ever undergone. Every system, every feature, every workflow, every pipeline, every automation, every role, every document, every notification, every broadcast, every database write, every UI component, every API route, every Trinity action — verified to work together as one unified production-ready system.
+
+This is not a code scan. This is a semantic interrogation of every layer of the platform from database schema to user interface. For every system ask what it is supposed to do, find the code that does it, verify it actually works end to end, fix what does not, and confirm the fix persists in production.
+
+Deploy all 20 subagents simultaneously across every domain. You personally analyze all findings as a whole, identify cross-system issues no single subagent would catch, fix everything, and sign off only when the entire platform operates correctly as one unified system ready for real tenants in production.
+
+**Zero tolerance. All tests against ACME sandbox only. Statewide workspace receives zero agent contact and zero test data under any circumstances. ACME is the exclusive development and testing sandbox.**
+
+---
+
+**THE MASTER SEMANTIC QUESTION SET**
+
+Before any subagent begins work answer these platform-wide questions. Every answer must be verified in code and database. Every gap must be fixed.
+
+```
+For every system on the platform:
+
+1. What is this system supposed to do?
+2. What triggers it?
+3. What does it write to the database?
+4. What does it read from the database?
+5. Are all required tables present with correct columns?
+6. Does the API route exist and return correct data?
+7. Does the UI component exist and render correctly?
+8. Does the UI call the correct API endpoint?
+9. Does the API call the correct service?
+10. Does the service write to the correct table?
+11. Does the write trigger the correct audit log entry?
+12. Does the write trigger the correct NDS notification?
+13. Does the write trigger the correct WebSocket broadcast?
+14. Does Trinity know about this event and can she act on it?
+15. Does the org owner see this event in their dashboard?
+16. Is the data workspace-scoped and tenant-isolated?
+17. Can the feature be used by its intended user role?
+18. Does the feature work on mobile?
+19. Does the feature work in both English and Spanish?
+20. Is the complete audit trail present?
+```
+
+---
+
+**STEP 0 — MASTER PLATFORM INVENTORY**
+
+Run this first. Everything depends on it.
+
+```bash
+# Complete route inventory
+echo "=== ALL API ROUTES ==="
+grep -rn "router\.\(get\|post\|patch\|put\|delete\)" \
+  server/routes/ --include="*.ts" | \
+  grep -v node_modules | \
+  sed 's/.*router\.\(get\|post\|patch\|put\|delete\)(\(.*\),.*/\1 \2/' | \
+  sort | uniq > /tmp/all_routes.txt
+wc -l /tmp/all_routes.txt
+cat /tmp/all_routes.txt
+
+# Complete table inventory
+echo "=== ALL DATABASE TABLES ==="
+psql $DATABASE_URL -t -c "
+  SELECT table_name, 
+    (SELECT COUNT(*) FROM information_schema.columns c 
+     WHERE c.table_name = t.table_name) as col_count,
+    pg_size_pretty(pg_total_relation_size(quote_ident(table_name))) as size
+  FROM information_schema.tables t
+  WHERE table_schema = 'public' 
+  AND table_type = 'BASE TABLE'
+  ORDER BY table_name
+" > /tmp/all_tables.txt
+wc -l /tmp/all_tables.txt
+cat /tmp/all_tables.txt
+
+# Complete page inventory
+echo "=== ALL FRONTEND PAGES ==="
+find client/src/pages -name "*.tsx" | sort > /tmp/all_pages.txt
+wc -l /tmp/all_pages.txt
+cat /tmp/all_pages.txt
+
+# Complete service inventory
+echo "=== ALL BACKEND SERVICES ==="
+find server/services -name "*.ts" | sort > /tmp/all_services.txt
+wc -l /tmp/all_services.txt
+cat /tmp/all_services.txt
+
+# Trinity action count
+echo "=== TRINITY ACTIONS ==="
+grep -rn "actionId\|action_id" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v test | \
+  grep -oP "['\"]([\w.]+)['\"]" | sort | uniq | wc -l
+
+# NDS notification types
+echo "=== NDS NOTIFICATION TYPES ==="
+grep -rn "notification_type\|notificationType" \
+  server/services/notificationDeliveryService.ts | \
+  grep -oP "'[a-z_]+'" | sort | uniq | wc -l
+
+# WebSocket broadcast types
+echo "=== WEBSOCKET BROADCAST TYPES ==="
+grep -rn "broadcastToWorkspace" server/ --include="*.ts" | \
+  grep -v node_modules | \
+  grep -oP "type: '[^']+'" | sort | uniq | wc -l
+
+# TypeScript errors baseline
+echo "=== TYPESCRIPT ERRORS BASELINE ==="
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+
+# Report full inventory summary
+echo "API Routes: $(wc -l < /tmp/all_routes.txt)"
+echo "DB Tables: $(wc -l < /tmp/all_tables.txt)"
+echo "Frontend Pages: $(wc -l < /tmp/all_pages.txt)"
+echo "Backend Services: $(wc -l < /tmp/all_services.txt)"
+```
+
+---
+
+**SUBAGENT 1 — AUTHENTICATION, SESSIONS, AND IDENTITY**
+
+*Does every user get in correctly and stay correctly identified throughout their session?*
+
+```bash
+# Q1: Does registration create all required records?
+# User record, workspace record, org_id, email addresses,
+# default notification preferences, consent preferences,
+# Trinity welcome message, onboarding checklist
+
+# Q2: Does login return a valid JWT with correct claims?
+# workspaceId, userId, role, email, employeeId if applicable
+
+# Q3: Does token refresh work without forcing re-login?
+
+# Q4: Does 2FA work for all protected roles?
+# platform_staff, sra_auditor, org_owner
+
+# Q5: Does magic link login work for first-time users?
+
+# Q6: Does session timeout work correctly?
+
+# Q7: Does logout invalidate the session server-side?
+
+# Test complete auth flow
+echo "Testing registration..."
+REGISTER=$(curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "companyName": "Audit Test Security LLC",
+    "email": "audittest@coaileague-test.com",
+    "password": "AuditTest2026!",
+    "firstName": "Audit",
+    "lastName": "Test",
+    "stateCode": "TX"
+  }')
+echo $REGISTER | jq '{userId: .userId, workspaceId: .workspaceId, orgId: .orgId}'
+
+# Verify all registration side effects
+WORKSPACE_ID=$(echo $REGISTER | jq -r '.workspaceId')
+USER_ID=$(echo $REGISTER | jq -r '.userId')
+
+psql $DATABASE_URL -c "
+  SELECT 
+    w.company_name,
+    w.org_id IS NOT NULL as has_org_id,
+    w.email_slug IS NOT NULL as has_email_slug,
+    w.trinity_email IS NOT NULL as has_trinity_email,
+    w.tier,
+    w.subscription_status,
+    (SELECT COUNT(*) FROM users WHERE id = '$USER_ID') as user_exists,
+    (SELECT COUNT(*) FROM user_notification_preferences 
+     WHERE workspace_id = '$WORKSPACE_ID') as has_notif_prefs,
+    (SELECT COUNT(*) FROM consent_preferences 
+     WHERE workspace_id = '$WORKSPACE_ID') as has_consent_prefs,
+    (SELECT COUNT(*) FROM voice_credit_accounts 
+     WHERE workspace_id = '$WORKSPACE_ID') as has_voice_account
+  FROM workspaces w WHERE w.id = '$WORKSPACE_ID'
+"
+# All values must be true/positive
+
+# Test login
+LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"audittext@coaileague-test.com","password":"AuditTest2026!"}')
+TOKEN=$(echo $LOGIN | jq -r '.token')
+echo "Login token received: $([ -n '$TOKEN' ] && echo 'YES' || echo 'NO — CRITICAL')"
+
+# Verify token contains required claims
+echo $TOKEN | cut -d. -f2 | base64 -d 2>/dev/null | jq '{
+  userId: .userId,
+  workspaceId: .workspaceId,
+  role: .role,
+  exp: .exp
+}'
+
+# Test token verification
+curl -s http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer $TOKEN" | jq '{
+  id: .id,
+  email: .email,
+  role: .role,
+  workspaceId: .workspaceId
+}'
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 2 — EMPLOYEE AND OFFICER MANAGEMENT**
+
+*Does every officer lifecycle event work correctly from creation to termination?*
+
+```bash
+# Q1: Can org owner create a new officer with all required fields?
+# Q2: Does employee_number auto-generate on creation?
+# Q3: Does user account auto-create linked to employee record?
+# Q4: Does welcome email send via NDS on creation?
+# Q5: Does officer appear in roster with correct status?
+# Q6: Can supervisor be assigned and does it reflect in reporting?
+# Q7: Does pay rate store with correct precision?
+# Q8: Does license information store and trigger expiry monitoring?
+# Q9: Does officer profile photo upload and display correctly?
+# Q10: Does termination process archive correctly?
+# Q11: Does terminated officer lose system access immediately?
+# Q12: Does officer's data remain visible to org owner after termination?
+
+# Test complete officer creation
+echo "Testing officer creation..."
+OFFICER=$(curl -s -X POST \
+  "http://localhost:5000/api/employees" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Test",
+    "lastName": "Officer",
+    "email": "testofficer@acmesecurity-test.com",
+    "phone": "210-555-0001",
+    "position": "Unarmed Security Officer",
+    "payRate": 15.00,
+    "payType": "hourly",
+    "isArmed": false,
+    "hireDate": "2026-04-01",
+    "address": "123 Test St",
+    "city": "San Antonio",
+    "state": "TX",
+    "zip": "78201"
+  }')
+
+OFFICER_ID=$(echo $OFFICER | jq -r '.id')
+EMPLOYEE_NUMBER=$(echo $OFFICER | jq -r '.employeeNumber')
+
+echo "Officer ID: $OFFICER_ID"
+echo "Employee Number: $EMPLOYEE_NUMBER"
+
+# Verify all creation side effects
+psql $DATABASE_URL -c "
+  SELECT 
+    e.employee_number IS NOT NULL as has_number,
+    e.status,
+    (SELECT COUNT(*) FROM users WHERE employee_id = e.id) as has_user_account,
+    (SELECT COUNT(*) FROM onboarding_tasks WHERE employee_id = e.id) as onboarding_tasks,
+    (SELECT COUNT(*) FROM notification_deliveries 
+     WHERE notification_type = 'employee_welcome'
+     AND created_at > NOW() - INTERVAL '30 seconds') as welcome_sent
+  FROM employees e WHERE e.id = '$OFFICER_ID'
+"
+
+# Test officer appears in roster
+ROSTER=$(curl -s \
+  "http://localhost:5000/api/employees?workspaceId=[acme_id]" \
+  -H "Authorization: Bearer [acme_org_owner_token]")
+echo "Officers in roster: $(echo $ROSTER | jq 'length')"
+
+# Test officer cannot access other officers' data
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "http://localhost:5000/api/employees/$OFFICER_ID" \
+  -H "Authorization: Bearer [different_officer_token]")
+echo "Cross-officer access blocked: $([ '$STATUS' = '403' ] && echo 'YES' || echo 'NO — SECURITY BUG')"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 3 — SCHEDULING SYSTEM**
+
+*Does every scheduling operation work correctly from shift creation to completion?*
+
+```bash
+# Q1: Can org owner create shifts for any post?
+# Q2: Does shift assignment notify the officer via NDS?
+# Q3: Does assigned shift appear on officer's schedule immediately?
+# Q4: Does WebSocket broadcast update supervisor dashboard in real time?
+# Q5: Does shift trading work with proper approval flow?
+# Q6: Does time off request flow work end to end?
+# Q7: Does availability matrix affect auto-scheduling?
+# Q8: Does calloff trigger cascade replacement automatically?
+# Q9: Does cascade notify eligible officers in tier order?
+# Q10: Does accepted shift in cascade mark cascade resolved?
+# Q11: Does emergency escalation work if cascade fails?
+# Q12: Does schedule view show correct data for each role?
+# Q13: Does rest period validation prevent illegal schedules?
+
+# Test shift creation
+SHIFT=$(curl -s -X POST \
+  "http://localhost:5000/api/shifts" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "postId": "[acme_post_id]",
+    "shiftDate": "2026-04-15",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "isArmedRequired": false,
+    "workspaceId": "[acme_id]"
+  }')
+
+SHIFT_ID=$(echo $SHIFT | jq -r '.id')
+echo "Shift created: $SHIFT_ID"
+
+# Assign officer
+ASSIGN=$(curl -s -X PATCH \
+  "http://localhost:5000/api/shifts/$SHIFT_ID/assign" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"officerId":"[acme_officer_id]"}')
+echo "Assignment: $(echo $ASSIGN | jq '.success')"
+
+# Verify NDS fired
+sleep 2
+psql $DATABASE_URL -c "
+  SELECT notification_type, channel, status, created_at
+  FROM notification_deliveries
+  WHERE notification_type = 'shift_assigned'
+  AND workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+
+# Verify WebSocket broadcast fired
+grep -rn "shift_assigned\|SHIFT_ASSIGNED\|shiftAssigned" \
+  server/ --include="*.ts" | grep broadcastToWorkspace | head -3
+
+# Test calloff cascade
+CALLOFF=$(curl -s -X POST \
+  "http://localhost:5000/api/calloffs" \
+  -H "Authorization: Bearer [officer_token]" \
+  -H "Content-Type: application/json" \
+  -d "{\"shiftId\":\"$SHIFT_ID\",\"reason\":\"sick\"}")
+echo "Calloff: $(echo $CALLOFF | jq '.status')"
+
+sleep 3
+
+# Verify cascade triggered
+psql $DATABASE_URL -c "
+  SELECT cascade_tier, notifications_sent, cascade_status
+  FROM replacement_cascade_logs
+  WHERE shift_id = '$SHIFT_ID'
+  ORDER BY created_at DESC LIMIT 1
+"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 4 — TIME AND ATTENDANCE**
+
+*Does every clock-in and clock-out operation work correctly with all verification methods?*
+
+```bash
+# Q1: Does web clock-in create time entry with GPS coordinates?
+# Q2: Does voice clock-in work via Trinity phone system?
+# Q3: Does QR code clock-in work at post locations?
+# Q4: Does clock-in reference number auto-generate?
+# Q5: Does supervisor see clock-in in real time?
+# Q6: Does clock-out calculate total hours correctly?
+# Q7: Does overtime calculation trigger at 40 hours?
+# Q8: Does timesheet approval flow work correctly?
+# Q9: Does rejected timesheet notify officer?
+# Q10: Does approved timesheet flow into payroll correctly?
+# Q11: Does geofencing validation work for location verification?
+# Q12: Does photo verification on clock-in store correctly?
+
+# Test clock-in
+CLOCKIN=$(curl -s -X POST \
+  "http://localhost:5000/api/time-entries/clock-in" \
+  -H "Authorization: Bearer [officer_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "shiftId": "[shift_id]",
+    "latitude": 29.4241,
+    "longitude": -98.4936,
+    "method": "web"
+  }')
+
+TIME_ENTRY_ID=$(echo $CLOCKIN | jq -r '.timeEntryId')
+CLOCKIN_REF=$(echo $CLOCKIN | jq -r '.clockinReference')
+
+echo "Time Entry ID: $TIME_ENTRY_ID"
+echo "Clockin Reference: $CLOCKIN_REF"
+
+# Verify clockin_reference format
+echo "Reference format valid: $(echo $CLOCKIN_REF | grep -P '^CLK-\d{8}-\d{5}$' | wc -l)"
+# Must be 1
+
+# Verify GPS stored
+psql $DATABASE_URL -c "
+  SELECT 
+    clockin_reference,
+    gps_latitude,
+    gps_longitude,
+    clock_in_method,
+    clock_in
+  FROM time_entries WHERE id = '$TIME_ENTRY_ID'
+"
+
+# Verify real-time broadcast to supervisor
+grep -rn "officer_clocked_in\|clockin.*broadcast" \
+  server/ --include="*.ts" | grep broadcastToWorkspace | head -3
+
+# Test clock-out
+sleep 2
+CLOCKOUT=$(curl -s -X POST \
+  "http://localhost:5000/api/time-entries/clock-out" \
+  -H "Authorization: Bearer [officer_token]" \
+  -H "Content-Type: application/json" \
+  -d "{\"timeEntryId\":\"$TIME_ENTRY_ID\"}")
+echo "Total hours: $(echo $CLOCKOUT | jq '.totalHours')"
+
+# Verify total hours calculated
+psql $DATABASE_URL -c "
+  SELECT 
+    total_hours,
+    regular_hours,
+    overtime_hours,
+    clock_in,
+    clock_out,
+    status
+  FROM time_entries WHERE id = '$TIME_ENTRY_ID'
+"
+# total_hours must be non-null and calculated correctly
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 5 — INVOICING AND BILLING**
+
+*Does every financial operation work correctly with complete audit trails?*
+
+```bash
+# Q1: Does invoice generation calculate correctly from time entries?
+# Q2: Does invoice number auto-generate in correct format?
+# Q3: Does invoice PDF generate with correct branding?
+# Q4: Does sending invoice notify client via NDS?
+# Q5: Does payment recording update invoice status?
+# Q6: Does payment trigger QuickBooks sync?
+# Q7: Does overdue detection work and alert org owner?
+# Q8: Does dispute flow work with correct notifications?
+# Q9: Does void invoice prevent further edits?
+# Q10: Does subtotal sync trigger on line item changes?
+# Q11: Does invoice appear correctly in client portal?
+# Q12: Does revenue appear in analytics dashboard?
+# Q13: Are all financial writes audit logged?
+
+# Test invoice creation
+INVOICE=$(curl -s -X POST \
+  "http://localhost:5000/api/invoices/generate" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clientId": "[acme_client_id]",
+    "periodStart": "2026-04-01",
+    "periodEnd": "2026-04-15",
+    "workspaceId": "[acme_id]"
+  }')
+
+INVOICE_ID=$(echo $INVOICE | jq -r '.id')
+INVOICE_NUMBER=$(echo $INVOICE | jq -r '.invoiceNumber')
+
+echo "Invoice ID: $INVOICE_ID"
+echo "Invoice Number: $INVOICE_NUMBER"
+echo "Number format valid: $(echo $INVOICE_NUMBER | grep -P '^INV-\d{6}-\d{5}$' | wc -l)"
+
+# Verify subtotal matches line items
+psql $DATABASE_URL -c "
+  SELECT 
+    i.invoice_number,
+    i.subtotal,
+    (SELECT COALESCE(SUM(amount), 0) 
+     FROM invoice_line_items WHERE invoice_id = i.id) as line_items_total,
+    ABS(i.subtotal - (SELECT COALESCE(SUM(amount), 0) 
+     FROM invoice_line_items WHERE invoice_id = i.id)) as discrepancy
+  FROM invoices i WHERE i.id = '$INVOICE_ID'
+"
+# discrepancy must be 0.00
+
+# Test PDF generation
+PDF=$(curl -s -X POST \
+  "http://localhost:5000/api/invoices/$INVOICE_ID/generate-pdf" \
+  -H "Authorization: Bearer [acme_org_owner_token]")
+echo "PDF URL: $(echo $PDF | jq -r '.pdfUrl')"
+PDF_URL=$(echo $PDF | jq -r '.pdfUrl')
+PDF_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PDF_URL")
+echo "PDF accessible: $([ '$PDF_STATUS' = '200' ] && echo 'YES' || echo 'NO — CRITICAL')"
+
+# Test send invoice
+SEND=$(curl -s -X PATCH \
+  "http://localhost:5000/api/invoices/$INVOICE_ID/send" \
+  -H "Authorization: Bearer [acme_org_owner_token]")
+echo "Invoice sent: $(echo $SEND | jq '.success')"
+
+sleep 2
+psql $DATABASE_URL -c "
+  SELECT status, sent_at FROM invoices WHERE id = '$INVOICE_ID'
+"
+# status must be 'sent', sent_at must be populated
+
+# Test payment recording
+PAYMENT=$(curl -s -X PATCH \
+  "http://localhost:5000/api/invoices/$INVOICE_ID/pay" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"paymentReference":"CHK-TEST-001","amount":1500.00}')
+echo "Payment recorded: $(echo $PAYMENT | jq '.success')"
+
+# Verify QB sync queued
+sleep 2
+psql $DATABASE_URL -c "
+  SELECT status FROM quickbooks_sync_logs
+  WHERE entity_id = '$INVOICE_ID'
+  ORDER BY created_at DESC LIMIT 1
+"
+
+# Verify audit trail
+psql $DATABASE_URL -c "
+  SELECT action_type, actor_id, created_at
+  FROM universal_audit_log
+  WHERE entity_id = '$INVOICE_ID'
+  ORDER BY created_at
+"
+# Must show: invoice_created, invoice_sent, invoice_paid
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 6 — PAYROLL SYSTEM**
+
+*Does every payroll operation work correctly with financial precision?*
+
+```bash
+# Q1: Does payroll run calculate gross pay correctly?
+# Q2: Does overtime calculation apply at correct threshold?
+# Q3: Does tax calculation use correct rates per state?
+# Q4: Does net pay never go negative?
+# Q5: Does pay stub PDF generate for each officer?
+# Q6: Does direct deposit initiation work via Plaid?
+# Q7: Does payroll approval flow require correct role?
+# Q8: Does approved payroll lock for edits?
+# Q9: Does payroll appear in officer's pay stub view?
+# Q10: Does payroll sync to QuickBooks after processing?
+# Q11: Does garnishment deduction apply correctly?
+# Q12: Does payroll audit log capture every change?
+# Q13: Is idempotency_key enforced to prevent double processing?
+
+# Test payroll run creation
+PAYROLL=$(curl -s -X POST \
+  "http://localhost:5000/api/payroll/runs" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "periodStart": "2026-04-01",
+    "periodEnd": "2026-04-15",
+    "workspaceId": "[acme_id]"
+  }')
+
+PAYROLL_ID=$(echo $PAYROLL | jq -r '.id')
+echo "Payroll Run: $PAYROLL_ID"
+echo "Status: $(echo $PAYROLL | jq -r '.status')"
+
+# Verify calculations
+psql $DATABASE_URL -c "
+  SELECT 
+    prd.employee_id,
+    prd.regular_hours,
+    prd.overtime_hours,
+    prd.gross_pay,
+    prd.total_deductions,
+    prd.net_pay,
+    prd.net_pay >= 0 as net_pay_valid
+  FROM payroll_run_details prd
+  WHERE prd.payroll_run_id = '$PAYROLL_ID'
+  ORDER BY prd.net_pay DESC
+"
+# net_pay_valid must be true for all rows
+
+# Verify no double processing possible
+psql $DATABASE_URL -c "
+  SELECT idempotency_key FROM payroll_runs WHERE id = '$PAYROLL_ID'
+"
+# Must have idempotency_key set
+
+# Test double submission rejected
+DUPLICATE=$(curl -s -X POST \
+  "http://localhost:5000/api/payroll/runs" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "periodStart": "2026-04-01",
+    "periodEnd": "2026-04-15",
+    "workspaceId": "[acme_id]"
+  }')
+echo "Duplicate prevented: $(echo $DUPLICATE | jq '.error // "NOT PREVENTED — BUG"')"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 7 — ONLINE FORMS AND ESIGNATURE**
+
+*Does every form flow work correctly from invitation to PDF generation?*
+
+```bash
+# Q1: Do all 7 platform default forms exist and have correct fields?
+# Q2: Does form invitation create secure token?
+# Q3: Does form render correctly without authentication?
+# Q4: Does pre-population fill employee data correctly?
+# Q5: Does signature capture work on mobile touchscreen?
+# Q6: Does submission create form_submission record?
+# Q7: Does PDF generate after every submission?
+# Q8: Does PDF embed signature correctly?
+# Q9: Does PDF store in document vault with SHA-256 hash?
+# Q10: Does onboarding task auto-complete after form submission?
+# Q11: Does officer auto-activate after all Tier 1 tasks complete?
+# Q12: Does multi-party signing enforce correct order?
+# Q13: Does org owner get notified of every submission?
+# Q14: Does submitter receive confirmation email with PDF link?
+# Q15: Does expired token return correct error?
+
+# Verify all default forms exist
+psql $DATABASE_URL -c "
+  SELECT form_type, title, requires_signature, submit_action
+  FROM platform_forms
+  WHERE workspace_id IS NULL
+  ORDER BY form_type
+"
+# Must show all 7: offer_letter, onboarding_w4, onboarding_direct_deposit,
+# handbook_acknowledgment, background_check_consent, job_application,
+# client_intake_form
+
+# Test complete form flow
+JOB_APP_FORM_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM platform_forms 
+  WHERE form_type = 'job_application' LIMIT 1
+" | tr -d ' ')
+
+# Create invitation
+INVITATION=$(curl -s -X POST \
+  "http://localhost:5000/api/forms/$JOB_APP_FORM_ID/invite" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "formtest@test.com",
+    "name": "Form Test Applicant",
+    "contextType": null
+  }')
+
+TOKEN=$(echo $INVITATION | jq -r '.invitation.token')
+echo "Form token: $TOKEN"
+
+# Access form without auth
+FORM=$(curl -s "http://localhost:5000/api/forms/public/$TOKEN")
+echo "Form title: $(echo $FORM | jq -r '.title')"
+echo "Field count: $(echo $FORM | jq '.fields | length')"
+
+# Submit form
+SUBMISSION=$(curl -s -X POST \
+  "http://localhost:5000/api/forms/public/$TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "firstName": "Form",
+      "lastName": "Test",
+      "email": "formtest@test.com",
+      "phone": "210-555-0002",
+      "positionApplied": "Unarmed Security Officer",
+      "hasLicense": "Yes",
+      "yearsExperience": "1-3 years",
+      "availability": "Any shift",
+      "certifyAccurate": true
+    },
+    "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    "signatureType": "drawn",
+    "deviceType": "desktop"
+  }')
+
+SUBMISSION_ID=$(echo $SUBMISSION | jq -r '.submissionId')
+echo "Submission ID: $SUBMISSION_ID"
+
+sleep 5
+
+# Verify PDF generated
+psql $DATABASE_URL -c "
+  SELECT 
+    trinity_processing_status,
+    generated_document_url IS NOT NULL as has_pdf,
+    processed_at
+  FROM form_submissions WHERE id = '$SUBMISSION_ID'
+"
+
+# Verify document vault entry
+psql $DATABASE_URL -c "
+  SELECT document_number, integrity_hash IS NOT NULL as has_hash
+  FROM document_vault
+  WHERE created_at > NOW() - INTERVAL '30 seconds'
+  ORDER BY created_at DESC LIMIT 1
+"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 8 — NOTIFICATION DELIVERY SYSTEM**
+
+*Does every notification reach the right person on the right channel?*
+
+```bash
+# Q1: Is NDS the ONLY sender — no bypass routes?
+# Q2: Does every notification type have a template?
+# Q3: Does language preference route to correct template?
+# Q4: Does quiet hours enforcement work correctly?
+# Q5: Does consent check prevent unwanted communications?
+# Q6: Does retry logic work with exponential backoff?
+# Q7: Does failure logging capture all errors?
+# Q8: Does email deliver via Resend with correct from address?
+# Q9: Does SMS deliver via Twilio with correct from number?
+# Q10: Does push notification reach mobile devices?
+# Q11: Does in-app notification appear without page refresh?
+# Q12: Does unsubscribe/opt-out honor immediately?
+# Q13: Does notification appear in officer's notification center?
+
+# Verify NDS is only sender
+echo "=== CHECKING FOR NDS BYPASS ==="
+grep -rn "resend\.emails\.send\|twilio\.messages\.create\|sendgrid" \
+  server/ --include="*.ts" | \
+  grep -v "notificationDeliveryService\|nds\|node_modules" | \
+  grep -v test | head -10
+# Must return zero results
+
+# Count notification types
+NDS_TYPES=$(grep -rn "notification_type\|notificationType" \
+  server/services/notificationDeliveryService.ts | \
+  grep -oP "'[a-z_]+'" | sort | uniq | wc -l)
+echo "NDS notification types: $NDS_TYPES"
+
+# Test end-to-end notification
+curl -s -X POST \
+  "http://localhost:5000/api/notifications/test" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "shift_assigned",
+    "workspaceId": "[acme_id]",
+    "userId": "[acme_officer_user_id]"
+  }'
+
+sleep 3
+
+psql $DATABASE_URL -c "
+  SELECT channel, status, to_email, delivered_at
+  FROM notification_deliveries
+  WHERE notification_type = 'shift_assigned'
+  AND workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+  ORDER BY channel
+"
+# Must show email and sms rows with delivered or pending status
+
+# Test quiet hours respected
+psql $DATABASE_URL -c "
+  UPDATE user_notification_preferences
+  SET quiet_hours_enabled = true,
+      quiet_hours_start = '00:00',
+      quiet_hours_end = '23:59'
+  WHERE workspace_id = '[acme_id]'
+  AND user_id = '[acme_officer_user_id]'
+"
+
+# Non-critical notification should be queued not sent
+curl -s -X POST \
+  "http://localhost:5000/api/notifications/test" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"schedule_reminder","workspaceId":"[acme_id]","userId":"[acme_officer_user_id]"}'
+
+psql $DATABASE_URL -c "
+  SELECT status FROM notification_deliveries
+  WHERE notification_type = 'schedule_reminder'
+  AND created_at > NOW() - INTERVAL '10 seconds'
+"
+# Must show 'queued' not 'delivered'
+
+# Reset quiet hours
+psql $DATABASE_URL -c "
+  UPDATE user_notification_preferences
+  SET quiet_hours_enabled = false
+  WHERE workspace_id = '[acme_id]'
+  AND user_id = '[acme_officer_user_id]'
+"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 9 — DOCKCHAT AND REAL-TIME MESSAGING**
+
+*Does every real-time communication channel work correctly?*
+
+```bash
+# Q1: Does DockChat load with correct rooms for each role?
+# Q2: Does message send persist to database?
+# Q3: Does message broadcast to all room members in real time?
+# Q4: Does Trinity respond in DockChat correctly?
+# Q5: Does Trinity intake widget render in DockChat?
+# Q6: Does unread count update correctly?
+# Q7: Does direct message between officers work?
+# Q8: Does supervisor-only channel exist and enforce access?
+# Q9: Does org-wide announcement channel work?
+# Q10: Does Trinity proactively post insights to correct channels?
+# Q11: Does message notification appear for offline users?
+# Q12: Does WebSocket reconnect after connection loss?
+# Q13: Does message history load correctly on room open?
+
+# Verify chat tables exist and have data
+psql $DATABASE_URL -c "
+  SELECT 
+    (SELECT COUNT(*) FROM chat_rooms WHERE workspace_id = '[acme_id]') as rooms,
+    (SELECT COUNT(*) FROM chat_messages WHERE workspace_id = '[acme_id]') as messages,
+    (SELECT COUNT(*) FROM chat_room_members WHERE workspace_id = '[acme_id]') as members
+"
+
+# Test message creation
+MESSAGE=$(curl -s -X POST \
+  "http://localhost:5000/api/chat/rooms/[acme_room_id]/messages" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"messageText": "Audit test message", "messageType": "text"}')
+MESSAGE_ID=$(echo $MESSAGE | jq -r '.id')
+echo "Message ID: $MESSAGE_ID"
+
+# Verify message stored
+psql $DATABASE_URL -c "
+  SELECT id, message_text, sender_id, created_at
+  FROM chat_messages WHERE id = '$MESSAGE_ID'
+"
+
+# Verify WebSocket broadcast types handled by client
+grep -rn "trinity_message\|chat_message\|room_message" \
+  client/src/ --include="*.tsx" --include="*.ts" | \
+  grep -v node_modules | head -10
+
+# Test Trinity response in DockChat
+TRINITY_MSG=$(curl -s -X POST \
+  "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"How many officers are currently on shift?","workspaceId":"[acme_id]"}')
+echo "Trinity response: $(echo $TRINITY_MSG | jq -r '.message' | head -c 100)"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 10 — DOCUMENT VAULT AND PDF GENERATION**
+
+*Does every document generate correctly and store with complete integrity?*
+
+```bash
+# Q1: Does every document get a unique document_number?
+# Q2: Is SHA-256 hash calculated and stored for every document?
+# Q3: Is every document linked to correct employee or client?
+# Q4: Is every document workspace-scoped?
+# Q5: Does document_vault enforce access control by role?
+# Q6: Does PDF generation work for all document types?
+# Q7: Does offer letter PDF include correct officer data?
+# Q8: Does invoice PDF include correct client and line items?
+# Q9: Does pay stub PDF include correct hours and calculations?
+# Q10: Does signed document embed signature visibly?
+# Q11: Does document appear in officer's document portal?
+# Q12: Does document appear in client's portal?
+# Q13: Can Trinity find documents by employee number?
+# Q14: Does document deletion mark is_deleted without destroying record?
+
+# Audit document vault completeness
+psql $DATABASE_URL -c "
+  SELECT 
+    COUNT(*) as total_documents,
+    COUNT(document_number) as with_doc_number,
+    COUNT(integrity_hash) as with_hash,
+    COUNT(workspace_id) as with_workspace,
+    COUNT(CASE WHEN employee_id IS NOT NULL OR client_id IS NOT NULL 
+               OR entity_id IS NOT NULL THEN 1 END) as with_entity_link,
+    COUNT(*) - COUNT(document_number) as missing_doc_number,
+    COUNT(*) - COUNT(integrity_hash) as missing_hash
+  FROM document_vault
+  WHERE workspace_id = '[acme_id]'
+"
+# missing_doc_number and missing_hash must be 0
+
+# Fix any missing document numbers
+DO $$
+DECLARE r RECORD;
+  today_str TEXT := TO_CHAR(NOW(), 'YYYYMMDD');
+  next_num INTEGER;
+BEGIN
+  FOR r IN 
+    SELECT id FROM document_vault 
+    WHERE document_number IS NULL 
+    ORDER BY created_at
+  LOOP
+    SELECT COALESCE(MAX(CAST(
+      SUBSTRING(document_number FROM LENGTH('DOC-' || today_str || '-') + 1) 
+      AS INTEGER)), 0) + 1
+    INTO next_num
+    FROM document_vault 
+    WHERE document_number LIKE 'DOC-' || today_str || '-%';
+    
+    UPDATE document_vault 
+    SET document_number = 'DOC-' || today_str || '-' || LPAD(next_num::TEXT, 5, '0')
+    WHERE id = r.id;
+  END LOOP;
+  RAISE NOTICE 'Document number backfill complete';
+END $$;
+
+# Test PDF accessibility
+psql $DATABASE_URL -c "
+  SELECT document_url FROM document_vault
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 5
+" | while read url; do
+  if [ -n "$url" ]; then
+    STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+    echo "PDF $url: $STATUS"
+  fi
+done
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 11 — TRINITY ORCHESTRATION AND AI**
+
+*Does Trinity operate correctly as the intelligent backbone of the entire platform?*
+
+```bash
+# Q1: Does Trinity system actor exist with correct identity?
+# Q2: Does Trinity have access to all platform domains?
+# Q3: Does Trinity respond correctly in English and Spanish?
+# Q4: Does Trinity session isolation prevent cross-user context leakage?
+# Q5: Does Trinity write audit records for every action?
+# Q6: Do Trinity pending approvals route to correct role?
+# Q7: Does Trinity proactive monitoring fire insights?
+# Q8: Does Trinity process inbound emails correctly?
+# Q9: Does Trinity process voice calls correctly?
+# Q10: Does Trinity intake widget work in DockChat?
+# Q11: Does Trinity FAQ check before creating tickets?
+# Q12: Does Trinity auto-resolve Tier 1 support issues?
+# Q13: Does Trinity escalate correctly to human agents?
+# Q14: Does Trinity action registry have all required actions?
+# Q15: Does Trinity working memory persist across conversation turns?
+
+# Verify Trinity system actor
+psql $DATABASE_URL -c "
+  SELECT id, email, role, status
+  FROM users
+  WHERE id = 'trinity-system-actor-000000000000'
+"
+# Must exist
+
+# Test Trinity domain coverage
+TRINITY_QUERIES=(
+  "How many officers are currently on shift?"
+  "Which invoices are overdue?"
+  "Are any licenses expiring this month?"
+  "What is the calloff rate this week?"
+  "Show me open shifts for next week"
+  "Which candidates are awaiting screening?"
+  "What is our voice credit balance?"
+  "Are there pending form submissions?"
+  "Which officers have not completed onboarding?"
+  "What is our revenue this month?"
+)
+
+ANSWERED=0
+TOTAL=${#TRINITY_QUERIES[@]}
+
+for query in "${TRINITY_QUERIES[@]}"; do
+  RESPONSE=$(curl -s -X POST \
+    "http://localhost:5000/api/helpai/chat" \
+    -H "Authorization: Bearer [acme_org_owner_token]" \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"$query\",\"workspaceId\":\"[acme_id]\"}")
+  
+  MESSAGE=$(echo $RESPONSE | jq -r '.message')
+  IS_VALID=$(echo $MESSAGE | grep -v "I don't know\|I cannot\|I'm not sure\|unclear" | wc -l)
+  
+  echo "Q: $query"
+  echo "A: ${MESSAGE:0:80}..."
+  echo "Valid: $([ $IS_VALID -gt 0 ] && echo 'YES' || echo 'NO — FIX')"
+  echo "---"
+  
+  [ $IS_VALID -gt 0 ] && ANSWERED=$((ANSWERED + 1))
+done
+
+echo "Trinity domain coverage: $ANSWERED/$TOTAL"
+echo "Target: $TOTAL/$TOTAL"
+
+# Test Trinity session isolation
+SESSION_A_MSG=$(curl -s -X POST \
+  "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"I am looking at officer Martinez specifically","workspaceId":"[acme_id]"}')
+
+SESSION_B_MSG=$(curl -s -X POST \
+  "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [supervisor_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What was I just looking at?","workspaceId":"[acme_id]"}')
+
+echo "Session B mentions Martinez: $(echo $SESSION_B_MSG | jq -r '.message' | grep -i martinez | wc -l)"
+# Must be 0 — sessions must be isolated
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 12 — CLIENT PORTAL AND CLIENT MANAGEMENT**
+
+*Does every client-facing feature work correctly?*
+
+```bash
+# Q1: Does client portal login work independently of org login?
+# Q2: Does client see only their own workspace data?
+# Q3: Does client see their invoices and can pay online?
+# Q4: Does client see officer roster assigned to their posts?
+# Q5: Does client see real-time shift coverage status?
+# Q6: Does client see incident reports from their sites?
+# Q7: Does client NPS survey trigger at correct intervals?
+# Q8: Does client receive proposal and can sign online?
+# Q9: Does client intake form create client record correctly?
+# Q10: Does client number auto-generate in correct format?
+# Q11: Does client health score calculate and display?
+# Q12: Does client billing history show correctly?
+
+# Test client portal access
+CLIENT_LOGIN=$(curl -s -X POST \
+  "http://localhost:5000/api/auth/client-portal/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "[client_email]",
+    "password": "[client_password]"
+  }')
+CLIENT_TOKEN=$(echo $CLIENT_LOGIN | jq -r '.token')
+echo "Client login: $([ -n '$CLIENT_TOKEN' ] && echo 'SUCCESS' || echo 'FAILED')"
+
+# Verify client sees only their data
+CLIENT_DATA=$(curl -s \
+  "http://localhost:5000/api/client-portal/overview" \
+  -H "Authorization: Bearer $CLIENT_TOKEN")
+echo "Client portal data keys: $(echo $CLIENT_DATA | jq 'keys')"
+
+# Verify client cannot see other clients' data
+OTHER_CLIENT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "http://localhost:5000/api/client-portal/invoices/[other_client_invoice_id]" \
+  -H "Authorization: Bearer $CLIENT_TOKEN")
+echo "Cross-client access blocked: $([ '$OTHER_CLIENT_STATUS' = '403' ] && echo 'YES' || echo 'NO — SECURITY BUG')"
+
+# Verify client number format
+psql $DATABASE_URL -c "
+  SELECT client_number FROM clients
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 5
+"
+# All must follow CLT-XXX-NNNNN format
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 13 — SALES PIPELINE AND CRM**
+
+*Does every sales workflow work correctly from lead capture to contract execution?*
+
+```bash
+# Q1: Does lead creation capture all required fields?
+# Q2: Does Trinity auto-score leads on creation?
+# Q3: Does lead stage advancement trigger correct notifications?
+# Q4: Does proposal generation create correct PDF?
+# Q5: Does online proposal acceptance advance lead stage?
+# Q6: Does accepted proposal create client record automatically?
+# Q7: Does contract PDF generate with both signatures embedded?
+# Q8: Does sales pipeline dashboard show correct stage counts?
+# Q9: Does lead assignment notify assigned sales rep?
+# Q10: Does follow-up reminder system work correctly?
+# Q11: Does revenue projection calculate from pipeline value?
+
+# Test complete sales flow
+LEAD=$(curl -s -X POST \
+  "http://localhost:5000/api/sales/leads" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "companyName": "Audit Test Corp",
+    "contactName": "John Audit",
+    "contactEmail": "jaudit@audittest.com",
+    "contactPhone": "210-555-0099",
+    "source": "web_form",
+    "workspaceId": "[acme_id]"
+  }')
+
+LEAD_ID=$(echo $LEAD | jq -r '.id')
+echo "Lead ID: $LEAD_ID"
+
+sleep 2
+
+# Verify Trinity scored lead
+psql $DATABASE_URL -c "
+  SELECT stage, lead_score, trinity_scored_at
+  FROM sales_leads WHERE id = '$LEAD_ID'
+"
+
+# Advance to proposal
+curl -s -X PATCH \
+  "http://localhost:5000/api/sales/leads/$LEAD_ID" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"stage":"proposal_sent"}'
+
+# Create and send online proposal
+PROPOSAL=$(curl -s -X POST \
+  "http://localhost:5000/api/proposals" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"leadId\": \"$LEAD_ID\",
+    \"title\": \"Security Services Proposal\",
+    \"clientEmail\": \"jaudit@audittest.com\",
+    \"totalMonthlyValue\": 3000.00,
+    \"content\": {
+      \"companyName\": \"ACME Security\",
+      \"services\": [{\"description\":\"Unarmed Officers\",\"amount\":\"3000.00\"}],
+      \"pricing\": {\"lineItems\":[{\"label\":\"Officers\",\"amount\":\"3000.00\"}]},
+      \"terms\": \"Net 30 payment terms\"
+    }
+  }")
+
+PROPOSAL_TOKEN=$(echo $PROPOSAL | jq -r '.token')
+echo "Proposal token: $PROPOSAL_TOKEN"
+
+# Client accepts proposal
+curl -s -X POST \
+  "http://localhost:5000/api/proposals/public/$PROPOSAL_TOKEN/action" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "accept",
+    "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    "signatureType": "drawn"
+  }'
+
+sleep 3
+
+# Verify lead advanced to contract
+psql $DATABASE_URL -c "
+  SELECT stage FROM sales_leads WHERE id = '$LEAD_ID'
+"
+# Must be 'contract_executed'
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 14 — COMPLIANCE AND LICENSING**
+
+*Does every compliance monitoring function work correctly?*
+
+```bash
+# Q1: Does license expiry monitoring run on schedule?
+# Q2: Does license expiry alert fire at 30, 60, 90 days?
+# Q3: Does compliance evidence upload and verify correctly?
+# Q4: Does Trinity AI verify document authenticity?
+# Q5: Does compliance score calculate correctly?
+# Q6: Does compliance violation create correct workflow?
+# Q7: Does remediation tracking work end to end?
+# Q8: Does SRA audit access work with TOTP authentication?
+# Q9: Does SRA auditor see read-only data only?
+# Q10: Does SRA audit log capture every auditor action?
+# Q11: Does regulatory reporting generate correctly?
+# Q12: Does multi-state license tracking work?
+
+# Simulate license expiring soon
+psql $DATABASE_URL -c "
+  UPDATE officer_licenses
+  SET expiry_date = NOW() + INTERVAL '15 days'
+  WHERE employee_id IN (
+    SELECT id FROM employees
+    WHERE workspace_id = '[acme_id]'
+    LIMIT 1
+  )
+  RETURNING employee_id, license_type, expiry_date
+"
+
+# Trigger compliance scan
+SCAN=$(curl -s -X POST \
+  "http://localhost:5000/api/admin/trinity/trigger-scan" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"workspaceId":"[acme_id]","scanType":"license_expiry"}')
+echo "Scan triggered: $(echo $SCAN | jq '.success')"
+
+sleep 5
+
+# Verify alert fired
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE workspace_id = '[acme_id]'
+  AND notification_type LIKE '%license%'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+
+# Verify insight created
+psql $DATABASE_URL -c "
+  SELECT insight_type, title, severity
+  FROM trinity_insights
+  WHERE workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 15 — VOICE AND TRINITY PHONE SYSTEM**
+
+*Does every voice interaction work correctly?*
+
+```bash
+# Q1: Does toll-free number route to correct workspace?
+# Q2: Does extension routing work for all sub-menus?
+# Q3: Does officer identification via employee number work?
+# Q4: Does PIN verification work for clock-in via voice?
+# Q5: Does calloff via voice create correct calloff record?
+# Q6: Does voice credit balance check work?
+# Q7: Does auto-refill trigger at threshold?
+# Q8: Does call recording store correctly?
+# Q9: Does transcript generate after call ends?
+# Q10: Does Trinity process inbound voice naturally?
+# Q11: Does consent verification happen before call start?
+# Q12: Does voice clock-in match officer to correct shift?
+
+# Verify voice tables exist
+psql $DATABASE_URL -c "
+  SELECT 
+    (SELECT COUNT(*) FROM voice_credit_accounts 
+     WHERE workspace_id = '[acme_id]') as has_credit_account,
+    (SELECT balance_cents FROM voice_credit_accounts 
+     WHERE workspace_id = '[acme_id]') as balance_cents,
+    (SELECT COUNT(*) FROM voice_call_sessions 
+     WHERE workspace_id = '[acme_id]') as total_calls
+"
+
+# Verify Twilio webhook routes exist
+grep -rn "twilio\|voice.*webhook\|webhook.*voice" \
+  server/routes/ --include="*.ts" | \
+  grep -v node_modules | head -10
+
+# Verify toll-free routing table
+psql $DATABASE_URL -c "
+  SELECT workspace_id, phone_number, is_active
+  FROM workspace_phone_numbers
+  ORDER BY created_at DESC LIMIT 5
+" 2>/dev/null || echo "workspace_phone_numbers table missing — create it"
+
+CREATE TABLE IF NOT EXISTS workspace_phone_numbers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  phone_number VARCHAR(20) NOT NULL,
+  phone_type VARCHAR(50) DEFAULT 'toll_free',
+  is_active BOOLEAN DEFAULT true,
+  twilio_sid VARCHAR(100),
+  monthly_cost_cents INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 16 — SUPPORT ORGANIZATION**
+
+*Does every support function work correctly for 99% automated resolution?*
+
+```bash
+# Q1: Does HelpAI correctly triage all issue categories?
+# Q2: Does Trinity attempt resolution before creating ticket?
+# Q3: Does account unlock action persist correctly?
+# Q4: Does PIN reset action persist correctly?
+# Q5: Does notification fix action persist correctly?
+# Q6: Does schedule fix action persist correctly?
+# Q7: Does invoice recalculate action persist correctly?
+# Q8: Does onboarding task reset action persist correctly?
+# Q9: Does org owner receive notification of every intervention?
+# Q10: Does human escalation include full Trinity transcript?
+# Q11: Does support ticket track time to resolution?
+# Q12: Does FAQ check happen before ticket creation?
+# Q13: Is auto-resolution rate measurable?
+# Q14: Does support console show pending invitations correctly?
+
+# Verify FAQ entries exist
+psql $DATABASE_URL -c "
+  SELECT category, COUNT(*) as entries
+  FROM faq_entries
+  WHERE workspace_id IS NULL
+  AND status = 'published'
+  GROUP BY category
+  ORDER BY category
+"
+# Must show 20+ platform FAQ entries
+
+# Test support triage
+TRIAGE=$(curl -s -X POST \
+  "http://localhost:5000/api/helpai/triage" \
+  -H "Authorization: Bearer [officer_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "I cannot log into my account",
+    "workspaceId": "[acme_id]"
+  }')
+
+echo "Category: $(echo $TRIAGE | jq -r '.category')"
+echo "Trinity attempted: $(echo $TRIAGE | jq -r '.trinityAttempted')"
+echo "Resolved: $(echo $TRIAGE | jq -r '.resolved')"
+
+# Test complete support action
+SUPPORT_ACTION=$(curl -s -X POST \
+  "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "actionType": "support.account.unlock",
+    "targetEntityType": "user",
+    "targetEntityId": "[officer_user_id]",
+    "workspaceId": "[acme_id]",
+    "reason": "Officer locked out — audit test"
+  }')
+echo "Support action: $(echo $SUPPORT_ACTION | jq '.success')"
+
+# Verify org notified
+sleep 2
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE notification_type = 'support_intervention_notice'
+  AND workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 17 — ANALYTICS AND REPORTING**
+
+*Does every analytics and reporting function show correct data?*
+
+```bash
+# Q1: Does daily snapshot capture all required metrics?
+# Q2: Does BI dashboard show real data not mock data?
+# Q3: Does revenue chart pull from actual invoices?
+# Q4: Does labor cost pull from actual payroll?
+# Q5: Does shift coverage rate calculate correctly?
+# Q6: Does calloff rate calculate correctly?
+# Q7: Does client health score show on client cards?
+# Q8: Does NPS score pull from actual survey responses?
+# Q9: Does compliance score pull from actual license data?
+# Q10: Does officer performance metric calculate correctly?
+# Q11: Does export to CSV work for all report types?
+# Q12: Does analytics respect workspace isolation?
+
+# Trigger daily snapshot
+curl -s -X POST \
+  "http://localhost:5000/api/admin/analytics/snapshot" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{"workspaceId":"[acme_id]","date":"2026-03-31"}'
+
+# Verify snapshot created
+psql $DATABASE_URL -c "
+  SELECT 
+    snapshot_date,
+    active_officers,
+    scheduled_shifts,
+    total_hours_worked,
+    total_revenue,
+    compliance_score
+  FROM analytics_daily_snapshots
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY snapshot_date DESC LIMIT 5
+"
+# All columns must have non-null values
+
+# Test BI dashboard data
+BI=$(curl -s \
+  "http://localhost:5000/api/analytics/bi?workspaceId=[acme_id]&period=30d" \
+  -H "Authorization: Bearer [acme_org_owner_token]")
+echo "BI data keys: $(echo $BI | jq 'keys')"
+echo "Revenue this month: $(echo $BI | jq '.revenueThisMonth')"
+echo "Active officers: $(echo $BI | jq '.activeOfficers')"
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 18 — ONBOARDING PIPELINES**
+
+*Does every onboarding flow work correctly for all entity types?*
+
+```bash
+# Q1: Does new org onboarding create all required records?
+# Q2: Does officer onboarding create all Tier 1 tasks?
+# Q3: Does form bundle send all 6 onboarding forms automatically?
+# Q4: Does task completion auto-activate officer?
+# Q5: Does client onboarding create portal access?
+# Q6: Does interview pipeline flow from application to hire?
+# Q7: Does candidate scoring work automatically?
+# Q8: Does Trinity welcome new officers in DockChat?
+# Q9: Does onboarding progress show in dashboard?
+# Q10: Does expired invitation allow re-sending?
+
+# Test officer onboarding bundle
+BUNDLE=$(curl -s -X POST \
+  "http://localhost:5000/api/forms/onboarding-bundle" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"employeeId\": \"[acme_officer_id]\",
+    \"email\": \"bundle-test@acme-test.com\"
+  }")
+
+echo "Bundle forms sent: $(echo $BUNDLE | jq 'length')"
+# Must be 6
+
+# Verify all 6 invitations created
+psql $DATABASE_URL -c "
+  SELECT pf.form_type, fi.status, fi.sent_to_email
+  FROM form_invitations fi
+  JOIN platform_forms pf ON pf.id = fi.form_id
+  WHERE fi.context_id = '[acme_officer_id]'
+  AND fi.created_at > NOW() - INTERVAL '30 seconds'
+  ORDER BY pf.form_type
+"
+
+# Test candidate to hire flow
+CANDIDATE_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM interview_candidates
+  WHERE workspace_id = '[acme_id]'
+  AND stage = 'screening'
+  LIMIT 1
+" | tr -d ' ')
+
+if [ -n "$CANDIDATE_ID" ]; then
+  # Hire candidate
+  HIRE=$(curl -s -X POST \
+    "http://localhost:5000/api/recruitment/hire" \
+    -H "Authorization: Bearer [acme_org_owner_token]" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"candidateId\": \"$CANDIDATE_ID\",
+      \"offeredPayRate\": 15.00,
+      \"startDate\": \"2026-05-01\"
+    }")
+  
+  echo "Hire result: $(echo $HIRE | jq '{success, employeeId}')"
+fi
+
+# FIX ALL ISSUES FOUND
+```
+
+---
+
+**SUBAGENT 19 — RBAC AND SECURITY**
+
+*Does every role and permission work correctly with zero security gaps?*
+
+```bash
+# Q1: Does roleDefinitions.ts serve as single source of truth?
+# Q2: Does org_owner have full workspace access?
+# Q3: Does officer have access ONLY to their own data?
+# Q4: Does supervisor see their team but not financials?
+# Q5: Does platform_staff read all workspaces without mutation?
+# Q6: Does sra_auditor have read-only access to authorized workspace?
+# Q7: Does client portal user see only their data?
+# Q8: Are all routes protected with requireAuth?
+# Q9: Does workspace_id always come from session not request body?
+# Q10: Can cross-workspace data ever be accessed?
+# Q11: Does Statewide receive zero test data ever?
+# Q12: Does featureRegistry control feature access by tier?
+
+# Comprehensive RBAC test matrix
+echo "=== RBAC SECURITY MATRIX ==="
+
+# Test org_owner access
+for endpoint in \
+  "GET /api/employees?workspaceId=[acme_id]" \
+  "GET /api/invoices?workspaceId=[acme_id]" \
+  "GET /api/payroll/runs?workspaceId=[acme_id]" \
+  "GET /api/analytics/bi?workspaceId=[acme_id]" \
+  "GET /api/compliance/dashboard?workspaceId=[acme_id]"; do
+  
+  METHOD=$(echo $endpoint | cut -d' ' -f1)
+  PATH=$(echo $endpoint | cut -d' ' -f2)
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X $METHOD "http://localhost:5000$PATH" \
+    -H "Authorization: Bearer [acme_org_owner_token]")
+  echo "org_owner $METHOD $PATH: $STATUS (expected 200)"
+done
+
+# Test officer CANNOT access financial data
+for endpoint in \
+  "GET /api/invoices?workspaceId=[acme_id]" \
+  "GET /api/payroll/runs?workspaceId=[acme_id]" \
+  "GET /api/employees?workspaceId=[acme_id]" \
+  "GET /api/analytics/bi?workspaceId=[acme_id]"; do
+  
+  METHOD=$(echo $endpoint | cut -d' ' -f1)
+  PATH=$(echo $endpoint | cut -d' ' -f2)
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X $METHOD "http://localhost:5000$PATH" \
+    -H "Authorization: Bearer [officer_token]")
+  echo "officer $METHOD $PATH: $STATUS (expected 403)"
+done
+
+# Verify workspaceId always from session
+grep -rn "req\.body\.workspaceId\|req\.query\.workspaceId" \
+  server/routes/ --include="*.ts" | \
+  grep -v "^Binary\|node_modules" | \
+  grep -v "admin\|platform_staff" | head -10
+# Any result here is a potential security issue
+# WorkspaceId must come from req.user.workspaceId not from request
+
+# Verify Statewide has zero test data
+STATEWIDE_ID="37a04d24-51bd-4856-9faa-d26a2fe82094"
+psql $DATABASE_URL -c "
+  SELECT 
+    (SELECT COUNT(*) FROM form_submissions WHERE workspace_id = '$STATEWIDE_ID'
+     AND created_at > NOW() - INTERVAL '24 hours') as recent_form_submissions,
+    (SELECT COUNT(*) FROM time_entries WHERE workspace_id = '$STATEWIDE_ID'
+     AND created_at > NOW() - INTERVAL '24 hours') as recent_time_entries,
+    (SELECT COUNT(*) FROM support_tickets WHERE workspace_id = '$STATEWIDE_ID'
+     AND created_at > NOW() - INTERVAL '24 hours') as recent_support_tickets
+"
+# ALL MUST BE ZERO
+
+# FIX EVERY SECURITY ISSUE FOUND IMMEDIATELY
+```
+
+---
+
+**SUBAGENT 20 — PRODUCTION READINESS FINAL CHECKS**
+
+*Is the platform ready for real tenants in production?*
+
+```bash
+# Q1: Does health check endpoint return correct status?
+# Q2: Are zero TypeScript errors present?
+# Q3: Does server start cleanly without errors?
+# Q4: Are all environment variables configured?
+# Q5: Are all database migrations applied?
+# Q6: Are all triggers and functions working?
+# Q7: Are all indexes present for query performance?
+# Q8: Are all required platform default data seeded?
+# Q9: Does the platform work on mobile viewport?
+# Q10: Does the platform work in Spanish throughout?
+# Q11: Are all external service connections verified?
+# Q12: Is rate limiting in place for all public endpoints?
+# Q13: Is CORS configured correctly?
+# Q14: Are all sensitive values in environment variables?
+# Q15: Is the backup and recovery process verified?
+
+# Health check
+HEALTH=$(curl -s http://localhost:5000/health)
+echo "Health: $(echo $HEALTH | jq .)"
+# Must return { status: "ok", database: "connected", services: {...} }
+
+# TypeScript zero errors
+TS_ERRORS=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l)
+echo "TypeScript errors: $TS_ERRORS"
+# Must be 0
+
+# Environment variables check
+REQUIRED_ENV_VARS=(
+  "DATABASE_URL"
+  "JWT_SECRET"
+  "RESEND_API_KEY"
+  "TWILIO_ACCOUNT_SID"
+  "TWILIO_AUTH_TOKEN"
+  "STRIPE_SECRET_KEY"
+  "BASE_URL"
+  "GEMINI_API_KEY"
+  "OPENAI_API_KEY"
+  "ANTHROPIC_API_KEY"
+)
+
+for var in "${REQUIRED_ENV_VARS[@]}"; do
+  if [ -z "${!var}" ]; then
+    echo "MISSING ENV: $var"
+  else
+    echo "ENV OK: $var"
+  fi
+done
+
+# Database integrity check
+psql $DATABASE_URL -c "
+  -- Check for broken foreign keys
+  SELECT 
+    tc.table_name,
+    kcu.column_name,
+    ccu.table_name AS referenced_table
+  FROM information_schema.table_constraints tc
+  JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+  JOIN information_schema.constraint_column_usage ccu
+    ON ccu.constraint_name = tc.constraint_name
+  WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.tables t
+    WHERE t.table_name = ccu.table_name
+    AND t.table_schema = 'public'
+  )
+"
+# Must return zero rows
+
+# Index coverage check
+psql $DATABASE_URL -c "
+  SELECT 
+    schemaname,
+    tablename,
+    indexname
+  FROM pg_indexes
+  WHERE schemaname = 'public'
+  ORDER BY tablename, indexname
+" | wc -l
+echo "Total indexes in database"
+
+# Seed verification
+psql $DATABASE_URL -c "
+  SELECT 
+    (SELECT COUNT(*) FROM platform_forms WHERE workspace_id IS NULL) as default_forms,
+    (SELECT COUNT(*) FROM faq_entries WHERE workspace_id IS NULL AND status = 'published') as faq_entries,
+    (SELECT COUNT(*) FROM legal_agreements) as legal_agreements,
+    (SELECT COUNT(*) FROM users WHERE role = 'system') as system_actors
+"
+# default_forms: 7+
+# faq_entries: 20+
+# legal_agreements: 3+ (ToS, Privacy, ESIGN)
+# system_actors: 4+ (Trinity, HelpAI, NDS, Scheduler)
+
+# Rate limiting check
+grep -rn "rateLimit\|rate_limit\|rateLimiter" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+# Must show rate limiting on public endpoints
+
+# Verify all platform default data
+echo "=== PLATFORM DEFAULT DATA VERIFICATION ==="
+psql $DATABASE_URL -c "
+  SELECT 'platform_forms' as entity, COUNT(*) as count 
+  FROM platform_forms WHERE workspace_id IS NULL
+  UNION ALL
+  SELECT 'faq_entries', COUNT(*) 
+  FROM faq_entries WHERE workspace_id IS NULL AND status = 'published'
+  UNION ALL
+  SELECT 'system_users', COUNT(*) 
+  FROM users WHERE role = 'system'
+  UNION ALL
+  SELECT 'legal_agreements', COUNT(*) 
+  FROM legal_agreements
+  UNION ALL
+  SELECT 'trinity_actions', COUNT(*) 
+  FROM trinity_action_registry
+"
+```
+
+---
+
+**ARCHITECT PERSONAL GRAND ANALYSIS**
+
+After all 20 subagents report perform your own deep cross-system analysis:
+
+```bash
+# SYSTEM COMMUNICATION MATRIX
+# Verify every major event fires all 4 required outputs:
+# 1. Database write
+# 2. Audit log entry
+# 3. NDS notification
+# 4. WebSocket broadcast
+
+CRITICAL_EVENTS=(
+  "officer_created"
+  "shift_assigned"
+  "clock_in"
+  "clock_out"
+  "calloff_submitted"
+  "invoice_sent"
+  "invoice_paid"
+  "payroll_approved"
+  "form_submitted"
+  "document_signed"
+  "candidate_hired"
+  "compliance_violation"
+  "support_ticket_created"
+  "support_action_executed"
+  "proposal_accepted"
+)
+
+for event in "${CRITICAL_EVENTS[@]}"; do
+  DB_WRITE=$(grep -rn "$event\|${event//_/ }" server/ --include="*.ts" | \
+    grep -i "INSERT\|UPDATE\|pool.query" | grep -v node_modules | wc -l)
+  AUDIT=$(grep -rn "$event" server/ --include="*.ts" | \
+    grep "universalAuditService\|audit_log" | grep -v node_modules | wc -l)
+  NDS=$(grep -rn "$event" server/ --include="*.ts" | \
+    grep "notificationDeliveryService\|NDS" | grep -v node_modules | wc -l)
+  WS=$(grep -rn "$event" server/ --include="*.ts" | \
+    grep "broadcastToWorkspace" | grep -v node_modules | wc -l)
+  
+  STATUS="COMPLETE"
+  [ $DB_WRITE -eq 0 ] && STATUS="MISSING DB WRITE"
+  [ $AUDIT -eq 0 ] && STATUS="$STATUS | MISSING AUDIT"
+  [ $NDS -eq 0 ] && STATUS="$STATUS | MISSING NDS"
+  [ $WS -eq 0 ] && STATUS="$STATUS | MISSING BROADCAST"
+  
+  echo "$event: $STATUS"
+done
+
+# FINAL PRODUCTION READINESS SCORE
+echo ""
+echo "=== FINAL PRODUCTION READINESS ASSESSMENT ==="
+
+psql $DATABASE_URL -c "
+  SELECT
+    (SELECT COUNT(*) FROM information_schema.tables 
+     WHERE table_schema = 'public' AND table_type = 'BASE TABLE') as total_tables,
+    (SELECT COUNT(*) FROM information_schema.triggers 
+     WHERE trigger_schema = 'public') as total_triggers,
+    (SELECT COUNT(*) FROM pg_indexes 
+     WHERE schemaname = 'public') as total_indexes,
+    (SELECT COUNT(*) FROM platform_forms WHERE workspace_id IS NULL) as default_forms,
+    (SELECT COUNT(*) FROM faq_entries WHERE workspace_id IS NULL) as faq_entries,
+    (SELECT COUNT(*) FROM users WHERE role = 'system') as system_actors,
+    (SELECT COUNT(*) FROM trinity_action_registry) as trinity_actions,
+    (SELECT COUNT(*) FROM notification_deliveries 
+     WHERE created_at > NOW() - INTERVAL '24 hours') as notifications_24h,
+    (SELECT COUNT(*) FROM universal_audit_log 
+     WHERE created_at > NOW() - INTERVAL '24 hours') as audit_entries_24h
+"
+
+# TypeScript final check
+echo "TypeScript errors: $(npx tsc --noEmit --skipLibCheck 2>&1 | grep 'error TS' | wc -l)"
+echo "Server health: $(curl -s http://localhost:5000/health | jq -r '.status')"
+```
+
+---
+
+**GRAND UNIFIED CERTIFICATION**
+
+```
+PRODUCTION READINESS FINAL REPORT
+===================================
+Generated: [DATE]
+Platform: CoAIleague
+Audit Scope: Complete Platform — All Systems
+
+AUTHENTICATION AND IDENTITY:        [READY / ISSUES]
+EMPLOYEE MANAGEMENT:                [READY / ISSUES]
+SCHEDULING SYSTEM:                  [READY / ISSUES]
+TIME AND ATTENDANCE:                [READY / ISSUES]
+INVOICING AND BILLING:              [READY / ISSUES]
+PAYROLL SYSTEM:                     [READY / ISSUES]
+ONLINE FORMS AND ESIGNATURE:        [READY / ISSUES]
+NOTIFICATION DELIVERY:              [READY / ISSUES]
+DOCKCHAT AND MESSAGING:             [READY / ISSUES]
+DOCUMENT VAULT AND PDF:             [READY / ISSUES]
+TRINITY ORCHESTRATION:              [READY / ISSUES]
+CLIENT PORTAL:                      [READY / ISSUES]
+SALES PIPELINE:                     [READY / ISSUES]
+COMPLIANCE AND LICENSING:           [READY / ISSUES]
+VOICE SYSTEM:                       [READY / ISSUES]
+SUPPORT ORGANIZATION:               [READY / ISSUES]
+ANALYTICS AND REPORTING:            [READY / ISSUES]
+ONBOARDING PIPELINES:               [READY / ISSUES]
+RBAC AND SECURITY:                  [READY / ISSUES]
+PRODUCTION READINESS:               [READY / ISSUES]
+
+DATABASE:
+  Total Tables:                     [N]
+  Total Triggers:                   [N]
+  Total Indexes:                    [N]
+  Broken Foreign Keys:              0
+  Missing Universal IDs:            0
+  Missing Integrity Hashes:         0
+
+PLATFORM DEFAULT DATA:
+  Platform Forms:                   [N] (target 7+)
+  FAQ Entries:                      [N] (target 20+)
+  System Actors:                    [N] (target 4+)
+  Trinity Actions:                  [N] (target 900+)
+  Legal Agreements:                 [N] (target 3+)
+
+SYSTEM COMMUNICATION:
+  Events With Full Chain:           [N/20]
+  Missing DB Writes:                [N]
+  Missing Audit Entries:            [N]
+  Missing NDS Notifications:        [N]
+  Missing WS Broadcasts:            [N]
+
+SECURITY:
+  RBAC Violations Found:            0
+  Cross-Workspace Leaks Found:      0
+  Statewide Test Data Written:      0
+  NDS Bypass Routes Found:          0
+  Unprotected Public Routes:        0
+
+CODE QUALITY:
+  TypeScript Errors:                0
+  Server Startup Errors:            0
+  Broken API Routes:                0
+
+TOTAL ISSUES FOUND:                 [N]
+TOTAL ISSUES FIXED:                 [N]
+REMAINING KNOWN GAPS:               [DNS, Twilio verification, Stripe live keys]
+
+PRODUCTION READINESS SCORE:         [X]/100
+PLATFORM STATUS:                    [LAUNCH READY / NEEDS WORK]
+
+Signed off by: Architect
+Date: [DATE]
+```
+
+---
+
+Paste that. This is the most complete platform audit that can be constructed. Every system, every feature, every workflow, every pipeline, every role, every document, every notification, every broadcast, every database write, every user journey — checked simultaneously by 20 specialized subagents and synthesized by the Architect into a single production readiness declaration. Every gap gets fixed. Every issue gets resolved. The platform either passes or keeps getting worked until it does.

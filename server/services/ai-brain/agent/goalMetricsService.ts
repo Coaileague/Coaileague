@@ -10,15 +10,17 @@
  */
 
 import { db } from '../../../db';
-import { 
-  employees, 
-  shifts, 
-  clients, 
-  systemAuditLogs,
-  workspaceGovernancePolicies 
+import {
+  employees,
+  shifts,
+  clients,
+  workspaces,
+  systemAuditLogs
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, inArray } from 'drizzle-orm';
 import crypto from 'crypto';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('goalMetricsService');
 
 // ============================================================================
 // TYPES
@@ -139,7 +141,7 @@ class GoalMetricsService {
   private readonly maxHistorySize = 1000;
 
   private constructor() {
-    console.log('[GoalMetricsService] Initialized goal execution tracking');
+    log.info('[GoalMetricsService] Initialized goal execution tracking');
   }
 
   static getInstance(): GoalMetricsService {
@@ -363,11 +365,11 @@ class GoalMetricsService {
       const employeeShiftDays = new Map<string, Set<string>>();
       
       for (const shift of proposedChanges.shiftsToCreate) {
-        if (!shift.assignedEmployeeId) continue;
+        if (!shift.employeeId) continue;
         
-        const days = employeeShiftDays.get(shift.assignedEmployeeId) || new Set();
+        const days = employeeShiftDays.get(shift.employeeId) || new Set();
         days.add(new Date(shift.startTime).toDateString());
-        employeeShiftDays.set(shift.assignedEmployeeId, days);
+        employeeShiftDays.set(shift.employeeId, days);
       }
 
       for (const [employeeId, days] of employeeShiftDays) {
@@ -487,7 +489,7 @@ class GoalMetricsService {
     for (const client of allClients) {
       clientImpacts.set(client.id, {
         clientId: client.id,
-        clientName: client.name,
+        clientName: client.companyName,
         currentCoverage: 0,
         proposedCoverage: 0,
         coverageDelta: 0,
@@ -499,8 +501,8 @@ class GoalMetricsService {
     // Process created shifts
     if (proposedChanges.shiftsToCreate) {
       for (const shift of proposedChanges.shiftsToCreate) {
-        if (shift.assignedEmployeeId) {
-          const impact = employeeImpacts.get(shift.assignedEmployeeId);
+        if (shift.employeeId) {
+          const impact = employeeImpacts.get(shift.employeeId);
           if (impact) {
             const shiftHours = this.calculateShiftHours(shift.startTime, shift.endTime);
             impact.proposedHours += shiftHours;
@@ -523,8 +525,8 @@ class GoalMetricsService {
     if (proposedChanges.shiftsToDelete) {
       const deletedShifts = await this.getShiftsByIds(proposedChanges.shiftsToDelete);
       for (const shift of deletedShifts) {
-        if (shift.assignedEmployeeId) {
-          const impact = employeeImpacts.get(shift.assignedEmployeeId);
+        if (shift.employeeId) {
+          const impact = employeeImpacts.get(shift.employeeId);
           if (impact) {
             const shiftHours = this.calculateShiftHours(shift.startTime, shift.endTime);
             impact.proposedHours -= shiftHours;
@@ -555,25 +557,25 @@ class GoalMetricsService {
           : oldHours;
 
         // Handle employee changes
-        if (mod.changes.assignedEmployeeId !== existingShift.assignedEmployeeId) {
-          if (existingShift.assignedEmployeeId) {
-            const oldImpact = employeeImpacts.get(existingShift.assignedEmployeeId);
+        if (mod.changes.employeeId !== existingShift.employeeId) {
+          if (existingShift.employeeId) {
+            const oldImpact = employeeImpacts.get(existingShift.employeeId);
             if (oldImpact) {
               oldImpact.proposedHours -= oldHours;
               oldImpact.hoursDelta -= oldHours;
               oldImpact.shiftsRemoved++;
             }
           }
-          if (mod.changes.assignedEmployeeId) {
-            const newImpact = employeeImpacts.get(mod.changes.assignedEmployeeId);
+          if (mod.changes.employeeId) {
+            const newImpact = employeeImpacts.get(mod.changes.employeeId);
             if (newImpact) {
               newImpact.proposedHours += newHours;
               newImpact.hoursDelta += newHours;
               newImpact.shiftsAdded++;
             }
           }
-        } else if (existingShift.assignedEmployeeId) {
-          const impact = employeeImpacts.get(existingShift.assignedEmployeeId);
+        } else if (existingShift.employeeId) {
+          const impact = employeeImpacts.get(existingShift.employeeId);
           if (impact) {
             const hoursDiff = newHours - oldHours;
             impact.proposedHours += hoursDiff;
@@ -647,29 +649,20 @@ class GoalMetricsService {
         workspaceId: null,
         userId: null,
         action: 'goal_execution_metrics',
-        details: JSON.stringify({
-          goalId: metrics.goalId,
-          goalType: metrics.goalType,
-          success: metrics.success,
-          attempts: metrics.attempts,
-          durationMs: metrics.durationMs,
-          errorCount: metrics.errorCount,
-          rollbackCount: metrics.rollbackCount,
-          finalConfidence: metrics.finalConfidence,
-          learningsCount: metrics.learnings.length,
-        }),
-        severity: metrics.success ? 'info' : 'warning',
+        metadata: { severity: metrics.success ? 'info' : 'warning', details: JSON.stringify({ goalId: metrics.goalId, goalType: metrics.goalType, success: metrics.success, attempts: metrics.attempts, durationMs: metrics.durationMs, errorCount: metrics.errorCount, rollbackCount: metrics.rollbackCount, finalConfidence: metrics.finalConfidence, learningsCount: metrics.learnings.length }) },
       });
     } catch (error) {
-      console.error('[GoalMetricsService] Failed to persist metrics:', error);
+      log.error('[GoalMetricsService] Failed to persist metrics:', error);
     }
   }
 
   private async getWorkspacePolicies(workspaceId: string): Promise<any[]> {
     try {
-      return await db.select()
-        .from(workspaceGovernancePolicies)
-        .where(eq(workspaceGovernancePolicies.workspaceId, workspaceId));
+      // workspaceGovernancePolicies merged into workspaces.governancePolicyBlob
+      const [ws] = await db.select({ blob: workspaces.governancePolicyBlob })
+        .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      const blob = ws?.blob as Record<string, any> | null;
+      return blob && Object.keys(blob).length > 0 ? [{ workspaceId, ...blob }] : [];
     } catch {
       return [];
     }
@@ -707,7 +700,7 @@ class GoalMetricsService {
       const employeeShifts = await db.select()
         .from(shifts)
         .where(and(
-          eq(shifts.assignedEmployeeId, employeeId),
+          eq(shifts.employeeId, employeeId),
           eq(shifts.workspaceId, workspaceId),
           gte(shifts.startTime, weekStart),
           lte(shifts.endTime, weekEnd)
@@ -769,7 +762,7 @@ class GoalMetricsService {
         const hours = this.calculateShiftHours(shift.startTime, shift.endTime);
         estimatedCost += hours * avgHourlyRate;
         scheduleChangesCount++;
-        if (shift.assignedEmployeeId) affectedEmployees.add(shift.assignedEmployeeId);
+        if (shift.employeeId) affectedEmployees.add(shift.employeeId);
         if (shift.clientId) affectedClients.add(shift.clientId);
       }
     }

@@ -1,16 +1,18 @@
 import { useState } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { 
   Activity, 
   Users, 
@@ -28,11 +30,17 @@ import {
   Ticket,
   CreditCard,
   BarChart3,
-  Settings
+  Settings,
+  Shield,
+  Bot,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
+import { SupportTeamPanel } from "@/components/support/SupportTeamPanel";
+import { RecycledCreditsPanel } from "@/components/support/RecycledCreditsPanel";
+import { TrinityKnowledgePanel } from "@/components/support/TrinityKnowledgePanel";
+import { FinancialHealthPanel } from "@/components/admin/FinancialHealthPanel";
 
 interface PlatformStats {
   totalWorkspaces: number;
@@ -248,7 +256,7 @@ function OnboardingVisibilityManager() {
               {workspaces.map((workspace) => (
                 <div
                   key={workspace.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between gap-2 p-4 border rounded-lg"
                   data-testid={`row-workspace-${workspace.id}`}
                 >
                   <div className="flex-1">
@@ -361,7 +369,7 @@ function PlatformRolesManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="relative flex-1 max-w-sm">
           <Input
             placeholder="Search by email..."
@@ -386,7 +394,7 @@ function PlatformRolesManager() {
             .map((assignment) => (
               <div
                 key={assignment.id}
-                className="flex items-center justify-between p-3 rounded-lg border hover-elevate"
+                className="flex items-center justify-between gap-2 p-3 rounded-lg border hover-elevate"
                 data-testid={`role-row-${assignment.id}`}
               >
                 <div className="flex items-center gap-3">
@@ -433,14 +441,14 @@ function PlatformRolesManager() {
       </ScrollArea>
 
       {/* Edit Role Dialog */}
-      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Platform Role</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <UniversalModalContent size="sm">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Change Platform Role</UniversalModalTitle>
+            <UniversalModalDescription>
               Update the platform role for {selectedUser?.userEmail}
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -457,7 +465,7 @@ function PlatformRolesManager() {
                     onClick={() => setNewRole(role.value)}
                     data-testid={`role-option-${role.value}`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="font-medium">{role.label}</p>
                         <p className="text-sm text-muted-foreground">
@@ -474,7 +482,7 @@ function PlatformRolesManager() {
             </div>
           </div>
 
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button
               variant="outline"
               onClick={() => setShowAssignDialog(false)}
@@ -489,9 +497,9 @@ function PlatformRolesManager() {
             >
               {assignRoleMutation.isPending ? 'Saving...' : 'Update Role'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
     </div>
   );
 }
@@ -753,14 +761,14 @@ function SupportSessionsManager() {
         </Card>
       )}
 
-      <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
-        <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle>Start Support Session</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showStartDialog} onOpenChange={setShowStartDialog}>
+        <UniversalModalContent size="md">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Start Support Session</UniversalModalTitle>
+            <UniversalModalDescription>
               Create an audited session to access another organization's data
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Target Organization</Label>
@@ -786,7 +794,7 @@ function SupportSessionsManager() {
               />
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <UniversalModalFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setShowStartDialog(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
@@ -798,18 +806,18 @@ function SupportSessionsManager() {
             >
               {startSessionMutation.isPending ? 'Starting...' : 'Start Session'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={showAuditDialog} onOpenChange={setShowAuditDialog}>
-        <DialogContent size="xl" className="max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Session Audit Log</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showAuditDialog} onOpenChange={setShowAuditDialog}>
+        <UniversalModalContent size="xl" className="max-h-[80vh]">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Session Audit Log</UniversalModalTitle>
+            <UniversalModalDescription>
               All actions performed during this support session
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <ScrollArea className="max-h-[50vh]">
             {loadingAudit ? (
               <div className="flex items-center justify-center py-8">
@@ -840,8 +848,8 @@ function SupportSessionsManager() {
               </div>
             )}
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
     </div>
   );
 }
@@ -856,7 +864,7 @@ export default function PlatformAdmin() {
     maintenanceMode: false,
     newWorkspaceRegistration: true,
     emailNotifications: true,
-    supportEmail: "support@workforceos.com",
+    supportEmail: "support@coaileague.com",
     enforceSSO: false,
     requireMFA: false,
     passwordExpiry: 90,
@@ -870,7 +878,7 @@ export default function PlatformAdmin() {
   
   const saveSettingsMutation = useMutation({
     mutationFn: async (settings: typeof platformSettings) => {
-      const response = await fetch("/api/platform/settings", {
+      const response = await secureFetch("/api/platform/settings", {
         method: "POST",
         body: JSON.stringify(settings),
         headers: { "Content-Type": "application/json" }
@@ -913,36 +921,31 @@ export default function PlatformAdmin() {
     return "text-red-600 dark:text-red-400";
   };
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {/* WorkForceOS™ Logo */}
-          <CoAIleagueAFLogo size="sm" variant="icon" />
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Platform Admin</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Manage your entire Elite SaaS platform from one dashboard
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowSettings(true)} data-testid="button-platform-settings">
-            <Settings className="mr-2 h-4 w-4" />
-            Platform Settings
-          </Button>
-          <Button onClick={() => setShowSupportQueue(true)} data-testid="button-support-queue">
-            <Ticket className="mr-2 h-4 w-4" />
-            Support Queue
-          </Button>
-        </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'platform-admin',
+    title: 'Platform Admin',
+    subtitle: 'Manage your entire Elite SaaS platform from one dashboard',
+    category: 'admin',
+    headerActions: (
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => setShowSettings(true)} data-testid="button-platform-settings">
+          <Settings className="mr-2 h-4 w-4" />
+          Platform Settings
+        </Button>
+        <Button onClick={() => setShowSupportQueue(true)} data-testid="button-support-queue">
+          <Ticket className="mr-2 h-4 w-4" />
+          Support Queue
+        </Button>
       </div>
+    ),
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Workspaces</CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -957,7 +960,7 @@ export default function PlatformAdmin() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -972,7 +975,7 @@ export default function PlatformAdmin() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -987,7 +990,7 @@ export default function PlatformAdmin() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Revenue/Workspace</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -1003,12 +1006,19 @@ export default function PlatformAdmin() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="health" data-testid="tab-health">System Health</TabsTrigger>
           <TabsTrigger value="support" data-testid="tab-support">Support Metrics</TabsTrigger>
           <TabsTrigger value="sessions" data-testid="tab-sessions">Support Sessions</TabsTrigger>
+          <TabsTrigger value="team" data-testid="tab-team" className="flex items-center gap-1.5">
+            <Shield className="h-3.5 w-3.5" />
+            Team
+          </TabsTrigger>
+          <TabsTrigger value="knowledge" data-testid="tab-knowledge">Knowledge</TabsTrigger>
+          <TabsTrigger value="credits" data-testid="tab-credits">Credits</TabsTrigger>
           <TabsTrigger value="revenue" data-testid="tab-revenue">Revenue</TabsTrigger>
+          <TabsTrigger value="financial" data-testid="tab-financial">Financial Health</TabsTrigger>
           <TabsTrigger value="roles" data-testid="tab-roles">User Roles</TabsTrigger>
           <TabsTrigger value="onboarding" data-testid="tab-onboarding">Onboarding</TabsTrigger>
         </TabsList>
@@ -1078,7 +1088,7 @@ export default function PlatformAdmin() {
         <TabsContent value="health" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
                 <Cpu className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1091,7 +1101,7 @@ export default function PlatformAdmin() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
                 <HardDrive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1104,7 +1114,7 @@ export default function PlatformAdmin() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Database</CardTitle>
                 <Database className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1126,7 +1136,7 @@ export default function PlatformAdmin() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Uptime</CardTitle>
                 <Server className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1144,7 +1154,7 @@ export default function PlatformAdmin() {
         <TabsContent value="support" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
                 <Ticket className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1155,7 +1165,7 @@ export default function PlatformAdmin() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1166,7 +1176,7 @@ export default function PlatformAdmin() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">SLA Compliance</CardTitle>
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1177,7 +1187,7 @@ export default function PlatformAdmin() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">CSAT Score</CardTitle>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -1235,6 +1245,11 @@ export default function PlatformAdmin() {
           </div>
         </TabsContent>
 
+        {/* Financial Health Tab */}
+        <TabsContent value="financial" className="space-y-4">
+          <FinancialHealthPanel />
+        </TabsContent>
+
         {/* User Roles Tab */}
         <TabsContent value="roles" className="space-y-4">
           <Card>
@@ -1261,20 +1276,45 @@ export default function PlatformAdmin() {
         <TabsContent value="sessions" className="space-y-4">
           <SupportSessionsManager />
         </TabsContent>
+
+        {/* Support Team Tab */}
+        <TabsContent value="team" className="space-y-4">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <SupportTeamPanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="knowledge" className="space-y-4">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <TrinityKnowledgePanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="credits" className="space-y-4">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <RecycledCreditsPanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Platform Settings Dialog */}
-      <Dialog open={showSettings} onOpenChange={setShowSettings}>
-        <DialogContent size="xl" className="max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <UniversalModal open={showSettings} onOpenChange={setShowSettings}>
+        <UniversalModalContent size="xl" className="max-h-[85vh]">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
               Platform Settings
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               Configure platform-wide settings and preferences
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           
           <ScrollArea className="max-h-[calc(85vh-180px)] pr-4">
             <div className="space-y-6 py-4">
@@ -1289,7 +1329,7 @@ export default function PlatformAdmin() {
                     data-testid="input-platform-name" 
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5">
                     <Label>Maintenance Mode</Label>
                     <p className="text-sm text-muted-foreground">Temporarily disable platform access</p>
@@ -1300,7 +1340,7 @@ export default function PlatformAdmin() {
                     data-testid="switch-maintenance-mode" 
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5">
                     <Label>New Workspace Registration</Label>
                     <p className="text-sm text-muted-foreground">Allow new workspaces to register</p>
@@ -1311,7 +1351,7 @@ export default function PlatformAdmin() {
                     data-testid="switch-new-registration" 
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5">
                     <Label>Email Notifications</Label>
                     <p className="text-sm text-muted-foreground">Send platform-wide email alerts</p>
@@ -1336,7 +1376,7 @@ export default function PlatformAdmin() {
               {/* Security Settings */}
               <div className="space-y-4 pt-4 border-t">
                 <h3 className="text-sm font-semibold">Security</h3>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5">
                     <Label>Enforce SSO</Label>
                     <p className="text-sm text-muted-foreground">Require single sign-on for all workspaces</p>
@@ -1347,7 +1387,7 @@ export default function PlatformAdmin() {
                     data-testid="switch-enforce-sso" 
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5">
                     <Label>Require MFA</Label>
                     <p className="text-sm text-muted-foreground">Mandatory multi-factor authentication</p>
@@ -1382,7 +1422,7 @@ export default function PlatformAdmin() {
             </div>
           </ScrollArea>
 
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button 
               variant="outline" 
               onClick={() => setShowSettings(false)}
@@ -1397,22 +1437,22 @@ export default function PlatformAdmin() {
             >
               {saveSettingsMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Support Queue Dialog */}
-      <Dialog open={showSupportQueue} onOpenChange={setShowSupportQueue}>
-        <DialogContent size="full" className="max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <UniversalModal open={showSupportQueue} onOpenChange={setShowSupportQueue}>
+        <UniversalModalContent size="full" className="max-h-[80vh]">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
               <Ticket className="h-5 w-5" />
               Support Queue
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               View and manage pending support requests
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="py-4">
             <div className="text-center py-8 text-muted-foreground">
               <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1420,8 +1460,8 @@ export default function PlatformAdmin() {
               <p className="text-sm">All support tickets have been addressed</p>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

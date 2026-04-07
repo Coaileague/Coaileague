@@ -11,6 +11,9 @@ import {
 } from '@shared/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { z } from 'zod';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('helpaiRegistryService');
+
 
 export interface APIRegistryPayload {
   apiName: string;
@@ -69,7 +72,7 @@ export class HelpaiRegistryService {
       })
       .returning();
 
-    console.log(`✅ [HelpAI Registry] Registered API: ${sanitized.apiName} v${sanitized.apiVersion}`);
+    log.info(`✅ [HelpAI Registry] Registered API: ${sanitized.apiName} v${sanitized.apiVersion}`);
     return registry;
   }
 
@@ -231,7 +234,7 @@ export class HelpaiRegistryService {
       .where(eq(helpaiRegistry.id, existing.id))
       .returning();
 
-    console.log(`✅ [HelpAI Registry] Updated API: ${apiName}`);
+    log.info(`✅ [HelpAI Registry] Updated API: ${apiName}`);
     return updated;
   }
 
@@ -253,7 +256,7 @@ export class HelpaiRegistryService {
       })
       .where(eq(helpaiRegistry.id, existing.id));
 
-    console.log(`✅ [HelpAI Registry] Disabled API: ${apiName}`);
+    log.info(`✅ [HelpAI Registry] Disabled API: ${apiName}`);
   }
 
   /**

@@ -61,14 +61,10 @@ export const HELP_DESK_CONFIG = {
 export const MAIN_ROOM_ID = HELP_DESK_CONFIG.rooms.main.id;
 
 export const ROLE_PRIORITY: Record<string, number> = {
-  'root_admin': 0,
-  'bot': 1,
-  'deputy_admin': 2,
-  'support_manager': 3,
-  'sysop': 4,
-  'subscriber': 5,
-  'org_user': 6,
-  'guest': 7,
+  'staff': 1,
+  'bot': 5,
+  'customer': 7,
+  'guest': 9,
 };
 
 export type HelpDeskTicketStatus = 

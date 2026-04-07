@@ -12,14 +12,17 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Search, MapPin, Briefcase, Users, Star, ChevronDown, X } from 'lucide-react';
+import { Search, Building2, Briefcase, Users, Star, ChevronDown, X, Shield, Target } from 'lucide-react';
 import type { Employee, Client } from '@shared/schema';
 import { formatRoleDisplay } from '@/lib/utils';
+import { POSITION_CATEGORIES, POSITION_REGISTRY, getPositionById, type PositionCategory } from '@shared/positionRegistry';
 
 export interface ScheduleFilterState {
   searchQuery: string;
-  locations: string[];
+  clientIds: string[];
   positions: string[];
+  positionCategories: string[];
+  armedStatus: string[];
   employeeStatuses: string[];
   skills: string[];
 }
@@ -37,24 +40,18 @@ export function ScheduleFilters({
   employees,
   clients,
 }: ScheduleFiltersProps) {
-  const [expandedSections, setExpandedSections] = useState({
-    locations: true,
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    clients: true,
     positions: true,
+    positionCategories: false,
+    armedStatus: false,
     status: true,
     skills: true,
   });
 
-  const locations = useMemo(() => {
-    const locationSet = new Set<string>();
-    clients.forEach(client => {
-      if (client.address) locationSet.add(client.address);
-      if (client.city) locationSet.add(client.city);
-    });
-    employees.forEach(emp => {
-      if (emp.city) locationSet.add(emp.city);
-    });
-    return Array.from(locationSet).filter(Boolean).slice(0, 20);
-  }, [clients, employees]);
+  const uniqueClients = useMemo(() => {
+    return clients.filter(client => client.id && (client.companyName || client.firstName)).slice(0, 20);
+  }, [clients]);
 
   const positions = useMemo(() => {
     const positionSet = new Set<string>();
@@ -68,7 +65,7 @@ export function ScheduleFilters({
   const skills = useMemo(() => {
     const skillSet = new Set<string>();
     employees.forEach(emp => {
-      if (emp.workspaceRole === 'department_manager' || emp.workspaceRole === 'org_admin') skillSet.add('Manager');
+      if (emp.workspaceRole === 'department_manager' || emp.workspaceRole === 'co_owner') skillSet.add('Manager');
       if (emp.workspaceRole === 'supervisor') skillSet.add('Supervisor');
       if (emp.performanceScore && Number(emp.performanceScore) > 90) skillSet.add('Top Performer');
     });
@@ -77,7 +74,7 @@ export function ScheduleFilters({
 
   const employeeStatuses = ['active', 'on_leave', 'part_time', 'inactive'];
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
+  const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
@@ -92,24 +89,46 @@ export function ScheduleFilters({
   const clearFilters = () => {
     onFiltersChange({
       searchQuery: '',
-      locations: [],
+      clientIds: [],
       positions: [],
+      positionCategories: [],
+      armedStatus: [],
       employeeStatuses: [],
       skills: [],
     });
   };
 
-  const activeFilterCount = filters.locations.length + filters.positions.length + 
+  const activeFilterCount = filters.clientIds.length + filters.positions.length + 
+    filters.positionCategories.length + filters.armedStatus.length +
     filters.employeeStatuses.length + filters.skills.length;
+
+  const categoryEmployeeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    POSITION_CATEGORIES.forEach(cat => {
+      counts[cat.id] = employees.filter(emp => {
+        const pos = (emp as any).position ? getPositionById((emp as any).position) : undefined;
+        return pos?.category === cat.id;
+      }).length;
+    });
+    return counts;
+  }, [employees]);
+
+  const armedCounts = useMemo(() => {
+    let armed = 0, unarmed = 0;
+    employees.forEach(emp => {
+      const pos = (emp as any).position ? getPositionById((emp as any).position) : undefined;
+      if (pos?.armedStatus === 'armed') armed++;
+      else if (pos?.armedStatus === 'unarmed') unarmed++;
+    });
+    return { armed, unarmed };
+  }, [employees]);
 
   const getFilteredCount = (filterType: string, value: string): number => {
     switch (filterType) {
-      case 'locations':
-        return employees.filter(e => e.city === value).length;
       case 'positions':
         return employees.filter(e => e.role === value || e.organizationalTitle === value).length;
       case 'status':
-        return employees.filter(e => e.onboardingStatus === value).length;
+        return employees.filter(e => (e.state || 'active').toLowerCase() === value).length;
       default:
         return 0;
     }
@@ -117,7 +136,7 @@ export function ScheduleFilters({
 
   return (
     <div className="space-y-4" data-testid="schedule-filters">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold text-sm">Filters</h3>
         {activeFilterCount > 0 && (
           <Button 
@@ -147,36 +166,35 @@ export function ScheduleFilters({
       <ScrollArea className="h-[calc(100vh-300px)]">
         <div className="space-y-4 pr-4">
           <Collapsible 
-            open={expandedSections.locations} 
-            onOpenChange={() => toggleSection('locations')}
+            open={expandedSections.clients} 
+            onOpenChange={() => toggleSection('clients')}
           >
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2">
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full py-2">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <MapPin className="w-4 h-4" />
-                Locations
+                <Building2 className="w-4 h-4" />
+                Clients
               </div>
-              <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.locations ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.clients ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2 pt-2">
-              {locations.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No locations found</p>
+              {uniqueClients.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No clients found</p>
               ) : (
-                locations.map(location => (
-                  <div key={location} className="flex items-center space-x-2">
+                uniqueClients.map(client => (
+                  <div key={client.id} className="flex items-start space-x-2">
                     <Checkbox
-                      id={`location-${location}`}
-                      checked={filters.locations.includes(location)}
-                      onCheckedChange={() => toggleFilter('locations', location)}
+                      id={`client-${client.id}`}
+                      checked={filters.clientIds.includes(client.id)}
+                      onCheckedChange={() => toggleFilter('clientIds', client.id)}
+                      className="mt-0.5"
                     />
                     <Label 
-                      htmlFor={`location-${location}`} 
-                      className="text-sm flex-1 cursor-pointer truncate"
+                      htmlFor={`client-${client.id}`} 
+                      className="text-sm flex-1 cursor-pointer break-words leading-tight"
+                      title={client.address || undefined}
                     >
-                      {location}
+                      {client.companyName || `${client.firstName} ${client.lastName}`.trim() || 'Unknown Client'}
                     </Label>
-                    <Badge variant="secondary" className="text-xs">
-                      {getFilteredCount('locations', location)}
-                    </Badge>
                   </div>
                 ))
               )}
@@ -187,7 +205,7 @@ export function ScheduleFilters({
             open={expandedSections.positions} 
             onOpenChange={() => toggleSection('positions')}
           >
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2">
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full py-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Briefcase className="w-4 h-4" />
                 Positions
@@ -221,10 +239,83 @@ export function ScheduleFilters({
           </Collapsible>
 
           <Collapsible 
+            open={expandedSections.positionCategories || false} 
+            onOpenChange={() => setExpandedSections(prev => ({ ...prev, positionCategories: !prev.positionCategories }))}
+          >
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full py-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Target className="w-4 h-4" />
+                Position Category
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform ${(expandedSections as any).positionCategories ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-2 pt-2">
+              {POSITION_CATEGORIES.map(cat => (
+                <div key={cat.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`cat-${cat.id}`}
+                    checked={(filters.positionCategories || []).includes(cat.id)}
+                    onCheckedChange={() => toggleFilter('positionCategories', cat.id)}
+                  />
+                  <Label 
+                    htmlFor={`cat-${cat.id}`} 
+                    className="text-sm flex-1 cursor-pointer flex items-center gap-2"
+                  >
+                    <span 
+                      className="w-3 h-3 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: cat.color }}
+                      data-testid={`color-swatch-${cat.id}`}
+                      role="img"
+                      aria-label={`${cat.label} color category`}
+                    />
+                    {cat.label}
+                  </Label>
+                  <Badge variant="secondary" className="text-xs">
+                    {categoryEmployeeCounts[cat.id] || 0}
+                  </Badge>
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible 
+            open={expandedSections.armedStatus || false} 
+            onOpenChange={() => setExpandedSections(prev => ({ ...prev, armedStatus: !prev.armedStatus }))}
+          >
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full py-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Shield className="w-4 h-4" />
+                Armed Status
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform ${(expandedSections as any).armedStatus ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-2 pt-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="armed-armed"
+                  checked={(filters.armedStatus || []).includes('armed')}
+                  onCheckedChange={() => toggleFilter('armedStatus', 'armed')}
+                />
+                <Label htmlFor="armed-armed" className="text-sm flex-1 cursor-pointer">Armed</Label>
+                <Badge variant="secondary" className="text-xs">{armedCounts.armed}</Badge>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="armed-unarmed"
+                  checked={(filters.armedStatus || []).includes('unarmed')}
+                  onCheckedChange={() => toggleFilter('armedStatus', 'unarmed')}
+                />
+                <Label htmlFor="armed-unarmed" className="text-sm flex-1 cursor-pointer">Unarmed</Label>
+                <Badge variant="secondary" className="text-xs">{armedCounts.unarmed}</Badge>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible 
             open={expandedSections.status} 
             onOpenChange={() => toggleSection('status')}
           >
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2">
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full py-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Users className="w-4 h-4" />
                 Employee Status
@@ -257,7 +348,7 @@ export function ScheduleFilters({
             open={expandedSections.skills} 
             onOpenChange={() => toggleSection('skills')}
           >
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2">
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full py-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Star className="w-4 h-4" />
                 Skills & Certifications

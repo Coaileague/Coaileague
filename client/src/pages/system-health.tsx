@@ -27,6 +27,7 @@ import {
   TrendingUp,
   AlertCircle,
 } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import {
   LineChart,
   Line,
@@ -40,6 +41,7 @@ import {
   Legend,
   BarChart,
   Bar,
+  Cell,
 } from "recharts";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -125,6 +127,8 @@ const SERVICE_LABELS: Record<string, string> = {
   health_check_total: "System Monitoring",
 };
 
+import { CHART_PALETTE, CHART_SERIES } from "@/lib/chartPalette";
+
 function StatusIndicator({ status }: { status: "operational" | "degraded" | "down" }) {
   const config = {
     operational: { color: "bg-emerald-500", icon: CheckCircle, label: "Operational" },
@@ -156,7 +160,7 @@ function ServiceCard({ service, showDetails = true }: { service: ServiceHealth; 
   return (
     <Card className={`${statusColors[service.status]} transition-colors`} data-testid={`card-service-${service.service}`}>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-background">
               <Icon className="h-5 w-5 text-cyan-500" />
@@ -175,7 +179,7 @@ function ServiceCard({ service, showDetails = true }: { service: ServiceHealth; 
       </CardHeader>
       {showDetails && (
         <CardContent className="pt-0">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
             <span>
               {service.latencyMs !== undefined ? `${service.latencyMs}ms latency` : "No latency data"}
             </span>
@@ -324,7 +328,7 @@ function ResponseTimeChart({ data }: { data: ResponseTimeMetric[] }) {
     .slice(-20);
 
   const services = [...new Set(data.filter((d) => d.service !== "health_check_total").map((d) => d.service))];
-  const colors = ["#2dd4bf", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b"];
+  const colors = CHART_SERIES;
 
   return (
     <Card data-testid="chart-response-times">
@@ -375,10 +379,10 @@ function UptimeChart({ data }: { data: ServiceUptimeRecord[] }) {
     uptime: record.uptimePercent,
     fill:
       record.uptimePercent >= 99
-        ? "#10b981"
+        ? CHART_PALETTE.SUCCESS
         : record.uptimePercent >= 95
-        ? "#f59e0b"
-        : "#ef4444",
+        ? CHART_PALETTE.WARNING
+        : CHART_PALETTE.DANGER,
   }));
 
   return (
@@ -405,7 +409,20 @@ function UptimeChart({ data }: { data: ServiceUptimeRecord[] }) {
                 }}
                 formatter={(value: number) => [`${value.toFixed(2)}%`, "Uptime"]}
               />
-              <Bar dataKey="uptime" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="uptime" radius={[0, 4, 4, 0]}>
+                {chartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={
+                      entry.uptime >= 99
+                        ? CHART_PALETTE.SUCCESS
+                        : entry.uptime >= 95
+                        ? CHART_PALETTE.WARNING
+                        : CHART_PALETTE.DANGER
+                    } 
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -449,16 +466,16 @@ function MemoryChart({ history }: { history: SystemMetrics[] }) {
                 type="monotone"
                 dataKey="heap"
                 name="Heap Used"
-                stroke="#06b6d4"
-                fill="#06b6d4"
+                stroke={CHART_PALETTE.BRAND}
+                fill={CHART_PALETTE.BRAND}
                 fillOpacity={0.3}
               />
               <Area
                 type="monotone"
                 dataKey="rss"
                 name="RSS"
-                stroke="#3b82f6"
-                fill="#3b82f6"
+                stroke={CHART_PALETTE.INFO}
+                fill={CHART_PALETTE.INFO}
                 fillOpacity={0.2}
               />
             </AreaChart>
@@ -600,60 +617,52 @@ export default function SystemHealth() {
   const { data } = healthReport;
   const status = platformStatusConfig[data.platformReadiness];
 
-  return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500">
-              <Activity className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">System Health</h1>
-              <p className="text-sm text-muted-foreground">
-                Monitor platform services and performance
-              </p>
-            </div>
-          </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'system-health',
+    title: 'System Health',
+    subtitle: 'Monitor platform services and performance',
+    category: 'admin',
+    headerActions: (
+      <div className="flex items-center gap-4">
+        <div className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+          data.platformReadiness === "ready"
+            ? "bg-emerald-500/10 text-emerald-600"
+            : data.platformReadiness === "degraded"
+            ? "bg-amber-500/10 text-amber-600"
+            : "bg-red-500/10 text-red-600"
+        }`} data-testid="badge-platform-status">
+          <div className={`w-2 h-2 rounded-full ${status.color} animate-pulse`} />
+          <span className="text-sm font-medium">{status.label}</span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-            data.platformReadiness === "ready"
-              ? "bg-emerald-500/10 text-emerald-600"
-              : data.platformReadiness === "degraded"
-              ? "bg-amber-500/10 text-amber-600"
-              : "bg-red-500/10 text-red-600"
-          }`} data-testid="badge-platform-status">
-            <div className={`w-2 h-2 rounded-full ${status.color} animate-pulse`} />
-            <span className="text-sm font-medium">{status.label}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Switch
-              id="auto-refresh"
-              checked={autoRefresh}
-              onCheckedChange={setAutoRefresh}
-              data-testid="switch-auto-refresh"
-            />
-            <Label htmlFor="auto-refresh" className="text-sm">
-              Auto-refresh
-            </Label>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="auto-refresh"
+            checked={autoRefresh}
+            onCheckedChange={setAutoRefresh}
+            data-testid="switch-auto-refresh"
+          />
+          <Label htmlFor="auto-refresh" className="text-sm">
+            Auto-refresh
+          </Label>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          data-testid="button-refresh"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
+    ),
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       <SystemMetricsCards metrics={data.systemMetrics} />
 
       <Tabs defaultValue="services" className="space-y-4">
@@ -702,7 +711,7 @@ export default function SystemHealth() {
                     const percent = Math.min(100, (latency / maxLatency) * 100);
                     return (
                       <div key={service.service} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center justify-between gap-2 text-sm">
                           <span className="font-medium">
                             {SERVICE_LABELS[service.service] || service.service}
                           </span>
@@ -741,7 +750,7 @@ export default function SystemHealth() {
                     className="p-4 rounded-lg border bg-card"
                     data-testid={`uptime-record-${record.service}`}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between gap-2 mb-2">
                       <span className="font-medium">
                         {SERVICE_LABELS[record.service] || record.service}
                       </span>
@@ -779,6 +788,6 @@ export default function SystemHealth() {
           <ErrorLogsList logs={data.errorLogs} />
         </TabsContent>
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }

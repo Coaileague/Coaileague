@@ -1,0 +1,190 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 20 — CLIENT AND END-USER PORTAL VERIFICATION**
+
+This phase owns every portal-facing surface in the platform — what clients see, what officers see, what auditors see, and what the regulatory portal exposes. Portals are the trust interface between CoAIleague and the real world. A data leak, a broken view, or a permission gap here is visible to paying clients and regulated officers. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+Before writing your completion summary produce a full reconciliation table listing every finding — PASS, GAP, PARTIAL, CRITICAL — with confirmed fix evidence or a statement that no fix was needed. Every row must be green before Phase 20 closes. This is non-negotiable.
+
+---
+
+**STEP 1 — PORTAL SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of every portal surface in the platform:
+- Client portal — what pages exist, what data is accessible, what actions can be taken
+- Officer (end-user) portal — what pages exist, what data is accessible, what actions can be taken
+- Auditor portal — what pages exist, what data is accessible, what actions can be taken
+- Regulatory portal — what is exposed, who can access it, what export formats exist
+- Secure link system — how portal access is granted, scoped, and expired
+- Portal authentication — how each portal type authenticates its users
+- Any scheduled job or Trinity action that generates portal content
+
+Flag any portal endpoint that returns data without explicit workspace scoping.
+
+---
+
+**STEP 2 — CLIENT PORTAL VERIFICATION**
+
+The client portal is what paying clients use to manage their account:
+- Invoice view — client can see all invoices for their account, correct amounts, correct status
+- Invoice payment acknowledgment — client can acknowledge or dispute an invoice from the portal
+- Incident report access — client can view incident reports for their contracted posts only
+- Proof of service logs — client can view GPS-stamped activity logs for their posts
+- Contract view and signing — client can view their executed contracts and sign pending ones
+- Communication history — client can view all NDS communications sent to them
+- Client cannot see: other clients' data, officer personal information (pay rates, addresses), internal platform data
+- All client portal queries are scoped to `client_id` AND `workspace_id` — both required
+- Client portal accessible via secure time-bounded token — not a standard login session
+- Portal token expiry enforced — expired tokens rejected with clear message
+
+---
+
+**STEP 3 — OFFICER PORTAL VERIFICATION**
+
+The officer portal is what field officers use day-to-day:
+- Schedule view — officer sees only their own assigned shifts, correct dates, times, and post locations
+- Shift acknowledgment — officer can acknowledge upcoming shifts from the portal
+- Pay stub access — officer can view and download their own pay stubs only
+- Document access — officer can view and sign documents addressed to them only
+- Incident reporting — officer can submit incident reports from the portal
+- Clock-in/out — officer can clock in and out from the portal with GPS capture
+- Profile and license view — officer can view their own license status and expiration dates
+- Officer cannot see: other officers' schedules, pay stubs, or personal information
+- Officer portal authenticated via standard workspace login — not a token
+- All officer portal queries scoped to the officer's own `employee_id` and `workspace_id`
+
+---
+
+**STEP 4 — AUDITOR PORTAL VERIFICATION**
+
+The auditor portal provides read-only access for external compliance auditors:
+- Regulatory data access — auditor can view compliance records for the workspace they are authorized for
+- Export functions — auditor can export compliance data in the required format
+- Auditor session management confirmed — session tokens are workspace-scoped and time-bounded
+- Auditor cannot modify any data — all routes are read-only, write attempts rejected
+- Auditor cannot see financial data — invoices, payroll, and billing are hidden from auditor view
+- Auditor access log — every auditor view and export is logged with auditor identity, timestamp, and data accessed
+- Auditor portal finding log — auditor can submit findings, findings are routed to compliance officer via NDS
+- Multiple auditors per workspace supported — each with independent session
+
+---
+
+**STEP 5 — REGULATORY PORTAL VERIFICATION**
+
+The regulatory portal serves state-level compliance requirements:
+- Data accessible matches DPS regulatory requirements — correct fields, correct format
+- Export format verified for regulatory submission
+- Regulatory portal access is separate from auditor portal — distinct authentication
+- Access gated to compliance_officer and org_owner — not visible to managers or officers
+- Every regulatory data access logged with: accessor_id, workspace_id, data_type, timestamp
+- Regulatory portal data is read-only — no mutations possible
+- Data freshness confirmed — regulatory portal shows current data, not cached stale snapshots
+
+---
+
+**STEP 6 — PORTAL SECURITY VERIFICATION**
+
+Every portal must be secure by design:
+- Cross-workspace data isolation confirmed on every portal endpoint — client A cannot access client B's data
+- Cross-officer data isolation confirmed — officer A cannot access officer B's pay stubs, schedule, or documents
+- Secure portal links are workspace-scoped and time-bounded — confirmed from Phase 18
+- Portal links cannot be reused after expiry — expired tokens rejected
+- Portal access is logged — every session start, page view, and data export recorded
+- Rate limiting applied to portal endpoints — no bulk data scraping possible
+- Portal endpoints behind HTTPS only — no plain HTTP access
+- Sensitive fields masked in portal views — SSN, bank account, full addresses masked appropriately
+
+---
+
+**STEP 7 — REAL-TIME PORTAL SYNC**
+
+Portal data must reflect the current state of the platform:
+- When a new invoice is generated — client portal reflects it within the WebSocket push window
+- When a shift is assigned to an officer — officer portal schedule updates in real time
+- When a document is executed — client and officer portal both reflect executed status immediately
+- When a pay stub is generated — officer portal shows it without requiring a page refresh
+- WebSocket connections in portals are workspace-scoped — officer A does not receive officer B's push events
+- Portal WebSocket reconnect behavior — if connection drops, portal re-syncs on reconnect without missing updates
+
+---
+
+**STEP 8 — PERMISSION MATRIX INTEGRATION**
+
+Portal visibility must respect the Phase 9B permission matrix:
+- Features disabled for a role in the permission matrix are not visible in that role's portal — not just blocked, but hidden
+- Permission matrix changes propagate to active portal sessions in real time via WebSocket
+- Portal navigation reflects only permitted features — no dead links or 403 surprises
+- Client portal features that can be toggled by org_owner via the permission matrix — confirm which features are controllable
+- Officer portal features that can be toggled — confirm which features are controllable
+
+---
+
+**STEP 9 — PHASE INTEGRATION VERIFICATION**
+
+Portals must integrate correctly with all prior phases:
+- Phase 11 integration — invoice portal links are workspace-scoped and time-bounded (regression check)
+- Phase 13 integration — inbound email confirmation replies reach the correct client or officer portal
+- Phase 14 integration — disputed invoice freeze visible in client portal — client cannot pay a disputed invoice from the portal
+- Phase 17 integration — officer license status and expiration visible in officer portal profile
+- Phase 18 integration — documents generated and signed flow correctly into both client and officer portal views
+- Phase 19 integration — Trinity can query portal status and surface information to authorized users via registered actions
+
+---
+
+**STEP 10 — TRINITY PORTAL ACTIONS**
+
+Trinity must be able to query and act on portal data:
+- `portal.client.query` — query client portal status, invoices, and contract state for a specific client
+- `portal.officer.query` — query officer portal status, schedule, and document state for a specific officer
+- `portal.auditor.status` — query auditor session status and recent access log
+- `portal.send_link` — generate and send a new portal access link to a client or officer
+- All 4 actions respect workspace context and role permissions — Trinity cannot generate a portal link for another workspace
+
+---
+
+**STEP 11 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing the completion summary:
+1. List every finding from the findings report in a reconciliation table
+2. PASS — confirm still passing with one-line evidence
+3. GAP — confirm fixed with file name and line reference
+4. PARTIAL — confirm fully resolved, not just partially improved
+5. CRITICAL — confirm fixed with grep or query evidence
+6. Any finding without confirmed evidence — fix before proceeding
+7. Only after every row is green write the Phase 20 completion summary
+
+---
+
+**STEP 12 — VERIFICATION**
+
+Run all checks before Phase 20 is marked complete:
+- Check 1: Client portal scoped to client_id AND workspace_id on every query — grep confirms
+- Check 2: Client cannot see other clients' data, officer PII, or internal platform data
+- Check 3: Invoice payment acknowledgment and dispute accessible from client portal
+- Check 4: Incident reports and proof of service scoped to client's contracted posts only
+- Check 5: Officer portal scoped to employee_id AND workspace_id on every query
+- Check 6: Officer cannot see other officers' pay stubs, schedules, or documents
+- Check 7: Pay stub access confirmed scoped to owning officer only — regression check from Phase 15
+- Check 8: Auditor portal is fully read-only — write attempts rejected
+- Check 9: Auditor cannot see financial data — invoices and payroll hidden
+- Check 10: Auditor access logged on every view and export
+- Check 11: Regulatory portal data matches DPS format requirements
+- Check 12: Regulatory portal access logged — every access recorded
+- Check 13: Cross-workspace isolation confirmed on all portal endpoints
+- Check 14: Expired portal tokens rejected — clear error message returned
+- Check 15: Rate limiting confirmed on portal endpoints
+- Check 16: WebSocket push confirmed delivering portal updates in real time
+- Check 17: Permission matrix changes propagate to active portal sessions
+- Check 18: All Phase 11/13/14/17/18/19 integrations confirmed passing
+- Check 19: All 4 Trinity portal actions registered and callable
+- Check 20: Nothing Left Behind reconciliation table complete — every finding green
+- Check 21: Server starts clean with zero TypeScript errors across all portal files
+
+Do not mark Phase 20 complete until all 21 checks pass and the Nothing Left Behind reconciliation table is fully green. Findings first. Full picture assembled. Then fixes. Every gap from low to critical fixed. Every PARTIAL fully resolved. Nothing left behind.
+
+---
+
+Paste that. Same standard — findings before fixes, reconciliation table before summary, every PARTIAL treated as a gap until fully resolved.

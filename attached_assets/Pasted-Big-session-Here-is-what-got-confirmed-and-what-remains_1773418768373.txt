@@ -1,0 +1,367 @@
+Big session. Here is what got confirmed and what remains. Copy everything below this line:
+
+---
+
+COAILEAGUE — GRAND OPENING SPRINT CONTINUATION
+743 actions, 15/15 domains, 4/4 regression tests, 0 errors confirmed.
+Compliance intelligence is now fully wired — all three channels deliver simultaneously.
+Six compliance scenarios verified live in database. WebSocket gaps patched.
+What remains is proving every user-facing flow works with real data end to end.
+Read everything before touching anything. Report findings before fixing.
+
+---
+
+WHAT IS CONFIRMED COMPLETE THIS SESSION — DO NOT RETEST
+
+Trinity Compliance Engine three-channel delivery: deliverComplianceAlerts fires
+notification insert, briefing channel post, and Resend email simultaneously via
+Promise.all for every non-compliant officer. Out-of-state flags get their own
+parallel bundle.
+
+Scenario 3 renewal confirm API: POST /api/compliance/confirm-renewal/:employeeId
+built. Manager sends certId and new expiration date. Cert updates, eligibility
+restored, audit trail logged with COMPLIANCE:RENEWAL_CONFIRMED, notification fires.
+
+Scenario 6 out-of-state override API: POST /api/compliance/override-out-of-state/:employeeId
+built. Manager submits reason minimum 10 characters. Full audit trail entry with
+issuing state, license number, reason, and approver identity.
+
+WebSocket clock-in broadcast: broadcastToWorkspace fires immediately after every
+successful clock-in alongside the internal event bus.
+
+WebSocket invoice-paid broadcast: fires when paymentIntent.status is succeeded
+in the pay-invoice route carrying invoice ID, workspace ID, and payment intent ID.
+
+All 6 compliance scenarios verified live in Acme database with pass status.
+
+---
+
+PRIORITY 1 — UNVERIFIED ITEMS FROM FINDINGS REPORT
+
+These were identified as gaps last session but not yet fixed. Fix these first.
+
+TRIAL SIGNUP CREDIT ALLOCATION AND WELCOME NOTIFICATION:
+The registration flow creates a user and sends email verification.
+Workspace creation is a separate step.
+It is unconfirmed whether 500 credits are allocated at workspace creation
+with a system event reference in the ledger — not a Stripe reference.
+It is unconfirmed whether the welcome in-platform notification fires at that moment.
+
+Read the workspace creation handler completely.
+Find exactly where and how credits are allocated on new workspace creation.
+If 500 credits are not being allocated with a system event reference fix it now.
+If the welcome notification is not firing on workspace creation fix it now.
+After fixing run a real test: create a new test workspace, confirm exactly 500 credits
+appear in the credit ledger with transaction_type of system_grant or equivalent
+and no Stripe reference, confirm the welcome notification appears in the platform
+for the new org_owner immediately after workspace creation.
+
+STRIPE WEBHOOK CREDIT ALLOCATION AMOUNTS:
+The Stripe webhook pipeline is wired for invoice.payment_succeeded,
+checkout.session.completed, and customer.subscription.updated.
+It is unconfirmed whether the webhook handler allocates the correct credit amounts
+per tier when a subscription activates or renews.
+
+Read stripeWebhookService.handleEvent() completely.
+Find the credit allocation logic inside it.
+Verify the following amounts are allocated correctly:
+Starter subscription activation or renewal: exactly 5000 credits.
+Professional subscription activation or renewal: exactly 10000 credits.
+Enterprise subscription activation or renewal: exactly 22000 credits.
+Each allocation must create a ledger entry with the Stripe invoice ID as the reference.
+If any tier allocates the wrong amount fix it now.
+Run a test: simulate a Starter subscription webhook and confirm exactly 5000 credits
+are allocated with the Stripe invoice reference in the ledger.
+
+SHIFT ASSIGNED WEBSOCKET BROADCAST:
+Clock-in and invoice-paid WebSocket broadcasts were added this session.
+Shift assignment broadcast was listed as needing verification but not confirmed fixed.
+Read shiftRoutes.ts completely and find the shift assignment handler.
+Confirm broadcastToWorkspace fires when a shift is assigned to an officer.
+If it is not firing add it now.
+The broadcast must fire for both new shift assignment and shift reassignment.
+The broadcast payload must include the shift ID, employee ID, workspace ID,
+and shift start time so the employee's schedule view can update in real time.
+
+WEBSOCKET RECONNECTION EVENT BUFFER:
+Missed events on reconnect were identified as a gap but not built.
+When a client disconnects and reconnects they must receive events they missed.
+Build a per-workspace event buffer that holds the last 50 events for 5 minutes.
+On reconnect the client sends their last received event timestamp.
+The server replays any events after that timestamp from the buffer.
+If the client has been disconnected longer than 5 minutes they receive a
+full state refresh instead of event replay.
+This ensures a manager who loses connection for 2 minutes does not miss
+clock-ins, incidents, or critical alerts that fired during the gap.
+
+---
+
+PRIORITY 2 — NEW ORG COLD SIGNUP END TO END
+Walk through every step as a real new user. Use a real email address you control.
+
+LANDING PAGE:
+Open on desktop at 1440px wide and on mobile at 375px wide simultaneously.
+Confirm no broken links, no 404 pages, no missing images on any public page.
+Confirm pricing page shows correct prices: Free Trial $0, Starter $899,
+Professional $1999, Enterprise Contact Sales.
+Confirm Start Free Trial buttons navigate to signup correctly on both viewports.
+
+SIGNUP FLOW:
+Complete signup with a real email address.
+Confirm workspace created with unique workspace_id.
+Confirm user assigned org_owner role in workspace_members.
+Confirm subscription record created with free_trial tier.
+Confirm exactly 500 credits allocated in credit ledger with system event reference.
+Confirm welcome email arrives at the signup address — check inbox not spam.
+Confirm welcome notification fires in platform immediately on first login.
+Confirm Trinity is available and responsive on first login.
+
+CORE LOOP AS NEW ORG OWNER:
+Add one employee manually.
+Confirm invite email delivers to employee email address.
+Employee accepts invite and sets password.
+Confirm they land on onboarding screen not a 404.
+Create one client and one site with a real address.
+Build one shift and assign the employee to it.
+Confirm employee receives shift notification.
+Employee clocks in via GPS.
+Confirm clock-in record in database contains GPS coordinates, timestamp,
+employee ID, site ID — all four fields populated correctly.
+Employee clocks out.
+Confirm time entry created with correct duration.
+Generate one invoice for the client.
+Confirm invoice email delivers to the client email address.
+Confirm the email contains a working payment link.
+
+CREDIT CONSUMPTION DURING LOOP:
+Confirm credits are deducting correctly as each credit-gated action runs.
+Confirm credits widget shows correct balance after each deduction.
+Set balance to 75 credits and confirm WARNING notification fires.
+Set balance to 0 and confirm hard block fires with upgrade prompt visible.
+Confirm no credit-gated action can execute at zero balance.
+
+TRIAL EXPIRY:
+Advance the trial expiration date to simulate 14 days elapsed.
+Confirm platform gates access and prompts plan selection.
+Confirm org data is completely preserved — nothing deleted on expiry.
+Confirm org_owner can select Starter plan and continue immediately.
+
+---
+
+PRIORITY 3 — STRIPE SUBSCRIPTION FLOW
+
+Upgrade the trial org to Starter using Stripe test card 4242424242424242.
+Confirm a Stripe checkout session is created server-side before redirect.
+Complete checkout and confirm post-payment redirect lands on success page not 404.
+Confirm Stripe webhook invoice.payment_succeeded fires and activates subscription
+in the database — the webhook activates it not the redirect URL.
+Confirm exactly 5000 credits allocate from the webhook with Stripe invoice reference.
+Confirm org_owner receives subscription confirmation notification and email.
+Confirm managers and org_admin cannot access the billing settings page.
+
+Upgrade from Starter to Professional.
+Confirm the Stripe subscription updates rather than cancels and recreates.
+Confirm credit allocation upgrades from 5000 to 10000 immediately.
+Confirm soft cap overage mode activates — Professional orgs entering overage
+get metered at $0.01 per credit not blocked.
+Confirm org_owner receives upgrade confirmation notification and email.
+
+---
+
+PRIORITY 4 — CORE DAILY OPERATIONS STRESS TEST
+
+SIMULTANEOUS CLOCK-INS:
+Five employees clock in at five different sites at the exact same moment.
+Confirm all five clock-in records created independently with correct GPS coordinates.
+Confirm no records crossed between employees.
+Confirm no employee appears in another employee's time entries.
+Confirm manager dashboard receives five distinct real-time updates.
+
+CALL-OFF FULL FLOW:
+Officer submits call-off on mobile one hour before their shift.
+Confirm call-off is received and logged with timestamp.
+Confirm manager receives immediate notification.
+Confirm Trinity scans for available replacements and presents ranked list.
+Confirm manager can assign replacement with one action.
+Confirm replacement officer receives shift notification.
+Confirm audit trail logs call-off submission, replacement scan, and resolution.
+
+TIMESHEET TO PAYROLL FULL FLOW:
+Advance pay period to generate timesheets from clock records.
+Confirm timesheets auto-generate — no manual input required.
+Confirm each employee timesheet shows correct hours per shift.
+Employee submits timesheet. Manager approves.
+Confirm approved timesheet is locked.
+Attempt to edit locked timesheet via direct API call bypassing the UI.
+Confirm edit is blocked at database level not just UI level.
+Run payroll calculation from approved timesheets.
+Confirm Trinity presents the run for human review.
+Confirm Trinity does NOT auto-execute under any circumstance.
+Org_owner approves the payroll run.
+Confirm pay stubs generate for each employee.
+Confirm each employee receives notification with deep link to their pay stub.
+Confirm pay stub shows correct earnings, hours, and deductions.
+
+CLIENT BILLING FULL FLOW:
+Generate invoice from approved timesheets for a client.
+Confirm invoice calculates correctly based on hours and billing rate.
+Confirm invoice email delivers to client address with working payment link.
+Simulate client payment.
+Confirm invoice status updates to paid.
+Confirm revenue ledger entry created with payment reference.
+Confirm org_owner revenue widget updates in real time.
+Confirm audit trail logs the payment event with timestamp.
+
+---
+
+PRIORITY 5 — DOCUMENT SYSTEM SIMULATION
+
+Read the existing document system code completely before building any simulation.
+Find what already exists: employee-packet-portal.tsx, contract-signing-portal.tsx,
+document-vault.tsx, hr-documents.tsx, sps-document-safe.tsx.
+Report what is fully functional versus what is partial or placeholder.
+Do not rebuild what already works.
+
+EMPLOYEE ONBOARDING SIMULATION:
+Create simulated employee Marcus Johnson with these exact values:
+Position: Level II Security Officer
+Texas PSB License: B12345678 Class B expires 2027-06-15
+Pay Rate: $18.00 per hour
+Start Date: today plus 7 days
+
+Generate the complete employee onboarding packet.
+For every document confirm: generates without errors, correct data populated
+from database with no blank fields, header uniform with org name and license number,
+footer shows page numbers and document status, signature blocks visible and
+finger-tap sized on mobile, routing to correct signers in correct order,
+signing flow completes, executed PDF saves to document safe, employee receives
+copy in personal portal.
+After all documents execute confirm Trinity allows scheduling Marcus Johnson.
+
+CONTRACTOR SIMULATION:
+Create simulated contractor Rosa Delgado with rate $22.00 per hour 1099.
+Generate the contractor packet: Independent Contractor Agreement, W-9,
+License Verification, Confidentiality Agreement.
+Same confirmation checklist as employee simulation.
+After all documents execute confirm Trinity allows assigning Rosa to shifts.
+
+POST ORDERS SIMULATION:
+Generate post orders for one Acme client site.
+Assign both Marcus and Rosa to the site.
+Confirm both must sign before being scheduled there.
+Simulate both signing. Confirm site shows fully acknowledged.
+
+SERVICE PROPOSAL AND CONTRACT:
+Generate a proposal for Lone Star Industrial Park San Antonio Texas.
+Confirm PDF looks professional enough to send to a real client.
+Simulate acceptance and generate the full service agreement.
+Simulate both parties signing. Confirm executed contract saves to document safe.
+
+DESKTOP AND MOBILE RENDERING:
+Open every document type at 1440px desktop and 375px mobile.
+Confirm uniform header and footer across all document types.
+Confirm no horizontal scrolling on mobile.
+Confirm print preview matches screen exactly.
+Confirm finger-draw signature capture works on mobile.
+
+---
+
+PRIORITY 6 — WEBSOCKET MANUAL TEST SCRIPT
+
+Write a step-by-step script I can follow myself with two browser windows open.
+For each event tell me exactly what to open in each window, what action to take
+in window 1, and what to look for in window 2 within 2 seconds without a page refresh.
+
+Cover all seven events:
+Employee clocks in — manager dashboard updates.
+Incident submitted — notification badge increments.
+Shift assigned — employee schedule updates.
+Invoice paid — org_owner revenue widget updates.
+Credit balance changes — credits widget updates.
+Trinity posts briefing — Briefing Channel shows it.
+New notification — badge count updates within 2 seconds.
+
+Also test the event buffer: disconnect window 2, trigger 3 events in window 1,
+reconnect window 2, verify all 3 missed events are delivered.
+
+---
+
+PRIORITY 7 — MOBILE TEST SCRIPT
+
+Write a step-by-step script I can follow on my phone.
+Tell me exactly what to tap, what to expect on screen, and what to verify in the database.
+
+GPS clock-in with geofence: what screen, what button, what happens when
+clocking in from wrong location versus correct location.
+
+Overnight shift: create shift 10pm to 6am, clock in and out, confirm single
+time entry in database with exactly 8 hours not split at midnight.
+
+Duplicate clock-in prevention: attempt second clock-in while already clocked in,
+confirm clear message, confirm no duplicate database entry.
+
+Shift swap full flow: both employee perspectives and manager approval step by step.
+
+Call-off with Trinity replacement: officer submits, manager sees ranked list,
+manager assigns with one tap, replacement notified.
+
+Incident report: photo attachment, GPS auto-populate, real-time manager notification
+with deep link to the report.
+
+Schedule view: next shift prominent at top with site address and post orders,
+no horizontal scrolling required.
+
+---
+
+PRIORITY 8 — MULTI-TENANT SIMULTANEOUS STRESS TEST
+
+Create three orgs simultaneously:
+Org Alpha Starter tier 10 employees.
+Org Beta Professional tier 30 employees.
+Org Gamma Enterprise tier 100 employees.
+
+Run simultaneous operations across all three at the exact same moment:
+All three orgs have employees clocking in.
+All three have Trinity chat active.
+All three have notifications firing.
+All three have credit deductions happening.
+
+After simultaneous operations verify complete isolation:
+Each org sees only its own data on every screen.
+No notification from one org appears in another.
+No employee from one org appears in another org schedule.
+Credit ledgers are completely independent.
+Trinity responses are scoped to the requesting org only.
+
+---
+
+PRIORITY 9 — FAILURE AND RECOVERY
+
+Stripe payment failure: simulate failed Starter subscription payment.
+Confirm org_owner receives payment failed notification and email.
+Confirm platform continues through grace period not instant lockout.
+Confirm automatic retry fires. Confirm full access restored on successful retry.
+
+Overage charge failure: simulate failed end-of-cycle overage on Professional.
+Confirm 3 retry attempts with exponential backoff.
+Confirm hard cap fallback after 3 failures.
+Confirm platform_staff alert fires.
+Confirm soft cap restored after payment resolution.
+
+Session expiry mid-payroll: begin payroll review, expire session, confirm payroll
+stays pending not auto-approved, confirm clean resume after re-login.
+
+GPS unavailable: officer attempts clock-in with no GPS signal.
+Confirm graceful handling with clear message and no phantom record created.
+
+---
+
+FINAL GRAND OPENING SIGN-OFF
+
+After all priorities complete report confirmed status of every checklist item.
+Every item must show confirmed with real data from real tests.
+Nothing is marked complete based on code existing alone.
+
+The platform does not open to new paying customers until every item is green.
+Statewide does not begin the go-live migration until every item is green.
+These are the two finish lines. Run toward both.

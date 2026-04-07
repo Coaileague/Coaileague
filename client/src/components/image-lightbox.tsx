@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Button } from "@/components/ui/button";
 import { X, Download, ZoomIn, ZoomOut } from "lucide-react";
 
@@ -65,8 +65,8 @@ export function ImageLightbox({ src, alt = "Image", isOpen, onClose }: ImageLigh
   }, [isOpen]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={resetAndClose}>
-      <DialogContent size="full" className="max-h-[95vh] p-0 border-0">
+    <UniversalModal open={isOpen} onOpenChange={resetAndClose}>
+      <UniversalModalContent size="full" className="max-h-[95vh] p-0 border-0">
         <div className="relative w-full h-full bg-black/95 rounded-lg overflow-hidden">
           {/* Controls */}
           <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
@@ -119,7 +119,7 @@ export function ImageLightbox({ src, alt = "Image", isOpen, onClose }: ImageLigh
             />
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

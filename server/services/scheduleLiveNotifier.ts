@@ -14,7 +14,7 @@
 
 import { db } from '../db';
 import { shifts, employees, users } from '@shared/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, gte, lte } from 'drizzle-orm';
 import {
   notifySchedulePublished,
   notifyShiftCreated,
@@ -23,6 +23,9 @@ import {
   notifyShiftSwap,
   publishPlatformUpdate,
 } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+const log = createLogger('scheduleLiveNotifier');
+
 
 export interface ShiftInfo {
   id: string;
@@ -91,7 +94,7 @@ async function getEmployeeName(employeeId: string): Promise<string> {
       return `${employee.firstName} ${employee.lastName}`.trim() || 'Employee';
     }
   } catch (error) {
-    console.error('[ScheduleLive] Error getting employee name:', error);
+    log.error('[ScheduleLive] Error getting employee name:', error);
   }
   return 'Employee';
 }
@@ -106,7 +109,7 @@ export async function onShiftCreated(
   try {
     const affectedIds = getAffectedEmployeeIds(shift);
     if (affectedIds.length === 0) {
-      console.log('[ScheduleLive] Shift created but no employees assigned, skipping notification');
+      log.info('[ScheduleLive] Shift created but no employees assigned, skipping notification');
       return;
     }
 
@@ -128,9 +131,9 @@ export async function onShiftCreated(
       });
     }
 
-    console.log(`[ScheduleLive] Shift created: Notified ${affectedIds.length} employee(s)`);
+    log.info(`[ScheduleLive] Shift created: Notified ${affectedIds.length} employee(s)`);
   } catch (error) {
-    console.error('[ScheduleLive] Error in onShiftCreated:', error);
+    log.error('[ScheduleLive] Error in onShiftCreated:', error);
   }
 }
 
@@ -145,7 +148,7 @@ export async function onShiftUpdated(
   try {
     const affectedIds = getAffectedEmployeeIds(shift);
     if (affectedIds.length === 0) {
-      console.log('[ScheduleLive] Shift updated but no employees assigned, skipping notification');
+      log.info('[ScheduleLive] Shift updated but no employees assigned, skipping notification');
       return;
     }
 
@@ -165,9 +168,9 @@ export async function onShiftUpdated(
       });
     }
 
-    console.log(`[ScheduleLive] Shift updated: Notified ${affectedIds.length} employee(s) - ${changes}`);
+    log.info(`[ScheduleLive] Shift updated: Notified ${affectedIds.length} employee(s) - ${changes}`);
   } catch (error) {
-    console.error('[ScheduleLive] Error in onShiftUpdated:', error);
+    log.error('[ScheduleLive] Error in onShiftUpdated:', error);
   }
 }
 
@@ -181,7 +184,7 @@ export async function onShiftDeleted(
   try {
     const affectedIds = getAffectedEmployeeIds(shift);
     if (affectedIds.length === 0) {
-      console.log('[ScheduleLive] Shift deleted but no employees were assigned, skipping notification');
+      log.info('[ScheduleLive] Shift deleted but no employees were assigned, skipping notification');
       return;
     }
 
@@ -201,9 +204,9 @@ export async function onShiftDeleted(
       });
     }
 
-    console.log(`[ScheduleLive] Shift deleted: Notified ${affectedIds.length} employee(s)`);
+    log.info(`[ScheduleLive] Shift deleted: Notified ${affectedIds.length} employee(s)`);
   } catch (error) {
-    console.error('[ScheduleLive] Error in onShiftDeleted:', error);
+    log.error('[ScheduleLive] Error in onShiftDeleted:', error);
   }
 }
 
@@ -221,10 +224,108 @@ export async function onSchedulePublished(params: {
 }): Promise<void> {
   try {
     await notifySchedulePublished(params);
-    console.log(`[ScheduleLive] Schedule published: Notified ${params.affectedEmployeeIds.length} employee(s) for ${params.weekStart} - ${params.weekEnd}`);
+    log.info(`[ScheduleLive] Schedule published: Notified ${params.affectedEmployeeIds.length} employee(s) for ${params.weekStart} - ${params.weekEnd}`);
   } catch (error) {
-    console.error('[ScheduleLive] Error in onSchedulePublished:', error);
+    log.error('[ScheduleLive] Error in onSchedulePublished:', error);
   }
+
+  // Non-blocking: send weekly schedule email to each assigned officer
+  setImmediate(async () => {
+    try {
+      const { sendWeeklyScheduleEmail } = await import('./emailCore');
+
+      if (!params.weekStart || !params.weekEnd) return;
+      const weekStartDate = new Date(params.weekStart);
+      const weekEndDate = new Date(params.weekEnd);
+
+      // Fetch all shifts for this workspace in the week window
+      const weekShifts = await db.select()
+        .from(shifts)
+        .where(
+          and(
+            eq(shifts.workspaceId, params.workspaceId),
+            gte(shifts.startTime, weekStartDate),
+            lte(shifts.startTime, weekEndDate)
+          )
+        );
+
+      if (weekShifts.length === 0) return;
+
+      // Group shifts by employeeId
+      const shiftsByEmployee = new Map<string, typeof weekShifts>();
+      for (const shift of weekShifts) {
+        const empId = (shift as any).employeeId;
+        if (!empId) continue;
+        if (!shiftsByEmployee.has(empId)) shiftsByEmployee.set(empId, []);
+        shiftsByEmployee.get(empId)!.push(shift);
+      }
+
+      // Get employee → user mapping for all affected employees
+      const empIds = [...shiftsByEmployee.keys()];
+      if (empIds.length === 0) return;
+
+      const empRows = await db.select({ id: employees.id, userId: employees.userId })
+        .from(employees)
+        .where(and(eq(employees.workspaceId, params.workspaceId), inArray(employees.id, empIds)));
+
+      const userIds = empRows.map(e => e.userId).filter(Boolean) as string[];
+      if (userIds.length === 0) return;
+
+      const userRows = await db.select({ id: users.id, email: users.email, firstName: users.firstName, lastName: users.lastName })
+        .from(users)
+        .where(inArray(users.id, userIds));
+
+      const empToUser = new Map(empRows.map(e => [e.id, e.userId]));
+      const userById = new Map(userRows.map(u => [u.id, u]));
+
+      const weekLabel = weekStartDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const baseUrl = process.env.APP_BASE_URL || 'https://app.coaileague.com';
+
+      const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      await Promise.allSettled([...shiftsByEmployee.entries()].map(async ([empId, empShifts]) => {
+        const userId = empToUser.get(empId);
+        if (!userId) return;
+        const user = userById.get(userId);
+        if (!user?.email) return;
+
+        const employeeName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
+
+        const shiftEntries = empShifts
+          .sort((a, b) => new Date((a as any).startTime).getTime() - new Date((b as any).startTime).getTime())
+          .map(s => {
+            const st = new Date((s as any).startTime);
+            const et = new Date((s as any).endTime);
+            const dayName = DAYS[st.getDay()];
+            const dateStr = `${MONTHS[st.getMonth()]} ${st.getDate()}`;
+            const startStr = st.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            const endStr = et.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            return {
+              day: dayName,
+              date: dateStr,
+              startTime: startStr,
+              endTime: endStr,
+              siteName: (s as any).location || (s as any).siteName || 'TBD',
+              postTitle: (s as any).title || (s as any).postTitle || 'Security Officer',
+              specialInstructions: (s as any).notes || undefined,
+            };
+          });
+
+        await sendWeeklyScheduleEmail(user.email, {
+          employeeName,
+          weekLabel,
+          shifts: shiftEntries,
+          scheduleUrl: `${baseUrl}/schedule`,
+          orgName: params.workspaceId,
+        }, params.workspaceId);
+      }));
+
+      log.info(`[ScheduleLive] Weekly schedule emails sent to ${shiftsByEmployee.size} employee(s) for week of ${params.weekStart}`);
+    } catch (emailErr: any) {
+      log.warn('[ScheduleLive] Weekly schedule email send failed (non-blocking):', emailErr.message);
+    }
+  });
 }
 
 /**
@@ -251,9 +352,9 @@ export async function onShiftSwap(
     } as const;
 
     await notifyShiftSwap(eventMap[eventType], params);
-    console.log(`[ScheduleLive] Shift swap ${eventType}: Notified affected employees`);
+    log.info(`[ScheduleLive] Shift swap ${eventType}: Notified affected employees`);
   } catch (error) {
-    console.error('[ScheduleLive] Error in onShiftSwap:', error);
+    log.error('[ScheduleLive] Error in onShiftSwap:', error);
   }
 }
 
@@ -284,10 +385,10 @@ export async function onAutomationScheduleChange(params: {
       },
     });
 
-    console.log(`[ScheduleLive] Automation schedule change: ${params.actionType} - ${params.affectedEmployeeIds.length} affected`);
+    log.info(`[ScheduleLive] Automation schedule change: ${params.actionType} - ${params.affectedEmployeeIds.length} affected`);
   } catch (error) {
-    console.error('[ScheduleLive] Error in onAutomationScheduleChange:', error);
+    log.error('[ScheduleLive] Error in onAutomationScheduleChange:', error);
   }
 }
 
-console.log('[ScheduleLiveNotifier] Service initialized - Real-time schedule notifications ready');
+log.info('[ScheduleLiveNotifier] Service initialized - Real-time schedule notifications ready');

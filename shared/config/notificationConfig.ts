@@ -456,22 +456,22 @@ const DEFAULT_TAB: NotificationTab = 'whats_new';
  */
 export const RBAC_NOTIFICATION_TARGETING = {
   // Platform-level updates (all users)
-  platform_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'org_admin', 'department_manager', 'supervisor', 'staff', 'contractor'],
+  platform_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'co_owner', 'department_manager', 'supervisor', 'staff', 'contractor'],
   
   // Technical/AI Brain updates (technical roles only)
   technical_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager'],
   
   // Subagent/Orchestration updates (admin and support roles)
-  orchestration_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin'],
+  orchestration_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'co_owner'],
   
   // Security updates (elevated roles)
-  security_updates: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'],
+  security_updates: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'],
   
   // Billing/Financial updates (finance roles)
-  financial_updates: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+  financial_updates: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner'],
   
   // Compliance updates (compliance-related roles)
-  compliance_updates: ['root_admin', 'deputy_admin', 'sysop', 'compliance_officer', 'org_owner', 'org_admin', 'department_manager'],
+  compliance_updates: ['root_admin', 'deputy_admin', 'sysop', 'compliance_officer', 'org_owner', 'co_owner', 'department_manager'],
 } as const;
 
 /**

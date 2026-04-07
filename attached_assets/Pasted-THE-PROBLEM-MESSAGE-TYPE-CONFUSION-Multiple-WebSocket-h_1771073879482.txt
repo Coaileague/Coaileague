@@ -1,0 +1,81 @@
+THE PROBLEM: MESSAGE TYPE CONFUSION
+Multiple WebSocket hooks send different join types:
+HookSendsServer HandleruseChatroomWebSocketjoin_conversationChat handleruseChatroomNotificationsjoin_notificationsNotification handleruseShiftWebSocketjoin_shift_updatesShift handleruseTrinitySchedulingProgressjoin_scheduling_progressScheduling handleruseCreditMonitorjoin_credit_updatesCredit handler
+The suspected bug:
+1. Non-chat WebSocket connects (e.g., notifications)
+2. Sends: { type: 'join_notifications', ... }
+3. Message gets BUFFERED during auth handshake
+4. Auth completes
+5. Buffered message gets processed
+6. Wrong handler tries to treat it as 'join_conversation'
+7. Looks up conversation ID → "Conversation not found"
+
+WHERE TO LOOK
+The auth/buffer logic in the WebSocket handler:
+typescript// Somewhere in the WebSocket auth flow:
+
+ws.on('message', (raw) => {
+  const data = JSON.parse(raw);
+  
+  if (!authenticated) {
+    // Buffer messages until auth completes
+    bufferedMessages.push(data);
+    return;
+  }
+  
+  // After auth, process buffered messages
+  // BUG: Maybe processing ALL buffered messages 
+  // through the CHAT handler regardless of type?
+});
+
+THE FIX PATTERN
+typescript// CORRECT: Route by message type
+ws.on('message', (raw) => {
+  const data = JSON.parse(raw);
+  
+  switch (data.type) {
+    case 'join_conversation':
+      // Only THIS should look up conversations
+      handleChatJoin(data);
+      break;
+      
+    case 'join_notifications':
+      // This should NOT touch conversation table
+      handleNotificationSubscribe(data);
+      break;
+      
+    case 'join_shift_updates':
+      handleShiftSubscribe(data);
+      break;
+      
+    // etc...
+    
+    default:
+      console.warn('Unknown message type:', data.type);
+  }
+});
+
+QUICK DIAGNOSTIC
+Add this logging to the server WebSocket handler:
+typescriptws.on('message', (raw) => {
+  const data = JSON.parse(raw);
+  
+  console.log('[WS] Received:', {
+    type: data.type,
+    hasConversationId: !!data.conversationId,
+    authenticated: !!ws.userId,
+    socketPath: ws.upgradeReq?.url  // Which endpoint?
+  });
+  
+  // ... rest of handler
+});
+This will show:
+
+What message types are coming in
+Whether they have conversation IDs
+Whether they're hitting the right handler
+
+
+WAIT FOR LOGS
+Replit is adding debug output. Once you connect and use the app, the server logs will show exactly which messages are being misrouted.
+Let us know what the debug logs show after you test.

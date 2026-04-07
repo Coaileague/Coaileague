@@ -2,7 +2,7 @@
  * DashboardShell - Shared responsive container for all role dashboards
  * 
  * Features:
- * - Centers content on large screens (max-w-5xl xl:max-w-6xl)
+ * - Centers content on large screens (max-w-5xl xl:max-w-6xl 2xl:max-w-[1400px])
  * - Consistent padding and margins
  * - Optional center alignment for headers/CTAs
  * - Mobile-first responsive design
@@ -25,16 +25,16 @@ export function DashboardShell({
   maxWidth = "5xl" 
 }: DashboardShellProps) {
   const maxWidthClasses = {
-    "4xl": "max-w-4xl",
-    "5xl": "max-w-5xl xl:max-w-6xl",
-    "6xl": "max-w-6xl xl:max-w-7xl",
-    "7xl": "max-w-7xl"
+    "4xl": "max-w-4xl 2xl:max-w-5xl",
+    "5xl": "max-w-5xl xl:max-w-6xl 2xl:max-w-[1400px]",
+    "6xl": "max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]",
+    "7xl": "max-w-7xl 2xl:max-w-[1400px]"
   };
 
   return (
     <div 
       className={cn(
-        "w-full px-4 sm:px-6 mx-auto",
+        "w-full px-4 sm:px-6 mx-auto 2xl:text-base",
         maxWidthClasses[maxWidth],
         align === "center" && "flex flex-col items-center text-center",
         className

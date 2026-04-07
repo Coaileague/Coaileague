@@ -4,9 +4,16 @@ import {
   billingAuditLog,
   subscriptionInvoices,
   users,
-  type Workspace,
+  employees,
 } from '@shared/schema';
 import { eq, and, lte } from 'drizzle-orm';
+import { sendInvoiceOverdueReminderEmail } from '../emailCore';
+import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
+import { publishPlatformUpdate } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
+
+const log = createLogger('AccountStateService');
 
 export type AccountState = 'active' | 'payment_failed' | 'suspended' | 'requires_support';
 
@@ -31,7 +38,13 @@ export class AccountStateService {
         .where(eq(users.id, actorId))
         .limit(1);
       
-      return actor && (actor.role === 'admin' || actor.role === 'root' || actor.role === 'support');
+      return actor && (
+        actor.role === 'root_admin' ||
+        actor.role === 'deputy_admin' ||
+        actor.role === 'sysop' ||
+        actor.role === 'support_manager' ||
+        actor.role === 'support_agent'
+      );
     } catch (error) {
       return false;
     }
@@ -53,7 +66,21 @@ export class AccountStateService {
       throw new Error(`Workspace ${workspaceId} not found`);
     }
 
+    // FOUNDER EXEMPTION: Never suspend billing-exempt workspaces (e.g. Statewide Protective Services)
+    if ((newState === 'suspended' || newState === 'requires_support') && isBillingExemptByRecord(workspace)) {
+      await logExemptedAction({ workspaceId, action: `account_state_transition_blocked:${newState}`, metadata: { requestedState: newState, reason: 'founder_exemption', blockedReason: reason } });
+      log.warn('EXEMPTED: Blocked account state transition for founder workspace', { workspaceId, requestedState: newState });
+      return workspace as any;
+    }
+
     const previousState = workspace.accountState || 'active';
+
+    // FOUNDER EXEMPTION: Never transition out of active for billing-exempt workspaces
+    if (newState !== 'active' && isBillingExemptByRecord(workspace)) {
+      await logExemptedAction({ workspaceId, action: `account_state_transition_blocked:${newState}`, metadata: { requestedState: newState, reason: 'founder_exemption', blockedReason: reason } });
+      log.warn('EXEMPTED: Blocked account state transition for founder workspace', { workspaceId, requestedState: newState });
+      return workspace as any;
+    }
 
     // Validate state transition
     this.validateStateTransition(previousState as AccountState, newState);
@@ -303,6 +330,73 @@ export class AccountStateService {
           );
         }
 
+        // Send overdue notification email to workspace owner
+        try {
+          const ownerEmployee = await db.select({
+            userId: employees.userId,
+          })
+            .from(employees)
+            .where(
+              and(
+                eq(employees.workspaceId, invoice.workspaceId),
+                eq(employees.workspaceRole, 'org_owner'),
+                eq(employees.isActive, true)
+              )
+            )
+            .limit(1);
+
+          if (ownerEmployee.length > 0 && ownerEmployee[0].userId) {
+            const [ownerUser] = await db.select({
+              email: users.email,
+              name: users.firstName,
+            })
+              .from(users)
+              .where(eq(users.id, ownerEmployee[0].userId))
+              .limit(1);
+
+            if (ownerUser?.email) {
+              const baseUrl = getAppBaseUrl();
+              await sendInvoiceOverdueReminderEmail(
+                ownerUser.email,
+                {
+                  clientName: ownerUser.name || 'Workspace Owner',
+                  invoiceNumber: invoice.invoiceNumber || `INV-${invoice.id.slice(0, 8)}`,
+                  total: String(invoice.totalAmount || '0.00'),
+                  dueDate: invoice.dueDate.toLocaleDateString(),
+                  daysOverdue,
+                  paymentUrl: `${baseUrl}/billing`,
+                },
+                invoice.workspaceId
+              );
+              log.info('Sent overdue notification email', { recipientEmail: ownerUser.email, invoiceNumber: invoice.invoiceNumber });
+            }
+          }
+        } catch (emailError) {
+          log.error('Failed to send overdue email', { invoiceId: invoice.id, error: (emailError as any).message });
+        }
+
+        // Emit platform event for the notification engine
+        try {
+          await publishPlatformUpdate({
+            type: 'billing',
+            category: 'announcement',
+            title: 'Invoice Overdue',
+            description: `Invoice ${invoice.invoiceNumber || invoice.id} is ${daysOverdue} days overdue. Amount: $${invoice.totalAmount || '0.00'}`,
+            workspaceId: invoice.workspaceId,
+            visibility: 'org_leadership',
+            priority: daysOverdue >= 7 ? 3 : 2,
+            metadata: {
+              invoiceId: invoice.id,
+              invoiceNumber: invoice.invoiceNumber,
+              daysOverdue,
+              totalAmount: invoice.totalAmount,
+              skipFeatureCheck: true,
+            },
+          });
+        } catch (eventError) {
+          log.error('Failed to emit platform event', { invoiceId: invoice.id, error: (eventError as any).message });
+        }
+
         // Log audit event
         await db.insert(billingAuditLog).values({
           workspaceId: invoice.workspaceId,
@@ -319,7 +413,7 @@ export class AccountStateService {
           },
         });
       } catch (error) {
-        console.error(`Failed to process overdue invoice ${invoice.id}:`, error);
+        log.error('Failed to process overdue invoice', { invoiceId: invoice.id, error: (error as any).message });
       }
     }
   }

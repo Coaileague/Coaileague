@@ -15,6 +15,9 @@ import {
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('helpaiIntegrationService');
+
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32; // 256 bits
@@ -80,7 +83,7 @@ export class HelpaiIntegrationService {
       })
       .returning();
 
-    console.log(
+    log.info(
       `✅ [HelpAI Integration] Enabled for workspace ${config.workspaceId}: ${registry.apiName}`
     );
     return integration;
@@ -116,7 +119,7 @@ export class HelpaiIntegrationService {
       .where(eq(helpaiIntegrations.id, integration.id))
       .returning();
 
-    console.log(
+    log.info(
       `✅ [HelpAI Integration] Updated for workspace ${config.workspaceId}`
     );
     return updated;
@@ -180,7 +183,7 @@ export class HelpaiIntegrationService {
       })
       .where(eq(helpaiIntegrations.id, integration.id));
 
-    console.log(
+    log.info(
       `✅ [HelpAI Integration] Disabled for workspace ${workspaceId}`
     );
   }
@@ -193,13 +196,8 @@ export class HelpaiIntegrationService {
     createdBy: string
   ): Promise<HelpaiCredential> {
     const encryptionKeyId = crypto.randomUUID();
-    const encryptionKey = crypto.randomBytes(KEY_LENGTH);
+    const encryptionKey = this.deriveKey(encryptionKeyId);
     const encrypted = this.encryptCredential(config.credentialValue, encryptionKey);
-
-    // Store the key separately in a secure manner (would be in a secrets vault in production)
-    // For now, we'll just use the keyId and store the key encrypted
-    const keyWithIV = Buffer.concat([encryptionKey, Buffer.from(encryptionKeyId)]);
-    const encryptedKey = keyWithIV.toString('base64');
 
     const [credential] = await db
       .insert(helpaiCredentials)
@@ -216,10 +214,22 @@ export class HelpaiIntegrationService {
       })
       .returning();
 
-    console.log(
-      `✅ [HelpAI Integration] Stored credential for integration ${config.integrationId}`
+    log.info(
+      `[HelpAI Integration] Stored credential for integration ${config.integrationId}`
     );
     return credential;
+  }
+
+  /**
+   * Derive encryption key from platform secret + keyId for deterministic key recovery
+   */
+  private deriveKey(keyId: string): Buffer {
+    const secret = process.env.SESSION_SECRET || process.env.REPL_ID;
+    if (!secret) {
+      log.error('[HelpAI] WARNING: Neither SESSION_SECRET nor REPL_ID is set — credential encryption key is undefined');
+      throw new Error('Cannot derive encryption key: SESSION_SECRET or REPL_ID required');
+    }
+    return crypto.scryptSync(secret, keyId, KEY_LENGTH);
   }
 
   /**
@@ -233,16 +243,12 @@ export class HelpaiIntegrationService {
       return null;
     }
 
-    // In production, this would retrieve the key from a secrets vault
-    // For now, we'd need the key stored somewhere secure
     try {
-      // This is a placeholder - actual implementation would retrieve key from secure storage
-      console.warn(
-        '⚠️ [HelpAI] Credential decryption requires key retrieval from secure storage'
-      );
-      return { value: cred.encryptedValue, credential: cred };
+      const encryptionKey = this.deriveKey(cred.encryptionKeyId || '');
+      const decrypted = this.decryptCredential(cred.encryptedValue, encryptionKey);
+      return { value: decrypted, credential: cred };
     } catch (error) {
-      console.error('Error retrieving credential:', error);
+      log.error(`[HelpAI] Credential decryption failed for integration ${integrationId}:`, error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -275,7 +281,7 @@ export class HelpaiIntegrationService {
       })
       .where(eq(helpaiCredentials.id, credentialId));
 
-    console.log(`✅ [HelpAI Integration] Revoked credential ${credentialId}`);
+    log.info(`✅ [HelpAI Integration] Revoked credential ${credentialId}`);
   }
 
   /**
@@ -295,6 +301,22 @@ export class HelpaiIntegrationService {
     return result;
   }
 
+  private decryptCredential(encryptedData: string, key: Buffer): string {
+    const ivHex = encryptedData.slice(0, IV_LENGTH * 2);
+    const authTagHex = encryptedData.slice(IV_LENGTH * 2, IV_LENGTH * 2 + AUTH_TAG_LENGTH * 2);
+    const encryptedHex = encryptedData.slice(IV_LENGTH * 2 + AUTH_TAG_LENGTH * 2);
+
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encryptedHex, 'hex', 'utf-8');
+    decrypted += decipher.final('utf-8');
+    return decrypted;
+  }
+
   /**
    * Update sync status for integration
    */
@@ -312,7 +334,7 @@ export class HelpaiIntegrationService {
       })
       .where(eq(helpaiIntegrations.id, integrationId));
 
-    console.log(
+    log.info(
       `✅ [HelpAI Integration] Sync status updated: ${status}${message ? ` - ${message}` : ''}`
     );
   }

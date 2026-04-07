@@ -2,13 +2,14 @@
  * Global hook that listens for chatroom notifications across all rooms
  * Shows toast notifications when user gets new messages or is added to chatrooms
  * 
- * SECURITY: Authenticates via join_conversation before subscribing to notifications.
- * This ensures the server validates the user's identity before allowing notification access.
+ * Uses the unified WebSocketProvider bus instead of creating its own connection.
  */
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { queryClient } from '@/lib/queryClient';
+import { useWebSocketBus } from '@/providers/WebSocketProvider';
 
 interface ChatroomNotification {
   type: 'new_chatroom_message' | 'user_added_to_chatroom' | 'chatroom_invitation' | 'notification_new' | 'notifications_subscribed' | 'error';
@@ -29,120 +30,46 @@ interface ChatroomNotification {
 export function useChatroomNotifications() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const wsRef = useRef<WebSocket | null>(null);
+  const bus = useWebSocketBus();
   const lastNotificationRef = useRef<Map<string, number>>(new Map());
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const authenticatedRef = useRef(false);
-  const MAX_RECONNECT_ATTEMPTS = 5;
+  const hasSentJoinRef = useRef(false);
   
-  // Toast ref to avoid dependency issues
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
   useEffect(() => {
-    if (!user?.id) return;
-    
-    // NOTE: Location check moved to ChatroomNotificationListener component level
-    // This hook should NOT be called on HelpDesk/Chat pages
+    if (!user?.id || !bus) return;
 
-    // Get workspace ID from user context
     const workspaceId = (user as any)?.currentWorkspaceId || (user as any)?.workspaceId || (user as any)?.defaultWorkspaceId;
-    if (!workspaceId) {
-      console.log('[ChatroomNotifications] No workspace ID available, skipping subscription');
-      return;
-    }
+    if (!workspaceId) return;
 
-    const connectNotificationWS = () => {
-      try {
-        authenticatedRef.current = false;
-        
-        // Clean up existing connection
-        if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
-          wsRef.current.close();
-        }
-
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const wsHost = window.location.host || 
-          (window.location.port 
-            ? `${window.location.hostname}:${window.location.port}` 
-            : window.location.hostname);
-        
-        // Connect to existing /ws/chat endpoint
-        const wsUrl = `${protocol}://${wsHost}/ws/chat`;
-        console.log('[ChatroomNotifications] Connecting to', wsUrl);
-        const ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => {
-          console.log('[ChatroomNotifications] WebSocket connected, subscribing to notifications...');
-          reconnectAttemptsRef.current = 0;
-          
-          // Server authenticates via HTTP session cookies at connection time
-          // Just send join_notifications - no need for join_conversation first
-          ws.send(JSON.stringify({
-            type: 'join_notifications',
-          }));
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data: ChatroomNotification = JSON.parse(event.data);
-            
-            // Handle subscription confirmation
-            if (data.type === 'notifications_subscribed') {
-              console.log('[ChatroomNotifications] Successfully subscribed to notifications');
-              authenticatedRef.current = true;
-              return;
-            }
-            
-            // Handle errors (e.g., authentication required)
-            if (data.type === 'error') {
-              console.warn('[ChatroomNotifications] Server error:', data.message);
-              authenticatedRef.current = false;
-              return;
-            }
-            
-            // Handle actual notifications
-            handleNotification(data);
-          } catch (e) {
-            console.error('[ChatroomNotifications] Failed to parse message:', e);
-          }
-        };
-
-        ws.onerror = (error) => {
-          console.error('[ChatroomNotifications] WebSocket error:', error);
-        };
-
-        ws.onclose = () => {
-          console.log('[ChatroomNotifications] WebSocket closed');
-          authenticatedRef.current = false;
-          
-          // Reconnect with exponential backoff
-          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-            reconnectAttemptsRef.current++;
-            console.log(`[ChatroomNotifications] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current})`);
-            reconnectTimeoutRef.current = setTimeout(connectNotificationWS, delay);
-          }
-        };
-
-        wsRef.current = ws;
-      } catch (e) {
-        console.error('[ChatroomNotifications] Failed to create WebSocket:', e);
+    const sendJoinNotifications = () => {
+      if (!hasSentJoinRef.current && bus.isConnected()) {
+        bus.send({ type: 'join_notifications' });
+        hasSentJoinRef.current = true;
       }
     };
 
+    sendJoinNotifications();
+
+    const unsubConnect = bus.subscribe('__ws_connected', () => {
+      hasSentJoinRef.current = false;
+      sendJoinNotifications();
+    });
+
     const handleNotification = (data: ChatroomNotification) => {
-      // Skip non-notification messages
       if (['conversation_joined', 'notifications_subscribed', 'error', 'conversation_history', 'online_users'].includes(data.type)) {
         return;
       }
+      
+      const roomInvalidatingEvents = ['new_chatroom_message', 'user_added_to_chatroom', 'chatroom_invitation'];
+      if (roomInvalidatingEvents.includes(data.type)) {
+        queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms'] });
+      }
 
-      // Handle platform notifications
       if (data.type === 'notification_new' && data.notification) {
         const notification = data.notification;
         
-        // Prevent duplicate toasts
         const key = `notification-${notification.id}`;
         const lastTime = lastNotificationRef.current.get(key);
         if (lastTime && Date.now() - lastTime < 2000) return;
@@ -153,24 +80,22 @@ export function useChatroomNotifications() {
           description: notification.message,
         });
 
-        // Navigate if action URL provided
         if (notification.actionUrl) {
           setTimeout(() => window.location.href = notification.actionUrl!, 1500);
         }
         return;
       }
 
-      // Handle chatroom-specific notifications
       if (data.type === 'new_chatroom_message' && data.chatroomId) {
         const key = `chatroom-msg-${data.chatroomId}`;
         const lastTime = lastNotificationRef.current.get(key);
         if (lastTime && Date.now() - lastTime < 2000) return;
         lastNotificationRef.current.set(key, Date.now());
 
-        // Only show if not currently viewing this chatroom
         const currentPath = window.location.pathname;
         if (currentPath.includes(`/chatrooms/${data.chatroomId}`) || 
             currentPath.includes(`/chat/${data.chatroomId}`) ||
+            currentPath.includes('/chatrooms') ||
             currentPath.includes('/chat')) {
           return;
         }
@@ -194,15 +119,17 @@ export function useChatroomNotifications() {
       }
     };
 
-    connectNotificationWS();
+    const unsubs = [
+      unsubConnect,
+      bus.subscribe('new_chatroom_message', (data: any) => handleNotification(data)),
+      bus.subscribe('user_added_to_chatroom', (data: any) => handleNotification(data)),
+      bus.subscribe('chatroom_invitation', (data: any) => handleNotification(data)),
+      bus.subscribe('notification_new', (data: any) => handleNotification(data)),
+    ];
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      unsubs.forEach(unsub => unsub());
+      hasSentJoinRef.current = false;
     };
-  }, [user?.id]);
+  }, [user?.id, bus]);
 }

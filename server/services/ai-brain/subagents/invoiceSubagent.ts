@@ -16,12 +16,17 @@ import {
   invoiceLineItems,
   timeEntries,
   clients,
-  invoicePayments,
   idempotencyKeys
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, isNull, inArray } from 'drizzle-orm';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
+import { creditManager, CREDIT_COSTS } from '../../billing/creditManager';
+import { platformEventBus } from '../../platformEventBus';
+import { broadcastToWorkspace } from '../../../websocket';
+import { trinityActionReasoner } from '../trinityActionReasoner';
 import crypto from 'crypto';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('invoiceSubagent');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -109,7 +114,7 @@ class PaymentGatewayCircuitBreaker {
     if (this.state.state === 'open') {
       if (this.state.nextRetry && new Date() >= this.state.nextRetry) {
         this.state.state = 'half-open';
-        console.log('[InvoiceSubagent] Payment gateway circuit entering half-open state');
+        log.info('[InvoiceSubagent] Payment gateway circuit entering half-open state');
         return false;
       }
       return true;
@@ -130,7 +135,7 @@ class PaymentGatewayCircuitBreaker {
     if (this.state.failures >= this.failureThreshold) {
       this.state.state = 'open';
       this.state.nextRetry = new Date(Date.now() + this.recoveryTimeMs);
-      console.log(`[InvoiceSubagent] Payment gateway circuit opened: ${error.message}`);
+      log.info(`[InvoiceSubagent] Payment gateway circuit opened: ${error.message}`);
     }
   }
 
@@ -177,7 +182,7 @@ class InvoiceSubagentService {
     // Check for existing invoice
     const existing = await this.checkIdempotency(idempotencyKey);
     if (existing) {
-      console.log(`[InvoiceSubagent] Returning cached invoice for idempotency key: ${idempotencyKey}`);
+      log.info(`[InvoiceSubagent] Returning cached invoice for idempotency key: ${idempotencyKey}`);
       return existing;
     }
 
@@ -213,7 +218,7 @@ class InvoiceSubagentService {
           success: true,
           traceId,
           clientId,
-          clientName: clientData.name || 'Unknown',
+          clientName: clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || 'Unknown',
           totalAmount: 0,
           totalHours: 0,
           lineItemCount: 0,
@@ -228,8 +233,8 @@ class InvoiceSubagentService {
         };
       }
 
-      // Calculate totals
-      let totalAmount = 0;
+      // Calculate totals using integer-cent arithmetic to prevent floating-point drift
+      let totalAmountCents = 0; // accumulate in integer cents
       let totalHours = 0;
       const lineItems: Array<{
         description: string;
@@ -242,10 +247,12 @@ class InvoiceSubagentService {
       for (const entry of billableEntries) {
         const hours = parseFloat(entry.totalHours?.toString() || '0');
         const rate = parseFloat(entry.hourlyRate?.toString() || clientData.defaultHourlyRate?.toString() || '100');
-        const amount = hours * rate;
+        // Integer-cent arithmetic: hundredths_of_hour × cents_per_hour ÷ 100 = cents
+        const amountCents = Math.round(Math.round(hours * 100) * Math.round(rate * 100) / 100);
+        const amount = amountCents / 100;
 
         totalHours += hours;
-        totalAmount += amount;
+        totalAmountCents += amountCents;
 
         lineItems.push({
           description: `Services - ${new Date(entry.clockIn).toLocaleDateString()}`,
@@ -266,49 +273,131 @@ class InvoiceSubagentService {
         }
       }
 
+      // Convert accumulated cents back to dollars (integer-cent math ensures no float drift)
+      const totalAmount = totalAmountCents / 100;
+
+      // === TRINITY DECISION-GATED REASONING (T006) ===
+      // Trinity evaluates the invoice batch AFTER totals are calculated but
+      // BEFORE the invoice is committed to the database. Trinity can block
+      // generation if data looks inconsistent (zero rates, missing hours, etc.)
+      try {
+        const zeroRateCount = lineItems.filter(li => li.rate === 0).length;
+        const zeroHourCount = lineItems.filter(li => li.quantity === 0).length;
+        const rateVarianceCount = issues.filter(i => i.type === 'rate').length;
+
+        const invoiceReasoning = await trinityActionReasoner.reason({
+          domain: 'invoice_generate',
+          workspaceId,
+          actionSummary: `Generate invoice for client ${clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || clientId}: ${billableEntries.length} entries, $${totalAmount.toFixed(2)} total, ${totalHours.toFixed(1)}h`,
+          payload: {
+            amount: totalAmount,
+            totalHours: totalHours,
+            lineItems: lineItems.length,
+            zeroRateEntries: zeroRateCount,
+            zeroHourEntries: zeroHourCount,
+            rateVariances: rateVarianceCount,
+            contractRate: clientData.defaultHourlyRate,
+            periodStart: billingPeriodStart.toISOString(),
+            periodEnd: billingPeriodEnd.toISOString(),
+          },
+          riskSignals: [
+            ...(zeroRateCount > 0 ? [`${zeroRateCount} line items with $0 billing rate`] : []),
+            ...(zeroHourCount > 0 ? [`${zeroHourCount} entries with 0 hours billed`] : []),
+            ...(rateVarianceCount > 0 ? [`${rateVarianceCount} rate variance(s) from contract rate`] : []),
+            ...(totalAmount === 0 ? ['Total invoice amount is $0'] : []),
+          ],
+        });
+
+        log.info(`[InvoiceSubagent] Trinity pre-generation: ${invoiceReasoning.decision.toUpperCase()} (confidence: ${(invoiceReasoning.confidence * 100).toFixed(0)}%) — client ${clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || clientId}`);
+
+        if (invoiceReasoning.decision === 'block') {
+          this.logAudit(traceId, 'invoice.generate', 'failed', {
+            blockedBy: 'trinity',
+            reason: invoiceReasoning.blockReason,
+            totalAmount,
+            lineItemCount: lineItems.length,
+          });
+          return {
+            success: false,
+            traceId,
+            clientId,
+            clientName: clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || 'Unknown',
+            totalAmount: 0,
+            totalHours: 0,
+            lineItemCount: 0,
+            processingTimeMs: Date.now() - startTime,
+            idempotencyKey,
+            issues: [{
+              severity: 'critical',
+              type: 'validation',
+              description: `Trinity blocked invoice generation: ${invoiceReasoning.blockReason || invoiceReasoning.reasoning}`,
+              resolution: invoiceReasoning.recommendations.join('; ') || 'Review billing data before re-generating',
+            }],
+            auditLog: this.getAuditLog(traceId),
+          };
+        }
+
+        // Add Trinity's revenue recommendations as info-level issues
+        for (const rec of invoiceReasoning.recommendations.slice(0, 3)) {
+          issues.push({ severity: 'info', type: 'unbilled', description: `Trinity: ${rec}` });
+        }
+      } catch (reasonErr) {
+        log.warn(`[InvoiceSubagent] Trinity pre-generation reasoning failed (non-blocking):`, reasonErr instanceof Error ? reasonErr.message : 'unknown');
+      }
+      // === END DECISION-GATED REASONING ===
+
       // Generate invoice number
       const invoiceNumber = await this.generateInvoiceNumber(workspaceId);
 
-      // Create invoice
+      // Create invoice — all three writes (invoice header, line items, time entry stamps)
+      // are wrapped in a single transaction. If any step fails, all roll back atomically,
+      // preventing orphaned invoice headers or double-billable time entries.
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + (options.dueInDays || 30));
 
-      const [newInvoice] = await db.insert(invoices).values({
+      const { newInvoice } = await db.transaction(async (tx) => {
+        const [inv] = await tx.insert(invoices).values({
+          workspaceId,
+          clientId,
+          invoiceNumber,
+          subtotal: totalAmount.toFixed(2),
+          total: totalAmount.toFixed(2),
+          status: 'draft',
+          issueDate: new Date(),
+          dueDate,
+          notes: `Generated by Trinity AI Automation | ${invoiceNumber} | Trace: ${traceId}`,
+        }).returning();
+
+        for (const item of lineItems) {
+          await tx.insert(invoiceLineItems).values({
+            workspaceId,
+            invoiceId: inv.id,
+            description: item.description,
+            quantity: item.quantity.toString(),
+            rate: item.rate.toFixed(2),
+            amount: item.amount.toFixed(2),
+            timeEntryId: item.timeEntryId,
+          });
+
+          // Atomic billedAt stamp — prevents double-billing if process restarts mid-loop
+          await tx.update(timeEntries)
+            .set({ invoiceId: inv.id, billedAt: new Date(), updatedAt: new Date() })
+            .where(eq(timeEntries.id, item.timeEntryId));
+        }
+
+        return { newInvoice: inv };
+      });
+
+      broadcastToWorkspace(workspaceId, { type: 'invoices_updated', action: 'invoice_created', invoiceId: newInvoice.id });
+      platformEventBus.publish({
+        type: 'invoice_created',
+        category: 'billing',
+        title: 'Invoice Created by Trinity',
+        description: `Trinity AI generated invoice ${invoiceNumber} — $${totalAmount.toFixed(2)} for ${clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || 'client'} — status: draft`,
         workspaceId,
-        clientId,
-        invoiceNumber,
-        amount: totalAmount.toFixed(2),
-        totalHours: totalHours.toFixed(2),
-        status: 'draft',
-        issueDate: new Date(),
-        dueDate,
-        metadata: {
-          traceId,
-          idempotencyKey,
-          generatedAt: new Date().toISOString(),
-          billingPeriod: {
-            start: billingPeriodStart.toISOString(),
-            end: billingPeriodEnd.toISOString(),
-          },
-        },
-      }).returning();
-
-      // Create line items
-      for (const item of lineItems) {
-        await db.insert(invoiceLineItems).values({
-          invoiceId: newInvoice.id,
-          description: item.description,
-          quantity: item.quantity.toString(),
-          rate: item.rate.toFixed(2),
-          amount: item.amount.toFixed(2),
-          timeEntryId: item.timeEntryId,
-        });
-
-        // Mark time entry as invoiced
-        await db.update(timeEntries)
-          .set({ invoiceId: newInvoice.id })
-          .where(eq(timeEntries.id, item.timeEntryId));
-      }
+        metadata: { invoiceId: newInvoice.id, invoiceNumber, totalAmount, clientId, source: 'invoice_subagent', traceId },
+        visibility: 'manager',
+      }).catch((err) => log.warn('[invoiceSubagent] Fire-and-forget failed:', err));
 
       this.logAudit(traceId, 'invoice.generate', 'completed', {
         invoiceId: newInvoice.id,
@@ -323,7 +412,7 @@ class InvoiceSubagentService {
         invoiceId: newInvoice.id,
         invoiceNumber,
         clientId,
-        clientName: clientData.name || 'Unknown',
+        clientName: clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || 'Unknown',
         totalAmount,
         totalHours,
         lineItemCount: lineItems.length,
@@ -339,7 +428,7 @@ class InvoiceSubagentService {
       return result;
 
     } catch (error: any) {
-      this.logAudit(traceId, 'invoice.generate', 'failed', { error: error.message });
+      this.logAudit(traceId, 'invoice.generate', 'failed', { error: (error instanceof Error ? error.message : String(error)) });
 
       return {
         success: false,
@@ -377,6 +466,27 @@ class InvoiceSubagentService {
     const traceId = `batch-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
     this.logAudit(traceId, 'invoice.batch_generate', 'started', { workspaceId });
 
+    const sessionFee = CREDIT_COSTS['invoicing_session_fee'] || 25;
+    try {
+      await creditManager.deductCredits({
+        workspaceId,
+        userId: 'invoice-subagent',
+        featureKey: 'invoicing_session_fee',
+        featureName: 'Invoicing Processing Fee',
+        description: `Invoice batch ${traceId.substring(0, 16)} — processing fee (line item calculation, gap analysis, formatting)`,
+      });
+      log.info(`[InvoiceSubagent] Session fee charged: ${sessionFee} credits for workspace ${workspaceId}`);
+    } catch (feeErr: any) {
+      log.error(`[InvoiceSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr.message);
+      this.logAudit(traceId, 'invoice.batch_generate', 'billing_failed', { error: feeErr.message });
+      return {
+        totalGenerated: 0,
+        totalRevenue: 0,
+        results: [],
+        failedClients: [`billing: ${feeErr.message}`],
+      };
+    }
+
     // Get all clients with unbilled work
     const clientsWithWork = await db.selectDistinct({ clientId: timeEntries.clientId })
       .from(timeEntries)
@@ -407,11 +517,29 @@ class InvoiceSubagentService {
         results.push(result);
         if (result.success) {
           totalRevenue += result.totalAmount;
+
+          // PER-INVOICE OCCURRENCE FEE — fires once per invoice actually generated.
+          // This is the primary value-based charge: each AI-generated invoice represents
+          // AR admin labor replaced ($15-40/invoice manually) → 50 cr = $0.50/invoice.
+          // Non-blocking: invoice is already created; billing failure is logged, not fatal.
+          try {
+            const perInvoiceFee = CREDIT_COSTS['ai_invoice_generation'] || 50;
+            await creditManager.deductCredits({
+              workspaceId,
+              featureKey: 'ai_invoice_generation',
+              featureName: 'Per-Invoice AI Generation',
+              description: `Invoice ${result.invoiceId || 'unknown'} — per-occurrence fee (${perInvoiceFee}cr) for client ${clientId.substring(0, 12)}`,
+              quantity: 1,
+            });
+            log.info(`[InvoiceSubagent] Per-invoice fee charged: ${perInvoiceFee}cr for invoice ${result.invoiceId}`);
+          } catch (invoiceErr: any) {
+            log.warn(`[InvoiceSubagent] Per-invoice billing error (non-blocking):`, invoiceErr.message);
+          }
         } else {
           failedClients.push(clientId);
         }
       } catch (error: any) {
-        console.error(`[InvoiceSubagent] Failed to generate invoice for client ${clientId}:`, error.message);
+        log.error(`[InvoiceSubagent] Failed to generate invoice for client ${clientId}:`, (error instanceof Error ? error.message : String(error)));
         failedClients.push(clientId);
       }
     }
@@ -458,7 +586,7 @@ class InvoiceSubagentService {
     for (const invoice of outstandingInvoices) {
       const invoicePayments = allPayments.filter(p => p.invoiceId === invoice.id);
       const paidAmount = invoicePayments.reduce((sum, p) => sum + parseFloat(p.amount?.toString() || '0'), 0);
-      const invoiceAmount = parseFloat(invoice.amount?.toString() || '0');
+      const invoiceAmount = parseFloat(invoice.total?.toString() || '0');
       const difference = invoiceAmount - paidAmount;
 
       if (Math.abs(difference) > 0.01) {
@@ -549,7 +677,7 @@ class InvoiceSubagentService {
       ? await db.select().from(clients).where(inArray(clients.id, clientIds as string[]))
       : [];
     
-    const clientMap = new Map(clientData.map(c => [c.id, c.name]));
+    const clientMap = new Map(clientData.map(c => [c.id, c.companyName || [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown']));
 
     // Aggregate by client
     const clientGapsMap = new Map<string, {
@@ -641,6 +769,7 @@ class InvoiceSubagentService {
   private async storeIdempotencyResult(key: string, result: any): Promise<void> {
     try {
       await db.insert(idempotencyKeys).values({
+        workspaceId: 'system',
         key,
         result,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
@@ -649,7 +778,7 @@ class InvoiceSubagentService {
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {
-      console.error('[InvoiceSubagent] Failed to store idempotency result:', error);
+      log.error('[InvoiceSubagent] Failed to store idempotency result:', error);
     }
   }
 
@@ -678,21 +807,8 @@ class InvoiceSubagentService {
   }
 
   private async generateInvoiceNumber(workspaceId: string): Promise<string> {
-    const [latest] = await db.select({ invoiceNumber: invoices.invoiceNumber })
-      .from(invoices)
-      .where(eq(invoices.workspaceId, workspaceId))
-      .orderBy(desc(invoices.createdAt))
-      .limit(1);
-
-    let nextNum = 1001;
-    if (latest?.invoiceNumber) {
-      const match = latest.invoiceNumber.match(/\d+$/);
-      if (match) {
-        nextNum = parseInt(match[0]) + 1;
-      }
-    }
-
-    return `INV-${nextNum.toString().padStart(6, '0')}`;
+    const { generateTrinityInvoiceNumber } = await import('../../trinityInvoiceNumbering');
+    return generateTrinityInvoiceNumber(workspaceId, 'client');
   }
 
   private async generateReconciliationRecommendations(
@@ -771,7 +887,7 @@ Provide 2-3 sentences of executive-level recommendations to recover this revenue
       this.auditLog = this.auditLog.slice(-1000);
     }
 
-    console.log(`[InvoiceSubagent] ${action} ${status}:`, details);
+    log.info(`[InvoiceSubagent] ${action} ${status}:`, details);
   }
 
   getAuditLog(traceId?: string): AuditEntry[] {

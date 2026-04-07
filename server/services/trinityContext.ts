@@ -19,14 +19,24 @@ import {
   billingAddons,
   subscriptions,
   invoices,
-  aiWorkboardTasks,
   notifications,
   supportTickets,
   aiSuggestions,
+  shifts,
+  employeeDocuments,
+  timeEntries,
+  aiWorkboardTasks,
 } from '@shared/schema';
-import { eq, and, count, gte, lte, sql, desc } from 'drizzle-orm';
+import { payrollRuns } from '@shared/schema/domains/payroll';
+import { eq, and, count, gte, lte, sql, desc, isNull, lt, ne } from 'drizzle-orm';
 import { getUserPlatformRole, type PlatformRole, type WorkspaceRole } from '../rbac';
 import { subagentConfidenceMonitor } from './ai-brain/subagentConfidenceMonitor';
+import { platformHealthMonitor } from './ai-brain/platformHealthMonitor';
+import { geminiClient } from './ai-brain/providers/geminiClient';
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+const log = createLogger('trinityContext');
+
 
 // Platform diagnostics cache with 5-minute TTL
 let diagnosticsCache: { data: PlatformDiagnostics; timestamp: number } | null = null;
@@ -35,6 +45,14 @@ const DIAGNOSTICS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // Org intelligence cache with 2-minute TTL (per workspace)
 const orgIntelligenceCache = new Map<string, { data: OrgIntelligence; timestamp: number }>();
 const ORG_INTEL_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+// Trinity context resolution cache with 30-second TTL (per user+workspace)
+const trinityContextCache = new Map<string, { data: TrinityContext; timestamp: number }>();
+const TRINITY_CONTEXT_CACHE_TTL = 30_000; // 30 seconds
+
+// AI thought cache with 60-second TTL (per user+workspace) - avoids expensive Gemini calls
+const thoughtCache = new Map<string, { data: string | null; timestamp: number }>();
+const THOUGHT_CACHE_TTL = 60_000; // 60 seconds
 
 export interface OrgIntelligence {
   automationReadiness: {
@@ -59,6 +77,22 @@ export interface OrgIntelligence {
     invoicesPendingCount: number;
     invoicesOverdueCount: number;
     recentActivityScore: number;
+  } | null;
+  operationalIntelligence: {
+    openShiftsCount: number;
+    expiringCertsCount: number;
+    clockedInNow: number;
+    overdueTimesheets: number;
+    todayCoverageTotal: number;
+    todayCoverageFilled: number;
+  } | null;
+  payrollIntelligence: {
+    pendingRunsCount: number;
+    latestRunStatus: string | null;
+    latestRunPeriodStart: Date | null;
+    latestRunPeriodEnd: Date | null;
+    latestRunGrossPay: string | null;
+    draftRunsCount: number;
   } | null;
   priorityInsights: string[];
 }
@@ -94,11 +128,10 @@ export interface TrinityContext {
   isOrgOwner: boolean;
   isManager: boolean;
   
-  subscriptionTier: 'free' | 'starter' | 'professional' | 'enterprise';
+  subscriptionTier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   subscriptionStatus: 'trial' | 'active' | 'past_due' | 'cancelled' | 'suspended';
   
   hasTrinityPro: boolean;
-  hasBusinessBuddy: boolean;
   activeAddons: string[];
   
   orgStats?: {
@@ -113,15 +146,20 @@ export interface TrinityContext {
   trinityAccessReason: 'platform_staff' | 'org_owner' | 'addon_subscriber' | 'trial' | 'none';
   trinityAccessLevel: 'full' | 'basic' | 'none';
   
-  // Explicit Trinity operational mode
-  trinityMode: 'demo' | 'business_pro' | 'guru';
+  /**
+   * Trinity operational mode:
+   * - 'coo'    — COO mode for org owners/managers at security companies (full business intelligence)
+   * - 'guru'   — Tech Guru mode for platform support agents (platform diagnostics + health)
+   * - 'standard' — Standard mode for other authenticated users
+   */
+  trinityMode: 'coo' | 'guru' | 'standard';
   
   greeting: string;
-  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'platform_guru' | 'standard';
+  persona: 'executive_advisor' | 'support_partner' | 'coo_advisor' | 'onboarding_guide' | 'platform_guru' | 'standard';
 }
 
 const PLATFORM_STAFF_ROLES: PlatformRole[] = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
-const MANAGER_ROLES: WorkspaceRole[] = ['org_owner', 'org_admin', 'department_manager', 'supervisor'];
+const MANAGER_ROLES: WorkspaceRole[] = ['org_owner', 'co_owner', 'department_manager', 'supervisor'];
 
 async function gatherOrgIntelligence(workspaceId: string, userId: string): Promise<OrgIntelligence> {
   // Check cache first
@@ -137,10 +175,17 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
   let workboardStats: OrgIntelligence['workboardStats'] = null;
   let notificationSummary: OrgIntelligence['notificationSummary'] = null;
   let businessMetrics: OrgIntelligence['businessMetrics'] = null;
+  let operationalIntelligence: OrgIntelligence['operationalIntelligence'] = null;
+  let payrollIntelligence: OrgIntelligence['payrollIntelligence'] = null;
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
+  const sevenDaysFromNow = new Date(today.getTime() + 7 * 86400000);
+  const thirtyDaysFromNow = new Date(today.getTime() + 30 * 86400000);
+  const sevenDaysAgo = new Date(today.getTime() - 7 * 86400000);
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 3600000);
+
   try {
     // Run ALL queries in parallel for maximum speed
     const [
@@ -152,7 +197,16 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
       urgentResult,
       categoryBreakdown,
       sentInvoicesResult,
-      overdueInvoicesResult
+      overdueInvoicesResult,
+      openShiftsResult,
+      expiringCertsResult,
+      clockedInNowResult,
+      overdueTimesheetsResult,
+      pendingPayrollRunsResult,
+      draftPayrollRunsResult,
+      latestPayrollRunResult,
+      todayTotalShiftsResult,
+      todayFilledShiftsResult,
     ] = await Promise.all([
       // Automation readiness (may have internal caching)
       subagentConfidenceMonitor.getTrinityMonitoringSummary(workspaceId).catch(() => null),
@@ -167,14 +221,85 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
       db.select({ count: count() }).from(notifications)
         .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false))),
       db.select({ count: count() }).from(notifications)
-        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false), sql`${notifications.priority} IN ('urgent', 'high')`)),
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false), eq(notifications.category, 'alerts'))),
       db.select({ type: notifications.type, count: count() }).from(notifications)
         .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false))).groupBy(notifications.type),
       // Business metrics
       db.select({ count: count() }).from(invoices)
         .where(and(eq(invoices.workspaceId, workspaceId), sql`${invoices.status} = 'sent'`)),
       db.select({ count: count() }).from(invoices)
-        .where(and(eq(invoices.workspaceId, workspaceId), sql`${invoices.status} = 'overdue'`))
+        .where(and(eq(invoices.workspaceId, workspaceId), sql`${invoices.status} = 'overdue'`)),
+      // Operational intelligence — open shifts next 7 days
+      db.select({ count: count() }).from(shifts)
+        .where(and(
+          eq(shifts.workspaceId, workspaceId),
+          isNull(shifts.employeeId),
+          gte(shifts.startTime, today),
+          lte(shifts.startTime, sevenDaysFromNow),
+          ne(shifts.status, 'cancelled'),
+        )).catch(() => [{ count: 0 }]),
+      // Expiring certifications/licenses in next 30 days
+      db.select({ count: count() }).from(employeeDocuments)
+        .where(and(
+          eq(employeeDocuments.workspaceId, workspaceId),
+          gte(employeeDocuments.expirationDate, today),
+          lte(employeeDocuments.expirationDate, thirtyDaysFromNow),
+          sql`${employeeDocuments.status} = 'approved'`,
+        )).catch(() => [{ count: 0 }]),
+      // Currently clocked in (no clock-out in last 24h)
+      db.select({ count: count() }).from(timeEntries)
+        .where(and(
+          eq(timeEntries.workspaceId, workspaceId),
+          isNull(timeEntries.clockOut),
+          gte(timeEntries.clockIn, twentyFourHoursAgo),
+        )).catch(() => [{ count: 0 }]),
+      // Overdue timesheets — pending approval older than 7 days
+      db.select({ count: count() }).from(timeEntries)
+        .where(and(
+          eq(timeEntries.workspaceId, workspaceId),
+          sql`${timeEntries.status} = 'pending'`,
+          lt(timeEntries.clockIn, sevenDaysAgo),
+        )).catch(() => [{ count: 0 }]),
+      // Payroll: runs pending approval (submitted/review status)
+      db.select({ count: count() }).from(payrollRuns)
+        .where(and(
+          eq(payrollRuns.workspaceId, workspaceId),
+          sql`${payrollRuns.status} IN ('pending', 'approved')`,
+        )).catch(() => [{ count: 0 }]),
+      // Payroll: draft runs (not yet submitted)
+      db.select({ count: count() }).from(payrollRuns)
+        .where(and(
+          eq(payrollRuns.workspaceId, workspaceId),
+          sql`${payrollRuns.status} = 'draft'`,
+        )).catch(() => [{ count: 0 }]),
+      // Payroll: latest run (for status/period context)
+      db.select({
+        status: payrollRuns.status,
+        periodStart: payrollRuns.periodStart,
+        periodEnd: payrollRuns.periodEnd,
+        totalGrossPay: payrollRuns.totalGrossPay,
+      }).from(payrollRuns)
+        .where(eq(payrollRuns.workspaceId, workspaceId))
+        .orderBy(desc(payrollRuns.periodEnd))
+        .limit(1)
+        .catch(() => []),
+      // Today's schedule coverage — total shifts today
+      db.select({ count: count() }).from(shifts)
+        .where(and(
+          eq(shifts.workspaceId, workspaceId),
+          gte(shifts.startTime, today),
+          lt(shifts.startTime, new Date(today.getTime() + 86400000)),
+          ne(shifts.status, 'cancelled'),
+        )).catch(() => [{ count: 0 }]),
+      // Today's filled shifts (assigned employee)
+      db.select({ count: count() }).from(shifts)
+        .where(and(
+          eq(shifts.workspaceId, workspaceId),
+          gte(shifts.startTime, today),
+          lt(shifts.startTime, new Date(today.getTime() + 86400000)),
+          ne(shifts.status, 'cancelled'),
+          sql`${shifts.employeeId} IS NOT NULL`,
+        )).catch(() => [{ count: 0 }]),
     ]);
     
     // Process automation readiness
@@ -222,8 +347,47 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
     };
     if (businessMetrics.invoicesOverdueCount > 0) priorityInsights.unshift(`${businessMetrics.invoicesOverdueCount} overdue invoice(s) need attention`);
     if (businessMetrics.invoicesPendingCount > 3) priorityInsights.push(`${businessMetrics.invoicesPendingCount} pending invoices to process`);
+
+    // Process operational intelligence
+    const openShifts = openShiftsResult[0]?.count || 0;
+    const expiringCerts = expiringCertsResult[0]?.count || 0;
+    const clockedIn = clockedInNowResult[0]?.count || 0;
+    const overdueTs = overdueTimesheetsResult[0]?.count || 0;
+    const todayCoverageTotal = todayTotalShiftsResult[0]?.count || 0;
+    const todayCoverageFilled = todayFilledShiftsResult[0]?.count || 0;
+    operationalIntelligence = {
+      openShiftsCount: openShifts,
+      expiringCertsCount: expiringCerts,
+      clockedInNow: clockedIn,
+      overdueTimesheets: overdueTs,
+      todayCoverageTotal,
+      todayCoverageFilled,
+    };
+    if (openShifts > 0) priorityInsights.unshift(`${openShifts} open shift${openShifts !== 1 ? 's' : ''} need coverage in the next 7 days`);
+    if (expiringCerts > 0) priorityInsights.push(`${expiringCerts} certification${expiringCerts !== 1 ? 's' : ''} expiring within 30 days`);
+    if (overdueTs > 0) priorityInsights.push(`${overdueTs} timesheet${overdueTs !== 1 ? 's' : ''} pending approval for over 7 days`);
+    if (todayCoverageTotal > 0) {
+      const uncovered = todayCoverageTotal - todayCoverageFilled;
+      if (uncovered > 0) priorityInsights.unshift(`${uncovered} of ${todayCoverageTotal} shift${todayCoverageTotal !== 1 ? 's' : ''} today are uncovered`);
+    }
+
+    // Process payroll intelligence
+    const pendingPayroll = pendingPayrollRunsResult[0]?.count || 0;
+    const draftPayroll = draftPayrollRunsResult[0]?.count || 0;
+    const latestRun = latestPayrollRunResult[0] || null;
+    payrollIntelligence = {
+      pendingRunsCount: pendingPayroll,
+      draftRunsCount: draftPayroll,
+      latestRunStatus: latestRun?.status || null,
+      latestRunPeriodStart: latestRun?.periodStart || null,
+      latestRunPeriodEnd: latestRun?.periodEnd || null,
+      latestRunGrossPay: latestRun?.totalGrossPay || null,
+    };
+    if (pendingPayroll > 0) priorityInsights.unshift(`${pendingPayroll} payroll run${pendingPayroll !== 1 ? 's' : ''} pending approval`);
+    if (draftPayroll > 0) priorityInsights.push(`${draftPayroll} draft payroll run${draftPayroll !== 1 ? 's' : ''} not yet submitted`);
     
-  } catch {
+  } catch (err) {
+    log.error('[TrinityContext] gatherOrgIntelligence error:', err);
   }
   
   const result: OrgIntelligence = {
@@ -231,7 +395,9 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
     workboardStats,
     notificationSummary,
     businessMetrics,
-    priorityInsights: priorityInsights.slice(0, 5),
+    operationalIntelligence,
+    payrollIntelligence,
+    priorityInsights: priorityInsights.slice(0, 6),
   };
   
   // Cache the result
@@ -247,23 +413,28 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
 }
 
 export async function resolveTrinityContext(userId: string, workspaceId?: string): Promise<TrinityContext> {
-  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  const cacheKey = `${userId}:${workspaceId || 'default'}`;
+  const cached = trinityContextCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < TRINITY_CONTEXT_CACHE_TTL) {
+    return cached.data;
+  }
+
+  const [userResult, platformRole, ownedWorkspaceResult] = await Promise.all([
+    db.select().from(users).where(eq(users.id, userId)),
+    getUserPlatformRole(userId),
+    db.select().from(workspaces).where(eq(workspaces.ownerId, userId)).limit(1),
+  ]);
   
+  const [user] = userResult;
   if (!user) {
     return getAnonymousContext();
   }
   
-  const platformRole = await getUserPlatformRole(userId);
   const isPlatformStaff = PLATFORM_STAFF_ROLES.includes(platformRole);
   const isRootAdmin = platformRole === 'root_admin';
   const isSupportRole = ['support_manager', 'support_agent', 'sysop'].includes(platformRole);
   
-  const [ownedWorkspace] = await db
-    .select()
-    .from(workspaces)
-    .where(eq(workspaces.ownerId, userId))
-    .limit(1);
-  
+  const [ownedWorkspace] = ownedWorkspaceResult;
   const isOrgOwner = !!ownedWorkspace;
   const effectiveWorkspaceId = workspaceId || ownedWorkspace?.id;
   
@@ -272,54 +443,48 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
   let subscriptionTier: TrinityContext['subscriptionTier'] = 'free';
   let subscriptionStatus: TrinityContext['subscriptionStatus'] = 'active';
   let hasTrinityPro = false;
-  let hasBusinessBuddy = false;
   let activeAddons: string[] = [];
   let orgStats: TrinityContext['orgStats'] | undefined;
   
   if (effectiveWorkspaceId) {
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, effectiveWorkspaceId));
+    const [wsResult, employee, subscriptionResult, addons, employeeCountResult] = await Promise.all([
+      db.select().from(workspaces).where(eq(workspaces.id, effectiveWorkspaceId)),
+      db.query.employees.findFirst({
+        where: and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, effectiveWorkspaceId)
+        ),
+      }),
+      db.select().from(subscriptions).where(eq(subscriptions.workspaceId, effectiveWorkspaceId)),
+      db.select({
+        addonKey: billingAddons.addonKey,
+        addonName: billingAddons.name,
+        status: workspaceAddons.status,
+      })
+        .from(workspaceAddons)
+        .innerJoin(billingAddons, eq(workspaceAddons.addonId, billingAddons.id))
+        .where(and(
+          eq(workspaceAddons.workspaceId, effectiveWorkspaceId),
+          eq(workspaceAddons.status, 'active')
+        )),
+      db.select({ count: count() }).from(employees).where(eq(employees.workspaceId, effectiveWorkspaceId)),
+    ]);
+    
+    const [ws] = wsResult;
     workspaceName = ws?.name;
     
-    const employee = await db.query.employees.findFirst({
-      where: and(
-        eq(employees.userId, userId),
-        eq(employees.workspaceId, effectiveWorkspaceId)
-      ),
-    });
     workspaceRole = (employee?.workspaceRole || (isOrgOwner ? 'org_owner' : undefined)) as WorkspaceRole | undefined;
     
-    const [subscription] = await db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.workspaceId, effectiveWorkspaceId));
-    
+    const [subscription] = subscriptionResult;
     if (subscription) {
       subscriptionTier = subscription.plan as TrinityContext['subscriptionTier'];
       subscriptionStatus = subscription.status as TrinityContext['subscriptionStatus'];
     }
     
-    const addons = await db
-      .select({
-        addonKey: billingAddons.addonKey,
-        addonName: billingAddons.name,
-        status: workspaceAddons.status,
-      })
-      .from(workspaceAddons)
-      .innerJoin(billingAddons, eq(workspaceAddons.addonId, billingAddons.id))
-      .where(and(
-        eq(workspaceAddons.workspaceId, effectiveWorkspaceId),
-        eq(workspaceAddons.status, 'active')
-      ));
-    
     activeAddons = addons.map(a => a.addonKey);
     hasTrinityPro = activeAddons.includes('trinity_pro');
-    hasBusinessBuddy = activeAddons.includes('business_buddy') || activeAddons.includes('trinity_pro');
     
-    const [employeeCount] = await db
-      .select({ count: count() })
-      .from(employees)
-      .where(eq(employees.workspaceId, effectiveWorkspaceId));
-    
+    const [employeeCount] = employeeCountResult;
     const empCount = employeeCount?.count || 0;
     const isNewOrg = empCount < 5;
     
@@ -350,62 +515,63 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
   const isManager = workspaceRole ? MANAGER_ROLES.includes(workspaceRole) : false;
   
   let persona: TrinityContext['persona'] = 'standard';
-  let trinityMode: TrinityContext['trinityMode'] = 'demo';
+  let trinityMode: TrinityContext['trinityMode'] = 'standard';
   let greeting = `Hello${user.firstName ? `, ${user.firstName}` : ''}!`;
   
-  // GURU MODE - Platform staff get advanced diagnostics and proactive monitoring
+  // TECH GURU MODE - Platform support agents get advanced diagnostics and proactive monitoring
   if (isRootAdmin) {
     persona = 'platform_guru';
     trinityMode = 'guru';
-    greeting = `Welcome back, ${user.firstName || 'Root Administrator'}! Trinity Guru mode active. Platform diagnostics, engagement opportunities, and notification workflows at your command.`;
+    greeting = `Welcome back, ${user.firstName || 'Root Administrator'}! Trinity Tech Guru mode active. Platform diagnostics, engagement opportunities, and notification workflows at your command.`;
   } else if (isSupportRole) {
     persona = 'platform_guru';
     trinityMode = 'guru';
-    greeting = `Hi ${user.firstName || 'Support Team'}! Trinity Guru mode active. I'm analyzing platform health, looking for upgrade opportunities, and tracking engagement metrics for you.`;
+    greeting = `Hi ${user.firstName || 'Support Team'}! Trinity Tech Guru mode active. Analyzing platform health, tracking upgrade opportunities, and monitoring engagement metrics.`;
   } else if (isPlatformStaff) {
     persona = 'platform_guru';
     trinityMode = 'guru';
-    greeting = `Hello ${user.firstName || 'Administrator'}! Trinity Guru mode at your service. Platform monitoring and diagnostics ready.`;
-  // BUSINESS PRO MODE - Org owners and subscribers get org intelligence
+    greeting = `Hello ${user.firstName || 'Administrator'}! Trinity Tech Guru mode at your service. Platform monitoring and diagnostics ready.`;
+  // COO MODE - Org owners and managers get full business intelligence for their security company
   } else if (isOrgOwner && orgStats?.isNewOrg) {
     persona = 'onboarding_guide';
-    trinityMode = 'business_pro';
-    greeting = `Welcome ${user.firstName || 'there'}! I'm Trinity, your AI business companion. Let me help you get ${workspaceName || 'your organization'} set up for success!`;
-  } else if (isOrgOwner || hasBusinessBuddy || hasTrinityPro) {
-    persona = 'business_buddy';
-    trinityMode = 'business_pro';
-    greeting = `Hi ${user.firstName || 'there'}! Trinity here. How can I help grow ${workspaceName || 'your business'} today?`;
+    trinityMode = 'coo';
+    greeting = `Welcome ${user.firstName || 'there'}! I'm Trinity, your AI COO. Let me help you get ${workspaceName || 'your organization'} fully operational!`;
+  } else if (isOrgOwner || hasTrinityPro) {
+    persona = 'coo_advisor';
+    trinityMode = 'coo';
+    greeting = `Hi ${user.firstName || 'there'}! Trinity COO mode active. Ready to help optimize ${workspaceName || 'your business'} operations today.`;
   } else if (isManager) {
-    persona = 'business_buddy';
-    trinityMode = 'business_pro';
-    greeting = `Hello ${user.firstName || 'there'}! I'm Trinity, ready to help with your team management needs.`;
+    persona = 'coo_advisor';
+    trinityMode = 'coo';
+    greeting = `Hello ${user.firstName || 'there'}! I'm Trinity, your management co-pilot. Ready to assist with your team operations.`;
   }
-  // DEMO MODE - Everyone else gets limited demo functionality
+  // STANDARD MODE - All other authenticated users
   
   let orgIntelligence: OrgIntelligence | undefined;
-  // Platform/support staff in guru mode should NOT see business automation alerts
-  // They need platform diagnostics, not org-level business metrics
-  const shouldGatherOrgIntel = effectiveWorkspaceId && 
-    (isOrgOwner || isManager || hasTrinityPro || hasBusinessBuddy) && 
-    !isPlatformStaff; // Exclude platform staff from org intelligence
-  
-  if (shouldGatherOrgIntel) {
-    try {
-      orgIntelligence = await gatherOrgIntelligence(effectiveWorkspaceId, userId);
-    } catch {
-    }
-  }
-  
-  // Gather platform diagnostics for Guru mode (platform/support staff)
   let platformDiagnostics: PlatformDiagnostics | undefined;
-  if (trinityMode === 'guru') {
-    try {
-      platformDiagnostics = await gatherPlatformDiagnostics();
-    } catch {
-    }
-  }
+
+  const shouldGatherOrgIntel = effectiveWorkspaceId && 
+    (isOrgOwner || isManager || hasTrinityPro || trinityMode === 'coo') && 
+    !isPlatformStaff;
   
-  return {
+  const [orgIntelResult, platformDiagResult] = await Promise.all([
+    shouldGatherOrgIntel
+      ? gatherOrgIntelligence(effectiveWorkspaceId, userId).catch((err: any) => {
+          log.warn('[TrinityContext] gatherOrgIntelligence failed:', err?.message);
+          return undefined;
+        })
+      : Promise.resolve(undefined),
+    trinityMode === 'guru'
+      ? gatherPlatformDiagnostics().catch((err: any) => {
+          log.warn('[TrinityContext] gatherPlatformDiagnostics failed:', err?.message);
+          return undefined;
+        })
+      : Promise.resolve(undefined),
+  ]);
+  orgIntelligence = orgIntelResult;
+  platformDiagnostics = platformDiagResult;
+  
+  const result: TrinityContext = {
     userId,
     username: user.email?.split('@')[0] || 'User',
     displayName: user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : (user.email?.split('@')[0] || 'User'),
@@ -425,7 +591,6 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
     subscriptionStatus,
     
     hasTrinityPro,
-    hasBusinessBuddy,
     activeAddons,
     
     orgStats,
@@ -439,6 +604,9 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
     greeting,
     persona,
   };
+
+  trinityContextCache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
 }
 
 function getAnonymousContext(): TrinityContext {
@@ -459,12 +627,11 @@ function getAnonymousContext(): TrinityContext {
     subscriptionStatus: 'active',
     
     hasTrinityPro: false,
-    hasBusinessBuddy: false,
     activeAddons: [],
     
     trinityAccessReason: 'none',
     trinityAccessLevel: 'basic',
-    trinityMode: 'demo',
+    trinityMode: 'standard',
     
     greeting: 'Hello! I\'m Trinity, your AI guide. Sign in to unlock my full capabilities!',
     persona: 'standard',
@@ -703,7 +870,7 @@ export async function createNotificationSuggestion(params: {
     const [result] = await db
       .insert(aiSuggestions)
       .values({
-        workspaceId: 'ops-workspace-00000000',
+        workspaceId: PLATFORM_WORKSPACE_ID,
         suggestionType: 'platform_notification',
         sourceSystem: 'trinity_guru',
         title: params.title,
@@ -803,6 +970,12 @@ export async function generateContextualThought(context: TrinityContext): Promis
     return null;
   }
   
+  const thoughtCacheKey = `${context.userId}:${context.workspaceId || 'default'}`;
+  const cachedThought = thoughtCache.get(thoughtCacheKey);
+  if (cachedThought && Date.now() - cachedThought.timestamp < THOUGHT_CACHE_TTL) {
+    return cachedThought.data;
+  }
+
   const name = context.displayName || 'there';
   const org = context.workspaceName || 'your organization';
   const employeeCount = context.orgStats?.employeeCount || 0;
@@ -834,8 +1007,8 @@ export async function generateContextualThought(context: TrinityContext): Promis
   // Add subscription context
   if (context.hasTrinityPro) {
     contextParts.push('Subscription: Trinity Pro (advanced features unlocked)');
-  } else if (context.hasBusinessBuddy) {
-    contextParts.push('Subscription: Business Buddy tier');
+  } else if (context.trinityMode === 'coo') {
+    contextParts.push('Mode: Trinity COO — full business intelligence active');
   }
   
   // Add live intelligence data if available
@@ -868,16 +1041,13 @@ export async function generateContextualThought(context: TrinityContext): Promis
     }
   }
   
-  // Add platform health for staff
   if (context.isRootAdmin || context.isSupportRole) {
     try {
-      const { platformHealthMonitor } = await import('./ai-brain/platformHealthMonitor');
       const healthInsight = await platformHealthMonitor.getTrinityHealthInsight();
       if (healthInsight) {
         contextParts.push(`Platform health: ${healthInsight}`);
       }
     } catch {
-      // Ignore health monitor errors
     }
   }
   
@@ -886,18 +1056,15 @@ export async function generateContextualThought(context: TrinityContext): Promis
     contextParts.push('Status: New organization, just getting started');
   }
   
-  // Determine Trinity mode
-  let mode: 'demo' | 'business' | 'guru' = 'demo';
-  if (context.isRootAdmin || context.isSupportRole) {
+  // Determine Trinity mode for AI thought generation
+  let mode: 'coo' | 'guru' | 'standard' = 'standard';
+  if (context.isRootAdmin || context.isSupportRole || context.isPlatformStaff) {
     mode = 'guru';
-  } else if (context.hasBusinessBuddy || context.hasTrinityPro || context.isOrgOwner) {
-    mode = 'business';
+  } else if (context.trinityMode === 'coo' || context.hasTrinityPro || context.isOrgOwner) {
+    mode = 'coo';
   }
   
-  // Try to generate AI thought
   try {
-    const { geminiClient } = await import('./ai-brain/providers/geminiClient');
-    
     const aiThought = await geminiClient.generateTrinityThought({
       context: contextParts.join('\n'),
       displayName: name,
@@ -906,15 +1073,17 @@ export async function generateContextualThought(context: TrinityContext): Promis
     });
     
     if (aiThought) {
-      console.log(`[Trinity] AI-generated thought for ${name} (${mode} mode)`);
+      log.info(`[Trinity] AI-generated thought for ${name} (${mode} mode)`);
+      thoughtCache.set(thoughtCacheKey, { data: aiThought, timestamp: Date.now() });
       return aiThought;
     }
   } catch (error) {
-    console.warn('[Trinity] AI thought generation unavailable, using fallback:', error);
+    log.warn('[Trinity] AI thought generation unavailable, using fallback:', error);
   }
   
-  // Fallback to simple context-aware thoughts if AI fails
-  return generateFallbackThought(context, name, org, employeeCount);
+  const fallback = generateFallbackThought(context, name, org, employeeCount);
+  thoughtCache.set(thoughtCacheKey, { data: fallback, timestamp: Date.now() });
+  return fallback;
 }
 
 /**
@@ -943,7 +1112,7 @@ function generateFallbackThought(
     return `${name}, your Trinity Pro features are ready. Need strategic insights?`;
   }
   
-  if (context.hasBusinessBuddy || context.isOrgOwner) {
+  if (context.trinityMode === 'coo' || context.isOrgOwner) {
     return `${name}, ready to help optimize ${org}'s workforce operations.`;
   }
   

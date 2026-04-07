@@ -25,6 +25,8 @@
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
 import { trinityMemoryService } from './trinityMemoryService';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('UnifiedLifecycleManager');
 
 // ============================================================================
 // TYPES
@@ -126,7 +128,7 @@ class UnifiedLifecycleManager {
   private initialized = false;
 
   private constructor() {
-    console.log('[UnifiedLifecycleManager] Initializing lifecycle management...');
+    log.info('[UnifiedLifecycleManager] Initializing lifecycle management...');
   }
 
   static getInstance(): UnifiedLifecycleManager {
@@ -165,7 +167,7 @@ class UnifiedLifecycleManager {
     });
 
     this.initialized = true;
-    console.log('[UnifiedLifecycleManager] Initialized and subscribed to platform events');
+    log.info('[UnifiedLifecycleManager] Initialized and subscribed to platform events');
   }
 
   // ============================================================================
@@ -199,7 +201,7 @@ class UnifiedLifecycleManager {
     hooks.push(hook);
     hooks.sort((a, b) => a.priority - b.priority);
 
-    console.log(`[UnifiedLifecycleManager] Hook '${options.name}' registered for '${eventType}'`);
+    log.info(`[UnifiedLifecycleManager] Hook '${options.name}' registered for '${eventType}'`);
     return hookId;
   }
 
@@ -211,7 +213,7 @@ class UnifiedLifecycleManager {
       const index = hooks.findIndex(h => h.id === hookId);
       if (index !== -1) {
         hooks.splice(index, 1);
-        console.log(`[UnifiedLifecycleManager] Hook ${hookId} unregistered`);
+        log.info(`[UnifiedLifecycleManager] Hook ${hookId} unregistered`);
         return true;
       }
     }
@@ -287,7 +289,7 @@ class UnifiedLifecycleManager {
       try {
         await hook.handler(event);
       } catch (error: any) {
-        console.error(`[UnifiedLifecycleManager] Hook '${hook.name}' failed:`, error.message);
+        log.error(`[UnifiedLifecycleManager] Hook '${hook.name}' failed:`, (error instanceof Error ? error.message : String(error)));
       }
     }
   }
@@ -357,7 +359,7 @@ class UnifiedLifecycleManager {
   async endSession(sessionId: string): Promise<void> {
     const session = this.activeSessions.get(sessionId);
     if (!session) {
-      console.warn(`[UnifiedLifecycleManager] Session ${sessionId} not found`);
+      log.warn(`[UnifiedLifecycleManager] Session ${sessionId} not found`);
       return;
     }
 
@@ -435,9 +437,9 @@ class UnifiedLifecycleManager {
         { sessionId: session.sessionId }
       );
 
-      console.log(`[UnifiedLifecycleManager] Memory context restored for user ${session.userId}`);
+      log.info(`[UnifiedLifecycleManager] Memory context restored for user ${session.userId}`);
     } catch (error: any) {
-      console.error(`[UnifiedLifecycleManager] Failed to restore memory context:`, error.message);
+      log.error(`[UnifiedLifecycleManager] Failed to restore memory context:`, (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -464,10 +466,10 @@ class UnifiedLifecycleManager {
         { sessionId: session.sessionId, metadata: { checkpointId } }
       );
 
-      console.log(`[UnifiedLifecycleManager] Memory checkpoint ${checkpointId} saved`);
+      log.info(`[UnifiedLifecycleManager] Memory checkpoint ${checkpointId} saved`);
       return checkpointId;
     } catch (error: any) {
-      console.error(`[UnifiedLifecycleManager] Failed to save memory checkpoint:`, error.message);
+      log.error(`[UnifiedLifecycleManager] Failed to save memory checkpoint:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   }
@@ -646,11 +648,11 @@ class UnifiedLifecycleManager {
   // ============================================================================
 
   private async handleSessionStart(event: LifecycleEvent): Promise<void> {
-    console.log(`[UnifiedLifecycleManager] Session started: ${event.sessionId} for user ${event.userId}`);
+    log.info(`[UnifiedLifecycleManager] Session started: ${event.sessionId} for user ${event.userId}`);
   }
 
   private async handleSessionEnd(event: LifecycleEvent): Promise<void> {
-    console.log(`[UnifiedLifecycleManager] Session ended: ${event.sessionId}`);
+    log.info(`[UnifiedLifecycleManager] Session ended: ${event.sessionId}`);
   }
 
   private async handleTaskEnd(event: LifecycleEvent): Promise<void> {
@@ -667,7 +669,7 @@ class UnifiedLifecycleManager {
           applicableScenarios: [event.context.domain || 'general'],
         });
       } catch (error: any) {
-        console.error(`[UnifiedLifecycleManager] Failed to share task insight:`, error.message);
+        log.error(`[UnifiedLifecycleManager] Failed to share task insight:`, (error instanceof Error ? error.message : String(error)));
       }
     }
   }
@@ -695,16 +697,16 @@ class UnifiedLifecycleManager {
   private async handlePlatformEvent(event: PlatformEvent): Promise<void> {
     // Convert platform events to lifecycle events when relevant
     if (event.metadata?.executionId) {
-      console.log(`[UnifiedLifecycleManager] Platform event received: ${event.type}`);
+      log.info(`[UnifiedLifecycleManager] Platform event received: ${event.type}`);
     }
   }
 
   private async handleEscalationEvent(event: PlatformEvent): Promise<void> {
-    console.log(`[UnifiedLifecycleManager] Escalation event: ${event.title}`);
+    log.info(`[UnifiedLifecycleManager] Escalation event: ${event.title}`);
   }
 
   private async handleErrorEvent(event: PlatformEvent): Promise<void> {
-    console.log(`[UnifiedLifecycleManager] Error event: ${event.title}`);
+    log.info(`[UnifiedLifecycleManager] Error event: ${event.title}`);
   }
 
   // ============================================================================
@@ -773,7 +775,7 @@ class UnifiedLifecycleManager {
     }
 
     if (cleaned > 0) {
-      console.log(`[UnifiedLifecycleManager] Cleaned up ${cleaned} inactive sessions`);
+      log.info(`[UnifiedLifecycleManager] Cleaned up ${cleaned} inactive sessions`);
     }
     return cleaned;
   }
@@ -786,7 +788,7 @@ class UnifiedLifecycleManager {
     this.activeSessions.clear();
     this.eventHistory = [];
     this.initialized = false;
-    console.log('[UnifiedLifecycleManager] Shutdown complete');
+    log.info('[UnifiedLifecycleManager] Shutdown complete');
   }
 }
 

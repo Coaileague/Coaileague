@@ -1,0 +1,211 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 27 — NOTIFICATION AND COMMUNICATION PIPELINE END-TO-END VERIFICATION**
+
+This phase owns the complete notification and communication infrastructure from trigger to delivery. Every alert, every push, every email, every SMS, and every WebSocket event must be verified as firing correctly, routing through NDS, being tracked in `notification_deliveries`, and retrying on failure. A missed notification in a security operations platform is an operational failure — a supervisor who doesn't know an officer called off is a post left uncovered. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row. Every row green before Phase 27 closes.
+
+---
+
+**STEP 1 — NOTIFICATION SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of every notification type and delivery channel:
+- All 47 notification types in the NDS type registry — list every one with its trigger, recipient, and channel
+- All delivery channels: email (Resend), SMS, WebSocket push, in-app notification, push notification (PWA/mobile)
+- All direct email sends that are accepted architectural bypasses — auth tokens, magic links, panic SMS — list and confirm each is documented as exempt
+- Any notification send that bypasses NDS and is NOT a documented exempt bypass — flag as CRITICAL
+- `notification_deliveries` table schema confirmed — all required fields present
+- NDS retry configuration confirmed — backoff intervals, max retries, dead letter behavior
+- Phase 13 inbound email response pipeline — confirm confirmation replies route through NDS
+
+Flag every notification type that has no corresponding `notification_deliveries` record on delivery.
+
+---
+
+**STEP 2 — NDS CANONICAL ROUTING VERIFICATION**
+
+Every notification must route through NotificationDeliveryService:
+- Run a comprehensive grep across all route files and service files: any `sendEmail`, `sendSMS`, `sendPush`, or direct Resend/Twilio call that is NOT inside NDS and NOT in the documented exempt list — report every match
+- For each match found: determine if it is a legitimate bypass or a gap
+- Legitimate bypasses confirmed from Phase 8: auth verification emails, magic link emails, password reset emails, panic protocol SMS — confirm these are still the only bypasses
+- Any new bypasses introduced in Phases 9-26 — identify and either document as exempt or route through NDS
+- NDS itself confirmed importing from correct service path — no circular dependencies
+- NDS confirmed workspace-scoped — cannot deliver to another workspace's users
+
+---
+
+**STEP 3 — EMAIL DELIVERY VERIFICATION**
+
+Every email notification must be deliverable:
+- Resend API key confirmed active and valid
+- Sending domain confirmed configured in Resend
+- All email notification types confirmed rendering correctly — no broken templates
+- Email templates confirmed supporting both English and Spanish (Phase 32 scope — flag any template that is English-only as a future gap)
+- Email delivery confirmed tracked in `notification_deliveries` with channel: email
+- Bounced emails handled — hard bounce removes address, soft bounce retries
+- Unsubscribe handling confirmed for non-transactional emails
+- Email retry confirmed via NDS backoff — failed emails do not silently drop
+- SPF, DKIM, DMARC status noted — full verification deferred to Phase 29 but current status documented
+
+---
+
+**STEP 4 — SMS DELIVERY VERIFICATION**
+
+Every SMS notification must be deliverable:
+- SMS provider confirmed active — API key valid
+- SMS confirmed routing through NDS for all non-exempt sends
+- Panic/duress SMS confirmed as documented exempt bypass — still routing correctly
+- SMS delivery confirmed tracked in `notification_deliveries` with channel: sms
+- SMS retry confirmed on failure
+- SMS character limit handling — messages over 160 characters handled correctly (concatenated or truncated with warning)
+- International number format handling — E.164 format enforced
+
+---
+
+**STEP 5 — WEBSOCKET PUSH VERIFICATION**
+
+Real-time events must reach the correct sessions:
+- WebSocket server confirmed running and accepting connections
+- All WebSocket event types enumerated — produce the complete list
+- Every WebSocket broadcast confirmed workspace-scoped — no cross-workspace event leaks
+- WebSocket reconnect behavior confirmed — exponential backoff, missed events replayed on reconnect
+- WebSocket events confirmed not duplicated — same event cannot fire twice for the same session
+- WebSocket push confirmed for all real-time portal updates: schedule changes, invoice updates, document status, permission matrix changes
+- WebSocket delivery tracked where applicable — high-frequency events (schedule updates) may not need individual delivery records but critical events (duress alert, permission change) must be tracked
+
+---
+
+**STEP 6 — PUSH NOTIFICATION (PWA/MOBILE) VERIFICATION**
+
+Mobile push notifications are operationally critical:
+- VAPID keys confirmed configured and stored securely — not hardcoded
+- Push subscription storage confirmed — per-device subscriptions stored with workspace and user scope
+- Push notification delivery confirmed tracked in `notification_deliveries` with channel: push (Phase 22 regression check — this was added in Phase 22)
+- All critical push notification types confirmed firing:
+  - Shift assigned to officer
+  - Calloff received (supervisor/manager)
+  - Clock-in alert (supervisor)
+  - Duress/panic button (supervisor and manager — immediate)
+  - Document requiring signature
+  - Pay stub available
+  - Compliance alert
+  - Invoice status change (client)
+- Push notification tap confirmed deep-linking to correct page
+- Push delivered when app is background AND closed — confirmed
+- Failed push retries via NDS backoff — no silent drops
+- Orphaned push subscriptions cleaned on schedule (Phase 26 regression check)
+
+---
+
+**STEP 7 — IN-APP NOTIFICATION CENTER VERIFICATION**
+
+In-app notifications must be complete and consistent:
+- Notification center accessible from persistent bell icon on all pages
+- All notification types confirmed creating in-app records alongside other channel deliveries
+- Unread count accurate — updates in real time via WebSocket
+- Mark as read confirmed working — individual and mark-all-read
+- Notification tap navigates to correct context page
+- Old notifications archived or paginated — notification center does not load unbounded records
+- Notification center accessible on mobile — touch-friendly, correct rendering
+
+---
+
+**STEP 8 — THREE-TIER REPLACEMENT CASCADE NOTIFICATION VERIFICATION**
+
+The replacement cascade is the most complex notification flow on the platform:
+- Tier 1 notification confirmed firing to stay-late eligible officers only
+- Tier 2 notification confirmed firing after 15-minute window with no Tier 1 acceptance
+- Tier 3 notification confirmed firing after 30-minute window with no Tier 2 acceptance
+- Emergency mode confirmed collapsing all tiers when shift starts within 2 hours
+- Acceptance at any tier confirmed cancelling all pending and queued offers across other tiers
+- No-acceptance escalation confirmed firing manager alert before shift start
+- All tier transition notifications confirmed routing through NDS
+- All cascade notifications confirmed tracked in `notification_deliveries`
+
+---
+
+**STEP 9 — INBOUND EMAIL RESPONSE PIPELINE VERIFICATION**
+
+Phase 13 integration — inbound emails generate outbound confirmations:
+- calloffs@ confirmation reply confirmed routing through NDS — not raw email send
+- incidents@ confirmation reply confirmed routing through NDS
+- docs@ confirmation reply confirmed routing through NDS
+- support@ auto-reply confirmed routing through NDS
+- Unrecognized sender notification confirmed routing through NDS
+- All inbound response notifications confirmed tracked in `notification_deliveries`
+
+---
+
+**STEP 10 — NOTIFICATION IDEMPOTENCY VERIFICATION**
+
+No notification must fire twice for the same event:
+- NDS idempotency key mechanism confirmed active
+- Same event triggering the same notification twice produces one delivery record — not two
+- License expiry alerts confirmed idempotent via idempotencyKeys table (Phase 17 regression check)
+- Compliance violation alerts confirmed not duplicating on repeated sweeps
+- Payroll stub availability notification confirmed firing exactly once per officer per run
+- Overdue invoice escalation confirmed not firing duplicate tiers on repeated sweeps
+
+---
+
+**STEP 11 — DELIVERY TRACKING AND AUDIT VERIFICATION**
+
+Every delivery must be traceable:
+- `notification_deliveries` record created for every notification sent across all channels
+- Required fields confirmed populated: notification_type, channel, recipient_id, workspace_id, status, created_at
+- Delivery status lifecycle confirmed: pending → sent → delivered → failed → retrying → permanently_failed
+- Failed delivery retry confirmed updating status and incrementing attempt_count
+- Dead letter promotion confirmed after max retries exceeded
+- Delivery records queryable by: workspace, notification_type, channel, status, date range
+- Trinity can query delivery stats via registered action — confirm action exists
+- Platform staff can view delivery failure dashboard — confirm endpoint exists
+
+---
+
+**STEP 12 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. All rows green before summary written
+
+---
+
+**STEP 13 — VERIFICATION**
+
+Run all checks before Phase 27 is marked complete:
+- Check 1: All 47 notification types enumerated with trigger, recipient, and channel
+- Check 2: Zero non-exempt NDS bypasses — grep confirms
+- Check 3: All documented exempt bypasses still correctly identified and limited to original list
+- Check 4: Resend API key active — email delivery confirmed
+- Check 5: Email delivery tracked in notification_deliveries — channel: email confirmed
+- Check 6: SMS routing through NDS for all non-exempt sends confirmed
+- Check 7: SMS delivery tracked in notification_deliveries — channel: sms confirmed
+- Check 8: WebSocket broadcasts confirmed workspace-scoped — no cross-workspace leaks
+- Check 9: WebSocket reconnect and missed event replay confirmed
+- Check 10: VAPID keys confirmed secure — not hardcoded
+- Check 11: All 8 critical push notification types confirmed firing
+- Check 12: Push delivery tracked in notification_deliveries — Phase 22 regression check
+- Check 13: In-app notification center functional — unread count, mark read, navigation
+- Check 14: Three-tier cascade all tiers firing in correct sequence with correct windows
+- Check 15: Emergency mode confirmed collapsing tiers within 2-hour threshold
+- Check 16: All inbound email response confirmations routing through NDS
+- Check 17: NDS idempotency confirmed — same event cannot produce duplicate deliveries
+- Check 18: License expiry alert idempotency regression check confirmed
+- Check 19: notification_deliveries record created for every notification across all channels
+- Check 20: Dead letter promotion confirmed after max retries
+- Check 21: Trinity delivery stats query action confirmed registered
+- Check 22: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 23: Server starts clean with zero TypeScript errors across all notification files
+
+Do not mark Phase 27 complete until all 23 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. Nothing left behind.
+
+---
+
+Paste that. Every alert, every push, every email, every WebSocket event — all verified end to end before we move on.

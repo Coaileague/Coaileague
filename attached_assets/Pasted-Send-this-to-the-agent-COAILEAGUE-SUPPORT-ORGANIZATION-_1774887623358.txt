@@ -1,0 +1,1355 @@
+Send this to the agent:
+
+---
+
+**COAILEAGUE SUPPORT ORGANIZATION SEMANTIC AUDIT**
+
+This audit verifies that CoAIleague's internal support infrastructure — Trinity, HelpAI, system bots, root admin, and human support agents — operates as a fully functional autonomous support organization. The goal is 99% automated resolution by Trinity and her orchestration, 1% human escalation. Every tool, every action, every CRUD command must be wired, persist to the database, execute live, and operate under strict RBAC.
+
+Ask every question. Find the code. Verify it works. Fix what does not. Report everything.
+
+**All tests against ACME sandbox. Statewide untouchable.**
+
+---
+
+**THE CORE SEMANTIC QUESTIONS FOR SUPPORT ORGANIZATION:**
+
+```
+Q1: Can Trinity identify who is calling for help
+    and what workspace they belong to
+    before taking any action?
+
+Q2: Can Trinity read the full context of any org —
+    their officers, schedules, invoices, compliance,
+    documents, settings — to understand their situation
+    without asking them to repeat themselves?
+
+Q3: Can Trinity actually fix problems — not just describe them —
+    by writing to the database, updating records,
+    resending notifications, correcting settings,
+    and confirming the fix worked?
+
+Q4: Can Trinity override end-user settings when needed
+    to resolve issues — for example resetting a PIN,
+    unlocking an account, fixing a broken notification preference —
+    without the user having to do anything?
+
+Q5: Can human support agents do everything Trinity can do
+    but with a UI — a support console that shows them
+    the full workspace context and lets them
+    take corrective actions that persist?
+
+Q6: Are all support actions attributed to the correct actor —
+    Trinity system actor for automated fixes,
+    support agent user ID for human fixes —
+    with a full audit trail?
+
+Q7: Can the support system escalate correctly —
+    Trinity attempts resolution first,
+    logs what she tried,
+    then hands off to human with full context
+    if she cannot resolve?
+
+Q8: Does the org owner know when support intervened
+    in their workspace — full transparency,
+    notification of every support action taken?
+
+Q9: Are support agents and Trinity strictly limited
+    to read and corrective actions —
+    they cannot delete financial records,
+    cannot access data outside their scope,
+    cannot impersonate users maliciously?
+
+Q10: Does every support interaction produce a ticket
+     with full transcript, actions taken,
+     resolution status, and time to resolution?
+```
+
+---
+
+**SUBAGENT 1 — SUPPORT ORGANIZATION SCHEMA AND IDENTITY AUDIT**
+
+*Can every support actor be identified and attributed?*
+
+```bash
+# Step 1: Verify Trinity system actor exists with correct identity
+psql $DATABASE_URL -c "
+  SELECT id, email, role, created_at, status
+  FROM users
+  WHERE email LIKE '%trinity%system%'
+  OR email = 'trinity@system.coaileague.internal'
+  OR role = 'system'
+"
+# Must return Trinity's system actor record
+# If missing: CREATE immediately
+
+# Create Trinity system actor if missing
+psql $DATABASE_URL -c "
+  INSERT INTO users (
+    id, email, role, first_name, last_name, status, created_at
+  ) VALUES (
+    'trinity-system-actor-000000000000',
+    'trinity@system.coaileague.internal',
+    'system',
+    'Trinity',
+    'AI',
+    'active',
+    NOW()
+  ) ON CONFLICT (id) DO NOTHING
+"
+
+# Step 2: Verify platform_staff role is defined in roleDefinitions
+grep -rn "platform_staff\|PLATFORM_STAFF" \
+  server/config/roleDefinitions.ts | head -10
+# Must show platform_staff role with defined permissions
+
+# Step 3: Verify support_agent role exists or is part of platform_staff
+grep -rn "support_agent\|SUPPORT_AGENT\|helpdesk.*role" \
+  server/config/roleDefinitions.ts server/config/ --include="*.ts" | head -10
+
+# If support_agent is not a distinct role — add it:
+# support_agent has read-all-workspaces + corrective actions
+# platform_staff has full platform admin
+# They are different — support agents should not manage billing or platform config
+
+# Step 4: Verify bot actors have system identities
+psql $DATABASE_URL -c "
+  SELECT id, email, role, first_name FROM users
+  WHERE role IN ('system', 'bot', 'ai_actor')
+  ORDER BY created_at
+"
+# Must show:
+# Trinity system actor
+# HelpAI actor (if separate)
+# NDS bot actor (for notification attribution)
+# Any other system bots
+
+# Create missing bot actors
+psql $DATABASE_URL -c "
+  INSERT INTO users (id, email, role, first_name, last_name, status)
+  VALUES
+    ('helpai-system-actor-00000000000', 'helpai@system.coaileague.internal', 'system', 'HelpAI', 'Bot', 'active'),
+    ('nds-system-actor-000000000000000', 'nds@system.coaileague.internal', 'system', 'NDS', 'Bot', 'active'),
+    ('scheduler-bot-actor-000000000000', 'scheduler@system.coaileague.internal', 'system', 'Scheduler', 'Bot', 'active')
+  ON CONFLICT (id) DO NOTHING
+"
+
+# Step 5: Verify support tickets table exists with full schema
+psql $DATABASE_URL -c "
+  SELECT column_name, data_type
+  FROM information_schema.columns
+  WHERE table_schema = 'public'
+  AND table_name = 'support_tickets'
+  ORDER BY ordinal_position
+"
+# Expected columns:
+# id, ticket_number, workspace_id, user_id, title, description,
+# category, priority, status, assigned_to_user_id, assigned_to_trinity,
+# resolution_notes, actions_taken (jsonb), trinity_transcript (text),
+# time_to_resolution_minutes, created_at, updated_at, resolved_at
+
+# If table missing or incomplete: create/alter it
+psql $DATABASE_URL -c "
+  CREATE TABLE IF NOT EXISTS support_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_number VARCHAR(30) UNIQUE DEFAULT 'TKT-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(FLOOR(RANDOM() * 99999)::TEXT, 5, '0'),
+    workspace_id UUID REFERENCES workspaces(id),
+    user_id UUID REFERENCES users(id),
+    requester_email VARCHAR(255),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100),
+    priority VARCHAR(20) DEFAULT 'normal',
+    status VARCHAR(50) DEFAULT 'open',
+    assigned_to_user_id UUID REFERENCES users(id),
+    assigned_to_trinity BOOLEAN DEFAULT true,
+    trinity_attempted BOOLEAN DEFAULT false,
+    trinity_resolution_attempted_at TIMESTAMPTZ,
+    trinity_actions_taken JSONB DEFAULT '[]',
+    trinity_transcript TEXT,
+    human_escalated_at TIMESTAMPTZ,
+    escalation_reason TEXT,
+    resolution_notes TEXT,
+    resolution_method VARCHAR(50),
+    time_to_resolution_minutes INTEGER,
+    org_notified_of_intervention BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_support_tickets_workspace ON support_tickets(workspace_id);
+  CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);
+  CREATE INDEX IF NOT EXISTS idx_support_tickets_trinity ON support_tickets(assigned_to_trinity);
+"
+
+# Step 6: Verify support action log table
+psql $DATABASE_URL -c "
+  CREATE TABLE IF NOT EXISTS support_actions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id UUID REFERENCES support_tickets(id),
+    workspace_id UUID NOT NULL,
+    actor_id VARCHAR(255) NOT NULL,
+    actor_type VARCHAR(50) NOT NULL,
+    action_type VARCHAR(100) NOT NULL,
+    action_description TEXT,
+    target_entity_type VARCHAR(100),
+    target_entity_id UUID,
+    before_state JSONB,
+    after_state JSONB,
+    success BOOLEAN NOT NULL,
+    error_message TEXT,
+    executed_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_support_actions_ticket ON support_actions(ticket_id);
+  CREATE INDEX IF NOT EXISTS idx_support_actions_workspace ON support_actions(workspace_id);
+"
+
+echo "Support organization schema verified and complete"
+```
+
+---
+
+**SUBAGENT 2 — TRINITY SUPPORT CAPABILITIES AUDIT**
+
+*Can Trinity actually fix problems — not just describe them?*
+
+```bash
+# Step 1: Verify Trinity has support-specific actions registered
+SUPPORT_ACTIONS=(
+  "support.account.unlock"
+  "support.account.reset_pin"
+  "support.account.reset_2fa"
+  "support.notification.resend"
+  "support.notification.fix_preferences"
+  "support.schedule.fix_assignment"
+  "support.invoice.recalculate"
+  "support.onboarding.reset_task"
+  "support.onboarding.trigger_activation"
+  "support.workspace.read_context"
+  "support.employee.override_status"
+  "support.form.resend_invitation"
+  "support.document.regenerate"
+  "support.payroll.dispute_review"
+)
+
+for action in "${SUPPORT_ACTIONS[@]}"; do
+  EXISTS=$(grep -rn "actionId.*$action\|'$action'" server/ --include="*.ts" | \
+    grep -v node_modules | wc -l)
+  echo "$action: $([ $EXISTS -gt 0 ] && echo 'REGISTERED' || echo 'MISSING')"
+done
+
+# Register any missing support actions
+# Build server/services/supportActionRegistry.ts if missing
+
+cat > /tmp/support_actions_check.ts << 'EOF'
+// Verify all support actions have handlers that actually write to DB
+// Each action must:
+// 1. Validate actor has support_agent or system role
+// 2. Validate target workspace exists
+// 3. Execute the corrective action
+// 4. Write to support_actions log
+// 5. Write to universal_audit_log
+// 6. Notify the org_owner of intervention
+// 7. Return success/failure with details
+EOF
+
+# Step 2: Test Trinity reading full workspace context
+CONTEXT=$(curl -s -X POST "http://localhost:5000/api/support/workspace-context" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{"workspaceId":"[acme_id]"}')
+
+echo "Workspace context keys:"
+echo $CONTEXT | jq 'keys'
+# Expected: officers, activeShifts, openInvoices, complianceAlerts,
+#           recentIncidents, subscriptionStatus, pendingOnboarding,
+#           recentSupportTickets, trinityInsights
+
+# Step 3: Test Trinity fixing a broken clock-in PIN
+# Simulate officer with no PIN set
+psql $DATABASE_URL -c "
+  UPDATE employees SET clockin_pin_hash = NULL 
+  WHERE id = '[acme_officer_id]'
+"
+
+# Trinity fixes it via support action
+FIX=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{
+    "actionType": "support.account.reset_pin",
+    "targetEntityType": "employee",
+    "targetEntityId": "[acme_officer_id]",
+    "workspaceId": "[acme_id]",
+    "reason": "Officer unable to use voice clock-in — no PIN configured"
+  }')
+
+echo "PIN reset: $(echo $FIX | jq '.success')"
+echo "Action taken: $(echo $FIX | jq '.actionDescription')"
+
+# Verify: PIN reset notification sent to officer
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE notification_type = 'support_pin_reset'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+
+# Verify: org_owner notified of support intervention
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE notification_type = 'support_intervention_notice'
+  AND workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+
+# Step 4: Test Trinity unlocking a locked account
+# Lock an account first
+psql $DATABASE_URL -c "
+  UPDATE users SET 
+    locked_until = NOW() + INTERVAL '30 minutes',
+    failed_attempts = 5
+  WHERE employee_id = '[acme_officer_id]'
+"
+
+# Trinity unlocks it
+UNLOCK=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{
+    "actionType": "support.account.unlock",
+    "targetEntityType": "user",
+    "targetEntityId": "[officer_user_id]",
+    "workspaceId": "[acme_id]",
+    "reason": "Officer called in — locked out after failed PIN attempts"
+  }')
+
+echo "Account unlock: $(echo $UNLOCK | jq '.success')"
+
+# Verify account is unlocked
+psql $DATABASE_URL -c "
+  SELECT locked_until, failed_attempts 
+  FROM users WHERE id = '[officer_user_id]'
+"
+# locked_until must be null or in the past
+# failed_attempts must be 0
+
+# Step 5: Test Trinity resending a failed notification
+# Find a failed notification
+FAILED_NOTIF=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM notification_deliveries
+  WHERE workspace_id = '[acme_id]'
+  AND status = 'failed'
+  LIMIT 1
+" | tr -d ' ')
+
+if [ -n "$FAILED_NOTIF" ]; then
+  RESEND=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+    -H "Authorization: Bearer [platform_staff_token]" \
+    -d "{
+      \"actionType\": \"support.notification.resend\",
+      \"targetEntityType\": \"notification\",
+      \"targetEntityId\": \"$FAILED_NOTIF\",
+      \"workspaceId\": \"[acme_id]\",
+      \"reason\": \"Notification failed due to delivery error\"
+    }")
+  echo "Notification resend: $(echo $RESEND | jq '.success')"
+fi
+
+# Step 6: Test Trinity fixing notification preferences
+# Simulate broken notification preferences
+psql $DATABASE_URL -c "
+  UPDATE user_notification_preferences
+  SET all_opted_out = true
+  WHERE user_id = '[officer_user_id]'
+"
+
+# Support overrides to restore operational notifications
+FIX_PREFS=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{
+    "actionType": "support.notification.fix_preferences",
+    "targetEntityType": "user",
+    "targetEntityId": "[officer_user_id]",
+    "workspaceId": "[acme_id]",
+    "reason": "Officer reporting not receiving shift notifications — preferences corrupted",
+    "overrideData": {
+      "shift_assigned": {"email": true, "sms": true, "push": true},
+      "shift_reminder": {"email": true, "sms": true},
+      "all_opted_out": false
+    }
+  }')
+
+echo "Preferences fixed: $(echo $FIX_PREFS | jq '.success')"
+
+# Verify preferences updated
+psql $DATABASE_URL -c "
+  SELECT all_opted_out, trinity_sms, trinity_email
+  FROM user_notification_preferences
+  WHERE user_id = '[officer_user_id]'
+"
+# all_opted_out must be false
+
+# Step 7: Verify every support action writes to support_actions log
+psql $DATABASE_URL -c "
+  SELECT action_type, actor_id, actor_type, success, executed_at
+  FROM support_actions
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY executed_at DESC LIMIT 10
+"
+# Must show all actions taken above
+
+echo "Trinity support capabilities: VERIFIED"
+```
+
+---
+
+**SUBAGENT 3 — SUPPORT RBAC BOUNDARIES AUDIT**
+
+*Are support actors strictly limited — powerful but controlled?*
+
+```bash
+# Step 1: Define and verify what platform_staff CAN do
+PLATFORM_STAFF_CAN=(
+  "GET /api/admin/workspaces"
+  "GET /api/admin/users?search=test"
+  "POST /api/support/actions/execute"
+  "GET /api/admin/audit-log?workspaceId=[acme_id]"
+  "POST /api/admin/users/[id]/unlock"
+  "POST /api/admin/users/[id]/reset-2fa"
+  "GET /api/admin/sra/accounts"
+  "GET /api/admin/platform-status"
+)
+
+for endpoint_method in "${PLATFORM_STAFF_CAN[@]}"; do
+  METHOD=$(echo $endpoint_method | cut -d' ' -f1)
+  ENDPOINT=$(echo $endpoint_method | cut -d' ' -f2)
+  
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X $METHOD "http://localhost:5000$ENDPOINT" \
+    -H "Authorization: Bearer [platform_staff_token]")
+  
+  echo "platform_staff $METHOD $ENDPOINT: $STATUS"
+  # All must be 200 or 201
+done
+
+# Step 2: Define and verify what platform_staff CANNOT do
+PLATFORM_STAFF_CANNOT=(
+  "DELETE /api/invoices/[invoice_id]"
+  "DELETE /api/employees/[officer_id]"
+  "DELETE /api/universal_audit_log/[entry_id]"
+  "PATCH /api/billing/subscription"
+  "DELETE /api/workspaces/[workspace_id]"
+  "POST /api/payroll/runs"
+)
+
+for endpoint_method in "${PLATFORM_STAFF_CANNOT[@]}"; do
+  METHOD=$(echo $endpoint_method | cut -d' ' -f1)
+  ENDPOINT=$(echo $endpoint_method | cut -d' ' -f2)
+  
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X $METHOD "http://localhost:5000$ENDPOINT" \
+    -H "Authorization: Bearer [platform_staff_token]")
+  
+  echo "platform_staff BLOCKED $METHOD $ENDPOINT: $STATUS"
+  # All must be 403 — never 200 or 201
+done
+
+# Step 3: Verify Trinity cannot exceed her authority
+TRINITY_CANNOT=(
+  "DELETE financial records"
+  "Modify audit logs"
+  "Access Statewide data"
+  "Approve her own pending actions"
+  "Create new platform_staff users"
+  "Modify RBAC definitions"
+)
+
+# Check each in code
+grep -rn "DELETE FROM invoices\|DELETE FROM payroll\|DROP TABLE\|DELETE FROM universal_audit_log" \
+  server/services/helpai/ server/services/trinity/ --include="*.ts" 2>/dev/null | \
+  grep -v node_modules | head -10
+# Must return zero — Trinity never deletes financial or audit records
+
+grep -rn "INSERT INTO users.*platform_staff\|role.*platform_staff.*INSERT" \
+  server/services/helpai/ --include="*.ts" | grep -v node_modules | head -5
+# Must return zero — Trinity cannot create platform_staff users
+
+# Step 4: Verify support actions require a reason
+grep -rn "reason.*required\|require.*reason\|!reason\|reason.*empty" \
+  server/routes/supportRoutes.ts 2>/dev/null | head -5
+# Every support action must require a documented reason
+
+# Step 5: Verify support impersonation is read-only
+grep -rn "impersonate\|view.*as.*user\|act.*as.*user" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# If impersonation exists: verify it is read-only
+# Support agents can VIEW as a user but not perform destructive actions as them
+
+# Step 6: Verify support cannot access Statewide
+STATEWIDE_ID="37a04d24-51bd-4856-9faa-d26a2fe82094"
+
+# Verify: support CAN read Statewide (for support purposes)
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "http://localhost:5000/api/admin/workspaces/$STATEWIDE_ID/details" \
+  -H "Authorization: Bearer [platform_staff_token]")
+echo "Support reads Statewide (allowed): $STATUS"
+# Should be 200 — support needs to help Bryan
+
+# Verify: support CANNOT mutate Statewide data
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d "{\"targetEntityType\":\"employee\",\"workspaceId\":\"$STATEWIDE_ID\"}")
+echo "Support mutate Statewide (should require extra confirmation): $STATUS"
+# Should require explicit override confirmation for founder workspace
+
+# Step 7: Verify audit trail for every support action
+psql $DATABASE_URL -c "
+  SELECT 
+    sa.action_type,
+    sa.actor_id,
+    sa.actor_type,
+    sa.success,
+    ual.action_type as audit_action
+  FROM support_actions sa
+  LEFT JOIN universal_audit_log ual ON ual.entity_id = sa.id
+  WHERE sa.executed_at > NOW() - INTERVAL '1 hour'
+  ORDER BY sa.executed_at DESC LIMIT 10
+"
+# Every support action must have a corresponding universal_audit_log entry
+
+echo "Support RBAC boundaries: VERIFIED"
+```
+
+---
+
+**SUBAGENT 4 — HELPAI SUPPORT TRIAGE AUDIT**
+
+*Can HelpAI correctly triage every type of issue and route it correctly?*
+
+```bash
+# Step 1: Verify HelpAI triage categories are defined
+grep -rn "triageCategory\|TRIAGE_CATEGORY\|supportCategory\|issue.*category" \
+  server/services/helpai/ --include="*.ts" | head -20
+
+# Expected categories:
+TRIAGE_CATEGORIES=(
+  "account_access"
+  "scheduling_issue"
+  "payroll_dispute"
+  "notification_not_received"
+  "document_missing"
+  "onboarding_stuck"
+  "billing_question"
+  "compliance_alert"
+  "technical_error"
+  "general_question"
+)
+
+# Step 2: Test HelpAI triage for each category
+TEST_MESSAGES=(
+  "I cannot log into my account"
+  "I am not on the schedule but I should be"
+  "My paycheck is wrong I worked 40 hours but was paid for 35"
+  "I am not receiving shift notifications"
+  "I cannot find my offer letter"
+  "I have been waiting 3 days and my onboarding is not complete"
+  "I need to update my billing information"
+  "I got a compliance alert but I renewed my license"
+  "The page is showing an error when I try to clock in"
+  "How do I change my direct deposit?"
+)
+
+for msg in "${TEST_MESSAGES[@]}"; do
+  TRIAGE=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+    -H "Authorization: Bearer [officer_token]" \
+    -d "{\"message\":\"$msg\",\"workspaceId\":\"[acme_id]\"}")
+  
+  CATEGORY=$(echo $TRIAGE | jq -r '.category // "uncategorized"')
+  TRINITY_ATTEMPTED=$(echo $TRIAGE | jq -r '.trinityAttempted // false')
+  RESOLVED=$(echo $TRIAGE | jq -r '.resolved // false')
+  
+  echo "MSG: $msg"
+  echo "  Category: $CATEGORY | Trinity attempted: $TRINITY_ATTEMPTED | Resolved: $RESOLVED"
+done
+
+# Step 3: Verify HelpAI creates a ticket for every interaction
+psql $DATABASE_URL -c "
+  SELECT ticket_number, category, status, assigned_to_trinity, created_at
+  FROM support_tickets
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 10
+"
+# Must show tickets created for each test interaction above
+
+# Step 4: Test HelpAI escalation to human
+# Issue that Trinity cannot resolve autonomously
+COMPLEX=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{
+    "message":"I believe my manager is creating a hostile work environment and I want to file a formal complaint",
+    "workspaceId":"[acme_id]"
+  }')
+
+echo "Complex issue escalation:"
+echo $COMPLEX | jq '{category, trinityAttempted, escalatedToHuman, escalationReason}'
+
+# Trinity should escalate immediately for workplace complaints
+# She should NOT attempt to resolve this autonomously
+
+# Step 5: Verify FAQ knowledge base is used before Trinity attempts fixes
+grep -rn "faq_entries\|faqSearch\|searchFAQ\|FAQ_SEARCH" \
+  server/services/helpai/ --include="*.ts" | head -10
+# HelpAI should check FAQ first before creating a ticket
+
+# Test: common question should be answered from FAQ
+FAQ_TEST=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{
+    "message":"How do I request time off?",
+    "workspaceId":"[acme_id]"
+  }')
+
+echo "FAQ response:"
+echo $FAQ_TEST | jq '{answeredFromFaq, message}' | head -5
+# answeredFromFaq should be true for common questions
+
+# Step 6: Verify HelpAI uses workspace context in answers
+CONTEXT_TEST=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{
+    "message":"Who is my supervisor?",
+    "workspaceId":"[acme_id]"
+  }')
+
+echo "Context-aware answer:"
+echo $CONTEXT_TEST | jq '.message' | head -3
+# Must name the actual supervisor assigned to this officer
+# Must NOT give a generic answer
+
+# Step 7: Verify HelpAI language detection and response
+psql $DATABASE_URL -c "
+  UPDATE users SET preferred_language = 'es' 
+  WHERE employee_id = '[acme_officer_id]'
+"
+
+SPANISH_TRIAGE=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{
+    "message":"No puedo iniciar sesión",
+    "workspaceId":"[acme_id]"
+  }')
+
+echo "Spanish triage response language check:"
+echo $SPANISH_TRIAGE | jq '.language'
+# Must be 'es'
+
+echo "HelpAI support triage: VERIFIED"
+```
+
+---
+
+**SUBAGENT 5 — SUPPORT CONSOLE AND HUMAN AGENT TOOLS AUDIT**
+
+*Do human support agents have a full-featured console with all necessary tools?*
+
+```bash
+# Step 1: Verify support console pages exist
+ls client/src/pages/admin/ 2>/dev/null
+ls client/src/pages/support-console/ 2>/dev/null
+
+# Expected pages:
+# /admin/support-console — main support dashboard
+# /admin/support-console/tickets — all open tickets
+# /admin/support-console/workspace/[id] — workspace deep dive
+# /admin/support-console/tickets/[id] — ticket detail with action panel
+
+# Step 2: Verify workspace deep-dive API exists
+WORKSPACE_DETAIL=$(curl -s \
+  "http://localhost:5000/api/admin/workspaces/[acme_id]/details" \
+  -H "Authorization: Bearer [platform_staff_token]")
+
+echo "Workspace detail keys:"
+echo $WORKSPACE_DETAIL | jq 'keys'
+# Must include ALL of these:
+REQUIRED_DETAIL_KEYS=(
+  "workspace"
+  "subscription"
+  "officers"
+  "activeShifts"
+  "openInvoices"
+  "recentIncidents"
+  "complianceAlerts"
+  "pendingOnboarding"
+  "recentSupportTickets"
+  "notificationHealth"
+  "trinityActivity"
+)
+
+for key in "${REQUIRED_DETAIL_KEYS[@]}"; do
+  HAS=$(echo $WORKSPACE_DETAIL | jq "has(\"$key\")")
+  echo "$key: $([ '$HAS' = 'true' ] && echo 'PRESENT' || echo 'MISSING')"
+done
+
+# Step 3: Verify platform-wide search for support agents
+SEARCH=$(curl -s "http://localhost:5000/api/admin/search?q=martinez" \
+  -H "Authorization: Bearer [platform_staff_token]")
+
+echo "Platform-wide search results:"
+echo $SEARCH | jq 'length'
+# Must search across ALL workspaces for support agents
+
+# Results must include workspace context for each result
+echo $SEARCH | jq '.[0] | {entityType, displayName, workspaceId, workspaceName, deepLink}'
+
+# Step 4: Verify support action UI is wired to backend
+# Support console must have action buttons that call correct endpoints
+
+SUPPORT_ENDPOINTS=(
+  "POST /api/support/actions/execute"
+  "GET /api/support/tickets"
+  "PATCH /api/support/tickets/[id]/resolve"
+  "POST /api/support/tickets/[id]/escalate"
+  "GET /api/admin/workspaces/[id]/details"
+  "POST /api/admin/users/[id]/unlock"
+  "POST /api/admin/users/[id]/reset-2fa"
+)
+
+for endpoint_method in "${SUPPORT_ENDPOINTS[@]}"; do
+  METHOD=$(echo $endpoint_method | cut -d' ' -f1)
+  ENDPOINT=$(echo $endpoint_method | cut -d' ' -f2 | sed 's/\[id\]/test-id/g')
+  
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X $METHOD "http://localhost:5000$ENDPOINT" \
+    -H "Authorization: Bearer [platform_staff_token]")
+  
+  echo "$METHOD $ENDPOINT: $STATUS"
+  # 200, 201, or 404 (not found is ok) — never 500 or wrong auth error
+done
+
+# Step 5: Verify support agent can view any workspace without being that workspace's user
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "http://localhost:5000/api/admin/workspaces/[acme_id]/officers" \
+  -H "Authorization: Bearer [platform_staff_token]")
+echo "Support agent views ACME officers: $STATUS"
+# Must be 200
+
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "http://localhost:5000/api/admin/workspaces/[acme_id]/invoices" \
+  -H "Authorization: Bearer [platform_staff_token]")
+echo "Support agent views ACME invoices: $STATUS"
+# Must be 200
+
+# Step 6: Verify every support action through UI produces same result as API
+# Human clicks "Unlock Account" in console
+# Internally calls: POST /api/support/actions/execute
+# With: { actionType: "support.account.unlock", targetEntityId: userId, reason: "Manual unlock" }
+# Then: writes to support_actions, universal_audit_log, notifies org_owner
+
+grep -rn "support/actions/execute\|supportAction.*execute\|executeSupport" \
+  client/src/ --include="*.tsx" | grep -v node_modules | head -10
+# Must show support console calls this endpoint
+
+# Step 7: Verify ticket system tracks full conversation
+psql $DATABASE_URL -c "
+  SELECT 
+    ticket_number,
+    title,
+    status,
+    trinity_attempted,
+    jsonb_array_length(trinity_actions_taken) as actions_count,
+    time_to_resolution_minutes
+  FROM support_tickets
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 5
+"
+# trinity_actions_taken must be populated for resolved tickets
+# time_to_resolution_minutes must be calculated on resolution
+
+echo "Support console and human agent tools: VERIFIED"
+```
+
+---
+
+**SUBAGENT 6 — LIVE OVERRIDE AND CORRECTIVE ACTION AUDIT**
+
+*Can support override end-user settings and fix issues without user doing anything?*
+
+```bash
+# Step 1: Build and verify the complete support action registry
+cat > /tmp/verify_support_actions.sql << 'EOF'
+-- Check what support actions are registered
+SELECT * FROM trinity_action_registry WHERE category = 'support' ORDER BY action_id;
+EOF
+
+psql $DATABASE_URL < /tmp/verify_support_actions.sql
+
+# Step 2: Test each critical corrective action end-to-end
+
+# ACTION 1: Fix broken schedule assignment
+echo "Testing: Fix schedule assignment"
+# Simulate shift assigned to wrong officer
+psql $DATABASE_URL -c "
+  UPDATE shifts 
+  SET assigned_officer_id = '[wrong_officer_id]'
+  WHERE id = '[acme_shift_id]'
+"
+
+FIX=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{
+    "actionType": "support.schedule.fix_assignment",
+    "targetEntityType": "shift",
+    "targetEntityId": "[acme_shift_id]",
+    "workspaceId": "[acme_id]",
+    "reason": "Org owner reported wrong officer assigned to shift",
+    "correctionData": {
+      "correctOfficerId": "[correct_officer_id]"
+    }
+  }')
+echo "Schedule fix: $(echo $FIX | jq '.success')"
+
+# Verify: shift now has correct officer
+psql $DATABASE_URL -c "
+  SELECT assigned_officer_id FROM shifts WHERE id = '[acme_shift_id]'
+"
+
+# ACTION 2: Recalculate broken invoice
+echo "Testing: Recalculate invoice"
+# Simulate invoice with wrong subtotal
+psql $DATABASE_URL -c "
+  UPDATE invoices SET subtotal = 9999.99 WHERE id = '[acme_invoice_id]'
+"
+
+FIX=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{
+    "actionType": "support.invoice.recalculate",
+    "targetEntityType": "invoice",
+    "targetEntityId": "[acme_invoice_id]",
+    "workspaceId": "[acme_id]",
+    "reason": "Client reported invoice total is incorrect"
+  }')
+echo "Invoice recalculate: $(echo $FIX | jq '.success')"
+
+# Verify: subtotal recalculated from line items
+psql $DATABASE_URL -c "
+  SELECT 
+    i.subtotal as invoice_subtotal,
+    (SELECT SUM(amount) FROM invoice_line_items WHERE invoice_id = i.id) as line_items_total
+  FROM invoices i WHERE i.id = '[acme_invoice_id]'
+"
+# Both must match exactly
+
+# ACTION 3: Reset stuck onboarding task
+echo "Testing: Reset onboarding task"
+psql $DATABASE_URL -c "
+  UPDATE onboarding_tasks
+  SET status = 'failed', error_message = 'Unknown error'
+  WHERE employee_id = '[acme_officer_id]'
+  AND task_type = 'onboarding_w4'
+"
+
+FIX=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{
+    "actionType": "support.onboarding.reset_task",
+    "targetEntityType": "onboarding_task",
+    "workspaceId": "[acme_id]",
+    "reason": "Officer reports W-4 form shows error but they submitted it",
+    "correctionData": {
+      "employeeId": "[acme_officer_id]",
+      "taskType": "onboarding_w4",
+      "resetToStatus": "pending",
+      "resendForm": true
+    }
+  }')
+echo "Onboarding reset: $(echo $FIX | jq '.success')"
+
+# Verify: task reset to pending and form resent
+psql $DATABASE_URL -c "
+  SELECT status, error_message 
+  FROM onboarding_tasks 
+  WHERE employee_id = '[acme_officer_id]'
+  AND task_type = 'onboarding_w4'
+"
+# status must be 'pending', error_message must be null
+
+# Check form invitation was resent
+psql $DATABASE_URL -c "
+  SELECT status, created_at 
+  FROM form_invitations
+  WHERE context_id = '[acme_officer_id]'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+
+# ACTION 4: Trigger manual officer activation
+echo "Testing: Manual officer activation"
+psql $DATABASE_URL -c "
+  UPDATE employees SET status = 'pending'
+  WHERE id = '[acme_officer_id]'
+"
+
+FIX=$(curl -s -X POST "http://localhost:5000/api/support/actions/execute" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{
+    "actionType": "support.onboarding.trigger_activation",
+    "targetEntityType": "employee",
+    "targetEntityId": "[acme_officer_id]",
+    "workspaceId": "[acme_id]",
+    "reason": "All onboarding complete but officer stuck in pending status — manual activation"
+  }')
+echo "Manual activation: $(echo $FIX | jq '.success')"
+
+# Verify: officer now active
+psql $DATABASE_URL -c "
+  SELECT status FROM employees WHERE id = '[acme_officer_id]'
+"
+
+# Step 3: Verify every corrective action:
+# a. Stores before state
+# b. Stores after state
+# c. Marks success or failure
+# d. Notifies org owner
+
+psql $DATABASE_URL -c "
+  SELECT 
+    action_type,
+    actor_type,
+    before_state IS NOT NULL as has_before,
+    after_state IS NOT NULL as has_after,
+    success,
+    executed_at
+  FROM support_actions
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY executed_at DESC LIMIT 10
+"
+# All has_before and has_after must be true
+# All success must be true for the tests above
+
+# Step 4: Verify org owner was notified of every intervention
+psql $DATABASE_URL -c "
+  SELECT notification_type, COUNT(*) as count, MAX(created_at) as last_sent
+  FROM notification_deliveries
+  WHERE notification_type = 'support_intervention_notice'
+  AND workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '5 minutes'
+  GROUP BY notification_type
+"
+# Must show notifications for each corrective action taken
+
+echo "Live override and corrective actions: VERIFIED"
+```
+
+---
+
+**SUBAGENT 7 — 99% AUTOMATION READINESS AUDIT**
+
+*Can Trinity resolve 99% of issues without human help?*
+
+```bash
+# Step 1: Categorize all support issue types by automation potential
+declare -A AUTOMATION_TIERS=(
+  ["tier1_fully_auto"]="account_locked billing_question schedule_view payroll_stub_view notification_preference faq_answer"
+  ["tier2_auto_with_approval"]="schedule_fix invoice_recalculate onboarding_reset notification_fix pin_reset"
+  ["tier3_human_required"]="workplace_complaint legal_dispute fraud_report security_incident payroll_fraud"
+)
+
+echo "=== Tier 1: Fully Automated (Trinity resolves instantly) ==="
+for issue in ${AUTOMATION_TIERS["tier1_fully_auto"]}; do
+  # Check if Trinity has an action or FAQ for this
+  EXISTS=$(grep -rn "$issue\|$issue" server/services/helpai/ --include="*.ts" | wc -l)
+  echo "$issue: $([ $EXISTS -gt 0 ] && echo 'AUTOMATED' || echo 'NEEDS IMPLEMENTATION')"
+done
+
+echo ""
+echo "=== Tier 2: Automated With Org Owner Notification ==="
+for issue in ${AUTOMATION_TIERS["tier2_auto_with_approval"]}; do
+  EXISTS=$(grep -rn "support\.$issue\|$issue" server/ --include="*.ts" | grep "actionId" | wc -l)
+  echo "$issue: $([ $EXISTS -gt 0 ] && echo 'ACTION REGISTERED' || echo 'NEEDS ACTION REGISTRATION')"
+done
+
+echo ""
+echo "=== Tier 3: Human Required ==="
+for issue in ${AUTOMATION_TIERS["tier3_human_required"]}; do
+  echo "$issue: ESCALATE TO HUMAN (by design)"
+done
+
+# Step 2: Verify Trinity attempts resolution before creating ticket
+grep -rn "trinityAttempted\|trinity.*attempt.*resolve\|autoResolve\|resolve.*auto" \
+  server/services/helpai/ --include="*.ts" | head -10
+
+# Step 3: Test auto-resolution flow
+AUTO_ISSUES=(
+  "I forgot my clock-in PIN"
+  "I am locked out of my account"
+  "I did not receive my shift notification"
+  "I cannot find my pay stub"
+  "My W-4 form link has expired"
+)
+
+RESOLVED=0
+ESCALATED=0
+TOTAL=${#AUTO_ISSUES[@]}
+
+for issue in "${AUTO_ISSUES[@]}"; do
+  RESULT=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+    -H "Authorization: Bearer [officer_token]" \
+    -d "{\"message\":\"$issue\",\"workspaceId\":\"[acme_id]\"}")
+  
+  IS_RESOLVED=$(echo $RESULT | jq -r '.resolved // false')
+  IS_ESCALATED=$(echo $RESULT | jq -r '.escalatedToHuman // false')
+  
+  echo "Issue: $issue"
+  echo "  Resolved: $IS_RESOLVED | Escalated: $IS_ESCALATED"
+  
+  if [ "$IS_RESOLVED" = "true" ]; then
+    RESOLVED=$((RESOLVED + 1))
+  fi
+  if [ "$IS_ESCALATED" = "true" ]; then
+    ESCALATED=$((ESCALATED + 1))
+  fi
+done
+
+AUTOMATION_RATE=$((RESOLVED * 100 / TOTAL))
+echo ""
+echo "Auto-resolution rate: $AUTOMATION_RATE% ($RESOLVED/$TOTAL)"
+echo "Target: 99% — Gap: $((99 - AUTOMATION_RATE))%"
+
+# Step 4: Verify escalation hands off full context to human
+# When Trinity escalates she must pass:
+# - Full conversation transcript
+# - Actions already attempted
+# - Workspace context snapshot
+# - Suggested next steps
+# - Estimated resolution approach
+
+ESCALATED_TICKET=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM support_tickets
+  WHERE human_escalated_at IS NOT NULL
+  ORDER BY human_escalated_at DESC LIMIT 1
+" | tr -d ' ')
+
+if [ -n "$ESCALATED_TICKET" ]; then
+  psql $DATABASE_URL -c "
+    SELECT 
+      ticket_number,
+      trinity_transcript IS NOT NULL as has_transcript,
+      trinity_actions_taken != '[]' as has_actions,
+      escalation_reason IS NOT NULL as has_reason,
+      human_escalated_at
+    FROM support_tickets WHERE id = '$ESCALATED_TICKET'
+  "
+  # All boolean fields must be true for proper handoff
+fi
+
+# Step 5: Verify response time targets
+psql $DATABASE_URL -c "
+  SELECT 
+    resolution_method,
+    AVG(time_to_resolution_minutes) as avg_minutes,
+    MIN(time_to_resolution_minutes) as min_minutes,
+    MAX(time_to_resolution_minutes) as max_minutes,
+    COUNT(*) as ticket_count
+  FROM support_tickets
+  WHERE resolved_at IS NOT NULL
+  AND workspace_id = '[acme_id]'
+  GROUP BY resolution_method
+"
+# trinity_auto: should avg < 5 minutes
+# human_agent: should avg < 60 minutes
+
+echo "99% automation readiness: ASSESSED"
+```
+
+---
+
+**SUBAGENT 8 — SUPPORT KNOWLEDGE BASE AND TRINITY INTELLIGENCE AUDIT**
+
+*Does Trinity have the knowledge to resolve issues intelligently?*
+
+```bash
+# Step 1: Verify Trinity knowledge base is populated
+psql $DATABASE_URL -c "
+  SELECT 
+    COUNT(*) as total_faq,
+    COUNT(CASE WHEN workspace_id IS NULL THEN 1 END) as platform_faq,
+    COUNT(CASE WHEN workspace_id IS NOT NULL THEN 1 END) as workspace_faq,
+    COUNT(CASE WHEN status = 'published' THEN 1 END) as published
+  FROM faq_entries
+"
+# total_faq should be significant — seed platform FAQs if low
+
+# Step 2: Seed platform-level FAQ if empty
+FAQ_COUNT=$(psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM faq_entries WHERE workspace_id IS NULL" | tr -d ' ')
+
+if [ "$FAQ_COUNT" -lt "20" ]; then
+  echo "FAQ entries insufficient — seeding platform FAQ"
+  
+  psql $DATABASE_URL -c "
+    INSERT INTO faq_entries (question, answer, category, status, workspace_id) VALUES
+    ('How do I clock in?', 'Navigate to your dashboard and tap the Clock In button. You will need your shift to be active. You can also clock in via voice call using your employee number and PIN.', 'time_attendance', 'published', NULL),
+    ('How do I reset my clock-in PIN?', 'Contact your supervisor or open a support ticket. A support agent will reset your PIN and send you instructions to set a new one.', 'account', 'published', NULL),
+    ('Why am I not receiving shift notifications?', 'Check your notification preferences in Settings. Ensure SMS and email are enabled. If still not receiving, your notification may be in quiet hours. Contact support to diagnose.', 'notifications', 'published', NULL),
+    ('How do I view my pay stub?', 'Go to Payroll in the main menu and select Pay Stubs. You can view and download all your pay stubs from there.', 'payroll', 'published', NULL),
+    ('How do I request time off?', 'Go to Schedule and select Request Time Off. Fill in the dates and reason. Your supervisor will review and approve or decline.', 'scheduling', 'published', NULL),
+    ('How do I trade a shift?', 'Go to Shift Trading in the menu. You can post your shift to the marketplace or find another officer to swap with. Your supervisor must approve the trade.', 'scheduling', 'published', NULL),
+    ('Where are my onboarding documents?', 'Go to Documents in the main menu. All your onboarding forms and signed documents are stored there.', 'onboarding', 'published', NULL),
+    ('My license is expiring — what do I do?', 'Renew your license through the state licensing authority. Once renewed, upload the new license in Documents under Compliance Evidence.', 'compliance', 'published', NULL),
+    ('How do I report a workplace concern?', 'Go to Support in the menu and select Report a Concern. You can report anonymously. Your report goes directly to authorized management.', 'hr', 'published', NULL),
+    ('How do I set up direct deposit?', 'Check your email for a Direct Deposit Authorization form link. Fill it out and submit it. Or go to Settings > Payroll to find the form.', 'payroll', 'published', NULL),
+    ('I cannot log in — what do I do?', 'First try resetting your password using the Forgot Password link. If your account is locked, contact support and we will unlock it immediately.', 'account', 'published', NULL),
+    ('How do I access my post orders?', 'Go to Documents and look for Post Orders under your current assignment. You can also ask Trinity in the chat.', 'operations', 'published', NULL),
+    ('What is my employee number?', 'Your employee number starts with EMP- and can be found on your profile page, your pay stubs, and any documents generated for you.', 'account', 'published', NULL),
+    ('How do I update my personal information?', 'Go to Settings > Profile to update your phone number, address, and emergency contacts. Some changes require manager approval.', 'account', 'published', NULL),
+    ('When is payday?', 'Payroll is processed on the schedule set by your organization. Check the Payroll section to see your next payday date.', 'payroll', 'published', NULL),
+    ('How do I report an incident?', 'Go to Incidents in the menu and click New Incident Report. Fill in all details while they are fresh. Your supervisor is automatically notified.', 'operations', 'published', NULL),
+    ('How do I submit a Daily Activity Report?', 'At the end of your shift go to Daily Reports and click Submit DAR. Fill in your observations and submit. You will be prompted automatically after clocking out.', 'operations', 'published', NULL),
+    ('How do I wellness check in?', 'When a wellness check is due you will receive a notification. Tap I am Safe to confirm. If you miss a check-in your supervisor is notified.', 'safety', 'published', NULL),
+    ('I think my hours are wrong on my paycheck', 'Open a payroll dispute ticket in Support. Include your expected hours and the paycheck in question. A supervisor will review your timesheet.', 'payroll', 'published', NULL),
+    ('How do I sign my employment documents?', 'You will receive an email with a secure link to your documents. Open the link on any device, review, and draw or type your signature.', 'onboarding', 'published', NULL)
+    ON CONFLICT DO NOTHING
+  "
+  echo "Platform FAQ seeded with 20 entries"
+fi
+
+# Step 3: Verify Trinity uses FAQ before creating tickets
+grep -rn "searchFAQ\|faqSearch\|FAQ_THRESHOLD\|faq.*score\|score.*faq" \
+  server/services/helpai/ --include="*.ts" | head -10
+# Must show FAQ is searched with a confidence threshold before creating ticket
+
+# Step 4: Verify Trinity has access to workspace-specific context
+grep -rn "workspaceContext\|getWorkspaceContext\|loadContext\|workspace.*knowledge" \
+  server/services/helpai/ --include="*.ts" | head -10
+# Trinity must load workspace data before answering questions about that workspace
+
+# Step 5: Verify Trinity remembers previous support interactions
+psql $DATABASE_URL -c "
+  SELECT 
+    st.ticket_number,
+    st.title,
+    st.status,
+    st.created_at
+  FROM support_tickets st
+  WHERE st.workspace_id = '[acme_id]'
+  AND st.user_id = '[officer_user_id]'
+  ORDER BY st.created_at DESC LIMIT 5
+"
+# When officer contacts support again Trinity should surface their history
+# "I see you had a similar issue last week — did that get resolved?"
+
+# Test this:
+HISTORY_TEST=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{
+    "message":"I still cannot receive notifications",
+    "workspaceId":"[acme_id]"
+  }')
+
+echo "History-aware response:"
+echo $HISTORY_TEST | jq '.message' | head -5
+# Should reference previous notification issue if one exists
+
+# Step 6: Verify FAQ learning loop — unresolved questions become FAQ candidates
+psql $DATABASE_URL -c "
+  SELECT question, category, occurrence_count, created_at
+  FROM faq_candidates
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY occurrence_count DESC LIMIT 5
+"
+# Frequently asked questions not in FAQ should appear here
+
+# Step 7: Measure actual Trinity resolution accuracy
+psql $DATABASE_URL -c "
+  SELECT 
+    COUNT(*) as total_tickets,
+    COUNT(CASE WHEN resolved_at IS NOT NULL THEN 1 END) as resolved,
+    COUNT(CASE WHEN resolution_method = 'trinity_auto' THEN 1 END) as trinity_resolved,
+    COUNT(CASE WHEN resolution_method = 'human_agent' THEN 1 END) as human_resolved,
+    COUNT(CASE WHEN human_escalated_at IS NOT NULL THEN 1 END) as escalated,
+    ROUND(COUNT(CASE WHEN resolution_method = 'trinity_auto' THEN 1 END) * 100.0 / 
+          NULLIF(COUNT(CASE WHEN resolved_at IS NOT NULL THEN 1 END), 0), 1) as auto_resolution_rate
+  FROM support_tickets
+  WHERE workspace_id = '[acme_id]'
+"
+# auto_resolution_rate should approach 99% for well-trained system
+
+echo "Trinity knowledge base and intelligence: VERIFIED"
+```
+
+---
+
+**ARCHITECT DEEP ANALYSIS — After All 8 Subagents Report**
+
+```bash
+# 1. COMPLETE SUPPORT FLOW TEST
+# End-to-end: Officer has issue → HelpAI triages → Trinity fixes → Org notified → Ticket closed
+
+echo "=== Complete Support Flow Test ==="
+
+# Officer reports issue
+TICKET=$(curl -s -X POST "http://localhost:5000/api/helpai/triage" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{
+    "message":"I am locked out of my account and cannot clock in for my shift that starts in 20 minutes",
+    "workspaceId":"[acme_id]"
+  }')
+
+TICKET_ID=$(echo $TICKET | jq -r '.ticketId')
+echo "Ticket created: $TICKET_ID"
+
+# Wait for Trinity to attempt resolution
+sleep 5
+
+# Check what Trinity did
+psql $DATABASE_URL -c "
+  SELECT 
+    ticket_number,
+    status,
+    trinity_attempted,
+    trinity_actions_taken,
+    org_notified_of_intervention,
+    resolved_at
+  FROM support_tickets WHERE id = '$TICKET_ID'
+"
+
+# 2. CROSS-SYSTEM AUDIT
+# Verify support actions are visible in all relevant systems
+
+psql $DATABASE_URL -c "
+  SELECT 
+    'support_tickets' as system, COUNT(*) as records FROM support_tickets
+    WHERE workspace_id = '[acme_id]'
+  UNION ALL
+  SELECT 'support_actions', COUNT(*) FROM support_actions WHERE workspace_id = '[acme_id]'
+  UNION ALL
+  SELECT 'audit_log_support', COUNT(*) FROM universal_audit_log
+    WHERE workspace_id = '[acme_id]'
+    AND entity_type IN ('support_ticket', 'support_action')
+  UNION ALL
+  SELECT 'notifications_support', COUNT(*) FROM notification_deliveries
+    WHERE workspace_id = '[acme_id]'
+    AND notification_type LIKE '%support%'
+"
+
+# 3. VERIFY SUPPORT IS TRANSPARENT TO ORG OWNER
+ORG_VIEW=$(curl -s "http://localhost:5000/api/support/my-workspace-history" \
+  -H "Authorization: Bearer [org_owner_token]")
+
+echo "Org owner sees support history:"
+echo $ORG_VIEW | jq 'length'
+# Org owner must see all support interactions in their workspace
+
+# 4. FINAL HEALTH CHECK
+echo ""
+echo "=== SUPPORT ORGANIZATION HEALTH REPORT ==="
+
+echo "Support tickets in system:"
+psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM support_tickets" | tr -d ' '
+
+echo "Trinity auto-resolutions:"
+psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM support_tickets WHERE resolution_method = 'trinity_auto'" | tr -d ' '
+
+echo "Human escalations:"
+psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM support_tickets WHERE human_escalated_at IS NOT NULL" | tr -d ' '
+
+echo "FAQ entries (platform):"
+psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM faq_entries WHERE workspace_id IS NULL AND status = 'published'" | tr -d ' '
+
+echo "Support actions executed:"
+psql $DATABASE_URL -t -c "SELECT COUNT(*) FROM support_actions" | tr -d ' '
+
+echo "Support action registry:"
+grep -rn "support\." server/ --include="*.ts" | grep "actionId" | wc -l
+
+# 5. TYPESCRIPT AND SERVER HEALTH
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+
+curl -s http://localhost:5000/health | jq '.status'
+```
+
+---
+
+**CERTIFICATION — Support Organization Is Production Ready When:**
+
+```
+IDENTITY AND ATTRIBUTION:
+✅ Trinity system actor exists in users table with 'system' role
+✅ HelpAI system actor exists
+✅ All bot actors have valid identities
+✅ Every support action attributed to correct actor in audit log
+✅ Support agent actions tied to their user_id
+
+TRINITY SUPPORT CAPABILITIES:
+✅ support.account.unlock — works and persists
+✅ support.account.reset_pin — works and persists
+✅ support.account.reset_2fa — works and persists
+✅ support.notification.resend — works and persists
+✅ support.notification.fix_preferences — overrides and persists
+✅ support.schedule.fix_assignment — works and persists
+✅ support.invoice.recalculate — works and persists
+✅ support.onboarding.reset_task — works and persists
+✅ support.onboarding.trigger_activation — works and persists
+✅ support.document.regenerate — works and persists
+
+HELPAI TRIAGE:
+✅ All 10 issue categories correctly classified
+✅ FAQ checked before creating ticket
+✅ Common issues resolved from FAQ instantly
+✅ Complex issues escalated with full context
+✅ Language detection and bilingual response
+✅ Workspace context loaded for every triage
+✅ Previous support history surfaced
+
+RBAC BOUNDARIES:
+✅ platform_staff can read all workspaces
+✅ platform_staff cannot delete financial records
+✅ platform_staff cannot modify audit logs
+✅ Trinity cannot exceed system role permissions
+✅ Every support action requires documented reason
+✅ Org owner notified of every intervention
+✅ Statewide requires extra confirmation for any mutation
+
+AUTOMATION METRICS:
+✅ Tier 1 issues (FAQ/instant): 100% automated
+✅ Tier 2 issues (corrective action): 95%+ automated
+✅ Tier 3 issues (human judgment): correctly escalated
+✅ Overall auto-resolution rate: approaching 99%
+✅ Average Trinity resolution time: < 5 minutes
+✅ Escalation handoff includes full transcript and context
+
+HUMAN AGENT CONSOLE:
+✅ Support console pages exist and are accessible
+✅ Workspace deep-dive API returns full context
+✅ Platform-wide search works across all workspaces
+✅ All corrective action endpoints wired to console UI
+✅ Every console action calls same API as Trinity
+✅ Full ticket history with transcript and actions
+
+TRANSPARENCY:
+✅ Org owner sees all support interventions in their workspace
+✅ Notification sent for every corrective action taken
+✅ Before and after state stored for every action
+✅ Full audit trail for compliance and review
+
+KNOWLEDGE BASE:
+✅ 20+ platform FAQ entries published
+✅ Workspace-specific FAQ can be added
+✅ FAQ learning loop creates candidates from unresolved questions
+✅ Trinity uses workspace context to personalize answers
+✅ Support history surfaces on repeat contacts
+
+PRODUCTION READINESS:
+TypeScript: 0 errors
+Server: Clean startup
+Trinity Support Actions: [N] registered
+FAQ Entries: [N] published
+Auto-resolution Rate: [X]%
+Support Organization Status: PRODUCTION READY ✅
+```
+
+---
+
+Paste that. This audit treats CoAIleague's support organization as a real business unit — not just a feature. Trinity and her orchestration must have the tools, the knowledge, the access, and the authority to resolve 99% of issues automatically. Human agents get the 1% that genuinely requires human judgment. Every action persists. Every intervention is transparent. Every org owner knows when support touched their workspace.

@@ -12,10 +12,14 @@
  * migrations, and comprehensive platform updates.
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { broadcastToAllClients } from '../../websocket';
 import { aiBrainFileSystemTools } from './aiBrainFileSystemTools';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('aiBrainWorkflowExecutor');
 
 export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'rolled_back';
 
@@ -108,7 +112,7 @@ class AIBrainWorkflowExecutor {
 
   private registerBuiltInHandlers(): void {
     this.registerCustomHandler('log_message', async (params) => {
-      console.log(`[Workflow] ${params.message}`);
+      log.info(`[Workflow] ${params.message}`);
       return { logged: true, message: params.message };
     });
 
@@ -135,12 +139,12 @@ class AIBrainWorkflowExecutor {
     handler: (params: any, context: any) => Promise<any>
   ): void {
     this.customHandlers.set(name, handler);
-    console.log(`[WorkflowExecutor] Registered custom handler: ${name}`);
+    log.info(`[WorkflowExecutor] Registered custom handler: ${name}`);
   }
 
   registerWorkflow(definition: WorkflowDefinition): void {
     this.workflows.set(definition.id, definition);
-    console.log(`[WorkflowExecutor] Registered workflow: ${definition.id} (${definition.steps.length} steps)`);
+    log.info(`[WorkflowExecutor] Registered workflow: ${definition.id} (${definition.steps.length} steps)`);
   }
 
   getWorkflow(workflowId: string): WorkflowDefinition | undefined {
@@ -161,7 +165,7 @@ class AIBrainWorkflowExecutor {
   }
 
   private generateExecutionId(): string {
-    return `exec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `exec-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
   }
 
   private async broadcastProgress(execution: WorkflowExecution, step?: WorkflowStep): void {
@@ -271,14 +275,26 @@ class AIBrainWorkflowExecutor {
           });
         });
 
-      case 'http_request':
+      case 'http_request': {
+        // SSRF guard: validate URL before making outbound HTTP request from AI workflow step
+        if (!action.url || typeof action.url !== 'string') {
+          throw new Error('http_request step requires a valid URL');
+        }
+        try {
+          const { validateWebhookUrl } = await import('../webhookDeliveryService');
+          await validateWebhookUrl(action.url);
+        } catch {
+          throw new Error(`http_request step URL is not allowed (internal/private addresses are blocked): ${action.url}`);
+        }
         const response = await fetch(action.url, {
           method: action.method,
+          signal: AbortSignal.timeout(30000),
           headers: action.headers,
           body: action.body ? JSON.stringify(action.body) : undefined,
         });
         const data = await response.json().catch(() => response.text());
         return { status: response.status, data };
+      }
 
       case 'notify':
         broadcastToAllClients({
@@ -329,7 +345,7 @@ class AIBrainWorkflowExecutor {
 
     this.executions.set(executionId, execution);
 
-    console.log(`[WorkflowExecutor] Starting workflow: ${workflowId} (execution: ${executionId})`);
+    log.info(`[WorkflowExecutor] Starting workflow: ${workflowId} (execution: ${executionId})`);
 
     await this.logExecution(execution, 'started', { stepCount: workflow.steps.length });
     await this.broadcastProgress(execution);
@@ -399,7 +415,7 @@ class AIBrainWorkflowExecutor {
           retryCount++;
           if (retryCount > maxRetries) {
             stepResult.status = 'failed';
-            stepResult.error = error.message;
+            stepResult.error = (error instanceof Error ? error.message : String(error));
             stepResult.completedAt = new Date();
             stepResult.duration = stepResult.completedAt.getTime() - stepResult.startedAt.getTime();
 
@@ -426,10 +442,10 @@ class AIBrainWorkflowExecutor {
 
               return execution;
             } else if (step.onFailure === 'rollback') {
-              console.log(`[WorkflowExecutor] Rolling back workflow due to step failure: ${step.id}`);
+              log.info(`[WorkflowExecutor] Rolling back workflow due to step failure: ${step.id}`);
             }
           } else {
-            console.log(`[WorkflowExecutor] Retrying step ${step.id} (attempt ${retryCount + 1}/${maxRetries + 1})`);
+            log.info(`[WorkflowExecutor] Retrying step ${step.id} (attempt ${retryCount + 1}/${maxRetries + 1})`);
             await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
           }
         }
@@ -458,7 +474,7 @@ class AIBrainWorkflowExecutor {
     });
     await this.broadcastProgress(execution);
 
-    console.log(`[WorkflowExecutor] Workflow completed: ${workflowId} (${completedSteps.size}/${workflow.steps.length} steps)`);
+    log.info(`[WorkflowExecutor] Workflow completed: ${workflowId} (${completedSteps.size}/${workflow.steps.length} steps)`);
 
     return execution;
   }
@@ -485,20 +501,19 @@ class AIBrainWorkflowExecutor {
   ): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        workspaceId: 'coaileague-platform-workspace',
+        workspaceId: PLATFORM_WORKSPACE_ID,
         userId: execution.requestedBy,
         action: `ai_brain_workflow:${action}`,
-        targetType: 'workflow',
-        targetId: execution.executionId,
+        ipAddress: 'ai-brain-internal',
+        metadata: { targetType: 'workflow', targetId: execution.executionId,
         details: {
           workflowId: execution.workflowId,
           ...details,
           timestamp: new Date().toISOString(),
-        },
-        ipAddress: 'ai-brain-internal',
+        } },
       });
     } catch (error) {
-      console.error('[WorkflowExecutor] Failed to log execution:', error);
+      log.error('[WorkflowExecutor] Failed to log execution:', error);
     }
   }
 
@@ -511,7 +526,7 @@ class AIBrainWorkflowExecutor {
     }>
   ): WorkflowDefinition {
     const workflow: WorkflowDefinition = {
-      id: `quick-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: `quick-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
       name,
       description: `Quick workflow: ${name}`,
       version: '1.0.0',

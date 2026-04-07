@@ -76,10 +76,10 @@ function formatICSDate(date: Date, allDay?: boolean): string {
   return format(date, "yyyyMMdd'T'HHmmss'Z'");
 }
 
-export function generateICS(events: CalendarEvent[], calendarName: string = 'CoAIleague Schedule'): string {
+export function generateICS(events: CalendarEvent[], calendarName: string = `${process.env.PLATFORM_NAME || 'CoAIleague'} Schedule`): string {
   const calendar = icalGenerator({
     name: calendarName,
-    prodId: { company: 'CoAIleague', product: 'Workforce Management' },
+    prodId: { company: process.env.PLATFORM_NAME || 'CoAIleague', product: 'Workforce Management' },
     timezone: 'UTC',
   });
 
@@ -121,31 +121,33 @@ export async function createCalendarSubscription(
 ): Promise<CalendarSubscription> {
   const token = generateSecureToken();
   
-  const [subscription] = await db.insert(calendarSubscriptions).values({
-    workspaceId,
-    userId,
-    employeeId: employeeId || null,
-    subscriptionToken: token,
-    subscriptionType: options?.subscriptionType || 'shifts',
-    includeShifts: options?.includeShifts ?? true,
-    includeTimesheets: options?.includeTimesheets ?? false,
-    includePendingShifts: options?.includePendingShifts ?? true,
-    includeCancelledShifts: options?.includeCancelledShifts ?? false,
-    daysBack: options?.daysBack ?? 30,
-    daysForward: options?.daysForward ?? 90,
-    refreshIntervalMinutes: options?.refreshIntervalMinutes ?? 15,
-    name: options?.name || 'My Work Schedule',
-    isActive: true,
-    createdByIp: options?.createdByIp,
-  }).returning();
-
-  await db.insert(calendarSyncEvents).values({
-    workspaceId,
-    userId,
-    eventType: 'subscribe',
-    subscriptionId: subscription.id,
-    description: `Calendar subscription created: ${subscription.name}`,
-    metadata: { subscriptionType: subscription.subscriptionType },
+  const subscription = await db.transaction(async (tx) => {
+    const [newSub] = await tx.insert(calendarSubscriptions).values({
+      workspaceId,
+      userId,
+      employeeId: employeeId || null,
+      subscriptionToken: token,
+      subscriptionType: options?.subscriptionType || 'shifts',
+      includeShifts: options?.includeShifts ?? true,
+      includeTimesheets: options?.includeTimesheets ?? false,
+      includePendingShifts: options?.includePendingShifts ?? true,
+      includeCancelledShifts: options?.includeCancelledShifts ?? false,
+      daysBack: options?.daysBack ?? 30,
+      daysForward: options?.daysForward ?? 90,
+      refreshIntervalMinutes: options?.refreshIntervalMinutes ?? 15,
+      name: options?.name || 'My Work Schedule',
+      isActive: true,
+      createdByIp: options?.createdByIp,
+    }).returning();
+    await tx.insert(calendarSyncEvents).values({
+      workspaceId,
+      userId,
+      eventType: 'subscribe',
+      subscriptionId: newSub.id,
+      description: `Calendar subscription created: ${newSub.name}`,
+      metadata: { subscriptionType: newSub.subscriptionType },
+    });
+    return newSub;
   });
 
   return subscription;
@@ -176,23 +178,26 @@ export async function validateSubscriptionToken(token: string): Promise<Calendar
 }
 
 export async function revokeSubscription(subscriptionId: string, userId: string): Promise<boolean> {
-  const [subscription] = await db.update(calendarSubscriptions)
-    .set({ isActive: false, updatedAt: new Date() })
-    .where(and(
-      eq(calendarSubscriptions.id, subscriptionId),
-      eq(calendarSubscriptions.userId, userId)
-    ))
-    .returning();
-
-  if (subscription) {
-    await db.insert(calendarSyncEvents).values({
-      workspaceId: subscription.workspaceId,
-      userId,
-      eventType: 'unsubscribe',
-      subscriptionId: subscription.id,
-      description: `Calendar subscription revoked: ${subscription.name}`,
-    });
-  }
+  let subscription: CalendarSubscription | null = null;
+  await db.transaction(async (tx) => {
+    const [sub] = await tx.update(calendarSubscriptions)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(
+        eq(calendarSubscriptions.id, subscriptionId),
+        eq(calendarSubscriptions.userId, userId)
+      ))
+      .returning();
+    if (sub) {
+      subscription = sub;
+      await tx.insert(calendarSyncEvents).values({
+        workspaceId: sub.workspaceId,
+        userId,
+        eventType: 'unsubscribe',
+        subscriptionId: sub.id,
+        description: `Calendar subscription revoked: ${sub.name}`,
+      });
+    }
+  });
 
   return !!subscription;
 }

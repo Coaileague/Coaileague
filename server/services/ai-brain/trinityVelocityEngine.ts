@@ -1,6 +1,9 @@
 import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
 import { meteredGemini } from '../billing/meteredGeminiClient';
+import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityVelocityEngine');
 
 interface CacheEntry {
   value: any;
@@ -110,7 +113,7 @@ export class TrinityVelocityEngine extends EventEmitter {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.cache = new AgentCache(this.config.cacheTtlMs);
     
-    console.log('[TrinityVelocity] Engine initialized with config:', {
+    log.info('[TrinityVelocity] Engine initialized with config:', {
       maxConcurrency: this.config.maxConcurrency,
       cacheEnabled: this.config.cacheEnabled,
       confidenceThreshold: this.config.confidenceThreshold,
@@ -207,6 +210,14 @@ export class TrinityVelocityEngine extends EventEmitter {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.emit('orchestration_failed', { error: errorMessage });
+      platformEventBus.publish({
+        type: 'orchestration_failed',
+        category: 'automation',
+        title: 'Trinity Velocity Orchestration Failed',
+        description: errorMessage,
+        workspaceId: context.workspaceId,
+        metadata: { userId: context.userId, task: userTask, error: errorMessage },
+      }).catch((err) => log.warn('[trinityVelocityEngine] Fire-and-forget failed:', err));
       
       return {
         status: 'failed',
@@ -253,7 +264,7 @@ Return a JSON object with a "subtasks" array.`;
       });
 
       if (!result.success) {
-        console.error('[TrinityVelocity] Decomposition failed:', result.error);
+        log.error('[TrinityVelocity] Decomposition failed:', result.error);
         return {
           subtasks: [{
             id: 'fallback-1',
@@ -276,7 +287,7 @@ Return a JSON object with a "subtasks" array.`;
 
       return { subtasks: [] };
     } catch (error) {
-      console.error('[TrinityVelocity] Decomposition failed:', error);
+      log.error('[TrinityVelocity] Decomposition failed:', error);
       // Fallback: single general task
       return {
         subtasks: [{
@@ -504,7 +515,7 @@ Synthesize these results into a coherent, actionable response for the user. Use 
       });
 
       if (!result.success) {
-        console.error('[TrinityVelocity] Consolidation failed:', result.error);
+        log.error('[TrinityVelocity] Consolidation failed:', result.error);
         return successfulResults
           .map(r => `**${r.agent}**: ${r.recommendation || JSON.stringify(r.data)}`)
           .join('\n\n');
@@ -537,7 +548,7 @@ Synthesize these results into a coherent, actionable response for the user. Use 
 
       return text;
     } catch (error) {
-      console.error('[TrinityVelocity] Consolidation failed:', error);
+      log.error('[TrinityVelocity] Consolidation failed:', error);
       // Fallback: simple concatenation
       return successfulResults
         .map(r => `**${r.agent}**: ${r.recommendation || JSON.stringify(r.data)}`)
@@ -556,7 +567,7 @@ Synthesize these results into a coherent, actionable response for the user. Use 
 
   updateConfig(updates: Partial<VelocityConfig>): void {
     this.config = { ...this.config, ...updates };
-    console.log('[TrinityVelocity] Config updated:', updates);
+    log.info('[TrinityVelocity] Config updated:', updates);
   }
 
   getCacheStats(): { size: number; hitRate: number } {
@@ -565,7 +576,7 @@ Synthesize these results into a coherent, actionable response for the user. Use 
 
   clearCache(): void {
     this.cache.clear();
-    console.log('[TrinityVelocity] Cache cleared');
+    log.info('[TrinityVelocity] Cache cleared');
   }
 }
 

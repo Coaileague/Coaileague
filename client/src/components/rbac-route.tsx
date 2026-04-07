@@ -19,9 +19,13 @@ import { Button } from "@/components/ui/button";
 import { ShieldAlert, Lock, ArrowLeft, Home } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { navConfig } from "@/config/navigationConfig";
-import { Suspense, lazy } from "react";
 import { useMinimumLoadingTime, LOADING_DURATIONS } from "@/hooks/useMinimumLoadingTime";
-const TrinityRedesign = lazy(() => import("@/components/trinity-redesign"));
+
+function LoadingSpinner() {
+  return (
+    <div className="w-10 h-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
+  );
+}
 
 export type RBACCapability = 
   | 'authenticated'      
@@ -43,14 +47,15 @@ interface RoleCheckResult {
 
 const PLATFORM_ADMIN_ROLES = ['root_admin', 'deputy_admin'];
 const PLATFORM_STAFF_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
-const OWNER_ROLES = ['org_owner', 'org_admin'];
+const OWNER_ROLES = ['org_owner', 'co_owner'];
 const LEADER_ROLES = ['org_owner', 'department_manager'];
-const SUPERVISOR_ROLES = ['org_owner', 'org_admin', 'department_manager', 'supervisor'];
+const SUPERVISOR_ROLES = ['org_owner', 'co_owner', 'department_manager', 'supervisor'];
 
 function checkCapability(
   capability: RBACCapability,
   user: any,
-  isAuthenticated: boolean
+  isAuthenticated: boolean,
+  positionCapabilities?: string[]
 ): boolean {
   if (!isAuthenticated || !user) return false;
   
@@ -74,13 +79,19 @@ function checkCapability(
       return OWNER_ROLES.includes(workspaceRole) || isPlatformStaff;
       
     case 'admin':
-      return ['org_owner', 'org_admin'].includes(workspaceRole) || isPlatformStaff;
+      return ['org_owner', 'co_owner'].includes(workspaceRole) || isPlatformStaff;
       
-    case 'leader':
-      return LEADER_ROLES.includes(workspaceRole) || isPlatformStaff;
+    case 'leader': {
+      if (LEADER_ROLES.includes(workspaceRole) || isPlatformStaff) return true;
+      if (positionCapabilities?.includes('manage_employees')) return true;
+      return false;
+    }
       
-    case 'supervisor':
-      return SUPERVISOR_ROLES.includes(workspaceRole) || isPlatformStaff;
+    case 'supervisor': {
+      if (SUPERVISOR_ROLES.includes(workspaceRole) || isPlatformStaff) return true;
+      if (positionCapabilities?.includes('manage_employees') || positionCapabilities?.includes('manage_schedules')) return true;
+      return false;
+    }
       
     case 'employee':
       return !!workspaceRole || isPlatformStaff;
@@ -99,7 +110,8 @@ function checkCapability(
 function checkAccess(
   require: RBACCapability | RBACCapability[],
   user: any,
-  isAuthenticated: boolean
+  isAuthenticated: boolean,
+  positionCapabilities?: string[]
 ): RoleCheckResult {
   if (!isAuthenticated) {
     return {
@@ -112,7 +124,7 @@ function checkAccess(
   const capabilities = Array.isArray(require) ? require : [require];
   
   for (const capability of capabilities) {
-    if (checkCapability(capability, user, isAuthenticated)) {
+    if (checkCapability(capability, user, isAuthenticated, positionCapabilities)) {
       return { hasAccess: true };
     }
   }
@@ -193,7 +205,7 @@ export function RBACRoute({
   loadingComponent
 }: RBACRouteProps) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { workspaceRole, platformRole, isLoading: workspaceLoading } = useWorkspaceAccess();
+  const { workspaceRole, platformRole, isLoading: workspaceLoading, positionCapabilities } = useWorkspaceAccess();
   const { isLoadingBlocked } = useUniversalLoadingGate();
   const [, navigate] = useLocation();
   
@@ -213,10 +225,8 @@ export function RBACRoute({
       return <>{loadingComponent}</>;
     }
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <Suspense fallback={<div className="w-16 h-16" />}>
-          <TrinityRedesign size={64} mode="THINKING" />
-        </Suspense>
+      <div className="h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <LoadingSpinner />
         <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
@@ -229,7 +239,7 @@ export function RBACRoute({
     platformRole: platformRole || (user as any)?.platformRole,
   };
   
-  const result = checkAccess(require, userWithRoles, isAuthenticated);
+  const result = checkAccess(require, userWithRoles, isAuthenticated, positionCapabilities);
   
   if (!result.hasAccess) {
     // Not authenticated - redirect to login
@@ -238,10 +248,8 @@ export function RBACRoute({
         window.location.href = navConfig.auth.login;
       }
       return (
-        <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-          <Suspense fallback={<div className="w-16 h-16" />}>
-            <TrinityRedesign size={64} mode="ANALYZING" />
-          </Suspense>
+        <div className="h-screen flex flex-col items-center justify-center bg-background gap-4">
+          <LoadingSpinner />
           <span className="text-sm text-muted-foreground">Redirecting...</span>
         </div>
       );
@@ -263,7 +271,7 @@ export function RBACRoute({
         <Card className="max-w-md w-full">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-md bg-destructive/10 flex items-center justify-center">
                 <Icon className="h-6 w-6 text-destructive" />
               </div>
               <div>
@@ -304,25 +312,26 @@ export function RBACRoute({
 
 export function useRBAC() {
   const { user, isAuthenticated } = useAuth();
+  const { positionCapabilities } = useWorkspaceAccess();
   
   return {
     hasCapability: (capability: RBACCapability) => 
-      checkCapability(capability, user, isAuthenticated),
+      checkCapability(capability, user, isAuthenticated, positionCapabilities),
     
     hasAnyCapability: (capabilities: RBACCapability[]) =>
-      capabilities.some(c => checkCapability(c, user, isAuthenticated)),
+      capabilities.some(c => checkCapability(c, user, isAuthenticated, positionCapabilities)),
     
     hasAllCapabilities: (capabilities: RBACCapability[]) =>
-      capabilities.every(c => checkCapability(c, user, isAuthenticated)),
+      capabilities.every(c => checkCapability(c, user, isAuthenticated, positionCapabilities)),
     
     checkAccess: (require: RBACCapability | RBACCapability[]) =>
-      checkAccess(require, user, isAuthenticated),
+      checkAccess(require, user, isAuthenticated, positionCapabilities),
       
-    isPlatformAdmin: checkCapability('platform_admin', user, isAuthenticated),
-    isPlatformStaff: checkCapability('platform_staff', user, isAuthenticated),
-    isOwner: checkCapability('owner', user, isAuthenticated),
-    isLeader: checkCapability('leader', user, isAuthenticated),
-    isSupervisor: checkCapability('supervisor', user, isAuthenticated),
+    isPlatformAdmin: checkCapability('platform_admin', user, isAuthenticated, positionCapabilities),
+    isPlatformStaff: checkCapability('platform_staff', user, isAuthenticated, positionCapabilities),
+    isOwner: checkCapability('owner', user, isAuthenticated, positionCapabilities),
+    isLeader: checkCapability('leader', user, isAuthenticated, positionCapabilities),
+    isSupervisor: checkCapability('supervisor', user, isAuthenticated, positionCapabilities),
   };
 }
 

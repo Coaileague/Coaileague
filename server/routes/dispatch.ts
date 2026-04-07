@@ -3,12 +3,24 @@
  * GPS tracking, incident management, unit status, real-time CAD operations
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, type Request, type Response } from "express";
 import { dispatchService } from "../services/dispatch";
 import { z } from "zod";
 import { monitoringService } from "../monitoring";
+import { requireAuth } from "../auth";
+import { ensureWorkspaceAccess } from "../middleware/workspaceScope";
+import { platformEventBus } from "../services/platformEventBus";
 
 const router = Router();
+
+router.use(requireAuth);
+router.use(ensureWorkspaceAccess as any);
+
+/** Resolve the workspace from session middleware — never from client input */
+const getWorkspaceId = (req: Request): string | null => {
+  return req.workspaceId || null;
+};
 
 // ============================================================================
 // GPS TRACKING ENDPOINTS
@@ -20,23 +32,25 @@ const router = Router();
  */
 router.post('/gps', async (req: Request, res: Response) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
+
     const schema = z.object({
       employeeId: z.string(),
-      workspaceId: z.string(),
       latitude: z.number().min(-90).max(90),
       longitude: z.number().min(-180).max(180),
       accuracy: z.number().optional(),
     });
 
     const data = schema.parse(req.body);
-    const location = await dispatchService.recordGPSLocation(data);
+    const location = await dispatchService.recordGPSLocation({ ...data, workspaceId });
 
     res.json({ success: true, location });
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/gps', body: req.body }
     });
-    res.status(400).json({ message: error.message || "Failed to record GPS location" });
+    res.status(400).json({ message: sanitizeError(error) || "Failed to record GPS location" });
   }
 });
 
@@ -46,15 +60,12 @@ router.post('/gps', async (req: Request, res: Response) => {
  */
 router.get('/units', async (req: Request, res: Response) => {
   try {
-    const { workspaceId } = req.query;
-    
-    if (!workspaceId || typeof workspaceId !== 'string') {
-      return res.status(400).json({ message: "workspaceId query parameter required" });
-    }
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
 
     const units = await dispatchService.getActiveUnits(workspaceId);
     res.json(units);
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/units' }
     });
@@ -68,12 +79,11 @@ router.get('/units', async (req: Request, res: Response) => {
  */
 router.get('/units/:employeeId/trail', async (req: Request, res: Response) => {
   try {
-    const { employeeId } = req.params;
-    const { workspaceId, limit } = req.query;
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
 
-    if (!workspaceId || typeof workspaceId !== 'string') {
-      return res.status(400).json({ message: "workspaceId query parameter required" });
-    }
+    const { employeeId } = req.params;
+    const { limit } = req.query;
 
     const trail = await dispatchService.getUnitGPSTrail(
       employeeId,
@@ -82,7 +92,7 @@ router.get('/units/:employeeId/trail', async (req: Request, res: Response) => {
     );
 
     res.json(trail);
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/units/trail' }
     });
@@ -96,15 +106,12 @@ router.get('/units/:employeeId/trail', async (req: Request, res: Response) => {
  */
 router.get('/units/on-shift', async (req: Request, res: Response) => {
   try {
-    const { workspaceId } = req.query;
-    
-    if (!workspaceId || typeof workspaceId !== 'string') {
-      return res.status(400).json({ message: "workspaceId query parameter required" });
-    }
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
 
     const units = await dispatchService.getOnShiftUnits(workspaceId);
     res.json(units);
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/units/on-shift' }
     });
@@ -122,9 +129,11 @@ router.get('/units/on-shift', async (req: Request, res: Response) => {
  */
 router.post('/units/status', async (req: Request, res: Response) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
+
     const schema = z.object({
       employeeId: z.string(),
-      workspaceId: z.string(),
       status: z.enum(['available', 'dispatched', 'en_route', 'on_scene', 'offline']),
       incidentId: z.string().optional(),
     });
@@ -132,17 +141,17 @@ router.post('/units/status', async (req: Request, res: Response) => {
     const data = schema.parse(req.body);
     const unit = await dispatchService.updateUnitStatus(
       data.employeeId,
-      data.workspaceId,
+      workspaceId,
       data.status,
       data.incidentId
     );
 
     res.json({ success: true, unit });
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/units/status' }
     });
-    res.status(400).json({ message: error.message || "Failed to update unit status" });
+    res.status(400).json({ message: sanitizeError(error) || "Failed to update unit status" });
   }
 });
 
@@ -156,8 +165,10 @@ router.post('/units/status', async (req: Request, res: Response) => {
  */
 router.post('/incidents', async (req: Request, res: Response) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
+
     const schema = z.object({
-      workspaceId: z.string(),
       incidentNumber: z.string(),
       priority: z.enum(['emergency', 'urgent', 'routine']),
       type: z.string(),
@@ -171,14 +182,21 @@ router.post('/incidents', async (req: Request, res: Response) => {
     });
 
     const data = schema.parse(req.body);
-    const incident = await dispatchService.createIncident(data);
+    const incident = await dispatchService.createIncident({ ...data, workspaceId });
+
+    platformEventBus.emit('dispatch.incident_created', {
+      workspaceId,
+      incidentId: incident?.id,
+      priority: data.priority,
+      type: data.type,
+    });
 
     res.json({ success: true, incident });
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/incidents' }
     });
-    res.status(400).json({ message: error.message || "Failed to create incident" });
+    res.status(400).json({ message: sanitizeError(error) || "Failed to create incident" });
   }
 });
 
@@ -188,15 +206,12 @@ router.post('/incidents', async (req: Request, res: Response) => {
  */
 router.get('/incidents', async (req: Request, res: Response) => {
   try {
-    const { workspaceId } = req.query;
-    
-    if (!workspaceId || typeof workspaceId !== 'string') {
-      return res.status(400).json({ message: "workspaceId query parameter required" });
-    }
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
 
     const incidents = await dispatchService.getActiveIncidents(workspaceId);
     res.json(incidents);
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/incidents' }
     });
@@ -210,6 +225,9 @@ router.get('/incidents', async (req: Request, res: Response) => {
  */
 router.patch('/incidents/:id/status', async (req: Request, res: Response) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
+
     const incidentId = req.params.id;
     const schema = z.object({
       status: z.enum(['pending', 'assigned', 'en_route', 'on_scene', 'cleared']),
@@ -223,12 +241,19 @@ router.patch('/incidents/:id/status', async (req: Request, res: Response) => {
       data.dispatcherId
     );
 
+    platformEventBus.emit('dispatch.incident_status_changed', {
+      incidentId,
+      workspaceId,
+      newStatus: data.status,
+      dispatcherId: data.dispatcherId,
+    });
+
     res.json({ success: true, incident });
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/incidents/status' }
     });
-    res.status(400).json({ message: error.message || "Failed to update incident status" });
+    res.status(400).json({ message: sanitizeError(error) || "Failed to update incident status" });
   }
 });
 
@@ -242,6 +267,9 @@ router.patch('/incidents/:id/status', async (req: Request, res: Response) => {
  */
 router.post('/assignments', async (req: Request, res: Response) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
+
     const schema = z.object({
       incidentId: z.string(),
       employeeId: z.string(),
@@ -259,12 +287,19 @@ router.post('/assignments', async (req: Request, res: Response) => {
       data.dispatcherId
     );
 
+    platformEventBus.emit('dispatch.unit_assigned', {
+      incidentId: data.incidentId,
+      employeeId: data.employeeId,
+      workspaceId,
+      dispatcherId: data.dispatcherId,
+    });
+
     res.json({ success: true, assignment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/assignments' }
     });
-    res.status(400).json({ message: error.message || "Failed to assign unit" });
+    res.status(400).json({ message: sanitizeError(error) || "Failed to assign unit" });
   }
 });
 
@@ -274,6 +309,9 @@ router.post('/assignments', async (req: Request, res: Response) => {
  */
 router.post('/assignments/respond', async (req: Request, res: Response) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(400).json({ message: "Workspace context required" });
+
     const schema = z.object({
       incidentId: z.string(),
       employeeId: z.string(),
@@ -290,11 +328,11 @@ router.post('/assignments/respond', async (req: Request, res: Response) => {
     );
 
     res.json({ success: true, assignment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     monitoringService.logError(error, {
       additionalData: { endpoint: '/api/dispatch/assignments/respond' }
     });
-    res.status(400).json({ message: error.message || "Failed to respond to assignment" });
+    res.status(400).json({ message: sanitizeError(error) || "Failed to respond to assignment" });
   }
 });
 

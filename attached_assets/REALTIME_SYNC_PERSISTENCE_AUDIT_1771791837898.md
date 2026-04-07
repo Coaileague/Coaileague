@@ -1,0 +1,1469 @@
+# COAILEAGUE - REAL-TIME SYNC & DATA PERSISTENCE AUDIT
+
+## MISSION: PERFECT HARMONIOUS PLATFORM SYNC
+
+The platform must work as **ONE UNIFIED SYSTEM** where:
+- Desktop and mobile are perfectly synchronized
+- Changes are **LIVE** and **IMMEDIATE** across all devices
+- Data persists correctly per session, per user, per organization
+- Trinity AI actions reflect everywhere instantly
+- No conflicts, no stale data, no sync gaps
+- Every feature, service, bot, and route is consistent
+
+**ENDGAME: A platform that works together flawlessly.**
+
+---
+
+# PART 1: SYNC ARCHITECTURE OVERVIEW
+
+## 1.1 The Synchronization Model
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        COAILEAGUE SYNC                          │
+└─────────────────────────────────────────────────────────────────┘
+
+                    ┌──────────────────┐
+                    │    DATABASE      │
+                    │   (Source of     │
+                    │     Truth)       │
+                    └────────┬─────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │   API SERVER     │
+                    │  + WebSocket     │
+                    └────────┬─────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+     ┌────────▼────┐  ┌──────▼──────┐  ┌────▼────────┐
+     │   DESKTOP   │  │   MOBILE    │  │  TRINITY    │
+     │   CLIENT    │  │   CLIENT    │  │   (AI)      │
+     │             │  │             │  │             │
+     │ ┌─────────┐ │  │ ┌─────────┐ │  │ ┌─────────┐ │
+     │ │ Local   │ │  │ │ Local   │ │  │ │ Actions │ │
+     │ │ State   │ │  │ │ State   │ │  │ │ & CRUD  │ │
+     │ └─────────┘ │  │ └─────────┘ │  │ └─────────┘ │
+     └─────────────┘  └─────────────┘  └─────────────┘
+              │              │              │
+              └──────────────┼──────────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │    WEBSOCKET     │
+                    │   (Real-time)    │
+                    │                  │
+                    │ - Data changes   │
+                    │ - AI actions     │
+                    │ - Notifications  │
+                    │ - Presence       │
+                    └──────────────────┘
+```
+
+## 1.2 Sync Requirements
+
+```
+REQUIREMENT 1: IMMEDIATE SYNC
+- Any change on Device A appears on Device B within < 500ms
+- No manual refresh needed
+- Works for all data types
+
+REQUIREMENT 2: SESSION PERSISTENCE
+- User session consistent across devices
+- Login on desktop = logged in on mobile (same session)
+- Logout on one = logout on all (configurable)
+
+REQUIREMENT 3: USER DATA ISOLATION
+- User A never sees User B's data
+- Organization A never sees Organization B's data
+- Support staff sees only what they're authorized for
+
+REQUIREMENT 4: CONFLICT RESOLUTION
+- Two users editing same record = graceful handling
+- Last-write-wins OR merge strategy
+- User notified of conflicts
+
+REQUIREMENT 5: OFFLINE RESILIENCE
+- Queue changes when offline
+- Sync when back online
+- No data loss
+
+REQUIREMENT 6: TRINITY SYNC
+- AI actions reflect immediately
+- Schedule changes from Trinity = visible everywhere
+- AI-generated content syncs to all devices
+```
+
+---
+
+# PART 2: WEBSOCKET INFRASTRUCTURE AUDIT
+
+## 2.1 Find WebSocket Implementation
+
+```bash
+# Find WebSocket server setup
+grep -rn "WebSocket\|socket\.io\|ws\|Socket" --include="*.ts" server/
+
+# Find WebSocket client setup
+grep -rn "WebSocket\|socket\.io\|useSocket\|io\(" --include="*.tsx" --include="*.ts" client/src/
+
+# Find socket event definitions
+grep -rn "\.emit\|\.on\|\.off" --include="*.ts" --include="*.tsx"
+```
+
+## 2.2 Required WebSocket Events
+
+```typescript
+/**
+ * COMPLETE WEBSOCKET EVENT REGISTRY
+ * 
+ * Every event that needs real-time sync
+ */
+
+const WEBSOCKET_EVENTS = {
+  // ============================================
+  // CONNECTION EVENTS
+  // ============================================
+  connection: {
+    'connect': 'Client connected',
+    'disconnect': 'Client disconnected',
+    'reconnect': 'Client reconnected',
+    'error': 'Connection error',
+  },
+  
+  // ============================================
+  // AUTHENTICATION EVENTS
+  // ============================================
+  auth: {
+    'auth:login': 'User logged in (sync to other devices)',
+    'auth:logout': 'User logged out (sync to other devices)',
+    'auth:session_expired': 'Session expired',
+    'auth:token_refresh': 'Token refreshed',
+  },
+  
+  // ============================================
+  // USER/PRESENCE EVENTS
+  // ============================================
+  presence: {
+    'presence:online': 'User came online',
+    'presence:offline': 'User went offline',
+    'presence:away': 'User went away',
+    'presence:active': 'User is active',
+  },
+  
+  // ============================================
+  // EMPLOYEE EVENTS
+  // ============================================
+  employees: {
+    'employee:created': 'New employee added',
+    'employee:updated': 'Employee data changed',
+    'employee:deleted': 'Employee removed',
+    'employee:status_changed': 'Employee status changed',
+    'employee:document_added': 'Document uploaded',
+    'employee:credential_expiring': 'Credential expiring soon',
+  },
+  
+  // ============================================
+  // CLIENT EVENTS
+  // ============================================
+  clients: {
+    'client:created': 'New client added',
+    'client:updated': 'Client data changed',
+    'client:deleted': 'Client removed',
+    'client:contract_signed': 'Contract signed',
+  },
+  
+  // ============================================
+  // SCHEDULE EVENTS
+  // ============================================
+  schedule: {
+    'shift:created': 'New shift created',
+    'shift:updated': 'Shift modified',
+    'shift:deleted': 'Shift cancelled',
+    'shift:assigned': 'Employee assigned to shift',
+    'shift:unassigned': 'Employee removed from shift',
+    'shift:swap_requested': 'Shift swap requested',
+    'shift:swap_approved': 'Shift swap approved',
+    'shift:started': 'Shift started (clock in)',
+    'shift:ended': 'Shift ended (clock out)',
+  },
+  
+  // ============================================
+  // TIME TRACKING EVENTS
+  // ============================================
+  timeclock: {
+    'timeclock:clock_in': 'Employee clocked in',
+    'timeclock:clock_out': 'Employee clocked out',
+    'timeclock:break_start': 'Break started',
+    'timeclock:break_end': 'Break ended',
+    'timeentry:updated': 'Time entry modified',
+    'timeentry:approved': 'Time entry approved',
+  },
+  
+  // ============================================
+  // INVOICE EVENTS
+  // ============================================
+  invoices: {
+    'invoice:created': 'Invoice generated',
+    'invoice:sent': 'Invoice sent to client',
+    'invoice:viewed': 'Invoice viewed by client',
+    'invoice:paid': 'Payment received',
+    'invoice:overdue': 'Invoice became overdue',
+  },
+  
+  // ============================================
+  // CONTRACT EVENTS
+  // ============================================
+  contracts: {
+    'contract:created': 'Contract created',
+    'contract:sent': 'Contract sent for signature',
+    'contract:viewed': 'Contract viewed',
+    'contract:signed': 'Contract signed',
+    'contract:expired': 'Contract expired',
+  },
+  
+  // ============================================
+  // COMMUNICATION EVENTS
+  // ============================================
+  chat: {
+    'message:new': 'New message received',
+    'message:updated': 'Message edited',
+    'message:deleted': 'Message deleted',
+    'message:read': 'Message read',
+    'typing:start': 'User started typing',
+    'typing:stop': 'User stopped typing',
+    'room:created': 'Chat room created',
+    'room:updated': 'Chat room updated',
+    'room:member_added': 'Member added to room',
+    'room:member_removed': 'Member removed from room',
+  },
+  
+  // ============================================
+  // NOTIFICATION EVENTS
+  // ============================================
+  notifications: {
+    'notification:new': 'New notification',
+    'notification:read': 'Notification read',
+    'notification:cleared': 'Notifications cleared',
+    'announcement:new': 'New announcement',
+  },
+  
+  // ============================================
+  // TRINITY AI EVENTS
+  // ============================================
+  trinity: {
+    'trinity:thinking': 'Trinity is processing',
+    'trinity:response': 'Trinity responded',
+    'trinity:action_started': 'Trinity started an action',
+    'trinity:action_completed': 'Trinity completed an action',
+    'trinity:schedule_proposed': 'Trinity proposed a schedule',
+    'trinity:schedule_applied': 'Trinity schedule was applied',
+    'trinity:insight_generated': 'Trinity generated an insight',
+    'trinity:error': 'Trinity encountered an error',
+  },
+  
+  // ============================================
+  // COMPLIANCE EVENTS
+  // ============================================
+  compliance: {
+    'compliance:credential_expiring': 'Credential expiring',
+    'compliance:credential_expired': 'Credential expired',
+    'compliance:training_due': 'Training due',
+    'compliance:violation': 'Compliance violation detected',
+  },
+  
+  // ============================================
+  // SYSTEM EVENTS
+  // ============================================
+  system: {
+    'system:maintenance_scheduled': 'Maintenance scheduled',
+    'system:maintenance_started': 'Maintenance started',
+    'system:maintenance_ended': 'Maintenance ended',
+    'system:update_available': 'Update available',
+    'system:error': 'System error',
+  },
+};
+```
+
+## 2.3 WebSocket Server Implementation Audit
+
+```bash
+# Find socket server setup
+grep -rn "io\.on\|socket\.on" --include="*.ts" server/
+
+# Verify all events are emitted when data changes
+# For each API route that modifies data, check if it emits socket event
+for route in $(grep -rn "router\.post\|router\.put\|router\.patch\|router\.delete" --include="*.ts" server/routes/ -l); do
+  echo "=== $route ==="
+  echo "Mutations:"
+  grep -n "\.insert\|\.update\|\.delete" "$route" | head -5
+  echo "Socket emits:"
+  grep -n "\.emit\|io\.to" "$route" | head -5
+  echo ""
+done
+```
+
+## 2.4 Required Socket Server Structure
+
+```typescript
+// server/socket/index.ts
+
+import { Server } from 'socket.io';
+import { verifyToken } from '../auth';
+
+export function setupSocketServer(io: Server) {
+  // Middleware: Authenticate socket connections
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      const user = await verifyToken(token);
+      
+      if (!user) {
+        return next(new Error('Authentication failed'));
+      }
+      
+      // Attach user to socket
+      socket.data.user = user;
+      socket.data.workspaceId = user.workspaceId;
+      socket.data.userId = user.id;
+      
+      next();
+    } catch (error) {
+      next(new Error('Authentication failed'));
+    }
+  });
+  
+  io.on('connection', (socket) => {
+    const { userId, workspaceId } = socket.data;
+    
+    // Join user-specific room (for cross-device sync)
+    socket.join(`user:${userId}`);
+    
+    // Join workspace room (for org-wide updates)
+    socket.join(`workspace:${workspaceId}`);
+    
+    // Broadcast presence
+    io.to(`workspace:${workspaceId}`).emit('presence:online', { userId });
+    
+    // Handle disconnect
+    socket.on('disconnect', () => {
+      io.to(`workspace:${workspaceId}`).emit('presence:offline', { userId });
+    });
+    
+    // Handle room subscriptions
+    socket.on('subscribe:room', (roomId) => {
+      socket.join(`room:${roomId}`);
+    });
+    
+    socket.on('unsubscribe:room', (roomId) => {
+      socket.leave(`room:${roomId}`);
+    });
+  });
+  
+  return io;
+}
+
+// Utility to emit to all user's devices
+export function emitToUser(io: Server, userId: string, event: string, data: any) {
+  io.to(`user:${userId}`).emit(event, data);
+}
+
+// Utility to emit to entire workspace
+export function emitToWorkspace(io: Server, workspaceId: string, event: string, data: any) {
+  io.to(`workspace:${workspaceId}`).emit(event, data);
+}
+
+// Utility to emit to specific room
+export function emitToRoom(io: Server, roomId: string, event: string, data: any) {
+  io.to(`room:${roomId}`).emit(event, data);
+}
+```
+
+## 2.5 Socket Event Emission on Data Changes
+
+```typescript
+// server/routes/employees.ts - EXAMPLE OF PROPER SYNC
+
+import { emitToWorkspace } from '../socket';
+
+router.post('/api/employees', async (req, res) => {
+  try {
+    const { workspaceId } = req.user;
+    
+    // Create employee
+    const employee = await db.insert(employees).values({
+      ...req.body,
+      workspaceId,
+    }).returning();
+    
+    // ✅ EMIT SOCKET EVENT - All devices in workspace get notified
+    emitToWorkspace(io, workspaceId, 'employee:created', {
+      employee: employee[0],
+      createdBy: req.user.id,
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.json({ success: true, data: employee[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/api/employees/:id', async (req, res) => {
+  try {
+    const { workspaceId } = req.user;
+    
+    // Update employee
+    const employee = await db.update(employees)
+      .set({ ...req.body, updatedAt: new Date() })
+      .where(and(
+        eq(employees.id, req.params.id),
+        eq(employees.workspaceId, workspaceId)
+      ))
+      .returning();
+    
+    // ✅ EMIT SOCKET EVENT
+    emitToWorkspace(io, workspaceId, 'employee:updated', {
+      employee: employee[0],
+      updatedBy: req.user.id,
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.json({ success: true, data: employee[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/api/employees/:id', async (req, res) => {
+  try {
+    const { workspaceId } = req.user;
+    
+    // Delete employee
+    await db.delete(employees)
+      .where(and(
+        eq(employees.id, req.params.id),
+        eq(employees.workspaceId, workspaceId)
+      ));
+    
+    // ✅ EMIT SOCKET EVENT
+    emitToWorkspace(io, workspaceId, 'employee:deleted', {
+      employeeId: req.params.id,
+      deletedBy: req.user.id,
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+```
+
+---
+
+# PART 3: CLIENT-SIDE SYNC IMPLEMENTATION
+
+## 3.1 Find Client Socket Implementation
+
+```bash
+# Find socket context/provider
+grep -rn "SocketContext\|SocketProvider\|useSocket" --include="*.tsx" --include="*.ts" client/src/
+
+# Find socket connection
+grep -rn "io\(\|connect\(\|socket\.connect" --include="*.tsx" --include="*.ts" client/src/
+
+# Find socket event handlers
+grep -rn "socket\.on\|\.on\(" --include="*.tsx" client/src/
+```
+
+## 3.2 Required Client Socket Hook
+
+```typescript
+// client/src/hooks/useSocket.ts
+
+import { useEffect, useRef, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { useAuth } from './useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+
+interface UseSocketOptions {
+  autoConnect?: boolean;
+  reconnection?: boolean;
+  reconnectionAttempts?: number;
+  reconnectionDelay?: number;
+}
+
+export function useSocket(options: UseSocketOptions = {}) {
+  const socketRef = useRef<Socket | null>(null);
+  const { token, user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  const {
+    autoConnect = true,
+    reconnection = true,
+    reconnectionAttempts = 10,
+    reconnectionDelay = 1000,
+  } = options;
+  
+  // Initialize socket connection
+  useEffect(() => {
+    if (!token || !autoConnect) return;
+    
+    // Create socket connection with auth
+    const socket = io(import.meta.env.VITE_WS_URL || '', {
+      auth: { token },
+      reconnection,
+      reconnectionAttempts,
+      reconnectionDelay,
+      transports: ['websocket', 'polling'],
+    });
+    
+    socketRef.current = socket;
+    
+    // Connection events
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id);
+    });
+    
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+    });
+    
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+    
+    // ============================================
+    // SYNC EVENT HANDLERS - Update local state/cache
+    // ============================================
+    
+    // Employee events
+    socket.on('employee:created', (data) => {
+      queryClient.invalidateQueries(['employees']);
+      queryClient.setQueryData(['employees'], (old: any) => {
+        if (!old) return [data.employee];
+        return [...old, data.employee];
+      });
+    });
+    
+    socket.on('employee:updated', (data) => {
+      queryClient.invalidateQueries(['employees']);
+      queryClient.setQueryData(['employee', data.employee.id], data.employee);
+    });
+    
+    socket.on('employee:deleted', (data) => {
+      queryClient.invalidateQueries(['employees']);
+      queryClient.removeQueries(['employee', data.employeeId]);
+    });
+    
+    // Client events
+    socket.on('client:created', (data) => {
+      queryClient.invalidateQueries(['clients']);
+    });
+    
+    socket.on('client:updated', (data) => {
+      queryClient.invalidateQueries(['clients']);
+      queryClient.setQueryData(['client', data.client.id], data.client);
+    });
+    
+    socket.on('client:deleted', (data) => {
+      queryClient.invalidateQueries(['clients']);
+    });
+    
+    // Shift events
+    socket.on('shift:created', (data) => {
+      queryClient.invalidateQueries(['shifts']);
+      queryClient.invalidateQueries(['schedule']);
+    });
+    
+    socket.on('shift:updated', (data) => {
+      queryClient.invalidateQueries(['shifts']);
+      queryClient.invalidateQueries(['schedule']);
+    });
+    
+    socket.on('shift:assigned', (data) => {
+      queryClient.invalidateQueries(['shifts']);
+      queryClient.invalidateQueries(['schedule']);
+      queryClient.invalidateQueries(['employee', data.employeeId]);
+    });
+    
+    // Time tracking events
+    socket.on('timeclock:clock_in', (data) => {
+      queryClient.invalidateQueries(['timeEntries']);
+      queryClient.invalidateQueries(['activeShifts']);
+    });
+    
+    socket.on('timeclock:clock_out', (data) => {
+      queryClient.invalidateQueries(['timeEntries']);
+      queryClient.invalidateQueries(['activeShifts']);
+    });
+    
+    // Invoice events
+    socket.on('invoice:created', (data) => {
+      queryClient.invalidateQueries(['invoices']);
+    });
+    
+    socket.on('invoice:paid', (data) => {
+      queryClient.invalidateQueries(['invoices']);
+      queryClient.setQueryData(['invoice', data.invoiceId], (old: any) => ({
+        ...old,
+        status: 'paid',
+      }));
+    });
+    
+    // Contract events
+    socket.on('contract:signed', (data) => {
+      queryClient.invalidateQueries(['contracts']);
+      queryClient.invalidateQueries(['clients']);
+    });
+    
+    // Chat events
+    socket.on('message:new', (data) => {
+      queryClient.invalidateQueries(['messages', data.roomId]);
+      queryClient.setQueryData(['messages', data.roomId], (old: any) => {
+        if (!old) return [data.message];
+        return [...old, data.message];
+      });
+    });
+    
+    // Trinity AI events
+    socket.on('trinity:action_completed', (data) => {
+      // Invalidate relevant queries based on action type
+      if (data.actionType === 'schedule') {
+        queryClient.invalidateQueries(['shifts']);
+        queryClient.invalidateQueries(['schedule']);
+      }
+      if (data.actionType === 'assignment') {
+        queryClient.invalidateQueries(['shifts']);
+        queryClient.invalidateQueries(['employees']);
+      }
+    });
+    
+    // Notification events
+    socket.on('notification:new', (data) => {
+      queryClient.invalidateQueries(['notifications']);
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      socket.off('employee:created');
+      socket.off('employee:updated');
+      socket.off('employee:deleted');
+      socket.off('client:created');
+      socket.off('client:updated');
+      socket.off('client:deleted');
+      socket.off('shift:created');
+      socket.off('shift:updated');
+      socket.off('shift:assigned');
+      socket.off('timeclock:clock_in');
+      socket.off('timeclock:clock_out');
+      socket.off('invoice:created');
+      socket.off('invoice:paid');
+      socket.off('contract:signed');
+      socket.off('message:new');
+      socket.off('trinity:action_completed');
+      socket.off('notification:new');
+      
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [token, autoConnect, queryClient]);
+  
+  // Emit function
+  const emit = useCallback((event: string, data: any) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit(event, data);
+    }
+  }, []);
+  
+  // Subscribe to room
+  const subscribeToRoom = useCallback((roomId: string) => {
+    emit('subscribe:room', roomId);
+  }, [emit]);
+  
+  // Unsubscribe from room
+  const unsubscribeFromRoom = useCallback((roomId: string) => {
+    emit('unsubscribe:room', roomId);
+  }, [emit]);
+  
+  return {
+    socket: socketRef.current,
+    connected: socketRef.current?.connected ?? false,
+    emit,
+    subscribeToRoom,
+    unsubscribeFromRoom,
+  };
+}
+```
+
+## 3.3 Socket Provider for App-Wide Access
+
+```typescript
+// client/src/contexts/SocketContext.tsx
+
+import { createContext, useContext, ReactNode } from 'react';
+import { useSocket } from '../hooks/useSocket';
+import { Socket } from 'socket.io-client';
+
+interface SocketContextType {
+  socket: Socket | null;
+  connected: boolean;
+  emit: (event: string, data: any) => void;
+  subscribeToRoom: (roomId: string) => void;
+  unsubscribeFromRoom: (roomId: string) => void;
+}
+
+const SocketContext = createContext<SocketContextType | null>(null);
+
+export function SocketProvider({ children }: { children: ReactNode }) {
+  const socketValue = useSocket({ autoConnect: true });
+  
+  return (
+    <SocketContext.Provider value={socketValue}>
+      {children}
+    </SocketContext.Provider>
+  );
+}
+
+export function useSocketContext() {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error('useSocketContext must be used within SocketProvider');
+  }
+  return context;
+}
+```
+
+---
+
+# PART 4: DATA PERSISTENCE AUDIT
+
+## 4.1 Session Persistence
+
+```bash
+# Find session management
+grep -rn "session\|Session\|localStorage\|sessionStorage\|cookie" --include="*.ts" --include="*.tsx" client/src/
+
+# Find token storage
+grep -rn "token\|Token\|jwt\|JWT" --include="*.ts" --include="*.tsx" client/src/
+
+# Find auth persistence
+grep -rn "persist\|PERSIST\|rehydrate\|REHYDRATE" --include="*.ts" --include="*.tsx" client/src/
+```
+
+## 4.2 Required Session Structure
+
+```typescript
+// client/src/stores/authStore.ts
+
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  workspaceId: string | null;
+  sessionId: string | null;
+  
+  // Actions
+  setAuth: (user: User, token: string) => void;
+  clearAuth: () => void;
+  updateUser: (user: Partial<User>) => void;
+  setWorkspace: (workspaceId: string) => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      token: null,
+      workspaceId: null,
+      sessionId: null,
+      
+      setAuth: (user, token) => {
+        const sessionId = crypto.randomUUID();
+        set({ user, token, workspaceId: user.workspaceId, sessionId });
+      },
+      
+      clearAuth: () => {
+        set({ user: null, token: null, workspaceId: null, sessionId: null });
+      },
+      
+      updateUser: (updates) => {
+        const { user } = get();
+        if (user) {
+          set({ user: { ...user, ...updates } });
+        }
+      },
+      
+      setWorkspace: (workspaceId) => {
+        set({ workspaceId });
+      },
+    }),
+    {
+      name: 'coaileague-auth',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        workspaceId: state.workspaceId,
+        sessionId: state.sessionId,
+      }),
+    }
+  )
+);
+```
+
+## 4.3 Cross-Device Session Sync
+
+```typescript
+// When user logs in on one device, validate on others
+
+// Server: Track active sessions
+interface ActiveSession {
+  sessionId: string;
+  userId: string;
+  workspaceId: string;
+  deviceType: 'desktop' | 'mobile' | 'tablet';
+  lastActive: Date;
+  socketId: string;
+}
+
+// On login, create session record
+async function createSession(userId: string, deviceInfo: any): Promise<ActiveSession> {
+  const session = {
+    sessionId: crypto.randomUUID(),
+    userId,
+    workspaceId: user.workspaceId,
+    deviceType: deviceInfo.type,
+    lastActive: new Date(),
+    socketId: null, // Set when socket connects
+  };
+  
+  await db.insert(activeSessions).values(session);
+  
+  return session;
+}
+
+// On socket connect, link session
+socket.on('connection', async (socket) => {
+  const { sessionId } = socket.handshake.auth;
+  
+  await db.update(activeSessions)
+    .set({ socketId: socket.id, lastActive: new Date() })
+    .where(eq(activeSessions.sessionId, sessionId));
+});
+
+// Sync session state across devices
+socket.on('session:sync_request', async () => {
+  const { userId } = socket.data;
+  
+  // Get all user's active sessions
+  const sessions = await db.query.activeSessions.findMany({
+    where: eq(activeSessions.userId, userId),
+  });
+  
+  // Emit to all user's devices
+  emitToUser(io, userId, 'session:sync', { sessions });
+});
+```
+
+---
+
+# PART 5: TRINITY AI SYNC
+
+## 5.1 Trinity Action Broadcasting
+
+```typescript
+// server/services/ai/trinity-sync.ts
+
+import { emitToWorkspace, emitToUser } from '../socket';
+
+/**
+ * When Trinity performs any action, broadcast to all relevant parties
+ */
+
+export async function broadcastTrinityAction(
+  io: Server,
+  action: TrinityAction
+) {
+  const { workspaceId, userId, actionType, result } = action;
+  
+  // Emit thinking state (real-time feedback)
+  emitToUser(io, userId, 'trinity:thinking', {
+    actionType,
+    startedAt: new Date().toISOString(),
+  });
+  
+  // ... Trinity processes ...
+  
+  // Emit completion to user who triggered
+  emitToUser(io, userId, 'trinity:response', {
+    actionType,
+    result,
+    completedAt: new Date().toISOString(),
+  });
+  
+  // If action affects workspace data, broadcast to everyone
+  if (actionAffectsWorkspace(actionType)) {
+    emitToWorkspace(io, workspaceId, 'trinity:action_completed', {
+      actionType,
+      result,
+      triggeredBy: userId,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Emit specific events based on action type
+    switch (actionType) {
+      case 'create_shift':
+        emitToWorkspace(io, workspaceId, 'shift:created', result.shift);
+        break;
+      case 'assign_employee':
+        emitToWorkspace(io, workspaceId, 'shift:assigned', {
+          shiftId: result.shiftId,
+          employeeId: result.employeeId,
+        });
+        break;
+      case 'generate_schedule':
+        emitToWorkspace(io, workspaceId, 'schedule:generated', result.schedule);
+        break;
+      case 'send_notification':
+        emitToUser(io, result.recipientId, 'notification:new', result.notification);
+        break;
+    }
+  }
+}
+
+function actionAffectsWorkspace(actionType: string): boolean {
+  const workspaceActions = [
+    'create_shift',
+    'update_shift',
+    'delete_shift',
+    'assign_employee',
+    'unassign_employee',
+    'generate_schedule',
+    'apply_schedule',
+    'create_invoice',
+    'send_notification',
+    'update_client',
+    'update_employee',
+  ];
+  return workspaceActions.includes(actionType);
+}
+```
+
+## 5.2 Trinity Conversation Sync
+
+```typescript
+// Trinity conversations should sync across devices
+
+// When user sends message to Trinity on mobile
+socket.on('trinity:message', async (data) => {
+  const { userId, workspaceId, message, conversationId } = data;
+  
+  // Store message
+  const storedMessage = await db.insert(trinityMessages).values({
+    conversationId,
+    role: 'user',
+    content: message,
+    createdAt: new Date(),
+  }).returning();
+  
+  // Sync to user's other devices (so desktop sees the mobile message)
+  emitToUser(io, userId, 'trinity:message_synced', {
+    conversationId,
+    message: storedMessage[0],
+  });
+  
+  // Process with Trinity
+  const response = await trinity.process(message, { conversationId, workspaceId });
+  
+  // Store response
+  const storedResponse = await db.insert(trinityMessages).values({
+    conversationId,
+    role: 'assistant',
+    content: response.content,
+    createdAt: new Date(),
+  }).returning();
+  
+  // Sync response to all user's devices
+  emitToUser(io, userId, 'trinity:response', {
+    conversationId,
+    message: storedResponse[0],
+    actions: response.actions,
+  });
+  
+  // If Trinity performed actions, broadcast them
+  for (const action of response.actions) {
+    await broadcastTrinityAction(io, action);
+  }
+});
+```
+
+---
+
+# PART 6: CONFLICT RESOLUTION
+
+## 6.1 Optimistic Updates with Rollback
+
+```typescript
+// client/src/hooks/useOptimisticMutation.ts
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+interface OptimisticMutationOptions<T> {
+  queryKey: string[];
+  mutationFn: (data: T) => Promise<T>;
+  optimisticUpdate: (old: T[], newData: T) => T[];
+  onConflict?: (serverData: T, localData: T) => T;
+}
+
+export function useOptimisticMutation<T>({
+  queryKey,
+  mutationFn,
+  optimisticUpdate,
+  onConflict,
+}: OptimisticMutationOptions<T>) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn,
+    
+    // Optimistic update before server responds
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      // Optimistically update
+      queryClient.setQueryData(queryKey, (old: T[]) => 
+        optimisticUpdate(old || [], newData)
+      );
+      
+      return { previousData };
+    },
+    
+    // On error, rollback
+    onError: (err, newData, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+    },
+    
+    // On success, update with server data
+    onSuccess: (serverData) => {
+      queryClient.setQueryData(queryKey, (old: T[]) => {
+        if (!old) return [serverData];
+        
+        // Replace optimistic data with server data
+        return old.map(item => 
+          item.id === serverData.id ? serverData : item
+        );
+      });
+    },
+    
+    // Always refetch after mutation
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+```
+
+## 6.2 Conflict Detection
+
+```typescript
+// server/middleware/conflictDetection.ts
+
+interface ConflictCheckResult {
+  hasConflict: boolean;
+  serverVersion: number;
+  clientVersion: number;
+  conflictingFields?: string[];
+}
+
+export async function checkForConflict(
+  table: string,
+  id: string,
+  clientVersion: number
+): Promise<ConflictCheckResult> {
+  const record = await db.query[table].findFirst({
+    where: eq(table.id, id),
+  });
+  
+  if (!record) {
+    return { hasConflict: false, serverVersion: 0, clientVersion };
+  }
+  
+  if (record.version > clientVersion) {
+    return {
+      hasConflict: true,
+      serverVersion: record.version,
+      clientVersion,
+    };
+  }
+  
+  return { hasConflict: false, serverVersion: record.version, clientVersion };
+}
+
+// Usage in route
+router.put('/api/employees/:id', async (req, res) => {
+  const { version, ...updateData } = req.body;
+  
+  // Check for conflicts
+  const conflict = await checkForConflict('employees', req.params.id, version);
+  
+  if (conflict.hasConflict) {
+    // Get current server state
+    const currentEmployee = await db.query.employees.findFirst({
+      where: eq(employees.id, req.params.id),
+    });
+    
+    return res.status(409).json({
+      success: false,
+      error: 'CONFLICT',
+      message: 'Record was modified by another user',
+      serverData: currentEmployee,
+      serverVersion: conflict.serverVersion,
+      clientVersion: conflict.clientVersion,
+    });
+  }
+  
+  // No conflict, proceed with update
+  const updated = await db.update(employees)
+    .set({ 
+      ...updateData, 
+      version: conflict.serverVersion + 1,
+      updatedAt: new Date(),
+    })
+    .where(eq(employees.id, req.params.id))
+    .returning();
+  
+  // Broadcast update
+  emitToWorkspace(io, req.user.workspaceId, 'employee:updated', {
+    employee: updated[0],
+  });
+  
+  res.json({ success: true, data: updated[0] });
+});
+```
+
+## 6.3 Client Conflict Handling
+
+```typescript
+// client/src/hooks/useConflictResolution.ts
+
+export function useConflictResolution() {
+  const [conflict, setConflict] = useState<ConflictState | null>(null);
+  
+  const handleConflict = useCallback((error: any, localData: any) => {
+    if (error.response?.status === 409) {
+      setConflict({
+        serverData: error.response.data.serverData,
+        localData,
+        serverVersion: error.response.data.serverVersion,
+      });
+      return true;
+    }
+    return false;
+  }, []);
+  
+  const resolveWithServer = useCallback(() => {
+    // Accept server version
+    setConflict(null);
+    return conflict?.serverData;
+  }, [conflict]);
+  
+  const resolveWithLocal = useCallback(async () => {
+    // Force local version (with new version number)
+    if (!conflict) return;
+    
+    const result = await forceUpdate({
+      ...conflict.localData,
+      version: conflict.serverVersion,
+    });
+    
+    setConflict(null);
+    return result;
+  }, [conflict]);
+  
+  const resolveWithMerge = useCallback((mergedData: any) => {
+    // Use custom merged data
+    setConflict(null);
+    return mergedData;
+  }, []);
+  
+  return {
+    conflict,
+    handleConflict,
+    resolveWithServer,
+    resolveWithLocal,
+    resolveWithMerge,
+  };
+}
+```
+
+---
+
+# PART 7: SYNC VERIFICATION CHECKLIST
+
+## 7.1 Data Type Sync Matrix
+
+```
+For EACH data type, verify sync works:
+
+| Data Type | Create | Update | Delete | Desktop→Mobile | Mobile→Desktop | Trinity→All |
+|-----------|--------|--------|--------|----------------|----------------|-------------|
+| Employees | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Clients | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Sites | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Shifts | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Time Entries | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Invoices | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Contracts | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Messages | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Notifications | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Documents | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Schedules | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+```
+
+## 7.2 Sync Test Scenarios
+
+```
+TEST SCENARIO 1: Employee Creation
+1. Open Desktop and Mobile side by side
+2. Create employee on Desktop
+3. VERIFY: Employee appears on Mobile within 1 second
+4. VERIFY: No page refresh needed
+
+TEST SCENARIO 2: Shift Assignment
+1. Open Schedule on Desktop and Mobile
+2. Assign employee to shift on Mobile
+3. VERIFY: Desktop shows assignment immediately
+4. VERIFY: Employee's calendar updated on both
+
+TEST SCENARIO 3: Clock In/Out
+1. Employee clocks in on Mobile
+2. VERIFY: Manager's desktop shows clock-in immediately
+3. VERIFY: Time tracking dashboard updates
+
+TEST SCENARIO 4: Trinity AI Action
+1. Ask Trinity to "assign Maria to the 6 AM shift tomorrow"
+2. VERIFY: Schedule updates on mobile immediately
+3. VERIFY: Maria receives notification on her device
+4. VERIFY: Action logged in activity feed
+
+TEST SCENARIO 5: Message Sync
+1. Send message in chat from Desktop
+2. VERIFY: Message appears on Mobile immediately
+3. VERIFY: Read receipt syncs back to Desktop
+
+TEST SCENARIO 6: Conflict Resolution
+1. Open same employee on Desktop and Mobile
+2. Edit name on Desktop, DON'T save
+3. Edit name on Mobile, save
+4. Try to save on Desktop
+5. VERIFY: Conflict dialog appears
+6. VERIFY: User can choose resolution strategy
+```
+
+## 7.3 API Route Sync Audit
+
+```bash
+# Find all routes that modify data
+grep -rn "router\.post\|router\.put\|router\.patch\|router\.delete" --include="*.ts" server/routes/
+
+# For each, verify socket emit exists
+for route in $(find server/routes -name "*.ts"); do
+  echo "=== $route ==="
+  
+  mutations=$(grep -c "\.insert\|\.update\|\.delete" "$route")
+  emits=$(grep -c "\.emit\|emitTo" "$route")
+  
+  if [ "$mutations" -gt "$emits" ]; then
+    echo "⚠️  WARNING: $mutations mutations but only $emits emits"
+    echo "Missing socket events for real-time sync!"
+  else
+    echo "✅ OK: $mutations mutations, $emits emits"
+  fi
+done
+```
+
+---
+
+# PART 8: COMPREHENSIVE SEARCH COMMANDS
+
+## 8.1 Find ALL Missing Sync Points
+
+```bash
+#!/bin/bash
+# Save as: find_missing_sync.sh
+
+echo "=== FINDING MISSING REAL-TIME SYNC ==="
+echo ""
+
+echo "1. Routes with database mutations but no socket emit..."
+for file in $(find server/routes -name "*.ts"); do
+  # Count mutations
+  mutations=$(grep -E "\.insert|\.update|\.delete|\.create|\.remove" "$file" | wc -l)
+  # Count emits
+  emits=$(grep -E "\.emit|emitTo|io\.to" "$file" | wc -l)
+  
+  if [ "$mutations" -gt 0 ] && [ "$emits" -eq 0 ]; then
+    echo "  ⚠️  $file: $mutations mutations, NO socket emits"
+  elif [ "$mutations" -gt "$emits" ]; then
+    echo "  ⚠️  $file: $mutations mutations, only $emits emits (may be missing some)"
+  fi
+done
+
+echo ""
+echo "2. Socket events emitted but not listened on client..."
+# Get server emits
+grep -rn "\.emit\|emitTo" --include="*.ts" server/ | \
+  grep -oP "'[a-z_:]+'" | tr -d "'" | sort -u > /tmp/server_emits.txt
+
+# Get client listeners
+grep -rn "socket\.on\|\.on\(" --include="*.tsx" --include="*.ts" client/src/ | \
+  grep -oP "'[a-z_:]+'" | tr -d "'" | sort -u > /tmp/client_listeners.txt
+
+echo "Events emitted but not handled:"
+comm -23 /tmp/server_emits.txt /tmp/client_listeners.txt
+
+echo ""
+echo "3. Client listeners for events never emitted..."
+echo "Events listened but never emitted:"
+comm -13 /tmp/server_emits.txt /tmp/client_listeners.txt
+
+echo ""
+echo "4. React Query invalidations on socket events..."
+grep -rn "invalidateQueries" --include="*.tsx" --include="*.ts" client/src/ | wc -l
+echo "Total invalidation calls found"
+```
+
+## 8.2 Find Data Persistence Issues
+
+```bash
+#!/bin/bash
+# Save as: find_persistence_issues.sh
+
+echo "=== FINDING DATA PERSISTENCE ISSUES ==="
+echo ""
+
+echo "1. LocalStorage/SessionStorage usage..."
+grep -rn "localStorage\|sessionStorage" --include="*.tsx" --include="*.ts" client/src/
+
+echo ""
+echo "2. Zustand persist configuration..."
+grep -rn "persist\|createJSONStorage" --include="*.ts" client/src/
+
+echo ""
+echo "3. Auth token storage..."
+grep -rn "token\|Token" --include="*.ts" client/src/ | grep -i "storage\|localStorage\|cookie"
+
+echo ""
+echo "4. Session validation on app load..."
+grep -rn "validateSession\|checkAuth\|verifyToken" --include="*.tsx" --include="*.ts" client/src/
+```
+
+---
+
+# PART 9: OUTPUT FORMAT
+
+```markdown
+# REAL-TIME SYNC & DATA PERSISTENCE AUDIT REPORT
+
+## Date: [DATE]
+## Status: [SYNCED / GAPS FOUND / CRITICAL ISSUES]
+
+---
+
+## SYNC COVERAGE
+
+### Socket Events Implemented
+
+| Event | Server Emit | Client Listen | Cache Invalidation | Status |
+|-------|-------------|---------------|-------------------|--------|
+| employee:created | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| employee:updated | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| shift:assigned | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| ... | ... | ... | ... | ... |
+
+### Missing Sync Points
+
+| Route | Mutation | Missing Event |
+|-------|----------|---------------|
+| POST /api/employees | insert | employee:created |
+| ... | ... | ... |
+
+---
+
+## DATA PERSISTENCE
+
+### Session Management
+- [ ] Token stored securely
+- [ ] Session persists across refresh
+- [ ] Session syncs across devices
+- [ ] Logout clears all session data
+
+### Cross-Device Sync
+- [ ] Desktop → Mobile: Working/Broken
+- [ ] Mobile → Desktop: Working/Broken
+- [ ] Multi-tab sync: Working/Broken
+
+---
+
+## TRINITY AI SYNC
+
+- [ ] Trinity actions broadcast to workspace
+- [ ] Trinity conversations sync across devices
+- [ ] Trinity schedule changes reflect immediately
+
+---
+
+## CONFLICT RESOLUTION
+
+- [ ] Optimistic updates implemented
+- [ ] Conflict detection in place
+- [ ] User can resolve conflicts
+- [ ] No data loss on conflicts
+
+---
+
+## FIXES NEEDED
+
+| Priority | Issue | Location | Fix |
+|----------|-------|----------|-----|
+| CRITICAL | No socket emit on employee create | routes/employees.ts | Add emit |
+| HIGH | Cache not invalidated on shift update | hooks/useSocket.ts | Add invalidation |
+| ... | ... | ... | ... |
+
+---
+
+## VERIFICATION
+
+[ ] All CRUD operations emit socket events
+[ ] All socket events handled on client
+[ ] All handlers invalidate relevant caches
+[ ] Desktop-Mobile sync verified
+[ ] Trinity actions sync verified
+[ ] Conflict resolution tested
+[ ] Session persistence verified
+```
+
+---
+
+# EXECUTION PRIORITY
+
+1. **Audit socket event coverage** - Find all missing emit/listen pairs
+2. **Add missing socket events** - Every mutation needs an emit
+3. **Add client listeners** - Every emit needs a handler
+4. **Add cache invalidation** - Every handler needs to update React Query
+5. **Implement conflict resolution** - Handle concurrent edits
+6. **Test cross-device** - Verify with actual devices
+7. **Verify Trinity sync** - AI actions reflect everywhere
+
+**THE ENDGAME: Perfect harmonious platform where everything syncs instantly.**
+
+**BEGIN SYNC AUDIT NOW.**

@@ -5,8 +5,10 @@
  * Provides human-in-the-loop approval workflows and safety controls.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
+import { requireSysop } from '../rbac';
 import { trinitySelfEditGovernance } from '../services/ai-brain/trinitySelfEditGovernance';
 import { z } from 'zod';
 
@@ -51,27 +53,18 @@ const rejectionSchema = z.object({
   reason: z.string().min(1),
 });
 
-const isAdminRole = (role?: string): boolean => {
-  const adminRoles = ['root_admin', 'deputy_admin', 'sysop'];
-  return adminRoles.includes(role || '');
-};
 
 router.get('/rules', requireAuth, async (req: Request, res: Response) => {
   try {
     const rules = trinitySelfEditGovernance.getEditingRules();
     res.json({ success: true, rules });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.patch('/rules', requireAuth, async (req: Request, res: Response) => {
+router.patch('/rules', requireAuth, requireSysop as any, async (req: Request, res: Response) => {
   try {
-    const userRole = req.session?.role || (req as any).userRole;
-    if (!isAdminRole(userRole)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
     const parsed = updateRulesSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid request', details: parsed.error.flatten() });
@@ -79,8 +72,8 @@ router.patch('/rules', requireAuth, async (req: Request, res: Response) => {
 
     const updatedRules = trinitySelfEditGovernance.updateEditingRules(parsed.data);
     res.json({ success: true, rules: updatedRules });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -88,24 +81,19 @@ router.get('/circuit-breaker', requireAuth, async (req: Request, res: Response) 
   try {
     const state = trinitySelfEditGovernance.getCircuitBreakerState();
     res.json({ success: true, state });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/circuit-breaker/reset', requireAuth, async (req: Request, res: Response) => {
+router.post('/circuit-breaker/reset', requireAuth, requireSysop as any, async (req: Request, res: Response) => {
   try {
-    const userRole = req.session?.role || (req as any).userRole;
-    if (!isAdminRole(userRole)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
-    const userId = req.session?.userId || (req as any).userId;
+    const userId = req.session?.userId || req.userId;
     trinitySelfEditGovernance.resetCircuitBreaker(userId);
     
     res.json({ success: true, message: 'Circuit breaker reset' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -118,8 +106,8 @@ router.get('/check-permission', requireAuth, async (req: Request, res: Response)
 
     const result = trinitySelfEditGovernance.canEditPath(filePath);
     res.json({ success: true, ...result });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -127,8 +115,8 @@ router.get('/proposals', requireAuth, async (req: Request, res: Response) => {
   try {
     const proposals = trinitySelfEditGovernance.getPendingProposals();
     res.json({ success: true, proposals });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -139,32 +127,27 @@ router.get('/proposals/:proposalId', requireAuth, async (req: Request, res: Resp
       return res.status(404).json({ success: false, error: 'Proposal not found' });
     }
     res.json({ success: true, proposal });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/proposals', requireAuth, async (req: Request, res: Response) => {
+router.post('/proposals', requireAuth, requireSysop as any, async (req: Request, res: Response) => {
   try {
-    const userRole = req.session?.role || (req as any).userRole;
-    if (!isAdminRole(userRole)) {
-      return res.status(403).json({ success: false, error: 'Admin access required to create proposals' });
-    }
-
     const parsed = createProposalSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid request', details: parsed.error.flatten() });
     }
 
-    const userId = req.session?.userId || (req as any).userId;
+    const userId = req.session?.userId || req.userId;
     const result = await trinitySelfEditGovernance.createChangeProposal({
       ...parsed.data,
       userId,
     });
 
     res.json({ success: true, ...result });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -172,24 +155,19 @@ router.post('/proposals/:proposalId/sandbox', requireAuth, async (req: Request, 
   try {
     const execution = await trinitySelfEditGovernance.executeInSandbox(req.params.proposalId);
     res.json({ success: true, execution });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/proposals/:proposalId/approve', requireAuth, async (req: Request, res: Response) => {
+router.post('/proposals/:proposalId/approve', requireAuth, requireSysop as any, async (req: Request, res: Response) => {
   try {
-    const userRole = req.session?.role || (req as any).userRole;
-    if (!isAdminRole(userRole)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
     const parsed = approvalSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid request', details: parsed.error.flatten() });
     }
 
-    const userId = req.session?.userId || (req as any).userId;
+    const userId = req.session?.userId || req.userId;
     const proposal = await trinitySelfEditGovernance.approveProposal(
       req.params.proposalId,
       userId,
@@ -197,24 +175,19 @@ router.post('/proposals/:proposalId/approve', requireAuth, async (req: Request, 
     );
 
     res.json({ success: true, proposal });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/proposals/:proposalId/reject', requireAuth, async (req: Request, res: Response) => {
+router.post('/proposals/:proposalId/reject', requireAuth, requireSysop as any, async (req: Request, res: Response) => {
   try {
-    const userRole = req.session?.role || (req as any).userRole;
-    if (!isAdminRole(userRole)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
     const parsed = rejectionSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid request', details: parsed.error.flatten() });
     }
 
-    const userId = req.session?.userId || (req as any).userId;
+    const userId = req.session?.userId || req.userId;
     const proposal = await trinitySelfEditGovernance.rejectProposal(
       req.params.proposalId,
       userId,
@@ -222,37 +195,27 @@ router.post('/proposals/:proposalId/reject', requireAuth, async (req: Request, r
     );
 
     res.json({ success: true, proposal });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/proposals/:proposalId/apply', requireAuth, async (req: Request, res: Response) => {
+router.post('/proposals/:proposalId/apply', requireAuth, requireSysop as any, async (req: Request, res: Response) => {
   try {
-    const userRole = req.session?.role || (req as any).userRole;
-    if (!isAdminRole(userRole)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
     const result = await trinitySelfEditGovernance.applyApprovedChanges(req.params.proposalId);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/proposals/:proposalId/rollback', requireAuth, async (req: Request, res: Response) => {
+router.post('/proposals/:proposalId/rollback', requireAuth, requireSysop as any, async (req: Request, res: Response) => {
   try {
-    const userRole = req.session?.role || (req as any).userRole;
-    if (!isAdminRole(userRole)) {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
-
-    const userId = req.session?.userId || (req as any).userId;
+    const userId = req.session?.userId || req.userId;
     const result = await trinitySelfEditGovernance.rollbackProposal(req.params.proposalId, userId);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -277,8 +240,8 @@ router.get('/stats', requireAuth, async (req: Request, res: Response) => {
         testingRequired: rules.testingRequired,
       },
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 

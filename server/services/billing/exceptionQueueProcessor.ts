@@ -20,10 +20,14 @@
  */
 
 import { db } from '../../db';
-import { exceptionTriageQueue, users, workspaces, notifications } from '@shared/schema';
-import { eq, and, lt, isNull, desc, sql } from 'drizzle-orm';
+import { exceptionTriageQueue, users, workspaces, notifications, platformRoles } from '@shared/schema';
+import { eq, and, lt, isNull, desc, sql, inArray } from 'drizzle-orm';
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('ExceptionQueueProcessor');
 
 type ExceptionType = 
   | 'mapping_ambiguous'
@@ -95,7 +99,7 @@ class ExceptionQueueProcessor {
     expired: number;
     errors: string[];
   }> {
-    console.log('[ExceptionQueue] Processing exception queue...');
+    log.info('Processing exception queue');
     
     const results = { processed: 0, autoResolved: 0, escalated: 0, expired: 0, errors: [] as string[] };
 
@@ -122,15 +126,15 @@ class ExceptionQueueProcessor {
             case 'expired': results.expired++; break;
           }
         } catch (error: any) {
-          results.errors.push(`${exception.id}: ${error.message}`);
+          results.errors.push(`${exception.id}: ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
 
-      console.log(`[ExceptionQueue] Processed ${results.processed} exceptions:`, results);
+      log.info('Processed exceptions', { processed: results.processed, autoResolved: results.autoResolved, escalated: results.escalated, expired: results.expired });
       return results;
     } catch (error: any) {
-      console.error('[ExceptionQueue] Processing failed:', error);
-      results.errors.push(error.message);
+      log.error('Processing failed', { error: (error instanceof Error ? error.message : String(error)) });
+      results.errors.push((error instanceof Error ? error.message : String(error)));
       return results;
     }
   }
@@ -172,7 +176,7 @@ class ExceptionQueueProcessor {
    * Attempt auto-resolution based on exception type
    */
   private async attemptAutoResolution(exception: any, action: string): Promise<ExceptionResolution> {
-    console.log(`[ExceptionQueue] Attempting auto-resolution: ${action} for ${exception.id}`);
+    log.info('Attempting auto-resolution', { action, exceptionId: exception.id });
 
     try {
       let success = false;
@@ -198,7 +202,9 @@ class ExceptionQueueProcessor {
           .set({
             status: 'auto_resolved',
             resolvedAt: new Date(),
-            resolution: { action, message },
+            resolutionMethod: 'auto_retry',
+            resolutionNotes: JSON.stringify({ action, message }),
+            updatedAt: new Date(),
           })
           .where(eq(exceptionTriageQueue.id, exception.id));
 
@@ -222,7 +228,7 @@ class ExceptionQueueProcessor {
         success: false,
         exceptionId: exception.id,
         resolution: 'escalated',
-        message: `Auto-resolution error: ${error.message}`,
+        message: `Auto-resolution error: ${(error instanceof Error ? error.message : String(error))}`,
       };
     }
   }
@@ -245,28 +251,42 @@ class ExceptionQueueProcessor {
       category: 'billing',
       title: 'Billing Exception Escalated',
       description: `Exception requires human review: ${exception.title}`,
+      workspaceId: exception.workspaceId,
       metadata: {
         exceptionId: exception.id,
         exceptionType: exception.exceptionType,
         workspaceId: exception.workspaceId,
         priority: exception.priority,
       },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     });
 
-    const admins = await db.select()
-      .from(users)
-      .where(eq(users.role, 'platform_admin'));
+    const adminRoleRows = await db.select({ userId: platformRoles.userId })
+      .from(platformRoles)
+      .where(
+        and(
+          inArray(platformRoles.role, ['root_admin', 'deputy_admin', 'sysop', 'support_manager'] as any),
+          isNull(platformRoles.revokedAt),
+          eq(platformRoles.isSuspended, false)
+        )
+      );
 
-    for (const admin of admins) {
-      await db.insert(notifications).values({
-        userId: admin.id,
+    for (const { userId } of adminRoleRows) {
+      // Route through Trinity AI for contextual enrichment
+      await universalNotificationEngine.sendNotification({
         workspaceId: exception.workspaceId,
-        type: 'billing',
-        title: 'Billing Exception Requires Review',
-        message: `${exception.title} - Priority: ${exception.priority}`,
-        priority: exception.priority === 'critical' ? 'urgent' : 'high',
-        actionUrl: '/admin/billing/exceptions',
+        userId,
+        type: 'issue_detected',
+        title: `Billing Exception Escalated - ${exception.priority.toUpperCase()} Priority`,
+        message: `A billing exception requires your review: ${exception.title}. This exception could not be auto-resolved and needs human attention.`,
+        severity: exception.priority === 'critical' ? 'critical' : 'warning',
+        actionUrl: '/billing',
+        metadata: {
+          exceptionId: exception.id,
+          exceptionType: exception.exceptionType,
+          priority: exception.priority,
+          source: 'exception_queue_processor',
+        },
       });
     }
 
@@ -324,7 +344,7 @@ class ExceptionQueueProcessor {
         success: false,
         exceptionId,
         resolution: 'escalated',
-        message: `Resolution failed: ${error.message}`,
+        message: `Resolution failed: ${(error instanceof Error ? error.message : String(error))}`,
       };
     }
   }
@@ -379,11 +399,11 @@ class ExceptionQueueProcessor {
     const self = this;
 
     helpaiOrchestrator.registerAction({
-      actionId: 'exceptions.process_queue',
-      name: 'Process Exception Queue',
+      actionId: 'billing.exception_process_queue',
+      name: 'Process Billing Exception Queue',
       category: 'billing',
       description: 'Process all pending billing exceptions',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const result = await self.processQueue();
         return { success: true, actionId: request.actionId, message: 'Queue processed', data: result };
@@ -391,11 +411,11 @@ class ExceptionQueueProcessor {
     });
 
     helpaiOrchestrator.registerAction({
-      actionId: 'exceptions.get_stats',
-      name: 'Get Exception Stats',
+      actionId: 'billing.exception_get_stats',
+      name: 'Get Billing Exception Stats',
       category: 'billing',
-      description: 'Get exception queue statistics',
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      description: 'Get billing exception queue statistics',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const stats = await self.getQueueStats();
         return { success: true, actionId: request.actionId, message: 'Stats retrieved', data: stats };
@@ -403,11 +423,11 @@ class ExceptionQueueProcessor {
     });
 
     helpaiOrchestrator.registerAction({
-      actionId: 'exceptions.resolve',
-      name: 'Resolve Exception',
+      actionId: 'billing.exception_resolve',
+      name: 'Resolve Billing Exception',
       category: 'billing',
       description: 'Manually resolve a billing exception',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const { exceptionId, action, notes } = request.payload;
         const result = await self.resolveManually(exceptionId, request.context?.userId || 'system', { action, notes });
@@ -416,27 +436,27 @@ class ExceptionQueueProcessor {
     });
 
     helpaiOrchestrator.registerAction({
-      actionId: 'exceptions.get_pending',
-      name: 'Get Pending Exceptions',
+      actionId: 'billing.exception_get_pending',
+      name: 'Get Pending Billing Exceptions',
       category: 'billing',
-      description: 'Get pending exceptions for review',
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      description: 'Get pending billing exceptions for review',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const exceptions = await self.getPendingExceptions(request.payload?.limit || 50);
         return { success: true, actionId: request.actionId, message: `Found ${exceptions.length} pending`, data: exceptions };
       },
     });
 
-    console.log('[ExceptionQueue] Registered 4 AI Brain actions');
+    log.info('Registered 4 billing.exception_* AI Brain actions (billing_exception prefix retired)');
   }
 }
 
 export const exceptionQueueProcessor = ExceptionQueueProcessor.getInstance();
 
 export async function initializeExceptionQueueProcessor(): Promise<void> {
-  console.log('[ExceptionQueue] Initializing Exception Queue Processor...');
+  log.info('Initializing Exception Queue Processor');
   exceptionQueueProcessor.registerActions();
-  console.log('[ExceptionQueue] Exception Queue Processor initialized');
+  log.info('Exception Queue Processor initialized');
 }
 
 export { ExceptionQueueProcessor };

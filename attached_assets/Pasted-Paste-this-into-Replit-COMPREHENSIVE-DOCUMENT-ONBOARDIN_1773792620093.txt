@@ -1,0 +1,469 @@
+Paste this into Replit:
+
+---
+
+**COMPREHENSIVE DOCUMENT & ONBOARDING SYSTEM AUDIT — CLIENT + EMPLOYEE | 10-PASS SCAN | READ BEFORE TOUCH | FIX EVERYTHING**
+
+This audit covers the complete client onboarding data requirements and the complete employee/contractor onboarding document packet. Every gap found must be fixed before moving to the next pass. Maintain a running gap count throughout.
+
+---
+
+**SYSTEM REQUIREMENTS REFERENCE**
+
+Before scanning, understand what must exist:
+
+**Client data required for Trinity to orchestrate:**
+- Company name, billing address, work location address (can differ)
+- Primary contact name, phone, email
+- Accounts payable contact name, phone, email (separate from primary)
+- Service type requested — unarmed (Level 2), armed (Level 3), PPO (Level 4)
+- Number of officers required per shift
+- Days and hours of coverage needed
+- Bill rate per hour per officer type
+- Billing cycle — daily, weekly, biweekly, monthly
+- Invoice delivery email
+- Signed service proposal (required at some point, does not block shift creation)
+- Signed general services contract (required for compliance, does not block operations)
+- State ID of responsible party uploaded
+- Client portal access credentials
+
+**Employee/contractor documents required for compliance:**
+- Online application (fillable, signable)
+- Regulatory employee/contractor packet containing:
+  - Full legal name, DOB, full place of birth, current address
+  - Guard card number, issue date, expiry date, license type (Level 2/3/4)
+  - State ID — color front and back uploaded
+  - Social security card — front uploaded
+  - Drug-free workplace acknowledgment — signed online
+  - Employee handbook acknowledgment — signed online
+  - Liability clause acknowledgment — signed online
+  - Reference check — last worked location and contact
+  - W4 (W2 employees) or W9 (1099 contractors)
+  - I9 employment eligibility verification
+  - Direct deposit authorization form
+  - Post orders / SOP acknowledgment — assigned per client site, must be seen, acknowledged, and signed before first shift at that site
+  - Uniform and equipment issuance record
+- All documents compiled into a single chronological PDF upon onboarding completion
+- All documents persistent, searchable, downloadable, printable until explicitly purged
+- System reminders sent to employee AND org when any required document is missing before billing occurs
+
+---
+
+**PASS 1 — SCHEMA AND DATA MODEL AUDIT**
+
+Scan the DB schema for every table related to clients, employees, documents, and onboarding.
+
+**Client schema completeness:**
+- Does the `clients` table have all required fields:
+  - `billingAddress`, `billingCity`, `billingState`, `billingPostalCode`
+  - `workLocationAddress`, `workLocationCity`, `workLocationState`, `workLocationPostalCode`
+  - `primaryContactName`, `primaryContactPhone`, `primaryContactEmail`
+  - `apContactName`, `apContactPhone`, `apContactEmail`
+  - `serviceType` enum — `'level2_unarmed'`, `'level3_armed'`, `'level4_ppo'`
+  - `officersRequired` integer
+  - `coverageDays` — array or JSON of days needed
+  - `coverageStartTime`, `coverageEndTime`
+  - `armedBillRate`, `unarmedBillRate`, `ppoBillRate`, `overtimeRate`
+  - `billingCycle` enum
+  - `invoiceDeliveryEmail`
+  - `proposalSignedAt`, `proposalDocumentId`
+  - `contractSignedAt`, `contractDocumentId`
+  - `responsiblePartyIdDocumentId`
+  - `onboardingStatus` enum — `'incomplete'`, `'pending_signature'`, `'active'`
+  - `portalAccessEnabled` boolean
+
+For every missing column — add it to the schema and run migration.
+
+**Employee schema completeness:**
+- Does the `employees` table or related tables have:
+  - `fullLegalName`, `dateOfBirth`, `placeOfBirth`
+  - `currentAddress`, `city`, `state`, `postalCode`
+  - `guardCardNumber`, `guardCardIssueDate`, `guardCardExpiryDate`, `licenseType` enum
+  - `stateIdFrontUrl`, `stateIdBackUrl`
+  - `socialSecurityCardFrontUrl`
+  - `payType` enum — `'w2'`, `'1099'`
+  - `onboardingStatus` enum — `'incomplete'`, `'documents_pending'`, `'active'`
+  - `onboardingCompletedAt`
+  - `onboardingPacketPdfUrl` — the compiled PDF
+
+For every missing column — add it.
+
+**Document table completeness:**
+- Does the `documents` table have:
+  - `workspaceId`, `employeeId` (nullable), `clientId` (nullable)
+  - `documentType` enum — must include ALL of these values:
+    `'application'`, `'regulatory_packet'`, `'guard_card'`, `'state_id_front'`, `'state_id_back'`, `'social_security_card'`, `'drug_free_acknowledgment'`, `'handbook_acknowledgment'`, `'liability_acknowledgment'`, `'reference_check'`, `'w4'`, `'w9'`, `'i9'`, `'direct_deposit_authorization'`, `'post_orders_acknowledgment'`, `'uniform_equipment_issuance'`, `'service_proposal'`, `'services_contract'`, `'responsible_party_id'`, `'onboarding_packet'`, `'sop_acknowledgment'`
+  - `status` enum — `'draft'`, `'pending_signature'`, `'signed'`, `'expired'`, `'archived'`
+  - `signedAt`, `signedByUserId`, `signerIpAddress`, `signerEmail`
+  - `expiresAt`
+  - `isRequired` boolean
+  - `requiresSignature` boolean
+  - `signatureProviderDocumentId`
+  - `uploadedByUserId`
+  - `fileUrl`, `fileName`, `fileSize`, `fileMimeType`
+  - `documentSafeCategory` — which safe it belongs to
+
+For every missing column or enum value — add it.
+
+Report all schema gaps found and fixed. Update running count.
+
+---
+
+**PASS 2 — CLIENT ONBOARDING FLOW AUDIT**
+
+Scan the client creation and onboarding flow end to end.
+
+**Client creation:**
+- Does the client creation form collect ALL required fields from the requirements reference above?
+- Are billing address and work location address separate fields — not combined?
+- Are primary contact and AP contact separate sections?
+- Is service type selectable — Level 2, Level 3, Level 4?
+- Is officers required a numeric input?
+- Is coverage schedule configurable per client — days and hours?
+- After client creation — is `onboardingStatus` set to `'incomplete'` until all required data is present?
+
+**Client document collection:**
+- Is there a client document upload section in the client profile?
+- Can a service proposal document be uploaded and sent for e-signature?
+- Can a general services contract be uploaded and sent for e-signature?
+- Can the responsible party state ID be uploaded?
+- After all three documents are signed — does `onboardingStatus` update to `'active'`?
+- Does Trinity monitor client onboarding completeness and send reminders for missing documents?
+
+**Client portal:**
+- Can a client submit a service request through the client portal?
+- Does the service request include: dates needed, officer type, number of officers, location?
+- Does a submitted service request trigger Trinity to create a shift request for manager review?
+- Can a client view and pay invoices through the client portal?
+
+**Shift creation without blocking:**
+- Can a shift be created for a client before the proposal is signed?
+- Is there a visual indicator on the shift that the proposal is pending?
+- Does Trinity remind the org owner when a shift has been created for a client with no signed contract?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 3 — EMPLOYEE ONBOARDING DOCUMENT PACKET AUDIT**
+
+Scan the complete employee onboarding document system.
+
+**Online application:**
+- Does an online application form exist that collects: full name, DOB, place of birth, address, guard card info, references, last worked location?
+- Is the application submittable online with e-signature?
+- After submission — is the application saved as a document assigned to the employee?
+
+**Regulatory packet forms — each must exist as a fillable online form with e-signature:**
+- Drug-free workplace acknowledgment — does it exist? Is it fillable and signable online?
+- Employee handbook acknowledgment — does it exist?
+- Liability clause acknowledgment — does it exist?
+- Reference check form — does it exist?
+- W4 — does a fillable W4 form exist for W2 employees?
+- W9 — does a fillable W9 form exist for 1099 contractors?
+- I9 — does a fillable I9 form exist?
+- Direct deposit authorization — does it exist?
+- Uniform and equipment issuance record — does it exist?
+
+**Document uploads required during onboarding:**
+- Guard card — color front and back upload
+- State ID — color front and back upload
+- Social security card — front upload
+
+**Post orders / SOP acknowledgment:**
+- When an employee is assigned to a client site — are the post orders for that site automatically sent to the employee?
+- Must the employee view, acknowledge, and sign the post orders before their first shift at that site?
+- Is there a hard block preventing clock-in at a site where post orders have not been acknowledged?
+- Is the acknowledgment recorded with timestamp and stored as a document?
+
+**Onboarding packet PDF compilation:**
+- After all documents are submitted and signed — is a single chronological PDF compiled containing all forms?
+- Is the PDF stored in the employee's document safe?
+- Is the `onboardingPacketPdfUrl` field updated on the employee record?
+- Is the org owner notified when an employee's onboarding packet is complete?
+
+**W2 vs 1099 routing:**
+- When `payType` is `'w2'` — is the W4 form required and W9 not shown?
+- When `payType` is `'1099'` — is the W9 form required and W4 not shown?
+- Is the correct form automatically assigned to the employee based on their pay type?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 4 — MISSING DOCUMENT DETECTION AND REMINDERS**
+
+Scan the system that detects missing documents and sends reminders.
+
+**Pre-billing check:**
+- Before any invoice is generated for a client — does the system verify the client has a signed contract on file?
+- If no signed contract — does Trinity send a reminder to the org owner with the specific client name and what is missing?
+- Does this check happen automatically before every billing cycle — not just on demand?
+
+**Pre-payroll check:**
+- Before any payroll run — does the system verify every employee in the run has:
+  - Signed W4 or W9 on file
+  - Signed I9 on file
+  - Direct deposit authorization on file (or manual payment flag set)
+- If any document is missing — does Trinity send a reminder listing the specific employee and specific missing document?
+- Does this check happen as part of the 48-hour pre-payroll readiness scan?
+
+**Ongoing compliance check:**
+- Does Trinity run a weekly scan for expiring documents — guard cards expiring within 30 days, I9s expiring, contracts expiring?
+- Does Trinity send reminders to the employee for personal documents and to the org owner for org documents?
+- When a guard card expires — does the system hard-block the officer from being scheduled?
+
+**Reminder notification content:**
+- Do reminder notifications include the specific document name, the specific person it belongs to, the expiry date if applicable, and a direct link to upload or complete the document?
+- Are reminders sent via in-app notification AND email?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 5 — DOCUMENT SIGNING PIPELINE AUDIT**
+
+Trace every document that requires a signature through the complete signing pipeline.
+
+**For each signable document type — verify the full pipeline:**
+
+Step 1 — TRIGGER: What initiates the signature request? Manager action? Trinity automation? Employee onboarding step?
+Step 2 — FETCH: Is the document fetched with correct workspace and assignee context?
+Step 3 — VALIDATE: Is the document in the correct state? Does the signer have a valid email?
+Step 4 — PROCESS: Is the signature request prepared correctly with signer name, email, and document?
+Step 5 — MUTATE: Is the e-signature provider API called? Is document status updated to `pending_signature`?
+Step 6 — CONFIRM: Is the signature request confirmed? Is the signer notified?
+Step 7 — NOTIFY: Is the org owner notified the request was sent? Is `document_signature_requested` published?
+
+**Webhook completion pipeline:**
+
+Step 1 — TRIGGER: Webhook fires from e-signature provider
+Step 2 — FETCH: Is the local document fetched by provider document ID?
+Step 3 — VALIDATE: Is webhook signature verified? Is document in `pending_signature` state?
+Step 4 — PROCESS: Is the signed PDF downloaded from the provider?
+Step 5 — MUTATE: Is document status updated to `signed`? Is `signedAt`, `signedByUserId`, `signerIpAddress` recorded?
+Step 6 — CONFIRM: Is signed PDF stored and retrievable?
+Step 7 — NOTIFY: Is org owner notified? Is `document_signed` published? Is onboarding status rechecked?
+
+**Silent failure guards:**
+- If provider API call fails — is document status rolled back?
+- If webhook never fires — is there a polling fallback?
+- If signed PDF download fails — is document status NOT updated to signed?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 6 — TRINITY DOCUMENT ORCHESTRATION AUDIT**
+
+Scan every Trinity action and event related to documents.
+
+**Trinity document actions — verify each exists and works:**
+- `document.generate` — generates a document from a template with org and employee data pre-filled
+- `document.send_for_signature` — triggers e-signature request for a specific document
+- `document.check_status` — checks signature status for pending documents
+- `document.compliance_scan` — scans all employees for missing required documents
+- `document.license_expiry_scan` — scans all guard cards and certifications for expiry
+- `document.post_orders_acknowledgment_scan` — finds employees with unacknowledged post orders
+- `document.escalate_overdue` — escalates documents that have been pending signature too long
+- `employees.bulk_document_request` — sends document requests to multiple employees at once
+
+**For each action:**
+- Does the handler exist and have real logic — not a stub?
+- Does it validate `workspaceId` before any DB operation?
+- Does it write to audit logs?
+- Does it emit the correct platformEventBus event after execution?
+
+**Trinity autonomous document behaviors:**
+- Does Trinity automatically send the onboarding document packet to a new employee when they are created?
+- Does Trinity automatically send the service proposal to a new client when they are created?
+- Does Trinity automatically send post orders to an employee when they are assigned to a new client site?
+- Does Trinity automatically remind about expiring documents on schedule?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 7 — DOCUMENT SAFE AND STORAGE AUDIT**
+
+Scan the document safe implementation.
+
+**Document safe structure:**
+- Is there a document safe per workspace organized into these categories:
+  - Employee Documents (per employee — application, forms, IDs, acknowledgments)
+  - Client Documents (per client — proposals, contracts, IDs)
+  - Org Compliance Documents (license cert, insurance, labor law posters, etc.)
+  - Tax Documents (W2s, 1099s, I9s, W4s, W9s)
+  - Onboarding Packets (compiled PDFs per employee)
+  - Post Orders (per client site)
+
+- Is the document safe accessible from the org dashboard?
+- Can documents be filtered by category, employee, client, and status?
+- Can documents be searched by name?
+- Can documents be downloaded individually or in bulk?
+- Can documents be printed?
+- Are documents sorted by date — newest first by default?
+
+**Storage and URL integrity:**
+- Are document URLs permanent — do they expire?
+- If URLs expire — is there a signed URL generation system that creates fresh URLs on access?
+- Can a document URL from Workspace A be accessed by a user from Workspace B?
+- Are document file sizes validated before storage?
+- Are file types validated — only PDF, JPG, PNG, DOCX allowed?
+
+**Soft delete and audit:**
+- When a document is deleted — is it soft deleted with a `deletedAt` timestamp?
+- Is the deleted document still in the audit log?
+- Can a deleted document be restored by an admin?
+- Can documents be permanently purged only by platform admins with a confirmation step?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 8 — FRONTEND UI/UX AUDIT**
+
+Scan every frontend component related to documents and onboarding.
+
+**Employee onboarding UI:**
+- Is there a clear multi-step onboarding wizard for new employees?
+- Does each step show what is required and what is complete?
+- Is there a progress bar or checklist showing overall onboarding completion?
+- Can an employee complete all forms and signatures from their mobile device?
+- Are forms pre-populated with data already in the system (name, email, workspace name)?
+- Is there a clear "Your onboarding is complete" confirmation screen?
+- Does the org owner see a completion notification?
+
+**Client onboarding UI:**
+- Is there a clear client setup wizard?
+- Does it guide the org owner through all required data fields?
+- Is there a checklist showing what is complete and what is missing?
+- Is there a "Send proposal for signature" button on the client profile?
+- Is there a visual indicator showing contract status — not signed, pending, signed?
+
+**Document management UI:**
+- Is there a document safe view accessible from the main navigation?
+- Can documents be uploaded with drag and drop?
+- Is there an upload progress indicator?
+- Can documents be previewed in-browser before download?
+- Is there a signature status badge on each document — draft, pending, signed, expired?
+- Can the org owner send a signature reminder from the document list?
+- On mobile — is the document list readable and all actions accessible?
+
+**Missing document alerts UI:**
+- Are missing document alerts surfaced prominently — not buried in notifications?
+- Is there a "Compliance Dashboard" or "Onboarding Status" view showing all employees with missing documents?
+- Can the org owner click through from a missing document alert directly to the document upload or send-for-signature flow?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 9 — ISOLATION AND PERSISTENCE AUDIT**
+
+Verify every document is correctly isolated and persists correctly.
+
+**Workspace isolation:**
+- Can a user from Workspace A see documents belonging to Workspace B through any route?
+- Does every document query include `WHERE workspace_id = $workspaceId`?
+- Does the document safe only show documents belonging to the authenticated workspace?
+- Does Trinity's document compliance scan only scan employees and clients belonging to the current workspace?
+
+**Employee isolation:**
+- Can Employee A see Employee B's documents?
+- Are employee documents scoped so only the employee themselves and org admins can access them?
+- Does the I9, W4, W9, and direct deposit form only show to the correct employee and authorized admins?
+
+**Persistence verification:**
+- After a document is signed — does it remain in the system after server restart?
+- After an onboarding packet PDF is compiled — is it retrievable after 30 days?
+- After an employee is terminated — are their documents preserved with a termination date flag?
+- After a client is archived — are their contracts and proposals preserved?
+- Is there a document retention policy — when can documents be purged and who can authorize it?
+
+**Trinity session isolation:**
+- Does Trinity's document context for Workspace A ever include documents from Workspace B?
+- Is Trinity's document cache keyed strictly by `workspaceId`?
+
+Fix every gap found. Update running count.
+
+---
+
+**PASS 10 — FINAL END-TO-END SMOKE TEST**
+
+Execute the complete client and employee onboarding flow and verify every step.
+
+**Client onboarding test:**
+1. Create a new client with all required fields — billing address, work location, contacts, service type Level 3, bill rate $25/hr, billing cycle weekly, invoice email
+2. Upload a service proposal — send for e-signature — confirm status changes to `pending_signature`
+3. Simulate signature completion — confirm status changes to `signed` — confirm document in document safe
+4. Upload responsible party state ID — confirm it appears in client document safe
+5. Confirm Trinity now has all data needed to create shifts and generate invoices for this client
+6. Create a shift for this client before contract is signed — confirm it is allowed with a pending indicator
+
+**Employee onboarding test:**
+7. Create a new employee — set pay type W2
+8. Trigger onboarding packet — confirm W4 is assigned, W9 is not
+9. Fill and sign the application form — confirm it saves to employee document safe
+10. Upload guard card front and back — confirm both stored correctly
+11. Upload state ID front and back — confirm both stored correctly
+12. Upload social security card front — confirm stored correctly
+13. Sign drug-free workplace acknowledgment — confirm signed and stored
+14. Sign handbook acknowledgment — confirm signed and stored
+15. Sign liability clause acknowledgment — confirm signed and stored
+16. Fill and sign W4 — confirm stored under tax documents
+17. Fill and sign I9 — confirm stored under tax documents
+18. Assign employee to client site — confirm post orders are sent automatically
+19. Sign post orders acknowledgment — confirm signed and stored
+20. Complete onboarding — confirm single compiled PDF is generated and stored
+21. Confirm org owner receives onboarding complete notification
+22. Attempt to run payroll before I9 is signed — confirm Trinity blocks and lists missing document
+23. Confirm all documents visible in document safe under correct categories
+24. Confirm documents are isolated — not visible from a second test workspace
+
+Report PASS or FAIL for each of the 24 steps.
+
+---
+
+**RUNNING GAP COUNT**
+
+Update after every pass:
+
+```
+Pass 1  — Schema & data model:              N gaps found | N fixed
+Pass 2  — Client onboarding flow:           N gaps found | N fixed
+Pass 3  — Employee document packet:         N gaps found | N fixed
+Pass 4  — Missing document detection:       N gaps found | N fixed
+Pass 5  — Document signing pipeline:        N gaps found | N fixed
+Pass 6  — Trinity orchestration:            N gaps found | N fixed
+Pass 7  — Document safe & storage:          N gaps found | N fixed
+Pass 8  — Frontend UI/UX:                   N gaps found | N fixed
+Pass 9  — Isolation & persistence:          N gaps found | N fixed
+Pass 10 — Final smoke test:                 N/24 passing
+
+TOTAL GAPS FOUND: N
+TOTAL GAPS FIXED: N
+REMAINING UNFIXED: N
+```
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 10 passes:
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Pass 10 smoke test — 24/24 steps passing
+5. Running gap count — remaining unfixed = 0
+6. Trinity has all client and employee data needed for autonomous scheduling, billing, and payroll
+7. All documents persist, are searchable, downloadable, and isolated per workspace
+8. Missing document detection fires before billing and payroll with specific actionable alerts
+
+If all criteria met — state: **DOCUMENT AND ONBOARDING SYSTEM VERIFIED — READY FOR FIRST REAL TENANT**
+
+Stop and wait.
+
+---
+
+Paste results pass by pass. When Pass 10 hits 24/24 and remaining gaps hit zero the document and onboarding system is production ready.

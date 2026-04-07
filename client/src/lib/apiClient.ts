@@ -1,11 +1,12 @@
 /**
  * Centralized API Client
  * Handles all API calls with automatic endpoint resolution from config
- * Provides type-safe, consistent API interaction
+ * Provides type-safe, consistent API interaction with CSRF protection
  */
 
 import { configManager } from "@/lib/configManager";
 import { queryClient } from "@/lib/queryClient";
+import { getCsrfToken, requiresCsrfToken } from "@/lib/csrf";
 
 export type RequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -36,14 +37,24 @@ export async function apiClient(
     // Build full URL with params
     const fullUrl = configManager.buildApiUrl(endpoint, params);
 
+    // Add CSRF token for state-changing methods
+    const requestHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...headers,
+    };
+    
+    if (requiresCsrfToken(method)) {
+      const csrfToken = await getCsrfToken();
+      if (csrfToken) {
+        requestHeaders["X-CSRF-Token"] = csrfToken;
+      }
+    }
+
     // Make request
     const response = await fetch(fullUrl, {
       method,
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...headers,
-      },
+      headers: requestHeaders,
       ...(body && { body: JSON.stringify(body) }),
     });
 

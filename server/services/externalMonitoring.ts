@@ -8,6 +8,10 @@ import { db } from '../db';
 import { workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { createHealthCheckTicket } from './autoTicketCreation';
+import { platformEventBus } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+const log = createLogger('externalMonitoring');
+
 
 export interface MonitoringAlert {
   id: string;
@@ -59,7 +63,7 @@ export async function sendMonitoringAlert(alert: MonitoringAlert): Promise<boole
       // Would normally POST to Datadog API:
       // await fetch('https://api.datadoghq.com/api/v1/events', ...)
 
-      console.log('[ExternalMonitoring] Alert queued for Datadog:', payload);
+      log.info('[ExternalMonitoring] Alert queued for Datadog:', payload);
     }
 
     // Create auto-ticket for critical alerts
@@ -71,9 +75,18 @@ export async function sendMonitoringAlert(alert: MonitoringAlert): Promise<boole
       );
     }
 
+    platformEventBus.publish({
+      type: 'monitoring_alert_sent',
+      category: 'infrastructure',
+      title: `External Monitoring Alert: ${alert.level.toUpperCase()}`,
+      description: `${alert.service} alert on workspace ${alert.workspaceId}: ${alert.message}`,
+      workspaceId: alert.workspaceId,
+      metadata: { alertId: alert.id, service: alert.service, level: alert.level },
+    });
+
     return true;
   } catch (error) {
-    console.error('[ExternalMonitoring] Error sending alert:', error);
+    log.error('[ExternalMonitoring] Error sending alert:', error);
     return false;
   }
 }
@@ -129,7 +142,7 @@ export async function monitorSLACompliance(
       workspacesImpacted: 1,
     };
   } catch (error) {
-    console.error('[ExternalMonitoring] Error monitoring SLA:', error);
+    log.error('[ExternalMonitoring] Error monitoring SLA:', error);
     return {
       uptime: 0,
       responseTime: 0,
@@ -176,10 +189,10 @@ export async function broadcastAlert(
   try {
     // In production: Send notifications to all workspace admins
     // via email, Slack, PagerDuty, etc.
-    console.log(`[ExternalMonitoring] Broadcasting alert to workspace ${workspaceId}:`, alert.message);
+    log.info(`[ExternalMonitoring] Broadcasting alert to workspace ${workspaceId}:`, alert.message);
     return 1; // Would return count of notified admins
   } catch (error) {
-    console.error('[ExternalMonitoring] Error broadcasting alert:', error);
+    log.error('[ExternalMonitoring] Error broadcasting alert:', error);
     return 0;
   }
 }

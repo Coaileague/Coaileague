@@ -1,4 +1,6 @@
 // Reference: blueprint:javascript_object_storage
+import { createLogger } from './lib/logger';
+const log = createLogger('objectStorage');
 import { Storage, File } from "@google-cloud/storage";
 import { Response } from "express";
 import { randomUUID } from "crypto";
@@ -97,20 +99,25 @@ export class ObjectStorageService {
         "Content-Type": metadata.contentType || "application/octet-stream",
         "Content-Length": metadata.size,
         "Cache-Control": `${isPublic ? "public" : "private"}, max-age=${cacheTtlSec}`,
+        "X-Content-Type-Options": "nosniff",
       });
 
       const stream = file.createReadStream();
 
       stream.on("error", (err) => {
-        console.error("Stream error:", err);
+        log.error("Stream error:", err);
         if (!res.headersSent) {
           res.status(500).json({ error: "Error streaming file" });
         }
       });
 
+      // P25-3: Destroy the GCS read stream when the client disconnects early
+      // to release the file descriptor and prevent descriptor leaks.
+      res.on("close", () => stream.destroy());
+
       stream.pipe(res);
     } catch (error) {
-      console.error("Error downloading file:", error);
+      log.error("Error downloading file:", error);
       if (!res.headersSent) {
         res.status(500).json({ error: "Error downloading file" });
       }
@@ -118,14 +125,14 @@ export class ObjectStorageService {
   }
 
   // Gets the upload URL for an object entity.
-  async getObjectEntityUploadURL(): Promise<string> {
+  async getObjectEntityUploadURL(workspaceId: string): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error("PRIVATE_OBJECT_DIR not set.");
     }
 
     const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/chat-attachments/${objectId}`;
+    const fullPath = `${privateObjectDir}/chat-attachments/${workspaceId}/${objectId}`;
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
     return signObjectURL({
@@ -133,6 +140,22 @@ export class ObjectStorageService {
       objectName,
       method: "PUT",
       ttlSec: 900,
+    });
+  }
+
+  // Generates a signed upload URL for a specific path
+  async generateSignedUploadUrl(
+    fullPath: string,
+    contentType: string,
+    ttlSec: number = 300
+  ): Promise<string> {
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+
+    return signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec,
     });
   }
 
@@ -273,4 +296,91 @@ async function signObjectURL({
 
   const { signed_url: signedURL } = await response.json();
   return signedURL;
+}
+
+/**
+ * Upload a file buffer to object storage.
+ *
+ * When workspaceId + storageCategory are supplied, enforces Option B quota:
+ *   1. Pre-upload: checks category quota — throws StorageQuotaError (HTTP 507) if over limit
+ *   2. Post-upload: credits bytes_used to storage_usage table
+ *
+ * Omitting workspaceId/storageCategory skips quota enforcement (system-generated files,
+ * DAR PDFs, pay stubs, etc. that are already gated elsewhere).
+ */
+export class StorageQuotaError extends Error {
+  readonly statusCode = 507;
+  constructor(message: string) {
+    super(message);
+    this.name = 'StorageQuotaError';
+  }
+}
+
+export async function uploadFileToObjectStorage(params: {
+  objectPath: string;
+  buffer: Buffer;
+  workspaceId?: string;
+  storageCategory?: 'email' | 'documents' | 'media' | 'audit_reserve';
+  metadata?: {
+    contentType?: string;
+    metadata?: Record<string, string>;
+  };
+}): Promise<void> {
+  const { objectPath, buffer, workspaceId, storageCategory, metadata } = params;
+
+  // ── PRE-UPLOAD QUOTA CHECK ────────────────────────────────────────────────
+  if (workspaceId && storageCategory) {
+    const { checkCategoryQuota } = await import('./services/storage/storageQuotaService');
+    const check = await checkCategoryQuota(workspaceId, storageCategory, buffer.length);
+    if (!check.allowed) {
+      log.warn(`[ObjectStorage] Quota exceeded — ws=${workspaceId} cat=${storageCategory} size=${buffer.length}: ${check.reason}`);
+      throw new StorageQuotaError(check.reason ?? 'Storage quota exceeded for this category');
+    }
+  }
+
+  // Parse the object path to get bucket and object name
+  const pathParts = objectPath.startsWith('/') ? objectPath.slice(1).split('/') : objectPath.split('/');
+  if (pathParts.length < 2) {
+    throw new Error('Invalid object path: must contain at least bucket/object');
+  }
+
+  // Get bucket ID from environment
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) {
+    throw new Error('DEFAULT_OBJECT_STORAGE_BUCKET_ID not configured');
+  }
+
+  const bucket = objectStorageClient.bucket(bucketId);
+  const objectName = pathParts.slice(1).join('/'); // Skip 'objects' prefix
+  const blob = bucket.file(objectName);
+
+  await blob.save(buffer, {
+    contentType: metadata?.contentType || 'application/octet-stream',
+    metadata: metadata?.metadata,
+  });
+
+  // ── POST-UPLOAD USAGE ACCOUNTING ─────────────────────────────────────────
+  if (workspaceId && storageCategory) {
+    const { recordStorageUsage } = await import('./services/storage/storageQuotaService');
+    recordStorageUsage(workspaceId, storageCategory, buffer.length).catch((err: Error) =>
+      log.warn(`[ObjectStorage] recordStorageUsage fire-and-forget failed: ${err?.message}`)
+    );
+  }
+}
+
+/**
+ * Download a file buffer from object storage by its storage key path.
+ * The objectPath should match the format used by uploadFileToObjectStorage.
+ */
+export async function downloadFileFromObjectStorage(objectPath: string): Promise<Buffer> {
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) {
+    throw new Error('DEFAULT_OBJECT_STORAGE_BUCKET_ID not configured');
+  }
+
+  const bucket = objectStorageClient.bucket(bucketId);
+  const pathParts = objectPath.startsWith('/') ? objectPath.slice(1).split('/') : objectPath.split('/');
+  const objectName = pathParts.slice(1).join('/');
+  const [buffer] = await bucket.file(objectName).download();
+  return buffer;
 }

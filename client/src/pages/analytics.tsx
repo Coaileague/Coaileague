@@ -1,14 +1,17 @@
 import { useState } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useQuery } from "@tanstack/react-query";
 import { 
   DollarSign, Clock, Users, UserCheck, TrendingUp, TrendingDown, 
   FileText, BarChart3, Download, FileSpreadsheet, Calendar, 
   Activity, Target, AlertCircle, ChevronDown, Lightbulb, Award,
-  Brain, Sparkles, Zap, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus
+  Brain, Sparkles, Zap, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus, MapPin
 } from "lucide-react";
 import { HideInSimpleMode } from "@/components/SimpleMode";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { CalendarHeatmap } from "@/components/calendar-heatmap";
+import { IncidentHeatmap } from "@/components/incident-heatmap";
+import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +27,7 @@ import {
   ChartTooltipContent,
   type ChartConfig
 } from "@/components/ui/chart";
+import { formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import {
   LineChart,
   Line,
@@ -149,17 +153,17 @@ const DATE_PRESETS = [
   { value: 'last_30_days', label: 'Last 30 Days' },
 ];
 
-const CHART_COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981'];
+import { CHART_PALETTE, CHART_SERIES } from "@/lib/chartPalette";
 
 const trendChartConfig = {
-  hours: { label: "Hours", color: "#06b6d4" },
-  revenue: { label: "Revenue", color: "#3b82f6" },
-  laborCost: { label: "Labor Cost", color: "#8b5cf6" },
+  hours: { label: "Hours", color: CHART_PALETTE.BRAND },
+  revenue: { label: "Revenue", color: CHART_PALETTE.INFO },
+  labor_cost: { label: "Labor Cost", color: CHART_PALETTE.SUCCESS },
 } satisfies ChartConfig;
 
 const schedulingChartConfig = {
-  scheduled: { label: "Scheduled", color: "#3b82f6" },
-  completed: { label: "Completed", color: "#10b981" },
+  scheduled: { label: "Scheduled", color: CHART_PALETTE.INFO },
+  completed: { label: "Completed", color: CHART_PALETTE.SUCCESS },
 } satisfies ChartConfig;
 
 function MetricCard({ 
@@ -180,11 +184,11 @@ function MetricCard({
   borderClass?: string;
 }) {
   return (
-    <Card className={`group backdrop-blur-xl bg-gradient-to-br ${colorClass} border ${borderClass} hover:shadow-lg transition-all duration-300`}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-3 bg-muted/20 rounded-xl group-hover:scale-110 transition-transform">
-            <Icon className="w-5 h-5 text-primary" />
+    <Card className={`group backdrop-blur-xl bg-gradient-to-br ${colorClass} border ${borderClass} hover:shadow-sm transition-all duration-300`}>
+      <CardContent className="p-3 sm:p-6">
+        <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4">
+          <div className="p-2 sm:p-3 bg-muted/20 rounded-md shrink-0">
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </div>
           {change !== undefined && (
             <Badge variant={change >= 0 ? "default" : "destructive"} className="gap-1">
@@ -193,11 +197,11 @@ function MetricCard({
             </Badge>
           )}
         </div>
-        <p className="text-muted-foreground text-sm mb-2">{title}</p>
-        <div className="text-2xl font-bold text-foreground mb-1" data-testid={`text-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+        <p className="text-muted-foreground text-xs sm:text-sm mb-1 sm:mb-2 truncate">{title}</p>
+        <div className="text-base sm:text-2xl font-bold text-foreground mb-1 truncate" data-testid={`text-${title.toLowerCase().replace(/\s+/g, '-')}`}>
           {value}
         </div>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        {subtitle && <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{subtitle}</p>}
       </CardContent>
     </Card>
   );
@@ -205,10 +209,10 @@ function MetricCard({
 
 function UtilizationGauge({ value }: { value: number }) {
   const getColor = (v: number) => {
-    if (v >= 90) return 'text-green-500';
-    if (v >= 70) return 'text-cyan-500';
-    if (v >= 50) return 'text-yellow-500';
-    return 'text-red-500';
+    if (v >= 90) return 'text-green-500 dark:text-green-400';
+    if (v >= 70) return 'text-cyan-500 dark:text-cyan-400';
+    if (v >= 50) return 'text-cyan-400 dark:text-cyan-300';
+    return 'text-red-500 dark:text-red-400';
   };
 
   return (
@@ -249,11 +253,11 @@ function EmployeeLeaderboard({ employees }: { employees: EmployeePerformance[] }
   return (
     <div className="space-y-3">
       {employees.slice(0, 5).map((emp, index) => (
-        <div key={emp.employeeId} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+        <div key={emp.employeeId} className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-            index === 0 ? 'bg-yellow-500/20 text-yellow-600' :
+            index === 0 ? 'bg-cyan-500/20 text-cyan-600' :
             index === 1 ? 'bg-slate-400/20 text-slate-500' :
-            index === 2 ? 'bg-orange-500/20 text-orange-600' :
+            index === 2 ? 'bg-teal-500/20 text-teal-600' :
             'bg-muted text-muted-foreground'
           }`}>
             {index + 1}
@@ -261,7 +265,7 @@ function EmployeeLeaderboard({ employees }: { employees: EmployeePerformance[] }
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{emp.name}</p>
             <p className="text-xs text-muted-foreground">
-              {emp.totalHours.toFixed(1)} hrs | {emp.attendanceRate}% attendance
+              {(emp.totalHours ?? 0).toFixed(1)} hrs | {emp.attendanceRate}% attendance
             </p>
           </div>
           <div className="text-right">
@@ -282,7 +286,7 @@ function LoadingSkeleton() {
         {[1, 2, 3, 4].map(i => (
           <Card key={i}>
             <CardContent className="p-6">
-              <Skeleton className="h-10 w-10 rounded-xl mb-4" />
+              <Skeleton className="h-10 w-10 rounded-md mb-4" />
               <Skeleton className="h-4 w-24 mb-2" />
               <Skeleton className="h-8 w-32 mb-1" />
               <Skeleton className="h-3 w-20" />
@@ -327,10 +331,10 @@ function AIInsightsPanel({
 }) {
   if (isLoading) {
     return (
-      <Card className="backdrop-blur-xl bg-gradient-to-br from-purple-500/10 to-blue-500/5 border border-purple-500/20">
+      <Card className="backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-purple-500 animate-pulse" />
+            <Brain className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-pulse" />
             <CardTitle>AI-Powered Insights</CardTitle>
           </div>
         </CardHeader>
@@ -347,7 +351,7 @@ function AIInsightsPanel({
 
   if (!hasContent) {
     return (
-      <Card className="backdrop-blur-xl bg-gradient-to-br from-purple-500/10 to-blue-500/5 border border-purple-500/20">
+      <Card className="backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
         <CardContent className="p-8 text-center">
           <Brain className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">No AI insights available yet. Add more data to enable intelligent analysis.</p>
@@ -359,10 +363,10 @@ function AIInsightsPanel({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {(insights.length > 0 || recommendations.length > 0) && (
-        <Card className="backdrop-blur-xl bg-gradient-to-br from-purple-500/10 to-blue-500/5 border border-purple-500/20">
+        <Card className="backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Brain className="w-5 h-5 text-purple-500" />
+              <Brain className="w-5 h-5 text-blue-500 dark:text-blue-400" />
               <CardTitle>AI-Powered Insights</CardTitle>
             </div>
             <CardDescription>Intelligent analysis of your business metrics</CardDescription>
@@ -376,8 +380,8 @@ function AIInsightsPanel({
                 </div>
                 <div className="space-y-2">
                   {insights.slice(0, 5).map((insight, i) => (
-                    <div key={i} className="flex items-start gap-2 p-3 bg-muted/30 rounded-lg">
-                      <Lightbulb className="w-4 h-4 mt-0.5 text-yellow-500 flex-shrink-0" />
+                    <div key={i} className="flex items-start gap-2 p-3 bg-muted/30 rounded-md">
+                      <Lightbulb className="w-4 h-4 mt-0.5 text-cyan-500 flex-shrink-0" />
                       <p className="text-sm">{insight}</p>
                     </div>
                   ))}
@@ -392,8 +396,8 @@ function AIInsightsPanel({
                 </div>
                 <div className="space-y-2">
                   {recommendations.slice(0, 4).map((rec, i) => (
-                    <div key={i} className="flex items-start gap-2 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                      <Target className="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0" />
+                    <div key={i} className="flex items-start gap-2 p-3 bg-green-500/10 rounded-md border border-green-500/20">
+                      <Target className="w-4 h-4 mt-0.5 text-green-500 dark:text-green-400 flex-shrink-0" />
                       <p className="text-sm">{rec}</p>
                     </div>
                   ))}
@@ -407,10 +411,10 @@ function AIInsightsPanel({
       <HideInSimpleMode>
         <div className="space-y-6">
           {anomalies.length > 0 && (
-            <Card className="backdrop-blur-xl bg-gradient-to-br from-orange-500/10 to-red-500/5 border border-orange-500/20">
+            <Card className="backdrop-blur-xl bg-gradient-to-br from-teal-500/10 to-cyan-500/5 border border-teal-500/20">
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  <AlertTriangle className="w-5 h-5 text-teal-500" />
                   <CardTitle>Anomalies Detected</CardTitle>
                 </div>
                 <CardDescription>Areas requiring attention</CardDescription>
@@ -419,10 +423,10 @@ function AIInsightsPanel({
                 {anomalies.slice(0, 5).map((anomaly, i) => (
                   <div 
                     key={i} 
-                    className={`flex items-start gap-3 p-3 rounded-lg ${
+                    className={`flex items-start gap-3 p-3 rounded-md ${
                       anomaly.severity === 'high' ? 'bg-red-500/10 border border-red-500/20' :
-                      anomaly.severity === 'medium' ? 'bg-orange-500/10 border border-orange-500/20' :
-                      'bg-yellow-500/10 border border-yellow-500/20'
+                      anomaly.severity === 'medium' ? 'bg-teal-500/10 border border-teal-500/20' :
+                      'bg-cyan-500/10 border border-cyan-500/20'
                     }`}
                   >
                     <Badge 
@@ -452,7 +456,7 @@ function AIInsightsPanel({
               </CardHeader>
               <CardContent className="space-y-3">
                 {forecasts.slice(0, 4).map((forecast, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div key={i} className="flex items-center justify-between gap-2 p-3 bg-muted/30 rounded-md">
                     <div className="flex items-center gap-2">
                       {forecast.trend === 'up' ? (
                         <ArrowUpRight className="w-4 h-4 text-green-500" />
@@ -486,6 +490,14 @@ function AIInsightsPanel({
   );
 }
 
+const analyticsPageConfig: CanvasPageConfig = {
+  id: 'analytics',
+  title: 'Analytics Dashboard',
+  subtitle: 'Track your business performance and key metrics',
+  category: 'operations',
+  maxWidth: '7xl',
+};
+
 export default function Analytics() {
   const { toast } = useToast();
   const [period, setPeriod] = useState('last_30_days');
@@ -494,7 +506,7 @@ export default function Analytics() {
   const { data: dashboard, isLoading: dashboardLoading } = useQuery<{ data: DashboardMetrics }>({
     queryKey: ['/api/analytics/dashboard', period],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/dashboard?period=${period}`);
+      const res = await secureFetch(`/api/analytics/dashboard?period=${period}`);
       if (!res.ok) throw new Error('Failed to fetch dashboard');
       return res.json();
     }
@@ -503,7 +515,7 @@ export default function Analytics() {
   const { data: timeUsage, isLoading: timeUsageLoading } = useQuery<{ data: TimeUsageMetrics }>({
     queryKey: ['/api/analytics/time-usage', period],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/time-usage?period=${period}`);
+      const res = await secureFetch(`/api/analytics/time-usage?period=${period}`);
       if (!res.ok) throw new Error('Failed to fetch time usage');
       return res.json();
     },
@@ -513,7 +525,7 @@ export default function Analytics() {
   const { data: scheduling, isLoading: schedulingLoading } = useQuery<{ data: SchedulingMetrics }>({
     queryKey: ['/api/analytics/scheduling', period],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/scheduling?period=${period}`);
+      const res = await secureFetch(`/api/analytics/scheduling?period=${period}`);
       if (!res.ok) throw new Error('Failed to fetch scheduling');
       return res.json();
     },
@@ -523,7 +535,7 @@ export default function Analytics() {
   const { data: revenue, isLoading: revenueLoading } = useQuery<{ data: RevenueMetrics }>({
     queryKey: ['/api/analytics/revenue', period],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/revenue?period=${period}`);
+      const res = await secureFetch(`/api/analytics/revenue?period=${period}`);
       if (!res.ok) throw new Error('Failed to fetch revenue');
       return res.json();
     },
@@ -533,7 +545,7 @@ export default function Analytics() {
   const { data: performance, isLoading: performanceLoading } = useQuery<{ data: EmployeePerformanceMetrics }>({
     queryKey: ['/api/analytics/employee-performance', period],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/employee-performance?period=${period}`);
+      const res = await secureFetch(`/api/analytics/employee-performance?period=${period}`);
       if (!res.ok) throw new Error('Failed to fetch performance');
       return res.json();
     },
@@ -543,7 +555,7 @@ export default function Analytics() {
   const { data: insightsData, isLoading: insightsLoading } = useQuery<{ data: InsightsData }>({
     queryKey: ['/api/analytics/insights', period],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/insights?period=${period}`);
+      const res = await secureFetch(`/api/analytics/insights?period=${period}`);
       if (!res.ok) throw new Error('Failed to fetch insights');
       return res.json();
     }
@@ -561,15 +573,15 @@ export default function Analytics() {
 
     const d = dashboard.data;
     const exportData = [
-      { metric: 'Total Hours', value: d.totalHours.toLocaleString(), category: 'Operations' },
-      { metric: 'Total Revenue', value: `$${d.totalRevenue.toLocaleString()}`, category: 'Financial' },
-      { metric: 'Labor Cost', value: `$${d.laborCost.toLocaleString()}`, category: 'Financial' },
-      { metric: 'Revenue Per Hour', value: `$${d.revenuePerHour.toFixed(2)}`, category: 'KPI' },
-      { metric: 'Utilization Rate', value: `${d.utilizationRate}%`, category: 'KPI' },
-      { metric: 'Active Employees', value: d.activeEmployees, category: 'Team' },
-      { metric: 'Active Clients', value: d.activeClients, category: 'Business' },
-      { metric: 'Pending Invoices', value: d.pendingInvoices, category: 'Billing' },
-      { metric: 'Paid Invoices', value: d.paidInvoices, category: 'Billing' },
+      { metric: 'Total Hours', value: formatNumber(d.totalHours), category: 'Operations' },
+      { metric: 'Total Revenue', value: formatCurrency(d.totalRevenue), category: 'Financial' },
+      { metric: 'Labor Cost', value: formatCurrency(d.laborCost), category: 'Financial' },
+      { metric: 'Revenue Per Hour', value: formatCurrency(d.revenuePerHour), category: 'KPI' },
+      { metric: 'Utilization Rate', value: formatPercent(d.utilizationRate), category: 'KPI' },
+      { metric: 'Active Employees', value: formatNumber(d.activeEmployees), category: 'Team' },
+      { metric: 'Active Clients', value: formatNumber(d.activeClients), category: 'Business' },
+      { metric: 'Pending Invoices', value: formatNumber(d.pendingInvoices), category: 'Billing' },
+      { metric: 'Paid Invoices', value: formatNumber(d.paidInvoices), category: 'Billing' },
     ];
 
     if (d.comparison) {
@@ -606,66 +618,53 @@ export default function Analytics() {
   const anomalies = insightsData?.data?.anomalies || [];
   const forecasts = insightsData?.data?.forecasts || [];
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="transform hover:scale-105 transition-transform duration-300">
-                  <CoAIleagueAFLogo size="lg" variant="icon" />
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="heading-analytics">
-                    Analytics Dashboard
-                  </h1>
-                  <p className="text-muted-foreground text-sm">
-                    Track your business performance and key metrics
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Select value={period} onValueChange={setPeriod}>
-                    <SelectTrigger className="w-[160px]" data-testid="select-period">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="Select period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DATE_PRESETS.map(preset => (
-                        <SelectItem key={preset.value} value={preset.value}>
-                          {preset.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport('csv')}
-                    data-testid="button-export-csv"
-                    className="gap-2"
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span className="hidden sm:inline">CSV</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport('pdf')}
-                    data-testid="button-export-pdf"
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span className="hidden sm:inline">PDF</span>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+  const actionButtons = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Select value={period} onValueChange={setPeriod}>
+        <SelectTrigger className="w-full md:w-[160px]" data-testid="select-period">
+          <Calendar className="w-4 h-4 mr-2" />
+          <SelectValue placeholder="Select period" />
+        </SelectTrigger>
+        <SelectContent>
+          {DATE_PRESETS.map(preset => (
+            <SelectItem key={preset.value} value={preset.value}>
+              {preset.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleExport('csv')}
+        data-testid="button-export-csv"
+        className="gap-2"
+      >
+        <FileSpreadsheet className="h-4 w-4" />
+        <span className="hidden sm:inline">CSV</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleExport('pdf')}
+        data-testid="button-export-pdf"
+        className="gap-2"
+      >
+        <Download className="h-4 w-4" />
+        <span className="hidden sm:inline">PDF</span>
+      </Button>
+    </div>
+  );
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+  const analyticsConfig: CanvasPageConfig = {
+    ...analyticsPageConfig,
+    headerActions: actionButtons,
+  };
+
+  return (
+    <CanvasHubPage config={analyticsConfig}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 lg:w-auto lg:inline-grid">
             <TabsTrigger value="overview" className="gap-2" data-testid="tab-overview">
               <BarChart3 className="w-4 h-4 hidden sm:inline" />
               Overview
@@ -686,6 +685,10 @@ export default function Analytics() {
               <Users className="w-4 h-4 hidden sm:inline" />
               Employees
             </TabsTrigger>
+            <TabsTrigger value="incidents" className="gap-2" data-testid="tab-incidents">
+              <MapPin className="w-4 h-4 hidden sm:inline" />
+              Incidents
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -696,14 +699,14 @@ export default function Analytics() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <MetricCard
                     title="Total Hours"
-                    value={dashboard.data.totalHours.toLocaleString('en-US', { maximumFractionDigits: 1 })}
+                    value={formatNumber(dashboard.data.totalHours)}
                     subtitle="Hours tracked"
                     icon={Clock}
                     change={dashboard.data.comparison?.hoursChange}
                   />
                   <MetricCard
                     title="Total Revenue"
-                    value={`$${dashboard.data.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+                    value={formatCurrency(dashboard.data.totalRevenue, 0)}
                     subtitle="Invoiced amount"
                     icon={DollarSign}
                     change={dashboard.data.comparison?.revenueChange}
@@ -712,7 +715,7 @@ export default function Analytics() {
                   />
                   <MetricCard
                     title="Active Employees"
-                    value={dashboard.data.activeEmployees}
+                    value={formatNumber(dashboard.data.activeEmployees)}
                     subtitle="Working this period"
                     icon={UserCheck}
                     colorClass="from-blue-500/10 to-indigo-500/5"
@@ -720,7 +723,7 @@ export default function Analytics() {
                   />
                   <MetricCard
                     title="Active Clients"
-                    value={dashboard.data.activeClients}
+                    value={formatNumber(dashboard.data.activeClients)}
                     subtitle="With time entries"
                     icon={Users}
                     colorClass="from-purple-500/10 to-violet-500/5"
@@ -743,12 +746,12 @@ export default function Analytics() {
                           <AreaChart data={dashboard.data.trends}>
                             <defs>
                               <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                                <stop offset="5%" stopColor={CHART_PALETTE.BRAND} stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor={CHART_PALETTE.BRAND} stopOpacity={0}/>
                               </linearGradient>
                               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                <stop offset="5%" stopColor={CHART_PALETTE.INFO} stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor={CHART_PALETTE.INFO} stopOpacity={0}/>
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -764,7 +767,7 @@ export default function Analytics() {
                               yAxisId="left"
                               type="monotone"
                               dataKey="hours"
-                              stroke="#06b6d4"
+                              stroke={CHART_PALETTE.BRAND}
                               fillOpacity={1}
                               fill="url(#colorHours)"
                               name="Hours"
@@ -773,7 +776,7 @@ export default function Analytics() {
                               yAxisId="right"
                               type="monotone"
                               dataKey="revenue"
-                              stroke="#3b82f6"
+                              stroke={CHART_PALETTE.INFO}
                               fillOpacity={1}
                               fill="url(#colorRevenue)"
                               name="Revenue"
@@ -799,17 +802,17 @@ export default function Analytics() {
                     <CardContent>
                       <UtilizationGauge value={dashboard.data.utilizationRate} />
                       <div className="mt-4 space-y-3">
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between gap-2 text-sm">
                           <span className="text-muted-foreground">Revenue/Hour</span>
-                          <span className="font-medium">${dashboard.data.revenuePerHour.toFixed(2)}</span>
+                          <span className="font-medium">{formatCurrency(dashboard.data.revenuePerHour)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between gap-2 text-sm">
                           <span className="text-muted-foreground">Labor Cost</span>
-                          <span className="font-medium">${dashboard.data.laborCost.toLocaleString()}</span>
+                          <span className="font-medium">{formatCurrency(dashboard.data.laborCost, 0)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between gap-2 text-sm">
                           <span className="text-muted-foreground">Invoices Pending</span>
-                          <span className="font-medium">{dashboard.data.pendingInvoices}</span>
+                          <span className="font-medium">{formatNumber(dashboard.data.pendingInvoices)}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -841,21 +844,21 @@ export default function Analytics() {
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div>
-                          <div className="flex justify-between mb-2">
+                          <div className="flex justify-between gap-2 mb-2">
                             <span className="text-sm text-muted-foreground">Average Attendance</span>
                             <span className="text-sm font-medium">{performance.data.averageAttendanceRate}%</span>
                           </div>
                           <Progress value={performance.data.averageAttendanceRate} className="h-2" />
                         </div>
                         <div>
-                          <div className="flex justify-between mb-2">
+                          <div className="flex justify-between gap-2 mb-2">
                             <span className="text-sm text-muted-foreground">Average Punctuality</span>
                             <span className="text-sm font-medium">{performance.data.averagePunctualityRate}%</span>
                           </div>
                           <Progress value={performance.data.averagePunctualityRate} className="h-2" />
                         </div>
                         <div className="pt-4 border-t">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between gap-2 text-sm">
                             <span className="text-muted-foreground">Active Employees</span>
                             <span className="font-medium">{performance.data.employees.length}</span>
                           </div>
@@ -891,13 +894,13 @@ export default function Analytics() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <MetricCard
                     title="Total Hours"
-                    value={timeUsage.data.totalHours.toLocaleString('en-US', { maximumFractionDigits: 1 })}
+                    value={formatNumber(timeUsage.data.totalHours)}
                     subtitle="All time entries"
                     icon={Clock}
                   />
                   <MetricCard
                     title="Overtime Hours"
-                    value={timeUsage.data.overtimeHours.toLocaleString('en-US', { maximumFractionDigits: 1 })}
+                    value={formatNumber(timeUsage.data.overtimeHours)}
                     subtitle="Above 8hrs/day"
                     icon={AlertCircle}
                     colorClass="from-orange-500/10 to-amber-500/5"
@@ -905,13 +908,13 @@ export default function Analytics() {
                   />
                   <MetricCard
                     title="Avg Hours/Day"
-                    value={timeUsage.data.averageHoursPerDay.toFixed(1)}
+                    value={formatNumber(timeUsage.data.averageHoursPerDay)}
                     subtitle="Per working day"
                     icon={Activity}
                   />
                   <MetricCard
                     title="Employees"
-                    value={timeUsage.data.byEmployee.length}
+                    value={formatNumber(timeUsage.data.byEmployee.length)}
                     subtitle="With time entries"
                     icon={Users}
                   />
@@ -931,7 +934,7 @@ export default function Analytics() {
                             <XAxis type="number" className="text-xs" />
                             <YAxis dataKey="name" type="category" width={100} className="text-xs" />
                             <Tooltip />
-                            <Bar dataKey="totalHours" fill="#06b6d4" radius={[0, 4, 4, 0]} name="Total Hours" />
+                            <Bar dataKey="totalHours" fill={CHART_PALETTE.BRAND} radius={[0, 4, 4, 0]} name="Total Hours" />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
@@ -964,7 +967,7 @@ export default function Analytics() {
                               labelLine={false}
                             >
                               {timeUsage.data.byClient.slice(0, 6).map((_, index) => (
-                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                <Cell key={`cell-${index}`} fill={CHART_SERIES[index % CHART_SERIES.length]} />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -1039,8 +1042,8 @@ export default function Analytics() {
                             <XAxis dataKey="day" className="text-xs" />
                             <YAxis className="text-xs" />
                             <ChartTooltip content={<ChartTooltipContent />} />
-                            <Bar dataKey="scheduled" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Scheduled" />
-                            <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Completed" />
+                            <Bar dataKey="scheduled" fill={CHART_PALETTE.INFO} radius={[4, 4, 0, 0]} name="Scheduled" />
+                            <Bar dataKey="completed" fill={CHART_PALETTE.SUCCESS} radius={[4, 4, 0, 0]} name="Completed" />
                           </BarChart>
                         </ChartContainer>
                       ) : (
@@ -1072,7 +1075,7 @@ export default function Analytics() {
                               label={({ status, percent }) => `${status}: ${(percent * 100).toFixed(0)}%`}
                             >
                               {scheduling.data.byStatus.map((_, index) => (
-                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                <Cell key={`cell-${index}`} fill={CHART_SERIES[index % CHART_SERIES.length]} />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -1154,8 +1157,8 @@ export default function Analytics() {
                             <YAxis className="text-xs" />
                             <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
                             <Legend />
-                            <Bar dataKey="invoiced" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Invoiced" />
-                            <Bar dataKey="paid" fill="#10b981" radius={[4, 4, 0, 0]} name="Paid" />
+                            <Bar dataKey="invoiced" fill={CHART_PALETTE.INFO} radius={[4, 4, 0, 0]} name="Invoiced" />
+                            <Bar dataKey="paid" fill={CHART_PALETTE.SUCCESS} radius={[4, 4, 0, 0]} name="Paid" />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
@@ -1201,15 +1204,15 @@ export default function Analytics() {
                         </div>
                       </div>
                       <div className="mt-6 space-y-2 w-full">
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between gap-2 text-sm">
                           <span className="text-muted-foreground">Avg Invoice</span>
                           <span className="font-medium">${revenue.data.averageInvoiceAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between gap-2 text-sm">
                           <span className="text-muted-foreground">Net Revenue</span>
                           <span className="font-medium">${revenue.data.netRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between gap-2 text-sm">
                           <span className="text-muted-foreground">Platform Fees</span>
                           <span className="font-medium">${revenue.data.platformFees.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                         </div>
@@ -1307,7 +1310,7 @@ export default function Analytics() {
                   <CardContent>
                     <div className="space-y-3">
                       {performance.data.employees.slice(0, 10).map((emp, index) => (
-                        <div key={emp.employeeId} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover-elevate">
+                        <div key={emp.employeeId} className="flex items-center gap-3 p-3 rounded-md bg-muted/50 hover-elevate">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                             index === 0 ? 'bg-yellow-500/20 text-yellow-600' :
                             index === 1 ? 'bg-slate-400/20 text-slate-500' :
@@ -1319,7 +1322,7 @@ export default function Analytics() {
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{emp.name}</p>
                             <div className="flex gap-4 text-xs text-muted-foreground">
-                              <span>{emp.totalHours.toFixed(1)} hrs</span>
+                              <span>{(emp.totalHours ?? 0).toFixed(1)} hrs</span>
                               <span>{emp.completedShifts} shifts</span>
                               {emp.noShows > 0 && <span className="text-red-500">{emp.noShows} no-shows</span>}
                             </div>
@@ -1350,8 +1353,11 @@ export default function Analytics() {
               </Card>
             )}
           </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+
+          <TabsContent value="incidents" className="space-y-6">
+            <IncidentHeatmap />
+          </TabsContent>
+      </Tabs>
+    </CanvasHubPage>
   );
 }

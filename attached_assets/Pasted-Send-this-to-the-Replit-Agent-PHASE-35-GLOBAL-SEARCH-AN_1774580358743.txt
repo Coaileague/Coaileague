@@ -1,0 +1,239 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 35 — GLOBAL SEARCH AND DISCOVERY**
+
+This phase builds unified search across the entire CoAIleague platform. Managers, compliance officers, and owners need to find any record — any officer, any shift, any invoice, any document, any incident, any ticket — instantly without knowing exactly where to look. Search must be fast, role-scoped, workspace-isolated, and integrated with Trinity so users can search conversationally. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check. Specific evidence per row. Every row green before Phase 35 closes.
+
+**7-STEP FRAMEWORK — every feature built:**
+1. Trigger — search fires correctly on input
+2. Payload — correct query assembled with workspace scope
+3. API — correct endpoint, correct auth, workspace-scoped
+4. Processing — server searches correctly across all entity types
+5. Persistence — search queries logged for analytics where applicable
+6. Confirmation — results render correctly, empty states designed
+7. Sync — new records appear in search results without delay
+
+**5 MANDATORY QUALITY CHECKS:**
+1. TypeScript: `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -30` — zero errors
+2. Import completeness — all hooks and utilities imported
+3. State variable declarations — no undeclared variables
+4. Schema alignment — client expects exactly what server returns
+5. Server startup — ArchLinter passed, zero runtime errors
+
+**ZERO REGRESSION RULE:**
+Search must never modify data. All search endpoints are read-only. All queries must include workspace_id scope. No existing routes or components may be broken by this phase.
+
+---
+
+**STEP 1 — CURRENT SEARCH INVENTORY**
+
+Before touching anything inventory what currently exists:
+- Any existing search endpoints or full-text search infrastructure
+- Any existing search UI components or command palettes
+- What database indexes currently support text search
+- PostgreSQL full-text search capabilities already configured
+- Any existing Elasticsearch or external search integration
+- What entity types are currently queryable
+
+Flag any entity type that has no searchable index.
+
+---
+
+**STEP 2 — SEARCH ARCHITECTURE**
+
+Design the search system before building:
+
+**PostgreSQL full-text search approach:**
+- Use PostgreSQL `tsvector` and `tsquery` for full-text search — no external search engine required for initial implementation
+- Create `search_indexes` materialized view or use GIN indexes on text columns across all searchable tables
+- Weighted search: exact matches rank higher than partial matches, recent records rank higher than old ones
+- Fuzzy matching for names — handle typos and partial names using `pg_trgm` extension
+
+**Searchable entity types and fields:**
+
+| Entity | Searchable Fields | Minimum Role |
+|--------|------------------|--------------|
+| Officers | Name, badge number, email, phone, license number | Supervisor |
+| Clients | Company name, contact name, email, phone | Manager |
+| Shifts | Post name, date, officer name, status | Supervisor |
+| Invoices | Invoice number, client name, amount | Manager |
+| Documents | Document name, document type, entity name | Manager |
+| Incidents | Description, location, officer name, type | Supervisor |
+| Compliance violations | Description, officer name, violation type | Compliance officer |
+| Support tickets | Subject, description, category | Platform staff |
+| Pay stubs | Officer name, period | Org owner only |
+| Work orders | Title, client name, type | Manager |
+| Audit log | Action type, entity name | Org owner |
+
+**Search result structure:**
+Every result returns: entity_type, entity_id, display_name, subtitle, relevance_score, created_at, a deep_link to the correct page
+
+---
+
+**STEP 3 — SEARCH API**
+
+Build a unified search endpoint:
+
+**`GET /api/search?q={query}&types={comma-separated}&limit={n}&offset={n}`**
+
+- `q` — search query string, minimum 2 characters, maximum 100 characters
+- `types` — optional filter by entity type, defaults to all types the requesting user can access
+- `limit` — default 20, maximum 50
+- `offset` — for pagination
+- Returns: `{ results: SearchResult[], total: number, took_ms: number, query: string }`
+- Every result includes a `deep_link` — the exact URL to navigate to that record
+- Results grouped by entity type in the response
+- Results ordered by relevance score then by created_at descending within each type
+- Workspace isolation enforced on every sub-query — results only from requesting workspace
+- Role filtering enforced — pay stubs only returned for org_owner, audit log only for authorized roles
+- Search query logged for analytics (not personally identifiable — just the query string, entity types, result count, response time)
+- Rate limited — maximum 30 search requests per minute per user
+
+---
+
+**STEP 4 — SEARCH INDEXING**
+
+Every searchable entity must have proper indexes:
+
+- Enable `pg_trgm` extension for fuzzy matching
+- Create GIN indexes on text columns for all searchable entities:
+  - `officers`: GIN index on (first_name || ' ' || last_name), email, license_number
+  - `clients`: GIN index on company_name, contact_name, email
+  - `shifts`: GIN index on post_name, notes
+  - `invoices`: GIN index on invoice_number, client name (via join)
+  - `documents`: GIN index on document_name, document_type
+  - `incident_reports`: GIN index on description, location
+  - `compliance_violations`: GIN index on description, violation_type
+- Index creation must be CONCURRENT — non-blocking, does not lock tables during creation
+- Index creation logged and verified before search goes live
+- Search performance baseline: simple name query must return in under 100ms
+
+---
+
+**STEP 5 — GLOBAL SEARCH UI**
+
+Search must be accessible from everywhere:
+
+**Command palette (desktop):**
+- Keyboard shortcut `Cmd+K` (Mac) / `Ctrl+K` (Windows/Linux) opens global search
+- Full-screen overlay with search input prominently centered
+- Recent searches shown before typing (stored in localStorage per user)
+- As user types (debounced 300ms) — live results appear below input
+- Results grouped by entity type with entity type label
+- Each result shows: icon for entity type, display name, subtitle, and the deep_link page label
+- Keyboard navigable — up/down arrows, Enter to navigate, Escape to close
+- Loading state: subtle spinner while fetching, not a full skeleton
+- Empty state: helpful message "No results for '[query]' — try a different term"
+- Result count shown: "12 results for 'Martinez'"
+
+**Search bar (mobile):**
+- Persistent search icon in the mobile top bar — tap to open search
+- Full-screen search view on mobile — search input at top, results below
+- Same result structure as desktop but optimized for touch — larger tap targets
+- Recent searches shown as chips below the input before typing
+- Voice search option — tap microphone to speak the search query (uses Phase 22 voice infrastructure)
+
+**Inline search within pages:**
+- Officers list, Clients list, Invoices list — existing search/filter inputs enhanced to use the global search API where appropriate
+- Results in inline search do not navigate away from the page — they filter the current view
+
+---
+
+**STEP 6 — SEARCH RESULT DEEP LINKING**
+
+Every search result must navigate to the correct page:
+
+- Officer result → `/officers/{id}` — opens officer profile
+- Client result → `/clients/{id}` — opens client profile
+- Shift result → `/schedule?date={date}&shiftId={id}` — opens schedule on correct date with shift highlighted
+- Invoice result → `/invoices/{id}` — opens invoice detail
+- Document result → `/documents/{id}` — opens document viewer
+- Incident result → `/incidents/{id}` — opens incident detail
+- Compliance violation result → `/compliance/violations/{id}` — opens violation detail
+- Support ticket result → `/help-desk/tickets/{id}` — opens ticket detail
+- All deep links must work — no 404s on any search result link
+- Deep links respect role — if user cannot access the target they see a permission denied message, not a 404
+
+---
+
+**STEP 7 — TRINITY SEARCH INTEGRATION**
+
+Trinity must be able to search on behalf of users:
+
+- `search.query` Trinity action — accepts natural language query, translates to structured search, returns results
+- Trinity can answer: "Find all invoices for Securitas from last month" or "Show me Officer Martinez's recent incidents"
+- Trinity search results respect the requesting user's role — Trinity cannot return records the user cannot access directly
+- Trinity can refine search results conversationally: "Show me only the overdue ones" after an initial search
+- Trinity search uses the same `/api/search` endpoint — not a separate implementation
+- Trinity can navigate the user to a result: "Here is the invoice — shall I open it for you?"
+
+---
+
+**STEP 8 — SEARCH ANALYTICS**
+
+Search behavior provides valuable product intelligence:
+
+- Search query log: query string, entity types searched, result count, result clicked (entity_type and entity_id), response time, user role (not user ID), timestamp, workspace_id
+- No PII in search logs — officer names in queries are not logged in production
+- Search analytics accessible to platform staff: top searched terms, zero-result queries (content gaps), most clicked result types
+- Zero-result rate monitored — if a common query returns no results it may indicate a data entry or naming consistency issue
+- Trinity can query search analytics: "What are the most common search queries this week?"
+
+---
+
+**STEP 9 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. All 5 mandatory quality checks with command output
+6. 7-step framework verified for every feature
+7. Zero regression confirmed
+8. All rows green before summary written
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 35 is marked complete:
+- Check 1: Search inventory complete — existing infrastructure documented
+- Check 2: `pg_trgm` extension enabled — confirmed with query
+- Check 3: GIN indexes created CONCURRENT on all searchable entity tables
+- Check 4: Index creation non-blocking confirmed — no table locks during creation
+- Check 5: Unified search endpoint live at `GET /api/search` — returns correct structure
+- Check 6: Workspace isolation confirmed — search never returns results from another workspace
+- Check 7: Role filtering confirmed — pay stubs only for org_owner, audit log only for authorized roles
+- Check 8: Officers searchable by name, badge number, email, license number — confirmed
+- Check 9: Clients searchable by company name, contact name, email — confirmed
+- Check 10: Invoices, documents, incidents, violations all searchable — confirmed
+- Check 11: Every search result includes a valid deep_link — no 404s on any result
+- Check 12: Command palette opens on Cmd+K / Ctrl+K — confirmed
+- Check 13: Search results appear within 300ms debounce — live results working
+- Check 14: Mobile search full-screen view — touch-optimized, voice search wired
+- Check 15: Recent searches stored and shown before typing
+- Check 16: Empty state designed and helpful — not a blank page
+- Check 17: Search rate limited — 30 requests per minute per user
+- Check 18: `search.query` Trinity action registered and callable
+- Check 19: Trinity search respects requesting user's role — cannot return inaccessible records
+- Check 20: Search query log captures correct fields — no PII, workspace-scoped
+- Check 21: Simple name query returns in under 100ms — performance baseline confirmed
+- Check 22: Zero regression — no existing pages or routes broken
+- Check 23: TypeScript targeted check — zero errors in all search files
+- Check 24: Import completeness — all hooks and utilities imported
+- Check 25: State variable declarations — no undeclared variables
+- Check 26: Schema alignment — client expects exactly what server returns
+- Check 27: Server startup clean — ArchLinter passed, zero runtime errors
+- Check 28: Nothing Left Behind reconciliation table — one row per check, all green
+
+Do not mark Phase 35 complete until all 28 checks pass. Findings first. Full picture assembled. Then fixes. Every gap fixed. Zero regressions. Nothing left behind.
+
+---
+
+Paste that. Search is the feature that makes everything else findable. Without it a platform with 74 phases of data is a maze. With it everything is one keystroke away.

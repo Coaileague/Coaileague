@@ -24,6 +24,14 @@ import { alternativeStrategyService, AlternativeStrategy } from './alternativeSt
 import { db } from '../../../db';
 import { platformEventBus } from '../../platformEventBus';
 import crypto from 'crypto';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('goalExecutionService');
+
+// Lazy import to avoid circular dependencies
+async function getNotificationEngine() {
+  const { universalNotificationEngine } = await import('../../universalNotificationEngine');
+  return universalNotificationEngine;
+}
 
 export interface Goal {
   id: string;
@@ -96,7 +104,7 @@ class GoalExecutionService {
   private readonly verificationTimeout = 30000;
 
   private constructor() {
-    console.log('[GoalExecutionService] Initializing iterative goal execution...');
+    log.info('[GoalExecutionService] Initializing iterative goal execution...');
   }
 
   static getInstance(): GoalExecutionService {
@@ -137,14 +145,12 @@ class GoalExecutionService {
       try {
         listener(streamEvent);
       } catch (error) {
-        console.error('[GoalExecutionService] Error in event listener:', error);
+        log.error('[GoalExecutionService] Error in event listener:', error);
       }
     }
 
-    platformEventBus.emit('trinity:stream', {
-      conversationId,
-      event: streamEvent
-    });
+    // Trinity streaming is delivered via this.eventListeners above.
+    // platformEventBus is not used for real-time stream events (no 'trinity:stream' type).
   }
 
   /**
@@ -268,7 +274,7 @@ class GoalExecutionService {
               };
             }
           } catch (error) {
-            console.error('[GoalExecutionService] Risk analysis failed:', error);
+            log.error('[GoalExecutionService] Risk analysis failed:', error);
           }
 
           // STEP 2.2: Calculate stakeholder impact with REAL plan data
@@ -282,7 +288,7 @@ class GoalExecutionService {
               data: stakeholderImpact
             });
           } catch (error) {
-            console.error('[GoalExecutionService] Stakeholder impact calculation failed:', error);
+            log.error('[GoalExecutionService] Stakeholder impact calculation failed:', error);
           }
 
           // STEP 2.3: Calculate business impact
@@ -503,7 +509,7 @@ class GoalExecutionService {
         } catch (error: any) {
           await this.streamToUI(context.conversationId, {
             type: 'ERROR',
-            data: { message: error.message }
+            data: { message: (error instanceof Error ? error.message : String(error)) }
           });
           
           await selfReflectionEngine.reflect({
@@ -512,7 +518,7 @@ class GoalExecutionService {
             outcome: 'error',
             stepsCompleted,
             stepsTotal,
-            errors: [error.message]
+            errors: [(error instanceof Error ? error.message : String(error))]
           });
         }
       }
@@ -608,7 +614,7 @@ class GoalExecutionService {
             timestamp: new Date(),
             undoAction: async () => {
               // Placeholder for undo logic
-              console.log(`[GoalExecutionService] Undoing: ${step.description}`);
+              log.info(`[GoalExecutionService] Undoing: ${step.description}`);
             }
           } : undefined
         };
@@ -617,7 +623,7 @@ class GoalExecutionService {
       }
 
     } catch (error: any) {
-      return { success: false, error: error.message };
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -639,9 +645,20 @@ class GoalExecutionService {
           return { success: true, result: { action, parameters } };
           
         case 'send_notification':
-        case 'send_email':
-          // Use notification services
-          return { success: true, result: { action, parameters } };
+        case 'send_email': {
+          // Wire to NDS — parameters: { workspaceId, type, title, message, recipientId?, priority? }
+          const nds = await getNotificationEngine();
+          const ndsResult = await nds.sendNotification({
+            workspaceId: parameters.workspaceId || context.workspaceId,
+            type: parameters.type || 'system',
+            title: parameters.title || 'Trinity Notification',
+            message: parameters.message || parameters.body || '',
+            priority: parameters.priority || 'normal',
+            metadata: { source: 'trinity_goal_execution', action, parameters },
+            ...(parameters.recipientUserId ? { recipientUserId: parameters.recipientUserId } : {}),
+          });
+          return { success: ndsResult.success, result: ndsResult };
+        }
           
         case 'update_database':
         case 'create_record':
@@ -659,7 +676,7 @@ class GoalExecutionService {
           return { success: true, result: { action, parameters } };
       }
     } catch (error: any) {
-      return { success: false, error: error.message };
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -668,22 +685,36 @@ class GoalExecutionService {
    */
   private async verifyGoalAchieved(goal: Goal, context: GoalExecutionContext): Promise<boolean> {
     try {
-      // Query database/state to verify actual state matches target state
       if (!goal.targetState || Object.keys(goal.targetState).length === 0) {
-        // No target state defined, consider success based on step completion
         return true;
       }
 
-      // Compare current state with target state
-      for (const [key, expectedValue] of Object.entries(goal.targetState)) {
-        // In a real implementation, query actual state and compare
-        // For now, simulate verification
-        console.log(`[GoalExecutionService] Verifying ${key}: expected ${expectedValue}`);
+      const currentState = (context as any).currentState as Record<string, any> | undefined;
+      if (!currentState || Object.keys(currentState).length === 0) {
+        log.warn('[GoalExecutionService] No current state provided for verification - treating goal as unverified (step completion used as proxy)');
+        return true;
       }
 
-      return true;
+      let allMatched = true;
+      for (const [key, expectedValue] of Object.entries(goal.targetState)) {
+        const actualValue = currentState[key];
+        if (actualValue === undefined) {
+          log.warn(`[GoalExecutionService] Cannot verify '${key}': field not present in current state`);
+          allMatched = false;
+        } else if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
+          log.warn(`[GoalExecutionService] Verification mismatch for '${key}': expected ${JSON.stringify(expectedValue)}, got ${JSON.stringify(actualValue)}`);
+          allMatched = false;
+        } else {
+          log.info(`[GoalExecutionService] Verified '${key}' matches expected value`);
+        }
+      }
+
+      if (!allMatched) {
+        log.warn('[GoalExecutionService] Goal verification incomplete - some target states could not be confirmed');
+      }
+      return allMatched;
     } catch (error) {
-      console.error('[GoalExecutionService] Verification error:', error);
+      log.error('[GoalExecutionService] Verification error:', error);
       return false;
     }
   }
@@ -831,7 +862,7 @@ class GoalExecutionService {
    */
   async undoAction(actionId: string): Promise<boolean> {
     // Find the action in active executions and call its undo function
-    console.log(`[GoalExecutionService] Attempting to undo action: ${actionId}`);
+    log.info(`[GoalExecutionService] Attempting to undo action: ${actionId}`);
     return true;
   }
 

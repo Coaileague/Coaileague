@@ -3,6 +3,40 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
+  safelist: [
+    // Shift status border colors - must be safelisted for dynamic class generation
+    'border-l-4',
+    'border-red-500',
+    'border-amber-500',
+    'border-emerald-500',
+    'border-violet-500',
+    'border-dashed',
+    // Shift status background colors
+    'bg-red-50/70',
+    'bg-amber-50/70',
+    'bg-emerald-50/70',
+    'bg-violet-50/70',
+    // Badge colors
+    'bg-red-100',
+    'bg-amber-100',
+    'bg-emerald-100',
+    'bg-violet-100',
+    'text-red-700',
+    'text-amber-700',
+    'text-emerald-700',
+    'text-violet-700',
+    'border-red-400',
+    'border-amber-400',
+    'border-emerald-400',
+    'border-violet-400',
+    // Position color strips - Armed/Unarmed/Supervisor/Manager/Owner
+    'bg-red-600',      // Armed
+    'bg-slate-600',    // Unarmed
+    'bg-slate-400',    // Default/no position
+    'bg-amber-600',    // Supervisor
+    'bg-indigo-600',   // Manager
+    'bg-violet-600',   // Owner
+  ],
   theme: {
     extend: {
       borderRadius: {
@@ -101,7 +135,19 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      zIndex: {
+        'sticky': '10',
+        'header': '20', 
+        'sidebar': '30',
+        'fab': '40',
+        'nav': '50',
+        'dropdown': '100',
+        'modal': '200',
+        'toast': '300',
+        'overlay': '400',
+        'critical': '500',
+      }
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;

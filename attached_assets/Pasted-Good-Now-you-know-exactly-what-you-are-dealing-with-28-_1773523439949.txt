@@ -1,0 +1,63 @@
+Good. Now you know exactly what you are dealing with. 28 stubs out of 743 actions. That is actually better than expected — about 4 percent of the registry is fake. The real work is concentrated in 4 clusters and the decision for each cluster is different.
+
+Here is how to think about each group and what to tell Replit:
+
+**Group 1 — External intelligence (2 actions): Remove them.**
+Weather risk and local events risk are using fake logic. A weather API integration is not on your roadmap. Remove these two actions entirely. They charge credits for hardcoded nonsense.
+
+**Group 2 — Business Pro and Guru in-memory machinery (8 actions): Decision needed from you.**
+These are the strategic analysis features — ROI calculator, benchmarking, playbooks, scenario simulation. They sound impressive but run entirely in memory with hardcoded numbers and reset on every server restart. If these appear on your pricing page as features they need to be either built for real using actual org data or removed from the registry and the pricing page simultaneously. You cannot charge credits for fabricated ROI numbers.
+
+**Group 3 — Knowledge graph and reinforcement learning loop (6 actions): Remove them.**
+These are in-memory systems that vanish on restart. They were likely aspirational architecture from early sessions. They serve no real function for a security company operator today. Remove all 6.
+
+**Group 4 — Dead letter agent bots (4 actions): Remove them.**
+Payroll bot, scheduling bot, compliance bot, notification bot — all send messages to handlers that do not exist. The messages go nowhere. Remove all 4. The real bots (ReportBot, HelpAI, ClockBot, MeetingBot) are already built properly and do not use this broken protocol.
+
+**Group 5 — OAuth ghost (1 action): Remove it.**
+cognitive.get_workspace_connections always returns empty because OAuth tokens are never persisted. Remove it.
+
+**Group 6 — Tax math shortcuts (2 actions): Fix them.**
+These are close to real but the math is wrong. Quarterly tax estimates ignore uneven distribution and FUTA ignores the $7,000 wage base cap. These are fixable in an hour and worth keeping since payroll tax awareness is genuinely useful for security company owners.
+
+Send this to Replit:
+
+---
+
+The stub audit is complete. 28 stubs identified. Execute the following decisions exactly. Do not build anything new. Only remove stubs and fix the two tax math errors.
+
+**Remove these 18 actions entirely from the registry and their handler functions:**
+
+external.get_weather_risk and external.get_local_events_risk — fake hardcoded logic, no real API.
+
+knowledge.semantic_query, knowledge.add_entity, knowledge.check_rules — in-memory only, lost on restart.
+
+learning.record_experience, learning.get_confidence, learning.get_metrics, learning.get_adaptations, learning.validate_adaptation — in-memory only, lost on restart, uses Math.random() internally.
+
+agent.invoke_payroll_bot, agent.invoke_scheduling_bot, agent.invoke_compliance_bot, agent.invoke_notification_bot — dead letter queue, no handlers registered, messages go nowhere.
+
+cognitive.get_workspace_connections — OAuth tokens never persisted, always returns empty.
+
+**Flag these 8 actions as DEFERRED — do not remove but mark them clearly:**
+
+business_pro.discover_money, business_pro.get_playbook, business_pro.run_benchmark, business_pro.calculate_roi, business_pro.get_agents, business_pro.get_summary, guru.run_scenario, guru.propose_evolution.
+
+These use hardcoded or in-memory data. Add a comment block above each one: DEFERRED — requires real org data integration before production use. Add isDeferred: true to their ActionHandler registration so Trinity will not invoke them and no credits will be charged if they are accidentally triggered. Do not remove them yet — I will decide whether to build them out or remove them after go-live.
+
+**Fix these 2 actions — real math corrections only:**
+
+tax.estimate_quarterly — fix the quarterly distribution to reflect actual payroll schedule rather than dividing annual FICA equally by four. Use the actual pay periods in each quarter from the org's payroll records.
+
+tax.ytd_employer_summary — apply the $7,000 FUTA wage base cap per employee. FUTA is only owed on the first $7,000 of each employee's wages per year. Wages above $7,000 per employee are exempt. Fix the calculation to apply this cap correctly.
+
+**After all removals and fixes:**
+
+Restart the server.
+Report the new action count.
+Confirm all 15 domains healthy.
+Confirm all 4 regression tests passing.
+Confirm no user-facing feature broke — scheduling, payroll, compliance, documents, bots, briefing all still work.
+Confirm Statewide exemption still active.
+Report final count of real implemented actions versus deferred actions.
+
+That is the complete instruction. Remove 18, defer 8, fix 2. Nothing else.

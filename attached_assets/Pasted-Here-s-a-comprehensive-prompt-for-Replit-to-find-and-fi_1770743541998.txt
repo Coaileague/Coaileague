@@ -1,0 +1,360 @@
+Here's a comprehensive prompt for Replit to find and fix all unwired functionality:
+
+COAILEAGUE PLATFORM - UNWIRED FUNCTIONALITY AUDIT & WIRING
+OBJECTIVE: Find EVERY button, link, action, setting, form, modal, and CRUD operation that is not actually wired to work. This includes placeholder data, mock responses, non-functional buttons, and UI elements that look functional but do nothing. WIRE THEM ALL IN.
+
+WHAT TO LOOK FOR
+1. PLACEHOLDER DATA (Remove or Replace with Real Data)
+Examples to find:
+- "recipient@example.com"
+- "cc@example.com"
+- "example.com"
+- "John Doe"
+- "Jane Smith"
+- "Lorem ipsum"
+- "Test Company"
+- "123-456-7890"
+- "XXX-XX-XXXX"
+- "placeholder"
+- "sample"
+- "demo"
+- "mock"
+- "TODO"
+- "FIXME"
+- Any hardcoded fake email addresses
+- Any hardcoded fake phone numbers
+- Any hardcoded fake names
+- Any obviously fake data in forms or displays
+
+Search commands:
+grep -rn "example.com" --include="*.tsx" --include="*.ts"
+grep -rn "placeholder" --include="*.tsx" --include="*.ts"
+grep -rn "Lorem" --include="*.tsx" --include="*.ts"
+grep -rn "TODO" --include="*.tsx" --include="*.ts"
+grep -rn "FIXME" --include="*.tsx" --include="*.ts"
+grep -rn "John Doe\|Jane" --include="*.tsx" --include="*.ts"
+2. UNWIRED BUTTONS (onClick does nothing or is missing)
+Examples to find:
+- Buttons with no onClick handler
+- Buttons with onClick={() => {}} (empty function)
+- Buttons with onClick that just console.log
+- Buttons with onClick pointing to non-existent functions
+- Buttons with disabled={true} permanently
+- "Enhance" buttons that don't enhance anything
+- "Professional" buttons that don't professionalize anything
+- "Send" buttons that don't send anything
+- "Save" buttons that don't save anything
+- "Delete" buttons that don't delete anything
+- "Archive" buttons that don't archive anything
+- "Reply" buttons that don't open reply
+- "Forward" buttons that don't forward
+
+Search commands:
+grep -rn "onClick={() => {}}" --include="*.tsx"
+grep -rn "onClick={()=>{}}" --include="*.tsx"
+grep -rn "console.log" --include="*.tsx" | grep onClick
+grep -rn "// TODO" --include="*.tsx"
+grep -rn "not implemented" --include="*.tsx" --include="*.ts"
+3. UNWIRED MENU ITEMS
+From the screenshots, verify these work:
+- Reply → Actually opens reply composer with correct context
+- Forward → Actually opens forward modal, sends real email
+- Archive → Actually archives the item
+- Delete → Actually deletes the item with confirmation
+
+Find all dropdown menus and context menus:
+- Verify each menu item has a real handler
+- Verify the handler actually does something
+- Verify success/error feedback is shown
+4. UNWIRED FORMS
+Check all forms for:
+- Submit handler actually calls API
+- Form validation actually validates
+- Error messages actually display
+- Success messages actually display
+- Form resets after successful submit
+- Loading state during submission
+5. UNWIRED MODALS
+Check all modals for:
+- Open/close works correctly
+- Form inside modal submits correctly
+- Cancel button closes modal
+- Confirm button does the action
+- Escape key closes modal
+- Click outside closes modal (if intended)
+6. UNWIRED SETTINGS
+Find all settings pages and verify:
+- Toggle switches actually toggle and persist
+- Input fields actually save on change/blur
+- Dropdown selections actually save
+- Settings load correctly on page load
+- Settings sync to database
+7. UNWIRED CRUD OPERATIONS
+For EVERY entity (employees, clients, sites, shifts, etc.):
+- CREATE: Form submits, API called, item created, list refreshes
+- READ: List loads, detail view loads, all fields display
+- UPDATE: Edit form loads with current data, saves changes
+- DELETE: Confirmation shown, API called, item removed, list refreshes
+8. UNWIRED LINKS
+Find all links that:
+- Go to "#"
+- Go to non-existent routes
+- Have href="" (empty)
+- Have href="javascript:void(0)"
+- Use Link component but route doesn't exist
+9. MOCK API RESPONSES
+Find any API handlers that return:
+- Hardcoded mock data instead of database queries
+- Static arrays instead of real data
+- "return { success: true }" without doing anything
+- Commented out real logic with mock fallback
+10. NON-FUNCTIONAL FEATURES
+Features that appear to exist but don't work:
+- "Trinity enhanced this email" → Does Enhance button work?
+- "Professional" button → Does it actually rewrite professionally?
+- Sentiment analysis "Neutral" → Is this real or hardcoded?
+- Reply/Forward/Archive/Delete → Do they actually work?
+- Search bars that don't search
+- Filters that don't filter
+- Sort buttons that don't sort
+- Export buttons that don't export
+- Print buttons that don't print
+
+PHASE 1: DISCOVERY
+Scan the entire codebase and create a list:
+| Location | Element | Issue | Status |
+|----------|---------|-------|--------|
+| /client/src/pages/email.tsx:45 | Forward button | Opens modal but doesn't send | UNWIRED |
+| /client/src/components/email-forward.tsx:23 | To field | Has placeholder "recipient@example.com" | PLACEHOLDER |
+| /client/src/components/email-forward.tsx:67 | Enhance button | onClick is empty | UNWIRED |
+| ... | ... | ... | ... |
+Search EVERY file:
+bash# Find all potential issues
+find . -name "*.tsx" -o -name "*.ts" | xargs grep -l "example.com\|placeholder\|TODO\|FIXME\|console.log\|onClick={() => {}}\|not implemented" 
+
+# List all onClick handlers
+grep -rn "onClick=" --include="*.tsx" | head -200
+
+# List all buttons
+grep -rn "<Button" --include="*.tsx" | head -200
+
+# List all forms
+grep -rn "<form\|onSubmit" --include="*.tsx" | head -100
+
+# List all modals
+grep -rn "Dialog\|Modal" --include="*.tsx" | head -100
+
+PHASE 2: CATEGORIZE BY PRIORITY
+Critical (Breaks user experience):
+
+Buttons user expects to work that do nothing
+Forms that don't submit
+CRUD operations that don't persist
+Navigation that goes nowhere
+
+High (Makes platform look unfinished):
+
+Placeholder data visible to users
+Mock data instead of real data
+Features that appear but don't function
+
+Medium (Polish issues):
+
+Console.log statements left in
+TODO comments in production code
+Disabled features without explanation
+
+Low (Tech debt):
+
+Unused code that could be removed
+Commented out code blocks
+
+
+PHASE 3: WIRE EVERYTHING IN
+For each unwired element, implement the full flow:
+Example: Forward Email Button
+typescript// BEFORE (unwired)
+<Button onClick={() => console.log('forward')}>Forward</Button>
+
+// AFTER (fully wired)
+const handleForward = async () => {
+  if (!toEmail || !validateEmail(toEmail)) {
+    toast({ title: 'Invalid email', variant: 'destructive' });
+    return;
+  }
+  
+  setIsLoading(true);
+  try {
+    await apiRequest('POST', '/api/emails/forward', {
+      originalEmailId: email.id,
+      to: toEmail,
+      cc: ccEmail || undefined,
+      message: forwardMessage,
+      workspaceId
+    });
+    
+    toast({ title: 'Email forwarded successfully' });
+    onClose();
+  } catch (error) {
+    toast({ title: 'Failed to forward email', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+<Button onClick={handleForward} disabled={isLoading}>
+  {isLoading ? <Loader2 className="animate-spin" /> : 'Send'}
+</Button>
+Example: Enhance Button (Trinity AI)
+typescript// BEFORE (unwired)
+<Button onClick={() => {}}>Enhance</Button>
+
+// AFTER (fully wired)
+const handleEnhance = async () => {
+  setIsEnhancing(true);
+  try {
+    const response = await apiRequest('POST', '/api/ai/enhance-email', {
+      content: emailContent,
+      style: 'professional', // or based on button clicked
+      workspaceId
+    });
+    
+    const enhanced = await response.json();
+    setEmailContent(enhanced.content);
+    setIsEnhanced(true);
+    
+    toast({ title: 'Email enhanced by Trinity' });
+  } catch (error) {
+    toast({ title: 'Enhancement failed', variant: 'destructive' });
+  } finally {
+    setIsEnhancing(false);
+  }
+};
+Example: Archive Button
+typescript// BEFORE (unwired)
+<DropdownMenuItem onClick={() => {}}>Archive</DropdownMenuItem>
+
+// AFTER (fully wired)
+<DropdownMenuItem onClick={async () => {
+  try {
+    await apiRequest('POST', `/api/emails/${email.id}/archive`, { workspaceId });
+    queryClient.invalidateQueries({ queryKey: ['/api/emails'] });
+    toast({ title: 'Email archived' });
+    router.push('/emails');
+  } catch (error) {
+    toast({ title: 'Failed to archive', variant: 'destructive' });
+  }
+}}>
+  <Archive className="mr-2 h-4 w-4" />
+  Archive
+</DropdownMenuItem>
+```
+
+---
+
+## PHASE 4: VERIFY BACKEND ENDPOINTS EXIST
+
+**For every frontend action, verify the backend endpoint exists:**
+```
+Frontend Action          → Required Endpoint
+─────────────────────────────────────────────
+Forward email            → POST /api/emails/forward
+Archive email            → POST /api/emails/:id/archive
+Delete email             → DELETE /api/emails/:id
+Reply to email           → POST /api/emails/reply
+Enhance with AI          → POST /api/ai/enhance-email
+Professional rewrite     → POST /api/ai/rewrite-professional
+Mark as read             → PATCH /api/emails/:id/read
+Mark as unread           → PATCH /api/emails/:id/unread
+Star/unstar              → PATCH /api/emails/:id/star
+Move to folder           → PATCH /api/emails/:id/move
+If endpoint doesn't exist, CREATE IT:
+typescript// /server/routes/emailRoutes.ts
+
+router.post('/emails/forward', requireAuth, async (req, res) => {
+  const { originalEmailId, to, cc, message, workspaceId } = req.body;
+  
+  // Validate workspace access
+  // Fetch original email
+  // Send forwarded email (via Resend or email service)
+  // Log the action
+  // Return success
+});
+
+router.post('/emails/:id/archive', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { workspaceId } = req.body;
+  
+  // Validate workspace access
+  // Update email status to 'archived'
+  // Return success
+});
+
+PHASE 5: REMOVE ALL PLACEHOLDER DATA
+Replace with dynamic data or proper empty states:
+typescript// BEFORE
+<Input placeholder="recipient@example.com" />
+
+// AFTER
+<Input 
+  placeholder="Enter email address" 
+  value={toEmail}
+  onChange={(e) => setToEmail(e.target.value)}
+/>
+
+// BEFORE (hardcoded in form)
+const [to, setTo] = useState('recipient@example.com');
+
+// AFTER
+const [to, setTo] = useState('');
+```
+
+---
+
+## PHASE 6: VERIFICATION CHECKLIST
+
+After wiring everything, verify:
+```
+[ ] All buttons have real onClick handlers
+[ ] All forms submit to real API endpoints
+[ ] All API endpoints exist and function
+[ ] All CRUD operations persist to database
+[ ] All modals open, submit, and close correctly
+[ ] All menu items perform their stated action
+[ ] All placeholder text removed from data fields
+[ ] All placeholder data removed from state defaults
+[ ] All TODO/FIXME comments addressed or ticketed
+[ ] All console.log statements removed from production code
+[ ] User feedback shown for all actions (loading, success, error)
+```
+
+---
+
+## OUTPUT FORMAT
+```
+# UNWIRED FUNCTIONALITY REPORT
+
+## DISCOVERY SUMMARY
+- Total unwired buttons found: X
+- Total placeholder data found: X
+- Total mock API responses found: X
+- Total unwired forms found: X
+- Total missing endpoints found: X
+
+## ITEMS FIXED
+1. [Location] - [What was unwired] - [How it was fixed]
+2. ...
+
+## NEW ENDPOINTS CREATED
+1. [Endpoint] - [Purpose] - [Handler location]
+2. ...
+
+## ITEMS REQUIRING CLARIFICATION
+1. [Item] - [Question for Bryan]
+2. ...
+
+## REMAINING TECH DEBT
+1. [Item] - [Why not fixed now]
+2. ...
+
+BEGIN DISCOVERY PHASE. Report all findings before fixing.

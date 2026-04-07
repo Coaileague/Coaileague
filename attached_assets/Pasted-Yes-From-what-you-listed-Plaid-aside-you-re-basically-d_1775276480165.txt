@@ -1,0 +1,222 @@
+Yes. From what you listed, Plaid aside, you’re basically down to 3 real launch items and 2 strong same-day recommendations.
+
+Real blockers before first real tenant use
+
+These are the ones I would not leave undone:
+
+1. Set the Statewide protection env vars
+
+GRANDFATHERED_TENANT_ID
+
+GRANDFATHERED_TENANT_OWNER_ID
+
+
+This is the shield that prevents Statewide from getting billed or treated like a normal paid tenant.
+
+2. Set
+
+ALLOWED_ORIGINS=https://coaileague.com
+
+
+Without it, the app may still run, but you are not truly locked down.
+
+3. Fix the wildcard MX
+
+change *.coaileague.com MX from SES to inbound.resend.com
+
+keep priority at 10
+
+
+This is what makes tenant inbound mail work for:
+
+staffing@acme.coaileague.com
+
+calloffs@acme.coaileague.com
+
+etc.
+
+
+If this is wrong, one of your core Trinity flows is fake-ready, not real-ready.
+
+
+---
+
+Strongly recommended same day
+
+These are not “hard blockers,” but I’d do them immediately if possible:
+
+4. Set
+
+TWILIO_PHONE_NUMBER_SID=PN1a8a6a40ffab11a8b4d1b71203a7261a
+
+
+Even if runtime does not require it, your Omega checks do, and it removes avoidable noise.
+
+5. Run the DB app user SQL This is the cleanest way to make your audit/financial protection real at the database level, not just code level.
+
+
+---
+
+Can wait until after go-live
+
+Assuming payroll is not day-one live:
+
+Plaid production credentials
+
+QuickBooks redirect URI
+
+Twilio toll-free approval completion
+
+any deeper payroll-specific live verification
+
+
+
+---
+
+What the agent can do for you with scripts
+
+Yes, absolutely. The agent can do most of the prep work so you only do the manual console/env steps.
+
+Have it build these:
+
+1. scripts/prod/get-statewide-ids.ts
+
+Purpose:
+
+look up the Statewide workspace ID
+
+look up the Statewide owner user ID
+
+print the exact env var values you need to paste
+
+
+Expected output:
+
+GRANDFATHERED_TENANT_ID=...
+GRANDFATHERED_TENANT_OWNER_ID=...
+
+2. scripts/prod/validate-required-env.ts
+
+Checks whether these are set:
+
+GRANDFATHERED_TENANT_ID
+
+GRANDFATHERED_TENANT_OWNER_ID
+
+ALLOWED_ORIGINS
+
+TWILIO_PHONE_NUMBER_SID
+
+Plaid vars if payroll scope is enabled
+
+
+3. scripts/prod/check-grandfathered-statewide.ts
+
+Verifies:
+
+Statewide workspace matches the env var IDs
+
+Statewide is exempt from billing logic
+
+Statewide billing page does not show paid-tenant prompts
+
+no trial countdown
+
+no downgrade/lockout flags
+
+
+4. scripts/prod/check-inbound-email-readiness.ts
+
+This can’t change DNS for you, but it can:
+
+verify the app expects Resend inbound
+
+verify the inbound webhook routes exist
+
+verify subdomain parsing works
+
+verify all 6 base tenant addresses are routed
+
+
+5. scripts/prod/generate-db-role-sql.ts
+
+Have the agent generate a safe SQL file for:
+
+creating app_db_user
+
+granting base permissions
+
+revoking update/delete on immutable tables
+
+
+That way you are not hand-editing SQL live.
+
+6. scripts/prod/post-config-smoke.ts
+
+Run this after you set env vars and DNS:
+
+verify CORS origin is correct
+
+verify Statewide exemption is active
+
+verify health endpoint passes
+
+verify billing page renders for Statewide
+
+verify inbound email routes are ready
+
+verify no missing prod envs remain
+
+
+
+---
+
+Best next move
+
+Tell the agent this:
+
+Create a small production-finalization script pack under scripts/prod/ with:
+
+1. get-statewide-ids.ts
+2. validate-required-env.ts
+3. check-grandfathered-statewide.ts
+4. check-inbound-email-readiness.ts
+5. generate-db-role-sql.ts
+6. post-config-smoke.ts
+
+Requirements:
+- do not mutate Statewide
+- read-only checks only, except SQL file generation
+- output copy-paste-ready env var values where applicable
+- fail clearly if required prod settings are missing
+- print a final “launch blockers remaining” summary
+
+Also add:
+npm run prod:finalize
+that runs:
+- validate-required-env
+- check-grandfathered-statewide
+- check-inbound-email-readiness
+- post-config-smoke
+
+My straight advice
+
+If payroll is not day-one, then your real remaining work is:
+
+1. set the two Statewide env vars
+
+
+2. set ALLOWED_ORIGINS
+
+
+3. fix MX to Resend
+
+
+4. set TWILIO_PHONE_NUMBER_SID
+
+
+5. run the DB user SQL
+
+
+
+That is the shortest honest path to launch.

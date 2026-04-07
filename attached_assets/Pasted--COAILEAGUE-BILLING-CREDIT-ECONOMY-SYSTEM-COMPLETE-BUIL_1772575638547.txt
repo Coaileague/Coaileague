@@ -1,0 +1,1632 @@
+# COAILEAGUE BILLING & CREDIT ECONOMY SYSTEM — COMPLETE BUILD SPEC v2.0
+
+## FOR REPLIT AGENT — READ THIS ENTIRE DOCUMENT BEFORE WRITING ANY CODE
+
+This spec replaces ALL existing billing, credit, pricing, subscription, and tier logic in the platform. Every table, every constant, every route, every UI component related to billing must be updated to match this spec exactly. Do NOT preserve old pricing logic — it is being replaced.
+
+**METHODOLOGY:**
+1. Read this entire spec first
+2. Create all database tables and migrations
+3. Build the service layer
+4. Wire into existing systems
+5. Build the UI components
+6. Test each phase before moving to the next
+7. Do NOT skip sections or implement partial solutions
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 1: THE BUSINESS MODEL
+# ═══════════════════════════════════════════════════
+
+CoAIleague operates a **dual-revenue billing model** — two completely separate billing streams that appear on every org's monthly platform invoice.
+
+## Stream A: Subscription + Credits (Platform Access + AI Actions)
+
+- Org pays a fixed monthly subscription tier fee
+- Subscription includes a monthly credit allotment
+- Credits are consumed when Trinity or any AI feature TAKES A VALUABLE ACTION
+- Watching/monitoring/scanning is ALWAYS FREE — credits only burn when Trinity DOES something
+- When credits deplete, Trinity degrades gracefully to free database-only mode (Tier 1)
+- Org can buy credit packs at any time to restore full capability
+
+## Stream B: Financial Processing Fees (Real Dollar Charges)
+
+- Charged as real dollar amounts, NOT credits
+- Per-transaction fees for every invoice generated and every payroll employee processed
+- Per-event fees for every QuickBooks auto-sync
+- These accumulate throughout the month as line items on the org's platform bill
+- This is how CoAIleague replaces QuickBooks/Gusto — by being the middleware processor/automator
+- Priced competitively against QB ($6.50/emp) and Gusto ($6/emp) while providing MORE automation
+
+## Stream C: Monthly Platform Bill (What The Org Actually Pays)
+
+At the end of each billing cycle, the org receives ONE itemized invoice from CoAIleague:
+1. Subscription tier fee (fixed monthly)
+2. Per-employee overage charges (if they exceed tier's included employee count)
+3. Invoice processing fees (count × per-invoice rate for their tier)
+4. Payroll processing fees (employee-count × per-employee rate × number of runs)
+5. QuickBooks sync fees (event count × per-sync rate)
+6. Credit pack purchases made during the month
+7. Add-on module fees (Financial Intelligence, Forecasting, Multi-Location)
+
+**THE CARDINAL RULE: CoAIleague takes zero loss on any operation. Every action is either included in the subscription (with hard caps) or charged per occurrence. Every AI token cost is covered 100× or more by credit revenue. The platform profit margin on every tier exceeds 50% of the customer's savings.**
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 2: WHY THE OLD PRICING IS BEING REPLACED
+# ═══════════════════════════════════════════════════
+
+## Problem 1: Credit Allocations Were Massively Oversaturated
+
+Trinity scheduled a full month for an enterprise org and consumed only ~1,700 credits. Old tiers gave:
+- Starter: 2,500 credits/mo → org uses ~500 = 5× surplus (zero upgrade pressure)
+- Professional: 10,000 credits/mo → org uses ~3,000 = 3.3× surplus (never buy packs)
+- Enterprise: 50,000 credits/mo → org uses ~8,000 = 6.25× surplus (absurd waste)
+
+Credits were decoration, not a monetization lever. NEW allocations are right-sized based on real usage modeling.
+
+## Problem 2: "Trinity Thought Stream powered by Claude" Listed as Separate Feature
+
+Trinity IS the AI triad (Gemini + Claude + OpenAI) in orchestrated chain-of-command. There is no separate "Claude feature." Remove "Trinity Thought" from everywhere. All three models work together as Trinity. Period.
+
+## Problem 3: "Premium Features Use 2× Credits" — Confusing and Wrong
+
+Each feature should have its own credit cost based on: task difficulty + estimated token usage + convenience premium. A contract review (30 credits) already costs more than a GPS scan (1 credit). The multiplier is built into the per-action cost. Remove the "2× premium" concept entirely.
+
+## Problem 4: Financial Processing Was Charged as Credits Instead of Dollars
+
+Invoicing and payroll were listed as credit costs (6 credits per invoice, 2 credits per employee). But these are the platform's highest-value operations — they replace QuickBooks ($6.50/employee) and Gusto ($6/employee). Charging credits instead of real dollars for financial processing left massive revenue on the table. Financial processing is now a dollar-denominated transaction fee.
+
+## Problem 5: Enterprise Was Underpriced at $5,500
+
+Enterprise serves multi-state operators with 150-5,000+ guards (Securitas, Allied Universal, regional multi-state owners). These companies currently spend $35,000-120,000/month on the fragmented software stack CoAIleague replaces. Charging $5,500 captures less than 15% of their savings — leaving money on the table and undervaluing the platform. The correct price captures ~50% of savings while remaining an obvious ROI win.
+
+## Problem 6: No Hard Caps Created Zero Upgrade Pressure
+
+Without caps, a Starter org could process unlimited operations for a flat monthly fee. Hard caps on AI-powered features create natural tier boundaries — when an org consistently hits caps, upgrading becomes the obvious economic choice.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 3: THE NEW PRICING TIERS
+# ═══════════════════════════════════════════════════
+
+## Tier 0: Free Trial (14 Days)
+
+```
+PRICE:          $0
+EMPLOYEES:      Up to 5, 1 manager
+CREDITS:        100 (one-time, no refill)
+PROCESSING:     DISABLED (no invoicing, no payroll)
+
+FEATURES:
+  ✓ Basic scheduling (manual drag-and-drop, no AI optimization)
+  ✓ Basic time tracking (no GPS verification)
+  ✓ Dashboard access
+  ✓ Email support only
+  ✗ No AI scheduling
+  ✗ No financial processing
+  ✗ No integrations
+
+PURPOSE: Let them see the UI, play with the calendar, understand the platform value.
+```
+
+---
+
+## Tier 1: Starter — $899/month
+
+```
+PRICE:          $899/month
+EMPLOYEES:      Up to 15 included
+OVERAGE:        +$10/employee/month after 15
+CREDITS:        1,000/month
+
+HARD CAPS (free within cap, credits consumed after cap):
+  AI-scheduled shifts:     200/month  (then 3 credits each)
+  GPS verifications:        50/month  (then 1 credit each)
+  Analytics reports:          5/month  (then 15 credits each)
+  Contract reviews:           0        (Professional+ only)
+  DockChat sessions:          0        (Professional+ only)
+  AI bot interactions:     3/day       (HelpAI only)
+
+FEATURES INCLUDED (zero credits):
+  ✓ Trinity AI scheduling (basic optimization)
+  ✓ GPS time tracking (prevents $6K/year in time theft)
+  ✓ Mobile app for guards
+  ✓ Shift swapping with approvals
+  ✓ Basic compliance alerts (single state)
+  ✓ Email/SMS notifications
+  ✓ Basic equipment checkout (50 items)
+  ✓ QuickBooks export (manual — not auto-sync)
+  ✓ Basic invoicing UI
+  ✓ 3 AI bot interactions/day (HelpAI only)
+
+FINANCIAL PROCESSING FEES:
+  Invoice generation:    $3.50/invoice
+  Payroll processing:    $6.00/employee/run
+  QuickBooks sync:       Not available (Professional+)
+
+SUPPORT: Email (48hr response)
+```
+
+### Starter Economics Validation
+
+```
+TARGET CUSTOMER: 15-employee, 1-2 client security company
+THEIR CURRENT SPEND: ~$2,700/month (software stack + admin time + time theft losses)
+
+COAILEAGUE REVENUE:
+  Subscription:                    $899
+  Payroll (biweekly × 15 × $6):   $180
+  Invoicing (~8 × $3.50):          $28
+  ─────────────────────────────────────
+  TOTAL MONTHLY REVENUE:         $1,107
+
+CUSTOMER SAVINGS: $2,700 - $1,107 = $1,593/month
+CAPTURE RATE: 41% of savings → HEALTHY
+TOKEN COST TO PLATFORM: ~$0.30/month → NEGLIGIBLE
+CREDIT UTILIZATION: ~555-850 of 1,000 → buffer exists, heavy months need packs
+```
+
+---
+
+## Tier 2: Professional — $1,999/month
+
+```
+PRICE:          $1,999/month
+EMPLOYEES:      Up to 50 included
+OVERAGE:        +$8/employee/month after 50
+CREDITS:        3,500/month
+
+HARD CAPS (free within cap, credits consumed after cap):
+  AI-scheduled shifts:     750/month  (then 3 credits each)
+  GPS verifications:       300/month  (then 1 credit each)
+  Analytics reports:        15/month  (then 15 credits each)
+  Contract reviews:          3/month  (then 30 credits each)
+  DockChat sessions:        10/month  (then 10 credits each)
+  AI bot interactions:    20/day       (all 5 bots)
+
+FEATURES — EVERYTHING IN STARTER, PLUS:
+  ✓ FULL Trinity AI automation (all 3 models in orchestration)
+  ✓ Profit-first scheduling (margin optimization)
+  ✓ Automated call-out coverage (5-tier escalation)
+  ✓ Officer reliability scoring
+  ✓ Overtime prevention alerts
+  ✓ Automated payroll processing
+  ✓ QuickBooks full bidirectional auto-sync
+  ✓ Client billing automation
+  ✓ Invoice generation & management
+  ✓ P&L Financial Dashboard
+  ✓ Multi-state compliance (all 50 states)
+  ✓ Locked document vault (WORM — audit-proof)
+  ✓ One-click audit export (PDF)
+  ✓ Background check integration
+  ✓ UNLIMITED equipment tracking
+  ✓ Digital signatures + photos at checkout
+  ✓ Automatic payroll deductions for equipment losses
+  ✓ Client portal (real-time GPS, incidents)
+  ✓ Contract pipeline + E-signatures
+  ✓ RFP responses, proposals, capability statements (credits)
+  ✓ All 5 AI bots (HelpAI, MeetingBot, ReportBot, + 2 others)
+  ✓ 20 AI bot interactions/day
+
+FINANCIAL PROCESSING FEES:
+  Invoice generation:    $2.50/invoice
+  Payroll processing:    $4.50/employee/run
+  QuickBooks auto-sync:  $1.50/sync event
+
+SUPPORT: Priority (24hr response)
+```
+
+### Professional Economics Validation
+
+```
+TARGET CUSTOMER: 50-employee, 5-client security company
+THEIR CURRENT SPEND: ~$8,400/month (full software stack + 1-2 admin staff)
+
+COAILEAGUE REVENUE:
+  Subscription:                      $1,999
+  Payroll (biweekly × 50 × $4.50):    $450
+  Invoicing (~20 × $2.50):             $50
+  QB sync (~22 × $1.50):               $33
+  ─────────────────────────────────────────
+  TOTAL MONTHLY REVENUE:             $2,532
+
+CUSTOMER SAVINGS: $8,400 - $2,532 = $5,868/month
+CAPTURE RATE: 30% of savings → correct for the volume tier (most customers here)
+TOKEN COST TO PLATFORM: ~$1.50/month → NEGLIGIBLE
+CREDIT UTILIZATION: ~2,750 of 3,500 → 78% utilization, occasional packs needed
+```
+
+---
+
+## Tier 3: Enterprise — $9,999/month + $15/employee
+
+```
+PRICE:          $9,999/month base + $15/employee/month (ALL employees)
+                Example: 150 employees = $9,999 + $2,250 = $12,249/month
+                Example: 300 employees = $9,999 + $4,500 = $14,499/month
+                Example: 500 employees = $9,999 + $7,500 = $17,499/month
+                Example: 1,000 employees = $9,999 + $15,000 = $24,999/month
+
+EMPLOYEES:      All employees billed at $15/month (no "included" count)
+CREDITS:        12,000/month BASE + 10 credits per employee
+                Example: 150 emp = 12,000 + 1,500 = 13,500 credits/month
+                Example: 300 emp = 12,000 + 3,000 = 15,000 credits/month
+                Example: 500 emp = 12,000 + 5,000 = 17,000 credits/month
+                Example: 1,000 emp = 12,000 + 10,000 = 22,000 credits/month
+
+HARD CAPS:
+  AI-scheduled shifts:     3,000/month  (then 3 credits each)
+  GPS verifications:       1,500/month  (then 1 credit each)
+  Analytics reports:       UNLIMITED    (no cap)
+  Contract reviews:           10/month  (then 30 credits each)
+  DockChat sessions:          50/month  (then 10 credits each)
+  AI bot interactions:     UNLIMITED    (no cap)
+
+FEATURES — EVERYTHING IN PROFESSIONAL, PLUS:
+  ✓ Mother-org / sub-org hierarchy (multi-state operations)
+  ✓ Consolidated credit pool across all sub-orgs
+  ✓ Cross-state payroll processing (multiple tax jurisdictions)
+  ✓ Trinity AI CFO insights (deep financial analysis)
+  ✓ Per-client profitability analysis across all sub-orgs
+  ✓ Cash flow forecasting (90 days)
+  ✓ Predictive analytics & what-if scenarios
+  ✓ Regulator portal (state auditors access remotely)
+  ✓ 15-minute audit prep (always ready)
+  ✓ SOX-compliant audit trails
+  ✓ Vehicle assignment & tracking
+  ✓ Mileage logging & fuel tracking
+  ✓ Maintenance scheduling
+  ✓ Armory/weapon management
+  ✓ Advanced onboarding workflows
+  ✓ Custom integrations (ADP, Workday, Paychex)
+  ✓ White-label options
+  ✓ Full API access
+  ✓ SSO (Single Sign-On)
+  ✓ Dedicated account manager
+  ✓ Custom SLAs
+
+FINANCIAL PROCESSING FEES:
+  Invoice generation:    $1.75/invoice
+  Payroll processing:    $3.50/employee/run
+  QuickBooks auto-sync:  $1.00/sync event
+
+SUPPORT: On-demand (phone + video + dedicated account manager)
+```
+
+### Enterprise Economics Validation
+
+```
+TARGET CUSTOMER A: 300-employee, 5-state, 15-client security operation
+THEIR CURRENT SPEND: ~$35,000/month (ADP multi-state payroll, scheduling, guard tour,
+                      compliance, accounting, 4 admin staff stitching systems together)
+
+COAILEAGUE REVENUE:
+  Subscription:                            $14,499  ($9,999 + 300 × $15)
+  Payroll (3 runs × 300 × $3.50):          $3,150  (multi-state = sometimes 3 runs/mo)
+  Invoicing (~30 × $1.75):                    $52
+  QB sync (5 sub-orgs × ~16/mo × $1.00):     $80
+  ──────────────────────────────────────────────────
+  TOTAL MONTHLY REVENUE:                   $17,781
+
+CUSTOMER SAVINGS: $35,000 - $17,781 = $17,219/month
+CAPTURE RATE: 51% of savings → OPTIMAL (they save ~$17K/mo, we earn ~$18K/mo)
+TOKEN COST: ~$5/month → COVERED 3,500× by revenue
+CREDITS: 15,000/month, estimated usage ~12,000 → healthy utilization
+
+───────────────────────────────────────────────────────────────────────────
+
+TARGET CUSTOMER B: 1,000-employee, 12-state, 40-client operation (Securitas regional)
+THEIR CURRENT SPEND: ~$100,000/month (enterprise ADP, TrackTik at 40+ sites,
+                      scheduling platform, 8 admin staff, compliance department)
+
+COAILEAGUE REVENUE:
+  Subscription:                            $24,999  ($9,999 + 1,000 × $15)
+  Payroll (3 runs × 1,000 × $3.50):       $10,500
+  Invoicing (~100 × $1.75):                  $175
+  QB sync (12 sub-orgs × ~16/mo × $1.00):   $192
+  ──────────────────────────────────────────────────
+  TOTAL MONTHLY REVENUE:                   $35,866
+
+CUSTOMER SAVINGS: $100,000 - $35,866 = $64,134/month saved
+CAPTURE RATE: 36% → correct for mega-enterprise (ROI so obvious they never churn)
+TOKEN COST: ~$12/month → COVERED 2,988× by revenue
+CREDITS: 22,000/month, estimated usage ~18,000 → room for growth
+```
+
+---
+
+## Credit Pack Add-Ons (Available to All Tiers)
+
+```
+500 credits    = $39    ($0.078/credit)  — "Quick Top-Up"
+2,000 credits  = $129   ($0.065/credit)  — "Standard Pack" (17% discount)
+5,000 credits  = $279   ($0.056/credit)  — "Power Pack" (28% discount)
+```
+
+- One-time purchase, added instantly to the org's purchased credit pool
+- Purchased credits NEVER expire (unlike subscription credits)
+- Purchased credits are consumed LAST (after subscription and carryover credits drain)
+
+## Professional Add-On Modules
+
+```
+Financial Intelligence:   $199/month  — Client margin reports, profitability ranking, revenue analysis
+Forecasting Suite:        $249/month  — Cash flow forecasting (90 days), what-if scenarios, seasonal alerts
+Multi-Location Manager:   $149/month  — Per-location analytics, separate scheduling views, consolidated reports
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 4: CREDIT ECONOMY — THE COMPLETE SYSTEM
+# ═══════════════════════════════════════════════════
+
+## 4A: Credit Cost Per Action
+
+Every credit-consuming action has a FIXED processing fee. The org sees ONE number: "X credits consumed." They NEVER see token counts, model names, or API costs.
+
+```
+ACTION                                  CREDITS    ACTUAL AI COST    PLATFORM MARGIN
+──────────────────────────────────────────────────────────────────────────────────────
+Shift scheduled (AI placement)             3        ~$0.0007          99.9%
+Autonomous staffing (email inbox)          4        ~$0.002           99.8%
+Employee scored (performance)              2        ~$0.0005          99.9%
+GPS/QR/NFC scan verified                   1        $0.00 (math)      100%
+Clock-in verified (GPS)                    1        $0.00 (math)      100%
+Equipment checkout/return                  1        $0.00 (math)      100%
+Document sent for e-signature              3        ~$0.0003          99.9%
+AI bot interaction (HelpAI etc)            2        ~$0.001           99.9%
+Analytics report (Trinity insights)       15        ~$0.015           99.9%
+DockChat client issue                     10        ~$0.009           99.9%
+Contract review (AI legal analysis)       30        ~$0.045           99.9%
+RFP/Proposal generation                   20        ~$0.030           99.9%
+Marketing content generation              15        ~$0.015           99.9%
+Employee onboarding AI workflow            5        ~$0.002           99.9%
+Compliance audit report                   10        ~$0.012           99.9%
+Custom Trinity query (chat)                3        ~$0.003           99.9%
+```
+
+**Actions that are ALWAYS FREE (zero credits, included in subscription):**
+
+```
+All monitoring, scanning, and watching (Trinity Tier 1 — DB only)
+Shift calendar, drag-and-drop, recurring templates
+Employee availability management
+Open shift claiming (employee self-service)
+Shift swap requests and approvals
+Basic clock-in/out and timesheets (without GPS verification)
+Post orders and site instructions
+Compliance alerts and certification tracking
+Onboarding document collection (without AI workflow)
+All notifications and alerts
+Real-time chat (WebSocket messaging, per-shift rooms)
+Client portal read access (billed to org, free to client)
+State auditor portal read access (billed to org, free to auditor)
+Incident tracking and reporting
+Branding/white-label customization
+Basic billing rate management
+Helpdesk ticket system (without AI responses)
+All CRUD operations (create/edit/delete clients, employees, shifts)
+Dashboard views and basic charts
+Schedule publishing
+Manual payroll calculations (the math, not the processing)
+Manual invoice creation (the form, not the AI generation)
+```
+
+## 4B: Credit Lifecycle
+
+```
+MONTH START
+  ├── Subscription credits deposited (tier allotment)
+  ├── Carried-over credits from last month (max 10% of tier allotment)
+  ├── Any purchased credit pack balances remaining (never expire)
+  │
+  ├── Throughout month: credits consumed per action
+  │   DRAIN ORDER: subscription → carryover → purchased
+  │
+  ├── At 75% consumed: in-app notification to org owner
+  ├── At 90% consumed: warning + "Buy Credits" upsell prompt
+  ├── At 100% consumed: Trinity degrades to Tier 1 (free DB mode)
+  │   ├── Org can still manually trigger actions (warned, auto-buys pack if card on file)
+  │   └── Org can buy a credit pack at any time to restore full capability
+  │
+MONTH END
+  ├── Calculate unused subscription + carryover credits
+  ├── Carry over: min(unused_sub + unused_carryover, 10% of tier allotment)
+  │   Example: Professional tier allotment = 3,500
+  │            Max carryover = 350 credits
+  │            If 800 unused subscription + carryover → only 350 carry over
+  ├── Expired credits (above carryover cap) → Platform Credit Pool
+  ├── Purchased pack credits: UNCHANGED (never expire, carry forward forever)
+  └── New subscription credits deposited for next month
+```
+
+## 4C: Platform Credit Pool
+
+Expired credits from all orgs flow into the Platform Credit Pool. This pool costs CoAIleague nothing (orgs already paid through subscriptions) and funds:
+
+- **Bug compensation**: Refund credits when platform issues affect an org
+- **Loyalty bonuses**: Anniversary rewards, long-term customer appreciation
+- **Support operations**: Credits used when support agents troubleshoot org issues
+- **Promotional credits**: New feature launch incentives
+- **Platform maintenance**: Operations that benefit all orgs
+
+This is a self-funding goodwill fund. CoAIleague never dips into revenue to compensate customers.
+
+## 4D: Graceful Degradation When Credits Deplete
+
+```
+CREDIT LEVEL          TRINITY BEHAVIOR                           UI INDICATOR
+──────────────────────────────────────────────────────────────────────────────
+Normal (>25%)         Full Tier 1-3 capability                   Green badge
+Low (10-25%)          Warning notification. Continues normally.  Yellow badge
+Very Low (1-10%)      Tier 1 + Tier 2 only. No Tier 3 unless    Orange badge
+                      manager explicitly requests it.
+Depleted (0%)         Tier 1 ONLY (free DB mode). No AI          Red badge
+                      reasoning. Shifts generate from templates
+                      but no intelligent optimization. Billing
+                      and payroll still run (manual trigger).
+Manual Override       Org owner can trigger ANY action at 0       Pop-up warning:
+                      credits. System warns, then executes.       "This will use
+                      If Stripe card on file, auto-purchases      credits. Purchase
+                      minimum credit pack.                        pack to continue."
+```
+
+**CRITICAL: Trinity NEVER hard-stops. The cron keeps running, the bridge keeps detecting completions, billing keeps generating invoices. Only the AI intelligence layer degrades. The platform still functions — it just isn't smart.**
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 5: FINANCIAL PROCESSING FEES
+# ═══════════════════════════════════════════════════
+
+## 5A: How Financial Processing Fees Work
+
+Financial processing fees are real dollar charges — NOT credits. They accumulate throughout the month and appear as line items on the org's CoAIleague platform bill.
+
+**When an invoice is generated:**
+1. Trinity or the org creates an invoice from approved time entries
+2. Invoice is committed to database with line items, tax, totals
+3. A `financial_processing_fee` record is created with the tier's per-invoice rate
+4. Fee accumulates until the monthly platform bill
+
+**When payroll is processed:**
+1. Manager approves the payroll gate
+2. System processes payroll entries for N employees
+3. A `financial_processing_fee` record is created: tier rate × N employees
+4. Fee accumulates until the monthly platform bill
+
+**When QuickBooks syncs (Professional+ only):**
+1. Auto-sync fires (invoice sync, payment sync, account sync)
+2. A `financial_processing_fee` record is created with the tier's per-sync rate
+3. Fee accumulates until the monthly platform bill
+
+## 5B: Competitive Positioning
+
+```
+PAYROLL PROCESSING — CoAIleague vs Competition:
+  QuickBooks Core:          $50/mo BASE + $6.50/employee/run
+  Gusto Simple:             $49/mo BASE + $6.00/employee/run
+  ADP Run Essential:        $79/mo BASE + $4.00/employee/run
+  Paychex Essentials:       $39/mo BASE + $5.00/employee/run
+
+  CoAIleague Starter:       $6.00/employee/run (NO separate base — in subscription)
+  CoAIleague Professional:  $4.50/employee/run
+  CoAIleague Enterprise:    $3.50/employee/run
+
+  WHY COAILEAGUE WINS:
+  • No separate payroll base fee (included in subscription)
+  • Payroll auto-calculated from approved time entries (zero manual data entry)
+  • Full 50-state tax calculations included
+  • Approval gates built in (compliance)
+  • Ledger entries automatic (audit trail)
+  • Multi-state payroll at Enterprise tier (different tax jurisdictions handled)
+
+INVOICE PROCESSING — CoAIleague vs Competition:
+  QuickBooks: "Included" but costs $50-134/mo just for the platform
+  FreshBooks: $19-60/mo for invoicing alone
+  CoAIleague: $1.75-3.50/invoice, AUTO-GENERATED from time entries
+
+  A 50-employee company generating 20 invoices/month:
+    CoAIleague Professional: 20 × $2.50 = $50/month
+    QuickBooks Premium: $88/month minimum (manual invoice creation)
+    CoAIleague invoices are AUTONOMOUS — Trinity generates them from approved time entries
+```
+
+## 5C: Monthly Platform Bill Structure
+
+At the end of each billing cycle, generate ONE itemized invoice to the org:
+
+```
+═══════════════════════════════════════════════════════════════════
+ COAILEAGUE PLATFORM INVOICE — March 2026
+ Organization: Statewide Protective Services
+ Tier: Professional
+ Billing Period: March 1-31, 2026
+═══════════════════════════════════════════════════════════════════
+
+ SUBSCRIPTION
+   Professional Plan (monthly)                         $1,999.00
+   Additional employees: 12 × $8.00/month                 $96.00
+   ──────────────────────────────────────────────────────────────
+   Subscription subtotal                               $2,095.00
+
+ FINANCIAL PROCESSING
+   Invoice generation: 18 invoices × $2.50                $45.00
+   Payroll processing: 2 runs × 62 employees × $4.50     $558.00
+   QuickBooks auto-sync: 22 events × $1.50                $33.00
+   ──────────────────────────────────────────────────────────────
+   Processing subtotal                                   $636.00
+
+ CREDIT USAGE SUMMARY
+   Subscription credits: 3,500 included                      —
+   Carryover from February: 200                              —
+   Credits consumed this month: 3,127                        —
+   Credits remaining: 573 (350 max carry to April)           —
+   Additional credit packs purchased: 0                    $0.00
+
+ ADD-ON MODULES
+   Financial Intelligence                                $199.00
+   ──────────────────────────────────────────────────────────────
+   Add-on subtotal                                       $199.00
+
+═══════════════════════════════════════════════════════════════════
+ TOTAL DUE                                            $2,930.00
+═══════════════════════════════════════════════════════════════════
+ Payment due: April 1, 2026
+ Payment method: Visa ending 4242
+ Auto-pay: Enabled
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 6: MOTHER-ORG / SUB-ORG ARCHITECTURE (Enterprise)
+# ═══════════════════════════════════════════════════
+
+## 6A: The Concept
+
+Enterprise customers operate across multiple states. A company like "National Guard Services" might have:
+- **Mother Org**: National Guard Services (headquarters — manages billing, credits, company-wide settings)
+- **Sub-Org: Texas Division** — 80 employees, 8 clients, TX labor laws, TX tax withholding
+- **Sub-Org: California Division** — 60 employees, 5 clients, CA labor laws (daily OT!), CA tax
+- **Sub-Org: Florida Division** — 50 employees, 6 clients, FL labor laws, FL tax
+- **Sub-Org: New York Division** — 40 employees, 4 clients, NY labor laws, NY tax
+- **Sub-Org: Illinois Division** — 30 employees, 3 clients, IL labor laws, IL tax
+- **Total: 260 employees across 5 states, 26 clients**
+
+## 6B: How Billing Works for Mother-Org
+
+```
+ONE subscription charged to the mother org:
+  $9,999 base + (260 employees × $15) = $9,999 + $3,900 = $13,899/month
+
+ONE credit pool shared across all sub-orgs:
+  12,000 base + (260 × 10) = 14,600 credits/month
+
+Financial processing fees AGGREGATE across all sub-orgs:
+  Texas payroll: 2 runs × 80 emp × $3.50 = $560
+  California payroll: 2 runs × 60 emp × $3.50 = $420
+  Florida payroll: 2 runs × 50 emp × $3.50 = $350
+  New York payroll: 2 runs × 40 emp × $3.50 = $280
+  Illinois payroll: 2 runs × 30 emp × $3.50 = $210
+  Total payroll fees: $1,820/month
+
+  Invoicing across all sub-orgs: 26 clients × ~2 invoices × $1.75 = $91/month
+  QB sync: 5 sub-orgs × ~16 events × $1.00 = $80/month
+
+ONE monthly platform bill to the mother org:
+  Subscription:     $13,899
+  Payroll fees:      $1,820
+  Invoice fees:         $91
+  QB sync fees:         $80
+  ──────────────────────────
+  TOTAL:            $15,890/month = $190,680/year
+```
+
+## 6C: How Credits Flow
+
+```
+MOTHER ORG CREDIT POOL: 14,600 credits/month
+  │
+  ├── TX Division schedules 400 shifts → 1,200 credits from pool
+  ├── CA Division schedules 300 shifts → 900 credits from pool
+  ├── FL Division schedules 250 shifts → 750 credits from pool
+  ├── NY Division schedules 200 shifts → 600 credits from pool
+  ├── IL Division schedules 150 shifts → 450 credits from pool
+  ├── GPS verifications across all: ~800 → 800 credits from pool
+  ├── Bot interactions, scoring, etc: ~2,000 credits from pool
+  │
+  └── TOTAL CONSUMED: ~6,700 credits/month
+      REMAINING: ~7,900 credits (healthy buffer)
+      Carryover cap: 1,460 (10% of 14,600)
+```
+
+When any sub-org performs a credit-consuming action:
+1. Check the mother org's credit pool balance
+2. Deduct from the mother org's pool (NOT a sub-org-specific balance)
+3. Record the transaction with `sub_org_id` for attribution reporting
+4. Mother org dashboard shows per-sub-org credit consumption breakdown
+
+## 6D: Database Structure for Mother-Org / Sub-Org
+
+```sql
+-- Add to workspaces table:
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS parent_workspace_id UUID REFERENCES workspaces(id);
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS is_mother_org BOOLEAN DEFAULT false;
+
+-- When parent_workspace_id IS NOT NULL → this is a sub-org
+-- When is_mother_org = true → this workspace is a mother org
+-- When both are NULL/false → this is a standalone org (Starter/Professional)
+
+-- Credit pool ALWAYS lives on the mother org's workspace_id
+-- Sub-orgs do NOT have their own credit_balances row
+-- Sub-orgs reference the mother org's balance when consuming credits:
+
+-- In creditService.consumeCredits():
+--   1. If workspace has parent_workspace_id → use parent's credit balance
+--   2. If workspace is standalone → use its own credit balance
+--   3. Record the transaction with both workspace_id AND parent_workspace_id
+
+-- Financial processing fees are recorded per sub-org but billed to mother org:
+--   financialProcessingFees.workspace_id = sub_org workspace
+--   But the monthly platform bill rolls up to the mother org
+```
+
+## 6E: Multi-State Payroll
+
+Each sub-org operates under its state's labor laws. Trinity must handle:
+
+```
+STATE-SPECIFIC RULES TRINITY MUST KNOW:
+  Texas:       Weekly OT after 40 hours. No daily OT. No mandatory meal breaks.
+  California:  Weekly OT after 40 hours AND daily OT after 8 hours.
+               Double-time after 12 hours/day. Mandatory 30-min meal break at 5 hours.
+               Split-shift premium required.
+  New York:    Weekly OT after 40 hours. Spread-of-hours premium if shift > 10 hours.
+               Mandatory 30-min meal break for 6+ hour shifts.
+  Florida:     Weekly OT after 40 hours. No daily OT. Mandatory meal break for minors only.
+  Illinois:    Weekly OT after 40 hours. Mandatory 20-min meal break at 5 hours.
+               One Day Rest in Seven Act.
+
+PAYROLL PROCESSING PER STATE:
+  Each sub-org's payroll run uses that state's tax withholding tables
+  Federal taxes are the same across all states
+  State taxes vary: TX = 0%, CA = progressive 1-13.3%, NY = 4-10.9%, FL = 0%, IL = flat 4.95%
+  FICA/Medicare are federal and uniform
+
+THE PLATFORM BILL AGGREGATES ALL STATE PAYROLL FEES:
+  The mother org sees one line item: "Payroll processing: X total employees × $3.50"
+  The detail view breaks down per sub-org/state for transparency
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 7: CLIENT PORTAL & AUDITOR PORTAL BILLING
+# ═══════════════════════════════════════════════════
+
+## 7A: The Rule
+
+Client portals and state auditor portals are **FREE to the client/auditor**. The org that provisions their access pays for any AI-powered actions those external users trigger. The cost is charged against the org's credit pool.
+
+This is a sound business model: the org provides the portal as a value-add to their clients and regulators. It increases client retention (clients love real-time visibility) and reduces audit burden (auditors can self-serve). The cost to the org is minimal — most portal activity is just reading data (zero credits).
+
+## 7B: Client Portal Actions
+
+```
+ACTION BY CLIENT                    CREDIT COST TO ORG    NOTES
+─────────────────────────────────────────────────────────────────
+View real-time GPS tracking         0 (free)              Just reading data
+View incident reports               0 (free)              Just reading data
+View officer profiles               0 (free)              Just reading data
+View shift schedule                 0 (free)              Just reading data
+View invoices/payment status        0 (free)              Just reading data
+Download reports/PDFs               0 (free)              Just rendering data
+Submit a DockChat complaint         10 credits             AI sentiment analysis
+Request a schedule change           0 (free)              Goes to approval queue
+```
+
+## 7C: State Auditor Portal Actions
+
+```
+ACTION BY AUDITOR                   CREDIT COST TO ORG    NOTES
+─────────────────────────────────────────────────────────────────
+View compliance dashboard           0 (free)              Just reading data
+View certification status           0 (free)              Just reading data
+View audit trails                   0 (free)              Just reading data
+Download audit export (PDF)         0 (free)              Just rendering data
+Request SOX compliance report       10 credits             AI generates report
+View financial records              0 (free)              Just reading data
+```
+
+## 7D: Implementation
+
+When a client or auditor triggers a credit-consuming action:
+1. Look up which org (workspace) owns this client/auditor relationship
+2. If mother-org/sub-org: use the mother org's credit pool
+3. Check the credit balance
+4. If sufficient: execute action, deduct credits, log with `triggered_by: 'client_portal'` or `triggered_by: 'auditor_portal'`
+5. If insufficient: show the external user: "This feature is temporarily unavailable. Please contact [org name] directly."
+6. Notify the org owner that a portal action was blocked due to low credits
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 8: DATABASE SCHEMA
+# ═══════════════════════════════════════════════════
+
+## 8A: New Tables
+
+```sql
+-- ═══════════════════════════════════════════════════
+-- SUBSCRIPTION TIERS (Reference Table)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS subscription_tiers (
+  id VARCHAR(30) PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  base_price_cents INTEGER NOT NULL,
+  included_employees INTEGER NOT NULL,  -- 0 for enterprise (all billed per-emp)
+  overage_per_employee_cents INTEGER NOT NULL,
+  monthly_credits_base INTEGER NOT NULL,
+  credits_per_employee INTEGER NOT NULL DEFAULT 0,  -- Enterprise: 10 per emp
+  max_credit_carryover_pct NUMERIC(3,2) NOT NULL DEFAULT 0.10,
+  invoice_fee_cents INTEGER NOT NULL,
+  payroll_fee_cents INTEGER NOT NULL,
+  qb_sync_fee_cents INTEGER NOT NULL DEFAULT 0,
+  cap_ai_scheduled_shifts INTEGER NOT NULL DEFAULT 0,
+  cap_gps_verifications INTEGER NOT NULL DEFAULT 0,
+  cap_analytics_reports INTEGER NOT NULL DEFAULT 0,
+  cap_contract_reviews INTEGER NOT NULL DEFAULT 0,
+  cap_dockchat_sessions INTEGER NOT NULL DEFAULT 0,
+  cap_bot_interactions_per_day INTEGER NOT NULL DEFAULT 0,
+  allows_mother_org BOOLEAN NOT NULL DEFAULT false,
+  allows_multi_state BOOLEAN NOT NULL DEFAULT false,
+  allows_qb_auto_sync BOOLEAN NOT NULL DEFAULT false,
+  allows_client_portal BOOLEAN NOT NULL DEFAULT false,
+  allows_auditor_portal BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ═══════════════════════════════════════════════════
+-- ORG SUBSCRIPTIONS
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS org_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL UNIQUE REFERENCES workspaces(id),
+  tier_id VARCHAR(30) NOT NULL REFERENCES subscription_tiers(id),
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  current_period_start TIMESTAMP NOT NULL,
+  current_period_end TIMESTAMP NOT NULL,
+  stripe_subscription_id VARCHAR(100),
+  stripe_customer_id VARCHAR(100),
+  auto_pay_enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_org_sub_workspace ON org_subscriptions(workspace_id);
+CREATE INDEX idx_org_sub_status ON org_subscriptions(status);
+
+-- ═══════════════════════════════════════════════════
+-- CREDIT BALANCES (One row per standalone org or mother org)
+-- Sub-orgs do NOT have their own balance — they use parent's
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS credit_balances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL UNIQUE REFERENCES workspaces(id),
+  subscription_credits INTEGER NOT NULL DEFAULT 0,
+  carryover_credits INTEGER NOT NULL DEFAULT 0,
+  purchased_credits INTEGER NOT NULL DEFAULT 0,
+  total_credits INTEGER GENERATED ALWAYS AS
+    (subscription_credits + carryover_credits + purchased_credits) STORED,
+  last_refill_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ═══════════════════════════════════════════════════
+-- CREDIT TRANSACTIONS (Immutable Ledger)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS credit_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  sub_org_workspace_id UUID REFERENCES workspaces(id),  -- NULL if standalone
+  transaction_type VARCHAR(30) NOT NULL,
+  -- Types: subscription_deposit, carryover_deposit, pack_purchase,
+  --        action_debit, refund_credit, loyalty_credit, expiration_debit
+  amount INTEGER NOT NULL,  -- Positive = added, Negative = consumed
+  balance_after INTEGER NOT NULL,
+  source_type VARCHAR(30),  -- subscription, carryover, purchased
+  feature_key VARCHAR(50),
+  reference_id UUID,
+  reference_type VARCHAR(30),
+  triggered_by VARCHAR(30) DEFAULT 'system',
+  -- Values: system, manager, employee, client_portal, auditor_portal
+  description TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_credit_tx_workspace ON credit_transactions(workspace_id, created_at);
+CREATE INDEX idx_credit_tx_sub_org ON credit_transactions(sub_org_workspace_id, created_at);
+CREATE INDEX idx_credit_tx_feature ON credit_transactions(feature_key);
+CREATE INDEX idx_credit_tx_type ON credit_transactions(transaction_type);
+
+-- ═══════════════════════════════════════════════════
+-- FINANCIAL PROCESSING FEES (Real Dollar Charges)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS financial_processing_fees (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),  -- Sub-org or standalone
+  mother_org_workspace_id UUID REFERENCES workspaces(id), -- NULL if standalone
+  fee_type VARCHAR(30) NOT NULL,
+  -- Types: invoice_generation, payroll_processing, quickbooks_sync
+  amount_cents INTEGER NOT NULL,
+  reference_id UUID,
+  reference_type VARCHAR(30),
+  employee_count INTEGER,
+  per_unit_rate_cents INTEGER,
+  billing_cycle VARCHAR(7) NOT NULL,  -- 'YYYY-MM'
+  billed_on_platform_invoice_id UUID,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_fees_workspace ON financial_processing_fees(workspace_id, billing_cycle);
+CREATE INDEX idx_fees_mother ON financial_processing_fees(mother_org_workspace_id, billing_cycle);
+CREATE INDEX idx_fees_unbilled ON financial_processing_fees(billed_on_platform_invoice_id)
+  WHERE billed_on_platform_invoice_id IS NULL;
+
+-- ═══════════════════════════════════════════════════
+-- PLATFORM INVOICES (Monthly Bills to Orgs)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS platform_invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),  -- Mother org or standalone
+  billing_cycle VARCHAR(7) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  -- Line items
+  subscription_amount_cents INTEGER NOT NULL,
+  employee_overage_amount_cents INTEGER NOT NULL DEFAULT 0,
+  employee_overage_count INTEGER NOT NULL DEFAULT 0,
+  employee_total_count INTEGER NOT NULL DEFAULT 0,
+  invoice_processing_total_cents INTEGER NOT NULL DEFAULT 0,
+  invoice_processing_count INTEGER NOT NULL DEFAULT 0,
+  payroll_processing_total_cents INTEGER NOT NULL DEFAULT 0,
+  payroll_processing_runs INTEGER NOT NULL DEFAULT 0,
+  payroll_processing_employee_total INTEGER NOT NULL DEFAULT 0,
+  qb_sync_total_cents INTEGER NOT NULL DEFAULT 0,
+  qb_sync_count INTEGER NOT NULL DEFAULT 0,
+  credit_pack_purchases_cents INTEGER NOT NULL DEFAULT 0,
+  addon_modules_total_cents INTEGER NOT NULL DEFAULT 0,
+  -- Totals
+  subtotal_cents INTEGER NOT NULL,
+  tax_cents INTEGER NOT NULL DEFAULT 0,
+  total_cents INTEGER NOT NULL,
+  -- Payment
+  paid_at TIMESTAMP,
+  stripe_payment_intent_id VARCHAR(100),
+  stripe_invoice_id VARCHAR(100),
+  -- Dates
+  period_start TIMESTAMP NOT NULL,
+  period_end TIMESTAMP NOT NULL,
+  due_date TIMESTAMP NOT NULL,
+  sent_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(workspace_id, billing_cycle)
+);
+
+-- ═══════════════════════════════════════════════════
+-- USAGE CAPS TRACKING (Resets Monthly)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS usage_caps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  billing_cycle VARCHAR(7) NOT NULL,
+  ai_scheduled_shifts_used INTEGER NOT NULL DEFAULT 0,
+  gps_verifications_used INTEGER NOT NULL DEFAULT 0,
+  analytics_reports_used INTEGER NOT NULL DEFAULT 0,
+  contract_reviews_used INTEGER NOT NULL DEFAULT 0,
+  dockchat_sessions_used INTEGER NOT NULL DEFAULT 0,
+  bot_interactions_today INTEGER NOT NULL DEFAULT 0,
+  bot_interactions_reset_date DATE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(workspace_id, billing_cycle)
+);
+
+-- ═══════════════════════════════════════════════════
+-- AI TOKEN USAGE (Internal Cost Tracking — Org Never Sees)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS ai_token_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  sub_org_workspace_id UUID REFERENCES workspaces(id),
+  provider VARCHAR(20) NOT NULL,
+  model VARCHAR(50) NOT NULL,
+  feature_key VARCHAR(50) NOT NULL,
+  action_id UUID,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  raw_cost_usd NUMERIC(10,6) NOT NULL DEFAULT 0,
+  credits_charged INTEGER NOT NULL DEFAULT 0,
+  triggered_by VARCHAR(30) DEFAULT 'system',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_token_workspace ON ai_token_usage(workspace_id, created_at);
+CREATE INDEX idx_token_feature ON ai_token_usage(feature_key);
+
+-- ═══════════════════════════════════════════════════
+-- PLATFORM CREDIT POOL (Self-Funding Goodwill Fund)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS platform_credit_pool (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_type VARCHAR(30) NOT NULL,
+  -- Types: expired_credits_deposit, refund_disbursement,
+  --        loyalty_disbursement, support_disbursement
+  amount INTEGER NOT NULL,
+  source_workspace_id UUID,
+  target_workspace_id UUID,
+  balance_after INTEGER NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## 8B: Workspace Table Additions
+
+```sql
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS parent_workspace_id UUID REFERENCES workspaces(id);
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS is_mother_org BOOLEAN DEFAULT false;
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS operating_state VARCHAR(2);  -- TX, CA, FL, etc.
+```
+
+## 8C: Seed Subscription Tiers
+
+```sql
+INSERT INTO subscription_tiers (
+  id, name, base_price_cents, included_employees, overage_per_employee_cents,
+  monthly_credits_base, credits_per_employee, max_credit_carryover_pct,
+  invoice_fee_cents, payroll_fee_cents, qb_sync_fee_cents,
+  cap_ai_scheduled_shifts, cap_gps_verifications, cap_analytics_reports,
+  cap_contract_reviews, cap_dockchat_sessions, cap_bot_interactions_per_day,
+  allows_mother_org, allows_multi_state, allows_qb_auto_sync,
+  allows_client_portal, allows_auditor_portal
+) VALUES
+  ('free_trial', 'Free Trial', 0, 5, 0,
+   100, 0, 0.10, 0, 0, 0,
+   0, 0, 0, 0, 0, 3,
+   false, false, false, false, false),
+
+  ('starter', 'Starter', 89900, 15, 1000,
+   1000, 0, 0.10, 350, 600, 0,
+   200, 50, 5, 0, 0, 3,
+   false, false, false, false, false),
+
+  ('professional', 'Professional', 199900, 50, 800,
+   3500, 0, 0.10, 250, 450, 150,
+   750, 300, 15, 3, 10, 20,
+   false, true, true, true, false),
+
+  ('enterprise', 'Enterprise', 999900, 0, 1500,
+   12000, 10, 0.10, 175, 350, 100,
+   3000, 1500, -1, 10, 50, -1,
+   true, true, true, true, true)
+
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  base_price_cents = EXCLUDED.base_price_cents,
+  included_employees = EXCLUDED.included_employees,
+  overage_per_employee_cents = EXCLUDED.overage_per_employee_cents,
+  monthly_credits_base = EXCLUDED.monthly_credits_base,
+  credits_per_employee = EXCLUDED.credits_per_employee,
+  max_credit_carryover_pct = EXCLUDED.max_credit_carryover_pct,
+  invoice_fee_cents = EXCLUDED.invoice_fee_cents,
+  payroll_fee_cents = EXCLUDED.payroll_fee_cents,
+  qb_sync_fee_cents = EXCLUDED.qb_sync_fee_cents,
+  cap_ai_scheduled_shifts = EXCLUDED.cap_ai_scheduled_shifts,
+  cap_gps_verifications = EXCLUDED.cap_gps_verifications,
+  cap_analytics_reports = EXCLUDED.cap_analytics_reports,
+  cap_contract_reviews = EXCLUDED.cap_contract_reviews,
+  cap_dockchat_sessions = EXCLUDED.cap_dockchat_sessions,
+  cap_bot_interactions_per_day = EXCLUDED.cap_bot_interactions_per_day,
+  allows_mother_org = EXCLUDED.allows_mother_org,
+  allows_multi_state = EXCLUDED.allows_multi_state,
+  allows_qb_auto_sync = EXCLUDED.allows_qb_auto_sync,
+  allows_client_portal = EXCLUDED.allows_client_portal,
+  allows_auditor_portal = EXCLUDED.allows_auditor_portal,
+  updated_at = NOW();
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 9: SERVICE LAYER
+# ═══════════════════════════════════════════════════
+
+## 9A: Credit Service
+
+```typescript
+// server/services/creditService.ts
+
+class CreditService {
+
+  /**
+   * Get the correct credit balance workspace.
+   * If this workspace is a sub-org, return the mother org's workspace_id.
+   * If standalone or mother org, return this workspace_id.
+   */
+  private async getCreditPoolWorkspaceId(workspaceId: string): Promise<string> {
+    const workspace = await getWorkspace(workspaceId);
+    if (workspace.parentWorkspaceId) {
+      return workspace.parentWorkspaceId; // Sub-org → use mother's pool
+    }
+    return workspaceId; // Standalone or mother org → use own pool
+  }
+
+  /**
+   * Calculate total monthly credits for a workspace (including per-employee scaling)
+   */
+  async calculateMonthlyCredits(workspaceId: string): Promise<number> {
+    const sub = await getSubscription(workspaceId);
+    const tier = await getTier(sub.tierId);
+    const empCount = await countAllEmployees(workspaceId); // Includes sub-orgs for mother
+    return tier.monthlyCreditsBase + (tier.creditsPerEmployee * empCount);
+  }
+
+  /**
+   * Consume credits for an action.
+   * DRAIN ORDER: subscription → carryover → purchased
+   * Uses SELECT FOR UPDATE to prevent race conditions.
+   */
+  async consumeCredits(
+    workspaceId: string,      // The workspace performing the action
+    amount: number,
+    featureKey: string,
+    referenceId?: string,
+    referenceType?: string,
+    triggeredBy: string = 'system'
+  ): Promise<{ success: boolean; creditsRemaining: number; transactionId: string }> {
+
+    const poolWorkspaceId = await this.getCreditPoolWorkspaceId(workspaceId);
+    const isSubOrg = poolWorkspaceId !== workspaceId;
+
+    return await db.transaction(async (tx) => {
+      // Lock the balance row
+      const [bal] = await tx.select()
+        .from(creditBalances)
+        .where(eq(creditBalances.workspaceId, poolWorkspaceId))
+        .for('update');
+
+      if (!bal) throw new Error(`No credit balance for workspace ${poolWorkspaceId}`);
+
+      const total = bal.subscriptionCredits + bal.carryoverCredits + bal.purchasedCredits;
+
+      if (total < amount) {
+        return { success: false, creditsRemaining: total, transactionId: '' };
+      }
+
+      // Drain: subscription → carryover → purchased
+      let remaining = amount;
+
+      const newSub = Math.max(0, bal.subscriptionCredits - remaining);
+      remaining = Math.max(0, remaining - bal.subscriptionCredits);
+
+      const newCarry = remaining > 0 ? Math.max(0, bal.carryoverCredits - remaining) : bal.carryoverCredits;
+      remaining = remaining > 0 ? Math.max(0, remaining - bal.carryoverCredits) : 0;
+
+      const newPurch = remaining > 0 ? Math.max(0, bal.purchasedCredits - remaining) : bal.purchasedCredits;
+
+      // Update balance
+      await tx.update(creditBalances).set({
+        subscriptionCredits: newSub,
+        carryoverCredits: newCarry,
+        purchasedCredits: newPurch,
+        updatedAt: new Date()
+      }).where(eq(creditBalances.workspaceId, poolWorkspaceId));
+
+      const newTotal = newSub + newCarry + newPurch;
+
+      // Record transaction
+      const [txRecord] = await tx.insert(creditTransactions).values({
+        workspaceId: poolWorkspaceId,
+        subOrgWorkspaceId: isSubOrg ? workspaceId : null,
+        transactionType: 'action_debit',
+        amount: -amount,
+        balanceAfter: newTotal,
+        sourceType: newSub < bal.subscriptionCredits ? 'subscription' :
+                    newCarry < bal.carryoverCredits ? 'carryover' : 'purchased',
+        featureKey,
+        referenceId,
+        referenceType,
+        triggeredBy,
+        description: `${featureKey}: ${amount} credits consumed${isSubOrg ? ` (sub-org: ${workspaceId})` : ''}`
+      }).returning();
+
+      // Check degradation thresholds
+      const monthlyCredits = await this.calculateMonthlyCredits(poolWorkspaceId);
+      const pctRemaining = newTotal / monthlyCredits;
+
+      if (pctRemaining <= 0.25) {
+        const level = pctRemaining <= 0 ? 'depleted' :
+                      pctRemaining <= 0.10 ? 'very_low' : 'low';
+        await this.sendCreditWarning(poolWorkspaceId, level, newTotal, monthlyCredits);
+      }
+
+      return { success: true, creditsRemaining: newTotal, transactionId: txRecord.id };
+    });
+  }
+
+  /**
+   * Monthly credit cycle: deposit new credits, calculate carryover, expire excess
+   */
+  async processMonthlyReset(workspaceId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [bal] = await tx.select()
+        .from(creditBalances)
+        .where(eq(creditBalances.workspaceId, workspaceId))
+        .for('update');
+
+      const sub = await this.getSubscription(workspaceId);
+      const tier = await this.getTier(sub.tierId);
+      const monthlyCredits = await this.calculateMonthlyCredits(workspaceId);
+      const maxCarryover = Math.floor(monthlyCredits * Number(tier.maxCreditCarryoverPct));
+
+      const unusedSubAndCarry = bal.subscriptionCredits + bal.carryoverCredits;
+      const carryover = Math.min(unusedSubAndCarry, maxCarryover);
+      const expired = Math.max(0, unusedSubAndCarry - carryover);
+
+      // Expire excess to platform pool
+      if (expired > 0) {
+        // Get current pool balance
+        const [poolBal] = await tx.select({ total: sql`COALESCE(SUM(amount), 0)` })
+          .from(platformCreditPool);
+        const poolBalance = Number(poolBal?.total || 0);
+
+        await tx.insert(platformCreditPool).values({
+          transactionType: 'expired_credits_deposit',
+          amount: expired,
+          sourceWorkspaceId: workspaceId,
+          balanceAfter: poolBalance + expired,
+          description: `${expired} credits expired from ${workspaceId}`
+        });
+
+        await tx.insert(creditTransactions).values({
+          workspaceId,
+          transactionType: 'expiration_debit',
+          amount: -expired,
+          balanceAfter: monthlyCredits + carryover + bal.purchasedCredits,
+          sourceType: 'subscription',
+          description: `${expired} unused credits expired to platform pool`
+        });
+      }
+
+      // Deposit new credits
+      await tx.update(creditBalances).set({
+        subscriptionCredits: monthlyCredits,
+        carryoverCredits: carryover,
+        lastRefillAt: new Date(),
+        updatedAt: new Date()
+      }).where(eq(creditBalances.workspaceId, workspaceId));
+
+      await tx.insert(creditTransactions).values({
+        workspaceId,
+        transactionType: 'subscription_deposit',
+        amount: monthlyCredits,
+        balanceAfter: monthlyCredits + carryover + bal.purchasedCredits,
+        sourceType: 'subscription',
+        description: `Monthly deposit: ${monthlyCredits} credits`
+      });
+
+      // Reset usage caps
+      const newCycle = format(new Date(), 'yyyy-MM');
+      await tx.insert(usageCaps).values({
+        workspaceId,
+        billingCycle: newCycle
+      }).onConflictDoUpdate({
+        target: [usageCaps.workspaceId, usageCaps.billingCycle],
+        set: { aiScheduledShiftsUsed: 0, gpsVerificationsUsed: 0,
+               analyticsReportsUsed: 0, contractReviewsUsed: 0,
+               docchatSessionsUsed: 0, botInteractionsToday: 0,
+               updatedAt: new Date() }
+      });
+    });
+  }
+}
+```
+
+## 9B: Usage Cap Service
+
+```typescript
+// server/services/usageCapService.ts
+
+class UsageCapService {
+  /**
+   * Check if an action is within the org's tier cap.
+   * Within cap → free (no credits). Over cap → costs credits.
+   * Cap = -1 → unlimited (always free). Cap = 0 → feature unavailable.
+   */
+  async checkAndIncrement(
+    workspaceId: string,
+    capType: string,           // e.g., 'ai_scheduled_shifts'
+    creditCostIfOverCap: number
+  ): Promise<{ allowed: boolean; withinCap: boolean; creditCost: number }> {
+    // For sub-orgs, get the mother org's tier
+    const poolWorkspaceId = await creditService.getCreditPoolWorkspaceId(workspaceId);
+    const sub = await getSubscription(poolWorkspaceId);
+    const tier = await getTier(sub.tierId);
+
+    const cap = tier[`cap_${capType}`];
+
+    if (cap === 0) return { allowed: false, withinCap: false, creditCost: 0 };
+    if (cap === -1) {
+      await this.incrementUsage(poolWorkspaceId, capType);
+      return { allowed: true, withinCap: true, creditCost: 0 };
+    }
+
+    const cycle = format(new Date(), 'yyyy-MM');
+    const usage = await this.getUsage(poolWorkspaceId, cycle);
+    const currentUsed = usage[`${capType}_used`] || 0;
+
+    if (currentUsed < cap) {
+      await this.incrementUsage(poolWorkspaceId, capType);
+      return { allowed: true, withinCap: true, creditCost: 0 };
+    }
+
+    // Over cap — check credits
+    const balance = await getCreditBalance(poolWorkspaceId);
+    if (balance.totalCredits < creditCostIfOverCap) {
+      return { allowed: false, withinCap: false, creditCost: creditCostIfOverCap };
+    }
+
+    await this.incrementUsage(poolWorkspaceId, capType);
+    return { allowed: true, withinCap: false, creditCost: creditCostIfOverCap };
+  }
+}
+```
+
+## 9C: Financial Processing Fee Service
+
+```typescript
+// server/services/financialProcessingService.ts
+
+class FinancialProcessingService {
+  async recordFee(
+    workspaceId: string,
+    feeType: 'invoice_generation' | 'payroll_processing' | 'quickbooks_sync',
+    referenceId: string,
+    referenceType: string,
+    employeeCount?: number
+  ): Promise<void> {
+    // Get the billing workspace (mother org or standalone)
+    const workspace = await getWorkspace(workspaceId);
+    const billingWorkspaceId = workspace.parentWorkspaceId || workspaceId;
+
+    const sub = await getSubscription(billingWorkspaceId);
+    const tier = await getTier(sub.tierId);
+
+    // Idempotency check
+    const existing = await db.select().from(financialProcessingFees)
+      .where(and(
+        eq(financialProcessingFees.referenceId, referenceId),
+        eq(financialProcessingFees.feeType, feeType),
+        eq(financialProcessingFees.billingCycle, format(new Date(), 'yyyy-MM'))
+      )).limit(1);
+
+    if (existing.length > 0) return; // Already recorded
+
+    let amountCents: number;
+    let perUnitRate: number;
+
+    switch (feeType) {
+      case 'invoice_generation':
+        amountCents = tier.invoiceFeeCents;
+        perUnitRate = tier.invoiceFeeCents;
+        break;
+      case 'payroll_processing':
+        amountCents = tier.payrollFeeCents * (employeeCount || 1);
+        perUnitRate = tier.payrollFeeCents;
+        break;
+      case 'quickbooks_sync':
+        amountCents = tier.qbSyncFeeCents;
+        perUnitRate = tier.qbSyncFeeCents;
+        break;
+    }
+
+    await db.insert(financialProcessingFees).values({
+      workspaceId,
+      motherOrgWorkspaceId: workspace.parentWorkspaceId || null,
+      feeType,
+      amountCents,
+      referenceId,
+      referenceType,
+      employeeCount: employeeCount || null,
+      perUnitRateCents: perUnitRate,
+      billingCycle: format(new Date(), 'yyyy-MM')
+    });
+  }
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 10: WIRING INTO EXISTING SYSTEMS
+# ═══════════════════════════════════════════════════
+
+## 10A: Credit Consumption Wiring Points
+
+```
+FILE                                          ACTION                      CREDITS
+──────────────────────────────────────────────────────────────────────────────────
+trinityAutonomousScheduler.ts                 Shift placed by AI           3
+autonomousStaffingService.ts                  Email inbox staffing         4
+employeeScoringService.ts                     Employee scored              2
+gpsVerificationService.ts                     GPS clock-in verified        1
+guardTourService.ts                           QR/NFC scan verified         1
+equipmentService.ts                           Checkout/return              1
+documentService.ts                            E-signature sent             3
+trinityBotService.ts (all 5 bots)             Bot interaction              2
+analyticsService.ts                           Report generated            15
+dockChatService.ts                            Client issue processed      10
+contractReviewService.ts                      Contract analyzed           30
+rfpService.ts / proposalService.ts            RFP/proposal generated      20
+marketingContentService.ts                    Marketing content           15
+trinityChat.ts                                Custom Trinity query         3
+complianceReportService.ts                    Compliance audit report     10
+onboardingService.ts                          AI onboarding workflow       5
+```
+
+**For EACH of the above:** Before executing the AI action, call:
+```typescript
+const capResult = await usageCapService.checkAndIncrement(workspaceId, capType, creditCost);
+if (!capResult.allowed) {
+  // Feature not available at this tier or insufficient credits
+  return { error: 'FEATURE_UNAVAILABLE' or 'INSUFFICIENT_CREDITS' };
+}
+if (!capResult.withinCap) {
+  // Over cap — deduct credits
+  const deduction = await creditService.consumeCredits(workspaceId, capResult.creditCost, featureKey, refId, refType, triggeredBy);
+  if (!deduction.success) return { error: 'INSUFFICIENT_CREDITS' };
+}
+// Proceed with action...
+```
+
+## 10B: Financial Processing Fee Wiring Points
+
+```
+FILE                                          WHEN TO CALL                FEE TYPE
+──────────────────────────────────────────────────────────────────────────────────
+billingAutomation.ts                          AFTER invoice committed     invoice_generation
+payrollAutomation.ts                          AFTER gate approved +       payroll_processing
+                                              entries finalized
+quickbooksSync.ts                             AFTER successful sync       quickbooks_sync
+```
+
+**IMPORTANT:** Remove any existing credit charges for invoicing (old: 6 credits), payroll (old: 2 credits), and QB sync (old: 5 credits). These are now dollar-denominated fees, NOT credits.
+
+## 10C: Monthly Platform Bill Cron
+
+Create a cron that runs on the 1st of each month at 00:01 UTC:
+
+```typescript
+// For each active workspace that is NOT a sub-org:
+const activeWorkspaces = await db.select().from(workspaces)
+  .where(and(
+    isNull(workspaces.parentWorkspaceId),  // Not a sub-org
+    eq(workspaces.workspaceType, 'production')
+  ));
+
+for (const workspace of activeWorkspaces) {
+  await generateMonthlyPlatformBill(workspace.id, previousMonthCycle);
+  await creditService.processMonthlyReset(workspace.id);
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 11: UI CHANGES
+# ═══════════════════════════════════════════════════
+
+## 11A: Pricing Page Overhaul
+
+- Show all 4 tiers with the new pricing
+- Remove "Trinity Thought Stream powered by Claude" everywhere
+- Remove "Premium features use 2× credits" everywhere
+- Show financial processing fees clearly: "Pay-per-use for invoicing ($1.75-3.50/invoice) and payroll ($3.50-6.00/employee/run)"
+- Show competitive comparison table vs QB/Gusto/ADP
+- Enterprise shows the scaling formula: "$9,999/mo + $15/employee"
+- Credit packs section with volume discounts
+- Add-on modules for Professional tier
+
+## 11B: Credit Usage Dashboard (NEW — Build This)
+
+Accessible from the org owner's main navigation:
+- Current credit balance: subscription / carryover / purchased (3 progress bars)
+- Usage vs caps: progress bars for each capped feature showing used/cap
+- Credit consumption chart: daily line chart for the current billing cycle
+- Top credit-consuming features: pie chart
+- Projected depletion date based on burn rate trend
+- "Buy Credits" prominent button
+- Financial processing fees this month: itemized list
+- Upcoming platform bill estimate: running total
+- For mother-orgs: per-sub-org credit consumption breakdown table
+
+## 11C: Platform Bill View (NEW — Build This)
+
+Accessible from the org owner's billing settings:
+- List of all past and current platform bills
+- Click to expand itemized view (matching the format in Part 5C)
+- Payment status badge (Paid / Pending / Past Due)
+- "Download PDF" button for each bill
+- "Pay Now" button for unpaid bills
+- For mother-orgs: sub-org-level detail view showing which sub-org generated which fees
+
+## 11D: Trinity Status Badge
+
+Show in the header/nav bar:
+- Green dot: Normal (>25% credits)
+- Yellow dot + tooltip: Credits running low (10-25%)
+- Orange dot + tooltip: Very low, Trinity in reduced mode (1-10%)
+- Red dot + tooltip: Credits depleted, Trinity in basic mode (0%)
+
+## 11E: Feature Page Corrections
+
+Remove or rename:
+1. "C-Suite Intelligence Layer — 3 credits per query" → "Custom Trinity Queries — 3 credits each"
+2. "TRINITY PREMIUM AI (uses 2x credits)" → DELETE entirely
+3. "Seamless Payroll Processing — 2 credits per employee" → "$3.50-6.00/employee/run"
+4. "Automated Client Billing — 6 credits per invoice" → "$1.75-3.50/invoice"
+5. "99% Automated Accounting Sync — 5 credits per sync" → "$1.00-1.50/sync"
+6. "Built-In Employee Support — Included free" → Clarify: basic helpdesk free, AI responses = 2 credits
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 12: RACE CONDITION & INTEGRITY PROTECTIONS
+# ═══════════════════════════════════════════════════
+
+## 12A: Credit Balance Mutations
+ALL credit balance changes MUST use `SELECT ... FOR UPDATE` within a database transaction. No optimistic updates. No concurrent reads without locks.
+
+## 12B: Double-Charge Prevention
+Every credit deduction records a `reference_id` + `feature_key`. Before deducting, check if a transaction exists for this combination. If so, skip (idempotent).
+
+## 12C: Financial Fee Deduplication
+Before recording a fee, check for existing `reference_id` + `fee_type` + `billing_cycle`. If exists, skip.
+
+## 12D: Platform Bill Idempotency
+Before generating, check for existing `workspace_id` + `billing_cycle`. If draft exists, update it. If sent/paid exists, skip entirely.
+
+## 12E: Credit Pack Purchase Atomicity
+Stripe webhook fires → check if `payment_intent_id` already processed → if not, add credits + record transaction → if yes, skip.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 13: TOKEN-TO-CREDIT ECONOMICS (Internal)
+# ═══════════════════════════════════════════════════
+
+## Model Routing for Cost Minimization
+
+Trinity's orchestrator routes to the cheapest capable model:
+
+```
+TASK                        PRIMARY MODEL        FALLBACK          COST
+───────────────────────────────────────────────────────────────────────
+Shift scoring/matching      Gemini Flash         Math-only          ~$0.0003
+Employee availability       Database query       —                  $0.00
+GPS verification            Math only            —                  $0.00
+Bot interactions            Gemini Flash         OpenAI GPT-mini    ~$0.001
+Document processing         Gemini Flash         Claude Haiku       ~$0.0005
+Analytics report            Gemini Pro           Claude Sonnet      ~$0.015
+Compliance analysis         Claude Sonnet        Gemini Pro         ~$0.012
+Contract review             Claude Sonnet        OpenAI GPT-4o      ~$0.045
+RFP/Proposal                Claude Sonnet        OpenAI GPT-4o      ~$0.030
+DockChat sentiment          Gemini Flash         Claude Haiku       ~$0.003
+Deep financial analysis     Claude Sonnet        Gemini Pro         ~$0.020
+```
+
+**RULE: Gemini Flash handles 80%+ of all actions. Claude Sonnet reserved for complex reasoning only.**
+
+**TOKEN COVERAGE RATIOS:**
+- Starter at $899/mo: token cost ~$0.30/mo → 2,997× coverage
+- Professional at $1,999/mo: token cost ~$1.50/mo → 1,333× coverage
+- Enterprise at $14,499/mo (300 emp): token cost ~$5/mo → 2,900× coverage
+- Enterprise at $24,999/mo (1,000 emp): token cost ~$12/mo → 2,083× coverage
+
+There is zero scenario where AI token costs even register as a line item. The platform's token coverage ranges from 1,333× to 2,997× the actual cost.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 14: MIGRATION PLAN
+# ═══════════════════════════════════════════════════
+
+Execute in this order:
+
+1. **Create all new tables** (Part 8A, 8B)
+2. **Seed subscription_tiers** (Part 8C)
+3. **For each existing workspace:**
+   - Determine their tier (default: free_trial for dev, professional for Statewide)
+   - Create `org_subscriptions` record
+   - Create `credit_balances` record with tier's monthly credits
+   - Create initial `usage_caps` record
+4. **Wire credit consumption** into all action handlers (Part 10A)
+5. **Wire financial processing fees** into billing/payroll/QB (Part 10B)
+6. **Remove old credit charges** from invoicing (was 6 credits), payroll (was 2 credits), QB sync (was 5 credits)
+7. **Build monthly billing cron** (Part 10C)
+8. **Update pricing page UI** (Part 11A)
+9. **Build credit usage dashboard** (Part 11B)
+10. **Build platform bill view** (Part 11C)
+11. **Add Trinity status badge** (Part 11D)
+12. **Update features page** (Part 11E)
+13. **Update Drizzle schema** (shared/schema.ts) with all new tables
+
+**Test after EACH step. Verify with real numbers. Do NOT skip to the next step until the current one is proven working.**
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 15: IMPLEMENTATION RULES
+# ═══════════════════════════════════════════════════
+
+1. Do NOT preserve old pricing constants — replace everything with this spec's values
+2. Do NOT charge credits for invoicing or payroll — these are dollar processing fees now
+3. Every new table must have proper indexes as specified
+4. Every credit mutation must be transactional with SELECT FOR UPDATE
+5. Every financial processing fee must be idempotent
+6. The monthly platform bill cron must be idempotent
+7. Wire the pricing page to read from `subscription_tiers` table — NOT hardcoded values
+8. For mother-org/sub-org: credits always drain from the mother's pool
+9. For mother-org/sub-org: processing fees record per sub-org but bill to mother
+10. Trinity NEVER hard-stops — graceful degradation only
+11. Do NOT touch mobile UX, schedule page layout, or component structure
+12. Do NOT modify Trinity's scheduling logic — only the billing/credit layers
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 16: VERIFICATION TESTS
+# ═══════════════════════════════════════════════════
+
+After implementation, verify these scenarios:
+
+**Test 1: Credit Drain Order**
+Deposit 100 subscription + 50 carryover + 25 purchased. Consume 130. Result: subscription=0, carryover=20, purchased=25.
+
+**Test 2: Monthly Reset**
+Start: 500 sub + 100 carryover + 200 purchased. Tier = Professional (3,500 credits, 10% carryover). After reset: subscription=3,500, carryover=350 (capped), purchased=200 (unchanged). Expired to pool: 250.
+
+**Test 3: Graceful Degradation**
+Set credits to 0. Verify Trinity runs Tier 1 scans (free). Verify manager CAN manually trigger a shift fill (system warns, then executes if they confirm). Verify UI shows red badge.
+
+**Test 4: Financial Processing Fee Accumulation**
+Generate 5 invoices. Verify 5 `financial_processing_fees` records created. Verify monthly bill includes them as a line item. Verify deduplication (generating the same invoice twice doesn't create a duplicate fee).
+
+**Test 5: Mother-Org Credit Pool**
+Create mother org (Enterprise, 100 emp = 13,000 credits). Create 2 sub-orgs. Sub-org A schedules 50 shifts (150 credits). Sub-org B schedules 30 shifts (90 credits). Verify mother's balance = 13,000 - 240 = 12,760. Verify credit_transactions show sub_org_workspace_id for attribution.
+
+**Test 6: Mother-Org Platform Bill**
+Verify ONE bill generated for the mother org. Verify it includes processing fees from ALL sub-orgs aggregated. Verify sub-org detail breakdown is available.
+
+**Test 7: Cap Enforcement**
+Starter org. Schedule 200 shifts (within cap — free). Schedule shift 201 — should cost 3 credits. Verify 200 shifts consumed 0 credits and shift 201 consumed 3.
+
+**Test 8: Credit Pack Purchase**
+Org buys 2,000-credit pack for $129. Verify purchased_credits increases by 2,000. Verify these drain LAST (after subscription and carryover). Verify they survive monthly reset unchanged.
+
+---
+
+END OF SPEC v2.0
+
+Implement in order: Tables → Seed → Services → Wiring → Crons → UI → Tests.
+Every step must be verified with real data before proceeding to the next.
+Do NOT ask for confirmation — implement and report results per section.

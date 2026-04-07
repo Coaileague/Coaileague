@@ -21,15 +21,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { FRIENDLY_LABELS } from "@/lib/friendlyStrings";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface OversightEvent {
   id: string;
@@ -69,7 +63,7 @@ export default function OversightHub() {
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
-      return apiRequest(`/api/oversight/${id}/approve`, 'PATCH', { resolutionNotes: notes });
+      return apiRequest('PATCH', `/api/oversight/${id}/approve`, { resolutionNotes: notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/oversight'] });
@@ -91,7 +85,7 @@ export default function OversightHub() {
 
   const rejectMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
-      return apiRequest(`/api/oversight/${id}/reject`, 'PATCH', { resolutionNotes: notes });
+      return apiRequest('PATCH', `/api/oversight/${id}/reject`, { resolutionNotes: notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/oversight'] });
@@ -185,18 +179,16 @@ export default function OversightHub() {
 
   const pendingEvents = events.filter(e => e.status === 'pending');
 
-  return (
-    <div className="container mx-auto p-6 max-w-7xl" data-testid="page-oversight-hub">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2" data-testid="heading-oversight">
-          {FRIENDLY_LABELS.oversight || "1% Oversight Queue"}
-        </h1>
-        <p className="text-muted-foreground">
-          Review items flagged by automation for your approval
-        </p>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'oversight-hub',
+    title: FRIENDLY_LABELS.oversight || "1% Oversight Queue",
+    subtitle: 'Review items flagged by automation for your approval',
+    category: 'operations',
+    maxWidth: '7xl',
+  };
 
-      {/* Stats */}
+  return (
+    <CanvasHubPage config={pageConfig}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
@@ -243,7 +235,7 @@ export default function OversightHub() {
             <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">All Clear!</h3>
             <p className="text-muted-foreground">
-              No items need your review right now. CoAIleague is handling everything smoothly.
+              No items need your review right now. {(import.meta.env.VITE_PLATFORM_NAME as string) || 'CoAIleague'} is handling everything smoothly.
             </p>
           </CardContent>
         </Card>
@@ -326,18 +318,18 @@ export default function OversightHub() {
       )}
 
       {/* Review Dialog */}
-      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent size="md" data-testid="dialog-review">
-          <DialogHeader>
-            <DialogTitle>
+      <UniversalModal open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+        <UniversalModalContent size="md" data-testid="dialog-review">
+          <UniversalModalHeader>
+            <UniversalModalTitle>
               {reviewAction === 'approve' ? 'Approve Item' : 'Reject Item'}
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               {reviewAction === 'approve'
                 ? 'You can add optional notes about why you approved this item.'
                 : 'Please explain why you are rejecting this item.'}
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             {selectedEvent && (
               <div className="bg-muted/30 p-3 rounded-md space-y-2 text-sm">
@@ -371,7 +363,7 @@ export default function OversightHub() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button
               variant="outline"
               onClick={handleCloseDialog}
@@ -391,9 +383,9 @@ export default function OversightHub() {
                 ? 'Approve'
                 : 'Reject'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

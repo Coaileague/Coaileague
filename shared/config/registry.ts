@@ -587,8 +587,8 @@ export function getModule(moduleId: string): Module | undefined {
 /**
  * Get all modules for a tier
  */
-export function getModulesForTier(tier: "free" | "starter" | "professional" | "enterprise"): Module[] {
-  const tierOrder = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+export function getModulesForTier(tier: "free" | "trial" | "starter" | "professional" | "business" | "enterprise" | "strategic"): Module[] {
+  const tierOrder = { free: 0, trial: 0, starter: 1, professional: 2, business: 3, enterprise: 4, strategic: 5 };
   const modules: Module[] = [];
   
   for (const family of CONFIG.navigation.families) {
@@ -608,9 +608,9 @@ export function getModulesForTier(tier: "free" | "starter" | "professional" | "e
  */
 export function isFeatureEnabled(
   featureId: string,
-  userTier: "free" | "starter" | "professional" | "enterprise"
+  userTier: "free" | "trial" | "starter" | "professional" | "business" | "enterprise" | "strategic"
 ): boolean {
-  const tierOrder = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+  const tierOrder = { free: 0, trial: 0, starter: 1, professional: 2, business: 3, enterprise: 4, strategic: 5 };
   const feature = CONFIG.features.flags.find(f => f.id === featureId);
   
   if (!feature || !feature.enabled) return false;

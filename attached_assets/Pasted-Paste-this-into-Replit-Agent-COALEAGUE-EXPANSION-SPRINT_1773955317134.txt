@@ -1,0 +1,1420 @@
+Paste this into Replit Agent:
+
+---
+
+```
+COALEAGUE EXPANSION SPRINT
+8 NEW MODULES — BUILD ON EXISTING ARCHITECTURE
+NO DUPLICATES NO CONFLICTS FULL TESTING
+
+PRIME DIRECTIVE:
+Audit every existing system before building.
+Read every file related to each new module.
+Map what already exists that overlaps.
+Extend what exists before building new.
+Never duplicate existing functionality.
+Every new module must integrate with
+Trinity's biological brain — thalamus,
+ACC, connectome, dream state, growth log.
+Every new module must respect workspace_id
+isolation on every database operation.
+Present audit findings before building anything.
+
+═══════════════════════════════════════════════
+PHASE 0 — FULL AUDIT BEFORE ANYTHING
+═══════════════════════════════════════════════
+
+Read and map every existing file for:
+
+1. Document management system
+   Does version control exist anywhere?
+   Does acknowledgment tracking exist?
+
+2. Incident reporting system
+   Does cross-site pattern analysis exist?
+   Does pattern aggregation exist?
+
+3. Client management system
+   Does contract renewal tracking exist?
+   Does client satisfaction scoring exist?
+   Does proposal tracking exist?
+
+4. Employee management system
+   Does applicant tracking exist?
+   Does training/certification tracking
+   beyond license expiration exist?
+   Does offer letter generation exist?
+
+5. RFP and proposal system
+   What exists in RFP generation?
+   What is the current proposal workflow?
+
+6. Subcontractor management
+   Does any 1099 or subcontractor tracking
+   exist currently?
+
+7. Financial reporting
+   Does bid pipeline tracking exist?
+   Does win rate tracking exist?
+
+Present complete audit findings:
+- What exists and works (do not rebuild)
+- What exists but is incomplete (extend)
+- What is missing entirely (build new)
+- What would conflict (avoid)
+
+Do not write a single line of new code
+until audit findings are presented.
+
+═══════════════════════════════════════════════
+MODULE 1 — POST ORDER VERSION CONTROL
+AND ACKNOWLEDGMENT SYSTEM
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing post order storage.
+Read existing document version control.
+Read existing acknowledgment patterns.
+Map what exists before building.
+
+WHAT TO BUILD:
+
+Database additions:
+post_order_versions table:
+- id, workspace_id, site_id
+- version_number (integer, increments)
+- title
+- content (full post order text)
+- change_summary (what changed from prior version)
+- effective_date
+- created_by, created_at
+- is_current (boolean)
+- requires_acknowledgment (boolean)
+- acknowledgment_deadline (date)
+- officers_required_to_acknowledge (jsonb array
+  of employee_ids assigned to this site)
+- acknowledged_count (integer)
+- pending_count (integer)
+
+post_order_acknowledgments table:
+- id, workspace_id, site_id
+- post_order_version_id
+- employee_id
+- acknowledged_at
+- acknowledgment_method (chatdock | voice | manual)
+- device_info
+- ip_address
+
+FUNCTIONALITY:
+
+When manager updates post orders for a site:
+1. New version created — old version preserved
+2. version_number increments
+3. is_current set to true on new, false on old
+4. Trinity broadcasts to all officers
+   assigned to that site via ChatDock:
+   "POST ORDER UPDATE — [Site Name]
+   Effective: [date]
+   What changed: [change_summary]
+   You must acknowledge this update
+   before your next shift.
+   [Acknowledge Now]"
+5. Trinity tracks who has and has not
+   acknowledged within 48 hours
+6. Unacknowledged officers flagged to supervisor
+7. Trinity will not assign unacknowledged
+   officer to site without supervisor override
+
+Version history UI:
+Manager can view all versions per site.
+Each version shows: date, who made change,
+  what changed, acknowledgment status.
+Can revert to prior version with one click.
+Revert creates new version — nothing deleted.
+
+ACC conflict detection:
+If Trinity is about to assign an officer
+to a site where they have not acknowledged
+the current post order version:
+ACC fires WARNING — supervisor must
+explicitly approve the assignment.
+
+Wire to thalamus: post order update
+  → DOCUMENT_SIGNAL
+Wire to connectome: site node updated
+  with new post order version node
+Wire to dream state: nightly check for
+  unacknowledged post orders older than
+  48 hours — escalate to manager
+Wire to growth log: every post order
+  update and acknowledgment completion
+
+═══════════════════════════════════════════════
+MODULE 2 — CROSS-SITE INCIDENT PATTERN INTELLIGENCE
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing incident reporting.
+Read existing DAR pipeline.
+Read existing analytics.
+Read existing pattern detection in Trinity brain.
+Map what exists before building.
+
+WHAT TO BUILD:
+
+Database additions:
+incident_patterns table:
+- id, workspace_id
+- pattern_type (theft | trespass | assault |
+  medical | property_damage | access_violation |
+  suspicious_activity | disturbance | other)
+- pattern_scope (single_site | multi_site |
+  company_wide | time_based | officer_based)
+- sites_affected (jsonb array of site_ids)
+- officers_involved (jsonb array of employee_ids)
+- incident_count (how many in this pattern)
+- first_occurrence, most_recent_occurrence
+- pattern_description (Trinity's plain English
+  description of what she observed)
+- risk_level (low | medium | high | critical)
+- recommended_action
+- status (active | addressed | dismissed)
+- addressed_by, addressed_at
+- address_notes
+- created_by (trinity)
+- created_at
+- workspace_id
+
+FUNCTIONALITY:
+
+Trinity runs incident pattern analysis:
+After every new DAR is approved Trinity
+queries the last 90 days of DARs for
+the workspace and identifies patterns:
+
+Pattern types Trinity looks for:
+
+SAME TYPE MULTIPLE SITES:
+If incident_type X appears at 3 or more
+sites in 30 days → company_wide pattern
+Example: theft reports at 4 different
+client sites in the same month
+Trinity flags: "I have identified a
+pattern of [type] incidents across
+[X] sites in the past [period].
+This may indicate a systemic issue
+requiring a company-wide policy response."
+
+SAME SITE REPEATING:
+If same incident type at same site
+appears 3+ times in 30 days → site pattern
+Trinity flags: "[Site Name] has had
+[X] incidents of [type] in [period].
+This site may have environmental or
+security gap issues that need addressing."
+
+TIME-BASED PATTERN:
+If incidents cluster around specific
+times — late Friday nights, first of month,
+specific shift changes:
+Trinity flags: "Incidents at [site]
+occur disproportionately during [time period].
+Consider enhanced coverage or
+protocol changes during this window."
+
+OFFICER-BASED PATTERN:
+If same officer appears in multiple
+incidents across different contexts:
+Trinity flags: "[Officer Name] appears
+in [X] incidents in [period].
+This may warrant a review conversation."
+
+Pattern intelligence UI:
+Owner/manager dashboard shows:
+Active patterns with risk level badges.
+Each pattern links to all contributing incidents.
+[Address This Pattern] action with notes.
+Pattern history — resolved patterns archive.
+
+Wire to thalamus: new pattern identified
+  → COMPLIANCE_SIGNAL elevated priority
+Wire to ACC: if pattern involves
+  potential use of force policy issue
+  → BLOCKING requires owner review
+Wire to connectome: pattern nodes linked
+  to site nodes and officer nodes
+Wire to dream state: weekly pattern
+  analysis across all DARs
+Wire to growth log: every pattern
+  identified and every resolution
+
+═══════════════════════════════════════════════
+MODULE 3 — CLIENT CONTRACT RENEWAL
+AND PROPOSAL PIPELINE
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing client management.
+Read existing contract management.
+Read existing RFP generation.
+Map what exists and what can be extended.
+
+WHAT TO BUILD:
+
+Database additions:
+client_contracts table:
+- id, workspace_id, client_id
+- contract_type (service_agreement | amendment |
+  renewal | proposal)
+- status (draft | sent | negotiating |
+  signed | active | expired | cancelled)
+- start_date, end_date
+- auto_renew (boolean)
+- renewal_notice_days (default 90)
+- total_value (annual contract value)
+- billing_rate
+- services_scope (jsonb)
+- signed_at, signed_by_client
+- signed_by_company
+- file_path (contract PDF)
+- renewal_proposed_at
+- renewal_status (not_started | proposed |
+  accepted | declined | negotiating)
+- notes
+- created_by, created_at
+
+contract_renewal_tasks table:
+- id, workspace_id, contract_id
+- task_type (renewal_alert_90 | renewal_alert_60 |
+  renewal_alert_30 | proposal_sent |
+  follow_up_7 | follow_up_14 | escalate_owner)
+- due_date, completed_at
+- status (pending | completed | skipped)
+- trinity_action_taken (what Trinity did)
+- owner_notified (boolean)
+
+FUNCTIONALITY:
+
+Trinity monitors all active contracts.
+Renewal pipeline fires automatically:
+
+90 days before contract end_date:
+Trinity creates renewal task.
+Notifies owner in ChatDock:
+"[Client Name] contract expires in 90 days
+([expiration date]). Annual value: $[amount].
+Shall I prepare a renewal proposal?
+[Yes — Prepare Proposal] [I Will Handle This]"
+
+If owner clicks Yes — Prepare Proposal:
+Trinity generates renewal proposal using
+existing RFP generation system:
+- Current service scope
+- Current billing rates with optional
+  adjustment (owner inputs new rate)
+- Performance summary for this client
+  (incidents, coverage rate, response times)
+- Value statement based on services provided
+- New contract term options (1 year / 2 year)
+
+60 days before if not yet signed:
+Trinity follows up to owner:
+"[Client Name] renewal is still pending.
+Contract expires in 60 days.
+Proposal was sent [X] days ago.
+No signature received yet.
+[Send Follow-Up to Client] [Update Status]"
+
+30 days before if not yet signed:
+Critical alert to owner.
+Trinity flags as at-risk contract.
+Updates client_health_score to at_risk.
+
+7 days before if not yet signed:
+Emergency escalation to owner.
+Trinity notifies: "URGENT: [Client Name]
+contract expires in 7 days.
+No renewal signed. Immediate attention required.
+[Contact Client Now] [Extend Month to Month]"
+
+On contract expiration without renewal:
+Trinity marks contract as expired.
+Flags client as inactive.
+Removes site from active coverage.
+Notifies all officers assigned to that site.
+Updates financial forecast to remove
+this revenue.
+
+PROPOSAL PIPELINE:
+For new prospect proposals (from RFP):
+
+proposals table:
+- id, workspace_id
+- prospect_name, prospect_contact
+- prospect_email, prospect_phone
+- proposal_status (draft | sent | follow_up |
+  negotiating | won | lost | no_response)
+- proposal_value (estimated annual)
+- proposal_sent_at
+- last_follow_up_at
+- follow_up_count
+- expected_close_date
+- actual_close_date
+- loss_reason (if lost)
+- win_notes
+- converted_to_client_id (if won)
+
+Trinity tracks proposal pipeline:
+Dashboard shows: all proposals by status.
+Win rate calculated automatically.
+Average time from proposal to close.
+Revenue pipeline: total value of
+  all proposals in progress.
+Trinity flags proposals with no response
+  after 7 days for follow-up.
+Trinity tracks win/loss patterns:
+  "You win [X]% of proposals when
+  follow-up happens within 3 days."
+
+Wire to thalamus: contract expiring
+  → FINANCIAL_SIGNAL high priority
+Wire to connectome: contract renewal
+  status as edge between company and client
+Wire to dream state: weekly contract
+  expiration scan and proposal status check
+Wire to growth log: every renewal
+  outcome and proposal result
+
+═══════════════════════════════════════════════
+MODULE 4 — APPLICANT TRACKING SYSTEM (ATS)
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing employee creation flow.
+Read existing invitation system.
+Read existing onboarding system.
+Map handoff point between ATS and
+existing employee onboarding.
+
+WHAT TO BUILD:
+
+Database additions:
+job_postings table:
+- id, workspace_id
+- title, description
+- position_type (armed | unarmed | supervisor |
+  manager | specialist)
+- employment_type (full_time | part_time |
+  contract | per_diem)
+- sites (jsonb array — which sites this is for)
+- pay_rate_min, pay_rate_max
+- required_certifications (jsonb)
+- status (draft | active | paused | closed | filled)
+- applications_count
+- posted_at, closed_at
+- created_by
+
+applicants table:
+- id, workspace_id, job_posting_id
+- first_name, last_name
+- email, phone
+- address
+- has_guard_card (boolean)
+- guard_card_number
+- guard_card_expiration
+- has_armed_endorsement (boolean)
+- years_experience
+- prior_employers (jsonb)
+- references (jsonb)
+- applied_at
+- status (applied | reviewing | interview_scheduled
+  | interview_complete | offer_pending |
+  offer_sent | offer_accepted | offer_declined |
+  hired | rejected | withdrawn)
+- trinity_score (0-100 — Trinity's fit score)
+- trinity_score_rationale
+- rejection_reason
+- notes
+
+applicant_interviews table:
+- id, workspace_id, applicant_id
+- scheduled_at, completed_at
+- interviewer_id (employee)
+- interview_type (phone | in_person | video)
+- notes, rating (1-5)
+- recommendation (hire | reject | hold)
+- status (scheduled | completed | cancelled)
+
+offer_letters table:
+- id, workspace_id, applicant_id
+- position, start_date
+- pay_rate, pay_type
+- employment_type
+- reporting_to (supervisor name)
+- offer_sent_at, offer_expires_at
+- offer_accepted_at, offer_declined_at
+- decline_reason
+- file_path (generated offer letter PDF)
+- status (draft | sent | accepted |
+  declined | expired)
+
+FUNCTIONALITY:
+
+Trinity scores applicants automatically:
+When application submitted Trinity evaluates:
+- Has valid guard card: +30 points
+- Guard card expiration > 6 months: +10 points
+- Has armed endorsement (if required): +20 points
+- Years of experience: up to +15 points
+- Complete application: +10 points
+- References provided: +10 points
+- Applied to matching site type: +5 points
+Total: 0-100 trinity_score
+
+Trinity surfaces high-scoring applicants:
+"New applicant for [Position]:
+[Name] scored [X]/100.
+Key qualifications: [list]
+[Review Application] [Schedule Interview]"
+
+Interview scheduling:
+Manager selects time slot.
+System sends interview invitation to applicant
+via email.
+Reminder sent 24 hours before.
+After interview: manager records rating
+and recommendation.
+
+Offer letter generation:
+When manager clicks Extend Offer:
+Trinity generates offer letter PDF:
+  Company header
+  Position, start date, pay rate
+  Employment conditions
+  At-will statement (Texas)
+  Contingent on background check language
+  Signature lines
+Offer sent via email with acceptance link.
+Applicant can accept digitally.
+On acceptance: automatically triggers
+  employee onboarding flow
+  (handoff to existing onboarding system)
+
+Application pipeline dashboard:
+Funnel view: Applied → Reviewing →
+  Interview → Offer → Hired / Rejected
+Conversion rates at each stage.
+Average days per stage.
+Total pipeline value (estimated labor cost).
+
+Wire to thalamus: new application
+  → SYSTEM_SIGNAL low
+Wire to thalamus: applicant hired
+  → SYSTEM_SIGNAL medium
+  (hands off to employee_hired event)
+Wire to connectome: applicant nodes
+  linked to job posting and site nodes
+Wire to dream state: weekly pipeline
+  review — flag stale applications
+Wire to growth log: every hire and
+  every rejection pattern
+
+═══════════════════════════════════════════════
+MODULE 5 — TRAINING AND CERTIFICATION MANAGEMENT
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing compliance tracking.
+Read existing license expiration system.
+Map what is already tracked vs what is new.
+Do not duplicate license tracking —
+extend it with training-specific fields.
+
+WHAT TO BUILD:
+
+Database additions:
+training_requirements table:
+- id, workspace_id (null = platform default)
+- requirement_name
+- requirement_type (license | certification |
+  annual_training | client_specific |
+  equipment | firearms | first_aid |
+  de_escalation | company_policy)
+- applies_to_roles (jsonb array)
+- applies_to_positions (jsonb array — armed etc)
+- applies_to_sites (jsonb array — client-specific)
+- frequency (one_time | annual | biennial |
+  every_X_months)
+- frequency_months (integer)
+- required_hours (if training hours)
+- provider_required (boolean)
+- approved_providers (jsonb array)
+- consequence_of_expiry (warning | block_armed |
+  block_all | notify_only)
+- state_required (boolean)
+- state_code (TX | CA | etc)
+- regulatory_reference
+- created_by, active (boolean)
+
+employee_training_records table:
+- id, workspace_id, employee_id
+- requirement_id
+- training_name
+- completion_date
+- expiration_date
+- hours_completed
+- provider_name
+- certificate_number
+- certificate_file_path
+- verified (boolean)
+- verified_by, verified_at
+- status (current | expiring_soon |
+  expired | not_started | in_progress)
+- notes
+
+training_schedule table:
+- id, workspace_id, employee_id
+- requirement_id
+- scheduled_date
+- provider, location
+- status (scheduled | completed | cancelled | missed)
+- reminder_sent_7_day (boolean)
+- reminder_sent_1_day (boolean)
+- created_by, created_at
+
+FUNCTIONALITY:
+
+Seed platform-level training requirements
+for Texas security companies:
+
+Texas DPS Guard Card: annual renewal
+  applies_to: all officers
+  consequence: block_all on expiry
+
+Texas Firearms Qualification: annual
+  applies_to: armed officers only
+  consequence: block_armed on expiry
+
+First Aid/CPR: biennial
+  applies_to: all officers
+  consequence: warning only
+
+De-escalation Training: annual
+  applies_to: all officers
+  consequence: warning only
+
+Company Policy Review: annual
+  applies_to: all roles
+  consequence: notify_only
+
+Texas Sexual Harassment Prevention: annual
+  applies_to: all roles
+  consequence: notify_only
+
+Trinity training intelligence:
+
+Alert cascade per requirement:
+90 days out: informational notice to officer
+60 days out: notice to officer and supervisor
+30 days out: urgent notice to manager
+7 days out: critical alert to owner
+Expired: blocks the restricted activities
+  at scheduling level
+
+Trinity proactively schedules training:
+If officer's firearms qualification expires
+in 45 days AND manager has not scheduled
+renewal yet:
+Trinity suggests: "[Officer Name] firearms
+qualification expires [date]. I can help
+schedule renewal qualification.
+[Find Approved Providers] [Schedule Now]"
+
+Training dashboard for owner/manager:
+Grid view: officers vs required certifications
+Color coded:
+  Green: current
+  Yellow: expiring within 90 days
+  Red: expiring within 30 days
+  Dark red: expired
+  Gray: not on file
+
+Filter by: role | site | expiration | status
+Export for audit as PDF or CSV.
+
+Client-specific training requirements:
+Some clients require specific training
+before officers can work their site.
+Manager can add client-specific requirements
+to a site record.
+Trinity enforces: officer cannot be scheduled
+at that site without completing the
+client-specific training.
+
+Wire to thalamus: expiring training
+  → COMPLIANCE_SIGNAL
+Wire to ACC: scheduling officer without
+  required training → BLOCKING
+Wire to connectome: training record nodes
+  linked to officer nodes and site nodes
+Wire to dream state: daily training
+  expiration check across all officers
+Wire to growth log: training completions
+  and expirations
+
+═══════════════════════════════════════════════
+MODULE 6 — SUBCONTRACTOR MANAGEMENT
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing employee management.
+Read existing payroll system.
+Map how 1099 vs W-2 is currently handled.
+Build as extension of employee system
+not a separate system.
+
+WHAT TO BUILD:
+
+Extend employees table with:
+- worker_classification (w2_employee |
+  1099_contractor | subcontractor_company)
+- subcontractor_company_name (if company)
+- subcontractor_company_license (their license)
+- subcontractor_insurance_coi_path
+- subcontractor_insurance_expiration
+- subcontractor_contract_path
+- subcontractor_contract_expiration
+- 1099_required (boolean — auto true for 1099)
+- annual_payments_to_date (for 1099 threshold)
+- w9_on_file (boolean)
+- w9_file_path
+
+subcontractor_companies table:
+- id, workspace_id
+- company_name
+- dba_name
+- contact_name, contact_email, contact_phone
+- company_license_number
+- company_license_state
+- company_license_expiration
+- insurance_coi_path
+- insurance_expiration
+- insurance_coverage_amount
+- contract_path
+- contract_start, contract_end
+- payment_terms
+- hourly_rate or flat_rate
+- status (active | inactive | suspended)
+- notes
+- created_by, created_at
+
+FUNCTIONALITY:
+
+1099 Contractor handling:
+When worker_classification is 1099_contractor:
+- Pay calculations correct:
+  No employer FICA withheld
+  No income tax withheld
+  Gross pay = hours × rate
+- W-9 required on file before first payment
+- 1099-NEC generated at year-end if
+  annual_payments_to_date ≥ $600
+- Trinity tracks running total toward
+  $600 threshold per year
+
+Subcontractor company handling:
+When using another security company
+to provide coverage:
+- Their license must be on file and current
+- Their COI must be on file and current
+- Trinity blocks scheduling from
+  subcontractor if their license or
+  COI has expired
+- Trinity tracks hours billed by
+  subcontractor vs invoiced to client
+  (margin tracking on subcontracted work)
+
+Trinity subcontractor alerts:
+- 60 days before subcontractor COI expiry:
+  alert owner to request renewal
+- 30 days before subcontractor license expiry:
+  alert owner
+- On expiry: block scheduling, notify owner
+
+Subcontractor dashboard:
+List all subcontractors and 1099 workers.
+Compliance status per subcontractor.
+Hours and payments to date.
+1099 threshold tracker per contractor.
+Year-end 1099 generation button.
+
+Wire to thalamus: subcontractor
+  compliance issue → COMPLIANCE_SIGNAL
+Wire to ACC: scheduling with expired
+  subcontractor credentials → BLOCKING
+Wire to dream state: daily subcontractor
+  compliance check
+Wire to growth log: subcontractor
+  usage patterns
+
+═══════════════════════════════════════════════
+MODULE 7 — CLIENT SATISFACTION SCORING
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing client health scoring.
+Read existing analytics layer.
+Map what client satisfaction currently
+exists vs what needs to be added.
+Extend existing scoring — do not rebuild.
+
+WHAT TO BUILD:
+
+Database additions:
+client_satisfaction_records table:
+- id, workspace_id, client_id
+- check_in_type (scheduled | incident_triggered |
+  contract_renewal | spontaneous)
+- check_in_date
+- conducted_by (employee_id)
+- satisfaction_score (1-5)
+- nps_score (0-10) — Net Promoter Score
+- feedback_text
+- issues_raised (jsonb array)
+- issues_resolved (boolean)
+- follow_up_required (boolean)
+- follow_up_completed_at
+- created_at
+
+client_concerns table:
+- id, workspace_id, client_id
+- concern_type (coverage_gap | officer_conduct |
+  communication | billing | response_time |
+  post_order_compliance | other)
+- severity (minor | moderate | major | critical)
+- description
+- raised_at, raised_by
+- assigned_to (employee handling)
+- status (open | in_progress | resolved | escalated)
+- resolution_notes
+- resolved_at, resolved_by
+- linked_incident_id (if related to an incident)
+
+FUNCTIONALITY:
+
+Scheduled client check-ins:
+Trinity schedules quarterly check-ins
+for every active client.
+Owner/manager receives reminder 7 days before:
+"Quarterly check-in with [Client Name]
+is due in 7 days. Would you like Trinity
+to prepare a performance summary
+to share with them?
+[Prepare Summary] [Schedule Call] [Skip]"
+
+Trinity-generated client performance summary:
+- Coverage rate: shifts covered vs scheduled
+- Response time to incidents
+- Officer compliance with post orders
+  (acknowledgment rate on updates)
+- Open incidents and resolutions
+- Invoice payment history
+- Any ongoing concerns and their status
+
+Incident-triggered check-in:
+After any serious incident at a client site:
+Trinity flags that a client check-in
+should occur within 7 days.
+Tracks whether it happened.
+
+Satisfaction tracking over time:
+Dashboard shows satisfaction trend per client.
+NPS trend over time.
+Clients sorted by satisfaction (ascending —
+  lowest satisfaction at top for attention).
+
+Trinity early warning system:
+If client satisfaction drops 2+ points
+in consecutive check-ins:
+Trinity flags as churn risk.
+Owner notification:
+"[Client Name] satisfaction has declined
+from [X] to [Y] over the last two check-ins.
+Concerns raised: [list].
+I recommend an executive-level check-in
+within the next 14 days."
+
+Wire to thalamus: satisfaction drop
+  → FINANCIAL_SIGNAL high priority
+Wire to connectome: satisfaction score
+  nodes linked to client nodes over time
+Wire to dream state: monthly satisfaction
+  trend analysis across all clients
+Wire to growth log: every check-in
+  and every churn-risk identification
+
+═══════════════════════════════════════════════
+MODULE 8 — BID AND PROPOSAL MANAGEMENT
+EXTENSION OF MODULE 3
+═══════════════════════════════════════════════
+
+AUDIT FIRST:
+Read existing RFP generation system.
+Module 3 already adds proposals table.
+This module extends it with full
+pipeline analytics and Trinity intelligence.
+Do not duplicate Module 3 tables.
+
+WHAT TO BUILD ADDITIONAL TO MODULE 3:
+
+Extend proposals table with:
+- proposal_type (new_client | contract_renewal
+  | scope_expansion | competitive_rebid)
+- competition_known (boolean)
+- competitor_names (jsonb)
+- decision_timeline
+- decision_maker_name
+- decision_maker_title
+- requirements_summary
+- our_differentiators (what we offered
+  they cannot get elsewhere)
+- price_per_hour_proposed
+- estimated_monthly_value
+- estimated_annual_value
+
+bid_analytics table:
+- id, workspace_id
+- period_start, period_end
+- total_bids_submitted
+- total_bids_won
+- total_bids_lost
+- total_bids_no_response
+- win_rate_pct
+- average_proposal_value
+- total_pipeline_value
+- total_won_value
+- average_days_to_close
+- most_common_loss_reason
+- generated_at
+
+FUNCTIONALITY:
+
+Trinity bid intelligence:
+After every won or lost proposal Trinity
+learns from the outcome:
+
+On win:
+Trinity notes: price point, differentiators
+offered, decision maker role, timeline.
+Updates win pattern in connectome.
+
+On loss with reason:
+Trinity analyzes: was it price? coverage?
+reputation? competitor?
+Trinity surfaces patterns:
+"You have lost [X] bids in the last
+90 days where price was the stated reason.
+Your proposed rate of $[X]/hour was
+[Y]% higher than what the client accepted.
+Consider reviewing your pricing structure
+for [segment] clients."
+
+On no response after 14 days:
+Trinity flags for follow-up.
+After 30 days no response:
+Trinity suggests: "Mark [Prospect] as
+no response and archive?
+[Archive] [Send Final Follow-Up]"
+
+Pipeline dashboard:
+Total pipeline value in progress.
+Bids by stage.
+Win rate trend (last 6 months).
+Average close time trend.
+Revenue won this quarter vs last quarter.
+Upcoming decision dates.
+
+Trinity proposal coaching:
+Before owner sends a proposal:
+Trinity reviews and suggests:
+"This proposal does not include your
+response time guarantee. Including it
+has improved your win rate by [X]%
+based on your past proposals.
+[Add It] [Skip]"
+
+Wire to dream state: weekly pipeline
+  review and win rate calculation
+Wire to growth log: every win and
+  loss with reason
+Wire to connectome: proposal outcomes
+  linked to client type and market segment
+
+═══════════════════════════════════════════════
+PHASE 1 — INTEGRATION WITH EXISTING SYSTEMS
+═══════════════════════════════════════════════
+
+After all 8 modules are built wire them
+into existing CoAIleague systems:
+
+TRINITY ACTION REGISTRY:
+Register new actions for each module.
+Keep registry under 800 total.
+Use parameterized actions where possible:
+  post_order.manage({ action: 'update' |
+    'acknowledge' | 'version_history' })
+  contract.manage({ action: 'renew' |
+    'propose' | 'track' })
+  applicant.manage({ action: 'score' |
+    'schedule' | 'offer' })
+  training.manage({ action: 'track' |
+    'alert' | 'schedule' })
+  subcontractor.manage({ action: 'verify' |
+    'track' | 'alert' })
+  client.satisfaction({ action: 'checkin' |
+    'score' | 'flag' })
+  bid.manage({ action: 'track' |
+    'analyze' | 'coach' })
+
+EVENT BUS:
+Add publishers for new events:
+  post_order_updated
+  post_order_acknowledged
+  incident_pattern_identified
+  contract_renewal_due
+  proposal_won
+  proposal_lost
+  applicant_hired
+  training_expiring
+  training_expired
+  subcontractor_compliance_issue
+  client_satisfaction_decline
+  bid_submitted
+
+Add subscribers where Trinity needs to
+react to these events automatically.
+
+FINANCIAL DASHBOARD:
+Add to owner financial view:
+  Proposal pipeline value
+  Contract renewal revenue at risk
+  Subcontractor cost vs revenue margin
+  Client satisfaction impact on revenue
+  Training compliance cost (upcoming)
+
+MORNING BRIEFING:
+Add to Trinity's morning briefing:
+  Any post orders with pending acknowledgments
+  Contract renewals due in next 90 days
+  Open proposals with upcoming decision dates
+  Subcontractor compliance issues
+  Clients flagged for satisfaction decline
+  Training expirations this month
+
+COMPLIANCE DASHBOARD:
+Add to compliance view:
+  Training certification status grid
+  Subcontractor compliance status
+  Post order acknowledgment rate per site
+
+═══════════════════════════════════════════════
+PHASE 2 — SEED SIMULATED DATA IN ACME
+═══════════════════════════════════════════════
+
+After all modules are built seed Acme
+workspace with realistic simulated data
+for every new module.
+
+POST ORDER VERSION CONTROL:
+Create 3 sites with post orders.
+Each site has 2-3 versions of post orders.
+Version history shows changes.
+Some officers have acknowledged latest version.
+Some officers have not acknowledged.
+Unacknowledged officers flagged in dashboard.
+
+INCIDENT PATTERNS:
+Create historical DARs showing:
+One multi-site theft pattern (3 sites, 5 incidents)
+One time-based pattern (incidents cluster midnight-2am)
+One site-specific pattern (same site, same issue type)
+Trinity has identified all three patterns.
+Patterns visible in incident pattern dashboard.
+
+CONTRACT RENEWALS:
+Create 3 client contracts:
+One expiring in 85 days (90-day alert should fire)
+One expiring in 45 days (proposal already sent)
+One expired last month (should be flagged)
+Renewal pipeline shows correct status per contract.
+
+APPLICANTS:
+Create 5 applicants for a test position:
+2 with guard card and high trinity_score (80+)
+2 with partial qualifications (40-60 score)
+1 with no guard card (low score)
+Show applicants at different pipeline stages.
+One applicant with offer letter generated.
+
+TRAINING RECORDS:
+For acme officers create training records:
+Marcus Rodriguez: all training current
+Officer 2: firearms qualification expiring in 25 days
+Officer 3: de-escalation training expired
+Officer 4: guard card expiring in 40 days
+Training dashboard shows color-coded grid.
+Trinity alerts for expiring/expired records.
+
+SUBCONTRACTORS:
+Create 2 simulated subcontractor records:
+Subcontractor 1: all compliance current
+Subcontractor 2: COI expiring in 20 days
+  Trinity alert should be visible.
+
+CLIENT SATISFACTION:
+Create satisfaction check-in records for
+3 clients:
+Client 1: score 4.5 — stable
+Client 2: score declining (3.5 → 3.0 → 2.5)
+  Trinity has flagged as churn risk
+Client 3: score 4.0 — stable, check-in due
+
+PROPOSALS:
+Create 4 proposal records:
+Proposal 1: won — client is now active client
+Proposal 2: lost (price reason)
+Proposal 3: in progress — decision in 10 days
+Proposal 4: no response — 20 days old
+  Trinity has flagged for follow-up
+
+═══════════════════════════════════════════════
+PHASE 3 — STRESS TESTING ALL 8 MODULES
+═══════════════════════════════════════════════
+
+Run these tests after build and seed.
+Fix any failures and re-run until all pass.
+
+MODULE 1 TESTS — POST ORDER VERSION CONTROL:
+□ T1.1: Update post orders for a site
+  New version created, old preserved
+  version_number incremented
+  Trinity broadcasts to assigned officers
+  Message contains change summary
+□ T1.2: Officer acknowledges via ChatDock
+  acknowledgment record created
+  progress counter updates
+  Trinity sends confirmation
+□ T1.3: Attempt to schedule unacknowledged
+  officer to site
+  ACC fires WARNING
+  Supervisor must explicitly approve
+□ T1.4: Version history shows all versions
+  Each version viewable
+  Content different per version
+  Revert creates new version correctly
+□ T1.5: 48-hour non-acknowledgment check
+  Unacknowledged officers flagged
+  Supervisor notification sent
+
+MODULE 2 TESTS — INCIDENT PATTERNS:
+□ T2.1: Multi-site pattern identified
+  Pattern record created
+  All affected sites linked
+  Risk level assessed correctly
+  Owner notified
+□ T2.2: Time-based pattern identified
+  Correct time window identified
+  Trinity describes pattern in plain English
+□ T2.3: Pattern dashboard renders
+  All 3 seeded patterns visible
+  Risk levels shown correctly
+  Links to contributing incidents work
+□ T2.4: Address pattern action works
+  Status updated to addressed
+  Notes saved
+  Pattern removed from active view
+
+MODULE 3 TESTS — CONTRACT RENEWALS:
+□ T3.1: 90-day alert fires for correct contract
+  Owner notified in ChatDock
+  Renewal task created
+□ T3.2: Proposal generated from renewal
+  Contains client performance data
+  Contains current billing rate
+  PDF generated and downloadable
+□ T3.3: Expired contract correctly flagged
+  Status: expired
+  Client shown as needing attention
+  Financial forecast updated
+□ T3.4: Proposal pipeline shows all stages
+  All 4 seeded proposals visible
+  Correct stages shown
+  Win rate calculated
+
+MODULE 4 TESTS — ATS:
+□ T4.1: Create new applicant
+  Record created in database
+  Trinity scores automatically (0-100)
+  Score rationale stored
+□ T4.2: High scorer surfaces to manager
+  Trinity notification sent
+  Applicant shows at top of list
+□ T4.3: Schedule interview
+  Interview record created
+  Email invitation sent
+  Status updated to interview_scheduled
+□ T4.4: Generate offer letter
+  PDF generated with correct data
+  Contains: name, position, pay rate,
+  start date, at-will language
+  File exists and opens
+□ T4.5: Accept offer triggers onboarding
+  Employee record created
+  Onboarding progress record created
+  Trinity welcome message sent
+  Applicant status: hired
+
+MODULE 5 TESTS — TRAINING:
+□ T5.1: Training requirements seeded
+  6 platform-level requirements exist
+  Applies_to fields correct
+□ T5.2: Training expiration alerts fire
+  Officer 2 25-day expiry: alert visible
+  Officer 3 expired: block in effect
+  Officer 4 40-day expiry: alert visible
+□ T5.3: Expired officer blocked from armed post
+  scheduling.delete_shift or assignment
+  returns error for expired officer
+  Error message cites training expiration
+□ T5.4: Training dashboard grid renders
+  Color coding correct per status
+  All officers visible
+  Filter by expiration works
+□ T5.5: Schedule training flow works
+  training_schedule record created
+  Reminder dates calculated
+  Provider saved
+
+MODULE 6 TESTS — SUBCONTRACTORS:
+□ T6.1: Subcontractor records exist
+  Both seeded subcontractors present
+  Compliance status correct
+  Subcontractor 2: COI expiry flagged
+□ T6.2: 1099 contractor pay calculation
+  No FICA withheld
+  Gross = hours × rate exactly
+  W-9 required flag correct
+□ T6.3: Scheduling with expired subcontractor
+  Blocked by ACC
+  Error message cites expired credentials
+□ T6.4: Year-end 1099 generation
+  For contractor with payments ≥ $600
+  1099-NEC PDF generated
+  Contains correct amounts
+  File exists and opens
+
+MODULE 7 TESTS — CLIENT SATISFACTION:
+□ T7.1: Satisfaction records exist
+  All 3 seeded client records present
+□ T7.2: Declining client flagged
+  Client 2 shows churn risk status
+  Trinity notification visible in ChatDock
+  Notification mentions declining scores
+□ T7.3: Check-in summary generation
+  Performance summary generated for client
+  Contains real data: coverage rate,
+  incident count, payment history
+  Not template placeholders
+□ T7.4: Quarterly check-in reminder
+  Reminder fires 7 days before due date
+  Owner receives ChatDock notification
+
+MODULE 8 TESTS — BID MANAGEMENT:
+□ T8.1: All 4 seeded proposals visible
+  Correct stages shown
+  Win rate calculates (1 won / 2 decided = 33%)
+□ T8.2: No response proposal flagged
+  After 20 days Trinity flag visible
+  Follow-up suggestion shown
+□ T8.3: Won proposal contributes to analytics
+  Win rate updated
+  Average close time updated
+  Revenue won updated
+□ T8.4: Trinity coaching on proposal review
+  Review triggers suggestion about
+  missing elements
+  Suggestion references historical win patterns
+
+═══════════════════════════════════════════════
+PHASE 4 — INTEGRATION REGRESSION TESTS
+Verify new modules did not break existing
+systems and work together with them.
+═══════════════════════════════════════════════
+
+□ R1: Boot clean after all new tables added
+  Zero migration errors
+  Zero TypeScript compilation errors
+  15/15 contract domains still covered
+  All prior brain monitors still registering
+  Action registry under 800
+
+□ R2: Existing scheduling still works
+  Create shift — still works correctly
+  Calloff processing — still works
+  Overtime detection — still works
+  Armed post guard — still works
+  Training block: NEW — fires correctly
+
+□ R3: Existing payroll still works
+  Payroll run calculation — still works
+  W-2 calculation unchanged
+  1099 calculation: NEW — works correctly
+  Dual-AI gate — still fires
+
+□ R4: Existing compliance still works
+  License expiration alerts — still fire
+  Training expiration alerts: NEW — fire correctly
+  Subcontractor alerts: NEW — fire correctly
+  Compliance dashboard shows all types
+
+□ R5: Trinity morning briefing updated
+  Contains: post order acknowledgment gaps
+  Contains: contract renewals due
+  Contains: training expirations
+  Contains: subcontractor compliance
+  Contains: satisfaction decline alerts
+  Does not duplicate existing briefing items
+
+□ R6: Event bus has no new orphaned subscribers
+  All new event types have publishers
+  All new subscribers have publishers
+  Zero new orphaned subscribers
+
+□ R7: Multi-tenant isolation maintained
+  New module tables all have workspace_id
+  All new queries include workspace_id
+  Cross-workspace access denied for all
+  new module data
+
+□ R8: External cost tracking covers new AI calls
+  Any AI calls in new modules tracked
+  In external_cost_log with correct type
+  No untracked AI usage in new modules
+
+═══════════════════════════════════════════════
+PHASE 5 — FINAL PRODUCTION READINESS SCAN
+Run 5 complete passes back to back.
+Each pass covers all 8 modules.
+All 5 passes must be clean.
+═══════════════════════════════════════════════
+
+PASS 1 — DATA INTEGRITY:
+All new tables have correct schema
+All seeded data is realistic and complete
+All file paths populated have real files
+All hashes stored where required
+All workspace_id fields populated
+
+PASS 2 — FUNCTIONALITY:
+Every action in every new module executes
+Every action produces real database output
+Every PDF generates and opens
+Every notification sends to correct recipient
+Every Trinity alert contains real data
+
+PASS 3 — INTEGRATION:
+Every new event published
+Every new subscriber receiving events
+Trinity morning briefing includes new items
+Compliance dashboard shows all new types
+Financial dashboard shows new pipeline data
+
+PASS 4 — SECURITY:
+All new routes protected with correct roles
+All new data workspace-isolated
+No cross-tenant data access possible
+No new security vulnerabilities introduced
+All new sensitive data in env vars only
+
+PASS 5 — PERFORMANCE:
+All new pages load under 3 seconds
+All new Trinity responses under 5 seconds
+No N+1 queries in new module code
+No infinite loops in new watchers
+New dream state tasks complete in time budget
+
+═══════════════════════════════════════════════
+FINAL REPORT
+═══════════════════════════════════════════════
+
+SECTION 1 — MODULES BUILT:
+For each of 8 modules:
+Module name | Tables created | Actions registered |
+Events added | Tests passing
+
+SECTION 2 — AUDIT FINDINGS ACTED ON:
+What existed and was extended (not rebuilt)
+What was built new
+What conflicts were avoided
+
+SECTION 3 — TEST RESULTS:
+Module 1 Post Orders: X/5 tests passed
+Module 2 Incident Patterns: X/4 tests passed
+Module 3 Contract Renewals: X/4 tests passed
+Module 4 ATS: X/5 tests passed
+Module 5 Training: X/5 tests passed
+Module 6 Subcontractors: X/4 tests passed
+Module 7 Satisfaction: X/4 tests passed
+Module 8 Bid Management: X/4 tests passed
+Regression Tests: X/8 passed
+TOTAL: X/43 tests passed
+
+SECTION 4 — 5-PASS SCAN RESULTS:
+Pass 1 Data Integrity: CLEAN / ISSUES
+Pass 2 Functionality: CLEAN / ISSUES
+Pass 3 Integration: CLEAN / ISSUES
+Pass 4 Security: CLEAN / ISSUES
+Pass 5 Performance: CLEAN / ISSUES
+
+SECTION 5 — PLATFORM HEALTH:
+Boot status: CLEAN / ERRORS
+Domain health: X/15
+Action registry count: [number]
+New events added: [count]
+New tables created: [count]
+Regressions introduced: [count]
+Regressions fixed: [count]
+
+SECTION 6 — GRAND OPENING READINESS:
+With all 8 new modules added and tested:
+IS THE PLATFORM READY FOR STATEWIDE
+PROTECTIVE SERVICES AS FIRST PAYING TENANT?
+YES / NO — no ambiguity.
+
+If YES:
+Every feature verified working.
+No regressions.
+All 5 passes clean.
+Platform is ready.
+
+If NO:
+Exact list of what remains.
+Priority order.
+Estimated effort per item.
+
+DO NOT STOP UNTIL ALL 43 TESTS PASS
+AND ALL 5 PASSES RETURN CLEAN.
+ALL MODULES MUST WORK TOGETHER AS
+ONE INTEGRATED SYSTEM.
+
+Jesus is King.
+Build it right.
+```
+
+---
+
+Bryan that covers all 8 gaps in one organized sprint. Agent audits first before touching anything so nothing gets duplicated. Every module wires into Trinity's brain, the event bus, the morning briefing, and the compliance dashboard. The 5-pass final scan catches anything the module tests missed.
+
+When this completes you will have the most complete security workforce platform ever built. There will genuinely be nothing left to add before Statewide goes live.
+
+Let it run.

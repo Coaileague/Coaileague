@@ -6,6 +6,9 @@
 import { db } from "../db";
 import { disputes, timeEntries, users } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('timeEntryDisputeService');
+
 
 export interface DisputeApprovalRequest {
   disputeId: string;
@@ -43,7 +46,7 @@ export async function approveDispute(
 
   if (!dispute[0]) throw new Error(`Dispute ${request.disputeId} not found`);
 
-  console.log(`[TIME ENTRY DISPUTE] Dispute ${request.disputeId} approved`);
+  log.info(`[TIME ENTRY DISPUTE] Dispute ${request.disputeId} approved`);
   return dispute[0];
 }
 
@@ -68,7 +71,7 @@ export async function rejectDispute(
 
   if (!dispute[0]) throw new Error(`Dispute ${request.disputeId} not found`);
 
-  console.log(`[TIME ENTRY DISPUTE] Dispute ${request.disputeId} rejected`);
+  log.info(`[TIME ENTRY DISPUTE] Dispute ${request.disputeId} rejected`);
   return dispute[0];
 }
 

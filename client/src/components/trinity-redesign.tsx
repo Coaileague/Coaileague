@@ -152,6 +152,20 @@ const STATE_MUTATIONS: Record<string, {
     rotationSpeed: 0,
     particleCount: 18,
   },
+  SPEAKING: {
+    primaryColor: '#22d3ee',
+    secondaryColor: '#FFD700',
+    accentColor: '#a5f3fc',
+    animation: 'waveform',
+    scale: 1.08,
+    petalLength: 0.40,
+    petalWidth: 0.13,
+    jitter: 0.5,
+    coreSize: 0.15,
+    coreGlow: 0.35,
+    rotationSpeed: 8,
+    particleCount: 22,
+  },
   UPLOADING: {
     primaryColor: '#00BFFF',
     secondaryColor: '#FFD700',
@@ -240,7 +254,7 @@ const STATE_MUTATIONS: Record<string, {
 
 const CYCLE_MODES: MascotMode[] = [
   'IDLE', 'THINKING', 'ANALYZING', 'SEARCHING', 'SUCCESS', 
-  'LISTENING', 'UPLOADING', 'CELEBRATING', 'ADVISING', 'CODING'
+  'LISTENING', 'SPEAKING', 'UPLOADING', 'CELEBRATING', 'ADVISING', 'CODING'
 ];
 
 const RESPONSIVE_SIZES = {

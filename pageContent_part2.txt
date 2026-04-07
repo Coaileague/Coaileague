@@ -1,0 +1,100 @@
+1105-              {isMobile ? (
+1106-                <div className="space-y-3">
+1107-                  {/* Status Hero Widget */}
+1108-                  <div className={`rounded-2xl overflow-hidden shadow-sm border ${
+1109-                    currentlyClocked
+1110-                      ? onBreak
+1111-                        ? 'border-orange-200 dark:border-orange-800/50'
+1112-                        : 'border-emerald-200 dark:border-emerald-800/50'
+1113-                      : 'border-border'
+1114-                  }`}>
+1115-                    {/* Gradient top strip */}
+1116-                    <div className={`h-1.5 w-full ${
+1117-                      currentlyClocked
+1118-                        ? onBreak
+1119-                          ? 'bg-gradient-to-r from-orange-400 to-amber-500'
+1120-                          : 'bg-gradient-to-r from-emerald-400 to-green-500'
+1121-                        : 'bg-gradient-to-r from-blue-400 to-indigo-500'
+1122-                    }`} />
+1123-
+1124-                    <div className="bg-card p-4">
+1125-                      {/* Header row: status badge + elapsed time */}
+1126-                      <div className="flex items-center justify-between mb-3">
+1127-                        <div className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+1128-                          currentlyClocked
+1129-                            ? onBreak
+1130-                              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+1131-                              : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+1132-                            : 'bg-muted text-muted-foreground'
+1133-                        }`}>
+1134-                          <div className={`w-1.5 h-1.5 rounded-full ${
+1135-                            currentlyClocked
+1136-                              ? onBreak ? 'bg-orange-500' : 'bg-emerald-500 animate-pulse'
+1137-                              : 'bg-muted-foreground/50'
+1138-                          }`} />
+1139-                          {currentlyClocked ? (onBreak ? 'On Break' : 'On Shift') : 'Off Shift'}
+1140-                        </div>
+1141-
+1142-                        {currentlyClocked && clockedInTime && (
+1143-                          <div className="text-right">
+1144-                            <span className="text-2xl font-black tabular-nums text-foreground">
+1145-                              {Math.floor((now - clockedInTime.getTime()) / (1000 * 60 * 60))}
+1146-                              <span className="text-lg font-bold text-muted-foreground">h</span>
+1147-                              {String(Math.floor(((now - clockedInTime.getTime()) / (1000 * 60)) % 60)).padStart(2, '0')}
+1148-                              <span className="text-lg font-bold text-muted-foreground">m</span>
+1149-                            </span>
+1150-                          </div>
+1151-                        )}
+1152-                      </div>
+1153-
+1154-                      {/* Context info row */}
+1155-                      {currentlyClocked && clockedInTime ? (
+1156-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+1157-                          <div className="flex items-center gap-1">
+1158-                            <Clock className="w-3 h-3" />
+1159-                            <span>In at {clockedInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+1160-                          </div>
+1161-                          <div className="flex items-center gap-1">
+1162-                            <MapPin className="w-3 h-3" />
+1163-                            <span>GPS verified</span>
+1164-                          </div>
+1165-                        </div>
+1166-                      ) : (
+1167-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
+1168-                          <div className="flex items-center gap-1">
+1169-                            <MapPin className="w-3 h-3" />
+1170-                            <span>GPS required</span>
+1171-                          </div>
+1172-                          <div className="flex items-center gap-1">
+1173-                            <Camera className="w-3 h-3" />
+1174-                            <span>Photo required</span>
+1175-                          </div>
+1176-                        </div>
+1177-                      )}
+1178-
+1179-                      {/* Action Buttons — full width, no artificial max-width */}
+1180-                      {!currentlyClocked ? (
+1181-                        <Button
+1182-                          onClick={() => setClockInDialogOpen(true)}
+1183-                          className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold text-base shadow-lg shadow-emerald-500/20 h-12 rounded-xl"
+1184-                          data-testid="button-clock-in"
+1185-                        >
+1186-                          <LogIn className="w-5 h-5 mr-2" />
+1187-                          Clock In
+1188-                        </Button>
+1189-                      ) : !onBreak ? (
+1190-                        <div className="grid grid-cols-2 gap-2">
+1191-                          <Button
+1192-                            onClick={() => activeEntry && startBreakMutation.mutate({ entryId: activeEntry.id, breakType: 'meal' })}
+1193-                            className="bg-orange-500 text-white font-bold h-11 rounded-xl shadow-sm"
+1194-                            data-testid="button-start-break"
+1195-                          >
+1196-                            <Coffee className="w-4 h-4 mr-1.5" />
+1197-                            Break
+1198-                          </Button>
+1199-                          <Button
+1200-                            onClick={() => activeEntry && handleClockOut(activeEntry.id)}
+1201-                            className="bg-gradient-to-r from-red-500 to-rose-600 text-white font-bold h-11 rounded-xl shadow-lg shadow-red-500/20"
+1202-                            data-testid="button-clock-out"
+1203-                          >
+1204-                            <LogOut className="w-4 h-4 mr-1.5" />

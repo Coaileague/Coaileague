@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -108,7 +108,7 @@ export function UnassignedShiftsPanel({
       <Collapsible open={!isCollapsed} onOpenChange={onToggleCollapse}>
         <Card className="border-dashed border-amber-500/50" data-testid="unassigned-shifts-panel">
           <CardHeader className="py-3">
-            <CollapsibleTrigger className="flex items-center justify-between w-full">
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full">
               <CardTitle className="text-sm flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
                 Unassigned Shifts
@@ -197,11 +197,11 @@ export function UnassignedShiftsPanel({
         </Card>
       </Collapsible>
 
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle>Assign Shift</DialogTitle>
-          </DialogHeader>
+      <UniversalModal open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <UniversalModalContent size="md">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Assign Shift</UniversalModalTitle>
+          </UniversalModalHeader>
           
           {selectedShift && (
             <div className="py-4 space-y-4">
@@ -228,7 +228,7 @@ export function UnassignedShiftsPanel({
             </div>
           )}
 
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
               Cancel
             </Button>
@@ -238,9 +238,9 @@ export function UnassignedShiftsPanel({
             >
               {assignMutation.isPending ? 'Assigning...' : 'Assign'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
     </>
   );
 }

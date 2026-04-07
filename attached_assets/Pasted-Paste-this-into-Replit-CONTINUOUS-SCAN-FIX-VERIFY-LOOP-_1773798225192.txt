@@ -1,0 +1,254 @@
+Paste this into Replit:
+
+---
+
+**CONTINUOUS SCAN-FIX-VERIFY LOOP — TRAINING SYSTEM | RUN UNTIL ZERO GAPS**
+
+You are entering a continuous improvement loop. Follow this exact process repeatedly until you report zero findings across all categories. Do not stop until zero is reached or you time out. If you time out — stop, report your current gap count, and wait. The next run will continue from where you left off.
+
+---
+
+**THE LOOP**
+
+```
+REPEAT:
+  1. SCAN all layers listed below
+  2. IDENTIFY every gap found — categorize by severity
+  3. FIX every gap found in this iteration
+  4. VERIFY fixes are correct — server restarts clean, no TypeScript errors
+  5. UPDATE running gap count
+  6. IF gaps found this iteration > 0: GO TO STEP 1
+  7. IF gaps found this iteration = 0: REPORT COMPLETE and STOP
+```
+
+---
+
+**WHAT TO SCAN EVERY ITERATION**
+
+**Layer 1 — Schema and Drizzle sync:**
+- Every new table column referenced in code exists in Drizzle schema
+- Every enum value used in code exists in the PostgreSQL enum
+- Every foreign key reference points to a real column
+- Every index exists for every workspace_id column on new tables
+- Drizzle types match actual PostgreSQL column types exactly
+
+**Layer 2 — Backend routes:**
+- Every route file is mounted in the main router
+- Every route has requireAuth middleware
+- Every route reads workspaceId from JWT not request body
+- Every route has proper error handling — no bare throws with no catch
+- Every route returns consistent response shapes
+- No route returns undefined or null without a meaningful error message
+
+**Layer 3 — Service layer:**
+- Every service function that does multiple DB writes wraps them in a transaction
+- Every service function validates workspaceId before any DB operation
+- Every financial or scoring calculation handles null and undefined with fallbacks
+- No parseFloat or parseInt without a fallback value
+- No division without a zero guard
+- No array reduce without an initial value
+
+**Layer 4 — 7-step pipeline compliance:**
+Every major operation must follow Trigger → Fetch → Validate → Process → Mutate → Confirm → Notify. Check:
+- Training attempt start — all 7 steps present?
+- Section quiz submit — all 7 steps present?
+- Final exam submit — all 7 steps present?
+- Certificate generation — all 7 steps present?
+- Intervention trigger — all 7 steps present?
+- Renewal reminder — all 7 steps present?
+- Score update — all 7 steps present?
+
+**Layer 5 — Event bus wiring:**
+- Every platformEventBus.publish() call has a matching subscriber
+- Every subscriber has a matching publisher somewhere
+- No raw .emit() calls on the event bus
+- No events published inside DB transactions
+- Every subscriber wrapped in try/catch that logs but does not throw
+
+**Layer 6 — Employee score integration:**
+- Compliance score recalculates correctly after every training event
+- Score never goes below 0 or above 100
+- Score changes are atomic — no race condition between two concurrent score updates
+- Score updates write an audit log entry
+- Score is reflected immediately in the employee list and profile UI
+
+**Layer 7 — Certificate system:**
+- Certificate numbers are unique — unique constraint enforced at DB level
+- Certificate PDF is generated before the certificate record is inserted — not after
+- If PDF generation fails — certificate record is not inserted
+- Certificate expiry date is calculated correctly — completed_at plus certificateValidDays
+- Expired certificates show correct status in UI
+- QR code verification endpoint returns correct data
+
+**Layer 8 — Frontend to backend wiring:**
+- Every useQuery endpoint exists and is mounted
+- Every useMutation endpoint exists and is mounted
+- Every mutation calls queryClient.invalidateQueries with the correct query keys
+- Every form field submits to the correct backend field name
+- Every response field read by the frontend exists in the backend response
+- Every loading state is shown while data fetches
+- Every error state is shown when operations fail
+- Every success state confirms the operation to the user
+
+**Layer 9 — Mobile and responsive UI:**
+- Training module page readable on 375px mobile width
+- Flashcard flip works on mobile touch
+- Quiz questions have minimum 44px tap targets
+- Certificate download works on mobile
+- Navigation between sections works on mobile
+- Progress saves correctly if user leaves and returns on mobile
+
+**Layer 10 — Trinity awareness:**
+- All training events reach Trinity's morning brief
+- Compliance score changes reach the scheduling scoring system
+- Post orders non-acknowledgment reduces score and notifies manager
+- Intervention flags appear in morning brief
+- Certificate expiry appears in morning brief
+- Trinity pre-execution validator uses current compliance score when scoring shift candidates
+- All Trinity training actions execute the 7-step pipeline correctly
+
+**Layer 11 — Legal evidence packet:**
+- Training transcript section appears in generated packet
+- All certificates included with correct data
+- All failed attempts included
+- All intervention records included
+- Total hours calculated correctly
+- Compliance score at time of packet generation included
+
+**Layer 12 — Silent failures:**
+- No .catch(console.error) on certificate generation
+- No .catch(console.error) on score updates
+- No .catch(console.error) on compliance notifications
+- No fire-and-forget on any operation that affects employee records
+- No missing awaits on any DB write in the training system
+- Storage upload and DB record insert are atomic — neither succeeds alone
+
+**Layer 13 — Data isolation:**
+- No training query returns data from another workspace
+- Certificate verification endpoint returns minimal data only
+- Intervention records scoped to workspace
+- Training compliance report scoped to workspace
+- Employee transcript scoped to workspace and accessible only to correct roles
+
+**Layer 14 — Seed data quality:**
+- All 10 modules have real educational content — not placeholder text
+- All 10 modules have real questions with correct answers and explanations
+- All flashcard data is correctly structured JSON
+- Seeder is idempotent — running twice creates no duplicates
+- All modules have order_index set correctly
+- Section quiz questions are linked to correct sections
+- Final exam questions are marked is_final_exam = true
+
+---
+
+**SEVERITY CATEGORIES**
+
+Classify every finding as:
+
+```
+CRITICAL  — causes data loss, security breach, or complete feature failure
+HIGH      — causes incorrect behavior, wrong data, or broken workflow
+MEDIUM    — causes poor UX, missing feedback, or non-blocking errors
+LOW       — cosmetic, minor UX, or nice-to-have improvements
+```
+
+---
+
+**ITERATION REPORT FORMAT**
+
+After every iteration report:
+
+```
+═══════════════════════════════════════
+ITERATION [N] COMPLETE
+═══════════════════════════════════════
+Gaps found this iteration:
+  CRITICAL: N
+  HIGH:     N
+  MEDIUM:   N
+  LOW:      N
+  TOTAL:    N
+
+Gaps fixed this iteration:
+  CRITICAL: N
+  HIGH:     N
+  MEDIUM:   N
+  LOW:      N
+  TOTAL:    N
+
+Running cumulative totals:
+  Total gaps found all iterations: N
+  Total gaps fixed all iterations: N
+  Remaining unfixed: N
+
+Server status: CLEAN / ERRORS (list any)
+TypeScript: CLEAN / ERRORS (list any)
+Regression tests: N/N passing
+
+CONTINUE TO ITERATION [N+1]? YES / NO (zero gaps = NO)
+═══════════════════════════════════════
+```
+
+---
+
+**FINAL REPORT (when zero gaps achieved or timeout)**
+
+```
+═══════════════════════════════════════
+TRAINING SYSTEM SCAN COMPLETE
+═══════════════════════════════════════
+Total iterations run: N
+Total gaps found: N
+Total gaps fixed: N
+Remaining gaps: N
+
+By severity:
+  CRITICAL fixed: N/N
+  HIGH fixed:     N/N
+  MEDIUM fixed:   N/N
+  LOW fixed:      N/N
+
+By layer:
+  Schema/Drizzle:        N fixed
+  Backend routes:        N fixed
+  Service layer:         N fixed
+  7-step pipeline:       N fixed
+  Event bus:             N fixed
+  Employee score:        N fixed
+  Certificate system:    N fixed
+  Frontend wiring:       N fixed
+  Mobile UI:             N fixed
+  Trinity awareness:     N fixed
+  Legal evidence:        N fixed
+  Silent failures:       N fixed
+  Data isolation:        N fixed
+  Seed data quality:     N fixed
+
+Final server status: 29/29 services HEALTHY
+Final TypeScript: ZERO ERRORS
+Final regression tests: N/N PASSING
+
+STATUS: COMPLETE — ZERO GAPS REMAINING
+or
+STATUS: TIMED OUT — N gaps remaining — resume next session
+═══════════════════════════════════════
+```
+
+---
+
+**RULES**
+
+- Never skip a layer because it was clean last iteration — scan everything every time
+- Never mark a gap as fixed without verifying the fix compiles and the server starts clean
+- Never stop early — keep iterating until zero or timeout
+- If a fix causes a new gap — count it as a new gap in the next iteration
+- If the same gap appears in two consecutive iterations — it was not actually fixed — investigate why and fix the root cause not just the symptom
+- Fix cascading issues as part of the same iteration — do not defer them
+
+---
+
+**START NOW. RUN UNTIL ZERO OR TIMEOUT. REPORT EACH ITERATION.**
+
+---
+
+This is the most powerful prompt you can give Replit for closing out a feature. It self-directs, self-verifies, and keeps running. Paste the final iteration report back here when it stops and I will tell you if anything needs a follow-up pass.

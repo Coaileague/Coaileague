@@ -412,8 +412,14 @@ export async function initializeProductionSeeding(): Promise<void> {
   seedProductionDashboards();
   registerExtendedHealthChecks();
   
-  // Run regression tests after seeding
-  await runInfrastructureRegressionTests();
+  // Run regression tests DEFERRED (non-blocking) - improves startup time
+  setTimeout(async () => {
+    try {
+      await runInfrastructureRegressionTests();
+    } catch (error) {
+      console.error('[ProductionSeeding] Deferred regression tests failed:', error);
+    }
+  }, 5000); // Run 5 seconds after startup
   
   console.log('[ProductionSeeding] Production seeding complete');
 }

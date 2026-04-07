@@ -1,0 +1,140 @@
+Based on everything across this entire session — every audit pass, every fix, every regression — here are the three persistent root patterns that keep spawning new issues:
+
+**Root 1:** Events published with no subscriber, or subscribed with no publisher — Trinity is deaf to things that happened.
+
+**Root 2:** Raw `.emit()` bypassing `.publish()` — orchestration completing silently.
+
+**Root 3:** In-memory state with no DB backup — restart wipes critical operational state.
+
+Everything else is a symptom of one of these three. Paste this final prompt:
+
+---
+
+**PERMANENT ROOT CAUSE FIX — FINAL PASS | READ BEFORE TOUCH**
+
+This is the last pass. Fix the three persistent root patterns permanently across the entire codebase. No new features. No scope creep.
+
+---
+
+**ROOT 1 — EVENT BUS SYMMETRY AUDIT**
+
+Run this check across the entire codebase:
+
+Step 1 — Build a complete publisher map: every `platformEventBus.publish({ type: X })` call, what file, what line.
+
+Step 2 — Build a complete subscriber map: every `platformEventBus.subscribe(X, handler)` call, what file, what handler name.
+
+Step 3 — Find every asymmetry:
+- Published but no subscriber → add a subscriber or remove the publish call if the event is truly unused
+- Subscribed but never published → add a publish call at the correct mutation point or remove the dead subscriber
+
+Step 4 — For every confirmed asymmetry, fix it. Show the full before/after list.
+
+Priority fixes already identified:
+- `client_created` — publish in `clientRoutes.ts` after client insert
+- `workspace_suspended`, `workspace_reactivated`, `workspace_downgraded` — publish in `subscriptionManager.ts` at each state transition
+- `invoice_voided`, `invoice_cancelled` — publish in `invoiceRoutes.ts` PATCH paths
+- `payment_succeeded`, `payment_failed` — add subscribers that notify org owner
+- `quota_exceeded`, `feature_blocked`, `rate_limit_hit` — publish in `creditManager.ts` when hard cap fires
+- `onboarding_completed` — publish in onboarding completion route
+- `compliance_suspension_triggered` — publish in compliance bridge on hard block
+- `quickbooks_operation_failed` — publish in `quickbooksPhase3Service.ts` replacing raw emit
+
+---
+
+**ROOT 2 — RAW EMIT ELIMINATION**
+
+Search entire codebase for every `.emit(` call on any event bus or emitter that is NOT a canonical `platformEventBus.publish()` call.
+
+For each one found:
+- If it carries operational data that Trinity or any subscriber needs → replace with `platformEventBus.publish({ type: 'canonical_name', workspaceId, ...payload })`
+- If it is purely internal Node stream signaling with no subscriber → document it with a comment `// internal stream signal — not a Trinity event` and leave it
+- If it is a dead emit with no subscriber and no purpose → remove it
+
+Confirmed violations to fix:
+- `automationOrchestration.ts` — `.emit('automation.completed')` → `.publish({ type: 'automation_completed' })`
+- `usageMetering.ts` — any raw emits → canonical publish
+- `aiCreditGateway.ts` — any raw emits → canonical publish
+- `upsellService.ts` — any raw emits → canonical publish
+- `resilientAIGateway.ts` — any raw emits → canonical publish
+- `modelRouter.ts` — `.emit('system')` → remove or canonical publish
+- `goalExecutionService.ts` — `.emit('trinity:stream')` → route through WebSocket broadcast
+- `quickbooksPhase3Service.ts` — `.emit('reconciliation_alert')` → `.publish({ type: 'quickbooks_operation_failed' })`
+
+After fixes: grep the codebase for remaining `.emit('` calls on platformEventBus and report the count. Target is zero.
+
+---
+
+**ROOT 3 — IN-MEMORY STATE WITH NO DB BACKUP**
+
+Search entire codebase for every `new Map()` or `new Set()` declared at service or module level that stores operational state — not caches, not rate limiters, but actual business state that matters if lost on restart.
+
+For each one found that is operational state:
+
+A — Create a DB table for it if one doesn't exist
+B — On service startup, reload state from DB into the map
+C — On every write to the map, write to DB first, then update map
+D — The map is a cache. The DB is the source of truth.
+
+Confirmed violations:
+- `workspacePauseMap` in `aiBrainAuthorizationService.ts` → `trinity_workspace_pauses` table (CRITICAL — kill switch state lost on restart)
+- `stateTaxService` clientOverrides Map → `state_tax_overrides` DB table
+- Any welfare check or lone worker session Map not already converted to DB in prior session — verify and fix if any remain
+
+After fixes: list every remaining module-level Map in the codebase and confirm each is either a legitimate cache (rate limiter, dedup) or has been converted to DB-backed.
+
+---
+
+**ROOT 4 — DUPLICATE SUBSCRIBER CLEANUP**
+
+For every event type that has more than one subscriber registered, keep only the canonical one and remove duplicates. Rules for picking the canonical handler:
+- Keep the one that does the most complete action (notifies + logs + triggers downstream)
+- Keep the one in `trinityEventSubscriptions.ts` over ones in other files
+- If two handlers do different things that both need to happen, merge them into one handler
+
+Confirmed duplicates:
+- `invoice_paid` — 3 handlers → merge into 1
+- `invoice_overdue` — 2 handlers → merge into 1
+- `payroll_run_paid` — 2 handlers → merge into 1
+- `ai_error` — 3 handlers → merge into 1
+- `approval_approved` — 2 handlers → merge into 1
+- `automation_completed` — 2 handlers → merge into 1
+
+After fixes: report subscriber count per event type. No event type should have more than 1 subscriber unless explicitly documented as intentional fan-out.
+
+---
+
+**ROOT 5 — MISSING WORKSPACE_ID INDEXES**
+
+Run this SQL and report results:
+```sql
+SELECT table_name, column_name 
+FROM information_schema.columns 
+WHERE column_name = 'workspace_id' 
+AND table_schema = 'public'
+AND table_name NOT IN (
+  SELECT tablename FROM pg_indexes 
+  WHERE indexdef LIKE '%workspace_id%'
+)
+ORDER BY table_name;
+```
+
+For every table returned — add a DB index on `workspace_id`. These are full table scans under load.
+
+---
+
+**COMPLETION CRITERIA**
+
+1. TypeScript compile — zero errors
+2. Server restart — confirm `workspacePauseMap` reloads from DB at startup log
+3. Report: raw `.emit()` violations remaining on platformEventBus — target zero
+4. Report: asymmetric events remaining (published/no subscriber or subscribed/no publisher) — target zero
+5. Report: duplicate subscriber counts per event type — target max 1 per event
+6. Report: in-memory operational state Maps with no DB backup — target zero
+7. Report: tables missing `workspace_id` index — target zero
+8. All regression tests pass
+9. Stop and wait
+
+---
+
+This is the last prompt before production. Paste results back and if all five targets hit zero we're done permanently.

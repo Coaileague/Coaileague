@@ -4,6 +4,8 @@
  * Automated failover drills, resilience testing, and chaos engineering
  * for validating infrastructure under adverse conditions.
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('chaosTestingService');
 
 interface ChaosExperiment {
   id: string;
@@ -74,7 +76,7 @@ class ChaosTestingService {
     this.seedDefaultExperiments();
     this.seedDrillSchedules();
     this.initialized = true;
-    console.log('[ChaosTesting] Service initialized with resilience testing capabilities');
+    log.info('[ChaosTesting] Service initialized with resilience testing capabilities');
   }
 
   private seedDefaultExperiments(): void {
@@ -212,7 +214,7 @@ class ChaosTestingService {
       this.experiments.set(id, { ...exp, id });
     });
 
-    console.log(`[ChaosTesting] Seeded ${experiments.length} chaos experiments`);
+    log.info(`[ChaosTesting] Seeded ${experiments.length} chaos experiments`);
   }
 
   private seedDrillSchedules(): void {
@@ -244,7 +246,7 @@ class ChaosTestingService {
       this.schedules.set(schedule.id, schedule);
     });
 
-    console.log(`[ChaosTesting] Scheduled ${schedules.length} recurring drills`);
+    log.info(`[ChaosTesting] Scheduled ${schedules.length} recurring drills`);
   }
 
   private getNextSunday3AM(): Date {
@@ -272,7 +274,7 @@ class ChaosTestingService {
   }
 
   async createExperiment(experiment: Omit<ChaosExperiment, 'id' | 'status'>): Promise<ChaosExperiment> {
-    const id = `chaos-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `chaos-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     const newExperiment: ChaosExperiment = {
       ...experiment,
       id,
@@ -280,7 +282,7 @@ class ChaosTestingService {
     };
 
     this.experiments.set(id, newExperiment);
-    console.log(`[ChaosTesting] Created experiment: ${experiment.name}`);
+    log.info(`[ChaosTesting] Created experiment: ${experiment.name}`);
     return newExperiment;
   }
 
@@ -289,7 +291,7 @@ class ChaosTestingService {
     if (!experiment) return null;
 
     if (this.runningExperiment) {
-      console.log(`[ChaosTesting] Cannot run ${experiment.name} - another experiment is running`);
+      log.info(`[ChaosTesting] Cannot run ${experiment.name} - another experiment is running`);
       return null;
     }
 
@@ -297,7 +299,7 @@ class ChaosTestingService {
     experiment.status = 'running';
     experiment.startedAt = new Date();
 
-    console.log(`[ChaosTesting] Starting experiment: ${experiment.name}`);
+    log.info(`[ChaosTesting] Starting experiment: ${experiment.name}`);
 
     try {
       const results = await this.simulateExperiment(experiment);
@@ -306,7 +308,7 @@ class ChaosTestingService {
       experiment.completedAt = new Date();
       experiment.results = results;
 
-      console.log(`[ChaosTesting] Experiment completed: ${experiment.name} - ${results.success ? 'SUCCESS' : 'FAILED'}`);
+      log.info(`[ChaosTesting] Experiment completed: ${experiment.name} - ${results.success ? 'SUCCESS' : 'FAILED'}`);
       return results;
     } catch (error) {
       experiment.status = 'failed';
@@ -321,7 +323,7 @@ class ChaosTestingService {
         findings: [`Experiment failed: ${error}`],
         recommendations: ['Investigate failure cause before retrying']
       };
-      console.log(`[ChaosTesting] Experiment failed: ${experiment.name}`);
+      log.info(`[ChaosTesting] Experiment failed: ${experiment.name}`);
       return experiment.results;
     } finally {
       this.runningExperiment = null;
@@ -329,13 +331,15 @@ class ChaosTestingService {
   }
 
   private async simulateExperiment(experiment: ChaosExperiment): Promise<ExperimentResults> {
+    const startTime = Date.now();
     await new Promise(resolve => setTimeout(resolve, Math.min(experiment.config.duration / 10, 1000)));
+    const executionMs = Date.now() - startTime;
 
     const baseResults: ExperimentResults = {
       success: true,
-      metricsCollected: Math.floor(Math.random() * 100) + 20,
-      errorsObserved: Math.floor(Math.random() * 10),
-      recoveryTimeMs: Math.floor(Math.random() * 20000) + 2000,
+      metricsCollected: experiment.config.metrics?.length || 5,
+      errorsObserved: 0,
+      recoveryTimeMs: executionMs,
       systemBehavior: 'expected',
       dataIntegrity: 'verified',
       findings: [],
@@ -412,7 +416,7 @@ class ChaosTestingService {
     experiment.completedAt = new Date();
     this.runningExperiment = null;
 
-    console.log(`[ChaosTesting] Experiment aborted: ${experiment.name}`);
+    log.info(`[ChaosTesting] Experiment aborted: ${experiment.name}`);
     return true;
   }
 
@@ -428,7 +432,7 @@ class ChaosTestingService {
     };
 
     this.schedules.set(schedule.id, schedule);
-    console.log(`[ChaosTesting] Scheduled drill: ${experiment.name} at ${cronExpression}`);
+    log.info(`[ChaosTesting] Scheduled drill: ${experiment.name} at ${cronExpression}`);
     return schedule;
   }
 
@@ -437,7 +441,7 @@ class ChaosTestingService {
     if (!schedule) return null;
 
     schedule.enabled = enabled;
-    console.log(`[ChaosTesting] Drill ${scheduleId} ${enabled ? 'enabled' : 'disabled'}`);
+    log.info(`[ChaosTesting] Drill ${scheduleId} ${enabled ? 'enabled' : 'disabled'}`);
     return schedule;
   }
 
@@ -480,13 +484,31 @@ class ChaosTestingService {
     };
   }
 
-  getHealth(): { healthy: boolean; experimentsRun: number; successRate: number } {
-    const stats = this.getStats();
-    const total = stats.successfulExperiments + stats.failedExperiments;
+  /**
+   * Run full platform health check
+   */
+  async performHealthCheck(): Promise<ExperimentResults> {
+    log.info('🏥 Running AI provider health check...');
+    const startTime = Date.now();
+    
+    const experiments = [
+      'chaos-1', // Circuit Breaker
+      'chaos-2', // Failover
+      'chaos-3', // Latency
+    ];
+
+    const results = await Promise.allSettled(experiments.map(id => this.runExperiment(id)));
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+
     return {
-      healthy: this.initialized && !this.runningExperiment,
-      experimentsRun: total,
-      successRate: total > 0 ? Math.round((stats.successfulExperiments / total) * 100) : 100
+      success: successCount === experiments.length,
+      metricsCollected: experiments.length,
+      errorsObserved: experiments.length - successCount,
+      recoveryTimeMs: Date.now() - startTime,
+      systemBehavior: successCount === experiments.length ? 'expected' : 'degraded',
+      dataIntegrity: 'verified',
+      findings: [`Completed health check with ${successCount}/${experiments.length} experiments successful`],
+      recommendations: successCount < experiments.length ? ['Investigate failed health check experiments'] : []
     };
   }
 
@@ -494,7 +516,7 @@ class ChaosTestingService {
     if (this.runningExperiment) {
       await this.abortExperiment(this.runningExperiment.id);
     }
-    console.log('[ChaosTesting] Service shutdown');
+    log.info('[ChaosTesting] Service shutdown');
   }
 }
 

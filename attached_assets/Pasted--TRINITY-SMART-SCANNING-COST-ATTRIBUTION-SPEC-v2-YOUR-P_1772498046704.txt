@@ -1,0 +1,324 @@
+# TRINITY SMART SCANNING & COST ATTRIBUTION SPEC (v2)
+
+## YOUR PRICING MODEL (Already Defined)
+
+Orgs pay a subscription tier that includes monthly credits. Credits are consumed per ACTION, not per scan. This is correct and should NOT change.
+
+### Actions that consume credits (from your pricing):
+| Action | Credits | Why it's worth paying for |
+|--------|---------|--------------------------|
+| Shift scheduled (AI placement) | 3 | Trinity chose the best employee |
+| Autonomous staffing (email inbox) | 4 | Trinity handled a request end-to-end |
+| Invoice generated | 6 | Trinity did the billing math |
+| Payroll employee processed | 2 | Trinity calculated pay correctly |
+| Employee scored | 2 | Trinity analyzed performance |
+| GPS/QR/NFC scan verified | 1 | System confirmed guard presence |
+| Clock-in verified (GPS) | 1 | System confirmed location |
+| Document sent for signature | 3 | System handled the doc workflow |
+| QuickBooks sync | 5 | System synced accounting data |
+| Analytics report | 15 | Trinity produced deep insights |
+| DockChat client issue | 10 | Trinity analyzed client sentiment |
+| Contract review | 30 | Trinity did legal analysis |
+| Equipment checkout/return | 1 | System tracked the asset |
+
+### Actions that are FREE (included in subscription):
+- All monitoring, scanning, and watching
+- Shift calendar, drag-and-drop, templates
+- Employee availability management
+- Open shift claiming (employee self-service)
+- Shift swap requests and approvals
+- Basic clock-in/out and timesheets
+- Post orders and site instructions
+- Compliance alerts and certification tracking
+- Onboarding workflows
+- Notifications and alerts
+- Real-time chat
+- Client portal
+- Incident tracking
+- Branding/white-label
+- Basic billing rate management
+
+### THE RULE:
+**Watching is free. Doing is credits.**
+
+Trinity scanning, monitoring, detecting changes, flagging issues = FREE. Always. This is the baseline value of the subscription. Orgs should never feel like Trinity's "thinking" is burning their credits.
+
+Trinity taking action — scheduling a shift, generating an invoice, scoring an employee, producing a report = CREDITS. This is the premium value they're paying for.
+
+---
+
+## PROBLEM: SCANNING EFFICIENCY
+
+Even though scanning is free to the ORG, it's not free to YOU. Every AI token Trinity burns on scanning costs CoAIleague money. At scale, inefficient scanning eats your margins.
+
+### Current: Time-based polling (wasteful)
+```
+Every 30 minutes → scan ALL clients → scan ALL employees → full AI analysis
+Cost to CoAIleague: ~$1.44/day per org (at scale)
+```
+
+### Target: Event-driven + lightweight heartbeat (efficient)
+```
+When something changes → Trinity reacts to ONLY what changed
+Every 30 minutes → cheap DB-only heartbeat, zero AI tokens unless needed
+Cost to CoAIleague: ~$0.02/day per org (at scale)
+```
+
+The org doesn't see or care about this difference. They get the same experience — Trinity catches everything. But YOUR infrastructure costs drop 98%.
+
+---
+
+## EVENT-DRIVEN SCANNING (React to incidents, not clocks)
+
+Instead of scanning everything every 30 minutes, Trinity listens for specific events and reacts only to what changed. This is smarter, faster, and cheaper.
+
+### Events Trinity listens for:
+
+**Client changes (react immediately):**
+```
+client_settings_changed → Trinity re-evaluates ONLY that client
+  - Staffing demand changed? Regenerate shifts for that client only
+  - Rate changed? Flag affected invoices for recalculation
+  - Client deactivated? Cancel future shifts, zero out demands
+```
+
+**Employee changes (react immediately):**
+```
+employee_availability_changed → Trinity re-checks shifts involving that employee
+  - New availability window? Check if they can fill open shifts
+  - Availability removed? Find replacement for their assigned shifts
+  
+employee_deactivated → Trinity unassigns future shifts, finds replacements
+
+employee_call_off → Trinity finds replacement for THAT shift
+  - This is the #1 real-time trigger in security staffing
+  - Trinity should react within seconds, not wait 30 minutes
+```
+
+**Shift events (react immediately):**
+```
+shift_created_manually → Trinity evaluates and suggests best employee
+shift_swap_requested → Trinity validates eligibility
+shift_completion_detected → Bridge creates time entry, fires billing chain
+no_show_detected → Trinity flags and escalates
+```
+
+**Staffing email received (react immediately):**
+```
+staffing_email_received → Trinity parses request, matches guards, responds
+  - This already consumes 4 credits per assignment (autonomous staffing)
+  - Should trigger within minutes of email arriving
+```
+
+**Scheduled events (keep these on timers but make them cheap):**
+```
+daily_morning_scan (5AM) → Tier 1 DB check for today's coverage gaps
+daily_afternoon_scan (1PM) → Tier 1 DB check for evening/overnight gaps
+weekly_pattern_analysis (Sunday night) → Tier 3 deep learning cycle
+monthly_org_report → Tier 3 full analytics
+```
+
+### How events fire:
+
+Every API endpoint that modifies client/employee/shift data publishes an event:
+
+```typescript
+// Client update route — after saving to DB:
+platformEventBus.publish({
+  type: 'client_settings_changed',
+  workspaceId,
+  data: { clientId, changedFields: ['minimumStaffing'] }
+});
+
+// Employee call-off route:
+platformEventBus.publish({
+  type: 'employee_call_off',
+  workspaceId,
+  data: { employeeId, shiftId, reason: 'sick' }
+});
+
+// Staffing email received (from Resend inbound):
+platformEventBus.publish({
+  type: 'staffing_email_received',
+  workspaceId,
+  data: { emailId, clientId, requestedDate, requestedShiftType }
+});
+```
+
+Trinity subscribes to these events and reacts to ONLY the affected data:
+
+```typescript
+// Trinity reacts to call-off — finds replacement for ONE shift
+platformEventBus.subscribe('employee_call_off', async (event) => {
+  const { workspaceId, data } = event;
+  const { shiftId } = data;
+  
+  // Find the shift that needs coverage
+  const shift = await getShift(shiftId);
+  
+  // Score eligible employees for THIS shift only (not all shifts)
+  const candidates = await scoreEmployeesForShift(workspaceId, shift);
+  
+  // If auto-fill is enabled, assign the best candidate
+  if (workspace.autoFillEnabled) {
+    await assignEmployee(shift, candidates[0]); // 3 credits consumed
+  } else {
+    // Notify manager with Trinity's recommendation
+    await notifyManager(workspaceId, {
+      message: `Call-off for ${shift.clientName}. Best replacement: ${candidates[0].name} (score: ${candidates[0].score})`,
+      action: 'approve_replacement',
+      shiftId,
+      candidateId: candidates[0].id
+    });
+  }
+});
+```
+
+---
+
+## THE 30-MINUTE HEARTBEAT (Keep it, but make it free)
+
+The 30-minute cron stays as a safety net — catching anything the event system missed. But it should be almost entirely database-only (Tier 1), burning zero AI tokens in most cycles.
+
+### Heartbeat logic:
+
+```typescript
+async function trinityHeartbeat(workspaceId: string) {
+  // Step 1: Check if anything changed since last scan (DB ONLY — free)
+  const lastScan = await getLastScanTime(workspaceId);
+  
+  const changedClients = await db.select()
+    .from(clients)
+    .where(and(
+      eq(clients.workspaceId, workspaceId),
+      gt(clients.updatedAt, lastScan)
+    ));
+  
+  const changedEmployees = await db.select()
+    .from(employees)
+    .where(and(
+      eq(employees.workspaceId, workspaceId),
+      gt(employees.updatedAt, lastScan)
+    ));
+  
+  const unfilledShifts = await db.select()
+    .from(shifts)
+    .where(and(
+      eq(shifts.workspaceId, workspaceId),
+      eq(shifts.status, 'draft'),
+      isNull(shifts.employeeId)
+    ));
+
+  // Step 2: If NOTHING changed and no unfilled shifts — exit immediately
+  if (changedClients.length === 0 && changedEmployees.length === 0 && unfilledShifts.length === 0) {
+    await updateLastScanTime(workspaceId);
+    return; // Zero tokens burned. Free.
+  }
+
+  // Step 3: Something changed — process ONLY what changed
+  // This might consume credits if Trinity takes action (fills a shift, etc.)
+  for (const client of changedClients) {
+    await trinity.reevaluateClientShifts(workspaceId, client.id);
+  }
+  
+  // Only attempt to fill shifts if there are unfilled ones
+  if (unfilledShifts.length > 0) {
+    await trinity.attemptAutoFill(workspaceId, unfilledShifts);
+    // Each successful placement = 3 credits
+  }
+}
+```
+
+### What this means in practice:
+
+**Monday 2:00 AM:** Nothing changed → heartbeat exits in <100ms → 0 tokens, 0 credits
+**Monday 2:30 AM:** Nothing changed → exits → 0 tokens, 0 credits  
+**Monday 3:00 AM:** Client called, changed staffing from 2→3 guards → event fired immediately, Trinity generated 1 new shift and filled it → 3 credits consumed at 3:01 AM
+**Monday 3:00 AM:** Heartbeat fires → detects the client change already handled by event → no additional action → 0 tokens
+**Monday 3:30 AM:** Nothing changed → exits → 0 tokens
+
+Result: Trinity reacted in 1 minute instead of waiting up to 30 minutes. Used 3 credits (same as before). Burned near-zero platform tokens on scanning.
+
+---
+
+## COST ATTRIBUTION — WHO PAYS FOR WHAT
+
+### Credits (org pays from their monthly allotment):
+Only consumed when Trinity takes a MEANINGFUL ACTION that produces value:
+- Placed an employee on a shift → 3 credits
+- Generated an invoice → 6 credits
+- Processed payroll → 2 credits per employee
+- Scored an employee → 2 credits
+- etc. (per your existing pricing table)
+
+### Platform overhead (CoAIleague absorbs):
+- The 30-minute heartbeat DB queries (near-zero cost)
+- Event bus infrastructure
+- ShiftCompletionBridge cron (no AI — just DB checks)
+- Billing automation triggers (the event chain itself)
+- WebSocket broadcast infrastructure
+
+### AI token costs (CoAIleague absorbs but minimizes):
+When Trinity needs to use an AI model for reasoning (Gemini/Claude/OpenAI), the token cost is absorbed by CoAIleague — the org already paid via credits. But we minimize it:
+- Employee scoring uses MATH first, AI only for tiebreaking
+- Shift matching uses scoring algorithms, not LLM calls
+- Compliance checks use rule engines, not AI
+- AI is reserved for: pattern recognition, natural language chat, complex conflict resolution, thought stream generation
+
+### The business math:
+- Org pays $X/month subscription which includes Y credits
+- Each credit represents a valuable action Trinity performed
+- CoAIleague's cost per credit = AI tokens + compute + infrastructure
+- As long as cost-per-credit < revenue-per-credit, you're profitable
+- Smart scanning ensures cost-per-credit stays low by not burning tokens on watching
+
+---
+
+## WHAT TRINITY MONITORS FOR FREE (No credits consumed)
+
+These are the "incidents" Trinity watches for that trigger reactions:
+
+### Schedule Health Monitoring:
+- Unfilled shifts approaching (< 24 hours out)
+- Employees approaching OT threshold (> 36 hours)
+- Rest compliance violations (< 8 hour gap between shifts)
+- Double-booked employees
+- Shifts with no-show (past start time, no clock-in)
+
+### Client Health Monitoring:
+- Client with all shifts unfilled (staffing emergency)
+- Client contract expiring soon
+- Client billing overdue
+- Client complaint patterns
+
+### Employee Health Monitoring:
+- Certifications expiring within 30 days
+- Attendance pattern degradation
+- Employees with zero hours scheduled
+- New hires not yet assigned
+
+### Financial Health Monitoring:
+- Invoices overdue > 30 days
+- Negative margin clients (pay rate > bill rate)
+- Payroll pending approval for > 48 hours
+- Unbilled approved time entries
+
+**All of this is Tier 1 — pure database queries, zero AI tokens, zero credits.** Trinity flags issues and notifies managers. Credits only consumed if Trinity ACTS on the issue (fills a shift, generates an invoice, etc.).
+
+---
+
+## IMPLEMENTATION PRIORITY
+
+### Before Launch:
+1. **Credit attribution** — Verify every credit-consuming action deducts from the org's monthly allotment correctly
+2. **Heartbeat optimization** — Make the 30-min cron check timestamps before doing anything expensive. If nothing changed, exit immediately.
+3. **Event publishing** — Add `platformEventBus.publish()` to client update, employee update, and call-off routes
+
+### Post-Launch Sprint 1:
+4. **Event-driven Trinity reactions** — Wire Trinity listeners for client_changed, employee_changed, call_off events
+5. **Call-off fast response** — Trinity reacts to call-offs within minutes via event, not 30-minute scan
+
+### Post-Launch Sprint 2:
+6. **Tier 1 monitoring dashboard** — Show org owners what Trinity is watching (free) vs what she's doing (credits)
+7. **Credit usage transparency** — Show org owners their credit consumption breakdown
+8. **Smart recommendations** — "You have 50 unused credits this month. Want Trinity to run a deep analytics report?"

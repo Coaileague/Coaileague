@@ -1,4 +1,13 @@
 import { UniversalErrorPage } from "@/components/universal-error-page";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+
+const error403Config: CanvasPageConfig = {
+  id: 'error-403',
+  title: 'Access Denied',
+  category: 'system',
+  variant: 'centered',
+  showHeader: false,
+};
 
 export default function Error403() {
   const errorDetails = [
@@ -9,5 +18,9 @@ export default function Error403() {
     `User Agent: ${navigator.userAgent}`
   ].join('\n');
 
-  return <UniversalErrorPage type="403" errorDetails={errorDetails} />;
+  return (
+    <CanvasHubPage config={error403Config}>
+      <UniversalErrorPage type="403" errorDetails={errorDetails} />
+    </CanvasHubPage>
+  );
 }

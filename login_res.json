@@ -1,0 +1,1 @@
+{"message":"Dev login successful","csrfToken":"03a8a54d76c51b6209fd75b2abd7071dc09e4b3e5e2fdfcc3d3b06b784ec1b3b","user":{"id":"dev-owner-001","email":"owner@acme-security.test","firstName":"Marcus","lastName":"Rivera","role":"platform-admin","emailVerified":true,"platformRole":null,"currentWorkspaceId":"dev-acme-security-ws"}}

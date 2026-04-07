@@ -14,7 +14,9 @@
  */
 
 import { platformEventBus, PlatformEventType, PlatformEvent } from '../platformEventBus';
-import { UnifiedGeminiClient } from './providers/geminiClient';
+import { geminiClient } from './providers/geminiClient';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('ServiceOrchestrationWatchdog');
 
 // Service registration status
 export interface RegisteredService {
@@ -101,12 +103,10 @@ export class ServiceOrchestrationWatchdog {
   private orphanServices: Map<string, RegisteredService> = new Map();
   private scanInterval: NodeJS.Timeout | null = null;
   private readonly SCAN_INTERVAL_MS = 5 * 60 * 1000; // Scan every 5 minutes
-  private geminiClient: UnifiedGeminiClient;
 
   constructor() {
-    this.geminiClient = new UnifiedGeminiClient();
     this.initializeExpectedServices();
-    console.log('[ServiceWatchdog] Initialized - Monitoring platform service orchestration');
+    log.info('[ServiceWatchdog] Initialized - Monitoring platform service orchestration');
   }
 
   /**
@@ -140,7 +140,7 @@ export class ServiceOrchestrationWatchdog {
    * Start the watchdog monitoring
    */
   async start(): Promise<void> {
-    console.log('[ServiceWatchdog] Starting service orchestration monitoring...');
+    log.info('[ServiceWatchdog] Starting service orchestration monitoring...');
     this.startupTime = new Date();
     
     // Register self FIRST before any scanning
@@ -163,14 +163,18 @@ export class ServiceOrchestrationWatchdog {
     });
 
     // Delay initial scan to allow services to register during startup
-    console.log('[ServiceWatchdog] Waiting for startup grace period before first scan...');
+    log.info('[ServiceWatchdog] Waiting for startup grace period before first scan...');
     setTimeout(async () => {
       await this.scanForOrphanServices();
     }, this.STARTUP_GRACE_PERIOD_MS);
 
     // Set up periodic scanning (after grace period)
     this.scanInterval = setInterval(async () => {
-      await this.scanForOrphanServices();
+      try {
+        await this.scanForOrphanServices();
+      } catch (error: any) {
+        log.warn('[ServiceWatchdog] Scan failed (will retry):', error?.message || 'unknown');
+      }
     }, this.SCAN_INTERVAL_MS);
 
     // Publish registration event
@@ -186,7 +190,7 @@ export class ServiceOrchestrationWatchdog {
       },
     });
 
-    console.log('[ServiceWatchdog] Monitoring active (first scan after 3min grace period)');
+    log.info('[ServiceWatchdog] Monitoring active (first scan after 3min grace period)');
   }
 
   /**
@@ -197,7 +201,7 @@ export class ServiceOrchestrationWatchdog {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
-    console.log('[ServiceWatchdog] Stopped monitoring');
+    log.info('[ServiceWatchdog] Stopped monitoring');
   }
 
   /**
@@ -232,7 +236,7 @@ export class ServiceOrchestrationWatchdog {
     // Remove from orphans if it was there
     this.orphanServices.delete(config.id);
 
-    console.log(`[ServiceWatchdog] Service registered: ${config.name} (${config.id})`);
+    log.info(`[ServiceWatchdog] Service registered: ${config.name} (${config.id})`);
   }
 
   /**
@@ -309,7 +313,7 @@ export class ServiceOrchestrationWatchdog {
    * Scan for orphan/rebel services
    */
   async scanForOrphanServices(): Promise<void> {
-    console.log('[ServiceWatchdog] Scanning for orphan/rebel services...');
+    log.info('[ServiceWatchdog] Scanning for orphan/rebel services...');
     
     const now = new Date();
     const staleThreshold = 10 * 60 * 1000; // 10 minutes
@@ -318,7 +322,7 @@ export class ServiceOrchestrationWatchdog {
     // During startup grace period, only check for explicit rebels
     const inGracePeriod = timeSinceStartup < this.STARTUP_GRACE_PERIOD_MS;
     if (inGracePeriod) {
-      console.log(`[ServiceWatchdog] Still in startup grace period (${Math.round(timeSinceStartup / 1000)}s elapsed), skipping orphan detection`);
+      log.info(`[ServiceWatchdog] Still in startup grace period (${Math.round(timeSinceStartup / 1000)}s elapsed), skipping orphan detection`);
       return;
     }
     
@@ -343,14 +347,14 @@ export class ServiceOrchestrationWatchdog {
         service.status = 'orphan';
         this.orphanServices.set(id, service);
         orphansFound++;
-        console.log(`[ServiceWatchdog] Orphan detected: ${service.name} (no heartbeat for ${Math.round(timeSinceHeartbeat / 1000)}s)`);
+        log.info(`[ServiceWatchdog] Orphan detected: ${service.name} (no heartbeat for ${Math.round(timeSinceHeartbeat / 1000)}s)`);
       }
       
       // Only flag as rebel if explicitly marked as standalone
       if (service.orchestratedBy === 'standalone') {
         service.status = 'rebel';
         rebelsFound++;
-        console.log(`[ServiceWatchdog] Rebel service detected: ${service.name} (running outside Trinity orchestration)`);
+        log.info(`[ServiceWatchdog] Rebel service detected: ${service.name} (running outside Trinity orchestration)`);
       }
     }
 
@@ -377,17 +381,17 @@ export class ServiceOrchestrationWatchdog {
       // Use AI to analyze and recommend actions
       await this.analyzeOrchestrationIssues();
     } else {
-      console.log('[ServiceWatchdog] All services healthy - no orphans or rebels detected');
+      log.info('[ServiceWatchdog] All services healthy - no orphans or rebels detected');
     }
 
-    console.log(`[ServiceWatchdog] Scan complete. Orphans: ${orphansFound}, Rebels: ${rebelsFound}`);
+    log.info(`[ServiceWatchdog] Scan complete. Orphans: ${orphansFound}, Rebels: ${rebelsFound}`);
   }
 
   /**
    * Detect a rebel service trying to operate outside orchestration
    */
   private detectRebelService(serviceId: string, payload: Record<string, any>): void {
-    console.log(`[ServiceWatchdog] Rebel service detected: ${serviceId}`);
+    log.info(`[ServiceWatchdog] Rebel service detected: ${serviceId}`);
     
     const rebelService: RegisteredService = {
       id: serviceId,
@@ -413,7 +417,7 @@ export class ServiceOrchestrationWatchdog {
    * Attempt to hook a rebel service into Trinity orchestration
    */
   private async attemptServiceHooking(service: RegisteredService): Promise<boolean> {
-    console.log(`[ServiceWatchdog] Attempting to hook service: ${service.name}`);
+    log.info(`[ServiceWatchdog] Attempting to hook service: ${service.name}`);
     
     // Publish hook request
     await platformEventBus.publish({
@@ -468,7 +472,8 @@ Respond in JSON format:
 }`;
 
     try {
-      const response = await this.geminiClient.generate({
+      const response = await geminiClient.generate({
+        workspaceId: undefined, // Platform-level service orchestration, no workspace billing
         featureKey: 'orchestration_analysis',
         systemPrompt: 'You are an AI service orchestration analyst.',
         userMessage: prompt,
@@ -493,11 +498,11 @@ Respond in JSON format:
             },
           });
 
-          console.log(`[ServiceWatchdog] AI Analysis: ${analysis.summary}`);
+          log.info(`[ServiceWatchdog] AI Analysis: ${analysis.summary}`);
         }
       }
     } catch (error) {
-      console.error('[ServiceWatchdog] Failed to analyze orchestration issues:', error);
+      log.error('[ServiceWatchdog] Failed to analyze orchestration issues:', error);
     }
   }
 
@@ -535,7 +540,7 @@ Respond in JSON format:
       return { success: false, message: `Service not found: ${serviceId}` };
     }
 
-    console.log(`[ServiceWatchdog] Hotpatch requested for ${service.name}: ${patchConfig.type}`);
+    log.info(`[ServiceWatchdog] Hotpatch requested for ${service.name}: ${patchConfig.type}`);
 
     if (patchConfig.requiresApproval) {
       // Create workflow for approval

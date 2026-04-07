@@ -1,0 +1,70 @@
+Good questions. Here are the definitive answers based on CoAIleague's architecture:
+
+---
+
+**1. Route placement — neither a standalone page nor a modal.**
+
+The onboarding packet is not something a user navigates to directly. It is generated on demand and delivered through the Phase 18 document pipeline. The flow is:
+
+When a new officer is created and activated, the system automatically generates all 8 documents as individual signed documents routed through the E-SIGN flow. The officer receives a link via NDS to their onboarding portal where they complete each document sequentially. The manager sees the onboarding task progress ring (Phase 48).
+
+The `/onboarding-packet.html` static file the agent generated is a preview/reference artifact — useful for you to verify the layout and content, but it is not the production integration path. The production path is Phase 18 document pipeline + Phase 48 task management.
+
+---
+
+**2. Data population — fully auto-filled from live records.**
+
+When any onboarding document is generated the template engine populates every `{{variable}}` from live data automatically:
+
+- Workspace variables pull from the workspace record — company name, license number, address, EIN, logo
+- Officer variables pull from the employee record being onboarded — name, DOB, hire date, position, pay rate
+- Signing rep variables pull from the org_owner or designated signer on the workspace
+- Date variables are server-authoritative — officer cannot set them manually
+
+The officer never sees raw `{{placeholders}}`. They see a completed document with their name, their employer's name, their hire date, and their pay rate already filled in. They only need to sign, upload photos, and complete the fields that only they can provide (bank account, SSN, emergency contacts).
+
+---
+
+**3. Access control — role-specific with three distinct access levels.**
+
+- **org_owner and org_admin** — full access. Can generate packets for any officer, view completion status, download completed packets, waive tasks with documented reason, and complete employer sections (I-9 Section 2, verification).
+
+- **Officers (the employee being onboarded)** — self-service access to their own onboarding portal only. They see their own packet, can sign documents, upload required photos, and fill in personal fields. They cannot see other officers' packets.
+
+- **Compliance officer** — read-only access to completed packets for audit purposes. Cannot generate or modify.
+
+- **Supervisors and managers** — can view completion status and send reminders but cannot generate or modify packets.
+
+---
+
+**What to send the agent:**
+
+The `/onboarding-packet.html` file needs to be converted from a static HTML preview into actual document templates wired into the Phase 18 pipeline. Send this:
+
+---
+
+**ONBOARDING PACKET INTEGRATION — Convert static preview to live document pipeline**
+
+The `/onboarding-packet.html` file is a verified layout reference. Convert it into production document templates integrated with the Phase 18 document signing pipeline and Phase 48 onboarding task system.
+
+**Integration requirements:**
+
+1. Each of the 8 documents in the packet becomes a separate entry in `templateRegistry.ts` if not already present — `offer_letter`, `employee_file_checklist`, `welcome_letter`, `w4`, `i9`, `direct_deposit_authorization`, `handbook_acknowledgment`, `employee_responsibility_clause`, `uniform_equipment_policy`, `drug_free_policy`
+
+2. When an officer is created and their hire date is set the system automatically generates all applicable documents via the document generation service — pre-populated with workspace and officer data from live records
+
+3. The officer receives an NDS notification with a secure link to their onboarding portal where they complete documents sequentially — sign, upload, fill required fields
+
+4. Each document completion auto-updates the corresponding Phase 48 onboarding task
+
+5. Access control enforced at the route level — officer sees only their own documents, org_owner sees all, compliance officer read-only
+
+6. The static `/public/onboarding-packet.html` file can remain as a printable reference but is not the primary delivery mechanism
+
+7. Employer-completion fields (I-9 Section 2, file checklist verification) are routed to the designated org_owner or admin signer — separate signing step after officer completes their portion
+
+Verify all 8 documents generate correctly with live workspace and officer data. Confirm zero hardcoded company references in any generated output. TypeScript zero errors. Server clean.
+
+---
+
+Paste that. This closes the loop between the document templates and the live platform.

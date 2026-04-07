@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
+import { apiFetch } from "@/lib/apiError";
+import { BillableHoursReportResponse, PayrollReportResponse, ClientSummaryReportResponse, EmployeeActivityReportResponse, AuditLogReportResponse } from "@shared/schemas/responses/analytics";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { 
   FileText, Calendar, DollarSign, Users, 
   Download, Filter, Lock, AlertCircle 
@@ -43,11 +46,11 @@ const reportTierRequirements: Record<ReportTab, SubscriptionTier> = {
 
 // Role requirements for each report  
 const reportRoleRequirements: Record<ReportTab, string[]> = {
-  billable: ['supervisor', 'department_manager', 'org_admin', 'org_owner'],
-  payroll: ['department_manager', 'org_admin', 'org_owner'],
-  client: ['supervisor', 'department_manager', 'org_admin', 'org_owner'],
-  activity: ['supervisor', 'department_manager', 'org_admin', 'org_owner'],
-  audit: ['department_manager', 'org_admin', 'org_owner'],
+  billable: ['supervisor', 'department_manager', 'co_owner', 'org_owner'],
+  payroll: ['department_manager', 'co_owner', 'org_owner'],
+  client: ['supervisor', 'department_manager', 'co_owner', 'org_owner'],
+  activity: ['supervisor', 'department_manager', 'co_owner', 'org_owner'],
+  audit: ['department_manager', 'co_owner', 'org_owner'],
 };
 
 export default function AnalyticsReportsPage() {
@@ -133,60 +136,47 @@ export default function AnalyticsReportsPage() {
     return hasRoleAccess(tab) && hasTierAccess(tab);
   };
 
+  const actionButton = (
+    <Button 
+      variant="outline" 
+      size="sm" 
+      onClick={handleExport}
+      data-testid="button-export"
+    >
+      <Download className="w-4 h-4 mr-2" />
+      Export Report
+    </Button>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'analytics-reports',
+    title: 'Analytics Reports',
+    subtitle: 'Comprehensive insights and reporting for workforce management',
+    category: 'operations',
+    headerActions: actionButton,
+  };
+
   if (accessLoading) {
     return (
-      <div className="mobile-safe-container max-w-7xl mx-auto">
+      <CanvasHubPage config={{ ...pageConfig, headerActions: undefined }}>
         <Skeleton className="h-12 w-64 mb-6" />
         <Skeleton className="h-96 w-full" />
-      </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mobile-safe-container max-w-7xl mx-auto">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <FileText className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">
-                  Analytics Reports
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Comprehensive insights and reporting for workforce management
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters Card */}
+    <CanvasHubPage config={pageConfig}>
+      {/* Filters Card */}
         <Card className="mb-6">
           <CardHeader>
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="w-5 h-5" />
-                  Report Filters
-                </CardTitle>
-                <CardDescription>
-                  Select date range and filters for your reports
-                </CardDescription>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleExport}
-                data-testid="button-export"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export Report
-              </Button>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="w-5 h-5" />
+              Report Filters
+            </CardTitle>
+            <CardDescription>
+              Select date range and filters for your reports
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -230,7 +220,7 @@ export default function AnalyticsReportsPage() {
 
         {/* Report Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ReportTab)}>
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="w-full overflow-x-auto grid grid-cols-2 sm:grid-cols-5 mb-6">
             <TabsTrigger 
               value="billable" 
               disabled={!canAccessTab('billable')}
@@ -368,8 +358,7 @@ export default function AnalyticsReportsPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }
 
@@ -379,7 +368,8 @@ function BillableHoursReport({ startDate, endDate }: { startDate: Date; endDate:
   const endDateStr = format(endDate, 'yyyy-MM-dd');
   
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/reports/billable-hours?startDate=${startDateStr}&endDate=${endDateStr}`],
+    queryKey: ['/api/reports/billable-hours', { startDate: startDateStr, endDate: endDateStr }],
+    queryFn: () => apiFetch(`/api/reports/billable-hours?startDate=${startDateStr}&endDate=${endDateStr}`, BillableHoursReportResponse),
   });
 
   if (isLoading) {
@@ -426,7 +416,8 @@ function PayrollReport({ startDate, endDate }: { startDate: Date; endDate: Date 
   const endDateStr = format(endDate, 'yyyy-MM-dd');
   
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/reports/payroll?startDate=${startDateStr}&endDate=${endDateStr}`],
+    queryKey: ['/api/reports/payroll', { startDate: startDateStr, endDate: endDateStr }],
+    queryFn: () => apiFetch(`/api/reports/payroll?startDate=${startDateStr}&endDate=${endDateStr}`, PayrollReportResponse),
   });
 
   if (isLoading) {
@@ -465,7 +456,7 @@ function PayrollReport({ startDate, endDate }: { startDate: Date; endDate: Date 
             <p>No payroll data for this period</p>
           </div>
         ) : (
-          <div className="border rounded-md">
+          <div className="overflow-x-auto border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -503,7 +494,8 @@ function ClientSummaryReport({ startDate, endDate }: { startDate: Date; endDate:
   const endDateStr = format(endDate, 'yyyy-MM-dd');
   
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/reports/client-summary?startDate=${startDateStr}&endDate=${endDateStr}`],
+    queryKey: ['/api/reports/client-summary', { startDate: startDateStr, endDate: endDateStr }],
+    queryFn: () => apiFetch(`/api/reports/client-summary?startDate=${startDateStr}&endDate=${endDateStr}`, ClientSummaryReportResponse),
   });
 
   if (isLoading) {
@@ -542,7 +534,7 @@ function ClientSummaryReport({ startDate, endDate }: { startDate: Date; endDate:
             <p>No client data for this period</p>
           </div>
         ) : (
-          <div className="border rounded-md">
+          <div className="overflow-x-auto border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -582,7 +574,8 @@ function EmployeeActivityReport({ startDate, endDate }: { startDate: Date; endDa
   const endDateStr = format(endDate, 'yyyy-MM-dd');
   
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/reports/employee-activity?startDate=${startDateStr}&endDate=${endDateStr}`],
+    queryKey: ['/api/reports/employee-activity', { startDate: startDateStr, endDate: endDateStr }],
+    queryFn: () => apiFetch(`/api/reports/employee-activity?startDate=${startDateStr}&endDate=${endDateStr}`, EmployeeActivityReportResponse),
   });
 
   if (isLoading) {
@@ -621,7 +614,7 @@ function EmployeeActivityReport({ startDate, endDate }: { startDate: Date; endDa
             <p>No employee activity for this period</p>
           </div>
         ) : (
-          <div className="border rounded-md">
+          <div className="overflow-x-auto border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -661,7 +654,8 @@ function AuditTrailReport({ startDate, endDate }: { startDate: Date; endDate: Da
   const endDateStr = format(endDate, 'yyyy-MM-dd');
   
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/reports/audit-logs?startDate=${startDateStr}&endDate=${endDateStr}`],
+    queryKey: ['/api/reports/audit-logs', { startDate: startDateStr, endDate: endDateStr }],
+    queryFn: () => apiFetch(`/api/reports/audit-logs?startDate=${startDateStr}&endDate=${endDateStr}`, AuditLogReportResponse),
   });
 
   if (isLoading) {
@@ -700,7 +694,7 @@ function AuditTrailReport({ startDate, endDate }: { startDate: Date; endDate: Da
             <p>No audit logs for this period</p>
           </div>
         ) : (
-          <div className="border rounded-md">
+          <div className="overflow-x-auto border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>

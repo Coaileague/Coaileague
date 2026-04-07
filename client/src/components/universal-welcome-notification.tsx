@@ -90,12 +90,15 @@ export function UniversalWelcomeNotification({
     }
 
     const roleMap: Record<string, { label: string; icon: any }> = {
-      admin: { label: "Administrator", icon: Shield },
-      owner: { label: "Organization Owner", icon: Crown },
+      org_admin: { label: "Administrator", icon: Shield },
+      org_owner: { label: "Organization Owner", icon: Crown },
+      co_owner: { label: "Co-Owner", icon: Crown },
+      org_manager: { label: "Organization Manager", icon: Zap },
       manager: { label: "Manager", icon: Zap },
+      department_manager: { label: "Department Manager", icon: Shield },
       supervisor: { label: "Supervisor", icon: Shield },
-      hr_manager: { label: "HR Manager", icon: Shield },
       employee: { label: "Employee", icon: LogIn },
+      staff: { label: "Staff", icon: LogIn },
       user: { label: "Team Member", icon: LogIn },
     };
     
@@ -147,7 +150,7 @@ export function UniversalWelcomeNotification({
           }
         `}</style>
 
-        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 dark:from-blue-700 dark:via-blue-600 dark:to-cyan-600 rounded-xl p-3 sm:p-4 md:p-5 shadow-xl text-white border border-white/10">
+        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 dark:from-blue-700 dark:via-blue-600 dark:to-cyan-600 rounded-md p-3 sm:p-4 md:p-5 shadow-sm text-white border border-white/10">
           {/* Header with Trinity Icon and Welcome */}
           <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
             <div className="flex-shrink-0">
@@ -211,7 +214,7 @@ export function UniversalWelcomeNotification({
               </div>
               
               {/* Percentage text */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-1">
                 <span className="text-white/60 text-[10px]">Loading...</span>
                 <span className="text-white font-semibold text-sm tabular-nums">
                   {Math.round(progress)}%

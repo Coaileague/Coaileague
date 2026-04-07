@@ -15,7 +15,6 @@
 import { db } from '../../db';
 import { eq, and, desc, gte, sql, count, inArray } from 'drizzle-orm';
 import {
-  aiWorkboardTasks,
   subagentTelemetry,
   automationActionLedger,
   aiSubagentDefinitions,
@@ -26,6 +25,8 @@ import {
 } from '@shared/schema';
 import { TTLCache } from './cacheUtils';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('swarmCommanderService');
 
 // Guru-mode roles that can access Swarm Commander features
 export const GURU_MODE_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'] as const;
@@ -185,7 +186,7 @@ class SwarmCommanderService {
   private roiCache = new TTLCache<string, ROIMetrics>(5 * 60 * 1000, 50); // 5min TTL
 
   private constructor() {
-    console.log('[SwarmCommander] Initializing Swarm Commander Service...');
+    log.info('[SwarmCommander] Initializing Swarm Commander Service...');
   }
 
   static getInstance(): SwarmCommanderService {
@@ -302,7 +303,7 @@ class SwarmCommanderService {
       this.topologyCache.set(cacheKey, topology);
       return topology;
     } catch (error) {
-      console.error('[SwarmCommander] Topology error:', error);
+      log.error('[SwarmCommander] Topology error:', error);
       return {
         nodes: [],
         edges: [],
@@ -380,7 +381,7 @@ class SwarmCommanderService {
     plaintiff: { agent: string; request: string; reason: string };
     defendant: { agent: string; objection: string; rule: string };
   }): Promise<ConflictCase> {
-    const conflictId = `conflict-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const conflictId = `conflict-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     
     const conflict: ConflictCase = {
       id: conflictId,
@@ -405,9 +406,9 @@ class SwarmCommanderService {
         status: 'pending',
         confidenceScore: 100,
       });
-      console.log('[SwarmCommander] Agent Court: Conflict filed to database', conflictId);
+      log.info('[SwarmCommander] Agent Court: Conflict filed to database', conflictId);
     } catch (err) {
-      console.error('[SwarmCommander] Failed to persist conflict:', err);
+      log.error('[SwarmCommander] Failed to persist conflict:', err);
       // Still keep in memory as fallback
       this.pendingConflicts.set(conflictId, conflict);
     }
@@ -442,6 +443,7 @@ class SwarmCommanderService {
           if (workspaceId && conflict.workspaceId !== workspaceId) continue;
           conflicts.push(conflict);
         } catch {
+          // Skip malformed conflict entries
         }
       }
       
@@ -451,7 +453,7 @@ class SwarmCommanderService {
       
       return [...conflicts, ...memoryConflicts];
     } catch (err) {
-      console.error('[SwarmCommander] Failed to fetch conflicts:', err);
+      log.error('[SwarmCommander] Failed to fetch conflicts:', err);
       const conflicts = Array.from(this.pendingConflicts.values());
       if (workspaceId) {
         return conflicts.filter(c => c.workspaceId === workspaceId && c.status === 'pending');
@@ -494,11 +496,11 @@ class SwarmCommanderService {
           })
           .where(eq(aiSuggestions.id, conflictId));
         
-        console.log('[SwarmCommander] Agent Court: Conflict resolved in database', conflictId, decision);
+        log.info('[SwarmCommander] Agent Court: Conflict resolved in database', conflictId, decision);
         return conflict;
       }
     } catch (err) {
-      console.error('[SwarmCommander] Failed to resolve conflict in database:', err);
+      log.error('[SwarmCommander] Failed to resolve conflict in database:', err);
     }
     
     // Fallback to in-memory
@@ -517,7 +519,7 @@ class SwarmCommanderService {
     };
     
     this.pendingConflicts.set(conflictId, conflict);
-    console.log('[SwarmCommander] Agent Court: Conflict resolved in memory', conflictId, decision);
+    log.info('[SwarmCommander] Agent Court: Conflict resolved in memory', conflictId, decision);
     
     return conflict;
   }
@@ -592,7 +594,7 @@ class SwarmCommanderService {
   // ============================================================================
 
   recordStateSnapshot(snapshot: Omit<StateSnapshot, 'id'>): string {
-    const snapshotId = `snap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const snapshotId = `snap-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     
     const fullSnapshot: StateSnapshot = {
       id: snapshotId,
@@ -706,6 +708,7 @@ class SwarmCommanderService {
           ));
         realApiCost = (creditSum?.total || 0) * 0.01; // Convert credits to dollars
       } catch {
+        // Credit query failed - continue with zero cost
       }
 
       // Calculate metrics per category
@@ -760,7 +763,7 @@ class SwarmCommanderService {
       
       // Log which cost source was used for debugging
       if (realApiCost > 0) {
-        console.log(`[SwarmCommander] ROI using real credit data: $${realApiCost.toFixed(2)}`);
+        log.info(`[SwarmCommander] ROI using real credit data: $${realApiCost.toFixed(2)}`);
       }
       
       const costPerTask = tasksDone > 0 ? finalApiCost / tasksDone : 0;
@@ -779,7 +782,7 @@ class SwarmCommanderService {
       this.roiCache.set(cacheKey, metrics);
       return metrics;
     } catch (error) {
-      console.error('[SwarmCommander] ROI calculation error:', error);
+      log.error('[SwarmCommander] ROI calculation error:', error);
       return {
         tasksDone: 0,
         apiCost: 0,

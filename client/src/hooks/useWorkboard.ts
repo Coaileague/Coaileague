@@ -54,11 +54,12 @@ export function useWorkboardRBAC() {
   const { employee } = useEmployee();
   
   const platformRole = user?.platformRole || 'none';
-  const workspaceRole = employee?.workspaceRole || 'staff';
+  // SECURITY: Use server-authoritative user.workspaceRole for authorization
+  const workspaceRole = user?.workspaceRole || 'staff';
   
-  const isAdmin = ['root_admin', 'super_admin', 'support_admin'].includes(platformRole);
-  const isManager = workspaceRole === 'org_owner' || workspaceRole === 'org_admin' || workspaceRole === 'manager';
-  const isSupport = ['support_manager', 'support_agent', 'support_lead'].includes(platformRole);
+  const isAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(platformRole);
+  const isManager = workspaceRole === 'org_owner' || workspaceRole === 'co_owner' || workspaceRole === 'org_admin' || workspaceRole === 'org_manager' || workspaceRole === 'manager' || workspaceRole === 'department_manager' || workspaceRole === 'supervisor';
+  const isSupport = ['support_manager', 'support_agent'].includes(platformRole);
   
   return {
     canViewAllTasks: isAdmin || isSupport,
@@ -85,8 +86,8 @@ export function useWorkboardTasks(params: WorkboardListParams = {}) {
       scope: rbac.roleLevel,
     }],
     enabled: !!user,
-    refetchInterval: 10000,
-    staleTime: 5000,
+    refetchInterval: 30000,
+    staleTime: 15000,
   });
 }
 

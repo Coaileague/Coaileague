@@ -1,0 +1,62 @@
+There it is. The build passes but runtime crashes — meaning npm prune --omit=dev is removing drizzle-orm. Which means it's still in devDependencies OR esbuild is marking it as external.
+Here's the fix prompt — this one goes nuclear on both possibilities:
+
+TASK: Fix drizzle-orm Missing at Runtime (FINAL FIX)
+CONTEXT: Build succeeds but deployment crashes because drizzle-orm is missing after npm prune --omit=dev. This means either (A) drizzle-orm is in devDependencies, or (B) esbuild externals config is broken.
+FIX BOTH. NOW.
+
+STEP 1: Move drizzle-orm to dependencies
+Open package.json. Find drizzle-orm. If it's under "devDependencies", move it to "dependencies".
+Also verify these are in "dependencies" (NOT devDependencies):
+
+drizzle-orm
+drizzle-zod (if used)
+@neondatabase/serverless (or your DB driver)
+postgres (if used)
+Any @libsql, better-sqlite3, or database packages
+
+STEP 2: Check esbuild/vite config for externals
+Search for any config that marks drizzle-orm as external:
+jsexternal: ['drizzle-orm']
+If found, REMOVE drizzle-orm from externals. It needs to be bundled OR available in node_modules at runtime — not both excluded.
+STEP 3: Update deploy-build.sh
+Replace with:
+bash#!/bin/bash
+set -e
+
+echo "=== Clean install ALL dependencies ==="
+rm -rf node_modules
+npm ci
+
+echo "=== Running build ==="
+npm run build
+
+echo "=== Reinstalling production dependencies only ==="
+rm -rf node_modules
+npm ci --omit=dev
+
+echo "=== Verifying drizzle-orm exists ==="
+if [ ! -d "node_modules/drizzle-orm" ]; then
+  echo "FATAL: drizzle-orm not in production dependencies!"
+  echo "Check package.json - drizzle-orm must be in dependencies, not devDependencies"
+  exit 1
+fi
+
+echo "=== Build complete ==="
+KEY CHANGE: Full rm -rf node_modules + npm ci --omit=dev instead of npm prune. Prune is unreliable. Clean reinstall of prod-only deps is bulletproof.
+STEP 4: Verify package.json manually
+Run this and confirm drizzle-orm appears:
+bashcat package.json | grep -A 50 '"dependencies"' | grep drizzle
+If nothing shows, that's your problem. Move it.
+
+DO NOT:
+
+Use npm prune (unreliable)
+Mark drizzle-orm as external in bundler config
+Assume it's already in dependencies without checking
+
+REQUIRED OUTPUT:
+After applying fix, show me the output of:
+bashcat package.json | grep -A 5 '"drizzle'
+
+This should be the last time. The full nuke-and-reinstall approach guarantees clean state. If it still fails after this, drizzle-orm is genuinely not in dependencies and Replit needs to show you exactly where it is in package.json.

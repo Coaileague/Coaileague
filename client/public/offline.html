@@ -17,7 +17,7 @@
             color: #e2e8f0;
             display: flex;
             align-items: center;
-            justify-center;
+            justify-content: center;
             min-height: 100vh;
             padding: 20px;
         }
@@ -81,10 +81,14 @@
         }
         
         .features li::before {
-            content: "✓";
-            color: #2563eb;
-            font-weight: bold;
+            content: "";
+            display: inline-block;
+            width: 16px;
+            height: 16px;
             margin-right: 10px;
+            background-color: #2563eb;
+            border-radius: 50%;
+            vertical-align: middle;
         }
         
         button {
@@ -121,7 +125,13 @@
 </head>
 <body>
     <div class="container">
-        <div class="icon">⚡</div>
+        <div class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+        </div>
         <h1>You're Offline</h1>
         <p>
             No internet connection detected. CoAIleague works offline with limited functionality.

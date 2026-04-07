@@ -12,6 +12,7 @@
  * All operations are authenticated and authorized for support staff only.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response, NextFunction } from 'express';
 import { type AuthenticatedRequest } from '../rbac';
 import { helpaiOrchestrator } from '../services/helpai/platformActionHub';
@@ -24,6 +25,10 @@ import { trinitySelfAssessment } from '../services/ai-brain/trinitySelfAssessmen
 import { db } from '../db';
 import { auditLogs } from '@shared/schema';
 import { broadcastToAllClients } from '../websocket';
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+const log = createLogger('AiBrainConsole');
+
 
 export const aiBrainConsoleRouter = Router();
 
@@ -68,7 +73,7 @@ aiBrainConsoleRouter.post('/chat', requireSupportRole, async (req: Authenticated
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    const convId = conversationId || `conv-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const convId = conversationId || `conv-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
     
     if (!conversations.has(convId)) {
       conversations.set(convId, [{
@@ -148,15 +153,15 @@ To execute an action, respond with JSON in format:
             
             assistantMessage = response.replace(actionMatch[0], '') + 
               `\n\n✅ Action executed: ${actionId}\nResult: ${result.message}`;
-          } catch (error: any) {
+          } catch (error: unknown) {
             actionExecuted = {
               actionId,
               success: false,
-              result: { error: error.message }
+              result: { error: sanitizeError(error) }
             };
             
             assistantMessage = response.replace(actionMatch[0], '') + 
-              `\n\n❌ Action failed: ${actionId}\nError: ${error.message}`;
+              `\n\n❌ Action failed: ${actionId}\nError: ${sanitizeError(error)}`;
           }
         }
       }
@@ -180,13 +185,13 @@ To execute an action, respond with JSON in format:
         actionExecuted,
         messageCount: conv.length
       });
-    } catch (error: any) {
-      console.error('[AIBrainConsole] Chat error:', error);
-      res.status(500).json({ error: 'Failed to get AI response', details: error.message });
+    } catch (error: unknown) {
+      log.error('[AIBrainConsole] Chat error:', error);
+      res.status(500).json({ error: 'Failed to get AI response', details: sanitizeError(error) });
     }
-  } catch (error: any) {
-    console.error('[AIBrainConsole] Chat error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Chat error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -246,9 +251,9 @@ aiBrainConsoleRouter.get('/capabilities', requireSupportRole, async (req: Authen
         operations: ['read', 'write', 'edit', 'delete', 'list', 'search', 'diff', 'copy', 'move']
       }
     });
-  } catch (error: any) {
-    console.error('[AIBrainConsole] Capabilities error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Capabilities error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -277,9 +282,9 @@ aiBrainConsoleRouter.post('/execute', requireSupportRole, async (req: Authentica
     await logConsoleAction(userId, 'execute_action', { actionId, success: result.success });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[AIBrainConsole] Execute error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Execute error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -331,9 +336,9 @@ aiBrainConsoleRouter.post('/file', requireSupportRole, async (req: Authenticated
     await logConsoleAction(userId, `file_${operation}`, { path, success: result.success });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[AIBrainConsole] File operation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] File operation error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -382,9 +387,9 @@ aiBrainConsoleRouter.post('/workflow', requireSupportRole, async (req: Authentic
     await logConsoleAction(userId, `workflow_${operation}`, { workflowId, success: result.success });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[AIBrainConsole] Workflow operation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Workflow operation error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -437,9 +442,9 @@ aiBrainConsoleRouter.post('/test', requireSupportRole, async (req: Authenticated
     await logConsoleAction(userId, `test_${operation}`, { testId, category, success: result.success });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[AIBrainConsole] Test operation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Test operation error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -483,9 +488,9 @@ aiBrainConsoleRouter.get('/status', requireSupportRole, async (req: Authenticate
         activeConversations: conversations.size
       }
     });
-  } catch (error: any) {
-    console.error('[AIBrainConsole] Status error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Status error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -496,9 +501,10 @@ aiBrainConsoleRouter.get('/status', requireSupportRole, async (req: Authenticate
 aiBrainConsoleRouter.get('/self-assessment', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id || 'support';
-    const workspaceId = req.user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     
-    console.log(`[AIBrainConsole] Self-assessment requested by ${userId}`);
+    log.info(`[AIBrainConsole] Self-assessment requested by ${userId}`);
     
     const result = await trinitySelfAssessment.performAssessment(workspaceId);
     
@@ -512,9 +518,9 @@ aiBrainConsoleRouter.get('/self-assessment', requireSupportRole, async (req: Aut
       success: true,
       data: result
     });
-  } catch (error: any) {
-    console.error('[AIBrainConsole] Self-assessment error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Self-assessment error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -532,8 +538,8 @@ aiBrainConsoleRouter.delete('/conversation/:id', requireSupportRole, async (req:
     } else {
       res.status(404).json({ error: 'Conversation not found' });
     }
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -555,8 +561,109 @@ aiBrainConsoleRouter.get('/conversation/:id', requireSupportRole, async (req: Au
     } else {
       res.status(404).json({ error: 'Conversation not found' });
     }
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+aiBrainConsoleRouter.get('/files', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const dirPath = (req.query.path as string) || (req.query['0'] as string) || '.';
+    const userId = req.user?.id || 'support';
+    const result = await aiBrainFileSystemTools.listDirectory(dirPath, {}, userId);
+    res.json({ files: result.data?.files || result.data?.entries || [], path: dirPath });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Files list error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+aiBrainConsoleRouter.post('/files/read', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { filePath } = req.body;
+    const userId = req.user?.id || 'support';
+    if (!filePath) return res.status(400).json({ error: 'filePath is required' });
+    const result = await aiBrainFileSystemTools.readFile(filePath, {}, userId);
+    res.json({ content: result.data?.content || '', path: filePath });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] File read error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+aiBrainConsoleRouter.post('/files/write', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { filePath, content } = req.body;
+    const userId = req.user?.id || 'support';
+    if (!filePath) return res.status(400).json({ error: 'filePath is required' });
+    const result = await aiBrainFileSystemTools.writeFile(filePath, content || '', {}, userId);
+    await logConsoleAction(userId, 'file_write', { path: filePath, success: result.success });
+    res.json(result);
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] File write error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+aiBrainConsoleRouter.post('/files/search', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { pattern, path: searchPath } = req.body;
+    const userId = req.user?.id || 'support';
+    if (!pattern) return res.status(400).json({ error: 'pattern is required' });
+    const result = await aiBrainFileSystemTools.searchFiles(searchPath || '.', { pattern }, userId);
+    res.json({ matches: result.data?.matches || [], pattern });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] File search error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+aiBrainConsoleRouter.post('/tests/run', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { category, testNames } = req.body;
+    const userId = req.user?.id || 'support';
+    let results;
+    if (category && category !== 'all') {
+      results = await aiBrainTestRunner.runTestsByCategory(category, userId);
+    } else {
+      results = await aiBrainTestRunner.runAllTests(userId);
+    }
+    await logConsoleAction(userId, 'test_run', { category, success: results.summary.failed === 0 });
+    res.json({
+      total: results.summary.total,
+      passed: results.summary.passed,
+      failed: results.summary.failed,
+      results: results.results,
+    });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] Test run error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+aiBrainConsoleRouter.get('/history', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { desc: descOrder, like } = await import('drizzle-orm');
+    const logs = await db.select()
+      .from(auditLogs)
+      .where(
+        like(auditLogs.action, 'ai_brain_console:%')
+      )
+      .orderBy(descOrder(auditLogs.createdAt))
+      .limit(50);
+    
+    const actions = logs.map(log => ({
+      actionId: log.action?.replace('ai_brain_console:', '') || '',
+      category: log.targetType || 'console',
+      success: (log.metadata as any)?.success ?? true,
+      message: (log.metadata as any)?.message || '',
+      timestamp: log.createdAt?.toISOString() || new Date().toISOString(),
+    }));
+    
+    res.json({ actions });
+  } catch (error: unknown) {
+    log.error('[AIBrainConsole] History error:', error);
+    res.status(500).json({ error: sanitizeError(error), actions: [] });
   }
 });
 
@@ -567,18 +674,18 @@ async function logConsoleAction(
 ): Promise<void> {
   try {
     await db.insert(auditLogs).values({
-      workspaceId: 'coaileague-platform-workspace',
+      workspaceId: PLATFORM_WORKSPACE_ID,
       userId,
       action: `ai_brain_console:${action}`,
       targetType: 'ai_brain',
       targetId: 'console',
-      details: {
+      metadata: {
         ...details,
         timestamp: new Date().toISOString(),
       },
       ipAddress: 'support-console',
     });
   } catch (error) {
-    console.error('[AIBrainConsole] Failed to log action:', error);
+    log.error('[AIBrainConsole] Failed to log action:', error);
   }
 }

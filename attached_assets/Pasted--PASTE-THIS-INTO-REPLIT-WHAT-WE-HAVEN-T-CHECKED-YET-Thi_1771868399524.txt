@@ -1,0 +1,480 @@
+# PASTE THIS INTO REPLIT — "WHAT WE HAVEN'T CHECKED YET"
+# Things That Will Break In Production When Real Orgs Sign Up
+
+---
+
+We've already audited Trinity's brain, tools, orchestration, and the 7-step pipeline. Now I need you to find everything ELSE that could break when real customers sign up and try to use CoAIleague to run their security business. These are the blind spots — the things that work fine in dev with one test org but explode when real multi-tenant traffic hits.
+
+---
+
+## AUDIT A: NEW ORG SIGNUP → FIRST VALUE — THE CRITICAL PATH
+
+A new security company owner finds CoAIleague, signs up, and tries to get value. Trace EVERY step of this journey in the actual code and find where it breaks.
+
+### A.1 — Marketing Site → Signup
+
+```
+VERIFY:
+[ ] Landing page loads on mobile AND desktop (not just desktop)
+[ ] All CTAs (buttons, links) actually navigate to signup
+[ ] SEO meta tags present (title, description, og:image) — important for Google/social sharing
+[ ] Page loads fast (not waiting on massive JS bundle before anything renders)
+[ ] Site is server-side rendered or has pre-rendered HTML for SEO crawlers
+    → If it's pure client-side React with no SSR, Google may not index it properly
+    → This is a MAJOR issue for discoverability
+[ ] No console errors on landing page
+[ ] Pricing page loads and displays all tiers correctly
+[ ] "Start Free Trial" or "Sign Up" button works from every page
+```
+
+### A.2 — Account Creation
+
+```
+VERIFY THE SIGNUP FLOW:
+[ ] Email + password registration works
+[ ] Email validation (proper format, not disposable emails if you filter those)
+[ ] Password strength requirements enforced
+[ ] Duplicate email handled gracefully (not a server error)
+[ ] Confirmation email sent (via Resend)
+[ ] Confirmation email actually arrives (check Resend deliverability)
+[ ] Email confirmation link works and activates account
+[ ] OAuth signup works (Google, Microsoft) if offered
+[ ] After signup → user lands on onboarding, NOT a blank dashboard
+
+EDGE CASES THAT WILL HAPPEN:
+[ ] User signs up → closes browser → comes back later → can they still confirm?
+[ ] User signs up with wrong email → can they change it?
+[ ] Confirmation link expires → is there a resend option?
+[ ] User hits signup twice quickly → duplicate account created? (race condition)
+[ ] User signs up on mobile → entire flow works on small screen?
+[ ] What if Resend is down? Does signup silently fail or queue the email?
+```
+
+### A.3 — Onboarding Flow (First 10 Minutes = Make or Break)
+
+```
+THIS IS WHERE MOST SAAS PLATFORMS LOSE CUSTOMERS.
+
+[ ] Onboarding wizard/steps exist and guide the user
+[ ] Step 1: Company info (name, address, state, license number)
+[ ] Step 2: Invite first employees OR add them manually
+[ ] Step 3: Add first client/site
+[ ] Step 4: Create first schedule or shift
+[ ] Step 5: Connect integrations (QuickBooks, Stripe billing)
+
+FOR EACH STEP VERIFY:
+[ ] Can be completed on mobile
+[ ] Can be skipped and returned to later
+[ ] Progress is saved if user leaves mid-step
+[ ] Validation errors are clear (not generic "something went wrong")
+[ ] Back button doesn't lose data
+[ ] Step completion triggers the correct database records
+
+AFTER ONBOARDING:
+[ ] Dashboard shows relevant data (not empty state with no guidance)
+[ ] Empty states have helpful prompts ("Add your first employee to get started")
+[ ] Trinity chat is accessible and responsive
+[ ] User knows what to do next (not staring at blank screen)
+```
+
+### A.4 — Subscription & Payment (Stripe)
+
+```
+VERIFY THE MONEY PATH:
+[ ] Free trial starts automatically (if offered)
+[ ] Trial duration is correct and enforced
+[ ] Trial expiration warning emails sent at right intervals
+[ ] Plan selection page shows all tiers with correct pricing
+[ ] Stripe checkout flow works (card entry, processing, confirmation)
+[ ] Successful payment → account upgraded to paid tier immediately
+[ ] Failed payment → clear error message, account not upgraded
+[ ] Webhook from Stripe received and processed correctly
+[ ] Subscription status stored in database AND checked on feature access
+[ ] Downgrade flow works (features restricted appropriately)
+[ ] Cancellation flow works (what happens to their data?)
+[ ] Reactivation after cancellation works
+
+STRIPE EDGE CASES:
+[ ] Card declined → user can try another card
+[ ] 3D Secure (SCA) challenge required → flow handles it
+[ ] Webhook arrives before redirect completes (race condition)
+[ ] Customer disputes charge → chargeback webhook handled
+[ ] Proration on mid-cycle plan change calculated correctly
+[ ] Multiple workspaces under same Stripe customer?
+```
+
+---
+
+## AUDIT B: MULTI-TENANT ISOLATION — THE #1 PRODUCTION KILLER
+
+If Org A can see Org B's data, the platform is dead on arrival.
+
+### B.1 — Data Isolation Verification
+
+```
+FOR EVERY API ENDPOINT, VERIFY:
+[ ] Query includes workspace_id / org_id filter
+[ ] User can only access data from their own workspace
+[ ] A user in Org A cannot craft a request to access Org B's data
+[ ] Even if they guess/know another org's ID
+
+TEST THIS:
+1. Create two test orgs with different data
+2. Log in as user from Org A
+3. Try to access Org B's:
+   - Employees (GET /api/employees?workspaceId=orgB_id)
+   - Clients
+   - Shifts/schedules  
+   - Invoices
+   - Time entries
+   - Chat messages
+   - Documents
+   
+If ANY of these return Org B's data → CRITICAL security vulnerability
+```
+
+### B.2 — Cross-Tenant Bleed Points
+
+```
+CHECK THESE SPECIFIC RISK AREAS:
+[ ] WebSocket rooms — can a user join another org's chat room?
+[ ] Real-time updates — do push events leak to wrong org?
+[ ] File uploads — are files stored with org isolation (not shared bucket)?
+[ ] Reports — does report generation scope to requesting org?
+[ ] Search — does search index scope to user's org?
+[ ] Trinity AI — does Trinity's context include ONLY the requesting org's data?
+[ ] Admin panels — does platform admin view properly isolate org data?
+[ ] Email notifications — do emails reference correct org branding/info?
+```
+
+---
+
+## AUDIT C: EMPLOYEE INVITE & ONBOARDING — THE SECOND USER EXPERIENCE
+
+The org owner signed up. Now they invite their first employee. This is the second critical path.
+
+```
+EMPLOYEE INVITE FLOW:
+[ ] Owner can invite by email
+[ ] Invite email sent with clear CTA
+[ ] Invite link works on mobile (employees are field workers — mobile first!)
+[ ] Employee creates account from invite
+[ ] Employee is automatically linked to correct org with correct role
+[ ] Employee lands on their dashboard (not admin dashboard)
+[ ] Employee can see their assigned shifts
+[ ] Employee can clock in/out
+[ ] Employee can view their schedule
+[ ] Employee can access chat
+[ ] Employee can NOT see admin features (payroll, billing, client details)
+
+EDGE CASES:
+[ ] Invite sent to wrong email → can owner revoke/resend?
+[ ] Employee already has an account on another org → can they be on two orgs?
+[ ] Invite link expires → clear message + resend option
+[ ] Employee accepts invite on desktop but primarily uses mobile → consistent experience?
+[ ] What if employee has no email? (common in security industry) → alternative invite method?
+[ ] Bulk invite (import 50 employees at once) → works without timeout/error?
+```
+
+---
+
+## AUDIT D: MOBILE EXPERIENCE — YOUR USERS ARE IN THE FIELD
+
+Security officers are NOT at desks. They're on phones, often older phones, often on bad connections.
+
+```
+MOBILE-CRITICAL CHECKS:
+[ ] Login works on mobile (no tiny inputs, no zoom required)
+[ ] Clock in/out works on mobile with GPS capture
+[ ] Clock in works on slow/spotty connection (queues offline?)
+[ ] GPS permission prompt appears and is handled if denied
+[ ] Camera works for proof-of-service photos
+[ ] Schedule view is readable on small screen
+[ ] Chat works on mobile (can send/receive messages)
+[ ] Push notifications work (shift assignments, schedule changes)
+[ ] Duress/panic button works on mobile (if this feature exists)
+[ ] Touch targets are large enough (44px minimum for field workers with gloves)
+[ ] Battery drain — does GPS tracking kill battery?
+[ ] Data usage — is the app efficient on cellular data?
+
+PWA / NATIVE APP:
+[ ] Is there a PWA manifest for "add to home screen"?
+[ ] Does the app work when added to home screen?
+[ ] App icon and splash screen configured?
+[ ] Or is there a native app? If so, is it current in the app store?
+```
+
+---
+
+## AUDIT E: ROLE-BASED ACCESS CONTROL (RBAC) — CAN THE WRONG PERSON SEE THE WRONG THING?
+
+```
+ROLE HIERARCHY:
+Platform Admin > Owner > Co-Owner > Manager > Supervisor > Employee
+
+FOR EACH ROLE, VERIFY THEY CAN ONLY ACCESS WHAT THEY SHOULD:
+
+PLATFORM ADMIN:
+[ ] Can access all orgs (for support)
+[ ] Can NOT modify org data without audit trail
+[ ] Admin routes are completely separate from user routes
+
+OWNER:
+[ ] Full access to their org
+[ ] Can manage billing/subscription
+[ ] Can manage all employees, clients, schedules
+[ ] Can access all reports and analytics
+[ ] Can configure org settings
+
+CO-OWNER:
+[ ] Same as owner EXCEPT billing? (define boundary)
+[ ] Can they invite other admins?
+
+MANAGER:
+[ ] Can manage schedules and shifts
+[ ] Can approve timesheets
+[ ] Can view (but not create?) invoices
+[ ] Cannot access billing/subscription
+[ ] Cannot delete employees
+
+SUPERVISOR:
+[ ] Can view team schedules
+[ ] Can approve time entries for their team
+[ ] Cannot access financial data
+[ ] Cannot modify client contracts
+
+EMPLOYEE:
+[ ] Can ONLY see their own schedule, time entries, pay stubs
+[ ] Cannot see other employees' data
+[ ] Cannot access admin features
+[ ] Cannot see client billing information
+[ ] Cannot modify schedules
+
+TEST: Log in as each role and try to access pages/endpoints they shouldn't.
+Any access that succeeds where it shouldn't → CRITICAL bug.
+```
+
+---
+
+## AUDIT F: WHAT HAPPENS WHEN THINGS GO WRONG?
+
+Production isn't about the happy path. It's about when things break.
+
+### F.1 — Database Goes Down
+
+```
+[ ] App shows maintenance page (not stack trace)
+[ ] Active users see graceful error (not white screen)
+[ ] Data entered just before crash → was it saved? (transaction integrity)
+[ ] When DB comes back → app recovers without manual intervention
+[ ] No orphaned records from partial writes during crash
+```
+
+### F.2 — Third-Party Service Goes Down
+
+```
+STRIPE DOWN:
+[ ] Signup still works (just delays payment)
+[ ] Existing users unaffected
+[ ] Webhook queue doesn't lose events
+
+RESEND DOWN:
+[ ] Email-dependent flows gracefully degrade
+[ ] Emails queued for retry (not lost)
+[ ] User not told "email sent" when it wasn't
+
+QUICKBOOKS DOWN:
+[ ] Sync failures queued for retry
+[ ] Data entry still works (just doesn't sync)
+[ ] No duplicate sync when QB comes back
+
+AI MODELS DOWN (Gemini/Claude/OpenAI):
+[ ] Fallback chain activates
+[ ] If ALL models down → graceful message (not error)
+[ ] Non-AI features still work normally
+[ ] Queued AI requests don't pile up and explode when service returns
+```
+
+### F.3 — User Errors
+
+```
+[ ] User deletes something important → undo or soft delete?
+[ ] User enters clearly wrong data (negative hours, $0 pay rate) → validation catches it?
+[ ] User navigates to invalid URL → 404 page (not blank screen)
+[ ] User's session expires while filling long form → data preserved on re-login?
+[ ] Two admins edit same record simultaneously → conflict resolution?
+```
+
+---
+
+## AUDIT G: SCALABILITY — WILL IT WORK WITH 10 ORGS? 100? 1000?
+
+```
+PERFORMANCE CHECKS:
+[ ] Dashboard load time with 100 employees → under 2 seconds?
+[ ] Schedule view with 500 shifts in a month → renders without lag?
+[ ] Chat with 1000+ messages in history → virtualized/paginated?
+[ ] Employee list with 200+ employees → paginated, searchable?
+[ ] Report generation for 3 months of data → doesn't timeout?
+[ ] Concurrent users: 50 users hitting API simultaneously → no 500 errors?
+
+DATABASE:
+[ ] Indexes on all frequently queried columns (workspace_id, employee_id, date ranges)
+[ ] N+1 query problems → eager loading where needed
+[ ] Large table queries use LIMIT/OFFSET or cursor pagination
+[ ] Connection pooling configured (not opening new connection per request)
+
+WEBSOCKETS:
+[ ] Socket server handles 100+ simultaneous connections
+[ ] Room join/leave doesn't leak memory
+[ ] Heartbeat/ping configured for stale connection cleanup
+```
+
+---
+
+## AUDIT H: LEGAL & COMPLIANCE — CAN THIS PLATFORM GET SUED?
+
+```
+LABOR LAW COMPLIANCE:
+[ ] Overtime calculated per STATE rules (not just federal 40-hour)
+[ ] California daily overtime (over 8 hours/day) handled?
+[ ] Break requirements per state enforced?
+[ ] Meal period violations tracked?
+[ ] Minor labor restrictions (if employing under 18)?
+[ ] Pay stub requirements per state met?
+
+DATA PRIVACY:
+[ ] Privacy policy exists and is linked
+[ ] Terms of service exist and are agreed to at signup
+[ ] User data export capability (GDPR/CCPA if applicable)
+[ ] User data deletion capability
+[ ] Employee data encrypted at rest?
+[ ] PII not logged in plaintext in server logs
+[ ] Passwords hashed (bcrypt/argon2, NOT md5/sha)
+
+SECURITY INDUSTRY SPECIFIC:
+[ ] Guard licensing requirements tracked per state
+[ ] Armed guard certification tracked separately from unarmed
+[ ] Firearm permit expiration tracked
+[ ] CPR/First Aid certification tracked
+[ ] Drug testing compliance tracked
+[ ] State-specific training hour requirements tracked
+```
+
+---
+
+## AUDIT I: NOTIFICATIONS & COMMUNICATIONS — DO PEOPLE ACTUALLY GET TOLD?
+
+```
+VERIFY NOTIFICATIONS FIRE FOR:
+[ ] New shift assigned → employee notified (push + email)
+[ ] Shift changed → affected employee notified
+[ ] Shift cancelled → affected employee notified
+[ ] Schedule published → all affected employees notified
+[ ] Timesheet approved → employee notified
+[ ] Timesheet rejected → employee notified with reason
+[ ] Invoice sent → client notified
+[ ] Payment received → org owner notified
+[ ] Certification expiring → employee AND manager notified
+[ ] New employee joined → org admin notified
+[ ] Calloff received → manager notified
+[ ] Payroll ready for review → owner notified
+
+FOR EACH NOTIFICATION:
+[ ] Push notification works (mobile)
+[ ] Email notification works
+[ ] In-app notification works
+[ ] Notification preferences respected (user can turn off specific types)
+[ ] Notifications don't fire for inactive/terminated employees
+[ ] Notifications are org-scoped (not leaking to wrong org)
+```
+
+---
+
+## AUDIT J: DATA MIGRATION & IMPORT — NEW ORGS HAVE EXISTING DATA
+
+```
+New security companies switching to CoAIleague have existing:
+- Employee rosters (possibly in spreadsheets)
+- Client lists
+- Schedules
+- Pay rates
+- Certification records
+
+VERIFY:
+[ ] CSV/Excel import for employees works
+[ ] Import validates data (catches duplicates, missing required fields)
+[ ] Import maps columns correctly (flexible, not rigid format)
+[ ] Import preview before committing (don't just blindly insert)
+[ ] Failed rows reported clearly (row 47: missing email)
+[ ] Large imports (500+ rows) don't timeout
+[ ] Import for clients/sites works
+[ ] Import for schedules/shifts works
+[ ] QB data import on first connect (pull existing employees/clients)
+```
+
+---
+
+## AUDIT K: WHAT YOUR COMPETITORS DO THAT YOU MIGHT BE MISSING
+
+Based on industry analysis, security WFM platforms commonly offer these features. Flag any that are PROMISED on your site but NOT built:
+
+```
+INDUSTRY STANDARD FEATURES:
+[ ] Guard tour / patrol checkpoint scanning (NFC, QR code, GPS)
+[ ] Daily Activity Reports (DAR) — automated from clock events
+[ ] Client portal — clients can log in and view their coverage/reports
+[ ] Post orders — digital post orders accessible to guards on mobile
+[ ] Incident report workflow — field to approval to client delivery
+[ ] Guard tour verification — proof guard visited checkpoints
+[ ] Lone worker protection / duress button
+[ ] Visitor management integration
+[ ] Equipment tracking (radios, vehicles, keys, weapons)
+[ ] Customizable digital forms for field use
+[ ] Geofencing with alerts when guard leaves zone
+[ ] Pass-down logs between shifts
+[ ] Officer ranking/scoring system
+
+CHECK: Are any of these promised on coaileague.com but not actually functional?
+If yes → that's a launch blocker or needs to be removed from marketing.
+```
+
+---
+
+## OUTPUT
+
+Give me a SINGLE summary:
+
+```
+NEW ORG SIGNUP READINESS:
+  Signup flow:        PASS / FAIL + issues
+  Onboarding flow:    PASS / FAIL + issues  
+  Payment flow:       PASS / FAIL + issues
+  First employee add: PASS / FAIL + issues
+  Mobile experience:  PASS / FAIL + issues
+
+SECURITY:
+  Multi-tenant isolation: PASS / FAIL + issues
+  RBAC enforcement:       PASS / FAIL + issues
+  Data encryption:        PASS / FAIL + issues
+
+RESILIENCE:
+  Third-party failover: PASS / FAIL + issues
+  Error handling:       PASS / FAIL + issues
+  Scalability:          PASS / FAIL + issues
+
+COMPLIANCE:
+  Labor law:     PASS / FAIL + issues
+  Data privacy:  PASS / FAIL + issues
+  Industry reqs: PASS / FAIL + issues
+
+FEATURE GAPS VS COMPETITORS:
+  [list anything promised but not built]
+
+TOP 10 THINGS THAT WILL BREAK FIRST IN PRODUCTION:
+1. ___
+2. ___
+...
+```
+
+**Be ruthless. Real customers are about to use this. Every gap is a potential lost customer or worse — a lawsuit, a compliance violation, or a data breach. Find them all.**

@@ -1,0 +1,219 @@
+Solid session. Here is what got confirmed and what comes next.
+
+All six tasks from that session are clean. The Statewide founder exemption is fully enforced at every layer — schema, credit manager, all four billing layers, subscription manager, and usage tracker. The universalAudit bug was caught and fixed. The CSV import backend is built with dry-run preview mode. The go-live checklist is wired. Statewide will never be charged, never have credits deducted, never be suspended or downgraded by any automated process.
+
+The last line of the file shows Replit is now working on the document system design — reading, analyzing, enhancing, and making it work on desktop and mobile.
+
+Copy everything below this line for what comes after the document work completes:
+
+---
+
+COAILEAGUE — POST-DOCUMENT SYSTEM VERIFICATION AND FINAL SPRINT
+The document system enhancement is running. When it completes verify everything
+works end to end before moving to the remaining production gaps.
+
+---
+
+WHEN THE DOCUMENT WORK IS DONE VERIFY THESE FIRST
+
+Do not assume the document enhancements worked. Verify each one explicitly.
+
+DESKTOP RENDERING:
+Open every document type on a desktop browser at 1440px wide.
+Confirm the header is uniform across all document types.
+Confirm the footer shows page numbers, org name, document status, and QR code.
+Confirm signature blocks have visible borders and distinct background.
+Confirm the document action sidebar shows on the right with signer status,
+download button, and audit trail link.
+Confirm print layout matches digital layout exactly — print preview must match screen.
+
+MOBILE RENDERING:
+Open every document type on a 375px wide mobile viewport.
+Confirm no horizontal scrolling is required on any document.
+Confirm signature blocks are minimum 44px height for finger tapping.
+Confirm the sign button is always visible without scrolling to find it.
+Confirm pinch to zoom works on document views.
+Confirm finger-draw signature capture works on mobile — not just typed name.
+
+PDF EXPORT:
+Generate a PDF for every document type.
+Confirm the PDF matches the on-screen rendering exactly.
+Confirm file names follow the format: DocumentType_OrgName_Date_DocumentID.pdf
+Confirm PDFs save automatically to the org document safe on generation.
+Confirm executed PDFs show EXECUTED watermark across the body.
+
+PIPELINE END TO END:
+Trigger a document through all 8 pipeline steps.
+Confirm every step logs to the audit trail with timestamp.
+Confirm routing goes to the correct signers in the correct order.
+Confirm notifications fire via all three channels on each routing step.
+Confirm the WORM lock activates on execution and blocks API edits.
+Confirm all parties receive executed copies automatically on completion.
+
+---
+
+WHAT STILL NEEDS TO BE CHECKED AFTER DOCUMENTS
+
+SPRINT 1 — NEW ORG COLD SIGNUP END TO END
+
+This has not been walked through as a complete real flow yet.
+Walk through every step as a stranger signing up cold:
+
+Open the landing page on mobile and desktop. Confirm no broken links or
+missing images on any public-facing page.
+
+Complete the full signup flow. Confirm the workspace is created, the user
+is assigned org_owner role, the free trial subscription is created, exactly
+500 trial credits are allocated with a system event reference in the ledger,
+the welcome email arrives at the signup address, and Trinity is available
+immediately on first login.
+
+Add one employee, create one client and site, build one shift, assign the
+employee, have them clock in via GPS, clock out, and generate one invoice.
+This single loop proves the entire core platform works for a brand new org.
+
+Confirm the trial credit warning fires at 75 credits remaining.
+Confirm the hard block fires at zero credits with the upgrade prompt.
+Confirm the trial expiry gates access correctly with data preserved.
+
+SPRINT 2 — STRIPE SUBSCRIPTION FLOW
+
+Complete the upgrade from trial to Starter using a Stripe test card.
+Confirm the subscription activates via webhook not redirect URL.
+Confirm 5000 credits allocate from the webhook confirmation.
+Confirm the org_owner receives subscription confirmation notification and email.
+Confirm the upgrade flow from Starter to Professional works correctly.
+Confirm credit allocation upgrades from 5000 to 10000 immediately.
+Confirm soft cap behavior activates on Professional.
+
+SPRINT 3 — CORE DAILY OPERATIONS
+
+Five employees clock in simultaneously at five different sites.
+Confirm all five records are created independently with correct GPS data.
+Confirm no records are crossed between employees.
+Confirm manager dashboard updates in real time for each clock-in.
+
+Run the call-off flow end to end — officer submits, manager notified,
+Trinity finds replacement, manager assigns, replacement officer notified.
+
+Run the complete payroll flow — timesheets auto-generate, manager approves,
+Trinity presents for review, org_owner approves, pay stubs generate,
+employees notified. Confirm Trinity never auto-executes payroll.
+
+Run the complete client billing flow — invoice generates, email delivers
+to client with working payment link, payment updates invoice to paid,
+revenue ledger entry created, org_owner widget updates.
+
+SPRINT 4 — TRINITY COMPLIANCE SIMULATION FOR ACME
+
+These six scenarios were specified in the last prompt and need to run:
+
+Scenario 1: Set one employee license to expire in 25 days. Confirm the
+30-day URGENT alert fires via all three channels simultaneously.
+Confirm employee is still scheduling-eligible at 25 days.
+
+Scenario 2: Set one employee license to expired yesterday. Confirm Trinity
+marks it expired, removes scheduling eligibility, blocks shift assignment
+with clear message, alerts manager and org_owner.
+
+Scenario 3: Expired employee uploads renewed guard card. Confirm Trinity
+scans it, extracts new expiration date, presents to manager for confirmation,
+restores scheduling eligibility after manager confirms.
+
+Scenario 4: Create a post requiring First Aid certification. Attempt to
+assign an officer without it. Confirm Trinity blocks with clear message.
+Officer uploads First Aid cert. Confirm Trinity adds it and allows assignment.
+
+Scenario 5: Set Acme insurance certificate to expire in 45 days. Confirm
+Trinity fires the 60-day WARNING via all three channels and daily briefing.
+
+Scenario 6: Create an employee with an out-of-state license. Confirm Trinity
+flags it for manager review with a note about cross-state validity.
+Confirm manager can override with documented reason.
+
+SPRINT 5 — WEBSOCKET LIVE TEST
+
+Write a manual test script I can follow with two browser windows open
+simultaneously. Tell me exactly what to open in each window, what action
+to take in window 1, and what to look for in window 2 within 2 seconds.
+
+Then programmatically test: simulate a client disconnect, trigger 3 events,
+reconnect, verify all 3 missed events are delivered. If missed events are
+lost build a 5 minute event buffer holding the last 50 events per workspace.
+
+SPRINT 6 — MOBILE END TO END TEST SCRIPT
+
+Write a step-by-step manual test script for each of these mobile flows
+so I can walk through them on my phone:
+
+GPS clock-in with geofence validation and what rejection looks like.
+Overnight shift crossing midnight creating one correct time entry.
+Duplicate clock-in prevention with clear message.
+Shift swap from both employee perspectives plus manager approval.
+Call-off submission with Trinity replacement flow.
+Incident report with photo and GPS auto-populate.
+Schedule view with next shift prominent and no horizontal scroll.
+
+SPRINT 7 — MULTI-TENANT STRESS TEST
+
+Create three orgs simultaneously — Org Alpha Starter, Org Beta Professional,
+Org Gamma Enterprise. Run simultaneous clock-ins, timesheet approvals, Trinity
+chat sessions, and notifications across all three at the same moment.
+
+After simultaneous operations confirm each org sees only its own data in
+every view — schedules, employees, invoices, notifications, Trinity responses,
+credit ledgers. Zero bleed between orgs on any surface.
+
+SPRINT 8 — FAILURE AND RECOVERY
+
+Simulate failed Stripe subscription payment — confirm grace period, retry,
+org_owner payment prompt, access restored on successful retry.
+
+Simulate failed overage charge on Professional — confirm 3 retry attempts,
+hard cap fallback after 3 failures, platform_staff alert, soft cap restored
+on payment resolution.
+
+GPS unavailable during clock-in — confirm graceful handling, no phantom record.
+
+Session expiry mid-payroll — confirm payroll stays pending, no auto-approval,
+clean resume after re-login.
+
+---
+
+STATEWIDE GO-LIVE READINESS CHECK
+
+After all sprints above pass confirm these Statewide-specific items:
+
+The go-live checklist page is accessible in the Statewide workspace showing
+all 10 steps with green or red status for each.
+
+The employee CSV import preview mode works — upload a test CSV with 5 rows,
+confirm preview shows all 5 employees with their details before writing anything,
+confirm validation catches a row with a missing required field.
+
+The client and site CSV import preview mode works — same validation test.
+
+The founder exemption log line fires on every server startup:
+FounderExemption Statewide Protective Services exemption verified and enforced.
+
+Attempting any credit deduction against the Statewide workspace returns
+unlimitedCredits: true with zero deduction and an audit trail entry showing
+exemption reason.
+
+Attempting any Stripe charge against Statewide is blocked at all four
+billing layers with zero invoice items created.
+
+Attempting to downgrade, suspend, or cancel the Statewide subscription
+is blocked by subscriptionManager with zero status change.
+
+---
+
+FINAL GRAND OPENING CHECKLIST STATUS
+
+After all sprints above complete report the status of every item on
+the grand opening checklist. Every item must show confirmed with data.
+Any item not yet confirmed is a blocker for go-live.
+
+The platform does not open to new paying customers until every item is green.
+Statewide does not go live until the go-live checklist shows all 10 steps complete.
+These are the two finish lines. Run toward both simultaneously.

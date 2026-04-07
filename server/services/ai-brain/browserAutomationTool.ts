@@ -12,6 +12,8 @@
  */
 
 import puppeteer, { Browser, Page } from 'puppeteer';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('browserAutomationTool');
 
 // Viewport presets for common devices
 export const VIEWPORT_PRESETS: Record<string, { width: number; height: number; deviceScaleFactor?: number; isMobile?: boolean }> = {
@@ -80,7 +82,7 @@ class BrowserAutomationTool {
   }
 
   private async launchBrowser(): Promise<Browser> {
-    console.log('[BrowserAutomation] Launching headless browser...');
+    log.info('[BrowserAutomation] Launching headless browser...');
     
     return puppeteer.launch({
       headless: true,
@@ -99,12 +101,16 @@ class BrowserAutomationTool {
 
   private startIdleTimer(): void {
     setInterval(async () => {
-      const idleTime = Date.now() - this.lastUsed.getTime();
-      if (idleTime > this.IDLE_TIMEOUT && this.browser) {
-        console.log('[BrowserAutomation] Closing idle browser');
-        await this.closeBrowser();
+      try {
+        const idleTime = Date.now() - this.lastUsed.getTime();
+        if (idleTime > this.IDLE_TIMEOUT && this.browser) {
+          log.info('[BrowserAutomation] Closing idle browser');
+          await this.closeBrowser();
+        }
+      } catch (error: any) {
+        log.warn('[BrowserAutomation] Idle check failed (non-fatal):', error?.message || 'unknown');
       }
-    }, 60000);
+    }, 60000).unref();
   }
 
   async closeBrowser(): Promise<void> {
@@ -112,7 +118,7 @@ class BrowserAutomationTool {
       try {
         await this.browser.close();
       } catch (error) {
-        console.error('[BrowserAutomation] Error closing browser:', error);
+        log.error('[BrowserAutomation] Error closing browser:', error);
       }
       this.browser = null;
     }
@@ -208,12 +214,14 @@ class BrowserAutomationTool {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[BrowserAutomation] Screenshot capture failed:', errorMessage);
+      log.error('[BrowserAutomation] Screenshot capture failed:', errorMessage);
 
       if (page) {
         try {
           await page.close();
-        } catch {}
+        } catch (closeError) {
+          log.warn('[BrowserAutomation] Failed to close page during cleanup:', closeError);
+        }
       }
 
       return {

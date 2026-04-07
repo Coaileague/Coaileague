@@ -1,0 +1,1144 @@
+# CoAIleague — Data Provenance, Audit Trail & Universal Breadcrumb Architecture
+## "Nothing Gets Lost. Everything Has a Home. Every Action Has a Trail."
+
+**Date:** March 4, 2026
+**Context:** CoAIleague has 109+ pages/routes, multiple AI agents (Trinity, ClockBot, ReportBot, MeetingBot, GuardBot, HelpBot), and dozens of CRUD operations. Every piece of data — whether created by a human, an AI bot, or the system itself — MUST be permanently attributed to: (1) the user who triggered it, (2) the org/workspace that owns it, and (3) an unbroken audit trail of every mutation. No orphaned data. No lost documents. No "who created this?" mysteries.
+
+**THE RULE: If it touches the database, it leaves a breadcrumb.**
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 1: THE PROBLEM — HOW DATA GETS LOST
+# ═══════════════════════════════════════════════════
+
+## 1A: Common Data Loss Patterns in Large Apps
+
+```
+PATTERN 1: Missing workspace_id
+  A route creates a record but doesn't attach workspace_id.
+  Result: The record exists but doesn't belong to any org.
+  Nobody can find it. It doesn't show up in any dashboard.
+  The AI generated a report but it's floating in space.
+
+PATTERN 2: Missing created_by / triggered_by
+  A cron job or bot creates a document but doesn't record who/what triggered it.
+  Result: "Where did this invoice come from?" Nobody knows.
+  Was it auto-generated? Did a manager create it? Which bot?
+
+PATTERN 3: Stale references
+  An employee is deactivated but their documents, reports, clock records
+  still reference their user_id. When the employee record is deleted (if ever),
+  all those references break. Foreign keys fail or data becomes unqueryable.
+
+PATTERN 4: Implicit org context
+  Route assumes the org from the logged-in user's session.
+  But a bot or cron job runs without a session. Now the route doesn't know
+  which org context to use. Data gets created under the wrong org or no org.
+
+PATTERN 5: AI-generated data with no attribution
+  Trinity generates a report. ReportBot polishes an incident.
+  MeetingBot creates minutes. The output goes to the document vault.
+  But which bot created it? On behalf of which user? Triggered by what event?
+  If the attribution chain is broken, the document is an orphan.
+
+PATTERN 6: Cross-table consistency
+  An invoice is created with line items, but the line items reference
+  employees or shifts that have since been edited or deleted.
+  The invoice now contains stale data that doesn't match current records.
+
+PATTERN 7: File uploads without metadata
+  A photo is uploaded but not attached to a shift room, incident, or employee.
+  It sits in cloud storage consuming space with no way to find it.
+```
+
+## 1B: The Solution — Three Layers
+
+```
+LAYER 1: OWNERSHIP COLUMNS        → Every table knows who owns every row
+LAYER 2: AUDIT TRAIL              → Every mutation is logged with who/what/when/why  
+LAYER 3: TRINITY GATEWAY           → All AI actions flow through one orchestrator
+                                     that enforces attribution before execution
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 2: LAYER 1 — UNIVERSAL OWNERSHIP COLUMNS
+# ═══════════════════════════════════════════════════
+
+## 2A: The Rule
+
+**EVERY table in the database that stores org-specific data MUST have these columns:**
+
+```sql
+-- REQUIRED on every org-data table:
+workspace_id    UUID NOT NULL REFERENCES workspaces(id),  -- Which org owns this
+created_by      UUID REFERENCES users(id),                 -- Which user created it (NULL if system/bot)
+created_by_type VARCHAR(20) NOT NULL DEFAULT 'user',       -- 'user', 'bot', 'system', 'cron', 'trinity'
+created_by_bot  VARCHAR(30),                               -- If created_by_type = 'bot': which bot
+updated_by      UUID REFERENCES users(id),                 -- Last user to edit (NULL if system/bot)
+updated_by_type VARCHAR(20),                               -- Same enum as created_by_type
+created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
+```
+
+**ALSO REQUIRED on tables that reference employees, clients, or sites:**
+
+```sql
+-- When the record is "about" a specific employee:
+employee_id     UUID REFERENCES users(id),                 -- Which employee this relates to
+
+-- When the record is "about" a specific client/site:
+client_id       UUID REFERENCES clients(id),               -- Which client/site this relates to
+```
+
+## 2B: Schema Audit Checklist
+
+The Replit agent MUST audit EVERY existing table and verify these columns exist. Here is the audit query:
+
+```sql
+-- Find all tables that are MISSING workspace_id
+SELECT table_name 
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  AND t.table_name NOT IN ('workspaces', 'subscription_tiers', 'migrations', 'drizzle_migrations')
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name 
+      AND c.column_name = 'workspace_id'
+  );
+
+-- Find all tables that are MISSING created_by
+SELECT table_name 
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  AND t.table_name NOT IN ('workspaces', 'subscription_tiers', 'migrations', 'drizzle_migrations')
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name 
+      AND c.column_name = 'created_by'
+  );
+
+-- Find all tables that are MISSING created_at
+SELECT table_name 
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name 
+      AND c.column_name = 'created_at'
+  );
+```
+
+**For every table returned by these queries, ADD the missing columns.** This is non-negotiable.
+
+## 2C: Table-by-Table Ownership Map
+
+Every table must map to this hierarchy:
+
+```
+OWNERSHIP HIERARCHY:
+
+  workspace (org)
+    ├── users (employees, managers, owners)
+    │     ├── clock_records (belong to user + workspace)
+    │     ├── time_entries (belong to user + workspace)
+    │     ├── payroll_entries (belong to user + workspace)
+    │     ├── behavior_scores (belong to user + workspace)
+    │     ├── training_records (belong to user + workspace)
+    │     └── signature_requests (belong to user + workspace)
+    │
+    ├── clients (sites)
+    │     ├── shifts (belong to client + workspace)
+    │     │     ├── shift_rooms (belong to shift + workspace)
+    │     │     │     ├── shift_room_messages (belong to room + workspace)
+    │     │     │     └── shift_check_ins (belong to room + officer + workspace)
+    │     │     └── shift_assignments (belong to shift + user + workspace)
+    │     ├── post_orders (belong to client + workspace)
+    │     ├── contracts (belong to client + workspace)
+    │     └── client_contacts (belong to client + workspace)
+    │
+    ├── invoices (belong to client + workspace)
+    │     └── invoice_line_items (belong to invoice + workspace)
+    │
+    ├── payroll_runs (belong to workspace)
+    │     └── payroll_entries (belong to run + user + workspace)
+    │
+    ├── incident_reports (belong to shift + site + reporter + workspace)
+    │
+    ├── document_templates (belong to workspace)
+    │     └── document_instances (belong to template + workspace)
+    │           └── signature_requests (belong to document + workspace)
+    │
+    ├── document_vault (belong to workspace)
+    │
+    ├── custom_forms (belong to workspace)
+    │     └── form_submissions (belong to form + user + workspace)
+    │
+    ├── pipeline_deals (belong to workspace)
+    │
+    ├── approval_pipeline (belong to workspace)
+    │
+    ├── saved_reports (belong to workspace)
+    │
+    ├── credit_balances (belong to workspace)
+    ├── credit_transactions (belong to workspace)
+    ├── financial_processing_fees (belong to workspace)
+    ├── platform_invoices (belong to workspace)
+    ├── usage_caps (belong to workspace)
+    │
+    ├── org_subscriptions (belong to workspace)
+    │
+    ├── notifications (belong to user + workspace)
+    │
+    └── broadcasts (belong to workspace)
+
+RULE: You should NEVER be able to query a record without knowing which workspace it belongs to.
+RULE: You should NEVER create a record without attaching it to a workspace.
+RULE: Every query from an authenticated user should include WHERE workspace_id = <user's workspace>.
+```
+
+## 2D: Middleware Enforcement
+
+To prevent ANY route from creating data without proper attribution, implement a middleware layer:
+
+```typescript
+// server/middleware/dataAttribution.ts
+
+/**
+ * Middleware that runs BEFORE every database write operation.
+ * Ensures workspace_id, created_by, and created_by_type are set.
+ * 
+ * This is the SINGLE POINT OF ENFORCEMENT.
+ * No route, no service, no cron job can bypass this.
+ */
+
+export function enforceAttribution(context: RequestContext) {
+  return {
+    // For INSERT operations
+    beforeInsert(table: string, data: Record<string, any>) {
+      // workspace_id is REQUIRED (except for global tables)
+      const globalTables = ['workspaces', 'subscription_tiers', 'system_config'];
+      if (!globalTables.includes(table)) {
+        if (!data.workspace_id) {
+          throw new Error(`ATTRIBUTION ERROR: Cannot insert into ${table} without workspace_id`);
+        }
+      }
+      
+      // created_by attribution
+      if (context.type === 'user_request') {
+        data.created_by = context.userId;
+        data.created_by_type = 'user';
+      } else if (context.type === 'bot_action') {
+        data.created_by = null;
+        data.created_by_type = 'bot';
+        data.created_by_bot = context.botName; // 'clock_bot', 'report_bot', etc.
+      } else if (context.type === 'cron_job') {
+        data.created_by = null;
+        data.created_by_type = 'cron';
+      } else if (context.type === 'trinity') {
+        data.created_by = null;
+        data.created_by_type = 'trinity';
+      } else if (context.type === 'system') {
+        data.created_by = null;
+        data.created_by_type = 'system';
+      }
+      
+      // Timestamps
+      data.created_at = data.created_at || new Date();
+      data.updated_at = new Date();
+      
+      return data;
+    },
+    
+    // For UPDATE operations
+    beforeUpdate(table: string, data: Record<string, any>) {
+      data.updated_at = new Date();
+      
+      if (context.type === 'user_request') {
+        data.updated_by = context.userId;
+        data.updated_by_type = 'user';
+      } else if (context.type === 'bot_action') {
+        data.updated_by = null;
+        data.updated_by_type = 'bot';
+      }
+      // ... same pattern
+      
+      return data;
+    },
+    
+    // For SELECT operations — scope to workspace
+    beforeSelect(table: string, query: any) {
+      const globalTables = ['workspaces', 'subscription_tiers', 'system_config'];
+      if (!globalTables.includes(table) && context.workspaceId) {
+        query.where.workspace_id = context.workspaceId;
+      }
+      return query;
+    }
+  };
+}
+```
+
+**CRITICAL: This middleware must wrap the database client itself, not individual routes.** If it's applied at the route level, someone will forget to add it to a new route. If it wraps the DB client, it's impossible to bypass.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 3: LAYER 2 — UNIVERSAL AUDIT TRAIL
+# ═══════════════════════════════════════════════════
+
+## 3A: The Audit Log Table
+
+Every meaningful action across the entire platform is logged:
+
+```sql
+CREATE TABLE IF NOT EXISTS audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- WHO
+  workspace_id UUID NOT NULL,                    -- Which org
+  actor_id UUID,                                 -- Which user (NULL if bot/system)
+  actor_type VARCHAR(20) NOT NULL,               -- 'user', 'bot', 'system', 'cron', 'trinity'
+  actor_bot VARCHAR(30),                         -- Which bot (if actor_type = 'bot')
+  actor_role VARCHAR(30),                        -- Role at time of action: 'owner', 'manager', 'field_worker', etc.
+  actor_ip VARCHAR(45),                          -- IP address (for user actions)
+  
+  -- WHAT
+  action VARCHAR(50) NOT NULL,                   -- The action performed (see action catalog below)
+  entity_type VARCHAR(50) NOT NULL,              -- Which table/entity was affected
+  entity_id UUID,                                -- ID of the specific record
+  entity_name VARCHAR(300),                      -- Human-readable name (e.g., employee name, invoice #)
+  
+  -- HOW (what changed)
+  change_type VARCHAR(10) NOT NULL,              -- 'create', 'update', 'delete', 'read', 'action'
+  changes JSONB,                                 -- For updates: {field: {old: X, new: Y}, ...}
+  metadata JSONB DEFAULT '{}',                   -- Additional context (route, page, request details)
+  
+  -- WHERE
+  source_route VARCHAR(200),                     -- API route that triggered the action
+  source_page VARCHAR(100),                      -- UI page that initiated the request
+  
+  -- WHEN
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for fast querying
+CREATE INDEX idx_audit_workspace ON audit_log(workspace_id, created_at DESC);
+CREATE INDEX idx_audit_actor ON audit_log(actor_id, created_at DESC);
+CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id, created_at DESC);
+CREATE INDEX idx_audit_action ON audit_log(action, created_at DESC);
+CREATE INDEX idx_audit_bot ON audit_log(actor_bot, created_at DESC) WHERE actor_bot IS NOT NULL;
+
+-- Partition by month for performance (optional but recommended at scale)
+-- CREATE INDEX idx_audit_created ON audit_log(created_at);
+```
+
+## 3B: Action Catalog
+
+Every action that gets logged:
+
+```
+CATEGORY: AUTHENTICATION
+  user.login                    User logged in
+  user.logout                   User logged out
+  user.session_expired          Session expired
+  user.password_changed         Password changed
+  user.role_changed             User role modified
+
+CATEGORY: EMPLOYEES
+  employee.created              New employee added
+  employee.updated              Employee info edited (changes JSONB shows what)
+  employee.deactivated          Employee deactivated
+  employee.reactivated          Employee reactivated
+  employee.deleted              Employee soft-deleted
+  employee.pay_rate_changed     Pay rate modified (old + new in changes)
+  employee.role_changed         Employee role changed
+  employee.site_assigned        Employee assigned to a site
+  employee.site_unassigned      Employee removed from a site
+
+CATEGORY: SCHEDULING
+  shift.created                 Shift created (manually or by Trinity)
+  shift.updated                 Shift modified
+  shift.deleted                 Shift deleted
+  shift.assigned                Officer assigned to shift
+  shift.unassigned              Officer removed from shift
+  shift.published               Shift published to officers
+  shift.picked_up               Officer picked up open shift
+  shift.swapped                 Shift swapped between officers
+  shift.conflict_detected       Schedule conflict found
+  shift.conflict_resolved       Conflict resolved
+
+CATEGORY: TIME & ATTENDANCE
+  clock.in                      Officer clocked in (GPS data in metadata)
+  clock.out                     Officer clocked out (GPS data in metadata)
+  clock.force_in                ClockBot force-clocked officer in
+  clock.manual_edit             Manager manually edited clock record
+  clock.approved                Clock record approved
+  clock.disputed                Clock record disputed
+  checkin.completed             Hourly check-in completed
+  checkin.missed                Hourly check-in missed
+  checkin.excused               Missed check-in excused by manager
+
+CATEGORY: INVOICING & BILLING
+  invoice.created               Invoice created
+  invoice.auto_generated        Invoice auto-generated by system
+  invoice.updated               Invoice edited
+  invoice.sent                  Invoice sent to client
+  invoice.paid                  Invoice payment received
+  invoice.voided                Invoice voided
+  invoice.overdue               Invoice passed due date
+  payroll.run_started           Payroll run initiated
+  payroll.run_completed         Payroll run completed
+  payroll.approved              Payroll approved by manager
+  expense.submitted             Expense submitted by employee
+  expense.approved              Expense approved
+  expense.rejected              Expense rejected
+  expense.reimbursed            Expense reimbursed
+
+CATEGORY: CREDITS & PLATFORM BILLING
+  credits.consumed              Credits deducted for action
+  credits.refilled              Monthly credit refill
+  credits.purchased             Credit pack purchased
+  credits.expired               Credits expired to pool
+  platform_bill.generated       Monthly platform bill created
+  platform_bill.paid            Platform bill paid via Stripe
+
+CATEGORY: DOCUMENTS & SIGNING
+  document.generated            Document generated from template
+  document.uploaded             Document manually uploaded
+  document.signature_requested  Signature request sent
+  document.signed               Document signed by signer
+  document.completed            All signatures collected
+  document.voided               Document voided
+  document.vault_stored         Document stored in vault
+
+CATEGORY: REPORTS & INCIDENTS
+  incident.submitted            Incident report submitted by officer
+  incident.bot_processed        ReportBot polished the report
+  incident.reviewed             Manager reviewed the report
+  incident.approved             Report approved
+  incident.sent_to_client       Report delivered to client
+  daily_report.submitted        Daily report submitted
+  daily_report.bot_processed    ReportBot polished the report
+  proof_of_service.generated    Proof of service PDF auto-generated
+  proof_of_service.approved     Proof of service approved by manager
+  proof_of_service.delivered    Proof of service sent to client
+
+CATEGORY: COMMUNICATION
+  message.sent                  DockChat message sent
+  message.photo_uploaded        Photo uploaded in shift room
+  broadcast.sent                Broadcast sent to org
+  shift_room.created            Shift room auto-created
+  shift_room.archived           Shift room archived at shift end
+
+CATEGORY: AI / BOT ACTIONS
+  trinity.schedule_generated    Trinity generated schedule
+  trinity.shift_filled          Trinity filled an open shift
+  bot.joined_room               System bot joined a shift room
+  bot.analysis_completed        Bot completed analysis
+  bot.report_generated          Bot generated a report/document
+  bot.alert_sent                Bot sent an alert/notification
+  bot.force_action              Bot took a forced action (force clock-in, etc.)
+
+CATEGORY: PIPELINE / DEALS
+  deal.created                  New pipeline deal created
+  deal.stage_changed            Deal moved to new stage
+  deal.rfp_generated            RFP response generated by Trinity
+  deal.proposal_sent            Proposal sent to prospect
+  deal.won                      Deal marked as won
+  deal.lost                     Deal marked as lost
+
+CATEGORY: SETTINGS / ADMIN
+  settings.updated              Org settings changed
+  site_config.updated           Site configuration changed
+  rbac.permission_changed       User permissions modified
+  integration.connected         External integration connected (QB, Stripe, etc.)
+  integration.disconnected      Integration disconnected
+  integration.sync_completed    Integration sync completed
+  integration.sync_failed       Integration sync failed
+```
+
+## 3C: Audit Log Service
+
+```typescript
+// server/services/auditLogService.ts
+
+interface AuditEntry {
+  workspaceId: string;
+  actorId?: string;            // User ID or null for bots
+  actorType: 'user' | 'bot' | 'system' | 'cron' | 'trinity';
+  actorBot?: string;           // Which bot
+  actorRole?: string;          // Role at time of action
+  actorIp?: string;
+  action: string;              // From action catalog
+  entityType: string;          // Table name
+  entityId?: string;
+  entityName?: string;         // Human-readable
+  changeType: 'create' | 'update' | 'delete' | 'read' | 'action';
+  changes?: Record<string, { old: any; new: any }>;
+  metadata?: Record<string, any>;
+  sourceRoute?: string;
+  sourcePage?: string;
+}
+
+class AuditLogService {
+  /**
+   * Log an action. This should be called by every service layer function
+   * that modifies data. NOT by routes directly — routes call services,
+   * services call audit log.
+   */
+  async log(entry: AuditEntry): Promise<void> {
+    await db.insert(auditLog).values({
+      workspace_id: entry.workspaceId,
+      actor_id: entry.actorId,
+      actor_type: entry.actorType,
+      actor_bot: entry.actorBot,
+      actor_role: entry.actorRole,
+      actor_ip: entry.actorIp,
+      action: entry.action,
+      entity_type: entry.entityType,
+      entity_id: entry.entityId,
+      entity_name: entry.entityName,
+      change_type: entry.changeType,
+      changes: entry.changes,
+      metadata: entry.metadata,
+      source_route: entry.sourceRoute,
+      source_page: entry.sourcePage,
+    });
+  }
+  
+  /**
+   * Query audit trail for an entity (e.g., "show me everything that 
+   * happened to this employee" or "show me everything this bot did")
+   */
+  async getEntityHistory(entityType: string, entityId: string, limit = 50) {
+    return db.select().from(auditLog)
+      .where(and(
+        eq(auditLog.entity_type, entityType),
+        eq(auditLog.entity_id, entityId)
+      ))
+      .orderBy(desc(auditLog.created_at))
+      .limit(limit);
+  }
+  
+  /**
+   * Query audit trail for a user
+   */
+  async getUserHistory(userId: string, limit = 50) {
+    return db.select().from(auditLog)
+      .where(eq(auditLog.actor_id, userId))
+      .orderBy(desc(auditLog.created_at))
+      .limit(limit);
+  }
+  
+  /**
+   * Query audit trail for a bot
+   */
+  async getBotHistory(botName: string, workspaceId: string, limit = 50) {
+    return db.select().from(auditLog)
+      .where(and(
+        eq(auditLog.actor_bot, botName),
+        eq(auditLog.workspace_id, workspaceId)
+      ))
+      .orderBy(desc(auditLog.created_at))
+      .limit(limit);
+  }
+  
+  /**
+   * Detect changes between old and new record versions
+   * Automatically generates the changes JSONB
+   */
+  static diffChanges(oldRecord: Record<string, any>, newRecord: Record<string, any>): Record<string, { old: any; new: any }> | null {
+    const changes: Record<string, { old: any; new: any }> = {};
+    const ignoreFields = ['updated_at', 'updated_by', 'updated_by_type'];
+    
+    for (const key of Object.keys(newRecord)) {
+      if (ignoreFields.includes(key)) continue;
+      if (JSON.stringify(oldRecord[key]) !== JSON.stringify(newRecord[key])) {
+        changes[key] = { old: oldRecord[key], new: newRecord[key] };
+      }
+    }
+    
+    return Object.keys(changes).length > 0 ? changes : null;
+  }
+}
+```
+
+## 3D: How Every Service Uses Audit Logging
+
+```typescript
+// EXAMPLE: Employee pay rate change
+
+async updatePayRate(employeeId: string, newRate: number, context: RequestContext) {
+  // 1. Fetch current record
+  const employee = await db.select().from(employees).where(eq(employees.id, employeeId));
+  const oldRate = employee.pay_rate;
+  
+  // 2. Update the record
+  await db.update(employees)
+    .set({ pay_rate: newRate, updated_at: new Date(), updated_by: context.userId })
+    .where(eq(employees.id, employeeId));
+  
+  // 3. Log the breadcrumb
+  await auditLog.log({
+    workspaceId: context.workspaceId,
+    actorId: context.userId,
+    actorType: 'user',
+    actorRole: context.userRole,
+    actorIp: context.ipAddress,
+    action: 'employee.pay_rate_changed',
+    entityType: 'employees',
+    entityId: employeeId,
+    entityName: employee.full_name,
+    changeType: 'update',
+    changes: { pay_rate: { old: oldRate, new: newRate } },
+    sourceRoute: '/api/employees/:id/pay-rate',
+    sourcePage: 'employee-profile',
+  });
+}
+
+// EXAMPLE: Bot-generated proof of service
+
+async generateProofOfService(shiftRoomId: string, botContext: BotContext) {
+  const pdf = await this.compilePDF(shiftRoomId);
+  
+  const doc = await db.insert(documentVault).values({
+    workspace_id: botContext.workspaceId,
+    title: `Proof of Service — ${shiftRoom.room_name}`,
+    category: 'proof_of_service',
+    file_url: pdf.url,
+    created_by: null,                    // Bot created it
+    created_by_type: 'bot',
+    created_by_bot: 'report_bot',
+    related_entity_type: 'shift_room',
+    related_entity_id: shiftRoomId,
+  });
+  
+  await auditLog.log({
+    workspaceId: botContext.workspaceId,
+    actorId: null,
+    actorType: 'bot',
+    actorBot: 'report_bot',
+    action: 'proof_of_service.generated',
+    entityType: 'document_vault',
+    entityId: doc.id,
+    entityName: doc.title,
+    changeType: 'create',
+    metadata: {
+      shift_room_id: shiftRoomId,
+      total_messages: stats.totalMessages,
+      total_photos: stats.totalPhotos,
+      total_check_ins: stats.totalCheckIns,
+    },
+  });
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 4: LAYER 3 — TRINITY AS UNIVERSAL GATEWAY
+# ═══════════════════════════════════════════════════
+
+## 4A: The Concept
+
+Trinity isn't just the scheduling AI — she's the universal intelligence layer that oversees ALL data flow. Every bot reports to Trinity. Every AI action goes through Trinity. Trinity enforces:
+
+1. **Attribution** — Before any bot acts, Trinity ensures workspace_id + actor info is attached
+2. **Authorization** — Trinity checks: "Does this bot have permission to do this in this workspace?"
+3. **Credit deduction** — Trinity deducts credits before allowing AI processing
+4. **Audit logging** — Trinity logs every AI action through the audit service
+5. **Error containment** — If a bot fails mid-action, Trinity rolls back cleanly
+
+```
+DATA FLOW THROUGH TRINITY:
+
+  EVENT OCCURS                   TRINITY GATEWAY                    BOT EXECUTION
+  (clock-in, message,            (validates, authorizes,            (specialized action)
+   shift start, incident)         deducts credits, logs)
+        │                              │                                  │
+        ▼                              ▼                                  ▼
+  Event detected ──────────► Trinity receives event ──────────► Bot performs action
+                              │                                         │
+                              ├─ Validates workspace_id exists          │
+                              ├─ Validates actor attribution            │
+                              ├─ Checks org has sufficient credits      │
+                              ├─ Deducts credits (if AI action)         │
+                              ├─ Logs to audit trail                    │
+                              └─ Passes to appropriate bot              │
+                                                                        │
+                                                              Bot completes action
+                                                                        │
+                                                                        ▼
+                                                              Trinity confirms success
+                                                              Logs completion to audit
+                                                              Updates entity records
+```
+
+## 4B: Trinity Orchestrator Service
+
+```typescript
+// server/services/trinityOrchestrator.ts
+
+class TrinityOrchestrator {
+  /**
+   * ALL bot actions MUST go through this method.
+   * This is the single enforcement point for attribution + credits + audit.
+   */
+  async executeAction(params: {
+    workspaceId: string;
+    botName: string;              // 'clock_bot', 'report_bot', 'meeting_bot', 'guard_bot'
+    action: string;               // What the bot wants to do
+    creditCost: number;           // Credits this action costs (0 for free actions)
+    entityType: string;           // What entity is being affected
+    entityId?: string;
+    triggeredBy?: string;         // User ID if user-triggered, null if event-triggered
+    triggerEvent?: string;        // 'shift_start', 'clock_in', 'message_detected', etc.
+    payload: any;                 // Action-specific data
+  }): Promise<ActionResult> {
+    
+    // STEP 1: Validate workspace exists
+    const workspace = await this.getWorkspace(params.workspaceId);
+    if (!workspace) {
+      throw new Error(`Trinity: Invalid workspace ${params.workspaceId}`);
+    }
+    
+    // STEP 2: Check credits (if action costs credits)
+    if (params.creditCost > 0) {
+      const balance = await creditBalanceService.getBalance(params.workspaceId);
+      if (balance.total_credits < params.creditCost) {
+        // Graceful degradation — don't hard-fail, degrade
+        await auditLog.log({
+          workspaceId: params.workspaceId,
+          actorType: 'trinity',
+          action: 'credits.insufficient',
+          entityType: params.entityType,
+          entityId: params.entityId,
+          changeType: 'action',
+          metadata: { required: params.creditCost, available: balance.total_credits, bot: params.botName },
+        });
+        
+        return { 
+          success: false, 
+          degraded: true, 
+          reason: 'insufficient_credits',
+          fallbackAction: this.getGracefulFallback(params.action),
+        };
+      }
+      
+      // Deduct credits
+      await creditBalanceService.deduct(params.workspaceId, params.creditCost, {
+        feature_key: `bot.${params.botName}.${params.action}`,
+        reference_id: params.entityId,
+        reference_type: params.entityType,
+        triggered_by: params.botName,
+      });
+    }
+    
+    // STEP 3: Execute the bot action
+    const bot = this.getBot(params.botName);
+    let result;
+    
+    try {
+      result = await bot.execute(params.action, {
+        workspaceId: params.workspaceId,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        payload: params.payload,
+        // Attribution context — bot MUST use these when creating records
+        attribution: {
+          created_by: null,
+          created_by_type: 'bot',
+          created_by_bot: params.botName,
+          workspace_id: params.workspaceId,
+        },
+      });
+    } catch (error) {
+      // STEP 3B: If bot fails, refund credits and log error
+      if (params.creditCost > 0) {
+        await creditBalanceService.refund(params.workspaceId, params.creditCost, {
+          feature_key: `bot.${params.botName}.${params.action}.refund`,
+          reference_id: params.entityId,
+          triggered_by: 'trinity',
+          description: `Refund: ${params.botName} action failed — ${error.message}`,
+        });
+      }
+      
+      await auditLog.log({
+        workspaceId: params.workspaceId,
+        actorType: 'trinity',
+        action: 'bot.action_failed',
+        entityType: params.entityType,
+        entityId: params.entityId,
+        changeType: 'action',
+        metadata: { bot: params.botName, action: params.action, error: error.message },
+      });
+      
+      throw error;
+    }
+    
+    // STEP 4: Log successful action
+    await auditLog.log({
+      workspaceId: params.workspaceId,
+      actorType: 'bot',
+      actorBot: params.botName,
+      action: `bot.${params.action}`,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      changeType: result.changeType || 'action',
+      metadata: {
+        trigger_event: params.triggerEvent,
+        triggered_by_user: params.triggeredBy,
+        credits_consumed: params.creditCost,
+        result_summary: result.summary,
+      },
+    });
+    
+    return { success: true, data: result };
+  }
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 5: ROUTE-BY-ROUTE AUDIT (THE FULL SWEEP)
+# ═══════════════════════════════════════════════════
+
+## 5A: The Agent Must Do This
+
+The Replit agent must systematically audit EVERY route in the application:
+
+```
+FOR EVERY API ROUTE (all 109+ of them):
+
+1. Does the route extract workspace_id from the authenticated user's session?
+   If NO → FIX: Add workspace_id extraction
+
+2. Does every INSERT operation include workspace_id?
+   If NO → FIX: Add workspace_id to the insert
+
+3. Does every INSERT operation include created_by and created_by_type?
+   If NO → FIX: Add attribution columns
+
+4. Does every UPDATE operation include updated_by and updated_at?
+   If NO → FIX: Add mutation tracking
+
+5. Does every SELECT query filter by workspace_id?
+   If NO → FIX: Add workspace_id to WHERE clause
+   (This prevents org A from seeing org B's data — CRITICAL for multi-tenant)
+
+6. Does the route call the audit log service for meaningful actions?
+   If NO → FIX: Add audit log call for creates, updates, deletes
+
+7. Does the route handle errors without leaving partial data?
+   If NO → FIX: Wrap in database transaction with rollback
+```
+
+## 5B: Discovery Script
+
+Run this to find all routes:
+
+```bash
+# Find all route definitions
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" server/ --include="*.ts" --include="*.js" | sort
+
+# Find all db.insert calls that might be missing workspace_id
+grep -rn "db\.insert\|\.insert(" server/ --include="*.ts" --include="*.js" -A 5 | grep -v "workspace_id"
+
+# Find all db.select calls that might be missing workspace_id filter
+grep -rn "db\.select\|\.select(" server/ --include="*.ts" --include="*.js" -A 10 | grep -v "workspace_id"
+
+# Find all db.update calls that might be missing updated_by
+grep -rn "db\.update\|\.update(" server/ --include="*.ts" --include="*.js" -A 5 | grep -v "updated_by"
+```
+
+## 5C: Automated Enforcement (Long-Term)
+
+After the manual audit, implement automated enforcement so NEW routes can't break the rules:
+
+```typescript
+// Database wrapper that enforces attribution on every operation
+// This replaces direct db access throughout the app
+
+import { db as rawDb } from './database';
+
+export function createScopedDb(context: RequestContext) {
+  return {
+    insert(table: any) {
+      return {
+        values(data: any) {
+          // Auto-inject attribution
+          const enriched = {
+            ...data,
+            workspace_id: data.workspace_id || context.workspaceId,
+            created_by: context.type === 'user' ? context.userId : null,
+            created_by_type: context.type,
+            created_by_bot: context.botName || null,
+            created_at: new Date(),
+            updated_at: new Date(),
+          };
+          
+          // Validate workspace_id exists
+          if (!enriched.workspace_id && !isGlobalTable(table)) {
+            console.error(`ATTRIBUTION VIOLATION: Insert into ${table.name} without workspace_id`);
+            throw new Error(`workspace_id required for ${table.name}`);
+          }
+          
+          return rawDb.insert(table).values(enriched);
+        }
+      };
+    },
+    
+    select() {
+      // All selects auto-scoped to workspace
+      return rawDb.select();
+      // Note: Individual queries must still add .where(workspace_id = X)
+      // but the middleware logs a warning if they don't
+    },
+    
+    // ... update, delete with similar wrappers
+  };
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 6: DOCUMENT & FILE ATTRIBUTION
+# ═══════════════════════════════════════════════════
+
+## 6A: Every File Has a Home
+
+```
+FILE ATTRIBUTION CHAIN:
+
+  UPLOADED BY           →  BELONGS TO            →  STORED IN           →  FINDABLE VIA
+  ──────────────────────────────────────────────────────────────────────────────────────
+  Officer (photo)       →  Shift Room + Employee →  Media Vault         →  Shift, Site, Officer, Date
+  ReportBot (PDF)       →  Workspace + Incident  →  Document Vault      →  Incident #, Site, Date
+  MeetingBot (PDF)      →  Workspace + Meeting   →  Document Vault      →  Meeting date, Participants
+  Trinity (schedule)    →  Workspace             →  Audit Log           →  Date, action type
+  Manager (upload)      →  Workspace + Entity    →  Document Vault      →  Category, Entity, Date
+  Officer (form)        →  Workspace + Form      →  Form Submissions    →  Form type, Officer, Date
+  System (invoice PDF)  →  Workspace + Invoice   →  Document Vault      →  Invoice #, Client, Date
+
+  RULE: Every file must be queryable by at least 3 of these:
+    - workspace_id (ALWAYS)
+    - created_by or created_by_bot (who made it)
+    - related_entity_type + related_entity_id (what it's about)
+    - created_at (when)
+```
+
+## 6B: Employee Document Safe
+
+Each employee has a personal document collection — everything about them in one place:
+
+```
+EMPLOYEE DOCUMENT SAFE:
+  Query: SELECT * FROM document_vault WHERE related_entity_type = 'employee' AND related_entity_id = :employeeId
+
+  Contains:
+  ├── Employment agreement (signed)
+  ├── NDA (signed)
+  ├── Policy acknowledgments (signed)
+  ├── Background check authorization (signed)
+  ├── Direct deposit form (signed)
+  ├── Training certificates
+  ├── Equipment issue forms
+  ├── Performance reviews
+  ├── Incident reports (where they are the reporting officer)
+  ├── Disciplinary records
+  └── Termination documents (if applicable)
+
+  Also queryable (across other tables):
+  ├── All clock records → clock_records WHERE user_id = :employeeId
+  ├── All shifts worked → shift_assignments WHERE user_id = :employeeId
+  ├── All paychecks → payroll_entries WHERE employee_id = :employeeId
+  ├── All shift room activity → shift_room_messages WHERE sender_id = :employeeId
+  ├── All form submissions → form_submissions WHERE submitted_by = :employeeId
+  └── Behavior score history → behavior_scores WHERE employee_id = :employeeId
+```
+
+## 6C: Org Document Safe
+
+The org-level document collection — everything the company needs:
+
+```
+ORG DOCUMENT SAFE:
+  Query: SELECT * FROM document_vault WHERE workspace_id = :workspaceId
+
+  Contains (organized by category):
+  ├── CONTRACTS
+  │   ├── Client service agreements
+  │   ├── Vendor contracts
+  │   └── Insurance policies
+  ├── EMPLOYEE RECORDS
+  │   ├── All employee document safes (aggregated)
+  │   └── Org-wide policy documents
+  ├── OPERATIONAL
+  │   ├── Post orders (per site)
+  │   ├── Proof of service PDFs (per shift)
+  │   ├── Incident reports (per site)
+  │   └── Daily reports
+  ├── FINANCIAL
+  │   ├── Invoices (generated)
+  │   ├── Payroll summaries
+  │   ├── Tax documents
+  │   └── Expense reports
+  ├── MEETINGS
+  │   ├── Meeting minutes
+  │   └── Action item summaries
+  ├── PIPELINE
+  │   ├── RFP responses
+  │   ├── Proposals
+  │   └── Site survey documents
+  └── COMPLIANCE
+      ├── Licenses
+      ├── Certifications
+      ├── Audit reports
+      └── Workers comp documentation
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 7: SOFT DELETE — NEVER ACTUALLY DELETE ANYTHING
+# ═══════════════════════════════════════════════════
+
+## 7A: The Rule
+
+**NOTHING is ever hard-deleted from the database.** Everything uses soft delete:
+
+```sql
+-- Every table that supports deletion must have:
+is_deleted      BOOLEAN DEFAULT false,
+deleted_at      TIMESTAMP,
+deleted_by      UUID REFERENCES users(id),
+deleted_by_type VARCHAR(20),                  -- 'user', 'system', 'cron'
+deleted_reason  TEXT
+```
+
+**Why:** An employee who files a wage claim 2 years after termination needs their records. A client who disputes an invoice from 18 months ago needs the proof of service. If you hard-delete, the evidence is gone.
+
+## 7B: How Soft Delete Works
+
+```typescript
+// NEVER do this:
+await db.delete(employees).where(eq(employees.id, employeeId));  // ❌ NEVER
+
+// ALWAYS do this:
+await db.update(employees).set({
+  is_deleted: true,
+  deleted_at: new Date(),
+  deleted_by: context.userId,
+  deleted_by_type: 'user',
+  deleted_reason: 'Employee terminated — voluntary resignation',
+  updated_at: new Date(),
+}).where(eq(employees.id, employeeId));
+
+// All SELECT queries must exclude soft-deleted records by default:
+await db.select().from(employees)
+  .where(and(
+    eq(employees.workspace_id, workspaceId),
+    eq(employees.is_deleted, false)           // Always include this
+  ));
+
+// Except when explicitly looking at deleted records (admin/audit view):
+await db.select().from(employees)
+  .where(and(
+    eq(employees.workspace_id, workspaceId),
+    eq(employees.is_deleted, true)             // Show deleted only
+  ));
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 8: IMPLEMENTATION INSTRUCTIONS FOR REPLIT AGENT
+# ═══════════════════════════════════════════════════
+
+## Step-by-Step Execution
+
+```
+STEP 1: SCHEMA AUDIT (Day 1)
+  - Run the discovery queries from Part 5B
+  - List every table missing workspace_id, created_by, or created_at
+  - ALTER TABLE to add missing columns with defaults
+  - Add is_deleted, deleted_at, deleted_by to tables that don't have them
+  - Update Drizzle schema to match
+
+STEP 2: CREATE AUDIT LOG TABLE (Day 1)
+  - Create the audit_log table from Part 3A
+  - Create the AuditLogService from Part 3C
+  - Add Drizzle schema definition
+
+STEP 3: CREATE ATTRIBUTION MIDDLEWARE (Day 2)
+  - Implement the enforceAttribution middleware from Part 2D
+  - Or implement the createScopedDb wrapper from Part 5C
+  - Wire it into the database client so ALL operations go through it
+
+STEP 4: ROUTE AUDIT (Day 2-4)
+  - For EVERY API route (all 109+):
+    a. Verify workspace_id is extracted and used
+    b. Verify INSERT operations have attribution columns
+    c. Verify SELECT operations filter by workspace_id
+    d. Verify UPDATE operations set updated_by
+    e. Add audit log calls for create/update/delete actions
+  - This is tedious but essential. Do not skip routes.
+
+STEP 5: BOT ATTRIBUTION (Day 4-5)
+  - Wire all bot actions through TrinityOrchestrator.executeAction()
+  - Ensure every bot-created record has created_by_type = 'bot'
+  - Ensure every bot action is logged to audit trail
+  - Ensure credit deduction happens through Trinity, not directly
+
+STEP 6: SOFT DELETE MIGRATION (Day 5)
+  - Add is_deleted + deleted_at + deleted_by columns to all tables
+  - Update all DELETE operations to soft-delete
+  - Update all SELECT operations to exclude soft-deleted records
+  - Create admin view for viewing/restoring soft-deleted records
+
+STEP 7: VERIFICATION (Day 6)
+  - Create a test employee, assign to shift, clock in, send photos,
+    submit incident, generate proof of service, create invoice
+  - Query audit_log for the employee: every action should appear
+  - Query audit_log for the workspace: everything should be attributed
+  - Verify no record in any table is missing workspace_id
+  - Verify no record is missing created_by attribution
+  - Delete the test employee (soft delete): verify all records preserved
+  - Query by employee_id across all tables: all history intact
+```
+
+---
+
+## THE BREADCRUMB PROMISE
+
+After implementation, you can answer these questions instantly:
+
+```
+"Who created this invoice?"        → audit_log WHERE entity_id = invoice_id
+"What has this bot been doing?"    → audit_log WHERE actor_bot = 'report_bot'
+"Show me everything about this     → query all tables WHERE employee_id = X
+ employee from hire to termination"
+"When was this pay rate changed    → audit_log WHERE action = 'employee.pay_rate_changed'
+ and who changed it?"                 AND entity_id = employee_id
+"What happened at this site on     → shift_room_messages + audit_log
+ March 4th?"                          WHERE site_id AND date
+"Which documents does this         → document_vault WHERE related_entity_type = 'employee'
+ employee have on file?"              AND related_entity_id = employee_id
+"What did Trinity do last Tuesday?"→ audit_log WHERE actor_type = 'trinity'
+                                      AND created_at BETWEEN ...
+"Show me proof we served this      → proof of service PDF + media vault + clock records
+ client last month"                   WHERE client_id AND date_range
+```
+
+Every question has an answer. Every piece of data has a breadcrumb trail back to who created it, who owns it, and what happened to it.
+
+---
+
+END OF DATA PROVENANCE SPEC v1.0

@@ -1,11 +1,15 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+
 // ============================================================================
 // GLOBAL ERROR BOUNDARY
 // ============================================================================
 // Catches unhandled React errors and provides a simple fallback UI
 // IMPORTANT: This component must NOT use any hooks since it renders outside
 // of React context providers when an error is caught
+// NOTE: Uses hsl(var(--xxx)) for all colors since CSS custom properties defined
+// in :root are still available even when React providers have crashed.
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -27,7 +31,7 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '1rem',
-      backgroundColor: 'white',
+      backgroundColor: 'hsl(var(--background))',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
       <div style={{
@@ -35,27 +39,27 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
         width: '100%',
         textAlign: 'center',
         padding: '2rem',
-        border: '1px solid #e5e7eb',
+        border: '1px solid hsl(var(--border))',
         borderRadius: '0.5rem',
-        backgroundColor: '#fafafa'
+        backgroundColor: 'hsl(var(--card))'
       }}>
         <div style={{
           width: '4rem',
           height: '4rem',
           margin: '0 auto 1.5rem',
-          backgroundColor: '#fee2e2',
+          backgroundColor: 'hsl(var(--destructive) / 0.15)',
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <span style={{ fontSize: '2rem' }}>!</span>
+          <span style={{ fontSize: '2rem', color: 'hsl(var(--destructive))' }}>!</span>
         </div>
         
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 'bold',
-          color: '#111827',
+          color: 'hsl(var(--foreground))',
           marginBottom: '0.5rem'
         }}>
           Something Went Wrong
@@ -63,7 +67,7 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
         
         <p style={{
           fontSize: '0.875rem',
-          color: '#6b7280',
+          color: 'hsl(var(--muted-foreground))',
           marginBottom: '1.5rem'
         }}>
           An unexpected error occurred. Please refresh the page to try again.
@@ -74,18 +78,18 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
             textAlign: 'left',
             marginBottom: '1.5rem',
             padding: '0.75rem',
-            backgroundColor: '#f3f4f6',
+            backgroundColor: 'hsl(var(--muted))',
             borderRadius: '0.375rem',
             fontSize: '0.75rem'
           }}>
-            <summary style={{ cursor: 'pointer', color: '#374151' }}>
+            <summary style={{ cursor: 'pointer', color: 'hsl(var(--foreground))' }}>
               Error Details
             </summary>
             <pre style={{
               marginTop: '0.5rem',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              color: '#dc2626'
+              color: 'hsl(var(--destructive))'
             }}>
               {errorMessage}
             </pre>
@@ -102,8 +106,8 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
             onClick={() => window.location.href = '/'}
             style={{
               padding: '0.5rem 1.5rem',
-              backgroundColor: '#10b981',
-              color: 'white',
+              backgroundColor: 'hsl(var(--primary))',
+              color: 'hsl(var(--primary-foreground))',
               border: 'none',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
@@ -118,8 +122,8 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
             onClick={() => window.history.back()}
             style={{
               padding: '0.5rem 1.5rem',
-              backgroundColor: '#6b7280',
-              color: 'white',
+              backgroundColor: 'hsl(var(--secondary))',
+              color: 'hsl(var(--secondary-foreground))',
               border: 'none',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
@@ -134,8 +138,8 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
             onClick={() => window.location.reload()}
             style={{
               padding: '0.5rem 1.5rem',
-              backgroundColor: '#3b82f6',
-              color: 'white',
+              backgroundColor: 'hsl(var(--accent))',
+              color: 'hsl(var(--accent-foreground))',
               border: 'none',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
@@ -151,9 +155,9 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
         <p style={{
           marginTop: '1rem',
           fontSize: '0.75rem',
-          color: '#9ca3af'
+          color: 'hsl(var(--muted-foreground))'
         }}>
-          CoAIleague - Autonomous Workforce Management
+          {PLATFORM_NAME} - Autonomous Workforce Management
         </p>
       </div>
     </div>
@@ -191,6 +195,23 @@ export class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
       componentStack: errorInfo.componentStack,
       timestamp: new Date().toISOString(),
     });
+
+    // Auto-reload on chunk/dynamic-import failures (e.g. 503 from Vite)
+    const msg = error?.message ?? '';
+    const name = error?.name ?? '';
+    const isChunkError =
+      name === 'ChunkLoadError' ||
+      msg.includes('dynamically imported module') ||
+      msg.includes('Failed to fetch dynamically') ||
+      msg.includes('Loading chunk') ||
+      msg.includes('Importing a module script failed') ||
+      /Loading CSS chunk \d+ failed/.test(msg);
+    if (isChunkError) {
+      console.warn('[GlobalErrorBoundary] Chunk load failure detected — reloading in 1.5s');
+      setTimeout(() => {
+        try { window.location.reload(); } catch { window.location.href = '/'; }
+      }, 1500);
+    }
   }
 
   render() {
@@ -199,9 +220,7 @@ export class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
         return this.props.fallback;
       }
 
-      return (
-        <SimpleErrorFallback errorMessage={this.state.error?.message} />
-      );
+      return <SimpleErrorFallback errorMessage={this.state.error?.message} />;
     }
 
     return this.props.children;

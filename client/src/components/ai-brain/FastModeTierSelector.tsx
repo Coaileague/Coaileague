@@ -148,12 +148,12 @@ export function FastModeTierSelector({
             <RadioGroupItem value={tier.id} id={tier.id} className="peer sr-only" />
             <Label
               htmlFor={tier.id}
-              className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover-elevate ${
+              className={`flex flex-col p-4 rounded-lg border cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover-elevate ${
                 selectedTier === tier.id ? getTierColor(tier.id) : 'border-border'
               }`}
               data-testid={`tier-${tier.id}`}
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   {getTierIcon(tier.id)}
                   <span className="font-medium">{tier.name}</span>
@@ -210,7 +210,7 @@ export function FastModeTierSelector({
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between gap-2 text-sm">
                 <span className="text-muted-foreground">Budget Impact</span>
                 <span className={getBudgetStatusColor(estimate.budgetStatus.warningLevel)}>
                   {estimate.budgetStatus.currentBalance} → {estimate.budgetStatus.afterExecution} credits

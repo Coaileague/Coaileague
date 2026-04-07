@@ -13,11 +13,14 @@
  * - Is fully self-aware of its own state and capabilities
  */
 
+import crypto from 'crypto';
 import { platformEventBus } from '../platformEventBus';
 import { ChatServerHub, getAllActiveChatRooms, getChatServerHubStats } from '../ChatServerHub';
 import { db } from '../../db';
 import { chatParticipants, chatConversations, supportRooms, users, supportTickets } from '@shared/schema';
 import { eq, and, gte, count, sql } from 'drizzle-orm';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('chatServerSubagent');
 
 // ============================================================================
 // TYPES
@@ -151,7 +154,7 @@ class ChatServerHealthManager {
 
     this.subscribeToEvents();
     this.startPeriodicDiagnostics();
-    console.log('[ChatServerSubagent] Self-aware health manager initialized');
+    log.info('[ChatServerSubagent] Self-aware health manager initialized');
   }
 
   private messageCount = 0;
@@ -180,7 +183,11 @@ class ChatServerHealthManager {
 
   private startPeriodicDiagnostics(): void {
     this.diagnosticInterval = setInterval(async () => {
-      await this.runDiagnostics();
+      try {
+        await this.runDiagnostics();
+      } catch (error: any) {
+        log.warn('[ChatServerSubagent] Diagnostics failed (will retry):', error?.message || 'unknown');
+      }
     }, 60000);
   }
 
@@ -334,7 +341,7 @@ class ChatServerHealthManager {
     description: string
   ): ChatServerIssue {
     return {
-      id: `issue-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: `issue-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
       type,
       severity,
       description,
@@ -381,7 +388,7 @@ class ChatServerHealthManager {
           await this.healPerformanceIssue(issue);
           break;
         default:
-          console.log(`[ChatServerSubagent] No specific healing for ${issue.type}`);
+          log.info(`[ChatServerSubagent] No specific healing for ${issue.type}`);
       }
 
       action.status = 'completed';
@@ -396,11 +403,11 @@ class ChatServerHealthManager {
     } catch (error: any) {
       action.status = 'failed';
       action.completedAt = new Date();
-      action.result = `Self-healing failed: ${error.message}`;
+      action.result = `Self-healing failed: ${(error instanceof Error ? error.message : String(error))}`;
       issue.fixSucceeded = false;
 
       this.updateConfidence(-0.1);
-      await this.escalateToTicket(issue, error.message);
+      await this.escalateToTicket(issue, (error instanceof Error ? error.message : String(error)));
       this.selfAwareness.currentState = 'idle';
       return false;
     }
@@ -419,20 +426,20 @@ class ChatServerHealthManager {
   }
 
   private async healRoomIssue(issue: ChatServerIssue): Promise<void> {
-    console.log(`[ChatServerSubagent] Healing room issue: ${issue.description}`);
+    log.info(`[ChatServerSubagent] Healing room issue: ${issue.description}`);
     await ChatServerHub.initializeGateway();
   }
 
   private async healPresenceIssue(issue: ChatServerIssue): Promise<void> {
-    console.log(`[ChatServerSubagent] Healing presence issue: ${issue.description}`);
+    log.info(`[ChatServerSubagent] Healing presence issue: ${issue.description}`);
   }
 
   private async healBotIssue(issue: ChatServerIssue): Promise<void> {
-    console.log(`[ChatServerSubagent] Healing bot issue: ${issue.description}`);
+    log.info(`[ChatServerSubagent] Healing bot issue: ${issue.description}`);
   }
 
   private async healPerformanceIssue(issue: ChatServerIssue): Promise<void> {
-    console.log(`[ChatServerSubagent] Healing performance issue: ${issue.description}`);
+    log.info(`[ChatServerSubagent] Healing performance issue: ${issue.description}`);
   }
 
   // ============================================================================
@@ -472,7 +479,7 @@ class ChatServerHealthManager {
     }
 
     this.selfAwareness.currentState = 'idle';
-    console.log(`[ChatServerSubagent] Reported to Trinity: ${report.status}`);
+    log.info(`[ChatServerSubagent] Reported to Trinity: ${report.status}`);
   }
 
   private getRecommendedActions(report: ChatServerHealthReport): string[] {
@@ -513,7 +520,7 @@ class ChatServerHealthManager {
       }
     });
 
-    console.log(`[ChatServerSubagent] Escalated issue ${issue.id} to ticket system`);
+    log.info(`[ChatServerSubagent] Escalated issue ${issue.id} to ticket system`);
   }
 
   // ============================================================================
@@ -605,7 +612,7 @@ class ChatServerHealthManager {
   }
 
   private async handleAIError(event: any): Promise<void> {
-    console.log(`[ChatServerSubagent] Detected AI error in chat context:`, event.data?.errorMessage);
+    log.info(`[ChatServerSubagent] Detected AI error in chat context:`, event.data?.errorMessage);
   }
 
   // ============================================================================
@@ -617,7 +624,7 @@ class ChatServerHealthManager {
       clearInterval(this.diagnosticInterval);
       this.diagnosticInterval = null;
     }
-    console.log('[ChatServerSubagent] Health manager shutdown');
+    log.info('[ChatServerSubagent] Health manager shutdown');
   }
 }
 

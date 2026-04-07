@@ -10,6 +10,9 @@
 import { db } from '../../db';
 import { userDeviceProfiles, type UserDeviceProfile, type InsertUserDeviceProfile } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('deviceLoader');
+
 
 export interface DeviceCapabilities {
   deviceType: 'desktop' | 'tablet' | 'mobile';
@@ -316,7 +319,7 @@ class UniversalDeviceLoader {
       };
     } catch (error) {
       // Database not ready, just return computed settings
-      console.log('[DeviceLoader] DB not ready, using computed settings');
+      log.info('[DeviceLoader] DB not ready, using computed settings');
       
       this.settingsCache.set(cacheKey, {
         settings,

@@ -1,0 +1,10 @@
+1,982 filled out of 4,056 total (49% fill rate). All 120 employees used with an average of 17 shifts each, max 22. That's NOT a front-loading problem — Trinity is distributing work across the full workforce. The issue is genuine demand exceeding capacity. 47 sandbox clients are generating 4,056 shifts in a month and 120 employees simply can't cover all of them.
+To put it in perspective: if each shift is 8 hours, 4,056 shifts = 32,448 hours needed. 120 employees × 40 hours/week × 4 weeks = 19,200 hours available. You'd need roughly 170 employees to fill everything. So 49% fill rate with 120 employees is actually mathematically close to correct.
+The real bugs to fix are:
+The 5 double-booking conflicts — that should be zero. Trinity should never assign the same employee to two overlapping shifts. That's a race condition in the assignment logic.
+The demand vs capacity mismatch — 47 sandbox clients might have inflated staffing demands. Your real Statewide operation with 30-40 weekend guards and 10-25 weekday is much more reasonable. The sandbox data may not represent realistic demand.
+Tell it:
+
+"The fill rate makes sense mathematically — 120 employees can't cover 4,056 shifts. The 5 double-booking conflicts are the real bug. Fix double-booking first — Trinity should NEVER assign the same employee to overlapping shifts. That's a hard constraint, not a soft preference.
+After fixing double-booking, re-run the fill using the setTimeout approach. Then show me: the 5 highest-demand clients that have unfilled shifts, their minimumStaffing settings, and whether those demands are realistic for a sandbox test. If clients are demanding 10 guards when they should demand 2, the seed data is inflated.
+Then build the staffing gap alert: after every scheduling run, Trinity produces a summary — X shifts filled, Y unfilled, and for each unfilled group: which client, which time slot, why (not enough employees, all at OT, no one with that availability), and recommendation (hire N more night-shift guards, or approve OT for existing staff). This alert goes to org owner and authorized managers."

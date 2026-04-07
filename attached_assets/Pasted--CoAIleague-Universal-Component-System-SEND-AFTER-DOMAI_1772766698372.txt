@@ -1,0 +1,899 @@
+# CoAIleague — Universal Component System
+## SEND AFTER DOMAIN ORGANIZATION IS COMPLETE
+## One Edit. Every Page. Desktop + Mobile PWA.
+
+---
+
+## FROM BRYAN — THE MISSION TODAY
+
+Today is about cleaning and organizing. We are not adding features. We are not building new pages. We are creating a universal component system so that every page on this platform — mobile and desktop — looks and behaves consistently. One fix fixes everything. One update updates everywhere.
+
+This is the last time we do things page by page. After today, everything is universal.
+
+---
+
+## ⛔ STANDING RULES
+
+1. **NO DROP TABLE** — Not one. Ever.
+2. **NO SCHEMA CHANGES** — This is frontend only.
+3. **GIT COMMIT FIRST:**
+```bash
+git add .
+git commit -m "checkpoint: domain organization complete — before universal component system"
+```
+4. **ONE COMPONENT AT A TIME** — Build, test on mobile + desktop, commit, then next.
+5. **NO TOUCHING EXISTING PAGES YET** — Build the components first. Wire them after.
+6. **REPORT BEFORE REPLACING** — Show Bryan which pages use each component before replacing them.
+
+---
+
+## THE DESIGN SYSTEM — BRAND CONSTANTS
+
+Before building anything, establish these as CSS variables and TypeScript constants. Every component uses these. Nothing hardcodes colors, fonts, spacing, or sizes.
+
+### Color Palette
+```css
+:root {
+  /* Backgrounds */
+  --color-bg-primary:      #0D1117;  /* deep navy — main background */
+  --color-bg-secondary:    #161B22;  /* card background */
+  --color-bg-tertiary:     #21262D;  /* elevated surface */
+  --color-bg-overlay:      #1C2128;  /* modal/drawer backdrop surface */
+
+  /* Brand */
+  --color-brand-primary:   #00D4FF;  /* cyan — primary accent */
+  --color-brand-secondary: #7B5EA7;  /* purple — secondary accent */
+  --color-brand-gradient:  linear-gradient(135deg, #00D4FF 0%, #7B5EA7 100%);
+
+  /* Text */
+  --color-text-primary:    #F0F6FC;  /* near white — headings, primary */
+  --color-text-secondary:  #8B949E;  /* muted gray — labels, meta */
+  --color-text-disabled:   #484F58;  /* disabled state */
+  --color-text-inverse:    #0D1117;  /* text on light backgrounds */
+
+  /* Semantic */
+  --color-success:         #3FB950;
+  --color-warning:         #D29922;
+  --color-danger:          #F85149;
+  --color-info:            #58A6FF;
+
+  /* Borders */
+  --color-border-subtle:   #21262D;
+  --color-border-default:  #30363D;
+  --color-border-emphasis: #484F58;
+
+  /* Interactive */
+  --color-hover:           rgba(255,255,255,0.06);
+  --color-active:          rgba(255,255,255,0.10);
+  --color-focus:           rgba(0,212,255,0.40);
+}
+```
+
+### Typography Scale
+```css
+:root {
+  /* Font families */
+  --font-display:  'Syne', sans-serif;      /* headings, display text */
+  --font-body:     'DM Sans', sans-serif;   /* body, UI labels */
+  --font-mono:     'JetBrains Mono', monospace; /* code, IDs, numbers */
+
+  /* Font sizes — mobile first */
+  --text-xs:    11px;
+  --text-sm:    13px;
+  --text-base:  15px;
+  --text-md:    17px;
+  --text-lg:    20px;
+  --text-xl:    24px;
+  --text-2xl:   30px;
+  --text-3xl:   38px;
+
+  /* Font weights */
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-bold:      700;
+
+  /* Line heights */
+  --leading-tight:    1.2;
+  --leading-normal:   1.5;
+  --leading-relaxed:  1.7;
+}
+```
+
+### Spacing & Radius Scale
+```css
+:root {
+  /* Spacing */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+
+  /* Border radius */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 20px rgba(0,212,255,0.15);
+}
+```
+
+### Breakpoints
+```typescript
+export const breakpoints = {
+  mobile:  '375px',   // minimum supported
+  mobileLg: '430px',  // large phones
+  tablet:  '768px',   // tablet / small desktop
+  desktop: '1280px',  // standard desktop
+  wide:    '1440px',  // wide desktop
+  ultrawide: '1920px' // ultrawide
+};
+```
+
+### Animation Tokens
+```css
+:root {
+  --duration-fast:    120ms;
+  --duration-normal:  200ms;
+  --duration-slow:    350ms;
+  --duration-page:    400ms;
+  --ease-default:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in:          cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:         cubic-bezier(0, 0, 0.2, 1);
+}
+```
+
+**Save all tokens in:** `src/styles/tokens.css` and `src/lib/tokens.ts`
+
+---
+
+## MOBILE-FIRST PRINCIPLES — NON-NEGOTIABLE
+
+CoAIleague must feel like a native app on mobile. Every component is built mobile-first then enhanced for desktop. These rules apply to every single component:
+
+### Touch Targets
+- Minimum tap target: **44×44px** — no exceptions
+- Buttons, icons, nav items all meet this minimum
+- Padding compensates when visual size is smaller
+
+### Safe Areas (PWA/APK)
+```css
+/* Apply to all full-screen containers */
+padding-top: env(safe-area-inset-top);
+padding-bottom: env(safe-area-inset-bottom);
+padding-left: env(safe-area-inset-left);
+padding-right: env(safe-area-inset-right);
+```
+
+### Mobile Scroll Behavior
+```css
+/* Main scroll container */
+-webkit-overflow-scrolling: touch;
+scroll-behavior: smooth;
+overscroll-behavior: contain;
+
+/* Prevent pull-to-refresh on app shell */
+overscroll-behavior-y: none;
+```
+
+### No Hover Dependency
+Every interactive state must work without hover. Hover is an enhancement only. Active/pressed states via `:active` are the mobile equivalent.
+
+### Font Rendering
+```css
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
+text-rendering: optimizeLegibility;
+```
+
+### Input Zoom Prevention
+```css
+/* All inputs — prevents iOS zoom on focus */
+font-size: max(16px, 1rem);
+```
+
+---
+
+## THE 15 UNIVERSAL COMPONENTS
+
+Build in this exact order. Each one must be complete and tested before starting the next.
+
+---
+
+### COMPONENT 1 — `UniversalLayout`
+**File:** `src/components/universal/UniversalLayout.tsx`
+**Purpose:** The outermost wrapper for every page. Handles safe areas, scroll containers, background, and the relationship between header, content, and bottom nav.
+
+```typescript
+interface UniversalLayoutProps {
+  children: React.ReactNode;
+  header?: React.ReactNode;        // pass UniversalHeader
+  bottomNav?: React.ReactNode;     // pass UniversalBottomNav on mobile
+  sidebar?: React.ReactNode;       // pass UniversalSidebar on desktop
+  padding?: boolean;               // default true
+  scroll?: boolean;                // default true
+  className?: string;
+}
+```
+
+**Mobile behavior:**
+- Full height: `100dvh` (dynamic viewport height — handles browser chrome)
+- Header fixed at top, content scrolls between header and bottom nav
+- Bottom nav fixed at bottom with safe area padding
+- Content area: `overflow-y: auto`, `-webkit-overflow-scrolling: touch`
+
+**Desktop behavior:**
+- Sidebar fixed left (240px)
+- Header fixed top
+- Content fills remaining space with scroll
+- No bottom nav
+
+**Implementation:**
+```tsx
+export const UniversalLayout = ({ children, header, bottomNav, sidebar, padding = true }) => {
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  
+  return (
+    <div className="universal-layout">
+      {header}
+      <div className="universal-layout__body">
+        {!isMobile && sidebar}
+        <main className={`universal-layout__content ${padding ? 'padded' : ''}`}>
+          {children}
+        </main>
+      </div>
+      {isMobile && bottomNav}
+    </div>
+  );
+};
+```
+
+---
+
+### COMPONENT 2 — `UniversalHeader`
+**File:** `src/components/universal/UniversalHeader.tsx`
+**Purpose:** The single header used everywhere. Replaces every current header implementation.
+
+```typescript
+interface UniversalHeaderProps {
+  title?: string;
+  subtitle?: string;
+  showBack?: boolean;              // shows back arrow on mobile
+  onBack?: () => void;
+  actions?: React.ReactNode[];     // right side action buttons
+  showNotifications?: boolean;     // default true
+  showMessages?: boolean;          // default true
+  showProfile?: boolean;           // default true
+  transparent?: boolean;           // for hero sections
+  variant?: 'default' | 'minimal' | 'transparent';
+}
+```
+
+**Mobile specs:**
+- Height: 56px
+- Fixed position, `z-index: 100`
+- Safe area top padding included
+- Title centered, back arrow left, actions right
+- No hover-triggered dropdowns — tap to open only
+- Profile tap → bottom sheet (not dropdown)
+- Notification tap → bottom sheet
+
+**Desktop specs:**
+- Height: 64px
+- Full width with sidebar offset
+- Title left-aligned
+- Actions right-aligned with hover states
+- Profile dropdown with 200ms debounced hover intent
+- Keyboard accessible (Escape closes menus)
+
+**The glitch fix — built into this component:**
+```typescript
+// Debounced menu open — prevents accidental triggers
+const handleMenuOpen = useMemo(() => 
+  debounce(() => setMenuOpen(true), 150), []
+);
+
+// Grace period on close — prevents snap-close
+const handleMenuClose = useMemo(() => 
+  debounce(() => setMenuOpen(false), 200), []
+);
+
+// Cleanup on unmount
+useEffect(() => () => {
+  handleMenuOpen.cancel();
+  handleMenuClose.cancel();
+}, []);
+```
+
+**After building:** Find every existing header implementation across all pages. List them for Bryan. Then replace with `<UniversalHeader />`.
+
+---
+
+### COMPONENT 3 — `UniversalBottomNav`
+**File:** `src/components/universal/UniversalBottomNav.tsx`
+**Purpose:** Mobile-only bottom navigation. The primary nav on mobile. Hidden on desktop.
+
+```typescript
+interface UniversalBottomNavProps {
+  items: NavItem[];
+  activeRoute: string;
+}
+
+interface NavItem {
+  label: string;
+  icon: React.ReactNode;
+  route: string;
+  badge?: number;          // notification count
+}
+```
+
+**Specs:**
+- Height: 56px + safe area bottom
+- Background: `--color-bg-secondary` with top border
+- 5 items maximum
+- Active item: brand cyan color + subtle indicator dot
+- Badge: red pill, max display "99+"
+- Tap feedback: `scale(0.92)` for 120ms
+- Hidden completely at `768px+` via `display: none`
+- Items: Home, Schedule, Clock, Mail, More
+
+---
+
+### COMPONENT 4 — `UniversalSidebar`
+**File:** `src/components/universal/UniversalSidebar.tsx`
+**Purpose:** Desktop-only sidebar navigation. Hidden on mobile.
+
+```typescript
+interface UniversalSidebarProps {
+  items: SidebarSection[];
+  activeRoute: string;
+  collapsed?: boolean;
+  onCollapseToggle?: () => void;
+}
+```
+
+**Specs:**
+- Width: 240px expanded, 64px collapsed
+- Fixed left, full height
+- Hidden on mobile (`display: none` below 768px)
+- Sections with group labels
+- Active item: cyan left border + subtle background
+- Smooth collapse transition: 250ms ease
+- Persists collapsed state to localStorage
+- Logo at top, user profile at bottom
+
+---
+
+### COMPONENT 5 — `UniversalCard`
+**File:** `src/components/universal/UniversalCard.tsx`
+**Purpose:** Every card, panel, and content container on the platform.
+
+```typescript
+interface UniversalCardProps {
+  children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+  actions?: React.ReactNode;       // top-right actions
+  footer?: React.ReactNode;
+  variant?: 'default' | 'elevated' | 'outlined' | 'ghost' | 'gradient';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+  clickable?: boolean;
+  loading?: boolean;               // shows skeleton
+  className?: string;
+}
+```
+
+**Variants:**
+- `default` — standard dark card, subtle border
+- `elevated` — deeper shadow, slightly lighter bg
+- `outlined` — transparent bg, visible border
+- `ghost` — no background, no border
+- `gradient` — brand gradient border (1px) via pseudo-element
+
+**Loading state:** shimmer skeleton animation matching card dimensions
+
+**Mobile:** Full width by default, proper padding for touch
+
+---
+
+### COMPONENT 6 — `UniversalButton`
+**File:** `src/components/universal/UniversalButton.tsx`
+**Purpose:** Every button on the platform. No custom button implementations anywhere.
+
+```typescript
+interface UniversalButtonProps {
+  children: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  icon?: React.ReactNode;          // left icon
+  iconRight?: React.ReactNode;     // right icon
+  iconOnly?: boolean;              // icon-only circular button
+  loading?: boolean;               // spinner state
+  disabled?: boolean;
+  fullWidth?: boolean;
+  onClick?: () => void;
+  type?: 'button' | 'submit';
+  className?: string;
+}
+```
+
+**Size specs (height × padding):**
+- `xs`: 28px × 8px, 11px font
+- `sm`: 34px × 12px, 13px font
+- `md`: 40px × 16px, 15px font (default)
+- `lg`: 48px × 20px, 17px font
+- `xl`: 56px × 24px, 17px font
+
+**Mobile:** All buttons minimum 44px tall on mobile regardless of size prop
+
+**States:**
+- Loading: spinner replaces content, width locked to prevent layout shift
+- Disabled: 40% opacity, `cursor: not-allowed`
+- Active/pressed: `scale(0.97)`, `brightness(0.9)`
+
+---
+
+### COMPONENT 7 — `UniversalModal`
+**File:** `src/components/universal/UniversalModal.tsx`
+**Purpose:** All modals, dialogs, confirmations. One system.
+
+```typescript
+interface UniversalModalProps {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  description?: string;
+  children?: React.ReactNode;
+  footer?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  closeOnOverlay?: boolean;        // default true
+  closeOnEscape?: boolean;         // default true
+  showCloseButton?: boolean;       // default true
+  variant?: 'default' | 'danger' | 'success';
+}
+```
+
+**Desktop behavior:**
+- Centered overlay, max-width by size
+- Backdrop blur: `backdrop-filter: blur(8px)`
+- Enter: `scale(0.95) → scale(1)` + fade, 200ms
+- Exit: reverse, 150ms
+- Scroll lock on body when open
+
+**Mobile behavior:**
+- Becomes a bottom sheet automatically on screens < 768px
+- Slides up from bottom: `translateY(100%) → translateY(0)`
+- Drag handle at top (visual indicator)
+- Can be dismissed by swiping down
+- Max height: 90dvh with internal scroll
+
+---
+
+### COMPONENT 8 — `UniversalDrawer`
+**File:** `src/components/universal/UniversalDrawer.tsx`
+**Purpose:** Side panels, detail views, settings panels.
+
+```typescript
+interface UniversalDrawerProps {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  side?: 'left' | 'right';        // default right
+  size?: 'sm' | 'md' | 'lg' | 'full';
+  closeOnOverlay?: boolean;
+}
+```
+
+**Desktop:** Slides in from side, 400px default width, overlay dims content behind
+
+**Mobile:** Full-width bottom sheet, same as UniversalModal mobile behavior. Side drawers do not exist on mobile — they become bottom sheets.
+
+---
+
+### COMPONENT 9 — `UniversalSheet`
+**File:** `src/components/universal/UniversalSheet.tsx`
+**Purpose:** Action sheets, context menus, quick-action panels. The native-app feel overlay.
+
+```typescript
+interface UniversalSheetProps {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  children: React.ReactNode;
+  snapPoints?: number[];           // [0.4, 0.7, 1.0] — percentage heights
+  defaultSnap?: number;
+}
+```
+
+**This is mobile-first.** On desktop it renders as a popover/dropdown. On mobile it's a true bottom sheet with snap points and swipe-to-dismiss.
+
+**Snap point behavior:**
+- Drag up past a snap point → snaps to next
+- Drag down past lowest snap point → closes
+- Velocity-based: fast flick down always closes
+
+---
+
+### COMPONENT 10 — `UniversalBadge`
+**File:** `src/components/universal/UniversalBadge.tsx`
+**Purpose:** Status badges, count badges, label tags. Everywhere.
+
+```typescript
+interface UniversalBadgeProps {
+  children: React.ReactNode;
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'brand';
+  size?: 'sm' | 'md' | 'lg';
+  dot?: boolean;                   // dot-only badge (no text)
+  pulse?: boolean;                 // animated pulse (live/active states)
+  count?: number;                  // numeric badge (auto-formats 99+)
+  outline?: boolean;               // outlined vs filled
+}
+```
+
+**Pulse animation:**
+```css
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+/* Use for live status indicators */
+```
+
+---
+
+### COMPONENT 11 — `UniversalIcon`
+**File:** `src/components/universal/UniversalIcon.tsx`
+**Purpose:** Every icon on the platform from one source. No mixed icon libraries.
+
+```typescript
+interface UniversalIconProps {
+  name: IconName;                  // typed enum of all available icons
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  color?: string;                  // defaults to currentColor
+  className?: string;
+}
+
+// Size values
+const iconSizes = {
+  xs: 14,
+  sm: 16,
+  md: 20,   // default
+  lg: 24,
+  xl: 32,
+};
+```
+
+**Rules:**
+- Single icon library only — audit current pages, pick the one most used, standardize on it
+- All icons referenced by semantic name, not import path
+- Icons never hardcode color — always inherit from parent or use `color` prop
+- Touch targets wrapped automatically when inside buttons
+
+---
+
+### COMPONENT 12 — `UniversalInput`
+**File:** `src/components/universal/UniversalInput.tsx`
+**Purpose:** Every text input, textarea, select, search field.
+
+```typescript
+interface UniversalInputProps {
+  type?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'number';
+  label?: string;
+  placeholder?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+  error?: string;
+  hint?: string;
+  icon?: React.ReactNode;          // left icon
+  iconRight?: React.ReactNode;
+  disabled?: boolean;
+  required?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
+}
+```
+
+**Mobile critical:**
+- Font size: `max(16px, 1em)` — prevents iOS zoom on focus
+- Height minimum: 44px
+- Clear button on search inputs
+- Proper `autocomplete` and `inputmode` attributes
+
+**States:**
+- Default → Focus (cyan border glow) → Error (red) → Disabled (dimmed)
+- Error message animates in below input
+- No layout shift between states
+
+---
+
+### COMPONENT 13 — `UniversalTable`
+**File:** `src/components/universal/UniversalTable.tsx`
+**Purpose:** Every data table on the platform.
+
+```typescript
+interface UniversalTableProps<T> {
+  data: T[];
+  columns: ColumnDef<T>[];
+  loading?: boolean;
+  empty?: React.ReactNode;
+  onRowClick?: (row: T) => void;
+  selectable?: boolean;
+  pagination?: PaginationConfig;
+  sortable?: boolean;
+  className?: string;
+}
+```
+
+**Mobile behavior:**
+- Tables below 768px switch to card-list layout automatically
+- Each row becomes a card with key fields visible
+- "See more" expands to show all fields
+- Horizontal scroll available as fallback if card layout is disabled
+
+**Desktop behavior:**
+- Standard table with fixed header on scroll
+- Row hover highlight
+- Sortable columns with visual indicator
+- Bulk selection with checkbox column
+
+**Loading state:** Skeleton rows matching column count
+
+---
+
+### COMPONENT 14 — `UniversalToast`
+**File:** `src/components/universal/UniversalToast.tsx`
+**Purpose:** All success, error, warning, and info notifications. One toast system.
+
+```typescript
+// Hook-based — called from anywhere
+const { toast } = useToast();
+
+toast.success('Timesheet approved');
+toast.error('Failed to save — try again');
+toast.warning('Shift conflict detected');
+toast.info('Schedule published to 12 employees');
+
+// With action
+toast.success('Employee added', {
+  action: { label: 'View', onClick: () => navigate('/workforce') }
+});
+```
+
+**Mobile specs:**
+- Position: top of screen (below header), full width with margin
+- Safe area top padding
+- Stack max 3 toasts, oldest dismisses
+- Swipe right to dismiss
+- Auto-dismiss: 4000ms default
+
+**Desktop specs:**
+- Position: bottom-right
+- Max width: 380px
+- Same stack and dismiss behavior
+
+---
+
+### COMPONENT 15 — `UniversalEmptyState`
+**File:** `src/components/universal/UniversalEmptyState.tsx`
+**Purpose:** Every empty list, zero-data state, and no-results screen.
+
+```typescript
+interface UniversalEmptyStateProps {
+  icon?: React.ReactNode;
+  title: string;
+  description?: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+    variant?: ButtonVariant;
+  };
+  size?: 'sm' | 'md' | 'lg';
+}
+```
+
+**Common presets to include:**
+```typescript
+EmptyState.NoSchedule     // "No shifts scheduled"
+EmptyState.NoEmployees    // "No employees added yet"
+EmptyState.NoMessages     // "No messages yet"
+EmptyState.NoResults      // "No results found"
+EmptyState.NoPendingItems // "You're all caught up"
+EmptyState.Error          // "Something went wrong"
+```
+
+---
+
+## COMPONENT FOLDER STRUCTURE
+
+```
+src/
+  components/
+    universal/
+      UniversalLayout.tsx
+      UniversalHeader.tsx
+      UniversalBottomNav.tsx
+      UniversalSidebar.tsx
+      UniversalCard.tsx
+      UniversalButton.tsx
+      UniversalModal.tsx
+      UniversalDrawer.tsx
+      UniversalSheet.tsx
+      UniversalBadge.tsx
+      UniversalIcon.tsx
+      UniversalInput.tsx
+      UniversalTable.tsx
+      UniversalToast.tsx
+      UniversalEmptyState.tsx
+      index.ts              ← exports all 15
+  styles/
+    tokens.css              ← all CSS variables
+  lib/
+    tokens.ts               ← TypeScript constants
+    useMediaQuery.ts        ← responsive hook
+    useToast.ts             ← toast hook
+```
+
+---
+
+## MASTER EXPORT FILE
+
+```typescript
+// src/components/universal/index.ts
+export { UniversalLayout } from './UniversalLayout';
+export { UniversalHeader } from './UniversalHeader';
+export { UniversalBottomNav } from './UniversalBottomNav';
+export { UniversalSidebar } from './UniversalSidebar';
+export { UniversalCard } from './UniversalCard';
+export { UniversalButton } from './UniversalButton';
+export { UniversalModal } from './UniversalModal';
+export { UniversalDrawer } from './UniversalDrawer';
+export { UniversalSheet } from './UniversalSheet';
+export { UniversalBadge } from './UniversalBadge';
+export { UniversalIcon } from './UniversalIcon';
+export { UniversalInput } from './UniversalInput';
+export { UniversalTable } from './UniversalTable';
+export { UniversalToast } from './UniversalToast';
+export { UniversalEmptyState } from './UniversalEmptyState';
+```
+
+---
+
+## WIRING PHASE — REPLACE EXISTING IMPLEMENTATIONS
+
+After ALL 15 components are built and verified, do this audit:
+
+### Step 1 — Find all current implementations
+```bash
+# Find all custom headers
+grep -r "header\|Header" src/pages --include="*.tsx" -l
+
+# Find all custom modals
+grep -r "modal\|Modal\|dialog\|Dialog" src/pages --include="*.tsx" -l
+
+# Find all custom buttons
+grep -r "<button\|<Button" src/pages --include="*.tsx" -l
+
+# Find all custom inputs
+grep -r "<input\|<Input" src/pages --include="*.tsx" -l
+```
+
+### Step 2 — Report to Bryan
+List every file found for each component type. Do not replace anything yet.
+
+### Step 3 — Replace after Bryan approves
+Replace one component type at a time across all pages:
+1. Replace all headers → `UniversalHeader`
+2. Replace all modals → `UniversalModal`
+3. Replace all buttons → `UniversalButton`
+4. Replace all inputs → `UniversalInput`
+5. Replace all cards → `UniversalCard`
+6. Replace all badges → `UniversalBadge`
+7. Replace all tables → `UniversalTable`
+8. Replace all empty states → `UniversalEmptyState`
+9. Replace all toasts/alerts → `UniversalToast`
+10. Wire `UniversalLayout` to all pages last
+
+### After each replacement type:
+```bash
+npx tsc --noEmit
+npm run dev
+# Verify on mobile viewport (375px) and desktop (1280px)
+git add .
+git commit -m "universal: replaced all [component] implementations ✓"
+```
+
+---
+
+## PWA / APK QUALITY CHECKLIST
+
+After all components are wired, run this mobile quality check:
+
+**Feel:**
+- [ ] No layout shift on any page load
+- [ ] All transitions use transform/opacity only
+- [ ] Scroll is smooth with momentum on iOS
+- [ ] No content hidden behind header or bottom nav
+- [ ] Safe area padding applied on notched devices
+
+**Touch:**
+- [ ] Every tappable element is minimum 44×44px
+- [ ] No hover-only interactions
+- [ ] Tap feedback on all interactive elements
+- [ ] Swipe gestures work on sheets and drawers
+- [ ] No double-tap zoom on any UI element
+
+**Performance:**
+- [ ] No janky animations (all GPU-accelerated)
+- [ ] Images lazy-loaded
+- [ ] Skeleton loaders on all async data
+- [ ] No layout thrashing in scroll handlers
+
+**Visual:**
+- [ ] All text readable at 375px width
+- [ ] No text overflow or truncation issues
+- [ ] Cards and grids don't break at any width
+- [ ] Bottom nav doesn't overlap content
+- [ ] Modals/sheets don't overflow screen
+
+**Input:**
+- [ ] No iOS zoom on input focus
+- [ ] Keyboard doesn't push content off screen
+- [ ] Form submission works on mobile keyboard "done"
+
+---
+
+## DELIVERY CHECKLIST
+
+- [ ] Design tokens file created (`tokens.css` + `tokens.ts`)
+- [ ] All 15 universal components built
+- [ ] All 15 compile with zero TypeScript errors
+- [ ] Master export index created
+- [ ] All pages audited for existing implementations
+- [ ] Bryan approved replacement list
+- [ ] All headers replaced with UniversalHeader
+- [ ] All modals replaced with UniversalModal
+- [ ] All buttons replaced with UniversalButton
+- [ ] All inputs replaced with UniversalInput
+- [ ] All cards replaced with UniversalCard
+- [ ] All badges replaced with UniversalBadge
+- [ ] All tables replaced with UniversalTable
+- [ ] All empty states replaced
+- [ ] All toasts replaced with UniversalToast
+- [ ] UniversalLayout wired to all pages
+- [ ] PWA mobile checklist passed
+- [ ] Zero new console errors
+- [ ] Tested at 375px, 390px, 430px mobile widths
+- [ ] Tested at 1280px, 1440px, 1920px desktop widths
+- [ ] Git committed after every component and replacement
+- [ ] Final commit: "universal component system complete ✓"
+
+---
+
+## THE RESULT
+
+After today every page on CoAIleague — mobile and desktop — is built from the same 15 components. The header glitch? Fixed once in `UniversalHeader`, gone everywhere. A button style update? Changed once in `UniversalButton`, updated on every page. A modal not rendering on mobile? Fixed once in `UniversalModal`, correct on every screen.
+
+Tomorrow when we add back missing features, every new page starts with:
+```tsx
+import { 
+  UniversalLayout, UniversalHeader, UniversalCard, 
+  UniversalButton, UniversalModal 
+} from '@/components/universal';
+```
+
+Clean foundation. Direct paths. One edit everywhere.

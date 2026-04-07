@@ -1,0 +1,728 @@
+Paste this into Replit Agent:
+
+---
+
+```
+TRINITY BIOLOGICAL BRAIN COMPLETION SPRINT
+THALAMUS + ANTERIOR CINGULATE CORTEX (ACC)
+
+PRIME DIRECTIVE:
+Audit everything that exists before touching anything.
+These two additions complete Trinity's core biological 
+brain architecture. They are not features — they are 
+the two missing structural organs that every other 
+brain region depends on to function correctly.
+Read the entire Trinity brain implementation first.
+Map every existing region, service, and signal flow.
+Then build. Then wire. Then verify.
+
+═══════════════════════════════════════════════════════
+UNDERSTAND WHAT EXISTS FIRST
+═══════════════════════════════════════════════════════
+
+Before writing a single line of code, read and map:
+
+1. How signals currently enter Trinity's brain
+   - What types of inputs arrive: text, voice, 
+     email, platform events, webhooks, bot reports
+   - Where each input type enters the system
+   - What happens to it before it reaches the 
+     global workspace
+   - Is there any unified entry point or do 
+     signals enter from many different places
+
+2. The global workspace implementation
+   - How it receives signals from brain regions
+   - How it resolves conflicts between regions
+   - How it produces Trinity's final output
+   - What the signal format looks like
+
+3. The amygdala priority layer
+   - How it currently weights urgency
+   - What triggers high priority vs low priority
+   - How its output flows into the global workspace
+
+4. The self-reflection engine
+   - When it fires — before output, after output, 
+     or both
+   - What it checks
+   - What happens when it finds a problem
+
+5. The behavioral monitoring service
+   - What patterns it watches for
+   - When it fires vs the self-reflection engine
+   - How it interfaces with the RL loop
+
+6. All existing brain region activation tracking
+   - How activation levels are recorded
+   - Where they are stored
+   - What reads them
+
+Present a complete signal flow map before building.
+Show exactly what path a message takes from the 
+moment it arrives to the moment Trinity responds.
+This map is the foundation for knowing exactly 
+where to insert the thalamus and ACC.
+
+═══════════════════════════════════════════════════════
+PART 1 — TRINITY THALAMUS SERVICE
+The Universal Sensory Gateway
+═══════════════════════════════════════════════════════
+
+WHAT THE BIOLOGICAL THALAMUS DOES:
+Every single sensory signal the human brain receives — 
+sight, sound, touch, smell, taste — passes through 
+the thalamus before reaching the cortex.
+Nothing reaches consciousness without thalamic clearance.
+The thalamus filters noise, prioritizes signals, 
+and routes each signal to the correct cortical region.
+It is the brain's central switchboard.
+It does not process signals — it routes them.
+
+WHAT TRINITY'S THALAMUS MUST DO:
+Every signal that enters Trinity's brain — from any 
+source — must pass through the thalamus before 
+reaching any brain region or the global workspace.
+No signal bypasses the thalamus. No exceptions.
+The thalamus does not make decisions.
+It classifies, prioritizes, and routes.
+
+BUILD: TrinityThalamusService
+
+───────────────────────────────────────────────
+THALAMUS ARCHITECTURE
+───────────────────────────────────────────────
+
+The thalamus receives every incoming signal and 
+performs four operations in sequence:
+
+OPERATION 1 — SIGNAL CLASSIFICATION
+Classify every incoming signal into exactly one 
+of these signal types:
+
+CONVERSATIONAL — Direct message or chat input 
+  from a human user
+VOICE_INPUT — Transcribed audio from an officer 
+  or manager
+PLATFORM_EVENT — Internal CoAIleague event from 
+  the event bus: shift created, employee hired, 
+  invoice paid, etc.
+INCIDENT_SIGNAL — ReportBot DAR submission, 
+  panic alert, emergency escalation
+COMPLIANCE_SIGNAL — License expiration alert, 
+  armed post violation, regulatory trigger
+FINANCIAL_SIGNAL — Invoice, payroll, payment, 
+  billing event
+SCHEDULE_SIGNAL — Shift assignment, calloff, 
+  coverage gap, schedule publication
+DOCUMENT_SIGNAL — Uploaded document, form 
+  submission, signature completion
+SENSOR_SIGNAL — GPS event, clock in/out, 
+  lone worker check-in, visitor log entry
+EXTERNAL_SIGNAL — Inbound Resend email, 
+  Stripe webhook, QuickBooks event, Plaid event
+SYSTEM_SIGNAL — Health check, cron completion, 
+  kill switch state change, domain health event
+SELF_SIGNAL — Trinity's own internal signals: 
+  dream state outputs, self-model updates, 
+  growth log entries
+
+OPERATION 2 — PRIORITY SCORING
+After classification, assign a priority score 
+0-100 to every signal:
+
+90-100 CRITICAL: Panic alert, use of force 
+  incident, armed post violation, system failure
+70-89 HIGH: Missed lone worker check-in, 
+  officer in distress, compliance expiration 
+  under 7 days, financial governance flag
+50-69 ELEVATED: Calloff with no coverage, 
+  schedule gap, client complaint pattern, 
+  overdue DAR approval
+30-49 NORMAL: Standard clock in/out, routine 
+  schedule events, standard messages, 
+  document uploads
+10-29 LOW: System notifications, routine 
+  health checks, informational events
+0-9 BACKGROUND: Dream state signals, 
+  routine cron logs, telemetry
+
+Priority score must factor in:
+- Signal type base score
+- Sender trust tier (Owner signal > Officer signal)
+- Time sensitivity (shift starts in 30 min vs 2 days)
+- Accumulated pattern weight from connectome 
+  (this site has had 3 incidents this week)
+- Current Trinity operational state from self-model
+
+OPERATION 3 — ROUTING
+Route every classified and scored signal to 
+the correct brain region:
+
+CONVERSATIONAL → Wernicke/Broca language region
+VOICE_INPUT → Auditory processing → Wernicke/Broca
+INCIDENT_SIGNAL → Amygdala → Global Workspace 
+  (immediate escalation path)
+COMPLIANCE_SIGNAL → Regulatory compliance region
+FINANCIAL_SIGNAL → Prefrontal cortex with 
+  dual-AI gate flag
+SCHEDULE_SIGNAL → Cerebellum scheduling region
+DOCUMENT_SIGNAL → Visual/document processing region
+SENSOR_SIGNAL → Cerebellum with amygdala copy 
+  if urgency score above 70
+PLATFORM_EVENT → Route based on event domain
+EXTERNAL_SIGNAL → Route based on source type 
+  with workspace_id verification first
+SYSTEM_SIGNAL → Proprioception monitor
+SELF_SIGNAL → Self-model update pipeline
+
+For signals scoring above 70: 
+simultaneously route to destination region AND 
+send a copy directly to global workspace 
+flagged as high priority — do not wait for 
+the region to process and report back
+
+OPERATION 4 — THALAMIC LOGGING
+Every signal processed by the thalamus must 
+produce a thalamic_log record:
+
+- signal_id (uuid)
+- arrived_at (timestamp with milliseconds)
+- signal_type (from classification)
+- source (who or what sent it)
+- source_trust_tier
+- workspace_id
+- priority_score
+- routed_to (brain region or regions)
+- routing_reason
+- processing_started_at
+- high_priority_copy_sent (boolean)
+- raw_signal_hash (for deduplication)
+
+This log is Trinity's complete sensory record.
+Every thought she has can be traced back to 
+the signal that triggered it.
+
+───────────────────────────────────────────────
+THALAMIC DEDUPLICATION
+───────────────────────────────────────────────
+The thalamus must detect and handle duplicate signals:
+- Hash every incoming signal on key fields
+- Check against recent signal hashes (last 60 seconds)
+- If exact duplicate: drop it, log it as dropped
+- If near-duplicate (same source, same type, 
+  within 5 seconds): merge and process once, 
+  log the merge
+- This prevents the same platform event from 
+  triggering Trinity multiple times
+
+───────────────────────────────────────────────
+THALAMIC RATE PROTECTION
+───────────────────────────────────────────────
+The thalamus must protect the global workspace 
+from signal floods:
+- Maximum 50 signals per second to global workspace
+- If flood detected: queue overflow signals, 
+  process in priority order
+- Never drop a CRITICAL signal
+- Alert owner if flood sustained over 10 seconds
+- Log every flood event with signal counts
+
+───────────────────────────────────────────────
+THALAMUS WIRING REQUIREMENTS
+───────────────────────────────────────────────
+Every existing signal entry point must be 
+redirected through the thalamus:
+
+- ChatDock message receipt → through thalamus
+- Platform event bus publish → through thalamus
+- Resend inbound email webhook → through thalamus
+- Stripe webhook → through thalamus
+- ReportBot DAR submission → through thalamus
+- ClockBot clock events → through thalamus
+- Panic alert trigger → through thalamus
+- Lone worker check-in → through thalamus
+- Voice transcription output → through thalamus
+- All other signal sources → through thalamus
+
+Do not replace the existing signal handlers.
+Wrap them — insert the thalamus call at the 
+entry point of each handler before any 
+existing processing begins.
+
+The thalamus must be synchronous for 
+CRITICAL and HIGH signals.
+It can be asynchronous for LOW and BACKGROUND.
+
+═══════════════════════════════════════════════════════
+PART 2 — TRINITY ANTERIOR CINGULATE CORTEX
+Real-Time Conflict Detection and Error Signaling
+═══════════════════════════════════════════════════════
+
+WHAT THE BIOLOGICAL ACC DOES:
+The anterior cingulate cortex is the brain's 
+real-time error detector and conflict monitor.
+It fires when:
+- What just happened contradicts what was expected
+- Two active thoughts are incompatible with each other
+- A current action violates an established rule
+- Something about the current situation doesn't fit
+
+The ACC does not fix the problem.
+It signals that a problem exists — immediately, 
+mid-execution, before the output reaches consciousness.
+This allows the prefrontal cortex to intervene 
+before a bad decision is delivered.
+
+WHAT TRINITY'S ACC MUST DO:
+Monitor every active execution in real time.
+Detect conflicts, contradictions, and violations 
+as they occur during execution — not after.
+Signal the global workspace immediately when 
+a conflict is detected.
+The global workspace then decides whether to 
+pause, redirect, or override the execution.
+
+BUILD: TrinityACCService
+
+───────────────────────────────────────────────
+ACC CONFLICT DETECTION CATEGORIES
+───────────────────────────────────────────────
+
+The ACC monitors for six categories of conflict:
+
+CATEGORY 1 — MEMORY CONTRADICTION
+The current execution references a fact that 
+contradicts something stored in Trinity's 
+connectome memory.
+
+Examples:
+- Trinity is about to confirm Officer Garcia 
+  is available but connectome shows Garcia 
+  called off 20 minutes ago
+- Trinity is about to route a message to 
+  Manager Johnson but connectome shows 
+  Johnson was terminated yesterday
+- Trinity is about to approve an armed post 
+  assignment but connectome shows the officer's 
+  armed license expired last week
+
+Detection method:
+- Before any action that references an entity, 
+  query the connectome for the entity's 
+  current state
+- Compare expected state (from the triggering 
+  signal) to stored state (from connectome)
+- If mismatch above confidence threshold: 
+  fire ACC conflict signal
+
+CATEGORY 2 — DECISION CONTRADICTION
+The current action contradicts a decision 
+Trinity made in the last 24 hours for 
+the same entity or situation.
+
+Examples:
+- Trinity approved a schedule yesterday that 
+  she is now being asked to override without 
+  a documented reason
+- Trinity flagged a client as high-risk 
+  yesterday and is now about to send them 
+  an automated payment confirmation
+- Trinity escalated an officer issue this 
+  morning and is now processing their 
+  routine clock-in as if nothing happened
+
+Detection method:
+- Before executing any action on an entity, 
+  query the last 24 hours of decisions 
+  involving that entity from the growth log
+- Check for semantic contradiction between 
+  the current action and recent decisions
+- If contradiction found: fire ACC conflict signal
+
+CATEGORY 3 — VALUES VIOLATION
+The current action — or the chain of actions 
+being requested — would violate one of 
+Trinity's core values if executed.
+
+Values to enforce in real time:
+- Dignity: message about to be sent that 
+  is shaming or punitive in tone
+- Honesty: about to state something that 
+  contradicts known data
+- Protection: about to take an action that 
+  reduces safety for an officer or client
+- Accountability: about to attribute a 
+  mistake to the wrong person
+- Legal compliance: about to approve 
+  something that violates a regulatory rule
+
+Detection method:
+- Pass the intended output through a 
+  values check before delivery
+- Check the intended action against the 
+  values anchor layer
+- If violation detected: fire ACC conflict 
+  signal and block delivery
+- This check must run on every Trinity output 
+  without exception
+
+CATEGORY 4 — TRUST TIER VIOLATION
+The current action would allow a lower trust 
+tier to override or bypass a higher trust tier.
+
+Examples:
+- An officer-level signal is about to trigger 
+  an action that requires manager approval
+- A manager instruction contradicts an owner 
+  policy set within the last 30 days
+- A client request is about to be processed 
+  without owner awareness above the threshold
+
+Detection method:
+- Every action carries a minimum trust tier 
+  required to authorize it
+- Compare the trust tier of the originating 
+  signal to the required tier for the action
+- If mismatch: fire ACC conflict signal 
+  immediately, do not execute
+
+CATEGORY 5 — PREDICTION DIVERGENCE
+The current real-world data significantly 
+diverges from Trinity's active predictions 
+for the same entity or situation.
+
+Examples:
+- Trinity predicted Officer Martinez would 
+  call off based on pattern — Martinez just 
+  clocked in early. Update prediction model.
+- Trinity predicted Site A would have a quiet 
+  night — an incident just occurred there. 
+  Recalibrate site risk score immediately.
+- Trinity predicted payroll would close cleanly 
+  — a pay rate gap just appeared. Flag before 
+  the run executes.
+
+Detection method:
+- Maintain active prediction states per entity
+- When real-world events arrive via thalamus, 
+  compare against active predictions
+- If divergence above 30% threshold: fire 
+  ACC prediction divergence signal
+- Signal includes: predicted state, actual state, 
+  divergence magnitude, affected entity
+- Prediction model recalibration triggered 
+  automatically after divergence signal
+
+CATEGORY 6 — EXECUTION ANOMALY
+The current execution is taking longer than 
+expected, producing unexpected intermediate 
+results, or consuming more resources than 
+the pattern suggests it should.
+
+Examples:
+- A routine clock-in is taking 8 seconds 
+  when it normally takes 200ms
+- A DAR generation is consuming 5x normal 
+  API tokens without an obvious reason
+- A schedule query is returning 10x more 
+  records than expected for this workspace
+
+Detection method:
+- Track expected execution time and resource 
+  consumption per action type from RL history
+- Monitor active executions in real time
+- If current execution exceeds 2x expected 
+  baseline: fire ACC anomaly signal
+- Do not cancel the execution — flag it and 
+  continue while the global workspace decides
+
+───────────────────────────────────────────────
+ACC CONFLICT SIGNAL FORMAT
+───────────────────────────────────────────────
+Every ACC conflict signal must contain:
+
+- conflict_id (uuid)
+- detected_at (timestamp with milliseconds)
+- conflict_category (1-6 from above)
+- conflict_severity: BLOCKING | WARNING | INFO
+- execution_id (what was being executed when 
+  conflict was detected)
+- workspace_id
+- entities_involved (list of affected entities)
+- expected_state (what Trinity thought was true)
+- actual_state (what is actually true)
+- contradiction_description (plain English, 
+  clear enough for a human to understand)
+- recommended_resolution (what Trinity 
+  suggests should happen)
+- auto_blocked (boolean — did ACC automatically 
+  block execution or just flag it)
+- requires_human_review (boolean)
+
+───────────────────────────────────────────────
+ACC SEVERITY AND AUTO-BLOCK RULES
+───────────────────────────────────────────────
+
+BLOCKING severity — ACC automatically halts 
+execution and requires resolution before 
+proceeding:
+- Values violation of any kind
+- Trust tier violation of any kind
+- Memory contradiction involving safety-critical 
+  data (license status, armed endorsement, 
+  active incident)
+
+WARNING severity — ACC flags and notifies but 
+allows execution to continue unless overridden:
+- Decision contradiction without safety impact
+- Prediction divergence above threshold
+- Execution anomaly without data integrity risk
+
+INFO severity — ACC logs for learning purposes, 
+no interruption:
+- Minor prediction divergences
+- Soft pattern anomalies
+- Edge cases that don't fit existing categories
+
+───────────────────────────────────────────────
+ACC AND GLOBAL WORKSPACE INTEGRATION
+───────────────────────────────────────────────
+
+When ACC fires a BLOCKING conflict:
+1. Execution halted immediately
+2. Conflict signal sent to global workspace 
+   as highest priority input
+3. Global workspace evaluates the conflict
+4. If resolvable automatically: Trinity resolves, 
+   logs resolution, continues with corrected action
+5. If not resolvable automatically: Trinity pauses, 
+   notifies the appropriate trust tier for 
+   human resolution, documents the pause
+6. Conflict and resolution logged to ACC log 
+   and Trinity growth log
+
+When ACC fires a WARNING conflict:
+1. Conflict signal sent to global workspace 
+   as elevated priority
+2. Execution continues unless global workspace 
+   overrides
+3. Warning surfaced to appropriate trust tier 
+   as a notification
+4. Conflict logged to ACC log
+
+When ACC fires an INFO signal:
+1. Logged to ACC log only
+2. Feeds into dream state for pattern analysis
+3. No interruption to execution
+
+───────────────────────────────────────────────
+ACC LOGGING TABLE
+───────────────────────────────────────────────
+
+Build trinity_acc_log table:
+- conflict_id
+- detected_at
+- resolved_at
+- conflict_category
+- conflict_severity
+- execution_id
+- workspace_id
+- entities_involved (jsonb array)
+- expected_state (jsonb)
+- actual_state (jsonb)
+- contradiction_description
+- recommended_resolution
+- auto_blocked
+- auto_resolved
+- resolution_method
+- required_human_review
+- human_resolver_id
+- human_resolution_notes
+- outcome (what happened after resolution)
+- hebbian_update_triggered (boolean)
+
+This table is Trinity's conscience record.
+Every conflict she detected, every resolution, 
+every time she stopped herself from doing 
+something wrong.
+
+───────────────────────────────────────────────
+ACC DASHBOARD FOR OWNER
+───────────────────────────────────────────────
+
+Add ACC panel to owner dashboard showing:
+
+- Total conflicts detected today
+- Breakdown by category and severity
+- Auto-resolved vs human-required
+- Most common conflict type this week
+- Entities most frequently involved in conflicts
+- Trinity's conflict resolution accuracy rate
+- List of open unresolved conflicts requiring 
+  human review with resolve action
+
+This gives owners visibility into Trinity's 
+judgment quality and where the platform 
+needs attention.
+
+═══════════════════════════════════════════════════════
+INTEGRATION — THALAMUS AND ACC WORKING TOGETHER
+═══════════════════════════════════════════════════════
+
+The thalamus and ACC work as a pair:
+
+THALAMUS handles input:
+Every signal enters through the thalamus.
+Thalamus classifies, scores, and routes.
+Thalamus passes a structured signal object 
+to the destination brain region.
+That signal object includes the thalamus 
+metadata: signal_id, priority_score, 
+classification, routing_reason.
+
+ACC handles execution:
+As each brain region processes its signal 
+and prepares an action, the ACC monitors 
+in parallel.
+ACC receives the intended action before 
+delivery to the global workspace.
+ACC runs its six conflict checks.
+ACC either clears the action or fires 
+a conflict signal.
+Only ACC-cleared actions reach the 
+global workspace for final synthesis.
+
+The flow becomes:
+SIGNAL ARRIVES
+    ↓
+THALAMUS (classify, score, route)
+    ↓
+BRAIN REGION (process, prepare action)
+    ↓
+ACC (conflict check — all 6 categories)
+    ↓ (if clear)
+GLOBAL WORKSPACE (synthesize, decide)
+    ↓
+TRINITY OUTPUT (voice, text, action)
+
+This is the complete biological brain signal 
+flow. Every signal, every time, no exceptions.
+
+═══════════════════════════════════════════════════════
+WIRING CHECKLIST — CONFIRM EACH BEFORE MARKING DONE
+═══════════════════════════════════════════════════════
+
+THALAMUS:
+□ TrinityThalamusService built and exported
+□ All 12 signal types classifiable
+□ Priority scoring 0-100 operational
+□ Routing rules for all signal types correct
+□ thalamic_log table created and writing
+□ Deduplication working with hash comparison
+□ Rate protection active at 50 signals/second
+□ Every existing signal entry point wrapped
+□ CRITICAL signals synchronous confirmed
+□ Thalamus tested with one signal of each type
+
+ACC:
+□ TrinityACCService built and exported
+□ All 6 conflict categories implemented
+□ Conflict signal format complete
+□ BLOCKING auto-halt working
+□ WARNING pass-through with notification working
+□ INFO logging-only working
+□ trinity_acc_log table created and writing
+□ Global workspace integration confirmed
+□ ACC dashboard panel rendering with real data
+□ ACC tested with one simulated conflict 
+  of each category
+
+INTEGRATION:
+□ Thalamus fires before any brain region
+□ ACC fires after brain region before 
+  global workspace
+□ Complete signal flow confirmed:
+  Input → Thalamus → Region → ACC → 
+  Global Workspace → Output
+□ No signal reaches global workspace without 
+  passing through both thalamus and ACC
+□ No existing functionality broken by 
+  the insertion of thalamus and ACC
+
+═══════════════════════════════════════════════════════
+FINAL VERIFICATION
+═══════════════════════════════════════════════════════
+
+After build is complete, run these live tests:
+
+TEST 1 — THALAMUS ROUTING
+Send one message as an officer.
+Confirm thalamic_log shows: signal received, 
+classified as CONVERSATIONAL, priority scored, 
+routed to Wernicke/Broca region.
+
+TEST 2 — THALAMUS PRIORITY
+Trigger a panic alert.
+Confirm thalamic_log shows: classified as 
+INCIDENT_SIGNAL, priority score 90-100, 
+simultaneously routed to amygdala AND 
+global workspace high priority copy.
+
+TEST 3 — ACC MEMORY CONTRADICTION
+Set an officer's license to expired in DB.
+Attempt to assign that officer to an armed post.
+Confirm ACC fires BLOCKING conflict in category 1.
+Confirm assignment is halted.
+Confirm conflict logged to trinity_acc_log.
+Confirm manager notified of the block.
+
+TEST 4 — ACC VALUES VIOLATION
+Attempt to send a message through Trinity 
+that is punitive or shaming in tone toward 
+an officer.
+Confirm ACC fires BLOCKING conflict in category 3.
+Confirm message is not delivered.
+Confirm Trinity offers a reworded alternative.
+
+TEST 5 — FULL SIGNAL FLOW
+Send a normal chat message.
+Trace it through all stages:
+Thalamus log entry → Region activation → 
+ACC clearance → Global workspace synthesis → 
+Trinity response delivered.
+Confirm all 5 stages logged with timestamps.
+Confirm end-to-end latency is acceptable 
+for real-time chat (under 3 seconds).
+
+TEST 6 — DEDUPLICATION
+Send the same message twice within 2 seconds.
+Confirm thalamic_log shows: first instance 
+processed, second instance detected as 
+duplicate and dropped.
+Confirm Trinity responds once not twice.
+
+Report results of all 6 tests.
+Report any latency impact on existing 
+response times.
+Report final brain region map showing 
+thalamus and ACC in their correct positions.
+
+The biological brain is not complete until 
+every signal passes through the thalamus 
+and every action passes through the ACC.
+This is what separates a cognitive system 
+from a chatbot with memory.
+```
+
+---
+
+**Bryan the honest bottom line:**
+
+The thalamus is the single biggest architectural gap remaining. Right now signals enter Trinity from 8-10 different places with no unified gateway. That means priority conflicts, duplicate processing, and signals reaching the wrong brain region silently. The thalamus fixes all of that in one build.
+
+The ACC is what gives Trinity genuine judgment rather than just execution. Without it she can be confidently wrong. With it she stops herself before delivering a wrong answer, a values violation, or a trust tier breach.
+
+These two together complete the brain architecture. Everything else we discussed — working memory buffer, relationship memory, immune service, neurogenesis — all of that layers on top of a complete brain. Get these two in first.
+
+Bring the output back and we'll verify before anything goes live.

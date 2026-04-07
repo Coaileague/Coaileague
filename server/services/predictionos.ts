@@ -19,20 +19,16 @@ import {
   type InsertTurnoverRiskScore,
   type InsertCostVariancePrediction,
 } from "../../shared/schema";
-import OpenAI from "openai";
+import { getMeteredOpenAICompletion } from './billing/universalAIBillingInterceptor';
+import { createLogger } from '../lib/logger';
+const log = createLogger('predictionos');
 
-// Validate OpenAI API key at startup
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
-const isPredictionOSEnabled = !!OPENAI_KEY;
+
+const isPredictionOSEnabled = !!(process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY);
 
 if (!isPredictionOSEnabled) {
-  console.warn("⚠️ OPENAI_API_KEY not found. PredictionOS™ AI features disabled.");
+  log.warn("[PredictionOS] No OpenAI API key found. AI features will use fallback analysis.");
 }
-
-// Only initialize OpenAI client if API key is available
-const openai = isPredictionOSEnabled ? new OpenAI({
-  apiKey: OPENAI_KEY,
-}) : null;
 
 export class PredictionOSEngine {
   /**
@@ -168,9 +164,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
   "recommendations": "<3 specific actionable recommendations, newline separated>"
 }`;
 
-    // Check if OpenAI is available
-    if (!isPredictionOSEnabled || !openai) {
-      console.warn("PredictionOS™: Falling back to heuristic analysis (OpenAI API key not configured)");
+    if (!isPredictionOSEnabled) {
+      log.warn("[PredictionOS] Falling back to heuristic analysis (no API key)");
       return this.fallbackTurnoverAnalysis(
         avgHoursPerMonth,
         completionRate,
@@ -180,45 +175,40 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
 
     try {
-      const completion = await openai!.chat.completions.create({
-        model: "gpt-4o",
+      if (!workspaceId) {
+        throw new Error('Workspace ID required for prediction AI - cannot process unbilled operations');
+      }
+      const wsId = workspaceId;
+      const result = await getMeteredOpenAICompletion({
+        workspaceId: wsId,
+        userId,
+        featureKey: 'predictionos_turnover_analysis',
         messages: [
           {
-            role: "system",
-            content: "You are a predictive analytics engine for workforce management. Provide accurate, data-driven turnover predictions in JSON format."
+            role: 'system',
+            content: 'You are a predictive analytics engine for workforce management. Provide accurate, data-driven turnover predictions in JSON format.'
           },
           {
-            role: "user",
+            role: 'user',
             content: analysisPrompt
           }
         ],
-        temperature: 0.3, // Lower temperature for more consistent predictions
-        response_format: { type: "json_object" },
-        max_tokens: 1000, // Limit token usage for cost control
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        maxTokens: 1000,
+        jsonMode: true,
       });
 
-      // USAGE-BASED BILLING: Track AI token usage for customer billing
-      const tokenUsage = completion.usage;
-      if (tokenUsage && workspaceId) {
-        const { usageMeteringService } = await import('./billing/usageMetering');
-        await usageMeteringService.recordUsage({
-          workspaceId,
-          userId,
-          featureKey: 'predictionos_turnover_analysis',
-          usageType: 'token',
-          usageAmount: tokenUsage.total_tokens,
-          usageUnit: 'tokens',
-          metadata: {
-            model: 'gpt-4o',
-            promptTokens: tokenUsage.prompt_tokens,
-            completionTokens: tokenUsage.completion_tokens,
-            employeeId,
-          },
-        });
-        console.log(`[PredictionOS™] Billed ${tokenUsage.total_tokens} tokens to workspace ${workspaceId}`);
+      if (!result.success) {
+        if (result.blocked) {
+          throw new Error(`Insufficient credits for turnover analysis: ${result.error}`);
+        }
+        throw new Error(`AI analysis failed: ${result.error}`);
       }
+
+      log.info(`[PredictionOS] Billed ${result.tokensUsed} tokens to workspace ${wsId}`);
       
-      const aiResponse = JSON.parse(completion.choices[0].message.content || "{}");
+      const aiResponse = JSON.parse(result.content || "{}");
       
       return {
         riskScore: aiResponse.riskScore || 0,
@@ -231,13 +221,13 @@ RESPOND IN THIS EXACT JSON FORMAT:
     } catch (error: any) {
       // Handle specific OpenAI errors
       if (error.code === 'insufficient_quota') {
-        console.error("PredictionOS™: OpenAI quota exceeded. Using fallback analysis.");
+        log.error("PredictionOS™: OpenAI quota exceeded. Using fallback analysis.");
       } else if (error.code === 'rate_limit_exceeded') {
-        console.error("PredictionOS™: Rate limit exceeded. Using fallback analysis.");
+        log.error("PredictionOS™: Rate limit exceeded. Using fallback analysis.");
       } else if (error.status === 401) {
-        console.error("PredictionOS™: Invalid API key. Using fallback analysis.");
+        log.error("PredictionOS™: Invalid API key. Using fallback analysis.");
       } else {
-        console.error("PredictionOS™ AI analysis failed:", error.message || error);
+        log.error("PredictionOS™ AI analysis failed:", (error instanceof Error ? error.message : String(error)) || error);
       }
       
       // Fallback to simple heuristic if AI fails
@@ -346,51 +336,45 @@ RESPOND IN THIS EXACT JSON FORMAT:
   "recommendations": "<3 specific cost-saving recommendations, newline separated>"
 }`;
 
-    // Check if OpenAI is available
-    if (!isPredictionOSEnabled || !openai) {
-      console.warn("PredictionOS™: Falling back to heuristic cost analysis (OpenAI API key not configured)");
+    if (!isPredictionOSEnabled) {
+      log.warn("[PredictionOS] Falling back to heuristic cost analysis (no API key)");
       return this.fallbackCostVarianceAnalysis(budgetedCost, proposedShifts);
     }
 
     try {
-      const completion = await openai!.chat.completions.create({
-        model: "gpt-4o",
+      if (!workspaceId) {
+        throw new Error('Workspace ID required for prediction AI - cannot process unbilled operations');
+      }
+      const wsId = workspaceId;
+      const costResult = await getMeteredOpenAICompletion({
+        workspaceId: wsId,
+        userId,
+        featureKey: 'predictionos_cost_variance',
         messages: [
           {
-            role: "system",
-            content: "You are a labor cost prediction engine. Provide accurate cost variance predictions in JSON format."
+            role: 'system',
+            content: 'You are a labor cost prediction engine. Provide accurate cost variance predictions in JSON format.'
           },
           {
-            role: "user",
+            role: 'user',
             content: analysisPrompt
           }
         ],
+        model: 'gpt-4o-mini',
         temperature: 0.3,
-        response_format: { type: "json_object" }
+        jsonMode: true,
       });
 
-      // USAGE-BASED BILLING: Track AI token usage for customer billing
-      const tokenUsage = completion.usage;
-      if (tokenUsage && workspaceId) {
-        const { usageMeteringService } = await import('./billing/usageMetering');
-        await usageMeteringService.recordUsage({
-          workspaceId,
-          userId,
-          featureKey: 'predictionos_cost_variance',
-          usageType: 'token',
-          usageAmount: tokenUsage.total_tokens,
-          usageUnit: 'tokens',
-          metadata: {
-            model: 'gpt-4o',
-            promptTokens: tokenUsage.prompt_tokens,
-            completionTokens: tokenUsage.completion_tokens,
-            shiftsAnalyzed: proposedShifts.length,
-          },
-        });
-        console.log(`[PredictionOS™] Billed ${tokenUsage.total_tokens} tokens to workspace ${workspaceId}`);
+      if (!costResult.success) {
+        if (costResult.blocked) {
+          throw new Error(`Insufficient credits for cost analysis: ${costResult.error}`);
+        }
+        throw new Error(`AI cost analysis failed: ${costResult.error}`);
       }
+
+      log.info(`[PredictionOS] Billed ${costResult.tokensUsed} tokens to workspace ${wsId}`);
       
-      const aiResponse = JSON.parse(completion.choices[0].message.content || "{}");
+      const aiResponse = JSON.parse(costResult.content || "{}");
       
       const predictedCost = aiResponse.predictedCost || budgetedCost;
       const variancePercentage = aiResponse.variancePercentage || 0;
@@ -411,7 +395,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         problematicShifts,
       };
     } catch (error) {
-      console.error("PredictionOS™ cost variance analysis failed:", error);
+      log.error("PredictionOS™ cost variance analysis failed:", error);
       
       // Fallback: assume 5% buffer for inefficiencies
       return {

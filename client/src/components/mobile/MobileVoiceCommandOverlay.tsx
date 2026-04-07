@@ -113,7 +113,6 @@ export function MobileVoiceCommandOverlay({
   const { speak, stop: stopTTS, isSpeaking, ttsEnabled, setTtsEnabled } = useTTS();
 
   const handleResult = useCallback((result: VoiceCommandResult) => {
-    console.log('[VoiceOverlay] Received result:', result);
     setFinalTranscript(prev => {
       const newTranscript = prev ? `${prev} ${result.transcript}` : result.transcript;
       return newTranscript.trim();
@@ -132,7 +131,6 @@ export function MobileVoiceCommandOverlay({
   }, [onModeChange, toast]);
 
   const handleStateChange = useCallback((state: string) => {
-    console.log('[VoiceOverlay] State changed:', state);
     switch (state) {
       case 'listening':
         onModeChange?.('LISTENING');
@@ -192,8 +190,6 @@ export function MobileVoiceCommandOverlay({
         source: 'mobile_trinity',
         executionMode: fastModeEnabled ? 'trinity_fast' : 'normal',
       });
-
-      console.log('[VoiceOverlay] Task executed:', result.taskId, result.status);
 
       const trinityResponse = result.response || result.message;
       
@@ -267,7 +263,7 @@ export function MobileVoiceCommandOverlay({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 100 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed inset-x-0 bottom-0 z-[9999] bg-background/95 backdrop-blur-xl border-t rounded-t-3xl shadow-2xl"
+          className="fixed inset-x-0 bottom-0 z-[9999] bg-background/95 backdrop-blur-xl border-t rounded-t-md shadow-sm"
           style={{ 
             paddingBottom: Math.max(safeAreaBottom, 16),
             maxHeight: '70vh'
@@ -275,7 +271,7 @@ export function MobileVoiceCommandOverlay({
           data-testid="voice-command-overlay"
         >
           <div className="flex flex-col h-full p-4 gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                   <Mic className="w-4 h-4 text-primary" />
@@ -330,7 +326,7 @@ export function MobileVoiceCommandOverlay({
               </div>
             </div>
 
-            <div className="flex-1 min-h-[80px] max-h-[200px] overflow-y-auto bg-muted/50 rounded-xl p-4">
+            <div className="flex-1 min-h-[80px] max-h-[200px] overflow-y-auto bg-muted/50 rounded-md p-4">
               {errorMessage ? (
                 <div className="flex items-start gap-2 text-destructive">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -468,7 +464,7 @@ export function MobileVoiceCommandOverlay({
               {fastModeEnabled ? (
                 <span className="flex items-center justify-center gap-1 text-amber-500">
                   <Zap className="h-3 w-3" />
-                  Fast Mode: 2x credits for parallel processing
+                  Fast Mode: parallel processing enabled
                 </span>
               ) : isIOS ? (
                 'Voice recognition uses your device\'s speech services'

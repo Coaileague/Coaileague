@@ -1,0 +1,685 @@
+You are identifying the most critical production readiness gap. Every CRUD operation must work end-to-end — the data must actually persist to the database, the UI must reflect the change immediately, and the correct user sees the correct data based on their role and workspace. Send this to the agent:
+
+---
+
+**FULL CRUD INTEGRITY AUDIT — Every Role, Every Action, Every Entity**
+
+This audit verifies that every create, read, update, delete, search, and action across every role actually works end-to-end. The test is simple: make a change, verify it saved to the database, verify the UI reflects it, verify the correct roles can see it, verify incorrect roles cannot.
+
+All tests against ACME Security sandbox only. Statewide untouchable.
+
+Use 8 subagents. Each owns a domain. Each follows this exact test pattern for every action:
+
+```
+1. Perform the action via the UI or API
+2. Query the database directly to confirm the change persisted
+3. Refresh the page and confirm the UI still shows the change (not from cache)
+4. Verify the correct role can see the change
+5. Verify an incorrect role cannot see or access the change
+6. Verify the audit record was written
+7. Verify any WebSocket broadcast fired (other open sessions updated)
+8. Document PASS or FAIL with specific evidence
+```
+
+---
+
+**SUBAGENT 1 — ORG OWNER CRUD AUDIT**
+
+The org_owner must be able to perform every management action on their workspace. Test every single one:
+
+**Client Management:**
+```
+CREATE: POST /api/clients { companyName, contactName, contactEmail, billingRate }
+→ DB: SELECT * FROM clients WHERE id = [returned_id]
+→ UI: Navigate to /clients, verify new client appears in list
+→ EDIT: PATCH /api/clients/:id { companyName: 'Updated Name' }
+→ DB: SELECT company_name FROM clients WHERE id = [id] — must show 'Updated Name'
+→ UI: Refresh client profile, verify updated name shows
+→ SEARCH: GET /api/clients?search=Updated — must return the client
+→ DEACTIVATE: PATCH /api/clients/:id { status: 'suspended' }
+→ DB: SELECT status FROM clients WHERE id = [id] — must show 'suspended'
+→ PORTAL ACCESS: Verify suspended client cannot log into client portal
+→ REACTIVATE: PATCH /api/clients/:id { status: 'active' }
+→ PORTAL ACCESS: Verify reactivated client can log into portal again
+```
+
+**Officer Management:**
+```
+CREATE: POST /api/employees { firstName, lastName, email, position, payRate }
+→ DB: SELECT * FROM employees WHERE id = [returned_id]
+→ UI: Navigate to /officers, verify new officer appears
+
+SEARCH: GET /api/employees?search=[name]
+→ Must return matching officers within ACME workspace only
+→ Must NOT return officers from other workspaces
+
+EDIT: PATCH /api/employees/:id { payRate: 18.00, position: 'Supervisor' }
+→ DB: SELECT pay_rate, position FROM employees WHERE id = [id]
+→ Must show 18.00 and 'Supervisor'
+→ UI: Refresh officer profile, verify changes show
+
+ACTIVATE: POST /api/employees/:id/activate
+→ DB: SELECT status FROM employees WHERE id = [id] — must show 'active'
+→ Verify seat count incremented in workspace subscription
+→ Verify NDS notification sent to officer
+
+SUSPEND: POST /api/employees/:id/suspend { reason: 'Policy violation' }
+→ DB: SELECT status FROM employees WHERE id = [id] — must show 'suspended'
+→ Verify suspended officer cannot clock in
+→ Verify suspended officer cannot be assigned to shifts
+
+TERMINATE: POST /api/employees/:id/terminate { reason: 'voluntary', effectiveDate }
+→ DB: SELECT status, document_access_expires_at FROM employees WHERE id = [id]
+→ Must show 'terminated' and a date 14 days from now
+→ Verify session invalidated
+→ Verify open shifts created for any assigned shifts
+→ Verify termination email sent
+
+REHIRE: Create new employee with same email
+→ Must detect prior employment record
+→ Must surface prior employment history to manager
+```
+
+**Invoice Management:**
+```
+CREATE: POST /api/invoices/generate { clientId, lineItems }
+→ DB: SELECT * FROM invoices WHERE id = [returned_id]
+→ Verify subtotal = sum of line items (DB trigger test)
+
+EDIT LINE ITEMS: POST /api/invoices/:id/line-items { description, quantity, rate }
+→ DB: SELECT subtotal FROM invoices WHERE id = [id]
+→ Subtotal must auto-update via DB trigger
+
+SEND: PATCH /api/invoices/:id/send
+→ DB: SELECT status FROM invoices WHERE id = [id] — must show 'sent'
+→ Verify NDS notification sent to client
+
+MARK PAID: PATCH /api/invoices/:id/pay { paymentReference, amount }
+→ DB: SELECT status, paid_at FROM invoices WHERE id = [id]
+→ Must show 'paid' and timestamp
+→ Verify QuickBooks sync triggered
+→ Verify audit record written
+
+DISPUTE: PATCH /api/invoices/:id/dispute { reason }
+→ DB: SELECT status FROM invoices WHERE id = [id] — must show 'disputed'
+→ Verify disputed invoice is locked — cannot be edited
+→ Verify further payment attempts blocked
+
+VOID: PATCH /api/invoices/:id/void
+→ DB: SELECT status FROM invoices WHERE id = [id] — must show 'void'
+→ Verify voided invoice cannot be edited or paid
+```
+
+**Settings Management:**
+```
+WORKSPACE SETTINGS: PATCH /api/settings/workspace
+{ companyName: 'ACME Security Updated', primaryTimezone: 'America/New_York' }
+→ DB: SELECT company_name, primary_timezone FROM workspaces WHERE id = [acme_id]
+→ Must show updated values
+→ UI: Refresh settings page — must show updated values
+→ UI: Refresh dashboard — company name in header must update
+
+NOTIFICATION SETTINGS: PATCH /api/settings/notifications
+{ emailEnabled: true, smsEnabled: false }
+→ DB: SELECT * FROM workspace_notification_settings WHERE workspace_id = [acme_id]
+→ Must persist
+
+BILLING SETTINGS: PATCH /api/billing/hard-cap { enabled: true }
+→ DB: SELECT seat_hard_cap_enabled FROM subscriptions WHERE workspace_id = [acme_id]
+→ Must show true
+→ Verify activating officer beyond cap is blocked
+```
+
+**Report ALL failures with exact error message, HTTP status code, and DB query result.**
+
+---
+
+**SUBAGENT 2 — END USER (OFFICER) CRUD AUDIT**
+
+Officers must be able to manage their own profile, view their own data, and perform field operations. They must NOT be able to see other officers' data.
+
+```
+PROFILE UPDATE: PATCH /api/employees/me { 
+  phone: '210-555-9999', 
+  address: '123 New Street San Antonio TX 78201',
+  emergencyContactName: 'Jane Doe',
+  emergencyContactPhone: '210-555-8888'
+}
+→ DB: SELECT phone, address FROM employees WHERE id = [officer_id]
+→ Must show updated values
+→ UI: Refresh profile — must show updated values
+→ SECURITY: Verify officer cannot update another officer's profile
+  → PATCH /api/employees/[other_officer_id] — must return 403
+
+EMAIL CHANGE: PATCH /api/users/me/email { newEmail: 'newemail@test.com', currentPassword }
+→ DB: SELECT email FROM users WHERE id = [user_id]
+→ Must show new email
+→ Verify confirmation sent to new email
+→ UI: Refresh settings — must show new email
+→ SECURITY: Verify email change requires password confirmation — attempt without password → 401
+
+PASSWORD CHANGE: POST /api/auth/change-password { currentPassword, newPassword }
+→ Verify old password no longer works
+→ Verify new password works
+→ Verify all other sessions invalidated on password change
+
+LANGUAGE PREFERENCE: PATCH /api/users/me/language { preferredLanguage: 'es' }
+→ DB: SELECT preferred_language FROM users WHERE id = [user_id]
+→ Must show 'es'
+→ UI: Refresh page — interface must switch to Spanish
+→ Trinity responses must be in Spanish after this change
+
+NOTIFICATION PREFERENCES: PATCH /api/notifications/preferences/me
+{ shiftAssigned: { email: true, sms: false, push: true }, quietHoursEnabled: true, quietHoursStart: '22:00', quietHoursEnd: '07:00' }
+→ DB: SELECT * FROM user_notification_preferences WHERE user_id = [user_id]
+→ Must persist all values
+→ Verify quiet hours enforced on next non-critical notification
+
+VIEW OWN SCHEDULE: GET /api/shifts/my-schedule
+→ Must return only shifts assigned to this officer
+→ Must NOT return shifts assigned to other officers
+→ SECURITY: GET /api/shifts?officerId=[other_officer_id] — must return 403 or empty
+
+VIEW OWN PAY STUBS: GET /api/payroll/stubs/my
+→ Must return only this officer's pay stubs
+→ SECURITY: GET /api/payroll/stubs/[other_officer_id] — must return 403
+
+CLOCK IN: POST /api/time-entries/clock-in { shiftId, latitude, longitude }
+→ DB: SELECT * FROM time_entries WHERE employee_id = [officer_id] AND clock_out IS NULL
+→ Must show open entry
+→ UI: Dashboard must show officer as clocked in
+→ WebSocket: Other logged-in supervisors must see officer status update
+
+CLOCK OUT: POST /api/time-entries/clock-out { timeEntryId, latitude, longitude }
+→ DB: SELECT clock_out FROM time_entries WHERE id = [entry_id]
+→ Must show timestamp
+→ Verify timesheet entry appears in supervisor approval queue
+
+CALLOFF: POST /api/calloffs { shiftId, reason, noticeGivenAt }
+→ DB: SELECT status FROM shifts WHERE id = [shift_id] — must show 'calloff'
+→ Verify NDS notification sent to supervisor
+→ Verify replacement cascade triggered
+→ Verify calloff reason persisted in DB
+
+SHIFT TRADE REQUEST: POST /api/shift-trading/requests { requestedShiftId, reason }
+→ DB: SELECT * FROM shift_trade_requests WHERE requesting_officer_id = [officer_id]
+→ Must show pending status
+→ Verify notification sent to target officer or posted to marketplace
+
+SUBMIT DAR: POST /api/dars { shiftId, postId, conditionsObserved, roundsCompleted }
+→ DB: SELECT * FROM daily_activity_reports WHERE officer_id = [officer_id]
+→ Must show submitted status
+→ Verify timestamp is server-authoritative (cannot be backdated)
+→ Attempt to submit DAR with yesterday's date → must reject or use server time
+
+WELLNESS CHECK RESPONSE: POST /api/wellness/respond { checkEventId, responseType: 'confirmed_safe' }
+→ DB: SELECT responded_at, response_type FROM wellness_check_events WHERE id = [event_id]
+→ Must show timestamp and 'confirmed_safe'
+```
+
+---
+
+**SUBAGENT 3 — PLATFORM STAFF (SUPPORT) CRUD AUDIT**
+
+Platform staff must be able to search and manage across all workspaces. They must see everything but be appropriately restricted from financial data of tenants.
+
+```
+PLATFORM-WIDE WORKSPACE SEARCH:
+GET /api/admin/workspaces?search=acme
+→ Must return ACME workspace
+GET /api/admin/workspaces?search=statewide  
+→ Must return Statewide workspace info (read-only, never modify)
+→ Must show subscription status, tier, officer count, last activity
+
+WORKSPACE DRILL-DOWN:
+GET /api/admin/workspaces/[acme_id]/details
+→ Must return workspace overview: officer count, client count, subscription status, recent activity
+→ Must NOT return individual officer SSNs, bank details, or PII beyond what's needed
+
+USER SEARCH PLATFORM-WIDE:
+GET /api/admin/users?search=marcus
+→ Must return Marcus Rivera (ACME org_owner)
+→ Must show workspace, role, last login, account status
+
+RESET USER 2FA: POST /api/admin/users/:id/reset-2fa
+→ DB: SELECT mfa_enabled, mfa_secret FROM user_2fa WHERE user_id = [user_id]
+→ Must show mfa_enabled = false after reset
+→ Verify audit record written with platform_staff actor_id
+
+UNLOCK ACCOUNT: POST /api/admin/users/:id/unlock
+→ DB: SELECT locked_until, failed_attempts FROM users WHERE id = [user_id]
+→ Must show unlocked state
+→ Verify audit record written
+
+IMPERSONATE WORKSPACE (view-only): GET /api/admin/workspaces/:id/view
+→ Platform staff can view workspace data for support purposes
+→ Must be read-only — no mutations allowed through impersonation
+→ Every view action logged in platform audit trail
+
+MANAGE FEATURE FLAGS: PATCH /api/admin/feature-flags/:flagKey
+{ enabledGlobally: true, rolloutPercentage: 50 }
+→ DB: SELECT * FROM feature_flags WHERE flag_key = [key]
+→ Must show updated values
+→ Verify cache invalidated — affected workspaces immediately see new flag state
+
+MANAGE PLATFORM STATUS: POST /api/admin/platform-status/incidents
+{ title: 'Scheduled Maintenance', severity: 'low', description: 'Brief maintenance window' }
+→ DB: SELECT * FROM platform_incidents WHERE title = 'Scheduled Maintenance'
+→ Must persist
+→ UI: /status page must show the incident
+
+SRA ACCOUNT MANAGEMENT: GET /api/admin/sra/accounts
+→ Must return all SRA auditor accounts
+→ POST /api/admin/sra/accounts/:id/suspend — must suspend account
+→ DB: SELECT status FROM sra_accounts WHERE id = [id] — must show 'suspended'
+
+DATA SUBJECT REQUEST MANAGEMENT: GET /api/admin/privacy-requests
+→ Must show all pending data subject requests across platform
+→ POST /api/admin/privacy-requests/:id/approve
+→ DB: SELECT status FROM data_subject_requests WHERE id = [id] — must show 'approved'
+→ Verify export generation triggered or erasure executed
+
+SEARCH AUDIT LOG: GET /api/admin/audit-log?workspaceId=[acme_id]&startDate=2026-01-01
+→ Must return audit entries for ACME workspace
+→ Must NOT allow UPDATE or DELETE on any audit record
+→ Attempt: DELETE /api/admin/audit-log/[entry_id] → must return 403 or 404
+```
+
+---
+
+**SUBAGENT 4 — SUPERVISOR AND MANAGER CRUD AUDIT**
+
+Supervisors and managers have elevated permissions within their workspace but cannot access other workspaces or financial data beyond their scope.
+
+```
+APPROVE TIMESHEET: POST /api/time-entries/:id/approve
+→ DB: SELECT approved_by, approved_at FROM time_entries WHERE id = [id]
+→ Must show supervisor user_id and timestamp
+→ UI: Timesheet list must move entry to approved status
+→ SECURITY: Supervisor cannot approve their own timesheet — must return 403
+
+REJECT TIMESHEET: POST /api/time-entries/:id/reject { reason }
+→ DB: SELECT status, rejection_reason FROM time_entries WHERE id = [id]
+→ Must show rejected status and reason
+→ NDS notification sent to officer
+
+SHIFT ASSIGNMENT: PATCH /api/shifts/:id/assign { officerId }
+→ DB: SELECT officer_id FROM shifts WHERE id = [shift_id] — must show assigned officer
+→ Verify license check fired before assignment
+→ Verify 8-hour rest period check fired
+→ Verify OT warning generated if applicable
+→ WebSocket: Officer must see shift appear in their portal immediately
+
+CREATE INCIDENT REPORT: POST /api/incidents { type, severity, description, postId, officerIds }
+→ DB: SELECT * FROM incident_reports WHERE id = [returned_id]
+→ Must persist with all fields
+→ NDS notification sent to org_owner
+
+EDIT INCIDENT REPORT: PATCH /api/incidents/:id { description: 'Updated description' }
+→ DB: SELECT description FROM incident_reports WHERE id = [id]
+→ Must show updated description
+→ Verify audit record written with who changed it and when
+→ SECURITY: Supervisor cannot edit incidents from other workspaces
+
+CREATE DISCIPLINARY RECORD: POST /api/performance/disciplinary
+{ officerId, recordType: 'verbal_warning', reason: 'Late to shift', effectiveDate }
+→ DB: SELECT * FROM disciplinary_records WHERE id = [returned_id]
+→ Must persist
+→ NDS notification sent to officer
+→ Officer acknowledgment flag = false initially
+
+OFFICER ACKNOWLEDGES: POST /api/performance/disciplinary/:id/acknowledge
+→ DB: SELECT officer_acknowledged_at FROM disciplinary_records WHERE id = [id]
+→ Must show timestamp
+→ SECURITY: Only the specific officer can acknowledge their own record
+
+APPROVE SHIFT TRADE: POST /api/shift-trading/requests/:id/manager-approve
+→ DB: SELECT assigned_officer_id FROM shifts WHERE id = [original_shift_id]
+→ Must show new officer (atomic swap confirmed)
+→ DB: SELECT assigned_officer_id FROM shifts WHERE id = [offered_shift_id]  
+→ Must show original officer
+→ Both officers notified via NDS
+
+APPROVE TIME OFF: PATCH /api/time-off/requests/:id/review { status: 'approved' }
+→ DB: SELECT status, reviewed_by FROM time_off_requests WHERE id = [id]
+→ Must show approved and manager user_id
+→ Verify approved period blocked in scheduling for that officer
+→ UI: Schedule calendar must show blocked dates
+
+ISSUE RECOGNITION NOMINATION: POST /api/recognition/nominations
+{ nomineeId, awardType: 'perfect_attendance', reason }
+→ DB: SELECT * FROM recognition_nominations WHERE id = [returned_id]
+→ Must show pending status
+→ Org_owner approval queue must show the nomination
+
+SEARCH WITHIN WORKSPACE: GET /api/search?q=martinez
+→ Must return officers, shifts, incidents matching 'martinez'
+→ Must NOT return data from other workspaces
+→ Each result must have correct deep_link that navigates to correct record
+```
+
+---
+
+**SUBAGENT 5 — REAL-TIME AND WEBSOCKET CRUD AUDIT**
+
+Every mutation must broadcast to other sessions. Test every broadcast.
+
+**Setup: Open 3 browser tabs**
+- Tab A: Logged in as ACME org_owner (Marcus Rivera)
+- Tab B: Logged in as ACME supervisor
+- Tab C: Logged in as an ACME officer
+
+**Test every broadcast:**
+
+```
+TEST 1 — Shift Created:
+→ Tab A creates a new shift via POST /api/shifts
+→ Tab B must show new shift in schedule without refresh
+→ Tab C must show new shift in their portal if they are assigned
+→ DB: SELECT id FROM shifts WHERE id = [new_shift_id] — must exist
+→ PASS if Tab B updates within 3 seconds
+
+TEST 2 — Officer Clocks In:
+→ Tab C (officer) clocks in via POST /api/time-entries/clock-in
+→ Tab B (supervisor) must see officer status change to 'clocked in' without refresh
+→ Tab A (org_owner) dashboard must update active officer count
+→ DB: SELECT clock_in FROM time_entries WHERE employee_id = [officer_id]
+→ PASS if both Tab A and Tab B update within 3 seconds
+
+TEST 3 — Notification Sent:
+→ Tab A sends a notification to the officer
+→ Tab C must see notification badge increment without refresh
+→ Tab C opens notification → badge must decrement
+→ Tab C clears all notifications → badge must show 0 in Tab C AND Tab B simultaneously
+→ PASS if cross-tab state stays in sync
+
+TEST 4 — Chat Message Sent:
+→ Tab B sends a DockChat message in the general channel
+→ Tab A and Tab C must see the message appear without refresh
+→ Unread count must increment in Tab A and Tab C
+→ Tab A opens chat → marks channel as read → unread count drops in Tab A only
+→ PASS if message delivery under 1 second
+
+TEST 5 — Trinity Action Fires:
+→ Trigger a Trinity action (e.g., compliance check)
+→ Tab A Trinity Activity Bar must show the action appearing
+→ Trinity insight bar must update if a new insight is generated
+→ PASS if Trinity Activity Bar updates within 5 seconds
+
+TEST 6 — Subscription State Change:
+→ Simulate payment failure webhook: POST /api/webhooks/stripe with invoice.payment_failed event
+→ Tab A must immediately show the payment failure banner
+→ Tab B and Tab C must see restricted access if workspace is suspended
+→ PASS if state change propagates to all active sessions within 3 seconds
+
+TEST 7 — Schedule Update:
+→ Tab A assigns an officer to a shift
+→ Tab C (that officer) must see the new shift in their schedule without refresh
+→ Tab B must see the assignment in the shift management view
+→ PASS if assignment visible across all tabs within 3 seconds
+
+TEST 8 — Calloff Cascade:
+→ Tab C submits a calloff for their shift
+→ Tab B must immediately see the open shift appear in the replacement queue
+→ Tab A must receive the supervisor notification
+→ Another officer in Tab D (if available) must see the open shift in the marketplace
+→ PASS if cascade triggers within 5 seconds of calloff submission
+```
+
+**For each test document:**
+- What triggered the action
+- Which tabs updated
+- How long it took (must be under stated threshold)
+- DB state before and after
+- PASS or FAIL
+
+---
+
+**SUBAGENT 6 — DATA PERSISTENCE AND CACHE AUDIT**
+
+Every change must survive a server restart and a browser refresh. Cache must never serve stale data after a mutation.
+
+```
+PERSISTENCE TEST SEQUENCE — Run for every entity type:
+
+1. Create a record via API
+2. Confirm in DB
+3. Restart the server: kill and restart the Node process
+4. Query the same record via API after restart
+5. Must return the same data — nothing lost on restart
+
+Run persistence test for:
+- Employee profile update
+- Shift assignment
+- Invoice payment
+- Client settings update
+- Workspace settings update
+- Feature flag change
+- Notification preference
+- Onboarding task completion
+- Recognition award
+- Disciplinary record
+- Training attendance
+
+CACHE STALENESS TEST:
+1. Load a list page (e.g., /clients) — note client count
+2. Create a new client via API
+3. Refresh the page — must show updated count immediately
+4. If using react-query: verify invalidateQueries fires after mutation
+5. Verify no stale data served from cache after mutation
+
+CACHE INVALIDATION AUDIT:
+grep -rn "invalidateQueries\|queryClient\.invalidate" client/src/ --include="*.tsx" | wc -l
+→ Must be significant number — every mutation hook must invalidate relevant queries
+
+Find mutations missing invalidation:
+grep -rn "useMutation" client/src/ --include="*.tsx" | wc -l
+grep -rn "onSuccess.*invalidate\|invalidate.*onSuccess" client/src/ --include="*.tsx" | wc -l
+→ Both counts should be similar — every mutation should invalidate on success
+
+Find any mutation with onSuccess that does NOT invalidate:
+grep -A5 "onSuccess:" client/src/ --include="*.tsx" -rn | grep -v "invalidate\|navigate\|toast\|setQuery" | head -20
+→ These are mutations that save to DB but don't update the UI
+→ Fix every one found
+```
+
+---
+
+**SUBAGENT 7 — SEARCH AND FILTER CRUD AUDIT**
+
+Every search must return correct results scoped to the user's workspace and role. Every filter must actually filter.
+
+```
+TEST EVERY SEARCH ENDPOINT:
+
+Officer Search:
+GET /api/employees?search=turner
+→ Must return officers matching 'turner' in ACME workspace
+→ Must NOT return officers from other workspaces
+→ Empty search must return all officers (paginated)
+→ Filter by status=active must return only active officers
+→ Filter by status=suspended must return only suspended officers
+→ Filter by position=supervisor must return only supervisors
+→ Sort by lastName must return alphabetical order
+
+Client Search:
+GET /api/clients?search=crossing
+→ Must return 'Coyote Crossing Saloon'
+→ Filter by status=active must return only active clients
+→ Filter by status=suspended must return only suspended clients
+
+Shift Search:
+GET /api/shifts?startDate=2026-03-01&endDate=2026-03-31
+→ Must return all shifts in March 2026 for ACME workspace
+→ Filter by officerId must return only that officer's shifts
+→ Filter by postId must return only that post's shifts
+→ Filter by status=open must return only unfilled shifts
+
+Invoice Search:
+GET /api/invoices?status=overdue
+→ Must return only overdue invoices
+→ Filter by clientId must return only that client's invoices
+→ Filter by dateRange must respect start and end dates
+→ Search by invoiceNumber must return exact match
+
+Document Search:
+GET /api/documents?search=offer+letter
+→ Must return offer letter documents
+→ Filter by officerId must return only that officer's documents
+→ Filter by type must return only that document type
+
+Global Search (Phase 35):
+GET /api/search?q=martinez
+→ Must return officers, incidents, shifts matching 'martinez'
+→ Each result must have entity_type, display_name, and deep_link
+→ Deep link must navigate to correct page when clicked
+→ Rate limit: 31st request in 1 minute must return 429
+
+SECURITY — Verify workspace isolation on every search:
+→ Authenticate as ACME org_owner
+→ GET /api/employees?workspaceId=[statewide_workspace_id]
+→ Must return empty result or 403 — NEVER Statewide employee data
+
+→ GET /api/search?q=guillen
+→ Must NOT return any Statewide data even if 'guillen' matches Statewide officers
+
+PAGINATION:
+GET /api/employees?page=1&limit=10
+→ Must return exactly 10 results
+→ GET /api/employees?page=2&limit=10 → must return next 10
+→ Total count in response header must be accurate
+→ Last page must return remaining records (not empty, not duplicates)
+```
+
+---
+
+**SUBAGENT 8 — FORM VALIDATION AND ERROR HANDLING AUDIT**
+
+Every form must validate correctly. Invalid data must be rejected. Error messages must be helpful.
+
+```
+TEST VALIDATION ON EVERY CRITICAL FORM:
+
+Employee Creation - Invalid Data:
+POST /api/employees { firstName: '', lastName: '', email: 'not-an-email', payRate: -5 }
+→ Must return 400 with specific field errors
+→ Error must indicate which fields failed and why
+→ DB: Verify no record was created
+
+Employee Creation - Duplicate Email:
+POST /api/employees { email: '[existing_officer_email]', ... }
+→ Must return 409 CONFLICT or 400 with "email already in use" message
+→ DB: Verify only one record exists for that email
+
+Invoice - Invalid Line Items:
+POST /api/invoices/generate { clientId: '[valid]', lineItems: [] }
+→ Must return 400 "at least one line item required"
+POST /api/invoices/generate { lineItems: [{ quantity: -1, rate: 0 }] }
+→ Must return 400 with specific validation error
+
+Shift - Rest Period Violation:
+POST /api/shifts/assign { officerId, shiftId }
+(where officer worked until 2 AM and new shift starts at 6 AM — only 4 hours rest)
+→ Must return 422 with clear message "Officer has insufficient rest period (4 hours). Minimum 8 hours required."
+→ Must NOT assign the shift
+
+Clock In - License Expired:
+POST /api/time-entries/clock-in { shiftId }
+(where officer's license expired yesterday)
+→ Must return 422 "Cannot clock in: license expired on [date]"
+→ Must NOT create time entry
+
+Payroll - Self Approval:
+POST /api/payroll/runs/:id/approve
+(where approver is the same person who created the run)
+→ Must return 403 SELF_APPROVAL_FORBIDDEN
+→ Must NOT approve the run
+
+Password Change - Wrong Current Password:
+POST /api/auth/change-password { currentPassword: 'wrong', newPassword: 'newpass123' }
+→ Must return 401 "Current password is incorrect"
+→ Must NOT change the password
+→ DB: Verify password hash unchanged
+
+Data Subject Request - Officer Requesting Another Officer's Data:
+POST /api/privacy/export/officer/[other_officer_id]
+(authenticated as a different officer)
+→ Must return 403
+
+Termination - Officer With Active Clock-In:
+POST /api/employees/:id/terminate
+(where officer is currently clocked in)
+→ Must either: auto clock-out and then terminate, or return error requiring clock-out first
+→ Must NOT leave a dangling open time entry
+
+FRONTEND VALIDATION:
+→ Test every required field in every form — empty submission must show inline error
+→ Test email fields — invalid format must show error before API call
+→ Test number fields — negative values must be rejected before API call
+→ Test date fields — past dates where future dates required must show error
+→ Verify error messages appear next to the relevant field (not just at top of form)
+→ Verify submit button is disabled while request is in flight (no double-submit)
+→ Verify form shows success state after successful submission
+→ Verify form resets or navigates away after successful submission
+```
+
+---
+
+**AFTER ALL 8 SUBAGENTS COMPLETE — ARCHITECT GATEKEEPER VERIFICATION:**
+
+Collect every failure into a single master fix list. Prioritize:
+
+**P0 — Data not persisting to database:**
+Any action where the UI appears to work but the DB query shows nothing changed. This is the most critical failure. Fix immediately.
+
+**P1 — Security violation:**
+Any action where a user can access or modify another user's data or another workspace's data. Fix before any other work.
+
+**P2 — Cache not invalidating:**
+Any mutation where the UI does not update after a change. Fix next.
+
+**P3 — Validation missing:**
+Any form that accepts invalid data. Fix next.
+
+**P4 — WebSocket not broadcasting:**
+Any mutation where other sessions do not update. Fix next.
+
+**P5 — Error messages unhelpful:**
+Any error that returns a generic message instead of a specific actionable one. Fix last.
+
+**For every P0 and P1 fix:**
+1. Identify the exact file and line where the issue occurs
+2. Write the fix
+3. Test with the same scenario that failed
+4. Confirm DB state before and after
+5. Confirm correct role behavior before and after
+6. Run TypeScript compilation
+7. Run server restart
+8. Mark resolved
+
+**Report format:**
+
+```
+CRUD INTEGRITY AUDIT — RESULTS
+
+P0 Data Persistence Failures: [N] found, [N] fixed
+P1 Security Violations: [N] found, [N] fixed  
+P2 Cache Invalidation Gaps: [N] found, [N] fixed
+P3 Validation Missing: [N] found, [N] fixed
+P4 WebSocket Broadcast Gaps: [N] found, [N] fixed
+P5 Error Message Quality: [N] found, [N] fixed
+
+Total Issues: [N]
+Total Fixed: [N]
+Remaining: [N] (all must be zero before Phase 55)
+
+TypeScript: 0 errors
+Server: Clean startup
+Tests: [X]/[X] passing
+```
+
+**Every single issue must be zero before Phase 55 Grand Launch Certification proceeds. A platform where data does not save is not a platform. Fix everything.**
+
+---
+
+Paste that to the agent. This is the most important audit in the entire build. When data persists correctly, roles see what they should see, searches return correct results, and real-time updates work across sessions — the platform is production ready. Standing by for results.

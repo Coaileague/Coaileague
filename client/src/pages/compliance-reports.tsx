@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { 
   FileText, 
   Download, 
@@ -79,6 +80,13 @@ export default function ComplianceReportsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/compliance-reports/list'] });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Generate Report Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const getStatusBadge = (status: string) => {
@@ -109,34 +117,32 @@ export default function ComplianceReportsPage() {
     return <Icon className="w-5 h-5" />;
   };
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'compliance-reports',
+    title: 'Compliance Reports',
+    subtitle: 'Generate and manage regulatory compliance reports with full audit trails',
+    category: 'operations',
+  };
+
   if (typesLoading) {
     return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <Skeleton className="h-10 w-64 mb-4" />
-        <Skeleton className="h-6 w-96 mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+      <CanvasHubPage config={pageConfig}>
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-64" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
         </div>
-      </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl" data-testid="page-compliance-reports">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-3" data-testid="heading-compliance-reports">
-          <Shield className="w-8 h-8 text-primary" />
-          Compliance Reports
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Generate and manage regulatory compliance reports with full audit trails
-        </p>
-      </div>
-
+    <CanvasHubPage config={pageConfig}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="generate" data-testid="tab-generate">
             <FileText className="w-4 h-4 mr-2" />
             Generate Report
@@ -271,23 +277,10 @@ export default function ComplianceReportsPage() {
         <TabsContent value="history" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Generated Reports</CardTitle>
-                  <CardDescription>
-                    All compliance reports with 7-year retention for regulatory audits
-                  </CardDescription>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/compliance-reports/list'] })}
-                  data-testid="button-refresh-reports"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh
-                </Button>
-              </div>
+              <CardTitle>Generated Reports</CardTitle>
+              <CardDescription>
+                All compliance reports with 7-year retention for regulatory audits
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {reportsLoading ? (
@@ -341,8 +334,15 @@ export default function ComplianceReportsPage() {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" data-testid={`button-download-${report.id}`}>
-                              <Download className="w-4 h-4" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              data-testid={`button-download-${report.id}`}
+                              onClick={() => window.open(`/api/compliance-reports/${report.id}/pdf`, '_blank')}
+                              title="Download compliance report"
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              PDF
                             </Button>
                           </div>
                         </div>
@@ -355,6 +355,6 @@ export default function ComplianceReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }

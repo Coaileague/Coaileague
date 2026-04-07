@@ -1,3 +1,4 @@
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import multer from "multer";
 import path from "path";
@@ -5,6 +6,11 @@ import { randomBytes } from "crypto";
 import { requireAuth } from "../auth";
 import type { AuthenticatedRequest } from "../rbac";
 import { Storage } from "@google-cloud/storage";
+import { strictVirusScan } from "../middleware/virusScan";
+import { logScanResult, type ScanResult } from "../services/virusScanService";
+import { createLogger } from '../lib/logger';
+const log = createLogger('EmailAttachments');
+
 
 const router = Router();
 
@@ -12,21 +18,21 @@ const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
 const PRIVATE_DIR = process.env.PRIVATE_OBJECT_DIR || "/.private";
 
 if (!BUCKET_ID) {
-  console.warn("[EmailAttachments] Object storage not configured - attachment uploads will fail");
+  log.warn("[EmailAttachments] Object storage not configured - attachment uploads will fail");
 }
 
 const storage = BUCKET_ID ? new Storage() : null;
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = [
-  "image/jpeg", "image/png", "image/gif", "image/webp",
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain", "text/csv",
-  "application/zip"
+  "application/zip", "application/x-rar-compressed"
 ];
 
 function sanitizeFilename(filename: string): string {
@@ -54,7 +60,7 @@ const upload = multer({
   },
 });
 
-router.post("/upload", requireAuth, upload.array("files", 10), async (req, res) => {
+router.post("/upload", requireAuth, upload.array("files", 10), strictVirusScan, async (req, res) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
@@ -97,25 +103,29 @@ router.post("/upload", requireAuth, upload.array("files", 10), async (req, res) 
         expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
       });
       
+      // Get scan result from middleware
+      const scanResult = (file as any).scanResult as ScanResult | undefined;
+
       uploadedAttachments.push({
         name: file.originalname,
         url: signedUrl,
         size: file.size,
         type: file.mimetype,
+        scanStatus: scanResult?.status || 'clean',
       });
     }
-    
-    console.log(`[EmailAttachments] Uploaded ${uploadedAttachments.length} files for user ${userId}`);
+
+    log.info(`[EmailAttachments] Uploaded ${uploadedAttachments.length} scanned files for user ${userId}`);
     
     return res.json({
       success: true,
       attachments: uploadedAttachments,
     });
   } catch (error) {
-    console.error("[EmailAttachments] Upload failed:", error);
+    log.error("[EmailAttachments] Upload failed:", error);
     return res.status(500).json({ 
       error: "Failed to upload attachments",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? sanitizeError(error) : "Unknown error"
     });
   }
 });

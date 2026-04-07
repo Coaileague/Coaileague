@@ -1,0 +1,303 @@
+REAL SIMULATED DOCUMENT GENERATION — FULL FIX SPRINT
+
+THE PROBLEM:
+The employee_documents table has records but the files 
+behind them are fake placeholder paths that do not exist.
+The 8 required document types have no real content.
+Any link clicked by a real user 404s immediately.
+This must be completely fixed before any demo or 
+real tenant onboarding.
+
+PRIME DIRECTIVE:
+Every simulated employee in every dev workspace must 
+have all 8 required documents fully generated with 
+their real seeded data populated inside the document.
+Every document must be viewable, downloadable, and 
+properly attached to the employee record.
+No placeholder paths. No empty files. Real content only.
+
+═══════════════════════════════════════════════════════
+STEP 1 — AUDIT WHAT WE HAVE
+═══════════════════════════════════════════════════════
+
+Before building anything:
+
+1. List every employee in every dev workspace with 
+   their full name, role, employee_id, workspace_id
+2. List every document record in employee_documents 
+   for each employee — show document type, file path, 
+   whether the file actually exists at that path
+3. List which of the 8 required document types are 
+   missing for each employee:
+   - Employment Application
+   - Driver License / Government ID
+   - Social Security Acknowledgment
+   - I-9 Employment Eligibility Verification
+   - W-4 Federal Tax Withholding (employees) or 
+     W-9 (contractors)
+   - Drug-Free Workplace Policy Acknowledgment
+   - Background Check Authorization and Results
+   - Security Guard Registration / Guard Card
+4. Identify where documents are stored — what storage 
+   system, what path structure, what serving route
+5. Confirm whether a document viewer route exists 
+   that can serve generated documents
+6. Present findings before building anything
+
+═══════════════════════════════════════════════════════
+STEP 2 — BUILD THE DOCUMENT GENERATION ENGINE
+═══════════════════════════════════════════════════════
+
+Build a real document generation service that creates 
+actual readable documents populated with employee data.
+
+GENERATION APPROACH:
+Generate each document as a real HTML-rendered page 
+served by a proper route OR as a real PDF generated 
+server-side using the employee's actual data fields.
+Do not use placeholder paths. Do not use lorem ipsum.
+Use the employee's actual name, address, SSN last 4, 
+hire date, role, pay rate, workspace name, and all 
+other real seeded fields.
+
+For each of the 8 document types build a real template:
+
+───────────────────────────────────────────────
+DOCUMENT 1 — EMPLOYMENT APPLICATION
+───────────────────────────────────────────────
+Must contain and display:
+- Applicant full name
+- Date of application (use hire date)
+- Position applied for (their actual role)
+- Address from employee record
+- Phone number from employee record
+- Email from employee record
+- Employment history section (simulated 2 prior jobs)
+- Emergency contact (simulated)
+- Signature line showing employee name and date signed
+- Company header showing workspace/org name
+- Status: APPROVED with hire date
+
+───────────────────────────────────────────────
+DOCUMENT 2 — DRIVER LICENSE / GOVERNMENT ID
+───────────────────────────────────────────────
+Must contain and display:
+- Employee full name
+- Document type: Driver License
+- Simulated license number (DL + employee_id pattern)
+- State: Texas
+- Date of birth (simulated, makes employee 25-45)
+- Expiration date (2 years from hire date)
+- Verified by: HR on hire date
+- Verification status: VERIFIED
+- Copy on file: YES
+
+───────────────────────────────────────────────
+DOCUMENT 3 — SOCIAL SECURITY ACKNOWLEDGMENT
+───────────────────────────────────────────────
+Must contain and display:
+- Employee full name
+- Last 4 of SSN: XXXX-XX-[4 digit from employee seed]
+- Acknowledgment text: employee confirms SSN provided 
+  is accurate and belongs to them
+- Date signed: hire date
+- Witness: HR Manager name from workspace
+- Employee signature line with name populated
+
+───────────────────────────────────────────────
+DOCUMENT 4 — I-9 EMPLOYMENT ELIGIBILITY VERIFICATION
+───────────────────────────────────────────────
+Must contain and display:
+- Section 1: Employee full name, address, DOB, 
+  SSN last 4, citizenship status (US Citizen), 
+  employee signature and date
+- Section 2: Employer review — document type 
+  (DL + SSN card), document numbers, expiration, 
+  employer name and address, hire date, 
+  HR signature and date
+- List A or B+C document notation
+- Employer business name from workspace record
+- Status: COMPLETE — EMPLOYMENT AUTHORIZED
+
+───────────────────────────────────────────────
+DOCUMENT 5 — W-4 FEDERAL TAX WITHHOLDING
+───────────────────────────────────────────────
+Must contain and display:
+- Employee full name and address
+- SSN last 4 masked: XXX-XX-XXXX
+- Filing status: Single (default for simulation)
+- Step 2-4 fields populated with defaults
+- Employee signature and date signed (hire date)
+- Employer name and EIN (simulated EIN for org)
+- First date of employment
+- Standard IRS W-4 2024 format layout
+
+───────────────────────────────────────────────
+DOCUMENT 6 — DRUG-FREE WORKPLACE POLICY
+───────────────────────────────────────────────
+Must contain and display:
+- Company header with org name
+- Policy statement (standard drug-free workplace text)
+- Employee full name
+- Acknowledgment: employee confirms they have read, 
+  understand, and agree to comply with the policy
+- Consequences of violation section
+- Employee signature line with name and date (hire date)
+- HR witness signature with name and date
+- Document version and effective date
+
+───────────────────────────────────────────────
+DOCUMENT 7 — BACKGROUND CHECK AUTHORIZATION AND RESULTS
+───────────────────────────────────────────────
+Must contain and display:
+- Employee full name and address
+- Authorization: employee authorizes background check
+- Date authorized: hire date - 7 days
+- Consent signature with date
+- RESULTS SECTION:
+  - Criminal history: No records found
+  - Sex offender registry: Not listed  
+  - Employment verification: Completed
+  - Education verification: Completed
+  - Overall result: CLEARED FOR EMPLOYMENT
+  - Cleared date: hire date - 2 days
+  - Reviewed by: HR Manager name
+
+───────────────────────────────────────────────
+DOCUMENT 8 — SECURITY GUARD REGISTRATION / GUARD CARD
+───────────────────────────────────────────────
+Must contain and display:
+- Officer full name
+- Guard card number (GC + employee_id pattern)
+- Texas DPS registration number
+- License type: Unarmed Security Officer
+  (or Armed if role indicates armed)
+- Issue date: hire date
+- Expiration date: 2 years from hire date
+- Sponsoring company: org name from workspace
+- Company license number: C11608501 for SPS 
+  or workspace license number
+- Training hours completed: 6 (minimum Texas requirement)
+- Status: ACTIVE AND VALID
+- DPS verification code (simulated)
+
+═══════════════════════════════════════════════════════
+STEP 3 — DOCUMENT STORAGE AND SERVING
+═══════════════════════════════════════════════════════
+
+For each generated document:
+
+STORAGE:
+- Generate real content (HTML rendered to PDF or 
+  server-rendered HTML page)
+- Store at a real accessible path:
+  /documents/{workspace_id}/{employee_id}/{doc_type}.pdf
+  or serve via a real route that generates on demand
+- Update the employee_documents record with the 
+  real path or route URL
+- Set document status to: complete
+- Set created_at to employee hire date
+- Set verified_at to hire date + 1 day
+- Set verified_by to HR manager user_id for workspace
+
+SERVING ROUTE:
+- Build or verify a route exists at:
+  GET /api/documents/:documentId/view
+  and
+  GET /api/documents/:documentId/download
+- Route must check employee belongs to requesting 
+  user's workspace before serving — workspace_id guard
+- Route must return the actual document content 
+  not a 404
+- Document must be viewable in browser and 
+  downloadable as PDF
+
+═══════════════════════════════════════════════════════
+STEP 4 — SEED ALL DOCUMENTS FOR ALL DEV EMPLOYEES
+═══════════════════════════════════════════════════════
+
+Generate and seed all 8 documents for every 
+simulated employee in every dev workspace.
+
+For each employee:
+1. Generate all 8 documents with their real data
+2. Store each document at the correct path
+3. Create or update the employee_documents record 
+   with the real path and complete status
+4. Verify the document is accessible via the 
+   view and download routes
+5. Confirm the document appears in the employee 
+   profile document section in the frontend
+
+After seeding confirm:
+- Zero placeholder paths remaining in employee_documents
+- Zero 404s when clicking any document link
+- All 8 document types present for every employee
+- Every document contains the employee's real data
+- Every document is readable in the browser
+
+═══════════════════════════════════════════════════════
+STEP 5 — FRONTEND DOCUMENT PANEL VERIFICATION
+═══════════════════════════════════════════════════════
+
+Verify the employee document panel in the frontend:
+
+- Employee profile shows Documents section
+- All 8 document types listed with status indicators
+- Each document has View and Download buttons
+- Clicking View opens the real document in browser
+- Clicking Download triggers a real file download
+- Document status shows: Complete / Verified
+- Verified date and verified by are displayed
+- Missing documents show as: Pending with 
+  Upload or Request button
+- No broken links. No 404s. No empty previews.
+
+═══════════════════════════════════════════════════════
+STEP 6 — ORG-LEVEL DOCUMENT VERIFICATION
+═══════════════════════════════════════════════════════
+
+At the workspace/org level verify:
+
+- Owner can see document completion status 
+  across all employees
+- Manager can see which employees have missing 
+  documents
+- Trinity flags any employee with incomplete 
+  documents in the compliance dashboard
+- Onboarding checklist shows document completion 
+  percentage per employee
+- Documents are properly scoped to workspace_id — 
+  org A cannot see org B's employee documents
+
+═══════════════════════════════════════════════════════
+FINAL CONFIRMATION
+═══════════════════════════════════════════════════════
+
+After all documents are generated and seeded, 
+confirm the following end to end:
+
+1. Open Marcus Rodriguez employee profile
+2. Navigate to Documents section
+3. All 8 documents listed with Complete status
+4. Click View on Employment Application — 
+   real document opens with Marcus's real data
+5. Click View on Guard Card — 
+   real document opens with Marcus's info
+6. Click Download on I-9 — 
+   real PDF downloads to browser
+7. Owner dashboard shows 100% document 
+   completion for Marcus
+8. Trinity compliance panel shows Marcus 
+   as fully documented
+
+Report: total documents generated, total employees 
+covered, any documents that could not be generated 
+and why, final zero-404 confirmation.
+
+DO NOT use placeholder paths.
+DO NOT use lorem ipsum content.
+DO NOT fake the file existence — the file must 
+actually exist and be servable.
+Real data. Real files. Real routes. 
+That is the only acceptable outcome.

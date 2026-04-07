@@ -11,6 +11,10 @@
 
 import { broadcastToAllClients } from '../websocket';
 import { AuditLogger } from './audit-logger';
+import { createLogger } from '../lib/logger';
+import { PLATFORM } from '../config/platformConfig';
+const log = createLogger('animationControlService');
+
 
 const auditLogger = new AuditLogger();
 
@@ -68,7 +72,7 @@ class AnimationControlService {
   constructor() {
     this.currentState = {
       mode: 'idle',
-      mainText: 'CoAIleague',
+      mainText: PLATFORM.name,
       subText: 'Workforce Intelligence',
       progress: 0,
       seasonalTheme: this.detectSeasonalTheme(),
@@ -135,7 +139,7 @@ class AnimationControlService {
           return { success: false, message: `Unknown action: ${command.action}` };
       }
     } catch (error) {
-      console.error('[AnimationControl] Command execution failed:', error);
+      log.error('[AnimationControl] Command execution failed:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

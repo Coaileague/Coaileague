@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalFooter, UniversalModalDescription, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -15,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Users, Briefcase, Calendar, MapPin, DollarSign, Star, Clock, CheckCircle, XCircle, User, Award, ThumbsUp, ThumbsDown } from "lucide-react";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const GIG_STATUS = {
   open: { label: "Open", color: "bg-green-500" },
@@ -105,7 +107,7 @@ function ContractorCard({ contractor, onView }: { contractor: { contractor: Flex
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t text-sm text-muted-foreground">
+        <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t text-sm text-muted-foreground">
           <span>{c.totalGigsCompleted} gigs completed</span>
           {c.isActive ? (
             <Badge variant="outline" className="text-green-600">Active</Badge>
@@ -147,7 +149,7 @@ function GigCard({ gig, onView }: { gig: FlexGig; onView: () => void }) {
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t">
+        <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t">
           <div className="flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-green-600" />
             <span className="font-bold">${gig.payRate}/hr</span>
@@ -181,32 +183,49 @@ export default function FlexStaffing() {
 
   const { data: gigsData, isLoading: gigsLoading } = useQuery({
     queryKey: ["/api/flex/gigs"],
+    queryFn: () => apiFetch('/api/flex/gigs', AnyResponse),
   });
 
   const { data: contractorsData, isLoading: contractorsLoading } = useQuery({
     queryKey: ["/api/flex/contractors"],
+    queryFn: () => apiFetch('/api/flex/contractors', AnyResponse),
   });
 
   const { data: applicationsData } = useQuery({
     queryKey: ["/api/flex/gigs", selectedGig?.id, "applications"],
     enabled: !!selectedGig?.id,
+    queryFn: () => apiFetch(`/api/flex/gigs/${selectedGig?.id}/applications`, AnyResponse),
   });
 
   const createGigMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/flex/gigs", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }),
+    mutationFn: (data: any) => apiRequest("POST", "/api/flex/gigs", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/flex/gigs"] });
       setShowNewGig(false);
       toast({ title: "Gig posted successfully" });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Create Gig Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const reviewApplicationMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => 
-      apiRequest(`/api/flex/applications/${id}/review`, { method: "PATCH", body: JSON.stringify({ status }), headers: { "Content-Type": "application/json" } }),
+      apiRequest("PATCH", `/api/flex/applications/${id}/review`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/flex/gigs"] });
       toast({ title: "Application reviewed" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Review Application Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -238,74 +257,78 @@ export default function FlexStaffing() {
     });
   };
 
-  return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Flex Staffing Pool</h1>
-          <p className="text-muted-foreground">Manage contractors and gig opportunities</p>
-        </div>
-        <Dialog open={showNewGig} onOpenChange={setShowNewGig}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-post-gig">
-              <Plus className="w-4 h-4 mr-2" />
-              Post New Gig
+  const actionButton = (
+    <UniversalModal open={showNewGig} onOpenChange={setShowNewGig}>
+      <UniversalModalTrigger asChild>
+        <Button data-testid="button-post-gig">
+          <Plus className="w-4 h-4 mr-2" />
+          Post New Gig
+        </Button>
+      </UniversalModalTrigger>
+      <UniversalModalContent size="lg">
+        <UniversalModalHeader>
+          <UniversalModalTitle>Post New Gig</UniversalModalTitle>
+        </UniversalModalHeader>
+        <form onSubmit={handleCreateGig} className="space-y-4">
+          <div>
+            <Label htmlFor="title">Gig Title *</Label>
+            <Input id="title" name="title" required placeholder="e.g., Event Security Guard" data-testid="input-gig-title" />
+          </div>
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" name="description" placeholder="Describe the gig requirements..." data-testid="input-gig-description" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="gigDate">Date *</Label>
+              <Input id="gigDate" name="gigDate" type="date" required data-testid="input-gig-date" />
+            </div>
+            <div>
+              <Label htmlFor="startTime">Start Time *</Label>
+              <Input id="startTime" name="startTime" type="time" required data-testid="input-start-time" />
+            </div>
+            <div>
+              <Label htmlFor="endTime">End Time *</Label>
+              <Input id="endTime" name="endTime" type="time" required data-testid="input-end-time" />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="locationName">Location Name</Label>
+            <Input id="locationName" name="locationName" placeholder="e.g., Downtown Convention Center" data-testid="input-location-name" />
+          </div>
+          <div>
+            <Label htmlFor="locationAddress">Address</Label>
+            <Input id="locationAddress" name="locationAddress" placeholder="Full address" data-testid="input-location-address" />
+          </div>
+          <div>
+            <Label htmlFor="payRate">Pay Rate ($/hr) *</Label>
+            <Input id="payRate" name="payRate" type="number" step="0.01" required data-testid="input-pay-rate" />
+          </div>
+          <div>
+            <Label htmlFor="requirements">Required Certifications</Label>
+            <Input id="requirements" name="requirements" placeholder="Armed Guard, CPR, etc. (comma separated)" data-testid="input-requirements" />
+          </div>
+          <UniversalModalFooter>
+            <Button type="submit" disabled={createGigMutation.isPending} data-testid="button-submit-gig">
+              {createGigMutation.isPending ? "Posting..." : "Post Gig"}
             </Button>
-          </DialogTrigger>
-          <DialogContent size="lg">
-            <DialogHeader>
-              <DialogTitle>Post New Gig</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateGig} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Gig Title *</Label>
-                <Input id="title" name="title" required placeholder="e.g., Event Security Guard" data-testid="input-gig-title" />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" placeholder="Describe the gig requirements..." data-testid="input-gig-description" />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="gigDate">Date *</Label>
-                  <Input id="gigDate" name="gigDate" type="date" required data-testid="input-gig-date" />
-                </div>
-                <div>
-                  <Label htmlFor="startTime">Start Time *</Label>
-                  <Input id="startTime" name="startTime" type="time" required data-testid="input-start-time" />
-                </div>
-                <div>
-                  <Label htmlFor="endTime">End Time *</Label>
-                  <Input id="endTime" name="endTime" type="time" required data-testid="input-end-time" />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="locationName">Location Name</Label>
-                <Input id="locationName" name="locationName" placeholder="e.g., Downtown Convention Center" data-testid="input-location-name" />
-              </div>
-              <div>
-                <Label htmlFor="locationAddress">Address</Label>
-                <Input id="locationAddress" name="locationAddress" placeholder="Full address" data-testid="input-location-address" />
-              </div>
-              <div>
-                <Label htmlFor="payRate">Pay Rate ($/hr) *</Label>
-                <Input id="payRate" name="payRate" type="number" step="0.01" required data-testid="input-pay-rate" />
-              </div>
-              <div>
-                <Label htmlFor="requirements">Required Certifications</Label>
-                <Input id="requirements" name="requirements" placeholder="Armed Guard, CPR, etc. (comma separated)" data-testid="input-requirements" />
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={createGigMutation.isPending} data-testid="button-submit-gig">
-                  {createGigMutation.isPending ? "Posting..." : "Post Gig"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </UniversalModalFooter>
+        </form>
+      </UniversalModalContent>
+    </UniversalModal>
+  );
 
-      <div className="grid grid-cols-4 gap-4 p-4 border-b">
+  const pageConfig: CanvasPageConfig = {
+    id: 'flex-staffing',
+    title: 'Flex Staffing Pool',
+    subtitle: 'Manage contractors and gig opportunities',
+    category: 'operations',
+    headerActions: actionButton,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -353,8 +376,8 @@ export default function FlexStaffing() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 border-b">
-          <TabsList>
+        <div className="flex items-center justify-between gap-2 px-4 border-b">
+          <TabsList className="w-full sm:w-auto overflow-x-auto">
             <TabsTrigger value="gigs" data-testid="tab-gigs">Gig Board</TabsTrigger>
             <TabsTrigger value="contractors" data-testid="tab-contractors">Contractor Pool</TabsTrigger>
           </TabsList>
@@ -406,14 +429,14 @@ export default function FlexStaffing() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedGig} onOpenChange={() => setSelectedGig(null)}>
-        <DialogContent size="xl">
+      <UniversalModal open={!!selectedGig} onOpenChange={() => setSelectedGig(null)}>
+        <UniversalModalContent size="xl">
           {selectedGig && (
             <>
-              <DialogHeader>
-                <DialogTitle>{selectedGig.title}</DialogTitle>
-                <DialogDescription>{selectedGig.description}</DialogDescription>
-              </DialogHeader>
+              <UniversalModalHeader>
+                <UniversalModalTitle>{selectedGig.title}</UniversalModalTitle>
+                <UniversalModalDescription>{selectedGig.description}</UniversalModalDescription>
+              </UniversalModalHeader>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -451,7 +474,7 @@ export default function FlexStaffing() {
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-auto">
                       {applications.map(app => (
-                        <div key={app.id} className="flex items-center justify-between p-2 border rounded">
+                        <div key={app.id} className="flex items-center justify-between gap-2 p-2 border rounded">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback>
@@ -499,18 +522,18 @@ export default function FlexStaffing() {
               )}
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={!!selectedContractor} onOpenChange={() => setSelectedContractor(null)}>
-        <DialogContent>
+      <UniversalModal open={!!selectedContractor} onOpenChange={() => setSelectedContractor(null)}>
+        <UniversalModalContent>
           {selectedContractor && (
             <>
-              <DialogHeader>
-                <DialogTitle>
+              <UniversalModalHeader>
+                <UniversalModalTitle>
                   {selectedContractor.user?.firstName} {selectedContractor.user?.lastName}
-                </DialogTitle>
-              </DialogHeader>
+                </UniversalModalTitle>
+              </UniversalModalHeader>
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16">
@@ -547,7 +570,7 @@ export default function FlexStaffing() {
                     )) || <span className="text-muted-foreground text-sm">None listed</span>}
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center justify-between gap-2 pt-4 border-t">
                   <div>
                     <p className="text-sm text-muted-foreground">Hourly Rate</p>
                     <p className="text-xl font-bold">${selectedContractor.contractor.hourlyRate}/hr</p>
@@ -561,8 +584,8 @@ export default function FlexStaffing() {
               </div>
             </>
           )}
-        </DialogContent>
-      </Dialog>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

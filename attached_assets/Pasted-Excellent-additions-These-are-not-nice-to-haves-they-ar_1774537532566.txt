@@ -1,0 +1,214 @@
+Excellent additions. These are not nice-to-haves — they are operational requirements for a regulated security company platform. Let me think through everything you described and build it out properly.
+
+---
+
+**What you're describing breaks into two distinct systems:**
+
+**System 1 — Officer Compliance Documentation and Verification**
+Not a background check integration (since DPS handles that federally) but a structured evidence submission system where officers self-certify by uploading: their active DPS license photo, any test results or qualification scores (firearms qualification, first aid, etc.), TCOLE training completion certificates, classwork completion records, and any other state-required documentation. Trinity reviews the submission, extracts key data (license number, expiry date, qualification type, pass/fail), verifies it matches existing records, and flags anything inconsistent for human review. The system tracks what was submitted, when, by whom, and what Trinity verified — creating a defensible compliance record.
+
+**System 2 — Onboarding Task Management and Org Health Gamification**
+A beautiful task management system for both new officers and new organizations. Three tiers of tasks:
+
+- **Mandatory** — platform will not activate the entity without these (active license upload, basic profile, emergency contact, direct deposit for officers / billing setup, initial contract, first post configuration for orgs)
+- **Compliance-required** — needed to stay active and avoid violations (license renewal before expiry, annual requalification, TCOLE hours, state-specific requirements per the knowledge base)
+- **Profile-enhancing** — optional tasks that make officers or orgs more attractive to potential clients (armed qualification, additional certifications, client testimonials, insurance certificates, years in operation)
+
+Graphically this could be a progress ring or task board — clearly showing completion percentage, which tasks are urgent, which are overdue, and which are optional enhancers. Trinity proactively reminds. Org profiles visible to potential clients show a trust score or completion badge based on how complete their compliance profile is.
+
+---
+
+**Updated phase additions — send this to the agent to add to replit.md:**
+
+---
+
+**MASTER PLAN UPDATE — ADD PHASES 46 THROUGH 53 TO replit.md**
+
+---
+
+**Phase 46 — Time Zone Management and Holiday Calendar**
+
+Time zone management is not cosmetic — it directly affects shift display, pay period boundaries, clock-in validation, and overtime calculations. Every post has a location and therefore a time zone. Every officer sees times in their post's local zone.
+
+Time zone per post: every post record requires a `timezone` field (IANA format, e.g. `America/Chicago`). Shift times stored in UTC, displayed in post-local time. Clock-in/out timestamps stored UTC, displayed in local time.
+
+Pay period boundaries: all period calculations use UTC internally, boundary display uses workspace's primary timezone. Bi-weekly UTC fix from Phase 11 confirmed still active.
+
+Holiday calendar: workspace-configurable holiday dates. System holidays pre-loaded (federal holidays). State-specific holidays pre-loaded from state knowledge base. Custom holidays addable by org_owner. Holiday differential pay triggers only when the shift falls on a confirmed holiday in the post's state. Mid-shift holiday boundary handled — shift spanning midnight into a holiday calculates correctly.
+
+Holiday calendar management UI: simple calendar interface, org_owner can add/edit/remove custom holidays, state holidays auto-populated from knowledge base, changes take effect on future shifts only — never retroactively alter locked payroll.
+
+*Syncs with: Phases 12, 15, 21B*
+
+---
+
+**Phase 47 — Officer Compliance Documentation and License Verification System**
+
+DPS conducts background checks at the federal level — CoAIleague does not replicate this. What CoAIleague owns is the evidence submission and verification layer that creates a defensible compliance record for every officer.
+
+**Evidence submission system:**
+Officers upload directly to their compliance profile: DPS license card photo (front and back), firearms qualification certificate with score and date, TCOLE training completion certificates with course name and hours, first aid/CPR certification, any state-required classwork completion records, additional certifications (armed, Level IV PPO, crowd manager, etc.).
+
+**Trinity verification layer:**
+Trinity receives each uploaded document and: extracts license number, expiry date, issuing authority, and officer name via document parsing. Cross-references extracted data against the existing license record in `employee_certifications`. Flags mismatches — name on license doesn't match employee record, expiry date differs from what was entered manually. Scores the submission confidence (high/medium/low). Stores the verification result with Trinity's analysis, extracted fields, and confidence score. Flags low-confidence submissions for human review by compliance officer.
+
+**Qualification tracking:**
+Firearms qualification tracked as a distinct record: qualification date, score, range, weapon type, next qualification due date. TCOLE training hours accumulated per officer — total hours toward annual requirement tracked. Requalification reminders fire at 90/60/30/7 days before due date. Trinity proactive scanner checks requalification status daily.
+
+**Compliance evidence vault:**
+All submitted documents stored in the document vault with type: `compliance_evidence`. Linked to the officer's certification record. Accessible to compliance officer and org_owner. State auditor portal (Phase 33) can view evidence for officers within the audit scope. Evidence package generatable on demand for regulatory submission.
+
+*Syncs with: Phases 17, 18, 21, 33*
+
+---
+
+**Phase 48 — Onboarding Task Management and Org Health Dashboard**
+
+Every new officer and every new organization gets a structured, beautiful, gamified onboarding experience. Tasks are not a checklist — they are a living progress system that Trinity monitors and manages.
+
+**Task taxonomy — three tiers:**
+
+Tier 1 — Mandatory (system will not activate without these):
+- Officer: profile complete, DPS license uploaded and verified, direct deposit configured, emergency contact added, onboarding documents signed
+- Organization: billing configured, initial contract executed, first post created with GPS geofence, at least one officer activated, org_owner identity verified
+
+Tier 2 — Compliance-required (needed to stay active, violations generated if overdue):
+- Officer: license renewal before expiry, annual firearms requalification, TCOLE hours met, state-specific requirements per knowledge base
+- Organization: insurance certificate current, all active officers have valid licenses, no unresolved compliance violations, regulatory reporting current
+
+Tier 3 — Profile-enhancing (optional, improves trust score and client visibility):
+- Officer: additional certifications (armed, Level IV, crowd manager), first aid/CPR current, years of experience documented, reference letters uploaded
+- Organization: client testimonials, additional insurance coverage, SDVOSB or other certification uploaded, years in operation documented, multiple state compliance achieved
+
+**Visual design:**
+Progress ring at the top of the profile — fills as tasks complete, color-coded (red for overdue mandatory, amber for upcoming compliance, green for complete, gold accent for profile-enhancing completed). Task cards below the ring — each shows task name, description, due date if applicable, status, and a clear CTA to complete. Mandatory tasks shown first with red border if incomplete. Completed tasks collapse into a "Completed" section with a timestamp.
+
+**Trinity integration:**
+Trinity monitors all active onboarding tasks daily. Sends reminders at appropriate intervals — firm for mandatory tasks, helpful for compliance, encouraging for profile-enhancing. Trinity can complete certain tasks on behalf of the user if the data already exists in the system (auto-fills license data from existing certification record, auto-confirms document signing from vault records). Trinity surfaces the health score to org_owner: "Your organization is 78% complete — 2 mandatory tasks remaining before full activation."
+
+**Organization profile public view:**
+When a potential client visits an organization's profile they see: trust score badge (percentage of Tier 1 + Tier 2 tasks complete), active officer count, years in operation, certifications held, states licensed in, compliance status (all current / has outstanding items). Personal officer data never shown to clients — only aggregate trust indicators.
+
+**Task management API:**
+Complete CRUD for tasks, progress tracking per entity, Trinity action `onboarding.task.status` for querying and updating task completion, audit record on every task completion with actor and timestamp.
+
+*Syncs with: Phases 10, 17, 19, 21, 31, 47*
+
+---
+
+**Phase 49 — Notification Preferences and Communication Template Management**
+
+Users must control how they are notified. A security officer who is asleep after a night shift does not want SMS alerts for low-priority events.
+
+**Notification preferences per user:**
+Each user configures: preferred channel per notification category (email, SMS, push, in-app, or none), quiet hours (no push or SMS between defined times), language preference (English or Spanish — feeds Phase 32), digest preference (receive individual notifications vs daily digest for low-priority types). Preferences stored per user per workspace — the same user in different workspaces can have different preferences.
+
+**Channel fallback chain:**
+When a user's preferred channel is unavailable NDS falls back to the next configured channel. If all channels are disabled for a notification category the notification is still stored in-app — never completely dropped for critical types. Critical notifications (duress alert, payroll run failure, compliance violation) override quiet hours — always delivered immediately regardless of preferences.
+
+**Communication template management:**
+Platform staff and org_owner can customize notification templates: subject lines, email body content, SMS message content, push notification title and body. Templates support merge fields. Template changes versioned — previous versions retained for audit. Default templates in both English and Spanish. Custom templates per workspace override defaults.
+
+**Template management UI:**
+Clean interface showing all notification types, current template per channel, preview function, edit history, restore to default option. Role-gated to org_owner and platform staff.
+
+*Syncs with: Phases 8, 27, 32*
+
+---
+
+**Phase 50 — Outbound Webhook System and Integration Framework**
+
+Every B2B SaaS platform needs a general webhook system. Security companies use dozens of tools — scheduling software, HR systems, accounting packages beyond QuickBooks, insurance portals. CoAIleague must be able to push events to any external system.
+
+**Webhook configuration:**
+Org_owner can register webhook endpoints: URL, secret for HMAC signature, event types to subscribe to, active/inactive status. Multiple webhooks per workspace supported. Webhook test button — sends a sample payload to verify the endpoint is receiving correctly.
+
+**Event catalog:**
+Every platform event that can trigger a webhook: officer_activated, officer_deactivated, shift_created, shift_assigned, clock_in, clock_out, calloff_submitted, incident_created, invoice_generated, invoice_paid, payroll_run_completed, document_executed, compliance_violation_detected, license_expiring. Payload per event is structured JSON with: event_type, workspace_id, timestamp, entity_id, entity_type, and relevant data fields.
+
+**Delivery:**
+Webhooks delivered with HMAC-SHA256 signature header. Retry with exponential backoff on failure. Dead letter after max retries — org_owner notified. Delivery log per webhook endpoint — org_owner can see recent deliveries, status, and response codes. Webhook delivery tracked in notification_deliveries with channel: webhook.
+
+**Trinity integration:**
+Trinity can query webhook delivery health and manually trigger a retry for a failed webhook via registered action.
+
+*Syncs with: Phases 8, 27*
+
+---
+
+**Phase 51 — Feature Flags, Database Backup Verification, and Platform Status Page**
+
+**Feature flags:**
+Platform staff can enable or disable specific features per workspace without a code deployment. Flag types: boolean (on/off), percentage rollout (enable for N% of workspaces for gradual rollout), workspace-specific (enable only for named workspaces). Feature flags checked at route level and UI level. New features gated behind flags by default — promoted to general availability only after controlled rollout confirms stability. Flag configuration stored in database — changes take effect immediately without server restart. Trinity can query feature flag status via registered action.
+
+**Database backup verification:**
+Automated daily backup confirmed running. Backup restore tested — a restore to a test environment confirmed completing successfully with data integrity verified. Backup age confirmed — most recent backup never older than 24 hours. Point-in-time recovery capability documented. Recovery Time Objective (RTO) and Recovery Point Objective (RPO) defined and documented. Backup storage confirmed in a different region than the primary database.
+
+**Platform status page:**
+Internal status page at `/admin/status` showing: current uptime percentage, active incidents with severity and description, recent deployments with status, scheduled maintenance windows, real-time service health per subsystem (API, database, NDS, Trinity, QuickBooks sync, push notifications). External public status page at `status.[domain]` showing: overall platform status, recent incidents, uptime history for the past 90 days. Status page updated automatically when health checks fail — not manually maintained.
+
+*Syncs with: Phases 40, 42*
+
+---
+
+**Phase 52 — Cookie Consent, Terms Acceptance, and Legal Compliance**
+
+**Cookie consent:**
+Cookie consent banner on first visit — GDPR and CCPA compliant. Users can accept all, reject non-essential, or configure per category (essential, analytics, functional). Consent stored per user with timestamp. Consent preferences respected — no non-essential cookies set before consent. Consent withdrawal supported — user can change preferences at any time from account settings. Consent log retained for compliance audit.
+
+**Terms of service and privacy policy acceptance:**
+Every user must accept current terms of service and privacy policy before accessing the platform. Acceptance recorded with: user_id, terms version, privacy policy version, acceptance timestamp, IP address. When terms are updated existing users prompted to re-accept on next login — cannot bypass. Version history maintained — previous versions accessible for reference. Officers in California covered by CCPA provisions in privacy policy. Officers and clients in EU (if applicable) covered by GDPR provisions.
+
+**Data subject rights:**
+Right to access — user can request export of all personal data held. Right to erasure — user can request deletion of personal data with correct retention exceptions applied. Right to portability — data exportable in machine-readable format. Request tracking — each rights request logged with status and resolution timestamp. SLA defined — rights requests fulfilled within 30 days per GDPR requirement.
+
+*Syncs with: Phases 36, 38*
+
+---
+
+**Phase 53 — Two-Factor Authentication Completion and Verification**
+
+Phase 24 noted MFA as available for org_owner and platform staff but never confirmed it was built and working. This phase closes that gap completely.
+
+**2FA implementation confirmed:**
+TOTP (Time-based One-Time Password) implementation via authenticator app (Google Authenticator, Authy compatible). SMS OTP as fallback for users without authenticator app. Backup codes generated on 2FA enrollment — downloadable once, stored hashed.
+
+**Enrollment flow:**
+Org_owner and platform staff prompted to enroll 2FA on first login after enablement. QR code displayed for authenticator app setup. Verification step required before enrollment completes — cannot skip. Backup codes shown once — user must confirm they have saved them.
+
+**Enforcement:**
+2FA required for: org_owner, co_owner, platform staff (mandatory — cannot be disabled). 2FA optional but encouraged for: managers, compliance officers (configurable per workspace). 2FA not required for: officers (mobile-first users, SMS OTP available if workspace enables it).
+
+**Recovery:**
+Lost authenticator — backup code flow with identity verification step. No recovery without backup codes for platform staff — security requirement. Org_owner can reset 2FA for workspace users with audit record.
+
+**Session management:**
+2FA verified session valid for configurable duration (default 8 hours, configurable per workspace). Remember device option for trusted devices (configurable by org_owner). Device trust stored securely — not in easily spoofable client storage.
+
+*Syncs with: Phase 24*
+
+---
+
+**UPDATED MASTER ROSTER: 53 PHASES TOTAL**
+
+Phases 1–27: Certified
+Phase 28: Running
+Phases 29–53: Queued in sequence
+
+Phases 46–53 slotted as follows in the sequence after Phase 43:
+- Phase 44: Trinity Intelligence Upgrade
+- Phase 45: Codebase Cleanup
+- Phase 46: Time Zone and Holiday Calendar
+- Phase 47: Officer Compliance Documentation
+- Phase 48: Onboarding Task Management
+- Phase 49: Notification Preferences
+- Phase 50: Outbound Webhook System
+- Phase 51: Feature Flags and Platform Status
+- Phase 52: Cookie Consent and Legal Compliance
+- Phase 53: Two-Factor Authentication
+
+Update replit.md with all 8 new phases now. Every phase syncs with prior work. Nothing operates in isolation.
+
+---
+
+Paste that to the agent now while Phase 28 runs. The master plan stays current and the agent builds with the full 53-phase picture in mind.

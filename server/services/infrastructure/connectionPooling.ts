@@ -13,6 +13,9 @@
 import { randomUUID } from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('connectionPooling');
+
 
 export interface PoolConnection {
   id: string;
@@ -106,7 +109,7 @@ class ConnectionPoolingService {
     setInterval(() => this.cleanupIdleConnections(), 60000);
 
     this.isInitialized = true;
-    console.log(`[ConnectionPooling] Initialized with ${this.config.minConnections} connections`);
+    log.info(`[ConnectionPooling] Initialized with ${this.config.minConnections} connections`);
   }
 
   /**
@@ -242,7 +245,7 @@ class ConnectionPoolingService {
    */
   updateConfig(config: Partial<PoolConfig>): void {
     this.config = { ...this.config, ...config };
-    console.log('[ConnectionPooling] Configuration updated');
+    log.info('[ConnectionPooling] Configuration updated');
 
     // Ensure minimum connections
     while (this.connections.size < this.config.minConnections) {
@@ -385,7 +388,7 @@ class ConnectionPoolingService {
     }
 
     if (toRemove.length > 0) {
-      console.log(`[ConnectionPooling] Cleaned up ${toRemove.length} idle connections`);
+      log.info(`[ConnectionPooling] Cleaned up ${toRemove.length} idle connections`);
     }
   }
 
@@ -415,7 +418,7 @@ class ConnectionPoolingService {
     this.connections.clear();
     this.waitQueue = [];
     
-    console.log('[ConnectionPooling] Service shut down');
+    log.info('[ConnectionPooling] Service shut down');
   }
 }
 

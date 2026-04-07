@@ -13,6 +13,10 @@
 import { randomUUID } from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
+import { typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('healthCheckAggregation');
+
 
 export interface ServiceHealth {
   serviceId: string;
@@ -81,7 +85,7 @@ class HealthCheckAggregationService {
     this.registerDefaultChecks();
 
     this.isInitialized = true;
-    console.log('[HealthCheck] Aggregation service initialized');
+    log.info('[HealthCheck] Aggregation service initialized');
   }
 
   /**
@@ -111,7 +115,7 @@ class HealthCheckAggregationService {
     // Run initial check
     this.checkService(config.serviceId);
 
-    console.log(`[HealthCheck] Registered service: ${config.serviceName}`);
+    log.info(`[HealthCheck] Registered service: ${config.serviceName}`);
   }
 
   /**
@@ -254,7 +258,7 @@ class HealthCheckAggregationService {
         service.status = 'degraded';
       }
       
-      service.metadata = { error: error.message };
+      service.metadata = { error: (error instanceof Error ? error.message : String(error)) };
     }
 
     return service;
@@ -286,7 +290,8 @@ class HealthCheckAggregationService {
       checkFn: async () => {
         try {
           const start = Date.now();
-          await db.execute('SELECT 1');
+          // Converted to Drizzle ORM: health check ping
+          await db.execute(sql`SELECT 1`);
           return { healthy: true, responseTime: Date.now() - start };
         } catch {
           return { healthy: false, responseTime: 0 };
@@ -380,8 +385,8 @@ class HealthCheckAggregationService {
         },
         createdAt: new Date()
       });
-    } catch (error) {
-      console.error('[HealthCheck] Failed to log unhealthy service:', error);
+    } catch (error: any) {
+      log.warn('[HealthCheck] Failed to log unhealthy service (will retry):', error?.message || 'unknown');
     }
   }
 
@@ -398,7 +403,7 @@ class HealthCheckAggregationService {
     this.services.clear();
     this.configs.clear();
     
-    console.log('[HealthCheck] Aggregation service shut down');
+    log.info('[HealthCheck] Aggregation service shut down');
   }
 }
 

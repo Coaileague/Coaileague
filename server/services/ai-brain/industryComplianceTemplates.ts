@@ -15,6 +15,8 @@ import industryTaxonomy from '@shared/industry-taxonomy.json';
 import { db } from '../../db';
 import { workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('industryComplianceTemplates');
 
 export interface ComplianceTemplate {
   id: string;
@@ -563,7 +565,7 @@ class IndustryComplianceTemplatesService {
     const templatesDeployed: string[] = [];
     let requirementsCreated = 0;
 
-    console.log(`[IndustryComplianceTemplates] Deploying templates for workspace ${workspaceId}, sub-industry ${subIndustryId}`);
+    log.info(`[IndustryComplianceTemplates] Deploying templates for workspace ${workspaceId}, sub-industry ${subIndustryId}`);
 
     try {
       const config = this.getComplianceConfigForSubIndustry(subIndustryId);
@@ -597,7 +599,7 @@ class IndustryComplianceTemplatesService {
         requirementsCreated += template.requirements.length;
       }
 
-      console.log(`[IndustryComplianceTemplates] Deployed ${templatesDeployed.length} templates with ${requirementsCreated} requirements for workspace ${workspaceId}`);
+      log.info(`[IndustryComplianceTemplates] Deployed ${templatesDeployed.length} templates with ${requirementsCreated} requirements for workspace ${workspaceId}`);
 
       return {
         success: true,
@@ -607,8 +609,8 @@ class IndustryComplianceTemplatesService {
       };
 
     } catch (error: any) {
-      console.error('[IndustryComplianceTemplates] Deployment failed:', error);
-      errors.push(error.message);
+      log.error('[IndustryComplianceTemplates] Deployment failed:', error);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return {
         success: false,
         templatesDeployed,

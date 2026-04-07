@@ -23,6 +23,9 @@ import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import crypto from 'crypto';
 
+import { createLogger } from '../../lib/logger';
+const log = createLogger('TrinityWorkOrderSystem');
+
 // ============================================================================
 // TYPES - WORK ORDER INTAKE
 // ============================================================================
@@ -312,7 +315,7 @@ class TrinityWorkOrderIntake {
     const workOrderId = crypto.randomUUID();
     const startTime = Date.now();
     
-    console.log(`[WorkOrderIntake] Parsing request: "${rawRequest.substring(0, 100)}..."`);
+    log.info(`[WorkOrderIntake] Parsing request: "${rawRequest.substring(0, 100)}..."`);
     
     const prompt = `You are an expert work order analyst. Parse this user request into a structured work order.
 
@@ -395,7 +398,7 @@ Return JSON:
 
       this.activeWorkOrders.set(workOrderId, workOrder);
       
-      console.log(`[WorkOrderIntake] Parsed work order ${workOrderId}:`, {
+      log.info(`[WorkOrderIntake] Parsed work order ${workOrderId}:`, {
         intent: workOrder.intent,
         complexity: workOrder.complexity,
         criteria: workOrder.successCriteria.length,
@@ -409,7 +412,7 @@ Return JSON:
       return workOrder;
       
     } catch (error: any) {
-      console.error('[WorkOrderIntake] Parse failed:', error.message);
+      log.error('[WorkOrderIntake] Parse failed:', (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   }
@@ -442,7 +445,7 @@ Return JSON:
         },
       });
     } catch (error) {
-      console.error('[WorkOrderIntake] Failed to log work order:', error);
+      log.error('[WorkOrderIntake] Failed to log work order:', error);
     }
   }
 
@@ -479,7 +482,7 @@ class TaskDecompositionEngine {
 
   async decompose(workOrder: WorkOrder): Promise<TaskNode[]> {
     const startTime = Date.now();
-    console.log(`[TaskDecomposition] Decomposing work order ${workOrder.id}...`);
+    log.info(`[TaskDecomposition] Decomposing work order ${workOrder.id}...`);
     
     // For simple/trivial complexity, create a minimal task graph
     if (workOrder.complexity === 'trivial') {
@@ -596,12 +599,12 @@ Order tasks logically: understand -> plan -> implement -> test -> commit`;
 
       this.taskGraphs.set(workOrder.id, tasks);
       
-      console.log(`[TaskDecomposition] Created ${tasks.length} tasks in ${Date.now() - startTime}ms`);
+      log.info(`[TaskDecomposition] Created ${tasks.length} tasks in ${Date.now() - startTime}ms`);
       
       return tasks;
       
     } catch (error: any) {
-      console.error('[TaskDecomposition] Decomposition failed:', error.message);
+      log.error('[TaskDecomposition] Decomposition failed:', (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   }
@@ -694,7 +697,7 @@ class SolutionDiscoveryLoop {
     const workOrderAttempts = this.attempts.get(workOrder.id) || [];
     const attemptNumber = workOrderAttempts.length + 1;
     
-    console.log(`[SolutionDiscovery] Starting attempt ${attemptNumber} for work order ${workOrder.id}`);
+    log.info(`[SolutionDiscovery] Starting attempt ${attemptNumber} for work order ${workOrder.id}`);
     onProgress?.(`Starting attempt ${attemptNumber}...`);
     
     const attempt: SolutionAttempt = {
@@ -765,8 +768,8 @@ class SolutionDiscoveryLoop {
               attempt.issues.push(`Task ${task.title} failed: ${result.error}`);
             }
           } catch (error: any) {
-            decomposer.markTaskFailed(workOrder.id, task.id, error.message);
-            attempt.issues.push(`Task ${task.title} threw: ${error.message}`);
+            decomposer.markTaskFailed(workOrder.id, task.id, (error instanceof Error ? error.message : String(error)));
+            attempt.issues.push(`Task ${task.title} threw: ${(error instanceof Error ? error.message : String(error))}`);
           }
         }
       }
@@ -778,7 +781,7 @@ class SolutionDiscoveryLoop {
       const totalTasks = allTasks.length;
       
       attempt.success = failedTasks === 0 && successfulTasks === totalTasks;
-      console.log(`[SolutionDiscovery] Task completion: ${successfulTasks}/${totalTasks} succeeded, ${failedTasks} failed`);
+      log.info(`[SolutionDiscovery] Task completion: ${successfulTasks}/${totalTasks} succeeded, ${failedTasks} failed`);
 
       // Run self-reflection on the attempt
       if (attempt.tasksExecuted.length > 0) {
@@ -813,9 +816,9 @@ class SolutionDiscoveryLoop {
           attempt.shouldRetry = (!reflectionResult.passed || failedTasks > 0) && 
                                attemptNumber < this.MAX_ATTEMPTS;
                                
-          console.log(`[SolutionDiscovery] Reflection: ${reflectionResult.passed ? 'PASSED' : 'FAILED'}, confidence: ${(reflectionResult.confidenceScore * 100).toFixed(0)}%`);
+          log.info(`[SolutionDiscovery] Reflection: ${reflectionResult.passed ? 'PASSED' : 'FAILED'}, confidence: ${(reflectionResult.confidenceScore * 100).toFixed(0)}%`);
         } catch (reflectionError: any) {
-          console.error('[SolutionDiscovery] Reflection failed:', reflectionError.message);
+          log.error('[SolutionDiscovery] Reflection failed:', reflectionError.message);
           attempt.issues.push(`Self-reflection failed: ${reflectionError.message}`);
           attempt.confidenceScore = 0.5;
           attempt.shouldCommit = false;
@@ -831,8 +834,8 @@ class SolutionDiscoveryLoop {
       }
 
     } catch (error: any) {
-      console.error('[SolutionDiscovery] Attempt error:', error.message);
-      attempt.issues.push(`Attempt failed: ${error.message}`);
+      log.error('[SolutionDiscovery] Attempt error:', (error instanceof Error ? error.message : String(error)));
+      attempt.issues.push(`Attempt failed: ${(error instanceof Error ? error.message : String(error))}`);
       attempt.success = false;
       attempt.shouldCommit = false;
       attempt.shouldRetry = attemptNumber < this.MAX_ATTEMPTS;
@@ -844,7 +847,7 @@ class SolutionDiscoveryLoop {
     workOrderAttempts.push(attempt);
     this.attempts.set(workOrder.id, workOrderAttempts);
     
-    console.log(`[SolutionDiscovery] Attempt ${attemptNumber} completed:`, {
+    log.info(`[SolutionDiscovery] Attempt ${attemptNumber} completed:`, {
       success: attempt.success,
       confidence: attempt.confidenceScore,
       tasksExecuted: attempt.tasksExecuted.length,
@@ -861,7 +864,7 @@ class SolutionDiscoveryLoop {
     workOrder: WorkOrder
   ): Promise<{ success: boolean; output?: any; error?: string; changes?: ChangeRecord[] }> {
     const startTime = Date.now();
-    console.log(`[SolutionDiscovery] Executing task: ${task.title} (${task.actionType})`);
+    log.info(`[SolutionDiscovery] Executing task: ${task.title} (${task.actionType})`);
     
     switch (task.actionType) {
       case 'search_code':
@@ -1042,7 +1045,7 @@ class SolutionDiscoveryLoop {
 
       default:
         task.durationMs = Date.now() - startTime;
-        console.warn(`[SolutionDiscovery] Unknown action type: ${task.actionType}`);
+        log.warn(`[SolutionDiscovery] Unknown action type: ${task.actionType}`);
         return { success: false, error: `Unknown action type: ${task.actionType}` };
     }
   }
@@ -1076,7 +1079,7 @@ class ConfidentCommitProtocol {
     workOrder: WorkOrder,
     attempt: SolutionAttempt
   ): Promise<CommitDecision> {
-    console.log(`[CommitProtocol] Evaluating commit readiness for attempt ${attempt.attemptNumber}...`);
+    log.info(`[CommitProtocol] Evaluating commit readiness for attempt ${attempt.attemptNumber}...`);
     
     const decision: CommitDecision = {
       shouldCommit: false,
@@ -1093,26 +1096,26 @@ class ConfidentCommitProtocol {
 
     // Run actual tests using AI Brain Test Runner
     try {
-      console.log('[CommitProtocol] Running test suite...');
+      log.info('[CommitProtocol] Running test suite...');
       const testResults = await aiBrainTestRunner.runAll('Commit Validation');
       decision.testsPass = testResults.summary.failed === 0;
       
       if (!decision.testsPass) {
         decision.riskMitigations.push(`${testResults.summary.failed} tests failed - needs investigation`);
-        console.log(`[CommitProtocol] Tests FAILED: ${testResults.summary.failed}/${testResults.summary.total}`);
+        log.info(`[CommitProtocol] Tests FAILED: ${testResults.summary.failed}/${testResults.summary.total}`);
       } else {
-        console.log(`[CommitProtocol] Tests PASSED: ${testResults.summary.passed}/${testResults.summary.total}`);
+        log.info(`[CommitProtocol] Tests PASSED: ${testResults.summary.passed}/${testResults.summary.total}`);
       }
     } catch (error: any) {
-      console.error('[CommitProtocol] Test execution error:', error.message);
+      log.error('[CommitProtocol] Test execution error:', (error instanceof Error ? error.message : String(error)));
       decision.testsPass = false;
-      decision.riskMitigations.push(`Test execution failed: ${error.message}`);
+      decision.riskMitigations.push(`Test execution failed: ${(error instanceof Error ? error.message : String(error))}`);
     }
 
     // Run self-reflection if not already done in attempt
     if (!attempt.reflectionResult) {
       try {
-        console.log('[CommitProtocol] Running self-reflection...');
+        log.info('[CommitProtocol] Running self-reflection...');
         const reflectionResult = await selfReflectionEngine.reflect({
           executionId: attempt.id,
           workspaceId: workOrder.workspaceId,
@@ -1130,11 +1133,11 @@ class ConfidentCommitProtocol {
         });
         decision.reflectionPass = reflectionResult.passed;
         decision.confidenceScore = reflectionResult.confidenceScore;
-        console.log(`[CommitProtocol] Reflection ${reflectionResult.passed ? 'PASSED' : 'FAILED'}: ${(reflectionResult.confidenceScore * 100).toFixed(0)}% confidence`);
+        log.info(`[CommitProtocol] Reflection ${reflectionResult.passed ? 'PASSED' : 'FAILED'}: ${(reflectionResult.confidenceScore * 100).toFixed(0)}% confidence`);
       } catch (error: any) {
-        console.error('[CommitProtocol] Reflection error:', error.message);
+        log.error('[CommitProtocol] Reflection error:', (error instanceof Error ? error.message : String(error)));
         decision.reflectionPass = false;
-        decision.riskMitigations.push(`Self-reflection failed: ${error.message}`);
+        decision.riskMitigations.push(`Self-reflection failed: ${(error instanceof Error ? error.message : String(error))}`);
       }
     } else {
       decision.reflectionPass = attempt.reflectionResult.passed;
@@ -1186,7 +1189,7 @@ class ConfidentCommitProtocol {
       decision.confidenceScore >= 0.75 &&
       !decision.requiresHumanReview;
 
-    console.log(`[CommitProtocol] Decision:`, {
+    log.info(`[CommitProtocol] Decision:`, {
       shouldCommit: decision.shouldCommit,
       confidence: decision.confidenceScore,
       testsPass: decision.testsPass,
@@ -1495,7 +1498,7 @@ export class TrinityWorkOrderOrchestrator {
         success: workOrder.status === 'completed',
         summary: summary.title,
       },
-    });
+    }).catch((err) => log.warn('[trinityWorkOrderSystem] Fire-and-forget failed:', err));
     
     return {
       workOrder,
@@ -1529,4 +1532,4 @@ export const confidentCommitProtocol = ConfidentCommitProtocol.getInstance();
 export const clarificationProtocol = ClarificationProtocol.getInstance();
 export const workSummaryEngine = WorkSummaryEngine.getInstance();
 
-console.log('[TrinityWorkOrderSystem] Work order orchestration system initialized');
+log.info('[TrinityWorkOrderSystem] Work order orchestration system initialized');

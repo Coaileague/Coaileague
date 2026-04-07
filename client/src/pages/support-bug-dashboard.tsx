@@ -4,22 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { 
   Bug, CheckCircle, XCircle, Clock, Loader2, AlertTriangle,
-  FileCode, RefreshCw, Eye, ThumbsUp, ThumbsDown, Wrench,
+  FileCode, Eye, ThumbsUp, ThumbsDown, Wrench,
   BarChart3, TrendingUp
 } from "lucide-react";
+import { UniversalEmptyState } from "@/components/universal/UniversalEmptyState";
 
 interface RemediationRequest {
   id: string;
@@ -71,20 +66,22 @@ function StatCard({ title, value, icon: Icon, trend }: {
 }) {
   return (
     <Card>
-      <CardContent className="flex items-center gap-4 p-4">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Icon className="h-5 w-5 text-primary" />
+      <CardContent className="p-3 sm:pt-4 sm:px-6">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{title}</p>
+            <p className="text-lg sm:text-2xl font-bold truncate">{value}</p>
+          </div>
+          {trend && (
+            <Badge variant="outline" className="gap-1 shrink-0 hidden sm:flex">
+              <TrendingUp className="h-3 w-3" />
+              {trend}
+            </Badge>
+          )}
         </div>
-        <div className="flex-1">
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-        </div>
-        {trend && (
-          <Badge variant="outline" className="gap-1">
-            <TrendingUp className="h-3 w-3" />
-            {trend}
-          </Badge>
-        )}
       </CardContent>
     </Card>
   );
@@ -109,15 +106,15 @@ function RemediationCard({
     <Card className="hover-elevate" data-testid={`card-remediation-${remediation.id}`}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="space-y-1 flex-1">
-            <CardTitle className="text-base line-clamp-1" data-testid={`text-title-${remediation.id}`}>
+          <div className="space-y-1 flex-1 min-w-0">
+            <CardTitle className="text-sm sm:text-base line-clamp-1" data-testid={`text-title-${remediation.id}`}>
               {remediation.title}
             </CardTitle>
-            <CardDescription className="text-xs font-mono">
+            <CardDescription className="text-xs font-mono truncate">
               ID: {remediation.id}
             </CardDescription>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 shrink-0 flex-wrap justify-end">
             <Badge className={SEVERITY_COLORS[remediation.severity]}>
               {remediation.severity}
             </Badge>
@@ -148,11 +145,11 @@ function RemediationCard({
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t">
-          <div className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t flex-wrap">
+          <div className="text-xs text-muted-foreground truncate">
             Confidence: {Math.round(remediation.confidence * 100)}%
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 shrink-0">
             <Button 
               variant="ghost" 
               size="sm"
@@ -303,34 +300,18 @@ export default function SupportBugDashboard() {
   const stats = statsQuery.data?.data;
   const isLoading = pendingQuery.isLoading || allQuery.isLoading;
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-dashboard-title">
-            <Bug className="h-6 w-6 text-primary" />
-            Bug Remediation Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Review and approve AI-generated bug fixes
-          </p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={() => {
-            pendingQuery.refetch();
-            allQuery.refetch();
-            statsQuery.refetch();
-          }}
-          data-testid="button-refresh-dashboard"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: "support-bug-dashboard",
+    title: "Bug Remediation Dashboard",
+    subtitle: "Review and approve AI-generated bug fixes",
+    category: "admin",
+    maxWidth: "6xl",
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <StatCard title="Pending Review" value={stats.pending} icon={Clock} />
           <StatCard title="Approved" value={stats.approved} icon={CheckCircle} />
           <StatCard title="Applied" value={stats.applied} icon={Wrench} />
@@ -339,7 +320,7 @@ export default function SupportBugDashboard() {
       )}
 
       <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="pending" className="gap-2" data-testid="tab-pending">
             <Clock className="h-4 w-4" />
             Pending ({pending.length})
@@ -358,13 +339,12 @@ export default function SupportBugDashboard() {
           )}
 
           {!isLoading && pending.length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <CheckCircle className="h-12 w-12 mb-4 opacity-30" />
-                <p className="text-lg font-medium">All caught up!</p>
-                <p className="text-sm">No pending remediations to review.</p>
-              </CardContent>
-            </Card>
+            <UniversalEmptyState
+              icon={<CheckCircle className="h-12 w-12" />}
+              title="All caught up!"
+              description="No pending remediations to review."
+              data-testid="empty-state-pending"
+            />
           )}
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -390,13 +370,12 @@ export default function SupportBugDashboard() {
           )}
 
           {!isLoading && all.length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <Bug className="h-12 w-12 mb-4 opacity-30" />
-                <p className="text-lg font-medium">No remediations yet</p>
-                <p className="text-sm">Bug reports will appear here once analyzed by Trinity AI.</p>
-              </CardContent>
-            </Card>
+            <UniversalEmptyState
+              icon={<Bug className="h-12 w-12" />}
+              title="No remediations yet"
+              description="Bug reports will appear here once analyzed by Trinity AI."
+              data-testid="empty-state-all"
+            />
           )}
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -415,19 +394,19 @@ export default function SupportBugDashboard() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedRemediation} onOpenChange={() => setSelectedRemediation(null)}>
-        <DialogContent size="lg">
+      <UniversalModal open={!!selectedRemediation} onOpenChange={() => setSelectedRemediation(null)}>
+        <UniversalModalContent size="lg">
           {selectedRemediation && (
             <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+              <UniversalModalHeader>
+                <UniversalModalTitle className="flex items-center gap-2">
                   <FileCode className="h-5 w-5 text-primary" />
                   {selectedRemediation.title}
-                </DialogTitle>
-                <DialogDescription className="font-mono text-xs">
+                </UniversalModalTitle>
+                <UniversalModalDescription className="font-mono text-xs">
                   ID: {selectedRemediation.id}
-                </DialogDescription>
-              </DialogHeader>
+                </UniversalModalDescription>
+              </UniversalModalHeader>
 
               <div className="space-y-4">
                 <div className="flex gap-2">
@@ -468,13 +447,13 @@ export default function SupportBugDashboard() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+                <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground pt-2 border-t">
                   <span>Confidence: {Math.round(selectedRemediation.confidence * 100)}%</span>
                   <span>Created: {new Date(selectedRemediation.createdAt).toLocaleString()}</span>
                 </div>
               </div>
 
-              <DialogFooter>
+              <UniversalModalFooter>
                 {selectedRemediation.status === 'pending' && (
                   <>
                     <Button
@@ -503,23 +482,23 @@ export default function SupportBugDashboard() {
                     Close
                   </Button>
                 )}
-              </DialogFooter>
+              </UniversalModalFooter>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <UniversalModal open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <UniversalModalContent size="md">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               Reject Fix
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               Please provide a reason for rejecting this proposed fix.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <Textarea
             placeholder="Enter rejection reason (optional)"
             value={rejectReason}
@@ -527,7 +506,7 @@ export default function SupportBugDashboard() {
             rows={3}
             data-testid="input-reject-reason"
           />
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
               Cancel
             </Button>
@@ -544,9 +523,9 @@ export default function SupportBugDashboard() {
               )}
               Confirm Reject
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

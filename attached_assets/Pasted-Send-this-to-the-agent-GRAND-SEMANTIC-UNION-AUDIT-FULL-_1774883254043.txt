@@ -1,0 +1,1203 @@
+Send this to the agent:
+
+---
+
+**GRAND SEMANTIC UNION AUDIT — FULL PLATFORM COMMUNICATION AND FLOW INTEGRITY**
+
+You are the Architect and Gatekeeper. This is the most comprehensive audit the platform has ever undergone. Every feature, every flow, every pipeline, every communication channel, every automation, every role, every document, every notification, every broadcast, every database write — verified to work together as one unified system.
+
+This is not a code scan. This is a semantic interrogation. For every system ask what it is supposed to do, find the code that does it, verify it actually works, fix what does not, then confirm the fix holds.
+
+Deploy all 8 subagents simultaneously. You personally analyze all findings as a whole, identify cross-system issues no single subagent would catch, fix everything, and sign off only when the entire platform communicates correctly as one system.
+
+**Zero tolerance. All tests against ACME sandbox only. Statewide untouchable.**
+
+---
+
+**THE CORE SEMANTIC QUESTION FOR EVERY SYSTEM:**
+
+```
+1. What is this feature supposed to do?
+2. What triggers it?
+3. What does it do when triggered?
+4. What does it write to the database?
+5. Who gets notified?
+6. What gets broadcast in real time?
+7. What document or payload gets generated?
+8. How does Trinity know about it and act on it?
+9. Does it correctly identify which org and which user it belongs to?
+10. Does it leave a complete audit trail?
+```
+
+Ask and answer all 10 questions for every system. Fix any answer that does not match intent.
+
+---
+
+**SUBAGENT 1 — NOTIFICATION AND COMMUNICATION SEMANTIC UNION**
+
+*Every communication channel must work together as one unified system. NDS is the single sender. Trinity is the intelligence layer. Every message reaches the right person in the right language on the right channel.*
+
+**Q: When something happens on the platform does the right person always get notified through the right channel in the right language?**
+
+```bash
+# Step 1: Map every notification type to its trigger
+grep -rn "notification_type\|notificationType" \
+  server/services/notificationDeliveryService.ts | \
+  grep -oP "'[a-z_]+'" | sort | uniq > /tmp/notification_types.txt
+cat /tmp/notification_types.txt
+echo "Total notification types: $(wc -l < /tmp/notification_types.txt)"
+
+# Step 2: For each notification type verify a template exists
+grep -rn "getTemplate\|emailTemplate\|smsTemplate" \
+  server/services/notificationDeliveryService.ts | head -20
+# Every notification_type must have a corresponding template
+# Verify no notification type has a null or empty template
+
+# Step 3: Verify language preference is checked before every send
+grep -rn "preferred_language\|preferredLanguage\|getLanguage" \
+  server/services/notificationDeliveryService.ts | head -10
+# Must appear in the send pipeline not just in some templates
+
+# Step 4: Verify quiet hours enforcement
+grep -rn "quietHours\|quiet_hours\|isQuietHour" \
+  server/services/notificationDeliveryService.ts | head -10
+# Must be checked before every non-critical send
+
+# Step 5: Verify critical override bypasses quiet hours
+grep -rn "critical.*override\|CRITICAL.*bypass\|overrideQuietHours\|panic.*quiet\|duress.*quiet" \
+  server/services/notificationDeliveryService.ts | head -5
+
+# Step 6: Verify consent is checked before Trinity communications
+grep -rn "checkConsent\|consentCheck\|trinity_voice_calls\|trinity_sms\|consent_preferences" \
+  server/services/notificationDeliveryService.ts | head -10
+
+# Step 7: Verify retry logic with exponential backoff
+grep -rn "retry\|exponential\|backoff\|nextRetryAt\|retry_count" \
+  server/services/notificationDeliveryService.ts | head -10
+
+# Step 8: Run the cross-channel smoke test
+# Trigger a shift assignment and verify ALL notification channels fire correctly
+curl -s -X PATCH "http://localhost:5000/api/shifts/[acme_shift_id]/assign" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"officerId":"[acme_officer_id]"}'
+
+sleep 3
+
+# Check every channel fired
+psql $DATABASE_URL -c "
+  SELECT channel, status, notification_type, created_at
+  FROM notification_deliveries
+  WHERE workspace_id = '[acme_id]'
+  AND notification_type = 'shift_assigned'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+  ORDER BY channel
+"
+# Must show: email record, sms record (if consented), push record (if enabled), in_app record
+
+# Step 9: Verify unsubscribe and opt-out honored
+psql $DATABASE_URL -c "
+  UPDATE consent_preferences 
+  SET trinity_sms = false 
+  WHERE workspace_id = '[acme_id]'
+  LIMIT 1
+"
+
+# Trigger another notification
+curl -s -X POST "http://localhost:5000/api/notifications/test" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"type":"compliance_reminder","workspaceId":"[acme_id]"}'
+
+psql $DATABASE_URL -c "
+  SELECT channel, status FROM notification_deliveries
+  WHERE notification_type = 'compliance_reminder'
+  AND created_at > NOW() - INTERVAL '10 seconds'
+"
+# SMS must NOT appear — consent was revoked
+
+# Step 10: Verify NDS is the ONLY sender — no bypasses
+grep -rn "resend\.emails\.send\|twilio\.messages\.create\|sendEmail\|sendSMS" \
+  server/ --include="*.ts" | \
+  grep -v "notificationDeliveryService\|emailCore\|node_modules\|test\|panic\|magic_link" | \
+  wc -l
+# Must be 0 — everything goes through NDS
+
+# FIX EVERY ISSUE FOUND
+# Report: channels working, channels broken, fixes applied
+```
+
+---
+
+**SUBAGENT 2 — REAL-TIME BROADCAST SEMANTIC UNION**
+
+*Every state change must reach every affected session in real time. The dashboard must update when an officer clocks in. The schedule must update when a shift is assigned. Notifications must appear without refresh.*
+
+**Q: When data changes does every open session that cares about it update immediately?**
+
+```bash
+# Step 1: Map all broadcast types and their triggers
+grep -rn "broadcastToWorkspace(" server/ --include="*.ts" | \
+  grep -v node_modules | \
+  grep -oP "type: '[^']+'" | sort | uniq > /tmp/broadcast_types.txt
+cat /tmp/broadcast_types.txt
+echo "Total broadcast types: $(wc -l < /tmp/broadcast_types.txt)"
+
+# Step 2: Find mutations that SHOULD broadcast but don't
+MUTATIONS=$(grep -rn "router\.\(post\|patch\|put\|delete\)" server/routes/ --include="*.ts" | \
+  grep -v node_modules | wc -l)
+BROADCASTS=$(grep -rn "broadcastToWorkspace" server/routes/ --include="*.ts" | \
+  grep -v node_modules | wc -l)
+echo "Total mutations: $MUTATIONS"
+echo "Total broadcasts: $BROADCASTS"
+echo "Coverage: ~$((BROADCASTS * 100 / MUTATIONS))%"
+# Should be at least 40% coverage — mutations affecting shared state need broadcasts
+
+# Step 3: Verify clock-in broadcasts to supervisor dashboard
+# Open supervisor dashboard in one terminal
+# Clock in an officer in another
+curl -s -X POST "http://localhost:5000/api/time-entries/clock-in" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{"shiftId":"[shift_id]","latitude":29.4241,"longitude":-98.4936}'
+
+# Check broadcast fired
+grep -rn "officer_clocked_in\|clockin.*broadcast\|broadcast.*clockin" \
+  server/ --include="*.ts" | grep "broadcastToWorkspace" | head -3
+
+# Step 4: Verify notification badge broadcasts
+curl -s -X POST "http://localhost:5000/api/notifications" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"type":"test","userId":"[officer_id]"}'
+
+grep -rn "notification_received\|NOTIFICATION_RECEIVED\|badge.*update\|unread.*broadcast" \
+  server/ --include="*.ts" | head -5
+
+# Step 5: Verify schedule update broadcasts
+curl -s -X POST "http://localhost:5000/api/shifts" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"postId":"[post_id]","startTime":"08:00","endTime":"16:00","shiftDate":"2026-04-01"}'
+
+grep -rn "shift_created\|schedule_updated\|SHIFT_CREATED" \
+  server/ --include="*.ts" | grep "broadcastToWorkspace" | head -3
+
+# Step 6: Verify client handles every broadcast type
+grep -rn "case '\|type ===\|event\.type\|message\.type" \
+  client/src/providers/WebSocketProvider.tsx \
+  client/src/hooks/useWebSocket.ts 2>/dev/null | head -30
+
+# Cross-reference with server broadcast types
+comm -23 \
+  <(cat /tmp/broadcast_types.txt | grep -oP "'[^']+'" | tr -d "'" | sort) \
+  <(grep -rn "case '\|type ==" client/src/ --include="*.tsx" | grep -oP "case '[^']+'" | tr -d "case '" | sort) \
+  > /tmp/unhandled_broadcasts.txt
+
+echo "Server broadcasts not handled by client:"
+cat /tmp/unhandled_broadcasts.txt
+# Every unhandled broadcast type = stale UI — fix each one
+
+# Step 7: Verify WebSocket auth before any data flows
+grep -rn "ws\.authenticated\|isAuthenticated.*ws\|wsAuth\|serverAuth" \
+  server/websocket.ts | head -5
+# Auth check must precede any data send
+
+# Step 8: Verify WebSocket reconnection works
+grep -rn "reconnect\|onClose.*reconnect\|retryConnection\|exponential.*ws" \
+  client/src/ --include="*.tsx" --include="*.ts" | head -5
+# Client must auto-reconnect on disconnect
+
+# Step 9: Verify workspace scoping on every broadcast
+grep -rn "broadcastToWorkspace" server/ --include="*.ts" | \
+  grep -v node_modules | \
+  grep -v "workspaceId\|workspace_id" | head -10
+# Any broadcast NOT scoped by workspaceId is a potential cross-workspace leak
+
+# FIX: Add missing broadcast handlers in client WebSocketProvider
+# FIX: Add missing broadcasts after mutations that affect shared state
+# FIX: Add workspace scoping to any unscoped broadcasts
+```
+
+---
+
+**SUBAGENT 3 — TRINITY ORCHESTRATION SEMANTIC UNION**
+
+*Trinity must be aware of everything happening on the platform, able to act on it, and correctly attribute every action to herself in the audit trail.*
+
+**Q: Is Trinity fully integrated with every platform system as an intelligent actor?**
+
+```bash
+# Step 1: Verify Trinity system actor exists and is valid
+psql $DATABASE_URL -c "
+  SELECT id, email, role, created_at 
+  FROM users 
+  WHERE email LIKE '%trinity%system%' OR role = 'system'
+"
+# Must exist — if missing create it immediately
+
+# Step 2: Verify all Trinity actions write to DB with system actor ID
+psql $DATABASE_URL -c "
+  SELECT action_id, COUNT(*) as executions,
+    COUNT(CASE WHEN audit_written THEN 1 END) as with_audit
+  FROM ai_brain_jobs
+  WHERE created_at > NOW() - INTERVAL '24 hours'
+  GROUP BY action_id
+  HAVING COUNT(*) > COUNT(CASE WHEN audit_written THEN 1 END)
+"
+# Any row here = Trinity action without audit trail — fix each one
+
+# Step 3: Verify Trinity actions are registered and callable
+curl -s "http://localhost:5000/api/trinity/actions" \
+  -H "Authorization: Bearer [token]" | jq 'length'
+# Expected: 902 registered actions
+
+# Step 4: Verify Trinity can access every platform domain
+TRINITY_DOMAINS=(
+  "schedule.suggest_coverage"
+  "compliance.license_expiry_check"
+  "finance.invoice.overdue_check"
+  "sales.lead.score"
+  "interview.screen"
+  "voice.credits.status"
+  "welfare.wellness.status"
+  "system.resolve_id"
+)
+
+for action in "${TRINITY_DOMAINS[@]}"; do
+  RESULT=$(curl -s -X POST "http://localhost:5000/api/ai-brain/actions/execute" \
+    -H "Authorization: Bearer [token]" \
+    -d "{\"actionId\":\"$action\",\"params\":{\"workspaceId\":\"[acme_id]\"}}")
+  STATUS=$(echo $RESULT | jq -r '.status // .error // "ok"')
+  echo "$action: $STATUS"
+done
+# Every action must return data or ok — never 404 or undefined
+
+# Step 5: Verify Trinity approval gates work for autonomous actions
+# Actions that contact external parties must require approval
+REQUIRES_APPROVAL=(
+  "sales.outreach.draft"
+  "interview.send_questions"
+  "employment_verification.release"
+)
+
+for action in "${REQUIRES_APPROVAL[@]}"; do
+  grep -rn "requiresApproval\|pending_approval\|PENDING_APPROVAL" \
+    server/services/helpai/ --include="*.ts" | grep "$action" | head -2
+  echo "Approval gate check for $action: $([ $? -eq 0 ] && echo 'EXISTS' || echo 'MISSING')"
+done
+
+# Step 6: Verify Trinity responds in correct language
+psql $DATABASE_URL -c "
+  UPDATE users SET preferred_language = 'es' 
+  WHERE id = '[officer_user_id]'
+"
+
+SPANISH_RESPONSE=$(curl -s -X POST "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d '{"message":"¿Cuándo es mi próximo turno?","workspaceId":"[acme_id]"}')
+
+echo $SPANISH_RESPONSE | jq '.message' | head -5
+# Must respond in Spanish
+
+# Step 7: Verify Trinity session isolation between users
+SESSION_A=$(curl -s -X POST "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [org_owner_token]" \
+  -d '{"message":"I am looking at officer Martinez","workspaceId":"[acme_id]"}' | \
+  jq -r '.sessionId')
+
+SESSION_B=$(curl -s -X POST "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [supervisor_token]" \
+  -d '{"message":"What was I just looking at?","workspaceId":"[acme_id]"}')
+
+echo $SESSION_B | jq '.message'
+# Trinity must NOT mention Martinez in session B
+# Session A context must not bleed into session B
+
+# Step 8: Verify Trinity proactive monitoring produces insights
+curl -s -X POST "http://localhost:5000/api/admin/trinity/trigger-scan" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"workspaceId":"[acme_id]","scanType":"full"}'
+
+sleep 5
+
+psql $DATABASE_URL -c "
+  SELECT insight_type, content, created_at
+  FROM trinity_insights
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 5
+"
+# Must show recent insights from full scan
+
+# Step 9: Verify Trinity email processing works
+# Send email to Trinity's address for ACME
+curl -s -X POST "http://localhost:5000/api/inbound-email/webhook" \
+  -d "to=trinity.acmsecurity@mail.coaileague.com&from=test@client.com&subject=Need more officers&body=We need 2 more officers at Site A starting Monday"
+
+sleep 3
+# Verify email was processed and routed correctly
+psql $DATABASE_URL -c "
+  SELECT * FROM inbound_emails 
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 1
+"
+
+# FIX EVERY ISSUE FOUND
+```
+
+---
+
+**SUBAGENT 4 — DOCUMENT AND FORM SEMANTIC UNION**
+
+*Every document generated must be correctly linked to the right org and user, have a reference number, be searchable by Trinity, and be accessible to the right people.*
+
+**Q: Does every document know who it belongs to, where it came from, and can Trinity find it?**
+
+```bash
+# Step 1: Audit document vault for missing identifiers
+psql $DATABASE_URL -c "
+  SELECT 
+    COUNT(*) as total,
+    COUNT(document_number) as has_doc_number,
+    COUNT(integrity_hash) as has_hash,
+    COUNT(employee_id) + COUNT(client_id) + COUNT(entity_id) as has_entity_link,
+    COUNT(workspace_id) as has_workspace
+  FROM document_vault
+  WHERE workspace_id = '[acme_id]'
+"
+# All counts must equal total — no nulls allowed
+
+# Step 2: Find documents missing any required field
+psql $DATABASE_URL -c "
+  SELECT id, document_type, created_at,
+    CASE WHEN document_number IS NULL THEN 'MISSING document_number' END as issue1,
+    CASE WHEN integrity_hash IS NULL THEN 'MISSING integrity_hash' END as issue2,
+    CASE WHEN employee_id IS NULL AND client_id IS NULL AND entity_id IS NULL 
+         THEN 'MISSING entity link' END as issue3
+  FROM document_vault
+  WHERE workspace_id = '[acme_id]'
+  AND (document_number IS NULL OR integrity_hash IS NULL 
+       OR (employee_id IS NULL AND client_id IS NULL AND entity_id IS NULL))
+  LIMIT 20
+"
+# Fix every row returned
+
+# Step 3: Verify form submissions link to document vault
+psql $DATABASE_URL -c "
+  SELECT 
+    COUNT(*) as total_submissions,
+    COUNT(generated_document_id) as with_document,
+    COUNT(generated_document_url) as with_url
+  FROM form_submissions
+  WHERE workspace_id = '[acme_id]'
+"
+# with_document and with_url should equal total_submissions
+
+# Step 4: Verify Trinity can search and retrieve documents
+curl -s -X POST "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [org_owner_token]" \
+  -d '{"message":"Show me all documents for officer EMP-ACM-00034","workspaceId":"[acme_id]"}'
+
+# Expected: Trinity returns list of documents for that officer
+# If Trinity cannot find documents by employee_number: fix resolver
+
+# Step 5: Verify document access control
+# Org owner can see all documents in workspace
+DOCS=$(curl -s "http://localhost:5000/api/documents?workspaceId=[acme_id]" \
+  -H "Authorization: Bearer [org_owner_token]")
+echo "Docs visible to org owner: $(echo $DOCS | jq 'length')"
+
+# Officer can only see their own documents
+OFFICER_DOCS=$(curl -s "http://localhost:5000/api/documents/my" \
+  -H "Authorization: Bearer [officer_token]")
+echo "Docs visible to officer: $(echo $OFFICER_DOCS | jq 'length')"
+
+# Attempt cross-workspace document access
+curl -s "http://localhost:5000/api/documents/[acme_doc_id]" \
+  -H "Authorization: Bearer [different_workspace_token]" | jq '.error'
+# Must return error — cannot access other workspace documents
+
+# Step 6: Verify signed documents correctly update onboarding status
+psql $DATABASE_URL -c "
+  SELECT ot.task_title, ot.status, ot.completed_at
+  FROM onboarding_tasks ot
+  JOIN employees e ON e.id = ot.employee_id
+  WHERE e.workspace_id = '[acme_id]'
+  AND ot.task_type IN ('offer_letter', 'onboarding_w4', 'handbook_acknowledgment')
+  ORDER BY ot.employee_id, ot.task_title
+  LIMIT 10
+"
+# Completed forms must show completed status
+
+# Step 7: Verify document number search works
+curl -s "http://localhost:5000/api/search?q=DOC-20260329&workspaceId=[acme_id]" \
+  -H "Authorization: Bearer [token]" | jq '.[0]'
+# Must return matching document with deep link
+
+# Step 8: Verify SHA-256 integrity can be verified
+psql $DATABASE_URL -c "
+  SELECT id, document_number, integrity_hash, document_url
+  FROM document_vault
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 3
+"
+# Verify: download doc from document_url, calculate SHA-256, compare to integrity_hash
+# They must match — proving document has not been tampered with
+
+# FIX EVERY ISSUE FOUND
+```
+
+---
+
+**SUBAGENT 5 — WORKFLOW AND PIPELINE SEMANTIC UNION**
+
+*Every workflow must flow from trigger to completion without breaking. The cascade, the onboarding pipeline, the sales pipeline, the compliance pipeline — all must work end to end.*
+
+**Q: Do all workflows trigger correctly, flow completely, and reach their defined end state?**
+
+```bash
+# Step 1: Map all workflows and their expected states
+declare -A WORKFLOWS=(
+  ["calloff_cascade"]="calloff → open shift → notifications → acceptance → cascade resolved"
+  ["officer_lifecycle"]="created → onboarding → activated → scheduled → paid → terminated"
+  ["invoice_pipeline"]="generated → sent → paid → QB synced → audit logged"
+  ["sales_pipeline"]="captured → qualified → outreach → proposal → contract → onboarded"
+  ["compliance_cycle"]="violation detected → notification → remediation → resolved"
+  ["interview_pipeline"]="application → screening → chat interview → voice interview → hired"
+  ["onboarding_pipeline"]="offer → paperwork → compliance docs → platform setup → activated"
+  ["document_pipeline"]="generated → sent for signature → signed → stored → task completed"
+)
+
+for workflow in "${!WORKFLOWS[@]}"; do
+  echo "=== Checking: $workflow ==="
+  echo "Expected: ${WORKFLOWS[$workflow]}"
+done
+
+# Step 2: Test calloff cascade end-to-end
+# Create open shift
+SHIFT_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM shifts 
+  WHERE workspace_id = '[acme_id]'
+  AND status = 'published'
+  AND assigned_officer_id IS NOT NULL
+  LIMIT 1
+" | tr -d ' ')
+
+# Submit calloff
+CALLOFF=$(curl -s -X POST "http://localhost:5000/api/calloffs" \
+  -H "Authorization: Bearer [officer_token]" \
+  -d "{\"shiftId\":\"$SHIFT_ID\",\"reason\":\"sick\"}")
+echo "Calloff result: $(echo $CALLOFF | jq '.status')"
+
+sleep 3
+
+# Verify cascade triggered
+psql $DATABASE_URL -c "
+  SELECT cascade_tier, notifications_sent, status, created_at
+  FROM replacement_cascade_logs
+  WHERE shift_id = '$SHIFT_ID'
+  ORDER BY created_at DESC LIMIT 3
+"
+# Must show cascade initiated with Tier 1 notifications
+
+# Verify shift marked as calloff
+psql $DATABASE_URL -c "
+  SELECT status FROM shifts WHERE id = '$SHIFT_ID'
+"
+# Must show 'calloff' or 'open'
+
+# Step 3: Verify sales pipeline stage transitions
+psql $DATABASE_URL -c "
+  SELECT stage, COUNT(*) FROM sales_leads 
+  WHERE workspace_id = '[acme_id]'
+  GROUP BY stage ORDER BY stage
+"
+# Should show distribution across all 7 stages
+
+# Advance a lead manually and verify pipeline tracks
+LEAD_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM sales_leads 
+  WHERE workspace_id = '[acme_id]'
+  AND stage = 'captured'
+  LIMIT 1
+" | tr -d ' ')
+
+curl -s -X PATCH "http://localhost:5000/api/sales/leads/$LEAD_ID" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"stage":"qualified","score":75}'
+
+psql $DATABASE_URL -c "
+  SELECT stage, lead_score, updated_at 
+  FROM sales_leads WHERE id = '$LEAD_ID'
+"
+# Must show updated stage and score
+
+# Step 4: Verify compliance pipeline fires alerts
+psql $DATABASE_URL -c "
+  UPDATE officer_licenses 
+  SET expiry_date = NOW() + INTERVAL '5 days'
+  WHERE employee_id IN (
+    SELECT id FROM employees 
+    WHERE workspace_id = '[acme_id]'
+    LIMIT 1
+  )
+"
+
+curl -s -X POST "http://localhost:5000/api/admin/trinity/trigger-scan" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"workspaceId":"[acme_id]","scanType":"license_expiry"}'
+
+sleep 3
+
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE notification_type LIKE '%license_expiry%'
+  AND workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '30 seconds'
+"
+# Must show alert fired
+
+# Step 5: Verify invoice pipeline with QB sync
+INVOICE_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM invoices 
+  WHERE workspace_id = '[acme_id]'
+  AND status = 'sent'
+  LIMIT 1
+" | tr -d ' ')
+
+curl -s -X PATCH "http://localhost:5000/api/invoices/$INVOICE_ID/pay" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"paymentReference":"CHK-TEST-001","amount":1500.00}'
+
+sleep 2
+
+psql $DATABASE_URL -c "
+  SELECT i.status, i.paid_at,
+    (SELECT status FROM quickbooks_sync_logs WHERE entity_id = i.id ORDER BY created_at DESC LIMIT 1) as qb_sync_status,
+    (SELECT COUNT(*) FROM universal_audit_log WHERE entity_id = i.id) as audit_records
+  FROM invoices i
+  WHERE i.id = '$INVOICE_ID'
+"
+# status must be 'paid'
+# qb_sync_status must be 'synced' or 'queued'
+# audit_records must be > 0
+
+# Step 6: Verify onboarding pipeline auto-activates officer
+# Check if all Tier 1 tasks complete → officer status changes
+psql $DATABASE_URL -c "
+  SELECT e.status, 
+    COUNT(ot.id) as total_tier1,
+    COUNT(CASE WHEN ot.status = 'completed' THEN 1 END) as completed_tier1
+  FROM employees e
+  LEFT JOIN onboarding_tasks ot ON ot.employee_id = e.id AND ot.tier = 1 AND ot.is_blocking = true
+  WHERE e.workspace_id = '[acme_id]'
+  AND e.status = 'pending'
+  GROUP BY e.id, e.status
+  HAVING COUNT(CASE WHEN ot.status = 'completed' THEN 1 END) = COUNT(ot.id)
+"
+# Any row here = officer whose Tier 1 is complete but status is still pending
+# This means auto-activation is not firing — fix
+
+# FIX EVERY BROKEN PIPELINE
+```
+
+---
+
+**SUBAGENT 6 — ROLE AND PERMISSION SEMANTIC UNION**
+
+*Every user sees exactly what they should see and can do exactly what they should be able to do — nothing more, nothing less.*
+
+**Q: Does every role have the correct access — no more, no less than intended?**
+
+```bash
+# Step 1: Define what each role SHOULD see and do
+declare -A ROLE_PERMISSIONS=(
+  ["org_owner"]="everything in their workspace"
+  ["org_admin"]="everything except billing and workspace deletion"
+  ["org_manager"]="officers, shifts, incidents, reports — not payroll details"
+  ["supervisor"]="their team shifts, timesheets, incidents — not financials"
+  ["officer"]="own schedule, own pay stubs, own documents — nothing else"
+  ["compliance_officer"]="compliance data, audit logs — not payroll"
+  ["platform_staff"]="all workspaces read, platform admin — no tenant mutations"
+  ["sra_auditor"]="one workspace read-only during audit period"
+)
+
+# Step 2: Test org_owner — can they access everything?
+for endpoint in \
+  "/api/employees?workspaceId=[acme_id]" \
+  "/api/invoices?workspaceId=[acme_id]" \
+  "/api/payroll/runs?workspaceId=[acme_id]" \
+  "/api/compliance/dashboard?workspaceId=[acme_id]" \
+  "/api/trinity/insights?workspaceId=[acme_id]" \
+  "/api/analytics/bi?workspaceId=[acme_id]" \
+  "/api/settings/workspace" \
+  "/api/trinity/pending-approvals?workspaceId=[acme_id]"; do
+  
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    "http://localhost:5000$endpoint" \
+    -H "Authorization: Bearer [org_owner_token]")
+  echo "org_owner $endpoint: $STATUS"
+  # All must be 200 not 403
+done
+
+# Step 3: Test officer — they should NOT access financial or other officers' data
+for endpoint in \
+  "/api/invoices?workspaceId=[acme_id]" \
+  "/api/payroll/runs?workspaceId=[acme_id]" \
+  "/api/employees?workspaceId=[acme_id]" \
+  "/api/analytics/bi?workspaceId=[acme_id]" \
+  "/api/compliance/dashboard?workspaceId=[acme_id]"; do
+  
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    "http://localhost:5000$endpoint" \
+    -H "Authorization: Bearer [officer_token]")
+  echo "officer $endpoint: $STATUS"
+  # All must be 403 not 200
+done
+
+# Step 4: Test officer CAN access their own data
+for endpoint in \
+  "/api/shifts/my-schedule" \
+  "/api/payroll/stubs/my" \
+  "/api/documents/my" \
+  "/api/notifications?workspaceId=[acme_id]"; do
+  
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    "http://localhost:5000$endpoint" \
+    -H "Authorization: Bearer [officer_token]")
+  echo "officer own-data $endpoint: $STATUS"
+  # All must be 200
+done
+
+# Step 5: Test platform_staff — cross-workspace read
+psql_result=$(curl -s "http://localhost:5000/api/admin/workspaces" \
+  -H "Authorization: Bearer [platform_staff_token]" | jq 'length')
+echo "platform_staff sees $psql_result workspaces"
+# Should see multiple workspaces
+
+# Platform staff should NOT mutate tenant data
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X PATCH "http://localhost:5000/api/employees/[acme_officer_id]" \
+  -H "Authorization: Bearer [platform_staff_token]" \
+  -d '{"payRate": 0.01}')
+echo "platform_staff mutate tenant: $STATUS"
+# Must be 403
+
+# Step 6: Test SRA auditor isolation
+SRA_TOKEN=$(curl -s -X POST "http://localhost:5000/api/regulatory-audit/login" \
+  -d '{"email":"[sra_email]","password":"[sra_pass]","totpCode":"[code]"}' | \
+  jq -r '.token')
+
+# Can read authorized workspace
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "http://localhost:5000/api/regulatory-audit/officers?workspaceId=[acme_id]" \
+  -H "Authorization: Bearer $SRA_TOKEN")
+echo "SRA read authorized workspace: $STATUS"
+# Must be 200
+
+# Cannot access different workspace
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "http://localhost:5000/api/regulatory-audit/officers?workspaceId=[different_id]" \
+  -H "Authorization: Bearer $SRA_TOKEN")
+echo "SRA read unauthorized workspace: $STATUS"
+# Must be 403
+
+# Cannot write anything
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "http://localhost:5000/api/employees" \
+  -H "Authorization: Bearer $SRA_TOKEN" \
+  -d '{"firstName":"Test"}')
+echo "SRA write attempt: $STATUS"
+# Must be 403
+
+# Step 7: Verify roleDefinitions.ts is the single source of truth
+grep -rn "'org_owner'\|'officer'\|'supervisor'" \
+  server/routes/ --include="*.ts" | \
+  grep -v "roleDefinitions\|requireRole\|hasRole\|canAssign\|checkRole" | \
+  head -20
+# Must return zero — no hardcoded role strings outside roleDefinitions
+
+# FIX EVERY PERMISSION VIOLATION FOUND
+```
+
+---
+
+**SUBAGENT 7 — DATA INTEGRITY AND UNIVERSAL ID SEMANTIC UNION**
+
+*Every entity must be identifiable. Every record must belong to the right org. Every financial calculation must be exact. Every audit trail must be complete.*
+
+**Q: Does every piece of data know exactly who it belongs to and can it always be found?**
+
+```bash
+# Step 1: Verify universal ID coverage
+psql $DATABASE_URL -c "
+  SELECT 
+    'workspaces' as entity,
+    COUNT(*) as total,
+    COUNT(org_id) as with_id,
+    COUNT(*) - COUNT(org_id) as missing
+  FROM workspaces
+  UNION ALL
+  SELECT 'clients', COUNT(*), COUNT(client_number), COUNT(*) - COUNT(client_number) FROM clients
+  UNION ALL
+  SELECT 'employees', COUNT(*), COUNT(employee_number), COUNT(*) - COUNT(employee_number) FROM employees
+  UNION ALL
+  SELECT 'invoices', COUNT(*), COUNT(invoice_number), COUNT(*) - COUNT(invoice_number) FROM invoices
+  UNION ALL
+  SELECT 'documents', COUNT(*), COUNT(document_number), COUNT(*) - COUNT(document_number) FROM document_vault
+  UNION ALL
+  SELECT 'time_entries', COUNT(*), COUNT(clockin_reference), COUNT(*) - COUNT(clockin_reference) FROM time_entries
+"
+# All 'missing' columns must be 0
+
+# Step 2: Verify financial calculation precision
+psql $DATABASE_URL -c "
+  SELECT COUNT(*) FROM invoices 
+  WHERE ABS(subtotal - (
+    SELECT COALESCE(SUM(amount), 0) 
+    FROM invoice_line_items 
+    WHERE invoice_id = invoices.id
+  )) > 0.01
+"
+# Must be 0 — subtotal must exactly match sum of line items
+
+psql $DATABASE_URL -c "
+  SELECT COUNT(*) FROM payroll_run_details 
+  WHERE net_pay < 0
+"
+# Must be 0 — no negative net pay
+
+# Step 3: Verify workspace isolation — no orphaned cross-workspace records
+psql $DATABASE_URL -c "
+  SELECT 'employees' as entity, COUNT(*) as orphans
+  FROM employees e
+  WHERE NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.id = e.workspace_id)
+  UNION ALL
+  SELECT 'clients', COUNT(*) FROM clients c
+  WHERE NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.id = c.workspace_id)
+  UNION ALL
+  SELECT 'shifts', COUNT(*) FROM shifts s
+  WHERE NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.id = s.workspace_id)
+  UNION ALL
+  SELECT 'invoices', COUNT(*) FROM invoices i
+  WHERE NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.id = i.workspace_id)
+"
+# All orphan counts must be 0
+
+# Step 4: Verify universal ID resolver handles all prefixes
+for prefix in "ORG" "CLT" "EMP" "INV" "DOC" "CLK"; do
+  SAMPLE=$(psql $DATABASE_URL -t -c "
+    SELECT CASE 
+      WHEN '$prefix' = 'ORG' THEN org_id
+      WHEN '$prefix' = 'CLT' THEN client_number
+      WHEN '$prefix' = 'EMP' THEN employee_number
+      WHEN '$prefix' = 'INV' THEN invoice_number
+      WHEN '$prefix' = 'DOC' THEN document_number
+      WHEN '$prefix' = 'CLK' THEN clockin_reference
+    END as id
+    FROM (
+      SELECT org_id FROM workspaces WHERE org_id IS NOT NULL LIMIT 1
+    ) w, (SELECT client_number FROM clients WHERE client_number IS NOT NULL LIMIT 1) c,
+    (SELECT employee_number FROM employees WHERE employee_number IS NOT NULL LIMIT 1) e,
+    (SELECT invoice_number FROM invoices WHERE invoice_number IS NOT NULL LIMIT 1) i,
+    (SELECT document_number FROM document_vault WHERE document_number IS NOT NULL LIMIT 1) d,
+    (SELECT clockin_reference FROM time_entries WHERE clockin_reference IS NOT NULL LIMIT 1) t
+    LIMIT 1
+  " | tr -d ' ')
+  
+  if [ -n "$SAMPLE" ]; then
+    RESOLVE=$(curl -s "http://localhost:5000/api/search?q=$SAMPLE&workspaceId=[acme_id]" \
+      -H "Authorization: Bearer [token]")
+    echo "$prefix ($SAMPLE): $(echo $RESOLVE | jq 'length') results"
+    # Must return 1 result with correct entity type
+  fi
+done
+
+# Step 5: Verify audit log completeness
+psql $DATABASE_URL -c "
+  SELECT actor_id = 'trinity-system-actor-000000000000' as is_trinity,
+    COUNT(*) as records,
+    COUNT(CASE WHEN actor_id IS NULL THEN 1 END) as unattributed
+  FROM universal_audit_log
+  WHERE workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '24 hours'
+  GROUP BY is_trinity
+"
+# unattributed must be 0 — every action attributed to someone
+
+# Step 6: Verify SRA audit log is truly append-only
+grep -rn "UPDATE.*sra_audit_log\|DELETE.*sra_audit_log" \
+  server/ --include="*.ts" | grep -v node_modules | wc -l
+# Must be 0
+
+# Step 7: Verify document integrity hashes are valid
+psql $DATABASE_URL -c "
+  SELECT COUNT(*) FROM document_vault
+  WHERE workspace_id = '[acme_id]'
+  AND (integrity_hash IS NULL OR LENGTH(integrity_hash) != 64)
+"
+# Must be 0 — all hashes must be valid 64-char SHA-256
+
+# FIX ALL DATA INTEGRITY ISSUES
+```
+
+---
+
+**SUBAGENT 8 — END-TO-END USER JOURNEY SEMANTIC UNION**
+
+*Every user type must be able to complete their core job from start to finish without hitting a broken step.*
+
+**Q: Can every user type complete their full workflow without encountering a broken feature?**
+
+```bash
+# JOURNEY 1: New Officer From Application to First Paycheck
+echo "=== Testing: Officer Journey ==="
+
+# 1a. Application submitted via online form
+APPLY=$(curl -s -X POST "http://localhost:5000/api/forms/public/[job_app_token]/submit" \
+  -d '{"data":{"firstName":"Journey","lastName":"Test","email":"journey@test.com","phone":"210-555-0099","positionApplied":"Unarmed Security Officer","hasLicense":"Yes","yearsExperience":"1-3 years","availability":"Any shift","certifyAccurate":true},"signatureData":"data:image/png;base64,iVBORw0K...","signatureType":"drawn"}')
+echo "1a Apply: $(echo $APPLY | jq '.success')"
+
+sleep 3
+
+# 1b. Candidate record created by Trinity
+CANDIDATE=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM interview_candidates 
+  WHERE email = 'journey@test.com'
+  LIMIT 1
+" | tr -d ' ')
+echo "1b Candidate created: $([ -n '$CANDIDATE' ] && echo 'YES' || echo 'NO — FIX')"
+
+# 1c. Trinity scores candidate
+echo "1c Trinity score: $(psql $DATABASE_URL -t -c "SELECT trinity_score FROM interview_candidates WHERE id = '$CANDIDATE'" | tr -d ' ')"
+
+# 1d. Org owner hires candidate
+HIRE=$(curl -s -X POST "http://localhost:5000/api/recruitment/hire" \
+  -H "Authorization: Bearer [org_owner_token]" \
+  -d "{\"candidateId\":\"$CANDIDATE\",\"offeredPayRate\":15.00,\"startDate\":\"2026-04-15\"}")
+echo "1d Hire: $(echo $HIRE | jq '.success')"
+EMPLOYEE_ID=$(echo $HIRE | jq -r '.employeeId')
+
+sleep 3
+
+# 1e. Onboarding forms sent automatically
+PENDING_FORMS=$(curl -s "http://localhost:5000/api/forms/invitations/pending" \
+  -H "Authorization: Bearer [org_owner_token]" | jq "[.[] | select(.context_id == \"$EMPLOYEE_ID\")] | length")
+echo "1e Onboarding forms sent: $PENDING_FORMS"
+
+# 1f. Officer completes forms (simulate submission for each)
+# [Loop through each pending form and submit it]
+
+# 1g. Officer auto-activated after all Tier 1 complete
+sleep 5
+STATUS=$(psql $DATABASE_URL -t -c "SELECT status FROM employees WHERE id = '$EMPLOYEE_ID'" | tr -d ' ')
+echo "1g Officer status: $STATUS"
+
+# 1h. Officer assigned to shift
+ASSIGN=$(curl -s -X PATCH "http://localhost:5000/api/shifts/[acme_shift_id]/assign" \
+  -H "Authorization: Bearer [org_owner_token]" \
+  -d "{\"officerId\":\"$EMPLOYEE_ID\"}")
+echo "1h Shift assigned: $(echo $ASSIGN | jq '.success')"
+
+# 1i. Officer clocks in
+CLOCKIN=$(curl -s -X POST "http://localhost:5000/api/time-entries/clock-in" \
+  -H "Authorization: Bearer [new_officer_token]" \
+  -d '{"shiftId":"[shift_id]","latitude":29.4241,"longitude":-98.4936}')
+echo "1i Clock in: $(echo $CLOCKIN | jq '.clockinReference')"
+
+# 1j. Officer clocks out
+CLOCKOUT=$(curl -s -X POST "http://localhost:5000/api/time-entries/clock-out" \
+  -H "Authorization: Bearer [new_officer_token]" \
+  -d "{\"timeEntryId\":\"$(echo $CLOCKIN | jq -r '.timeEntryId')\"}")
+echo "1j Clock out: $(echo $CLOCKOUT | jq '.totalHours')"
+
+# 1k. Payroll run includes this officer
+PAYROLL=$(curl -s -X POST "http://localhost:5000/api/payroll/runs" \
+  -H "Authorization: Bearer [org_owner_token]" \
+  -d '{"periodStart":"2026-04-01","periodEnd":"2026-04-15","workspaceId":"[acme_id]"}')
+echo "1k Payroll run: $(echo $PAYROLL | jq '.status')"
+
+# 1l. Officer can see their pay stub
+STUB=$(curl -s "http://localhost:5000/api/payroll/stubs/my" \
+  -H "Authorization: Bearer [new_officer_token]")
+echo "1l Pay stub visible: $(echo $STUB | jq 'length')"
+
+echo "=== Officer Journey Complete ==="
+echo "Broken steps: check any outputs above showing null, false, or error"
+
+# -----------------------------------------------
+
+# JOURNEY 2: New Client From Prospect to Invoiced
+echo "=== Testing: Client Journey ==="
+
+# 2a. Lead enters system from phone/email
+LEAD=$(curl -s -X POST "http://localhost:5000/api/sales/leads" \
+  -H "Authorization: Bearer [token]" \
+  -d '{"companyName":"Journey Test Corp","contactName":"Jane Journey","contactEmail":"jane@journeytest.com","contactPhone":"210-555-0088","source":"email_inbound"}')
+LEAD_ID=$(echo $LEAD | jq -r '.id')
+echo "2a Lead created: $LEAD_ID"
+
+# 2b. Trinity scores lead
+sleep 2
+SCORE=$(psql $DATABASE_URL -t -c "SELECT lead_score FROM sales_leads WHERE id = '$LEAD_ID'" | tr -d ' ')
+echo "2b Trinity score: $SCORE"
+
+# 2c. Proposal generated and sent
+PROPOSAL=$(curl -s -X POST "http://localhost:5000/api/proposals" \
+  -H "Authorization: Bearer [token]" \
+  -d "{\"leadId\":\"$LEAD_ID\",\"title\":\"Security Services for Journey Test Corp\",\"clientEmail\":\"jane@journeytest.com\",\"totalMonthlyValue\":3000.00,\"content\":{\"companyName\":\"ACME Security\",\"services\":[{\"description\":\"Unarmed Officers\",\"amount\":\"3000.00\"}],\"pricing\":{\"lineItems\":[{\"label\":\"3 officers × 40hrs × \$25\",\"amount\":\"3000.00\"}]}}}")
+PROPOSAL_TOKEN=$(echo $PROPOSAL | jq -r '.token')
+echo "2c Proposal token: $PROPOSAL_TOKEN"
+
+# 2d. Client accepts proposal online
+ACCEPT=$(curl -s -X POST "http://localhost:5000/api/proposals/public/$PROPOSAL_TOKEN/action" \
+  -d '{"action":"accept","signatureData":"data:image/png;base64,iVBORw0K...","signatureType":"drawn"}')
+echo "2d Accept: $(echo $ACCEPT | jq '.success')"
+
+sleep 3
+
+# 2e. Lead advances to contract executed
+LEAD_STAGE=$(psql $DATABASE_URL -t -c "SELECT stage FROM sales_leads WHERE id = '$LEAD_ID'" | tr -d ' ')
+echo "2e Lead stage: $LEAD_STAGE"
+# Must be 'contract_executed' or 'onboarded'
+
+# 2f. Client record created
+CLIENT_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM clients 
+  WHERE contact_email = 'jane@journeytest.com'
+  AND workspace_id = '[acme_id]'
+  LIMIT 1
+" | tr -d ' ')
+echo "2f Client created: $([ -n '$CLIENT_ID' ] && echo $CLIENT_ID || echo 'NO — FIX')"
+
+# 2g. Client portal provisioned
+PORTAL=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM users 
+  WHERE email = 'jane@journeytest.com'
+  AND workspace_id = '[acme_id]'
+  LIMIT 1
+" | tr -d ' ')
+echo "2g Client portal account: $([ -n '$PORTAL' ] && echo 'YES' || echo 'NO — FIX')"
+
+# 2h. Client signs in and sees their data
+CLIENT_TOKEN=$(curl -s -X POST "http://localhost:5000/api/auth/login" \
+  -d '{"email":"jane@journeytest.com","password":"[temp_password]"}' | jq -r '.token')
+
+CLIENT_DATA=$(curl -s "http://localhost:5000/api/client-portal/overview" \
+  -H "Authorization: Bearer $CLIENT_TOKEN")
+echo "2h Client portal data: $(echo $CLIENT_DATA | jq 'keys')"
+
+# 2i. Invoice generated and sent to client
+INVOICE=$(curl -s -X POST "http://localhost:5000/api/invoices/generate" \
+  -H "Authorization: Bearer [token]" \
+  -d "{\"clientId\":\"$CLIENT_ID\",\"periodStart\":\"2026-04-01\",\"periodEnd\":\"2026-04-30\"}")
+INV_ID=$(echo $INVOICE | jq -r '.id')
+echo "2i Invoice: $INV_ID"
+
+curl -s -X PATCH "http://localhost:5000/api/invoices/$INV_ID/send" \
+  -H "Authorization: Bearer [token]"
+
+# 2j. Client sees invoice in portal
+CLIENT_INVOICES=$(curl -s "http://localhost:5000/api/client-portal/invoices" \
+  -H "Authorization: Bearer $CLIENT_TOKEN")
+echo "2j Client sees invoices: $(echo $CLIENT_INVOICES | jq 'length')"
+
+echo "=== Client Journey Complete ==="
+
+# -----------------------------------------------
+
+# JOURNEY 3: SRA Audit Lifecycle
+echo "=== Testing: SRA Audit Journey ==="
+
+# 3a. SRA auditor logs in with TOTP
+SRA_LOGIN=$(curl -s -X POST "http://localhost:5000/api/regulatory-audit/login" \
+  -d '{"email":"[sra_email]","password":"[sra_pass]","totpCode":"[code]"}')
+SRA_TOKEN=$(echo $SRA_LOGIN | jq -r '.token')
+echo "3a SRA login: $([ -n '$SRA_TOKEN' ] && echo 'SUCCESS' || echo 'FAILED — FIX')"
+
+# 3b. Auditor views officer compliance
+OFFICERS=$(curl -s "http://localhost:5000/api/regulatory-audit/officers" \
+  -H "Authorization: Bearer $SRA_TOKEN")
+echo "3b Officers visible: $(echo $OFFICERS | jq 'length')"
+
+# 3c. Auditor asks Trinity advisory question
+TRINITY_ADVISORY=$(curl -s -X POST "http://localhost:5000/api/regulatory-audit/trinity/query" \
+  -H "Authorization: Bearer $SRA_TOKEN" \
+  -d '{"query":"Which officers have licenses expiring in the next 30 days?"}')
+echo "3c Trinity advisory: $(echo $TRINITY_ADVISORY | jq '.message' | head -c 100)"
+
+# 3d. Verify every auditor action is logged
+sleep 2
+AUDIT_ENTRIES=$(psql $DATABASE_URL -t -c "
+  SELECT COUNT(*) FROM sra_audit_log 
+  WHERE created_at > NOW() - INTERVAL '2 minutes'
+" | tr -d ' ')
+echo "3d Audit entries logged: $AUDIT_ENTRIES"
+
+# 3e. Auditor tries to write (must fail)
+WRITE_ATTEMPT=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "http://localhost:5000/api/employees" \
+  -H "Authorization: Bearer $SRA_TOKEN")
+echo "3e Write blocked: $([ '$WRITE_ATTEMPT' = '403' ] && echo 'YES' || echo 'NO — SECURITY BUG')"
+
+echo "=== SRA Journey Complete ==="
+```
+
+---
+
+**ARCHITECT PERSONAL ANALYSIS — After All 8 Subagents Report**
+
+Perform your own deep cross-system analysis:
+
+```bash
+# 1. SEMANTIC UNION CHECK: Does every system speak to every other system?
+
+# When an officer clocks in:
+# → Does scheduling know they are present?
+# → Does the dashboard update in real time?
+# → Does Trinity log this action?
+# → Does the supervisor see it without refresh?
+# → Is the timesheet entry created correctly?
+# → Is the GPS coordinate stored?
+# → Is the clock-in reference number generated?
+
+psql $DATABASE_URL -c "
+  SELECT 
+    te.id,
+    te.clock_in,
+    te.clockin_reference,
+    te.gps_latitude IS NOT NULL as has_gps,
+    te.clock_in_method,
+    (SELECT COUNT(*) FROM universal_audit_log WHERE entity_id = te.id) as audit_records
+  FROM time_entries te
+  WHERE te.workspace_id = '[acme_id]'
+  ORDER BY te.clock_in DESC LIMIT 5
+"
+
+# 2. COMMUNICATION COMPLETENESS CHECK
+# Every event → notification → broadcast → audit (in that order)
+# Find any event missing any step in this chain
+
+grep -rn "broadcastToWorkspace\|notificationDeliveryService\|universalAuditService" \
+  server/routes/ --include="*.ts" | grep -v node_modules | \
+  sed 's/.*routes\///' | sed 's/:.*$//' | sort | uniq -c | sort -rn | head -20
+# Files with all three = good
+# Files with some missing = those mutations are incomplete
+
+# 3. TRINITY KNOWLEDGE CHECK
+# Can Trinity answer questions about every platform domain?
+TRINITY_QUERIES=(
+  "How many officers are currently on shift?"
+  "Which invoices are overdue?"
+  "Are any licenses expiring this month?"
+  "What is the current NPS score for our main client?"
+  "Show me open shifts for next week"
+  "Which candidates are awaiting an interview?"
+  "What is the voice credit balance?"
+  "Are there any pending form submissions?"
+)
+
+for query in "${TRINITY_QUERIES[@]}"; do
+  RESPONSE=$(curl -s -X POST "http://localhost:5000/api/helpai/chat" \
+    -H "Authorization: Bearer [org_owner_token]" \
+    -d "{\"message\":\"$query\",\"workspaceId\":\"[acme_id]\"}")
+  ANSWER=$(echo $RESPONSE | jq -r '.message' | head -c 80)
+  echo "Q: $query"
+  echo "A: $ANSWER"
+  echo "---"
+done
+# Every query must produce a relevant data-backed answer
+# "I don't know" or empty response = Trinity not connected to that domain
+
+# 4. WORKSPACE ISOLATION FINAL TEST
+# Create test data in ACME then verify it cannot be accessed from another workspace
+TEST_RECORD=$(psql $DATABASE_URL -t -c "
+  SELECT employee_number FROM employees 
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 1
+" | tr -d ' ')
+
+# Search for ACME employee_number using a different workspace token
+LEAK=$(curl -s "http://localhost:5000/api/search?q=$TEST_RECORD" \
+  -H "Authorization: Bearer [different_workspace_token]")
+echo "Cross-workspace data leak check: $(echo $LEAK | jq 'length') results"
+# Must be 0 — ACME data invisible to other workspace
+
+# 5. FINAL SYSTEM HEALTH
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+# Must be 0
+
+# Server restart and health check
+curl -s http://localhost:5000/health | jq .
+# Must return { status: "ok" }
+
+# Trinity action count
+curl -s "http://localhost:5000/api/trinity/actions" \
+  -H "Authorization: Bearer [token]" | jq 'length'
+# Must be 902+
+```
+
+---
+
+**FINAL PRODUCTION READINESS DECLARATION**
+
+After all audits complete and all fixes applied write the final report:
+
+```
+GRAND SEMANTIC UNION AUDIT — FINAL REPORT
+==========================================
+
+COMMUNICATION SYSTEMS:
+  NDS (Notifications):      [CANONICAL / ISSUES]
+  WebSocket (Broadcasts):   [CANONICAL / ISSUES]  
+  Email (Inbound/Outbound): [CANONICAL / ISSUES]
+  Trinity (AI Actor):       [CANONICAL / ISSUES]
+  Voice (Twilio):           [READY PENDING DNS / ISSUES]
+
+WORKFLOW PIPELINES:
+  Officer Lifecycle:        [COMPLETE / BROKEN STEPS]
+  Client Pipeline:          [COMPLETE / BROKEN STEPS]
+  Sales Pipeline:           [COMPLETE / BROKEN STEPS]
+  Invoice Pipeline:         [COMPLETE / BROKEN STEPS]
+  Compliance Cycle:         [COMPLETE / BROKEN STEPS]
+  Onboarding Pipeline:      [COMPLETE / BROKEN STEPS]
+  Interview Pipeline:       [COMPLETE / BROKEN STEPS]
+  Form-to-PDF Pipeline:     [COMPLETE / BROKEN STEPS]
+
+ROLE PERMISSIONS:
+  org_owner:                [CORRECT / ISSUES]
+  officer:                  [CORRECT / ISSUES]
+  supervisor:               [CORRECT / ISSUES]
+  platform_staff:           [CORRECT / ISSUES]
+  sra_auditor:              [CORRECT / ISSUES]
+  client_portal:            [CORRECT / ISSUES]
+
+DATA INTEGRITY:
+  Universal IDs:            [100% / X% MISSING]
+  Financial Precision:      [EXACT / FLOAT ERRORS]
+  Workspace Isolation:      [CLEAN / LEAKS]
+  Audit Trail:              [COMPLETE / GAPS]
+  Document Integrity:       [VERIFIED / ISSUES]
+
+USER JOURNEYS:
+  Officer: Application to Paycheck: [COMPLETE / BROKEN AT STEP X]
+  Client: Prospect to Invoice:       [COMPLETE / BROKEN AT STEP X]
+  SRA: Login to Audit Complete:      [COMPLETE / BROKEN AT STEP X]
+
+TRINITY INTELLIGENCE:
+  Domain Coverage:          [X/10 domains answerable]
+  Action Persistence:       [ALL / SOME SILENT]
+  Session Isolation:        [CONFIRMED / LEAKING]
+  Approval Gates:           [ENFORCED / MISSING]
+  Language Compliance:      [BILINGUAL / EN ONLY]
+
+TOTAL ISSUES FOUND:         [N]
+TOTAL ISSUES FIXED:         [N]
+REMAINING KNOWN GAPS:       [DNS, Twilio verification, Stripe live key]
+
+PRODUCTION READINESS SCORE: [X]/100
+PLATFORM STATUS:            [LAUNCH READY / NEEDS WORK]
+
+Signed off by: Architect
+Date: [DATE]
+```
+
+---
+
+Paste that. This is the most complete audit possible — semantic, systematic, and canonical. It asks what every system is supposed to do and verifies it actually does it. Every communication channel, every workflow, every role, every document, every notification, every broadcast, every user journey — checked, fixed, and verified as one unified system.

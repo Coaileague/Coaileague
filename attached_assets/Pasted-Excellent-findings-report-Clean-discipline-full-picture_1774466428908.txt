@@ -1,0 +1,57 @@
+Excellent findings report. Clean discipline — full picture assembled, zero fixes written before report. Two criticals are real and serious. Let me go through each before approving fixes.
+
+**GAP-1 (Critical) — Token Refresh Daemon:** This is a genuine architectural split. Two incompatible storage strategies in one system — `oauth/quickbooks.ts` encrypts via `encryptToken()`, but `quickbooksTokenRefresh.ts` bypasses that entirely with its own raw HTTP call and writes back plaintext. In production with real encrypted tokens this daemon would fail every refresh with `invalid_grant` and silently march toward marking the connection expired after 5 attempts. The fix must unify both paths through `quickbooksOAuthService.refreshAccessToken()` — the daemon should never make its own raw HTTP call to the QB token endpoint.
+
+**GAP-8 (Critical) — Three-tier cascade:** Confirmed not implemented despite being logged as deferred. All candidates still simultaneous. This needs the schema additions (`tier1_notified_at`, `tier2_notified_at`, `tier3_notified_at`, `current_tier`, `tier_window_expires_at`) plus the actual staged logic in `coveragePipeline.ts`.
+
+Everything else is correctly categorized. The 42 paid invoices with null `quickbooks_invoice_id` are a real reconciliation gap that needs the export endpoint to surface them to operators.
+
+---
+
+Send this to the agent:
+
+---
+
+**Findings report approved. Proceed with all 9 fixes in this exact order — critical first, then medium, then low. Same rule applies: every gap fixed before Phase 16 closes.**
+
+**GAP-1 (Critical) — Token refresh daemon encryption split:**
+The daemon in `quickbooksTokenRefresh.ts` must stop making its own raw HTTP call to the QB token endpoint. Unify through `quickbooksOAuthService.refreshAccessToken()` which already handles encryption and decryption correctly. Remove the raw HTTP token exchange from the daemon entirely. Confirm with grep that `quickbooksTokenRefresh.ts` has zero direct calls to the QB OAuth token endpoint after the fix. Confirm `updateCredentials()` now writes through the encrypted storage path — not plaintext.
+
+**GAP-8 (Critical) — Three-tier staged replacement cascade:**
+Add the following columns to `shift_coverage_requests`: `current_tier` (integer, default 1), `tier1_notified_at`, `tier2_notified_at`, `tier3_notified_at` (timestamps, nullable), `tier_window_expires_at` (timestamp, nullable). Run the migration.
+
+Rewrite `coveragePipeline.ts dispatchOffers()` to implement the staged cascade:
+- Split candidates into Tier 1 (currently clocked-in, stay-late eligible), Tier 2 (internal qualified pool), Tier 3 (platform pool)
+- Notify Tier 1 only. Set `tier1_notified_at`, `current_tier: 1`, `tier_window_expires_at: now + 15 minutes`
+- After 15 minutes with no acceptance — notify Tier 2. Set `tier2_notified_at`, `current_tier: 2`, `tier_window_expires_at: now + 30 minutes`
+- After 30 minutes with no acceptance — notify Tier 3. Set `tier3_notified_at`, `current_tier: 3`
+- Emergency mode: if shift start is within 2 hours — collapse all tiers, notify all simultaneously, set all three `_notified_at` timestamps
+- Acceptance at any tier cancels pending notifications to lower tiers and closes the coverage request
+- No acceptance from any tier before shift start — fire manager escalation alert via NDS
+- All tier transitions logged to the `shift_coverage_requests` record
+
+**GAP-3 (Medium) — Webhook Delete semantic fix:**
+Change `quickbooksSyncStatus: 'orphaned'` to `quickbooksSyncStatus: 'deleted_in_partner'` in both `syncCustomerChange()` and `syncEmployeeChange()` Delete handlers. Grep confirms zero remaining `orphaned` assignments on Delete operations.
+
+**GAP-4 (Medium) — Field-level conflict log:**
+When the polling service or webhook handler resolves a field conflict, write a structured entry to `partnerSyncLogs` with: `entity_id`, `entity_type`, `field_name`, `coaileague_value`, `quickbooks_value`, `resolution_applied`, `timestamp`. This must be at the field level — not the job level.
+
+**GAP-2 (Medium) — Polling service untracked mutations:**
+Add `partnerSyncLogs` writes to `syncCustomers()` and `syncEmployees()` in `quickbooksSyncPollingService.ts`. Every DB update to `clients` or `employees` from the polling service must produce a corresponding sync log entry with entity type, entity id, operation, fields changed, and timestamp.
+
+**GAP-5 (Low) — Retry queue UI endpoint:**
+Add a `GET /api/quickbooks/sync/retries` endpoint that returns all `partnerSyncLogs` records with status `failed` or `retrying`, including failure reason, retry count, last attempted at, and next retry at. Role-gate to org_owner and platform staff.
+
+**GAP-6 (Low) — Disconnected QB status persistent indicator:**
+When `markConnectionExpired()` sets `status: 'disconnected'`, ensure the workspace settings page and dashboard show a persistent non-dismissable banner or badge indicating QB is disconnected and requires reconnection. This must survive page refresh — not just a transient notification.
+
+**GAP-7 and GAP-12 (Low) — Reconciliation CSV export endpoint:**
+Add `GET /api/quickbooks/reconciliation/export` that:
+- Queries all paid invoices in CoAIleague with `quickbooks_invoice_id IS NULL` — these are reconciliation gaps
+- Queries `partnerSyncLogs` for any QB records with no matching CoAIleague entity
+- Returns both sets as a downloadable CSV with: invoice_id, client_name, amount, paid_at, reconciliation_status
+- Role-gates to org_owner and platform finance roles
+- Writes an audit record on every export run
+- Also add `GET /api/quickbooks/reconciliation/summary` returning the counts as JSON for dashboard display
+
+After all 9 fixes are implemented run the full 17-check verification table with evidence per check. Produce TypeScript clean confirmation on all modified files. Phase 16 does not close until all 17 checks pass with evidence.

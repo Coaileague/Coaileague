@@ -1,0 +1,360 @@
+Group 2 — Phases 39 + 41 + Phase 40 Sync Audit: ALL CERTIFIED ✅
+Full picture now. Let me go through each:
+
+Phase 39 — Performance and Stability: CERTIFIED ✅ (25/25 checks)
+Six gaps found and fixed:
+
+Compression middleware added — gzip confirmed via Content-Encoding: gzip, threshold 1KB, webhook paths exempt
+DB pool raised from 5 → 10 connections with idle timeout, connection timeout, and statement timeout per connection
+Slow query logging confirmed live — [SlowQuery] 1028ms visible in startup logs
+44 critical FK performance indexes added CONCURRENTLY via ensurePerformanceIndexes()
+NDS queue depth alert registered — fires at 1000 pending items every 15 minutes
+Feature blob cache added (2-min TTL) — eliminates per-check DB hit on every feature gate call
+
+69/69 tests green after all changes.
+
+Phase 41 — Workspace Subscription Lifecycle: CERTIFIED ✅ (28/28 checks)
+Six gaps closed:
+
+4 missing Stripe webhook handlers: trial_will_end, paused, resumed, invoice.upcoming
+paused → suspended mapping fixed for FSM consistency
+Cancellation with reason stored for churn analysis
+Subscription read-only guard middleware — suspended workspaces get reads only, writes blocked, billing and auth always exempt, Statewide bypass intact
+Subscription dashboard at /subscription — 6 contextual banners, FSM card, invoice history
+
+56/56 tests still green.
+
+Phase 40 — Sync Audit (Phases 31-41): CERTIFIED ✅
+The agent ran this proactively and correctly. Security, performance, billing FSM, WCAG, GDPR, schema integrity, and webhook hardening all checked across Phases 31-41. No critical gaps found. Clean to proceed.
+
+Certified to date: Phases 1-41 (plus 36, 37, 38)
+Total: 44 phases certified.
+
+Ready to send Group 3 — Backend Services Domain (5 phases: 46, 49, 50, 51, 53)?
+Send this to the Replit Agent:
+
+PARALLEL GROUP 3 — BACKEND SERVICES DOMAIN
+Phases 46, 49, 50, 51, 53
+Read all five phase prompts fully before writing a single line of code. Complete phases in this order: 46 → 49 → 50 → 51 → 53. Each gets its own reconciliation table and certification before the next begins. All five are backend-only with zero file overlap — safe to execute in sequence within this session.
+Domain: Backend Services — new service files, new routes, auth extensions only. No shared frontend files touched.
+All standing rules apply: Nothing Left Behind, 7-step framework, 5 mandatory quality checks per phase, TypeScript zero errors, server clean startup after each phase.
+
+PHASE 46 — TIME ZONE MANAGEMENT AND HOLIDAY CALENDAR
+Time zone errors cause real operational harm — officers missing shifts, incorrect overtime calculations, wrong pay period boundaries. Every post has a location and therefore a time zone. All times stored in UTC, displayed in local time per post location.
+STEP 1 — INVENTORY
+Check current time zone handling: how shifts store and display times, whether UTC is consistent throughout, current holiday detection logic in payroll, whether posts have a timezone field.
+STEP 2 — POST TIMEZONE FIELD
+
+Add timezone field to posts table — IANA format (e.g. America/Chicago) — required, not null for new posts, existing posts default to America/Chicago
+Add migration — CONCURRENT, non-blocking
+Update post creation and edit forms to include timezone selector
+Validate timezone against IANA timezone database on save
+
+STEP 3 — SHIFT TIME DISPLAY
+
+All shift times stored in UTC — confirmed or fixed
+Shift display converts UTC to post's local timezone for officers and supervisors
+Schedule page shows shifts in the post's local time — not server time
+Clock-in validation uses post timezone for shift window check
+Pay period boundaries display in workspace's primary timezone
+
+STEP 4 — HOLIDAY CALENDAR
+
+workspace_holidays table: id, workspace_id, name, date, holiday_type (federal/state/custom), state_code, applies_to_differential (boolean), created_by, created_at
+Pre-populate federal holidays for current and next year
+Pre-populate state holidays for all states in stateRegulatoryKnowledgeBase
+Holiday management UI — org_owner can add/edit/remove custom holidays
+Holiday differential pay triggers only when shift falls on confirmed holiday for the post's state
+Holiday changes take effect on future shifts only — locked payroll periods unaffected
+Cron job: auto-populate next year's holidays every December 1st
+
+STEP 5 — TIMEZONE-AWARE CALCULATIONS
+
+Overtime calculation uses post timezone for workweek boundary (Sunday midnight local time)
+Pay period close uses workspace primary timezone for period boundaries
+All existing setHours calls audited — replace with setUTCHours where needed (regression from Phase 11)
+License expiry alerts use officer's local timezone for notification timing
+
+VERIFICATION — 18 checks:
+
+Check 1: Posts table has timezone field — migration confirmed
+Check 2: Timezone validated against IANA database on save
+Check 3: Shift times stored in UTC — grep confirms no local time storage
+Check 4: Shift display converts to post local timezone
+Check 5: Clock-in window validation uses post timezone
+Check 6: workspace_holidays table created with all required fields
+Check 7: Federal holidays pre-populated for current and next year
+Check 8: State holidays pre-populated from knowledge base
+Check 9: Holiday differential triggers on confirmed holiday dates only
+Check 10: Holiday changes don't affect locked payroll periods
+Check 11: December 1st cron registered for next-year holiday population
+Check 12: Overtime workweek boundary uses post timezone
+Check 13: Pay period close uses workspace primary timezone
+Check 14: No remaining setHours calls on date-sensitive calculations
+Check 15: Holiday management UI accessible to org_owner
+Check 16: TypeScript zero errors
+Check 17: Import completeness confirmed
+Check 18: Server startup clean
+
+
+PHASE 49 — NOTIFICATION PREFERENCES AND COMMUNICATION TEMPLATE MANAGEMENT
+Officers working night shifts don't want SMS alerts at 3 AM for low-priority events. Every user must control how and when they receive notifications.
+STEP 1 — INVENTORY
+Check current notification delivery — does NDS respect any user preferences today? Check if user_notification_preferences table exists. Check if quiet hours logic exists anywhere.
+STEP 2 — PREFERENCES SCHEMA
+Create user_notification_preferences table:
+
+id, user_id, workspace_id
+notification_type — references the 47 NDS notification types
+channel_email boolean default true
+channel_sms boolean default true
+channel_push boolean default true
+channel_in_app boolean default true
+quiet_hours_enabled boolean default false
+quiet_hours_start time (e.g. 22:00)
+quiet_hours_end time (e.g. 07:00)
+language_preference — en/es, syncs with Phase 32
+
+STEP 3 — NDS PREFERENCE ENFORCEMENT
+
+Before delivering any notification NDS checks user's preferences for that notification type
+If channel disabled — skip that channel, deliver via other enabled channels
+If quiet hours active and current time is within quiet hours — defer non-critical notifications until quiet hours end
+Critical notifications (duress alert, enforcement action, account suspension) override quiet hours always
+Preference check cached per user per workspace — 5-minute TTL
+
+STEP 4 — COMMUNICATION TEMPLATE MANAGEMENT
+
+notification_templates table: id, workspace_id (null = platform default), notification_type, channel, language, subject, body_template, version, is_active, created_by, created_at
+Workspace templates override platform defaults
+Template variables use {{variable_name}} syntax — validated on save
+Template management UI — org_owner and platform staff can create/edit/preview templates
+Template preview: renders with sample data before saving
+Template versioning — prior versions retained, current version always active
+
+STEP 5 — PREFERENCES UI
+
+Notification preferences page in user profile settings
+Grid showing all notification types with toggles per channel
+Quiet hours configuration — enable toggle, time range selector
+Language preference selector (syncs with Phase 32)
+Bulk actions: enable all, disable all non-critical, reset to defaults
+
+VERIFICATION — 16 checks:
+
+Check 1: user_notification_preferences table created
+Check 2: notification_templates table created
+Check 3: NDS checks preferences before delivery — confirmed in delivery logic
+Check 4: Channel disabled — notification skips that channel
+Check 5: Quiet hours enforced for non-critical notifications
+Check 6: Critical notifications (duress, enforcement) override quiet hours always
+Check 7: Preference check cached 5-minute TTL
+Check 8: Workspace templates override platform defaults
+Check 9: Template variable validation on save
+Check 10: Template preview renders with sample data
+Check 11: Template versioning — prior versions retained
+Check 12: Preferences UI accessible from user profile
+Check 13: Quiet hours time range selector functional
+Check 14: Language preference syncs with Phase 32 preferred_language
+Check 15: TypeScript zero errors
+Check 16: Server startup clean
+
+
+PHASE 50 — OUTBOUND WEBHOOK SYSTEM AND INTEGRATION FRAMEWORK
+Security companies use many tools beyond CoAIleague. An outbound webhook system lets any external tool receive real-time events without polling the API.
+STEP 1 — INVENTORY
+Check if any webhook delivery infrastructure exists. Check if workspace_webhooks table exists. Check event catalog from Phase 27.
+STEP 2 — WEBHOOK SCHEMA
+Create workspace_webhooks table:
+
+id, workspace_id, name, url, secret (for HMAC-SHA256 signing), events (text array of subscribed event types), is_active boolean, created_by, created_at, last_triggered_at, last_status_code, failure_count
+
+Create webhook_deliveries table:
+
+id, webhook_id, workspace_id, event_type, payload, response_status, response_body, attempt_number, delivered_at, next_retry_at
+
+STEP 3 — WEBHOOK SERVICE
+Create server/services/webhookDeliveryService.ts:
+
+deliverWebhookEvent(workspaceId, eventType, payload) — finds all active webhooks for workspace subscribed to that event type
+Signs payload with HMAC-SHA256 using webhook secret — X-CoAIleague-Signature header
+Delivers via HTTP POST with 10-second timeout
+On failure: exponential backoff retry (1min, 5min, 30min, 2hr, 24hr)
+After 5 failures: marks webhook as failed, notifies org_owner
+All deliveries logged to webhook_deliveries table
+Delivery logged to notification_deliveries with channel: webhook
+
+STEP 4 — EVENT CATALOG
+Register webhooks for all platform events:
+
+officer.activated, officer.deactivated, officer.terminated
+shift.created, shift.assigned, shift.cancelled
+clock_in, clock_out
+calloff.submitted, calloff.resolved
+incident.created, incident.resolved
+invoice.generated, invoice.sent, invoice.paid, invoice.overdue, invoice.disputed
+payroll.run_completed, payroll.stub_available
+document.executed, document.voided
+compliance.violation_detected, compliance.violation_resolved
+client.activated, client.offboarded
+subscription.trial_ending, subscription.suspended, subscription.cancelled
+
+STEP 5 — WEBHOOK MANAGEMENT UI
+
+Webhook list page — shows all configured webhooks with status, last triggered, failure count
+Create webhook — URL, name, secret, event subscription checkboxes
+Test webhook — sends a sample payload to verify endpoint is receiving
+Delivery log — last 50 deliveries per webhook with status and response
+Retry failed delivery button
+Business tier and above feature (Phase 30 tier enforcement)
+
+VERIFICATION — 16 checks:
+
+Check 1: workspace_webhooks table created
+Check 2: webhook_deliveries table created
+Check 3: Webhook service delivers with HMAC-SHA256 signature
+Check 4: X-CoAIleague-Signature header present on all deliveries
+Check 5: Exponential backoff retry confirmed — 5 attempts
+Check 6: After 5 failures webhook marked failed, org_owner notified
+Check 7: All deliveries logged to webhook_deliveries
+Check 8: Deliveries logged to notification_deliveries with channel: webhook
+Check 9: All 25 event types registered in event catalog
+Check 10: Webhook fires on officer.activated event — confirmed
+Check 11: Webhook fires on invoice.paid event — confirmed
+Check 12: Test webhook endpoint sends sample payload
+Check 13: Delivery log shows last 50 deliveries per webhook
+Check 14: Webhook management gated at Business tier minimum
+Check 15: TypeScript zero errors
+Check 16: Server startup clean
+
+
+PHASE 51 — FEATURE FLAGS, DATABASE BACKUP VERIFICATION, AND PLATFORM STATUS PAGE
+STEP 1 — FEATURE FLAGS
+Create feature_flags table:
+
+id, flag_key, description, enabled_globally boolean, enabled_for_workspaces text array, rollout_percentage integer (0-100), minimum_tier, created_by, created_at, updated_at
+
+Feature flag middleware checkFeatureFlag(flagKey):
+
+Checks if flag is enabled globally
+Checks if workspace is in enabled_for_workspaces list
+Checks rollout_percentage — workspace hash determines if included
+Checks minimum_tier against workspace tier
+Result cached 5-minute TTL per workspace
+Platform staff UI to manage flags — enable/disable, set rollout percentage, add specific workspaces
+
+STEP 2 — DATABASE BACKUP VERIFICATION
+
+Verify automated backup is running — check Replit database backup configuration
+Document backup frequency, retention period, and restore procedure
+Test restore to verify backup integrity — restore to test environment, verify data count matches
+Document Recovery Time Objective (RTO) and Recovery Point Objective (RPO)
+Backup verification cron — weekly verification that backup completed successfully
+Alert if backup fails — platform staff notified immediately
+
+STEP 3 — PLATFORM STATUS PAGE
+Internal status page at /admin/platform-status:
+
+Real-time health indicators: API, Database, NDS, Trinity AI, QuickBooks sync, Stripe, Push notifications
+Each indicator: current status (operational/degraded/outage), response time, last checked
+Active incidents with severity and description
+Recent deployments with status
+Uptime percentage for last 30 days per service
+Health check endpoints queried every 60 seconds
+
+External status page at /status (no auth required):
+
+Overall platform status (all systems operational / partial outage / major outage)
+Per-service status (without internal details)
+Recent incidents last 30 days with resolution notes
+Uptime history chart last 90 days
+Subscribe to status updates via email (stores email in status_subscribers table, NDS delivery)
+
+VERIFICATION — 16 checks:
+
+Check 1: feature_flags table created
+Check 2: Feature flag middleware checks global, workspace, rollout, and tier
+Check 3: Feature flag result cached 5-minute TTL
+Check 4: Platform staff UI to manage flags
+Check 5: Backup verification documented — frequency and retention confirmed
+Check 6: Backup restore tested — data count matches
+Check 7: RTO and RPO documented in replit.md
+Check 8: Weekly backup verification cron registered
+Check 9: Backup failure alert to platform staff
+Check 10: Internal status page at /admin/platform-status — all 7 services shown
+Check 11: Health indicators update every 60 seconds
+Check 12: External status page at /status — no auth required
+Check 13: External status shows overall and per-service without internal details
+Check 14: Status subscriber email capture and NDS delivery
+Check 15: TypeScript zero errors
+Check 16: Server startup clean
+
+
+PHASE 53 — TWO-FACTOR AUTHENTICATION COMPLETION AND VERIFICATION
+Phase 24 noted MFA as available but never confirmed it was fully built and working. This phase closes that gap.
+STEP 1 — INVENTORY
+Check current 2FA implementation: does TOTP exist, is speakeasy installed, is 2FA enforced for any role, what is the enrollment flow, do backup codes exist.
+STEP 2 — TOTP IMPLEMENTATION
+If not fully implemented, build:
+
+speakeasy already installed (confirmed from Phase 33 SRA portal)
+user_2fa table: user_id, totp_secret (encrypted), is_enabled, enrolled_at, backup_codes (hashed array of 10 codes), last_used_at
+TOTP enrollment flow: generate secret → show QR code → verify first code → save secret → show backup codes once
+TOTP verification: on login after password success → require TOTP code → validate with speakeasy
+Backup code flow: user enters backup code → verified against hashed list → code marked used → cannot be reused
+
+STEP 3 — ENFORCEMENT RULES
+
+org_owner and co_owner: 2FA mandatory — cannot be disabled, prompted on first login after enablement
+platform_staff: 2FA mandatory — same enforcement
+Managers and compliance officers: 2FA optional but encouraged — workspace-configurable
+Officers: 2FA not required by default — SMS OTP available if workspace enables
+Cannot bypass 2FA with any session manipulation — server validates on every 2FA-required login
+
+STEP 4 — RECOVERY AND MANAGEMENT
+
+Lost authenticator: backup code flow — 10 codes generated at enrollment
+No recovery without backup codes for org_owner and platform_staff — by design
+org_owner can reset 2FA for workspace users — logged as audit record
+Platform staff can reset 2FA for any user — logged as audit record
+Device trust: remember this device for 8 hours (configurable) — stored as hashed device fingerprint
+
+STEP 5 — SESSION MANAGEMENT
+
+2FA verified session valid for 8 hours default
+Remember device option stores device trust token (httpOnly secure cookie)
+Device trust does not bypass 2FA on new devices or new browsers
+Concurrent session limit: maximum 3 active sessions per user
+
+VERIFICATION — 16 checks:
+
+Check 1: user_2fa table created with all fields
+Check 2: TOTP enrollment flow complete — QR code, verification, backup codes shown once
+Check 3: TOTP verification fires after password on login
+Check 4: Backup codes hashed — not stored in plaintext
+Check 5: Used backup code cannot be reused
+Check 6: 2FA mandatory for org_owner and platform_staff — cannot skip
+Check 7: 2FA optional for managers — workspace-configurable
+Check 8: Officers exempt by default
+Check 9: org_owner can reset 2FA for workspace users — audit logged
+Check 10: Platform staff can reset 2FA for any user — audit logged
+Check 11: Device trust stored as hashed fingerprint — 8-hour default
+Check 12: Device trust in httpOnly secure cookie — not localStorage
+Check 13: Maximum 3 concurrent sessions per user
+Check 14: SRA portal 2FA regression check — speakeasy still working (Phase 33)
+Check 15: TypeScript zero errors
+Check 16: Server startup clean
+
+
+AFTER ALL FIVE PHASES COMPLETE:
+PHASE 46: CERTIFIED ✅ — [N] gaps fixed, 18/18 checks green
+PHASE 49: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 50: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 51: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 53: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+
+GROUP 3 COMPLETE — 5 phases certified
+Total phases certified to date: 49
+Next group: Group 4 — Phases 44, 48, 52, 54 (Frontend and UX Domain)
+
+Paste that. Group 3 is 5 backend-only phases with zero file overlap. Let it run.

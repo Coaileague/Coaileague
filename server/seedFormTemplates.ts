@@ -68,6 +68,124 @@ export const systemFormTemplates = {
         { name: "vehicle_condition", label: "Vehicle Condition", type: "select", options: ["Excellent", "Good", "Fair", "Poor"], required: true },
         { name: "damages_noted", label: "Damages/Issues Noted", type: "textarea", required: false }
       ]
+    },
+    {
+      name: "Guard Post Orders",
+      description: "Site-specific instructions and protocols for security officers",
+      category: "security",
+      fields: [
+        { name: "date", label: "Effective Date", type: "date", required: true },
+        { name: "site_name", label: "Site/Property Name", type: "text", required: true },
+        { name: "site_address", label: "Site Address", type: "text", required: true },
+        { name: "post_number", label: "Post Number/Name", type: "text", required: true },
+        { name: "shift", label: "Shift", type: "select", options: ["Day", "Swing", "Night", "24-Hour"], required: true },
+        { name: "uniform_requirements", label: "Uniform Requirements", type: "textarea", required: true },
+        { name: "access_points", label: "Access Points & Entry Procedures", type: "textarea", required: true },
+        { name: "patrol_route", label: "Patrol Route Description", type: "textarea", required: true },
+        { name: "emergency_contacts", label: "Emergency Contacts", type: "textarea", required: true },
+        { name: "client_instructions", label: "Client-Specific Instructions", type: "textarea", required: true },
+        { name: "prohibited_items", label: "Prohibited Items/Activities", type: "textarea", required: false },
+        { name: "alarm_procedures", label: "Alarm Response Procedures", type: "textarea", required: true },
+        { name: "fire_evacuation", label: "Fire/Evacuation Procedures", type: "textarea", required: true },
+        { name: "special_instructions", label: "Special Instructions", type: "textarea", required: false },
+        { name: "acknowledged_by", label: "Officer Acknowledgment", type: "signature", required: true }
+      ]
+    },
+    {
+      name: "Patrol Log",
+      description: "Checkpoint-based patrol documentation with timestamps",
+      category: "security",
+      requiresPhotos: true,
+      minPhotos: 1,
+      maxPhotos: 8,
+      photoInstructions: "Photo each checkpoint visited. Include timestamps and any anomalies discovered during patrol.",
+      fields: [
+        { name: "date", label: "Patrol Date", type: "date", required: true },
+        { name: "officer_name", label: "Officer Name", type: "text", required: true },
+        { name: "patrol_start", label: "Patrol Start Time", type: "time", required: true },
+        { name: "patrol_end", label: "Patrol End Time", type: "time", required: true },
+        { name: "patrol_type", label: "Patrol Type", type: "select", options: ["Foot Patrol", "Vehicle Patrol", "Bike Patrol", "Interior Patrol", "Perimeter Patrol"], required: true },
+        { name: "checkpoint_1", label: "Checkpoint 1 - Location & Time", type: "text", required: true },
+        { name: "checkpoint_2", label: "Checkpoint 2 - Location & Time", type: "text", required: false },
+        { name: "checkpoint_3", label: "Checkpoint 3 - Location & Time", type: "text", required: false },
+        { name: "checkpoint_4", label: "Checkpoint 4 - Location & Time", type: "text", required: false },
+        { name: "checkpoint_5", label: "Checkpoint 5 - Location & Time", type: "text", required: false },
+        { name: "doors_windows_secure", label: "All Doors/Windows Secure?", type: "select", options: ["Yes", "No - Details Below"], required: true },
+        { name: "lights_functioning", label: "All Lights Functioning?", type: "select", options: ["Yes", "No - Details Below"], required: true },
+        { name: "suspicious_activity", label: "Suspicious Activity Observed", type: "textarea", required: false },
+        { name: "maintenance_issues", label: "Maintenance Issues Noted", type: "textarea", required: false },
+        { name: "notes", label: "Additional Notes", type: "textarea", required: false }
+      ]
+    },
+    {
+      name: "Visitor Log",
+      description: "Sign-in/out tracking for visitors and contractors",
+      category: "security",
+      requiresPhotos: true,
+      minPhotos: 0,
+      maxPhotos: 3,
+      photoInstructions: "Photo visitor ID badge if required by site policy. Ensure photo is clear and legible.",
+      fields: [
+        { name: "date", label: "Date", type: "date", required: true },
+        { name: "officer_name", label: "Officer on Duty", type: "text", required: true },
+        { name: "visitor_name", label: "Visitor Name", type: "text", required: true },
+        { name: "visitor_company", label: "Visitor Company/Organization", type: "text", required: false },
+        { name: "visitor_type", label: "Visitor Type", type: "select", options: ["Guest", "Contractor", "Vendor", "Delivery", "Inspector", "Emergency Services", "Other"], required: true },
+        { name: "id_type", label: "ID Type Presented", type: "select", options: ["Driver License", "State ID", "Passport", "Company Badge", "Military ID", "None"], required: true },
+        { name: "id_verified", label: "ID Verified?", type: "select", options: ["Yes", "No", "N/A"], required: true },
+        { name: "host_name", label: "Host/Person Being Visited", type: "text", required: true },
+        { name: "purpose", label: "Purpose of Visit", type: "text", required: true },
+        { name: "badge_number", label: "Visitor Badge Number Issued", type: "text", required: false },
+        { name: "sign_in_time", label: "Sign-In Time", type: "time", required: true },
+        { name: "sign_out_time", label: "Sign-Out Time", type: "time", required: false },
+        { name: "vehicle_info", label: "Vehicle Info (Make/Model/Plate)", type: "text", required: false },
+        { name: "items_carried", label: "Items/Equipment Carried In", type: "textarea", required: false },
+        { name: "notes", label: "Additional Notes", type: "textarea", required: false }
+      ]
+    },
+    {
+      name: "Shift Handoff Report",
+      description: "End-of-shift summary for incoming guard",
+      category: "security",
+      fields: [
+        { name: "date", label: "Date", type: "date", required: true },
+        { name: "outgoing_officer", label: "Outgoing Officer", type: "text", required: true },
+        { name: "incoming_officer", label: "Incoming Officer", type: "text", required: true },
+        { name: "shift_ending", label: "Shift Ending", type: "select", options: ["Day (0600-1400)", "Swing (1400-2200)", "Night (2200-0600)", "Custom"], required: true },
+        { name: "shift_end_time", label: "Shift End Time", type: "time", required: true },
+        { name: "incidents_summary", label: "Incidents During Shift", type: "textarea", required: true },
+        { name: "ongoing_issues", label: "Ongoing Issues/Situations", type: "textarea", required: false },
+        { name: "visitor_count", label: "Total Visitors This Shift", type: "number", required: false },
+        { name: "patrols_completed", label: "Patrols Completed", type: "number", required: true },
+        { name: "equipment_status", label: "Equipment Status", type: "select", options: ["All Functional", "Issues - See Notes"], required: true },
+        { name: "keys_accounted", label: "All Keys Accounted For?", type: "select", options: ["Yes", "No - See Notes"], required: true },
+        { name: "pending_tasks", label: "Pending Tasks for Next Shift", type: "textarea", required: false },
+        { name: "management_notifications", label: "Items Requiring Management Attention", type: "textarea", required: false },
+        { name: "outgoing_signature", label: "Outgoing Officer Signature", type: "signature", required: true },
+        { name: "incoming_signature", label: "Incoming Officer Acknowledgment", type: "signature", required: true }
+      ]
+    },
+    {
+      name: "Key/Access Control Log",
+      description: "Key issuance and return tracking",
+      category: "security",
+      fields: [
+        { name: "date", label: "Date", type: "date", required: true },
+        { name: "officer_name", label: "Issuing Officer", type: "text", required: true },
+        { name: "key_number", label: "Key Number/ID", type: "text", required: true },
+        { name: "key_description", label: "Key Description", type: "text", required: true },
+        { name: "action", label: "Action", type: "select", options: ["Issued", "Returned", "Lost", "Replacement Issued", "Deactivated"], required: true },
+        { name: "issued_to", label: "Issued To (Name)", type: "text", required: true },
+        { name: "issued_to_company", label: "Company/Department", type: "text", required: false },
+        { name: "purpose", label: "Purpose/Reason", type: "text", required: true },
+        { name: "issue_time", label: "Issue Time", type: "time", required: true },
+        { name: "expected_return", label: "Expected Return Time", type: "time", required: false },
+        { name: "actual_return_time", label: "Actual Return Time", type: "time", required: false },
+        { name: "return_condition", label: "Return Condition", type: "select", options: ["Good", "Damaged", "Not Returned", "N/A"], required: false },
+        { name: "authorization", label: "Authorized By", type: "text", required: true },
+        { name: "recipient_signature", label: "Recipient Signature", type: "signature", required: true },
+        { name: "notes", label: "Additional Notes", type: "textarea", required: false }
+      ]
     }
   ],
 

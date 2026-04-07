@@ -1,0 +1,69 @@
+What's Working
+
+Thalamus is live — 66 entries already in the thalamic log from real platform events
+ACC dashboard route is resolving correctly at /ai/brain
+Session auth is working for dev-owner-001
+All 6 e2e verification checks passed
+Signal types confirmed uppercase in DB — frontend map was corrected
+
+
+The One Bug — WorkspaceId Resolution Returning Empty
+The UI shows 0 thalamic records even though 35 exist in the DB. The root cause is clear from the trace:
+The frontend query is passing workspaceId as a URL path segment instead of a query parameter. The middleware reads workspaceId from req.session.workspaceId as the fast path — but when the session's currentWorkspaceId is null or undefined, nothing resolves and the query returns empty.
+
+Tell Agent This Exactly
+The thalamic log UI shows 0 records despite 35 
+existing in the DB. The workspaceId is resolving 
+as empty on the new brain dashboard routes.
+
+Fix in this order:
+
+1. Find where the brain dashboard API routes 
+   read workspaceId. Add this fallback chain:
+
+   const workspaceId = 
+     req.session.workspaceId ||
+     req.session.currentWorkspaceId ||
+     req.query.workspaceId ||
+     null;
+
+   If workspaceId is still null after all 
+   fallbacks: return 400 with clear error 
+   "workspace context required" — never 
+   silently return empty results.
+
+2. Fix the frontend query for thalamic log 
+   and ACC log to pass workspaceId as a 
+   query parameter not a URL path segment:
+
+   WRONG: useQuery(['/api/brain/thalamus', workspaceId])
+   RIGHT: useQuery(['/api/brain/thalamus', { workspaceId }])
+
+   Or if using session-only auth with no 
+   workspaceId param needed: 
+   useQuery(['/api/brain/thalamus'])
+   and let the session resolve it server-side.
+
+3. After fix, confirm:
+   - Thalamic log tab shows real count 
+     matching DB (35+)
+   - ACC log tab shows real records
+   - Signal type distribution chart 
+     populates with real data
+   - All 6 e2e verification tests still pass
+
+4. Run one live signal through the full chain:
+   Send a test message in ChatDock →
+   Confirm thalamic_log gets new entry →
+   Confirm entry appears in dashboard 
+   immediately without page refresh →
+   Confirm signal_type, priority_score, 
+   and routed_to fields are all populated
+
+Report the thalamic log count visible 
+in the UI after the fix.
+
+What This Tells Us About the Broader State
+The fact that 66 entries are already in the thalamic log means the Thalamus is actively processing real platform signals. That's the most important confirmation — the organ is alive and routing. The bug is purely a display layer issue, not an architectural one.
+Once this workspaceId fix lands the dashboard should light up with real data immediately since the records are already there waiting to be displayed.
+Bring the output back when Agent finishes and we'll run the full brain verification before calling the Thalamus and ACC sprint complete.

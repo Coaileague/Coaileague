@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Heart, MessageSquare, Award, Star, Lightbulb } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 export default function EmployeeEngagement() {
   const { toast } = useToast();
@@ -21,7 +23,7 @@ export default function EmployeeEngagement() {
   const { data: pulseSurveys } = useQuery<any[]>({
     queryKey: ['/api/engagement/pulse-surveys/templates'],
     queryFn: async () => {
-      const response = await fetch('/api/engagement/pulse-surveys/templates?isActive=true');
+      const response = await secureFetch('/api/engagement/pulse-surveys/templates?isActive=true');
       if (!response.ok) return [];
       return response.json();
     }
@@ -40,7 +42,14 @@ export default function EmployeeEngagement() {
     onSuccess: () => {
       toast({ title: "Survey submitted", description: "Thank you for your feedback!" });
       queryClient.invalidateQueries({ queryKey: ['/api/engagement/pulse-surveys/responses'] });
-    }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Submit Survey Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   // Submit employer rating
@@ -50,7 +59,15 @@ export default function EmployeeEngagement() {
     },
     onSuccess: () => {
       toast({ title: "Rating submitted", description: "Your feedback helps improve our workplace!" });
-    }
+      queryClient.invalidateQueries({ queryKey: ['/api/engagement/employer-ratings'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Submit Rating Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   // Submit anonymous suggestion
@@ -60,7 +77,15 @@ export default function EmployeeEngagement() {
     },
     onSuccess: () => {
       toast({ title: "Suggestion submitted", description: "We'll review your suggestion soon!" });
-    }
+      queryClient.invalidateQueries({ queryKey: ['/api/engagement/suggestions'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Submit Suggestion Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   // Submit employee recognition
@@ -71,20 +96,27 @@ export default function EmployeeEngagement() {
     onSuccess: () => {
       toast({ title: "Recognition sent!", description: "Your kudos have been shared!" });
       queryClient.invalidateQueries({ queryKey: ['/api/engagement/recognition'] });
-    }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Submit Recognition Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
-  return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="page-employee-engagement">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">Employee Engagement</h1>
-          <p className="text-muted-foreground">Share feedback, recognize peers, and help improve our workplace</p>
-        </div>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'engagement-employee',
+    title: 'Employee Engagement',
+    subtitle: 'Share feedback, recognize peers, and help improve our workplace',
+    category: 'operations',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="pulse" data-testid="tab-pulse">
             <Heart className="h-4 w-4 mr-2" />
             Pulse Surveys
@@ -217,7 +249,7 @@ export default function EmployeeEngagement() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }
 

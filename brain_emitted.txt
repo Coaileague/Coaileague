@@ -1,0 +1,61 @@
+server/services/ai-brain/adaptiveSupervisionRouter.ts:    platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/agentToAgentProtocol.ts:      platformEventBus.publish({
+server/services/ai-brain/agentToAgentProtocol.ts:    platformEventBus.publish({
+server/services/ai-brain/aiBrainMasterOrchestrator.ts:          await platformEventBus.publish({
+server/services/ai-brain/aiBrainMasterOrchestrator.ts:      await platformEventBus.publish({
+server/services/ai-brain/aiBrainMasterOrchestrator.ts:        // since these events always flow through platformEventBus.publish().
+server/services/ai-brain/autonomousFixPipeline.ts:      await platformEventBus.publish({
+server/services/ai-brain/autonomousFixPipeline.ts:      await platformEventBus.publish(event);
+server/services/ai-brain/behavioralMonitoringService.ts:    platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/bugReportOrchestrator.ts:        platformEventBus.publish({
+server/services/ai-brain/bugReportOrchestrator.ts:      platformEventBus.publish({
+server/services/ai-brain/bugReportOrchestrator.ts:    platformEventBus.publish({
+server/services/ai-brain/chatServerSubagent.ts:      await platformEventBus.publish({
+server/services/ai-brain/chatServerSubagent.ts:    await platformEventBus.publish({
+server/services/ai-brain/cognitiveOnboardingService.ts:      platformEventBus.publish({
+server/services/ai-brain/documentUnderstandingPipeline.ts:        platformEventBus.publish({
+server/services/ai-brain/documentUnderstandingPipeline.ts:      platformEventBus.publish({
+server/services/ai-brain/domainLeadSupervisors.ts:    platformEventBus.publish({
+server/services/ai-brain/elevatedSessionGuardian.ts:      platformEventBus.publish({
+server/services/ai-brain/elevatedSessionGuardian.ts:    platformEventBus.publish({
+server/services/ai-brain/gapIntelligenceService.ts:      await platformEventBus.publish(event);
+server/services/ai-brain/integrationManagementService.ts:      platformEventBus.publish({
+server/services/ai-brain/integrationPartnerService.ts:      platformEventBus.publish({
+server/services/ai-brain/llmJudgeEnhanced.ts:      platformEventBus.publish({
+server/services/ai-brain/llmJudgeEvaluator.ts:      platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/notificationDiagnostics.ts:    platformEventBus.publish({
+server/services/ai-brain/planningFrameworkService.ts:    platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/reinforcementLearningLoop.ts:      platformEventBus.publish({
+server/services/ai-brain/reinforcementLearningLoop.ts:    platformEventBus.publish({
+server/services/ai-brain/seasonalSubagent.ts:    await platformEventBus.publish({
+server/services/ai-brain/secureToolExecutor.ts:      platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/selfReflectionEngine.ts:      platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/serviceOrchestrationWatchdog.ts:          await platformEventBus.publish({
+server/services/ai-brain/serviceOrchestrationWatchdog.ts:      await platformEventBus.publish({
+server/services/ai-brain/serviceOrchestrationWatchdog.ts:    await platformEventBus.publish({
+server/services/ai-brain/sharedKnowledgeGraph.ts:    platformEventBus.publish({
+server/services/ai-brain/subagentBanker.ts:      platformEventBus.publish({
+server/services/ai-brain/subagentBanker.ts:    platformEventBus.publish({
+server/services/ai-brain/subagentPerformanceMeetingService.ts:      await platformEventBus.publish({
+server/services/ai-brain/subagents/onboardingOrchestrator.ts:      await platformEventBus.publish(event);
+server/services/ai-brain/subagents/payrollSubagent.ts:        platformEventBus.publish('payroll_escalation', {
+server/services/ai-brain/subagents/schedulingSubagent.ts:            platformEventBus.publish('schedule_escalation', {
+server/services/ai-brain/subagentSupervisor.ts:    await platformEventBus.publish({
+server/services/ai-brain/trinityAgentParityLayer.ts:      platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/trinityCodeOps.ts:          platformEventBus.publish({
+server/services/ai-brain/trinityCodeOps.ts:      platformEventBus.publish({
+server/services/ai-brain/trinityExecutionFabric.ts:      platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/trinityExecutionFabric.ts:    platformEventBus.publish('ai_brain_action', {
+server/services/ai-brain/trinityFastDiagnostic.ts:    platformEventBus.publish({
+server/services/ai-brain/trinityNotificationBridge.ts:      await platformEventBus.publish({
+server/services/ai-brain/trinityPlatformConnector.ts:      await platformEventBus.publish(event);
+server/services/ai-brain/trinityPlatformConnector.ts:    await platformEventBus.publish(event);
+server/services/ai-brain/trinityReflectionEngine.ts:      await platformEventBus.publish(event);
+server/services/ai-brain/trinitySelfEditGovernance.ts:        platformEventBus.publish({
+server/services/ai-brain/trinitySelfEditGovernance.ts:      platformEventBus.publish({
+server/services/ai-brain/trinitySelfEditGovernance.ts:    platformEventBus.publish({
+server/services/ai-brain/trinityWorkOrderSystem.ts:    platformEventBus.publish({
+server/services/ai-brain/uiControlSubagent.ts:      platformEventBus.publish({
+server/services/ai-brain/unifiedLifecycleManager.ts:    await platformEventBus.publish({
+server/services/ai-brain/universalDiagnosticOrchestrator.ts:    platformEventBus.publish({
+server/services/ai-brain/workflowApprovalService.ts:      await platformEventBus.publish(event);

@@ -1,0 +1,618 @@
+Understood completely. Here is Phase 2 written to be airtight, shortcut-proof, and explicitly built on Phase 1's foundation.
+
+---
+
+**COAILEAGUE — PHASE 2: MASTER ROOT CAUSE ELIMINATION**
+*Builds Directly on Phase 1 | No Shortcuts | No Bandaids | No Deferrals | Fully Verified Before Phase 3*
+
+---
+
+**READ THIS BEFORE TOUCHING A SINGLE FILE**
+
+Phase 1 established the foundation this phase builds on. Every table has a Drizzle schema definition. Every column has an explicit name mapping. Every financial core file is on true ORM. Every raw SQL string that remains has explicit TypeScript types, verified column names, and a documented justification. That work was done correctly and completely. Phase 2 must meet the same standard.
+
+The patterns that will not be accepted in this phase:
+
+**Wrapping is not fixing.** If a root cause requires eliminating native number arithmetic on financial values, replacing `parseFloat(value) * hours` with `typedCalculate(value, hours)` that calls `parseFloat(value) * hours` inside it is not a fix. It is the same broken code inside a new function name. The fix is the decimal library doing the arithmetic.
+
+**Typing is not validating.** If a root cause requires Zod runtime validation on API boundaries, adding a TypeScript interface that describes the expected shape and casting the response with `as ExpectedShape` is not a fix. TypeScript types disappear at runtime. Zod validation runs at runtime. They are not the same thing.
+
+**Documenting is not resolving.** If a root cause is found in 40 files, fixing it in 5 and noting the other 35 in a comment is not a fix. Every instance is fixed. Every file. No exceptions.
+
+**Deferring is not acceptable.** Every root cause in this phase is fixed completely before Phase 3 begins. There is no "address in a future session." There is no "deferred for infrastructure sprint." There is no "noted for later." If a fix requires a migration, run it. If a fix requires changing 200 files, change all 200. The point of this systematic phase approach is that each phase is complete when it closes. Phase 3 builds on Phase 2 the same way Phase 2 builds on Phase 1 — on a foundation with nothing broken underneath it.
+
+---
+
+**PHASE 1 SYNC VERIFICATION — BEFORE ANY PHASE 2 WORK BEGINS**
+
+Confirm the following Phase 1 outputs are in place before writing a single line of Phase 2 code. If any of these are missing or incomplete, stop and resolve the Phase 1 gap before proceeding.
+
+Every database table has a Drizzle schema definition. Run the schema parity check. Must return zero untracked tables and zero untracked columns.
+
+Every raw SQL query in every route and service file either uses true Drizzle ORM calls or has a Category C comment block with explicit input types, explicit output types, and column names verified against the Name Registry. Run the scan for `typedQuery(`, `typedPool(`, `typedExec(`, and `client.query(` calls without Category C comment blocks. Must return zero results.
+
+The ghost column report from Phase 1 is in replit.md. `employment_status` and `end_date` are documented as fixed. Any additional ghost columns found during Phase 1 final completion are also documented.
+
+The server starts with 30/30 background services and zero failures.
+
+If all of the above are confirmed, record this as the Phase 2 Sync Confirmation and append it to replit.md. Then and only then proceed to Root Cause 1.
+
+---
+
+**BASELINE RECORD — BEFORE TOUCHING ANYTHING**
+
+Record and store as the Phase 2 Baseline Document:
+
+Total route files. Total service files. Total Drizzle schema table definitions — must be 661 or more matching Phase 1 output. Server startup result — must confirm 30/30 background services, zero failures. Login flow result — must complete without error.
+
+Run these ten ACME sandbox operations and record the result of each — pass or fail and exactly what data was produced:
+
+Create a new employee with full profile, pay rate, pay type, and position. Create a shift for that employee assigned to a client. Generate an invoice for that client. Run a payroll calculation for the current period. Execute a Trinity action with a real payload. Run a hiring pipeline stage transition. Generate a pay stub for the employee. Create a new client with billing settings. Assign a shift through Trinity natural language instruction. Send an invoice and confirm status updates to sent.
+
+All ten must pass before Phase 2 begins. If any fail, that is a Phase 1 gap — resolve it before proceeding. Append the baseline document to replit.md.
+
+After every single root cause fix in this phase, re-run all ten baseline operations and confirm zero regressions before proceeding to the next root cause. A fix that breaks a baseline operation is not complete.
+
+---
+
+**ROOT CAUSE 1 — UNTYPED REQUEST OBJECTS BYPASSING MULTI-TENANT SECURITY**
+
+*The disease: workspaceId — the field that controls which organization's data every query returns — is accessed with `req as any` in route handlers throughout the codebase. This pattern bypasses TypeScript's compile-time safety on the single most security-critical field in a multi-tenant platform. A mistyped field name, a missing middleware, or a refactor that changes the field name returns undefined silently. The workspace isolation that prevents Org A from reading Org B's data depends on this field being correct on every single request.*
+
+**How this connects to Phase 1:** Phase 1 established that every column in every table has an explicit typed schema definition. The database layer is now typed. Root Cause 1 makes the route layer typed to match. A typed database layer feeding into an untyped route layer is a gap in the chain.
+
+**Search — find every instance:**
+
+Scan every file in the server/routes directory. Scan every file in the server/services directory. Search for every occurrence of: `(req as any).workspaceId`, `(req as any).user`, `req.user as any`, `(req as any)` in any form, and any other cast that applies `as any` to the request object. Do not search for a sample. Scan every file. Produce a complete list with exact file path and line number for every occurrence. Report the total count before making any changes.
+
+**Fix — apply completely:**
+
+Create `server/types/authenticated-request.ts`. This file contains one export: the `AuthenticatedRequest` interface. It extends Express's `Request`. It types `workspaceId` as `string` — non-optional, never undefined. It types `user` as the complete session user object shape with every field that authentication middleware attaches. It types any other fields that middleware adds to the request. This is the single source of type truth for authenticated requests. It is imported from this one location everywhere it is used. It is never redefined in another file.
+
+Update the authentication middleware that attaches `workspaceId` and `user` to the request. Confirm it is typed to produce an `AuthenticatedRequest` output. The type flows from middleware through to handler — no casting required at the handler because the middleware already guarantees the type.
+
+Replace every `(req as any).workspaceId` and every other `req as any` cast across every route file and every service file with the `AuthenticatedRequest` type. Change every handler signature that accepts a generic `Request` to accept `AuthenticatedRequest`. This is not a find-and-replace on one file. This is a full codebase update.
+
+Add the following runtime guard at the top of every route handler that accesses workspace-scoped data — not just the ones that had `as any` casts, every handler that touches workspace data:
+
+```typescript
+if (!req.workspaceId) {
+  return res.status(401).json({ 
+    error: 'Workspace context required',
+    code: 'MISSING_WORKSPACE_CONTEXT'
+  });
+}
+```
+
+This guard is the runtime enforcement. The `AuthenticatedRequest` type is the compile-time enforcement. Both must be present. One without the other is incomplete.
+
+**What is not acceptable:**
+
+Creating a helper function `getWorkspaceId(req: any): string` that internally does the `as any` cast and returns the value. This is the same broken pattern inside a wrapper. The type must be correct at the handler parameter level.
+
+Adding the type to new files only and leaving existing files with `as any`. Every file. Every cast. Every instance.
+
+**Verification — prove it works:**
+
+Run TypeScript compilation. Zero errors related to request types. Zero `as any` casts on request objects anywhere in the codebase — run a search and confirm the count is zero.
+
+Call a workspace-scoped endpoint with an expired session token. Confirm 401 is returned with the `MISSING_WORKSPACE_CONTEXT` error code. Call a workspace-scoped endpoint with a valid session. Confirm it executes correctly and returns data scoped to the correct workspace.
+
+Re-run all ten baseline operations. All ten must pass with identical results to the baseline document.
+
+Add to replit.md Architecture Canons: "`AuthenticatedRequest` is the required type for every authenticated route handler. `req as any` on request objects is permanently retired from this codebase. Any future route handler that accesses workspace-scoped data must use `AuthenticatedRequest` and include the workspace context runtime guard."
+
+---
+
+**ROOT CAUSE 2 — MISSING DATABASE TRANSACTIONS ON MULTI-TABLE FINANCIAL WRITES**
+
+*The disease: operations that write to more than one database table as a single logical unit are executed as sequential independent writes with no transaction wrapping. If the server crashes, the network drops, or the database throws an error after the first write succeeds but before the second write executes, the database is left in a permanently inconsistent state. A payroll entry exists with no corresponding pay stub. An employee record exists with no corresponding bank account record. An invoice exists with no line items. These are not recoverable without manual intervention. No error is surfaced. The data is simply wrong.*
+
+**How this connects to Phase 1:** Phase 1 confirmed the R-003 fix wrapped the bank account and payroll info write in a transaction. That fix is the correct pattern. Root Cause 2 applies that same correct pattern everywhere it is missing — not just the one place it was caught.
+
+**Search — find every instance:**
+
+Scan every route file and every service file. Find every sequence where two or more of the following operations appear consecutively as part of a single logical unit without being wrapped in `db.transaction()`: `db.insert()`, `db.update()`, `db.delete()`, `tx.insert()`, `tx.update()`. A single logical unit means both writes must succeed together or both must fail together.
+
+Specifically search in these domains — these are the highest risk areas:
+
+Payroll domain: any sequence touching more than one of payroll_runs, payroll_entries, pay_stubs, employee_payroll_info, employee_bank_accounts, payroll_deductions.
+
+Invoice domain: any sequence touching more than one of invoices, invoice_line_items, invoice_payments, client billing records.
+
+Employee domain: any sequence touching more than one of employees, employee_profiles, employee_payroll_info, employee_bank_accounts, workspace_users, user_roles, user_invites.
+
+Shift domain: any sequence that creates a shift and immediately creates associated notification records, coverage records, or audit entries.
+
+Trinity action domain: any action that generates a document and writes a database reference to that document as separate operations.
+
+Hiring pipeline domain: any stage transition that updates the applicant record and creates an associated event or notification record.
+
+Produce the complete list with file path, line range, and every table the sequence touches. Report the total count before making any changes.
+
+**Fix — apply completely:**
+
+Wrap every identified sequence in `db.transaction(async (tx) => { })`. Every database call within the transaction must use `tx` as the database handle — never the global `db` inside a transaction block. The transaction commits only when every write succeeds. If any write throws, all writes roll back automatically.
+
+The canonical pattern that every transaction in this codebase must follow:
+
+```typescript
+const result = await db.transaction(async (tx) => {
+  // First write
+  const [primaryRecord] = await tx
+    .insert(primaryTable)
+    .values(primaryData)
+    .returning();
+
+  // Second write depends on first
+  await tx
+    .insert(relatedTable)
+    .values({ 
+      ...relatedData, 
+      primaryId: primaryRecord.id,
+      workspaceId: primaryRecord.workspaceId 
+    });
+
+  // Return whatever the caller needs
+  return primaryRecord;
+});
+```
+
+Every transaction must: use `tx` not `db` for every operation inside it, include `workspaceId` on every inserted record, return a meaningful result to the caller, and handle only writes that are logically coupled — do not bundle unrelated writes into one transaction.
+
+Confirm the existing R-003 fix in PATCH /my-payroll-info matches this canonical form exactly. If it does not, update it to match.
+
+**What is not acceptable:**
+
+Wrapping the sequence in a try-catch and manually rolling back with a second database call on error. Manual rollback is not a transaction. If the manual rollback itself fails, you have compounded the inconsistency. Use `db.transaction()`.
+
+Wrapping only the first and second writes when there are three writes in the sequence. If three writes are logically coupled, all three go inside the same transaction.
+
+Adding error handling that catches the partial write failure and logs it without rolling back. Logging a partial write is not recovery. Rolling back is recovery.
+
+**Verification — prove it works:**
+
+For each fixed sequence: temporarily introduce a forced failure on the final write by adding a `throw new Error('forced test failure')` as the last operation inside the transaction. Execute the operation. Confirm the server returns an error response to the caller. Query every table the transaction writes to and confirm zero records from the failed operation exist anywhere in the database. Remove the forced failure. Execute the operation again. Confirm all records are created correctly and persist. Confirm `workspaceId` is present and correct on every created record.
+
+Re-run all ten baseline operations. All ten must pass.
+
+Add to replit.md Architecture Canons: "All multi-table writes that form a single logical operation use `db.transaction()`. Sequential independent writes on logically coupled financial data are permanently retired. `tx` is used for all database calls inside a transaction block — the global `db` is never called inside a transaction."
+
+---
+
+**ROOT CAUSE 3 — DUAL SOURCES OF TRUTH FOR PAYROLL CYCLE CONFIGURATION**
+
+*The disease: payroll cycle settings — pay cycle frequency, pay day of week, pay period start date — exist in two storage locations: a JSONB blob column and dedicated columns on the workspaces table. The UI writes to one location. The payroll calculation engine may read from the other. If they diverge, every payroll run calculates pay period boundaries using the wrong configuration. An employee paid weekly according to the UI settings gets a bi-weekly paycheck because the engine reads a stale JSONB value. No error is thrown. The numbers are just wrong.*
+
+**How this connects to Phase 1:** Phase 1 eliminated ghost columns — column references in code that do not match the actual database. Root Cause 3 eliminates ghost configuration — settings that exist in two places and are assumed to be the same when they may not be.
+
+**Search — find every instance:**
+
+Trace the exact code execution path from the moment a user clicks "Run Payroll" to the moment the payroll engine reads the pay cycle frequency. Document every function call in that path. At the exact point where pay cycle configuration is consumed, identify the precise variable name, the file, and the line number where the value is read and which database column or JSONB field it reads from.
+
+Then find every location in the codebase that writes payroll cycle configuration. For each write location: what triggers it, what value is written, and which storage destination it targets — the JSONB blob, the dedicated column, or both.
+
+Produce a complete read-write map: every read location with its source, every write location with its destination. This map is the evidence for which source is authoritative and which is the duplicate.
+
+**Fix — apply completely:**
+
+Based on the read-write map, designate the dedicated columns on the `workspaces` table as the single authoritative source. Write and run a migration that reads current payroll cycle values from `billing_settings_blob` for every workspace where the dedicated columns are null and writes those values to the dedicated columns. After the migration runs, the dedicated columns are populated for every workspace.
+
+Remove every code path that reads payroll cycle configuration from `billing_settings_blob`. Replace each with a read from the dedicated workspaces columns. Remove every code path that writes payroll cycle configuration to `billing_settings_blob`. Replace each with a write to the dedicated columns.
+
+Add this comment at the authoritative read site — the exact line where the payroll engine reads pay cycle configuration:
+
+```typescript
+// CANONICAL SOURCE — payroll cycle configuration
+// Reads exclusively from workspaces table dedicated columns.
+// billing_settings_blob is NOT a source of truth for operational configuration.
+// Writing payroll cycle settings to billing_settings_blob is permanently retired.
+// See CoAIleague Architecture Canons in replit.md.
+```
+
+**What is not acceptable:**
+
+Reading from both sources and using one as a fallback for the other — `dedicatedColumn ?? jsonbValue`. This perpetuates the dual source pattern. One source. The dedicated column. If the dedicated column is null after the migration runs, that is a migration bug — fix the migration.
+
+Adding a synchronization function that copies the value between the two sources after every write. This is two sources with extra steps. One source.
+
+**Verification — prove it works:**
+
+Update payroll cycle settings through the settings UI to weekly pay cycle. Query the workspaces table directly and confirm `payrollCycle` is set to weekly in the dedicated column. Query `billing_settings_blob` directly and confirm no payroll cycle write occurred there. Run a payroll calculation for the current period. Trace the code path during execution and confirm the payroll engine reads the dedicated column value. Confirm the pay period boundaries the engine calculates match a weekly cycle exactly.
+
+Change the pay cycle to bi-weekly through the UI. Confirm the dedicated column updates. Run another payroll calculation. Confirm the pay period boundaries match bi-weekly exactly.
+
+Re-run all ten baseline operations. All ten must pass.
+
+Add to replit.md Architecture Canons: "Payroll cycle configuration is stored in and read from the dedicated workspaces table columns exclusively. `billing_settings_blob` does not store operational configuration. This was resolved in Phase 2 Root Cause 3."
+
+---
+
+**ROOT CAUSE 4 — FLOATING POINT ARITHMETIC ON FINANCIAL CALCULATIONS**
+
+*The disease: JavaScript's native Number type stores values in IEEE 754 binary floating point format which cannot precisely represent most decimal fractions. 0.1 + 0.2 equals 0.30000000000000004 in native JavaScript. On a single calculation this looks trivial. Across 80 employee payroll entries with overtime, deductions, and accumulated totals, the error compounds. An employee's net pay is off by a few cents. An invoice total does not match the sum of its line items by a small amount. These are not rounding errors — they are precision errors that accumulate unpredictably. In a financial platform they are unacceptable.*
+
+**How this connects to Phase 1:** Phase 1 fixed ghost columns where queries referenced non-existent database columns and returned wrong values silently. Root Cause 4 fixes ghost precision where calculations reference the right columns but compute wrong values silently because the arithmetic itself is broken.
+
+**Search — find every instance:**
+
+Scan the entire codebase. Find every arithmetic operation — `*`, `/`, `+`, `-` — where either operand could be a financial value: a pay rate, an hourly amount, an invoice line item amount, a deduction amount, a gross pay value, a net pay value, or any value derived from those. Find every `parseFloat()` call on a database value. Find every `Number()` call on a value from a request body or database row. Find every `Math.round()`, `Math.floor()`, and `Math.ceil()` call on a financial value. Find every `.toFixed()` call on a financial value.
+
+Specifically search in: every payroll calculation function, every invoice line item calculation, every gross pay calculation, every overtime calculation, every deduction calculation, every running total accumulation across multiple records, every pay stub generation function, and every Trinity financial intelligence function.
+
+Produce the complete list with file path, line number, and the financial values involved in each operation. Report the total count before making any changes.
+
+**Fix — apply completely:**
+
+Confirm `decimal.js` is installed as a project dependency. If it is not, install it now with `npm install decimal.js` and confirm it appears in package.json.
+
+Create `server/services/financialCalculator.ts`. This is the only permitted location for financial arithmetic in the entire codebase. It imports `Decimal` from `decimal.js`. It exports the following named functions — these are the complete set of financial calculations the platform performs. If a calculation is needed that is not in this list, it is added here before being used anywhere else:
+
+```typescript
+import { Decimal } from 'decimal.js';
+
+// All inputs are strings (from DB or request body)
+// All outputs are strings (for DB storage or API response)
+// The only time a financial value becomes a JS number is formatCurrency() for display
+
+export function calculateGrossPay(
+  hours: string, 
+  rate: string, 
+  payType: 'hourly' | 'salary' | 'contract'
+): string {
+  const h = new Decimal(hours);
+  const r = new Decimal(rate);
+  if (payType === 'salary') return r.toFixed(4);
+  return h.mul(r).toFixed(4);
+}
+
+export function calculateOvertimePay(
+  overtimeHours: string,
+  rate: string,
+  multiplier: string = '1.5'
+): string {
+  return new Decimal(overtimeHours)
+    .mul(new Decimal(rate))
+    .mul(new Decimal(multiplier))
+    .toFixed(4);
+}
+
+export function calculateInvoiceLineItem(
+  hours: string, 
+  clientRate: string
+): string {
+  return new Decimal(hours)
+    .mul(new Decimal(clientRate))
+    .toFixed(4);
+}
+
+export function calculateInvoiceTotal(lineItems: string[]): string {
+  return lineItems
+    .reduce((sum, item) => sum.plus(new Decimal(item)), new Decimal(0))
+    .toFixed(4);
+}
+
+export function applyDeduction(
+  gross: string, 
+  deductionAmount: string
+): string {
+  return new Decimal(gross)
+    .minus(new Decimal(deductionAmount))
+    .toFixed(4);
+}
+
+export function calculateNetPay(
+  gross: string, 
+  deductions: string[]
+): string {
+  const totalDeductions = deductions
+    .reduce((sum, d) => sum.plus(new Decimal(d)), new Decimal(0));
+  return new Decimal(gross)
+    .minus(totalDeductions)
+    .toFixed(4);
+}
+
+export function sumFinancialValues(values: string[]): string {
+  return values
+    .reduce((sum, v) => sum.plus(new Decimal(v)), new Decimal(0))
+    .toFixed(4);
+}
+
+export function formatCurrency(amount: string): string {
+  // ONLY use this at the display boundary — never for calculation inputs
+  return new Decimal(amount).toDecimalPlaces(2, Decimal.ROUND_HALF_EVEN).toFixed(2);
+}
+```
+
+Replace every instance of native arithmetic on financial values with the appropriate `FinancialCalculator` function. Every `parseFloat(rate) * hours` becomes `calculateGrossPay(hours, rate, payType)`. Every `parseFloat(amount) + parseFloat(other)` that accumulates financial values becomes `sumFinancialValues([amount, other])`. Every `.toFixed(2)` on a financial value that is not at the final display boundary gets removed — intermediate calculations carry four decimal places of precision.
+
+**What is not acceptable:**
+
+Creating a wrapper function that calls `parseFloat()` internally and returns the result as a string. The wrapper must use the Decimal library for the arithmetic — not wrap the broken arithmetic in a new function.
+
+Using `FinancialCalculator` for some calculations and native arithmetic for others in the same file. Every financial arithmetic operation in the file uses `FinancialCalculator`. No exceptions.
+
+Using `.toFixed(2)` on an intermediate calculation result that will be used as input to another calculation. `.toFixed(2)` truncates precision. Intermediate values carry four decimal places. Only `formatCurrency()` produces two decimal places and only at the display boundary.
+
+**Verification — prove it works:**
+
+Run the following calculations and confirm the output matches the mathematically exact expected result:
+
+`calculateGrossPay('40', '15.75', 'hourly')` must return `'630.0000'`
+`calculateGrossPay('40', '15.75', 'hourly')` plus `calculateOvertimePay('5', '15.75', '1.5')` accumulated with `sumFinancialValues` must return `'748.1250'`
+`calculateInvoiceTotal(['100.0000', '200.0000', '150.0000'])` must return `'450.0000'`
+`formatCurrency('748.1250')` must return `'748.13'`
+
+Run payroll calculation for 10 employees from the ACME sandbox with known rates and hours. Record every expected gross pay. Confirm every platform output matches exactly. Generate an invoice with 15 line items. Confirm the total equals the exact sum of all line items with zero drift.
+
+Re-run all ten baseline operations. All ten must pass.
+
+Add to replit.md Architecture Canons: "`FinancialCalculator` in `server/services/financialCalculator.ts` is the only permitted location for financial arithmetic. Native JavaScript arithmetic operators on financial values are permanently retired. Financial values are strings at every layer except `formatCurrency()` display output. Four decimal places of precision in storage. Two decimal places at display boundary only."
+
+---
+
+**ROOT CAUSE 5 — SHIFT OVERLAP RACE CONDITION**
+
+*The disease: when a shift assignment is submitted, the code checks for overlapping shifts with a SELECT query, then creates the new shift with a separate INSERT. Between the SELECT completing and the INSERT executing there is a window — even if only milliseconds — where a second concurrent request can run the same SELECT, also find no overlap, and also execute its INSERT. Both shifts are created. The same employee is now double-booked. Both shifts flow through to payroll. The employee is paid twice for the same time period. In a security staffing context this is not a scheduling inconvenience — it is a payroll accuracy failure.*
+
+**How this connects to Phase 1:** Phase 1 confirmed every column name is correct and every query references real columns. Root Cause 5 confirms that even correct queries executed in the correct sequence can produce wrong results when timing is not controlled.
+
+**Search — find every instance:**
+
+Find the shift overlap check in shiftRoutes.ts. Read the exact code — the SELECT that checks for existing overlapping shifts and the INSERT that creates the new shift. Confirm these are two separate database calls with no atomic protection between them.
+
+Search for every other SELECT-then-act pattern in the codebase where the SELECT checks a condition and the subsequent INSERT or UPDATE acts on that condition, in domains where a concurrent duplicate would cause a financial or operational error. List every instance.
+
+**Fix — apply completely:**
+
+For the shift overlap race condition, implement a unique composite constraint on the shifts table. This is the canonical solution because it pushes the enforcement to the database level where it is truly atomic regardless of application server count or request timing:
+
+Write and run a migration that adds a unique constraint to the shifts table. The constraint covers `employee_id` and the time range using PostgreSQL's exclusion constraint with the `tsrange` type:
+
+```sql
+ALTER TABLE shifts 
+ADD CONSTRAINT no_overlapping_employee_shifts 
+EXCLUDE USING GIST (
+  employee_id WITH =,
+  tsrange(start_time, end_time, '[)') WITH &&
+) WHERE (status != 'cancelled');
+```
+
+If the `btree_gist` extension is not enabled, enable it first:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+```
+
+Update the shift creation route to handle the constraint violation error code (`23P01` for exclusion constraint violation) and return a clean, human-readable 409 response:
+
+```typescript
+try {
+  const [shift] = await db.insert(shifts).values(shiftData).returning();
+  return res.status(201).json(shift);
+} catch (error) {
+  if (error.code === '23P01') {
+    return res.status(409).json({
+      error: 'This employee already has a shift during this time period',
+      code: 'SHIFT_OVERLAP_CONFLICT'
+    });
+  }
+  throw error;
+}
+```
+
+Remove the application-level SELECT overlap check. The database constraint is the enforcement. The application-level check was a TOCTOU vulnerability. The database constraint is atomic.
+
+For every other SELECT-then-act pattern found: apply the same principle — push enforcement to the database with a constraint or a unique index where possible, or wrap in a serializable transaction where a constraint is not sufficient.
+
+**What is not acceptable:**
+
+Keeping the SELECT overlap check and adding the constraint. The SELECT check is the vulnerable pattern. Remove it. The constraint handles enforcement.
+
+Using an application-level lock — a JavaScript Map, a Redis key, an in-memory flag — to prevent concurrent writes. Application-level locks do not survive server restarts and do not work across multiple server instances. Database constraints work always.
+
+**Verification — prove it works:**
+
+Confirm the `btree_gist` extension is enabled in the database.
+Confirm the exclusion constraint exists on the shifts table.
+
+Fire 20 concurrent POST requests for shift assignment — all for the same employee, all for the same time slot — simultaneously using Promise.all. Confirm exactly one returns 201. Confirm every other returns 409 with the `SHIFT_OVERLAP_CONFLICT` code. Query the shifts table and confirm exactly one record was created for that employee in that time slot.
+
+Re-run all ten baseline operations. All ten must pass.
+
+Add to replit.md Architecture Canons: "Shift overlap prevention uses a PostgreSQL exclusion constraint on the shifts table. Application-level SELECT-then-INSERT overlap checks are permanently retired. The database constraint is the sole enforcement mechanism and is atomic under all concurrency conditions."
+
+---
+
+**ROOT CAUSE 6 — TRINITY ACTIONS USING UNVERIFIED DATABASE REFERENCES**
+
+*The disease: Trinity actions that construct database queries using raw string table names, raw string column names, or string-literal SQL fragments reference column names that are never checked against the actual schema. Phase 1 found that `employment_status` and `end_date` — columns that do not exist — were being queried silently in financial service files. Trinity's action layer has the same risk. An action that queries a non-existent column returns empty results and reports success. Trinity tells the user the action completed. The data that should have been found, written, or processed was never touched.*
+
+**How this connects to Phase 1:** Phase 1 found and fixed ghost columns in service files. Root Cause 6 applies the same verification to Trinity's action layer which was not in scope for Phase 1's financial core file conversion.
+
+**Search — find every instance:**
+
+Audit every Trinity action in the action registry. For each action find every database operation. Classify each database operation:
+
+Already uses Drizzle ORM with schema object references — acceptable, no change needed.
+
+Uses a raw string table name or raw string column name inside a sql template or db.execute call — must be verified against the Name Registry and converted to ORM or wrapped as Category C.
+
+Uses a string variable to construct a table or column name dynamically — flag as high risk, requires explicit verification.
+
+For every document generation template used by Trinity: list every template variable name and the field it is supposed to pull its value from.
+
+**Fix — apply completely:**
+
+For every Trinity action database operation that uses raw string column or table references: verify every column name and table name against the canonical Name Registry from Phase 1. If a referenced column does not exist — it is a ghost column — fix it by identifying the correct column from the schema and updating the query. If the query can be expressed in Drizzle ORM, convert it. If it is a legitimate Category C, apply the full Category C documentation standard.
+
+For every document generation template: create an explicit typed mapping object that declares every template variable and its source field:
+
+```typescript
+const payStubTemplateMapping = {
+  employeeName: (data: PayStubData) => `${data.firstName} ${data.lastName}`,
+  grossPay: (data: PayStubData) => formatCurrency(data.grossPay),
+  netPay: (data: PayStubData) => formatCurrency(data.netPay),
+  payPeriodStart: (data: PayStubData) => formatDate(data.periodStart),
+  payPeriodEnd: (data: PayStubData) => formatDate(data.periodEnd),
+} as const satisfies TemplateMapping<PayStubData>;
+```
+
+No template variable resolves by string name convention. Every variable has an explicit typed resolver function. A template variable that references a field that does not exist on the data type is a TypeScript compile error.
+
+**What is not acceptable:**
+
+Wrapping Trinity actions in a try-catch that swallows errors and reports success. This is the exact pattern that caused ghost columns to go undetected. Errors must surface.
+
+Verifying only the Trinity actions that are called frequently. Every action in the registry is verified. An infrequently called action that fails silently on the first real tenant use is the same failure as a frequently called one.
+
+**Verification — prove it works:**
+
+Execute every Trinity action in the registry with a real ACME sandbox payload. Confirm every action produces its expected output. Confirm every output persists to the correct record. Query the database directly after each action and confirm the data is present. Confirm no action references a column or table that does not exist in the current schema — run a search for any string literal column names in Trinity action files and cross-reference every one against the Name Registry.
+
+Re-run all ten baseline operations. All ten must pass.
+
+Add to replit.md Architecture Canons: "Trinity actions use Drizzle schema object references for all database operations. Raw string column and table name references in Trinity action files are permanently retired. Document generation templates use explicit typed mapping objects — no string convention resolution."
+
+---
+
+**ROOT CAUSE 7 — UNVALIDATED API RESPONSE SHAPES ON FINANCIAL AND OPERATIONAL BOUNDARIES**
+
+*The disease: TypeScript interfaces used to type API responses are compile-time assertions. They describe what the developer intended the API to return. They do not check what the API actually returns at runtime. When the API returns a different shape — a null where a number was expected, a string key where a different string key was expected, a missing nested object — TypeScript does not catch it at runtime. The value is undefined. The component renders blank or zero. No error is thrown. A payroll display shows $0.00 for an employee who should be paid $847.50. No one knows until the employee complains.*
+
+**How this connects to Phase 1:** Phase 1 established explicit column mappings so the database layer returns exactly the right field names. Root Cause 7 establishes runtime validation at the API boundary so the frontend layer receives exactly the right field names and types and knows immediately when it does not.
+
+**Search — find every instance:**
+
+Scan every frontend service file and every React Query hook. For each API call that returns financial data, schedule data, employee data, or Trinity outputs: identify the TypeScript type used to type the response. Determine whether that type is a compile-time assertion only (`as ResponseType`, `<ResponseType>response.data`) or whether it includes runtime validation. List every API call that uses compile-time assertion only with no runtime validation.
+
+Scan every API route that accepts financial or operational input in the request body. Identify every route that reads from `req.body` without first running the body through a validation function that checks types, required fields, and value constraints at runtime. List every route with no body validation or only partial body validation.
+
+**Fix — apply completely:**
+
+Install Zod as a project dependency if not already installed: `npm install zod`. Zod is the canonical runtime validation library for this codebase. No other validation library is introduced for this purpose.
+
+Create `shared/schemas/` directory. This directory contains Zod schema files organized by domain — payroll, invoices, employees, shifts, clients, Trinity, subscriptions. These schemas are importable from both the frontend and the backend. One schema definition, used in both directions.
+
+For every financial and operational API response: write a Zod schema that describes the exact shape the API returns. Add runtime validation to every React Query `queryFn` that calls a financial or operational endpoint:
+
+```typescript
+const { data } = useQuery({
+  queryKey: ['payroll', workspaceId],
+  queryFn: async () => {
+    const response = await fetch(`/api/payroll?workspaceId=${workspaceId}`);
+    const json = await response.json();
+    // Runtime validation — catches shape mismatches at the boundary
+    return PayrollResponseSchema.parse(json);
+  }
+});
+```
+
+If `PayrollResponseSchema.parse(json)` throws, it means the API returned something different from what was expected. The error surfaces immediately with the exact field that failed validation. This is diagnosed and fixed. Not silently rendered as blank.
+
+For every API route that accepts financial or operational input: add request body validation middleware using the corresponding Zod schema:
+
+```typescript
+import { z } from 'zod';
+
+const CreateInvoiceSchema = z.object({
+  clientId: z.string().uuid(),
+  lineItems: z.array(z.object({
+    description: z.string().min(1),
+    hours: z.string().regex(/^\d+\.?\d{0,4}$/),
+    rate: z.string().regex(/^\d+\.?\d{0,4}$/)
+  })).min(1),
+  dueDate: z.string().datetime()
+});
+
+// In route handler:
+const parseResult = CreateInvoiceSchema.safeParse(req.body);
+if (!parseResult.success) {
+  return res.status(400).json({
+    error: 'Invalid request body',
+    fields: parseResult.error.flatten().fieldErrors
+  });
+}
+const validatedBody = parseResult.data; // fully typed, no any
+```
+
+Document the canonical financial value serialization contract in replit.md: financial values are stored as numeric strings in the database (Drizzle returns PostgreSQL numeric type as string). They travel as strings in API request and response bodies. They are parsed by `FinancialCalculator` functions (established in Root Cause 4) before arithmetic. They are formatted by `formatCurrency()` at the display boundary only. No financial value is a native JavaScript number at any layer except inside `formatCurrency()`.
+
+**What is not acceptable:**
+
+Adding Zod schemas to new endpoints only and leaving existing endpoints unvalidated. Every financial and operational API boundary gets Zod validation. The list from the search pass is the complete work order.
+
+Using `z.any()` or `z.unknown()` in the Zod schema for financial fields. A schema that accepts anything is not a schema. Every financial field has a specific type constraint.
+
+Adding Zod validation to the frontend only and leaving the backend routes with no request body validation. Both directions. Request bodies validated on the backend. Response bodies validated on the frontend.
+
+**Verification — prove it works:**
+
+Submit a request with a missing required field to every financial endpoint. Confirm every one returns 400 with the specific field name that failed validation. Submit a request with a pay rate of -5. Confirm 400 with a clear error message. Submit a request with a non-numeric string as an hours value. Confirm 400.
+
+On the frontend: mock an API response that returns `grossPay: null` for a payroll endpoint. Confirm the Zod parse throws and the error is caught. Confirm the component does not render `$0.00` silently — it surfaces an error state.
+
+Re-run all ten baseline operations. All ten must pass with correct data.
+
+Add to replit.md Architecture Canons: "Zod is the canonical runtime validation library. Every financial and operational API boundary has a Zod schema enforced in both directions — request body validation on the backend, response validation on the frontend. TypeScript interface-only typing of API responses is permanently retired for financial and operational data."
+
+---
+
+**PHASE 2 FINAL VERIFICATION — ALL SEVEN ROOT CAUSES COMPLETE**
+
+Run this verification sequence after all seven root causes are confirmed fixed. Do not run it until all seven are done — this is the phase completion gate, not a mid-phase check.
+
+**Code scan verification:**
+Search for `req as any` across all route files — must return zero results.
+Search for sequential `db.insert()` or `db.update()` calls outside `db.transaction()` in multi-table write sequences — must return zero results.
+Search for payroll cycle reads from `billing_settings_blob` — must return zero results.
+Search for native arithmetic operators on financial values outside `financialCalculator.ts` — must return zero results.
+Search for the old SELECT-based overlap check in shiftRoutes.ts — must be gone, replaced by the constraint handler.
+Search for raw string column name references in Trinity action files — must return zero results or have Category C documentation.
+Search for React Query `queryFn` calls on financial endpoints without Zod parse — must return zero results.
+
+**Database verification:**
+Confirm `btree_gist` extension is enabled.
+Confirm the shift exclusion constraint exists on the shifts table.
+Confirm `payrollCycle` dedicated column is populated for every workspace in the ACME sandbox.
+Confirm `billing_settings_blob` has no payroll cycle writes from the Phase 2 session.
+
+**Concurrent write verification:**
+Fire 20 concurrent shift assignment requests for the same slot. Exactly one succeeds. Every other returns 409. Zero duplicate records in the database.
+
+**Financial accuracy verification:**
+Run payroll for 10 ACME sandbox employees with known rates and hours. Independently verify every gross pay, overtime pay, and net pay calculation. Every figure must match the mathematically exact expected value.
+
+**Server verification:**
+Start the server fresh. Confirm 30/30 background services start with zero failures. Confirm login flow completes without error.
+
+**Full baseline verification:**
+Run all ten baseline operations: create employee, create shift, generate invoice, run payroll calculation, execute Trinity action, run hiring pipeline stage transition, generate pay stub, create client, assign shift through Trinity, send invoice. All ten must pass with correct data persisting to the correct database records. Compare results to the Phase 2 Baseline Document recorded at the start of this phase. Every result must be identical or improved — zero regressions.
+
+---
+
+**PHASE 2 COMPLETION REPORT**
+
+Produce the following structured report and append it to replit.md:
+
+For each of the seven root causes: the exact files changed, the total instance count found, the total instance count fixed, the verification result, and the canon added to replit.md.
+
+Ghost columns found during Phase 2 Trinity audit: every column name that was wrong, the correct column, and the action it was in.
+
+Total `req as any` casts eliminated. Total write sequences wrapped in transactions. Total native arithmetic operations replaced with FinancialCalculator calls. Total Zod schemas created.
+
+Confirmation that every Phase 2 Architecture Canon is appended to replit.md and correlates correctly with existing Phase 1 canons — no conflicts, no gaps, no duplications.
+
+Phase 2 sync statement: "Phase 2 root causes are fully resolved. All fixes build on Phase 1's schema parity foundation. Phase 3 can begin on a codebase where naming is correct, financial core files use ORM, request types are enforced, financial transactions are atomic, pay cycle has one source of truth, financial arithmetic is precise, concurrent shift writes are protected by database constraint, Trinity actions reference verified schema objects, and API boundaries have runtime validation."
+
+---
+
+**PHASE 2 IS COMPLETE WHEN:**
+
+All seven code scan verifications return zero violations. All database verifications pass. The concurrent write test confirms exactly one shift per slot. The financial accuracy verification matches expected values exactly. The server starts with 30/30 services. All ten baseline operations pass with zero regressions. The completion report is in replit.md. The Phase 2 sync statement is written.
+
+Only then does Phase 3 begin.
+
+---
+
+That is Phase 2, Bryan. Zero shortcuts possible. Every root cause has an explicit search pass that produces a count before any changes are made, a fix pass with exact patterns that cannot be substituted with wrappers, a list of what is not acceptable that calls out the specific shortcuts by name, and a verification pass that requires direct database queries and concurrent load testing — not just "the server starts clean." When he brings the completion report back, bring it here and we confirm Phase 2 before Phase 3 goes in.

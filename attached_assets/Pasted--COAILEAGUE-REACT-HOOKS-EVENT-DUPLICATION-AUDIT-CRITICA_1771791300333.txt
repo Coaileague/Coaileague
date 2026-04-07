@@ -1,0 +1,948 @@
+# COAILEAGUE - REACT HOOKS & EVENT DUPLICATION AUDIT
+
+## CRITICAL ISSUES IDENTIFIED
+
+1. **"Rendered more hooks than during the previous render"** - React hooks violation causing page crashes
+2. **"Duplicate notifications for New Update Available"** - Event listeners firing multiple times
+
+**THESE ARE UNIVERSAL ISSUES** affecting all pages on desktop and mobile, breaking workflows.
+
+---
+
+# PART 1: REACT HOOKS RULES VIOLATION HUNT
+
+## 1.1 Understanding the Error
+
+```
+"Rendered more hooks than during the previous render"
+
+This error means:
+- Hooks are being called CONDITIONALLY
+- Hooks are called AFTER early returns
+- Hooks are called INSIDE loops
+- Hooks are called INSIDE nested functions
+- The NUMBER of hooks changes between renders
+
+React requires hooks to be called:
+- At the TOP LEVEL of the component
+- In the SAME ORDER every render
+- NEVER conditionally
+```
+
+## 1.2 Find ALL Hooks Violations
+
+```bash
+# VIOLATION 1: Hooks after early return
+# Pattern: return before useState/useEffect/etc
+grep -rn "return.*\n.*use[A-Z]" --include="*.tsx" client/src/
+grep -rn "return [^;]*$" --include="*.tsx" client/src/ -A 5 | grep "use[A-Z]"
+
+# Better approach - find all early returns and check what follows
+for file in $(find client/src -name "*.tsx"); do
+  if grep -q "return.*null\|return.*<>\|return.*undefined\|return.*false" "$file"; then
+    if grep -n "return" "$file" | head -5; then
+      echo "CHECK: $file for hooks after early return"
+    fi
+  fi
+done
+
+# VIOLATION 2: Hooks inside conditionals
+grep -rn "if.*{[^}]*use[A-Z]\|if.*use[A-Z]" --include="*.tsx" client/src/
+grep -rn "&&.*use[A-Z]\|? use[A-Z]\|: use[A-Z]" --include="*.tsx" client/src/
+
+# VIOLATION 3: Hooks inside loops
+grep -rn "for.*use[A-Z]\|while.*use[A-Z]\|\.map.*use[A-Z]\|\.forEach.*use[A-Z]" --include="*.tsx" client/src/
+
+# VIOLATION 4: Hooks inside nested functions
+grep -rn "function.*{[^}]*use[A-Z]\|=>.*{[^}]*use[A-Z]" --include="*.tsx" client/src/
+
+# VIOLATION 5: Hooks in try/catch
+grep -rn "try.*{[^}]*use[A-Z]\|catch.*{[^}]*use[A-Z]" --include="*.tsx" client/src/
+```
+
+## 1.3 Common Violation Patterns
+
+### Pattern 1: Early Return Before Hooks (MOST COMMON)
+
+```tsx
+// ❌ BAD - Hooks after conditional return
+function ClientsPage() {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Redirect to="/login" />; // Early return
+  }
+  
+  // These hooks won't run if user is null!
+  const [clients, setClients] = useState([]); // VIOLATION
+  const { data } = useQuery(['clients']); // VIOLATION
+  
+  return <div>{/* ... */}</div>;
+}
+
+// ✅ GOOD - All hooks before any returns
+function ClientsPage() {
+  const { user } = useAuth();
+  const [clients, setClients] = useState([]);
+  const { data } = useQuery(['clients'], { enabled: !!user });
+  
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+  
+  return <div>{/* ... */}</div>;
+}
+```
+
+### Pattern 2: Conditional Hook Calls
+
+```tsx
+// ❌ BAD - Hook inside condition
+function UserProfile({ userId }) {
+  if (userId) {
+    const { data } = useQuery(['user', userId]); // VIOLATION
+  }
+  
+  return <div>{/* ... */}</div>;
+}
+
+// ✅ GOOD - Hook always called, condition in options
+function UserProfile({ userId }) {
+  const { data } = useQuery(
+    ['user', userId], 
+    () => fetchUser(userId),
+    { enabled: !!userId } // Conditional execution, not conditional hook
+  );
+  
+  return <div>{/* ... */}</div>;
+}
+```
+
+### Pattern 3: Hooks in Loops
+
+```tsx
+// ❌ BAD - Hooks in map/loop
+function ItemList({ items }) {
+  return items.map(item => {
+    const [expanded, setExpanded] = useState(false); // VIOLATION
+    return <Item key={item.id} expanded={expanded} />;
+  });
+}
+
+// ✅ GOOD - Extract to separate component
+function ItemList({ items }) {
+  return items.map(item => (
+    <ItemWithState key={item.id} item={item} />
+  ));
+}
+
+function ItemWithState({ item }) {
+  const [expanded, setExpanded] = useState(false); // OK - top level of component
+  return <Item expanded={expanded} />;
+}
+```
+
+### Pattern 4: Hooks in Event Handlers
+
+```tsx
+// ❌ BAD - Hook in callback
+function Form() {
+  const handleSubmit = () => {
+    const [loading, setLoading] = useState(false); // VIOLATION
+    setLoading(true);
+  };
+  
+  return <form onSubmit={handleSubmit} />;
+}
+
+// ✅ GOOD - Hook at top level
+function Form() {
+  const [loading, setLoading] = useState(false);
+  
+  const handleSubmit = () => {
+    setLoading(true);
+  };
+  
+  return <form onSubmit={handleSubmit} />;
+}
+```
+
+### Pattern 5: Dynamic Hook Count
+
+```tsx
+// ❌ BAD - Variable number of hooks
+function DynamicFields({ fields }) {
+  const values = fields.map(field => {
+    return useState(field.defaultValue); // VIOLATION - different count each render
+  });
+}
+
+// ✅ GOOD - Single state object
+function DynamicFields({ fields }) {
+  const [values, setValues] = useState(
+    fields.reduce((acc, f) => ({ ...acc, [f.name]: f.defaultValue }), {})
+  );
+}
+```
+
+## 1.4 Systematic File-by-File Audit
+
+```bash
+# Generate list of all components to audit
+find client/src -name "*.tsx" -exec grep -l "use[A-Z]" {} \; > /tmp/components_with_hooks.txt
+
+# For each file, check hook order
+for file in $(cat /tmp/components_with_hooks.txt); do
+  echo "=== $file ==="
+  
+  # Find all hooks
+  grep -n "use[A-Z][a-zA-Z]*(" "$file" | head -20
+  
+  # Find all returns
+  grep -n "return" "$file" | head -10
+  
+  # Check if any return comes before hooks
+  first_return=$(grep -n "return" "$file" | head -1 | cut -d: -f1)
+  last_hook=$(grep -n "use[A-Z][a-zA-Z]*(" "$file" | tail -1 | cut -d: -f1)
+  
+  if [ -n "$first_return" ] && [ -n "$last_hook" ]; then
+    if [ "$first_return" -lt "$last_hook" ]; then
+      echo "⚠️  POTENTIAL VIOLATION: return on line $first_return, hook on line $last_hook"
+    fi
+  fi
+  
+  echo ""
+done
+```
+
+## 1.5 Specific Files to Check (Based on Error)
+
+```bash
+# The error occurred on Clients page - check it first
+grep -n "use[A-Z]\|return" client/src/pages/clients/*.tsx
+grep -n "use[A-Z]\|return" client/src/pages/clients/index.tsx
+grep -n "use[A-Z]\|return" client/src/pages/clients.tsx
+
+# Check all page components
+for page in $(find client/src/pages -name "*.tsx"); do
+  echo "=== Checking $page ==="
+  
+  # Extract function body and check hook order
+  grep -n "use[A-Z]" "$page"
+  grep -n "^[[:space:]]*return\|if.*return" "$page"
+done
+```
+
+---
+
+# PART 2: DUPLICATE EVENTS & NOTIFICATIONS HUNT
+
+## 2.1 Understanding Duplicate Events
+
+```
+Duplicate "New Update Available" notifications indicate:
+
+1. useEffect running multiple times without cleanup
+2. Event listeners added multiple times
+3. WebSocket handlers registered multiple times
+4. Service worker events firing multiple times
+5. Context providers mounted multiple times
+6. Subscriptions not cleaned up on unmount
+```
+
+## 2.2 Find ALL Event Listeners
+
+```bash
+# Find addEventListener without removeEventListener
+grep -rn "addEventListener" --include="*.tsx" --include="*.ts" client/src/ | \
+  while read line; do
+    file=$(echo "$line" | cut -d: -f1)
+    if ! grep -q "removeEventListener" "$file"; then
+      echo "MISSING CLEANUP: $line"
+    fi
+  done
+
+# Find all event subscriptions
+grep -rn "\.on\(.*\)\|\.subscribe\|addEventListener\|addListener" --include="*.tsx" --include="*.ts" client/src/
+
+# Find useEffect without cleanup
+grep -rn "useEffect" --include="*.tsx" client/src/ -A 10 | grep -B 5 "}\s*,\s*\[" | grep -v "return"
+```
+
+## 2.3 Common Duplication Patterns
+
+### Pattern 1: useEffect Without Cleanup
+
+```tsx
+// ❌ BAD - No cleanup, listener added every render
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+  // Missing cleanup!
+}, []);
+
+// ✅ GOOD - Cleanup on unmount
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+  return () => {
+    window.removeEventListener('resize', handleResize);
+  };
+}, []);
+```
+
+### Pattern 2: WebSocket Without Cleanup
+
+```tsx
+// ❌ BAD - Socket handlers accumulate
+useEffect(() => {
+  socket.on('notification', handleNotification);
+  // No cleanup - handlers pile up!
+}, []);
+
+// ✅ GOOD - Remove handler on cleanup
+useEffect(() => {
+  socket.on('notification', handleNotification);
+  return () => {
+    socket.off('notification', handleNotification);
+  };
+}, []);
+```
+
+### Pattern 3: Service Worker Multiple Registrations
+
+```tsx
+// ❌ BAD - Registers every time component mounts
+useEffect(() => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    // Registers multiple times on remount!
+  }
+}, []);
+
+// ✅ GOOD - Check if already registered, cleanup
+useEffect(() => {
+  let registration;
+  
+  const setup = async () => {
+    if ('serviceWorker' in navigator) {
+      registration = await navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+    }
+  };
+  
+  setup();
+  
+  return () => {
+    navigator.serviceWorker.removeEventListener('message', handleMessage);
+  };
+}, []);
+```
+
+### Pattern 4: Interval/Timeout Without Cleanup
+
+```tsx
+// ❌ BAD - Intervals pile up
+useEffect(() => {
+  setInterval(() => {
+    checkForUpdates();
+  }, 30000);
+  // No cleanup - multiple intervals running!
+}, []);
+
+// ✅ GOOD - Clear on cleanup
+useEffect(() => {
+  const interval = setInterval(() => {
+    checkForUpdates();
+  }, 30000);
+  
+  return () => clearInterval(interval);
+}, []);
+```
+
+### Pattern 5: Subscription Without Unsubscribe
+
+```tsx
+// ❌ BAD - Subscriptions accumulate
+useEffect(() => {
+  const unsubscribe = store.subscribe(handleChange);
+  // Never unsubscribes!
+}, []);
+
+// ✅ GOOD - Unsubscribe on cleanup
+useEffect(() => {
+  const unsubscribe = store.subscribe(handleChange);
+  return () => unsubscribe();
+}, []);
+```
+
+### Pattern 6: Context Provider Remounting
+
+```tsx
+// ❌ BAD - Provider inside component that remounts
+function App() {
+  const [key, setKey] = useState(0);
+  
+  return (
+    <div key={key}> {/* Forces remount */}
+      <NotificationProvider> {/* Recreated on key change */}
+        <Content />
+      </NotificationProvider>
+    </div>
+  );
+}
+
+// ✅ GOOD - Providers at stable level
+function App() {
+  return (
+    <NotificationProvider> {/* Stable, doesn't remount */}
+      <Content />
+    </NotificationProvider>
+  );
+}
+```
+
+## 2.4 Find "Update Available" Source
+
+```bash
+# Find where "Update Available" notification originates
+grep -rn "Update Available\|update.*available\|new.*update" --include="*.tsx" --include="*.ts" client/src/
+
+# Find service worker registration
+grep -rn "serviceWorker\|ServiceWorker" --include="*.tsx" --include="*.ts" client/src/
+
+# Find update checking logic
+grep -rn "checkForUpdate\|check.*update\|version.*check" --include="*.tsx" --include="*.ts" client/src/
+
+# Find where notifications are created
+grep -rn "toast\|notification\|Notification\|showNotification\|addNotification" --include="*.tsx" --include="*.ts" client/src/
+```
+
+## 2.5 Notification System Audit
+
+```bash
+# Find notification context/provider
+grep -rn "NotificationContext\|NotificationProvider\|ToastProvider" --include="*.tsx" client/src/
+
+# Find all places notifications are triggered
+grep -rn "toast\.\|notify\.\|showToast\|addToast\|createNotification" --include="*.tsx" client/src/
+
+# Find notification state management
+grep -rn "notifications.*useState\|setNotifications\|notificationState" --include="*.tsx" client/src/
+```
+
+---
+
+# PART 3: SPECIFIC FIX FOR CLIENTS PAGE
+
+## 3.1 Analyze Clients Page Structure
+
+```bash
+# Find the clients page file
+find client/src -name "*client*" -type f | grep -i page
+
+# Check its hook usage
+cat client/src/pages/clients.tsx 2>/dev/null || cat client/src/pages/clients/index.tsx 2>/dev/null
+
+# Look for the specific pattern
+grep -n "use[A-Z]\|return\|if\|&&" client/src/pages/clients*.tsx
+```
+
+## 3.2 Likely Issue Pattern
+
+```tsx
+// ❌ LIKELY BROKEN CODE - Clients Page
+function ClientsPage() {
+  const { user, isLoading } = useAuth();
+  
+  // Early return BEFORE other hooks
+  if (isLoading) {
+    return <LoadingSpinner />; // ← PROBLEM: hooks below won't run
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" />; // ← PROBLEM: hooks below won't run
+  }
+  
+  // These hooks run AFTER conditional returns - VIOLATION!
+  const [clients, setClients] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { data, isLoading: clientsLoading } = useQuery(['clients']);
+  const { mutate } = useMutation(deleteClient);
+  
+  return (
+    <div>
+      {/* ... */}
+    </div>
+  );
+}
+
+// ✅ FIXED CODE
+function ClientsPage() {
+  // ALL hooks FIRST - before any returns
+  const { user, isLoading: authLoading } = useAuth();
+  const [clients, setClients] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { data, isLoading: clientsLoading } = useQuery(
+    ['clients'],
+    fetchClients,
+    { enabled: !!user } // Conditional fetch, not conditional hook
+  );
+  const { mutate } = useMutation(deleteClient);
+  
+  // NOW safe to do conditional returns
+  if (authLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  return (
+    <div>
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+---
+
+# PART 4: UNIVERSAL FIX PATTERNS
+
+## 4.1 Create ESLint Rule Enforcement
+
+```javascript
+// .eslintrc.js - Add these rules
+module.exports = {
+  plugins: ['react-hooks'],
+  rules: {
+    'react-hooks/rules-of-hooks': 'error', // Enforces Rules of Hooks
+    'react-hooks/exhaustive-deps': 'warn', // Checks effect dependencies
+  },
+};
+```
+
+## 4.2 Run ESLint to Find All Violations
+
+```bash
+# Run ESLint with hooks plugin
+npx eslint client/src --ext .tsx,.ts --rule 'react-hooks/rules-of-hooks: error' 2>&1 | tee /tmp/hooks_violations.txt
+
+# Count violations
+grep -c "rules-of-hooks" /tmp/hooks_violations.txt
+
+# List affected files
+grep "rules-of-hooks" /tmp/hooks_violations.txt | cut -d: -f1 | sort -u
+```
+
+## 4.3 Standard Component Template
+
+```tsx
+/**
+ * CORRECT COMPONENT STRUCTURE
+ * 
+ * 1. All hooks at the top (useState, useEffect, useQuery, etc.)
+ * 2. Derived state / computations
+ * 3. Event handlers
+ * 4. Early returns for loading/error states
+ * 5. Main render
+ */
+
+function StandardComponent({ id }) {
+  // ========================================
+  // 1. ALL HOOKS FIRST - ALWAYS RUN
+  // ========================================
+  
+  // Auth/Context hooks
+  const { user } = useAuth();
+  const { workspace } = useWorkspace();
+  
+  // State hooks
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Query hooks (with enabled flag for conditional fetching)
+  const { data, isLoading, error } = useQuery(
+    ['resource', id],
+    () => fetchResource(id),
+    { enabled: !!id && !!user } // Conditional execution, NOT conditional hook
+  );
+  
+  // Mutation hooks
+  const { mutate, isLoading: isMutating } = useMutation(updateResource);
+  
+  // Effect hooks
+  useEffect(() => {
+    // Effect logic
+    return () => {
+      // Cleanup - ALWAYS include for subscriptions/listeners
+    };
+  }, [dependencies]);
+  
+  // Ref hooks
+  const inputRef = useRef(null);
+  
+  // Memo hooks
+  const filteredData = useMemo(() => {
+    return data?.filter(item => item.name.includes(searchQuery));
+  }, [data, searchQuery]);
+  
+  // Callback hooks
+  const handleSubmit = useCallback(() => {
+    mutate({ id, data: formData });
+  }, [id, formData, mutate]);
+  
+  // ========================================
+  // 2. DERIVED STATE (no hooks)
+  // ========================================
+  
+  const hasData = data && data.length > 0;
+  const canEdit = user?.role === 'admin';
+  
+  // ========================================
+  // 3. EVENT HANDLERS (no hooks)
+  // ========================================
+  
+  const handleClick = () => {
+    setIsOpen(true);
+  };
+  
+  // ========================================
+  // 4. EARLY RETURNS (AFTER all hooks)
+  // ========================================
+  
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  if (error) {
+    return <ErrorMessage error={error} />;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  // ========================================
+  // 5. MAIN RENDER
+  // ========================================
+  
+  return (
+    <div>
+      {/* Component JSX */}
+    </div>
+  );
+}
+```
+
+## 4.4 useEffect Cleanup Template
+
+```tsx
+/**
+ * ALWAYS include cleanup for:
+ * - Event listeners
+ * - Subscriptions
+ * - Timers (setTimeout, setInterval)
+ * - WebSocket handlers
+ * - Abort controllers for fetch
+ */
+
+// Event listener cleanup
+useEffect(() => {
+  const handleResize = () => setWidth(window.innerWidth);
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+
+// WebSocket cleanup
+useEffect(() => {
+  const handleMessage = (data) => setMessages(prev => [...prev, data]);
+  socket.on('message', handleMessage);
+  return () => socket.off('message', handleMessage);
+}, []);
+
+// Timer cleanup
+useEffect(() => {
+  const timer = setTimeout(() => setVisible(false), 3000);
+  return () => clearTimeout(timer);
+}, []);
+
+// Interval cleanup
+useEffect(() => {
+  const interval = setInterval(() => fetchUpdates(), 30000);
+  return () => clearInterval(interval);
+}, []);
+
+// Fetch abort cleanup
+useEffect(() => {
+  const controller = new AbortController();
+  
+  fetch('/api/data', { signal: controller.signal })
+    .then(res => res.json())
+    .then(data => setData(data))
+    .catch(err => {
+      if (err.name !== 'AbortError') {
+        setError(err);
+      }
+    });
+  
+  return () => controller.abort();
+}, []);
+
+// Subscription cleanup
+useEffect(() => {
+  const unsubscribe = store.subscribe(state => setState(state));
+  return () => unsubscribe();
+}, []);
+```
+
+---
+
+# PART 5: COMPREHENSIVE SEARCH COMMANDS
+
+## 5.1 Find ALL Hook Violations
+
+```bash
+#!/bin/bash
+# Save as: find_hook_violations.sh
+
+echo "=== SEARCHING FOR REACT HOOKS VIOLATIONS ==="
+echo ""
+
+echo "1. Hooks after early returns..."
+grep -rn "return.*null\|return.*<\|return.*undefined" --include="*.tsx" client/src/ -l | while read file; do
+  # Get line numbers of returns and hooks
+  returns=$(grep -n "^[[:space:]]*return\|if.*return" "$file" | head -1 | cut -d: -f1)
+  hooks=$(grep -n "use[A-Z][a-zA-Z]*(" "$file" | tail -1 | cut -d: -f1)
+  
+  if [ -n "$returns" ] && [ -n "$hooks" ] && [ "$returns" -lt "$hooks" ]; then
+    echo "  ⚠️  $file: return on L$returns, hook on L$hooks"
+  fi
+done
+
+echo ""
+echo "2. Hooks inside conditionals..."
+grep -rn "if\s*(.*)\s*{[^}]*use[A-Z]" --include="*.tsx" client/src/
+grep -rn "&&\s*use[A-Z]\|?\s*use[A-Z]\|:\s*use[A-Z]" --include="*.tsx" client/src/
+
+echo ""
+echo "3. Hooks inside loops..."
+grep -rn "\.map\s*([^)]*use[A-Z]\|\.forEach\s*([^)]*use[A-Z]" --include="*.tsx" client/src/
+grep -rn "for\s*([^)]*)[^{]*{[^}]*use[A-Z]" --include="*.tsx" client/src/
+
+echo ""
+echo "4. Hooks inside nested functions..."
+grep -rn "const\s*\w*\s*=\s*(\s*)\s*=>\s*{[^}]*use[A-Z]" --include="*.tsx" client/src/
+
+echo ""
+echo "5. Hooks inside try/catch..."
+grep -rn "try\s*{[^}]*use[A-Z]\|catch\s*([^)]*)\s*{[^}]*use[A-Z]" --include="*.tsx" client/src/
+```
+
+## 5.2 Find ALL Missing Cleanups
+
+```bash
+#!/bin/bash
+# Save as: find_missing_cleanups.sh
+
+echo "=== SEARCHING FOR MISSING EFFECT CLEANUPS ==="
+echo ""
+
+echo "1. addEventListener without removeEventListener..."
+for file in $(grep -rl "addEventListener" --include="*.tsx" --include="*.ts" client/src/); do
+  adds=$(grep -c "addEventListener" "$file")
+  removes=$(grep -c "removeEventListener" "$file")
+  if [ "$adds" -gt "$removes" ]; then
+    echo "  ⚠️  $file: $adds adds, $removes removes"
+  fi
+done
+
+echo ""
+echo "2. socket.on without socket.off..."
+for file in $(grep -rl "socket\.on\|\.on(" --include="*.tsx" --include="*.ts" client/src/); do
+  ons=$(grep -c "\.on(" "$file")
+  offs=$(grep -c "\.off(" "$file")
+  if [ "$ons" -gt "$offs" ]; then
+    echo "  ⚠️  $file: $ons .on(), $offs .off()"
+  fi
+done
+
+echo ""
+echo "3. setInterval without clearInterval..."
+for file in $(grep -rl "setInterval" --include="*.tsx" --include="*.ts" client/src/); do
+  sets=$(grep -c "setInterval" "$file")
+  clears=$(grep -c "clearInterval" "$file")
+  if [ "$sets" -gt "$clears" ]; then
+    echo "  ⚠️  $file: $sets setInterval, $clears clearInterval"
+  fi
+done
+
+echo ""
+echo "4. setTimeout without clearTimeout..."
+for file in $(grep -rl "setTimeout" --include="*.tsx" --include="*.ts" client/src/); do
+  sets=$(grep -c "setTimeout" "$file")
+  clears=$(grep -c "clearTimeout" "$file")
+  if [ "$sets" -gt "$clears" ]; then
+    echo "  ⚠️  $file: $sets setTimeout, $clears clearTimeout"
+  fi
+done
+
+echo ""
+echo "5. subscribe without unsubscribe..."
+for file in $(grep -rl "\.subscribe" --include="*.tsx" --include="*.ts" client/src/); do
+  subs=$(grep -c "\.subscribe" "$file")
+  unsubs=$(grep -c "unsubscribe\|\.unsubscribe" "$file")
+  if [ "$subs" -gt "$unsubs" ]; then
+    echo "  ⚠️  $file: $subs subscribe, $unsubs unsubscribe"
+  fi
+done
+
+echo ""
+echo "6. useEffect without return (cleanup)..."
+grep -rn "useEffect\s*(\s*(\s*)\s*=>" --include="*.tsx" client/src/ -A 15 | \
+  grep -B 10 "},\s*\[" | grep -v "return" | grep "useEffect" | head -20
+```
+
+## 5.3 Find Notification Duplicates
+
+```bash
+#!/bin/bash
+# Save as: find_notification_issues.sh
+
+echo "=== SEARCHING FOR NOTIFICATION ISSUES ==="
+echo ""
+
+echo "1. Places where notifications are created..."
+grep -rn "toast\.\|addToast\|showToast\|notify\|showNotification\|addNotification" --include="*.tsx" --include="*.ts" client/src/
+
+echo ""
+echo "2. Notification/Toast providers (should only be ONE)..."
+grep -rn "ToastProvider\|NotificationProvider\|Toaster" --include="*.tsx" client/src/
+
+echo ""
+echo "3. Service worker update handlers..."
+grep -rn "serviceWorker\|onUpdate\|update.*available\|new.*version" --include="*.tsx" --include="*.ts" client/src/
+
+echo ""
+echo "4. Multiple effect triggers for same event..."
+grep -rn "useEffect.*update\|useEffect.*notification\|useEffect.*version" --include="*.tsx" client/src/ -A 5
+```
+
+---
+
+# PART 6: FIX VERIFICATION
+
+## 6.1 After Fixing, Run These Checks
+
+```bash
+# 1. Run ESLint hooks rule
+npx eslint client/src --ext .tsx --rule 'react-hooks/rules-of-hooks: error' 2>&1
+
+# 2. TypeScript compile check
+npx tsc --noEmit 2>&1 | grep -i "hook\|render"
+
+# 3. Verify no duplicate providers
+grep -rn "Provider>" --include="*.tsx" client/src/App.tsx
+
+# 4. Check useEffect cleanup coverage
+echo "Effects with cleanup:"
+grep -rn "useEffect" --include="*.tsx" client/src/ -A 10 | grep -c "return () =>"
+
+echo "Total effects:"
+grep -rn "useEffect" --include="*.tsx" client/src/ | wc -l
+```
+
+## 6.2 Manual Testing Checklist
+
+```
+After fixes, test EVERY page:
+
+[ ] /dashboard - No hooks error
+[ ] /employees - No hooks error
+[ ] /employees/:id - No hooks error
+[ ] /clients - No hooks error (THIS WAS BROKEN)
+[ ] /clients/:id - No hooks error
+[ ] /schedule - No hooks error
+[ ] /timeclock - No hooks error
+[ ] /settings - No hooks error
+
+For notifications:
+[ ] Only ONE "Update Available" shows (not duplicates)
+[ ] Notifications clear properly
+[ ] No notification accumulation on navigation
+[ ] Service worker updates once, not repeatedly
+```
+
+---
+
+# OUTPUT FORMAT
+
+```markdown
+# REACT HOOKS & EVENT DUPLICATION AUDIT REPORT
+
+## Date: [DATE]
+## Critical Issue: "Rendered more hooks than during the previous render"
+
+---
+
+## HOOKS VIOLATIONS FOUND
+
+| File | Line | Issue | Fix |
+|------|------|-------|-----|
+| pages/clients.tsx | 15 | useState after early return | Move hooks before return |
+| pages/employees.tsx | 22 | useQuery after loading check | Move hooks before return |
+| components/Modal.tsx | 8 | useEffect inside condition | Move outside condition |
+| ... | ... | ... | ... |
+
+---
+
+## MISSING CLEANUPS FOUND
+
+| File | Line | Issue | Fix |
+|------|------|-------|-----|
+| hooks/useSocket.ts | 12 | socket.on without socket.off | Add cleanup return |
+| components/Timer.tsx | 8 | setInterval without clear | Add clearInterval |
+| ... | ... | ... | ... |
+
+---
+
+## NOTIFICATION ISSUES FOUND
+
+| File | Issue | Fix |
+|------|-------|-----|
+| App.tsx | Multiple ToastProviders | Keep only one at root |
+| sw-registration.ts | Update event fires twice | Add registration check |
+| ... | ... | ... |
+
+---
+
+## FILES FIXED
+
+1. pages/clients.tsx - Moved all hooks before returns
+2. pages/employees.tsx - Moved all hooks before returns
+3. hooks/useSocket.ts - Added cleanup function
+4. ... 
+
+---
+
+## VERIFICATION
+
+[ ] ESLint hooks rule passes
+[ ] No console errors on any page
+[ ] Notifications appear once only
+[ ] All pages render without crashes
+```
+
+---
+
+# EXECUTION PRIORITY
+
+1. **FIRST**: Fix hooks violations (crashes the app)
+2. **SECOND**: Fix missing cleanups (causes duplicates)
+3. **THIRD**: Fix notification system (user annoyance)
+4. **FOURTH**: Add ESLint rule to prevent future issues
+
+**THIS IS THE MOST CRITICAL FIX** - Hook violations crash the app. Fix these before anything else.
+
+**BEGIN HOOKS & EVENT AUDIT NOW.**

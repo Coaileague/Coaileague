@@ -2,6 +2,8 @@
  * Performance Metrics Service
  * Tracks API response times, database queries, WebSocket latency, and automation success rates
  */
+import { platformEventBus } from './platformEventBus';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
 
 export interface MetricPoint {
   timestamp: Date;
@@ -71,6 +73,16 @@ class PerformanceMetricsCollector {
 
   recordAutomationFailure(): void {
     this.automationFailures++;
+    const total = this.automationSuccesses + this.automationFailures;
+    const failureRate = total > 0 ? Math.round((this.automationFailures / total) * 100) : 0;
+    platformEventBus.publish({
+      type: 'automation_failure_recorded',
+      category: 'infrastructure',
+      title: 'Automation Failure Recorded',
+      description: `Automation failure recorded — cumulative failure rate: ${failureRate}% (${this.automationFailures}/${total})`,
+      workspaceId: PLATFORM_WORKSPACE_ID,
+      metadata: { failures: this.automationFailures, total, failureRate },
+    });
   }
 
   private percentile(array: number[], p: number): number {

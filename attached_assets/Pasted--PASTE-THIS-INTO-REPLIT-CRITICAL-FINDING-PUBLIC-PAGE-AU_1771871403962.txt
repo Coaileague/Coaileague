@@ -1,0 +1,322 @@
+# PASTE THIS INTO REPLIT — CRITICAL FINDING + PUBLIC PAGE AUDIT
+
+---
+
+## 🚨 CRITICAL FINDING: SITE IS INVISIBLE TO SEARCH ENGINES & CRAWLERS
+
+I just tried to crawl www.coaileague.com and got back ONLY the text "CoAIleague" — no content, no meta tags, no page structure. Google has ZERO indexed pages for coaileague.com. This means:
+
+1. **Google cannot find us** — no organic traffic will ever arrive
+2. **Social sharing is broken** — sharing our URL on LinkedIn/Facebook/Twitter shows a blank preview
+3. **Web crawlers see nothing** — our marketing pages are invisible
+
+**ROOT CAUSE:** The site is a pure client-side React SPA. The HTML returned by the server is essentially an empty shell that requires JavaScript to render content. Search engines and social platforms need server-rendered HTML.
+
+**FIX THIS IMMEDIATELY — Choose one:**
+
+Option A: **Add SSR/SSG (Server-Side Rendering / Static Site Generation)**
+- If using Next.js → use `getStaticProps` or `getServerSideProps` for public pages
+- If using Vite/CRA → add a pre-rendering step (e.g., `react-snap`, `prerender-spa-plugin`)
+
+Option B: **Add meta tags and pre-rendered HTML for public routes at minimum**
+- Server must return proper HTML `<title>`, `<meta description>`, `<meta og:*>` tags for:
+  - `/` (homepage)
+  - `/pricing`
+  - `/features`
+  - `/about`
+  - `/login`
+  - `/signup`
+  - `/contact`
+- These can be static HTML with hydrated React on top
+
+Option C: **Separate marketing site from app**
+- Marketing pages (homepage, pricing, features) → static site (Webflow, plain HTML, Astro, etc.)
+- App (dashboard, login, etc.) → keep as React SPA at app.coaileague.com or /app
+
+**VERIFY AFTER FIX:**
+```bash
+# Test what Google sees
+curl -s https://www.coaileague.com | head -100
+
+# Should contain actual content, not just <div id="root"></div>
+# Should contain:
+# <title>CoAIleague - AI-Powered Workforce Management for Security Companies</title>
+# <meta name="description" content="...">
+# <meta property="og:title" content="...">
+# <meta property="og:description" content="...">
+# <meta property="og:image" content="...">
+```
+
+---
+
+## PUBLIC PAGES AUDIT — Every Page A Visitor Sees Before Signing Up
+
+Check each of these pages. For EACH page verify it exists, loads, has content, works on mobile, and has proper meta tags.
+
+### Homepage (/)
+
+```
+CONTENT:
+[ ] Clear value proposition visible above the fold (what is CoAIleague?)
+[ ] Target audience stated (security companies)
+[ ] Key features highlighted with clear descriptions
+[ ] Social proof (testimonials, customer logos, case studies) — even if placeholder
+[ ] Clear CTA (Sign Up / Start Free Trial / Book Demo)
+[ ] CTA button actually works and goes to signup
+[ ] Pricing or link to pricing visible
+[ ] Navigation works (all links go somewhere real)
+[ ] Footer with: contact info, legal links, social media
+
+TECHNICAL:
+[ ] Page loads in under 3 seconds on mobile
+[ ] No console errors
+[ ] All images load (no broken images)
+[ ] All links work (no 404s)
+[ ] Responsive — works on phone, tablet, desktop
+[ ] Favicon set
+[ ] Page title descriptive ("CoAIleague - AI-Powered Workforce Management" not just "CoAIleague")
+[ ] Meta description set (for Google search results)
+[ ] Open Graph tags set (for social sharing previews)
+[ ] Twitter card tags set
+[ ] Structured data / schema.org markup (for rich search results)
+```
+
+### Pricing Page (/pricing)
+
+```
+[ ] All subscription tiers displayed with clear names
+[ ] Pricing amounts visible and correct
+[ ] Feature comparison between tiers is clear
+[ ] "Most Popular" or recommended tier highlighted
+[ ] Each tier has a CTA button that works
+[ ] Free trial terms stated clearly (duration, what's included)
+[ ] Credit-based pricing explained clearly (if applicable)
+[ ] Enterprise / custom plan option with "Contact Us"
+[ ] FAQ section addressing common pricing questions
+[ ] No broken layout on mobile
+```
+
+### Features Page (/features)
+
+```
+[ ] Each major feature described:
+    - GPS Time Tracking
+    - Trinity AI Scheduling
+    - Payroll Automation
+    - QuickBooks Integration
+    - Compliance Management
+    - Real-time Chat / Communications
+    - Incident Reporting
+    - Client Management
+    - Mobile App for Officers
+[ ] Screenshots or visuals of the product (not just text)
+[ ] Each feature links to more detail or to signup
+[ ] Security industry specific language (not generic HR software language)
+[ ] Competitive differentiators highlighted (what makes us different from Trackforce, Belfry, Connecteam)
+```
+
+### Login Page (/login or /auth/login)
+
+```
+[ ] Email + password fields visible
+[ ] Login button works
+[ ] "Forgot password" link works and triggers email
+[ ] "Sign up" link for new users
+[ ] Error messages clear: wrong password vs. account not found
+[ ] OAuth login buttons work (Google, Microsoft) if offered
+[ ] After login → redirects to correct dashboard for user's role
+[ ] Session persists (refresh doesn't log you out)
+[ ] Mobile keyboard doesn't cover input fields
+[ ] No auto-zoom on input focus (iOS issue if font-size < 16px)
+```
+
+### Signup Page (/signup or /auth/register)
+
+```
+[ ] All required fields present (name, email, password, company name)
+[ ] Validation is real-time (not just on submit)
+[ ] Password requirements shown before user submits
+[ ] Terms of Service checkbox with link to actual TOS
+[ ] Privacy Policy linked
+[ ] Submit button shows loading state during processing
+[ ] Success → redirect to onboarding or confirmation page
+[ ] Error → clear message (not generic "something went wrong")
+[ ] Duplicate email → helpful message ("account already exists, try logging in")
+[ ] Mobile friendly — form is usable on phone
+```
+
+### Password Reset Flow
+
+```
+[ ] "Forgot password" link on login page works
+[ ] Enter email → reset email sent (via Resend)
+[ ] Reset email arrives within 60 seconds
+[ ] Reset link in email works
+[ ] Can set new password
+[ ] New password works for login immediately
+[ ] Reset link expires after reasonable time (1 hour)
+[ ] Reset link can only be used once
+[ ] If email doesn't exist → DON'T reveal this (security: "if account exists, email sent")
+```
+
+### Contact / Support Page
+
+```
+[ ] Contact form or support email visible
+[ ] Form actually submits and creates a ticket or sends email
+[ ] Business phone number (if applicable)
+[ ] Business address (important for B2B trust)
+[ ] Response time expectations set
+```
+
+### Legal Pages
+
+```
+[ ] Terms of Service page exists and has real content (not placeholder)
+[ ] Privacy Policy page exists and has real content
+[ ] Both are linked from signup page
+[ ] Both are linked from footer
+[ ] Both are accessible without login
+[ ] Content is appropriate for a B2B SaaS handling employee PII and payroll data
+[ ] CCPA/GDPR relevant disclosures if applicable
+```
+
+---
+
+## AUDIT: 404 AND ERROR PAGES
+
+```
+[ ] Navigate to /nonexistent-page → shows custom 404 page (not blank white screen)
+[ ] 404 page has navigation back to home
+[ ] 404 page matches site branding
+[ ] Server errors (500) show friendly error page (not stack trace)
+[ ] API errors return JSON (not HTML error pages) for frontend to handle
+```
+
+---
+
+## AUDIT: PERFORMANCE & CORE WEB VITALS
+
+```
+Run Lighthouse audit on homepage. Check:
+[ ] Largest Contentful Paint (LCP) < 2.5 seconds
+[ ] First Input Delay (FID) < 100ms
+[ ] Cumulative Layout Shift (CLS) < 0.1
+[ ] Performance score > 80
+[ ] Accessibility score > 80
+[ ] SEO score > 80
+[ ] Best Practices score > 80
+
+Also check:
+[ ] Bundle size — is the main JS bundle over 1MB? (too large, needs code splitting)
+[ ] Images optimized (WebP, proper sizing, lazy loading)
+[ ] Fonts loaded efficiently (not blocking render)
+[ ] No render-blocking CSS/JS on critical path
+[ ] Service worker registered for offline capability (PWA)
+```
+
+---
+
+## AUDIT: SECURITY HEADERS ON PUBLIC PAGES
+
+```bash
+# Run this and check the response headers:
+curl -I https://www.coaileague.com
+
+VERIFY THESE HEADERS EXIST:
+[ ] Strict-Transport-Security (HSTS) — forces HTTPS
+[ ] X-Content-Type-Options: nosniff
+[ ] X-Frame-Options: DENY or SAMEORIGIN (prevents clickjacking)
+[ ] Content-Security-Policy (CSP) — prevents XSS
+[ ] Referrer-Policy
+[ ] Permissions-Policy
+
+ALSO:
+[ ] HTTPS enforced (HTTP redirects to HTTPS)
+[ ] SSL certificate valid and not expiring soon
+[ ] No mixed content warnings (HTTP resources on HTTPS page)
+```
+
+---
+
+## AUDIT: ROBOTS.TXT AND SITEMAP
+
+```
+VERIFY:
+[ ] https://www.coaileague.com/robots.txt exists
+[ ] robots.txt allows search engines to crawl public pages
+[ ] robots.txt blocks /api/, /dashboard/, /admin/ routes
+[ ] https://www.coaileague.com/sitemap.xml exists
+[ ] Sitemap lists all public pages (homepage, pricing, features, etc.)
+[ ] Sitemap is submitted to Google Search Console
+
+If these don't exist → Google has no map of your site.
+```
+
+---
+
+## AUDIT: DOMAIN & DNS
+
+```
+[ ] www.coaileague.com resolves correctly
+[ ] coaileague.com (without www) redirects to www (or vice versa) — pick one
+[ ] No duplicate content issues (both www and non-www serving same content)
+[ ] Email DNS records configured for Resend (SPF, DKIM, DMARC)
+    → Without these, your emails land in spam
+[ ] MX records configured if receiving email
+[ ] SSL covers both www and root domain
+```
+
+---
+
+## AUDIT: CROSS-BROWSER TESTING
+
+```
+Test the public site AND the app on:
+[ ] Chrome (desktop + mobile)
+[ ] Safari (desktop + mobile/iOS) — THIS IS CRITICAL, many CSS issues here
+[ ] Firefox
+[ ] Samsung Internet (many Android users)
+[ ] Edge
+
+SAFARI-SPECIFIC ISSUES TO CHECK:
+[ ] Date inputs render correctly (Safari handles date differently)
+[ ] Flexbox/grid layouts don't break
+[ ] Position: sticky works
+[ ] 100vh doesn't account for Safari's address bar (use dvh)
+[ ] Backdrop-filter works (needs -webkit- prefix)
+[ ] PWA "Add to Home Screen" works on iOS
+
+KNOWN MOBILE ISSUES:
+[ ] iOS rubber-band scrolling doesn't break fixed headers/footers
+[ ] Keyboard doesn't cover form inputs
+[ ] Select dropdowns usable on mobile
+[ ] File upload/camera capture works on both iOS and Android
+```
+
+---
+
+## OUTPUT FORMAT
+
+```
+PUBLIC SITE READINESS:
+  SEO / Crawlability:    CRITICAL FAIL — site invisible to search engines
+  Homepage:              PASS / FAIL + issues
+  Pricing:               PASS / FAIL + issues
+  Features:              PASS / FAIL + issues
+  Login:                 PASS / FAIL + issues
+  Signup:                PASS / FAIL + issues
+  Password Reset:        PASS / FAIL + issues
+  Legal Pages:           PASS / FAIL + issues
+  404/Error Pages:       PASS / FAIL + issues
+  Performance:           Score: ___/100
+  Security Headers:      X/6 present
+  Robots/Sitemap:        PASS / FAIL
+  DNS/Email:             PASS / FAIL
+  Cross-Browser:         X/5 browsers tested
+
+TOTAL PUBLIC-FACING ISSUES: ___
+CRITICAL (blocks launch): ___
+HIGH (fix first week): ___
+MEDIUM (fix first month): ___
+```

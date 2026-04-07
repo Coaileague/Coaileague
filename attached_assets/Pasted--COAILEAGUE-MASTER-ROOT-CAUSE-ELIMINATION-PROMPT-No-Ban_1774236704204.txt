@@ -1,0 +1,166 @@
+**COAILEAGUE — MASTER ROOT CAUSE ELIMINATION PROMPT**
+*No Bandaids. No Deferrals. No Workarounds. Fix the Architecture.*
+
+---
+
+This is not a patch session. This is not a defensive hardening pass. This is a permanent elimination of every root cause producing silent failures, data loss, naming drift, race conditions, and broken executions across the CoAIleague platform. Every fix applied in this session must address why the problem exists, not just what the problem is. If a fix requires changing a foundational pattern that is used in 200 files, change it in all 200 files. If a fix requires a migration, run it. If a fix requires retiring a pattern and replacing it with a correct one platform-wide, retire it completely. Partial fixes are not accepted. A fix that leaves the same root cause in place anywhere else in the codebase is not a fix — it is a bandaid on one symptom of a disease that remains.
+
+---
+
+**THE STANDARD FOR EVERY FIX IN THIS SESSION**
+
+Before any fix is accepted, it must satisfy all four of these conditions:
+
+**1. Root cause identified** — not just what is broken, but why it exists. If a column write is silently failing, the root cause is not "the column name is wrong." The root cause is "there is no enforced convention ensuring schema property names map explicitly to database column names, so any developer or agent that writes a column reference makes a naming assumption that may be wrong." The fix must address that root cause, not just the one broken column.
+
+**2. Platform-wide application** — if the root cause exists in one place, it exists in every place built with the same pattern. Find every instance. Fix every instance. Do not fix the one that was caught and leave twenty more that haven't surfaced yet.
+
+**3. Re-entry prevention** — after the fix is applied, put something in place that prevents the same root cause from re-entering the codebase. This means a canonical pattern documented in replit.md, a TypeScript type that makes the wrong pattern impossible to write, a migration discipline that must be followed, or a schema convention that is enforced by structure rather than by memory.
+
+**4. Database verification** — every fix that involves data persistence must be verified by direct database query, not by re-running the code that was broken. The data must exist in the correct table, in the correct column, with the correct value, associated with the correct record. Code running without error is not verification. The record in the database is verification.
+
+---
+
+**ROOT CAUSE 1 — SCHEMA-TO-DATABASE NAMING DRIFT**
+*The actual disease: there is no enforced single source of truth between what the code calls things and what the database calls things*
+
+Do not fix individual column names. Fix the system that allows column names to drift.
+
+Execute the following in this exact order and do not proceed to the next step until the current step is verified complete:
+
+**Step 1 — Establish database ground truth.** Introspect the live database completely. Extract every table name, every column name, every data type, every constraint, every index, and every foreign key exactly as the database knows them. This is the truth document. Everything else must conform to it.
+
+**Step 2 — Audit every Drizzle table definition.** For every table in the schema file, confirm the string passed to the table constructor exactly matches the database table name. For every column in every table definition, confirm either: the string passed to the column constructor exactly matches the database column name, or if no string is passed, confirm Drizzle's automatic inference produces the correct database column name for that specific ORM version. If there is any ambiguity about automatic inference, add the explicit string. Ambiguity is not acceptable in a financial platform.
+
+**Step 3 — Establish and enforce the explicit mapping rule.** Going forward, every column definition in the Drizzle schema must explicitly declare its database column name as a string argument. No implicit inference. No assumption. The pattern is `propertyName: columnType('column_name')` for every single column in every single table. Apply this to every column in the schema that does not already have an explicit declaration. This is the permanent rule. Add it to replit.md as a hard requirement.
+
+**Step 4 — Audit every relation definition.** For every relation in the schema relations objects, confirm the `fields` array references JavaScript property names that exist on the schema object, confirm the `references` array references JavaScript property names that exist on the referenced schema object, and confirm every foreign key column exists in the live database with the correct name. Fix every mismatch.
+
+**Step 5 — Audit every `with` clause in every query.** Every `with` clause across every route file and service file must reference a relation name that exactly matches a defined relation. Find every `with` clause. Verify every name. Fix every mismatch.
+
+**Step 6 — Run the migration alignment pass.** For every column that exists in the schema file but not in the live database, generate and run the migration now. For every column that exists in the live database under a different name than the schema file, generate and run a rename migration, then update every code reference. After all migrations run, re-introspect the database and confirm it matches the schema file with zero drift.
+
+**Step 7 — Produce the canonical name registry.** Document every table name, every column name, every JavaScript property name, and every API response key in a single reference document. Append this to replit.md. Every future code generation session must consult this registry before writing any database reference.
+
+---
+
+**ROOT CAUSE 2 — UNPROTECTED CONCURRENT WRITES ON FINANCIAL DATA**
+*The actual disease: financial operations have no atomicity guarantee, allowing concurrent requests to corrupt each other's data*
+
+Do not add a comment saying concurrent writes are a known risk. Fix the concurrency model.
+
+**Shift overlap race condition (R-002):** The SELECT-then-INSERT pattern for shift assignment is not atomic. Replace it with one of the following — not both, pick one and implement it completely: either add a unique composite constraint on the shifts table covering employee_id and the time window so the database itself rejects the second concurrent insert with a constraint violation that the route handles gracefully, or wrap the check-and-insert in a serializable transaction so the database guarantees only one can succeed. Whichever approach is chosen, test it by firing two concurrent requests for the same shift assignment and confirming exactly one succeeds and the other receives a clean, handled rejection — not a 500, not a crash, a proper conflict response.
+
+**Payroll and invoice concurrent write protection:** Every payroll run initiation and every invoice generation must be wrapped in a database-level transaction covering the full operation — not just the final write. The check for an existing in-progress run, the creation of the run record, and the initial write of entries must all occur inside a single transaction with a row-level lock on the payroll period record. If the transaction cannot acquire the lock within an acceptable timeout, return a clean "payroll run already in progress" response. Apply the same pattern to invoice generation.
+
+**All multi-step financial writes:** Any operation that writes to more than one table as part of a single logical operation must be wrapped in a database transaction. If any step fails, all steps roll back. There are no partial financial records in a production system. Audit every financial write operation in the codebase and confirm every multi-table write is transactional. This is not optional and cannot be deferred.
+
+---
+
+**ROOT CAUSE 3 — UNTYPED REQUEST OBJECTS BYPASSING SECURITY-CRITICAL FIELD VALIDATION**
+*The actual disease: the most important field in a multi-tenant system — workspaceId — has no compile-time enforcement*
+
+Do not leave `(req as any).workspaceId` in place anywhere in the codebase. Fix the type system.
+
+Create a single `AuthenticatedRequest` interface that extends Express's `Request` and explicitly types `workspaceId` as a non-optional string, `user` as the full typed user object, and any other fields added by authentication middleware. Export this interface from a single location.
+
+Replace every instance of `(req as any).workspaceId`, `(req as any).user`, and every other `req as any` cast in route files with the `AuthenticatedRequest` type. This is approximately 15+ route files. Update all of them.
+
+Add a runtime assertion at the top of every route handler that touches workspace-scoped data: if `req.workspaceId` is undefined or empty, return 401 immediately. This is a second line of defense after the type system. Both must be in place.
+
+Add the `AuthenticatedRequest` pattern to replit.md as the required pattern for every route handler going forward. The `as any` cast on request objects is permanently retired.
+
+---
+
+**ROOT CAUSE 4 — DUAL SOURCES OF TRUTH FOR OPERATIONAL CONFIGURATION**
+*The actual disease: payroll cycle settings exist in two places and there is no guarantee they agree*
+
+Identify definitively which source the payroll calculation engine reads when determining pay period boundaries and pay cycle frequency. Trace the exact code path from payroll run initiation to the point where pay cycle configuration is consumed. Document the authoritative source.
+
+Deprecate the non-authoritative source entirely. Write a one-time migration that reads the current value from the non-authoritative source for every workspace that has it set and writes it to the authoritative source if the authoritative source is empty. After the migration runs, remove every code path that reads from the non-authoritative source. Remove every code path that writes to the non-authoritative source. The setting now has exactly one home.
+
+Add a comment at the authoritative read site documenting that this is the single source of truth for pay cycle configuration and any future feature that needs this value must read from this location. Add this to replit.md.
+
+---
+
+**ROOT CAUSE 5 — FLOATING POINT ARITHMETIC ON FINANCIAL CALCULATIONS**
+*The actual disease: JavaScript's native Number type cannot represent decimal currency values accurately at scale*
+
+Do not leave `parseFloat()`, `Number()`, or arithmetic operators on currency values anywhere in the financial calculation engine. The fix is a decimal library applied consistently.
+
+Install a decimal precision library — `decimal.js` or equivalent — as a project dependency.
+
+Identify every location in the codebase where a financial value is: read from the database as a string and converted with `parseFloat()` or `Number()`, multiplied or divided as part of a pay or invoice calculation, rounded for display or storage, or accumulated in a running total across multiple line items.
+
+Replace every instance with the decimal library equivalent. Every financial calculation must use the library's precision arithmetic from the moment the value is read from the database to the moment it is written back. The only time a financial value should become a native JavaScript number is for final display formatting — never for arithmetic.
+
+After the migration, run the financial calculation test suite against known inputs and confirm every output matches the mathematically exact expected result at every decimal place.
+
+---
+
+**ROOT CAUSE 6 — TRINITY ACTIONS WRITING OUTSIDE THE ORM**
+*The actual disease: Trinity's execution layer may use raw string table and column names that bypass all ORM mapping and schema validation*
+
+Audit every Trinity action in the registry for any database operation that uses a raw table name string, a raw column name string, or a raw SQL query that is not constructed through the Drizzle schema object.
+
+For every raw reference found: replace it with the equivalent Drizzle schema object reference so it benefits from the explicit column mapping established in Root Cause 1. If a Trinity action must use raw SQL for performance reasons, add a comment documenting the exact database column names it references and add those column names to the canonical name registry so they are verified in every future schema audit.
+
+Confirm every Trinity action that generates a document uses template variable names that are explicitly mapped to schema property names — not assumed to match by convention. The mapping must be documented and explicit.
+
+---
+
+**ROOT CAUSE 7 — FRONTEND CONSUMING UNVALIDATED API RESPONSE SHAPES**
+*The actual disease: TypeScript interfaces describe what developers intended the API to return, not what it actually returns — and there is no runtime enforcement of the contract*
+
+Do not add more TypeScript interfaces that assert response shapes without validating them. Add runtime validation at the API boundary.
+
+For every API response that feeds a financial display, a schedule operation, or a Trinity action: add Zod schema validation at the point the frontend receives the response. If the response shape does not match the expected schema, throw a typed error that surfaces to the user as a clear message rather than a silent undefined rendering as blank or zero.
+
+For every TypeScript interface currently used to type API responses: audit whether the interface accurately reflects what the corresponding API route actually returns today — not what was intended, what actually comes back. Find every mismatch. Fix the API response to match the interface or fix the interface to match reality. They must agree.
+
+Add the Zod boundary validation pattern to replit.md as the required approach for all financial and operational data received from the API.
+
+---
+
+**EXECUTION PROTOCOL**
+
+Work through each root cause in the order listed. Do not begin Root Cause 2 until Root Cause 1 is fully resolved and verified. Each root cause builds on the foundation established by the previous one. A naming drift fix applied before the schema parity pass is complete may use a wrong name. A transaction fix applied before the type safety fix may wrap an operation that is still reading workspaceId unsafely.
+
+For each root cause:
+- Identify every instance of the pattern in the codebase — not a sample, every instance
+- Apply the fix to every instance
+- Verify by direct database query or runtime test, not by code inspection
+- Update replit.md with the canonical pattern and the retired anti-pattern
+- Confirm two consecutive clean passes with no regression before moving to the next root cause
+
+---
+
+**REPLIT.MD MANDATORY ADDITIONS**
+
+At the conclusion of this session, replit.md must contain a permanently maintained section titled **CoAIleague Architecture Canons** with the following entries, each stating the required pattern and the retired anti-pattern it replaces:
+
+- Explicit Drizzle column mapping — required pattern, implicit inference retired
+- AuthenticatedRequest type — required for all route handlers, `req as any` retired
+- Database transactions for all multi-table financial writes — required, sequential separate writes retired
+- Decimal library for all financial arithmetic — required, native Number arithmetic on currency retired
+- Zod validation at API response boundaries for financial data — required, unvalidated interface casting retired
+- Single authoritative source for every configuration value — required, dual-source patterns retired
+- Canonical name registry location — every table and column name, referenced before any new database code is written
+
+These canons are permanent. They are not suggestions. Every future development session begins by reading them. Every code generation pass must comply with them. Any output from any tool that violates a canon must be corrected before it is committed.
+
+---
+
+**FINAL VERIFICATION**
+
+When all seven root causes are resolved, run the following verification sequence against the live production environment:
+
+Create a new employee with full profile and pay rate. Verify the record in the database. Update the pay rate. Verify the update in the database. Run a payroll calculation for that employee. Verify the calculated amount is mathematically exact. Generate an invoice for a client. Verify every line item and total. Have Trinity assign a shift. Verify the shift record. Fire two concurrent shift assignment requests for the same slot. Verify exactly one succeeds. Restart the server. Verify all records are still present and unchanged.
+
+If every verification passes, the root causes are eliminated. If any verification fails, the corresponding root cause was not fully resolved and the session continues until it is.
+
+The goal is a platform where data cannot be silently lost, calculations cannot drift, names cannot mismatch, concurrent writes cannot corrupt each other, and every fix made today cannot be accidentally re-introduced tomorrow because the wrong pattern is no longer possible to write.
+
+---
+
+That's the master prompt Bryan. No bandaids, no deferrals. Paste it in and let it run to completion.

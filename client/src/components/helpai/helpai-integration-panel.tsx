@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,20 +49,23 @@ export function HelpAIIntegrationPanel() {
   // Fetch API Registry
   const { data: registryData, isLoading: registryLoading } = useQuery({
     queryKey: ["/api/helpai/registry"],
-    staleTime: 300000, // 5 minutes
+    staleTime: 300000,
+    queryFn: () => apiFetch('/api/helpai/registry', AnyResponse),
   });
 
   // Fetch Integrations
   const { data: integrationsData, isLoading: integrationsLoading } = useQuery({
     queryKey: ["/api/helpai/integrations/config"],
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
+    queryFn: () => apiFetch('/api/helpai/integrations/config', AnyResponse),
   });
 
   // Fetch Audit Log
   const { data: auditData, isLoading: auditLoading } = useQuery({
     queryKey: ["/api/helpai/audit-log"],
     enabled: showAuditLog,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
+    queryFn: () => apiFetch('/api/helpai/audit-log', AnyResponse),
   });
 
   // Configure Integration Mutation
@@ -117,7 +121,7 @@ export function HelpAIIntegrationPanel() {
               {registryList.map((api) => (
                 <div
                   key={api.id}
-                  className="flex items-center justify-between p-3 border rounded-md hover-elevate"
+                  className="flex items-center justify-between gap-2 p-3 border rounded-md hover-elevate"
                   data-testid={`api-registry-${api.id}`}
                 >
                   <div className="flex-1">
@@ -181,7 +185,7 @@ export function HelpAIIntegrationPanel() {
                 return (
                   <div
                     key={integration.id}
-                    className="flex items-center justify-between p-3 border rounded-md hover-elevate"
+                    className="flex items-center justify-between gap-2 p-3 border rounded-md hover-elevate"
                     data-testid={`integration-${integration.id}`}
                   >
                     <div className="flex-1">
@@ -228,7 +232,7 @@ export function HelpAIIntegrationPanel() {
             size="sm"
             variant="ghost"
             onClick={() => setShowAuditLog(!showAuditLog)}
-            className="w-full justify-between"
+            className="w-full justify-between gap-2"
             data-testid="button-toggle-audit-log"
           >
             <CardTitle className="flex items-center gap-2">
@@ -256,7 +260,7 @@ export function HelpAIIntegrationPanel() {
                     className="text-sm p-2 border rounded"
                     data-testid={`audit-entry-${entry.id}`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1">
                       <span className="font-medium">{entry.action}</span>
                       <Badge
                         variant={entry.status === "success" ? "default" : "destructive"}

@@ -1,0 +1,26 @@
+Looking at all 6 screenshots, here's exactly what's broken and what the developer needs to fix and *verify visually* before calling it done:
+
+---
+
+**ISSUE 1: Dual FAB Chaos**
+There are two completely separate, uncoordinated FABs floating simultaneously — the blue `+` action button and the teal Trinity star button. In Image 1 they're stacked on top of each other. In Image 6 they're both crammed into the bottom-left corner overlapping. These need to be **consolidated into one FAB system** — a single primary FAB that either expands with a speed-dial (Trinity + Add) or the Trinity FAB *replaces* the generic `+` entirely where appropriate.
+
+**ISSUE 2: Trinity FAB is a Generic Icon — Not Custom**
+The Trinity FAB is using what looks like a generic sparkle/star icon (a Gemini API widget copy-paste). Trinity is your branded AI. It needs a **custom branded button** — the CoAIleague propeller/trinity logo mark, with the teal gradient, a subtle pulse animation, and a label like "Trinity AI" on first load. It should feel premium and intentional, not like a floating Google widget.
+
+**ISSUE 3: Trinity Modal is Not Mobile-Contained**
+The dialog/modal that opens when tapping Trinity is not dynamically sized for small screens. It needs: `max-height: 85vh`, `border-radius` on top corners only (bottom-sheet style), proper safe area insets, and scrollable content inside — not a fixed desktop-sized modal crammed on a 360px screen.
+
+**ISSUE 4: Developer Is Not Visually Verifying**
+Tell your developer this directly: **every PR that touches UI must include mobile screenshots at 360px width before it's considered done.** Not "I tested it" — actual screenshots. The pattern of broken FAB positioning, overlapping buttons, and unsized modals all point to changes being pushed without a single mobile viewport check. He needs to use Chrome DevTools mobile emulation at minimum, or better, test on an actual device before marking anything complete.
+
+---
+
+**What to hand your developer:**
+
+> "These are the acceptance criteria. Do not mark any of these done until you show me a screenshot on mobile proving it:
+> 1. One FAB only — no duplicate floating buttons on any page
+> 2. Trinity FAB uses custom CoAIleague branding (not a generic sparkle icon)
+> 3. Trinity modal opens as a bottom sheet, max 85vh, scrollable, with rounded top corners
+> 4. Run React DevTools and fix any hook errors showing in console before submitting
+> 5. Submit a mobile screenshot (360px) for every screen the FAB appears on"

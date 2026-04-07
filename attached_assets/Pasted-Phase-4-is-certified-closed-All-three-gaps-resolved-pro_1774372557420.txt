@@ -1,0 +1,506 @@
+Phase 4 is certified closed. All three gaps resolved properly.
+
+AnyResponse is now a real Zod union rejecting null, strings, numbers, and primitives — not a cast bypass. TypeScript confirmed zero errors twice. All five financial surface URLs are hardcoded string literals in explicit queryFns with no join bug possible. The URL discovery and fix across 9 queries was genuinely valuable work.
+
+Phase 5 goes in now.
+
+---
+
+**COAILEAGUE — PHASE 5: BUSINESS LOGIC VALIDATION LAYER**
+*Syncs Into Phases 1 Through 4 | No Shortcuts | No Partial Coverage | No Deferrals | Fully Verified Before Phase 6*
+
+---
+
+**READ THIS ENTIRE SECTION BEFORE TOUCHING A SINGLE FILE**
+
+Phase 1 verified every database column is real. Phase 2 verified financial writes are atomic, calculations are precise, API inputs have Zod validation on financial endpoints, and the shift overlap race condition is protected by a database constraint. Phase 3 verified the UI is survivable. Phase 4 verified API response contracts at runtime. Phase 5 now establishes the layer that none of those phases covered — business logic validation. A pay rate of negative five dollars is a valid number. A shift ending before it starts passes a datetime type check. A billing rate of zero satisfies a UUID format validator. These values are structurally valid but operationally impossible. They will be accepted by Phase 2's Zod schemas, written to the database through Phase 2's transactions, and displayed by Phase 3's components without a single error. Phase 5 is the layer that catches them.
+
+**SHORTCUT PATTERNS THAT WILL BE REJECTED**
+
+**REJECTED — Frontend-only business rule enforcement.** Business rules enforced only in the UI can be bypassed by calling the API directly. Every rule must be enforced server-side. Frontend enforcement is supplementary UX only.
+
+**REJECTED — Hardcoded magic numbers scattered through route handlers.** A pay rate minimum of `0.01` that appears in 15 different route files is not a business rule system. It is 15 independent checks that will inevitably diverge. All rules live in one place.
+
+**REJECTED — Generic error messages.** A business rule rejection that returns `"Invalid input"` is not acceptable. Every rejection names the specific field, the specific rule violated, and the acceptable range or values. The user must know exactly what to fix.
+
+**REJECTED — Partial domain coverage.** If payroll has business rules, every payroll endpoint enforces them. Not the ones that seem risky. Every endpoint that accepts a value governed by a business rule validates against that rule.
+
+**REJECTED — Rules that conflict with Phase 2 Zod schemas.** Phase 2 Zod schemas validate structure and type. Phase 5 business rules validate logical constraints. They must not duplicate each other or contradict each other. Rules are applied after Zod validation passes — not instead of it.
+
+**REJECTED — Silent rule violations.** A business rule that logs a warning and proceeds is not enforcement. Every rule violation returns a 400 response with a specific error before any database operation executes.
+
+---
+
+**PHASE 1 THROUGH 4 SYNC VERIFICATION — BEFORE ANY PHASE 5 WORK BEGINS**
+
+Confirm every one of the following before writing a single line of Phase 5 code:
+
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` — must return zero errors.
+
+Run Phase 2 code scans — all must return zero:
+- `req as any` across all route files
+- Native arithmetic on financial values outside `financialCalculator.ts`
+- Sequential `db.insert()` outside `db.transaction()` in multi-table financial sequences
+
+Confirm `shared/schemas/` contains both request schemas from Phase 2 and response schemas from Phase 4.
+
+Confirm `client/src/lib/apiError.ts` exports `ApiError`, `ApiContractViolation`, `apiFetch`, and the corrected `AnyResponse` Zod union.
+
+Confirm `client/src/hooks/useAsyncData.ts` handles `ApiError` 401 redirect.
+
+Confirm server starts with 30/30 background services and zero failures.
+
+Record this as the Phase 5 Sync Confirmation and append to replit.md. Then proceed.
+
+---
+
+**BASELINE RECORD — BEFORE TOUCHING ANYTHING**
+
+Record as the Phase 5 Baseline Document:
+
+Total route files in `server/routes/`. Total service files in `server/services/`. Server startup — 30/30 services. TypeScript error count — zero.
+
+Run the ten ACME sandbox operations and confirm all pass with correct data. Append baseline to replit.md. After every step re-run and confirm zero regressions.
+
+---
+
+**STEP 1 — CREATE THE CENTRAL BUSINESSRULES MODULE**
+
+Create `server/lib/businessRules.ts`. This is the single source of truth for every business constraint in the platform. Every rule is named, typed, and testable. No business constraint is defined anywhere else in the codebase. Every route that needs to enforce a constraint imports from this module.
+
+```typescript
+import { z } from 'zod';
+
+// ─── PAY RATE RULES ───────────────────────────────────────────────────────────
+export const PAY_RATE_RULES = {
+  minimum: '0.01',        // No zero or negative pay rates
+  maximum: '999.99',      // Configurable ceiling — prevents data entry errors
+  decimalPlaces: 4,       // Matches FinancialCalculator precision
+} as const;
+
+// ─── HOURS RULES ─────────────────────────────────────────────────────────────
+export const HOURS_RULES = {
+  minimumPerShift: '0',      // Zero hours allowed (placeholder shifts)
+  maximumPerShift: '24',     // Cannot exceed 24 hours in a single shift
+  maximumPerWeek: '168',     // Cannot exceed total hours in a week
+} as const;
+
+// ─── SHIFT TIME RULES ────────────────────────────────────────────────────────
+export const SHIFT_TIME_RULES = {
+  endMustBeAfterStart: true,
+  minimumDurationMinutes: 0,     // Zero-duration allowed for instantaneous entries
+  maximumDurationHours: 24,      // No shift longer than 24 hours
+  pastLookbackDays: 90,          // Shifts cannot be created more than 90 days in past
+  futureLookAheadDays: 365,      // Shifts cannot be scheduled more than 1 year ahead
+} as const;
+
+// ─── INVOICE RULES ───────────────────────────────────────────────────────────
+export const INVOICE_RULES = {
+  minimumAmount: '0.01',    // No zero or negative invoices
+  maximumAmount: '999999.99',
+  minimumLineItems: 1,
+  dueDateMinimumDaysFromNow: 0,  // Can be due today
+  dueDateMaximumDaysFromNow: 365,
+} as const;
+
+// ─── BILLING RATE RULES ──────────────────────────────────────────────────────
+export const BILLING_RATE_RULES = {
+  minimum: '0.01',
+  maximum: '9999.99',
+} as const;
+
+// ─── PAYROLL PERIOD RULES ────────────────────────────────────────────────────
+export const PAYROLL_PERIOD_RULES = {
+  endMustBeAfterStart: true,
+  maximumPeriodDays: 31,
+  cannotOverlapClosedRun: true,
+} as const;
+
+// ─── ROLE ASSIGNMENT RULES ───────────────────────────────────────────────────
+export const ROLE_HIERARCHY = ['officer', 'supervisor', 'manager', 'owner'] as const;
+export type RoleLevel = typeof ROLE_HIERARCHY[number];
+
+export function getRoleLevel(role: string): number {
+  return ROLE_HIERARCHY.indexOf(role as RoleLevel);
+}
+
+export function canAssignRole(assignerRole: string, targetRole: string): boolean {
+  // Owners can assign any role
+  if (assignerRole === 'owner') return true;
+  // Others can only assign roles strictly below their own level
+  return getRoleLevel(assignerRole) > getRoleLevel(targetRole);
+}
+
+// ─── VALIDATION FUNCTIONS ────────────────────────────────────────────────────
+import { Decimal } from 'decimal.js';
+
+export interface BusinessRuleViolation {
+  field: string;
+  rule: string;
+  message: string;
+  received: string | number | null;
+  allowed: string;
+}
+
+export function validatePayRate(
+  rate: string, 
+  fieldName: string = 'payRate'
+): BusinessRuleViolation | null {
+  const d = new Decimal(rate);
+  if (d.lessThan(PAY_RATE_RULES.minimum)) {
+    return {
+      field: fieldName,
+      rule: 'PAY_RATE_MINIMUM',
+      message: `Pay rate must be at least $${PAY_RATE_RULES.minimum}`,
+      received: rate,
+      allowed: `>= ${PAY_RATE_RULES.minimum}`
+    };
+  }
+  if (d.greaterThan(PAY_RATE_RULES.maximum)) {
+    return {
+      field: fieldName,
+      rule: 'PAY_RATE_MAXIMUM',
+      message: `Pay rate cannot exceed $${PAY_RATE_RULES.maximum}`,
+      received: rate,
+      allowed: `<= ${PAY_RATE_RULES.maximum}`
+    };
+  }
+  return null;
+}
+
+export function validateShiftTimes(
+  startTime: Date,
+  endTime: Date
+): BusinessRuleViolation | null {
+  if (endTime <= startTime) {
+    return {
+      field: 'endTime',
+      rule: 'SHIFT_END_AFTER_START',
+      message: 'Shift end time must be after start time',
+      received: endTime.toISOString(),
+      allowed: `> ${startTime.toISOString()}`
+    };
+  }
+  const durationHours = 
+    (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+  if (durationHours > SHIFT_TIME_RULES.maximumDurationHours) {
+    return {
+      field: 'endTime',
+      rule: 'SHIFT_DURATION_MAXIMUM',
+      message: `Shift duration cannot exceed ${SHIFT_TIME_RULES.maximumDurationHours} hours`,
+      received: `${durationHours.toFixed(2)} hours`,
+      allowed: `<= ${SHIFT_TIME_RULES.maximumDurationHours} hours`
+    };
+  }
+  return null;
+}
+
+export function validateInvoiceAmount(
+  amount: string,
+  fieldName: string = 'amount'
+): BusinessRuleViolation | null {
+  const d = new Decimal(amount);
+  if (d.lessThan(INVOICE_RULES.minimumAmount)) {
+    return {
+      field: fieldName,
+      rule: 'INVOICE_AMOUNT_MINIMUM',
+      message: `Invoice amount must be at least $${INVOICE_RULES.minimumAmount}`,
+      received: amount,
+      allowed: `>= ${INVOICE_RULES.minimumAmount}`
+    };
+  }
+  if (d.greaterThan(INVOICE_RULES.maximumAmount)) {
+    return {
+      field: fieldName,
+      rule: 'INVOICE_AMOUNT_MAXIMUM',
+      message: `Invoice amount cannot exceed $${INVOICE_RULES.maximumAmount}`,
+      received: amount,
+      allowed: `<= ${INVOICE_RULES.maximumAmount}`
+    };
+  }
+  return null;
+}
+
+export function validateBillingRate(
+  rate: string,
+  fieldName: string = 'billingRate'
+): BusinessRuleViolation | null {
+  const d = new Decimal(rate);
+  if (d.lessThan(BILLING_RATE_RULES.minimum)) {
+    return {
+      field: fieldName,
+      rule: 'BILLING_RATE_MINIMUM',
+      message: `Billing rate must be at least $${BILLING_RATE_RULES.minimum}`,
+      received: rate,
+      allowed: `>= ${BILLING_RATE_RULES.minimum}`
+    };
+  }
+  if (d.greaterThan(BILLING_RATE_RULES.maximum)) {
+    return {
+      field: fieldName,
+      rule: 'BILLING_RATE_MAXIMUM',
+      message: `Billing rate cannot exceed $${BILLING_RATE_RULES.maximum}`,
+      received: rate,
+      allowed: `<= ${BILLING_RATE_RULES.maximum}`
+    };
+  }
+  return null;
+}
+
+export function validatePayrollPeriod(
+  startDate: Date,
+  endDate: Date
+): BusinessRuleViolation | null {
+  if (endDate <= startDate) {
+    return {
+      field: 'periodEnd',
+      rule: 'PAYROLL_PERIOD_END_AFTER_START',
+      message: 'Payroll period end date must be after start date',
+      received: endDate.toISOString(),
+      allowed: `> ${startDate.toISOString()}`
+    };
+  }
+  const durationDays = 
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+  if (durationDays > PAYROLL_PERIOD_RULES.maximumPeriodDays) {
+    return {
+      field: 'periodEnd',
+      rule: 'PAYROLL_PERIOD_MAXIMUM_DURATION',
+      message: `Payroll period cannot exceed ${PAYROLL_PERIOD_RULES.maximumPeriodDays} days`,
+      received: `${durationDays} days`,
+      allowed: `<= ${PAYROLL_PERIOD_RULES.maximumPeriodDays} days`
+    };
+  }
+  return null;
+}
+
+// ─── MIDDLEWARE HELPER ────────────────────────────────────────────────────────
+export function businessRuleResponse(
+  res: any,
+  violations: (BusinessRuleViolation | null)[]
+): boolean {
+  const active = violations.filter(Boolean) as BusinessRuleViolation[];
+  if (active.length === 0) return false;
+  
+  res.status(400).json({
+    error: 'Business rule violation',
+    code: 'BUSINESS_RULE_VIOLATION',
+    violations: active.map(v => ({
+      field: v.field,
+      rule: v.rule,
+      message: v.message,
+      received: v.received,
+      allowed: v.allowed
+    }))
+  });
+  return true;
+}
+```
+
+Verify this file compiles with zero TypeScript errors before proceeding to Step 2.
+
+---
+
+**STEP 2 — APPLY BUSINESS RULES TO PAYROLL ENDPOINTS**
+
+Open `server/routes/payrollRoutes.ts`. Identify every endpoint that accepts a pay rate, hours worked, payroll period dates, or deduction amounts. For each endpoint add business rule validation after the Phase 2 Zod schema parse and before any database operation:
+
+```typescript
+import { 
+  validatePayRate, 
+  validateShiftTimes,
+  validatePayrollPeriod,
+  businessRuleResponse 
+} from '../lib/businessRules';
+
+// After Zod parse succeeds, before any DB operation:
+const violations = [
+  validatePayRate(body.hourlyRate, 'hourlyRate'),
+  validatePayrollPeriod(new Date(body.periodStart), new Date(body.periodEnd))
+];
+
+if (businessRuleResponse(res, violations)) return;
+// Proceed with DB operation only if no violations
+```
+
+Specifically enforce:
+- Every pay rate write: must pass `validatePayRate`
+- Every payroll period creation: must pass `validatePayrollPeriod`
+- Every hours entry: must be >= 0 and <= 24 per day
+- Every deduction amount: must be > 0 and <= gross pay being deducted from
+
+Report every endpoint updated with the specific rule or rules applied to it.
+
+---
+
+**STEP 3 — APPLY BUSINESS RULES TO INVOICE ENDPOINTS**
+
+Open `server/routes/invoiceRoutes.ts`. For every endpoint that accepts invoice amounts, line item amounts, billing rates, or due dates add business rule validation after Zod parse:
+
+Specifically enforce:
+- Every invoice amount and line item amount: must pass `validateInvoiceAmount`
+- Every billing rate: must pass `validateBillingRate`
+- Every due date: must not be more than 365 days in the future
+- Every invoice must have at least one line item per `INVOICE_RULES.minimumLineItems`
+- Partial payment amounts: must be > 0 and <= remaining balance on the invoice
+
+Report every endpoint updated with the specific rule or rules applied.
+
+---
+
+**STEP 4 — APPLY BUSINESS RULES TO EMPLOYEE ENDPOINTS**
+
+Open `server/routes/employeeRoutes.ts`. For every endpoint that accepts pay rates, pay types, or role assignments add business rule validation:
+
+Specifically enforce:
+- Every employee pay rate write: must pass `validatePayRate`
+- Every role assignment: must pass `canAssignRole(req.user.role, body.role)` — a user cannot assign a role equal to or higher than their own
+- Pay type must be one of the valid enum values — confirm this aligns with the Phase 2 Zod enum
+
+For role assignment violations return a specific response:
+```typescript
+if (!canAssignRole(req.workspaceId, targetRole)) {
+  return res.status(403).json({
+    error: 'Role assignment not permitted',
+    code: 'ROLE_ESCALATION_VIOLATION',
+    message: `You cannot assign the ${targetRole} role. You may only assign roles below your own level.`
+  });
+}
+```
+
+Report every endpoint updated.
+
+---
+
+**STEP 5 — APPLY BUSINESS RULES TO SHIFT ENDPOINTS**
+
+Open `server/routes/shiftRoutes.ts`. For every endpoint that creates or updates a shift add business rule validation. Note that Phase 2 already added the database exclusion constraint for overlap prevention — Phase 5 adds the logical time validation that happens before the database is touched:
+
+Specifically enforce:
+- Every shift creation and update: must pass `validateShiftTimes`
+- Shift start time: must not be more than 90 days in the past per `SHIFT_TIME_RULES.pastLookbackDays`
+- Shift end time: must not be more than 365 days in the future per `SHIFT_TIME_RULES.futureLookAheadDays`
+- Shift position: must be a non-empty string
+
+The Phase 2 database exclusion constraint handles concurrent overlap. Phase 5 `validateShiftTimes` handles logical time validation before the database is touched. Both layers are required.
+
+Report every endpoint updated.
+
+---
+
+**STEP 6 — APPLY BUSINESS RULES TO CLIENT ENDPOINTS**
+
+Open `server/routes/clientRoutes.ts`. For every endpoint that accepts billing rates or client configuration add business rule validation:
+
+Specifically enforce:
+- Every client billing rate: must pass `validateBillingRate`
+- Client name: must be a non-empty string with a reasonable maximum length
+- Address fields: if provided must be non-empty strings
+
+Add a billing rate margin warning — not a hard block — when a client billing rate is set lower than the pay rate for the position it covers. This produces a warning in the response alongside a 200 success:
+
+```typescript
+// After successful save, check for margin warning
+if (billingRate < employeePayRateForPosition) {
+  return res.status(200).json({
+    ...savedClient,
+    warnings: [{
+      code: 'BILLING_RATE_BELOW_PAY_RATE',
+      message: 'Client billing rate is below the employee pay rate for this position. This will result in a loss on every shift.'
+    }]
+  });
+}
+```
+
+Report every endpoint updated.
+
+---
+
+**STEP 7 — ADD BILLING RATE WARNING TO TRINITY SCHEDULING ACTIONS**
+
+Trinity's auto-scheduling actions assign employees to client shifts. When Trinity assigns an employee whose pay rate exceeds the client billing rate for the position Trinity must surface this as a warning in her action response — not block the assignment, but flag it explicitly so the org owner is aware.
+
+Open the Trinity action file that handles shift assignments. Add a margin check after a successful assignment:
+
+```typescript
+// After successful shift assignment
+const marginCheck = await checkShiftMargin(
+  employeePayRate, 
+  clientBillingRate, 
+  workspaceId
+);
+
+if (marginCheck.isNegativeMargin) {
+  // Include warning in Trinity's response — do not block the assignment
+  trinityResponse.warnings = [{
+    code: 'NEGATIVE_MARGIN_SHIFT',
+    message: `This shift has a negative margin. Employee pay rate ($${employeePayRate}/hr) exceeds client billing rate ($${clientBillingRate}/hr).`,
+    impact: `Loss per hour: $${marginCheck.lossPerHour}`
+  }];
+}
+```
+
+---
+
+**STEP 8 — VERIFY BUSINESSRULES MODULE IS THE ONLY SOURCE**
+
+After all endpoints are updated scan the entire codebase for business logic that exists outside `businessRules.ts`:
+
+```bash
+grep -rn "< 0\|<= 0\|> 0\|>= 0" server/routes --include="*.ts" | grep -v "businessRules\|node_modules\|// " | head -30
+```
+
+```bash
+grep -rn "parseFloat.*rate\|Number.*rate\|parseFloat.*pay\|Number.*pay" server/routes --include="*.ts" | grep -v "node_modules\|// " | head -20
+```
+
+Every result that represents a business constraint check must be replaced with a call to the appropriate `BusinessRules` validation function. Inline business logic in route handlers is permanently retired.
+
+---
+
+**PHASE 5 FINAL VERIFICATION**
+
+Run after all eight steps are complete:
+
+**BusinessRules module scan:**
+Run `grep -r "validatePayRate\|validateShiftTimes\|validateInvoiceAmount\|validateBillingRate\|validatePayrollPeriod\|canAssignRole" server/routes --include="*.ts" -l` and confirm the list includes: payrollRoutes.ts, invoiceRoutes.ts, employeeRoutes.ts, shiftRoutes.ts, clientRoutes.ts.
+
+**Negative value rejection test:**
+Submit the following to each endpoint and confirm every one returns 400 with a specific rule violation message:
+- Pay rate of `-5` to employee update endpoint
+- Pay rate of `0` to employee update endpoint
+- Shift end time before start time to shift create endpoint
+- Invoice amount of `0` to invoice create endpoint
+- Billing rate of `-10` to client update endpoint
+- Payroll period where end is before start
+- Role assignment attempting to assign owner role from manager session
+
+**TypeScript verification:**
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` — zero errors.
+
+**Server verification:**
+Start fresh. 30/30 background services. Login flow completes.
+
+**Baseline verification:**
+All ten ACME sandbox operations pass. Zero regressions from prior phases.
+
+**Phase 4 sync confirmation:**
+Confirm business rule violations produce 400 responses that are caught by Phase 4's `ApiError` handling in `apiFetch`. Confirm the Phase 3 `ErrorBoundary` handles the error display when a business rule violation occurs during a mutation. The chain Phase 1 through Phase 5 must remain unbroken.
+
+---
+
+**PHASE 5 COMPLETION REPORT**
+
+Produce and append to replit.md:
+
+Total endpoints updated with business rule validation per domain. Total distinct rules defined in `businessRules.ts`. Every negative value rejection test result. Billing rate margin warning confirmed in client and Trinity endpoints.
+
+Phase 5 sync statement: *"Phase 5 business logic validation is complete and synced with Phases 1 through 4. Every financial input passes through the central BusinessRules module before reaching the database. Pay rates, invoice amounts, billing rates, shift times, payroll periods, and role assignments all have specific named rules with actionable error messages. The BusinessRules module is the single source of truth for all business constraints — no inline validation logic exists in route handlers. Phase 6 can begin on a platform where structurally valid data is also logically valid data."*
+
+---
+
+**PHASE 5 IS COMPLETE WHEN:**
+
+`businessRules.ts` is the single source of all business constraints. Every negative value rejection test returns 400 with a specific named rule violation. Zero TypeScript errors. Zero inline business logic in route handlers outside `businessRules.ts`. All ten baseline operations pass. Completion report and sync statement in replit.md.
+
+Bring the Phase 5 completion report here before Phase 6 goes in.

@@ -1,3 +1,5 @@
+import { createLogger } from '../../lib/logger';
+const log = createLogger('automationTestRunner');
 import { db } from '../../db';
 import { employees, clients, shifts, timeEntries, invoices, payrollRuns, partnerConnections } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -39,7 +41,7 @@ export class TrinityAutomationTestRunner {
     const startedAt = new Date();
     const tests: TestResult[] = [];
 
-    console.log(`[TrinityTest] Starting full automation test suite: ${runId}`);
+    log.info(`[TrinityTest] Starting full automation test suite: ${runId}`);
 
     tests.push(await this.testDataIntegrity());
     tests.push(await this.testSchedulingAutomation());
@@ -71,7 +73,7 @@ export class TrinityAutomationTestRunner {
 
     platformEventBus.emit('trinity_automation_test_complete', report);
 
-    console.log(`[TrinityTest] ${report.summary}`);
+    log.info(`[TrinityTest] ${report.summary}`);
     return report;
   }
 
@@ -121,7 +123,7 @@ export class TrinityAutomationTestRunner {
       return {
         testName,
         passed: false,
-        message: `Error: ${error.message}`,
+        message: `Error: ${(error instanceof Error ? error.message : String(error))}`,
         durationMs: Date.now() - start,
       };
     }
@@ -171,7 +173,7 @@ export class TrinityAutomationTestRunner {
       return {
         testName,
         passed: false,
-        message: `Error: ${error.message}`,
+        message: `Error: ${(error instanceof Error ? error.message : String(error))}`,
         durationMs: Date.now() - start,
       };
     }
@@ -197,14 +199,14 @@ export class TrinityAutomationTestRunner {
 
       const approvedEntries = entries.filter(e => e.status === 'approved');
       const totalHours = entries.reduce((sum, e) => sum + parseFloat(e.totalHours || '0'), 0);
-      const avgHoursPerEntry = totalHours / entries.length;
+      const avgHoursPerEntry = entries.length > 0 ? totalHours / entries.length : 0;
 
       const validEntries = entries.filter(e => {
         const hours = parseFloat(e.totalHours || '0');
         return hours > 0 && hours <= 24;
       });
 
-      const validationRate = (validEntries.length / entries.length * 100).toFixed(1);
+      const validationRate = entries.length > 0 ? (validEntries.length / entries.length * 100).toFixed(1) : '100.0';
 
       return {
         testName,
@@ -223,7 +225,7 @@ export class TrinityAutomationTestRunner {
       return {
         testName,
         passed: false,
-        message: `Error: ${error.message}`,
+        message: `Error: ${(error instanceof Error ? error.message : String(error))}`,
         durationMs: Date.now() - start,
       };
     }
@@ -268,7 +270,7 @@ export class TrinityAutomationTestRunner {
       return {
         testName,
         passed: false,
-        message: `Error: ${error.message}`,
+        message: `Error: ${(error instanceof Error ? error.message : String(error))}`,
         durationMs: Date.now() - start,
       };
     }
@@ -313,7 +315,7 @@ export class TrinityAutomationTestRunner {
       return {
         testName,
         passed: false,
-        message: `Error: ${error.message}`,
+        message: `Error: ${(error instanceof Error ? error.message : String(error))}`,
         durationMs: Date.now() - start,
       };
     }
@@ -343,8 +345,8 @@ export class TrinityAutomationTestRunner {
       }
 
       const isConnected = connection.status === 'connected';
-      const tokenExpiry = connection.accessTokenExpiresAt 
-        ? new Date(connection.accessTokenExpiresAt)
+      const tokenExpiry = connection.expiresAt 
+        ? new Date(connection.expiresAt)
         : null;
       const isTokenValid = tokenExpiry ? tokenExpiry > new Date() : false;
 
@@ -352,13 +354,13 @@ export class TrinityAutomationTestRunner {
         testName,
         passed: isConnected && isTokenValid,
         message: isConnected 
-          ? `QuickBooks connected: ${connection.partnerCompanyName || 'Unknown Company'}`
+          ? `QuickBooks connected: ${connection.partnerName || 'Unknown Company'}`
           : `QuickBooks not connected: ${connection.status}`,
         durationMs: Date.now() - start,
         details: {
           status: connection.status,
-          companyName: connection.partnerCompanyName,
-          realmId: connection.partnerCompanyId,
+          partnerName: connection.partnerName,
+          realmId: connection.realmId,
           tokenValid: isTokenValid,
         },
       };
@@ -366,7 +368,7 @@ export class TrinityAutomationTestRunner {
       return {
         testName,
         passed: false,
-        message: `Error: ${error.message}`,
+        message: `Error: ${(error instanceof Error ? error.message : String(error))}`,
         durationMs: Date.now() - start,
       };
     }
@@ -426,7 +428,7 @@ export class TrinityAutomationTestRunner {
         test: {
           testName,
           passed: false,
-          message: `Error: ${error.message}`,
+          message: `Error: ${(error instanceof Error ? error.message : String(error))}`,
           durationMs: Date.now() - start,
         },
       };

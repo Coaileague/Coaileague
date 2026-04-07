@@ -8,15 +8,16 @@
 import { db } from '../../db';
 import { 
   sessionCheckpoints, 
-  sessionCheckpointEvents,
   sessionRecoveryRequests,
   type InsertSessionCheckpoint,
-  type InsertSessionCheckpointEvent,
   type SessionCheckpoint
 } from '@shared/schema';
-import { eq, and, desc, isNull, lt, or } from 'drizzle-orm';
+import { eq, and, desc, isNull, lt, or, sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('sessionCheckpointService');
+
 
 export interface CheckpointPayload {
   formData?: Record<string, any>;
@@ -48,7 +49,7 @@ class SessionCheckpointService {
   private static instance: SessionCheckpointService;
   
   private constructor() {
-    console.log('[SessionCheckpoint] Service initialized');
+    log.info('[SessionCheckpoint] Service initialized');
   }
   
   static getInstance(): SessionCheckpointService {
@@ -94,7 +95,7 @@ class SessionCheckpointService {
     // Notify AI Brain
     this.notifyTrinity(checkpoint, 'checkpoint_created');
     
-    console.log(`[SessionCheckpoint] Created checkpoint ${checkpoint.id} for user ${params.userId}`);
+    log.info(`[SessionCheckpoint] Created checkpoint ${checkpoint.id} for user ${params.userId}`);
     return checkpoint;
   }
   
@@ -161,7 +162,7 @@ class SessionCheckpointService {
     if (updated) {
       await this.logEvent(checkpointId, 'finalized', source, {});
       this.notifyTrinity(updated, 'checkpoint_finalized');
-      console.log(`[SessionCheckpoint] Finalized checkpoint ${checkpointId}`);
+      log.info(`[SessionCheckpoint] Finalized checkpoint ${checkpointId}`);
       return true;
     }
     return false;
@@ -235,7 +236,7 @@ class SessionCheckpointService {
         audience: 'user',
         targetUserId: userId,
       },
-    });
+    }).catch((err) => log.warn('[sessionCheckpointService] Fire-and-forget failed:', err));
     
     return request.id;
   }
@@ -292,7 +293,7 @@ class SessionCheckpointService {
     
     this.notifyTrinity(checkpoint, 'checkpoint_recovered');
     
-    console.log(`[SessionCheckpoint] Recovery completed for checkpoint ${checkpoint.id}`);
+    log.info(`[SessionCheckpoint] Recovery completed for checkpoint ${checkpoint.id}`);
     return checkpoint;
   }
   
@@ -305,12 +306,10 @@ class SessionCheckpointService {
     eventSource: string,
     metadata: any
   ): Promise<void> {
-    await db.insert(sessionCheckpointEvents).values({
-      checkpointId,
-      eventType,
-      eventSource,
-      metadata,
-    });
+    const entry = JSON.stringify([{ eventType, eventSource, metadata, createdAt: new Date().toISOString() }]);
+    await db.update(sessionCheckpoints)
+      .set({ checkpointEvents: sql`COALESCE(checkpoint_events, '[]'::jsonb) || ${entry}::jsonb` })
+      .where(eq(sessionCheckpoints.id, checkpointId));
   }
   
   /**
@@ -332,9 +331,9 @@ class SessionCheckpointService {
           trinityContextId: checkpoint.trinityContextId,
         },
         visibility: 'admin',
-      });
+      }).catch((err) => log.warn('[sessionCheckpointService] Fire-and-forget failed:', err));
     } catch (error) {
-      console.error('[SessionCheckpoint] Failed to notify Trinity:', error);
+      log.error('[SessionCheckpoint] Failed to notify Trinity:', error);
     }
   }
   
@@ -351,7 +350,7 @@ class SessionCheckpointService {
       )
       .returning();
     
-    console.log(`[SessionCheckpoint] Cleaned up ${result.length} expired checkpoints`);
+    log.info(`[SessionCheckpoint] Cleaned up ${result.length} expired checkpoints`);
     return result.length;
   }
 }

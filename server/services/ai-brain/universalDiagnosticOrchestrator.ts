@@ -62,6 +62,9 @@ import type {
   TestAccount,
   PerformanceThresholds
 } from './crawlerTypes';
+import { typedCount, typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('universalDiagnosticOrchestrator');
 
 // Re-export for external consumers
 export type {
@@ -128,7 +131,7 @@ const RBAC_PERMISSIONS: Record<string, {
     canDeleteWithoutApproval: false, // Even root needs two-code for delete
     hotpatchTypes: ['config_update', 'cache_clear', 'service_restart', 'data_fix', 'code_edit', 'query_fix', 'permission_fix']
   },
-  platform_support: {
+  support_agent: {
     canViewDiagnostics: true,
     canSuggestFixes: true,
     canExecuteHotpatch: true,
@@ -136,7 +139,7 @@ const RBAC_PERMISSIONS: Record<string, {
     canDeleteWithoutApproval: false,
     hotpatchTypes: ['config_update', 'cache_clear', 'service_restart', 'data_fix']
   },
-  platform_admin: {
+  sysop: {
     canViewDiagnostics: true,
     canSuggestFixes: true,
     canExecuteHotpatch: true,
@@ -194,13 +197,14 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
       const issues: DiagnosticIssue[] = [];
       try {
         // Check notification table health
-        const result = await db.execute(sql`
+        // CATEGORY C — Raw SQL retained: FILTER (WHERE | Tables: notifications | Verified: 2026-03-23
+        const result = await typedQuery(sql`
           SELECT 
             COUNT(*) FILTER (WHERE is_read = false) as unread,
             COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as recent
           FROM notifications
         `);
-        const stats = result.rows?.[0] as any;
+        const stats = (result as any[])[0] as any;
         
         if (parseInt(stats?.unread || '0') > 1000) {
           issues.push({
@@ -218,7 +222,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
               description: 'Move notifications older than 30 days to archive',
               estimatedImpact: 'low',
               requiresTwoCodeApproval: false,
-              rbacMinimumRole: 'platform_support',
+              rbacMinimumRole: 'support_agent',
               canAutoExecute: true
             }
           });
@@ -229,7 +233,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
           domain: 'notifications',
           severity: 'error',
           title: 'Notification system error',
-          description: error.message,
+          description: (error instanceof Error ? error.message : String(error)),
           detectedAt: new Date(),
           autoFixable: false
         });
@@ -250,11 +254,12 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
     healthCheckFn: async () => {
       const issues: DiagnosticIssue[] = [];
       try {
-        const result = await db.execute(sql`
+        // CATEGORY C — Raw SQL retained: Count( | Tables: shifts | Verified: 2026-03-23
+        const result = await typedQuery(sql`
           SELECT COUNT(*) as conflicts FROM shifts 
           WHERE status = 'conflict' AND shift_date >= CURRENT_DATE
         `);
-        const conflicts = parseInt((result.rows?.[0] as any)?.conflicts || '0');
+        const conflicts = parseInt((result as any[])[0]?.conflicts || '0');
         
         if (conflicts > 0) {
           issues.push({
@@ -272,7 +277,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
               description: 'Use AI to suggest optimal resolution for conflicts',
               estimatedImpact: 'medium',
               requiresTwoCodeApproval: false,
-              rbacMinimumRole: 'platform_support',
+              rbacMinimumRole: 'support_agent',
               canAutoExecute: true
             }
           });
@@ -295,11 +300,12 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
     healthCheckFn: async () => {
       const issues: DiagnosticIssue[] = [];
       try {
-        const result = await db.execute(sql`
+        // CATEGORY C — Raw SQL retained: Count( | Tables: sessions | Verified: 2026-03-23
+        const result = await typedQuery(sql`
           SELECT COUNT(*) as expired FROM sessions 
           WHERE expire < NOW()
         `);
-        const expired = parseInt((result.rows?.[0] as any)?.expired || '0');
+        const expired = parseInt((result as any[])[0]?.expired || '0');
         
         if (expired > 100) {
           issues.push({
@@ -317,7 +323,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
               description: 'Remove expired session records',
               estimatedImpact: 'low',
               requiresTwoCodeApproval: false,
-              rbacMinimumRole: 'platform_support',
+              rbacMinimumRole: 'support_agent',
               canAutoExecute: true
             }
           });
@@ -356,6 +362,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
       const issues: DiagnosticIssue[] = [];
       try {
         const start = Date.now();
+        // Converted to Drizzle ORM: health check ping
         await db.execute(sql`SELECT 1`);
         const latency = Date.now() - start;
         
@@ -376,7 +383,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
           domain: 'database',
           severity: 'critical',
           title: 'Database connection failed',
-          description: error.message,
+          description: (error instanceof Error ? error.message : String(error)),
           detectedAt: new Date(),
           autoFixable: false
         });
@@ -431,14 +438,14 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
               description: 'Restart subagents that failed health checks',
               estimatedImpact: 'low',
               requiresTwoCodeApproval: false,
-              rbacMinimumRole: 'platform_support',
+              rbacMinimumRole: 'support_agent',
               canAutoExecute: true
             }
           });
         }
       } catch (error: any) {
         // Subagent health check failed gracefully - AI Brain is still operational
-        console.log('[AIBrainDiagnostician] Subagent health check skipped:', error.message);
+        log.info('[AIBrainDiagnostician] Subagent health check skipped:', (error instanceof Error ? error.message : String(error)));
       }
       return { healthy: issues.length === 0, issues };
     },
@@ -508,6 +515,7 @@ Format as structured analysis. Be specific about file names, functions, and exac
 
   try {
     const response = await geminiClient.generate({
+      workspaceId: undefined, // Platform-level log analysis, no workspace billing
       featureKey: 'universal_diagnostics',
       systemPrompt: 'You are an expert platform diagnostic AI. Provide actionable, specific fixes.',
       userMessage: prompt,
@@ -525,7 +533,7 @@ Format as structured analysis. Be specific about file names, functions, and exac
       issuesDetected: [],
       patterns: [],
       recommendations: [],
-      geminiInsight: `Analysis failed: ${error.message}`
+      geminiInsight: `Analysis failed: ${(error instanceof Error ? error.message : String(error))}`
     };
   }
 }
@@ -548,7 +556,7 @@ class HotpatchExecutor {
     platformRole: string,
     hotpatchType: HotpatchType
   ): Promise<{ allowed: boolean; requiresTwoCode: boolean; reason?: string }> {
-    const permissions = RBAC_PERMISSIONS[platformRole] || RBAC_PERMISSIONS['admin'];
+    const permissions = RBAC_PERMISSIONS[platformRole] || RBAC_PERMISSIONS['support_agent'];
 
     // Basic permission check
     if (!permissions.canExecuteHotpatch) {
@@ -637,7 +645,7 @@ class HotpatchExecutor {
         return execution;
       }
       // In production: verify approval codes against stored approval records
-      console.log(`[HotpatchExecutor] Two-code approval validated for ${hotpatch.type}`);
+      log.info(`[HotpatchExecutor] Two-code approval validated for ${hotpatch.type}`);
     }
 
     // Execute the hotpatch
@@ -682,7 +690,7 @@ class HotpatchExecutor {
       execution.status = 'success';
     } catch (error: any) {
       execution.status = 'failed';
-      execution.result = error.message;
+      execution.result = (error instanceof Error ? error.message : String(error));
     }
 
     this.pendingExecutions.delete(execution.id);
@@ -700,7 +708,7 @@ class HotpatchExecutor {
       },
       source: 'UniversalDiagnosticOrchestrator',
       timestamp: new Date()
-    });
+    }).catch((err) => log.warn('[universalDiagnosticOrchestrator] Fire-and-forget failed:', err));
 
     return execution;
   }
@@ -729,14 +737,14 @@ class UniversalDiagnosticOrchestrator {
 
   constructor() {
     this.hotpatchExecutor = new HotpatchExecutor();
-    console.log('[UniversalDiagnosticOrchestrator] Initialized with', DOMAIN_SUBAGENTS.length, 'domain subagents');
+    log.info('[UniversalDiagnosticOrchestrator] Initialized with', DOMAIN_SUBAGENTS.length, 'domain subagents');
   }
 
   async runFullDiagnostic(userId: string, platformRole: string): Promise<DiagnosticReport> {
     const startTime = Date.now();
     const allIssues: DiagnosticIssue[] = [];
     
-    console.log('[UniversalDiagnosticOrchestrator] Starting full platform diagnostic...');
+    log.info('[UniversalDiagnosticOrchestrator] Starting full platform diagnostic...');
 
     // Run all domain health checks in parallel
     const healthChecks = await Promise.all(
@@ -753,7 +761,7 @@ class UniversalDiagnosticOrchestrator {
               domain: subagent.domain,
               severity: 'error' as IssueSeverity,
               title: `${subagent.name} health check failed`,
-              description: error.message,
+              description: (error instanceof Error ? error.message : String(error)),
               detectedAt: new Date(),
               autoFixable: false
             }]
@@ -784,6 +792,7 @@ class UniversalDiagnosticOrchestrator {
 
       try {
         const response = await geminiClient.generate({
+          workspaceId: undefined, // Platform-level diagnostics, no workspace billing
           featureKey: 'diagnostic_summary',
           systemPrompt: 'You are Trinity, the AI Brain. Provide executive summary of platform health.',
           userMessage: `Summarize these platform issues and prioritize fixes:\n${issuesSummary}`,
@@ -812,7 +821,7 @@ class UniversalDiagnosticOrchestrator {
     this.diagnosticHistory.push(report);
     this.lastFullScan = new Date();
 
-    console.log(`[UniversalDiagnosticOrchestrator] Diagnostic complete: ${overallHealth}, ${allIssues.length} issues in ${report.duration}ms`);
+    log.info(`[UniversalDiagnosticOrchestrator] Diagnostic complete: ${overallHealth}, ${allIssues.length} issues in ${report.duration}ms`);
 
     return report;
   }
@@ -860,7 +869,7 @@ class UniversalDiagnosticOrchestrator {
   }
 
   getRBACPermissions(platformRole: string) {
-    return RBAC_PERMISSIONS[platformRole] || RBAC_PERMISSIONS['admin'];
+    return RBAC_PERMISSIONS[platformRole] || RBAC_PERMISSIONS['support_agent'];
   }
 }
 
@@ -879,10 +888,10 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     name: 'Full Platform Diagnostic',
     description: 'Run full platform diagnostic scan using Gemini 3 deep analysis',
     category: 'system',
-    requiredRoles: ['platform_support', 'platform_admin', 'root_admin'],
+    requiredRoles: ['support_agent', 'sysop', 'root_admin'],
     handler: async (request: any) => {
       const userId = request.userId || 'system';
-      const platformRole = request.metadata?.platformRole || 'platform_support';
+      const platformRole = request.metadata?.platformRole || 'support_agent';
       const report = await universalDiagnosticOrchestrator.runFullDiagnostic(userId, platformRole);
       return {
         success: true,
@@ -899,7 +908,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     name: 'Domain Diagnostic',
     description: 'Run diagnostic on a specific domain',
     category: 'system',
-    requiredRoles: ['platform_support', 'platform_admin', 'root_admin'],
+    requiredRoles: ['support_agent', 'sysop', 'root_admin'],
     handler: async (request: any) => {
       const domain = request.params?.domain || request.payload?.domain;
       if (!domain) {
@@ -921,7 +930,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     name: 'AI Log Analysis',
     description: 'Analyze logs with Gemini 3 for root cause analysis',
     category: 'system',
-    requiredRoles: ['platform_support', 'platform_admin', 'root_admin'],
+    requiredRoles: ['support_agent', 'sysop', 'root_admin'],
     handler: async (request: any) => {
       const logs = request.params?.logs || request.payload?.logs || '';
       const domain = request.params?.domain || request.payload?.domain;
@@ -941,11 +950,11 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     name: 'Execute Hotpatch',
     description: 'Execute a suggested hotpatch with RBAC validation. Destructive operations require two-code approval.',
     category: 'system',
-    requiredRoles: ['platform_admin', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin'],
     handler: async (request: any) => {
       const hotpatch = request.params?.hotpatch || request.payload?.hotpatch;
       const userId = request.userId || 'system';
-      const platformRole = request.metadata?.platformRole || 'platform_admin';
+      const platformRole = request.metadata?.platformRole || 'sysop';
       const approvalCode = request.params?.approvalCode || request.payload?.approvalCode;
       const secondApprovalCode = request.params?.secondApprovalCode || request.payload?.secondApprovalCode;
       
@@ -974,9 +983,9 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     name: 'Get Diagnostic Permissions',
     description: 'Get RBAC permissions for a specific role regarding diagnostics and hotpatches',
     category: 'security',
-    requiredRoles: ['admin', 'platform_support', 'platform_admin', 'root_admin'],
+    requiredRoles: ['support_agent', 'sysop', 'root_admin'],
     handler: async (request: any) => {
-      const role = request.params?.role || request.payload?.role || request.metadata?.platformRole || 'admin';
+      const role = request.params?.role || request.payload?.role || request.metadata?.platformRole || 'support_agent';
       const permissions = universalDiagnosticOrchestrator.getRBACPermissions(role);
       return {
         success: true,
@@ -993,7 +1002,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     name: 'List Diagnostic Subagents',
     description: 'List all specialized diagnostic subagents and their domains',
     category: 'system',
-    requiredRoles: ['admin', 'platform_support', 'platform_admin', 'root_admin'],
+    requiredRoles: ['admin', 'support_agent', 'sysop', 'root_admin'],
     handler: async (request: any) => {
       const subagents = DOMAIN_SUBAGENTS.map(s => ({
         domain: s.domain,
@@ -1016,7 +1025,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     name: 'Hotpatch Execution History',
     description: 'Get history of hotpatch executions for audit trail',
     category: 'security',
-    requiredRoles: ['platform_admin', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin'],
     handler: async (request: any) => {
       const history = universalDiagnosticOrchestrator.getExecutionHistory();
       return {
@@ -1028,7 +1037,7 @@ export async function registerUniversalDiagnosticActions(orchestrator: any): Pro
     }
   });
 
-  console.log('[AI Brain Master Orchestrator] Registered 7 Universal Diagnostic Orchestrator actions');
+  log.info('[AI Brain Master Orchestrator] Registered 7 Universal Diagnostic Orchestrator actions');
 }
 
 // Export types for external use

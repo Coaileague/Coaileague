@@ -6,10 +6,16 @@
  */
 
 import { db } from '../db';
-import { platformUpdates as platformUpdatesTable, userPlatformUpdateViews } from '@shared/schema';
+import {
+  userPlatformUpdateViews,
+  platformUpdates as platformUpdatesTable
+} from '@shared/schema';
 import { isFeatureEnabled, PLATFORM } from '@shared/platformConfig';
 import { desc, eq, sql, and, gte, or, isNull, notInArray } from 'drizzle-orm';
 import { humanizeTitle, humanizeText, containsTechnicalJargon, generateEndUserSummary } from '@shared/utils/humanFriendlyCopy';
+import { createLogger } from '../lib/logger';
+const log = createLogger('whatsNewService');
+
 
 export interface PlatformUpdate {
   id: string;
@@ -39,7 +45,7 @@ const VISIBILITY_LEVELS: Record<string, number> = {
 // Map workspace roles to their effective visibility access level
 const WORKSPACE_ROLE_ACCESS: Record<string, number> = {
   'org_owner': 1,           // Same as admin access
-  'org_admin': 1,           // Same as admin access
+  'co_owner': 1,           // Same as admin access
   'department_manager': 2,  // Manager level
   'supervisor': 3,          // Supervisor level
   'staff': 4,               // Staff level
@@ -68,14 +74,19 @@ function hasVisibilityAccess(userRole: string, visibility: string): boolean {
  */
 export async function seedPlatformUpdates(): Promise<void> {
   try {
+    const { isDbCircuitOpen } = await import('../db');
+    if (isDbCircuitOpen()) {
+      log.warn('[WhatsNew] Skipping update check — DB circuit is open');
+      return;
+    }
     const existingCount = await db.query.platformUpdates.findFirst({});
     if (existingCount) {
-      console.log('[WhatsNew] Platform updates exist in database');
+      log.info('[WhatsNew] Platform updates exist in database');
     } else {
-      console.log('[WhatsNew] No platform updates - create via admin interface');
+      log.info('[WhatsNew] No platform updates - create via admin interface');
     }
   } catch (error) {
-    console.error('[WhatsNew] Failed to check updates:', error);
+    log.error('[WhatsNew] Failed to check updates:', error);
   }
 }
 
@@ -137,11 +148,15 @@ export async function getUpdates(options?: {
       viewedUpdateIds = new Set(viewedUpdates.map(v => v.updateId));
     }
 
-    // Filter by RBAC and add viewed status
+    const seenTitles = new Set<string>();
     return dbUpdates
       .filter(u => {
         const visibility = u.visibility || 'all';
-        return hasVisibilityAccess(userRole, visibility);
+        if (!hasVisibilityAccess(userRole, visibility)) return false;
+        const titleKey = u.title.toLowerCase().trim();
+        if (seenTitles.has(titleKey)) return false;
+        seenTitles.add(titleKey);
+        return true;
       })
       .map(u => ({
         id: u.id,
@@ -158,7 +173,7 @@ export async function getUpdates(options?: {
         hasViewed: viewedUpdateIds.has(u.id),
       }));
   } catch (error) {
-    console.error('[WhatsNew] Database query failed:', error);
+    log.error('[WhatsNew] Database query failed:', error);
     return [];
   }
 }
@@ -174,10 +189,10 @@ export async function markUpdateViewed(userId: string, updateId: string, viewSou
       viewSource,
     }).onConflictDoNothing();
     
-    console.log(`[WhatsNew] User ${userId} viewed update ${updateId}`);
+    log.info(`[WhatsNew] User ${userId} viewed update ${updateId}`);
     return true;
   } catch (error) {
-    console.error('[WhatsNew] Failed to mark update as viewed:', error);
+    log.error('[WhatsNew] Failed to mark update as viewed:', error);
     return false;
   }
 }
@@ -192,9 +207,6 @@ export async function getUnviewedCount(userId: string, userRole: string = 'staff
       columns: { updateId: true },
     });
     const viewedIds = viewedUpdates.map(v => v.updateId);
-    
-    // DEBUG: Log viewed count
-    console.log(`[WhatsNew.getUnviewedCount] User: ${userId}, ViewedIds count: ${viewedIds.length}, WorkspaceId: ${workspaceId || 'none'}`);
     
     // Build conditions with workspace scoping
     const conditions = [];
@@ -220,10 +232,10 @@ export async function getUnviewedCount(userId: string, userRole: string = 'staff
     
     // Filter by RBAC
     const unviewedCount = allUpdates.filter(u => hasVisibilityAccess(userRole, u.visibility || 'all')).length;
-    console.log(`[WhatsNew.getUnviewedCount] TotalUpdates fetched: ${allUpdates.length}, After RBAC filter: ${unviewedCount}`);
+    log.info(`[WhatsNew.getUnviewedCount] TotalUpdates fetched: ${allUpdates.length}, After RBAC filter: ${unviewedCount}`);
     return unviewedCount;
   } catch (error) {
-    console.error('[WhatsNew] Failed to get unviewed count:', error);
+    log.error('[WhatsNew] Failed to get unviewed count:', error);
     return 0;
   }
 }
@@ -279,7 +291,7 @@ export async function getNewFeatures(userId?: string, userRole?: string, workspa
         hasViewed: viewedUpdateIds.has(u.id),
       }));
   } catch (error) {
-    console.error('[WhatsNew] Failed to get new features:', error);
+    log.error('[WhatsNew] Failed to get new features:', error);
     return [];
   }
 }
@@ -319,7 +331,7 @@ export async function getUpdateById(id: string, userId?: string): Promise<Platfo
       hasViewed,
     };
   } catch (error) {
-    console.error('[WhatsNew] Failed to get update by ID:', error);
+    log.error('[WhatsNew] Failed to get update by ID:', error);
     return undefined;
   }
 }
@@ -353,7 +365,7 @@ export async function getUpdateStats(userRole: string = 'staff') {
       latestVersion: PLATFORM.version,
     };
   } catch (error) {
-    console.error('[WhatsNew] Failed to get stats:', error);
+    log.error('[WhatsNew] Failed to get stats:', error);
     return {
       total: 0,
       recentCount: 0,
@@ -399,10 +411,10 @@ export async function addUpdate(update: Omit<PlatformUpdate, 'id'> & { visibilit
       date: new Date(update.date),
     });
     
-    console.log(`[WhatsNew] Added humanized update: "${humanizedTitle}"`);
+    log.info(`[WhatsNew] Added humanized update: "${humanizedTitle}"`);
     return { ...update, id, title: humanizedTitle, description: humanizedDescription };
   } catch (error) {
-    console.error('[WhatsNew] Failed to add update:', error);
+    log.error('[WhatsNew] Failed to add update:', error);
     throw error;
   }
 }

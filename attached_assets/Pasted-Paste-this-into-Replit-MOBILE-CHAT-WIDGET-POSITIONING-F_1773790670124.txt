@@ -1,0 +1,39 @@
+Paste this into Replit:
+
+---
+
+**MOBILE CHAT WIDGET POSITIONING FIX — READ BEFORE TOUCH | UI ONLY**
+
+The minimized chat bar at the bottom of the mobile screen is overlapping the bottom navigation bar and covering page content. The FAB button in the bottom right corner works correctly and should not be changed. Only fix the minimized chat widget positioning.
+
+**The problem:**
+The minimized "72 Messages" bar renders at the bottom of the screen at the same z-level as the bottom navigation tabs (Home, Schedule, Clock, Mail, More). It sits on top of the nav bar instead of above it, blocking both the nav and the page content behind it.
+
+**The fix:**
+Read the component that renders the minimized chat bar — likely a floating bottom sheet or drawer component in `client/src/components/chat/` or equivalent.
+
+Apply these changes:
+
+1. The minimized chat bar must sit ABOVE the bottom navigation bar — not overlapping it. Add `bottom` positioning that accounts for the bottom nav height. The bottom nav is approximately 64px tall. Set the minimized bar's `bottom` to `64px` plus any safe area inset for mobile devices — use `calc(64px + env(safe-area-inset-bottom, 0px))`.
+
+2. The minimized bar must not overlap page content. Ensure the main page content area has `padding-bottom` that accounts for both the minimized chat bar height AND the bottom nav height when the chat is in minimized state.
+
+3. On mobile screens (max-width 768px) specifically — ensure the minimized bar width does not exceed the screen width and does not cause horizontal scroll.
+
+4. The expanded messages panel (Image 2) should render as a bottom sheet that slides up from above the nav bar — not from the very bottom of the screen. The bottom sheet should have `bottom: 64px` so the nav remains accessible when messages are open.
+
+5. Do not change the FAB button positioning — it is working correctly.
+
+Read the current CSS and component structure before making any changes. Show before/after for every style change made.
+
+After fixing — confirm on mobile viewport (375px width) that:
+- Bottom nav is fully visible and tappable
+- Minimized chat bar sits cleanly above the nav with no overlap
+- Page content is not covered by either the chat bar or the nav
+- Expanded messages panel slides up from above the nav bar
+
+Stop and wait.
+
+---
+
+Paste results back and if it looks right on your phone we move on.

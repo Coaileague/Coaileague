@@ -190,11 +190,11 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
   
   // Color theming based on status
   const statusColors = {
-    loading: 'from-teal-500 via-cyan-500 to-blue-500',
-    success: 'from-green-500 via-emerald-500 to-teal-500',
-    error: 'from-red-500 via-rose-500 to-pink-500',
-    denied: 'from-amber-500 via-orange-500 to-red-500',
-    info: 'from-blue-500 via-indigo-500 to-purple-500',
+    loading: 'from-cyan-500 to-blue-600',
+    success: 'from-emerald-500 to-teal-500',
+    error: 'from-blue-600 to-cyan-500',
+    denied: 'from-cyan-500 to-blue-600',
+    info: 'from-blue-500 to-cyan-500',
   };
   
   const isLoadingStatus = status === 'loading';
@@ -243,7 +243,7 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
                 className="mt-4 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"
               >
                 <motion.div
-                  className="h-full bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
@@ -291,7 +291,7 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
       
       <div className="text-center space-y-1">
         <p className={cn(
-          'font-semibold bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent',
+          'font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent',
           size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-xl'
         )}>
           {displayMessage}{dots}

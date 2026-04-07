@@ -12,8 +12,6 @@
  * - Automated org configuration from documents
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-// Use Gemini 2.5 Pro for document understanding
 import { db } from '../../db';
 import { 
   employees, 
@@ -25,8 +23,10 @@ import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { automationOrchestration } from '../orchestration/automationOrchestration';
+import { meteredGemini } from '../billing/meteredGeminiClient';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('documentUnderstandingPipeline');
 
 // ============================================================================
 // TYPES
@@ -159,105 +159,139 @@ class DocumentUnderstandingPipelineService {
     const startTime = Date.now();
     const pipelineId = request.pipelineId || crypto.randomUUID();
 
-    console.log(`[DocumentPipeline] Starting ingestion pipeline: ${pipelineId}`);
+    log.info(`[DocumentPipeline] Starting ingestion pipeline: ${pipelineId}`);
 
-    const config: ExtractionConfig = {
-      extractEmployees: true,
-      extractSchedules: true,
-      extractPositions: true,
-      extractPayRates: true,
-      extractContacts: true,
-      validateData: true,
-      ...request.extractionConfig
-    };
+    const result = await automationOrchestration.executeAutomation(
+      {
+        domain: 'document',
+        automationName: 'document-ingestion-pipeline',
+        automationType: 'document_processing',
+        triggeredBy: 'api',
+        workspaceId: request.workspaceId,
+        userId: request.userId,
+        payload: {
+          pipelineId,
+          documentCount: request.documents.length,
+          documentTypes: request.documents.map(d => d.type),
+        },
+        billable: true,
+      },
+      async (ctx) => {
+        const config: ExtractionConfig = {
+          extractEmployees: true,
+          extractSchedules: true,
+          extractPositions: true,
+          extractPayRates: true,
+          extractContacts: true,
+          validateData: true,
+          ...request.extractionConfig
+        };
 
-    const extractedData: ExtractionResult['extractedData'] = {};
-    const validationResults: ValidationResult[] = [];
-    const warnings: string[] = [];
-    const errors: string[] = [];
-    let overallConfidence = 0;
-    let documentCount = 0;
+        const extractedData: ExtractionResult['extractedData'] = {};
+        const validationResults: ValidationResult[] = [];
+        const warnings: string[] = [];
+        const errors: string[] = [];
+        let overallConfidence = 0;
+        let documentCount = 0;
 
-    try {
-      for (const doc of request.documents) {
-        documentCount++;
-        console.log(`[DocumentPipeline] Processing document ${documentCount}/${request.documents.length}: ${doc.fileName}`);
+        for (const doc of request.documents) {
+          documentCount++;
+          log.info(`[DocumentPipeline] Processing document ${documentCount}/${request.documents.length}: ${doc.fileName}`);
 
-        try {
-          const docResult = await this.processDocument(doc, config);
-          
-          // Merge extracted data
-          if (docResult.employees?.length) {
-            extractedData.employees = [...(extractedData.employees || []), ...docResult.employees];
+          try {
+            const docResult = await this.processDocument(doc, config, request.workspaceId);
+            
+            if (docResult.employees?.length) {
+              extractedData.employees = [...(extractedData.employees || []), ...docResult.employees];
+            }
+            if (docResult.schedules?.length) {
+              extractedData.schedules = [...(extractedData.schedules || []), ...docResult.schedules];
+            }
+            if (docResult.positions?.length) {
+              extractedData.positions = [...(extractedData.positions || []), ...docResult.positions];
+            }
+            if (docResult.contacts?.length) {
+              extractedData.contacts = [...(extractedData.contacts || []), ...docResult.contacts];
+            }
+
+            overallConfidence += docResult.confidence;
+            warnings.push(...docResult.warnings);
+          } catch (docError: any) {
+            errors.push(`Failed to process ${doc.fileName}: ${docError.message}`);
           }
-          if (docResult.schedules?.length) {
-            extractedData.schedules = [...(extractedData.schedules || []), ...docResult.schedules];
-          }
-          if (docResult.positions?.length) {
-            extractedData.positions = [...(extractedData.positions || []), ...docResult.positions];
-          }
-          if (docResult.contacts?.length) {
-            extractedData.contacts = [...(extractedData.contacts || []), ...docResult.contacts];
-          }
-
-          overallConfidence += docResult.confidence;
-          warnings.push(...docResult.warnings);
-        } catch (docError: any) {
-          errors.push(`Failed to process ${doc.fileName}: ${docError.message}`);
         }
+
+        overallConfidence = documentCount > 0 ? overallConfidence / documentCount : 0;
+
+        const EXTRACTION_CONFIDENCE_THRESHOLD = 0.7;
+        const flagLowConfidence = (items: any[] | undefined, entityType: string) => {
+          if (!items) return;
+          for (const item of items) {
+            if (item.confidence !== undefined && item.confidence < EXTRACTION_CONFIDENCE_THRESHOLD) {
+              item.requiresHumanReview = true;
+              warnings.push(`Low confidence ${entityType} extraction (${Math.round(item.confidence * 100)}%) — flagged for human review: ${item.name || item.title || JSON.stringify(item).slice(0, 80)}`);
+            }
+          }
+        };
+        flagLowConfidence(extractedData.employees, 'employee');
+        flagLowConfidence(extractedData.schedules, 'schedule');
+        flagLowConfidence(extractedData.positions, 'position');
+        flagLowConfidence(extractedData.contacts, 'contact');
+
+        if (config.validateData) {
+          const validation = await this.validateExtractedData(extractedData);
+          validationResults.push(...validation);
+        }
+
+        await this.logPipeline(pipelineId, 'ingestion_complete', {
+          documentsProcessed: documentCount,
+          employeesExtracted: extractedData.employees?.length || 0,
+          schedulesExtracted: extractedData.schedules?.length || 0,
+          positionsExtracted: extractedData.positions?.length || 0
+        });
+
+        platformEventBus.publish({
+          type: 'automation' as any,
+          title: 'Document Ingestion Complete',
+          description: `Extracted ${extractedData.employees?.length || 0} employees, ${extractedData.schedules?.length || 0} schedules`,
+          data: { pipelineId, workspaceId: request.workspaceId, extractedCounts: { employees: extractedData.employees?.length || 0, schedules: extractedData.schedules?.length || 0, positions: extractedData.positions?.length || 0 } },
+          severity: 'info',
+          isNew: true
+        }).catch((err) => log.warn('[documentUnderstandingPipeline] Fire-and-forget failed:', err));
+
+        return {
+          pipelineId,
+          status: errors.length === 0 ? 'success' : warnings.length > 0 ? 'partial' : 'failed',
+          extractedData,
+          validationResults,
+          confidence: overallConfidence,
+          processingTimeMs: Date.now() - startTime,
+          warnings,
+          errors
+        };
       }
+    );
 
-      // Calculate average confidence
-      overallConfidence = documentCount > 0 ? overallConfidence / documentCount : 0;
-
-      // Validate extracted data if enabled
-      if (config.validateData) {
-        const validation = await this.validateExtractedData(extractedData);
-        validationResults.push(...validation);
-      }
-
-      // Log the operation
-      await this.logPipeline(pipelineId, 'ingestion_complete', {
-        documentsProcessed: documentCount,
-        employeesExtracted: extractedData.employees?.length || 0,
-        schedulesExtracted: extractedData.schedules?.length || 0,
-        positionsExtracted: extractedData.positions?.length || 0
-      });
-
-      // Emit success event
-      platformEventBus.publish({
-        type: 'automation' as any,
-        title: 'Document Ingestion Complete',
-        description: `Extracted ${extractedData.employees?.length || 0} employees, ${extractedData.schedules?.length || 0} schedules`,
-        data: { pipelineId, workspaceId: request.workspaceId, extractedCounts: { employees: extractedData.employees?.length || 0, schedules: extractedData.schedules?.length || 0, positions: extractedData.positions?.length || 0 } },
-        severity: 'info',
-        isNew: true
-      });
-
-      return {
-        pipelineId,
-        status: errors.length === 0 ? 'success' : warnings.length > 0 ? 'partial' : 'failed',
-        extractedData,
-        validationResults,
-        confidence: overallConfidence,
-        processingTimeMs: Date.now() - startTime,
-        warnings,
-        errors
-      };
-
-    } catch (error: any) {
-      console.error('[DocumentPipeline] Pipeline error:', error);
-      return {
-        pipelineId,
-        status: 'failed',
-        extractedData: {},
-        validationResults: [],
-        confidence: 0,
-        processingTimeMs: Date.now() - startTime,
-        warnings,
-        errors: [error.message]
-      };
+    if (result.success && result.data) {
+      return result.data;
     }
+
+    const errorDetails = [
+      result.error || 'Orchestration execution failed',
+      result.step ? `(step: ${result.step})` : '',
+      result.errorCode ? `[${result.errorCode}]` : '',
+    ].filter(Boolean).join(' ');
+
+    return {
+      pipelineId,
+      status: 'failed',
+      extractedData: {},
+      validationResults: [],
+      confidence: 0,
+      processingTimeMs: Date.now() - startTime,
+      warnings: [],
+      errors: [errorDetails]
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -266,7 +300,8 @@ class DocumentUnderstandingPipelineService {
 
   private async processDocument(
     doc: DocumentInput, 
-    config: ExtractionConfig
+    config: ExtractionConfig,
+    workspaceId?: string
   ): Promise<{
     employees: ExtractedEmployee[];
     schedules: ExtractedSchedule[];
@@ -284,7 +319,7 @@ class DocumentUnderstandingPipelineService {
 
     // Use Gemini Vision for image/PDF processing
     if (doc.type === 'pdf' || doc.type === 'image') {
-      const visionResult = await this.processWithVision(doc, config);
+      const visionResult = await this.processWithVision(doc, config, workspaceId);
       employees.push(...visionResult.employees);
       schedules.push(...visionResult.schedules);
       positions.push(...visionResult.positions);
@@ -305,7 +340,8 @@ class DocumentUnderstandingPipelineService {
 
   private async processWithVision(
     doc: DocumentInput,
-    config: ExtractionConfig
+    config: ExtractionConfig,
+    workspaceId?: string
   ): Promise<{
     employees: ExtractedEmployee[];
     schedules: ExtractedSchedule[];
@@ -314,8 +350,6 @@ class DocumentUnderstandingPipelineService {
     confidence: number;
     warnings: string[];
   }> {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro-preview-05-06' });
-
     const prompt = `Analyze this document and extract structured workforce data.
 
 Extract the following (if present):
@@ -337,17 +371,20 @@ Return a JSON object with this structure:
 Only include fields where data was found. Estimate confidence based on data clarity.`;
 
     try {
-      // For text content, use direct generation
       const contentString = typeof doc.content === 'string' 
         ? doc.content 
         : doc.content.toString('base64');
 
-      const result = await model.generateContent([
-        { text: prompt },
-        { text: `Document content (${doc.type}): ${contentString.substring(0, 10000)}` }
-      ]);
+      const fullPrompt = `${prompt}\n\nDocument content (${doc.type}): ${contentString.substring(0, 10000)}`;
 
-      const responseText = result.response.text();
+      const genResult = await meteredGemini.generate({
+        prompt: fullPrompt,
+        workspaceId: workspaceId,
+        featureKey: 'ai_document_processing',
+        systemInstruction: 'You are a document analysis AI. Extract structured data from documents and return valid JSON.',
+      });
+
+      const responseText = genResult.text;
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       
       if (jsonMatch) {
@@ -372,14 +409,14 @@ Only include fields where data was found. Estimate confidence based on data clar
       };
 
     } catch (error: any) {
-      console.error('[DocumentPipeline] Vision processing error:', error);
+      log.error('[DocumentPipeline] Vision processing error:', error);
       return {
         employees: [],
         schedules: [],
         positions: [],
         contacts: [],
         confidence: 0,
-        warnings: [`Vision processing failed: ${error.message}`]
+        warnings: [`Vision processing failed: ${(error instanceof Error ? error.message : String(error))}`]
       };
     }
   }
@@ -518,7 +555,7 @@ Only include fields where data was found. Estimate confidence based on data clar
     userId: string,
     extractionResult: ExtractionResult
   ): Promise<OrgSetupResult> {
-    console.log(`[DocumentPipeline] Setting up org from extracted data for workspace: ${workspaceId}`);
+    log.info(`[DocumentPipeline] Setting up org from extracted data for workspace: ${workspaceId}`);
 
     const createdRecords = { employees: 0, positions: 0, scheduleTemplates: 0 };
     let skippedRecords = 0;
@@ -526,26 +563,11 @@ Only include fields where data was found. Estimate confidence based on data clar
     const { extractedData } = extractionResult;
 
     try {
-      // Create positions first
       if (extractedData.positions?.length) {
         for (const pos of extractedData.positions) {
-          try {
-            await db.insert(positions).values({
-              id: crypto.randomUUID(),
-              workspaceId,
-              name: pos.name,
-              department: pos.department || null,
-              createdAt: new Date()
-            });
-            createdRecords.positions++;
-          } catch (err: any) {
-            if (err.code === '23505') { // Duplicate
-              skippedRecords++;
-            } else {
-              errors.push(`Failed to create position ${pos.name}: ${err.message}`);
-            }
-          }
+          log.info(`[DocumentPipeline] Position extracted: "${pos.name}" - mapped to employee.position field`);
         }
+        createdRecords.positions = 0;
       }
 
       // Create employees
@@ -562,14 +584,13 @@ Only include fields where data was found. Estimate confidence based on data clar
               workspaceId,
               firstName: emp.firstName,
               lastName: emp.lastName,
-              email: emp.email || `${emp.firstName.toLowerCase()}.${emp.lastName.toLowerCase()}@placeholder.com`,
+              email: emp.email || `${emp.firstName.toLowerCase()}.${emp.lastName.toLowerCase()}@${workspaceId}.internal`,
               phone: emp.phone || null,
-              position: emp.position || null,
-              department: emp.department || null,
+              role: emp.position || null,
               hireDate: emp.hireDate ? new Date(emp.hireDate) : new Date(),
-              payRate: emp.payRate?.toString() || null,
+              hourlyRate: emp.payRate?.toString() || null,
               payType: emp.payType || 'hourly',
-              status: 'active',
+              isActive: true,
               createdAt: new Date()
             });
             createdRecords.employees++;
@@ -577,7 +598,7 @@ Only include fields where data was found. Estimate confidence based on data clar
             if (err.code === '23505') {
               skippedRecords++;
             } else {
-              errors.push(`Failed to create employee ${emp.firstName} ${emp.lastName}: ${err.message}`);
+              errors.push(`Failed to create employee ${emp.firstName} ${emp.lastName}: ${(err instanceof Error ? err.message : String(err))}`);
             }
           }
         }
@@ -601,7 +622,7 @@ Only include fields where data was found. Estimate confidence based on data clar
         data: { workspaceId, createdRecords },
         severity: 'success',
         isNew: true
-      });
+      }).catch((err) => log.warn('[documentUnderstandingPipeline] Fire-and-forget failed:', err));
 
       return {
         success: errors.length === 0,
@@ -613,13 +634,13 @@ Only include fields where data was found. Estimate confidence based on data clar
       };
 
     } catch (error: any) {
-      console.error('[DocumentPipeline] Org setup error:', error);
+      log.error('[DocumentPipeline] Org setup error:', error);
       return {
         success: false,
         workspaceId,
         createdRecords,
         skippedRecords,
-        errors: [error.message],
+        errors: [(error instanceof Error ? error.message : String(error))],
         readinessChecklist: []
       };
     }
@@ -677,7 +698,7 @@ Only include fields where data was found. Estimate confidence based on data clar
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('[DocumentPipeline] Failed to log operation:', error);
+      log.error('[DocumentPipeline] Failed to log operation:', error);
     }
   }
 }

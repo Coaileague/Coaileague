@@ -1,0 +1,158 @@
+# Git - large repository history not needed in production
+.git
+.gitignore
+.gitattributes
+
+# Development dependencies and cache (CRITICAL: These are huge!)
+node_modules
+.npm
+.pnpm-store
+.yarn
+.bun
+bun.lockb
+
+# Replit and development caches (CRITICAL: .cache ~1GB, .local ~1.1GB)
+.cache
+.cache/**
+.local
+.local/**
+.config
+.config/**
+.upm
+.upm/**
+
+# Build artifacts that will be rebuilt
+dist
+build
+.next
+.nuxt
+.turbo
+.parcel-cache
+
+# Development and test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__
+coverage
+.nyc_output
+e2e
+cypress
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+*.sublime-*
+
+# Temporary files and logs
+/tmp
+tmp/
+*.tmp
+*.temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Documentation (keep README for reference)
+*.md
+!README.md
+docs
+
+# Development config files
+.env.local
+.env.development
+.env.test
+.env.*.local
+*.local
+
+# Replit specific files
+.replit
+replit.nix
+.breakpoints
+.replit.nix
+.replitrc
+
+# Attached assets and development files
+attached_assets
+attached_assets/**
+
+# Large binary files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.iso
+*.dmg
+
+# Source maps (can be very large)
+*.map
+*.js.map
+*.css.map
+
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Drizzle migration metadata (migrations folder needed for production)
+drizzle/meta
+drizzle/meta/**
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+
+# Android and mobile development
+android
+ios
+*.apk
+*.ipa
+
+# Testing infrastructure
+diagnostics-runner
+test-results
+playwright-report
+playwright/.cache
+playwright.config.ts
+vitest.config.ts
+jest.config.*
+.playwright
+
+# Scripts output and development scripts
+scripts/output
+scripts/*.log
+scripts/test-*
+scripts/debug-*
+
+# Development server files
+server/uploads
+server/temp
+uploads/
+temp/
+
+# Skill files (development only)
+.local/skills
+
+# Broken symlinks and pulse audio (causes deployment issues)
+pulse-*
+**/pulse-*
+
+# Development tooling
+.husky
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Large development dependencies that shouldn't be in prod image
+# These are automatically excluded when using production npm install
+# but adding explicitly for safety

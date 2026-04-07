@@ -71,11 +71,10 @@ export interface TrinityContext {
   isOrgOwner: boolean;
   isManager: boolean;
   
-  subscriptionTier: 'free' | 'starter' | 'professional' | 'enterprise';
+  subscriptionTier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   subscriptionStatus: 'trial' | 'active' | 'past_due' | 'cancelled' | 'suspended';
   
   hasTrinityPro: boolean;
-  hasBusinessBuddy: boolean;
   activeAddons: string[];
   
   orgStats?: {
@@ -89,10 +88,16 @@ export interface TrinityContext {
   
   trinityAccessReason: 'platform_staff' | 'org_owner' | 'addon_subscriber' | 'trial' | 'none';
   trinityAccessLevel: 'full' | 'basic' | 'none';
-  trinityMode: 'demo' | 'business_pro' | 'guru';
+  /**
+   * Trinity operational mode:
+   * - 'coo'    — COO mode for org owners/managers at security companies
+   * - 'guru'   — Tech Guru mode for platform support agents
+   * - 'standard' — Standard mode for all other users
+   */
+  trinityMode: 'coo' | 'guru' | 'standard';
   
   greeting: string;
-  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'platform_guru' | 'standard';
+  persona: 'executive_advisor' | 'support_partner' | 'coo_advisor' | 'onboarding_guide' | 'platform_guru' | 'standard';
 }
 
 interface TrinityContextResponse {
@@ -106,7 +111,7 @@ interface TrinityAccessResponse {
   accessLevel: 'full' | 'basic' | 'none';
   reason: string;
   hasTrinityPro: boolean;
-  hasBusinessBuddy: boolean;
+  trinityMode: 'coo' | 'guru' | 'standard';
   persona: string;
   isPlatformStaff: boolean;
   isRootAdmin: boolean;
@@ -118,9 +123,9 @@ export function useTrinityContext(workspaceId?: string) {
   const query = useQuery<TrinityContextResponse>({
     queryKey: ['/api/trinity/context', workspaceId],
     enabled: !!user && !authLoading,
-    staleTime: 10 * 1000, // 10 seconds - shorter stale time for LIVE notification sync
+    staleTime: 15 * 1000, // 15 seconds - server-side cached for fast response
     refetchOnWindowFocus: true, // Sync when user returns to tab
-    refetchInterval: 20 * 1000, // Refetch every 20 seconds for near real-time Trinity awareness
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds (server caches for 15s)
     refetchOnMount: 'always', // Always get fresh data on mount
   });
   
@@ -181,7 +186,7 @@ export function useTrinityAccess(workspaceId?: string) {
     hasAccess,
     accessLevel,
     hasTrinityPro: query.data?.hasTrinityPro ?? false,
-    hasBusinessBuddy: query.data?.hasBusinessBuddy ?? false,
+    trinityMode: query.data?.trinityMode ?? 'standard',
     isPlatformStaff: query.data?.isPlatformStaff ?? false,
     isRootAdmin: query.data?.isRootAdmin ?? false,
     persona: query.data?.persona ?? 'standard',
@@ -202,7 +207,7 @@ export function getRoleDisplayName(context: TrinityContext | undefined): string 
     return 'Platform Staff';
   }
   if (context.isOrgOwner) return 'Organization Owner';
-  if (context.workspaceRole === 'org_admin') return 'Organization Admin';
+  if (context.workspaceRole === 'co_owner') return 'Co-Owner';
   if (context.workspaceRole === 'department_manager') return 'Department Manager';
   if (context.workspaceRole === 'supervisor') return 'Supervisor';
   if (context.workspaceRole === 'staff') return 'Team Member';
@@ -216,8 +221,8 @@ export function getPersonaDescription(persona: string): string {
       return 'Executive-level strategic advisor for platform oversight';
     case 'support_partner':
       return 'Support operations assistant for platform staff';
-    case 'business_buddy':
-      return 'Business growth partner and workforce advisor';
+    case 'coo_advisor':
+      return 'AI COO — business intelligence and workforce operations advisor';
     case 'onboarding_guide':
       return 'New organization setup assistant';
     default:

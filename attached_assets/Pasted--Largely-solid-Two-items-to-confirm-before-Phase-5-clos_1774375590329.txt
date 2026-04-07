@@ -1,0 +1,54 @@
+**Largely solid. Two items to confirm before Phase 5 closes.**
+
+---
+
+**WHAT IS GENUINELY DONE RIGHT**
+
+`businessRules.ts` created as the single source of truth with 6 constant sets and 12 exported functions. 17 call sites across 5 route files. All 8 negative value rejection tests pass with specific named rule violations. Trinity margin check added as non-blocking warning with `lossPerHour` calculation. TypeScript zero errors. Server HTTP 200. The `billableRate` vs `billingRate` column name discrepancy caught and fixed during the work — another phantom caught by careful reading.
+
+---
+
+**TWO ITEMS TO CONFIRM**
+
+**Item 1 — automationInlineRoutes.ts inline check.**
+The Step 8 scan found an inline hourly rate business constraint in `automationInlineRoutes.ts`. The report notes it was found but does not confirm what happened to it. The Phase 5 standard requires every inline business constraint outside `businessRules.ts` to be replaced with a call to the appropriate validation function. Was this inline check migrated to use `validatePayRate` from `businessRules.ts` or is it still inline?
+
+**Item 2 — canAssignRole is missing from the 17 call sites.**
+Step 4 required role assignment validation using `canAssignRole(req.user.role, body.role)` on every role assignment endpoint in `employeeRoutes.ts`. The completion table shows `Employee PATCH /:id — validatePayRate × 4 rate fields` but no mention of `canAssignRole`. Role escalation prevention — a user assigning a role equal to or higher than their own — was a specific Phase 5 requirement. Confirm whether `canAssignRole` was applied to role assignment endpoints and if not apply it now.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Two items before Phase 5 closes. Both in the same session right now.
+
+**Item 1 — automationInlineRoutes.ts:**
+Run `grep -n "hourly\|rate\|pay" server/routes/automationInlineRoutes.ts | head -20` and paste the output. If the inline hourly rate check is still there and not using `validatePayRate` from `businessRules.ts` replace it now. Report the before and after.
+
+**Item 2 — canAssignRole on role assignment endpoints:**
+Run `grep -n "role" server/routes/employeeRoutes.ts | grep -i "assign\|update\|patch\|body.role\|req.body" | head -20` to find where roles are assigned or updated. Confirm whether `canAssignRole` from `businessRules.ts` is called at those points. If it is not add it now. The implementation must be:
+
+```typescript
+import { canAssignRole } from '../lib/businessRules';
+
+// In the role assignment handler — after Zod parse, before DB write:
+if (body.role && !canAssignRole(req.user.role, body.role)) {
+  return res.status(403).json({
+    error: 'Role assignment not permitted',
+    code: 'ROLE_ESCALATION_VIOLATION',
+    message: `You cannot assign the ${body.role} role. You may only assign roles below your own level.`
+  });
+}
+```
+
+After both items are addressed run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` and confirm zero errors. Then run the Step 8 scan one final time:
+
+```bash
+grep -rn "< 0\|<= 0" server/routes --include="*.ts" | grep -v "businessRules\|node_modules\|// \|test\|spec" | head -20
+```
+
+Must return zero results that represent inline business constraints. Report the exact output.
+
+When both items are confirmed Phase 5 is certified closed and Phase 6 goes in immediately.

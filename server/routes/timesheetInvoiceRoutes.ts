@@ -4,8 +4,8 @@
  * Enhanced with PDF generation, email integration, and AI Brain events
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
-import { requireAuth } from '../auth';
 import { requireWorkspaceRole, requireManager } from '../rbac';
 import { 
   generateInvoiceFromTimesheets,
@@ -24,6 +24,10 @@ import { invoices, invoiceLineItems, clients, workspaces } from '@shared/schema'
 import { eq, and, gte, lte, desc, or } from 'drizzle-orm';
 import { format } from 'date-fns';
 import '../types';
+import { createLogger } from '../lib/logger';
+import { PLATFORM } from '../config/platformConfig';
+const log = createLogger('TimesheetInvoiceRoutes');
+
 
 export const timesheetInvoiceRouter = Router();
 
@@ -31,10 +35,10 @@ export const timesheetInvoiceRouter = Router();
 // LIST ALL INVOICES WITH FILTERS
 // ============================================================================
 
-timesheetInvoiceRouter.get('/', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetInvoiceRouter.get('/', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: 'No workspace selected' });
@@ -70,13 +74,32 @@ timesheetInvoiceRouter.get('/', requireAuth, requireManager, async (req: Request
       conditions.push(lte(invoices.issueDate, new Date(endDate)));
     }
 
-    const invoiceList = await db.query.invoices.findMany({
-      where: and(...conditions),
-      with: {
-        client: true,
-      },
-      orderBy: [desc(invoices.createdAt)],
-    });
+    const invoiceList = await db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        issueDate: invoices.issueDate,
+        dueDate: invoices.dueDate,
+        subtotal: invoices.subtotal,
+        taxRate: invoices.taxRate,
+        taxAmount: invoices.taxAmount,
+        total: invoices.total,
+        status: invoices.status,
+        paidAt: invoices.paidAt,
+        amountPaid: invoices.amountPaid,
+        sentAt: invoices.sentAt,
+        clientId: invoices.clientId,
+        notes: invoices.notes,
+        createdAt: invoices.createdAt,
+        clientCompanyName: clients.companyName,
+        clientFirstName: clients.firstName,
+        clientLastName: clients.lastName,
+        clientEmail: clients.email,
+      })
+      .from(invoices)
+      .leftJoin(clients, eq(invoices.clientId, clients.id))
+      .where(and(...conditions))
+      .orderBy(desc(invoices.createdAt));
 
     const data = invoiceList.map(inv => ({
       id: inv.id,
@@ -92,10 +115,10 @@ timesheetInvoiceRouter.get('/', requireAuth, requireManager, async (req: Request
       amountPaid: inv.amountPaid,
       sentAt: inv.sentAt,
       clientId: inv.clientId,
-      clientName: inv.client 
-        ? (inv.client.companyName || `${inv.client.firstName || ''} ${inv.client.lastName || ''}`.trim())
-        : 'Unknown Client',
-      clientEmail: inv.client?.email,
+      clientName: inv.clientCompanyName
+        || `${inv.clientFirstName || ''} ${inv.clientLastName || ''}`.trim()
+        || 'Unknown Client',
+      clientEmail: inv.clientEmail,
       notes: inv.notes,
       createdAt: inv.createdAt,
     }));
@@ -104,101 +127,16 @@ timesheetInvoiceRouter.get('/', requireAuth, requireManager, async (req: Request
       success: true,
       data,
     });
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] List error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to list invoices' });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] List error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to list invoices' });
   }
 });
 
-// ============================================================================
-// GET INVOICE DETAIL WITH LINE ITEMS
-// ============================================================================
-
-timesheetInvoiceRouter.get('/:invoiceId', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetInvoiceRouter.post('/generate', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
-    
-    if (!workspaceId) {
-      return res.status(400).json({ success: false, error: 'No workspace selected' });
-    }
-
-    const { invoiceId } = req.params;
-
-    const invoice = await db.query.invoices.findFirst({
-      where: and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)),
-      with: {
-        client: true,
-      },
-    });
-
-    if (!invoice) {
-      return res.status(404).json({ success: false, error: 'Invoice not found' });
-    }
-
-    const lineItems = await db.select().from(invoiceLineItems)
-      .where(eq(invoiceLineItems.invoiceId, invoiceId));
-
-    const workspace = await db.query.workspaces.findFirst({
-      where: eq(workspaces.id, workspaceId),
-    });
-
-    const data = {
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      issueDate: invoice.issueDate,
-      dueDate: invoice.dueDate,
-      subtotal: invoice.subtotal,
-      taxRate: invoice.taxRate,
-      taxAmount: invoice.taxAmount,
-      total: invoice.total,
-      status: invoice.status,
-      paidAt: invoice.paidAt,
-      amountPaid: invoice.amountPaid,
-      sentAt: invoice.sentAt,
-      notes: invoice.notes,
-      paymentIntentId: invoice.paymentIntentId,
-      client: invoice.client ? {
-        id: invoice.client.id,
-        firstName: invoice.client.firstName,
-        lastName: invoice.client.lastName,
-        companyName: invoice.client.companyName,
-        email: invoice.client.email,
-        phone: invoice.client.phone,
-        address: invoice.client.address,
-      } : null,
-      workspace: workspace ? {
-        id: workspace.id,
-        name: workspace.name,
-        companyName: workspace.companyName,
-        address: workspace.address,
-        phone: workspace.phone,
-      } : null,
-      lineItems: lineItems.map(li => ({
-        id: li.id,
-        description: li.description,
-        quantity: li.quantity,
-        unitPrice: li.unitPrice,
-        amount: li.amount,
-        timeEntryId: li.timeEntryId,
-      })),
-      createdAt: invoice.createdAt,
-    };
-
-    res.json({
-      success: true,
-      data,
-    });
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Detail error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to get invoice detail' });
-  }
-});
-
-timesheetInvoiceRouter.post('/generate', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
-  try {
-    const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -224,16 +162,16 @@ timesheetInvoiceRouter.post('/generate', requireAuth, requireWorkspaceRole(['org
       success: true,
       ...result,
     });
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Generate error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate invoice' });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Generate error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to generate invoice' });
   }
 });
 
-timesheetInvoiceRouter.get('/uninvoiced', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetInvoiceRouter.get('/uninvoiced', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -247,16 +185,16 @@ timesheetInvoiceRouter.get('/uninvoiced', requireAuth, requireManager, async (re
       success: true,
       ...result,
     });
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Uninvoiced error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Uninvoiced error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-timesheetInvoiceRouter.post('/:invoiceId/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
+timesheetInvoiceRouter.post('/:invoiceId/send', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -267,16 +205,16 @@ timesheetInvoiceRouter.post('/:invoiceId/send', requireAuth, requireWorkspaceRol
     const result = await sendInvoice(invoiceId, workspaceId);
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Send error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Send error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-timesheetInvoiceRouter.post('/:invoiceId/mark-paid', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
+timesheetInvoiceRouter.post('/:invoiceId/mark-paid', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -293,9 +231,9 @@ timesheetInvoiceRouter.post('/:invoiceId/mark-paid', requireAuth, requireWorkspa
     );
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Mark paid error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Mark paid error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -303,10 +241,10 @@ timesheetInvoiceRouter.post('/:invoiceId/mark-paid', requireAuth, requireWorkspa
 // ENHANCED INVOICE GENERATION FROM HOURS
 // ============================================================================
 
-timesheetInvoiceRouter.post('/generate-from-hours', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
+timesheetInvoiceRouter.post('/generate-from-hours', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -345,9 +283,9 @@ timesheetInvoiceRouter.post('/generate-from-hours', requireAuth, requireWorkspac
       success: true,
       ...result,
     });
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Generate from hours error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate invoice from hours' });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Generate from hours error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to generate invoice from hours' });
   }
 });
 
@@ -355,10 +293,10 @@ timesheetInvoiceRouter.post('/generate-from-hours', requireAuth, requireWorkspac
 // SEND INVOICE WITH EMAIL AND PDF ATTACHMENT
 // ============================================================================
 
-timesheetInvoiceRouter.post('/:invoiceId/send-email', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
+timesheetInvoiceRouter.post('/:invoiceId/send-email', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId || !user?.id) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -375,9 +313,9 @@ timesheetInvoiceRouter.post('/:invoiceId/send-email', requireAuth, requireWorksp
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Send email error:', error);
-    res.status(500).json({ error: error.message || 'Failed to send invoice email' });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Send email error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to send invoice email' });
   }
 });
 
@@ -385,10 +323,10 @@ timesheetInvoiceRouter.post('/:invoiceId/send-email', requireAuth, requireWorksp
 // DOWNLOAD INVOICE PDF
 // ============================================================================
 
-timesheetInvoiceRouter.get('/:invoiceId/pdf', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetInvoiceRouter.get('/:invoiceId/pdf', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -422,7 +360,7 @@ timesheetInvoiceRouter.get('/:invoiceId/pdf', requireAuth, requireManager, async
       clientCompany: invoice.client?.companyName || '',
       clientEmail: invoice.client?.email || '',
       clientAddress: invoice.client?.address || undefined,
-      workspaceName: workspace?.name || 'CoAIleague',
+      workspaceName: workspace?.name || PLATFORM.name,
       workspaceAddress: workspace?.address || undefined,
       lineItems: lineItems.map(li => ({
         description: li.description,
@@ -442,9 +380,9 @@ timesheetInvoiceRouter.get('/:invoiceId/pdf', requireAuth, requireManager, async
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
     res.send(pdfBuffer);
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] PDF download error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate PDF' });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] PDF download error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to generate PDF' });
   }
 });
 
@@ -452,10 +390,10 @@ timesheetInvoiceRouter.get('/:invoiceId/pdf', requireAuth, requireManager, async
 // OVERDUE INVOICES AND REVENUE FORECAST
 // ============================================================================
 
-timesheetInvoiceRouter.get('/overdue', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetInvoiceRouter.get('/overdue', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -467,16 +405,16 @@ timesheetInvoiceRouter.get('/overdue', requireAuth, requireManager, async (req: 
       success: true,
       ...result,
     });
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Overdue check error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Overdue check error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-timesheetInvoiceRouter.get('/revenue-forecast', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetInvoiceRouter.get('/revenue-forecast', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -488,8 +426,120 @@ timesheetInvoiceRouter.get('/revenue-forecast', requireAuth, requireManager, asy
       success: true,
       ...result,
     });
-  } catch (error: any) {
-    console.error('[TimesheetInvoice] Revenue forecast error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Revenue forecast error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+// ============================================================================
+// GET INVOICE DETAIL WITH LINE ITEMS (must be last — wildcard route)
+// ============================================================================
+
+timesheetInvoiceRouter.get('/:invoiceId', requireManager, async (req: Request, res: Response) => {
+  try {
+    const user = req.user;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ success: false, error: 'No workspace selected' });
+    }
+
+    const { invoiceId } = req.params;
+
+    const invoiceRows = await db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        issueDate: invoices.issueDate,
+        dueDate: invoices.dueDate,
+        subtotal: invoices.subtotal,
+        taxRate: invoices.taxRate,
+        taxAmount: invoices.taxAmount,
+        total: invoices.total,
+        status: invoices.status,
+        paidAt: invoices.paidAt,
+        amountPaid: invoices.amountPaid,
+        sentAt: invoices.sentAt,
+        notes: invoices.notes,
+        paymentIntentId: invoices.paymentIntentId,
+        clientId: invoices.clientId,
+        createdAt: invoices.createdAt,
+        clientDbId: clients.id,
+        clientFirstName: clients.firstName,
+        clientLastName: clients.lastName,
+        clientCompanyName: clients.companyName,
+        clientEmail: clients.email,
+        clientPhone: clients.phone,
+        clientAddress: clients.address,
+      })
+      .from(invoices)
+      .leftJoin(clients, eq(invoices.clientId, clients.id))
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
+      .limit(1);
+
+    const invoice = invoiceRows[0];
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, error: 'Invoice not found' });
+    }
+
+    const lineItems = await db.select().from(invoiceLineItems)
+      .where(eq(invoiceLineItems.invoiceId, invoiceId));
+
+    const workspace = await db.select().from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1)
+      .then(rows => rows[0] || null);
+
+    const data = {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      subtotal: invoice.subtotal,
+      taxRate: invoice.taxRate,
+      taxAmount: invoice.taxAmount,
+      total: invoice.total,
+      status: invoice.status,
+      paidAt: invoice.paidAt,
+      amountPaid: invoice.amountPaid,
+      sentAt: invoice.sentAt,
+      notes: invoice.notes,
+      paymentIntentId: invoice.paymentIntentId,
+      client: invoice.clientDbId ? {
+        id: invoice.clientDbId,
+        firstName: invoice.clientFirstName,
+        lastName: invoice.clientLastName,
+        companyName: invoice.clientCompanyName,
+        email: invoice.clientEmail,
+        phone: invoice.clientPhone,
+        address: invoice.clientAddress,
+      } : null,
+      workspace: workspace ? {
+        id: workspace.id,
+        name: workspace.name,
+        companyName: workspace.companyName,
+        address: workspace.address,
+        phone: workspace.phone,
+      } : null,
+      lineItems: lineItems.map(li => ({
+        id: li.id,
+        description: li.description,
+        quantity: li.quantity,
+        unitPrice: li.unitPrice,
+        amount: li.amount,
+        timeEntryId: li.timeEntryId,
+      })),
+      createdAt: invoice.createdAt,
+    };
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error: unknown) {
+    log.error('[TimesheetInvoice] Detail error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get invoice detail' });
   }
 });

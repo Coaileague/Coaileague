@@ -7,6 +7,10 @@ import type {
 import { db } from '../../../db';
 import { employees, employeeSkills, shifts, contractorPool, contractorSkills } from '@shared/schema';
 import { eq, and, inArray, count, isNotNull } from 'drizzle-orm';
+import { createLogger } from '../../../lib/logger';
+import { PLATFORM } from '../../../config/platformConfig';
+
+const log = createLogger('IntelligentScheduler');
 
 interface ShiftLocation {
   lat: number;
@@ -79,10 +83,10 @@ export class IntelligentSchedulerSkill extends BaseSkill {
       name: 'Intelligent Shift Scheduler',
       version: '1.0.0',
       description: 'AI-based employee assignment for shift scheduling using weighted scoring across employee qualifications, proximity, and client relationship history',
-      author: 'CoAIleague Platform',
+      author: PLATFORM.name + " Platform",
       category: 'scheduling',
       requiredTier: 'professional',
-      requiredRole: ['owner', 'admin', 'manager'],
+      requiredRole: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       capabilities: [
         'employee-scoring',
         'proximity-calculation',
@@ -101,6 +105,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
     params: SchedulerInputParams
   ): Promise<SkillResult<SchedulerResult>> {
     const logs: string[] = [];
+    const startTime = Date.now();
     logs.push(`[IntelligentScheduler] Starting execution for shift ${params.shiftId}`);
 
     try {
@@ -178,6 +183,21 @@ export class IntelligentSchedulerSkill extends BaseSkill {
         );
       });
 
+      try {
+        const { creditManager } = await import('../../../services/billing/creditManager');
+        await creditManager.deductCredits({
+          workspaceId: context.workspaceId,
+          userId: context.userId || 'ai-brain',
+          featureKey: 'ai_shift_matching',
+          featureName: 'Intelligent Shift Matching',
+          description: `AI shift matching for shift ${params.shiftId.substring(0, 8)} — ${candidates.length} candidates scored`,
+          quantity: 1,
+        });
+        logs.push(`[IntelligentScheduler] Billed 1 × ai_shift_matching credit`);
+      } catch (creditErr: any) {
+        logs.push(`[IntelligentScheduler] Credit billing failed (non-blocking): ${creditErr.message}`);
+      }
+
       return {
         success: true,
         data: {
@@ -194,14 +214,14 @@ export class IntelligentSchedulerSkill extends BaseSkill {
             proximity: PROXIMITY_SCORE_WEIGHT,
             relationship: RELATIONSHIP_SCORE_WEIGHT,
           },
-          processingTimeMs: Date.now(),
+          processingTimeMs: Date.now() - startTime,
         },
       };
     } catch (error: any) {
-      logs.push(`[IntelligentScheduler] Error: ${error.message}`);
+      logs.push(`[IntelligentScheduler] Error: ${(error instanceof Error ? error.message : String(error))}`);
       return {
         success: false,
-        error: error.message || 'Failed to execute intelligent scheduler',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to execute intelligent scheduler',
         logs,
       };
     }
@@ -403,34 +423,37 @@ export class IntelligentSchedulerSkill extends BaseSkill {
         }
       }
 
-      // Build candidate list from real data
+      // Build candidate list from real employee data
       for (const emp of activeEmployees) {
         const empSkills = skillsByEmployee[emp.id] || [];
         const shiftCount = shiftCountByEmployee[emp.id] || 0;
         
-        // Default location near shift if no address (geocoding would enhance this)
         const homeLocation = {
-          lat: params.shiftLocation.lat + (Math.random() - 0.5) * 0.1,
-          lng: params.shiftLocation.lng + (Math.random() - 0.5) * 0.1,
+          lat: parseFloat((emp as any).homeLatitude || (emp as any).latitude || '0') || params.shiftLocation.lat,
+          lng: parseFloat((emp as any).homeLongitude || (emp as any).longitude || '0') || params.shiftLocation.lng,
         };
+
+        const compositeScore = parseFloat((emp as any).compositeScore || '0');
+        const attendanceVal = parseFloat((emp as any).attendanceRate || '0');
+        const perfRating = parseFloat((emp as any).performanceRating || '0');
 
         candidates.push({
           employeeId: emp.id,
           employeeName: `${emp.firstName} ${emp.lastName}`,
-          reliabilityRating: 0.85 + Math.random() * 0.15, // From attendance metrics
+          reliabilityRating: compositeScore > 0 ? Math.min(1, compositeScore / 100) : (attendanceVal > 0 ? Math.min(1, attendanceVal / 100) : 0.6),
           skills: empSkills,
-          attendanceRate: 0.90 + Math.random() * 0.10, // From time entry records
-          performanceRating: 0.80 + Math.random() * 0.20, // From performance reviews
+          attendanceRate: attendanceVal > 0 ? Math.min(1, attendanceVal / 100) : ((emp as any).status === 'active' ? 0.7 : 0.5),
+          performanceRating: perfRating > 0 ? Math.min(1, perfRating / 5) : ((emp as any).status === 'active' ? 0.6 : 0.4),
           homeLocation,
           previousShiftsWithClient: shiftCount,
-          avgClientRating: 3.0 + Math.random() * 2, // From feedback records
+          avgClientRating: parseFloat((emp as any).qualityScore || '0') > 0 ? Math.min(5, parseFloat((emp as any).qualityScore) / 20) : 3.5,
           isContractor: false,
         });
       }
 
       return candidates;
     } catch (error) {
-      console.error('[IntelligentScheduler] Error fetching candidates from database:', error);
+      log.error('[IntelligentScheduler] Error fetching candidates from database:', error);
       // Return empty array on error - don't use mock data in production
       return [];
     }
@@ -484,33 +507,35 @@ export class IntelligentSchedulerSkill extends BaseSkill {
         skillsByContractor[skill.contractorId].push(skill.skillName);
       }
 
-      // Build contractor candidate list
+      // Build contractor candidate list from real data
       for (const contractor of activeContractors) {
         const contractorSkillSet = skillsByContractor[contractor.id] || [];
         
-        // Use actual contractor location if available, fallback to estimated
         const homeLocation = {
-          lat: contractor.homeLatitude ? parseFloat(contractor.homeLatitude) : params.shiftLocation.lat + (Math.random() - 0.5) * 0.15,
-          lng: contractor.homeLongitude ? parseFloat(contractor.homeLongitude) : params.shiftLocation.lng + (Math.random() - 0.5) * 0.15,
+          lat: contractor.homeLatitude ? parseFloat(contractor.homeLatitude) : params.shiftLocation.lat,
+          lng: contractor.homeLongitude ? parseFloat(contractor.homeLongitude) : params.shiftLocation.lng,
         };
 
+        const cRating = parseFloat((contractor as any).reliabilityScore || (contractor as any).rating || '0');
+        const normalizedRating = cRating > 10 ? Math.min(1, cRating / 100) : (cRating > 0 ? Math.min(1, cRating / 5) : 0);
+
         candidates.push({
-          employeeId: `contractor-${contractor.id}`, // Flag as contractor
+          employeeId: `contractor-${contractor.id}`,
           employeeName: `${contractor.firstName} ${contractor.lastName}`,
-          reliabilityRating: 0.80 + Math.random() * 0.15, // Contractors slightly lower baseline
+          reliabilityRating: normalizedRating > 0 ? normalizedRating : 0.55,
           skills: contractorSkillSet,
-          attendanceRate: 0.85 + Math.random() * 0.10, // Contractors track differently
-          performanceRating: 0.75 + Math.random() * 0.20, // New metrics source
+          attendanceRate: (contractor as any).isActive ? 0.65 : 0.4,
+          performanceRating: normalizedRating > 0 ? normalizedRating : 0.5,
           homeLocation,
-          previousShiftsWithClient: 0, // Contractors are new to orgs
-          avgClientRating: 3.5 + Math.random() * 1.5, // Lower baseline for new contractors
+          previousShiftsWithClient: 0,
+          avgClientRating: 3.0,
           isContractor: true,
         });
       }
 
       return candidates;
     } catch (error) {
-      console.error('[IntelligentScheduler] Error fetching contractor candidates:', error);
+      log.error('[IntelligentScheduler] Error fetching contractor candidates:', error);
       return [];
     }
   }

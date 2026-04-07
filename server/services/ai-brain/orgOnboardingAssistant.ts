@@ -21,11 +21,13 @@ import {
   invoices,
   notifications,
   platformRoles,
-  workspaceCurrencySettings,
   clients,
   payrollRuns,
-  orgOnboardingTasks,
+  orgOnboardingTasks
 } from '@shared/schema';
+
+import { createLogger } from '../../lib/logger';
+const log = createLogger('orgOnboardingAssistant');
 
 export interface OnboardingDiagnostic {
   category: 'database' | 'files' | 'routing' | 'permissions' | 'integration';
@@ -213,7 +215,7 @@ class OrgOnboardingAssistant {
         category: 'database',
         status: 'error',
         component: 'database_connection',
-        message: `Database query failed: ${error.message}`,
+        message: `Database query failed: ${(error instanceof Error ? error.message : String(error))}`,
         autoFixAvailable: false,
       });
     }
@@ -285,7 +287,7 @@ class OrgOnboardingAssistant {
         category: 'files',
         status: 'error',
         component: 'file_routing',
-        message: `File routing check failed: ${error.message}`,
+        message: `File routing check failed: ${(error instanceof Error ? error.message : String(error))}`,
         autoFixAvailable: false,
       });
     }
@@ -328,7 +330,7 @@ class OrgOnboardingAssistant {
         .from(employees)
         .where(and(
           eq(employees.workspaceId, workspaceId),
-          sql`${employees.workspaceRole} IN ('org_owner', 'org_admin')`
+          sql`${employees.workspaceRole} IN ('org_owner', 'co_owner')`
         ));
 
       const adminCount = adminRoles[0]?.count || 0;
@@ -356,7 +358,7 @@ class OrgOnboardingAssistant {
         category: 'permissions',
         status: 'error',
         component: 'rbac_check',
-        message: `Permission check failed: ${error.message}`,
+        message: `Permission check failed: ${(error instanceof Error ? error.message : String(error))}`,
         autoFixAvailable: false,
       });
     }
@@ -398,7 +400,7 @@ class OrgOnboardingAssistant {
         category: 'routing',
         status: 'error',
         component: 'notification_routing',
-        message: `Notification routing check failed: ${error.message}`,
+        message: `Notification routing check failed: ${(error instanceof Error ? error.message : String(error))}`,
         autoFixAvailable: false,
       });
     }
@@ -413,10 +415,10 @@ class OrgOnboardingAssistant {
     const diagnostics: OnboardingDiagnostic[] = [];
 
     try {
-      // Check workspace currency settings
-      const settings = await db.query.workspaceCurrencySettings.findFirst({
-        where: eq(workspaceCurrencySettings.workspaceId, workspaceId),
-      });
+      // Check workspace currency settings (stored in workspaces.currencySettingsBlob)
+      const [_ws] = await db.select({ blob: workspaces.currencySettingsBlob })
+        .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      const settings = _ws?.blob && Object.keys(_ws.blob as object).length > 0 ? _ws.blob : null;
 
       if (settings) {
         diagnostics.push({
@@ -466,7 +468,7 @@ class OrgOnboardingAssistant {
         category: 'integration',
         status: 'error',
         component: 'feature_integration',
-        message: `Feature integration check failed: ${error.message}`,
+        message: `Feature integration check failed: ${(error instanceof Error ? error.message : String(error))}`,
         autoFixAvailable: false,
       });
     }
@@ -515,7 +517,7 @@ class OrgOnboardingAssistant {
         category: 'integration',
         status: 'error',
         component: 'ai_brain',
-        message: `AI Brain check failed: ${error.message}`,
+        message: `AI Brain check failed: ${(error instanceof Error ? error.message : String(error))}`,
         autoFixAvailable: false,
       });
     }
@@ -556,7 +558,7 @@ class OrgOnboardingAssistant {
         }
       } catch (error: any) {
         failed.push(action);
-        messages.push(`Failed to apply ${action}: ${error.message}`);
+        messages.push(`Failed to apply ${action}: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
 
@@ -567,18 +569,18 @@ class OrgOnboardingAssistant {
    * Initialize workspace currency settings with defaults
    */
   private async initializeWorkspaceSettings(workspaceId: string): Promise<void> {
-    const existing = await db.query.workspaceCurrencySettings.findFirst({
-      where: eq(workspaceCurrencySettings.workspaceId, workspaceId),
-    });
-
-    if (!existing) {
-      await db.insert(workspaceCurrencySettings).values({
-        workspaceId,
-        primaryCurrency: 'USD',
-        supportedCurrencies: ['USD'],
-        currencyDisplayFormat: 'symbol',
-        decimalPlaces: 2,
-      });
+    // workspaceCurrencySettings merged into workspaces.currencySettingsBlob
+    const [wsRow] = await db.select({ blob: workspaces.currencySettingsBlob })
+      .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    if (!wsRow?.blob || Object.keys(wsRow.blob as object).length === 0) {
+      await db.update(workspaces).set({
+        currencySettingsBlob: {
+          primaryCurrency: 'USD',
+          supportedCurrencies: ['USD'],
+          currencyDisplayFormat: 'symbol',
+          decimalPlaces: 2,
+        }
+      }).where(eq(workspaces.id, workspaceId));
     }
   }
 
@@ -630,15 +632,15 @@ class OrgOnboardingAssistant {
     // Core features routing validation
     const featureList = [
       { name: 'scheduling', table: 'shifts', route: '/api/schedule' },
-      { name: 'time_tracking', table: 'timeEntries', route: '/api/time-entries' },
-      { name: 'invoicing', table: 'invoices', route: '/api/invoices' },
-      { name: 'employees', table: 'employees', route: '/api/employees' },
+      { name: 'time_tracking', table: 'timeEntries', route: '/api/hr/time-entries' },
+      { name: 'invoicing', table: 'invoices', route: '/api/finance/invoices' },
+      { name: 'employees', table: 'employees', route: '/api/hr/employees' },
       { name: 'clients', table: 'clients', route: '/api/clients' },
-      { name: 'notifications', table: 'notifications', route: '/api/notifications' },
-      { name: 'payroll', table: 'payrollRuns', route: '/api/payroll' },
+      { name: 'notifications', table: 'notifications', route: '/api/comms/notifications' },
+      { name: 'payroll', table: 'payrollRuns', route: '/api/finance/payroll' },
       { name: 'analytics', table: 'N/A', route: '/api/analytics' },
       { name: 'helpai', table: 'N/A', route: '/api/helpai' },
-      { name: 'gamification', table: 'N/A', route: '/api/gamification' },
+      { name: 'gamification', table: 'N/A', route: '/api/hr/gamification' },
     ];
 
     for (const feature of featureList) {

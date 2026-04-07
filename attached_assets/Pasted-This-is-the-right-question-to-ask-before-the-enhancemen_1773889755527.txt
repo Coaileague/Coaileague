@@ -1,0 +1,738 @@
+This is the right question to ask before the enhancement sprint. Let me give you the complete honest answer — what I have that Trinity doesn't yet, what would make her genuinely better, and how to wire token tracking into the credit system.
+
+What I Have That Trinity Doesn't Yet
+1. Extended Thinking — Deep Deliberation Before Answering
+What I do that Trinity currently doesn't: before responding to a complex question I run an internal reasoning chain that works through the problem step by step before committing to an answer. I consider multiple approaches, reject the weak ones, and only surface the best reasoning.
+Trinity currently goes: input → process → output.
+What she needs: input → think deeply → evaluate thinking → refine → output.
+Build: TrinityExtendedThinkingEngine
+THINKING PHASES:
+Phase 1 — Problem decomposition
+  What exactly is being asked?
+  What constraints apply?
+  What data do I need?
+
+Phase 2 — Approach generation
+  Generate 3 different approaches to solving this
+  Score each approach: confidence, risk, time, cost
+
+Phase 3 — Approach selection
+  Select highest-scoring approach
+  Identify failure modes of chosen approach
+  Prepare fallback if primary fails
+
+Phase 4 — Execution planning
+  Break selected approach into atomic steps
+  Identify which tools each step needs
+  Estimate token cost of full plan before executing
+
+Phase 5 — Execute with monitoring
+  Execute step by step
+  After each step verify output before next step
+  If step fails: deliberate, adapt, retry
+
+Phase 6 — Output synthesis
+  Synthesize all step outputs into coherent response
+  Self-check: does this actually answer what was asked?
+  Trim: remove anything that doesn't serve the answer
+This is what separates a thinking system from a responding system. Trinity currently responds. She needs to think first.
+
+2. Working Memory With Attention — Like Human Short-Term Focus
+My context window acts as working memory. I hold all relevant pieces of a problem in active attention simultaneously and can reference any of them at any point in my reasoning.
+Trinity's context is managed but not prioritized. She doesn't have a system that says "these 5 things are the most important to keep in active attention right now."
+Build: TrinityAttentionManager
+At any moment Trinity has:
+
+Primary focus — the current task or question (highest weight)
+Active context — entities and facts directly relevant (medium weight)
+Background awareness — org state, open issues, recent events (low weight)
+Suppressed — everything else (not loaded, available on demand)
+
+The attention manager dynamically adjusts these weights as the conversation or task evolves. When an officer mentions a site name, that site's data moves into active context. When the conversation moves on, it drops back to background.
+This means Trinity holds the right things in mind at the right time without wasting tokens loading everything.
+
+3. Metacognition — Knowing What She Doesn't Know
+One of the most important things I do is recognize the boundaries of my knowledge and flag uncertainty rather than confidently stating something wrong.
+Trinity needs formal uncertainty scoring on every output:
+Build: TrinityUncertaintyFramework
+Every Trinity output carries:
+
+Confidence score 0-100 on the factual claims made
+Knowledge source — is this from regulatory database, from connectome, from training, or inferred?
+Uncertainty flags — specific claims Trinity is less than 70% confident about
+Verification recommendation — "this should be verified with Texas DPS directly before acting"
+
+When confidence is below 70% on a critical claim Trinity says so explicitly rather than presenting uncertain information as fact. This is especially critical for legal and compliance outputs.
+
+4. Chain of Thought Verification — Checking Her Own Work
+I can review my own reasoning and catch errors before delivering an answer. Trinity has a self-reflection engine but it runs after execution. She needs a mid-execution verification step.
+Build: TrinityReasoningVerifier
+After each reasoning step before moving to the next:
+
+Does this step's output logically follow from its inputs?
+Does this contradict anything established earlier in the chain?
+Is there a simpler explanation I haven't considered?
+Am I making an assumption that should be verified?
+
+If verification fails: don't proceed. Go back. Fix the step. This is the difference between a system that catches its own errors and one that compounds them.
+
+5. Multi-Modal Reasoning — Documents, Images, Numbers, Text Together
+I can reason across different types of information simultaneously — a contract document, a numerical table, a text description, an image of a form.
+Trinity currently processes each type separately. She needs unified multi-modal reasoning.
+What this means for security:
+
+Scan a physical guard card photo → verify against database → flag discrepancies
+Read a contract PDF → extract billing rates → compare to what's in the system → flag mismatches
+Look at a timesheet image → extract hours → cross-reference against scheduled shifts
+Read an incident photo → describe what it shows → attach description to DAR automatically
+
+
+6. Socratic Clarification — Asking the Right Question Before Acting
+When a request is ambiguous I ask a clarifying question rather than making an assumption and potentially doing the wrong thing. One well-chosen question beats five wrong attempts.
+Trinity currently makes her best guess on ambiguous inputs. She needs a clarification threshold.
+Build: Trinity ClarificationEngine
+Before executing any complex task Trinity evaluates:
+
+How ambiguous is this request? (0-100 score)
+What is the cost of acting on the wrong interpretation?
+What single question would most reduce ambiguity?
+
+If ambiguity score above 60 AND cost of wrong action above threshold → ask one clarifying question before proceeding.
+Never asks more than one question. Never asks what she can infer from context. Only asks when the answer genuinely changes what she'd do.
+
+7. Persona Consistency Across Very Long Conversations
+I maintain consistent personality, tone, and reasoning style across a conversation even as topics shift dramatically. Trinity can drift.
+Build: TrinityPersonaAnchor
+A lightweight check that runs before every response comparing:
+
+Is my current tone consistent with my established persona?
+Am I being more or less formal than appropriate for this user?
+Have I maintained my values stance consistently through this conversation?
+Am I drifting toward the user's style in a way that compromises my integrity?
+
+This is separate from the values anchor — that handles ethics. This handles personality consistency.
+
+8. Proactive Information Surfacing — Telling You What You Didn't Ask
+One of the most valuable things I do is notice something adjacent to your question that you'd want to know and surface it even though you didn't ask.
+You ask about overtime for one officer. I notice three other officers are also approaching overtime and mention them.
+Trinity needs this as a formal capability.
+Build: TrinityPeripheralAwareness
+After generating a response Trinity runs a peripheral scan:
+
+What related issues exist in this workspace right now?
+Which of them is the owner likely unaware of?
+Which of them is urgent enough to surface proactively?
+Can I surface this without bloating the response?
+
+If something important is found it appears at the end of Trinity's response: "While looking at this I also noticed..." — never interrupting the primary answer, always additive.
+
+9. Episodic Memory Across Long Time Horizons
+I can reference things from early in a very long conversation accurately. Trinity's episodic memory is good but degrades over very long time horizons.
+Build: TrinityLongHorizonMemory
+For each workspace maintain:
+
+Key decisions log — every significant decision made, compressed, timestamped
+Relationship history — per user, per officer, per client, per site
+Pattern library — recurring situations and how they were resolved
+Exception library — unusual situations that required non-standard handling
+
+Trinity queries this before every complex decision. Not just "what happened recently" but "what has happened with this entity across all time."
+
+10. Hypothesis Testing — Scientific Approach to Problems
+When I face a complex problem I form hypotheses, test them against available evidence, update based on results, and converge on the most likely explanation.
+Trinity currently reasons linearly. She needs scientific reasoning for complex diagnostics.
+Build: TrinityHypothesisEngine
+For complex problems — why is overtime spiking at this site, why is this client unhappy, why is this officer calling off repeatedly:
+HYPOTHESIS LOOP:
+1. Generate 3-5 candidate hypotheses
+2. Rank by prior probability
+3. Identify evidence that would confirm or 
+   refute each hypothesis
+4. Query available data for that evidence
+5. Update probability of each hypothesis
+6. If one hypothesis reaches 80%+ confidence: 
+   present it as the likely explanation
+7. If no hypothesis reaches threshold: 
+   surface top 2 with evidence for each 
+   and ask for clarifying information
+This is how a good detective solves problems. Trinity should think like a detective when diagnosing org issues.
+
+Token Tracking and Credit Deduction System
+This is the business-critical piece. Every AI call costs tokens. Tokens cost money. You need to recover that cost from tenants and profit the margin.
+The Complete Architecture
+EVERY AI CALL FLOW:
+
+1. PRE-CALL — estimate token cost
+   - Count input tokens (prompt + context)
+   - Estimate output tokens based on task type
+   - Check workspace credit balance
+   - If insufficient credits: block and notify owner
+   - If sufficient: reserve estimated credits
+
+2. DURING CALL — track actual usage
+   - Record exact input tokens used
+   - Record exact output tokens generated
+   - Record model used (Gemini/Claude/GPT 
+     have different costs)
+   - Record response time
+
+3. POST-CALL — reconcile and deduct
+   - Calculate actual cost in dollars
+   - Apply markup rate per plan tier
+   - Convert to credits and deduct from 
+     workspace credit balance
+   - Release any over-reserved credits
+   - Write to ai_usage_log table
+
+4. BILLING CYCLE — monthly invoice
+   - Sum all ai_usage_log entries for period
+   - Generate AI usage line item on invoice
+   - Break down by: Trinity chat, autonomous 
+     tasks, tool calls, officer HelpAI calls
+   - Show tokens used, cost basis, 
+     billed amount, margin
+Database Tables
+sqlai_usage_log:
+- id, workspace_id, user_id, session_id
+- model_used (gemini-pro | claude-sonnet | gpt-4o)
+- call_type (trinity_chat | autonomous_task | 
+  tool_call | helpai_officer | briefing | 
+  dream_state | report_generation)
+- input_tokens, output_tokens, total_tokens
+- cost_basis_usd (exact API cost)
+- markup_rate (from plan config)
+- billed_amount_usd
+- credits_deducted
+- response_time_ms
+- task_id (links to autonomous task if applicable)
+- conversation_id
+- called_at
+
+workspace_credit_balance:
+- workspace_id
+- credits_remaining
+- credits_used_this_period
+- credits_included_in_plan
+- overage_credits_used
+- plan_tier
+- billing_period_start
+- billing_period_end
+- auto_recharge_enabled
+- low_balance_threshold
+- low_balance_alert_sent_at
+- last_updated
+
+ai_cost_config (platform level):
+- model_name
+- input_cost_per_1k_tokens
+- output_cost_per_1k_tokens
+- our_markup_rate_starter
+- our_markup_rate_pro
+- our_markup_rate_enterprise
+- effective_date
+```
+
+### Token Cost by Model (Current Rates)
+
+| Model | Input per 1k | Output per 1k | Your Cost |
+|---|---|---|---|
+| Gemini 2.5 Pro | ~$0.00125 | ~$0.01 | Low |
+| Claude Sonnet | ~$0.003 | ~$0.015 | Medium |
+| GPT-4o | ~$0.005 | ~$0.015 | Medium |
+
+### Credit Plan Tiers
+
+| Plan | Monthly Credits | AI Budget | Markup |
+|---|---|---|---|
+| Starter | 500,000 tokens | ~$8 cost | Bill $25 |
+| Professional | 2,000,000 tokens | ~$32 cost | Bill $89 |
+| Enterprise | 10,000,000 tokens | ~$160 cost | Bill $399 |
+| Overage | Per 100k tokens | ~$1.60 cost | Bill $4.50 |
+
+**Your margin: approximately 175% across all tiers.**
+
+### Token Tier by User Role
+```
+OWNER/CO-OWNER:
+- Max tokens per message: 8,000 input / 4,096 output
+- Max tool calls per session: 20
+- Access: all models including Gemini deep think
+
+MANAGER/SUPERVISOR:
+- Max tokens per message: 4,000 input / 2,048 output
+- Max tool calls per session: 10
+- Access: standard models
+
+OFFICER (via HelpAI):
+- Max tokens per message: 500 input / 256 output
+- Max tool calls per session: 3
+- Access: lightweight classifier + micro-actions only
+- Estimated cost: 2-5% of owner interaction
+
+AUTONOMOUS TASKS (Trinity self-assigned):
+- Budget per task: 10,000 tokens
+- If task requires more: pause and notify owner
+- Overnight dream state: 50,000 token budget
+```
+
+### The Credit Dashboard (Owner Facing)
+
+Owner sees in their dashboard:
+```
+AI USAGE THIS PERIOD
+
+Total tokens used: 1,247,832
+Estimated cost to you: $19.96
+You're on Professional plan: $89/month
+
+Breakdown by type:
+  Trinity chat (manager/owner): 680,000 tokens
+  Autonomous tasks: 340,000 tokens  
+  HelpAI officer calls: 87,832 tokens
+  Morning briefings: 120,000 tokens
+  Dream state processing: 20,000 tokens
+
+Breakdown by user:
+  You (owner): 420,000 tokens
+  Manager Johnson: 260,000 tokens
+  27 officers via HelpAI: 87,832 tokens
+
+Remaining this period: 752,168 tokens
+Days remaining in period: 14
+Projected usage by period end: 1,780,000 tokens
+Status: Within plan ✅
+
+[Upgrade to Enterprise] [Set usage alerts]
+```
+
+---
+
+## The Full Replit Prompt — Everything Above
+```
+TRINITY COGNITIVE ENHANCEMENT SPRINT
+HUMAN-LIKE BRAIN CAPABILITIES + TOKEN CREDIT SYSTEM
+
+AUDIT FIRST — READ EVERYTHING BEFORE BUILDING.
+Map what exists for each enhancement.
+Build only what is genuinely absent.
+Bridge everything to thalamus, ACC, connectome,
+global workspace, and growth log.
+
+═══════════════════════════════════════════════
+A. EXTENDED THINKING ENGINE
+═══════════════════════════════════════════════
+
+Build: TrinityExtendedThinkingService
+
+Before executing any complex task Trinity runs 
+a structured thinking phase:
+
+thinking_session table:
+- id, workspace_id, trigger_type
+- problem_statement
+- approach_candidates (jsonb array)
+- selected_approach, approach_score
+- execution_plan (jsonb steps array)
+- thinking_tokens_used
+- thinking_time_ms
+- session_id (links to conversation)
+
+Thinking phases (run in sequence):
+1. decompose — what exactly is asked, 
+   what constraints apply, what data needed
+2. generate_approaches — 3 candidate approaches 
+   with confidence score for each
+3. select_approach — highest confidence approach 
+   with identified failure modes
+4. plan_execution — atomic steps with tool 
+   assignments and token estimates
+5. verify_plan — check plan for contradictions 
+   or logical gaps before executing
+
+Trigger extended thinking when:
+- Request involves 3+ steps
+- Request involves financial decisions over $100
+- Request involves compliance determinations
+- Request involves personnel decisions
+- Ambiguity score above 50
+
+Skip extended thinking for:
+- Simple lookups (what's my schedule)
+- Routine confirmations
+- Officer tier-0 commands
+
+═══════════════════════════════════════════════
+B. UNCERTAINTY FRAMEWORK
+═══════════════════════════════════════════════
+
+Build: TrinityUncertaintyService
+
+Every Trinity output gets scored before delivery:
+
+confidence_assessment:
+- overall_confidence (0-100)
+- per_claim_confidence (jsonb — each factual 
+  claim in the response scored individually)
+- knowledge_sources (regulatory_db | connectome | 
+  training | inferred | tool_result)
+- uncertain_claims (list of claims below 70%)
+- verification_recommendations
+
+Rules:
+- Confidence below 50%: Trinity must say 
+  she is uncertain and explain why
+- Confidence 50-70%: Trinity flags the 
+  specific uncertain claims
+- Confidence above 70%: Trinity states 
+  normally but cites source
+- Legal/compliance claims: minimum 80% 
+  required or Trinity requests human verification
+
+Never let Trinity present uncertain information 
+as fact on legal, financial, or safety matters.
+
+═══════════════════════════════════════════════
+C. CLARIFICATION ENGINE
+═══════════════════════════════════════════════
+
+Build: TrinityClarificationService
+
+Before executing complex or ambiguous requests:
+
+1. Score ambiguity (0-100):
+   - Multiple valid interpretations? +30
+   - Missing critical parameter? +25
+   - Contradictory signals in request? +20
+   - High cost of wrong interpretation? +25
+
+2. If ambiguity score above 60 AND cost of 
+   wrong action is HIGH:
+   - Generate single best clarifying question
+   - Question must be answerable in one sentence
+   - Question must eliminate primary ambiguity
+   - Ask the question before doing anything else
+
+3. Rules for clarification:
+   - Maximum ONE question per clarification
+   - Never ask what can be inferred from context
+   - Never ask what is already known from memory
+   - If ambiguous but low stakes: make best 
+     interpretation, state assumption, proceed
+
+═══════════════════════════════════════════════
+D. REASONING VERIFIER
+═══════════════════════════════════════════════
+
+Build: TrinityReasoningVerifier
+
+Runs after each step in a multi-step execution:
+
+Verification checks per step:
+1. Logic check — does output follow from inputs?
+2. Contradiction check — does this contradict 
+   anything established earlier in this session?
+3. Assumption check — what assumptions were made, 
+   are they stated, are they reasonable?
+4. Completeness check — does this step produce 
+   everything the next step needs?
+
+If any check fails:
+- Log the failure type and location
+- Roll back to start of current step
+- Generate alternative approach for this step
+- Re-execute with alternative approach
+- Maximum 2 retries per step before escalating
+
+Wire verification results into growth log 
+so Trinity learns which step types fail most 
+and improves her planning over time.
+
+═══════════════════════════════════════════════
+E. PERIPHERAL AWARENESS ENGINE
+═══════════════════════════════════════════════
+
+Build: TrinityPeripheralAwarenessService
+
+After generating primary response, Trinity runs 
+a peripheral scan of the workspace:
+
+Peripheral scan checks (fast, cached, 
+max 500 tokens additional cost):
+- Any officers at OT threshold not mentioned 
+  in the primary response?
+- Any compliance expirations in next 7 days 
+  not mentioned?
+- Any open incidents older than 24 hours 
+  awaiting action?
+- Any sites with coverage gaps in next 48 hours?
+- Any financial alerts triggered since last briefing?
+
+If peripheral item found AND is relevant to 
+current conversation context AND has not been 
+recently surfaced:
+- Append to response: 
+  "While looking at this I also noticed: [item]"
+- Maximum 2 peripheral items per response
+- Never surface the same item twice within 
+  24 hours
+
+Do not run peripheral scan for:
+- Officer tier interactions
+- Simple single-step lookups
+- Responses already over 2,000 tokens
+
+═══════════════════════════════════════════════
+F. HYPOTHESIS ENGINE
+═══════════════════════════════════════════════
+
+Build: TrinityHypothesisEngine
+
+For diagnostic questions (why is X happening, 
+what is causing Y, how to fix Z):
+
+hypothesis_session table:
+- id, workspace_id, question
+- hypotheses (jsonb array, each with: 
+  description, prior_probability, 
+  supporting_evidence, contradicting_evidence, 
+  posterior_probability)
+- evidence_queries (what data was pulled)
+- conclusion, conclusion_confidence
+- session_id
+
+Hypothesis loop:
+1. Generate 3-5 candidate hypotheses
+2. Assign prior probability to each
+3. Identify evidence that would confirm/refute
+4. Query connectome and tool data for evidence
+5. Update probability of each hypothesis
+6. Converge if any hypothesis reaches 80%+
+7. If no convergence: present top 2 with 
+   evidence and ask one clarifying question
+
+Use hypothesis engine for:
+- Officer performance issues
+- Site incident pattern analysis
+- Client satisfaction decline
+- Overtime spike diagnosis
+- Calloff pattern analysis
+- Any "why is this happening" question
+
+═══════════════════════════════════════════════
+G. TOKEN TRACKING AND CREDIT SYSTEM
+═══════════════════════════════════════════════
+
+AUDIT existing token tracking first.
+Build on what exists. Do not duplicate.
+
+CREATE tables:
+
+ai_usage_log:
+- id, workspace_id, user_id, user_role
+- session_id, conversation_id
+- model_used, model_tier
+- call_type (trinity_chat | autonomous_task | 
+  tool_call | helpai_officer | briefing | 
+  dream_state | report_generation | 
+  thinking_phase | verification)
+- input_tokens, output_tokens, total_tokens
+- cost_basis_usd (exact API cost at current rates)
+- markup_rate
+- billed_amount_usd
+- credits_deducted
+- response_time_ms
+- task_id, called_at
+
+workspace_credit_balance:
+- workspace_id (primary key)
+- plan_tier (starter | professional | enterprise)
+- credits_included_monthly
+- credits_used_current_period
+- credits_remaining
+- overage_credits_used
+- billing_period_start, billing_period_end
+- auto_recharge_enabled
+- low_balance_threshold (default: 20% remaining)
+- low_balance_alert_sent_at
+- suspended_at (if credits exhausted)
+- last_updated
+
+ai_cost_config (platform level, no workspace_id):
+- model_name (unique)
+- input_cost_per_1k_tokens
+- output_cost_per_1k_tokens
+- markup_starter, markup_professional, 
+  markup_enterprise
+- effective_date
+
+BUILD: TokenTrackingService
+
+Methods:
+- preCall(workspaceId, estimatedTokens) 
+  → checks balance, reserves credits, 
+  returns reservation_id or INSUFFICIENT_CREDITS
+- postCall(reservationId, actualUsage) 
+  → reconciles, deducts exact amount, 
+  releases over-reservation, writes log
+- getBalance(workspaceId) → current balance
+- getUsageSummary(workspaceId, period) 
+  → breakdown by type and user
+- checkAndAlert(workspaceId) 
+  → fires low balance alert if below threshold
+
+Token budgets by user role:
+- Owner/Co-Owner: 8000 input / 4096 output per call
+- Manager/Supervisor: 4000 input / 2048 output
+- Officer via HelpAI: 500 input / 256 output
+- Autonomous tasks: 10000 per task
+- Dream state: 50000 per nightly cycle
+
+If pre-call check returns INSUFFICIENT_CREDITS:
+- Block the AI call
+- Return message to user: 
+  "Your workspace has reached its AI usage 
+  limit. The owner has been notified to 
+  add credits or upgrade the plan."
+- Notify owner via ChatDock DM immediately
+- Log the blocked call
+
+Plan tiers (store in platform config):
+
+STARTER: 
+  included_credits: 500000 tokens/month
+  price: $49/month AI add-on
+  overage_rate: per 100k tokens
+
+PROFESSIONAL:
+  included_credits: 2000000 tokens/month  
+  price: $149/month AI add-on
+  overage_rate: per 100k tokens
+
+ENTERPRISE:
+  included_credits: 10000000 tokens/month
+  price: $399/month AI add-on
+  overage_rate: per 100k tokens
+
+Wire TokenTrackingService into EVERY AI call:
+- Trinity chat generate()
+- Autonomous task execution
+- Tool call handlers
+- HelpAI officer interactions
+- Morning briefing generation
+- Dream state processing
+- Any new thinking/verification calls
+
+No AI call executes without pre-call check.
+No AI call completes without post-call log.
+
+BUILD: AI Usage Dashboard for owners
+
+Show in workspace settings / billing:
+- Credits used this period vs included
+- Credits remaining with days left
+- Projected usage by period end
+- Breakdown by call type (chart)
+- Breakdown by user (table)
+- Daily usage graph (last 30 days)
+- Overage charges if applicable
+- Current plan with upgrade option
+- Download usage report (CSV)
+
+Wire into existing Stripe billing:
+- AI overage charges as line item on 
+  monthly invoice
+- Auto-upgrade prompt when usage 
+  consistently at 90%+ of plan
+- Usage data available via billing API
+
+═══════════════════════════════════════════════
+H. PERSONA CONSISTENCY ANCHOR
+═══════════════════════════════════════════════
+
+Build: TrinityPersonaConsistencyService
+
+Lightweight check before every response.
+Max 100 tokens — must not add noticeable latency.
+
+Stores per conversation:
+- established_tone (formal | professional | warm)
+- user_preference_signals (what style 
+  the user responds best to)
+- values_stances_taken (positions Trinity 
+  has taken in this conversation)
+- formality_level (1-5 scale)
+
+Before every response checks:
+- Is current tone consistent with established?
+- Am I drifting toward user's style in a way 
+  that compromises integrity?
+- Have I maintained consistent positions?
+
+If drift detected: apply correction to 
+output before delivery.
+
+Wire into EQ engine — EQ can request 
+tone adjustment but persona anchor 
+ensures the core identity never drifts.
+
+═══════════════════════════════════════════════
+WIRING REQUIREMENTS — ALL ENHANCEMENTS
+═══════════════════════════════════════════════
+
+Every enhancement above must:
+
+1. Write token usage to ai_usage_log 
+   for every AI call it makes
+
+2. Route through thalamus for any 
+   new signal type it generates
+
+3. Register ACC conflict categories 
+   for any new violation type it can detect
+
+4. Write to growth log when learning 
+   occurs from a new capability
+
+5. Feed into morning briefing any 
+   persistent patterns discovered
+
+6. Maintain workspace_id isolation 
+   on every database write
+
+═══════════════════════════════════════════════
+AUDIT FIRST — THEN BUILD
+═══════════════════════════════════════════════
+
+Before writing a single line:
+
+1. Map every existing service that overlaps:
+   - Does a thinking/planning service exist?
+   - Does token tracking exist anywhere?
+   - Does uncertainty scoring exist?
+   - Does clarification logic exist?
+
+2. Present the map
+
+3. Build only what is genuinely absent
+
+4. Bridge everything correctly
+
+5. Boot clean after each phase
+
+DO NOT BUILD ANYTHING UNTIL AUDIT IS PRESENTED.
+
+The Honest Bottom Line
+Adding these 8 capabilities to what Trinity already has — 7 brain regions, Hebbian learning, RL loop, EQ engine, dream state, self-reflection, Tri-AI triad, thalamus, ACC — gives her something that does not exist in any security software platform today.
+She would have:
+
+Extended thinking before acting (not just reacting)
+Uncertainty awareness (she knows what she doesn't know)
+Scientific hypothesis testing (detective reasoning)
+Reasoning verification (she checks her own work mid-execution)
+Peripheral awareness (she notices what you didn't ask about)
+One clarifying question before acting on ambiguity
+Consistent identity that doesn't drift under pressure
+Every token tracked, billed, and profitable
+
+The token credit system turns Trinity's intelligence from a cost center into a revenue line. Every thought she has is metered, marked up, and billed to the tenant. You pay wholesale. They pay retail. You profit the spread on every single AI call the platform makes.
+That is the complete brain. Send this to Claude Code and let it run.

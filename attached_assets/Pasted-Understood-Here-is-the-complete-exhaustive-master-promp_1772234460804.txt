@@ -1,0 +1,111 @@
+Understood. Here is the complete, exhaustive master prompt. It contains the system verification rules, the embedded finance payloads, the webhook listeners, and the database schema updates all in one shot.
+
+Copy everything between the lines below and paste it directly into your Replit AI prompt. It is fully weaponized for CoAIleague's specific security architecture and will force the AI to build the complete financial bridge without breaking your core system.
+
+System Role & Objective
+You are the Lead Architect and QA Engineer for CoAIleague, a comprehensive workforce management platform for Statewide Protective Services and other security organizations. Your objective is to execute "Document 5 (System Verification)," stress test the platform, integrate our Embedded Finance external APIs (Stripe & Payroll), and ensure a stable, crash-free build and publish process. Ignore any prior outdated audits. Read, analyze, fix, build, and deploy.
+
+Critical Build & Publish Rules
+
+Zero-Crash Policy: Before compiling or publishing, verify all dependencies, route handlers, and database schema migrations. The build MUST complete successfully.
+
+Feature Integration Protocol: Before implementing any new fix or feature, verify that org_id, workspace_id, and created_by/updated_by propagate correctly through all records.
+
+Execution Standard: Every system action MUST follow the 7-Step Process: TRIGGER → VALIDATE → PROCESS → PERSIST → PROPAGATE → NOTIFY → CONFIRM.
+
+Phase 1: Core System Verification (Document 5)
+Run a comprehensive check on the following components. Identify gaps, implement fixes, and log the outcome.
+
+Platform Scope: Verify CoAIleague is optimized for security operations. Test all 8 domains (Workforce, Field Ops, Dispatch, Client Services, Financial, Compliance, Communication, AI).
+
+Execution Workflows: Run the 7-Step Process on: Clock-In, Clock-Out, Incident Submit, Schedule Create, Dispatch, Invoice, Position Change, Geofence Violation, Trinity Query.
+
+Data Persistence & Isolation: Verify the canonical data store. Force-test boundaries to confirm Org A never sees Org B, client data is strictly isolated, and auditor read-only access functions correctly.
+
+Trinity Orchestration Health: Test Triad routing between Claude, GPT, and Gemini. Verify tool execution and fallback chains.
+
+End-to-End Workflows: Run complete tests for the Officer Shift Lifecycle, Client Billing Lifecycle, Incident Response Lifecycle, and Employee Onboarding.
+
+Phase 2: Embedded Finance Data Structures (Outbound)
+CoAIleague will handle all native logic (calculating guard hours, overtime, and invoice totals). We will "wire in" external engines for the legal/financial processing. Implement the following outbound data payloads:
+
+A. Stripe API Payload (Client Invoicing)
+Implement the Stripe Checkout integration using this data structure. Ensure all CoAIleague internal IDs are passed in the metadata object so the webhook can map it back to the correct organization and client.
+
+JSON
+{
+  "stripe_payload": {
+    "customer_email": "client@example.com",
+    "payment_method_types": ["card", "us_bank_account"],
+    "line_items": [
+      {
+        "price_data": {
+          "currency": "usd",
+          "product_data": {
+            "name": "Security Officer Services - Armed",
+            "description": "Weekly Services"
+          },
+          "unit_amount": 4500,
+        },
+        "quantity": 40 
+      }
+    ],
+    "mode": "payment",
+    "metadata": {
+      "org_id": "org_12345ABC",
+      "workspace_id": "ws_9876XYZ",
+      "invoice_id": "inv_55555",
+      "client_id": "cli_77777"
+    },
+    "success_url": "https://coaileague.com/dashboard/billing/success?session_id={CHECKOUT_SESSION_ID}"
+  }
+}
+B. Payroll API Payload (Taxes & Direct Deposit)
+Implement the Payroll API sync (for providers like Check/Patriot) using this payload. The employee_reference_id must strictly match our internal user_id to prevent data isolation leaks.
+
+JSON
+{
+  "payroll_payload": {
+    "company_id": "ext_payroll_comp_888", 
+    "pay_period": {
+      "start_date": "2026-10-10",
+      "end_date": "2026-10-17"
+    },
+    "employees": [
+      {
+        "employee_reference_id": "usr_guard_999", 
+        "earnings": [
+          {"type": "regular", "hours": 40.0, "rate": 20.00},
+          {"type": "overtime", "hours": 5.5, "rate": 30.00}
+        ],
+        "metadata": {
+          "org_id": "org_12345ABC",
+          "location_id": "loc_tx_san_antonio"
+        }
+      }
+    ],
+    "auto_approve": false 
+  }
+}
+Phase 3: Webhook Architecture (Inbound)
+To complete the embedded finance loop, build the webhook endpoints that listen for the success signals from our external processors.
+
+Task: Build POST /api/webhooks/stripe and POST /api/webhooks/payroll.
+
+Validate: Verify the incoming webhook signature to ensure it is securely coming from Stripe or the Payroll provider.
+
+Process & Persist: Extract the metadata.org_id and metadata.invoice_id (or user_id). Update the corresponding record in the CoAIleague database (e.g., change invoice_status from 'Pending' to 'Paid').
+
+Propagate & Notify: Trigger a real-time update to the CFO Dashboard indicating the payment was received or the payroll batch was successfully filed, and send a notification to the Org Admin.
+
+Phase 4: Database Schema Updates
+Execute a safe database migration to add the necessary reference columns for these external integrations. Do not overwrite existing data.
+
+users table: Add ext_payroll_id (string, nullable).
+
+invoices table: Add stripe_payment_intent_id (string, nullable) and stripe_checkout_session_id (string, nullable).
+
+organizations table: Add stripe_customer_id (string, nullable).
+
+Output Requirement:
+Execute all tests, apply necessary code fixes to resolve any failures, implement the payloads and webhooks, and initiate a clean, crash-free publish. Provide a summary of the fixes implemented and confirm the system is a PASS

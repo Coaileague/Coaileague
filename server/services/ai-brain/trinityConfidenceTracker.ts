@@ -18,6 +18,8 @@ import {
   type TrinityUserConfidenceStats,
   type TrinityOrgStats,
 } from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityConfidenceTracker');
 
 export interface SessionConfidenceMetrics {
   sessionId: string;
@@ -62,7 +64,7 @@ class TrinityConfidenceTracker {
     try {
       const existingStats = await this.getOrCreateUserStats(metrics.userId, metrics.workspaceId);
       if (!existingStats) {
-        console.warn(`[TrinityConfidenceTracker] Could not get/create stats for user ${metrics.userId}`);
+        log.warn(`[TrinityConfidenceTracker] Could not get/create stats for user ${metrics.userId}`);
         return null;
       }
 
@@ -125,7 +127,7 @@ class TrinityConfidenceTracker {
         .where(eq(trinityUserConfidenceStats.id, existingStats.id))
         .returning();
 
-      console.log(`[TrinityConfidenceTracker] Updated user ${metrics.userId} confidence stats: trust=${newTrustLevel}, avg=${newAvgConfidence.toFixed(2)}`);
+      log.info(`[TrinityConfidenceTracker] Updated user ${metrics.userId} confidence stats: trust=${newTrustLevel}, avg=${newAvgConfidence.toFixed(2)}`);
 
       if (metrics.workspaceId) {
         await this.updateOrgStatsAsync(metrics.workspaceId);
@@ -133,7 +135,7 @@ class TrinityConfidenceTracker {
 
       return updatedStats || null;
     } catch (error) {
-      console.error('[TrinityConfidenceTracker] Error updating user confidence:', error);
+      log.error('[TrinityConfidenceTracker] Error updating user confidence:', error);
       return null;
     }
   }
@@ -183,7 +185,7 @@ class TrinityConfidenceTracker {
 
       return created || null;
     } catch (error) {
-      console.error('[TrinityConfidenceTracker] Error getting/creating user stats:', error);
+      log.error('[TrinityConfidenceTracker] Error getting/creating user stats:', error);
       return null;
     }
   }
@@ -267,9 +269,9 @@ class TrinityConfidenceTracker {
           });
       }
 
-      console.log(`[TrinityConfidenceTracker] Updated org ${workspaceId} stats: ${activeUsers} users, ${totalSessions} sessions`);
+      log.info(`[TrinityConfidenceTracker] Updated org ${workspaceId} stats: ${activeUsers} users, ${totalSessions} sessions`);
     } catch (error) {
-      console.error('[TrinityConfidenceTracker] Error updating org stats:', error);
+      log.error('[TrinityConfidenceTracker] Error updating org stats:', error);
     }
   }
 
@@ -361,7 +363,7 @@ class TrinityConfidenceTracker {
         sessionDurationMs,
       };
     } catch (error) {
-      console.error('[TrinityConfidenceTracker] Error extracting session metrics:', error);
+      log.error('[TrinityConfidenceTracker] Error extracting session metrics:', error);
       return null;
     }
   }
@@ -386,7 +388,7 @@ class TrinityConfidenceTracker {
 
       return (stats?.trustLevel as TrustLevel) || 'new';
     } catch (error) {
-      console.error('[TrinityConfidenceTracker] Error getting trust level:', error);
+      log.error('[TrinityConfidenceTracker] Error getting trust level:', error);
       return 'new';
     }
   }
@@ -401,7 +403,7 @@ class TrinityConfidenceTracker {
 
       return stats || null;
     } catch (error) {
-      console.error('[TrinityConfidenceTracker] Error getting org stats:', error);
+      log.error('[TrinityConfidenceTracker] Error getting org stats:', error);
       return null;
     }
   }

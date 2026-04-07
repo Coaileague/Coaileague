@@ -1,0 +1,199 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 21 — COMPLIANCE AND REGULATORY VERIFICATION**
+
+This phase owns every compliance system, regulatory reporting pipeline, and audit trail on the platform. Texas security companies operate under DPS regulation and TCOLE oversight. A compliance failure is not a software bug — it is a regulatory violation with real legal consequences for the company and its officers. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+Before writing your completion summary produce a full reconciliation table with one row per verification check — not one row per finding. Every row must have a specific evidence statement. PASS, GAP, PARTIAL, and CRITICAL all require evidence. No general statements. No shared evidence across rows. Every row green before Phase 21 closes.
+
+---
+
+**STEP 1 — COMPLIANCE SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of every compliance-related file, route, service, scheduled job, and Trinity action. Include:
+- Compliance enforcement engine and rules
+- Violation detection and recording
+- Compliance alert service and notification pipeline
+- Regulatory reporting — what reports exist, who receives them, what format
+- State auditor portal — what it exposes, how it is accessed
+- DPS compliance export — confirmed in Phase 17, regression check required
+- Audit log system — what is logged, retention policy, immutability
+- Any scheduled job that runs compliance checks
+- Trinity compliance actions
+
+Flag any compliance mutation that has no corresponding audit trail write.
+
+---
+
+**STEP 2 — COMPLIANCE ENFORCEMENT ENGINE VERIFICATION**
+
+The enforcement engine governs what is allowed on the platform:
+- All active compliance rules enumerated — produce the complete list
+- Rule evaluation fires on the correct triggers — not just on a schedule
+- Rule violations recorded with: rule_id, officer_id, workspace_id, violation_type, severity, detected_at, resolved_at, resolution_notes
+- Violation severity levels defined and enforced: critical, high, medium, low
+- Critical violations trigger immediate escalation — not waiting for next sweep
+- Compliance rules are workspace-configurable — different workspaces can have different thresholds
+- Rule changes are audited — who changed a rule, what changed, when
+- Expired compliance rules are retired cleanly — not silently ignored
+
+---
+
+**STEP 3 — VIOLATION DETECTION AND DEDUPLICATION**
+
+Violations must be detected accurately and not duplicated:
+- Violation deduplication confirmed — same violation cannot be recorded twice for the same officer in the same window
+- `dedupeHash` mechanism confirmed active (verified in prior phases — regression check)
+- Violation status state machine: `open → under_review → resolved → dismissed`
+- No invalid state transitions — dismissed violations cannot be reopened without a new detection event
+- Violation resolution requires a reason and actor — not a blank status change
+- Resolved violations retained for audit — not deleted
+- Violation trends queryable — compliance officer can see violation frequency by type, officer, and post
+
+---
+
+**STEP 4 — COMPLIANCE ALERT PIPELINE VERIFICATION**
+
+Alerts must reach the right people at the right time:
+- Compliance alerts route via NDS — confirmed no direct email sends bypassing NDS
+- Alert recipients confirmed: compliance_officer (primary), org_owner (secondary), direct supervisor (tertiary for officer-level violations)
+- Alert content includes: violation type, severity, officer affected, detected timestamp, recommended action
+- Critical violation alerts fire immediately — not batched with the daily sweep
+- Alert idempotency confirmed — same violation does not generate duplicate alerts if the job runs multiple times
+- Alert delivery confirmed in `notification_deliveries` table — every compliance alert tracked
+- Undelivered alerts retry via NDS backoff — no silent drops
+
+---
+
+**STEP 5 — REGULATORY REPORTING VERIFICATION**
+
+All required reports must be accurate, complete, and deliverable:
+- Enumerate every regulatory report type the platform generates
+- For each report: what data it contains, who receives it, what format, what schedule
+- Report generation is idempotent — running twice for the same period produces one report not two
+- Report data integrity confirmed — SHA-256 checksum on generated reports (confirmed in prior phases — regression check)
+- Report delivery confirmed via NDS to compliance officer
+- Reports accessible to state auditor portal in the correct format
+- Report data freshness — reports reflect data up to the generation timestamp, not cached stale data
+- Failed report generation logs explicitly and alerts compliance officer — no silent failure
+
+---
+
+**STEP 6 — AUDIT LOG SYSTEM VERIFICATION**
+
+The audit log is the source of truth for all platform activity:
+- Audit log immutability confirmed — no UPDATE or DELETE permitted on audit_log rows by any role (confirmed Phase 11 — regression check)
+- Audit log completeness — every financial, scheduling, document, and compliance mutation has an entry
+- Audit log schema confirmed: entity_type, entity_id, action, before_state, after_state, actor_id, workspace_id, timestamp — all fields populated
+- Audit log accessible to org_owner and platform staff — read-only
+- Audit log retention policy defined and enforced — entries not deleted within retention window
+- Audit log exportable for compliance purposes — role-gated export endpoint confirmed
+- Audit log search functional — queryable by entity_type, actor_id, date range, and workspace
+
+---
+
+**STEP 7 — STATE AUDITOR PORTAL REGRESSION CHECK**
+
+Confirmed built and verified in prior phases — full regression required:
+- Auditor portal authentication confirmed — session tokens workspace-scoped and time-bounded
+- Auditor portal read-only confirmed — all write routes rejected
+- Auditor financial data filter confirmed — invoices and payroll hidden from auditor view
+- Per-section audit logging confirmed — every auditor page view logged (added Phase 20)
+- Auditor finding submission confirmed — findings routed to compliance officer via NDS
+- Multiple auditor sessions per workspace supported
+- Auditor session expiry enforced — expired sessions rejected cleanly
+
+---
+
+**STEP 8 — DPS COMPLIANCE EXPORT REGRESSION CHECK**
+
+Confirmed built in Phase 17 — regression verification required:
+- DPS export endpoint still active — `GET /api/compliance/licenses/export/dps-csv`
+- Export contains all required fields: officer name, DPS license number, license type, issue date, expiration date, current status, post assignments
+- Export is workspace-scoped — only officers in the requesting workspace included
+- Export role-gated to compliance_officer and org_owner
+- Export audit record written on every run
+- Export format confirmed for current TX DPS submission requirements
+
+---
+
+**STEP 9 — COMPLIANCE DASHBOARD VERIFICATION**
+
+Compliance officers need full visibility:
+- Compliance dashboard shows: open violations by severity, violation trends, officers with expiring licenses, upcoming compliance deadlines
+- Dashboard data is real-time — not a cached snapshot older than 5 minutes
+- Dashboard filterable by: severity, violation type, date range, officer, post
+- Dashboard exportable as CSV for internal reporting
+- Dashboard accessible to compliance_officer and org_owner — not visible to managers or officers without explicit permission
+- Trinity can query compliance dashboard data via registered actions
+
+---
+
+**STEP 10 — CROSS-PHASE COMPLIANCE INTEGRATION**
+
+Compliance must integrate correctly with all prior phases:
+- Phase 12 integration — scheduling enforcement (rest periods, OT) produces compliance records when violated
+- Phase 15 integration — payroll garnishment violations produce compliance records
+- Phase 17 integration — license expiry violations feed into compliance engine correctly
+- Phase 18 integration — unsigned required documents produce compliance flags
+- Phase 19 integration — Trinity conscience blocks non-compliant actions and logs the block as a compliance event
+- Phase 20 integration — auditor portal correctly surfaces all compliance findings
+
+---
+
+**STEP 11 — TRINITY COMPLIANCE ACTIONS**
+
+Trinity must be able to query and act on compliance data:
+- `compliance.query` — query open violations, trends, and compliance status for a workspace
+- `compliance.alert` — manually trigger a compliance alert for a specific violation
+- `compliance.report` — generate a compliance report for a specific period
+- `compliance.resolve` — mark a violation as resolved with a reason (requires compliance_officer role)
+- All 4 actions confirmed registered, callable, and role-gated
+
+---
+
+**STEP 12 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing the completion summary:
+1. One row per verification check in the reconciliation table — not one row per finding
+2. PASS — one-line evidence with file and line reference
+3. GAP — fix confirmed with file name and line reference
+4. PARTIAL — fully resolved evidence required
+5. CRITICAL — grep or query evidence required
+6. Any unconfirmed finding — fix before proceeding
+7. All rows green before writing the Phase 21 completion summary
+
+---
+
+**STEP 13 — VERIFICATION**
+
+Run all checks before Phase 21 is marked complete:
+- Check 1: All compliance rules enumerated — complete list produced
+- Check 2: Violation deduplication confirmed — `dedupeHash` regression check
+- Check 3: Violation state machine enforced — no invalid transitions
+- Check 4: Critical violations trigger immediate escalation — not batched
+- Check 5: Compliance alerts route via NDS — no direct email bypasses
+- Check 6: Alert idempotency confirmed — no duplicate alerts for same violation
+- Check 7: Alert delivery tracked in `notification_deliveries`
+- Check 8: All regulatory report types enumerated with format and schedule
+- Check 9: Report generation idempotent — same period run twice = one report
+- Check 10: Report SHA-256 checksum regression check confirmed
+- Check 11: Audit log immutability regression check confirmed
+- Check 12: Audit log completeness — every mutation type has an entry
+- Check 13: Audit log exportable and searchable — endpoints confirmed
+- Check 14: Auditor portal regression — all 7 auditor checks confirmed
+- Check 15: DPS export regression — all 6 DPS checks confirmed
+- Check 16: Compliance dashboard real-time, filterable, exportable
+- Check 17: All Phase 12/15/17/18/19/20 integrations confirmed
+- Check 18: All 4 Trinity compliance actions registered and callable
+- Check 19: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 20: Server starts clean with zero TypeScript errors across all compliance files
+
+Do not mark Phase 21 complete until all 20 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. Nothing left behind.
+
+---
+
+Paste that. Hold the same standard — findings before fixes, 20-row reconciliation table before summary, no check skipped.

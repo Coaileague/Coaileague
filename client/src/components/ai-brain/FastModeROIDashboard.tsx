@@ -97,7 +97,7 @@ export function FastModeROIDashboard({ workspaceId, className = '' }: FastModeRO
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-amber-500" />
           <h2 className="text-lg font-semibold">Fast Mode ROI Dashboard</h2>
@@ -180,7 +180,7 @@ export function FastModeROIDashboard({ workspaceId, className = '' }: FastModeRO
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <div className="flex items-center justify-between text-sm mb-1">
+              <div className="flex items-center justify-between gap-2 text-sm mb-1">
                 <span className="flex items-center gap-2">
                   <Zap className="h-3 w-3 text-amber-500" />
                   Fast Mode
@@ -193,7 +193,7 @@ export function FastModeROIDashboard({ workspaceId, className = '' }: FastModeRO
               />
             </div>
             <div>
-              <div className="flex items-center justify-between text-sm mb-1">
+              <div className="flex items-center justify-between gap-2 text-sm mb-1">
                 <span className="flex items-center gap-2">
                   <Clock className="h-3 w-3 text-muted-foreground" />
                   Normal Mode
@@ -226,7 +226,7 @@ export function FastModeROIDashboard({ workspaceId, className = '' }: FastModeRO
             ) : (
               <div className="space-y-2">
                 {roi.topAgentsUsed.slice(0, 5).map((agent, index) => (
-                  <div key={agent.agent} className="flex items-center justify-between text-sm">
+                  <div key={agent.agent} className="flex items-center justify-between gap-2 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
                         {index + 1}
@@ -248,19 +248,19 @@ export function FastModeROIDashboard({ workspaceId, className = '' }: FastModeRO
             <CardTitle className="text-sm">Credit Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Total Credits Spent</span>
               <span className="font-medium">{roi.totalCreditsSpent}</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Fast Mode Credits</span>
               <span className="font-medium">{roi.fastModeCredits}</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">SLA Refunds Received</span>
               <span className="font-medium text-green-500">+{roi.refundsIssued}</span>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t">
               <span className="text-muted-foreground">Net Fast Mode Cost</span>
               <span className="font-bold">{roi.fastModeCredits - roi.refundsIssued}</span>
             </div>

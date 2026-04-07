@@ -1,0 +1,573 @@
+# CoAIleague — Complete Domain Organization
+## FINAL SEND-READY PROMPT — Paste This Entire Document
+## Tables · Schema · Routes · Service Files · All Must Match
+
+---
+
+## FROM BRYAN — THIS IS THE LAW GOING FORWARD
+
+We are at 500 tables. This is where we stop adding tables. Everything from this point forward — every new feature, every new system, every new bot, every new workflow — gets built inside one of the 13 domains below. No exceptions. No new tables outside of these domains. No scattered files. No orphaned routes. Everything connects directly front to back inside its domain.
+
+**What I want done in this session:**
+1. Every database table assigned to exactly one of the 13 domains
+2. Schema files split into 13 matching domain files
+3. Service files verified to route through their correct domain only
+4. API routes verified to match their domain service
+5. No duplicate tables, no conflicting definitions, no overlapping paths
+6. Every future feature slots into an existing domain — no exceptions
+
+**The rule from here forward:**
+> If it doesn't fit a domain, you bring it to Bryan first. You do not create new tables. You do not create new schema files outside this structure. You make it work inside what we have.
+
+---
+
+## ⛔ NON-NEGOTIABLE RULES — READ BEFORE TOUCHING ANYTHING
+
+1. **NO DROP TABLE** — Not one. Not ever. Not for any reason.
+2. **GIT COMMIT FIRST** — Right now, before anything else: `git add . && git commit -m "checkpoint: 500 tables — before domain organization"` Confirm the commit hash before proceeding.
+3. **SHOW THE PLAN, WAIT FOR APPROVAL** — Produce the full domain assignment table and stop. Do not move files until Bryan approves.
+4. **ONE DOMAIN AT A TIME** — Complete, compile, commit, then move to the next. No parallel work.
+5. **ZERO DATABASE CHANGES** — No ALTER TABLE. No migrations. No column changes. File restructuring only.
+6. **ASK BEFORE ASSUMING** — If a table's domain isn't clear, flag it. Do not guess.
+7. **NO SILENT FAILURES** — Every step must output visible confirmation it worked.
+8. **NO NEW TABLES** — Ever. Everything new gets built inside existing domain tables using existing columns or JSONB flexibility. If a new column is genuinely needed, ask Bryan first.
+
+---
+
+## THE 13 DOMAINS — PERMANENT STRUCTURE
+
+These 13 domains are the permanent architecture of CoAIleague. Every table, every schema file, every service file, every API route belongs to exactly one of these domains forever.
+
+---
+
+### DOMAIN 1 — `auth`
+**Purpose:** Who is allowed in and what they can do.
+**Owns:** Users, sessions, tokens, roles, permissions, 2FA, API keys, OAuth connections
+**Tables include:**
+`users`, `sessions`, `user_sessions`, `refresh_tokens`, `access_tokens`, `permissions`, `roles`, `role_permissions`, `user_roles`, `api_keys`, `oauth_tokens`, `password_resets`, `mfa_tokens`, `two_factor_auth`, `login_attempts`
+**Service file:** `auth.service.ts`
+**API routes:** `/api/auth/*`
+**Future features that belong here:** Any new authentication method, SSO, biometric login
+
+---
+
+### DOMAIN 2 — `orgs`
+**Purpose:** The organization as an entity — its structure, settings, and lifecycle.
+**Owns:** Organizations, hierarchy, settings, onboarding, branding, invitations, feature flags
+**Tables include:**
+`organizations`, `org_settings`, `org_hierarchy`, `sub_organizations`, `org_branding`, `org_onboarding`, `onboarding_steps`, `onboarding_progress`, `org_invitations`, `org_members`, `org_feature_flags`, `org_registration_queue`, `mother_orgs`
+**Service file:** `orgs.service.ts`
+**API routes:** `/api/orgs/*`
+**Future features that belong here:** New org settings, multi-org features, white-labeling
+
+---
+
+### DOMAIN 3 — `workforce`
+**Purpose:** The people who work — their profiles, availability, and site assignments.
+**Owns:** Employees, profiles, availability, preferences, certifications, emergency contacts
+**Tables include:**
+`employees`, `employee_profiles`, `employee_availability`, `employee_preferences`, `employee_assignments`, `employee_certifications`, `employee_documents`, `employee_settings`, `employee_status_history`, `contractors`, `guard_profiles`
+**Service file:** `workforce.service.ts`
+**API routes:** `/api/workforce/*`
+**Future features that belong here:** Employee wellness tracking, performance reviews, new profile fields
+
+---
+
+### DOMAIN 4 — `scheduling`
+**Purpose:** When and where people work — shift creation, templates, coverage, conflicts.
+**Owns:** Schedules, shifts, templates, assignments, conflicts, coverage requirements, swaps, post orders
+**Tables include:**
+`schedules`, `shifts`, `shift_templates`, `shift_assignments`, `schedule_conflicts`, `coverage_requirements`, `shift_swaps`, `open_shifts`, `schedule_publish_history`, `scheduling_preferences`, `post_orders`, `schedule_templates`
+**Service file:** `scheduling.service.ts`
+**API routes:** `/api/scheduling/*`
+**Future features that belong here:** AI schedule suggestions UI, shift bidding, new coverage rules
+
+---
+
+### DOMAIN 5 — `time`
+**Purpose:** Actual hours worked — what really happened vs what was scheduled.
+**Owns:** Clock events, time entries, timesheets, GPS, geofencing, breaks, overtime flags
+**Tables include:**
+`clock_events`, `time_entries`, `timesheets`, `timesheet_approvals`, `gps_locations`, `geofence_zones`, `geofence_violations`, `break_records`, `overtime_flags`, `location_history`
+**Service file:** `time.service.ts`
+**API routes:** `/api/time/*`
+**Future features that belong here:** Biometric clock-in, new GPS verification methods, break rule enforcement
+
+---
+
+### DOMAIN 6 — `payroll`
+**Purpose:** Every dollar an employee earns — calculations, runs, deductions, state rules.
+**Owns:** Pay periods, payroll runs, earnings, deductions, tax rules, exports, garnishments
+**Tables include:**
+`pay_periods`, `payroll_runs`, `payroll_line_items`, `earnings_records`, `deductions`, `overtime_calculations`, `payroll_settings`, `state_payroll_rules`, `payroll_exports`, `garnishments`, `payroll_audit_trail`
+**Service file:** `payroll.service.ts`
+**API routes:** `/api/payroll/*`
+**⚠️ Special rule:** Do not consolidate aggressively. These tables have legal and compliance significance. When in doubt, keep them separate.
+**Future features that belong here:** New state tax rules, tip tracking, commission calculations
+
+---
+
+### DOMAIN 7 — `billing`
+**Purpose:** What organizations pay to use CoAIleague — plans, invoices, Stripe, usage.
+**Owns:** Plans, subscriptions, invoices, payments, Stripe events, usage records, credits
+**Tables include:**
+`billing_plans`, `subscriptions`, `invoices`, `invoice_line_items`, `payments`, `payment_methods`, `billing_history`, `stripe_events`, `stripe_customers`, `usage_records`, `billing_settings`, `credits`, `billing_cycles`
+**Service file:** `billing.service.ts`
+**API routes:** `/api/billing/*`
+**⚠️ Special rule:** Do not drop ANY billing table regardless of row count. Zero rows = no customers yet, not unused. Stripe event tables are a legal audit trail.
+**Future features that belong here:** New pricing tiers, usage-based billing, credit system expansion
+
+---
+
+### DOMAIN 8 — `trinity`
+**Purpose:** The AI brain — job orchestration, model routing, cost attribution, prompt management.
+**Owns:** AI job queue, model configs, token usage, cost records, fallback chains, prompt templates, event bus
+**Tables include:**
+`trinity_jobs`, `trinity_results`, `ai_model_configs`, `ai_usage_logs`, `token_usage`, `ai_cost_records`, `model_usage_by_org`, `fallback_chains`, `ai_prompts`, `prompt_templates`, `ai_feedback`, `scheduling_intelligence`, `trinity_event_bus`
+**Service file:** `trinity.service.ts`
+**API routes:** `/api/trinity/*`
+**Future features that belong here:** New AI models, new prompt types, new cost tracking dimensions, new fallback rules
+
+---
+
+### DOMAIN 9 — `comms`
+**Purpose:** How people communicate on the platform — chat, notifications, mail, announcements.
+**Owns:** Chat rooms, messages, shift rooms, notifications, push tokens, mail, announcements, broadcasts
+**Tables include:**
+`chat_rooms`, `chat_participants`, `messages`, `message_attachments`, `shift_rooms`, `notifications`, `notification_queue`, `notification_preferences`, `push_tokens`, `mail_messages`, `mail_threads`, `announcements`, `broadcast_history`
+**Service file:** `comms.service.ts`
+**API routes:** `/api/comms/*`
+**Future features that belong here:** New message types, new notification channels, video messaging, DockChat expansion
+
+---
+
+### DOMAIN 10 — `clients`
+**Purpose:** The businesses that hire the security company — their sites, contracts, and requirements.
+**Owns:** Clients, sites, contracts, site requirements, client contacts, post orders billing rates
+**Tables include:**
+`clients`, `sites`, `site_assignments`, `site_requirements`, `site_schedules`, `contracts`, `contract_terms`, `client_contacts`, `client_billing_rates`, `site_geofences`
+**Service file:** `clients.service.ts`
+**API routes:** `/api/clients/*`
+**Future features that belong here:** Client portal access, new site types, contract renewal automation
+
+---
+
+### DOMAIN 11 — `compliance`
+**Purpose:** Staying legal — licenses, certifications, document signing, incident reporting.
+**Owns:** State licenses, employee certifications, documents, signatures, incidents, compliance checklists
+**Tables include:**
+`licenses`, `license_types`, `certifications`, `employee_certifications`, `expiration_alerts`, `documents`, `document_templates`, `document_signatures`, `signature_requests`, `incidents`, `incident_types`, `incident_attachments`, `incident_notifications`, `compliance_requirements`, `compliance_records`
+**Service file:** `compliance.service.ts`
+**API routes:** `/api/compliance/*`
+**Future features that belong here:** New license types, new document templates, new incident categories, e-signature expansion
+
+---
+
+### DOMAIN 12 — `audit`
+**Purpose:** The paper trail — everything that happened, when, and who did it.
+**Owns:** Audit logs, change history, system events, activity feeds, login history, error logs, webhook logs
+**Tables include:**
+`audit_log`, `change_history`, `system_events`, `activity_feed`, `login_history`, `data_export_log`, `deletion_log`, `error_log`, `integration_logs`, `webhook_logs`
+**Service file:** `audit.service.ts`
+**API routes:** `/api/audit/*`
+**⚠️ Special rule:** Do not aggressively consolidate audit tables. They are legal records. Keep event types separated where column structures differ.
+**Future features that belong here:** New audit event types, compliance reporting, new webhook sources
+
+---
+
+### DOMAIN 13 — `support`
+**Purpose:** Platform-level support and system operations — the layer CoAIleague uses to manage the platform itself.
+**Owns:** Support tickets, support agent assignments, system bots, system health monitoring, admin tools, platform-level announcements, escalation workflows, internal tooling
+**Tables include:**
+`support_tickets`, `support_threads`, `support_messages`, `support_agents`, `support_assignments`, `support_categories`, `support_escalations`, `system_bots`, `bot_configs`, `bot_assignments`, `system_health`, `platform_monitoring`, `admin_actions`, `platform_announcements`, `internal_alerts`, `feature_requests`, `system_maintenance`
+**Service file:** `support.service.ts`
+**API routes:** `/api/support/*`
+**Key distinction:** This domain operates at the PLATFORM level (CoAIleague looking down at orgs). It is not org-level support. Org-level communications stay in `comms`. Platform-level admin operations live here.
+**Future features that belong here:** New bot types, new support workflows, new admin tools, system health dashboards, Trinity bot management
+
+---
+
+## COMPLETE ROUTING MAP — FRONT TO BACK
+
+Every request through the system follows this exact path. No exceptions:
+
+```
+Browser / Mobile App
+        ↓
+React Component (domain-aware)
+        ↓
+API Route  /api/[domain]/[action]
+        ↓
+[domain].service.ts
+        ↓
+schema/domains/[domain]/index.ts
+        ↓
+Database Table (inside correct domain)
+```
+
+### Route → Service → Schema mapping:
+
+| API Route Prefix | Service File | Schema Domain File |
+|---|---|---|
+| `/api/auth/*` | `auth.service.ts` | `domains/auth/index.ts` |
+| `/api/orgs/*` | `orgs.service.ts` | `domains/orgs/index.ts` |
+| `/api/workforce/*` | `workforce.service.ts` | `domains/workforce/index.ts` |
+| `/api/scheduling/*` | `scheduling.service.ts` | `domains/scheduling/index.ts` |
+| `/api/time/*` | `time.service.ts` | `domains/time/index.ts` |
+| `/api/payroll/*` | `payroll.service.ts` | `domains/payroll/index.ts` |
+| `/api/billing/*` | `billing.service.ts` | `domains/billing/index.ts` |
+| `/api/trinity/*` | `trinity.service.ts` | `domains/trinity/index.ts` |
+| `/api/comms/*` | `comms.service.ts` | `domains/comms/index.ts` |
+| `/api/clients/*` | `clients.service.ts` | `domains/clients/index.ts` |
+| `/api/compliance/*` | `compliance.service.ts` | `domains/compliance/index.ts` |
+| `/api/audit/*` | `audit.service.ts` | `domains/audit/index.ts` |
+| `/api/support/*` | `support.service.ts` | `domains/support/index.ts` |
+
+---
+
+## EXECUTION PHASES
+
+---
+
+### PHASE 1 — GIT CHECKPOINT (DO THIS NOW)
+
+```bash
+git add .
+git commit -m "checkpoint: 500 tables clean — before domain organization"
+```
+
+Output the commit hash. Do not proceed until confirmed.
+
+---
+
+### PHASE 2 — AUDIT CURRENT SCHEMA FILES
+
+```bash
+# Find all schema files
+find . -name "schema.ts" -o -name "*.schema.ts" -o -name "schema.js" | grep -v node_modules
+
+# Count table definitions
+grep -c "pgTable\|mysqlTable\|createTable" path/to/schema.ts
+
+# List all table names
+grep "pgTable\|mysqlTable\|createTable" path/to/schema.ts | grep -oP "'\K[^']+"
+```
+
+Report:
+- Every schema file path and line count
+- Total table count
+- Complete list of all table names
+
+---
+
+### PHASE 3 — DOMAIN ASSIGNMENT TABLE
+### ⛔ STOP AND WAIT FOR APPROVAL BEFORE PHASE 4
+
+Map every single table to its domain. Output this complete table:
+
+```
+TABLE NAME                    | DOMAIN       | NOTES
+------------------------------|--------------|---------------------------
+users                         | auth         |
+organizations                 | orgs         |
+employees                     | workforce    |
+shifts                        | scheduling   |
+clock_events                  | time         |
+payroll_runs                  | payroll      |
+subscriptions                 | billing      |
+trinity_jobs                  | trinity      |
+messages                      | comms        |
+clients                       | clients      |
+documents                     | compliance   |
+audit_log                     | audit        |
+support_tickets               | support      |
+[ALL 500 tables listed]       |              |
+```
+
+Mark any uncertain table as "NEEDS REVIEW" in the notes column.
+
+**⛔ FULL STOP. Send this list to Bryan. Wait for explicit approval before touching any files.**
+
+---
+
+### PHASE 4 — CREATE FOLDER STRUCTURE
+
+After approval — create folders only, no files:
+
+```
+src/
+  db/
+    schema/
+      domains/
+        auth/
+        orgs/
+        workforce/
+        scheduling/
+        time/
+        payroll/
+        billing/
+        trinity/
+        comms/
+        clients/
+        compliance/
+        audit/
+        support/
+      index.ts    ← built last
+  services/
+    auth.service.ts       ← verify exists, routes correctly
+    orgs.service.ts
+    workforce.service.ts
+    scheduling.service.ts
+    time.service.ts
+    payroll.service.ts
+    billing.service.ts
+    trinity.service.ts
+    comms.service.ts
+    clients.service.ts
+    compliance.service.ts
+    audit.service.ts
+    support.service.ts    ← create if missing
+  routes/
+    auth.routes.ts        ← verify exists, matches service
+    orgs.routes.ts
+    [all 13 domains]
+```
+
+---
+
+### PHASE 5 — BUILD DOMAIN SCHEMA FILES
+
+Process in this order — one at a time, compile, commit, then next:
+
+`auth` → `orgs` → `clients` → `workforce` → `scheduling` → `time` → `payroll` → `billing` → `trinity` → `comms` → `compliance` → `audit` → `support`
+
+**Template for every domain file:**
+```typescript
+// ============================================
+// CoAIleague Schema — [DOMAIN] Domain
+// ============================================
+// Tables: [list all table names in this file]
+// Domain: [domain name]
+// Last updated: [date]
+// ============================================
+
+import { 
+  pgTable, text, integer, boolean, 
+  timestamp, uuid, jsonb, varchar 
+} from 'drizzle-orm/pg-core';
+
+// ─────────────────────────────────────────────
+// [TABLE NAME]
+// ─────────────────────────────────────────────
+export const tableName = pgTable('table_name', {
+  // EXACT existing definition — do not change anything
+});
+
+// repeat for every table in this domain
+```
+
+**After each domain:**
+```bash
+npx tsc --noEmit
+git add .
+git commit -m "schema: [domain] domain → domains/[domain]/index.ts ✓"
+```
+
+Zero TypeScript errors before moving on. No exceptions.
+
+---
+
+### PHASE 6 — CROSS-DOMAIN FOREIGN KEY REFERENCES
+
+Cross-domain references use direct domain imports — never from the monolith:
+
+```typescript
+// In scheduling domain
+import { employees } from '../workforce';
+import { sites } from '../clients';
+
+export const shifts = pgTable('shifts', {
+  id: uuid('id').primaryKey(),
+  employeeId: uuid('employee_id').references(() => employees.id),
+  siteId: uuid('site_id').references(() => sites.id),
+  // all other columns exact as-is
+});
+```
+
+**All known cross-domain references:**
+
+| Table | References | From Domain |
+|---|---|---|
+| `shifts` | `employees`, `sites` | workforce, clients |
+| `clock_events` | `employees`, `shifts` | workforce, scheduling |
+| `timesheets` | `employees`, `pay_periods` | workforce, payroll |
+| `payroll_runs` | `employees`, `pay_periods` | workforce, payroll |
+| `trinity_jobs` | `organizations` | orgs |
+| `ai_usage_logs` | `organizations` | orgs |
+| `messages` | `users`, `chat_rooms` | auth, comms |
+| `notifications` | `users` | auth |
+| `audit_log` | `users`, `organizations` | auth, orgs |
+| `document_signatures` | `documents`, `employees` | compliance, workforce |
+| `invoices` | `organizations`, `billing_plans` | orgs, billing |
+| `support_tickets` | `organizations`, `users` | orgs, auth |
+| `support_assignments` | `support_agents`, `support_tickets` | support |
+| `system_bots` | `organizations` | orgs |
+| `bot_assignments` | `system_bots`, `chat_rooms` | support, comms |
+
+---
+
+### PHASE 7 — MASTER INDEX FILE
+
+After all 13 domains compile clean:
+
+```typescript
+// ============================================
+// CoAIleague Schema — Master Index
+// ============================================
+// Single import point for the entire schema.
+// Import from here unless you need a specific
+// domain import for cross-reference.
+// ============================================
+
+export * from './domains/auth';
+export * from './domains/orgs';
+export * from './domains/workforce';
+export * from './domains/scheduling';
+export * from './domains/time';
+export * from './domains/payroll';
+export * from './domains/billing';
+export * from './domains/trinity';
+export * from './domains/comms';
+export * from './domains/clients';
+export * from './domains/compliance';
+export * from './domains/audit';
+export * from './domains/support';
+```
+
+---
+
+### PHASE 8 — VERIFY SERVICE FILE ROUTING
+
+Find all service files and verify each one imports only from its matching domain:
+
+```bash
+find src -name "*.service.ts" | grep -v node_modules
+```
+
+For each service, check its imports. It should only import schema from its own domain:
+
+```typescript
+// ✅ CORRECT — payroll service imports from payroll domain only
+import { payrollRuns, payPeriods, earnings } from '../db/schema/domains/payroll';
+
+// ❌ WRONG — payroll service importing from wrong domain
+import { shifts } from '../db/schema/domains/scheduling'; // flag this
+```
+
+**Do not refactor service files without Bryan's instruction.** Just report what you find. Flag any service importing from the wrong domain.
+
+---
+
+### PHASE 9 — VERIFY API ROUTE ALIGNMENT
+
+Find all route files and verify they match their service domain:
+
+```bash
+find src -name "*.routes.ts" -o -name "*.router.ts" | grep -v node_modules
+```
+
+Each route file should call only its matching service:
+- `/api/payroll/*` → only calls `payroll.service.ts`
+- `/api/trinity/*` → only calls `trinity.service.ts`
+- `/api/support/*` → only calls `support.service.ts`
+
+Report any misaligned routes. Flag but do not fix without instruction.
+
+---
+
+### PHASE 10 — UPDATE ALL SCHEMA IMPORTS
+
+Find every file importing from the old schema location:
+
+```bash
+grep -r "from.*schema" src/ --include="*.ts" -l | grep -v node_modules
+```
+
+Update any broken paths. If `index.ts` sits in the same location as the old `schema.ts`, most imports will not need changing — the re-exports handle it.
+
+Run full TypeScript verification:
+```bash
+npx tsc --noEmit
+```
+
+Zero errors required.
+
+---
+
+### PHASE 11 — FINAL APP VERIFICATION
+
+```bash
+npm run dev
+```
+
+Verify in the running app:
+- [ ] App starts without errors
+- [ ] Zero new console errors
+- [ ] Dashboard loads correctly
+- [ ] All navigation works
+- [ ] Clock in/out works
+- [ ] Schedule view loads
+- [ ] No broken API calls in network tab
+
+---
+
+### PHASE 12 — ARCHIVE AND FINAL COMMIT
+
+```bash
+# Archive old monolithic schema file — do NOT delete
+mv src/db/schema.ts src/db/schema.ARCHIVED.ts
+
+# Verify app still runs with archived file
+npm run dev
+
+# Final commit
+git add .
+git commit -m "schema: 13-domain split complete — all tables routed, monolith archived ✓"
+```
+
+---
+
+## DELIVERY CHECKLIST
+
+Do not call this complete until every item is checked:
+
+- [ ] Git checkpoint committed before starting
+- [ ] All 500 tables assigned to exactly one domain
+- [ ] Bryan approved domain assignment table before files were moved
+- [ ] All 13 domain schema files created
+- [ ] Each domain file compiles with zero TypeScript errors
+- [ ] Cross-domain foreign key references use proper imports
+- [ ] Master index.ts exports all 13 domains
+- [ ] All existing codebase imports still resolve
+- [ ] `npx tsc --noEmit` passes with zero errors
+- [ ] Service files verified to route through correct domains
+- [ ] API routes verified to match their service domain
+- [ ] App runs cleanly with zero new console errors
+- [ ] Old schema file archived (not deleted)
+- [ ] Git committed after every domain completion
+- [ ] Final commit made
+
+---
+
+## THE RULE GOING FORWARD
+
+**Every new feature, every new bot, every new workflow, every new system — it goes into one of these 13 domains. No new tables without Bryan's explicit approval. No new schema files outside this structure. No orphaned routes. No scattered service files.**
+
+If it's a new auth method → `auth`
+If it's a new employee field → `workforce`
+If it's a new AI capability → `trinity`
+If it's a new bot → `support`
+If it's a new notification type → `comms`
+If it's a new report → `audit`
+
+**Make it work inside what we have. No exceptions.**

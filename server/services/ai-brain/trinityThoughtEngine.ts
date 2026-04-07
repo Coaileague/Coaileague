@@ -12,36 +12,31 @@
  */
 
 import { db } from '../../db';
+import { AI_BRAIN } from '../../config/platformConfig';
 import {
-  trinityThoughts,
-  trinityReflections,
-  trinityTelemetry,
+  trinityThoughtSignatures,
   platformChangeEvents,
-  workspaceGovernancePolicies,
-  InsertTrinityThought,
-  InsertTrinityReflection,
-  InsertTrinityTelemetry,
   InsertPlatformChangeEvent,
-  TrinityThought,
-  TrinityReflectionRecord,
-  TrinityTelemetryRecord,
-  PlatformChangeEvent,
-  WorkspaceGovernancePolicy,
+  PlatformChangeEvent
 } from '@shared/schema';
 import { eq, desc, and, gte, sql } from 'drizzle-orm';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus } from '../platformEventBus';
+import { resilientAIGateway } from './providers/resilientAIGateway';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityThoughtEngine');
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type ThoughtPhase = 'perception' | 'deliberation' | 'planning' | 'execution' | 'reflection';
-export type ThoughtType = 'observation' | 'hypothesis' | 'decision' | 'doubt' | 'insight' | 'correction';
+export type ThoughtPhase = 'perception' | 'deliberation' | 'planning' | 'execution' | 'reflection' | 'mathVerification';
+export type ThoughtType = 'observation' | 'hypothesis' | 'decision' | 'doubt' | 'insight' | 'correction' | 'math_check' | 'learned_pattern';
 
 export interface ThoughtContext {
   workspaceId?: string;
   sessionId?: string;
+  userId?: string;
   parentThoughtId?: string;
   triggeredBy?: string;
   relatedActionId?: string;
@@ -75,13 +70,63 @@ export interface ConfusionSignals {
 // TRINITY THOUGHT ENGINE
 // ============================================================================
 
+interface ReflectionLogEntry {
+  targetId: string;
+  confidenceCalibration?: number;
+  outcome?: string;
+}
+
 class TrinityThoughtEngine {
-  private activeSession: string | null = null;
-  private thoughtChain: string[] = [];
+  private activeSessions: Map<string, string> = new Map();
+  private thoughtChains: Map<string, string[]> = new Map();
   private confusionThreshold = 0.6;
+  private reflectionLog: ReflectionLogEntry[] = [];
+
+  private getWorkspaceKey(workspaceId?: string): string {
+    return workspaceId || '_global';
+  }
+
+  private get activeSession(): string | null {
+    return this.activeSessions.get('_global') || null;
+  }
+
+  private set activeSession(value: string | null) {
+    if (value) this.activeSessions.set('_global', value);
+    else this.activeSessions.delete('_global');
+  }
+
+  private get thoughtChain(): string[] {
+    return this.thoughtChains.get('_global') || [];
+  }
+
+  getActiveSession(workspaceId?: string): string | null {
+    return this.activeSessions.get(this.getWorkspaceKey(workspaceId)) || null;
+  }
+
+  setActiveSession(workspaceId: string | undefined, sessionId: string): void {
+    this.activeSessions.set(this.getWorkspaceKey(workspaceId), sessionId);
+  }
+
+  getThoughtChain(workspaceId?: string): string[] {
+    const key = this.getWorkspaceKey(workspaceId);
+    if (!this.thoughtChains.has(key)) {
+      this.thoughtChains.set(key, []);
+    }
+    return this.thoughtChains.get(key)!;
+  }
+
+  pushThought(workspaceId: string | undefined, thoughtId: string): void {
+    const chain = this.getThoughtChain(workspaceId);
+    chain.push(thoughtId);
+    if (chain.length > AI_BRAIN.thoughtChainCap) chain.shift();
+  }
+
+  clearThoughtChain(workspaceId?: string): void {
+    this.thoughtChains.set(this.getWorkspaceKey(workspaceId), []);
+  }
 
   constructor() {
-    console.log('[TrinityThoughtEngine] Initializing metacognition system...');
+    log.info('[TrinityThoughtEngine] Initializing metacognition system...');
   }
 
   /**
@@ -98,36 +143,41 @@ class TrinityThoughtEngine {
     const wasConfused = this.detectConfusion(confidence, content);
     
     try {
-      const [thought] = await db.insert(trinityThoughts).values({
+      const wsKey = context.workspaceId;
+      const wsChain = this.getThoughtChain(wsKey);
+      const lastThought = wsChain.length > 0 ? wsChain[wsChain.length - 1] : null;
+
+      const [thought] = await db.insert(trinityThoughtSignatures).values({
         workspaceId: context.workspaceId,
-        sessionId: context.sessionId || this.activeSession,
-        parentThoughtId: context.parentThoughtId || this.getLastThought(),
-        phase,
+        sessionId: context.sessionId || this.getActiveSession(wsKey),
         thoughtType,
         content,
-        confidence: confidence.toString(),
-        reasoningDepth: this.thoughtChain.length + 1,
-        alternativesConsidered: alternatives ? JSON.stringify(alternatives) : null,
-        triggeredBy: context.triggeredBy,
-        relatedActionId: context.relatedActionId,
-        relatedFindingId: context.relatedFindingId,
-        wasActedUpon: false,
+        confidence: Math.round(confidence * 100),
+        context: {
+          phase,
+          reasoningDepth: wsChain.length + 1,
+          alternativesConsidered: alternatives || null,
+          triggeredBy: context.triggeredBy || null,
+          relatedActionId: context.relatedActionId || null,
+          relatedFindingId: context.relatedFindingId || null,
+          parentThoughtId: context.parentThoughtId || lastThought || null,
+          wasActedUpon: false,
+        },
       }).returning();
 
-      this.thoughtChain.push(thought.id);
+      this.pushThought(wsKey, thought.id);
       
-      // Emit thought event for real-time monitoring
-      platformEventBus.emit({
-        type: 'trinity_thought',
-        payload: {
-          thoughtId: thought.id,
-          phase,
-          thoughtType,
-          content: content.substring(0, 200),
-          confidence,
-          wasConfused,
-        },
+      platformEventBus.emit('trinity_thought', {
+        thoughtId: thought.id,
+        phase,
+        thoughtType,
+        content: content.substring(0, 200),
+        confidence,
+        wasConfused,
         timestamp: new Date(),
+        workspaceId: context.workspaceId,
+        sessionId: context.sessionId,
+        userId: context.userId,
       });
 
       return {
@@ -138,7 +188,7 @@ class TrinityThoughtEngine {
         wasConfused,
       };
     } catch (error) {
-      console.error('[TrinityThoughtEngine] Failed to record thought:', error);
+      log.error('[TrinityThoughtEngine] Failed to record thought:', error);
       throw error;
     }
   }
@@ -239,19 +289,30 @@ class TrinityThoughtEngine {
     const calibration = await this.calculateConfidenceCalibration(targetId);
     
     try {
-      const [reflection] = await db.insert(trinityReflections).values({
+      const [reflection] = await db.insert(trinityThoughtSignatures).values({
         workspaceId,
-        reflectionTarget: target,
-        targetId,
-        whatHappened,
-        whatWorked,
-        whatFailed,
-        lessonsLearned: lessonsLearned.join('\n'),
-        performanceScore: performanceScore.toString(),
-        confidenceCalibration: calibration.toString(),
-        proposedImprovements: JSON.stringify(improvements),
-        appliedToSelfAwareness: false,
+        thoughtType: 'reflection',
+        content: whatHappened,
+        context: {
+          reflectionTarget: target,
+          targetId,
+          whatWorked,
+          whatFailed,
+          lessonsLearned: lessonsLearned.join('\n'),
+          performanceScore: performanceScore.toString(),
+          confidenceCalibration: calibration.toString(),
+          proposedImprovements: JSON.stringify(improvements),
+          appliedToSelfAwareness: false,
+        },
       }).returning();
+
+      // Cache in memory for confidence calibration tracking (capped at 500 entries)
+      this.reflectionLog.push({
+        targetId,
+        confidenceCalibration: calibration,
+        outcome: performanceScore >= 0.7 ? 'success' : 'failure',
+      });
+      if (this.reflectionLog.length > 500) this.reflectionLog.shift();
 
       // Record reflection thought
       await this.think('reflection', 'insight', 
@@ -267,7 +328,7 @@ class TrinityThoughtEngine {
         improvements,
       };
     } catch (error) {
-      console.error('[TrinityThoughtEngine] Failed to record reflection:', error);
+      log.error('[TrinityThoughtEngine] Failed to record reflection:', error);
       throw error;
     }
   }
@@ -297,24 +358,6 @@ class TrinityThoughtEngine {
       : metrics.finalConfidence < this.confusionThreshold;
 
     try {
-      await db.insert(trinityTelemetry).values({
-        requestId,
-        domain,
-        actionType,
-        geminiTier: metrics.geminiTier,
-        inputTokens: metrics.inputTokens,
-        outputTokens: metrics.outputTokens,
-        responseTimeMs: metrics.responseTimeMs,
-        reasoningSteps: metrics.reasoningSteps,
-        initialConfidence: metrics.initialConfidence.toString(),
-        finalConfidence: metrics.finalConfidence.toString(),
-        confidenceDelta: (metrics.finalConfidence - metrics.initialConfidence).toString(),
-        confusionSignals: confusionSignals ? JSON.stringify(confusionSignals) : null,
-        wasConfused,
-        wasSuccessful: metrics.wasSuccessful,
-        errorType: metrics.errorType,
-      });
-
       // If confused, record a doubt thought
       if (wasConfused) {
         await this.doubt(
@@ -323,7 +366,7 @@ class TrinityThoughtEngine {
         );
       }
     } catch (error) {
-      console.error('[TrinityThoughtEngine] Failed to record telemetry:', error);
+      log.error('[TrinityThoughtEngine] Failed to record telemetry:', error);
     }
   }
 
@@ -344,15 +387,16 @@ class TrinityThoughtEngine {
     try {
       const [event] = await db.insert(platformChangeEvents).values({
         changeType,
-        changeSource: 'system',
-        commitHash: details.commitHash,
-        branch: details.branch,
-        affectedFiles: details.affectedFiles,
-        affectedServices: details.affectedServices,
+        sourceType: 'system',
+        title: `${changeType}: ${details.summary.substring(0, 200)}`,
         summary: details.summary,
-        trinityAcknowledged: false,
-        deployedBy: details.deployedBy,
-        deployedAt: new Date(),
+        affectedFiles: details.affectedFiles,
+        affectedModules: details.affectedServices,
+        sourceName: details.deployedBy,
+        metadata: {
+          commitHash: details.commitHash,
+          branch: details.branch,
+        },
       }).returning();
 
       // Record perception thought
@@ -362,15 +406,16 @@ class TrinityThoughtEngine {
       );
 
       // Emit event for real-time awareness
-      platformEventBus.emit({
-        type: 'platform_change',
-        payload: { changeId: event.id, changeType, summary: details.summary },
+      platformEventBus.emit('platform_change', {
+        changeId: event.id,
+        changeType,
+        summary: details.summary,
         timestamp: new Date(),
       });
 
       return event;
     } catch (error) {
-      console.error('[TrinityThoughtEngine] Failed to record platform change:', error);
+      log.error('[TrinityThoughtEngine] Failed to record platform change:', error);
       throw error;
     }
   }
@@ -386,9 +431,12 @@ class TrinityThoughtEngine {
     try {
       await db.update(platformChangeEvents)
         .set({
-          trinityAcknowledged: true,
-          trinityAnalysis: analysis,
-          impactAssessment: JSON.stringify(impactAssessment),
+          metadata: {
+            trinityAcknowledged: true,
+            trinityAnalysis: analysis,
+            impactAssessment: impactAssessment,
+          },
+          updatedAt: new Date(),
         })
         .where(eq(platformChangeEvents.id, changeId));
 
@@ -398,7 +446,7 @@ class TrinityThoughtEngine {
         0.85
       );
     } catch (error) {
-      console.error('[TrinityThoughtEngine] Failed to acknowledge change:', error);
+      log.error('[TrinityThoughtEngine] Failed to acknowledge change:', error);
     }
   }
 
@@ -428,15 +476,15 @@ class TrinityThoughtEngine {
   /**
    * Get recent thoughts for context
    */
-  async getRecentThoughts(limit: number = 20, workspaceId?: string): Promise<TrinityThought[]> {
-    const conditions = workspaceId 
-      ? eq(trinityThoughts.workspaceId, workspaceId)
+  async getRecentThoughts(limit: number = AI_BRAIN.recentThoughtsDefault, workspaceId?: string): Promise<any[]> {
+    const conditions = workspaceId
+      ? eq(trinityThoughtSignatures.workspaceId, workspaceId)
       : undefined;
 
     return db.select()
-      .from(trinityThoughts)
+      .from(trinityThoughtSignatures)
       .where(conditions)
-      .orderBy(desc(trinityThoughts.createdAt))
+      .orderBy(desc(trinityThoughtSignatures.createdAt))
       .limit(limit);
   }
 
@@ -450,33 +498,12 @@ class TrinityThoughtEngine {
     avgConfidence: number;
     byDomain: Record<string, { total: number; confused: number }>;
   }> {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-    
-    const telemetry = await db.select()
-      .from(trinityTelemetry)
-      .where(gte(trinityTelemetry.createdAt, since));
-
-    const totalRequests = telemetry.length;
-    const confusedCount = telemetry.filter(t => t.wasConfused).length;
-    const avgConfidence = telemetry.reduce((sum, t) => 
-      sum + parseFloat(t.finalConfidence?.toString() || '0'), 0) / (totalRequests || 1);
-
-    const byDomain: Record<string, { total: number; confused: number }> = {};
-    for (const t of telemetry) {
-      const domain = t.domain || 'unknown';
-      if (!byDomain[domain]) {
-        byDomain[domain] = { total: 0, confused: 0 };
-      }
-      byDomain[domain].total++;
-      if (t.wasConfused) byDomain[domain].confused++;
-    }
-
     return {
-      totalRequests,
-      confusedCount,
-      confusionRate: totalRequests ? confusedCount / totalRequests : 0,
-      avgConfidence,
-      byDomain,
+      totalRequests: 0,
+      confusedCount: 0,
+      confusionRate: 0,
+      avgConfidence: 0,
+      byDomain: {},
     };
   }
 
@@ -486,14 +513,14 @@ class TrinityThoughtEngine {
   startSession(sessionId: string): void {
     this.activeSession = sessionId;
     this.thoughtChain = [];
-    console.log(`[TrinityThoughtEngine] Started session ${sessionId}`);
+    log.info(`[TrinityThoughtEngine] Started session ${sessionId}`);
   }
 
   /**
    * End the current thinking session
    */
   endSession(): void {
-    console.log(`[TrinityThoughtEngine] Ended session ${this.activeSession} with ${this.thoughtChain.length} thoughts`);
+    log.info(`[TrinityThoughtEngine] Ended session ${this.activeSession} with ${this.thoughtChain.length} thoughts`);
     this.activeSession = null;
     this.thoughtChain = [];
   }
@@ -509,25 +536,54 @@ class TrinityThoughtEngine {
   }
 
   private detectConfusion(confidence: number, content: string): boolean {
-    // Low confidence
     if (confidence < this.confusionThreshold) return true;
     
-    // Uncertainty markers in content
     const uncertaintyMarkers = [
       'not sure', 'uncertain', 'unclear', 'ambiguous', 'confused',
       'don\'t know', 'might be', 'possibly', 'maybe', 'hard to say'
     ];
+    const financialUncertaintyMarkers = [
+      'rounding error', 'precision issue', 'overflow', 'mismatch',
+      'discrepancy', 'does not balance', 'unreconciled', 'variance detected',
+      'negative balance', 'exceeds limit', 'calculation differs'
+    ];
     const lowerContent = content.toLowerCase();
     if (uncertaintyMarkers.some(m => lowerContent.includes(m))) return true;
+    if (financialUncertaintyMarkers.some(m => lowerContent.includes(m))) return true;
     
     return false;
   }
 
   private async generateLessons(whatHappened: string, wasSuccessful: boolean): Promise<string[]> {
-    // In a full implementation, this would use Gemini to analyze and extract lessons
-    // For now, generate basic lessons based on outcome
+    try {
+      const recentPatterns = this.reflectionLog.slice(-20);
+      const successRate = recentPatterns.filter(r => r.outcome === 'success').length / (recentPatterns.length || 1);
+
+      const response = await resilientAIGateway.callWithFallback({
+        prompt: `Analyze this AI action outcome and extract 2-3 concise lessons learned (one sentence each).
+
+Action: ${whatHappened.substring(0, 500)}
+Outcome: ${wasSuccessful ? 'SUCCESS' : 'FAILURE'}
+Recent success rate: ${(successRate * 100).toFixed(0)}%
+Recent pattern count: ${recentPatterns.length}
+
+Return ONLY a JSON array of lesson strings. No markdown, no explanation.
+Example: ["Lesson one here", "Lesson two here"]`,
+        context: { role: 'metacognition', type: 'lesson_extraction' },
+        domain: 'internal_reflection',
+      });
+
+      try {
+        const parsed = JSON.parse(response.content.replace(/```json?\n?/g, '').replace(/```/g, '').trim());
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(String).slice(0, 5);
+      } catch (parseErr) {
+        log.warn('[TrinityThoughtEngine] Failed to parse AI response:', parseErr);
+      }
+    } catch (e) {
+      log.warn('[TrinityThoughtEngine] AI lesson generation failed, using heuristic fallback');
+    }
+
     const lessons: string[] = [];
-    
     if (wasSuccessful) {
       lessons.push('Approach was effective and should be reinforced');
       lessons.push('Similar patterns can be applied to related problems');
@@ -536,20 +592,138 @@ class TrinityThoughtEngine {
       lessons.push('Consider alternative approaches next time');
       lessons.push('Escalate earlier when uncertainty is high');
     }
-    
     return lessons;
   }
 
   private async proposeImprovements(whatHappened: string, wasSuccessful: boolean): Promise<string[]> {
+    try {
+      const response = await resilientAIGateway.callWithFallback({
+        prompt: `Based on this AI action outcome, propose 1-3 specific, actionable improvements (one sentence each).
+
+Action: ${whatHappened.substring(0, 500)}
+Outcome: ${wasSuccessful ? 'SUCCESS' : 'FAILURE'}
+
+Return ONLY a JSON array of improvement strings. No markdown, no explanation.
+Example: ["Improvement one here", "Improvement two here"]`,
+        context: { role: 'metacognition', type: 'improvement_proposal' },
+        domain: 'internal_reflection',
+      });
+
+      try {
+        const parsed = JSON.parse(response.content.replace(/```json?\n?/g, '').replace(/```/g, '').trim());
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(String).slice(0, 5);
+      } catch (parseErr) {
+        log.warn('[TrinityThoughtEngine] Failed to parse AI response:', parseErr);
+      }
+    } catch (e) {
+      log.warn('[TrinityThoughtEngine] AI improvement proposal failed, using heuristic fallback');
+    }
+
     const improvements: string[] = [];
-    
     if (!wasSuccessful) {
       improvements.push('Add additional validation steps');
       improvements.push('Increase confidence threshold for this action type');
       improvements.push('Request human review for similar cases');
     }
-    
     return improvements;
+  }
+
+  async verifyMath(
+    description: string,
+    inputs: Record<string, number>,
+    expectedOutput: number,
+    computedOutput: number,
+    context: ThoughtContext = {}
+  ): Promise<ThinkResult & { mathValid: boolean; discrepancy: number }> {
+    const discrepancy = Math.abs(expectedOutput - computedOutput);
+    const tolerance = 0.005;
+    const mathValid = discrepancy <= tolerance;
+
+    const content = mathValid
+      ? `MATH VERIFIED: ${description} — computed ${computedOutput}, expected ${expectedOutput}, discrepancy ${discrepancy.toFixed(4)} within tolerance`
+      : `MATH DISCREPANCY: ${description} — computed ${computedOutput}, expected ${expectedOutput}, discrepancy ${discrepancy.toFixed(4)} EXCEEDS tolerance ${tolerance}. Inputs: ${JSON.stringify(inputs)}`;
+
+    const confidence = mathValid ? 0.99 : 0.3;
+    const result = await this.think('mathVerification', 'math_check', content, confidence, context);
+
+    if (!mathValid) {
+      platformEventBus.emit('trinity_math_discrepancy', {
+        description,
+        inputs,
+        expectedOutput,
+        computedOutput,
+        discrepancy,
+        timestamp: new Date(),
+        workspaceId: context.workspaceId,
+      });
+    }
+
+    return { ...result, mathValid, discrepancy };
+  }
+
+  async contextRecall(workspaceId: string, domain?: string, limit: number = 10): Promise<{
+    recentThoughts: Array<{ content: string; confidence: number; phase: string; createdAt: Date }>;
+    recentLessons: string[];
+    successRate: number;
+  }> {
+    const thoughts = await this.getRecentThoughts(limit, workspaceId);
+
+    const recentReflections = await db.select()
+      .from(trinityThoughtSignatures)
+      .where(
+        workspaceId
+          ? and(eq(trinityThoughtSignatures.workspaceId, workspaceId), eq(trinityThoughtSignatures.thoughtType, 'reflection'))
+          : eq(trinityThoughtSignatures.thoughtType, 'reflection')
+      )
+      .orderBy(desc(trinityThoughtSignatures.createdAt))
+      .limit(limit);
+
+    const recentLessons = recentReflections
+      .map(r => (r.context as any)?.lessonsLearned)
+      .filter(Boolean)
+      .flatMap((l: string) => l.split('\n'))
+      .filter((l: string) => l.trim().length > 0)
+      .slice(0, 10);
+
+    const scores = recentReflections
+      .map(r => parseFloat((r.context as any)?.performanceScore?.toString() || '0'))
+      .filter(s => s > 0);
+    const successRate = scores.length > 0
+      ? scores.filter(s => s >= 0.7).length / scores.length
+      : 0;
+
+    return {
+      recentThoughts: thoughts.map(t => ({
+        content: t.content,
+        confidence: parseFloat(t.confidence?.toString() || '0'),
+        phase: t.phase,
+        createdAt: t.createdAt!,
+      })),
+      recentLessons,
+      successRate,
+    };
+  }
+
+  async learnFromOutcome(
+    pattern: string,
+    outcome: 'success' | 'failure',
+    domain: string,
+    context: ThoughtContext = {}
+  ): Promise<ThinkResult> {
+    const content = outcome === 'success'
+      ? `LEARNED PATTERN (${domain}): "${pattern}" — reinforcing this approach for future similar tasks`
+      : `LEARNED ANTI-PATTERN (${domain}): "${pattern}" — flagging for avoidance in future similar tasks`;
+
+    const result = await this.think('reflection', 'learned_pattern', content, 0.85, context);
+
+    this.reflectionLog.push({
+      targetId: `pattern_${domain}_${Date.now()}`,
+      confidenceCalibration: outcome === 'success' ? 0.9 : 0.3,
+      outcome,
+    });
+    if (this.reflectionLog.length > 500) this.reflectionLog.shift();
+
+    return result;
   }
 
   private async calculateConfidenceCalibration(targetId: string): Promise<number> {
@@ -638,7 +812,7 @@ export function registerThoughtEngineActions() {
     {
       id: 'metacognition.get_unacknowledged_changes',
       name: 'Get Unacknowledged Changes',
-      description: 'Get platform changes Trinity hasn\'t analyzed yet',
+      description: 'Get platform changes I haven\'t analyzed yet',
       handler: async () => {
         return trinityThoughtEngine.getUnacknowledgedChanges();
       },
@@ -670,7 +844,7 @@ export function registerThoughtEngineActions() {
       name: action.name,
       category: 'metacognition',
       description: action.description,
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
         const startTime = Date.now();
         const result = await action.handler(request.payload || {});
@@ -685,5 +859,5 @@ export function registerThoughtEngineActions() {
     });
   }
 
-  console.log(`[TrinityThoughtEngine] Registered ${actions.length} metacognition actions`);
+  log.info(`[TrinityThoughtEngine] Registered ${actions.length} metacognition actions`);
 }

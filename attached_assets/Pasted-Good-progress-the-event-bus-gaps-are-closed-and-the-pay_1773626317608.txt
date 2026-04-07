@@ -1,0 +1,53 @@
+Good progress — the event bus gaps are closed and the payment pipelines are wired. But the audit from the first file flagged specific **production blockers** that haven't been fixed yet. Paste this into Replit now:
+
+---
+
+**PRODUCTION BLOCKER FIXES — READ BEFORE TOUCH | NO NEW FEATURES**
+
+Fix the following in priority order. These are the remaining items blocking real tenant onboarding.
+
+---
+
+**FIX 1 — Direct deposit data not encrypted**
+Routing numbers and account numbers are stored as plain varchar. Encrypt both fields using AES-256 or equivalent at rest. Add encrypt/decrypt helpers. All reads must decrypt transparently. All writes must encrypt before DB insert. This is a compliance requirement for ACH — do not skip.
+
+---
+
+**FIX 2 — QuickBooks auto-push after invoice send and after payroll approval**
+Currently QB sync is manual or nightly. Wire it so:
+- When an invoice status changes to `sent` — automatically trigger `qb.create_invoice` action
+- When a payroll run is approved — automatically trigger `qb.sync_payroll` action
+Both must be non-blocking — if QB sync fails, the invoice/payroll operation still succeeds but a retry is queued and the org owner is notified of the sync failure.
+
+---
+
+**FIX 3 — Financial record write-protection after close period**
+After a payroll run reaches `paid` status, make all its associated time entries and pay stubs read-only. After an invoice reaches `paid` or `voided` status, make it read-only. Any attempt to edit a closed record must return a 403 with message `"This record has been closed and cannot be modified."` Add this guard to every relevant PATCH and PUT route.
+
+---
+
+**FIX 4 — Payroll period unique constraint**
+Add a unique constraint on `(workspace_id, pay_period_start, pay_period_end)` to the payroll runs table. This prevents two payroll runs being created and processed for the same period, which would cause double-payment to employees.
+
+---
+
+**FIX 5 — Per-client billing cycle**
+Add a `billing_cycle` field to the clients table — values: `weekly`, `biweekly`, `monthly`. Default to the workspace billing cycle if not set. Invoice generation must respect the per-client cycle when determining which clients to bill on any given run.
+
+---
+
+**FIX 6 — Trinity proactive data readiness scan before payroll runs**
+Add a pre-payroll data readiness check that Trinity runs 48 hours before any scheduled payroll run. It must scan all active employees and flag: missing pay rate, missing direct deposit account, missing employment type (W2/1099). Surface a prioritized alert to the org owner listing every employee with missing data, with a direct link to fix each one. Do not wait until the payroll run itself to discover missing data.
+
+---
+
+**COMPLETION CRITERIA**
+1. TypeScript compile — zero errors
+2. Server restart — clean start
+3. All regression tests pass
+4. Report fix status per item
+5. Stop and wait
+
+---
+
+These six fixes close the last production blockers. Once they're done paste the results and I'll give you the final green light for real tenant onboarding.

@@ -23,9 +23,11 @@
  */
 
 import { db } from '../../db';
-import { systemAuditLogs, organizations } from '@shared/schema';
+import { systemAuditLogs, workspaces } from '@shared/schema';
 import { eq, and, gte, sql } from 'drizzle-orm';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityContentGuardrails');
 
 export type ViolationType = 
   | 'inappropriate'    // Sexual, explicit content
@@ -127,7 +129,7 @@ class TrinityContentGuardrails {
   private readonly violationWindowDays = 90;
 
   private constructor() {
-    console.log('[TrinityGuardrails] Content guardrails initialized');
+    log.info('[TrinityGuardrails] Content guardrails initialized');
   }
 
   static getInstance(): TrinityContentGuardrails {
@@ -263,24 +265,16 @@ class TrinityContentGuardrails {
   ): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        workspaceId,
-        userId,
         action: 'trinity_content_violation',
-        details: JSON.stringify({
-          violationType,
-          severity,
-          messagePreview: messageContent.substring(0, 100) + '...',
-          timestamp: new Date().toISOString(),
-        }),
         ipAddress: null,
-        severity: severity === 'critical' ? 'critical' : severity === 'high' ? 'error' : 'warning',
+        metadata: { severity: severity === 'critical' ? 'critical' : severity === 'high' ? 'error' : 'warning', details: JSON.stringify({ violationType, severity, messagePreview: messageContent.substring(0, 100) + '...', timestamp: new Date().toISOString() }) },
       });
 
       this.violationCache.delete(workspaceId);
       
-      console.log(`[TrinityGuardrails] Violation recorded: ${violationType} (${severity}) for workspace ${workspaceId}`);
+      log.info(`[TrinityGuardrails] Violation recorded: ${violationType} (${severity}) for workspace ${workspaceId}`);
     } catch (error) {
-      console.error('[TrinityGuardrails] Failed to record violation:', error);
+      log.error('[TrinityGuardrails] Failed to record violation:', error);
     }
   }
 
@@ -307,7 +301,8 @@ class TrinityContentGuardrails {
         .limit(10);
 
       const violations: ViolationRecord[] = logs.map(log => {
-        const details = JSON.parse(log.details || '{}');
+        const meta = (log.metadata as any) || {};
+        const details = typeof meta.details === 'string' ? JSON.parse(meta.details) : (meta.details || {});
         return {
           id: log.id,
           workspaceId: workspaceId,
@@ -323,7 +318,7 @@ class TrinityContentGuardrails {
       this.violationCache.set(workspaceId, violations);
       return violations;
     } catch (error) {
-      console.error('[TrinityGuardrails] Failed to get violations:', error);
+      log.error('[TrinityGuardrails] Failed to get violations:', error);
       return [];
     }
   }
@@ -383,21 +378,16 @@ Trinity is here to help your business thrive ethically and support your team's g
   async clearViolations(workspaceId: string, adminUserId: string): Promise<boolean> {
     try {
       await db.insert(systemAuditLogs).values({
-        workspaceId,
         userId: adminUserId,
         action: 'trinity_violations_cleared',
-        details: JSON.stringify({
-          clearedBy: adminUserId,
-          timestamp: new Date().toISOString(),
-        }),
-        severity: 'info',
+        metadata: { severity: 'info', details: JSON.stringify({ clearedBy: adminUserId, timestamp: new Date().toISOString() }) },
       });
 
       this.violationCache.delete(workspaceId);
-      console.log(`[TrinityGuardrails] Violations cleared for workspace ${workspaceId} by ${adminUserId}`);
+      log.info(`[TrinityGuardrails] Violations cleared for workspace ${workspaceId} by ${adminUserId}`);
       return true;
     } catch (error) {
-      console.error('[TrinityGuardrails] Failed to clear violations:', error);
+      log.error('[TrinityGuardrails] Failed to clear violations:', error);
       return false;
     }
   }

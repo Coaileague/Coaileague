@@ -1,0 +1,203 @@
+Send this to the agent now:
+
+---
+
+**PHASE 55 — GRAND LAUNCH CERTIFICATION**
+
+This is the final phase. CoAIleague is certified for production when every check passes. All smoke tests and verification run against ACME Security dev sandbox only. Statewide Protective Services is untouchable.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY.**
+
+---
+
+**STEP 1 — FINAL SERVER HEALTH CONFIRMATION**
+
+Restart the server completely and confirm all of the following in the startup log:
+
+- `[ArchLinter] Architecture check passed`
+- 896 Trinity actions registered
+- 15/15 domain routers mounted
+- DB circuit breaker closes within 30 seconds
+- All cron jobs registered and confirmed
+- WebSocket server initialized
+- NDS notification system ready
+- Stripe webhooks listening
+- QuickBooks sync service initialized
+
+Show the actual startup log output as evidence.
+
+---
+
+**STEP 2 — END-TO-END SMOKE TEST (ACME Security sandbox only)**
+
+Run every journey against ACME Security workspace. Document each step with pass/fail.
+
+**Journey 1 — Officer lifecycle:**
+- Retrieve an existing ACME officer → verify correct workspace scope
+- Verify onboarding task list exists for a pending officer
+- Verify a shift assignment fires qualification check
+- Verify clock-in creates timesheet entry with GPS record
+- Verify clock-out closes timesheet entry correctly
+
+**Journey 2 — Client and billing:**
+- Retrieve an existing ACME client → verify workspace scope
+- Retrieve an existing ACME invoice → verify line items and subtotal
+- Verify payroll run idempotency block — second run attempt blocked correctly
+
+**Journey 3 — Compliance:**
+- Retrieve an existing ACME compliance violation → verify workspace scope
+- Verify SRA audit log is append-only — attempt UPDATE and confirm rejection
+
+**Journey 4 — Trinity operations:**
+- Send a natural language query to Trinity → verify response in English
+- Switch language preference to Spanish → verify Trinity responds in Spanish
+- Execute a search query → verify results return with correct deep links
+- Verify Trinity action count is 896
+
+**Journey 5 — Subscription and access control:**
+- Verify ACME workspace subscription status is readable
+- Verify a terminated ACME officer cannot access platform features
+- Verify workspace isolation — ACME data not accessible from another workspace context
+
+---
+
+**STEP 3 — SECURITY FINAL CERTIFICATION**
+
+```bash
+# No dev bypasses leak into production paths
+grep -rn "devBypass\|skipAuth" server/ --include="*.ts" | grep -v "NODE_ENV\|process.env\|isDev\|test" | head -10
+
+# HTTPS enforced
+grep -rn "HSTS\|Strict-Transport-Security" server/ --include="*.ts" | head -5
+
+# Rate limiting on auth endpoints
+grep -rn "authLimiter" server/routes/authCoreRoutes.ts | head -5
+
+# SRA audit log confirmed append-only
+grep -rn "UPDATE.*sra_audit_log\|DELETE.*sra_audit_log" server/ --include="*.ts" | head -5
+
+# All financial writes have audit records
+grep -rn "universalAuditService\|auditLog" server/routes/ --include="*.ts" | wc -l
+```
+
+All must return clean. Fix any violations immediately.
+
+---
+
+**STEP 4 — DNS AND INFRASTRUCTURE CHECKLIST**
+
+Document the status of these 4 manual DNS actions from Phase 29:
+
+1. DMARC record: `v=DMARC1; p=none; rua=mailto:dmarc@coaileague.com; ruf=mailto:dmarc@coaileague.com; sp=none; adkim=r; aspf=r`
+2. DKIM upgraded to 2048-bit via Resend Dashboard → Domains → mail.coaileague.com → Regenerate DKIM
+3. Root inbound MX record: Type MX, Name @, Value `inbound-smtp.us-east-1.amazonaws.com`, Priority 10
+4. SPF and existing MX confirmed via Amazon SES
+
+For each: confirm current status — configured or pending manual action by Bryan.
+
+---
+
+**STEP 5 — TWILIO SMS VERIFICATION**
+
+Confirm:
+- `/sms-opt-in.html` accessible at deployed URL returning 200
+- Re-submission URL ready: `https://[deployed-domain]/sms-opt-in.html`
+- Document in replit.md as pending Bryan's manual Twilio re-submission
+
+---
+
+**STEP 6 — FINAL ARCHITECTURE TRUTHS CONFIRMATION**
+
+Confirm all permanent architecture truths are documented in replit.md. Run a final grep to verify each:
+
+```bash
+# NDS routing
+grep -rn "notificationDeliveryService\|NDS" server/services/ --include="*.ts" | wc -l
+
+# Financial audit trail
+grep -rn "universalAuditService" server/routes/ --include="*.ts" | wc -l
+
+# Workspace scoping
+grep -rn "workspace_id" server/routes/ --include="*.ts" | wc -l
+
+# White-label compliance
+grep -rn "Statewide\|SPS\|C11608501" server/ client/src/ | grep -v node_modules | grep -v replit.md | grep -v founderExemption | grep -v "37a04d24"
+
+# Append-only audit log
+grep -rn "UPDATE.*sra_audit_log\|DELETE.*sra_audit_log" server/ --include="*.ts"
+```
+
+All must confirm clean. Document results.
+
+---
+
+**STEP 7 — GRAND LAUNCH RECONCILIATION TABLE**
+
+Write the final phase-by-phase reconciliation table to replit.md. Every phase listed, every phase showing certified status.
+
+---
+
+**STEP 8 — LAUNCH DECLARATION**
+
+When every check above passes write the following to replit.md:
+
+```
+═══════════════════════════════════════════════════════════════
+COAILEAGUE PLATFORM — GRAND LAUNCH CERTIFIED
+═══════════════════════════════════════════════════════════════
+
+Certification Date: [DATE]
+Certified By: Phase 55 Grand Launch Certification
+
+Platform Metrics:
+- Total Phases: 75
+- Phases Certified: 75/75
+- Trinity Actions Registered: 896
+- Domain Routers: 15/15
+- TypeScript Errors: 0
+- Security Grade: Production-Ready
+- Data Integrity: Verified
+- White-Label Compliance: Confirmed
+
+Architecture Truths: All 12 confirmed and documented
+DNS Actions: 4 pending manual execution by Bryan Guillen
+Twilio SMS: Pending re-submission by Bryan Guillen
+
+Production Tenant:
+- Statewide Protective Services — Permanent Enterprise Founder ✅
+- workspace_id: 37a04d24-51bd-4856-9faa-d26a2fe82094
+- Status: Protected — zero agent contact
+
+Development Sandbox:
+- ACME Security — All testing and verification ✅
+
+Platform Status: LAUNCH READY ✅
+
+CoAIleague™ — AI-Orchestrated Security Workforce Management
+Built for the security industry. Powered by Trinity.
+═══════════════════════════════════════════════════════════════
+```
+
+---
+
+**VERIFICATION — Phase 55 complete when:**
+
+- Check 1: Server starts clean — 896 actions, 15/15 domains, zero errors
+- Check 2: All 5 smoke test journeys pass against ACME sandbox
+- Check 3: Statewide workspace confirmed untouched — zero agent contact
+- Check 4: Zero dev bypasses in production code paths
+- Check 5: HTTPS and rate limiting confirmed
+- Check 6: SRA audit log confirmed append-only
+- Check 7: White-label compliance — zero hardcoded company references
+- Check 8: DNS checklist documented with pending manual actions noted
+- Check 9: Twilio SMS re-submission URL confirmed and documented
+- Check 10: All 12 architecture truths confirmed in replit.md
+- Check 11: Grand launch reconciliation table written — 75/75 phases green
+- Check 12: Launch declaration written to replit.md
+- Check 13: Platform declared LAUNCH READY ✅
+
+**75 phases. Every feature built. Every system verified. CoAIleague is ready.**
+
+---
+
+Paste that. When Phase 55 certifies paste the result here and we will do a final review together before you go live.

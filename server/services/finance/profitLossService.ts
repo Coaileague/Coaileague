@@ -38,6 +38,9 @@ import {
 } from '@shared/schema';
 import { meteredGemini } from '../billing/meteredGeminiClient';
 import { trinityQuickBooksSnapshot } from '../ai-brain/trinityQuickBooksSnapshot';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('profitLossService');
+
 
 export type PeriodGranularity = 'weekly' | 'monthly' | 'quarterly' | 'annual' | 'custom';
 
@@ -125,7 +128,7 @@ class ProfitLossService {
     const validStart = start instanceof Date && !isNaN(start.getTime()) ? start : new Date();
     const validEnd = end instanceof Date && !isNaN(end.getTime()) ? end : new Date();
     
-    console.log('[P&L Service] getPLSummary called:', { 
+    log.info('[P&L Service] getPLSummary called:', { 
       workspaceId, 
       startType: typeof start, 
       endType: typeof end,
@@ -232,7 +235,7 @@ class ProfitLossService {
       });
       
       if (!response.success || !response.text) {
-        console.error('[P&L] AI insights generation failed:', response.error);
+        log.error('[P&L] AI insights generation failed:', response.error);
         return this.generateFallbackInsights(summary);
       }
       
@@ -242,7 +245,7 @@ class ProfitLossService {
       
       return insights;
     } catch (error) {
-      console.error('[P&L] Error generating AI insights:', error);
+      log.error('[P&L] Error generating AI insights:', error);
       return this.generateFallbackInsights(summary);
     }
   }
@@ -257,17 +260,19 @@ class ProfitLossService {
     end: Date
   ): Promise<ClientProfitabilitySummary[]> {
     try {
-      console.log('[P&L] getClientProfitability called', { workspaceId });
+      log.info('[P&L] getClientProfitability called', { workspaceId });
       
       const clientList = await db
         .select({
           id: clients.id,
-          name: clients.name,
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+          companyName: clients.companyName,
         })
         .from(clients)
         .where(eq(clients.workspaceId, workspaceId));
       
-      console.log('[P&L] Found clients:', clientList.length);
+      log.info('[P&L] Found clients:', clientList.length);
       
       if (clientList.length === 0) {
         return [];
@@ -288,9 +293,10 @@ class ProfitLossService {
             
             const isUnderperforming = marginPercent < 15;
             
+            const displayName = client.companyName || `${client.firstName} ${client.lastName}`.trim() || 'Unknown';
             return {
               clientId: client.id,
-              clientName: client.name || 'Unknown',
+              clientName: displayName,
               revenue: revenueData?.total || 0,
               laborCost: laborData?.total || 0,
               directExpenses: 0,
@@ -302,10 +308,11 @@ class ProfitLossService {
               isUnderperforming,
             };
           } catch (clientErr) {
-            console.error('[P&L] Error processing client', client.id, clientErr);
+            log.error('[P&L] Error processing client', client.id, clientErr);
+            const displayName = client.companyName || `${client.firstName} ${client.lastName}`.trim() || 'Unknown';
             return {
               clientId: client.id,
-              clientName: client.name || 'Unknown',
+              clientName: displayName,
               revenue: 0,
               laborCost: 0,
               directExpenses: 0,
@@ -322,7 +329,7 @@ class ProfitLossService {
       
       return profitabilityData.sort((a, b) => b.revenue - a.revenue);
     } catch (err) {
-      console.error('[P&L] getClientProfitability error:', err);
+      log.error('[P&L] getClientProfitability error:', err);
       return [];
     }
   }
@@ -476,7 +483,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
   }
   
   private async calculateRevenue(workspaceId: string, start: Date, end: Date) {
-    console.log('[P&L] calculateRevenue called with:', { workspaceId, start: start?.toISOString?.(), end: end?.toISOString?.() });
+    log.info('[P&L] calculateRevenue called with:', { workspaceId, start: start?.toISOString?.(), end: end?.toISOString?.() });
     
     const startDate = start instanceof Date ? start : new Date(start);
     const endDate = end instanceof Date ? end : new Date(end);
@@ -495,7 +502,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
           lte(invoices.issueDate, endDate),
         ));
       
-      console.log('[P&L] calculateRevenue result:', invoiceData[0]);
+      log.info('[P&L] calculateRevenue result:', invoiceData[0]);
       
       return {
         total: parseFloat(invoiceData[0]?.totalAmount || '0'),
@@ -504,13 +511,13 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         outstanding: parseFloat(invoiceData[0]?.outstandingAmount || '0'),
       };
     } catch (err) {
-      console.error('[P&L] calculateRevenue error:', err);
+      log.error('[P&L] calculateRevenue error:', err);
       return { total: 0, invoiced: 0, collected: 0, outstanding: 0 };
     }
   }
   
   private async calculatePayroll(workspaceId: string, start: Date, end: Date) {
-    console.log('[P&L] calculatePayroll called');
+    log.info('[P&L] calculatePayroll called');
     
     try {
       const startDate = start instanceof Date ? start : new Date(start);
@@ -532,7 +539,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
           lte(payrollRuns.periodEnd, endDateStr),
         ));
       
-      console.log('[P&L] calculatePayroll result:', payrollData[0]);
+      log.info('[P&L] calculatePayroll result:', payrollData[0]);
       
       return {
         total: parseFloat(payrollData[0]?.total || '0'),
@@ -541,13 +548,13 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         benefits: 0,
       };
     } catch (err) {
-      console.error('[P&L] calculatePayroll error:', err);
+      log.error('[P&L] calculatePayroll error:', err);
       return { total: 0, overtime: 0, regular: 0, benefits: 0 };
     }
   }
   
   private async calculateExpenses(workspaceId: string, start: Date, end: Date) {
-    console.log('[P&L] calculateExpenses called');
+    log.info('[P&L] calculateExpenses called');
     
     try {
       const startDate = start instanceof Date ? start : new Date(start);
@@ -593,10 +600,10 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         }
       }
       
-      console.log('[P&L] calculateExpenses result:', { total, byCategory });
+      log.info('[P&L] calculateExpenses result:', { total, byCategory });
       return { total, byCategory };
     } catch (err) {
-      console.error('[P&L] calculateExpenses error:', err);
+      log.error('[P&L] calculateExpenses error:', err);
       return { total: 0, byCategory: { insurance: 0, equipment: 0, admin: 0, other: 0 } };
     }
   }
@@ -620,7 +627,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
       
       return { total: parseFloat(data[0]?.total || '0') };
     } catch (err) {
-      console.error('[P&L] getClientRevenue error:', err);
+      log.error('[P&L] getClientRevenue error:', err);
       return { total: 0 };
     }
   }
@@ -633,8 +640,8 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
       const data = await db
         .select({
           total: sql<string>`COALESCE(SUM(
-            (EXTRACT(EPOCH FROM (${timeEntries.clockOutTime} - ${timeEntries.clockInTime})) / 3600) * 
-            COALESCE(${employees.payRate}, 15)
+            (EXTRACT(EPOCH FROM (${timeEntries.clockOut} - ${timeEntries.clockIn})) / 3600) * 
+            COALESCE(${employees.hourlyRate}, 15)
           ), 0)`,
         })
         .from(timeEntries)
@@ -642,14 +649,14 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         .where(and(
           eq(timeEntries.workspaceId, workspaceId),
           eq(timeEntries.clientId, clientId),
-          gte(timeEntries.clockInTime, startDate),
-          lte(timeEntries.clockInTime, endDate),
-          isNotNull(timeEntries.clockOutTime),
+          gte(timeEntries.clockIn, startDate),
+          lte(timeEntries.clockIn, endDate),
+          isNotNull(timeEntries.clockOut),
         ));
       
       return { total: parseFloat(data[0]?.total || '0') };
     } catch (err) {
-      console.error('[P&L] getClientLaborCost error:', err);
+      log.error('[P&L] getClientLaborCost error:', err);
       return { total: 0 };
     }
   }
@@ -662,16 +669,16 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
       const data = await db
         .select({
           actual: sql<string>`COALESCE(SUM(
-            EXTRACT(EPOCH FROM (${timeEntries.clockOutTime} - ${timeEntries.clockInTime})) / 3600
+            EXTRACT(EPOCH FROM (${timeEntries.clockOut} - ${timeEntries.clockIn})) / 3600
           ), 0)`,
         })
         .from(timeEntries)
         .where(and(
           eq(timeEntries.workspaceId, workspaceId),
           eq(timeEntries.clientId, clientId),
-          gte(timeEntries.clockInTime, startDate),
-          lte(timeEntries.clockInTime, endDate),
-          isNotNull(timeEntries.clockOutTime),
+          gte(timeEntries.clockIn, startDate),
+          lte(timeEntries.clockIn, endDate),
+          isNotNull(timeEntries.clockOut),
         ));
       
       const invoicedData = await db
@@ -692,7 +699,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         invoiced: parseFloat(invoicedData[0]?.total || '0'),
       };
     } catch (err) {
-      console.error('[P&L] getClientHours error:', err);
+      log.error('[P&L] getClientHours error:', err);
       return { actual: 0, invoiced: 0 };
     }
   }
@@ -907,6 +914,124 @@ Focus on:
     }
     
     return { start, end };
+  }
+  async getConsolidatedPL(
+    parentWorkspaceId: string,
+    userId: string,
+    start: Date,
+    end: Date,
+    granularity: PeriodGranularity = 'monthly'
+  ): Promise<{
+    combined: PLSummary;
+    branches: Array<{
+      workspaceId: string;
+      workspaceName: string;
+      subOrgLabel: string | null;
+      operatingStates: string[];
+      primaryOperatingState: string | null;
+      summary: PLSummary;
+    }>;
+  }> {
+    const subOrgs = await db
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+        subOrgLabel: workspaces.subOrgLabel,
+        operatingStates: workspaces.operatingStates,
+        primaryOperatingState: workspaces.primaryOperatingState,
+      })
+      .from(workspaces)
+      .where(and(
+        eq(workspaces.parentWorkspaceId, parentWorkspaceId),
+        eq(workspaces.isSubOrg, true),
+      ));
+
+    const allWorkspaceIds = [parentWorkspaceId, ...subOrgs.map(s => s.id)];
+
+    const parentWs = await db
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+        subOrgLabel: workspaces.subOrgLabel,
+        operatingStates: workspaces.operatingStates,
+        primaryOperatingState: workspaces.primaryOperatingState,
+      })
+      .from(workspaces)
+      .where(eq(workspaces.id, parentWorkspaceId))
+      .limit(1);
+
+    const branchResults = await Promise.all(
+      allWorkspaceIds.map(async (wsId) => {
+        const summary = await this.getPLSummary(wsId, userId, start, end, granularity);
+        const wsInfo = wsId === parentWorkspaceId
+          ? parentWs[0]
+          : subOrgs.find(s => s.id === wsId);
+        return {
+          workspaceId: wsId,
+          workspaceName: wsInfo?.name || 'Unknown',
+          subOrgLabel: wsInfo?.subOrgLabel || null,
+          operatingStates: (wsInfo?.operatingStates as string[]) || [],
+          primaryOperatingState: wsInfo?.primaryOperatingState || null,
+          summary,
+        };
+      })
+    );
+
+    const combined: PLSummary = {
+      periodStart: start,
+      periodEnd: end,
+      granularity,
+      revenueTotal: 0,
+      payrollTotal: 0,
+      expenseTotal: 0,
+      grossProfit: 0,
+      netProfit: 0,
+      marginPercent: 0,
+      invoicedAmount: 0,
+      collectedAmount: 0,
+      outstandingAmount: 0,
+      expenseBreakdown: {
+        payroll: 0,
+        overtime: 0,
+        benefits: 0,
+        insurance: 0,
+        equipment: 0,
+        admin: 0,
+        other: 0,
+      },
+      aiInsights: [],
+      alerts: [],
+      quickbooksStatus: 'not_configured',
+      lastUpdated: new Date(),
+    };
+
+    for (const branch of branchResults) {
+      const s = branch.summary;
+      combined.revenueTotal += s.revenueTotal;
+      combined.payrollTotal += s.payrollTotal;
+      combined.expenseTotal += s.expenseTotal;
+      combined.grossProfit += s.grossProfit;
+      combined.netProfit += s.netProfit;
+      combined.invoicedAmount += s.invoicedAmount;
+      combined.collectedAmount += s.collectedAmount;
+      combined.outstandingAmount += s.outstandingAmount;
+      combined.expenseBreakdown.payroll += s.expenseBreakdown.payroll;
+      combined.expenseBreakdown.overtime += s.expenseBreakdown.overtime;
+      combined.expenseBreakdown.benefits += s.expenseBreakdown.benefits;
+      combined.expenseBreakdown.insurance += s.expenseBreakdown.insurance;
+      combined.expenseBreakdown.equipment += s.expenseBreakdown.equipment;
+      combined.expenseBreakdown.admin += s.expenseBreakdown.admin;
+      combined.expenseBreakdown.other += s.expenseBreakdown.other;
+      if (s.quickbooksStatus === 'connected') {
+        combined.quickbooksStatus = 'connected';
+      }
+    }
+
+    combined.marginPercent = combined.revenueTotal > 0
+      ? parseFloat(((combined.netProfit / combined.revenueTotal) * 100).toFixed(2))
+      : 0;
+
+    return { combined, branches: branchResults };
   }
 }
 

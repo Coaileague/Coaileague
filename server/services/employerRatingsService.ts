@@ -149,6 +149,9 @@ export async function getRatingTrends(
   targetId?: string,
   granularity: 'week' | 'month' = 'week'
 ) {
+  if (!['week', 'month'].includes(granularity)) {
+    throw new Error(`Invalid granularity: ${granularity}`);
+  }
   let query = db
     .select({
       period: sql`DATE_TRUNC('${sql.raw(granularity)}', ${employerRatings.submittedAt})`,

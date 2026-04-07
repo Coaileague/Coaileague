@@ -1,0 +1,39 @@
+This is the right move. What you're describing is the complete platform specification — every feature, every flow, every expected output, written so the agent can trace any bug from trigger to end state without guessing. Let me build it.
+
+Download that file. Then send the agent this:
+
+---
+
+```
+Read OMEGA.md and OMEGA_STATE_CHECKPOINT.md first.
+
+Then append the entire contents of OMEGA_PLATFORM_SPEC.md 
+to the bottom of OMEGA.md. Do not modify any existing 
+content in OMEGA.md. Only append.
+
+After appending, confirm the file exists and tell me 
+how many domains are now documented in OMEGA.md.
+
+Then read Domain 1 through Domain 5 of the new spec 
+and verify that the current codebase matches the 
+specified behavior for each feature. Fix any divergence. 
+Update OMEGA_STATE_CHECKPOINT.md with results.
+
+Stop after Domain 5 and wait for my command.
+```
+
+---
+
+Here is what you now have and why it matters.
+
+**30 domains. Every feature. Beginning to end.**
+
+Every domain follows the same structure the agent can trace mechanically — Trigger, Steps, End State, Output, Race Conditions, Error Handling. When something breaks the agent does not search randomly. It opens the relevant domain, finds the step where actual behavior diverges from spec, and fixes that step only.
+
+**The most important section is Domain 28 — Financial System Universal Rules.** That three-layer atomicity spec, the write protection rules, and the audit trail completeness rules apply across every single financial feature. The agent checks those three things on every financial bug before it looks at anything else.
+
+**Domain 29 and 30 are the debugging shortcuts.** Silent failures, race conditions, tenant isolation, soft delete — these apply everywhere. When an issue does not fit a specific domain, the agent starts here.
+
+**The Definition of Correct Behavior at the bottom** gives the agent a 10-point checklist for any feature. Working correctly means all 10. Broken means at least one of the 10 is violated. That is how debugging becomes systematic instead of random.
+
+This plus OMEGA.md is the complete specification. The agent now knows what every feature is supposed to do, what correct looks like, and exactly what to check when it does not.

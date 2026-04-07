@@ -1,0 +1,189 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — SESSION CONTINUATION AUDIT
+Building on the previous session's completed work.
+Seven tasks closed. Now verify they hold and execute what remains.
+Read everything before touching anything. Report findings before fixing.
+
+---
+
+WHAT WAS COMPLETED LAST SESSION — VERIFY EACH ONE HELD
+
+Before building anything new confirm every fix from last session is still intact after restarts and schema changes.
+
+T1 — Scheduling double-charge: Open creditManager.ts and confirm scheduling_session_fee is completely gone. Confirm schedule_generation is set to exactly 300 credits. Confirm no other file still references scheduling_session_fee as an active charge. Run a test schedule generation and confirm exactly one ledger entry fires at 300 credits — not two entries.
+
+T2 — Invoice delivery tracking columns: Run a query against the invoices table and confirm delivery_confirmed and resent_after_delivery_failure columns exist with boolean DEFAULT false. Confirm they survived the db:push and are not null on existing rows.
+
+T3 — Invoice resend endpoints: Hit GET /api/admin/invoices/undelivered and confirm it returns a real list with a dollar total. Confirm the Statewide hard-block is active by attempting a dry run against Statewide and verifying it is rejected without the explicit includeStatewide flag. Do not run a live resend yet — that requires Bryan's review first.
+
+T4 — Collections escalation: Confirm overdueCollectionsService is wired inside AutomationTriggerService and fires in the daily billing cycle. Trigger the manual sweep via POST /api/admin/billing/collections-sweep and confirm it runs without errors. Confirm the 1 overdue invoice at $3.12K is caught by the sweep and the correct escalation tier fires based on how many days past due it currently is.
+
+T5 — Compliance pending notifications: Hit POST /api/admin/compliance/notify-pending and confirm it returns workspace counts. Confirm the in-platform notifications were created for org_owners with pending documents. Confirm the 26 pending documents across the relevant workspaces all triggered notifications.
+
+T6 — Credit pack canonical value: Open billingConfig.ts and confirm credits_ai_5000 is defined as $59, 5000 credits, never-expire, $0.0118 per credit. Confirm this value is what the credits pack purchase webhook handler reads — it must not have a separate hardcoded value anywhere else.
+
+T7 — Inbound email routing doc: Confirm docs/inbound-email-routing.md exists and contains the full spec for all four addresses with routing logic and build effort estimates. This is documentation only — the actual build is a future session.
+
+---
+
+PHASE 1 — INVOICE RESEND — BRYAN MUST REVIEW BEFORE EXECUTION
+
+The undelivered invoice list is now queryable. Before any resend runs Bryan must see the list.
+
+Run GET /api/admin/invoices/undelivered and display the full results including total invoice count, total dollar amount, breakdown by workspace, oldest invoice date, and newest invoice date.
+
+Present this data clearly. Do not execute the bulk resend. Do not run it in dry run mode against production. Surface the numbers and wait for explicit approval on which workspaces to include.
+
+When approval is given run POST /api/admin/invoices/bulk-resend with dryRun: true first for the approved workspaces. Show the dry run results — exactly which invoices would be resent, to which email addresses, for which amounts. Confirm the dry run output looks correct before switching dryRun to false.
+
+For Statewide specifically: do not include Statewide in any resend without Bryan explicitly providing the includeStatewide flag with confirmation. Statewide is production. Every action touching it is a real business event.
+
+After live resend executes: confirm Resend delivery receipts come back for each invoice. Update delivery_confirmed to true on webhook confirmation. Log every resend in the audit trail with reason: initial delivery failed resent after email barrel fix.
+
+---
+
+PHASE 2 — CREDIT AND BILLING FULL REBUILD
+
+This is the largest remaining structural gap. The canonical values are established. Build it now.
+
+CANONICAL TIER VALUES — WIRE EXACTLY:
+
+Free Trial: 500 credits total hard cap. 14 day expiration. 5 employees plus 1 manager hard ceiling. At zero: block completely, show upgrade prompt. At expiration: gate platform access.
+
+Starter: $899/month. 15 base seats. $10 per seat above 15 billed via Stripe end of cycle. 5000 credits per month hard cap. At zero: block all credit-gated features, show credits pack purchase prompt at $59.
+
+Professional: $1999/month. 50 base seats. $8 per seat above 50 via Stripe. 10000 credits per month soft cap. Overage at $0.01 per credit. Premium actions cost 2x. At zero: enter overage mode, meter every credit, show real-time accumulator, charge end of cycle via Stripe.
+
+Enterprise: $9999/month base plus $15 per seat all seats. 22000 credits per month soft cap. Same overage rules as Professional.
+
+AI Credits Pack: $59. Exactly 5000 credits. Never expire. $0.0118 per credit — intentionally above $0.01 overage rate. Monthly allocation consumed first, pack credits consumed second.
+
+BUGS TO FIX IN ORDER:
+
+Bug 1 — checkCredits() hard cap not enforcing on Trial and Starter. Balance check and deduction must be one atomic database transaction. Two simultaneous requests cannot both pass the same insufficient balance. Use row-level locking.
+
+Bug 2 — Soft cap has no overage billing code. Build it completely. When Professional or Enterprise balance goes below zero: allow the action, flag the ledger entry overage_flag true, update overage accumulator, notify org_owner on first overage of the cycle via notification panel and Org Operations Briefing Channel and Resend email simultaneously. End of billing cycle: sum overage ledger, create Stripe invoice item, charge, on success reset accumulator and allocate new cycle credits. On failure: retry 3 times, then switch to hard cap mode and alert platform_staff.
+
+Bug 3 — Scheduling session fee is already eliminated from T1. Confirm it is also removed from any credit reporting or itemization views so it does not show as a zero-cost line item confusing org_owners.
+
+Bug 4 — Ledger corruption from stress test data. Identify all entries with wrong tier labels or without Stripe references. Void them with reason documented. Create correct replacement entries. Run integrity check.
+
+Bug 5 — Free trial allocation: confirm it is now 500 not 150 everywhere — tier config, Stripe product metadata if applicable, and pricing page display.
+
+Bug 6 — Thresholds must be percentage-based not flat numbers. Free Trial: warn at 75 credits remaining (15%), urgent at 25 (5%), block at 0. Starter: warn at 1250 (25%), urgent at 500 (10%), block at 0. Professional: warn at 2500 (25%), urgent at 1000 (10%), overage mode at 0. Enterprise: warn at 5500 (25%), urgent at 2200 (10%), overage mode at 0. All threshold notifications fire all three channels simultaneously.
+
+Bug 7 — Credits pack Stripe product: confirm metadata includes credits: 5000. Confirm purchase webhook allocates exactly 5000 credits with Stripe payment reference. Confirm it is a one-time purchase not a subscription.
+
+Bug 8 — Seat overage billing: confirm code exists to calculate and charge seat overages at end of cycle via Stripe for all three paid tiers. If it does not exist build it now.
+
+Bug 9 — Monthly allocation reset: confirm it fires from the Stripe subscription renewal webhook not a cron job or manual process. Purchased credits must NOT reset. Overage accumulator must reset to zero. New balance equals carried forward purchased credits plus new monthly allocation.
+
+STRIPE PRODUCT VERIFICATION:
+Pull all CoAIleague products from Stripe API. Verify each exists in both test and production mode with correct prices and metadata matching the canonical values above. Any mismatch is a billing bug.
+
+CREDIT VERIFICATION TESTS — ALL 10 MUST PASS:
+
+Test 1: Set trial org to 10 credits. Attempt 300 credit action. Verify hard block, zero deducted, upgrade prompt shown, no ledger entry created.
+
+Test 2: Set Starter org to 0 credits. Attempt action. Verify hard block and credits pack purchase prompt. Simulate Stripe payment webhook. Verify 5000 credits allocated with Stripe reference. Attempt action again. Verify executes and 300 deducted.
+
+Test 3: Set Professional org to 0 monthly and 0 purchased credits. Attempt 400 credit action. Verify action executes, overage_flag true on entry, accumulator shows 400 credits at $4.00, all three channel notifications fire.
+
+Test 4: Same as Test 3 on Enterprise with 22000 allocation verified.
+
+Test 5: Set Starter to 20 employees. Simulate billing cycle end. Verify Stripe invoice item for $50 (5 seats x $10).
+
+Test 6: Trigger schedule generation. Verify exactly one 300 credit deduction. Verify no scheduling_session_fee entry exists.
+
+Test 7: Simultaneously trigger two 300 credit actions on Starter with 400 credits. Verify one succeeds and one blocks. Verify total deducted is exactly 300 not 600.
+
+Test 8: Sum all allocations minus sum all deductions for every test workspace. Verify result equals displayed balance exactly.
+
+Test 9: Set Professional to 2500 credits. Verify warning fires. Set to 1000. Verify urgent fires. Set to 0. Verify overage mode notification fires with accumulator visible.
+
+Test 10: Pull all Stripe products via API. Compare each against canonical values. Document any mismatch found.
+
+---
+
+PHASE 3 — WEBSOCKET REAL-TIME SIMULTANEOUS CONNECTION TEST
+
+Open two browser sessions simultaneously — session A as org_owner, session B as manager.
+
+Test each event and record whether it updated without a page refresh and how many seconds it took:
+
+Clock-in on session A — manager dashboard on session B updates.
+New incident submitted on session A — notification badge on session B increments.
+Shift assigned on session A — schedule view on session B updates.
+Invoice paid on session A — revenue widget on session B updates.
+Credit balance changes on session A — credits widget on session B updates.
+Trinity posts briefing on session A — Briefing Channel on session B shows it.
+New notification created — badge count on session B updates within 2 seconds.
+
+Then test reconnection: close session B, trigger 3 events on session A, reopen session B. Verify all 3 missed events are received on reconnect. If missed events are lost on reconnect build event buffering logic — store the last 50 events per workspace for 5 minutes so reconnecting clients can catch up.
+
+Document every result. Any event requiring a page refresh is a broken WebSocket and must be fixed before go-live.
+
+---
+
+PHASE 4 — MOBILE END TO END ON REAL DEVICE OR SMALLEST VIEWPORT
+
+GPS CLOCK-IN: Open platform on mobile as employee. Clock in. Confirm GPS coordinates captured. Confirm geofence check fires. Test clock-in from outside geofence and document the behavior — block, warn, or flag. Confirm DB record contains GPS coordinates, timestamp, employee ID, and site ID. Confirm manager gets real-time notification.
+
+OVERNIGHT SHIFT: Create shift from 10pm to 6am. Clock in at 10pm, out at 6am. Verify single time entry created spanning midnight with exactly 8 hours calculated.
+
+DUPLICATE CLOCK-IN: Clock in without clocking out. Attempt to clock in again. Verify blocked with clear message. Verify no duplicate DB entry.
+
+SHIFT SWAP: Employee A requests swap with Employee B. B receives notification and accepts. Manager receives approval request and approves. Both employees confirmed. DB schedule reflects swap correctly.
+
+CALL-OFF: Employee submits call-off with reason. Manager notified immediately. Trinity triggers and presents replacement list to manager. Manager assigns replacement with one tap. Replacement officer notified.
+
+INCIDENT REPORT: Submit from mobile with photo. Photo uploads successfully. GPS auto-populates. Report saves with all required fields. Manager receives real-time deep link notification to the report.
+
+SCHEDULE VIEW: Employee views schedule on mobile small screen. Next shift at top with site address, post orders, and supervisor contact. No horizontal scrolling required. Future shifts accessible.
+
+---
+
+PHASE 5 — COMPLIANCE WORM LOCK ENFORCEMENT TEST
+
+The 26 pending documents need the full workflow verified not just the notification.
+
+Walk through the complete flow: upload a test compliance document, route it for review, approve it, then test that the WORM lock is enforced.
+
+After approval attempt to edit the document via direct API call bypassing the UI. If the API allows editing an approved locked document that is a compliance failure regardless of what the UI shows. The lock must be enforced at the DB level.
+
+Also verify: locked documents cannot be deleted via API. Verify a locked document's audit trail is immutable. Verify the document vault returns a clear error when a write is attempted on a locked record.
+
+---
+
+PHASE 6 — FINAL PRODUCTION READINESS CHECKLIST
+
+Run through every item and record pass or fail with data proof. No item is marked pass based on assumption.
+
+BUILD: Clean build exit 0 zero errors. Zero dynamic imports pointing to missing files. Zero setTimeout calls replacing real API calls.
+
+SERVER: Zero unhandled rejections on startup. Zero missing module errors. Trinity 736+ actions, drift=0, 15/15 domains, 28/28 services.
+
+EMAIL: Test invoice delivered with working payment link confirmed. Test invite delivered with working accept token confirmed. Test password reset delivered with working token confirmed. Credit warning email fires with in-platform notification simultaneously confirmed. Pay stub notification fires after payroll approval confirmed.
+
+INVOICES: Undelivered invoice list reviewed by Bryan. Resend job executed for approved workspaces. Delivery confirmed via Resend webhooks. Audit trail entries created for every resend.
+
+COMPLIANCE: 26 pending documents — org owners notified. WORM lock blocks API write on locked document confirmed.
+
+WEBSOCKET: All 7 event types update without page refresh confirmed. Missed events received on reconnect confirmed.
+
+MOBILE: GPS clock-in with coordinates in DB confirmed. Overnight shift single entry correct hours confirmed. Duplicate clock-in blocked confirmed. Call-off replacement flow end to end confirmed.
+
+CREDITS: All 10 verification tests passing. Hard cap blocks on Trial and Starter confirmed. Soft cap overage mode on Professional and Enterprise confirmed. Overage Stripe charge fires end of cycle confirmed. Seat billing fires for all tiers confirmed. Credits pack allocates exactly 5000 on confirmed Stripe payment. Ledger math verified for every workspace.
+
+AUTH: Zero routes missing auth where required. Zero queries missing workspace_id filter. Statewide write protection active. Dev routes blocked in production.
+
+STRIPE: All products in test and production with correct prices and metadata. Webhook signature verification active. Idempotency enforced.
+
+ENVIRONMENT: All required vars documented and present. Production uses production keys. Rate limiting on all auth endpoints. 500 errors never return stack traces.
+
+---
+
+When every item on this checklist passes with data proof CoAIleague is ready for Statewide to go live. That is the finish line. Every session from here runs toward it.

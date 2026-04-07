@@ -1,0 +1,183 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 18 — DOCUMENT PIPELINE FULL VERIFICATION**
+
+This phase owns the complete document lifecycle from creation through execution, storage, retrieval, and audit. Documents in CoAIleague are legally binding — onboarding agreements, client contracts, and compliance records carry real weight. A broken signing flow, a missing document, or an access control gap is not a UX problem — it is a legal exposure. Report all findings before fixing anything. No exceptions.
+
+---
+
+**STEP 1 — DOCUMENT SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, scheduled job, and Trinity action that touches documents. Include:
+- Document creation and template management
+- Document routing and delivery
+- Signing flow — officer and client side
+- Countersignature logic
+- Document storage in the vault
+- Document retrieval and access control
+- Document status state machine
+- Expired and voided document handling
+- Document audit trail
+- Any scheduled job that touches document records
+
+Flag any document mutation that has no corresponding audit trail write.
+
+---
+
+**STEP 2 — DOCUMENT SCHEMA VERIFICATION**
+
+The document data model must be complete:
+- Every document record has: workspace_id, entity_id, entity_type, document_type, status, created_by, created_at
+- Document types are validated against a canonical registry — not unconstrained varchar
+- Status field enforced as enum: `draft → pending_signature → partially_signed → executed → expired → voided → archived`
+- Multiple signatories supported per document — each with their own signature status and timestamp
+- Document version history preserved — amendments do not overwrite the original
+- SHA-256 integrity hash stored and verified on retrieval
+- Storage URL is workspace-scoped — officers cannot construct a URL to access another workspace's documents
+- Document linked to the correct entity — onboarding docs linked to employee, contracts linked to client
+
+---
+
+**STEP 3 — TEMPLATE MANAGEMENT VERIFICATION**
+
+Document templates are the source of all generated documents:
+- Template registry exists as a canonical source — not scattered inline
+- Templates support merge fields — dynamic values injected at generation time (officer name, start date, rate, post, etc.)
+- Template versioning — when a template is updated, existing documents generated from the old version are not affected
+- Template access role-gated — only authorized roles can create or modify templates
+- Template preview available before sending — manager can review before routing to officer or client
+- Missing merge field at generation time produces an explicit error — not a silently blank field in the document
+
+---
+
+**STEP 4 — DOCUMENT GENERATION AND ROUTING VERIFICATION**
+
+Trace document generation from trigger to delivery:
+- Onboarding document generated on officer activation — correct template selected, all merge fields populated
+- Contract generated with correct rate, scope, post, and term data from the client record
+- Document routed to the correct signatory via NDS — secure link delivered, not the document itself as an attachment
+- Secure link is time-bounded and workspace-scoped — cannot be used after expiry or by another workspace
+- Document visible in the recipient's portal immediately after routing
+- Generation failure produces an explicit error and does not create a partial document record
+
+---
+
+**STEP 5 — SIGNING FLOW VERIFICATION**
+
+The signing flow must be E-SIGN compliant and airtight:
+- Officer signing flow: officer receives secure link → opens document → reviews → signs → signature recorded with timestamp and IP address
+- Client signing flow: same pattern — secure link, review, sign, recorded
+- Countersignature fires automatically after all required signatories have signed — not manually triggered
+- Countersignature applied by the correct authorized role (org_owner or designated signer)
+- Signature audit log per action: who signed, when, IP address, document hash at time of signing
+- Document status transitions correctly: `pending_signature → partially_signed → executed` as each signatory completes
+- Signed document stored in vault with SHA-256 integrity hash updated post-signature
+- Officer cannot sign on behalf of another officer — signing identity verified against session
+- E-SIGN disclosure presented and accepted before signing — acceptance logged
+
+---
+
+**STEP 6 — DOCUMENT VAULT AND STORAGE VERIFICATION**
+
+Every document must be stored securely and retrievably:
+- Document stored in private object storage — not publicly accessible via URL guessing
+- Storage path is workspace-scoped — confirm no path construction allows cross-workspace access
+- SHA-256 hash verified on every retrieval — tampered documents detected and flagged
+- Document retrievable by authorized roles only — verify role check on every retrieval endpoint
+- Large document handling — verify no timeout or truncation on documents above a size threshold
+- Vault accessible from the document management page with correct role filtering
+- Deleted documents soft-deleted only — physically retained for audit purposes, not permanently removed
+
+---
+
+**STEP 7 — DOCUMENT STATUS STATE MACHINE VERIFICATION**
+
+Every state transition must be enforced:
+- `draft → pending_signature` — only when all required signatories are identified and routing is confirmed
+- `pending_signature → partially_signed` — only when at least one but not all signatories have signed
+- `partially_signed → executed` — only when all required signatories have signed and countersignature is applied
+- `executed → expired` — only via scheduled expiry check, not manual transition
+- `executed → voided` — only by org_owner or compliance_officer with a reason recorded
+- `voided → any state` — blocked entirely, voided is terminal
+- `expired → any state` — blocked entirely, expired is terminal
+- Every transition writes an audit record: document_id, from_state, to_state, actor_id, reason, timestamp
+
+---
+
+**STEP 8 — EXPIRED AND VOIDED DOCUMENT HANDLING**
+
+Documents that are no longer active must be handled correctly:
+- Scheduled check identifies executed documents past their term end date and transitions to `expired`
+- Expiry notification fires to document owner and relevant parties via NDS
+- Voided documents display a clear visual indicator in all portals — not shown as active
+- Voided documents cannot be signed, routed, or re-sent
+- Expired contracts trigger a renewal prompt to the account manager
+- Archived documents accessible to compliance officer for audit purposes but not visible in active document lists
+
+---
+
+**STEP 9 — DOCUMENT ACCESS CONTROL VERIFICATION**
+
+Every document must be accessible only to authorized parties:
+- Officers can only view documents they are a signatory on or that are addressed to them
+- Clients can only view documents linked to their client record
+- Managers can view all documents in their workspace
+- Compliance officers can view all documents for audit purposes
+- Documents from other workspaces are completely inaccessible regardless of role
+- Secure signing links are single-use scoped — expired after use or after time limit
+- Document access logged — every view and download recorded with actor, timestamp, and document_id
+
+---
+
+**STEP 10 — INBOUND DOCUMENT PROCESSING (Phase 13 Integration)**
+
+Documents received via docs@ inbound email (Phase 13) must integrate correctly:
+- Attachments stored in document vault with correct workspace_id, entity_id, document_type
+- Document record created with status `received` and submission_method `email`
+- Routing to correct reviewer fires via NDS based on document type
+- Inbound document appears in the correct document management view
+- If sender is unrecognized — document stored but flagged as unverified_sender
+- Inbound license and certification documents automatically linked to the officer's license record (Phase 17 integration)
+
+---
+
+**STEP 11 — TRINITY DOCUMENT ACTIONS**
+
+Trinity must be able to query and act on documents:
+- `document.query` — query document status, signatories, and history for a specific document or entity
+- `document.generate` — generate a document from a template for a specific entity
+- `document.route` — route a document to signatories
+- `document.void` — void a document with a reason (requires org_owner or compliance_officer role)
+- `document.export` — export documents for a specific entity or date range as a package
+- All 5 actions respect workspace context and role permissions
+
+---
+
+**STEP 12 — VERIFICATION**
+
+Run all checks before Phase 18 is marked complete:
+- Check 1: Document schema complete — all required fields, canonical type enum, status enum enforced at DB and application layer
+- Check 2: Template registry exists — merge fields, versioning, role-gated access confirmed
+- Check 3: Generation failure produces explicit error — no partial document records created
+- Check 4: Secure signing links are time-bounded and workspace-scoped
+- Check 5: Officer signing records IP address and timestamp — E-SIGN audit log confirmed
+- Check 6: Countersignature fires automatically after all signatories complete — not manually triggered
+- Check 7: Document status machine enforced — voided and expired are terminal, no transitions out
+- Check 8: SHA-256 hash verified on retrieval — tampered document detected and flagged
+- Check 9: Storage path is workspace-scoped — cross-workspace access impossible
+- Check 10: Soft-delete confirmed — voided documents retained for audit, not permanently removed
+- Check 11: Expired documents trigger renewal prompt for contracts
+- Check 12: Officers cannot view documents outside their own signatory scope
+- Check 13: Phase 13 inbound docs@ integration confirmed — attachments land in vault with correct metadata
+- Check 14: Phase 17 integration confirmed — inbound license docs linked to officer license record
+- Check 15: All 5 Trinity document actions registered and callable
+- Check 16: All document mutations have audit trail entries — grep confirms zero untracked writes
+- Check 17: Server starts clean with zero TypeScript errors across all document-related files
+
+Do not mark Phase 18 complete until all 17 checks pass. Produce a structured findings report — every component investigated, pass or gap — before beginning any fixes. Findings first. Full picture assembled. Then fixes. Every gap from low to critical gets fixed before this phase closes.
+
+---
+
+Paste that and hold the line. Documents are legal instruments — the same zero tolerance standard applies.

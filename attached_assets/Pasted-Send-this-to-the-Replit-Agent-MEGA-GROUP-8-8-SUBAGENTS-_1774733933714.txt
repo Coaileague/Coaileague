@@ -1,0 +1,654 @@
+Send this to the Replit Agent:
+
+---
+
+**MEGA GROUP 8 — 8 SUBAGENTS RUNNING IN PARALLEL**
+**Phases 35P, 35Q, 35R, 35S, 35T, 47, 42, 45**
+
+You have 8 subagents available. Assign one phase per subagent and run all 8 simultaneously. Each subagent works on entirely different files — zero overlap confirmed. Every subagent follows all standing rules independently.
+
+**ABSOLUTE RULES FOR ALL 8 SUBAGENTS:**
+1. Read your full phase spec before writing a single line of code
+2. Inventory what already exists before building anything new
+3. Complete your phase fully with its own reconciliation table before stopping
+4. Run all 5 mandatory quality checks independently
+5. TypeScript zero errors in your modified files
+6. Server must start clean after your changes
+7. 56/56 tests must remain green — run the full suite after your phase
+8. Nothing Left Behind — one row per check, all green, specific evidence
+9. Sync with all prior phases — your feature must integrate correctly with existing infrastructure
+10. If your phase conflicts with another subagent's files — stop and flag immediately
+
+**7-STEP FRAMEWORK applies to every feature in every phase:**
+Trigger → Payload → API → Processing → Persistence → Confirmation → Sync
+
+**5 MANDATORY QUALITY CHECKS per phase:**
+1. TypeScript: `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -30` — zero errors
+2. Import completeness — all hooks and utilities imported in every modified component
+3. State variable declarations — no undeclared variables
+4. Schema alignment — client expects exactly what server returns
+5. Server startup — ArchLinter passed, zero runtime errors
+
+---
+
+**SUBAGENT 1 — PHASE 35P: MULTI-COMPANY, SUBSIDIARY, AND FRANCHISE MANAGEMENT**
+
+This phase enables enterprise operators to manage multiple security company subsidiaries or franchises from a single parent account. Consolidated reporting, inter-subsidiary staffing, and policy broadcasting.
+
+**INVENTORY FIRST:**
+Check existing workspace architecture, RBAC system, and permission system. Check Phase 9 RBAC, Phase 28 multi-tenant isolation, Phase 30 tier enforcement. Document how workspaces currently relate to each other before building anything.
+
+**SCHEMA:**
+```sql
+workspace_relationships: id, parent_workspace_id, child_workspace_id, 
+relationship_type (enum: subsidiary/franchise/partner), 
+created_by, created_at, is_active
+
+consolidated_reports: id, parent_workspace_id, report_type, 
+period_start, period_end, data (jsonb), generated_at
+```
+
+**BACKEND:** `server/routes/multiCompanyRoutes.ts`
+- `GET /api/multi-company/subsidiaries` — list all child workspaces under parent
+- `POST /api/multi-company/relationships` — create parent-subsidiary link, requires platform_staff approval
+- `DELETE /api/multi-company/relationships/:id` — dissolve relationship
+- `GET /api/multi-company/consolidated/dashboard` — aggregate metrics across all subsidiaries: total officer count, total revenue, average compliance score, total open shifts, total active clients
+- `GET /api/multi-company/consolidated/reports` — combined financial and operational report for a period
+- `POST /api/multi-company/policy/broadcast` — parent sets compliance policy that applies to all subsidiaries — all subsidiaries notified via NDS
+- `GET /api/multi-company/officer-pool` — officers eligible for inter-subsidiary shift coverage — filtered by qualifications and authorization
+- Data isolation enforced at route level — parent sees aggregated metrics only, never individual officer PII across subsidiaries without explicit authorization
+- Trinity operates at parent level — can answer questions across all subsidiaries with aggregated data only
+- Enterprise tier minimum — gated via Phase 30 tier enforcement
+
+**TRINITY ACTIONS:**
+- `multi_company.summary` — consolidated performance across all subsidiaries
+- `multi_company.compliance` — compliance score comparison across subsidiaries
+- `multi_company.staffing` — inter-subsidiary staffing opportunities and coverage gaps
+
+**UI:** At `/multi-company`:
+- Parent dashboard: subsidiary cards showing key metrics per workspace — officer count, revenue, compliance score, open shifts, last activity
+- Consolidated metrics panel: aggregate revenue, total headcount, average compliance score, open positions across all subsidiaries
+- Policy broadcast form: select policy type, description, effective date, applies to all subsidiaries
+- Officer pool view: available officers for inter-subsidiary coverage with qualification badges
+- Relationship management: add or dissolve subsidiary relationships
+
+**SYNCS WITH:** Phase 9 (RBAC), Phase 28 (multi-tenant isolation), Phase 30 (tier enforcement), Phase 34 (analytics — feed consolidated data into BI dashboard)
+
+**VERIFICATION — 16 checks:**
+- Check 1: `workspace_relationships` table created and migrated
+- Check 2: Parent-subsidiary relationship creation works
+- Check 3: Consolidated dashboard aggregates metrics correctly across subsidiaries
+- Check 4: Data isolation confirmed — parent cannot see individual officer PII across subsidiaries
+- Check 5: Policy broadcast reaches all subsidiaries via NDS
+- Check 6: Inter-subsidiary officer pool filtered by qualifications correctly
+- Check 7: All 3 Trinity actions registered in action registry
+- Check 8: Consolidated report generates with correct aggregated data
+- Check 9: Enterprise tier gating enforced — Starter/Professional/Business blocked
+- Check 10: Relationship dissolution works correctly
+- Check 11: All routes workspace-scoped — no cross-workspace data leakage
+- Check 12: TypeScript zero errors
+- Check 13: Import completeness confirmed
+- Check 14: State variable declarations confirmed
+- Check 15: Server startup clean
+- Check 16: 56/56 tests green
+
+---
+
+**SUBAGENT 2 — PHASE 35Q: PUBLIC API DOCUMENTATION AND DEVELOPER PORTAL**
+
+This phase builds the external API and developer portal allowing third-party tools to integrate with CoAIleague. Security companies use many specialized tools — this lets them connect everything.
+
+**INVENTORY FIRST:**
+Check Phase 50 webhook system for any existing API key infrastructure. Check Phase 24 security for rate limiting patterns to follow. Check existing routes for any developer portal references. Document what exists.
+
+**SCHEMA:**
+```sql
+api_keys: id, workspace_id, name, key_hash (bcrypt), 
+key_prefix (first 8 chars for display only), 
+scopes (text array), last_used_at, expires_at, 
+is_active, created_by, created_at
+
+api_key_usage: id, api_key_id, workspace_id, endpoint, 
+method, response_status, response_time_ms, timestamp
+```
+
+**BACKEND:** `server/routes/developerPortalRoutes.ts`
+- `GET /api/developers/keys` — list API keys showing prefix only, never full key
+- `POST /api/developers/keys` — generate new API key — returns full key ONCE only, never again — stored as bcrypt hash
+- `DELETE /api/developers/keys/:id` — revoke key immediately
+- `GET /api/developers/keys/:id/usage` — usage analytics for a specific key: requests per hour, error rate, top endpoints
+- `GET /api/developers/docs` — serve OpenAPI spec JSON generated from existing routes
+- `GET /api/developers/status` — current API health and rate limit status
+- API key authentication middleware: `Authorization: Bearer sk_live_xxxxx` header — validate against hashed keys
+- Rate limiting per API key: 1000 requests per hour default, configurable per key
+- Every API key request logged to `api_key_usage` — non-blocking fire-and-forget
+- Business tier minimum
+
+**DEVELOPER PORTAL UI:** At `/developers`:
+- API key management panel: create new key, view prefix and creation date, revoke, set scopes and expiry
+- Usage dashboard: requests per hour chart, error rate, top 5 endpoints, response time percentiles
+- Interactive API documentation: Swagger UI rendered from OpenAPI spec
+- Code examples panel: JavaScript, Python, and cURL examples for common operations (list officers, create shift, get invoices)
+- Webhook configuration shortcut: links directly to Phase 50 webhook management
+- Rate limit status: current usage vs hourly limit with visual gauge
+
+**TRINITY ACTIONS:**
+- `api.usage.summary` — API usage metrics and top consumers for workspace
+- `api.keys.status` — active keys, their scopes, and recent usage
+
+**SYNCS WITH:** Phase 24 (security and rate limiting), Phase 50 (webhook system), Phase 30 (tier enforcement — Business tier minimum)
+
+**VERIFICATION — 16 checks:**
+- Check 1: Both tables created and migrated
+- Check 2: API key generation returns full key exactly once — subsequent requests show prefix only
+- Check 3: Key stored as bcrypt hash — grep confirms no plaintext key storage anywhere
+- Check 4: API key auth middleware validates correctly — invalid key returns 401
+- Check 5: Rate limiting per key enforced — 429 returned on breach with Retry-After header
+- Check 6: All API key requests logged to `api_key_usage` non-blocking
+- Check 7: OpenAPI spec served at `/api/developers/docs` — valid JSON
+- Check 8: Swagger UI renders correctly at `/developers`
+- Check 9: Usage dashboard shows requests per hour and error rate
+- Check 10: Business tier gating enforced via Phase 30 `requirePlan()`
+- Check 11: Both Trinity actions registered in action registry
+- Check 12: TypeScript zero errors
+- Check 13: Import completeness confirmed
+- Check 14: State variable declarations confirmed
+- Check 15: Server startup clean
+- Check 16: 56/56 tests green
+
+---
+
+**SUBAGENT 3 — PHASE 35R: INSURANCE CERTIFICATE, BONDING, AND COVERAGE MANAGEMENT**
+
+Security companies must maintain active insurance and bonding at all times. Lapses expose the company and clients to liability. This phase tracks every policy and alerts before anything expires.
+
+**INVENTORY FIRST:**
+Check Phase 21 compliance system for any existing insurance tracking. Check Phase 17 license tracking for alert pattern to follow. Check `stateRegulatoryKnowledgeBase` for state minimum coverage data. Document what currently exists.
+
+**SCHEMA:**
+```sql
+insurance_policies: id, workspace_id, policy_type 
+(enum: general_liability/workers_compensation/professional_liability/
+commercial_auto/umbrella/crime_fidelity_bond/cyber_liability/other), 
+carrier_name, policy_number, coverage_amount (decimal), 
+effective_date, expiration_date, premium_amount (decimal), 
+certificate_url, named_insured, 
+additional_insured_clients (text array), 
+is_active, created_by, created_at
+
+insurance_alerts: id, workspace_id, policy_id, 
+alert_type (enum: expiry_90/expiry_60/expiry_30/expiry_7/
+coverage_gap/state_minimum_breach), 
+fired_at, acknowledged_at, created_at
+```
+
+**BACKEND:** `server/routes/insuranceRoutes.ts`
+- `GET /api/insurance/policies` — list all policies with expiry status
+- `POST /api/insurance/policies` — add policy with certificate PDF upload to document vault
+- `PATCH /api/insurance/policies/:id` — update policy details
+- `DELETE /api/insurance/policies/:id` — archive policy (soft delete)
+- `GET /api/insurance/compliance` — coverage gap analysis and state minimum compliance check
+- `POST /api/insurance/certificates/generate` — generate formatted certificate of insurance request letter for sending to clients — workspace-branded
+- Expiry alert cron: daily scan, fire NDS to org_owner and compliance officer at 90/60/30/7 days before expiration
+- State minimum check: cross-reference coverage amounts against `stateRegulatoryKnowledgeBase` for each state where workspace operates — alert if below state minimum
+- Coverage gap detection: alert if any required policy type is missing or expired
+
+**TRINITY ACTIONS:**
+- `insurance.status` — current coverage summary, active policies, and gaps
+- `insurance.expiry` — policies expiring in next 90 days sorted by urgency
+- `insurance.state_compliance` — state minimum coverage compliance across all operating states
+
+**UI:** At `/insurance`:
+- Policy cards grid: carrier, policy type, coverage amount, expiry date, days remaining, status badge (active/expiring/expired)
+- Expiry timeline: visual timeline showing all policies by expiry date
+- Coverage gap indicator: checklist of required coverage types — green if covered, red if missing or expired
+- State compliance checker: for each state workspace operates in — shows minimum required vs actual coverage
+- Certificate request generator: fills in workspace details, generates formatted letter
+- Alert history: all fired insurance alerts with acknowledgment status
+
+**SYNCS WITH:** Phase 17 (license alert pattern), Phase 21 (compliance system), Phase 27 (NDS notifications), Phase 36 (document vault for certificate storage)
+
+**VERIFICATION — 16 checks:**
+- Check 1: Both tables created and migrated
+- Check 2: Policy creation with certificate PDF upload works — stored in document vault
+- Check 3: Expiry alerts fire at 90/60/30/7 days via NDS — cron registered
+- Check 4: State minimum check fires alert when coverage below minimum
+- Check 5: Coverage gap detection identifies missing required policy types
+- Check 6: Certificate request letter generates with workspace branding — no hardcoded company names
+- Check 7: All 3 Trinity actions registered in action registry
+- Check 8: Policy list renders with correct status badges and days remaining
+- Check 9: Expiry timeline renders all policies chronologically
+- Check 10: State compliance checker cross-references knowledge base correctly
+- Check 11: All routes workspace-scoped
+- Check 12: TypeScript zero errors
+- Check 13: Import completeness confirmed
+- Check 14: Schema alignment confirmed
+- Check 15: Server startup clean
+- Check 16: 56/56 tests green
+
+---
+
+**SUBAGENT 4 — PHASE 35S: CLIENT SATISFACTION SURVEYS AND SERVICE QUALITY MEASUREMENT**
+
+Client satisfaction data must live in the platform — not in someone's email inbox. This phase builds structured survey delivery, response collection, NPS tracking, and churn signal detection.
+
+**INVENTORY FIRST:**
+Check Phase 34 client health score for integration point — survey results must feed into health score. Check Phase 20 client portal for delivery mechanism. Check Phase 35G client communications for overlap. Document what exists before building.
+
+**SCHEMA:**
+```sql
+survey_templates: id, workspace_id, name, 
+survey_type (enum: post_incident/quarterly_pulse/
+contract_renewal/adhoc), 
+questions (jsonb array of {id, text, type, options}), 
+is_active, created_by, created_at
+
+survey_instances: id, workspace_id, client_id, 
+template_id, trigger_type, 
+status (enum: draft/sent/completed/expired), 
+sent_at, completed_at, expires_at, 
+nps_score (integer 0-10), overall_rating (1-5), 
+responses (jsonb), created_at
+
+survey_alerts: id, workspace_id, client_id, survey_id, 
+alert_type (enum: low_nps/negative_sentiment/churn_signal), 
+fired_at, acknowledged_by, created_at
+```
+
+**BACKEND:** `server/routes/surveyRoutes.ts`
+- `GET /api/surveys/templates` — list workspace survey templates
+- `POST /api/surveys/templates` — create survey template with custom questions
+- `PATCH /api/surveys/templates/:id` — update template
+- `POST /api/surveys/send` — send survey to client via NDS — generates secure response token with 14-day expiry
+- `POST /api/surveys/respond/:token` — client submits responses — NO AUTH REQUIRED, token-gated only
+- `GET /api/surveys/responses` — list completed surveys with NPS scores and ratings
+- `GET /api/surveys/analytics` — NPS trend over time, average rating by client, response rate, churn risk summary
+- On completion: update Phase 34 `analytics_client_health_scores` with survey NPS score
+- Churn signal: NPS score 0-6 fires immediate NDS alert to account manager assigned to that client
+- Auto-trigger hooks: post-incident survey fires 24 hours after incident resolution (Phase 22 integration)
+
+**TRINITY ACTIONS:**
+- `survey.send` — trigger survey delivery for a specific client
+- `survey.analyze` — sentiment analysis on recent survey text responses
+- `survey.churn_risk` — flag clients with declining NPS trend or multiple low scores
+
+**UI:** At `/surveys`:
+- Template builder: drag-and-drop question builder, preview mode, question types (NPS 0-10, rating 1-5, text, multiple choice)
+- Active surveys panel: sent but not yet completed — shows days remaining, client name, survey type
+- Response dashboard: NPS gauge showing current average, rating trend chart, recent response feed
+- Churn risk list: clients with NPS below 7 sorted by score ascending — highest risk at top
+- Analytics tab: response rate by client, NPS distribution chart, month-over-month trend
+- Client portal: clean branded survey form, no platform navigation visible, mobile-optimized
+
+**SYNCS WITH:** Phase 20 (client portal), Phase 22 (incident system — auto-trigger), Phase 27 (NDS delivery), Phase 34 (client health score update)
+
+**VERIFICATION — 16 checks:**
+- Check 1: All 3 tables created and migrated
+- Check 2: Survey template creation with custom questions works
+- Check 3: Survey sent to client via NDS with secure response token
+- Check 4: Client completes survey without auth — token-gated only, no login required
+- Check 5: NPS score calculated correctly from 0-10 response
+- Check 6: Phase 34 `analytics_client_health_scores` updated on survey completion
+- Check 7: Churn signal NDS alert fires when NPS score 0-6
+- Check 8: All 3 Trinity actions registered in action registry
+- Check 9: NPS trend chart renders correctly in analytics tab
+- Check 10: Response rate calculated per client
+- Check 11: Post-incident auto-trigger hook wired to Phase 22
+- Check 12: All routes workspace-scoped
+- Check 13: TypeScript zero errors
+- Check 14: Schema alignment confirmed
+- Check 15: Server startup clean
+- Check 16: 56/56 tests green
+
+---
+
+**SUBAGENT 5 — PHASE 35T: OFFICER RECOGNITION, AWARDS, AND CULTURE BUILDING**
+
+Retention is the biggest challenge in security. Recognition builds culture and reduces turnover. Trinity proactively surfaces recognition opportunities so managers never miss a milestone.
+
+**INVENTORY FIRST:**
+Check Phase 35J performance management for commendation records that may already exist. Check Phase 34 analytics for attendance and performance data that feeds recognition suggestions. Check Phase 48 onboarding for milestone date tracking. Document what exists before building.
+
+**SCHEMA:**
+```sql
+recognition_awards: id, workspace_id, officer_id, 
+award_type (enum: officer_of_month/perfect_attendance/
+client_commendation/milestone_6mo/milestone_1yr/
+milestone_3yr/milestone_5yr/life_saver/above_and_beyond), 
+awarded_by, reason, client_id (nullable), 
+approved_by, approved_at, is_public, created_at
+
+recognition_nominations: id, workspace_id, nominee_id, 
+nominator_id, award_type, reason, 
+status (enum: pending/approved/rejected), 
+reviewed_by, reviewed_at, created_at
+```
+
+**BACKEND:** `server/routes/recognitionRoutes.ts`
+- `GET /api/recognition/awards` — list awards with filters (officer, type, date range)
+- `POST /api/recognition/nominations` — manager nominates officer for award
+- `PATCH /api/recognition/nominations/:id/approve` — org_owner approves nomination — award issued, NDS to officer
+- `PATCH /api/recognition/nominations/:id/reject` — reject nomination with reason
+- `GET /api/recognition/wall` — public recognition wall — all workspace officers can view
+- `GET /api/recognition/officer/:officerId` — all awards for a specific officer
+- `GET /api/recognition/pending` — nominations awaiting org_owner approval
+- Milestone cron: daily check — when officer hire date anniversary matches 6mo/1yr/3yr/5yr auto-create nomination for org_owner review — do not auto-award without approval
+- Client commendation pipeline: positive client feedback in Phase 35G triggers Trinity to create a commendation nomination suggestion
+
+**TRINITY ACTIONS:**
+- `recognition.suggest` — proactively surface officers with perfect attendance, high performance, client praise
+- `recognition.summary` — recognition activity across workspace for a period
+- `recognition.client_commendation` — process positive client feedback into commendation nomination
+
+**UI:** At `/recognition`:
+- Recognition wall: public feed of all approved awards visible to all workspace users — officer photo, award type badge, reason, date — most recent first
+- Nomination form: award type selector, nominee search, reason text field, supporting evidence upload
+- Pending nominations queue: org_owner sees all pending nominations — approve or reject with one click
+- Officer recognition profile section: all awards displayed on officer profile page (Phase 31 integration)
+- Milestone tracker: upcoming anniversaries in next 30 days — who is due for a milestone award
+- Trinity suggestions panel: Trinity's proactive recommendation list with one-click nominate button
+
+**SYNCS WITH:** Phase 31 (officer profile), Phase 34 (performance data for suggestions), Phase 35G (client commendation pipeline), Phase 35J (performance records), Phase 48 (hire date for milestones)
+
+**VERIFICATION — 16 checks:**
+- Check 1: Both tables created and migrated
+- Check 2: Nomination creation works with all required fields
+- Check 3: Org_owner approval required before award is issued — no auto-award
+- Check 4: NDS notification fires to officer on award approval
+- Check 5: Recognition wall renders all public approved awards
+- Check 6: Milestone cron creates nominations (not awards) on anniversary dates
+- Check 7: All 3 Trinity actions registered in action registry
+- Check 8: Trinity suggestions use Phase 34 attendance and performance data
+- Check 9: Client commendation pipeline creates nomination from positive feedback
+- Check 10: Officer profile shows all awards (Phase 31 integration)
+- Check 11: Pending nominations queue shows correctly for org_owner
+- Check 12: All routes workspace-scoped
+- Check 13: TypeScript zero errors
+- Check 14: Schema alignment confirmed
+- Check 15: Server startup clean
+- Check 16: 56/56 tests green
+
+---
+
+**SUBAGENT 6 — PHASE 47: OFFICER COMPLIANCE DOCUMENTATION AND EVIDENCE VAULT**
+
+This phase builds the structured evidence vault for compliance documents — license photos, firearms qualifications, TCOLE certificates, background check consents. Trinity parses uploaded documents to extract structured data.
+
+**INVENTORY FIRST:**
+Check Phase 17 license tracking — license records already exist. Check Phase 18 document pipeline — document vault already exists. Check Phase 33 SRA portal — compliance evidence visibility for auditors. Check Phase 48 onboarding tasks — upload tasks reference this system. Document exactly what already exists before building anything. Do not duplicate existing Phase 17 or Phase 18 work.
+
+**SCHEMA:**
+```sql
+compliance_evidence: id, workspace_id, officer_id, 
+evidence_type (enum: license_photo_front/license_photo_back/
+firearms_qualification/tcole_certificate/
+background_check_consent/drug_test_result/
+id_front/id_back/training_certificate/other), 
+document_url, sha256_hash, verified_by, verified_at, 
+expiry_date, status (enum: pending_review/verified/rejected/expired), 
+rejection_reason, trinity_confidence_score (decimal 0-1), 
+trinity_extracted_data (jsonb), created_at
+
+compliance_verification_log: id, workspace_id, officer_id, 
+evidence_id, action (enum: submitted/verified/rejected/expired/re_submitted), 
+actor_id, notes, created_at
+```
+
+**BACKEND:** `server/routes/complianceEvidenceRoutes.ts`
+- `GET /api/compliance-evidence/:officerId` — all evidence documents for an officer
+- `POST /api/compliance-evidence` — officer uploads evidence — triggers Trinity document parsing on upload
+- `POST /api/compliance-evidence/:id/verify` — compliance officer verifies with notes
+- `POST /api/compliance-evidence/:id/reject` — reject with reason — NDS to officer
+- `GET /api/compliance-evidence/pending` — all evidence awaiting review — sorted by submission date
+- `GET /api/compliance-evidence/expiring` — evidence expiring in next 30/60/90 days
+- Trinity document parsing on upload: extract license number, expiry date, certification type — confidence scored 0-1 — stored in `trinity_extracted_data` — compliance officer reviews and confirms
+- Cross-reference: when a license photo is verified cross-reference extracted license number against Phase 17 `officer_licenses` table — flag if mismatch
+- SRA portal integration: verified compliance evidence visible to SRA auditors within their audit scope (Phase 33 data access rules apply)
+
+**TRINITY ACTIONS:**
+- `compliance.evidence.parse` — extract structured data from uploaded compliance document
+- `compliance.evidence.verify` — confidence-scored verification recommendation for compliance officer
+- `compliance.evidence.gaps` — officers with missing required compliance documents by type
+
+**UI:** At `/compliance-evidence`:
+- Officer compliance passport: all evidence documents in a grid per officer — grouped by type, status badges
+- Pending review queue: documents awaiting compliance officer action — side-by-side document viewer with Trinity extraction preview
+- Expiry pipeline: documents expiring by 30/60/90 day buckets
+- Upload flow: guided sequential capture for each evidence type — mobile camera integration
+- Verification workflow: compliance officer sees document image, Trinity's extracted data, confidence score — one-click verify or reject with notes
+- SRA integration: SRA auditors see read-only view of verified compliance evidence
+
+**SYNCS WITH:** Phase 17 (license records cross-reference), Phase 18 (document vault storage), Phase 33 (SRA portal access), Phase 48 (onboarding task completion triggers)
+
+**VERIFICATION — 18 checks:**
+- Check 1: Both tables created and migrated
+- Check 2: Evidence upload stores file in document vault with SHA-256 hash
+- Check 3: Trinity document parsing fires on upload — extracted data stored in `trinity_extracted_data`
+- Check 4: Trinity confidence score displayed to compliance officer during review
+- Check 5: Verification records actor_id and timestamp in verification log
+- Check 6: Rejection fires NDS to officer with rejection reason
+- Check 7: Cross-reference with Phase 17 license records flags mismatches
+- Check 8: Pending review queue shows all unverified evidence sorted by date
+- Check 9: Expiry pipeline shows evidence in 30/60/90 day buckets
+- Check 10: All 3 Trinity actions registered in action registry
+- Check 11: SRA portal can view verified evidence within their audit scope — Phase 33 regression confirmed
+- Check 12: Officer compliance passport renders all document types with correct status badges
+- Check 13: All routes workspace-scoped and role-gated
+- Check 14: TypeScript zero errors
+- Check 15: Import completeness confirmed
+- Check 16: Schema alignment confirmed
+- Check 17: Server startup clean
+- Check 18: 56/56 tests green
+
+---
+
+**SUBAGENT 7 — PHASE 42: PRODUCTION DEPLOYMENT READINESS**
+
+This phase hardens the platform for real production use. Every environment assumption, security configuration, and operational procedure must be verified and documented.
+
+**INVENTORY FIRST:**
+Check current environment configuration. Check existing health endpoints. Check session configuration. Check error monitoring setup. Check CI/CD configuration if any exists. Document current state completely before making any changes.
+
+**ENVIRONMENT SEPARATION:**
+Verify and fix:
+- `NODE_ENV` correctly gates dev-only features — dev login bypass inaccessible when `NODE_ENV=production`
+- No hardcoded development values leak into production: run `grep -rn "localhost\|127.0.0.1\|dev_only\|development_only" server/ --include="*.ts" | grep -v node_modules` — confirm zero violations
+- All API keys and secrets are environment variables: run `grep -rn "sk_test\|sk_live\|whsec_\|hardcoded" server/ --include="*.ts" | grep -v node_modules` — confirm zero violations
+- Vite build strips all dev-only code from production bundle
+
+**DATABASE MIGRATIONS:**
+- All schema changes applied via idempotent startup migrations — safe to run multiple times
+- Every g5TableInit and similar migration uses `CREATE TABLE IF NOT EXISTS` — confirmed
+- Migration order documented — dependent tables created after their dependencies
+- Rollback procedure documented in replit.md for each major schema change
+
+**HEALTH CHECKS:**
+Build or verify these endpoints:
+- `GET /health` — returns `{status: "ok", timestamp}` when server ready — used by load balancer, no auth required
+- `GET /api/health/db` — returns circuit breaker state, pool stats, last failure — Phase CB regression check
+- `GET /api/health/detailed` — all service statuses (DB, NDS, Stripe, QuickBooks, AI providers) — auth-gated to platform_staff only
+
+**ERROR MONITORING:**
+- Unhandled exceptions captured and logged with workspace context
+- Critical errors tagged with severity: payment failures, auth failures, data mutations
+- PII filtered from error logs — officer SSNs, bank details, passwords never logged: run `grep -rn "ssn\|bankAccount\|password\|secret" server/middleware/errorHandler*` — confirm filtering is active
+
+**ZERO-DOWNTIME CONSIDERATIONS:**
+- WebSocket clients reconnect automatically after server restart — confirmed from Phase CB work
+- Session store survives server restart — sessions not lost on deployment
+- Database migrations complete before server accepts traffic
+
+**SECURITY HARDENING FINAL CHECK:**
+Run final security sweep:
+```bash
+# Check for any remaining dev bypasses
+grep -rn "devBypass\|skipAuth\|noAuth" server/ --include="*.ts" | grep -v node_modules
+
+# Confirm HTTPS-only headers
+grep -rn "HSTS\|Strict-Transport" server/ --include="*.ts"
+
+# Confirm all sensitive routes have requireAuth
+grep -rn "router\.\(get\|post\|patch\|delete\)" server/routes/ --include="*.ts" | grep -v "requireAuth\|requireSRAAuth\|requirePlan" | head -20
+```
+
+Document all findings. Fix any violations found.
+
+**DOCUMENT IN replit.md:**
+- Environment variables required for production (complete list)
+- Deployment checklist: steps to deploy safely
+- Rollback procedure: steps to revert if deployment fails
+- DNS actions still required (from Phase 29 — 4 manual DNS actions)
+
+**VERIFICATION — 16 checks:**
+- Check 1: Zero hardcoded localhost or dev-only values — grep confirms
+- Check 2: `NODE_ENV=production` blocks dev login bypass — confirmed
+- Check 3: All secrets are environment variables — grep confirms zero hardcoded keys
+- Check 4: All startup migrations confirmed idempotent — `CREATE TABLE IF NOT EXISTS` pattern
+- Check 5: Rollback procedure documented in replit.md
+- Check 6: `GET /health` returns 200 with correct body — no auth required
+- Check 7: `GET /api/health/db` returns circuit breaker state — Phase CB regression confirmed
+- Check 8: `GET /api/health/detailed` auth-gated to platform_staff only
+- Check 9: Server only accepts traffic after DB connection confirmed
+- Check 10: PII filtering confirmed in error handler — SSNs and bank details not logged
+- Check 11: WebSocket clients reconnect after restart — confirmed
+- Check 12: Session store survives restart — no forced logouts on deployment
+- Check 13: All sensitive routes have requireAuth — grep confirms
+- Check 14: HSTS header confirmed — HTTPS enforced
+- Check 15: TypeScript zero errors
+- Check 16: 56/56 tests green
+
+---
+
+**SUBAGENT 8 — PHASE 45: CODEBASE CLEANUP AND TECHNICAL DEBT RESOLUTION**
+
+This phase cleans everything accumulated across 75 phases before the final bug sweep. Clean code is easier to audit, easier to debug, and safer to deploy.
+
+**INVENTORY FIRST — run all diagnostics before removing anything:**
+
+```bash
+# Count console.log statements in server production code
+grep -rn "console\.log" server/ --include="*.ts" | grep -v node_modules | wc -l
+
+# Count console.log in client production code
+grep -rn "console\.log" client/src/ --include="*.tsx" --include="*.ts" | grep -v node_modules | wc -l
+
+# Count TODO and FIXME markers
+grep -rn "TODO\|FIXME\|HACK\|XXX" server/ client/src/ | grep -v node_modules | wc -l
+
+# Count commented-out code blocks
+grep -rn "\/\*\|\/\/" server/ --include="*.ts" | grep -v node_modules | wc -l
+
+# Find any remaining hardcoded company references
+grep -rn "Statewide\|SPS\|Guillen\|C11608501" server/ client/src/ | grep -v node_modules | grep -v "replit.md"
+```
+
+Show all counts before removing anything. Document every finding.
+
+**WHAT TO CLEAN — in this order:**
+
+**Step 1 — Console.log removal:**
+- Remove ALL `console.log` statements from server production code
+- Remove ALL `console.log` statements from client production code
+- Keep `console.error` only where it serves a real logging purpose and is not already captured by error monitoring
+- Replace any remaining important debug logs with structured logging service calls
+- After removal: `grep -rn "console\.log" server/ client/src/ | grep -v node_modules` must return zero
+
+**Step 2 — Hardcoded company reference sweep:**
+- Confirm zero hardcoded SPS, Statewide, Guillen, or C11608501 references outside of replit.md and billing exemption constants
+- Fix any found violations immediately
+
+**Step 3 — TODO and FIXME resolution:**
+- For each TODO: implement the missing feature if small, convert to replit.md known issue if large, or remove if no longer relevant
+- For each FIXME: fix the issue or document as accepted technical debt in replit.md
+- After resolution: zero raw TODOs or FIXMEs in production code paths
+
+**Step 4 — Dead code removal:**
+- Identify commented-out code blocks longer than 5 lines — remove them
+- Any component or function imported nowhere — remove
+- Run 56/56 tests after every batch of removals to catch accidental removal of needed code
+
+**Step 5 — Import cleanup:**
+- Remove unused imports in all files modified during cleanup
+- Run TypeScript compiler after each file cleaned to catch over-removal
+
+**Step 6 — Duplicate utility consolidation:**
+- Identify any utility functions that do the same thing in different files
+- Consolidate to single canonical version in shared utilities
+- Update all callers
+
+**WHAT NOT TO TOUCH:**
+- Any migration file
+- Any seed data file
+- Any test file
+- Any file modified by another subagent in this group — check before touching
+- Any file with a `// @keep` comment
+- The founderExemption constants that reference Statewide — these are legitimate system constants
+
+**DOCUMENT IN replit.md:**
+- Final console.log count before and after
+- List of TODOs converted to known issues
+- List of duplicate utilities consolidated
+- Any accepted technical debt with justification
+
+**VERIFICATION — 14 checks:**
+- Check 1: Zero `console.log` in server production code — grep confirms
+- Check 2: Zero `console.log` in client production code — grep confirms
+- Check 3: Zero hardcoded SPS/Statewide/Guillen references outside legitimate constants — grep confirms
+- Check 4: Zero TODO markers in production code paths — grep confirms
+- Check 5: Zero FIXME markers — all resolved or documented as accepted debt
+- Check 6: Zero commented-out code blocks over 5 lines
+- Check 7: Duplicate utility functions consolidated — callers updated
+- Check 8: Unused imports removed from all cleaned files
+- Check 9: 56/56 tests green after ALL cleanup — full regression run
+- Check 10: TypeScript zero errors after cleanup
+- Check 11: Server startup clean after cleanup
+- Check 12: Known technical debt documented in replit.md
+- Check 13: Cleanup summary written to replit.md with before/after counts
+- Check 14: No other subagent's files touched — confirmed
+
+---
+
+**AFTER ALL 8 SUBAGENTS COMPLETE — REPORT FORMAT:**
+
+Each subagent reports independently:
+
+```
+PHASE 35P: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 35Q: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 35R: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 35S: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 35T: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 47:  CERTIFIED ✅ — [N] gaps fixed, 18/18 checks green
+PHASE 42:  CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 45:  CERTIFIED ✅ — [N] gaps fixed, 14/14 checks green
+
+MEGA GROUP 8 COMPLETE — 8 phases certified
+Total phases certified: 73 of 75
+Remaining: Phase 54B → Phase 55 (Final Group 9)
+```
+
+---
+
+**MANDATORY SYNC AUDIT — runs immediately after all 8 subagents certify:**
+
+Before Final Group 9 begins run the cross-phase synchronization audit:
+
+```bash
+# Verify all new routes have workspace_id scoping
+grep -rn "workspace_id" server/routes/multiCompanyRoutes.ts server/routes/developerPortalRoutes.ts server/routes/insuranceRoutes.ts server/routes/surveyRoutes.ts server/routes/recognitionRoutes.ts server/routes/complianceEvidenceRoutes.ts | wc -l
+
+# Verify all new features write audit records
+grep -rn "universalAuditService\|auditLog\|writeAudit" server/routes/multiCompanyRoutes.ts server/routes/insuranceRoutes.ts server/routes/surveyRoutes.ts server/routes/recognitionRoutes.ts | wc -l
+
+# Verify Trinity action registry total count
+grep -rn "registerAction\|platformActionHub" server/ --include="*.ts" | wc -l
+
+# Full regression
+npm run test
+```
+
+Document every gap found in the sync audit and fix before proceeding to Phase 54B.
+
+---
+
+Paste that to the agent now. All 8 subagents clearly assigned, fully detailed, zero file conflicts. Standing by for results.

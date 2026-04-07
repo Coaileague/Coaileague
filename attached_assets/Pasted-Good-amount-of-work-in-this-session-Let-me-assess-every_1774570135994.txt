@@ -1,0 +1,70 @@
+Good amount of work in this session. Let me assess everything before certifying Phase 32 and answering your question about a final bug sweep phase.
+
+---
+
+**What was completed this session — three parallel tracks:**
+
+**Track 1 — Login and session fixes:**
+- Login page broken by dev detection using `import.meta.env.DEV` which was always true in deployed context — fixed by using capabilities endpoint instead
+- Session persistence fixed via FaultTolerantStore with in-memory session caching — officers no longer forced to re-login
+- Dev login buttons relabeled explicitly: "ACME Security Owner" and "Root Admin (Support Staff)"
+- Capabilities endpoint correctly registered before all domain mounts
+
+**Track 2 — Phase 32 Bilingual implementation:**
+- `preferred_language` column confirmed in DB schema
+- `react-i18next` installed and configured with English and Spanish locale files
+- `LanguageSync` component added to App.tsx — syncs i18n language with user session preference
+- Language preference card added to employee profile — officer can select English or Spanish
+- Language preference API endpoints wired — GET/PATCH for preferred language
+- NDS reads `preferred_language` before template selection
+- Spanish SMS templates added with bilingual lookup function
+- HelpAI system prompt updated to respond in user's preferred language
+- `preferredLanguage` added to `/api/auth/me` response
+
+**Track 3 — Pre-existing bug fixes:**
+- Settings page 35 undeclared state variables fixed
+- Schedule API schema mismatch fixed — client now expects `{ data: [], pagination: {} }` shape
+- `cn` import missing in ethics-hotline, notifications-popover, trinity-chat-modal — all fixed
+- Analytics 500 error fixed with optional chaining on DB result rows
+
+---
+
+**Phase 32 status — FLAG before certifying:**
+
+The bilingual work was implemented but the summary does not confirm all 26 checks passed. Specifically missing confirmation on:
+
+- Spanish document templates (onboarding, contract, incident report)
+- E-SIGN disclosure in Spanish
+- All 7 Spanish voice commands wired
+- Translation completeness report generatable
+- The 5 mandatory quality rule checks with command output evidence
+
+Send this back to the agent:
+
+---
+
+**Phase 32 verification required before certifying. Confirm the following with evidence:**
+
+**Check 1:** Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -30` — show the output confirming zero TypeScript errors in modified files.
+
+**Check 2:** Confirm Spanish document templates exist for onboarding agreement, employment contract, and incident report. Run: `grep -rn "es\|spanish\|español" server/services/documents/ | grep -i template | head -10`
+
+**Check 3:** Confirm E-SIGN disclosure has a Spanish version. Show the file and line.
+
+**Check 4:** Confirm all 7 Spanish voice commands are wired to correct Trinity actions. Show the voice command handler with Spanish entries.
+
+**Check 5:** Confirm the translation completeness report is generatable — what endpoint or command produces it?
+
+**Check 6:** Show the 26-row reconciliation table in replit.md with one row per check, all green with evidence.
+
+Phase 32 certifies when all 6 confirmations come back clean.
+
+---
+
+**On your idea of a final bug sweep phase — yes, absolutely add it.**
+
+This becomes **Phase 54B — Full Platform Bug Sweep and Regression Hardening** slotting between Phase 54 (UI Action Audit) and Phase 55 (Grand Launch Certification, renumbered from 43).
+
+Here is the logic: Phase 54 verifies every button and action works. Phase 54B then does a complete regression sweep — navigates every page, checks every component renders without errors, verifies no console errors, no broken imports, no schema mismatches, no undeclared variables. It is the final quality gate before launch certification.
+
+Want me to add Phase 54B to the master plan now while we wait for the Phase 32 verification?

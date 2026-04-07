@@ -1,0 +1,151 @@
+Paste this into Replit:
+
+---
+
+**PATTERN ELIMINATION AUDIT — ALL DOMAINS | READ BEFORE TOUCH | FIX EVERYTHING FOUND**
+
+This is a pattern-based scan not a feature scan. You are looking for the same five broken patterns repeating across every domain. Find every instance of each pattern across the entire codebase and fix them all in one pass. Do not fix symptoms one by one — find the pattern, map every location it appears, fix all locations together.
+
+---
+
+**PATTERN 1 — FRONTEND CALLING NON-EXISTENT OR WRONG ROUTE**
+
+Search every `useQuery`, `useMutation`, `apiRequest`, `fetch`, and `axios` call in the entire `client/src/` directory. For every API path called, verify the exact path is mounted in the backend. Check for:
+- URL prefix mismatches — frontend calls `/api/compliance/my-status` but backend mounts at `/api/compliance-status/my-status`
+- Missing route mounts — route file exists but never added to `server/index.ts` or main router
+- Method mismatches — frontend does GET but backend only has POST
+- Parameter format mismatches — frontend sends `/api/shifts/:id` but backend expects `/api/shifts/detail/:id`
+
+For every mismatch found — fix the frontend path to match the backend, or mount the missing route. Show a table of every mismatch found and how it was resolved.
+
+---
+
+**PATTERN 2 — WEBSOCKET EVENT NAME MISMATCHES**
+
+Search every `socket.on(`, `socket.emit(`, WebSocket message handler, and `broadcastToWorkspace(` call across both frontend and backend.
+
+Build two lists:
+- Every event name the backend broadcasts
+- Every event name the frontend listens for
+
+Find every asymmetry — backend broadcasts `schedules_updated` but frontend listens for `schedule_updated`. Backend broadcasts `compliance_updated` but frontend has no handler. Frontend listens for `payroll_updated` but backend never sends it.
+
+For every mismatch — standardize on the backend name as canonical. Update the frontend listener to match. If the frontend has a handler for an event the backend never sends, remove the dead handler. If the backend sends an event nobody listens for, add the frontend handler.
+
+---
+
+**PATTERN 3 — SILENT ERROR SWALLOWING**
+
+Search the entire codebase for:
+- `.catch(console.error)` or `.catch(console.warn)` or `.catch(() => {})` on any operation that mutates data, sends money, sends notifications, or changes workflow state
+- `try { } catch(e) { }` blocks with empty catch or console.log only on financial or state-mutating operations
+- Any `Promise` chain with no error handler at all
+
+For every instance found on a critical path (money, notifications, state changes, auth):
+- Replace with proper error handling that either throws, writes to an error table, or notifies the org owner
+- Add the error to `trinity_credit_failures` if it involves credits, or `billing_audit_log` if it involves money, or `audit_logs` if it involves state
+
+For non-critical paths (cache invalidation, analytics, telemetry) — document with a comment `// non-critical: failure is acceptable` and leave the catch as-is.
+
+---
+
+**PATTERN 4 — CACHE INVALIDATION GAPS**
+
+Search every `useMutation` in the frontend. For every mutation that succeeds, verify it calls `queryClient.invalidateQueries` on every related query key that would be stale after that mutation.
+
+Common gaps to look for:
+- Creating a shift does not invalidate the schedule query
+- Approving payroll does not invalidate the payroll list query
+- Adding an employee does not invalidate the employee count or roster query
+- Paying an invoice does not invalidate the AR aging query
+- Updating client settings does not invalidate the client detail query
+
+For every mutation missing invalidations — add `queryClient.invalidateQueries` for every affected query key. Group related invalidations so a single mutation invalidates all stale data in one call.
+
+---
+
+**PATTERN 5 — AUTH MIDDLEWARE MISSING ON PROTECTED ROUTES**
+
+Search every route file for routes that:
+- Access workspace-scoped data but do not have `ensureAuth` or equivalent middleware
+- Read or write employee, client, invoice, payroll, or schedule data without validating the JWT
+- Accept `workspaceId` from `req.body` or `req.params` without cross-validating against `req.workspaceId` from the JWT
+- Are mounted under `/api/` but have no auth guard at all
+
+For every unprotected route found — add the appropriate auth middleware. If `workspaceId` comes from the request instead of the JWT, replace it.
+
+---
+
+**EXECUTION ORDER**
+
+Do not fix all patterns simultaneously. Work in this exact order to avoid conflicts:
+
+**Round 1** — Fix Pattern 1 (route mismatches) first. This is the foundation — fixing routes before fixing WebSocket names prevents double work.
+
+**Round 2** — Fix Pattern 2 (WebSocket mismatches) after routes are confirmed correct.
+
+**Round 3** — Fix Pattern 3 (silent errors) across all domains.
+
+**Round 4** — Fix Pattern 4 (cache invalidation) across all frontend mutations.
+
+**Round 5** — Fix Pattern 5 (auth gaps) last since these may require middleware changes that affect other routes.
+
+---
+
+**DOMAIN SCAN ORDER**
+
+Within each pattern fix, scan domains in this order so nothing is missed:
+
+1. Auth & onboarding
+2. Scheduling & shifts
+3. Employees & contractors
+4. Clients & contracts
+5. Invoicing & billing
+6. Payroll & timesheets
+7. Chat & shift rooms
+8. Compliance & licensing
+9. Notifications & alerts
+10. Trinity autonomous actions
+11. Settings & org configuration
+12. Reports & analytics
+13. Safety & welfare checks
+14. Document safe & uploads
+15. Admin & platform management
+
+---
+
+**AFTER EACH ROUND**
+
+Before moving to the next round:
+1. Restart the server — confirm clean start
+2. Report how many instances of the pattern were found
+3. Report how many were fixed
+4. Report any that could not be fixed and why
+5. Then proceed to the next round
+
+---
+
+**FINAL COMPLETION CRITERIA**
+
+After all 5 rounds across all 15 domains:
+
+Report this table:
+```
+Pattern 1 — Route mismatches found: N | Fixed: N | Remaining: N
+Pattern 2 — WebSocket mismatches found: N | Fixed: N | Remaining: N  
+Pattern 3 — Silent errors found: N | Fixed: N | Non-critical documented: N
+Pattern 4 — Cache gaps found: N | Fixed: N | Remaining: N
+Pattern 5 — Auth gaps found: N | Fixed: N | Remaining: N
+```
+
+Then confirm:
+- TypeScript compile — zero errors
+- Server restart — clean start
+- All regression tests pass
+- Zero remaining instances of any pattern across all 15 domains
+
+Stop and wait for sign-off.
+
+---
+
+This prompt finds the pattern, maps every location, and fixes them all in one pass. Paste results back domain by domain as Replit reports them.

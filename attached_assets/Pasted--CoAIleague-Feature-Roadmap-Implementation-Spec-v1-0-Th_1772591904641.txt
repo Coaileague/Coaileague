@@ -1,0 +1,1498 @@
+# CoAIleague — Feature Roadmap & Implementation Spec v1.0
+## The "Cancel Everything Else" Platform Build-Out
+
+**Date:** March 3, 2026
+**Scope:** 7 major feature areas that transform CoAIleague from a scheduling/payroll platform into a complete security workforce operating system.
+
+**IMPORTANT RULES FOR ALL FEATURES:**
+- Do NOT break any existing functionality (scheduling, billing, credits, Trinity orchestration)
+- Do NOT modify Trinity's scheduling logic or credit/billing services
+- Every new feature must integrate with the existing workspace/org model
+- Every AI-powered action must consume credits per the billing economy spec
+- All new database tables need Drizzle schema definitions
+- Mobile-first design, then desktop parity
+
+---
+
+# ═══════════════════════════════════════════════════
+# FEATURE 1: DOCUMENT SIGNING (Replaces DocuSign)
+# ═══════════════════════════════════════════════════
+
+## 1A: What Security Companies Sign
+
+Every security company generates the same document types repeatedly. CoAIleague should handle all of them natively:
+
+- Employment agreements (merit-based pay, NDAs, at-will acknowledgment, policy acceptance)
+- Client service contracts (guard services agreements, SLAs, pricing schedules, scope of work)
+- Post orders (site-specific instructions signed by each officer assigned to that site)
+- Policy acknowledgments (use of force, uniform policy, attendance policy, vehicle policy)
+- Incident report sign-offs (officer signs, supervisor countersigns, client acknowledges)
+- Equipment issue/return forms (radio, badge, uniform, vehicle keys, body camera)
+- Vehicle inspection sign-offs (pre/post shift vehicle condition reports)
+- Training completion certificates (CPR, first aid, de-escalation, firearms qualification)
+- Non-compete / non-solicitation agreements
+- Background check authorization forms
+- Direct deposit authorization forms
+
+## 1B: Architecture Overview
+
+```
+DOCUMENT LIFECYCLE:
+                                                          
+  Template          Trinity fills         PDF generated       Signature fields
+  (with merge       merge fields from     with filled         positioned per
+  fields)           employee/client/      content             template config
+                    site database                              
+     │                   │                    │                    │
+     ▼                   ▼                    ▼                    ▼
+  Template ──────► Merge Engine ──────► PDF Renderer ──────► Signing Session
+  Library           (Trinity AI)         (pdf-lib)           (JWT-secured)
+                                                                   │
+                                                                   ▼
+                                                            Signer draws/types
+                                                            signature on canvas
+                                                                   │
+                                                                   ▼
+                                                            Signature embedded
+                                                            into PDF at coords
+                                                                   │
+                                                                   ▼
+                                                            Signed PDF stored
+                                                            in Document Vault
+                                                                   │
+                                                                   ▼
+                                                            Audit trail created
+                                                            Notifications sent
+```
+
+## 1C: Database Schema
+
+```sql
+-- ═══════════════════════════════════════════════════
+-- DOCUMENT TEMPLATES
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS document_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  name VARCHAR(200) NOT NULL,
+  description TEXT,
+  category VARCHAR(50) NOT NULL,
+  -- Categories: employment, client_contract, post_order, policy,
+  --             incident, equipment, vehicle, training, compliance, custom
+  content_type VARCHAR(20) NOT NULL DEFAULT 'rich_text',
+  -- Types: rich_text (built in editor), uploaded_pdf, html_template
+  content_body TEXT,                          -- Rich text / HTML template content
+  uploaded_pdf_url VARCHAR(500),              -- If type = uploaded_pdf
+  merge_fields JSONB DEFAULT '[]',           -- Array of {key, label, source_table, source_column}
+  signature_fields JSONB DEFAULT '[]',       -- Array of {id, label, signer_role, page, x, y, width, height}
+  -- signer_role: employee, supervisor, manager, client, witness
+  requires_countersign BOOLEAN DEFAULT false,
+  countersign_roles JSONB DEFAULT '[]',      -- e.g., ["supervisor", "client"]
+  auto_send_on_event VARCHAR(50),            -- Event trigger: new_hire, site_assignment, shift_complete, contract_renewal
+  expiration_days INTEGER,                   -- Days until signature request expires
+  version INTEGER NOT NULL DEFAULT 1,
+  is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_doc_templates_workspace ON document_templates(workspace_id, category);
+CREATE INDEX idx_doc_templates_event ON document_templates(auto_send_on_event) WHERE auto_send_on_event IS NOT NULL;
+
+-- ═══════════════════════════════════════════════════
+-- DOCUMENT INSTANCES (Generated Documents)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS document_instances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  template_id UUID REFERENCES document_templates(id),
+  title VARCHAR(300) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  -- Status: draft, pending_signature, partially_signed, completed, expired, voided
+  generated_pdf_url VARCHAR(500),
+  signed_pdf_url VARCHAR(500),
+  merge_data JSONB DEFAULT '{}',             -- Snapshot of data used to fill template
+  related_entity_type VARCHAR(30),           -- employee, client, site, shift, incident
+  related_entity_id UUID,
+  created_by UUID REFERENCES users(id),
+  completed_at TIMESTAMP,
+  expires_at TIMESTAMP,
+  voided_at TIMESTAMP,
+  voided_reason TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_doc_instances_workspace ON document_instances(workspace_id, status);
+CREATE INDEX idx_doc_instances_entity ON document_instances(related_entity_type, related_entity_id);
+
+-- ═══════════════════════════════════════════════════
+-- SIGNATURE REQUESTS (One per signer per document)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS signature_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID NOT NULL REFERENCES document_instances(id),
+  signer_role VARCHAR(30) NOT NULL,          -- employee, supervisor, manager, client, witness
+  signer_user_id UUID REFERENCES users(id),  -- Internal user (employee/manager)
+  signer_email VARCHAR(255),                 -- External signer (client) or fallback
+  signer_name VARCHAR(200),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  -- Status: pending, viewed, signed, declined, expired
+  signing_token VARCHAR(100) UNIQUE,         -- JWT or unique token for signing link
+  signing_order INTEGER DEFAULT 1,           -- 1 = first signer, 2 = countersigner, etc.
+  signature_fields JSONB DEFAULT '[]',       -- Which fields this signer is responsible for
+  reminder_sent_at TIMESTAMP,
+  viewed_at TIMESTAMP,
+  signed_at TIMESTAMP,
+  declined_at TIMESTAMP,
+  declined_reason TEXT,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_sig_requests_document ON signature_requests(document_id);
+CREATE INDEX idx_sig_requests_signer ON signature_requests(signer_user_id, status);
+CREATE INDEX idx_sig_requests_token ON signature_requests(signing_token);
+
+-- ═══════════════════════════════════════════════════
+-- SIGNATURES (Actual signature data)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS signatures (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id UUID NOT NULL REFERENCES signature_requests(id),
+  field_id VARCHAR(50) NOT NULL,             -- Matches signature_fields[].id from template
+  signature_type VARCHAR(20) NOT NULL,       -- draw, type, upload
+  signature_data TEXT NOT NULL,              -- Base64 PNG (draw), typed name (type), image URL (upload)
+  signed_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  ip_address VARCHAR(45) NOT NULL,
+  user_agent TEXT NOT NULL,
+  geolocation JSONB                          -- {lat, lng, accuracy} if available
+);
+
+CREATE INDEX idx_signatures_request ON signatures(request_id);
+
+-- ═══════════════════════════════════════════════════
+-- DOCUMENT VAULT (Completed + Uploaded Documents)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS document_vault (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  document_instance_id UUID REFERENCES document_instances(id),  -- NULL if manually uploaded
+  title VARCHAR(300) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  file_url VARCHAR(500) NOT NULL,
+  file_size_bytes INTEGER,
+  mime_type VARCHAR(50),
+  tags JSONB DEFAULT '[]',
+  related_entity_type VARCHAR(30),
+  related_entity_id UUID,
+  uploaded_by UUID REFERENCES users(id),
+  is_signed BOOLEAN DEFAULT false,
+  retention_until TIMESTAMP,                 -- For compliance: when this can be deleted
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_vault_workspace ON document_vault(workspace_id, category);
+CREATE INDEX idx_vault_entity ON document_vault(related_entity_type, related_entity_id);
+```
+
+## 1D: Service Layer
+
+```
+DocumentTemplateService:
+  - createTemplate(workspaceId, templateData) → template
+  - listTemplates(workspaceId, category?) → templates[]
+  - getTemplate(templateId) → template with merge field definitions
+  - updateTemplate(templateId, updates) → template (creates new version)
+  - deleteTemplate(templateId) → soft delete (is_active = false)
+
+DocumentGenerationService:
+  - generateFromTemplate(templateId, mergeData, signerConfig[]) → documentInstance
+    1. Fetch template
+    2. Resolve merge fields from database (employee name, pay rate, site address, etc.)
+    3. Generate PDF using pdf-lib (fill merge fields into template)
+    4. Store generated PDF
+    5. Create document_instance record
+    6. Create signature_request records for each signer
+    7. Generate signing tokens (JWT, expires per template.expiration_days)
+    8. Send notification to first signer (respecting signing_order)
+    CREDIT COST: 5 credits (Trinity merge + PDF generation)
+
+  - generateBulk(templateId, entityIds[], signerConfig) → documentInstances[]
+    For sending the same template to many employees (policy acknowledgments, etc.)
+    CREDIT COST: 3 credits each (bulk discount)
+
+SigningService:
+  - getSigningSession(token) → document + fields for this signer (no auth required — token IS auth)
+  - submitSignature(token, signatures[]) → signed document
+    1. Validate token (not expired, not already signed)
+    2. Store each signature image/data
+    3. Embed signatures into PDF at defined coordinates using pdf-lib
+    4. Update signature_request status = 'signed'
+    5. If all signers complete → update document_instance status = 'completed'
+    6. Store signed PDF in document_vault
+    7. Notify next signer if countersign required
+    8. Notify document creator that signing is complete
+    CREDIT COST: 0 credits (signing is free — generation costs credits)
+
+  - declineSignature(token, reason) → declined
+  - sendReminder(requestId) → reminder notification sent
+
+DocumentVaultService:
+  - listDocuments(workspaceId, filters) → documents[] with pagination
+  - getDocument(documentId) → document with download URL
+  - uploadManual(workspaceId, file, metadata) → vault entry
+  - searchDocuments(workspaceId, query) → full-text search results
+```
+
+## 1E: Trinity Integration — Auto-Send Workflows
+
+Trinity triggers document sending based on events:
+
+```
+EVENT                          TEMPLATE CATEGORY       ACTION
+─────────────────────────────────────────────────────────────────
+Employee added (new hire)      employment              Auto-generate employment agreement,
+                                                       NDA, policy bundle. Send for signature.
+                                                       Block scheduling until all signed.
+
+Employee assigned to site      post_order              Auto-generate post order for that site.
+                                                       Send to employee for signature.
+
+Shift completed                incident (if flagged)   If shift had incident, generate report
+                                                       template pre-filled with shift data.
+
+Contract approaching renewal   client_contract         30/60/90 day alerts. Auto-generate
+                                                       renewal from existing contract template.
+
+Training completed             training                Generate completion certificate.
+
+Equipment issued               equipment               Generate issue form with serial numbers,
+                                                       condition notes. Send for signature.
+```
+
+## 1F: Mobile UI — Signing Experience
+
+The signing experience must work perfectly on mobile since officers sign on their phones:
+
+```
+SIGNING SCREEN LAYOUT:
+┌─────────────────────────────┐
+│ CoAIleague Document Signing │
+│ [Document Title]            │
+├─────────────────────────────┤
+│                             │
+│  Scrollable PDF preview     │
+│  (rendered as images,       │
+│   pinch-to-zoom enabled)    │
+│                             │
+│  Signature fields marked    │
+│  with pulsing blue borders  │
+│  and "Tap to sign" labels   │
+│                             │
+├─────────────────────────────┤
+│ [Draw Signature]            │
+│ ┌─────────────────────────┐ │
+│ │                         │ │
+│ │  HTML5 Canvas area      │ │
+│ │  (finger drawing)       │ │
+│ │                         │ │
+│ └─────────────────────────┘ │
+│ [Clear] [Type Instead]     │
+│                             │
+│ ☑ I agree to the terms     │
+│                             │
+│ [  Sign & Complete  ]       │
+└─────────────────────────────┘
+```
+
+- **Draw mode:** Full-width canvas, finger/stylus drawing, undo/clear
+- **Type mode:** Type full name, rendered in a script font (Brush Script or similar)
+- **Upload mode:** Upload a signature image (less common, but some people have these)
+- All modes capture: timestamp, IP address, user agent, geolocation if permitted
+
+## 1G: Credit Costs
+
+```
+ACTION                                    CREDITS
+──────────────────────────────────────────────────
+Generate document from template            5
+Generate document (bulk, per doc)          3
+Sign a document                            0 (free)
+Send signing reminder                      0 (free)
+Trinity auto-generate on event             5
+Search document vault                      0 (free)
+Upload manual document                     0 (free)
+AI contract review (future)               30
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# FEATURE 2: QB REPORT REPLACEMENT
+# ═══════════════════════════════════════════════════
+
+## 2A: Reports That Matter to Security Company Owners
+
+After analyzing what security companies actually pull from QuickBooks, these are the reports that drive decisions. CoAIleague already HAS the underlying data for most of them — the missing piece is the reporting layer.
+
+## 2B: Report Definitions
+
+### REPORT 1: Client Profitability (P&L by Client)
+**Data source:** Invoices (revenue) + Time entries × pay rates (labor cost)
+**Why it matters:** Tells the owner which contracts make money and which are underwater
+
+```
+DISPLAY:
+┌─────────────────────────────────────────────────────────────┐
+│  Client Profitability Report          Period: Feb 2026      │
+├──────────────┬──────────┬────────────┬─────────┬────────────┤
+│ CLIENT       │ REVENUE  │ LABOR COST │ MARGIN  │ MARGIN %   │
+├──────────────┼──────────┼────────────┼─────────┼────────────┤
+│ North Star DC│ $31,000  │ $22,800    │ $8,200  │ 26.5% ✅   │
+│ Dura Line    │ $24,500  │ $18,400    │ $6,100  │ 24.9% ✅   │
+│ Grand Plaza  │ $18,200  │ $14,100    │ $4,100  │ 22.5% ⚠️   │
+│ Retail Sol.  │ $154     │ $540       │ -$386   │ -249% 🔴   │
+├──────────────┼──────────┼────────────┼─────────┼────────────┤
+│ TOTAL        │ $73,854  │ $55,840    │ $18,014 │ 24.4%      │
+└──────────────┴──────────┴────────────┴─────────┴────────────┘
+
+TRINITY INSIGHT (auto-generated):
+"North Star Data Center has your highest margin at 26.5%. Consider
+proposing expanded coverage. Retail Solutions Group is losing $386/mo
+on only 8 hours of coverage — recommend contract renegotiation or
+termination. Grand Plaza margin dropped 2.4% from last quarter due
+to increased overtime — scheduling optimization recommended."
+```
+
+**Calculation:**
+- Revenue = Sum of invoices for client in period
+- Labor Cost = Sum of (hours worked × employee pay rate) for shifts at client sites
+- Margin = Revenue - Labor Cost
+- Margin % = Margin / Revenue × 100
+- Color coding: Green ≥ 25%, Amber 15-25%, Red < 15%
+
+### REPORT 2: Payroll Summary
+**Data source:** Payroll runs + time entries
+**Why it matters:** Biggest expense line — owners need to know where labor dollars go
+
+```
+DISPLAY:
+┌───────────────────────────────────────────────────────┐
+│  Payroll Summary              Period: Feb 15-28, 2026 │
+├───────────────────────────────────────────────────────┤
+│  Total Gross Payroll          $47,832.00              │
+│  ├─ Regular Hours (1,842 hrs)  $42,366.00             │
+│  ├─ Overtime Hours (96 hrs)    $5,466.00              │
+│  └─ OT as % of Total          11.4% ⚠️               │
+│                                                       │
+│  Tax Withholdings                                     │
+│  ├─ Social Security (6.2%)     $2,965.58              │
+│  ├─ Medicare (1.45%)           $693.56                │
+│  ├─ Federal Income Tax         $5,739.84              │
+│  └─ State Income Tax           $0.00 (Texas)          │
+│                                                       │
+│  Total Net Payroll             $38,432.02             │
+│                                                       │
+│  vs Prior Period               ▲ +4.2% ($1,928)       │
+├───────────────────────────────────────────────────────┤
+│  Top 5 Earners This Period:                           │
+│  1. Robert Williams  $2,944 (64hrs — 24 OT ⚠️)       │
+│  2. Marcus Adams     $1,840 (80hrs — 0 OT)           │
+│  3. Angel Jackson    $1,760 (80hrs — 0 OT)           │
+│  ...                                                  │
+└───────────────────────────────────────────────────────┘
+
+TRINITY INSIGHT:
+"Overtime is at 11.4% — above your 10% target. Robert Williams
+accounts for 25% of all OT this period. The schedule shows 135
+conflicts this week including his 64-hour assignment. Recommend
+redistributing his Thursday/Friday shifts to reduce OT liability."
+```
+
+### REPORT 3: Accounts Receivable Aging
+**Data source:** Invoices table (already exists — the Invoice page already shows this!)
+**Enhancement:** Add drill-down and Trinity auto-collection
+
+```
+ENHANCEMENT TO EXISTING INVOICES PAGE:
+- Already have: Current, 1-30, 31-60, 61-90 aging buckets ✅
+- Add: Click any bucket → see individual invoices in that bucket
+- Add: "Send Reminder" button on each overdue invoice
+- Add: Trinity auto-reminder at 30 days (email to client)
+- Add: Trinity escalation at 45 days (formal letter generated from template)
+- Add: "Collection Risk Score" per client (based on payment history)
+```
+
+### REPORT 4: Revenue Trend
+**Data source:** Invoices by month
+
+```
+DISPLAY:
+- 12-month line chart showing monthly revenue
+- Stacked bar chart showing revenue by client
+- Projection line (dotted) based on active contracts
+- New vs recurring revenue split
+- MoM and YoY comparison
+```
+
+### REPORT 5: Labor Cost Analysis
+**Data source:** Time entries + pay rates + sites
+
+```
+DISPLAY:
+- Cost per hour by site (are some sites more expensive to staff?)
+- Overtime as % of total hours by employee (who's generating OT?)
+- Turnover cost estimate (avg recruiting cost × turnover rate)
+- Bill rate vs pay rate spread by position
+- Workers comp hours by classification (armed @ rate X, unarmed @ rate Y)
+```
+
+### REPORT 6: Tax Liability Summary
+**Data source:** Payroll tax withholdings
+
+```
+DISPLAY:
+- Quarterly tax summary (SS, Medicare, Federal, FUTA, SUTA)
+- Year-to-date totals
+- Estimated quarterly payment amounts
+- Filing deadlines with reminders
+```
+
+### REPORT 7: Cash Flow Statement
+**Data source:** Invoices (inflow) + Payroll + Expenses (outflow)
+
+```
+DISPLAY:
+- Money In: Client payments received this month
+- Money Out: Payroll + expenses + platform fees
+- Net Cash Flow = In - Out
+- 3-month rolling average
+- Projected cash position (based on outstanding invoices + upcoming payroll)
+```
+
+### REPORT 8: Workers Comp Report
+**Data source:** Time entries + employee classification + sites
+
+```
+DISPLAY:
+- Hours by classification code (Armed Security, Unarmed Security, Supervisor)
+- Each classification has a different workers comp rate
+- Total estimated premium per classification
+- Exportable for insurance audits
+```
+
+## 2C: Technical Architecture
+
+```
+ReportingService:
+  - generateReport(workspaceId, reportType, dateRange, filters) → reportData
+  - exportReport(reportId, format) → PDF or CSV download
+  - getReportInsight(reportType, reportData) → Trinity AI analysis
+  
+  Report types: client_profitability, payroll_summary, ar_aging,
+                revenue_trend, labor_cost, tax_liability, cash_flow,
+                workers_comp
+
+  All reports query existing tables:
+    - invoices (revenue)
+    - time_entries / clock_records (hours)
+    - employees (pay rates, classification)
+    - shifts (site assignment)
+    - clients (contract rates)
+    - payroll_runs (tax withholdings)
+    - expenses (outflows)
+```
+
+No new database tables needed — reports are read-only aggregations of existing data. The only new table is for saved/scheduled reports:
+
+```sql
+CREATE TABLE IF NOT EXISTS saved_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  report_type VARCHAR(50) NOT NULL,
+  name VARCHAR(200),
+  filters JSONB DEFAULT '{}',
+  schedule VARCHAR(20),                      -- NULL, daily, weekly, monthly
+  schedule_recipients JSONB DEFAULT '[]',    -- Email addresses to send to
+  last_generated_at TIMESTAMP,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## 2D: UI — Reports Hub
+
+```
+REPORTS PAGE LAYOUT:
+┌─────────────────────────────┐
+│ Reports                     │
+│ Financial intelligence for  │
+│ your security business      │
+├─────────────────────────────┤
+│ [Quick Reports]             │
+│ ┌───────────┬─────────────┐ │
+│ │ 📊 Client │ 💰 Payroll  │ │
+│ │ Profit.   │ Summary     │ │
+│ ├───────────┼─────────────┤ │
+│ │ 📋 AR     │ 📈 Revenue  │ │
+│ │ Aging     │ Trend       │ │
+│ ├───────────┼─────────────┤ │
+│ │ 👷 Labor  │ 🏛️ Tax      │ │
+│ │ Cost      │ Liability   │ │
+│ ├───────────┼─────────────┤ │
+│ │ 💵 Cash   │ 🛡️ Workers  │ │
+│ │ Flow      │ Comp        │ │
+│ └───────────┴─────────────┘ │
+│                             │
+│ [Saved Reports]             │
+│  • Monthly P&L (scheduled)  │
+│  • Weekly Payroll Review    │
+│                             │
+│ [Trinity Insights]          │
+│  "3 clients below 20%      │
+│   margin this month..."     │
+└─────────────────────────────┘
+```
+
+## 2E: Credit Costs
+
+```
+ACTION                                    CREDITS
+──────────────────────────────────────────────────
+Generate standard report                  0 (free — it's your data)
+Trinity AI insight on report             15
+Export report to PDF                      0 (free)
+Schedule automated report delivery         0 (free)
+Custom report builder (future)            10
+```
+
+**CRITICAL: Reports should be FREE (0 credits).** Owners need to see their financial data without friction. The value-add that costs credits is Trinity's analysis and insights on top of the raw data. This creates a natural upgrade path — "I can see the numbers for free, but Trinity's recommendations cost credits."
+
+---
+
+# ═══════════════════════════════════════════════════
+# FEATURE 3: INCIDENT REPORT PIPELINE
+# ═══════════════════════════════════════════════════
+
+## 3A: The Full Pipeline
+
+This is the workflow that makes CoAIleague indispensable to security companies. No other platform does this end-to-end:
+
+```
+PIPELINE:
+
+  OFFICER IN FIELD                    TRINITY AI                    MANAGER                      CLIENT
+  ─────────────────                   ──────────                    ───────                      ──────
+  1. Taps "Report                     3. Receives raw              5. Reviews Trinity's          7. Receives
+     Incident" on mobile                 submission                   polished report               professional
+                                                                                                    report attached
+  2. Fills out form:                  4. Rewrites report:          6. Approves, edits,              to their client
+     - Voice dictation or text           - Professional tone          or requests changes            portal or email
+     - Severity                          - Proper grammar                                        
+     - Incident type                     - Structured format       (Can send back to             8. Can acknowledge
+     - Photos from camera                - Fills gaps from            Trinity for another            receipt and add
+     - Witness info                        shift context               revision pass)                comments
+     - Location (auto GPS)              - Adds incident #                                        
+                                        - Adds date/time/site                                    
+                                        - Cross-references                                       
+                                          witness statements                                     
+                                        - Flags legal concerns                                   
+```
+
+## 3B: Database Schema
+
+```sql
+-- ═══════════════════════════════════════════════════
+-- INCIDENT REPORTS (Enhanced from existing)
+-- ═══════════════════════════════════════════════════
+-- If an incidents table already exists, ALTER it to add these columns.
+-- If not, create it:
+
+CREATE TABLE IF NOT EXISTS incident_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  incident_number VARCHAR(30) UNIQUE,        -- Auto-generated: INC-2026-0001
+  
+  -- Source info
+  reported_by UUID NOT NULL REFERENCES users(id),
+  shift_id UUID REFERENCES shifts(id),       -- Which shift was the officer on
+  site_id UUID REFERENCES clients(id),       -- Which client site
+  
+  -- Officer's raw submission
+  title VARCHAR(300) NOT NULL,
+  severity VARCHAR(20) NOT NULL,             -- low, medium, high, critical
+  incident_type VARCHAR(50) NOT NULL,        -- trespass, theft, vandalism, medical, fire, disturbance, suspicious_activity, other
+  raw_description TEXT NOT NULL,             -- Officer's original words (preserved)
+  raw_voice_transcript TEXT,                 -- If voice-to-text was used
+  
+  -- Trinity's polished version
+  polished_description TEXT,                 -- Trinity's rewritten version
+  polished_summary TEXT,                     -- One-paragraph executive summary
+  trinity_revision_count INTEGER DEFAULT 0,
+  trinity_legal_flags JSONB DEFAULT '[]',    -- e.g., ["potential_liability", "use_of_force", "injury"]
+  
+  -- Evidence
+  photos JSONB DEFAULT '[]',                 -- Array of {url, caption, taken_at}
+  witness_statements JSONB DEFAULT '[]',     -- Array of {name, contact, statement}
+  
+  -- Location
+  gps_latitude DECIMAL(10, 8),
+  gps_longitude DECIMAL(11, 8),
+  location_address TEXT,
+  
+  -- Pipeline status
+  status VARCHAR(30) NOT NULL DEFAULT 'submitted',
+  -- Status: submitted, trinity_processing, pending_review, revision_requested,
+  --         approved, sent_to_client, client_acknowledged, closed
+  
+  reviewed_by UUID REFERENCES users(id),
+  reviewed_at TIMESTAMP,
+  review_notes TEXT,
+  
+  -- Client delivery
+  sent_to_client_at TIMESTAMP,
+  sent_to_client_by UUID REFERENCES users(id),
+  client_acknowledged_at TIMESTAMP,
+  client_comments TEXT,
+  
+  -- Document
+  final_pdf_url VARCHAR(500),                -- Generated PDF of the complete report
+  document_vault_id UUID REFERENCES document_vault(id),
+  
+  -- Meta
+  occurred_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_incidents_workspace ON incident_reports(workspace_id, status);
+CREATE INDEX idx_incidents_site ON incident_reports(site_id, occurred_at);
+CREATE INDEX idx_incidents_reporter ON incident_reports(reported_by, created_at);
+CREATE INDEX idx_incidents_number ON incident_reports(incident_number);
+
+-- ═══════════════════════════════════════════════════
+-- INCIDENT REPORT ACTIVITY LOG (Audit Trail)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS incident_report_activity (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  incident_id UUID NOT NULL REFERENCES incident_reports(id),
+  action VARCHAR(50) NOT NULL,
+  -- Actions: submitted, trinity_processed, manager_reviewed, revision_requested,
+  --          approved, sent_to_client, client_acknowledged, closed, photo_added, 
+  --          witness_added, comment_added
+  performed_by UUID REFERENCES users(id),
+  performed_by_role VARCHAR(30),             -- officer, manager, trinity, client
+  details JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_incident_activity ON incident_report_activity(incident_id, created_at);
+```
+
+## 3C: Trinity Report Processing
+
+When an officer submits a raw incident report, Trinity processes it:
+
+```
+INPUT (Officer's raw submission):
+  Title: "guy tresspassing"
+  Description: "found a male individual walking around the parking garage 
+  on level 3 he didnt have a badge or visitor pass I asked him to leave 
+  he got aggresive and started yelling at me I called police non emergency 
+  they said they would send someone. he eventually left on his own going 
+  south toward main street. white male about 6ft wearing a red jacket 
+  and jeans"
+  Photos: [parking_garage_level3.jpg]
+  Severity: Medium
+  Type: Trespass
+
+TRINITY PROCESSING:
+  1. Fix grammar and spelling
+  2. Structure into professional report format
+  3. Add context from shift data (site name, officer name, date/time, post)
+  4. Add incident number (auto-generated)
+  5. Identify and flag legal concerns
+  6. Extract suspect description into structured format
+  7. Preserve officer's original words as "Officer's Original Statement"
+
+OUTPUT (Trinity's polished version):
+  
+  INCIDENT REPORT — INC-2026-0047
+  
+  Date/Time: March 3, 2026 at 02:15 AM CST
+  Site: Pinnacle Tower LLC — Parking Garage, Level 3
+  Reporting Officer: Marcus Rivera (Badge #147)
+  Shift: Overnight Security, 12:00 AM – 8:00 AM
+  
+  SUMMARY:
+  An unauthorized male individual was discovered on Level 3 of the 
+  parking garage without proper credentials. After being asked to 
+  leave, the individual became verbally aggressive. Non-emergency 
+  police were contacted. The individual departed the premises 
+  voluntarily, heading south toward Main Street.
+  
+  SUSPECT DESCRIPTION:
+  - Race/Gender: White male
+  - Height: Approximately 6'0"
+  - Clothing: Red jacket, blue jeans
+  - Direction of travel: South toward Main Street
+  
+  DETAILED NARRATIVE:
+  At approximately 02:15 AM, the reporting officer observed a male 
+  individual on Level 3 of the parking garage. The individual was 
+  not wearing a building badge or visitor pass. When approached and 
+  asked to identify himself and his purpose, the individual became 
+  verbally aggressive, raising his voice. The officer maintained a 
+  safe distance and contacted the non-emergency police line. Officers 
+  indicated they would dispatch a unit. The individual departed the 
+  premises on his own accord approximately 10 minutes later, heading 
+  south toward Main Street on foot.
+  
+  ACTIONS TAKEN:
+  1. Verbal contact with individual
+  2. Non-emergency police contacted
+  3. Area monitored until individual departed
+  4. Photographic evidence captured
+  
+  ⚠️ LEGAL FLAGS: None identified
+  
+  OFFICER'S ORIGINAL STATEMENT: [preserved verbatim]
+  
+  [Photo: parking_garage_level3.jpg]
+```
+
+**CREDIT COST: 10 credits per report processed by Trinity**
+
+## 3D: Mobile UI Enhancement
+
+The existing incident form (Image 6 from screenshots) needs these additions:
+
+```
+ENHANCED INCIDENT FORM:
+┌─────────────────────────────┐
+│ 🔴 Report Incident          │ ← Red/amber gradient header (urgency)
+├─────────────────────────────┤
+│ Auto-filled from shift:     │
+│ Site: Pinnacle Tower LLC    │
+│ Shift: 12:00AM-8:00AM      │
+│ Officer: Marcus Rivera      │
+├─────────────────────────────┤
+│ Severity: [Low][Med][High][CRIT] ← Colored chip buttons, not dropdown
+│                             │
+│ Type: [icons grid]          │ ← Visual icon chips for type selection
+│ 🚶Trespass 🔒Theft          │
+│ 💥Vandalism 🏥Medical        │
+│ 🔥Fire 😤Disturbance         │
+│ 👁️Suspicious 📝Other         │
+├─────────────────────────────┤
+│ What happened?              │
+│ ┌─────────────────────┐ 🎤  │ ← Large microphone button for voice
+│ │                     │     │    (auto-transcribed)
+│ │  (tall text area)   │     │
+│ │                     │     │
+│ │                     │     │
+│ └─────────────────────┘     │
+├─────────────────────────────┤
+│ 📷 Add Photos (0/10)        │ ← Camera + gallery picker
+│ [Take Photo] [From Gallery] │
+├─────────────────────────────┤
+│ 👤 Witnesses (optional)      │
+│ [+ Add Witness]             │
+│  Name: ___________          │
+│  Contact: ________          │
+│  Statement: ______          │
+├─────────────────────────────┤
+│ 📍 Pinnacle Tower LLC       │ ← GPS auto-captured, shows address
+│    32.7767° N, -96.7970° W  │
+├─────────────────────────────┤
+│ [✨ Analyze with ReportBot]  │ ← Prominent Trinity button (gradient)
+│ [📤 Submit Raw Report]       │ ← Option to skip Trinity
+└─────────────────────────────┘
+```
+
+## 3E: Manager Review Screen
+
+```
+MANAGER REVIEW LAYOUT:
+┌─────────────────────────────┐
+│ ← Incident INC-2026-0047   │
+│ Pinnacle Tower — Trespass   │
+│ Status: Pending Review      │
+├─────────────────────────────┤
+│ [Trinity's Version] [Raw]   │ ← Tab toggle between polished and original
+│                             │
+│ (Trinity's polished report  │
+│  displayed here in full)    │
+│                             │
+│ Photos:                     │
+│ [thumb1] [thumb2]           │
+│                             │
+│ Trinity Flags: None         │
+├─────────────────────────────┤
+│ Manager Notes:              │
+│ ┌─────────────────────┐     │
+│ │                     │     │
+│ └─────────────────────┘     │
+├─────────────────────────────┤
+│ [✅ Approve & Send to Client]│
+│ [✏️ Request Revision]        │
+│ [🔄 Re-analyze with Trinity] │
+│ [❌ Reject Report]           │
+└─────────────────────────────┘
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# FEATURE 4: FORM BUILDER & FORM UX OVERHAUL
+# ═══════════════════════════════════════════════════
+
+## 4A: The Problem
+
+Mobile forms throughout the app (incident reports, daily reports, safety checklists, expense submissions, time-off requests, equipment forms) all use the same plain pattern: dark card with basic HTML inputs. They feel like developer prototypes, not professional tools that field officers use at 2am in poor lighting conditions.
+
+## 4B: Universal Form Component System
+
+Build a reusable form component library that ALL forms in the app use. This ensures consistency and makes future form creation trivial.
+
+### Form Field Components:
+
+```
+TextInput:         Standard text field with floating label, clear button
+TextArea:          Multi-line with character count, auto-expand, voice-to-text button
+NumberInput:       Numeric with +/- steppers (for counts, quantities)
+SelectChips:       Horizontal scrollable colored chips (replaces dropdowns for <8 options)
+SelectDropdown:    For >8 options, searchable dropdown with categories
+DateTimePicker:    Native date/time picker with quick presets ("Now", "Start of shift", "End of shift")
+PhotoCapture:      Camera + gallery with thumbnail preview strip, up to 10 photos
+VoiceInput:        Hold-to-record button → auto-transcribe → fills text field
+SignatureField:    Canvas for drawing signature (from Feature 1)
+ChecklistGroup:    Styled checkboxes with tap-entire-row, completion counter
+LocationCapture:   Auto GPS with address display, tap to view on map
+ToggleSwitch:      On/off with clear visual state
+RatingScale:       1-5 stars or 1-10 slider for severity/satisfaction ratings
+FileUpload:        Document/PDF upload with preview
+```
+
+### Form Container Patterns:
+
+```
+BOTTOM SHEET FORM (for quick inputs — 3-5 fields):
+  - Slides up from bottom, handles ~40% of screen
+  - Pull-down handle to dismiss
+  - Content scrolls within the sheet
+  - Primary action button fixed at bottom of sheet
+  - Use for: quick expense, time-off request, shift swap
+
+FULL PAGE FORM (for complex inputs — 6+ fields):
+  - Full screen with back navigation
+  - Sections with collapsible headers
+  - Floating "Submit" button at bottom
+  - Progress indicator at top (Step 1 of 3)
+  - Use for: incident reports, daily reports, employee onboarding
+
+MODAL DIALOG (for confirmations — 1-2 fields):
+  - Centered overlay, dimmed background
+  - Tap outside to dismiss
+  - Use for: approve/reject, delete confirmation, quick note
+```
+
+### Visual Standards for All Forms:
+
+```css
+/* Field container */
+.form-field {
+  margin-bottom: 20px;
+}
+
+/* Label */
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+/* Input */
+.form-input {
+  background: #1a2332;
+  border: 1px solid #2a3a52;
+  border-radius: 10px;
+  color: #f1f5f9;
+  font-size: 16px;       /* Prevents iOS zoom on focus */
+  padding: 14px 16px;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Error state */
+.form-input.error {
+  border-color: #ef4444;
+}
+
+/* Submit button */
+.form-submit {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 16px;
+  width: 100%;
+}
+
+.form-submit:active {
+  transform: scale(0.98);
+}
+```
+
+## 4C: Form Builder (Phase 2 — Custom Forms)
+
+Allow org owners/managers to create custom forms without code:
+
+```
+FORM BUILDER UI:
+┌─────────────────────────────┐
+│ Create Custom Form          │
+│ [Form Name: ___________]    │
+├─────────────────────────────┤
+│ Drag fields to build form:  │
+│                             │
+│ [+ Text Field]              │
+│ [+ Text Area]               │
+│ [+ Checkbox Group]          │
+│ [+ Photo Upload]            │
+│ [+ Dropdown Select]         │
+│ [+ Date/Time]               │
+│ [+ Signature]               │
+│ [+ Location]                │
+│ [+ Rating]                  │
+│ [+ Number]                  │
+├─────────────────────────────┤
+│ YOUR FORM PREVIEW:          │
+│ ┌─────────────────────┐     │
+│ │ Field 1: __________ │     │
+│ │ Field 2: __________ │     │
+│ │ Field 3: ☐ ☐ ☐      │     │
+│ └─────────────────────┘     │
+├─────────────────────────────┤
+│ Assign to:                  │
+│ ☐ All employees             │
+│ ☐ Specific site             │
+│ ☐ Specific role             │
+│ Schedule: [One-time / Daily │
+│ / Weekly / Per shift]       │
+│                             │
+│ [Save Form] [Preview]       │
+└─────────────────────────────┘
+```
+
+### Database:
+
+```sql
+CREATE TABLE IF NOT EXISTS custom_forms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  name VARCHAR(200) NOT NULL,
+  description TEXT,
+  fields JSONB NOT NULL,                     -- Array of field definitions
+  -- Each field: {id, type, label, required, options[], validation{}, order}
+  assignment_type VARCHAR(30) DEFAULT 'all',  -- all, site, role, individual
+  assignment_entity_ids JSONB DEFAULT '[]',
+  schedule VARCHAR(30),                       -- null, daily, weekly, per_shift, one_time
+  is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS form_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  form_id UUID NOT NULL REFERENCES custom_forms(id),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  submitted_by UUID NOT NULL REFERENCES users(id),
+  shift_id UUID REFERENCES shifts(id),
+  data JSONB NOT NULL,                        -- {field_id: value} pairs
+  photos JSONB DEFAULT '[]',
+  status VARCHAR(20) DEFAULT 'submitted',     -- submitted, reviewed, approved, rejected
+  reviewed_by UUID REFERENCES users(id),
+  reviewed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_form_subs_workspace ON form_submissions(workspace_id, form_id, created_at);
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# FEATURE 5: DOCKCHAT MESSAGING BRIDGES
+# ═══════════════════════════════════════════════════
+
+## 5A: Architecture
+
+DockChat already handles internal team messaging. The goal is to bridge external messaging platforms so ALL communication flows through one unified inbox — DockChat.
+
+```
+EXTERNAL MESSAGE FLOW:
+
+  Client sends WhatsApp msg ──► Twilio/360dialog webhook ──► DockChat middleware ──► Appears in
+                                                                                     DockChat as
+  Client sends SMS ───────────► Twilio webhook ────────────► DockChat middleware ──► a unified
+                                                                                     conversation
+  Client sends email ─────────► Resend inbound webhook ───► DockChat middleware ──►
+                                                                                     
+  Client sends FB Messenger ──► Meta webhook ──────────────► DockChat middleware ──►
+
+OUTBOUND (reply from DockChat):
+
+  Manager replies in DockChat ──► Middleware detects channel ──► Routes back via same channel
+                                  (WhatsApp/SMS/Email/Messenger)   (client receives reply on
+                                                                    their original platform)
+```
+
+## 5B: Middleware Service
+
+```
+MessageBridgeService:
+  - receiveInbound(channel, from, message, metadata) → creates/appends to DockChat conversation
+    1. Identify sender: match phone/email to client or employee record
+    2. Find or create DockChat conversation thread
+    3. Store message with channel metadata (so replies go back same channel)
+    4. If sender unknown: create "Unknown Contact" thread, notify manager
+    
+  - sendOutbound(conversationId, message, replyTo) → delivers via original channel
+    1. Look up conversation's channel metadata
+    2. Route through appropriate provider (Twilio for SMS/WhatsApp, Resend for email, Meta API for Messenger)
+    3. Store delivery status
+    
+  - getUnifiedInbox(workspaceId) → all conversations across all channels, merged
+```
+
+## 5C: Integration Providers
+
+```
+CHANNEL          PROVIDER            WHAT'S NEEDED
+──────────────────────────────────────────────────────────────
+SMS              Twilio              Twilio account, phone number, webhook URL
+WhatsApp         Twilio or           WhatsApp Business API approval,
+                 360dialog           message templates for outbound
+Email            Resend              Already have Resend — add inbound processing
+                                     (calloffs@, incidents@, docs@, support@)
+FB Messenger     Meta API            Facebook Page, App ID, webhook verification
+```
+
+## 5D: DockChat UI Enhancement
+
+```
+ENHANCED CONVERSATION VIEW:
+┌─────────────────────────────┐
+│ ← John Smith (Grand Plaza)  │
+│    💬 WhatsApp               │ ← Channel indicator badge
+├─────────────────────────────┤
+│ ┌──────────────────────┐    │
+│ │ Hi, we need to extend│ ←── Incoming (WhatsApp)
+│ │ coverage Saturday    │    │
+│ │ until midnight.       │    │
+│ │        2:15 PM 📱     │    │ ← Channel icon on each message
+│ └──────────────────────┘    │
+│    ┌──────────────────────┐ │
+│    │ Sure, I'll adjust   │──── Outgoing (replied via DockChat,
+│    │ the schedule. Cost  │ │   delivered to WhatsApp)
+│    │ will be $XX extra.  │ │
+│    │ 2:18 PM ✓✓          │ │ ← Delivery status
+│    └──────────────────────┘ │
+├─────────────────────────────┤
+│ [📎] [Message...      ] [➤] │
+│ Reply via: WhatsApp ▼       │ ← Channel selector for reply
+└─────────────────────────────┘
+```
+
+## 5E: Credit Costs
+
+```
+ACTION                                    CREDITS
+──────────────────────────────────────────────────
+Receive inbound message                    0 (free)
+Send outbound via DockChat (internal)      0 (free)
+Send outbound via SMS                      0 (free — but Twilio charges apply to org's Twilio account)
+Send outbound via WhatsApp                 0 (free — but provider charges apply)
+Send outbound via Email                    0 (free — Resend charges apply)
+Trinity auto-respond to client message     3 credits
+Trinity translate message                  2 credits
+```
+
+**NOTE:** CoAIleague does NOT absorb messaging provider costs. The org connects their own Twilio/Meta account. CoAIleague is the middleware that unifies the inbox.
+
+---
+
+# ═══════════════════════════════════════════════════
+# FEATURE 6: RFP / CONTRACT / PROPOSAL PIPELINE
+# ═══════════════════════════════════════════════════
+
+## 6A: The Pipeline
+
+Security companies win new business through a consistent flow: Lead → RFP Response → Proposal → Contract → Onboarding. Most companies do this in Word docs and email. CoAIleague automates the entire pipeline.
+
+```
+PIPELINE STAGES:
+
+  1. LEAD           New business opportunity entered (manual or from inbound email)
+  2. SITE SURVEY    Schedule and document site assessment (photos, notes, requirements)
+  3. RFP RESPONSE   Trinity generates professional response from templates + site data
+  4. PROPOSAL       Pricing proposal with coverage plan, rates, terms
+  5. NEGOTIATION    Track revisions, counter-offers, communications
+  6. CONTRACT       Generate contract from proposal terms (→ Document Signing flow)
+  7. ONBOARDING     New client setup: create site, assign officers, generate post orders
+```
+
+## 6B: Database Schema
+
+```sql
+CREATE TABLE IF NOT EXISTS pipeline_deals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  
+  -- Lead info
+  prospect_company VARCHAR(200) NOT NULL,
+  prospect_contact_name VARCHAR(200),
+  prospect_email VARCHAR(255),
+  prospect_phone VARCHAR(20),
+  source VARCHAR(50),                        -- referral, website, cold_call, rfp_received, email
+  
+  -- Pipeline stage
+  stage VARCHAR(30) NOT NULL DEFAULT 'lead',
+  -- Stages: lead, site_survey, rfp_response, proposal, negotiation, contract, onboarding, won, lost
+  
+  -- Deal details
+  estimated_monthly_value INTEGER,           -- cents
+  coverage_type VARCHAR(30),                 -- armed, unarmed, mixed, patrol, event
+  estimated_hours_weekly INTEGER,
+  number_of_sites INTEGER DEFAULT 1,
+  
+  -- Site survey
+  site_survey_date TIMESTAMP,
+  site_survey_notes TEXT,
+  site_survey_photos JSONB DEFAULT '[]',
+  site_requirements JSONB DEFAULT '{}',      -- {armed: bool, shifts_per_day: int, special_requirements: []}
+  
+  -- RFP
+  rfp_received_url VARCHAR(500),             -- Uploaded RFP document
+  rfp_response_url VARCHAR(500),             -- Generated response
+  rfp_due_date TIMESTAMP,
+  
+  -- Proposal
+  proposal_url VARCHAR(500),
+  proposal_sent_at TIMESTAMP,
+  proposed_rates JSONB DEFAULT '{}',         -- {hourly_rate: cents, overtime_rate: cents, holiday_rate: cents}
+  
+  -- Contract
+  contract_document_id UUID REFERENCES document_instances(id),  -- Links to Document Signing
+  contract_start_date DATE,
+  contract_end_date DATE,
+  contract_auto_renew BOOLEAN DEFAULT false,
+  
+  -- Outcome
+  won_at TIMESTAMP,
+  lost_at TIMESTAMP,
+  lost_reason TEXT,
+  client_id UUID REFERENCES clients(id),     -- Created when deal is won
+  
+  -- Assignment
+  assigned_to UUID REFERENCES users(id),     -- Sales person / account manager
+  
+  -- Meta
+  notes TEXT,
+  last_activity_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_pipeline_workspace ON pipeline_deals(workspace_id, stage);
+CREATE INDEX idx_pipeline_assigned ON pipeline_deals(assigned_to, stage);
+
+CREATE TABLE IF NOT EXISTS pipeline_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id UUID NOT NULL REFERENCES pipeline_deals(id),
+  activity_type VARCHAR(50) NOT NULL,
+  -- Types: stage_changed, note_added, email_sent, call_logged, meeting_scheduled,
+  --        document_generated, proposal_sent, contract_sent, site_survey_completed
+  description TEXT,
+  performed_by UUID REFERENCES users(id),
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## 6C: Trinity Integration
+
+```
+TRINITY ACTIONS IN PIPELINE:
+
+1. RFP RESPONSE GENERATION (30 credits):
+   Input: Uploaded RFP document + site survey data + company profile
+   Output: Professional RFP response addressing every requirement point-by-point
+   
+2. PROPOSAL GENERATION (20 credits):
+   Input: Site requirements + coverage plan + rate card
+   Output: Branded PDF proposal with coverage schedule, pricing table, SLA terms
+
+3. CONTRACT GENERATION (5 credits — uses Document Signing templates):
+   Input: Accepted proposal terms
+   Output: Contract from template with all terms pre-filled → Document Signing flow
+
+4. FOLLOW-UP EMAILS (3 credits each):
+   Trinity drafts contextual follow-up emails based on deal stage and last activity
+
+5. DEAL SCORING (2 credits):
+   Trinity scores deal likelihood based on activity, response time, deal size, pipeline velocity
+```
+
+## 6D: UI — Pipeline Board
+
+```
+PIPELINE BOARD (Kanban):
+┌─────────────────────────────────────────────────────────────────┐
+│ Sales Pipeline                                     + New Deal   │
+├──────────┬──────────┬──────────┬──────────┬──────────┬─────────┤
+│  LEAD    │  SURVEY  │   RFP    │ PROPOSAL │ CONTRACT │   WON   │
+│  (3)     │  (1)     │   (2)    │  (1)     │  (1)     │  (4)    │
+├──────────┼──────────┼──────────┼──────────┼──────────┼─────────┤
+│┌────────┐│          │┌────────┐│┌────────┐│┌────────┐│         │
+││Grand   ││          ││North   ││ │Metro   │││Heritage ││         │
+││Hotels  ││          ││Star    ││ │Transit ││ │National││         │
+││$8K/mo  ││          ││$12K/mo ││ │$6K/mo  │││$9K/mo  ││         │
+││📞 2d   ││          ││📄 Due  ││ │📤 Sent │││✍️ Sign ││         │
+│└────────┘│          ││  3/10  ││ │  2/28  │││ pending ││         │
+│┌────────┐│          │└────────┘│ └────────┘│└────────┘│         │
+││ABC Corp││          │          │           │          │         │
+││$4K/mo  ││          │          │           │          │         │
+│└────────┘│          │          │           │          │         │
+└──────────┴──────────┴──────────┴──────────┴──────────┴─────────┘
+```
+
+Drag-and-drop cards between stages. Each card shows: company name, estimated value, days in stage, next action icon.
+
+---
+
+# ═══════════════════════════════════════════════════
+# FEATURE 7: DESKTOP CLIENT POLISH (GetSling-Level)
+# ═══════════════════════════════════════════════════
+
+## 7A: Current State
+
+The mobile app has strong feature coverage. The desktop experience needs to match with layouts optimized for large screens. Desktop users are primarily org owners and managers — they need data-dense views with multi-panel layouts.
+
+## 7B: Desktop Layout Architecture
+
+```
+DESKTOP SHELL:
+┌────────────────────────────────────────────────────────────────┐
+│ CoAIleague™    🔍 Search...    💬 8   🔔 9+   Marcus Rivera ▼  │
+├────────┬───────────────────────────────────────────────────────┤
+│        │                                                       │
+│  📊    │   MAIN CONTENT AREA                                   │
+│  Home  │                                                       │
+│        │   (Full width, or split into panels depending         │
+│  📅    │    on the page)                                       │
+│Schedule│                                                       │
+│        │                                                       │
+│  ⏰    │                                                       │
+│ Time   │                                                       │
+│        │                                                       │
+│  👥    │                                                       │
+│Employ. │                                                       │
+│        │                                                       │
+│  💰    │                                                       │
+│Invoice │                                                       │
+│        │                                                       │
+│  📋    │                                                       │
+│Reports │                                                       │
+│        │                                                       │
+│  💬    │                                                       │
+│  Chat  │                                                       │
+│        │                                                       │
+│  ···   │                                                       │
+│  More  │                                                       │
+│        │                                                       │
+├────────┤                                                       │
+│Settings│                                                       │
+│Logout  │                                                       │
+└────────┴───────────────────────────────────────────────────────┘
+```
+
+## 7C: Key Desktop Pages
+
+### Schedule (GetSling-Style)
+
+This is the most important desktop view. Match GetSling's grid layout:
+
+```
+DESKTOP SCHEDULE:
+┌──────────────────────────────────────────────────────────────────────┐
+│ Schedule    Mar 2026    [< Week >]  [Day|Week|Month]  [+ Add Shift] │
+├──────────────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬─────┤
+│ EMPLOYEE     │ MON  │ TUE  │ WED  │ THU  │ FRI  │ SAT  │ SUN  │TOTAL│
+│              │  2   │  3   │  4   │  5   │  6   │  7   │  8   │     │
+├──────────────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼─────┤
+│ 🟢 Marcus A. │ 2-10 │      │ 2-10 │      │ 2-10 │ 2-10 │      │ 32h │
+│              │Westf.│      │Westf.│      │Westf.│Westf.│      │     │
+├──────────────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼─────┤
+│ 🟡 Robert W. │ 6-6  │ 6-6  │ 6-6  │ 6-6  │      │      │ 6-6  │ 60h │
+│              │Pinn. │Pinn. │Pinn. │Pinn. │      │      │Pinn. │ ⚠️  │
+├──────────────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼─────┤
+│ 🟢 Kimberly  │      │ 8-4  │      │ 8-4  │      │ 8-4  │ 8-4  │ 32h │
+│              │      │FtWth │      │FtWth │      │FtWth │FtWth │     │
+├──────────────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼─────┤
+│ ⬜ OPEN      │ 12-8 │      │      │      │ 12-8 │      │      │ 16h │
+│              │Pinn. │      │      │      │Pinn. │      │      │     │
+└──────────────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┴─────┘
+
+Features:
+- Drag-and-drop shifts between cells (reassign employee or day)
+- Click cell to create shift
+- Right-click for context menu (edit, copy, delete, swap)
+- Color-coded by site or by shift type
+- OT warning (amber/red) when employee exceeds 40h
+- Open shifts row at bottom
+- Filter by site, role, employee
+- Hover over shift cell to see full details tooltip
+```
+
+### Dashboard (Owner View — Desktop)
+
+```
+DESKTOP DASHBOARD:
+┌──────────────────────────────┬───────────────────────────┐
+│  OPERATIONAL SNAPSHOT        │  FINANCIAL SNAPSHOT        │
+│                              │                            │
+│  Active Shifts: 47           │  Revenue (MTD): $73,854    │
+│  Officers on Duty: 42       │  Outstanding: $55,001      │
+│  Open Shifts: 12            │  Payroll (next): $47,832   │
+│  Conflicts: 3 ⚠️            │  Margin: 24.4%             │
+├──────────────────────────────┼───────────────────────────┤
+│  SCHEDULE TODAY              │  TRINITY INSIGHTS          │
+│  (mini schedule grid)        │                            │
+│                              │  "Robert Williams has 64   │
+│                              │  hours this week..."       │
+│                              │                            │
+│                              │  "Retail Solutions Group    │
+│                              │  is unprofitable..."       │
+│                              │                            │
+│                              │  "3 contracts expire in    │
+│                              │  30 days..."               │
+├──────────────────────────────┴───────────────────────────┤
+│  RECENT ACTIVITY                                          │
+│  • Invoice #1047 paid by Grand Plaza ($6,100)   10m ago   │
+│  • Sandra Gonzalez clocked in at Metro Transit  22m ago   │
+│  • Incident report submitted — Pinnacle Tower   1h ago    │
+│  • Trinity scheduled 12 shifts for tomorrow     2h ago    │
+└───────────────────────────────────────────────────────────┘
+```
+
+### Chat (Desktop — Side Panel)
+
+On desktop, DockChat should be a persistent side panel that slides in from the right, NOT a full-page takeover. Users can chat while viewing the schedule or reports.
+
+```
+┌────────────────────────────────────┬──────────────────────┐
+│ (Main content — schedule, reports) │ 💬 DockChat           │
+│                                    │ ┌──────────────────┐ │
+│                                    │ │ Conversations    │ │
+│                                    │ │ • Help Desk (8)  │ │
+│                                    │ │ • John Smith 💬   │ │
+│                                    │ │ • Team Briefing  │ │
+│                                    │ ├──────────────────┤ │
+│                                    │ │ Chat thread      │ │
+│                                    │ │ ...              │ │
+│                                    │ │ ...              │ │
+│                                    │ ├──────────────────┤ │
+│                                    │ │ [msg...]    [➤]  │ │
+│                                    │ └──────────────────┘ │
+└────────────────────────────────────┴──────────────────────┘
+```
+
+## 7D: Desktop-Specific Components
+
+```
+COMPONENT                  MOBILE          DESKTOP
+────────────────────────────────────────────────────────────
+Navigation                Bottom tab bar  Left sidebar (collapsible)
+Schedule                  Day list         Week grid (GetSling-style)
+Employees                 Card list        Table with sortable columns
+Chat                      Full page        Side panel overlay
+Reports                   Stacked cards    Side-by-side panels
+Forms                     Bottom sheet     Modal dialog or side panel
+Notifications             Bottom sheet     Dropdown from bell icon
+More menu                 Full page list   Already in sidebar
+Data tables               Horizontal scroll  Full table with pagination
+```
+
+## 7E: Responsive Breakpoints
+
+```
+MOBILE:     < 768px    → Current mobile layout (already built)
+TABLET:     768-1024px → Hybrid (sidebar + adapted content)
+DESKTOP:    > 1024px   → Full desktop layout (sidebar + multi-panel)
+LARGE:      > 1440px   → Extra data density (wider tables, more columns)
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# IMPLEMENTATION PRIORITY & TIMELINE
+# ═══════════════════════════════════════════════════
+
+## Recommended Build Order
+
+Each feature is independent — they can be built in parallel by the Replit agent. But if doing them sequentially, this order maximizes value:
+
+```
+PHASE 1 — Revenue Generators (Weeks 1-3):
+  Feature 2: QB Reports         → Helps close Enterprise deals (owners want reports)
+  Feature 6: Pipeline/RFP       → Directly drives new client acquisition
+  Feature 3: Incident Pipeline   → Biggest differentiator vs all competitors
+
+PHASE 2 — Platform Completeness (Weeks 3-5):
+  Feature 1: Document Signing    → Eliminates DocuSign dependency, enables auto-onboarding
+  Feature 4: Form Builder/UX     → Every form in the app gets better simultaneously
+
+PHASE 3 — Communication & Scale (Weeks 5-7):
+  Feature 5: DockChat Bridges    → Requires Twilio/Meta accounts, more complex integration
+  Feature 7: Desktop Polish      → Large surface area, benefits from all other features existing first
+```
+
+## Credit Cost Summary Across All Features
+
+```
+FEATURE                              FREE ACTIONS              PAID ACTIONS
+──────────────────────────────────────────────────────────────────────────────
+Document Signing                     Sign, upload, search      Generate from template (5cr)
+QB Reports                           All reports, export       Trinity insight (15cr)
+Incident Pipeline                    Submit raw, view          Trinity polish (10cr)
+Form Builder                         Submit forms, view        Trinity form analysis (5cr)
+DockChat Bridges                     All messaging             Trinity auto-respond (3cr)
+RFP/Pipeline                         Track deals, log activity RFP response (30cr), Proposal (20cr)
+Desktop                              All (UI layer only)       N/A
+```
+
+---
+
+END OF FEATURE ROADMAP v1.0
+
+Build each feature with its own database migration, service layer, API routes, and UI components. 
+Test each feature independently before integrating. 
+All AI-powered actions must deduct credits per the billing economy spec.
+Do NOT modify existing Trinity scheduling, billing, or credit services.

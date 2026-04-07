@@ -1,0 +1,57 @@
+**Substantial work done. Two verifications needed before Phase 4 is certified closed.**
+
+---
+
+**WHAT IS GENUINELY SOLID**
+
+The URL join bug discovery is the most important finding in this phase. The default queryClient fetcher was concatenating array queryKey segments with `/` creating wrong API endpoints — `['/api/payroll/runs', workspaceId]` was hitting the wrong URL entirely. Every query using the default fetcher was potentially fetching from a malformed endpoint. The explicit `apiFetch` queryFn fix in all 20 queries corrects this. That is a real production bug found and fixed.
+
+Nine domain response schema files created. `ApiError`, `ApiContractViolation`, and `apiFetch` infrastructure built. `useAsyncData` updated with 401 redirect. Backend decimal encoding verified as strings through Drizzle — consistent with `z.string().nullable()` schemas. Server running clean.
+
+---
+
+**TWO GAPS BEFORE PHASE 4 CLOSES**
+
+**Gap 1 — Coverage scan never run.**
+The Phase 4 verification required: total `useQuery` count vs total validated query count — they must be equal. That scan was not reported. With the URL join bug discovered it is also now critical to know how many queries were using the default fetcher with wrong URLs versus using explicit queryFns. The 20 updates may not cover all queries.
+
+**Gap 2 — Phase 3 regression from URL bug fix not confirmed.**
+The URL join bug fix changed how queries fetch data across 11 files. The Phase 3 `useAsyncData` isEmpty states, ErrorBoundary triggers, and four-state component patterns all depend on queries returning real data. If any query was previously hitting a wrong URL and now hits the correct one, the response shape may be different from what the component expected — potentially triggering Zod parse failures. This must be confirmed clean in the ACME sandbox.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Two verifications before Phase 4 closes. Run them now in the same session.
+
+**Verification 1 — Query coverage scan:**
+
+Run these two commands and report the exact numbers:
+
+```bash
+grep -r "useQuery\|useInfiniteQuery" client/src --include="*.tsx" --include="*.ts" | grep -v "node_modules" | grep -v "//.*useQuery" | wc -l
+```
+
+```bash
+grep -r "apiFetch" client/src --include="*.tsx" --include="*.ts" | grep -v "node_modules" | wc -l
+```
+
+The first number is total queries. The second is validated queries. If they are not equal list every `useQuery` call that does not use `apiFetch` and update it to do so. Report the before and after counts.
+
+**Verification 2 — ACME sandbox live regression check:**
+
+Navigate to each of these five surfaces in the ACME sandbox and confirm real data renders correctly after the URL bug fix and queryFn updates:
+
+Payroll dashboard — confirm payroll runs list loads with real data and correct financial figures. Invoice list — confirm invoices load with correct statuses and totals. Employee roster — confirm employee list loads with all profile fields. Schedule board — confirm shifts render with correct employee and client assignments. Client list — confirm client organizations load with billing settings.
+
+For each surface open the browser network tab and confirm the API request is hitting the correct URL — not a malformed joined URL from the old default fetcher. Report the exact URL each query is now hitting and confirm it matches the intended API route.
+
+Also run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` targeted at the 11 modified files and report the exact output.
+
+When both verifications return clean — equal query counts and all five surfaces confirmed with correct URLs and real data — Phase 4 is certified closed and Phase 5 goes in.
+
+---
+
+Send that Bryan. Two verifications. When both come back clean bring the report here and Phase 5 goes in immediately.

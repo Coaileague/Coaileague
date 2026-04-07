@@ -1,0 +1,50 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="50%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1200" height="4" fill="url(#accent)"/>
+  <rect x="0" y="626" width="1200" height="4" fill="url(#accent)"/>
+  
+  <!-- Trinity Logo - 3 converging arrows -->
+  <g transform="translate(100, 200)">
+    <polygon points="40,0 50,5 42,30 40,35 38,30 30,5" fill="#3B82F6"/>
+    <polygon points="65,50 60,40 42,38 38,38 38,35 55,30" fill="#8B5CF6"/>
+    <polygon points="15,50 20,40 38,38 42,38 42,35 25,30" fill="#06B6D4"/>
+    <circle cx="40" cy="35" r="5" fill="white" opacity="0.9"/>
+  </g>
+  
+  <!-- Company Name -->
+  <text x="170" y="240" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="white">CoAIleague</text>
+  
+  <!-- Tagline -->
+  <text x="100" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#94a3b8">AI-Powered Workforce Intelligence Platform</text>
+  
+  <!-- Feature pills -->
+  <g transform="translate(100, 380)">
+    <rect x="0" y="0" width="220" height="40" rx="20" fill="#3b82f6" opacity="0.2"/>
+    <text x="110" y="26" font-family="system-ui, sans-serif" font-size="16" fill="#60a5fa" text-anchor="middle">Trinity AI Assistant</text>
+    
+    <rect x="240" y="0" width="200" height="40" rx="20" fill="#8b5cf6" opacity="0.2"/>
+    <text x="340" y="26" font-family="system-ui, sans-serif" font-size="16" fill="#a78bfa" text-anchor="middle">Smart Scheduling</text>
+    
+    <rect x="460" y="0" width="200" height="40" rx="20" fill="#06b6d4" opacity="0.2"/>
+    <text x="560" y="26" font-family="system-ui, sans-serif" font-size="16" fill="#22d3ee" text-anchor="middle">GPS Time Tracking</text>
+    
+    <rect x="680" y="0" width="180" height="40" rx="20" fill="#10b981" opacity="0.2"/>
+    <text x="770" y="26" font-family="system-ui, sans-serif" font-size="16" fill="#34d399" text-anchor="middle">Auto-Payroll</text>
+  </g>
+  
+  <!-- Bottom tagline -->
+  <text x="100" y="500" font-family="system-ui, sans-serif" font-size="22" fill="#64748b">Fortune 500-grade workforce management for security companies</text>
+  <text x="100" y="540" font-family="system-ui, sans-serif" font-size="20" fill="#3b82f6">coaileague.com</text>
+  <text x="900" y="540" font-family="system-ui, sans-serif" font-size="18" fill="#475569">Start Free Trial →</text>
+</svg>

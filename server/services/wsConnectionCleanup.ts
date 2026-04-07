@@ -10,6 +10,11 @@ import { db } from '../db';
 import { chatConnections } from '@shared/schema';
 import { isNull, and, sql } from 'drizzle-orm';
 import { cleanupStaleConnections } from '../middleware/wsRateLimiter';
+import { platformEventBus } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+const log = createLogger('wsConnectionCleanup');
+
 
 /**
  * Mark orphaned connections as disconnected
@@ -35,12 +40,12 @@ export async function markOrphanedConnections(thresholdMs: number = 5 * 60 * 100
       .returning({ sessionId: chatConnections.sessionId });
     
     if (orphanedConnections.length > 0) {
-      console.log(`🧹 Cleaned up ${orphanedConnections.length} orphaned WebSocket connection(s)`);
+      log.info(`🧹 Cleaned up ${orphanedConnections.length} orphaned WebSocket connection(s)`);
     }
     
     return orphanedConnections.length;
   } catch (error) {
-    console.error('Error marking orphaned connections:', error);
+    log.error('Error marking orphaned connections:', error);
     return 0;
   }
 }
@@ -51,9 +56,9 @@ export async function markOrphanedConnections(thresholdMs: number = 5 * 60 * 100
  * - Purges old records (>24 hours via existing cleanup)
  */
 export async function runWebSocketConnectionCleanup(): Promise<void> {
-  console.log('\n=================================================');
-  console.log('🧹 WebSocket Connection Cleanup - Starting');
-  console.log('=================================================\n');
+  log.info('\n=================================================');
+  log.info('🧹 WebSocket Connection Cleanup - Starting');
+  log.info('=================================================\n');
 
   try {
     // Step 1: Mark orphaned connections (>5 minutes old, never disconnected)
@@ -62,13 +67,25 @@ export async function runWebSocketConnectionCleanup(): Promise<void> {
     // Step 2: Purge old disconnected records (>24 hours via existing cleanup)
     const purgedCount = await cleanupStaleConnections();
     
-    console.log(`\n✅ WebSocket cleanup complete:`);
-    console.log(`   Orphaned connections closed: ${orphanedCount}`);
-    console.log(`   Stale records purged: ${purgedCount}`);
-    
+    log.info(`\n✅ WebSocket cleanup complete:`);
+    log.info(`   Orphaned connections closed: ${orphanedCount}`);
+    log.info(`   Stale records purged: ${purgedCount}`);
+
+    // NOTE: workspaceId must be a real workspace row or null — 'PLATFORM' is not a valid FK value.
+    // This is an internal infrastructure event; it is blocked by SYSTEM_INTERNAL_EVENT_TYPES
+    // and never reaches the What's New feed or platform_updates table.
+    platformEventBus.publish({
+      type: 'websocket_cleanup_completed',
+      category: 'announcement',
+      title: 'WebSocket Cleanup Completed',
+      description: `Closed ${orphanedCount} orphaned connection(s), purged ${purgedCount} stale record(s)`,
+      workspaceId: PLATFORM_WORKSPACE_ID,
+      metadata: { orphanedCount, purgedCount },
+    });
+
   } catch (error) {
-    console.error('💥 Critical error in WebSocket cleanup:', error);
+    log.error('💥 Critical error in WebSocket cleanup:', error);
   }
 
-  console.log('=================================================\n');
+  log.info('=================================================\n');
 }

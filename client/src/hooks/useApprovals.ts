@@ -1,3 +1,4 @@
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +45,7 @@ export function useApprovals(options: UseApprovalsOptions = {}) {
   return useQuery<ApprovalRequest[]>({
     queryKey: ['/api/approvals', { decision, scope, limit }],
     queryFn: async () => {
-      const response = await fetch(`/api/approvals${queryString ? `?${queryString}` : ''}`, {
+      const response = await secureFetch(`/api/approvals${queryString ? `?${queryString}` : ''}`, {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch approvals');
@@ -60,7 +61,7 @@ export function usePendingApprovalsCount(enabled = true) {
   return useQuery<number>({
     queryKey: ['/api/approvals/pending-count'],
     queryFn: async () => {
-      const response = await fetch('/api/approvals/pending-count', {
+      const response = await secureFetch('/api/approvals/pending-count', {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch pending count');

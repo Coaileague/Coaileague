@@ -25,7 +25,7 @@ export function DayTabs({ weekStart, selectedDate, onSelectDate }: DayTabsProps)
               key={index}
               onClick={() => onSelectDate(day)}
               className={cn(
-                "flex-shrink-0 px-5 py-3 rounded-xl text-center transition-all border-2",
+                "flex-shrink-0 px-5 py-3 rounded-md text-center transition-all border",
                 isActive
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-card text-card-foreground border-border hover-elevate active-elevate-2"

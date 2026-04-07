@@ -1,13 +1,17 @@
+import crypto from 'crypto';
 import { db } from '../../db';
 import { 
   users, workspaces, employees, clients, shifts, timeEntries, 
   invoices, invoiceLineItems, payrollRuns, payrollEntries,
-  workspaceCredits, partnerConnections
+  partnerConnections
 } from '@shared/schema';
 import { eq, and, count } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('sandboxSimulationService');
 
-const SANDBOX_WORKSPACE_ID = '37a04d24-51bd-4856-9faa-d26a2fe82094';
+
+const SANDBOX_WORKSPACE_ID = 'sandbox-simulation-workspace-00000000';
 const SANDBOX_USER_ID = 'sandbox-test-user';
 
 const SECURITY_POSITIONS = [
@@ -76,12 +80,12 @@ interface SimulationResult {
 export class SandboxSimulationService {
   
   async createSandboxWorkspace(): Promise<{ userId: string; workspaceId: string }> {
-    console.log('[Sandbox] Creating sandbox test workspace...');
+    log.info('[Sandbox] Creating sandbox test workspace...');
     
     const existingUser = await db.select().from(users).where(eq(users.id, SANDBOX_USER_ID));
     
     if (existingUser.length > 0) {
-      console.log('[Sandbox] Sandbox already exists, clearing and recreating...');
+      log.info('[Sandbox] Sandbox already exists, clearing and recreating...');
       await this.clearSandboxData();
     } else {
       await db.insert(users).values({
@@ -113,18 +117,60 @@ export class SandboxSimulationService {
         workspaceType: 'business',
       });
 
-      await db.insert(workspaceCredits).values({
-        workspaceId: SANDBOX_WORKSPACE_ID,
-        balance: 100000,
-      }).onConflictDoNothing();
+      // workspace_credits table dropped (Phase 16) — skip seed
     }
 
-    console.log('[Sandbox] Sandbox workspace ready');
+    // Create QuickBooks sandbox connection for testing
+    await this.setupQuickBooksSandboxConnection();
+
+    log.info('[Sandbox] Sandbox workspace ready');
     return { userId: SANDBOX_USER_ID, workspaceId: SANDBOX_WORKSPACE_ID };
   }
 
+  private async setupQuickBooksSandboxConnection(): Promise<void> {
+    // Check if QuickBooks credentials are configured
+    if (!process.env.QUICKBOOKS_CLIENT_ID || !process.env.QUICKBOOKS_CLIENT_SECRET) {
+      log.info('[Sandbox] QuickBooks credentials not configured - skipping sandbox connection');
+      return;
+    }
+
+    const existingConnection = await db.select().from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, SANDBOX_WORKSPACE_ID),
+          eq(partnerConnections.partnerType, 'quickbooks')
+        )
+      );
+
+    if (existingConnection.length > 0) {
+      log.info('[Sandbox] QuickBooks sandbox connection already exists');
+      return;
+    }
+
+    // Create a sandbox QuickBooks connection for demo/training purposes
+    // In production, OAuth flow would populate real tokens
+    const sandboxRealmId = process.env.QUICKBOOKS_SANDBOX_REALM_ID || `sandbox-realm-${crypto.randomUUID().slice(0, 12)}`;
+    
+    await db.insert(partnerConnections).values({
+      id: crypto.randomUUID(),
+      workspaceId: SANDBOX_WORKSPACE_ID,
+      partnerType: 'quickbooks',
+      partnerName: 'QuickBooks Online (Sandbox)',
+      realmId: sandboxRealmId,
+      status: 'sandbox',
+      accessToken: `sandbox-${crypto.randomUUID()}`,
+      refreshToken: `sandbox-${crypto.randomUUID()}`,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      refreshTokenExpiresAt: new Date(Date.now() + 100 * 24 * 60 * 60 * 1000),
+      scopes: ['com.intuit.quickbooks.accounting'],
+      lastSyncAt: new Date(),
+    });
+
+    log.info('[Sandbox] Created QuickBooks sandbox connection');
+  }
+
   async clearSandboxData(): Promise<void> {
-    console.log('[Sandbox] Clearing existing sandbox data...');
+    log.info('[Sandbox] Clearing existing sandbox data...');
     
     await db.delete(payrollEntries).where(eq(payrollEntries.workspaceId, SANDBOX_WORKSPACE_ID));
     await db.delete(payrollRuns).where(eq(payrollRuns.workspaceId, SANDBOX_WORKSPACE_ID));
@@ -133,8 +179,9 @@ export class SandboxSimulationService {
     await db.delete(shifts).where(eq(shifts.workspaceId, SANDBOX_WORKSPACE_ID));
     await db.delete(employees).where(eq(employees.workspaceId, SANDBOX_WORKSPACE_ID));
     await db.delete(clients).where(eq(clients.workspaceId, SANDBOX_WORKSPACE_ID));
+    await db.delete(partnerConnections).where(eq(partnerConnections.workspaceId, SANDBOX_WORKSPACE_ID));
     
-    console.log('[Sandbox] Sandbox data cleared');
+    log.info('[Sandbox] Sandbox data cleared');
   }
 
   async runFullSimulation(config: Partial<SimulationConfig> = {}): Promise<SimulationResult> {
@@ -150,7 +197,7 @@ export class SandboxSimulationService {
       includePayroll: config.includePayroll !== false,
     };
 
-    console.log(`[Sandbox] Starting full simulation with config:`, fullConfig);
+    log.info(`[Sandbox] Starting full simulation with config:`, fullConfig);
 
     await this.createSandboxWorkspace();
 
@@ -197,12 +244,12 @@ export class SandboxSimulationService {
       result,
     });
 
-    console.log(`[Sandbox] ${result.summary}`);
+    log.info(`[Sandbox] ${result.summary}`);
     return result;
   }
 
   private async seedEmployees(count: number): Promise<number> {
-    console.log(`[Sandbox] Seeding ${count} employees...`);
+    log.info(`[Sandbox] Seeding ${count} employees...`);
     
     const employeeRecords = [];
     const usedCombos = new Set<string>();
@@ -238,12 +285,12 @@ export class SandboxSimulationService {
     }
 
     await db.insert(employees).values(employeeRecords);
-    console.log(`[Sandbox] Created ${count} employees`);
+    log.info(`[Sandbox] Created ${count} employees`);
     return count;
   }
 
   private async seedClients(count: number): Promise<number> {
-    console.log(`[Sandbox] Seeding ${count} clients...`);
+    log.info(`[Sandbox] Seeding ${count} clients...`);
     
     const clientRecords = [];
 
@@ -256,11 +303,11 @@ export class SandboxSimulationService {
         workspaceId: SANDBOX_WORKSPACE_ID,
         firstName: contactFirst,
         lastName: contactLast,
-        company: company.name,
+        companyName: company.name,
         email: `${contactFirst.toLowerCase()}.${contactLast.toLowerCase()}@${company.name.toLowerCase().replace(/\s+/g, '')}.test`,
         phone: `(555) ${String(200 + i).padStart(3, '0')}-${String(2000 + i).padStart(4, '0')}`,
         address: `${1000 + i * 100} ${company.industry} Blvd, Test City, CA 90210`,
-        billingRate: company.billRate.toFixed(2),
+        contractRate: company.billRate.toFixed(2),
         strategicTier: i < 3 ? 'enterprise' : i < 6 ? 'premium' : 'standard',
         tierScore: (50 + Math.random() * 50).toFixed(2),
         isActive: true,
@@ -268,18 +315,18 @@ export class SandboxSimulationService {
     }
 
     await db.insert(clients).values(clientRecords);
-    console.log(`[Sandbox] Created ${count} clients`);
+    log.info(`[Sandbox] Created ${count} clients`);
     return count;
   }
 
   private async seedSchedules(weeksOfHistory: number): Promise<number> {
-    console.log(`[Sandbox] Seeding ${weeksOfHistory} weeks of schedules...`);
+    log.info(`[Sandbox] Seeding ${weeksOfHistory} weeks of schedules...`);
     
     const allEmployees = await db.select().from(employees).where(eq(employees.workspaceId, SANDBOX_WORKSPACE_ID));
     const allClients = await db.select().from(clients).where(eq(clients.workspaceId, SANDBOX_WORKSPACE_ID));
     
     if (allEmployees.length === 0 || allClients.length === 0) {
-      console.log('[Sandbox] No employees or clients to create schedules for');
+      log.info('[Sandbox] No employees or clients to create schedules for');
       return 0;
     }
 
@@ -317,7 +364,7 @@ export class SandboxSimulationService {
             workspaceId: SANDBOX_WORKSPACE_ID,
             employeeId: employee.id,
             clientId: client.id,
-            title: `${client.company} - ${shiftType.name}`,
+            title: `${client.companyName || 'Client'} - ${shiftType.name}`,
             startTime,
             endTime,
             status: shiftDate < now ? 'completed' : 'scheduled',
@@ -335,12 +382,12 @@ export class SandboxSimulationService {
       }
     }
 
-    console.log(`[Sandbox] Created ${shiftRecords.length} shifts`);
+    log.info(`[Sandbox] Created ${shiftRecords.length} shifts`);
     return shiftRecords.length;
   }
 
   private async seedTimeEntries(weeksOfHistory: number): Promise<number> {
-    console.log(`[Sandbox] Seeding ${weeksOfHistory} weeks of time entries...`);
+    log.info(`[Sandbox] Seeding ${weeksOfHistory} weeks of time entries...`);
     
     const allShifts = await db.select().from(shifts).where(
       and(
@@ -350,7 +397,7 @@ export class SandboxSimulationService {
     );
 
     if (allShifts.length === 0) {
-      console.log('[Sandbox] No completed shifts to create time entries for');
+      log.info('[Sandbox] No completed shifts to create time entries for');
       return 0;
     }
 
@@ -387,17 +434,17 @@ export class SandboxSimulationService {
       }
     }
 
-    console.log(`[Sandbox] Created ${timeEntryRecords.length} time entries`);
+    log.info(`[Sandbox] Created ${timeEntryRecords.length} time entries`);
     return timeEntryRecords.length;
   }
 
   private async seedInvoices(weeksOfHistory: number): Promise<number> {
-    console.log(`[Sandbox] Seeding invoices for ${weeksOfHistory} weeks...`);
+    log.info(`[Sandbox] Seeding invoices for ${weeksOfHistory} weeks...`);
     
     const allClients = await db.select().from(clients).where(eq(clients.workspaceId, SANDBOX_WORKSPACE_ID));
     
     if (allClients.length === 0) {
-      console.log('[Sandbox] No clients to create invoices for');
+      log.info('[Sandbox] No clients to create invoices for');
       return 0;
     }
 
@@ -412,7 +459,7 @@ export class SandboxSimulationService {
 
       for (const client of allClients) {
         const hours = 40 + Math.random() * 120;
-        const rate = parseFloat(client.billingRate || '35');
+        const rate = parseFloat(client.contractRate || '35');
         const subtotal = hours * rate;
         const tax = subtotal * 0.0875;
         const total = subtotal + tax;
@@ -433,8 +480,9 @@ export class SandboxSimulationService {
         }).returning();
 
         await db.insert(invoiceLineItems).values({
+          workspaceId: SANDBOX_WORKSPACE_ID,
           invoiceId: invoice.id,
-          description: `Security services for ${client.company}`,
+          description: `Security services for ${client.companyName || 'Client'}`,
           quantity: hours.toFixed(2),
           unitPrice: rate.toFixed(2),
           amount: subtotal.toFixed(2),
@@ -444,12 +492,12 @@ export class SandboxSimulationService {
       }
     }
 
-    console.log(`[Sandbox] Created ${invoicesCreated} invoices`);
+    log.info(`[Sandbox] Created ${invoicesCreated} invoices`);
     return invoicesCreated;
   }
 
   private async seedPayroll(weeksOfHistory: number): Promise<number> {
-    console.log(`[Sandbox] Seeding payroll for ${weeksOfHistory} weeks...`);
+    log.info(`[Sandbox] Seeding payroll for ${weeksOfHistory} weeks...`);
     
     const allEmployees = await db.select().from(employees).where(
       and(
@@ -459,7 +507,7 @@ export class SandboxSimulationService {
     );
 
     if (allEmployees.length === 0) {
-      console.log('[Sandbox] No employees to create payroll for');
+      log.info('[Sandbox] No employees to create payroll for');
       return 0;
     }
 
@@ -545,7 +593,7 @@ export class SandboxSimulationService {
       payrollRunsCreated++;
     }
 
-    console.log(`[Sandbox] Created ${payrollRunsCreated} payroll runs`);
+    log.info(`[Sandbox] Created ${payrollRunsCreated} payroll runs`);
     return payrollRunsCreated;
   }
 

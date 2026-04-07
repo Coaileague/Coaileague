@@ -1,18 +1,24 @@
+import { sanitizeError } from '../middleware/errorHandler';
 import type { Express } from 'express';
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { orgDocuments, orgDocumentAccess, orgDocumentSignatures, users } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import '../types';
+import { documentSigningService } from '../services/documentSigningService';
+import { creditManager } from '../services/billing/creditManager';
+import { createLogger } from '../lib/logger';
+const log = createLogger('DocumentLibraryRoutes');
 
-export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
+
+export function registerDocumentLibraryRoutes(app: Express, requireAuth: any, attachWorkspaceId?: any) {
   const router = Router();
 
   // ==================== DOCUMENTS ====================
 
   router.get("/", requireAuth, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req as any).workspaceId;
+      const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
 
       const { category, requiresSignature } = req.query;
@@ -31,14 +37,50 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
       .orderBy(desc(orgDocuments.createdAt));
 
       res.json({ success: true, data: docs });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.get("/my/pending-signatures", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const pending = await documentSigningService.getMyPendingSignatures(userId, workspaceId);
+      res.json({ success: true, data: pending });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.get("/external/verify/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+
+      const [sigRequest] = await db.select({
+        signature: orgDocumentSignatures,
+        document: orgDocuments
+      })
+      .from(orgDocumentSignatures)
+      .leftJoin(orgDocuments, eq(orgDocumentSignatures.documentId, orgDocuments.id))
+      .where(eq(orgDocumentSignatures.verificationToken, token));
+
+      if (!sigRequest) return res.status(404).json({ error: "Invalid or expired token" });
+
+      res.json({ success: true, data: sigRequest });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
   router.get("/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req as any).workspaceId;
+      const workspaceId = req.workspaceId;
       const { id } = req.params;
       const userId = (req.user as any)?.id;
 
@@ -55,14 +97,15 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
       });
 
       res.json({ success: true, data: doc });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
   router.post("/", requireAuth, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req as any).workspaceId;
+      const workspaceId = req.workspaceId;
       const userId = (req.user as any)?.id;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
 
@@ -86,33 +129,62 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
       }).returning();
 
       res.json({ success: true, data: doc });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
   router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req as any).workspaceId;
+      const workspaceId = req.workspaceId;
       const { id } = req.params;
-      const updates = req.body;
+      const { title, description, category, fileUrl, fileName, fileType, fileSize, status, tags, signatureRequired, totalSignaturesRequired } = req.body;
 
-      updates.updatedAt = new Date();
+      const safeDocUpdates: Record<string, any> = { updatedAt: new Date() };
+      if (title !== undefined) safeDocUpdates.title = title;
+      if (description !== undefined) safeDocUpdates.description = description;
+      if (category !== undefined) safeDocUpdates.category = category;
+      if (fileUrl !== undefined) safeDocUpdates.fileUrl = fileUrl;
+      if (fileName !== undefined) safeDocUpdates.fileName = fileName;
+      if (fileType !== undefined) safeDocUpdates.fileType = fileType;
+      if (fileSize !== undefined) safeDocUpdates.fileSize = fileSize;
+      if (status !== undefined) safeDocUpdates.status = status;
+      if (tags !== undefined) safeDocUpdates.tags = tags;
+      if (signatureRequired !== undefined) safeDocUpdates.signatureRequired = signatureRequired;
+      if (totalSignaturesRequired !== undefined) safeDocUpdates.totalSignaturesRequired = totalSignaturesRequired;
 
       const [updated] = await db.update(orgDocuments)
-        .set(updates)
+        .set(safeDocUpdates)
         .where(and(eq(orgDocuments.id, id), eq(orgDocuments.workspaceId, workspaceId)))
         .returning();
 
       res.json({ success: true, data: updated });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.put("/:id/signature-fields", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const { id } = req.params;
+      const { signatureFields } = req.body;
+      const [updated] = await db.update(orgDocuments)
+        .set({ signatureFields, updatedAt: new Date() })
+        .where(and(eq(orgDocuments.id, id), eq(orgDocuments.workspaceId, workspaceId)))
+        .returning();
+      res.json({ success: true, data: updated });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Signature fields error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
   router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const workspaceId = (req as any).workspaceId;
+      const workspaceId = req.workspaceId;
       const { id } = req.params;
 
       await db.update(orgDocuments)
@@ -120,8 +192,9 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
         .where(and(eq(orgDocuments.id, id), eq(orgDocuments.workspaceId, workspaceId)));
 
       res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
@@ -141,8 +214,9 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
       .orderBy(desc(orgDocumentSignatures.signedAt));
 
       res.json({ success: true, data: signatures });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
@@ -150,9 +224,12 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
     try {
       const { id } = req.params;
       const userId = (req.user as any)?.id;
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
       const { signatureData, signatureType, signerEmail, signerName } = req.body;
 
       const [signature] = await db.insert(orgDocumentSignatures).values({
+        workspaceId: workspaceId,
         documentId: id,
         signerUserId: userId,
         signerEmail,
@@ -168,76 +245,152 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
         .where(eq(orgDocuments.id, id));
 
       res.json({ success: true, data: signature });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.post("/:id/send-for-signature", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = req.workspaceId;
+      const userId = (req.user as any)?.id;
+      const { id } = req.params;
+      const { recipients, message } = req.body;
+
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ error: "At least one recipient is required" });
+      }
+
+      const senderName = (req.user as any)?.firstName 
+        ? `${(req.user as any).firstName} ${(req.user as any).lastName || ''}`.trim()
+        : (req.user as any)?.email || 'Organization';
+
+      const result = await documentSigningService.sendDocumentForSignature({
+        documentId: id,
+        workspaceId,
+        senderId: userId,
+        senderName,
+        recipients: recipients.map((r: any) => ({
+          email: r.email,
+          name: r.name,
+          userId: r.userId,
+          type: r.type || (r.userId ? 'internal' : 'external'),
+        })),
+        message,
+      });
+
+      // Deduct 3 credits per document sent for e-signature (replaces DocuSign at $500+/year)
+      if (workspaceId) {
+        creditManager.deductCredits({
+          workspaceId,
+          userId: userId || 'system',
+          featureKey: 'document_signing_send',
+          featureName: 'Digital E-Signature Send',
+          description: `Document ${id} sent for e-signature to ${recipients.length} recipient(s)`,
+          amountOverride: 3,
+          relatedEntityType: 'org_document',
+          relatedEntityId: id,
+        }).catch((err: Error) => { log.error('[DocumentLibrary] E-sig credit deduction failed (non-blocking):', sanitizeError(err)); });
+      }
+
+      res.json({ success: true, data: result });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
   router.post("/:id/request-signature", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = req.workspaceId;
+      const userId = (req.user as any)?.id;
       const { id } = req.params;
       const { signerEmail, signerName } = req.body;
 
-      const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const senderName = (req.user as any)?.firstName 
+        ? `${(req.user as any).firstName} ${(req.user as any).lastName || ''}`.trim()
+        : 'Organization';
 
-      const [request] = await db.insert(orgDocumentSignatures).values({
+      const result = await documentSigningService.sendDocumentForSignature({
         documentId: id,
-        signerEmail,
-        signerName,
-        verificationToken,
-      }).returning();
+        workspaceId,
+        senderId: userId,
+        senderName,
+        recipients: [{ email: signerEmail, name: signerName, type: 'external' as const }],
+      });
 
-      res.json({ success: true, data: request, signatureLink: `/sign/${verificationToken}` });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      const firstSig = result[0];
+      res.json({ success: true, data: firstSig, signatureLink: `/sign/${firstSig?.verificationToken}` });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
-  router.get("/external/verify/:token", async (req: Request, res: Response) => {
+  router.post("/:id/sign-internal", requireAuth, async (req: Request, res: Response) => {
     try {
-      const { token } = req.params;
+      const userId = (req.user as any)?.id;
+      const { id } = req.params;
+      const { signatureData, signatureType } = req.body;
 
-      const [sigRequest] = await db.select({
-        signature: orgDocumentSignatures,
-        document: orgDocuments
-      })
-      .from(orgDocumentSignatures)
-      .leftJoin(orgDocuments, eq(orgDocumentSignatures.documentId, orgDocuments.id))
-      .where(eq(orgDocumentSignatures.verificationToken, token));
+      if (!signatureData) return res.status(400).json({ error: "Signature data is required" });
 
-      if (!sigRequest) return res.status(404).json({ error: "Invalid or expired token" });
+      const result = await documentSigningService.processInternalSignature(
+        id, userId, signatureData, signatureType || 'drawn',
+        req.ip || req.socket.remoteAddress || '',
+        req.headers['user-agent'] || ''
+      );
 
-      res.json({ success: true, data: sigRequest });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.json({ success: true, data: result });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.get("/:id/signature-status", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const status = await documentSigningService.getSignatureStatus(id);
+      res.json({ success: true, data: status });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.post("/:id/send-reminders", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await documentSigningService.sendDocumentReminders(id);
+      res.json({ success: true, data: result });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
   router.post("/external/sign/:token", async (req: Request, res: Response) => {
     try {
       const { token } = req.params;
-      const { signatureData, signatureType } = req.body;
+      const { signatureData, signatureType, workspaceId: bodyWorkspaceId } = req.body;
+      // Check 4: accept workspace scope from body or query param so the link can carry it
+      const requestedWorkspaceId = bodyWorkspaceId || (req.query.workspaceId as string | undefined);
 
-      const [updated] = await db.update(orgDocumentSignatures)
-        .set({
-          signatureData,
-          signatureType: signatureType || 'drawn',
-          verifiedAt: new Date(),
-          ipAddress: req.ip || req.socket.remoteAddress,
-          userAgent: req.headers['user-agent']
-        })
-        .where(eq(orgDocumentSignatures.verificationToken, token))
-        .returning();
+      if (!signatureData) return res.status(400).json({ error: "Signature data is required" });
 
-      if (updated) {
-        await db.update(orgDocuments)
-          .set({ signaturesCompleted: sql`${orgDocuments.signaturesCompleted} + 1`, updatedAt: new Date() })
-          .where(eq(orgDocuments.id, updated.documentId));
-      }
+      const result = await documentSigningService.processExternalSignature(
+        token, signatureData, signatureType || 'drawn',
+        req.ip || req.socket.remoteAddress || '',
+        req.headers['user-agent'] || '',
+        requestedWorkspaceId   // Check 4: pass workspace scope for token binding
+      );
 
-      res.json({ success: true, data: updated });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.json({ success: true, data: result });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
@@ -257,10 +410,12 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: any) {
       .orderBy(desc(orgDocumentAccess.viewedAt));
 
       res.json({ success: true, data: logs });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[DocumentLibrary] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
-  app.use('/api/documents', router);
+  const middlewares = attachWorkspaceId ? [requireAuth, attachWorkspaceId] : [requireAuth];
+  app.use('/api/documents', ...middlewares, router);
 }

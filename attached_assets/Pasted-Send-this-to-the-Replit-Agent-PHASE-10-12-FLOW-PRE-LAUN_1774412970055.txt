@@ -1,0 +1,84 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 10 — 12-FLOW PRE-LAUNCH BUG SWEEP**
+
+This phase traces every critical user flow from trigger to completion. No flow is marked clean until every step in the chain — trigger, fetch, validate, process, mutate, confirm, notify — is verified working, correctly permissioned, and producing the right downstream records. Report all findings per flow before fixing anything.
+
+---
+
+**THE 12 FLOWS**
+
+**Flow 1 — Officer Onboarding**
+Trigger: Manager invites a new officer → officer receives invite email → creates account → completes onboarding documents → documents signed and stored → officer record activated → workspace notified.
+Verify: Invite email delivered via NDS. Account creation scoped to correct workspace. All onboarding documents generated from templates. Signing flow completes and saves correctly. Officer status transitions from pending → active. Manager receives confirmation notification.
+
+**Flow 2 — Shift Creation & Assignment**
+Trigger: Manager creates a shift → assigns officer → officer receives shift notification → officer acknowledges → shift appears on schedule.
+Verify: Shift record created with correct workspace_id, post, date, time, and rate. Assignment validates officer license against post requirements. NDS notification delivered to officer. Acknowledgment recorded. Schedule reflects assignment in real time.
+
+**Flow 3 — Officer Clock-In from Field**
+Trigger: Officer clocks in via mobile → GPS coordinates captured → timestamp recorded → supervisor notified → shift status updates to active.
+Verify: GPS stamp saved with clock-in record. Timestamp within acceptable window of shift start. Supervisor notification fires via NDS. Shift status transitions correctly. Clock-in cannot be submitted for a shift not assigned to that officer.
+
+**Flow 4 — Calloff & Replacement Cascade**
+Trigger: Officer calls off → calloff recorded → open shift created → qualified available replacements notified in priority order → replacement accepts → shift reassigned → manager notified of resolution.
+Verify: Calloff record created with reason and timestamp. Original officer's record updated. Open shift visibility scoped correctly by role. Replacement notification chain fires in correct order. Acceptance closes the open shift. Manager receives resolution confirmation via NDS.
+
+**Flow 5 — Incident Report Creation & Routing**
+Trigger: Officer submits incident report from field → report routed to supervisor → supervisor reviews → escalation path triggered if required → client notified if client-facing incident → report stored with audit trail.
+Verify: Report record created with correct workspace, shift, officer, and timestamp. Supervisor notification fires immediately. Escalation logic triggers correctly based on incident type and severity. Client notification conditional on incident category. Document stored and accessible to correct roles only.
+
+**Flow 6 — Shift Close & Hours Confirmation**
+Trigger: Officer clocks out → hours calculated → supervisor confirms → hours locked → payroll record staged.
+Verify: Clock-out GPS and timestamp saved. Hours calculated correctly including any break deductions. Supervisor confirmation required before hours lock. Locked hours feed correctly into payroll staging table. Discrepancy flag triggers if hours deviate significantly from scheduled shift length.
+
+**Flow 7 — Invoice Generation & Delivery**
+Trigger: Pay period closes → shifts aggregated by client → rates applied → invoice generated → invoice delivered to client via NDS → client views invoice → payment acknowledged.
+Verify: All shifts for the period included — none missing, none duplicated. Rate calculation correct including any differential rates. Invoice PDF generated with correct line items. NDS delivery confirmed. Client portal reflects invoice status. Payment acknowledgment updates invoice state machine correctly.
+
+**Flow 8 — Payroll Run**
+Trigger: Pay period closes → officer hours confirmed → rates applied → deductions processed → pay stubs generated → payroll export or direct deposit triggered → officers notified.
+Verify: Every officer with confirmed hours included. Regular and overtime calculated correctly. Deductions applied in correct order. Pay stub generated and accessible to officer in portal. Payroll run idempotency confirmed — cannot fire twice for same period. Officers notified via NDS on pay stub availability.
+
+**Flow 9 — Client Contract Creation & Signing**
+Trigger: Sales creates client contract → contract routed to client for review → client signs → countersignature applied → contract stored → client portal reflects executed contract.
+Verify: Contract generated from correct template with accurate rate and scope data. Routing delivers to correct client contact via NDS. Signing flow completes without errors. Countersignature logic fires after client signs. Executed contract stored with correct access permissions. Client portal reflects signed status immediately.
+
+**Flow 10 — Compliance Report Generation**
+Trigger: Scheduled or manual trigger → compliance data aggregated → report generated → routed to compliance officer → state auditor portal updated if required.
+Verify: All required data fields populated. Report generation idempotent — no duplicates on retry. Compliance officer notification via NDS. Auditor portal reflects current data. Export format meets regulatory requirements.
+
+**Flow 11 — Trinity Action Execution via Natural Language**
+Trigger: Authorized user sends natural language request to Trinity or HelpAI → intent parsed → action identified in registry → permission verified against requesting user's role → action executed → result confirmed → audit log created.
+Verify: Intent parsed correctly for at least 5 representative action types (schedule query, permission change, report request, shift assignment, incident escalation). Permission check fires before execution — not after. Action executes only if user's role has clearance. Result returned with confirmation. Every execution logged in Trinity audit trail with user, action, timestamp, and outcome.
+
+**Flow 12 — End-to-End Operational Cycle**
+This is the integration flow. Run all of the above as one continuous cycle: Officer onboarded → scheduled → clocks in → incident reported → clocks out → hours confirmed → invoice generated → payroll run → compliance recorded → Trinity queried for summary.
+Verify: Every system hands off correctly to the next. No orphaned records at any stage. Audit trail is complete and continuous from onboarding through compliance. All NDS notifications fired and logged. Financial records reconcile end-to-end.
+
+---
+
+**EXECUTION RULES**
+
+- Trace each flow completely before writing any fixes
+- Report findings per flow: what passed, what failed, what is missing
+- After findings are reported and reviewed, fix all issues systematically — smallest scope fix first
+- After fixes, re-trace the affected flow to confirm it now passes
+- Do not mark a flow clean until the full trace completes without errors
+
+**FINAL VERIFICATION — before Phase 10 is marked complete:**
+- Check 1: All 12 flows traced and passing end-to-end
+- Check 2: Zero orphaned records produced by any flow
+- Check 3: Every flow produces the correct NDS notification at each step
+- Check 4: All financial flows (7, 8) verified idempotent — cannot produce duplicate records
+- Check 5: Trinity flow (11) confirms permission check fires before execution on all 5 test actions
+- Check 6: End-to-end cycle (Flow 12) completes with a continuous unbroken audit trail
+- Check 7: Server starts clean with zero errors after all fixes applied
+
+Report findings flow by flow. Do not mark Phase 10 complete until all 7 checks pass.
+
+---
+
+Paste that and let it run. Tell it findings first, fixes second — same discipline as Phase 9.

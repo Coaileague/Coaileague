@@ -1,0 +1,131 @@
+Good news. You already have a lot of Resend infrastructure in place. Here is exactly what to keep, what to change, and what to delete.
+
+---
+
+**WHAT YOU ALREADY HAVE THAT IS GOOD — KEEP THESE**
+
+```
+A    @              34.111.179.208        KEEP - points to Replit
+TXT  @              replit-verify=...     KEEP - Replit verification
+TXT  resend._domainkey  p=MIGfMA0...     KEEP - Resend DKIM already set
+TXT  _dmarc         v=DMARC1;p=reject    KEEP but EDIT (see below)
+A    www            34.111.179.208        KEEP
+TXT  www            replit-verify=...    KEEP
+```
+
+---
+
+**WHAT TO DELETE**
+
+```
+DELETE these — Google Workspace MX records:
+  MX  @   aspmx.l.google.com
+  MX  @   alt1.aspmx.l.google.com
+  MX  @   alt2.aspmx.l.google.com
+  MX  @   alt3.aspmx.l.google.com
+  MX  @   alt4.aspmx.l.google.com
+
+DELETE these — Neo/Zoho records no longer needed:
+  TXT  @    v=spf1 include:spf0001.neo.space -all
+  TXT  @    neo-verification=PwqghPnrMY
+  TXT  neo1._domainkey   p=MIGfMA0... (the Neo DKIM)
+
+DELETE this — Google verification no longer needed:
+  TXT  @    google-site-verification=x9Vs3bw6gsd...
+
+DELETE these — mail subdomain redundant after root domain setup:
+  MX   mail      inbound-smtp.us-east-1.amazonaws.com
+  MX   send.mail feedback-smtp.us-east-1.amazonses.com
+  TXT  send.mail v=spf1 include:amazonses.com ~all
+  TXT  send      v=spf1 include:amazonses.com ~all
+  TXT  resend._domainkey.mail  p=MIGfMA0... (redundant)
+```
+
+---
+
+**WHAT TO CHANGE**
+
+```
+CHANGE the SPF record at @ root:
+  DELETE: v=spf1 include:spf0001.neo.space -all
+  ADD NEW TXT @ record:
+    v=spf1 include:amazonses.com ~all
+
+CHANGE the DMARC record:
+  Current: v=DMARC1; p=reject; sp=reject; pct=100
+  Change to: v=DMARC1; p=quarantine; rua=mailto:dmarc@coaileague.com; pct=100
+  Reason: p=reject is too strict during transition. Use quarantine first.
+  After 30 days of stable delivery switch back to reject.
+```
+
+---
+
+**WHAT TO ADD**
+
+```
+ADD new MX records at @ root for Resend inbound:
+  Type: MX
+  Name/Host: @
+  Priority: 10
+  Value: inbound-smtp.us-east-1.amazonaws.com
+
+  (This is the same server already on your mail subdomain
+   just moving it to the root @ so all @coaileague.com
+   email routes through Resend inbound)
+```
+
+---
+
+**YOUR FINAL DNS SHOULD LOOK LIKE THIS**
+
+```
+TYPE   HOST                    VALUE
+A      @                       34.111.179.208
+A      www                     34.111.179.208
+TXT    @                       replit-verify=db56a2c0-e2f1-4d42-b899-6511...
+TXT    @                       v=spf1 include:amazonses.com ~all
+TXT    www                     replit-verify=db56a2c0-e2f1-4d42-b899-6511...
+TXT    _dmarc                  v=DMARC1; p=quarantine; rua=mailto:dmarc@coaileague.com; pct=100
+TXT    resend._domainkey       p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCE... (already there keep it)
+MX     @                       inbound-smtp.us-east-1.amazonaws.com (priority 10)
+```
+
+---
+
+**THE ORDER TO DO THIS**
+
+```
+Step 1: Delete Neo/Zoho records first
+Step 2: Delete Google site verification
+Step 3: Update SPF at @ to amazonses.com
+Step 4: Update DMARC to p=quarantine with rua email
+Step 5: Delete all 5 Google MX records
+Step 6: Add new MX @ pointing to inbound-smtp.us-east-1.amazonaws.com
+Step 7: Delete redundant mail and send subdomain records
+Step 8: Wait 24-48 hours for DNS propagation
+Step 9: Test by sending email to bryan@coaileague.com
+        from an external account like Gmail
+Step 10: Verify it arrives in CoAIleague platform inbox
+```
+
+---
+
+**BEFORE YOU DELETE GOOGLE MX RECORDS**
+
+Export your existing Google Workspace emails right now before doing anything. Go to takeout.google.com and download your Gmail archive. Once MX records change new email stops going to Google immediately.
+
+Also go to Resend Dashboard and confirm coaileague.com shows as a verified domain before changing MX records. If it is not verified yet Resend will not accept the inbound email.
+
+---
+
+**REPLIT SECRETS TO ADD/VERIFY**
+
+```
+RESEND_API_KEY          re_[your key from Resend dashboard]
+RESEND_WEBHOOK_SECRET   [signing secret from Resend inbound webhook]
+RESEND_FROM_DOMAIN      coaileague.com
+RESEND_FROM_EMAIL       noreply@coaileague.com
+BASE_URL                https://coaileague.com
+```
+
+Go make those DNS changes in the exact order above and come back when done. The propagation takes up to 48 hours but usually shows within a few hours.

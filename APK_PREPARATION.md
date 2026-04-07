@@ -66,12 +66,12 @@ File: `public/manifest.json` (create if missing)
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
@@ -209,9 +209,10 @@ cordova build android
 
 ## Assets Required
 
-### Icons (Create these before build):
-- `public/icon-192.png` (192x192px)
-- `public/icon-512.png` (512x512px)
+### Icons (Auto-generated from coaileague-logo.png):
+- `client/public/icons/icon-192x192.png` (192x192px)
+- `client/public/icons/icon-512x512.png` (512x512px)
+- All sizes in `client/public/icons/` folder
 - `android/app/src/main/res/mipmap-*/ic_launcher.png` (various sizes)
 
 ### Splash Screen:

@@ -1,0 +1,85 @@
+Yes. The audits covered the platform itself thoroughly. What they didn't cover is everything surrounding the platform that determines whether the first tenant experience is actually safe and successful. Here's what's missing:
+
+---
+
+**CATEGORY 1 — PRODUCTION ENVIRONMENT INTEGRITY**
+
+These are the things that work fine in dev and silently fail in prod if not explicitly verified.
+
+Environment variable separation — every secret, API key, database URL, and service token used in development must be rotated to production-specific values before go-live. A single dev credential pointing at a prod database, or a prod credential leaking into a dev log, is a serious exposure. Confirm no dev or sandbox values exist anywhere in the production environment.
+
+CORS lockdown — confirm CORS policy in production is restricted to the exact production domain only. Dev environments often have permissive CORS that gets carried forward. In production it must reject any origin not explicitly whitelisted.
+
+Production database separation — confirm the production database is completely isolated from the ACME sandbox database. No shared connection strings, no shared tables, no migration scripts that could run against the wrong target.
+
+SSL and domain verification — confirm every endpoint in production is HTTPS only with no HTTP fallback, certificates are valid and auto-renewing, and the production domain resolves correctly from all regions you expect tenants to access from.
+
+---
+
+**CATEGORY 2 — OBSERVABILITY & INCIDENT RESPONSE**
+
+The audit confirmed the platform works. This covers what happens when something breaks at 2am after go-live with a real tenant.
+
+Error monitoring — confirm a production error tracking tool (Sentry or equivalent) is active and alerting. If Trinity silently throws a 500 on a payroll calculation in production, you need to know before the tenant does.
+
+Uptime monitoring — confirm an external uptime monitor is watching the production URL and will alert you if the platform goes down. The tenant should never be the one who tells you it's offline.
+
+Logging — confirm production logs are being captured, retained, and searchable. When a tenant reports an issue, you need to be able to pull the exact request and trace what happened.
+
+Incident response plan — before the first tenant goes live, you need a documented answer to: what do you do if payroll data is inaccessible on payday? What do you do if an invoice is generated with the wrong amount? What is your response time commitment and your communication protocol with the tenant?
+
+Rollback plan — if a post-launch deployment breaks something, what is your rollback procedure and how fast can you execute it?
+
+---
+
+**CATEGORY 3 — DATA PROTECTION & BACKUP**
+
+Backup verification — confirm production database backups are running on a defined schedule. More importantly, confirm a restore has actually been tested. A backup that has never been restored is theoretical. You need to know your recovery time before you need it.
+
+Data retention policy — confirm you have a documented policy for how long tenant data is retained after cancellation, and that it is disclosed to the tenant before they sign up.
+
+Breach response — confirm you have a basic incident response procedure for a data breach. Under Texas law and general best practice, you have notification obligations if tenant or employee data is compromised.
+
+---
+
+**CATEGORY 4 — EMAIL & NOTIFICATION DELIVERABILITY**
+
+Transactional email authentication — confirm SPF, DKIM, and DMARC records are configured correctly for every domain you send email from. Without these, your invite emails, payroll notifications, and invoice sends will land in spam or be rejected entirely. Test actual delivery to Gmail, Outlook, and Yahoo inboxes before the tenant goes live.
+
+Staffing email routing — calloffs@, incidents@, docs@, and support@ were tested functionally in the audit. Confirm those inbound addresses are active on the production domain, not just the dev domain, and that Trinity is receiving from the production routing, not a sandbox forwarder.
+
+Notification delivery end-to-end — confirm every notification the platform sends (shift assignments, payroll approval requests, invoice sent confirmations, onboarding invites) actually arrives at a real inbox under production conditions, not just in the test environment.
+
+---
+
+**CATEGORY 5 — LEGAL FOUNDATION**
+
+Terms of Service and Privacy Policy — confirm these exist, are accessible from the platform before signup, and have been reviewed by someone with legal knowledge. They do not need to be perfect but they need to exist and cover: what data you collect, how you use it, what happens on cancellation, and limitation of liability. Without them you have no contractual protection.
+
+Data Processing Agreement — because CoAIleague processes employee payroll and personal data on behalf of the tenant org, you are a data processor for that org. A basic DPA should be in place or at minimum addressable if the tenant asks for one.
+
+Texas-specific compliance — Statewide is a licensed Texas security company operating under DPS/PSB oversight. Confirm nothing the platform does conflicts with PSB record-keeping or reporting requirements. The hiring pipeline and employee records it generates should be compatible with what PSB audits expect to see.
+
+SLA expectations — even informally, the tenant should know what uptime you are targeting, what your support response time is, and what your commitment is if payroll data is unavailable on a processing deadline. Set the expectation before they have a problem, not after.
+
+---
+
+**CATEGORY 6 — FIRST TENANT READINESS**
+
+Browser compatibility — confirm the platform works correctly in Chrome, Safari, Firefox, and Edge. Statewide's managers and officers will use whatever browser they have. A layout that breaks in Safari on an iPhone is a support call on day one.
+
+Performance baseline — the audit confirmed functionality. It did not confirm speed. Load the ACME sandbox with the full data set and confirm every critical page (schedule board, payroll run, invoice list, Trinity chat) loads in under three seconds. A functional but slow platform is a credibility problem with the first tenant.
+
+Offboarding and data export — before the tenant signs up, you should have an answer to: if they want to leave, can they get their data? Even a CSV export of employee records, shift history, and invoice history is sufficient. Not having an answer to this question is a red flag for any sophisticated buyer.
+
+Support channel — establish a dedicated support path for Statewide before go-live. Whether that is a direct line to you, a support email, or a dedicated Trinity help channel inside the platform — they need to know exactly how to reach you when something is unclear or wrong.
+
+---
+
+**THE SHORT VERSION**
+
+The audit sweeps confirmed the platform works. What's missing is the wrapper around the platform: the production environment is clean, errors are visible when they happen, data is recoverable if something goes wrong, emails actually land, you are legally covered, and the tenant knows what to expect and how to reach you.
+
+None of these are code problems. They are operational readiness items. They are also the things that determine whether the first tenant experience builds trust or erodes it.
+
+Handle these alongside the final audit fixes and you go to the first tenant with nothing left to chance.

@@ -422,7 +422,7 @@ class BusinessOwnerAnalyticsService {
           userId: user.id,
           userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
           userRole: user.workspaceRole || 'member',
-          lastActive: activity.lastActive?.toISOString() || '',
+          lastActive: activity.lastActive ? new Date(activity.lastActive).toISOString() : '',
           sessionsCount: 0,
           actionsCount: Number(activity.actionsCount) || 0,
           topFeature: 'dashboard'
@@ -435,7 +435,7 @@ class BusinessOwnerAnalyticsService {
     const inactiveUsers = allUsers
       .filter(u => !activeUserIds.has(u.id))
       .map(user => {
-        const lastActive = user.lastLogin || new Date(0);
+        const lastActive = user.lastLogin ? new Date(user.lastLogin) : new Date(0);
         const daysSinceActive = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
         return {
           userId: user.id,
@@ -621,7 +621,7 @@ class BusinessOwnerAnalyticsService {
       userId: a.userId,
       userName: a.userEmail,
       userRole: a.userRole,
-      lastActive: a.lastActive?.toISOString() || '',
+      lastActive: a.lastActive ? new Date(a.lastActive).toISOString() : '',
       sessionsCount: 0,
       actionsCount: Number(a.actionsCount) || 0,
       topFeature: a.topAction || 'dashboard'

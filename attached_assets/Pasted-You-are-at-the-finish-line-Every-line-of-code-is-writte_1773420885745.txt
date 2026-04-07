@@ -1,0 +1,366 @@
+You are at the finish line. Every line of code is written. What remains is 15 live action tests — no more building, just proving it works with real hands on real screens. Copy everything below this line:
+
+---
+
+COAILEAGUE — GRAND OPENING LIVE VERIFICATION SPRINT
+All code is complete. 743 actions, 15/15 domains, 4/4 regression tests, 0 errors.
+No more building. Every task in this sprint is a live test that proves
+what is already built actually works end to end with real data.
+Run each test exactly as written. Report pass or fail with the specific
+data that confirms it. Any failure gets fixed immediately before moving on.
+
+---
+
+TEST 1 — NEW ORG COLD SIGNUP WITH REAL EMAIL
+
+Use a real email address you control for this entire test.
+Do not use a fake address. The email delivery is what we are proving.
+
+Open the platform landing page on a desktop browser.
+Navigate to the pricing page and confirm all four tiers show correct prices.
+Click Start Free Trial and complete the signup form with the real email address.
+
+After signup confirm all of the following in order:
+The workspace record exists in the database with a unique workspace_id.
+The user record exists with the signup email address.
+The workspace_members record exists with role org_owner for this user.
+The subscription record exists with tier free_trial and status active.
+The credit_transactions record exists with exactly 500 credits allocated
+and a transaction_type of system_grant or equivalent — no Stripe reference on this entry.
+The credit balance for this workspace shows exactly 500.
+The welcome email arrives in the real inbox within 60 seconds — check inbox not spam.
+The welcome notification is visible in the platform notification panel on first login.
+Trinity is available and responds to a test message on first login.
+
+If any of these 9 items fails that is a bug. Fix it before moving to Test 2.
+
+---
+
+TEST 2 — CORE PLATFORM LOOP AS NEW ORG OWNER
+
+Continue as the org_owner from Test 1. Use the same session.
+
+Add one employee manually. Enter a real email address for the employee.
+Confirm the employee invite email arrives at that address within 60 seconds.
+Open the invite link in the email.
+Confirm you land on an onboarding screen not a 404 page.
+Set a password and complete onboarding.
+Confirm the employee can log in with the new password.
+
+Log back in as org_owner.
+Create one client with a name, contact email, and billing rate.
+Create one site for that client with a real street address.
+Build one shift and assign the employee to it.
+Confirm the employee receives a shift notification in the platform.
+
+As the employee log in and clock in via GPS.
+Confirm the clock-in record in the database contains all four required fields:
+GPS latitude, GPS longitude, employee_id, and site_id — all populated, none null.
+Clock out as the employee.
+Confirm the time entry record shows correct start time, end time, and duration.
+Duration must match the actual elapsed time within 1 minute.
+
+As org_owner generate an invoice for the client from the time entry.
+Confirm the invoice email delivers to the client contact email.
+Confirm the email contains a visible payment link that loads a real page when clicked.
+
+---
+
+TEST 3 — CREDIT CONSUMPTION AND TRIAL HARD BLOCK
+
+Continue as the org_owner from Test 2.
+
+Confirm the credits widget shows the correct remaining balance after the
+actions taken in Test 2. Calculate what the balance should be based on the
+credit costs per action and verify the widget matches.
+
+Manually set the workspace credit balance to 80 credits in the database.
+Perform one credit-gated action that costs more than 5 credits.
+Confirm the credits widget updates to reflect the deduction.
+Set the balance to 75 credits.
+Confirm the WARNING notification fires in the platform notification panel.
+Confirm the WARNING email arrives at the org_owner email address.
+Confirm the Org Operations Briefing Channel shows the credit warning.
+All three must fire. If any of the three does not fire that is a bug.
+
+Set the balance to 0 credits.
+Attempt to perform any credit-gated action.
+Confirm the hard block fires and the upgrade prompt appears on screen.
+Confirm the blocked action did not execute — verify in the database that
+no record was created for the attempted action.
+Confirm every credit-gated action shows the upgrade prompt at zero balance.
+
+---
+
+TEST 4 — STRIPE UPGRADE STARTER AND PROFESSIONAL
+
+Continue as the org_owner from Test 3.
+The account is at zero credits with the upgrade prompt showing.
+
+Click the upgrade prompt and select Starter plan.
+Confirm a Stripe checkout session URL is generated server-side before redirect.
+Complete checkout using Stripe test card 4242 4242 4242 4242
+any future expiry date and any 3-digit CVC.
+
+After checkout confirm all of the following:
+The post-payment redirect lands on a success page not a 404.
+The Stripe webhook invoice.payment_succeeded fires and hits the server.
+The subscription record in the database updates to tier starter via the webhook
+not the redirect — the redirect is cosmetic, the webhook is the truth.
+Exactly 5000 credits are allocated in the credit ledger with the Stripe invoice ID
+as the transaction reference — not a system_grant reference.
+The credit balance shows exactly 5000 in the platform.
+The org_owner receives a subscription confirmation notification in the platform.
+The org_owner receives a subscription confirmation email at their address.
+Managers and org_admin cannot see the billing settings page — verify by logging
+in as the manager from Test 2 and attempting to navigate to billing settings.
+
+Now upgrade from Starter to Professional while logged in as org_owner.
+Select Professional from the plan management page.
+Complete upgrade using the same Stripe test card.
+Confirm the Stripe subscription updates rather than cancels and recreates.
+Confirm the credit balance increases from 5000 to 10000 immediately.
+Confirm soft cap behavior is now active — attempting to use credits beyond 10000
+puts the org into overage mode at $0.01 per credit rather than blocking.
+Confirm org_owner receives the upgrade confirmation notification and email.
+
+---
+
+TEST 5 — TRIAL EXPIRY GRACE
+
+On a separate test workspace set the trial expiration date to yesterday.
+Log in as the org_owner of that workspace.
+Confirm the platform shows a trial expired prompt and gates access to
+credit-gated features.
+Confirm all existing data is fully preserved — employees, schedules, invoices,
+clients all visible, nothing deleted.
+Confirm the org_owner can select a plan and complete Stripe checkout to restore
+full access immediately after subscribing.
+Confirm the moment the subscription activates via webhook the expiry gate lifts.
+
+---
+
+TEST 6 — WEBSOCKET LIVE EVENTS
+
+Follow the test script at docs/test-scripts/P6-websocket-test.md exactly.
+Open two browser windows side by side — Window 1 as manager, Window 2 as org_owner.
+You need both windows visible simultaneously on your screen.
+
+Run all seven event tests in order and record pass or fail for each:
+
+Event 1 Clock-in broadcast:
+In Window 1 have an employee clock in.
+In Window 2 confirm the manager dashboard shows the clock-in within 2 seconds
+without a page refresh.
+
+Event 2 Incident broadcast:
+In Window 1 submit a new incident report.
+In Window 2 confirm the notification badge increments within 2 seconds.
+
+Event 3 Shift assigned broadcast:
+In Window 1 assign a shift to an employee.
+In Window 2 confirm the employee schedule view updates within 2 seconds.
+
+Event 4 Invoice paid broadcast:
+In Window 1 complete a payment on a test invoice.
+In Window 2 confirm the revenue widget on the org_owner dashboard updates
+within 2 seconds without a page refresh.
+
+Event 5 Credit balance broadcast:
+In Window 1 trigger a credit deduction.
+In Window 2 confirm the credits widget updates within 2 seconds.
+
+Event 6 Trinity briefing broadcast:
+In Window 1 trigger a Trinity briefing post.
+In Window 2 confirm the Briefing Channel shows the new post within 2 seconds.
+
+Event 7 Notification badge broadcast:
+In Window 1 trigger any notification for the org_owner.
+In Window 2 confirm the notification badge count increments within 2 seconds.
+
+Reconnect event buffer test:
+Close Window 2 completely.
+In Window 1 trigger 3 distinct events — a clock-in, a shift assignment, and a notification.
+Reopen Window 2 and log back in.
+Confirm all 3 missed events are delivered to Window 2 within 5 seconds of reconnect.
+Confirm none of the 3 events are duplicated.
+
+Cross-workspace isolation test:
+Log Window 2 in as an org_owner of a different test workspace.
+Trigger events in Window 1 workspace.
+Confirm Window 2 receives zero events from Window 1 workspace.
+
+---
+
+TEST 7 — MOBILE END TO END
+
+Follow the test script at docs/test-scripts/P7-mobile-test.md on your actual phone.
+Run every step as written. Record pass or fail for each with what you saw on screen.
+
+GPS clock-in from correct location:
+Open the mobile app or mobile browser on your phone.
+Navigate to the clock-in screen.
+Tap clock in.
+Confirm the platform confirms GPS coordinates and accepts the punch.
+After clocking in check the database and confirm the time entry record
+has non-null latitude and longitude matching your actual location.
+
+GPS clock-in from wrong location:
+Move more than the geofence radius away from the assigned site.
+Attempt to clock in.
+Confirm the platform shows a geofence rejection message.
+Confirm no clock-in record is created in the database.
+
+Overnight shift:
+Create a shift starting at 10pm tonight and ending at 6am tomorrow.
+Assign it to a test employee.
+Clock in as that employee at the shift start time.
+Clock out at the end time.
+Confirm the database shows exactly one time entry spanning midnight
+with exactly 8 hours duration — not two entries split at midnight.
+
+Duplicate clock-in prevention:
+While the employee is already clocked in attempt to clock in again.
+Confirm the platform shows a clear message that the employee is already clocked in.
+Confirm no duplicate time entry is created in the database.
+
+Incident report from mobile:
+Navigate to the incident report screen on mobile.
+Attach a photo from your camera or camera roll.
+Confirm GPS coordinates are auto-populated in the location field.
+Submit the report.
+Confirm the manager receives a real-time notification with a deep link to the report.
+Confirm the report is visible in the compliance dashboard.
+
+Schedule view on mobile:
+Navigate to the schedule view as an employee on a 375px wide screen.
+Confirm the next upcoming shift is at the top of the view.
+Confirm the site address and post orders are visible on the shift card.
+Confirm no horizontal scrolling is required to see the complete shift card.
+
+---
+
+TEST 8 — SIMULTANEOUS MULTI-TENANT OPERATIONS
+
+Create three test workspaces if they do not already exist:
+Org Alpha on Starter with 5 employees.
+Org Beta on Professional with 10 employees.
+Org Gamma on Enterprise with 20 employees.
+
+Open three separate browser sessions logged in as org_owner of each org.
+Trigger the following operations across all three at the same moment:
+Have employees from all three orgs clock in simultaneously.
+Trigger Trinity chat in all three orgs simultaneously.
+Trigger credit deductions in all three orgs simultaneously.
+
+After all operations complete verify isolation by checking:
+The Alpha clock-ins show only Alpha employees — no Beta or Gamma records.
+The Beta credit ledger shows only Beta deductions — no Alpha or Gamma entries.
+The Gamma Trinity chat shows only Gamma data — no other org data in responses.
+The notification panel in each org shows only that org's notifications.
+
+If any org's data appears in another org's view that is a critical isolation failure.
+Fix it before proceeding.
+
+---
+
+TEST 9 — STRIPE IDEMPOTENCY AND FAILURE RECOVERY
+
+Stripe webhook idempotency:
+Send the same invoice.payment_succeeded webhook event twice using the same event ID.
+Confirm credits are only allocated once — not doubled.
+Confirm the second webhook returns 200 but creates no duplicate ledger entry.
+This is a critical test — duplicate webhook delivery is normal in production
+and the platform must handle it gracefully every time.
+
+Stripe payment failure and recovery:
+Use a Stripe test card that declines: 4000000000000002.
+Attempt to upgrade a trial org using the declining card.
+Confirm the checkout fails gracefully with a clear error message.
+Confirm the subscription record is not created or changed.
+Confirm the org remains on free trial with its current credit balance.
+Now complete the upgrade with the good test card 4242 4242 4242 4242.
+Confirm the subscription activates correctly after the prior failure.
+
+Session expiry mid-payroll:
+Begin a payroll run review as org_owner.
+Before clicking approve manually expire the session by clearing the session cookie.
+Attempt to click approve.
+Confirm the platform redirects to login rather than processing the approval.
+Log back in and navigate back to the payroll run.
+Confirm the payroll run is still in pending state — not auto-approved or corrupted.
+Confirm the org_owner can complete the approval cleanly after re-login.
+
+---
+
+TEST 10 — DOCUMENT SYSTEM END TO END
+
+Follow the document simulation exactly as specified in the last prompt.
+For Marcus Johnson generate all 10 onboarding documents.
+For Rosa Delgado generate all 4 contractor documents.
+For Lone Star Industrial Park generate the post orders, proposal, and contract.
+
+For every document record pass or fail on these five points:
+Generated without errors with all fields populated from database.
+Header and footer uniform with org name, license number, and document status.
+Signature blocks visible and correctly sized on both desktop and mobile.
+Executed PDF saved to the document safe automatically.
+Signer received executed copy in their personal document portal.
+
+After all onboarding documents execute confirm Trinity allows scheduling
+Marcus and Rosa. Attempt to schedule them before execution is complete
+and confirm Trinity blocks the assignment with a clear message explaining
+the pending onboarding documents.
+
+---
+
+PRODUCTION ENVIRONMENT FINAL CHECK
+
+Before going live confirm every environment variable is set correctly
+in the production deployment — not the dev environment, the production one.
+
+Required variables that must be present and using production values not test values:
+STRIPE_SECRET_KEY must be the live key starting with sk_live not sk_test.
+STRIPE_WEBHOOK_SECRET must be the live webhook signing secret.
+STRIPE_PUBLISHABLE_KEY must be the live publishable key.
+RESEND_API_KEY must be the production Resend key.
+DATABASE_URL must point to the production database.
+SESSION_SECRET must be a strong random string unique to production.
+NODE_ENV must be set to production.
+OPENAI_API_KEY, ANTHROPIC_API_KEY, and GOOGLE_AI_API_KEY must all be present.
+
+Confirm STRIPE_SECRET_KEY is a live key before going live.
+A test key in production means zero revenue and zero subscriptions.
+This is the most common and most costly go-live mistake.
+
+Confirm dev routes are blocked: attempt to hit /api/dev/anything in production.
+Confirm a 404 is returned not a 200.
+
+Confirm error responses never include stack traces in production.
+Trigger a deliberate server error and confirm the response is a clean
+JSON error object with no file paths, no line numbers, no internal detail.
+
+---
+
+GRAND OPENING SIGN-OFF
+
+When all 10 tests plus the production environment check are complete
+report the final status of every item on this list:
+
+Test 1 new org signup 9-point verification confirmed.
+Test 2 core platform loop employee to invoice confirmed.
+Test 3 credit consumption and hard block confirmed.
+Test 4 Stripe Starter and Professional upgrade confirmed.
+Test 5 trial expiry grace and recovery confirmed.
+Test 6 all 7 WebSocket events confirmed plus reconnect buffer confirmed.
+Test 7 all 6 mobile flows confirmed on real device.
+Test 8 multi-tenant isolation confirmed across 3 simultaneous orgs.
+Test 9 Stripe idempotency confirmed plus failure recovery confirmed.
+Test 10 document simulation all documents pass all 5 points confirmed.
+Production environment variables all set to live values confirmed.
+Dev routes blocked in production confirmed.
+No stack traces in production error responses confirmed.
+
+When every item on this list shows confirmed CoAIleague is ready to open
+for business and Statewide Protective Services is ready to begin go-live migration.
+That is the finish line. You are one sprint away.

@@ -1,0 +1,237 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 22 — FIELD OPERATIONS AND MOBILE SUITE VERIFICATION**
+
+This phase owns the complete mobile experience for every user type on the platform. Officers in the field, supervisors on the go, managers running operations from their phone, and owners monitoring the business from anywhere — all of them depend on a mobile experience that is fast, reliable, touch-perfect, and live-synced at all times. A broken mobile experience is not a cosmetic issue — it is an operational failure that leaves posts uncovered and officers unsupported. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+Before writing your completion summary produce a full reconciliation table with one row per verification check. Every row must have specific evidence. PASS, GAP, PARTIAL, and CRITICAL all require evidence. No general statements. No shared evidence across rows. Every row green before Phase 22 closes.
+
+---
+
+**STEP 1 — MOBILE SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of every mobile-facing surface:
+- Every page and component that has a mobile viewport implementation
+- PWA configuration — manifest.json, service worker, offline capability
+- APK build configuration if present
+- Push notification implementation — service worker registration, push subscription, notification delivery
+- Touch interaction handlers across all interactive components
+- Responsive breakpoints defined in the design system
+- Trinity voice chat and voice command implementation — what exists, what API is wired
+- Any mobile-specific route or endpoint
+- Real-time sync implementation on mobile — WebSocket behavior on mobile browsers
+
+Flag any page that has no mobile viewport implementation or has a broken layout below 768px.
+
+---
+
+**STEP 2 — RESPONSIVE LAYOUT AND TOUCH VERIFICATION**
+
+Every page must render correctly on mobile:
+- All pages render correctly at 375px (iPhone SE), 390px (iPhone 14), 414px (iPhone Pro Max), and 360px (Android standard)
+- Navigation is touch-friendly — tap targets minimum 44x44px per Apple HIG and Google Material standards
+- No horizontal scroll on any page at mobile viewport — content fits within the viewport
+- Text is readable without zooming — minimum 16px base font size on mobile
+- Forms are usable on mobile — inputs trigger correct keyboard types (numeric, email, tel), no input fields hidden behind keyboard
+- Tables and data grids have mobile-optimized views — not shrunken desktop tables
+- Modals and drawers are full-screen or properly constrained on mobile — not overflowing
+- Images and icons scale correctly — no pixelation or overflow
+- Dark navy design system renders correctly on mobile — gold accents, Trinity purple consistent
+- Touch gestures work correctly — swipe, tap, long press where applicable
+
+---
+
+**STEP 3 — OFFICER FIELD OPERATIONS MOBILE VERIFICATION**
+
+Officers use mobile as their primary device — this must be flawless:
+- Clock-in from mobile: GPS coordinates captured accurately, timestamp server-authoritative, shift validation fires correctly
+- Clock-out from mobile: same GPS and timestamp requirements, hours calculated correctly
+- GPS accuracy verified — coordinates within acceptable radius of post location
+- Shift schedule visible immediately on login — no loading delays over 2 seconds on mobile
+- Shift acknowledgment works from mobile — one-tap confirmation
+- Incident reporting from mobile: form fully functional on touch, photo attachment supported, GPS auto-populated
+- Duress/panic button accessible from mobile — one tap, fires immediately, cannot be accidentally triggered
+- Duress button alert confirmed reaching supervisor and manager via push notification within 5 seconds
+- Post orders and instructions readable on mobile — formatted correctly, no truncation
+- Calloff submission from mobile — form functional, reason field required, confirmation received
+
+---
+
+**STEP 4 — SUPERVISOR AND MANAGER MOBILE VERIFICATION**
+
+Supervisors and managers need operational control from mobile:
+- Real-time roster view — who is clocked in, who is late, who called off — all visible on mobile
+- Shift management from mobile — create, edit, assign, cancel shifts from phone
+- Calloff notification received via push — one-tap to view and begin replacement process
+- Clock-in alerts received via push — late clock-in and on-time clock-in both push correctly
+- Incident report notifications received via push — tap to open and review
+- Approval workflows functional on mobile — timesheet approval, payroll proposal review
+- Schedule publish from mobile — confirm publish action works on touch
+- NDS notifications rendered correctly on mobile — not truncated, actionable
+
+---
+
+**STEP 5 — OWNER MOBILE VERIFICATION**
+
+Owners need high-level visibility from anywhere:
+- Dashboard loads correctly on mobile — key metrics visible without scrolling past the fold
+- Financial summary visible on mobile — revenue, outstanding invoices, payroll summary
+- Compliance status visible on mobile — open violations, expiring licenses
+- Permission matrix accessible from mobile — toggles functional on touch
+- QuickBooks sync status visible on mobile
+- Trinity accessible from mobile — can query and receive responses on phone
+- Critical alerts (duress, compliance violation, payroll anomaly) delivered via push immediately
+
+---
+
+**STEP 6 — PWA IMPLEMENTATION VERIFICATION**
+
+The Progressive Web App must be correctly configured:
+- `manifest.json` confirmed present with: name, short_name, icons (192x192 and 512x512), theme_color matching dark navy design system, background_color, display: standalone, start_url, orientation
+- Service worker registered and active — confirm via browser DevTools simulation
+- Offline capability defined — what works offline, what requires connectivity
+- App installable on iOS (Add to Home Screen) and Android (Install prompt)
+- Installed PWA launches in standalone mode — no browser chrome visible
+- App icon correct on both platforms — dark navy with correct branding
+- Splash screen correct on launch
+- PWA update mechanism — when a new version deploys, installed PWA prompts user to update
+- Cache strategy defined — static assets cached, API calls network-first with cache fallback
+
+---
+
+**STEP 7 — PUSH NOTIFICATION VERIFICATION**
+
+Push notifications are operationally critical — a missed push is a missed event:
+- Push notification service registered — VAPID keys configured, subscription stored per device
+- Notification permission requested at correct moment — not on first load, but on first relevant action
+- Push notifications fire for all critical events:
+  - Shift assigned to officer
+  - Calloff received (supervisor/manager)
+  - Clock-in alert (supervisor)
+  - Duress/panic button triggered (supervisor and manager — immediate)
+  - Document requiring signature
+  - Payroll stub available
+  - Compliance alert
+  - Invoice status change (client)
+- Push notification payload includes: title, body, icon, badge, action buttons where applicable
+- Notification tap opens the correct page in the app — deep link routing confirmed
+- Notifications delivered when app is in background AND when app is closed
+- Notification delivery logged in `notification_deliveries` table — push channel confirmed
+- Failed push retries via NDS backoff — no silent drops
+- Push notification unsubscription handled cleanly — no orphaned subscriptions
+
+---
+
+**STEP 8 — REAL-TIME SYNC ON MOBILE VERIFICATION**
+
+Live data must stay current on mobile:
+- WebSocket connection established on mobile browser — confirmed stable
+- WebSocket reconnects automatically on mobile network switch (WiFi to cellular)
+- WebSocket reconnects after app returns from background
+- Schedule updates push to officer mobile in real time — no manual refresh required
+- Clock-in events visible to supervisor in real time — roster updates without refresh
+- Incident reports visible to supervisor in real time after officer submits
+- Invoice status updates visible to client portal on mobile in real time
+- Permission matrix changes propagate to active mobile sessions immediately
+- Data sync on reconnect — missed events during disconnection are replayed correctly on reconnect
+
+---
+
+**STEP 9 — TRINITY VOICE CHAT AND VOICE COMMANDS**
+
+Trinity must work perfectly on mobile with voice capability:
+- Voice input API confirmed — Web Speech API or equivalent wired correctly
+- Microphone permission requested correctly — not on page load, on first voice interaction
+- Voice input transcribed accurately and sent to Trinity as text intent
+- Trinity response rendered correctly on mobile — readable, properly formatted
+- Voice output (text-to-speech) available for Trinity responses — officer can hear Trinity's response without looking at screen
+- Voice commands wired to correct Trinity actions:
+  - "Clock me in" → triggers clock-in flow with GPS capture
+  - "Submit incident report" → opens incident form pre-populated with GPS and timestamp
+  - "What's my schedule today" → returns officer's shifts for the day
+  - "I need to call off" → initiates calloff flow
+  - "Call for backup" → triggers duress/panic alert
+  - "What are my post orders" → returns post instructions for current shift
+- Voice command permission model — officer-level voice commands cannot trigger manager-level actions
+- Trinity voice wired to correct AI provider — confirm which API (Claude, Whisper, or Web Speech API) and that the API key is configured and active
+- Voice transcription latency acceptable — response within 3 seconds on mobile network
+- Voice UI renders correctly on mobile — microphone button accessible, recording indicator visible, response displayed clearly
+- Offline voice command handling — graceful message when connectivity lost, not a silent failure
+
+---
+
+**STEP 10 — APK BUILD VERIFICATION (if applicable)**
+
+If an Android APK build exists:
+- APK build process confirmed — build script or Capacitor/Cordova/React Native configuration
+- APK installs correctly on Android device
+- All PWA features available in APK — push notifications, GPS, camera
+- APK version management — version code increments correctly on new build
+- If no APK exists — confirm PWA is the primary mobile delivery mechanism and document this as the architectural decision
+
+---
+
+**STEP 11 — MOBILE PERFORMANCE VERIFICATION**
+
+Performance on mobile hardware matters:
+- First Contentful Paint under 2 seconds on a simulated 4G connection
+- Time to Interactive under 3 seconds
+- No layout shift after initial render — Cumulative Layout Shift score acceptable
+- Images lazy-loaded — not blocking initial render
+- JavaScript bundle size acceptable for mobile — no unnecessary imports on mobile routes
+- API response times acceptable on mobile — data loads within 2 seconds for primary views
+- Infinite scroll or pagination implemented for long lists — not loading 1000 rows on mobile
+
+---
+
+**STEP 12 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing the completion summary:
+1. One row per verification check in reconciliation table
+2. PASS — one-line evidence with file or config reference
+3. GAP — fix confirmed with file name and line reference
+4. PARTIAL — fully resolved, not just partially improved
+5. CRITICAL — grep or device test evidence
+6. Any unconfirmed finding fixed before proceeding
+7. All rows green before writing Phase 22 completion summary
+
+---
+
+**STEP 13 — VERIFICATION**
+
+Run all checks before Phase 22 is marked complete:
+- Check 1: All pages render correctly at 375px, 390px, 414px, and 360px viewports
+- Check 2: All tap targets minimum 44x44px — no undersized touch targets
+- Check 3: No horizontal scroll at mobile viewport on any page
+- Check 4: Minimum 16px base font on mobile — text readable without zoom
+- Check 5: GPS clock-in confirmed capturing accurate coordinates on mobile
+- Check 6: Duress/panic button fires within 5 seconds — push notification reaches supervisor
+- Check 7: Incident reporting fully functional on mobile — form, photo, GPS
+- Check 8: Supervisor roster view real-time on mobile — no manual refresh needed
+- Check 9: Push notifications fire for all critical event types listed in Step 7
+- Check 10: Push notification tap deep-links to correct page in app
+- Check 11: Notifications delivered when app is background AND closed
+- Check 12: manifest.json confirmed correct — all required fields present
+- Check 13: Service worker registered and active
+- Check 14: PWA installable on iOS and Android — standalone launch confirmed
+- Check 15: PWA update mechanism confirmed — new version prompts update
+- Check 16: WebSocket reconnects on network switch and app background/foreground
+- Check 17: Missed events replayed correctly on WebSocket reconnect
+- Check 18: Trinity voice input wired to correct API — API key active and confirmed
+- Check 19: All 6 voice commands wired to correct Trinity actions
+- Check 20: Voice command permission model enforced — officer cannot trigger manager actions
+- Check 21: Trinity voice response rendered correctly on mobile — readable and formatted
+- Check 22: Voice transcription latency under 3 seconds on mobile network
+- Check 23: First Contentful Paint under 2 seconds on simulated 4G
+- Check 24: Time to Interactive under 3 seconds
+- Check 25: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 26: Server starts clean with zero TypeScript errors across all mobile and voice files
+
+Do not mark Phase 22 complete until all 26 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. Nothing left behind.
+
+---
+
+Paste that. This phase is about the humans using this platform in the field — officers on post, supervisors in their cars, managers at their desk on their phone. It has to work perfectly for all of them.

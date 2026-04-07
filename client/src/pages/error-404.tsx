@@ -1,4 +1,13 @@
 import { UniversalErrorPage } from "@/components/universal-error-page";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+
+const error404Config: CanvasPageConfig = {
+  id: 'error-404',
+  title: 'Page Not Found',
+  category: 'system',
+  variant: 'centered',
+  showHeader: false,
+};
 
 export default function Error404() {
   const errorDetails = [
@@ -9,5 +18,9 @@ export default function Error404() {
     `User Agent: ${navigator.userAgent}`
   ].join('\n');
 
-  return <UniversalErrorPage type="404" errorDetails={errorDetails} />;
+  return (
+    <CanvasHubPage config={error404Config}>
+      <UniversalErrorPage type="404" errorDetails={errorDetails} />
+    </CanvasHubPage>
+  );
 }

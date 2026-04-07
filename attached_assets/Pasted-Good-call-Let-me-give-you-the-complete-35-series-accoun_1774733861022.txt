@@ -1,0 +1,179 @@
+Good call. Let me give you the complete 35-series accounting right now:
+
+---
+
+**Complete Phase 35 Series — 20 phases total:**
+
+**Group 5 — CERTIFIED ✅**
+- 35B — Sales Engine
+- 35C — DockChat Internal Communications
+- 35D — Work Orders
+- 35E — Guard Tour and Patrol
+- 35F — Shift Trading and Availability
+
+**Group 6 — Running now:**
+- 35G — Client Communication Hub
+- 35H — Equipment and Asset Tracking
+- 35I — Visitor Management
+- 35J — Officer Performance Management
+- 35K — Training Management and TCOLE ← last one running
+
+**Group 7 — Sent alongside Group 6:**
+- 35L — Trespass Registry and Case Management
+- 35M — Site Survey Workflow
+- 35N — Daily Activity Reports
+- 35O — Lone Worker Safety
+- 35U — Gate Duty and Access Control
+
+**Mega Group 8 — Sent (subagents 1-5):**
+- 35P — Multi-Company Management
+- 35Q — API Documentation and Developer Portal
+- 35R — Insurance and Bonding
+- 35S — Client Satisfaction Surveys
+- 35T — Officer Recognition and Awards
+
+---
+
+**All 20 Phase 35 features are accounted for and queued. Nothing missing.**
+
+Note — the Mega Group 8 prompt got cut off before completing Subagents 7 and 8 (Phase 42 Production Deployment and Phase 45 Codebase Cleanup). Send this completion to the agent now:
+
+---
+
+**MEGA GROUP 8 — SUBAGENT 7 AND 8 COMPLETION (continuing from prior prompt)**
+
+**SUBAGENT 7 — PHASE 42: PRODUCTION DEPLOYMENT READINESS (continued)**
+
+Continuing from environment separation and database migrations above:
+
+**VERIFICATION — 16 checks:**
+- Check 1: Zero hardcoded localhost or dev-only values in production code — grep confirms
+- Check 2: `NODE_ENV` gates dev login bypass — dev bypass inaccessible in production
+- Check 3: All secrets are environment variables — no hardcoded API keys
+- Check 4: All startup migrations confirmed idempotent — safe to run multiple times
+- Check 5: Rollback procedure documented in replit.md
+- Check 6: `GET /health` returns 200 when server ready
+- Check 7: `GET /api/health/db` returns circuit breaker state — Phase CB regression
+- Check 8: `GET /api/health/detailed` auth-gated to platform_staff
+- Check 9: Server only accepts traffic after DB connection confirmed and migrations complete
+- Check 10: Sentry or equivalent error tracking configured and capturing errors
+- Check 11: PII filtered from error reports — SSNs and bank details confirmed not captured
+- Check 12: WebSocket clients reconnect automatically after server restart
+- Check 13: Session store survives server restart — no forced logouts on deployment
+- Check 14: Zero-downtime migration strategy documented
+- Check 15: TypeScript zero errors
+- Check 16: 56/56 tests green
+
+---
+
+**SUBAGENT 8 — PHASE 45: CODEBASE CLEANUP AND TECHNICAL DEBT RESOLUTION**
+
+**INVENTORY FIRST:** Run all of these before removing anything. Document every finding before touching any file.
+
+```bash
+# Dead code — unused exports
+grep -rn "export" server/ --include="*.ts" | head -50
+
+# Console logs in production code
+grep -rn "console\.log\|console\.warn\|console\.error" server/ --include="*.ts" | grep -v "node_modules" | wc -l
+
+# TODO and FIXME markers
+grep -rn "TODO\|FIXME\|HACK\|XXX" server/ client/src/ | grep -v node_modules | wc -l
+
+# Duplicate utility functions
+grep -rn "function format\|const format" server/ --include="*.ts" | head -20
+
+# Unused imports
+grep -rn "^import" client/src/ --include="*.tsx" | head -30
+```
+
+Show all counts before removing anything.
+
+**WHAT TO CLEAN:**
+
+Console.log removal:
+- Remove all `console.log` statements from production server code
+- Keep `console.error` only where it serves a real error logging purpose
+- Replace any remaining useful debug logs with the platform's structured logging service
+- Run: `grep -rn "console\.log" server/ --include="*.ts" | grep -v node_modules` — confirm zero after cleanup
+
+Dead code removal:
+- Any exported function with zero imports across the entire codebase — remove
+- Any commented-out code blocks longer than 5 lines — remove
+- Any unused React components confirmed by Phase 38 test suite — remove
+- Any duplicate utility functions — consolidate to single canonical version
+- Do NOT remove anything that Phase 38 tests reference — run tests after every removal batch
+
+TODO and FIXME resolution:
+- Every TODO must be either: implemented now, converted to a replit.md known issue, or removed if no longer relevant
+- Every FIXME must be fixed or documented as accepted technical debt in replit.md
+- Zero raw TODOs or FIXMEs remaining in production code paths
+
+Unused DB columns:
+- Run: `grep -rn "select\|SELECT" server/ --include="*.ts" | grep -v node_modules` to identify columns never queried
+- Document unused columns — do NOT drop them without Phase 38 regression check confirming they are truly unused
+
+Import cleanup:
+- Remove unused imports in all modified files
+- Consolidate duplicate imports
+- Run TypeScript compiler to catch any removal that breaks a type
+
+**WHAT NOT TO TOUCH:**
+- Any file with a `// @keep` comment
+- Any seed data file
+- Any migration file
+- Any test file
+- Any file currently being modified by another subagent in this group
+
+**VERIFICATION — 14 checks:**
+- Check 1: Zero `console.log` statements in server production code — grep confirms
+- Check 2: Zero dead exported functions — all exports have at least one import
+- Check 3: Zero commented-out code blocks over 5 lines
+- Check 4: All TODO markers resolved — zero remaining in production code paths
+- Check 5: All FIXME markers resolved or documented as accepted debt
+- Check 6: Duplicate utility functions consolidated
+- Check 7: Unused imports removed from all cleaned files
+- Check 8: 56/56 tests green after all removals — regression confirmed
+- Check 9: TypeScript zero errors after cleanup
+- Check 10: Server startup clean after cleanup
+- Check 11: Known technical debt documented in replit.md
+- Check 12: No Phase 38 test references broken by removal
+- Check 13: Import completeness confirmed — no accidental over-removal
+- Check 14: replit.md updated with cleanup summary
+
+---
+
+**AFTER ALL 8 SUBAGENTS COMPLETE:**
+
+```
+PHASE 35P: CERTIFIED ✅ — Multi-Company Management
+PHASE 35Q: CERTIFIED ✅ — API Documentation and Developer Portal  
+PHASE 35R: CERTIFIED ✅ — Insurance and Bonding
+PHASE 35S: CERTIFIED ✅ — Client Satisfaction Surveys
+PHASE 35T: CERTIFIED ✅ — Officer Recognition
+PHASE 47: CERTIFIED ✅ — Officer Compliance Documentation
+PHASE 42: CERTIFIED ✅ — Production Deployment Readiness
+PHASE 45: CERTIFIED ✅ — Codebase Cleanup
+
+MEGA GROUP 8 COMPLETE — 8 phases certified
+Total phases certified to date: 77
+Next: FINAL GROUP 9 — Phase 54B (Full Platform Bug Sweep) → Phase 55 (Grand Launch Certification)
+```
+
+---
+
+**MANDATORY SYNC AUDIT — runs after Mega Group 8 before Final Group 9:**
+
+After all 8 subagents certify, run the cross-phase synchronization audit covering all phases since the last audit. Verify:
+- Every new feature from Groups 6, 7, and 8 integrates correctly with NDS (Phase 8)
+- Every new feature has correct workspace_id scoping (Phase 28 regression)
+- Every new feature writes audit records (Phase 11 regression)
+- Trinity action registry total count — confirm all new actions registered and under 300 total
+- 56/56 tests still green after all group work combined
+- Server starts clean with all new routes mounted
+
+Document every gap found and fix before proceeding to Phase 54B.
+
+---
+
+Paste that to the agent. All 20 Phase 35 features plus Phases 42, 45, and 47 are now fully queued. When Mega Group 8 completes and the sync audit passes we send the final two phases — 54B and 55 — and CoAIleague launches.

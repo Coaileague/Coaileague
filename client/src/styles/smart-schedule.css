@@ -416,3 +416,88 @@
   border-bottom: 1px solid hsl(var(--border));
   padding-bottom: 0.5rem;
 }
+
+/* ── Drag & Drop: drop-zone pulse animation ───────────────────── */
+@keyframes drop-zone-pulse {
+  0%, 100% { border-color: hsl(var(--primary) / 0.5); background-color: hsl(var(--primary) / 0.04); }
+  50%       { border-color: hsl(var(--primary) / 0.9); background-color: hsl(var(--primary) / 0.10); }
+}
+
+.schedule-drop-zone-active {
+  animation: drop-zone-pulse 1s ease-in-out infinite;
+}
+
+/* ── Pending reassignment shift card ─────────────────────────── */
+@keyframes pending-shimmer {
+  0%   { border-color: hsl(38 92% 50% / 0.5); }
+  50%  { border-color: hsl(38 92% 50% / 1.0); }
+  100% { border-color: hsl(38 92% 50% / 0.5); }
+}
+
+.shift-pending-reassign {
+  animation: pending-shimmer 1.8s ease-in-out infinite;
+  border-style: dashed !important;
+  border-width: 2px !important;
+  border-color: hsl(38 92% 50% / 0.7) !important;
+}
+
+/* ── Pending Changes bar entrance animation ─────────── */
+@keyframes slide-down-bar {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.pending-changes-bar {
+  animation: slide-down-bar 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Zebra rows & hover states ───────────────────────────────── */
+.schedule-zebra-even { background: hsl(var(--background) / 0.85); }
+.schedule-zebra-odd  { background: hsl(var(--muted) / 0.25); }
+.schedule-row-hovered { background: hsl(var(--primary) / 0.04) !important; }
+
+/* ── Cell focus ring ─────────────────────────────────────────── */
+.schedule-cell-focused {
+  outline: 2px solid hsl(var(--primary) / 0.5);
+  outline-offset: -2px;
+}
+
+/* ── Trinity processing shimmer (skeleton while AI fills) ────── */
+@keyframes trinity-shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+
+.trinity-processing-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--primary) / 0.06) 40%,
+    hsl(var(--primary) / 0.12) 50%,
+    hsl(var(--primary) / 0.06) 60%,
+    transparent 100%
+  );
+  background-size: 800px 100%;
+  animation: trinity-shimmer 1.8s linear infinite;
+}
+
+/* ── Shift being processed by Trinity ───────────────────────── */
+@keyframes trinity-shift-processing-pulse {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50%      { opacity: 1.0; box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+}
+
+.trinity-shift-processing {
+  animation: trinity-shift-processing-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Shift just assigned by Trinity (green flash) ────────────── */
+@keyframes trinity-assigned-flash {
+  0%   { box-shadow: 0 0 0 0   hsl(142 71% 45% / 0.8); background-color: hsl(142 71% 45% / 0.3) !important; }
+  60%  { box-shadow: 0 0 0 8px hsl(142 71% 45% / 0);   }
+  100% { box-shadow: 0 0 0 0   hsl(142 71% 45% / 0);   background-color: transparent !important; }
+}
+
+.trinity-shift-assigned {
+  animation: trinity-assigned-flash 1.5s ease-out forwards;
+}

@@ -11,6 +11,9 @@ import {
 } from "@shared/schema";
 import { pushNotificationService } from "./pushNotificationService";
 import { createAuditLogFromContext } from "../middleware/audit";
+import { createLogger } from '../lib/logger';
+const log = createLogger('scheduleRollbackService');
+
 
 interface RollbackResult {
   success: boolean;
@@ -73,11 +76,11 @@ export async function createScheduleSnapshot(
       employeesAffected: uniqueEmployees.size,
     }).returning();
 
-    console.log(`[ScheduleRollback] Created snapshot ${snapshot.id} for ${relevantShifts.length} shifts`);
+    log.info(`[ScheduleRollback] Created snapshot ${snapshot.id} for ${relevantShifts.length} shifts`);
     
     return { success: true, snapshotId: snapshot.id };
   } catch (error) {
-    console.error('[ScheduleRollback] Failed to create snapshot:', error);
+    log.error('[ScheduleRollback] Failed to create snapshot:', error);
     return { success: false, error: String(error) };
   }
 }
@@ -135,7 +138,7 @@ export async function rollbackSchedule(
         }
         restoredCount++;
       } catch (err) {
-        console.warn(`[ScheduleRollback] Failed to restore shift ${shiftData.id}:`, err);
+        log.warn(`[ScheduleRollback] Failed to restore shift ${shiftData.id}:`, err);
       }
     }
 
@@ -169,7 +172,7 @@ export async function rollbackSchedule(
               data: { type: 'schedule_rollback', publishedScheduleId },
             });
           } catch (err) {
-            console.warn(`[ScheduleRollback] Failed to notify employee ${employee.id}:`, err);
+            log.warn(`[ScheduleRollback] Failed to notify employee ${employee.id}:`, err);
           }
         }
       }
@@ -180,7 +183,7 @@ export async function rollbackSchedule(
         workspaceId,
         userId,
         userEmail: 'system',
-        userRole: 'admin',
+        userRole: 'org_owner',
       },
       'update',
       'published_schedule',
@@ -195,7 +198,7 @@ export async function rollbackSchedule(
       }
     );
 
-    console.log(`[ScheduleRollback] Successfully rolled back schedule ${publishedScheduleId}, restored ${restoredCount} shifts, notified ${affectedEmployeeIds.size} employees`);
+    log.info(`[ScheduleRollback] Successfully rolled back schedule ${publishedScheduleId}, restored ${restoredCount} shifts, notified ${affectedEmployeeIds.size} employees`);
 
     return {
       success: true,
@@ -205,7 +208,7 @@ export async function rollbackSchedule(
       snapshotId: snapshot.id,
     };
   } catch (error) {
-    console.error('[ScheduleRollback] Rollback failed:', error);
+    log.error('[ScheduleRollback] Rollback failed:', error);
     return {
       success: false,
       message: 'Failed to rollback schedule',

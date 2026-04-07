@@ -1,0 +1,257 @@
+Paste this into Replit — all three combined into one sequential prompt:
+
+---
+
+**FINAL PRE-LAUNCH VERIFICATION — PLAID BUILD + CAPABILITY AUDIT + LIVE REASONING TESTS | EXECUTE IN ORDER**
+
+Work through all three checks sequentially. Complete each fully before moving to the next. Do not skip ahead.
+
+---
+
+**CHECK 1 — PLAID INTEGRATION BUILD**
+
+**Phase A — Audit existing ACH infrastructure first:**
+
+Read and report:
+- Is `plaid` in `package.json`? What version if so?
+- Any existing Plaid SDK imports or API calls anywhere in codebase — report every file and line
+- Any Plaid environment variables in `.env.example`
+- What is the exact last automated step in the current payroll flow — what file, what function, what line does execution stop
+- Where is employee direct deposit data stored — table and columns
+- Where is org bank account data stored — table and columns
+- Is there a billing event for payroll processing in `partnerApiUsage.ts`
+- Does Stripe Connect currently route client payments to org bank accounts automatically
+
+Report Phase A then immediately proceed to Phase B.
+
+**Phase B — Build Plaid integration:**
+
+Install `plaid` npm package and `react-plaid-link` for frontend.
+
+Create `server/services/partners/plaidService.ts` as the single canonical Plaid client. All Plaid API calls must go through this file only. Never call Plaid SDK directly from any other file.
+
+Initialize with environment variables:
+- `PLAID_CLIENT_ID`
+- `PLAID_SECRET`
+- `PLAID_ENV` (sandbox / development / production)
+
+Add all three to `.env.example` with descriptions. Add startup validation — log a clear warning if missing in development, hard fail in production.
+
+Export these methods from `plaidService.ts`:
+```typescript
+createLinkToken(userId: string, workspaceId: string): Promise<string>
+exchangePublicToken(publicToken: string): Promise<{ accessToken: string, itemId: string }>
+getAccountDetails(accessToken: string): Promise<{ routing: string, account: string, accountType: string, mask: string }>
+verifyBankAccount(accessToken: string): Promise<{ valid: boolean, status: string }>
+initiateTransfer(params: { accessToken: string, accountId: string, amount: number, description: string, workspaceId: string }): Promise<{ transferId: string, status: string }>
+getTransferStatus(transferId: string): Promise<{ status: string, failureReason?: string }>
+cancelTransfer(transferId: string): Promise<boolean>
+```
+
+**Org bank account connection:**
+
+`POST /api/payroll/bank/link-token` — returns Plaid link token. Auth required, workspace-scoped.
+
+`POST /api/payroll/bank/connect` — receives `publicToken` from Plaid Link. Exchanges for access token. Stores encrypted `plaidAccessToken` and `plaidItemId` in workspace settings. Never stores raw routing or account numbers. Writes audit log with `isSensitiveData: true`. Publishes `workspace_bank_connected` to platformEventBus.
+
+`GET /api/payroll/bank/status` — returns `{ connected: boolean, accountMask: string | null }`. Never returns full account details.
+
+`DELETE /api/payroll/bank/disconnect` — removes access token, writes audit log, publishes `workspace_bank_disconnected`.
+
+**Employee direct deposit via Plaid:**
+
+`POST /api/payroll/employees/:employeeId/bank/link-token` — employee-scoped link token.
+
+`POST /api/payroll/employees/:employeeId/bank/connect` — exchanges token, stores encrypted `plaidAccessToken` and `plaidItemId` in `employee_bank_accounts` table. Add `plaid_access_token` (encrypted) and `plaid_item_id` columns if not present. Display as last-4 only everywhere.
+
+**Payroll disbursement via Plaid Transfer:**
+
+In `POST /api/payroll/runs/:id/process` — after pay stubs are created, execute Plaid transfers as the primary disbursement step:
+
+For each employee WITH a connected Plaid account:
+1. Call `plaidService.verifyBankAccount()` — confirm account valid and active
+2. Call `plaidService.initiateTransfer()` — initiate ACH push to employee bank
+3. Store `transferId` on pay stub record
+4. Set pay stub status to `transfer_initiated`
+5. Publish `{ type: 'payroll_transfer_initiated', workspaceId, employeeId, transferId, amount }` to platformEventBus
+
+For each employee WITHOUT a connected Plaid account — generate NACHA entry for that employee only. Flag as `requires_manual_disbursement` in run summary.
+
+Update payroll run status to `disbursing` after all transfers initiated.
+
+**Transfer monitoring:**
+
+Create `server/services/payroll/payrollTransferMonitor.ts` — cron every 2 hours:
+- For every payroll run in `disbursing` status, call `getTransferStatus()` for each pending transfer
+- `settled` → pay stub to `paid`, emit `payroll_transfer_settled`
+- `failed` → pay stub to `failed`, emit `payroll_transfer_failed`, notify org owner with employee name, amount, and failure reason
+- All transfers settled → run transitions to `paid`, emit `payroll_run_paid`
+- If `getTransferStatus()` throws — write to `trinity_credit_failures`, notify org owner, increment `consecutive_poll_failures` counter — after 3 consecutive failures set pay stub to `poll_failed`
+
+Add `POST /api/payroll/runs/:id/retry-failed-transfers` — retry failed transfers once. Manager role required.
+
+**Per-event billing:**
+
+In `partnerApiUsage.ts` add:
+- `plaid_transfer_initiated` — platform cost per transfer including margin above Plaid's fee
+- `plaid_bank_verification` — cost per verification
+
+After each successful `initiateTransfer()` — deduct credits for `plaid_transfer_initiated`. Wire to `trinity_credit_failures` on deduction failure.
+
+**Frontend Plaid Link:**
+
+In org settings payroll tab — add "Connect Bank Account" button:
+1. Calls `GET /api/payroll/bank/link-token`
+2. Opens Plaid Link via `react-plaid-link`
+3. On success calls `POST /api/payroll/bank/connect` with public token
+4. Shows connected status with account last-4 and green checkmark
+5. Shows disconnect button when connected
+
+In employee profile direct deposit section:
+1. "Set Up Direct Deposit" button
+2. Opens Plaid Link
+3. On success calls employee bank connect endpoint
+4. Shows "Direct Deposit Connected ✓" with last-4
+
+**Trinity awareness:**
+
+Add subscribers for:
+- `payroll_transfer_failed` → notify org owner immediately with employee name, amount, and next step
+- `workspace_bank_disconnected` → alert org owner that payroll cannot process until bank reconnected
+- `payroll_transfer_initiated` → log to Trinity intelligence for disbursement tracking
+
+Update pre-payroll readiness scan to also verify:
+- Org has connected Plaid bank account
+- All active employees have connected direct deposit or are flagged for manual NACHA
+- Surface missing connections as blocking items in the 48h readiness report
+
+**Check 1 completion criteria:**
+- TypeScript compile zero errors
+- Server restart clean
+- Plaid Link flow works in sandbox — connect bank, verify, initiate test transfer
+- Payroll run completes full cycle in sandbox — approve, initiate transfers, monitor, settle, mark paid
+- Per-event billing fires on each transfer
+- Employee without Plaid falls back to NACHA correctly
+- Report Phase A findings + all routes mounted + frontend components added
+
+Stop after Check 1 report. Proceed to Check 2.
+
+---
+
+**CHECK 2 — TRINITY CAPABILITY VERIFICATION**
+
+Answer every question below with PASS, FAIL, or PARTIAL and one sentence. Check actual running code not intentions.
+
+**Scheduling autonomy:**
+- Does Trinity automatically detect and fill open shifts without any manager action?
+- Does Trinity confirm shift assignments with officers and track acknowledgment without manager involvement?
+- Is the autonomous scheduling daemon running at startup or deliberately disabled?
+- Does Trinity handle shift swaps end to end without manager manually approving each step?
+
+**Invoice autonomy:**
+- Does Trinity automatically generate invoices for all active clients at end of their billing cycle?
+- Does Trinity pull billable hours from approved timesheets with no manual data entry?
+- Does Trinity send invoice reminders at 7, 14, and 30 day overdue milestones automatically?
+- Can the full invoice lifecycle — generate, send, remind, collect, reconcile — complete with zero manager action if all data is populated?
+
+**Payroll autonomy:**
+- Does Trinity automatically build payroll runs from approved timesheets at pay period end?
+- Does Trinity flag missing data 48 hours before payroll is due?
+- After Plaid integration — does payroll disburse automatically after owner approval with no manual steps?
+- Does Trinity notify every employee when their pay has been processed?
+
+**Financial intelligence:**
+- Does Trinity's morning COO brief fire for each workspace on schedule and deliver specific numbers not generic statements?
+- Does Trinity proactively surface cash flow risk — flagging when outstanding invoices plus upcoming payroll creates a negative position?
+- Does Trinity identify which clients are operating at a loss?
+- Can Trinity answer "how is my business doing?" with real org data not a generic response?
+
+**Compliance autonomy:**
+- Does Trinity automatically scan officer licenses and flag expiring ones before they expire?
+- Does Trinity automatically hard-block an expired officer from shift assignment?
+- Does Trinity notify the officer and manager with enough lead time to renew?
+
+**Multi-tenant isolation:**
+- Is every DB query scoped with workspace_id from JWT — confirmed zero exceptions?
+- Are Trinity's autonomous actions scoped per workspace — one workspace cannot influence another?
+
+**Overall score:**
+```
+AUTONOMOUS READINESS: X/18 passing
+```
+
+Two lists:
+**Sell this today — fully autonomous features passing**
+**Next sprint — FAIL and PARTIAL items needing one more wiring pass**
+
+Stop after Check 2 report. Proceed to Check 3.
+
+---
+
+**CHECK 3 — LIVE REASONING GATE TESTS**
+
+Execute each test against the live running codebase. Report exact HTTP status and response body returned.
+
+**Test 3A — Terminated employee block**
+Find any employee in the dev workspace. Set their `isActive` to `false` directly in the DB via SQL. Then attempt to assign them to a shift via `POST /api/shifts` with their `employeeId`. Report exact HTTP status and response body.
+
+**Test 3B — Zero approved hours payroll gate**
+Ensure zero approved timesheet entries exist for the current pay period in the dev workspace. Attempt to create a payroll run via `POST /api/payroll/runs`. Report exact HTTP status and response body.
+
+**Test 3C — NaN tax rate fix confirmed**
+Find or create a workspace with no `defaultTaxRate` set. Attempt to create an invoice for that workspace. Confirm it succeeds with `taxAmount: 0` not a crash. Report HTTP status and response body.
+
+**Test 3D — Invoice anomaly warning**
+Create a test invoice with `totalAmount` above $50,000 in the dev workspace. Attempt to send it via the invoice send action. Report whether `anomalyWarning` appears in the success response.
+
+**Test 3E — Critical action dual-AI gate**
+Trigger `billing.run_weekly` via the action registry for the dev workspace. Check server logs for any `claudeVerificationService` log entries. Report whether dual-AI verification was invoked.
+
+**Test 3F — QB invoice sync**
+Confirm `invoice.issueDate` and `invoice.total` are now read correctly in `quickbooks.ts`. Trigger a QB invoice sync for any invoice in the dev workspace. Report whether it succeeds without a TypeError crash.
+
+**Test 3G — Contradiction enforcement**
+In the Trinity chat for the dev workspace send these two messages in sequence:
+- "Always bill client ABC on the 1st of the month"
+- "Generate an invoice for client ABC for last week"
+Report whether Trinity surfaces a contradiction before executing or proceeds silently.
+
+**Test 3H — Plaid sandbox transfer**
+Using the Plaid sandbox credentials, connect a test bank account to the dev workspace. Initiate a test payroll run. Confirm Plaid transfer is initiated and `transferId` is stored on the pay stub. Report transfer status from the monitoring cron.
+
+After all 8 tests report:
+```
+3A: PASS/FAIL — [exact response]
+3B: PASS/FAIL — [exact response]
+3C: PASS/FAIL — [exact response]
+3D: PASS/FAIL — [exact response]
+3E: PASS/FAIL — [exact response]
+3F: PASS/FAIL — [exact response]
+3G: PASS/FAIL — [exact response]
+3H: PASS/FAIL — [exact response]
+```
+
+---
+
+**FINAL COMPLETION REPORT**
+
+After all three checks produce:
+
+```
+CHECK 1 — Plaid Integration: COMPLETE / INCOMPLETE
+CHECK 2 — Autonomous Readiness Score: X/18
+CHECK 3 — Reasoning Gates: X/8 passing
+```
+
+Then give a single final verdict:
+
+If Check 1 complete + Check 2 ≥ 14/18 + Check 3 ≥ 6/8:
+**PLATFORM READY — Clear to onboard first real tenant**
+
+If any check falls below threshold — list exactly what needs one more fix before tenant onboarding.
+
+Stop and wait for final verdict.
+
+---
+
+Paste the full results back here. That final verdict is your green light.

@@ -1,0 +1,238 @@
+Good. I can see exactly what needs to be fixed. Here is the complete audit for both.
+
+---
+
+**DESKTOP — PROBLEMS IDENTIFIED**
+
+```
+CRITICAL:
+  Trinity AI panel on the right is cut off
+  All text in AI Summary, Action Items, Priority Alert
+  and Quick Actions is being clipped off screen
+  The right panel has no scroll and no contained width
+  This is a CSS overflow issue — the panel needs
+  a fixed width, overflow-y: auto, and proper containment
+
+  The email body area has a massive empty white space
+  below the 4 lines of email content
+  The content does not fill the reading pane
+  Needs min-height and better layout structure
+
+  Left sidebar email previews are too heavily truncated
+  Sender name and subject barely readable
+  Sidebar needs slightly more width or better typography
+
+VISUAL IMPROVEMENTS NEEDED:
+  Unread emails need bolder visual treatment
+  Sender name should be dark and bold when unread
+  Subject line should be full weight when unread
+  Read emails should be visually lighter (Gmail does this)
+  
+  Reply and Forward bar at bottom looks clean — keep it
+  Red compliance banner at top is good — keep it
+  Three panel layout foundation is correct — fix sizing
+```
+
+---
+
+**MOBILE — PROBLEMS IDENTIFIED**
+
+```
+CRITICAL VISUAL GAPS vs GMAIL:
+
+  Unread indicator is just a thin red left border
+  Very easy to miss. Gmail uses bold sender name
+  and dark subject line for unread. Much more obvious.
+
+  Compose button bottom left is tiny and barely visible
+  Gmail has a large prominent FAB (floating action button)
+  with text that says Compose — yours needs to be bigger
+  and positioned bottom right not bottom left
+
+  No swipe gestures
+  Gmail: swipe right = archive, swipe left = delete/snooze
+  This is the number one mobile email UX pattern
+  Currently you have to tap into email and use buttons
+
+  No unread count badge per email or per folder
+  All Mail shows 4 but individual folder counts missing
+
+  Timestamp format — showing 27 days ago for all
+  Should be: today = 3:45 PM, this week = Mon, older = Mar 9
+
+  No attachment paperclip indicator on emails with files
+
+  Empty space below 4 emails
+  Should show loading skeleton or empty state message
+  like You are all caught up with a checkmark
+
+  No Trinity summary visible in list view
+  Gmail shows preview text — yours should show
+  Trinity one-line summary instead which is more valuable
+
+  Star icon too faint — barely visible against white
+
+  No priority or urgency visual indicator on list
+  High priority emails should show orange or red dot
+
+  Avatar colors are good but inconsistent sizing
+```
+
+---
+
+**SEND THIS TO YOUR AGENT**
+
+---
+
+The email inbox needs a complete visual and functional upgrade on both desktop and mobile to be Gmail-equivalent or better. Here are all required fixes.
+
+DESKTOP FIXES:
+
+Fix 1 — Trinity AI panel containment. The right panel is overflowing off screen and clipping all content. Apply these styles to the Trinity panel container:
+
+```
+width: 320px
+min-width: 320px
+max-width: 320px
+height: 100%
+overflow-y: auto
+overflow-x: hidden
+border-left: 1px solid border color
+flex-shrink: 0
+```
+
+Fix 2 — Three panel layout must be fully contained with no overflow. The root email layout container needs:
+
+```
+display: flex
+height: 100vh (or calc(100vh - header height))
+overflow: hidden
+width: 100%
+```
+
+Left sidebar: 280px fixed width with overflow-y auto
+Center reading pane: flex: 1, min-width: 0, overflow-y auto
+Right Trinity panel: 320px fixed as above
+
+Fix 3 — Email reading pane empty space. The email body must fill the pane properly. Wrap email content in a container with padding 24px and ensure the reading pane scrolls independently.
+
+Fix 4 — Unread vs read visual treatment. Unread emails in the list must show:
+```
+Sender name: font-weight 700 (bold) color #000
+Subject: font-weight 600 color #000
+Preview: font-weight 400 color #555
+Background: white
+Unread dot: 8px blue circle on left edge
+```
+Read emails:
+```
+Sender name: font-weight 400 color #444
+Subject: font-weight 400 color #666
+Preview: color #999
+Background: #f9f9f9
+```
+
+Fix 5 — Left sidebar width. Increase from current width to 300px minimum. Email sender names are being cut too aggressively.
+
+MOBILE FIXES:
+
+Fix 1 — Compose button. Replace current small pencil icon with a large Gmail-style floating action button:
+```
+Position: fixed bottom right
+Bottom: 80px (above tab bar)
+Right: 16px
+Width: 56px height: 56px (icon only) 
+OR width: 140px height: 48px with text Compose
+Background: primary navy #0a1628
+Color: white
+Border-radius: 28px (pill shape for expanded)
+Shadow: 0 4px 12px rgba(0,0,0,0.3)
+Z-index: 1000
+```
+
+Fix 2 — Unread indicator. Remove the thin red left border. Replace with:
+```
+Sender name: font-weight 700, color #000 when unread
+Subject line: font-weight 600, color #000 when unread
+Small filled blue circle 8px on the left before avatar
+Read emails: all text normal weight color #666
+```
+
+Fix 3 — Add swipe gestures on each email row:
+```
+Swipe right: archive (green background with archive icon reveals)
+Swipe left: delete (red background with trash icon reveals)
+Use react-swipeable or similar library
+Threshold: 80px swipe to trigger action
+```
+
+Fix 4 — Fix timestamp format:
+```
+Today: show time only e.g. 3:45 PM
+This week: show day only e.g. Mon or Tue
+This year: show month day e.g. Mar 9
+Older: show month day year e.g. Mar 9 2025
+```
+
+Fix 5 — Replace email preview text with Trinity summary. Instead of showing the raw first line of the email body, show trinity_summary from the database. This is the killer feature that makes this better than Gmail. Style it in a slightly different color like #6B7280 italic.
+
+Fix 6 — Add priority indicator dot to list items:
+```
+High priority: orange dot 6px before sender name
+Urgent: red dot 6px
+Normal: no dot
+Low: no indicator
+Pull from trinity_priority field on platform_emails
+```
+
+Fix 7 — Add attachment indicator:
+```
+Paperclip icon 14px gray after subject line
+Only show when email has attachments
+Pull from email_attachments count
+```
+
+Fix 8 — Fix empty state below email list:
+```
+When inbox has emails but you are at the end:
+  Show: You are all caught up checkmark in green
+When inbox is truly empty:
+  Show: illustration and text Your inbox is empty
+  Trinity says: I will notify you when something arrives
+```
+
+Fix 9 — Star button more visible:
+```
+Empty star: #CCCCCC with 22px size
+Filled star: #F59E0B (amber) with 22px size
+Tap target: 44x44px minimum
+```
+
+Fix 10 — Folder unread counts on category tabs:
+```
+Primary (3) Updates (1) Promotions (0)
+Show count badge on each tab
+Only show if count > 0
+```
+
+BOTH DESKTOP AND MOBILE — Trinity integration improvements:
+
+The Trinity summary in the right panel (desktop) and list view (mobile) must show the actual trinity_summary field from platform_emails. Verify the withGemini call that generates the summary is firing on every inbound email and storing to trinity_summary column.
+
+Add a one-tap Generate Reply button that fills the compose area with trinity_draft_reply. User reviews edits and sends. This is the feature that beats Gmail — AI drafted reply in one tap.
+
+For emails marked as high priority by Trinity the list item gets a subtle orange left border 3px instead of no indicator.
+
+PERFORMANCE:
+
+Add optimistic UI updates. When user stars, archives, or deletes an email update the UI instantly before the server confirms. Roll back if server returns error.
+
+Add virtual scrolling for inbox lists over 50 emails so it never gets slow regardless of inbox size.
+
+WebSocket must update unread count badge in tab bar in real time when new email arrives without any page refresh.
+
+After all fixes: test on iPhone 15, iPhone 14, Samsung Galaxy S24, and desktop at 1280px and 1920px widths. Every layout must work perfectly at all sizes.
+
+---
+
+Show me the result after the agent applies these fixes and I will give you the next round of improvements.

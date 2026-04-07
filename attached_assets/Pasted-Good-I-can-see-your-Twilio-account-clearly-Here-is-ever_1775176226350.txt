@@ -1,0 +1,231 @@
+Good. I can see your Twilio account clearly. Here is everything you need to know and do.
+
+---
+
+**WHAT I CAN SEE**
+
+```
+Account SID: AC689ddd56e5164bdaecd5a75eda533a63
+Auth Token:  98c65c5e1983f6b0bc9ba5cfea91569d
+Phone Number: +18664644151
+Status: Trial account still showing step 5 incomplete
+         (Complete toll free verification)
+```
+
+---
+
+**WHAT YOU NEED TO DO IN TWILIO FOR TRINITY VOICE**
+
+**Step 1 — Complete toll-free verification first**
+
+This is the most critical blocker. Your number +18664644151 cannot send SMS at scale until verified. Click the blue **Complete toll free verification** button on screen 1.
+
+When the form opens fill it exactly like this:
+
+```
+Business name: Coaileague Automations LLC
+
+Use case: Workforce management platform for security
+companies. We send operational SMS notifications to
+security officers who have opted in during onboarding.
+Messages include shift assignments, calloff alerts,
+schedule changes, and payroll confirmations.
+
+Opt-in URL: https://coaileague.com/sms-consent
+(agent must build this public page if not done yet)
+
+Sample message 1:
+ACME Security: Your shift at Site 4 on April 3 8AM-4PM
+is confirmed. Reply STOP to opt out.
+
+Sample message 2:
+ACME Security: OPEN SHIFT tonight 10PM-6AM at Site 2.
+Reply YES to accept or NO to decline. Reply STOP to opt out.
+
+Sample message 3:
+ACME Security: Your paycheck for April 1-15 has been
+processed. Log in to view your pay stub. Reply STOP to opt out.
+
+Volume: Low to medium 50-500 messages per day
+Opt-in method: Website form during employee onboarding
+```
+
+---
+
+**Step 2 — Configure Voice for Trinity**
+
+In the left sidebar click **Voice**. You need to configure these webhook URLs for your number +18664644151.
+
+Go to Phone Numbers then Manage then your number. Set:
+
+```
+Voice Configuration:
+  A call comes in:
+    Webhook: https://coaileague.com/api/voice/inbound
+    HTTP: POST
+
+  Call status changes:
+    Webhook: https://coaileague.com/api/voice/status
+    HTTP: POST
+
+Messaging Configuration:
+  A message comes in:
+    Webhook: https://coaileague.com/api/sms/inbound
+    HTTP: POST
+
+  Message status callback:
+    Webhook: https://coaileague.com/api/sms/status
+    HTTP: POST
+```
+
+---
+
+**Step 3 — Do you need to upgrade Twilio?**
+
+```
+VOICE CALLS: Works on your current paid account
+  No upgrade needed for receiving and making calls
+  You pay per minute as you use it
+  Twilio voice: ~$0.022/minute inbound and outbound
+
+SMS: Blocked until toll-free verification completes
+  After verification SMS sends at scale
+  Cost: ~$0.0079/SMS outbound
+
+DO YOU NEED TWILIO VOICE UPGRADE?
+  No. Your current account supports:
+    Inbound voice calls to toll-free number
+    Outbound voice calls from Trinity
+    IVR (Interactive Voice Response) menus
+    Call recording
+    Text to speech
+    Speech recognition
+    Conference calling
+
+  The only thing blocking SMS is the toll-free verification
+  Voice calls work right now on your current plan
+```
+
+---
+
+**Step 4 — Replit Secrets to verify are set**
+
+Check these are all in your Replit Secrets:
+
+```
+TWILIO_ACCOUNT_SID
+Value: AC689ddd56e5164bdaecd5a75eda533a63
+
+TWILIO_AUTH_TOKEN
+Value: 98c65c5e1983f6b0bc9ba5cfea91569d
+
+TWILIO_PHONE_NUMBER
+Value: +18664644151
+```
+
+---
+
+**Step 5 — What Trinity Voice needs to do**
+
+Send this to your agent:
+
+---
+
+Verify and configure the complete Trinity Voice system. Trinity voice must handle these scenarios when someone calls +18664644151:
+
+```
+INBOUND CALL HANDLER at POST /api/voice/inbound:
+
+  1. Answer the call with Trinity greeting
+     "Thank you for calling. This is Trinity, your
+     CoAIleague assistant. How can I help you today?"
+
+  2. Identify the caller workspace by:
+     - Caller phone number matched to employee record
+     - If not recognized: ask for employee number
+
+  3. Route to correct action based on speech or keypress:
+     Press 1 or say Calloff: process officer calloff
+     Press 2 or say Clock in: voice clock-in for shift
+     Press 3 or say Schedule: read upcoming shifts
+     Press 4 or say Emergency: connect to supervisor
+     Press 5 or say Support: HelpAI support menu
+
+  4. CALLOFF FLOW:
+     Trinity confirms which shift officer is calling off for
+     Trinity asks for reason (optional)
+     Trinity confirms calloff and informs cascade will begin
+     INSERT calloff_records with source=voice call_sid employee_id
+     Cascade replacement triggers immediately after call ends
+     Supervisor receives urgent NDS notification
+
+  5. VOICE CLOCK-IN FLOW:
+     Trinity confirms officer identity via employee number
+     Trinity confirms shift details
+     Officer confirms clock-in
+     INSERT time_entries with clock_in_method=voice
+     Supervisor sees real-time WebSocket update
+
+  6. CALL COMPLETION WEBHOOK at POST /api/voice/status:
+     Receives call duration and status from Twilio
+     INSERT into voice_sms_event_log with:
+       call_sid, duration_seconds, duration_minutes_billed
+       cost_basis_cents, billed_cents
+     Updates workspace_voice_sms_usage for billing period
+     No credit system references anywhere in this flow
+
+  7. AI PROCESSING:
+     All Trinity speech understanding uses withGemini wrapper
+     withGemini('gemini-2.5-flash', {workspaceId, tier, callType: 'voice_processing'}, fn)
+     Every AI call logged in ai_call_log with cost_microcents
+
+  8. BILINGUAL:
+     Detect Spanish from caller speech within first 5 seconds
+     Switch all responses to Spanish automatically
+     Maintain Spanish for entire call once detected
+
+  9. ERROR HANDLING:
+     If Trinity cannot understand after 3 attempts
+     Transfer to voicemail or give callback number
+     Never leave caller with silence or dead air
+     Always give graceful exit option
+
+  10. AFTER CALL:
+      Call summary written to platform inbox for org owner
+      trinity_summary: what happened on the call
+      Any actions taken during call listed
+      Call recording URL stored if recording enabled
+```
+
+Build the public /sms-consent page that Twilio toll-free verification requires. It must:
+- Load without any login required
+- Show business name Coaileague Automations LLC
+- Show what messages will be sent
+- Show message frequency varies
+- Show Msg and data rates may apply
+- Show Reply STOP to unsubscribe
+- Show Reply HELP for help
+- Show link to privacy policy
+- Show link to terms of service
+- Show a consent checkbox
+- Return HTTP 200
+
+Test the voice system by calling +18664644151 and verify Trinity answers, processes a test calloff, and the calloff record appears in the database.
+
+---
+
+**BOTTOM LINE — THREE THINGS TO DO RIGHT NOW**
+
+```
+1. Click Complete toll free verification in Twilio
+   and submit the form with the exact text above
+   This unblocks SMS for all your tenants
+
+2. Go to your phone number settings in Twilio
+   and add the 4 webhook URLs for voice and SMS
+
+3. Send the agent prompt above to wire up
+   Trinity voice IVR and test it end to end
+```
+
+The toll-free verification is the most urgent. You have been rejected 4 times because of the opt-in URL. The agent needs to build that /sms-consent page immediately so you can resubmit and get approved this time.

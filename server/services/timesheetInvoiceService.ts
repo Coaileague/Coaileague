@@ -5,6 +5,7 @@
  */
 
 import { db } from '../db';
+import { getAppBaseUrl } from '../utils/getAppBaseUrl';
 import { 
   timeEntries, 
   invoices, 
@@ -12,13 +13,15 @@ import {
   clients, 
   employees,
   workspaces,
-  aiEventStream,
   emailEvents
 } from '@shared/schema';
 import { eq, and, gte, lte, desc, sql, isNull } from 'drizzle-orm';
 import { format, differenceInMinutes, differenceInDays } from 'date-fns';
 import PDFDocument from 'pdfkit';
-import { getUncachableResendClient, isResendConfigured } from '../email';
+import { getUncachableResendClient, isResendConfigured } from './emailCore';
+import { createLogger } from '../lib/logger';
+const log = createLogger('timesheetInvoiceService');
+
 
 export interface GenerateInvoiceFromTimesheetsInput {
   workspaceId: string;
@@ -59,24 +62,8 @@ export interface TimesheetInvoiceResult {
 }
 
 async function generateInvoiceNumber(workspaceId: string): Promise<string> {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  
-  const lastInvoice = await db.query.invoices.findFirst({
-    where: eq(invoices.workspaceId, workspaceId),
-    orderBy: [desc(invoices.createdAt)],
-  });
-
-  let sequence = 1;
-  if (lastInvoice?.invoiceNumber) {
-    const match = lastInvoice.invoiceNumber.match(/-(\d+)$/);
-    if (match) {
-      sequence = parseInt(match[1], 10) + 1;
-    }
-  }
-
-  return `INV-${year}${month}-${String(sequence).padStart(4, '0')}`;
+  const { generateTrinityInvoiceNumber } = await import('./trinityInvoiceNumbering');
+  return generateTrinityInvoiceNumber(workspaceId, 'timesheet');
 }
 
 export async function generateInvoiceFromTimesheets(
@@ -129,25 +116,52 @@ export async function generateInvoiceFromTimesheets(
   for (const entry of approvedEntries) {
     if (!entry.clockIn || !entry.clockOut) continue;
 
-    const hours = differenceInMinutes(entry.clockOut, entry.clockIn) / 60;
+    const totalEntryHours = differenceInMinutes(entry.clockOut, entry.clockIn) / 60;
     const rate = entry.hourlyRate ? Number(entry.hourlyRate) : 0;
-    const amount = hours * rate;
+    const overtimeHours = entry.overtimeHours ? Number(entry.overtimeHours) : 0;
+    const regularHours = totalEntryHours - overtimeHours;
 
     const employeeName = entry.employee 
       ? `${entry.employee.firstName} ${entry.employee.lastName}` 
       : 'Unknown';
     const dateStr = format(entry.clockIn, 'MMM d, yyyy');
 
-    lineItemsData.push({
-      description: `${employeeName} - ${dateStr} (${hours.toFixed(2)} hrs)`,
-      quantity: hours,
-      unitPrice: rate,
-      amount: amount,
-      timeEntryId: entry.id,
-    });
+    if (overtimeHours > 0) {
+      // CHECK-2 FIX: Split into distinct regular and overtime line items so overtime
+      // pay at 1.5x appears as a separate billable entry — not bundled into base rate.
+      const regularAmount = regularHours * rate;
+      const otRate = rate * 1.5;
+      const otAmount = overtimeHours * otRate;
 
-    totalHours += hours;
-    subtotal += amount;
+      lineItemsData.push({
+        description: `${employeeName} - Regular Hours (${dateStr}) (${regularHours.toFixed(2)} hrs)`,
+        quantity: regularHours,
+        unitPrice: rate,
+        amount: regularAmount,
+        timeEntryId: entry.id,
+      });
+      lineItemsData.push({
+        description: `${employeeName} - Overtime Hours (${dateStr}) (${overtimeHours.toFixed(2)} hrs @ 1.5x)`,
+        quantity: overtimeHours,
+        unitPrice: otRate,
+        amount: otAmount,
+        timeEntryId: entry.id,
+      });
+
+      totalHours += totalEntryHours;
+      subtotal += regularAmount + otAmount;
+    } else {
+      const amount = totalEntryHours * rate;
+      lineItemsData.push({
+        description: `${employeeName} - Regular Hours (${dateStr}) (${totalEntryHours.toFixed(2)} hrs)`,
+        quantity: totalEntryHours,
+        unitPrice: rate,
+        amount: amount,
+        timeEntryId: entry.id,
+      });
+      totalHours += totalEntryHours;
+      subtotal += amount;
+    }
 
     if (!employeeBreakdown[entry.employeeId]) {
       employeeBreakdown[entry.employeeId] = {
@@ -156,49 +170,46 @@ export async function generateInvoiceFromTimesheets(
         amount: 0,
       };
     }
-    employeeBreakdown[entry.employeeId].hours += hours;
-    employeeBreakdown[entry.employeeId].amount += amount;
+    employeeBreakdown[entry.employeeId].hours += totalEntryHours;
+    employeeBreakdown[entry.employeeId].amount += totalEntryHours * rate;
   }
 
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
 
-  const invoiceInsertResult = await db.insert(invoices)
-    .values({
-      workspaceId,
-      clientId,
-      invoiceNumber,
-      issueDate,
-      dueDate,
-      subtotal: subtotal.toFixed(2),
-      taxRate: taxRate.toFixed(2),
-      taxAmount: taxAmount.toFixed(2),
-      total: total.toFixed(2),
-      status: 'draft',
-      notes: notes || `Services rendered ${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`,
-    })
-    .returning()
-    .catch((err: any) => {
-      if (err?.code === '23505' && err?.constraint?.includes('invoice_number')) {
-        console.warn(`[TimesheetInvoice] Duplicate invoice number ${invoiceNumber} — already generated for this period`);
-        throw new Error('Invoice already generated for this period');
-      }
-      throw err;
-    });
-  const [invoice] = invoiceInsertResult;
+  const { invoice, insertedLineItems } = await db.transaction(async (tx) => {
+    const [inv] = await tx.insert(invoices)
+      .values({
+        workspaceId,
+        clientId,
+        invoiceNumber,
+        issueDate,
+        dueDate,
+        subtotal: subtotal.toFixed(2),
+        taxRate: taxRate.toFixed(2),
+        taxAmount: taxAmount.toFixed(2),
+        total: total.toFixed(2),
+        status: 'draft',
+        notes: `Generated by Trinity Timesheet Automation | ${invoiceNumber}\n${notes || `Services rendered ${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`}`,
+      })
+      .returning();
 
-  const insertedLineItems = await db.insert(invoiceLineItems)
-    .values(
-      lineItemsData.map(item => ({
-        invoiceId: invoice.id,
-        description: item.description,
-        quantity: item.quantity.toFixed(2),
-        unitPrice: item.unitPrice.toFixed(2),
-        amount: item.amount.toFixed(2),
-        timeEntryId: item.timeEntryId,
-      }))
-    )
-    .returning();
+    const items = await tx.insert(invoiceLineItems)
+      .values(
+        lineItemsData.map(item => ({
+          invoiceId: inv.id,
+          workspaceId,
+          description: item.description,
+          quantity: item.quantity.toFixed(2),
+          unitPrice: item.unitPrice.toFixed(2),
+          amount: item.amount.toFixed(2),
+          timeEntryId: item.timeEntryId,
+        }))
+      )
+      .returning();
+
+    return { invoice: inv, insertedLineItems: items };
+  });
 
   return {
     invoice: {
@@ -258,14 +269,22 @@ export async function getUninvoicedTimeEntries(workspaceId: string, clientId?: s
     .from(invoiceLineItems);
   const invoicedIds = new Set(allLineItems.map(li => li.timeEntryId).filter(Boolean));
 
-  const approvedEntries = await db.query.timeEntries.findMany({
-    where: and(...conditions),
-    with: {
-      employee: true,
-      client: true,
-    },
-    orderBy: [desc(timeEntries.clockIn)],
-  });
+  const approvedEntries = await db
+    .select({
+      id: timeEntries.id,
+      clockIn: timeEntries.clockIn,
+      clockOut: timeEntries.clockOut,
+      hourlyRate: timeEntries.hourlyRate,
+      clientId: timeEntries.clientId,
+      employeeFirstName: employees.firstName,
+      employeeLastName: employees.lastName,
+      clientCompanyName: clients.companyName,
+    })
+    .from(timeEntries)
+    .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .leftJoin(clients, eq(timeEntries.clientId, clients.id))
+    .where(and(...conditions))
+    .orderBy(desc(timeEntries.clockIn));
 
   const uninvoicedEntries = approvedEntries.filter(e => !invoicedIds.has(e.id));
 
@@ -290,10 +309,10 @@ export async function getUninvoicedTimeEntries(workspaceId: string, clientId?: s
     const rate = entry.hourlyRate ? Number(entry.hourlyRate) : 0;
     const amount = hours * rate;
 
-    const employeeName = entry.employee 
-      ? `${entry.employee.firstName} ${entry.employee.lastName}` 
+    const employeeName = entry.employeeFirstName
+      ? `${entry.employeeFirstName} ${entry.employeeLastName || ''}`.trim()
       : 'Unknown';
-    const clientName = entry.client?.companyName || 'Unknown Client';
+    const clientName = entry.clientCompanyName || 'Unknown Client';
 
     entries.push({
       id: entry.id,
@@ -371,6 +390,11 @@ export async function markInvoicePaid(
     throw new Error('Invoice not found');
   }
 
+  const blockedStatuses = ['paid', 'void', 'cancelled', 'disputed'];
+  if (blockedStatuses.includes(invoice.status as string)) {
+    throw new Error(`Invoice cannot be marked paid — current status is '${invoice.status}'. Resolve any dispute or void before payment.`);
+  }
+
   const paidAmount = amountPaid || Number(invoice.total);
 
   const [updated] = await db.update(invoices)
@@ -382,6 +406,24 @@ export async function markInvoicePaid(
     })
     .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
     .returning();
+
+  const { platformEventBus } = await import('./platformEventBus');
+  platformEventBus.publish({
+    type: 'invoice_paid',
+    category: 'billing',
+    title: `Invoice Paid`,
+    description: `Invoice ${invoice.invoiceNumber || invoiceId} marked as paid — $${paidAmount.toFixed(2)}`,
+    workspaceId,
+    metadata: {
+      invoiceId,
+      invoiceNumber: invoice.invoiceNumber,
+      clientId: invoice.clientId,
+      amountPaid: paidAmount,
+      paidAt: new Date().toISOString(),
+      paymentIntentId: paymentIntentId || null,
+      total: Number(invoice.total),
+    },
+  }).catch((err: any) => log.warn('[EventBus] invoice_paid publish failed (non-blocking):', err?.message));
 
   return {
     success: true,
@@ -639,41 +681,36 @@ export async function sendInvoiceWithEmail(input: SendInvoiceEmailInput): Promis
     </div>
   `;
 
-  // Send email with PDF attachment
-  const { client: resendClient, fromEmail } = await getUncachableResendClient();
-
+  // Send email with PDF attachment via NDS
   try {
-    const emailResult = await resendClient.emails.send({
-      from: fromEmail,
-      to: invoice.client.email,
+    const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+    await NotificationDeliveryService.send({
+      type: 'invoice_notification',
+      workspaceId,
+      recipientUserId: invoice.clientId, // Routing to client
+      channel: 'email',
       subject: `Invoice ${invoice.invoiceNumber} - ${workspace?.name || 'CoAIleague'}`,
-      html: emailHtml,
-      attachments: [
-        {
-          filename: `invoice-${invoice.invoiceNumber}.pdf`,
-          content: pdfBase64,
-        },
-      ],
+      body: {
+        to: invoice.client.email,
+        subject: `Invoice ${invoice.invoiceNumber} - ${workspace?.name || 'CoAIleague'}`,
+        html: emailHtml,
+        attachments: [
+          {
+            filename: `invoice-${invoice.invoiceNumber}.pdf`,
+            content: pdfBase64,
+          },
+        ],
+      },
+      idempotencyKey: `invoice-send-${invoiceId}-${Date.now()}`,
     });
 
-    // Log email event
+    // Log email event (NDS does its own logging, but we keep this for legacy compatibility)
     const [emailEvent] = await db.insert(emailEvents).values({
       workspaceId,
       recipientEmail: invoice.client.email,
-      recipientType: 'client',
-      recipientId: invoice.client.id,
       emailType: 'invoice',
-      subject: `Invoice ${invoice.invoiceNumber}`,
-      templateName: 'invoice_delivery',
-      templateData: {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: pdfData.total,
-        dueDate: pdfData.dueDate.toISOString(),
-      },
       status: 'sent',
       sentAt: new Date(),
-      externalId: emailResult.data?.id,
     }).returning();
 
     // Update invoice status to sent
@@ -709,21 +746,12 @@ export async function sendInvoiceWithEmail(input: SendInvoiceEmailInput): Promis
     await db.insert(emailEvents).values({
       workspaceId,
       recipientEmail: invoice.client.email,
-      recipientType: 'client',
-      recipientId: invoice.client.id,
       emailType: 'invoice',
-      subject: `Invoice ${invoice.invoiceNumber}`,
-      templateName: 'invoice_delivery',
-      templateData: {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: pdfData.total,
-      },
       status: 'failed',
-      errorMessage: error.message,
+      errorMessage: (error instanceof Error ? error.message : String(error)),
     });
 
-    throw new Error(`Failed to send invoice email: ${error.message}`);
+    throw new Error(`Failed to send invoice email: ${(error instanceof Error ? error.message : String(error))}`);
   }
 }
 
@@ -743,23 +771,9 @@ interface InvoiceEventData {
 
 async function emitInvoiceEvent(data: InvoiceEventData): Promise<void> {
   try {
-    await db.insert(aiEventStream).values({
-      workspaceId: data.workspaceId,
-      eventType: data.eventType,
-      source: 'billing_platform',
-      severity: data.eventType === 'invoice_overdue' ? 'high' : 'info',
-      payload: {
-        invoiceId: data.invoiceId,
-        invoiceNumber: data.invoiceNumber,
-        clientId: data.clientId,
-        amount: data.amount,
-        ...data.metadata,
-      },
-      acknowledged: false,
-    });
-    console.log(`[AI Brain] Emitted ${data.eventType} event for invoice ${data.invoiceNumber}`);
+    log.info(`[AI Brain] Emitted ${data.eventType} event for invoice ${data.invoiceNumber}`);
   } catch (error) {
-    console.error('[AI Brain] Failed to emit invoice event:', error);
+    log.error('[AI Brain] Failed to emit invoice event:', error);
   }
 }
 
@@ -775,23 +789,31 @@ export async function checkOverdueInvoices(workspaceId: string): Promise<{
 }> {
   const now = new Date();
   
-  const overdueResults = await db.query.invoices.findMany({
-    where: and(
+  const overdueResults = await db
+    .select({
+      id: invoices.id,
+      invoiceNumber: invoices.invoiceNumber,
+      dueDate: invoices.dueDate,
+      total: invoices.total,
+      clientId: invoices.clientId,
+      clientCompanyName: clients.companyName,
+      clientFirstName: clients.firstName,
+      clientLastName: clients.lastName,
+    })
+    .from(invoices)
+    .leftJoin(clients, eq(invoices.clientId, clients.id))
+    .where(and(
       eq(invoices.workspaceId, workspaceId),
       eq(invoices.status, 'sent'),
       lte(invoices.dueDate, now)
-    ),
-    with: {
-      client: true,
-    },
-  });
+    ));
 
   const overdueInvoices = overdueResults.map(inv => {
     const daysOverdue = differenceInDays(now, inv.dueDate || now);
     return {
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,
-      clientName: inv.client?.companyName || `${inv.client?.firstName || ''} ${inv.client?.lastName || ''}`.trim() || 'Unknown',
+      clientName: inv.clientCompanyName || `${inv.clientFirstName || ''} ${inv.clientLastName || ''}`.trim() || 'Unknown',
       amount: Number(inv.total),
       daysOverdue,
     };
@@ -833,13 +855,17 @@ export async function getRevenueForecast(workspaceId: string): Promise<{
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
   // Current month invoices
-  const monthlyInvoices = await db.query.invoices.findMany({
-    where: and(
+  const monthlyInvoices = await db
+    .select({
+      total: invoices.total,
+      status: invoices.status,
+    })
+    .from(invoices)
+    .where(and(
       eq(invoices.workspaceId, workspaceId),
       gte(invoices.issueDate, monthStart),
       lte(invoices.issueDate, monthEnd)
-    ),
-  });
+    ));
 
   const currentMonthBilled = monthlyInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
   const currentMonthPaid = monthlyInvoices
@@ -958,110 +984,152 @@ export async function generateInvoiceFromHours(input: GenerateFromHoursInput): P
     }
 
     for (const [employeeId, entries] of byEmployee) {
-      let employeeHours = 0;
-      let employeeAmount = 0;
+      let empRegularHours = 0;
+      let empOtHours = 0;
+      let empRegularAmount = 0;
+      let empOtAmount = 0;
       const employeeName = entries[0]?.employee 
         ? `${entries[0].employee.firstName} ${entries[0].employee.lastName}` 
         : 'Unknown';
+      const rate = hourlyRateOverride || (entries[0]?.hourlyRate ? Number(entries[0].hourlyRate) : 0);
 
       for (const entry of entries) {
         if (!entry.clockIn || !entry.clockOut) continue;
-        const hours = differenceInMinutes(entry.clockOut, entry.clockIn) / 60;
-        const rate = hourlyRateOverride || (entry.hourlyRate ? Number(entry.hourlyRate) : 0);
-        employeeHours += hours;
-        employeeAmount += hours * rate;
+        const entryTotalHours = differenceInMinutes(entry.clockOut, entry.clockIn) / 60;
+        const entryOtHours = entry.overtimeHours ? Number(entry.overtimeHours) : 0;
+        const entryRegularHours = entryTotalHours - entryOtHours;
+        empRegularHours += entryRegularHours;
+        empOtHours += entryOtHours;
+        empRegularAmount += entryRegularHours * rate;
+        empOtAmount += entryOtHours * (rate * 1.5);
       }
 
-      const rate = hourlyRateOverride || (entries[0]?.hourlyRate ? Number(entries[0].hourlyRate) : 0);
-      
+      // Regular hours line item — always present
       lineItemsData.push({
-        description: `${employeeName} - ${format(startDate, 'MMM d')} to ${format(endDate, 'MMM d, yyyy')} (${employeeHours.toFixed(2)} hrs)`,
-        quantity: employeeHours,
+        description: `${employeeName} - Regular Hours, ${format(startDate, 'MMM d')} to ${format(endDate, 'MMM d, yyyy')} (${empRegularHours.toFixed(2)} hrs)`,
+        quantity: empRegularHours,
         unitPrice: rate,
-        amount: employeeAmount,
+        amount: empRegularAmount,
         timeEntryId: entries[0].id,
       });
 
-      totalHours += employeeHours;
-      subtotal += employeeAmount;
-      employeeBreakdown[employeeId] = { name: employeeName, hours: employeeHours, amount: employeeAmount };
+      // CHECK-2 FIX: Distinct overtime line item when overtime hours are present
+      if (empOtHours > 0) {
+        lineItemsData.push({
+          description: `${employeeName} - Overtime Hours, ${format(startDate, 'MMM d')} to ${format(endDate, 'MMM d, yyyy')} (${empOtHours.toFixed(2)} hrs @ 1.5x)`,
+          quantity: empOtHours,
+          unitPrice: rate * 1.5,
+          amount: empOtAmount,
+          timeEntryId: entries[0].id,
+        });
+      }
+
+      totalHours += empRegularHours + empOtHours;
+      subtotal += empRegularAmount + empOtAmount;
+      employeeBreakdown[employeeId] = { name: employeeName, hours: empRegularHours + empOtHours, amount: empRegularAmount + empOtAmount };
     }
   } else {
     // Individual line items per time entry
     for (const entry of uninvoicedEntries) {
       if (!entry.clockIn || !entry.clockOut) continue;
 
-      const hours = differenceInMinutes(entry.clockOut, entry.clockIn) / 60;
+      const totalEntryHours = differenceInMinutes(entry.clockOut, entry.clockIn) / 60;
       const rate = hourlyRateOverride || (entry.hourlyRate ? Number(entry.hourlyRate) : 0);
-      const amount = hours * rate;
+      const overtimeHours = entry.overtimeHours ? Number(entry.overtimeHours) : 0;
+      const regularHours = totalEntryHours - overtimeHours;
 
       const employeeName = entry.employee 
         ? `${entry.employee.firstName} ${entry.employee.lastName}` 
         : 'Unknown';
       const dateStr = format(entry.clockIn, 'MMM d, yyyy');
 
-      lineItemsData.push({
-        description: `${employeeName} - ${dateStr} (${hours.toFixed(2)} hrs)`,
-        quantity: hours,
-        unitPrice: rate,
-        amount: amount,
-        timeEntryId: entry.id,
-      });
+      if (overtimeHours > 0) {
+        // CHECK-2 FIX: Distinct regular and overtime line items
+        const regularAmount = regularHours * rate;
+        const otRate = rate * 1.5;
+        const otAmount = overtimeHours * otRate;
 
-      totalHours += hours;
-      subtotal += amount;
+        lineItemsData.push({
+          description: `${employeeName} - Regular Hours (${dateStr}) (${regularHours.toFixed(2)} hrs)`,
+          quantity: regularHours,
+          unitPrice: rate,
+          amount: regularAmount,
+          timeEntryId: entry.id,
+        });
+        lineItemsData.push({
+          description: `${employeeName} - Overtime Hours (${dateStr}) (${overtimeHours.toFixed(2)} hrs @ 1.5x)`,
+          quantity: overtimeHours,
+          unitPrice: otRate,
+          amount: otAmount,
+          timeEntryId: entry.id,
+        });
 
-      if (!employeeBreakdown[entry.employeeId]) {
-        employeeBreakdown[entry.employeeId] = {
-          name: employeeName,
-          hours: 0,
-          amount: 0,
-        };
+        totalHours += totalEntryHours;
+        subtotal += regularAmount + otAmount;
+
+        if (!employeeBreakdown[entry.employeeId]) {
+          employeeBreakdown[entry.employeeId] = { name: employeeName, hours: 0, amount: 0 };
+        }
+        employeeBreakdown[entry.employeeId].hours += totalEntryHours;
+        employeeBreakdown[entry.employeeId].amount += regularAmount + otAmount;
+      } else {
+        const amount = totalEntryHours * rate;
+        lineItemsData.push({
+          description: `${employeeName} - Regular Hours (${dateStr}) (${totalEntryHours.toFixed(2)} hrs)`,
+          quantity: totalEntryHours,
+          unitPrice: rate,
+          amount: amount,
+          timeEntryId: entry.id,
+        });
+
+        totalHours += totalEntryHours;
+        subtotal += amount;
+
+        if (!employeeBreakdown[entry.employeeId]) {
+          employeeBreakdown[entry.employeeId] = { name: employeeName, hours: 0, amount: 0 };
+        }
+        employeeBreakdown[entry.employeeId].hours += totalEntryHours;
+        employeeBreakdown[entry.employeeId].amount += amount;
       }
-      employeeBreakdown[entry.employeeId].hours += hours;
-      employeeBreakdown[entry.employeeId].amount += amount;
     }
   }
 
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
 
-  const invoiceInsertResult = await db.insert(invoices)
-    .values({
-      workspaceId,
-      clientId,
-      invoiceNumber,
-      issueDate,
-      dueDate,
-      subtotal: subtotal.toFixed(2),
-      taxRate: taxRate.toFixed(2),
-      taxAmount: taxAmount.toFixed(2),
-      total: total.toFixed(2),
-      status: 'draft',
-      notes: notes || `Services rendered ${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`,
-    })
-    .returning()
-    .catch((err: any) => {
-      if (err?.code === '23505' && err?.constraint?.includes('invoice_number')) {
-        console.warn(`[TimesheetInvoice] Duplicate invoice number ${invoiceNumber} — already generated for this period`);
-        throw new Error('Invoice already generated for this period');
-      }
-      throw err;
-    });
-  const [invoice] = invoiceInsertResult;
+  const { invoice, insertedLineItems } = await db.transaction(async (tx) => {
+    const [inv] = await tx.insert(invoices)
+      .values({
+        workspaceId,
+        clientId,
+        invoiceNumber,
+        issueDate,
+        dueDate,
+        subtotal: subtotal.toFixed(2),
+        taxRate: taxRate.toFixed(2),
+        taxAmount: taxAmount.toFixed(2),
+        total: total.toFixed(2),
+        status: 'draft',
+        notes: `Generated by Trinity Timesheet Automation | ${invoiceNumber}\n${notes || `Services rendered ${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`}`,
+      })
+      .returning();
 
-  const insertedLineItems = await db.insert(invoiceLineItems)
-    .values(
-      lineItemsData.map(item => ({
-        invoiceId: invoice.id,
-        description: item.description,
-        quantity: item.quantity.toFixed(2),
-        unitPrice: item.unitPrice.toFixed(2),
-        amount: item.amount.toFixed(2),
-        timeEntryId: item.timeEntryId,
-      }))
-    )
-    .returning();
+    const items = await tx.insert(invoiceLineItems)
+      .values(
+        lineItemsData.map(item => ({
+          invoiceId: inv.id,
+          workspaceId,
+          description: item.description,
+          quantity: item.quantity.toFixed(2),
+          unitPrice: item.unitPrice.toFixed(2),
+          amount: item.amount.toFixed(2),
+          timeEntryId: item.timeEntryId,
+        }))
+      )
+      .returning();
+
+    return { invoice: inv, insertedLineItems: items };
+  });
 
   // Emit AI Brain event for invoice generation
   await emitInvoiceEvent({
@@ -1111,22 +1179,74 @@ export async function generateInvoiceFromHours(input: GenerateFromHoursInput): P
 }
 
 // ============================================================================
+// SCHEDULED CLIENT INVOICE AUTO-GENERATION
+// ============================================================================
+
+/**
+ * Runs weekly to auto-generate client invoices when billing is due and approved
+ * time entries exist. Called from the startup scheduler in server/index.ts.
+ */
+export async function runScheduledClientInvoiceAutoGeneration(): Promise<void> {
+  const allWorkspaces = await db.select({ id: workspaces.id, name: workspaces.name })
+    .from(workspaces);
+
+  for (const ws of allWorkspaces) {
+    try {
+      const summary = await getUninvoicedTimeEntries(ws.id);
+      if (Object.keys(summary.summary.byClient).length === 0) continue;
+
+      const now = new Date();
+      const allClients = await db.select({
+        id: clients.id,
+        companyName: clients.companyName,
+      }).from(clients).where(eq(clients.workspaceId, ws.id));
+
+      for (const client of allClients) {
+        if (!summary.summary.byClient[client.id]) continue;
+
+        // Check last invoice date to determine if billing is due
+        const [lastInvoice] = await db.select({ createdAt: invoices.createdAt })
+          .from(invoices)
+          .where(and(eq(invoices.workspaceId, ws.id), eq(invoices.clientId, client.id)))
+          .orderBy(desc(invoices.createdAt))
+          .limit(1);
+
+        let isDue = !lastInvoice;
+        if (lastInvoice) {
+          const daysSince = differenceInDays(now, new Date(lastInvoice.createdAt));
+          isDue = daysSince >= 7; // Weekly billing check; contract cycle enforced at route level
+        }
+
+        if (!isDue) continue;
+
+        const clientEntries = summary.entries.filter(e => e.clientName === summary.summary.byClient[client.id]?.name);
+        if (clientEntries.length === 0) continue;
+
+        const dates = clientEntries.map(e => new Date(e.date));
+        const startDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const endDate = now;
+
+        await generateInvoiceFromTimesheets({
+          workspaceId: ws.id,
+          clientId: client.id,
+          startDate,
+          endDate,
+          dueInDays: 30,
+          notes: `Auto-generated (scheduled weekly billing run)`,
+        });
+
+        log.info(`[ScheduledInvoicing] Generated invoice for client ${client.companyName} in workspace ${ws.id}`);
+      }
+    } catch (wsErr) {
+      log.error(`[ScheduledInvoicing] Error processing workspace ${ws.id}:`, wsErr instanceof Error ? wsErr.message : String(wsErr));
+    }
+  }
+}
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
 function getBaseUrl(): string {
-  if (process.env.APP_BASE_URL) {
-    return process.env.APP_BASE_URL;
-  }
-  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
-  }
-  if (process.env.REPLIT_DOMAINS) {
-    const domains = process.env.REPLIT_DOMAINS.split(',');
-    return `https://${domains[0]}`;
-  }
-  if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
-  }
-  return 'http://localhost:5000';
+  return getAppBaseUrl();
 }

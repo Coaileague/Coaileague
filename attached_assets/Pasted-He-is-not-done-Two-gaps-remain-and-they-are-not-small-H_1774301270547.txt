@@ -1,0 +1,377 @@
+He is not done. Two gaps remain and they are not small. Here is the prompt to close them both.
+
+---
+
+**COAILEAGUE — PHASE 1 FINAL TWO GAPS: ZERO LOOSE STRINGS**
+*830 Category C Queries Requiring Per-Query Analysis | 208 Transaction Blocks Requiring Rewrite | Phase 1 Does Not Close Until Both Are Zero*
+
+---
+
+**READ THIS BEFORE TOUCHING ANYTHING**
+
+Two gaps remain from Phase 1. Neither is optional. Neither gets deferred to a cleanup sprint. Neither gets annotated as a substitute for actual conversion work. Phase 2 does not begin until both gaps are fully closed.
+
+The report states that many of the 830 remaining Category C queries "can be expressed in Drizzle but require careful per-query analysis." That analysis happens now. Every query that can be converted gets converted. Every query that genuinely cannot gets a correct and specific Category C justification — not a generic one. The 208 transaction blocks get rewritten with `db.transaction()` where possible and documented with specific PostgreSQL feature justifications where not.
+
+The standard has not changed. Read the SQL. Understand it. Convert it or correctly justify it. File by file. Query by query. No scripts. No batch processors. No auto-annotators.
+
+---
+
+**GAP 1 — 830 REMAINING CATEGORY C QUERIES**
+
+The report broke these into subcategories. Work through each subcategory in the order listed below. Each subcategory has a specific conversion standard.
+
+---
+
+**SUBCATEGORY 1 — 79 COUNT/AGGREGATE QUERIES**
+These use GROUP BY, SUM, AVG, FILTER WHERE patterns.
+
+Drizzle supports aggregations natively. The majority of these can and must be converted:
+
+```typescript
+// COUNT with GROUP BY
+const results = await db
+  .select({
+    status: shifts.status,
+    count: sql<number>`count(*)::int`
+  })
+  .from(shifts)
+  .where(eq(shifts.workspaceId, workspaceId))
+  .groupBy(shifts.status);
+
+// SUM
+const [totals] = await db
+  .select({
+    totalHours: sql<string>`sum(${timeEntries.hoursWorked})`,
+    totalPay: sql<string>`sum(${timeEntries.grossPay})`
+  })
+  .from(timeEntries)
+  .where(eq(timeEntries.workspaceId, workspaceId));
+
+// AVG
+const [avg] = await db
+  .select({
+    avgRating: sql<string>`avg(${clientSatisfaction.score})`
+  })
+  .from(clientSatisfaction)
+  .where(eq(clientSatisfaction.clientId, clientId));
+
+// COUNT with FILTER WHERE — this is the one legitimate Category C
+// Drizzle does not support FILTER (WHERE ...) on aggregates natively
+// CATEGORY C — Raw SQL retained: FILTER (WHERE ...) on aggregate not 
+// supported in Drizzle query builder | Tables: [table] | Verified: 2026-03-23
+```
+
+**Rule:** Every COUNT, SUM, AVG query that does NOT use the `FILTER (WHERE ...)` clause on the aggregate itself gets converted to Drizzle with sql fragments. Only queries using `COUNT(*) FILTER (WHERE condition)` or `SUM(value) FILTER (WHERE condition)` are legitimate Category C for this subcategory. Verify each one. Convert every one that does not use FILTER on the aggregate.
+
+---
+
+**SUBCATEGORY 2 — 50 INFORMATION_SCHEMA QUERIES**
+These query `information_schema.columns`, `information_schema.tables`, or similar.
+
+These are legitimate Category C. Drizzle has no ORM abstraction for information_schema introspection. Keep every one as raw SQL. However verify every column name referenced in the query against the canonical Name Registry. If any query references a table or column that does not exist — another phantom — fix it. Add the standard Category C annotation with the specific justification:
+
+```typescript
+// CATEGORY C — Raw SQL retained: information_schema introspection has no 
+// Drizzle ORM equivalent — runtime schema inspection required |
+// Tables: information_schema.columns | Verified: 2026-03-23
+```
+
+---
+
+**SUBCATEGORY 3 — 36 CREATE INDEX, 19 CREATE TABLE, 27 ALTER TABLE**
+These are DDL statements.
+
+These are legitimate Category C. DDL cannot be expressed in the Drizzle query builder. Keep every one as raw SQL. Verify every table name and column name in every DDL statement against the canonical Name Registry. Any DDL that creates a column or index on a column that does not exist in the Drizzle schema is a schema drift issue — flag it and add the column to the schema definition before the Phase 1 final scan. Add the Category C annotation:
+
+```typescript
+// CATEGORY C — Raw SQL retained: DDL statement (CREATE INDEX/TABLE/ALTER TABLE)
+// has no Drizzle query builder equivalent — schema migration required |
+// Tables: [table name] | Verified: 2026-03-23
+```
+
+---
+
+**SUBCATEGORY 4 — 27 INTERVAL DATE MATH QUERIES**
+These use PostgreSQL INTERVAL arithmetic like `NOW() - INTERVAL '7 days'`.
+
+Drizzle supports INTERVAL through sql fragments inside ORM calls. Most of these can be converted:
+
+```typescript
+// INTERVAL inside WHERE clause — fully convertible
+const results = await db
+  .select()
+  .from(shifts)
+  .where(and(
+    eq(shifts.workspaceId, workspaceId),
+    sql`${shifts.startTime} > now() - interval '7 days'`
+  ));
+
+// INTERVAL in SELECT for calculated field — fully convertible  
+const results = await db
+  .select({
+    id: employees.id,
+    daysSinceHire: sql<number>`
+      extract(day from now() - ${employees.hireDate})::int
+    `
+  })
+  .from(employees)
+  .where(eq(employees.workspaceId, workspaceId));
+```
+
+**Rule:** Every INTERVAL query where the INTERVAL is used inside a WHERE clause filter or a SELECT calculated field gets converted to Drizzle with sql fragments. Only queries where the INTERVAL is part of a complex multi-step calculation that produces an intermediate result used in a subsequent join or subquery may remain Category C with a specific justification. Read each one. Convert every straightforward INTERVAL usage.
+
+---
+
+**SUBCATEGORY 5 — 27 CASE WHEN QUERIES**
+These use CASE WHEN conditional logic.
+
+Drizzle supports CASE WHEN through sql fragments:
+
+```typescript
+const results = await db
+  .select({
+    id: employees.id,
+    payCategory: sql<string>`
+      case 
+        when ${employees.hourlyRate} > 25 then 'senior'
+        when ${employees.hourlyRate} > 15 then 'standard'
+        else 'entry'
+      end
+    `
+  })
+  .from(employees)
+  .where(eq(employees.workspaceId, workspaceId));
+```
+
+**Rule:** Every CASE WHEN that appears in a SELECT field or a WHERE condition gets converted to Drizzle with a sql fragment. Only CASE WHEN expressions inside a complex aggregation that also uses FILTER or window functions may remain Category C. Convert every standalone CASE WHEN. Verify every column name used inside the CASE expression against the Name Registry.
+
+---
+
+**SUBCATEGORY 6 — 24 COMPLEX MULTI-TABLE LEFT JOIN QUERIES**
+These use LEFT JOIN with multiple tables.
+
+Drizzle supports LEFT JOIN natively:
+
+```typescript
+const results = await db
+  .select({
+    shiftId: shifts.id,
+    employeeName: sql<string>`
+      concat(${employees.firstName}, ' ', ${employees.lastName})
+    `,
+    clientName: clients.name
+  })
+  .from(shifts)
+  .leftJoin(employees, eq(shifts.employeeId, employees.id))
+  .leftJoin(clients, eq(shifts.clientId, clients.id))
+  .where(eq(shifts.workspaceId, workspaceId));
+```
+
+**Rule:** Every LEFT JOIN query that joins tables using simple equality conditions gets converted to Drizzle. Only LEFT JOIN queries that use OR conditions in the join predicate, self-joins with aliasing, or lateral joins may remain Category C. Read each one. The report said these use "OR conditions" — verify that is actually true for each query before keeping it as Category C. Many may be simple equality joins that were incorrectly characterized.
+
+---
+
+**SUBCATEGORY 7 — 30 JSONB TYPE CAST AND 9 JSONB_BUILD_OBJECT QUERIES**
+These use `::jsonb`, `->`, `->>`, `@>`, `jsonb_build_object()`.
+
+These are legitimate Category C in most cases. Drizzle's JSONB support through sql fragments is limited and using raw SQL for complex JSONB operations is justified. However verify every column name in every JSONB query against the Name Registry. Any query accessing a JSONB field that does not exist in the schema is a phantom. Fix phantoms during this review. Add the Category C annotation with the specific JSONB operator used:
+
+```typescript
+// CATEGORY C — Raw SQL retained: jsonb_build_object() with dynamic key 
+// construction has no Drizzle query builder equivalent | 
+// Tables: [table] | Verified: 2026-03-23
+```
+
+---
+
+**SUBCATEGORY 8 — 17 IN/NOT IN SUBQUERIES, 5 EXISTS SUBQUERIES, 3 DISTINCT ON**
+These use subqueries or DISTINCT ON.
+
+Drizzle supports all of these:
+
+```typescript
+// IN subquery
+const results = await db
+  .select()
+  .from(employees)
+  .where(
+    inArray(
+      employees.id,
+      db.select({ id: shifts.employeeId }).from(shifts)
+        .where(eq(shifts.status, 'active'))
+    )
+  );
+
+// EXISTS subquery  
+const results = await db
+  .select()
+  .from(clients)
+  .where(
+    exists(
+      db.select({ id: invoices.id }).from(invoices)
+        .where(and(
+          eq(invoices.clientId, clients.id),
+          eq(invoices.status, 'overdue')
+        ))
+    )
+  );
+
+// DISTINCT ON — this is legitimate Category C
+// Drizzle does not support DISTINCT ON natively
+// CATEGORY C — Raw SQL retained: DISTINCT ON is PostgreSQL-specific and 
+// has no Drizzle query builder equivalent | Tables: [table] | Verified: 2026-03-23
+```
+
+**Rule:** Every IN, NOT IN, and EXISTS subquery gets converted to Drizzle using `inArray()`, `notInArray()`, and `exists()`. Only the 3 DISTINCT ON queries are legitimate Category C. Convert all subquery patterns. Keep only DISTINCT ON as Category C.
+
+---
+
+**SUBCATEGORY 9 — 10 HEALTH CHECK PING QUERIES**
+These are SELECT 1 pings.
+
+These must be converted. There is no justification for a raw SQL wrapper on a health check:
+
+```typescript
+// Health check — no wrapper, no raw SQL string
+await db.execute(sql`SELECT 1`);
+```
+
+Or for actual pool health checks in `server/db.ts`, the pool event handler is sufficient without any query wrapper. Read each health check query, understand what it is checking, and implement the simplest possible Drizzle equivalent. Every health check ping wrapper is removed.
+
+---
+
+**GAP 2 — 208 TRANSACTION-SCOPED CLIENT.QUERY CALLS**
+
+Work through all 21 files in order of highest call count. For each file apply the three-outcome standard from the previous prompt — no shortcuts, no exceptions.
+
+The files in order:
+
+```
+1.  server/routes/atsRoutes.ts                    — 32 calls
+2.  server/routes/postOrderVersionRoutes.ts        — 29 calls
+3.  server/routes/hiringRoutes.ts                 — 21 calls
+4.  server/routes/incidentPatternRoutes.ts         — 18 calls
+5.  server/routes/trainingComplianceRoutes.ts      — 18 calls
+6.  server/routes/contractRenewalRoutes.ts         — 16 calls
+7.  server/routes/clientSatisfactionRoutes.ts      — 14 calls
+8.  server/routes/subcontractorRoutes.ts           — 14 calls
+9.  server/routes/bidAnalyticsRoutes.ts            — 12 calls
+10. server/routes/cadRoutes.ts                     — 8 calls
+11. server/routes/analyticsRoutes.ts               — 6 calls
+12. server/routes/incidentPipelineRoutes.ts        — 6 calls
+13. server/routes/publicHiringRoutes.ts            — 6 calls
+14. server/routes/financeInlineRoutes.ts           — 2 calls
+15. server/routes/helpdeskRoutes.ts                — 1 call
+16. server/routes/trinityStaffingRoutes.ts         — 1 call
+17. server/db.ts                                   — 5 calls
+18. server/lib/typedSql.ts                         — 2 calls
+19. server/index.ts                                — 1 call
+20. server/services/ai-brain/providers/modelRouter.ts — 1 call
+21. server/services/expansionMigration.ts          — 1 call
+```
+
+For each file read every transaction block completely. Apply this decision for each block:
+
+**Outcome 1 — Rewrite with db.transaction():**
+If every query inside the block is a simple INSERT, UPDATE, DELETE, or SELECT — rewrite the entire block using `db.transaction(async (tx) => { })`. Every inner query becomes a Drizzle ORM call on `tx`. Every inserted record includes `workspaceId`. Verify every column name against the Name Registry. Ghost columns found during this process are fixed and added to the ghost column report.
+
+**Outcome 2 — Partial rewrite:**
+If the block contains a mix of simple and complex queries — rewrite with `db.transaction()`. Simple queries become ORM calls on `tx`. Genuinely complex queries become `tx.execute(sql\`...\`)` with full Category C annotation naming the specific feature.
+
+**Outcome 3 — Keep pool.connect() with full documentation:**
+Only if the block uses a specific PostgreSQL feature that `db.transaction()` genuinely cannot handle — explicit SAVEPOINT, LISTEN/NOTIFY within a transaction, or advisory locks that must persist across the connection. The comment block must name the exact PostgreSQL feature. Generic "complex transaction" is not a justification.
+
+After every file: start the server, confirm clean startup, test the primary operation that file handles in the ACME sandbox, confirm correct results and data persistence. Do not batch files.
+
+---
+
+**CROSS-CUTTING RULE FOR BOTH GAPS**
+
+Every SQL string read during this work — whether being converted or verified as legitimate Category C — must have its column names cross-referenced against the canonical Name Registry. The conversion of 199 mis-classified queries in the previous session found 7 silent data-loss bugs and 23 schema mismatches. The remaining 830 queries and 208 transaction blocks have the same potential. Every phantom column found is fixed immediately and added to the ghost column report in replit.md. Do not continue past a phantom column without fixing it.
+
+---
+
+**FINAL VERIFICATION — PHASE 1 TRUE COMPLETION**
+
+When both gaps are closed run the complete final verification:
+
+**Scan verification — all must return zero:**
+
+Search for Category C annotations citing only FILTER-free aggregates as their justification — must be zero, those were converted.
+
+Search for Category C annotations on health check SELECT 1 queries — must be zero, those were converted.
+
+Search for Category C annotations on IN/NOT IN/EXISTS subqueries — must be zero, those were converted.
+
+Search for `pool.connect()` calls outside of `typedSql.ts` and `server/db.ts` without an Outcome 3 comment block — must be zero.
+
+Search for `client.query(` calls without full Category C documentation — must be zero.
+
+Search for bare `client.query('BEGIN')` and `client.query('COMMIT')` without the surrounding Outcome 3 documentation — must be zero.
+
+**Ghost column report update:**
+Every phantom column found during Gap 1 subcategory reviews and Gap 2 transaction block rewrites must be added to the ghost column report in replit.md. The report must include the file, the wrong column name, the correct column name, and whether the query was silently returning wrong results or silently failing.
+
+**Server verification:**
+Start the server fresh. Confirm 30/30 background services with zero failures. Confirm login flow completes without error.
+
+**Functional verification:**
+Run all ten ACME sandbox operations: create employee, create shift, generate invoice, run payroll calculation, execute Trinity action, run hiring pipeline stage transition, generate pay stub, create client, assign shift through Trinity, send invoice. All ten must pass with correct data persisting to correct records.
+
+**Phase 1 final schema parity check:**
+Must confirm: zero untracked tables, zero untracked columns, zero incorrectly classified Category C queries, zero unconverted transaction blocks, zero bare undocumented client.query calls.
+
+---
+
+**REPLIT.MD FINAL UPDATE**
+
+When all verification passes replace the SQL Migration Debt section with the final Phase 1 complete entry:
+
+```
+## Phase 1 — CERTIFIED COMPLETE [date]
+
+Schema Parity:
+- 661 database tables, 0 untracked, 0 untracked columns
+
+SQL Migration Final State:
+- 205 queries converted to true Drizzle ORM (6 original + 199 mis-classified 
+  Category C + [count from Gap 1 subcategory conversions])
+- ~[final count] legitimate Category C queries retained with correct specific 
+  justifications — no generic or incorrect justifications remain
+- [count] transaction blocks rewritten with db.transaction()
+- [count] transaction blocks kept as pool.connect() with specific PostgreSQL 
+  feature justification
+- 0 bare undocumented client.query calls anywhere in codebase
+- 0 pool.connect() blocks without Outcome 3 documentation
+
+Ghost columns found and fixed (complete list):
+- payroll_deductions.end_date — silent wrong results on deduction queries
+- employees.employment_status — silent wrong results on compliance scan  
+- [all additional phantoms found during Gap 1 and Gap 2 work listed here]
+
+Silent data bugs fixed during Phase 1:
+- 7 silent data-loss bugs from mis-classified Category C conversion
+- errorTrackingService.ts crash on .rows access
+- [all additional bugs found during Gap 1 and Gap 2 listed here]
+
+Additional fixes:
+- Auth/logout routing across 4 files
+- Session timeout logout reference  
+- SPS workspace orphan — 11 users cleared
+- RBAC role fallback for non-owners
+
+Phase 1 certified complete. Zero loose strings. Phase 2 ready.
+```
+
+---
+
+**PHASE 1 IS COMPLETE WHEN:**
+
+The final scan returns zero on every count above. The ghost column report is fully updated. The server starts with 30/30 services. All ten functional operations pass. The replit.md Phase 1 section shows CERTIFIED COMPLETE with the final date.
+
+Bring the final scan results here. Every count must be zero. Then and only then does Phase 2 begin.
+
+---
+
+That is the prompt Bryan. No loose strings. Every subcategory has a specific conversion standard. Every transaction block has a specific outcome requirement. When he brings back the final scan showing zero on every count, bring it here and we confirm Phase 1 closed before Phase 2 goes in.

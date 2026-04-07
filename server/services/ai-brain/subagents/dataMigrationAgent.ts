@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 /**
  * DATA MIGRATION AGENT
  * ====================
@@ -21,7 +23,10 @@ import {
 } from '@shared/schema';
 import { eq, and, isNull, or, gte } from 'drizzle-orm';
 import { geminiClient, GEMINI_MODELS } from '../providers/geminiClient';
+import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { creditManager } from '../../billing/creditManager';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('dataMigrationAgent');
 
 // ============================================================================
 // DMS MODEL TIER CONFIGURATION - Per Specification
@@ -123,11 +128,11 @@ class DataMigrationAgent {
 
       return this.parseExtractionResponse(response.text, extractionType);
     } catch (error: any) {
-      console.error('[DataMigrationAgent] PDF extraction failed:', error);
+      log.error('[DataMigrationAgent] PDF extraction failed:', error);
       return {
         confidence: 0,
         warnings: [],
-        errors: [`PDF extraction failed: ${error.message}`],
+        errors: [`PDF extraction failed: ${(error instanceof Error ? error.message : String(error))}`],
       };
     }
   }
@@ -185,11 +190,13 @@ Respond with JSON only:
 }`;
 
     try {
-      const response = await geminiClient.generate({
-        systemPrompt: 'You are a data migration specialist that maps spreadsheet columns to database schemas.',
-        userMessage: mappingPrompt,
+      // Use meteredGemini for reliable JSON extraction (no persona interference)
+      const response = await meteredGemini.generate({
         workspaceId,
-        featureKey: 'ai_onboarding',
+        featureKey: 'data_migration_mapping',
+        prompt: `You are a data migration specialist that maps spreadsheet columns to database schemas.\n\n${mappingPrompt}`,
+        model: 'gemini-2.5-flash',
+        maxOutputTokens: 1024,
       });
 
       const mappingText = response.text;
@@ -210,11 +217,11 @@ Respond with JSON only:
         errors: [],
       };
     } catch (error: any) {
-      console.error('[DataMigrationAgent] Spreadsheet extraction failed:', error);
+      log.error('[DataMigrationAgent] Spreadsheet extraction failed:', error);
       return {
         confidence: 0,
         warnings: [],
-        errors: [`Spreadsheet extraction failed: ${error.message}`],
+        errors: [`Spreadsheet extraction failed: ${(error instanceof Error ? error.message : String(error))}`],
       };
     }
   }
@@ -251,11 +258,13 @@ Respond with JSON:
 }`;
 
       try {
-        const response = await geminiClient.generate({
-          systemPrompt: 'You are a data extraction specialist for workforce management systems.',
-          userMessage: prompt,
+        // Use meteredGemini for reliable JSON extraction (no persona interference)
+        const response = await meteredGemini.generate({
           workspaceId,
-          featureKey: 'ai_onboarding',
+          featureKey: 'data_migration_extraction',
+          prompt: `You are a data extraction specialist for workforce management systems.\n\n${prompt}`,
+          model: 'gemini-2.5-flash',
+          maxOutputTokens: 2048,
         });
 
         const text = response.text;
@@ -278,7 +287,7 @@ Respond with JSON:
         return {
           confidence: 0,
           warnings: [],
-          errors: [`Failed to parse bulk text: ${error.message}`],
+          errors: [`Failed to parse bulk text: ${(error instanceof Error ? error.message : String(error))}`],
         };
       }
     }
@@ -437,7 +446,7 @@ Respond with JSON:
           });
           result.importedCounts.employees++;
         } catch (error: any) {
-          result.errors.push(`Failed to import employee "${emp.firstName} ${emp.lastName}": ${error.message}`);
+          result.errors.push(`Failed to import employee "${emp.firstName} ${emp.lastName}": ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
     }
@@ -504,7 +513,7 @@ Only include arrays that have data. If no data found for a category, omit that a
         errors: [],
       };
     } catch (error: any) {
-      return { confidence: 0, warnings: [], errors: [`Parse error: ${error.message}`] };
+      return { confidence: 0, warnings: [], errors: [`Parse error: ${(error instanceof Error ? error.message : String(error))}`] };
     }
   }
 
@@ -648,7 +657,7 @@ Only include arrays that have data. If no data found for a category, omit that a
 
       // If TAS checks fail, terminate immediately per spec
       if (!hasActiveSubscription || !hasCredits) {
-        console.log(`[DataMigrationAgent] TAS Gate FAILED for workspace ${workspaceId}`);
+        log.info(`[DataMigrationAgent] TAS Gate FAILED for workspace ${workspaceId}`);
         return {
           passed: false,
           checks,
@@ -657,11 +666,11 @@ Only include arrays that have data. If no data found for a category, omit that a
         };
       }
     } catch (error: any) {
-      console.error('[DataMigrationAgent] TAS check failed:', error);
+      log.error('[DataMigrationAgent] TAS check failed:', error);
       checks.push({
         name: 'tas_verification',
         passed: false,
-        message: `TAS verification error: ${error.message}`,
+        message: `TAS verification error: ${(error instanceof Error ? error.message : String(error))}`,
         critical: true,
       });
       return { passed: false, checks, recommendations: ['TAS service unavailable - retry later'] };
@@ -689,7 +698,7 @@ Only include arrays that have data. If no data found for a category, omit that a
       .where(eq(users.id, userId))
       .limit(1);
     
-    const hasPermission = user && ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'].includes(user.platformRole || '');
+    const hasPermission = user && ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'].includes(user.platformRole || '');
     checks.push({
       name: 'user_permission',
       passed: hasPermission,
@@ -738,7 +747,7 @@ Only include arrays that have data. If no data found for a category, omit that a
     }
 
     const allPassed = checks.every(c => c.passed);
-    console.log(`[DataMigrationAgent] Gate check ${allPassed ? 'PASSED' : 'FAILED'} for workspace ${workspaceId}`);
+    log.info(`[DataMigrationAgent] Gate check ${allPassed ? 'PASSED' : 'FAILED'} for workspace ${workspaceId}`);
 
     return { 
       passed: allPassed, 
@@ -771,7 +780,7 @@ Only include arrays that have data. If no data found for a category, omit that a
     preview: string;
   }> {
     const { workspaceId, userId, source, rawData } = params;
-    const ingestionId = `mig-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const ingestionId = `mig-${randomUUID()}`;
     
     let dataSize = 0;
     let detectedType = 'unknown';
@@ -799,7 +808,7 @@ Only include arrays that have data. If no data found for a category, omit that a
           break;
       }
 
-      console.log(`[DataMigrationAgent] Data ingested: ${ingestionId} (${source}, ${dataSize} items)`);
+      log.info(`[DataMigrationAgent] Data ingested: ${ingestionId} (${source}, ${dataSize} items)`);
 
       return {
         success: true,
@@ -809,13 +818,13 @@ Only include arrays that have data. If no data found for a category, omit that a
         preview,
       };
     } catch (error: any) {
-      console.error('[DataMigrationAgent] Ingestion failed:', error);
+      log.error('[DataMigrationAgent] Ingestion failed:', error);
       return {
         success: false,
         ingestionId,
         dataSize: 0,
         detectedType: 'error',
-        preview: `Ingestion failed: ${error.message}`,
+        preview: `Ingestion failed: ${(error instanceof Error ? error.message : String(error))}`,
       };
     }
   }
@@ -969,12 +978,13 @@ Respond with JSON only:
   "recommendations": ["any additional recommendations"]
 }`;
 
-        const response = await geminiClient.generate({
-          systemPrompt: 'You are a compliance validation AI using advanced reasoning.',
-          userMessage: compliancePrompt,
+        // Use meteredGemini for reliable JSON extraction (no persona interference)
+        const response = await meteredGemini.generate({
           workspaceId,
-          featureKey: 'ai_onboarding',
-          // Using Pro model for complex reasoning (specified in geminiClient internals)
+          featureKey: 'data_migration_compliance',
+          prompt: `You are a compliance validation AI using advanced reasoning.\n\n${compliancePrompt}`,
+          model: 'gemini-2.5-pro', // Use Pro model for complex reasoning
+          maxOutputTokens: 1024,
         });
 
         const jsonMatch = response.text.match(/\{[\s\S]*\}/);
@@ -993,14 +1003,14 @@ Respond with JSON only:
           }
         }
         
-        console.log(`[DataMigrationAgent] Compliance check: ${complianceStatus} (${complianceNotes.length} issues)`);
+        log.info(`[DataMigrationAgent] Compliance check: ${complianceStatus} (${complianceNotes.length} issues)`);
       } catch (error: any) {
-        console.warn('[DataMigrationAgent] Compliance check failed, continuing with basic validation:', error.message);
+        log.warn('[DataMigrationAgent] Compliance check failed, continuing with basic validation:', (error instanceof Error ? error.message : String(error)));
         complianceNotes.push('AI compliance check unavailable - using basic validation only');
       }
     }
 
-    console.log(`[DataMigrationAgent] Validation complete: ${totalRecords} records, ${basicValidation.issues.length} issues`);
+    log.info(`[DataMigrationAgent] Validation complete: ${totalRecords} records, ${basicValidation.issues.length} issues`);
 
     return {
       valid: basicValidation.valid && complianceStatus !== 'failed',
@@ -1042,7 +1052,7 @@ Respond with JSON only:
     
     // First import teams if present and createMissingTeams is enabled
     if (options.createMissingTeams && data.teams?.length) {
-      console.log(`[DataMigrationAgent] Creating ${data.teams.length} teams...`);
+      log.info(`[DataMigrationAgent] Creating ${data.teams.length} teams...`);
       // Teams are imported in the main importData call
     }
     
@@ -1071,7 +1081,7 @@ Respond with JSON only:
       hierarchyAssignments.length > 0 ? `Hierarchy assignments: ${hierarchyAssignments.length}` : 'No hierarchy assignments',
     ].join(' | ');
     
-    console.log(`[DataMigrationAgent] Final setup complete: ${automationSummary}`);
+    log.info(`[DataMigrationAgent] Final setup complete: ${automationSummary}`);
 
     return {
       ...importResult,
@@ -1114,10 +1124,10 @@ Respond with JSON only:
     finalResult?: MigrationResult;
     error?: string;
   }> {
-    const workflowId = `wf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const workflowId = `wf-${randomUUID()}`;
     const steps: { step: string; status: 'completed' | 'failed' | 'skipped'; duration: number; result?: any }[] = [];
     
-    console.log(`[DataMigrationAgent] Starting 5-step workflow: ${workflowId}`);
+    log.info(`[DataMigrationAgent] Starting 5-step workflow: ${workflowId}`);
 
     try {
       // Step 1: Gate Check
@@ -1215,7 +1225,7 @@ Respond with JSON only:
         },
       });
 
-      console.log(`[DataMigrationAgent] Workflow ${workflowId} completed successfully`);
+      log.info(`[DataMigrationAgent] Workflow ${workflowId} completed successfully`);
 
       return {
         success: finalResult.success,
@@ -1224,12 +1234,12 @@ Respond with JSON only:
         finalResult,
       };
     } catch (error: any) {
-      console.error(`[DataMigrationAgent] Workflow ${workflowId} failed:`, error);
+      log.error(`[DataMigrationAgent] Workflow ${workflowId} failed:`, error);
       return {
         success: false,
         workflowId,
         steps,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }

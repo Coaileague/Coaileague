@@ -11,9 +11,12 @@
 
 import crypto from 'crypto';
 import { db } from '../../db';
-import { webhookEvents, idempotencyKeys } from '@shared/schema';
+import { webhookDeliveries, idempotencyKeys } from '@shared/schema';
 import { eq, and, gte } from 'drizzle-orm';
 import { auditLogger } from '../audit-logger';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('webhookVerifier');
+
 
 interface WebhookVerificationResult {
   valid: boolean;
@@ -62,7 +65,7 @@ class WebhookVerifierService {
 
   constructor() {
     setInterval(() => this.cleanupProcessedEvents(), 60 * 60 * 1000);
-    console.log('[WebhookVerifier] Service initialized');
+    log.info('[WebhookVerifier] Service initialized');
   }
 
   private cleanupProcessedEvents(): void {
@@ -82,7 +85,7 @@ class WebhookVerifierService {
     const secret = process.env.QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN;
     
     if (!secret) {
-      console.warn('[WebhookVerifier] QuickBooks webhook secret not configured');
+      log.warn('[WebhookVerifier] QuickBooks webhook secret not configured');
       return { 
         valid: false, 
         isDuplicate: false, 
@@ -114,7 +117,7 @@ class WebhookVerifierService {
         valid = crypto.timingSafeEqual(sigBuffer, expectedBuffer);
       }
     } catch (error) {
-      console.error('[WebhookVerifier] Signature comparison error:', error);
+      log.error('[WebhookVerifier] Signature comparison error:', error);
       valid = false;
     }
 
@@ -137,9 +140,19 @@ class WebhookVerifierService {
       };
     }
 
-    const parsedPayload = JSON.parse(payload);
-    const eventId = parsedPayload.eventNotifications?.[0]?.dataChangeEvent?.entities?.[0]?.id || 
-                    `qb-${Date.now()}`;
+    let parsedPayload: any;
+    try {
+      parsedPayload = JSON.parse(payload);
+    } catch {
+      return { valid: false, eventId: `qb-${Date.now()}`, isDuplicate: false, error: 'Invalid JSON payload', provider: 'quickbooks' as const };
+    }
+    let eventId: string;
+    if (Array.isArray(parsedPayload) && parsedPayload[0]?.id) {
+      eventId = parsedPayload[0].id;
+    } else {
+      eventId = parsedPayload.eventNotifications?.[0]?.dataChangeEvent?.entities?.[0]?.id || 
+                `qb-${Date.now()}`;
+    }
 
     const isDuplicate = await this.checkDuplicate('quickbooks', eventId);
 
@@ -163,7 +176,7 @@ class WebhookVerifierService {
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
     
     if (!secret) {
-      console.warn('[WebhookVerifier] Stripe webhook secret not configured');
+      log.warn('[WebhookVerifier] Stripe webhook secret not configured');
       return { 
         valid: false, 
         isDuplicate: false, 
@@ -230,7 +243,12 @@ class WebhookVerifierService {
       };
     }
 
-    const parsedPayload = JSON.parse(payload);
+    let parsedPayload: any;
+    try {
+      parsedPayload = JSON.parse(payload);
+    } catch {
+      return { valid: false, eventId: `stripe-${Date.now()}`, isDuplicate: false, error: 'Invalid JSON payload', provider: 'stripe' as const };
+    }
     const eventId = parsedPayload.id;
 
     const isDuplicate = await this.checkDuplicate('stripe', eventId);
@@ -268,7 +286,7 @@ class WebhookVerifierService {
 
       return existing.length > 0;
     } catch (error) {
-      console.error('[WebhookVerifier] Error checking duplicate:', error);
+      log.error('[WebhookVerifier] Error checking duplicate:', error);
       return false;
     }
   }
@@ -285,8 +303,11 @@ class WebhookVerifierService {
 
     try {
       await db.insert(idempotencyKeys).values({
-        key: cacheKey,
-        response: { processed: true, provider, eventId },
+        workspaceId: workspaceId || 'system',
+        operationType: 'invoice_generation',
+        requestFingerprint: cacheKey,
+        status: 'completed',
+        resultMetadata: { processed: true, provider, eventId },
         expiresAt: new Date(Date.now() + this.eventRetentionMs),
       }).onConflictDoNothing();
 
@@ -302,7 +323,7 @@ class WebhookVerifierService {
         workspaceId,
       });
     } catch (error) {
-      console.error('[WebhookVerifier] Error recording event:', error);
+      log.error('[WebhookVerifier] Error recording event:', error);
     }
   }
 
@@ -316,7 +337,7 @@ class WebhookVerifierService {
     const isDuplicate = await this.checkDuplicate(provider, `process:${eventId}`);
     
     if (isDuplicate) {
-      console.log(`[WebhookVerifier] Skipping duplicate event: ${eventId}`);
+      log.info(`[WebhookVerifier] Skipping duplicate event: ${eventId}`);
       return { result: null, wasProcessed: false };
     }
 
@@ -324,14 +345,17 @@ class WebhookVerifierService {
       const result = await processor();
       
       await db.insert(idempotencyKeys).values({
-        key: cacheKey,
-        response: { processed: true, result: 'success' },
+        workspaceId: 'system',
+        operationType: 'invoice_generation',
+        requestFingerprint: cacheKey,
+        status: 'completed',
+        resultMetadata: { processed: true, result: 'success' },
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       }).onConflictDoNothing();
 
       return { result, wasProcessed: true };
     } catch (error) {
-      console.error(`[WebhookVerifier] Error processing event ${eventId}:`, error);
+      log.error(`[WebhookVerifier] Error processing event ${eventId}:`, error);
       throw error;
     }
   }

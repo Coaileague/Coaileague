@@ -22,6 +22,8 @@ import { platformEventBus } from '../platformEventBus';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('llmJudgeEvaluator');
 
 // ============================================================================
 // TYPES
@@ -191,7 +193,7 @@ class LLMJudgeEvaluator {
   private evaluationCache: Map<string, EvaluationResult> = new Map();
 
   private constructor() {
-    console.log('[LLMJudgeEvaluator] Initializing evaluation subagent system...');
+    log.info('[LLMJudgeEvaluator] Initializing evaluation subagent system...');
   }
 
   static getInstance(): LLMJudgeEvaluator {
@@ -277,7 +279,7 @@ class LLMJudgeEvaluator {
       return result;
 
     } catch (error: any) {
-      console.error('[LLMJudgeEvaluator] Evaluation failed:', error);
+      log.error('[LLMJudgeEvaluator] Evaluation failed:', error);
       
       // Return failed evaluation
       return {
@@ -582,26 +584,15 @@ Be consistent in your scoring across evaluations.`;
     try {
       await db.insert(systemAuditLogs).values({
         id: crypto.randomUUID(),
-        timestamp: new Date(),
-        eventType: 'llm_judge_evaluation',
         entityType: 'evaluation',
         entityId: result.evaluationId,
         userId: request.userId,
         workspaceId: request.workspaceId,
         action: 'evaluate',
-        details: JSON.stringify({
-          contentType: request.contentType,
-          overallScore: result.overallScore,
-          verdict: result.overallVerdict,
-          passed: result.passed,
-          evaluatorPersona: result.evaluatorPersona.name,
-          criteriaCount: result.criteriaScores.length,
-          evaluationTimeMs: result.evaluationTimeMs,
-        }),
-        severity: result.passed ? 'low' : 'medium',
+        metadata: { eventType: 'llm_judge_evaluation', severity: result.passed ? 'low' : 'medium', details: JSON.stringify({ contentType: request.contentType, overallScore: result.overallScore, verdict: result.overallVerdict, passed: result.passed, evaluatorPersona: result.evaluatorPersona.name, criteriaCount: result.criteriaScores.length, evaluationTimeMs: result.evaluationTimeMs }) },
       });
     } catch (error) {
-      console.error('[LLMJudgeEvaluator] Failed to log evaluation:', error);
+      log.error('[LLMJudgeEvaluator] Failed to log evaluation:', error);
     }
   }
 

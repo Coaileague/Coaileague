@@ -3,10 +3,13 @@
  * 
  * This hook receives WebSocket broadcasts of AI activity and provides
  * the current AI state for Trinity mascot mode mapping.
+ * 
+ * Uses unified WebSocketProvider instead of creating its own connection.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { MascotMode } from '@/config/mascotConfig';
+import { useWebSocketBus } from '@/providers/WebSocketProvider';
 
 export type AIActivityState = 
   | 'IDLE'
@@ -57,7 +60,7 @@ export function useAIActivity(options: AIActivityOptions = {}) {
   const [lastEvent, setLastEvent] = useState<AIActivityEvent | null>(null);
   const [isActive, setIsActive] = useState(false);
   const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const bus = useWebSocketBus();
 
   const handleActivity = useCallback((event: AIActivityEvent) => {
     if (workspaceId && event.workspaceId && event.workspaceId !== workspaceId) {
@@ -83,48 +86,21 @@ export function useAIActivity(options: AIActivityOptions = {}) {
     }
   }, [workspaceId, userId, autoResetDelay]);
 
+  const handleActivityRef = useRef(handleActivity);
+  handleActivityRef.current = handleActivity;
+
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'ai_activity') {
-          handleActivity(data as AIActivityEvent);
-        }
-      } catch {
-      }
-    };
-
-    const existingWs = (window as any).__coaileague_ws;
-    if (existingWs && existingWs.readyState === WebSocket.OPEN) {
-      existingWs.addEventListener('message', handleMessage);
-      wsRef.current = existingWs;
-    }
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    const connectWs = () => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) return;
-      
-      const ws = new WebSocket(wsUrl);
-      ws.addEventListener('message', handleMessage);
-      ws.addEventListener('close', () => {
-        setTimeout(connectWs, 3000);
-      });
-      wsRef.current = ws;
-      (window as any).__coaileague_ws = ws;
-    };
-
-    if (!wsRef.current) {
-      connectWs();
-    }
+    const unsub = bus.subscribe('ai_activity', (data) => {
+      handleActivityRef.current(data as AIActivityEvent);
+    });
 
     return () => {
+      unsub();
       if (resetTimeoutRef.current) {
         clearTimeout(resetTimeoutRef.current);
       }
     };
-  }, [handleActivity]);
+  }, [bus]);
 
   const mascotMode: MascotMode = STATE_TO_MODE_MAP[activityState] || 'IDLE';
 

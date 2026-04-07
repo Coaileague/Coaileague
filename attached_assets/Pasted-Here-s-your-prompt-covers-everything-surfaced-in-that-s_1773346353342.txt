@@ -1,0 +1,105 @@
+Here's your prompt — covers everything surfaced in that session plus the systemic gaps behind each one:
+
+---
+
+**COAILEAGUE — POST-BUILD SWEEP AUDIT AND GAP CLOSURE**
+
+A recent parallel sweep found multiple critical issues. Some were fixed in that session but fixes applied under time pressure often introduce new gaps or miss root causes. Read every file touched in the last session completely before doing anything. Verify every fix held. Then address every remaining gap.
+
+---
+
+**STEP 1 — VERIFY ALL RECENT FIXES ACTUALLY HELD**
+
+Do not assume the last session's fixes are stable. Verify each one explicitly:
+
+Build verification — run a clean full build right now before anything else. Report exit code, all errors, all warnings. A build that exits 0 with warnings is not the same as a clean build. Document every warning and classify each one as safe to ignore or requiring a fix.
+
+Missing service files — the two service files created last session must exist at their correct paths, import correctly from all files that reference them, and contain complete non-placeholder logic. Read both files and confirm they are real implementations not stubs.
+
+Compliance service schema fix — the aiProactiveAlerts table does not have title or summary columns. Data goes in the payload column. Verify the compliance service is writing to payload correctly and not attempting to write to non-existent columns. Run a test insert and confirm no schema errors.
+
+Logger path fix — the new service files had wrong logger import paths. Verify both files now import logger from the correct relative path. A wrong logger path causes silent failures in production when errors occur and nothing gets logged.
+
+Duplicate key warning — identify exactly which key is duplicated, in which file, and why. A duplicate key warning in a production build is a latent bug waiting to become a runtime error. Fix it completely, do not suppress it.
+
+CommandDocRoutes empty handler — an empty route handler is an open endpoint that returns nothing or crashes. Verify this route either has a complete implementation or is removed from the router entirely. An empty registered route is worse than no route.
+
+---
+
+**STEP 2 — AUTH GAPS FOUND DURING SWEEP**
+
+The sweep found routes with incomplete internal auth. For every route identified as lacking auth:
+
+Classify the route — is it intentionally public (landing page, pricing, health check) or should it require authentication (any route touching org data, user data, financial data, or Trinity actions).
+
+For every route that should be authenticated — verify the auth middleware fires before the handler. Verify it checks both authentication (valid session) and authorization (correct org and role for that specific resource).
+
+For every route that should be public — verify it returns zero org data, zero user data, zero financial data under any circumstance regardless of query parameters.
+
+No route that touches any of the following is ever public under any circumstance: credit ledger, billing data, payroll records, employee data, schedule data, incident data, invoice data, client data, Trinity action results.
+
+---
+
+**STEP 3 — BUILD FAILURE ROOT CAUSE ANALYSIS**
+
+The build failed because two service files were imported but did not exist. This is a symptom of a deeper problem — code was written that referenced files before those files were created. This means the codebase has other references to files or functions that may not exist yet.
+
+Run this check now:
+Scan every import statement in every file. For every import verify the target file exists at the exact path specified. For every function or class imported verify it is actually exported from that file. Report every broken import found even if the build currently passes — a passing build does not guarantee all imports resolve correctly at runtime.
+
+Fix every broken import found. If the target file does not exist — create it with complete implementation or remove the import and the code that depends on it.
+
+---
+
+**STEP 4 — ACCOUNTING INTEGRATIONS HONEST UX VERIFICATION**
+
+The accounting integrations currently shows "team will verify within 24-48 hours" messaging. This is honest placeholder UX which is acceptable for launch. However verify:
+
+The form submission actually sends a notification to platform staff — it cannot just display a message and discard the data. Verify there is a database record created for each submission and a notification fires to platform staff via the correct channel.
+
+The org owner receives a confirmation — either an email via Resend or an in-platform notification confirming their request was received.
+
+The 24-48 hour response is reflected in the org owner's account somewhere — a pending integration request they can see and track.
+
+If any of these three things are not happening the honest UX becomes a broken promise.
+
+---
+
+**STEP 5 — SCHEMA MISMATCH AUDIT**
+
+The compliance service schema mismatch — writing to columns that do not exist — means there may be other services writing to wrong columns. This class of bug is silent in development if the database swallows bad inserts without throwing errors.
+
+Run this check across all services:
+For every database write operation in every service — verify every column being written to actually exists in the target table with the correct data type. Pay specific attention to any service created or modified in the last session. Any column mismatch is a data loss bug — the write appears to succeed but the data is never stored.
+
+Specifically verify:
+The aiProactiveAlerts table schema — document every column that actually exists. Verify every service writing to this table only writes to existing columns and puts all variable data in the payload column as intended.
+
+Any other table that uses a payload or metadata JSON column pattern — verify all services are consistent in how they write to these tables.
+
+---
+
+**STEP 6 — FINAL DEPLOYMENT READINESS CHECK**
+
+After all fixes above are verified run this final check:
+
+Full clean build — exit 0, zero errors, zero unresolved warnings
+Server restart — clean startup, zero unhandled rejections, zero missing module errors
+Trinity startup — 736 actions registered, 28 services, 15/15 domains healthy, zero duplicate WARN messages
+All routes — authenticated routes require auth, public routes return no org data
+All database writes — every column written to exists in the target table
+All service files — every imported file exists at its exact path
+All webhook handlers — Stripe signature verification active on all webhook endpoints
+Ledger integrity — run the balance check on all workspaces, sum allocations minus sum deductions equals displayed balance for every org
+
+Document the result of every check. Any check that fails is a blocker.
+
+---
+
+**PERMANENT RULE ADDED FROM THIS SESSION:**
+
+Before any code references a file, function, or database column — verify it exists first. Write the dependency before writing the code that depends on it. A build that fails because an import references a non-existent file means the code was written in the wrong order. From now on: create the file, verify it exports correctly, then write the import. This prevents the class of build failure that triggered this entire session.
+
+---
+
+Paste that Bryan. It verifies everything from last session held, closes the auth gaps, catches any other broken imports before they become production runtime failures, and ends with a clean deployment readiness checklist. When everything on that checklist passes you have a stable build.

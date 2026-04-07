@@ -1,5 +1,6 @@
 // Utility to format user display names for chat
 // Returns clean name without role suffixes - frontend handles role badges via superscript
+// PRIVACY: Platform/support staff show FIRST NAME ONLY to end users
 
 interface UserInfo {
   firstName?: string | null;
@@ -11,40 +12,53 @@ interface UserInfo {
   isSubscriber?: boolean;
 }
 
+const PLATFORM_STAFF_ROLES = [
+  'root_admin',
+  'deputy_admin',
+  'support_manager',
+  'sysop',
+  'support_agent',
+  'compliance_officer',
+];
+
+export function isPlatformStaffRole(role?: string | null): boolean {
+  if (!role) return false;
+  return PLATFORM_STAFF_ROLES.includes(role);
+}
+
 /**
- * Format user display name - returns clean name only
- * Frontend handles role display with superscript badges
- * Examples: "Brigido Root", "Sarah Martinez", "John Doe"
+ * Format user display name - returns clean FULL name
+ * Used internally (admin panels, internal staff views, audit logs)
+ * Examples: "Jane Root", "Sarah Martinez", "John Doe"
  */
 export function formatUserDisplayName(user: UserInfo): string {
   const firstName = user.firstName || extractFirstNameFromEmail(user.email);
   const lastName = user.lastName || '';
   const fullName = lastName ? `${firstName} ${lastName}` : firstName;
-  
-  // Return just the name - frontend handles role display with superscript badges
   return fullName;
 }
 
 /**
- * Format user display name for chat user lists and join/leave messages
- * Support staff: "Title FirstName" (e.g., "Admin Brigido", "SysOp James")
- * Regular users: "FirstName LastName" (e.g., "Sarah Martinez", "John Doe")
+ * Format user display name for end-user-facing contexts
+ * PRIVACY: Platform/support staff see FIRST NAME ONLY — their role badge
+ * identifies them as platform representatives. Full names are never exposed
+ * to regular end users in chat, emails, tickets, or announcements.
+ * Regular users: "FirstName LastName" (e.g., "Sarah Martinez")
+ * Platform staff: "FirstName" only (e.g., "Jane")
  */
 export function formatUserDisplayNameForChat(user: UserInfo): string {
-  const firstName = user.firstName || extractFirstNameFromEmail(user.email);
-  const lastName = user.lastName || '';
-  
-  // Check if user is support staff with a platform role
-  const isStaff = user.platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(user.platformRole);
-  
-  if (isStaff && user.platformRole) {
-    // Format: "Title FirstName" for support staff
-    const title = getRoleTitlePrefix(user.platformRole);
-    return `${title} ${firstName}`;
-  } else {
-    // Format: "FirstName LastName" for regular users
-    return lastName ? `${firstName} ${lastName}` : firstName;
+  if (isPlatformStaffRole(user.platformRole)) {
+    return user.firstName || extractFirstNameFromEmail(user.email);
   }
+  return formatUserDisplayName(user);
+}
+
+/**
+ * Format staff name for support sessions, ticket correspondence, and emails
+ * Returns first name only for privacy — role badge shows platform affiliation
+ */
+export function formatStaffDisplayNameForEndUser(user: UserInfo): string {
+  return user.firstName || extractFirstNameFromEmail(user.email);
 }
 
 /**

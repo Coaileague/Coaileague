@@ -1,0 +1,189 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 25 — DATA INTEGRITY AND CROSS-TABLE CONSISTENCY SWEEP**
+
+This phase owns the completeness and consistency of every record in the database. A platform where every feature works correctly in isolation but leaves orphaned records, broken foreign key relationships, or missing audit entries is not a reliable platform. This sweep finds every inconsistency, repairs it, and closes the root cause so it cannot recur. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row — query results, row counts, or grep output. Every row green before Phase 25 closes.
+
+---
+
+**STEP 1 — DATABASE INVENTORY**
+
+Before touching anything produce a complete inventory of every table in the database:
+- Total table count
+- Row counts per table
+- Foreign key relationships mapped — which tables reference which
+- Tables with no foreign key constraints — flag as potential orphan risk
+- Tables with no `workspace_id` column — flag for isolation review
+- Tables with no `created_at` column — flag for audit completeness
+- Tables with no soft-delete mechanism — flag for data retention review
+
+---
+
+**STEP 2 — ORPHANED RECORD DETECTION**
+
+Run the following orphan detection queries and report exact row counts:
+- Shifts with no matching workspace in workspaces table
+- Time entries with no matching shift record
+- Time entries with no matching employee record
+- Payroll entries with no matching payroll run
+- Pay stubs with no matching employee record
+- Invoices with no matching client record
+- Invoice line items with no matching invoice
+- Documents with no matching entity (employee or client)
+- Signatures with no matching document record
+- Notifications with no matching workspace
+- Audit log entries with no matching workspace
+- Compliance violations with no matching employee or workspace
+- License records with no matching employee
+- Support tickets with no matching submitter
+- Inbound email log entries with processing_status failed and no follow-up record
+
+For each orphan type found: report the count, show a sample record, identify the root cause, fix it, and confirm zero orphans after fix.
+
+---
+
+**STEP 3 — FINANCIAL RECORD RECONCILIATION**
+
+Every financial record must trace correctly to its source:
+- Every invoice line item amount sums correctly to the invoice subtotal — run verification query across all invoices
+- Every payroll entry net pay equals gross minus total deductions minus garnishments — run verification query
+- Every payment record links to a valid invoice — no payments against nonexistent invoices
+- Every QuickBooks sync record links to a valid CoAIleague entity — no orphaned sync mappings
+- Every billing audit log entry links to a valid workspace
+- Credit memos link to valid invoices and do not exceed the invoice amount
+- Run totals: sum of all invoice amounts by workspace matches sum of all payment records plus outstanding balances — report any workspace where this does not reconcile
+
+---
+
+**STEP 4 — SCHEDULING RECORD RECONCILIATION**
+
+Every scheduling record must trace correctly:
+- Every shift assignment links to a valid employee and a valid shift
+- Every clock-in record links to a valid shift and a valid employee
+- Every clock-in has a corresponding clock-out OR is flagged as open — no silent unclosed shifts
+- Every calloff record links to a valid shift and a valid employee
+- Every shift coverage request links to a valid shift
+- Every open shift links back to a calloff or a manual creation event — no orphaned open shifts
+- OT acknowledgment records link to valid employees and valid managers
+- Shift acknowledgment records link to valid shifts and valid employees
+
+---
+
+**STEP 5 — DOCUMENT RECORD RECONCILIATION**
+
+Every document record must trace correctly:
+- Every document instance links to a valid template
+- Every signature record links to a valid document and a valid user
+- Every countersignature links to a valid document
+- Every document vault entry links to a valid workspace and a valid entity
+- Every inbound document (Phase 13) links to a valid inbound_email_log entry
+- License documents in the vault link to valid employee certification records (Phase 17 integration)
+- Document SHA-256 hashes present on all executed documents — no executed documents without integrity hash
+- No hard-deleted document records — soft-delete confirmed on all vault entries
+
+---
+
+**STEP 6 — COMPLIANCE AND LICENSE RECORD RECONCILIATION**
+
+Every compliance record must trace correctly:
+- Every compliance violation links to a valid employee and workspace
+- Every violation has a severity level — no null severity records
+- Every license record links to a valid employee
+- Every license record has a state_code — no null state codes on active licenses
+- Every certification type matches a value in the canonical certification registry
+- Every compliance alert links to a valid violation
+- Every DPS export audit record links to a valid workspace and valid actor
+
+---
+
+**STEP 7 — NOTIFICATION AND AUDIT TRAIL RECONCILIATION**
+
+The audit trail must be complete and consistent:
+- Every notification in `notification_deliveries` links to a valid workspace
+- Delivery status distribution — what percentage succeeded, failed, retrying — report the breakdown
+- Every audit_log entry has actor_id, workspace_id, entity_type, entity_id, action, and timestamp populated — no null required fields
+- Zero audit_log entries have been modified or deleted — immutability confirmed via row count stability check
+- Every financial mutation type has at least one audit entry — confirm no financial table is audit-blind
+- Every permission change has an audit entry — regression check from sync audit
+
+---
+
+**STEP 8 — WORKSPACE ISOLATION VERIFICATION**
+
+No data should exist outside its workspace context:
+- Run cross-workspace query: select any employee record and confirm its shift records, time entries, payroll entries, and documents all share the same workspace_id — no cross-workspace data contamination
+- Run query: any invoice where workspace_id does not match its client's workspace_id — report count
+- Run query: any payroll entry where workspace_id does not match its employee's workspace_id — report count
+- Run query: any document where workspace_id does not match its entity's workspace_id — report count
+- Run query: any notification_deliveries record where workspace_id is null — report count
+
+---
+
+**STEP 9 — INDEX AND QUERY PERFORMANCE CHECK**
+
+Critical query paths must be indexed:
+- `workspace_id` index confirmed on every table that has a workspace_id column
+- `employee_id` index confirmed on time_entries, payroll_entries, shift_assignments
+- `invoice_id` index confirmed on invoice_line_items and payments
+- `status` index confirmed on invoices, shifts, documents, compliance_violations
+- `created_at` index confirmed on audit_logs, notification_deliveries, inbound_email_log
+- Any table with over 10,000 rows and no index on its primary query column — flag and add index
+- EXPLAIN ANALYZE run on the 5 most frequently called queries — no sequential scans on large tables
+
+---
+
+**STEP 10 — ROOT CAUSE CLOSURE**
+
+For every orphan or inconsistency found:
+- Identify the code path that allowed the inconsistency to occur
+- Fix the root cause — not just the data
+- Add a database constraint or application-level guard to prevent recurrence
+- Confirm the fix with a re-run of the detection query showing zero results
+
+---
+
+**STEP 11 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with query result or row count
+3. Every GAP fixed with root cause closed
+4. Every PARTIAL fully resolved
+5. All rows green before summary written
+
+---
+
+**STEP 12 — VERIFICATION**
+
+Run all checks before Phase 25 is marked complete:
+- Check 1: Complete table inventory produced — row counts and foreign key map documented
+- Check 2: Zero orphaned shift records — query confirms
+- Check 3: Zero orphaned time entry records — query confirms
+- Check 4: Zero orphaned payroll entry records — query confirms
+- Check 5: Zero orphaned invoice records — query confirms
+- Check 6: Zero orphaned document records — query confirms
+- Check 7: Invoice line items sum correctly to subtotals — zero mismatches after Phase 14 fix regression check
+- Check 8: Payroll net pay reconciles — gross minus deductions minus garnishments — zero mismatches
+- Check 9: Every clock-in has a clock-out or is flagged open — no silent unclosed shifts
+- Check 10: Every calloff links to a valid shift and employee — zero orphaned calloffs
+- Check 11: Every executed document has a SHA-256 hash — zero executed documents without hash
+- Check 12: Every license record has state_code and links to valid employee — zero nulls
+- Check 13: Every audit_log entry has all required fields populated — zero nulls on required fields
+- Check 14: Audit log immutability confirmed — zero modified or deleted rows
+- Check 15: Zero cross-workspace data contamination — all isolation queries return zero
+- Check 16: workspace_id index confirmed on every table that has workspace_id column
+- Check 17: No sequential scans on large tables — EXPLAIN ANALYZE confirms
+- Check 18: Every root cause of orphaned data closed — guard or constraint added
+- Check 19: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 20: Server starts clean with zero TypeScript errors after all fixes applied
+
+Do not mark Phase 25 complete until all 20 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence including query results and row counts. Findings first. Full picture assembled. Then fixes. Every gap fixed. Root causes closed. Nothing left behind.
+
+---
+
+Paste that. This phase is about the health of the data itself — not features, not UI, not flows. Clean data is the foundation a reliable platform stands on.

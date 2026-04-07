@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Phone, Mail, Building, DollarSign, User, Clock, Target, ChevronRight, TrendingUp, Filter } from "lucide-react";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const LEAD_STAGES = [
   { id: "new", label: "New", color: "bg-slate-500" },
@@ -109,7 +111,7 @@ function DealCard({ deal, onClick }: { deal: Deal; onClick: () => void }) {
             </Badge>
           )}
         </div>
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between gap-1 mt-2">
           <Badge variant="outline" className="text-xs">{deal.probability}% prob</Badge>
           {deal.expectedCloseDate && (
             <span className="text-xs text-muted-foreground">
@@ -122,6 +124,13 @@ function DealCard({ deal, onClick }: { deal: Deal; onClick: () => void }) {
   );
 }
 
+const pageConfig: CanvasPageConfig = {
+  id: 'sales-crm',
+  title: 'Sales CRM',
+  subtitle: 'Manage leads and deals pipeline',
+  category: 'operations',
+};
+
 export default function SalesCRM() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("leads");
@@ -133,18 +142,21 @@ export default function SalesCRM() {
 
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
     queryKey: ["/api/crm"],
+    queryFn: () => apiFetch('/api/crm', AnyResponse),
   });
 
   const { data: dealsData, isLoading: dealsLoading } = useQuery({
     queryKey: ["/api/crm/deals"],
+    queryFn: () => apiFetch('/api/crm/deals', AnyResponse),
   });
 
   const { data: statsData } = useQuery({
     queryKey: ["/api/crm/pipeline/stats"],
+    queryFn: () => apiFetch('/api/crm/pipeline/stats', AnyResponse),
   });
 
   const createLeadMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/crm", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }),
+    mutationFn: (data: any) => apiRequest("POST", "/api/crm", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm"] });
       setShowNewLead(false);
@@ -156,19 +168,33 @@ export default function SalesCRM() {
   });
 
   const updateLeadMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/crm/${id}`, { method: "PATCH", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }),
+    mutationFn: ({ id, ...data }: any) => apiRequest("PATCH", `/api/crm/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm"] });
       toast({ title: "Lead updated" });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Update Lead Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const createDealMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/crm/deals", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }),
+    mutationFn: (data: any) => apiRequest("POST", "/api/crm/deals", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/deals"] });
       setShowNewDeal(false);
       toast({ title: "Deal created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Create Deal Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -231,132 +257,125 @@ export default function SalesCRM() {
     }
   };
 
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button data-testid="button-new-lead" onClick={() => setShowNewLead(true)}>
+        <Plus className="w-4 h-4 mr-2" />
+        New Lead
+      </Button>
+      <Button variant="outline" data-testid="button-new-deal" onClick={() => setShowNewDeal(true)}>
+        <Target className="w-4 h-4 mr-2" />
+        New Deal
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Sales CRM</h1>
-          <p className="text-muted-foreground">Manage leads and deals pipeline</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Dialog open={showNewLead} onOpenChange={setShowNewLead}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-new-lead">
-                <Plus className="w-4 h-4 mr-2" />
-                New Lead
+    <CanvasHubPage config={{ ...pageConfig, headerActions }}>
+      <UniversalModal open={showNewLead} onOpenChange={setShowNewLead}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Add New Lead</UniversalModalTitle>
+          </UniversalModalHeader>
+          <form onSubmit={handleSubmitLead} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="companyName">Company Name *</Label>
+                <Input id="companyName" name="companyName" required data-testid="input-company-name" />
+              </div>
+              <div>
+                <Label htmlFor="industry">Industry</Label>
+                <Select name="industry">
+                  <SelectTrigger data-testid="select-industry">
+                    <SelectValue placeholder="Select industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="security">Security</SelectItem>
+                    <SelectItem value="healthcare">Healthcare</SelectItem>
+                    <SelectItem value="cleaning">Cleaning</SelectItem>
+                    <SelectItem value="construction">Construction</SelectItem>
+                    <SelectItem value="property_management">Property Management</SelectItem>
+                    <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                    <SelectItem value="retail">Retail</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="contactName">Contact Name</Label>
+                <Input id="contactName" name="contactName" data-testid="input-contact-name" />
+              </div>
+              <div>
+                <Label htmlFor="contactTitle">Title</Label>
+                <Input id="contactTitle" name="contactTitle" data-testid="input-contact-title" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="contactEmail">Email *</Label>
+                <Input id="contactEmail" name="contactEmail" type="email" required data-testid="input-contact-email" />
+              </div>
+              <div>
+                <Label htmlFor="contactPhone">Phone</Label>
+                <Input id="contactPhone" name="contactPhone" type="tel" data-testid="input-contact-phone" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="estimatedValue">Estimated Value ($)</Label>
+              <Input id="estimatedValue" name="estimatedValue" type="number" data-testid="input-estimated-value" />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea id="notes" name="notes" data-testid="input-notes" />
+            </div>
+            <UniversalModalFooter>
+              <Button type="submit" disabled={createLeadMutation.isPending} data-testid="button-submit-lead">
+                {createLeadMutation.isPending ? "Creating..." : "Create Lead"}
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Lead</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmitLead} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="companyName">Company Name *</Label>
-                    <Input id="companyName" name="companyName" required data-testid="input-company-name" />
-                  </div>
-                  <div>
-                    <Label htmlFor="industry">Industry</Label>
-                    <Select name="industry">
-                      <SelectTrigger data-testid="select-industry">
-                        <SelectValue placeholder="Select industry" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="security">Security</SelectItem>
-                        <SelectItem value="healthcare">Healthcare</SelectItem>
-                        <SelectItem value="cleaning">Cleaning</SelectItem>
-                        <SelectItem value="construction">Construction</SelectItem>
-                        <SelectItem value="property_management">Property Management</SelectItem>
-                        <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                        <SelectItem value="retail">Retail</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="contactName">Contact Name</Label>
-                    <Input id="contactName" name="contactName" data-testid="input-contact-name" />
-                  </div>
-                  <div>
-                    <Label htmlFor="contactTitle">Title</Label>
-                    <Input id="contactTitle" name="contactTitle" data-testid="input-contact-title" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="contactEmail">Email *</Label>
-                    <Input id="contactEmail" name="contactEmail" type="email" required data-testid="input-contact-email" />
-                  </div>
-                  <div>
-                    <Label htmlFor="contactPhone">Phone</Label>
-                    <Input id="contactPhone" name="contactPhone" type="tel" data-testid="input-contact-phone" />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="estimatedValue">Estimated Value ($)</Label>
-                  <Input id="estimatedValue" name="estimatedValue" type="number" data-testid="input-estimated-value" />
-                </div>
-                <div>
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea id="notes" name="notes" data-testid="input-notes" />
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={createLeadMutation.isPending} data-testid="button-submit-lead">
-                    {createLeadMutation.isPending ? "Creating..." : "Create Lead"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            </UniversalModalFooter>
+          </form>
+        </UniversalModalContent>
+      </UniversalModal>
 
-          <Dialog open={showNewDeal} onOpenChange={setShowNewDeal}>
-            <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-new-deal">
-                <Target className="w-4 h-4 mr-2" />
-                New Deal
+      <UniversalModal open={showNewDeal} onOpenChange={setShowNewDeal}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Create New Deal</UniversalModalTitle>
+          </UniversalModalHeader>
+          <form onSubmit={handleSubmitDeal} className="space-y-4">
+            <div>
+              <Label htmlFor="dealName">Deal Name *</Label>
+              <Input id="dealName" name="dealName" required data-testid="input-deal-name" />
+            </div>
+            <div>
+              <Label htmlFor="companyName">Company Name *</Label>
+              <Input id="companyName" name="companyName" required data-testid="input-deal-company" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="estimatedValue">Value ($)</Label>
+                <Input id="estimatedValue" name="estimatedValue" type="number" data-testid="input-deal-value" />
+              </div>
+              <div>
+                <Label htmlFor="probability">Probability (%)</Label>
+                <Input id="probability" name="probability" type="number" min="0" max="100" defaultValue="50" data-testid="input-probability" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="expectedCloseDate">Expected Close Date</Label>
+              <Input id="expectedCloseDate" name="expectedCloseDate" type="date" data-testid="input-close-date" />
+            </div>
+            <UniversalModalFooter>
+              <Button type="submit" disabled={createDealMutation.isPending} data-testid="button-submit-deal">
+                {createDealMutation.isPending ? "Creating..." : "Create Deal"}
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Deal</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmitDeal} className="space-y-4">
-                <div>
-                  <Label htmlFor="dealName">Deal Name *</Label>
-                  <Input id="dealName" name="dealName" required data-testid="input-deal-name" />
-                </div>
-                <div>
-                  <Label htmlFor="companyName">Company Name *</Label>
-                  <Input id="companyName" name="companyName" required data-testid="input-deal-company" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="estimatedValue">Value ($)</Label>
-                    <Input id="estimatedValue" name="estimatedValue" type="number" data-testid="input-deal-value" />
-                  </div>
-                  <div>
-                    <Label htmlFor="probability">Probability (%)</Label>
-                    <Input id="probability" name="probability" type="number" min="0" max="100" defaultValue="50" data-testid="input-probability" />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="expectedCloseDate">Expected Close Date</Label>
-                  <Input id="expectedCloseDate" name="expectedCloseDate" type="date" data-testid="input-close-date" />
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={createDealMutation.isPending} data-testid="button-submit-deal">
-                    {createDealMutation.isPending ? "Creating..." : "Create Deal"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+            </UniversalModalFooter>
+          </form>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <div className="grid grid-cols-4 gap-4 p-4 border-b">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -406,8 +425,8 @@ export default function SalesCRM() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 border-b">
-          <TabsList>
+        <div className="flex items-center justify-between gap-2 px-4 border-b">
+          <TabsList className="w-full sm:w-auto overflow-x-auto">
             <TabsTrigger value="leads" data-testid="tab-leads">Lead Pipeline</TabsTrigger>
             <TabsTrigger value="deals" data-testid="tab-deals">Deals Pipeline</TabsTrigger>
           </TabsList>
@@ -438,7 +457,7 @@ export default function SalesCRM() {
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, stage.id)}
               >
-                <div className="p-3 border-b flex items-center justify-between sticky top-0 bg-background">
+                <div className="p-3 border-b flex items-center justify-between gap-2 sticky top-0 z-10 bg-background">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${stage.color}`} />
                     <span className="font-medium text-sm">{stage.label}</span>
@@ -475,7 +494,7 @@ export default function SalesCRM() {
                 key={stage.id}
                 className="flex-shrink-0 w-64 border-r flex flex-col"
               >
-                <div className="p-3 border-b flex items-center justify-between sticky top-0 bg-background">
+                <div className="p-3 border-b flex items-center justify-between gap-2 sticky top-0 z-10 bg-background">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${stage.color}`} />
                     <span className="font-medium text-sm">{stage.label}</span>
@@ -500,16 +519,16 @@ export default function SalesCRM() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
-        <DialogContent size="xl">
+      <UniversalModal open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
+        <UniversalModalContent size="xl">
           {selectedLead && (
             <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+              <UniversalModalHeader>
+                <UniversalModalTitle className="flex items-center gap-2">
                   <Building className="w-5 h-5" />
                   {selectedLead.companyName}
-                </DialogTitle>
-              </DialogHeader>
+                </UniversalModalTitle>
+              </UniversalModalHeader>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
@@ -539,19 +558,19 @@ export default function SalesCRM() {
                   <div>
                     <h4 className="font-medium mb-2">Lead Details</h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <span className="text-muted-foreground">Status:</span>
                         <Badge>{LEAD_STAGES.find(s => s.id === selectedLead.leadStatus)?.label}</Badge>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <span className="text-muted-foreground">Industry:</span>
                         <span>{selectedLead.industry || "N/A"}</span>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <span className="text-muted-foreground">Score:</span>
                         <span>{selectedLead.leadScore}</span>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <span className="text-muted-foreground">Value:</span>
                         <span>${Number(selectedLead.estimatedValue || 0).toLocaleString()}</span>
                       </div>
@@ -577,7 +596,7 @@ export default function SalesCRM() {
                   </div>
                 </div>
               </div>
-              <DialogFooter>
+              <UniversalModalFooter>
                 <Button variant="outline" onClick={() => setSelectedLead(null)}>Close</Button>
                 <Button onClick={() => {
                   const nextStageIndex = LEAD_STAGES.findIndex(s => s.id === selectedLead.leadStatus) + 1;
@@ -588,11 +607,11 @@ export default function SalesCRM() {
                 }} data-testid="button-advance-lead">
                   Advance Stage <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
-              </DialogFooter>
+              </UniversalModalFooter>
             </>
           )}
-        </DialogContent>
-      </Dialog>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

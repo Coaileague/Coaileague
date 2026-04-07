@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useTransition } from "@/contexts/transition-context";
-import { handleFormSubmissionWithTransition, showSuccessTransition } from "@/lib/transition-utils";
+// DEPRECATED: transition-utils has been removed in favor of Canvas Hub TransitionLoader.
+// Use useTransitionLoader() from '@/components/canvas-hub/TransitionLoader' instead.
+// import { handleFormSubmissionWithTransition, showSuccessTransition } from "@/lib/transition-utils";
 import { apiRequest } from "@/lib/queryClient";
 
 const employeeSchema = z.object({

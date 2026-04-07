@@ -1,0 +1,136 @@
+Got the full report. Here's the execution order — two batched prompts. CRITICAL and HIGH security issues first, then everything else.
+
+---
+
+## PROMPT 3A — CRITICAL & HIGH FIXES
+
+Paste this now:
+
+---
+
+**PRODUCTION FIX BATCH 3A — CRITICAL + HIGH SEVERITY | READ BEFORE TOUCH | NO NEW FEATURES**
+
+Fix the following in priority order. Read each file before editing. Show before/after for each fix. Do not move to the next item until the current one is confirmed.
+
+---
+
+**FIX 1 — CRITICAL — Double-spend race condition**
+File: `creditLedger.ts` lines 128–137
+
+Replace the pre-read balance check and static SET with an atomic database expression inside the transaction. The fix must:
+- Remove the `getWallet()` call that captures balance outside the transaction
+- Replace `SET current_balance = ${capturedValue - amount}` with `SET current_balance = current_balance - ${amount} WHERE current_balance >= ${amount}`
+- After the UPDATE, check rowCount — if 0 rows updated, throw `InsufficientCreditsError`
+- The entire check-and-deduct must be one atomic operation inside the transaction
+
+---
+
+**FIX 2 — CRITICAL — workspaceId query override on Trinity session routes**
+File: `trinitySessionRoutes.ts` line 10
+
+Remove `req.query.workspaceId` override. The workspace context must come exclusively from `req.workspaceId` set by the JWT middleware. If no `req.workspaceId` exists on the request, return 401. Do not accept workspaceId from query params, body, or headers on any route in this file.
+
+---
+
+**FIX 3 — CRITICAL — Unscoped skill query in ScheduleOS**
+File: `scheduleos.ts` line 984
+
+Add `.where(eq(employeeSkills.workspaceId, workspaceId))` to the `db.select().from(employeeSkills)` query. Confirm `workspaceId` is in scope at that call site — if not, trace it from the parent function parameters and thread it through. This query must never return skills from another workspace.
+
+---
+
+**FIX 4 — HIGH — executionTrackerRoutes workspaceId source**
+File: `executionTrackerRoutes.ts` lines 28, 91, 208
+
+Replace all `req.query.workspaceId` reads with `req.workspaceId` from the JWT. Add a guard at the top of each affected handler: if `!req.workspaceId` return 401.
+
+---
+
+**FIX 5 — HIGH — scheduling.ts body workspaceId override**
+File: `scheduling.ts` line 45
+
+Remove `workspaceId` from `req.body` as a trusted source. Use only `req.workspaceId` from the JWT. If the body contains a `workspaceId` that differs from `req.workspaceId`, log a warning and ignore the body value — do not throw, just silently use the JWT value.
+
+---
+
+**FIX 6 — HIGH — Stripe double-subscription on period-end cancel**
+File: `subscriptionManager.ts` lines 392–403
+
+On the `immediate=false` cancel path, set `stripeSubscriptionId = null` in the workspace row after confirming the Stripe cancel-at-period-end call succeeded. Do not clear it before the Stripe call succeeds — only after. Add a `billingAuditLog` entry on this path with event type `subscription_cancel_period_end`.
+
+---
+
+**FIX 7 — HIGH — Per-workspace Trinity kill switch**
+File: `aiBrainAuthorizationService.ts` lines 148–200
+
+Add a `Map<string, boolean>` named `workspacePauseMap` alongside the existing platform kill switch boolean. Add two methods: `pauseWorkspaceTrinity(workspaceId: string)` and `resumeWorkspaceTrinity(workspaceId: string)`. Update the authorization check to return false if `workspacePauseMap.get(workspaceId) === true` before checking the global kill switch. The global kill switch must still work platform-wide. Wire both methods to the existing admin kill switch route as optional `workspaceId` param — if workspaceId is provided, pause that workspace only; if not provided, pause platform-wide.
+
+---
+
+**FIX 8 — HIGH — Credit deduction fire-and-forget in creditWrapper**
+File: `creditWrapper.ts` lines 155–168
+
+Change the catch block on credit deduction failure to throw rather than swallow. If the deduction fails after a successful automation run, log the failure to a `trinity_credit_failures` table (workspaceId, actionId, amount, error, timestamp) and return `success: false` with `error: 'credit_deduction_failed'` to the caller. Do not silently absorb.
+
+Create `trinity_credit_failures` table with columns: `id`, `workspace_id`, `action_id`, `amount`, `error_message`, `created_at`. Add to schema and push migration.
+
+---
+
+**FIX 9 — HIGH — JWT Bearer tokens not invalidated on logout**
+File: `authCoreRoutes.ts` line 525
+
+Add a `revoked_tokens` table with columns: `jti` (JWT ID), `workspace_id`, `revoked_at`, `expires_at`. On logout, insert the token's `jti` into this table. Add middleware that checks this table on every request using a Bearer token — if the `jti` is in the revoked list, return 401. Clean up expired rows nightly via a lightweight cron. If JWTs do not currently include a `jti` claim, add one during token signing.
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 9 fixes:
+1. Run TypeScript compiler — zero errors
+2. Restart server — confirm clean start
+3. Run the 4 regression tests
+4. Report pass/fail per fix
+5. Stop and wait — do not start 3B
+
+---
+
+## PROMPT 3B — MEDIUM FIXES
+
+Hold this until 3A completes. Then paste:
+
+---
+
+**PRODUCTION FIX BATCH 3B — MEDIUM + LOW SEVERITY | READ BEFORE TOUCH**
+
+Fix in order, same rules — read before touch, show before/after.
+
+**FIX 1** — `creditsLedgerService.ts` line 2/164: Add deprecation throw. Any caller hitting the deprecated `deductCredits` export should receive an error redirecting them to `creditLedger.ts`. Search for all external callers and update them to use `creditLedger.ts` directly.
+
+**FIX 2** — `subscriptionManager.ts` line 388: Call `creditManager.initializeCredits(workspaceId, 'free')` on the period-end cancel path as well, scheduled to execute when the `customer.subscription.deleted` Stripe webhook fires — not immediately. Confirm the webhook handler at `stripeWebhooks.ts` calls credit reset on that event.
+
+**FIX 3** — `onboardingInlineRoutes.ts` line 43: Before creating a new invite, check if an unexpired invite for the same email + workspaceId already exists. If it does, invalidate the old token and issue a fresh one — do not create a second valid token.
+
+**FIX 4** — `onboardingInlineRoutes.ts` line 225: Add rate limiting to the invite opened endpoint — max 3 calls per token per hour. Return 429 beyond that.
+
+**FIX 5** — `creditManager.ts` line 1883: Extract all platform fee rate literals into a single exported constant `PLATFORM_FEE_RATES` at the top of the file. Replace every hardcoded rate literal in `usageMetering.ts`, `platformServicesMeter.ts`, `platformBillService.ts`, and `orgBillingService.ts` with imports of this constant.
+
+**FIX 6** — `trinitySelfEditGovernance.ts` lines 230–271: If DB is unavailable at startup, default circuit breaker to OPEN not CLOSED. Fail safe — Trinity self-edit should be off until the breaker state is confirmed readable.
+
+**FIX 7** — `subagentSupervisor.ts` line 4135: Add circuit breaker coverage to scheduling, compliance, and communications domains matching the existing financial domain pattern.
+
+**FIX 8** — `shared/schema/domains/comms/index.ts` line 122: Add `is_bot boolean default false` and `bot_name varchar(50)` columns to `chat_messages` schema. Push migration. Update every bot message write path to set `is_bot: true` and `bot_name` to the appropriate bot identifier.
+
+**FIX 9** — `helpAIOrchestrator.ts` line 470: Sanitize `summonResult.message` before exposing in UI. Replace raw message with a generic user-facing string: "I wasn't able to complete that action. Please try again." Log the raw error server-side only.
+
+**FIX 10** — `trinityInsightsRoutes.ts` line 121: Add admin-only role check to the manual proactive scan trigger endpoint. Org_manager and below must not be able to call this endpoint.
+
+**COMPLETION CRITERIA**
+1. TypeScript compile — zero errors
+2. Server restart — clean start
+3. All regression tests pass
+4. Report final summary — all 35 audit findings addressed
+5. Stop and wait for production sign-off
+
+---
+
+Paste 3A results back the moment Replit finishes and I'll clear you for 3B immediately.

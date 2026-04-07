@@ -6,6 +6,7 @@
  * All actions are logged via AI Brain orchestrator.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response, NextFunction } from 'express';
 import { eq } from 'drizzle-orm';
 import { type AuthenticatedRequest } from '../rbac';
@@ -15,6 +16,7 @@ import { db } from '../db';
 import { notifications, systemAuditLogs, users } from '@shared/schema';
 import { broadcastToAllClients } from '../websocket';
 import { animationControlService, type AnimationCommand } from '../services/animationControlService';
+import { universalNotificationEngine } from '../services/universalNotificationEngine';
 
 export const supportCommandRouter = Router();
 
@@ -39,7 +41,7 @@ function broadcastForceRefresh(type: string, payload: any) {
     timestamp: new Date().toISOString(),
   };
   const count = broadcastToAllClients(message);
-  console.log(`[SupportConsole] Force broadcast sent: ${type} to ${count} clients`);
+  log.info(`[SupportConsole] Force broadcast sent: ${type} to ${count} clients`);
   return count;
 }
 
@@ -63,7 +65,7 @@ supportCommandRouter.get('/test-broadcast', requireSupportRole, async (req: Auth
     
     const count = broadcastToAllClients(testMessage);
     
-    console.log(`[SupportConsole] Test broadcast sent to ${count} clients`);
+    log.info(`[SupportConsole] Test broadcast sent to ${count} clients`);
     
     res.json({
       success: true,
@@ -71,9 +73,9 @@ supportCommandRouter.get('/test-broadcast', requireSupportRole, async (req: Auth
       clientCount: count,
       payload: testMessage,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Test broadcast error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Test broadcast error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -136,9 +138,9 @@ supportCommandRouter.post('/force-whats-new', requireSupportRole, async (req: Au
       message: 'What\'s New update pushed to all clients',
       update,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Force What\'s New error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Force What\'s New error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -158,45 +160,47 @@ supportCommandRouter.post('/force-notification', requireSupportRole, async (req:
     const notificationsCreated: string[] = [];
     let notificationScope = 'platform-wide';
 
-    // Determine targeting scope
+    // Route through UNE for AI enrichment while maintaining force-push capability
+    // Determine targeting scope and use UNE for unified notification handling
     if (targetUserIds && Array.isArray(targetUserIds) && targetUserIds.length > 0) {
       // Specific users
       notificationScope = `${targetUserIds.length} specific users`;
       for (const userId of targetUserIds) {
-        const notification = await db.insert(notifications).values({
-          workspaceId: targetWorkspaceId || 'coaileague-platform-workspace',
+        const result = await universalNotificationEngine.sendNotification({
+          workspaceId: targetWorkspaceId || PLATFORM_WORKSPACE_ID,
           userId,
           type: type || 'system',
           title,
           message,
-          actionUrl: actionUrl || '/notifications',
-          priority: priority || 'normal',
-          isRead: false,
-          metadata: { forcePushed: true, pushedBy: req.user?.id },
-        }).returning();
-        notificationsCreated.push(notification[0]?.id);
+          actionUrl: actionUrl || '/dashboard',
+          severity: priority === 'urgent' ? 'error' : priority === 'high' ? 'warning' : 'info',
+          metadata: { 
+            forcePushed: true, 
+            pushedBy: req.user?.id,
+            skipFeatureCheck: true, // Admin force-push bypasses feature validation
+          },
+        });
+        if (result.notificationIds.length > 0) {
+          notificationsCreated.push(...result.notificationIds);
+        }
       }
     } else if (targetWorkspaceId) {
-      // All users in a specific workspace
-      const workspaceUsers = await db.select({ id: users.id })
-        .from(users)
-        .where(eq(users.currentWorkspace, targetWorkspaceId));
-      
-      notificationScope = `${workspaceUsers.length} users in workspace`;
-      for (const user of workspaceUsers) {
-        const notification = await db.insert(notifications).values({
-          workspaceId: targetWorkspaceId,
-          userId: user.id,
-          type: type || 'system',
-          title,
-          message,
-          actionUrl: actionUrl || '/notifications',
-          priority: priority || 'normal',
-          isRead: false,
-          metadata: { forcePushed: true, pushedBy: req.user?.id },
-        }).returning();
-        notificationsCreated.push(notification[0]?.id);
-      }
+      // All users in a specific workspace - use UNE with workspace targeting
+      const result = await universalNotificationEngine.sendNotification({
+        workspaceId: targetWorkspaceId,
+        type: type || 'system',
+        title,
+        message,
+        actionUrl: actionUrl || '/dashboard',
+        severity: priority === 'urgent' ? 'error' : priority === 'high' ? 'warning' : 'info',
+        metadata: { 
+          forcePushed: true, 
+          pushedBy: req.user?.id,
+          skipFeatureCheck: true,
+        },
+      });
+      notificationScope = `${result.recipientCount} users in workspace`;
+      notificationsCreated.push(...result.notificationIds);
     } else {
       // Platform-wide - notify all users using their current workspace
       const allUsers = await db.select({ 
@@ -205,19 +209,35 @@ supportCommandRouter.post('/force-notification', requireSupportRole, async (req:
       }).from(users);
       notificationScope = `${allUsers.length} users platform-wide`;
       
+      // Group users by workspace for efficient UNE calls
+      const usersByWorkspace = new Map<string, string[]>();
       for (const user of allUsers) {
-        const notification = await db.insert(notifications).values({
-          workspaceId: user.currentWorkspace || 'coaileague-platform-workspace',
-          userId: user.id,
-          type: type || 'system',
-          title,
-          message,
-          actionUrl: actionUrl || '/notifications',
-          priority: priority || 'normal',
-          isRead: false,
-          metadata: { forcePushed: true, pushedBy: req.user?.id },
-        }).returning();
-        notificationsCreated.push(notification[0]?.id);
+        const wsId = user.currentWorkspace || PLATFORM_WORKSPACE_ID;
+        if (!usersByWorkspace.has(wsId)) usersByWorkspace.set(wsId, []);
+        usersByWorkspace.get(wsId)!.push(user.id);
+      }
+      
+      // Send notifications per workspace for proper context
+      for (const [wsId, userIds] of usersByWorkspace) {
+        for (const userId of userIds) {
+          const result = await universalNotificationEngine.sendNotification({
+            workspaceId: wsId,
+            userId,
+            type: type || 'system',
+            title,
+            message,
+            actionUrl: actionUrl || '/dashboard',
+            severity: priority === 'urgent' ? 'error' : priority === 'high' ? 'warning' : 'info',
+            metadata: { 
+              forcePushed: true, 
+              pushedBy: req.user?.id,
+              skipFeatureCheck: true,
+            },
+          });
+          if (result.notificationIds.length > 0) {
+            notificationsCreated.push(...result.notificationIds);
+          }
+        }
       }
     }
 
@@ -242,9 +262,9 @@ supportCommandRouter.post('/force-notification', requireSupportRole, async (req:
       notificationIds: notificationsCreated,
       scope: notificationScope,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Force notification error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Force notification error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -278,9 +298,9 @@ supportCommandRouter.post('/force-sync', requireSupportRole, async (req: Authent
       message: `Force sync broadcast for: ${types.join(', ')}`,
       syncTypes: types,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Force sync error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Force sync error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -315,9 +335,9 @@ supportCommandRouter.post('/broadcast-message', requireSupportRole, async (req: 
       success: true,
       message: 'System message broadcast to all clients',
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Broadcast message error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Broadcast message error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -346,9 +366,9 @@ supportCommandRouter.post('/maintenance-mode', requireSupportRole, async (req: A
       success: true,
       message: enabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled',
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Maintenance mode error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Maintenance mode error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -381,9 +401,9 @@ supportCommandRouter.post('/invalidate-cache', requireSupportRole, async (req: A
       message: `Cache invalidation broadcast for: ${cacheKeys.join(', ')}`,
       cacheKeys,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Cache invalidation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Cache invalidation error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -416,9 +436,9 @@ supportCommandRouter.post('/animation', requireSupportRole, async (req: Authenti
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Animation control error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Animation control error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -435,8 +455,8 @@ supportCommandRouter.get('/animation/state', requireSupportRole, async (req: Aut
       availableThemes: animationControlService.getAvailableThemes(),
       availableModes: animationControlService.getAvailableModes()
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -460,9 +480,9 @@ supportCommandRouter.post('/animation/seasonal', requireSupportRole, async (req:
     await logSupportAction(req.user?.id || 'unknown', 'animation_theme_change', { theme });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Seasonal theme error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Seasonal theme error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -475,7 +495,7 @@ supportCommandRouter.post('/animation/seasonal', requireSupportRole, async (req:
  * This is broadcast to all clients via WebSocket for instant updates
  */
 interface MascotOrchestrationState {
-  mode: 'idle' | 'advising' | 'celebrating' | 'alerting' | 'teaching' | 'business_buddy';
+  mode: 'idle' | 'advising' | 'celebrating' | 'alerting' | 'teaching' | 'coo_advisor';
   persona: 'friendly' | 'professional' | 'playful' | 'serious' | 'motivational';
   currentEmote: string;
   currentSpeech: string | null;
@@ -522,13 +542,13 @@ supportCommandRouter.get('/mascot/state', requireSupportRole, async (req: Authen
     res.json({
       success: true,
       state: mascotState,
-      availableModes: ['idle', 'advising', 'celebrating', 'alerting', 'teaching', 'business_buddy'],
+      availableModes: ['idle', 'advising', 'celebrating', 'alerting', 'teaching', 'coo_advisor'],
       availablePersonas: ['friendly', 'professional', 'playful', 'serious', 'motivational'],
       availableEmotes: ['idle', 'curious', 'happy', 'thinking', 'excited', 'concerned', 'celebrating', 'advising'],
       availableBusinessFocus: ['growth', 'sales', 'efficiency', 'debt', 'general'],
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -569,9 +589,9 @@ supportCommandRouter.post('/mascot/control', requireSupportRole, async (req: Aut
       message: 'Mascot state updated and broadcast to all clients',
       state: mascotState,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Mascot control error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Mascot control error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -614,9 +634,9 @@ supportCommandRouter.post('/mascot/speak', requireSupportRole, async (req: Authe
       currentSpeech: mascotState.currentSpeech,
       queueLength: mascotState.speechQueue.length,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Mascot speak error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Mascot speak error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -651,9 +671,9 @@ Focus areas:
 - GENERAL: Overall business health and improvement`;
     
     const response = await geminiClient.generate({
-      workspaceId: workspaceId || 'system',
+      workspaceId: workspaceId || undefined,
       userId: req.user?.id || 'support-console',
-      featureKey: 'business_buddy_advice',
+      featureKey: 'coo_advisor_advice',
       systemPrompt,
       userMessage: `Generate ${businessFocus} insights for the business owner`,
       temperature: 0.8,
@@ -663,7 +683,7 @@ Focus areas:
     const advice = response.text;
     
     if (broadcast) {
-      mascotState.mode = 'business_buddy';
+      mascotState.mode = 'coo_advisor';
       mascotState.businessFocus = businessFocus;
       mascotState.currentSpeech = advice.split('\n')[0]?.replace(/^[-*•]\s*/, '') || 'Here are some insights for your business!';
       mascotState.currentEmote = 'advising';
@@ -694,9 +714,9 @@ Focus areas:
       advice,
       broadcast,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Business advice error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Business advice error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -745,9 +765,9 @@ supportCommandRouter.post('/mascot/react-whats-new', requireSupportRole, async (
       title,
       emote: mascotState.currentEmote,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] What\'s New reaction error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] What\'s New reaction error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -778,9 +798,9 @@ supportCommandRouter.post('/mascot/holiday-theme', requireSupportRole, async (re
       message: theme ? `Holiday theme set to ${theme}` : 'Holiday theme cleared',
       holidayTheme: mascotState.holidayTheme,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Holiday theme error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Holiday theme error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -814,9 +834,9 @@ supportCommandRouter.post('/mascot/reset', requireSupportRole, async (req: Authe
       message: 'Mascot reset to default state',
       state: mascotState,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Mascot reset error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Mascot reset error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -862,9 +882,9 @@ supportCommandRouter.post('/code/stage', requireSupportRole, async (req: Authent
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Code stage error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Code stage error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -901,9 +921,9 @@ supportCommandRouter.post('/code/stage-batch', requireSupportRole, async (req: A
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Code stage batch error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Code stage batch error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -922,9 +942,9 @@ supportCommandRouter.get('/code/pending', requireSupportRole, async (req: Authen
       count: pendingChanges.length,
       changes: pendingChanges
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Get pending changes error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Get pending changes error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -950,9 +970,9 @@ supportCommandRouter.post('/code/approve', requireSupportRole, async (req: Authe
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Code approve error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Code approve error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -978,9 +998,9 @@ supportCommandRouter.post('/code/reject', requireSupportRole, async (req: Authen
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Code reject error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Code reject error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1025,9 +1045,9 @@ supportCommandRouter.post('/code/apply', requireSupportRole, async (req: Authent
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Code apply error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Code apply error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1072,9 +1092,9 @@ supportCommandRouter.post('/code/rollback', requireSupportRole, async (req: Auth
     });
 
     res.json(result);
-  } catch (error: any) {
-    console.error('[SupportConsole] Code rollback error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Code rollback error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1096,9 +1116,9 @@ supportCommandRouter.get('/code/change/:id', requireSupportRole, async (req: Aut
       success: true,
       change
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Get change error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Get change error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1131,9 +1151,9 @@ supportCommandRouter.post('/platform/scan-now', requireSupportRole, async (req: 
       message: 'Platform scan completed',
       ...result,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Platform scan error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Platform scan error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1145,16 +1165,16 @@ supportCommandRouter.get('/platform/scan-history', requireSupportRole, async (re
   try {
     const { platformChangeMonitor } = await import('../services/ai-brain/platformChangeMonitor');
     
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 10), 500);
     const history = await platformChangeMonitor.getRecentScans(limit);
 
     res.json({
       success: true,
       scans: history,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Scan history error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Scan history error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1166,16 +1186,16 @@ supportCommandRouter.get('/platform/changes', requireSupportRole, async (req: Au
   try {
     const { platformChangeMonitor } = await import('../services/ai-brain/platformChangeMonitor');
     
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 20), 500);
     const changes = await platformChangeMonitor.getRecentChanges(limit);
 
     res.json({
       success: true,
       changes,
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Get changes error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Get changes error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1222,8 +1242,8 @@ supportCommandRouter.get('/status', requireSupportRole, async (req: Authenticate
       userRole: req.platformRole,
       animationState: animationControlService.getState(),
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1258,21 +1278,20 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
         currentWorkspace: users.currentWorkspace 
       }).from(users);
     } catch (error) {
-      console.warn('[TestCountdown] Could not fetch users:', error);
+      log.warn('[TestCountdown] Could not fetch users:', error);
       allUsers = [];
     }
 
     // Create system notification for each user
     if (allUsers.length > 0) {
       const notificationInserts = allUsers.map(user => ({
-        workspaceId: user.currentWorkspace || 'coaileague-platform-workspace',
+        workspaceId: user.currentWorkspace || PLATFORM_WORKSPACE_ID,
         userId: user.id,
         type: 'system' as const,
         title: '🤖 HelpAI System Alert - Platform Maintenance',
-        message: 'CoAIleague platform is going down for maintenance. Countdown: 30 seconds',
-        priority: 'critical' as const,
+        message: `${PLATFORM.name} platform is going down for maintenance. Countdown: 30 seconds`,
         isRead: false,
-        actionUrl: '/notifications' as string,
+        actionUrl: '/dashboard' as string,
         metadata: { 
           testCountdown: true, 
           pushedBy: req.user?.id,
@@ -1286,7 +1305,7 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
       try {
         await db.insert(notifications).values(notificationInserts);
       } catch (insertError) {
-        console.error('[TestCountdown] Notification insert failed:', insertError);
+        log.error('[TestCountdown] Notification insert failed:', insertError);
       }
     }
 
@@ -1312,7 +1331,7 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
         senderBrand: 'HelpAI',
       });
 
-      console.log(`[HelpAI Maintenance] Seconds remaining: ${secondsRemaining}`);
+      log.info(`[HelpAI Maintenance] Seconds remaining: ${secondsRemaining}`);
 
       if (secondsRemaining <= 0) {
         clearInterval(countdownInterval);
@@ -1329,7 +1348,7 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
           senderBrand: 'HelpAI',
         });
 
-        console.log('[HelpAI Maintenance] Countdown complete - platform down');
+        log.info('[HelpAI Maintenance] Countdown complete - platform down');
       }
     }, 1000);
 
@@ -1346,9 +1365,9 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
       countdownSeconds: 30,
       startTime: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[SupportConsole] Platform downtime countdown test error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Platform downtime countdown test error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -1358,6 +1377,7 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
 async function logSupportAction(userId: string, action: string, details: Record<string, any>) {
   try {
     await db.insert(systemAuditLogs).values({
+      workspaceId: 'system',
       userId,
       action: `support_console_${action}`,
       entityType: 'support_command',
@@ -1367,9 +1387,157 @@ async function logSupportAction(userId: string, action: string, details: Record<
         console: 'support_command_console',
         timestamp: new Date().toISOString(),
       },
-      ipAddress: '127.0.0.1',
+      ipAddress: 'system-support-console',
     });
   } catch (error) {
-    console.error('[SupportConsole] Audit log failed:', error);
+    log.error('[SupportConsole] Audit log failed:', error);
   }
 }
+
+// =============================================================================
+// PLATFORM MAINTENANCE MODE ENDPOINTS
+// =============================================================================
+
+import { platformMaintenanceService, HELPAI_MAINTENANCE_COMMANDS } from '../services/platformMaintenanceService';
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../services/billing/billingConstants';
+import { PLATFORM } from '../config/platformConfig';
+const log = createLogger('SupportCommandConsole');
+
+
+/**
+ * GET /api/support/command/maintenance/status
+ * Get current maintenance mode status
+ */
+supportCommandRouter.get('/maintenance/status', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  const status = platformMaintenanceService.getStatus();
+  res.json({ success: true, ...status });
+});
+
+/**
+ * POST /api/support/command/maintenance/activate
+ * Activate maintenance mode - locks platform for end users
+ */
+supportCommandRouter.post('/maintenance/activate', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { reason, estimatedMinutes } = req.body;
+    const userId = req.user?.id || 'support_console';
+    
+    const result = await platformMaintenanceService.activateMaintenance(
+      userId,
+      reason || 'Scheduled maintenance',
+      estimatedMinutes
+    );
+    
+    await logSupportAction(userId, 'maintenance_activate', {
+      reason,
+      estimatedMinutes,
+      success: result.success,
+    });
+    
+    res.json(result);
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Maintenance activate error:', error);
+    res.status(500).json({ success: false, message: sanitizeError(error) });
+  }
+});
+
+/**
+ * POST /api/support/command/maintenance/deactivate
+ * Deactivate maintenance mode - restores normal platform access
+ */
+supportCommandRouter.post('/maintenance/deactivate', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.id || 'support_console';
+    
+    const result = await platformMaintenanceService.deactivateMaintenance(userId);
+    
+    await logSupportAction(userId, 'maintenance_deactivate', {
+      success: result.success,
+    });
+    
+    res.json(result);
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Maintenance deactivate error:', error);
+    res.status(500).json({ success: false, message: sanitizeError(error) });
+  }
+});
+
+/**
+ * POST /api/support/command/broadcast
+ * Send platform-wide broadcast announcement
+ */
+supportCommandRouter.post('/broadcast', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { title, message, priority } = req.body;
+    const userId = req.user?.id || 'support_console';
+    
+    if (!message) {
+      return res.status(400).json({ success: false, message: 'Message is required' });
+    }
+    
+    const result = await platformMaintenanceService.broadcastPlatformMessage(
+      userId,
+      title || 'Platform Announcement',
+      message,
+      priority || 'high'
+    );
+    
+    await logSupportAction(userId, 'platform_broadcast', {
+      title,
+      message,
+      priority,
+    });
+    
+    res.json(result);
+  } catch (error: unknown) {
+    log.error('[SupportConsole] Broadcast error:', error);
+    res.status(500).json({ success: false, message: sanitizeError(error) });
+  }
+});
+
+/**
+ * POST /api/support/command/helpai/command
+ * Execute HelpAI maintenance commands directly (for API access)
+ * HelpAI uses this to bypass normal auth during maintenance
+ */
+supportCommandRouter.post('/helpai/command', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { command, args, userId, userRole, bypassToken } = req.body;
+    
+    // Validate HelpAI bypass token during maintenance
+    const accessCheck = platformMaintenanceService.canAccess(
+      userId || 'helpai',
+      userRole || 'bot',
+      undefined,
+      bypassToken
+    );
+    
+    if (!accessCheck.allowed && !bypassToken) {
+      // Generate bypass for HelpAI
+      const newToken = platformMaintenanceService.generateBypassToken('helpai');
+      return res.json({
+        success: true,
+        bypassToken: newToken,
+        message: 'Bypass token generated for HelpAI',
+      });
+    }
+    
+    // Execute the command
+    const cmdHandler = HELPAI_MAINTENANCE_COMMANDS[command as keyof typeof HELPAI_MAINTENANCE_COMMANDS];
+    if (!cmdHandler) {
+      return res.status(404).json({ success: false, message: `Unknown command: ${command}` });
+    }
+    
+    const result = await cmdHandler.execute(args || [], userId || 'helpai', userRole || 'bot');
+    
+    res.json({
+      success: true,
+      response: result,
+      bypassToken: bypassToken,
+    });
+  } catch (error: unknown) {
+    log.error('[SupportConsole] HelpAI command error:', error);
+    res.status(500).json({ success: false, message: sanitizeError(error) });
+  }
+});

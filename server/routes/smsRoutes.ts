@@ -2,19 +2,24 @@
  * SMS API Routes - Twilio SMS Integration
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
 import { requireWorkspaceRole, requireManager } from '../rbac';
 import { 
-  sendSMS, 
-  sendSMSToEmployee, 
-  sendShiftReminder,
-  sendScheduleChangeNotification,
-  sendInvoiceReminder,
   isSMSConfigured 
 } from '../services/smsService';
 import { isFeatureEnabled } from '@shared/platformConfig';
 import '../types';
+import { createLogger } from '../lib/logger';
+import { PLATFORM } from '../config/platformConfig';
+const log = createLogger('SmsRoutes');
+
+
+interface AuthenticatedRequest extends Request {
+  user: any;
+  workspaceId?: string;
+}
 
 export const smsRouter = Router();
 
@@ -25,20 +30,21 @@ smsRouter.get('/status', requireAuth, async (req: Request, res: Response) => {
       configured: isSMSConfigured(),
       provider: 'twilio',
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-smsRouter.post('/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
+smsRouter.post('/send', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
     const { to, message, type, employeeId } = req.body;
-    const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const user = authReq.user;
+    const workspaceId = authReq.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -54,8 +60,17 @@ smsRouter.post('/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_adm
 
     let targetPhone = to;
     if (employeeId && !to) {
-      const result = await sendSMSToEmployee(employeeId, message, type || 'notification', workspaceId);
-      return res.json(result);
+      const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+      const id = await NotificationDeliveryService.send({
+        type: (type as any) || 'system_alert',
+        workspaceId,
+        recipientUserId: employeeId,
+        channel: 'sms',
+        body: {
+          body: message,
+        }
+      });
+      return res.json({ success: !id.startsWith('skipped'), id });
     }
 
     if (!targetPhone) {
@@ -67,29 +82,34 @@ smsRouter.post('/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_adm
       return res.status(400).json({ error: 'Invalid phone number format' });
     }
 
-    const result = await sendSMS({
-      to: targetPhone,
-      body: message,
-      type: type || 'manual',
+    const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+    const id = await NotificationDeliveryService.send({
+      type: (type as any) || 'system_alert',
       workspaceId,
-      userId: user?.id,
+      recipientUserId: user?.id || 'system',
+      channel: 'sms',
+      body: {
+        phone: targetPhone,
+        body: message,
+      }
     });
 
-    res.json(result);
-  } catch (error: any) {
-    console.error('[SMS] Send error:', error);
-    res.status(500).json({ error: error.message });
+    res.json({ success: !id.startsWith('skipped'), id });
+  } catch (error: unknown) {
+    log.error('[SMS] Send error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-smsRouter.post('/send-to-employee', requireAuth, requireManager, async (req: Request, res: Response) => {
+smsRouter.post('/send-to-employee', requireManager, async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
-    const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const user = authReq.user;
+    const workspaceId = authReq.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -105,23 +125,33 @@ smsRouter.post('/send-to-employee', requireAuth, requireManager, async (req: Req
       return res.status(400).json({ error: 'Message too long (max 1600 characters)' });
     }
 
-    const result = await sendSMSToEmployee(employeeId, message, type || 'notification', workspaceId);
+    const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+    const id = await NotificationDeliveryService.send({
+      type: (type as any) || 'system_alert',
+      workspaceId,
+      recipientUserId: employeeId,
+      channel: 'sms',
+      body: {
+        body: message,
+      }
+    });
 
-    res.json(result);
-  } catch (error: any) {
-    console.error('[SMS] Send to employee error:', error);
-    res.status(500).json({ error: error.message });
+    res.json({ success: !id.startsWith('skipped'), id });
+  } catch (error: unknown) {
+    log.error('[SMS] Send to employee error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-smsRouter.post('/shift-reminder', requireAuth, requireManager, async (req: Request, res: Response) => {
+smsRouter.post('/shift-reminder', requireManager, async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
-    const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const user = authReq.user;
+    const workspaceId = authReq.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -133,23 +163,33 @@ smsRouter.post('/shift-reminder', requireAuth, requireManager, async (req: Reque
       return res.status(400).json({ error: 'Employee ID, shift date, and time are required' });
     }
 
-    const result = await sendShiftReminder(employeeId, shiftDate, shiftTime, location, workspaceId);
+    const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+    const id = await NotificationDeliveryService.send({
+      type: 'shift_reminder',
+      workspaceId,
+      recipientUserId: employeeId,
+      channel: 'sms',
+      body: {
+        body: `${PLATFORM.name} Reminder: You have a shift on ${shiftDate} at ${shiftTime}${location ? ` at ${location}` : ''}. Reply STOP to unsubscribe.`,
+      }
+    });
 
-    res.json(result);
-  } catch (error: any) {
-    console.error('[SMS] Shift reminder error:', error);
-    res.status(500).json({ error: error.message });
+    res.json({ success: !id.startsWith('skipped'), id });
+  } catch (error: unknown) {
+    log.error('[SMS] Shift reminder error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-smsRouter.post('/schedule-change', requireAuth, requireManager, async (req: Request, res: Response) => {
+smsRouter.post('/schedule-change', requireManager, async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
-    const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const user = authReq.user;
+    const workspaceId = authReq.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -161,32 +201,60 @@ smsRouter.post('/schedule-change', requireAuth, requireManager, async (req: Requ
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const result = await sendScheduleChangeNotification(employeeId, changeType, shiftDetails, workspaceId);
+    const messages = {
+      added: `${PLATFORM.name}: New shift assigned - ${shiftDetails}. Check your schedule for details.`,
+      removed: `${PLATFORM.name}: Shift cancelled - ${shiftDetails}. Check your schedule for updates.`,
+      modified: `${PLATFORM.name}: Schedule update - ${shiftDetails}. Check your schedule for details.`,
+    };
 
-    res.json(result);
-  } catch (error: any) {
-    console.error('[SMS] Schedule change error:', error);
-    res.status(500).json({ error: error.message });
+    const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+    const id = await NotificationDeliveryService.send({
+      type: 'schedule_notification',
+      workspaceId,
+      recipientUserId: employeeId,
+      channel: 'sms',
+      body: {
+        body: messages[changeType as keyof typeof messages] || messages.modified,
+      }
+    });
+
+    res.json({ success: !id.startsWith('skipped'), id });
+  } catch (error: unknown) {
+    log.error('[SMS] Schedule change error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-smsRouter.post('/invoice-reminder', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
+smsRouter.post('/invoice-reminder', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
     }
 
     const { clientPhone, invoiceNumber, amount, dueDate } = req.body;
+    const user = authReq.user;
+    const workspaceId = authReq.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
 
     if (!clientPhone || !invoiceNumber || !amount || !dueDate) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const result = await sendInvoiceReminder(clientPhone, invoiceNumber, amount, dueDate);
+    const { NotificationDeliveryService } = await import('../services/notificationDeliveryService');
+    const id = await NotificationDeliveryService.send({
+      type: 'invoice_notification',
+      workspaceId: workspaceId || 'system',
+      recipientUserId: clientPhone, // We don't have a userId here, using phone as identifier
+      channel: 'sms',
+      body: {
+        phone: clientPhone,
+        body: `${PLATFORM.name}: Invoice ${invoiceNumber} for ${amount} is due ${dueDate}. View and pay online at your client portal.`,
+      }
+    });
 
-    res.json(result);
-  } catch (error: any) {
-    console.error('[SMS] Invoice reminder error:', error);
-    res.status(500).json({ error: error.message });
+    res.json({ success: !id.startsWith('skipped'), id });
+  } catch (error: unknown) {
+    log.error('[SMS] Invoice reminder error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });

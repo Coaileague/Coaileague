@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useQuery } from "@tanstack/react-query";
-import { WorkspaceLayout } from "@/components/workspace-layout";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { AiUsageDashboard } from "@/components/billing/AiUsageDashboard";
 import { ResponsiveLoading } from "@/components/loading-indicators";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -189,7 +191,7 @@ export default function OwnerAnalytics() {
   const { data: reconciliation, isLoading: reconciliationLoading } = useQuery<{ success: boolean; data: ReconciliationData }>({
     queryKey: ['/api/analytics/owner/reconciliation', selectedPeriod],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/owner/reconciliation?period=${selectedPeriod}`);
+      const res = await secureFetch(`/api/analytics/owner/reconciliation?period=${selectedPeriod}`);
       if (!res.ok) throw new Error('Failed to fetch reconciliation data');
       return res.json();
     },
@@ -200,9 +202,15 @@ export default function OwnerAnalytics() {
     return <ResponsiveLoading message="Loading Analytics Dashboard..." />;
   }
 
-  if (workspaceRole !== 'org_owner' && workspaceRole !== 'org_admin') {
+  if (workspaceRole !== 'org_owner' && workspaceRole !== 'co_owner') {
+    const accessDeniedConfig: CanvasPageConfig = {
+      id: 'owner-analytics-denied',
+      title: 'Usage Analytics',
+      subtitle: 'Executive insights into platform usage and team engagement',
+      category: 'admin',
+    };
     return (
-      <WorkspaceLayout>
+      <CanvasHubPage config={accessDeniedConfig}>
         <div className="flex items-center justify-center h-full">
           <Alert variant="destructive" className="max-w-md" data-testid="alert-permission-denied">
             <AlertCircle className="h-4 w-4" />
@@ -212,7 +220,7 @@ export default function OwnerAnalytics() {
             </AlertDescription>
           </Alert>
         </div>
-      </WorkspaceLayout>
+      </CanvasHubPage>
     );
   }
 
@@ -242,12 +250,44 @@ export default function OwnerAnalytics() {
   const trendData = trends?.data || [];
   const teamData = team?.data;
 
+  const actionButtons = (
+    <div className="flex items-center gap-3">
+      <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+        <SelectTrigger className="w-full md:w-[180px]" data-testid="select-period">
+          <SelectValue placeholder="Select period" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="today">Today</SelectItem>
+          <SelectItem value="last_7_days">Last 7 Days</SelectItem>
+          <SelectItem value="last_30_days">Last 30 Days</SelectItem>
+          <SelectItem value="this_month">This Month</SelectItem>
+          <SelectItem value="last_month">Last Month</SelectItem>
+          <SelectItem value="this_quarter">This Quarter</SelectItem>
+          <SelectItem value="this_year">This Year</SelectItem>
+        </SelectContent>
+      </Select>
+      
+      <Button variant="outline" onClick={handleExport} data-testid="button-export">
+        <Download className="h-4 w-4 mr-2" />
+        Export
+      </Button>
+    </div>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'owner-analytics',
+    title: 'Usage Analytics',
+    subtitle: 'Executive insights into platform usage and team engagement',
+    category: 'admin',
+    headerActions: actionButtons,
+  };
+
   return (
-    <WorkspaceLayout>
-      <div className="p-6 space-y-6" data-testid="owner-analytics-page">
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6" data-testid="owner-analytics-page">
         <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent" data-testid="card-trinity-elite">
           <CardContent className="py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Crown className="h-5 w-5 text-primary" />
@@ -285,35 +325,6 @@ export default function OwnerAnalytics() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="text-page-title">Usage Analytics</h1>
-            <p className="text-muted-foreground">Executive insights into platform usage and team engagement</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="w-[180px]" data-testid="select-period">
-                <SelectValue placeholder="Select period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="last_7_days">Last 7 Days</SelectItem>
-                <SelectItem value="last_30_days">Last 30 Days</SelectItem>
-                <SelectItem value="this_month">This Month</SelectItem>
-                <SelectItem value="last_month">Last Month</SelectItem>
-                <SelectItem value="this_quarter">This Quarter</SelectItem>
-                <SelectItem value="this_year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button variant="outline" onClick={handleExport} data-testid="button-export">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-        </div>
-
         {data?.alerts && data.alerts.length > 0 && (
           <div className="space-y-2">
             {data.alerts.slice(0, 3).map((alert, i) => (
@@ -333,7 +344,7 @@ export default function OwnerAnalytics() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList data-testid="tabs-analytics">
+          <TabsList className="w-full sm:w-auto overflow-x-auto" data-testid="tabs-analytics">
             <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
             <TabsTrigger value="trends" data-testid="tab-trends">Trends</TabsTrigger>
             <TabsTrigger value="team" data-testid="tab-team">Team</TabsTrigger>
@@ -434,7 +445,7 @@ export default function OwnerAnalytics() {
                       <Progress value={data.featureAdoptionScore} className="mb-4" />
                       <div className="space-y-3">
                         {data.topFeatures.slice(0, 5).map((feature, i) => (
-                          <div key={i} className="flex items-center justify-between">
+                          <div key={i} className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <Badge variant="outline">{feature.featureCategory}</Badge>
                               <span className="text-sm font-medium">{feature.featureKey}</span>
@@ -498,7 +509,7 @@ export default function OwnerAnalytics() {
                   <CardContent>
                     <div className="space-y-4">
                       {data.teamActivity.slice(0, 5).map((member, i) => (
-                        <div key={i} className="flex items-center justify-between" data-testid={`row-team-member-${i}`}>
+                        <div key={i} className="flex items-center justify-between gap-2" data-testid={`row-team-member-${i}`}>
                           <div className="flex items-center gap-3">
                             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary font-medium text-sm">
                               {i + 1}
@@ -520,6 +531,14 @@ export default function OwnerAnalytics() {
                     </div>
                   </CardContent>
                 </Card>
+
+                <div data-testid="section-ai-usage-widget">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Trinity AI Usage — This Period
+                  </h3>
+                  <AiUsageDashboard />
+                </div>
               </>
             ) : (
               <Alert>
@@ -684,7 +703,7 @@ export default function OwnerAnalytics() {
                     <CardContent>
                       <div className="space-y-4">
                         {teamData.topPerformers.map((performer, i) => (
-                          <div key={i} className="flex items-center justify-between" data-testid={`row-top-performer-${i}`}>
+                          <div key={i} className="flex items-center justify-between gap-2" data-testid={`row-top-performer-${i}`}>
                             <div className="flex items-center gap-3">
                               <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary font-medium text-sm">
                                 {i + 1}
@@ -746,7 +765,7 @@ export default function OwnerAnalytics() {
                     {data.topFeatures.map((feature, i) => (
                       <div key={i} className="flex items-center gap-4" data-testid={`row-feature-${i}`}>
                         <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center justify-between gap-2 mb-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{feature.featureKey}</span>
                               <Badge variant="outline" className="text-xs">{feature.featureCategory}</Badge>
@@ -912,6 +931,7 @@ export default function OwnerAnalytics() {
                       <CardDescription>Side-by-side Platform vs QuickBooks hours by client</CardDescription>
                     </CardHeader>
                     <CardContent>
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -954,6 +974,7 @@ export default function OwnerAnalytics() {
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -1013,6 +1034,6 @@ export default function OwnerAnalytics() {
           </TabsContent>
         </Tabs>
       </div>
-    </WorkspaceLayout>
+    </CanvasHubPage>
   );
 }

@@ -132,7 +132,7 @@ export function DocumentExtractionUpload() {
           <CardContent>
             <div className="space-y-2">
               {Object.entries(results.extractedFields).map(([key, value]) => (
-                <div key={key} className="flex justify-between text-sm">
+                <div key={key} className="flex justify-between gap-2 text-sm">
                   <span className="font-medium">{key}:</span>
                   <span className="text-muted-foreground">{String(value)}</span>
                 </div>

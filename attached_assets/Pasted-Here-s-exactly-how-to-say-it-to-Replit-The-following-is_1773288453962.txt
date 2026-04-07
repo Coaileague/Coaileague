@@ -1,0 +1,38 @@
+Here's exactly how to say it to Replit:
+
+---
+
+The following issues were discovered during the last audit pass. Add all of them permanently to the master audit protocol so every future pass checks for them automatically. Do not just fix them this session — bake them into the standing architecture standards.
+
+**Add to Phase 0 — Single Source of Truth:**
+- Scan for duplicate Action Hub registrations across ALL files. Any Trinity action registered in more than one file is a Single Source of Truth violation. The canonical registration location is the Action Hub only — any duplicate in orchestrator files, platform action files, or scheduling files must be removed from the secondary location and consolidated. Known duplicates found and fixed this session — verify they stay fixed on every future pass:
+- scheduling.detect_conflicts was registered in both aiBrainMasterOrchestrator.ts AND trinitySchedulingPlatformActions.ts
+- scheduling.publish_shifts was registered in both platformActionHub.ts AND trinitySchedulingPlatformActions.ts
+- On every audit pass scan all files for duplicate action string registrations and flag any found as critical violations
+
+**Add to Phase 3B — Widget Data Integrity:**
+- Verify payroll seed data exists for all Acme test users for the current pay period — Marcus and all other test employees must have realistic payroll records seeded so earnings widgets have data to calculate against
+- After any app restart trigger dev seed automatically to ensure test data is never lost between sessions
+- Verify payroll record status values match exactly what the schema accepts — invalid status strings silently break payroll queries without throwing errors
+
+**Add to Phase 6 — Trinity AI Verification:**
+- On every pass verify zero duplicate action registrations in Trinity's Action Hub
+- circuitBreaker.ts must exist in the resilience directory — missing file breaks domain health monitoring
+- After every fix verify domain health count — current baseline is 12/15 healthy domains, target is 15/15
+- Identify and resolve the 3 remaining partial domains from current session — do not close this phase until 15/15 domains report healthy
+- App restart logs must show zero duplicate WARN messages for any Trinity action registration — any WARN is a flag
+
+**Add to Execution Rules:**
+- After every app restart check domain health score and log it — any regression from previous score is a blocker
+- Dev seed must be triggered after every restart to ensure test data integrity
+- Never consider a Trinity fix complete until restart logs confirm clean registration with zero duplicate warnings
+
+---
+
+Then add this line to your Success Criteria:
+
+- 15/15 Trinity domains healthy with zero duplicate action registrations and zero missing resilience files
+
+---
+
+That keeps the master prompt living and growing with every real issue found so nothing gets rediscovered from scratch next pass.

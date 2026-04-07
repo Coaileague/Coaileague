@@ -4,11 +4,18 @@
  * Integrates with AI Brain for automated workspace validation
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response } from 'express';
-import { type AuthenticatedRequest, attachWorkspaceId } from '../rbac';
+import { type AuthenticatedRequest, attachWorkspaceId, hasPlatformWideAccess, requirePlatformStaff } from '../rbac';
 import { orgOnboardingAssistant } from '../services/ai-brain/orgOnboardingAssistant';
+import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('OnboardingAssistantRoutes');
+
 
 export const onboardingAssistantRouter = Router();
+
+onboardingAssistantRouter.use(requireAuth);
 
 /**
  * GET /api/onboarding-assistant/diagnostics
@@ -31,17 +38,17 @@ onboardingAssistantRouter.get('/diagnostics', attachWorkspaceId, async (req: Aut
       success: true,
       report,
     });
-  } catch (error: any) {
-    console.error('[OnboardingAssistant] Diagnostics error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OnboardingAssistant] Diagnostics error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 /**
  * GET /api/onboarding-assistant/diagnostics/:workspaceId
- * Run diagnostics for a specific workspace (admin access)
+ * Run diagnostics for a specific workspace (platform admin access only)
  */
-onboardingAssistantRouter.get('/diagnostics/:workspaceId', async (req: AuthenticatedRequest, res: Response) => {
+onboardingAssistantRouter.get('/diagnostics/:workspaceId', requirePlatformStaff, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { workspaceId } = req.params;
     
@@ -55,9 +62,9 @@ onboardingAssistantRouter.get('/diagnostics/:workspaceId', async (req: Authentic
       success: true,
       report,
     });
-  } catch (error: any) {
-    console.error('[OnboardingAssistant] Diagnostics error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OnboardingAssistant] Diagnostics error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -90,9 +97,9 @@ onboardingAssistantRouter.post('/auto-fix', attachWorkspaceId, async (req: Authe
       success: true,
       result,
     });
-  } catch (error: any) {
-    console.error('[OnboardingAssistant] Auto-fix error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OnboardingAssistant] Auto-fix error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -117,9 +124,9 @@ onboardingAssistantRouter.get('/routing-config', attachWorkspaceId, async (req: 
       success: true,
       config,
     });
-  } catch (error: any) {
-    console.error('[OnboardingAssistant] Routing config error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OnboardingAssistant] Routing config error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -144,8 +151,8 @@ onboardingAssistantRouter.get('/validate-routing', attachWorkspaceId, async (req
       success: true,
       validation,
     });
-  } catch (error: any) {
-    console.error('[OnboardingAssistant] Routing validation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OnboardingAssistant] Routing validation error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });

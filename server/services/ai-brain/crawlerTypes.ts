@@ -1,3 +1,6 @@
+import { createLogger } from '../../lib/logger';
+const log = createLogger('crawlerTypes');
+
 /**
  * CoAIleague Comprehensive Site Crawler & Diagnostic System
  * =========================================================

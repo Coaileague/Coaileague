@@ -42,7 +42,7 @@ export function useNavigation() {
   }, [setLocation]);
 
   const navigateToChat = useCallback(() => {
-    setLocation(navConfig.app.chat);
+    setLocation(navConfig.app.chatrooms);
   }, [setLocation]);
 
   const canNavigate = useCallback((path: string) => {

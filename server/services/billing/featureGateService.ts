@@ -1,19 +1,22 @@
+import { createLogger } from '../../lib/logger';
 import { db } from '../../db';
-import { 
-  workspaceFeatureStates,
+import {
   workspaces,
   organizationOnboarding,
   users,
   supportSessionElevations,
+  workspaceUsageTracking,
   type WorkspaceFeatureState
 } from '@shared/schema';
 import { eq, and, gt, sql, or } from 'drizzle-orm';
-import { creditsLedgerService } from './creditsLedgerService';
+import { creditManager, CREDIT_COSTS } from './creditManager';
 import { platformEventBus } from '../platformEventBus';
 import { BILLING, TierKey } from '@shared/billingConfig';
-
-const SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+import { SUPPORT_ROLES } from '@shared/platformConfig';
+import { typedExec } from '../../lib/typedSql';
+import { cacheManager } from '../platform/cacheManager';
 const AI_SERVICE_IDS = ['trinity', 'helpai', 'bot', 'subagent'];
+const log = createLogger('featureGateService');
 
 // Tier-based feature key mapping to featureMatrix keys
 const FEATURE_TO_MATRIX_KEY: Record<string, keyof typeof BILLING.featureMatrix> = {
@@ -247,9 +250,17 @@ class FeatureGateService {
     userId: string,
     sessionId?: string
   ): Promise<FeatureGateResult> {
+    if (process.env.NODE_ENV === 'development') {
+      const devBypass = await this.checkDevelopmentBypass(workspaceId);
+      if (devBypass) {
+        log.info(`[FeatureGate] Development mode bypass for workspace ${workspaceId} using ${featureKey}`);
+        return { allowed: true, reason: 'development_mode_bypass' };
+      }
+    }
+    
     const isSupportBypass = await this.checkSupportRoleBypass(userId, sessionId);
     if (isSupportBypass) {
-      console.log(`[FeatureGate] Support role bypass for ${userId} using ${featureKey}`);
+      log.info(`[FeatureGate] Support role bypass for ${userId} using ${featureKey}`);
       return { allowed: true, reason: 'support_role_bypass' };
     }
 
@@ -257,14 +268,14 @@ class FeatureGateService {
     if (isAiService) {
       const hasElevation = await this.checkElevatedSession(userId, sessionId);
       if (hasElevation) {
-        console.log(`[FeatureGate] AI service bypass for ${userId} using ${featureKey}`);
+        log.info(`[FeatureGate] AI service bypass for ${userId} using ${featureKey}`);
         return { allowed: true, reason: 'ai_service_bypass' };
       }
     }
 
     const featureDef = FEATURE_DEFINITIONS[featureKey];
     if (!featureDef) {
-      console.log(`[FeatureGate] Unknown feature ${featureKey}, allowing by default`);
+      log.info(`[FeatureGate] Unknown feature ${featureKey}, allowing by default`);
       return { allowed: true };
     }
 
@@ -302,30 +313,53 @@ class FeatureGateService {
       }
     }
 
-    // All features in this system consume credits per use
-    if (featureDef.creditsPerUse > 0) {
-      const creditsNeeded = await creditsLedgerService.getActionCreditCost(
-        featureKey,
-        workspace.subscriptionTier || 'free'
-      ) || featureDef.creditsPerUse;
+    // ── Interaction Limit Check (replaces credit system) ──────────────────
+    // Checks the workspace's monthly interaction count against the tier hard cap.
+    // Critical operations (panic alerts, incidents, compliance) are NEVER blocked.
+    // Non-critical autonomous work is allowed up to the hard cap, then queued.
+    // This is a non-blocking check — the platform records usage and flags overages
+    // rather than hard-stopping the request. Billing for overages is line-item.
+    const criticalFeatures = new Set([
+      'panic_alert', 'incident_report', 'compliance_check', 'payroll_run',
+      'timesheet_approval', 'officer_alert', 'emergency_dispatch',
+    ]);
 
-      const hasCredits = await creditsLedgerService.hasEnoughCredits(workspaceId, creditsNeeded);
-      
-      if (!hasCredits) {
-        const balance = await creditsLedgerService.getBalance(workspaceId);
-        return {
-          allowed: false,
-          reason: `Insufficient credits. Need ${creditsNeeded}, have ${balance}`,
-          requiredAction: 'purchase_credits',
-          creditsRequired: creditsNeeded,
-          currentBalance: balance
+    if (!criticalFeatures.has(featureKey)) {
+      try {
+        const TIER_HARD_CAPS: Record<string, number | null> = {
+          trial: 500, starter: 15000, professional: 50000, business: 150000, enterprise: null, strategic: null,
         };
+        const tier = (workspace.subscriptionTier || 'trial') as string;
+        const hardCap = TIER_HARD_CAPS[tier] ?? null;
+
+        if (hardCap !== null) {
+          const usageRows = await db.select({ count: workspaceUsageTracking.interactionsUsedCurrentPeriod })
+            .from(workspaceUsageTracking)
+            .where(eq(workspaceUsageTracking.workspaceId, workspaceId))
+            .limit(1);
+          const currentUsage = usageRows[0]?.count ?? 0;
+
+          if ((currentUsage ?? 0) >= hardCap) {
+            log.warn(`[FeatureGate] Hard cap reached for workspace ${workspaceId}: ${currentUsage}/${hardCap}`);
+          }
+          // NOTE: We do NOT return allowed: false here. Overages are billed as line-items.
+          // The platform flags the workspace for billing review but does not block requests.
+        }
+      } catch (usageErr: any) {
+        // Usage check failure is non-fatal — allow the request, log the error
+        log.warn('[FeatureGate] Usage check failed (non-fatal):', usageErr?.message);
       }
     }
 
     return { allowed: true };
   }
 
+  /**
+   * Records an AI interaction in workspace_usage_tracking.
+   * Previously deducted credits — now just records usage for billing/analytics.
+   * Critical features bypass this entirely. Overages are billed as line-items,
+   * never as hard blocks.
+   */
   async consumeCreditsForFeature(
     featureKey: string,
     workspaceId: string,
@@ -334,54 +368,50 @@ class FeatureGateService {
     actionId?: string
   ): Promise<{ success: boolean; creditsUsed: number; error?: string }> {
     const gateResult = await this.canUseFeature(featureKey, workspaceId, userId, sessionId);
-    
+
     if (!gateResult.allowed) {
-      return {
-        success: false,
-        creditsUsed: 0,
-        error: gateResult.reason
-      };
+      return { success: false, creditsUsed: 0, error: gateResult.reason };
     }
 
-    if (gateResult.reason === 'support_role_bypass' || gateResult.reason === 'ai_service_bypass') {
-      console.log(`[FeatureGate] Bypass active, no credits consumed for ${featureKey}`);
+    // Bypass roles do not generate usage records
+    if (
+      gateResult.reason === 'support_role_bypass' ||
+      gateResult.reason === 'ai_service_bypass' ||
+      gateResult.reason === 'development_mode_bypass'
+    ) {
       return { success: true, creditsUsed: 0 };
     }
 
-    const featureDef = FEATURE_DEFINITIONS[featureKey];
-    if (!featureDef || featureDef.creditsPerUse <= 0) {
-      return { success: true, creditsUsed: 0 };
+    // Record the interaction asynchronously — never block on this
+    // Upserts to workspace_usage_tracking aggregate row (per-workspace monthly counters)
+    try {
+      // Converted to Drizzle ORM: CASE WHEN → sql fragment
+      await db.insert(workspaceUsageTracking).values({
+        workspaceId,
+        interactionsUsedCurrentPeriod: 1,
+        interactionsRemaining: 499,
+        lastUpdated: sql`now()`
+      }).onConflictDoUpdate({
+        target: workspaceUsageTracking.workspaceId,
+        set: {
+          interactionsUsedCurrentPeriod: sql`${workspaceUsageTracking.interactionsUsedCurrentPeriod} + 1`,
+          interactionsRemaining: sql`greatest(0, ${workspaceUsageTracking.interactionsRemaining} - 1)`,
+          overageInteractions: sql`
+            case
+              when ${workspaceUsageTracking.interactionsRemaining} <= 0
+              then ${workspaceUsageTracking.overageInteractions} + 1
+              else ${workspaceUsageTracking.overageInteractions}
+            end
+          `,
+          lastUpdated: sql`now()`
+        }
+      });
+    } catch (trackErr: any) {
+      // Non-fatal — usage tracking failure must never deny service
+      log.warn('[FeatureGate] Usage recording failed (non-fatal):', trackErr?.message);
     }
 
-    const [workspace] = await db.select().from(workspaces)
-      .where(eq(workspaces.id, workspaceId))
-      .limit(1);
-
-    const creditsNeeded = await creditsLedgerService.getActionCreditCost(
-      featureKey,
-      workspace?.subscriptionTier || 'free'
-    ) || featureDef.creditsPerUse;
-
-    const deductResult = await creditsLedgerService.deductCredits(
-      workspaceId,
-      creditsNeeded,
-      featureKey,
-      userId,
-      actionId
-    );
-
-    if (!deductResult.success) {
-      return {
-        success: false,
-        creditsUsed: 0,
-        error: deductResult.error
-      };
-    }
-
-    return {
-      success: true,
-      creditsUsed: deductResult.creditsDeducted
-    };
+    return { success: true, creditsUsed: 0 };
   }
 
   private async checkSupportRoleBypass(userId: string, sessionId?: string): Promise<boolean> {
@@ -429,6 +459,17 @@ class FeatureGateService {
     return !!elevation;
   }
 
+  /**
+   * Development mode bypass - allows all features for testing in development environment
+   * This checks if the workspace has DEV_BYPASS enabled or if we're in development mode
+   */
+  private async checkDevelopmentBypass(workspaceId: string): Promise<boolean> {
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+    return false;
+  }
+
   private async checkOnboardingComplete(workspaceId: string): Promise<{ complete: boolean; progress: number }> {
     const [onboarding] = await db.select().from(organizationOnboarding)
       .where(eq(organizationOnboarding.workspaceId, workspaceId))
@@ -460,7 +501,7 @@ class FeatureGateService {
   }
 
   private checkTierRequirement(currentTier: string, requiredTier: string): { allowed: boolean } {
-    const tierHierarchy = ['free', 'starter', 'professional', 'enterprise'];
+    const tierHierarchy = ['trial', 'free', 'starter', 'professional', 'business', 'enterprise', 'strategic'];
     const currentIndex = tierHierarchy.indexOf(currentTier.toLowerCase());
     const requiredIndex = tierHierarchy.indexOf(requiredTier.toLowerCase());
 
@@ -502,7 +543,7 @@ class FeatureGateService {
       return { allowed: true };
     } else if (access === false) {
       // Find the minimum tier that allows this feature
-      const tierHierarchy: TierKey[] = ['free', 'starter', 'professional', 'enterprise'];
+      const tierHierarchy: TierKey[] = ['free', 'trial', 'starter', 'professional', 'business', 'enterprise', 'strategic' as TierKey];
       const requiredTier = tierHierarchy.find(t => featureAccess[t] === true);
       return { allowed: false, requiredTier: requiredTier || 'professional' };
     } else if (access === 'addon') {
@@ -544,45 +585,77 @@ class FeatureGateService {
   async checkCreditLimits(
     workspaceId: string,
     creditsNeeded: number
-  ): Promise<{ allowed: boolean; reason?: string; action?: 'purchase_credits' | 'upgrade_tier' }> {
+  ): Promise<{ allowed: boolean; reason?: string; action?: 'purchase_credits' | 'upgrade_tier'; code?: string }> {
     const [workspace] = await db.select().from(workspaces)
       .where(eq(workspaces.id, workspaceId))
       .limit(1);
 
     if (!workspace) {
-      return { allowed: false, reason: 'Workspace not found' };
+      return { allowed: false, reason: 'Workspace not found', code: 'WORKSPACE_NOT_FOUND' };
     }
 
     const tier = (workspace.subscriptionTier || 'free') as TierKey;
     const tierConfig = BILLING.tiers[tier];
-    const balance = await creditsLedgerService.getBalance(workspaceId);
+    const balance = await creditManager.getBalance(workspaceId);
 
-    // Check if user has enough credits
+    // Hard stop: insufficient credits — block execution, notify owner, return structured error
     if (balance < creditsNeeded) {
-      // Check if tier allows overage
       const allowsOverage = tierConfig.allowCreditOverage;
       
       if (!allowsOverage) {
-        // Free and Starter tiers cannot have overage
+        // Notify org owner of depleted credits — fire-and-forget
+        import('../notificationService').then(async ({ createNotification }) => {
+          const { db } = await import('../../db');
+          const { workspaces } = await import('@shared/schema');
+          const { eq } = await import('drizzle-orm');
+          const [ws] = await db.select({ ownerId: workspaces.ownerId }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+          if (!ws?.ownerId) { log.warn('[FeatureGate] No owner found for workspace', workspaceId); return; }
+          createNotification({
+            workspaceId,
+            userId: ws.ownerId,
+            title: 'AI Credits Depleted',
+            message: balance <= 0
+              ? `Your workspace has zero AI credits remaining. AI features are paused until credits are replenished.`
+              : `Your workspace has insufficient credits (${balance} remaining, ${creditsNeeded} needed). AI features are paused.`,
+            type: 'error',
+            category: 'billing',
+            priority: 'high',
+            actionUrl: '/billing',
+          }).catch((notifErr: Error) => {
+            log.warn('[FeatureGate] Failed to send credit-depleted notification:', notifErr?.message);
+          });
+        }).catch((importErr: Error) => {
+          log.warn('[FeatureGate] Failed to import notificationService for credit alert:', importErr?.message);
+        });
+
         if (tier === 'free') {
           return {
             allowed: false,
+            code: 'INSUFFICIENT_CREDITS',
             reason: 'Trial credits exhausted. Upgrade to continue using AI features.',
-            action: 'upgrade_tier'
+            action: 'upgrade_tier',
           };
         } else if (tier === 'starter') {
           return {
             allowed: false,
+            code: 'INSUFFICIENT_CREDITS',
             reason: 'Monthly credits exhausted. Upgrade to Professional or purchase AI credit pack.',
-            action: 'purchase_credits'
+            action: 'purchase_credits',
+          };
+        } else {
+          // Non-overage tier with depleted balance
+          return {
+            allowed: false,
+            code: 'INSUFFICIENT_CREDITS',
+            reason: `Credits exhausted (balance: ${balance}, required: ${creditsNeeded}). Please purchase additional credits.`,
+            action: 'purchase_credits',
           };
         }
       }
       
       // Professional tier can auto-charge for overage
       if (tier === 'professional' && allowsOverage) {
-        // Allow but flag for auto-charge
-        console.log(`[FeatureGate] Professional tier credit overage for workspace ${workspaceId}`);
+        log.info(`[FeatureGate] Professional tier credit overage for workspace ${workspaceId}`);
       }
     }
 
@@ -615,8 +688,17 @@ class FeatureGateService {
     const tierConfig = BILLING.tiers[tier];
     const limit = tierConfig.maxEmployees;
 
-    // Get actual employee count if not provided
-    const currentCount = employeeCount ?? 0; // Would need to query employees table
+    let currentCount = employeeCount ?? 0;
+    if (employeeCount === undefined) {
+      const { employees } = await import('@shared/schema');
+      const [countResult] = await db.select({ count: sql<number>`count(*)::int` })
+        .from(employees)
+        .where(and(
+          eq(employees.workspaceId, workspaceId),
+          eq(employees.isActive, true)
+        ));
+      currentCount = countResult?.count || 0;
+    }
 
     const overage = Math.max(0, currentCount - limit);
     const overageRate = BILLING.overages[tier as keyof typeof BILLING.overages] || 0;
@@ -644,14 +726,9 @@ class FeatureGateService {
   }
 
   private async getFeatureState(workspaceId: string, featureKey: string): Promise<WorkspaceFeatureState | null> {
-    const [state] = await db.select().from(workspaceFeatureStates)
-      .where(and(
-        eq(workspaceFeatureStates.workspaceId, workspaceId),
-        eq(workspaceFeatureStates.featureKey, featureKey)
-      ))
-      .limit(1);
-
-    return state || null;
+    // Phase 39 — use CacheManager blob cache (2min TTL) to avoid per-check DB round-trip
+    const states = await cacheManager.getWorkspaceFeatureBlob(workspaceId);
+    return states[featureKey] ? { ...states[featureKey], workspaceId, featureKey } as WorkspaceFeatureState : null;
   }
 
   async unlockFeature(
@@ -662,39 +739,29 @@ class FeatureGateService {
     expiresAt?: Date
   ): Promise<boolean> {
     try {
-      const existingState = await this.getFeatureState(workspaceId, featureKey);
       const featureDef = FEATURE_DEFINITIONS[featureKey];
+      const [ws] = await db.select({ blob: workspaces.featureStatesBlob })
+        .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      const states = ((ws?.blob || {}) as Record<string, any>);
+      states[featureKey] = {
+        ...(states[featureKey] || {}),
+        isUnlocked: true,
+        unlockMethod,
+        unlockedAt: new Date().toISOString(),
+        unlockedBy: userId,
+        expiresAt: expiresAt?.toISOString() || null,
+        featureCategory: featureDef?.category || 'ai_brain',
+        creditsPerUse: featureDef?.creditsPerUse ?? 1,
+        showLockIcon: false,
+      };
+      await db.update(workspaces)
+        .set({ featureStatesBlob: states })
+        .where(eq(workspaces.id, workspaceId));
 
-      if (existingState) {
-        await db.update(workspaceFeatureStates)
-          .set({
-            isUnlocked: true,
-            unlockMethod,
-            unlockedAt: new Date(),
-            unlockedBy: userId,
-            expiresAt,
-            updatedAt: new Date()
-          })
-          .where(eq(workspaceFeatureStates.id, existingState.id));
-      } else {
-        await db.insert(workspaceFeatureStates).values({
-          workspaceId,
-          featureKey,
-          featureCategory: featureDef?.category || 'ai_brain',
-          isUnlocked: true,
-          unlockMethod,
-          unlockedAt: new Date(),
-          unlockedBy: userId,
-          expiresAt,
-          requiresCredits: true, // All features in this system consume credits
-          creditsPerUse: featureDef?.creditsPerUse ?? 1,
-          requiredTier: null, // Credits are separate from subscription tiers
-          showLockIcon: false,
-          lockMessage: featureDef?.lockMessage
-        });
-      }
+      // Phase 39 — invalidate feature blob cache so next check fetches fresh state
+      cacheManager.invalidateFeatureBlob(workspaceId);
 
-      console.log(`[FeatureGate] Unlocked feature ${featureKey} for workspace ${workspaceId} via ${unlockMethod}`);
+      log.info(`[FeatureGate] Unlocked feature ${featureKey} for workspace ${workspaceId} via ${unlockMethod}`);
 
       platformEventBus.publish({
         type: 'feature_released',
@@ -702,11 +769,13 @@ class FeatureGateService {
         title: 'Feature Unlocked',
         description: `Feature ${featureKey} has been unlocked`,
         metadata: { workspaceId, featureKey, unlockMethod }
+      }).catch((busErr: Error) => {
+        log.warn('[FeatureGate] Failed to publish feature_released event:', busErr?.message);
       });
 
       return true;
     } catch (error) {
-      console.error('[FeatureGate] Error unlocking feature:', error);
+      log.error('[FeatureGate] Error unlocking feature:', error);
       return false;
     }
   }
@@ -714,31 +783,32 @@ class FeatureGateService {
   async lockFeature(workspaceId: string, featureKey: string, reason?: string): Promise<boolean> {
     try {
       const existingState = await this.getFeatureState(workspaceId, featureKey);
-
       if (existingState) {
-        await db.update(workspaceFeatureStates)
-          .set({
-            isUnlocked: false,
-            showLockIcon: true,
-            lockMessage: reason,
-            updatedAt: new Date()
-          })
-          .where(eq(workspaceFeatureStates.id, existingState.id));
-
-        console.log(`[FeatureGate] Locked feature ${featureKey} for workspace ${workspaceId}`);
+        // Re-read directly from DB to get fresh data for the write (bypass cache for write path)
+        const [ws] = await db.select({ blob: workspaces.featureStatesBlob })
+          .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        const states = ((ws?.blob || {}) as Record<string, any>);
+        states[featureKey] = { ...(states[featureKey] || {}), isUnlocked: false, showLockIcon: true, lockMessage: reason };
+        await db.update(workspaces).set({ featureStatesBlob: states }).where(eq(workspaces.id, workspaceId));
+        // Phase 39 — invalidate feature blob cache after lock
+        cacheManager.invalidateFeatureBlob(workspaceId);
+        log.info(`[FeatureGate] Locked feature ${featureKey} for workspace ${workspaceId}`);
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('[FeatureGate] Error locking feature:', error);
+      log.error('[FeatureGate] Error locking feature:', error);
       return false;
     }
   }
 
   async getWorkspaceFeatureStates(workspaceId: string): Promise<WorkspaceFeatureState[]> {
-    return db.select().from(workspaceFeatureStates)
-      .where(eq(workspaceFeatureStates.workspaceId, workspaceId));
+    // Phase 39 — use cache blob (2 min TTL) instead of direct DB query
+    const states = await cacheManager.getWorkspaceFeatureBlob(workspaceId);
+    return Object.entries(states).map(([key, val]: [string, any]) => ({
+      ...val, workspaceId, featureKey: key
+    })) as WorkspaceFeatureState[];
   }
 
   async unlockAllFeaturesForOnboarding(workspaceId: string, userId: string): Promise<void> {
@@ -760,7 +830,7 @@ class FeatureGateService {
       })
       .where(eq(organizationOnboarding.workspaceId, workspaceId));
 
-    console.log(`[FeatureGate] Unlocked all onboarding-gated features for workspace ${workspaceId}`);
+    log.info(`[FeatureGate] Unlocked all onboarding-gated features for workspace ${workspaceId}`);
   }
 
   getFeatureDefinitions(): Record<string, FeatureDefinition> {

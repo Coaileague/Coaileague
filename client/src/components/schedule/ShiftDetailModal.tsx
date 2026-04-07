@@ -32,12 +32,12 @@ interface ShiftDetailModalProps {
 type ShiftStatus = 'scheduled' | 'pending' | 'conflict' | 'published' | 'completed' | 'draft';
 
 const STATUS_CONFIG: Record<ShiftStatus, { label: string; color: string; dotColor: string }> = {
-  scheduled: { label: 'Scheduled', color: 'bg-green-500/10 text-green-700 border-green-500/30', dotColor: 'text-green-500' },
-  pending: { label: 'Pending', color: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', dotColor: 'text-yellow-500' },
-  conflict: { label: 'Conflict', color: 'bg-red-500/10 text-red-700 border-red-500/30', dotColor: 'text-red-500' },
-  published: { label: 'Published', color: 'bg-blue-500/10 text-blue-700 border-blue-500/30', dotColor: 'text-blue-500' },
-  completed: { label: 'Completed', color: 'bg-gray-500/10 text-gray-600 border-gray-500/30', dotColor: 'text-gray-400' },
-  draft: { label: 'Draft', color: 'bg-purple-500/10 text-purple-700 border-purple-500/30', dotColor: 'text-purple-500' },
+  scheduled: { label: 'Scheduled', color: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/30', dotColor: 'text-green-500' },
+  pending: { label: 'Pending', color: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30', dotColor: 'text-yellow-500' },
+  conflict: { label: 'Conflict', color: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30', dotColor: 'text-red-500' },
+  published: { label: 'Published', color: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30', dotColor: 'text-blue-500' },
+  completed: { label: 'Completed', color: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/30', dotColor: 'text-gray-400' },
+  draft: { label: 'Draft', color: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30', dotColor: 'text-purple-500' },
 };
 
 function getShiftStatus(shift: Shift): ShiftStatus {
@@ -95,104 +95,110 @@ export function ShiftDetailModal({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent 
-        className="max-h-[70vh] rounded-t-2xl"
+        className="max-h-[75vh]"
         data-testid="shift-detail-modal"
       >
-        <DrawerHeader className="flex items-center justify-between border-b pb-4">
-          <DrawerTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            Shift Details
-            {isAiGenerated && (
-              <Badge variant="secondary" className="ml-2 text-xs">
-                <Sparkles className="h-3 w-3 mr-1 text-amber-500" />
-                Trinity Optimized
-              </Badge>
-            )}
-          </DrawerTitle>
-          <DrawerClose asChild>
-            <Button variant="ghost" size="icon">
-              <X className="h-4 w-4" />
-            </Button>
-          </DrawerClose>
+        <DrawerHeader className="flex items-center justify-between gap-2 pb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10 shrink-0">
+              <Calendar className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <DrawerTitle className="flex items-center gap-2 flex-wrap">
+                Shift Details
+                {isAiGenerated && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Sparkles className="h-3 w-3 mr-1 text-amber-500" />
+                    Trinity
+                  </Badge>
+                )}
+              </DrawerTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {format(startTime, 'EEEE, MMM d, yyyy')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant="outline"
+              className={cn("text-xs font-medium flex items-center gap-1 shrink-0", statusConfig.color)}
+            >
+              <Circle className={cn("h-2 w-2 fill-current", statusConfig.dotColor)} />
+              {statusConfig.label}
+            </Badge>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close details">
+                <X className="h-4 w-4" />
+              </Button>
+            </DrawerClose>
+          </div>
         </DrawerHeader>
 
-        <div className="p-6 space-y-6">
-          {/* Employee Info */}
+        <div data-vaul-no-drag className="px-4 pb-4 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0 [touch-action:pan-y] [-webkit-overflow-scrolling:touch]">
           {employee && (
-            <div className="flex items-center gap-4">
-              <Avatar className="h-14 w-14 border-2 border-border">
+            <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+              <Avatar className="h-11 w-11 border border-border shrink-0">
                 <AvatarImage src={(employee as any).photoUrl || (employee as any).avatarUrl} alt={employee.firstName || ''} />
-                <AvatarFallback className="bg-primary/10 text-primary text-lg font-medium">
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <div className="font-semibold text-lg">
+              <div className="min-w-0">
+                <div className="font-semibold text-sm">
                   {employee.firstName} {employee.lastName}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {(employee as any).jobTitle || (employee as any).position || 'Employee'}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Shift Details */}
-          <div className="space-y-3 bg-muted/30 rounded-lg p-4">
-            <div className="flex items-center gap-3 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-medium">{clientName}</span>
-              {siteName && <span className="text-muted-foreground">- {siteName}</span>}
-            </div>
-            
-            <div className="flex items-center gap-3 text-sm">
+          <div className="rounded-lg border border-border/50 divide-y divide-border/30">
+            <div className="flex items-center gap-3 text-sm p-3">
               <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-medium">
-                {format(startTime, 'h:mm a')} - {format(endTime, 'h:mm a')}
-              </span>
-              <span className="text-muted-foreground">({duration})</span>
+              <div className="flex-1">
+                <span className="font-medium">
+                  {format(startTime, 'h:mm a')} - {format(endTime, 'h:mm a')}
+                </span>
+                <span className="text-muted-foreground ml-2">({duration})</span>
+              </div>
             </div>
             
-            {payRate > 0 && (
-              <div className="flex items-center gap-3 text-sm">
-                <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="font-medium">${payRate}/hr</span>
-                <span className="text-muted-foreground">= ${totalPay.toFixed(2)}</span>
+            <div className="flex items-center gap-3 text-sm p-3">
+              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <div>
+                <span className="font-medium">{clientName}</span>
+                {siteName && <span className="text-muted-foreground ml-1">- {siteName}</span>}
               </div>
-            )}
+            </div>
             
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-3 text-sm p-3">
               <Shield className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span>{formatRoleDisplay((shift as any).positionType || (shift as any).role || 'Security Officer')}</span>
             </div>
+
+            {payRate > 0 && (
+              <div className="flex items-center gap-3 text-sm p-3">
+                <DollarSign className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                <span className="font-medium">${payRate}/hr</span>
+                <span className="text-muted-foreground">= ${totalPay.toFixed(2)} total</span>
+              </div>
+            )}
           </div>
 
-          {/* Status Badge */}
-          <div className="flex items-center gap-2" data-testid="shift-status-badge">
-            <span className="text-sm text-muted-foreground">Status:</span>
-            <Badge 
-              variant="outline"
-              className={cn("text-xs font-medium flex items-center gap-1", statusConfig.color)}
-            >
-              <Circle className={cn("h-2 w-2 fill-current", statusConfig.dotColor)} />
-              {statusConfig.label}
-            </Badge>
-          </div>
-
-          {/* Action Buttons */}
           {canEdit && (
-            <div className="grid grid-cols-2 gap-3 pt-4 border-t">
+            <div className="grid grid-cols-2 gap-2 pt-2">
               <Button 
                 variant="outline"
                 onClick={() => {
                   onEdit(shift);
                   onOpenChange(false);
                 }}
-                className="h-12"
                 data-testid="button-edit-shift"
               >
                 <Edit className="h-4 w-4 mr-2" />
-                Edit Shift
+                Edit
               </Button>
               
               <Button 
@@ -201,7 +207,6 @@ export function ShiftDetailModal({
                   onSwap(shift);
                   onOpenChange(false);
                 }}
-                className="h-12"
                 data-testid="button-swap-shift"
               >
                 <ArrowRightLeft className="h-4 w-4 mr-2" />
@@ -214,7 +219,6 @@ export function ShiftDetailModal({
                   onDuplicate(shift);
                   onOpenChange(false);
                 }}
-                className="h-12"
                 data-testid="button-duplicate-shift"
               >
                 <Copy className="h-4 w-4 mr-2" />
@@ -227,7 +231,6 @@ export function ShiftDetailModal({
                   onCancel(shift);
                   onOpenChange(false);
                 }}
-                className="h-12"
                 data-testid="button-cancel-shift"
               >
                 <Trash2 className="h-4 w-4 mr-2" />

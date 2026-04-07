@@ -186,6 +186,7 @@ export async function createCalendarEvent(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
     {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -212,6 +213,7 @@ export async function updateCalendarEvent(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
     {
       method: 'PATCH',
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -237,6 +239,7 @@ export async function deleteCalendarEvent(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
     {
       method: 'DELETE',
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -272,6 +275,7 @@ export async function listCalendarEvents(
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`,
     {
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -366,7 +370,7 @@ export async function syncShiftsToGoogleCalendar(
       }
     } catch (error: any) {
       result.failed++;
-      result.errors.push(`Shift ${shift.id}: ${error.message}`);
+      result.errors.push(`Shift ${shift.id}: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
 

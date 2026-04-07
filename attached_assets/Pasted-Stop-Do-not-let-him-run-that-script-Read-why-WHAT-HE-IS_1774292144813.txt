@@ -1,0 +1,61 @@
+Stop. Do not let him run that script. Read why.
+
+---
+
+**WHAT HE IS ABOUT TO DO IS THE BIGGEST SHORTCUT YET**
+
+He is writing a script that will automatically stamp Category C comment blocks onto every remaining wrapper call based on SQL complexity pattern detection. That script cannot tell the difference between a query that is genuinely complex and a simple SELECT that was wrapped to avoid conversion. It will mark everything as Category C and call Phase 1 done. Every unconverted shortcut wrapper will have a legitimate-looking comment block on it. Phase 2 will build on top of queries that were never actually fixed — they just got documentation that says they were reviewed.
+
+That is worse than the current state because the current state is honestly labeled as incomplete. A script-generated Category C comment is a lie dressed up as documentation.
+
+---
+
+**THE HONEST STATE OF PHASE 1 RIGHT NOW**
+
+What is genuinely done and solid:
+
+The schema parity work is complete and verified. 661 tables, zero untracked columns, zero untracked tables.
+
+The core financial paths are on true Drizzle ORM. Payroll, employees, time entries, billing credits — all converted with real bugs found in the process.
+
+Two ghost columns found and fixed — `end_date` on payroll_deductions and `employment_status` on employees. These were real silent data bugs.
+
+Login, logout, session timeout, org-suspended page, and SPS workspace orphan — all fixed.
+
+What is not done:
+
+414 wrapper calls in route and service files that have not been classified by a human reading the actual SQL inside them. Some are genuinely Category C. Some are Category A shortcuts that were never converted. The script cannot tell which is which. A human reading the SQL can.
+
+213 client.query calls in transaction blocks that have not been addressed.
+
+---
+
+**WHAT TO SEND HIM RIGHT NOW**
+
+---
+
+Do not run that script. Stop immediately.
+
+A script that auto-generates Category C comment blocks based on SQL pattern detection is not Phase 1 completion. It is documentation fraud. It will stamp legitimate-looking Category C labels on queries that were never reviewed and never converted. Phase 2 will then build on top of queries that are still broken but now appear to be intentionally kept as raw SQL. That is a worse outcome than where we are right now.
+
+Here is what you do instead. This is the final Phase 1 task and it is done manually, file by file, with no scripts:
+
+Take the list of files that still have unmarked wrapper calls. Open each file. Read each wrapped query. Make a human judgment on each one:
+
+If the query is a simple SELECT, INSERT, UPDATE, or DELETE with no advanced SQL features — convert it to true Drizzle ORM right now. Do not wrap it. Do not comment it. Convert it. This is what Cat A and Cat B means.
+
+If the query uses a genuine advanced SQL feature that Drizzle cannot express — a window function, a recursive CTE, a FILTER clause on an aggregate, a PostgreSQL-specific operator, an advisory lock — keep it as a wrapper and add the Category C comment block manually with the specific reason written by you, not by a pattern detector.
+
+Work through the files in order of highest wrapper count first. Report after every 10 files with how many were converted and how many were legitimately kept as Category C.
+
+For the 213 client.query transaction blocks: open each of the 20 files. For each transaction block, rewrite it using db.transaction() where possible. Where pool.connect() is genuinely required for a PostgreSQL-specific feature, keep it and add the Category C documentation manually.
+
+Do not batch process. Do not script. Do not auto-generate. Read the SQL. Make the judgment. Do the work.
+
+When every file is done: run the final scan. Zero unmarked wrappers. Zero undocumented client.query calls. Report the result file by file.
+
+That is Phase 1 completion. Nothing else is.
+
+---
+
+Send that exactly Bryan. No script. File by file. When he brings back the file-by-file report we confirm it here and Phase 2 goes in clean.

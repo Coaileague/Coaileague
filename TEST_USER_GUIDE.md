@@ -18,7 +18,7 @@
 
 **Demo Workspace Details:**
 - **Company**: Acme Services Inc.
-- **Owner**: Demo User (demo@shiftsync.app)
+- **Owner**: Demo User (demo@coaileague.test)
 - **Tier**: Professional (all features unlocked)
 - **Resets**: Every 24 hours for fresh testing
 

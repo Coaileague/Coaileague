@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const terminationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -52,22 +53,23 @@ export default function HRTerminations() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: terminations, isLoading } = useQuery<Termination[]>({
-    queryKey: ['/api/hr/terminations'],
+    queryKey: ['/api/terminations'],
   });
 
-  const { data: employees } = useQuery<Employee[]>({
+  const { data: employees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
+    select: (res) => res?.data ?? [],
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: TerminationFormData) => {
-      return apiRequest('POST', '/api/hr/terminations', {
+      return apiRequest('POST', '/api/terminations', {
         ...data,
         finalPayAmount: data.finalPayAmount ? parseFloat(data.finalPayAmount) : null,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/terminations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/terminations'] });
       setDialogOpen(false);
       form.reset();
       toast({
@@ -86,10 +88,10 @@ export default function HRTerminations() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest('PATCH', `/api/hr/terminations/${id}`, { status });
+      return apiRequest('PATCH', `/api/terminations/${id}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hr/terminations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/terminations'] });
       toast({
         title: "Success",
         description: "Status updated successfully",
@@ -154,28 +156,33 @@ export default function HRTerminations() {
     return <Badge variant={variants[type] || "outline"}>{type}</Badge>;
   };
 
+  const addTerminationButton = (
+    <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+      <UniversalModalTrigger asChild>
+        <Button data-testid="button-add-termination">
+          <Plus className="h-4 w-4 mr-2" />
+          New Termination
+        </Button>
+      </UniversalModalTrigger>
+    </UniversalModal>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: "hr-terminations",
+    title: "Employee Terminations",
+    subtitle: "Manage offboarding and exit processes",
+    category: "operations",
+    headerActions: addTerminationButton,
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="heading-terminations">Employee Terminations</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Manage offboarding and exit processes
-              </p>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-termination">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Termination
-                </Button>
-              </DialogTrigger>
-              <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create Termination Record</DialogTitle>
-                </DialogHeader>
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6">
+        <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+              <UniversalModalContent size="xl" className="max-h-[90vh] overflow-y-auto">
+                <UniversalModalHeader>
+                  <UniversalModalTitle>Create Termination Record</UniversalModalTitle>
+                </UniversalModalHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
@@ -311,8 +318,8 @@ export default function HRTerminations() {
                     </div>
                   </form>
                 </Form>
-              </DialogContent>
-            </Dialog>
+              </UniversalModalContent>
+            </UniversalModal>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -410,8 +417,6 @@ export default function HRTerminations() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }

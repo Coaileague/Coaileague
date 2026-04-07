@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import {
   Brain,
   Send,
@@ -55,14 +56,7 @@ import {
   Activity
 } from "lucide-react";
 import { format } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter } from '@/components/ui/universal-modal';
 import {
   Select,
   SelectContent,
@@ -309,85 +303,83 @@ export default function SupportAIConsole() {
     });
   };
 
-  return (
-    <div className="flex flex-col h-full bg-background">
-      <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-4 lg:p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
-              <Brain className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold" data-testid="text-page-title">
-                Support AI Control Console
-              </h1>
-              <p className="text-violet-100 text-sm lg:text-base">
-                Direct interface to Trinity™ - File access, workflows, testing, and chat
-              </p>
-            </div>
-          </div>
+  const pageConfig: CanvasPageConfig = {
+    id: "support-ai-console",
+    title: "Support AI Control Console",
+    subtitle: "Direct interface to Trinity™ - File access, workflows, testing, and chat",
+    category: "admin",
+    maxWidth: "7xl",
+  };
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-            <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-5 h-5" />
-                <span className="text-sm font-medium">Actions</span>
-              </div>
-              <div className="text-2xl font-bold mt-1" data-testid="text-action-count">
-                {capabilities?.actionCount || 0}
-              </div>
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-6">
+        <Card className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border-violet-500/20">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate" data-testid="text-action-count">
+              {capabilities?.actionCount || 0}
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-              <div className="flex items-center space-x-2">
-                <FileCode className="w-5 h-5" />
-                <span className="text-sm font-medium">File Tools</span>
-              </div>
-              <div className="text-2xl font-bold mt-1" data-testid="text-file-tools">
-                7
-              </div>
+            <p className="text-[10px] sm:text-xs text-violet-600 dark:text-violet-400 truncate flex items-center gap-1">
+              <Zap className="w-3 h-3 shrink-0" />
+              Actions
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border-violet-500/20">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate" data-testid="text-file-tools">
+              6
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-              <div className="flex items-center space-x-2">
-                <TestTube className="w-5 h-5" />
-                <span className="text-sm font-medium">Test Suites</span>
-              </div>
-              <div className="text-2xl font-bold mt-1" data-testid="text-test-suites">
-                {capabilities?.testSuites || 0}
-              </div>
+            <p className="text-[10px] sm:text-xs text-violet-600 dark:text-violet-400 truncate flex items-center gap-1">
+              <FileCode className="w-3 h-3 shrink-0" />
+              File Tools
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border-violet-500/20">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate" data-testid="text-test-suites">
+              {capabilities?.testSuites || 0}
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-              <div className="flex items-center space-x-2">
-                <Activity className="w-5 h-5" />
-                <span className="text-sm font-medium">Workflows</span>
-              </div>
-              <div className="text-2xl font-bold mt-1" data-testid="text-workflows">
-                {capabilities?.workflows || 0}
-              </div>
+            <p className="text-[10px] sm:text-xs text-violet-600 dark:text-violet-400 truncate flex items-center gap-1">
+              <TestTube className="w-3 h-3 shrink-0" />
+              Test Suites
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border-violet-500/20">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate" data-testid="text-workflows">
+              {capabilities?.workflows || 0}
             </div>
-          </div>
-        </div>
+            <p className="text-[10px] sm:text-xs text-violet-600 dark:text-violet-400 truncate flex items-center gap-1">
+              <Activity className="w-3 h-3 shrink-0" />
+              Workflows
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="flex-1 overflow-hidden p-4 lg:p-6">
+      <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
-            <TabsTrigger value="chat" className="flex items-center gap-2" data-testid="tab-chat">
+          <TabsList className="w-full overflow-x-auto flex sm:grid sm:grid-cols-5 max-w-2xl">
+            <TabsTrigger value="chat" className="flex items-center gap-1.5 shrink-0" data-testid="tab-chat">
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Chat</span>
             </TabsTrigger>
-            <TabsTrigger value="files" className="flex items-center gap-2" data-testid="tab-files">
+            <TabsTrigger value="files" className="flex items-center gap-1.5 shrink-0" data-testid="tab-files">
               <FileCode className="w-4 h-4" />
               <span className="hidden sm:inline">Files</span>
             </TabsTrigger>
-            <TabsTrigger value="workflows" className="flex items-center gap-2" data-testid="tab-workflows">
+            <TabsTrigger value="workflows" className="flex items-center gap-1.5 shrink-0" data-testid="tab-workflows">
               <Play className="w-4 h-4" />
               <span className="hidden sm:inline">Workflows</span>
             </TabsTrigger>
-            <TabsTrigger value="tests" className="flex items-center gap-2" data-testid="tab-tests">
+            <TabsTrigger value="tests" className="flex items-center gap-1.5 shrink-0" data-testid="tab-tests">
               <TestTube className="w-4 h-4" />
               <span className="hidden sm:inline">Tests</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2" data-testid="tab-history">
+            <TabsTrigger value="history" className="flex items-center gap-1.5 shrink-0" data-testid="tab-history">
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
@@ -477,22 +469,14 @@ export default function SupportAIConsole() {
           </TabsContent>
 
           <TabsContent value="files" className="flex-1 overflow-hidden mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 h-full">
               <Card className="flex flex-col">
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <CardTitle className="flex items-center gap-2">
                       <Folder className="w-5 h-5 text-yellow-500" />
                       File Browser
                     </CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => refetchFiles()}
-                      data-testid="button-refresh-files"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <Button
@@ -568,7 +552,7 @@ export default function SupportAIConsole() {
 
               <Card className="flex flex-col">
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <CardTitle className="flex items-center gap-2">
                       <Code className="w-5 h-5 text-green-500" />
                       File Editor
@@ -800,7 +784,7 @@ export default function SupportAIConsole() {
           <TabsContent value="history" className="flex-1 overflow-hidden mt-4">
             <Card className="h-full flex flex-col">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <History className="w-5 h-5 text-orange-500" />
@@ -810,14 +794,6 @@ export default function SupportAIConsole() {
                       Recent Trinity™ actions and console interactions
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refetchHistory()}
-                    data-testid="button-refresh-history"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto">
@@ -833,7 +809,7 @@ export default function SupportAIConsole() {
                         className="p-3 border rounded-lg"
                         data-testid={`history-item-${i}`}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             {action.success ? (
                               <CheckCircle className="w-4 h-4 text-green-500" />
@@ -864,6 +840,6 @@ export default function SupportAIConsole() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

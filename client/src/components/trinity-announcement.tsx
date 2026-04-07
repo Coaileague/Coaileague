@@ -83,7 +83,7 @@ function AnnouncementBubble({
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
       className={`
-        relative max-w-sm w-full rounded-lg border shadow-lg p-4
+        relative max-w-sm w-full rounded-lg border shadow-sm p-4
         ${style.bg} ${style.border}
       `}
       data-testid={`trinity-announcement-${announcement.id}`}

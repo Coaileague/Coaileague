@@ -1,0 +1,246 @@
+Perfect. Send this to the agent:
+
+---
+
+```
+Read OMEGA.md and OMEGA_STATE_CHECKPOINT.md.
+
+Make the following permanent updates to OMEGA.md now.
+
+======================================================================
+UPDATE 1 — STATEWIDE PROTECTIVE SERVICES DEFINITION
+======================================================================
+
+Find the PLATFORM IDENTITY section in OMEGA.md.
+Replace the Statewide description with this exact text:
+
+"STATEWIDE PROTECTIVE SERVICES — PRODUCTION TENANT RULES
+
+Statewide Protective Services (SPS) is Bryan's real operating
+security company. It is the first live production tenant on
+CoAIleague and the platform owner.
+
+WHAT STATEWIDE PAYS:
+- Subscription fee: NEVER charged. Zero. Does not accrue.
+  Does not expire. No trial. No billing cycle for subscription.
+- Middleware fees: YES — billed monthly based on actual usage
+  (invoice processing fees 2.9% + $0.25, payroll middleware
+  fees per employee per run, Stripe Connect payout fees)
+- Payroll ACH: YES — Plaid transfer fees apply per transfer
+- Invoice collection: YES — processing fees apply when clients
+  pay invoices through the platform
+
+HOW STATEWIDE IS BILLED FOR MIDDLEWARE:
+At the end of each calendar month, generate a single
+consolidated middleware bill for Statewide covering:
+- All invoice processing fees for the month
+- All payroll processing fees for the month
+- All payout fees for the month
+- No subscription line item ever appears on this bill
+
+WHAT STATEWIDE GETS:
+- Maximum tier — ALL features unlocked, all tiers, permanently
+- No seat limit
+- No storage limit enforcement (quota tracked but never blocked)
+- No token/AI usage limit (usage tracked but never blocked or
+  overaged — Bryan reviews usage monthly)
+- No expiry of any kind
+- No automated billing enforcement of any kind except middleware
+
+EXEMPTION IMPLEMENTATION RULES:
+- The grandfathered exemption must be EXPLICIT in code
+  not merely absent from billing jobs
+- Every billing job, trial expiry job, seat overage job,
+  token overage job must have an explicit Statewide check:
+  if (workspace.is_grandfathered) skip and continue
+- Exemption is scoped to Statewide workspace_id only
+- No other tenant ever receives this exemption
+- Billing page for Statewide shows:
+  'Enterprise tier — Complimentary'
+  'Subscription: Grandfathered — No charge'
+  'Middleware fees: Billed monthly based on usage'
+
+STATEWIDE IN TESTING:
+- NEVER used as a test workspace
+- NEVER seeded with test data
+- NEVER mutated by agent scripts
+- READ-ONLY for any verification check
+- ACME Security is the exclusive sandbox always"
+
+======================================================================
+UPDATE 2 — REMOVE CREDIT SYSTEM, ADD TOKEN USAGE SYSTEM
+======================================================================
+
+Find any reference to "AI credits" or "credit system" in OMEGA.md.
+Replace the entire AI credit concept with the following token
+usage system. This is a full replacement — credits no longer exist.
+
+TOKEN USAGE SYSTEM — FULL SPECIFICATION
+
+WHAT IT IS:
+Each workspace has a monthly token allowance based on their
+subscription tier. Token usage is tracked per session, per
+workspace, per month. This is not a credit system — tokens
+are not purchased in advance. Usage is metered and overages
+are billed at the end of the billing period.
+
+TOKEN ALLOWANCES PER TIER (monthly):
+- Trial:        500,000 tokens/month
+- Starter:      2,000,000 tokens/month
+- Professional: 10,000,000 tokens/month
+- Business:     30,000,000 tokens/month
+- Enterprise:   100,000,000 tokens/month
+- Strategic:    Unlimited (tracked, reviewed monthly by Bryan)
+- Statewide:    Unlimited (tracked, reviewed monthly by Bryan,
+                never billed for overages)
+
+TOKEN OVERAGE PRICING:
+When a workspace exceeds their monthly allowance:
+- Per 100,000 tokens over limit: $2.00
+- Overage is calculated at end of billing month
+- Overage invoice generated as DRAFT for org owner review
+- Org owner must approve before charge is applied
+- If not approved within 7 days: auto-approve and charge
+
+TOKEN TRACKING RULES:
+1. Every Trinity action, email classification, voice interaction,
+   AI-assisted feature, and model API call records token usage
+2. Token usage stored in: token_usage_log table with fields:
+   workspace_id, session_id, model_used, tokens_input,
+   tokens_output, tokens_total, action_type, timestamp
+3. Monthly rollup stored in: token_usage_monthly table with:
+   workspace_id, month_year, total_tokens_used,
+   allowance_tokens, overage_tokens, overage_amount_cents
+4. Usage tracked per session for observability
+5. Usage tracked per model for cost analysis
+   (Gemini vs OpenAI vs Claude have different costs)
+
+TOKEN LIMIT ENFORCEMENT:
+1. At 80% of monthly allowance:
+   NDS warning to org owner: "You have used 80% of your
+   monthly AI token allowance. Overage billing applies
+   beyond your limit."
+2. At 100% of allowance:
+   DO NOT block Trinity or AI features
+   Continue working — overage tracking begins
+   NDS alert to org owner: "You have exceeded your monthly
+   token allowance. Overages will be billed at $2.00 per
+   100,000 tokens."
+3. At 200% of allowance (2× the limit):
+   NDS critical alert to org owner
+   Flag workspace for platform admin review
+   Still do NOT block — overage continues to accrue
+4. Statewide: track but NEVER alert, NEVER bill, NEVER block
+
+TOKEN USAGE DISPLAY:
+- Org owner dashboard shows: tokens used this month, allowance,
+  percentage used, estimated overage if current pace continues
+- Platform admin dashboard shows: all workspaces, token usage
+  ranked highest to lowest, total platform token costs
+
+TOKEN OVERAGE BILLING FLOW:
+1. At month end: calculate overage for each workspace
+2. If overage > 0: create DRAFT invoice line item in billing system
+3. NDS notification to org owner with overage details
+4. Org owner has 7 days to review
+5. After 7 days: auto-approve, charge via Stripe on file
+6. Record in financial_processing_fees (Path B — internal fee)
+7. Record in platform_revenue
+8. Write audit record
+
+REMOVING CREDIT REFERENCES:
+- Remove all references to "AI credits", "credit balance",
+  "credit deduction", "credit overage" from the codebase
+- Replace with token_usage tracking throughout
+- Update billingConfig.ts to use token_allowances not credit limits
+- Update any NDS messages that mention "credits" to say "tokens"
+- Update all UI displays that show credit balance to show
+  token usage meter instead
+
+======================================================================
+UPDATE 3 — ADD TOKEN USAGE TO TRINITY ACTION PIPELINE
+======================================================================
+
+Find DOMAIN 13 — TRINITY BRAIN in OMEGA.md (or the Trinity
+action pipeline section).
+
+Add to the 7-STEP PIPELINE under step 5 (AI credit check):
+
+"STEP 5 — TOKEN USAGE TRACKING (replaces credit check):
+Before execution: record the start of a token-consuming operation
+After execution: record actual tokens consumed from model response
+Write to token_usage_log: workspace_id, session_id, model_used,
+tokens_input, tokens_output, action_type, timestamp
+Update token_usage_monthly running total for this workspace
+If workspace has exceeded 200% of allowance: flag for admin review
+NEVER block execution based on token usage — always track,
+never gate"
+
+======================================================================
+UPDATE 4 — ADD TOKEN USAGE TABLES TO DATABASE SPEC
+======================================================================
+
+Add to the database integrity rules section:
+
+"TOKEN USAGE TABLES:
+
+token_usage_log:
+  id, workspace_id, session_id, user_id, model_used,
+  tokens_input, tokens_output, tokens_total, action_type,
+  feature_name, timestamp
+  INDEX: workspace_id, timestamp, model_used
+
+token_usage_monthly:
+  id, workspace_id, month_year, total_tokens_used,
+  allowance_tokens, overage_tokens, overage_amount_cents,
+  overage_invoice_id (nullable), status: PENDING|INVOICED|PAID
+  UNIQUE: (workspace_id, month_year)
+
+These tables are append-only for token_usage_log.
+token_usage_monthly is updated via atomic increment on each
+token_usage_log write."
+
+======================================================================
+UPDATE 5 — ADD TO CLASS A PRODUCTION BLOCKERS
+======================================================================
+
+Add to the CLASS A PRODUCTION BLOCKERS list:
+
+"17. Token usage is not being tracked — any Trinity action or
+    AI feature that consumes tokens without writing to
+    token_usage_log is a billing integrity failure
+18. Statewide workspace receives a subscription charge,
+    a token overage bill, or any automated billing action
+    that is not a middleware fee — this is a Class A blocker"
+
+======================================================================
+AFTER MAKING ALL UPDATES:
+======================================================================
+
+1. Confirm all 5 updates are merged into OMEGA.md
+2. Search the codebase for all references to:
+   - "AI credits" or "credit balance" or "credit deduction"
+   - "creditLimit" or "aiCredits" or similar variable names
+   Replace or flag each for replacement with token_usage equivalents
+3. Check if token_usage_log and token_usage_monthly tables exist
+   in the database schema — if not, create migrations for both
+4. Check if billingConfig.ts has token_allowances per tier —
+   if not, add them using the values specified above
+5. Verify Statewide workspace has is_grandfathered = true flag
+   and that at least 3 billing jobs explicitly check this flag
+   before processing
+6. Update OMEGA_STATE_CHECKPOINT.md with all changes made
+7. Report: what was updated in OMEGA.md, what code changes were
+   made, what migrations were created, what still needs work
+```
+
+---
+
+After the agent confirms, every future session has the complete and correct definition of:
+
+- Exactly what Statewide pays and never pays
+- How token usage works instead of credits
+- How overages are calculated and billed
+- How Statewide is permanently exempt from everything except middleware fees
+
+Clean, permanent, in OMEGA.md. The agent never has to be told again.

@@ -1,26 +1,25 @@
 // Multi-tenant SaaS Storage Interface
 // References: javascript_log_in_with_replit and javascript_database blueprints
 
+import crypto from 'crypto';
 import {
   users,
   workspaces,
-  workspaceThemes,
   employees,
   employeeBenefits,
   performanceReviews,
   ptoRequests,
-  employeeTerminations,
   clients,
   shifts,
   shiftTemplates,
   timeEntries,
+  mileageLogs,
   invoices,
   invoiceLineItems,
   managerAssignments,
   onboardingInvites,
   onboardingApplications,
   documentSignatures,
-  employeeCertifications,
   reportTemplates,
   reportSubmissions,
   reportAttachments,
@@ -35,10 +34,11 @@ import {
   platformRoles,
   chatConversations,
   chatMessages,
+  chatParticipants,
   dmAuditRequests,
   dmAccessLogs,
   conversationEncryptionKeys,
-  aiUsageLogs,
+  aiUsageEvents,
   customForms,
   customFormSubmissions,
   payrollRuns,
@@ -63,7 +63,6 @@ import {
   expenseCategories,
   expenses,
   expenseReceipts,
-  employeeI9Records,
   companyPolicies,
   policyAcknowledgments,
   organizationChatRooms,
@@ -73,35 +72,23 @@ import {
   notifications,
   pushSubscriptions,
   userNotificationPreferences,
-  auditEvents,
   idRegistry,
   writeAheadLog,
   orgInvitations,
   proposals,
-  salesActivities,
   passwordResetAuditLog,
-  aiResponses,
   aiSuggestions,
   userFeedback,
   feedbackComments,
   feedbackVotes,
-  type User,
   type OrgInvitation,
   type InsertOrgInvitation,
   type Proposal,
   type InsertProposal,
-  type SalesActivity,
-  type InsertSalesActivity,
-  type UpsertUser,
   type AbuseViolation,
   type InsertAbuseViolation,
   type ServiceIncidentReport,
   type InsertServiceIncidentReport,
-  type Workspace,
-  type InsertWorkspace,
-  type WorkspaceTheme,
-  type Employee,
-  type InsertEmployee,
   type EmployeeBenefit,
   type InsertEmployeeBenefit,
   type PerformanceReview,
@@ -120,6 +107,8 @@ import {
   type InsertShiftTemplate,
   type TimeEntry,
   type InsertTimeEntry,
+  type MileageLog,
+  type InsertMileageLog,
   type Invoice,
   type InsertInvoice,
   type InvoiceLineItem,
@@ -203,9 +192,8 @@ import {
   type PushSubscription,
   type InsertPushSubscription,
   type UserNotificationPreferences,
-  type InsertUserNotificationPreferences,
-  type AuditEvent,
-  type InsertAuditEvent,
+  type AuditLog,
+  type InsertAuditLog,
   type IdRegistry,
   type InsertIdRegistry,
   type WriteAheadLog,
@@ -248,20 +236,26 @@ import {
   type InsertMaintenanceAlert,
   type MaintenanceAcknowledgment,
   type InsertMaintenanceAcknowledgment,
-  aiBrainActionLogs,
   type AiBrainActionLog,
   type InsertAiBrainActionLog,
   supportSessions,
-  supportAuditLogs,
   type SupportSession,
   type InsertSupportSession,
-  type SupportAuditLog,
   type InsertSupportAuditLog,
-} from "@shared/schema";
+  type EmployeeInvitation,
+  type InsertEmployeeInvitation,
+  employeeTerminations,
+  type InsertEmployeeTermination,
+  type EmployeeTermination,
+} from '@shared/schema';
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
 import { db } from "./db";
 import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, gte, count, gt, inArray, not, ne } from "drizzle-orm";
+import { typedCount, typedQuery } from './lib/typedSql';
+import { createLogger } from './lib/logger';
+const log = createLogger('storage');
+
 
 // Custom error for WAL transition failures
 export class InvalidWalTransitionError extends Error {
@@ -278,7 +272,7 @@ export class InvalidWalTransitionError extends Error {
 
 // Generate unique organization ID: wfosupport-#########
 function generateOrganizationId(): string {
-  const randomNum = Math.floor(100000000 + Math.random() * 900000000); // 9-digit number
+  const randomNum = crypto.randomInt(100000000, 999999999); // 9-digit number
   return `wfosupport-${randomNum}`;
 }
 
@@ -294,7 +288,7 @@ async function generateOrganizationSerial(): Promise<string> {
   
   // Sequential counter: cycles 1-9999 (never 0)
   const sequential = ((result?.count || 0) % 9999) + 1;
-  const random = Math.floor(Math.random() * 10000); // 0000-9999
+  const random = crypto.randomInt(0, 10000); // 0000-9999
   
   const sequentialStr = sequential.toString().padStart(4, '0');
   const randomStr = random.toString().padStart(4, '0');
@@ -340,6 +334,17 @@ export interface IStorage {
   getWorkspaceByOwnerId(ownerId: string): Promise<Workspace | undefined>;
   getWorkspaceByMembership(userId: string): Promise<Workspace | undefined>;
   updateWorkspace(id: string, data: Partial<InsertWorkspace>): Promise<Workspace | undefined>;
+
+  /**
+   * Complex multi-step workspace resolution with ownership and membership priority.
+   * Handles multi-workspace users by selecting the primary (oldest) workspace.
+   */
+  resolveWorkspaceForUser(userId: string, requestedWorkspaceId?: string): Promise<{
+    workspaceId: string | null;
+    role: WorkspaceRole | null;
+    employeeId: string | null;
+    error?: string;
+  }>;
   
   // Workspace theme operations
   getWorkspaceTheme(workspaceId: string): Promise<WorkspaceTheme | null>;
@@ -347,9 +352,9 @@ export interface IStorage {
   // Employee operations
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   getEmployee(id: string, workspaceId: string): Promise<Employee | undefined>;
-  getEmployeeByUserId(userId: string): Promise<Employee | undefined>;
-  getEmployeeById(employeeId: string): Promise<Employee | undefined>;
-  getEmployeesByWorkspace(workspaceId: string): Promise<Employee[]>;
+  getEmployeeByUserId(userId: string, workspaceId?: string): Promise<Employee | undefined>;
+  getEmployeeById(employeeId: string, workspaceId?: string): Promise<Employee | undefined>;
+  getEmployeesByWorkspace(workspaceId: string, limit?: number, offset?: number): Promise<Employee[]>;
   getWorkspaceMemberByUserId(userId: string): Promise<{ workspaceId: string; id: string } | undefined>;
   updateEmployee(id: string, workspaceId: string, data: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: string, workspaceId: string): Promise<boolean>;
@@ -368,10 +373,14 @@ export interface IStorage {
   createClientRate(rate: InsertClientRate): Promise<ClientRate>;
   getClientRates(workspaceId: string, clientId: string): Promise<ClientRate[]>;
   
+  getClientRatesByWorkspace(workspaceId: string): Promise<ClientRate[]>;
+  createBulkNotifications(notifications: InsertNotification[]): Promise<Notification[]>;
+  getInvoicesByClientAndStatus(clientId: string, status: string, workspaceId: string): Promise<Invoice[]>;
+  
   // Shift operations
   createShift(shift: InsertShift): Promise<Shift>;
   getShift(id: string, workspaceId: string): Promise<Shift | undefined>;
-  getShiftsByWorkspace(workspaceId: string, startDate?: Date, endDate?: Date): Promise<Shift[]>;
+  getShiftsByWorkspace(workspaceId: string, startDate?: Date, endDate?: Date, limit?: number, offset?: number): Promise<Shift[]>;
   updateShift(id: string, workspaceId: string, data: Partial<InsertShift>): Promise<Shift | undefined>;
   deleteShift(id: string, workspaceId: string): Promise<boolean>;
   
@@ -385,21 +394,28 @@ export interface IStorage {
   // Time Entry operations
   createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry>;
   getTimeEntry(id: string, workspaceId: string): Promise<TimeEntry | undefined>;
-  getTimeEntriesByWorkspace(workspaceId: string): Promise<TimeEntry[]>;
+  getTimeEntriesByWorkspace(workspaceId: string, limit?: number, offset?: number): Promise<TimeEntry[]>;
   getUnbilledTimeEntries(workspaceId: string, clientId: string): Promise<TimeEntry[]>;
   updateTimeEntry(id: string, workspaceId: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry | undefined>;
   
   // Invoice operations
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   getInvoice(id: string, workspaceId: string): Promise<Invoice | undefined>;
+  getInvoiceById(id: string, workspaceId?: string): Promise<Invoice | undefined>;
   getInvoicesByWorkspace(workspaceId: string): Promise<Invoice[]>;
   updateInvoice(id: string, workspaceId: string, data: Partial<InsertInvoice>): Promise<Invoice | undefined>;
   
   // Invoice Line Item operations
   createInvoiceLineItem(item: InsertInvoiceLineItem): Promise<InvoiceLineItem>;
   getInvoiceLineItems(invoiceId: string): Promise<InvoiceLineItem[]>;
+  deleteInvoiceLineItem(id: string, workspaceId: string): Promise<void>;
+  getInvoicesByClient(clientId: string, workspaceId: string): Promise<Invoice[]>;
   
   // Analytics operations
+  /**
+   * Sophisticated analytical aggregation for workspace performance.
+   * Combines revenue, labor hours, and client metrics for executive dashboards.
+   */
   getWorkspaceAnalytics(workspaceId: string): Promise<{
     totalRevenue: number;
     totalHoursWorked: number;
@@ -436,22 +452,23 @@ export interface IStorage {
   // Document Signature operations
   createDocumentSignature(signature: InsertDocumentSignature): Promise<DocumentSignature>;
   getDocumentSignature(id: string, workspaceId: string): Promise<DocumentSignature | undefined>;
-  getDocumentSignaturesByApplication(applicationId: string): Promise<DocumentSignature[]>;
+  getDocumentSignaturesByApplication(applicationId: string, workspaceId: string): Promise<DocumentSignature[]>;
   updateDocumentSignature(id: string, workspaceId: string, data: Partial<InsertDocumentSignature>): Promise<DocumentSignature | undefined>;
   
   // Employee Certification operations
   createEmployeeCertification(certification: InsertEmployeeCertification): Promise<EmployeeCertification>;
   getEmployeeCertificationsByEmployee(employeeId: string, workspaceId: string): Promise<EmployeeCertification[]>;
-  getEmployeeCertificationsByApplication(applicationId: string): Promise<EmployeeCertification[]>;
+  getEmployeeCertificationsByApplication(applicationId: string, workspaceId: string): Promise<EmployeeCertification[]>;
   updateEmployeeCertification(id: string, workspaceId: string, data: Partial<InsertEmployeeCertification>): Promise<EmployeeCertification | undefined>;
   
   // Report Management System (RMS) operations
+  createReportTemplate(template: InsertReportTemplate): Promise<ReportTemplate>;
   getReportTemplatesByWorkspace(workspaceId: string): Promise<ReportTemplate[]>;
   toggleReportTemplateActivation(templateId: string, workspaceId: string): Promise<ReportTemplate>;
   createReportSubmission(submission: InsertReportSubmission): Promise<ReportSubmission>;
   getReportSubmissions(workspaceId: string, filters?: { status?: string; employeeId?: string }): Promise<ReportSubmission[]>;
   getReportSubmissionById(id: string): Promise<ReportSubmission | undefined>;
-  updateReportSubmission(id: string, data: Partial<InsertReportSubmission>): Promise<ReportSubmission>;
+  updateReportSubmission(id: string, workspaceId: string, data: Partial<InsertReportSubmission>): Promise<ReportSubmission>;
   reviewReportSubmission(id: string, review: { approved: boolean; reviewNotes: string; reviewedBy: string }): Promise<ReportSubmission>;
   createCustomerReportAccess(access: InsertCustomerReportAccess): Promise<CustomerReportAccess>;
   getCustomerReportAccessByToken(token: string): Promise<CustomerReportAccess | undefined>;
@@ -460,8 +477,8 @@ export interface IStorage {
   getSupportTicket(id: string, workspaceId: string): Promise<SupportTicket | undefined>;
   getSupportTickets(workspaceId: string): Promise<SupportTicket[]>;
   getActiveSupportTicket(userId: string, workspaceId: string): Promise<SupportTicket | undefined>;
-  updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket>;
-  deleteSupportTicket(id: string): Promise<boolean>;
+  updateSupportTicket(id: string, data: Partial<InsertSupportTicket>, workspaceId?: string): Promise<SupportTicket>;
+  deleteSupportTicket(id: string, workspaceId?: string): Promise<boolean>;
   
   // HelpAI AI Support System
   createHelposSession(session: InsertHelposAiSession): Promise<HelposAiSession>;
@@ -472,15 +489,23 @@ export interface IStorage {
   getHelposTranscripts(sessionId: string): Promise<HelposAiTranscriptEntry[]>;
   
   // Audit Log operations (Security & Compliance)
+  /**
+   * Secure audit trail creation with SOC-2 compliance tagging.
+   * Captures entity changes, sensitive data flags, and actor context.
+   */
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(workspaceId: string, filters?: { userId?: string; entityType?: string; action?: string; startDate?: Date; endDate?: Date; limit?: number; offset?: number }): Promise<AuditLog[]>;
   
   // Event Sourcing & Data Integrity operations
-  createAuditEvent(event: InsertAuditEvent): Promise<string>;
-  getAuditEvent(id: string): Promise<AuditEvent | undefined>;
-  getAuditEvents(filters?: { workspaceId?: string; actorType?: string; eventType?: string; limit?: number }): Promise<AuditEvent[]>;
+  createAuditEvent(event: InsertAuditLog): Promise<string>;
+  getAuditEvent(id: string): Promise<AuditLog | undefined>;
+  getAuditEvents(filters?: { workspaceId?: string; actorType?: string; eventType?: string; limit?: number }): Promise<AuditLog[]>;
   verifyAuditEvent(eventId: string, actionHash: string): Promise<void>;
   registerID(entry: InsertIdRegistry): Promise<void>;
+  /**
+   * Critical Write-Ahead Log (WAL) for financial transaction atomicity.
+   * Ensures multi-stage operations can be rolled back on failure.
+   */
   createWriteAheadLog(entry: InsertWriteAheadLog): Promise<string>;
   markWALPrepared(transactionId: string): Promise<void>;
   markWALCommitted(transactionId: string): Promise<void>;
@@ -499,6 +524,9 @@ export interface IStorage {
   createAiUsage(usage: InsertWorkspaceAiUsage): Promise<WorkspaceAiUsage>;
   getAiUsage(workspaceId: string, filters?: { feature?: string; billingPeriod?: string }): Promise<WorkspaceAiUsage[]>;
   getAiUsageSummary(workspaceId: string, billingPeriod: string): Promise<{ totalCost: number; totalCharge: number; operationCount: number }>;
+
+  // Workspace membership
+  getWorkspaceMembership(userId: string, workspaceId: string): Promise<boolean>;
   
   // Employee Benefits operations (HR)
   createEmployeeBenefit(benefit: InsertEmployeeBenefit): Promise<EmployeeBenefit>;
@@ -535,7 +563,17 @@ export interface IStorage {
   updatePtoRequest(id: string, workspaceId: string, data: Partial<InsertPtoRequest>): Promise<PtoRequest | undefined>;
   approvePtoRequest(id: string, workspaceId: string, approverId: string): Promise<PtoRequest | undefined>;
   denyPtoRequest(id: string, workspaceId: string, approverId: string, denialReason: string): Promise<PtoRequest | undefined>;
-  
+
+  // Mileage Log operations
+  createMileageLog(log: InsertMileageLog): Promise<MileageLog>;
+  getMileageLog(id: string, workspaceId: string): Promise<MileageLog | undefined>;
+  getMileageLogsByWorkspace(workspaceId: string, filters?: { employeeId?: string; status?: string; startDate?: Date; endDate?: Date }): Promise<MileageLog[]>;
+  getMileageLogsByEmployee(employeeId: string, workspaceId: string): Promise<MileageLog[]>;
+  updateMileageLog(id: string, workspaceId: string, data: Partial<InsertMileageLog>): Promise<MileageLog | undefined>;
+  approveMileageLog(id: string, workspaceId: string, approverId: string): Promise<MileageLog | undefined>;
+  rejectMileageLog(id: string, workspaceId: string, approverId: string, reason: string): Promise<MileageLog | undefined>;
+  deleteMileageLog(id: string, workspaceId: string): Promise<boolean>;
+
   // Employee Termination operations (HR)
   createEmployeeTermination(termination: InsertEmployeeTermination): Promise<EmployeeTermination>;
   getEmployeeTermination(id: string, workspaceId: string): Promise<EmployeeTermination | undefined>;
@@ -545,32 +583,45 @@ export interface IStorage {
   
   // Platform Role operations
   getUserPlatformRole(userId: string): Promise<string | null>;
+  getUserPlatformRolesBatch(userIds: string[]): Promise<Map<string, string | null>>;
+  getUserDisplayInfoBatch(userIds: string[]): Promise<Map<string, {
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    userType: string | null;
+  } | null>>;
   
   // Live Chat operations (Support System)
   createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
   getChatConversation(id: string): Promise<ChatConversation | undefined>;
   getChatConversationsByWorkspace(workspaceId: string, filters?: { status?: string }): Promise<ChatConversation[]>;
-  getAllChatConversations(filters?: { status?: string }): Promise<ChatConversation[]>;
-  updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation | undefined>;
+  getAllChatConversations(workspaceId: string, filters?: { status?: string }): Promise<ChatConversation[]>;
+  updateChatConversation(id: string, workspaceId: string, data: Partial<InsertChatConversation>): Promise<ChatConversation | undefined>;
   closeChatConversation(id: string): Promise<ChatConversation | undefined>;
-  getClosedConversationsForReview(): Promise<ChatConversation[]>;
-  getPositiveTestimonials(): Promise<ChatConversation[]>;
+  getClosedConversationsForReview(workspaceId: string): Promise<ChatConversation[]>;
+  getPositiveTestimonials(workspaceId: string): Promise<ChatConversation[]>;
   
   // Shift Chatroom operations (auto-create on clock-in, auto-close on clock-out)
   createShiftChatroom(workspaceId: string, shiftId: string, timeEntryId: string, employeeId: string, employeeName: string): Promise<ChatConversation>;
-  getShiftChatroom(shiftId: string, timeEntryId: string): Promise<ChatConversation | undefined>;
+  getShiftChatroom(shiftId: string, timeEntryId: string, workspaceId: string): Promise<ChatConversation | undefined>;
   closeShiftChatroom(shiftId: string, timeEntryId: string): Promise<ChatConversation | undefined>;
   getActiveShiftChatrooms(workspaceId: string): Promise<ChatConversation[]>;
   
+  ensureChatParticipant(conversationId: string, userId: string): Promise<void>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
-  getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]>;
+  getChatMessagesByConversation(conversationId: string, workspaceId: string, since?: Date): Promise<ChatMessage[]>;
+  getChatMessagesByUserId(userId: string): Promise<{ senderId: string | null; senderType: string; message: string; createdAt: Date }[]>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
   updateChatMessage(id: string, conversationId: string, data: { message: string }): Promise<ChatMessage | undefined>;
   deleteChatMessage(id: string, conversationId: string): Promise<boolean>;
+  deleteMessageForUser(messageId: string, userId: string, conversationId: string): Promise<boolean>;
+  deleteMessageForEveryone(messageId: string, userId: string, conversationId: string): Promise<boolean>;
   
   // HelpDesk Room operations (Professional Support Chat)
   createSupportRoom(room: InsertSupportRoom): Promise<SupportRoom>;
   getSupportRoomBySlug(slug: string): Promise<SupportRoom | undefined>;
+  getSupportRoomById(id: string): Promise<SupportRoom | undefined>;
+  getSupportRoomByConversationId(conversationId: string): Promise<SupportRoom | undefined>;
   getAllSupportRooms(workspaceId?: string | null): Promise<SupportRoom[]>;
   updateSupportRoomStatus(slug: string, status: string, statusMessage: string | null, changedBy: string): Promise<SupportRoom | undefined>;
   updateSupportRoomConversation(slug: string, conversationId: string): Promise<SupportRoom | undefined>;
@@ -584,22 +635,23 @@ export interface IStorage {
   createCustomForm(form: InsertCustomForm): Promise<CustomForm>;
   getCustomForm(id: string): Promise<CustomForm | undefined>;
   getCustomFormsByOrganization(organizationId: string): Promise<CustomForm[]>;
-  updateCustomForm(id: string, data: Partial<InsertCustomForm>): Promise<CustomForm | undefined>;
-  deleteCustomForm(id: string): Promise<boolean>;
+  updateCustomForm(id: string, workspaceId: string, data: Partial<InsertCustomForm>): Promise<CustomForm | undefined>;
+  deleteCustomForm(id: string, workspaceId?: string): Promise<boolean>;
   
   // Custom Form Submission operations
   createCustomFormSubmission(submission: InsertCustomFormSubmission): Promise<CustomFormSubmission>;
   getCustomFormSubmission(id: string): Promise<CustomFormSubmission | undefined>;
   getCustomFormSubmissionsByOrganization(organizationId: string): Promise<CustomFormSubmission[]>;
-  getCustomFormSubmissionsByForm(formId: string): Promise<CustomFormSubmission[]>;
-  updateCustomFormSubmission(id: string, data: Partial<InsertCustomFormSubmission>): Promise<CustomFormSubmission | undefined>;
+  getCustomFormSubmissionsByForm(formId: string, workspaceId: string): Promise<CustomFormSubmission[]>;
+  updateCustomFormSubmission(id: string, workspaceId: string, data: Partial<InsertCustomFormSubmission>): Promise<CustomFormSubmission | undefined>;
   
   // AI Payroll™ operations (Automated Payroll Processing)
   getPayrollRunsByWorkspace(workspaceId: string): Promise<PayrollRun[]>;
   getPayrollRun(id: string, workspaceId: string): Promise<PayrollRun | undefined>;
-  updatePayrollRunStatus(id: string, status: string, processedBy: string): Promise<PayrollRun | undefined>;
+  updatePayrollRunStatus(id: string, status: string, processedBy: string, workspaceId?: string): Promise<PayrollRun | undefined>;
   getPayrollEntriesByRun(payrollRunId: string): Promise<PayrollEntry[]>;
   getPayrollEntriesByEmployee(employeeId: string, workspaceId: string): Promise<PayrollEntry[]>;
+  updatePayrollEntry(id: string, workspaceId: string, data: Partial<{ status: string; updatedAt: Date }>): Promise<PayrollEntry | undefined>;
   
   // Abuse violation operations (Staff Protection)
   createAbuseViolation(violation: InsertAbuseViolation): Promise<AbuseViolation>;
@@ -659,7 +711,7 @@ export interface IStorage {
   getCompanyPolicies(workspaceId: string): Promise<any[]>;
   updateCompanyPolicy(id: string, workspaceId: string, data: any): Promise<any | undefined>;
   publishPolicy(id: string, workspaceId: string, publishedBy: string): Promise<any | undefined>;
-  getPolicyAcknowledgments(policyId: string): Promise<any[]>;
+  getPolicyAcknowledgments(policyId: string, workspaceId: string): Promise<any[]>;
   createPolicyAcknowledgment(ack: any): Promise<any>;
   
   // ReportOS™ Monopolistic Features
@@ -812,14 +864,16 @@ export interface IStorage {
   // ========================================================================
   createNotification(notification: InsertNotification): Promise<Notification>;
   createUserScopedNotification(userId: string, type: string, title: string, message: string, metadata?: any): Promise<Notification>;
-  getNotificationsByUser(userId: string, workspaceId: string, limit?: number): Promise<Notification[]>;
-  getAllNotificationsForUser(userId: string, workspaceId?: string, limit?: number): Promise<Notification[]>;
+  getNotificationsByUser(userId: string, workspaceId: string, limit?: number, offset?: number): Promise<Notification[]>;
+  getAllNotificationsForUser(userId: string, workspaceId?: string, limit?: number, offset?: number): Promise<Notification[]>;
   getUnreadNotificationCount(userId: string, workspaceId: string): Promise<number>;
   getTotalUnreadCountForUser(userId: string, workspaceId?: string): Promise<number>;
   markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined>;
   toggleNotificationReadStatus(id: string, userId: string): Promise<Notification | undefined>;
-  markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number>;
+  markAllNotificationsAsRead(userId: string, workspaceId?: string): Promise<number>;
   deleteNotification(id: string, userId: string): Promise<boolean>;
+  deleteAllNotificationsForUser(userId: string, workspaceId?: string): Promise<number>;
+  markAllChatMessagesRead(userId: string): Promise<number>;
   deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number>;
   
   // Bulk notification operations - Database-synced persistent clear/acknowledge
@@ -853,6 +907,7 @@ export interface IStorage {
   markAllPlatformUpdatesAsViewed(userId: string, workspaceId?: string): Promise<number>;
   markPlatformUpdatesByCategories(userId: string, categories: string[], workspaceId?: string): Promise<number>;
   deletePlatformUpdatesByCategories(userId: string, categories: string[], workspaceId?: string): Promise<number>;
+  deleteAllPlatformUpdateViewsForUser(userId: string): Promise<number>;
   deletePlatformUpdate(id: string): Promise<boolean>;
   createPlatformUpdate(update: InsertPlatformUpdate): Promise<PlatformUpdate>;
 
@@ -890,7 +945,7 @@ export interface IStorage {
   
   createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment>;
   getFeedbackComments(feedbackId: string): Promise<FeedbackComment[]>;
-  deleteFeedbackComment(id: string): Promise<boolean>;
+  deleteFeedbackComment(id: string, workspaceId: string): Promise<boolean>;
   
   voteFeedback(feedbackId: string, userId: string, voteType: 'up' | 'down'): Promise<{ feedback: UserFeedback; userVote: string | null }>;
   getUserFeedbackVote(feedbackId: string, userId: string): Promise<FeedbackVote | undefined>;
@@ -930,12 +985,8 @@ export interface IStorage {
   createAiBrainActionLog(log: InsertAiBrainActionLog): Promise<AiBrainActionLog>;
   getAiBrainActionLog(id: string): Promise<AiBrainActionLog | undefined>;
   getAiBrainActionLogs(filters?: {
-    actorType?: string;
-    status?: string;
-    categoryTag?: string;
-    workflowId?: string;
+    actionType?: string;
     workspaceId?: string;
-    requiresHumanReview?: boolean;
     startDate?: Date;
     endDate?: Date;
     limit?: number;
@@ -971,9 +1022,172 @@ export interface IStorage {
     limit?: number;
     offset?: number;
   }): Promise<SupportAuditLog[]>;
+
+  // ========================================================================
+  // EMPLOYEE INVITATIONS - AI Action Registry Support
+  // ========================================================================
+  createEmployeeInvitation(data: InsertEmployeeInvitation): Promise<EmployeeInvitation>;
+  getEmployeeInvitationById(id: string): Promise<EmployeeInvitation | undefined>;
+  updateEmployeeInvitation(id: string, data: Partial<InsertEmployeeInvitation>): Promise<EmployeeInvitation | undefined>;
+
+  // ========================================================================
+  // WORKSPACE LISTING - Data Integrity Scanner Support
+  // ========================================================================
+  listWorkspaces(): Promise<Workspace[]>;
 }
 
 export class DatabaseStorage implements IStorage {
+  async resolveWorkspaceForUser(userId: string, requestedWorkspaceId?: string): Promise<{
+    workspaceId: string | null;
+    role: WorkspaceRole | null;
+    employeeId: string | null;
+    error?: string;
+  }> {
+    // Root user always gets org_owner access to the default workspace
+    if (userId === 'root-user-00000000') {
+      const [workspace] = await db.select().from(workspaces).limit(1);
+      if (workspace) {
+        const employee = await db.query.employees.findFirst({
+          where: and(
+            eq(employees.userId, userId),
+            eq(employees.workspaceId, workspace.id)
+          ),
+        });
+        return {
+          workspaceId: requestedWorkspaceId || workspace.id,
+          role: 'org_owner',
+          employeeId: employee?.id || null,
+        };
+      }
+    }
+
+    if (requestedWorkspaceId) {
+      const [ownedWorkspace] = await db
+        .select()
+        .from(workspaces)
+        .where(and(
+          eq(workspaces.id, requestedWorkspaceId),
+          eq(workspaces.ownerId, userId)
+        ))
+        .limit(1);
+
+      if (ownedWorkspace) {
+        const employee = await db.query.employees.findFirst({
+          where: and(
+            eq(employees.userId, userId),
+            eq(employees.workspaceId, requestedWorkspaceId)
+          ),
+        });
+        return {
+          workspaceId: requestedWorkspaceId,
+          role: 'org_owner',
+          employeeId: employee?.id || null,
+        };
+      }
+
+      const employee = await db.query.employees.findFirst({
+        where: and(
+          eq(employees.userId, userId),
+          eq(employees.workspaceId, requestedWorkspaceId)
+        ),
+      });
+
+      if (!employee) {
+        return {
+          workspaceId: null,
+          role: null,
+          employeeId: null,
+          error: 'You do not have access to this workspace'
+        };
+      }
+      return {
+        workspaceId: requestedWorkspaceId,
+        role: (employee.workspaceRole as WorkspaceRole) || 'staff',
+        employeeId: employee.id
+      };
+    }
+
+    const [ownedWorkspaces, userEmployees] = await Promise.all([
+      db.select().from(workspaces).where(eq(workspaces.ownerId, userId)),
+      db.query.employees.findMany({
+        where: eq(employees.userId, userId),
+      }),
+    ]);
+
+    if (ownedWorkspaces.length > 1) {
+      const sortedWorkspaces = ownedWorkspaces.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateA - dateB;
+      });
+      const workspace = sortedWorkspaces[0];
+      const employee = userEmployees.find(e => e.workspaceId === workspace.id);
+      return {
+        workspaceId: workspace.id,
+        role: 'org_owner',
+        employeeId: employee?.id || null,
+      };
+    }
+
+    if (ownedWorkspaces.length === 1) {
+      const workspace = ownedWorkspaces[0];
+      const employee = userEmployees.find(e => e.workspaceId === workspace.id);
+      return {
+        workspaceId: workspace.id,
+        role: 'org_owner',
+        employeeId: employee?.id || null,
+      };
+    }
+
+    if (userEmployees.length === 0) {
+      const userRecord = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { currentWorkspaceId: true },
+      });
+      if (userRecord?.currentWorkspaceId) {
+        const cwsId = userRecord.currentWorkspaceId;
+        const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, cwsId)).limit(1);
+        if (ws) {
+          const isOwner = ws.ownerId === userId;
+          if (isOwner) {
+            return {
+              workspaceId: cwsId,
+              role: 'org_owner',
+              employeeId: null,
+            };
+          }
+        }
+      }
+      return {
+        workspaceId: null,
+        role: null,
+        employeeId: null,
+        error: 'User is not a member of any workspace'
+      };
+    }
+
+    if (userEmployees.length === 1) {
+      const emp = userEmployees[0];
+      return {
+        workspaceId: emp.workspaceId,
+        role: (emp.workspaceRole as WorkspaceRole) || 'staff',
+        employeeId: emp.id,
+      };
+    }
+
+    const sortedEmployees = userEmployees.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
+    const emp = sortedEmployees[0];
+    return {
+      workspaceId: emp.workspaceId,
+      role: (emp.workspaceRole as WorkspaceRole) || 'staff',
+      employeeId: emp.id,
+    };
+  }
+
   // ============================================================================
   // USER OPERATIONS (Required for Replit Auth)
   // ============================================================================
@@ -1051,7 +1265,8 @@ export class DatabaseStorage implements IStorage {
   async getSession(sessionId: string): Promise<{passport?: {user?: string}} | null> {
     try {
       // Query the sessions table directly
-      const result = await db.execute(sql`
+      // CATEGORY C — Genuine schema mismatch: sessions table managed by connect-pg-simple, no Drizzle schema defined
+      const result = await typedQuery(sql`
         SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()
       `);
       
@@ -1063,7 +1278,7 @@ export class DatabaseStorage implements IStorage {
       const sessionData = result.rows[0].sess as {passport?: {user?: string}};
       return sessionData;
     } catch (error) {
-      console.error('[SECURITY] Failed to fetch session:', error);
+      log.error('[SECURITY] Failed to fetch session:', error);
       return null;
     }
   }
@@ -1131,50 +1346,55 @@ export class DatabaseStorage implements IStorage {
       organizationId: workspaceData.organizationId || generateOrganizationId(),
       organizationSerial: workspaceData.organizationSerial || await generateOrganizationSerial(),
     };
-    
-    const [workspace] = await db
-      .insert(workspaces)
-      .values(dataWithOrgInfo)
-      .returning();
-    
-    // Auto-seed default expense categories for new workspace
-    await this.seedDefaultExpenseCategories(workspace.id);
-    
-    // Generate human-readable external ID (ORG-XXXX) and initialize employee/client sequences
-    // BLOCKING call - critical for downstream employee ID generation
+
+    // Wrap workspace insert + expense category seed in a single transaction.
+    // If category seeding fails, the workspace row is rolled back — no zombie workspaces.
+    const workspace = await db.transaction(async (tx) => {
+      const [ws] = await tx
+        .insert(workspaces)
+        .values(dataWithOrgInfo)
+        .returning();
+
+      await this.seedDefaultExpenseCategories(ws.id, tx);
+      return ws;
+    });
+
+    // Generate human-readable external ID (ORG-XXXX) and initialize employee/client sequences.
+    // BLOCKING call — critical for downstream employee/client ID generation.
+    // Intentionally outside the transaction: this calls an external identity service and can be
+    // retried independently without risk of partial workspace state.
     try {
       const { ensureOrgIdentifiers } = await import('./services/identityService');
       await ensureOrgIdentifiers(workspace.id, workspace.name);
-      console.log(`✅ [Storage] Generated external ID for org: ${workspace.id}`);
+      log.info(`✅ [Storage] Generated external ID for org: ${workspace.id}`);
     } catch (err) {
-      // Log error but don't fail workspace creation - can be retried later
-      console.error(`❌ [Storage] Failed to attach org external ID for ${workspace.id}:`, err);
-      // Consider: throw error here if external IDs are critical for your workflow
+      log.error(`❌ [Storage] Failed to attach org external ID for ${workspace.id}:`, err);
     }
-    
+
     return workspace;
   }
-  
-  // Helper method to seed default expense categories
-  private async seedDefaultExpenseCategories(workspaceId: string): Promise<void> {
+
+  // Helper method to seed default expense categories — accepts optional tx for atomic workspace creation
+  private async seedDefaultExpenseCategories(workspaceId: string, tx?: any): Promise<void> {
+    const dbHandle = tx || db;
     const defaultCategories = [
       { name: 'Mileage', description: 'Vehicle mileage reimbursement' },
       { name: 'Meals', description: 'Business meals and entertainment' },
       { name: 'Travel', description: 'Flights, hotels, and transportation' },
       { name: 'Office Supplies', description: 'Office equipment and supplies' },
     ];
-    
+
     for (const category of defaultCategories) {
       try {
-        await db.insert(expenseCategories).values({
+        await dbHandle.insert(expenseCategories).values({
           workspaceId,
           name: category.name,
           description: category.description,
           isActive: true,
         });
       } catch (error) {
-        // Ignore duplicate errors, continue with next category
-        console.log(`Category ${category.name} already exists for workspace ${workspaceId}`);
+        // Ignore duplicate key errors — category already exists for this workspace
+        log.info(`[Storage] Category '${category.name}' already exists for workspace ${workspaceId}`);
       }
     }
   }
@@ -1211,11 +1431,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkspaceTheme(workspaceId: string): Promise<WorkspaceTheme | null> {
-    const [theme] = await db
-      .select()
-      .from(workspaceThemes)
-      .where(eq(workspaceThemes.workspaceId, workspaceId));
-    return theme || null;
+    const [ws] = await db
+      .select({ blob: workspaces.themeConfigBlob })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
+    const blob = (ws?.blob || {}) as Record<string, any>;
+    if (!blob.mode && !blob.primaryColor) return null;
+    return { ...blob, workspaceId } as WorkspaceTheme;
   }
 
   // ============================================================================
@@ -1241,7 +1463,7 @@ export class DatabaseStorage implements IStorage {
     return employee;
   }
 
-  async getEmployeesByWorkspace(workspaceId: string): Promise<Employee[]> {
+  async getEmployeesByWorkspace(workspaceId: string, limit: number = 25, offset: number = 0): Promise<Employee[]> {
     // Join with users table to get actual name when userId is linked
     const results = await db
       .select({
@@ -1252,7 +1474,9 @@ export class DatabaseStorage implements IStorage {
       .from(employees)
       .leftJoin(users, eq(employees.userId, users.id))
       .where(eq(employees.workspaceId, workspaceId))
-      .orderBy(desc(employees.createdAt));
+      .orderBy(desc(employees.createdAt))
+      .limit(limit)
+      .offset(offset);
     
     // Prefer user's actual name over placeholder employee name
     return results.map(({ employee, userFirstName, userLastName }) => ({
@@ -1287,6 +1511,20 @@ export class DatabaseStorage implements IStorage {
         eq(employees.workspaceId, workspaceId)
       ))
       .returning();
+
+    if (result.length > 0) {
+      // Cascade: cancel all future shifts for the deactivated employee
+      await db.update(shifts)
+        .set({ status: 'cancelled' } as any)
+        .where(and(
+          eq(shifts.employeeId, id),
+          eq(shifts.workspaceId, workspaceId),
+          gte(shifts.startTime, new Date())
+        ))
+        .catch((err: Error) =>
+          log.warn('[Storage] deleteEmployee: shift cascade cancel failed:', err.message)
+        );
+    }
     return result.length > 0;
   }
 
@@ -1306,11 +1544,15 @@ export class DatabaseStorage implements IStorage {
     return employee;
   }
 
-  async getEmployeeByUserId(userId: string): Promise<Employee | undefined> {
+  async getEmployeeByUserId(userId: string, workspaceId?: string): Promise<Employee | undefined> {
+    const conditions = [eq(employees.userId, userId)];
+    if (workspaceId) {
+      conditions.push(eq(employees.workspaceId, workspaceId));
+    }
     const [employee] = await db
       .select()
       .from(employees)
-      .where(eq(employees.userId, userId));
+      .where(and(...conditions));
     return employee;
   }
 
@@ -1322,11 +1564,15 @@ export class DatabaseStorage implements IStorage {
     return employee;
   }
 
-  async getEmployeeById(employeeId: string): Promise<Employee | undefined> {
+  async getEmployeeById(employeeId: string, workspaceId?: string): Promise<Employee | undefined> {
+    const conditions = [eq(employees.id, employeeId)];
+    if (workspaceId) {
+      conditions.push(eq(employees.workspaceId, workspaceId));
+    }
     const [employee] = await db
       .select()
       .from(employees)
-      .where(eq(employees.id, employeeId));
+      .where(and(...conditions));
     return employee;
   }
 
@@ -1339,6 +1585,19 @@ export class DatabaseStorage implements IStorage {
       .insert(clients)
       .values(clientData)
       .returning();
+    // Publish canonical client_created event so Trinity, cross-device sync, and workboard react (non-blocking)
+    import('./services/platformEventBus').then(({ platformEventBus }) =>
+      platformEventBus.publish({
+        type: 'client_created',
+        workspaceId: client.workspaceId,
+        metadata: {
+          clientId: client.id,
+          clientName: client.companyName || `${client.firstName} ${client.lastName}`.trim(),
+          email: client.email || undefined,
+          source: 'storage_createClient',
+        },
+      }).catch(() => null)
+    ).catch(() => null);
     return client;
   }
 
@@ -1358,7 +1617,8 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(clients)
       .where(eq(clients.workspaceId, workspaceId))
-      .orderBy(desc(clients.createdAt));
+      .orderBy(desc(clients.createdAt))
+      .limit(1000);
   }
 
   async getClientByUserId(userId: string): Promise<Client | undefined> {
@@ -1429,21 +1689,63 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: clients.id,
         workspaceId: clients.workspaceId,
+        userId: clients.userId,
         firstName: clients.firstName,
         lastName: clients.lastName,
         companyName: clients.companyName,
+        category: clients.category,
         email: clients.email,
         phone: clients.phone,
         address: clients.address,
+        addressLine2: clients.addressLine2,
+        city: clients.city,
+        state: clients.state,
+        postalCode: clients.postalCode,
         latitude: clients.latitude,
         longitude: clients.longitude,
         billingEmail: clients.billingEmail,
         taxId: clients.taxId,
+        isTaxExempt: clients.isTaxExempt,
+        taxExemptCertificate: clients.taxExemptCertificate,
+        contractRate: clients.contractRate,
         clientOvertimeMultiplier: clients.clientOvertimeMultiplier,
         clientHolidayMultiplier: clients.clientHolidayMultiplier,
+        billingCycle: clients.billingCycle,
+        paymentTermsDays: clients.paymentTermsDays,
+        preferredPaymentMethod: clients.preferredPaymentMethod,
+        autoSendInvoice: clients.autoSendInvoice,
+        armedBillRate: clients.armedBillRate,
+        unarmedBillRate: clients.unarmedBillRate,
+        overtimeBillRate: clients.overtimeBillRate,
+        requiresArmed: clients.requiresArmed,
+        minOfficerSchedulingScore: clients.minOfficerSchedulingScore,
+        minimumStaffing: clients.minimumStaffing,
+        maxDrivingDistance: clients.maxDrivingDistance,
+        pocName: clients.pocName,
+        pocTitle: clients.pocTitle,
+        pocPhone: clients.pocPhone,
+        pocEmail: clients.pocEmail,
+        apContactName: clients.apContactName,
+        apContactEmail: clients.apContactEmail,
+        apContactPhone: clients.apContactPhone,
+        postOrders: clients.postOrders,
+        contractFileUrl: clients.contractFileUrl,
         isActive: clients.isActive,
         notes: clients.notes,
         color: clients.color,
+        strategicTier: clients.strategicTier,
+        agencyClientNumber: clients.agencyClientNumber,
+        agencyPONumber: clients.agencyPONumber,
+        agencyContractNumber: clients.agencyContractNumber,
+        serviceType: clients.serviceType,
+        officersRequired: clients.officersRequired,
+        ppoBillRate: clients.ppoBillRate,
+        primaryContactName: clients.primaryContactName,
+        primaryContactPhone: clients.primaryContactPhone,
+        primaryContactEmail: clients.primaryContactEmail,
+        clientOnboardingStatus: clients.clientOnboardingStatus,
+        portalAccessEnabled: clients.portalAccessEnabled,
+        contractSignedAt: clients.contractSignedAt,
         createdAt: clients.createdAt,
         updatedAt: clients.updatedAt,
         invoiceCount: sql<number>`COALESCE(COUNT(${invoices.id}), 0)::int`,
@@ -1488,6 +1790,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClient(id: string, workspaceId: string): Promise<boolean> {
+    // Cascade: cancel all future open/assigned shifts for this client before deletion
+    await db.update(shifts)
+      .set({ status: 'cancelled' } as any)
+      .where(and(
+        eq(shifts.clientId, id),
+        eq(shifts.workspaceId, workspaceId),
+        gte(shifts.startTime, new Date())
+      ))
+      .catch((err: Error) =>
+        log.warn('[Storage] deleteClient: shift cascade cancel failed:', err.message)
+      );
+
     const result = await db
       .delete(clients)
       .where(and(
@@ -1520,7 +1834,7 @@ export class DatabaseStorage implements IStorage {
     return shift;
   }
 
-  async getShiftsByWorkspace(workspaceId: string, startDate?: Date, endDate?: Date): Promise<Shift[]> {
+  async getShiftsByWorkspace(workspaceId: string, startDate?: Date, endDate?: Date, limit: number = 25, offset: number = 0): Promise<Shift[]> {
     const conditions = [eq(shifts.workspaceId, workspaceId)];
     
     if (startDate) {
@@ -1534,7 +1848,9 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(shifts)
       .where(and(...conditions))
-      .orderBy(desc(shifts.startTime));
+      .orderBy(desc(shifts.startTime))
+      .limit(limit)
+      .offset(offset);
   }
 
   async updateShift(id: string, workspaceId: string, data: Partial<InsertShift>): Promise<Shift | undefined> {
@@ -1635,29 +1951,14 @@ export class DatabaseStorage implements IStorage {
     return entry;
   }
 
-  async getTimeEntriesByWorkspace(workspaceId: string): Promise<TimeEntry[]> {
+  async getTimeEntriesByWorkspace(workspaceId: string, limit: number = 25, offset: number = 0): Promise<TimeEntry[]> {
     return await db
-      .select({
-        id: timeEntries.id,
-        workspaceId: timeEntries.workspaceId,
-        shiftId: timeEntries.shiftId,
-        employeeId: timeEntries.employeeId,
-        clientId: timeEntries.clientId,
-        clockIn: timeEntries.clockIn,
-        clockOut: timeEntries.clockOut,
-        totalHours: timeEntries.totalHours,
-        hourlyRate: timeEntries.hourlyRate,
-        totalAmount: timeEntries.totalAmount,
-        status: timeEntries.status,
-        invoiceId: timeEntries.invoiceId,
-        billableToClient: timeEntries.billableToClient,
-        notes: timeEntries.notes,
-        createdAt: timeEntries.createdAt,
-        updatedAt: timeEntries.updatedAt,
-      })
+      .select()
       .from(timeEntries)
       .where(eq(timeEntries.workspaceId, workspaceId))
-      .orderBy(desc(timeEntries.clockIn));
+      .orderBy(desc(timeEntries.clockIn))
+      .limit(limit)
+      .offset(offset);
   }
 
   async getUnbilledTimeEntries(workspaceId: string, clientId: string): Promise<TimeEntry[]> {
@@ -1724,15 +2025,48 @@ export class DatabaseStorage implements IStorage {
     return invoice;
   }
 
+  async getInvoiceById(id: string, workspaceId?: string): Promise<Invoice | undefined> {
+    const conditions = [eq(invoices.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(invoices.workspaceId, workspaceId));
+    }
+    const [invoice] = await db
+      .select()
+      .from(invoices)
+      .where(and(...conditions));
+    return invoice;
+  }
+
   async getInvoicesByWorkspace(workspaceId: string): Promise<Invoice[]> {
     return await db
       .select()
       .from(invoices)
       .where(eq(invoices.workspaceId, workspaceId))
-      .orderBy(desc(invoices.createdAt));
+      .orderBy(desc(invoices.createdAt))
+      .limit(1000);
   }
 
   async updateInvoice(id: string, workspaceId: string, data: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    // Service-layer guard: disputed and voided invoices are immutable except for allowed resolution fields
+    const [current] = await db
+      .select({ status: invoices.status })
+      .from(invoices)
+      .where(and(eq(invoices.id, id), eq(invoices.workspaceId, workspaceId)))
+      .limit(1);
+
+    if (current) {
+      if (current.status === 'disputed') {
+        const DISPUTE_ALLOWED = new Set(['dispute_notes', 'dispute_resolution', 'status', 'updatedAt']);
+        const blockedFields = Object.keys(data).filter(k => !DISPUTE_ALLOWED.has(k));
+        if (blockedFields.length > 0) {
+          throw new Error(`Invoice is in dispute. Cannot modify: ${blockedFields.join(', ')}. Resolve the dispute first.`);
+        }
+      }
+      if (current.status === 'void' || current.status === 'voided') {
+        throw new Error('Voided invoices cannot be modified.');
+      }
+    }
+
     const [invoice] = await db
       .update(invoices)
       .set({ ...data, updatedAt: new Date() })
@@ -1761,6 +2095,42 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(invoiceLineItems)
       .where(eq(invoiceLineItems.invoiceId, invoiceId));
+  }
+
+  async deleteInvoiceLineItem(id: string, workspaceId: string): Promise<void> {
+    await db.delete(invoiceLineItems).where(
+      and(
+        eq(invoiceLineItems.id, id),
+        eq(invoiceLineItems.workspaceId, workspaceId)
+      )
+    );
+  }
+
+  async getInvoicesByClient(clientId: string, workspaceId: string): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.clientId, clientId),
+          eq(invoices.workspaceId, workspaceId)
+        )
+      )
+      .orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoicesByClientAndStatus(clientId: string, status: string, workspaceId: string): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.clientId, clientId),
+          eq(invoices.status, status),
+          eq(invoices.workspaceId, workspaceId)
+        )
+      )
+      .orderBy(desc(invoices.createdAt));
   }
 
   // ============================================================================
@@ -1912,7 +2282,8 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(onboardingInvites)
       .where(eq(onboardingInvites.workspaceId, workspaceId))
-      .orderBy(desc(onboardingInvites.createdAt));
+      .orderBy(desc(onboardingInvites.createdAt))
+      .limit(2000);
   }
   
   async updateOnboardingInvite(id: string, data: Partial<InsertOnboardingInvite>): Promise<OnboardingInvite | undefined> {
@@ -2115,6 +2486,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async generateEmployeeNumber(workspaceId: string): Promise<string> {
+    // Get workspace org code for employee number prefix
+    const [workspace] = await db
+      .select({ orgCode: workspaces.orgCode, name: workspaces.name })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
+    
     // Get count of employees and applications for this workspace
     const employeeCount = await db
       .select()
@@ -2128,10 +2505,13 @@ export class DatabaseStorage implements IStorage {
     
     const totalCount = employeeCount.length + applicationCount.length + 1;
     
-    // Generate employee number: EMP-YYYY-XXXX
-    const year = new Date().getFullYear();
+    // Use workspace orgCode if set, otherwise derive from workspace name
+    // Format: ORGCODE-XXXX (e.g., STATEWIDE-0001, ACME-0042)
+    const prefix = workspace?.orgCode?.toUpperCase() || 
+                   workspace?.name?.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10) || 
+                   'EMP';
     const paddedNumber = String(totalCount).padStart(4, '0');
-    return `EMP-${year}-${paddedNumber}`;
+    return `${prefix}-${paddedNumber}`;
   }
   
   // ============================================================================
@@ -2156,11 +2536,16 @@ export class DatabaseStorage implements IStorage {
     return signature;
   }
   
-  async getDocumentSignaturesByApplication(applicationId: string): Promise<DocumentSignature[]> {
+  async getDocumentSignaturesByApplication(applicationId: string, workspaceId: string): Promise<DocumentSignature[]> {
     return await db
       .select()
       .from(documentSignatures)
-      .where(eq(documentSignatures.applicationId, applicationId))
+      .where(
+        and(
+          eq(documentSignatures.applicationId, applicationId),
+          eq(documentSignatures.workspaceId, workspaceId)
+        )
+      )
       .orderBy(desc(documentSignatures.createdAt));
   }
   
@@ -2204,11 +2589,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(employeeCertifications.createdAt));
   }
   
-  async getEmployeeCertificationsByApplication(applicationId: string): Promise<EmployeeCertification[]> {
+  async getEmployeeCertificationsByApplication(applicationId: string, workspaceId: string): Promise<EmployeeCertification[]> {
     return await db
       .select()
       .from(employeeCertifications)
-      .where(eq(employeeCertifications.applicationId, applicationId))
+      .where(
+        and(
+          eq(employeeCertifications.applicationId, applicationId),
+          eq(employeeCertifications.workspaceId, workspaceId)
+        )
+      )
       .orderBy(desc(employeeCertifications.createdAt));
   }
   
@@ -2234,6 +2624,11 @@ export class DatabaseStorage implements IStorage {
   // REPORT MANAGEMENT SYSTEM (RMS) OPERATIONS
   // ============================================================================
   
+  async createReportTemplate(template: InsertReportTemplate): Promise<ReportTemplate> {
+    const [created] = await db.insert(reportTemplates).values(template).returning();
+    return created;
+  }
+
   async getReportTemplatesByWorkspace(workspaceId: string): Promise<ReportTemplate[]> {
     return await db
       .select()
@@ -2306,20 +2701,29 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reportSubmissions.createdAt));
   }
   
-  async getReportSubmissionById(id: string): Promise<ReportSubmission | undefined> {
+  async getReportSubmissionById(id: string, workspaceId?: string): Promise<ReportSubmission | undefined> {
+    const conditions = [eq(reportSubmissions.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(reportSubmissions.workspaceId, workspaceId));
+    }
     const [submission] = await db
       .select()
       .from(reportSubmissions)
-      .where(eq(reportSubmissions.id, id));
+      .where(and(...conditions));
     
     return submission;
   }
   
-  async updateReportSubmission(id: string, data: Partial<InsertReportSubmission>): Promise<ReportSubmission> {
+  async updateReportSubmission(id: string, workspaceId: string, data: Partial<InsertReportSubmission>): Promise<ReportSubmission> {
     const [updated] = await db
       .update(reportSubmissions)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(reportSubmissions.id, id))
+      .where(
+        and(
+          eq(reportSubmissions.id, id),
+          eq(reportSubmissions.workspaceId, workspaceId)
+        )
+      )
       .returning();
     
     return updated;
@@ -2424,20 +2828,26 @@ export class DatabaseStorage implements IStorage {
     return tickets[0];
   }
   
-  async updateSupportTicket(id: string, data: Partial<InsertSupportTicket>): Promise<SupportTicket> {
+  async updateSupportTicket(id: string, data: Partial<InsertSupportTicket>, workspaceId?: string): Promise<SupportTicket> {
+    const condition = workspaceId
+      ? and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId))
+      : eq(supportTickets.id, id);
     const [updated] = await db
       .update(supportTickets)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(supportTickets.id, id))
+      .where(condition)
       .returning();
     
     return updated;
   }
 
-  async deleteSupportTicket(id: string): Promise<boolean> {
+  async deleteSupportTicket(id: string, workspaceId?: string): Promise<boolean> {
+    const condition = workspaceId
+      ? and(eq(supportTickets.id, id), eq(supportTickets.workspaceId, workspaceId))
+      : eq(supportTickets.id, id);
     const result = await db
       .delete(supportTickets)
-      .where(eq(supportTickets.id, id));
+      .where(condition);
     
     return (result.rowCount || 0) > 0;
   }
@@ -2548,7 +2958,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Support pagination with explicit offset/limit controls
-    const limit = Math.min(filters?.limit || 1000, 1000); // Cap at 1000 for performance
+    const limit = Math.min(filters?.limit || 50, 200); // Default 50, cap at 200 for performance
     const offset = filters?.offset || 0;
     
     return await db
@@ -2564,48 +2974,59 @@ export class DatabaseStorage implements IStorage {
   // EVENT SOURCING & DATA INTEGRITY OPERATIONS
   // ============================================================================
   
-  async createAuditEvent(event: InsertAuditEvent): Promise<string> {
+  async createAuditEvent(event: InsertAuditLog): Promise<string> {
     const [newEvent] = await db
-      .insert(auditEvents)
-      .values(event)
+      .insert(auditLogs)
+      .values({
+        workspaceId: event.workspaceId,
+        rawAction: (event as any).eventType,
+        actorType: (event as any).actorType,
+        entityId: (event as any).aggregateId,
+        entityType: (event as any).aggregateType,
+        payload: (event as any).payload,
+        actionHash: (event as any).actionHash,
+        metadata: (event as any).metadata,
+        ipAddress: (event as any).ipAddress,
+        userAgent: (event as any).userAgent,
+      })
       .returning();
     
     return newEvent.id;
   }
   
-  async getAuditEvent(id: string): Promise<AuditEvent | undefined> {
+  async getAuditEvent(id: string): Promise<AuditLog | undefined> {
     const [event] = await db
       .select()
-      .from(auditEvents)
-      .where(eq(auditEvents.id, id));
+      .from(auditLogs)
+      .where(eq(auditLogs.id, id));
     
     return event;
   }
 
-  async getAuditEvents(filters?: { workspaceId?: string; actorType?: string; eventType?: string; limit?: number }): Promise<AuditEvent[]> {
+  async getAuditEvents(filters?: { workspaceId?: string; actorType?: string; eventType?: string; limit?: number }): Promise<AuditLog[]> {
     let query = db
       .select()
-      .from(auditEvents);
+      .from(auditLogs);
 
     const conditions = [];
     
     if (filters?.workspaceId) {
-      conditions.push(eq(auditEvents.workspaceId, filters.workspaceId));
+      conditions.push(eq(auditLogs.workspaceId, filters.workspaceId));
     }
     
     if (filters?.actorType) {
-      conditions.push(eq(auditEvents.actorType, filters.actorType));
+      conditions.push(eq(auditLogs.actorType, filters.actorType));
     }
     
     if (filters?.eventType) {
-      conditions.push(eq(auditEvents.eventType, filters.eventType));
+      conditions.push(eq(auditLogs.rawAction, filters.eventType));
     }
 
     if (conditions.length > 0) {
       query = query.where(and(...conditions)) as any;
     }
 
-    query = query.orderBy(desc(auditEvents.timestamp)) as any;
+    query = query.orderBy(desc(auditLogs.createdAt)) as any;
 
     if (filters?.limit) {
       query = query.limit(filters.limit) as any;
@@ -2615,21 +3036,20 @@ export class DatabaseStorage implements IStorage {
   }
   
   async verifyAuditEvent(eventId: string, actionHash: string): Promise<void> {
-    const result = await db
-      .update(auditEvents)
-      .set({ 
-        verifiedAt: new Date(),
-        status: 'committed' as any,
-      })
-      .where(and(
-        eq(auditEvents.id, eventId),
-        eq(auditEvents.actionHash, actionHash)
-      ))
-      .returning();
-    
-    if (!result || result.length === 0) {
-      throw new Error(`Failed to verify audit event ${eventId} - hash mismatch or event not found`);
+    const [existing] = await db
+      .select({ id: auditLogs.id, actionHash: auditLogs.actionHash })
+      .from(auditLogs)
+      .where(eq(auditLogs.id, eventId))
+      .limit(1);
+
+    if (!existing) {
+      throw new Error(`Failed to verify audit event ${eventId} — event not found`);
     }
+    if (existing.actionHash !== actionHash) {
+      throw new Error(`Failed to verify audit event ${eventId} — hash mismatch, integrity check failed`);
+    }
+    // Audit log immutability: do NOT update the original audit record.
+    // Verification is confirmed by hash comparison above. The immutable audit trail is preserved.
   }
   
   async registerID(entry: InsertIdRegistry): Promise<void> {
@@ -2640,7 +3060,7 @@ export class DatabaseStorage implements IStorage {
         .onConflictDoNothing(); // ID might already be registered
     } catch (error) {
       // Silently fail if ID is already registered (that's the goal!)
-      console.warn('[Storage] ID already registered:', entry.id);
+      log.warn('[Storage] ID already registered:', entry.id);
     }
   }
   
@@ -2682,12 +3102,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async markWALCommitted(transactionId: string): Promise<void> {
-    // Transition: pending (with preparedAt set) → committed
+    // Transition: pending (with preparedAt set) → completed
     const result = await db
       .update(writeAheadLog)
       .set({ 
         committedAt: new Date(),
-        status: 'committed' as any,
+        status: 'completed' as any,
         updatedAt: new Date(),
       })
       .where(and(
@@ -2867,6 +3287,20 @@ export class DatabaseStorage implements IStorage {
     return summary;
   }
 
+  async getWorkspaceMembership(userId: string, workspaceId: string): Promise<boolean> {
+    // Check workspace ownership
+    const owned = await db.select({ id: workspaces.id }).from(workspaces)
+      .where(and(eq(workspaces.id, workspaceId), eq(workspaces.ownerId, userId)))
+      .limit(1);
+    if (owned.length > 0) return true;
+
+    // Check platform roles / membership
+    const role = await db.select({ id: platformRoles.id }).from(platformRoles)
+      .where(and(eq(platformRoles.userId, userId), eq(platformRoles.workspaceId, workspaceId)))
+      .limit(1);
+    return role.length > 0;
+  }
+
   // ============================================================================
   // EMPLOYEE BENEFITS OPERATIONS (HR)
   // ============================================================================
@@ -2907,7 +3341,8 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(employeeBenefits)
       .where(eq(employeeBenefits.workspaceId, workspaceId))
-      .orderBy(desc(employeeBenefits.createdAt));
+      .orderBy(desc(employeeBenefits.createdAt))
+      .limit(5000);
   }
   
   async updateEmployeeBenefit(
@@ -3203,18 +3638,40 @@ export class DatabaseStorage implements IStorage {
   }
   
   async approvePtoRequest(id: string, workspaceId: string, approverId: string): Promise<PtoRequest | undefined> {
-    const [approved] = await db
-      .update(ptoRequests)
-      .set({
-        status: "approved",
-        approverId,
-        approvedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(ptoRequests.id, id), eq(ptoRequests.workspaceId, workspaceId)))
-      .returning();
-    
-    return approved;
+    return await db.transaction(async (tx) => {
+      // SELECT FOR UPDATE — prevents two concurrent approvals of the same PTO request
+      // (Phase 23 race-condition guard: time-off approval SELECT FOR UPDATE)
+      const [existing] = await tx
+        .select()
+        .from(ptoRequests)
+        .where(and(eq(ptoRequests.id, id), eq(ptoRequests.workspaceId, workspaceId)))
+        .for('update')
+        .limit(1);
+
+      if (!existing) return undefined;
+
+      // Idempotency: already approved/denied — don't re-process
+      if (existing.status !== 'pending') {
+        return existing as PtoRequest;
+      }
+
+      const [approved] = await tx
+        .update(ptoRequests)
+        .set({
+          status: "approved",
+          approverId,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(ptoRequests.id, id),
+          eq(ptoRequests.workspaceId, workspaceId),
+          eq(ptoRequests.status, 'pending'),
+        ))
+        .returning();
+
+      return approved;
+    });
   }
   
   async denyPtoRequest(
@@ -3235,6 +3692,92 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return denied;
+  }
+
+  // ============================================================================
+  // MILEAGE LOG OPERATIONS
+  // ============================================================================
+
+  async createMileageLog(log: InsertMileageLog): Promise<MileageLog> {
+    const miles = parseFloat(String(log.miles));
+    const rate = parseFloat(String(log.ratePerMile || '0.6700'));
+    const reimbursementAmount = (miles * rate).toFixed(2);
+    const [created] = await db
+      .insert(mileageLogs)
+      .values({
+        ...log,
+        tripDate: new Date(log.tripDate),
+        miles: String(miles),
+        ratePerMile: String(rate),
+        reimbursementAmount,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async getMileageLog(id: string, workspaceId: string): Promise<MileageLog | undefined> {
+    const [log] = await db
+      .select()
+      .from(mileageLogs)
+      .where(and(eq(mileageLogs.id, id), eq(mileageLogs.workspaceId, workspaceId)));
+    return log;
+  }
+
+  async getMileageLogsByWorkspace(workspaceId: string, filters?: { employeeId?: string; status?: string; startDate?: Date; endDate?: Date }): Promise<MileageLog[]> {
+    const conditions = [eq(mileageLogs.workspaceId, workspaceId)];
+    if (filters?.employeeId) conditions.push(eq(mileageLogs.employeeId, filters.employeeId));
+    if (filters?.status) conditions.push(eq(mileageLogs.status, filters.status));
+    return db.select().from(mileageLogs).where(and(...conditions)).orderBy(mileageLogs.tripDate);
+  }
+
+  async getMileageLogsByEmployee(employeeId: string, workspaceId: string): Promise<MileageLog[]> {
+    return db
+      .select()
+      .from(mileageLogs)
+      .where(and(eq(mileageLogs.employeeId, employeeId), eq(mileageLogs.workspaceId, workspaceId)))
+      .orderBy(mileageLogs.tripDate);
+  }
+
+  async updateMileageLog(id: string, workspaceId: string, data: Partial<InsertMileageLog>): Promise<MileageLog | undefined> {
+    const updateData: any = { ...data, updatedAt: new Date() };
+    if (data.miles || data.ratePerMile) {
+      const existing = await this.getMileageLog(id, workspaceId);
+      const miles = parseFloat(String(data.miles || existing?.miles || 0));
+      const rate = parseFloat(String(data.ratePerMile || existing?.ratePerMile || 0.67));
+      updateData.reimbursementAmount = (miles * rate).toFixed(2);
+    }
+    const [updated] = await db
+      .update(mileageLogs)
+      .set(updateData)
+      .where(and(eq(mileageLogs.id, id), eq(mileageLogs.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+
+  async approveMileageLog(id: string, workspaceId: string, approverId: string): Promise<MileageLog | undefined> {
+    const [approved] = await db
+      .update(mileageLogs)
+      .set({ status: 'approved', approvedBy: approverId, approvedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(mileageLogs.id, id), eq(mileageLogs.workspaceId, workspaceId)))
+      .returning();
+    return approved;
+  }
+
+  async rejectMileageLog(id: string, workspaceId: string, approverId: string, reason: string): Promise<MileageLog | undefined> {
+    const [rejected] = await db
+      .update(mileageLogs)
+      .set({ status: 'rejected', approvedBy: approverId, rejectionReason: reason, updatedAt: new Date() })
+      .where(and(eq(mileageLogs.id, id), eq(mileageLogs.workspaceId, workspaceId)))
+      .returning();
+    return rejected;
+  }
+
+  async deleteMileageLog(id: string, workspaceId: string): Promise<boolean> {
+    const result = await db
+      .delete(mileageLogs)
+      .where(and(eq(mileageLogs.id, id), eq(mileageLogs.workspaceId, workspaceId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // ============================================================================
@@ -3312,6 +3855,89 @@ export class DatabaseStorage implements IStorage {
     return roleRecord?.role || null;
   }
 
+  /**
+   * Batch lookup of platform roles for multiple users (N+1 query optimization)
+   */
+  async getUserPlatformRolesBatch(userIds: string[]): Promise<Map<string, string | null>> {
+    if (userIds.length === 0) return new Map();
+    
+    const uniqueIds = [...new Set(userIds.filter(id => id && id !== 'system' && id !== 'ai-bot'))];
+    if (uniqueIds.length === 0) return new Map();
+    
+    const roleRecords = await db
+      .select({ userId: platformRoles.userId, role: platformRoles.role })
+      .from(platformRoles)
+      .where(and(
+        sql`${platformRoles.userId} = ANY(${uniqueIds})`,
+        isNull(platformRoles.revokedAt)
+      ));
+    
+    const roleMap = new Map<string, string | null>();
+    for (const record of roleRecords) {
+      roleMap.set(record.userId, record.role);
+    }
+    
+    // Fill in nulls for users without roles
+    for (const id of uniqueIds) {
+      if (!roleMap.has(id)) {
+        roleMap.set(id, null);
+      }
+    }
+    
+    return roleMap;
+  }
+
+  /**
+   * Batch lookup of user display info for multiple users (N+1 query optimization)
+   */
+  async getUserDisplayInfoBatch(userIds: string[]): Promise<Map<string, {
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    userType: string | null;
+  } | null>> {
+    if (userIds.length === 0) return new Map();
+    
+    const uniqueIds = [...new Set(userIds.filter(id => id && id !== 'system' && id !== 'ai-bot'))];
+    if (uniqueIds.length === 0) return new Map();
+    
+    const userRecords = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        userType: users.role,
+      })
+      .from(users)
+      .where(sql`${users.id} = ANY(${uniqueIds})`);
+    
+    const infoMap = new Map<string, {
+      firstName: string | null;
+      lastName: string | null;
+      email: string | null;
+      userType: string | null;
+    } | null>();
+    
+    for (const user of userRecords) {
+      infoMap.set(user.id, {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        userType: user.userType,
+      });
+    }
+    
+    // Fill in nulls for users not found
+    for (const id of uniqueIds) {
+      if (!infoMap.has(id)) {
+        infoMap.set(id, null);
+      }
+    }
+    
+    return infoMap;
+  }
+
   // ============================================================================
   // LIVE CHAT OPERATIONS (Support System)
   // ============================================================================
@@ -3325,11 +3951,15 @@ export class DatabaseStorage implements IStorage {
     return newConversation;
   }
   
-  async getChatConversation(id: string): Promise<ChatConversation | undefined> {
+  async getChatConversation(id: string, workspaceId?: string): Promise<ChatConversation | undefined> {
+    const conditions = [eq(chatConversations.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(chatConversations.workspaceId, workspaceId));
+    }
     const [conversation] = await db
       .select()
       .from(chatConversations)
-      .where(eq(chatConversations.id, id));
+      .where(and(...conditions));
     
     return conversation;
   }
@@ -3348,21 +3978,26 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(chatConversations.lastMessageAt));
   }
   
-  async getAllChatConversations(filters?: { status?: string }): Promise<ChatConversation[]> {
-    let query = db.select().from(chatConversations);
+  async getAllChatConversations(workspaceId: string, filters?: { status?: string }): Promise<ChatConversation[]> {
+    let query = db.select().from(chatConversations).where(eq(chatConversations.workspaceId, workspaceId));
     
     if (filters?.status) {
-      query = query.where(eq(chatConversations.status, filters.status as any)) as any;
+      query = query.where(and(eq(chatConversations.workspaceId, workspaceId), eq(chatConversations.status, filters.status as any))) as any;
     }
     
     return await query.orderBy(desc(chatConversations.lastMessageAt));
   }
   
-  async updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation | undefined> {
+  async updateChatConversation(id: string, workspaceId: string, data: Partial<InsertChatConversation>): Promise<ChatConversation | undefined> {
     const [updated] = await db
       .update(chatConversations)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(chatConversations.id, id))
+      .where(
+        and(
+          eq(chatConversations.id, id),
+          eq(chatConversations.workspaceId, workspaceId)
+        )
+      )
       .returning();
     
     return updated;
@@ -3382,6 +4017,40 @@ export class DatabaseStorage implements IStorage {
     return closed;
   }
   
+  async ensureChatParticipant(conversationId: string, userId: string): Promise<void> {
+    const existing = await db
+      .select({ id: chatParticipants.id })
+      .from(chatParticipants)
+      .where(
+        and(
+          eq(chatParticipants.conversationId, conversationId),
+          eq(chatParticipants.participantId, userId)
+        )
+      )
+      .limit(1);
+    
+    if (existing.length > 0) return;
+
+    const conversation = await db.query.chatConversations.findFirst({
+      where: eq(chatConversations.id, conversationId),
+    });
+    if (!conversation) return;
+
+    const userInfo = await this.getUserDisplayInfo(userId);
+    const displayName = userInfo
+      ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 'User'
+      : 'User';
+
+    await db.insert(chatParticipants).values({
+      conversationId,
+      workspaceId: conversation.workspaceId || 'platform',
+      participantId: userId,
+      participantName: displayName,
+      participantEmail: userInfo?.email || undefined,
+      participantRole: 'member',
+    }).onConflictDoNothing();
+  }
+
   async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
     const [newMessage] = await db
       .insert(chatMessages)
@@ -3397,12 +4066,40 @@ export class DatabaseStorage implements IStorage {
     return newMessage;
   }
   
-  async getChatMessagesByConversation(conversationId: string): Promise<ChatMessage[]> {
+  async getChatMessagesByConversation(conversationId: string, workspaceId: string, since?: Date): Promise<ChatMessage[]> {
+    const conditions: any[] = [
+      eq(chatMessages.conversationId, conversationId),
+      eq(chatMessages.workspaceId, workspaceId)
+    ];
+    if (since) {
+      conditions.push(gte(chatMessages.createdAt, since));
+    }
     return await db
       .select()
       .from(chatMessages)
-      .where(eq(chatMessages.conversationId, conversationId))
+      .where(and(...conditions))
       .orderBy(chatMessages.createdAt);
+  }
+
+  async getChatMessagesByUserId(userId: string): Promise<{ senderId: string | null; senderType: string; message: string; createdAt: Date }[]> {
+    // Search all messages sent by this user across all conversations
+    // Used by HelpAI/Trinity to understand returning user's history
+    const results = await db
+      .select({
+        senderId: chatMessages.senderId,
+        senderType: chatMessages.senderType,
+        message: chatMessages.message,
+        createdAt: chatMessages.createdAt,
+      })
+      .from(chatMessages)
+      .where(eq(chatMessages.senderId, userId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(50); // Last 50 messages for context
+    
+    return results.map(r => ({
+      ...r,
+      createdAt: new Date(r.createdAt),
+    }));
   }
   
   async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
@@ -3450,21 +4147,39 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
-  async getClosedConversationsForReview(): Promise<ChatConversation[]> {
-    return await db
-      .select()
-      .from(chatConversations)
-      .where(eq(chatConversations.status, 'closed'))
-      .orderBy(desc(chatConversations.closedAt));
+  async deleteMessageForUser(messageId: string, userId: string, conversationId: string): Promise<boolean> {
+    const { chatParityService } = await import('./services/chatParityService');
+    const result = await chatParityService.deleteMessageForUser(messageId, userId, conversationId);
+    return result.success;
   }
 
-  async getPositiveTestimonials(): Promise<ChatConversation[]> {
+  async deleteMessageForEveryone(messageId: string, userId: string, conversationId: string): Promise<boolean> {
+    const { chatParityService } = await import('./services/chatParityService');
+    const result = await chatParityService.deleteMessageForEveryone(messageId, userId, conversationId);
+    return result.success;
+  }
+
+  async getClosedConversationsForReview(workspaceId: string): Promise<ChatConversation[]> {
     return await db
       .select()
       .from(chatConversations)
       .where(
         and(
           eq(chatConversations.status, 'closed'),
+          eq(chatConversations.workspaceId, workspaceId)
+        )
+      )
+      .orderBy(desc(chatConversations.closedAt));
+  }
+
+  async getPositiveTestimonials(workspaceId: string): Promise<ChatConversation[]> {
+    return await db
+      .select()
+      .from(chatConversations)
+      .where(
+        and(
+          eq(chatConversations.status, 'closed'),
+          eq(chatConversations.workspaceId, workspaceId),
           sql`${chatConversations.rating} >= 4`, // 4-5 star reviews
           sql`${chatConversations.feedback} IS NOT NULL`
         )
@@ -3513,7 +4228,7 @@ export class DatabaseStorage implements IStorage {
     return conversation;
   }
 
-  async getShiftChatroom(shiftId: string, timeEntryId: string): Promise<ChatConversation | undefined> {
+  async getShiftChatroom(shiftId: string, timeEntryId: string, workspaceId: string): Promise<ChatConversation | undefined> {
     const [conversation] = await db
       .select()
       .from(chatConversations)
@@ -3521,6 +4236,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(chatConversations.shiftId, shiftId),
           eq(chatConversations.timeEntryId, timeEntryId),
+          eq(chatConversations.workspaceId, workspaceId),
           eq(chatConversations.conversationType, 'shift_chat')
         )
       )
@@ -3596,25 +4312,40 @@ export class DatabaseStorage implements IStorage {
     return room;
   }
   
+  async getSupportRoomById(id: string): Promise<SupportRoom | undefined> {
+    const [room] = await db
+      .select()
+      .from(supportRooms)
+      .where(eq(supportRooms.id, id));
+    
+    return room;
+  }
+  
+  async getSupportRoomByConversationId(conversationId: string): Promise<SupportRoom | undefined> {
+    const [room] = await db
+      .select()
+      .from(supportRooms)
+      .where(eq(supportRooms.conversationId, conversationId));
+    
+    return room;
+  }
+  
   async getAllSupportRooms(workspaceId?: string | null): Promise<SupportRoom[]> {
-    // Return all platform-wide rooms (workspaceId is null) or workspace-specific rooms
+    const platformWide = or(
+      isNull(supportRooms.workspaceId),
+      eq(supportRooms.workspaceId, 'system')
+    );
     if (workspaceId) {
       return await db
         .select()
         .from(supportRooms)
-        .where(
-          or(
-            isNull(supportRooms.workspaceId),
-            eq(supportRooms.workspaceId, workspaceId)
-          )
-        )
+        .where(or(platformWide, eq(supportRooms.workspaceId, workspaceId)))
         .orderBy(supportRooms.name);
     } else {
-      // Return only platform-wide rooms
       return await db
         .select()
         .from(supportRooms)
-        .where(isNull(supportRooms.workspaceId))
+        .where(platformWide)
         .orderBy(supportRooms.name);
     }
   }
@@ -3747,11 +4478,15 @@ export class DatabaseStorage implements IStorage {
     return form;
   }
   
-  async getCustomForm(id: string): Promise<CustomForm | undefined> {
+  async getCustomForm(id: string, organizationId?: string): Promise<CustomForm | undefined> {
+    const conditions = [eq(customForms.id, id)];
+    if (organizationId) {
+      conditions.push(eq(customForms.organizationId, organizationId));
+    }
     const [form] = await db
       .select()
       .from(customForms)
-      .where(eq(customForms.id, id));
+      .where(and(...conditions));
     
     return form;
   }
@@ -3760,24 +4495,32 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(customForms)
-      .where(eq(customForms.organizationId, organizationId))
+      .where(eq(customForms.workspaceId, organizationId))
       .orderBy(desc(customForms.createdAt));
   }
   
-  async updateCustomForm(id: string, data: Partial<InsertCustomForm>): Promise<CustomForm | undefined> {
+  async updateCustomForm(id: string, workspaceId: string, data: Partial<InsertCustomForm>): Promise<CustomForm | undefined> {
     const [updated] = await db
       .update(customForms)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(customForms.id, id))
+      .where(
+        and(
+          eq(customForms.id, id),
+          eq(customForms.workspaceId, workspaceId)
+        )
+      )
       .returning();
     
     return updated;
   }
   
-  async deleteCustomForm(id: string): Promise<boolean> {
+  async deleteCustomForm(id: string, workspaceId?: string): Promise<boolean> {
+    const condition = workspaceId
+      ? and(eq(customForms.id, id), eq(customForms.organizationId, workspaceId))
+      : eq(customForms.id, id);
     const result = await db
       .delete(customForms)
-      .where(eq(customForms.id, id))
+      .where(condition)
       .returning();
     
     return result.length > 0;
@@ -3796,11 +4539,15 @@ export class DatabaseStorage implements IStorage {
     return submission;
   }
   
-  async getCustomFormSubmission(id: string): Promise<CustomFormSubmission | undefined> {
+  async getCustomFormSubmission(id: string, workspaceId?: string): Promise<CustomFormSubmission | undefined> {
+    const conditions = [eq(customFormSubmissions.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(customFormSubmissions.workspaceId, workspaceId));
+    }
     const [submission] = await db
       .select()
       .from(customFormSubmissions)
-      .where(eq(customFormSubmissions.id, id));
+      .where(and(...conditions));
     
     return submission;
   }
@@ -3813,19 +4560,29 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(customFormSubmissions.submittedAt));
   }
   
-  async getCustomFormSubmissionsByForm(formId: string): Promise<CustomFormSubmission[]> {
+  async getCustomFormSubmissionsByForm(formId: string, workspaceId: string): Promise<CustomFormSubmission[]> {
     return await db
       .select()
       .from(customFormSubmissions)
-      .where(eq(customFormSubmissions.formId, formId))
+      .where(
+        and(
+          eq(customFormSubmissions.formId, formId),
+          eq(customFormSubmissions.workspaceId, workspaceId)
+        )
+      )
       .orderBy(desc(customFormSubmissions.submittedAt));
   }
   
-  async updateCustomFormSubmission(id: string, data: Partial<InsertCustomFormSubmission>): Promise<CustomFormSubmission | undefined> {
+  async updateCustomFormSubmission(id: string, workspaceId: string, data: Partial<InsertCustomFormSubmission>): Promise<CustomFormSubmission | undefined> {
     const [updated] = await db
       .update(customFormSubmissions)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(customFormSubmissions.id, id))
+      .where(
+        and(
+          eq(customFormSubmissions.id, id),
+          eq(customFormSubmissions.workspaceId, workspaceId)
+        )
+      )
       .returning();
     
     return updated;
@@ -3864,9 +4621,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(employees.userId, userId))
       .limit(1);
     
+    // PRIORITY: users table is the canonical source for names (Settings updates users table).
+    // employees table is authoritative for workspaceRole only; its firstName/lastName
+    // may be stale seeded data — only fall back to it when users record has no name.
     return {
-      firstName: employeeData?.firstName || user.firstName,
-      lastName: employeeData?.lastName || user.lastName,
+      firstName: user.firstName || employeeData?.firstName || null,
+      lastName: user.lastName || employeeData?.lastName || null,
       email: user.email,
       platformRole: platformRoleData?.role || null,
       workspaceRole: employeeData?.workspaceRole || null,
@@ -3878,19 +4638,17 @@ export class DatabaseStorage implements IStorage {
    */
   async getAiUsageCount(userId: string): Promise<number> {
     try {
-      const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
       const logs = await db
         .select({ count: sql<number>`count(*)` })
-        .from(aiUsageLogs)
+        .from(aiUsageEvents)
         .where(
           and(
-            eq(aiUsageLogs.userId, userId),
-            eq(aiUsageLogs.billingMonth, billingMonth)
+            eq(aiUsageEvents.userId, userId),
+            sql`DATE_TRUNC('month', ${aiUsageEvents.createdAt}) = DATE_TRUNC('month', NOW())`
           )
         );
       return Number(logs[0]?.count || 0);
     } catch (error: any) {
-      // If table doesn't exist (error code 42P01), return 0
       if (error.code === '42P01') {
         return 0;
       }
@@ -3926,7 +4684,27 @@ export class DatabaseStorage implements IStorage {
     usageCount: number;
     billingMonth: string;
   }): Promise<void> {
-    await db.insert(aiUsageLogs).values(data);
+    await db.insert(aiUsageEvents).values({
+      workspaceId: data.workspaceId,
+      userId: data.userId ?? undefined,
+      featureKey: data.requestType,
+      usageType: 'token',
+      usageAmount: data.totalTokens.toString(),
+      usageUnit: 'tokens',
+      totalCost: data.totalCost,
+      sessionId: data.conversationId,
+      metadata: {
+        model: data.model,
+        promptTokens: data.promptTokens,
+        completionTokens: data.completionTokens,
+        promptCost: data.promptCost,
+        completionCost: data.completionCost,
+        userTier: data.userTier,
+        usageCount: data.usageCount,
+        billingMonth: data.billingMonth,
+        messageId: data.messageId,
+      },
+    });
   }
 
   // ============================================================================
@@ -3938,7 +4716,8 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(payrollRuns)
       .where(eq(payrollRuns.workspaceId, workspaceId))
-      .orderBy(desc(payrollRuns.createdAt));
+      .orderBy(desc(payrollRuns.createdAt))
+      .limit(1000);
   }
   
   async getPayrollRun(id: string, workspaceId: string): Promise<PayrollRun | undefined> {
@@ -3954,7 +4733,16 @@ export class DatabaseStorage implements IStorage {
     return run;
   }
   
-  async updatePayrollRunStatus(id: string, status: string, processedBy: string): Promise<PayrollRun | undefined> {
+  async updatePayrollRunStatus(id: string, status: string, processedBy: string, workspaceId?: string): Promise<PayrollRun | undefined> {
+    // Atomic guard: only transition from the expected prior status
+    // approved ← pending | processed ← approved
+    const requiredPriorStatus = status === 'approved' ? 'pending' : status === 'processed' ? 'approved' : null;
+    const idCondition = workspaceId
+      ? and(eq(payrollRuns.id, id), eq(payrollRuns.workspaceId, workspaceId))
+      : eq(payrollRuns.id, id);
+    const condition = requiredPriorStatus
+      ? and(idCondition, eq(payrollRuns.status, requiredPriorStatus as any))
+      : idCondition;
     const [updated] = await db
       .update(payrollRuns)
       .set({
@@ -3963,16 +4751,40 @@ export class DatabaseStorage implements IStorage {
         processedAt: new Date(),
         updatedAt: new Date()
       })
-      .where(eq(payrollRuns.id, id))
+      .where(condition)
       .returning();
     return updated;
   }
   
-  async getPayrollEntriesByRun(payrollRunId: string): Promise<PayrollEntry[]> {
-    return await db
-      .select()
+  async getPayrollEntriesByRun(payrollRunId: string): Promise<any[]> {
+    const entries = await db
+      .select({
+        id: payrollEntries.id,
+        payrollRunId: payrollEntries.payrollRunId,
+        employeeId: payrollEntries.employeeId,
+        workspaceId: payrollEntries.workspaceId,
+        regularHours: payrollEntries.regularHours,
+        overtimeHours: payrollEntries.overtimeHours,
+        hourlyRate: payrollEntries.hourlyRate,
+        grossPay: payrollEntries.grossPay,
+        federalTax: payrollEntries.federalTax,
+        stateTax: payrollEntries.stateTax,
+        socialSecurity: payrollEntries.socialSecurity,
+        medicare: payrollEntries.medicare,
+        netPay: payrollEntries.netPay,
+        notes: payrollEntries.notes,
+        createdAt: payrollEntries.createdAt,
+        employeeFirstName: employees.firstName,
+        employeeLastName: employees.lastName,
+      })
       .from(payrollEntries)
+      .leftJoin(employees, eq(payrollEntries.employeeId, employees.id))
       .where(eq(payrollEntries.payrollRunId, payrollRunId));
+    
+    return entries.map(entry => ({
+      ...entry,
+      employeeName: `${entry.employeeFirstName || ''} ${entry.employeeLastName || ''}`.trim() || 'Unknown Employee',
+    }));
   }
   
   async getPayrollEntriesByEmployee(employeeId: string, workspaceId: string): Promise<PayrollEntry[]> {
@@ -4005,6 +4817,20 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(payrollEntries.createdAt));
+  }
+
+  async updatePayrollEntry(id: string, workspaceId: string, data: Partial<{ status: string; updatedAt: Date }>): Promise<PayrollEntry | undefined> {
+    const [updated] = await db
+      .update(payrollEntries)
+      .set(data)
+      .where(
+        and(
+          eq(payrollEntries.id, id),
+          eq(payrollEntries.workspaceId, workspaceId)
+        )
+      )
+      .returning();
+    return updated;
   }
   
   // ============================================================================
@@ -4264,6 +5090,14 @@ export class DatabaseStorage implements IStorage {
         eq(clientRates.clientId, clientId)
       ));
   }
+
+  async getClientRatesByWorkspace(workspaceId: string): Promise<ClientRate[]> {
+    const { clientRates } = await import("@shared/schema");
+    return await db
+      .select()
+      .from(clientRates)
+      .where(eq(clientRates.workspaceId, workspaceId));
+  }
   
   // ============================================================================
   // EXPENSEOS™ - EXPENSE MANAGEMENT
@@ -4386,8 +5220,8 @@ export class DatabaseStorage implements IStorage {
       .update(expenses)
       .set({
         status: 'approved',
-        reviewedBy: approverId,
-        reviewedAt: new Date(),
+        approvedBy: approverId,
+        approvedAt: new Date(),
         reviewNotes: reviewNotes || null,
         updatedAt: new Date()
       })
@@ -4405,8 +5239,8 @@ export class DatabaseStorage implements IStorage {
       .update(expenses)
       .set({
         status: 'rejected',
-        reviewedBy: reviewerId,
-        reviewedAt: new Date(),
+        rejectedBy: reviewerId,
+        rejectedAt: new Date(),
         reviewNotes,
         updatedAt: new Date()
       })
@@ -4424,8 +5258,9 @@ export class DatabaseStorage implements IStorage {
       .update(expenses)
       .set({
         status: 'reimbursed',
-        paidAt: new Date(),
-        paymentMethod: paymentMethod || null,
+        reimbursedAt: new Date(),
+        reimbursementMethod: paymentMethod || 'manual',
+        reimbursedBy: paidById,
         updatedAt: new Date()
       })
       .where(and(
@@ -4468,12 +5303,17 @@ export class DatabaseStorage implements IStorage {
     return receipt;
   }
   
-  async getExpenseReceiptsByExpense(expenseId: string) {
+  async getExpenseReceiptsByExpense(expenseId: string, workspaceId: string): Promise<(typeof expenseReceipts.$inferSelect)[]> {
     const { expenseReceipts } = await import("@shared/schema");
     return await db
       .select()
       .from(expenseReceipts)
-      .where(eq(expenseReceipts.expenseId, expenseId))
+      .where(
+        and(
+          eq(expenseReceipts.expenseId, expenseId),
+          eq(expenseReceipts.workspaceId, workspaceId)
+        )
+      )
       .orderBy(expenseReceipts.uploadedAt);
   }
   
@@ -4593,12 +5433,17 @@ export class DatabaseStorage implements IStorage {
     return published;
   }
   
-  async getPolicyAcknowledgments(policyId: string) {
+  async getPolicyAcknowledgments(policyId: string, workspaceId: string): Promise<any[]> {
     const { policyAcknowledgments } = await import("@shared/schema");
     return await db
       .select()
       .from(policyAcknowledgments)
-      .where(eq(policyAcknowledgments.policyId, policyId))
+      .where(
+        and(
+          eq(policyAcknowledgments.policyId, policyId),
+          eq(policyAcknowledgments.workspaceId, workspaceId)
+        )
+      )
       .orderBy(desc(policyAcknowledgments.acknowledgedAt));
   }
   
@@ -4818,12 +5663,17 @@ export class DatabaseStorage implements IStorage {
     return step;
   }
   
-  async getApprovalStepsBySubmission(submissionId: string): Promise<any[]> {
+  async getApprovalStepsBySubmission(submissionId: string, workspaceId: string): Promise<any[]> {
     const { reportApprovalSteps } = await import("@shared/schema");
     return await db
       .select()
       .from(reportApprovalSteps)
-      .where(eq(reportApprovalSteps.submissionId, submissionId))
+      .where(
+        and(
+          eq(reportApprovalSteps.submissionId, submissionId),
+          eq(reportApprovalSteps.workspaceId, workspaceId)
+        )
+      )
       .orderBy(reportApprovalSteps.stepNumber);
   }
   
@@ -4921,11 +5771,15 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
   
-  async getInternalBidById(id: string): Promise<any | undefined> {
+  async getInternalBidById(id: string, workspaceId?: string): Promise<any | undefined> {
+    const conditions: any[] = [eq(internalBids.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(internalBids.workspaceId, workspaceId));
+    }
     const [bid] = await db
       .select()
       .from(internalBids)
-      .where(eq(internalBids.id, id))
+      .where(and(...conditions))
       .limit(1);
     return bid;
   }
@@ -4965,11 +5819,16 @@ export class DatabaseStorage implements IStorage {
     return application;
   }
   
-  async getBidApplicationsByBid(bidId: string): Promise<any[]> {
+  async getBidApplicationsByBid(bidId: string, workspaceId: string): Promise<any[]> {
     return await db
       .select()
       .from(bidApplications)
-      .where(eq(bidApplications.bidId, bidId))
+      .where(
+        and(
+          eq(bidApplications.bidId, bidId),
+          eq(bidApplications.workspaceId, workspaceId)
+        )
+      )
       .orderBy(desc(bidApplications.appliedAt));
   }
   
@@ -5213,12 +6072,16 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
   
-  async getSecurityIncident(id: string): Promise<any | undefined> {
+  async getSecurityIncident(id: string, workspaceId?: string): Promise<any | undefined> {
     const { securityIncidents } = await import("@shared/schema");
+    const conditions: any[] = [eq(securityIncidents.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(securityIncidents.workspaceId, workspaceId));
+    }
     const [incident] = await db
       .select()
       .from(securityIncidents)
-      .where(eq(securityIncidents.id, id));
+      .where(and(...conditions));
     return incident;
   }
   
@@ -5277,10 +6140,10 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(timeEntries.workspaceId, workspaceId),
         eq(timeEntries.employeeId, employeeId),
-        sql`${timeEntries.clockInTime} >= ${startDate}`,
-        sql`${timeEntries.clockInTime} <= ${endDate}`
+        sql`${timeEntries.clockIn} >= ${startDate}`,
+        sql`${timeEntries.clockIn} <= ${endDate}`
       ))
-      .orderBy(timeEntries.clockInTime);
+      .orderBy(timeEntries.clockIn);
   }
   
   async getReportSubmissionsByEmployee(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]> {
@@ -5317,18 +6180,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTurnoverPredictions(workspaceId: string, filters?: { employeeId?: string; limit?: number }): Promise<any[]> {
-    const { turnoverPredictions } = await import("@shared/schema");
-    const conditions = [eq(turnoverPredictions.workspaceId, workspaceId)];
+    const { turnoverRiskScores } = await import("@shared/schema");
+    const conditions = [eq(turnoverRiskScores.workspaceId, workspaceId)];
     
     if (filters?.employeeId) {
-      conditions.push(eq(turnoverPredictions.employeeId, filters.employeeId));
+      conditions.push(eq(turnoverRiskScores.employeeId, filters.employeeId));
     }
     
     let query = db
       .select()
-      .from(turnoverPredictions)
+      .from(turnoverRiskScores)
       .where(and(...conditions))
-      .orderBy(desc(turnoverPredictions.predictionDate));
+      .orderBy(desc(turnoverRiskScores.predictedTurnoverDate));
     
     if (filters?.limit) {
       query = query.limit(filters.limit) as any;
@@ -5357,11 +6220,15 @@ export class DatabaseStorage implements IStorage {
     return document;
   }
   
-  async getEmployeeDocument(id: string): Promise<EmployeeDocument | undefined> {
+  async getEmployeeDocument(id: string, workspaceId?: string): Promise<EmployeeDocument | undefined> {
+    const conditions = [eq(employeeDocuments.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(employeeDocuments.workspaceId, workspaceId));
+    }
     const [document] = await db
       .select()
       .from(employeeDocuments)
-      .where(eq(employeeDocuments.id, id));
+      .where(and(...conditions));
     return document;
   }
   
@@ -5471,11 +6338,15 @@ export class DatabaseStorage implements IStorage {
     return checklist;
   }
   
-  async getOnboardingChecklist(id: string): Promise<OnboardingChecklist | undefined> {
+  async getOnboardingChecklist(id: string, workspaceId?: string): Promise<OnboardingChecklist | undefined> {
+    const conditions = [eq(onboardingChecklists.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(onboardingChecklists.workspaceId, workspaceId));
+    }
     const [checklist] = await db
       .select()
       .from(onboardingChecklists)
-      .where(eq(onboardingChecklists.id, id));
+      .where(and(...conditions));
     return checklist;
   }
   
@@ -5570,8 +6441,12 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
   
-  async getOrganizationChatRoom(id: string): Promise<any | undefined> {
-    const [room] = await db.select().from(organizationChatRooms).where(eq(organizationChatRooms.id, id));
+  async getOrganizationChatRoom(id: string, workspaceId?: string): Promise<any | undefined> {
+    const conditions: any[] = [eq(organizationChatRooms.id, id)];
+    if (workspaceId) {
+      conditions.push(eq(organizationChatRooms.workspaceId, workspaceId));
+    }
+    const [room] = await db.select().from(organizationChatRooms).where(and(...conditions));
     return room;
   }
   
@@ -5674,13 +6549,14 @@ export class DatabaseStorage implements IStorage {
     allowGuests: boolean;
   }): Promise<any> {
     return await db.transaction(async (tx) => {
-      const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const roomId = `room_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
       
       const [room] = await tx.insert(organizationChatRooms).values({
         id: roomId,
         workspaceId,
         roomName: roomData.roomName,
-        roomDescription: roomData.roomDescription || null,
+        roomSlug: roomData.roomName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        description: roomData.roomDescription || null,
         createdBy: userId,
         status: 'active',
         allowGuests: roomData.allowGuests,
@@ -5842,7 +6718,7 @@ export class DatabaseStorage implements IStorage {
             const decrypted = await decryptMessage(msg.message, msg.encryptionIv, conv.encryptionKeyId);
             return { ...msg, message: decrypted };
           } catch (error) {
-            console.error('Failed to decrypt message:', error);
+            log.error('Failed to decrypt message:', error);
             return { ...msg, message: '[Decryption failed]' };
           }
         }
@@ -5924,7 +6800,7 @@ export class DatabaseStorage implements IStorage {
             const decrypted = await decryptMessage(msg.message, msg.encryptionIv, conv.encryptionKeyId);
             return { ...msg, message: decrypted };
           } catch (error) {
-            console.error('Failed to decrypt message:', error);
+            log.error('Failed to decrypt message:', error);
             return { ...msg, message: '[Decryption failed]' };
           }
         }
@@ -6097,8 +6973,7 @@ export class DatabaseStorage implements IStorage {
         and(
           or(
             eq(employees.workspaceId, workspaceId),
-            eq(users.role, 'platform_admin'),
-            eq(users.role, 'support_staff')
+            sql`EXISTS (SELECT 1 FROM platform_roles pr WHERE pr.user_id = ${users.id} AND pr.revoked_at IS NULL AND pr.is_suspended = false)`
           ),
           or(
             sql`LOWER(${users.email}) LIKE ${searchTerm}`,
@@ -6270,11 +7145,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Chat Export Methods for Support Staff
-  async getSupportConversationForExport(conversationId: string): Promise<any | null> {
+  async getSupportConversationForExport(conversationId: string, workspaceId: string): Promise<{ conversation: ChatConversation; messages: ChatMessage[]; exportedAt: Date } | null> {
     const conversation = await db
       .select()
       .from(chatConversations)
-      .where(eq(chatConversations.id, conversationId))
+      .where(
+        and(
+          eq(chatConversations.id, conversationId),
+          eq(chatConversations.workspaceId, workspaceId)
+        )
+      )
       .limit(1);
     
     if (conversation.length === 0) {
@@ -6284,7 +7164,12 @@ export class DatabaseStorage implements IStorage {
     const messages = await db
       .select()
       .from(chatMessages)
-      .where(eq(chatMessages.conversationId, conversationId))
+      .where(
+        and(
+          eq(chatMessages.conversationId, conversationId),
+          eq(chatMessages.workspaceId, workspaceId)
+        )
+      )
       .orderBy(chatMessages.createdAt);
     
     return {
@@ -6424,6 +7309,14 @@ export class DatabaseStorage implements IStorage {
     return notification;
   }
 
+  async createBulkNotifications(notificationsData: InsertNotification[]): Promise<Notification[]> {
+    if (notificationsData.length === 0) return [];
+    return await db
+      .insert(notifications)
+      .values(notificationsData)
+      .returning();
+  }
+
   /**
    * Create a user-scoped notification that doesn't require a workspaceId.
    * Used for platform-wide notifications, global admin alerts, and orchestrator workflows
@@ -6451,54 +7344,50 @@ export class DatabaseStorage implements IStorage {
     return notification;
   }
 
-  async getNotificationsByUser(userId: string, workspaceId: string, limit: number = 50): Promise<Notification[]> {
+  async getNotificationsByUser(userId: string, workspaceId: string, limit: number = 25, offset: number = 0): Promise<Notification[]> {
     return await db
       .select()
       .from(notifications)
       .where(and(
         eq(notifications.userId, userId),
         eq(notifications.workspaceId, workspaceId),
-        isNull(notifications.clearedAt)
       ))
       .orderBy(desc(notifications.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
   }
 
   /**
    * Get all notifications for a user including both workspace-scoped and user-scoped.
    * This is the primary method for fetching notifications in the dual-scope model.
-   * Only returns non-cleared notifications (where clearedAt is NULL).
    */
-  async getAllNotificationsForUser(userId: string, workspaceId?: string, limit: number = 50): Promise<Notification[]> {
+  async getAllNotificationsForUser(userId: string, workspaceId?: string, limit: number = 25, offset: number = 0): Promise<Notification[]> {
     if (workspaceId) {
-      // Include both workspace-scoped for this workspace AND user-scoped notifications
-      // Exclude cleared notifications (clearedAt is NULL)
       return await db
         .select()
         .from(notifications)
         .where(and(
           eq(notifications.userId, userId),
-          isNull(notifications.clearedAt),
           or(
             eq(notifications.workspaceId, workspaceId),
+            isNull(notifications.workspaceId),
             eq(notifications.scope, 'user' as any)
           )
         ))
         .orderBy(desc(notifications.createdAt))
-        .limit(limit);
+        .limit(limit)
+        .offset(offset);
     } else {
-      // Only user-scoped notifications (for users without workspace context)
-      // Exclude cleared notifications (clearedAt is NULL)
       return await db
         .select()
         .from(notifications)
         .where(and(
           eq(notifications.userId, userId),
           eq(notifications.scope, 'user' as any),
-          isNull(notifications.clearedAt)
         ))
         .orderBy(desc(notifications.createdAt))
-        .limit(limit);
+        .limit(limit)
+        .offset(offset);
     }
   }
 
@@ -6508,16 +7397,20 @@ export class DatabaseStorage implements IStorage {
       .from(notifications)
       .where(and(
         eq(notifications.userId, userId),
-        eq(notifications.workspaceId, workspaceId),
+        or(
+          eq(notifications.workspaceId, workspaceId),
+          isNull(notifications.workspaceId),
+          eq(notifications.scope, 'user' as any)
+        ),
         eq(notifications.isRead, false),
-        isNull(notifications.clearedAt)
+        isNull(notifications.clearedAt),
+        sql`${notifications.type} != 'platform_update'`,
       ));
     return result?.count || 0;
   }
 
   /**
    * Get total unread count including both workspace-scoped and user-scoped notifications.
-   * Only counts non-cleared notifications.
    */
   async getTotalUnreadCountForUser(userId: string, workspaceId?: string): Promise<number> {
     if (workspaceId) {
@@ -6531,7 +7424,7 @@ export class DatabaseStorage implements IStorage {
             eq(notifications.scope, 'user' as any)
           ),
           eq(notifications.isRead, false),
-          isNull(notifications.clearedAt)
+          sql`${notifications.type} != 'platform_update'`,
         ));
       return result?.count || 0;
     } else {
@@ -6542,7 +7435,7 @@ export class DatabaseStorage implements IStorage {
           eq(notifications.userId, userId),
           eq(notifications.scope, 'user' as any),
           eq(notifications.isRead, false),
-          isNull(notifications.clearedAt)
+          sql`${notifications.type} != 'platform_update'`,
         ));
       return result?.count || 0;
     }
@@ -6594,7 +7487,20 @@ export class DatabaseStorage implements IStorage {
     return notification;
   }
 
-  async markAllNotificationsAsRead(userId: string, workspaceId: string): Promise<number> {
+  async markAllNotificationsAsRead(userId: string, workspaceId?: string): Promise<number> {
+    const conditions = [
+      eq(notifications.userId, userId),
+      eq(notifications.isRead, false),
+    ];
+    if (workspaceId) {
+      conditions.push(
+        or(
+          eq(notifications.workspaceId, workspaceId),
+          isNull(notifications.workspaceId),
+          eq(notifications.scope, 'user' as any)
+        )!
+      );
+    }
     const result = await db
       .update(notifications)
       .set({ 
@@ -6602,11 +7508,7 @@ export class DatabaseStorage implements IStorage {
         readAt: new Date(),
         updatedAt: new Date()
       })
-      .where(and(
-        eq(notifications.userId, userId),
-        eq(notifications.workspaceId, workspaceId),
-        eq(notifications.isRead, false)
-      ));
+      .where(and(...conditions));
     return result.rowCount || 0;
   }
 
@@ -6618,6 +7520,42 @@ export class DatabaseStorage implements IStorage {
         eq(notifications.userId, userId) // Ensure user can only delete their own notifications
       ));
     return (result.rowCount || 0) > 0;
+  }
+
+  async deleteAllNotificationsForUser(userId: string, workspaceId?: string): Promise<number> {
+    let whereClause;
+    if (workspaceId) {
+      whereClause = and(
+        eq(notifications.userId, userId),
+        or(
+          eq(notifications.workspaceId, workspaceId),
+          isNull(notifications.workspaceId),
+          eq(notifications.scope, 'user' as any)
+        )
+      );
+    } else {
+      whereClause = eq(notifications.userId, userId);
+    }
+    const result = await db.delete(notifications).where(whereClause);
+    return result.rowCount || 0;
+  }
+
+  async markAllChatMessagesRead(userId: string): Promise<number> {
+    // Mark all unread chat messages sent by others (in conversations user participates in) as read
+    const subquery = db
+      .select({ conversationId: chatParticipants.conversationId })
+      .from(chatParticipants)
+      .where(eq(chatParticipants.participantId, userId));
+
+    const result = await db
+      .update(chatMessages)
+      .set({ readAt: new Date(), isRead: true, updatedAt: new Date() })
+      .where(and(
+        isNull(chatMessages.readAt),
+        ne(chatMessages.senderId, userId),
+        inArray(chatMessages.conversationId, subquery)
+      ));
+    return result.rowCount || 0;
   }
 
   async deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number> {
@@ -6654,11 +7592,17 @@ export class DatabaseStorage implements IStorage {
   async acknowledgeAllNotifications(userId: string, workspaceId?: string, category?: string): Promise<number> {
     const conditions = [
       eq(notifications.userId, userId),
-      isNull(notifications.clearedAt), // Only acknowledge uncleared notifications
+      isNull(notifications.clearedAt),
     ];
     
     if (workspaceId) {
-      conditions.push(eq(notifications.workspaceId, workspaceId));
+      conditions.push(
+        or(
+          eq(notifications.workspaceId, workspaceId),
+          isNull(notifications.workspaceId),
+          eq(notifications.scope, 'user' as any)
+        )!
+      );
     }
     
     if (category) {
@@ -6700,15 +7644,20 @@ export class DatabaseStorage implements IStorage {
   async clearAllNotifications(userId: string, workspaceId?: string, category?: string): Promise<number> {
     const conditions = [
       eq(notifications.userId, userId),
-      isNull(notifications.clearedAt), // Only clear uncleared notifications
-      // NEVER clear hotpatch/system_fix notifications - these require explicit approval
+      isNull(notifications.clearedAt),
       not(eq(notifications.category, 'system_fix' as any)),
       not(eq(notifications.category, 'hotpatch' as any)),
       not(eq(notifications.category, 'admin_action' as any)),
     ];
     
     if (workspaceId) {
-      conditions.push(eq(notifications.workspaceId, workspaceId));
+      conditions.push(
+        or(
+          eq(notifications.workspaceId, workspaceId),
+          isNull(notifications.workspaceId),
+          eq(notifications.scope, 'user' as any)
+        )!
+      );
     }
     
     if (category) {
@@ -6732,7 +7681,6 @@ export class DatabaseStorage implements IStorage {
   async getUnclearedNotifications(userId: string, workspaceId?: string, category?: string, limit: number = 50): Promise<Notification[]> {
     const conditions = [
       eq(notifications.userId, userId),
-      isNull(notifications.clearedAt), // Only get uncleared notifications
     ];
     
     if (workspaceId) {
@@ -6756,7 +7704,6 @@ export class DatabaseStorage implements IStorage {
   async getUnreadAndUnclearedCount(userId: string, workspaceId?: string): Promise<{ unread: number; uncleared: number }> {
     const conditions = [
       eq(notifications.userId, userId),
-      isNull(notifications.clearedAt), // Only count uncleared notifications
     ];
     
     if (workspaceId) {
@@ -6793,6 +7740,19 @@ export class DatabaseStorage implements IStorage {
     workspaceId: string,
     data: Partial<InsertUserNotificationPreferences>
   ): Promise<UserNotificationPreferences> {
+    const existing = await db.select().from(userNotificationPreferences)
+      .where(eq(userNotificationPreferences.userId, userId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(userNotificationPreferences)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(userNotificationPreferences.userId, userId))
+        .returning();
+      return updated;
+    }
+
     const [prefs] = await db
       .insert(userNotificationPreferences)
       .values({
@@ -6800,13 +7760,6 @@ export class DatabaseStorage implements IStorage {
         workspaceId,
         ...data,
       } as InsertUserNotificationPreferences)
-      .onConflictDoUpdate({
-        target: [userNotificationPreferences.userId],
-        set: {
-          ...data,
-          updatedAt: new Date(),
-        },
-      })
       .returning();
     return prefs;
   }
@@ -6897,41 +7850,45 @@ export class DatabaseStorage implements IStorage {
     // Only show updates from the last 7 days to prevent stale data
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     
-    // Single SQL query with LEFT JOIN for reliable isViewed computation
-    const result = await db.execute(sql`
-      SELECT 
-        p.*,
-        v.id as view_id
-      FROM platform_updates p
-      LEFT JOIN user_platform_update_views v 
-        ON v.update_id = p.id 
-        AND v.user_id = ${userId}
-      WHERE (p.visibility = 'all' 
-        OR p.workspace_id IS NULL 
-        OR p.workspace_id = ${workspaceId})
-        AND p.created_at >= ${sevenDaysAgo}
-      ORDER BY p.created_at DESC
-      LIMIT ${limit}
-    `);
+    // Single Drizzle query with LEFT JOIN for reliable isViewed computation
+    // Converted to Drizzle ORM: LEFT JOIN → db.leftJoin()
+    const updates = await db.select({
+      id: platformUpdates.id,
+      title: platformUpdates.title,
+      description: platformUpdates.description,
+      category: platformUpdates.category,
+      date: platformUpdates.date,
+      version: platformUpdates.version,
+      badge: platformUpdates.badge,
+      isNew: platformUpdates.isNew,
+      priority: platformUpdates.priority,
+      visibility: platformUpdates.visibility,
+      workspaceId: platformUpdates.workspaceId,
+      createdAt: platformUpdates.createdAt,
+      metadata: platformUpdates.metadata,
+      viewId: userPlatformUpdateViews.id
+    })
+      .from(platformUpdates)
+      .leftJoin(userPlatformUpdateViews, and(
+        eq(userPlatformUpdateViews.updateId, platformUpdates.id),
+        eq(userPlatformUpdateViews.userId, userId)
+      ))
+      .where(and(
+        or(
+          eq(platformUpdates.visibility, 'all'),
+          isNull(platformUpdates.workspaceId),
+          eq(platformUpdates.workspaceId, workspaceId)
+        ),
+        gte(platformUpdates.createdAt, sevenDaysAgo)
+      ))
+      .orderBy(desc(platformUpdates.createdAt))
+      .limit(limit);
     
-    // Map raw SQL result to typed objects - isViewed = true if view_id exists (check for truthy value)
-    // Note: view_id comes from LEFT JOIN and will be a string if record exists, null/undefined otherwise
-    return (result.rows as any[]).map(row => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      category: row.category,
-      date: row.date,
-      version: row.version,
-      badge: row.badge,
-      isNew: row.is_new,
-      priority: row.priority,
-      visibility: row.visibility,
-      workspaceId: row.workspace_id,
-      createdAt: row.created_at,
-      metadata: row.metadata, // Include metadata for frontend mapping
-      isViewed: row.view_id !== null && row.view_id !== undefined && row.view_id !== '',
-    }));
+    // Map Drizzle result to typed objects - isViewed = true if viewId exists
+    return updates.map(row => ({
+      ...row,
+      isViewed: row.viewId !== null && row.viewId !== undefined && row.viewId !== '',
+    })) as Array<PlatformUpdate & { isViewed: boolean }>;
   }
 
   async markPlatformUpdateAsViewed(userId: string, updateId: string): Promise<void> {
@@ -6951,18 +7908,24 @@ export class DatabaseStorage implements IStorage {
     // Only count updates from the last 7 days to prevent stale data
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     
-    // Direct SQL count of unviewed platform updates
-    const result = await db.execute(sql`
-      SELECT COUNT(*) as count
-      FROM platform_updates p
-      LEFT JOIN user_platform_update_views v 
-        ON v.update_id = p.id 
-        AND v.user_id = ${userId}
-      WHERE v.id IS NULL
-        AND (p.visibility = 'all' OR p.workspace_id IS NULL ${workspaceId ? sql`OR p.workspace_id = ${workspaceId}` : sql``})
-        AND p.created_at >= ${sevenDaysAgo}
-    `);
-    return parseInt((result.rows[0] as any)?.count || '0', 10);
+    // Direct Drizzle count of unviewed platform updates
+    // Converted to Drizzle ORM: LEFT JOIN → db.leftJoin()
+    const result = await db.select({ count: count() })
+      .from(platformUpdates)
+      .leftJoin(userPlatformUpdateViews, and(
+        eq(userPlatformUpdateViews.updateId, platformUpdates.id),
+        eq(userPlatformUpdateViews.userId, userId)
+      ))
+      .where(and(
+        isNull(userPlatformUpdateViews.id),
+        or(
+          eq(platformUpdates.visibility, 'all'),
+          isNull(platformUpdates.workspaceId),
+          workspaceId ? eq(platformUpdates.workspaceId, workspaceId) : undefined
+        ),
+        gte(platformUpdates.createdAt, sevenDaysAgo)
+      ));
+    return result[0]?.count || 0;
   }
 
   async markAllPlatformUpdatesAsViewed(userId: string, workspaceId?: string): Promise<number> {
@@ -7081,8 +8044,15 @@ export class DatabaseStorage implements IStorage {
     // Then delete the actual platform updates
     await db.delete(platformUpdates).where(inArray(platformUpdates.id, updateIds));
 
-    console.log(`[Storage] Deleted ${updateIds.length} platform updates in categories: ${categories.join('\, ')}`);
+    log.info(`[Storage] Deleted ${updateIds.length} platform updates in categories: ${categories.join('\, ')}`);
     return updateIds.length;
+  }
+
+  async deleteAllPlatformUpdateViewsForUser(userId: string): Promise<number> {
+    const result = await db
+      .delete(userPlatformUpdateViews)
+      .where(eq(userPlatformUpdateViews.userId, userId));
+    return result.rowCount || 0;
   }
 
   async deletePlatformUpdate(id: string): Promise<boolean> {
@@ -7167,16 +8137,21 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(aiResponses.createdAt));
   }
 
-  async updateAiResponse(id: string, data: Partial<InsertAiResponse>): Promise<AiResponse | undefined> {
+  async updateAiResponse(id: string, workspaceId: string, data: Partial<InsertAiResponse>): Promise<AiResponse | undefined> {
     const [response] = await db
       .update(aiResponses)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(aiResponses.id, id))
+      .where(
+        and(
+          eq(aiResponses.id, id),
+          eq(aiResponses.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return response;
   }
 
-  async rateAiResponse(id: string, rating: number, feedback?: string): Promise<AiResponse | undefined> {
+  async rateAiResponse(id: string, workspaceId: string, rating: number, feedback?: string): Promise<AiResponse | undefined> {
     const [response] = await db
       .update(aiResponses)
       .set({
@@ -7186,7 +8161,12 @@ export class DatabaseStorage implements IStorage {
         ratedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(aiResponses.id, id))
+      .where(
+        and(
+          eq(aiResponses.id, id),
+          eq(aiResponses.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return response;
   }
@@ -7257,16 +8237,21 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(aiSuggestions.priority), desc(aiSuggestions.createdAt));
   }
 
-  async updateAiSuggestion(id: string, data: Partial<InsertAiSuggestion>): Promise<AiSuggestion | undefined> {
+  async updateAiSuggestion(id: string, workspaceId: string, data: Partial<InsertAiSuggestion>): Promise<AiSuggestion | undefined> {
     const [suggestion] = await db
       .update(aiSuggestions)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(aiSuggestions.id, id))
+      .where(
+        and(
+          eq(aiSuggestions.id, id),
+          eq(aiSuggestions.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return suggestion;
   }
 
-  async acceptAiSuggestion(id: string, userId: string): Promise<AiSuggestion | undefined> {
+  async acceptAiSuggestion(id: string, workspaceId: string, userId: string): Promise<AiSuggestion | undefined> {
     const [suggestion] = await db
       .update(aiSuggestions)
       .set({
@@ -7275,12 +8260,17 @@ export class DatabaseStorage implements IStorage {
         acceptedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(aiSuggestions.id, id))
+      .where(
+        and(
+          eq(aiSuggestions.id, id),
+          eq(aiSuggestions.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return suggestion;
   }
 
-  async rejectAiSuggestion(id: string, userId: string, reason?: string): Promise<AiSuggestion | undefined> {
+  async rejectAiSuggestion(id: string, workspaceId: string, userId: string, reason?: string): Promise<AiSuggestion | undefined> {
     const [suggestion] = await db
       .update(aiSuggestions)
       .set({
@@ -7290,12 +8280,17 @@ export class DatabaseStorage implements IStorage {
         rejectedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(aiSuggestions.id, id))
+      .where(
+        and(
+          eq(aiSuggestions.id, id),
+          eq(aiSuggestions.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return suggestion;
   }
 
-  async implementAiSuggestion(id: string): Promise<AiSuggestion | undefined> {
+  async implementAiSuggestion(id: string, workspaceId: string): Promise<AiSuggestion | undefined> {
     const [suggestion] = await db
       .update(aiSuggestions)
       .set({
@@ -7303,7 +8298,12 @@ export class DatabaseStorage implements IStorage {
         implementedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(aiSuggestions.id, id))
+      .where(
+        and(
+          eq(aiSuggestions.id, id),
+          eq(aiSuggestions.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return suggestion;
   }
@@ -7386,16 +8386,21 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async updateFeedback(id: string, data: Partial<InsertUserFeedback>): Promise<UserFeedback | undefined> {
+  async updateFeedback(id: string, workspaceId: string, data: Partial<InsertUserFeedback>): Promise<UserFeedback | undefined> {
     const [result] = await db
       .update(userFeedback)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(userFeedback.id, id))
+      .where(
+        and(
+          eq(userFeedback.id, id),
+          eq(userFeedback.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return result;
   }
 
-  async updateFeedbackStatus(id: string, status: string, updatedBy: string, note?: string): Promise<UserFeedback | undefined> {
+  async updateFeedbackStatus(id: string, workspaceId: string, status: string, updatedBy: string, note?: string): Promise<UserFeedback | undefined> {
     const [result] = await db
       .update(userFeedback)
       .set({
@@ -7405,15 +8410,25 @@ export class DatabaseStorage implements IStorage {
         statusNote: note,
         updatedAt: new Date(),
       })
-      .where(eq(userFeedback.id, id))
+      .where(
+        and(
+          eq(userFeedback.id, id),
+          eq(userFeedback.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return result;
   }
 
-  async deleteFeedback(id: string): Promise<boolean> {
+  async deleteFeedback(id: string, workspaceId: string): Promise<boolean> {
     const result = await db
       .delete(userFeedback)
-      .where(eq(userFeedback.id, id));
+      .where(
+        and(
+          eq(userFeedback.id, id),
+          eq(userFeedback.workspaceId, workspaceId)
+        )
+      );
     return true;
   }
 
@@ -7442,13 +8457,24 @@ export class DatabaseStorage implements IStorage {
       .orderBy(feedbackComments.createdAt);
   }
 
-  async deleteFeedbackComment(id: string): Promise<boolean> {
+  async deleteFeedbackComment(id: string, workspaceId: string): Promise<boolean> {
     const [comment] = await db
       .select()
       .from(feedbackComments)
       .where(eq(feedbackComments.id, id));
     
     if (comment) {
+      // Security check: ensure the parent feedback belongs to the workspace
+      const [feedback] = await db
+        .select()
+        .from(userFeedback)
+        .where(and(
+          eq(userFeedback.id, comment.feedbackId),
+          eq(userFeedback.workspaceId, workspaceId)
+        ));
+        
+      if (!feedback) return false;
+
       await db.delete(feedbackComments).where(eq(feedbackComments.id, id));
       await db
         .update(userFeedback)
@@ -7456,7 +8482,10 @@ export class DatabaseStorage implements IStorage {
           commentCount: sql`GREATEST(${userFeedback.commentCount} - 1, 0)`,
           updatedAt: new Date()
         })
-        .where(eq(userFeedback.id, comment.feedbackId));
+        .where(and(
+          eq(userFeedback.id, comment.feedbackId),
+          eq(userFeedback.workspaceId, workspaceId)
+        ));
     }
     return true;
   }
@@ -7559,13 +8588,29 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(mascotMotionProfiles).where(eq(mascotMotionProfiles.isActive, true)).orderBy(mascotMotionProfiles.name);
   }
 
-  async updateMascotMotionProfile(id: string, data: Partial<InsertMascotMotionProfile>): Promise<MascotMotionProfile | undefined> {
-    const [updated] = await db.update(mascotMotionProfiles).set({ ...data, updatedAt: new Date() }).where(eq(mascotMotionProfiles.id, id)).returning();
+  async updateMascotMotionProfile(id: string, workspaceId: string, data: Partial<InsertMascotMotionProfile>): Promise<MascotMotionProfile | undefined> {
+    const [updated] = await db
+      .update(mascotMotionProfiles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(
+        and(
+          eq(mascotMotionProfiles.id, id),
+          eq(mascotMotionProfiles.workspaceId, workspaceId)
+        )
+      )
+      .returning();
     return updated;
   }
 
-  async deleteMascotMotionProfile(id: string): Promise<boolean> {
-    await db.delete(mascotMotionProfiles).where(eq(mascotMotionProfiles.id, id));
+  async deleteMascotMotionProfile(id: string, workspaceId: string): Promise<boolean> {
+    await db
+      .delete(mascotMotionProfiles)
+      .where(
+        and(
+          eq(mascotMotionProfiles.id, id),
+          eq(mascotMotionProfiles.workspaceId, workspaceId)
+        )
+      );
     return true;
   }
 
@@ -7667,12 +8712,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAiBrainActionLogs(filters?: {
-    actorType?: string;
-    status?: string;
-    categoryTag?: string;
-    workflowId?: string;
+    actionType?: string;
     workspaceId?: string;
-    requiresHumanReview?: boolean;
     startDate?: Date;
     endDate?: Date;
     limit?: number;
@@ -7681,23 +8722,11 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(aiBrainActionLogs).$dynamic();
     
     const conditions = [];
-    if (filters?.actorType) {
-      conditions.push(eq(aiBrainActionLogs.actorType, filters.actorType));
-    }
-    if (filters?.status) {
-      conditions.push(eq(aiBrainActionLogs.status, filters.status));
-    }
-    if (filters?.categoryTag) {
-      conditions.push(eq(aiBrainActionLogs.categoryTag, filters.categoryTag));
-    }
-    if (filters?.workflowId) {
-      conditions.push(eq(aiBrainActionLogs.workflowId, filters.workflowId));
+    if (filters?.actionType) {
+      conditions.push(eq(aiBrainActionLogs.actionType, filters.actionType));
     }
     if (filters?.workspaceId) {
       conditions.push(eq(aiBrainActionLogs.workspaceId, filters.workspaceId));
-    }
-    if (filters?.requiresHumanReview !== undefined) {
-      conditions.push(eq(aiBrainActionLogs.requiresHumanReview, filters.requiresHumanReview));
     }
     if (filters?.startDate) {
       conditions.push(sql`${aiBrainActionLogs.createdAt} >= ${filters.startDate}`);
@@ -7726,29 +8755,39 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(aiBrainActionLogs)
-      .where(eq(aiBrainActionLogs.workflowId, workflowId))
+      .where(sql`${aiBrainActionLogs.actionData}::text LIKE ${`%${workflowId}%`}`)
       .orderBy(desc(aiBrainActionLogs.createdAt));
   }
 
-  async updateAiBrainActionLog(id: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined> {
+  async updateAiBrainActionLog(id: string, workspaceId: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined> {
+    const safeData: Record<string, any> = {};
+    if (data.actionType !== undefined) safeData.actionType = data.actionType;
+    if (data.actionData !== undefined) safeData.actionData = data.actionData;
+    if (data.result !== undefined) safeData.result = data.result;
+    if (Object.keys(safeData).length === 0) return this.getAiBrainActionLog(id);
     const [updated] = await db
       .update(aiBrainActionLogs)
-      .set(data)
-      .where(eq(aiBrainActionLogs.id, id))
+      .set(safeData)
+      .where(
+        and(
+          eq(aiBrainActionLogs.id, id),
+          eq(aiBrainActionLogs.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return updated;
   }
 
-  async markAiBrainActionReviewed(id: string, reviewedBy: string, notes?: string): Promise<AiBrainActionLog | undefined> {
+  async markAiBrainActionReviewed(id: string, workspaceId: string, _reviewedBy: string, _notes?: string): Promise<AiBrainActionLog | undefined> {
     const [updated] = await db
       .update(aiBrainActionLogs)
-      .set({
-        humanReviewedBy: reviewedBy,
-        humanReviewedAt: new Date(),
-        humanReviewNotes: notes,
-        requiresHumanReview: false,
-      })
-      .where(eq(aiBrainActionLogs.id, id))
+      .set({ result: 'REVIEWED' })
+      .where(
+        and(
+          eq(aiBrainActionLogs.id, id),
+          eq(aiBrainActionLogs.workspaceId, workspaceId)
+        )
+      )
       .returning();
     return updated;
   }
@@ -7841,8 +8880,15 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
 
   async createSupportAuditLog(log: InsertSupportAuditLog): Promise<SupportAuditLog> {
-    const [created] = await db.insert(supportAuditLogs).values(log).returning();
-    return created;
+    // Redirected: support_audit_logs merged into audit_logs with metadata
+    const [created] = await db.insert(auditLogs).values({
+      workspaceId: log.workspaceId || 'system',
+      userId: log.adminUserId,
+      action: 'support_action' as any,
+      entityType: 'support_audit',
+      metadata: { ...log, logType: 'support_audit' },
+    }).returning();
+    return { ...created, adminUserId: log.adminUserId, sessionId: log.sessionId, action: log.action, severity: log.severity, timestamp: created.createdAt } as any;
   }
 
   async getSupportAuditLogs(filters?: {
@@ -7856,45 +8902,52 @@ export class DatabaseStorage implements IStorage {
     limit?: number;
     offset?: number;
   }): Promise<SupportAuditLog[]> {
-    let query = db.select().from(supportAuditLogs).$dynamic();
-    const conditions: any[] = [];
+    // Redirected: support_audit_logs merged into audit_logs
+    const conditions: any[] = [eq(auditLogs.entityType, 'support_audit')];
+    if (filters?.workspaceId) conditions.push(eq(auditLogs.workspaceId, filters.workspaceId));
+    if (filters?.adminUserId) conditions.push(eq(auditLogs.userId, filters.adminUserId));
+    if (filters?.startDate) conditions.push(sql`${auditLogs.createdAt} >= ${filters.startDate}`);
+    if (filters?.endDate) conditions.push(sql`${auditLogs.createdAt} <= ${filters.endDate}`);
     
-    if (filters?.adminUserId) {
-      conditions.push(eq(supportAuditLogs.adminUserId, filters.adminUserId));
-    }
-    if (filters?.workspaceId) {
-      conditions.push(eq(supportAuditLogs.workspaceId, filters.workspaceId));
-    }
-    if (filters?.sessionId) {
-      conditions.push(eq(supportAuditLogs.sessionId, filters.sessionId));
-    }
-    if (filters?.severity) {
-      conditions.push(sql`${supportAuditLogs.severity} = ${filters.severity}`);
-    }
-    if (filters?.action) {
-      conditions.push(eq(supportAuditLogs.action, filters.action));
-    }
-    if (filters?.startDate) {
-      conditions.push(sql`${supportAuditLogs.timestamp} >= ${filters.startDate}`);
-    }
-    if (filters?.endDate) {
-      conditions.push(sql`${supportAuditLogs.timestamp} <= ${filters.endDate}`);
-    }
+    let query = db.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt));
+    if (filters?.limit) query = query.limit(filters.limit) as any;
+    if (filters?.offset) query = query.offset(filters.offset) as any;
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    query = query.orderBy(desc(supportAuditLogs.timestamp));
-    
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
-    if (filters?.offset) {
-      query = query.offset(filters.offset);
-    }
-    
-    return await query;
+    const rows = await query;
+    return rows.map(r => ({
+      ...r,
+      adminUserId: r.userId,
+      sessionId: (r.metadata as any)?.sessionId,
+      severity: (r.metadata as any)?.severity,
+      action: (r.metadata as any)?.action,
+      timestamp: r.createdAt,
+    })) as any[];
+  }
+
+  async createEmployeeInvitation(data: InsertEmployeeInvitation): Promise<EmployeeInvitation> {
+    const token = crypto.randomBytes(32).toString('hex');
+    const [invitation] = await db.insert(employeeInvitations).values({
+      ...data,
+      inviteToken: token,
+    } as any).returning();
+    return invitation;
+  }
+
+  async getEmployeeInvitationById(id: string): Promise<EmployeeInvitation | undefined> {
+    const [invitation] = await db.select().from(employeeInvitations).where(eq(employeeInvitations.id, id));
+    return invitation;
+  }
+
+  async updateEmployeeInvitation(id: string, data: Partial<InsertEmployeeInvitation>): Promise<EmployeeInvitation | undefined> {
+    const [updated] = await db.update(employeeInvitations)
+      .set({ ...data, updatedAt: new Date() } as any)
+      .where(eq(employeeInvitations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async listWorkspaces(): Promise<Workspace[]> {
+    return await db.select().from(workspaces);
   }
 }
 

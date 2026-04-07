@@ -21,16 +21,18 @@
  */
 
 import { db } from '../../db';
+import { AI } from '../../config/platformConfig';
 import { eq, and, desc, gte, sql, count, avg } from 'drizzle-orm';
 import {
   subagentTelemetry,
-  workspaceAutomationPolicies,
   workspaces,
-  aiSubagentDefinitions,
+  aiSubagentDefinitions
 } from '@shared/schema';
 import { automationGovernanceService } from './automationGovernanceService';
 import { aiBrainService } from './aiBrainService';
 import { TTLCache } from './cacheUtils';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('subagentConfidenceMonitor');
 
 // ============================================================================
 // TYPES
@@ -210,7 +212,7 @@ class SubagentConfidenceMonitor {
       const successComponent = successRate * CONFIDENCE_WEIGHTS.successRate;
       
       // Time component: faster is better (target: under 10s = 100%)
-      const targetTimeMs = 10000;
+      const targetTimeMs = AI.targetResponseTimeMs;
       const timeScore = Math.min(100, (targetTimeMs / Math.max(avgExecutionTimeMs, 1000)) * 100);
       const timeComponent = timeScore * CONFIDENCE_WEIGHTS.executionTime;
 
@@ -281,7 +283,7 @@ class SubagentConfidenceMonitor {
       return score;
 
     } catch (error) {
-      console.error('[SubagentConfidenceMonitor] Error calculating confidence:', error);
+      log.error('[SubagentConfidenceMonitor] Error calculating confidence:', error);
       return null;
     }
   }
@@ -326,7 +328,7 @@ class SubagentConfidenceMonitor {
         escalated,
       };
 
-      console.log(`[SubagentConfidenceMonitor] Confidence updated: ${subagentId} ${confidenceBefore} → ${confidenceAfter}`);
+      log.info(`[SubagentConfidenceMonitor] Confidence updated: ${subagentId} ${confidenceBefore} → ${confidenceAfter}`);
 
       // Check if org should be evaluated for graduation
       if (confidenceAfter >= SCORE_THRESHOLDS.trusted) {
@@ -336,7 +338,7 @@ class SubagentConfidenceMonitor {
       return event;
 
     } catch (error) {
-      console.error('[SubagentConfidenceMonitor] Error recording execution:', error);
+      log.error('[SubagentConfidenceMonitor] Error recording execution:', error);
       return null;
     }
   }
@@ -476,7 +478,7 @@ class SubagentConfidenceMonitor {
       return readiness;
 
     } catch (error) {
-      console.error('[SubagentConfidenceMonitor] Error calculating org readiness:', error);
+      log.error('[SubagentConfidenceMonitor] Error calculating org readiness:', error);
       return null;
     }
   }
@@ -535,7 +537,7 @@ class SubagentConfidenceMonitor {
       });
 
       if (updated) {
-        console.log(`[SubagentConfidenceMonitor] Org graduated: ${workspaceId} ${eligibility.currentLevel} → ${eligibility.recommendedLevel}`);
+        log.info(`[SubagentConfidenceMonitor] Org graduated: ${workspaceId} ${eligibility.currentLevel} → ${eligibility.recommendedLevel}`);
         
         // Clear cache
         this.orgScoreCache.delete(workspaceId);
@@ -556,7 +558,7 @@ class SubagentConfidenceMonitor {
       };
 
     } catch (error) {
-      console.error('[SubagentConfidenceMonitor] Error graduating org:', error);
+      log.error('[SubagentConfidenceMonitor] Error graduating org:', error);
       return {
         success: false,
         previousLevel: eligibility.currentLevel,

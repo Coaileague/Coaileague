@@ -11,7 +11,7 @@ export interface SkillManifest {
   description: string; // Skill description
   author: string; // Skill author
   category: SkillCategory;
-  requiredTier?: 'free' | 'starter' | 'professional' | 'enterprise'; // Minimum subscription tier
+  requiredTier?: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic'; // Minimum subscription tier
   requiredRole?: string[]; // Required workspace roles
   capabilities: string[]; // List of capabilities this skill provides
   dependencies?: string[]; // Other skill IDs this skill depends on

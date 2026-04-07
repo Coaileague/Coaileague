@@ -4,6 +4,8 @@
  * Provides smoke tests for critical RBAC-protected routes to detect
  * parity issues (e.g., routes missing from desktop vs mobile views)
  */
+import { createLogger } from '../lib/logger';
+const log = createLogger('routeHealthService');
 
 export interface RouteHealthCheck {
   path: string;
@@ -38,10 +40,10 @@ export const CRITICAL_ROUTES: RouteHealthCheck[] = [
   { path: '/clients', name: 'Clients', requiredRole: 'owner', category: 'owner', expectedStatus: 200 },
   
   // Admin routes
-  { path: '/admin', name: 'Admin Dashboard', requiredRole: 'admin', category: 'admin', expectedStatus: 200 },
-  { path: '/admin/users', name: 'User Management', requiredRole: 'admin', category: 'admin', expectedStatus: 200 },
-  { path: '/admin/compliance', name: 'Compliance', requiredRole: 'admin', category: 'admin', expectedStatus: 200 },
-  { path: '/admin/integrations', name: 'Integrations', requiredRole: 'admin', category: 'admin', expectedStatus: 200 },
+  { path: '/admin', name: 'Admin Dashboard', requiredRole: 'platform-admin', category: 'admin', expectedStatus: 200 },
+  { path: '/admin/users', name: 'User Management', requiredRole: 'platform-admin', category: 'admin', expectedStatus: 200 },
+  { path: '/admin/compliance', name: 'Compliance', requiredRole: 'platform-admin', category: 'admin', expectedStatus: 200 },
+  { path: '/admin/integrations', name: 'Integrations', requiredRole: 'platform-admin', category: 'admin', expectedStatus: 200 },
   
   // Employee routes
   { path: '/profile', name: 'Profile', requiredRole: 'employee', category: 'employee', expectedStatus: 200 },
@@ -116,9 +118,9 @@ export async function recordRouteHealthCheck(
 ): Promise<void> {
   // Log to console for now - database table can be added later if needed
   if (status === 'error') {
-    console.error(`[RouteHealth] ${path} is ${status}`, { responseTime, errorMessage });
+    log.error(`[RouteHealth] ${path} is ${status}`, { responseTime, errorMessage });
   } else if (status === 'degraded') {
-    console.warn(`[RouteHealth] ${path} is ${status}`, { responseTime });
+    log.warn(`[RouteHealth] ${path} is ${status}`, { responseTime });
   }
   // Info level logs are silent to avoid noise
 }

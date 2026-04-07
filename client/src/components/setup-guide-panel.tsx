@@ -4,13 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import {
   Accordion,
   AccordionContent,
@@ -169,7 +163,7 @@ export function SetupGuidePanel({
 
   const completedPanelContent = (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b shrink-0">
         <span className="text-sm font-semibold">Setup complete</span>
         <Button
           variant="ghost"
@@ -198,7 +192,7 @@ export function SetupGuidePanel({
 
   const panelContent = isComplete ? completedPanelContent : (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-2">
           <TrinityBadge showLabel={false} />
           <span className="text-sm font-semibold">Setup Guide</span>
@@ -229,7 +223,7 @@ export function SetupGuidePanel({
 
       <div className="px-4 py-3 border-b shrink-0">
         <Progress value={guideData.completionPercent} className="h-1.5" />
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between gap-1 mt-2">
           <span className="text-xs text-muted-foreground">
             {guideData.completedTasks} of {guideData.totalTasks} tasks complete
           </span>
@@ -328,7 +322,7 @@ export function SetupGuidePanel({
               transition={{ duration: 0.2 }}
             >
               <Card
-                className={cn("w-80 shadow-lg max-h-[70vh] flex flex-col overflow-hidden", className)}
+                className={cn("w-80 shadow-sm max-h-[70vh] flex flex-col overflow-hidden", className)}
                 data-testid="setup-guide-panel"
               >
                 {panelContent}
@@ -344,7 +338,7 @@ export function SetupGuidePanel({
             >
               <Button
                 onClick={() => setIsOpen(true)}
-                className="rounded-full h-11 px-4 gap-2 shadow-lg"
+                className="rounded-full h-11 px-4 gap-2 shadow-sm"
                 data-testid="button-open-setup-guide"
               >
                 <Settings className="w-4 h-4" />
@@ -359,10 +353,10 @@ export function SetupGuidePanel({
       </div>
 
       <div className="md:hidden">
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>
+        <UniversalModal open={isOpen} onOpenChange={setIsOpen}>
+          <UniversalModalTrigger asChild>
             <Button
-              className="rounded-full h-11 px-4 gap-2 shadow-lg"
+              className="rounded-full h-11 px-4 gap-2 shadow-sm"
               data-testid="button-open-setup-guide-mobile"
             >
               <Settings className="w-4 h-4" />
@@ -371,14 +365,14 @@ export function SetupGuidePanel({
                 {guideData.completionPercent}%
               </Badge>
             </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh] p-0 rounded-t-xl">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Setup Guide</SheetTitle>
-            </SheetHeader>
+          </UniversalModalTrigger>
+          <UniversalModalContent side="bottom" className="h-[85vh] p-0 rounded-t-xl sm:max-w-3xl" showHomeButton={false}>
+            <UniversalModalHeader className="sr-only">
+              <UniversalModalTitle>Setup Guide</UniversalModalTitle>
+            </UniversalModalHeader>
             {panelContent}
-          </SheetContent>
-        </Sheet>
+          </UniversalModalContent>
+        </UniversalModal>
       </div>
     </>
   );

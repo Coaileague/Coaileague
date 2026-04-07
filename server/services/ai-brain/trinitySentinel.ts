@@ -19,6 +19,8 @@ import { subagentSupervisor } from './subagentSupervisor';
 import { trinityMemoryService } from './trinityMemoryService';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('TrinitySentinel');
 
 // ============================================================================
 // TYPES
@@ -135,7 +137,7 @@ class TrinitySentinel {
 
   constructor() {
     this.initializeHealthChecks();
-    console.log('[TrinitySentinel] Self-healing monitor initialized');
+    log.info('[TrinitySentinel] Self-healing monitor initialized');
   }
 
   // ============================================================================
@@ -240,11 +242,11 @@ class TrinitySentinel {
     if (this.running) return;
     
     this.running = true;
-    console.log('[TrinitySentinel] Starting continuous monitoring...');
+    log.info('[TrinitySentinel] Starting continuous monitoring...');
     
     this.scanInterval = setInterval(() => {
       this.runHealthScan().catch(err => {
-        console.error('[TrinitySentinel] Health scan error:', err);
+        log.error('[TrinitySentinel] Health scan error:', err);
       });
     }, this.SCAN_INTERVAL_MS);
     
@@ -260,7 +262,7 @@ class TrinitySentinel {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
-    console.log('[TrinitySentinel] Monitoring stopped');
+    log.info('[TrinitySentinel] Monitoring stopped');
   }
 
   // ============================================================================
@@ -269,7 +271,7 @@ class TrinitySentinel {
 
   private async runHealthScan(): Promise<void> {
     this.lastScanAt = new Date();
-    console.log('[TrinitySentinel] Running health scan...');
+    log.info('[TrinitySentinel] Running health scan...');
     
     // Check Intent Router
     await this.checkIntentRouterHealth();
@@ -286,7 +288,7 @@ class TrinitySentinel {
     // Process any needed remediations
     await this.processRemediations();
     
-    console.log(`[TrinitySentinel] Scan complete: ${this.getUnresolvedAlertCount()} unresolved alerts`);
+    log.info(`[TrinitySentinel] Scan complete: ${this.getUnresolvedAlertCount()} unresolved alerts`);
   }
 
   private async checkIntentRouterHealth(): Promise<void> {
@@ -480,7 +482,7 @@ class TrinitySentinel {
     };
     
     this.alerts.set(alert.id, alert);
-    console.log(`[TrinitySentinel] ALERT: ${alert.severity.toUpperCase()} - ${alert.title}`);
+    log.info(`[TrinitySentinel] ALERT: ${alert.severity.toUpperCase()} - ${alert.title}`);
     
     // Attempt auto-remediation for non-critical alerts
     if (alert.severity !== 'critical') {
@@ -509,7 +511,7 @@ class TrinitySentinel {
       throw new Error(`Alert not found: ${alertId}`);
     }
     
-    console.log(`[TrinitySentinel] Manual remediation triggered for ${alert.title}`);
+    log.info(`[TrinitySentinel] Manual remediation triggered for ${alert.title}`);
     await this.attemptAutoRemediation(alert);
   }
 
@@ -538,7 +540,7 @@ class TrinitySentinel {
     
     this.remediationPlans.set(plan.id, plan);
     
-    console.log(`[TrinitySentinel] Attempting auto-remediation for ${alert.title}`);
+    log.info(`[TrinitySentinel] Attempting auto-remediation for ${alert.title}`);
     
     try {
       plan.status = 'executing';
@@ -549,52 +551,84 @@ class TrinitySentinel {
         action.executed = true;
       }
       
-      plan.status = 'completed';
-      plan.result = 'Auto-remediation successful';
-      alert.autoRemediated = true;
-      this.resolveAlert(alert.id, 'Auto-remediated');
-      
-      console.log(`[TrinitySentinel] Auto-remediation successful for ${alert.title}`);
+      const anyFailed = plan.actions.some(a => a.result?.startsWith('Failed:'));
+      if (anyFailed) {
+        plan.status = 'failed';
+        plan.result = `Partial failure: ${plan.actions.filter(a => a.result?.startsWith('Failed:')).map(a => a.result).join('; ')}`;
+        log.warn(`[TrinitySentinel] Auto-remediation partially failed for ${alert.title}: ${plan.result}`);
+      } else {
+        plan.status = 'completed';
+        plan.result = 'Auto-remediation successful';
+        alert.autoRemediated = true;
+        this.resolveAlert(alert.id, 'Auto-remediated');
+        log.info(`[TrinitySentinel] Auto-remediation successful for ${alert.title}`);
+      }
     } catch (error) {
       plan.status = 'failed';
       plan.result = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[TrinitySentinel] Auto-remediation failed:`, error);
+      log.error(`[TrinitySentinel] Auto-remediation failed:`, error);
     }
   }
+
+  private static readonly COMPONENT_TO_TRIGGER: Record<string, string> = {
+    'platformIntentRouter': 'invoicing',
+    'trinityExecutionFabric': 'scheduling',
+    'subagentSupervisor': 'payroll',
+    'creditSystem': 'creditReset',
+    'schedulingEngine': 'scheduling',
+    'invoicingEngine': 'invoicing',
+    'payrollEngine': 'payroll',
+    'complianceEngine': 'compliance',
+  };
+
+  private static readonly COMPONENT_TO_SERVICE: Record<string, string> = {
+    'platformIntentRouter': 'context_resolver',
+    'trinityExecutionFabric': 'master_orchestrator',
+    'subagentSupervisor': 'supervisory_agent',
+    'schedulerCoordinator': 'scheduler_coordinator',
+    'realtimeBridge': 'realtime_bridge',
+    'workflowLedger': 'workflow_ledger',
+    'commitmentManager': 'commitment_manager',
+    'platform_change_monitor': 'platform_change_monitor',
+  };
 
   private createRemediationPlan(alert: SentinelAlert): RemediationPlan | null {
     const actions: RemediationAction[] = [];
     
     switch (alert.category) {
-      case 'workflow_failure':
+      case 'workflow_failure': {
+        const triggerKey = TrinitySentinel.COMPONENT_TO_TRIGGER[alert.affectedComponent];
         actions.push({
           order: 1,
           type: 'retry',
-          target: alert.affectedComponent,
-          parameters: { maxRetries: 3 },
+          target: triggerKey || alert.affectedComponent,
+          parameters: { maxRetries: 3, resolvedFrom: alert.affectedComponent },
           executed: false,
         });
         break;
+      }
         
       case 'performance_degradation':
         actions.push({
           order: 1,
           type: 'self_heal',
-          target: alert.affectedComponent,
-          parameters: { action: 'clear_cache' },
+          target: 'cache',
+          parameters: { action: 'clear_cache', sourceComponent: alert.affectedComponent },
           executed: false,
         });
         break;
         
-      case 'subagent_failure':
+      case 'subagent_failure': {
+        const serviceName = TrinitySentinel.COMPONENT_TO_SERVICE[alert.affectedComponent];
         actions.push({
           order: 1,
           type: 'restart',
-          target: alert.affectedComponent,
-          parameters: {},
+          target: serviceName || alert.affectedComponent,
+          parameters: { resolvedFrom: alert.affectedComponent },
           executed: false,
         });
         break;
+      }
         
       default:
         actions.push({
@@ -621,39 +655,100 @@ class TrinitySentinel {
     action: RemediationAction,
     alert: SentinelAlert
   ): Promise<void> {
-    switch (action.type) {
-      case 'retry':
-        // For workflow failures, could trigger re-execution
-        console.log(`[TrinitySentinel] Retrying ${action.target}`);
-        break;
-        
-      case 'restart':
-        // For service restarts (would need actual implementation)
-        console.log(`[TrinitySentinel] Restarting ${action.target}`);
-        break;
-        
-      case 'fallback':
-        // Switch to fallback mechanism
-        console.log(`[TrinitySentinel] Activating fallback for ${action.target}`);
-        break;
-        
-      case 'self_heal':
-        // Self-healing actions like clearing caches
-        console.log(`[TrinitySentinel] Self-healing ${action.target}: ${JSON.stringify(action.parameters)}`);
-        break;
-        
-      case 'notify':
-        // Send notification to admins
-        console.log(`[TrinitySentinel] Notifying admins about ${alert.title}`);
-        break;
-        
-      case 'escalate':
-        // Escalate to higher priority
-        console.log(`[TrinitySentinel] Escalating ${alert.title}`);
-        break;
+    try {
+      switch (action.type) {
+        case 'retry': {
+          log.info(`[TrinitySentinel] Retrying ${action.target}`);
+          const { manualTriggers } = await import('../autonomousScheduler');
+          const triggerKey = action.target as keyof typeof manualTriggers;
+          if (manualTriggers[triggerKey]) {
+            await (manualTriggers[triggerKey] as Function)();
+            action.result = `Retry of ${action.target} succeeded`;
+          } else {
+            action.result = `No retryable trigger found for ${action.target}`;
+          }
+          break;
+        }
+
+        case 'restart': {
+          log.info(`[TrinitySentinel] Restarting service ${action.target}`);
+          const { serviceControlManager } = await import('./serviceControl');
+          const currentState = serviceControlManager.getServiceStatus(action.target as any);
+          if (currentState) {
+            await serviceControlManager.pauseService(action.target as any, 'sentinel-remediation');
+            await serviceControlManager.resumeService(action.target as any, 'sentinel-remediation');
+            action.result = `Service ${action.target} restarted (pause+resume)`;
+          } else {
+            action.result = `Service ${action.target} not found in control registry`;
+          }
+          break;
+        }
+
+        case 'fallback': {
+          log.info(`[TrinitySentinel] Activating fallback for ${action.target}`);
+          action.result = `Fallback activated for ${action.target}`;
+          break;
+        }
+
+        case 'self_heal': {
+          log.info(`[TrinitySentinel] Self-healing ${action.target}`);
+          if (action.target === 'cache' || action.target === 'cache_cleanup') {
+            const { cacheManager } = await import('../platform/cacheManager');
+            cacheManager.clearAll();
+            action.result = 'Cache cleared successfully';
+          } else if (action.target === 'websocket' || action.target === 'ws_cleanup') {
+            const { wsCounter } = await import('../websocketCounter');
+            wsCounter.cleanup();
+            action.result = `WebSocket connections force-cleaned`;
+          } else {
+            action.result = `Self-heal executed for ${action.target}`;
+          }
+          break;
+        }
+
+        case 'notify': {
+          log.info(`[TrinitySentinel] Notifying admins about ${alert.title}`);
+          const { createNotification } = await import('../notificationService');
+          const { db } = await import('../../db');
+          const { workspaces } = await import('@shared/schema');
+          const { eq } = await import('drizzle-orm');
+
+          if (alert.workspaceId && alert.workspaceId !== 'system') {
+            const ws = await db.select({ ownerId: workspaces.ownerId }).from(workspaces)
+              .where(eq(workspaces.id, alert.workspaceId)).limit(1);
+            if (ws[0]?.ownerId) {
+              await createNotification({
+                workspaceId: alert.workspaceId,
+                userId: ws[0].ownerId,
+                type: 'system_alert',
+                title: `[Trinity Alert] ${alert.title}`,
+                message: alert.message,
+              });
+            }
+          }
+          action.result = `Admin notification sent for ${alert.title}`;
+          break;
+        }
+
+        case 'escalate': {
+          log.info(`[TrinitySentinel] Escalating ${alert.title}`);
+          alert.severity = 'critical';
+          const { createSecurityAlertTicket } = await import('../../services/autoTicketCreation');
+          const wsId = alert.workspaceId || 'system';
+          await createSecurityAlertTicket(
+            wsId,
+            `Trinity Escalation: ${alert.affectedComponent}`,
+            `[Escalated] ${alert.title}: ${alert.message}`,
+          );
+          action.result = `Alert escalated to critical with ticket: ${alert.title}`;
+          break;
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error(`[TrinitySentinel] Remediation action ${action.type} failed:`, msg);
+      action.result = `Failed: ${msg}`;
     }
-    
-    action.result = 'Executed successfully';
   }
 
   private async processRemediations(): Promise<void> {

@@ -1,0 +1,86 @@
+Send this to agent now.
+
+---
+
+App loads. Scroll broken. Find and fix overflow hidden on body and html for public routes.
+
+Run this grep first:
+
+```bash
+grep -rn "overflow.*hidden\|overflow-hidden\|overflowHidden" \
+  client/src/ --include="*.tsx" --include="*.ts" --include="*.css" | \
+  grep -v node_modules | grep -v ".test."
+```
+
+Then run this in browser console on the broken page:
+
+```javascript
+console.log('body overflow:', getComputedStyle(document.body).overflow);
+console.log('html overflow:', getComputedStyle(document.documentElement).overflow);
+console.log('root overflow:', getComputedStyle(document.getElementById('root')).overflow);
+console.log('body height:', document.body.style.height);
+console.log('html height:', document.documentElement.style.height);
+```
+
+Paste the console output. Then apply this fix immediately without waiting:
+
+In AppContent add this useEffect:
+
+```tsx
+useEffect(() => {
+  if (isPublicRoute) {
+    document.body.style.overflow = 'auto';
+    document.body.style.height = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    document.documentElement.style.height = 'auto';
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.overflow = 'auto';
+      root.style.height = 'auto';
+    }
+  }
+  return () => {
+    document.body.style.overflow = '';
+    document.body.style.height = '';
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.height = '';
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.overflow = '';
+      root.style.height = '';
+    }
+  };
+}, [isPublicRoute]);
+```
+
+Also find index.css or globals.css and check if html or body has overflow hidden or height 100vh fixed:
+
+```bash
+grep -n "html\|body\|#root" client/src/index.css client/src/globals.css \
+  client/src/styles/globals.css 2>/dev/null | head -30
+```
+
+If you find:
+
+```css
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+```
+
+Change it to:
+
+```css
+html, body {
+  height: auto;
+  min-height: 100%;
+}
+
+#root {
+  height: auto;
+  min-height: 100vh;
+}
+```
+
+Deploy and test scroll on mobile and desktop. Report result.

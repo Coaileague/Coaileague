@@ -1,0 +1,384 @@
+Send this to the Replit Agent:
+
+---
+
+**PARALLEL GROUP 5 — NEW FEATURES DOMAIN A**
+**Phases 35B, 35C, 35D, 35E, 35F**
+
+Read all five phase prompts fully before writing a single line of code. Complete phases in this order: 35B → 35C → 35D → 35E → 35F. Each gets its own reconciliation table and certification before the next begins. All five are new feature builds with entirely new files — zero overlap with each other or with prior phases.
+
+**Domain: New Features A — new tables, new routes, new frontend pages. Every file created in this group is net-new.**
+
+**All standing rules apply: Nothing Left Behind, 7-step framework, 5 mandatory quality checks per phase, TypeScript zero errors, server clean startup after each phase. The consent-manager rename is now permanent — never reference cookie-banner anywhere.**
+
+---
+
+**PHASE 35B — AUTONOMOUS SALES ENGINE AND RFP PIPELINE**
+
+This phase builds the complete autonomous sales and business development system. Trinity serves as the primary sales agent — she identifies prospects, initiates outreach, conducts email conversations, generates proposals, manages the approval chain, and hands off executed contracts to the operations pipeline automatically.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check what currently exists: `rfpPipelineRoutes.ts` skeleton, `inboundOpportunityAgent.ts`. Document what is built vs what needs to be created. Do not duplicate existing work.
+
+**STEP 2 — SCHEMA**
+Create these tables if not already present:
+
+`sales_leads`: id, workspace_id, company_name, contact_name, contact_email, contact_phone, lead_source (enum: manual_entry, inbound_inquiry, referral, linkedin, event, cold_outreach, other), stage (enum: captured, qualified, outreach_active, proposal_sent, proposal_approved, contract_sent, contract_executed, onboarded, lost), lost_reason, lead_score (0-100), assigned_to (user_id), estimated_contract_value, estimated_officers_needed, primary_post_type, operating_states (text array), notes, trinity_context (jsonb), created_at, updated_at, last_contacted_at, expected_close_date
+
+`sales_activities`: id, lead_id, workspace_id, activity_type, direction (inbound/outbound), subject, body, actor_id, timestamp
+
+`sales_proposals`: id, lead_id, workspace_id, proposal_number, status (draft/sent/viewed/approved/rejected/expired), services_description, estimated_officers, post_locations, coverage_schedule, monthly_rate, setup_fee, contract_term_months, document_url, org_owner_signed_at, prospect_signed_at, valid_until, created_at, updated_at, sent_at, approved_at
+
+`sales_email_threads`: id, lead_id, workspace_id, thread_id, from_email, to_email, subject, direction, body, trinity_generated (boolean), sent_at
+
+**STEP 3 — PIPELINE BACKEND**
+Build `server/routes/salesPipelineRoutes.ts`:
+- `GET /api/sales/leads` — list leads with filters (stage, assigned_to, lead_source), workspace-scoped
+- `POST /api/sales/leads` — create lead, auto-calculate lead score via Trinity
+- `PATCH /api/sales/leads/:id` — update lead, stage transition validation
+- `POST /api/sales/leads/:id/advance` — advance to next stage with Trinity approval gate
+- `GET /api/sales/leads/:id/activities` — activity timeline for a lead
+- `POST /api/sales/leads/:id/activities` — log manual activity
+- `POST /api/sales/proposals/generate` — Trinity generates proposal from lead data, stores in document vault
+- `POST /api/sales/proposals/:id/send` — org_owner approves and sends to prospect
+- `POST /api/sales/proposals/:id/approve` — prospect approval triggers contract generation
+- `GET /api/sales/pipeline/analytics` — pipeline value by stage, conversion rates, win rate
+
+Every stage transition writes an audit record. Org_owner approval required before any outreach or proposal is sent — Trinity drafts, human approves.
+
+**STEP 4 — TRINITY SALES ACTIONS**
+Register in action registry:
+- `sales.lead.score` — score a lead 0-100 based on company size, urgency signals, geographic fit
+- `sales.lead.qualify` — assess lead and recommend stage
+- `sales.outreach.draft` — draft personalized outreach email for org_owner review
+- `sales.proposal.generate` — generate proposal from lead data
+- `sales.pipeline.summary` — pipeline value and conversion metrics
+- `sales.lead.query` — query leads by criteria in natural language
+
+**STEP 5 — PIPELINE UI**
+Three views at `/sales`:
+
+Kanban board: columns for each stage, lead cards showing company name, estimated value, last activity, Trinity activity indicator (pulsing when Trinity is working), drag-and-drop stage advancement
+
+List view: sortable by stage, estimated value, last contacted, lead score. Filter by stage, assigned rep, lead source. Export to CSV.
+
+Lead detail view: full lead panel, activity timeline, email thread viewer, proposal status card, Trinity control panel showing what Trinity is doing and next scheduled action
+
+**VERIFICATION — 22 checks:**
+- Check 1: All 4 tables created and migrated
+- Check 2: Lead creation with auto-scoring works
+- Check 3: Stage transitions write audit records
+- Check 4: Org_owner approval gate blocks outreach without approval
+- Check 5: Proposal generation creates document in vault
+- Check 6: Proposal sent triggers NDS notification to prospect
+- Check 7: Proposal approval triggers contract generation
+- Check 8: Contract execution creates client record automatically
+- Check 9: All 6 Trinity sales actions registered
+- Check 10: Trinity lead scoring returns 0-100 value
+- Check 11: Kanban board renders with all stage columns
+- Check 12: Lead cards show correct data and Trinity activity indicator
+- Check 13: List view sortable and filterable
+- Check 14: Lead detail shows full activity timeline
+- Check 15: Email thread viewer shows inbound vs outbound distinction
+- Check 16: Pipeline analytics endpoint returns conversion rates
+- Check 17: All sales routes workspace-scoped
+- Check 18: rfpPipelineRoutes.ts existing skeleton integrated — no duplication
+- Check 19: TypeScript zero errors
+- Check 20: Import completeness confirmed
+- Check 21: State variable declarations confirmed
+- Check 22: Server startup clean
+
+---
+
+**PHASE 35C — INTERNAL COMMUNICATIONS AND DOCCHAT**
+
+Officers need to communicate with supervisors, supervisors need to broadcast to teams, and managers need to reach all officers instantly. This phase builds the complete internal communications system.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check what chat infrastructure currently exists — any chat tables, chat routes, chat UI components, WebSocket room handling, bot command infrastructure. Document everything before building.
+
+**STEP 2 — SCHEMA**
+Create if not present:
+`chat_rooms`: id, workspace_id, name, room_type (general/team/direct/broadcast/command), created_by, is_archived, created_at
+`chat_messages`: id, room_id, workspace_id, sender_id, sender_type (user/bot/trinity), content, message_type (text/command/announcement/system), metadata (jsonb), is_pinned, created_at, edited_at, deleted_at
+`chat_room_members`: room_id, user_id, role (owner/admin/member), last_read_at, joined_at
+`chat_bot_commands`: id, workspace_id, command_prefix, command_type, handler, description, min_role
+
+**STEP 3 — CHAT BACKEND**
+Build `server/routes/dockChatRoutes.ts`:
+- `GET /api/chat/rooms` — list rooms user has access to
+- `POST /api/chat/rooms` — create room
+- `GET /api/chat/rooms/:id/messages` — paginated message history (50 per page)
+- `POST /api/chat/rooms/:id/messages` — send message, broadcast via WebSocket
+- `POST /api/chat/rooms/:id/broadcast` — manager-only broadcast to all members
+- `GET /api/chat/direct/:userId` — get or create direct message room with a user
+- Bot command processing: `/schedule`, `/calloff`, `/incident`, `/roster`, `/help` — Trinity processes and responds
+
+WebSocket events: `chat:message`, `chat:typing`, `chat:read`, `chat:broadcast`
+
+**STEP 4 — DOCCHAT UI**
+WhatsApp-style interface accessible from the sidebar:
+- Room list on left — shows unread count badge, last message preview, timestamp
+- Message thread on right — shows messages with sender avatar, timestamp, delivery status
+- Message input with send button and attachment option
+- Bot commands: type `/` to see available commands with descriptions
+- Broadcast banner: manager-created broadcasts show with distinct styling at top of thread
+- Trinity accessible via `@Trinity` mention or `/trinity` command
+- Direct messaging: click any officer name to open DM
+- Unread count badge on sidebar chat icon
+
+**STEP 5 — NOTIFICATIONS**
+- NDS notification when user receives a direct message and is not in the chat
+- NDS notification when broadcast is sent to a room user is in
+- NDS notification when `@username` mentioned in any room
+
+**VERIFICATION — 18 checks:**
+- Check 1: All 4 tables created
+- Check 2: Room creation and member management works
+- Check 3: Message send and receive via WebSocket confirmed
+- Check 4: Paginated message history loads correctly
+- Check 5: Broadcast message shows distinctly in thread
+- Check 6: Bot commands `/schedule`, `/calloff`, `/incident`, `/roster`, `/help` all respond
+- Check 7: Trinity responds to `@Trinity` mention
+- Check 8: Direct messaging creates room and routes correctly
+- Check 9: Unread count badge shows on sidebar icon
+- Check 10: DockChat UI renders WhatsApp-style layout
+- Check 11: Message input handles bot command prefix `/`
+- Check 12: NDS notification fires on DM receipt
+- Check 13: NDS notification fires on broadcast
+- Check 14: `@username` mention triggers NDS notification
+- Check 15: All chat routes workspace-scoped
+- Check 16: TypeScript zero errors
+- Check 17: Import completeness confirmed
+- Check 18: Server startup clean
+
+---
+
+**PHASE 35D — WORK ORDER MANAGEMENT AND SPECIAL ASSIGNMENT PIPELINE**
+
+Work orders handle special assignments separate from regular scheduled posts — escorts, event security, investigations, emergency deployments. Each has its own lifecycle, billing trigger, and client sign-off.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check if any work order infrastructure exists in the codebase. Check Trinity action registry for any `workorder.*` actions already registered.
+
+**STEP 2 — SCHEMA**
+`work_orders`: id, workspace_id, client_id, title, work_order_type (enum: special_assignment, escort, investigation, event_security, emergency_deployment, other), status (enum: draft, pending_assignment, active, completed, cancelled, billed), description, location, required_certifications (text array), estimated_hours, actual_hours, billing_rate, billing_amount, assigned_officer_ids (text array), scheduled_start, scheduled_end, actual_start, actual_end, client_signed_at, client_signed_by, invoice_id (linked on completion), created_by, created_at, updated_at
+
+`work_order_evidence`: id, work_order_id, workspace_id, evidence_type (photo/document/note), file_url, sha256_hash, captured_by, captured_at, notes
+
+**STEP 3 — WORK ORDER BACKEND**
+Build `server/routes/workOrderRoutes.ts`:
+- `GET /api/work-orders` — list with filters (status, client, type, date range)
+- `POST /api/work-orders` — create work order with qualification check on officers
+- `PATCH /api/work-orders/:id` — update, status transitions validated
+- `POST /api/work-orders/:id/assign` — assign officer(s) with certification check
+- `POST /api/work-orders/:id/start` — mark active, record actual start time
+- `POST /api/work-orders/:id/complete` — mark completed, lock actual hours, trigger client sign-off
+- `POST /api/work-orders/:id/client-signoff` — client confirms completion via secure link
+- `POST /api/work-orders/:id/evidence` — upload photo or document evidence
+- `POST /api/work-orders/:id/bill` — auto-generate invoice from work order data
+
+Client sign-off triggers automatic invoice generation via Phase 14 invoice engine.
+
+**STEP 4 — TRINITY WORK ORDER ACTIONS**
+- `workorder.create` — create work order from natural language
+- `workorder.assign` — suggest officer assignments based on certifications and availability
+- `workorder.status` — query work order status
+- `workorder.summary` — summarize active work orders for a client or period
+
+**STEP 5 — WORK ORDER UI**
+At `/work-orders`:
+- List view with status badges, client name, type, assigned officers, scheduled time
+- Work order detail: all fields, evidence gallery, activity log, client sign-off status
+- Create form: type, client, location, required certifications, scheduling, billing rate
+- Evidence upload: camera capture on mobile, file upload on desktop
+- Client sign-off view: accessible via secure link, shows work order summary and sign button
+
+**VERIFICATION — 18 checks:**
+- Check 1: Both tables created and migrated
+- Check 2: Work order creation with certification check confirmed
+- Check 3: Officer assignment validates certifications
+- Check 4: Status transitions write audit records
+- Check 5: Client sign-off via secure link works
+- Check 6: Client sign-off auto-triggers invoice generation
+- Check 7: Evidence upload stores with SHA-256 hash
+- Check 8: Invoice auto-generated from work order billing data
+- Check 9: All 4 Trinity work order actions registered
+- Check 10: Work order list renders with correct status badges
+- Check 11: Work order detail shows evidence gallery
+- Check 12: Create form validates required fields
+- Check 13: Mobile camera capture works for evidence
+- Check 14: All routes workspace-scoped
+- Check 15: TypeScript zero errors
+- Check 16: Import completeness confirmed
+- Check 17: State variable declarations confirmed
+- Check 18: Server startup clean
+
+---
+
+**PHASE 35E — GUARD TOUR AND PATROL VERIFICATION SYSTEM**
+
+Security companies need proof that officers are actually patrolling — not just clocked in. This phase builds checkpoint scanning, tour completion tracking, and client-visible proof of patrol.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check if any patrol or checkpoint infrastructure exists. Check Phase 22 mobile features for any GPS waypoint work.
+
+**STEP 2 — SCHEMA**
+`patrol_routes`: id, workspace_id, client_id, post_id, name, checkpoint_count, estimated_duration_minutes, is_active, created_by, created_at
+
+`patrol_checkpoints`: id, patrol_route_id, workspace_id, name, sequence_order, latitude, longitude, radius_meters (acceptable scan distance), qr_code_value, nfc_tag_id, created_at
+
+`patrol_tours`: id, patrol_route_id, workspace_id, officer_id, shift_id, status (enum: in_progress, completed, incomplete, missed), started_at, completed_at, completion_percentage, missed_checkpoint_ids (text array)
+
+`patrol_checkpoint_scans`: id, tour_id, checkpoint_id, workspace_id, officer_id, scanned_at, scan_method (enum: qr, nfc, gps_proximity, manual), latitude, longitude, distance_from_checkpoint, is_within_radius, notes
+
+**STEP 3 — PATROL BACKEND**
+Build `server/routes/guardTourRoutes.ts`:
+- `GET /api/patrol/routes` — list patrol routes for workspace
+- `POST /api/patrol/routes` — create patrol route with checkpoints
+- `POST /api/patrol/tours/start` — officer starts a patrol tour
+- `POST /api/patrol/tours/:id/scan` — officer scans a checkpoint (QR, NFC, or GPS proximity)
+- `POST /api/patrol/tours/:id/complete` — complete tour, calculate completion percentage
+- `GET /api/patrol/tours` — list tours with filters (officer, date, status)
+- `GET /api/patrol/tours/:id` — full tour detail with checkpoint scan timestamps
+- Missed checkpoint alert: if officer has not scanned a checkpoint within the expected window fire NDS alert to supervisor
+
+**STEP 4 — TRINITY PATROL ACTIONS**
+- `patrol.status` — current tour status for an officer or post
+- `patrol.summary` — completion rates by officer, post, or period
+- `patrol.alert` — proactive flag for posts with consistently missed checkpoints
+
+**STEP 5 — PATROL UI**
+At `/guard-tours`:
+- Route management: create routes, add checkpoints with map pin placement, set sequence order
+- Active tours: real-time view of officers on patrol, which checkpoints completed, which pending
+- Tour history: completion percentage per tour, missed checkpoints highlighted in red
+- Client portal integration: clients can see proof of patrol — checkpoint scan times for their site
+
+Mobile officer view:
+- Current tour shows checkpoints in sequence with scan status
+- QR scanner button — opens camera to scan checkpoint QR code
+- GPS proximity auto-scan when officer is within radius
+- Tour complete button after all required checkpoints scanned
+
+**VERIFICATION — 18 checks:**
+- Check 1: All 4 tables created
+- Check 2: Patrol route creation with checkpoints works
+- Check 3: Tour start creates tour record linked to shift
+- Check 4: QR code scan records checkpoint with GPS coordinates
+- Check 5: GPS proximity auto-scan triggers when within radius
+- Check 6: Missed checkpoint alert fires to supervisor via NDS
+- Check 7: Tour completion calculates correct percentage
+- Check 8: Tour detail shows all checkpoint scans with timestamps
+- Check 9: All 3 Trinity patrol actions registered
+- Check 10: Client portal shows proof of patrol for their site
+- Check 11: Route management UI renders checkpoint map
+- Check 12: Active tours real-time view updates correctly
+- Check 13: Mobile QR scanner opens camera correctly
+- Check 14: All routes workspace-scoped
+- Check 15: TypeScript zero errors
+- Check 16: Import completeness confirmed
+- Check 17: State variable declarations confirmed
+- Check 18: Server startup clean
+
+---
+
+**PHASE 35F — SHIFT TRADING, OPEN SHIFT MARKETPLACE, AND OFFICER AVAILABILITY**
+
+Officers need to manage their own schedules — swap shifts, claim open shifts, request time off, and set availability preferences. This reduces management overhead and improves retention.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check existing scheduling infrastructure from Phase 12. Check Phase 16 three-tier cascade for open shift handling. Identify what shift trading infrastructure already exists.
+
+**STEP 2 — SCHEMA**
+`shift_trade_requests`: id, workspace_id, requesting_officer_id, requested_shift_id, offered_shift_id (optional), target_officer_id (null = open marketplace listing), status (enum: pending, accepted, rejected, cancelled, manager_approved, manager_rejected), reason, manager_id, manager_note, created_at, updated_at, expires_at
+
+`time_off_requests`: id, workspace_id, officer_id, request_type (enum: vacation, sick, personal, bereavement, jury_duty, military), start_date, end_date, reason, status (enum: pending, approved, rejected, cancelled), reviewed_by, reviewed_at, created_at
+
+`officer_availability`: id, workspace_id, officer_id, day_of_week (0-6), start_time, end_time, is_available (boolean), effective_from, effective_until, created_at, updated_at
+
+**STEP 3 — SHIFT TRADING BACKEND**
+Build `server/routes/shiftTradingRoutes.ts`:
+- `GET /api/shift-trading/my-shifts` — officer's upcoming shifts eligible for trading
+- `POST /api/shift-trading/requests` — create trade request (specific officer or open marketplace)
+- `PATCH /api/shift-trading/requests/:id/accept` — target officer accepts (both must accept before manager reviews)
+- `PATCH /api/shift-trading/requests/:id/reject` — reject trade
+- `PATCH /api/shift-trading/requests/:id/manager-approve` — manager approves, shifts reassigned atomically using SELECT FOR UPDATE to prevent race conditions
+- `GET /api/shift-trading/marketplace` — open shifts available for claiming
+- `POST /api/shift-trading/marketplace/:shiftId/claim` — officer claims open shift, SELECT FOR UPDATE prevents double-claiming
+- `GET /api/time-off/requests` — list time off requests for workspace
+- `POST /api/time-off/requests` — officer submits time off request
+- `PATCH /api/time-off/requests/:id/review` — manager approves or rejects
+- `GET /api/availability/:officerId` — get officer availability preferences
+- `PATCH /api/availability/:officerId` — update availability preferences
+
+All trading respects: license requirements, rest period rules (8 hours minimum between shifts), OT limits.
+
+**STEP 4 — TRINITY ACTIONS**
+- `schedule.trade.facilitate` — suggest compatible trade partners for a shift
+- `schedule.marketplace.summary` — open shifts needing coverage
+- `schedule.availability.conflicts` — officers with availability conflicts in upcoming schedule
+
+**STEP 5 — SHIFT TRADING UI**
+Officer-facing (in mobile portal and web):
+- "My Shifts" tab with trade request button on each eligible shift
+- Marketplace tab showing all claimable open shifts with qualification indicators
+- Time off request form with calendar date picker
+- Availability preferences grid — days of week with time range selectors
+
+Manager-facing (in schedule management):
+- Pending trade requests requiring approval — show both shifts side by side
+- Time off calendar view — approved time off blocks shown on schedule
+- Availability heat map — which officers prefer which time slots
+
+**VERIFICATION — 20 checks:**
+- Check 1: All 3 tables created
+- Check 2: Trade request creates correctly
+- Check 3: Both officer acceptance required before manager review
+- Check 4: Manager approval atomically reassigns shifts — SELECT FOR UPDATE confirmed
+- Check 5: Race condition prevented on marketplace claim — SELECT FOR UPDATE confirmed
+- Check 6: License requirement check runs on trade acceptance
+- Check 7: Rest period check (8 hours) runs on trade acceptance
+- Check 8: OT limit check runs on trade acceptance
+- Check 9: Open shift marketplace shows only shifts officer is qualified for
+- Check 10: Time off request creates and routes to manager
+- Check 11: Approved time off blocks appear on schedule
+- Check 12: Availability preferences saved and respected by scheduler
+- Check 13: All 3 Trinity schedule actions registered
+- Check 14: Officer-facing UI shows My Shifts and Marketplace tabs
+- Check 15: Manager trade approval view shows both shifts side by side
+- Check 16: Time off calendar view renders in schedule management
+- Check 17: All routes workspace-scoped and role-gated
+- Check 18: TypeScript zero errors
+- Check 19: Import completeness confirmed
+- Check 20: Server startup clean
+
+---
+
+**AFTER ALL FIVE PHASES COMPLETE:**
+
+```
+PHASE 35B: CERTIFIED ✅ — [N] gaps fixed, 22/22 checks green
+PHASE 35C: CERTIFIED ✅ — [N] gaps fixed, 18/18 checks green
+PHASE 35D: CERTIFIED ✅ — [N] gaps fixed, 18/18 checks green
+PHASE 35E: CERTIFIED ✅ — [N] gaps fixed, 18/18 checks green
+PHASE 35F: CERTIFIED ✅ — [N] gaps fixed, 20/20 checks green
+
+GROUP 5 COMPLETE — 5 phases certified
+Total phases certified to date: 59
+Next group: Group 6 — Phases 35G, 35H, 35I, 35J, 35K (New Features Domain B)
+```
+
+---
+
+Paste that. Group 5 adds the sales engine, internal communications, work orders, guard tours, and shift trading — five major operational features in one group. Standing by for results.

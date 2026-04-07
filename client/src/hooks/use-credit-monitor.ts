@@ -5,12 +5,15 @@
  * - Cross-device sync on credit changes
  * - Low-balance alerts with thresholds
  * - Automatic refetch on credit updates
+ * 
+ * Uses unified WebSocketProvider instead of creating its own connection.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useWebSocketBus, useWsConnected } from '@/providers/WebSocketProvider';
 
 export interface CreditBalance {
   id: string;
@@ -27,6 +30,7 @@ export interface CreditBalance {
   tier: string;
   subscriptionTier: string;
   unlimitedCredits?: boolean;
+  creditsUsedThisPeriod?: number;
 }
 
 export interface CreditAlert {
@@ -36,16 +40,15 @@ export interface CreditAlert {
   timestamp: number;
 }
 
-const LOW_BALANCE_THRESHOLD = 0.2; // 20% of monthly allocation
-const CRITICAL_BALANCE_THRESHOLD = 0.05; // 5% of monthly allocation
+const LOW_BALANCE_THRESHOLD = 0.2;
+const CRITICAL_BALANCE_THRESHOLD = 0.05;
 
 export function useCreditMonitor() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const bus = useWebSocketBus();
+  const isConnected = useWsConnected();
   const [alerts, setAlerts] = useState<CreditAlert[]>([]);
   const lastBalanceRef = useRef<number | null>(null);
   const alertShownRef = useRef<{ low: boolean; critical: boolean }>({ low: false, critical: false });
@@ -77,95 +80,60 @@ export function useCreditMonitor() {
     }, ...prev.slice(0, 9)]);
   }, []);
 
-  const connect = useCallback(() => {
+  useEffect(() => {
     if (!user) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsHost = window.location.host;
-    const wsUrl = `${protocol}://${wsHost}/ws/chat`;
+    const sendJoin = () => {
+      bus.send({ type: 'join_credit_updates' });
+    };
+    if (bus.isConnected()) sendJoin();
+    const unsubConnect = bus.subscribe('__ws_connected', sendJoin);
 
-    try {
-      wsRef.current = new WebSocket(wsUrl);
-
-      wsRef.current.onopen = () => {
-        console.log('[CreditMonitor] WebSocket connected');
-        setIsConnected(true);
-        wsRef.current?.send(JSON.stringify({
-          type: 'join_credit_updates',
-        }));
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-
-          if (message.type === 'credit_balance_updated' || message.type === 'credits_deducted' || message.type === 'credits_added') {
-            console.log('[CreditMonitor] Credit update received:', message.type);
+    const handleCreditUpdate = (message: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/credits/usage-breakdown'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/credits/transactions'] });
+      
+      if (message.data?.newBalance !== undefined) {
+        const oldBalance = lastBalanceRef.current;
+        const newBalance = message.data.newBalance;
+        
+        if (oldBalance !== null) {
+          if (newBalance < oldBalance) {
+            addAlert({
+              type: 'deduction',
+              message: `${oldBalance - newBalance} credits used`,
+              balance: newBalance,
+            });
+          } else if (newBalance > oldBalance) {
+            addAlert({
+              type: 'purchase',
+              message: `${newBalance - oldBalance} credits added`,
+              balance: newBalance,
+            });
             
-            queryClient.invalidateQueries({ queryKey: ['/api/credits/balance'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/credits/usage-breakdown'] });
-            
-            if (message.data?.newBalance !== undefined) {
-              const oldBalance = lastBalanceRef.current;
-              const newBalance = message.data.newBalance;
-              
-              if (oldBalance !== null) {
-                if (newBalance < oldBalance) {
-                  addAlert({
-                    type: 'deduction',
-                    message: `${oldBalance - newBalance} credits used`,
-                    balance: newBalance,
-                  });
-                } else if (newBalance > oldBalance) {
-                  addAlert({
-                    type: 'purchase',
-                    message: `${newBalance - oldBalance} credits added`,
-                    balance: newBalance,
-                  });
-                  
-                  toast({
-                    title: 'Credits Added',
-                    description: `${newBalance - oldBalance} credits have been added to your account`,
-                  });
-                }
-              }
-            }
+            toast({
+              title: 'Credits Added',
+              description: `${newBalance - oldBalance} credits have been added to your account`,
+            });
           }
-
-          if (message.type === 'credit_update_subscribed') {
-            console.log('[CreditMonitor] Subscribed to credit updates');
-          }
-        } catch (err) {
-          console.error('[CreditMonitor] Failed to parse message:', err);
         }
-      };
-
-      wsRef.current.onclose = () => {
-        console.log('[CreditMonitor] WebSocket closed, reconnecting...');
-        setIsConnected(false);
-        reconnectTimeoutRef.current = setTimeout(connect, 5000);
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('[CreditMonitor] WebSocket error:', error);
-      };
-    } catch (err) {
-      console.error('[CreditMonitor] Failed to connect:', err);
-    }
-  }, [user, queryClient, toast, addAlert]);
-
-  useEffect(() => {
-    connect();
-
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
       }
     };
-  }, [connect]);
+
+    const unsub1 = bus.subscribe('credit_balance_updated', handleCreditUpdate);
+    const unsub2 = bus.subscribe('credits_deducted', handleCreditUpdate);
+    const unsub3 = bus.subscribe('credits_added', handleCreditUpdate);
+    const unsub4 = bus.subscribe('credit_update_subscribed', () => {});
+
+    return () => {
+      unsubConnect();
+      unsub1();
+      unsub2();
+      unsub3();
+      unsub4();
+    };
+  }, [bus, user, queryClient, toast, addAlert]);
 
   useEffect(() => {
     if (!balance || isUnlimited) return;

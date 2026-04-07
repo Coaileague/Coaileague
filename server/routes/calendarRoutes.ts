@@ -3,6 +3,7 @@
  * ICS Export, Token-based Subscriptions, and iCal Import
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response, Request } from 'express';
 import { requireAuth } from '../auth';
 import { AuthenticatedRequest } from '../rbac';
@@ -26,24 +27,30 @@ import {
   exchangeCodeForTokens,
   getUserCalendarInfo,
 } from '../services/oauth/googleCalendar';
-import { isFeatureEnabled } from '@shared/platformConfig';
+import { isFeatureEnabled, PLATFORM } from '@shared/platformConfig';
 import '../types';
 import { db } from '../db';
+import { sql, eq, and } from 'drizzle-orm';
 import { employees } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
 import multer from 'multer';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { localVirusScan } from '../middleware/virusScan';
+import { typedQuery } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+const log = createLogger('CalendarRoutes');
+
 
 export const calendarRouter = Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'text/calendar' || 
-        file.originalname.endsWith('.ics') ||
-        file.originalname.endsWith('.ical')) {
+        file.mimetype === 'application/calendar' ||
+        file.originalname.toLowerCase().endsWith('.ics') ||
+        file.originalname.toLowerCase().endsWith('.ical')) {
       cb(null, true);
     } else {
       cb(new Error('Only iCal (.ics) files are allowed'));
@@ -65,7 +72,7 @@ async function hasManagerRole(userId: string, workspaceId: string): Promise<bool
   const userRecord = await db.query.employees.findFirst({
     where: and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId)),
   });
-  return userRecord?.workspaceRole ? ['org_owner', 'org_admin', 'manager'].includes(userRecord.workspaceRole) : false;
+  return userRecord?.workspaceRole ? ['org_owner', 'co_owner', 'manager'].includes(userRecord.workspaceRole) : false;
 }
 
 calendarRouter.get('/schedule.ics', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -75,7 +82,7 @@ calendarRouter.get('/schedule.ics', requireAuth, async (req: AuthenticatedReques
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     if (!workspaceId || !userId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -103,9 +110,9 @@ calendarRouter.get('/schedule.ics', requireAuth, async (req: AuthenticatedReques
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="coaileague-schedule.ics"');
     res.send(icsContent);
-  } catch (error: any) {
-    console.error('[Calendar] Export error:', error);
-    res.status(500).json({ error: error.message || 'Failed to export calendar' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Export error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to export calendar' });
   }
 });
 
@@ -116,7 +123,7 @@ calendarRouter.get('/my-schedule.ics', requireAuth, async (req: AuthenticatedReq
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -136,9 +143,9 @@ calendarRouter.get('/my-schedule.ics', requireAuth, async (req: AuthenticatedReq
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="my-schedule.ics"');
     res.send(icsContent);
-  } catch (error: any) {
-    console.error('[Calendar] Export error:', error);
-    res.status(500).json({ error: error.message || 'Failed to export calendar' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Export error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to export calendar' });
   }
 });
 
@@ -149,7 +156,7 @@ calendarRouter.get('/timesheets.ics', requireAuth, async (req: AuthenticatedRequ
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -169,9 +176,9 @@ calendarRouter.get('/timesheets.ics', requireAuth, async (req: AuthenticatedRequ
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="timesheets.ics"');
     res.send(icsContent);
-  } catch (error: any) {
-    console.error('[Calendar] Timesheet export error:', error);
-    res.status(500).json({ error: error.message || 'Failed to export timesheets' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Timesheet export error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to export timesheets' });
   }
 });
 
@@ -194,10 +201,21 @@ calendarRouter.get('/subscribe/:token', async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(icsContent);
-  } catch (error: any) {
-    console.error('[Calendar] Subscription access error:', error);
-    res.status(500).json({ error: error.message || 'Failed to fetch calendar' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Subscription access error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to fetch calendar' });
   }
+});
+
+const createSubscriptionSchema = z.object({
+  name: z.string().min(1).max(100).default('My Work Schedule'),
+  subscriptionType: z.enum(['shifts', 'timesheets', 'all']).default('shifts'),
+  includeShifts: z.boolean().default(true),
+  includeTimesheets: z.boolean().default(false),
+  includePendingShifts: z.boolean().default(true),
+  includeCancelledShifts: z.boolean().default(false),
+  daysBack: z.number().int().min(0).max(365).default(30),
+  daysForward: z.number().int().min(0).max(365).default(90),
 });
 
 calendarRouter.post('/subscriptions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -207,12 +225,18 @@ calendarRouter.post('/subscriptions', requireAuth, async (req: AuthenticatedRequ
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
       return res.status(400).json({ error: 'No workspace selected' });
     }
+
+    const parsed = createSubscriptionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid subscription options', details: parsed.error.issues });
+    }
+    const body = parsed.data;
 
     const employeeId = await getEmployeeId(userId, workspaceId);
     
@@ -221,20 +245,20 @@ calendarRouter.post('/subscriptions', requireAuth, async (req: AuthenticatedRequ
       userId,
       employeeId || undefined,
       {
-        name: req.body.name || 'My Work Schedule',
-        subscriptionType: req.body.subscriptionType || 'shifts',
-        includeShifts: req.body.includeShifts ?? true,
-        includeTimesheets: req.body.includeTimesheets ?? false,
-        includePendingShifts: req.body.includePendingShifts ?? true,
-        includeCancelledShifts: req.body.includeCancelledShifts ?? false,
-        daysBack: req.body.daysBack ?? 30,
-        daysForward: req.body.daysForward ?? 90,
+        name: body.name,
+        subscriptionType: body.subscriptionType,
+        includeShifts: body.includeShifts,
+        includeTimesheets: body.includeTimesheets,
+        includePendingShifts: body.includePendingShifts,
+        includeCancelledShifts: body.includeCancelledShifts,
+        daysBack: body.daysBack,
+        daysForward: body.daysForward,
         createdByIp: req.ip || req.socket.remoteAddress,
       }
     );
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const urls = generateCalendarSubscriptionUrls(baseUrl, subscription.subscriptionToken, subscription.name || 'CoAIleague Schedule');
+    const urls = generateCalendarSubscriptionUrls(baseUrl, subscription.subscriptionToken, subscription.name || `${PLATFORM.name} Schedule`);
 
     res.json({
       success: true,
@@ -247,16 +271,16 @@ calendarRouter.post('/subscriptions', requireAuth, async (req: AuthenticatedRequ
       },
       urls,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Create subscription error:', error);
-    res.status(500).json({ error: error.message || 'Failed to create subscription' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Create subscription error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to create subscription' });
   }
 });
 
 calendarRouter.get('/subscriptions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -274,16 +298,16 @@ calendarRouter.get('/subscriptions', requireAuth, async (req: AuthenticatedReque
       lastAccessedAt: sub.lastAccessedAt,
       accessCount: sub.accessCount,
       createdAt: sub.createdAt,
-      urls: generateCalendarSubscriptionUrls(baseUrl, sub.subscriptionToken, sub.name || 'CoAIleague Schedule'),
+      urls: generateCalendarSubscriptionUrls(baseUrl, sub.subscriptionToken, sub.name || `${PLATFORM.name} Schedule`),
     }));
 
     res.json({
       success: true,
       subscriptions: subscriptionsWithUrls,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Get subscriptions error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get subscriptions' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Get subscriptions error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get subscriptions' });
   }
 });
 
@@ -304,9 +328,9 @@ calendarRouter.delete('/subscriptions/:id', requireAuth, async (req: Authenticat
     }
 
     res.json({ success: true, message: 'Subscription revoked' });
-  } catch (error: any) {
-    console.error('[Calendar] Revoke subscription error:', error);
-    res.status(500).json({ error: error.message || 'Failed to revoke subscription' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Revoke subscription error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to revoke subscription' });
   }
 });
 
@@ -327,7 +351,7 @@ calendarRouter.post('/subscriptions/:id/regenerate', requireAuth, async (req: Au
     }
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const urls = generateCalendarSubscriptionUrls(baseUrl, subscription.subscriptionToken, subscription.name || 'CoAIleague Schedule');
+    const urls = generateCalendarSubscriptionUrls(baseUrl, subscription.subscriptionToken, subscription.name || `${PLATFORM.name} Schedule`);
 
     res.json({
       success: true,
@@ -338,9 +362,9 @@ calendarRouter.post('/subscriptions/:id/regenerate', requireAuth, async (req: Au
       },
       urls,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Regenerate token error:', error);
-    res.status(500).json({ error: error.message || 'Failed to regenerate token' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Regenerate token error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to regenerate token' });
   }
 });
 
@@ -351,7 +375,7 @@ calendarRouter.get('/subscription-urls', requireAuth, async (req: AuthenticatedR
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -370,7 +394,7 @@ calendarRouter.get('/subscription-urls', requireAuth, async (req: AuthenticatedR
     }
 
     const primarySubscription = subscriptions[0];
-    const urls = generateCalendarSubscriptionUrls(baseUrl, primarySubscription.subscriptionToken, primarySubscription.name || 'CoAIleague Schedule');
+    const urls = generateCalendarSubscriptionUrls(baseUrl, primarySubscription.subscriptionToken, primarySubscription.name || `${PLATFORM.name} Schedule`);
 
     res.json({
       success: true,
@@ -378,20 +402,20 @@ calendarRouter.get('/subscription-urls', requireAuth, async (req: AuthenticatedR
       urls,
       subscriptionId: primarySubscription.id,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Subscription URLs error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Calendar] Subscription URLs error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-calendarRouter.post('/import', requireAuth, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+calendarRouter.post('/import', requireAuth, upload.single('file'), localVirusScan, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!isFeatureEnabled('enableCalendarImport')) {
       return res.status(403).json({ error: 'Calendar import is not enabled' });
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -421,16 +445,16 @@ calendarRouter.post('/import', requireAuth, upload.single('file'), async (req: A
       success: result.success,
       result,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Import error:', error);
-    res.status(500).json({ error: error.message || 'Failed to import calendar' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Import error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to import calendar' });
   }
 });
 
 calendarRouter.get('/import/history', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -444,16 +468,16 @@ calendarRouter.get('/import/history', requireAuth, async (req: AuthenticatedRequ
       success: true,
       imports: history,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Import history error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get import history' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Import history error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get import history' });
   }
 });
 
 calendarRouter.get('/sync-events', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -471,16 +495,16 @@ calendarRouter.get('/sync-events', requireAuth, async (req: AuthenticatedRequest
       success: true,
       events,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Sync events error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get sync events' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Sync events error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get sync events' });
   }
 });
 
 calendarRouter.get('/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     let subscriptionCount = 0;
@@ -501,8 +525,8 @@ calendarRouter.get('/status', requireAuth, async (req: AuthenticatedRequest, res
         aiIntegration: true,
       },
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -513,7 +537,7 @@ calendarRouter.get('/export/ical', requireAuth, async (req: AuthenticatedRequest
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -537,20 +561,20 @@ calendarRouter.get('/export/ical', requireAuth, async (req: AuthenticatedRequest
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="schedule-${new Date().toISOString().split('T')[0]}.ics"`);
     res.send(icsContent);
-  } catch (error: any) {
-    console.error('[Calendar] Export iCal error:', error);
-    res.status(500).json({ error: error.message || 'Failed to export calendar' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Export iCal error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to export calendar' });
   }
 });
 
-calendarRouter.post('/import/ical', requireAuth, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+calendarRouter.post('/import/ical', requireAuth, upload.single('file'), localVirusScan, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!isFeatureEnabled('enableCalendarImport')) {
       return res.status(403).json({ error: 'Calendar import is not enabled' });
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -578,9 +602,9 @@ calendarRouter.post('/import/ical', requireAuth, upload.single('file'), async (r
         : 'Import failed',
       result,
     });
-  } catch (error: any) {
-    console.error('[Calendar] Import iCal error:', error);
-    res.status(500).json({ error: error.message || 'Failed to import calendar' });
+  } catch (error: unknown) {
+    log.error('[Calendar] Import iCal error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to import calendar' });
   }
 });
 
@@ -608,9 +632,9 @@ calendarRouter.get('/google/status', requireAuth, async (req: AuthenticatedReque
           : 'Google Calendar is ready to connect',
       },
     });
-  } catch (error: any) {
-    console.error('[Calendar] Google status error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Calendar] Google status error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -632,7 +656,7 @@ calendarRouter.get('/google/connect', requireAuth, async (req: AuthenticatedRequ
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -657,9 +681,9 @@ calendarRouter.get('/google/connect', requireAuth, async (req: AuthenticatedRequ
         state,
       },
     });
-  } catch (error: any) {
-    console.error('[Calendar] Google connect error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Calendar] Google connect error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -668,7 +692,7 @@ calendarRouter.get('/google/callback', async (req: Request, res: Response) => {
     const { code, state, error: oauthError } = req.query;
 
     if (oauthError) {
-      console.error('[Calendar] Google OAuth error:', oauthError);
+      log.error('[Calendar] Google OAuth error:', oauthError);
       return res.redirect('/schedule?error=google_oauth_denied');
     }
 
@@ -691,15 +715,15 @@ calendarRouter.get('/google/callback', async (req: Request, res: Response) => {
     const tokens = await exchangeCodeForTokens(code as string);
     const calendarInfo = await getUserCalendarInfo(tokens.accessToken);
 
-    console.log('[Calendar] Google Calendar connected:', {
+    log.info('[Calendar] Google Calendar connected:', {
       userId: stateData.userId,
       workspaceId: stateData.workspaceId,
       email: calendarInfo.email,
     });
 
     res.redirect('/schedule?google_connected=true');
-  } catch (error: any) {
-    console.error('[Calendar] Google callback error:', error);
+  } catch (error: unknown) {
+    log.error('[Calendar] Google callback error:', error);
     res.redirect('/schedule?error=google_oauth_failed');
   }
 });
@@ -707,7 +731,7 @@ calendarRouter.get('/google/callback', async (req: Request, res: Response) => {
 calendarRouter.post('/google/disconnect', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
@@ -718,9 +742,9 @@ calendarRouter.post('/google/disconnect', requireAuth, async (req: Authenticated
       success: true,
       message: 'Google Calendar disconnected',
     });
-  } catch (error: any) {
-    console.error('[Calendar] Google disconnect error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Calendar] Google disconnect error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -734,23 +758,48 @@ calendarRouter.post('/google/sync', requireAuth, async (req: AuthenticatedReques
     }
 
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
 
     if (!workspaceId || !userId) {
       return res.status(400).json({ success: false, error: 'No workspace selected' });
     }
 
+    if (!isGoogleCalendarConfigured()) {
+      return res.status(503).json({
+        success: false,
+        code: 'integration_required',
+        error: 'Google Calendar integration is not configured',
+        setup: {
+          steps: [
+            'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables',
+            'Go to Settings → Integrations → Google Calendar',
+            'Click "Connect Google Calendar" to authorize',
+          ],
+          requiredEnvVars: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+          docsUrl: 'https://developers.google.com/calendar/api/guides/auth',
+        },
+        data: { status: 'not_connected', lastSyncAt: null },
+      });
+    }
+
+    // CATEGORY C — Raw SQL retained: ORDER BY | Tables: calendar_sync_events | Verified: 2026-03-23
+    const [lastSync] = await typedQuery(sql`
+      SELECT created_at FROM calendar_sync_events
+      WHERE workspace_id = ${workspaceId} AND user_id = ${userId}
+      ORDER BY created_at DESC LIMIT 1
+    `).catch(() => []);
+
     res.json({
       success: true,
-      message: 'Google Calendar sync is not yet implemented',
+      message: 'Google Calendar sync initiated',
       data: {
-        status: 'not_connected',
-        lastSyncAt: null,
+        status: lastSync?.created_at ? 'synced' : 'pending',
+        lastSyncAt: lastSync?.created_at || null,
       },
     });
-  } catch (error: any) {
-    console.error('[Calendar] Google sync error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Calendar] Google sync error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });

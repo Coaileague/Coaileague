@@ -168,7 +168,7 @@ export function SwipeableApprovalCard({
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base md:text-lg truncate">
+              <CardTitle className="text-base md:text-lg line-clamp-2">
                 {title}
               </CardTitle>
               {subtitle && (
@@ -256,6 +256,10 @@ export function SwipeableDismissCard({
     setTimeout(onDismiss, 200);
   }, [onDismiss]);
 
+  if (isDismissed) {
+    return null;
+  }
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!isMobile) return;
     setTouchStartX(e.touches[0].clientX);
@@ -286,10 +290,6 @@ export function SwipeableDismissCard({
     }
     setTouchStartX(0);
   };
-
-  if (isDismissed) {
-    return null;
-  }
 
   return (
     <div

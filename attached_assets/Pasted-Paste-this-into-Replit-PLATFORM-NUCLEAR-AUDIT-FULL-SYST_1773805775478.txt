@@ -1,0 +1,606 @@
+Paste this into Replit:
+
+---
+
+**PLATFORM NUCLEAR AUDIT — FULL SYSTEM ZERO-GAP ELIMINATION | CONTINUOUS ITERATION UNTIL ZERO**
+
+This is the definitive platform-wide audit. Every system, every file, every route, every component, every event, every action, every pipeline, every UI element. Run continuously until zero gaps remain across every category. If timeout occurs — stop, report current state, resume on next run from where you left off.
+
+---
+
+**GROUND RULES**
+
+- Read before touching anything
+- Fix in chronological dependency order — schema first, then services, then routes, then events, then frontend
+- After every fix — verify TypeScript compiles and server starts clean before moving to the next fix
+- Never skip a category because it was clean last iteration — scan everything every time
+- If a fix introduces a new gap — count it and fix it in the same iteration
+- Trinity is the final gatekeeper — every action, event, data mutation, and notification must flow through Trinity's orchestration layer
+- Universal source of truth — every template, every enum, every config reads from one canonical location
+- 7-step pipeline — every significant operation follows Trigger → Fetch → Validate → Process → Mutate → Confirm → Notify
+
+---
+
+**CHRONOLOGICAL SCAN ORDER**
+
+Scan in this exact order every iteration. This order prevents cascading issues — foundation before features.
+
+---
+
+**PHASE 1 — FOUNDATION (Schema, Enums, Drizzle)**
+
+Scan first because everything else depends on it.
+
+Check every table:
+- Every column referenced anywhere in code exists in the Drizzle schema
+- Every Drizzle column name matches the PostgreSQL snake_case column exactly
+- Every enum type — every value used in code exists in the PostgreSQL enum — no value in code that is not in the DB
+- Every enum value in the DB is represented in the Drizzle pgEnum definition
+- Every table storing tenant data has `workspace_id` as a non-nullable indexed column
+- Every money/rate column is `decimal` not `float` or `integer`
+- Every status column is a PostgreSQL enum not varchar
+- Every foreign key reference points to a column that exists
+- Every table has a `created_at` timestamptz column with a default
+- Every new table added in recent sessions exists in the DB — run `\dt` and compare against schema files
+- Every migration has been applied — no schema drift between Drizzle definition and actual DB
+
+Fix every mismatch. Run migrations. Update Drizzle types. Verify.
+
+---
+
+**PHASE 2 — TRINITY CORE (Action Registry, Event Bus, Orchestration Gateway)**
+
+Trinity is the gatekeeper. Fix her core before fixing anything that flows through her.
+
+**Action Registry:**
+- Every action registered in any action file has a unique ID — no duplicates
+- Every action handler exists and is not a stub returning `{ success: true }` with no logic
+- Every action validates `workspaceId` before any DB operation
+- Every action checks workspace subscription status — suspended workspaces blocked
+- Every action checks credit balance — zero balance workspaces cannot execute credit-consuming actions
+- Every action writes to `audit_logs` with `performedBy` set correctly
+- Every action emits the correct `platformEventBus.publish()` after completion
+- Every action follows the 7-step pipeline
+- Total registered action count matches startup log — no registration failures
+- No action registered more than once
+
+**Event Bus:**
+- Build complete publisher map — every `.publish({ type: X })` call
+- Build complete subscriber map — every `.subscribe(X, handler)` call
+- Every published event has at least one subscriber
+- Every subscriber has at least one publisher
+- Zero raw `.emit()` calls on the platformEventBus — only `.publish()`
+- Zero events published inside DB transactions — all publishes after transaction commit
+- Every subscriber wrapped in try/catch that logs but never throws
+- Every subscriber validates `workspaceId` before DB operations
+- No duplicate subscribers for the same event type doing conflicting work
+
+**Trinity Orchestration:**
+- Pre-execution validator runs before every action in the registry
+- Kill switch correctly reloads from DB on server restart
+- Per-workspace pause map reloads from DB on server startup
+- Trinity bot bypass token loaded from env — fails closed if missing
+- All Trinity cron jobs have per-workspace error isolation
+- All Trinity cron jobs write completion records to `cron_run_log`
+- All Trinity autonomous actions use `userId: 'trinity-system'` for attribution
+- Trinity's morning brief fires for every workspace on schedule
+- Trinity's anomaly detector runs on schedule
+
+Fix everything found.
+
+---
+
+**PHASE 3 — DATA LAYER (Storage, Queries, Transactions)**
+
+Fix data layer before routes depend on it.
+
+**Query correctness:**
+- Every SELECT on a tenant table includes `WHERE workspace_id = $workspaceId`
+- Every UPDATE includes `AND workspace_id = $workspaceId` — not just `WHERE id = $id`
+- Every DELETE includes `AND workspace_id = $workspaceId`
+- Every INSERT includes `workspace_id` from JWT not from request body
+- No unscoped queries on multi-tenant tables anywhere
+
+**List and detail queries:**
+- Every list query returns ALL columns needed by edit forms — no explicit `.select()` that omits fields
+- Every detail query returns complete record
+- Every paginated query uses consistent offset/limit pattern
+- Every query that feeds an edit modal returns the full record shape the form expects
+
+**Transaction atomicity:**
+- Every operation with multiple DB writes uses `db.transaction()`
+- Every multi-step operation rolls back completely on failure
+- No partial state — either all writes succeed or none do
+
+**Race conditions:**
+- Every status transition uses `UPDATE ... WHERE status = 'expected_status'` then checks rowCount
+- Every credit deduction uses atomic `UPDATE WHERE balance >= amount`
+- Every unique record creation has a unique constraint at DB level
+- Every concurrent-safe operation uses SELECT FOR UPDATE where needed
+
+**Arithmetic safety:**
+- Every `parseFloat()` has `|| 0` fallback
+- Every `parseInt()` has `|| 0` fallback
+- Every division has a zero divisor guard
+- Every `Number(x)` where x could be undefined has `|| 0` fallback
+- Every financial reduce has a numeric initial value
+- Every `.toFixed()` is called on a value that cannot be NaN
+
+Fix everything found.
+
+---
+
+**PHASE 4 — BACKEND ROUTES (Mounts, Auth, Guards, Responses)**
+
+Fix routes after their dependencies are clean.
+
+**Route mounting:**
+- Every route file is imported and mounted in the main router or server/index.ts
+- Every route mount path is correct and does not conflict
+- No route file exists that is never mounted
+- Every route file exports a router
+
+**Authentication and authorization:**
+- `requireAuth` applied at mount level on every protected router
+- `workspaceId` sourced exclusively from `req.workspaceId` set by JWT middleware
+- Role checks enforced at route level — not just in UI
+- Trinity bot bypass validated correctly before granting access
+- Every admin route requires platform admin role
+- Every org-owner-only route enforces org_owner role
+
+**Status guards on financial routes:**
+- `paid` or `voided` invoices return 403 on any mutation attempt
+- `paid` payroll runs return 403 on any mutation attempt
+- `pending_signature` documents cannot be overwritten
+- Every status transition validates current status before allowing transition
+
+**Response consistency:**
+- Every success response includes at minimum `{ success: true, data: ... }`
+- Every error response includes `{ error: string, code: string }`
+- Every validation error maps field names to error messages
+- No route returns `undefined` or empty body on success
+- No route exposes stack traces in production
+
+**Timeout guards:**
+- Every external API call (Stripe, Plaid, QuickBooks, Resend, Anthropic) has `AbortSignal.timeout()`
+- Stripe: 30 seconds
+- Plaid: 30 seconds
+- Anthropic/Claude: 30 seconds
+- QuickBooks: 20 seconds
+- Resend: 15 seconds
+- OAuth token refreshes: 15 seconds
+
+Fix everything found.
+
+---
+
+**PHASE 5 — FINANCIAL SYSTEMS (Invoices, Payroll, Credits, Stripe, Plaid, QB)**
+
+Fix financial systems as a unit — they are interdependent.
+
+**Invoice pipeline:**
+- Invoice generation locks time entries to prevent double billing
+- Invoice send confirms client has billing email before attempting
+- Invoice send triggers QB sync non-blocking after success
+- Invoice paid triggers credit reconciliation and audit log
+- Invoice status transitions enforced — cannot go from draft to paid without sent
+- Duplicate invoice guard — unique constraint on `(workspace_id, client_id, billing_period_start, billing_period_end)`
+- All invoice mutations write to `billingAuditLog` with previousState and newState
+
+**Payroll pipeline:**
+- Zero approved hours hard gate active — 400 error if no approved timesheets
+- Payroll period unique constraint active — `(workspace_id, pay_period_start, pay_period_end)`
+- Pay rate sourced from `capturedPayRate` on time entries — not live employee rate
+- Payroll approval triggers QB sync non-blocking
+- Payroll process triggers Plaid transfers for employees with connected accounts
+- NACHA fallback generates correctly for employees without Plaid
+- Payroll run transitions to `disbursing` after transfers initiated
+- Transfer monitor polls every 2 hours and transitions to `paid` when all settled
+- Failed transfers notify org owner with employee name and failure reason
+- Pre-payroll readiness scan fires 48 hours before scheduled run
+
+**Credit system:**
+- All deductions go through atomic `UPDATE WHERE balance >= amount`
+- No balance can go negative — hard floor at 0
+- Failed deductions write to `trinity_credit_failures`
+- Deprecated credit path has zero callers
+- Partner API charges (Plaid, QB) deduct credits correctly with retry on failure
+
+**Stripe:**
+- All webhooks verify signature before processing
+- All webhooks check `processed_stripe_events` DB table for idempotency — not just in-memory cache
+- `checkout.session.completed` correctly parses tier from metadata
+- `customer.subscription.deleted` immediately restricts workspace access
+- `invoice.payment_failed` notifies org owner and platform admin
+- All Stripe API calls have timeout configured
+
+**Plaid:**
+- `verifyBankAccount()` calls real Plaid API
+- `cancelTransfer()` returns boolean
+- Transfer monitor handles poll failures with retry count and owner notification
+- All access tokens encrypted at rest
+- Plaid webhook verifies signature
+- Plaid webhook is idempotent
+
+**QuickBooks:**
+- `invoice.issueDate` not `invoice.invoiceDate` — fix confirmed intact
+- `invoice.total` not `invoice.totalAmount` — fix confirmed intact
+- QB sync writes `quickbooksSyncStatus` to local record after every attempt
+- QB sync failures notify org owner
+- OAuth token refresh is race-condition safe
+
+Fix everything found.
+
+---
+
+**PHASE 6 — DOCUMENT AND ONBOARDING SYSTEMS**
+
+Fix after foundation and routes are clean.
+
+**Universal template system:**
+- Template registry is the single source of truth — no templates defined elsewhere
+- All 15+ document templates defined in registry
+- Universal header and footer used by every template
+- No template has hardcoded org-specific data — all dynamic from workspace settings
+
+**Document pipeline:**
+- Every document upload stores both file URL and DB record atomically
+- If storage fails — DB record not created
+- If DB write fails — uploaded file cleaned up
+- Every document correctly assigns to employee, client, or org based on type
+- Every document routes to correct document safe category
+
+**E-signature pipeline (7 steps):**
+- Trigger → Fetch signer info → Validate document state and email → Prepare request → Call provider → Confirm request accepted → Notify all parties
+- Webhook completion → Fetch local record → Validate signature → Download signed PDF → Update status + store PDF → Confirm stored → Notify + route to safe
+- If webhook never fires — polling fallback exists
+
+**Trinity document validation:**
+- All required fields checked before document accepted
+- Signature fields verified to contain actual signature data
+- GPS and IP captured and stamped on every submission
+- Incomplete submissions returned with specific actionable field list
+- Completed documents emit `document_completed` to platformEventBus
+
+**Employee onboarding completeness:**
+- All required documents tracked per employee
+- Missing documents flagged before payroll runs
+- Missing documents flagged before invoice generation for that employee's hours
+- 48-hour reminder before first shift if documents incomplete
+- Post orders sent automatically on client site assignment
+- Post orders acknowledgment required before first clock-in at that site
+
+Fix everything found.
+
+---
+
+**PHASE 7 — TRAINING SYSTEM**
+
+Fix after document system is clean.
+
+**Module and question integrity:**
+- All 10 platform default modules seeded with real content
+- Seeder is idempotent — no duplicates on re-run
+- All questions have correct answers and explanations
+- Final exam questions marked `is_final_exam = true`
+- Section quiz questions linked to correct section
+
+**Attempt and certificate pipeline:**
+- Section progress saved atomically
+- Final exam score calculated correctly — sections 40%, final 60%
+- Certificate generated before DB record inserted
+- If PDF generation fails — certificate record not inserted
+- Certificate number unique constraint enforced at DB level
+- Certificate expiry = completed_at + `certificateValidDays` days
+- Cannot retake until anniversary — active valid certificate blocks new attempt
+- After 2 failures — intervention triggered, compliance score reduced
+
+**Compliance score integration:**
+- Score never below 0 or above 100
+- Score updates are atomic — no race condition
+- Score recalculates immediately after every training event
+- Score reflected in employee list badge in real time
+- Score affects scheduling priority — not blocking
+- Post orders non-acknowledgment reduces score after 24 hours
+- Unsigned required documents reduce score after 48 hours
+
+**Anniversary renewal:**
+- Daily cron checks all certificates
+- 30-day warning sent to employee and manager
+- Expired certificate reduces score and notifies
+- Cron completion written to `cron_run_log`
+
+Fix everything found.
+
+---
+
+**PHASE 8 — CLIENT AND EMPLOYEE LIFECYCLE**
+
+Fix lifecycle systems after core systems are clean.
+
+**Client lifecycle:**
+- Client deactivation checks for outstanding invoices before deactivating
+- Deactivation with collections starts daily collection emails immediately
+- Collections emails fire daily until resolved — never stop automatically
+- Collections log entry created for every email sent
+- Collections PDF saved to document safe after every email
+- Collections appear in morning brief daily while active
+- Client reactivation syncs live immediately via WebSocket
+- Trinity warns on reactivation if previous deactivation was for legal or payment reasons
+- Deactivated clients blocked from new shifts and invoices
+- Trinity pre-execution validator blocks actions on deactivated clients
+
+**Employee lifecycle:**
+- Employee deactivation removes from future shifts and revokes sessions
+- Employee reactivation checks months inactive — 3+ months requires full re-onboarding
+- Password reset required flag set on reactivation
+- Password reset enforced on next login
+- 3-month rule: all new documents required — W4/W9, I9, handbook, offer letter
+- Under 3 months: expired documents flagged for renewal, valid documents reused
+- Deactivated employee shift assignments cleaned up
+- Reactivation syncs live immediately via WebSocket
+
+Fix everything found.
+
+---
+
+**PHASE 9 — SCHEDULING AND TIME TRACKING**
+
+Fix scheduling after employee and client systems are clean.
+
+**Shift assignment:**
+- Terminated/inactive employee hard blocked from assignment — both manual and autonomous paths
+- Compliance-blocked officer (expired license) shows warning before assignment
+- Shift overlap check runs before every assignment
+- Client minimum staffing requirements respected in auto-fill
+- Auto-fill uses atomic UPDATE WHERE employee_id IS NULL — no race condition double-booking
+- Shift creation for deactivated client shows warning badge
+
+**Post orders:**
+- Post orders sent automatically when employee assigned to new client site
+- Post orders acknowledgment required before first clock-in at that site
+- Clock-in at unacknowledged site shows warning and requires override with manager approval
+- Acknowledgment logged with timestamp, GPS, IP
+
+**Time entries:**
+- Clock-in captures GPS coordinates
+- Clock-out verifies employee is clocked in before allowing
+- Missed clock-ins detected and flagged to manager
+- Time entries associated with a paid payroll run are read-only
+- Geofence override requires manager approval and writes audit log
+
+**Autonomous scheduling daemon:**
+- Confirm it is running at startup — check server logs
+- Per-workspace error isolation confirmed
+- Org patterns loaded from DB before making assignment decisions
+- Coverage gap detection fires and attempts to fill
+
+Fix everything found.
+
+---
+
+**PHASE 10 — NOTIFICATIONS, CHAT, AND REAL-TIME SYNC**
+
+Fix communication layer after data layer is clean.
+
+**WebSocket symmetry:**
+- Build current publisher list — every `broadcastToWorkspace()` call
+- Build current frontend handler list — every WebSocket event listener
+- Every backend broadcast has a frontend handler
+- Every frontend handler has a backend broadcast
+- Event names match exactly — no singular/plural mismatches
+- ForceRefreshProvider handles all required event types
+
+**Query cache invalidation:**
+- Every mutation calls `queryClient.invalidateQueries` with correct keys
+- No stale data after any create, update, or delete operation
+- Settings changes invalidate all dependent queries
+
+**Notification pipeline:**
+- No notification created in DB that is never delivered via WebSocket or email
+- All notifications scoped to workspace
+- Bot messages marked `is_bot: true` and `bot_name` set
+- Notification count badge updates in real time
+
+**Chat and shift rooms:**
+- Shift room created automatically when shift is created
+- Shift room scoped to workspace — no cross-workspace access
+- Photo uploads capture GPS and trigger ReportBot analysis
+- End-of-shift report generated and saved to document safe automatically
+
+**Morning brief:**
+- Fires for every workspace on schedule
+- Contains: open shifts, collections activity, training status, compliance alerts, overnight actions taken, clock-in issues, new clients, certificate expirations, intervention flags
+- Scoped per workspace — one org's brief never contains another org's data
+
+Fix everything found.
+
+---
+
+**PHASE 11 — FRONTEND UI AND UX**
+
+Fix UI after all backend systems are verified.
+
+**Loading and error states:**
+- Every `useQuery` has loading skeleton shown while fetching
+- Every `useQuery` has actionable error message when fetch fails
+- Every `useMutation` disables submit button while in flight
+- Every `useMutation` shows success confirmation
+- Every `useMutation` shows specific error from backend on failure
+- Empty states exist for every list — not just blank pages
+
+**Form validation:**
+- Client-side validation before API call on every form
+- Zod backend errors mapped to field-level messages in UI
+- Required fields visually marked
+- Numeric fields reject non-numeric input
+- Email fields validate format
+- Phone fields validate format
+
+**Mobile rendering:**
+- Every page usable on 375px width
+- No horizontal scroll anywhere
+- All text minimum 16px — no auto-zoom on iOS
+- All buttons minimum 48px height
+- All tap targets minimum 44x44px
+- Bottom navigation above safe area insets
+- Chat widget above bottom navigation — no overlap
+- Document forms full-screen on mobile
+- Signature capture opens full-screen modal on mobile
+- Tables either scroll horizontally or reflow to card layout on mobile
+- Modals scroll correctly when content is tall
+- No text overflow without ellipsis or wrapping
+- No container bleed — no element wider than viewport
+
+**Design consistency:**
+- Dark navy command-center design system applied consistently
+- Gold accents used consistently
+- Purple reserved for Trinity AI elements only
+- No random color usage outside the design system
+- Icon sizes consistent throughout
+- Card padding consistent throughout
+- Typography scale consistent — no random font sizes
+- Badge and status indicator colors consistent
+- Loading skeletons match the shape of the content they replace
+
+**Overlapping and bleeding issues:**
+- No elements overlapping unintentionally
+- No text bleeding outside its container
+- No absolute positioned elements covering interactive elements
+- FAB buttons do not cover content
+- Toast notifications do not cover the bottom navigation
+- Modals centered correctly on all screen sizes
+- Dropdowns do not overflow the viewport
+
+Fix everything found.
+
+---
+
+**PHASE 12 — ISOLATION AND SECURITY FINAL CHECK**
+
+Fix last because this verifies everything above is properly scoped.
+
+**Cross-tenant isolation:**
+- No query returns data from another workspace
+- No file URL from Workspace A is accessible by Workspace B
+- Trinity context for Workspace A never contains Workspace B data
+- Training data scoped to workspace
+- Document safe scoped to workspace
+- Collections log scoped to workspace
+- Cron jobs process each workspace independently
+
+**Authentication:**
+- All sessions invalidated on password change
+- Password reset tokens expire after single use
+- Invite tokens expire after acceptance
+- JWT includes workspaceId and role as required claims
+- All bearer tokens added to revoked_tokens on logout
+
+**Data integrity:**
+- No sensitive data (SSN, routing numbers, account numbers) stored unencrypted
+- No sensitive data logged to console or audit logs in plain text
+- All Plaid access tokens encrypted at rest
+- All direct deposit data encrypted at rest
+
+Fix everything found.
+
+---
+
+**ITERATION REPORT FORMAT**
+
+After every complete pass through all 12 phases:
+
+```
+═══════════════════════════════════════════════════
+PLATFORM NUCLEAR AUDIT — ITERATION [N]
+═══════════════════════════════════════════════════
+Phase 1  Foundation:          CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 2  Trinity Core:        CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 3  Data Layer:          CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 4  Backend Routes:      CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 5  Financial Systems:   CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 6  Documents:           CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 7  Training:            CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 8  Client/Employee:     CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 9  Scheduling/Time:     CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 10 Notifications:       CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 11 Frontend UI/UX:      CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Phase 12 Isolation/Security:  CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+───────────────────────────────────────────────────
+TOTAL THIS ITERATION:
+  Found:  CRITICAL:N HIGH:N MED:N LOW:N TOTAL:N
+  Fixed:  CRITICAL:N HIGH:N MED:N LOW:N TOTAL:N
+
+CUMULATIVE ALL ITERATIONS:
+  Total found:  N
+  Total fixed:  N
+  Remaining:    N
+
+Server: 29/29 HEALTHY
+TypeScript: ZERO ERRORS
+Regression tests: N/N PASSING
+
+CONTINUE TO ITERATION [N+1]? YES (gaps remain) / NO (zero gaps)
+═══════════════════════════════════════════════════
+```
+
+---
+
+**TIMEOUT PROTOCOL**
+
+If Replit times out mid-iteration:
+
+```
+TIMEOUT REPORT:
+Last phase completed: Phase N
+Current phase in progress: Phase N
+Gaps fixed this session: N
+Gaps remaining when timed out: N
+Next session: Resume from Phase N — continue same loop
+```
+
+On next run — paste the same prompt. Replit will scan all phases and find whatever remains.
+
+---
+
+**FINAL COMPLETION REPORT**
+
+When zero gaps found across all 12 phases in a single iteration:
+
+```
+═══════════════════════════════════════════════════
+PLATFORM NUCLEAR AUDIT — COMPLETE
+═══════════════════════════════════════════════════
+Total iterations run: N
+Total gaps found across all iterations: N
+Total gaps fixed: N
+Final remaining: ZERO
+
+By severity:
+  CRITICAL: N found | N fixed | 0 remaining
+  HIGH:     N found | N fixed | 0 remaining
+  MEDIUM:   N found | N fixed | 0 remaining
+  LOW:      N found | N fixed | 0 remaining
+
+By phase:
+  [N fixed per phase]
+
+Final server: 29/29 HEALTHY
+Final TypeScript: ZERO ERRORS
+Final regression tests: ALL PASSING
+Final Trinity actions: N registered
+Final event subscribers: N active
+Final cron jobs: N running
+
+VERDICT: PLATFORM PRODUCTION READY
+CLEAR TO ONBOARD FIRST REAL TENANT
+═══════════════════════════════════════════════════
+```
+
+---
+
+**START ITERATION 1 NOW. SCAN ALL 12 PHASES. FIX EVERYTHING. REPEAT UNTIL ZERO.**
+
+---
+
+Paste each iteration report back here. I will track progress across sessions and tell you when the final zero is reached.

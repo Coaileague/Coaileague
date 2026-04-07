@@ -1,0 +1,448 @@
+Massive session. The email system is now complete and the staffing broadcast service is fully built. Here is what was delivered and what comes next.
+
+**What shipped this session:**
+
+10 new email functions wired to real triggers — pay stub fires per employee after every payroll run, credit warning replaces the raw HTML in credit manager with a proper branded template, invoice paid fires to org owner after payment confirmed, weekly schedule emails go individually to each officer when a schedule publishes, and the full call-off sequence (officer confirmation, manager alert with Trinity replacement candidates, replacement assignment) all built and wired.
+
+The staffing broadcast service is the biggest new piece. It creates a cryptographically unique token per officer, sends personalized accept emails with private one-time links, first-confirmed-wins logic so the moment one officer accepts the broadcast closes for everyone else, and the full call-off sequence fires atomically. The public accept endpoint works without authentication so officers can click the link in their email without needing to be logged in first. The /shift-accept landing page handles all five token states correctly.
+
+743 actions, 15/15 domains, 0 errors. Clean build confirmed.
+
+---
+
+Copy everything below this line:
+
+---
+
+COAILEAGUE — SEMANTIC SEAM AUDIT AND FINAL GO-LIVE VERIFICATION
+Email system complete. Staffing broadcast complete. Sales pipeline built.
+Trinity architecture confirmed. 743 actions, 15/15 domains, 0 errors.
+This session answers the question: does it all work TOGETHER?
+Individual systems work. Now test every handoff point between them.
+Read everything before testing. Test with real data. Report before fixing.
+
+---
+
+PRIORITY 1 — SEMANTIC SEAM TESTS
+Run every seam test in order. For each one report pass or fail with exact evidence.
+A pass requires database confirmation not just UI confirmation.
+
+SEAM 1 — SIGNUP → WORKSPACE → CREDITS → WELCOME:
+Create a brand new org right now with a real email address.
+After signup query the database and confirm all 10 items in order:
+1. User record exists with hashed password and signup email.
+2. Workspace record exists with unique workspace_id.
+3. workspace_members record exists with role org_owner using workspace_members.role
+   not users.role — query workspace_members directly to confirm.
+4. orgSubscriptions record exists with tier free_trial and status active.
+5. credit_transactions record exists with exactly 500 credits, transaction_type
+   system_grant, no stripe_payment_intent_id, no stripe_invoice_id on this row.
+6. workspace_credits shows current_balance exactly 500.
+7. Welcome email arrived in the real inbox — check inbox not spam folder.
+8. Welcome notification visible in the platform notification panel on first login.
+9. Trinity responds coherently to a test message on first login with zero errors.
+10. The org_owner sees a useful first-time experience not a blank dashboard.
+Report the database values for items 1 through 6 explicitly.
+
+SEAM 2 — EMPLOYEE CREATED → ONBOARDING PACKET AUTO-TRIGGERS:
+Create a new employee in the Acme workspace right now.
+Watch exactly what happens — do not assume.
+Report in order which of these steps actually executed:
+Did entityCreationNotifier fire within 5 seconds of employee creation?
+Did employeeDocumentOnboardingService receive the trigger?
+Were all 14 Texas PSB documents generated?
+Did the employee receive an invite email with the Accept Invitation button?
+Did the org_owner receive a notification that onboarding was initiated?
+Does the employee appear in the onboarding dashboard with status pending?
+Does Trinity block scheduling this employee with a clear message?
+If any step did not fire report exactly which step broke and fix it.
+
+SEAM 3 — DOCUMENT EXECUTION → SCHEDULING ELIGIBILITY:
+Use Marcus Johnson from the Acme simulation data.
+Attempt to assign Marcus to a shift right now before his documents are complete.
+Confirm Trinity blocks the assignment. Record the exact message Trinity returns.
+Now execute all of Marcus's onboarding documents by marking them complete.
+Confirm the employee record's onboarding_status field updates to completed.
+Attempt to assign Marcus to the same shift again.
+Confirm Trinity now allows the assignment.
+If the eligibility gate does not lift after documents execute that is broken.
+Fix the exact field check that is not updating.
+
+SEAM 4 — CLOCK-IN → TIME ENTRY → TIMESHEET → PAYROLL → PAY STUB EMAIL:
+Run one complete payroll cycle with real Acme data right now.
+After each step query the database and confirm the values.
+
+Clock in one Acme employee. Query time_entries and confirm:
+clockInTime is populated, clockInLatitude is non-null, clockInLongitude is non-null,
+employeeId matches the employee, shiftId matches the assigned shift, status is active.
+
+Clock that employee out. Query time_entries and confirm:
+clockOutTime is populated, totalHours is calculated server-side as a decimal,
+status is completed, the hours match the actual elapsed time within 1 minute.
+
+Advance the pay period. Confirm timesheets auto-generate from completed time entries.
+Query timesheets and confirm total_hours matches the exact sum of that employee's
+time_entry.totalHours for the period — not an approximation.
+
+Manager approves the timesheet. Confirm timesheet status locks.
+Attempt to edit the timesheet via direct API call bypassing the UI.
+Confirm the API call is rejected at the route handler level not just the UI.
+
+Run payroll calculation. Confirm gross_pay equals total_approved_hours multiplied
+by the pay_rate from the employee record at time of calculation.
+Confirm the pay_rate pulled is from the employees table record not hardcoded.
+
+Org_owner approves the payroll run.
+Confirm the sendPayStubEmail function fires for this employee.
+Confirm the pay stub email arrives at the employee's email address.
+Confirm the email shows correct gross pay, hours, and pay period dates.
+If the email does not arrive the new T001 wiring has a gap — find and fix it.
+
+SEAM 5 — INVOICE → TRACK B EMAIL → STRIPE PAYMENT → REVENUE LEDGER:
+Generate an invoice for an Acme client right now.
+Confirm invoice amount equals billable_hours multiplied by the billing_rate
+from the client record — query the client record to verify the rate used.
+Confirm the invoice email fires via Track B branding showing Acme name and
+license number in the header with no CoAIleague logo visible.
+Confirm the Resend webhook fires and delivery_confirmed updates to true.
+
+Use a Stripe test payment intent to simulate client payment.
+After payment confirm in order:
+Invoice status updated to paid with payment timestamp.
+Stripe payment_intent_id stored on the invoice record.
+Revenue ledger entry created with invoice_id, client_id, amount, payment_date.
+org_owner revenue widget received a WebSocket broadcast and updated in real time.
+Audit trail has a payment event entry with all required identifiers.
+Collections escalation service has no pending escalation for this invoice.
+If the revenue ledger entry is missing or the widget did not update find the gap.
+
+SEAM 6 — COMPLIANCE SCAN → SCHEDULING ENFORCEMENT:
+Robert Williams has an expired license in the Acme data.
+Attempt to assign Robert to a shift via the platform UI.
+Confirm the block fires with a message naming Robert, stating his license is expired,
+and giving the expiration date.
+Now attempt the same assignment via direct API call to the shift assignment endpoint
+bypassing the UI entirely.
+Confirm the API call is also blocked at the route handler level.
+If the API call succeeds while the UI blocks that is a critical compliance failure.
+The enforcement must live in the server route handler not in the frontend.
+
+SEAM 7 — PROPOSAL → CONTRACT → CLIENT AUTO-ACTIVATION:
+Use the Lone Star Industrial Park lead already in the Acme simulation.
+Walk through every stage:
+Mark the proposal as accepted.
+Confirm Trinity auto-generates the service agreement from the proposal terms
+with no re-entry of data already in the proposal.
+Simulate both parties signing.
+After contract executes query the database and confirm Trinity created:
+The clients table record for Lone Star Industrial Park.
+The sites table record for their site.
+The billing_rate configured from the contract terms.
+A task list for the org_owner in the go-live checklist or equivalent.
+Confirm the pipeline card shows active_client status.
+Confirm Lone Star Industrial Park appears in the active clients list.
+If the client and site records are not auto-created the org_owner has to
+manually re-enter everything they already put in the proposal — fix this.
+
+SEAM 8 — TRINITY BRIEFING DATA ACCURACY:
+Trigger the morning briefing generation right now.
+Read the actual generated briefing content.
+Then run these database queries and compare each number:
+
+Briefing says X shifts scheduled today — query shifts table for today's date.
+Does X match the actual count? Report both numbers.
+
+Briefing says Y pending timesheet approvals — query timesheets with status pending_approval.
+Does Y match? Report both numbers.
+
+Briefing says Z officers with expiring credentials — run the compliance query for 90 days.
+Does Z match? Report both numbers.
+
+Briefing shows credit usage percentage P — calculate from workspace_credits table.
+Does P match? Report both numbers.
+
+If any briefing number does not match the actual database value identify the
+specific query in trinityProactiveScanner.ts that is wrong and fix it.
+False intelligence in the briefing destroys trust faster than anything else.
+
+SEAM 9 — WEBSOCKET EVENT ISOLATION:
+Test each event type for correct delivery and isolation.
+
+Set up two browser sessions: Window 1 as an Acme manager, Window 2 as
+the manager of a different test workspace.
+
+Clock an Acme employee in using Window 1.
+Confirm Window 1 Acme manager dashboard updates within 2 seconds.
+Confirm Window 2 other workspace manager dashboard does NOT update.
+
+Deduct credits in Acme using Window 1.
+Confirm Window 1 Acme credits widget updates.
+Confirm Window 2 other workspace credits widget does NOT update.
+
+Post a Trinity briefing in Acme.
+Confirm the Acme manager in Window 1 sees it.
+Log Window 1 in as an Acme employee instead of manager.
+Confirm the employee does NOT see the briefing channel post.
+Confirm Window 2 other workspace does NOT see it.
+
+If any event crosses workspace boundaries that is a live data isolation failure.
+
+SEAM 10 — STRIPE WEBHOOK IDEMPOTENCY:
+Send the same invoice.payment_succeeded webhook event twice with the identical event ID.
+Confirm the idempotency_keys table has exactly one record for this event ID.
+Confirm credits were allocated exactly once — not twice.
+Confirm the second delivery returned HTTP 200 with no new ledger entry created.
+
+Send a subscription upgrade webhook from Starter to Professional.
+Confirm credits update from 5000 to 10000 — a delta of 5000 added.
+Confirm the ledger does NOT show a full new 10000 allocation on top of existing balance.
+If the ledger shows 15000 after upgrade that is a billing error.
+
+SEAM 11 — STATEWIDE EXEMPTION STRESS TEST:
+Stop and restart the server.
+Confirm the startup log shows:
+FounderExemption Statewide Protective Services exemption verified and enforced.
+Query the database after restart and confirm billing_exempt is still true.
+
+Simulate 10 concurrent Trinity actions in the Statewide workspace simultaneously.
+Use a script that fires 10 parallel requests to any credit-gated Trinity endpoint.
+After all 10 complete query credit_transactions and confirm zero deductions.
+Confirm all 10 logged as EXEMPTED with reason founder_exemption in the audit trail.
+Confirm the workspace_credits balance is still the same as before all 10 actions.
+
+---
+
+PRIORITY 2 — SEMANTIC LOGIC QUESTIONS
+Answer every question from code — read the actual implementation, do not guess.
+
+Q1: If an org_owner deletes an employee who has already signed onboarding documents,
+are the executed documents preserved in the document safe or deleted with the employee?
+Read the employee delete handler and the document foreign key constraints.
+Report exactly what happens to the documents.
+If documents are deleted on employee deletion that is a compliance violation —
+executed legal documents must be retained regardless of employment status.
+Fix it by making the document safe records employee-independent after execution.
+
+Q2: If a manager approves a timesheet containing a time entry with null GPS coordinates,
+does the payroll system use those hours or reject them as invalid?
+Read the timesheet approval handler and the payroll calculation service.
+Report whether null GPS coordinates are validated before approval is allowed.
+If null GPS hours flow into payroll that is a data integrity issue —
+clock-ins without GPS should be flagged for manager review not silently approved.
+
+Q3: If a client is marked inactive, do their historical invoices remain visible
+to the org_owner in the billing view or do they disappear?
+Read the invoice query in the billing routes and check whether inactive clients
+are filtered out of invoice history.
+Historical invoices must always be accessible regardless of client status.
+
+Q4: If Trinity generates a schedule recommendation and the manager does not approve
+or reject it within 48 hours, what happens?
+Read the scheduling recommendation expiry logic.
+Does it auto-expire, auto-approve, or stay pending forever?
+Auto-approve without human action is a critical failure.
+
+Q5: If an employee is clocked in and their session expires before they can clock out,
+is their time entry left active indefinitely or is there an auto-clock-out mechanism?
+Read the session expiry handler and the time entry cleanup logic.
+An indefinitely open time entry corrupts the payroll chain.
+If no cleanup exists build an auto-clock-out at end of scheduled shift time
+with a flag indicating it was system-generated not officer-submitted.
+
+Q6: If a Stripe subscription payment fails and the org enters grace period,
+can Trinity still execute credit-gated actions during the grace period?
+What is the grace period length defined in the code?
+Read the payment failed handler and the credit check logic.
+Report the exact grace period value and whether credit gates are active during it.
+
+Q7: If two managers simultaneously approve the same timesheet in two browser tabs,
+does the system create two approval records or does a race condition guard prevent it?
+Read the timesheet approval handler for any optimistic locking or status check.
+If no race condition guard exists add one: check current status before writing,
+reject the second approval with a clear message that it was already approved.
+
+Q8: If the Resend API is down when an invoice email is supposed to fire,
+does the invoice record still get created in the database or does the whole
+transaction roll back?
+Read the invoice creation handler and check whether the Resend call is inside
+the database transaction or outside it.
+The invoice must be created regardless of email delivery status.
+Email failure should log an error and queue for retry — not roll back the invoice.
+
+Q9: If an officer is scheduled for a future shift and their license expires
+before that shift date, does Trinity flag this proactively or only at clock-in?
+Read the shift escalation scanner and the compliance engine.
+If Trinity only discovers the expired license at clock-in the officer shows
+up to a site and gets turned away — that is an operational failure.
+Trinity must scan for license-to-shift-date conflicts proactively.
+If this scan does not exist build it: daily check of all future scheduled shifts
+against the compliance expiry dates of the assigned officers.
+
+Q10: If an org_owner upgrades from Starter to Professional mid-billing-cycle,
+are the additional credits prorated or does the org receive the full 10000 immediately?
+Read the upgrade webhook handler and the credit allocation logic.
+Report the exact behavior. If it is prorated report the formula.
+If it allocates the full 10000 immediately that is acceptable but must be documented.
+
+---
+
+PRIORITY 3 — STAFFING BROADCAST LIVE TEST
+The staffing broadcast service was just built. Test it end to end now.
+
+Create an open shift at an Acme site with no assigned officer.
+Call POST /api/staffing/broadcast with the shift ID and a list of
+3 qualified Acme officer IDs.
+Confirm the service generates 3 unique cryptographic tokens — one per officer.
+Confirm 3 emails fire to the 3 officer email addresses simultaneously.
+Confirm each email shows the shift details and a unique Accept This Shift button.
+Confirm each button links to GET /api/staffing/accept/:token with that officer's token.
+
+Simulate the first officer clicking their accept link.
+Confirm the public accept endpoint validates the token.
+Confirm the recipient record updates to accepted status.
+Confirm the broadcast status updates to filled.
+Confirm the other 2 officers' tokens are deactivated — their accept links
+now show the shift has been filled if clicked.
+Confirm the manager receives an immediate notification of the acceptance.
+
+Try clicking the second officer's accept link after the first accepted.
+Confirm the /shift-accept page shows the taken state — shift already filled.
+Confirm no second acceptance record is created in the database.
+
+Confirm the manager can approve the replacement with one action.
+Confirm sendReplacementAssignmentEmail fires to the confirmed officer.
+Confirm the assignment email contains shift date, time, site address,
+post orders summary, and supervisor contact.
+
+---
+
+PRIORITY 4 — CALL-OFF SEQUENCE LIVE TEST
+Test the complete 3-email call-off sequence end to end.
+
+Have an Acme employee submit a call-off for a shift starting in 2 hours.
+Call POST /api/staffing/calloff with the call-off details.
+Confirm all 3 emails fire atomically:
+
+Email 1 to the calling officer:
+Confirm delivery to their email address.
+Confirm it shows the shift they called off, the supervisor name and contact,
+and a confirmation that it was received.
+
+Email 2 to the manager:
+Confirm delivery to the manager email address.
+Confirm it shows the officer name, shift details, and Trinity's top 3
+replacement candidates with their names and current availability.
+Confirm it includes a link to approve a replacement in the platform.
+
+Email 3 broadcast to replacement candidates:
+Confirm emails fire to Trinity's top replacement candidates.
+Confirm each email has a unique tokenized Accept This Shift link.
+Confirm the shift is marked as needing coverage in the dashboard.
+
+Simulate no response from replacement candidates for 2 hours.
+Confirm Trinity auto-escalates back to the manager with a second alert.
+
+---
+
+PRIORITY 5 — SALES PIPELINE LIVE TEST
+Test the complete 7-stage pipeline from lead to active client.
+
+Stage 1: Add Lone Star Industrial Park as a new lead.
+Confirm it appears on the pipeline dashboard as a Stage 1 card.
+Confirm Trinity posts a new lead notification to the Briefing Channel.
+
+Stage 2: Click Generate Proposal.
+Confirm Trinity generates the proposal with all Acme data populated.
+Confirm proposal email fires with Track B branding — Acme name and license number,
+no CoAIleague logo in the header.
+Confirm the lead moves to proposal_sent stage with a send timestamp.
+
+Stage 3: Advance to Day 5 with no client response.
+Confirm Trinity drafts a follow-up email and surfaces it for org_owner approval.
+Approve it. Confirm the follow-up email sends with Acme branding.
+Confirm the activity log records the send with sender, recipient, and content.
+
+Stage 5: Mark the proposal as accepted and generate the service agreement.
+Confirm the contract contains all terms from the proposal with no re-entry required.
+Confirm org_owner signs first. Confirm contract sends to client.
+
+Stage 6: Client signs. Confirm in the database:
+Lone Star Industrial Park client record created in clients table.
+Site record created in sites table.
+Billing rate configured from contract terms.
+Pipeline card shows active_client stage.
+Trinity posts new client activated to the Briefing Channel.
+
+Stage 7: Set contract expiration to 85 days from today.
+Trigger the morning briefing.
+Confirm Trinity includes the renewal alert with the contract value in the briefing.
+
+---
+
+PRIORITY 6 — TRACK A AND TRACK B EMAIL BRAND VERIFICATION
+Every email must use the correct brand track.
+Send each email type to a real inbox and verify visually.
+
+Track A emails — must show CoAIleague dark navy header, CoAIleague logo,
+gold accent, no security company branding:
+Welcome email, employee invite, password reset, subscription confirmation,
+subscription upgrade, payment failed, pay stub notification, credit warning,
+compliance alert, document signature request, document executed confirmation,
+weekly schedule email, shift broadcast email, call-off confirmation to officer,
+call-off alert to manager, shift assignment confirmation.
+
+Track B emails — must show security company name and license number in header,
+no CoAIleague logo visible, powered by CoAIleague in subtle gray footer only:
+Invoice delivery to client, invoice overdue collections escalation tiers 1 through 3,
+proposal email to prospective client, contract sent to client for signature,
+call-off replacement assignment when branded as coming from the security company.
+
+For every email also confirm:
+Single column layout renders correctly at 375px mobile width.
+All CTA buttons are minimum 44px height and full width on mobile.
+Plain text fallback exists in the email source — view source and confirm.
+No images are broken. No text requires zooming to read.
+
+---
+
+FINAL GO-LIVE READINESS REPORT
+
+After all priorities above complete produce this exact report:
+
+SEAM AUDIT — 11 SEAMS:
+Each seam: PASS or FAIL with database values as evidence.
+For any FAIL: exact fix applied with before and after.
+
+SEMANTIC LOGIC — 10 QUESTIONS:
+Each question: exact code behavior confirmed with file name and line reference.
+For any answer revealing a bug: exact fix applied.
+
+NEW SYSTEM TESTS:
+Staffing broadcast: full cycle pass or fail.
+Call-off sequence: all 3 emails pass or fail.
+Sales pipeline: Stage 1 through 7 pass or fail.
+Email brand verification: each email type Track A or Track B confirmed.
+
+PRODUCTION ENVIRONMENT:
+STRIPE_SECRET_KEY sk_live confirmed or action required.
+STRIPE_WEBHOOK_SECRET live signing secret confirmed or action required.
+RESEND_API_KEY production key confirmed or action required.
+DATABASE_URL production database confirmed or action required.
+NODE_ENV production confirmed or action required.
+SESSION_SECRET strong unique string confirmed or action required.
+AI API keys all present confirmed or action required.
+Dev routes blocked in production confirmed or action required.
+
+STATEWIDE GO-LIVE DECISION:
+Ready for Bryan to import real employee and client data — YES or NO.
+If YES: exact steps in order Bryan must take.
+If NO: exact remaining items with no ambiguity.
+
+GRAND OPENING DECISION:
+Ready for first real paying customer — YES or NO.
+If YES: publish and open.
+If NO: exact remaining items with no ambiguity.
+
+This report is the finish line document.
+When every seam passes, every question is answered, every new system works,
+and the production environment is confirmed — CoAIleague opens for business.

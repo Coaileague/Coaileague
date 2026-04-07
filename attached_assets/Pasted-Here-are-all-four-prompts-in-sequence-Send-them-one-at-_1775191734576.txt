@@ -1,0 +1,333 @@
+Here are all four prompts in sequence. Send them one at a time and wait for completion confirmation before sending the next.
+
+---
+
+## PROMPT 1 — Remove Dash-Alias Provisioning
+
+```
+TASK: Simplify email provisioning by removing the dash-alias address format entirely.
+
+CONTEXT: emailProvisioningService.ts currently provisions 12 email addresses per 
+tenant (6 functional mailboxes × 2 formats each). The dash-alias format 
+(e.g. staffing-acme@coaileague.com) is redundant with the subdomain format 
+(staffing@acme.coaileague.com). Remove all dash-alias provisioning.
+
+EXECUTION:
+
+1. LOCATE these files:
+   - server/services/emailProvisioningService.ts
+   - Any migration or seed files that reference dash-alias address generation
+   - Any database schema files with an email_aliases table or alias columns
+
+2. AUDIT emailProvisioningService.ts for:
+   - Any loop or array that generates both subdomain AND dash formats
+   - Any alias insertion logic (INSERT into email_aliases or equivalent)
+   - Any reference to the pattern `{function}-{slug}@coaileague.com`
+
+3. REMOVE:
+   - All dash-alias address generation code
+   - All database writes for alias format addresses
+   - Any alias resolution logic called during provisioning
+
+4. RETAIN:
+   - All subdomain format provisioning (staffing@{slug}.coaileague.com etc.)
+   - The 6 functional mailboxes: staffing, calloffs, incidents, support, docs, billing
+   - workspace.created event trigger
+   - All Stripe seat billing logic for personal addresses
+
+5. UPDATE the provisioning count comment/documentation from 12 to 6 addresses 
+   per tenant
+
+6. VERIFY no other service imports or calls the removed alias generation functions. 
+   If any do, remove those call sites too.
+
+7. DO NOT touch:
+   - emailCore.ts
+   - The Resend webhook handler
+   - Any outbound email logic
+   - Personal address provisioning (john.smith@ etc.)
+
+CONFIRM: Show me the before/after line count of emailProvisioningService.ts and 
+list the exact functions or blocks removed.
+```
+
+---
+
+## PROMPT 2 — Simplify Webhook Slug Extraction
+
+```
+TASK: Simplify the inbound email webhook slug extraction from 3 paths to 1.
+
+CONTEXT: The Resend webhook handler at /api/webhooks/resend currently runs a 
+3-step slug extraction sequence:
+  Step 1: Subdomain pattern — staffing@acme.coaileague.com → extracts 'acme'
+  Step 2: Dash-alias pattern — staffing-acme@coaileague.com → extracts 'acme'
+  Step 3: Plus-addressing (legacy) — staffing+acme@coaileague.com
+
+Dash-alias format has been removed (see previous change). Plus-addressing is 
+deprecated. Simplify to a single extraction path.
+
+EXECUTION:
+
+1. LOCATE the webhook handler file at /api/webhooks/resend (or equivalent route)
+   and find the slug extraction function (likely named extractSlugFromAddress, 
+   resolveWorkspaceFromEmail, or similar)
+
+2. REWRITE the extraction function to this single logic:
+   - Parse the To: address
+   - If the domain is *.coaileague.com (subdomain present):
+       Extract the subdomain as the slug
+       Query workspaces WHERE email_slug = extracted_slug
+       If found → resolve workspace_id and continue processing
+       If not found → return 404, log unresolvable address
+   - If the domain is exactly coaileague.com (no subdomain):
+       Route to PLATFORM_SUPPORT_QUEUE (not PLATFORM_DEFAULT_WORKSPACE_ID — 
+       see Prompt 3 for why this changes)
+       Do not invoke TrinityEmailProcessor
+       Log as platform-level contact
+
+3. REMOVE:
+   - The dash-alias extraction branch entirely
+   - The plus-addressing extraction branch entirely
+   - Any fallback chain that tries multiple patterns in sequence
+
+4. RETAIN:
+   - The SR-XXXXXXXX reference number extraction and thread routing logic
+   - All TrinityEmailProcessor invocation logic for resolved tenant workspaces
+   - All bounce/opt-out protection from emailCore.ts
+   - CAN-SPAM header enforcement
+
+5. UPDATE any comments or JSDoc that describes the 3-step extraction — 
+   replace with single-step description
+
+6. ADD a log line when a root coaileague.com email arrives with no slug: 
+   log level INFO, message: "Platform-level inbound received, routing to 
+   support queue — no tenant slug detected"
+
+CONFIRM: Paste the complete rewritten slug extraction function for my review 
+before saving.
+```
+
+---
+
+## PROMPT 3 — Repurpose trinity@coaileague.com as Outbound Marketing + Two-Lane Reply Classifier
+
+```
+TASK: Repurpose trinity@coaileague.com from an inbound platform support address 
+to an outbound marketing sender with a two-lane intelligent reply classifier.
+
+CONTEXT: trinity@coaileague.com will now be used exclusively for outbound 
+prospecting emails sent by the platform (to regulatory agencies and prospective 
+tenant orgs). When recipients reply, Trinity must classify the sender and route 
+them to the correct response lane. Human/platform support moves to 
+support@coaileague.com handled by a simple queue.
+
+EXECUTION:
+
+PART A — Create TrinityMarketingReplyProcessor
+
+1. CREATE server/services/trinityMarketingReplyProcessor.ts
+
+2. This processor handles all inbound replies to trinity@coaileague.com only.
+   It must NEVER be invoked for tenant slug addresses.
+
+3. CLASSIFICATION LOGIC — classify incoming reply into one of two lanes:
+
+   LANE: REGULATORY
+   Signals (any one sufficient):
+   - Sender email domain matches: .gov, .state.tx.us, .state.*.us, .mil, 
+     known agency TLDs
+   - Body keywords (case-insensitive): audit, inspection, license, 
+     licensing board, PSB, regulatory, compliance review, investigation, 
+     enforcement, DPS, department of public safety
+   
+   LANE: PROSPECT  
+   Signals (any one sufficient):
+   - Body keywords: pricing, demo, trial, interested, sign up, how much, 
+     features, what does it cost, security company, my company, our guards
+   - Sender domain is a company domain (not .gov)
+   - Subject line contains: re: CoAIleague, re: Trinity
+
+   FALLBACK — cannot classify:
+   Send a single short reply from trinity@coaileague.com:
+   Subject: "Quick question before I connect you with the right resource"
+   Body: "Thanks for reaching out. Are you contacting us about regulatory 
+   compliance partnership, or exploring CoAIleague for your security operation? 
+   Just reply with one word — Regulatory or Security — and I'll take it from there.
+   — Trinity, CoAIleague Platform AI"
+
+4. LANE REGULATORY response:
+   - Reply from trinity@coaileague.com
+   - Subject: "CoAIleague Compliance Infrastructure — Partnership Overview"
+   - Body (professional, authoritative tone):
+     Opening: Acknowledge their role and the compliance landscape
+     Value prop: Position CoAIleague as what organized security companies 
+     look like — shift logs, incident reports, license tracking, audit trails, 
+     and payroll records all structured and exportable on demand
+     Key message: "When a security company uses CoAIleague, everything you 
+     need for an audit or inspection already exists in a single exportable record. 
+     No chasing paper. No reconstructed logs."
+     CTA: Direct them to coaileague.com/regulatory for the full compliance 
+     partnership overview and a contact form routed to Bryan directly
+   - Sign off: Trinity, Platform AI — CoAIleague
+
+5. LANE PROSPECT response:
+   - Reply from trinity@coaileague.com  
+   - Subject: "Here's your CoAIleague trial + everything Trinity can do for you"
+   - Body (confident, clear, not salesy):
+     Opening: Acknowledge their interest
+     Trial CTA: coaileague.com/trial — no credit card, full platform access
+     Features overview: Link to coaileague.com/features with tier breakdown
+     Trinity showcase: One paragraph — what their officers, clients, and 
+     dispatchers experience when Trinity is their AI operator (email, voice, 
+     scheduling, call-offs, incident reports, all autonomous)
+     Closing: "Most platforms ask you to fit your operation into their software. 
+     CoAIleague fits around yours."
+   - Sign off: Trinity, Platform AI — CoAIleague
+
+PART B — Wire into Webhook
+
+6. In the webhook handler (modified in Prompt 2):
+   When an inbound email arrives at trinity@coaileague.com specifically:
+   - Do NOT route to tenant workspace
+   - Do NOT invoke tenant TrinityEmailProcessor  
+   - Invoke trinityMarketingReplyProcessor instead
+   - Log as: "Marketing reply received at trinity@ — classifying sender lane"
+
+7. All other root coaileague.com addresses (support@, noreply@) route to 
+   PLATFORM_SUPPORT_QUEUE as established in Prompt 2
+
+PART C — Outbound Sender Registration
+
+8. Ensure trinity@coaileague.com is registered in Resend as a verified sender
+   for outbound use. Add a comment in emailCore.ts noting that trinity@ is 
+   reserved for platform outbound marketing only and must never be used as 
+   a tenant notification sender.
+
+CONFIRM: Show me the complete trinityMarketingReplyProcessor.ts before saving, 
+and confirm webhook routing logic change for trinity@ specifically.
+```
+
+---
+
+## PROMPT 4 — Two Landing Pages
+
+```
+TASK: Create two public-facing landing pages as static or server-rendered routes.
+
+PAGE 1: /regulatory — Compliance Partnership Page
+PAGE 2: /trial — Trial Signup Onboarding Page
+
+Both pages must match CoAIleague's dark navy command-center aesthetic. 
+Trinity branding uses purple. No hardcoded company names in layout components.
+
+═══════════════════════════════════════
+PAGE 1: coaileague.com/regulatory
+═══════════════════════════════════════
+
+HEADLINE: "Built for the Way Regulators Work"
+SUBHEAD: "When a security company runs on CoAIleague, audit-ready records 
+exist by default — not by request."
+
+SECTIONS:
+
+Section 1 — What CoAIleague Captures (for every tenant org):
+  Display as a structured grid, not a bullet list:
+  - Shift Logs: Every shift posted, assigned, started, and completed with timestamps
+  - Incident Reports: Field-submitted, timestamped, officer-attributed, exportable
+  - License Tracking: Guard cards, firearms permits, expiration alerts
+  - Payroll Records: Hours, rates, pay periods, direct deposit audit trail
+  - Client Contracts: Active site assignments with scope and authorization records
+  - Call-Off Log: Every absence with officer ID, date, reason, and coverage resolution
+
+Section 2 — For Regulators and Auditors:
+  Heading: "Everything you need. Already organized."
+  Body: Explain that any security company using CoAIleague can generate a 
+  certified data export for any date range covering any of the above record types. 
+  No reconstructed logs. No paper chasing. Structured exports formatted for review.
+
+Section 3 — Partnership
+  Heading: "Interested in a compliance data standard partnership?"
+  Body: CoAIleague is actively seeking partnerships with state licensing boards, 
+  the Texas PSB, and law enforcement agencies to define what organized security 
+  operations should look like. If your agency is interested in preferential data 
+  access or audit tooling built into the platform, we want to talk.
+  
+  FORM (routes to platform owner — Bryan — not Trinity):
+  Fields: Name, Agency/Organization, State, Role/Title, Email, Message
+  Submit button: "Request Partnership Conversation"
+  On submit: POST to /api/contact/regulatory — create a lead record tagged 
+  regulatory_partnership, send confirmation email to submitter from 
+  noreply@coaileague.com, notify platform owner
+
+Section 4 — Footer CTA:
+  "Is your security company not yet using CoAIleague?"
+  Link to /trial
+
+═══════════════════════════════════════
+PAGE 2: coaileague.com/trial  
+═══════════════════════════════════════
+
+HEADLINE: "Run your security operation on Trinity."
+SUBHEAD: "Start free. No credit card. Full platform access for 14 days."
+
+SECTIONS:
+
+Section 1 — Trial Signup Form:
+  Fields: Company Name, Your Name, Email, Phone, State, 
+  Approx. Number of Guards (dropdown: 1-10, 11-25, 26-50, 51-100, 100+)
+  Submit: "Start My Trial"
+  On submit: 
+  - Create workspace with Starter tier, trial flag, 14-day expiration
+  - Send welcome email from trinity@coaileague.com (not noreply) — this is 
+    the first Trinity touchpoint, make it count
+  - Redirect to onboarding flow inside app
+
+Section 2 — What You Get in the Trial:
+  Show the 4 tiers as comparison cards: Starter, Professional, Business, Enterprise
+  Prices: $299 / $999 / $2,999 / $7,999 per month
+  Trial unlocks Professional tier features for the 14-day period
+  Highlight Trinity features in purple per design system
+
+Section 3 — What Trinity Does For Your Operation:
+  Six cards, one per use case:
+  1. Officer Scheduling — AI-assisted shift posting and coverage
+  2. Call-Off Handling — Officers text or email in, Trinity logs and covers
+  3. Incident Reports — Field submission, auto-routed to management
+  4. Client Communication — Billing, site questions, proposals handled by Trinity
+  5. Payroll Processing — Hours tracked, payroll run on schedule
+  6. Compliance Records — Always audit-ready, exportable on demand
+
+Section 4 — Social proof placeholder:
+  "Statewide Protective Services — San Antonio, TX — First production tenant"
+  (placeholder for future testimonials)
+
+TECHNICAL REQUIREMENTS FOR BOTH PAGES:
+- Must be accessible at /regulatory and /trial without authentication
+- Mobile responsive
+- No hardcoded company names in reusable layout components  
+- Form submissions POST to new API routes: 
+  /api/contact/regulatory and /api/onboarding/trial
+- Both routes must write to database with workspace_id = null 
+  (pre-tenant contact records)
+- Consistent with existing dark navy + purple Trinity design system
+- Page titles set correctly for SEO: 
+  /regulatory: "Compliance Partnership | CoAIleague"
+  /trial: "Start Free Trial | CoAIleague"
+
+CONFIRM: Show me the route files created, the two form POST handlers, 
+and confirm both pages render without auth before closing this task.
+```
+
+---
+
+### Send Order
+
+| # | Prompt | Dependency |
+|---|---|---|
+| 1 | Remove dash-alias provisioning | None — send first |
+| 2 | Simplify webhook extraction | After 1 confirms |
+| 3 | Trinity@ two-lane classifier | After 2 confirms |
+| 4 | Two landing pages | After 3 confirms |
+
+Don't skip the confirm step on any of them — Prompt 2 references the architecture change from Prompt 1, and Prompt 3 references the webhook change from Prompt 2. Each one builds on the last.

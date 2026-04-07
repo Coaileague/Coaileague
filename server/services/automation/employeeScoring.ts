@@ -20,16 +20,15 @@
  */
 
 import { db } from "../../db";
-import { 
-  employees, 
-  employeeSkills, 
-  employeeCertifications, 
-  employeeMetrics,
+import {
+  employees,
+  employeeSkills,
   shifts,
   clients,
+  disciplinaryRecords,
   type EmployeeSkill,
   type EmployeeCertification
-} from "@shared/schema";
+} from '@shared/schema';
 import { eq, and, sql, gte, lte, isNull, or } from "drizzle-orm";
 
 export interface ScoringWeights {
@@ -43,7 +42,7 @@ export interface ScoringWeights {
   contractorStatus: number;
 }
 
-export const DEFAULT_WEIGHTS: ScoringWeights = {
+export const EMPLOYEE_SCORING_WEIGHTS: ScoringWeights = {
   skills: 0.25,
   certifications: 0.15,
   performance: 0.15,
@@ -138,7 +137,7 @@ function normalize(value: number, min: number, max: number, invert = false): num
 export async function scoreEmployeesForShift(
   workspaceId: string,
   requirements: ShiftRequirements,
-  weights: ScoringWeights = DEFAULT_WEIGHTS
+  weights: ScoringWeights = EMPLOYEE_SCORING_WEIGHTS
 ): Promise<EmployeeCandidate[]> {
   
   // Load shift details
@@ -180,22 +179,41 @@ export async function scoreEmployeesForShift(
       )
     );
 
-  // Load skills and certifications separately for each employee
+  const employeeIds = activeEmployees.map(e => e.employee.id);
+
+  const [allSkills, allCerts] = await Promise.all([
+    employeeIds.length > 0
+      ? db.query.employeeSkills.findMany({
+          where: sql`${employeeSkills.employeeId} IN (${sql.join(employeeIds.map(id => sql`${id}`), sql`, `)})`,
+        })
+      : Promise.resolve([]),
+    employeeIds.length > 0
+      ? db.query.employeeCertifications.findMany({
+          where: and(
+            sql`${employeeCertifications.employeeId} IN (${sql.join(employeeIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(employeeCertifications.status, "verified")
+          ),
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const skillsByEmployee = new Map<string, typeof allSkills>();
+  for (const skill of allSkills) {
+    if (!skillsByEmployee.has(skill.employeeId)) skillsByEmployee.set(skill.employeeId, []);
+    skillsByEmployee.get(skill.employeeId)!.push(skill);
+  }
+
+  const certsByEmployee = new Map<string, typeof allCerts>();
+  for (const cert of allCerts) {
+    if (!certsByEmployee.has(cert.employeeId)) certsByEmployee.set(cert.employeeId, []);
+    certsByEmployee.get(cert.employeeId)!.push(cert);
+  }
+
   const candidates: EmployeeCandidate[] = [];
 
   for (const { employee, metrics } of activeEmployees) {
-    // Load skills
-    const skillsData = await db.query.employeeSkills.findMany({
-      where: eq(employeeSkills.employeeId, employee.id),
-    });
-
-    // Load certifications (only verified ones count for scoring)
-    const certsData = await db.query.employeeCertifications.findMany({
-      where: and(
-        eq(employeeCertifications.employeeId, employee.id),
-        eq(employeeCertifications.status, "verified")
-      ),
-    });
+    const skillsData = skillsByEmployee.get(employee.id) || [];
+    const certsData = certsByEmployee.get(employee.id) || [];
 
     // =====================================================
     // HARD FILTERS
@@ -332,10 +350,55 @@ export async function scoreEmployeesForShift(
     }
 
     // =====================================================
+    // DISCIPLINARY PENALTY — Trinity scheduling intelligence (Phase 35J)
+    // Spec: deprioritize officers with active written_warning or suspension ONLY for
+    // critical posts (shift.severity === 'critical'). Other disciplinary record types
+    // (verbal_caution, verbal_warning, pip, commendation, etc.) do NOT affect scheduling.
+    // This is a soft scoring penalty — managers can still override via manual assignment.
+    // =====================================================
+    let disciplinaryPenalty = 0;
+    const isCriticalPost = shift.severity === 'critical';
+    if (isCriticalPost) {
+      try {
+        // Only query for the two types that carry scheduling weight per Phase 35J spec
+        const activeWarnings = await db
+          .select({ recordType: disciplinaryRecords.recordType })
+          .from(disciplinaryRecords)
+          .where(
+            and(
+              eq(disciplinaryRecords.workspaceId, workspaceId),
+              eq(disciplinaryRecords.employeeId, employee.id),
+              eq(disciplinaryRecords.status, 'active'),
+              or(
+                eq(disciplinaryRecords.recordType, 'suspension'),
+                eq(disciplinaryRecords.recordType, 'written_warning'),
+              ),
+            ),
+          )
+          .limit(5);
+
+        const hasSuspension = activeWarnings.some((r) => r.recordType === 'suspension');
+        const hasWrittenWarning = activeWarnings.some((r) => r.recordType === 'written_warning');
+
+        if (hasSuspension) {
+          disciplinaryPenalty = 0.30; // Significant penalty for active suspension
+          concerns.push('Active suspension on record — deprioritized for critical posts');
+        } else if (hasWrittenWarning) {
+          disciplinaryPenalty = 0.15; // Moderate penalty for written warning
+          concerns.push('Active written warning on record — lower priority for critical posts');
+        }
+        // Note: Other active record types (verbal_caution, verbal_warning, pip, commendation)
+        // do not affect scheduling per Phase 35J spec.
+      } catch {
+        // Non-blocking — scoring continues without disciplinary check
+      }
+    }
+
+    // =====================================================
     // COMPOSITE SCORE
     // =====================================================
 
-    const compositeScore =
+    const rawCompositeScore =
       skillsScore * weights.skills +
       certsScore * weights.certifications +
       perfScore * weights.performance +
@@ -344,6 +407,9 @@ export async function scoreEmployeesForShift(
       payMarginScore * weights.payMargin +
       overtimeRiskScore * weights.overtimeRisk +
       contractorStatusScore * weights.contractorStatus;
+
+    // Apply disciplinary penalty (soft deprioritization, not a hard block)
+    const compositeScore = Math.max(0, rawCompositeScore - disciplinaryPenalty);
 
     candidates.push({
       employeeId: employee.id,

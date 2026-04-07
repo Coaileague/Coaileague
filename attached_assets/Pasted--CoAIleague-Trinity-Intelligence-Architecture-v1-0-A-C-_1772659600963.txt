@@ -1,0 +1,1239 @@
+# CoAIleague — Trinity Intelligence Architecture v1.0
+## "A C-Suite Brain That Knows Security, Knows the Law, Knows the Money, and Can Act"
+
+**Date:** March 4, 2026
+**Vision:** Trinity isn't a chatbot. She's the AI Chief Operating Officer of every security company on the platform. She knows state-specific security law, licensing requirements, tax codes, labor regulations, pricing economics, and use of force doctrine. She reads every document uploaded, observes every event on the platform, learns each org's patterns, and makes decisions — always with human approval at the gate.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 1: WHAT TRINITY IS vs WHAT TRINITY NEEDS TO BE
+# ═══════════════════════════════════════════════════
+
+## 1A: Current State (Honest Assessment)
+
+```
+WHAT TRINITY CAN DO NOW:                     STATUS
+──────────────────────────────────────────────────────
+Schedule shifts (score + assign)              ✅ Working
+Fill open shifts autonomously                 ✅ Working (100% fill achieved)
+Detect schedule conflicts                     ✅ Working
+Generate notifications/alerts                 ✅ Working
+Profitability analysis (basic)                ✅ Working (notification showed -249% margin)
+Multi-model orchestration (Gemini/Claude/GPT) ✅ Architecture exists
+Metacognition layer (thought/judge pattern)   ✅ Claimed by Replit agent
+
+WHAT TRINITY CANNOT DO YET:                  NEEDED
+──────────────────────────────────────────────────────
+State-specific legal knowledge                ❌ No knowledge base
+Security industry regulations (Ch. 1702)      ❌ No knowledge base
+Tax calculation by state                      ❌ No tax engine
+Pricing/rate recommendation                   ❌ No cost modeling
+Document scanning and learning                ❌ No document ingestion
+Contract/proposal generation                  ❌ No template + context engine
+Expense tracking for true P&L                 ❌ No expense integration
+Email drafting with strategic framing         ❌ No outbound action engine
+Pattern learning over time per org            ❌ No persistent memory/context
+Full platform event awareness                 ❌ Events don't all feed Trinity
+Action execution with approval gates          ❌ No approval workflow for AI actions
+Spawn specialized bots on demand              ⚠️ Bot architecture specced but not built
+Tool use (search, calculate, query, draft)    ⚠️ Partial — needs formal tool registry
+```
+
+## 1B: The Gap
+
+Trinity has the brain (triad architecture) but not the knowledge, tools, or connective tissue to use it. It's like having a brilliant executive with no desk, no phone, no access to the filing cabinet, and no authority to send emails. The brain works — the infrastructure around it doesn't.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 2: TRINITY KNOWLEDGE BASE — WHAT SHE MUST KNOW
+# ═══════════════════════════════════════════════════
+
+## 2A: Knowledge Architecture
+
+Trinity's knowledge comes from three sources:
+
+```
+SOURCE 1: STATIC KNOWLEDGE (Pre-loaded, same for all orgs)
+  - State security regulations and licensing
+  - Federal and state labor law
+  - Tax rates and rules by state
+  - Security industry standards and best practices
+  - Use of force doctrine
+  - TABC and liquor licensing requirements
+  - Contract law basics for service agreements
+
+SOURCE 2: ORG-SPECIFIC KNOWLEDGE (Learned from each org's data + uploads)
+  - Uploaded documents (insurance policies, contracts, licenses)
+  - Historical financial data (invoices, payroll, expenses)
+  - Client relationships and patterns
+  - Employee performance patterns
+  - Pricing history and margin trends
+  - Operational patterns (peak hours, high-turnover sites, etc.)
+
+SOURCE 3: REAL-TIME CONTEXT (Live platform events)
+  - Every clock in/out
+  - Every shift change
+  - Every incident report
+  - Every invoice generated/paid
+  - Every message in DockChat
+  - Every Trinity action and its outcome
+  - Credit balance changes
+  - Employee behavior score changes
+```
+
+## 2B: Static Knowledge Modules
+
+Each module is a structured knowledge document that gets injected into Trinity's system prompt when relevant to the task.
+
+### MODULE: Texas Security Regulations (Chapter 1702)
+
+```
+KNOWLEDGE FILE: texas_security_1702.md
+
+CONTENTS:
+- Texas Occupations Code Chapter 1702 — Private Security Act
+  - Licensing requirements (company license, individual license)
+  - Level II (unarmed) certification requirements
+  - Level III (armed/commissioned) certification requirements  
+  - Level IV (personal protection officer) certification requirements
+  - Continuing education requirements (annual hours)
+  - Background check requirements
+  - Drug testing requirements
+  - Supervision ratios
+  - Record keeping obligations
+  - Penalties for non-compliance
+  
+- Texas Administrative Code Title 37, Part 1, Chapter 35
+  - PSB (Private Security Bureau) rules
+  - License application procedures
+  - Training curriculum requirements
+  - Pocket card requirements
+  - Uniform and badge regulations
+  
+- Related chapters:
+  - Chapter 1701 (Law enforcement — for understanding jurisdiction boundaries)
+  - Chapter 1703 (Private investigators — overlap areas)
+  - Penal Code Chapter 9 (Justification / Use of Force)
+  - Penal Code § 9.31 (Self-defense)
+  - Penal Code § 9.32 (Deadly force in defense of person)
+  - Penal Code § 9.41-9.43 (Protection of property)
+  - Government Code Chapter 411 (CHL/LTC interactions)
+
+TRINITY USES THIS WHEN:
+  - Checking employee certification compliance
+  - Generating compliance reports
+  - Answering "Ask Trinity" questions about regulations
+  - Building training requirements per employee
+  - Flagging expiring licenses/certifications
+  - Onboarding new employees (required documentation checklist)
+  - Drafting RFP responses that reference regulatory compliance
+```
+
+### MODULE: Multi-State Security Licensing
+
+```
+KNOWLEDGE FILE: multistate_security_licensing.md
+
+CONTENTS (per state where org operates):
+
+  STATE     GOVERNING BODY          LICENSE TYPES           KEY DIFFERENCES FROM TX
+  ────────────────────────────────────────────────────────────────────────────────────
+  Texas     PSB (DPS)               Lvl II, III, IV, PPO    Base reference
+  California BSIS (DCA)             Guard Card, Firearm     40hr training (vs TX 6hr L2)
+                                    Permit, PPO             Exposed firearm permit separate
+  Florida   DOACS Div of Licensing  D License, G License    40hr Class D, 28hr Class G
+  New York  DOS                     Unarmed, Armed          47hr unarmed, 8hr OJT, annual
+  Illinois  IDFPR                   PERC card               20hr basic, 20hr firearm
+  Arizona   DPS                     Guard, Armed Guard      None/minimal training requirement
+  Georgia   GPSB                    Guard, Armed Guard      24hr basic, 8hr annual refresher
+  ...
+
+TRINITY USES THIS WHEN:
+  - Org expands to new state (what licenses do we need?)
+  - Employee transfers between states (what additional certs needed?)
+  - Compliance dashboard (are we legal in every state we operate?)
+  - RFP responses (demonstrating multi-state licensing)
+  - Contract proposals (pricing that accounts for state-specific compliance costs)
+```
+
+### MODULE: Use of Force Doctrine
+
+```
+KNOWLEDGE FILE: use_of_force_security.md
+
+CONTENTS:
+- Use of Force Continuum (Security-Specific):
+  1. Professional Presence (uniform, posture, demeanor)
+  2. Verbal Commands (clear, direct, de-escalation focused)
+  3. Soft Hand Control (escort holds, guided compliance)
+  4. Hard Hand Control (restraint techniques — ONLY if authorized by contract + licensing)
+  5. Intermediate Weapons (OC spray, baton — ONLY if licensed + authorized)
+  6. Deadly Force (firearm — ONLY Level III/IV, ONLY per Penal Code Chapter 9)
+
+- Key Legal Principles:
+  - Security officers are NOT law enforcement
+  - Citizen's arrest limitations by state
+  - Duty to retreat vs stand your ground (varies by state)
+  - Liability differences: company vs individual
+  - Report documentation requirements after any use of force
+  - When to call law enforcement vs handle independently
+
+- TABC-Specific (Texas Alcoholic Beverage Commission):
+  - 51% establishments (bars, clubs) — special rules
+  - Security at licensed premises — cannot be employed by the establishment 
+    as both security AND other roles simultaneously
+  - Intoxicated person handling procedures
+  - ID verification authority and limitations
+  - Ejection procedures and documentation
+  - Coordination with TABC enforcement
+
+TRINITY USES THIS WHEN:
+  - Training compliance verification
+  - Incident report review (was use of force appropriate per doctrine?)
+  - Post orders generation (site-specific force authorization levels)
+  - Contract proposals (specifying authorized force levels per site type)
+  - Legal risk assessment on incident reports
+  - Flagging incidents that may need legal counsel review
+```
+
+### MODULE: Tax Knowledge by State
+
+```
+KNOWLEDGE FILE: state_tax_security.md
+
+CONTENTS:
+
+PAYROLL TAXES (per state):
+  Federal (all states):
+    - Social Security: 6.2% (employer) + 6.2% (employee) up to wage base $168,600 (2025)
+    - Medicare: 1.45% each, no cap. Additional 0.9% employee above $200K
+    - FUTA: 6.0% on first $7,000/employee (effectively 0.6% after state credit)
+    
+  Texas:
+    - State income tax: NONE
+    - SUTA (unemployment): 0.31% - 6.31% on first $9,000/employee (rate varies by experience)
+    - Workers comp: NOT state-run, private insurance required
+      - Armed security rate: ~$8-15 per $100 payroll
+      - Unarmed security rate: ~$3-7 per $100 payroll
+      - PPO/executive protection: ~$12-20 per $100 payroll
+    
+  California:
+    - State income tax: 1% - 13.3% (progressive brackets)
+    - SDI (State Disability): 1.1% on first $153,164
+    - SUTA: 1.5% - 6.2% on first $7,000
+    - ETT (Employment Training Tax): 0.1% on first $7,000
+    
+  Florida:
+    - State income tax: NONE
+    - SUTA: varies on first $7,000
+    
+  New York:
+    - State income tax: 4% - 10.9%
+    - NYC additional: 3.078% - 3.876% (if operating in NYC)
+    - SDI: 0.511% up to $0.14/day
+    - PFL (Paid Family Leave): 0.455%
+
+SERVICE TAXES:
+  Texas:
+    - Security guard services ARE taxable under Texas Tax Code
+    - Sales tax rate: 6.25% state + up to 2% local = max 8.25%
+    - Must charge sales tax on invoices to clients
+    - Exception: government contracts may be exempt
+    
+  California:
+    - Security services generally NOT subject to sales tax
+    - (Services vs tangible goods distinction)
+    
+  Florida:
+    - Security services ARE taxable
+    - Rate: 6% state + up to 1.5% local
+    
+  New York:
+    - Security services ARE taxable
+    - Rate: 4% state + up to 4.875% local
+
+TRINITY USES THIS WHEN:
+  - Calculating payroll (correct withholdings per state)
+  - Generating invoices (add service tax where required)
+  - Estimating labor costs for proposals (total burden rate)
+  - P&L calculations (true cost per employee including all taxes + insurance)
+  - Multi-state operations (different rules per operating state)
+  - Financial forecasting
+  - Recommending pricing (must account for tax burden)
+```
+
+### MODULE: Pricing Economics
+
+```
+KNOWLEDGE FILE: security_pricing_economics.md
+
+CONTENTS:
+
+INDUSTRY STANDARD BILLING RATES (2025-2026):
+  Category                    Bill Rate Range     Typical Pay Rate     Target Margin
+  ─────────────────────────────────────────────────────────────────────────────────────
+  Unarmed Guard (standing)    $22 - $35/hr        $14 - $20/hr         35-45%
+  Unarmed Guard (patrol)      $25 - $40/hr        $15 - $22/hr         35-45%
+  Armed Guard (standing)      $30 - $50/hr        $18 - $28/hr         35-45%
+  Armed Guard (patrol)        $35 - $55/hr        $20 - $30/hr         35-45%
+  PPO / Executive Protection  $50 - $150/hr       $28 - $60/hr         40-55%
+  Event Security (unarmed)    $28 - $45/hr        $16 - $24/hr         35-50%
+  Event Security (armed)      $40 - $65/hr        $22 - $35/hr         35-50%
+  Loss Prevention             $25 - $38/hr        $15 - $22/hr         35-45%
+  Mobile Patrol               $35 - $55/visit     $18 - $25/hr         40-50%
+  Alarm Response              $45 - $85/response  $18 - $25/hr         50-65%
+  Fire Watch                  $28 - $45/hr        $15 - $22/hr         35-45%
+
+TRUE COST PER EMPLOYEE (Burden Rate Calculator):
+  Base hourly rate:                               $20.00
+  + Employer SS (6.2%):                           $1.24
+  + Employer Medicare (1.45%):                    $0.29
+  + FUTA (0.6% on first $7K):                    ~$0.04
+  + SUTA (varies, est 2.7% on first $9K):        ~$0.07
+  + Workers Comp (est $5 per $100 payroll):       $1.00
+  + General Liability Insurance (est 3%):         $0.60
+  + Uniform/Equipment amortized:                  $0.25
+  + Admin overhead (est 8%):                      $1.60
+  ─────────────────────────────────────────────────────
+  TRUE COST PER HOUR:                             $25.09
+  
+  To achieve 50% profit margin:
+    Bill rate = True Cost / (1 - Target Margin)
+    Bill rate = $25.09 / 0.50 = $50.18/hr
+
+  TRINITY FORMULA:
+    bill_rate = (base_pay × (1 + ss_rate + medicare_rate + futa_rate + suta_rate + 
+                 wc_rate + gl_rate + equipment_amort + admin_overhead)) / (1 - target_margin)
+
+TRINITY USES THIS WHEN:
+  - Generating proposals/quotes for new clients
+  - Recommending rate adjustments for existing contracts
+  - Analyzing client profitability (are we below our burden rate?)
+  - Cost of living adjustments (annual rate review)
+  - Drafting rate increase letters to clients
+  - Forecasting profitability for pipeline deals
+  - Comparing against competitor pricing
+```
+
+## 2C: Knowledge Base Storage
+
+```sql
+-- ═══════════════════════════════════════════════════
+-- TRINITY KNOWLEDGE BASE
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS trinity_knowledge_base (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Scope
+  scope VARCHAR(20) NOT NULL,
+  -- Scopes: 'global' (all orgs), 'state' (state-specific), 'org' (org-specific)
+  workspace_id UUID REFERENCES workspaces(id),     -- NULL for global/state scope
+  state_code VARCHAR(2),                            -- NULL for global/org scope
+  
+  -- Content
+  module_key VARCHAR(100) NOT NULL UNIQUE,          -- e.g., 'texas_security_1702', 'pricing_economics'
+  title VARCHAR(300) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  -- Categories: regulation, licensing, tax, pricing, use_of_force, labor_law,
+  --             insurance, contract_law, tabc, compliance, industry_standards
+  content TEXT NOT NULL,                             -- The actual knowledge content (markdown)
+  
+  -- Versioning
+  version INTEGER NOT NULL DEFAULT 1,
+  effective_date DATE,                               -- When this knowledge became valid
+  expiration_date DATE,                              -- When it expires (tax rates change annually)
+  
+  -- Metadata
+  source VARCHAR(300),                               -- Where this knowledge came from
+  last_verified_at TIMESTAMP,                        -- When was this last fact-checked
+  
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_kb_scope ON trinity_knowledge_base(scope, state_code);
+CREATE INDEX idx_kb_category ON trinity_knowledge_base(category);
+CREATE INDEX idx_kb_module ON trinity_knowledge_base(module_key);
+
+-- ═══════════════════════════════════════════════════
+-- ORG-SPECIFIC KNOWLEDGE (Learned from uploads + operations)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS trinity_org_knowledge (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  
+  -- What Trinity learned
+  knowledge_type VARCHAR(50) NOT NULL,
+  -- Types: uploaded_document, financial_pattern, operational_pattern,
+  --        client_relationship, employee_pattern, pricing_history,
+  --        expense_category, insurance_policy, contract_terms
+  
+  title VARCHAR(300) NOT NULL,
+  summary TEXT NOT NULL,                             -- Trinity's summary of what she learned
+  source_document_id UUID REFERENCES document_vault(id),  -- If learned from an upload
+  source_data_query TEXT,                            -- If learned from platform data
+  
+  -- The actual knowledge (structured)
+  knowledge_data JSONB NOT NULL,
+  -- Examples:
+  -- For insurance: {provider, policy_number, coverage_type, annual_premium, 
+  --                 per_employee_rate, expiration_date, deductible}
+  -- For workers_comp: {rate_per_100, classification_codes, carrier, annual_audit_date}
+  -- For pricing: {client, bill_rate, pay_rate, margin, last_adjusted, contract_term}
+  -- For pattern: {pattern_type, description, confidence, data_points, recommendation}
+  
+  -- Confidence and freshness
+  confidence_score DECIMAL(3,2) DEFAULT 0.80,        -- 0.00 to 1.00
+  last_validated_at TIMESTAMP,
+  expires_at TIMESTAMP,                              -- Knowledge may become stale
+  
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_org_knowledge ON trinity_org_knowledge(workspace_id, knowledge_type);
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 3: TRINITY TOOL REGISTRY — WHAT SHE CAN DO
+# ═══════════════════════════════════════════════════
+
+## 3A: Formal Tool Definitions
+
+Trinity needs a formal registry of tools she can invoke. Each tool has defined inputs, outputs, permissions, and credit costs. This is how the triad brain decides what to do — it picks from this toolbox.
+
+```typescript
+// server/trinity/tools/toolRegistry.ts
+
+const TRINITY_TOOLS = {
+
+  // ═══════════════════════════════════════
+  // DATABASE QUERY TOOLS (read-only)
+  // ═══════════════════════════════════════
+  
+  query_employees: {
+    description: "Query employee records for the workspace",
+    inputs: { filters: "role, status, certification, site, availability" },
+    outputs: "Employee records matching filters",
+    permissions: ["read_employees"],
+    creditCost: 0,
+    model: "database",  // No AI needed, direct DB query
+  },
+  
+  query_schedule: {
+    description: "Query shift schedule for date range",
+    inputs: { dateRange: "start/end dates", filters: "site, employee, status" },
+    outputs: "Shift records with assignments",
+    permissions: ["read_schedule"],
+    creditCost: 0,
+    model: "database",
+  },
+  
+  query_financials: {
+    description: "Query invoices, payroll, expenses, and P&L data",
+    inputs: { reportType: "revenue, expenses, payroll, profit_loss", dateRange: "period", groupBy: "client, employee, site" },
+    outputs: "Financial data aggregations",
+    permissions: ["read_financials"],
+    creditCost: 0,
+    model: "database",
+  },
+  
+  query_clock_records: {
+    description: "Query clock in/out records with GPS data",
+    inputs: { dateRange: "period", employee: "optional filter", site: "optional filter" },
+    outputs: "Clock records with hours, GPS, geofence status",
+    permissions: ["read_timekeeping"],
+    creditCost: 0,
+    model: "database",
+  },
+  
+  query_incidents: {
+    description: "Query incident reports",
+    inputs: { dateRange: "period", site: "optional", severity: "optional", status: "optional" },
+    outputs: "Incident records with details",
+    permissions: ["read_incidents"],
+    creditCost: 0,
+    model: "database",
+  },
+  
+  query_knowledge_base: {
+    description: "Search Trinity's knowledge base for regulatory, legal, or industry information",
+    inputs: { query: "search terms", category: "optional filter", state: "optional filter" },
+    outputs: "Relevant knowledge modules",
+    permissions: ["read_knowledge"],
+    creditCost: 0,
+    model: "database",
+  },
+  
+  query_org_knowledge: {
+    description: "Search org-specific learned knowledge (insurance, pricing, patterns)",
+    inputs: { workspaceId: "org", knowledgeType: "optional filter" },
+    outputs: "Org-specific knowledge entries",
+    permissions: ["read_org_knowledge"],
+    creditCost: 0,
+    model: "database",
+  },
+
+  // ═══════════════════════════════════════
+  // CALCULATION TOOLS (deterministic math)
+  // ═══════════════════════════════════════
+  
+  calculate_payroll: {
+    description: "Calculate payroll for employees in a given period",
+    inputs: { employeeIds: "list", period: "date range", state: "operating state" },
+    outputs: "Gross, OT, taxes, deductions, net per employee",
+    permissions: ["read_timekeeping", "read_employees"],
+    creditCost: 0,
+    model: "calculation",  // Deterministic math, no AI
+    logic: `
+      For each employee:
+        1. Sum regular hours (up to 40/week for TX, or 8/day for CA)
+        2. Sum overtime hours (above thresholds)
+        3. Gross = (regular_hours × rate) + (ot_hours × rate × 1.5) + (double_time × rate × 2.0)
+        4. Apply state tax tables
+        5. Apply federal tax tables (based on W-4 withholding elections)
+        6. Deduct SS (6.2%) + Medicare (1.45%)
+        7. Net = Gross - all deductions
+    `,
+  },
+  
+  calculate_burden_rate: {
+    description: "Calculate true cost per employee hour including all taxes, insurance, overhead",
+    inputs: { baseRate: "hourly pay", state: "operating state", classification: "armed/unarmed/ppo", overheadPercent: "org overhead" },
+    outputs: "True cost per hour, recommended bill rate at target margin",
+    permissions: ["read_org_knowledge"],
+    creditCost: 0,
+    model: "calculation",
+  },
+  
+  calculate_profitability: {
+    description: "Calculate profit margin per client, site, or contract",
+    inputs: { entityType: "client/site", entityId: "ID", period: "date range" },
+    outputs: "Revenue, labor cost, burden, margin, margin %, trend",
+    permissions: ["read_financials", "read_timekeeping"],
+    creditCost: 0,
+    model: "calculation",
+  },
+  
+  calculate_overtime_forecast: {
+    description: "Predict overtime liability for upcoming schedule",
+    inputs: { weekStartDate: "date" },
+    outputs: "Projected OT hours and cost per employee",
+    permissions: ["read_schedule", "read_employees"],
+    creditCost: 0,
+    model: "calculation",
+  },
+
+  calculate_invoice: {
+    description: "Calculate invoice total from time entries for a client/period",
+    inputs: { clientId: "client", period: "date range", includeTax: "boolean" },
+    outputs: "Line items, subtotal, tax (if applicable by state), total",
+    permissions: ["read_timekeeping", "read_clients"],
+    creditCost: 0,
+    model: "calculation",
+    logic: `
+      1. Query approved time entries for client in period
+      2. Group by employee and shift type
+      3. Apply bill rate per employee/position
+      4. Calculate subtotal
+      5. If state charges service tax (TX, FL, NY): apply rate
+      6. Total = subtotal + tax
+    `,
+  },
+
+  // ═══════════════════════════════════════
+  // AI ANALYSIS TOOLS (use credits)
+  // ═══════════════════════════════════════
+  
+  analyze_profitability: {
+    description: "Deep AI analysis of profitability with recommendations",
+    inputs: { scope: "org-wide or per-client", period: "date range" },
+    outputs: "Analysis narrative, risk flags, recommendations",
+    permissions: ["read_financials", "read_timekeeping", "read_org_knowledge"],
+    creditCost: 15,
+    model: "gemini_pro",  // Complex reasoning
+    fallback: "claude_sonnet",
+  },
+  
+  analyze_document: {
+    description: "Scan an uploaded document, extract key information, add to org knowledge",
+    inputs: { documentId: "vault document ID", documentType: "insurance/contract/license/financial" },
+    outputs: "Extracted data, summary, structured knowledge entry",
+    permissions: ["read_documents", "write_org_knowledge"],
+    creditCost: 10,
+    model: "claude_sonnet",  // Best at document comprehension
+    fallback: "gemini_pro",
+  },
+  
+  analyze_incident: {
+    description: "Polish raw incident report into professional format",
+    inputs: { incidentId: "incident report ID" },
+    outputs: "Polished report, legal flags, severity assessment",
+    permissions: ["read_incidents", "write_incidents"],
+    creditCost: 10,
+    model: "claude_sonnet",
+    fallback: "gemini_pro",
+  },
+  
+  analyze_compliance: {
+    description: "Check org compliance against state regulations",
+    inputs: { state: "operating state", scope: "licensing/training/documentation" },
+    outputs: "Compliance status, gaps, required actions, deadlines",
+    permissions: ["read_employees", "read_knowledge", "read_org_knowledge"],
+    creditCost: 8,
+    model: "gemini_pro",
+    fallback: "claude_sonnet",
+  },
+  
+  analyze_pricing: {
+    description: "Analyze if current pricing is appropriate given costs, market, margins",
+    inputs: { clientId: "optional — specific client or org-wide" },
+    outputs: "Current vs recommended rates, margin analysis, market comparison",
+    permissions: ["read_financials", "read_org_knowledge", "read_knowledge"],
+    creditCost: 12,
+    model: "gemini_pro",
+    fallback: "claude_sonnet",
+  },
+  
+  detect_patterns: {
+    description: "Analyze historical data to detect operational patterns",
+    inputs: { patternType: "attendance/overtime/turnover/revenue/incidents", period: "date range" },
+    outputs: "Detected patterns, confidence scores, predictions, recommendations",
+    permissions: ["read_all"],
+    creditCost: 15,
+    model: "gemini_pro",
+  },
+  
+  forecast_financials: {
+    description: "Project revenue, expenses, and profit for future periods",
+    inputs: { forecastMonths: "1-12", includeExpenses: "boolean" },
+    outputs: "Projected P&L, cash flow, risk factors",
+    permissions: ["read_financials", "read_org_knowledge", "read_schedule"],
+    creditCost: 15,
+    model: "gemini_pro",
+    fallback: "claude_sonnet",
+  },
+
+  // ═══════════════════════════════════════
+  // ACTION TOOLS (require human approval)
+  // ═══════════════════════════════════════
+  
+  draft_email: {
+    description: "Draft a professional email for manager review before sending",
+    inputs: { purpose: "rate_increase/collection/proposal/contract_renewal/etc", recipientContext: "client info", talking_points: "key arguments" },
+    outputs: "Draft email with subject line, saved as pending approval",
+    permissions: ["write_drafts"],
+    creditCost: 5,
+    model: "claude_sonnet",  // Best at persuasive writing
+    requiresApproval: true,
+    approvalRole: "manager",
+  },
+  
+  draft_proposal: {
+    description: "Generate a service proposal for a prospect or existing client",
+    inputs: { dealId: "pipeline deal or client", coveragePlan: "hours/positions/sites", rateStrategy: "calculated from burden rate" },
+    outputs: "Professional PDF proposal saved as draft",
+    permissions: ["write_documents", "read_org_knowledge", "read_knowledge"],
+    creditCost: 20,
+    model: "claude_sonnet",
+    requiresApproval: true,
+    approvalRole: "owner",
+  },
+  
+  draft_contract: {
+    description: "Generate a service contract from template + terms",
+    inputs: { templateId: "contract template", clientId: "client", terms: "rate, duration, scope" },
+    outputs: "Contract document ready for signing workflow",
+    permissions: ["write_documents"],
+    creditCost: 5,
+    model: "template_merge",  // Template fill, light AI for custom clauses
+    requiresApproval: true,
+    approvalRole: "owner",
+  },
+  
+  draft_rate_increase: {
+    description: "Draft a rate increase letter/email with strategic framing to minimize rejection",
+    inputs: { clientId: "client", currentRate: "$/hr", proposedRate: "$/hr", justification: "cost_of_living/insurance_increase/market_adjustment/expanded_scope" },
+    outputs: "Professionally framed rate increase letter",
+    permissions: ["write_drafts", "read_org_knowledge"],
+    creditCost: 8,
+    model: "claude_sonnet",
+    requiresApproval: true,
+    approvalRole: "owner",
+    strategy: `
+      Trinity uses persuasion best practices:
+      1. Lead with value delivered (hours served, incidents handled, problems prevented)
+      2. Show market context (industry rates, cost increases)
+      3. Frame as partnership (we want to maintain quality for you)
+      4. Present the number after the value case is made
+      5. Offer flexibility (phased increase, extended contract lock)
+      6. Never apologize for the increase — frame as investment in service quality
+    `,
+  },
+  
+  create_shift: {
+    description: "Create and assign a shift",
+    inputs: { date: "date", time: "start/end", siteId: "site", employeeId: "optional" },
+    outputs: "Shift created with notification sent",
+    permissions: ["write_schedule"],
+    creditCost: 3,
+    model: "gemini_flash",
+    requiresApproval: false,  // AI scheduling doesn't need per-shift approval
+  },
+  
+  generate_invoice: {
+    description: "Generate invoice from approved time entries",
+    inputs: { clientId: "client", period: "date range" },
+    outputs: "Invoice record created with line items",
+    permissions: ["write_invoices", "read_timekeeping"],
+    creditCost: 0,  // Financial operations are dollar fees, not credits
+    model: "calculation",
+    requiresApproval: false,  // Auto-invoicing toggle controls this
+  },
+  
+  send_notification: {
+    description: "Send notification to user(s)",
+    inputs: { recipients: "user IDs or roles", title: "string", body: "string", type: "info/warning/urgent" },
+    outputs: "Notification delivered",
+    permissions: ["write_notifications"],
+    creditCost: 0,
+    model: "system",
+    requiresApproval: false,
+  },
+  
+  spawn_bot: {
+    description: "Summon a specialized bot to handle a task",
+    inputs: { botType: "clock_bot/report_bot/meeting_bot/guard_bot/help_bot", context: "room/shift/incident/meeting" },
+    outputs: "Bot activated in context",
+    permissions: ["manage_bots"],
+    creditCost: 0,  // Bot actions have their own credit costs
+    model: "system",
+    requiresApproval: false,
+  },
+  
+  add_to_org_knowledge: {
+    description: "Store a new piece of learned knowledge for the org",
+    inputs: { knowledgeType: "type", title: "string", data: "structured data" },
+    outputs: "Knowledge entry created",
+    permissions: ["write_org_knowledge"],
+    creditCost: 0,
+    model: "system",
+    requiresApproval: false,
+  },
+};
+```
+
+## 3B: Tool Invocation Pattern
+
+When Trinity needs to act, the triad brain works like this:
+
+```
+USER OR EVENT TRIGGERS TRINITY
+         │
+         ▼
+┌─────────────────────────────────────────────────┐
+│  GEMINI (Brain/Orchestrator — "Thought" model)  │
+│                                                  │
+│  1. Understand the request/event                │
+│  2. Determine what tools are needed             │
+│  3. Plan the sequence of tool calls             │
+│  4. Execute tools in order                      │
+│  5. Synthesize results                          │
+│                                                  │
+│  "I need to respond to a rate increase request. │
+│   Step 1: query_financials (get client margins) │
+│   Step 2: query_org_knowledge (get insurance $) │
+│   Step 3: calculate_burden_rate (true cost)     │
+│   Step 4: analyze_pricing (market comparison)   │
+│   Step 5: draft_rate_increase (compose letter)  │
+│   Step 6: Queue for owner approval"             │
+└──────────────┬──────────────────────────────────┘
+               │
+               │ If complex decision or ambiguity:
+               ▼
+┌─────────────────────────────────────────────────┐
+│  CLAUDE (Judge — Complex Reasoning)              │
+│                                                  │
+│  Reviews Gemini's plan and output:              │
+│  - Is the rate increase justified by the data?  │
+│  - Are there legal concerns with the framing?   │
+│  - Is the tone appropriate for this client?     │
+│  - Should we offer alternatives?                │
+│                                                  │
+│  "The proposed 12% increase is aggressive for   │
+│   a client who's been with us 3 years. Suggest  │
+│   phased approach: 6% now, 6% in 6 months.     │
+│   Also, their contract renewal is in 60 days —  │
+│   time the letter to coincide with renewal."    │
+└──────────────┬──────────────────────────────────┘
+               │
+               │ For simple/routine execution:
+               ▼
+┌─────────────────────────────────────────────────┐
+│  GPT (Grunt Work — Execution)                    │
+│                                                  │
+│  Handles routine tasks delegated by Gemini:     │
+│  - Data formatting                              │
+│  - Simple text generation                       │
+│  - Template filling                             │
+│  - Notification composition                     │
+│  - Basic summarization                          │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 4: DOCUMENT INGESTION — TRINITY LEARNS FROM UPLOADS
+# ═══════════════════════════════════════════════════
+
+## 4A: Upload → Scan → Learn → Store
+
+When an org owner uploads a document, Trinity doesn't just file it — she reads it, extracts data, and adds it to her org-specific knowledge.
+
+```
+UPLOAD FLOW:
+
+  Owner uploads "2026 Workers Comp Policy.pdf"
+       │
+       ▼
+  File stored in Document Vault
+  (workspace_id, category: insurance, uploaded_by: owner)
+       │
+       ▼
+  Trinity Document Analyzer triggered (10 credits)
+       │
+       ▼
+  Claude Sonnet reads the full document and extracts:
+  {
+    knowledge_type: "insurance_policy",
+    title: "Workers Compensation Policy 2026",
+    summary: "Texas Mutual policy #WC-2026-44781, effective 1/1/2026 - 12/31/2026",
+    knowledge_data: {
+      carrier: "Texas Mutual Insurance Company",
+      policy_number: "WC-2026-44781",
+      effective_date: "2026-01-01",
+      expiration_date: "2026-12-31",
+      classification_codes: [
+        { code: "7382", description: "Guard - Armed", rate_per_100: 8.52 },
+        { code: "7382", description: "Guard - Unarmed", rate_per_100: 4.23 },
+        { code: "8742", description: "Supervisor/Manager", rate_per_100: 1.15 }
+      ],
+      annual_premium: 28500,
+      deductible: 1000,
+      experience_modifier: 0.95,
+      annual_payroll_estimate: 650000,
+      audit_date: "2027-02-15"
+    },
+    confidence_score: 0.92,
+    expires_at: "2026-12-31"
+  }
+       │
+       ▼
+  Stored in trinity_org_knowledge
+       │
+       ▼
+  Trinity can now:
+  - Use WC rates in burden rate calculations
+  - Alert 60 days before policy expiration
+  - Include accurate WC costs in proposals
+  - Factor into P&L and profitability analysis
+  - Reference policy number in compliance reports
+```
+
+**Document types Trinity should learn from:**
+
+```
+DOCUMENT TYPE              WHAT TRINITY EXTRACTS                   USE CASE
+───────────────────────────────────────────────────────────────────────────────────
+Workers Comp Policy        Rates by classification, carrier,       Burden rate, proposals, P&L
+                           premium, experience mod, audit date
+General Liability Policy   Coverage limits, premium, carrier,      Risk assessment, proposals
+                           deductible, exclusions
+Vehicle Insurance          Coverage, vehicles covered, rates       Fleet cost tracking
+Business License           License #, expiration, state            Compliance monitoring
+Client Contract            Terms, rates, duration, renewal date    Revenue forecasting, alerts
+Employee Agreements        Pay rate, terms, signed date            Wage claim defense, HR
+Lease/Rent Agreements      Monthly cost, term, address             Overhead tracking
+Equipment Invoices         What was bought, cost, warranty         Asset tracking, depreciation
+Tax Returns (prev year)    Revenue, expenses, profit, tax paid     Forecasting, benchmarking
+Vendor Contracts           Vendor, service, cost, term             Expense tracking
+Training Certificates      Employee, cert type, expiration         Compliance tracking
+State License              Company license #, type, expiration     Regulatory compliance
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 5: FULL PLATFORM EVENT AWARENESS
+# ═══════════════════════════════════════════════════
+
+## 5A: The Event Bus
+
+Every action on the platform emits an event that Trinity can observe and optionally act on:
+
+```typescript
+// server/trinity/eventBus.ts
+
+// Every service publishes events to this bus
+// Trinity subscribes and decides what to do
+
+const PLATFORM_EVENTS = {
+  // Time & Attendance
+  'clock.in':                   { data: 'employee, shift, gps, timestamp' },
+  'clock.out':                  { data: 'employee, shift, gps, timestamp, total_hours' },
+  'clock.late':                 { data: 'employee, shift, minutes_late' },
+  'clock.missed':               { data: 'employee, shift' },
+  'clock.geofence_violation':   { data: 'employee, shift, distance_from_site' },
+  
+  // Scheduling
+  'shift.created':              { data: 'shift, site, created_by' },
+  'shift.assigned':             { data: 'shift, employee, assigned_by' },
+  'shift.unassigned':           { data: 'shift, employee, reason' },
+  'shift.conflict_detected':    { data: 'employee, conflicting_shifts' },
+  'shift.open_unfilled':        { data: 'shift, site, hours_until_start' },
+  
+  // Financial
+  'invoice.created':            { data: 'invoice, client, amount' },
+  'invoice.paid':               { data: 'invoice, client, amount, payment_date' },
+  'invoice.overdue':            { data: 'invoice, client, days_overdue, amount' },
+  'payroll.run_completed':      { data: 'payroll_run, total_gross, total_net, employee_count' },
+  'expense.submitted':          { data: 'expense, employee, amount, category' },
+  'credit.balance_low':         { data: 'workspace, balance, threshold' },
+  'credit.depleted':            { data: 'workspace' },
+  
+  // Incidents & Reports
+  'incident.submitted':         { data: 'incident, officer, site, severity' },
+  'incident.high_severity':     { data: 'incident, officer, site' },
+  'daily_report.submitted':     { data: 'report, officer, shift' },
+  
+  // Communication
+  'message.sent':               { data: 'message, sender, room, content_preview' },
+  'shift_room.created':         { data: 'room, shift, site' },
+  'shift_room.closed':          { data: 'room, shift, message_count, photo_count' },
+  
+  // Employee
+  'employee.added':             { data: 'employee, workspace' },
+  'employee.deactivated':       { data: 'employee, reason' },
+  'employee.cert_expiring':     { data: 'employee, cert_type, expiration_date' },
+  'behavior_score.changed':     { data: 'employee, old_score, new_score, reason' },
+  
+  // Documents
+  'document.uploaded':          { data: 'document, uploader, category' },
+  'document.signed':            { data: 'document, signer' },
+  'contract.expiring':          { data: 'contract, client, days_until_expiry' },
+  
+  // Pipeline
+  'deal.stage_changed':         { data: 'deal, old_stage, new_stage' },
+  'deal.rfp_due_approaching':   { data: 'deal, days_until_due' },
+  
+  // System
+  'integration.sync_failed':    { data: 'integration_type, error' },
+  'health_check.issues_found':  { data: 'issues_list' },
+};
+```
+
+## 5B: Trinity Event Handlers
+
+Trinity subscribes to events and decides what action to take:
+
+```typescript
+// server/trinity/eventHandlers.ts
+
+trinityEventBus.on('invoice.overdue', async (event) => {
+  const { invoice, client, days_overdue, amount } = event.data;
+  
+  if (days_overdue === 30) {
+    // First reminder — gentle
+    await trinity.executeAction({
+      tool: 'draft_email',
+      inputs: {
+        purpose: 'payment_reminder',
+        recipientContext: client,
+        talking_points: [`Invoice #${invoice.number}`, `$${amount} outstanding`, `30 days past due`],
+      },
+      requiresApproval: true,
+      approvalRole: 'manager',
+    });
+  }
+  
+  if (days_overdue === 45) {
+    // Second notice — formal
+    await trinity.executeAction({
+      tool: 'draft_email',
+      inputs: {
+        purpose: 'formal_collection_notice',
+        recipientContext: client,
+        talking_points: [`Final notice before escalation`, `Service may be affected`],
+      },
+      requiresApproval: true,
+      approvalRole: 'owner',
+    });
+  }
+  
+  if (days_overdue === 60) {
+    // Alert owner — recommend service suspension discussion
+    await trinity.executeAction({
+      tool: 'send_notification',
+      inputs: {
+        recipients: ['owner'],
+        title: `Client ${client.name}: $${amount} overdue 60 days`,
+        body: `Recommend scheduling a call to discuss payment or service adjustment. Trinity can draft a service suspension notice if needed.`,
+        type: 'urgent',
+      },
+    });
+  }
+});
+
+trinityEventBus.on('document.uploaded', async (event) => {
+  const { document, category } = event.data;
+  
+  // Auto-analyze uploaded documents to learn from them
+  const learnableCategories = ['insurance', 'contract', 'license', 'financial', 'compliance'];
+  
+  if (learnableCategories.includes(category)) {
+    await trinity.executeAction({
+      tool: 'analyze_document',
+      inputs: { documentId: document.id, documentType: category },
+      creditCost: 10,
+    });
+  }
+});
+
+trinityEventBus.on('contract.expiring', async (event) => {
+  const { contract, client, days_until_expiry } = event.data;
+  
+  if (days_until_expiry === 90) {
+    // Start renewal process early
+    const profitability = await trinity.executeTool('calculate_profitability', {
+      entityType: 'client', entityId: client.id, period: 'last_12_months',
+    });
+    
+    if (profitability.margin_percent < 25) {
+      // Recommend rate increase with renewal
+      await trinity.executeAction({
+        tool: 'analyze_pricing',
+        inputs: { clientId: client.id },
+      });
+    }
+    
+    await trinity.executeAction({
+      tool: 'send_notification',
+      inputs: {
+        recipients: ['owner', 'manager'],
+        title: `Contract Renewal: ${client.name} expires in 90 days`,
+        body: `Current margin: ${profitability.margin_percent}%. ${profitability.margin_percent < 25 ? 'Rate increase recommended.' : 'Margins healthy.'} Trinity can draft a renewal proposal.`,
+        type: 'info',
+      },
+    });
+  }
+});
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 6: APPROVAL GATES — TRINITY NEVER ACTS ALONE ON BIG DECISIONS
+# ═══════════════════════════════════════════════════
+
+## 6A: Approval Tiers
+
+```
+TIER 0 — NO APPROVAL NEEDED (automated freely):
+  - Read/query data
+  - Send notifications
+  - Create schedule shifts (within normal parameters)
+  - Record financial processing fees
+  - Log audit trail entries
+  - Spawn monitoring bots
+  - Calculate payroll/invoices (the math)
+  - Detect patterns and anomalies
+
+TIER 1 — MANAGER APPROVAL:
+  - Send emails to clients
+  - Approve/reject incident reports
+  - Process payroll (after calculation)
+  - Generate and send invoices
+  - Daily report polishing
+  
+TIER 2 — OWNER APPROVAL:
+  - Rate increase proposals
+  - Contract generation
+  - Service proposals
+  - Client communications about money
+  - Service suspension/termination notices
+  - RFP responses
+  - Pricing changes
+  - Any action involving legal commitment
+
+TIER 3 — HUMAN REVIEW ONLY (Trinity recommends, never acts):
+  - Terminate employee
+  - Accept new client
+  - Change insurance providers
+  - Sign contracts
+  - Legal responses
+  - Regulatory filings
+```
+
+## 6B: Approval Queue UI
+
+```
+TRINITY DRAFTS (Pending Approval):
+┌─────────────────────────────────────────┐
+│ Trinity Drafts           5 pending      │
+├─────────────────────────────────────────┤
+│ ✉️ Rate Increase — Grand Plaza Hotel    │
+│   Trinity recommends 8% increase        │
+│   Current margin: 18.2% (below target)  │
+│   [Review Draft] [Approve & Send]       │
+│   [Edit] [Reject]                       │
+├─────────────────────────────────────────┤
+│ 📄 Renewal Proposal — North Star DC     │
+│   Contract expires in 87 days           │
+│   Trinity drafted 2-year renewal        │
+│   [Review Draft] [Approve] [Edit]       │
+├─────────────────────────────────────────┤
+│ 📊 Pricing Analysis                     │
+│   3 clients below 20% margin            │
+│   Trinity recommends rate adjustments   │
+│   [View Analysis] [Take Action]         │
+└─────────────────────────────────────────┘
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 7: PERSISTENT ORG MEMORY — TRINITY LEARNS AND GROWS
+# ═══════════════════════════════════════════════════
+
+## 7A: What Trinity Remembers Per Org
+
+Over time, Trinity builds an increasingly detailed understanding of each org:
+
+```
+ORG MEMORY CATEGORIES:
+
+  FINANCIAL PATTERNS:
+    - Average monthly revenue and trend direction
+    - Seasonal revenue patterns (holiday season, event season)
+    - Which clients pay on time vs chronically late
+    - Average DSO (days sales outstanding) per client
+    - Payroll as percentage of revenue (trending up or down?)
+    - Which expense categories are growing
+    - True profit margin after ALL costs
+    
+  OPERATIONAL PATTERNS:
+    - Which shifts are hardest to fill (time, site, requirements)
+    - Employee reliability scores over time
+    - Turnover rate and common departure reasons
+    - Peak hiring seasons
+    - Sites with most incidents
+    - Average response time to open shifts
+    - Overtime patterns (which employees, which weeks, why)
+    
+  CLIENT PATTERNS:
+    - Communication preferences per client (email, phone, portal)
+    - Contract renewal success rate
+    - Client complaint history and resolution
+    - Payment behavior history
+    - Service expansion/contraction trends
+    - Relationship health score per client
+    
+  EMPLOYEE PATTERNS:
+    - Individual reliability trends
+    - Skill development trajectory
+    - Certification expiration cycles
+    - Preferred sites/shifts per employee
+    - Overtime triggers per employee
+    - Flight risk indicators (declining engagement, frequent calloffs)
+```
+
+## 7B: How Memory Builds
+
+Trinity's memory isn't pre-programmed — it emerges from observing the event stream:
+
+```typescript
+// After processing events for 90 days, Trinity can say:
+
+"Grand Plaza Hotel consistently pays invoices 15-20 days late. Their DSO is 
+45 days vs your org average of 22 days. However, they've never defaulted 
+and represent $18K/month in revenue. Recommendation: Add a 2% early payment 
+discount to their next contract renewal to incentivize faster payment."
+
+// After processing 6 months of schedule data:
+
+"Thursday evening shifts at Pinnacle Tower have a 34% calloff rate — 
+significantly higher than the 12% org average. The pattern correlates with 
+employees who also have Friday morning shifts elsewhere, suggesting scheduling 
+fatigue. Recommendation: Either make Thursday evenings standalone shifts or 
+assign dedicated Thursday-night officers who don't have Friday mornings."
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 8: WHAT NEEDS TO BE BUILT
+# ═══════════════════════════════════════════════════
+
+## Ordered by Foundation → Features → Intelligence:
+
+```
+PHASE 1 — FOUNDATION (Week 1-2):
+  □ Create trinity_knowledge_base table
+  □ Create trinity_org_knowledge table
+  □ Seed static knowledge modules (TX Ch. 1702, tax tables, pricing economics, 
+    use of force, multi-state licensing)
+  □ Create tool registry with all tool definitions
+  □ Create event bus infrastructure
+  □ Wire existing services to emit events
+
+PHASE 2 — TOOL WIRING (Week 2-3):
+  □ Implement calculation tools (payroll, burden rate, profitability, invoice, OT forecast)
+  □ Implement database query tools (employees, schedule, financials, clock, incidents)
+  □ Implement knowledge query tools (static KB + org knowledge)
+  □ Wire tools into Trinity orchestrator so triad brain can invoke them
+  □ Test each tool independently with real data
+
+PHASE 3 — DOCUMENT INGESTION (Week 3-4):
+  □ Build document analyzer (upload → Claude reads → extracts structured data)
+  □ Build knowledge storage pipeline (extracted data → trinity_org_knowledge)
+  □ Support insurance policies, contracts, licenses, financial documents
+  □ Auto-trigger analysis when documents are uploaded to vault
+  □ Expiration tracking from extracted dates
+
+PHASE 4 — ACTION ENGINE (Week 4-5):
+  □ Build draft_email tool with strategic framing
+  □ Build draft_rate_increase tool with persuasion strategy
+  □ Build draft_proposal tool integrated with burden rate calculator
+  □ Build approval queue UI for Trinity drafts
+  □ Wire approval flow: Trinity drafts → queue → human reviews → approve/edit/reject → execute
+
+PHASE 5 — EVENT AWARENESS (Week 5-6):
+  □ Wire all platform services to emit events to event bus
+  □ Build Trinity event handlers for key events
+  □ Implement escalation chains (invoice overdue → 30/45/60 day responses)
+  □ Implement contract expiration watchers
+  □ Implement certification expiration watchers
+  □ Implement profitability alerts
+
+PHASE 6 — PATTERN LEARNING (Week 6-8):
+  □ Build pattern detection engine (runs weekly/monthly)
+  □ Detect financial patterns (revenue trends, margin trends, payment patterns)
+  □ Detect operational patterns (calloff rates, OT patterns, fill difficulty)
+  □ Detect employee patterns (reliability trends, flight risk)
+  □ Store patterns in trinity_org_knowledge with confidence scores
+  □ Surface patterns as Trinity Insights in notifications and dashboard
+```
+
+---
+
+END OF TRINITY INTELLIGENCE ARCHITECTURE v1.0
+
+Trinity has the brain. This spec gives her the knowledge, the tools, the eyes, the ears, 
+and the hands — with human approval on every consequential action.

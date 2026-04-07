@@ -1,0 +1,455 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 33 — STATE REGULATORY AUDITOR PARTNER PORTAL**
+
+This is the most strategically important phase in the entire build. The Regulatory Auditor Partner Portal is CoAIleague's path to official partnerships with state regulatory bodies — starting with Texas DPS and TCOLE and expanding to all 57 states in the knowledge base. A state auditor who can conduct a full, verified, frictionless, legally defensible audit through CoAIleague is a state auditor who recommends CoAIleague to every security company they regulate. This portal must be world-class — secure, precise, legally compliant, and purpose-built for regulatory work. No shortcuts. No compromises. Report all findings before fixing anything.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check. Specific evidence per row. Every row green before Phase 33 closes.
+
+**7-STEP FRAMEWORK — applies to every feature built in this phase:**
+1. Trigger — action fires correctly
+2. Payload — correct data assembled and validated
+3. API — correct endpoint, correct auth, correct workspace scope
+4. Processing — server validates and executes correctly
+5. Persistence — correct DB write with audit record
+6. Confirmation — UI updates correctly in success and error states
+7. Sync — changes propagate in real time where applicable
+
+**5 MANDATORY QUALITY CHECKS — run before reconciliation table:**
+1. TypeScript: `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -30` — zero errors
+2. Import completeness — all hooks and utilities imported in every modified component
+3. State variable declarations — no undeclared variables
+4. Schema alignment — client expects exactly what server returns
+5. Server startup — ArchLinter passed, zero runtime errors
+
+---
+
+**STEP 1 — CURRENT STATE INVENTORY**
+
+Before touching anything inventory everything that currently exists for the SRA portal:
+- Any existing auditor authentication system
+- Any existing regulatory portal routes or pages
+- Current `stateRegulatoryKnowledgeBase` — what states, what fields, what audit requirements
+- Any existing SRA account type or schema
+- What the Phase 20 auditor portal currently covers
+- What Phase 21 compliance portal currently covers
+- What gaps exist between what exists and what is required
+
+Produce a complete gap list before writing a single line of new code.
+
+---
+
+**STEP 2 — SRA ACCOUNT ARCHITECTURE**
+
+State Regulatory Authority accounts are a completely separate account type — not workspace users, not platform staff, not officers:
+
+**Schema — create `sra_accounts` table:**
+- `id` — uuid primary key
+- `badge_number` — text, unique, required
+- `full_legal_name` — text, required
+- `regulatory_body` — text (e.g. Texas DPS, FDLE, BSIS, DCJS)
+- `state_code` — text, references state knowledge base
+- `government_email` — text, unique, verified
+- `authorization_letter_url` — document vault reference, required before activation
+- `government_id_url` — document vault reference, required before activation
+- `status` — enum: pending_verification, active, suspended, expired
+- `credential_hash` — bcrypt hash of issued password
+- `two_factor_secret` — TOTP secret for mandatory 2FA
+- `verified_by` — platform staff user_id who approved the account
+- `verified_at` — timestamp
+- `created_at`, `updated_at`
+
+**Schema — create `sra_audit_sessions` table:**
+- `id` — uuid primary key
+- `sra_account_id` — foreign key
+- `workspace_id` — the specific company being audited
+- `state_code` — the state jurisdiction of this audit
+- `audit_period_start`, `audit_period_end` — timestamps bounding the audit scope
+- `authorization_letter_url` — the specific authorization for this audit
+- `status` — enum: active, completed, expired, revoked
+- `session_token` — secure random token for session authentication
+- `token_expires_at` — timestamp
+- `created_at`, `closed_at`
+
+**Schema — create `sra_audit_log` table:**
+- Every action taken by an SRA auditor logged immutably
+- `id`, `session_id`, `sra_account_id`, `workspace_id`, `action_type`, `resource_type`, `resource_id`, `ip_address`, `user_agent`, `timestamp`
+- No UPDATE or DELETE permitted on this table — append-only
+
+**Schema — create `sra_findings` table:**
+- `id` — uuid primary key
+- `session_id` — foreign key to sra_audit_sessions
+- `workspace_id` — company being audited
+- `finding_type` — enum: observation, violation, citation, enforcement_action, commendation
+- `severity` — enum: informational, minor, moderate, major, critical
+- `occupation_code_reference` — specific Texas Occupations Code section or equivalent state law reference
+- `description` — detailed finding description
+- `evidence_urls` — array of document vault references (letters, photos, exhibits)
+- `recommended_action` — what the company must do
+- `compliance_deadline` — date by which action must be taken
+- `fine_amount` — decimal, if applicable
+- `payment_instructions` — text, how to pay any assessed fines
+- `follow_up_required` — boolean
+- `follow_up_date` — timestamp
+- `status` — enum: open, acknowledged, under_review, remediated, closed, appealed
+- `created_at`, `updated_at`, `closed_at`
+
+**Schema — create `sra_enforcement_documents` table:**
+- Tracks all official documents issued during an audit
+- `id`, `session_id`, `workspace_id`, `document_type` (citation, enforcement_order, compliance_directive, notice_of_violation, commendation_letter), `document_url`, `issued_at`, `issued_by_sra_id`, `acknowledged_by_workspace_at`, `sha256_hash`
+
+---
+
+**STEP 3 — SRA IDENTITY VERIFICATION FLOW**
+
+Every SRA auditor must be verified before receiving credentials:
+
+**Verification request flow:**
+1. SRA auditor submits verification request at `/regulatory-audit/apply` — completely separate from main platform login
+2. Required fields: full legal name, badge number, regulatory body, state, government email, audit scope (company name, period, license types)
+3. Required documents: authorization letter upload (PDF), government-issued ID upload (PDF or image)
+4. Trinity receives the submission package and runs automated verification:
+   - Confirms regulatory body exists in `stateRegulatoryKnowledgeBase`
+   - Validates authorization letter format against known regulatory document templates for that state
+   - Extracts audit scope fields (company, period, jurisdiction) via document parsing
+   - Cross-references badge number format against state-specific badge patterns
+   - Scores verification confidence: HIGH / MEDIUM / LOW / UNVERIFIABLE
+   - Flags specific inconsistencies with plain-language explanation
+5. Trinity's analysis presented to platform staff for final review
+6. Platform staff approves or denies with documented reason
+7. On approval: SRA account created, credentials issued via secure email to government address only
+8. Credentials: username format `SRA-[StateCode]-[BadgeNumber]`, temporary password, mandatory TOTP 2FA setup required on first login
+9. Audit session created with scope from authorization letter
+10. Org_owner of the audited workspace notified via NDS: auditor identity, badge number, regulatory body, audit period, stated purpose
+
+---
+
+**STEP 4 — SRA AUTHENTICATION SYSTEM**
+
+Dedicated authentication — completely separate from main platform:
+
+**Login portal at `/regulatory-audit/login`:**
+- Username and password fields
+- TOTP code field (mandatory — no bypass)
+- No "forgot password" self-service — must contact platform staff
+- Failed login attempts locked after 3 attempts — 30-minute lockout
+- Every login attempt logged regardless of success or failure
+- Successful login creates a time-bounded session scoped to the authorized workspace only
+- Session duration matches authorization letter period — cannot exceed it
+- Session shows: auditor name, badge number, company being audited, audit period remaining, days until session expires
+
+**Session security:**
+- Session token stored in httpOnly secure cookie — not localStorage
+- Session validated on every request — not cached client-side
+- Concurrent sessions from different IPs flagged and logged
+- Session revocable by platform staff at any time
+- Automatic session expiry at audit period end — not just at token expiry
+
+---
+
+**STEP 5 — SRA READ-ONLY DATA ACCESS**
+
+What auditors can see — precisely scoped to their authorization:
+
+**Permitted data — all read-only:**
+
+Officer roster view:
+- Full name, badge/employee number, hire date, position/title
+- DPS license number, license type, license expiration date, license status
+- Armed/unarmed designation
+- Active certifications with expiration dates
+- Post assignments during audit period
+- Training hours and TCOLE compliance status
+- Background check submission status (not results — DPS handles results)
+
+Compliance records:
+- Compliance violations during audit period — type, severity, date, resolution status
+- Compliance reports generated during audit period
+- License expiry alerts that fired during audit period
+
+Incident reports:
+- All incidents during audit period for the company's posts
+- Incident type, severity, date, location, responding officer, resolution status
+
+Document vault (filtered):
+- Onboarding documents — officer agreements, policy acknowledgments
+- License and certification documents
+- Training completion records
+- Post orders and site-specific instructions
+- Compliance correspondence
+
+Schedule and service records:
+- Shift logs for audit period — officer, post, scheduled times, actual clock-in/out, hours worked
+- GPS clock-in records — officer was on post at required times
+- Proof of service records — timestamps, GPS coordinates, photos if applicable
+- Open shifts and calloff records during audit period
+
+**Strictly prohibited — never accessible:**
+- Payroll amounts, pay rates, salary information
+- Bank account or direct deposit information
+- Personal financial records
+- SSN or tax identification numbers
+- Internal platform communications between staff
+- Other workspaces' data — complete isolation
+- Platform configuration or system settings
+- Any data outside the authorized audit period
+
+---
+
+**STEP 6 — SRA FINDINGS AND ENFORCEMENT SYSTEM**
+
+This is what makes CoAIleague a true regulatory partner — not just a viewer but a full audit management system:
+
+**Finding creation:**
+- Auditor creates a finding from any data view — contextual "Flag This" button on any record
+- Finding form: type, severity, occupation code reference, description, recommended action, compliance deadline, fine amount if applicable, payment instructions, follow-up required and date
+- Evidence attachment: auditor can upload letters of enforcement, citations, photos, exhibits directly — stored in SRA enforcement documents vault with SHA-256 hash
+- Finding linked to specific records (officer, post, incident, document) that triggered it
+
+**Finding types and their workflows:**
+
+**Observation** — informational note, no action required from company
+- Visible to compliance officer immediately
+- No response deadline
+- Automatically closed when audit session closes
+
+**Violation** — regulatory requirement not met
+- NDS notification to org_owner and compliance officer immediately
+- Response required within finding's compliance_deadline
+- Company must acknowledge and submit remediation plan
+- Auditor reviews remediation — can accept or request additional action
+- Finding closes when auditor marks remediated and satisfied
+
+**Citation** — formal citation issued under state occupation code
+- Specific occupation code section referenced (e.g. Texas Occupations Code §1702.XXX)
+- Fine amount specified with payment instructions
+- Hard compliance deadline — non-negotiable
+- Company must: acknowledge within 48 hours, submit payment plan or payment, submit remediation evidence by deadline
+- Non-response triggers escalation alert to platform staff and auditor
+
+**Enforcement Action** — most severe — license suspension or revocation recommendation
+- Requires platform staff notification immediately
+- Company org_owner and compliance officer notified via NDS with urgency flag
+- Trinity conscience flags all scheduling activity for this workspace pending resolution
+- Company can submit appeal via platform
+- Audit session stays open until enforcement action is resolved
+
+**Commendation** — positive finding — company exceeds compliance requirements
+- Visible in company public profile as a compliance achievement badge
+- Archived as a positive compliance record
+
+**Finding status progression:**
+`open → acknowledged → under_review → remediated → closed` or `open → appealed → under_review → closed`
+
+Every status change logged in `sra_audit_log` with actor and timestamp.
+
+---
+
+**STEP 7 — COMPANY RESPONSE SYSTEM**
+
+The audited company must be able to respond to findings within the platform:
+
+**Company-side finding view:**
+- All findings from the current audit visible to org_owner and compliance officer
+- Each finding shows: type, severity, occupation code, description, deadline, fine amount, payment instructions, required actions
+- Countdown timer visible for each finding with a deadline — turns amber at 7 days remaining, red at 3 days, critical at 24 hours
+
+**Company response actions:**
+- Acknowledge finding — required within 48 hours of citation or enforcement action
+- Submit remediation evidence — upload corrective action documents, photos, training records, payment receipts
+- Submit payment confirmation — reference number, amount, payment method, date
+- Submit appeal — with written explanation and supporting evidence
+- Request extension — with justification (auditor must approve)
+
+**Communication thread:**
+- Each finding has a structured message thread between auditor and company
+- Company and auditor can exchange messages within the platform — not email
+- All messages logged immutably as part of the audit record
+- Trinity monitors the thread — can surface relevant compliance data if auditor requests it during conversation
+
+---
+
+**STEP 8 — AUDIT CLOSURE AND EVIDENCE PACKAGE**
+
+Every audit must have a formal close:
+
+**Audit closure process:**
+- Auditor reviews all findings — confirms each is in a terminal state (closed, appealed, or formally escalated)
+- Auditor marks audit as complete
+- System generates the final evidence package automatically:
+  - Cover page: auditor name, badge, regulatory body, company audited, audit period, closure date
+  - Summary of all findings by type and severity
+  - For each finding: full detail, evidence attachments, company response, resolution timeline
+  - Data accessed log: every record the auditor viewed during the audit
+  - Action log: every action taken during the audit with timestamps
+  - SHA-256 integrity hash of the complete package
+- Evidence package generated as a PDF with digital signature
+- CoAIleague retains a copy in the SRA vault — immutable, never deletable
+- Company (org_owner) receives a copy automatically via NDS
+- Auditor receives a copy via secure download link
+- Audit session transitions to `completed` status — no further access
+
+**Post-closure:**
+- Closed audit visible to compliance officer in read-only mode indefinitely
+- Future auditors of the same company can see prior audit summary (not full detail) — shows closure date, finding count by type, and overall compliance rating
+- Compliance rating calculated: percentage of findings remediated vs total, weighted by severity
+- Compliance rating displayed on company's public profile as a trust signal for potential clients
+
+---
+
+**STEP 9 — MULTI-STATE REGULATORY SUPPORT**
+
+Every state's regulatory requirements are different:
+
+**State-specific audit fields:**
+- `stateRegulatoryKnowledgeBase` defines for each state: required officer fields for audit, required document types, citation format, occupation code reference format, regulatory body contact information, audit standard procedures
+- SRA portal renders only the fields required by the auditor's state — Texas DPS sees Texas-required fields, FDLE sees Florida-required fields
+- Occupation code autocomplete in finding form pulls from the correct state's code sections
+- Fine calculation follows state-specific schedules where defined
+- Compliance deadline defaults follow state regulatory standards
+
+**Cross-state audits:**
+- A company operating in multiple states may be audited by auditors from multiple states simultaneously
+- Each auditor's session is scoped to their state's jurisdiction — they see only their state's relevant records
+- Company compliance officer sees all concurrent audits in a unified view
+
+---
+
+**STEP 10 — TRINITY INTEGRATION IN SRA PORTAL**
+
+Trinity assists the auditor — not the company — during an active audit:
+
+**Trinity assistance for auditors:**
+- Auditor can ask Trinity questions about the company's compliance history in plain language
+- Trinity surfaces relevant records proactively — "I notice officer Martinez's license expired 3 days before the audit period began — would you like to flag this?"
+- Trinity answers regulatory questions: "What does Texas Occupations Code §1702.321 require?"
+- Trinity generates compliance summaries: "Here is a summary of all license expirations during the audit period"
+- Trinity drafts finding language: "Based on the record I found, here is a suggested citation description for your review"
+- Trinity cannot modify findings or take actions on behalf of the auditor — advisory only
+- All Trinity interactions during an audit logged in `sra_audit_log`
+
+**Trinity assistance for the audited company:**
+- Company can ask Trinity to help prepare remediation responses
+- Trinity can surface the specific compliance records that address a finding
+- Trinity can generate remediation evidence packages
+- Trinity cannot communicate with the auditor directly on behalf of the company
+
+---
+
+**STEP 11 — SRA PORTAL UI DESIGN REQUIREMENTS**
+
+The portal must look and feel like official government regulatory software — professional, precise, and trustworthy:
+
+**Design principles:**
+- Separate visual identity from the main CoAIleague dark navy design — SRA portal uses a professional deep blue and white color scheme with regulatory authority branding
+- CoAIleague branding present but secondary — "Powered by CoAIleague" in footer
+- State regulatory body logo displayed prominently if provided
+- Clean, minimal, data-dense — auditors are professionals who need information efficiently presented
+- No gamification, no marketing language, no upgrade prompts — this is a regulatory tool
+
+**Key UI components:**
+
+Dashboard on login:
+- Audit summary card: company name, audit period, days remaining, total findings by type
+- Finding status board: open, acknowledged, under review, closed counts
+- Recent activity feed: last 10 actions taken in this audit session
+- Quick access: officer roster, compliance records, incident reports, documents
+
+Officer roster view:
+- Sortable, filterable table: name, license type, license status, expiry date, post assignments, compliance status
+- Color-coded license status: green (valid), amber (expiring within 30 days), red (expired), gray (no license on file)
+- Export button: generates DPS-format CSV for the state
+- Individual officer drill-down: full compliance profile
+
+Finding management:
+- Finding creation from any record view — contextual flag button
+- Finding detail view: all fields, evidence attachments, communication thread, status timeline
+- Finding list: sortable by severity, type, deadline, status
+- Deadline countdown prominently displayed — cannot be missed
+
+Audit closure:
+- Checklist showing all findings and their status — must all be terminal before closure is allowed
+- Preview of evidence package before finalizing
+- Formal close button with confirmation — cannot be undone
+
+**Mobile responsive:**
+- Auditors may access from tablets or phones during field inspections
+- All core functions accessible on mobile — finding creation, record viewing, evidence upload
+- Mobile camera integration for evidence photo capture
+
+---
+
+**STEP 12 — SECURITY AND COMPLIANCE REQUIREMENTS**
+
+The SRA portal handles sensitive regulatory data — security is paramount:
+
+- All SRA portal routes behind dedicated auth middleware — `requireSRAAuth` — completely separate from main platform auth
+- SRA session token validated on every request — no cached auth state
+- All data returned to SRA portal confirmed read-only at the route level — no POST, PATCH, or DELETE routes accessible to SRA sessions except finding creation and document upload
+- Rate limiting on SRA portal: maximum 120 requests per minute per session
+- All SRA requests logged in `sra_audit_log` — no exceptions
+- SRA audit log confirmed append-only — no UPDATE or DELETE in any code path
+- Session revocation propagates immediately — no grace period
+- Evidence documents stored with SHA-256 hash — integrity verified on retrieval
+- All SRA portal routes behind HTTPS only
+- CSP headers set for SRA portal — no inline scripts, no external resources except CoAIleague CDN
+
+---
+
+**STEP 13 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. All 5 mandatory quality checks confirmed with command output
+6. 7-step framework verified for every feature built
+7. All rows green before summary written
+
+---
+
+**STEP 14 — VERIFICATION**
+
+Run all checks before Phase 33 is marked complete:
+- Check 1: All 4 new SRA schemas created and migrated — `sra_accounts`, `sra_audit_sessions`, `sra_audit_log`, `sra_findings`, `sra_enforcement_documents`
+- Check 2: SRA account verification flow complete — Trinity analysis, platform staff review, credential issuance
+- Check 3: Org_owner notified via NDS when SRA auditor logs in — badge number and purpose included
+- Check 4: SRA login portal at `/regulatory-audit/login` — separate from main platform login
+- Check 5: Mandatory 2FA enforced on every SRA login — no bypass possible
+- Check 6: Failed login lockout after 3 attempts confirmed
+- Check 7: SRA session scoped to authorized workspace only — cannot access other workspaces
+- Check 8: SRA session expires at audit period end — not just token expiry
+- Check 9: All 6 prohibited data types confirmed inaccessible — payroll, pay rates, SSN, bank accounts, other workspaces, platform config
+- Check 10: Officer roster view returns correct fields for auditor's state from knowledge base
+- Check 11: All 5 finding types implemented — observation, violation, citation, enforcement action, commendation
+- Check 12: Citation finding triggers NDS notification to org_owner and compliance officer immediately
+- Check 13: Enforcement action finding triggers platform staff notification and Trinity conscience flag
+- Check 14: Company can acknowledge, submit evidence, submit payment, appeal, and request extension
+- Check 15: Finding communication thread logged immutably in sra_audit_log
+- Check 16: Audit closure generates complete evidence package as PDF with SHA-256 hash
+- Check 17: Evidence package delivered to company and auditor automatically on closure
+- Check 18: Compliance rating calculated and stored on audit closure
+- Check 19: State-specific occupation code autocomplete in finding form
+- Check 20: Trinity advisory confirmed — surfaces relevant records, drafts finding language, cannot modify findings
+- Check 21: All Trinity SRA interactions logged in sra_audit_log
+- Check 22: SRA portal separate visual design — deep blue and white, not dark navy
+- Check 23: Mobile responsive — finding creation and evidence upload work on tablet/phone
+- Check 24: `sra_audit_log` confirmed append-only — grep confirms zero UPDATE or DELETE on this table
+- Check 25: All SRA routes behind `requireSRAAuth` — main platform auth cannot access SRA routes
+- Check 26: Rate limiting confirmed on SRA portal — 120 requests per minute per session
+- Check 27: TypeScript targeted check — zero errors in all SRA files
+- Check 28: Import completeness — all hooks and utilities imported
+- Check 29: State variable declarations — no undeclared variables
+- Check 30: Schema alignment — client expects exactly what server returns
+- Check 31: Server startup clean — ArchLinter passed, zero runtime errors
+- Check 32: Nothing Left Behind reconciliation table — one row per check, all green
+
+Do not mark Phase 33 complete until all 32 checks pass. This portal represents CoAIleague's path to official regulatory partnerships. It must be built to the standard of government-grade regulatory software — precise, secure, legally defensible, and completely trustworthy. Findings first. Full picture assembled. Then fixes. Nothing left behind.
+
+---
+
+Paste that. This is the phase that could make CoAIleague the official audit platform for Texas DPS and eventually all 57 states in the knowledge base. Build it like it matters — because it does.

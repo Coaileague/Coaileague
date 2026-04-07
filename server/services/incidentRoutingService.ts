@@ -5,11 +5,16 @@
  * Ensures critical incidents reach managers immediately via SMS.
  */
 
+import { NotificationDeliveryService } from './notificationDeliveryService';
 import { db } from "../db";
-import { securityIncidents, employees, clients, notifications, shifts } from "@shared/schema";
+import { securityIncidents, employees, clients, notifications, shifts, managerAssignments } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { platformEventBus } from "./platformEventBus";
 import { smsService } from "./smsService";
+import { universalNotificationEngine } from "./universalNotificationEngine";
+import { createLogger } from '../lib/logger';
+const log = createLogger('incidentRoutingService');
+
 
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type IncidentType = 'safety_hazard' | 'property_damage' | 'theft' | 'injury' | 'harassment' | 'unauthorized_access' | 'equipment_failure' | 'other';
@@ -77,31 +82,36 @@ export class IncidentRoutingService {
     for (const severity of ['critical', 'high', 'medium', 'low'] as IncidentSeverity[]) {
       const keywords = SEVERITY_KEYWORDS[severity];
       if (keywords.some(keyword => normalizedDesc.includes(keyword))) {
-        console.log(`[IncidentRouting] Severity ${severity} detected via keyword match in: "${description.substring(0, 50)}..."`);
+        log.info(`[IncidentRouting] Severity ${severity} detected via keyword match in: "${description.substring(0, 50)}..."`);
         return severity;
       }
     }
     
     const defaultSeverity = TYPE_SEVERITY_DEFAULTS[type] || 'medium';
-    console.log(`[IncidentRouting] Using type-based default severity: ${defaultSeverity} for type: ${type}`);
+    log.info(`[IncidentRouting] Using type-based default severity: ${defaultSeverity} for type: ${type}`);
     return defaultSeverity;
   }
 
   /**
-   * Get the supervisor for an employee
+   * Get the assigned supervisor for an employee via manager_assignments table.
+   * Previously queried employee.managerId which does not exist on the schema.
    */
   async getSupervisor(employeeId: string, workspaceId: string) {
-    const employee = await db.query.employees.findFirst({
-      where: and(
-        eq(employees.id, employeeId),
-        eq(employees.workspaceId, workspaceId)
-      ),
-    });
+    const [assignment] = await db
+      .select()
+      .from(managerAssignments)
+      .where(
+        and(
+          eq(managerAssignments.employeeId, employeeId),
+          eq(managerAssignments.workspaceId, workspaceId)
+        )
+      )
+      .limit(1);
 
-    if (!employee?.managerId) return null;
+    if (!assignment?.managerId) return null;
 
     return db.query.employees.findFirst({
-      where: eq(employees.id, employee.managerId),
+      where: eq(employees.id, assignment.managerId),
     });
   }
 
@@ -167,14 +177,20 @@ export class IncidentRoutingService {
     const supervisor = await this.getSupervisor(data.employeeId, data.workspaceId);
     if (supervisor) {
       try {
-        await db.insert(notifications).values({
+        // Route through Trinity AI for contextual enrichment
+        await universalNotificationEngine.sendNotification({
           workspaceId: data.workspaceId,
           userId: supervisor.userId || supervisor.id,
-          type: 'incident_reported',
-          title: `${severity.toUpperCase()} Incident Reported`,
-          message: `${data.type}: ${data.description.substring(0, 100)}...`,
-          priority: severity === 'critical' ? 'urgent' : 'normal',
-          metadata: { incidentId: incident.id, severity },
+          type: 'issue_detected',
+          title: `Security Incident Reported - ${severity.toUpperCase()} Priority`,
+          message: `A ${data.type.replace(/_/g, ' ')} incident has been reported: ${data.description.substring(0, 150)}. Immediate supervisor review required.`,
+          severity: severity === 'critical' ? 'critical' : 'warning',
+          metadata: { 
+            incidentId: incident.id, 
+            severity, 
+            incidentType: data.type,
+            source: 'incident_routing_service',
+          },
         });
         supervisorNotified = true;
         routingDetails.push(`Supervisor notified: ${supervisor.firstName} ${supervisor.lastName}`);
@@ -183,7 +199,7 @@ export class IncidentRoutingService {
       }
     } else {
       escalationFailures.push('No supervisor assigned - escalation skipped');
-      console.warn(`[IncidentRouting] No supervisor for employee ${data.employeeId} - incident ${incident.id} needs manual review`);
+      log.warn(`[IncidentRouting] No supervisor for employee ${data.employeeId} - incident ${incident.id} needs manual review`);
     }
 
     if (severity === 'critical' || severity === 'high') {
@@ -191,7 +207,7 @@ export class IncidentRoutingService {
       
       if (managers.length === 0) {
         escalationFailures.push(`No managers found in workspace - ${severity} incident requires manual escalation`);
-        console.error(`[IncidentRouting] CRITICAL: No managers in workspace ${data.workspaceId} for ${severity} incident ${incident.id}`);
+        log.error(`[IncidentRouting] CRITICAL: No managers in workspace ${data.workspaceId} for ${severity} incident ${incident.id}`);
         
         const owners = await db.query.employees.findMany({
           where: and(
@@ -202,14 +218,21 @@ export class IncidentRoutingService {
         
         for (const owner of owners) {
           try {
-            await db.insert(notifications).values({
+            // Route through Trinity AI for contextual enrichment
+            await universalNotificationEngine.sendNotification({
               workspaceId: data.workspaceId,
               userId: owner.userId || owner.id,
-              type: 'critical_incident',
-              title: `URGENT: ${severity.toUpperCase()} Incident - No Manager Available`,
-              message: `${data.type}: ${data.description.substring(0, 150)}. No managers configured - requires immediate attention.`,
-              priority: 'urgent',
-              metadata: { incidentId: incident.id, severity, escalationGap: true },
+              type: 'issue_detected',
+              title: `URGENT: ${severity.toUpperCase()} Security Incident - Escalated to Owner`,
+              message: `A ${data.type.replace(/_/g, ' ')} incident requires your immediate attention: ${data.description.substring(0, 150)}. This was escalated directly because no managers are configured in your organization.`,
+              severity: 'critical',
+              metadata: { 
+                incidentId: incident.id, 
+                severity, 
+                escalationGap: true,
+                incidentType: data.type,
+                source: 'incident_routing_service',
+              },
             });
             managerNotified = true;
             routingDetails.push(`Org owner notified (fallback): ${owner.firstName} ${owner.lastName}`);
@@ -221,22 +244,25 @@ export class IncidentRoutingService {
       
       for (const manager of managers) {
         try {
-          await db.insert(notifications).values({
+          // Route through Trinity AI for contextual enrichment
+          await universalNotificationEngine.sendNotification({
             workspaceId: data.workspaceId,
             userId: manager.userId || manager.id,
-            type: 'critical_incident',
-            title: `CRITICAL: ${data.type}`,
-            message: data.description.substring(0, 200),
-            priority: 'urgent',
-            metadata: { incidentId: incident.id, severity },
+            type: 'issue_detected',
+            title: `${severity.toUpperCase()} Security Incident - Manager Action Required`,
+            message: `A ${data.type.replace(/_/g, ' ')} incident has been reported and requires manager review: ${data.description.substring(0, 200)}`,
+            severity: severity === 'critical' ? 'critical' : 'warning',
+            metadata: { 
+              incidentId: incident.id, 
+              severity,
+              incidentType: data.type,
+              source: 'incident_routing_service',
+            },
           });
 
           if (severity === 'critical' && manager.phone) {
             try {
-              await smsService.sendSMS(
-                manager.phone,
-                `CRITICAL INCIDENT: ${data.type} reported. ${data.description.substring(0, 100)}. Login to CoAIleague for details.`
-              );
+              await NotificationDeliveryService.send({ type: 'incident_alert', workspaceId: data.workspaceId || 'system', recipientUserId: manager.id || manager.phone, channel: 'sms', body: { to: manager.phone, body: `CRITICAL INCIDENT: ${data.type} reported. ${data.description.substring(0, 100)}. Login to CoAIleague for details.` } });
               routingDetails.push(`SMS sent to manager: ${manager.firstName} ${manager.lastName}`);
             } catch (smsError) {
               escalationFailures.push(`SMS failed for ${manager.firstName} ${manager.lastName}: ${smsError}`);
@@ -267,7 +293,7 @@ export class IncidentRoutingService {
               },
             });
             clientNotified = true;
-            routingDetails.push(`Enterprise client notified: ${client.companyName || client.name}`);
+            routingDetails.push(`Enterprise client notified: ${client.companyName || `${client.firstName} ${client.lastName}`}`);
           } catch (error) {
             escalationFailures.push(`Client notification failed: ${error}`);
           }
@@ -276,7 +302,7 @@ export class IncidentRoutingService {
     }
 
     if (escalationFailures.length > 0) {
-      console.error(`[IncidentRouting] Escalation failures for incident ${incident.id}:`, escalationFailures);
+      log.error(`[IncidentRouting] Escalation failures for incident ${incident.id}:`, escalationFailures);
       routingDetails.push(`Escalation gaps detected: ${escalationFailures.length} issues`);
     }
 

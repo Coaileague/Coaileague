@@ -3,7 +3,7 @@ import { useApprovals, usePendingApprovalsCount, useApprovalDecision, ApprovalRe
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -168,8 +168,8 @@ export function ApprovalTray({ scope = 'employee', isMobile = false }: ApprovalT
 
   if (isMobile) {
     return (
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
+      <UniversalModal open={isOpen} onOpenChange={setIsOpen}>
+        <UniversalModalTrigger asChild>
           <Button 
             variant="outline" 
             size="sm" 
@@ -183,17 +183,17 @@ export function ApprovalTray({ scope = 'employee', isMobile = false }: ApprovalT
               </span>
             )}
           </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[80vh]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
+        </UniversalModalTrigger>
+        <UniversalModalContent side="bottom" className="h-[80vh] sm:max-w-3xl" showHomeButton={false}>
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
               <Bell className="w-5 h-5" />
               Pending Approvals
               {count > 0 && (
                 <Badge variant="destructive">{count}</Badge>
               )}
-            </SheetTitle>
-          </SheetHeader>
+            </UniversalModalTitle>
+          </UniversalModalHeader>
           <ScrollArea className="h-full mt-4">
             <div className="space-y-3 pb-20">
               {isLoading ? (
@@ -212,19 +212,19 @@ export function ApprovalTray({ scope = 'employee', isMobile = false }: ApprovalT
               )}
             </div>
           </ScrollArea>
-        </SheetContent>
-      </Sheet>
+        </UniversalModalContent>
+      </UniversalModal>
     );
   }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40" data-testid="approval-tray-desktop">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div className="bg-background border-t shadow-lg">
+        <div className="bg-background border-t shadow-sm">
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
-              className="w-full flex items-center justify-between py-3 px-4 rounded-none"
+              className="w-full flex items-center justify-between gap-2 py-3 px-4 rounded-none"
               data-testid="button-toggle-approval-tray"
             >
               <div className="flex items-center gap-2">

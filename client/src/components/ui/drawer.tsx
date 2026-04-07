@@ -28,7 +28,7 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/80", className)}
+    className={cn("fixed inset-0 z-[2500] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=closed]:pointer-events-none", className)}
     {...props}
   />
 ))
@@ -43,24 +43,39 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+        "fixed inset-x-0 bottom-0 z-[2501] mt-24 flex max-h-[100dvh] flex-col rounded-t-[10px] border bg-background overflow-hidden box-border",
         className
       )}
       {...props}
     >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+      <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-muted-foreground/25 shrink-0" />
       {children}
     </DrawerPrimitive.Content>
   </DrawerPortal>
 ))
 DrawerContent.displayName = "DrawerContent"
 
+const DrawerBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    data-vaul-no-drag
+    className={cn(
+      "flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 [touch-action:pan-y] [-webkit-overflow-scrolling:touch]",
+      className
+    )}
+    {...props}
+  />
+)
+DrawerBody.displayName = "DrawerBody"
+
 const DrawerHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("grid gap-1.5 p-4 text-center sm:text-left", className)}
+    className={cn("grid gap-0.5 px-3 pr-24 pb-2 pt-1 text-center sm:text-left sm:pr-28 shrink-0 border-b border-border/40", className)}
     {...props}
   />
 )
@@ -71,7 +86,11 @@ const DrawerFooter = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+    className={cn(
+      "mt-auto flex flex-wrap gap-2 px-4 py-3 border-t border-border/50 shrink-0",
+      "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+      className
+    )}
     {...props}
   />
 )
@@ -84,7 +103,7 @@ const DrawerTitle = React.forwardRef<
   <DrawerPrimitive.Title
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
+      "text-base font-semibold leading-tight tracking-tight",
       className
     )}
     {...props}
@@ -98,7 +117,7 @@ const DrawerDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-xs text-muted-foreground leading-snug", className)}
     {...props}
   />
 ))
@@ -111,6 +130,7 @@ export {
   DrawerTrigger,
   DrawerClose,
   DrawerContent,
+  DrawerBody,
   DrawerHeader,
   DrawerFooter,
   DrawerTitle,

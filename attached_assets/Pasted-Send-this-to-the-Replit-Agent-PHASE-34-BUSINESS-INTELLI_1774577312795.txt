@@ -1,0 +1,303 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 34 — BUSINESS INTELLIGENCE AND ANALYTICS**
+
+This phase builds the complete business intelligence and analytics layer for CoAIleague. Owners and managers need more than operational dashboards — they need trend data, predictive insights, financial performance visibility, and workforce analytics that help them make better business decisions. Every analytics view must be read-only, workspace-scoped, performant on large datasets, and integrated with Trinity so insights can be queried conversationally. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check. Specific evidence per row. Every row green before Phase 34 closes.
+
+**7-STEP FRAMEWORK — every feature built in this phase:**
+1. Trigger — action fires correctly
+2. Payload — correct data assembled and validated
+3. API — correct endpoint, correct auth, correct workspace scope
+4. Processing — server validates and executes correctly
+5. Persistence — correct DB write with audit record where applicable
+6. Confirmation — UI updates correctly in success and error states
+7. Sync — real-time updates where applicable
+
+**5 MANDATORY QUALITY CHECKS — run before reconciliation table:**
+1. TypeScript: `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -30` — zero errors
+2. Import completeness — all hooks and utilities imported in every modified component
+3. State variable declarations — no undeclared variables
+4. Schema alignment — client expects exactly what server returns
+5. Server startup — ArchLinter passed, zero runtime errors
+
+**ZERO REGRESSION RULE:**
+Analytics queries must never modify data. Every analytics endpoint is read-only — no INSERT, UPDATE, or DELETE permitted. All analytics queries must include workspace_id scope — no cross-workspace data leakage. Analytics must not break any existing route, service, or component from prior phases. Before implementing run a targeted grep to confirm no existing analytics infrastructure conflicts with new work.
+
+---
+
+**STEP 1 — CURRENT ANALYTICS INVENTORY**
+
+Before touching anything inventory everything that currently exists:
+- Any existing analytics routes, services, or components
+- Any existing dashboard metrics or KPI displays
+- What data is currently available for analytics queries
+- What indexes exist on tables that will be queried frequently for analytics
+- Any existing BI or reporting infrastructure
+- Current Trinity BI actions registered
+- Performance baseline — how long do current dashboard queries take
+
+Flag any analytics query that would cause a full table scan on a large table.
+
+---
+
+**STEP 2 — FINANCIAL ANALYTICS**
+
+Revenue and financial performance visibility for org_owner and finance roles:
+
+**Revenue metrics:**
+- Total revenue by period (week, month, quarter, year) — sum of paid invoices
+- Revenue by client — which clients generate the most revenue
+- Revenue trend — month-over-month and year-over-year comparison
+- Outstanding revenue — total unpaid invoices by age bucket (0-30, 31-60, 61-90, 90+ days)
+- Invoice payment velocity — average days from invoice sent to payment received
+- Overdue rate — percentage of invoices that go overdue
+- Disputed invoice rate — percentage of invoices disputed
+- Credit memo volume — total credits issued by period
+
+**Payroll metrics:**
+- Total payroll cost by period
+- Payroll cost as percentage of revenue — margin visibility
+- Overtime cost by period and by officer — who is driving OT costs
+- Garnishment total by period
+- Average pay rate by post type
+- Payroll cost by client — cost to serve each client
+
+**Billing efficiency:**
+- Unbilled hours — confirmed hours not yet invoiced
+- Billing lag — average days from shift close to invoice generation
+- QuickBooks sync health — last sync time, pending records, error rate
+
+---
+
+**STEP 3 — WORKFORCE ANALYTICS**
+
+Officer performance and workforce health visibility:
+
+**Attendance and reliability:**
+- Calloff rate by officer — ranked list of most frequent callers
+- Calloff rate by day of week and time of day — pattern detection
+- Late clock-in rate by officer
+- No-show rate by officer
+- Average calloff notice time — how much advance notice officers give
+- Replacement success rate — how often open shifts get filled before start time
+
+**Scheduling efficiency:**
+- Open shift fill rate — percentage of open shifts filled vs unfilled
+- Average time to fill an open shift — from calloff to acceptance
+- Overtime hours per period — total and by officer
+- Understaffed posts — posts that frequently have coverage gaps
+- Officer utilization rate — average hours worked vs available hours
+
+**Retention and turnover:**
+- Officer tenure distribution — how long officers stay
+- Turnover rate by period — annualized
+- Rehire rate — percentage of terminated officers who return
+- New hire rate by period
+- Active officer count trend over time
+
+**Compliance health:**
+- License expiry pipeline — officers with licenses expiring in next 30/60/90 days
+- Compliance score trend by workspace — improving or declining
+- Violation rate by type and severity
+- Time to remediate violations — average days from violation to closure
+- Officers with open compliance violations — count and severity
+
+---
+
+**STEP 4 — CLIENT ANALYTICS**
+
+Client relationship health visibility for org_owner and account managers:
+
+**Client performance:**
+- Revenue per client by period
+- Client retention — how long clients have been with the company
+- Client churn risk signals — declining post count, late payments, dispute frequency, support ticket volume
+- Post coverage rate per client — are their posts consistently covered
+- Incident rate per client — incidents at their posts by type and severity
+- Client satisfaction proxy — payment velocity, dispute rate, ticket volume combined into a health score
+
+**Service delivery:**
+- Hours delivered vs contracted hours per client
+- Post coverage percentage — actual vs scheduled
+- Response time to client incidents — how quickly incidents are escalated
+- Open shift incidents at client posts — how often posts are uncovered
+
+---
+
+**STEP 5 — OPERATIONAL ANALYTICS**
+
+Real-time and historical operational visibility:
+
+**Current operations (real-time):**
+- Officers currently clocked in — count and map view
+- Posts currently covered vs total active posts
+- Active open shifts awaiting fill
+- Officers late to clock in — past shift start time with no clock-in
+- Active incidents under review
+
+**Historical operations:**
+- Shift completion rate — shifts that completed as scheduled vs cancelled, modified, or no-show
+- GPS compliance — percentage of clock-ins within geofence vs outside
+- Incident volume by type, post, officer, and time period
+- Post order acknowledgment rate — officers who read their post orders before clocking in
+
+---
+
+**STEP 6 — ANALYTICS DASHBOARD UI**
+
+The analytics dashboard must be clean, professional, and actionable:
+
+**Layout:**
+- Top-level date range selector — applies to all metrics on the page simultaneously
+- Tab navigation: Financial, Workforce, Clients, Operations
+- Each tab shows: KPI summary cards at top, trend charts below, detailed tables at bottom
+- Export button on every chart and table — CSV download, role-gated
+
+**Chart types:**
+- Line charts for trends over time — revenue, payroll cost, officer count
+- Bar charts for comparisons — revenue by client, calloff rate by officer
+- Donut/pie charts for composition — revenue breakdown, calloff reasons
+- Heat maps for pattern detection — calloff rate by day/time
+- Gauge charts for health scores — compliance score, client health score
+- All charts use the CoAIleague dark navy design system — gold accents, consistent typography
+
+**Performance requirements:**
+- Dashboard initial load under 3 seconds — precomputed aggregates where needed
+- Date range change refreshes in under 2 seconds
+- No analytics query should scan more than 90 days of raw data without using an aggregate table
+- Slow queries (over 500ms) logged and flagged for optimization
+- Analytics queries run on read replicas or with query hints where possible to avoid blocking operational writes
+
+**Role access:**
+- Financial tab: org_owner, co_owner, finance roles only
+- Workforce tab: org_owner, co_owner, org_admin, org_manager
+- Clients tab: org_owner, co_owner, org_admin, account manager roles
+- Operations tab: all manager and supervisor roles
+- No analytics data accessible to officers or clients
+
+---
+
+**STEP 7 — PRECOMPUTED ANALYTICS AGGREGATES**
+
+Raw queries on large tables are too slow for real-time dashboards:
+
+**Create `analytics_daily_snapshots` table:**
+- Captures daily aggregated metrics per workspace: total shifts, hours worked, calloffs, revenue, payroll cost, active officer count, compliance violations
+- Populated by a daily cron job running at 2 AM after payroll auto-close
+- Used as the data source for all trend queries instead of raw tables
+- Schema: workspace_id, snapshot_date, metric_name, metric_value, dimension (optional grouping like officer_id or client_id)
+
+**Create `analytics_client_health_scores` table:**
+- Daily client health score per workspace+client combination
+- Composite score from: payment velocity (weight 30%), dispute rate (weight 20%), post coverage rate (weight 30%), support ticket volume (weight 20%)
+- Populated by same daily cron job
+- Used for churn risk detection and client health dashboard
+
+**Index requirements:**
+- `analytics_daily_snapshots`: index on (workspace_id, snapshot_date, metric_name)
+- `analytics_client_health_scores`: index on (workspace_id, client_id, snapshot_date)
+- Confirm existing indexes on: invoices (workspace_id, status, created_at), shifts (workspace_id, status, date), time_entries (workspace_id, employee_id, clock_in)
+
+---
+
+**STEP 8 — TRINITY BI INTEGRATION**
+
+Trinity must be able to query and explain analytics data conversationally:
+
+**Trinity BI actions — register all of the following:**
+- `analytics.revenue.summary` — revenue metrics for a period
+- `analytics.revenue.by_client` — revenue breakdown by client
+- `analytics.workforce.calloff_rate` — calloff analytics by officer or period
+- `analytics.workforce.overtime` — OT cost and hours by officer or period
+- `analytics.workforce.retention` — turnover and tenure metrics
+- `analytics.compliance.health` — compliance score and violation trends
+- `analytics.client.health` — client health scores and churn signals
+- `analytics.operations.current` — real-time operational status
+- `analytics.report.generate` — generate a structured analytics report for a period
+
+**Trinity BI behavior:**
+- Trinity can answer questions like "Who are my top 3 clients by revenue this quarter?" or "Which officer has the highest calloff rate this month?"
+- Trinity surfaces anomalies proactively: "Your payroll cost increased 23% this month compared to last month — the primary driver is Officer Johnson's overtime hours"
+- Trinity can generate a full business performance report on request — structured sections, key insights, recommendations
+- All Trinity BI queries workspace-scoped — Trinity cannot query another workspace's analytics
+- Trinity BI queries use precomputed aggregates — not raw table scans
+
+---
+
+**STEP 9 — EXPORT AND REPORTING**
+
+Analytics data must be exportable:
+
+**Export formats:**
+- CSV export for every chart and table in the dashboard
+- PDF report generation — full analytics summary for a period, formatted for sharing with stakeholders or investors
+- All exports role-gated — officer and client roles cannot export analytics
+- Every export action writes an audit record: exported_by, workspace_id, report_type, date_range, timestamp
+
+**Scheduled reports:**
+- Org_owner can configure weekly or monthly analytics email report
+- Report delivered via NDS as a PDF attachment — follows Phase 29 email deliverability standards
+- Report includes: revenue summary, workforce health, top 3 clients, compliance score, key anomalies flagged by Trinity
+- Scheduled report configuration stored per workspace — can be enabled/disabled and reconfigured
+
+---
+
+**STEP 10 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. All 5 mandatory quality checks confirmed with command output
+6. 7-step framework verified for every feature built
+7. Zero regression confirmed — no existing routes or components broken
+8. All rows green before summary written
+
+---
+
+**STEP 11 — VERIFICATION**
+
+Run all checks before Phase 34 is marked complete:
+- Check 1: Analytics inventory complete — existing infrastructure documented, no conflicts found
+- Check 2: Revenue metrics all confirmed — total, by client, trend, outstanding, payment velocity
+- Check 3: Payroll cost metrics confirmed — total, OT cost, cost as % of revenue, by officer
+- Check 4: Workforce calloff analytics confirmed — rate by officer, pattern by day/time
+- Check 5: Officer retention analytics confirmed — tenure distribution, turnover rate, rehire rate
+- Check 6: Compliance health analytics confirmed — score trend, violation rate, time to remediate
+- Check 7: Client health scores calculated — composite from payment, disputes, coverage, tickets
+- Check 8: Real-time operations view confirmed — officers clocked in, posts covered, open shifts
+- Check 9: Analytics dashboard UI — 4 tabs, date range selector, role-gated correctly
+- Check 10: All charts use dark navy design system — gold accents, consistent with platform
+- Check 11: Dashboard initial load under 3 seconds — verified
+- Check 12: `analytics_daily_snapshots` table created and indexed correctly
+- Check 13: `analytics_client_health_scores` table created and indexed correctly
+- Check 14: Daily cron job registered — runs at 2 AM, populates aggregate tables
+- Check 15: All analytics endpoints confirmed read-only — grep shows zero INSERT/UPDATE/DELETE
+- Check 16: All analytics queries workspace-scoped — grep confirms workspace_id on every query
+- Check 17: Slow query logging confirmed — queries over 500ms flagged
+- Check 18: All 9 Trinity BI actions registered and callable
+- Check 19: Trinity BI uses precomputed aggregates — not raw table scans
+- Check 20: Trinity proactive anomaly detection confirmed — payroll spike, calloff pattern alerts
+- Check 21: CSV export confirmed for all charts and tables — role-gated
+- Check 22: PDF analytics report generation confirmed
+- Check 23: Every export writes an audit record
+- Check 24: Scheduled weekly/monthly analytics email report confirmed
+- Check 25: Zero regression — no existing routes or components broken by analytics work
+- Check 26: TypeScript targeted check — zero errors in all analytics files
+- Check 27: Import completeness — all hooks and utilities imported
+- Check 28: State variable declarations — no undeclared variables
+- Check 29: Schema alignment — client expects exactly what server returns
+- Check 30: Server startup clean — ArchLinter passed, zero runtime errors
+- Check 31: Nothing Left Behind reconciliation table — one row per check, all green
+
+Do not mark Phase 34 complete until all 31 checks pass. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. Zero regressions introduced. Nothing left behind.
+
+---
+
+Paste that. Analytics done right gives owners the visibility to run their business better — and gives CoAIleague a differentiated feature that most security workforce platforms completely lack.

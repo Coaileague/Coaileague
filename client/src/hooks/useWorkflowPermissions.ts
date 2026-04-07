@@ -4,12 +4,13 @@
  */
 
 import { useMemo } from 'react';
+import { useAuth } from './useAuth';
 import { useEmployee } from './useEmployee';
 import { useQuery } from '@tanstack/react-query';
 
 interface Workspace {
   id: string;
-  tier: 'free' | 'starter' | 'professional' | 'enterprise';
+  tier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
 }
 
 interface WorkflowCapabilities {
@@ -32,6 +33,7 @@ interface WorkflowCapabilities {
  * Combines workspaceRole (RBAC) + workspace tier (feature gating)
  */
 export function useWorkflowPermissions(): WorkflowCapabilities {
+  const { user } = useAuth();
   const { employee } = useEmployee();
   
   // Fetch workspace to get tier
@@ -40,19 +42,22 @@ export function useWorkflowPermissions(): WorkflowCapabilities {
   });
 
   const tier = workspace?.tier || 'free';
-  const workspaceRole = employee?.workspaceRole || null;
+  // SECURITY: Use server-authoritative user.workspaceRole for authorization
+  const workspaceRole = user?.workspaceRole || null;
 
   const capabilities = useMemo<WorkflowCapabilities>(() => {
     // View permission: All authenticated workspace members can VIEW approvals
     const canView = !!workspaceRole;
     
-    // Approve permission: Only managers, accountants, and HR can APPROVE workflows
+    // Approve permission: Manager-level roles can APPROVE workflows
     const canApprove = 
       workspaceRole === 'org_owner' || 
-      workspaceRole === 'org_admin' || 
+      workspaceRole === 'co_owner' || 
+      workspaceRole === 'admin' ||
+      workspaceRole === 'org_manager' ||
       workspaceRole === 'manager' ||
-      workspaceRole === 'accountant' ||
-      workspaceRole === 'hr_manager';
+      workspaceRole === 'department_manager' ||
+      workspaceRole === 'supervisor';
 
     // Tier Gating: Professional+ required for invoices/payroll
     const hasProfessionalTier = tier === 'professional' || tier === 'enterprise';

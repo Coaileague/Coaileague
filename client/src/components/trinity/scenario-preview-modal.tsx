@@ -5,7 +5,7 @@
  * Requires explicit user approval before Trinity proceeds.
  */
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalFooter } from '@/components/ui/universal-modal';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,17 +51,16 @@ export function ScenarioPreviewModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="full" className="max-h-[90vh]" data-testid="modal-scenario-preview">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <UniversalModal open={open} onOpenChange={onOpenChange} size="full" className="max-h-[90vh]" data-testid="modal-scenario-preview">
+        <UniversalModalHeader>
+          <UniversalModalTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             Preview Changes
-          </DialogTitle>
-          <DialogDescription>
+          </UniversalModalTitle>
+          <UniversalModalDescription>
             Review what Trinity will change before proceeding
-          </DialogDescription>
-        </DialogHeader>
+          </UniversalModalDescription>
+        </UniversalModalHeader>
 
         {planSummary && (
           <div className="bg-muted/50 rounded-lg p-3 mb-4">
@@ -146,7 +145,7 @@ export function ScenarioPreviewModal({
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <UniversalModalFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"
             onClick={onReject}
@@ -178,8 +177,7 @@ export function ScenarioPreviewModal({
             <Check className="h-4 w-4" />
             Execute
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </UniversalModalFooter>
+    </UniversalModal>
   );
 }

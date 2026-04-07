@@ -23,6 +23,8 @@ import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('behavioralMonitoringService');
 
 // ============================================================================
 // TYPES
@@ -185,7 +187,7 @@ class BehavioralMonitoringService {
   private alertCooldowns: Map<string, Date> = new Map();
 
   private constructor() {
-    console.log('[BehavioralMonitoring] Initializing model drift detection...');
+    log.info('[BehavioralMonitoring] Initializing model drift detection...');
     this.startPeriodicAnalysis();
   }
 
@@ -652,7 +654,7 @@ class BehavioralMonitoringService {
       deviationScore: anomaly.deviationScore,
     });
 
-    console.log(`[BehavioralMonitoring] Anomaly detected: ${anomaly.anomalyType} in ${anomaly.subagentId} (severity: ${anomaly.severity})`);
+    log.info(`[BehavioralMonitoring] Anomaly detected: ${anomaly.anomalyType} in ${anomaly.subagentId} (severity: ${anomaly.severity})`);
   }
 
   /**
@@ -681,7 +683,7 @@ class BehavioralMonitoringService {
       driftPercentage: drift.driftPercentage,
     });
 
-    console.log(`[BehavioralMonitoring] Drift detected: ${drift.metricName} in ${drift.subagentId} (severity: ${drift.severity}, ${drift.driftPercentage.toFixed(1)}% change)`);
+    log.info(`[BehavioralMonitoring] Drift detected: ${drift.metricName} in ${drift.subagentId} (severity: ${drift.severity}, ${drift.driftPercentage.toFixed(1)}% change)`);
   }
 
   /**
@@ -690,17 +692,15 @@ class BehavioralMonitoringService {
   private async logBehavioralEvent(eventType: string, data: any): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
         id: crypto.randomUUID(),
-        timestamp: new Date(),
-        eventType: `behavioral_monitoring_${eventType}`,
         entityType: 'behavior',
         entityId: data.anomalyId || data.driftId,
         action: eventType,
-        details: JSON.stringify(data),
-        severity: data.severity === 'critical' ? 'high' : data.severity === 'high' ? 'medium' : 'low',
+        metadata: { timestamp: new Date(), eventType: `behavioral_monitoring_${eventType}`, details: JSON.stringify(data), severity: data.severity === 'critical' ? 'high' : data.severity === 'high' ? 'medium' : 'low' },
       });
     } catch (error) {
-      console.error('[BehavioralMonitoring] Failed to log event:', error);
+      log.error('[BehavioralMonitoring] Failed to log event:', error);
     }
   }
 
@@ -708,13 +708,16 @@ class BehavioralMonitoringService {
    * Start periodic analysis
    */
   private startPeriodicAnalysis(): void {
-    // Run analysis every 5 minutes
     setInterval(async () => {
-      for (const [key] of this.samples) {
-        const [subagentId, modelTier] = key.split('-');
-        await this.updateProfile(subagentId, modelTier);
+      try {
+        for (const [key] of this.samples) {
+          const [subagentId, modelTier] = key.split('-');
+          await this.updateProfile(subagentId, modelTier);
+        }
+      } catch (error: any) {
+        log.warn('[BehavioralMonitoring] Analysis failed (will retry):', error?.message || 'unknown');
       }
-    }, 5 * 60 * 1000);
+    }, 5 * 60 * 1000).unref();
   }
 
   /**

@@ -1,15 +1,20 @@
 import type { Express } from 'express';
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { leads, leadActivities, deals, users } from '@shared/schema';
+import { leads, activities, deals, users } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import '../types';
+import { platformEventBus } from '../services/platformEventBus';
+import { requireManager } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('LeadCrmRoutes');
 
-export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
+
+export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWorkspaceId?: any) {
   const router = Router();
 
   const getWorkspaceId = (req: Request): string | null => {
-    return (req as any).workspaceId || null;
+    return req.workspaceId || null;
   };
 
   const requireWorkspace = (req: Request, res: Response): string | null => {
@@ -37,177 +42,12 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
         .from(leads)
         .where(and(...conditions))
         .orderBy(desc(leads.createdAt))
-        .limit(Number(limit));
+        .limit(Math.min(Number(limit) || 100, 500));
 
       res.json({ success: true, data: result });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.get("/:id", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const workspaceId = requireWorkspace(req, res);
-      if (!workspaceId) return;
-
-      const { id } = req.params;
-
-      const [lead] = await db.select()
-        .from(leads)
-        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
-      
-      if (!lead) return res.status(404).json({ error: "Lead not found" });
-
-      const activities = await db.select({
-        activity: leadActivities,
-        user: { id: users.id, firstName: users.firstName, lastName: users.lastName }
-      })
-      .from(leadActivities)
-      .leftJoin(users, eq(leadActivities.userId, users.id))
-      .where(and(eq(leadActivities.leadId, id), eq(leadActivities.workspaceId, workspaceId)))
-      .orderBy(desc(leadActivities.createdAt));
-
-      res.json({ success: true, data: { lead, activities } });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.post("/", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const workspaceId = requireWorkspace(req, res);
-      if (!workspaceId) return;
-
-      const userId = (req.user as any)?.id;
-      
-      const { 
-        companyName, industry, companyWebsite, estimatedEmployees,
-        contactName, contactTitle, contactEmail, contactPhone,
-        leadStatus, leadScore, estimatedValue, source, notes, nextFollowUpDate, assignedTo
-      } = req.body;
-
-      const [lead] = await db.insert(leads).values({
-        organizationId: workspaceId,
-        companyName,
-        industry,
-        companyWebsite,
-        estimatedEmployees,
-        contactName,
-        contactTitle,
-        contactEmail,
-        contactPhone,
-        leadStatus: leadStatus || 'new',
-        leadScore: leadScore || 0,
-        estimatedValue: estimatedValue ? String(estimatedValue) : undefined,
-        source: source || 'manual',
-        notes,
-        nextFollowUpDate,
-        assignedTo: assignedTo || userId
-      }).returning();
-
-      await db.insert(leadActivities).values({
-        leadId: lead.id,
-        userId,
-        workspaceId,
-        activityType: 'status_change',
-        description: 'Lead created',
-        newStatus: lead.leadStatus
-      });
-
-      res.json({ success: true, data: lead });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const workspaceId = requireWorkspace(req, res);
-      if (!workspaceId) return;
-
-      const { id } = req.params;
-      const userId = (req.user as any)?.id;
-      const updates = req.body;
-
-      const [existing] = await db.select()
-        .from(leads)
-        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
-      
-      if (!existing) return res.status(404).json({ error: "Lead not found" });
-
-      if (updates.estimatedValue) updates.estimatedValue = String(updates.estimatedValue);
-      updates.updatedAt = new Date();
-
-      const [updated] = await db.update(leads)
-        .set(updates)
-        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)))
-        .returning();
-
-      if (updates.leadStatus && updates.leadStatus !== existing.leadStatus) {
-        await db.insert(leadActivities).values({
-          leadId: id,
-          userId,
-          workspaceId,
-          activityType: 'status_change',
-          description: `Status changed from ${existing.leadStatus} to ${updates.leadStatus}`,
-          previousStatus: existing.leadStatus || undefined,
-          newStatus: updates.leadStatus
-        });
-      }
-
-      res.json({ success: true, data: updated });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const workspaceId = requireWorkspace(req, res);
-      if (!workspaceId) return;
-
-      const { id } = req.params;
-      await db.delete(leads)
-        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
-      
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.post("/:id/activity", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const workspaceId = requireWorkspace(req, res);
-      if (!workspaceId) return;
-
-      const { id } = req.params;
-      const userId = (req.user as any)?.id;
-      const { activityType, description } = req.body;
-
-      const [lead] = await db.select()
-        .from(leads)
-        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
-      
-      if (!lead) return res.status(404).json({ error: "Lead not found" });
-
-      const [activity] = await db.insert(leadActivities).values({
-        leadId: id,
-        userId,
-        workspaceId,
-        activityType,
-        description
-      }).returning();
-
-      if (activityType === 'email_sent' || activityType === 'call') {
-        await db.update(leads)
-          .set({ lastContactedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
-      }
-
-      res.json({ success: true, data: activity });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
@@ -227,66 +67,12 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
         .from(deals)
         .where(and(...conditions))
         .orderBy(desc(deals.createdAt))
-        .limit(Number(limit));
+        .limit(Math.min(Number(limit) || 50, 500));
 
       res.json({ success: true, data: result });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.post("/deals", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const workspaceId = requireWorkspace(req, res);
-      if (!workspaceId) return;
-
-      const userId = (req.user as any)?.id;
-      
-      const { 
-        dealName, companyName, leadId, rfpId, stage,
-        estimatedValue, probability, expectedCloseDate, notes, ownerId
-      } = req.body;
-
-      const [deal] = await db.insert(deals).values({
-        organizationId: workspaceId,
-        dealName,
-        companyName,
-        leadId,
-        rfpId,
-        stage: stage || 'prospect',
-        estimatedValue: estimatedValue ? String(estimatedValue) : undefined,
-        probability: probability || 50,
-        expectedCloseDate,
-        notes,
-        ownerId: ownerId || userId
-      }).returning();
-
-      res.json({ success: true, data: deal });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.patch("/deals/:id", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const workspaceId = requireWorkspace(req, res);
-      if (!workspaceId) return;
-
-      const { id } = req.params;
-      const updates = req.body;
-
-      if (updates.estimatedValue) updates.estimatedValue = String(updates.estimatedValue);
-      updates.updatedAt = new Date();
-      if (updates.status === 'won') updates.actualCloseDate = new Date();
-
-      const [updated] = await db.update(deals)
-        .set(updates)
-        .where(and(eq(deals.id, id), eq(deals.organizationId, workspaceId)))
-        .returning();
-
-      res.json({ success: true, data: updated });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
@@ -319,10 +105,290 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
           leads: leadStats
         } 
       });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
     }
   });
 
-  app.use('/api/crm', router);
+  router.get("/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
+      const { id } = req.params;
+
+      const [lead] = await db.select()
+        .from(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
+      if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+      const leadActivityList = await db.select({
+        activity: activities,
+        user: { id: users.id, firstName: users.firstName, lastName: users.lastName }
+      })
+      .from(activities)
+      .leftJoin(users, eq(activities.createdByUserId, users.id))
+      .where(and(eq(activities.leadId, id), eq(activities.workspaceId, workspaceId)))
+      .orderBy(desc(activities.createdAt));
+
+      res.json({ success: true, data: { lead, activities: leadActivityList } });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.post("/", requireManager, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
+      const userId = (req.user as any)?.id;
+      
+      const { 
+        companyName, industry, companyWebsite, estimatedEmployees,
+        contactName, contactTitle, contactEmail, contactPhone,
+        leadStatus, leadScore, estimatedValue, source, notes, nextFollowUpDate, assignedTo
+      } = req.body;
+
+      const [lead] = await db.insert(leads).values({
+        organizationId: workspaceId,
+        companyName,
+        industry,
+        companyWebsite,
+        estimatedEmployees,
+        contactName,
+        contactTitle,
+        contactEmail,
+        contactPhone,
+        leadStatus: leadStatus || 'new',
+        leadScore: leadScore || 0,
+        estimatedValue: estimatedValue ? String(estimatedValue) : undefined,
+        source: source || 'manual',
+        notes,
+        nextFollowUpDate,
+        assignedTo: assignedTo || userId
+      }).returning();
+
+      await db.insert(activities).values({
+        organizationId: workspaceId,
+        leadId: lead.id,
+        createdByUserId: userId || 'system',
+        workspaceId,
+        activityType: 'status_change',
+        subject: 'Lead created',
+        newStatus: lead.leadStatus,
+      });
+
+      platformEventBus.emit('crm.lead_created', {
+        workspaceId,
+        leadId: lead.id,
+        companyName,
+        source: source || 'manual',
+        createdBy: userId,
+      });
+
+      res.json({ success: true, data: lead });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.patch("/:id", requireManager, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
+      const { id } = req.params;
+      const userId = (req.user as any)?.id;
+
+      const [existing] = await db.select()
+        .from(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
+      if (!existing) return res.status(404).json({ error: "Lead not found" });
+
+      const { companyName, contactName, contactEmail, contactPhone, leadSource, source, leadStatus, estimatedValue, notes, tags, assignedTo, industry, website, address } = req.body;
+      const safeLeadUpdates: Record<string, any> = { updatedAt: new Date() };
+      if (companyName !== undefined) safeLeadUpdates.companyName = companyName;
+      if (contactName !== undefined) safeLeadUpdates.contactName = contactName;
+      if (contactEmail !== undefined) safeLeadUpdates.contactEmail = contactEmail;
+      if (contactPhone !== undefined) safeLeadUpdates.contactPhone = contactPhone;
+      if (source !== undefined) safeLeadUpdates.source = source;
+      else if (leadSource !== undefined) safeLeadUpdates.source = leadSource;
+      if (leadStatus !== undefined) safeLeadUpdates.leadStatus = leadStatus;
+      if (estimatedValue !== undefined) safeLeadUpdates.estimatedValue = String(estimatedValue);
+      if (notes !== undefined) safeLeadUpdates.notes = notes;
+      if (tags !== undefined) safeLeadUpdates.tags = tags;
+      if (assignedTo !== undefined) safeLeadUpdates.assignedTo = assignedTo;
+      if (industry !== undefined) safeLeadUpdates.industry = industry;
+      if (website !== undefined) safeLeadUpdates.website = website;
+      if (address !== undefined) safeLeadUpdates.address = address;
+
+      const [updated] = await db.update(leads)
+        .set(safeLeadUpdates)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)))
+        .returning();
+
+      if (leadStatus && leadStatus !== existing.leadStatus) {
+        await db.insert(activities).values({
+          organizationId: workspaceId,
+          leadId: id,
+          createdByUserId: userId || 'system',
+          workspaceId,
+          activityType: 'status_change',
+          subject: `Status changed from ${existing.leadStatus} to ${leadStatus}`,
+          previousStatus: existing.leadStatus || undefined,
+          newStatus: leadStatus,
+        });
+
+        platformEventBus.emit('crm.lead_status_changed', {
+          workspaceId,
+          leadId: id,
+          previousStatus: existing.leadStatus,
+          newStatus: leadStatus,
+          changedBy: userId,
+        });
+      }
+
+      res.json({ success: true, data: updated });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.delete("/:id", requireManager, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
+      const { id } = req.params;
+      await db.delete(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
+      res.json({ success: true });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.post("/:id/activity", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
+      const { id } = req.params;
+      const userId = (req.user as any)?.id;
+      const { activityType, description } = req.body;
+
+      const [lead] = await db.select()
+        .from(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
+      if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+      const [activity] = await db.insert(activities).values({
+        organizationId: workspaceId,
+        leadId: id,
+        createdByUserId: userId || 'system',
+        workspaceId,
+        activityType,
+        subject: description || activityType,
+        notes: description,
+      }).returning();
+
+      if (activityType === 'email_sent' || activityType === 'call') {
+        await db.update(leads)
+          .set({ lastContactedAt: new Date(), updatedAt: new Date() })
+          .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      }
+
+      res.json({ success: true, data: activity });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.post("/deals", requireManager, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
+      const userId = (req.user as any)?.id;
+      
+      const { 
+        dealName, companyName, leadId, rfpId, stage,
+        estimatedValue, probability, expectedCloseDate, notes, ownerId
+      } = req.body;
+
+      const [deal] = await db.insert(deals).values({
+        workspaceId: workspaceId!,
+        organizationId: workspaceId,
+        dealName,
+        companyName,
+        leadId,
+        rfpId,
+        stage: stage || 'prospect',
+        estimatedValue: estimatedValue ? String(estimatedValue) : undefined,
+        probability: probability || 50,
+        expectedCloseDate,
+        notes,
+        ownerId: ownerId || userId
+      }).returning();
+
+      platformEventBus.emit('crm.deal_created', {
+        workspaceId,
+        dealId: deal.id,
+        dealName,
+        stage: stage || 'prospect',
+        estimatedValue,
+        createdBy: userId,
+      });
+
+      res.json({ success: true, data: deal });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  router.patch("/deals/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
+      const { id } = req.params;
+      const { name: dealName, status: dealStatus, stage, estimatedValue: dealValue, expectedCloseDate, leadId, assignedTo: dealAssignee, notes: dealNotes } = req.body;
+
+      const safeDealUpdates: Record<string, any> = { updatedAt: new Date() };
+      if (dealName !== undefined) safeDealUpdates.name = dealName;
+      if (dealStatus !== undefined) safeDealUpdates.status = dealStatus;
+      if (stage !== undefined) safeDealUpdates.stage = stage;
+      if (dealValue !== undefined) safeDealUpdates.estimatedValue = String(dealValue);
+      if (expectedCloseDate !== undefined) safeDealUpdates.expectedCloseDate = expectedCloseDate;
+      if (leadId !== undefined) safeDealUpdates.leadId = leadId;
+      if (dealAssignee !== undefined) safeDealUpdates.assignedTo = dealAssignee;
+      if (dealNotes !== undefined) safeDealUpdates.notes = dealNotes;
+      if (dealStatus === 'won') safeDealUpdates.actualCloseDate = new Date();
+
+      const [updated] = await db.update(deals)
+        .set(safeDealUpdates)
+        .where(and(eq(deals.id, id), eq(deals.organizationId, workspaceId)))
+        .returning();
+
+      res.json({ success: true, data: updated });
+    } catch (error: unknown) {
+      log.error('[LeadCRM] Operation error:', error);
+      res.status(500).json({ error: 'An internal error occurred' });
+    }
+  });
+
+  const middlewares = attachWorkspaceId ? [requireAuth, attachWorkspaceId] : [requireAuth];
+  app.use('/api/crm', ...middlewares, router);
 }

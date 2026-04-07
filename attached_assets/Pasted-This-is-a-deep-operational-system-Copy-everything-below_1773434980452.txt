@@ -1,0 +1,463 @@
+This is a deep operational system. Copy everything below this line:
+
+---
+
+COAILEAGUE — SHIFT ROOM ARCHITECTURE FULL AUDIT AND BUILD
+Read everything before touching anything. Find every existing file related to
+chat rooms, shift rooms, bots, ReportBot, HelpAI, MeetingBot, ClockBot,
+the chat dock, and the document safe shifts category.
+Map exactly what exists, what is wired, what is stubbed, and what is missing.
+Report the full architecture map before writing a single line of new code.
+
+---
+
+STEP 1 — AUDIT WHAT ALREADY EXISTS
+
+Find and read every file related to these systems:
+The chat room architecture — how rooms are created, how users join, how messages are posted.
+The shift room specifically — is there a shift-specific room type, how is it linked to a shift record.
+The chat dock — how officers access rooms from mobile, how the dock renders, what rooms are visible.
+The bot system — HelpAI, ReportBot, MeetingBot, ClockBot — which exist as real implementations versus stubs.
+The existing bot entry logic — does any bot currently auto-enter a room on any trigger.
+The image/photo upload in chat — can officers post pictures with timestamps into a room today.
+The document safe shifts category — does this category exist, how are documents saved to it.
+The PDF generation service — what exists for generating PDFs from chat content.
+Trinity orchestration of bots — is there any existing wiring connecting Trinity to bot autonomy.
+
+After reading all of this produce the architecture map in this exact format:
+
+CHAT ROOM SYSTEM:
+Room creation: [what exists]
+Room types: [what types are defined]
+User join mechanism: [how users enter rooms]
+Message posting: [how messages are stored and retrieved]
+Real-time delivery: [WebSocket or polling]
+Image upload in chat: [exists or missing]
+Timestamp and location stamping on images: [exists or missing]
+
+SHIFT ROOM SPECIFICALLY:
+Shift room auto-creation on shift assignment: [exists or missing]
+Link between shift record and room: [exists or missing]
+Officer auto-notification to enter room: [exists or missing]
+Chat dock entry point for officers: [exists or missing]
+
+BOT SYSTEM:
+ReportBot: [full implementation / stub / missing]
+HelpAI: [full implementation / stub / missing]
+MeetingBot: [full implementation / stub / missing]
+ClockBot: [full implementation / stub / missing]
+Bot auto-entry on room creation trigger: [exists or missing]
+Bot message processing and response: [exists or missing]
+Bot acknowledgment of officer messages and photos: [exists or missing]
+
+DOCUMENT PIPELINE:
+Shifts category in document safe: [exists or missing]
+PDF generation from shift room content: [exists or missing]
+End-of-shift report auto-generation: [exists or missing]
+Report saved to document safe: [exists or missing]
+Report sent to client pipeline: [exists or missing]
+
+TRINITY BOT ORCHESTRATION:
+Trinity awareness of active shift rooms: [exists or missing]
+Trinity directing ReportBot behavior: [exists or missing]
+Trinity directing ClockBot on demand: [exists or missing]
+
+Do not build anything until this map is complete and reported.
+
+---
+
+STEP 2 — SHIFT ROOM FULL ARCHITECTURE SPEC
+
+After the audit build everything missing according to this exact specification.
+
+SHIFT ROOM CREATION:
+Every time a shift is assigned to one or more officers a shift room is automatically created.
+The room is created by the system not by any user.
+Room name format: Shift — [Site Name] — [Date] — [Start Time to End Time]
+Example: Shift — Lone Star Industrial Park — March 15 — 22:00 to 06:00
+Room type: shift_room
+Room is linked to the shift record by shift_id.
+Room is linked to the workspace by workspace_id.
+Room has a status: pre_shift, active, completed.
+Room status changes to active when the shift start time arrives.
+Room status changes to completed when end-of-shift report is generated and saved.
+Room is read-only after completed status — no new messages can be posted.
+
+WHO IS IN THE ROOM:
+When the room is created these participants are automatically added:
+ReportBot — always present in every shift room, cannot be removed.
+HelpAI — always present in every shift room, cannot be removed.
+The assigned officer or officers — added automatically on room creation.
+The site manager or shift supervisor if one is assigned to the site.
+The org_owner and co_owner have read access to all shift rooms but are not active participants.
+Managers have read access to all shift rooms for their assigned sites.
+Employees can only see shift rooms they are personally assigned to.
+No employee can see another employee's shift room.
+
+OFFICER ENTRY FROM CHAT DOCK:
+When an officer has an active or upcoming shift a shift room card appears in their chat dock.
+The card shows: site name, shift date and time, room status (pre_shift / active / completed).
+The officer taps the card to enter the room.
+On entry ReportBot sends a greeting message:
+"Welcome to your shift room for [Site Name] on [Date]. I am ReportBot.
+Use this room to post your hourly check-ins, site photos, and incident reports.
+I will organize everything into a shift report at the end of your shift.
+Post a photo with your location to begin your shift documentation."
+
+OFFICER CHAT DOCK VISIBILITY RULES:
+Officers see only their own shift rooms.
+Officers see only shift rooms where their shift is today or within the next 24 hours.
+Completed shift rooms remain visible for 7 days then archive.
+Officers cannot create new rooms from the chat dock — they can only enter assigned rooms.
+The chat dock always shows a Rooms tab and a Direct Messages tab.
+The shift room card is the most prominent item in the Rooms tab when a shift is active.
+
+---
+
+STEP 3 — REPORTBOT FULL SPECIFICATION
+
+ReportBot is an autonomous intelligence under Trinity orchestration.
+She does not wait to be summoned. She is active in every shift room from creation to completion.
+She has specific behaviors at specific times. Every behavior is automatic.
+
+REPORTBOT ON SHIFT START:
+When the shift start time arrives ReportBot sends the opening check-in prompt:
+"Shift started. [Officer Name], please post your first check-in photo showing
+your current position at [Site Name]. Include the time and confirm you are on post."
+
+REPORTBOT ON HOURLY CHECK-IN:
+Every hour during the shift ReportBot sends a check-in reminder if the officer
+has not posted anything in the last 55 minutes:
+"Hourly check-in reminder — please post a photo or update from your current position."
+If the officer has been active in the last 55 minutes ReportBot does not send the reminder
+to avoid interrupting active documentation.
+
+REPORTBOT PHOTO ACKNOWLEDGMENT:
+When an officer posts a photo ReportBot immediately acknowledges it:
+ReportBot reads the image metadata — timestamp and GPS coordinates if available.
+ReportBot cross-references the GPS coordinates against the site geofence.
+If coordinates are within the geofence: "Photo logged at [Time]. Location confirmed at [Site Name]."
+If coordinates are outside the geofence: "Photo logged at [Time]. Location shows outside
+expected site boundary. Please confirm your position."
+If no GPS metadata: "Photo logged at [Time]. GPS data not available for this image.
+Please confirm your current location in a message."
+Every photo is assigned a log entry number: Photo 1, Photo 2, and so on.
+The log entry number is used in the final report.
+
+REPORTBOT MESSAGE ACKNOWLEDGMENT:
+When an officer posts a text message ReportBot acknowledges it:
+For routine check-in messages: "Check-in noted at [Time]."
+For incident reports: "Incident logged at [Time]. This will be included in your shift report.
+Please include: what happened, who was involved, any actions taken, and whether police or
+emergency services were contacted."
+For anything that appears urgent based on content: ReportBot escalates to the manager
+immediately with a notification: "ReportBot — Possible incident reported at [Site Name].
+Officer [Name] posted: [message excerpt]. Please review immediately."
+This escalation fires via in-platform notification and email to the shift manager.
+
+REPORTBOT OFFICER IDENTITY VERIFICATION:
+ReportBot verifies that the person posting in the room is the officer assigned to the shift.
+Posts are tied to authenticated user sessions — a post can only come from a logged-in user.
+If a post comes from a user who is not assigned to this shift room ReportBot flags it:
+"Message received from an unassigned user. Only officers assigned to this shift
+may post in this room. This event has been logged."
+The org_owner is notified of any unauthorized post attempt.
+
+REPORTBOT END OF SHIFT:
+30 minutes before shift end ReportBot sends:
+"Your shift ends in 30 minutes. Please post your final site status update
+and any outstanding observations before shift end."
+
+At shift end time ReportBot sends:
+"Shift ended. Compiling your shift report now. This may take a moment."
+
+ReportBot then compiles the complete shift report.
+
+---
+
+STEP 4 — SHIFT REPORT GENERATION SPECIFICATION
+
+This is the most important ReportBot function.
+At end of shift ReportBot compiles everything posted in the room into a
+professional organized PDF report. The report format is fixed and consistent
+every time regardless of how many posts were made.
+
+REPORT STRUCTURE:
+
+HEADER:
+Security company name and license number (Track B — no CoAIleague branding visible to client).
+Report title: SHIFT ACTIVITY REPORT
+Site name and address.
+Shift date.
+Shift time: start time to end time.
+Officer name and badge or license number.
+Report ID: auto-generated unique identifier.
+Report generated timestamp.
+
+OFFICER AND ASSIGNMENT SUMMARY:
+Officer full name.
+Officer security license number and class.
+Assigned post.
+Site supervisor name and contact if applicable.
+Relief officer name if applicable.
+
+HOURLY LOG — CHRONOLOGICAL:
+Every hour of the shift gets its own section.
+Each section shows: Hour label (22:00 — 23:00), then all posts during that hour in time order.
+For each photo: log number, time, GPS confirmation status, a thumbnail of the photo.
+For each text post: time, officer name, full message text.
+For each incident report: time, labeled as INCIDENT REPORT in red or bold,
+full incident description, actions taken, whether emergency services were contacted.
+If no activity was logged in a given hour: note reads "No activity logged this hour."
+
+POST-PROCESSING:
+Before the report is finalized ReportBot runs a quality scan:
+Spelling check — flag any misspelled words and correct them in the report.
+If a word is ambiguous ReportBot uses context to determine the correct spelling.
+Articulation check — if a message is unclear or grammatically broken ReportBot
+rewrites it in professional security report language while preserving the meaning.
+The officer's original message is preserved in a footnote.
+This ensures every shift report reads professionally regardless of how it was typed.
+Completeness check — if any hour has no logged activity ReportBot flags it
+with a note: "No officer activity documented for this period."
+This creates accountability — gaps in documentation are visible in the report.
+
+SIGNATURE SECTION:
+Officer digital signature line (links to the officer's acknowledgment in the document pipeline).
+Supervisor review signature line.
+Date and time of report generation.
+Statement: "This report was automatically compiled by ReportBot under Trinity AI orchestration
+and reviewed for accuracy. Original message content is preserved in the CoAIleague audit trail."
+
+FOOTER:
+Powered by CoAIleague in subtle gray text.
+Report ID for audit reference.
+Page numbers.
+Watermark: SHIFT REPORT across the body in light gray diagonal text.
+
+PDF GENERATION AND STORAGE:
+The report is generated as a professional PDF using the existing PDF generation service.
+File name format: ShiftReport_[SiteName]_[Date]_[StartTime]_[ReportID].pdf
+The PDF is saved to the org document safe under the Shifts category automatically.
+The document safe entry includes: site name, officer name, shift date, shift time, report ID.
+The report is WORM locked immediately on save — it cannot be edited or deleted.
+The audit trail logs the report generation with timestamp and who it was generated by (ReportBot/system).
+
+CLIENT DISTRIBUTION (OPTIONAL):
+After the report is saved the manager or org_owner receives a notification:
+"Shift report for [Site Name] on [Date] is ready. View or send to client."
+The manager can review the report in the document safe.
+The manager can choose to send the report to the client contact via a single button.
+If sent the client receives a Track B branded email with the PDF attached.
+Email subject: Shift Activity Report — [Site Name] — [Date]
+The send action is logged in the audit trail.
+Trinity is aware of whether reports are being sent to clients and includes
+this in the weekly operational summary.
+
+---
+
+STEP 5 — HELPAI IN SHIFT ROOMS
+
+HelpAI is present in every shift room as a resource for officers.
+HelpAI does not interrupt unless addressed.
+Officers can ask HelpAI questions at any time during their shift.
+
+What HelpAI can do in a shift room:
+Answer questions about post orders for this specific site.
+Provide emergency contact numbers for this site.
+Explain reporting procedures for specific incident types.
+Tell the officer their clock-out time and overtime status.
+Answer questions about company policy from the employee handbook.
+Provide first aid guidance if an officer reports a medical situation.
+Provide de-escalation language if an officer reports a confrontational situation.
+
+HelpAI cannot do in a shift room:
+Access financial data, billing, or payroll information.
+Access any other officer's shift room or data.
+Perform actions that require manager or org_owner authorization.
+
+When an officer types @HelpAI or asks a question HelpAI responds.
+HelpAI responses are clearly labeled with the HelpAI name and avatar.
+ReportBot responses are clearly labeled with the ReportBot name and avatar.
+Each bot has a distinct visual identity in the room so officers always know who they are talking to.
+
+---
+
+STEP 6 — MEETING ROOMS AND MEETINGBOT
+
+When a meeting is created in the platform a meeting room is automatically created.
+Room name format: Meeting — [Meeting Title] — [Date]
+MeetingBot auto-enters the room on creation.
+MeetingBot opening message: "Meeting room is open for [Meeting Title] on [Date] at [Time].
+I will keep a record of this meeting and generate a summary when the meeting ends."
+
+MeetingBot functions during the meeting:
+Notes every message posted with a timestamp.
+If someone posts @MeetingBot action item: [text] MeetingBot adds it to the action items list.
+If someone posts @MeetingBot decision: [text] MeetingBot adds it to the decisions list.
+
+MeetingBot at meeting end:
+Generates a meeting summary with: attendees, duration, key points discussed,
+decisions made, action items with owner names, next meeting date if mentioned.
+Meeting summary is saved to the document safe under the Meetings category.
+Every attendee receives the summary via in-platform notification.
+
+---
+
+STEP 7 — CLOCKBOT FORCED CLOCK-IN SYSTEM
+
+ClockBot can be summoned by any manager or org_owner when an officer is
+having trouble clocking in through the normal GPS clock-in flow.
+
+CLOCKBOT SUMMONING:
+Manager opens the officer's shift room or direct message.
+Manager types @ClockBot or clicks a Clock In Officer button in the shift room header.
+ClockBot appears and asks for confirmation:
+"You are about to create a supervised clock-in for [Officer Name] at [Site Name].
+Please confirm the officer is physically present at the site. Type CONFIRM to proceed."
+Manager types CONFIRM.
+
+CLOCKBOT FORCED CLOCK-IN:
+ClockBot creates a time entry for the officer with:
+clockInTime: current timestamp.
+clockInMethod: supervisor_override.
+supervisorId: the manager who initiated the override.
+gps_verification_status: supervisor_confirmed.
+A note in the time entry: "Clock-in created by supervisor override via ClockBot.
+Initiated by [Manager Name] at [Timestamp]."
+
+ClockBot notifies the officer via in-platform notification:
+"Your manager has clocked you in for your shift at [Site Name].
+Clock-in time recorded as [Time]. Contact your supervisor with any questions."
+
+ClockBot posts in the shift room:
+"ClockBot — Supervised clock-in recorded for [Officer Name] at [Time].
+Method: supervisor override. Authorized by [Manager Name].
+This event is logged in the audit trail."
+
+CLOCKBOT AUDIT TRAIL:
+Every ClockBot action is logged in the universal audit trail with:
+Action type: supervisor_clock_in_override.
+Officer ID, manager ID, site ID, workspace ID.
+Timestamp and clock-in method.
+This creates full accountability for every forced clock-in.
+
+CLOCKBOT CANNOT:
+Clock out an officer — only the officer can clock themselves out.
+Create a clock-in for a shift that has already ended.
+Create a clock-in for an officer who is already clocked in.
+Be used by an employee or org_admin — only manager, co_owner, or org_owner.
+
+---
+
+STEP 8 — TRINITY ORCHESTRATION OF ALL BOTS
+
+Trinity is the orchestration layer above all bots.
+The bots do not operate independently — they operate as instruments of Trinity.
+
+Trinity monitors all active shift rooms simultaneously.
+Trinity directs ReportBot to escalate to the manager when incident language is detected.
+Trinity directs HelpAI to proactively offer resources if an officer reports a dangerous situation.
+Trinity includes active shift room status in the daily operations briefing:
+"[X] shifts currently active. [Y] officers on duty. [Z] incidents reported in last 24 hours."
+
+Trinity action registry entries to add if not already present:
+shiftroom.create — create a shift room for a given shift ID
+shiftroom.add_participant — add a user to a shift room
+shiftroom.get_active — get all active shift rooms for a workspace
+reportbot.compile_shift_report — compile and generate end-of-shift PDF report
+reportbot.send_hourly_reminder — send hourly check-in reminder to officer
+reportbot.escalate_incident — fire immediate notification to manager
+helpai.answer_shift_question — answer a shift-related officer question
+meetingbot.generate_summary — compile and save meeting summary
+clockbot.supervised_clockin — execute a supervisor override clock-in
+clockbot.validate_clockin_request — validate manager has authority and shift is active
+
+---
+
+STEP 9 — SIMULATION TEST
+
+After building everything run a complete simulation for Acme Security Services.
+
+SHIFT ROOM SIMULATION:
+Create a shift for Marcus Johnson at Lone Star Industrial Park tonight 22:00 to 06:00.
+Confirm the shift room is auto-created with the correct name.
+Confirm ReportBot and HelpAI auto-enter the room.
+Confirm Marcus receives a chat dock notification showing the shift room card.
+
+Simulate Marcus entering the room at 22:00.
+Confirm ReportBot sends the opening greeting.
+Simulate Marcus posting a photo with GPS metadata matching the site coordinates.
+Confirm ReportBot acknowledges it with "Location confirmed at [Site Name]."
+Simulate Marcus posting a second photo from outside the geofence.
+Confirm ReportBot flags the location mismatch.
+
+Simulate Marcus posting an incident report message at 01:30:
+"Man approached gate asking for entry, had no ID, was told to leave, he left."
+Confirm ReportBot acknowledges it as an incident, logs it, and asks for the follow-up fields.
+Confirm the manager receives an immediate escalation notification via all three channels.
+
+Simulate Marcus posting hourly check-in photos at 23:00, 00:00, 01:00, 02:00, 03:00, 04:00, 05:00.
+At 05:30 confirm ReportBot sends the 30-minute warning.
+At 06:00 confirm ReportBot compiles the report.
+
+Confirm the generated PDF contains:
+Correct header with Acme name and license number.
+Hourly log for all 8 hours with photos and timestamps in order.
+Incident report section clearly labeled at 01:30 entry.
+Quality scan corrections applied where needed.
+Signature section present.
+Professional formatting throughout.
+
+Confirm the PDF is saved to the document safe under Shifts category.
+Confirm it is WORM locked.
+Confirm the manager receives a notification with a view and send to client option.
+
+CLOCKBOT SIMULATION:
+Create a second shift for an Acme officer who cannot clock in via GPS.
+Manager enters the shift room and summons @ClockBot.
+Confirm ClockBot asks for CONFIRM before proceeding.
+Manager types CONFIRM.
+Confirm ClockBot creates a time entry with clockInMethod: supervisor_override.
+Confirm the officer receives the notification.
+Confirm the shift room shows the ClockBot post with the override details.
+Confirm the audit trail has the supervisor_clock_in_override entry.
+
+MEETINGBOT SIMULATION:
+Create a manager meeting in Acme for a team check-in.
+Confirm meeting room is auto-created.
+Confirm MeetingBot enters and posts the opening message.
+Post three messages as participants.
+Post @MeetingBot action item: Review post orders for Lone Star by March 20.
+Post @MeetingBot decision: All officers will use the new incident report format.
+Confirm MeetingBot tracks both.
+Close the meeting.
+Confirm MeetingBot generates a summary with action items and decisions.
+Confirm summary is saved to document safe under Meetings category.
+Confirm all attendees receive the summary notification.
+
+REPORT ALL SIMULATION RESULTS:
+For every step report pass or fail with specific evidence.
+Any failure is a bug that must be fixed before this system is production ready.
+If all simulation steps pass the shift room system is production ready for Statewide.
+
+---
+
+COMPLETION CRITERIA
+
+The shift room system is production ready when:
+Shift rooms auto-create on every shift assignment.
+ReportBot and HelpAI auto-enter every shift room.
+Officers can access their shift room from the chat dock on mobile.
+ReportBot acknowledges every photo with GPS verification.
+ReportBot acknowledges every text post with appropriate response.
+ReportBot escalates incident reports to the manager immediately.
+ReportBot generates a professional chronological PDF at end of shift.
+The PDF passes the spelling and articulation quality scan.
+The PDF is saved WORM locked to the document safe under the Shifts category.
+The manager can send the report to the client with one action.
+ClockBot creates supervisor override clock-ins with full audit trail.
+MeetingBot generates meeting summaries saved to the document safe.
+Trinity orchestrates all bots and is aware of all active shift rooms.
+All simulation tests pass with real data for Acme Security Services.
+When these criteria are met the system is ready for Statewide Protective Services operations.

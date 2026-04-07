@@ -1,0 +1,315 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — TRINITY ACTION REGISTRY CONSOLIDATION AUDIT
+This is NOT a refactor of the domain architecture.
+Do NOT touch the route domains, mount domains, or file domains.
+Do NOT reorganize any folder structure.
+Do NOT move any files.
+Do NOT change any route paths.
+The domain architecture is correct and stays exactly as it is.
+
+This audit is ONLY about the Trinity action registry.
+Specifically the list of actions registered in the platformActionHub
+and the handlers they point to.
+Nothing else is being changed.
+
+---
+
+WHAT THIS IS AND IS NOT
+
+THIS IS:
+An audit of the 750+ registered Trinity action definitions.
+Identification of duplicate action names pointing to the same behavior.
+Identification of stub handlers that do not actually execute real work.
+Identification of actions whose credit costs are wrong or missing.
+Consolidation of duplicates into single authoritative actions.
+Removal of stubs that have no real implementation.
+The result is a cleaner action registry with fewer but fully functional actions.
+
+THIS IS NOT:
+A restructuring of the domain file organization.
+A change to any route handler or API endpoint.
+A change to any service file.
+A change to any database schema.
+A change to any frontend component.
+A change to any middleware.
+A change to any bot file.
+A change to any email or document pipeline.
+
+The only files that will change are the action registry definitions
+and the handler functions that those registry entries point to.
+Everything else is untouched.
+
+---
+
+STEP 1 — READ BEFORE TOUCHING ANYTHING
+
+Read the complete platformActionHub.ts file in its entirety.
+Read every file that registers actions into the hub.
+Read every handler function that any action points to.
+
+Do not modify a single line until you have read everything and produced the report below.
+
+---
+
+STEP 2 — PRODUCE THE FULL AUDIT REPORT
+
+After reading everything produce this exact report before making any changes.
+
+SECTION A — DUPLICATE ACTION GROUPS:
+List every group of actions that perform the same function.
+Format each group like this:
+Group 1: schedule.create | scheduling.create_shift | shift.new
+All three do the same thing. Recommended: keep schedule.create, remove the other two.
+List every group. Do not merge anything yet.
+
+SECTION B — STUB ACTIONS:
+List every action where the handler function:
+Does not exist as an actual function in any file.
+Exists but returns a hardcoded value without querying the database.
+Exists but only calls console.log or logger without doing real work.
+Exists but immediately returns success without executing any business logic.
+Format each stub like this:
+Action: reportbot.generate_summary
+Handler: generateReportSummary in reportBot.ts
+Stub reason: function exists but returns hardcoded string, never queries database.
+List every stub. Do not remove anything yet.
+
+SECTION C — CREDIT COST MISMATCHES:
+List every action where the registered credit cost does not match
+the canonical credit cost table from the billing configuration.
+Format each mismatch like this:
+Action: schedule.generate
+Registered cost: 200 credits
+Canonical cost: 300 credits
+Mismatch: undercharging by 100 credits per execution.
+List every mismatch. Do not change anything yet.
+
+SECTION D — MISSING RBAC:
+List every action that executes without checking the caller's role.
+An action that any role can trigger regardless of what it does is a security gap.
+Format each gap like this:
+Action: payroll.approve
+RBAC check: missing
+Risk: employee role could trigger payroll approval.
+List every missing RBAC check.
+
+SECTION E — MISSING AUDIT TRAIL:
+List every action that completes without writing to the universal audit trail.
+Every Trinity action that executes must leave an audit record.
+Format each gap like this:
+Action: document.generate
+Audit trail: missing
+Risk: no record of when documents were generated or by whom.
+List every missing audit trail entry.
+
+SECTION F — NAMING INCONSISTENCIES:
+The correct naming convention is domain.verb in lowercase with no underscores in the domain.
+Examples of correct names: schedule.generate, payroll.approve, document.send_for_signature.
+List every action that does not follow this convention.
+Format each inconsistency like this:
+Current name: generateSchedule
+Correct name: schedule.generate
+List every inconsistency.
+
+SECTION G — COUNT SUMMARY:
+Total actions currently registered: [number]
+Duplicate groups found: [number of groups, total actions that are duplicates]
+Stub actions found: [number]
+Credit cost mismatches found: [number]
+Missing RBAC checks found: [number]
+Missing audit trail entries found: [number]
+Naming inconsistencies found: [number]
+Estimated clean action count after consolidation: [number]
+
+DO NOT MAKE ANY CHANGES UNTIL THIS REPORT IS COMPLETE AND SHOWN TO ME.
+I will review the report and confirm which consolidations to proceed with.
+
+---
+
+STEP 3 — WAIT FOR APPROVAL BEFORE MAKING ANY CHANGES
+
+After producing the Section A through G report stop.
+Do not merge any duplicates.
+Do not remove any stubs.
+Do not change any credit costs.
+Do not add any RBAC checks.
+Do not add any audit trail entries.
+Do not rename any actions.
+
+Present the full report and wait.
+I will review each section and give explicit approval for each category of changes.
+We do this in stages so nothing that currently works gets broken.
+
+---
+
+STEP 4 — AFTER APPROVAL: CONSOLIDATION RULES
+
+When I approve consolidation proceed using these exact rules.
+Do not deviate from these rules.
+
+RULE 1 — DUPLICATE CONSOLIDATION:
+For each duplicate group keep exactly one action.
+The action to keep is the one that:
+Has the most complete handler implementation.
+Has the correct credit cost.
+Has RBAC enforcement.
+Has an audit trail entry.
+Has the most correct naming convention.
+If no action in the group meets all criteria keep the best one and improve it.
+Remove the duplicates from the registry only — do not delete handler files.
+Handler files may be used by other parts of the system outside the registry.
+
+RULE 2 — STUB REMOVAL:
+For each stub action make a decision:
+If the feature this stub represents is on the pricing page or in a user-facing flow
+it must be built for real before being kept in the registry.
+Build the real implementation first. Then keep it in the registry.
+If the feature this stub represents is not in any user-facing flow or pricing page
+remove the stub from the registry entirely.
+A stub in the registry is worse than no action — it charges credits for nothing.
+
+RULE 3 — CREDIT COST CORRECTION:
+For every credit cost mismatch update the registered cost to match the canonical table.
+The canonical table is the source of truth.
+Never update the canonical table to match the wrong registry value.
+
+RULE 4 — RBAC ADDITION:
+For every action missing RBAC add the correct role check.
+The role required for each action is determined by what the action does:
+Actions that read data: employee and above.
+Actions that modify schedules: manager and above.
+Actions that touch financial data: org_owner and co_owner only.
+Actions that touch billing or Stripe: org_owner and co_owner only.
+Actions that generate compliance reports: manager and above.
+Actions that execute payroll: org_owner only.
+Actions that manage documents: manager and above.
+Platform health actions: platform_staff only.
+
+RULE 5 — AUDIT TRAIL ADDITION:
+For every action missing an audit trail entry add this minimum record:
+action_type: the action name.
+actor_id: the user or system that triggered the action.
+workspace_id: the workspace the action executed in.
+timestamp: exact execution time.
+credits_deducted: amount deducted for this action.
+result: success or failure with reason.
+
+RULE 6 — NAMING STANDARDIZATION:
+Rename every action that does not follow the domain.verb convention.
+Update every reference to the old action name across the entire codebase.
+Search for every string that contains the old action name and update it.
+Do not leave any orphaned references to renamed actions.
+
+---
+
+STEP 5 — VERIFICATION AFTER CONSOLIDATION
+
+After every approved change is applied run these exact checks:
+
+CHECK 1 — SERVER STARTUP:
+Restart the server.
+Confirm it starts without errors.
+Confirm the new action count is reported in the startup log.
+Confirm the new count is less than the previous count.
+Confirm all 15 domains are still healthy.
+Confirm all 29 services are still running.
+Confirm all 4 regression tests still pass.
+Report the exact new action count.
+
+CHECK 2 — CREDIT DEDUCTION ACCURACY:
+Execute 5 actions that existed before consolidation.
+Confirm each deducts exactly the credit amount in the canonical table.
+Confirm no double deductions occur.
+Confirm no action executes without a deduction when a cost is specified.
+
+CHECK 3 — RBAC ENFORCEMENT:
+Attempt to execute an org_owner-only action as a manager-role user.
+Confirm it is rejected with a 403.
+Attempt to execute a manager action as an employee-role user.
+Confirm it is rejected with a 403.
+Confirm no action that previously had RBAC now lacks it after consolidation.
+
+CHECK 4 — AUDIT TRAIL COMPLETENESS:
+Execute 5 actions after consolidation.
+Confirm each creates an audit trail entry with all required fields.
+Confirm no action executes without an audit trail entry.
+
+CHECK 5 — ZERO REGRESSION:
+Test every user-facing feature that uses a Trinity action.
+Scheduling assistant — still works.
+Compliance scan — still works.
+Document generation — still works.
+Payroll analysis — still works.
+Shift escalation — still works.
+ReportBot PDF generation — still works.
+HelpAI shift room responses — still works.
+ClockBot supervised clock-in — still works.
+MeetingBot summary generation — still works.
+Morning briefing generation — still works.
+If any feature is broken by the consolidation it must be restored immediately.
+
+CHECK 6 — STATEWIDE EXEMPTION STILL ACTIVE:
+Confirm ensureStatewideExemption fires on startup after consolidation.
+Confirm no Trinity action can deduct credits from the Statewide workspace.
+Confirm the founder exemption is not affected by any action registry changes.
+
+---
+
+STEP 6 — FINAL REPORT
+
+After all approved changes and all verification checks produce this report:
+
+ACTION REGISTRY FINAL STATE:
+Previous action count: [number]
+Actions removed as duplicates: [number]
+Actions removed as stubs with no real implementation: [number]
+Actions built out from stubs: [number]
+Actions renamed for consistency: [number]
+Final action count: [number]
+Reduction percentage: [percentage]
+
+CREDIT SYSTEM INTEGRITY:
+Credit costs corrected: [number]
+All deductions match canonical table: confirmed or list gaps.
+
+RBAC INTEGRITY:
+RBAC checks added: [number]
+All actions now have role enforcement: confirmed or list gaps.
+
+AUDIT TRAIL INTEGRITY:
+Audit trail entries added: [number]
+All actions now write to audit trail: confirmed or list gaps.
+
+REGRESSION STATUS:
+All 15 domains healthy: confirmed.
+All 29 services running: confirmed.
+All 4 regression tests passing: confirmed.
+All user-facing Trinity features working: confirmed or list failures.
+Statewide exemption still active: confirmed.
+
+OVERALL VERDICT:
+Trinity action registry is clean, non-duplicated, fully implemented,
+correctly priced, RBAC-enforced, and audit-trailed.
+Ready for real user traffic: YES or NO.
+If NO list exact remaining items.
+
+---
+
+IMPORTANT REMINDER TO REPLIT:
+
+The domain file structure is correct and is not being changed.
+The route mounting is correct and is not being changed.
+The service layer is correct and is not being changed.
+The database schema is not being changed.
+The frontend is not being changed.
+
+The only thing changing is the list of actions in the Trinity action registry
+and the quality of the handler functions those actions point to.
+
+This is a precision audit of one specific system within the existing architecture.
+Not a refactor. Not a restructure. A cleanup of the action registry only.
+Work within the existing architecture. Respect the domain boundaries that are already there.
+Make the registry reflect reality — real actions, real implementations, real costs, real RBAC.

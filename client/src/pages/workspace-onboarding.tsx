@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import {
   CheckCircle2,
   Circle,
@@ -62,9 +63,9 @@ interface AutomationTrigger {
 function StepIcon({ status }: { status: OnboardingStep['status'] }) {
   switch (status) {
     case 'completed':
-      return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      return <CheckCircle2 className="h-5 w-5 text-green-500 dark:text-green-400" />;
     case 'in_progress':
-      return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
+      return <Loader2 className="h-5 w-5 text-blue-500 dark:text-blue-400 animate-spin" />;
     case 'failed':
       return <AlertCircle className="h-5 w-5 text-destructive" />;
     case 'skipped':
@@ -273,30 +274,32 @@ export default function WorkspaceOnboarding() {
     );
   }
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold" data-testid="text-page-title">Workspace Onboarding</h1>
-          <p className="text-muted-foreground">Track your setup progress and automation status</p>
-        </div>
-        {isComplete && (
-          <Badge variant="default" className="gap-1">
-            <CheckCircle2 className="h-4 w-4" />
-            Setup Complete
-          </Badge>
-        )}
-      </div>
+  const setupCompleteBadge = isComplete ? (
+    <Badge variant="default" className="gap-1">
+      <CheckCircle2 className="h-4 w-4" />
+      Setup Complete
+    </Badge>
+  ) : undefined;
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'workspace-onboarding',
+    title: 'Workspace Onboarding',
+    subtitle: 'Track your setup progress and automation status',
+    category: 'operations',
+    headerActions: setupCompleteBadge,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-start sm:items-center justify-between gap-2 flex-wrap">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
                 Setup Progress
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 {isComplete 
                   ? 'Your workspace is fully configured and automations are active.'
                   : `${completedSteps} of ${steps.length} steps completed`
@@ -325,20 +328,20 @@ export default function WorkspaceOnboarding() {
         <CardContent>
           <div className="space-y-4">
             {steps.map((step, idx) => (
-              <div key={step.id} className="flex items-start gap-4" data-testid={`step-${step.id}`}>
-                <div className="flex flex-col items-center">
+              <div key={step.id} className="flex items-start gap-3 sm:gap-4" data-testid={`step-${step.id}`}>
+                <div className="flex flex-col items-center flex-shrink-0">
                   <StepIcon status={step.status} />
                   {idx < steps.length - 1 && (
                     <div className="w-px h-8 bg-border mt-2" />
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">{step.label}</h4>
-                      <p className="text-sm text-muted-foreground">{step.description}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                    <div className="min-w-0">
+                      <h4 className="font-medium text-sm sm:text-base">{step.label}</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{step.description}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 mt-1 sm:mt-0">
                       <StatusBadge status={step.status} />
                       {step.actionPath && step.status === 'pending' && (
                         <Link href={step.actionPath}>
@@ -374,12 +377,12 @@ export default function WorkspaceOnboarding() {
             <>
               <Separator className="my-4" />
               <div className="space-y-2">
-                <h4 className="font-medium text-amber-500 flex items-center gap-2">
+                <h4 className="font-medium text-amber-500 dark:text-amber-400 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
                   Warnings
                 </h4>
                 {flow.warnings.map((warning, idx) => (
-                  <p key={idx} className="text-sm text-amber-500/80">{warning}</p>
+                  <p key={idx} className="text-sm text-amber-500/80 dark:text-amber-400/80">{warning}</p>
                 ))}
               </div>
             </>
@@ -436,7 +439,7 @@ export default function WorkspaceOnboarding() {
       {isComplete && (
         <Card className="border-green-500/20 bg-green-500/5">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
+            <CardTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
               <CheckCircle2 className="h-5 w-5" />
               Automation Active
             </CardTitle>
@@ -485,6 +488,6 @@ export default function WorkspaceOnboarding() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </CanvasHubPage>
   );
 }

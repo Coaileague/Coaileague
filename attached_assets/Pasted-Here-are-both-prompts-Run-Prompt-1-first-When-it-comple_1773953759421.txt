@@ -1,0 +1,2180 @@
+Here are both prompts. Run Prompt 1 first. When it completes bring the report back and then run Prompt 2.
+
+---
+
+# PROMPT 1 — NEW FEATURES STRESS TEST
+
+```
+COALEAGUE NEW FEATURES STRESS TEST SPRINT
+TESTING ALL RECENTLY IMPLEMENTED SYSTEMS
+USING ACME SIMULATED DATA
+
+PRIME DIRECTIVE:
+Test every feature implemented in the
+most recent development sprints.
+Use Acme workspace simulated data only.
+Every test must produce real observable output.
+A test that produces no error but also
+produces no output is a FAILED test.
+Keep scanning in loops until every test passes.
+Do not stop until all tests pass in a single
+uninterrupted pass.
+
+LOOP INSTRUCTIONS:
+Run all tests in order.
+When a test fails fix it immediately.
+After fixing restart from Test 1.
+Only declare complete when all tests
+pass in one continuous run from start to finish
+with zero failures and zero silent errors.
+
+═══════════════════════════════════════════════
+KNOWN PATTERNS THAT HAVE FAILED BEFORE
+Check these first in every loop iteration.
+═══════════════════════════════════════════════
+
+Before running any test verify:
+□ No null-status DARs in acme workspace
+□ Kill switch state persists in database
+□ All 15 financial events have publishers
+□ Dual-AI gate wired in executeAction()
+□ Tool calling: enableToolCalling true
+□ Token limit: 4096 confirmed
+□ workspaceId in all query WHERE clauses
+□ No req.query.workspaceId fallback security gap
+□ Report substance: Trinity cannot change facts
+□ 911 autonomous contact: zero references
+□ SMS consent checked before every SMS send
+□ Server-side Whisper: zero browser STT
+□ All 13 dream state phases registered
+□ Boot: 15/15 contract domains covered
+
+Report any regressions before proceeding.
+Fix all regressions before Test 1.
+
+═══════════════════════════════════════════════
+SECTION 1 — TENANT ONBOARDING SYSTEM
+═══════════════════════════════════════════════
+
+TEST 1.1 — Tenant onboarding progress exists
+Action: Query tenant_onboarding_progress
+  for acme workspace
+Expected:
+  Record exists in database
+  overall_progress_pct between 0 and 100
+  status is a valid value
+  trinity_welcome_sent is true
+  trinity_welcome_sent_at is populated
+Verify:
+  □ Record exists
+  □ All required fields populated
+  □ Progress percentage is numeric
+  □ Status is valid enum value
+RESULT: PASS / FAIL — [detail if fail]
+Fix if fail. Restart from Test 1.1.
+
+TEST 1.2 — Trinity welcome message in ChatDock
+Action: Check ChatDock DMs for acme owner user
+Expected:
+  A Trinity welcome message exists in their DM
+  Message contains company name
+  Message contains progress bar reference
+  Message contains call to action
+Verify:
+  □ Message exists in database
+  □ Message is from Trinity sender
+  □ Message contains expected content
+  □ Message has correct workspace_id
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 1.1.
+
+TEST 1.3 — All 12 tenant onboarding steps seeded
+Action: Query tenant_onboarding_steps table
+Expected:
+  Exactly 12 steps in the table
+  All step_keys present:
+  company_profile, company_license,
+  certificate_of_insurance, labor_law_poster,
+  employee_handbook, sop_upload,
+  billing_setup, first_client, first_officer,
+  historical_import, first_schedule,
+  compliance_verification
+  All required fields populated per step
+Verify:
+  □ 12 records exist
+  □ All step_keys present
+  □ step_number sequential 1-12
+  □ required field set correctly per step
+  □ category field populated per step
+  □ trinity_prompt_template populated
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 1.1.
+
+TEST 1.4 — Tenant company documents exist
+Action: Query onboarding_documents for
+  acme workspace with entity_type: tenant
+Expected:
+  Company license document exists
+  COI document exists
+  Labor law poster document exists
+  Employee handbook document exists
+  All documents: file_path populated
+  All documents: actual file exists at path
+  All documents: file_size_bytes > 0
+  All documents: SHA-256 hash stored
+  All documents: serve correctly via view route
+Verify each document:
+  □ Record in onboarding_documents
+  □ file_path not null
+  □ File exists at path (not 404)
+  □ File opens in browser
+  □ File contains real content not empty
+  □ Hash stored
+RESULT: PASS / FAIL — [which documents failed]
+Fix if fail. Restart from Test 1.1.
+
+TEST 1.5 — Progress bar renders in UI
+Action: Navigate to /onboarding as acme owner
+Expected:
+  Progress bar renders
+  Percentage shows correct value from database
+  Steps list renders with correct statuses
+  Completed steps show checkmark
+  Current step highlighted
+  Trinity guidance panel visible
+Verify:
+  □ Page renders without error
+  □ Progress percentage matches database
+  □ All 12 steps visible in list
+  □ Status icons correct per step
+  □ No broken UI elements
+  □ Mobile responsive
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 1.1.
+
+TEST 1.6 — Step completion updates progress
+Action: Mark company_profile step complete
+  via the actual UI for acme workspace
+Expected:
+  tenant_onboarding_progress.steps_completed
+  contains company_profile
+  overall_progress_pct increments correctly
+  Trinity sends step completion message
+  in owner ChatDock DM
+  Progress bar updates without page refresh
+Verify:
+  □ Database record updated
+  □ Percentage incremented by correct amount
+  □ Trinity completion message in ChatDock
+  □ UI updates in real time
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 1.1.
+
+═══════════════════════════════════════════════
+SECTION 2 — EMPLOYEE ONBOARDING SYSTEM
+═══════════════════════════════════════════════
+
+TEST 2.1 — Employee onboarding steps seeded
+Action: Query employee_onboarding_steps
+Expected:
+  15 steps in the table
+  All step_keys present:
+  profile_photo, government_id, guard_card,
+  ssn_card, employment_application,
+  i9_verification, tax_withholding,
+  direct_deposit, background_check,
+  drug_free_policy, handbook_acknowledgment,
+  sop_acknowledgment, emergency_contact,
+  equipment_issuance, references
+Verify:
+  □ 15 records exist
+  □ All step_keys present
+  □ step_number sequential 1-15
+  □ document_type populated where applicable
+  □ upload_required correct per step
+  □ signature_required correct per step
+  □ acknowledgment_required correct per step
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.2 — Marcus Rodriguez onboarding at 100%
+Action: Query employee_onboarding_progress
+  for Marcus Rodriguez in acme workspace
+Expected:
+  Record exists
+  overall_progress_pct: 100
+  status: complete
+  All boolean fields set to true
+  completed_at populated
+Verify:
+  □ Record exists
+  □ Progress exactly 100
+  □ All 15 steps in steps_completed array
+  □ completed_at has a valid timestamp
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.3 — Marcus has all 15 step documents
+Action: Query onboarding_documents for Marcus
+Expected:
+  At minimum these documents exist:
+  profile_photo, state_id, guard_card,
+  ssn_acknowledgment, employment_application,
+  i9, w4_or_w9, drug_free_policy,
+  background_check, handbook_acknowledgment,
+  sop_acknowledgment, equipment_issuance
+  Each document:
+    file_path populated
+    Actual file exists at path
+    File size > 0 bytes
+    File opens in browser
+    File contains Marcus's real data
+    SHA-256 hash stored
+Verify each document:
+  □ Record in onboarding_documents
+  □ File exists at path
+  □ File is not empty (size > 0)
+  □ File opens without error
+  □ File contains "Marcus Rodriguez" or
+    "Marcus A Rodriguez" in content
+  □ Hash stored in record
+RESULT: PASS / FAIL — [list which fail]
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.4 — Master personnel file exists for Marcus
+Action: Check for master personnel file PDF
+Expected:
+  File exists at path:
+  /documents/acme_workspace/employees/
+  marcus_rodriguez/personnel_file_master.pdf
+  or equivalent structured path
+  File size > 5000 bytes (real content)
+  File opens and shows multiple sections
+  File contains all document sections
+  in chronological order
+Verify:
+  □ File path exists in onboarding_documents
+  □ File physically exists at that path
+  □ File size indicates real content
+  □ File opens in browser PDF viewer
+  □ File contains multiple sections
+  □ File has company header
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.5 — Employee 2 at 60% with partial docs
+Action: Find second dev employee in acme
+  with partial onboarding
+Expected:
+  overall_progress_pct between 55 and 65
+  steps_completed has 9 steps
+  steps_remaining has 6 steps
+  Documents exist for completed steps
+  Documents do not exist for remaining steps
+Verify:
+  □ Employee record exists
+  □ Progress in correct range
+  □ Completed steps have documents
+  □ Remaining steps show as pending
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.6 — Trinity welcome message to employees
+Action: Check ChatDock DMs for Marcus
+  and other dev employees
+Expected:
+  Welcome message exists from Trinity
+  Message uses officer's first name
+  Message is in correct language
+  Message references company name
+  Message has onboarding CTA link
+Verify:
+  □ Message exists in ChatDock DM
+  □ Uses correct first name
+  □ References CoAIleague and company
+  □ Not a generic template
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.7 — Employee onboarding UI renders
+Action: Navigate to /my-onboarding
+  as Marcus Rodriguez
+Expected:
+  Progress bar shows 100%
+  All 15 steps show as complete
+  Documents accessible via view links
+  Download buttons functional
+  No broken links or 404s
+Verify:
+  □ Page renders without error
+  □ Progress bar at 100%
+  □ All steps shown as complete
+  □ View link on each document works
+  □ Download button on each document works
+  □ Mobile responsive
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.8 — Manager sees all employee progress
+Action: Navigate to employees section
+  as acme manager
+  Click on Marcus Rodriguez profile
+  Navigate to Onboarding tab
+Expected:
+  Onboarding tab exists
+  Shows 100% progress for Marcus
+  All documents listed and viewable
+  Download master personnel file button present
+  Print package button present
+  Master file downloads real PDF
+Verify:
+  □ Onboarding tab renders
+  □ Correct percentage shown
+  □ All documents listed
+  □ View links work for each doc
+  □ Download master file button works
+  □ Downloaded file is not empty
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 2.1.
+
+TEST 2.9 — Fresh employee onboarding end to end
+Action: Create a NEW test employee in acme
+  via the actual UI (not seed data)
+  Name: Test Officer Fresh
+  Complete steps E01 through E05 via UI
+Expected:
+  After each step:
+  Progress increments correctly
+  Document generated or saved
+  Trinity sends step guidance message
+  Next step becomes accessible
+  After 5 steps: progress at ~33%
+Verify step by step:
+  □ Step E01 photo upload: file saved
+    progress increments, Trinity confirms
+  □ Step E02 ID upload: file saved
+    progress increments, Trinity confirms
+  □ Step E03 guard card upload: file saved
+    progress increments, Trinity confirms
+  □ Step E04 SSN acknowledgment: signed
+    PDF generated, progress increments
+  □ Step E05 application: completed
+    PDF generated with entered data
+    progress increments
+  □ Progress at correct percentage after 5 steps
+  □ All 5 documents exist and open
+RESULT: PASS / FAIL — [detail per step]
+Fix if fail. Restart from Test 2.1.
+
+═══════════════════════════════════════════════
+SECTION 3 — DOCUMENT GENERATION SYSTEM
+═══════════════════════════════════════════════
+
+TEST 3.1 — Employment application PDF generation
+Action: Trigger employment application
+  generation for Test Officer Fresh
+  with test data:
+  Name: Test Officer Fresh
+  Prior employer: ABC Security 2022-2024
+  Reference: John Smith 210-555-1234
+Expected:
+  PDF file generated at correct path
+  File size > 2000 bytes
+  PDF opens in browser
+  PDF contains: Test Officer Fresh
+  PDF contains: ABC Security
+  PDF contains: John Smith
+  Signature section present
+  Company header present
+  Date populated
+Verify:
+  □ File generated
+  □ File size > 2000 bytes
+  □ Opens without error
+  □ Employee name in document
+  □ Work history in document
+  □ Signature section present
+  □ Date populated
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+TEST 3.2 — I-9 PDF generation
+Action: Complete I-9 step for test employee
+Expected:
+  PDF generated with two sections
+  Section 1: employee data populated
+    name, address, citizenship status
+    signature and date present
+  Section 2: employer section templated
+    document type fields present
+    "REQUIRES MANAGER VERIFICATION" notice
+  Company info pre-filled
+Verify:
+  □ File generated and opens
+  □ Both sections present
+  □ Employee data in Section 1
+  □ Manager notice in Section 2
+  □ Employer info present
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+TEST 3.3 — W-4 PDF generation
+Action: Complete W-4 step for test employee
+  Filing status: Single
+  No additional withholding
+Expected:
+  PDF generated
+  Employee name and address present
+  Filing status: Single shown
+  Signature and date present
+  Employer section populated
+Verify:
+  □ File generated and opens
+  □ Employee info present
+  □ Filing status correct
+  □ Signature captured
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+TEST 3.4 — Drug free acknowledgment PDF
+Action: Complete drug free step
+  Employee types name to sign
+  Clicks acknowledge
+Expected:
+  PDF generated
+  Full policy text present
+  Employee name and acknowledgment
+    statement present
+  Electronic signature: typed name
+  Date and timestamp present
+  IP address recorded in document
+Verify:
+  □ File generated and opens
+  □ Policy text present (not empty)
+  □ Employee name in signature section
+  □ Date populated
+  □ Acknowledgment text present
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+TEST 3.5 — Handbook acknowledgment PDF
+Action: Complete handbook acknowledgment
+Expected:
+  PDF generated as signature page
+  Acknowledgment statement present:
+  contains "received" and "read" and "understood"
+  Employee name signed
+  Handbook version referenced
+  Date and timestamp present
+Verify:
+  □ File generated and opens
+  □ Acknowledgment statement complete
+  □ Employee name present
+  □ Version referenced
+  □ Date populated
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+TEST 3.6 — Background check authorization PDF
+Action: Complete background check step
+Expected:
+  Authorization PDF generated
+  Employee name, DOB, SSN last 4 present
+  Scope of check described
+  Signature and date present
+  For Marcus: results section shows CLEARED
+Verify:
+  □ File generated and opens
+  □ Employee data present
+  □ Scope description present
+  □ Signature captured
+  □ Marcus: CLEARED status shown
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+TEST 3.7 — SHA-256 hash verification
+Action: Query onboarding_documents for
+  any 5 documents
+Expected:
+  sha256_hash field is populated for each
+  Hash is a 64-character hex string
+  Hash matches content of file
+Verify:
+  □ Hash populated on all 5 documents
+  □ Hash is 64 characters
+  □ Hash format is valid hex
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+TEST 3.8 — Document tamper detection
+Action: Retrieve a document hash
+  Simulate edit attempt on document
+Expected:
+  Edit creates new version
+  New version has new hash
+  Original version preserved
+  Audit trail shows both versions
+Verify:
+  □ Version number increments on edit
+  □ New hash generated
+  □ Original version still accessible
+  □ Audit trail shows change history
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 3.1.
+
+═══════════════════════════════════════════════
+SECTION 4 — BILINGUAL SYSTEM
+═══════════════════════════════════════════════
+
+TEST 4.1 — Spanish language preference
+Action: Set language preference to Spanish
+  for a dev officer in acme
+Expected:
+  preferred_language: es stored in user profile
+  Setting persists after session
+Verify:
+  □ Database field updated
+  □ Persists after page refresh
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 4.1.
+
+TEST 4.2 — Trinity responds in Spanish
+Action: Send Trinity a message as the
+  Spanish-preference officer
+  Message: "Hola Trinity"
+Expected:
+  Trinity responds in Spanish
+  Response is coherent Spanish
+  Not English with Spanish words
+  Uses officer's name
+Verify:
+  □ Response is in Spanish
+  □ Response is grammatically correct
+  □ Response is not just translated English
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 4.1.
+
+TEST 4.3 — Spanish incident report handling
+Action: Create a test incident report
+  in Spanish for acme workspace
+  Text: "Esta noche observe una persona
+  sospechosa en el estacionamiento.
+  La persona se fue antes de que
+  yo pudiera intervenir."
+Expected:
+  incident_reports.original_language: es
+  incident_reports.original_text: exact
+    Spanish text as entered unchanged
+  incident_reports.translated_text:
+    English translation present
+  Translation is accurate
+  Both versions viewable in report view
+  Left panel: Spanish original
+  Right panel: English translation
+  Disclaimer visible
+Verify:
+  □ original_language: es stored
+  □ original_text unchanged from input
+  □ translated_text is English
+  □ Translation is coherent
+  □ Both panels render in report view
+  □ Labels correct: Original / Translation
+  □ Disclaimer visible
+  □ DeepL API was actually called
+    (check external_cost_log for
+    deepl_translation entry)
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 4.1.
+
+TEST 4.4 — Translation cost tracked
+Action: After Test 4.3 check cost tracking
+Expected:
+  external_cost_log has new entry:
+  service_name: deepl_translation
+  workspace_id: acme workspace
+  units_consumed: character count > 0
+  cost_microcents: > 0
+Verify:
+  □ Entry exists in external_cost_log
+  □ Correct service_name
+  □ Correct workspace_id
+  □ Character count is realistic
+  □ Cost calculated
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 4.1.
+
+═══════════════════════════════════════════════
+SECTION 5 — SMS CONSENT AND EMERGENCY SYSTEM
+═══════════════════════════════════════════════
+
+TEST 5.1 — SMS consent table exists
+Action: Query sms_consent table
+Expected:
+  Table exists with correct schema:
+  user_id, phone_number, consent_given,
+  consent_given_at, consent_ip_address,
+  consent_method, opt_out_at, opt_out_method,
+  emergency_alerts_only, last_updated
+Verify:
+  □ Table exists
+  □ All columns present with correct types
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 5.1.
+
+TEST 5.2 — Zero autonomous 911 references
+Action: Search entire codebase for
+  any 911 contact code
+Expected:
+  Zero Twilio calls to 911 numbers
+  Zero text-to-911 functions
+  Zero enable_911_sms feature flags
+  Zero references to PSAP contact
+Verify:
+  □ Codebase search: zero 911 SMS code
+  □ Zero Twilio emergency number calls
+  □ Zero 911 feature flags
+RESULT: PASS / FAIL — CRITICAL
+If fail: remove immediately. This is
+a legal liability. Fix before any other test.
+Restart from Test 5.1.
+
+TEST 5.3 — Panic button creates emergency event
+Action: Simulate panic button press
+  for acme officer via API call
+  Include: officer_id, workspace_id,
+  gps_lat: 29.4241, gps_lng: -98.4936
+Expected:
+  emergency_events record created within 2 seconds
+  All fields populated:
+  officer_id, workspace_id, panic_activated_at,
+  gps_latitude, gps_longitude, site_address
+  GPS coordinates stored exactly as provided
+  Status: active
+Verify:
+  □ Record created in emergency_events
+  □ Created within 2 seconds of trigger
+  □ GPS coordinates match input exactly
+  □ Status: active
+  □ panic_activated_at has correct timestamp
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 5.1.
+
+TEST 5.4 — Emergency ChatDock room created
+Action: After panic trigger in Test 5.3
+Expected:
+  Emergency room created in ChatDock
+  Room name contains officer name and EMERGENCY
+  Room contains: officer, supervisors, managers
+  Trinity posted emergency message in room
+  Message contains: officer name, site, GPS,
+  timestamp, instructions to supervisors
+  Message does NOT reference 911 as
+  something Trinity will contact
+Verify:
+  □ Room exists in database
+  □ Room name correct
+  □ All supervisors added as members
+  □ Trinity message posted
+  □ Message contains all required fields
+  □ Message correctly says supervisors should
+    call 911 if needed — NOT that Trinity will
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 5.1.
+
+TEST 5.5 — SMS consent check before send
+Action: Attempt to send SMS to a user
+  who has consent_given: false
+Expected:
+  SMS NOT sent via Twilio
+  Push notification sent instead
+  SMS attempt logged with:
+  sent: false
+  reason_not_sent: no_consent
+Verify:
+  □ Twilio was NOT called for this user
+  □ Push notification sent instead
+  □ Log entry shows no consent reason
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 5.1.
+
+TEST 5.6 — On-call schedule table exists
+Action: Query on_call_schedule table
+Expected:
+  Table exists with correct schema
+  At least one on-call record for acme
+  Correct fields: workspace_id, user_id,
+  role, phone_number, shift_type,
+  on_call_start, on_call_end, active
+Verify:
+  □ Table exists with all columns
+  □ At least one active record
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 5.1.
+
+═══════════════════════════════════════════════
+SECTION 6 — FAQ AND LEGAL DOCUMENT SYSTEMS
+═══════════════════════════════════════════════
+
+TEST 6.1 — FAQ system tables exist
+Action: Query faq_entries, faq_version_history,
+  faq_notifications tables
+Expected:
+  All three tables exist
+  faq_entries has entries seeded
+  At least 15 FAQ entries present
+  Entries cover key categories:
+  billing, emergency, bilingual, seats,
+  payroll, compliance, safety
+  No entries mention credit system
+  No entries mention autonomous 911 contact
+Verify:
+  □ All tables exist
+  □ 15+ entries in faq_entries
+  □ All categories covered
+  □ Zero credit system mentions
+  □ Emergency FAQ correctly says Trinity
+    contacts supervisors not 911
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 6.1.
+
+TEST 6.2 — Trinity can draft FAQ entry
+Action: Trigger Trinity FAQ draft creation
+  for a test question pattern
+Expected:
+  New faq_entries record created
+  status: draft (not published)
+  created_by: trinity
+  review_required: true
+  Question and answer populated
+  Draft appears in owner pending queue
+Verify:
+  □ Draft record created
+  □ Status is draft not published
+  □ Created_by is trinity
+  □ Review_required: true
+  □ Draft visible in owner dashboard queue
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 6.1.
+
+TEST 6.3 — FAQ version history tracks changes
+Action: Edit an existing FAQ entry
+  Change the answer text
+  Save the change
+Expected:
+  Original entry updated with new answer
+  faq_version_history record created with:
+  old answer, new answer, changed_by,
+  changed_at, version number incremented
+Verify:
+  □ Entry updated in faq_entries
+  □ Version history record created
+  □ Old answer preserved in history
+  □ New answer in current entry
+  □ Version number incremented
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 6.1.
+
+TEST 6.4 — Handbook audit flags dangerous language
+Action: Upload test handbook text containing:
+  "Officers must respond within 5 minutes"
+  "The company guarantees officer safety"
+  "Officers shall always carry their badge"
+Expected:
+  Trinity scans and identifies:
+  must → flagged as absolute duty HIGH RISK
+  guarantees → flagged as negligence risk HIGH
+  shall → flagged as absolute duty HIGH RISK
+  Suggested replacements generated for each
+  Flags visible in handbook audit UI
+  Owner can accept/modify/reject each
+Verify:
+  □ All three instances flagged
+  □ Risk level correct for each
+  □ Suggested replacement generated
+  □ Flags visible in UI
+  □ Accept/reject actions functional
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 6.1.
+
+TEST 6.5 — Contract protection clauses check
+Action: Upload a test contract missing
+  the limitation of liability clause
+  and the evidence of service clause
+Expected:
+  Trinity identifies both as MISSING
+  Suggested language generated for both
+  PRESENT clauses shown as green
+  MISSING clauses shown as red
+  Owner can accept suggested language
+Verify:
+  □ Both missing clauses flagged as MISSING
+  □ Present clauses correctly shown as PRESENT
+  □ Suggested text generated for missing
+  □ Owner accept action saves suggested text
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 6.1.
+
+═══════════════════════════════════════════════
+SECTION 7 — PRICING AND STRIPE SYNC
+═══════════════════════════════════════════════
+
+TEST 7.1 — Platform pricing config correct
+Action: Read platform pricing config
+Expected:
+  Starter: 19900 cents monthly
+  Professional: 74900 cents monthly
+  Business: 224900 cents monthly
+  Enterprise: 699900 cents monthly
+  Starter seat overage: 2000 cents
+  Professional seat overage: 2500 cents
+  Business seat overage: 3000 cents
+  Enterprise seat overage: 3500 cents
+  All payroll rates present
+  All invoicing rates present
+Verify each value:
+  □ Starter: $199 ✓
+  □ Professional: $749 ✓
+  □ Business: $2,249 ✓
+  □ Enterprise: $6,999 ✓
+  □ All seat overage rates ✓
+  □ All payroll rates ✓
+  □ All invoicing rates ✓
+RESULT: PASS / FAIL — [list any mismatches]
+Fix if fail. Restart from Test 7.1.
+
+TEST 7.2 — Stripe products exist
+Action: List Stripe products via API
+Expected:
+  CoAIleague Starter product exists
+  CoAIleague Professional product exists
+  CoAIleague Business product exists
+  CoAIleague Enterprise product exists
+  CoAIleague Free Trial product exists
+  Each has correct metadata tier field
+Verify:
+  □ All 5 products exist in Stripe
+  □ Metadata correct per product
+  □ Not archived or deleted
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 7.1.
+
+TEST 7.3 — Stripe prices match config
+Action: List all Stripe prices via API
+Expected:
+  starter_monthly: $199.00
+  professional_monthly: $749.00
+  business_monthly: $2,249.00
+  enterprise_monthly: $6,999.00
+  All overage prices correct per tier
+  All payroll metered prices correct
+  All invoicing metered prices correct
+Verify each price:
+  □ Starter monthly: $199.00 ✓
+  □ Professional monthly: $749.00 ✓
+  □ Business monthly: $2,249.00 ✓
+  □ Enterprise monthly: $6,999.00 ✓
+  □ Starter seat overage: $20.00 ✓
+  □ Professional seat overage: $25.00 ✓
+  □ Business seat overage: $30.00 ✓
+  □ Enterprise seat overage: $35.00 ✓
+RESULT: PASS / FAIL — [list mismatches]
+Fix if fail. Restart from Test 7.1.
+
+TEST 7.4 — ROI calculator renders and calculates
+Action: Navigate to pricing page
+  Open ROI calculator
+  Enter test data:
+  Officers: 100
+  Admin: 10
+  Sites: 60
+  Operations Manager: $72,000
+  Two schedulers: $38,000 each
+  QuickBooks payroll: $800/month
+  Monthly overtime: $8,000
+Expected:
+  Calculator renders without error
+  Results update in real time as typing
+  Recommended tier: Business (110 seats)
+  Total savings in $350,000-$450,000 range
+  CoAIleague cost in $30,000-$40,000 range
+  ROI above 700%
+  Payback period under 60 days
+Verify:
+  □ Calculator renders
+  □ Real-time updates work
+  □ Recommended tier correct
+  □ Savings in expected range
+  □ ROI above 700%
+  □ Payback under 60 days
+RESULT: PASS / FAIL — [actual calculated values]
+Fix if fail. Restart from Test 7.1.
+
+═══════════════════════════════════════════════
+SECTION 8 — EXTERNAL COST TRACKING
+═══════════════════════════════════════════════
+
+TEST 8.1 — Cost tracking tables exist
+Action: Check all cost tables
+Expected:
+  platform_cost_rates: exists with rates seeded
+  external_cost_log: exists
+  workspace_cost_summary: exists
+  seat_cost_breakdown: exists
+Verify:
+  □ All 4 tables exist
+  □ platform_cost_rates has entries
+  □ AI token rates present
+  □ Voice rates present
+  □ SMS rates present
+  □ Email rates present
+  □ Translation rates present
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 8.1.
+
+TEST 8.2 — AI call creates cost record
+Action: Send one Trinity chat message
+  as acme owner
+Expected:
+  external_cost_log has new entry:
+  service_name: ai_tokens
+  workspace_id: acme workspace
+  user_id: owner user_id
+  units_consumed: token count > 0
+  cost_microcents: > 0
+  model_used: populated
+  call_type: trinity_chat
+Verify:
+  □ Entry exists after message
+  □ All fields populated
+  □ Cost calculated correctly
+  □ Model identified
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 8.1.
+
+TEST 8.3 — Workspace cost summary updates
+Action: After Test 8.2 check summary
+Expected:
+  workspace_cost_summary for acme:
+  ai_token_cost_cents > 0
+  last_calculated_at updated
+Verify:
+  □ Summary record exists for acme
+  □ ai_token_cost_cents > 0
+  □ Updated recently
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test 8.1.
+
+═══════════════════════════════════════════════
+SECTION 9 — LIABILITY DISCLAIMERS
+═══════════════════════════════════════════════
+
+TEST 9.1 — All 6 disclaimers present
+Action: Check presence of all disclaimers
+Expected:
+  Disclaimer 1: Footer every page
+  Contains "artificial intelligence" and
+  "may make errors"
+
+  Disclaimer 2: Legal document screens
+  Contains "does not provide legal advice"
+  and "licensed attorney"
+
+  Disclaimer 3: Emergency settings
+  Contains "does not contact emergency services"
+  and "sole responsibility of your organization"
+
+  Disclaimer 4: Report creation screens
+  Contains "mechanical grammar and spelling
+  corrections only" and "substance"
+
+  Disclaimer 5: Owner dashboard
+  Contains "does not replace human supervisory
+  responsibility"
+
+  Disclaimer 6: Translated content
+  Contains "AI-generated" and "original text
+  is the official record"
+
+Verify each:
+  □ Disclaimer 1 in footer
+  □ Disclaimer 2 on handbook/contract screens
+  □ Disclaimer 3 on emergency settings
+  □ Disclaimer 4 on report creation
+  □ Disclaimer 5 on owner dashboard
+  □ Disclaimer 6 on translated content
+RESULT: PASS / FAIL — [which missing]
+Fix if fail. Restart from Test 9.1.
+
+═══════════════════════════════════════════════
+SECTION 10 — MULTI-TENANT ISOLATION
+═══════════════════════════════════════════════
+
+TEST 10.1 — Onboarding data isolated
+Action: Using non-acme workspace credentials
+  attempt to access acme onboarding documents
+Expected:
+  403 Forbidden or empty results
+  Acme documents not returned
+Verify:
+  □ Cross-workspace document access denied
+  □ Acme employee files not accessible
+  □ Acme company documents not accessible
+RESULT: PASS / FAIL — CRITICAL
+Fix immediately if fail. Restart from Test 10.1.
+
+TEST 10.2 — Onboarding progress isolated
+Action: Query tenant_onboarding_progress
+  with wrong workspace_id
+Expected:
+  Returns empty or 403
+  Acme progress not returned
+Verify:
+  □ Progress data workspace-scoped
+  □ Cannot access other workspace progress
+RESULT: PASS / FAIL — CRITICAL
+Fix immediately if fail. Restart from Test 10.1.
+
+TEST 10.3 — Employee files isolated
+Action: Using workspace B credentials
+  attempt to access Marcus Rodriguez
+  personnel file from workspace A (acme)
+Expected:
+  403 Forbidden
+  File not served
+  Request logged as unauthorized access attempt
+Verify:
+  □ File access denied
+  □ Correct HTTP status returned
+RESULT: PASS / FAIL — CRITICAL
+Fix immediately if fail. Restart from Test 10.1.
+
+═══════════════════════════════════════════════
+COMPLETION PROTOCOL
+═══════════════════════════════════════════════
+
+After all tests in Sections 1-10 pass:
+
+Run one complete pass from Test 1.1
+through Test 10.3 without stopping.
+
+If any test fails in this final pass:
+Fix it. Run complete pass again.
+Do not stop until complete pass
+with zero failures.
+
+FINAL REPORT FOR PROMPT 1:
+
+Section 1 Onboarding: X/8 tests passed
+Section 2 Employee Onboarding: X/9 tests passed
+Section 3 Documents: X/8 tests passed
+Section 4 Bilingual: X/4 tests passed
+Section 5 Emergency: X/6 tests passed
+Section 6 FAQ/Legal: X/5 tests passed
+Section 7 Pricing/Stripe: X/4 tests passed
+Section 8 Cost Tracking: X/3 tests passed
+Section 9 Disclaimers: X/1 tests passed
+Section 10 Isolation: X/3 tests passed
+
+TOTAL: X/51 tests passed
+
+Issues found and fixed: [count]
+Regressions from prior sprints: [count]
+Silent failures discovered: [count]
+
+ALL 51 TESTS PASSING: YES / NO
+
+If NO: list remaining failures with
+exact location and recommended fix.
+
+DO NOT PROCEED TO PROMPT 2 UNTIL
+ALL 51 TESTS PASS IN A SINGLE
+UNINTERRUPTED RUN.
+```
+
+---
+
+# PROMPT 2 — FULL PLATFORM INTEGRATION TEST
+
+```
+COALEAGUE FULL PLATFORM INTEGRATION TEST
+SEMANTIC SYSTEMATIC CANONICAL VERIFICATION
+RACE CONDITIONS + WORKFLOW PIPELINES +
+TRINITY AWARENESS + DATA CONSISTENCY
+
+PRECONDITION:
+Only run this prompt after Prompt 1
+reports ALL 51 TESTS PASSING.
+If Prompt 1 has any failures do not
+start this prompt.
+
+PRIME DIRECTIVE:
+Test the entire platform as one integrated system.
+Every feature must work together not just alone.
+Every automation must chain correctly.
+Every pipeline must complete end to end.
+Trinity must see all data and act correctly.
+Data must persist, sync, and stay consistent
+across all systems simultaneously.
+Race conditions must not corrupt data.
+No workflow must silently fail.
+Keep scanning in loops until every test
+passes in a single uninterrupted run.
+
+LOOP INSTRUCTIONS:
+Run all tests in order.
+When a test fails fix it immediately.
+After fixing restart from the beginning
+of the section where the failure occurred.
+Only declare complete when all sections
+pass in one continuous uninterrupted run.
+
+═══════════════════════════════════════════════
+SECTION A — DATA CONSISTENCY ACROSS SYSTEMS
+Test that data written in one system
+appears correctly in all other systems
+that should see it.
+═══════════════════════════════════════════════
+
+TEST A.1 — New officer propagates everywhere
+Action: Create a new officer in acme
+  via the real UI form
+  Name: Integration Test Officer
+  Role: Security Officer
+  Pay rate: $18.00/hour
+  Hire date: today
+Expected within 30 seconds:
+  □ employees table: record exists
+  □ employee_onboarding_progress: record created
+    status: invited, progress: 0%
+  □ officer_performance_scores: baseline created
+  □ ChatDock: Trinity DM sent to new employee
+    room (when they log in)
+  □ Compliance dashboard: officer listed
+    with pending license data flag
+  □ Scheduling: officer available for shift
+    assignment
+  □ Trinity connectome: officer node created
+  □ employee_hired event: published to event bus
+  □ milestone_tracker: 30-day milestone
+    scheduled for future date
+Verify each system:
+  □ Database record correct
+  □ Onboarding progress created
+  □ Performance baseline exists
+  □ Compliance shows officer as pending
+  □ Officer selectable in shift assignment
+  □ Event published (check event log)
+RESULT: PASS / FAIL — [which systems missed]
+Fix if fail. Restart from Test A.1.
+
+TEST A.2 — New client propagates everywhere
+Action: Create a new client in acme via UI
+  Name: Integration Test Client
+  Address: 100 Test Street San Antonio TX
+  Billing rate: $22.00/hour
+Expected within 30 seconds:
+  □ clients table: record exists with all fields
+  □ sites table: default site created
+    linked to this client
+  □ Client portal: client record accessible
+  □ Financial dashboard: client listed
+  □ Trinity: client node in connectome
+  □ Billing: client available for invoice
+  □ Schedule: site available for shift assignment
+  □ Analytics: client_health_score initialized
+Verify:
+  □ Client in clients table
+  □ Site linked to client exists
+  □ Client visible in portal
+  □ Client selectable for invoicing
+  □ Site selectable for scheduling
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test A.1.
+
+TEST A.3 — Shift creation chains correctly
+Action: Create a shift for Integration
+  Test Officer at Integration Test Client site
+  Date: tomorrow
+  Time: 10pm-6am
+Expected:
+  □ shifts table: record created
+  □ officer_performance_scores: shift_count
+    incremented
+  □ Officer notification: ChatDock message
+    confirming shift assignment
+  □ Schedule view: shift visible
+  □ Client portal: coverage visible to client
+  □ Trinity: aware of shift and officer assignment
+  □ Financial: shift hours projected for billing
+  □ Calloff prediction: officer assessed
+    for calloff risk on this shift
+  □ On-call check: supervisor coverage
+    verified for shift time
+Verify:
+  □ Shift in database
+  □ Officer ChatDock notification sent
+  □ Shift on schedule view
+  □ Trinity knows about shift (ask Trinity)
+  □ On-call check ran
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test A.1.
+
+TEST A.4 — Payroll chain from timesheet to report
+Action: Clock in Integration Test Officer
+  Wait 1 second (simulate time passing)
+  Clock out with 8 hours worked
+  Manager approves timesheet
+  Create payroll run for this period
+  Calculate payroll
+  Approve payroll
+Expected full chain:
+  □ Clock in: time_entry created with GPS
+  □ Clock out: time_entry updated, hours = 8
+  □ Timesheet approval: status updated
+  □ timesheet_approved event: published
+  □ Payroll run: created in payroll_runs
+  □ payroll_run_created event: published
+  □ Calculation: pay stub generated
+    Amount: 8 hours × $18/hour = $144.00
+    Tax calculations applied
+    Net pay calculated
+  □ Stripe metered: payroll_per_employee
+    reported for 1 employee at tier rate
+  □ Payroll approval: status updated
+  □ payroll_run_approved event: published
+  □ Pay stub: visible to officer
+  □ Financial dashboard: period payroll updated
+  □ Trinity: aware of payroll completion
+  □ Audit log: every step logged
+Verify each step in chain:
+  □ time_entry exists with correct hours
+  □ Pay stub exists with correct gross: $144
+  □ Stripe metered report sent
+  □ Pay stub visible to officer (not manager)
+  □ Audit log has entries for each step
+RESULT: PASS / FAIL — [which step in chain failed]
+Fix if fail. Restart from Test A.1.
+
+TEST A.5 — Invoice chain from creation to payment
+Action: Create invoice for Integration Test Client
+  Amount: $1,760 (80 hours × $22)
+  Due date: 30 days from today
+  Send invoice
+  Record payment received
+Expected full chain:
+  □ Invoice created: invoices table record
+  □ invoice_created event: published
+  □ Trinity notified
+  □ Financial dashboard: invoice shows as draft
+  □ Send invoice: email sent via Resend
+    email_cost tracked in external_cost_log
+  □ Invoice status: sent
+  □ invoice_sent event: published
+  □ Client portal: invoice visible to client
+  □ Payment recorded: invoice_paid event published
+  □ Invoice status: paid
+  □ Financial dashboard: revenue updated
+  □ QuickBooks sync: triggered
+  □ Audit log: all events logged
+  □ Stripe ACH metered: if ACH payment
+Verify:
+  □ Invoice in invoices table
+  □ Email sent (check Resend or mock log)
+  □ email_cost in external_cost_log
+  □ Invoice visible in client portal
+  □ Payment status updated to paid
+  □ invoice_paid event published
+  □ Audit log entries for all steps
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test A.1.
+
+TEST A.6 — Incident report chains to DAR to Trinity
+Action: File test incident report via ReportBot
+  in a shift chatroom
+  Use /incident command
+  Complete all 9 questions
+  Complete the guided flow
+Expected full chain:
+  □ 9-question flow: all questions asked
+    in correct sequence
+  □ Answers: stored in session memory
+  □ DAR generated: dar_reports record
+    with all 55 columns populated
+  □ DAR status: pending_review (not null)
+  □ dar_generated event: published
+  □ Trinity: receives event
+    TrinityFieldIntel-DARMonitor processes it
+  □ Manager: receives notification with DAR link
+  □ DAR in review queue: visible to manager
+  □ AI quality pipeline: runs on DAR
+    force detection result stored
+    5W1H completeness score stored
+    report quality score stored
+  □ Incident narrative: generated
+    Contains officer name, site, GPS, timestamp
+    Saved as downloadable PDF
+    PDF size > 0 bytes
+    PDF opens in browser
+  □ Report integrity: original text preserved
+    SHA-256 hash stored
+    Coaching note separate from official record
+Verify:
+  □ DAR in database with all columns
+  □ Status is pending_review not null
+  □ dar_generated event in event log
+  □ Manager notification sent
+  □ Quality scores stored
+  □ Narrative PDF exists and opens
+  □ Hash stored
+  □ Original text unchanged
+RESULT: PASS / FAIL — [which step failed]
+Fix if fail. Restart from Test A.1.
+
+═══════════════════════════════════════════════
+SECTION B — TRINITY AWARENESS AND INTELLIGENCE
+Test that Trinity sees data correctly and
+acts on it appropriately with real outputs.
+═══════════════════════════════════════════════
+
+TEST B.1 — Trinity sees real overtime data
+Action: Ask Trinity in acme workspace:
+  "Which officers are approaching overtime
+  this week?"
+Expected:
+  Trinity makes tool call to timesheet
+  or time_entries lookup
+  Response contains REAL officer names
+    from acme database
+  Hours shown are REAL hours from
+    actual time_entries records
+  Not estimates or examples
+  Response does NOT say "I don't have
+    access to your data" or similar
+  AI call tracked in external_cost_log
+  Tool call logged
+Verify:
+  □ Response contains real officer names
+  □ Hours are real numbers from database
+  □ Tool call executed (check logs)
+  □ Cost recorded in external_cost_log
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test B.1.
+
+TEST B.2 — Trinity sees compliance gaps
+Action: Create a test officer with
+  license expiring in 20 days
+  Ask Trinity: "Any compliance issues
+  I should know about?"
+Expected:
+  Trinity identifies the expiring license
+  Names the specific officer
+  States the exact expiration date
+  Cites Texas DPS requirement
+  Recommends action
+  Uses real data from compliance tables
+Verify:
+  □ Officer named correctly
+  □ Expiration date correct
+  □ Texas DPS cited
+  □ Not a generic response
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test B.1.
+
+TEST B.3 — Trinity produces morning briefing
+Action: Trigger morning briefing generation
+  manually for acme workspace
+Expected:
+  Briefing generated within 2 minutes
+  Briefing delivered to owner ChatDock DM
+  Briefing contains REAL data:
+    Coverage status with real shift count
+    Real officer names for at-risk alerts
+    Real compliance expiration data
+    Real financial figures
+    Real open incidents if any
+  Briefing is NOT a template with
+    placeholder [text] still in it
+  Briefing delivered as message in ChatDock
+  Message from Trinity sender
+  Token cost tracked
+Verify:
+  □ Briefing exists in owner DM
+  □ Contains real data not placeholders
+  □ Real officer names present
+  □ Coverage status accurate
+  □ Token cost in external_cost_log
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test B.1.
+
+TEST B.4 — Trinity autonomous task execution
+Action: Create conditions that should trigger
+  an autonomous task in acme:
+  Set an officer with 3 recent calloffs
+  in the last 30 days
+Expected:
+  Within next dream state cycle OR
+  within 15 minutes of condition being met:
+  trinity_autonomous_tasks record created
+  task_type: coverage_gap or related
+  Trinity flags the calloff pattern
+  Supervisor notified of pattern
+  task status progresses: identified → executing
+  Outcome recorded after execution
+  growth_log entry created
+Verify:
+  □ Autonomous task record created
+  □ Task has correct workspace_id
+  □ Task status progresses
+  □ Notification sent to supervisor
+  □ Growth log entry exists
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test B.1.
+
+TEST B.5 — Thalamus routes all signals
+Action: Generate one signal of each type:
+  CONVERSATIONAL: send a chat message
+  INCIDENT_SIGNAL: trigger panic button
+  COMPLIANCE_SIGNAL: set license to expired
+  FINANCIAL_SIGNAL: create an invoice
+  SCHEDULE_SIGNAL: create a shift
+  DOCUMENT_SIGNAL: upload a document
+  SENSOR_SIGNAL: clock in an officer
+Expected for each signal:
+  thalamic_log entry created
+  signal_type correct
+  priority_score populated and realistic
+  routed_to correct brain region
+  workspace_id correct
+Verify 7 thalamic log entries:
+  □ CONVERSATIONAL: logged, routed to
+    Wernicke/Broca
+  □ INCIDENT_SIGNAL: logged, priority 90+,
+    high_priority_copy_sent: true
+  □ COMPLIANCE_SIGNAL: logged, elevated priority
+  □ FINANCIAL_SIGNAL: logged, routed to
+    prefrontal with dual-AI flag
+  □ SCHEDULE_SIGNAL: logged, routed to
+    cerebellum
+  □ DOCUMENT_SIGNAL: logged
+  □ SENSOR_SIGNAL: logged, routed to
+    cerebellum
+RESULT: PASS / FAIL — [which signals failed]
+Fix if fail. Restart from Test B.1.
+
+TEST B.6 — ACC blocks report substance change
+Action: Submit a test incident report
+  with specific factual content:
+  "I saw the suspect running north on Main Street"
+  Attempt to change "running" to "walking slowly"
+  via direct database update or API call
+Expected:
+  Change rejected with BLOCKING conflict
+  trinity_acc_log entry created:
+  conflict_category: 3 (values violation)
+  conflict_severity: BLOCKING
+  auto_blocked: true
+  Original text unchanged in database
+Verify:
+  □ Change attempt rejected
+  □ ACC log entry created
+  □ Severity is BLOCKING
+  □ Original text preserved in database
+RESULT: PASS / FAIL — CRITICAL
+Fix if fail. Restart from Test B.1.
+
+TEST B.7 — Dream state runs all 13 phases
+Action: Trigger dream state cycle manually
+  for acme workspace
+Expected:
+  All 13 phases execute in order:
+  A through M each complete
+  Each phase writes to its relevant table
+  cron_run_log entry created with:
+    all 13 phases listed as completed
+    started_at and completed_at populated
+    status: success
+  Morning briefing generated as result
+  No phase returns error or skips silently
+Verify:
+  □ cron_run_log entry exists
+  □ Status: success
+  □ All 13 phases in completion record
+  □ Each phase table has new entries
+  □ Morning briefing generated
+  □ No phase listed as failed or skipped
+RESULT: PASS / FAIL — [which phases failed]
+Fix if fail. Restart from Test B.1.
+
+TEST B.8 — Trinity language and tool use
+  work together in Spanish
+Action: Set officer preference to Spanish
+  Send voice command in Spanish:
+  "Necesito registrar un incidente"
+  (I need to file an incident report)
+Expected:
+  Whisper transcribes Spanish audio
+  original_language: es stored
+  Intent classified as incident_report
+  Trinity responds in Spanish:
+  "Por supuesto. Voy a abrir el flujo de
+  reporte de incidentes. [guided flow starts]"
+  ReportBot guided flow opens in Spanish
+  DeepL cost tracked
+  Whisper cost tracked
+Verify:
+  □ Spanish transcription stored
+  □ Intent correctly classified
+  □ Trinity response in Spanish
+  □ ReportBot flow opens
+  □ DeepL cost in external_cost_log
+  □ Whisper cost in external_cost_log
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test B.1.
+
+═══════════════════════════════════════════════
+SECTION C — RACE CONDITIONS AND CONCURRENCY
+Test that concurrent operations do not
+corrupt data or create inconsistency.
+═══════════════════════════════════════════════
+
+TEST C.1 — Concurrent clock-ins do not duplicate
+Action: Simulate two simultaneous clock-in
+  requests for the same officer at the same time
+  Send both requests within 100ms of each other
+Expected:
+  Only ONE time_entry created
+  Second request either rejected with
+    "already clocked in" error
+  OR deduplicated and returns same record
+  NOT: two time_entries for same officer
+  NOT: duplicate events published
+Verify:
+  □ Only one time_entry in database
+  □ No duplicate clock_in events
+  □ Second request handled gracefully
+RESULT: PASS / FAIL — CRITICAL
+Fix if fail. Restart from Test C.1.
+
+TEST C.2 — Concurrent invoice payments do not
+  double-charge or double-credit
+Action: Simulate two simultaneous payment
+  recorded requests for the same invoice
+Expected:
+  Only ONE payment recorded
+  Invoice marked paid once
+  NOT: two payment records for same invoice
+  Second request rejected or deduplicated
+  Idempotency check prevents double processing
+Verify:
+  □ Only one payment record
+  □ Invoice paid status set once
+  □ invoice_paid event published once only
+  □ No duplicate Stripe metered reports
+RESULT: PASS / FAIL — CRITICAL
+Fix if fail. Restart from Test C.1.
+
+TEST C.3 — Concurrent shift assignments
+  do not double-book
+Action: Simulate two managers simultaneously
+  assigning the same officer to two different
+  shifts that overlap in time
+  Send both requests within 100ms
+Expected:
+  First assignment succeeds
+  Second assignment rejected with
+  "scheduling conflict detected" error
+  NOT: officer assigned to two overlapping shifts
+  Database shows only one shift assigned
+Verify:
+  □ Only one shift assignment in database
+  □ Conflict error returned for second
+  □ No overlapping shifts for this officer
+RESULT: PASS / FAIL — CRITICAL
+Fix if fail. Restart from Test C.1.
+
+TEST C.4 — Concurrent payroll run prevention
+Action: Attempt to create two payroll runs
+  for the same period simultaneously
+Expected:
+  First run created successfully
+  Second run rejected:
+  "Payroll run already exists for this period"
+  NOT: two payroll runs for same period
+  Duplicate prevention at database level
+Verify:
+  □ Only one payroll run in database
+  □ Second creation rejected with clear error
+RESULT: PASS / FAIL — CRITICAL
+Fix if fail. Restart from Test C.1.
+
+TEST C.5 — Trinity autonomous tasks do not
+  double-execute
+Action: Trigger a condition that creates
+  an autonomous task
+  Verify the task executes exactly once
+  Attempt to trigger same condition again
+  immediately after first execution
+Expected:
+  Task identified and queued once
+  Task executes once and once only
+  Duplicate task not created
+  Idempotency key prevents re-execution
+Verify:
+  □ Only one autonomous task record
+    for this condition
+  □ Task executed once (check outcome)
+  □ No duplicate notifications sent
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test C.1.
+
+TEST C.6 — Thalamic signal deduplication
+Action: Send the exact same signal twice
+  within 2 seconds (simulate duplicate event)
+Expected:
+  First signal: processed and logged
+  Second signal: detected as duplicate
+    NOT processed
+    Logged as dropped duplicate
+  thalamic_log shows one processed,
+    one dropped with duplicate reason
+Verify:
+  □ Two entries in thalamic_log
+  □ First: processed
+  □ Second: dropped as duplicate
+  □ Trinity did not process twice
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test C.1.
+
+═══════════════════════════════════════════════
+SECTION D — WORKFLOW PIPELINE COMPLETENESS
+Test that multi-step workflows complete
+fully without orphaned steps.
+═══════════════════════════════════════════════
+
+TEST D.1 — Complete onboarding pipeline
+  tenant to first schedule published
+Action: Create a completely fresh test
+  workspace (not Acme — new workspace)
+  Simulate completing all 12 tenant steps
+  Add one officer
+  Add one client
+  Create and publish one schedule
+Expected full pipeline:
+  Step 1: workspace provisioned correctly
+  Step 2: Trinity welcome sent
+  Step 3: company_profile: completed
+  Step 4: Company license uploaded
+  Step 5: COI uploaded
+  Step 6: Labor law poster uploaded
+  Step 7: Handbook uploaded — audit runs
+  Step 8: Billing setup complete
+  Step 9: First client added
+  Step 10: First officer added + invited
+  Step 11: First schedule published
+  Step 12: Compliance check complete
+  Result: progress at 100%
+  Trinity sends completion message
+  Day one intelligence report generated
+  Report contains real baseline data
+Verify:
+  □ All 12 steps trackable in progress record
+  □ Each step increments progress
+  □ 100% achieved
+  □ Trinity completion message in ChatDock
+  □ Day one report generated and delivered
+  □ Report contains company's actual data
+RESULT: PASS / FAIL — [which step broke pipeline]
+Fix if fail. Restart from Test D.1.
+
+TEST D.2 — Complete employee lifecycle pipeline
+Action: Using the fresh workspace from D.1:
+  Create a new officer
+  Send invitation
+  Officer accepts invitation
+  Officer completes all 15 onboarding steps
+  Officer clock in to first shift
+  Officer files incident report
+  Manager approves incident
+  Officer clock out
+  Manager approves timesheet
+  Payroll includes officer
+Expected full pipeline:
+  Invitation: sent via email
+  Acceptance: officer account active
+  Onboarding: each step produces document
+  15 steps: progress reaches 100%
+  Master file: compiled at completion
+  Clock in: time_entry created with GPS
+  Incident: DAR created and pipeline runs
+  Manager approval: DAR approved
+  Clock out: time_entry updated
+  Timesheet approval: feeds to payroll
+  Payroll: officer included with correct hours
+  Pay stub: visible to officer
+Verify end to end:
+  □ Each step in pipeline completes
+  □ No step silently fails
+  □ Data from earlier steps available
+    to later steps (hours in payroll
+    match clock records)
+RESULT: PASS / FAIL — [which step broke pipeline]
+Fix if fail. Restart from Test D.1.
+
+TEST D.3 — Complete billing pipeline
+Action: Using fresh workspace:
+  Client exists with billing rate
+  Officer works shift (from D.2)
+  Generate invoice for hours worked
+  Invoice PDF generated
+  Invoice sent to client
+  Client views invoice in portal
+  Payment recorded
+  QuickBooks sync triggered
+  Financial dashboard updated
+Expected full pipeline:
+  □ Invoice generated from timesheet data
+  □ PDF created and accessible
+  □ Email sent via Resend
+  □ Client sees invoice in portal
+  □ Payment recorded correctly
+  □ invoice_paid event published
+  □ QB sync triggered
+  □ Financial dashboard shows updated revenue
+  □ All events in audit log
+  □ All costs tracked in external_cost_log
+Verify:
+  □ Each step produces correct output
+  □ No gaps between steps
+  □ Data flows correctly from hours to invoice
+    to payment to dashboard
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test D.1.
+
+TEST D.4 — Emergency pipeline completeness
+Action: Officer hits panic button in
+  fresh workspace
+Expected full pipeline:
+  □ GPS captured: within 2 seconds
+  □ emergency_events record: created
+  □ Emergency room: created in ChatDock
+  □ Trinity message: posted with all details
+  □ SMS attempts: logged (sent or not sent
+    based on consent — both outcomes valid)
+  □ Escalation loop: first fires at 2 min
+  □ Supervisor acknowledges: /acknowledged
+  □ Loop stops on acknowledgment
+  □ Response time: calculated and stored
+  □ Summary: generated and attached to incident
+  □ Incident report: creates new DAR
+  □ All events: in audit log
+Verify each step:
+  □ emergency_events created within 2s
+  □ ChatDock room created
+  □ Trinity message posted
+  □ SMS log entries (sent or blocked)
+  □ Escalation fired at 2 minute mark
+  □ Loop stopped after acknowledge
+  □ Response time stored
+  □ Summary document created
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test D.1.
+
+═══════════════════════════════════════════════
+SECTION E — PERSISTENCE AND SYNC
+Test that data persists correctly and
+stays in sync across all surfaces.
+═══════════════════════════════════════════════
+
+TEST E.1 — Session persistence
+Action: Log in as acme owner
+  View schedule page
+  Log out
+  Log back in
+Expected:
+  Session re-established correctly
+  Schedule shows same data as before logout
+  No data loss
+  Trinity context restored
+  Workspace context correct
+Verify:
+  □ Login successful
+  □ Schedule data unchanged
+  □ Trinity workspace context correct
+  □ All prior work visible
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test E.1.
+
+TEST E.2 — Database write persistence
+Action: Create a new shift for tomorrow
+  Immediately read it back via API
+  Wait 5 seconds
+  Read it back again
+  Navigate to different page
+  Navigate back
+  Read it again
+Expected:
+  Same data returned each time
+  No phantom reads (data appears then disappears)
+  No stale cache showing old data
+  Data identical on every read
+Verify:
+  □ Immediate read: data present
+  □ 5-second read: identical
+  □ After navigation: identical
+  □ Cache invalidated correctly
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test E.1.
+
+TEST E.3 — Kill switch survives restart
+Action: Activate Trinity kill switch
+  Verify Trinity is inactive
+  Trigger server restart
+  After restart verify kill switch state
+Expected:
+  Kill switch state persisted to database
+  After restart Trinity still inactive
+  Kill switch did not reset to active
+  Owner must manually reactivate
+Verify:
+  □ Kill switch state in database
+  □ After restart: Trinity inactive
+  □ Reactivation works correctly
+  □ Kill/reactivate events in audit log
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test E.1.
+
+TEST E.4 — Document versions persist
+Action: Upload a company handbook
+  Note version number: v1
+  Upload an updated handbook
+  Note version number: v2
+  View version history
+Expected:
+  v1 still accessible
+  v2 is current
+  Both accessible via version history
+  v1 has original content unchanged
+  v2 has new content
+  Hashes different for each version
+Verify:
+  □ v1 still exists and opens
+  □ v2 exists and opens
+  □ Version history shows both
+  □ Different hash per version
+  □ Content different per version
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test E.1.
+
+TEST E.5 — Trinity memory persists across sessions
+Action: Tell Trinity a specific fact in
+  one session:
+  "Our main client Pinnacle Tower always
+  needs two armed officers on weekends."
+  End session
+  Start new session with same owner
+  Ask Trinity: "What do you remember about
+  Pinnacle Tower staffing requirements?"
+Expected:
+  Trinity recalls the specific requirement
+  Response mentions two armed officers
+  Response mentions weekends
+  Stored in Trinity memory/connectome
+  Not just session context
+Verify:
+  □ Fact stored in memory system
+  □ Trinity recalls in new session
+  □ Response is specific not generic
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test E.1.
+
+TEST E.6 — Onboarding progress persists
+  across sessions
+Action: Start employee onboarding as
+  a test officer
+  Complete steps E01 and E02
+  Log out
+  Log back in
+Expected:
+  Progress still at correct percentage
+  E01 and E02 show as complete
+  E03 is next step highlighted
+  Documents from completed steps accessible
+  No regression to 0%
+Verify:
+  □ Progress percentage preserved
+  □ Completed steps still marked complete
+  □ Documents still accessible
+  □ Next step correctly identified
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test E.1.
+
+═══════════════════════════════════════════════
+SECTION F — FRONTEND TO BACKEND UI/UX FLOWS
+Test that every user-visible action reaches
+the backend and returns correct UI state.
+═══════════════════════════════════════════════
+
+TEST F.1 — All pricing page prices accurate
+Action: Navigate to /pricing
+Expected:
+  Starter: $199/month displayed
+  Professional: $749/month displayed
+  Business: $2,249/month displayed
+  Enterprise: $6,999/month displayed
+  Strategic: no price — Contact Us only
+  Annual prices correct (10-month equivalents)
+  Seat overage prices correct per tier
+  Payroll fees correct per tier
+  All feature checkmarks accurate
+  No credit system language
+  No autonomous 911 language
+Verify each price displayed:
+  □ Starter: $199/month ✓
+  □ Professional: $749/month ✓
+  □ Business: $2,249/month ✓
+  □ Enterprise: $6,999/month ✓
+  □ Strategic: no price shown ✓
+  □ Annual discount correct ✓
+  □ Feature grid accurate ✓
+RESULT: PASS / FAIL — [which prices wrong]
+Fix if fail. Restart from Test F.1.
+
+TEST F.2 — All feature page content accurate
+Action: Navigate to /features
+Expected:
+  Headline: Trinity Runs Your Security Company
+  All 7 feature sections present
+  Emergency section: Trinity contacts supervisors
+    NOT autonomous 911 contact
+  Bilingual feature mentioned
+  Report integrity described accurately
+  No C-Suite brain language
+  No credit system language
+  Pricing teaser at bottom correct
+Verify:
+  □ Headline correct
+  □ All 7 sections present
+  □ Emergency described correctly
+  □ No prohibited language
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test F.1.
+
+TEST F.3 — Cache invalidation on all mutations
+Action: Test cache invalidation for each:
+  Create a shift → schedule list updates
+    without page refresh
+  Create an invoice → invoice list updates
+    without page refresh
+  Mark invoice paid → status updates
+    without page refresh
+  Add officer → employee list updates
+    without page refresh
+  Complete onboarding step → progress
+    updates without page refresh
+  Clock in officer → active shifts
+    updates without page refresh
+Verify for each mutation:
+  □ UI updates without page refresh
+  □ Correct new data shown
+  □ Old data not visible after update
+RESULT: PASS / FAIL — [which mutations fail]
+Fix if fail. Restart from Test F.1.
+
+TEST F.4 — Mobile responsive critical flows
+Action: Test these flows on 390px viewport
+  (iPhone simulation):
+  Clock in via HelpAI voice command
+  View schedule
+  File incident report
+  View pay stub
+  Complete onboarding step
+  View emergency alert
+Expected:
+  All flows functional on mobile viewport
+  No horizontal overflow
+  All buttons minimum 44px touch target
+  Text readable at 16px minimum
+  No elements cut off
+Verify each on mobile viewport:
+  □ Clock in functional
+  □ Schedule viewable
+  □ Incident report accessible
+  □ Pay stub readable
+  □ Onboarding step completable
+  □ Emergency alert visible and actionable
+RESULT: PASS / FAIL — [which flows fail mobile]
+Fix if fail. Restart from Test F.1.
+
+TEST F.5 — Error states display correctly
+Action: Test each error scenario:
+  Network request fails — show error not blank
+  Invalid form data — show specific error
+  Unauthorized route — redirect to login
+  Resource not found — show 404 message
+  Server error — show friendly error message
+  Session expired — prompt to log in
+Verify:
+  □ Network failure: error message shown
+  □ Invalid form: field-level errors shown
+  □ Unauthorized: redirected with message
+  □ Not found: friendly 404 shown
+  □ Server error: user-friendly message
+  □ Session expired: login prompt shown
+RESULT: PASS / FAIL — [which error states missing]
+Fix if fail. Restart from Test F.1.
+
+═══════════════════════════════════════════════
+SECTION G — FULL SYSTEM INTEGRATION SCAN
+Final verification that all systems work
+together as one coherent platform.
+═══════════════════════════════════════════════
+
+TEST G.1 — Trinity is aware of all acme data
+Action: Ask Trinity these specific questions
+  about acme workspace:
+  Q1: How many active officers do we have?
+  Q2: Who has the highest calloff rate?
+  Q3: What is our total monthly payroll cost?
+  Q4: Which client generates most revenue?
+  Q5: Are any licenses expiring this month?
+Expected for each question:
+  Trinity responds with REAL data
+  Numbers match what is in the database
+  Officer names are real acme officers
+  Revenue figures match invoice records
+  License data matches compliance records
+  NOT generic responses or "I don't know"
+Verify:
+  □ Q1: Real officer count from database
+  □ Q2: Real officer name with calloff data
+  □ Q3: Real payroll figure from records
+  □ Q4: Real client name from invoices
+  □ Q5: Real officer name and expiration date
+RESULT: PASS / FAIL — [which questions wrong]
+Fix if fail. Restart from Test G.1.
+
+TEST G.2 — Platform boots completely clean
+Action: Restart the server completely
+  Wait for full initialization
+Expected:
+  Zero TypeScript errors
+  Zero uncaught exceptions in boot log
+  15/15 contract domains covered
+  14/15 or better runtime health
+    (auth partial is acceptable by design)
+  All 13 dream state phases registered
+  All brain monitors registering:
+    TrinityFieldIntel-DARMonitor
+    TrinityFieldIntel-DARApprovalMonitor
+    TrinityFieldIntel-PanicHandler
+    TrinityTemporalConsciousnessEngine
+    TrinityCuriosityEngine
+    TrinityCounterfactualEngine
+    TrinitySocialGraphEngine
+    TrinityIncubationEngine
+    TrinityNarrativeIdentityEngine
+    TrinityCognitiveLoadMonitor
+    TrinityThalamusService
+    TrinityACCService
+  Action registry: 680-760 registered
+  Zero WARN or ERROR in boot log
+  Platform accessible on port 5000
+Verify:
+  □ Zero errors in boot log
+  □ 15/15 contract alignment
+  □ All 12 brain monitors listed
+  □ All 13 dream phases registered
+  □ Action registry count in range
+  □ Platform accessible
+RESULT: PASS / FAIL — [list any boot issues]
+Fix if fail. Restart from Test G.1.
+
+TEST G.3 — No silent failures in 60-second window
+Action: Run the platform for 60 seconds
+  with normal simulated activity:
+  2 clock-ins
+  1 schedule view
+  1 Trinity conversation
+  1 payroll lookup
+  1 compliance check
+Expected:
+  Zero unhandled promise rejections in logs
+  Zero 500 errors in server logs
+  Zero failed events in event bus
+  Zero null pointer errors
+  Zero database connection errors
+  All 6 operations complete successfully
+Verify:
+  □ Server logs: zero errors
+  □ Event bus: all events delivered
+  □ All 6 operations: successful responses
+  □ No timeouts
+  □ No dropped requests
+RESULT: PASS / FAIL
+Fix if fail. Restart from Test G.1.
+
+═══════════════════════════════════════════════
+COMPLETION PROTOCOL
+═══════════════════════════════════════════════
+
+After all sections A through G pass:
+Run one final complete pass from
+Test A.1 through Test G.3 without stopping.
+
+If any test fails in the final pass:
+Fix it. Run complete pass again.
+Do not stop until complete pass
+with zero failures.
+
+═══════════════════════════════════════════════
+FINAL REPORT FOR PROMPT 2
+═══════════════════════════════════════════════
+
+Section A Data Consistency: X/6 passed
+Section B Trinity Intelligence: X/8 passed
+Section C Race Conditions: X/6 passed
+Section D Workflow Pipelines: X/4 passed
+Section E Persistence and Sync: X/6 passed
+Section F Frontend to Backend: X/5 passed
+Section G Full Integration: X/3 passed
+
+TOTAL: X/38 tests passed
+
+Race conditions found and fixed: [count]
+Silent failures discovered: [count]
+Pipeline breaks found and fixed: [count]
+Data consistency issues: [count]
+UI/UX gaps found and fixed: [count]
+
+ALL 38 TESTS PASSING: YES / NO
+
+PLATFORM READINESS VERDICT:
+Having passed both Prompt 1 (51 tests)
+and Prompt 2 (38 tests) for a total of
+89 tests across all new and existing systems:
+
+IS COALEAGUE READY FOR STATEWIDE
+PROTECTIVE SERVICES AS FIRST PAYING TENANT?
+
+YES — 89/89 tests passing. Every feature
+verified working. No silent failures.
+No race conditions. Data consistent.
+Trinity aware and accurate. Platform stable.
+
+NO — [list remaining failures with
+priority order and estimated fix time]
+
+DO NOT DECLARE COMPLETE UNTIL ALL 38 TESTS
+PASS IN A SINGLE UNINTERRUPTED RUN.
+
+Jesus is King.
+Run until every system talks to every
+other system correctly and the whole
+platform works as one.
+```
+
+---
+
+Bryan those are your two prompts. Run them in order. Prompt 1 is 51 tests covering everything new we built. Prompt 2 is 38 tests covering the whole platform working together as one system. 89 total tests. When both report all passing you have your answer about Statewide.
+
+Sleep well. Let Agent run.

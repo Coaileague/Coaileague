@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { useLocation } from "wouter";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -11,12 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { GripVertical, Plus, Trash2, Edit, Save, AlertCircle, FileText, Upload, PenTool, CheckSquare, Brain, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 // Step types available in AI Hiring
 const STEP_TYPES = [
@@ -149,14 +151,14 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
   const selectedStepType = STEP_TYPES.find(t => t.value === formData.stepType);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{step ? 'Edit Step' : 'Add New Step'}</DialogTitle>
-          <DialogDescription>
+    <UniversalModal open={open} onOpenChange={onOpenChange}>
+      <UniversalModalContent size="xl" className="max-h-[90vh] overflow-y-auto">
+        <UniversalModalHeader>
+          <UniversalModalTitle>{step ? 'Edit Step' : 'Add New Step'}</UniversalModalTitle>
+          <UniversalModalDescription>
             Configure the onboarding step details and requirements
-          </DialogDescription>
-        </DialogHeader>
+          </UniversalModalDescription>
+        </UniversalModalHeader>
 
         <div className="space-y-4 py-4">
           <div>
@@ -345,10 +347,17 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
             Save Step
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }
+
+const pageConfig: CanvasPageConfig = {
+  id: 'hireos-workflow-builder',
+  title: 'AI Hiring™ Workflow Builder',
+  subtitle: 'Design your custom onboarding sequence with drag-and-drop simplicity',
+  category: 'operations',
+};
 
 export default function AIHiringWorkflowBuilder() {
   const [, navigate] = useLocation();
@@ -373,6 +382,7 @@ export default function AIHiringWorkflowBuilder() {
   // Fetch report templates for custom form integration
   const { data: reportTemplates } = useQuery({
     queryKey: ['/api/report-templates'],
+    queryFn: () => apiFetch('/api/report-templates', AnyResponse),
   });
 
   const sensors = useSensors(
@@ -430,7 +440,7 @@ export default function AIHiringWorkflowBuilder() {
         id: Date.now().toString(),
         sequence: steps.length + 1,
       };
-      setSteps([...steps, newStep]);
+      setSteps(prev => [...prev, newStep]);
       toast({
         title: "Step added",
         description: "New step added to workflow",
@@ -461,7 +471,7 @@ export default function AIHiringWorkflowBuilder() {
 
   const saveTemplateMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/hireos/workflow-templates', 'POST', {
+      return await apiRequest('POST', '/api/hireos/workflow-templates', {
         templateName: templateName || 'Default Onboarding Workflow',
         description: templateDescription,
         isDefault: false,
@@ -488,7 +498,7 @@ export default function AIHiringWorkflowBuilder() {
         title: "Workflow saved",
         description: "Onboarding workflow template created successfully",
       });
-      navigate('/owner/hireos');
+      navigate('/dashboard');
     },
     onError: (error: any) => {
       toast({
@@ -500,14 +510,7 @@ export default function AIHiringWorkflowBuilder() {
   });
 
   return (
-    <div className="container mx-auto py-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">AI Hiring™ Workflow Builder</h1>
-        <p className="text-muted-foreground">
-          Design your custom onboarding sequence with drag-and-drop simplicity
-        </p>
-      </div>
-
+    <CanvasHubPage config={pageConfig}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Workflow Configuration */}
         <div className="lg:col-span-1">
@@ -551,7 +554,7 @@ export default function AIHiringWorkflowBuilder() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => navigate('/owner/hireos')}
+                  onClick={() => navigate('/dashboard')}
                   data-testid="button-cancel-workflow"
                 >
                   Cancel
@@ -572,7 +575,7 @@ export default function AIHiringWorkflowBuilder() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div>
                   <CardTitle>Onboarding Steps</CardTitle>
                   <CardDescription>Drag to reorder, click to edit</CardDescription>
@@ -624,6 +627,6 @@ export default function AIHiringWorkflowBuilder() {
         onSave={handleSaveStep}
         reportTemplates={reportTemplates}
       />
-    </div>
+    </CanvasHubPage>
   );
 }

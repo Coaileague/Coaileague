@@ -1,4 +1,4 @@
-import { User } from "@shared/schema";
+import type { User } from '@shared/schema/auth';
 
 declare global {
   namespace Express {

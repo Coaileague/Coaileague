@@ -1,8 +1,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Sparkles } from "lucide-react";
 import type { ChatMessage } from "@shared/schema";
+import { IrcRoleBadge, IrcSigil, mapToIrcRole, isTrinityBot, type IrcRole } from "./IrcRoleBadge";
+import { TrinityLogo } from "@/components/trinity-logo";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -13,16 +14,33 @@ interface MessageBubbleProps {
     readAt: Date;
   };
   showAvatar?: boolean;
+  platformRole?: string | null;
+  workspaceRole?: string | null;
+  roomRole?: string | null;
 }
 
 export function MessageBubble({ 
   message, 
   isCurrentUser, 
   readReceipt,
-  showAvatar = true 
+  showAvatar = true,
+  platformRole,
+  workspaceRole,
+  roomRole,
 }: MessageBubbleProps) {
   const isSystem = message.senderType === 'system';
+  const isBot = message.senderType === 'bot';
   const isStaff = message.senderType === 'support' || message.senderType === 'staff';
+  const isTrinity = isBot && isTrinityBot(message.senderName);
+  
+  const ircRole = mapToIrcRole({
+    platformRole,
+    workspaceRole,
+    roomRole,
+    isBot,
+    senderType: message.senderType,
+    senderName: message.senderName,
+  });
   
   const initials = message.senderName
     ?.split(' ')
@@ -33,9 +51,9 @@ export function MessageBubble({
 
   if (isSystem) {
     return (
-      <div className="flex justify-center my-3">
-        <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full max-w-md">
-          <p className="text-xs text-slate-600 dark:text-slate-400 text-center">
+      <div className="flex justify-center my-2" data-testid={`message-system-${message.id}`}>
+        <div className="px-3 py-1 bg-muted/40 rounded-full max-w-md">
+          <p className="text-[10px] text-muted-foreground/70 text-center leading-snug font-medium">
             {message.message}
           </p>
         </div>
@@ -43,76 +61,102 @@ export function MessageBubble({
     );
   }
 
+  const showRoleBadge = ircRole !== 'user' && ircRole !== 'guest';
+
+  const bubbleTailClasses = isCurrentUser
+    ? 'msg-bubble-tail-right'
+    : 'msg-bubble-tail-left';
+
+  const bubbleColorClasses = isCurrentUser
+    ? 'bg-primary text-primary-foreground'
+    : isBot
+      ? 'msg-bubble-bot bg-card border border-border/60 text-card-foreground'
+      : 'bg-muted text-foreground';
+
   return (
     <div
-      className={`flex gap-3 mb-4 ${
+      className={`flex gap-2 mb-1.5 message-arrive ${
         isCurrentUser ? 'flex-row-reverse' : 'flex-row'
       }`}
       data-testid={`message-bubble-${message.id}`}
     >
       {showAvatar && !isCurrentUser && (
-        <Avatar className="h-8 w-8 flex-shrink-0" data-testid="avatar-sender">
-          <AvatarImage src={undefined} />
-          <AvatarFallback className="text-xs bg-slate-200 dark:bg-slate-700">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative flex-shrink-0 self-end">
+          <Avatar className={`h-7 w-7 ring-2 ring-background ${isBot ? 'msg-bot-avatar' : ''}`} data-testid="avatar-sender">
+            <AvatarImage src={undefined} alt={message.senderName} />
+            <AvatarFallback className={`text-[10px] font-semibold ${
+              isBot 
+                ? 'bg-primary/10 text-primary'
+                : 'bg-muted text-muted-foreground'
+            }`}>
+              {isBot ? <TrinityLogo size={14} /> : initials}
+            </AvatarFallback>
+          </Avatar>
+          {isBot && (
+            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border border-background flex items-center justify-center msg-ai-indicator" data-testid="indicator-ai-bot">
+              <Sparkles className="w-2 h-2 text-primary-foreground" />
+            </div>
+          )}
+        </div>
       )}
 
       <div className={`flex flex-col max-w-[75%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
         {!isCurrentUser && (
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-slate-700 dark:text-slate-300" data-testid="text-sender-name">
+          <div className="flex items-center gap-1 mb-0.5 px-1 flex-wrap">
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-muted-foreground/70" data-testid="text-sender-name">
+              <IrcSigil role={ircRole} isBot={isBot} />
               {message.senderName}
             </span>
-            {isStaff && (
-              <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-emerald-100 dark:bg-emerald-900 text-blue-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" data-testid="badge-staff">
-                SUPPORT
-              </Badge>
+            {showRoleBadge && (
+              <IrcRoleBadge 
+                role={ircRole}
+                isBot={isBot}
+                isTrinity={isTrinity}
+                platformRole={platformRole}
+                workspaceRole={workspaceRole}
+                showSigil={false}
+                size="xs"
+              />
             )}
           </div>
         )}
 
         <div
-          className={`px-4 py-2.5 rounded-2xl ${
-            isCurrentUser
-              ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white'
-              : 'bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
-          }`}
+          className={`relative px-3 py-1.5 ${bubbleTailClasses} ${bubbleColorClasses} msg-bubble-shadow`}
           data-testid="div-message-content"
         >
-          <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+          <p className="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
             {message.message}
           </p>
         </div>
 
-        <div className={`flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 dark:text-slate-400 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
-          <span data-testid="text-timestamp">
+        <div className={`flex items-center gap-1 mt-px px-0.5 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`} data-testid="div-message-meta">
+          <span className="text-[9px] text-muted-foreground/35 select-none leading-none tracking-tight" data-testid="text-timestamp">
             {message.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Just now'}
           </span>
           
           {isCurrentUser && (
             <div className="flex items-center" data-testid="div-read-status">
               {readReceipt ? (
-                <CheckCheck className="h-3 w-3 text-blue-600 dark:text-blue-400" data-testid="icon-read-receipt" />
+                <CheckCheck className="h-2.5 w-2.5 text-primary read-receipt" data-testid="icon-read-receipt" />
               ) : (
-                <Check className="h-3 w-3" data-testid="icon-sent" />
+                <Check className="h-2 w-2 text-muted-foreground/30" data-testid="icon-sent" />
               )}
             </div>
           )}
           
           {readReceipt && isCurrentUser && (
-            <span className="text-[10px] text-blue-600 dark:text-blue-400" data-testid="text-read-by">
-              Read by {readReceipt.readByName}
+            <span className="text-[8px] text-primary/40 read-receipt leading-none" data-testid="text-read-by">
+              {readReceipt.readByName}
             </span>
           )}
         </div>
       </div>
 
       {showAvatar && isCurrentUser && (
-        <Avatar className="h-8 w-8 flex-shrink-0" data-testid="avatar-current-user">
-          <AvatarImage src={undefined} />
-          <AvatarFallback className="text-xs bg-gradient-to-br from-emerald-600 to-emerald-700 text-white">
+        <Avatar className="h-7 w-7 flex-shrink-0 self-end ring-2 ring-background" data-testid="avatar-current-user">
+          <AvatarImage src={undefined} alt={message.senderName} />
+          <AvatarFallback className="text-[10px] font-semibold bg-primary text-primary-foreground">
             {initials}
           </AvatarFallback>
         </Avatar>

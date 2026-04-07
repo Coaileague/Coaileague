@@ -1,0 +1,146 @@
+FULL 34-FINDING FIX BATCH — ALL PATTERNS | READ BEFORE TOUCH | NO NEW FEATURES
+Fix every finding from the pattern scan in priority order. Read each file before touching. Show before/after per fix. Do not skip any finding regardless of severity.
+
+PHASE 1 — CRITICAL FIXES (Fix first, confirm clean before Phase 2)
+P1-FIX-1 — QB field mismatches (CRITICAL)
+File: server/services/partners/quickbooks.ts
+Find every reference to invoice.invoiceDate — replace with invoice.issueDate
+Find every reference to invoice.totalAmount — replace with invoice.total
+Read the full QB invoice sync function first. Map every field access against the actual Drizzle invoices schema. Fix every mismatch not just these two — do a complete field audit of this function while you are in it.
+P1-FIX-2 — PDF invoice date field (CRITICAL)
+File: server/routes/invoiceRoutes.ts line 125
+Replace invoice.invoiceDate with invoice.issueDate in the PDF generation path. Confirm no other invoiceDate references exist in this file.
+P2-FIX-1 — pending_approval enum crash (CRITICAL)
+File: server/services/ai-brain/trinityTimesheetPayrollCycleActions.ts
+Find both .set({ status: 'pending_approval' as any }) calls. Replace with .set({ status: 'pending' }) — that is the correct enum value for a run awaiting approval.
+Find the .set({ status: 'correction_pending' as any }) call. Determine the correct existing enum value for this state — likely 'draft' for a run being sent back for correction. Replace with the correct enum value.
+Find all if (status === 'pending_approval') comparisons — replace with if (status === 'pending') to match the actual DB value.
+After fixing — search the entire codebase for any other 'pending_approval' or 'correction_pending' string references and fix every one.
+P5-FIX-1 — NaN tax rate calculation (CRITICAL)
+File: server/services/billing/invoice.ts lines 132 and 716
+Replace both instances of:
+typescriptconst parsedTaxRate = workspace?.defaultTaxRate ? parseFloat(workspace.defaultTaxRate) : NaN
+With:
+typescriptconst parsedTaxRate = workspace?.defaultTaxRate ? parseFloat(workspace.defaultTaxRate) || 0 : 0
+The fallback must be 0 not NaN. Zero tax rate means no tax applied. NaN means invoice creation fails entirely. After fixing — search for any other parseFloat( calls in billing code that could produce NaN and fix the same way.
+
+After Phase 1 — restart server, confirm clean start, run regression tests. Report results before Phase 2.
+
+PHASE 2 — HIGH FIXES
+P7-FIX-1 — Claude API calls without timeout (HIGH)
+Files: claudeService.ts lines 92 and 204, claudeVerificationService.ts line 72, resilientAIGateway.ts line 420
+For every Anthropic fetch() call in these files add:
+typescriptsignal: AbortSignal.timeout(30000) // 30 second timeout
+Add error handling for the abort case:
+typescriptcatch (error) {
+  if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+    throw new Error('Claude API timeout after 30 seconds')
+  }
+  throw error
+}
+P7-FIX-2 — OAuth token refresh calls without timeout (HIGH)
+Files: quickbooks.ts lines 275, 301, 413, 475 — googleCalendar.ts lines 78, 112, 144, 185, 211, 236, 272 — gusto.ts lines 114, 231
+Add signal: AbortSignal.timeout(15000) to every OAuth fetch() call. OAuth token refresh should never take more than 15 seconds — if it does the call is hung and should fail fast so the caller can retry or notify.
+P7-FIX-3 — QuickBooks Phase 3 API calls without timeout (HIGH)
+File: quickbooksPhase3Service.ts lines 151, 391, 633
+Add signal: AbortSignal.timeout(20000) to each QB API call. 20 seconds for QB operations which can be slower than OAuth.
+P5-FIX-2 — Any remaining parseFloat NaN risks (HIGH)
+Search the entire codebase for parseFloat( calls in any billing, payroll, or invoice service. For every one that does not have an || 0 fallback — add it. Financial calculations must never produce NaN.
+
+After Phase 2 — restart server, confirm clean start. Report before Phase 3.
+
+PHASE 3 — MEDIUM FIXES
+P3-FIX-1 — Missing userId on system actor calls (MEDIUM)
+Files: stripeEventBridge.ts line 202, selfReflectionEngine.ts lines 632 and 657, orchestrationBridge.ts line 307, trinityChangePropagationActions.ts lines 64, 77, 91, trinityDrugTestingActions.ts line 133 and 184, cleanupAgentSubagent.ts line 262, trinityExtendedActions.ts line 339
+For every helpaiOrchestrator.executeAction() or executeAction() call missing a userId parameter — add userId: 'trinity-system'. This ensures every autonomous action has proper attribution in the audit trail.
+Search for any other executeAction( calls in background services, cron jobs, or event subscribers that are missing userId and add userId: 'trinity-system' to all of them.
+P8-FIX-1 — Missing audit log on Stripe invoice mutations (MEDIUM)
+File: stripeInlineRoutes.ts lines 203 and 283
+After every storage.updateInvoice() call — add a createAuditLog() call with:
+
+action: 'invoice_updated'
+entityType: 'invoice'
+entityId: invoiceId
+workspaceId: workspaceId
+performedBy: 'stripe-webhook'
+previousState and newState showing before/after status
+
+P8-FIX-2 — Missing audit log on ScheduleOS invoice mutations (MEDIUM)
+File: scheduleosRoutes.ts line 1200
+Same pattern — add createAuditLog() after storage.updateInvoice().
+P8-FIX-3 — Missing audit log on admin invoice mutations (MEDIUM)
+File: adminRoutes.ts lines 909 and 947
+Same pattern — add createAuditLog() with performedBy: req.user?.id || 'admin'.
+P8-FIX-4 — Missing audit log on Resend delivery confirmation (LOW)
+File: resendWebhooks.ts line 362
+Add audit log entry after db.update(invoices).set({ deliveryConfirmed: true }).
+P6-FIX-1 — Cron transaction timeout guard (MEDIUM)
+File: autonomousScheduler.ts line 706
+Wrap the inner db.transaction() call in a Promise.race with a 60-second timeout:
+typescriptawait Promise.race([
+  db.transaction(async (tx) => { ... }),
+  new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Invoice transaction timeout')), 60000)
+  )
+])
+If the timeout fires — log the workspace ID that timed out, skip it, and continue to the next workspace.
+P6-FIX-2 — Cron completion records (MEDIUM)
+Create a cron_run_log table if it does not exist:
+sqlCREATE TABLE IF NOT EXISTS cron_run_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cron_name varchar NOT NULL,
+  started_at timestamptz DEFAULT now(),
+  completed_at timestamptz,
+  workspaces_processed integer DEFAULT 0,
+  workspaces_failed integer DEFAULT 0,
+  status varchar DEFAULT 'running',
+  error_summary text
+)
+Add start and completion records to these critical crons:
+
+Auto-invoicing loop
+Payroll generation loop
+Weekly billing run
+Payroll readiness scanner
+Compliance scanner
+
+Write status: 'completed' on success, status: 'interrupted' if the process exits mid-run, status: 'failed' on unhandled error.
+P4-FIX-1 — RL workspaceId extraction (LOW)
+File: trinityOrgIntelligenceService.ts lines 150 and 160
+Change:
+typescriptconst workspaceId = event.workspaceId
+To:
+typescriptconst workspaceId = event.workspaceId || event.metadata?.workspaceId
+```
+
+If `workspaceId` is still undefined after both checks — log a warning and return early rather than calling `learnSchedulingPattern(undefined, ...)`.
+
+---
+
+**After Phase 3 — restart server, run all regression tests.**
+
+---
+
+**FINAL VERIFICATION**
+
+After all three phases complete:
+
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Run this verification checklist:
+   - Attempt QB invoice sync — confirm no crash on `invoice.issueDate`
+   - Generate a PDF invoice — confirm date shows correctly not 'N/A'
+   - Attempt Trinity payroll submission — confirm no `pending_approval` DB crash
+   - Create an invoice for a workspace with no defaultTaxRate — confirm it succeeds with $0 tax not a crash
+   - Trigger a Claude verification — confirm it has a 30-second timeout in logs
+5. Report fix status for all 34 findings:
+```
+Phase 1 — Critical: N/6 fixed
+Phase 2 — High: N/8 fixed  
+Phase 3 — Medium/Low: N/20 fixed
+TOTAL: N/34 fixed
+Remaining: N (list any that could not be fixed and why)
+
+Stop and wait for production sign-off
+

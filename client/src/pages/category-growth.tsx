@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Briefcase, UserCog, Activity, BarChart3, FileText, Sparkles, ArrowRight, TrendingUp } from "lucide-react";
+import { Briefcase, UserCog, Activity, BarChart3, FileText, ArrowRight, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 export default function GrowthFamilyPage() {
   const modules = [
@@ -48,28 +49,21 @@ export default function GrowthFamilyPage() {
     }
   ];
 
-  return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/20 to-pink-500/20 border border-violet-500/30">
-              <Sparkles className="h-12 w-12 text-blue-700 dark:text-blue-400" />
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-            Growth & Intelligence
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Scale your organization with AI-powered recruitment, talent management, and predictive analytics
-          </p>
-          <Badge variant="outline" className="text-sm px-4 py-1">
-            5 Modules
-          </Badge>
-        </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'category-growth',
+    title: 'Growth & Intelligence',
+    subtitle: 'Scale your organization with AI-powered recruitment, talent management, and predictive analytics',
+    category: 'operations',
+    headerActions: (
+      <Badge variant="outline" className="text-sm px-4 py-1">
+        5 Modules
+      </Badge>
+    ),
+  };
 
-        {/* Modules Grid */}
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-8">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => {
             const Icon = module.icon;
@@ -105,7 +99,6 @@ export default function GrowthFamilyPage() {
           })}
         </div>
 
-        {/* Intelligence Section */}
         <Card className="border-2 border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
@@ -116,25 +109,25 @@ export default function GrowthFamilyPage() {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">🎯 Predictive Hiring</h3>
+                <h3 className="font-bold text-lg">Predictive Hiring</h3>
                 <p className="text-sm text-muted-foreground">
                   AI algorithms predict candidate success rates, reducing time-to-hire by 60% and improving retention
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">📈 Turnover Prevention</h3>
+                <h3 className="font-bold text-lg">Turnover Prevention</h3>
                 <p className="text-sm text-muted-foreground">
                   Machine learning identifies at-risk employees 90 days before turnover, enabling proactive retention
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">🧠 Skills Gap Analysis</h3>
+                <h3 className="font-bold text-lg">Skills Gap Analysis</h3>
                 <p className="text-sm text-muted-foreground">
                   Automated skills mapping identifies training needs and succession planning opportunities
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">💡 Strategic Insights</h3>
+                <h3 className="font-bold text-lg">Strategic Insights</h3>
                 <p className="text-sm text-muted-foreground">
                   Executive dashboards with actionable intelligence for data-driven talent decisions
                 </p>
@@ -143,6 +136,6 @@ export default function GrowthFamilyPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

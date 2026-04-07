@@ -1,0 +1,20 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "zPuhYHXIlk1AZ4oNkNVOq"
+uri = "file://client/public/ads/angle1-pain.png"
+type = "image"
+title = "Ad 1 — Pain Point (1080×1080)"
+
+[[outputs]]
+id = "lOKgoGbvDU2cGaLmEthKu"
+uri = "file://client/public/ads/angle2-outcome.png"
+type = "image"
+title = "Ad 2 — Outcome (1080×1080)"
+
+[[outputs]]
+id = "tTksqms59duqymae2z9pf"
+uri = "file://client/public/ads/angle3-texas.png"
+type = "image"
+title = "Ad 3 — Texas Focus (1080×1080)"

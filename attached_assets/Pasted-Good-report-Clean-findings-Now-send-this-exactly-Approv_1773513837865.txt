@@ -1,0 +1,43 @@
+Good report. Clean findings. Now send this exactly:
+
+---
+
+Approved. This is the correct findings report. Work in this exact order. Complete each phase fully, restart the server, confirm all domains healthy and all regression tests passing before starting the next phase. Do not combine phases.
+
+**Phase 1 — Fix the admin role crisis first. This is P0.**
+
+The admin role does real work across 12 or more files but cannot exist in the database. This means every permission check using admin is either silently failing or being bypassed. Fix this completely:
+
+Add org_admin to the workspaceRoleEnum database enum. This is the office secretary role — administrative only, no financial access, no scheduling authority. Every place in the codebase that currently checks for admin as a workspace role gets updated to org_admin. Every place that checks for admin as a platform role gets updated to the correct platform role. No references to the bare string admin should remain in any permission check after this phase. Show me a before and after count of admin references.
+
+**Phase 2 — Clean the platformActionHub role hierarchy.**
+
+Replace the current broken hierarchy with the target hierarchy exactly as specified. Remove all phantom roles: super_admin, owner, coo, cto, support, support_lead, guest, Bot. Add the missing real roles: org_admin at 200, auditor at 50, contractor at 90. Fix the empty requiredRoles array bug so an empty array means open to all authenticated users. After this phase every role in the hierarchy must exist in a real database enum and every real database role must exist in the hierarchy.
+
+**Phase 3 — Fix the auditor role hard properties.**
+
+Three of four required auditor protections are enforced ad hoc instead of at the RBAC layer. Fix all three:
+
+First — enforce the expiresAt database field at the portal token validation middleware. Not just JWT signature validation. Actually query the auditorAccounts table and confirm expiresAt is in the future on every request. If expired return 401 immediately.
+
+Second — enforce financial data exclusion at the RBAC layer not just through route design. Add a financial exclusion check to the requireAuditor middleware so that any route tagged as financial automatically returns 403 for auditor sessions regardless of which developer wrote the route.
+
+Third — add auditor to the platformActionHub at level 50 with a strict allowlist of Trinity actions auditors can trigger. Auditors should only be able to trigger read actions on compliance data. Any Trinity action involving financial data, billing, payroll, or credits must be blocked at level 50.
+
+Also fix the requireAuditor middleware name — it currently allows managers in. Rename it to requireAuditorOnly and make it accept only the auditor role, nothing else.
+
+**Phase 4 — Remove orphaned and duplicate roles.**
+
+Remove from all layers — TypeScript types, DB enums, RBAC middleware, platformActionHub, and every route file: super_admin, owner, coo, cto, support, support_lead, guest, Bot as a workspace role, org_manager, department_manager, dept_manager, staff as a duplicate of employee, supervisor as a duplicate of manager.
+
+For each removed role find every user or workspace_member currently assigned that role and migrate them to the correct canonical role. Document every migration in the audit trail. No user loses access they legitimately had.
+
+**Phase 5 — Build display name customization.**
+
+Add a workspace_role_labels table with workspace_id, role, display_name, and updated_at. Org_owner can set a custom display name for each of the six org roles. The system always uses the role identifier for permission checks. The UI always shows the custom display name if one exists or the default name if not. Default display names are: org_owner shows as Owner, co_owner shows as Deputy Chief, manager shows as Shift Supervisor, org_admin shows as Office Administrator, employee shows as Security Officer, contractor shows as Contract Officer.
+
+**After all five phases complete report:**
+
+Final role count in each enum. Count of phantom roles removed. Count of admin references before and after Phase 1. Auditor hard properties — all four confirmed enforced at RBAC layer. platformActionHub hierarchy showing only real roles. Regression tests passing. All 15 domains healthy. RBAC verdict updated from NOT production ready to production ready.
+
+Do not start Phase 2 until Phase 1 is complete and verified. Do not start Phase 3 until Phase 2 is complete and verified. Work in order.

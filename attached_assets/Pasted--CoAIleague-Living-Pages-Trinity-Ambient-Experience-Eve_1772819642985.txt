@@ -1,0 +1,574 @@
+# CoAIleague — Living Pages & Trinity Ambient Experience
+## Every Page Alive. Trinity Always Present. Mobile + Desktop Universal.
+## Feed After Universal Component System Is Complete
+
+---
+
+## FROM BRYAN — THE VISION
+
+I do not want dead pages. I do not want pages that are just cards, buttons, and basic text with nothing happening. Every single page on this platform — mobile and desktop — needs to feel alive, helpful, and intelligent. 
+
+The reference is what Homebase does on their mobile dashboard — the moment you open it you feel something. Your money is there. Your shift is there. It feels like it knows you.
+
+We are going further than that. Trinity is our AI and she needs to be ambient — always present, always helpful, always aware of what the user is looking at. Not buried in a link. Not hidden behind a menu. She follows the user everywhere, knows the context of every page, and proactively helps.
+
+This is the standard I want. Nothing less.
+
+---
+
+## ⛔ STANDING RULES
+
+1. **NO DROP TABLE** — Not one. Ever.
+2. **NO SCHEMA CHANGES** — Frontend and AI wiring only.
+3. **READ BEFORE WRITE** — Understand the current page before touching it.
+4. **ONE PAGE SECTION AT A TIME** — Build, verify mobile + desktop, checkpoint, next.
+5. **TRINITY READS, NEVER GUESSES** — All Trinity widgets pull from real data. No hardcoded content.
+6. **UNIVERSAL COMPONENTS ONLY** — Every element uses the universal system. No custom one-off implementations.
+
+---
+
+## PART 1 — THE TRINITY AMBIENT WIDGET (FAB)
+
+This is the most important element on the entire platform. It lives on every single page.
+
+### What It Is
+A floating action button that is Trinity's presence on every page. It is context-aware — it knows which page the user is on, what data is visible, and what questions the user might have. It can analyze what's on screen and answer questions about it in plain language.
+
+Think of it exactly like QuickBooks' Intuit Assist widget — but smarter because Trinity knows the entire CoAIleague platform.
+
+### Behavior
+```
+Default state:    Small FAB, bottom right, Trinity logo/icon, subtle pulse animation
+Hover/tap:        Expands to show quick action chips
+Open state:       Full chat panel slides up (mobile) or pops out (desktop)
+Scrolling:        Hides when scrolling down, reappears when scrolling up or stops
+Conflict avoid:   Moves left if bottom nav or other FABs are nearby
+```
+
+### Visual Specs
+```
+Size:             56px circle (default), 44px when scrolling hides it partially
+Background:       Brand gradient (cyan → purple)
+Icon:             Trinity logo or AI sparkle icon
+Shadow:           0 4px 20px rgba(0,212,255,0.3) — glowing cyan shadow
+Pulse:            Subtle scale(1) → scale(1.05) → scale(1) every 3s when idle
+Badge:            Red dot when Trinity has a proactive suggestion waiting
+Position:         Fixed, bottom: 24px + safe area, right: 20px
+Mobile:           Bottom: 80px (above bottom nav)
+Desktop:          Bottom: 24px, right: 24px
+```
+
+### Context Awareness
+When the user opens the Trinity widget, it automatically:
+1. Detects the current page/route
+2. Pulls the page title and primary data context
+3. Generates a contextual greeting
+
+```typescript
+// Context detection per route
+const trinityContext = {
+  '/dashboard':     'Looking at your dashboard. I can explain any widget or help you navigate.',
+  '/scheduling':    'You\'re on the schedule. I can help you spot conflicts or explain coverage gaps.',
+  '/timesheets':    'Viewing timesheets. I can help you find discrepancies or explain overtime calculations.',
+  '/payroll':       'On the payroll page. Ask me anything about how pay is calculated.',
+  '/billing':       'Viewing billing. I can explain any charge, plan, or invoice.',
+  '/compliance':    'Compliance page. I can tell you what\'s expiring soon and what needs action.',
+  // ... all routes
+};
+```
+
+### Screen Analysis Feature
+When the user taps "Analyze this page" inside the Trinity widget:
+1. Capture current viewport as screenshot using `html2canvas`
+2. Send to Trinity with the page context
+3. Trinity describes what she sees and offers insights or next steps
+4. Response appears in the chat panel
+
+### Quick Action Chips (shown before opening full chat)
+These appear when the FAB is tapped once — contextual to the current page:
+
+```
+On Dashboard:     [ What do my earnings mean? ] [ What's my next shift? ] [ How do I clock in? ]
+On Scheduling:    [ Any conflicts this week? ] [ Who's uncovered? ] [ Explain this shift ]
+On Timesheets:    [ Any overtime? ] [ Explain my hours ] [ What's pending approval? ]
+On Payroll:       [ How was this calculated? ] [ When do I get paid? ] [ Explain deductions ]
+On Compliance:    [ What's expiring soon? ] [ What do I need to complete? ] [ Explain this requirement ]
+```
+
+### Trinity Widget Component
+```typescript
+// src/components/trinity/TrinityWidget.tsx
+interface TrinityWidgetProps {
+  route: string;
+  userRole: 'employee' | 'manager' | 'admin' | 'org_owner';
+  orgId: string;
+  userId: string;
+}
+```
+
+**Wire this to every page layout through UniversalLayout so it appears automatically everywhere.**
+
+---
+
+## PART 2 — TRINITY PROACTIVE REMINDER CARDS
+
+These are NOT static cards. They are live, intelligent cards generated by Trinity based on real data. They appear on dashboard and relevant domain pages. They disappear when the action is completed.
+
+### Card Types
+
+#### Setup Reminder Cards (for new orgs)
+Trinity detects incomplete configuration and surfaces it:
+
+```
+╔══════════════════════════════════════════╗
+║  ⚙️  Trinity Reminder                    ║
+║  ─────────────────────────────────────── ║
+║  Your payroll settings aren't configured ║
+║  yet. Set your pay period and rates so   ║
+║  employees can see accurate earnings.    ║
+║                                          ║
+║  [ Configure Payroll → ]  [ Remind Later ]║
+╚══════════════════════════════════════════╝
+```
+
+**Triggers for setup cards:**
+- No pay period configured → show payroll setup card
+- No sites added → show site setup card
+- No employees added → show employee setup card
+- Stripe not connected → show billing setup card
+- No schedule created → show scheduling card
+- QuickBooks not connected → show QB integration card
+- No compliance docs uploaded → show compliance card
+
+#### Action Required Cards
+```
+╔══════════════════════════════════════════╗
+║  🔔  Action Required                     ║
+║  ─────────────────────────────────────── ║
+║  3 timesheets are pending your approval  ║
+║  from last week. Payroll runs in 2 days. ║
+║                                          ║
+║  [ Review Timesheets → ]                 ║
+╚══════════════════════════════════════════╝
+```
+
+#### Compliance Alert Cards
+```
+╔══════════════════════════════════════════╗
+║  ⚠️  Compliance Alert                    ║
+║  ─────────────────────────────────────── ║
+║  Marcus Rivera's security license        ║
+║  expires in 14 days. Renew now to avoid  ║
+║  scheduling conflicts.                   ║
+║                                          ║
+║  [ View License → ]  [ Dismiss ]         ║
+╚══════════════════════════════════════════╝
+```
+
+### Card Visual Specs
+```css
+/* Trinity reminder card */
+.trinity-reminder-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 3px solid var(--color-brand-primary); /* cyan left accent */
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  
+  /* Entry animation */
+  animation: slideInUp 0.3s var(--ease-default);
+}
+
+/* Gradient border variant for important cards */
+.trinity-reminder-card--important {
+  position: relative;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+}
+
+.trinity-reminder-card--important::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  padding: 1px;
+  background: var(--color-brand-gradient);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+```
+
+---
+
+## PART 3 — GUIDED ONBOARDING ANIMATIONS
+
+When a new org owner logs in for the first time, Trinity guides them through setup step by step with animated, helpful instructions. This is not a boring checklist — it's an interactive guided experience.
+
+### Onboarding Flow
+
+**Step 1 — Welcome**
+```
+Animated Trinity avatar appears
+Greeting: "Welcome to CoAIleague! I'm Trinity, your AI workforce assistant.
+           Let me help you set up your organization in just a few steps."
+CTA: [ Let's Get Started → ]
+```
+
+**Step 2 — Spotlight Animation**
+When Trinity guides a user to click something:
+- A pulsing spotlight circle highlights the target element
+- An animated arrow points to it
+- Trinity speech bubble explains what to do
+- Backdrop dims everything except the spotlight target
+
+```typescript
+// Spotlight component
+interface SpotlightProps {
+  targetSelector: string;    // CSS selector of element to highlight
+  message: string;           // Trinity's instruction
+  position: 'top' | 'bottom' | 'left' | 'right';
+  onComplete: () => void;
+}
+```
+
+**Step 3 — Progress Indicator**
+```
+○ ● ○ ○ ○ ○   Step 2 of 6: Add your first employee
+─────────────────────────────────────
+Animated progress bar fills as steps complete
+Each completed step shows a green checkmark with a satisfying pop animation
+```
+
+**Step 4 — Celebration Moments**
+When a setup step is completed:
+- Brief confetti burst animation (CSS only, no heavy libraries)
+- Trinity: "Great job! Your payroll is now configured."
+- Smooth transition to next step
+
+### Onboarding Steps to Guide
+1. Organization profile — name, logo, address
+2. Add first site/location
+3. Add first employee
+4. Configure pay period and rates
+5. Connect Stripe for billing
+6. Create first schedule
+
+### Returning User Nudges
+For users who started onboarding but didn't finish — Trinity shows a resume card:
+```
+"You're 60% set up. Finish adding your employees to unlock full scheduling."
+[ Continue Setup → ]
+```
+
+---
+
+## PART 4 — PAGE-BY-PAGE LIVING ENHANCEMENTS
+
+Every page gets these treatments. Apply universally.
+
+### All Pages — Universal Enhancements
+- **Page load animation:** Content staggered in, 50ms delay between sections
+- **Trinity FAB:** Present on every page (wired through UniversalLayout)
+- **Empty states:** Trinity-powered with contextual suggestions (not generic "No data")
+- **Loading states:** Skeleton loaders with shimmer, never blank white
+- **Error states:** Trinity explains the error in plain language with next steps
+
+### Dashboard Page
+Already covered in the dashboard redesign prompt — earnings widget, shift status, activity feed, quick actions.
+
+**Additional Trinity widgets for dashboard:**
+- "Your week at a glance" — Trinity summarizes the week in 2 sentences
+- "Something needs your attention" — proactive alert card if anything is pending
+- "Did you know?" — rotating helpful tips about platform features
+
+### Schedule Page
+```
+Live enhancements:
+- Shift cards pulse green when a guard is actively on shift
+- Conflict indicator: red badge on conflicting shifts with Trinity explanation on tap
+- Coverage heat map: color intensity shows how covered each time slot is
+- Trinity sidebar widget: "Here's what I notice about this week's schedule..."
+- Drag-to-reschedule with smooth animation and conflict detection
+- Empty shift slots: soft dashed border with "+" to quick-add
+```
+
+### Timesheets Page
+```
+Live enhancements:
+- Hours worked progress bar per employee for the pay period
+- Overtime warning: amber highlight + Trinity tooltip explaining the OT rule
+- Pending approval rows pulse subtly to draw attention
+- Quick approve: swipe right on mobile to approve (like email clients)
+- Trinity insight banner: "4 employees are approaching overtime this week"
+```
+
+### Payroll Page
+```
+Live enhancements:
+- Pay period countdown: "Next payroll runs in 3 days"
+- Per-employee earnings bar showing current vs projected
+- Trinity explanation button on every line item: "What is this?"
+- Animated total when payroll is calculated — counter rolls up
+- Warning cards for any anomalies Trinity detected
+```
+
+### Compliance Page
+```
+Live enhancements:
+- Expiration timeline: visual timeline of upcoming expirations
+- Color-coded urgency: green (90+ days), yellow (30-90 days), red (<30 days)
+- Trinity alert: "2 licenses expire this month — here's what to do"
+- Document upload zones: drag-and-drop with animated feedback
+- Completion progress ring per employee
+```
+
+### Clock In/Out Page
+```
+Live enhancements:
+- Large, clear clock display — current time prominent
+- Location status: green checkmark if within geofence, red warning if outside
+- Last action summary: "You clocked in 3h 42m ago at Main Street Plaza"
+- Shift remaining indicator: progress bar showing shift completion
+- Trinity status: "You're on track — 4h 18m remaining in your shift"
+```
+
+### My Team Page (Manager view)
+```
+Live enhancements:
+- Live status indicators: green dot = on shift, gray = off, orange = late
+- Quick stats row: X on shift, X scheduled today, X pending approval
+- Trinity insight: "Your team is fully covered until 8 PM tonight"
+- Employee cards with mini shift timeline for the day
+- Tap employee → quick action sheet (message, view schedule, approve timesheet)
+```
+
+---
+
+## PART 5 — UNIVERSAL CARD VISUAL ENHANCEMENT
+
+Every card across the platform gets this visual treatment. No more flat, dead cards.
+
+### Card Border Styles
+```css
+/* Standard card — subtle left accent */
+.card-standard {
+  border-left: 2px solid var(--color-brand-primary);
+}
+
+/* Important card — gradient border */
+.card-important {
+  /* Uses gradient border technique from Part 2 */
+}
+
+/* Success card */
+.card-success {
+  border-left: 2px solid var(--color-success);
+}
+
+/* Warning card */
+.card-warning {
+  border-left: 2px solid var(--color-warning);
+}
+
+/* Danger card */
+.card-danger {
+  border-left: 2px solid var(--color-danger);
+}
+```
+
+### Card Header Standard
+Every card with a title gets this universal header treatment:
+```
+╔══════════════════════════════════════════╗
+║  [Icon]  Card Title          [Action ⋯] ║
+║  Subtitle or meta info                   ║
+║  ─────────────────────────────────────── ║
+║  Content area                            ║
+╚══════════════════════════════════════════╝
+```
+
+- Icon: 20px, brand cyan
+- Title: 15px semibold, primary text
+- Subtitle: 12px, secondary text
+- Action: icon button (3-dot menu or specific action)
+- Divider line between header and content
+
+---
+
+## PART 6 — UNIVERSAL MODAL/DRAWER/SHEET HEADERS
+
+Every modal, drawer, and sheet gets a consistent header with this exact structure:
+
+```
+╔══════════════════════════════════════════╗
+║  ← Back  [Title]              [✕ Close] ║
+║  [Subtitle if needed]                    ║
+║  ─────────────────────────────────────── ║
+```
+
+```typescript
+// All modals, drawers, sheets use this header
+interface UniversalOverlayHeader {
+  title: string;
+  subtitle?: string;
+  showBack?: boolean;
+  onBack?: () => void;
+  onClose: () => void;
+  actions?: React.ReactNode;  // additional header actions
+}
+```
+
+**Rules:**
+- Title always present — no untitled overlays
+- Close button always top right — no exceptions
+- Back button on mobile when navigating within an overlay
+- Subtitle optional but encouraged for context
+- Actions slot for page-specific header buttons
+
+---
+
+## PART 7 — ANIMATION STANDARDS
+
+Every interaction has a micro-animation. These are not decorative — they communicate state and guide attention.
+
+### Required Animations
+
+**Page transitions:**
+```css
+/* Entering a page */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: pageEnter 0.25s var(--ease-out); }
+```
+
+**Card entry (staggered):**
+```css
+/* Cards stagger in on page load */
+.card:nth-child(1) { animation-delay: 0ms; }
+.card:nth-child(2) { animation-delay: 50ms; }
+.card:nth-child(3) { animation-delay: 100ms; }
+/* etc */
+```
+
+**Number counters:**
+```typescript
+// Earnings, totals, counts all animate up from 0
+const useCountUp = (target: number, duration = 800) => {
+  // requestAnimationFrame counter from 0 to target
+  // easeOut curve so it feels natural
+};
+```
+
+**Button press:**
+```css
+button:active { 
+  transform: scale(0.97); 
+  transition: transform 0.1s ease; 
+}
+```
+
+**Trinity widget pulse:**
+```css
+@keyframes trinityPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(0,212,255,0); }
+}
+```
+
+**Success state:**
+```css
+@keyframes successPop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+```
+
+**Skeleton shimmer:**
+```css
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, 
+    var(--color-bg-secondary) 25%, 
+    var(--color-bg-tertiary) 50%, 
+    var(--color-bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+```
+
+---
+
+## PART 8 — MOBILE LIVING PAGE REQUIREMENTS
+
+Every mobile page must pass this living page checklist:
+
+**Feels alive:**
+- [ ] At least one animated element visible on load
+- [ ] Data that changes shows a brief highlight animation when it updates
+- [ ] Empty states have Trinity present with a helpful suggestion
+- [ ] Loading states use skeleton loaders, never spinners on full pages
+
+**Trinity present:**
+- [ ] Trinity FAB visible on every page
+- [ ] At least one Trinity insight card on pages with complex data
+- [ ] Trinity explains empty states with context-aware messaging
+- [ ] Trinity onboarding nudge if any setup is incomplete
+
+**Visually rich:**
+- [ ] Cards have accent borders or gradient borders
+- [ ] Status indicators use color + icon (never color alone)
+- [ ] Numbers and metrics are large and prominent
+- [ ] Section headers are styled, not plain gray text
+- [ ] At least one visual hierarchy element (big number, progress bar, or status badge) per screen
+
+**Interactive:**
+- [ ] Primary action is always obvious — one clear CTA per page
+- [ ] Swipe gestures where appropriate (approve timesheets, dismiss cards)
+- [ ] Tap feedback on all interactive elements
+- [ ] Pull to refresh where data can change
+
+---
+
+## DELIVERY CHECKLIST
+
+- [ ] Trinity FAB built and wired to UniversalLayout (appears on every page)
+- [ ] Trinity context detection working per route
+- [ ] Screen analysis feature working (html2canvas → Trinity)
+- [ ] Quick action chips contextual per page
+- [ ] Trinity proactive reminder cards built
+- [ ] Setup reminder cards trigger on incomplete configuration
+- [ ] Guided onboarding flow with spotlight animations
+- [ ] Progress indicator and celebration moments working
+- [ ] All 6 onboarding steps guided
+- [ ] Dashboard living enhancements applied
+- [ ] Schedule page living enhancements applied
+- [ ] Timesheets page living enhancements applied
+- [ ] Payroll page living enhancements applied
+- [ ] Compliance page living enhancements applied
+- [ ] Clock In/Out page living enhancements applied
+- [ ] My Team page living enhancements applied
+- [ ] Universal card border styles applied across all cards
+- [ ] Universal overlay headers on all modals, drawers, sheets
+- [ ] All animation standards implemented
+- [ ] Trinity FAB hides on scroll, reappears on stop
+- [ ] Mobile living page checklist passed on every page
+- [ ] Tested at 375px, 390px, 430px mobile widths
+- [ ] Tested at 1280px, 1440px desktop widths
+- [ ] Zero new console errors
+- [ ] GitHub checkpoint pushed after completion
+
+---
+
+## THE STANDARD
+
+Every person who opens CoAIleague — whether they're a security guard checking their next shift or an org owner reviewing payroll — should feel like the platform is working for them, not waiting on them. Trinity is always there. The data is always visible. The next action is always obvious.
+
+This is not a form with buttons. This is a living platform.

@@ -23,8 +23,8 @@ export const navConfig = {
     pricing: "/pricing",
     contact: "/contact",
     support: "/support",
-    terms: "/terms-of-service",
-    privacy: "/privacy-policy",
+    terms: "/terms",
+    privacy: "/privacy",
   },
 
   // Core App Routes
@@ -40,9 +40,8 @@ export const navConfig = {
     analytics: "/analytics",
     settings: "/settings",
     reports: "/reports",
-    chat: "/chat",
-    chatrooms: "/chatrooms",
-    notifications: "/command-center",
+    chatrooms: "/chatrooms", // Consolidated: removed duplicate 'chat' key
+    commandCenter: "/command-center", // Renamed from 'notifications' for clarity
   },
 
   // Workspace Management
@@ -70,20 +69,44 @@ export const navConfig = {
     grievanceApprovals: "/grievance-approvals",
   },
 
+  // Security Operations
+  securityOps: {
+    complianceMatrix: "/compliance-matrix",
+    auditReadiness: "/security-compliance/audit-readiness",
+    auditorPortal: "/security-compliance/auditor-portal",
+    clientProfitability: "/client-profitability",
+    turnoverAnalytics: "/turnover-analytics",
+    situationBoard: "/situation-board",
+    credentialWallet: "/credential-wallet",
+    proposals: "/proposals",
+    siteBriefings: "/site-briefings",
+    guardTour: "/guard-tour",
+    postOrders: "/post-orders",
+  },
+
+  // Regulatory Portal (public-facing auditor access)
+  regulatory: {
+    portal: "/regulatory",
+    dashboard: "/regulatory/dashboard",
+    auditorLogin: "/auditor/login",
+  },
+
   // Compliance & Admin
   admin: {
     platform: "/platform-admin",
     root: "/root-admin-portal",
     dashboard: "/root-admin-dashboard",
-    users: "/platform/users",
-    commands: "/admin-command-center",
-    usage: "/admin-usage",
-    customForms: "/admin-custom-forms",
-    banners: "/admin-banners",
-    ticketReviews: "/admin-ticket-reviews",
+    users: "/admin/end-user-controls",
+    commands: "/dashboard",
+    usage: "/admin/usage",
+    customForms: "/admin/custom-forms",
+    banners: "/admin/banners",
+    adminPermissionMatrix: "/admin/permission-matrix",
+    ticketReviews: "/admin/ticket-reviews",
     i9Compliance: "/i9-compliance",
     policies: "/policies",
     roleManagement: "/role-management",
+    permissionMatrix: "/workspace/permissions",
     auditLogs: "/audit-logs",
     shiftApprovals: "/shift-approvals",
     timesheetApprovals: "/admin-timesheet-approvals",
@@ -106,8 +129,8 @@ export const navConfig = {
   // Special Portals
   portal: {
     sales: "/sales-portal",
-    client: "/client-portal",
-    auditor: "/auditor-portal",
+    client: "/client/portal",
+    auditor: "/auditor/portal",
   },
 
   // AI & Automation Routes
@@ -121,8 +144,8 @@ export const navConfig = {
     records: "/records",
     insights: "/insights",
     commandCenter: "/ai-command-center",
-    trinityCommandCenter: "/trinity/command-center",
-    supportConsole: "/support/console",
+    trinityCommandCenter: "/support/ai-console",
+    supportConsole: "/support/ai-console",
     supportAiConsole: "/support/ai-console",
     aiBrainDashboard: "/ai-brain-dashboard",
   },
@@ -166,6 +189,8 @@ export const navConfig = {
     salesDashboard: "/sales/dashboard",
     supportTickets: "/support-tickets",
     supportRequests: "/support-requests",
+    voiceCalls: "/voice-calls",
+    voiceSettings: "/voice-settings",
   },
 
   // Error Routes

@@ -22,6 +22,8 @@ export const MVP_FEATURE_FLAGS = {
   HELPDESK: true,
   CLIENTS: true,
   BASIC_REPORTS: true,
+  ORG_NETWORK: true,
+  PROGRESSIVE_NAV: true,  // Slim header + navigation overlay system
   
   // =============================================
   // Enterprise Features (HIDDEN for MVP)
@@ -35,7 +37,6 @@ export const MVP_FEATURE_FLAGS = {
   PLATFORM_ADMIN: false,  // Only visible to internal staff
   SYSTEM_HEALTH: false,
   AI_CONSOLE: false,
-  TRINITY_COMMAND_CENTER: false,
   AUDIT_LOGS: false,
   ORG_MANAGEMENT: false,
 };
@@ -48,11 +49,8 @@ export const HIDDEN_ROUTE_IDS = [
   'infrastructure-monitoring',
   'system-health',
   'support-ai-console',
-  'trinity-command-center',
-  'admin-command-center',
   'end-user-controls',
   'org-management',
-  'platform-users',
   'root-admin-dashboard',
   'audit-logs',
   'analytics', // Enterprise analytics

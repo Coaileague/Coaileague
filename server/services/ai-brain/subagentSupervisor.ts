@@ -15,30 +15,34 @@
  */
 
 import { db } from '../../db';
+import { TIMEOUTS, SCHEDULING } from '../../config/platformConfig';
 import { eq, and, desc, isNull, gte, SQL } from 'drizzle-orm';
 import {
   aiSubagentDefinitions,
   subagentTelemetry,
   supportInterventions,
   trinityAccessControl,
-  governanceApprovals,
   InsertAiSubagentDefinition,
   InsertSubagentTelemetry,
   InsertSupportIntervention,
   AiSubagentDefinition,
   SubagentTelemetry,
   SupportIntervention,
-  TrinityAccessControl,
+  TrinityAccessControl
 } from '@shared/schema';
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from './aiBrainAuthorizationService';
 import { aiBrainService } from './aiBrainService';
-import { creditManager, CREDIT_COSTS } from '../billing/creditManager';
+import { CREDIT_COSTS } from '../billing/creditManager';
+import { aiCreditGateway } from '../billing/aiCreditGateway';
 import { subagentConfidenceMonitor } from './subagentConfidenceMonitor';
 import { modelRoutingEngine, getSubagentModelConfigs, recordModelResult, SubagentModelConfig } from './modelRoutingEngine';
 import { GeminiModelTier } from './providers/geminiClient';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('SubagentSupervisor');
 
 // Domain-to-credit-feature mapping for cost estimation
 const DOMAIN_CREDIT_COSTS: Record<SubagentDomain, keyof typeof CREDIT_COSTS> = {
@@ -170,7 +174,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 30000,
     confidenceThreshold: 0.75,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin', 'department_manager'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'co_owner', 'department_manager'],
     bypassAuthFor: ['root_admin', 'deputy_admin'],
     isActive: true,
     version: '1.0.0',
@@ -194,7 +198,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 60000,
     confidenceThreshold: 0.9,
     requiresApproval: true,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'],
     bypassAuthFor: ['root_admin'],
     isActive: true,
     version: '1.0.0',
@@ -218,7 +222,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 45000,
     confidenceThreshold: 0.85,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'],
     bypassAuthFor: ['root_admin', 'deputy_admin'],
     isActive: true,
     version: '1.0.0',
@@ -242,7 +246,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 30000,
     confidenceThreshold: 0.95,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'compliance_officer', 'org_owner', 'org_admin'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'compliance_officer', 'org_owner', 'co_owner'],
     bypassAuthFor: ['root_admin', 'compliance_officer'],
     isActive: true,
     version: '1.0.0',
@@ -251,7 +255,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     name: 'NotificationAgent',
     domain: 'notifications',
     description: 'Smart Mail Delivery Specialist - Routes all communications with intelligent tab filtering, RBAC-based targeting, and multi-channel delivery (email, SMS, WebSocket, push). Coordinates with Trinity for architectural context.',
-    capabilities: ['notifications.send_platform_update', 'notifications.broadcast_message', 'notifications.send_to_user', 'notifications.create_maintenance_alert', 'notifications.get_stats', 'notifications.force_clear_all', 'support.broadcast'],
+    capabilities: ['notify.send_platform_update', 'notify.broadcast_message', 'notify.send_to_user', 'notify.create_maintenance_alert', 'notify.get_stats', 'notify.force_clear_all', 'support.broadcast'],
     requiredTools: ['email_service', 'sms_service', 'websocket_broadcaster', 'push_notifier', 'tab_router', 'rbac_filter', 'digest_aggregator'],
     escalationPolicy: { maxRetries: 5, escalateOn: ['delivery_failure_rate_high', 'rbac_routing_error', 'channel_unavailable'] },
     diagnosticWorkflow: {
@@ -463,7 +467,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 20000,
     confidenceThreshold: 0.85,
     requiresApproval: true,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'],
     bypassAuthFor: ['root_admin', 'deputy_admin'],
     isActive: true,
     version: '1.0.0',
@@ -511,7 +515,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 45000,
     confidenceThreshold: 0.75,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin', 'department_manager'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'co_owner', 'department_manager'],
     bypassAuthFor: ['root_admin', 'deputy_admin'],
     isActive: true,
     version: '1.0.0',
@@ -559,7 +563,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 30000,
     confidenceThreshold: 0.8,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin', 'department_manager'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'co_owner', 'department_manager'],
     bypassAuthFor: ['root_admin', 'deputy_admin'],
     isActive: true,
     version: '1.0.0',
@@ -583,32 +587,8 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 20000,
     confidenceThreshold: 0.6,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'org_admin', 'department_manager', 'supervisor', 'staff', 'Bot'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'co_owner', 'department_manager', 'supervisor', 'staff', 'Bot'],
     bypassAuthFor: ['root_admin', 'deputy_admin', 'Bot'],
-    isActive: true,
-    version: '1.0.0',
-  },
-  {
-    name: 'FileSystemAgent',
-    domain: 'filesystem',
-    description: 'Secure file operations: read, write, edit, delete, search with RBAC enforcement',
-    capabilities: ['filesystem.read', 'filesystem.write', 'filesystem.edit', 'filesystem.delete', 'filesystem.list', 'filesystem.search', 'filesystem.diff'],
-    requiredTools: ['file_reader', 'file_writer', 'file_editor', 'file_searcher', 'permission_checker'],
-    escalationPolicy: { maxRetries: 2, escalateOn: ['permission_denied', 'file_corruption'], alwaysNotify: true },
-    diagnosticWorkflow: {
-      diagnose: ['verify_file_exists', 'check_permissions', 'validate_path'],
-      fix: ['adjust_permissions', 'restore_from_backup', 'clear_locks'],
-      validate: ['verify_operation_completed', 'check_file_integrity'],
-      report: ['log_file_operation']
-    },
-    knownPatterns: ['file_not_found', 'permission_denied', 'path_traversal_attempt', 'file_locked'],
-    fixStrategies: { file_locked: 'wait_and_retry', permission_denied: 'request_elevation' },
-    maxRetries: 2,
-    timeoutMs: 30000,
-    confidenceThreshold: 0.85,
-    requiresApproval: true,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'Bot'],
-    bypassAuthFor: ['root_admin'],
     isActive: true,
     version: '1.0.0',
   },
@@ -679,7 +659,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 30000,
     confidenceThreshold: 0.8,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin', 'department_manager'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'co_owner', 'department_manager'],
     bypassAuthFor: ['root_admin', 'deputy_admin'],
     isActive: true,
     version: '1.0.0',
@@ -703,7 +683,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 45000,
     confidenceThreshold: 0.7,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'co_owner'],
     bypassAuthFor: ['root_admin', 'deputy_admin'],
     isActive: true,
     version: '1.0.0',
@@ -727,7 +707,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 60000,
     confidenceThreshold: 0.85,
     requiresApproval: true,
-    allowedRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner'],
     bypassAuthFor: ['root_admin'],
     isActive: true,
     version: '1.0.0',
@@ -891,7 +871,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 30000,
     confidenceThreshold: 0.95,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'co_owner'],
     bypassAuthFor: ['root_admin', 'deputy_admin', 'sysop', 'Bot'],
     isActive: true,
     version: '1.0.0',
@@ -974,7 +954,7 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     timeoutMs: 30000,
     confidenceThreshold: 0.85,
     requiresApproval: false,
-    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'org_admin', 'Bot'],
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'co_owner', 'Bot'],
     bypassAuthFor: ['root_admin', 'deputy_admin', 'sysop', 'Bot'],
     isActive: true,
     version: '1.0.0',
@@ -1254,7 +1234,7 @@ export const MAILING_INSTRUCTIONS: Record<string, MailingInstruction> = {
   // Normal priority notifications
   platform_update: {
     category: 'system',
-    priority: 'normal',
+    priority: 'medium',
     requiredFields: ['email', 'title', 'description'],
     optionalFields: ['actionUrl', 'releaseNotes'],
     templateId: 'platformUpdate',
@@ -1277,7 +1257,7 @@ export const MAILING_INSTRUCTIONS: Record<string, MailingInstruction> = {
 
   support_ticket_confirmation: {
     category: 'support',
-    priority: 'normal',
+    priority: 'medium',
     requiredFields: ['email', 'name', 'ticketNumber', 'subject'],
     optionalFields: ['ticketUrl'],
     templateId: 'supportTicketConfirmation',
@@ -1300,7 +1280,7 @@ export const MAILING_INSTRUCTIONS: Record<string, MailingInstruction> = {
 
   employee_invitation: {
     category: 'onboarding',
-    priority: 'normal',
+    priority: 'medium',
     requiredFields: ['email', 'inviterName', 'workspaceName', 'joinUrl'],
     optionalFields: ['firstName', 'roleName', 'expiresInDays'],
     templateId: 'employeeInvitation',
@@ -1415,7 +1395,7 @@ export interface GraduationStatus {
 /**
  * Default Fast Mode configuration by tier
  */
-export const FAST_MODE_TIERS: Record<string, FastModeContext> = {
+export const FAST_MODE_CONTEXTS: Record<string, FastModeContext> = {
   standard: {
     enabled: true,
     tier: 'standard',
@@ -1566,7 +1546,7 @@ class ParallelWorkOrderDispatcher {
     tasks: Array<{ domain: SubagentDomain; actionId: string; parameters: Record<string, any>; priority?: WorkOrderPriority; dependencies?: string[] }>,
     options: { slaTimeoutMs?: number; parallelLimit?: number; modelPolicy?: Partial<SupervisorModelPolicy> } = {}
   ): WorkOrderBatch {
-    const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const batchId = `batch-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     
     const items: WorkOrderItem[] = tasks.map((task, index) => ({
       id: `wo-${batchId}-${index}`,
@@ -1605,7 +1585,7 @@ class ParallelWorkOrderDispatcher {
     this.activeBatches.set(batchId, batch);
     this.coordinationBus.set(batchId, []);
     
-    console.log(`[ParallelDispatcher] Created batch ${batchId} with ${items.length} work orders for job ${workboardJobId}`);
+    log.info(`[ParallelDispatcher] Created batch ${batchId} with ${items.length} work orders for job ${workboardJobId}`);
     return batch;
   }
 
@@ -1648,7 +1628,7 @@ class ParallelWorkOrderDispatcher {
         })
         .slice(0, batch.parallelLimit);
 
-      console.log(`[ParallelDispatcher] Dispatching ${toExecute.length} work orders in parallel for batch ${batch.id}`);
+      log.info(`[ParallelDispatcher] Dispatching ${toExecute.length} work orders in parallel for batch ${batch.id}`);
 
       // Mark as dispatched
       toExecute.forEach(item => {
@@ -1781,7 +1761,7 @@ class SubagentCoordinationManager {
     const summary = `Batch ${batch.id}: ${completedItems.length} completed, ${failedItems.length} failed. ` +
       (errors.length > 0 ? `Errors: ${errors.slice(0, 3).join('; ')}` : 'No validation errors.');
 
-    console.log(`[CoordinationManager] Validation: ${summary}`);
+    log.info(`[CoordinationManager] Validation: ${summary}`);
 
     return {
       valid: errors.length === 0 && failedItems.length === 0,
@@ -1862,12 +1842,12 @@ class WorkboardJobLifecycle {
   async updateJobStatus(update: WorkboardJobUpdate): Promise<void> {
     try {
       // Update via workboard API
-      console.log(`[WorkboardLifecycle] Updating job ${update.jobId}: ${update.status} (${update.progress || 0}%)`);
+      log.info(`[WorkboardLifecycle] Updating job ${update.jobId}: ${update.status} (${update.progress || 0}%)`);
       
       // Log event for real-time tracking (internal telemetry)
-      console.log(`[WorkboardLifecycle] Event: workboard:job_update`, JSON.stringify(update));
+      log.info(`[WorkboardLifecycle] Event: workboard:job_update`, JSON.stringify(update));
     } catch (error) {
-      console.error(`[WorkboardLifecycle] Failed to update job ${update.jobId}:`, error);
+      log.error(`[WorkboardLifecycle] Failed to update job ${update.jobId}:`, error);
     }
   }
 
@@ -1964,7 +1944,7 @@ class UnifiedCompletionReporter {
       summary,
     };
 
-    console.log(`[CompletionReporter] Report for batch ${batch.id}: ${report.success ? 'SUCCESS' : 'FAILED'}`);
+    log.info(`[CompletionReporter] Report for batch ${batch.id}: ${report.success ? 'SUCCESS' : 'FAILED'}`);
     return report;
   }
 
@@ -1989,7 +1969,7 @@ class UnifiedCompletionReporter {
     }
 
     // Log completion event for Trinity to consume (internal telemetry)
-    console.log(`[CompletionReporter] Event: ai_brain:job_completed`, JSON.stringify({
+    log.info(`[CompletionReporter] Event: ai_brain:job_completed`, JSON.stringify({
       batchId: batch.id,
       jobId: batch.workboardJobId,
       workspaceId: batch.workspaceId,
@@ -2002,7 +1982,7 @@ class UnifiedCompletionReporter {
       totalTokensUsed: report.totalTokensUsed,
     }));
 
-    console.log(`[CompletionReporter] Reported job ${batch.workboardJobId} completion to Trinity`);
+    log.info(`[CompletionReporter] Reported job ${batch.workboardJobId} completion to Trinity`);
   }
 
   /**
@@ -2027,9 +2007,9 @@ class UnifiedCompletionReporter {
     };
 
     // Log notification event (internal telemetry)
-    console.log(`[CompletionReporter] Event: notification:create`, JSON.stringify(notification));
+    log.info(`[CompletionReporter] Event: notification:create`, JSON.stringify(notification));
 
-    console.log(`[CompletionReporter] Notified user ${userId} about job ${batch.workboardJobId}`);
+    log.info(`[CompletionReporter] Notified user ${userId} about job ${batch.workboardJobId}`);
   }
 }
 
@@ -2066,34 +2046,44 @@ class SubagentSupervisor {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log('[SubagentSupervisor] Initializing subagent registry...');
+    log.info('[SubagentSupervisor] Initializing subagent registry...');
     
-    // Seed default subagents if needed
-    await this.seedDefaultSubagents();
-    
-    // Load all subagents into cache
-    await this.refreshSubagentCache();
-    
-    // Subscribe to platform events for health monitoring
+    // Subscribe to platform events for health monitoring (no DB needed)
     this.setupHealthMonitoring();
-    
     this.initialized = true;
-    console.log(`[SubagentSupervisor] Initialized with ${this.subagentCache.size} subagents`);
+    
+    // Defer DB-heavy seeding by 60s to avoid startup connection storm
+    setTimeout(async () => {
+      try {
+        await this.seedDefaultSubagents();
+        await this.refreshSubagentCache();
+        log.info(`[SubagentSupervisor] Seeded and cached ${this.subagentCache.size} subagents`);
+      } catch (error: any) {
+        log.warn('[SubagentSupervisor] Deferred init failed (non-fatal):', error?.message || 'unknown');
+      }
+    }, 60000);
   }
 
   private async seedDefaultSubagents(): Promise<void> {
+    let consecutiveFailures = 0;
+    const MAX_CONSECUTIVE_FAILURES = 3;
     for (const subagent of DEFAULT_SUBAGENTS) {
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        log.warn(`[SubagentSupervisor] Circuit breaker: aborting seed after ${consecutiveFailures} consecutive failures`);
+        break;
+      }
       try {
         const existing = await db.select().from(aiSubagentDefinitions)
           .where(eq(aiSubagentDefinitions.name, subagent.name))
           .limit(1);
-        
         if (existing.length === 0) {
-          await db.insert(aiSubagentDefinitions).values(subagent as any);
-          console.log(`[SubagentSupervisor] Created subagent: ${subagent.name}`);
+          await db.insert(aiSubagentDefinitions).values({ ...(subagent as any), workspaceId: PLATFORM_WORKSPACE_ID });
+          log.info(`[SubagentSupervisor] Created subagent: ${subagent.name}`);
         }
-      } catch (error) {
-        console.error(`[SubagentSupervisor] Error seeding subagent ${subagent.name}:`, error);
+        consecutiveFailures = 0;
+      } catch (error: any) {
+        consecutiveFailures++;
+        log.warn(`[SubagentSupervisor] Skipping subagent ${subagent.name} (failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, error?.message);
       }
     }
   }
@@ -2149,7 +2139,7 @@ class SubagentSupervisor {
     platformRole: string,
     actionHandler: (params: Record<string, any>) => Promise<any>
   ): Promise<SubagentExecutionResult> {
-    const executionId = `exec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const executionId = `exec-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     const startTime = Date.now();
     
     // Find the appropriate subagent
@@ -2166,13 +2156,13 @@ class SubagentSupervisor {
 
     // CREDIT-GATED EXECUTION: Check credits before allowing execution
     const featureKey = DOMAIN_CREDIT_COSTS[domain] || 'ai_general';
-    const creditCheck = await creditManager.checkCredits(workspaceId, featureKey);
+    const creditAuth = await aiCreditGateway.preAuthorize(workspaceId, userId, featureKey);
     
-    if (!creditCheck.hasEnoughCredits) {
-      console.log(`[SubagentSupervisor] Credit-gated: ${domain} requires ${creditCheck.required} credits, workspace has ${creditCheck.currentBalance}`);
+    if (!creditAuth.authorized) {
+      log.info(`[SubagentSupervisor] Credit-gated: ${domain} blocked - ${creditAuth.reason}`);
       return this.createFailureResult(
         'insufficient_credits', 
-        `Insufficient credits for ${domain}. Need ${creditCheck.required}, have ${creditCheck.currentBalance}. Please add more credits.`,
+        `Insufficient credits for ${domain}. ${creditAuth.reason}. Please add more credits.`,
         startTime
       );
     }
@@ -2266,7 +2256,7 @@ class SubagentSupervisor {
           validationPassed = true;
         } else {
           retryCount++;
-          console.log(`[SubagentSupervisor] NEEDS_REVISION: ${subagent.name} retry ${retryCount}/${maxRetries}`);
+          log.info(`[SubagentSupervisor] NEEDS_REVISION: ${subagent.name} retry ${retryCount}/${maxRetries}`);
           
           if (retryCount >= maxRetries) {
             const diagnostics = await this.runDiagnostics(context, subagent, new Error(validateResult.error || 'Validation failed after retries'));
@@ -2295,28 +2285,21 @@ class SubagentSupervisor {
       this.activeExecutions.delete(executionId);
 
       // CREDIT DEDUCTION: Deduct credits after successful execution
-      const deductionResult = await creditManager.deductCredits({
+      const billingResult = await aiCreditGateway.finalizeBilling(
         workspaceId,
         userId,
         featureKey,
-        featureName: `${domain}:${actionId}`,
-        description: `AI Brain subagent execution: ${subagent.name}`,
-        relatedEntityType: 'subagent_execution',
-        relatedEntityId: executionId,
-      });
+        0,
+        { entityType: 'subagent_execution', entityId: executionId }
+      );
 
-      // Calculate final credit values - even if deduction failed, report what was attempted
-      const creditsUsed = deductionResult.success ? creditCheck.required : 0;
-      const finalBalance = deductionResult.success 
-        ? deductionResult.newBalance 
-        : creditCheck.currentBalance; // Keep original balance on failure
+      const creditsUsed = billingResult.charged ? billingResult.creditsDeducted : 0;
+      const finalBalance = billingResult.newBalance;
 
-      if (!deductionResult.success) {
-        console.warn(`[SubagentSupervisor] Credit deduction failed after execution: ${deductionResult.errorMessage}`);
-        // Note: Execution succeeded but billing failed - this is logged for reconciliation
-        // We don't fail the operation since the work was already completed
+      if (!billingResult.charged) {
+        log.warn(`[SubagentSupervisor] Credit deduction failed after execution for ${domain}`);
       } else {
-        console.log(`[SubagentSupervisor] Credits deducted: ${creditsUsed} for ${domain}, new balance: ${finalBalance}`);
+        log.info(`[SubagentSupervisor] Credits deducted: ${creditsUsed} for ${domain}, new balance: ${finalBalance}`);
       }
 
       // Record execution for confidence scoring
@@ -2330,7 +2313,7 @@ class SubagentSupervisor {
         retryCount,
         escalated: false,
         confidenceScore: 1.0,
-      }).catch(err => console.error('[SubagentSupervisor] Failed to record confidence:', err));
+      }).catch(err => log.error('[SubagentSupervisor] Failed to record confidence:', err));
 
       return {
         success: true,
@@ -2346,9 +2329,9 @@ class SubagentSupervisor {
       };
 
     } catch (error: any) {
-      console.error(`[SubagentSupervisor] Unexpected error in ${subagent.name}:`, error);
+      log.error(`[SubagentSupervisor] Unexpected error in ${subagent.name}:`, error);
       const failureDurationMs = Date.now() - startTime;
-      await this.completeTelemetry(telemetryId, 'failed', null, failureDurationMs, error.message);
+      await this.completeTelemetry(telemetryId, 'failed', null, failureDurationMs, (error instanceof Error ? error.message : String(error)));
       this.activeExecutions.delete(executionId);
       
       // Record failure for confidence scoring
@@ -2361,7 +2344,7 @@ class SubagentSupervisor {
         retryCount: 0,
         escalated: false,
         confidenceScore: 0,
-      }).catch(err => console.error('[SubagentSupervisor] Failed to record failure confidence:', err));
+      }).catch(err => log.error('[SubagentSupervisor] Failed to record failure confidence:', err));
       
       return this.createFailureResult('unexpected_error', error.message, startTime);
     }
@@ -2401,7 +2384,7 @@ class SubagentSupervisor {
     const maxConcurrent = options?.maxConcurrent || 4;
     const slaTimeoutMs = options?.slaTimeoutMs || 15000;
     
-    console.log(`[SubagentSupervisor] Fast Mode parallel execution: ${actions.length} actions, max ${maxConcurrent} concurrent`);
+    log.info(`[SubagentSupervisor] Fast Mode parallel execution: ${actions.length} actions, max ${maxConcurrent} concurrent`);
     
     const results: SubagentExecutionResult[] = [];
     let parallelExecuted = 0;
@@ -2442,7 +2425,7 @@ class SubagentSupervisor {
             status: 'failed' as const,
             error: {
               code: 'sla_timeout',
-              message: error.message || 'SLA timeout exceeded'
+              message: (error instanceof Error ? error.message : String(error)) || 'SLA timeout exceeded'
             },
             durationMs: slaTimeoutMs,
             confidenceScore: 0
@@ -2464,7 +2447,7 @@ class SubagentSupervisor {
     const totalDurationMs = Date.now() - startTime;
     const allSucceeded = results.every(r => r.success);
     
-    console.log(`[SubagentSupervisor] Fast Mode completed: ${results.filter(r => r.success).length}/${results.length} succeeded in ${totalDurationMs}ms`);
+    log.info(`[SubagentSupervisor] Fast Mode completed: ${results.filter(r => r.success).length}/${results.length} succeeded in ${totalDurationMs}ms`);
     
     return {
       success: allSucceeded,
@@ -2578,7 +2561,7 @@ class SubagentSupervisor {
     const startTime = Date.now();
     const phaseReports: Array<{ phase: string; status: string; durationMs: number }> = [];
     
-    console.log(`[SubagentSupervisor] Fast Mode Context Execution:`, {
+    log.info(`[SubagentSupervisor] Fast Mode Context Execution:`, {
       tier: fastModeContext.tier,
       maxConcurrent: fastModeContext.maxConcurrent,
       parallelPhases: fastModeContext.parallelPhases,
@@ -2665,7 +2648,7 @@ class SubagentSupervisor {
     const totalDurationMs = Date.now() - startTime;
     onProgress?.('complete', actions.length, actions.length, `All phases complete in ${totalDurationMs}ms`);
 
-    console.log(`[SubagentSupervisor] Fast Mode Context Execution Complete:`, {
+    log.info(`[SubagentSupervisor] Fast Mode Context Execution Complete:`, {
       totalDurationMs,
       successRate: (successCount / results.length * 100).toFixed(1) + '%',
       newTrustScore: newGraduationStatus.trustScore,
@@ -2733,7 +2716,7 @@ class SubagentSupervisor {
             success: false,
             phase: 'execute' as const,
             status: 'failed' as const,
-            error: { code: 'sla_timeout', message: error.message },
+            error: { code: 'sla_timeout', message: (error instanceof Error ? error.message : String(error)) },
             durationMs: slaTimeoutMs,
             confidenceScore: 0
           };
@@ -2839,7 +2822,7 @@ class SubagentSupervisor {
         pendingReviewDomains
       };
     } catch (error) {
-      console.error('[SubagentSupervisor] Failed to get graduation status:', error);
+      log.error('[SubagentSupervisor] Failed to get graduation status:', error);
       return {
         workspaceId,
         trustScore: 0,
@@ -2867,7 +2850,7 @@ class SubagentSupervisor {
 
     // Log graduation update if newly graduated
     if (status.isGraduated && status.trustScore >= GRADUATION_THRESHOLD) {
-      console.log(`[SubagentSupervisor] Graduation achieved for workspace ${workspaceId}: ${status.trustScore.toFixed(1)}% trust score - auto-approval enabled!`);
+      log.info(`[SubagentSupervisor] Graduation achieved for workspace ${workspaceId}: ${status.trustScore.toFixed(1)}% trust score - auto-approval enabled!`);
     }
 
     return status;
@@ -2914,7 +2897,7 @@ class SubagentSupervisor {
    * Get Fast Mode context by tier
    */
   getFastModeContext(tier: 'standard' | 'premium' | 'enterprise' = 'standard'): FastModeContext {
-    return FAST_MODE_TIERS[tier] || FAST_MODE_TIERS.standard;
+    return FAST_MODE_CONTEXTS[tier] || FAST_MODE_CONTEXTS.standard;
   }
 
   // ============================================================================
@@ -2957,7 +2940,7 @@ class SubagentSupervisor {
   // ============================================================================
 
   private async runDiagnostics(context: SubagentExecutionContext, subagent: AiSubagentDefinition, error: any): Promise<DiagnosticResult> {
-    console.log(`[DrHolmes] Running diagnostics for ${subagent.name} error:`, error.message);
+    log.info(`[DrHolmes] Running diagnostics for ${subagent.name} error:`, error.message);
     
     const knownPatterns = (subagent.knownPatterns as string[]) || [];
     const fixStrategies = (subagent.fixStrategies as Record<string, string>) || {};
@@ -2999,7 +2982,7 @@ class SubagentSupervisor {
       const strategy = fixStrategies[matchedPattern];
       
       try {
-        console.log(`[DrHolmes] Attempting fix strategy: ${strategy} for pattern: ${matchedPattern}`);
+        log.info(`[DrHolmes] Attempting fix strategy: ${strategy} for pattern: ${matchedPattern}`);
         
         // Execute domain-specific fix strategies
         const fixResult = await this.executeFixStrategy(
@@ -3018,12 +3001,12 @@ class SubagentSupervisor {
         };
         
         if (fixSucceeded) {
-          console.log(`[DrHolmes] Fix strategy succeeded: ${strategy}`);
+          log.info(`[DrHolmes] Fix strategy succeeded: ${strategy}`);
         } else {
-          console.log(`[DrHolmes] Fix strategy partial: ${fixResult.reason}`);
+          log.info(`[DrHolmes] Fix strategy partial: ${fixResult.reason}`);
         }
       } catch (fixError) {
-        console.error(`[DrHolmes] Fix strategy failed:`, fixError);
+        log.error(`[DrHolmes] Fix strategy failed:`, fixError);
         fixSucceeded = false;
         fixDetails = {
           strategy,
@@ -3154,7 +3137,7 @@ class SubagentSupervisor {
         return await this.handleSessionResync(userId, workspaceId);
 
       default:
-        console.log(`[DrHolmes] Unknown strategy: ${strategy}, marking for manual review`);
+        log.info(`[DrHolmes] Unknown strategy: ${strategy}, marking for manual review`);
         return {
           success: false,
           action: 'manual_review_required',
@@ -3284,7 +3267,7 @@ class SubagentSupervisor {
   // ============================================================================
 
   async escalateToSupport(request: EscalationRequest, workspaceId: string): Promise<string> {
-    console.log(`[SubagentSupervisor] Escalating to support: ${request.derailmentType}`);
+    log.info(`[SubagentSupervisor] Escalating to support: ${request.derailmentType}`);
 
     // Create support intervention record
     const [intervention] = await db.insert(supportInterventions).values({
@@ -3321,7 +3304,7 @@ class SubagentSupervisor {
         },
       });
     } catch (notifyError) {
-      console.error('[SubagentSupervisor] Failed to notify support:', notifyError);
+      log.error('[SubagentSupervisor] Failed to notify support:', notifyError);
     }
 
     // Publish platform event
@@ -3363,7 +3346,7 @@ class SubagentSupervisor {
   }
 
   private async executeFix(intervention: SupportIntervention): Promise<void> {
-    console.log(`[SubagentSupervisor] Executing approved fix for intervention: ${intervention.id}`);
+    log.info(`[SubagentSupervisor] Executing approved fix for intervention: ${intervention.id}`);
     
     // Update status to resolved
     await db.update(supportInterventions)
@@ -3403,13 +3386,13 @@ class SubagentSupervisor {
         // Elevated sessions for support roles bypass standard checks
         const ELEVATED_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
         if (ELEVATED_SUPPORT_ROLES.includes(elevation.platformRole)) {
-          console.log(`[SubagentSupervisor] User ${userId} has elevated session (${elevation.platformRole}), bypassing standard auth for ${subagent.name}`);
+          log.info(`[SubagentSupervisor] User ${userId} has elevated session (${elevation.platformRole}), bypassing standard auth for ${subagent.name}`);
           return { allowed: true, elevatedSession: true };
         }
       }
     } catch (error) {
       // Fall through to standard auth if elevation check fails
-      console.warn('[SubagentSupervisor] Elevation check failed, using standard auth:', error);
+      log.warn('[SubagentSupervisor] Elevation check failed, using standard auth:', error);
     }
 
     // Check if role is in allowed list
@@ -3530,25 +3513,25 @@ class SubagentSupervisor {
 
     // Log observability event for retry metrics
     if (retriesUsed && retriesUsed > 0) {
-      console.log(`[SubagentSupervisor] Event: subagent:self_correction`, JSON.stringify({
+      log.info(`[SubagentSupervisor] Event: subagent:self_correction`, JSON.stringify({
         telemetryId,
         retriesUsed,
         status,
         durationMs,
         timestamp: new Date().toISOString(),
       }));
-      console.log(`[SubagentSupervisor] Self-correction metrics: ${retriesUsed} retries, status=${status}, duration=${durationMs}ms`);
+      log.info(`[SubagentSupervisor] Self-correction metrics: ${retriesUsed} retries, status=${status}, duration=${durationMs}ms`);
     }
   }
 
   private async handleHeartbeat(event: any): Promise<void> {
     // Record heartbeat for health monitoring
-    console.log(`[SubagentSupervisor] Heartbeat received from ${event.subagentId}`);
+    log.info(`[SubagentSupervisor] Heartbeat received from ${event.subagentId}`);
   }
 
   private async handleHealthCheck(event: any): Promise<void> {
     // Perform health check on requested subagent
-    console.log(`[SubagentSupervisor] Health check for ${event.subagentId}`);
+    log.info(`[SubagentSupervisor] Health check for ${event.subagentId}`);
   }
 
   // ============================================================================
@@ -3795,7 +3778,7 @@ class SubagentSupervisor {
   }> {
     const { transcript, userId, workspaceId, executionMode = 'normal', context } = params;
     
-    console.log('[SubagentSupervisor] Routing voice command:', { 
+    log.info('[SubagentSupervisor] Routing voice command:', { 
       transcriptLength: transcript.length,
       userId, 
       workspaceId 
@@ -3839,7 +3822,7 @@ class SubagentSupervisor {
     const matchCount = keywords.filter(kw => lowerTranscript.includes(kw)).length;
     const confidence = matchCount > 0 ? Math.min(0.5 + (matchCount * 0.15), 0.95) : 0.4;
 
-    console.log('[SubagentSupervisor] Voice command routed:', {
+    log.info('[SubagentSupervisor] Voice command routed:', {
       assignedAgent,
       estimatedTokens,
       confidence,
@@ -3883,7 +3866,7 @@ class SubagentSupervisor {
   }> {
     const { content, type, workspaceId, userId, executionMode = 'normal' } = params;
     
-    console.log('[SubagentSupervisor] Analyzing request:', {
+    log.info('[SubagentSupervisor] Analyzing request:', {
       contentLength: content.length,
       type,
       executionMode
@@ -3929,7 +3912,7 @@ class SubagentSupervisor {
     const { agentId, taskId, content, workspaceId, userId, context } = params;
     const startTime = Date.now();
 
-    console.log('[SubagentSupervisor] FAST MODE parallel execution:', {
+    log.info('[SubagentSupervisor] FAST MODE parallel execution:', {
       agentId,
       taskId,
       contentLength: content.length
@@ -3955,7 +3938,7 @@ class SubagentSupervisor {
       ]);
 
       const duration = Date.now() - startTime;
-      console.log('[SubagentSupervisor] Fast mode completed in', duration, 'ms');
+      log.info('[SubagentSupervisor] Fast mode completed in', duration, 'ms');
 
       return {
         success: true,
@@ -3963,10 +3946,10 @@ class SubagentSupervisor {
         summary: `Task completed in ${duration}ms using ${subagent.name}`
       };
     } catch (error: any) {
-      console.error('[SubagentSupervisor] Fast mode execution error:', error);
+      log.error('[SubagentSupervisor] Fast mode execution error:', error);
       return {
         success: false,
-        error: error.message || 'Fast mode execution failed'
+        error: (error instanceof Error ? error.message : String(error)) || 'Fast mode execution failed'
       };
     }
   }
@@ -4122,8 +4105,8 @@ class SubagentSupervisor {
   // ============================================================================
   
   private circuitBreaker: Map<string, { failures: number; lastFailure: Date; state: 'closed' | 'open' | 'half-open' }> = new Map();
-  private readonly CIRCUIT_FAILURE_THRESHOLD = 3;
-  private readonly CIRCUIT_RESET_TIMEOUT_MS = 60000; // 1 minute
+  private readonly CIRCUIT_FAILURE_THRESHOLD = SCHEDULING.circuitBreakerThreshold;
+  private readonly CIRCUIT_RESET_TIMEOUT_MS = TIMEOUTS.circuitBreakerResetMs;
   
   /**
    * Check if circuit breaker allows execution for a domain
@@ -4143,7 +4126,7 @@ class SubagentSupervisor {
         // Transition to half-open for retry
         circuit.state = 'half-open';
         this.circuitBreaker.set(domain, circuit);
-        console.log(`[CircuitBreaker] ${domain} transitioning to half-open state`);
+        log.info(`[CircuitBreaker] ${domain} transitioning to half-open state`);
         return { allowed: true };
       }
       
@@ -4170,7 +4153,7 @@ class SubagentSupervisor {
     if (success) {
       // Reset circuit on success
       circuit = { failures: 0, lastFailure: new Date(), state: 'closed' };
-      console.log(`[CircuitBreaker] ${domain} circuit CLOSED (success)`);
+      log.info(`[CircuitBreaker] ${domain} circuit CLOSED (success)`);
     } else {
       // Increment failures
       circuit.failures++;
@@ -4178,10 +4161,10 @@ class SubagentSupervisor {
       
       if (circuit.failures >= this.CIRCUIT_FAILURE_THRESHOLD) {
         circuit.state = 'open';
-        console.warn(`[CircuitBreaker] ${domain} circuit OPEN after ${circuit.failures} failures`);
+        log.warn(`[CircuitBreaker] ${domain} circuit OPEN after ${circuit.failures} failures`);
         
         // Log alert for financial circuit breaker
-        console.warn(`[CircuitBreaker] CRITICAL: ${domain} circuit breaker triggered after ${circuit.failures} failures`);
+        log.warn(`[CircuitBreaker] CRITICAL: ${domain} circuit breaker triggered after ${circuit.failures} failures`);
       }
     }
     
@@ -4234,7 +4217,7 @@ class SubagentSupervisor {
         break;
     }
     
-    console.log(`[PreValidation] ${domain} validation: ${issues.length === 0 ? 'PASSED' : 'FAILED'} (${recommendations.length} recommendations)`);
+    log.info(`[PreValidation] ${domain} validation: ${issues.length === 0 ? 'PASSED' : 'FAILED'} (${recommendations.length} recommendations)`);
     
     return { valid: issues.length === 0, issues, recommendations };
   }
@@ -4256,7 +4239,7 @@ class SubagentSupervisor {
     // CRITICAL: Pre-execution validation for financial operations
     const validationResult = await this.preExecutionValidation(domain, workspaceId, context || {});
     if (!validationResult.valid) {
-      console.warn(`[SubagentSupervisor] Pre-execution validation FAILED for ${domain}:`, validationResult.issues);
+      log.warn(`[SubagentSupervisor] Pre-execution validation FAILED for ${domain}:`, validationResult.issues);
       
       // Record circuit breaker failure (blocked by validation)
       this.recordCircuitResult(domain, false);
@@ -4273,16 +4256,16 @@ class SubagentSupervisor {
     
     // Log recommendations if any
     if (validationResult.recommendations.length > 0) {
-      console.log(`[SubagentSupervisor] Pre-execution recommendations for ${domain}:`, validationResult.recommendations);
+      log.info(`[SubagentSupervisor] Pre-execution recommendations for ${domain}:`, validationResult.recommendations);
     }
     
     // Get model tier configuration for this subagent
     const modelConfig = this.getSubagentModelConfig(subagent.name, domain);
     
-    console.log(`[SubagentSupervisor] Executing ${subagent.name} with model tier ${modelConfig.preferredTier} (${content.substring(0, 50)}...)`);
+    log.info(`[SubagentSupervisor] Executing ${subagent.name} with model tier ${modelConfig.preferredTier} (${content.substring(0, 50)}...)`);
     
     // Log telemetry event with model tier info
-    console.log(`[SubagentSupervisor] Execution telemetry:`, JSON.stringify({
+    log.info(`[SubagentSupervisor] Execution telemetry:`, JSON.stringify({
       subagentId: subagent.id,
       subagentName: subagent.name,
       domain: subagent.domain,
@@ -4383,7 +4366,7 @@ class SubagentSupervisor {
       });
 
       const executionTime = Date.now() - startTime;
-      console.log(`[SubagentSupervisor] AI Brain execution completed: ${result.status} (${executionTime}ms, tier: ${modelConfig.preferredTier})`);
+      log.info(`[SubagentSupervisor] AI Brain execution completed: ${result.status} (${executionTime}ms, tier: ${modelConfig.preferredTier})`);
 
       // Record successful execution for model routing telemetry
       recordModelResult(modelConfig.preferredTier, true, executionTime);
@@ -4406,22 +4389,20 @@ class SubagentSupervisor {
       };
     } catch (error: any) {
       const executionTime = Date.now() - startTime;
-      console.error(`[SubagentSupervisor] AI Brain execution failed (${executionTime}ms, tier: ${modelConfig.preferredTier}):`, error.message);
+      log.error(`[SubagentSupervisor] AI Brain execution failed (${executionTime}ms, tier: ${modelConfig.preferredTier}):`, (error instanceof Error ? error.message : String(error)));
       
       // Record failed execution for model routing telemetry
-      recordModelResult(modelConfig.preferredTier, false, executionTime, error.message);
+      recordModelResult(modelConfig.preferredTier, false, executionTime, (error instanceof Error ? error.message : String(error)));
       
       // CRITICAL: Record circuit breaker failure for financial domains
       this.recordCircuitResult(domain, false);
       
-      // Fallback to simulated execution for resilience
-      console.log('[SubagentSupervisor] Falling back to simulated execution');
       return {
-        executed: true,
+        executed: false,
         subagent: subagent.name,
         domain: subagent.domain,
-        status: 'simulated',
-        output: { message: `${subagent.name} processed: ${content.substring(0, 100)}` },
+        status: 'failed',
+        output: { error: `AI execution failed: ${(error instanceof Error ? error.message : String(error))}` },
         fallbackReason: error.message,
         modelTier: modelConfig.preferredTier,
         executionTimeMs: executionTime,
@@ -4461,8 +4442,8 @@ class SubagentSupervisor {
     const { workboardJobId, workspaceId, userId, platformRole, tasks, options = {} } = params;
     const startTime = Date.now();
 
-    console.log(`[SubagentSupervisor] Starting parallel work order execution for job ${workboardJobId}`);
-    console.log(`[SubagentSupervisor] ${tasks.length} tasks across ${[...new Set(tasks.map(t => t.domain))].length} domains`);
+    log.info(`[SubagentSupervisor] Starting parallel work order execution for job ${workboardJobId}`);
+    log.info(`[SubagentSupervisor] ${tasks.length} tasks across ${[...new Set(tasks.map(t => t.domain))].length} domains`);
 
     // Start workboard job lifecycle
     await workboardLifecycle.startJob(workboardJobId);
@@ -4483,7 +4464,7 @@ class SubagentSupervisor {
     try {
       // Dispatch work orders in parallel - subagents work in tandem
       await parallelDispatcher.dispatchParallel(batch, async (item: WorkOrderItem) => {
-        console.log(`[SubagentSupervisor] Executing work order ${item.id}: ${item.subagentDomain}/${item.actionId}`);
+        log.info(`[SubagentSupervisor] Executing work order ${item.id}: ${item.subagentDomain}/${item.actionId}`);
         
         // Update progress
         const progress = Math.floor((batch.completedCount / batch.items.length) * 90);
@@ -4509,7 +4490,7 @@ class SubagentSupervisor {
 
       // Check if we need Pro model for failure analysis
       if (coordinationManager.shouldEscalateToProModel(batch)) {
-        console.log(`[SubagentSupervisor] Escalating to Pro model for failure analysis`);
+        log.info(`[SubagentSupervisor] Escalating to Pro model for failure analysis`);
         // Additional deep analysis could be performed here with Gemini Pro
       }
 
@@ -4527,15 +4508,15 @@ class SubagentSupervisor {
       // Cleanup
       parallelDispatcher.cleanupBatch(batch.id);
 
-      console.log(`[SubagentSupervisor] Parallel execution completed: ${report.completedItems}/${tasks.length} tasks in ${Date.now() - startTime}ms`);
+      log.info(`[SubagentSupervisor] Parallel execution completed: ${report.completedItems}/${tasks.length} tasks in ${Date.now() - startTime}ms`);
 
       return report;
 
     } catch (error: any) {
-      console.error(`[SubagentSupervisor] Parallel execution failed:`, error);
+      log.error(`[SubagentSupervisor] Parallel execution failed:`, error);
       
       // Mark job as failed
-      await workboardLifecycle.failJob(workboardJobId, error.message);
+      await workboardLifecycle.failJob(workboardJobId, (error instanceof Error ? error.message : String(error)));
 
       // Cleanup
       parallelDispatcher.cleanupBatch(batch.id);

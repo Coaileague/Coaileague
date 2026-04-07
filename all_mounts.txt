@@ -1,0 +1,63 @@
+server/routes/compliance/documentTypes.ts:router.use(requireAuth);
+server/routes/compliance/requirements.ts:router.use(requireAuth);
+server/routes/compliance/states.ts:router.use(requireAuth);
+server/routes/compliance/index.ts:router.use("/states", statesRoutes);
+server/routes/compliance/index.ts:router.use("/document-types", documentTypesRoutes);
+server/routes/compliance/index.ts:router.use("/requirements", requirementsRoutes);
+server/routes/compliance/index.ts:router.use("/records", recordsRoutes);
+server/routes/compliance/index.ts:router.use("/documents", documentsRoutes);
+server/routes/compliance/index.ts:router.use("/approvals", approvalsRoutes);
+server/routes/compliance/index.ts:router.use("/audit-trail", auditTrailRoutes);
+server/routes/compliance/index.ts:router.use("/checklists", checklistsRoutes);
+server/routes/compliance/index.ts:router.use("/regulator", regulatorRoutes);
+server/routes/compliance/index.ts:router.use("/packets", packetsRoutes);
+server/routes/compliance/index.ts:router.use("/enforcement", enforcementRoutes);
+server/routes/compliance/index.ts:router.use("/matrix", matrixRoutes);
+server/routes/compliance/matrix.ts:router.use(requireAuth);
+server/routes/admin/aiCosts.ts:router.use(requireAuth);
+server/routes/admin/aiCosts.ts:router.use(requireSupportStaff);
+server/routes/integrationManagementRoutes.ts:router.use(requireAuth);
+server/routes/deviceLoaderRoutes.ts:router.use(requireAuth);
+server/routes/aiSchedulingRoutes.ts:router.use(requireAuth);
+server/routes/dispatch.ts:router.use(requireAuth);
+server/routes/trinityStaffingRoutes.ts:router.use(requireAuth);
+server/routes/controlTowerRoutes.ts:router.use(requireAuth);
+server/routes/controlTowerRoutes.ts:router.use(requirePlatformRole(['root_admin', 'super_admin']));
+server/routes/experienceRoutes.ts:router.use(requireAuth);
+server/routes/enterpriseOnboardingRoutes.ts:router.use(requireAuth);
+server/routes/enterpriseOnboardingRoutes.ts:router.use(validateWorkspaceOwnership);
+server/routes/schedulerRoutes.ts:router.use(requireAuth);
+server/routes/trinityChatRoutes.ts:router.use(requireAuth);
+server/routes/orchestratedScheduleRoutes.ts:router.use(requireAuth);
+server/routes/subagentRoutes.ts:router.use(requireAuth);
+server/routes/infrastructureRoutes.ts:router.use(requireAuth);
+server/routes/infrastructureRoutes.ts:router.use((req: Request, res: Response, next: Function) => {
+server/routes/code-editor.ts:router.use(requireAuth);
+server/routes/code-editor.ts:router.use(requirePlatformStaff);
+server/routes/helpdeskRoutes.ts:router.use((req, res, next) => {
+server/routes/health.ts:router.use(rootRouter); // Mount /health
+server/routes/health.ts:router.use('/api/health', apiHealthRouter); // Mount /api/health/*
+server/routes/health.ts:router.use('/api/workspace', workspaceRouter); // Mount /api/workspace/*
+server/routes/health.ts:router.use('/api/integrations', integrationsHealthRouter); // Mount /api/integrations/health
+server/routes/health.ts:router.use('/api/support', supportRouter); // Mount /api/support/*
+server/routes/adminRoutes.ts:router.use(requireAuth);
+server/routes/adminRoutes.ts:router.use(requirePlatformStaff);
+server/routes/chatInlineRoutes.ts:router.use(requireAuth);
+server/routes/chat-management.ts:router.use(requireAuth);
+server/routes/bugRemediation.ts:router.use(requireAuth);
+server/routes/platformRoutes.ts:router.use(requireAuth);
+server/routes/trinityRevenueRoutes.ts:router.use(requireOwner);
+server/routes/sandbox-routes.ts:router.use(requireAuth);
+server/routes/trinityInsightsRoutes.ts:router.use(requireAuth);
+server/routes/trinityInsightsRoutes.ts:router.use(requireManager);
+server/routes/financialIntelligence.ts:router.use(requireAuth);
+server/routes/invoiceRoutes.ts:router.use((req, res, next) => {
+server/routes/vehicleRoutes.ts:router.use(requireAuth);
+server/routes/documentVaultRoutes.ts:router.use(requireAuth);
+server/routes/approvalRoutes.ts:router.use(requireAuth);
+server/routes/documentTemplateRoutes.ts:router.use(requireAuth);
+server/routes/contractPipelineRoutes.ts:router.use(requireAuth);
+server/routes/chat-rooms.ts:router.use(requireAuth);
+server/routes/salesInlineRoutes.ts:router.use(requireAuth);
+server/routes/salesInlineRoutes.ts:router.use(requirePlatformStaff);
+server/routes/onboardingInlineRoutes.ts:router.use((req, res, next) => {

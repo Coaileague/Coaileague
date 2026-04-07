@@ -8,11 +8,16 @@
  * - View hotpatch history
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
 import { requirePlatformStaff, AuthenticatedRequest } from '../rbac';
 import { trinityAutonomousNotifier, notifySupportStaff } from '../services/ai-brain/trinityAutonomousNotifier';
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import rateLimit from 'express-rate-limit';
+import { typedQuery } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+const log = createLogger('TrinityAlerts');
+
 
 const router = Router();
 
@@ -23,11 +28,11 @@ const testAlertLimiter = rateLimit({
   message: { success: false, error: 'Too many test alerts. Please wait before trying again.' },
   keyGenerator: (req: Request) => {
     const authReq = req as AuthenticatedRequest;
-    if (authReq.userId) return authReq.userId;
-    return ipKeyGenerator(req);
+    return authReq.userId || 'anonymous';
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 // In-memory audit log for test alerts (in production, use proper audit table)
@@ -42,7 +47,7 @@ const testAlertAuditLog: Array<{
  * GET /api/trinity/alerts
  * Get all pending Trinity alerts (support staff only)
  */
-router.get('/alerts', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
+router.get('/alerts', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const alerts = trinityAutonomousNotifier.getPendingAlerts();
     const status = trinityAutonomousNotifier.getStatus();
@@ -52,9 +57,9 @@ router.get('/alerts', requireAuth, requirePlatformStaff, async (req: Request, re
       alerts,
       status,
     });
-  } catch (error: any) {
-    console.error('[TrinityAlerts] Failed to get alerts:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityAlerts] Failed to get alerts:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -74,8 +79,8 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
         autonomousMode: 'active',
       },
     });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -83,7 +88,7 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
  * GET /api/trinity/hotpatches
  * Get applied hotpatch history (support staff only)
  */
-router.get('/hotpatches', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
+router.get('/hotpatches', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const hotpatches = trinityAutonomousNotifier.getAppliedHotpatches();
     
@@ -91,9 +96,9 @@ router.get('/hotpatches', requireAuth, requirePlatformStaff, async (req: Request
       success: true,
       hotpatches,
     });
-  } catch (error: any) {
-    console.error('[TrinityAlerts] Failed to get hotpatches:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityAlerts] Failed to get hotpatches:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -101,7 +106,7 @@ router.get('/hotpatches', requireAuth, requirePlatformStaff, async (req: Request
  * POST /api/trinity/hotpatch/:patchId/rollback
  * Rollback a specific hotpatch (support staff only)
  */
-router.post('/hotpatch/:patchId/rollback', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
+router.post('/hotpatch/:patchId/rollback', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const { patchId } = req.params;
     const success = await trinityAutonomousNotifier.rollbackHotpatch(patchId);
@@ -110,9 +115,9 @@ router.post('/hotpatch/:patchId/rollback', requireAuth, requirePlatformStaff, as
       success,
       message: success ? 'Hotpatch rolled back successfully' : 'Failed to rollback hotpatch',
     });
-  } catch (error: any) {
-    console.error('[TrinityAlerts] Failed to rollback hotpatch:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityAlerts] Failed to rollback hotpatch:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -121,7 +126,7 @@ router.post('/hotpatch/:patchId/rollback', requireAuth, requirePlatformStaff, as
  * Create a test alert (for testing notification system - support staff only)
  * Rate limited: 5 per minute per user
  */
-router.post('/test-alert', requireAuth, requirePlatformStaff, testAlertLimiter, async (req: Request, res: Response) => {
+router.post('/test-alert', requirePlatformStaff, testAlertLimiter, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     
@@ -149,16 +154,16 @@ router.post('/test-alert', requireAuth, requirePlatformStaff, testAlertLimiter, 
       testAlertAuditLog.shift();
     }
     
-    console.log(`[AUDIT] Test alert created by ${authReq.userId} - AlertID: ${alert.id}`);
+    log.info(`[AUDIT] Test alert created by ${authReq.userId} - AlertID: ${alert.id}`);
     
     res.json({
       success: true,
       message: 'Test alert created and broadcast to support staff',
       alertId: alert.id,
     });
-  } catch (error: any) {
-    console.error('[TrinityAlerts] Failed to create test alert:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityAlerts] Failed to create test alert:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -166,7 +171,7 @@ router.post('/test-alert', requireAuth, requirePlatformStaff, testAlertLimiter, 
  * POST /api/trinity/detect
  * Trigger manual issue detection scan (support staff only)
  */
-router.post('/detect', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
+router.post('/detect', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     // Run some basic health checks and create alerts if issues found
     const checks = [
@@ -177,10 +182,11 @@ router.post('/detect', requireAuth, requirePlatformStaff, async (req: Request, r
           try {
             const { db } = await import('../db');
             const { sql } = await import('drizzle-orm');
+            // Converted to Drizzle ORM: health check ping
             await db.execute(sql`SELECT 1`);
             return { healthy: true };
-          } catch (error: any) {
-            return { healthy: false, message: error.message, suggestedFix: 'Check database connection settings' };
+          } catch (error: unknown) {
+            return { healthy: false, message: sanitizeError(error), suggestedFix: 'Check database connection settings' };
           }
         },
         autoFixRisk: 'high' as const,
@@ -214,9 +220,9 @@ router.post('/detect', requireAuth, requirePlatformStaff, async (req: Request, r
       alertsCreated: alerts.length,
       alerts: alerts.map(a => ({ id: a.id, title: a.title, severity: a.severity })),
     });
-  } catch (error: any) {
-    console.error('[TrinityAlerts] Detection failed:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityAlerts] Detection failed:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -224,7 +230,7 @@ router.post('/detect', requireAuth, requirePlatformStaff, async (req: Request, r
  * POST /api/trinity/config
  * Update Trinity autonomous configuration (support staff only)
  */
-router.post('/config', requireAuth, requirePlatformStaff, async (req: Request, res: Response) => {
+router.post('/config', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const { hotpatchEnabled, autoTicketEnabled } = req.body;
     
@@ -241,9 +247,9 @@ router.post('/config', requireAuth, requirePlatformStaff, async (req: Request, r
       message: 'Configuration updated',
       status: trinityAutonomousNotifier.getStatus(),
     });
-  } catch (error: any) {
-    console.error('[TrinityAlerts] Config update failed:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityAlerts] Config update failed:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 

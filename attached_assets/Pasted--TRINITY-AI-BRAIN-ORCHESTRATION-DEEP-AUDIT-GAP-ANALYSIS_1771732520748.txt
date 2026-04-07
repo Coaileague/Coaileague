@@ -1,0 +1,577 @@
+# TRINITY AI BRAIN ORCHESTRATION — DEEP AUDIT & GAP ANALYSIS
+
+## COPY THIS ENTIRE PROMPT INTO REPLIT
+
+---
+
+You are performing a comprehensive audit of Trinity — our multi-model AI orchestration system. Trinity is the AI brain of CoAIleague, a B2B SaaS workforce management platform for security companies. Trinity uses 3 AI models (Gemini as primary, Claude as validator/judge, OpenAI/GPT as workhorse/backup) working in governance and tandem with a meta-cognition executive function layer above them.
+
+**Your mission:** Find every gap, broken workflow, dead path, missing capability, incomplete tool, and inefficiency in Trinity's brain. Trinity needs to be smart enough to RUN a security company autonomously — scheduling, compliance, staffing, reporting, client management, incident response, payroll oversight. If it can't do that reliably end-to-end, we have gaps.
+
+---
+
+## PHASE 1: ORCHESTRATION CORE INTEGRITY
+
+Analyze the complete AI orchestration layer. Check every file in:
+- `/server/services/ai/` 
+- `/server/services/orchestration/`
+- Any file containing `trinity`, `gemini`, `claude`, `openai`, `gpt`, `orchestrat`, `ai-router`, `model-select`, `fallback`
+
+**For each file, answer:**
+
+```
+FILE: [path]
+PURPOSE: [what it should do]
+ACTUALLY DOES: [what it actually does]
+GAPS:
+- [ ] Missing functionality
+- [ ] Dead code paths  
+- [ ] Error handling incomplete
+- [ ] Hardcoded values that should be dynamic
+```
+
+### 1.1 — Model Router & Selection Logic
+
+```
+VERIFY:
+[ ] Request comes in → Router determines which model handles it
+[ ] Task classification exists (simple/operational/strategic/complex)
+[ ] Model selection is based on task type, not random or hardcoded
+[ ] Selection considers: cost, speed, accuracy needed, task complexity
+[ ] Router logs WHY it chose a specific model
+
+GAPS TO FIND:
+- Is there actually a router, or does everything just go to one model?
+- Is task classification real or just a placeholder?
+- Can the router dynamically adjust based on model performance history?
+- Is there a "model health" check before routing?
+```
+
+### 1.2 — Fallback Chain Integrity
+
+```
+VERIFY THE CHAIN:
+Primary (Gemini/Trinity) → fail → Claude → fail → OpenAI/GPT → fail → Human Escalation
+
+[ ] Primary model attempt has proper timeout (not hanging forever)
+[ ] Timeout value is configurable, not hardcoded
+[ ] On primary failure, error is captured with full context
+[ ] Context is passed to fallback model (not starting from scratch)
+[ ] Fallback model receives: original prompt + primary failure reason + any partial results
+[ ] If fallback also fails, third model gets cumulative context
+[ ] If ALL models fail, human escalation triggers with full audit trail
+[ ] Each attempt is logged to meta_cognition_logs
+[ ] Token usage tracked per attempt per model per org
+[ ] Cost attributed to the correct subscriber organization (NOT to CoAIleague platform)
+
+GAPS TO FIND:
+- Does the fallback actually work or is it just defined but never tested?
+- Does context degrade through the chain (losing info at each hop)?
+- Is there retry logic WITH backoff, or just immediate retry?
+- What happens if the fallback model is also rate-limited?
+- Are partial results from failed attempts preserved or thrown away?
+- Is there a circuit breaker to stop hammering a model that's down?
+```
+
+### 1.3 — Meta-Cognition Executive Function Layer
+
+```
+THIS IS THE BRAIN ABOVE THE BRAIN. VERIFY:
+
+[ ] Meta-cognition layer exists as actual code (not just a concept)
+[ ] It triggers when:
+    - Task classified as 'complex' or 'high-stakes'
+    - Any model returns confidence below threshold (0.75)
+    - Two models return conflicting answers
+    - Task involves money/payroll/billing
+    - Task involves compliance/legal
+[ ] It has access to:
+    - Original task/prompt
+    - ALL model responses
+    - Individual confidence scores
+    - Reasoning chains from each model
+    - Execution time per model
+    - Historical performance data
+[ ] It can:
+    - SYNTHESIZE: Merge best parts of multiple model responses
+    - ARBITRATE: Choose the best response when they conflict
+    - ESCALATE: Flag for human review when confidence is too low
+    - LEARN: Log the decision for future pattern improvement
+
+GAPS TO FIND:
+- Does this layer actually exist in code or is it theoretical?
+- Is the confidence threshold configurable per task type?
+- Does it log its own reasoning (metacognition of metacognition)?
+- Can it override a model that returned high confidence but wrong answer?
+- Is there a feedback loop where human corrections train the meta-layer?
+```
+
+---
+
+## PHASE 2: TRINITY'S TOOL CALLING CAPABILITIES
+
+Trinity is only as smart as the tools she can use. Audit every tool she has access to.
+
+### 2.1 — Tool Inventory
+
+```
+LIST EVERY TOOL TRINITY CAN CALL. For each tool:
+
+TOOL: [name]
+FILE: [where it's defined]  
+FUNCTION: [what it does]
+INPUT VALIDATION: [does it validate params before executing?]
+ERROR HANDLING: [what happens when it fails?]
+AUTHORIZATION: [does it check user/org permissions?]
+ACTUALLY WORKS: [yes/no — test it]
+```
+
+### 2.2 — Required Tools Check
+
+Trinity MUST have these tools to run a security business. Flag any that are missing or incomplete:
+
+```
+SCHEDULING TOOLS:
+[ ] query_employees — Filter by: armed/unarmed, availability, certifications, location/radius, reliability score
+[ ] query_shifts — Filter by: date range, status (open/assigned/completed), site, employee
+[ ] create_shift — With: site_id, date, start/end time, position type, requirements, notes
+[ ] assign_shift — With: shift_id, employee_id, notify flag, compliance pre-check
+[ ] swap_shift — Between two employees with mutual availability verification
+[ ] cancel_shift — With: reason, notification to assigned employee, client notification
+[ ] fill_calloff — Auto-find replacement: query available → rank by proximity/reliability → offer → assign
+[ ] bulk_schedule — Generate full week/month schedule for a site based on contract requirements
+[ ] detect_conflicts — Scan for double-bookings, overtime violations, rest period violations
+
+COMPLIANCE TOOLS:
+[ ] check_compliance — For specific employee against specific requirements
+[ ] check_certifications — Expiring soon, expired, missing for role
+[ ] generate_compliance_report — Per employee, per site, per org
+[ ] flag_violation — Create compliance alert with severity level
+[ ] check_state_requirements — State-specific licensing for all 50 states
+
+CLIENT MANAGEMENT TOOLS:
+[ ] query_clients — With contract details, site locations, requirements
+[ ] query_client_satisfaction — Complaints, issues, trends
+[ ] generate_client_report — Shift coverage, incident summary, performance metrics
+[ ] alert_client_issue — Proactive notification of problems
+
+PAYROLL TOOLS:
+[ ] calculate_hours — From time entries with overtime rules
+[ ] preview_payroll — Show calculations before processing
+[ ] flag_payroll_anomaly — Unusual hours, missing punches, overtime spikes
+[ ] sync_to_quickbooks — Push payroll data to QB
+
+REPORTING TOOLS:
+[ ] generate_incident_report — From chat/field data, grammatically clean, legally safe
+[ ] generate_shift_report — Coverage, attendance, exceptions
+[ ] generate_financial_report — Labor costs, profitability by client
+[ ] queue_report_for_approval — Send to org owner/supervisor pipeline
+
+COMMUNICATION TOOLS:
+[ ] send_notification — Push/email/SMS to employee
+[ ] broadcast_message — To team, site, org, or all
+[ ] send_client_update — Professional communication to client
+[ ] escalate_to_human — When Trinity can't handle it
+
+GPS & FIELD OPERATIONS TOOLS:
+[ ] verify_location — Employee is at assigned site
+[ ] flag_geo_anomaly — Employee clocked in but not at site
+[ ] force_clock_in — Bot-assisted manual clock-in with authentication
+[ ] track_patrol_route — For mobile patrol contracts
+
+BOT ECOSYSTEM TOOLS:
+[ ] deploy_help_bot — In org support rooms
+[ ] deploy_meeting_bot — In meeting rooms (met+ variable)
+[ ] deploy_report_bot — In org rooms (org+ variable) for incident analysis
+[ ] deploy_clock_bot — For authentication-based manual clock assistance
+[ ] bot_session_management — Pool management, auto-close after timeout
+```
+
+### 2.3 — Tool Execution Framework
+
+```
+EVERY TOOL MUST FOLLOW THE 7-STEP PIPELINE:
+
+1. TRIGGER → What event/request activates this tool?
+2. FETCH → What data does the tool need to gather?
+3. VALIDATE → Are all required inputs present and authorized?
+4. PROCESS → Execute the core logic
+5. MUTATE → Save results to database
+6. CONFIRM → Return success/failure with details
+7. NOTIFY → Alert relevant parties of the outcome
+
+FOR EACH TOOL, VERIFY:
+[ ] All 7 steps are implemented
+[ ] Step 3 (VALIDATE) includes org-scoping / tenant isolation
+[ ] Step 4 (PROCESS) has try/catch with meaningful error messages
+[ ] Step 5 (MUTATE) uses transactions for multi-table writes
+[ ] Step 6 (CONFIRM) returns structured response Trinity can interpret
+[ ] Step 7 (NOTIFY) actually sends notifications (not just logs)
+
+COMMON GAPS:
+- Tools that fetch but don't validate permissions
+- Tools that process but don't save results
+- Tools that save but don't confirm back to Trinity
+- Tools that work but don't notify anyone
+- Tools that skip straight from trigger to process (no fetch/validate)
+```
+
+---
+
+## PHASE 3: TRINITY'S INTELLIGENT LOOP & ITERATION
+
+This is what makes Trinity smart vs. just a chatbot wrapper. She needs to THINK iteratively.
+
+### 3.1 — Logic Loop Framework
+
+```
+VERIFY TRINITY'S REASONING LOOP EXISTS:
+
+UNDERSTAND → GATHER → ANALYZE → PROPOSE → VALIDATE → EXECUTE → CONFIRM
+    ↑                                                              │
+    └──────────────────── ITERATE IF NEEDED ───────────────────────┘
+
+[ ] Trinity can decompose complex requests into sub-tasks
+[ ] Each sub-task follows the 7-step pipeline independently
+[ ] Results from sub-tasks feed back into the main task
+[ ] If a sub-task fails, Trinity re-plans (not just fails entirely)
+[ ] Trinity can ask clarifying questions before executing
+[ ] Trinity explains her reasoning before taking action on high-stakes tasks
+[ ] Trinity can handle multi-turn conversations maintaining full context
+
+EXAMPLE TEST CASE — Give Trinity this prompt and verify she handles it:
+
+"We just lost 3 guards at the Walmart account. Two quit and one's 
+license expired. I need coverage for all their shifts this week, 
+make sure replacements are qualified, notify the client, and give 
+me a cost impact analysis."
+
+TRINITY SHOULD:
+1. UNDERSTAND: 3 guards gone, need immediate replacement + client comms + cost analysis
+2. GATHER: Query the 3 guards' shift schedules, Walmart site requirements, available qualified staff
+3. ANALYZE: Which shifts are open? Who's qualified AND available? Distance? Cost difference?
+4. PROPOSE: "Here are my recommended replacements for each shift with reasoning..."
+5. VALIDATE: Check each replacement for: certifications, overtime impact, availability conflicts
+6. EXECUTE: Assign shifts, send notifications, generate client email, calculate cost delta
+7. CONFIRM: Summary of all actions taken with links/references
+
+IF SHE CAN'T DO THIS END-TO-END, DOCUMENT EXACTLY WHERE SHE BREAKS.
+```
+
+### 3.2 — Sub-Agent Architecture
+
+```
+VERIFY TRINITY CAN DELEGATE TO SPECIALIZED SUB-AGENTS:
+
+[ ] SchedulerAgent — Handles all scheduling optimization
+[ ] ComplianceAgent — Handles all certification/licensing checks  
+[ ] CommunicationsAgent — Handles all notifications/emails/SMS
+[ ] AnalyticsAgent — Handles all reporting/cost analysis
+[ ] FieldOpsAgent — Handles GPS/clock-in/patrol tracking
+
+FOR EACH SUB-AGENT:
+[ ] It exists as actual code (not just a concept)
+[ ] Trinity can invoke it with structured parameters
+[ ] It returns structured results Trinity can interpret
+[ ] It has its own error handling that doesn't crash Trinity
+[ ] It respects org-scoping / multi-tenant isolation
+[ ] It logs its actions for audit trail
+[ ] It follows the 7-step pipeline
+```
+
+### 3.3 — Conversation Context & Memory
+
+```
+VERIFY TRINITY MAINTAINS CONTEXT:
+
+[ ] Conversation history persists across messages in same session
+[ ] Trinity remembers what she already did (no re-processing)
+[ ] Trinity can reference previous results ("the schedule I just created")
+[ ] Workspace context loaded at conversation start (org info, active contracts, staff)
+[ ] Client intelligence accessible (preferences, history, satisfaction scores)
+[ ] Staff intelligence accessible (reliability scores, performance patterns)
+[ ] Previous meta-cognition decisions accessible for pattern learning
+
+GAPS TO FIND:
+- Does context get truncated too aggressively (losing important info)?
+- Is conversation history stored in the right format for each model?
+- Does switching from Gemini to Claude in mid-conversation lose context?
+- Is there a max context window strategy (summarize old messages vs. drop them)?
+```
+
+---
+
+## PHASE 4: AUTOMATION WORKFLOWS — END-TO-END VERIFICATION
+
+These are the automations customers are paying for. Every single one must work flawlessly.
+
+### 4.1 — Inbound Opportunity Automation
+
+```
+EMAIL ARRIVES → TRINITY PROCESSES → SHIFTS CREATED → STAFF ASSIGNED → CLIENT NOTIFIED
+
+Stage A — Email Ingestion:
+[ ] Monitor inbox (Resend inbound: calloffs@, incidents@, docs@, support@)
+[ ] AI classifies email type (shift request, calloff, incident, general)
+[ ] Extract shift details to structured JSON
+[ ] Create staged_shifts records
+[ ] Low confidence → flag for human review
+[ ] 7-step pipeline followed
+
+Stage B — Auto-Staffing:
+[ ] Fetch qualified employees for extracted requirements
+[ ] AI ranks best matches (proximity, reliability, certifications, cost)
+[ ] Send offers via push + email with expiration timers
+[ ] Track responses (accepted, declined, expired)
+[ ] 7-step pipeline followed
+
+Stage C — Acceptance & Approval:
+[ ] Employee accepts → re-validate qualifications (may have changed)
+[ ] AI approves match
+[ ] Create assignment record
+[ ] Send employee confirmation with POC info
+[ ] Expire other outstanding offers
+[ ] 7-step pipeline followed
+
+Stage D — Contractor/Client Close:
+[ ] Auto-generate professional email to client with guard details
+[ ] Send confirmation
+[ ] Log everything to audit trail
+[ ] Notify ops team
+[ ] 7-step pipeline followed
+
+TEST: Send a test email to the inbound address and verify the ENTIRE pipeline fires.
+DOCUMENT where it breaks.
+```
+
+### 4.2 — Calloff Response Automation
+
+```
+EMPLOYEE CALLS OFF → TRINITY DETECTS → FINDS REPLACEMENT → ASSIGNS → NOTIFIES
+
+[ ] Calloff detected (via chat command, email, or manual entry)
+[ ] Shift identified that needs coverage
+[ ] Trinity queries available qualified replacements
+[ ] Ranked by: proximity, reliability, overtime impact, cost
+[ ] Offers sent with expiration
+[ ] First acceptance wins, others expired
+[ ] Client notified of personnel change
+[ ] Org owner/supervisor notified
+[ ] Full audit trail logged
+
+TEST: Simulate a calloff and verify end-to-end.
+```
+
+### 4.3 — Compliance Expiration Automation
+
+```
+CREDENTIAL EXPIRING → ALERT → RESTRICT → ESCALATE
+
+[ ] Daily/hourly scan of all credentials across all orgs
+[ ] 30-day warning → notification to employee + supervisor
+[ ] 7-day warning → escalation to org owner
+[ ] Expired → automatic restriction from assignment to requiring shifts
+[ ] Trinity proactively finds replacement coverage for affected shifts
+[ ] Compliance report generated and queued
+
+TEST: Set a credential to expire tomorrow and verify the cascade.
+```
+
+### 4.4 — Payroll Automation Pipeline
+
+```
+PAY PERIOD ENDS → HOURS CALCULATED → ANOMALIES FLAGGED → PREVIEW → APPROVE → SYNC
+
+[ ] Automatic calculation at pay period close
+[ ] Overtime calculated per state rules (daily/weekly)
+[ ] Break deductions applied per state rules
+[ ] Holiday pay applied
+[ ] Anomalies detected: missing punches, unusual hours, geo violations
+[ ] Payroll preview generated for org owner review
+[ ] Approval workflow (owner must approve before processing)
+[ ] Approved payroll syncs to QuickBooks
+[ ] Pay stubs generated and accessible to employees
+[ ] Full audit trail
+
+TEST: Process a test pay period and verify every step.
+```
+
+### 4.5 — Report Generation Automation
+
+```
+INCIDENT IN FIELD → OFFICER REPORTS VIA CHAT → BOT ANALYZES → 
+CLEAN REPORT GENERATED → QUEUED FOR APPROVAL → DELIVERED TO CLIENT
+
+[ ] ReportBot monitors org+ chat rooms for incident reports
+[ ] Raw report analyzed by AI for: grammar, legal language, clarity, completeness
+[ ] Clean professional report generated (PDF)
+[ ] Queued to org owner/authorized rep for approval
+[ ] Approver can edit before finalizing
+[ ] Approved report pipelines to:
+    - Client the incident occurred at
+    - Manager/supervisor assigned
+    - Org's secure document storage
+[ ] Reports cannot be deleted by org users (audit compliance)
+[ ] Reports can be purged by support/cleanup bot after org-configured retention period
+[ ] Full audit trail
+
+TEST: Submit a raw incident report via chat and verify the pipeline.
+```
+
+### 4.6 — Meeting Automation
+
+```
+MEETING STARTED → BOT JOINS → RECORDS/ANALYZES → 
+PDF GENERATED → QUEUED FOR APPROVAL → STORED
+
+[ ] Authorized user starts meeting (/meetingstart or quick action)
+[ ] MeetingBot activates in met+ room
+[ ] Transcript captured
+[ ] Auto-close after 1 hour of inactivity
+[ ] AI analyzes: summary, action items, decisions made
+[ ] PDF generated
+[ ] Queued for approval
+[ ] Approved → stored in org secure docs
+[ ] Action items extracted and assigned
+
+TEST: Start a test meeting, have conversation, end it, verify output.
+```
+
+---
+
+## PHASE 5: COST PROTECTION & TOKEN MANAGEMENT
+
+### 5.1 — Per-Org Token Budgets
+
+```
+[ ] Each subscriber org has defined token/credit limits
+[ ] ALL AI calls track token usage per model per org
+[ ] Usage approaches limit → warning to org admin
+[ ] Usage exceeds limit → graceful degradation (not hard cutoff)
+[ ] Cost never falls back to CoAIleague platform billing
+[ ] Usage dashboard visible to org admins
+[ ] Platform admin can see all orgs' usage
+
+GAPS TO FIND:
+- Are there ANY AI calls that don't attribute cost to an org?
+- What happens when an org runs out of credits mid-operation?
+- Is there a way for an org to accidentally burn unlimited credits?
+- Are fallback model calls double-counted (primary attempt + fallback)?
+```
+
+### 5.2 — Rate Limiting
+
+```
+[ ] Per-org rate limits on AI requests
+[ ] Per-user rate limits within org
+[ ] Global rate limits to protect upstream APIs
+[ ] Rate limit errors return meaningful messages (not generic 429)
+[ ] Queuing for burst traffic (don't just reject)
+[ ] Rate limit data logged for capacity planning
+```
+
+---
+
+## PHASE 6: INTELLIGENCE & LEARNING
+
+### 6.1 — Pattern Learning
+
+```
+[ ] Trinity logs successful task completions with full context
+[ ] Trinity logs failures with root cause
+[ ] Patterns extractable: "for this type of task, model X works best"
+[ ] Human corrections feed back into routing decisions
+[ ] Per-org learning: Trinity adapts to each company's patterns
+[ ] Cross-org learning: General improvements from aggregate data (privacy-safe)
+```
+
+### 6.2 — Client Intelligence
+
+```
+[ ] Client preferences stored and accessible to Trinity
+[ ] Client history (complaints, compliments, issues) accessible
+[ ] Satisfaction scoring calculated and updated
+[ ] At-risk client detection (declining satisfaction trend)
+[ ] Trinity can proactively suggest relationship improvements
+```
+
+### 6.3 — Staff Intelligence
+
+```
+[ ] Employee reliability scores calculated from attendance data
+[ ] Performance patterns tracked (late arrivals, calloff frequency)
+[ ] Certification tracking with proactive alerts
+[ ] Training needs identification
+[ ] Employee ranking for shift assignment optimization
+```
+
+---
+
+## PHASE 7: INTEGRATION INTEGRITY
+
+### 7.1 — QuickBooks Sync
+
+```
+[ ] Employee data syncs bidirectionally
+[ ] Client/Customer data syncs
+[ ] Invoice creation and sync works
+[ ] Payment recording syncs
+[ ] Time entry sync works
+[ ] Token refresh is automatic (not requiring manual re-auth)
+[ ] Error recovery on sync failures
+[ ] Webhook handling for real-time updates from QB
+[ ] Trinity can trigger QB operations via tools
+```
+
+### 7.2 — Stripe Billing
+
+```
+[ ] Subscription creation works
+[ ] Plan upgrade/downgrade works
+[ ] Usage-based billing tracked
+[ ] Payment failure handling
+[ ] Dunning (failed payment retry) automation
+[ ] Invoice generation
+[ ] Trinity aware of org's billing status (can't offer premium features to free tier)
+```
+
+### 7.3 — Resend Email
+
+```
+[ ] Outbound email sending works (notifications, reports, client comms)
+[ ] Inbound email processing works (calloffs@, incidents@, docs@, support@)
+[ ] Trinity auto-processes inbound emails
+[ ] Email templates are professional and branded
+[ ] Bounce/complaint handling
+[ ] Email delivery tracking
+```
+
+### 7.4 — WebSocket / Chat Server
+
+```
+[ ] Universal chat server is THE single chat system (no duplicates)
+[ ] Room types properly identified: org+ (org rooms), met+ (meeting rooms), coai+ (platform rooms)
+[ ] mIRC event parity: /commands work, userlist works, inline options work
+[ ] Bots connect and operate in correct room types
+[ ] Cross-org support agent access works
+[ ] Message persistence and history
+[ ] File sharing in chat works
+[ ] Connection recovery on disconnect
+```
+
+---
+
+## OUTPUT FORMAT
+
+For every issue found, log it as:
+
+```
+SEVERITY: CRITICAL | HIGH | MEDIUM | LOW
+LOCATION: [file path and line number]
+CATEGORY: Orchestration | Tools | Logic Loop | Automation | Cost | Integration
+DESCRIPTION: [what's wrong]
+IMPACT: [what breaks if this isn't fixed]
+FIX: [recommended solution]
+```
+
+**Start with Phase 1 and work through systematically. Do NOT skip phases. Every gap you find could be a production failure that costs Bryan a customer.**

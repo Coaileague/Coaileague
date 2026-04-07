@@ -1,9 +1,12 @@
 import { db } from "server/db";
-import { timeEntries, employees, workspaces, clients } from "@shared/schema";
-import { and, eq, gte, lte, isNull, sql } from "drizzle-orm";
+import { timeEntries, employees, workspaces, clients, shifts } from "@shared/schema";
+import { and, eq, gte, lte, isNull, isNotNull, or, sql } from "drizzle-orm";
 import { resolveRates, bucketHours, calculateAmount, roundHours } from "./rateResolver";
 import { isHolidayDate } from "./holidayDetector";
 import { PayrollAutomationEngine } from "../payrollAutomation";
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger('payroll-hours-aggregator');
 
 /**
  * Payroll Hours Aggregation Service
@@ -45,6 +48,8 @@ export interface EmployeePayrollSummary {
   employeeId: string;
   employeeName: string;
   employeeNumber: string | null;
+  employeeState: string | null;
+  workerType: 'employee' | 'contractor';
   entries: TimeEntryPayroll[];
   totalHours: number;
   totalRegularHours: number;
@@ -73,6 +78,8 @@ export interface TimeEntryPayroll {
   holidayPay: number;
   totalPay: number;
   rateSource: string;
+  manuallyEdited?: boolean;
+  manualEditReason?: string | null;
 }
 
 /**
@@ -84,8 +91,8 @@ export async function aggregatePayrollHours(params: {
   endDate: Date;
 }): Promise<PayrollHoursSummary> {
   const { workspaceId, startDate, endDate } = params;
-  
-  console.log(`[PayrollHours] Aggregating for workspace ${workspaceId} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+
+  log.info(`Aggregating for workspace ${workspaceId} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
   // Get workspace settings for overtime rules, holiday calendar, and default rates
   const workspace = await db.query.workspaces.findFirst({
@@ -107,6 +114,8 @@ export async function aggregatePayrollHours(params: {
   const workspaceTimezone = workspace.timezone || "America/New_York";
 
   // Find all approved, unpayrolled time entries in period
+  // Training guard: exclude entries linked to training shifts (isTrainingShift=true)
+  // so seeded training data never bleeds into real payroll runs.
   const approvedEntries = await db
     .select({
       timeEntry: timeEntries,
@@ -114,17 +123,20 @@ export async function aggregatePayrollHours(params: {
     })
     .from(timeEntries)
     .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .leftJoin(shifts, eq(timeEntries.shiftId, shifts.id))
     .where(
       and(
         eq(timeEntries.workspaceId, workspaceId),
         eq(timeEntries.status, 'approved'),
         isNull(timeEntries.payrolledAt),
+        isNotNull(timeEntries.clockOut),
         gte(timeEntries.clockIn, startDate),
-        lte(timeEntries.clockIn, endDate)
+        lte(timeEntries.clockIn, endDate),
+        or(isNull(timeEntries.shiftId), eq(shifts.isTrainingShift, false))
       )
     );
 
-  console.log(`[PayrollHours] Found ${approvedEntries.length} approved, unpayrolled entries`);
+  log.info(`Found ${approvedEntries.length} approved, unpayrolled entries`);
 
   if (approvedEntries.length === 0) {
     return {
@@ -150,7 +162,7 @@ export async function aggregatePayrollHours(params: {
       })
       .from(clients)
       .where(
-        sql`${clients.id} IN (${sql.join(uniqueClientIds.map(id => sql.raw(`'${id}'`)), sql.raw(', '))})`
+        sql`${clients.id} IN (${sql.join(uniqueClientIds.map(id => sql`${id}`), sql.raw(', '))})`
       );
     
     clientsMap = new Map(clientsList.map(c => [c.id, c.companyName]));
@@ -182,7 +194,13 @@ export async function aggregatePayrollHours(params: {
     }
 
     const employeeName = `${employee.firstName} ${employee.lastName}`;
-    
+    const workerType: 'employee' | 'contractor' = (employee.is1099Eligible) ? 'contractor' : 'employee';
+    const isContractor = workerType === 'contractor';
+
+    if (isContractor) {
+      log.info(`Employee ${employeeId} is a 1099 contractor — all hours treated as regular (no OT/holiday multipliers)`);
+    }
+
     // Sort entries chronologically for deterministic overtime calculation
     const sortedEntries = entries.sort((a, b) => 
       a.timeEntry.clockIn.getTime() - b.timeEntry.clockIn.getTime()
@@ -249,16 +267,24 @@ export async function aggregatePayrollHours(params: {
       // Calculate hours bucketing (regular, OT, holiday) using workspace settings
       const totalHours = parseFloat(timeEntry.totalHours);
       
-      // Timezone-aware holiday detection using workspace holiday calendar
-      const isHoliday = isHolidayDate(timeEntry.clockIn, holidayCalendar, workspaceTimezone);
+      // 1099 contractors: ALL hours are regular — no overtime or holiday multipliers
+      // They are paid straight rate regardless of hours worked (no FLSA OT protection)
+      let hoursBucket: { regularHours: number; overtimeHours: number; holidayHours: number };
       
-      const hoursBucket = bucketHours({
-        totalHours,
-        weeklyHoursSoFar,
-        enableDailyOvertime: enableDailyOT,
-        weeklyOvertimeThreshold: weeklyOTThreshold,
-        isHoliday,
-      });
+      if (isContractor) {
+        hoursBucket = { regularHours: totalHours, overtimeHours: 0, holidayHours: 0 };
+      } else {
+        // Timezone-aware holiday detection using workspace holiday calendar
+        const isHoliday = isHolidayDate(timeEntry.clockIn, holidayCalendar, workspaceTimezone);
+        
+        hoursBucket = bucketHours({
+          totalHours,
+          weeklyHoursSoFar,
+          enableDailyOvertime: enableDailyOT,
+          weeklyOvertimeThreshold: weeklyOTThreshold,
+          isHoliday,
+        });
+      }
 
       // Update weekly hours accumulator for next entry
       weeklyHoursSoFar += totalHours;
@@ -288,6 +314,8 @@ export async function aggregatePayrollHours(params: {
         holidayPay,
         totalPay,
         rateSource: resolved.rateSource,
+        manuallyEdited: timeEntry.manuallyEdited || false,
+        manualEditReason: (timeEntry as any).manualEditReason || null,
       });
 
       employeeTotalHours += totalHours;
@@ -305,27 +333,27 @@ export async function aggregatePayrollHours(params: {
     
     if (uniqueRates.size > 1 && employeeTotalOvertimeHours > 0) {
       // Employee worked at multiple rates with overtime - use FLSA weighted average
-      console.log(`[PayrollHours] Employee ${employeeName} worked at ${uniqueRates.size} different rates with OT - using FLSA weighted average`);
-      
+      log.info(`Employee ${employeeId} worked at ${uniqueRates.size} different rates with OT - using FLSA weighted average`);
+
       // Build rate/hours array for FLSA calculation
       const rateHours = employeePayroll.map(e => ({
         rate: e.payRate,
         hours: e.totalHours
       }));
-      
+
       // Calculate FLSA-compliant weighted average overtime
       const flsaResult = PayrollAutomationEngine.calculateFLSAWeightedAverageOvertime(
         rateHours,
         employeeTotalOvertimeHours
       );
-      
+
       // Recalculate overtime pay using FLSA weighted average (half-time premium)
       const oldOvertimePay = employeeOvertimePay;
       employeeOvertimePay = flsaResult.overtimePremium;
-      
+
       // Also recalculate regular pay as straight-time pay
       employeeRegularPay = flsaResult.straightTimePay;
-      
+
       // Log the adjustment
       const adjustment = employeeOvertimePay - oldOvertimePay;
       if (Math.abs(adjustment) > 0.01) {
@@ -333,7 +361,7 @@ export async function aggregatePayrollHours(params: {
           `FLSA weighted average applied: OT adjusted by $${adjustment.toFixed(2)} ` +
           `(weighted avg rate: $${flsaResult.weightedAverageRate.toFixed(2)}/hr)`
         );
-        console.log(`[PayrollHours] FLSA adjustment for ${employeeName}: $${oldOvertimePay.toFixed(2)} -> $${employeeOvertimePay.toFixed(2)}`);
+        log.info(`FLSA adjustment for employee ${employeeId}: delta $${adjustment.toFixed(2)}`);
       }
     }
 
@@ -344,6 +372,8 @@ export async function aggregatePayrollHours(params: {
         employeeId,
         employeeName,
         employeeNumber: employee.employeeNumber,
+        employeeState: employee.state || null,
+        workerType,
         entries: employeePayroll,
         totalHours: roundHours(employeeTotalHours),
         totalRegularHours: roundHours(employeeTotalRegularHours),
@@ -362,7 +392,7 @@ export async function aggregatePayrollHours(params: {
     warnings.push(...employeeWarnings);
   }
 
-  console.log(`[PayrollHours] Processed ${approvedEntries.length} entries, $${totalPayrollAmount.toFixed(2)} total payroll`);
+  log.info(`Processed ${approvedEntries.length} entries for ${employeeSummaries.length} employees`);
 
   return {
     workspaceId,
@@ -384,17 +414,24 @@ export async function markEntriesAsPayrolled(params: {
 }): Promise<void> {
   const { timeEntryIds, payrollRunId } = params;
 
-  // Update each entry to mark as payrolled
+  let markedCount = 0;
   for (const entryId of timeEntryIds) {
-    await db
+    const result = await db
       .update(timeEntries)
       .set({
         payrolledAt: new Date(),
         payrollRunId: payrollRunId || null,
         updatedAt: new Date(),
       })
-      .where(eq(timeEntries.id, entryId));
+      .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.payrolledAt)))
+      .returning();
+    
+    if (result.length > 0) {
+      markedCount++;
+    } else {
+      log.warn(`Entry ${entryId} already payrolled - skipping (race condition guard)`);
+    }
   }
 
-  console.log(`[PayrollHours] Marked ${timeEntryIds.length} entries as payrolled${payrollRunId ? ` (run ${payrollRunId})` : ''}`);
+  log.info(`Marked ${markedCount}/${timeEntryIds.length} entries as payrolled${payrollRunId ? ` (run ${payrollRunId})` : ''}`);
 }

@@ -1,369 +1,380 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  TrendingUp, TrendingDown, DollarSign, Activity, 
-  AlertTriangle, CheckCircle, Database, Mail, CreditCard,
-  Zap, RefreshCw
+  Coins, Clock, ArrowDown, ArrowUp, History,
+  Zap, Calendar, TrendingDown, ChevronLeft, ChevronRight,
+  Activity
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { WFLogoCompact } from "@/components/wf-logo";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { useCreditMonitor } from "@/hooks/use-credit-monitor";
+
+interface CreditBalance {
+  currentBalance: number;
+  monthlyAllocation: number;
+  totalCreditsEarned: number;
+  totalCreditsSpent: number;
+  totalCreditsPurchased: number;
+  lastResetAt: string;
+  nextResetAt: string;
+  subscriptionTier: string;
+  unlimitedCredits?: boolean;
+  creditsUsedThisPeriod?: number;
+}
+
+interface CreditTransaction {
+  id: string;
+  workspaceId: string;
+  userId: string | null;
+  transactionType: string;
+  amount: number;
+  balanceAfter: number;
+  featureKey: string | null;
+  featureName: string | null;
+  creditPackId: string | null;
+  description: string | null;
+  createdAt: string;
+}
+
+interface CreditUsageBreakdown {
+  featureKey: string;
+  featureName: string;
+  totalCredits: number;
+  operationCount: number;
+}
+
+const FRIENDLY_ACTION_NAMES: Record<string, string> = {
+  'ai_scheduling': 'AI Scheduling',
+  'trinity_chat': 'Trinity Chat',
+  'trinity_thought': 'Trinity Thinking',
+  'trinity_insight': 'Trinity Insight',
+  'ai_invoicing': 'AI Invoicing',
+  'ai_payroll': 'AI Payroll',
+  'ai_analytics': 'AI Analytics',
+  'ai_sentiment': 'Sentiment Analysis',
+  'ai_onboarding': 'AI Onboarding',
+  'ai_compliance': 'Compliance Check',
+  'ai_dispute': 'Dispute Resolution',
+  'ai_health_monitoring': 'Health Monitoring',
+  'ai_document_extraction': 'Document Extraction',
+  'ai_issue_detection': 'Issue Detection',
+  'ai_quick_insight': 'Quick Insight',
+  'ai_chat_query': 'AI Chat',
+  'ai_vision': 'Vision Analysis',
+  'purchase': 'Credit Purchase',
+  'monthly_allocation': 'Monthly Allocation',
+  'monthly_reset': 'Monthly Reset',
+};
+
+function getActionName(featureKey: string | null, featureName: string | null, transactionType: string): string {
+  if (featureKey && FRIENDLY_ACTION_NAMES[featureKey]) return FRIENDLY_ACTION_NAMES[featureKey];
+  if (featureName) return featureName;
+  if (transactionType === 'purchase') return 'Credit Purchase';
+  if (transactionType === 'allocation') return 'Monthly Allocation';
+  if (transactionType === 'reset') return 'Monthly Reset';
+  return transactionType.charAt(0).toUpperCase() + transactionType.slice(1);
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit'
+  });
+}
+
+function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 export default function AdminUsage() {
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { balance: liveBalance, isUnlimited, daysUntilReset } = useCreditMonitor();
+  const [txPage, setTxPage] = useState(0);
+  const txLimit = 20;
 
-  const { data: stats } = useQuery({
-    queryKey: ['/api/analytics/stats', refreshKey],
+  const { data: balance, isLoading: balanceLoading } = useQuery<CreditBalance>({
+    queryKey: ['/api/credits/balance'],
     enabled: isAuthenticated,
   });
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      window.location.href = '/api/login';
-    }
-  }, [isAuthenticated, isLoading]);
+  const { data: usage } = useQuery<CreditUsageBreakdown[]>({
+    queryKey: ['/api/credits/usage-breakdown'],
+    enabled: isAuthenticated,
+  });
 
-  if (isLoading || !isAuthenticated) {
+  const { data: transactions, isLoading: txLoading } = useQuery<CreditTransaction[]>({
+    queryKey: ['/api/credits/transactions', { limit: txLimit, offset: txPage * txLimit }],
+    enabled: isAuthenticated,
+  });
+
+  if (authLoading || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--cad-background))] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-[hsl(var(--cad-blue))] border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  // Simulated credit data - Replace with actual API call when available
-  const creditBalance = 100.00; // Your $100 credit
-  const creditUsed = 12.50; // Estimated usage so far
-  const creditRemaining = creditBalance - creditUsed;
-  const usagePercent = (creditUsed / creditBalance) * 100;
-
-  // Cost estimations
-  const totalWorkspaces = (stats as any)?.totalEmployees || 0;
-  const monthlyEmailsSent = 450; // Estimated
-  const monthlyDatabaseSize = 2.5; // GB
+  const effectiveBalance = liveBalance || balance;
+  const isUnlimitedUser = isUnlimited || effectiveBalance?.unlimitedCredits === true || 
+    (effectiveBalance?.monthlyAllocation && effectiveBalance.monthlyAllocation > 999999);
   
-  // Per-service costs (monthly estimates)
-  const costs = {
-    database: totalWorkspaces * 0.30, // $0.30 per workspace
-    email: monthlyEmailsSent * 0.01, // $0.01 per email
-    compute: 8.00, // Fixed hosting cost
-    stripe: 0, // Transaction fees passed to customers
+  // Derive "used this period" from the ledger field (authoritative) or fall back to balance math.
+  // Never use monthlyAllocation as the total pool denominator — purchased credits can exceed it.
+  const creditsUsedThisPeriod = effectiveBalance?.creditsUsedThisPeriod
+    ?? Math.max(0, (effectiveBalance?.monthlyAllocation ?? 0) - (effectiveBalance?.currentBalance ?? 0));
+  const totalAvailable = creditsUsedThisPeriod + (effectiveBalance?.currentBalance ?? 0);
+
+  const usagePercent = effectiveBalance && !isUnlimitedUser && totalAvailable > 0
+    ? Math.min(100, (creditsUsedThisPeriod / totalAvailable) * 100) : 0;
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'ai-usage-ledger',
+    title: 'AI Usage',
+    subtitle: 'Track your AI feature usage and operation history included in your plan',
+    category: 'admin',
   };
 
-  const totalMonthlyCost = Object.values(costs).reduce((a, b) => a + b, 0);
-  const projectedMonthsRemaining = creditRemaining / totalMonthlyCost;
-  const needsRecharge = projectedMonthsRemaining < 2;
-
-  // Revenue data
-  const monthlyRevenue = 799; // Professional tier example
-  const profitMargin = ((monthlyRevenue - totalMonthlyCost) / monthlyRevenue) * 100;
-
   return (
-    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-md shadow-blue-900/30 p-2">
-                <WFLogoCompact size={28} />
-              </div>
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-usage-title">
-                  Platform Usage & Credits
-                </h2>
-                <p className="text-sm sm:text-base text-[hsl(var(--cad-text-secondary))]">
-                  Monitor operational costs and credit balance
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRefreshKey(prev => prev + 1)}
-              data-testid="button-refresh-usage"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
-
-          {/* Credit Balance Alert */}
-          {needsRecharge && (
-            <Card className="bg-gradient-to-br from-[hsl(var(--cad-orange))]/10 to-[hsl(var(--cad-red))]/10 border-[hsl(var(--cad-orange))] p-6">
-              <div className="flex items-start gap-4">
-                <AlertTriangle className="h-6 w-6 text-[hsl(var(--cad-orange))] flex-shrink-0 mt-1" />
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-[hsl(var(--cad-text-primary))] mb-2">
-                    Low Credit Balance Warning
-                  </h3>
-                  <p className="text-sm text-[hsl(var(--cad-text-secondary))] mb-4">
-                    Your credit balance is running low. At current usage, you have approximately{" "}
-                    <span className="font-bold text-[hsl(var(--cad-orange))]">
-                      {projectedMonthsRemaining.toFixed(1)} months
-                    </span>{" "}
-                    of credits remaining. We recommend recharging soon to avoid service interruption.
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6" data-testid="page-credit-usage">
+        {/* Balance Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+          <Card data-testid="card-current-balance">
+            <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Coins className="h-4 w-4 shrink-0" />
+                <span className="truncate">Operations Used</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {balanceLoading ? (
+                <div className="h-9 bg-muted rounded animate-pulse" />
+              ) : isUnlimitedUser ? (
+                <div className="text-xl sm:text-3xl font-bold text-foreground truncate" data-testid="text-balance">Unlimited</div>
+              ) : (
+                <>
+                  <div className="text-xl sm:text-3xl font-bold truncate text-foreground" data-testid="text-balance">
+                    {creditsUsedThisPeriod.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    of {totalAvailable.toLocaleString()} in current period
                   </p>
-                  <Button
-                    className="bg-[hsl(var(--cad-orange))] hover:bg-[hsl(var(--cad-orange))]/90 text-white"
-                    onClick={() => window.open('https://replit.com/pricing', '_blank')}
-                    data-testid="button-recharge-credits"
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Add Credits to Replit Account
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Credit Balance Overview */}
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-6" data-testid="card-total-credits">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-12 w-12 rounded-lg bg-[hsl(var(--cad-blue))]/10 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-[hsl(var(--cad-blue))]" />
-                </div>
-                <Badge className="bg-[hsl(var(--cad-blue))]/10 text-[hsl(var(--cad-blue))] border-none">
-                  Initial Balance
-                </Badge>
-              </div>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))] mb-2">Total Credits Added</p>
-              <p className="text-3xl font-bold font-mono">${creditBalance.toFixed(2)}</p>
-            </Card>
-
-            <Card className="bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-6" data-testid="card-used-credits">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-12 w-12 rounded-lg bg-[hsl(var(--cad-red))]/10 flex items-center justify-center">
-                  <TrendingDown className="h-6 w-6 text-[hsl(var(--cad-red))]" />
-                </div>
-                <Badge className="bg-[hsl(var(--cad-red))]/10 text-[hsl(var(--cad-red))] border-none">
-                  {usagePercent.toFixed(1)}% Used
-                </Badge>
-              </div>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))] mb-2">Credits Used</p>
-              <p className="text-3xl font-bold font-mono text-[hsl(var(--cad-red))]">
-                ${creditUsed.toFixed(2)}
-              </p>
-            </Card>
-
-            <Card className="bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-6" data-testid="card-remaining-credits">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-                  needsRecharge 
-                    ? 'bg-[hsl(var(--cad-orange))]/10' 
-                    : 'bg-[hsl(var(--cad-green))]/10'
-                }`}>
-                  {needsRecharge ? (
-                    <AlertTriangle className="h-6 w-6 text-[hsl(var(--cad-orange))]" />
-                  ) : (
-                    <CheckCircle className="h-6 w-6 text-[hsl(var(--cad-green))]" />
-                  )}
-                </div>
-                <Badge className={`border-none ${
-                  needsRecharge
-                    ? 'bg-[hsl(var(--cad-orange))]/10 text-[hsl(var(--cad-orange))]'
-                    : 'bg-[hsl(var(--cad-green))]/10 text-[hsl(var(--cad-green))]'
-                }`}>
-                  {needsRecharge ? 'Recharge Soon' : 'Healthy'}
-                </Badge>
-              </div>
-              <p className="text-sm text-[hsl(var(--cad-text-secondary))] mb-2">Credits Remaining</p>
-              <p className={`text-3xl font-bold font-mono ${
-                needsRecharge ? 'text-[hsl(var(--cad-orange))]' : 'text-[hsl(var(--cad-green))]'
-              }`}>
-                ${creditRemaining.toFixed(2)}
-              </p>
-            </Card>
-          </div>
-
-          {/* Credit Usage Progress */}
-          <Card className="bg-[hsl(var(--cad-surface))] border-[hsl(var(--cad-border))] p-6">
-            <h3 className="text-lg font-semibold mb-4">Credit Usage</h3>
-            <Progress value={usagePercent} className="h-3 mb-2" />
-            <div className="flex justify-between text-sm text-[hsl(var(--cad-text-secondary))]">
-              <span>${creditUsed.toFixed(2)} used</span>
-              <span>${creditRemaining.toFixed(2)} remaining</span>
-            </div>
+                </>
+              )}
+            </CardContent>
           </Card>
 
-          {/* Monthly Cost Breakdown */}
-          <Card className="bg-[hsl(var(--cad-surface))] border-[hsl(var(--cad-border))] p-6">
-            <h3 className="text-lg font-semibold mb-6">Monthly Cost Breakdown</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-[hsl(var(--cad-surface-elevated))] rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Database className="h-5 w-5 text-[hsl(var(--cad-blue))]" />
-                  <div>
-                    <p className="font-medium text-sm">Database Storage</p>
-                    <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
-                      {totalWorkspaces} workspaces × $0.30
-                    </p>
+          <Card data-testid="card-credits-used">
+            <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 shrink-0" />
+                <span className="truncate">Total Operations</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              {balanceLoading ? (
+                <div className="h-9 bg-muted rounded animate-pulse" />
+              ) : (
+                <>
+                  <div className="text-xl sm:text-3xl font-bold truncate" data-testid="text-used">
+                    {effectiveBalance?.totalCreditsSpent?.toLocaleString() ?? '0'}
                   </div>
-                </div>
-                <p className="font-mono font-semibold">${costs.database.toFixed(2)}</p>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-[hsl(var(--cad-surface-elevated))] rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-5 w-5 text-[hsl(var(--cad-purple))]" />
-                  <div>
-                    <p className="font-medium text-sm">Email Sending (Resend)</p>
-                    <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
-                      {monthlyEmailsSent} emails × $0.01
-                    </p>
-                  </div>
-                </div>
-                <p className="font-mono font-semibold">${costs.email.toFixed(2)}</p>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-[hsl(var(--cad-surface-elevated))] rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Zap className="h-5 w-5 text-[hsl(var(--cad-cyan))]" />
-                  <div>
-                    <p className="font-medium text-sm">Compute & Hosting</p>
-                    <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
-                      Replit hosting fixed cost
-                    </p>
-                  </div>
-                </div>
-                <p className="font-mono font-semibold">${costs.compute.toFixed(2)}</p>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-[hsl(var(--cad-surface-elevated))] rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-[hsl(var(--cad-green))]" />
-                  <div>
-                    <p className="font-medium text-sm">Stripe Transaction Fees</p>
-                    <p className="text-xs text-[hsl(var(--cad-text-tertiary))]">
-                      Passed to customers (2.9% + $0.30)
-                    </p>
-                  </div>
-                </div>
-                <p className="font-mono font-semibold text-[hsl(var(--cad-text-tertiary))]">$0.00</p>
-              </div>
-
-              <div className="pt-4 border-t border-[hsl(var(--cad-border))] flex items-center justify-between">
-                <p className="font-semibold text-lg">Total Monthly Cost</p>
-                <p className="text-2xl font-bold font-mono text-[hsl(var(--cad-text-primary))]">
-                  ${totalMonthlyCost.toFixed(2)}
-                </p>
-              </div>
-            </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+                    lifetime AI automations
+                  </p>
+                </>
+              )}
+            </CardContent>
           </Card>
 
-          {/* Profit Margin Analysis */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="bg-gradient-to-br from-[hsl(var(--cad-green))]/10 via-[hsl(var(--cad-surface-elevated))] to-[hsl(var(--cad-cyan))]/10 border-[hsl(var(--cad-border-strong))] p-6">
-              <h3 className="text-lg font-semibold mb-4">Profitability Analysis</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--cad-text-secondary))]">Monthly Revenue (Example)</span>
-                  <span className="font-mono font-semibold text-[hsl(var(--cad-green))]">
-                    +${monthlyRevenue.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--cad-text-secondary))]">Operating Costs</span>
-                  <span className="font-mono font-semibold text-[hsl(var(--cad-red))]">
-                    -${totalMonthlyCost.toFixed(2)}
-                  </span>
-                </div>
-                <div className="pt-3 border-t border-[hsl(var(--cad-border))] flex justify-between items-center">
-                  <span className="font-semibold">Net Profit</span>
-                  <span className="text-xl font-mono font-bold text-[hsl(var(--cad-green))]">
-                    ${(monthlyRevenue - totalMonthlyCost).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <TrendingUp className="h-4 w-4 text-[hsl(var(--cad-green))]" />
-                  <span className="text-[hsl(var(--cad-text-secondary))]">
-                    Profit Margin: 
-                    <span className="font-bold text-[hsl(var(--cad-green))] ml-1">
-                      {profitMargin.toFixed(1)}%
-                    </span>
-                  </span>
-                </div>
+          <Card data-testid="card-reset-info">
+            <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0" />
+                <span className="truncate">Reset</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-xl sm:text-3xl font-bold truncate" data-testid="text-days-reset">
+                {daysUntilReset} days
               </div>
-            </Card>
-
-            <Card className="bg-[hsl(var(--cad-surface-elevated))] border-[hsl(var(--cad-border-strong))] p-6">
-              <h3 className="text-lg font-semibold mb-4">Runway Projection</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--cad-text-secondary))]">Current Balance</span>
-                  <span className="font-mono font-semibold">${creditRemaining.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--cad-text-secondary))]">Monthly Burn Rate</span>
-                  <span className="font-mono font-semibold text-[hsl(var(--cad-red))]">
-                    ${totalMonthlyCost.toFixed(2)}
-                  </span>
-                </div>
-                <div className="pt-3 border-t border-[hsl(var(--cad-border))] flex justify-between items-center">
-                  <span className="font-semibold">Months Remaining</span>
-                  <span className={`text-xl font-mono font-bold ${
-                    needsRecharge ? 'text-[hsl(var(--cad-orange))]' : 'text-[hsl(var(--cad-cyan))]'
-                  }`}>
-                    {projectedMonthsRemaining.toFixed(1)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  {needsRecharge ? (
-                    <AlertTriangle className="h-4 w-4 text-[hsl(var(--cad-orange))]" />
-                  ) : (
-                    <CheckCircle className="h-4 w-4 text-[hsl(var(--cad-green))]" />
-                  )}
-                  <span className={needsRecharge 
-                    ? "text-[hsl(var(--cad-orange))]" 
-                    : "text-[hsl(var(--cad-text-secondary))]]"
-                  }>
-                    {needsRecharge 
-                      ? "Recharge recommended within 30 days" 
-                      : "Credit balance is healthy"
-                    }
-                  </span>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          <Card className="bg-[hsl(var(--cad-surface))] border-[hsl(var(--cad-border))] p-6">
-            <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              <Button
-                variant="outline"
-                className="h-auto py-4 flex-col gap-2"
-                onClick={() => window.open('https://replit.com/pricing', '_blank')}
-              >
-                <CreditCard className="h-5 w-5" />
-                <span>Add Credits</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-auto py-4 flex-col gap-2"
-                onClick={() => window.location.href = '/analytics'}
-              >
-                <Activity className="h-5 w-5" />
-                <span>View Analytics</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-auto py-4 flex-col gap-2"
-                onClick={() => window.location.href = '/pricing'}
-              >
-                <DollarSign className="h-5 w-5" />
-                <span>View Pricing</span>
-              </Button>
-            </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {effectiveBalance?.nextResetAt ? formatShortDate(effectiveBalance.nextResetAt) : 'Balance resets monthly'}
+              </p>
+            </CardContent>
           </Card>
         </div>
+
+        {/* Usage Progress Bar */}
+        {!isUnlimitedUser && effectiveBalance && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-sm font-medium">Monthly Usage</span>
+                <span className="text-sm text-muted-foreground">{Math.round(usagePercent)}% used</span>
+              </div>
+              <Progress value={usagePercent} className="h-2" data-testid="progress-usage" />
+              <div className="flex items-center justify-between gap-1 mt-2 text-xs text-muted-foreground">
+                <span>{effectiveBalance.currentBalance.toLocaleString()} remaining</span>
+                <span>{totalAvailable.toLocaleString()} total pool</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
+        {/* Usage Breakdown by Feature */}
+        {usage && usage.length > 0 && (
+          <Card data-testid="card-usage-breakdown">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                Usage Breakdown
+              </CardTitle>
+              <CardDescription>AI operations performed per feature this month</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {usage.map((item) => {
+                  const totalUsed = usage.reduce((sum, u) => sum + u.totalCredits, 0);
+                  const pct = totalUsed > 0 ? (item.totalCredits / totalUsed) * 100 : 0;
+                  return (
+                    <div key={item.featureKey} className="flex items-center justify-between gap-4" data-testid={`row-usage-${item.featureKey}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-sm font-medium truncate">
+                            {FRIENDLY_ACTION_NAMES[item.featureKey] || item.featureName}
+                          </span>
+                          <span className="text-sm text-muted-foreground ml-2 flex-shrink-0">
+                            {item.operationCount} operations
+                          </span>
+                        </div>
+                        <Progress value={pct} className="h-1.5" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Transaction Ledger */}
+        <Card data-testid="card-transaction-ledger">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary" />
+                  AI Usage Ledger
+                </CardTitle>
+                <CardDescription>Complete history of AI operations with usage running total</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={txPage === 0}
+                  onClick={() => setTxPage(p => Math.max(0, p - 1))}
+                  data-testid="button-prev-page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">Page {txPage + 1}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!transactions || transactions.length < txLimit}
+                  onClick={() => setTxPage(p => p + 1)}
+                  data-testid="button-next-page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {txLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-14 bg-muted rounded animate-pulse" />
+                ))}
+              </div>
+            ) : !transactions || transactions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground" data-testid="text-no-transactions">
+                <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No AI usage activity yet</p>
+                <p className="text-xs mt-1">Operations will appear here as you use AI features</p>
+              </div>
+            ) : (
+              <div className="space-y-1" data-testid="list-transactions">
+                {/* Header row */}
+                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-3 py-2 border-b">
+                  <div className="col-span-3">Date</div>
+                  <div className="col-span-4">Action</div>
+                  <div className="col-span-2 text-right">Ops</div>
+                  <div className="col-span-3 text-right">Running Total</div>
+                </div>
+                {transactions.map((tx) => {
+                  const isDeduction = tx.amount < 0;
+                  const isAddition = tx.amount > 0;
+                  return (
+                    <div
+                      key={tx.id}
+                      className="grid grid-cols-12 gap-2 items-center px-3 py-2.5 rounded-md hover-elevate"
+                      data-testid={`row-transaction-${tx.id}`}
+                    >
+                      <div className="col-span-3 text-sm text-muted-foreground">
+                        {formatDate(tx.createdAt)}
+                      </div>
+                      <div className="col-span-4 flex items-center gap-2">
+                        {isDeduction ? (
+                          <ArrowDown className="h-3.5 w-3.5 text-orange-500 dark:text-orange-400 flex-shrink-0" />
+                        ) : (
+                          <ArrowUp className="h-3.5 w-3.5 text-green-500 dark:text-green-400 flex-shrink-0" />
+                        )}
+                        <span className="text-sm font-medium truncate">
+                          {getActionName(tx.featureKey, tx.featureName, tx.transactionType)}
+                        </span>
+                      </div>
+                      <div className={`col-span-2 text-right text-sm font-mono font-medium ${isDeduction ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                        {isAddition ? '+' : ''}{tx.amount}
+                      </div>
+                      <div className="col-span-3 text-right">
+                        <Badge variant="secondary" className="font-mono text-xs">
+                          {tx.balanceAfter.toLocaleString()}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Flat-rate plan notice */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Activity className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">Flat-Rate Plan — Usage Included</p>
+                <p className="text-sm text-muted-foreground">All AI operations are included in your subscription. Usage is tracked for plan reporting purposes only.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

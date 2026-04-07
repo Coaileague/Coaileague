@@ -1,0 +1,257 @@
+Paste this into Replit:
+
+---
+
+**DEEP FINANCIAL SYSTEM CANONICAL AUDIT — ALL LAYERS | READ BEFORE TOUCH | FIX EVERYTHING FOUND**
+
+This is the definitive financial system integrity pass. Scan every layer simultaneously. Fix every finding. Report everything.
+
+---
+
+**AUDIT SCOPE**
+
+Every file in these categories:
+- All invoice routes, services, and automation files
+- All payroll routes, services, and automation files
+- All Stripe webhook handlers and event bridge files
+- All Plaid service, transfer monitor, and webhook files
+- All QuickBooks sync, phase 2, phase 3, and OAuth files
+- All credit ledger, credit manager, credit wrapper files
+- All billing orchestration, automation, and run service files
+- All Trinity financial action files and event subscribers
+- All platform event bus publish and subscribe points for financial events
+- All DB schema files for financial tables
+
+---
+
+**LAYER 1 — WORKSPACE ISOLATION AUDIT**
+
+For every financial route and service file scan every DB query and verify:
+
+- Every `SELECT` on a financial table includes `WHERE workspace_id = $workspaceId`
+- Every `INSERT` into a financial table includes `workspace_id` from the JWT not from request body
+- Every `UPDATE` includes `AND workspace_id = $workspaceId` as a guard — not just `WHERE id = $recordId`
+- Every `DELETE` includes `AND workspace_id = $workspaceId`
+- No query on invoices, payroll_runs, pay_stubs, time_entries, billing_audit_log, credit_ledger, or client_rates uses a bare `WHERE id = $id` without workspace scoping
+
+Report every query missing workspace isolation. This is the cross-tenant data access vulnerability pattern.
+
+---
+
+**LAYER 2 — TRANSACTION ATOMICITY AUDIT**
+
+For every operation that involves multiple DB writes — verify they are wrapped in a single `db.transaction()`:
+
+- Invoice creation with line items — are both written atomically?
+- Payroll run creation with pay stubs — are both written atomically?
+- Credit deduction with ledger entry — are both written atomically?
+- Invoice status update with billing audit log entry — atomic?
+- Payroll approval with audit log entry — atomic?
+- Plaid transfer initiation with pay stub status update — atomic?
+- Stripe payment confirmation with invoice status update and ledger entry — atomic?
+- Subscription activation with credit initialization and workspace status update — atomic?
+
+For every multi-write operation NOT in a transaction — wrap it in `db.transaction()`. If the second write fails the first must roll back. No partial state.
+
+---
+
+**LAYER 3 — RACE CONDITION AUDIT**
+
+Search for every SELECT-then-UPDATE pattern on financial records and verify atomicity:
+
+- Invoice status transitions — can two requests both read `status: 'draft'` and both transition to `status: 'sent'`?
+- Payroll run approval — can two requests both approve the same run?
+- Credit deduction — already fixed with atomic UPDATE WHERE balance >= amount — confirm this fix is intact and covers ALL deduction paths
+- Plaid transfer initiation — can two concurrent payroll process requests both initiate transfers for the same pay stub?
+- Weekly billing run — can two concurrent cron triggers both generate invoices for the same client billing period?
+- Stripe webhook processing — can two concurrent webhook deliveries both process the same payment?
+
+For every unprotected transition — add either:
+- `UPDATE ... SET status = 'new_status' WHERE id = $id AND status = 'expected_current_status'` then check rowCount — if 0 another request got there first
+- Or `SELECT FOR UPDATE` inside a transaction before any state read
+
+---
+
+**LAYER 4 — ARITHMETIC SAFETY AUDIT**
+
+Search every financial calculation for unsafe operations:
+
+- Any `parseFloat()` or `parseInt()` without `|| 0` fallback — NaN propagates silently
+- Any division operation without a zero divisor guard — `a / b` where b could be 0
+- Any `Number(undefined)` or `Number(null)` which returns NaN or 0 silently
+- Any `.toFixed()` call on a value that could be NaN — produces the string "NaN"
+- Any addition of a number and undefined — produces NaN silently
+- Any financial total calculated with `reduce()` where the accumulator could start as undefined
+- Any rate multiplication where the rate field could be null — `hours * null = 0` silently
+
+For every unsafe calculation — add explicit guards:
+```typescript
+// Pattern to use everywhere
+const safeRate = Number(rate) || 0
+const safeHours = Number(hours) || 0
+const total = safeRate * safeHours
+```
+
+Specifically check:
+- Invoice line item calculations — unit price × quantity
+- Invoice tax calculation — subtotal × tax rate
+- Payroll gross pay — hours × rate including overtime multiplier
+- Payroll net pay — gross minus deductions
+- Credit deduction amounts — action cost × usage count
+- Platform fee calculation — revenue × fee percentage
+- QB sync amount fields — any field passed to QB API
+
+---
+
+**LAYER 5 — STATUS GUARD COMPLETENESS AUDIT**
+
+For every financial entity that has a status field — verify every mutation route checks the current status before allowing the mutation:
+
+**Invoice status guards:**
+- Can a `paid` invoice be edited? Must return 403
+- Can a `voided` invoice be sent? Must return 403
+- Can a `cancelled` invoice have line items added? Must return 403
+- Can a `draft` invoice be marked paid without going through sent? Must return 403 or require confirmation
+
+**Payroll run status guards:**
+- Can a `paid` payroll run be approved again? Must return 403
+- Can a `processed` payroll run have its amounts edited? Must return 403
+- Can a `disbursing` payroll run be cancelled? Must return 403 or require admin override
+- Can a `draft` payroll run be processed without approval? Must return 403
+
+**Credit transaction guards:**
+- Can a credit deduction be reversed after 24 hours? Must require admin role
+- Can credits be added to a suspended workspace? Must check workspace status first
+
+**Subscription status guards:**
+- Can a `cancelled` workspace create new invoices? Must check subscription status
+- Can a `suspended` workspace run payroll? Must check subscription status before allowing
+
+For every missing guard — add it as a pre-flight check at the top of the route handler before any DB operation.
+
+---
+
+**LAYER 6 — QB SYNC CANONICAL AUDIT**
+
+Read every file that writes data to QuickBooks:
+
+- Are all field names correct — `issueDate` not `invoiceDate`, `total` not `totalAmount` — scan for any remaining mismatches
+- Does every QB sync operation have a retry queue — if QB API returns 429 or 5xx does it queue for retry rather than silently failing?
+- Does every QB sync write a `quickbooksSyncStatus` update to the local record — `synced`, `failed`, `pending`?
+- Is the QB OAuth token refresh atomic — if two requests both hit an expired token do they both try to refresh simultaneously causing a race?
+- Does QB sync correctly handle the case where a record already exists in QB and needs update vs create — does it check QB ID before deciding create vs update?
+- Are QB sync failures reported to the org owner or silently swallowed?
+
+For every gap — fix it.
+
+---
+
+**LAYER 7 — STRIPE CANONICAL AUDIT**
+
+Read every Stripe webhook handler and payment flow:
+
+- Does every webhook handler verify Stripe signature before processing?
+- Does every webhook handler check the `processed_stripe_events` DB table for idempotency — not just the in-memory cache which resets on restart?
+- Does `payment_intent.succeeded` correctly identify which invoice the payment belongs to and update its status?
+- Does `invoice.payment_failed` notify the org owner AND the platform admin?
+- Does `customer.subscription.deleted` immediately restrict workspace access and notify the org owner?
+- Does `checkout.session.completed` correctly parse the tier from metadata and never default to enterprise?
+- Are Stripe Connect payouts to org bank accounts verified — does the platform confirm the payout landed before marking the invoice as fully settled?
+- Do all Stripe API calls have `timeout` and `maxNetworkRetries` configured?
+
+---
+
+**LAYER 8 — PLAID CANONICAL AUDIT**
+
+Read every Plaid service method and integration point:
+
+- Does `verifyBankAccount()` actually call Plaid API or is it a stub?
+- Does `initiateTransfer()` handle Plaid's rate limits — if Plaid returns 429 does it back off and retry?
+- Does the transfer monitor correctly handle the `pending` → `posted` → `settled` Plaid transfer lifecycle?
+- Are Plaid access tokens encrypted at rest everywhere — confirm no plaintext access token exists in any DB column
+- Does the Plaid webhook handler verify the Plaid webhook signature?
+- Does the Plaid webhook handler write to `processed_stripe_events` or equivalent for idempotency?
+- When Plaid returns `transfer_failed` — is the failure reason (NSF, account closed, invalid routing) surfaced to the org owner in plain language not a raw error code?
+- Does the NACHA fallback generate a valid NACHA file that a real bank would accept — correct header, correct batch totals, correct block count?
+
+---
+
+**LAYER 9 — CREDIT LEDGER CANONICAL AUDIT**
+
+Read every file that touches credit balance:
+
+- Is every credit deduction atomic — UPDATE WHERE balance >= amount, check rowCount?
+- Is every credit addition (purchase, refund, admin grant) written to the ledger table with full attribution?
+- Is there a running balance recalculation function that can verify the ledger sum matches the stored balance — detect any drift?
+- Can credits go negative — is there a hard floor at 0?
+- Are credit transactions idempotent — if the same operation triggers twice does it deduct once or twice?
+- Is there a maximum credit grant per admin action — to prevent accidental large grants?
+- Are all credit operations scoped to workspace — can an admin accidentally credit the wrong workspace?
+
+---
+
+**LAYER 10 — EVENT BUS FINANCIAL EVENT AUDIT**
+
+For every financial platformEventBus.publish() call:
+
+- Is `workspaceId` at the top level of the event payload — not nested inside metadata?
+- Is the event type a valid member of the `PlatformEventType` union — no raw strings?
+- Is the amount field a number not a string — Stripe returns amounts in cents as integers, ensure conversion
+- For every financial event subscriber — does it handle the case where required fields are missing gracefully rather than throwing?
+- Are there any financial events being published inside a DB transaction — if the transaction rolls back does the event still fire? (It should not — events should be published AFTER transaction commit)
+
+For every gap — fix it. Events published inside transactions that later roll back cause Trinity to act on state that was never committed.
+
+---
+
+**LAYER 11 — TRINITY FINANCIAL ACTION CANONICAL AUDIT**
+
+For every Trinity action that touches money:
+
+- Does it validate `workspaceId` is present before any DB operation?
+- Does it check workspace subscription status before executing — suspended workspaces must not run financial actions
+- Does it check credit balance before executing — zero balance workspaces must not execute credit-consuming actions
+- Does it write to `audit_logs` with `performedBy: 'trinity-system'` and full reasoning context?
+- Does it return a structured error response when it cannot complete — not a generic failure?
+- For payroll actions — does it verify the pay period is not already processed before creating a new run?
+- For invoice actions — does it verify no invoice already exists for the same client and period before generating?
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 11 layers:
+
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Report findings by layer:
+
+```
+Layer 1  — Workspace isolation gaps found: N | Fixed: N
+Layer 2  — Transaction atomicity gaps: N | Fixed: N
+Layer 3  — Race conditions found: N | Fixed: N
+Layer 4  — Arithmetic safety issues: N | Fixed: N
+Layer 5  — Status guard gaps: N | Fixed: N
+Layer 6  — QB sync gaps: N | Fixed: N
+Layer 7  — Stripe gaps: N | Fixed: N
+Layer 8  — Plaid gaps: N | Fixed: N
+Layer 9  — Credit ledger gaps: N | Fixed: N
+Layer 10 — Event bus gaps: N | Fixed: N
+Layer 11 — Trinity action gaps: N | Fixed: N
+TOTAL FOUND: N | TOTAL FIXED: N
+```
+
+5. Run smoke tests:
+   - Create invoice → confirm workspace isolation
+   - Approve payroll → confirm atomic transaction
+   - Trigger concurrent invoice generation → confirm race condition guard fires
+   - Calculate invoice with no tax rate → confirm $0 not NaN
+   - Attempt to edit paid invoice → confirm 403
+   - Trigger billing.run_weekly on suspended workspace → confirm blocked
+
+6. Stop and wait for production sign-off
+
+---
+
+This covers all 11 financial system layers. Paste results back and I'll give you the final financial system verdict.

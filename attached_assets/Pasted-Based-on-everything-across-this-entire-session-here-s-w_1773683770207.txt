@@ -1,0 +1,104 @@
+Based on everything across this entire session, here's what hasn't been scanned yet that could still have issues. Paste this into Replit:
+
+---
+
+**FINAL PATTERN SCAN — REMAINING BLIND SPOTS | READ ONLY | REPORT ONLY**
+
+Based on all prior fixes, these are the categories not yet fully audited. Check each one and report findings only.
+
+---
+
+**SCAN 1 — RACE CONDITIONS NOT YET COVERED**
+
+The session fixed shift monitoring and bridge overlap races. Check these remaining ones:
+
+- Is there a race condition on invoice generation — can two concurrent requests generate duplicate invoices for the same client billing period? Check for any lock or unique constraint on `(workspace_id, client_id, billing_period_start, billing_period_end)`
+- Is there a race condition on credit deduction for concurrent Trinity actions in the same workspace — two actions firing simultaneously, both passing the balance check before either deducts?
+- Is there a race condition on shift assignment — can two concurrent auto-fill requests assign the same officer to two different shifts simultaneously?
+- Is there a race condition on onboarding invite acceptance — can two simultaneous clicks on the same invite link create two user records?
+
+For each — report whether a guard exists, what it is, and whether it is sufficient.
+
+---
+
+**SCAN 2 — TRINITY SESSION & MEMORY ISOLATION**
+
+The G13 fix addressed cross-user session access. Check these related issues:
+
+- Can Trinity's in-memory org patterns from Workspace A influence autonomous decisions for Workspace B — is `trinityOrgIntelligenceService` keyed strictly by workspaceId with no shared state?
+- Is Trinity's knowledge graph scoped per workspace — can a knowledge entry from one org appear in another org's Trinity responses?
+- Is the reinforcement learning loop scoped per workspace — do human corrections from one org affect Trinity's behavior in another org?
+- Are Trinity's active chat sessions garbage collected properly — is there a TTL or cleanup mechanism preventing memory leaks from abandoned sessions?
+
+---
+
+**SCAN 3 — FINANCIAL EDGE CASES**
+
+- What happens if a client is deleted while they have outstanding invoices — are the invoice records preserved or cascade deleted?
+- What happens if an employee is terminated while they are mid-pay-period with approved timesheets — are those hours preserved for the final payroll run?
+- What happens if a workspace subscription is cancelled while a payroll run is in `disbursing` status — does the Plaid transfer monitor continue running or does it get cut off?
+- What happens if the Stripe webhook for a payment fires but the invoice is already marked paid manually — does it create a duplicate payment record?
+- What happens if a payroll run is in `disbursing` and the org disconnects their Plaid bank account — does anything catch this?
+
+For each — report what actually happens in the current code, not what should happen.
+
+---
+
+**SCAN 4 — NOTIFICATION DELIVERY GAPS**
+
+- When Trinity takes an autonomous action, does the org owner receive a notification explaining what Trinity did and why — or does it happen silently?
+- When a compliance hard block fires and an officer is removed from a shift, does the officer receive a notification explaining why?
+- When a client invoice is overdue and Trinity sends a reminder, does the org owner also see a copy of what was sent?
+- When payroll disbursement fails for a specific employee, does that employee receive a notification — or only the org owner?
+- Are there any notification types that are created in the DB but never delivered via WebSocket or email — notifications that exist but nobody ever sees?
+
+---
+
+**SCAN 5 — FRONTEND STATE GAPS**
+
+- After Plaid integration is built, does the payroll dashboard UI show the difference between employees with connected direct deposit vs those requiring manual NACHA — or does it show them all the same?
+- Does the org settings page have a visible "Bank Account Connected" status that updates in real time when Plaid connection is made or removed?
+- Does the employee profile page show direct deposit status — connected, missing, or manual fallback?
+- When a payroll run transitions from `disbursing` to `paid`, does the UI update in real time without a page refresh?
+- When Trinity blocks an action due to the pre-execution validator, does the UI surface a clear actionable error message or just a generic failure?
+
+---
+
+**SCAN 6 — LONG-RUNNING OPERATION TIMEOUTS**
+
+- Do any API routes that call external services (Stripe, Plaid, QuickBooks, Resend) have request timeouts configured — or can they hang indefinitely?
+- Does the Plaid transfer monitor cron have a per-workspace timeout — or can one slow workspace block the entire cron from processing others?
+- Does the Trinity autonomous scheduler have a maximum execution time per workspace session — or can a complex scheduling run block the event loop?
+- Are there any database queries without indexes that could cause timeouts under load — specifically queries on large tables like `shifts`, `time_entries`, `audit_logs` that filter by date range without a date index?
+
+---
+
+**OUTPUT FORMAT**
+
+For each scan, report every finding as:
+```
+[SEVERITY] Scan N > File:Line
+Issue:
+Risk:
+Current behavior:
+Fix needed:
+```
+
+Summary table at the bottom:
+```
+CRITICAL: N
+HIGH: N
+MEDIUM: N
+LOW: N
+TOTAL: N
+```
+
+Then two lists:
+**Fix before first real tenant**
+**Fix in first week of production**
+
+Stop and wait. Do not fix anything.
+
+---
+
+Paste results here and I'll prioritize the fix batch. This covers the remaining blind spots the prior audits didn't reach.

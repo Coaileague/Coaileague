@@ -13,6 +13,8 @@
  */
 
 import { TTLCache } from './cacheUtils';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('toolCapabilityRegistry');
 
 export interface ToolCapability {
   id: string;
@@ -75,7 +77,7 @@ class ToolCapabilityRegistry {
   constructor() {
     this.permissionCache = new TTLCache<string, boolean>(60 * 5);
     this.initializeCoreTools();
-    console.log('[ToolRegistry] Capability registry initialized');
+    log.info('[ToolRegistry] Capability registry initialized');
   }
 
   private initializeCoreTools(): void {
@@ -225,6 +227,67 @@ class ToolCapabilityRegistry {
         retryable: false,
         maxRetries: 0,
       },
+      // ── Training & Certification Tools ─────────────────────────────────────
+      {
+        id: 'training.assign_module',
+        name: 'Assign Training Module',
+        category: 'training',
+        description: 'Assign a required training module to one or more officers',
+        requiredPermissions: ['training:manage'],
+        requiredConsents: [],
+        prerequisites: ['employee_exists'],
+        timeout: 30000,
+        retryable: true,
+        maxRetries: 2,
+      },
+      {
+        id: 'training.check_compliance',
+        name: 'Check Training Compliance',
+        category: 'training',
+        description: 'Check officer training compliance status — certificates, expirations, open interventions',
+        requiredPermissions: ['training:read', 'compliance:read'],
+        requiredConsents: [],
+        prerequisites: ['workspace_configured'],
+        timeout: 30000,
+        retryable: true,
+        maxRetries: 2,
+      },
+      {
+        id: 'training.send_reminder',
+        name: 'Send Training Reminder',
+        category: 'training',
+        description: 'Send a training renewal reminder to officers with expiring or expired certificates',
+        requiredPermissions: ['training:notify', 'employees:contact'],
+        requiredConsents: ['automated_notifications'],
+        prerequisites: ['employee_exists', 'training_module_exists'],
+        timeout: 30000,
+        retryable: true,
+        maxRetries: 2,
+      },
+      {
+        id: 'training.flag_intervention',
+        name: 'Flag Training Intervention',
+        category: 'training',
+        description: 'Flag an officer for a remediation session after repeated training failures',
+        requiredPermissions: ['training:manage', 'compliance:write'],
+        requiredConsents: [],
+        prerequisites: ['employee_exists', 'training_attempt_exists'],
+        timeout: 30000,
+        retryable: false,
+        maxRetries: 0,
+      },
+      {
+        id: 'training.generate_compliance_report',
+        name: 'Generate Training Compliance Report',
+        category: 'training',
+        description: 'Generate a workspace-wide officer training compliance report with pass rates, open interventions, and expiring certificates',
+        requiredPermissions: ['training:read', 'reports:read'],
+        requiredConsents: [],
+        prerequisites: ['workspace_configured'],
+        timeout: 60000,
+        retryable: true,
+        maxRetries: 2,
+      },
       // Gemini 3 Reasoning Tools
       {
         id: 'deep-think',
@@ -291,6 +354,71 @@ class ToolCapabilityRegistry {
         maxRetries: 2,
         rateLimit: { requests: 30, windowMs: 60000 },
       },
+      // ── HelpAI Knowledge & Support Tools ────────────────────────────────────
+      {
+        id: 'helpai.knowledge_search',
+        name: 'HelpAI Knowledge Search',
+        category: 'data',
+        description: 'Search Trinity\'s full knowledge base (regulatory modules, compliance rules, org-specific knowledge) to enrich HelpAI responses with accurate platform and industry information.',
+        requiredPermissions: ['helpai:respond'],
+        requiredConsents: [],
+        prerequisites: [],
+        timeout: 10000,
+        retryable: true,
+        maxRetries: 2,
+        rateLimit: { requests: 60, windowMs: 60000 },
+      },
+      {
+        id: 'helpai.faq_search',
+        name: 'HelpAI FAQ Search',
+        category: 'data',
+        description: 'Search platform FAQs with keyword and semantic scoring to surface relevant pre-answered questions during active helpdesk sessions.',
+        requiredPermissions: ['helpai:respond'],
+        requiredConsents: [],
+        prerequisites: [],
+        timeout: 5000,
+        retryable: true,
+        maxRetries: 3,
+        rateLimit: { requests: 120, windowMs: 60000 },
+      },
+      {
+        id: 'helpai.cross_channel_context',
+        name: 'Cross-Channel Context',
+        category: 'data',
+        description: 'Retrieve a unified cross-channel snapshot of a user\'s recent email threads, voice calls, and open support tickets to give Trinity and HelpAI full situational awareness before responding.',
+        requiredPermissions: ['helpai:respond', 'support:read'],
+        requiredConsents: [],
+        prerequisites: ['user_exists'],
+        timeout: 8000,
+        retryable: true,
+        maxRetries: 2,
+        rateLimit: { requests: 60, windowMs: 60000 },
+      },
+      {
+        id: 'helpai.support_action',
+        name: 'HelpAI Support Action',
+        category: 'support',
+        description: 'Execute one of the 14 corrective support actions (account unlock, PIN reset, 2FA reset, schedule fix, invoice recalculate, etc.) on behalf of a support agent or Trinity with full audit trail.',
+        requiredPermissions: ['support:execute', 'helpai:act'],
+        requiredConsents: [],
+        prerequisites: ['support_role_verified'],
+        timeout: 30000,
+        retryable: false,
+        maxRetries: 0,
+      },
+      {
+        id: 'helpai.voice_context',
+        name: 'Voice Call Context',
+        category: 'communication',
+        description: 'Retrieve recent voice call sessions for a workspace — status, duration, Trinity AI resolution result — to provide cross-channel support context when assisting via chat or email.',
+        requiredPermissions: ['helpai:respond', 'voice:read'],
+        requiredConsents: [],
+        prerequisites: [],
+        timeout: 6000,
+        retryable: true,
+        maxRetries: 2,
+        rateLimit: { requests: 60, windowMs: 60000 },
+      },
     ];
 
     for (const tool of coreTools) {
@@ -328,7 +456,7 @@ class ToolCapabilityRegistry {
       bySubagent: new Map(),
     });
 
-    console.log(`[ToolRegistry] Registered tool: ${capability.id} (${capability.category})`);
+    log.info(`[ToolRegistry] Registered tool: ${capability.id} (${capability.category})`);
   }
 
   getTool(toolId: string): ToolCapability | undefined {
@@ -657,7 +785,7 @@ class ToolCapabilityRegistry {
       }
     }, intervalMs);
 
-    console.log('[ToolRegistry] Health monitoring started');
+    log.info('[ToolRegistry] Health monitoring started');
   }
 
   stopHealthMonitoring(): void {
@@ -691,7 +819,7 @@ class ToolCapabilityRegistry {
   } | null {
     const tool = this.tools.get(toolId);
     if (!tool) {
-      console.warn(`[ToolRegistry] Tool ${toolId} not found`);
+      log.warn(`[ToolRegistry] Tool ${toolId} not found`);
       return null;
     }
 
@@ -737,7 +865,7 @@ class ToolCapabilityRegistry {
     // Find healthy alternative in same category
     const alternative = this.findHealthyAlternative(toolId, options?.preferredFallbacks);
     if (alternative) {
-      console.log(`[ToolRegistry] Auto-fallback: ${toolId} -> ${alternative.toolId} (${health.status} -> ${alternative.health.status})`);
+      log.info(`[ToolRegistry] Auto-fallback: ${toolId} -> ${alternative.toolId} (${health.status} -> ${alternative.health.status})`);
       return {
         selectedToolId: alternative.toolId,
         originalToolId: toolId,
@@ -748,7 +876,7 @@ class ToolCapabilityRegistry {
     }
 
     // No healthy alternative found
-    console.warn(`[ToolRegistry] No healthy fallback for ${toolId} (status: ${health.status})`);
+    log.warn(`[ToolRegistry] No healthy fallback for ${toolId} (status: ${health.status})`);
     return {
       selectedToolId: toolId,
       originalToolId: toolId,
@@ -860,15 +988,15 @@ class ToolCapabilityRegistry {
         }
       }
 
-      console.log(`[ToolRegistry] Health check ${toolId}: ${health.status}`);
+      log.info(`[ToolRegistry] Health check ${toolId}: ${health.status}`);
       return health;
     } catch (error: any) {
       health.lastCheck = new Date();
       health.consecutiveFailures++;
-      health.lastError = { message: error.message, timestamp: new Date() };
+      health.lastError = { message: (error instanceof Error ? error.message : String(error)), timestamp: new Date() };
       health.status = health.consecutiveFailures >= 3 ? 'offline' : 'degraded';
       
-      console.warn(`[ToolRegistry] Health check failed for ${toolId}: ${error.message}`);
+      log.warn(`[ToolRegistry] Health check failed for ${toolId}: ${(error instanceof Error ? error.message : String(error))}`);
       return health;
     }
   }
@@ -888,7 +1016,7 @@ class ToolCapabilityRegistry {
       }
     }
 
-    console.log(`[ToolRegistry] Health check complete: ${results.healthy} healthy, ${results.degraded} degraded, ${results.offline} offline`);
+    log.info(`[ToolRegistry] Health check complete: ${results.healthy} healthy, ${results.degraded} degraded, ${results.offline} offline`);
     return results;
   }
 
@@ -904,7 +1032,7 @@ class ToolCapabilityRegistry {
     health.lastError = undefined;
     health.lastCheck = new Date();
     
-    console.log(`[ToolRegistry] Reset health for ${toolId}`);
+    log.info(`[ToolRegistry] Reset health for ${toolId}`);
     return true;
   }
 

@@ -1,0 +1,399 @@
+That session was a landmark. The email pipeline is now proven end to end with real delivery confirmation. That was the last major infrastructure unknown. Here is where you stand and what the grand opening sprint looks like.
+
+Copy everything below this line:
+
+---
+
+COAILEAGUE — GRAND OPENING PRODUCTION READINESS SPRINT
+The email pipeline is proven. Auth is clean. Credits are verified. Build is stable.
+What remains is proving every real-world flow works for three distinct audiences:
+new orgs signing up cold, existing orgs onboarding with real data, and Statewide
+going live as the founding production client.
+Nothing gets assumed. Everything gets proven with real data before a single real
+customer touches this platform.
+
+---
+
+WHAT IS CONFIRMED AND DOES NOT NEED RETESTING
+
+Email delivery pipeline: 5-point verification passed. Tags, webhook handler,
+delivery_confirmed update, audit trail — all confirmed working with real Resend delivery.
+
+Auth and role boundaries: 5 critical bugs fixed. org_admin blocked from all financial
+routes. Managers blocked from Stripe payment methods. org_owner and co_owner are the
+only roles that touch money. Cross-workspace isolation confirmed at resolver level.
+
+Credit and billing: all 10 verification tests passed. Hard cap, soft cap, overage mode,
+seat billing, credits pack, ledger math — all confirmed.
+
+Webhook auth fix: /api/webhooks/resend now correctly registered before domain mounts.
+Resend can reach the endpoint without being intercepted by requireAuth.
+
+Trinity startup: 736 actions, drift=0, 15/15 domains, 28/28 services, zero failed jobs.
+
+Statewide founder exemption: billing_exempt confirmed independent from role checks.
+
+---
+
+SPRINT 1 — NEW ORG COLD SIGNUP FLOW
+A stranger finds CoAIleague, goes to the pricing page, and signs up.
+This flow must work perfectly with zero human intervention from our side.
+Walk through every step as if you are that stranger.
+
+Step 1 — Landing and pricing page:
+Open the landing page on a mobile device and on a desktop browser.
+Confirm it loads correctly on both.
+Confirm the pricing page shows all four tiers with correct prices.
+Free Trial $0, Starter $899, Professional $1999, Enterprise Contact Sales.
+Confirm the Start Free Trial buttons work and navigate to signup.
+Confirm no broken links, no 404 pages, no missing images exist anywhere
+on the public-facing pages.
+
+Step 2 — Signup and workspace creation:
+Complete the signup flow as a new user.
+Confirm the workspace is created with a unique workspace_id.
+Confirm the signing up user is assigned org_owner role in workspace_members.
+Confirm the subscription record is created with free_trial tier.
+Confirm exactly 500 credits are allocated in the credit ledger with a
+system event reference — not a Stripe reference since trial is free.
+Confirm the welcome email arrives at the signup email address.
+Confirm the in-platform welcome notification fires.
+Confirm Trinity is available immediately on first login.
+
+Step 3 — Trial experience:
+As the new org_owner complete one full workflow end to end:
+Add one employee manually.
+Confirm the employee invite email arrives at the employee email address.
+Confirm the employee can accept the invite and set their password.
+Create one client and one site.
+Build one shift and assign it to the employee.
+Confirm the employee receives a notification about their assigned shift.
+Have the employee clock in via GPS.
+Confirm the clock-in record is created with GPS coordinates.
+Have the employee clock out.
+Confirm the time entry is created with correct duration.
+Generate one invoice for the client.
+Confirm the invoice email delivers to the client email address.
+This single end-to-end walkthrough proves the core platform loop works
+for a brand new org with zero prior data.
+
+Step 4 — Trial credit consumption:
+Confirm credits are deducting correctly as actions are performed.
+Confirm the credits widget shows the correct balance after each action.
+Trigger the 15 percent warning threshold at 75 credits remaining.
+Confirm the warning fires via notification panel.
+Reach zero credits.
+Confirm the hard block fires and the upgrade prompt appears.
+Confirm no credit-gated action can execute at zero balance.
+
+Step 5 — Trial expiration:
+Advance the trial expiration date to simulate 14 days passing.
+Confirm the platform correctly gates access and prompts plan selection.
+Confirm the org data is preserved — nothing is deleted on expiration.
+Confirm the org_owner can select a paid plan and continue immediately.
+
+---
+
+SPRINT 2 — PAID PLAN SUBSCRIPTION FLOW
+A trial org decides to upgrade to Starter. This is your revenue moment.
+It must work without friction.
+
+Stripe checkout:
+Confirm the plan selection page shows the correct prices and features.
+Click upgrade to Starter.
+Confirm a real Stripe checkout session is created server-side.
+Complete the checkout with a Stripe test card.
+Confirm the post-payment redirect lands on a success page not a 404.
+Confirm the Stripe webhook fires invoice.payment_succeeded.
+Confirm the webhook handler activates the subscription in the database —
+not the redirect URL, the webhook. The redirect is decoration only.
+Confirm the subscription tier updates to starter in the workspace record.
+Confirm the monthly credit allocation of 5000 fires from the webhook.
+Confirm the org_owner receives an in-platform notification and email
+confirming their subscription is active.
+
+Subscription management:
+Confirm the org_owner can view their current plan in billing settings.
+Confirm the org_owner can update their payment method.
+Confirm the org_owner can view their billing history.
+Confirm managers and org_admin cannot see any of these pages.
+
+Plan upgrade from Starter to Professional:
+Complete the upgrade flow.
+Confirm the Stripe subscription is updated not canceled and recreated.
+Confirm the credit allocation upgrades from 5000 to 10000 immediately.
+Confirm the soft cap behavior activates — overage mode instead of hard block.
+Confirm the org_owner receives confirmation of the upgrade.
+
+---
+
+SPRINT 3 — CORE OPERATIONAL FLOWS FOR A RUNNING SECURITY COMPANY
+These are the flows that happen every single day for every paying customer.
+They must work without errors every time.
+
+DAILY SCHEDULING FLOW:
+Create a weekly schedule for all employees across all client sites.
+Confirm conflict detection fires when two shifts overlap for the same officer.
+Confirm the conflict is shown to the manager before the schedule is published.
+Publish the schedule.
+Confirm all assigned officers receive notifications about their shifts.
+Confirm the schedule displays correctly on mobile for each officer.
+
+DAILY CLOCK-IN/OUT FLOW:
+Five different employees clock in at five different sites simultaneously.
+Confirm all five clock-in records are created independently with correct
+GPS coordinates, timestamps, employee IDs, and site IDs.
+Confirm the manager dashboard updates in real time for each clock-in.
+Have all five employees clock out.
+Confirm five correct time entries are created with accurate durations.
+Confirm no entries are duplicated or crossed between employees.
+
+CALL-OFF FLOW:
+An officer submits a call-off on mobile one hour before their shift.
+Confirm the call-off is received and logged.
+Confirm the manager receives an immediate notification.
+Confirm Trinity triggers and scans for available replacement officers.
+Confirm Trinity presents a ranked replacement list to the manager.
+Confirm the manager can assign the replacement with one action.
+Confirm the replacement officer receives a notification of the new shift.
+Confirm the audit trail logs the call-off, the gap, and the resolution.
+
+TIMESHEET APPROVAL FLOW:
+Advance the pay period to generate timesheets from the clock records.
+Confirm timesheets auto-generate correctly from time entries — no manual input.
+Confirm each employee's timesheet shows correct hours per shift.
+Have an employee review and submit their timesheet.
+Have the manager review and approve the timesheet.
+Confirm the approved timesheet is locked and cannot be edited.
+Attempt to edit a locked timesheet via direct API call.
+Confirm the edit is blocked at the database level not just the UI.
+
+PAYROLL FLOW:
+With approved timesheets run a payroll calculation.
+Confirm the calculation produces correct gross pay for each employee
+based on their pay rate and approved hours.
+Confirm Trinity presents the payroll run for human review — it does NOT
+auto-execute. A human must approve every payroll run without exception.
+Have the org_owner review and approve the payroll run.
+Confirm pay stubs are generated for each employee.
+Confirm each employee receives a notification that their pay stub is ready.
+Confirm the employee can view their pay stub with correct earnings details.
+Confirm the approved payroll run is locked and cannot be modified.
+
+CLIENT BILLING FLOW:
+With approved timesheets generate an invoice for a client.
+Confirm the invoice calculates correctly based on hours worked and billing rate.
+Confirm the invoice email delivers to the client email address.
+Confirm the email contains a working payment link.
+Simulate a client payment via the payment link.
+Confirm the invoice status updates to paid.
+Confirm a revenue ledger entry is created with the payment reference.
+Confirm the org_owner revenue widget updates to reflect the payment.
+Confirm the audit trail logs the payment event.
+
+INCIDENT REPORT FLOW:
+An officer submits an incident report from mobile.
+Confirm the report saves with all required fields including GPS and timestamp.
+Confirm a photo attachment uploads successfully.
+Confirm the manager receives a real-time notification with a deep link to the report.
+Confirm the incident appears in the compliance dashboard.
+Confirm the incident is workspace-scoped and no other org can see it.
+
+---
+
+SPRINT 4 — TRINITY COO FULL VERIFICATION
+Trinity is the product differentiator. Every intelligence layer must work.
+
+Chat and command execution:
+As org_owner open Trinity chat and ask a complex operational question such as
+which officers are most at risk of overtime this week.
+Confirm Trinity queries the actual schedule and time entry data.
+Confirm the response is accurate based on real data not a generic answer.
+Confirm the credit deduction fires at the correct rate.
+Confirm the conversation history persists within the session.
+
+Proactive briefings:
+Confirm the daily Org Operations Briefing posts automatically.
+Confirm it is visible to org_owner and manager only.
+Confirm employee cannot see the Briefing Channel.
+Confirm the briefing contains real data — shift coverage, pending approvals,
+flagged anomalies — not placeholder text.
+Confirm each item in the briefing has a deep link to the exact record.
+
+Shift escalation scanner:
+Confirm the scanner runs every 30 minutes.
+Create an unassigned shift 25 hours from now.
+Confirm the 24 hour URGENT alert fires to the manager and org_owner.
+Create an unassigned shift 3 hours from now.
+Confirm the 4 hour CRITICAL alert fires and Trinity begins finding replacement candidates.
+
+COO strategic analysis — the three previously broken paths:
+Trigger a strategic analysis request.
+Confirm it reaches unifiedGeminiClient successfully.
+Confirm a real AI-generated response returns.
+Confirm the 2x premium credit deduction fires.
+Confirm the ledger entry notes it as a premium action.
+
+Autonomous scheduler:
+Trigger an autonomous scheduling recommendation.
+Confirm Trinity presents the recommendation for human approval.
+Confirm Trinity does NOT auto-assign shifts without manager confirmation.
+Confirm the recommendation is based on actual officer availability and site requirements.
+
+---
+
+SPRINT 5 — STATEWIDE GO-LIVE PREPARATION
+This is the founding production client. Nothing gets rushed.
+
+Go-live tooling verification:
+Confirm the employee CSV import tool exists and is accessible to org_owner only.
+Confirm the client and site CSV import tool exists.
+Confirm both tools have preview mode that shows what will be created before writing.
+Confirm validation rejects invalid rows with clear error messages.
+Confirm neither tool can import historical financial data.
+Confirm the go-live checklist page exists in the Statewide workspace showing all 10 steps.
+
+Pre-migration checklist — Bryan must complete before any import:
+Export all active employees from QuickBooks as CSV.
+Clean the CSV — verify all required columns are present: first_name, last_name,
+email, phone, role, pay_rate, pay_type, hire_date, license_number if applicable.
+Export all active clients from QuickBooks as CSV.
+Clean the CSV — verify all required columns are present: client_name, contact_name,
+contact_email, contact_phone, billing_rate, billing_cycle, site_address,
+site_name, post_orders.
+Have both CSVs ready before starting the import.
+Do not start the import until both files are validated.
+
+Migration execution order — do not deviate from this sequence:
+Step 1: Run employee CSV through preview mode. Review every row. Approve.
+Step 2: Execute employee import. Confirm all employees created. Confirm invite
+emails sent to all employees at their real email addresses.
+Step 3: Run client and site CSV through preview mode. Review every row. Approve.
+Step 4: Execute client and site import. Confirm all clients and sites created.
+Step 5: Verify pay rates are set for every employee.
+Step 6: Verify billing rates are set for every client.
+Step 7: Set up GPS geofence coordinates for every site.
+Step 8: Create the first real schedule.
+Step 9: Have one real officer do one real GPS clock-in as a live test.
+Step 10: Generate one real invoice for one real client and confirm email delivery.
+
+Do not mark Statewide live until all 10 steps are green on the go-live checklist.
+
+---
+
+SPRINT 6 — MULTI-TENANT STRESS VERIFICATION
+Before opening to the public verify the platform handles multiple active orgs
+simultaneously without data bleeding between them.
+
+Create three separate test orgs simultaneously in the dev environment:
+Org Alpha on Starter tier with 10 employees.
+Org Beta on Professional tier with 30 employees.
+Org Gamma on Enterprise tier with 100 employees.
+
+Run simultaneous operations across all three:
+All three orgs have employees clocking in at the same moment.
+All three orgs have managers approving timesheets at the same moment.
+All three orgs have Trinity chat active at the same moment.
+All three orgs have notifications firing at the same moment.
+
+Verify after simultaneous operations:
+Org Alpha sees only Org Alpha data in every view.
+Org Beta sees only Org Beta data in every view.
+Org Gamma sees only Org Gamma data in every view.
+No notification from one org appears in another org dashboard.
+No employee from one org appears in another org schedule.
+No invoice from one org appears in another org billing view.
+Credit deductions for each org are isolated to their own ledger.
+Trinity responses for each org are scoped to that org data only.
+
+---
+
+SPRINT 7 — FAILURE AND RECOVERY SCENARIOS
+Production systems fail. Verify CoAIleague recovers gracefully every time.
+
+Stripe payment failure:
+Simulate a failed subscription payment for a Starter org.
+Confirm the org_owner receives a payment failed notification and email.
+Confirm the platform continues to work for a grace period — not instant lockout.
+Confirm the payment retry fires automatically.
+Confirm the org_owner sees a clear payment update prompt.
+Confirm successful retry restores full access immediately.
+
+Overage charge failure on Professional:
+Simulate a failed end-of-cycle overage charge.
+Confirm three retry attempts with exponential backoff.
+Confirm after three failures the org switches to hard cap mode temporarily.
+Confirm platform_staff receives an alert.
+Confirm the org_owner receives a payment update request.
+Confirm resolving the payment restores soft cap mode.
+
+GPS clock-in with no signal:
+Officer attempts to clock in with GPS unavailable.
+Confirm the platform handles this gracefully — either queues the clock-in
+for when GPS is available or shows a clear message to the officer.
+Confirm no phantom clock-in record is created without GPS data.
+
+Session expiry mid-payroll:
+Begin a payroll review as org_owner.
+Simulate session expiry before approval.
+Confirm the payroll run is NOT auto-approved.
+Confirm the payroll run returns to pending state.
+Confirm no partial payroll execution occurred.
+Confirm the org_owner can log back in and resume the review cleanly.
+
+Database connection interruption:
+Simulate a brief database connection failure.
+Confirm the server does not crash — it returns a graceful 503 error.
+Confirm no partial writes occurred during the interruption.
+Confirm the server reconnects automatically and resumes normal operation.
+
+---
+
+FINAL GRAND OPENING SIGN-OFF CHECKLIST
+
+Every item below must be confirmed with real data from real tests.
+This is the checklist Bryan personally reviews before saying we are live.
+
+New org signup flow works end to end with no errors.
+Welcome email delivers to real inbox.
+Trial credits allocate correctly on signup.
+Trial hard block fires at zero credits.
+Trial expiration gates access correctly with data preserved.
+Stripe checkout creates real subscription on confirmed webhook.
+Credit allocation upgrades correctly on plan change.
+Employee invite email delivers with working token.
+Employee can complete onboarding from invite link.
+GPS clock-in captures coordinates in database.
+Overnight shift creates single correct time entry.
+Duplicate clock-in is blocked.
+Timesheet auto-generates from clock records.
+Locked timesheet cannot be edited via API.
+Payroll requires human approval every time without exception.
+Pay stub notification delivers to employee.
+Client invoice email delivers with working payment link.
+Invoice status updates to paid on client payment.
+Revenue ledger entry created on payment.
+Incident report saves with GPS and photo from mobile.
+WORM lock blocks API write on locked compliance document.
+Trinity chat responds with real data-driven answers.
+Daily briefing posts automatically to correct audience.
+Shift escalation alerts fire at 72h, 24h, and 4h.
+COO strategic analysis reaches unifiedGeminiClient and returns real response.
+All notifications are workspace-scoped with zero cross-tenant leakage.
+WebSocket updates fire without page refresh for all 7 event types.
+Missed events delivered on WebSocket reconnect.
+Auth error messages expose zero internal detail.
+Dev routes blocked in production environment.
+All Stripe products have correct prices and metadata including Enterprise per-seat rate.
+Statewide founder exemption prevents all credit deductions and Stripe charges.
+Statewide role checks enforce identically to all other orgs.
+Statewide go-live checklist tool built and all 10 steps trackable.
+Employee CSV import works with preview mode and invite emails.
+Client and site CSV import works with preview mode.
+Multi-tenant isolation confirmed with three simultaneous active orgs.
+Payment failure recovery works for both subscription and overage charges.
+Session expiry mid-payroll leaves payroll in pending state not auto-approved.
+
+When every item on this list is green CoAIleague opens for business.
+Not before. The founding client Statewide Protective Services and every
+future customer deserves a platform that works completely on day one.

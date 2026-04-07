@@ -24,15 +24,14 @@ import {
   type InsertOrchestrationOverlay,
   type PhaseTransition,
   type OrchestrationAuditEntry,
-  isValidPhaseTransition,
-  getAllowedNextPhases,
-  VALID_PHASE_TRANSITIONS,
 } from '@shared/schema';
 import { trinityWorkOrderIntake, type WorkOrder } from './trinityWorkOrderSystem';
 import { trinityExecutionFabric, type ExecutionManifest } from './trinityExecutionFabric';
 import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';
 import { toolCapabilityRegistry, type ToolValidationResult } from './toolCapabilityRegistry';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('orchestrationStateMachine');
 
 // ============================================================================
 // TYPES
@@ -170,7 +169,7 @@ class OrchestrationStateMachine {
       .values(insert)
       .returning();
 
-    console.log(`[OrchestrationStateMachine] Created overlay ${overlay.id} for work order ${params.workOrderId}`);
+    log.info(`[OrchestrationStateMachine] Created overlay ${overlay.id} for work order ${params.workOrderId}`);
 
     return overlay;
   }
@@ -340,7 +339,7 @@ class OrchestrationStateMachine {
       actorId: request.actorId,
     });
 
-    console.log(`[OrchestrationStateMachine] Transitioned overlay ${overlay.id}: ${currentPhase} → ${targetPhase}`);
+    log.info(`[OrchestrationStateMachine] Transitioned overlay ${overlay.id}: ${currentPhase} → ${targetPhase}`);
 
     return {
       success: true,
@@ -469,7 +468,7 @@ class OrchestrationStateMachine {
       };
 
     } catch (error: any) {
-      console.error(`[OrchestrationStateMachine] Permission check failed:`, error.message);
+      log.error(`[OrchestrationStateMachine] Permission check failed:`, (error instanceof Error ? error.message : String(error)));
       
       // Log failure to audit trail for state consistency
       await this.appendAuditEntry(overlayId, {
@@ -478,7 +477,7 @@ class OrchestrationStateMachine {
         eventType: 'permission_check_failed',
         details: {
           capabilities,
-          error: error.message,
+          error: (error instanceof Error ? error.message : String(error)),
         },
         actor: 'auth_service',
       });
@@ -498,7 +497,7 @@ class OrchestrationStateMachine {
           })
           .where(eq(orchestrationOverlays.id, overlayId));
       } catch (updateError) {
-        console.error(`[OrchestrationStateMachine] Failed to update overlay state:`, updateError);
+        log.error(`[OrchestrationStateMachine] Failed to update overlay state:`, updateError);
       }
       
       return {
@@ -684,21 +683,21 @@ class OrchestrationStateMachine {
         triggeredBy: 'orchestrator',
       });
     } catch (error: any) {
-      console.error(`[OrchestrationStateMachine] Escalation failed:`, error.message);
+      log.error(`[OrchestrationStateMachine] Escalation failed:`, (error instanceof Error ? error.message : String(error)));
       
       // Log escalation failure
       await this.appendAuditEntry(overlayId, {
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         eventType: 'escalation_failed',
-        details: { reason, error: error.message },
+        details: { reason, error: (error instanceof Error ? error.message : String(error)) },
         actor: 'orchestrator',
       });
 
       return {
         success: false,
         overlay: null,
-        error: `Escalation failed: ${error.message}`,
+        error: `Escalation failed: ${(error instanceof Error ? error.message : String(error))}`,
       };
     }
   }
@@ -727,21 +726,21 @@ class OrchestrationStateMachine {
         triggeredBy: 'orchestrator',
       });
     } catch (error: any) {
-      console.error(`[OrchestrationStateMachine] Rollback failed:`, error.message);
+      log.error(`[OrchestrationStateMachine] Rollback failed:`, (error instanceof Error ? error.message : String(error)));
       
       // Log rollback failure
       await this.appendAuditEntry(overlayId, {
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         eventType: 'rollback_failed',
-        details: { reason, error: error.message },
+        details: { reason, error: (error instanceof Error ? error.message : String(error)) },
         actor: 'orchestrator',
       });
 
       return {
         success: false,
         overlay: null,
-        error: `Rollback failed: ${error.message}`,
+        error: `Rollback failed: ${(error instanceof Error ? error.message : String(error))}`,
       };
     }
   }
@@ -803,7 +802,7 @@ class OrchestrationStateMachine {
     
     try {
       // Phase 1: INTAKE - Parse work order via WorkOrderIntake
-      console.log(`[OrchestrationStateMachine] Starting orchestration for: "${params.rawRequest.substring(0, 50)}..."`);
+      log.info(`[OrchestrationStateMachine] Starting orchestration for: "${params.rawRequest.substring(0, 50)}..."`);
       
       const workOrder = await trinityWorkOrderIntake.parseWorkOrder(
         params.rawRequest,
@@ -987,7 +986,7 @@ class OrchestrationStateMachine {
       // Update work order status
       await trinityWorkOrderIntake.updateStatus(workOrder.id, 'completed');
       
-      console.log(`[OrchestrationStateMachine] Orchestration completed: ${overlayId}`);
+      log.info(`[OrchestrationStateMachine] Orchestration completed: ${overlayId}`);
       
       return {
         success: true,
@@ -998,13 +997,13 @@ class OrchestrationStateMachine {
       };
       
     } catch (error: any) {
-      console.error(`[OrchestrationStateMachine] Orchestration failed:`, error.message);
+      log.error(`[OrchestrationStateMachine] Orchestration failed:`, (error instanceof Error ? error.message : String(error)));
       
       if (overlayId) {
         await this.transitionPhase({
           overlayId,
           targetPhase: 'failed',
-          reason: error.message,
+          reason: (error instanceof Error ? error.message : String(error)),
           triggeredBy: 'error',
         });
       }
@@ -1053,7 +1052,7 @@ class OrchestrationStateMachine {
         })
         .where(eq(orchestrationOverlays.id, overlayId));
     } catch (error) {
-      console.error(`[OrchestrationStateMachine] Failed to append audit entry:`, error);
+      log.error(`[OrchestrationStateMachine] Failed to append audit entry:`, error);
     }
   }
 

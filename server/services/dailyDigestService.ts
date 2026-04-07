@@ -11,12 +11,17 @@
 import { db } from '../db';
 import { 
   employees, shifts, timeEntries, notifications, 
-  users, workspaces, shiftSwapRequests, timeOffRequests,
-  employeeCertifications
+  users, workspaces, shiftSwapRequests, timeOffRequests, idempotencyKeys,
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, or } from 'drizzle-orm';
-import { getUncachableResendClient } from '../email';
+import { sendCanSpamCompliantEmail } from './emailCore';
+import { PLATFORM } from '../config/platformConfig';
 import { format, startOfDay, endOfDay, addDays, subDays, isToday, isTomorrow } from 'date-fns';
+import { platformEventBus } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+const log = createLogger('dailyDigestService');
+
 
 interface DigestData {
   employee: {
@@ -89,7 +94,7 @@ async function getEmployeeDigestData(
 
     let pendingApprovals = { swapRequests: 0, timeOffRequests: 0, timesheetApprovals: 0 };
     
-    if (['org_owner', 'org_admin', 'manager'].includes(employee.workspaceRole)) {
+    if (['org_owner', 'co_owner', 'manager'].includes(employee.workspaceRole)) {
       const pendingSwaps = await db.select({ count: sql<number>`count(*)::int` })
         .from(shiftSwapRequests)
         .where(and(
@@ -180,7 +185,7 @@ async function getEmployeeDigestData(
       unreadNotifications: unreadNotificationsCount[0]?.count || 0
     };
   } catch (error) {
-    console.error(`[DailyDigest] Error getting digest data for employee ${employee.id}:`, error);
+    log.error(`[DailyDigest] Error getting digest data for employee ${employee.id}:`, error);
     return null;
   }
 }
@@ -288,7 +293,7 @@ function generateDigestEmailHtml(data: DigestData, workspaceName: string): strin
 
           <!-- CTA -->
           <div style="text-align: center; margin-top: 32px;">
-            <a href="${process.env.REPLIT_DEV_DOMAIN || 'https://coaileague.ai'}/dashboard" 
+            <a href="${process.env.REPLIT_DEV_DOMAIN || PLATFORM.appUrl}/dashboard" 
                style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">
               Open Dashboard
             </a>
@@ -301,7 +306,7 @@ function generateDigestEmailHtml(data: DigestData, workspaceName: string): strin
             This is an automated daily digest from ${workspaceName} via CoAIleague™
           </p>
           <p style="color: #94a3b8; font-size: 12px; margin: 8px 0 0 0;">
-            <a href="${process.env.REPLIT_DEV_DOMAIN || 'https://coaileague.ai'}/settings/notifications" style="color: #64748b;">Manage notification preferences</a>
+            <a href="${process.env.REPLIT_DEV_DOMAIN || PLATFORM.appUrl}/settings/notifications" style="color: #64748b;">Manage notification preferences</a>
           </p>
         </div>
       </div>
@@ -334,25 +339,56 @@ export async function sendDailyDigest(employeeId: string): Promise<{ success: bo
     }
 
     const emailHtml = generateDigestEmailHtml(digestData, workspace.name);
-    const { client, fromEmail } = await getUncachableResendClient();
 
-    await client.emails.send({
-      from: fromEmail,
+    const emailResult = await sendCanSpamCompliantEmail({
       to: digestData.employee.email,
-      subject: `☀️ Your Daily Digest - ${format(new Date(), 'MMM d, yyyy')}`,
-      html: emailHtml
+      subject: `Your Daily Digest - ${format(new Date(), 'MMM d, yyyy')}`,
+      html: emailHtml,
+      emailType: 'digest',
+      workspaceId: workspace.id,
     });
 
-    console.log(`[DailyDigest] ✅ Sent digest to ${digestData.employee.email}`);
+    if (emailResult.skipped) {
+      log.info(`[DailyDigest] Skipped ${digestData.employee.email} (unsubscribed)`);
+      return { success: false, error: emailResult.reason };
+    }
+
+    if (!emailResult.success) {
+      return { success: false, error: emailResult.error?.message || 'Email send failed' };
+    }
+
+    log.info(`[DailyDigest] Sent digest to ${digestData.employee.email}`);
     return { success: true };
   } catch (error: any) {
-    console.error(`[DailyDigest] ❌ Error sending digest:`, error);
-    return { success: false, error: error.message };
+    log.error(`[DailyDigest] ❌ Error sending digest:`, error);
+    return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
 export async function runDailyDigestJob(): Promise<{ sent: number; failed: number; skipped: number }> {
-  console.log(`📧 [DAILY DIGEST] Starting daily digest job at ${new Date().toISOString()}`);
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // DB-backed idempotency: survives server restarts, unlike the old in-memory guard.
+  // Uses the idempotency_keys table — unique index on (workspaceId, operationType, requestFingerprint)
+  // prevents duplicate digests even if the cron fires or the server restarts mid-day.
+  const digestKey = `daily-digest-${today}`;
+  const inserted = await db.insert(idempotencyKeys)
+    .values({
+      workspaceId: PLATFORM_WORKSPACE_ID,
+      operationType: 'daily_digest',
+      requestFingerprint: digestKey,
+      status: 'completed',
+      expiresAt: new Date(Date.now() + 23 * 60 * 60 * 1000), // expire 23h later, well before next day
+    })
+    .onConflictDoNothing()
+    .returning({ id: idempotencyKeys.id });
+
+  if (inserted.length === 0) {
+    log.info(`[DailyDigest] Already ran today (${today}), skipping duplicate run`);
+    return { sent: 0, failed: 0, skipped: 0 };
+  }
+
+  log.info(`[DailyDigest] Starting daily digest job at ${new Date().toISOString()}`);
   
   const stats = { sent: 0, failed: 0, skipped: 0 };
 
@@ -368,7 +404,7 @@ export async function runDailyDigestJob(): Promise<{ sent: number; failed: numbe
       const workspaceEmployees = await db.query.employees.findMany({
         where: and(
           eq(employees.workspaceId, workspace.id),
-          eq(employees.employmentStatus, 'active')
+          eq(employees.isActive, true)
         )
       });
 
@@ -398,16 +434,26 @@ export async function runDailyDigestJob(): Promise<{ sent: number; failed: numbe
 
           await new Promise(r => setTimeout(r, 100));
         } catch (err) {
-          console.error(`[DailyDigest] Error processing employee ${employee.id}:`, err);
+          log.error(`[DailyDigest] Error processing employee ${employee.id}:`, err);
           stats.failed++;
         }
       }
     }
 
-    console.log(`📧 [DAILY DIGEST] Complete: ${stats.sent} sent, ${stats.failed} failed, ${stats.skipped} skipped`);
+    log.info(`📧 [DAILY DIGEST] Complete: ${stats.sent} sent, ${stats.failed} failed, ${stats.skipped} skipped`);
+
+    platformEventBus.publish({
+      type: 'daily_digest_completed',
+      category: 'communications',
+      title: 'Daily Digest Job Completed',
+      description: `Daily digest sent to ${stats.sent} employee(s): ${stats.failed} failed, ${stats.skipped} skipped`,
+      workspaceId: PLATFORM_WORKSPACE_ID,
+      metadata: { sent: stats.sent, failed: stats.failed, skipped: stats.skipped },
+    });
+
     return stats;
   } catch (error) {
-    console.error('[DailyDigest] Job error:', error);
+    log.error('[DailyDigest] Job error:', error);
     throw error;
   }
 }

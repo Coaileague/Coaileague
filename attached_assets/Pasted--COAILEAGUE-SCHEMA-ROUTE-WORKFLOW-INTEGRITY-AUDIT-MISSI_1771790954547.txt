@@ -1,0 +1,1156 @@
+# COAILEAGUE - SCHEMA, ROUTE & WORKFLOW INTEGRITY AUDIT
+
+## MISSION: SOLID FOUNDATION - ZERO SILENT FAILURES
+
+This audit finds:
+1. **Missing tables** - Referenced but don't exist
+2. **Missing enums** - Used in code but not defined
+3. **Missing subtables** - Related tables needed but not created
+4. **Workflow failures** - Silently failing due to missing DB structures
+5. **Route mount issues** - Routes not mounted or conflicting
+6. **Frontend-backend mismatch** - API calls to non-existent endpoints
+7. **Schema-code drift** - Schema doesn't match what code expects
+
+**SILENT FAILURES ARE THE WORST BUGS** - They don't crash, they just don't work.
+
+---
+
+# PART 1: COMPLETE SCHEMA INVENTORY
+
+## 1.1 Extract Current Schema
+
+```bash
+# Step 1: Get the complete schema file
+cat shared/schema.ts
+
+# Step 2: Extract ALL table definitions
+grep -n "export const.*= pgTable\|pgTable(" shared/schema.ts
+
+# Step 3: Extract ALL enum definitions
+grep -n "export const.*= pgEnum\|pgEnum(" shared/schema.ts
+
+# Step 4: Extract ALL type exports
+grep -n "export type\|export interface" shared/schema.ts
+
+# Step 5: List table names only
+grep -oP "export const \K[a-zA-Z]+" shared/schema.ts | grep -v "Enum\|Relations\|Type"
+```
+
+## 1.2 Expected Tables Checklist
+
+**Verify EVERY table exists in schema.ts:**
+
+```
+CORE TABLES:
+[ ] users - User accounts
+[ ] sessions - Auth sessions
+[ ] workspaces - Multi-tenant workspaces
+[ ] workspaceMembers - User-workspace relationships
+[ ] workspaceInvites - Pending invitations
+
+USER MANAGEMENT:
+[ ] roles - Role definitions
+[ ] permissions - Permission definitions
+[ ] rolePermissions - Role-permission mapping
+[ ] userRoles - User-role assignments
+
+EMPLOYEES:
+[ ] employees - Employee records
+[ ] employeeDocuments - Document uploads
+[ ] employeeCertifications - Licenses/certs
+[ ] employeeAvailability - Availability patterns
+[ ] employeePayRates - Pay rate history
+[ ] employeeEmergencyContacts - Emergency contacts
+
+ONBOARDING:
+[ ] employeeOnboardingPackets - Onboarding data
+[ ] onboardingDocuments - Uploaded docs
+[ ] onboardingActivityLog - Activity tracking
+[ ] stateSecurityRequirements - State-specific rules
+
+CLIENTS:
+[ ] clients - Client records
+[ ] clientContacts - Client POCs
+[ ] clientNotes - Notes/history
+
+CONTRACTS:
+[ ] clientContracts - Service contracts
+[ ] contractSites - Sites per contract
+[ ] contractScheduleRequirements - Schedule needs
+[ ] contractAmendments - Contract changes
+
+SITES:
+[ ] sites - Work locations
+[ ] siteGeofences - Geofence boundaries
+[ ] postOrders - Site instructions
+
+SCHEDULING:
+[ ] shifts - Individual shifts
+[ ] shiftAssignments - Employee assignments
+[ ] shiftSwapRequests - Swap requests
+[ ] openShifts - Unfilled shifts
+[ ] scheduleTemplates - Recurring templates
+[ ] scheduleTemplateShifts - Template details
+
+TIME TRACKING:
+[ ] timeEntries - Clock in/out records
+[ ] clockEvents - Individual punch events
+[ ] breaks - Break periods
+[ ] timesheets - Weekly/period summaries
+[ ] timesheetApprovals - Approval workflow
+
+PAYROLL:
+[ ] payrollRuns - Payroll periods
+[ ] payrollItems - Line items per employee
+[ ] payStubs - Generated pay stubs
+[ ] deductions - Deduction types
+[ ] employeeDeductions - Per-employee deductions
+[ ] taxWithholdings - Tax calculations
+
+INVOICING:
+[ ] invoices - Invoice records
+[ ] invoiceItems - Line items
+[ ] invoicePayments - Payment records
+[ ] recurringInvoices - Auto-generate rules
+[ ] recurringInvoiceSchedules - Schedule details
+
+COMMUNICATIONS:
+[ ] chatRooms - Chat room definitions
+[ ] chatRoomMembers - Room membership
+[ ] chatMessages - Individual messages
+[ ] messageReadReceipts - Read tracking
+[ ] notifications - System notifications
+[ ] announcements - Broadcast messages
+
+AI / TRINITY:
+[ ] trinityConversations - Chat sessions
+[ ] trinityMessages - Individual messages
+[ ] trinityClientIntelligence - Client insights
+[ ] trinityStaffIntelligence - Staff insights
+[ ] trinityOrgContext - Org-level context
+[ ] trinityLearnedPatterns - Learned behaviors
+[ ] aiCostTracking - Token/cost tracking
+[ ] aiModelUsage - Model usage stats
+
+COMPLIANCE:
+[ ] complianceRequirements - What's required
+[ ] complianceStatus - Current status per employee
+[ ] credentialExpirations - Expiring items
+[ ] trainingRequirements - Training needs
+[ ] trainingCompletions - Completed training
+
+FORMS:
+[ ] formTemplates - Form definitions
+[ ] formFields - Field definitions
+[ ] formSubmissions - Submitted forms
+[ ] formResponses - Individual responses
+
+DOCUMENTS:
+[ ] documents - General documents
+[ ] documentSignatures - E-signature records
+[ ] documentVersions - Version history
+
+SUPPORT:
+[ ] supportTickets - Ticket records
+[ ] ticketMessages - Ticket correspondence
+[ ] ticketAssignments - Agent assignments
+[ ] ticketTags - Categorization
+[ ] knowledgeBaseArticles - Help articles
+
+BILLING:
+[ ] subscriptions - Active subscriptions
+[ ] subscriptionPlans - Plan definitions
+[ ] billingEvents - Billing history
+[ ] usageTracking - Feature usage
+[ ] creditTransactions - Credit usage
+
+INTEGRATIONS:
+[ ] integrationConnections - OAuth connections
+[ ] quickbooksTokens - QB auth tokens
+[ ] quickbooksSyncLog - Sync history
+[ ] webhooks - Webhook definitions
+[ ] webhookDeliveries - Delivery log
+
+AUDIT:
+[ ] auditLogs - Security audit trail
+[ ] activityLogs - User activity
+[ ] errorLogs - Error tracking
+[ ] systemEvents - System events
+```
+
+## 1.3 Find Missing Tables
+
+```bash
+# Step 1: Extract all table references from code
+grep -rn "from.*schema\|\.from(\|\.into(\|\.table(" --include="*.ts" server/ | \
+  grep -oP "[a-zA-Z]+(?=\)|\s)" | sort -u > /tmp/referenced_tables.txt
+
+# Step 2: Extract actual table definitions
+grep -oP "export const \K[a-zA-Z]+(?= = pgTable)" shared/schema.ts | sort -u > /tmp/defined_tables.txt
+
+# Step 3: Find tables referenced but not defined
+echo "=== TABLES REFERENCED BUT NOT DEFINED ==="
+comm -23 /tmp/referenced_tables.txt /tmp/defined_tables.txt
+
+# Step 4: Find tables defined but never used
+echo "=== TABLES DEFINED BUT NEVER USED ==="
+comm -13 /tmp/referenced_tables.txt /tmp/defined_tables.txt
+```
+
+---
+
+# PART 2: ENUM AUDIT
+
+## 2.1 Extract All Enums
+
+```bash
+# Find all enum definitions in schema
+grep -n "pgEnum\|export const.*Enum" shared/schema.ts
+
+# Find all enum usages in code
+grep -rn "\.enum(\|z\.enum\|type.*=.*\|" --include="*.ts" server/ client/src/
+```
+
+## 2.2 Expected Enums Checklist
+
+```
+USER ENUMS:
+[ ] userRole - platform_admin, owner, co_owner, manager, supervisor, employee
+[ ] userStatus - active, inactive, pending, suspended
+
+EMPLOYEE ENUMS:
+[ ] employeeType - unarmed, armed, supervisor, manager
+[ ] employeeStatus - active, inactive, pending, onboarding, terminated
+[ ] employmentType - full_time, part_time, contract, seasonal
+
+ONBOARDING ENUMS:
+[ ] onboardingStatus - pending_invite, invited, in_progress, submitted, under_review, approved, rejected, incomplete, expired
+[ ] documentStatus - pending, approved, rejected, expired
+[ ] citizenshipStatus - us_citizen, us_national, permanent_resident, alien_authorized
+[ ] backgroundCheckStatus - not_started, pending, in_progress, passed, failed, review_required
+[ ] drugTestStatus - not_started, scheduled, pending_results, passed, failed
+
+CONTRACT ENUMS:
+[ ] contractStatus - draft, sent, viewed, signed, active, expired, terminated
+[ ] serviceType - armed, unarmed, both
+
+SHIFT ENUMS:
+[ ] shiftStatus - draft, published, assigned, in_progress, completed, cancelled
+[ ] dayOfWeek - sunday, monday, tuesday, wednesday, thursday, friday, saturday
+
+TIME TRACKING ENUMS:
+[ ] clockEventType - clock_in, clock_out, break_start, break_end
+[ ] timesheetStatus - draft, submitted, approved, rejected
+
+PAYROLL ENUMS:
+[ ] payrollStatus - draft, processing, completed, cancelled
+[ ] paymentMethod - direct_deposit, check, paycard
+[ ] payFrequency - weekly, biweekly, semimonthly, monthly
+
+INVOICE ENUMS:
+[ ] invoiceStatus - draft, sent, viewed, paid, partial, overdue, cancelled
+[ ] invoiceFrequency - weekly, biweekly, monthly, on_completion
+
+COMMUNICATION ENUMS:
+[ ] messageType - text, image, file, system
+[ ] notificationType - info, warning, error, success
+[ ] roomType - direct, group, support, announcement
+
+TICKET ENUMS:
+[ ] ticketStatus - open, assigned, in_progress, waiting_customer, waiting_internal, resolved, closed
+[ ] ticketPriority - low, medium, high, critical
+[ ] ticketCategory - billing, technical, feature_request, bug, general
+
+DOCUMENT ENUMS:
+[ ] documentCategory - identity, employment_auth, security_license, firearms, training, certification, tax, banking, agreement, other
+```
+
+## 2.3 Find Missing Enums
+
+```bash
+# Step 1: Find all string literal unions in code (potential missing enums)
+grep -rn "type.*=.*'\|'\s*\|" --include="*.ts" | grep -oP "'[a-z_]+'" | sort | uniq -c | sort -rn | head -50
+
+# Step 2: Find hardcoded strings that should be enums
+grep -rn "status ===\|status ==\|status:\|type ===\|type ==" --include="*.ts" server/ | head -50
+
+# Step 3: Find enum-like checks without actual enums
+grep -rn "=== 'active'\|=== 'pending'\|=== 'draft'" --include="*.ts" server/
+
+# Step 4: Verify enum values match between frontend and backend
+grep -rn "enum\|Enum" --include="*.ts" shared/
+```
+
+## 2.4 Enum Definition Template
+
+```typescript
+// If missing, add to shared/schema.ts:
+
+// User roles
+export const userRoleEnum = pgEnum('user_role', [
+  'platform_admin',
+  'owner',
+  'co_owner', 
+  'manager',
+  'supervisor',
+  'employee',
+  'support_agent',
+]);
+
+// Employee types
+export const employeeTypeEnum = pgEnum('employee_type', [
+  'unarmed',
+  'armed',
+  'supervisor',
+  'manager',
+]);
+
+// Onboarding status
+export const onboardingStatusEnum = pgEnum('onboarding_status', [
+  'pending_invite',
+  'invited',
+  'in_progress',
+  'submitted',
+  'under_review',
+  'approved',
+  'rejected',
+  'incomplete',
+  'expired',
+]);
+
+// Contract status
+export const contractStatusEnum = pgEnum('contract_status', [
+  'draft',
+  'sent',
+  'viewed',
+  'signed',
+  'active',
+  'expired',
+  'terminated',
+]);
+
+// Shift status
+export const shiftStatusEnum = pgEnum('shift_status', [
+  'draft',
+  'published',
+  'assigned',
+  'in_progress',
+  'completed',
+  'cancelled',
+]);
+
+// Add more as needed...
+```
+
+---
+
+# PART 3: FOREIGN KEY & RELATIONSHIP AUDIT
+
+## 3.1 Find All Foreign Keys
+
+```bash
+# Extract all foreign key references
+grep -n "references\|\.references(" shared/schema.ts
+
+# Find potential missing foreign keys (fields ending in Id without reference)
+grep -n "Id:" shared/schema.ts | grep -v "references"
+```
+
+## 3.2 Verify Relationships
+
+```
+For EVERY foreign key field:
+
+FIELD: _______________
+TABLE: _______________
+REFERENCES: _______________
+
+CHECKS:
+[ ] Referenced table exists
+[ ] Referenced column exists
+[ ] ON DELETE behavior defined
+[ ] ON UPDATE behavior defined
+[ ] Index exists on foreign key
+
+COMMON ISSUES:
+[ ] workspaceId references workspaces (not undefined)
+[ ] employeeId references employees
+[ ] clientId references clients
+[ ] siteId references sites
+[ ] userId references users
+```
+
+## 3.3 Missing Relationship Detection
+
+```bash
+# Find tables with workspaceId (should have foreign key)
+grep -n "workspaceId" shared/schema.ts | grep -v "references"
+
+# Find all *Id columns
+grep -oP "[a-zA-Z]+Id" shared/schema.ts | sort -u
+
+# For each, verify foreign key exists
+```
+
+---
+
+# PART 4: ROUTE MOUNTING AUDIT
+
+## 4.1 Find All Route Files
+
+```bash
+# List all route files
+find server -name "*.ts" -path "*/routes/*" | sort
+
+# List all route definitions per file
+for file in $(find server -name "*.ts" -path "*/routes/*"); do
+  echo "=== $file ==="
+  grep -n "router\.\(get\|post\|put\|patch\|delete\)" "$file"
+done
+```
+
+## 4.2 Find Route Mounting
+
+```bash
+# Find where routes are mounted (typically in index.ts or app.ts)
+grep -rn "app\.use\|router\.use" --include="*.ts" server/
+
+# Find the main app file
+cat server/index.ts 2>/dev/null || cat server/app.ts 2>/dev/null
+
+# Extract all route prefixes
+grep -rn "app\.use.*'/api" --include="*.ts" server/
+```
+
+## 4.3 Route Mounting Checklist
+
+```
+ROUTE FILE: _______________
+EXPECTED PREFIX: _______________
+MOUNTED AT: _______________
+MOUNTED: [ ] YES [ ] NO
+
+VERIFY MOUNTING:
+
+[ ] server/routes/auth.ts → /api/auth
+[ ] server/routes/users.ts → /api/users
+[ ] server/routes/workspaces.ts → /api/workspaces
+[ ] server/routes/employees.ts → /api/employees
+[ ] server/routes/clients.ts → /api/clients
+[ ] server/routes/sites.ts → /api/sites
+[ ] server/routes/shifts.ts → /api/shifts
+[ ] server/routes/schedule.ts → /api/schedule
+[ ] server/routes/timeclock.ts → /api/timeclock
+[ ] server/routes/timeentries.ts → /api/time-entries
+[ ] server/routes/timesheets.ts → /api/timesheets
+[ ] server/routes/payroll.ts → /api/payroll
+[ ] server/routes/invoices.ts → /api/invoices
+[ ] server/routes/contracts.ts → /api/contracts
+[ ] server/routes/onboarding.ts → /api/onboarding
+[ ] server/routes/chat.ts → /api/chat
+[ ] server/routes/messages.ts → /api/messages
+[ ] server/routes/notifications.ts → /api/notifications
+[ ] server/routes/trinity.ts → /api/trinity
+[ ] server/routes/ai.ts → /api/ai
+[ ] server/routes/reports.ts → /api/reports
+[ ] server/routes/documents.ts → /api/documents
+[ ] server/routes/forms.ts → /api/forms
+[ ] server/routes/support.ts → /api/support
+[ ] server/routes/tickets.ts → /api/tickets
+[ ] server/routes/integrations.ts → /api/integrations
+[ ] server/routes/quickbooks.ts → /api/quickbooks
+[ ] server/routes/billing.ts → /api/billing
+[ ] server/routes/admin.ts → /api/admin
+[ ] server/routes/webhooks.ts → /api/webhooks
+```
+
+## 4.4 Find Unmounted Routes
+
+```bash
+# Step 1: Find all route file exports
+grep -rn "export.*router\|module\.exports" --include="*.ts" server/routes/
+
+# Step 2: Find all route imports in main app
+grep -rn "import.*routes\|require.*routes" --include="*.ts" server/index.ts server/app.ts
+
+# Step 3: Compare - find routes defined but not imported
+```
+
+## 4.5 Route Conflict Detection
+
+```bash
+# Find potentially conflicting routes (same path, different files)
+grep -rn "router\.\(get\|post\|put\|delete\).*'/'" --include="*.ts" server/routes/ | \
+  grep -oP "'\K[^']+" | sort | uniq -d
+
+# Find routes with same path but different methods
+grep -rn "'/api/" --include="*.ts" server/ | sort | uniq -c | sort -rn | head -20
+```
+
+---
+
+# PART 5: FRONTEND-BACKEND API PARITY
+
+## 5.1 Extract All Frontend API Calls
+
+```bash
+# Find all fetch/axios calls
+grep -rn "fetch\|axios\|useMutation\|useQuery" --include="*.tsx" --include="*.ts" client/src/ | \
+  grep -oP "/api/[a-zA-Z0-9/_-]+" | sort -u > /tmp/frontend_apis.txt
+
+# Count calls per endpoint
+grep -rn "/api/" --include="*.tsx" --include="*.ts" client/src/ | \
+  grep -oP "/api/[a-zA-Z0-9/_-]+" | sort | uniq -c | sort -rn
+```
+
+## 5.2 Extract All Backend Routes
+
+```bash
+# Find all defined routes
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)\|app\.\(get\|post\|put\|patch\|delete\)" --include="*.ts" server/ | \
+  grep -oP "'\K/api/[^']+" | sort -u > /tmp/backend_routes.txt
+
+# Alternative: Find route patterns
+grep -rn "router\." --include="*.ts" server/routes/ | \
+  grep -oP "'[^']+'" | tr -d "'" | sort -u
+```
+
+## 5.3 Find Mismatches
+
+```bash
+# Frontend calls with no backend
+echo "=== FRONTEND CALLS WITH NO BACKEND HANDLER ==="
+comm -23 /tmp/frontend_apis.txt /tmp/backend_routes.txt
+
+# Backend routes never called from frontend
+echo "=== BACKEND ROUTES NEVER CALLED ==="
+comm -13 /tmp/frontend_apis.txt /tmp/backend_routes.txt
+
+# Dynamic route comparison (with params)
+# Frontend: /api/employees/:id → Backend: /api/employees/:id
+```
+
+## 5.4 API Parity Verification
+
+```
+For EVERY frontend API call:
+
+FRONTEND:
+File: _______________
+Call: _______________
+Method: _______________
+Endpoint: _______________
+
+BACKEND:
+File: _______________
+Handler: _______________
+Method: _______________
+Route: _______________
+
+MATCH: [ ] YES [ ] NO
+
+IF NO MATCH:
+[ ] Route not defined
+[ ] Route not mounted
+[ ] Method mismatch (GET vs POST)
+[ ] Path mismatch (/employees vs /employee)
+[ ] Param mismatch (:id vs :employeeId)
+```
+
+## 5.5 Common Mismatch Patterns
+
+```bash
+# Singular vs plural mismatch
+grep -rn "/api/employee[^s]" --include="*.tsx" client/src/  # Should be /employees
+grep -rn "/api/client[^s]" --include="*.tsx" client/src/    # Should be /clients
+
+# Inconsistent param names
+grep -rn "/:id\|/:.*Id" --include="*.ts" server/routes/
+
+# Missing trailing slashes
+grep -rn "/api/.*/$" --include="*.tsx" --include="*.ts"
+```
+
+---
+
+# PART 6: WORKFLOW INTEGRITY AUDIT
+
+## 6.1 Map All Workflows
+
+```
+WORKFLOW: Contract Signing
+TRIGGER: Client signs contract
+TABLES NEEDED:
+[ ] clientContracts - Update status
+[ ] clients - Create if not exists
+[ ] contractSites - Create site records
+[ ] sites - Create site records
+[ ] contractScheduleRequirements - Create schedule rules
+[ ] activityLogs - Log activity
+[ ] notifications - Send notifications
+
+APIS NEEDED:
+[ ] POST /api/contracts/:id/sign
+[ ] POST /api/clients (if new)
+[ ] POST /api/sites (for each site)
+[ ] POST /api/notifications
+
+STATUS: [ ] All tables exist [ ] All APIs exist [ ] Workflow tested
+```
+
+```
+WORKFLOW: Employee Onboarding
+TRIGGER: Admin approves packet
+TABLES NEEDED:
+[ ] employeeOnboardingPackets - Update status
+[ ] employees - Create record
+[ ] users - Create account (optional)
+[ ] employeeDocuments - Copy documents
+[ ] employeeCertifications - Copy credentials
+[ ] complianceStatus - Initialize
+[ ] activityLogs - Log activity
+[ ] notifications - Welcome email
+
+APIS NEEDED:
+[ ] POST /api/onboarding/:id/approve
+[ ] POST /api/employees
+[ ] POST /api/users (optional)
+[ ] POST /api/notifications
+
+STATUS: [ ] All tables exist [ ] All APIs exist [ ] Workflow tested
+```
+
+```
+WORKFLOW: Shift Assignment
+TRIGGER: Employee assigned to shift
+TABLES NEEDED:
+[ ] shifts - Update status
+[ ] shiftAssignments - Create record
+[ ] employees - Verify eligibility
+[ ] complianceStatus - Check compliance
+[ ] notifications - Notify employee
+
+APIS NEEDED:
+[ ] PUT /api/shifts/:id/assign
+[ ] GET /api/employees/:id/compliance
+
+STATUS: [ ] All tables exist [ ] All APIs exist [ ] Workflow tested
+```
+
+```
+WORKFLOW: Time Clock
+TRIGGER: Employee clocks in/out
+TABLES NEEDED:
+[ ] timeEntries - Create/update entry
+[ ] clockEvents - Log punch
+[ ] shifts - Update status (optional)
+[ ] sites - Validate geofence
+[ ] siteGeofences - Get boundaries
+[ ] activityLogs - Log activity
+
+APIS NEEDED:
+[ ] POST /api/timeclock/clock-in
+[ ] POST /api/timeclock/clock-out
+[ ] GET /api/sites/:id/geofence
+
+STATUS: [ ] All tables exist [ ] All APIs exist [ ] Workflow tested
+```
+
+```
+WORKFLOW: Invoice Generation
+TRIGGER: Manual or scheduled
+TABLES NEEDED:
+[ ] invoices - Create invoice
+[ ] invoiceItems - Create line items
+[ ] timeEntries - Get billable hours
+[ ] clients - Get billing info
+[ ] clientContracts - Get rates
+[ ] sites - Get site info
+
+APIS NEEDED:
+[ ] POST /api/invoices
+[ ] POST /api/invoices/:id/items
+[ ] GET /api/time-entries (with filters)
+
+STATUS: [ ] All tables exist [ ] All APIs exist [ ] Workflow tested
+```
+
+```
+WORKFLOW: Payroll Run
+TRIGGER: Admin initiates payroll
+TABLES NEEDED:
+[ ] payrollRuns - Create run
+[ ] payrollItems - Create per employee
+[ ] timeEntries - Get hours
+[ ] employees - Get pay rates
+[ ] employeePayRates - Get rates
+[ ] deductions - Get deduction types
+[ ] employeeDeductions - Get per-employee
+[ ] taxWithholdings - Calculate taxes
+
+APIS NEEDED:
+[ ] POST /api/payroll/run
+[ ] GET /api/time-entries (by period)
+[ ] GET /api/employees/:id/pay-rates
+
+STATUS: [ ] All tables exist [ ] All APIs exist [ ] Workflow tested
+```
+
+## 6.2 Detect Silent Workflow Failures
+
+```bash
+# Find try/catch blocks that swallow errors
+grep -rn "catch.*{\s*}" --include="*.ts" server/
+grep -rn "catch.*{[\s\n]*console" --include="*.ts" server/
+
+# Find workflows without error handling
+grep -rn "await.*await.*await" --include="*.ts" server/ | head -20
+
+# Find database operations without error handling
+grep -rn "\.insert\|\.update\|\.delete" --include="*.ts" server/ | grep -v "try\|catch"
+```
+
+## 6.3 Workflow Error Handling Fix
+
+```typescript
+// BAD - Silent failure
+async function processWorkflow() {
+  try {
+    await step1();
+    await step2(); // If this fails, step1 is orphaned
+    await step3();
+  } catch (error) {
+    console.log(error); // Silent failure!
+  }
+}
+
+// GOOD - Transaction with proper error handling
+async function processWorkflow() {
+  const result = await db.transaction(async (tx) => {
+    const step1Result = await tx.insert(table1).values({...}).returning();
+    const step2Result = await tx.insert(table2).values({...}).returning();
+    const step3Result = await tx.insert(table3).values({...}).returning();
+    return { step1Result, step2Result, step3Result };
+  });
+  
+  // If any step fails, entire transaction rolls back
+  return result;
+}
+
+// With explicit error handling
+async function processWorkflowWithHandling() {
+  try {
+    return await db.transaction(async (tx) => {
+      // steps...
+    });
+  } catch (error) {
+    // Log error
+    await logError('workflow_failure', error);
+    // Notify admin
+    await notifyAdmin('Workflow failed', error);
+    // Throw to caller
+    throw new WorkflowError('Workflow failed', { cause: error });
+  }
+}
+```
+
+---
+
+# PART 7: REAL-TIME SYNC AUDIT
+
+## 7.1 WebSocket Event Mapping
+
+```bash
+# Find all WebSocket events emitted
+grep -rn "socket\.emit\|io\.emit\|\.emit(" --include="*.ts" server/
+
+# Find all WebSocket events listened
+grep -rn "socket\.on\|io\.on\|\.on(" --include="*.ts" --include="*.tsx"
+```
+
+## 7.2 Event Parity Check
+
+```
+For EVERY WebSocket event:
+
+EVENT: _______________
+EMITTER: server/_______________
+LISTENER: client/_______________
+
+[ ] Event emitted correctly
+[ ] Event listened correctly
+[ ] Payload shape matches
+[ ] Error handling exists
+```
+
+## 7.3 Real-Time Update Points
+
+```
+WHEN DATA CHANGES, EMIT EVENTS:
+
+EMPLOYEES:
+[ ] employee:created → Refresh employee list
+[ ] employee:updated → Update employee card
+[ ] employee:deleted → Remove from list
+
+SHIFTS:
+[ ] shift:created → Add to schedule
+[ ] shift:updated → Update schedule
+[ ] shift:deleted → Remove from schedule
+[ ] shift:assigned → Update assignment
+
+TIME TRACKING:
+[ ] timeclock:clock_in → Update status
+[ ] timeclock:clock_out → Update status
+[ ] timeentry:updated → Refresh timesheet
+
+MESSAGES:
+[ ] message:new → Add to chat
+[ ] message:read → Update read receipt
+[ ] typing:start → Show indicator
+[ ] typing:stop → Hide indicator
+
+NOTIFICATIONS:
+[ ] notification:new → Show notification
+[ ] notification:read → Update badge
+```
+
+---
+
+# PART 8: DATABASE MIGRATION AUDIT
+
+## 8.1 Check Migration State
+
+```bash
+# Find migration files
+find . -name "*migration*" -o -name "*migrate*" | grep -v node_modules
+
+# Check if drizzle is configured
+cat drizzle.config.ts 2>/dev/null
+
+# List migrations
+ls -la drizzle/migrations/ 2>/dev/null || ls -la migrations/ 2>/dev/null
+```
+
+## 8.2 Schema-Database Sync
+
+```bash
+# Generate migration to see drift
+npx drizzle-kit generate:pg 2>&1
+
+# Push schema to database
+npx drizzle-kit push:pg --dry-run 2>&1
+
+# Check for pending migrations
+npx drizzle-kit check:pg 2>&1
+```
+
+## 8.3 Missing Column Detection
+
+```bash
+# Compare schema.ts to actual database
+# This requires database connection
+
+# Alternative: Find column references in code that might not exist
+grep -rn "\.[a-zA-Z]*\s*==\|eq(\|\.where(" --include="*.ts" server/ | \
+  grep -oP "\.\K[a-zA-Z]+" | sort | uniq -c | sort -rn | head -50
+```
+
+---
+
+# PART 9: TYPE SAFETY AUDIT
+
+## 9.1 Find Type Mismatches
+
+```bash
+# Run TypeScript compiler
+npx tsc --noEmit 2>&1 | tee /tmp/tsc_errors.txt
+
+# Count errors by type
+grep -oP "error TS\d+" /tmp/tsc_errors.txt | sort | uniq -c | sort -rn
+
+# Find 'any' usage (potential type issues)
+grep -rn ": any\|as any\|<any>" --include="*.ts" --include="*.tsx" | wc -l
+```
+
+## 9.2 Schema Type Exports
+
+```bash
+# Verify types are exported from schema
+grep -n "export type.*=.*typeof" shared/schema.ts
+
+# Verify inferred types exist
+grep -n "InferModel\|InferSelectModel\|InferInsertModel" shared/schema.ts
+```
+
+## 9.3 Type Definition Checklist
+
+```typescript
+// Ensure these types exist for each table:
+
+// For 'employees' table:
+export type Employee = typeof employees.$inferSelect;
+export type NewEmployee = typeof employees.$inferInsert;
+
+// For 'clients' table:
+export type Client = typeof clients.$inferSelect;
+export type NewClient = typeof clients.$inferInsert;
+
+// For 'shifts' table:
+export type Shift = typeof shifts.$inferSelect;
+export type NewShift = typeof shifts.$inferInsert;
+
+// For 'contracts' table:
+export type Contract = typeof clientContracts.$inferSelect;
+export type NewContract = typeof clientContracts.$inferInsert;
+
+// ... for every table
+```
+
+---
+
+# PART 10: COMPLETE INTEGRITY VERIFICATION
+
+## 10.1 End-to-End Flow Testing
+
+```
+TEST EACH FLOW:
+
+1. CREATE EMPLOYEE:
+   Frontend: /employees/new → POST /api/employees → INSERT employees
+   [ ] Form submits
+   [ ] API receives data
+   [ ] Database insert succeeds
+   [ ] Response returns to frontend
+   [ ] UI updates
+
+2. ASSIGN SHIFT:
+   Frontend: Schedule → PUT /api/shifts/:id/assign → UPDATE shifts
+   [ ] Action triggered
+   [ ] Compliance check runs
+   [ ] Database updates
+   [ ] Notifications sent
+   [ ] Real-time update emitted
+
+3. CLOCK IN:
+   Frontend: Time Clock → POST /api/timeclock/clock-in → INSERT time_entries
+   [ ] GPS captured
+   [ ] Geofence validated
+   [ ] Entry created
+   [ ] Status updated
+   [ ] Real-time update
+
+4. GENERATE INVOICE:
+   Frontend: Invoices → POST /api/invoices → INSERT invoices, invoice_items
+   [ ] Time entries queried
+   [ ] Rates applied
+   [ ] Invoice created
+   [ ] Line items created
+   [ ] PDF generated
+
+5. SIGN CONTRACT:
+   Frontend: Public signing page → POST /api/contracts/:id/sign
+   [ ] Signature captured
+   [ ] Contract updated
+   [ ] Client created
+   [ ] Sites created
+   [ ] Workflow triggers
+```
+
+## 10.2 Automated Integrity Checks
+
+```typescript
+// Create integrity check script: server/scripts/integrity-check.ts
+
+async function checkIntegrity() {
+  const issues: string[] = [];
+  
+  // 1. Check all tables exist
+  const tables = await db.execute(sql`
+    SELECT table_name FROM information_schema.tables 
+    WHERE table_schema = 'public'
+  `);
+  const expectedTables = ['users', 'workspaces', 'employees', /* ... */];
+  for (const table of expectedTables) {
+    if (!tables.rows.find(r => r.table_name === table)) {
+      issues.push(`Missing table: ${table}`);
+    }
+  }
+  
+  // 2. Check foreign key constraints
+  const fks = await db.execute(sql`
+    SELECT tc.table_name, kcu.column_name, ccu.table_name AS foreign_table
+    FROM information_schema.table_constraints AS tc
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+    WHERE tc.constraint_type = 'FOREIGN KEY'
+  `);
+  
+  // 3. Check for orphan records
+  const orphanEmployees = await db.execute(sql`
+    SELECT e.id FROM employees e
+    LEFT JOIN workspaces w ON e.workspace_id = w.id
+    WHERE w.id IS NULL
+  `);
+  if (orphanEmployees.rows.length > 0) {
+    issues.push(`Orphan employees: ${orphanEmployees.rows.length}`);
+  }
+  
+  // 4. Check enum consistency
+  const invalidStatuses = await db.execute(sql`
+    SELECT id, status FROM employees 
+    WHERE status NOT IN ('active', 'inactive', 'pending', 'terminated')
+  `);
+  if (invalidStatuses.rows.length > 0) {
+    issues.push(`Invalid employee statuses: ${invalidStatuses.rows.length}`);
+  }
+  
+  return issues;
+}
+```
+
+---
+
+# OUTPUT FORMAT
+
+```markdown
+# SCHEMA & ROUTE INTEGRITY AUDIT REPORT
+
+## Date: [DATE]
+## Status: [CRITICAL ISSUES / NEEDS WORK / HEALTHY]
+
+---
+
+## MISSING TABLES
+
+| Table | Referenced In | Required By | Priority |
+|-------|---------------|-------------|----------|
+| trinityClientIntelligence | trinity.ts | AI features | CRITICAL |
+| ... | ... | ... | ... |
+
+---
+
+## MISSING ENUMS
+
+| Enum | Used In | Values Needed | Priority |
+|------|---------|---------------|----------|
+| employeeTypeEnum | employees.ts | unarmed, armed, supervisor, manager | HIGH |
+| ... | ... | ... | ... |
+
+---
+
+## UNMOUNTED ROUTES
+
+| Route File | Expected Mount | Currently | Fix |
+|------------|----------------|-----------|-----|
+| server/routes/contracts.ts | /api/contracts | NOT MOUNTED | Add to index.ts |
+| ... | ... | ... | ... |
+
+---
+
+## FRONTEND-BACKEND MISMATCHES
+
+| Frontend Call | Expected Backend | Actual Backend | Fix |
+|---------------|------------------|----------------|-----|
+| GET /api/employee/:id | /api/employee/:id | /api/employees/:id | Fix frontend path |
+| ... | ... | ... | ... |
+
+---
+
+## WORKFLOW FAILURES
+
+| Workflow | Failing Step | Missing Dependency | Fix |
+|----------|--------------|-------------------|-----|
+| Contract Signing | Create sites | contractSites table missing | Add table |
+| ... | ... | ... | ... |
+
+---
+
+## SILENT FAILURES FOUND
+
+| Location | Type | Issue | Fix |
+|----------|------|-------|-----|
+| server/routes/employees.ts:45 | Swallowed error | catch only logs | Add response |
+| ... | ... | ... | ... |
+
+---
+
+## FOREIGN KEY ISSUES
+
+| Table | Column | Should Reference | Currently | Fix |
+|-------|--------|------------------|-----------|-----|
+| employees | workspaceId | workspaces.id | No FK | Add constraint |
+| ... | ... | ... | ... | ... |
+
+---
+
+## TYPE ISSUES
+
+| File | Line | Issue | Fix |
+|------|------|-------|-----|
+| ... | ... | ... | ... |
+
+---
+
+## MIGRATION NEEDED
+
+```sql
+-- Add missing tables
+CREATE TABLE IF NOT EXISTS trinity_client_intelligence (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID REFERENCES workspaces(id),
+  ...
+);
+
+-- Add missing enums
+CREATE TYPE employee_type AS ENUM ('unarmed', 'armed', 'supervisor', 'manager');
+
+-- Add missing foreign keys
+ALTER TABLE employees ADD CONSTRAINT fk_workspace 
+  FOREIGN KEY (workspace_id) REFERENCES workspaces(id);
+```
+
+---
+
+## FIX ORDER
+
+1. [CRITICAL] Add missing tables
+2. [CRITICAL] Add missing enums
+3. [CRITICAL] Mount unmounted routes
+4. [HIGH] Fix frontend-backend mismatches
+5. [HIGH] Add proper error handling
+6. [MEDIUM] Add foreign key constraints
+7. [LOW] Clean up unused code
+
+---
+
+## VERIFICATION
+
+[ ] All tables exist
+[ ] All enums defined
+[ ] All routes mounted
+[ ] All API calls match backend
+[ ] All workflows complete successfully
+[ ] No silent failures
+[ ] Type safety verified
+
+---
+```
+
+---
+
+# EXECUTION INSTRUCTIONS
+
+1. **Start with schema** - Foundation must be solid
+2. **Then routes** - APIs must be reachable
+3. **Then workflows** - End-to-end must work
+4. **Then sync** - Real-time must update
+5. **Run migrations** - Apply all schema changes
+6. **Test each flow** - Verify nothing silently fails
+7. **Document everything** - Track what was fixed
+
+**FOUNDATION FIRST - EVERYTHING ELSE DEPENDS ON IT.**
+
+**BEGIN INTEGRITY AUDIT NOW.**

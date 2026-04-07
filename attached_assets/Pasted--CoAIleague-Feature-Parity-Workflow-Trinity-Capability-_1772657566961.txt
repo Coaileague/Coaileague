@@ -1,0 +1,878 @@
+# CoAIleague — Feature Parity, Workflow & Trinity Capability Audit
+## "If It's On the Page, It Must Work. If Trinity Promises It, Trinity Delivers It."
+
+**Date:** March 4, 2026
+**Purpose:** Systematically verify that every feature visible in the UI actually works end-to-end, every automation toggle actually automates, every pipeline completes from start to finish, and Trinity's brain has the wiring to orchestrate what we promise.
+
+**INSTRUCTIONS TO REPLIT AGENT:**
+This is a verification audit, not a build document. For each feature below, you will:
+1. Navigate to the page/route
+2. Test every CRUD operation (Create, Read, Update, Delete)
+3. Test the workflow/pipeline end-to-end
+4. Test Trinity's automation capability for that feature
+5. Record result: ✅ PASS, ⚠️ PARTIAL (works but has gaps), or ❌ FAIL (broken/missing)
+6. For every ⚠️ or ❌, document exactly what's missing or broken
+
+**DO NOT FIX ANYTHING during this audit.** Just document. After the full audit, we'll prioritize fixes.
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 1: HOME DASHBOARD
+# ═══════════════════════════════════════════════════
+
+## 1.1 Dashboard Home Page
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Page loads without errors                     Dashboard renders with user card       [ ]
+User profile card shows correct info          Name, org, role badge                  [ ]
+Clock In/Out tile navigates to clock page     Opens clock page                       [ ]
+My Schedule tile navigates to schedule        Opens personal schedule                [ ]
+All dashboard tiles are tappable              Every tile navigates correctly          [ ]
+Dashboard shows relevant data                 Not all zeros/empty when data exists   [ ]
+Bottom nav works on all 5 tabs                Home, Schedule, Clock, Mail, More      [ ]
+```
+
+## 1.2 Notifications
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Notification panel opens                      Shows notification list                [ ]
+Filter tabs work (warnings, info, tasks)      Filters change displayed notifs        [ ]
+Clear All removes all notifications           All cleared                            [ ]
+Mark as read works                            Read status persists                   [ ]
+Trinity Alert notifications display           AI insights show with detail           [ ]
+Tapping notification navigates to source      Opens related page/item                [ ]
+Notification count badge updates              Badge reflects unread count            [ ]
+Notifications are workspace-scoped            Only shows notifs for this org         [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 2: SCHEDULING (Core Feature)
+# ═══════════════════════════════════════════════════
+
+## 2.1 My Schedule (Employee View)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Page loads with current week                  Week strip + day list visible          [ ]
+Week navigation (< >) works                  Shows prev/next week                   [ ]
+Shift details display correctly               Time, site, role, status badge         [ ]
+PUBLISHED/COMPLETED badges show correctly     Correct status per shift               [ ]
+Day off / No shift displays                   Shows when no shifts assigned          [ ]
+Tapping a shift opens shift details           Detail view with all info              [ ]
+Weekly hours counter is accurate              Matches actual scheduled hours         [ ]
+```
+
+## 2.2 Full Team Schedule (Manager View)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Full Team tab shows all employees' shifts     Every assigned shift visible           [ ]
+Weekly hours total is accurate (1592h etc.)   Sum matches individual shifts          [ ]
+COMPLETED badges on past shifts               Status accurate                        [ ]
+Swap icon (⇄) is functional                  Opens swap dialog or action            [ ]
+Employee names link to profiles               Navigates to employee detail           [ ]
+Site names are correct per shift              Matches client/site assignment         [ ]
+Shift type labels accurate                    Day/Swing/Night/Overnight correct      [ ]
+```
+
+## 2.3 Pending / Open Shifts
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Pending tab shows unassigned shifts           Open shifts listed                     [ ]
+"All Positions" filter dropdown works         Filters by position type               [ ]
+Pick Up button is functional                  Officer can claim shift                [ ]
+After pickup, shift moves to My Schedule      Appears in personal schedule           [ ]
+After pickup, shift removed from Pending      No longer shows as open                [ ]
+Shift details (date, time, site) accurate     Matches database records               [ ]
+OPEN status badge displays                    Shows on unassigned shifts             [ ]
+```
+
+## 2.4 Schedule Conflicts
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Conflict detection fires when conflicts exist 135 conflicts shown (or current #)    [ ]
+Conflict card shows employee + reason         "Too Many Hours", "Double Booked"     [ ]
+Resolve button opens resolution options       Can reassign, split, or adjust         [ ]
+Dismiss button marks conflict as acknowledged Conflict dismissed, doesn't reappear  [ ]
+Conflict count badge is accurate              Matches actual conflict count          [ ]
+Conflicts recalculate after schedule changes  Count updates when shifts change       [ ]
+```
+
+## 2.5 Schedule Creation (Manager)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+"+" button on schedule opens create shift     Shift creation form appears            [ ]
+Can select date, time, site, position         All fields functional                  [ ]
+Can assign employee to shift                  Employee dropdown populated            [ ]
+Can create open/unassigned shift              Shift appears in Pending               [ ]
+Can publish shift                             Employee receives notification         [ ]
+Created shift has correct workspace_id        Belongs to correct org                 [ ]
+Created shift has created_by attribution      Shows who created it                   [ ]
+```
+
+## 2.6 Trinity AI Scheduling
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+AI Scheduling toggle (Settings) is functional Turns on/off auto-scheduling          [ ]
+Trinity can generate a full week's schedule   Schedule populated for all sites       [ ]
+Trinity respects employee availability        No shifts during unavailable times     [ ]
+Trinity respects overtime limits              No employee exceeds 40hr threshold     [ ]
+Trinity fills open shifts autonomously        Open shifts get assigned               [ ]
+Trinity considers skill/cert requirements     Armed sites get armed officers         [ ]
+Trinity logs credit consumption               Credits deducted per scheduling action [ ]
+Trinity schedule shows in manager view        Auto-generated shifts visible          [ ]
+Trinity provides reasoning for assignments    Can see why each officer was chosen    [ ]
+Graceful degradation at 0 credits             Falls back to template-based schedule  [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 3: TIME & ATTENDANCE
+# ═══════════════════════════════════════════════════
+
+## 3.1 Clock In/Out
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Clock In button appears when not clocked in   Shows Clock In option                  [ ]
+Clock In captures GPS coordinates             Lat/lng stored with record             [ ]
+Clock In verifies geofence (if configured)    Within geofence = success              [ ]
+Clock In outside geofence shows warning       Alert to manager                       [ ]
+Clock Out button appears when clocked in      Shows Clock Out option                 [ ]
+Clock Out captures GPS coordinates            Lat/lng stored                         [ ]
+Clock record created with correct shift link  References the correct shift           [ ]
+Clock record has workspace_id                 Belongs to correct org                 [ ]
+Clock record has user_id                      Belongs to correct employee            [ ]
+Clock times are accurate (server-verified)    Not just device clock                  [ ]
+Break clock in/out works (if applicable)      Break time tracked separately          [ ]
+```
+
+## 3.2 Timesheets
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Timesheets page shows clock records           List of worked shifts with hours       [ ]
+Hours calculations are accurate               Regular vs OT correctly split          [ ]
+Date range filter works                       Can view different periods             [ ]
+Employee can view own timesheets              Personal history visible               [ ]
+Manager can view all employee timesheets      All employees' records visible         [ ]
+Export/download timesheet data works           CSV or PDF export functional           [ ]
+Timesheets match clock records exactly         No discrepancy between clock + sheet  [ ]
+Overtime calculated per state rules            TX weekly, CA daily, etc.             [ ]
+```
+
+## 3.3 Availability
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Weekly availability grid displays             7-day grid with time slots             [ ]
+Can set available hours per day               Time range selection works             [ ]
+Can set "No availability" for a day           Day shows as unavailable               [ ]
+Changes persist after page reload             Saved to database                      [ ]
+Availability has workspace_id                 Belongs to correct org                 [ ]
+Trinity reads availability for scheduling     Auto-scheduling respects availability  [ ]
+Time Off tab works (if present)               Can request time off                   [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 4: COMMUNICATIONS
+# ═══════════════════════════════════════════════════
+
+## 4.1 Team Chat (DockChat)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Messages page loads                           Conversation list visible              [ ]
+Filter chips work (All, DMs, Rooms, etc.)     Filters change displayed convos        [ ]
+Can create new conversation                   "+" button works                       [ ]
+Can send text message                         Message appears in thread              [ ]
+Can send to DM (direct message)               One-on-one chat works                  [ ]
+Can send to Room (group chat)                 Group message works                    [ ]
+Messages have timestamps                      Time displayed per message             [ ]
+Messages persist after page reload            Stored in database                     [ ]
+Messages are workspace-scoped                 Can't see other org's messages         [ ]
+Unread badge count is accurate                Badge reflects actual unread count     [ ]
+Search conversations works                    Can find messages by keyword           [ ]
+Help Desk channel functional                  Support messages work                  [ ]
+```
+
+## 4.2 Email / Inbox
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Inbox page loads                              Email list visible                     [ ]
+Can view received emails                      Email content readable                 [ ]
+Can compose/send email                        Outbound email works                   [ ]
+Email integration functional (Resend)         Actually sends/receives                [ ]
+Emails are workspace-scoped                   Only org emails visible                [ ]
+Inbound emails route correctly                calloffs@, incidents@, etc.            [ ]
+```
+
+## 4.3 Broadcasts
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Broadcast creation page works                 Can compose broadcast                  [ ]
+Can select recipients (all, role, site)       Targeting options functional            [ ]
+Broadcast sends to all selected recipients    All targeted users receive             [ ]
+Broadcast delivery confirmation               Shows sent status                      [ ]
+Broadcast history viewable                    Past broadcasts listed                 [ ]
+Broadcasts have workspace_id                  Scoped to org                          [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 5: FIELD REPORTS & INCIDENTS
+# ═══════════════════════════════════════════════════
+
+## 5.1 Daily Report
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Create tab shows report form                  Form renders                           [ ]
+Title auto-populates with date                "Daily Report - Mar 4, 2026"           [ ]
+Description/Notes field accepts text          Can type report content                [ ]
+Location Captured shows GPS data              Coordinates captured                   [ ]
+Submit Report button works                    Report saved to database               [ ]
+History tab shows submitted reports           Past reports listed                    [ ]
+Report has workspace_id                       Belongs to correct org                 [ ]
+Report has created_by (reporting officer)     Attribution correct                    [ ]
+Report linked to shift (if on shift)          Shift reference attached               [ ]
+Manager can view submitted reports            Visible in manager view                [ ]
+```
+
+## 5.2 Incident Report
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Incident form opens                           Form renders with all fields           [ ]
+Title auto-populates                          Date-based title                       [ ]
+Severity dropdown works                       Can select Low/Med/High/Critical       [ ]
+Incident Type dropdown works                  Can select type category               [ ]
+Description field accepts text                Multi-line input functional            [ ]
+Location Captured shows GPS                   Coordinates captured                   [ ]
+"Analyze with ReportBot AI" button works      Sends to AI for processing             [ ]
+AI analysis returns polished report           Professional rewrite generated         [ ]
+Submit creates incident record                Saved with all fields                  [ ]
+Incident has workspace_id                     Belongs to correct org                 [ ]
+Incident has reported_by                      Officer attribution correct            [ ]
+Incident linked to shift/site                 Proper entity references               [ ]
+Incident visible in manager review            Shows in approvals/incidents list      [ ]
+Photos can be attached (if feature exists)    Photo upload functional                [ ]
+Credit deduction on AI analysis               Credits consumed for ReportBot         [ ]
+```
+
+## 5.3 Safety Checklist
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Checklist renders with items                  All checklist items visible            [ ]
+Checkboxes are tappable and show state        Checked vs unchecked VISIBLE           [ ]  ← KNOWN BUG
+Checking an item visually updates             Clear checked state                    [ ]  ← KNOWN BUG
+Description/Notes field works                 Can add notes                          [ ]
+Location Captured works                       GPS data captured                      [ ]
+Submit saves checklist data                   All checked/unchecked states saved     [ ]
+Checklist has workspace_id                    Belongs to correct org                 [ ]
+Checklist linked to shift/site                Proper references                      [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 6: EMPLOYEES & HR
+# ═══════════════════════════════════════════════════
+
+## 6.1 Employees List
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Employee list loads                           All employees in org shown             [ ]
+Search employees works                        Filters by name/email                  [ ]
+Filter button works                           Can filter by role/status              [ ]
+Grouping dropdown works                       Can group by criteria                  [ ]
+Employee card shows role, status, pay rate    Correct info per employee              [ ]
+Three-dot menu opens actions                  Edit, message, schedule, etc.          [ ]
+Tapping employee opens profile/detail         Full employee info                     [ ]
+Can add new employee                          Create employee form works             [ ]
+New employee gets workspace_id                Belongs to correct org                 [ ]
+Can edit employee info                        Update saves correctly                 [ ]
+Can deactivate employee                       Status changes, not hard deleted       [ ]
+Employee count matches for billing            Active count = billing count           [ ]
+```
+
+## 6.2 Training
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Training page loads                           Training records/modules visible       [ ]
+Can view employee training records            Certifications, completions listed     [ ]
+Can add training record                       New record saved                       [ ]
+Training expiration tracking works            Alerts for expiring certs              [ ]
+Training records have workspace_id            Belongs to correct org                 [ ]
+Training linked to employee                   Proper employee reference              [ ]
+```
+
+## 6.3 Compliance
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Compliance page loads                         Compliance items visible               [ ]
+Shows license/cert expiration dates           Date tracking functional               [ ]
+Alerts for approaching expirations            Notification sent before expiry        [ ]
+Break Compliance toggle (Settings) works      Monitors break requirements            [ ]
+State-specific compliance rules applied       Correct rules per operating state      [ ]
+Compliance records have workspace_id          Belongs to correct org                 [ ]
+```
+
+## 6.4 Behavior Scoring (AI)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Behavior Scoring page loads                   Scores visible per employee            [ ]
+AI badge indicates AI-powered scoring         Badge renders                          [ ]
+Scores calculate from real data               Based on attendance, performance       [ ]
+Score changes logged with reason              Audit trail for score changes          [ ]
+Positive/negative events affect score         Clock-in on time = positive, etc.     [ ]
+Scores have workspace_id                      Belongs to correct org                 [ ]
+Trinity can read scores for scheduling        Higher scores = priority assignments   [ ]
+```
+
+## 6.5 Recognition
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Recognition page loads                        Recognition feed/list visible          [ ]
+Can give recognition to employee              Create recognition record              [ ]
+Recognition visible to recipient              Employee sees their recognition        [ ]
+Recognition history viewable                  Past recognitions listed               [ ]
+Records have workspace_id                     Belongs to correct org                 [ ]
+```
+
+## 6.6 Leadership
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Leadership page loads                         Content renders                        [ ]
+Purpose is clear (leadership board? metrics?) Feature intent documented             [ ]
+Data displayed is accurate                    Numbers match reality                  [ ]
+Records have workspace_id                     Belongs to correct org                 [ ]
+```
+
+## 6.7 Engagement
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Engagement page loads                         Content renders                        [ ]
+Purpose is clear (surveys? pulse checks?)     Feature intent documented             [ ]
+Interactive elements functional               Surveys, polls, etc. work             [ ]
+Records have workspace_id                     Belongs to correct org                 [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 7: CLIENTS & SITES
+# ═══════════════════════════════════════════════════
+
+## 7.1 Clients
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Clients page loads                            Client list visible                    [ ]
+Can add new client/site                       Create form works                      [ ]
+New client gets workspace_id                  Belongs to correct org                 [ ]
+Can edit client info                          Update saves correctly                 [ ]
+Client detail shows site info                 Address, contacts, contract info       [ ]
+Client linked to shifts at their site         Shifts reference this client           [ ]
+Client linked to invoices                     Invoices reference this client         [ ]
+Can view client's shift history               Past shifts at this site               [ ]
+Can view client's invoice history             Past invoices for this client          [ ]
+```
+
+## 7.2 Auditor Portal
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Auditor Portal page loads                     Portal interface visible               [ ]
+Purpose is clear (client-facing view?)        Feature intent documented             [ ]
+Read-only access for auditor role             Cannot modify, only view               [ ]
+Shows relevant compliance/service data        Appropriate data exposed               [ ]
+Proper RBAC enforcement                       Only auditor role can access            [ ]
+Data scoped to workspace                      Only shows org's data                  [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 8: APPROVALS & FINANCE
+# ═══════════════════════════════════════════════════
+
+## 8.1 Invoices
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Invoice page loads                            Invoice dashboard visible              [ ]
+Auto-Generate Invoices button works           Creates invoices from time data        [ ]
+Generate from Time button works               Creates from approved time entries     [ ]
+Create Invoice (manual) works                 Manual invoice creation form           [ ]
+Invoice has correct line items                Hours × rate = amount                  [ ]
+Invoice has workspace_id                      Belongs to correct org                 [ ]
+Invoice linked to correct client              Client reference accurate              [ ]
+Invoice status tracking works                 Draft → Sent → Paid → Overdue         [ ]
+72 Drafts Pending Review badge accurate       Count matches actual drafts            [ ]
+Total Value / Paid / Outstanding accurate     Numbers match invoice records          [ ]
+Overdue amount accurate                       Past-due invoices correctly flagged    [ ]
+Accounts Receivable Aging chart accurate      Buckets match actual aging             [ ]
+Can send invoice to client                    Email/delivery functional              [ ]
+Can mark invoice as paid                      Status updates, amount recorded        [ ]
+Financial processing fee recorded             Fee created on invoice generation      [ ]
+Credit NOT deducted (invoicing is $$)         Uses dollar fees, not credits          [ ]
+```
+
+## 8.2 Auto Invoicing (Trinity)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Auto Invoicing toggle (Settings) is functional Turns on/off auto-generation          [ ]
+When enabled, invoices auto-generate on cycle Monthly/biweekly cycle runs            [ ]
+Auto-generated invoices are accurate          Line items match time records          [ ]
+Auto-generation logged in audit trail         Trinity action recorded                [ ]
+Auto-generation consumes 0 credits            Financial ops are free                 [ ]
+Financial processing fee recorded             Dollar fee, not credit                 [ ]
+```
+
+## 8.3 Payroll
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Payroll page loads                            Payroll dashboard visible              [ ]
+Can initiate payroll run                      Payroll processing starts              [ ]
+Payroll calculates gross correctly            Hours × rate = gross                   [ ]
+Overtime calculated correctly                 Per state rules (TX = weekly >40)      [ ]
+Tax withholdings calculated                   SS, Medicare, Federal, State           [ ]
+Net pay calculated correctly                  Gross - taxes - deductions = net       [ ]
+Payroll has workspace_id                      Belongs to correct org                 [ ]
+Each employee's payroll entry created         One entry per employee per run         [ ]
+Can approve payroll                           Manager approval gate works            [ ]
+QuickBooks sync works (if connected)          Payroll data syncs to QB               [ ]
+Financial processing fee recorded             Per-employee fee, not credits          [ ]
+Auto Payroll toggle functional                Auto-runs on biweekly cycle            [ ]
+Payroll data appears in My Paychecks          Employee can see their pay stubs       [ ]
+```
+
+## 8.4 Auto Payroll (Trinity)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Auto Payroll toggle (Settings) is functional  Turns on/off auto-payroll              [ ]
+When enabled, payroll runs on schedule        Biweekly cycle executes                [ ]
+Auto-payroll requires manager approval gate   Doesn't fully process without approve  [ ]
+Auto-payroll calculations accurate            Matches manual payroll run             [ ]
+Auto-payroll logged in audit trail            Trinity action recorded                [ ]
+```
+
+## 8.5 Expenses (ExpenseOS)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+ExpenseOS page loads                          Expense interface visible              [ ]
+New Expense button works                      Expense form opens                     [ ]
+Can submit expense with details               Amount, category, description saved    [ ]
+Can attach receipt photo                      Image upload functional                [ ]
+Tab filters work (All, Submitted, etc.)       Filters change displayed expenses      [ ]
+Submitted expense visible to manager          Shows in approval queue                [ ]
+Manager can approve/reject                    Status updates correctly               [ ]
+Approved expense moves to Reimbursed          Full pipeline works                    [ ]
+Expenses have workspace_id                    Belongs to correct org                 [ ]
+Expenses linked to employee                   Submitted_by attribution correct       [ ]
+```
+
+## 8.6 Disputes
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Disputes page loads                           Dispute interface visible              [ ]
+Can create a dispute                          Dispute form works                     [ ]
+Dispute types defined (pay, schedule, etc.)   Category selection works               [ ]
+Dispute pipeline works                        Submitted → Reviewing → Resolved      [ ]
+Disputes have workspace_id                    Belongs to correct org                 [ ]
+Both parties can add comments/evidence        Communication thread works             [ ]
+Resolution logged                             Outcome recorded with reason           [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 9: SHIFT MARKETPLACE & COVERAGE
+# ═══════════════════════════════════════════════════
+
+## 9.1 Shift Marketplace
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Marketplace page loads                        Open shifts listed                     [ ]
+Pick Up button functional                     Can claim a shift                      [ ]
+After pickup, shift assigned to officer       Appears in My Schedule                 [ ]
+Only qualified officers see eligible shifts   Filters by certs/skills                [ ]
+Marketplace scoped to workspace               Only shows org's open shifts           [ ]
+Urgency indication for imminent shifts        Shifts starting soon highlighted       [ ]
+```
+
+## 9.2 Coverage Market
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Coverage Market page loads                    Interface visible                      [ ]
+Purpose clear (different from Marketplace?)   Feature intent documented             [ ]
+Can request coverage for a shift              Coverage request created               [ ]
+Available officers can accept coverage        Accept/decline functional              [ ]
+Coverage linked to original shift             Proper references                      [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 10: APPROVALS PIPELINE
+# ═══════════════════════════════════════════════════
+
+## 10.1 Approvals
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Approvals page loads                          Pending approvals listed               [ ]
+Shows all types (time, expenses, reports)     All approval types visible             [ ]
+Can approve an item                           Status changes to approved             [ ]
+Can reject an item                            Status changes, reason captured        [ ]
+Can request revision                          Sends back to submitter                [ ]
+Approved items flow to next step              Approved expenses → reimbursement, etc.[ ]
+Approval has audit trail                      Who approved, when, from where         [ ]
+Approvals scoped to workspace                 Only org's items visible               [ ]
+Manager sees only items assigned to them      RBAC enforced on approval queue        [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 11: FILES & DOCUMENTS
+# ═══════════════════════════════════════════════════
+
+## 11.1 File Cabinet
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+File Cabinet page loads                       File/document list visible             [ ]
+Can upload a file                             File upload functional                 [ ]
+Uploaded files persist                        Stored permanently                     [ ]
+Can organize by category/folder               Organization system works              [ ]
+Can search files                              Search returns relevant results        [ ]
+Can download files                            Download button works                  [ ]
+Files have workspace_id                       Belongs to correct org                 [ ]
+Files have uploaded_by attribution            Who uploaded is recorded               [ ]
+Files linked to entity (employee, site, etc.) Proper references where applicable     [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 12: AI & TRINITY FEATURES
+# ═══════════════════════════════════════════════════
+
+## 12.1 Ask Trinity AI
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Ask Trinity AI page/interface loads           Chat or prompt interface visible       [ ]
+Can ask a question                            Input field + submit works             [ ]
+Trinity responds with relevant answer         AI response generated                  [ ]
+Trinity has access to org data                Can answer org-specific questions      [ ]
+Response is workspace-scoped                  Only references this org's data        [ ]
+Credits consumed per query                    Credit deduction recorded              [ ]
+Graceful degradation at 0 credits             Helpful message, no crash              [ ]
+Response quality is reasonable                Accurate, relevant, professional       [ ]
+```
+
+## 12.2 AI Scheduling (Trinity Core)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Toggle on: Trinity generates schedules        Autonomous scheduling active           [ ]
+Toggle off: Trinity stops auto-scheduling     Only manual scheduling works           [ ]
+Trinity checks employee availability          Respects availability settings         [ ]
+Trinity checks employee certifications        Armed officers to armed sites          [ ]
+Trinity checks overtime thresholds            Avoids exceeding 40h/week             [ ]
+Trinity checks behavior scores                Higher scores = preference             [ ]
+Trinity resolves conflicts                    No double-bookings in output           [ ]
+Trinity fills open shifts                     100% fill rate (or close to it)        [ ]
+Trinity provides fill reasoning               Can explain why each assignment        [ ]
+Credit consumption accurate                   3 credits per AI scheduling action     [ ]
+Fallback to free mode at 0 credits            Template-based scheduling, no AI       [ ]
+Multi-model orchestration working             Gemini → Claude → OpenAI fallback     [ ]
+```
+
+## 12.3 AI Summarization
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Toggle on: Summaries auto-generated           Daily/weekly digests created           [ ]
+Toggle off: No auto summaries                 Feature disabled cleanly               [ ]
+Summaries cover key metrics                   Hours, revenue, incidents, OT          [ ]
+Summaries delivered to managers               Notification or email                  [ ]
+Credits consumed per summary                  Credit deduction recorded              [ ]
+Summary content is accurate                   Numbers match actual data              [ ]
+```
+
+## 12.4 Shift Reminders
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Toggle on: Reminders sent before shifts       Notification to officers               [ ]
+Toggle off: No reminders sent                 Feature disabled cleanly               [ ]
+Reminder timing configurable                  1hr before, 30min, etc.                [ ]
+Reminder reaches the officer                  Push notification or email             [ ]
+Reminder references correct shift details     Right time, site, role                 [ ]
+```
+
+## 12.5 Break Compliance
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Toggle on: Break monitoring active            System tracks break compliance         [ ]
+Toggle off: No break monitoring               Feature disabled cleanly               [ ]
+Federal break rules enforced                  30min break after 6 hours              [ ]
+State-specific rules applied (if applicable)  CA meal/rest period rules              [ ]
+Alert sent when break is overdue              Notification to officer + manager      [ ]
+Break compliance logged                       Record of compliance/violations        [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 13: SETTINGS & CONFIGURATION
+# ═══════════════════════════════════════════════════
+
+## 13.1 Settings Page
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Settings page loads                           All settings categories visible        [ ]
+Email Notifications toggle works              Enables/disables email alerts          [ ]
+Push Notifications toggle works               Enables/disables push alerts           [ ]
+SMS toggle works (if available)               Enables/disables SMS alerts            [ ]
+All toggles persist after page reload         Saved to database                      [ ]
+Settings have workspace_id                    Org-specific settings                  [ ]
+Settings changes logged in audit trail        Who changed what, when                 [ ]
+Easy View Mode toggle functional              UI simplifies when enabled             [ ]
+Quick Toggles section matches full settings   Consistent state                       [ ]
+```
+
+## 13.2 HelpDesk
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+HelpDesk page loads                           Support interface visible              [ ]
+Can submit a support request                  Ticket created                         [ ]
+HelpBot responds (if AI-powered)              Automated initial response             [ ]
+Support tickets tracked                       Status pipeline works                  [ ]
+Tickets have workspace_id                     Scoped to org                          [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 14: CROSS-CUTTING CONCERNS
+# ═══════════════════════════════════════════════════
+
+## 14.1 RBAC (Role-Based Access Control)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Org Owner sees all features                   Full access                            [ ]
+Manager sees management features              Schedule, employees, approvals, etc.   [ ]
+Field Worker sees limited features            Clock, my schedule, reports only       [ ]
+Field Worker CANNOT see payroll               Finance restricted                     [ ]
+Field Worker CANNOT see other employees' data Isolation enforced                     [ ]
+Field Worker CANNOT access other org's data   Workspace isolation enforced           [ ]
+Role change immediately updates access        No stale permissions                   [ ]
+Supervisor has intermediate access            Between manager and field worker       [ ]
+```
+
+## 14.2 Data Isolation (Multi-Tenant)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Create two test workspaces                    Both exist independently               [ ]
+Workspace A cannot see Workspace B's data     No data leakage on ANY page            [ ]
+Employees in Workspace A invisible to B       Employee list isolated                 [ ]
+Shifts in Workspace A invisible to B          Schedule isolated                      [ ]
+Invoices in Workspace A invisible to B        Financial data isolated                [ ]
+Messages in Workspace A invisible to B        Chat isolated                          [ ]
+API routes enforce workspace_id on ALL queries No endpoint returns cross-org data    [ ]
+```
+
+## 14.3 Mobile UX (Known Issues from Screenshots)
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Bottom nav bar doesn't overlap content        All buttons reachable                  [ ]  ← KNOWN BUG
+FAB doesn't cover interactive elements        All toggles/buttons tappable           [ ]  ← KNOWN BUG
+Logout is accessible in all locations         Profile sheet + More menu              [ ]  ← KNOWN BUG
+Safety checklist checkboxes render correctly  Checked/unchecked states visible       [ ]  ← KNOWN BUG
+All pages scroll fully with bottom padding    Content not hidden behind nav          [ ]  ← KNOWN BUG
+```
+
+## 14.4 QuickBooks Integration
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+QB OAuth connection works                     Can connect QB account                 [ ]
+QB OAuth token refreshes automatically        No manual re-auth needed               [ ]
+Invoice sync to QB works                      Invoices push to QB                    [ ]
+Payroll sync to QB works                      Payroll data pushes to QB              [ ]
+Customer/Client sync works                    Clients match between systems          [ ]
+Sync errors handled gracefully                Notification on failure, no crash      [ ]
+Sync logged in audit trail                    Who synced, when, what                 [ ]
+Financial processing fee on sync              Dollar fee recorded per sync           [ ]
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 15: TRINITY BRAIN — COMPLETE CAPABILITY MAP
+# ═══════════════════════════════════════════════════
+
+This section verifies that Trinity's orchestration layer has the connections, permissions, and data access to perform every automation we promise.
+
+## 15.1 Trinity Data Access
+```
+CAN TRINITY READ:                            VERIFIED?
+─────────────────────────────────────────────────────────
+Employee records (names, roles, certs, pay)   [ ]
+Employee availability                         [ ]
+Employee behavior scores                      [ ]
+Shift schedule (all shifts, all sites)        [ ]
+Client/site information                       [ ]
+Clock records (in/out, GPS)                   [ ]
+Time entries / timesheets                     [ ]
+Invoice data                                  [ ]
+Payroll data                                  [ ]
+Incident reports                              [ ]
+Daily reports                                 [ ]
+DockChat messages (for context)               [ ]
+Notification history                          [ ]
+Credit balance (to check before acting)       [ ]
+Org settings/preferences                      [ ]
+```
+
+## 15.2 Trinity Write/Action Capabilities
+```
+CAN TRINITY:                                 VERIFIED?  CREDITS?
+──────────────────────────────────────────────────────────────────
+Create/assign shifts                          [ ]        3/action
+Fill open shifts                              [ ]        3/action
+Send notifications                            [ ]        0
+Generate invoices                             [ ]        0 ($ fee)
+Process payroll calculations                  [ ]        0 ($ fee)
+Analyze incident reports (ReportBot)          [ ]        10
+Polish daily reports (ReportBot)              [ ]        5
+Generate profitability insights               [ ]        15
+Send shift reminders                          [ ]        0
+Detect schedule conflicts                     [ ]        0
+Monitor break compliance                      [ ]        0
+Score employee behavior                       [ ]        0
+Generate AI summaries/digests                 [ ]        5
+Respond to Ask Trinity queries                [ ]        5
+Auto-sync QuickBooks                          [ ]        0 ($ fee)
+```
+
+## 15.3 Trinity Multi-Model Orchestration
+```
+TEST                                          EXPECTED                              RESULT
+─────────────────────────────────────────────────────────────────────────────────────────────
+Gemini Flash is primary for simple tasks      80%+ of actions use Gemini             [ ]
+Claude Sonnet used for complex reasoning      Contract review, deep analysis         [ ]
+OpenAI used as fallback                       If primary models fail                 [ ]
+Fallback chain works automatically            Gemini fail → Claude → OpenAI          [ ]
+Token usage tracked per request               ai_token_usage table populated         [ ]
+Token usage attributed to workspace           Org-level tracking                     [ ]
+Model routing logic is correct                Right model for right task             [ ]
+API keys configured and working               All 3 providers accessible             [ ]
+Rate limiting handled gracefully              Retries, backoff, fallback             [ ]
+```
+
+## 15.4 Trinity Event System
+```
+DOES TRINITY RESPOND TO:                     VERIFIED?  ACTION TAKEN?
+──────────────────────────────────────────────────────────────────────────
+Shift start time reached                      [ ]        Opens shift room, alerts officers
+Officer clocks in                             [ ]        Verifies GPS, logs attendance
+Officer clocks in late                        [ ]        Escalation protocol
+Officer doesn't clock in                      [ ]        Alert chain (5/10/15/20 min)
+Shift end time reached                        [ ]        Prompts clock-out, compiles data
+Invoice due date approaching                  [ ]        Sends client reminder
+Invoice overdue                               [ ]        Escalation + collection workflow
+Payroll cycle date                            [ ]        Auto-runs payroll (if toggle on)
+Employee added                                [ ]        Onboarding workflow triggers
+Contract expiring (30/60/90 days)             [ ]        Renewal alert to management
+Schedule conflict detected                    [ ]        Alert + resolution suggestions
+Credit balance low                            [ ]        Alert org owner
+Credit balance depleted                       [ ]        Graceful degradation activated
+New incident reported                         [ ]        ReportBot processing triggered
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# SECTION 16: RESULT COMPILATION
+# ═══════════════════════════════════════════════════
+
+After running all tests, compile results into this summary:
+
+```
+CATEGORY                    TOTAL TESTS    ✅ PASS    ⚠️ PARTIAL    ❌ FAIL
+──────────────────────────────────────────────────────────────────────────────
+Dashboard & Navigation       ___            ___        ___           ___
+Scheduling                   ___            ___        ___           ___
+Time & Attendance            ___            ___        ___           ___
+Communications               ___            ___        ___           ___
+Field Reports & Incidents    ___            ___        ___           ___
+Employees & HR               ___            ___        ___           ___
+Clients & Sites              ___            ___        ___           ___
+Approvals & Finance          ___            ___        ___           ___
+Shift Marketplace            ___            ___        ___           ___
+Files & Documents            ___            ___        ___           ___
+AI & Trinity Features        ___            ___        ___           ___
+Settings & Config            ___            ___        ___           ___
+Cross-Cutting (RBAC, etc.)   ___            ___        ___           ___
+Trinity Brain Capabilities   ___            ___        ___           ___
+──────────────────────────────────────────────────────────────────────────────
+TOTAL                        ___            ___        ___           ___
+```
+
+## Priority Fix Categories:
+
+```
+❌ FAIL items that affect money/billing:           FIX IMMEDIATELY
+❌ FAIL items that affect data integrity:           FIX IMMEDIATELY
+❌ FAIL items that are user-facing features:        FIX THIS WEEK
+⚠️ PARTIAL items with workarounds:                 FIX NEXT SPRINT
+⚠️ PARTIAL items that are cosmetic:                POLISH PHASE
+```
+
+---
+
+END OF FEATURE PARITY AUDIT v1.0
+
+RUN EVERY TEST. DOCUMENT EVERY RESULT. FIX NOTHING UNTIL THE FULL PICTURE IS KNOWN.

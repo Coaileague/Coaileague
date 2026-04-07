@@ -1,0 +1,876 @@
+# COAILEAGUE - SCHEMA/CODE/DATABASE MISMATCH AUDIT
+
+## THE EXACT PROBLEMS (From Real Examples)
+
+Based on the document you shared, here are the **EXACT TYPES** of mismatches causing silent failures:
+
+### Example 1: Enum Values Missing
+```
+ENUM: account_state
+DATABASE HAS: {active, trial, payment_failed, suspended, requires_support, cancelled, terminated}
+CODE TRIES: "maintenance", "deactivated"
+RESULT: 500 ERROR - Invalid input value for enum
+```
+
+### Example 2: Enum Case Mismatch
+```
+ENUM: actorTypeEnum  
+DATABASE HAS: 'SUPPORT_STAFF' (uppercase)
+CODE USES: 'platform_staff' (lowercase, different string)
+RESULT: SILENT FAILURE
+```
+
+### Example 3: Enum Value Doesn't Exist
+```
+ENUM: event_status
+DATABASE HAS: {pending, in_progress, completed, failed, rolled_back}
+CODE USES: 'committed'
+RESULT: DATABASE INSERT FAILS
+```
+
+### Example 4: Column Names Don't Exist
+```
+TABLE: auditEvents
+CODE TRIES TO INSERT: entityType, entityId, details
+TABLE ACTUALLY HAS: aggregateType, aggregateId, metadata, payload
+RESULT: SILENT FAILURE - columns ignored or error
+```
+
+### Example 5: Schema Drift
+```
+SCHEMA FILE: accountState: varchar("account_state")
+ACTUAL DATABASE: account_state is USER-DEFINED enum type
+RESULT: Type mismatch, unexpected behavior
+```
+
+---
+
+# PART 1: SYSTEMATIC ENUM AUDIT
+
+## 1.1 Extract ALL Enum Definitions from Schema
+
+```bash
+#!/bin/bash
+# extract_schema_enums.sh
+
+echo "=== EXTRACTING ENUMS FROM SCHEMA.TS ==="
+
+# Find all pgEnum definitions
+grep -n "pgEnum" shared/schema.ts | while read line; do
+  echo "$line"
+done
+
+# Extract enum names and values
+grep -A 20 "= pgEnum" shared/schema.ts | \
+  grep -oP "pgEnum\('\K[^']+|'[a-zA-Z_]+'" | \
+  tr '\n' ' ' | \
+  sed 's/pgEnum/\n\nENUM:/g'
+```
+
+## 1.2 Extract ALL Enum Values from Database
+
+```sql
+-- Run this SQL to get actual database enums
+SELECT 
+  t.typname AS enum_name,
+  string_agg(e.enumlabel, ', ' ORDER BY e.enumsortorder) AS enum_values
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE n.nspname = 'public'
+GROUP BY t.typname
+ORDER BY t.typname;
+```
+
+## 1.3 Extract ALL Enum Value Usage in Code
+
+```bash
+#!/bin/bash
+# find_enum_usage.sh
+
+echo "=== FINDING ALL ENUM VALUE USAGE IN CODE ==="
+
+# Status values
+echo "--- STATUS VALUES USED ---"
+grep -rn "status:\s*['\"]" --include="*.ts" server/ | \
+  grep -oP "status:\s*['\"]?\K[a-zA-Z_]+" | \
+  sort | uniq -c | sort -rn
+
+# Type values  
+echo "--- TYPE VALUES USED ---"
+grep -rn "type:\s*['\"]" --include="*.ts" server/ | \
+  grep -oP "type:\s*['\"]?\K[a-zA-Z_]+" | \
+  sort | uniq -c | sort -rn
+
+# State values
+echo "--- STATE VALUES USED ---"
+grep -rn "state:\s*['\"]" --include="*.ts" server/ | \
+  grep -oP "state:\s*['\"]?\K[a-zA-Z_]+" | \
+  sort | uniq -c | sort -rn
+
+# Role values
+echo "--- ROLE VALUES USED ---"
+grep -rn "role:\s*['\"]" --include="*.ts" server/ | \
+  grep -oP "role:\s*['\"]?\K[a-zA-Z_]+" | \
+  sort | uniq -c | sort -rn
+
+# ActorType values
+echo "--- ACTORTYPE VALUES USED ---"
+grep -rn "actorType:\s*['\"]" --include="*.ts" server/ | \
+  grep -oP "actorType:\s*['\"]?\K[a-zA-Z_]+" | \
+  sort | uniq -c | sort -rn
+```
+
+## 1.4 Compare Enum Values
+
+```bash
+#!/bin/bash
+# compare_enums.sh
+
+echo "=== ENUM COMPARISON: SCHEMA vs CODE vs DATABASE ==="
+
+# For each known enum, compare all three sources
+
+ENUMS=(
+  "account_state"
+  "user_role"
+  "employee_type"
+  "employee_status"
+  "shift_status"
+  "contract_status"
+  "invoice_status"
+  "ticket_status"
+  "ticket_priority"
+  "message_type"
+  "notification_type"
+  "event_status"
+  "actor_type"
+  "onboarding_status"
+  "document_status"
+)
+
+for enum in "${ENUMS[@]}"; do
+  echo ""
+  echo "========== $enum =========="
+  
+  # Schema values
+  echo "SCHEMA.TS:"
+  grep -A 15 "pgEnum('$enum'" shared/schema.ts | grep -oP "'[a-zA-Z_]+'" | head -20
+  
+  # Code usage
+  echo "CODE USES:"
+  grep -rn "$enum\|${enum//_/}:" --include="*.ts" server/ | \
+    grep -oP "['\"][a-zA-Z_]+['\"]" | sort -u | head -20
+  
+  # Need to query DB for actual values (manual step)
+  echo "DATABASE: (run SQL query)"
+done
+```
+
+---
+
+# PART 2: SYSTEMATIC COLUMN NAME AUDIT
+
+## 2.1 Extract Schema Column Definitions
+
+```bash
+#!/bin/bash
+# extract_schema_columns.sh
+
+echo "=== EXTRACTING COLUMNS FROM SCHEMA.TS ==="
+
+# Parse each table and its columns
+node << 'SCRIPT'
+const fs = require('fs');
+const content = fs.readFileSync('shared/schema.ts', 'utf8');
+
+// Match table definitions
+const tableRegex = /export const (\w+) = pgTable\(['"]([^'"]+)['"]/g;
+const columnRegex = /(\w+):\s*(varchar|text|integer|boolean|timestamp|uuid|jsonb|serial|pgEnum)/g;
+
+let match;
+const tables = {};
+
+// Find all tables
+while ((match = tableRegex.exec(content)) !== null) {
+  const [_, varName, tableName] = match;
+  tables[varName] = { 
+    sqlName: tableName, 
+    jsName: varName,
+    columns: [] 
+  };
+}
+
+// For each table, find column section and extract
+for (const [varName, table] of Object.entries(tables)) {
+  const tableStart = content.indexOf(`export const ${varName} = pgTable`);
+  const tableEnd = content.indexOf('});', tableStart);
+  const tableBlock = content.substring(tableStart, tableEnd);
+  
+  // Extract columns
+  const colMatches = tableBlock.matchAll(/(\w+):\s*(\w+)\(/g);
+  for (const col of colMatches) {
+    table.columns.push({
+      jsName: col[1],
+      type: col[2]
+    });
+  }
+}
+
+// Output
+for (const [varName, table] of Object.entries(tables)) {
+  console.log(`\nTABLE: ${varName} (SQL: ${table.sqlName})`);
+  console.log('COLUMNS:');
+  for (const col of table.columns) {
+    // Predict SQL name (camelCase -> snake_case)
+    const sqlName = col.jsName.replace(/([A-Z])/g, '_$1').toLowerCase();
+    if (col.jsName !== sqlName.replace(/^_/, '')) {
+      console.log(`  ${col.jsName} -> ${sqlName} (CASE CONVERSION)`);
+    } else {
+      console.log(`  ${col.jsName}`);
+    }
+  }
+}
+SCRIPT
+```
+
+## 2.2 Extract Database Column Names
+
+```sql
+-- Get actual column names from database
+SELECT 
+  table_name,
+  column_name,
+  data_type,
+  udt_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+```
+
+## 2.3 Find Column References in Code
+
+```bash
+#!/bin/bash
+# find_column_refs.sh
+
+echo "=== FINDING COLUMN REFERENCES IN CODE ==="
+
+# Find all .column references in queries
+grep -rn "\.\w\+\s*==\|eq(\w\+\.\|\.set({" --include="*.ts" server/ | \
+  grep -oP "\.(\w+)\s*[=,]|eq\(\w+\.(\K\w+)" | \
+  sort | uniq -c | sort -rn | head -50
+
+# Find insert value keys
+echo "--- INSERT KEYS ---"
+grep -rn "\.insert\|\.values(" --include="*.ts" server/ -A 10 | \
+  grep -oP "^\s+(\w+):" | \
+  sed 's/://g' | sort | uniq -c | sort -rn | head -50
+
+# Find update set keys
+echo "--- UPDATE SET KEYS ---"
+grep -rn "\.set({" --include="*.ts" server/ -A 10 | \
+  grep -oP "^\s+(\w+):" | \
+  sed 's/://g' | sort | uniq -c | sort -rn | head -50
+```
+
+## 2.4 Compare Column Names
+
+```bash
+#!/bin/bash
+# compare_columns.sh
+
+echo "=== COLUMN NAME COMPARISON ==="
+
+# Known problematic patterns
+PROBLEM_COLUMNS=(
+  "workspaceId:workspace_id"
+  "createdAt:created_at"
+  "updatedAt:updated_at"
+  "employeeType:employee_type"
+  "accountState:account_state"
+  "entityType:entity_type"
+  "entityId:entity_id"
+  "actorType:actor_type"
+  "actorId:actor_id"
+  "resourceType:resource_type"
+  "resourceId:resource_id"
+  "firstName:first_name"
+  "lastName:last_name"
+  "emailAddress:email_address"
+  "phoneNumber:phone_number"
+)
+
+for pair in "${PROBLEM_COLUMNS[@]}"; do
+  jsName="${pair%%:*}"
+  sqlName="${pair##*:}"
+  
+  echo ""
+  echo "=== $jsName vs $sqlName ==="
+  
+  # Check schema
+  echo "Schema uses:"
+  grep -n "$jsName\|$sqlName" shared/schema.ts | head -5
+  
+  # Check code
+  echo "Code uses:"
+  grep -rn "$jsName" --include="*.ts" server/ | wc -l
+  echo "  $jsName: $(grep -rn "$jsName" --include="*.ts" server/ | wc -l) occurrences"
+  echo "  $sqlName: $(grep -rn "$sqlName" --include="*.ts" server/ | wc -l) occurrences"
+done
+```
+
+---
+
+# PART 3: TABLE NAME AUDIT
+
+## 3.1 Schema Table Names
+
+```bash
+#!/bin/bash
+# extract_table_names.sh
+
+echo "=== TABLE NAMES ==="
+
+# JavaScript variable names
+echo "--- JS Variable Names ---"
+grep -oP "export const \K\w+(?= = pgTable)" shared/schema.ts | sort
+
+# SQL table names
+echo "--- SQL Table Names ---"
+grep -oP "pgTable\('\K[^']+" shared/schema.ts | sort
+
+# Compare
+echo "--- COMPARISON ---"
+paste <(grep -oP "export const \K\w+(?= = pgTable)" shared/schema.ts | sort) \
+      <(grep -oP "pgTable\('\K[^']+" shared/schema.ts | sort) | \
+  awk '{if($1 != $2) print "MISMATCH: JS=" $1 " SQL=" $2}'
+```
+
+## 3.2 Code Table References
+
+```bash
+#!/bin/bash
+# find_table_refs.sh
+
+echo "=== TABLE REFERENCES IN CODE ==="
+
+# db.query.tableName
+echo "--- db.query.* ---"
+grep -rn "db\.query\." --include="*.ts" server/ | \
+  grep -oP "db\.query\.\K\w+" | \
+  sort | uniq -c | sort -rn
+
+# from(tableName)
+echo "--- .from() ---"
+grep -rn "\.from(" --include="*.ts" server/ | \
+  grep -oP "\.from\(\K\w+" | \
+  sort | uniq -c | sort -rn
+
+# insert(tableName)
+echo "--- db.insert() ---"
+grep -rn "db\.insert(" --include="*.ts" server/ | \
+  grep -oP "db\.insert\(\K\w+" | \
+  sort | uniq -c | sort -rn
+
+# update(tableName)
+echo "--- db.update() ---"
+grep -rn "db\.update(" --include="*.ts" server/ | \
+  grep -oP "db\.update\(\K\w+" | \
+  sort | uniq -c | sort -rn
+
+# delete(tableName)
+echo "--- db.delete() ---"
+grep -rn "db\.delete(" --include="*.ts" server/ | \
+  grep -oP "db\.delete\(\K\w+" | \
+  sort | uniq -c | sort -rn
+```
+
+---
+
+# PART 4: SPECIFIC MISMATCH PATTERNS TO FIND
+
+## 4.1 The "actorType" Pattern
+
+```bash
+# Find all actorType usages and their values
+echo "=== ACTORTYPE AUDIT ==="
+
+# What enum values exist in schema?
+echo "Schema enum values:"
+grep -A 10 "actorTypeEnum\|actor_type" shared/schema.ts | grep -oP "'[A-Za-z_]+'"
+
+# What values does code use?
+echo "Code uses:"
+grep -rn "actorType:" --include="*.ts" server/ | grep -oP "actorType:\s*['\"]?\K[A-Za-z_]+"
+
+# KNOWN ISSUE: Schema has 'SUPPORT_STAFF' but code uses 'platform_staff'
+```
+
+## 4.2 The "status" Pattern
+
+```bash
+# Find all status field mismatches
+echo "=== STATUS FIELD AUDIT ==="
+
+# For each status enum, find mismatches
+STATUS_ENUMS=(
+  "account_state"
+  "event_status"
+  "shift_status"
+  "contract_status"
+  "invoice_status"
+  "ticket_status"
+  "onboarding_status"
+)
+
+for enum in "${STATUS_ENUMS[@]}"; do
+  echo ""
+  echo "--- $enum ---"
+  
+  # Schema values
+  echo "Schema:"
+  grep -A 15 "pgEnum('$enum'" shared/schema.ts 2>/dev/null | grep -oP "'[a-z_]+'" | sort -u
+  
+  # Code that sets this status
+  echo "Code sets:"
+  grep -rn "${enum//_/}\|status:" --include="*.ts" server/ | \
+    grep -oP "status:\s*['\"]?\K[a-z_]+" | sort -u
+done
+```
+
+## 4.3 The "entityType/entityId" Pattern
+
+```bash
+# Find all audit/logging table column mismatches
+echo "=== AUDIT TABLE COLUMN AUDIT ==="
+
+# auditEvents table
+echo "--- auditEvents ---"
+echo "Schema columns:"
+grep -A 30 "auditEvents = pgTable" shared/schema.ts | grep -oP "^\s+\K\w+(?=:)"
+
+echo "Code insert keys:"
+grep -rn "insert(auditEvents)" --include="*.ts" server/ -A 20 | \
+  grep -oP "^\s+\K\w+(?=:)" | sort -u
+
+# systemAuditLogs table  
+echo "--- systemAuditLogs ---"
+echo "Schema columns:"
+grep -A 30 "systemAuditLogs = pgTable" shared/schema.ts | grep -oP "^\s+\K\w+(?=:)"
+
+echo "Code insert keys:"
+grep -rn "insert(systemAuditLogs)" --include="*.ts" server/ -A 20 | \
+  grep -oP "^\s+\K\w+(?=:)" | sort -u
+```
+
+## 4.4 The "varchar vs enum" Pattern
+
+```bash
+# Find columns defined as varchar in schema but are enums in DB (or vice versa)
+echo "=== TYPE MISMATCH AUDIT ==="
+
+# Columns that might be enums
+POTENTIAL_ENUMS=(
+  "status"
+  "state"
+  "type"
+  "role"
+  "priority"
+  "category"
+)
+
+for col in "${POTENTIAL_ENUMS[@]}"; do
+  echo ""
+  echo "--- *$col columns ---"
+  
+  # In schema as varchar
+  echo "As varchar in schema:"
+  grep -n "varchar.*$col\|$col.*varchar" shared/schema.ts
+  
+  # In schema as enum
+  echo "As enum in schema:"
+  grep -n "Enum.*$col\|$col.*Enum" shared/schema.ts
+done
+```
+
+---
+
+# PART 5: AUTOMATED MISMATCH DETECTION
+
+## 5.1 Comprehensive Detection Script
+
+```bash
+#!/bin/bash
+# detect_all_mismatches.sh
+
+echo "========================================================"
+echo "COMPREHENSIVE SCHEMA/CODE/DATABASE MISMATCH DETECTION"
+echo "========================================================"
+
+ISSUES_FOUND=0
+OUTPUT_FILE="/tmp/mismatch_report.txt"
+
+echo "" > $OUTPUT_FILE
+
+# Function to log issues
+log_issue() {
+  echo "[ISSUE] $1" | tee -a $OUTPUT_FILE
+  ((ISSUES_FOUND++))
+}
+
+# 1. ENUM VALUE MISMATCHES
+echo ""
+echo "=== CHECKING ENUM VALUE MISMATCHES ==="
+
+# Known problematic enum values from the document
+KNOWN_BAD_VALUES=(
+  "maintenance"      # Not in account_state
+  "deactivated"      # Not in account_state
+  "committed"        # Not in event_status
+  "platform_staff"   # Should be SUPPORT_STAFF
+)
+
+for val in "${KNOWN_BAD_VALUES[@]}"; do
+  count=$(grep -rn "'$val'\|\"$val\"" --include="*.ts" server/ | wc -l)
+  if [ "$count" -gt 0 ]; then
+    log_issue "Enum value '$val' used in $count places but may not exist in DB enum"
+    grep -rn "'$val'\|\"$val\"" --include="*.ts" server/ | head -5 >> $OUTPUT_FILE
+  fi
+done
+
+# 2. COLUMN NAME MISMATCHES
+echo ""
+echo "=== CHECKING COLUMN NAME MISMATCHES ==="
+
+# Check for columns used in code that might not match schema
+SUSPECT_COLUMNS=(
+  "entityType"
+  "entityId" 
+  "resourceType"
+  "resourceId"
+  "actorId"
+  "actorType"
+  "details"
+  "severity"
+)
+
+for col in "${SUSPECT_COLUMNS[@]}"; do
+  # Check if used in inserts/updates
+  usage=$(grep -rn "$col:" --include="*.ts" server/routes/ | wc -l)
+  if [ "$usage" -gt 0 ]; then
+    # Check if exists in schema
+    in_schema=$(grep -c "$col:" shared/schema.ts)
+    if [ "$in_schema" -eq 0 ]; then
+      log_issue "Column '$col' used in code ($usage times) but not found in schema"
+    fi
+  fi
+done
+
+# 3. CASE SENSITIVITY ISSUES
+echo ""
+echo "=== CHECKING CASE SENSITIVITY ISSUES ==="
+
+# Find uppercase enum values in schema
+echo "Uppercase enum values in schema:"
+grep -oP "'[A-Z][A-Z_]+'" shared/schema.ts | sort -u | while read val; do
+  lowercase=$(echo $val | tr '[:upper:]' '[:lower:]')
+  if grep -rq "$lowercase" --include="*.ts" server/; then
+    log_issue "Enum value $val is uppercase in schema but lowercase version used in code"
+  fi
+done
+
+# 4. TABLE REFERENCE MISMATCHES
+echo ""
+echo "=== CHECKING TABLE REFERENCE MISMATCHES ==="
+
+# Get all table variable names from schema
+grep -oP "export const \K\w+(?= = pgTable)" shared/schema.ts > /tmp/schema_tables.txt
+
+# Check each table reference in code
+grep -rn "db\.\(query\|insert\|update\|delete\)" --include="*.ts" server/ | \
+  grep -oP "\.\K\w+(?=\(|\s|\.)" | sort -u | while read table; do
+  if ! grep -q "^$table$" /tmp/schema_tables.txt; then
+    log_issue "Table '$table' referenced in code but not found in schema"
+  fi
+done
+
+# 5. SUMMARY
+echo ""
+echo "========================================================"
+echo "TOTAL ISSUES FOUND: $ISSUES_FOUND"
+echo "========================================================"
+echo "Full report saved to: $OUTPUT_FILE"
+
+cat $OUTPUT_FILE
+```
+
+## 5.2 SQL Verification Queries
+
+```sql
+-- Run these queries to verify database matches expectations
+
+-- 1. List all enums and their values
+SELECT 
+  t.typname AS enum_name,
+  array_agg(e.enumlabel ORDER BY e.enumsortorder) AS enum_values
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE n.nspname = 'public'
+GROUP BY t.typname
+ORDER BY t.typname;
+
+-- 2. Find columns using enum types
+SELECT 
+  c.table_name,
+  c.column_name,
+  c.udt_name AS enum_type
+FROM information_schema.columns c
+WHERE c.table_schema = 'public'
+  AND c.data_type = 'USER-DEFINED'
+ORDER BY c.table_name, c.column_name;
+
+-- 3. Find potential varchar columns that should be enums
+SELECT 
+  table_name,
+  column_name,
+  data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND data_type = 'character varying'
+  AND (column_name LIKE '%status%' 
+       OR column_name LIKE '%state%'
+       OR column_name LIKE '%type%'
+       OR column_name LIKE '%role%')
+ORDER BY table_name, column_name;
+
+-- 4. Check for missing columns referenced in common patterns
+SELECT 
+  table_name,
+  CASE WHEN EXISTS (
+    SELECT 1 FROM information_schema.columns c2 
+    WHERE c2.table_name = c.table_name AND c2.column_name = 'entity_type'
+  ) THEN 'YES' ELSE 'NO' END AS has_entity_type,
+  CASE WHEN EXISTS (
+    SELECT 1 FROM information_schema.columns c2 
+    WHERE c2.table_name = c.table_name AND c2.column_name = 'entity_id'
+  ) THEN 'YES' ELSE 'NO' END AS has_entity_id
+FROM information_schema.tables c
+WHERE table_schema = 'public'
+  AND table_type = 'BASE TABLE'
+  AND table_name LIKE '%audit%' OR table_name LIKE '%log%'
+ORDER BY table_name;
+```
+
+---
+
+# PART 6: KNOWN ISSUES CHECKLIST
+
+Based on the document you shared, here are **SPECIFIC ISSUES** to find and fix:
+
+## 6.1 Enum Issues
+
+```
+[ ] account_state enum - Add: 'maintenance', 'deactivated'
+[ ] event_status enum - Check if 'committed' should be 'completed'
+[ ] actorTypeEnum - Check case: 'SUPPORT_STAFF' vs 'platform_staff'
+[ ] All enums - Verify schema matches actual database
+```
+
+## 6.2 Column Issues
+
+```
+[ ] auditEvents table:
+    - Code uses: entityType, entityId, details
+    - Table has: aggregateType, aggregateId, metadata, payload
+    - FIX: Update code to use correct column names
+
+[ ] systemAuditLogs table:
+    - Code uses: actorId, actorType, resourceType, resourceId, details, severity
+    - Table has: userId, action, entityType, entityId, changes, metadata
+    - FIX: Update code to use correct column names
+```
+
+## 6.3 Type Issues
+
+```
+[ ] accountState column:
+    - Schema: varchar("account_state")
+    - Database: USER-DEFINED enum
+    - FIX: Update schema to match DB or migrate DB
+```
+
+---
+
+# PART 7: FIX TEMPLATES
+
+## 7.1 Adding Missing Enum Values
+
+```sql
+-- Add missing values to existing enum
+ALTER TYPE account_state ADD VALUE IF NOT EXISTS 'maintenance';
+ALTER TYPE account_state ADD VALUE IF NOT EXISTS 'deactivated';
+
+-- Verify
+SELECT enumlabel FROM pg_enum WHERE enumtypid = 'account_state'::regtype;
+```
+
+## 7.2 Fixing Column Name Mismatches in Code
+
+```typescript
+// BEFORE (wrong column names)
+await db.insert(auditEvents).values({
+  entityType: 'organization',  // WRONG
+  entityId: orgId,              // WRONG
+  details: JSON.stringify(data) // WRONG
+});
+
+// AFTER (correct column names)
+await db.insert(auditEvents).values({
+  aggregateType: 'organization',  // CORRECT
+  aggregateId: orgId,              // CORRECT
+  payload: JSON.stringify(data),   // CORRECT
+  metadata: {}                     // CORRECT
+});
+```
+
+## 7.3 Fixing Enum Value Mismatches
+
+```typescript
+// BEFORE (wrong enum value)
+await db.update(workspaces).set({
+  accountState: 'maintenance',  // DOESN'T EXIST IN ENUM
+  eventStatus: 'committed'      // DOESN'T EXIST IN ENUM
+});
+
+// AFTER (correct enum values)
+await db.update(workspaces).set({
+  accountState: 'suspended',    // EXISTS IN ENUM
+  eventStatus: 'completed'      // EXISTS IN ENUM (or add 'maintenance' to enum)
+});
+```
+
+## 7.4 Fixing Case Mismatches
+
+```typescript
+// BEFORE (wrong case)
+await db.insert(auditEvents).values({
+  actorType: 'platform_staff',  // WRONG: lowercase, different string
+});
+
+// AFTER (correct case)
+await db.insert(auditEvents).values({
+  actorType: 'SUPPORT_STAFF',   // CORRECT: matches enum exactly
+});
+```
+
+---
+
+# PART 8: VERIFICATION QUERIES
+
+## 8.1 After Fixes - Verify Enums
+
+```sql
+-- Verify all enum values are correct
+SELECT 
+  t.typname,
+  array_agg(e.enumlabel ORDER BY e.enumsortorder) AS values
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+WHERE t.typname IN ('account_state', 'event_status', 'actor_type', 'user_role')
+GROUP BY t.typname;
+```
+
+## 8.2 After Fixes - Test Inserts
+
+```sql
+-- Test that previously failing inserts now work
+INSERT INTO workspaces (id, account_state) VALUES ('test', 'maintenance');
+DELETE FROM workspaces WHERE id = 'test';
+
+-- If this works without error, the enum fix is good
+```
+
+---
+
+# OUTPUT FORMAT
+
+```markdown
+# SCHEMA/CODE/DATABASE MISMATCH REPORT
+
+## Date: [DATE]
+## Total Mismatches Found: [NUMBER]
+
+---
+
+## ENUM MISMATCHES
+
+| Enum | Schema Values | Code Uses | Database Has | Fix |
+|------|---------------|-----------|--------------|-----|
+| account_state | [list] | maintenance, deactivated | [list] | Add values to DB |
+| event_status | [list] | committed | [list] | Change code to 'completed' |
+| actor_type | [list] | platform_staff | SUPPORT_STAFF | Fix case in code |
+
+---
+
+## COLUMN MISMATCHES
+
+| Table | Code Uses | Schema Has | Database Has | Fix |
+|-------|-----------|------------|--------------|-----|
+| auditEvents | entityType | aggregateType | aggregate_type | Update code |
+| auditEvents | entityId | aggregateId | aggregate_id | Update code |
+| auditEvents | details | payload | payload | Update code |
+| systemAuditLogs | actorId | userId | user_id | Update code |
+
+---
+
+## TYPE MISMATCHES
+
+| Table | Column | Schema Type | Database Type | Fix |
+|-------|--------|-------------|---------------|-----|
+| workspaces | accountState | varchar | enum | Update schema |
+
+---
+
+## FILES TO UPDATE
+
+| File | Line | Current | Should Be |
+|------|------|---------|-----------|
+| hrInlineRoutes.ts | 247 | actorType: 'platform_staff' | actorType: 'SUPPORT_STAFF' |
+| hrInlineRoutes.ts | 250 | status: 'committed' | status: 'completed' |
+
+---
+
+## SQL MIGRATIONS NEEDED
+
+```sql
+ALTER TYPE account_state ADD VALUE IF NOT EXISTS 'maintenance';
+ALTER TYPE account_state ADD VALUE IF NOT EXISTS 'deactivated';
+```
+
+---
+
+## VERIFICATION
+
+[ ] All enum values exist in database
+[ ] All column names in code match schema
+[ ] All column names in schema match database
+[ ] All inserts/updates work without error
+[ ] No more 500 errors from type mismatches
+```
+
+---
+
+# EXECUTION PRIORITY
+
+1. **Run detection scripts** - Find all mismatches
+2. **Generate SQL migrations** - Add missing enum values
+3. **Update code** - Fix column names and enum values
+4. **Run migrations** - Apply to database
+5. **Test** - Verify no more silent failures
+6. **Monitor** - Check logs for any remaining issues
+
+**THIS AUDIT TARGETS THE EXACT ROOT CAUSE OF YOUR SILENT FAILURES.**
+
+**BEGIN SCHEMA MISMATCH AUDIT NOW.**

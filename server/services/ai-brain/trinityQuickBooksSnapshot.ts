@@ -22,10 +22,11 @@ import {
   employees,
   timeEntries,
   partnerConnections,
-  partnerSyncLogs,
   quickbooksSyncReceipts,
 } from '@shared/schema';
 import { TTLCache } from './cacheUtils';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityQuickBooksSnapshot');
 
 export interface ARAgingBucket {
   bucket: '0-30' | '31-60' | '61-90' | '90+';
@@ -184,7 +185,7 @@ class TrinityQuickBooksSnapshotService {
       const arData = await db
         .select({
           dueDate: invoices.dueDate,
-          amount: invoices.totalAmount,
+          amount: invoices.total,
         })
         .from(invoices)
         .where(and(
@@ -230,7 +231,7 @@ class TrinityQuickBooksSnapshotService {
       
       return [bucket0_30, bucket31_60, bucket61_90, bucket90Plus];
     } catch (error) {
-      console.error('[TrinityQBSnapshot] AR aging error:', error);
+      log.error('[TrinityQBSnapshot] AR aging error:', error);
       return [];
     }
   }
@@ -242,7 +243,7 @@ class TrinityQuickBooksSnapshotService {
       const overdueData = await db
         .select({
           invoiceId: invoices.id,
-          amount: invoices.totalAmount,
+          amount: invoices.total,
           dueDate: invoices.dueDate,
           clientId: invoices.clientId,
         })
@@ -261,11 +262,11 @@ class TrinityQuickBooksSnapshotService {
         let clientName = 'Unknown Client';
         if (inv.clientId) {
           const [client] = await db
-            .select({ name: clients.name })
+            .select({ name: clients.companyName })
             .from(clients)
             .where(eq(clients.id, inv.clientId))
             .limit(1);
-          if (client) clientName = client.name;
+          if (client) clientName = client.companyName || `${client.firstName || ""} ${client.lastName || ""}`.trim() || "Unknown";
         }
         
         const daysOverdue = inv.dueDate 
@@ -283,7 +284,7 @@ class TrinityQuickBooksSnapshotService {
       
       return result;
     } catch (error) {
-      console.error('[TrinityQBSnapshot] Overdue invoices error:', error);
+      log.error('[TrinityQBSnapshot] Overdue invoices error:', error);
       return [];
     }
   }
@@ -336,7 +337,7 @@ class TrinityQuickBooksSnapshotService {
         trinityVerified: status === 'OK',
       };
     } catch (error) {
-      console.error('[TrinityQBSnapshot] Hours reconciliation error:', error);
+      log.error('[TrinityQBSnapshot] Hours reconciliation error:', error);
       return {
         platformHours: 0,
         invoicedHours: 0,
@@ -356,8 +357,8 @@ class TrinityQuickBooksSnapshotService {
       
       const [monthlyStats] = await db
         .select({
-          totalRevenue: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`,
-          paidAmount: sql<number>`COALESCE(SUM(CASE WHEN status = 'paid' THEN CAST(total_amount AS DECIMAL) ELSE 0 END), 0)`,
+          totalRevenue: sql<number>`COALESCE(SUM(CAST(total AS DECIMAL)), 0)`,
+          paidAmount: sql<number>`COALESCE(SUM(CASE WHEN status = 'paid' THEN CAST(total AS DECIMAL) ELSE 0 END), 0)`,
         })
         .from(invoices)
         .where(and(
@@ -367,7 +368,7 @@ class TrinityQuickBooksSnapshotService {
       
       const [ytdStats] = await db
         .select({
-          totalRevenue: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`,
+          totalRevenue: sql<number>`COALESCE(SUM(CAST(total AS DECIMAL)), 0)`,
         })
         .from(invoices)
         .where(and(
@@ -378,7 +379,7 @@ class TrinityQuickBooksSnapshotService {
       
       const [outstandingStats] = await db
         .select({
-          total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`,
+          total: sql<number>`COALESCE(SUM(CAST(total AS DECIMAL)), 0)`,
         })
         .from(invoices)
         .where(and(
@@ -394,7 +395,7 @@ class TrinityQuickBooksSnapshotService {
         averagePaymentDays: 0, // Would need payment history to calculate
       };
     } catch (error) {
-      console.error('[TrinityQBSnapshot] Revenue signals error:', error);
+      log.error('[TrinityQBSnapshot] Revenue signals error:', error);
       return {
         monthlyRevenue: 0,
         yearToDateRevenue: 0,
@@ -453,7 +454,7 @@ class TrinityQuickBooksSnapshotService {
         recentErrors,
       };
     } catch (error) {
-      console.error('[TrinityQBSnapshot] Sync health error:', error);
+      log.error('[TrinityQBSnapshot] Sync health error:', error);
       return {
         connectionStatus: 'error',
         pendingSyncCount: 0,
@@ -484,7 +485,7 @@ class TrinityQuickBooksSnapshotService {
         lastSyncTime: stats[0]?.lastSync || undefined,
       };
     } catch (error) {
-      console.error('[TrinityQBSnapshot] Employee sync status error:', error);
+      log.error('[TrinityQBSnapshot] Employee sync status error:', error);
       return {
         totalEmployees: 0,
         syncedToQB: 0,

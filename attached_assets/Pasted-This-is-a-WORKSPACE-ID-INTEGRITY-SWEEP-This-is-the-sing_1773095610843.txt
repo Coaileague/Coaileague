@@ -1,0 +1,88 @@
+This is a WORKSPACE_ID INTEGRITY SWEEP. This is the single most important security and stability fix in the entire platform. Every bug, null constraint violation, multi-org data leak, and silent failure we keep hitting traces back to the same root cause: workspace_id is not being consistently propagated from authenticated session through every layer of the stack. We are fixing this everywhere in one pass.
+Do not add features. Do not refactor anything unrelated. Do not stop until every step is complete.
+
+STEP 1 — MAP EVERY TABLE THAT HAS A WORKSPACE_ID COLUMN
+Query the database directly:
+sqlSELECT table_name, column_name 
+FROM information_schema.columns 
+WHERE column_name = 'workspace_id' 
+ORDER BY table_name;
+List every table returned. This is your master target list. Every one of these tables must have workspace_id populated on every insert. Save this list as WORKSPACE_TABLES.md.
+
+STEP 2 — MAP EVERY DRIZZLE SCHEMA OBJECT
+For every table in WORKSPACE_TABLES.md, find its corresponding Drizzle schema object. Check whether workspaceId is defined in that schema object.
+List every schema object where workspaceId is MISSING from the Drizzle definition even though the DB column exists. This is the exact bug that caused the chat_connections null constraint — Drizzle silently drops columns it doesn't know about on INSERT.
+Fix every missing workspaceId in Drizzle schema objects now. Do not proceed until every table in WORKSPACE_TABLES.md has a matching Drizzle schema with workspaceId defined as:
+typescriptworkspaceId: uuid("workspace_id").notNull().references(() => workspaces.id)
+
+STEP 3 — MAP EVERY INSERT OPERATION
+Search the entire codebase for every db.insert() call. For each one:
+3A — Identify which table it inserts into
+3B — Check if that table is in WORKSPACE_TABLES.md
+3C — If yes — confirm workspace_id is included in the insert values
+3D — If workspace_id is missing from the insert — find where in the call stack the authenticated workspace context exists and trace it down to the insert
+The workspace_id must ALWAYS come from one of these sources in priority order:
+1. req.session.workspaceId (HTTP requests)
+2. The authenticated WebSocket session context (WebSocket handlers)
+3. A parent record's workspace_id when creating child records
+It must NEVER come from:
+- The request body (user-supplied — security risk)
+- A hardcoded value
+- Undefined or null
+Fix every insert that is missing workspace_id. Add it from the correct source.
+
+STEP 4 — MAP EVERY SELECT AND UPDATE OPERATION
+Search the entire codebase for every db.select(), db.update(), and db.delete() call on tables that are in WORKSPACE_TABLES.md.
+For each one confirm:
+- There is a WHERE workspace_id = [session workspace_id] filter
+- The workspace_id filter comes from the authenticated session, not from user input
+Any select, update, or delete on a workspace-scoped table without a workspace_id filter is a multi-org data leak. Fix every one.
+
+STEP 5 — FIX CHAT_CONNECTIONS SPECIFICALLY
+This is the confirmed broken case. Fix it completely:
+5A — Confirm workspaceId is now in the chatConnections Drizzle schema
+5B — Find the WebSocket connection handler where chat_connections records are inserted
+5C — Confirm the WebSocket session carries workspace_id from authentication
+5D — Add workspace_id to the insert from the WebSocket session
+5E — Test: connect to a chat room in Acme org. Confirm no null constraint error in logs. Confirm the chat_connections record has the correct workspace_id. Confirm connecting from Anvil org creates a record with Anvil's workspace_id, not Acme's.
+
+STEP 6 — FIX ROOMANALYTICSSERVICE SQL SYNTAX ERROR
+6A — Print the exact failing SQL query from RoomAnalyticsService
+6B — Identify the syntax error
+6C — Fix the query
+6D — Confirm analytics records are being written after the fix
+6E — Confirm workspace_id is included in analytics writes
+6F — Confirm analytics reads are filtered by workspace_id
+
+STEP 7 — FIX THE TIMESERIES QUERIES
+Search for every raw SQL query that uses time-based aggregation (date_trunc, generate_series, interval, time series). For each one:
+7A — Print the query
+7B — Confirm workspace_id filter is present
+7C — Fix any SQL syntax errors
+7D — Test the query returns data correctly filtered to the requesting org
+
+STEP 8 — TRINITY WORKSPACE ISOLATION
+Trinity has 679 registered actions. For every action that reads or writes data:
+8A — Confirm it receives workspace_id from the authenticated session context, not from the action payload
+8B — Confirm all DB calls within the action include workspace_id filters
+8C — Confirm Trinity cannot read data from a workspace it was not invoked from
+This is non-negotiable. A Trinity action invoked by Acme org must be physically incapable of reading or writing Anvil org data.
+
+STEP 9 — WRITE A WORKSPACE ISOLATION TEST
+Create a test that does the following:
+- Creates two workspaces: TestOrg_A and TestOrg_B
+- Creates records in TestOrg_A for: schedules, employees, payroll, chat, incidents, timesheets
+- Authenticates as TestOrg_B
+- Attempts to read every category of TestOrg_A records while authenticated as TestOrg_B
+- Asserts that every query returns zero results
+Run this test. Fix any failures. This test must pass before the platform is considered production-ready for multi-org use.
+
+STEP 10 — FINAL VERIFICATION
+After all fixes:
+- Start the server
+- Confirm zero null constraint violations in logs for chat_connections
+- Confirm zero SQL syntax errors from RoomAnalyticsService
+- Confirm workspace isolation test passes
+- Confirm Acme org and Anvil org data is completely isolated end to end
+Update WORKSPACE_TABLES.md with a VERIFIED column showing which tables passed isolation testing.
+Do not declare this complete until the server logs are clean and the isolation test passes.

@@ -1,110 +1,166 @@
 /**
- * MVP Feature Flag System
- * Controls which features are enabled for MVP launch vs Enterprise tier
- * 
- * IMPORTANT: Do NOT delete any enterprise code - just wrap in feature flag checks
- * These features will be reactivated for Fortune 500 customers (Securitas, Allied Universal)
+ * Platform Feature Flag System
+ * Maps features to minimum subscription tier required.
+ *
+ * NEW TIERS (pricing overhaul):
+ *   trial | starter | professional | business | enterprise
+ *
+ * Critical operations (panic alerts, incidents, compliance blocks)
+ * are NEVER gated — they run regardless of tier or interaction cap.
  */
 
+import { createLogger } from '../lib/logger';
+const log = createLogger('features');
 export const FEATURE_FLAGS = {
-  // =============================================
-  // MVP Features (ENABLED) - Core Workforce Management
-  // =============================================
+  // ── Always-on (every tier) ──────────────────────────────────────────────
   CORE_SCHEDULING: true,
-  BASIC_PAYROLL: true,
   TIME_TRACKING: true,
-  STRIPE_PAYMENTS: true,
-  EMAIL_NOTIFICATIONS: true,
-  TRINITY_AI_BASIC: true,
   EMPLOYEE_MANAGEMENT: true,
-  CLIENT_MANAGEMENT: true,
-  BASIC_INVOICING: true,
-  BASIC_REPORTS: true,
+  EMAIL_NOTIFICATIONS: true,
   CHATROOMS: true,
   HELPDESK: true,
-  
-  // =============================================
-  // Enterprise Features (DISABLED for MVP)
-  // Reactivate when targeting Fortune 500 customers
-  // =============================================
-  
-  // Infrastructure Services (Q1-Q4)
-  DISASTER_RECOVERY: false,        // ENTERPRISE FEATURE - Disabled for MVP
-  CHAOS_TESTING: false,            // ENTERPRISE FEATURE - Disabled for MVP
-  SLA_MONITORING: false,           // ENTERPRISE FEATURE - Disabled for MVP
-  LAUNCH_READINESS_CHECKS: false,  // ENTERPRISE FEATURE - Disabled for MVP
-  CIRCUIT_BREAKERS: false,         // Keep in code, just bypass for MVP
-  DISTRIBUTED_TRACING: false,      // ENTERPRISE FEATURE - Disabled for MVP
-  CDN_EDGE_CACHING: false,         // ENTERPRISE FEATURE - Disabled for MVP
-  LOG_AGGREGATION: false,          // ENTERPRISE FEATURE - Disabled for MVP
-  SECURITY_HARDENING: false,       // ENTERPRISE FEATURE - Disabled for MVP
-  AUDIT_TRAIL_EXPORT: false,       // ENTERPRISE FEATURE - Disabled for MVP
-  
-  // Compliance Features
-  SOX_COMPLIANCE: false,           // ENTERPRISE FEATURE - Disabled for MVP
-  GDPR_COMPLIANCE: false,          // ENTERPRISE FEATURE - Disabled for MVP
-  HIPAA_COMPLIANCE: false,         // ENTERPRISE FEATURE - Disabled for MVP
-  PCI_DSS_COMPLIANCE: false,       // ENTERPRISE FEATURE - Disabled for MVP
-  
-  // Advanced Analytics
-  ADVANCED_ANALYTICS: false,       // ENTERPRISE FEATURE - Disabled for MVP
-  AI_PREDICTIVE_ANALYTICS: false,  // ENTERPRISE FEATURE - Disabled for MVP
-  HEAT_MAP_VISUALIZATIONS: false,  // ENTERPRISE FEATURE - Disabled for MVP
-  
-  // Advanced Integrations
-  HRIS_INTEGRATION: false,         // ENTERPRISE FEATURE - 8 provider integrations
-  COGNITIVE_ONBOARDING: false,     // ENTERPRISE FEATURE - Auto-extraction
-  ADVANCED_API_ACCESS: false,      // ENTERPRISE FEATURE - Disabled for MVP
-  WEBHOOKS: false,                 // ENTERPRISE FEATURE - Disabled for MVP
-  WHITE_LABEL: false,              // ENTERPRISE FEATURE - Disabled for MVP
-  
-  // Platform Admin Features (keep enabled for internal use)
-  INFRASTRUCTURE_DASHBOARD: false, // Hide from regular users for MVP
-  PLATFORM_ADMIN: true,            // Keep for internal ops
+  HELPAI_BASIC: true,           // basic commands: clock in/out, schedule view, post orders
+  GPS_TIMEKEEPING: true,
+  MORNING_BRIEFINGS: true,
+  INCIDENT_REPORTING: true,
+  PANIC_ALERTS: true,           // NEVER gated — critical safety
+  COMPLIANCE_BLOCKS: true,      // NEVER gated — critical compliance
+
+  // ── Starter+ ────────────────────────────────────────────────────────────
+  TRINITY_AI_FULL: true,
+  PERFORMANCE_SCORING: true,
+  MILESTONE_RECOGNITION: true,
+  BASIC_ANALYTICS: true,
+  DOCUMENT_MANAGEMENT: true,
+  SINGLE_STATE_COMPLIANCE: true,
+
+  // ── Professional+ ───────────────────────────────────────────────────────
+  PAYROLL_PROCESSING: true,
+  INVOICE_GENERATION: true,
+  VOICE_SYSTEM: true,
+  FIFTY_STATE_COMPLIANCE: true,
+  CLIENT_PORTAL: true,
+  AUDITOR_PORTAL: true,
+  RFP_GENERATION: true,
+  ADVANCED_ANALYTICS: true,
+  PREDICTIVE_BRAIN: true,
+  FINANCIAL_INTELLIGENCE: true,
+  DISCIPLINARY_ANALYZER: true,
+  CONTRACT_HEALTH: true,
+  MULTI_LOCATION: true,
+
+  // ── Business+ ───────────────────────────────────────────────────────────
+  MULTI_WORKSPACE: true,
+  FULL_FINANCIAL_SUITE: true,
+  SOCIAL_GRAPH: true,
+  API_ACCESS: true,
+  CUSTOM_REPORTING: true,
+  SLACK_TEAMS_INTEGRATION: true,
+
+  // ── Enterprise only ─────────────────────────────────────────────────────
+  WHITE_LABEL: true,
+  CUSTOM_INTEGRATIONS: true,
+  ADVANCED_MULTI_AGENT: true,
+  FEDERAL_COMPLIANCE: true,
+  CUSTOM_AI_FINE_TUNING: true,
+  SLA_MANAGEMENT: true,
+
+  // ── Platform admin (internal) ───────────────────────────────────────────
+  PLATFORM_ADMIN: true,
+  STRIPE_PAYMENTS: true,
 };
 
+export type FeatureTier = 'trial' | 'starter' | 'professional' | 'business' | 'enterprise';
+
 /**
- * Check if a feature is enabled
+ * Minimum tier required for each feature.
+ * Unlocks cascade upward: business includes professional includes starter, etc.
  */
+export const FEATURE_TIERS: Record<string, FeatureTier> = {
+  // Always available (trial+)
+  CORE_SCHEDULING:           'trial',
+  TIME_TRACKING:             'trial',
+  EMPLOYEE_MANAGEMENT:       'trial',
+  EMAIL_NOTIFICATIONS:       'trial',
+  CHATROOMS:                 'trial',
+  HELPDESK:                  'trial',
+  HELPAI_BASIC:              'trial',
+  GPS_TIMEKEEPING:           'trial',
+  MORNING_BRIEFINGS:         'trial',
+  INCIDENT_REPORTING:        'trial',
+  PANIC_ALERTS:              'trial',   // CRITICAL — never block
+  COMPLIANCE_BLOCKS:         'trial',   // CRITICAL — never block
+
+  // Starter+
+  TRINITY_AI_FULL:           'starter',
+  PERFORMANCE_SCORING:       'starter',
+  MILESTONE_RECOGNITION:     'starter',
+  BASIC_ANALYTICS:           'starter',
+  DOCUMENT_MANAGEMENT:       'starter',
+  SINGLE_STATE_COMPLIANCE:   'starter',
+
+  // Professional+
+  PAYROLL_PROCESSING:        'professional',
+  INVOICE_GENERATION:        'professional',
+  VOICE_SYSTEM:              'professional',
+  FIFTY_STATE_COMPLIANCE:    'professional',
+  CLIENT_PORTAL:             'professional',
+  AUDITOR_PORTAL:            'professional',
+  RFP_GENERATION:            'professional',
+  ADVANCED_ANALYTICS:        'professional',
+  PREDICTIVE_BRAIN:          'professional',
+  FINANCIAL_INTELLIGENCE:    'professional',
+  DISCIPLINARY_ANALYZER:     'professional',
+  CONTRACT_HEALTH:           'professional',
+  MULTI_LOCATION:            'professional',
+
+  // Business+
+  MULTI_WORKSPACE:           'business',
+  FULL_FINANCIAL_SUITE:      'business',
+  SOCIAL_GRAPH:              'business',
+  API_ACCESS:                'business',
+  CUSTOM_REPORTING:          'business',
+  SLACK_TEAMS_INTEGRATION:   'business',
+
+  // Enterprise only
+  WHITE_LABEL:               'enterprise',
+  CUSTOM_INTEGRATIONS:       'enterprise',
+  ADVANCED_MULTI_AGENT:      'enterprise',
+  FEDERAL_COMPLIANCE:        'enterprise',
+  CUSTOM_AI_FINE_TUNING:     'enterprise',
+  SLA_MANAGEMENT:            'enterprise',
+};
+
+const TIER_ORDER: FeatureTier[] = ['trial', 'starter', 'professional', 'business', 'enterprise', 'strategic' as FeatureTier];
+
+/**
+ * Returns true if the workspace's current tier meets the minimum required tier.
+ */
+export function tierMeetsRequirement(workspaceTier: string, requiredTier: FeatureTier): boolean {
+  const workspaceIdx = TIER_ORDER.indexOf(workspaceTier as FeatureTier);
+  const requiredIdx  = TIER_ORDER.indexOf(requiredTier);
+  if (workspaceIdx === -1) return false;
+  return workspaceIdx >= requiredIdx;
+}
+
 export function isFeatureEnabled(feature: keyof typeof FEATURE_FLAGS): boolean {
   return FEATURE_FLAGS[feature] ?? false;
 }
 
-/**
- * Get all enabled features
- */
 export function getEnabledFeatures(): string[] {
   return Object.entries(FEATURE_FLAGS)
     .filter(([, enabled]) => enabled)
     .map(([feature]) => feature);
 }
 
-/**
- * Get all disabled features (enterprise tier)
- */
 export function getDisabledFeatures(): string[] {
   return Object.entries(FEATURE_FLAGS)
     .filter(([, enabled]) => !enabled)
     .map(([feature]) => feature);
 }
 
-/**
- * Feature tier requirements
- * Maps features to minimum subscription tier needed
- */
-export const FEATURE_TIERS: Record<string, 'free' | 'starter' | 'professional' | 'enterprise'> = {
-  CORE_SCHEDULING: 'free',
-  TIME_TRACKING: 'free',
-  EMPLOYEE_MANAGEMENT: 'free',
-  BASIC_REPORTS: 'starter',
-  BASIC_INVOICING: 'starter',
-  BASIC_PAYROLL: 'professional',
-  TRINITY_AI_BASIC: 'professional',
-  ADVANCED_ANALYTICS: 'enterprise',
-  SLA_MONITORING: 'enterprise',
-  DISASTER_RECOVERY: 'enterprise',
-  SOX_COMPLIANCE: 'enterprise',
-  HRIS_INTEGRATION: 'enterprise',
-};
+export function getMinTierForFeature(feature: string): FeatureTier | null {
+  return FEATURE_TIERS[feature] ?? null;
+}
 
-console.log('[Features] MVP Feature Flags loaded:', getEnabledFeatures().length, 'enabled,', getDisabledFeatures().length, 'disabled for enterprise tier');
+log.info('[Features] Tier-aware feature flags loaded:', Object.keys(FEATURE_TIERS).length, 'features mapped across 5 tiers');

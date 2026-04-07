@@ -1,0 +1,37 @@
+1. Platform Action Hub — where is it?
+
+grep: server/services/ai-brain/platformActionHub.ts: No such file or directory
+It's not in that file. Let me find where the actual registration happens.
+
+2. Duplicate clock_in/out handlers:
+Looking at the two implementations:
+
+actionRegistry.ts (canonical):
+
+clock_in: simple db.insert(timeEntries) with status 'active'
+
+No duplicate-entry check
+
+Roles: ['employee', 'manager', 'owner', 'root_admin']
+
+Different status value: 'clocked_in' vs 'active'
+
+aiBrainMasterOrchestrator.ts (duplicate):
+
+clock_in: looks up employee by userId, checks for existing active clock-in, inserts with status 'clocked_in'
+Has duplicate-entry check: "Already clocked in"
+Roles: ['staff', 'manager', 'admin', 'super_admin']
+More robust: includes notes field, proper employee lookup, idempotency check
+These are registered on different orchestrators, which means the same action is being handled two different ways depending on which one gets called first.
+
+Now I'm seeing that the /api/platform routes are mounted from multiple domain files — both audit.ts and support.ts register handlers at the same prefix. The order matters here since support.ts gets mounted before audit.ts, so service control routes would take precedence if there's any overlap.
+
+I'm also noticing there are two separate CircuitBreaker implementations with different patterns: one uses a simple EventEmitter with lowercase state constants, while the other is a larger Singleton with uppercase constants. I need to check which modules are actually importing from each one. I'm seeing that infrastructureRoutes.ts appears in both grep results, which means it imports from both circuit breaker files. The infrastructure/index.ts pulls from the resilience version, while infrastructureRoutes.ts uses the infrastructure-specific one. So there are actually two separate circuit breaker implementations in play here — the resilience one serving exchangeRateService.ts, infrastructure/index.ts, and resilience-api.ts, and the infrastructure one being used by infrastructureRoutes.ts.
+
+The infrastructure circuit breaker is the more mature implementation at 638 lines compared to the resilience version's 313 lines. Now looking at the clock_in registrations, I need to figure out whether the orchestrator and action registry are registering on the same hub or different ones. Given what the architect said about actionRegistry.ts being canonical, I should prioritize that implementation — though the orchestrator version has more robust features like idempotency checks and proper employee lookup that the simpler registry version lacks.
+
+The key issue is that both registrations appear in the logs as going to the same Platform Action Hub, which means the second one overwrites the first. So the startup order matters — whichever runs last determines which handler actually gets used for time_tracking.clock_in.
+
+More importantly, the two handlers use different status values: the registry version sets 'active' while the orchestrator version uses 'clocked_in', which is semantically correct and likely what the time-entry queries expect. The orchestrator's implementation is clearly more robust, but since the architect says the registry should be canonical, I need to figure out whether helpaiOrchestrator.registerAction is actually a different registration system or if it's also writing to the same Platform Action Hub.
+
+Let me investigate whether these are the same registration mechanism, what API routes actually exist in both domain files, and which circuit breaker is triggering the duplicate "initialized" log.

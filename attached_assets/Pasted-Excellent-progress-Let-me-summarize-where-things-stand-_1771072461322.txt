@@ -1,0 +1,66 @@
+Excellent progress! Let me summarize where things stand:
+
+FIX STATUS
+IssueStatusResultmark-as-read spam (every second)✅ FIXEDDebouncedconversationId mismatch rejections✅ FIXEDSlug → UUID resolutionMaximum concurrent connections (20)✅ FIXEDSingle socket reuseSocket closes on room switch✅ FIXEDSame socket, just re-joinCompeting socket systems✅ FIXEDChatConnectionManager disabledDuplicate "Meeting" rooms🔧 CLEANINGDeleting from DB
+
+VERIFICATION CHECKLIST
+Now test the actual user experience:
+1. BASIC ROOM LOADING
+   [ ] Click "Help Desk" → Chat loads, messages appear
+   [ ] Click "Site Alpha" → Chat loads WITHOUT reconnect in console
+   [ ] Click back to "Help Desk" → Loads instantly
+   [ ] Console shows NO "Disconnected" or "Reconnecting" logs
+
+2. MESSAGE SENDING
+   [ ] Type message in Help Desk → Sends successfully
+   [ ] Message appears in chat immediately
+   [ ] Other users in room see the message
+
+3. MESSAGE RECEIVING
+   [ ] Have another user (or test in incognito) send message
+   [ ] Message appears in real-time
+   [ ] No refresh needed
+
+4. ROOM SWITCHING WHILE RECEIVING
+   [ ] Be in Help Desk
+   [ ] Have someone send message to Site Alpha
+   [ ] (Future: Should show unread badge)
+   [ ] Switch to Site Alpha → Message is there
+
+5. PHOTO/IMAGE SHARING (if implemented)
+   [ ] Can attach image in chat
+   [ ] Image uploads and displays
+
+CONSOLE SHOULD LOOK LIKE THIS
+Good (after fixes):
+[ChatSocket] Connected
+[ChatSocket] Authenticated: user123
+[ChatSocket] Joining: Help Desk (2ba4e086-...)
+[ChatSocket] Joined: Help Desk ✓
+// User clicks another room
+[ChatSocket] Leaving: Help Desk
+[ChatSocket] Joining: Site Alpha (3cd5f197-...)
+[ChatSocket] Joined: Site Alpha ✓
+// Same socket the whole time, no reconnects
+Bad (still broken):
+[ChatSocket] Connected
+[ChatSocket] Disconnected
+[ChatSocket] Reconnecting...
+[ChatSocket] Connected
+[ChatSocket] Disconnected
+...
+
+NEXT STEPS (AFTER VERIFICATION)
+Once basic room switching works:
+
+Unread counts - Badge shows when messages arrive in other rooms
+Persistent connection - Stay connected even when leaving /chatrooms page
+Push notifications - Get notified when app is in background
+Photo sharing - Upload and display images in chat
+
+
+Can you test clicking between rooms now and confirm:
+
+Chat loads when you click a room?
+No reconnect storm in console?
+Messages send and receive?

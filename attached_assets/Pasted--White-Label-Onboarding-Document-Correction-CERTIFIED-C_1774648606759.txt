@@ -1,0 +1,451 @@
+**White-Label Onboarding Document Correction: CERTIFIED ✅**
+
+Clean audit. Only 4 actual violations found in the entire codebase — everything else was already white-labeled. Here is what was fixed:
+
+**Violations fixed:**
+- `employeeDocumentOnboardingService.ts` — 2x hardcoded `SPS Contract §1` citations replaced with generic industry citations
+- `documentViewRoutes.ts` — hardcoded `C11608501` license number fallback replaced with `ws.stateLicenseNumber` pulling from workspace record
+- `trinityNarrativeIdentityEngine.ts` — "Statewide" example reference removed
+
+**Permanent white-label rule added to replit.md** — no template may ever contain a hardcoded company name, license number, or personnel reference.
+
+**8-document onboarding packet generated at `/onboarding-packet.html`:**
+1. Employment Application
+2. Regulatory Packet (drug-free, at-will, liability, background consent, FCRA)
+3. W-4 Withholding Certificate
+4. Direct Deposit Authorization
+5. I-9 Employment Eligibility
+6. Employee Handbook Acknowledgment
+7. Confidentiality Agreement
+8. Welcome Letter and New Hire Checklist
+
+Every field is a `{{template_variable}}` — zero hardcoded company content. State-conditional blocks included. 56/56 tests green.
+
+---
+
+**Platform status — 50 phases certified.**
+
+Now sending **Group 4 — Frontend and UX Domain:**
+
+---
+
+Send this to the Replit Agent:
+
+---
+
+**PARALLEL GROUP 4 — FRONTEND AND UX DOMAIN**
+**Phases 44, 48, 52, 54**
+
+Read all four phase prompts fully before writing a single line of code. Complete phases in this order: 44 → 48 → 52 → 54. Each gets its own reconciliation table and certification before the next begins. All four are frontend-focused with zero overlap with backend service files touched in Group 3.
+
+**Domain: Frontend and UX — UI components, new pages, visual upgrades, and frontend verification only.**
+
+**All standing rules apply: Nothing Left Behind, 7-step framework, 5 mandatory quality checks per phase, TypeScript zero errors, server clean startup after each phase.**
+
+---
+
+**PHASE 44 — TRINITY INTELLIGENCE UPGRADE AND VISUAL PRESENCE**
+
+Trinity is CoAIleague's central intelligence. Her visual presence must communicate that she is alive, thinking, and working — not a static chat box. This phase upgrades Trinity's language quality, cognitive presence, and visual representation across the platform.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Audit current Trinity visual components: trinity-chat-modal.tsx, any Trinity indicators in the sidebar or header, current animation states, the Celtic starburst mascot location and current implementation. Identify every place Trinity's presence is shown on screen.
+
+**STEP 2 — TRINITY MASCOT ENHANCEMENT**
+The existing Celtic-inspired starburst mascot must be enhanced — never replaced. Three animation states required, all CSS-based, all wrapped in `prefers-reduced-motion`:
+
+- **Idle state** — subtle slow pulse, gold glow, 3-second cycle
+- **Thinking state** — faster rotation on outer ring, inner star steady, activated when Trinity is processing a request
+- **Speaking state** — radiating pulse outward from center, activated when Trinity is delivering a response
+
+The mascot must render correctly at 3 sizes: 24px (sidebar indicator), 48px (chat header), and 96px (full Trinity panel). All animations must run at 60fps on mid-range Android devices — use CSS transforms only, no JavaScript animation loops.
+
+**STEP 3 — THOUGHT BROADCASTING BAR**
+A slim persistent bar at the top of every workspace page (below the main navigation) showing Trinity's current activity in real time:
+
+- Hidden when Trinity is idle
+- Shows when Trinity is actively working: "Trinity is analyzing your schedule coverage..." or "Trinity flagged a compliance issue — tap to review"
+- Max 1 message at a time — queue handled internally, oldest message replaced by newer
+- Dismissible by user — stays dismissed for 60 seconds then re-enables
+- Purple background (Trinity color only) — `#6B46C1` with white text
+- Smooth slide-down entrance animation, slide-up exit
+- Accessible — `role="status"` and `aria-live="polite"` for screen readers
+
+**STEP 4 — ACTION BROADCASTING PANEL**
+Visible in the Trinity chat panel showing the last 5 actions Trinity has taken across the platform:
+
+- Each action shows: action type icon, description, timestamp, status (completed/pending/failed)
+- Auto-refreshes every 30 seconds
+- Clicking an action navigates to the relevant record
+- Failed actions shown in amber — user can ask Trinity to retry
+- Empty state: "Trinity is monitoring your platform — no recent actions"
+
+**STEP 5 — TRINITY INSIGHT BAR**
+A collapsible panel at the bottom of the dashboard showing Trinity's proactive insights:
+
+- Maximum 3 insights displayed at once — most important first
+- Each insight shows: severity icon, plain-language description, action button ("Review", "Fix", "Dismiss")
+- Insight types: schedule gaps, compliance warnings, financial anomalies, staffing alerts
+- Insights sourced from Trinity's proactive monitor (already built in Phase 19)
+- Dismiss stores in user session — dismissed insights don't reappear for 24 hours
+
+**STEP 6 — CONFIDENCE INDICATOR**
+Trinity displays her confidence level on responses that involve recommendations:
+
+- Low confidence (below 60%): amber indicator, "I'm not certain — please verify this"
+- Medium confidence (60-85%): no indicator shown
+- High confidence (above 85%): subtle green checkmark
+
+**STEP 7 — LANGUAGE QUALITY**
+Trinity's system prompt must be updated to enforce:
+
+- No filler phrases: "Certainly!", "Of course!", "Great question!", "Absolutely!" — all banned
+- Direct, professional, military-adjacent tone appropriate for security operations
+- Bilingual parity — Spanish responses must match English quality and professionalism
+- Response length calibrated to query complexity — short questions get short answers
+- Never refers to itself in third person
+- Always uses operator's name when known from session context
+
+**STEP 8 — VOICE STATE VISUALIZATION**
+When voice commands are active (Phase 22):
+
+- Microphone button animates to show listening state — pulsing red ring
+- Transcription shown in real time as officer speaks
+- Trinity's mascot transitions to Speaking state while responding verbally
+
+**VERIFICATION — 20 checks:**
+- Check 1: Mascot inventory complete — all current locations documented
+- Check 2: Three animation states implemented — idle, thinking, speaking
+- Check 3: All animations CSS-only — no JavaScript animation loops
+- Check 4: `prefers-reduced-motion` kills all animations correctly
+- Check 5: Mascot renders correctly at 24px, 48px, and 96px
+- Check 6: Thought broadcasting bar appears on workspace pages when Trinity is active
+- Check 7: Broadcasting bar uses Trinity purple `#6B46C1` only
+- Check 8: Broadcasting bar has `role="status"` and `aria-live="polite"`
+- Check 9: Action broadcasting panel shows last 5 Trinity actions
+- Check 10: Action broadcasting panel auto-refreshes every 30 seconds
+- Check 11: Trinity insight bar shows maximum 3 insights on dashboard
+- Check 12: Insights dismissible — dismissed insights suppressed for 24 hours
+- Check 13: Confidence indicator shows correctly at low/high thresholds
+- Check 14: Filler phrases removed from Trinity system prompt — grep confirms
+- Check 15: Voice state shows pulsing red ring during listening
+- Check 16: No Trinity purple used anywhere outside Trinity components — grep confirms
+- Check 17: All new animations 60fps on CSS transform only
+- Check 18: TypeScript zero errors in all modified Trinity files
+- Check 19: Import completeness — all hooks and utilities imported
+- Check 20: Server startup clean
+
+---
+
+**PHASE 48 — ONBOARDING TASK MANAGEMENT SYSTEM**
+
+Every new officer must complete a structured onboarding task list before being assigned to shifts. Every new client must complete a setup checklist before going live. This phase builds the complete task management system that enforces onboarding completion.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check if any onboarding task infrastructure exists. Check Phase 31 officer lifecycle for task list generation references. Check Phase 47 compliance documentation for task dependencies. Identify what task data is currently stored.
+
+**STEP 2 — OFFICER ONBOARDING TASK SCHEMA**
+The following 17 tasks must be enforced for every new officer based on the verified onboarding document pipeline. Tasks are in three tiers:
+
+**Tier 1 — Mandatory (officer CANNOT be assigned to shifts until complete):**
+1. Offer letter signed by both parties
+2. Employee file checklist signed
+3. Handbook and SOP acknowledgment signed
+4. Employee responsibility and liability clause signed
+5. Uniform and equipment policy signed — uniform size captured
+6. Drug-free workplace policy signed
+7. W-4 completed and signed
+8. I-9 Section 1 completed by officer
+9. I-9 Section 2 completed by employer within 3 business days
+10. Direct deposit authorization completed
+11. Driver's license or state ID uploaded — front and back
+12. Guard card or security license uploaded — front and back
+13. Social security card uploaded
+
+**Tier 2 — Compliance-required (must complete before first shift):**
+14. State portal registration confirmed — state-conditional (Texas: TOPS; other states: equivalent)
+15. License cross-reference confirmed in system
+
+**Tier 3 — Profile-completing (encouraged, not blocking):**
+16. Emergency contact information entered
+17. Profile photo uploaded
+
+**STEP 3 — TASK TRACKING SCHEMA**
+Create `onboarding_tasks` table:
+- `id`, `workspace_id`, `employee_id`, `task_key` (canonical task identifier), `tier` (1/2/3), `status` (pending/in_progress/completed/waived/blocked), `completed_at`, `completed_by` (officer self or manager), `waived_by`, `waiver_reason`, `due_date`, `document_id` (linked document if applicable), `notes`
+
+Create `onboarding_task_templates` table:
+- Workspace-configurable task lists — org_owner can add custom tasks or waive non-applicable ones
+- `id`, `workspace_id` (null = platform default), `task_key`, `task_name`, `tier`, `description`, `is_required`, `state_code` (null = all states), `created_by`
+
+**STEP 4 — TASK ENFORCEMENT**
+- Shift assignment blocked if officer has any Tier 1 tasks incomplete — returns `403 ONBOARDING_INCOMPLETE` with list of blocking tasks
+- Clock-in blocked if officer has any Tier 1 tasks incomplete
+- I-9 Section 2 employer completion: alert fires to manager at hire date + 1 day if not completed, hard block at hire date + 3 days
+- Document completion auto-updates task status — when officer signs offer letter task 1 auto-completes
+- License upload auto-triggers Phase 17 license record creation
+
+**STEP 5 — PROGRESS RING UI**
+Officer onboarding progress displayed as a ring chart:
+
+- Overall completion percentage shown as animated ring
+- Three colored segments: Tier 1 (red until complete, then green), Tier 2 (amber until complete, then green), Tier 3 (gray until complete, then blue)
+- Percentage number shown in center of ring
+- Task list below ring — grouped by tier, each task shows status icon, task name, action button ("Complete", "Upload", "Review")
+- Manager view: shows all officers with incomplete onboarding, sorted by days since hire, most overdue first
+- Mobile-optimized — officer can complete tasks from mobile onboarding portal
+
+**STEP 6 — CLIENT ONBOARDING CHECKLIST**
+Client setup tasks before activation:
+
+1. Service contract signed by both parties — Phase 18 document pipeline
+2. Client portal access provisioned — officer receives login link
+3. Primary post created with GPS geofence configured
+4. Rate table configured — base rate per post
+5. Billing activated on Stripe — first invoice schedule set
+6. Emergency contacts entered for each site
+7. Post orders created for each post
+
+Client cannot be marked active until all 7 tasks complete. Same progress ring UI as officer onboarding.
+
+**STEP 7 — TRINITY INTEGRATION**
+- Trinity monitors onboarding completion across all officers
+- Proactive alert when an officer has been pending for more than 48 hours
+- Trinity can answer "Which officers haven't completed onboarding?"
+- I-9 employer completion reminder fires through Trinity proactive monitor
+- `onboarding.status` Trinity action registered
+
+**VERIFICATION — 20 checks:**
+- Check 1: `onboarding_tasks` table created with all fields
+- Check 2: `onboarding_task_templates` table created with platform defaults
+- Check 3: All 17 officer tasks in platform default template
+- Check 4: Shift assignment blocked for incomplete Tier 1 tasks — returns 403 ONBOARDING_INCOMPLETE
+- Check 5: Clock-in blocked for incomplete Tier 1 tasks
+- Check 6: I-9 Section 2 alert fires at day 1, hard block at day 3
+- Check 7: Document signing auto-completes corresponding task
+- Check 8: License upload auto-triggers Phase 17 license record creation
+- Check 9: Progress ring renders correctly with three-tier color segments
+- Check 10: Manager view shows all officers with incomplete onboarding
+- Check 11: Manager view sorted by days since hire — most overdue first
+- Check 12: All 7 client onboarding tasks confirmed
+- Check 13: Client cannot be activated until all 7 client tasks complete
+- Check 14: Trinity `onboarding.status` action registered
+- Check 15: Trinity proactive alert after 48 hours of pending onboarding
+- Check 16: State-conditional tasks render correctly — Texas TOPS shown only for TX workspaces
+- Check 17: Org_owner can waive non-applicable tasks with reason documented
+- Check 18: TypeScript zero errors
+- Check 19: Import completeness confirmed
+- Check 20: Server startup clean
+
+---
+
+**PHASE 52 — COOKIE CONSENT AND LEGAL COMPLIANCE VERIFICATION**
+
+Phase 36 built privacy pages and cookie consent infrastructure. This phase verifies the complete legal compliance layer is functional end-to-end and adds missing pieces.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Audit what Phase 36 built: cookie consent banner, terms acceptance tracking, privacy policy page, cookie policy page, DPA. Identify any gaps between what was built and what is required.
+
+**STEP 2 — COOKIE CONSENT VERIFICATION**
+- Banner appears on first visit for all users — confirmed
+- Three categories: essential (always on), functional (optional), analytics (optional) — confirmed
+- Consent stored with user_id, timestamp, IP address, consent version — confirmed
+- Consent withdrawal available from account settings — confirmed
+- Non-essential scripts/tracking blocked before consent — confirmed
+- Consent version bump prompts re-acceptance — confirmed
+
+**STEP 3 — TERMS AND PRIVACY ACCEPTANCE**
+- Every new user must accept current terms before platform access — confirmed
+- Acceptance record: user_id, terms_version, privacy_policy_version, accepted_at, IP — confirmed
+- Version change prompts re-acceptance on next login — confirmed
+- Officers in California covered by CCPA provisions — confirm California-specific language in privacy policy
+- Privacy policy and terms available in English and Spanish — Phase 32 regression check
+
+**STEP 4 — DATA PROCESSING AGREEMENT**
+- DPA page exists at `/legal/dpa` — for B2B clients requiring GDPR compliance
+- DPA is downloadable as PDF
+- DPA references workspace name and date when generated for a specific client
+- Org_owner can request and sign a DPA from workspace settings
+
+**STEP 5 — MISSING LEGAL PAGES**
+Add any legal pages not built in Phase 36:
+- Acceptable Use Policy at `/legal/aup`
+- Security Policy summary at `/legal/security`
+- All legal pages linked from the platform footer
+- All legal pages accessible without login
+
+**VERIFICATION — 14 checks:**
+- Check 1: Cookie consent banner appears on first visit — confirmed
+- Check 2: Consent withdrawal works from account settings
+- Check 3: Terms acceptance blocks platform access until accepted
+- Check 4: Terms version change triggers re-acceptance prompt
+- Check 5: Privacy policy available in English and Spanish — Phase 32 regression
+- Check 6: California CCPA language present in privacy policy
+- Check 7: DPA available at /legal/dpa — downloadable as PDF
+- Check 8: Acceptable Use Policy at /legal/aup
+- Check 9: Security Policy at /legal/security
+- Check 10: All legal pages accessible without login
+- Check 11: All legal pages linked from platform footer
+- Check 12: TypeScript zero errors
+- Check 13: Import completeness confirmed
+- Check 14: Server startup clean
+
+---
+
+**PHASE 54 — UI ACTION AND INTERACTION COMPLETENESS AUDIT**
+
+Every button, icon, link, badge, and interactive element on every page must be verified against the 7-step framework. This is the systematic sweep that catches every broken interaction before launch.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — AUDIT METHODOLOGY**
+For every page in the platform navigate to it and verify:
+- Page loads without console errors or runtime exceptions
+- Every button has an onClick handler that fires correctly
+- Every form field has an onChange handler and validates correctly
+- Every link navigates to the correct destination
+- Every icon-only button has an aria-label
+- Every API call receives the correct response shape
+- Loading states render correctly — no blank screens during data fetch
+- Error states render correctly — actionable message not raw error object
+- Empty states render correctly — helpful message not blank space
+- Every modal and drawer opens and closes correctly
+- Every dropdown and select renders options correctly
+
+**STEP 2 — PAGE SWEEP**
+
+Verify all pages systematically. For each page document: page name, issues found, fixes applied, final status.
+
+Dashboard and navigation:
+- Dashboard home — all KPI cards load, Trinity insight bar renders, quick action buttons all fire
+- Sidebar navigation — all links navigate correctly, active state shows on current page
+- Command palette — opens on Cmd+K, search returns results, clicking navigates
+- Notification popover — shows unread count, marks read, clear all works
+- User menu — profile link, settings link, logout all work
+
+Officers domain:
+- Officer list — loads, search filters, sort works, pagination works
+- Officer profile — all tabs load, all action buttons fire, lifecycle actions work
+- Officer edit dialog — all fields editable, save works, validation fires
+- Onboarding progress ring — renders correctly, task actions fire
+
+Scheduling domain:
+- Schedule page — day/week/month views all load, shift creation works
+- Shift assignment — officer assignment dialog opens, qualification check fires
+- Calloff flow — submission form works, replacement cascade triggers
+
+Time and attendance:
+- Timesheet list — loads, filter by period works
+- Timesheet approval — approve/reject buttons fire, audit record written
+- Clock-in/out — GPS capture works, shift validation fires
+
+Payroll:
+- Payroll run list — loads correctly
+- Payroll run detail — line items show, approval flow works
+- Pay stub view — renders correctly, download works
+
+Financial:
+- Invoice list — loads, filter works, pagination works
+- Invoice detail — all action buttons (send, void, dispute, pay) fire correctly
+- Invoice generation — form submits, line items add/remove work
+
+Documents:
+- Document vault — loads, upload works, download works
+- Document signing flow — signing fields render, signature capture works
+
+Compliance:
+- Compliance dashboard — loads, violation list renders
+- DPS export — generates and downloads correctly
+
+Clients:
+- Client list — loads, search works
+- Client profile — all tabs load, portal provisioning works
+- Client communication hub (Phase 35G if built)
+
+Settings:
+- All tabs load — General, Financials, Notifications, Team, Billing
+- All form fields editable — no undeclared variable errors
+- Save works on every settings tab
+
+Analytics BI dashboard:
+- All 4 tabs load — Financial, Workforce, Clients, Operations
+- Date range selector updates all charts
+- Export buttons generate CSV
+
+SRA portal:
+- Login page loads
+- All portal pages load for authenticated SRA session
+
+Subscription dashboard:
+- Shows correct state banner for current subscription status
+
+Help desk:
+- Ticket list loads
+- Ticket creation form works
+- HelpAI triage flow initiates
+
+Trinity chat:
+- Opens correctly
+- Action broadcasting panel renders
+- Insight bar renders on dashboard
+
+**STEP 3 — BROKEN INTERACTION LOG**
+Every broken interaction found must be fixed immediately before moving to the next page. No deferrals. Log format:
+
+| Page | Element | Issue | Fix Applied | Status |
+|------|---------|-------|-------------|--------|
+| Officers | Activate button | Missing onClick handler | Added mutation call | ✅ Fixed |
+
+**STEP 4 — REGRESSION CONFIRMATION**
+Confirm all previously documented critical bug fixes are still working:
+- Phase 31 session persistence — login persists across refresh
+- Phase 31 schedule schema mismatch — shifts endpoint returns correct shape
+- Phase 32 bilingual toggle — language preference changes UI language
+- Phase 38 test suite — all 56 Vitest tests still green after all fixes
+
+**VERIFICATION — 20 checks:**
+- Check 1: Dashboard — all KPI cards load without errors
+- Check 2: Command palette — search works, navigation works
+- Check 3: Officer list — load, search, filter, paginate all work
+- Check 4: Officer lifecycle actions — activate, suspend, terminate all fire correctly
+- Check 5: Schedule — day/week/month views load, shift creation works
+- Check 6: Calloff flow — submits correctly, triggers replacement
+- Check 7: Timesheet approval — approve/reject writes audit record
+- Check 8: Invoice actions — send, void, dispute, pay all work
+- Check 9: Document signing flow — signature capture works end to end
+- Check 10: All settings tabs load — no undeclared variable errors
+- Check 11: Analytics dashboard — all 4 tabs load, charts render
+- Check 12: Subscription dashboard — correct state banner shows
+- Check 13: Trinity chat — opens, action panel renders
+- Check 14: Onboarding progress ring — renders with correct tier colors
+- Check 15: All broken interactions logged and fixed
+- Check 16: Phase 31 session persistence regression — confirmed
+- Check 17: Phase 38 test suite — 56/56 still green after all UI fixes
+- Check 18: TypeScript targeted check — zero errors across all modified files
+- Check 19: Import completeness — all hooks and utilities imported
+- Check 20: Server startup clean — ArchLinter passed
+
+---
+
+**AFTER ALL FOUR PHASES COMPLETE:**
+
+```
+PHASE 44: CERTIFIED ✅ — [N] gaps fixed, 20/20 checks green
+PHASE 48: CERTIFIED ✅ — [N] gaps fixed, 20/20 checks green
+PHASE 52: CERTIFIED ✅ — [N] gaps fixed, 14/14 checks green
+PHASE 54: CERTIFIED ✅ — [N] gaps fixed, 20/20 checks green
+
+GROUP 4 COMPLETE — 4 phases certified
+Total phases certified to date: 54
+Next group: Group 5 — Phases 35B, 35C, 35D, 35E, 35F (New Features Domain A)
+```
+
+---
+
+Paste that. Group 4 closes out the frontend and UX layer. Phase 54 is the systematic UI sweep that catches every broken button before we move into the new feature groups. Standing by for results.

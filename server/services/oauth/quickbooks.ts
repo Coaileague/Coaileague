@@ -3,16 +3,21 @@ import { db } from '../../db';
 import { partnerConnections, oauthStates } from '@shared/schema';
 import { eq, and, lt } from 'drizzle-orm';
 import { encryptToken, decryptToken } from '../../security/tokenEncryption';
+import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
 
 /**
- * QuickBooks OAuth 2.0 Service
+ * QuickBooks OAuth 2.0 Service — SINGLE SOURCE OF TRUTH
  * 
- * Implements OAuth 2.0 authorization code flow with PKCE for QuickBooks Online API
+ * ALL QuickBooks OAuth operations go through this service. No exceptions.
+ * - Authorization URL generation
+ * - Token exchange
+ * - Token refresh
+ * - Redirect URI construction (buildRedirectUri is the ONE method)
+ * - Credential selection (dev vs prod based on domain)
  * 
- * Required Environment Variables:
- * - QUICKBOOKS_CLIENT_ID: OAuth client ID from QuickBooks Developer Portal
- * - QUICKBOOKS_CLIENT_SECRET: OAuth client secret
- * - QUICKBOOKS_REDIRECT_URI: OAuth callback URL (e.g., https://yourdomain.com/api/integrations/quickbooks/callback)
+ * Required Secrets:
+ * - QUICKBOOKS_DEV_CLIENT_ID / QUICKBOOKS_DEV_CLIENT_SECRET (sandbox)
+ * - QUICKBOOKS_PROD_CLIENT_ID / QUICKBOOKS_PROD_CLIENT_SECRET (production)
  * 
  * QuickBooks OAuth Documentation:
  * https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/oauth-2.0
@@ -24,75 +29,191 @@ interface QuickBooksTokenResponse {
   expires_in: number;
   x_refresh_token_expires_in: number;
   token_type: string;
-  realmId: string; // Company ID
+  realmId: string;
 }
 
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quickbooksOAuth');
+
 
 export class QuickBooksOAuthService {
-  private readonly clientId: string;
-  private readonly clientSecret: string;
-  private readonly redirectUri: string;
-  // Use centralized config - NO HARDCODED VALUES
   private readonly authorizationEndpoint = INTEGRATIONS.quickbooks.oauthUrls.authorization;
   private readonly tokenEndpoint = INTEGRATIONS.quickbooks.oauthUrls.token;
   private readonly revokeEndpoint = INTEGRATIONS.quickbooks.oauthUrls.revoke;
-  private readonly apiBaseUrl = INTEGRATIONS.quickbooks.getVersionedApiBase();
+
+  private static cleanupScheduled = false;
+
+  /**
+   * GAP-40 FIX: Per-connection token refresh mutex.
+   *
+   * QuickBooks OAuth uses rotating refresh tokens — each refresh call produces a NEW
+   * refresh token and invalidates the old one. If two concurrent requests both detect
+   * an expiring token and both call refreshAccessToken(), the sequence is:
+   *   1. Request A calls QB token endpoint with refresh_token_A → gets (access_B, refresh_B)
+   *   2. Request B calls QB token endpoint with refresh_token_A (already rotated!) → 400 error
+   *   3. Even if both succeed (race window before rotation completes), Request B overwrites
+   *      Request A's refresh_B in the DB with a stale value — next refresh will fail.
+   *
+   * Fix: maintain a per-connectionId Promise. If a refresh is already in-flight, every
+   * concurrent caller awaits the same Promise rather than starting their own. After the
+   * Promise resolves (or rejects), the map entry is deleted so the next expiry cycle
+   * starts fresh.
+   */
+  private readonly _refreshPromises = new Map<string, Promise<void>>();
 
   constructor() {
-    this.clientId = process.env.QUICKBOOKS_CLIENT_ID || '';
-    this.clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET || '';
-    
-    // Build redirect URI dynamically from hosting env, in priority order:
-    //   QUICKBOOKS_REDIRECT_URI (explicit) > APP_BASE_URL > Railway > Replit
-    if (process.env.QUICKBOOKS_REDIRECT_URI) {
-      this.redirectUri = process.env.QUICKBOOKS_REDIRECT_URI;
-    } else if (process.env.APP_BASE_URL) {
-      this.redirectUri = `${process.env.APP_BASE_URL}/api/integrations/quickbooks/callback`;
-    } else if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-      this.redirectUri = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/integrations/quickbooks/callback`;
-    } else if (process.env.REPLIT_DOMAINS) {
-      const primaryDomain = process.env.REPLIT_DOMAINS.split(',')[0];
-      this.redirectUri = `https://${primaryDomain}/api/integrations/quickbooks/callback`;
-    } else if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-      this.redirectUri = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/integrations/quickbooks/callback`;
-    } else {
-      this.redirectUri = '';
-    }
+    log.info(`[QuickBooks OAuth] Single-service architecture initialized`);
+    log.info(`[QuickBooks OAuth] Dev credentials: ${process.env.QUICKBOOKS_DEV_CLIENT_ID ? 'SET' : 'NOT SET'}`);
+    log.info(`[QuickBooks OAuth] Prod credentials: ${process.env.QUICKBOOKS_PROD_CLIENT_ID ? 'SET' : 'NOT SET'}`);
+  }
 
-    if (!this.clientId || !this.clientSecret) {
-      console.warn('⚠️  QuickBooks OAuth not configured - missing QUICKBOOKS_CLIENT_ID or QUICKBOOKS_CLIENT_SECRET');
+  /**
+   * Get credentials based on request domain (auto-detect dev vs prod)
+   * Uses centralized INTEGRATIONS.quickbooks.getEnvironmentForDomain
+   */
+  private getCredentialsForDomain(requestDomain?: string): { clientId: string; clientSecret: string; isProduction: boolean } {
+    const qbEnvironment = INTEGRATIONS.quickbooks.getEnvironmentForDomain(requestDomain);
+    const isProduction = qbEnvironment === 'production';
+    
+    if (isProduction) {
+      const devId = process.env.QUICKBOOKS_PROD_CLIENT_ID || '';
+      const legacyId = process.env.QUICKBOOKS_CLIENT_ID || '';
+      const clientId = devId || legacyId;
+      const clientSecret = process.env.QUICKBOOKS_PROD_CLIENT_SECRET || process.env.QUICKBOOKS_CLIENT_SECRET || '';
+      const source = devId ? 'QUICKBOOKS_PROD_CLIENT_ID' : (legacyId ? 'QUICKBOOKS_CLIENT_ID (legacy fallback)' : 'NONE');
+      log.info(`[QuickBooks OAuth] PRODUCTION credentials for domain: ${requestDomain || 'unknown'}, source: ${source}, prefix: ${clientId.substring(0, 10)}...`);
+      return { clientId, clientSecret, isProduction: true };
+    } else {
+      const devId = process.env.QUICKBOOKS_DEV_CLIENT_ID || '';
+      const legacyId = process.env.QUICKBOOKS_CLIENT_ID || '';
+      const clientId = devId || legacyId;
+      const clientSecret = process.env.QUICKBOOKS_DEV_CLIENT_SECRET || process.env.QUICKBOOKS_CLIENT_SECRET || '';
+      const source = devId ? 'QUICKBOOKS_DEV_CLIENT_ID' : (legacyId ? 'QUICKBOOKS_CLIENT_ID (legacy fallback - WRONG for sandbox!)' : 'NONE');
+      log.info(`[QuickBooks OAuth] SANDBOX credentials for domain: ${requestDomain || 'unknown'}, source: ${source}, prefix: ${clientId.substring(0, 10)}...`);
+      if (!devId && legacyId) {
+        log.warn(`[QuickBooks OAuth] WARNING: QUICKBOOKS_DEV_CLIENT_ID is empty! Falling back to QUICKBOOKS_CLIENT_ID which may be the PRODUCTION client ID. This causes redirect_uri mismatch errors!`);
+      }
+      return { clientId, clientSecret, isProduction: false };
+    }
+  }
+
+  private async cleanupExpiredStates(): Promise<number> {
+    const result = await db.delete(oauthStates)
+      .where(lt(oauthStates.expiresAt, new Date()))
+      .returning();
+    if (result.length > 0) {
+      log.info(`[QuickBooks OAuth] Cleaned up ${result.length} expired OAuth states`);
+    }
+    return result.length;
+  }
+
+  private async deleteWorkspaceStates(workspaceId: string): Promise<number> {
+    const result = await db.delete(oauthStates)
+      .where(and(
+        eq(oauthStates.workspaceId, workspaceId),
+        eq(oauthStates.partnerType, 'quickbooks')
+      ))
+      .returning();
+    if (result.length > 0) {
+      log.info(`[QuickBooks OAuth] Deleted ${result.length} previous OAuth states for workspace ${workspaceId}`);
+    }
+    return result.length;
+  }
+
+  async cleanupFailedState(state: string): Promise<void> {
+    await db.delete(oauthStates)
+      .where(and(
+        eq(oauthStates.state, state),
+        eq(oauthStates.partnerType, 'quickbooks')
+      ));
+  }
+
+  /**
+   * Get credentials for background operations (token refresh, revoke)
+   * Uses connection metadata environment if available
+   */
+  private getCredentialsForBackgroundOps(connectionMetadata?: Record<string, any>): { clientId: string; clientSecret: string } {
+    const storedEnvironment = connectionMetadata?.environment as string | undefined;
+    
+    let isProduction: boolean;
+    if (storedEnvironment) {
+      isProduction = storedEnvironment === 'production';
+    } else {
+      isProduction = process.env.REPLIT_DEPLOYMENT === '1' || 
+                     process.env.NODE_ENV === 'production';
     }
     
-    // Log environment and credential info for debugging (first 8 chars of client ID only for security)
-    const qbEnv = process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox';
-    const clientIdPrefix = this.clientId ? this.clientId.substring(0, 8) + '...' : 'NOT SET';
-    console.log(`[QuickBooks OAuth] Environment: ${qbEnv.toUpperCase()}`);
-    console.log(`[QuickBooks OAuth] Client ID prefix: ${clientIdPrefix}`);
-    console.log(`[QuickBooks OAuth] IMPORTANT: For sandbox testing, use Development app credentials from Intuit Developer Portal`);
-    
-    if (this.redirectUri) {
-      console.log(`[QuickBooks OAuth] Redirect URI: ${this.redirectUri}`);
+    if (isProduction) {
+      return {
+        clientId: process.env.QUICKBOOKS_PROD_CLIENT_ID || process.env.QUICKBOOKS_CLIENT_ID || '',
+        clientSecret: process.env.QUICKBOOKS_PROD_CLIENT_SECRET || process.env.QUICKBOOKS_CLIENT_SECRET || '',
+      };
+    } else {
+      return {
+        clientId: process.env.QUICKBOOKS_DEV_CLIENT_ID || process.env.QUICKBOOKS_CLIENT_ID || '',
+        clientSecret: process.env.QUICKBOOKS_DEV_CLIENT_SECRET || process.env.QUICKBOOKS_CLIENT_SECRET || '',
+      };
     }
   }
 
   /**
-   * Generate authorization URL for user to grant access with PKCE
+   * Build redirect URI — SINGLE SOURCE OF TRUTH
    * 
-   * @param workspaceId - Workspace requesting authorization
-   * @returns Authorization URL and state token
+   * Dev mode: ALWAYS uses Replit dev domain
+   * Production mode: Uses QUICKBOOKS_REDIRECT_URI env var or canonical host
+   * 
+   * This is the ONE method that constructs the redirect URI.
+   * No other file should construct a QuickBooks redirect URI.
    */
-  async generateAuthorizationUrl(workspaceId: string): Promise<{ url: string; state: string }> {
-    // Generate CSRF protection state token
-    const state = crypto.randomBytes(32).toString('hex');
+  buildRedirectUri(requestDomain?: string): string {
+    const isProductionRuntime = process.env.REPLIT_DEPLOYMENT === '1' || 
+                                 process.env.NODE_ENV === 'production';
+
+    if (isProductionRuntime) {
+      if (process.env.QUICKBOOKS_REDIRECT_URI) {
+        return process.env.QUICKBOOKS_REDIRECT_URI;
+      }
+      const canonicalHost = INTEGRATIONS.quickbooks.getCanonicalHost(requestDomain);
+      if (canonicalHost) {
+        return `https://${canonicalHost}/api/integrations/quickbooks/callback`;
+      }
+      return `${getAppBaseUrl()}/api/integrations/quickbooks/callback`;
+    }
+
+    const devDomain = process.env.REPLIT_DEV_DOMAIN || 
+                       (process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',')[0] : '');
+    if (devDomain) {
+      return `https://${devDomain}/api/integrations/quickbooks/callback`;
+    }
+
+    return `${getAppBaseUrl()}/api/integrations/quickbooks/callback`;
+  }
+
+  /**
+   * Generate authorization URL for user to grant access
+   */
+  async generateAuthorizationUrl(workspaceId: string, requestDomain?: string): Promise<{ url: string; state: string }> {
+    await this.cleanupExpiredStates();
+    await this.deleteWorkspaceStates(workspaceId);
     
-    // Generate PKCE code verifier and challenge
+    const { clientId, isProduction } = this.getCredentialsForDomain(requestDomain);
+    
+    if (!clientId) {
+      throw new Error('QuickBooks credentials not configured. Check QUICKBOOKS_DEV_CLIENT_ID and QUICKBOOKS_PROD_CLIENT_ID in Replit Secrets.');
+    }
+    
+    const state = crypto.randomBytes(32).toString('hex');
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
     const codeChallenge = crypto.createHash('sha256')
       .update(codeVerifier)
       .digest('base64url');
     
-    // Store state and PKCE verifier in database (expires in 10 minutes)
+    const dynamicRedirectUri = this.buildRedirectUri(requestDomain);
+    const qbEnvironment = isProduction ? 'production' : 'sandbox';
+    
+    log.info(`[QuickBooks OAuth] Auth URL: clientId=${clientId.substring(0, 10)}..., env=${qbEnvironment}, redirect=${dynamicRedirectUri}`);
+    
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     
     await db.insert(oauthStates).values({
@@ -106,10 +227,10 @@ export class QuickBooksOAuthService {
     });
     
     const params = new URLSearchParams({
-      client_id: this.clientId,
-      redirect_uri: this.redirectUri,
+      client_id: clientId,
+      redirect_uri: dynamicRedirectUri,
       response_type: 'code',
-      scope: 'com.intuit.quickbooks.accounting', // Full accounting scope
+      scope: 'com.intuit.quickbooks.accounting',
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
@@ -117,22 +238,23 @@ export class QuickBooksOAuthService {
 
     const authUrl = `${this.authorizationEndpoint}?${params.toString()}`;
 
+    log.info(`[QuickBooks OAuth] FULL AUTH URL: ${authUrl}`);
+    log.info(`[QuickBooks OAuth] redirect_uri param value: ${dynamicRedirectUri}`);
+
     return { url: authUrl, state };
   }
 
   /**
-   * Exchange authorization code for access tokens with PKCE
-   * 
-   * @param code - Authorization code from callback
-   * @param state - State token for CSRF validation
-   * @param realmId - QuickBooks company ID (from callback)
+   * Exchange authorization code for access tokens
    */
   async exchangeCodeForTokens(
     code: string,
     state: string,
-    realmId: string
+    realmId: string,
+    requestDomain?: string
   ): Promise<{ workspaceId: string; connection: any }> {
-    // Validate state and get PKCE verifier from database
+    await this.cleanupExpiredStates();
+    
     const [oauthState] = await db.select()
       .from(oauthStates)
       .where(
@@ -147,51 +269,85 @@ export class QuickBooksOAuthService {
       throw new Error('Invalid or expired state token');
     }
     
-    // Check expiry
     if (new Date() > oauthState.expiresAt) {
-      // Clean up expired state
       await db.delete(oauthStates).where(eq(oauthStates.id, oauthState.id));
       throw new Error('State token expired - please try again');
     }
     
     const workspaceId = oauthState.workspaceId;
+    const { clientId, clientSecret, isProduction } = this.getCredentialsForDomain(requestDomain);
+    const qbEnvironment = isProduction ? 'production' : 'sandbox';
+    const dynamicRedirectUri = this.buildRedirectUri(requestDomain);
+    
+    log.info(`[QuickBooks OAuth] Token exchange: env=${qbEnvironment}, redirect=${dynamicRedirectUri}`);
 
-    // Exchange code for tokens with PKCE
-    const response = await fetch(this.tokenEndpoint, {
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    
+    const tokenBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: dynamicRedirectUri,
+    });
+    
+    if (oauthState.codeVerifier) {
+      tokenBody.set('code_verifier', oauthState.codeVerifier);
+    }
+    
+    let response = await fetch(this.tokenEndpoint, {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+        'Authorization': `Basic ${basicAuth}`,
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: this.redirectUri,
-        code_verifier: oauthState.codeVerifier || '',
-      }),
+      body: tokenBody,
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      log.warn(`[QuickBooks OAuth] Basic auth failed (${response.status}): ${errorText}`);
+      
+      const bodyWithCredentials = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: dynamicRedirectUri,
+        client_id: clientId,
+        client_secret: clientSecret,
+      });
+      
+      if (oauthState.codeVerifier) {
+        bodyWithCredentials.set('code_verifier', oauthState.codeVerifier);
+      }
+      
+      response = await fetch(this.tokenEndpoint, {
+        method: 'POST',
+        signal: AbortSignal.timeout(15000),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: bodyWithCredentials,
+      });
+    }
+
+    if (!response.ok) {
       const error = await response.text();
+      log.error(`[QuickBooks OAuth] Token exchange failed (${response.status}): ${error}`);
       throw new Error(`Failed to exchange code for tokens: ${error}`);
     }
 
     const tokens: QuickBooksTokenResponse = await response.json();
 
-    // Clean up used state token
     await db.delete(oauthStates).where(eq(oauthStates.id, oauthState.id));
 
-    // Calculate token expiry times
     const now = new Date();
     const expiresAt = new Date(now.getTime() + tokens.expires_in * 1000);
     const refreshTokenExpiresAt = new Date(now.getTime() + tokens.x_refresh_token_expires_in * 1000);
 
-    // Encrypt tokens before storage
     const encryptedAccessToken = encryptToken(tokens.access_token);
     const encryptedRefreshToken = encryptToken(tokens.refresh_token);
 
-    // Check if connection already exists
     const existing = await db.select()
       .from(partnerConnections)
       .where(
@@ -205,7 +361,6 @@ export class QuickBooksOAuthService {
     let connection;
 
     if (existing.length > 0) {
-      // Update existing connection
       const [updated] = await db.update(partnerConnections)
         .set({
           status: 'connected',
@@ -217,6 +372,7 @@ export class QuickBooksOAuthService {
           metadata: {
             companyId: realmId,
             tokenType: tokens.token_type,
+            environment: qbEnvironment,
           },
           lastSyncAt: now,
         })
@@ -225,7 +381,6 @@ export class QuickBooksOAuthService {
       
       connection = updated;
     } else {
-      // Create new connection
       const [created] = await db.insert(partnerConnections).values({
         workspaceId,
         partnerType: 'quickbooks',
@@ -239,6 +394,7 @@ export class QuickBooksOAuthService {
         metadata: {
           companyId: realmId,
           tokenType: tokens.token_type,
+          environment: qbEnvironment,
         },
         lastSyncAt: now,
       }).returning();
@@ -246,18 +402,12 @@ export class QuickBooksOAuthService {
       connection = created;
     }
 
-    // Clean up old expired states (housekeeping)
     await db.delete(oauthStates)
       .where(lt(oauthStates.expiresAt, now));
 
     return { workspaceId, connection };
   }
 
-  /**
-   * Refresh access token using refresh token
-   * 
-   * @param connectionId - Partner connection ID
-   */
   async refreshAccessToken(connectionId: string): Promise<void> {
     const [connection] = await db.select()
       .from(partnerConnections)
@@ -268,28 +418,28 @@ export class QuickBooksOAuthService {
       throw new Error('Connection not found or refresh token missing');
     }
 
-    // Check if refresh token is expired
     if (connection.refreshTokenExpiresAt && new Date() > connection.refreshTokenExpiresAt) {
-      // Refresh token expired - mark connection as expired
       await db.update(partnerConnections)
         .set({ status: 'expired' })
         .where(eq(partnerConnections.id, connectionId));
-      
       throw new Error('Refresh token expired - user must reconnect');
     }
 
-    // Decrypt refresh token
     const decryptedRefreshToken = decryptToken(connection.refreshToken);
     if (!decryptedRefreshToken) {
       throw new Error('Failed to decrypt refresh token');
     }
+    
+    const connectionMetadata = connection.metadata as Record<string, any> | null;
+    const { clientId, clientSecret } = this.getCredentialsForBackgroundOps(connectionMetadata || undefined);
 
     const response = await fetch(this.tokenEndpoint, {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
       },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
@@ -300,12 +450,10 @@ export class QuickBooksOAuthService {
     if (!response.ok) {
       const error = await response.text();
       
-      // Check if refresh token is invalid/revoked
       if (response.status === 400 || response.status === 401) {
         await db.update(partnerConnections)
           .set({ status: 'expired' })
           .where(eq(partnerConnections.id, connectionId));
-        
         throw new Error('Refresh token invalid - user must reconnect');
       }
       
@@ -314,16 +462,13 @@ export class QuickBooksOAuthService {
 
     const tokens: QuickBooksTokenResponse = await response.json();
 
-    // Calculate new expiry times
     const now = new Date();
     const expiresAt = new Date(now.getTime() + tokens.expires_in * 1000);
     const refreshTokenExpiresAt = new Date(now.getTime() + tokens.x_refresh_token_expires_in * 1000);
 
-    // Encrypt new tokens
     const encryptedAccessToken = encryptToken(tokens.access_token);
     const encryptedRefreshToken = encryptToken(tokens.refresh_token);
 
-    // Update connection with new tokens
     await db.update(partnerConnections)
       .set({
         accessToken: encryptedAccessToken,
@@ -335,11 +480,6 @@ export class QuickBooksOAuthService {
       .where(eq(partnerConnections.id, connectionId));
   }
 
-  /**
-   * Disconnect (revoke) QuickBooks connection
-   * 
-   * @param connectionId - Partner connection ID
-   */
   async disconnect(connectionId: string): Promise<void> {
     const [connection] = await db.select()
       .from(partnerConnections)
@@ -350,18 +490,19 @@ export class QuickBooksOAuthService {
       throw new Error('Connection not found');
     }
 
-    // Decrypt and revoke tokens with QuickBooks
     try {
       const decryptedRefreshToken = decryptToken(connection.refreshToken);
-      if (!decryptedRefreshToken) {
-        console.warn('Could not decrypt refresh token for revocation');
-      } else {
+      if (decryptedRefreshToken) {
+        const connectionMetadata = connection.metadata as Record<string, any> | null;
+        const { clientId, clientSecret } = this.getCredentialsForBackgroundOps(connectionMetadata || undefined);
+        
         const response = await fetch(this.revokeEndpoint, {
           method: 'POST',
+          signal: AbortSignal.timeout(15000),
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+            'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
           },
           body: new URLSearchParams({
             token: decryptedRefreshToken,
@@ -369,16 +510,13 @@ export class QuickBooksOAuthService {
         });
 
         if (!response.ok) {
-          console.error('Failed to revoke QuickBooks tokens:', await response.text());
-          // Continue anyway - we'll mark as disconnected locally
+          log.error('[QuickBooks OAuth] Failed to revoke tokens:', await response.text());
         }
       }
     } catch (error) {
-      console.error('Error revoking QuickBooks tokens:', error);
-      // Continue anyway
+      log.error('[QuickBooks OAuth] Error revoking tokens:', error);
     }
 
-    // Mark connection as disconnected
     await db.update(partnerConnections)
       .set({
         status: 'disconnected',
@@ -388,12 +526,38 @@ export class QuickBooksOAuthService {
       .where(eq(partnerConnections.id, connectionId));
   }
 
-  /**
-   * Get valid access token (refreshes if expired)
-   * 
-   * @param connectionId - Partner connection ID
-   * @returns Valid access token
-   */
+  getDecryptedAccessToken(connectionId: string): string | null {
+    return this.getCachedDecryptedToken(connectionId);
+  }
+
+  private cachedTokens: Map<string, { token: string; fetchedAt: number }> = new Map();
+
+  private getCachedDecryptedToken(connectionId: string): string | null {
+    const cached = this.cachedTokens.get(connectionId);
+    const now = Date.now();
+    if (cached && (now - cached.fetchedAt) < 30000) {
+      return cached.token;
+    }
+    return null;
+  }
+
+  async getDecryptedAccessTokenAsync(connectionId: string): Promise<string | null> {
+    const [connection] = await db.select()
+      .from(partnerConnections)
+      .where(eq(partnerConnections.id, connectionId))
+      .limit(1);
+
+    if (!connection || !connection.accessToken) {
+      return null;
+    }
+
+    const decrypted = decryptToken(connection.accessToken);
+    if (decrypted) {
+      this.cachedTokens.set(connectionId, { token: decrypted, fetchedAt: Date.now() });
+    }
+    return decrypted;
+  }
+
   async getValidAccessToken(connectionId: string): Promise<string> {
     const [connection] = await db.select()
       .from(partnerConnections)
@@ -404,17 +568,23 @@ export class QuickBooksOAuthService {
       throw new Error('Connection not found or access token missing');
     }
 
-    // Check if access token is expired (refresh 5 minutes before expiry)
-    const expiryBuffer = 5 * 60 * 1000; // 5 minutes
+    const expiryBuffer = 5 * 60 * 1000;
     const now = new Date();
     const isExpiringSoon = connection.expiresAt && 
       (now.getTime() + expiryBuffer) >= connection.expiresAt.getTime();
 
     if (isExpiringSoon) {
-      // Refresh token
-      await this.refreshAccessToken(connectionId);
-      
-      // Fetch updated connection
+      // GAP-40 FIX: Coalesce concurrent refresh calls into a single Promise so only one
+      // thread calls the QB token endpoint for this connection at a time.
+      let refreshPromise = this._refreshPromises.get(connectionId);
+      if (!refreshPromise) {
+        refreshPromise = this.refreshAccessToken(connectionId).finally(() => {
+          this._refreshPromises.delete(connectionId);
+        });
+        this._refreshPromises.set(connectionId, refreshPromise);
+      }
+      await refreshPromise;
+
       const [updated] = await db.select()
         .from(partnerConnections)
         .where(eq(partnerConnections.id, connectionId))
@@ -424,12 +594,44 @@ export class QuickBooksOAuthService {
         throw new Error('Failed to refresh access token');
       }
       
-      // Decrypt and return
       return decryptToken(updated.accessToken) || '';
     }
 
-    // Decrypt and return current token
     return decryptToken(connection.accessToken) || '';
+  }
+
+  startScheduledCleanup(): void {
+    if (QuickBooksOAuthService.cleanupScheduled) {
+      return;
+    }
+    QuickBooksOAuthService.cleanupScheduled = true;
+    
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+    
+    // Defer first cleanup 120s — probes DB before running to avoid circuit-open storms
+    setTimeout(async () => {
+      try {
+        const { probeDbConnection } = await import('../../db');
+        const dbOk = await probeDbConnection();
+        if (!dbOk) {
+          log.warn('[QuickBooks OAuth] Skipping startup cleanup — DB probe failed');
+          return;
+        }
+        await this.cleanupExpiredStates();
+      } catch (err: any) {
+        log.warn('[QuickBooks OAuth] Startup cleanup error:', err?.message || err);
+      }
+    }, 120000);
+    
+    setInterval(async () => {
+      try {
+        await this.cleanupExpiredStates();
+      } catch (error) {
+        log.warn('[QuickBooks OAuth] Scheduled cleanup error:', (error as Error)?.message || error);
+      }
+    }, ONE_HOUR_MS).unref();
+    
+    log.info(`[QuickBooks OAuth] Scheduled cleanup started (hourly)`);
   }
 }
 

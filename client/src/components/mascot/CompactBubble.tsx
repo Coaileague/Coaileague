@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, memo, useRef, useCallback } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { X, Sparkles } from 'lucide-react';
 import { triggerHaptic } from '@/hooks/use-touch-swipe';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
@@ -61,6 +61,7 @@ export const CompactBubble = memo(function CompactBubble({
   mode = 'IDLE',
   onDismiss,
 }: CompactBubbleProps) {
+  const [, setLocation] = useLocation();
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
@@ -205,7 +206,7 @@ export const CompactBubble = memo(function CompactBubble({
       data-testid="compact-bubble"
     >
       <div
-        className={`rounded-lg border backdrop-blur-sm shadow-lg ${colors.bg} ${colors.border} border px-3 py-2`}
+        className={`rounded-lg border backdrop-blur-sm shadow-sm ${colors.bg} ${colors.border} border px-3 py-2`}
       >
         {/* Header with Trinity icon and close button */}
         <div className="flex items-center justify-between gap-2 mb-1">
@@ -289,7 +290,7 @@ export const CompactBubble = memo(function CompactBubble({
             href="/trinity-insights"
             onClick={(e) => {
               e.preventDefault();
-              window.location.href = '/trinity-insights';
+              setLocation('/trinity-insights');
             }}
             className={`inline-block mt-1.5 text-xs font-medium ${colors.accent} hover:underline`}
             data-testid="link-trinity-insights"

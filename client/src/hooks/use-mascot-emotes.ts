@@ -109,13 +109,18 @@ export function useMascotEmotes(): EmoteManager {
     }
     
     // Set transition end
-    setTimeout(() => {
+    const transitionTimeout = setTimeout(() => {
       setState(prev => ({ ...prev, isTransitioning: false }));
     }, 200);
     
+    const unsubs: (() => void)[] = [
+      () => clearTimeout(transitionTimeout),
+    ];
+    
     // Auto-revert to neutral after duration (if not indefinite)
+    let revertTimeout: NodeJS.Timeout | null = null;
     if (config.duration > 0) {
-      timeoutRef.current = setTimeout(() => {
+      revertTimeout = setTimeout(() => {
         setState(prev => ({
           current: 'neutral',
           previous: prev.current,
@@ -124,11 +129,19 @@ export function useMascotEmotes(): EmoteManager {
           isTransitioning: true,
         }));
         
-        setTimeout(() => {
+        const secondTransitionTimeout = setTimeout(() => {
           setState(prev => ({ ...prev, isTransitioning: false }));
         }, 200);
+        // We can't easily push to unsubs from inside this timeout if the effect already returned,
+        // but this is a short one-off UI state update.
       }, config.duration);
+      timeoutRef.current = revertTimeout;
+      unsubs.push(() => { if (revertTimeout) clearTimeout(revertTimeout); });
     }
+
+    return () => {
+      unsubs.forEach(u => u());
+    };
   }, []); // Empty deps - uses ref for current state
   
   // Trigger emote by context

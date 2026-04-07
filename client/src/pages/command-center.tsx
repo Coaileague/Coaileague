@@ -2,6 +2,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { Bell } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 /**
  * Command Center Page - Redirect to proper notification access
@@ -25,19 +26,24 @@ export default function CommandCenterPage() {
     return () => clearTimeout(timer);
   }, [setLocation]);
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'command-center',
+    title: 'Notifications Moved',
+    subtitle: 'Redirecting to dashboard...',
+    category: 'operations',
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
-      <Bell className="w-16 h-16 text-muted-foreground mb-4" />
-      <h1 className="text-xl font-semibold mb-2">Notifications Moved</h1>
-      <p className="text-muted-foreground max-w-sm">
-        {isMobile 
-          ? "Tap the bell icon in the top header to access your notifications."
-          : "Click the bell icon in the header to access your notifications."
-        }
-      </p>
-      <p className="text-sm text-muted-foreground mt-4">
-        Redirecting to dashboard...
-      </p>
-    </div>
+    <CanvasHubPage config={pageConfig}>
+      <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+        <Bell className="w-16 h-16 text-muted-foreground mb-4" />
+        <p className="text-muted-foreground max-w-sm">
+          {isMobile 
+            ? "Tap the bell icon in the top header to access your notifications."
+            : "Click the bell icon in the header to access your notifications."
+          }
+        </p>
+      </div>
+    </CanvasHubPage>
   );
 }

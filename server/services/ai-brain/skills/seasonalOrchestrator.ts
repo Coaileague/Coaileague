@@ -11,6 +11,8 @@
 
 import { geminiClient } from '../providers/geminiClient';
 import { getSeasonalSubagent } from '../seasonalSubagent';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('seasonalOrchestrator');
 
 export type SeasonId = 
   | 'winter' | 'christmas' | 'newYear' | 'valentines' 
@@ -430,10 +432,21 @@ function detectCurrentSeason(date: Date): HolidayDefinition {
 }
 
 export async function generateSeasonalProfile(workspaceId?: string): Promise<SeasonalProfile> {
-  // Check if seasonal theming is disabled via orchestration
+  // SINGLE CONTROL POINT: Check server/config/seasonalToggle.ts to enable/disable
+  // Import dynamically to avoid circular dependencies
+  let seasonalEnabled = false;
+  try {
+    const { SEASONAL_ENABLED } = await import('../../../config/seasonalToggle');
+    seasonalEnabled = SEASONAL_ENABLED;
+  } catch {
+    // If toggle file doesn't exist, default to disabled
+    seasonalEnabled = false;
+  }
+  
+  // Check if seasonal theming is disabled via orchestration or toggle
   const subagent = getSeasonalSubagent();
-  if (subagent.isSeasonalDisabled()) {
-    console.log('[SeasonalOrchestrator] Seasonal theming disabled - returning default profile');
+  if (!seasonalEnabled || subagent.isSeasonalDisabled()) {
+    log.info('[SeasonalOrchestrator] Seasonal theming disabled - returning default profile');
     return {
       seasonId: 'default',
       holidayName: null,
@@ -526,10 +539,10 @@ export async function generateSeasonalProfile(workspaceId?: string): Promise<Sea
   };
   
   try {
-    const aiEnhanced = await enhanceWithAI(profile, now);
+    const aiEnhanced = await enhanceWithAI(profile, now, workspaceId);
     return { ...profile, ...aiEnhanced, aiGenerated: true };
   } catch (error) {
-    console.log('[SeasonalOrchestrator] AI enhancement skipped:', error);
+    log.info('[SeasonalOrchestrator] AI enhancement skipped:', error);
     return profile;
   }
 }
@@ -576,7 +589,7 @@ function getValidUntil(now: Date, holiday: HolidayDefinition | null, season: Hol
   return endDate.toISOString();
 }
 
-async function enhanceWithAI(profile: SeasonalProfile, now: Date): Promise<Partial<SeasonalProfile>> {
+async function enhanceWithAI(profile: SeasonalProfile, now: Date, workspaceId?: string): Promise<Partial<SeasonalProfile>> {
   const prompt = `You are the CoAIleague seasonal mood AI. Given the current date ${now.toLocaleDateString()} and season "${profile.seasonId}", suggest:
 1. One additional seasonal thought for the mascot (max 25 chars)
 2. Optimal effect intensity (0.3-1.0) based on time of day
@@ -586,6 +599,7 @@ Respond in JSON: { "thought": "...", "intensity": 0.X, "moreOrnaments": true/fal
 
   try {
     const result = await geminiClient.generate({
+      workspaceId,
       featureKey: 'seasonal_orchestrator',
       systemPrompt: 'You are the CoAIleague seasonal mood AI assistant. Respond only with valid JSON.',
       userMessage: prompt,
@@ -679,12 +693,12 @@ let activeManagers: Set<string> = new Set();
 
 export function registerSeasonalManager(managerId: string) {
   activeManagers.add(managerId);
-  console.log(`[SeasonalOrchestrator] Registered manager: ${managerId}`);
+  log.info(`[SeasonalOrchestrator] Registered manager: ${managerId}`);
 }
 
 export function unregisterSeasonalManager(managerId: string) {
   activeManagers.delete(managerId);
-  console.log(`[SeasonalOrchestrator] Unregistered manager: ${managerId}`);
+  log.info(`[SeasonalOrchestrator] Unregistered manager: ${managerId}`);
 }
 
 export function getActiveManagers(): string[] {
@@ -742,7 +756,7 @@ export async function runSeasonalHealthCheck(): Promise<SeasonalHealthCheck> {
     supportActions,
   };
   
-  console.log(`[SeasonalOrchestrator] Health check: ${status}, missing: ${missing.length}/${expected.length}`);
+  log.info(`[SeasonalOrchestrator] Health check: ${status}, missing: ${missing.length}/${expected.length}`);
   
   return healthCheck;
 }
@@ -767,7 +781,7 @@ let supportOverrides: {
 } = {};
 
 export async function executeSeasonalCommand(command: SeasonalCommand): Promise<SeasonalCommandResult> {
-  console.log(`[SeasonalOrchestrator] Executing command: ${command.action}`, command.params);
+  log.info(`[SeasonalOrchestrator] Executing command: ${command.action}`, command.params);
   
   switch (command.action) {
     case 'refresh':
@@ -885,6 +899,7 @@ Active managers: ${healthCheck.activeManagers.join(', ') || 'none'}.
 Generate a brief diagnostic message (max 100 chars) explaining the issue.`;
 
     const result = await geminiClient.generate({
+      workspaceId: undefined, // Platform-level health check, no workspace billing
       featureKey: 'seasonal_health',
       systemPrompt: 'You are a diagnostic AI. Provide brief, actionable status messages.',
       userMessage: prompt,

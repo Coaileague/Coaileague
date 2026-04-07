@@ -12,6 +12,9 @@
  */
 
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('cdnCachingService');
+
 
 interface CacheEntry {
   key: string;
@@ -85,7 +88,7 @@ class CDNCachingService {
     this.startCacheCleanup();
     
     this.initialized = true;
-    console.log('[CDNCaching] Service initialized with 4 edge locations');
+    log.info('[CDNCaching] Service initialized with 4 edge locations');
   }
   
   /**
@@ -179,7 +182,7 @@ class CDNCachingService {
     
     if (invalidated > 0) {
       // Internal event: cache_invalidated
-      console.log(`[CDNCaching] Invalidated ${invalidated} entries matching ${pattern}`);
+      log.info(`[CDNCaching] Invalidated ${invalidated} entries matching ${pattern}`);
     }
     
     return invalidated;
@@ -199,7 +202,7 @@ class CDNCachingService {
     }
     
     if (invalidated > 0) {
-      console.log(`[CDNCaching] Invalidated ${invalidated} entries with tag: ${tag}`);
+      log.info(`[CDNCaching] Invalidated ${invalidated} entries with tag: ${tag}`);
     }
     
     return invalidated;
@@ -214,7 +217,7 @@ class CDNCachingService {
     this.resetStats();
     
     // Internal event: cache_purged
-    console.log(`[CDNCaching] Purged all ${count} entries`);
+    log.info(`[CDNCaching] Purged all ${count} entries`);
     
     return count;
   }
@@ -230,7 +233,7 @@ class CDNCachingService {
       warmed++;
     }
     
-    console.log(`[CDNCaching] Cache warmed with ${warmed} entries`);
+    log.info(`[CDNCaching] Cache warmed with ${warmed} entries`);
     return warmed;
   }
   
@@ -282,7 +285,7 @@ class CDNCachingService {
    */
   updateConfig(config: Partial<CacheConfig>): void {
     this.config = { ...this.config, ...config };
-    console.log('[CDNCaching] Configuration updated');
+    log.info('[CDNCaching] Configuration updated');
   }
   
   /**
@@ -353,7 +356,7 @@ class CDNCachingService {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    console.log('[CDNCaching] Service shut down');
+    log.info('[CDNCaching] Service shut down');
   }
   
   // Private methods
@@ -442,7 +445,7 @@ class CDNCachingService {
       }
       
       if (expired > 0) {
-        console.log(`[CDNCaching] Cleaned up ${expired} expired entries`);
+        log.info(`[CDNCaching] Cleaned up ${expired} expired entries`);
       }
     }, 60000);
   }

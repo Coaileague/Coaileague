@@ -18,6 +18,8 @@ import { trinitySelfAwareness, InsertTrinitySelfAwareness, TrinitySelfAwareness 
 import { eq, and, desc, like, isNull, not, sql } from 'drizzle-orm';
 import { TRINITY_PERSONA, PERSONA_SYSTEM_INSTRUCTION } from './trinityPersona';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinitySelfAwarenessService');
 
 // ============================================================================
 // TYPES
@@ -454,11 +456,11 @@ class TrinitySelfAwarenessService {
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
-      console.log('[TrinitySelfAwareness] Already initialized');
+      log.info('[TrinitySelfAwareness] Already initialized');
       return;
     }
 
-    console.log('[TrinitySelfAwareness] Initializing self-awareness...');
+    log.info('[TrinitySelfAwareness] Initializing self-awareness...');
 
     try {
       // Load core facts into database if not present
@@ -481,9 +483,9 @@ class TrinitySelfAwarenessService {
       await this.refreshCache();
 
       this.initialized = true;
-      console.log(`[TrinitySelfAwareness] Initialized with ${allCoreFacts.length} core facts`);
+      log.info(`[TrinitySelfAwareness] Initialized with ${allCoreFacts.length} core facts`);
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Initialization failed:', error);
+      log.error('[TrinitySelfAwareness] Initialization failed:', error);
     }
   }
 
@@ -575,7 +577,7 @@ class TrinitySelfAwarenessService {
         name: action.name,
         category: 'self_awareness',
         description: action.description,
-        requiredRoles: ['support', 'admin', 'super_admin'],
+        requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         handler: async (request) => {
           const startTime = Date.now();
           const result = await action.handler(request.payload || {});
@@ -590,7 +592,7 @@ class TrinitySelfAwarenessService {
       });
     }
 
-    console.log('[TrinitySelfAwareness] Registered 7 AI Brain actions');
+    log.info('[TrinitySelfAwareness] Registered 7 AI Brain actions');
   }
 
   // ============================================================================
@@ -624,7 +626,7 @@ class TrinitySelfAwarenessService {
 
       return fact || null;
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error getting fact:', error);
+      log.error('[TrinitySelfAwareness] Error getting fact:', error);
       return null;
     }
   }
@@ -649,7 +651,7 @@ class TrinitySelfAwarenessService {
         .where(and(...conditions))
         .orderBy(trinitySelfAwareness.factKey);
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error getting facts by category:', error);
+      log.error('[TrinitySelfAwareness] Error getting facts by category:', error);
       return [];
     }
   }
@@ -659,56 +661,43 @@ class TrinitySelfAwarenessService {
    */
   async upsertFact(fact: SelfAwarenessFact): Promise<TrinitySelfAwareness | null> {
     try {
-      const existing = await this.getFact(fact.category, fact.factKey);
-
-      if (existing) {
-        // Update existing fact
-        const [updated] = await db
-          .update(trinitySelfAwareness)
-          .set({
+      const [result] = await db
+        .insert(trinitySelfAwareness)
+        .values({
+          workspaceId: 'system',
+          category: fact.category,
+          subcategory: fact.subcategory,
+          factKey: fact.factKey,
+          factValue: fact.factValue,
+          factType: fact.factType || 'text',
+          source: fact.source || 'system',
+          confidence: fact.confidence?.toString() || '1.0',
+          lastVerifiedAt: new Date(),
+          version: 1,
+          isActive: true,
+        })
+        .onConflictDoUpdate({
+          target: [trinitySelfAwareness.category, trinitySelfAwareness.factKey],
+          set: {
             factValue: fact.factValue,
             factType: fact.factType || 'text',
             subcategory: fact.subcategory,
             source: fact.source || 'configured',
             confidence: fact.confidence?.toString() || '1.0',
             lastVerifiedAt: new Date(),
-            version: (existing.version || 1) + 1,
             updatedAt: new Date(),
-          })
-          .where(eq(trinitySelfAwareness.id, existing.id))
-          .returning();
+          },
+        })
+        .returning();
 
-        // Update cache
+      if (result) {
         const cacheKey = `${fact.category}:${fact.factKey}`;
-        this.factCache.set(cacheKey, updated);
-
-        return updated;
-      } else {
-        // Insert new fact
-        const [inserted] = await db
-          .insert(trinitySelfAwareness)
-          .values({
-            category: fact.category,
-            subcategory: fact.subcategory,
-            factKey: fact.factKey,
-            factValue: fact.factValue,
-            factType: fact.factType || 'text',
-            source: fact.source || 'system',
-            confidence: fact.confidence?.toString() || '1.0',
-            lastVerifiedAt: new Date(),
-            version: 1,
-            isActive: true,
-          })
-          .returning();
-
-        // Update cache
-        const cacheKey = `${fact.category}:${fact.factKey}`;
-        this.factCache.set(cacheKey, inserted);
-
-        return inserted;
+        this.factCache.set(cacheKey, result);
       }
+
+      return result ?? null;
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error upserting fact:', error);
+      log.error('[TrinitySelfAwareness] Error upserting fact:', error);
       return null;
     }
   }
@@ -734,7 +723,7 @@ class TrinitySelfAwarenessService {
         .orderBy(desc(trinitySelfAwareness.confidence))
         .limit(20);
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error searching facts:', error);
+      log.error('[TrinitySelfAwareness] Error searching facts:', error);
       return [];
     }
   }
@@ -791,7 +780,7 @@ class TrinitySelfAwarenessService {
         systemHealth: 'healthy', // Will be determined by health checks
       };
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error getting platform context:', error);
+      log.error('[TrinitySelfAwareness] Error getting platform context:', error);
       return {
         totalServices: 80,
         totalSubagents: 15,
@@ -832,7 +821,7 @@ class TrinitySelfAwarenessService {
       
       return capabilities;
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error getting capabilities:', error);
+      log.error('[TrinitySelfAwareness] Error getting capabilities:', error);
       return [];
     }
   }
@@ -879,7 +868,7 @@ class TrinitySelfAwarenessService {
     
     // Check RBAC constraints
     if (context?.requiredRole && context?.userRole) {
-      const roleHierarchy = ['employee', 'supervisor', 'manager', 'admin', 'owner', 'support_engineer', 'support_manager', 'support_director', 'root_admin'];
+      const roleHierarchy = ['employee', 'contractor', 'staff', 'supervisor', 'manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
       const requiredIndex = roleHierarchy.indexOf(context.requiredRole);
       const userIndex = roleHierarchy.indexOf(context.userRole);
       
@@ -917,9 +906,9 @@ class TrinitySelfAwarenessService {
       }
 
       this.lastCacheRefresh = new Date();
-      console.log(`[TrinitySelfAwareness] Cache refreshed with ${allFacts.length} facts`);
+      log.info(`[TrinitySelfAwareness] Cache refreshed with ${allFacts.length} facts`);
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error refreshing cache:', error);
+      log.error('[TrinitySelfAwareness] Error refreshing cache:', error);
     }
   }
 
@@ -1005,7 +994,7 @@ I understand the platform architecture, can coordinate subagents, and will respe
         lastUpdated,
       };
     } catch (error) {
-      console.error('[TrinitySelfAwareness] Error getting stats:', error);
+      log.error('[TrinitySelfAwareness] Error getting stats:', error);
       return {
         totalFacts: 0,
         factsByCategory: {},

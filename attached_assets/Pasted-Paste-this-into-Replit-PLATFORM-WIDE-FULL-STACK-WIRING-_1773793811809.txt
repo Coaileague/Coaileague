@@ -1,0 +1,548 @@
+Paste this into Replit:
+
+---
+
+**PLATFORM-WIDE FULL-STACK WIRING AUDIT — ALL DOMAINS | MULTI-PASS | READ BEFORE TOUCH | FIX EVERYTHING**
+
+This is the most comprehensive audit possible. Every UI element that connects to real data, every button that fires an action, every backend route, every schema column, every enum, every event, every broadcast — audited end to end. Fix everything found. Keep a running count across all passes.
+
+---
+
+**AUDIT PHILOSOPHY**
+
+Every finding must be traced through this full chain:
+
+```
+UI Component → Frontend Handler → API Call → Route Mount → Middleware → Controller → Service → DB Query → Schema Column → Drizzle Enum → Response → State Update → WebSocket Broadcast → Frontend Refresh
+```
+
+Any broken link in this chain is a gap. Fix it.
+
+---
+
+**PASS 1 — SCHEMA TO DRIZZLE SYNC AUDIT**
+
+Before anything else — verify every DB table is correctly defined in Drizzle and every column name matches exactly what the code uses.
+
+**For every table in the schema run these checks:**
+
+- Does every column referenced in any route, service, or action file exist in the Drizzle schema definition?
+- Does every Drizzle schema column match the actual PostgreSQL column name exactly — no camelCase vs snake_case mismatches?
+- Does every enum type used in code match the values defined in the PostgreSQL enum exactly?
+- Does every foreign key reference point to a column that exists?
+- Does every table have a `workspace_id` column if it stores tenant data — and is it non-nullable and indexed?
+- Are all money/rate columns defined as `decimal` not `float` or `integer`?
+- Are all status columns defined as PostgreSQL enums not varchar?
+
+**Tables to audit — check every one:**
+```
+workspaces, users, employees, clients, shifts, time_entries,
+invoices, invoice_line_items, payroll_runs, pay_stubs,
+documents, document_signatures, audit_logs, billing_audit_log,
+notifications, platform_updates, credit_ledger, credit_wallets,
+client_rates, employee_bank_accounts, automation_triggers,
+approval_gates, idempotency_keys, processed_stripe_events,
+trinity_credit_failures, welfare_checks, chat_messages,
+chat_rooms, shift_chatrooms, post_orders, compliance_states,
+regulatory_violations, hiring_pipeline, onboarding_applications,
+dashboard_layouts, cron_run_log, trinity_workspace_pauses,
+email_deliveries, webhook_deliveries, state_tax_overrides
+```
+
+For every mismatch found — fix the Drizzle schema, run migration, update all code references.
+
+Report gap count. Fix before Pass 2.
+
+---
+
+**PASS 2 — ROUTE MOUNT COMPLETENESS AUDIT**
+
+Verify every route file is correctly mounted and accessible.
+
+**Scan `server/index.ts` and all router files:**
+
+- List every route file that exists in `server/routes/`
+- For each — confirm it is imported and mounted in the main router or `server/index.ts`
+- For each mounted route — confirm the path prefix is correct and does not conflict with another route
+- For each route file — confirm `requireAuth` or equivalent middleware is applied at mount level
+- For each route — confirm `workspaceId` comes from `req.workspaceId` (JWT) not from request body or params
+
+**Build a mount map:**
+```
+Route File → Mount Path → Auth Middleware → Workspace Scoping
+```
+
+For every unmounted route file — mount it.
+For every route missing auth — add it.
+For every route reading `workspaceId` from wrong source — fix it.
+
+Report gap count. Fix before Pass 3.
+
+---
+
+**PASS 3 — FRONTEND TO BACKEND ENDPOINT MAPPING AUDIT**
+
+Every `useQuery`, `useMutation`, `fetch`, `apiRequest` call in the frontend must map to a real mounted backend route.
+
+**Scan every file in `client/src/`:**
+
+Build a complete list of every API call:
+```
+Frontend File → API Method → API Path → Expected Response Shape
+```
+
+For each API call:
+- Does the backend route exist at exactly that path?
+- Is it mounted at the correct prefix?
+- Does the response shape match what the frontend expects?
+- Is the HTTP method correct — GET not POST, PATCH not PUT?
+
+**Common mismatches to look for:**
+- Frontend calls `/api/employees` but route is mounted at `/api/workforce/employees`
+- Frontend expects `{ data: [] }` but backend returns `[]` directly
+- Frontend sends PATCH but backend only has PUT
+- Frontend calls `/api/shifts/:id` but backend route is `/api/shifts/detail/:id`
+- Frontend calls with query params but backend reads from body
+
+For every mismatch — fix either the frontend path or the backend mount to match. Standardize on the backend path as canonical.
+
+Report gap count. Fix before Pass 4.
+
+---
+
+**PASS 4 — BUTTON AND ACTION WIRING AUDIT**
+
+Every interactive UI element must have a working end-to-end connection.
+
+**Scan every page and component for:**
+
+Buttons that should trigger mutations:
+- "Save" buttons — does the mutation fire, does it hit the correct endpoint, does it handle errors, does it show loading state, does it invalidate the correct query on success?
+- "Delete" buttons — does it show a confirmation dialog, does it call the correct DELETE endpoint, does it remove the item from the list immediately?
+- "Approve" buttons — does it call the correct approval endpoint, does it update the item status in real time?
+- "Send" buttons — email, invoice, notification sends — does the action complete end to end?
+- "Upload" buttons — file input, does it show progress, does it confirm success, does it appear in the list?
+- "Sign" buttons — does it trigger the e-signature flow, does status update?
+- "Export" / "Download" buttons — does the file actually download?
+- "Clock In / Clock Out" — does it record GPS, does it confirm success, does shift status update?
+- "Assign" buttons — shift assignment, document assignment — does it persist?
+
+Cards and badges that display real data:
+- Earnings card — does `$1,777.50` come from a real API query or is it hardcoded?
+- Compliance score badge — does it reflect real calculated score?
+- Open shifts count — does it reflect real DB count?
+- Overdue invoices badge — does it reflect real aging data?
+- Notification count badge — does it update in real time?
+
+For every button or element with broken wiring — fix the connection.
+
+Report gap count. Fix before Pass 5.
+
+---
+
+**PASS 5 — FORM SUBMISSION AND VALIDATION AUDIT**
+
+Every form must validate correctly, submit to the right endpoint, and persist the data.
+
+**Scan every form component:**
+
+- Client creation form — all fields submit, all fields persist, numeric coercion applied?
+- Client edit form — opens with current values, saves only changed fields, no null overwrites?
+- Employee creation form — payType, payFrequency, hourlyRate all submit correctly?
+- Employee edit form — all fields editable and persist?
+- Shift creation form — clientId, employeeId, start/end time, officer type all submit?
+- Invoice creation form — line items, tax rate, due date all persist?
+- Payroll settings form — payrollCycle, bankRouting, bankAccount all save?
+- Org settings form — timezone, defaultTaxRate, billingCycle all save?
+- Onboarding wizard — each step saves before advancing, no data lost on back navigation?
+
+**For each form:**
+- Is there client-side validation before submission?
+- Are Zod errors from the backend mapped to field-level errors in the UI?
+- Is there a loading state on the submit button?
+- Is there a success confirmation?
+- Is there an error state that shows the specific error?
+- Does the form reset correctly after successful submission?
+
+Fix every gap found. Report gap count.
+
+---
+
+**PASS 6 — CRUD OPERATION COMPLETENESS AUDIT**
+
+Every entity must have complete Create, Read, Update, Delete operations — both backend and frontend.
+
+**For each entity audit all four operations:**
+
+| Entity | Create | Read (list) | Read (detail) | Update | Delete |
+|--------|--------|-------------|---------------|--------|--------|
+| Clients | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Employees | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Shifts | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Time Entries | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Invoices | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Payroll Runs | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Documents | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+| Notifications | ✓/✗ | ✓/✗ | — | ✓/✗ | ✓/✗ |
+| Post Orders | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ | ✓/✗ |
+
+For every missing operation:
+- Add the backend route
+- Add the frontend query or mutation
+- Wire the UI element to trigger it
+- Add error handling
+
+Report gap count. Fix before Pass 7.
+
+---
+
+**PASS 7 — WEBSOCKET BROADCAST COMPLETENESS AUDIT**
+
+Every data mutation must broadcast a real-time update to connected clients.
+
+**Build two lists:**
+
+Backend broadcasts — every `broadcastToWorkspace()` call:
+```
+File:Line → Event Type → Payload Shape
+```
+
+Frontend handlers — every WebSocket event listener:
+```
+Component → Event Type → Handler Action
+```
+
+**Find every asymmetry:**
+
+- Backend broadcasts `shift_created` but frontend has no handler — add handler
+- Frontend listens for `invoice_updated` but backend never broadcasts it — add broadcast
+- Backend broadcasts with event type `schedules_updated` but frontend listens for `schedule_updated` — standardize
+
+**For every mutation that is missing a broadcast — add it:**
+- Client created/updated/deleted
+- Employee created/updated/deleted
+- Shift created/updated/deleted/assigned
+- Invoice created/sent/paid/voided
+- Payroll run created/approved/processed/paid
+- Document uploaded/signed/assigned
+- Notification created
+- Compliance status changed
+- Credit balance changed
+- Settings updated
+
+**For every frontend component displaying real-time data — verify:**
+- It has a WebSocket handler that invalidates the relevant query on update
+- The query key used in invalidation matches the query key used in `useQuery`
+- The component re-renders correctly after invalidation
+
+Report gap count. Fix before Pass 8.
+
+---
+
+**PASS 8 — ENUM AND CATEGORY SYNC AUDIT**
+
+Every enum used in code must match the PostgreSQL enum exactly.
+
+**Build a complete enum map:**
+
+For every `pgEnum()` in the Drizzle schema:
+- List all defined values
+- Search all code for every place that enum's values are used as string literals
+- Find any string that is not in the enum definition
+- Find any enum value that is never used anywhere in code
+
+**Enums to audit thoroughly:**
+```
+invoice_status, payroll_status, shift_status, employee_status,
+document_type, document_status, notification_type,
+platform_update_category, knowledge_domain, audit_log_action,
+subscription_status, billing_cycle, pay_type, pay_frequency,
+license_type, compliance_status, document_safe_category,
+automation_trigger_type, approval_gate_status
+```
+
+**For every mismatch:**
+- If code uses a value not in the enum — add the value to the enum and run `ALTER TYPE`
+- If enum has a value nothing uses — document it as reserved or remove it
+- Add a normalization guard anywhere the value is written to DB so unknown values fall back safely
+
+Report gap count. Fix before Pass 9.
+
+---
+
+**PASS 9 — TRINITY ORCHESTRATION WIRING AUDIT**
+
+Every Trinity action must be correctly wired from trigger to completion.
+
+**For every Trinity action in the registry — verify:**
+
+- The handler function exists and is not a stub returning `{ success: true }` with no logic
+- The handler validates `workspaceId` before any DB operation
+- The handler checks workspace subscription status — suspended workspaces blocked
+- The handler checks credit balance — zero balance workspaces blocked
+- The handler writes to `audit_logs` with `performedBy: 'trinity-system'`
+- The handler emits the correct `platformEventBus.publish()` after completion
+- The handler returns a structured error response on failure — not a generic message
+
+**For every platformEventBus subscriber — verify:**
+
+- The subscriber handles the case where required event fields are missing
+- The subscriber is wrapped in try/catch that does not kill the subscriber on error
+- The subscriber does not throw — it logs and continues
+- The subscriber does not publish inside a DB transaction that could roll back
+
+**For every Trinity autonomous cron — verify:**
+
+- It has per-workspace error isolation — one workspace failure does not skip others
+- It writes a completion record to `cron_run_log`
+- It has a maximum execution timeout per workspace
+- It correctly loads workspace pause state from DB before executing
+
+Report gap count. Fix before Pass 10.
+
+---
+
+**PASS 10 — SILENT FAILURE ELIMINATION AUDIT**
+
+Find every place where an operation can fail without the user or system knowing.
+
+**Patterns to search for:**
+
+```typescript
+// PATTERN 1 — Empty catch
+try { await someOperation() } catch (e) {}
+
+// PATTERN 2 — Console only catch on critical path
+.catch(console.error)
+
+// PATTERN 3 — Undefined field access
+const total = invoice.totalAmount // field doesn't exist → undefined
+Number(undefined) // → NaN
+
+// PATTERN 4 — Missing await
+db.insert(table).values(data) // not awaited — DB write silently skipped
+
+// PATTERN 5 — Race condition SELECT-then-UPDATE
+const record = await db.select()... 
+// another request modifies record here
+await db.update()... // updates based on stale read
+
+// PATTERN 6 — Event inside transaction
+await db.transaction(async tx => {
+  await tx.insert(...)
+  platformEventBus.publish(...) // fires even if tx rolls back
+})
+
+// PATTERN 7 — Missing rollback on multi-step operation
+await db.insert(documents)...
+await storage.upload(file)... // fails here — DB record exists with no file
+
+// PATTERN 8 — NaN in financial calculation
+const tax = parseFloat(rate) * amount // NaN if rate is null
+
+// PATTERN 9 — Status transition without guard
+await db.update(invoices).set({ status: 'paid' }) // no check that it was 'sent' first
+
+// PATTERN 10 — Fire and forget notification
+sendEmail(...) // not awaited, not caught
+```
+
+**For every instance found on a critical path — fix it:**
+- Empty catches on financial operations → log to `trinity_credit_failures`
+- Missing awaits on DB writes → add await
+- Race conditions → add SELECT FOR UPDATE or atomic UPDATE WHERE
+- Events inside transactions → move publish after transaction commit
+- Multi-step without rollback → wrap in transaction
+- NaN calculations → add `|| 0` fallback
+- Missing status guards → add pre-flight check
+- Fire and forget → wrap in try/catch with error logging
+
+Report gap count. Fix before Pass 11.
+
+---
+
+**PASS 11 — MOBILE AND RESPONSIVE UI AUDIT**
+
+Every page must be usable on mobile devices.
+
+**Scan every page for mobile issues:**
+
+- Navigation — is the bottom nav correctly positioned above safe area insets?
+- Chat widget — is the minimized chat bar above the bottom nav not overlapping it?
+- Tables — do data tables scroll horizontally on mobile or do they overflow and break layout?
+- Forms — are input fields large enough to tap on mobile (minimum 44px height)?
+- Buttons — are action buttons large enough on mobile?
+- Modals — do modals scroll correctly on mobile when content is tall?
+- Upload areas — is file upload accessible on mobile?
+- Document viewer — can documents be viewed on mobile?
+- Schedule view — is the schedule calendar usable on mobile?
+- Payroll dashboard — are the tables readable on mobile?
+- Settings pages — are all settings sections accessible on mobile?
+
+**Fix every mobile layout issue found.**
+
+Report gap count. Fix before Pass 12.
+
+---
+
+**PASS 12 — ERROR STATE AND LOADING STATE AUDIT**
+
+Every component that fetches data must handle loading and error states.
+
+**Scan every `useQuery` call:**
+
+- Is there a loading skeleton or spinner shown while data fetches?
+- Is there an error message shown when the fetch fails?
+- Is the error message actionable — "Failed to load clients. Try refreshing." not just "Error"?
+- Is there a retry button on error states?
+- Does the empty state make sense — "No clients yet. Add your first client." not just a blank page?
+
+**Scan every `useMutation` call:**
+
+- Is the submit button disabled while the mutation is in flight?
+- Is there a loading indicator on the button?
+- Is the success state confirmed to the user — toast, modal, redirect?
+- Is the error state shown to the user with the specific error from the backend?
+- Does the mutation optimistically update the UI or wait for server confirmation?
+
+**Fix every missing state.**
+
+Report gap count. Fix before Pass 13.
+
+---
+
+**PASS 13 — CACHE INVALIDATION COMPLETENESS AUDIT**
+
+Every mutation must invalidate exactly the right queries.
+
+**For every `useMutation` — list what queries it should invalidate:**
+
+```
+Client created → invalidate: ['clients', workspaceId], ['client-count', workspaceId]
+Client updated → invalidate: ['clients', workspaceId], ['client', clientId], ['invoices', workspaceId]
+Employee created → invalidate: ['employees', workspaceId], ['employee-count', workspaceId]
+Shift created → invalidate: ['shifts', workspaceId], ['schedule', workspaceId], ['open-shifts', workspaceId]
+Shift assigned → invalidate: ['shifts', workspaceId], ['employee-schedule', employeeId]
+Invoice created → invalidate: ['invoices', workspaceId], ['ar-aging', workspaceId]
+Invoice paid → invalidate: ['invoices', workspaceId], ['ar-aging', workspaceId], ['revenue', workspaceId]
+Payroll approved → invalidate: ['payroll-runs', workspaceId], ['payroll-dashboard', workspaceId]
+Document uploaded → invalidate: ['documents', workspaceId], ['employee-documents', employeeId]
+Settings saved → invalidate: ['workspace-settings', workspaceId], ALL dependent queries
+```
+
+For every mutation missing a required invalidation — add it.
+For every mutation invalidating too broadly (invalidating everything) — narrow it to only affected queries.
+
+Report gap count. Fix before Pass 14.
+
+---
+
+**PASS 14 — FINAL VERIFICATION PASS**
+
+Run a complete platform walkthrough and verify every critical path.
+
+**Execute these scenarios end to end:**
+
+**Scenario 1 — New tenant setup:**
+1. Register new org
+2. Complete onboarding wizard
+3. Set payroll cycle weekly, billing cycle monthly, timezone CST, tax rate 8.25%
+4. Confirm settings persist after page refresh
+
+**Scenario 2 — Client lifecycle:**
+5. Add client with all fields
+6. Edit client bill rate
+7. Confirm edit persists
+8. Upload service proposal
+9. Send for signature
+10. Confirm status updates in real time
+
+**Scenario 3 — Employee lifecycle:**
+11. Add employee W2, $15/hr, weekly pay
+12. Complete onboarding packet
+13. Upload guard card, state ID, social security card
+14. Sign all acknowledgment forms
+15. Confirm onboarding packet PDF compiled
+16. Assign to client site
+17. Confirm post orders sent automatically
+
+**Scenario 4 — Scheduling and time:**
+18. Create shift for client
+19. Assign officer to shift
+20. Clock in with GPS
+21. Clock out
+22. Approve timesheet
+
+**Scenario 5 — Billing and payroll:**
+23. Generate invoice from approved timesheets
+24. Confirm correct bill rate used
+25. Send invoice
+26. Mark invoice paid
+27. Run payroll from approved timesheets
+28. Confirm correct pay rate used
+29. Approve payroll
+30. Confirm pay stubs generated
+
+**Scenario 6 — Trinity autonomy:**
+31. Verify Trinity morning brief fires
+32. Verify Trinity detects open shift and attempts to fill
+33. Verify Trinity sends invoice reminder on overdue invoice
+34. Verify Trinity blocks expired officer from shift assignment
+
+**Scenario 7 — Isolation:**
+35. Create second workspace
+36. Confirm no data from Scenario 1-5 is visible in second workspace
+
+Report PASS or FAIL for all 36 steps.
+
+---
+
+**RUNNING GAP COUNT**
+
+Update after every pass:
+
+```
+Pass 1  — Schema/Drizzle sync:           N gaps | N fixed
+Pass 2  — Route mount completeness:      N gaps | N fixed
+Pass 3  — Frontend/backend mapping:      N gaps | N fixed
+Pass 4  — Button/action wiring:          N gaps | N fixed
+Pass 5  — Form submission/validation:    N gaps | N fixed
+Pass 6  — CRUD completeness:             N gaps | N fixed
+Pass 7  — WebSocket broadcasts:          N gaps | N fixed
+Pass 8  — Enum/category sync:            N gaps | N fixed
+Pass 9  — Trinity orchestration:         N gaps | N fixed
+Pass 10 — Silent failure elimination:    N gaps | N fixed
+Pass 11 — Mobile/responsive UI:          N gaps | N fixed
+Pass 12 — Error/loading states:          N gaps | N fixed
+Pass 13 — Cache invalidation:            N gaps | N fixed
+Pass 14 — Final verification:            N/36 passing
+
+TOTAL GAPS FOUND: N
+TOTAL GAPS FIXED: N
+REMAINING UNFIXED: N
+```
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 14 passes:
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Pass 14 scenario test — 36/36 passing
+5. Running gap count — remaining unfixed = 0
+6. Zero silent failures on any critical path
+7. All enums in sync between DB and code
+8. All WebSocket events symmetric — every broadcast has a handler
+9. Trinity has complete data access for all autonomous operations
+
+If all criteria met — state:
+
+**PLATFORM VERIFIED — PRODUCTION READY FOR FIRST REAL TENANT**
+
+Stop and wait.
+
+---
+
+Paste results pass by pass. When Pass 14 hits 36/36 and remaining gaps hit zero that is your final production green light.

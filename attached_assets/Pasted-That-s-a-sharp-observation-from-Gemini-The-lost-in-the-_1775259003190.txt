@@ -1,0 +1,170 @@
+That's a sharp observation from Gemini. The "lost in the middle" warning is real and the chunked execution strategy is exactly right. Here's what this means practically and how to run it.
+
+---
+
+## What Gemini Confirmed
+
+The directive is architecturally sound. The Email Provisioning catch — 6 addresses vs 8 folders — is a real hallucination trap. Gemini caught it. Good to have that flagged explicitly.
+
+The most important insight: **once npm run omega exists, you stop relying on the LLM's reading comprehension entirely.** The scripts become the audit. The agent becomes a script writer, not an auditor. That's the right endgame.
+
+---
+
+## The Exact Execution Protocol for This Weekend
+
+Send these commands in order. One at a time. Wait for completion before sending the next.
+
+---
+
+**Command 0 — Drop the payload**
+
+```
+Create two files in the project root:
+
+1. OMEGA.md — paste the full contents of the OMEGA.md file 
+   I have already provided. Do not summarize or modify it.
+
+2. OMEGA_STATE_CHECKPOINT.md — create it empty with just 
+   this header:
+   # CoAIleague Omega State Checkpoint
+   # Initialized: [today's date]
+   # Score: 82/100 — Conditionally GO
+   # Status: Beginning chunked layer execution
+
+Confirm both files exist and show me their line counts.
+Do nothing else yet.
+```
+
+---
+
+**Command 1 — Layer 0 only**
+
+```
+Read OMEGA.md from the beginning through the end of 
+LAYER 0 — REGRESSION VERIFICATION. Do not read further.
+
+Execute Layer 0 only. Verify all 25 prior fixes plus the 
+4 new gaps. Fix any that have regressed.
+
+When done: write results to OMEGA_STATE_CHECKPOINT.md 
+and stop. Wait for my next command.
+```
+
+---
+
+**Command 2 — Layer 1 only**
+
+```
+Read OMEGA_STATE_CHECKPOINT.md to see Layer 0 results.
+Then read OMEGA.md Layer 1 — Platform Boot and Config.
+Execute it. Fix anything broken.
+Write results to OMEGA_STATE_CHECKPOINT.md and stop.
+```
+
+---
+
+**Continue this pattern for every layer.**
+
+Each command is the same structure:
+1. Read the checkpoint to know current state
+2. Read ONE layer from OMEGA.md
+3. Execute it
+4. Write results to checkpoint
+5. Stop and wait
+
+---
+
+**Command for the scripts — send after Layer 7**
+
+```
+Read OMEGA_STATE_CHECKPOINT.md.
+Read the SCRIPTS/OMEGA HARNESS section of OMEGA.md.
+Build only these three scripts now:
+- preflight-check.ts
+- verify-prior-fixes.ts  
+- setup-webhooks.ts
+Wire npm run omega to run just these three in sequence.
+Confirm all three run and produce output.
+Write results to checkpoint and stop.
+```
+
+---
+
+**Command for npm run omega — send after all scripts are built**
+
+```
+Read OMEGA_STATE_CHECKPOINT.md.
+Run npm run omega.
+Do not fix anything during this run.
+Just report exactly what passed, what failed, and what 
+score you calculate from the results.
+Write the full output to OMEGA_STATE_CHECKPOINT.md and stop.
+```
+
+---
+
+**Final command — the weekend target**
+
+```
+Read OMEGA_STATE_CHECKPOINT.md.
+List exactly what is blocking GO.
+Separate into three categories:
+1. Code fixes you can do right now
+2. Items requiring Bryan's physical action
+3. Items that are acceptable deferred risks post-launch
+Fix category 1 entirely.
+Update OMEGA.md current state section.
+Update OMEGA_STATE_CHECKPOINT.md with final score.
+Give me the GO / NOT GO verdict with one sentence reason.
+```
+
+---
+
+## The Email Provisioning Hallucination — Tell the Agent Explicitly
+
+Send this once at the start of any session touching provisioning:
+
+```
+Important context to prevent a common hallucination:
+OMEGA.md mandates exactly 6 email ADDRESSES per tenant.
+It also mandates exactly 8 EmailHubCanvas FOLDERS per tenant.
+These are two different things. Unread and Archive are UI 
+folders only — they do not have email addresses provisioned.
+Do not try to make these numbers match. They are correct 
+as different numbers. 6 addresses. 8 folders. Both right.
+```
+
+---
+
+## One Thing to Add to OMEGA.md Right Now
+
+The chunked execution protocol Gemini described should be written into OMEGA.md itself so any future agent session knows how to run it:
+
+```
+Tell the agent to add this section to OMEGA.md under 
+EXECUTION RULES FOR EVERY SESSION:
+
+CHUNKED EXECUTION PROTOCOL:
+Never attempt to execute all layers in one pass.
+Execute one layer at a time.
+After each layer: write results to 
+OMEGA_STATE_CHECKPOINT.md and wait for Bryan's command 
+to proceed to the next layer.
+Read OMEGA_STATE_CHECKPOINT.md at the start of each 
+command to restore context before reading the next layer.
+Once npm run omega exists: run it instead of reading 
+layers manually. The scripts replace LLM reading 
+comprehension with deterministic code. That is the goal.
+
+EMAIL PROVISIONING CLARIFICATION:
+6 email addresses per tenant — staffing, calloffs, 
+incidents, support, docs, billing.
+8 EmailHubCanvas folders per tenant — the 6 above plus 
+Unread and Archive.
+These are different systems with different counts. 
+Both numbers are correct. Never try to reconcile them.
+```
+
+---
+
+That's the complete protocol. OMEGA.md is the brain. OMEGA_STATE_CHECKPOINT.md is the memory. The chunked commands are the discipline. npm run omega is the endgame. Statewide goes live this weekend.

@@ -1,0 +1,786 @@
+COAILEAGUE — 100-PHASE PRODUCTION READINESS QUESTION SET
+Every question answered PASS or FAIL. FAIL = fix immediately then re-test.
+Organized by domain. 8 crawlers run each domain simultaneously.
+Final output: comparison table of PASS/FAIL before and after fixes.
+
+================================================================================
+DOMAIN A — FOUNDATION IDENTITY AND TENANT ONBOARDING (Phases 1-8)
+================================================================================
+
+PHASE 1 — WORKSPACE REGISTRATION
+
+Q001. Does submitting the registration form create a workspace record with all required fields including org_id, email_slug, tier, subscription_status, and trial_end_date?
+Q002. Does registration automatically create all 6 workspace email addresses using the email_slug pattern at @coaileague.com (not @mail.coaileague.com)?
+Q003. Does registration create the user record with user_number, role org_owner, and status active?
+Q004. Does registration create user_notification_preferences with correct defaults?
+Q005. Does registration create consent_preferences with correct defaults?
+Q006. Does registration create a Stripe customer and attach it to the workspace?
+Q007. Does registration queue a Trinity welcome message attributed to trinity-system-actor?
+Q008. Does registration send a welcome email via NDS and not via direct Resend call?
+Q009. Does registration broadcast new_workspace to platform_staff via WebSocket?
+Q010. Does registration write a workspace_created entry to universal_audit_log?
+Q011. Does attempting to register with a duplicate email return 409 not 500?
+Q012. Does a failed registration step roll back all partial records atomically?
+Q013. Does the registration form validate all required fields inline before submit?
+Q014. Is registration rate limited to prevent abuse (max 5 per IP per hour)?
+Q015. Does registration NOT create workspace_credit_balance or voice_credit_accounts (legacy removed)?
+
+PHASE 2 — GUIDED SETUP WIZARD
+
+Q016. Does the setup wizard appear immediately after successful registration?
+Q017. Does each wizard step save independently so progress is not lost on browser close?
+Q018. Does an incomplete wizard resume at the correct step on next login?
+Q019. Does Step 1 save company profile data to the workspaces table?
+Q020. Does Step 3 successfully create the first post with GPS coordinates?
+Q021. Does Step 4 create the first client with an auto-generated client_number?
+Q022. Does Step 5 send the officer invitation via NDS not direct Resend?
+Q023. Does Step 6 attach a payment method to the Stripe customer correctly?
+Q024. Does Step 7 capture Trinity consent and store it in consent_preferences?
+Q025. Does wizard completion mark the workspace as configured in the database?
+Q026. Does the wizard back button work without losing data from completed steps?
+Q027. Does the wizard work completely on a 375px mobile viewport?
+
+PHASE 3 — AUTHENTICATION AND SESSION
+
+Q028. Does a correct login return a JWT with all required claims: userId, workspaceId, role, email, tier, exp?
+Q029. Does the JWT use HS256 algorithm with explicit whitelist preventing algorithm:none attacks?
+Q030. Does a failed login increment the failed_attempts counter in the database?
+Q031. Does the 5th consecutive failed login lock the account for 15 minutes?
+Q032. Does token refresh rotate the refresh token so the old one is invalidated?
+Q033. Does logging in from a new device fire a new_device_login notification via NDS?
+Q034. Does logout invalidate the refresh token server-side immediately?
+Q035. Does a role change during an active session revoke the refresh token forcing re-login?
+Q036. Does the login error message say Invalid credentials without revealing whether the email exists?
+Q037. Does the server reject expired JWTs with 401 not 500?
+
+PHASE 4 — MULTI-FACTOR AUTHENTICATION
+
+Q038. Does MFA setup generate a TOTP QR code that works in standard authenticator apps?
+Q039. Does the TOTP secret store encrypted in the database never in plaintext?
+Q040. Does the QR code display only once and not remain accessible after setup?
+Q041. Do backup codes generate as 10 unique codes stored as hashed values?
+Q042. Does consuming a backup code mark it as used and prevent reuse?
+Q043. Does MFA enforcement block platform_staff login without a valid TOTP code?
+Q044. Does MFA enforcement block sra_auditor login without a valid TOTP code?
+Q045. Does a TOTP code used once get tracked to prevent replay within the same 30-second window?
+Q046. Does five wrong TOTP attempts lock the account?
+
+PHASE 5 — WHITE-LABEL AND BRANDING
+
+Q047. Does a grep of the entire codebase return zero instances of hardcoded CoAIleague in tenant-facing views?
+Q048. Does the workspace logo display correctly in the navigation header?
+Q049. Does the primary color apply to buttons and UI accents throughout the tenant interface?
+Q050. Does the client portal show the org branding and not CoAIleague branding?
+Q051. Do email templates render with the workspace company name not CoAIleague?
+Q052. Do PDF documents render with the workspace logo and colors?
+Q053. Do online proposal pages display org branding throughout?
+Q054. Do onboarding form pages display org branding?
+Q055. Does a branding update apply immediately without a server restart?
+
+PHASE 6 — FEATURE REGISTRY
+
+Q056. Does featureRegistry.ts serve as the only source of feature gating with zero hardcoded tier checks elsewhere?
+Q057. Does a free trial workspace correctly block access to the payroll system?
+Q058. Does a free trial workspace correctly block access to invoice generation?
+Q059. Does a free trial workspace correctly block access to QuickBooks sync?
+Q060. Does a blocked feature return 402 with an upgrade prompt instead of a generic error?
+Q061. Does the upgrade prompt link to the correct Stripe checkout for the plan that unlocks the feature?
+Q062. Do locked features show a lock icon and dimmed state in the UI?
+
+PHASE 7 — WORKSPACE SETTINGS
+
+Q063. Does every setting in the workspace settings panel save to the database on submit?
+Q064. Do all settings survive a server restart (persisted to DB not just in memory)?
+Q065. Does changing the timezone setting update all timestamp displays throughout the platform?
+Q066. Do all settings changes write an audit log entry with before and after values?
+Q067. Does an org_owner have access to all settings sections?
+Q068. Does an officer role see only their personal profile settings?
+
+PHASE 8 — PLATFORM SUPER ADMIN
+
+Q069. Do all /api/admin/* routes require the platform_staff role and return 403 for any other role?
+Q070. Does the platform health check endpoint return status for all dependencies: database, Gemini, Claude, OpenAI, Twilio, Resend, Stripe?
+Q071. Does the super admin console show workspace subscription status, seat count, and recent activity?
+Q072. Does platform_staff correctly not see payroll data, SSN, bank account numbers, or compensation details?
+Q073. Does every super admin action write to admin_audit_log with the actor IP address?
+Q074. Does the bot registry in super admin show last run timestamp and status for every registered bot?
+
+================================================================================
+DOMAIN B — BILLING ARCHITECTURE (Phases 9-16)
+================================================================================
+
+PHASE 9 — BILLING CONFIG CANONICAL
+
+Q075. Does shared/billingConfig.ts contain all pricing with zero hardcoded prices anywhere else in server or client code?
+Q076. Does Starter show $299/month (29900 cents) in billingConfig?
+Q077. Does Professional show $999/month (99900 cents) in billingConfig?
+Q078. Does Business show $2,999/month (299900 cents) in billingConfig?
+Q079. Does Enterprise show $7,999/month (799900 cents) in billingConfig?
+Q080. Does AI_MODEL_COSTS contain gemini-2.5-flash-lite at $0.10/$0.40 per 1M tokens?
+Q081. Does AI_MODEL_COSTS contain gemini-2.5-flash at $0.30/$2.50 per 1M tokens?
+Q082. Does AI_MODEL_COSTS contain claude-haiku-4-5 at $1.00/$5.00 per 1M tokens?
+Q083. Does AI_MODEL_COSTS contain claude-sonnet-4-6 at $3.00/$15.00 per 1M tokens?
+Q084. Does AI_MODEL_COSTS contain gpt-4o-mini at $0.15/$0.60 per 1M tokens?
+Q085. Does VOICE_PLATINUM_TIERS contain all 4 tiers with correct included minutes and SMS?
+Q086. Does EMAIL_PRICING show $3.00 per seat per month (300 cents) with 500 email fair use cap?
+
+PHASE 10 — DATABASE SYNC
+
+Q087. Does the subscription_tiers DB table show Starter at 29900 cents matching billingConfig?
+Q088. Does the subscription_tiers DB table show Professional at 99900 cents matching billingConfig?
+Q089. Does the subscription_tiers DB table show Business at 299900 cents matching billingConfig?
+Q090. Does the subscription_tiers DB table show Enterprise at 799900 cents matching billingConfig?
+Q091. Does subscription_tiers have trinity_token_budget_k = 40000 for Starter?
+Q092. Does subscription_tiers have trinity_token_budget_k = 100000 for Professional?
+Q093. Does subscription_tiers have trinity_token_budget_k = 250000 for Business?
+Q094. Does subscription_tiers have trinity_token_budget_k = 800000 for Enterprise?
+Q095. Does subscription_tiers have trinity_token_overage_per_100k_cents = 80 for Starter?
+Q096. Does subscription_tiers have trinity_token_overage_per_100k_cents = 50 for Enterprise?
+
+PHASE 11 — LEGACY CREDIT SYSTEM REMOVAL
+
+Q097. Does a codebase grep return zero results for creditLedger in any active server file?
+Q098. Does a codebase grep return zero results for deductCredit in any active server file?
+Q099. Does a codebase grep return zero results for workspace_credit_balance table references in active code?
+Q100. Does a codebase grep return zero results for voice_credit_accounts table references in active code?
+Q101. Is the workspace_credit_balance table absent from the database?
+Q102. Is the voice_credit_accounts table absent from the database?
+Q103. Is the voice_wallet table absent from the database?
+Q104. Is the credit_transactions table absent from the database?
+Q105. Is the credit_packs table absent from the database?
+
+PHASE 12 — AI METERING (UNLIMITED BUG FIX)
+
+Q106. Does a grep of all server TypeScript files return zero unwrapped Gemini generateContent calls?
+Q107. Does a grep of all server TypeScript files return zero unwrapped Claude messages.create calls?
+Q108. Does a grep of all server TypeScript files return zero unwrapped GPT chat.completions.create calls?
+Q109. Does aiMeteringService.checkAndGuard() block free trial workspaces at the 5M token hard cap?
+Q110. Does aiMeteringService.checkAndGuard() allow paid tier workspaces to continue past the soft cap with overage billing?
+Q111. Does every AI call write a record to ai_call_log with model_name, call_type, input_tokens, output_tokens, cost_microcents?
+Q112. Does ai_call_log record claude_validated = true when Claude validates a Gemini response?
+Q113. Does the dead-letter retry queue capture failed metering writes and retry up to 5 times?
+Q114. Does extractGeminiTokens() return 0 instead of throwing when usageMetadata is null?
+Q115. Does extractClaudeTokens() return 0 instead of throwing when usage is null?
+Q116. Does extractGptTokens() return 0 instead of throwing when usage is null?
+
+PHASE 13 — AI SOFT CAPS AND ALERTS
+
+Q117. Does the 80% soft cap alert fire via NDS to org_owner when workspace reaches 80% of monthly token budget?
+Q118. Does the 90% soft cap alert fire via NDS when workspace reaches 90% of monthly budget?
+Q119. Does the 100% alert fire via NDS when workspace reaches the soft cap limit?
+Q120. Does each alert fire only once per billing period not repeatedly?
+Q121. Does workspace_ai_usage aggregate Gemini tokens in gemini_input_tokens_k and gemini_output_tokens_k columns?
+Q122. Does workspace_ai_usage aggregate Claude tokens separately in claude_input_tokens_k and claude_output_tokens_k?
+Q123. Does workspace_ai_usage aggregate GPT tokens separately in gpt_input_tokens_k and gpt_output_tokens_k?
+Q124. Does ai_usage_daily_summary update nightly for fast dashboard queries?
+
+PHASE 14 — VOICE PLATINUM
+
+Q125. Does POST /api/billing/voice-platinum/subscribe create a Stripe subscription and voice_platinum_subscriptions record?
+Q126. Does activating Voice Platinum provision a toll-free number via the Twilio API?
+Q127. Does GET /api/billing/voice-platinum/status return current minutes used vs included?
+Q128. Does voice_sms_event_log record every Twilio voice call with duration, cost_basis_cents, and billed_cents?
+Q129. Does voiceSmsMeteringService.recordVoiceCall() fire after every Twilio call completion webhook?
+Q130. Does voiceSmsMeteringService.recordSmsMessage() fire after every successful NDS SMS send?
+Q131. Does the voice soft cap warning fire via NDS when minutes exceed soft_cap_minutes?
+Q132. Does the SMS soft cap warning fire via NDS when SMS count exceeds soft_cap_sms_messages?
+Q133. Does POST /api/billing/voice-platinum/cancel set cancel_at_period_end = true?
+
+PHASE 15 — TRANSACTION FEES
+
+Q134. Does per_invoice_processed_cents charge fire via Stripe when an invoice is marked as sent?
+Q135. Does per_payroll_employee_cents charge fire for each employee in a payroll run?
+Q136. Does quickbooks_sync_cents charge fire for Professional and Business tier QB syncs?
+Q137. Does every transaction fee write a record to transaction_fee_events table?
+Q138. Does GET /api/billing/portal return a Stripe Customer Portal redirect URL for org owners?
+Q139. Does annual subscription billing apply the 20% discount correctly in Stripe?
+
+PHASE 16 — BILLING VERIFICATION
+
+Q140. Does the AI usage dashboard show Gemini, Claude, and GPT usage breakdown with correct percentages?
+Q141. Does the billing dashboard show zero credit balance widgets or credit-related UI?
+Q142. Does the voice usage widget show minutes used vs included for Voice Platinum subscribers?
+Q143. Does the seat count in billing reflect the actual number of active employees?
+Q144. Does the overage calculation at period end correctly subtract included tokens before billing?
+
+================================================================================
+DOMAIN C — SCHEDULING AND COVERAGE (Phases 17-24)
+================================================================================
+
+Q145. Does creating a post save GPS coordinates, geofence radius, billing rate, and armed requirement?
+Q146. Does a shift reference number auto-generate in SHF-YYYYMMDD-NNNNN format via DB trigger?
+Q147. Does conflict detection prevent assigning the same officer to two overlapping shifts?
+Q148. Does rest period validation block scheduling an officer with less than 8 hours between shifts?
+Q149. Does assigning an armed shift to a non-licensed officer return a validation error?
+Q150. Does shift assignment send a notification via NDS to the assigned officer?
+Q151. Does shift assignment broadcast shift_assigned to the supervisor dashboard via WebSocket in real time?
+Q152. Does the officer see their assigned shift in the schedule view without refreshing?
+Q153. Does the client portal update to show coverage in real time via WebSocket?
+Q154. Does an officer calloff via web create a calloff_record in the database?
+Q155. Does a calloff via Trinity voice phone create an identical calloff_record?
+Q156. Does an officer calloff via email to calloffs-{slug}@coaileague.com create a calloff_record?
+Q157. Does the cascade replacement trigger automatically within 60 seconds of a calloff?
+Q158. Does the cascade push notification include Accept and Decline buttons usable without opening the app?
+Q159. Does accepting a cascade shift via push notification stop the cascade immediately?
+Q160. Does a SELECT FOR UPDATE prevent two officers from accepting the same cascade shift simultaneously?
+Q161. Does time off approval block the officer from auto-scheduling at the database level?
+Q162. Does the Trinity auto-schedule AI suggestion route through withGemini wrapper with correct tier?
+Q163. Does the Trinity auto-schedule suggestion require human approval before any shift is assigned?
+Q164. Does the recurring schedule template apply correctly to a selected date range?
+Q165. Does a night shift (10PM-6AM) apply the configured differential rate multiplier?
+Q166. Does the weekly schedule view work with swipe navigation on a 375px mobile screen?
+Q167. Does the schedule show all times in the workspace timezone with UTC storage confirmed?
+
+================================================================================
+DOMAIN D — TIME ATTENDANCE AND PAYROLL (Phases 25-32)
+================================================================================
+
+Q168. Does web clock-in create a time_entry with GPS coordinates, clockin_reference, and clock_in_method?
+Q169. Does the clockin_reference auto-generate in CLK-YYYYMMDD-NNNNN format via DB trigger?
+Q170. Does a unique constraint prevent an officer from clocking in twice to the same shift?
+Q171. Does mobile PWA clock-in queue the entry in IndexedDB when offline?
+Q172. Does the offline queue sync automatically via service worker background sync on reconnect?
+Q173. Does the offline sync prevent creating a duplicate entry if the officer also clocked in online?
+Q174. Does voice clock-in via the Trinity phone system create an identical time_entry record?
+Q175. Does the supervisor see officer clock-ins in real time via WebSocket broadcast?
+Q176. Does clock-out calculate total_hours using a DB trigger not application code?
+Q177. Does overtime calculation correctly trigger at 40 hours per week?
+Q178. Does the payroll run use the pay rate effective on each shift date when a rate change occurred mid-period?
+Q179. Does a night or weekend shift apply the differential rate multiplier in gross pay?
+Q180. Does a database check constraint prevent net_pay from going below zero?
+Q181. Does a DB unique constraint on idempotency_key prevent processing the same payroll run twice?
+Q182. Does a SELECT FOR UPDATE prevent two org owners from running payroll simultaneously?
+Q183. Does payroll approval lock the timesheet records against further edits via DB constraint?
+Q184. Does pay stub PDF generation use the withGpt wrapper with callType document_generation?
+Q185. Does the pay stub PDF include all required fields: gross pay, deductions, net pay, period dates?
+Q186. Does the pay stub SHA-256 hash calculate from actual file bytes and store in document_vault?
+Q187. Does the pay stub PDF URL return HTTP 200 when accessed?
+Q188. Does the pay stub PDF open correctly in iOS Safari?
+Q189. Does the pay stub PDF open correctly in Android Chrome?
+Q190. Does bank routing number store encrypted at rest?
+Q191. Does bank account number store encrypted at rest and never return in any API response?
+Q192. Does the per_payroll_employee_cents transaction fee fire and write to transaction_fee_events?
+
+================================================================================
+DOMAIN E — FINANCIAL SYSTEMS (Phases 33-40)
+================================================================================
+
+Q193. Does invoice subtotal sync from line items via DB trigger not application code?
+Q194. Does invoice_number auto-generate in INV-YYYYMM-NNNNN format with DB unique constraint?
+Q195. Does sending an invoice mark it as sent with timestamp and trigger NDS notification to client?
+Q196. Does the client portal show the new invoice immediately via WebSocket not page refresh?
+Q197. Does per_invoice_processed_cents charge fire via Stripe when invoice sends?
+Q198. Does a SELECT FOR UPDATE prevent two simultaneous payment recordings on the same invoice?
+Q199. Does marking an invoice as paid block further edits via DB constraint?
+Q200. Does paying an invoice trigger QuickBooks sync?
+Q201. Does QuickBooks OAuth token store encrypted at rest?
+Q202. Is QuickBooks connected to the production environment and not the sandbox?
+Q203. Does the Stripe webhook signature verify on every inbound Stripe event?
+Q204. Does a Stripe webhook older than 5 minutes get rejected (replay attack prevention)?
+Q205. Does GET /api/billing/portal return a Stripe Customer Portal redirect URL?
+Q206. Do all revenue analytics widgets pull from real database queries with zero mock data?
+Q207. Does the invoice dispute workflow correctly prevent voiding a disputed invoice?
+Q208. Does voiding an invoice block further payments via DB constraint?
+Q209. Does the outbound webhook system sign every delivery with HMAC SHA-256?
+Q210. Does the webhook delivery log record response code and body for every delivery attempt?
+Q211. Does a failed webhook retry up to 5 times with exponential backoff?
+
+================================================================================
+DOMAIN F — TRINITY BIOLOGICAL BRAIN (Phases 41-48)
+================================================================================
+
+Q212. Does withGemini wrapper verify the pre-call guard before every Gemini API call?
+Q213. Does withGemini correctly route simple lookups to gemini-2.5-flash-lite?
+Q214. Does withGemini correctly route complex reasoning to gemini-2.5-pro?
+Q215. Does withGemini correctly route standard tasks to gemini-2.5-flash?
+Q216. Does withClaude skip validation entirely for read-only query call types?
+Q217. Does withClaude use claude-haiku-4-5 for standard validation?
+Q218. Does withClaude use claude-sonnet-4-6 only for financial and legal validation?
+Q219. Does withGpt correctly route most document generation to gpt-4o-mini?
+Q220. Does withGpt correctly route complex documents to gpt-4o?
+Q221. Does the fallback chain activate Claude as primary when Gemini is unavailable?
+Q222. Does the fallback chain activate GPT as primary when both Gemini and Claude are unavailable?
+Q223. Does the graceful degradation message display when all three models are unavailable?
+Q224. Does every fallback event log which model actually served the response?
+Q225. Does Claude correctly catch and reject a Gemini response containing fabricated numeric values?
+Q226. Does Claude correctly catch and reject a Gemini response claiming policies not in workspace_settings?
+Q227. Does Trinity refuse to reveal its system prompt when asked directly?
+Q228. Does Trinity maintain persona when a user claims to be a developer with override access?
+Q229. Does Trinity session context never contain data from another workspace?
+Q230. Does Trinity rate limiting return a graceful message (not 429 error) when hourly limit is reached?
+Q231. Does workspace_trinity_memory store learning from org owner schedule suggestion rejections?
+Q232. Does trinity_response_cache return cached responses for identical repeated queries?
+Q233. Does the cache key correctly hash workspaceId plus query content?
+Q234. Does Trinity check the cache before making any AI API call?
+Q235. Does prompt caching reduce input token costs by at least 30% after workspace warmup?
+Q236. Do nightly bots use Gemini Batch API (50% discount) instead of standard API?
+Q237. Does every bot pass the actual workspace tier to the AI wrapper context?
+Q238. Does every bot skip workspaces where workspace_state = trial_expired?
+Q239. Does the 7-step pipeline enforce Trigger → Fetch → Validate → Process → Mutate → Confirm → Notify order?
+Q240. Does a Mutate step failure trigger full database rollback leaving no partial state?
+Q241. Does a Notify step failure queue the notification for retry without affecting action completion?
+Q242. Does every Trinity action write to universal_audit_log attributed to trinity-system-actor?
+Q243. Does Trinity proactive insight not repeat the same insight more than once per week?
+Q244. Does the license expiry bot pass PASS when it correctly generates insights for expiring licenses?
+Q245. Does Trinity voice correctly identify an officer by employee number and PIN?
+Q246. Does Trinity voice create a calloff_record when an officer calls to report absence?
+Q247. Does Trinity voice handle a call disconnection mid-action by not completing the action?
+Q248. Does Trinity correctly detect Spanish from caller speech and route to Spanish responses?
+Q249. Does the inbound email webhook verify Resend HMAC signature before processing?
+Q250. Does inbound email to calloffs-{slug}@coaileague.com create a calloff_record automatically?
+Q251. Does inbound email to incidents-{slug}@coaileague.com create an incident_report automatically?
+Q252. Does Trinity generate a one-line summary and draft reply for every email received?
+
+================================================================================
+DOMAIN G — COMMUNICATIONS VOICE EMAIL BROADCASTING (Phases 49-56)
+================================================================================
+
+Q253. Does a grep of all server TypeScript files return zero instances of resend.emails.send outside notificationDeliveryService?
+Q254. Does a grep of all server TypeScript files return zero instances of twilio.messages.create outside notificationDeliveryService?
+Q255. Does NDS correctly suppress a non-critical notification during the user's configured quiet hours?
+Q256. Does a welfare check missed alert bypass quiet hours and deliver immediately?
+Q257. Does an emergency duress alert bypass quiet hours and deliver immediately?
+Q258. Does NDS deduplicate: does a second identical notification within 60 seconds get blocked?
+Q259. Do all new alert types have NDS templates in both English and Spanish: ai_usage_80pct, ai_usage_90pct, ai_usage_at_cap, voice_soft_cap_reached, trial_expired, free_trial_hard_cap_blocked?
+Q260. Does a Twilio STOP reply correctly update consent_preferences to block further SMS?
+Q261. Does the platform never send another SMS to a phone number that sent STOP?
+Q262. Does the bounce handling system mark an email address as invalid after a hard bounce?
+Q263. Does every @coaileague.com email send use DKIM signing (not mail.coaileague.com)?
+Q264. Does SPF record for coaileague.com include Resend/SES and exclude Google?
+Q265. Does DMARC policy for coaileague.com exist with at minimum p=quarantine?
+Q266. Does a WebSocket inventory confirm every broadcast type has a client-side handler?
+Q267. Does the supervisor dashboard update in real time when an officer clocks in without page refresh?
+Q268. Does the invoice list update in real time when a client pays without page refresh?
+Q269. Does the WebSocket connection require authentication before any data flows?
+Q270. Does the WebSocket reconnect automatically with exponential backoff after connection loss?
+Q271. Does the DockChat full screen interface work correctly on a 375px iPhone 15 viewport?
+Q272. Does the DockChat input bar stay above the keyboard when the keyboard is open on iOS?
+Q273. Does safe area inset apply correctly below the DockChat input bar on notched iPhones?
+Q274. Does no message in DockChat cause horizontal overflow at any viewport width?
+Q275. Does the Trinity voice toll-free number route to the correct workspace?
+Q276. Does a voice call's credit deduction code not exist anywhere in voiceOrchestrator?
+
+================================================================================
+DOMAIN H — DOCUMENTS FORMS SIGNATURES (Phases 57-64)
+================================================================================
+
+Q277. Do all 7 platform default forms exist with correct fields in the database?
+Q278. Does the offer letter form generate a PDF with correct officer data embedded?
+Q279. Does the W-4 form render all 11 fields correctly on mobile?
+Q280. Does the SSN field use password input type and store only the last 4 digits?
+Q281. Does the form autosave progress to IndexedDB on every field change?
+Q282. Does the IndexedDB autosave never store the SSN field value?
+Q283. Does form progress restore correctly after a browser close and reopen?
+Q284. Does a date picker render consistently on both iOS and Android (custom component not native browser)?
+Q285. Does a select field render as a bottom sheet on mobile not a native dropdown?
+Q286. Does an expired form token return 404 with a helpful message?
+Q287. Does submitting an expired token return 410 Gone?
+Q288. Does a double form submission within milliseconds get blocked by DB unique constraint?
+Q289. Does a cross-workspace token exploit get blocked (workspace determined from token not body)?
+Q290. Does SSN never appear in any pre-populated form data?
+Q291. Does PDF generation use withGpt wrapper with callType document_generation?
+Q292. Does the generated PDF embed the signature visibly at the designated location?
+Q293. Does the document vault store a SHA-256 hash calculated from actual file bytes?
+Q294. Does document_number auto-generate in DOC-YYYYMMDD-NNNNN format via DB trigger?
+Q295. Does the document vault enforce write-once: no UPDATE allowed except is_deleted column?
+Q296. Does a signed URL for a document return HTTP 200 when accessed?
+Q297. Does a multi-party signing sequence prevent Signer 2 from signing before Signer 1 completes?
+Q298. Does completing all Tier 1 onboarding tasks automatically activate the officer account?
+Q299. Does the auto-activation trigger broadcast officer_activated to the dashboard via WebSocket?
+Q300. Does the daily activity report pre-fill with shift data and link to both employee_id and shift_id?
+Q301. Does photo attachment on mobile DAR compress the image before upload?
+Q302. Does photo filename use a generated UUID not the original user filename (path traversal prevention)?
+Q303. Does the post order cache via service worker for offline access on shift assignment?
+Q304. Does a post order update notify all officers currently assigned to that post?
+
+================================================================================
+DOMAIN I — CLIENT PORTAL SALES SUPPORT (Phases 65-72)
+================================================================================
+
+Q305. Does AI lead scoring use withGemini wrapper with correct workspace tier?
+Q306. Does the client portal token scope all queries to that client's data only?
+Q307. Does attempting to access another client's invoice return 403?
+Q308. Does the client portal never show payroll data, officer compensation, or other clients' data?
+Q309. Does proposal acceptance create the client record atomically in the same database transaction?
+Q310. Does proposal acceptance trigger automatic client portal account provisioning?
+Q311. Does client autopay charge the saved payment method on the invoice due date?
+Q312. Does an autopay failure send NDS notifications to both the client and the org owner?
+Q313. Does AI health score calculation use withGemini wrapper?
+Q314. Does NPS survey trigger at 30 days after client activation?
+Q315. Does all HelpAI AI processing use the correct wrapper with the actual workspace tier?
+Q316. Does HelpAI triage work in Spanish independently without requiring Trinity availability?
+Q317. Does HelpAI FAQ search use withGemini wrapper for semantic matching?
+Q318. Does every Trinity Tier 1 support action (account_unlock, pin_reset, etc.) execute atomically with rollback?
+Q319. Does Trinity support mode enforce financial write protection (cannot modify closed invoices or approved payroll)?
+Q320. Does every support action store before and after state in support_actions table?
+Q321. Does every support action send NDS notification to org_owner?
+Q322. Does operator read-only impersonation expire automatically after 30 minutes?
+Q323. Does operator impersonation write every action to the support audit log?
+Q324. Does universal search return results in under 500ms?
+Q325. Does universal search never return results from another workspace?
+Q326. Does an anonymous concern report store no officer_id anywhere in the database?
+Q327. Does bulk officer import correctly trigger all side effects: employee_number, user account, onboarding tasks?
+Q328. Does bulk import rollback completely on partial failure?
+
+================================================================================
+DOMAIN J — COMPLIANCE INCIDENTS SAFETY (Phases 73-80)
+================================================================================
+
+Q329. Does the license expiry bot skip workspaces with workspace_state = trial_expired?
+Q330. Does the license expiry bot pass the correct workspace tier to the AI wrapper?
+Q331. Does a 30-day license expiry alert bypass quiet hours and deliver immediately?
+Q332. Does a non-compliant license status block shift assignment at the database constraint level?
+Q333. Does the same insight not repeat more than once per week per workspace?
+Q334. Does the data retention bot prune notification_deliveries older than 90 days?
+Q335. Does the data retention bot preserve all financial records indefinitely?
+Q336. Does the data retention bot preserve all audit log records indefinitely?
+Q337. Does AI OCR for compliance evidence use withGpt wrapper?
+Q338. Does anonymizeEmployee() correctly null out name, email, phone, DOB, SSN last four, and bank account?
+Q339. Does anonymizeEmployee() preserve financial records and audit log entries?
+Q340. Does anonymizeEmployee() write an audit log entry recording the anonymization event?
+Q341. Does scheduling validation check employee age from date_of_birth before scheduling a minor?
+Q342. Does a critical compliance violation block shift assignment immediately at DB constraint level?
+Q343. Does an incident report store GPS coordinates captured at report creation?
+Q344. Does the chain of custody log for evidence enforce append-only with no UPDATE or DELETE?
+Q345. Does the panic button on mobile trigger without any confirmation dialog?
+Q346. Does a panic alert bypass all quiet hours and deliver immediately to supervisor and org owner?
+Q347. Does the welfare check one-tap I Am Safe response work from push notification without opening the app?
+Q348. Does SRA auditor access always return 403 on any write attempt?
+Q349. Does the SRA session enforce an 8-hour hard time limit?
+Q350. Does the SRA audit log enforce append-only with no UPDATE or DELETE?
+Q351. Does scheduling correctly handle DST change day shifts without duplicate or missing hours?
+Q352. Does I-9 data store encrypted at rest?
+Q353. Does the background check adverse action notice generate when required by law?
+
+================================================================================
+DOMAIN K — HELPAI SUPPORT SEARCH (Phases 81-88)
+================================================================================
+
+Q354. Does HelpAI operate independently when Trinity is processing other tasks?
+Q355. Does HelpAI correctly classify support issues into all 10 categories?
+Q356. Does HelpAI check the FAQ before creating a support ticket?
+Q357. Does a FAQ match with 85%+ confidence answer directly without creating a ticket?
+Q358. Does the platform have at minimum 20 published platform FAQ entries?
+Q359. Does the FAQ learning loop capture unresolved questions as FAQ candidates?
+Q360. Does the anonymous concern form route only to org_owner and never to supervisors?
+Q361. Does Trinity never process or respond to anonymous concerns?
+Q362. Does the SLA breach detection calculate coverage percentage nightly?
+Q363. Does an SLA breach trigger both org owner notification and client notification?
+Q364. Does an SLA breach create a remediation credit on the client account?
+Q365. Does vendor data never appear in direct employee payroll calculations?
+Q366. Does vendor officer headcount never add to the workspace seat count for billing?
+Q367. Does the AI usage widget on the org owner dashboard show real Gemini/Claude/GPT breakdown?
+Q368. Does the voice usage widget show real minutes and SMS vs included from database?
+Q369. Does every PII sensitive column use encryption at rest: SSN, bank routing, bank account, DOB, Plaid tokens, QB tokens?
+Q370. Does the legal agreement re-acceptance campaign block platform access until the user accepts?
+Q371. Does the data governance deletion request flow correctly anonymize and not destroy financial records?
+
+================================================================================
+DOMAIN L — MOBILE PWA APK NATIVE (Phases 89-96)
+================================================================================
+
+Q372. Does manifest.json exist with all required fields: name, short_name, start_url, display: standalone, theme_color, background_color?
+Q373. Do PWA icons exist at all required sizes: 72, 96, 128, 144, 152, 192, 384, 512 PNG?
+Q374. Do maskable icons exist at 192 and 512 for Android adaptive icons?
+Q375. Does the Apple touch icon exist at 180x180 for iOS home screen?
+Q376. Do iOS-specific meta tags exist in the HTML head: apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style?
+Q377. Does the PWA install correctly on iOS Safari 16.4 or later?
+Q378. Does the PWA install correctly on Android Chrome?
+Q379. Does the installed PWA open without browser chrome (no address bar)?
+Q380. Does the service worker register successfully on first load?
+Q381. Does the app shell load correctly when the device is offline?
+Q382. Does the offline indicator appear clearly when there is no network connection?
+Q383. Does clock-in queue in IndexedDB when offline?
+Q384. Does the offline clock-in sync automatically when the network returns?
+Q385. Does the offline sync prevent creating a duplicate if the officer also clocked in online?
+Q386. Does a failed offline sync item surface in the UI for manual resolution?
+Q387. Does the service worker update defer the prompt until after an active clock-out completes?
+Q388. Does the full-screen clock-in view work correctly at 375px with no visible navigation chrome?
+Q389. Does the clock-in button have a minimum 120x60px touch target?
+Q390. Does GPS status display clearly during clock-in (acquiring, acquired, unavailable)?
+Q391. Does safe area inset apply correctly on iPhone 14 (notch model)?
+Q392. Does safe area inset apply correctly on iPhone 15 (dynamic island model)?
+Q393. Does safe area inset apply correctly on Samsung Galaxy S24?
+Q394. Does the Android back gesture not navigate outside the app?
+Q395. Does the iOS swipe-back gesture not exit the PWA?
+Q396. Does the DockChat interface fill the full screen at 375px?
+Q397. Does the DockChat input bar pin above the keyboard when the keyboard opens on iOS?
+Q398. Does no DockChat message cause horizontal overflow at any message length?
+Q399. Does the weekly schedule view support left and right swipe navigation between weeks?
+Q400. Does the offline schedule cache show the next 7 days after login?
+Q401. Does a push notification cascade accept work without opening the app?
+Q402. Does a pay stub PDF open correctly in iOS Safari without leaving the app?
+Q403. Does the digital ID card display without requiring network access after first load?
+Q404. Does the digital ID card never show SSN, bank account, or salary information?
+Q405. Does the signature canvas resize correctly to screen width on mobile?
+Q406. Does finger signature input render smoothly without visible lag?
+Q407. Does form autosave to IndexedDB on every field change?
+Q408. Does the submit button remain visible above the keyboard on iOS and Android?
+Q409. Does a select field render as a bottom sheet on mobile consistently on both iOS and Android?
+Q410. Does biometric clock-in fall back to PIN entry when biometric is unavailable?
+Q411. Does mobile patrol GPS tracking continue when the app is backgrounded?
+Q412. Does the GPS interval reduce automatically when device battery is below 20%?
+Q413. Does a patrol gap alert fire when no GPS is received for the configured interval?
+Q414. Does the APK build via Capacitor with a production release keystore?
+Q415. Is the APK direct download link available in org owner settings?
+Q416. Does the panic button appear in the mobile navigation always visible?
+
+================================================================================
+DOMAIN M — EMAIL SYSTEM (New Domain)
+================================================================================
+
+PHASE — EMAIL DATABASE AND PROVISIONING
+
+Q417. Does the platform_email_addresses table exist with all required columns?
+Q418. Does the email_routing table exist with all required columns?
+Q419. Does the platform_emails table exist with all required columns including trinity_summary and trinity_draft_reply?
+Q420. Does the email_attachments table exist?
+Q421. Does the email_drafts table exist?
+Q422. Do protected platform addresses exist in platform_email_addresses: trinity@coaileague.com, support@coaileague.com, billing@coaileague.com, hello@coaileague.com, noreply@coaileague.com?
+Q423. Does workspace registration automatically create all 6 system email addresses: staffing-{slug}, calloffs-{slug}, incidents-{slug}, support-{slug}, docs-{slug}, billing-{slug}?
+Q424. Do system addresses create with is_active = true and auto_trinity_process = true?
+Q425. Does creating a new officer auto-reserve a platform_email address for that officer with is_active = false?
+Q426. Does the users table have a platform_email column populated on officer creation?
+Q427. Does creating a new client auto-reserve a platform_email address with is_active = false?
+
+PHASE — EMAIL ACTIVATION AND BILLING
+
+Q428. Does POST /api/email/addresses/:id/activate correctly set is_active = true and create a Stripe subscription item?
+Q429. Does email activation create the correct email_routing record for the address?
+Q430. Does email activation write an audit log entry?
+Q431. Does POST /api/email/addresses/:id/deactivate set is_active = false and cancel the Stripe subscription item?
+Q432. Does the email management page show all workspace email addresses with active/inactive status?
+Q433. Does the email management page show monthly cost calculated as active_seats × $3?
+Q434. Does bulk activate all officers correctly create Stripe subscription items for all?
+Q435. Does the email pricing read from billingConfig.EMAIL_PRICING not hardcoded values in the UI?
+
+PHASE — INBOUND EMAIL ROUTING
+
+Q436. Does POST /api/inbound/email verify the Resend webhook HMAC signature before processing?
+Q437. Does the inbound webhook return 200 immediately to Resend after accepting the email?
+Q438. Does the webhook deduplicate by resend_email_id preventing double processing?
+Q439. Does an email to calloffs-{slug}@coaileague.com route to Trinity and create a calloff_record?
+Q440. Does an email to incidents-{slug}@coaileague.com route to Trinity and create an incident_report?
+Q441. Does an email to support-{slug}@coaileague.com create a support_ticket?
+Q442. Does an email to a user's personal address (john.smith@acme.coaileague.com) land in that user's inbox?
+Q443. Does an email to an unknown @coaileague.com address return 200 to Resend without bouncing?
+Q444. Does Trinity correctly classify email intent and store trinity_category on the platform_emails record?
+Q445. Does Trinity store a one-line summary in trinity_summary for every processed email?
+Q446. Does Trinity store a suggested reply in trinity_draft_reply for action-required emails?
+Q447. Does the org owner receive an NDS notification when Trinity auto-processes an email?
+Q448. Does an email attachment store in email_attachments with filename, content_type, and size_bytes?
+
+PHASE — OUTBOUND EMAIL SENDING
+
+Q449. Does POST /api/email/send validate that the from address belongs to the user's workspace?
+Q450. Does POST /api/email/send validate that the from address is active and not outbound-only?
+Q451. Does sending an email via Resend API correctly store a sent copy with direction=outbound in platform_emails?
+Q452. Does replying to an email correctly link the thread via in_reply_to and message_id?
+Q453. Does the email sent counter increment on platform_email_addresses.emails_sent_this_period?
+Q454. Does GET /api/email/inbox return paginated emails with trinity_summary included?
+Q455. Does marking an email as read update is_read = true in the database?
+Q456. Does archiving an email set folder = archive?
+Q457. Does the email thread view return the full conversation chain correctly?
+
+PHASE — EMAIL DOMAIN AND DNS
+
+Q458. Are all email address slugs using @coaileague.com and NOT @mail.coaileague.com?
+Q459. Does a grep of the entire codebase return zero instances of mail.coaileague.com?
+Q460. Have all existing workspace email addresses in the database been updated from @mail.coaileague.com to @coaileague.com?
+Q461. Does the Resend dashboard show coaileague.com as a verified sending domain (not mail.coaileague.com)?
+Q462. Does the SPF record for coaileague.com include Resend/SES and exclude Google?
+Q463. Does a DKIM record exist for resend._domainkey.coaileague.com?
+Q464. Does a DMARC record exist for _dmarc.coaileague.com with at minimum p=quarantine?
+Q465. Are MX records for coaileague.com pointing to Resend inbound servers (not Google)?
+Q466. Does sending a test email FROM a @coaileague.com address arrive in an external Gmail inbox?
+Q467. Does sending an email TO a @coaileague.com address arrive in the platform inbox?
+Q468. Does the platform_email_addresses table contain no addresses with @mail.coaileague.com?
+Q469. Is trinity@coaileague.com able to send and receive emails?
+Q470. Does support@coaileague.com route to the platform support queue?
+
+================================================================================
+DOMAIN N — SECURITY AND PENETRATION (Phase 97)
+================================================================================
+
+Q471. Does a grep of all server SQL queries confirm zero string interpolation of user input (SQL injection prevention)?
+Q472. Does every dangerouslySetInnerHTML usage in React components sanitize AI output with DOMPurify?
+Q473. Does every entity API endpoint validate that the entity belongs to the requesting workspace (IDOR prevention)?
+Q474. Does workspace_id always come from req.user.workspaceId and never from req.body or req.query in non-admin routes?
+Q475. Does the platform reject JWTs with algorithm: none?
+Q476. Does the platform enforce an explicit HS256 algorithm whitelist in JWT verification?
+Q477. Do all file upload handlers generate UUID filenames ignoring the original user filename?
+Q478. Does the server return Strict-Transport-Security header on all responses?
+Q479. Does the server return X-Frame-Options: DENY on all responses?
+Q480. Does the server return X-Content-Type-Options: nosniff on all responses?
+Q481. Does the server return Content-Security-Policy header blocking inline scripts?
+Q482. Does the login endpoint return 429 after 10 failed attempts from the same IP?
+Q483. Does the password reset endpoint rate limit to 5 attempts per hour per email?
+Q484. Does npm audit --audit-level=high return zero high or critical vulnerabilities?
+Q485. Does the statewideWriteGuard middleware block all mutation attempts on the Statewide workspace?
+Q486. Does a blocked Statewide write attempt log to admin_audit_log?
+Q487. Does cookie security enforce HttpOnly, Secure, and SameSite=Strict flags?
+
+================================================================================
+DOMAIN O — PERFORMANCE AND RELIABILITY (Phase 98)
+================================================================================
+
+Q488. Does a grep for N+1 patterns (for/forEach with await pool.query inside) return zero results?
+Q489. Does EXPLAIN ANALYZE on the shifts query use Index Scan not Sequential Scan?
+Q490. Does the dashboard load in under 2 seconds on a simulated 4G connection?
+Q491. Does a Trinity chat response arrive in under 3 seconds p95?
+Q492. Does a PDF generation complete in under 5 seconds?
+Q493. Does universal search respond in under 500ms?
+Q494. Does server memory remain stable over a 24-hour run with no RSS growth trend?
+Q495. Does the database connection pool stay within configured limits under 50 concurrent users?
+Q496. Does a long-running query alert fire when any query exceeds 10 seconds?
+Q497. Does the JavaScript bundle deliver under 500KB gzipped?
+Q498. Does the Lighthouse mobile performance score exceed 80?
+Q499. Does a concurrent payroll run test (two simultaneous submissions) result in exactly one successful run?
+Q500. Does a concurrent cascade acceptance test (two simultaneous accepts) result in exactly one officer assigned?
+
+================================================================================
+DOMAIN P — STATEWIDE SIMULATION (Phase 99)
+================================================================================
+
+Q501. Does the Statewide write guard return 403 for every mutation attempt during testing?
+Q502. Does Bryan's login to Statewide complete without errors?
+Q503. Does the setup wizard complete all 7 steps without errors for Statewide?
+Q504. Does creating a Statewide officer trigger all side effects: employee_number, user account, onboarding tasks?
+Q505. Do all 6 onboarding forms send to the new officer via NDS?
+Q506. Do all 6 forms render correctly on an iPhone at 375px?
+Q507. Do all 6 forms accept finger signature input and submit without errors?
+Q508. Do all 6 form PDFs generate and return HTTP 200 on their URL?
+Q509. Does completing all forms auto-activate the officer?
+Q510. Does Trinity send a welcome message in DockChat after officer activation?
+Q511. Does creating and assigning a Statewide shift work without errors?
+Q512. Does the officer receive a shift assignment notification?
+Q513. Does the Statewide officer clock-in via mobile PWA capture GPS?
+Q514. Does the supervisor see the clock-in in real time on the dashboard?
+Q515. Does a Statewide calloff trigger the cascade replacement?
+Q516. Does a replacement officer accept from push notification without opening the app?
+Q517. Does clock-out calculate total hours correctly?
+Q518. Does timesheet approval work and flow to payroll?
+Q519. Does the Statewide payroll run complete with pay stubs generated?
+Q520. Does the officer view their pay stub on iPhone without errors?
+Q521. Does generating a Statewide invoice complete with correct line items?
+Q522. Does the client receive the invoice and can view it in the portal?
+Q523. Does a compliance scan run on Statewide without false positives?
+Q524. Does Trinity answer 10 operational questions about Statewide with accurate data?
+Q525. Does a support ticket opened via HelpAI resolve automatically via Trinity?
+Q526. Does Bryan's AI usage dashboard show real metered data from all Statewide Trinity interactions?
+Q527. Does the browser console show zero errors throughout the entire Statewide simulation?
+Q528. Does the server log show zero errors throughout the entire Statewide simulation?
+Q529. Does a grep of Statewide workspace in test-data tables return zero rows (no contamination)?
+
+================================================================================
+DOMAIN Q — FINAL CERTIFICATION (Phase 100)
+================================================================================
+
+Q530. Does npx tsc --noEmit --skipLibCheck return zero TypeScript errors?
+Q531. Does the server start cleanly with zero error messages in the startup log?
+Q532. Does GET /health return status: ok?
+Q533. Does GET /health return connected status for the database?
+Q534. Does GET /health return reachable status for Gemini API?
+Q535. Does GET /health return reachable status for Claude API?
+Q536. Does GET /health return reachable status for OpenAI API?
+Q537. Does GET /health return reachable status for Twilio?
+Q538. Does GET /health return reachable status for Resend?
+Q539. Does GET /health return reachable status for Stripe?
+Q540. Does a grep confirm zero instances of TODO or FIXME in any active production code path?
+Q541. Does a grep confirm zero instances of console.log (for debugging) outside the Trinity AI introspection layer?
+Q542. Does a grep confirm zero instances of hardcoded localhost URLs in server code?
+Q543. Does the database have all required tables: does a count of critical tables return the expected number?
+Q544. Does the database have zero broken foreign key constraints?
+Q545. Are all 7 platform default forms present with workspace_id IS NULL?
+Q546. Are all 4 system actors present: trinity-system-actor, helpai-actor, nds-actor, scheduler-bot-actor?
+Q547. Are at minimum 20 published FAQ entries present with workspace_id IS NULL?
+Q548. Do all 3 legal agreements exist: Terms of Service, Privacy Policy, ESIGN Consent?
+Q549. Are at minimum 900 Trinity actions registered in trinity_action_registry?
+Q550. Does a grep confirm zero instances of unwrapped Gemini calls (zero generateContent outside withGemini)?
+Q551. Does a grep confirm zero instances of unwrapped Claude calls (zero messages.create outside withClaude)?
+Q552. Does a grep confirm zero instances of unwrapped GPT calls (zero chat.completions.create outside withGpt)?
+Q553. Does a grep confirm zero instances of credit system references in active code?
+Q554. Does a grep confirm zero instances of @mail.coaileague.com in any code or database record?
+Q555. Does the database show zero rows in the Statewide workspace test tables?
+Q556. Does the database confirm subscription_tiers prices match billingConfig for all 4 paid tiers?
+Q557. Does the database confirm all 12 new billing and metering tables exist?
+Q558. Does the database confirm all 5 email system tables exist?
+Q559. Does the database confirm zero legacy credit tables remain?
+Q560. Does the PWA install correctly on iOS with correct splash screen and app name?
+Q561. Does the PWA install correctly on Android with maskable icons?
+Q562. Does a test email FROM trinity@coaileague.com arrive in an external inbox with DKIM pass?
+Q563. Does a test email TO calloffs-{slug}@coaileague.com create a calloff record in the database?
+Q564. Does Stripe show live keys configured and not test keys for production?
+Q565. Does QuickBooks show connected to production environment not sandbox?
+Q566. Does Plaid show active connections with no expired tokens?
+Q567. Does the overall system handle 50 simultaneous officer clock-ins without errors?
+Q568. Does the overall system handle 20 simultaneous Trinity chat sessions without errors?
+Q569. Does the overall system handle 10 simultaneous PDF generations without memory exhaustion?
+Q570. Is the platform ready for Statewide Protective Services to begin live operations?
+
+================================================================================
+RESULTS COMPARISON TABLE FORMAT
+================================================================================
+
+After every crawl run record results in this format:
+
+QUESTION ID | DESCRIPTION                           | RUN 1  | RUN 2  | RUN 3
+------------|---------------------------------------|--------|--------|-------
+Q001        | Registration creates workspace record | PASS   | PASS   | PASS
+Q002        | All 6 emails use @coaileague.com      | FAIL   | PASS   | PASS
+Q106        | Zero unwrapped Gemini calls           | FAIL   | FAIL   | PASS
+
+SUMMARY PER RUN:
+  Total questions:     570
+  PASS count:          N
+  FAIL count:          N
+  FAIL rate:           N%
+  Critical FAILs:      List questions that are P0 blocking issues
+
+TARGET: 570/570 PASS before Statewide goes live.
+
+CRITICAL FAILS (must fix before any others):
+  Q106, Q107, Q108 — AI unlimited bug
+  Q097-Q105 — Legacy credit system
+  Q459 — mail.coaileague.com references
+  Q485 — Statewide guard active
+  Q530 — TypeScript zero errors
+  Q564 — Stripe live keys
+  Q570 — Production readiness confirmed
+
+================================================================================
+EXECUTION INSTRUCTIONS FOR AGENT
+================================================================================
+
+Run all 570 questions simultaneously across domains using 8 crawlers.
+Each crawler owns a domain and runs all questions in that domain.
+Answer each question with PASS or FAIL based on:
+  - Code inspection (grep, file reading)
+  - Database queries (psql verification)
+  - API calls (curl testing)
+  - Log inspection (server and browser)
+
+For every FAIL:
+  1. Identify root cause
+  2. Fix the issue
+  3. Re-test the question
+  4. Confirm PASS
+  5. Note fix applied in summary
+
+Report format per domain:
+  Domain: [NAME]
+  Questions: N
+  Pass: N
+  Fail: N
+  Fixes applied: [list]
+  Remaining issues: [list]
+
+Final report:
+  Total Pass: N/570
+  Total Fail: N/570
+  All critical questions: PASS/FAIL
+  Platform status: PRODUCTION READY or NEEDS WORK
+  Statewide status: READY or NOT READY
+
+ACME sandbox only for all testing.
+Statewide workspace: READ ONLY. Zero test data. Zero mutations.

@@ -11,21 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { useState } from 'react';
 import {
   Shield,
   AlertTriangle,
   CheckCircle,
   XCircle,
-  RefreshCw,
   Play,
   RotateCcw,
   Settings,
@@ -39,6 +31,7 @@ import {
   TestTube,
   Eye,
 } from 'lucide-react';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface EditingRules {
   allowedTiers: string[];
@@ -125,7 +118,7 @@ export default function TrinitySelfEditGovernancePage() {
 
   const resetCircuitBreakerMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/trinity/self-edit/circuit-breaker/reset');
+      const res = await apiRequest('POST', '/api/trinity/self-edit/circuit-breaker/reset', {});
       return res.json();
     },
     onSuccess: () => {
@@ -260,36 +253,20 @@ export default function TrinitySelfEditGovernancePage() {
     );
   }
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="text-page-title">
-            <Shield className="w-8 h-8" />
-            Trinity Self-Edit Governance
-          </h1>
-          <p className="text-muted-foreground mt-1" data-testid="text-page-description">
-            Safety controls for Trinity's autonomous code editing capabilities
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            queryClient.invalidateQueries({ queryKey: ['/api/trinity/self-edit'] });
-          }}
-          className="gap-2"
-          data-testid="button-refresh"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'trinity-self-edit-governance',
+    title: 'Trinity Self-Edit Governance',
+    subtitle: "Safety controls for Trinity's autonomous code editing capabilities",
+    category: 'admin',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {circuitState?.isOpen && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Circuit Breaker Tripped</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
+          <AlertDescription className="flex items-center justify-between gap-2">
             <span>
               Trinity self-editing is paused. Reason: {circuitState.reason}
               {circuitState.cooldownUntil && ` (Cooldown until ${new Date(circuitState.cooldownUntil).toLocaleTimeString()})`}
@@ -310,7 +287,7 @@ export default function TrinitySelfEditGovernancePage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card data-testid="card-stat-circuit-breaker">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Circuit Breaker</CardTitle>
             {circuitState?.isOpen ? <Lock className="w-4 h-4 text-destructive" /> : <Unlock className="w-4 h-4 text-green-600" />}
           </CardHeader>
@@ -325,7 +302,7 @@ export default function TrinitySelfEditGovernancePage() {
         </Card>
 
         <Card data-testid="card-stat-changes-hour">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Changes (Hour)</CardTitle>
             <Clock className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
@@ -340,7 +317,7 @@ export default function TrinitySelfEditGovernancePage() {
         </Card>
 
         <Card data-testid="card-stat-changes-day">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Changes (Day)</CardTitle>
             <Activity className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
@@ -355,7 +332,7 @@ export default function TrinitySelfEditGovernancePage() {
         </Card>
 
         <Card data-testid="card-stat-pending">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Proposals</CardTitle>
             <FileCode className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
@@ -371,7 +348,7 @@ export default function TrinitySelfEditGovernancePage() {
       </div>
 
       <Tabs defaultValue="proposals" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="proposals" data-testid="tab-proposals">Change Proposals</TabsTrigger>
           <TabsTrigger value="rules" data-testid="tab-rules">Editing Rules</TabsTrigger>
           <TabsTrigger value="safety" data-testid="tab-safety">Safety Controls</TabsTrigger>
@@ -518,21 +495,21 @@ export default function TrinitySelfEditGovernancePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-medium">Status</span>
                   <Badge variant={circuitState?.isOpen ? 'destructive' : 'default'}>
                     {circuitState?.isOpen ? 'OPEN (Blocked)' : 'CLOSED (Active)'}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-medium">Error Rate</span>
                   <span>{((circuitState?.errorRate || 0) * 100).toFixed(1)}%</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-medium">Changes (Last Hour)</span>
                   <span>{circuitState?.changesInLastHour || 0}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="font-medium">Changes (Last Day)</span>
                   <span>{circuitState?.changesInLastDay || 0}</span>
                 </div>
@@ -601,19 +578,19 @@ export default function TrinitySelfEditGovernancePage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedProposal} onOpenChange={() => setSelectedProposal(null)}>
-        <DialogContent size="full" className="max-h-[90vh] overflow-y-auto" data-testid="dialog-proposal-detail">
+      <UniversalModal open={!!selectedProposal} onOpenChange={() => setSelectedProposal(null)}>
+        <UniversalModalContent size="full" className="max-h-[90vh] overflow-y-auto" data-testid="dialog-proposal-detail">
           {selectedProposal && (
             <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+              <UniversalModalHeader>
+                <UniversalModalTitle className="flex items-center gap-2">
                   <FileCode className="w-5 h-5" />
                   Change Proposal
-                </DialogTitle>
-                <DialogDescription>
+                </UniversalModalTitle>
+                <UniversalModalDescription>
                   Review the proposed changes and take action
-                </DialogDescription>
-              </DialogHeader>
+                </UniversalModalDescription>
+              </UniversalModalHeader>
 
               <div className="space-y-4">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -635,7 +612,7 @@ export default function TrinitySelfEditGovernancePage() {
                   <ScrollArea className="h-48 rounded-md border">
                     <div className="p-3 space-y-2">
                       {selectedProposal.proposedChanges.map((change, i) => (
-                        <div key={i} className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                        <div key={i} className="flex items-center justify-between gap-2 bg-muted/50 p-2 rounded">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" size="sm">{change.operation}</Badge>
                             <code className="text-xs">{change.file}</code>
@@ -655,7 +632,7 @@ export default function TrinitySelfEditGovernancePage() {
                     <Label className="font-medium">Test Results</Label>
                     <div className="space-y-1">
                       {selectedProposal.testResults.map((test, i) => (
-                        <div key={i} className="flex items-center justify-between text-sm">
+                        <div key={i} className="flex items-center justify-between gap-1 text-sm">
                           <span className="flex items-center gap-2">
                             {test.passed ? (
                               <CheckCircle className="w-4 h-4 text-green-600" />
@@ -672,7 +649,7 @@ export default function TrinitySelfEditGovernancePage() {
                 )}
               </div>
 
-              <DialogFooter className="gap-2 flex-wrap">
+              <UniversalModalFooter className="gap-2 flex-wrap">
                 {selectedProposal.sandboxStatus === 'idle' && (
                   <Button
                     variant="secondary"
@@ -733,20 +710,20 @@ export default function TrinitySelfEditGovernancePage() {
                     Rollback
                   </Button>
                 )}
-              </DialogFooter>
+              </UniversalModalFooter>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent size="md" data-testid="dialog-reject">
-          <DialogHeader>
-            <DialogTitle>Reject Proposal</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-reject">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Reject Proposal</UniversalModalTitle>
+            <UniversalModalDescription>
               Please provide a reason for rejecting this change proposal.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <Textarea
             placeholder="Reason for rejection..."
             value={rejectReason}
@@ -754,7 +731,7 @@ export default function TrinitySelfEditGovernancePage() {
             className="min-h-24"
             data-testid="input-reject-reason"
           />
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
               Cancel
             </Button>
@@ -770,9 +747,9 @@ export default function TrinitySelfEditGovernancePage() {
             >
               {rejectMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reject'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

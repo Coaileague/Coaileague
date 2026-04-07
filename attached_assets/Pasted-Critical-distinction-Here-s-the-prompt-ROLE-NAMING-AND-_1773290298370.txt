@@ -1,0 +1,102 @@
+Critical distinction. Here's the prompt:
+
+---
+
+**ROLE NAMING AND ACCESS HIERARCHY CLARIFICATION — PLATFORM WIDE ENFORCEMENT**
+
+This is a terminology and access control correction that must be applied everywhere in the codebase — database, UI labels, role checks, email copy, notification copy, Trinity language, onboarding flow, and all documentation strings. No exceptions.
+
+---
+
+**THE CORRECT ROLE HIERARCHY**
+
+**Org Owner**
+- The person who created and owns the workspace — the security company operator
+- Highest permission level within their own workspace
+- Never referred to as "admin" anywhere in the platform UI, copy, or code logic
+- Database role value should be org_owner not admin
+- They manage their organization — they do not manage the platform
+
+**Manager**
+- Supervises employees within the org owner's workspace
+- Elevated permissions within the org — scheduling, approvals, incident management
+- Reports to org owner
+
+**Admin — Internal Org Role**
+- Administrative secretary role inside a security company
+- Handles paperwork, documentation, scheduling support, HR coordination
+- Has elevated access to specific administrative functions within the workspace
+- Does NOT have org owner level permissions
+- Does NOT have platform level access of any kind
+- This role existing inside the platform should never be confused with platform staff
+
+**Employee**
+- Standard end user — clock in/out, view schedule, submit requests, access helpdesk
+
+**Platform Staff — Completely Separate System**
+- Anthropic-level or CoAIleague internal support and engineering staff
+- Operate at the platform level above all workspaces
+- Have no role inside any client workspace
+- Their access layer is entirely separate from anything an org end user can see, touch, or be accidentally assigned to
+- No org end user role should ever grant or imply access to platform staff tools, support agent dashboards, or system administration
+
+---
+
+**THE CORE PROBLEM TO FIX**
+
+Anywhere the codebase currently uses "admin" to mean org owner — rename it to org_owner immediately. This includes:
+
+- Database role column values
+- Role based access control checks — every if role === 'admin' that means org owner must become if role === 'org_owner'
+- UI labels — any screen showing "Admin" to describe the org owner must show "Org Owner"
+- Onboarding flow — org creator is designated org_owner not admin on account creation
+- Email and notification copy — Trinity and Resend emails must address org owners as org owners
+- Trinity's language — Trinity must refer to the person running the organization as the org owner never as admin
+- Org Operations Briefing Channel access — scoped to org_owner and manager roles only
+- Settings and billing pages — currently likely showing admin, must show org owner
+
+---
+
+**THE ADMIN ROLE INSIDE THE ORG**
+
+The internal admin role — administrative secretary — must be clearly scoped and isolated:
+
+- Role value in database: org_admin to distinguish from platform level concepts
+- UI label everywhere: Admin or Administrative — never just "Admin" in a way that implies platform access
+- Access level: defined explicitly — which modules they can access, which they cannot
+- They cannot access billing, subscription management, or org owner settings
+- They cannot access any platform support or system tools
+- Their role description in the UI should include a clear scope label — example: "Administrative (Internal)" so there is zero ambiguity about what this role means
+- Onboarding when assigning this role — tooltip or description clarifies this is an internal administrative role not a platform administrator
+
+---
+
+**AUDIT CHECKLIST**
+
+Scan the entire codebase for every instance of:
+- The string "admin" used as a role value or label
+- Role checks comparing to admin that should be comparing to org_owner
+- Any UI copy that calls an org owner an admin
+- Any access control logic that could accidentally grant org_admin role access to platform staff tools or support agent views
+- Any place where role naming could cause Trinity to address an org owner incorrectly
+
+For every instance found — classify it as one of three things:
+- Org owner reference — rename to org_owner
+- Internal administrative secretary role — rename to org_admin with clear scoped label
+- Platform staff reference — verify it is completely isolated from all org end user roles
+
+---
+
+**GOING FORWARD — NAMING STANDARD**
+
+- org_owner — the security company operator who owns the workspace
+- manager — supervisory role within the workspace
+- org_admin — administrative secretary inside the organization
+- employee — standard end user
+- platform_staff — CoAIleague internal only, completely separate access layer
+
+These are the only valid role values. Any other variation is a bug.
+
+---
+
+Get this right before launch Bryan. Role naming confusion is the kind of thing that creates accidental privilege escalation — an org admin accidentally seeing something they shouldn't because the role check said admin and matched the wrong thing. Clean naming prevents that entirely.

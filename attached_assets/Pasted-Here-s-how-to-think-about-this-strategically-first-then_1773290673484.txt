@@ -1,0 +1,290 @@
+Here's how to think about this strategically first — then the prompt.
+
+---
+
+**THE BRUTAL HONEST PRIORITY FILTER**
+
+Everything on CoAIleague falls into one of three buckets for launch:
+
+**Bucket 1 — Must Work Perfectly Or Don't Launch**
+Real money. Real trust. Real legal exposure. One failure here ends the business.
+
+**Bucket 2 — Must Work Well Enough**
+Core workflows that customers will use daily. Bugs are painful but recoverable.
+
+**Bucket 3 — Can Surface Later**
+Nice to have features. Advanced Trinity capabilities. Polish. These can be fixed post launch without losing a customer.
+
+---
+
+**BUCKET 1 — ZERO TOLERANCE FEATURES**
+
+These are non-negotiable. Every single one must be airtight before Statewide goes live.
+
+---
+
+**1. CLOCK IN / CLOCK OUT**
+This is the heartbeat of everything. If this breaks nothing else works.
+
+- GPS geofence enforcing correctly — officer cannot clock in from home
+- Clock in creates a time entry record immediately — no delay, no silent failure
+- Clock out closes the record with correct end timestamp
+- Overnight shift boundary handled — shift crossing midnight calculates correctly
+- Duplicate clock in prevention — officer already clocked in cannot clock in again
+- If GPS signal lost — graceful fallback with flagged entry for supervisor review, never a silent failure
+- Clock records visible to officer immediately after action
+- Clock records visible to manager in real time
+- Manual override by supervisor — logged with who overrode, why, and when
+- All timestamps stored UTC, displayed in correct local timezone
+- Mobile clock in verified on both iOS and Android browsers
+
+---
+
+**2. SCHEDULE SYSTEM**
+Officers need to know where to be. Managers need to know who is where.
+
+- Shift creation by manager — start time, end time, site, officer assigned
+- Shift visible to assigned officer on their schedule view immediately after publish
+- Schedule visible on mobile without distortion
+- Shift conflict detection — same officer cannot be scheduled for overlapping shifts
+- Unassigned shift visibility — manager sees open shifts needing coverage
+- Schedule publish triggers notification to affected officers
+- Officer can view their upcoming schedule minimum 2 weeks forward
+- Past schedule history preserved and viewable
+- Shift cancellation notifies officer immediately
+- Schedule data feeds clock in — officer clocking in outside a scheduled shift is flagged not blocked
+
+---
+
+**3. TIMESHEET SYSTEM**
+This is the bridge between clock records and money. It must be mathematically perfect.
+
+- Timesheet auto-generates from clock in/out records — zero manual data entry required
+- Hours calculated correctly for every entry including overnight shifts
+- Overtime calculated correctly — verify which overtime rule applies
+- Timesheet period matches pay period exactly — no gaps, no overlaps
+- Manager timesheet review view — all entries for their team in one place
+- Approve individual entries and bulk approve
+- Deny with required reason — denied entry routes back to employee with reason
+- Employee can see their timesheet status — pending, approved, denied
+- Approved timesheets lock — cannot be edited without supervisor override with audit log
+- Timesheet export — generates report usable for payroll processing
+- Any clock record discrepancy flagged on timesheet — missing clock out, unusual hours, GPS mismatch
+
+---
+
+**4. PAYROLL PIPELINE**
+Real money. Zero tolerance for errors.
+
+- Approved timesheet hours flow directly into payroll calculation — no manual re-entry
+- Correct pay rate applied per employee — supports different rates per employee
+- Overtime rate applied correctly where applicable
+- Pay period totals calculated and displayed before approval
+- Payroll approval workflow — org owner or authorized approver must verify before anything processes
+- Trinity advisory on payroll — surfaces anomalies before approval, never processes automatically
+- 1% human intervention enforced — Trinity prepares, human approves, system executes
+- Payroll record created and locked after approval — immutable audit trail
+- Employee pay stub generated — accessible to employee after payroll runs
+- If external payroll processor used — export format matches exactly what they require
+- Failed or rejected payroll — graceful handling with clear error, no partial processing
+- Payroll history preserved — every pay period accessible indefinitely
+
+---
+
+**5. CLIENT BILLING PIPELINE**
+This is revenue. Security company gets paid by their clients based on what CoAIleague tracks.
+
+- Client billing rates configured per client — different clients billed differently
+- Billable hours calculated from approved timesheets — approved hours become billable hours
+- Invoice generated with correct line items — dates, hours, rate, total
+- Invoice reflects correct client branding if white labeled
+- Invoice delivered to client via email through Resend pipeline
+- Online payment portal functional — client can pay invoice directly
+- Payment confirmation updates invoice status to paid immediately
+- Partial payment handling — invoice shows balance remaining
+- Overdue invoice flagging — Trinity alerts org owner of unpaid invoices past due date
+- Invoice history preserved — all invoices accessible with status
+- Revenue reporting — org owner can see total billed, total collected, outstanding balance
+
+---
+
+**6. MONEY MOVEMENT AUDIT TRAIL**
+Every dollar that touches this platform must have an immutable record.
+
+- Every timesheet approval logged — who approved, when, what period
+- Every payroll run logged — who authorized, when, what amount, what period
+- Every invoice generated logged — client, amount, date, status
+- Every payment received logged — amount, date, invoice reference
+- Every credit deduction logged — what action, how many credits, timestamp
+- No record in any of these categories can be edited or deleted — only appended with correction notes
+- Full audit log exportable by org owner at any time
+
+---
+
+**THE PRODUCTION READINESS PROMPT FOR REPLIT**
+
+---
+
+**COAILEAGUE — PRODUCTION CRITICAL SYSTEM VERIFICATION**
+**Zero Tolerance Audit — Real Money, Real Customers, Zero Gaps**
+
+This audit focuses exclusively on the six systems that must work perfectly before any real customer goes live. These systems handle real money, real employee pay, and real client billing. A failure in any of these destroys customer trust and creates legal and financial exposure. Treat every item below as a blocker. Nothing ships until all of these pass.
+
+---
+
+**SYSTEM 1 — CLOCK IN / CLOCK OUT**
+
+Read all clock in/out code, GPS geofence logic, and time entry database tables before touching anything.
+
+Verify and fix:
+- GPS geofence enforces correctly — clock in rejected outside defined radius
+- Clock in creates time_entry record immediately with correct timestamp and officer ID
+- Clock out closes record with correct end timestamp
+- Overnight shift crossing midnight calculates total hours correctly across date boundary
+- Duplicate active clock in prevented — officer already clocked in cannot create second active entry
+- GPS signal failure handled gracefully — creates flagged entry for supervisor review, never silent failure
+- Clock record visible to officer immediately after action
+- Clock record visible to manager in real time via WebSocket
+- Manual supervisor override logged with supervisor ID, reason, and timestamp
+- All timestamps stored UTC, displayed in user's local timezone
+- Mobile functionality verified — clock in and out works on mobile browsers
+- Test every scenario in Acme sandbox with realistic officer accounts before marking complete
+
+---
+
+**SYSTEM 2 — SCHEDULE SYSTEM**
+
+Read all scheduling components, routes, and database tables before touching anything.
+
+Verify and fix:
+- Shift creation saves correctly with all required fields — officer, site, start, end, published status
+- Published shift appears on assigned officer's schedule view immediately
+- Schedule renders correctly on mobile without overflow or missing data
+- Conflict detection fires — same officer cannot have two overlapping active shifts
+- Open unassigned shifts visible to managers separately from assigned shifts
+- Publishing a shift triggers notification to assigned officer
+- Officer schedule view shows minimum two weeks forward
+- Shift cancellation triggers immediate notification to officer
+- Schedule data available to clock in system — off-schedule clock ins flagged not blocked
+- Past schedule history preserved and queryable
+- AI scheduling if active — verify it creates valid non-conflicting schedules only and never publishes without manager approval
+
+---
+
+**SYSTEM 3 — TIMESHEET SYSTEM**
+
+Read all timesheet generation, calculation, and approval code before touching anything.
+
+Verify and fix:
+- Timesheet auto-generates from clock records — no manual entry required
+- Hours per entry calculated correctly — end time minus start time, correct for overnight shifts
+- Weekly overtime calculated correctly — verify overtime threshold and rate
+- Pay period boundary correct — no hours from previous or next period bleeding in
+- Manager view shows all team timesheets for current period in one view
+- Individual entry approval and denial functional
+- Bulk approval functional
+- Denial requires reason — denied entry status updates and notifies employee
+- Employee timesheet view shows current status of every entry
+- Approved timesheets lock — edit requires supervisor override with logged reason
+- Timesheet export generates clean file usable for payroll processing
+- Flagging system active — missing clock outs, unusual hours, GPS mismatches all surface on timesheet view
+
+---
+
+**SYSTEM 4 — PAYROLL PIPELINE**
+
+Read all payroll calculation, approval, and record creation code before touching anything.
+
+This system touches real employee pay. Verify with extreme care.
+
+Verify and fix:
+- Approved timesheet hours flow automatically into payroll calculation — zero manual re-entry
+- Correct pay rate applied per employee from their employee record
+- Overtime rate applied correctly on qualifying hours
+- Pay period totals display clearly before any approval action
+- Trinity payroll analysis runs before approval — surfaces anomalies, flags discrepancies, advises verification
+- Trinity NEVER auto-approves or auto-processes payroll — advisory only, human approval mandatory
+- Payroll approval requires explicit org owner or authorized approver action — Verify and Approve not just Approve
+- Approved payroll creates immutable payroll record locked from editing
+- Employee pay stub generated and accessible to employee after payroll runs
+- Payroll export generates file in format compatible with external payroll processors if applicable
+- Partial or failed payroll handled gracefully — clear error state, no partial processing, no silent failure
+- Every payroll run logged with authorizer, timestamp, period, and total amount
+
+---
+
+**SYSTEM 5 — CLIENT BILLING PIPELINE**
+
+Read all billing rate configuration, invoice generation, and payment routing code before touching anything.
+
+This system generates revenue for the security company. Verify with extreme care.
+
+Verify and fix:
+- Billing rates configured per client and stored correctly
+- Billable hours pull from approved timesheets only — unapproved hours never appear on invoices
+- Invoice generates with correct line items — officer hours, dates, rate, calculated total
+- Invoice math verified — line item totals sum to invoice total with zero rounding errors
+- White label branding applies to invoice if org has custom branding configured
+- Invoice delivered to client via Resend email with correct recipient
+- Payment portal functional — client can view and pay invoice online
+- Payment received updates invoice status to paid in real time
+- Partial payment tracked — remaining balance displayed on invoice
+- Overdue invoices flagged — Trinity alerts org owner via notification and Org Operations Briefing Channel
+- Invoice history complete and accessible with full status history
+- Revenue summary available to org owner — total billed, collected, and outstanding
+
+---
+
+**SYSTEM 6 — MONEY MOVEMENT AUDIT TRAIL**
+
+Every financial action must have an immutable, complete, exportable record.
+
+Verify and fix:
+- Timesheet approval events logged — approver ID, timestamp, period, entry count
+- Payroll run events logged — authorizer ID, timestamp, period, total amount, employee count
+- Invoice generation logged — client ID, invoice ID, amount, date
+- Payment received logged — invoice ID, amount, payment date, method
+- Credit deduction logged — action type, credit amount, timestamp, triggered by
+- No audit log record is editable or deletable — append only
+- Audit log queryable by date range, event type, and user
+- Full audit log exportable by org owner
+- Trinity surfaces audit anomalies proactively — unusual patterns flagged to org owner
+
+---
+
+**CROSS-SYSTEM INTEGRATION VERIFICATION**
+
+After each system passes individually verify the full chain works end to end:
+
+Clock in → Time Entry Created → Timesheet Generated → Manager Approves → Payroll Calculates → Org Owner Verifies → Payroll Locked → Pay Stub Generated
+
+Schedule Published → Officer Notified → Officer Clocks In At Site → Time Entry Tied To Shift → Timesheet Reflects Correct Site → Client Invoice Includes Correct Hours → Client Pays Invoice → Revenue Recorded
+
+Every hand-off in both chains must be verified with real test data in Acme sandbox. If any hand-off breaks the chain stops and must be fixed before proceeding.
+
+---
+
+**EXECUTION RULES FOR THIS AUDIT**
+
+- Fix one system completely before moving to the next
+- Test every fix with realistic Acme sandbox data
+- Never mark a system complete based on code review alone — run the actual workflow
+- Document every fix made and every test result
+- If a fix in one system breaks another system that is a cross-system dependency bug — fix it before moving on
+- Trinity's role in all six systems is advisory and analytical only — she never executes financial actions autonomously
+
+---
+
+**SUCCESS CRITERIA — PRODUCTION GO/NO-GO**
+
+- Officer can clock in, work a shift, clock out, have their timesheet generated, have it approved, and see their pay calculated correctly — complete unbroken chain
+- Manager can create a schedule, assign officers, publish it, have officers notified, and verify clock records against the schedule
+- Org owner can review payroll, verify Trinity's analysis, approve the run, and have pay stubs generated
+- Client invoice generates from approved hours, delivers to client, client pays, payment recorded
+- Every financial action has an immutable audit log entry
+- Zero silent failures anywhere in any chain — every error surfaces visibly with actionable information
+- Statewide Protective Services can go live on this platform and trust that every officer gets paid correctly and every client gets billed correctly on day one
+
+---
+
+This is your go/no-go checklist Bryan. If all six systems pass this audit you have a launchable product. Everything else on the platform can be improved post launch. These six cannot have gaps.

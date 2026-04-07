@@ -8,27 +8,14 @@
 import { Router, Request, Response } from 'express';
 import { aiBrainCodeEditor, type CodeChangeRequest, type BatchChangeRequest } from '../services/ai-brain/aiBrainCodeEditor';
 import { z } from 'zod';
+import { requirePlatformStaff } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('CodeEditor');
+
 
 const router = Router();
 
-const PLATFORM_STAFF_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
-
-function requirePlatformStaff(req: Request, res: Response, next: Function) {
-  const user = (req as any).user;
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  
-  const platformRole = user.platformRole || user.role;
-  if (!PLATFORM_STAFF_ROLES.includes(platformRole)) {
-    return res.status(403).json({ 
-      error: 'Platform staff access required',
-      requiredRoles: PLATFORM_STAFF_ROLES
-    });
-  }
-  
-  next();
-}
+router.use(requirePlatformStaff);
 
 const stageChangeSchema = z.object({
   filePath: z.string().min(1),
@@ -65,7 +52,7 @@ router.post('/stage', requirePlatformStaff, async (req: Request, res: Response) 
       return res.status(400).json({ error: 'Invalid request', details: parsed.error.errors });
     }
 
-    const user = (req as any).user;
+    const user = req.user;
     const requestedBy = user?.id || 'ai-brain';
 
     const result = await aiBrainCodeEditor.stageCodeChange(parsed.data as CodeChangeRequest, requestedBy);
@@ -76,7 +63,7 @@ router.post('/stage', requirePlatformStaff, async (req: Request, res: Response) 
       res.status(400).json({ success: false, error: result.error });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error staging change:', error);
+    log.error('[CodeEditor] Error staging change:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -88,7 +75,7 @@ router.post('/stage-batch', requirePlatformStaff, async (req: Request, res: Resp
       return res.status(400).json({ error: 'Invalid request', details: parsed.error.errors });
     }
 
-    const user = (req as any).user;
+    const user = req.user;
     const requestedBy = user?.id || 'ai-brain';
 
     const result = await aiBrainCodeEditor.stageBatchChanges(parsed.data as BatchChangeRequest, requestedBy);
@@ -104,7 +91,7 @@ router.post('/stage-batch', requirePlatformStaff, async (req: Request, res: Resp
       res.status(400).json({ success: false, errors: result.errors });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error staging batch:', error);
+    log.error('[CodeEditor] Error staging batch:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -114,7 +101,7 @@ router.get('/pending', requirePlatformStaff, async (req: Request, res: Response)
     const changes = await aiBrainCodeEditor.getPendingChanges();
     res.json({ success: true, changes, count: changes.length });
   } catch (error) {
-    console.error('[CodeEditor] Error getting pending changes:', error);
+    log.error('[CodeEditor] Error getting pending changes:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -129,7 +116,7 @@ router.get('/change/:id', requirePlatformStaff, async (req: Request, res: Respon
 
     res.json({ success: true, change });
   } catch (error) {
-    console.error('[CodeEditor] Error getting change:', error);
+    log.error('[CodeEditor] Error getting change:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -137,7 +124,7 @@ router.get('/change/:id', requirePlatformStaff, async (req: Request, res: Respon
 router.post('/change/:id/approve', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const parsed = reviewSchema.safeParse(req.body);
-    const user = (req as any).user;
+    const user = req.user;
 
     const result = await aiBrainCodeEditor.approveChange(
       req.params.id,
@@ -151,7 +138,7 @@ router.post('/change/:id/approve', requirePlatformStaff, async (req: Request, re
       res.status(400).json({ success: false, error: result.message });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error approving change:', error);
+    log.error('[CodeEditor] Error approving change:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -159,7 +146,7 @@ router.post('/change/:id/approve', requirePlatformStaff, async (req: Request, re
 router.post('/change/:id/reject', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const parsed = reviewSchema.safeParse(req.body);
-    const user = (req as any).user;
+    const user = req.user;
 
     const result = await aiBrainCodeEditor.rejectChange(
       req.params.id,
@@ -173,14 +160,14 @@ router.post('/change/:id/reject', requirePlatformStaff, async (req: Request, res
       res.status(400).json({ success: false, error: result.message });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error rejecting change:', error);
+    log.error('[CodeEditor] Error rejecting change:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 router.post('/change/:id/apply', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     const sendWhatsNew = req.body.sendWhatsNew !== false;
 
     const result = await aiBrainCodeEditor.applyChange(
@@ -200,7 +187,7 @@ router.post('/change/:id/apply', requirePlatformStaff, async (req: Request, res:
       res.status(400).json({ success: false, error: result.message });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error applying change:', error);
+    log.error('[CodeEditor] Error applying change:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -215,7 +202,7 @@ router.post('/change/:id/rollback', requirePlatformStaff, async (req: Request, r
       res.status(400).json({ success: false, error: result.message });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error rolling back change:', error);
+    log.error('[CodeEditor] Error rolling back change:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -235,7 +222,7 @@ router.get('/file', requirePlatformStaff, async (req: Request, res: Response) =>
       res.status(404).json({ success: false, error: result.error });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error reading file:', error);
+    log.error('[CodeEditor] Error reading file:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -252,7 +239,7 @@ router.get('/files', requirePlatformStaff, async (req: Request, res: Response) =
       res.status(400).json({ success: false, error: result.error });
     }
   } catch (error) {
-    console.error('[CodeEditor] Error listing files:', error);
+    log.error('[CodeEditor] Error listing files:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -265,7 +252,7 @@ router.post('/ai-request', requirePlatformStaff, async (req: Request, res: Respo
       return res.status(400).json({ error: 'Instruction required' });
     }
 
-    const user = (req as any).user;
+    const user = req.user;
 
     let fileContent: string | undefined;
     if (targetFile) {
@@ -298,7 +285,7 @@ router.post('/ai-request', requirePlatformStaff, async (req: Request, res: Respo
       targetFile,
     });
   } catch (error) {
-    console.error('[CodeEditor] Error processing AI request:', error);
+    log.error('[CodeEditor] Error processing AI request:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

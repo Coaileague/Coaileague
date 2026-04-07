@@ -12,6 +12,9 @@
 
 import { maintenanceModeService, MaintenanceWindow } from './maintenanceModeService';
 import { trinityRuntimeFlagsService } from './featureFlagsService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('trinityMaintenanceOrchestrator');
+
 
 export interface DiagnosticsReport {
   runId: string;
@@ -209,7 +212,7 @@ export const trinityMaintenanceOrchestrator = {
           id: 'trinity-orchestrator',
           name: 'Trinity Maintenance Orchestrator'
         },
-        statusMessage: `Trinity has detected issues requiring maintenance. Estimated completion in ${estimatedMinutes} minutes.`,
+        statusMessage: `I've detected issues requiring maintenance. Estimated completion in ${estimatedMinutes} minutes.`,
         triadReportId: report.runId
       });
       
@@ -242,7 +245,7 @@ export const trinityMaintenanceOrchestrator = {
     
     const nextWindow = this.getNextMaintenanceWindow(schedule);
     
-    console.log(`[TrinityOrchestrator] Maintenance scheduled for ${nextWindow.toISOString()}`);
+    log.info(`[TrinityOrchestrator] Maintenance scheduled for ${nextWindow.toISOString()}`);
     
     return {
       success: true,

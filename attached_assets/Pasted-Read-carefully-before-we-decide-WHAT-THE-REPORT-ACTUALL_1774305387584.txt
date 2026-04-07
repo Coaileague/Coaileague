@@ -1,0 +1,50 @@
+Read carefully before we decide.
+
+---
+
+**WHAT THE REPORT ACTUALLY SHOWS**
+
+The good: All 8 final scan checks returned zero. Both remaining GAP 2 transaction blocks were converted to `db.transaction()`. The server is running clean. replit.md is updated with the certified complete entry.
+
+The concern: Three new bugs were introduced by subagents during the conversion work itself and then had to be fixed:
+
+`server/db.ts` — a subagent placed `db.execute()` inside a `pool.on('connect')` callback creating a circular reference. The database connection handler was broken by the very work meant to improve it.
+
+`trinityWorkforceProtocolService.ts` — a subagent invented a phantom `clientDocuments` table that does not exist. This is the exact class of bug Phase 1 was designed to eliminate — introduced during Phase 1 completion work.
+
+`trinityAutonomousTaskQueue.ts` — a subagent invented a phantom `employeeLicenses` import and used a wrong column name `expiryDate` when the correct column is `expirationDate` on `employeeCertifications`. Another phantom introduced during cleanup.
+
+All three were caught and fixed before the final scan. But the fact that subagents introduced phantom tables and circular references during conversion work means the final state needs one more confirmation before we call Phase 1 closed.
+
+---
+
+**WHAT TO SEND HIM NOW**
+
+---
+
+Before Phase 1 is certified closed and Phase 2 begins, run the following three verification checks. These confirm the three introduced bugs were fully resolved and left no residue anywhere else in the codebase.
+
+**Check 1 — db.ts pool handler verification:**
+Open `server/db.ts`. Find the `pool.on('connect')` callback. Confirm it uses `client.query()` directly, not `db.execute()` or any reference to the `db` object. Confirm `sql` is not imported in `db.ts` for the purpose of the pool handler. Confirm the pool handler starts and releases the connection cleanly. Start the server and confirm 30/30 background services start with zero failures.
+
+**Check 2 — Phantom table sweep:**
+Run a scan across all files that were touched during the final Phase 1 cleanup session. Search for any reference to `clientDocuments` as a table import or query target. Must return zero results — this table does not exist in the database. Search for any reference to `employeeLicenses` as a table import or query target. Must return zero results — this table does not exist. Search for `expiryDate` as a column reference on any employee certification or license table. Must return zero results — the correct column is `expirationDate` on `employeeCertifications`.
+
+**Check 3 — Functional verification of the three fixed files:**
+Run the primary operation that each of the three fixed files handles in the ACME sandbox:
+
+`server/db.ts` — confirm a fresh server start establishes database connections cleanly and the health check passes without error.
+
+`trinityWorkforceProtocolService.ts` — trigger a Trinity workforce protocol action and confirm it executes against `org_documents` correctly with data persisting to the correct record.
+
+`trinityAutonomousTaskQueue.ts` — trigger a Trinity task queue operation involving employee certifications and confirm it reads from `employeeCertifications` using `expirationDate` correctly with accurate results returned.
+
+All three checks must pass with zero errors. Report the result of each check specifically.
+
+When all three checks return clean, Phase 1 is certified closed and Phase 2 begins immediately in the same session. Do not wait for a separate session. Run the Phase 2 prompt the moment these three checks confirm clean.
+
+---
+
+**PHASE 2 BEGINS IN THE SAME SESSION AS THESE THREE CHECKS PASS**
+
+When he confirms all three checks clean, bring the confirmation here and the Phase 2 prompt goes in immediately. We are close Bryan. These three checks are the final gate. No loose strings.

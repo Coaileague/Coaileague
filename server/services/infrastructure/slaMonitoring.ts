@@ -17,6 +17,9 @@ import { randomUUID } from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('slaMonitoring');
+
 
 // ============================================================================
 // TYPES
@@ -181,7 +184,7 @@ class SLAMonitoringService {
     this.startDataCleanup();
     
     this.isInitialized = true;
-    console.log('[SLAMonitoring] Service initialized');
+    log.info('[SLAMonitoring] Service initialized');
   }
 
   /**
@@ -212,7 +215,7 @@ class SLAMonitoringService {
     this.breaches.set(serviceId, []);
     this.maintenanceWindows.set(serviceId, []);
 
-    console.log(`[SLAMonitoring] Registered service: ${serviceName} (${level})`);
+    log.info(`[SLAMonitoring] Registered service: ${serviceName} (${level})`);
     return config;
   }
 
@@ -363,18 +366,30 @@ class SLAMonitoringService {
         createdAt: new Date()
       });
 
-      // Emit event
-      platformEventBus.emit('sla_breach', {
-        breach,
-        serviceName
-      });
+      // Fix: was .emit() — SLA breaches were never reaching subscribers or user notifications.
+      // Now published so ops managers receive real-time breach alerts via the notification pipeline.
+      platformEventBus.publish({
+        type: 'sla_breach',
+        category: 'error',
+        title: `SLA Breach — ${serviceName}`,
+        description: `${serviceName} missed SLA target: ${breachType} (target: ${targetValue}, actual: ${Number(actualValue).toFixed(2)})`,
+        metadata: {
+          serviceId,
+          serviceName,
+          breachType,
+          targetValue,
+          actualValue,
+          severity: severity as any,
+          audience: 'manager',
+        },
+      }).catch((err: any) => log.warn('[SLAMonitoring] Failed to publish sla_breach:', err.message));
 
-      console.log(
+      log.info(
         `[SLAMonitoring] BREACH: ${serviceName} - ${breachType} ` +
         `(target: ${targetValue}, actual: ${actualValue.toFixed(2)})`
       );
     } catch (error) {
-      console.error('[SLAMonitoring] Failed to log breach:', error);
+      log.error('[SLAMonitoring] Failed to log breach:', error);
     }
   }
 
@@ -406,12 +421,12 @@ class SLAMonitoringService {
         createdAt: new Date()
       });
 
-      console.log(
+      log.info(
         `[SLAMonitoring] Breach resolved: ${breach.serviceName} - ${breach.breachType} ` +
         `(duration: ${Math.round(breach.duration / 1000)}s)`
       );
     } catch (error) {
-      console.error('[SLAMonitoring] Failed to log breach resolution:', error);
+      log.error('[SLAMonitoring] Failed to log breach resolution:', error);
     }
   }
 
@@ -547,7 +562,7 @@ class SLAMonitoringService {
     windows.push(window);
     this.maintenanceWindows.set(serviceId, windows);
 
-    console.log(
+    log.info(
       `[SLAMonitoring] Maintenance scheduled for ${serviceId}: ` +
       `${new Date(startTime).toISOString()} - ${new Date(endTime).toISOString()}`
     );
@@ -647,7 +662,7 @@ class SLAMonitoringService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('[SLAMonitoring] Failed to log report generation:', error);
+      log.error('[SLAMonitoring] Failed to log report generation:', error);
     }
 
     return report;
@@ -657,9 +672,12 @@ class SLAMonitoringService {
    * Start periodic reporting
    */
   private startPeriodicReporting(): void {
-    // Generate reports every hour
     this.reportInterval = setInterval(async () => {
-      await this.generateReport();
+      try {
+        await this.generateReport();
+      } catch (error: any) {
+        log.warn('[SLAMonitoring] Report generation failed (will retry):', error?.message || 'unknown');
+      }
     }, 60 * 60 * 1000);
   }
 
@@ -716,7 +734,7 @@ class SLAMonitoringService {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
-    console.log('[SLAMonitoring] Service shut down');
+    log.info('[SLAMonitoring] Service shut down');
   }
 }
 

@@ -1,13 +1,11 @@
 /**
  * Mobile Page Wrapper & Layout Primitives
- * Optimized container for mobile pages with pull-to-refresh, safe areas, and responsive layouts
+ * Optimized container for mobile pages with safe areas and responsive layouts
  * Uses centralized MOBILE_CONFIG for all sizing and behavior
  * Now with Universal Seasonal Handler integration for holidays and themed effects
  */
 
 import { ReactNode, useState, useEffect } from 'react';
-import { usePullToRefresh } from "@/hooks/use-touch-swipe";
-import { PullToRefreshIndicator } from "./pull-to-refresh-indicator";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { MOBILE_CONFIG } from "@/config/mobileConfig";
@@ -237,19 +235,15 @@ interface MobilePageWrapperProps {
 
 export function MobilePageWrapper({
   children,
-  onRefresh,
-  enablePullToRefresh = false,
+  // onRefresh and enablePullToRefresh kept in interface for compat but PTR is removed —
+  // the platform syncs live via WebSocket + background polling.
   className,
   withBottomNav = false,
   showSeasonalBanner = true,
   showSeasonalEffects = true,
 }: MobilePageWrapperProps) {
   const isMobile = useIsMobile();
-  const { isRefreshing, pullDistance } = usePullToRefresh(
-    onRefresh || (() => Promise.resolve())
-  );
-  
-  // Universal Seasonal Handler integration
+
   const { 
     seasonId, 
     isHoliday, 
@@ -258,17 +252,14 @@ export function MobilePageWrapper({
     effectIntensity 
   } = useSeasonalTheme();
 
-  const shouldEnablePullToRefresh = isMobile && enablePullToRefresh && onRefresh;
-
   return (
     <div 
       className={cn(
-        "flex flex-col h-full w-full overflow-hidden relative",
+        "w-full relative flex flex-col min-h-full overflow-x-hidden",
         className
       )}
       data-testid="mobile-page-wrapper"
     >
-      {/* Seasonal Effects Layer (behind content) */}
       {showSeasonalEffects && isMobile && (
         <MobileSeasonalEffects 
           effectType={primaryEffect} 
@@ -277,7 +268,6 @@ export function MobilePageWrapper({
         />
       )}
       
-      {/* Seasonal Banner (holidays & themed modes) */}
       {showSeasonalBanner && isMobile && (
         <MobileSeasonalBanner 
           seasonId={seasonId}
@@ -287,20 +277,13 @@ export function MobilePageWrapper({
         />
       )}
       
-      {/* Pull-to-Refresh Indicator */}
-      {shouldEnablePullToRefresh && (
-        <PullToRefreshIndicator 
-          pullDistance={pullDistance}
-          isRefreshing={isRefreshing}
-        />
-      )}
-
-      {/* Scrollable Content */}
-      <div 
+      <div
+        id="mobile-scroll-container"
         className={cn(
-          "flex-1 overflow-y-auto smooth-scroll mobile-safe-area-top relative z-20",
-          withBottomNav && "mobile-safe-area-bottom pb-20"
+          "flex-1 min-h-0 overflow-y-auto overscroll-y-contain",
+          withBottomNav && "pb-[calc(env(safe-area-inset-bottom,0px)+var(--bottom-nav-height,44px))]"
         )}
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
         {children}
       </div>
@@ -333,62 +316,68 @@ export function MobilePageHeader({
   return (
     <div
       className={cn(
-        'mobile-header sticky top-0 bg-background/95 backdrop-blur-lg border-b border-border',
-        'px-4 py-3 md:px-6 md:py-4',
+        'mobile-header bg-background border-b border-border',
+        'px-2.5 py-1.5 sm:px-4 sm:py-3 md:px-6 md:py-4',
         className
       )}
       style={{
-        zIndex: 'var(--z-sticky)',
         minHeight: isMobile
           ? `${MOBILE_CONFIG.header.heightMobile}px`
           : `${MOBILE_CONFIG.header.heightTablet}px`,
       }}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {backButton && onBack && (
-            <button
-              onClick={onBack}
-              className="mobile-touch-target shrink-0 hover-elevate active-elevate-2 rounded-lg"
-              style={{
-                minHeight: `${MOBILE_CONFIG.touchTargets.minHeight}px`,
-                minWidth: `${MOBILE_CONFIG.touchTargets.minWidth}px`,
-                padding: `${MOBILE_CONFIG.touchTargets.padding}px`,
-              }}
-              data-testid="button-back"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <div className="flex flex-col gap-1 sm:gap-3">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+            {backButton && onBack && (
+              <button
+                onClick={onBack}
+                className="mobile-touch-target shrink-0 hover-elevate active-elevate-2 rounded-lg"
+                style={{
+                  minHeight: `${MOBILE_CONFIG.touchTargets.minHeight}px`,
+                  minWidth: `${MOBILE_CONFIG.touchTargets.minWidth}px`,
+                  padding: `${MOBILE_CONFIG.touchTargets.padding}px`,
+                }}
+                data-testid="button-back"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-          )}
-          <div className="min-w-0 flex-1">
-            <h1
-              className={cn(
-                'font-bold truncate',
-                isMobile ? 'text-lg' : 'text-2xl'
-              )}
-            >
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="text-sm text-muted-foreground truncate mt-0.5">
-                {subtitle}
-              </p>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
             )}
+            <div className="min-w-0 flex-1">
+              <h1
+                className={cn(
+                  'font-bold',
+                  isMobile ? 'text-sm xs:text-base sm:text-lg leading-tight' : 'text-2xl'
+                )}
+                style={isMobile ? { fontSize: 'clamp(0.8rem, 4vw, 1.125rem)' } : undefined}
+              >
+                {title}
+              </h1>
+              {subtitle && (
+                <p className={cn(
+                  'text-muted-foreground mt-0.5',
+                  isMobile ? 'text-[10px] sm:text-xs leading-tight line-clamp-1' : 'text-sm truncate'
+                )}>
+                  {subtitle}
+                </p>
+              )}
+            </div>
           </div>
+          {action && !isMobile && <div className="shrink-0 flex-none ml-1">{action}</div>}
         </div>
-        {action && <div className="shrink-0">{action}</div>}
+        {action && isMobile && <div className="w-full">{action}</div>}
       </div>
     </div>
   );

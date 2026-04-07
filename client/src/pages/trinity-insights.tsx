@@ -10,15 +10,18 @@
  */
 
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, ArrowRight, Zap, RefreshCw, Check, AlertTriangle, Lightbulb, Trophy, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import TrinityRedesign from '@/components/trinity-redesign';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface TrinityInsight {
   id: string;
@@ -49,6 +52,7 @@ interface TrinityStatus {
 }
 
 export default function TrinityInsights() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
@@ -63,7 +67,7 @@ export default function TrinityInsights() {
 
   const scanMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/trinity/scan');
+      const response = await apiRequest('POST', '/api/trinity/scan', {});
       return response.json();
     },
     onSuccess: (data) => {
@@ -104,7 +108,7 @@ export default function TrinityInsights() {
       case 'recommendation': return <Brain className="w-4 h-4" />;
       case 'achievement': return <Trophy className="w-4 h-4" />;
       case 'insight': return <Sparkles className="w-4 h-4" />;
-      default: return <Sparkles className="w-4 h-4" />;
+      default: return null;
     }
   };
 
@@ -137,37 +141,33 @@ export default function TrinityInsights() {
     insight: 'Insight',
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-            <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-page-title">Trinity Insights</h1>
-          </div>
-          <p className="text-muted-foreground text-lg">
-            AI-powered business intelligence from your workforce data
-          </p>
-          
-          {/* Trinity Status */}
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <Badge variant={statusData?.available ? 'default' : 'secondary'}>
-              {statusData?.available ? 'AI Connected' : 'AI Offline'}
-            </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => scanMutation.mutate()}
-              disabled={scanMutation.isPending || !statusData?.available}
-              data-testid="button-scan"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
-              {scanMutation.isPending ? 'Scanning...' : 'Run Scan'}
-            </Button>
-          </div>
-        </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'trinity-insights',
+    title: 'Trinity Insights',
+    subtitle: 'AI-powered business intelligence from your workforce data',
+    category: 'operations',
+    maxWidth: '4xl',
+    headerActions: (
+      <div className="flex items-center gap-2">
+        <Badge variant={statusData?.available ? 'default' : 'secondary'}>
+          {statusData?.available ? 'AI Connected' : 'AI Offline'}
+        </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => scanMutation.mutate()}
+          disabled={scanMutation.isPending || !statusData?.available}
+          data-testid="button-scan"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
+          {scanMutation.isPending ? 'Scanning...' : 'Run Scan'}
+        </Button>
+      </div>
+    ),
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
         {/* Trinity Mascot Demo - Auto-cycling through states */}
         <Card className="mb-8 p-6 overflow-visible">
           <div className="text-center mb-4">
@@ -214,8 +214,10 @@ export default function TrinityInsights() {
 
         {/* Insights grid */}
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-md" />
+            ))}
           </div>
         ) : filteredInsights.length > 0 ? (
           <ScrollArea className="h-[600px] rounded-lg border">
@@ -270,8 +272,14 @@ export default function TrinityInsights() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full justify-between"
-                        onClick={() => window.location.href = insight.actionUrl!}
+                        className="w-full justify-between gap-2"
+                        onClick={() => {
+                          if (insight.actionUrl?.startsWith('/')) {
+                            setLocation(insight.actionUrl);
+                          } else {
+                            window.location.href = insight.actionUrl!;
+                          }
+                        }}
                         data-testid={`button-insight-action-${insight.id}`}
                       >
                         {insight.actionLabel || 'Take Action'}
@@ -332,7 +340,6 @@ export default function TrinityInsights() {
             </Card>
           </div>
         )}
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }

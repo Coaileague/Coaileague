@@ -1,0 +1,634 @@
+COAILEAGUE — ULTIMATE MASTER AUDIT PROMPT
+PRODUCTION CERTIFICATION — ZERO GAPS ZERO CONFLICTS ZERO ISSUES
+Version Final — Paste repeatedly until every phase reports clean
+
+═══════════════════════════════════════════════════════════════
+GOVERNING PHILOSOPHY — READ THIS FIRST
+═══════════════════════════════════════════════════════════════
+
+You are performing a full production certification audit of CoAIleague — a B2B SaaS workforce management platform built specifically for licensed security companies. This is not a quick scan. This is a complete architectural verification. Every system, every domain, every feature, every connection must be verified as working correctly, connected properly, and coordinated universally before this audit is considered complete.
+
+THE ONE SOURCE OF TRUTH LAW
+Every piece of data on this platform has exactly one authoritative source. One table. One service. One endpoint. One query. Every component that needs that data consumes it from that single source. No widget, component, or service independently queries data that already has a canonical owner. Competing endpoints, shadow routes, double-mounted services, and scattered query logic are all violations of this law. This is the governing architectural principle of CoAIleague. Every fix must comply with it. Any fix that patches a symptom without addressing a source of truth violation is not a fix — it will break again.
+
+TRINITY AS THE FINAL GATE
+Trinity is the central intelligence layer of CoAIleague. She operates as a silent COO. All AI actions, all automations, all workflow executions, all analyses, all proactive communications funnel through Trinity. Trinity is the final coordination gate — she does not bypass the One Source of Truth law, she enforces it. Trinity advises and prepares. Humans verify and approve. Trinity never autonomously executes any action involving real money, real employee pay, real client billing, or legal documents. The 1% human intervention model is non-negotiable and applies to all financial and legal actions regardless of confidence score.
+
+GROUND RULES — NON-NEGOTIABLE
+- Read all existing code completely before touching anything in each phase
+- Run record counts before and after every database change and document both numbers
+- Fix one phase completely before moving to the next
+- If a phase cannot be fully resolved — flag exact file, exact line, exact reason and continue
+- Repeat every phase until it self-reports zero issues
+- Never touch Statewide Protective Services production data — License C11608501 — sacred
+- Acme Security Services is the only workspace for dev, testing, and seeding
+- Document every fix made, every enhancement applied, every skip with reason
+- Test every fix with realistic Acme data — never mark complete based on code review alone
+
+ZERO TOLERANCE BUCKETS — THESE MUST BE PERFECT BEFORE ANY CUSTOMER GOES LIVE
+Bucket 1: Clock In/Out, Schedule, Timesheet, Payroll, Client Billing, Audit Trail
+Bucket 2: Credit Ledger, Subscription Billing, Seat Gating, Stripe Integration, Abuse Prevention
+Bucket 3: Role Hierarchy, Workspace Isolation, Session Security, Data Integrity
+
+Everything else improves post-launch. These three buckets do not ship with gaps.
+
+═══════════════════════════════════════════════════════════════
+PHASE 0 — SINGLE SOURCE OF TRUTH ARCHITECTURE ENFORCEMENT
+═══════════════════════════════════════════════════════════════
+
+This phase runs first. Its findings govern every subsequent phase.
+
+Map every data domain to its single canonical source:
+- Credits and ledger — one service, one table, one query owns this
+- Earnings and payroll — one service, one table owns this
+- Schedules and shifts — one service owns this
+- Clock records and time entries — one service owns this
+- Users and roles — one service owns this
+- Workspaces and org data — one service owns this
+- Incidents — one service owns this
+- Billing and invoices — one service owns this
+- Notifications — one service owns this
+- Trinity actions and registrations — one registry owns this
+
+Identify and fix every violation:
+- Any widget showing summary data and itemized data from separate queries that produce different totals — consolidate to single query
+- KNOWN BUG: Automation Credits widget header shows 6,840 used but itemized breakdown totals 24,408 — find both queries, identify correct source, unify them permanently
+- KNOWN BUG: Earnings forecast widget showing $0.00 — verify Acme has seeded shifts for current pay period for all test employees including Marcus, if not seed them, if yes fix the query connecting schedule table to earnings calculation
+- Any shadow routes — routes registered in multiple locations, leftover routes from refactors, routes hardcoded inside components that bypass the router — find all and eliminate
+- Any double-mounted services — WebSocket connections, event listeners, AI service initializations mounting more than once — find all and fix
+- Any competing endpoints returning the same data through different paths — consolidate
+- KNOWN BUG: scheduling.detect_conflicts was registered in both aiBrainMasterOrchestrator.ts AND trinitySchedulingPlatformActions.ts — verify this fix held and scan for any remaining duplicates
+- KNOWN BUG: scheduling.publish_shifts was registered in both platformActionHub.ts AND trinitySchedulingPlatformActions.ts — verify this fix held
+- Scan every file for duplicate Trinity action string registrations — any duplicate found is a critical violation
+- circuitBreaker.ts must exist in the resilience directory — verify present and functioning
+- Domain health score — current baseline 12/15, target 15/15 — identify and resolve all 3 remaining partial domains
+
+Document the canonical source for every major data domain. All future components must consume from documented canonical sources only.
+
+═══════════════════════════════════════════════════════════════
+PHASE 1 — FULL CODEBASE MAP
+═══════════════════════════════════════════════════════════════
+
+Produce a complete map before touching anything:
+- Every route — frontend and backend — mapped and verified
+- Every component and where it renders — duplicates flagged
+- Every database table and its relationships — orphaned tables flagged
+- Every schema file — verify matches actual database state exactly
+- Every environment variable — verify present in all environments
+- Every external service connection — Resend, Stripe, OpenAI, Gemini, Claude — verify active
+- Every Trinity Action Hub endpoint — complete registry mapped
+- Every file over 500 lines — flagged for potential splitting
+- Duplicate files or conflicting versions of same component — flagged for consolidation
+
+Report complete map findings. Verify before proceeding.
+
+═══════════════════════════════════════════════════════════════
+PHASE 2 — ROLE HIERARCHY AND ACCESS CONTROL
+═══════════════════════════════════════════════════════════════
+
+CRITICAL: Role naming is a security issue not just a terminology issue. Wrong role names cause accidental privilege escalation.
+
+THE CORRECT AND ONLY VALID ROLE VALUES:
+
+org_owner — The security company operator who created and owns the workspace. Highest permission within their workspace. Never referred to as "admin" anywhere in the platform. Never confused with platform staff. Manages their organization, not the platform.
+
+manager — Supervisory role within the org. Elevated permissions for scheduling, approvals, incident management. Reports to org_owner.
+
+org_admin — Administrative secretary inside the security company. Handles paperwork, documentation, HR coordination. Has specific scoped permissions. Does NOT have org_owner level permissions. Does NOT have any platform level access. UI label must show "Administrative (Internal)" to prevent confusion.
+
+employee — Standard end user. Clock in/out, view schedule, submit requests, helpdesk access.
+
+platform_staff — CoAIleague internal staff only. Completely separate access layer above all workspaces. Has zero presence inside any client workspace. No org end user role can ever grant or imply access to platform staff tools.
+
+Scan entire codebase for every instance of:
+- String "admin" used as role value that should be org_owner — rename to org_owner
+- Role checks comparing to "admin" that should compare to "org_owner" — fix all
+- Any UI copy calling an org owner an admin — fix all
+- Any access control logic that could accidentally grant org_admin access to platform staff tools — fix all
+- Any place where Trinity addresses an org owner incorrectly — fix all
+- Database role column values — verify only valid role values exist
+- Org Operations Briefing Channel access — scoped to org_owner and manager only
+- Billing and subscription access — org_owner only, org_admin cannot access billing
+
+═══════════════════════════════════════════════════════════════
+PHASE 3 — PLATFORM INTEGRITY
+═══════════════════════════════════════════════════════════════
+
+- Z-index conflicts across all layers — modals, drawers, toasts, Trinity FAB, navigation, bottom bar
+- Badge and button overflow on mobile and desktop viewports
+- Hardcoded colors anywhere outside theme token files — flag and fix every instance
+- Route conflicts — duplicate paths, undefined handlers, dead routes, routes registered in multiple places
+- Execution conflicts — functions called multiple times, event listeners stacking on re-render
+- Component render duplication — same component mounting more than once per view
+- Asset drawer, dialog, modal — all centralized and editable platform-wide in single action
+- Trinity FAB hidden correctly on landing and marketing pages
+- Trinity FAB present and functioning on all authenticated dashboard pages
+- Bottom navigation z-index not competing with FAB or modals
+- Light and dark mode rendering correctly — these are intentional day/night modes not bugs
+- Brand gradient elements verified as hardcoded constants not theme token violations
+- Unread count badge shows exact number — never capped at 9+ — if 32 unread show 32
+- All components respect theme tokens — zero inline style overrides except documented brand constants
+
+═══════════════════════════════════════════════════════════════
+PHASE 4 — SCHEMA AND DATABASE INTEGRITY
+═══════════════════════════════════════════════════════════════
+
+- Every table requiring workspace isolation has workspace_id column with index
+- All foreign key relationships have corresponding indexes
+- Drizzle schema matches actual database state exactly — zero drift tolerated
+- Workspace isolation enforced across all 300+ tables — no cross-tenant data leak possible
+- Zero orphaned records in any table
+- Zero missing join relationships
+- All cascade delete and cascade update rules correct
+- Run record counts before and after every change — document both numbers
+- All seeded data in Acme workspace is realistic and complete enough to simulate all platform features
+- Every test employee including Marcus has realistic shifts, clock records, timesheets, and payroll records for current period
+
+═══════════════════════════════════════════════════════════════
+PHASE 5 — WIDGET DATA INTEGRITY
+═══════════════════════════════════════════════════════════════
+
+- Every dashboard widget pulls from single verified canonical source
+- No widget may show summary and itemized data from separate queries producing different totals
+- KNOWN BUG: Credits summary vs itemized breakdown mismatch — verify permanently fixed, run the math, confirm they match
+- KNOWN BUG: Earnings widget $0.00 — verify seeded data exists and query connects correctly
+- Every widget showing $0.00 or blank in dev — investigate and fix whether empty data or broken query
+- All financial widgets verified with real calculation logic — no placeholder display values
+- Credit usage calculations verified end to end — deduction fires, balance updates, display refreshes
+- All progress bars and percentage displays mathematically verified against data sources
+- Automation Credits widget — summary balance must equal sum of all itemized usage entries exactly
+- Any counter or badge showing 9+ must reflect actual count
+
+═══════════════════════════════════════════════════════════════
+PHASE 6 — AUTHENTICATION AND SESSION INTEGRITY
+═══════════════════════════════════════════════════════════════
+
+- JWT tokens issuing and expiring correctly
+- Refresh token logic functioning without race conditions
+- Session persistence working across page refreshes
+- Multi-tenant auth — user can only access their own workspace data under any circumstance
+- Role based access control enforced server side on every route — never trust client side only
+- No route accessible without proper role verification
+- Password reset flow complete end to end
+- Invite flow complete end to end — new employee onboarding without gaps
+- Session timeout on inactivity — configurable, enforced
+- Two factor authentication for org_owner accounts — verify exists and functions
+- Billing endpoints require org_owner role and correct workspace ownership on every request
+- Session tokens cannot access billing or credit data of a different org under any circumstance
+
+═══════════════════════════════════════════════════════════════
+PHASE 7 — REAL TIME AND WEBSOCKET INTEGRITY
+═══════════════════════════════════════════════════════════════
+
+- WebSocket connections establishing correctly on authenticated pages
+- No duplicate socket connections on page navigation or re-render
+- Socket disconnecting cleanly on logout
+- Real time notifications delivering to correct workspace only — zero cross-tenant bleed
+- Clock in/out status updating in real time across all connected clients
+- Chat messages delivering without duplication
+- No memory leaks from unclosed socket listeners
+- Trinity real time updates — proactive messages delivering through correct channel without duplication
+
+═══════════════════════════════════════════════════════════════
+PHASE 8 — ZERO TOLERANCE SYSTEM 1: CLOCK IN/CLOCK OUT
+═══════════════════════════════════════════════════════════════
+
+This is the heartbeat of everything. If this breaks nothing else works.
+
+- GPS geofence enforces correctly — clock in rejected outside defined radius for each site
+- Clock in creates time_entry record immediately with correct timestamp, officer ID, and site ID
+- Clock out closes record with correct end timestamp
+- Overnight shift crossing midnight calculates total hours correctly across date boundary
+- Duplicate active clock in prevented — officer already clocked in cannot create second active entry
+- GPS signal failure handled gracefully — creates flagged entry for supervisor review, never silent failure
+- Clock record visible to officer immediately after action
+- Clock record visible to manager in real time via WebSocket
+- Manual supervisor override logged with supervisor ID, reason, and timestamp — immutable
+- All timestamps stored UTC, displayed in correct local timezone
+- Mobile clock in verified — works correctly on mobile browsers
+- Off-schedule clock in flagged not blocked — manager notified
+- Clock records feed directly into timesheet generation — zero manual re-entry required
+
+═══════════════════════════════════════════════════════════════
+PHASE 9 — ZERO TOLERANCE SYSTEM 2: SCHEDULE SYSTEM
+═══════════════════════════════════════════════════════════════
+
+- Shift creation saves correctly with all required fields — officer, site, start, end, published status
+- Published shift appears on assigned officer's schedule immediately
+- Schedule renders correctly on mobile — no overflow, no missing data
+- Conflict detection fires — same officer cannot have two overlapping active shifts
+- Open unassigned shifts visible to managers separately from assigned shifts
+- Publishing a shift triggers notification to assigned officer
+- Officer can view their upcoming schedule minimum two weeks forward
+- Past schedule history preserved and queryable
+- Shift cancellation triggers immediate notification to affected officer
+- Schedule data available to clock in system — off-schedule clock ins flagged
+- AI scheduling if active — never publishes without manager approval, never creates conflicting shifts
+- Schedule feeds earnings forecast widget — projected pay calculates from upcoming assigned shifts
+
+═══════════════════════════════════════════════════════════════
+PHASE 10 — ZERO TOLERANCE SYSTEM 3: TIMESHEET SYSTEM
+═══════════════════════════════════════════════════════════════
+
+- Timesheet auto-generates from clock records — zero manual data entry required
+- Hours per entry calculated correctly including overnight shifts crossing date boundary
+- Weekly overtime calculated correctly — verify correct overtime threshold and rate applied
+- Pay period boundary correct — no hours bleeding in from previous or next period
+- Manager view shows all team timesheets for current period in one view
+- Individual entry approval and denial functional
+- Bulk approval functional
+- Denial requires reason — denied entry notifies employee with reason attached
+- Employee timesheet view shows current status of every entry
+- Approved timesheets lock — edit requires supervisor override with logged reason and audit entry
+- Timesheet export generates clean file usable for payroll processing
+- Flagging active — missing clock outs, unusual hours, GPS mismatches all surface on timesheet view
+- Approved timesheet data flows directly into payroll calculation — single source handoff
+
+═══════════════════════════════════════════════════════════════
+PHASE 11 — ZERO TOLERANCE SYSTEM 4: PAYROLL PIPELINE
+═══════════════════════════════════════════════════════════════
+
+Real employee pay. Zero tolerance for errors.
+
+- Approved timesheet hours flow automatically into payroll calculation — zero manual re-entry
+- Correct pay rate applied per employee from their canonical employee record
+- Overtime rate applied correctly on qualifying hours
+- Pay period totals display clearly before any approval action
+- Trinity payroll analysis runs before approval — surfaces anomalies, flags discrepancies, advises verification
+- Trinity NEVER auto-approves or auto-processes payroll — advisory and preparation only
+- Human approval mandatory — Verify and Approve, not just Approve
+- 1% human intervention enforced — Trinity prepares, org_owner or authorized approver verifies, system executes
+- Approved payroll creates immutable payroll record locked from editing
+- Employee pay stub generated and accessible to employee after payroll runs
+- Payroll export generates file compatible with external payroll processors if applicable
+- Failed or rejected payroll — clear error state, no partial processing, no silent failure
+- Payroll run history preserved — every run accessible indefinitely
+- Every payroll run creates immutable audit log entry — authorizer ID, timestamp, period, total amount
+
+═══════════════════════════════════════════════════════════════
+PHASE 12 — ZERO TOLERANCE SYSTEM 5: CLIENT BILLING PIPELINE
+═══════════════════════════════════════════════════════════════
+
+Security company revenue. Zero tolerance for errors.
+
+- Billing rates configured per client and stored in canonical billing rate record
+- Billable hours pull from approved timesheets only — unapproved hours never appear on invoices
+- Invoice generates with correct line items — officer hours, dates, rate, calculated total
+- Invoice math verified with exact decimal precision — zero rounding errors on line items or totals
+- White label branding applies to invoice if org has custom branding configured
+- Invoice delivered to client via Resend with correct recipient and org branding
+- Payment portal functional — client can view invoice and pay online
+- Payment received updates invoice status to paid in real time via Stripe webhook
+- Partial payment tracked — remaining balance calculated from payment history not manual entry
+- Overdue invoices flagged — Trinity alerts org_owner via notification panel, Org Operations Briefing Channel, and email
+- Invoice history complete and accessible with full status history
+- Revenue summary available to org_owner — total billed, collected, and outstanding
+
+═══════════════════════════════════════════════════════════════
+PHASE 13 — ZERO TOLERANCE SYSTEM 6: MONEY MOVEMENT AUDIT TRAIL
+═══════════════════════════════════════════════════════════════
+
+Every dollar and every credit that touches this platform has an immutable record.
+
+- Timesheet approval events logged — approver ID, timestamp, period, entry count
+- Payroll run events logged — authorizer ID, timestamp, period, total amount, employee count
+- Invoice generation logged — client ID, invoice ID, amount, date
+- Payment received logged — invoice ID, amount, payment date, method
+- Credit deduction logged — action type, credit amount, timestamp, triggered by which system or user
+- Credit purchase logged — amount, Stripe reference, timestamp
+- Subscription change logged — event type, old tier, new tier, timestamp
+- No audit log record is editable or deletable — append only forever
+- Audit log queryable by date range, event type, and user
+- Full audit log exportable by org_owner at any time
+- Trinity surfaces audit anomalies proactively — unusual patterns flagged to org_owner
+
+═══════════════════════════════════════════════════════════════
+PHASE 14 — ZERO TOLERANCE SYSTEM 7: CREDIT LEDGER
+═══════════════════════════════════════════════════════════════
+
+The credit ledger is a financial record. It must be mathematically perfect and immutable.
+
+LEDGER ARCHITECTURE:
+- Every org has exactly one credit ledger — single canonical source
+- Ledger operates as append-only transaction log — no record ever edited or deleted
+- Every credit event creates a new ledger entry — debit or credit, never a mutable balance update alone
+- Current balance always calculated from ledger transaction history — never stored as mutable number that can drift
+- Balance displayed in UI always reads from calculated ledger total — never from cached or separate field
+- KNOWN BUG: Credits summary and itemized breakdown show different numbers — verify permanently resolved, summary must equal sum of all line items mathematically
+
+CREDIT ALLOCATION EVENTS — all must create ledger entries:
+- Monthly credit reset on billing cycle — log as allocation with period reference
+- Credit purchase — log with Stripe payment reference
+- Plan upgrade bonus credits — log with upgrade reference
+- Manual adjustment by platform_staff — log with staff ID and reason
+
+CREDIT DEDUCTION EVENTS — all must create ledger entries:
+- Smart scheduling execution — correct deduction, log action type
+- Scheduling session fee — correct deduction, log session reference
+- AI contract negotiation — exactly 30 credits per contract, log contract ID
+- Payroll analysis — log credit amount and scope
+- Schedule analysis — log credit amount and scope
+- Notification sends — log per batch
+- Any Trinity autonomous action — log action type and exact credit cost
+- Any future action type — framework supports new deduction types without architectural change
+
+LEDGER INTEGRITY:
+- Balance can never go below zero through deduction — check before every credit action
+- If insufficient credits — action blocked immediately, org notified with current balance and cost of attempted action
+- Race condition prevention — credit check and deduction are atomic transaction — two simultaneous actions cannot both pass a balance check and overdraw
+- Monthly reset never overwrites purchased credits — only resets allocated monthly credits, purchased credits carry forward
+- Purchased credits consumed after monthly allocation — monthly credits spent first
+
+═══════════════════════════════════════════════════════════════
+PHASE 15 — ZERO TOLERANCE SYSTEM 8: SUBSCRIPTION AND STRIPE
+═══════════════════════════════════════════════════════════════
+
+- Every tier defined with exact feature set, credit allocation, seat limit, and price in single canonical location
+- Feature gating enforced server side — never trust client side feature flags alone
+- Org cannot access features above their tier regardless of URL manipulation or API calls
+- Trial period logic — start, end, expiration handling, grace period — all verified
+- Trial expiration handled gracefully — features gated not silently broken
+- Upgrade flow — Stripe charge fires, tier updates immediately on confirmed payment
+- Downgrade flow — excess features gated, data preserved not deleted
+- Cancellation flow — access continues through paid period, then correctly gated
+- Reactivation flow — full access restores immediately on payment confirmation
+
+STRIPE INTEGRATION:
+- Webhook endpoint receiving all required event types — payment_intent.succeeded, payment_intent.failed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed
+- Every incoming webhook verified with Stripe signature before processing
+- Webhook idempotency — same event delivered twice creates zero duplicate records or charges
+- Webhook failure handling — retry logic in place, alert to platform_staff on persistent failure
+- Test mode and production mode keys correctly separated — test keys never in production
+- Every org has exactly one Stripe customer record mapped to their org ID
+- Failed subscription payment — retry logic, grace period, then correct access gating
+- Stripe dashboard amounts must reconcile exactly with CoAIleague credit ledger
+
+═══════════════════════════════════════════════════════════════
+PHASE 16 — ZERO TOLERANCE SYSTEM 9: CREDIT GATING AND ABUSE PREVENTION
+═══════════════════════════════════════════════════════════════
+
+CREDIT GATING:
+- Before executing any credit-costing action — check current balance atomically
+- If balance sufficient — deduct and execute in same atomic transaction
+- If balance insufficient — block immediately, return clear error with current balance and credit cost of attempted action
+- UI reflects insufficient credits state — button disabled, tooltip showing credits needed, direct link to purchase more
+- Trinity never attempts a credit-costing action without verifying balance first
+- Trinity notifies org_owner proactively when balance drops below 20% of allocation
+- Low credit warning — notification panel, Org Operations Briefing Channel, email
+- Critical warning at 10% remaining — escalated priority notification
+- Zero credit state — all credit-gated automations pause, clear path to purchase and resume
+- Credit purchase flow — Stripe payment intent server side, webhook confirmation, ledger entry, balance update, receipt emailed via Resend
+
+SEAT GATING:
+- Seat count tracked accurately — every active employee account is a seat
+- Seat limit enforced per tier — org cannot add employees beyond limit without upgrading
+- Approaching seat limit — Trinity warns org_owner before they hit the cap
+- At seat limit — new invite blocked with upgrade prompt
+- Deactivated accounts do not count toward seat limit
+- Seat count visible to org_owner in billing section at all times
+
+ABUSE AND ATTACK PREVENTION:
+- Rate limit all AI action endpoints — maximum requests per minute per org
+- Maximum credit spend per hour per org — configurable threshold, alert if exceeded
+- Anomalous usage detection — sudden 10x normal credit consumption rate flagged to platform_staff
+- Per-action rate limits — any analysis action cannot be triggered more than defined threshold per hour per org
+- All billing and credit endpoints require authentication and correct org authorization
+- CSRF protection on all billing form submissions
+- Input validation on all credit and billing inputs — no negative purchases, no zero invoices
+- Rate limiting on all endpoints — global, per IP, per org, per user
+- Exponential backoff on repeated failed payment attempts
+- Webhook endpoint rate limited and signature verified — cannot be spammed
+- Duplicate payment detection — same amount, same org, short time window flagged
+
+═══════════════════════════════════════════════════════════════
+PHASE 17 — TRINITY COO SYSTEM VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Trinity is the final coordination gate. All AI actions, automations, workflow executions, analyses, and proactive communications funnel through Trinity.
+
+ACTION HUB INTEGRITY:
+- Zero duplicate action registrations across all files — scan every file for duplicate action strings
+- Every Trinity action registered in exactly one place — the canonical Action Hub
+- circuitBreaker.ts present and functioning in resilience directory
+- All 15 domains healthy — 15/15 is the required baseline
+- App restart logs show zero duplicate WARN messages for any action registration
+- Dev seed triggers automatically after every restart to preserve test data
+
+INTELLIGENCE LAYERS:
+- Semantic awareness — Trinity knows what CoAIleague does across every domain
+- Reasoning layer — Trinity understands context before taking action
+- Orchestration layer — HelpAI supervisor correctly orchestrates ReportBot, ClockBot, MeetingBot, SysOpBot
+- Every bot scoped correctly — cannot execute actions outside its defined domain
+- Action Hub endpoint registry — all endpoints registered, none orphaned, none duplicated
+- 7-step governance pipeline enforced universally — Trigger, Fetch, Validate, Process, Mutate, Confirm, Notify
+- Gemini primary, Claude validator, OpenAI backup — fallback chain functioning
+- Trinity's knowledge of CoAIleague full platform scope complete and current
+
+1% HUMAN INTERVENTION — NON-NEGOTIABLE:
+- Trinity may analyze, recommend, prepare, and stage any action
+- Trinity never executes final action on anything involving money, employee pay, client billing, or legal documents without explicit human verification
+- All recommendations display confidence score and still require Verify and Approve
+- The verify step is never skippable on critical categories regardless of automation settings
+- Verify and Approve button — never just Approve on financial or legal actions
+
+PROACTIVE BEHAVIOR:
+- Payroll analysis — on command or configurable schedule, surfaces anomalies, credit cost logged
+- Schedule analysis — detects conflicts, understaffing, overtime risk, uncovered shifts
+- Compliance scan — expired certifications, licenses, documentation gaps
+- Client billing review — unbilled hours, rate discrepancies, invoice readiness
+- Every autonomous action shows credit cost in the notification it generates
+
+═══════════════════════════════════════════════════════════════
+PHASE 18 — FIVE CHANNEL COMMUNICATION SYSTEM
+═══════════════════════════════════════════════════════════════
+
+Trinity communicates through five unified channels. All five must be verified working.
+
+CHANNEL 1 — NOTIFICATION PANEL:
+- Every notification classified correctly — INFO, ACTION REQUIRED, DOCUMENT, APPROVAL, BILLING, TRINITY ADVISORY
+- Type 1 Informational — display only, no buttons
+- Type 2 Navigational — deep link button to exact record not just page
+- Type 3 Actionable — inline Approve/Deny buttons, API fires on tap, card updates in real time
+- Type 4 Document Pipeline — button opens document pipeline, Resend email fires simultaneously for formal trail
+- Type 5 Credit/Billing — deep link to billing page, current balance shown in notification
+- Type 6 Trinity Advisory — reasoning summary shown, confidence score shown, Verify and Approve required, never skippable on financial or legal actions
+- On denial — Trinity auto-generates internal report with denial reason, routes to supervisor via notification AND email
+- Notification routing — employee sees own, manager sees team, org_owner sees everything
+- Workspace isolation — zero cross-tenant notification bleed
+- Priority queue — ACTION REQUIRED always above INFO regardless of timestamp
+- History preserved and searchable — clear archives not deletes
+- Bulk action — select multiple same-type and act on all at once
+
+CHANNEL 2 — CHAT DOCK:
+- Ask Trinity from notification panel — chat opens with full notification context pre-loaded
+- Trinity pushes proactive messages to chat dock without user initiating — daily briefing, urgent alerts
+- User commands Trinity from chat — run payroll analysis, analyze schedule, show overtime risks — Trinity executes, uses credits, returns results as notification AND chat response AND briefing channel post
+- Document pipeline accessible from chat commands
+- Manager denial workflow completable from chat — deny, add reason, Trinity generates report, routes to supervisor, sends email, logs everything
+- Chat context persistent within session
+
+CHANNEL 3 — ORG OPERATIONS BRIEFING CHANNEL:
+- Dedicated broadcast chatroom — org_owner and manager access only — employees never see this
+- Trinity posts here automatically for — daily org briefing, overtime spikes, payroll anomalies, schedule conflicts, compliance gaps, client billing readiness, system health alerts
+- Post format — Category header, timestamp, finding summary, supporting data, recommended action with deep link, credit cost if triggered by scan, confidence score if applicable
+- Trinity does not flood this channel — consolidate related findings into single briefing posts, batch minor updates into daily summary, only urgent findings get immediate standalone posts
+- Trinity Advisory notifications always post summary to this channel simultaneously
+
+CHANNEL 4 — INTERNAL EMAIL PIPELINE:
+- Trinity uses Resend for all formal document routing
+- Trinity sends email automatically for — HR document routing, contract pipeline, incident reports, payroll approval requests, manager denial workflow with full context, compliance expiration warnings with sufficient lead time, invoice delivery
+- Role-based routing — email goes to correct person based on role and action type
+- Workspace isolation enforced — zero cross-tenant email routing possible
+- All emails include deep link back to relevant record in platform
+- All Trinity emails show org branding if white label configured
+- Sent email logged in platform against relevant record for full audit trail
+- Inbound email addresses — calloffs@, incidents@, docs@, support@ — all routing to Trinity for auto-classification and correct pipeline creation
+- Trinity responds to inbound sender confirming receipt where appropriate
+- Inbound email creates correct record and notifies manager via notification panel and Org Operations Briefing Channel
+
+CHANNEL 5 — DEEP LINKS:
+- Every Trinity communication across all channels includes direct link to exact record
+- Never a generic tab — always the specific record, specific shift, specific invoice, specific incident
+- Deep link routing verified — lands on correct record in correct workspace
+
+═══════════════════════════════════════════════════════════════
+PHASE 19 — FEATURE COMPLETENESS VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Verify complete user journey for every feature — not just that it exists but that it works end to end:
+
+- AI contract negotiation — 30 credits deducted atomically, strategy suggestions generating, contract storage working, client signature flow complete, signed copy routes back, expiration tracking active
+- Branding system — custom color palette propagates platform-wide including Trinity emails and client-facing pages, logo appears everywhere, custom domain CNAME setup documented and working
+- Incident tracking — severity classification routes correctly, photo evidence uploads and attaches to record, resolution workflow tracks, client notification fires, incident report PDF generates, immutable audit trail exists
+- Helpdesk — ticket creation works from mobile, priority routing functions, Trinity AI responses generating not placeholder, ticket assignment to manager or HR works, resolution notifies employee, ticket history accessible to both parties
+- GPS clock in/out — geofence enforces, overnight shifts calculate correctly, duplicate prevention works, manual override logs correctly, timezone handling correct
+- Smart scheduling — AI generates valid non-conflicting schedules, never publishes without manager approval, conflict detection fires
+- Payroll — approved hours to calculation to approval to pay stub — complete unbroken chain
+- Client billing — approved hours to invoice to delivery to payment to recorded revenue — complete unbroken chain
+- Broadcast and pass-down — shift handoff notes delivered to incoming officer
+- Universal Inbox — all notification types consolidated, no modal overflow
+- White label — all client-facing pages show security company branding not CoAIleague branding when configured
+- Multi-site management — different client sites with own geofences, site-specific billing rates, site-specific incident tracking
+- License and certification tracking — expiration dates stored, Trinity flags before expiration, compliance scan surfaces gaps
+- Reporting — org_owner dashboard shows key metrics, managers can export reports, Trinity analytics shows credit usage and action history
+
+═══════════════════════════════════════════════════════════════
+PHASE 20 — MOBILE AND DESKTOP UX VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+- All pages verified on mobile viewport — no overflow, no hidden content, no broken layouts
+- Bottom navigation functioning correctly on all authenticated pages
+- Touch targets minimum 44px on all interactive elements
+- No horizontal scroll on any mobile page
+- Modals and drawers fully visible and dismissible on mobile
+- All forms submittable on mobile keyboard without layout breaking
+- Desktop layout verified — no excessive whitespace, no broken grid
+- All tables responsive or converted to card layout on mobile
+- Trinity FAB visible and functional on mobile — bottom-left, not obscuring navigation
+
+═══════════════════════════════════════════════════════════════
+PHASE 21 — CROSS-DOMAIN INTEGRATION VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Every feature verified individually must now be verified connected as one complete system. The goal is zero duplicate paths, zero domain conflicts, complete end to end coordination.
+
+Verify every cross-domain handoff explicitly:
+
+- Clock in/out → time entry → timesheet generation → manager approval → payroll calculation → org_owner verification → payroll lock → pay stub generation — complete unbroken chain, no manual re-entry at any step
+
+- Schedule published → officer notified → officer clocks in at correct site → time entry tied to shift and site → timesheet reflects correct site → client invoice includes correct hours for that site → client pays → revenue recorded — complete unbroken chain
+
+- Incident reported → severity classification → correct notification routing → manager notified via notification panel AND Org Operations Briefing Channel → incident report PDF generated → formal email via Resend → client notified if applicable → audit trail entry created
+
+- Contract initiated → 30 credits deducted atomically → ledger entry created → strategy suggestions generated by Trinity → human reviews → client signs → signed contract stored → Resend confirmation email → contract expiration tracked
+
+- Helpdesk ticket created by employee → appears in manager notification panel as ACTION REQUIRED → assigned via inline action → Trinity generates AI response → resolution closes ticket → employee notified → ticket archived
+
+- White label active → custom branding applies to all Trinity emails + all client-facing pages + all exported documents + all invoices simultaneously
+
+- License expiration approaching → Trinity compliance scan detects → Trinity alerts via notification panel + Org Operations Briefing Channel + email with sufficient lead time
+
+- Credit balance drops below 20% → Trinity detects → notifies via notification panel + Org Operations Briefing Channel + email → all channels fire simultaneously not independently
+
+- All credit consumption across every feature — scheduling, contracts, helpdesk AI, payroll analysis — flows into single credit ledger with accurate itemized breakdown that mathematically equals the summary total displayed in the header
+
+═══════════════════════════════════════════════════════════════
+PHASE 22 — ENVIRONMENT AND DEPLOYMENT READINESS
+═══════════════════════════════════════════════════════════════
+
+- All environment variables present and correctly named in all environments
+- No development-only values bleeding into production config
+- Domain configuration verified — primary domain and subdomain routing
+- SSL verified and active
+- Database connection pooling configured correctly for production load
+- Error boundaries in place — no unhandled crash can take down full platform
+- Logging sufficient to diagnose production issues without exposing sensitive data
+- Rate limiting active on all public and AI endpoints
+- CSRF protection on all form submissions
+- Input validation on all inputs — no negative values, no injection vectors
+
+═══════════════════════════════════════════════════════════════
+EXECUTION RULES
+═══════════════════════════════════════════════════════════════
+
+1. Read all code completely before touching anything in each phase
+2. Run record counts before and after every database change — document both numbers
+3. Fix one phase completely before moving to the next
+4. If a phase cannot be fully resolved — flag exact file, exact line, exact reason and continue
+5. After every app restart — check domain health score, trigger dev seed, verify zero duplicate WARN messages
+6. Never mark a feature complete based on code review alone — run the actual workflow in Acme sandbox
+7. Document every fix made and every test result
+8. If a fix in one system breaks another — that is a cross-domain dependency bug, fix it before continuing
+9. Never touch Statewide Protective Services data under any circumstance
+10. Repeat every phase until it self-reports zero issues
+
+═══════════════════════════════════════════════════════════════
+SUCCESS CRITERIA — PRODUCTION CERTIFICATION
+═══════════════════════════════════════════════════════════════
+
+ARCHITECTURE:
+- Zero Single Source of Truth violations anywhere on the platform
+- Zero duplicate Trinity action registrations
+- Zero shadow routes or competing endpoints
+- Zero double-mounted services or stacking event listeners
+- 15/15 Trinity domains healthy
+
+DATA INTEGRITY:
+- Credit ledger balance always equals sum of all ledger transactions — never drifts
+- Summary credit display always equals itemized breakdown total — zero discrepancy
+- Zero schema drift between Drizzle and actual database
+- Zero workspace isolation gaps anywhere
+
+ZERO TOLERANCE SYSTEMS:
+- Officer can clock in, work a shift, clock out, have timesheet generated, have it approved, and see pay calculated correctly — complete unbroken chain
+- Manager can create schedule, assign officers, publish, have officers notified, verify clock records against schedule
+- Org owner can review payroll, verify Trinity analysis, approve run, have pay stubs generated
+- Client invoice generates from approved hours, delivers to client, client pays, payment recorded
+- Every financial action has immutable audit log entry
+
+BILLING AND CREDITS:
+- No org can use credit-gated features without sufficient balance — atomic check enforced
+- No two simultaneous actions can overdraw the same credit balance — race condition prevented
+- Stripe webhooks processing correctly with idempotency for all event types
+- Zero cross-org billing data access possible under any circumstance
+- All billing endpoints rate limited and protected against abuse
+
+TRINITY:
+- Trinity operates through registered Action Hub endpoints only — no exceptions
+- 1% human intervention enforced on all financial and legal actions — never skippable
+- All five communication channels operational — notification, chat dock, briefing channel, email, deep links
+- Every notification either informs, navigates, or enables action — zero dead ends
+- Trinity is the final coordination gate for all platform intelligence
+
+PLATFORM:
+- Zero hardcoded values outside token system
+- Zero render duplications
+- Zero WebSocket memory leaks
+- All role naming correct — org_owner, manager, org_admin, employee, platform_staff
+- Mobile and desktop both verified for all critical workflows
+- SEO meta tags, sitemap, robots.txt ready for Google indexing
+
+FINAL STANDARD:
+Statewide Protective Services can go live on this platform and trust that every officer gets paid correctly, every client gets billed correctly, every credit is accounted for accurately, and Trinity is running the organization proactively — on day one.
+
+Begin Phase 0 now. Report findings before making any changes.

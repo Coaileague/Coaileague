@@ -15,9 +15,13 @@ import {
   notifications, 
   platformUpdates, 
   userPlatformUpdateViews,
-  maintenanceAlerts
+  maintenanceAlerts,
+  workspaces,
 } from '@shared/schema';
 import { eq, and, sql, notInArray, gte, or, isNull, ne } from 'drizzle-orm';
+import { createLogger } from '../lib/logger';
+const log = createLogger('notificationStateManager');
+
 
 export interface UnreadCounts {
   notifications: number;
@@ -46,13 +50,33 @@ class NotificationStateManager {
   
   setBroadcastFunction(fn: BroadcastFunction) {
     this.broadcastFn = fn;
-    console.log('[NotificationStateManager] Broadcast function registered');
+    log.info('[NotificationStateManager] Broadcast function registered');
   }
   
   async getUnreadCounts(userId: string, workspaceId?: string, workspaceRole: string = 'staff'): Promise<UnreadCounts> {
     try {
+      // Determine the earliest date for platform updates to count.
+      // New users/orgs should only see platform updates created AFTER their
+      // workspace was created — not decades of backlog. This prevents the
+      // "thousands of notifications" flood on first login.
+      let platformUpdatesFrom: Date | undefined;
+      if (workspaceId) {
+        try {
+          const [ws] = await db
+            .select({ createdAt: workspaces.createdAt })
+            .from(workspaces)
+            .where(eq(workspaces.id, workspaceId))
+            .limit(1);
+          if (ws?.createdAt) {
+            platformUpdatesFrom = new Date(ws.createdAt);
+          }
+        } catch {
+          // Non-fatal — fall back to the standard 30-day window
+        }
+      }
+
       const notificationCount = await this.getUnreadNotificationCount(userId, workspaceId);
-      const platformUpdateCount = await this.getUnviewedPlatformUpdateCount(userId, workspaceRole);
+      const platformUpdateCount = await this.getUnviewedPlatformUpdateCount(userId, workspaceRole, platformUpdatesFrom);
       const alertCount = await this.getUnacknowledgedAlertCount(workspaceId);
       
       return {
@@ -63,7 +87,7 @@ class NotificationStateManager {
         lastUpdated: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('[NotificationStateManager] Error getting counts:', error);
+      log.error('[NotificationStateManager] Error getting counts:', error);
       return {
         notifications: 0,
         platformUpdates: 0,
@@ -97,7 +121,7 @@ class NotificationStateManager {
       
       return result?.count || 0;
     } catch (error) {
-      console.error('[NotificationStateManager] Error counting maintenance alerts:', error);
+      log.error('[NotificationStateManager] Error counting maintenance alerts:', error);
       return 0;
     }
   }
@@ -125,16 +149,27 @@ class NotificationStateManager {
       
       return result?.count || 0;
     } catch (error) {
-      console.error('[NotificationStateManager] Error counting notifications:', error);
+      log.error('[NotificationStateManager] Error counting notifications:', error);
       return 0;
     }
   }
   
-  private async getUnviewedPlatformUpdateCount(userId: string, workspaceRole: string): Promise<number> {
+  private async getUnviewedPlatformUpdateCount(
+    userId: string,
+    workspaceRole: string,
+    workspaceCreatedAt?: Date
+  ): Promise<number> {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
+      // Use the LATER of (workspace creation date) or (30 days ago).
+      // This means a brand-new workspace user only sees updates published
+      // AFTER their org was created, not 30 days of backlog they weren't part of.
+      const countFrom = workspaceCreatedAt && workspaceCreatedAt > thirtyDaysAgo
+        ? workspaceCreatedAt
+        : thirtyDaysAgo;
+
       const viewedUpdateIds = await db
         .select({ updateId: userPlatformUpdateViews.updateId })
         .from(userPlatformUpdateViews)
@@ -143,7 +178,7 @@ class NotificationStateManager {
       const viewedIds = viewedUpdateIds.map(v => v.updateId);
       
       const conditions = [
-        gte(platformUpdates.date, thirtyDaysAgo),
+        gte(platformUpdates.date, countFrom),
       ];
       
       if (viewedIds.length > 0) {
@@ -157,7 +192,7 @@ class NotificationStateManager {
       
       return result?.count || 0;
     } catch (error) {
-      console.error('[NotificationStateManager] Error counting platform updates:', error);
+      log.error('[NotificationStateManager] Error counting platform updates:', error);
       return 0;
     }
   }
@@ -186,7 +221,7 @@ class NotificationStateManager {
       
       return { success: true, newCounts };
     } catch (error) {
-      console.error('[NotificationStateManager] Error marking notification as read:', error);
+      log.error('[NotificationStateManager] Error marking notification as read:', error);
       return { 
         success: false, 
         newCounts: await this.getUnreadCounts(userId, workspaceId) 
@@ -216,7 +251,7 @@ class NotificationStateManager {
       
       return { success: true, newCounts };
     } catch (error) {
-      console.error('[NotificationStateManager] Error marking update as viewed:', error);
+      log.error('[NotificationStateManager] Error marking update as viewed:', error);
       return { 
         success: false, 
         newCounts: await this.getUnreadCounts(userId, workspaceId) 
@@ -263,7 +298,7 @@ class NotificationStateManager {
         newCounts 
       };
     } catch (error) {
-      console.error('[NotificationStateManager] Error clearing all notifications:', error);
+      log.error('[NotificationStateManager] Error clearing all notifications:', error);
       return { 
         success: false, 
         markedCount: 0, 
@@ -316,7 +351,7 @@ class NotificationStateManager {
         newCounts 
       };
     } catch (error) {
-      console.error('[NotificationStateManager] Error clearing all platform updates:', error);
+      log.error('[NotificationStateManager] Error clearing all platform updates:', error);
       return { 
         success: false, 
         markedCount: 0, 
@@ -338,7 +373,7 @@ class NotificationStateManager {
       
       this.broadcastCountUpdate(userId, workspaceId || 'global', newCounts, 'clear_all');
       
-      console.log(`[NotificationStateManager] Clear all for user ${userId}: ${notifResult.markedCount} notifications, ${updateResult.markedCount} updates`);
+      log.info(`[NotificationStateManager] Clear all for user ${userId}: ${notifResult.markedCount} notifications, ${updateResult.markedCount} updates`);
       
       return {
         success: true,
@@ -347,7 +382,7 @@ class NotificationStateManager {
         newCounts,
       };
     } catch (error) {
-      console.error('[NotificationStateManager] Error in clearAll:', error);
+      log.error('[NotificationStateManager] Error in clearAll:', error);
       return {
         success: false,
         notificationsCleared: 0,
@@ -369,17 +404,17 @@ class NotificationStateManager {
       // to avoid duplicate WebSocket events
       this.broadcastCountUpdate(userId, workspaceId, newCounts, 'new_notification');
       
-      console.log(`[NotificationStateManager] New notification for user ${userId}, total: ${newCounts.total}`);
+      log.info(`[NotificationStateManager] New notification for user ${userId}, total: ${newCounts.total}`);
     } catch (error) {
-      console.error('[NotificationStateManager] Error broadcasting new notification:', error);
+      log.error('[NotificationStateManager] Error broadcasting new notification:', error);
     }
   }
   
   async onNewPlatformUpdate(updateId: string): Promise<void> {
     try {
-      console.log(`[NotificationStateManager] New platform update: ${updateId}`);
+      log.info(`[NotificationStateManager] New platform update: ${updateId}`);
     } catch (error) {
-      console.error('[NotificationStateManager] Error handling new platform update:', error);
+      log.error('[NotificationStateManager] Error handling new platform update:', error);
     }
   }
   
@@ -390,7 +425,7 @@ class NotificationStateManager {
     source: 'read' | 'clear_all' | 'new_notification' | 'new_update' | 'sync'
   ): void {
     if (!this.broadcastFn) {
-      console.warn('[NotificationStateManager] No broadcast function registered');
+      log.warn('[NotificationStateManager] No broadcast function registered');
       return;
     }
     

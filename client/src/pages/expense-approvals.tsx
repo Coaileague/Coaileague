@@ -1,17 +1,18 @@
 import { useState, useCallback } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, DollarSign, Calendar, MapPin, FileText, Receipt, Paperclip, ExternalLink, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, DollarSign, Calendar, MapPin, FileText, Receipt, Paperclip, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub/CanvasHubRegistry";
 import { SwipeableApprovalCard } from "@/components/ui/swipeable-approval-card";
 
 export default function ExpenseApprovalsPage() {
@@ -35,7 +36,7 @@ export default function ExpenseApprovalsPage() {
     queryKey: ['/api/expenses', selectedExpenseId],
     queryFn: async () => {
       if (!selectedExpenseId) return null;
-      const response = await fetch(`/api/expenses/${selectedExpenseId}`, {
+      const response = await secureFetch(`/api/expenses/${selectedExpenseId}`, {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch expense details');
@@ -46,7 +47,7 @@ export default function ExpenseApprovalsPage() {
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
-      return apiRequest(`/api/expenses/${id}/approve`, 'PATCH', { reviewNotes: notes });
+      return apiRequest('PATCH', `/api/expenses/${id}/approve`, { reviewNotes: notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -67,7 +68,7 @@ export default function ExpenseApprovalsPage() {
 
   const rejectMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
-      return apiRequest(`/api/expenses/${id}/reject`, 'PATCH', { reviewNotes: notes });
+      return apiRequest('PATCH', `/api/expenses/${id}/reject`, { reviewNotes: notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -88,7 +89,7 @@ export default function ExpenseApprovalsPage() {
 
   const markPaidMutation = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
-      return apiRequest(`/api/expenses/${id}/mark-paid`, 'PATCH', { paymentMethod: 'direct_deposit' });
+      return apiRequest('PATCH', `/api/expenses/${id}/mark-paid`, { paymentMethod: 'direct_deposit' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -195,47 +196,31 @@ export default function ExpenseApprovalsPage() {
   );
 
   const pageContent = (
-    <div className="container mx-auto p-4 sm:p-6 max-w-7xl" data-testid="page-expense-approvals">
-      <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="heading-expense-approvals">Expense Approvals</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Review and approve expense reimbursements</p>
-        </div>
-        {isMobile && (
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={handleRefresh}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+    <div className="max-w-7xl" data-testid="page-expense-approvals">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-6">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+          <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Pending Review</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" data-testid="count-pending">{pendingExpenses.length}</div>
+          <CardContent className="p-2 sm:p-4 pt-0 sm:pt-0">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold" data-testid="count-pending">{pendingExpenses.length}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Approved (Unpaid)</CardTitle>
+          <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Approved (Unpaid)</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" data-testid="count-approved">{approvedExpenses.length}</div>
+          <CardContent className="p-2 sm:p-4 pt-0 sm:pt-0">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold" data-testid="count-approved">{approvedExpenses.length}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Reimbursed</CardTitle>
+          <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Total Reimbursed</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600" data-testid="count-reimbursed">
+          <CardContent className="p-2 sm:p-4 pt-0 sm:pt-0">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400 truncate" data-testid="count-reimbursed">
               ${reimbursedExpenses.reduce((sum: number, e: any) => sum + parseFloat(e.amount), 0).toFixed(2)}
             </div>
           </CardContent>
@@ -243,11 +228,13 @@ export default function ExpenseApprovalsPage() {
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
-        <TabsList>
-          <TabsTrigger value="pending" data-testid="tab-pending">Pending ({pendingExpenses.length})</TabsTrigger>
-          <TabsTrigger value="approved" data-testid="tab-approved">Approved ({approvedExpenses.length})</TabsTrigger>
-          <TabsTrigger value="reimbursed" data-testid="tab-reimbursed">Reimbursed</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <TabsList className="inline-flex w-full min-w-max sm:w-auto">
+            <TabsTrigger value="pending" className="text-[11px] sm:text-sm whitespace-nowrap" data-testid="tab-pending">Pending ({pendingExpenses.length})</TabsTrigger>
+            <TabsTrigger value="approved" className="text-[11px] sm:text-sm whitespace-nowrap" data-testid="tab-approved">Approved ({approvedExpenses.length})</TabsTrigger>
+            <TabsTrigger value="reimbursed" className="text-[11px] sm:text-sm whitespace-nowrap" data-testid="tab-reimbursed">Reimbursed</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="pending" className="space-y-3 sm:space-y-4">
           {pendingExpenses.length === 0 ? (
@@ -275,7 +262,7 @@ export default function ExpenseApprovalsPage() {
             pendingExpenses.map((expense: any) => (
               <Card key={expense.id} data-testid={`card-expense-${expense.id}`}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <CardTitle className="text-lg">{expense.description}</CardTitle>
                       <CardDescription className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
@@ -336,7 +323,7 @@ export default function ExpenseApprovalsPage() {
           {approvedExpenses.map((expense: any) => (
             <Card key={expense.id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
                     <CardTitle className="text-lg">{expense.description}</CardTitle>
                     <CardDescription>{format(new Date(expense.expenseDate), "MMM dd, yyyy")}</CardDescription>
@@ -368,7 +355,7 @@ export default function ExpenseApprovalsPage() {
           {reimbursedExpenses.map((expense: any) => (
             <Card key={expense.id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div>
                     <CardTitle className="text-lg">{expense.description}</CardTitle>
                     <CardDescription>{format(new Date(expense.expenseDate), "MMM dd, yyyy")}</CardDescription>
@@ -384,21 +371,21 @@ export default function ExpenseApprovalsPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={reviewDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent size="md" data-testid="dialog-review">
-          <DialogHeader>
-            <DialogTitle>
+      <UniversalModal open={reviewDialogOpen} onOpenChange={handleCloseDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-review">
+          <UniversalModalHeader>
+            <UniversalModalTitle>
               {reviewAction === 'approve' ? 'Approve' : 'Reject'} Expense
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               {selectedExpense && (
                 <div className="mt-2">
                   <div className="font-medium">{selectedExpense.description}</div>
                   <div className="text-2xl font-bold mt-1">${parseFloat(selectedExpense.amount).toFixed(2)}</div>
                 </div>
               )}
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             {expenseDetails?.receipts && expenseDetails.receipts.length > 0 && (
               <div>
@@ -410,7 +397,7 @@ export default function ExpenseApprovalsPage() {
                   {expenseDetails.receipts.map((receipt: any, index: number) => (
                     <div
                       key={receipt.id}
-                      className="flex items-center justify-between p-2 border rounded hover-elevate"
+                      className="flex items-center justify-between gap-2 p-2 border rounded hover-elevate"
                       data-testid={`receipt-${index}`}
                     >
                       <div className="flex items-center gap-2">
@@ -464,21 +451,23 @@ export default function ExpenseApprovalsPage() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <MobilePageWrapper
-        onRefresh={handleRefresh}
-        enablePullToRefresh
-      >
-        {pageContent}
-      </MobilePageWrapper>
-    );
-  }
+  const pageConfig: CanvasPageConfig = {
+    id: "expense-approvals",
+    title: "Expense Approvals",
+    subtitle: "Review and approve expense reimbursements",
+    category: "operations",
+    enablePullToRefresh: true,
+    onRefresh: handleRefresh,
+  };
 
-  return pageContent;
+  return (
+    <CanvasHubPage config={pageConfig}>
+      {pageContent}
+    </CanvasHubPage>
+  );
 }

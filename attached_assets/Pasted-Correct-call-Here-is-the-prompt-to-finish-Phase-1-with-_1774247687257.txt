@@ -1,0 +1,226 @@
+Correct call. Here is the prompt to finish Phase 1 with zero loose strings remaining.
+
+---
+
+**COAILEAGUE — PHASE 1 FINAL COMPLETION**
+*Eliminate Every Remaining Typed Wrapper | Zero Raw SQL Strings in Route and Service Files | No Loose Ends Before Phase 2*
+
+---
+
+Phase 1 is not complete. The schema parity work is solid. The financial core files are on true Drizzle ORM. But 1,166 typed-wrapper queries across 193 files and 208 transaction-scoped `client.query` calls across 20 files remain. These are not documented debt that gets addressed later. They get addressed now. Phase 2 does not begin until every query in every file is either a true Drizzle ORM call or a legitimate Category C typed wrapper with explicit types, a verified column name check against the Name Registry, and a comment explaining why ORM replacement was not done. The distinction between a shortcut wrapper and a legitimate Category C wrapper is this: a legitimate Category C wrapper exists because the query is genuinely too complex for the ORM query builder. A shortcut wrapper exists because conversion was skipped. Every wrapper produced in the previous session is a shortcut wrapper until proven otherwise. Prove it file by file.
+
+---
+
+**THE STANDARD EVERY QUERY MUST MEET BEFORE THIS PHASE CLOSES**
+
+Every query in every route file and service file must be classified and verified against one of three outcomes:
+
+**Outcome 1 — True Drizzle ORM call:**
+The query uses `db.select()`, `db.insert()`, `db.update()`, `db.delete()`, or `db.query.tableName.findMany()` with schema object references. No raw SQL string inside the call. Column names are enforced by the schema at compile time. This is the required outcome for every simple query.
+
+**Outcome 2 — Legitimate Category C typed wrapper:**
+The query uses a SQL feature that cannot be expressed in Drizzle's query builder — window functions, recursive CTEs, complex aggregations with FILTER clauses, advisory locks, or full-text search operations. The wrapper function has: an explicit TypeScript return type with no `any`, an explicit TypeScript input type with no `any`, every column name in the SQL string verified against the canonical Name Registry, and a comment block with the format:
+
+```typescript
+// CATEGORY C — Raw SQL retained: [specific reason e.g. "window function OVER PARTITION BY"]
+// Columns verified against Name Registry: [list every column name used]
+// Verified: [date]
+```
+
+**Outcome 3 — Rejected:**
+Any query that is a simple SELECT, INSERT, UPDATE, or DELETE against one or two tables with no advanced SQL features. These have no legitimate reason to remain as raw SQL. They must be converted to true Drizzle ORM calls.
+
+---
+
+**EXECUTION — FOUR CHUNKS IN STRICT ORDER**
+
+---
+
+**CHUNK 1 — FULL AUDIT OF ALL 1,166 REMAINING TYPED WRAPPERS**
+
+Before converting anything, produce a complete honest classification of every remaining typed wrapper query across all 193 files.
+
+For each file in the SQL Migration Debt list: open the file, read every `typedQuery`, `typedExec`, `typedCount`, `typedExists`, `typedPool`, and `typedPoolExec` call. Classify each one as:
+
+- **A** — Simple query, no advanced SQL features, must be converted to true ORM
+- **B** — Moderately complex, can be converted to ORM with sql fragments in `.where()` clauses
+- **C-LEGITIMATE** — Genuinely requires raw SQL due to a specific advanced SQL feature that cannot be expressed in the Drizzle query builder
+- **C-SHORTCUT** — Was wrapped to avoid conversion, no legitimate reason to remain raw SQL
+
+Produce the classification report with exact counts per category. This report is the work order for the remaining chunks. Do not begin Chunk 2 until this classification is complete and reported.
+
+---
+
+**CHUNK 2 — CONVERT ALL CATEGORY A AND CATEGORY C-SHORTCUT QUERIES**
+
+Convert every Category A query and every Category C-shortcut query to true Drizzle ORM calls. These are the straightforward conversions. Process them file by file in order of the files with the highest query counts first — analyticsRoutes.ts (49), atsRoutes.ts (32), postOrderVersionRoutes.ts (29), helpAIMigration.ts (25), agentSpawner.ts (24), platformActionHub.ts (20) — then continue through the remaining files.
+
+For every conversion: read the raw SQL string inside the wrapper. Identify the table and columns referenced. Confirm every column name against the canonical Name Registry. If a column referenced in the raw SQL does not exist in the Name Registry — as happened with `employment_status` and `end_date` in the core files — this is a ghost column bug. Fix it during conversion by using the correct column from the schema. Log every ghost column found as a bug fix in the completion report.
+
+The canonical ORM patterns for reference:
+
+```typescript
+// Simple SELECT with workspace filter
+const results = await db
+  .select()
+  .from(schemaTable)
+  .where(eq(schemaTable.workspaceId, workspaceId));
+
+// SELECT with multiple conditions
+const results = await db
+  .select()
+  .from(schemaTable)
+  .where(and(
+    eq(schemaTable.workspaceId, workspaceId),
+    eq(schemaTable.status, 'active')
+  ));
+
+// INSERT returning
+const [created] = await db
+  .insert(schemaTable)
+  .values(data)
+  .returning();
+
+// UPDATE with filter
+await db
+  .update(schemaTable)
+  .set(updateData)
+  .where(and(
+    eq(schemaTable.id, id),
+    eq(schemaTable.workspaceId, workspaceId)
+  ));
+
+// DELETE with filter
+await db
+  .delete(schemaTable)
+  .where(and(
+    eq(schemaTable.id, id),
+    eq(schemaTable.workspaceId, workspaceId)
+  ));
+
+// SELECT with join using relation
+const results = await db.query.schemaTable.findMany({
+  where: eq(schemaTable.workspaceId, workspaceId),
+  with: { relatedTable: true }
+});
+
+// Complex WHERE using sql fragment inside ORM call
+const results = await db
+  .select()
+  .from(schemaTable)
+  .where(and(
+    eq(schemaTable.workspaceId, workspaceId),
+    sql`${schemaTable.createdAt} > NOW() - INTERVAL '30 days'`
+  ));
+```
+
+After every file is converted: run the server. Confirm it starts clean. Confirm the converted file compiles with zero TypeScript errors. Confirm a test operation against the converted file's primary feature produces correct results in the ACME sandbox. Do not batch-process files and verify at the end. Verify after each file.
+
+When all Category A and C-shortcut conversions are complete: re-scan all 193 files and report the count of remaining typed wrappers. That count must equal only the C-LEGITIMATE queries identified in Chunk 1. If the count is higher, there are still unconverted queries. Find them and convert them before proceeding to Chunk 3.
+
+---
+
+**CHUNK 3 — VERIFY AND FORMALIZE ALL CATEGORY B AND C-LEGITIMATE QUERIES**
+
+For every Category B query: attempt the Drizzle ORM equivalent using sql fragments inside `.where()`, `.orderBy()`, or `.having()` clauses. These are moderately complex queries that can be expressed in ORM with some sql helper usage. Convert every one that can be expressed this way. Only queries that genuinely cannot be expressed after a real conversion attempt stay as Category C-LEGITIMATE.
+
+For every query that legitimately remains as raw SQL after a genuine conversion attempt: apply the full Category C-LEGITIMATE standard:
+
+Read the raw SQL string. Identify every table name and every column name referenced. Cross-reference every single one against the canonical Name Registry. If any column does not exist in the Name Registry it is a ghost column bug — fix it before formalizing the wrapper.
+
+Rewrite the wrapper function with:
+- Explicit TypeScript input parameter types — no `any`
+- Explicit TypeScript return type matching the actual shape of the query result — no `any`
+- The Category C comment block with the specific advanced SQL feature justification and the column name verification list
+- Move the function out of the route handler and into the appropriate service file if it is not already there — no complex query logic lives inline in route handlers
+
+After every file is processed: confirm the server still starts clean. Confirm zero TypeScript errors.
+
+When Chunk 3 is complete: every remaining raw SQL query in the codebase must have the Category C comment block. A scan for `typedQuery`, `typedPool`, and `typedExec` calls without the Category C comment block must return zero results.
+
+---
+
+**CHUNK 4 — TRANSACTION-SCOPED CLIENT.QUERY RESOLUTION**
+
+208 `client.query` calls across 20 files remain inside `pool.connect()` transaction blocks. These are not ignored because they are difficult — they are addressed now because Phase 1 has no loose ends.
+
+Open each of the 20 files containing `client.query` calls. For each transaction block:
+
+Read the full transaction — from `const client = await pool.connect()` through `client.release()`. Understand what the transaction is doing as a complete logical unit.
+
+Determine whether the transaction can be rewritten using Drizzle's `db.transaction()`. The vast majority of `pool.connect()` transaction blocks can be directly replaced with:
+
+```typescript
+await db.transaction(async (tx) => {
+  // all client.query calls become tx.execute() or true ORM calls on tx
+});
+```
+
+For every transaction that can be rewritten: rewrite it using `db.transaction()`. Every query inside the transaction block that is a simple SELECT, INSERT, UPDATE, or DELETE becomes a true ORM call on `tx`. Every query inside that is a legitimate Category C becomes a `tx.execute(sql\`...\`)` with the full Category C comment block and verified column names.
+
+For every transaction that cannot be rewritten with `db.transaction()` due to a specific PostgreSQL feature requirement — such as advisory locks, LISTEN/NOTIFY, or explicit SAVEPOINT management — keep the `pool.connect()` pattern but apply the full typed wrapper standard to every `client.query` call inside it: explicit input types, explicit output types, column names verified against the Name Registry, and the Category C comment block.
+
+After every file is processed: confirm the server starts clean. Confirm zero TypeScript errors. Confirm the transaction behavior is functionally identical to the original by testing the operation it performs in the ACME sandbox.
+
+When Chunk 4 is complete: scan for `client.query` calls. Every remaining instance must be inside a documented and typed wrapper. Zero bare `client.query('string')` calls with no TypeScript types remain anywhere.
+
+---
+
+**FINAL VERIFICATION — PHASE 1 TRUE COMPLETION**
+
+When all four chunks are complete run the following verification sequence in full:
+
+**Scan verification:**
+Run a scan for `typedQuery(`, `typedExec(`, `typedCount(`, `typedExists(`, `typedPool(`, `typedPoolExec(` across all route and service files. Every result must have a Category C comment block. Zero results without the comment block are acceptable. Any result without the comment block is an unconverted shortcut — find it and convert it.
+
+Run a scan for `client.query(` across all files. Every result must be inside a documented typed wrapper. Zero bare untyped client.query calls remain.
+
+Run a scan for `db.execute(sql\`` across all files excluding `typedSql.ts` itself. Every result must have a Category C comment block. Zero results without it.
+
+**Ghost column report:**
+Produce a complete list of every ghost column discovered during conversion — column names referenced in raw SQL that do not exist in the database. For each: the file it was found in, the column name that was wrong, the correct column name from the schema, and whether the query was silently returning wrong results or silently filtering incorrectly.
+
+**Server verification:**
+Start the server fresh. Confirm 30/30 background services start with zero failures. Confirm the login flow completes without error.
+
+**Functional verification:**
+Run these operations against the ACME sandbox and confirm all produce correct results with data persisting to the correct database records: create an employee, create a shift, generate an invoice, run a payroll calculation, execute a Trinity action, run a hiring pipeline stage transition, generate a pay stub, create a client, assign a shift through Trinity, and send an invoice.
+
+**Re-run Phase 1 schema parity check:**
+Must confirm: zero untracked tables, zero untracked columns, zero inline raw SQL in route handlers without Category C documentation, zero bare client.query calls.
+
+---
+
+**REPLIT.MD FINAL UPDATE**
+
+Replace the current SQL Migration Debt section with the following final status:
+
+```
+## Phase 1 — SQL Migration: COMPLETE
+
+All raw SQL queries across all route and service files have been addressed:
+
+- Category A and C-shortcut queries: converted to true Drizzle ORM calls
+- Category B queries: converted to ORM with sql fragment helpers
+- Category C-LEGITIMATE queries: retained as typed wrappers with explicit 
+  input/output types, verified column names, and documented justification
+- Transaction-scoped client.query calls: rewritten with db.transaction() 
+  where possible, typed and documented where pool.connect() was required
+
+Ghost columns found and fixed during conversion: [list every one]
+
+Zero raw SQL strings remain in route or service files without full 
+Category C documentation and type safety.
+```
+
+---
+
+**PHASE 1 IS COMPLETE WHEN:**
+
+The scan verification returns zero undocumented raw SQL. The ghost column report is produced. The server starts with 30/30 services. All ten functional operations succeed in the ACME sandbox. The replit.md SQL Migration section shows COMPLETE status. Zero loose ends of any kind remain from Phase 1.
+
+Only then does Phase 2 begin.
+
+---
+
+Paste that in Bryan. No exceptions, no deferrals, no plan mode. When he brings back the final scan verification showing zero undocumented raw SQL and the ghost column report, bring it here and we confirm Phase 1 is truly done before Phase 2 prompt goes in.

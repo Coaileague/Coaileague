@@ -7,14 +7,16 @@ import {
   pulseSurveyResponses,
   employerRatings,
   anonymousSuggestions,
-  employeeRecognition,
   employeeHealthScores,
   employerBenchmarkScores,
   employees,
   workspaces,
   engagementScoreHistory
-} from "@shared/schema";
+} from '@shared/schema';
 import { eq, and, gte, lte, desc, sql, avg } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('engagementCalculations');
+
 
 interface HealthScoreCalculationInput {
   workspaceId: string;
@@ -160,7 +162,7 @@ export async function calculateEmployeeHealthScore(input: HealthScoreCalculation
     
     return healthScore;
   } catch (error) {
-    console.error('[EngagementOS™] Error calculating employee health score:', error);
+    log.error('[EngagementOS™] Error calculating employee health score:', error);
     throw error;
   }
 }
@@ -322,7 +324,7 @@ export async function calculateEmployerBenchmark(input: BenchmarkCalculationInpu
       .where(and(...whereConditions));
     
     if (ratings.length === 0) {
-      console.log(`[EngagementOS™] No ratings found for ${benchmarkType} ${targetId} in period`);
+      log.info(`[EngagementOS™] No ratings found for ${benchmarkType} ${targetId} in period`);
       return null;
     }
     
@@ -429,7 +431,7 @@ export async function calculateEmployerBenchmark(input: BenchmarkCalculationInpu
     
     return benchmark;
   } catch (error) {
-    console.error('[EngagementOS™] Error calculating employer benchmark:', error);
+    log.error('[EngagementOS™] Error calculating employer benchmark:', error);
     throw error;
   }
 }
@@ -467,7 +469,7 @@ async function getPreviousBenchmark(
     
     return previous || null;
   } catch (error) {
-    console.error('[EngagementOS™] Error getting previous benchmark:', error);
+    log.error('[EngagementOS™] Error getting previous benchmark:', error);
     return null;
   }
 }
@@ -539,7 +541,7 @@ async function calculateIndustryBenchmark(workspaceId: string): Promise<{
       totalComparisons: industryScores.length,
     };
   } catch (error) {
-    console.error('[EngagementOS™] Error calculating industry benchmark:', error);
+    log.error('[EngagementOS™] Error calculating industry benchmark:', error);
     return { averageScore: 3.5, percentileRank: 50, totalComparisons: 0 };
   }
 }
@@ -595,9 +597,9 @@ export async function saveEngagementScoreHistory(
       scoreDelta: scoreDelta?.toFixed(2),
     });
     
-    console.log(`[EngagementOS™] Saved engagement score history: ${overallScore.toFixed(2)} (percentile: ${percentileRank})`);
+    log.info(`[EngagementOS™] Saved engagement score history: ${overallScore.toFixed(2)} (percentile: ${percentileRank})`);
   } catch (error) {
-    console.error('[EngagementOS™] Error saving engagement score history:', error);
+    log.error('[EngagementOS™] Error saving engagement score history:', error);
   }
 }
 
@@ -651,7 +653,7 @@ export async function getEngagementTrend(
     
     return { scores, trend, averageScore, industryPercentile };
   } catch (error) {
-    console.error('[EngagementOS™] Error getting engagement trend:', error);
+    log.error('[EngagementOS™] Error getting engagement trend:', error);
     return { scores: [], trend: 'stable', averageScore: 0, industryPercentile: 50 };
   }
 }
@@ -706,10 +708,10 @@ export async function checkEngagementAlertsForWorkspace(workspaceId: string): Pr
     
     // Log alerts
     if (criticalAlerts.length > 0) {
-      console.log(`[EngagementOS] ${criticalAlerts.length} CRITICAL engagement alerts for workspace ${workspaceId}`);
+      log.info(`[EngagementOS] ${criticalAlerts.length} CRITICAL engagement alerts for workspace ${workspaceId}`);
     }
     if (warningAlerts.length > 0) {
-      console.log(`[EngagementOS] ${warningAlerts.length} WARNING engagement alerts for workspace ${workspaceId}`);
+      log.info(`[EngagementOS] ${warningAlerts.length} WARNING engagement alerts for workspace ${workspaceId}`);
     }
     
     return {
@@ -718,7 +720,7 @@ export async function checkEngagementAlertsForWorkspace(workspaceId: string): Pr
       warningAlerts,
     };
   } catch (error) {
-    console.error('[EngagementOS] Error checking engagement alerts:', error);
+    log.error('[EngagementOS] Error checking engagement alerts:', error);
     return { alertsTriggered: 0, criticalAlerts: [], warningAlerts: [] };
   }
 }
@@ -748,7 +750,7 @@ export async function batchCalculateHealthScores(workspaceId: string, periodStar
       .from(employees)
       .where(eq(employees.workspaceId, workspaceId));
     
-    console.log(`[EngagementOS™] Calculating health scores for ${allEmployees.length} employees`);
+    log.info(`[EngagementOS™] Calculating health scores for ${allEmployees.length} employees`);
     
     const results = [];
     for (const employee of allEmployees) {
@@ -761,14 +763,14 @@ export async function batchCalculateHealthScores(workspaceId: string, periodStar
         });
         results.push(healthScore);
       } catch (error) {
-        console.error(`[EngagementOS™] Failed to calculate health score for employee ${employee.id}:`, error);
+        log.error(`[EngagementOS™] Failed to calculate health score for employee ${employee.id}:`, error);
       }
     }
     
-    console.log(`[EngagementOS™] Successfully calculated ${results.length} health scores`);
+    log.info(`[EngagementOS™] Successfully calculated ${results.length} health scores`);
     return results;
   } catch (error) {
-    console.error('[EngagementOS™] Error in batch health score calculation:', error);
+    log.error('[EngagementOS™] Error in batch health score calculation:', error);
     throw error;
   }
 }

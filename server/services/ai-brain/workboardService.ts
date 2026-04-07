@@ -10,13 +10,12 @@
 
 import crypto from 'crypto';
 import { db } from '../../db';
+import { createLogger } from '../../lib/logger';
 import { 
-  aiWorkboardTasks, 
   InsertAiWorkboardTask, 
   AiWorkboardTask,
-  trinityCredits,
-  trinityCreditTransactions 
 } from '@shared/schema';
+import { creditManager } from '../../services/billing/creditManager';
 import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { publishPlatformUpdate } from '../platformEventBus';
@@ -52,12 +51,14 @@ export interface WorkboardTaskResult {
 
 export type TaskStatus = 'pending' | 'analyzing' | 'assigned' | 'in_progress' | 'awaiting_approval' | 'completed' | 'failed' | 'cancelled' | 'escalated';
 
+const log = createLogger('WorkboardService');
+
 class WorkboardService {
   private static instance: WorkboardService;
   private processingTasks: Set<string> = new Set();
 
   private constructor() {
-    console.log('[WorkboardService] Initializing AI Brain Workboard...');
+    log.info('[WorkboardService] Initializing AI Brain Workboard...');
   }
 
   static getInstance(): WorkboardService {
@@ -76,7 +77,7 @@ class WorkboardService {
     const executionMode = submission.executionMode || 'normal';
     let isFastMode = executionMode === 'trinity_fast';
 
-    console.log('[WorkboardService] Submitting new task:', {
+    log.info('[WorkboardService] Submitting new task:', {
       workspaceId: submission.workspaceId,
       userId: submission.userId,
       requestType: submission.requestType,
@@ -107,7 +108,7 @@ class WorkboardService {
       });
       
       if (!quote.canProceed) {
-        console.log('[WorkboardService] Insufficient credits for fast mode, need', simulation.totalCredits, 'have', quote.currentBalance);
+        log.info('[WorkboardService] Insufficient credits for fast mode, need', simulation.totalCredits, 'have', quote.currentBalance);
         submission.executionMode = 'normal';
         isFastMode = false;
       } else {
@@ -116,9 +117,9 @@ class WorkboardService {
         if (reserveResult.success && reserveResult.reservation) {
           creditReservation = reserveResult.reservation;
           fastModeCredits = simulation.totalCredits;
-          console.log('[WorkboardService] Fast mode credits reserved:', fastModeCredits, 'reservation:', creditReservation.reservationId);
+          log.info('[WorkboardService] Fast mode credits reserved:', fastModeCredits, 'reservation:', creditReservation.reservationId);
         } else {
-          console.log('[WorkboardService] Credit reservation failed:', reserveResult.error);
+          log.info('[WorkboardService] Credit reservation failed:', reserveResult.error);
           submission.executionMode = 'normal';
           isFastMode = false;
         }
@@ -160,19 +161,19 @@ class WorkboardService {
       .values(taskData)
       .returning();
 
-    console.log('[WorkboardService] Task created:', task.id, 'mode:', executionMode);
+    log.info('[WorkboardService] Task created:', task.id, 'mode:', executionMode);
 
     // Process task asynchronously - fast mode uses parallel processing
     if (isFastMode) {
       setImmediate(() => {
         this.processTaskFastMode(task.id).catch(err => {
-          console.error('[WorkboardService] Fast mode processing error:', err);
+          log.error('[WorkboardService] Fast mode processing error:', err);
         });
       });
     } else {
       setImmediate(() => {
         this.processTask(task.id).catch(err => {
-          console.error('[WorkboardService] Background processing error:', err);
+          log.error('[WorkboardService] Background processing error:', err);
         });
       });
     }
@@ -185,20 +186,14 @@ class WorkboardService {
    */
   private async checkFastModeCredits(workspaceId: string, requiredCredits?: number): Promise<{ hasCredits: boolean; balance: number }> {
     try {
-      const [credits] = await db.select()
-        .from(trinityCredits)
-        .where(eq(trinityCredits.workspaceId, workspaceId))
-        .limit(1);
-
-      const balance = credits?.balance || 0;
-      // Use requiredCredits if provided, otherwise use minimum threshold
+      const balance = await creditManager.getBalance(workspaceId);
       const minRequired = requiredCredits ?? FAST_MODE_CONFIG.minCreditsRequired;
       const hasCredits = balance >= minRequired;
 
-      console.log('[WorkboardService] Credit check:', { workspaceId, balance, required: minRequired, hasCredits });
+      log.info('[WorkboardService] Credit check:', { workspaceId, balance, required: minRequired, hasCredits });
       return { hasCredits, balance };
     } catch (error) {
-      console.error('[WorkboardService] Credit check error:', error);
+      log.error('[WorkboardService] Credit check error:', error);
       return { hasCredits: false, balance: 0 };
     }
   }
@@ -208,12 +203,12 @@ class WorkboardService {
    */
   private async processTaskFastMode(taskId: string): Promise<void> {
     if (this.processingTasks.has(taskId)) {
-      console.log('[WorkboardService] Fast mode task already processing:', taskId);
+      log.info('[WorkboardService] Fast mode task already processing:', taskId);
       return;
     }
 
     this.processingTasks.add(taskId);
-    console.log('[WorkboardService] Starting FAST MODE processing:', taskId);
+    log.info('[WorkboardService] Starting FAST MODE processing:', taskId);
 
     try {
       const [task] = await db.select()
@@ -222,7 +217,7 @@ class WorkboardService {
         .limit(1);
 
       if (!task) {
-        console.error('[WorkboardService] Fast mode task not found:', taskId);
+        log.error('[WorkboardService] Fast mode task not found:', taskId);
         return;
       }
 
@@ -280,7 +275,7 @@ class WorkboardService {
       });
 
       const executionTime = Date.now() - startTime;
-      console.log('[WorkboardService] Fast mode execution completed in', executionTime, 'ms');
+      log.info('[WorkboardService] Fast mode execution completed in', executionTime, 'ms');
 
       // Consume reserved credits via SubagentBanker
       let creditsDeducted = 0;
@@ -294,9 +289,9 @@ class WorkboardService {
         
         if (consumeResult.success) {
           creditsDeducted = consumeResult.creditsDeducted;
-          console.log('[WorkboardService] Credits consumed via SubagentBanker:', creditsDeducted);
+          log.info('[WorkboardService] Credits consumed via SubagentBanker:', creditsDeducted);
         } else {
-          console.warn('[WorkboardService] Credit consumption failed:', consumeResult.error);
+          log.warn('[WorkboardService] Credit consumption failed:', consumeResult.error);
         }
       } else {
         // Legacy tasks without reservation - use directDeduct with proper refund on failure
@@ -322,7 +317,7 @@ class WorkboardService {
               description: `Refund for failed fast mode task: ${taskId.substring(0, 8)}`
             });
             creditsDeducted = 0;
-            console.log('[WorkboardService] Refunded credits for failed legacy task');
+            log.info('[WorkboardService] Refunded credits for failed legacy task');
           }
         }
       }
@@ -359,7 +354,7 @@ class WorkboardService {
       await this.sendCompletionNotification(taskId, result);
 
     } catch (error) {
-      console.error('[WorkboardService] Fast mode processing error:', error);
+      log.error('[WorkboardService] Fast mode processing error:', error);
       
       // Release reservation on error
       const [task] = await db.select()
@@ -376,7 +371,7 @@ class WorkboardService {
             taskId,
             success: false
           });
-          console.log('[WorkboardService] Released reservation on error:', reservationId);
+          log.info('[WorkboardService] Released reservation on error:', reservationId);
         }
       }
       
@@ -394,7 +389,7 @@ class WorkboardService {
    */
   async processTask(taskId: string): Promise<void> {
     if (this.processingTasks.has(taskId)) {
-      console.log('[WorkboardService] Task already being processed:', taskId);
+      log.info('[WorkboardService] Task already being processed:', taskId);
       return;
     }
 
@@ -407,12 +402,12 @@ class WorkboardService {
         .limit(1);
 
       if (!task) {
-        console.error('[WorkboardService] Task not found:', taskId);
+        log.error('[WorkboardService] Task not found:', taskId);
         return;
       }
 
       if (task.status !== 'pending') {
-        console.log('[WorkboardService] Task not in pending state:', taskId, task.status);
+        log.info('[WorkboardService] Task not in pending state:', taskId, task.status);
         return;
       }
 
@@ -457,7 +452,7 @@ class WorkboardService {
       // Step 5: Update to in_progress
       await this.updateTaskStatus(taskId, 'in_progress', routingResult.assignedAgent);
 
-      // Step 6: Execute task (simulated for now - actual execution would call subagent)
+      // Step 6: Execute task via AI Brain
       const result = await this.executeTask(task, routingResult);
 
       // Step 7: Complete task
@@ -481,20 +476,20 @@ class WorkboardService {
       // Step 8: Send notifications
       await this.sendCompletionNotification(taskId, result);
 
-      console.log('[WorkboardService] Task completed:', taskId, result.success ? 'SUCCESS' : 'FAILED');
+      log.info('[WorkboardService] Task completed:', taskId, result.success ? 'SUCCESS' : 'FAILED');
 
     } catch (error: any) {
-      console.error('[WorkboardService] Error processing task:', taskId, error);
+      log.error('[WorkboardService] Error processing task:', taskId, error);
       
       await db.update(aiWorkboardTasks)
         .set({
           status: 'failed',
-          errorMessage: error.message || 'Unknown error',
+          errorMessage: (error instanceof Error ? error.message : String(error)) || 'Unknown error',
           statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
             status: 'failed',
             timestamp: new Date().toISOString(),
             actor: 'system',
-            error: error.message
+            error: (error instanceof Error ? error.message : String(error))
           }])}::jsonb`,
           updatedAt: new Date()
         })
@@ -553,6 +548,8 @@ class WorkboardService {
         userMessage: task.requestContent,
         temperature: 0.7,
         maxTokens: 300,
+        workspaceId: task.workspaceId,
+        featureKey: 'workboard_ai_response',
       });
 
       if (!response.success || !response.text) {
@@ -566,7 +563,7 @@ class WorkboardService {
         };
       }
 
-      console.log('[WorkboardService] AI response generated:', {
+      log.info('[WorkboardService] AI response generated:', {
         agent: routing.assignedAgent,
         responseLength: response.text.length
       });
@@ -583,7 +580,7 @@ class WorkboardService {
       };
 
     } catch (error: any) {
-      console.error('[WorkboardService] AI execution error:', error);
+      log.error('[WorkboardService] AI execution error:', error);
       
       // Fallback to basic response on error
       return {
@@ -625,7 +622,7 @@ class WorkboardService {
       .set(updates)
       .where(eq(aiWorkboardTasks.id, taskId));
 
-    console.log('[WorkboardService] Status changed:', taskId, status, actor);
+    log.info('[WorkboardService] Status changed:', taskId, status, actor);
   }
 
   /**
@@ -638,36 +635,21 @@ class WorkboardService {
     taskId: string
   ): Promise<boolean> {
     try {
-      const [credits] = await db.select()
-        .from(trinityCredits)
-        .where(eq(trinityCredits.workspaceId, workspaceId))
-        .limit(1);
-
-      if (!credits || credits.balance < tokens) {
-        console.log('[WorkboardService] Insufficient credits:', workspaceId, credits?.balance, tokens);
-        return false;
-      }
-
-      await db.update(trinityCredits)
-        .set({
-          balance: sql`${trinityCredits.balance} - ${tokens}`,
-          lifetimeUsed: sql`${trinityCredits.lifetimeUsed} + ${tokens}`,
-          updatedAt: new Date()
-        })
-        .where(eq(trinityCredits.workspaceId, workspaceId));
-
-      const currentBalance = credits.balance - tokens;
-      await db.insert(trinityCreditTransactions).values({
+      const result = await creditManager.deductCredits({
         workspaceId,
         userId,
-        transactionType: 'usage',
-        credits: -tokens,
-        balanceAfter: currentBalance,
+        featureKey: 'ai_general',
+        featureName: 'Workboard Task',
+        amountOverride: tokens,
+        relatedEntityType: 'workboard_task',
+        relatedEntityId: taskId,
         description: `Workboard task: ${taskId.substring(0, 8)}`,
-        actionType: 'workboard_task',
-        actionId: taskId,
-        metadata: { taskId }
       });
+
+      if (!result.success) {
+        log.info('[WorkboardService] Insufficient credits:', workspaceId, result.newBalance, tokens);
+        return false;
+      }
 
       // Mark credits deducted on task
       await db.update(aiWorkboardTasks)
@@ -676,7 +658,7 @@ class WorkboardService {
 
       return true;
     } catch (error) {
-      console.error('[WorkboardService] Credit deduction error:', error);
+      log.error('[WorkboardService] Credit deduction error:', error);
       return false;
     }
   }
@@ -698,7 +680,7 @@ class WorkboardService {
       switch (channel) {
         case 'trinity':
           // Trinity mascot notification - log for now, integrate later
-          console.log('[WorkboardService] Trinity notification:', {
+          log.info('[WorkboardService] Trinity notification:', {
             userId: task.userId,
             type: result.success ? 'task_completed' : 'task_failed',
             message: result.summary
@@ -707,7 +689,7 @@ class WorkboardService {
 
         case 'websocket':
           // Real-time WebSocket update - log for now
-          console.log('[WorkboardService] WebSocket broadcast:', {
+          log.info('[WorkboardService] WebSocket broadcast:', {
             taskId: task.id,
             status: task.status
           });
@@ -771,7 +753,7 @@ class WorkboardService {
     if (!task) return false;
 
     if ((task.retryCount || 0) >= (task.maxRetries || 3)) {
-      console.log('[WorkboardService] Max retries exceeded:', taskId);
+      log.info('[WorkboardService] Max retries exceeded:', taskId);
       await this.escalateTask(taskId, 'Max retries exceeded');
       return false;
     }
@@ -813,7 +795,7 @@ class WorkboardService {
       })
       .where(eq(aiWorkboardTasks.id, taskId));
 
-    console.log('[WorkboardService] Task escalated:', taskId, reason);
+    log.info('[WorkboardService] Task escalated:', taskId, reason);
   }
 
   /**
@@ -837,7 +819,18 @@ class WorkboardService {
   }> {
     const { transcript, userId, workspaceId, executionMode = 'normal' } = params;
     
-    console.log('[WorkboardService] Trinity executing voice command:', { userId, transcript: transcript.substring(0, 50) });
+    if (!workspaceId) {
+      log.warn('[WorkboardService] Voice command rejected — no workspaceId');
+      return {
+        success: false,
+        taskId: crypto.randomUUID(),
+        response: 'Workspace context is required to execute voice commands.',
+        assignedAgent: 'none',
+        error: 'Missing workspace context'
+      };
+    }
+
+    log.info('[WorkboardService] Trinity executing voice command:', { userId, transcript: transcript.substring(0, 50) });
 
     const taskId = crypto.randomUUID();
     let taskCreated = false;
@@ -857,16 +850,16 @@ class WorkboardService {
       // Step 2: Create task in database with proper agent assignment
       await db.insert(aiWorkboardTasks).values({
         id: taskId,
-        workspaceId: workspaceId || '',
+        workspaceId,
         userId,
         requestType: 'voice_command',
         requestContent: transcript,
         priority: executionMode === 'trinity_fast' ? 'high' : 'normal',
         status: 'in_progress',
         executionMode,
-        assignedAgent: routingResult.assignedAgent,
+        assignedAgentId: routingResult.assignedAgent,
         estimatedTokens: routingResult.estimatedTokens,
-        confidenceScore: routingResult.confidence,
+        confidence: routingResult.confidence,
         requestMetadata: { 
           source: 'voice_sync', 
           platform: 'mobile', 
@@ -882,7 +875,7 @@ class WorkboardService {
 
       // Step 3: Deduct credits - Trinity uses credits for convenience
       const creditDeducted = await this.deductCredits(
-        workspaceId || '', 
+        workspaceId, 
         userId, 
         routingResult.estimatedTokens, 
         taskId
@@ -917,7 +910,7 @@ class WorkboardService {
       const result = await this.executeTask(
         { 
           id: taskId, 
-          workspaceId: workspaceId || '', 
+          workspaceId, 
           userId, 
           requestType: 'voice_command',
           requestContent: transcript,
@@ -952,7 +945,7 @@ class WorkboardService {
         ? result.data?.response || result.summary || 'Done! I completed that for you.'
         : `I couldn't complete that: ${result.error || 'Unknown error'}`;
 
-      console.log('[WorkboardService] Trinity action complete:', {
+      log.info('[WorkboardService] Trinity action complete:', {
         taskId,
         agent: routingResult.assignedAgent,
         success: result.success
@@ -969,7 +962,7 @@ class WorkboardService {
       };
 
     } catch (error: any) {
-      console.error('[WorkboardService] Trinity voice command error:', error);
+      log.error('[WorkboardService] Trinity voice command error:', error);
       
       // Update task to failed if it was created
       if (taskCreated) {
@@ -977,18 +970,18 @@ class WorkboardService {
           await db.update(aiWorkboardTasks)
             .set({
               status: 'failed',
-              errorMessage: error.message,
+              errorMessage: (error instanceof Error ? error.message : String(error)),
               statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
                 status: 'failed',
                 timestamp: new Date().toISOString(),
                 actor: 'voice_command_sync',
-                error: error.message
+                error: (error instanceof Error ? error.message : String(error))
               }])}::jsonb`,
               updatedAt: new Date()
             })
             .where(eq(aiWorkboardTasks.id, taskId));
         } catch (dbError) {
-          console.error('[WorkboardService] Failed to update task status:', dbError);
+          log.error('[WorkboardService] Failed to update task status:', dbError);
         }
       }
 
@@ -1193,14 +1186,14 @@ export async function postDatabaseEventToAIBrain(event: DatabaseEvent): Promise<
           },
           priority: 'low', // Background observability task
         });
-        console.log(`[AIBrain] Database event logged: ${event.eventType} for ${event.entityType}#${event.entityId}`);
+        log.info(`[AIBrain] Database event logged: ${event.eventType} for ${event.entityType}#${event.entityId}`);
       } catch (err) {
         // Silently log errors - don't let AI Brain logging affect main operations
-        console.error('[AIBrain] Failed to log database event:', err);
+        log.error('[AIBrain] Failed to log database event:', err);
       }
     });
   } catch (err) {
     // Outer catch for any synchronous errors
-    console.error('[AIBrain] Error posting database event:', err);
+    log.error('[AIBrain] Error posting database event:', err);
   }
 }

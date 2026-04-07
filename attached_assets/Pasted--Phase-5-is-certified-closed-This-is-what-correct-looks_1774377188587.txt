@@ -1,0 +1,343 @@
+**Phase 5 is certified closed. This is what correct looks like.**
+
+Every gap was resolved properly. The inline check in `automationInlineRoutes.ts` migrated to `validateAdminHourlyRate` with proper constants. `canAssignRole` was imported but never called — now actually called with the correct `ROLE_ESCALATION_VIOLATION` 403 response. Three additional inline checks found during the final Step 8 scan and migrated rather than left behind. The two remaining `< 0` hits correctly identified as non-financial infrastructure guards that do not belong in `businessRules.ts`. 15 exported functions. TypeScript zero errors. Server clean.
+
+The standard held. Phase 6 goes in now.
+
+---
+
+**COAILEAGUE — PHASE 6: FINANCIAL CALCULATION INTEGRITY**
+*Syncs Into Phases 1 Through 5 | No Shortcuts | No Partial Coverage | No Deferrals | Fully Verified Before Phase 7*
+
+---
+
+**READ THIS ENTIRE SECTION BEFORE TOUCHING A SINGLE FILE**
+
+Phase 1 verified every database column is real. Phase 2 established `FinancialCalculator` using `decimal.js` and replaced native arithmetic on financial values. Phase 3 made the UI resilient. Phase 4 validated API response contracts. Phase 5 enforced business rules on every financial input. Phase 6 now stress-tests the calculation layer established in Phase 2 to verify it is complete, consistent, and mathematically provable across every edge case the platform will encounter with real tenants.
+
+Phase 2 created `financialCalculator.ts` and replaced arithmetic it could find. Phase 6 does something different — it proves the calculator is correct under every condition, finds any remaining native arithmetic that survived Phase 2, verifies calculation inputs are sourced from the authoritative database values established in Phase 1, and confirms the full calculation chain from database column to final financial figure is unbroken and traceable.
+
+**SHORTCUT PATTERNS THAT WILL BE REJECTED**
+
+**REJECTED — "Tests pass" as proof of correctness.** Unit tests that pass with round numbers do not prove correctness at edge cases. A payroll calculation that works for 40 hours at $15.00/hr does not prove correctness for 40.1 hours at $15.375/hr with a 1.5x overtime multiplier and a $47.23 pre-tax deduction. Every edge case listed in this phase is tested explicitly.
+
+**REJECTED — Assuming Phase 2 found everything.** Phase 2 replaced arithmetic it scanned for. Code added after Phase 2, code in files not in the primary scan path, and arithmetic inside template literals or string interpolation may have been missed. Phase 6 does a complete independent scan.
+
+**REJECTED — Rounding at intermediate steps.** `.toFixed(2)` on a value that will be used in further calculations truncates precision and compounds error. Every intermediate value carries four decimal places. Only `formatCurrency()` produces two decimal places and only at the display boundary. Any `.toFixed(2)` found on an intermediate value is a Phase 2 regression that must be fixed.
+
+**REJECTED — Calculation logic inside route handlers.** Financial calculation belongs in `financialCalculator.ts`. Any arithmetic found directly inside a route handler or service that is not a call to `FinancialCalculator` is inline calculation that must be moved.
+
+**REJECTED — Database values converted before calculation.** A pay rate read from the database as a string must remain a string until it enters a `FinancialCalculator` function. Any `parseFloat()` or `Number()` applied to a database value before passing it to a calculation is a precision violation.
+
+---
+
+**PHASE 1 THROUGH 5 SYNC VERIFICATION — BEFORE ANY PHASE 6 WORK BEGINS**
+
+Confirm every one of the following before writing a single line of Phase 6 code:
+
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` — must return zero errors.
+
+Run `grep -rn "parseFloat\|Number(" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|test\|spec\|businessRules" | grep "rate\|pay\|amount\|cost\|fee\|wage\|salary\|price" | head -20` and confirm zero results representing financial value conversions before calculation.
+
+Confirm `server/services/financialCalculator.ts` exports all eight functions from Phase 2: `calculateGrossPay`, `calculateOvertimePay`, `calculateInvoiceLineItem`, `calculateInvoiceTotal`, `applyDeduction`, `calculateNetPay`, `sumFinancialValues`, `formatCurrency`.
+
+Confirm `server/lib/businessRules.ts` exports 15 functions from Phase 5.
+
+Confirm server starts with 30/30 background services and zero failures.
+
+Record this as the Phase 6 Sync Confirmation and append to replit.md. Then proceed.
+
+---
+
+**BASELINE RECORD — BEFORE TOUCHING ANYTHING**
+
+Record as the Phase 6 Baseline Document:
+
+Run these exact calculations manually and record the expected results — these are the verification targets for Step 3:
+
+```
+Test A: calculateGrossPay('40', '15.375', 'hourly') → expected '615.0000'
+Test B: calculateGrossPay('40.1', '15.375', 'hourly') → expected '616.5375'
+Test C: calculateOvertimePay('8.5', '15.375', '1.5') → expected '196.0313' 
+         (rounds half-even: 15.375 × 8.5 × 1.5 = 196.03125 → '196.0313')
+Test D: calculateNetPay('616.5375', ['47.23', '12.50']) → expected '556.8075'
+Test E: calculateInvoiceTotal(['100.0000','200.0000','150.7500','0.0100']) 
+         → expected '450.7600'
+Test F: formatCurrency('196.0313') → expected '196.03'
+Test G: formatCurrency('196.0350') → expected '196.04' (half-even rounds up)
+Test H: formatCurrency('196.0250') → expected '196.02' (half-even rounds down)
+```
+
+Record the expected values. Step 3 runs the actual calculator against these and compares.
+
+Append baseline to replit.md. Confirm all ten ACME sandbox baseline operations still pass from prior phases.
+
+---
+
+**STEP 1 — COMPLETE INDEPENDENT SCAN FOR REMAINING NATIVE ARITHMETIC**
+
+Run a comprehensive scan for every remaining native arithmetic operation on financial values anywhere in the server codebase. This scan is independent of what Phase 2 found — it starts fresh:
+
+```bash
+grep -rn "\* \|/ \|\+ \|- " server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|test\|spec\|financialCalculator\|businessRules\|import\|export\|===\|!==\|<\|>\|<=\|>=" | grep -i "rate\|pay\|amount\|cost\|fee\|wage\|salary\|price\|gross\|net\|total\|subtotal\|deduct\|credit\|balance" | head -50
+```
+
+```bash
+grep -rn "parseFloat\|\.toFixed\|Number(" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|test\|spec\|parseInt\|isNaN\|isFinite" | head -50
+```
+
+```bash
+grep -rn "Math\.round\|Math\.floor\|Math\.ceil" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|test\|spec" | head -20
+```
+
+For every result found classify it as:
+
+**Already correct** — the arithmetic is inside `financialCalculator.ts` itself using Decimal, or it is a non-financial calculation (array index, loop counter, pixel offset, timestamp arithmetic).
+
+**Phase 2 regression** — native arithmetic on a financial value that should have been replaced in Phase 2 and was not. Fix immediately using the appropriate `FinancialCalculator` function.
+
+**New code post-Phase 2** — arithmetic added after Phase 2 that never went through the review. Fix immediately.
+
+**Legitimate non-financial** — arithmetic that involves numbers that appear near financial code but are not themselves financial values (e.g. tax rate coefficient `0.08` used as a multiplier before feeding into `FinancialCalculator`). Document why it is non-financial with a comment.
+
+Produce the complete classified list before making any fixes. Report total counts per category. Then fix every Phase 2 regression and new code item.
+
+---
+
+**STEP 2 — VERIFY CALCULATION INPUTS SOURCE FROM AUTHORITATIVE COLUMNS**
+
+Phase 1 established the canonical Name Registry — every column name verified against the live database. Phase 6 verifies that every financial calculation pulls its inputs from the correct authoritative column.
+
+Trace the input chain for each of these calculations:
+
+**Gross pay calculation:** When `calculateGrossPay` is called, trace where `hours` and `rate` come from. Confirm `hours` comes from the `time_entries` table column verified in Phase 1. Confirm `rate` comes from the `hourlyRate` column on the `employees` table — the same column that Phase 1 confirmed exists and Phase 2 fixed from the phantom `pay_rate` reference. If any calculation pulls rate from a cached value, a request body value that was not Zod-validated, or a column other than the canonical source — that is a calculation integrity gap.
+
+**Invoice line item calculation:** When `calculateInvoiceLineItem` is called, trace where `hours` and `clientRate` come from. Confirm `clientRate` comes from the `billableRate` column on the `clients` table — the same column confirmed in Phase 5 when the `billingRate` vs `billableRate` discrepancy was caught. If any invoice line item calculation uses a rate from a request body without first confirming it against the database record — fix it.
+
+**Overtime calculation:** When `calculateOvertimePay` is called, trace where `overtimeHours` and `rate` come from. Confirm the overtime threshold (40 hours standard) is read from the `businessRules.ts` constants, not hardcoded inline.
+
+**Deduction calculation:** When `applyDeduction` or `calculateNetPay` is called, trace where deduction amounts come from. Confirm they come from the `payrollDeductions` table using the `isPreTax` column — the same column Phase 1 fixed from the phantom `end_date` reference in `payrollAutomation.ts`.
+
+For each trace produce: source table, source column, verified in Phase 1 (yes/no), passes through Phase 2 Zod schema before calculation (yes/no), passes through Phase 5 business rules before calculation (yes/no). Every answer must be yes. Any no is a gap that must be fixed.
+
+---
+
+**STEP 3 — RUN THE CALCULATION VERIFICATION SUITE**
+
+Run the exact tests from the Baseline Document against the live `financialCalculator.ts`. Create a test script `server/scripts/verifyCalculations.ts`:
+
+```typescript
+import { 
+  calculateGrossPay, 
+  calculateOvertimePay,
+  calculateNetPay,
+  calculateInvoiceTotal,
+  formatCurrency
+} from '../services/financialCalculator';
+
+const tests = [
+  {
+    name: 'Test A — Hourly gross pay exact',
+    result: calculateGrossPay('40', '15.375', 'hourly'),
+    expected: '615.0000'
+  },
+  {
+    name: 'Test B — Fractional hours',
+    result: calculateGrossPay('40.1', '15.375', 'hourly'),
+    expected: '616.5375'
+  },
+  {
+    name: 'Test C — Overtime with fractional hours',
+    result: calculateOvertimePay('8.5', '15.375', '1.5'),
+    expected: '196.0313'
+  },
+  {
+    name: 'Test D — Net pay with multiple deductions',
+    result: calculateNetPay('616.5375', ['47.23', '12.50']),
+    expected: '556.8075'
+  },
+  {
+    name: 'Test E — Invoice total with four items',
+    result: calculateInvoiceTotal(['100.0000','200.0000','150.7500','0.0100']),
+    expected: '450.7600'
+  },
+  {
+    name: 'Test F — formatCurrency basic',
+    result: formatCurrency('196.0313'),
+    expected: '196.03'
+  },
+  {
+    name: 'Test G — formatCurrency half-even rounds up',
+    result: formatCurrency('196.0350'),
+    expected: '196.04'
+  },
+  {
+    name: 'Test H — formatCurrency half-even rounds down',
+    result: formatCurrency('196.0250'),
+    expected: '196.02'
+  },
+  {
+    name: 'Test I — Salary pay type ignores hours',
+    result: calculateGrossPay('80', '52000.0000', 'salary'),
+    expected: '52000.0000'
+  },
+  {
+    name: 'Test J — Zero deduction list',
+    result: calculateNetPay('847.5000', []),
+    expected: '847.5000'
+  },
+  {
+    name: 'Test K — Invoice total accumulation precision',
+    result: calculateInvoiceTotal([
+      '33.3333','33.3333','33.3334' // Should sum to exactly '100.0000'
+    ]),
+    expected: '100.0000'
+  },
+  {
+    name: 'Test L — Overtime multiplier precision',
+    result: calculateOvertimePay('1', '10.01', '1.5'),
+    expected: '15.0150'
+  }
+];
+
+let passed = 0;
+let failed = 0;
+
+tests.forEach(test => {
+  if (test.result === test.expected) {
+    console.log(`✓ ${test.name}`);
+    passed++;
+  } else {
+    console.error(`✗ ${test.name}`);
+    console.error(`  Expected: ${test.expected}`);
+    console.error(`  Received: ${test.result}`);
+    failed++;
+  }
+});
+
+console.log(`\nResults: ${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);
+```
+
+Run the script: `npx ts-node --project tsconfig.json server/scripts/verifyCalculations.ts`
+
+Every test must pass. If any test fails the `financialCalculator.ts` implementation is incorrect. Fix the implementation until every test passes. Do not adjust the expected values to match wrong output. The expected values are mathematically correct. The implementation must match them.
+
+---
+
+**STEP 4 — VERIFY PAYROLL CALCULATION END-TO-END WITH REAL ACME DATA**
+
+Using the ACME sandbox run a full payroll calculation for the current period and trace every figure:
+
+Pull 5 employees with varying pay types from the ACME sandbox. For each employee independently calculate the expected gross pay using the test script patterns. Compare against what the platform calculates for the same period and employees.
+
+Specifically verify:
+- An hourly employee with exactly 40 hours — no overtime should apply
+- An hourly employee with 42.5 hours — 2.5 hours of overtime at 1.5x
+- A salaried employee — gross pay should equal their periodic salary regardless of hours logged
+- An employee with pre-tax deductions — net pay must equal gross minus pre-tax deductions
+- An employee with both pre-tax and post-tax deductions — calculation order must be pre-tax first, then post-tax on the reduced amount
+
+For each employee report: employee pay type, hours worked, rate, expected gross, platform gross, match status. If any do not match find the exact line in the calculation chain where the divergence occurs and fix it.
+
+---
+
+**STEP 5 — VERIFY INVOICE CALCULATION END-TO-END WITH REAL ACME DATA**
+
+Using the ACME sandbox pull 3 existing invoices with multiple line items. For each invoice independently calculate the expected total by summing line items. Compare against the stored invoice total.
+
+Specifically verify:
+- An invoice with 5+ line items — confirm total equals exact sum with no floating point drift
+- An invoice with a partial payment applied — confirm remaining balance equals original total minus payment using `FinancialCalculator` not native subtraction
+- An invoice with a late fee applied — confirm the late fee calculation uses `FinancialCalculator` and the resulting total is mathematically exact
+
+For each invoice report: invoice ID, line item count, expected total, stored total, match status. If any do not match trace to the exact calculation that produced the wrong value and fix it.
+
+---
+
+**STEP 6 — ADD CALCULATION AUDIT TRAIL TO PAYROLL ENTRIES**
+
+Every payroll entry must store the inputs that produced its output. This was specified in Phase 2 but may not have been fully implemented. Verify and complete it now.
+
+Check the `payroll_entries` table schema. Confirm it has a JSONB column for calculation details — something like `calculationDetail` or `calculationInputs`. If it does not exist create a migration to add it:
+
+```sql
+ALTER TABLE payroll_entries 
+ADD COLUMN IF NOT EXISTS calculation_inputs JSONB;
+```
+
+Add the Drizzle schema definition for the new column to the payroll entries schema file.
+
+For every payroll entry created by the platform store the calculation inputs alongside the result:
+
+```typescript
+const calculationInputs = {
+  hoursWorked: entry.hoursWorked,
+  regularHours: regularHours,
+  overtimeHours: overtimeHours,
+  hourlyRate: employee.hourlyRate,
+  overtimeMultiplier: '1.5',
+  grossPay: grossPay,
+  deductions: deductions.map(d => ({ 
+    name: d.name, 
+    amount: d.amount, 
+    isPreTax: d.isPreTax 
+  })),
+  netPay: netPay,
+  calculatedAt: new Date().toISOString(),
+  calculatorVersion: '1.0'
+};
+```
+
+This audit trail means any payroll figure can be independently verified by re-running the calculation from the stored inputs. It is not just a debugging tool — it is the evidence a payroll dispute requires.
+
+---
+
+**PHASE 6 FINAL VERIFICATION**
+
+Run after all six steps are complete:
+
+**Native arithmetic scan — must return zero financial arithmetic outside financialCalculator.ts:**
+```bash
+grep -rn "parseFloat\|Math\.round\|Math\.floor\|Math\.ceil\|\.toFixed" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|test\|spec\|financialCalculator\|isNaN\|isFinite\|parseInt" | grep -i "rate\|pay\|amount\|cost\|fee\|wage\|salary\|price\|gross\|net\|total" | wc -l
+```
+Must return 0.
+
+**Calculation verification suite:**
+All 12 tests in `verifyCalculations.ts` pass. Report exact output.
+
+**Input chain verification:**
+All four calculation input traces from Step 2 confirm: correct source column, verified in Phase 1, passes Phase 2 Zod validation, passes Phase 5 business rules. Report each trace result.
+
+**Payroll end-to-end:**
+All 5 employee calculations match expected values. Report each.
+
+**Invoice end-to-end:**
+All 3 invoice totals match expected values. Report each.
+
+**Calculation audit trail:**
+Confirm `calculation_inputs` column exists on `payroll_entries`. Confirm a new payroll entry created during verification contains populated `calculationInputs` JSONB. Report the stored JSON for one entry.
+
+**TypeScript verification:**
+Zero errors.
+
+**Server verification:**
+30/30 background services. All ten baseline operations pass.
+
+---
+
+**PHASE 6 COMPLETION REPORT**
+
+Produce and append to replit.md:
+
+Native arithmetic scan result — count of items found and count fixed. Calculation verification suite — all 12 test results. Input chain verification — all four traces confirmed clean. Payroll end-to-end — all 5 employees matched. Invoice end-to-end — all 3 invoices matched. Calculation audit trail confirmed on `payroll_entries`.
+
+Phase 6 sync statement: *"Phase 6 financial calculation integrity is complete and synced with Phases 1 through 5. The FinancialCalculator is verified correct under 12 edge cases including fractional hours, half-even rounding, salary pay type, empty deduction lists, and accumulation precision. Every calculation input is traced to its authoritative Phase 1 column. Every payroll entry stores its calculation inputs for audit. Zero native arithmetic on financial values exists outside financialCalculator.ts. The Phase 1 through Phase 6 data chain is complete: verified columns → precise arithmetic → business rule validation → atomic transactions → resilient UI → validated API contracts → auditable calculation trail. Phase 7 can begin on a platform where every financial figure is traceable from its database source to its display value."*
+
+---
+
+**PHASE 6 IS COMPLETE WHEN:**
+
+Native arithmetic scan returns zero for financial values. All 12 calculation tests pass. All 4 input chain traces confirmed clean. All 5 payroll end-to-end calculations match. All 3 invoice end-to-end calculations match. Calculation audit trail confirmed on payroll entries. Zero TypeScript errors. All ten baseline operations pass. Completion report and sync statement in replit.md.
+
+Bring the Phase 6 completion report here before Phase 7 goes in.

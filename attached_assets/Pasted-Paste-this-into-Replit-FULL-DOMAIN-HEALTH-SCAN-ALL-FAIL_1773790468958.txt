@@ -1,0 +1,289 @@
+Paste this into Replit:
+
+---
+
+**FULL DOMAIN HEALTH SCAN — ALL FAILURES, GAPS, DISCONNECTS | READ BEFORE TOUCH | FIX EVERYTHING**
+
+Scan every domain in the platform. For each domain find every failure, missing wire, broken configuration, and disconnected component. Fix everything found. Report by domain.
+
+---
+
+**DOMAIN 1 — AUTHENTICATION & SESSION**
+
+Scan for:
+- Any auth route that does not invalidate the session on logout server-side
+- Any route that reads `req.user` without verifying the session is still valid in DB
+- Any JWT that does not include `workspaceId` and `role` as required claims
+- Any password reset flow that does not expire the token after single use
+- Any invite token that can be reused after acceptance
+- Any session that survives a password change — all sessions must be invalidated when password changes
+- Any OAuth callback that does not validate the `state` parameter against CSRF
+- The Trinity bot bypass token — confirm it is loaded from env on startup and fails closed if missing
+
+Fix every gap found.
+
+---
+
+**DOMAIN 2 — ONBOARDING & WORKSPACE CREATION**
+
+Scan for:
+- Any path where a workspace can be created without a subscription record being initialized
+- Any path where Trinity does not bootstrap after workspace creation — memory profile, automation triggers, welcome sequence
+- Any invite flow where the invited user's role is not enforced at acceptance time
+- Any onboarding step that can be skipped leaving required data null — org name, billing email, timezone
+- Any sub-org creation that does not inherit parent subscription correctly
+- The onboarding checklist — does it exist in the UI and does it correctly track completion state per workspace?
+- Does completing onboarding publish `onboarding_completed` to platformEventBus?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 3 — EMPLOYEE & CONTRACTOR MANAGEMENT**
+
+Scan for:
+- Any employee creation path that allows null pay rate without flagging it as incomplete
+- Any employee termination path that does not remove them from future scheduled shifts
+- Any employee termination path that does not preserve their historical time entries and pay stubs
+- Any contractor vs W2 distinction that is not enforced in payroll processing
+- Any employee role change that does not write an audit log entry
+- Any employee document upload that does not associate with the correct workspace
+- Does the employee compliance score recalculate when a license or certification changes?
+- Does Trinity proactively flag employees whose licenses expire within 30 days?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 4 — CLIENT & CONTRACT MANAGEMENT**
+
+Scan for:
+- Any client creation path where billing cycle defaults silently to monthly without user confirmation
+- Any client with no billing email — does Trinity flag this before the first invoice attempt?
+- Any contract that can be marked executed without a document attached
+- Any client deletion that does not handle outstanding invoices — are they preserved or orphaned?
+- Any client rate change that does not trigger recalculation of open draft invoices
+- Does Trinity initialize a billing profile automatically when a new client is created with all required data?
+- Does the client portal exist and is it accessible to the correct roles only?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 5 — SCHEDULING & SHIFT MANAGEMENT**
+
+Scan for:
+- Any shift assignment path that does not check officer active status before assigning
+- Any shift assignment path that does not check for overlapping shifts before assigning
+- Any shift assignment path that does not check officer compliance status before assigning
+- Any open shift that has been unfilled for more than 24 hours — does Trinity escalate automatically?
+- Any shift deletion that does not notify the assigned officer
+- Any schedule publish that does not broadcast to all affected officers in real time
+- Is the autonomous scheduling daemon running at startup — confirm in server logs
+- Does Trinity respect client minimum staffing requirements when auto-filling shifts?
+- Are shift confirmation requests sent to officers with acknowledgment tracking?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 6 — TIME & ATTENDANCE**
+
+Scan for:
+- Any clock-in that does not capture GPS coordinates when location is available
+- Any clock-out that does not verify the officer is clocked in before allowing clock-out
+- Any time entry that can be approved without a corresponding shift record
+- Any time entry edit after payroll processing — must be blocked with 403
+- Does the geofence override workflow require manager approval and write an audit log?
+- Are missed clock-ins detected and flagged to the manager automatically?
+- Does Trinity detect and flag suspicious time entries — clock-ins far from the job site, unusually long shifts?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 7 — INVOICING & BILLING**
+
+Scan for:
+- Any invoice generation path that does not lock the time entries it bills — preventing double-billing
+- Any invoice that can be sent to a client with no email address on file
+- Any invoice line item with zero amount that is not flagged before send
+- Any invoice that can be edited after reaching `paid` or `voided` status
+- Any invoice PDF that shows incorrect date due to `issueDate` vs `invoiceDate` field mismatch — confirm fix is intact
+- Does Trinity send overdue reminders at exactly 7, 14, and 30 days with specific amounts?
+- Does the collections escalation path exist and does it fire after the final notice?
+- Are invoice records preserved permanently even after client deletion?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 8 — PAYROLL & COMPENSATION**
+
+Scan for:
+- Any payroll run that can be created with zero approved hours — confirm hard gate is intact
+- Any payroll run that can be processed twice for the same pay period — confirm unique constraint is intact
+- Any pay stub that can be edited after the payroll run reaches `paid` status
+- Any payroll run that transitions status without writing an audit log entry
+- Does the 48-hour pre-payroll readiness scan fire correctly and surface specific employee names with missing data?
+- Does Trinity auto-build payroll runs from approved timesheets at period end — or does the manager have to initiate?
+- Are contractor 1099 payments tracked separately from W2 payroll?
+- Does the payroll dashboard update in real time when run status changes?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 9 — PAYMENTS & FINANCIAL INFRASTRUCTURE**
+
+Scan for:
+- Any Stripe webhook that processes without signature verification
+- Any Stripe webhook that can be processed twice — confirm DB-backed idempotency not just in-memory
+- Any payment that updates invoice status without writing a ledger entry
+- Any Plaid transfer that initiates without verifying the bank account is valid first
+- Any Plaid transfer failure that does not notify the org owner with the specific employee name and failure reason
+- Any credit deduction that bypasses the atomic UPDATE WHERE balance >= amount pattern
+- Any credit balance that can go negative
+- Any QB sync that fails silently without notifying the org owner
+
+Fix every gap found.
+
+---
+
+**DOMAIN 10 — COMPLIANCE & LICENSING**
+
+Scan for:
+- Any officer license expiry that is not detected until after the expiry date
+- Any expired officer that can still be assigned to a shift
+- Any compliance violation that is not written to the WORM-locked violations table
+- Any regulatory portal request that bypasses the 24-hour owner notification requirement
+- Does the audit readiness score recalculate when documents are uploaded?
+- Does Trinity automatically start the hiring pipeline when a compliance gap creates a staffing shortage?
+- Are compliance notifications sent to the correct role — officer for personal compliance, manager for staffing compliance?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 11 — NOTIFICATIONS & COMMUNICATIONS**
+
+Scan for:
+- Any notification created in the DB but never delivered via WebSocket or email
+- Any WebSocket event broadcast from the backend with no corresponding frontend handler
+- Any frontend WebSocket handler listening for an event the backend never sends
+- Any email sent without the workspace unsubscribe check
+- Any bulk notification that does not respect per-user notification preferences
+- Does the Universal Notification Engine correctly route by priority — critical before normal?
+- Are bot-generated messages distinguishable from human messages in the chat log?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 12 — CHAT & SHIFT ROOMS**
+
+Scan for:
+- Any shift room message that does not associate with the correct workspace and shift
+- Any photo uploaded in a shift room without GPS capture attempted
+- Any shift room that is not automatically created when a shift is created
+- Any shift room that persists after shift deletion — orphaned rooms
+- Does ReportBot generate an end-of-shift report with all messages, incidents, and photos in chronological order?
+- Is the end-of-shift report saved to the document safe automatically?
+- Can a user in one workspace access a shift room from another workspace?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 13 — DOCUMENT MANAGEMENT**
+
+Scan for:
+- Any document upload that does not validate file type and size before storing
+- Any document that can be accessed by a user from a different workspace
+- Are sensitive documents — W2s, pay stubs, bank documents — accessible only to the correct employee and org admins?
+- Any document link that does not expire — permanent public URLs on sensitive documents are a security risk
+- Does document upload trigger the compliance score recalculation when compliance documents are uploaded?
+- Is the document safe correctly scoped per workspace with no cross-tenant access?
+
+Fix every gap found.
+
+---
+
+**DOMAIN 14 — TRINITY AUTONOMOUS INTELLIGENCE**
+
+Scan for:
+- Any Trinity autonomous action that executes without checking workspace subscription status first
+- Any Trinity cron job that does not have per-workspace error isolation
+- Any Trinity event subscriber that throws and kills the subscriber for all future events
+- Any Trinity action that mutates financial state without writing an audit log
+- Does Trinity's kill switch correctly block all actions for a paused workspace?
+- Does Trinity's pre-execution validator run before every registered action?
+- Does Trinity correctly reload workspace pause state from DB on server restart?
+- Any Trinity intelligence layer that reads data from another workspace — confirm isolation
+
+Fix every gap found.
+
+---
+
+**DOMAIN 15 — ADMIN & PLATFORM MANAGEMENT**
+
+Scan for:
+- Any admin route accessible without platform admin role verification
+- Any admin action that does not write an audit log
+- Any workspace suspension that does not immediately restrict API access
+- Any platform-wide setting change that does not propagate to all affected workspaces
+- Does the admin dashboard show real-time platform health — active workspaces, failed jobs, credit failures?
+- Can an admin view data across workspaces without that access being logged?
+- Is there a platform-wide emergency stop that halts all financial operations instantly?
+
+Fix every gap found.
+
+---
+
+**EXECUTION RULES**
+
+- Read every file before touching it
+- Fix every gap found regardless of severity
+- After each domain restart the server and confirm clean start before moving to next domain
+- If a fix in one domain breaks another domain — fix the breakage before continuing
+- No new features — only fix what exists
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 15 domains:
+
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Report by domain:
+
+```
+Domain 1  — Auth & Session:           N gaps found | N fixed
+Domain 2  — Onboarding:               N gaps found | N fixed
+Domain 3  — Employees:                N gaps found | N fixed
+Domain 4  — Clients:                  N gaps found | N fixed
+Domain 5  — Scheduling:               N gaps found | N fixed
+Domain 6  — Time & Attendance:        N gaps found | N fixed
+Domain 7  — Invoicing:                N gaps found | N fixed
+Domain 8  — Payroll:                  N gaps found | N fixed
+Domain 9  — Payments:                 N gaps found | N fixed
+Domain 10 — Compliance:               N gaps found | N fixed
+Domain 11 — Notifications:            N gaps found | N fixed
+Domain 12 — Chat & Shift Rooms:       N gaps found | N fixed
+Domain 13 — Documents:                N gaps found | N fixed
+Domain 14 — Trinity Intelligence:     N gaps found | N fixed
+Domain 15 — Admin & Platform:         N gaps found | N fixed
+
+TOTAL GAPS FOUND: N
+TOTAL GAPS FIXED: N
+REMAINING: N
+```
+
+5. For any gap that could not be fixed — explain why and what is needed
+6. Stop and wait for production sign-off
+
+---
+
+Paste results back domain by domain as Replit completes them. When the remaining count hits zero that is your production green light.

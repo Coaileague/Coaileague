@@ -1,0 +1,91 @@
+
+}, (table) => [
+  index("idx_auditor_doc_req_session").on(table.auditSessionId),
+  index("idx_auditor_doc_req_workspace").on(table.workspaceId),
+  index("idx_auditor_doc_req_status").on(table.status),
+]);
+
+export const insertAuditorDocumentRequestSchema = createInsertSchema(auditorDocumentRequests).omit({ id: true, createdAt: true });
+export type InsertAuditorDocumentRequest = z.infer<typeof insertAuditorDocumentRequestSchema>;
+export type AuditorDocumentRequest = typeof auditorDocumentRequests.$inferSelect;
+
+// ── audit_findings: violations, fines, conditions per session ─────────────
+export const auditFindings = pgTable("audit_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  auditSessionId: varchar("audit_session_id").references(() => auditSessions.id, { onDelete: 'cascade' }),
+  auditorId: varchar("auditor_id").references(() => auditorAccounts.id, { onDelete: 'set null' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+
+  findingType: auditFindingTypeEnum("finding_type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  severity: varchar("severity").default('medium'),
+
+  // Fine
+  fineAmount: integer("fine_amount").default(0), // cents
+  finePaid: boolean("fine_paid").default(false),
+  finePaidAt: timestamp("fine_paid_at"),
+
+  // Condition
+  conditionDeadline: timestamp("condition_deadline"),
+  conditionMet: boolean("condition_met").default(false),
+  conditionMetAt: timestamp("condition_met_at"),
+
+  relatedDocType: enforcementDocTypeEnum("related_doc_type"),
+  relatedDocId: varchar("related_doc_id"),
+
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_audit_findings_session").on(table.auditSessionId),
+  index("idx_audit_findings_workspace").on(table.workspaceId),
+  index("idx_audit_findings_type").on(table.findingType),
+]);
+
+export const insertAuditFindingSchema = createInsertSchema(auditFindings).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAuditFinding = z.infer<typeof insertAuditFindingSchema>;
+export type AuditFinding = typeof auditFindings.$inferSelect;
+
+// ── auditor_followups: scheduled phone/email follow-up calls ──────────────
+export const auditorFollowups = pgTable("auditor_followups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  auditSessionId: varchar("audit_session_id").references(() => auditSessions.id, { onDelete: 'cascade' }),
+  auditorId: varchar("auditor_id").references(() => auditorAccounts.id, { onDelete: 'set null' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  followupType: varchar("followup_type").notNull().default('phone_call'),
+  contactName: varchar("contact_name"),
+  contactPhone: varchar("contact_phone"),
+  contactEmail: varchar("contact_email"),
+  notes: text("notes"),
+
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  outcome: text("outcome"),
+
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_auditor_followups_session").on(table.auditSessionId),
+  index("idx_auditor_followups_auditor").on(table.auditorId),
+  index("idx_auditor_followups_scheduled").on(table.scheduledFor),
+]);
+
+export const insertAuditorFollowupSchema = createInsertSchema(auditorFollowups).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAuditorFollowup = z.infer<typeof insertAuditorFollowupSchema>;
+export type AuditorFollowup = typeof auditorFollowups.$inferSelect;
+
+// ── auditor_document_safe ─────────────────────────────────────────────────
+export const auditorDocumentSafe = pgTable("auditor_document_safe", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auditorId: varchar("auditor_id").references(() => auditorAccounts.id, { onDelete: 'cascade' }),
+  auditSessionId: varchar("audit_session_id").references(() => auditSessions.id, { onDelete: 'set null' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  documentType: varchar("document_type").notNull().default('audit_summary_pdf'),
+  label: varchar("label").notNull(),
+  storageKey: varchar("storage_key"),
+  downloadUrl: varchar("download_url"),
+  urlExpiresAt: timestamp("url_expires_at"),
+  retentionRequiredUntil: timestamp("retention_required_until"),
+  stateMandatedYears: integer("state_mandated_years").default(3),

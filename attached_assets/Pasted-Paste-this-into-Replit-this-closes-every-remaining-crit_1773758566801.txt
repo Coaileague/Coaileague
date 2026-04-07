@@ -1,0 +1,260 @@
+Paste this into Replit — this closes every remaining critical gap in one pass:
+
+---
+
+**CRITICAL WORKFLOW FIX BATCH — ALL REMAINING GAPS | READ BEFORE TOUCH | NO NEW FEATURES**
+
+Based on Check 1 Phase A findings and all prior audit patterns, fix every item below. Work in order. Read each file before touching. Show before/after per fix.
+
+---
+
+**PHASE 1 — PLAID GAPS (Complete Check 1)**
+
+**P1-FIX-1 — verifyBankAccount missing from plaidService.ts**
+Add this method to `plaidService.ts`:
+```typescript
+async verifyBankAccount(accessToken: string): Promise<{ valid: boolean, status: string }> {
+  try {
+    const response = await this.client.accountsGet({ access_token: accessToken })
+    const account = response.data.accounts[0]
+    if (!account) return { valid: false, status: 'no_account_found' }
+    return {
+      valid: account.verification_status !== 'verification_failed',
+      status: account.verification_status || 'active'
+    }
+  } catch (error) {
+    return { valid: false, status: 'verification_error' }
+  }
+}
+```
+
+**P1-FIX-2 — cancelTransfer return type fix**
+Change `cancelTransfer()` to return `Promise<boolean>`:
+```typescript
+async cancelTransfer(transferId: string): Promise<boolean> {
+  try {
+    await this.client.transferCancel({ transfer_id: transferId })
+    return true
+  } catch (error) {
+    console.error('[Plaid] cancelTransfer failed:', error)
+    return false
+  }
+}
+```
+
+**P1-FIX-3 — workspace_bank_disconnected Trinity subscriber**
+In `trinityEventSubscriptions.ts` add:
+```typescript
+platformEventBus.subscribe('workspace_bank_disconnected', async (event) => {
+  const { workspaceId } = event
+  if (!workspaceId) return
+  try {
+    await createNotification({
+      workspaceId,
+      type: 'system_alert',
+      title: 'Bank Account Disconnected',
+      message: 'Your organization bank account has been disconnected. Payroll cannot be processed until you reconnect your bank account in Settings → Payroll.',
+      priority: 'high',
+      targetRole: 'org_owner'
+    })
+  } catch (err) {
+    console.error('[Trinity] workspace_bank_disconnected handler error:', err)
+  }
+})
+```
+
+**P1-FIX-4 — payroll_transfer_initiated Trinity subscriber**
+Add subscriber:
+```typescript
+platformEventBus.subscribe('payroll_transfer_initiated', async (event) => {
+  const { workspaceId, employeeId, transferId, amount } = event
+  if (!workspaceId) return
+  try {
+    await createAuditLog({
+      workspaceId,
+      action: 'payroll_transfer_initiated',
+      entityType: 'payroll_transfer',
+      entityId: transferId,
+      performedBy: 'trinity-system',
+      newState: { employeeId, transferId, amount }
+    })
+  } catch (err) {
+    console.error('[Trinity] payroll_transfer_initiated handler error:', err)
+  }
+})
+```
+
+**P1-FIX-5 — retry-failed-transfers endpoint**
+In `payrollRoutes.ts` add after the mark-paid endpoint:
+```typescript
+router.post('/runs/:id/retry-failed-transfers', requireAuth, requireRole(['org_owner', 'org_manager']), async (req, res) => {
+  const { id } = req.params
+  const workspaceId = req.workspaceId
+  try {
+    const failedStubs = await db.select()
+      .from(payStubs)
+      .where(and(
+        eq(payStubs.payrollRunId, id),
+        eq(payStubs.workspaceId, workspaceId),
+        eq(payStubs.status, 'failed')
+      ))
+    if (failedStubs.length === 0) {
+      return res.json({ success: true, message: 'No failed transfers to retry', retried: 0 })
+    }
+    const results = []
+    for (const stub of failedStubs) {
+      try {
+        const employee = await db.select().from(employeeBankAccounts)
+          .where(and(
+            eq(employeeBankAccounts.employeeId, stub.employeeId),
+            eq(employeeBankAccounts.workspaceId, workspaceId),
+            eq(employeeBankAccounts.isPrimary, true)
+          )).limit(1)
+        if (!employee[0]?.plaidAccessTokenEncrypted) {
+          results.push({ employeeId: stub.employeeId, status: 'skipped', reason: 'no_plaid_account' })
+          continue
+        }
+        const accessToken = decrypt(employee[0].plaidAccessTokenEncrypted)
+        const transfer = await plaidService.initiateTransfer({
+          accessToken,
+          accountId: employee[0].plaidItemId,
+          amount: Number(stub.netPay),
+          description: `Payroll retry - ${stub.payPeriodStart}`,
+          workspaceId
+        })
+        await db.update(payStubs)
+          .set({ status: 'transfer_initiated', plaidTransferId: transfer.transferId, consecutivePollFailures: 0 })
+          .where(eq(payStubs.id, stub.id))
+        results.push({ employeeId: stub.employeeId, status: 'retried', transferId: transfer.transferId })
+      } catch (err) {
+        results.push({ employeeId: stub.employeeId, status: 'retry_failed', reason: err.message })
+      }
+    }
+    res.json({ success: true, retried: results.filter(r => r.status === 'retried').length, results })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retry transfers', details: err.message })
+  }
+})
+```
+
+**P1-FIX-6 — Org-level Plaid bank check in readiness scanner**
+In the payroll readiness scanner — add org bank connection check:
+```typescript
+// Check org bank connection
+const workspaceSettings = await db.select().from(workspaces)
+  .where(eq(workspaces.id, workspaceId)).limit(1)
+const orgBankConnected = !!workspaceSettings[0]?.plaidAccessTokenEncrypted
+
+if (!orgBankConnected) {
+  blockingIssues.push({
+    type: 'org_bank_not_connected',
+    severity: 'blocking',
+    message: 'Organization bank account not connected. Connect your bank account in Settings → Payroll before payroll can disburse.',
+    actionUrl: '/settings/payroll'
+  })
+}
+```
+
+**P1-FIX-7 — Payroll run disbursing status transition**
+In `payrollAutomation.ts` or wherever Plaid transfers are initiated — after all transfers are initiated, explicitly set the payroll run status to `disbursing`:
+```typescript
+await db.update(payrollRuns)
+  .set({ status: 'disbursing', updatedAt: new Date() })
+  .where(and(
+    eq(payrollRuns.id, payrollRunId),
+    eq(payrollRuns.workspaceId, workspaceId)
+  ))
+platformEventBus.publish({
+  type: 'payroll_run_disbursing',
+  workspaceId,
+  payrollRunId,
+  transferCount: initiatedTransfers.length,
+  nachaCount: nachaFallbackCount
+})
+```
+
+Add `'disbursing'` to the `payrollStatusEnum` if not already present. Check the enum first before adding.
+
+---
+
+**PHASE 2 — CHECK 2 FAILURES**
+
+After Check 2 runs — every FAIL and PARTIAL item gets a fix here. Do not skip to Phase 3 until Check 2 results are in.
+
+Read the Check 2 results from the prior run and for every FAIL or PARTIAL:
+
+**Autonomous scheduling daemon disabled:**
+If `AutonomousSchedulingDaemon` is not running at startup — find where it is commented out or gated and enable it. Add a startup log confirming it is active.
+
+**Trinity not auto-generating invoices:**
+If the billing cycle cron is not firing automatically per workspace — verify it is registered in `initializeSchedulers()` and runs on the correct schedule. If it exists but is disabled — enable it.
+
+**Morning COO brief not firing per workspace:**
+If the daily COO scan is not firing per workspace — verify the cron is registered and the per-workspace loop is active. Confirm startup log shows it scheduling.
+
+**Trinity not auto-building payroll runs:**
+If the payroll auto-build from timesheets is not running at period end — verify `payrollAutoCloseService` is registered and active. Enable if disabled.
+
+**Any other FAIL items from Check 2:**
+Read the specific finding, trace it to the file and function, and wire it in.
+
+---
+
+**PHASE 3 — CHECK 3 TEST FAILURES**
+
+After Check 3 runs — every FAIL gets a targeted fix here.
+
+**If 3A fails (terminated employee not blocked):**
+Read `shiftRoutes.ts` and verify the `isActive` check is in both POST and PATCH handlers. If missing re-add it.
+
+**If 3B fails (zero hours not blocked):**
+Read `payrollRoutes.ts` and verify the `ZERO_APPROVED_HOURS` guard is in the run creation handler. If missing re-add it.
+
+**If 3C fails (NaN tax rate crashes invoice):**
+Read `invoice.ts` lines 132 and 716 and verify both use `|| 0` fallback. If missing re-add.
+
+**If 3D fails (no anomaly warning on large invoice):**
+Read `invoiceRoutes.ts` and verify the `anomalyWarning` check fires before the send response. If missing re-add.
+
+**If 3E fails (dual-AI gate not invoked on billing.run_weekly):**
+Read `platformActionHub.ts` and verify `MANDATORY_DUAL_AI_ACTIONS` includes `billing.run_weekly`. If missing add it.
+
+**If 3F fails (QB sync crashes on invoice fields):**
+Read `quickbooks.ts` and verify `invoice.issueDate` and `invoice.total` are used not `invoice.invoiceDate` and `invoice.totalAmount`. If regression re-apply fix.
+
+**If 3G fails (contradiction not surfaced):**
+Read `trinityChatService.ts` and verify contradiction detection block is in `buildSystemPrompt`. If missing re-add.
+
+**If 3H fails (Plaid transfer not initiated in sandbox):**
+Check Plaid sandbox credentials are set in `.env`. Verify `initiateTransfer()` is called in the payroll process route. Check server logs for specific error.
+
+---
+
+**COMPLETION CRITERIA**
+
+After all three phases:
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Re-run all 8 Check 3 tests and confirm all pass
+5. Confirm Plaid sandbox end-to-end works
+6. Report final status:
+
+```
+Phase 1 — Plaid gaps: N/7 fixed
+Phase 2 — Autonomy gaps: N/N fixed  
+Phase 3 — Reasoning gate gaps: N/8 fixed
+
+CHECK 1: COMPLETE
+CHECK 2 SCORE: X/18
+CHECK 3 SCORE: X/8
+
+FINAL VERDICT: READY / NOT READY
+```
+
+7. If READY — list the exact steps to onboard Statewide Protective Services as the first real tenant
+8. Stop and wait
+
+---
+
+Paste the full results back. If all three phases pass and the verdict is READY that is your green light to onboard Statewide Protective today.

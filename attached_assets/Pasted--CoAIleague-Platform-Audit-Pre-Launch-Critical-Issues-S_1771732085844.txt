@@ -1,0 +1,712 @@
+# CoAIleague Platform Audit — Pre-Launch Critical Issues Sweep
+
+## 7-Step Systematic Audit Process
+
+> **Purpose:** Eliminate race conditions, CRUD/persistence failures, database sync issues, redundant bandaids, hardcoded values, rendering bugs, and broken workflows across ALL services, routes, domains, and UI surfaces before going live.
+
+> **How to use:** Run each grep/search command in your Replit shell. Every hit is a potential issue. Triage as CRITICAL / HIGH / MEDIUM / LOW.
+
+---
+
+## STEP 1: Race Conditions & Concurrency
+
+Race conditions are the #1 silent killer in production. They work fine in dev with one user and explode under real traffic.
+
+### 1.1 — Unguarded Async State Mutations
+
+Search for state being set without awaiting the operation that produces the value:
+
+```bash
+# React setState called inside async without proper await guards
+grep -rn "setState\|set[A-Z].*(" src/ --include="*.jsx" --include="*.tsx" --include="*.js" | grep -i "fetch\|axios\|api\|async"
+
+# Missing await before database operations
+grep -rn "\.create(\|\.update(\|\.delete(\|\.save(\|\.findOne(\|\.find(" src/ server/ --include="*.js" --include="*.ts" | grep -v "await"
+
+# Fire-and-forget promises (no await, no .then, no .catch)
+grep -rn "\.then(" src/ server/ --include="*.js" --include="*.ts" | grep -v "catch\|\.catch"
+```
+
+### 1.2 — Parallel Writes Without Locks or Transactions
+
+```bash
+# Multiple sequential writes that should be in a transaction
+grep -rn "await.*\.save\(\)" server/ --include="*.js" -A2 | grep "await.*\.save\(\)"
+
+# Optimistic updates without conflict resolution
+grep -rn "findOneAndUpdate\|updateOne\|updateMany" server/ --include="*.js" | grep -v "version\|__v\|optimistic"
+
+# Check for missing transaction wrappers on multi-step operations
+grep -rn "async.*function\|async.*=>" server/ --include="*.js" -A20 | grep -c "\.save\(\)\|\.create\(\)\|\.update\("
+```
+
+### 1.3 — Stale Closures in React
+
+```bash
+# useEffect with missing dependencies (stale closure trap)
+grep -rn "useEffect" src/ --include="*.jsx" --include="*.tsx" -A10 | grep "\[\]"
+
+# setTimeout/setInterval inside components without cleanup
+grep -rn "setTimeout\|setInterval" src/ --include="*.jsx" --include="*.tsx" | grep -v "clearTimeout\|clearInterval"
+
+# Event listeners without cleanup
+grep -rn "addEventListener" src/ --include="*.jsx" --include="*.tsx" | grep -v "removeEventListener"
+```
+
+### 1.4 — WebSocket / Real-time Race Conditions
+
+```bash
+# Socket events without deduplication
+grep -rn "socket\.on\|io\.on" src/ server/ --include="*.js" --include="*.jsx" | grep -v "removeListener\|off("
+
+# Multiple socket connections (no singleton pattern)
+grep -rn "io(\|new WebSocket\|socketio\|socket\.connect" src/ --include="*.js" --include="*.jsx"
+
+# Emitting before connection confirmed
+grep -rn "socket\.emit" src/ --include="*.js" --include="*.jsx" -B5 | grep -v "connected\|isConnected\|socket\.on.*connect"
+```
+
+### 1.5 — AI Orchestration Race Conditions (Trinity/Claude/OpenAI)
+
+```bash
+# Parallel AI calls without proper fallback sequencing
+grep -rn "Promise\.all\|Promise\.race" server/ --include="*.js" | grep -i "ai\|claude\|openai\|gemini\|trinity"
+
+# Missing timeout on AI API calls
+grep -rn "fetch\|axios" server/ --include="*.js" | grep -i "anthropic\|openai\|gemini\|googleapis" | grep -v "timeout"
+
+# Fallback chain without proper error boundaries
+grep -rn "catch" server/ --include="*.js" -A5 | grep -i "claude\|openai\|gemini"
+```
+
+---
+
+## STEP 2: CRUD & Database Persistence
+
+### 2.1 — Orphaned Records & Missing Cascades
+
+```bash
+# Delete operations without cascade/cleanup
+grep -rn "\.deleteOne\|\.deleteMany\|\.findOneAndDelete\|\.remove(" server/ --include="*.js" -A5 | grep -v "cascade\|related\|clean\|associated"
+
+# Foreign key references — check all ref fields have corresponding cleanup
+grep -rn "ref:" server/models/ --include="*.js"
+
+# Records created without required fields
+grep -rn "new.*Model\|\.create(" server/ --include="*.js" -A10 | grep -v "required"
+```
+
+### 2.2 — Transaction Gaps
+
+```bash
+# Multi-document operations without transactions
+grep -rn "async" server/ --include="*.js" -A30 | grep -P "(\.save\(\)|\.create\(|\.update\(|\.delete\().*\n.*(\.save\(\)|\.create\(|\.update\(|\.delete\()" 
+
+# Manual check: search for any endpoint that modifies 2+ collections
+grep -rn "Model\." server/routes/ --include="*.js" | awk -F: '{print $1}' | sort | uniq -c | sort -rn | head -20
+```
+
+### 2.3 — Missing Error Rollbacks
+
+```bash
+# Try/catch blocks that don't rollback on failure
+grep -rn "try {" server/ --include="*.js" -A30 | grep "catch" -A5 | grep -v "rollback\|abort\|undo\|revert\|delete"
+
+# API endpoints without proper error responses
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" server/ --include="*.js" -A30 | grep "catch" -A3 | grep -v "res\.\(status\|json\|send\)"
+```
+
+### 2.4 — Data Sync Between Services
+
+```bash
+# Check for data being stored in multiple places (sync risk)
+grep -rn "localStorage\|sessionStorage" src/ --include="*.js" --include="*.jsx" | grep -v "token\|theme"
+
+# Redux/Zustand/Context state that mirrors DB without sync mechanism
+grep -rn "createContext\|createStore\|useReducer" src/ --include="*.js" --include="*.jsx"
+
+# Caching without invalidation
+grep -rn "cache\|Cache\|cached\|memoize" server/ src/ --include="*.js" --include="*.jsx" | grep -v "invalidate\|clear\|expire\|ttl\|maxAge"
+```
+
+### 2.5 — Subscriber Org Data Isolation (CRITICAL for Multi-Tenant)
+
+```bash
+# Database queries WITHOUT organization/tenant filter
+grep -rn "\.find(\|\.findOne(\|\.findMany(\|\.aggregate(" server/ --include="*.js" | grep -v "org\|organization\|tenant\|company\|subscriber"
+
+# API routes missing org-scoped middleware
+grep -rn "router\.\(get\|post\|put\|delete\)" server/routes/ --include="*.js" -B5 | grep -v "orgAuth\|tenantAuth\|orgMiddleware\|verifyOrg"
+
+# AI token cost attribution — ensure all AI calls tag the org
+grep -rn "anthropic\|openai\|gemini\|googleapis.*generate" server/ --include="*.js" | grep -v "orgId\|organizationId\|tenantId\|subscriberId"
+```
+
+---
+
+## STEP 3: Semantic Workflow Integrity
+
+### 3.1 — Broken State Machines & Incomplete Flows
+
+```bash
+# Status/state fields — find all possible states
+grep -rn "status:\|state:\|phase:" server/models/ --include="*.js"
+
+# Check for missing state transitions
+grep -rn "status.*=\|state.*=\|\.status\s*=" server/ --include="*.js" | sort
+
+# Dead-end states (set but never transitioned from)
+grep -rn "'pending'\|'processing'\|'in_progress'\|'queued'" server/ --include="*.js"
+```
+
+### 3.2 — Incomplete User Flows
+
+```bash
+# Forms without validation
+grep -rn "onSubmit\|handleSubmit" src/ --include="*.jsx" --include="*.tsx" -A15 | grep -v "validate\|validation\|required\|error\|check"
+
+# Navigation without guards (accessing pages without required data)
+grep -rn "navigate\|push\|replace\|Link\|NavLink" src/ --include="*.jsx" --include="*.tsx" | grep -v "auth\|guard\|protect\|check\|isLogged\|isAuth"
+
+# Missing loading states
+grep -rn "useEffect" src/ --include="*.jsx" --include="*.tsx" -A10 | grep "fetch\|api\|get(" | grep -v "loading\|isLoading\|setLoading"
+
+# Missing error states on data fetches
+grep -rn "fetch\|axios\|api\.\(get\|post\)" src/ --include="*.jsx" --include="*.tsx" -A10 | grep -v "error\|setError\|catch\|onError"
+```
+
+### 3.3 — Employee Onboarding Flow Integrity
+
+```bash
+# Onboarding steps — verify all states are handled
+grep -rn "onboard\|Onboard" src/ server/ --include="*.js" --include="*.jsx"
+
+# State-specific compliance (50-state handling)
+grep -rn "state\|State" server/ --include="*.js" | grep -i "tax\|compliance\|withholding\|license\|i9\|w4\|w-4"
+
+# Missing required documents per state
+grep -rn "required.*document\|document.*required" server/ --include="*.js"
+```
+
+### 3.4 — Payroll & Time Tracking Workflow
+
+```bash
+# GPS clock-in/out — verify matching pairs
+grep -rn "clockIn\|clock_in\|clockOut\|clock_out\|punch" server/ --include="*.js"
+
+# Payroll calculations — check for floating point issues
+grep -rn "toFixed\|Math\.round\|parseFloat" server/ --include="*.js" | grep -i "pay\|wage\|rate\|hour\|overtime"
+
+# Missing overtime calculations
+grep -rn "overtime\|over_time\|OT\b" server/ --include="*.js"
+```
+
+---
+
+## STEP 4: Redundancy & Bandaid Removal
+
+### 4.1 — Duplicate Logic
+
+```bash
+# Find duplicate function names across files
+grep -rn "function \|const.*=.*=>" src/ server/ --include="*.js" --include="*.jsx" | awk -F'[( =]' '{print $NF}' | sort | uniq -cd | sort -rn | head -30
+
+# Duplicate API calls (same endpoint called from multiple components)
+grep -rn "fetch\|axios\|api\." src/ --include="*.jsx" --include="*.tsx" | grep -oP '["'"'"'][^"'"'"']*["'"'"']' | sort | uniq -cd | sort -rn | head -20
+
+# Duplicate utility functions
+grep -rn "export.*function\|module\.exports" src/utils/ server/utils/ --include="*.js" 2>/dev/null
+```
+
+### 4.2 — TODO/FIXME/HACK/TEMP Tags (Bandaids)
+
+```bash
+# Find ALL temporary fixes that need permanent solutions
+grep -rn "TODO\|FIXME\|HACK\|TEMP\|WORKAROUND\|BANDAID\|XXX\|KLUDGE" src/ server/ --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx"
+
+# Commented-out code blocks (dead code)
+grep -rn "^\s*//.*function\|^\s*//.*const\|^\s*//.*return\|^\s*/\*" src/ server/ --include="*.js" --include="*.jsx" | head -50
+
+# Console.log left in production code
+grep -rn "console\.log\|console\.warn\|console\.error\|console\.debug" src/ server/ --include="*.js" --include="*.jsx" | grep -v "node_modules\|\.test\.\|\.spec\." | wc -l
+```
+
+### 4.3 — Overlapping Route Handlers
+
+```bash
+# Find duplicate route definitions
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" server/routes/ --include="*.js" | awk -F'"' '{print $2}' | sort | uniq -cd
+
+# Find duplicate Express middleware
+grep -rn "app\.use\|router\.use" server/ --include="*.js" | sort
+
+# Overlapping API patterns
+grep -rn "app\.\(get\|post\|put\|delete\)" server/ --include="*.js" | sort
+```
+
+### 4.4 — Dead/Unreachable Code
+
+```bash
+# Exported but never imported
+for f in $(grep -rln "export" src/ server/ --include="*.js" --include="*.jsx" 2>/dev/null); do
+  exports=$(grep -oP "export\s+(default\s+)?(function|const|class)\s+\K\w+" "$f")
+  for exp in $exports; do
+    count=$(grep -rn "$exp" src/ server/ --include="*.js" --include="*.jsx" | grep -v "$f" | wc -l)
+    if [ "$count" -eq 0 ]; then
+      echo "UNUSED EXPORT: $exp in $f"
+    fi
+  done
+done
+
+# Unused npm dependencies
+npx depcheck 2>/dev/null || echo "Install depcheck: npm install -g depcheck"
+```
+
+---
+
+## STEP 5: Hardcoded Values Needing Dynamic/Live Approach
+
+### 5.1 — Hardcoded URLs, IPs, Ports
+
+```bash
+# Hardcoded localhost/IP addresses
+grep -rn "localhost\|127\.0\.0\.1\|0\.0\.0\.0" src/ server/ --include="*.js" --include="*.jsx" | grep -v "node_modules\|\.env\|config"
+
+# Hardcoded ports
+grep -rn ":\d\{4,5\}\b" src/ server/ --include="*.js" --include="*.jsx" | grep -v "node_modules\|process\.env\|\.env"
+
+# Hardcoded API URLs
+grep -rn "https\?://.*api\|https\?://.*\.com\|https\?://.*\.io" src/ server/ --include="*.js" --include="*.jsx" | grep -v "node_modules\|cdn\|font\|\.env\|config"
+```
+
+### 5.2 — Hardcoded API Keys, Secrets, Tokens
+
+```bash
+# API keys in source (CRITICAL SECURITY)
+grep -rn "sk-\|pk_\|api_key\|apiKey\|secret\|SECRET\|password\|PASSWORD" src/ server/ --include="*.js" --include="*.jsx" --include="*.env" | grep -v "node_modules\|process\.env\|\.example"
+
+# Stripe keys hardcoded
+grep -rn "sk_live\|sk_test\|pk_live\|pk_test" src/ server/ --include="*.js" --include="*.jsx"
+
+# QuickBooks/OAuth tokens hardcoded
+grep -rn "oauth\|refresh_token\|access_token" server/ --include="*.js" | grep -v "process\.env\|req\.\|res\.\|token.*="
+```
+
+### 5.3 — Hardcoded IDs, Roles, Permissions
+
+```bash
+# Hardcoded MongoDB ObjectIds
+grep -rn "['\"]5[a-f0-9]\{23\}['\"]\|['\"]6[a-f0-9]\{23\}['\"]" src/ server/ --include="*.js" --include="*.jsx"
+
+# Hardcoded role names/permission strings
+grep -rn "'admin'\|'superadmin'\|'manager'\|'officer'\|'employee'\|'owner'" server/ --include="*.js" | grep -v "enum\|Schema\|model\|const.*roles\|ROLES"
+
+# Hardcoded email addresses
+grep -rn "[a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]*\.[a-zA-Z]" src/ server/ --include="*.js" --include="*.jsx" | grep -v "node_modules\|\.env\|example\|test\|placeholder"
+```
+
+### 5.4 — Hardcoded Business Logic
+
+```bash
+# Hardcoded dollar amounts, tax rates, percentages
+grep -rn "\b[0-9]*\.[0-9][0-9]\b" server/ --include="*.js" | grep -i "rate\|tax\|percent\|fee\|cost\|price\|wage\|pay"
+
+# Hardcoded time values (hours, minutes, shifts)
+grep -rn "\b8\b.*hour\|\b40\b.*hour\|\b24\b.*hour\|shift.*length\|overtime.*\b40\b" server/ --include="*.js"
+
+# Hardcoded state/region specific values
+grep -rn "'TX'\|'CA'\|'NY'\|'FL'\|Texas\|California" server/ --include="*.js" | grep -v "enum\|states\|list\|array\|ALL_STATES"
+```
+
+### 5.5 — Environment Variable Audit
+
+```bash
+# List all env var usage vs what's in .env
+grep -rn "process\.env\." src/ server/ --include="*.js" --include="*.jsx" | grep -oP "process\.env\.\K\w+" | sort -u > /tmp/env_used.txt
+cat .env .env.example 2>/dev/null | grep -oP "^\K[A-Z_]+" | sort -u > /tmp/env_defined.txt
+echo "=== USED BUT NOT DEFINED ==="
+comm -23 /tmp/env_used.txt /tmp/env_defined.txt
+echo "=== DEFINED BUT NOT USED ==="
+comm -13 /tmp/env_used.txt /tmp/env_defined.txt
+```
+
+---
+
+## STEP 6: UI/UX Rendering — Mobile, Desktop, All Surfaces
+
+### 6.1 — Responsive Breakpoint Issues
+
+```bash
+# Find components without responsive handling
+grep -rL "media\|breakpoint\|sm:\|md:\|lg:\|xl:\|useMediaQuery\|isMobile\|isDesktop\|responsive" src/components/ --include="*.jsx" --include="*.tsx" --include="*.css" 2>/dev/null
+
+# Fixed pixel widths (breaks on mobile)
+grep -rn "width:\s*[0-9]\{3,\}px\|min-width:\s*[0-9]\{3,\}px" src/ --include="*.css" --include="*.jsx" --include="*.tsx"
+
+# Hardcoded heights that break scroll
+grep -rn "height:\s*[0-9]\{3,\}px\|max-height:\s*[0-9]\{3,\}px" src/ --include="*.css" --include="*.jsx" --include="*.tsx"
+
+# overflow hidden cutting off content on mobile
+grep -rn "overflow:\s*hidden\|overflow-x:\s*hidden\|overflow-y:\s*hidden" src/ --include="*.css" --include="*.jsx"
+```
+
+### 6.2 — Modal, Dialog, Sheet, Drawer Issues
+
+```bash
+# Modals/dialogs without proper close handlers
+grep -rn "Modal\|Dialog\|Sheet\|Drawer\|Popover" src/ --include="*.jsx" --include="*.tsx" | head -50
+
+# Z-index stacking issues (find all z-index values)
+grep -rn "z-index\|zIndex\|z-\[" src/ --include="*.css" --include="*.jsx" --include="*.tsx" | grep -oP "\d+" | sort -n | uniq -c | sort -rn
+
+# Modals without backdrop/overlay click dismiss
+grep -rn "Modal\|Dialog" src/ --include="*.jsx" -A10 | grep -v "onClose\|onDismiss\|handleClose\|backdrop\|overlay"
+
+# Scroll lock when modal is open (body scroll bleed-through)
+grep -rn "Modal\|Dialog\|Sheet" src/ --include="*.jsx" -A20 | grep -v "overflow\|scroll.*lock\|body.*overflow\|disableScrollLock"
+```
+
+### 6.3 — Button & Interactive Element Issues
+
+```bash
+# Buttons without type attribute (causes form submission bugs)
+grep -rn "<button" src/ --include="*.jsx" --include="*.tsx" | grep -v 'type='
+
+# Buttons without disabled state during async operations
+grep -rn "onClick.*async\|onClick.*fetch\|onClick.*api" src/ --include="*.jsx" --include="*.tsx" -A5 | grep -v "disabled\|loading\|isLoading"
+
+# Missing touch targets (too small for mobile — look for tiny clickable areas)
+grep -rn "width:\s*[12][0-9]px\|height:\s*[12][0-9]px\|w-[3-6]\b\|h-[3-6]\b" src/ --include="*.jsx" --include="*.css" | grep -i "button\|click\|tap\|link\|icon"
+
+# Double-click prevention missing
+grep -rn "onClick" src/ --include="*.jsx" --include="*.tsx" | grep -i "submit\|save\|create\|delete\|send\|pay" | grep -v "debounce\|throttle\|isSubmitting\|disabled\|loading"
+```
+
+### 6.4 — Container & Layout Issues
+
+```bash
+# Flex/grid without wrapping (overflows on small screens)
+grep -rn "display:\s*flex\|flex\b" src/ --include="*.css" --include="*.jsx" | grep -v "flex-wrap\|flex-col\|flex-row"
+
+# Tables without horizontal scroll wrapper (breaks mobile)
+grep -rn "<table\|<Table" src/ --include="*.jsx" --include="*.tsx" | grep -v "overflow\|scroll\|responsive\|wrapper"
+
+# Images without max-width (overflow container)
+grep -rn "<img\|<Image" src/ --include="*.jsx" --include="*.tsx" | grep -v "max-w\|max-width\|object-fit\|w-full\|width.*100"
+```
+
+### 6.5 — Mount/Unmount & Lifecycle Bugs
+
+```bash
+# State updates on unmounted components
+grep -rn "useEffect" src/ --include="*.jsx" --include="*.tsx" -A15 | grep "set[A-Z]" | head -30
+
+# Missing cleanup in useEffect (memory leaks)
+grep -rn "useEffect" src/ --include="*.jsx" --include="*.tsx" -A20 | grep -B20 "^\s*}" | grep -v "return\s*()" | head -30
+
+# Conditional hooks (React rules violation)
+grep -rn "if.*use[A-Z]\|&&.*use[A-Z]" src/ --include="*.jsx" --include="*.tsx"
+
+# Key prop issues in lists
+grep -rn "\.map(" src/ --include="*.jsx" --include="*.tsx" -A5 | grep -v "key=\|key =" | grep "<"
+```
+
+### 6.6 — Mobile-Specific Issues
+
+```bash
+# Touch events not handled alongside click events
+grep -rn "onClick" src/ --include="*.jsx" --include="*.tsx" | wc -l
+grep -rn "onTouchStart\|onTouchEnd" src/ --include="*.jsx" --include="*.tsx" | wc -l
+
+# Viewport meta tag present
+grep -rn "viewport" public/ src/ --include="*.html" --include="*.jsx"
+
+# Safe area insets for notched phones
+grep -rn "safe-area\|env(safe-area\|padding.*env(" src/ --include="*.css" --include="*.jsx"
+
+# Horizontal scroll issues (anything wider than viewport)
+grep -rn "width:\s*100vw\|min-width:\s*[0-9]\{4\}" src/ --include="*.css" --include="*.jsx"
+
+# Input zoom on iOS (font-size < 16px on inputs)
+grep -rn "input\|Input\|textarea\|TextArea" src/ --include="*.css" | grep "font-size" | grep -v "16\|1[7-9]\|[2-9][0-9]"
+```
+
+---
+
+## STEP 7: Service, Route & Security Integrity
+
+### 7.1 — Authentication & Authorization Gaps
+
+```bash
+# Unprotected API routes (no auth middleware)
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" server/routes/ --include="*.js" | grep -v "auth\|protect\|verify\|middleware\|isAuth\|requireAuth"
+
+# Admin routes without admin check
+grep -rn "admin\|Admin" server/routes/ --include="*.js" | grep "router\." | grep -v "isAdmin\|requireAdmin\|adminAuth\|role.*admin"
+
+# JWT/token verification gaps
+grep -rn "jwt\|token" server/ --include="*.js" | grep "verify\|decode" | grep -v "try\|catch"
+```
+
+### 7.2 — CORS & Security Headers
+
+```bash
+# CORS configuration
+grep -rn "cors\|CORS\|Access-Control" server/ --include="*.js"
+
+# Check for wildcard CORS (security risk)
+grep -rn "origin.*\*\|'*'" server/ --include="*.js" | grep -i "cors"
+
+# Security headers (helmet, CSP, etc.)
+grep -rn "helmet\|csp\|Content-Security-Policy\|X-Frame\|X-Content-Type" server/ --include="*.js"
+
+# Rate limiting
+grep -rn "rateLimit\|rate-limit\|rateLimiter\|throttle" server/ --include="*.js"
+```
+
+### 7.3 — Input Validation & Sanitization
+
+```bash
+# Routes accepting user input without validation
+grep -rn "req\.body\|req\.params\|req\.query" server/ --include="*.js" | grep -v "validate\|sanitize\|escape\|check\|joi\|zod\|yup\|express-validator"
+
+# SQL/NoSQL injection risks
+grep -rn "req\.body\|req\.params\|req\.query" server/ --include="*.js" -A3 | grep "\$where\|\$gt\|\$regex\|eval(\|exec("
+
+# XSS risks (dangerouslySetInnerHTML)
+grep -rn "dangerouslySetInnerHTML\|innerHTML\|__html" src/ --include="*.jsx" --include="*.tsx" --include="*.js"
+
+# File upload without validation
+grep -rn "upload\|multer\|formidable\|busboy" server/ --include="*.js" -A10 | grep -v "fileFilter\|mimetype\|maxSize\|limit"
+```
+
+### 7.4 — Error Handling Completeness
+
+```bash
+# Express routes without try/catch
+grep -rn "router\.\(get\|post\|put\|delete\)" server/routes/ --include="*.js" -A20 | grep "async" | grep -v "try"
+
+# Missing global error handler
+grep -rn "app\.use.*err\|errorHandler\|error.*middleware" server/ --include="*.js"
+
+# Unhandled promise rejections
+grep -rn "unhandledRejection\|uncaughtException" server/ --include="*.js"
+
+# Frontend error boundaries
+grep -rn "ErrorBoundary\|componentDidCatch\|getDerivedStateFromError" src/ --include="*.jsx" --include="*.tsx"
+```
+
+### 7.5 — API Response Consistency
+
+```bash
+# Inconsistent response formats
+grep -rn "res\.json\|res\.send\|res\.status" server/ --include="*.js" | grep -oP "json\(\{[^}]*\}" | sort | head -30
+
+# Missing status codes
+grep -rn "res\.json\|res\.send" server/ --include="*.js" | grep -v "res\.status\|\.status("
+
+# Missing error responses in catch blocks
+grep -rn "catch" server/routes/ --include="*.js" -A5 | grep -v "res\.\|next(\|throw\|log"
+```
+
+### 7.6 — Stripe & QuickBooks Integration Integrity
+
+```bash
+# Webhook signature verification
+grep -rn "webhook\|Webhook" server/ --include="*.js" | grep -v "verify\|signature\|constructEvent"
+
+# Stripe idempotency keys (prevent duplicate charges)
+grep -rn "stripe\." server/ --include="*.js" | grep "create\|charge\|subscription" | grep -v "idempotency\|idempotencyKey"
+
+# QuickBooks token refresh handling
+grep -rn "quickbooks\|intuit\|qbo" server/ --include="*.js" | grep -i "token\|refresh\|oauth" | grep -v "refresh\|renew\|expire"
+
+# Payment error handling
+grep -rn "stripe\.\|charge\|payment\|invoice" server/ --include="*.js" -A10 | grep "catch" -A5
+```
+
+### 7.7 — Resend Email Integration
+
+```bash
+# Email sending without error handling
+grep -rn "resend\|sendEmail\|sendMail" server/ --include="*.js" -A10 | grep -v "catch\|error\|try"
+
+# Missing email templates validation
+grep -rn "resend\.\|email.*send\|send.*email" server/ --include="*.js" | grep -v "to\|from\|subject\|html\|template"
+```
+
+---
+
+## MASTER TRIAGE CHECKLIST
+
+After running all searches above, categorize every finding:
+
+### CRITICAL (Fix Before Launch)
+- [ ] Race conditions on payment/billing operations
+- [ ] Missing multi-tenant data isolation (org scoping)
+- [ ] Unprotected API routes (auth gaps)
+- [ ] Hardcoded API keys or secrets in source
+- [ ] Missing webhook signature verification
+- [ ] No transaction wrapping on multi-step DB operations
+- [ ] AI token costs not attributed to subscriber org
+- [ ] Missing rate limiting on public endpoints
+- [ ] Double-submit on payment buttons
+- [ ] CORS wildcard in production
+
+### HIGH (Fix Within First Week)
+- [ ] Missing error rollbacks on failed operations
+- [ ] Orphaned records on delete operations
+- [ ] Stale closures causing wrong data in UI
+- [ ] Socket connections without cleanup
+- [ ] Forms without validation
+- [ ] Modal/dialog stacking z-index issues
+- [ ] Missing loading/error states on API calls
+- [ ] Console.logs in production code
+- [ ] Hardcoded URLs needing env vars
+- [ ] Missing input sanitization
+
+### MEDIUM (Fix Within First Month)
+- [ ] Duplicate logic across files
+- [ ] TODO/FIXME/HACK markers unresolved
+- [ ] Responsive breakpoint gaps
+- [ ] Dead/unreachable code
+- [ ] Missing TypeScript types (if applicable)
+- [ ] Inconsistent API response formats
+- [ ] Unused npm dependencies
+- [ ] Images without size constraints
+
+### LOW (Ongoing Maintenance)
+- [ ] Code style inconsistencies
+- [ ] Missing JSDoc comments
+- [ ] Unused CSS rules
+- [ ] Bundle size optimization
+- [ ] Test coverage gaps
+
+---
+
+## AUTOMATED AUDIT SCRIPT
+
+Save this as `audit.sh` in your Replit root and run with `bash audit.sh`:
+
+```bash
+#!/bin/bash
+# CoAIleague Pre-Launch Audit Script
+# Run from project root: bash audit.sh
+
+RED='\033[0;31m'
+YEL='\033[1;33m'
+GRN='\033[0;32m'
+NC='\033[0m'
+TOTAL=0
+
+check() {
+  local label="$1"
+  local severity="$2"
+  shift 2
+  local count
+  count=$(eval "$@" 2>/dev/null | wc -l)
+  if [ "$count" -gt 0 ]; then
+    case "$severity" in
+      CRITICAL) color=$RED ;;
+      HIGH) color=$YEL ;;
+      *) color=$NC ;;
+    esac
+    printf "${color}[%s] %s: %d hits${NC}\n" "$severity" "$label" "$count"
+    TOTAL=$((TOTAL + count))
+  else
+    printf "${GRN}[PASS] %s${NC}\n" "$label"
+  fi
+}
+
+echo "============================================"
+echo "  CoAIleague Pre-Launch Platform Audit"
+echo "============================================"
+echo ""
+
+echo "--- STEP 1: Race Conditions ---"
+check "DB ops missing await" "CRITICAL" \
+  "grep -rn '\.create(\|\.update(\|\.delete(\|\.save(\|\.findOne(' server/ --include='*.js' | grep -v await"
+check "Unhandled promises" "HIGH" \
+  "grep -rn '\.then(' src/ server/ --include='*.js' | grep -v 'catch\|\.catch'"
+check "setTimeout without cleanup" "MEDIUM" \
+  "grep -rn 'setTimeout\|setInterval' src/ --include='*.jsx' | grep -v 'clearTimeout\|clearInterval'"
+check "AI calls without timeout" "HIGH" \
+  "grep -rn 'fetch\|axios' server/ --include='*.js' | grep -i 'anthropic\|openai\|gemini' | grep -v timeout"
+
+echo ""
+echo "--- STEP 2: CRUD & Persistence ---"
+check "Deletes without cascade" "HIGH" \
+  "grep -rn '\.deleteOne\|\.deleteMany\|\.findOneAndDelete' server/ --include='*.js'"
+check "Queries missing org filter" "CRITICAL" \
+  "grep -rn '\.find(\|\.findOne(' server/ --include='*.js' | grep -v 'org\|organization\|tenant'"
+check "Cache without invalidation" "MEDIUM" \
+  "grep -rn 'cache\|Cache' server/ src/ --include='*.js' | grep -v 'invalidate\|clear\|expire'"
+
+echo ""
+echo "--- STEP 3: Workflow Integrity ---"
+check "Forms without validation" "HIGH" \
+  "grep -rn 'onSubmit\|handleSubmit' src/ --include='*.jsx' -A15 | grep -v 'validate\|required\|error'"
+check "Missing loading states" "MEDIUM" \
+  "grep -rn 'useEffect' src/ --include='*.jsx' -A10 | grep 'fetch\|api' | grep -v 'loading\|isLoading'"
+
+echo ""
+echo "--- STEP 4: Redundancy & Bandaids ---"
+check "TODO/FIXME/HACK markers" "MEDIUM" \
+  "grep -rn 'TODO\|FIXME\|HACK\|TEMP\|WORKAROUND' src/ server/ --include='*.js' --include='*.jsx'"
+check "Console.logs in code" "HIGH" \
+  "grep -rn 'console\.log' src/ server/ --include='*.js' --include='*.jsx' | grep -v node_modules"
+check "Duplicate routes" "HIGH" \
+  "grep -rn 'router\.\(get\|post\|put\|delete\)' server/routes/ --include='*.js' | awk -F'\"' '{print \$2}' | sort | uniq -d"
+
+echo ""
+echo "--- STEP 5: Hardcoded Values ---"
+check "Hardcoded localhost" "CRITICAL" \
+  "grep -rn 'localhost\|127\.0\.0\.1' src/ server/ --include='*.js' --include='*.jsx' | grep -v node_modules"
+check "Hardcoded API keys" "CRITICAL" \
+  "grep -rn 'sk-\|pk_\|sk_live\|sk_test' src/ server/ --include='*.js' --include='*.jsx'"
+check "Hardcoded ObjectIds" "HIGH" \
+  "grep -rn \"'5[a-f0-9]\{23\}'\|'6[a-f0-9]\{23\}'\" src/ server/ --include='*.js' --include='*.jsx'"
+check "Hardcoded emails" "MEDIUM" \
+  "grep -rn '[a-zA-Z]@[a-zA-Z]' src/ server/ --include='*.js' | grep -v node_modules | grep -v example | grep -v test"
+
+echo ""
+echo "--- STEP 6: UI/UX Rendering ---"
+check "Buttons without type" "MEDIUM" \
+  "grep -rn '<button' src/ --include='*.jsx' | grep -v 'type='"
+check "Double-submit unprotected" "HIGH" \
+  "grep -rn 'onClick' src/ --include='*.jsx' | grep -i 'submit\|save\|create\|delete\|pay' | grep -v 'debounce\|disabled\|loading'"
+check "dangerouslySetInnerHTML" "HIGH" \
+  "grep -rn 'dangerouslySetInnerHTML\|innerHTML' src/ --include='*.jsx'"
+check "Missing key props in lists" "MEDIUM" \
+  "grep -rn '\.map(' src/ --include='*.jsx' -A3 | grep '<' | grep -v 'key='"
+
+echo ""
+echo "--- STEP 7: Security & Routes ---"
+check "Unprotected routes" "CRITICAL" \
+  "grep -rn 'router\.\(get\|post\|put\|delete\)' server/routes/ --include='*.js' | grep -v 'auth\|protect\|verify\|middleware'"
+check "Wildcard CORS" "CRITICAL" \
+  "grep -rn \"origin.*\*\|'\*'\" server/ --include='*.js' | grep -i cors"
+check "No rate limiting found" "HIGH" \
+  "grep -rL 'rateLimit\|rate-limit\|throttle' server/ --include='*.js' 2>/dev/null | grep -i 'route\|app\|server'"
+check "Webhook sig not verified" "CRITICAL" \
+  "grep -rn 'webhook\|Webhook' server/ --include='*.js' | grep -v 'verify\|signature\|constructEvent'"
+check "Stripe no idempotency" "HIGH" \
+  "grep -rn 'stripe\.' server/ --include='*.js' | grep 'create\|charge' | grep -v idempotency"
+
+echo ""
+echo "============================================"
+printf "  TOTAL ISSUES FOUND: ${RED}%d${NC}\n" "$TOTAL"
+echo "============================================"
+```
+
+---
+
+## QUICK REFERENCE: Priority Fix Order
+
+1. **Security first** — API keys, auth gaps, CORS, input validation
+2. **Data integrity** — Multi-tenant isolation, transactions, cascades
+3. **Money paths** — Stripe, payroll, billing, AI cost attribution
+4. **Race conditions** — Async gaps, socket cleanup, stale state
+5. **User experience** — Loading states, error handling, mobile rendering
+6. **Code quality** — Bandaids, duplicates, dead code, console.logs
+7. **Polish** — Response consistency, TypeScript, test coverage

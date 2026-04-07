@@ -4,6 +4,7 @@
  * Allows platform support staff to monitor and join org chatrooms
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,12 +15,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   MessageSquare, Users, Building2, Search, 
-  RefreshCw, Loader2, ExternalLink, Clock, 
-  AlertCircle, Eye, Download
+  Loader2, ExternalLink, Clock, 
+  AlertCircle, Eye, Download, LogIn
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useLocation } from 'wouter';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
+import { apiRequest } from '@/lib/queryClient';
 
 interface OrgChatroom {
   id: string;
@@ -68,7 +71,7 @@ export default function SupportChatrooms() {
 
   const handleExportHistory = async (roomId: string, roomName: string) => {
     try {
-      const res = await fetch(`/api/chat/rooms/${roomId}/export`);
+      const res = await secureFetch(`/api/chat/rooms/${roomId}/export`);
       if (!res.ok) throw new Error('Export failed');
       
       const blob = await res.blob();
@@ -94,65 +97,77 @@ export default function SupportChatrooms() {
     }
   };
 
-  return (
-    <div className="container max-w-6xl mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <MessageSquare className="w-6 h-6 text-primary" />
-            Organization Chatrooms
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Monitor and support all organization chatrooms
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search rooms or orgs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64"
-            />
-          </div>
-          <Button variant="outline" size="icon" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4" />
-          </Button>
+  const handleJoinRoom = async (roomId: string, roomName: string) => {
+    try {
+      await apiRequest('POST', `/api/comm-os/rooms/${roomId}/join`);
+      toast({
+        title: 'Joined Room',
+        description: `You are now a participant in ${roomName}. The organization has been notified.`,
+      });
+      setLocation(`/org-chat/${roomId}`);
+    } catch (error: any) {
+      toast({
+        title: 'Failed to Join',
+        description: error.message || 'Could not join chatroom. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'support-chatrooms',
+    title: 'Organization Chatrooms',
+    subtitle: 'Monitor and support all organization chatrooms',
+    category: 'admin',
+    maxWidth: '6xl',
+    headerActions: (
+      <div className="flex items-center gap-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search rooms or orgs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-40 sm:w-64"
+          />
         </div>
       </div>
+    ),
+  };
 
-      <div className="grid grid-cols-4 gap-3">
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{chatrooms.length}</div>
-            <p className="text-xs text-muted-foreground">Total Rooms</p>
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate">{chatrooms.length}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Total Rooms</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-500">{activeRooms.length}</div>
-            <p className="text-xs text-muted-foreground">Active</p>
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold text-green-500 truncate">{activeRooms.length}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Active</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-muted-foreground">{idleRooms.length}</div>
-            <p className="text-xs text-muted-foreground">Idle</p>
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold text-muted-foreground truncate">{idleRooms.length}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Idle</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate">
               {new Set(chatrooms.map(r => r.workspaceId)).size}
             </div>
-            <p className="text-xs text-muted-foreground">Organizations</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Organizations</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="all">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="all">All Rooms ({filteredRooms.length})</TabsTrigger>
           <TabsTrigger value="active" className="gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -167,6 +182,7 @@ export default function SupportChatrooms() {
             isLoading={isLoading}
             formatDate={formatDate}
             onExport={handleExportHistory}
+            onJoin={handleJoinRoom}
             setLocation={setLocation}
           />
         </TabsContent>
@@ -177,6 +193,7 @@ export default function SupportChatrooms() {
             isLoading={isLoading}
             formatDate={formatDate}
             onExport={handleExportHistory}
+            onJoin={handleJoinRoom}
             setLocation={setLocation}
           />
         </TabsContent>
@@ -187,11 +204,12 @@ export default function SupportChatrooms() {
             isLoading={isLoading}
             formatDate={formatDate}
             onExport={handleExportHistory}
+            onJoin={handleJoinRoom}
             setLocation={setLocation}
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }
 
@@ -200,12 +218,14 @@ function RoomList({
   isLoading,
   formatDate,
   onExport,
+  onJoin,
   setLocation,
 }: {
   rooms: OrgChatroom[];
   isLoading: boolean;
   formatDate: (date?: string) => string;
   onExport: (roomId: string, roomName: string) => void;
+  onJoin: (roomId: string, roomName: string) => void;
   setLocation: (path: string) => void;
 }) {
   if (isLoading) {
@@ -250,26 +270,36 @@ function RoomList({
                   <Building2 className="w-3 h-3" />
                   <span className="truncate">{room.workspaceName}</span>
                 </div>
-                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
                   <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {room.memberCount} members
+                    <Users className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{room.memberCount}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3" />
-                    {room.messageCount} messages
+                    <MessageSquare className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{room.messageCount}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {formatDate(room.lastActivity)}
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{formatDate(room.lastActivity)}</span>
                   </span>
                 </div>
               </div>
               <div className="flex flex-col gap-1">
                 <Button
                   size="sm"
+                  variant="default"
+                  onClick={() => onJoin(room.id, room.name)}
+                  data-testid={`button-join-room-${room.id}`}
+                >
+                  <LogIn className="w-3 h-3 mr-1" />
+                  Join
+                </Button>
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setLocation(`/org-chat/${room.id}`)}
+                  data-testid={`button-view-room-${room.id}`}
                 >
                   <Eye className="w-3 h-3 mr-1" />
                   View
@@ -278,6 +308,7 @@ function RoomList({
                   size="sm"
                   variant="ghost"
                   onClick={() => onExport(room.id, room.name)}
+                  data-testid={`button-export-room-${room.id}`}
                 >
                   <Download className="w-3 h-3 mr-1" />
                   Export

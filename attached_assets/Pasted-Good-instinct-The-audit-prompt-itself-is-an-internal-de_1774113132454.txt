@@ -1,0 +1,47 @@
+Good instinct. The audit prompt itself is an internal dev instruction — no FTC exposure there. But what it's *testing* absolutely has exposure risk. Here's where CoAIleague could get into legal trouble and what to add:
+
+---
+
+**THE REAL RISKS TO PATCH**
+
+**1. AI Capability Claims (FTC's #1 target right now)**
+If Trinity's UI, onboarding copy, or any platform text says things like *"autonomously fills shifts," "learns your organization," "guaranteed coverage,"* or *"AI-powered"* in ways that overstate what actually executes — that's an unfair or deceptive trade practice under Section 5 of the FTC Act. The FTC has been aggressive on AI washing since 2023.
+
+**2. Payroll & Wage Claims**
+Any language suggesting the platform *guarantees* pay accuracy, compliance, or legal wage calculations exposes you to liability if it misfires. Must be clearly presented as a management tool, not a legal compliance guarantee.
+
+**3. Data & Privacy Claims**
+If onboarding or settings pages imply data is encrypted, never shared, HIPAA-adjacent, or SOC 2-level secure without that being verified infrastructure — that's an FTC data security claim violation.
+
+**4. Trial & Billing Representations**
+Trial signup flows with auto-conversion to paid must have clear, conspicuous disclosure of billing terms before capture. The FTC's *Negative Option Rule* (updated 2023) requires this explicitly.
+
+---
+
+Add this as **Phase 10** to the audit prompt:
+
+---
+
+**PHASE 10 — FTC COMPLIANCE & CLAIM SUBSTANTIATION AUDIT**
+
+Review every piece of platform-facing copy, UI label, onboarding text, Trinity dialogue, email communication, and feature description against what the platform actually executes. Flag any gap between claim and function.
+
+Specifically audit:
+
+- **AI capability language** — Every statement Trinity makes about herself and every label describing her capabilities must reflect only what demonstrably executes. Remove or qualify any language suggesting autonomy, intelligence, or guarantee that isn't technically substantiated. Replace superlatives with accurate functional descriptions (e.g., *"Trinity suggests coverage options"* not *"Trinity autonomously fills your shifts"*)
+
+- **Payroll & wage language** — Confirm no UI copy, tooltip, or generated document implies legal compliance guarantees. Add standard disclaimer language: *"CoAIleague is a workforce management tool. Users are responsible for verifying compliance with applicable wage and labor laws."*
+
+- **Data & privacy representations** — Audit every instance where data security, privacy, or confidentiality is implied. Confirm infrastructure actually supports every claim made. Flag any claim that exceeds current technical implementation.
+
+- **Trial & billing flow** — Confirm the trial signup presents billing terms clearly and conspicuously *before* payment capture, not buried in ToS. Auto-renewal or conversion must be explicitly disclosed at the point of enrollment per FTC Negative Option Rule (2023). Confirm cancellation mechanism is as easy to find as signup.
+
+- **Hiring pipeline & employment claims** — If any language touches on EEOC, background checks, or hiring compliance, confirm it is framed as tooling support only, not legal guidance.
+
+- **Testimonials or outcome claims** — If any marketing or onboarding copy references results ("save X hours," "reduce overtime by Y%"), confirm these are either substantiated with real data or clearly framed as illustrative examples, not guaranteed outcomes.
+
+**Deliverable for this phase:** A clean/flag list of every claim in the platform UI and communications. For each flagged item: original language, risk level (High / Medium / Low), and recommended replacement language that is accurate, defensible, and still compelling.
+
+---
+
+Paste that full updated prompt into Replit Agent. When findings come back, bring the Phase 10 output here first — that's the one that could cost you money in court, not just in dev hours.

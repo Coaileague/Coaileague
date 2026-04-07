@@ -1,0 +1,38 @@
+Clean report. Three bugs fixed. Two UX gaps documented. Phase 2 removal list is ready and waiting for your approval. Here is exactly what to say.
+
+The 27 proposed removals are correct. Every one of them is either a background cron, an internal routing mechanism, a platform ops tool, or a session management function that has no business being a user-facing Trinity action. Approve them all and address the two UX gaps at the same time since they are small fixes.
+
+Send this:
+
+---
+
+The 12-flow sweep is complete and understood. Three bugs confirmed fixed. Now execute the following in order.
+
+**First — fix the two UX gaps before Phase 2.**
+
+UX Gap 1 — Shift room discoverability:
+Add an Open Shift Room button to each shift card and shift detail panel. When clicked it navigates directly to the chatroom linked to that shift. The room already exists and is correctly created — officers just cannot find it from the shift. This is the most important UX gap because officers need to find their shift room without hunting through the Chatrooms section.
+
+UX Gap 2 — Hard block badge on employee detail:
+When isHardBlocked is true on an employee record display a prominent red badge on the employee detail page that says License Expired — Scheduling Blocked. The data is already correct. The frontend just needs to read the isHardBlocked field and render the badge. Also add this same indicator to the schedule builder so managers see the block before they try to assign the officer.
+
+Restart and confirm both gaps are resolved before Phase 2.
+
+**Second — execute Phase 2 removals.**
+
+Remove these exact 27 actions from the registry. No handler logic changes. No service file changes. Only remove the registration calls for these action IDs:
+
+ai.triad_health_check, ai.route_to_claude_judge, ai.route_to_openai_fallback, ai.confidence_score, auth.audit_login_events, auth.check_session, auth.list_active_sessions, auth.revoke_session, auth.verify_platform_role, auth.get_permission_matrix, proactive.run_daily_scan, proactive.run_weekly_scan, proactive.run_monthly_cycle, proactive.process_event, proactive.generate_morning_brief, qb.sync_cdc, qb.sync_initial, scheduling.run_monthly_cycle, scheduling.fill_from_email_pipeline, system.rollback_action, system.triad_status, system.confidence_score, trinity.domain_health_check, trinity.knowledge_confidence_check, email.process_inbound, chat.send_message, analytics.pattern_detection.
+
+After removing all 27 restart the server. Report the new action count. It must be 710 or below. Confirm all 15 domains healthy, all 4 regression tests passing, and Statewide exemption still active.
+
+**Third — report after both are done.**
+
+UX Gap 1 resolved: yes or no.
+UX Gap 2 resolved: yes or no.
+27 actions removed: confirmed.
+New action count: number.
+All 15 domains healthy: confirmed.
+All regression tests passing: confirmed.
+
+Then we proceed to Phase 3.

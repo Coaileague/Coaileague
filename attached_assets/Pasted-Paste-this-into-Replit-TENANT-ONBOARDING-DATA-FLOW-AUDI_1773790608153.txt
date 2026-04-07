@@ -1,0 +1,206 @@
+Paste this into Replit:
+
+---
+
+**TENANT ONBOARDING DATA FLOW AUDIT — ALL LAYERS | READ BEFORE TOUCH | FIX EVERYTHING FOUND**
+
+This audit focuses on one specific end-to-end flow: a new tenant registers, adds their first client with billing rates, adds their first employee with pay rate and tax type, edits and saves settings, and confirms all data persists, syncs live, and is isolated to their workspace. Find every gap that would break this flow. Fix everything found.
+
+---
+
+**SECTION 1 — CLIENT CREATION & BILLING RATE PERSISTENCE**
+
+Trace the complete path from the frontend "Add Client" form submission to the DB write and back to the UI.
+
+Scan for:
+- Does the client creation form submit all required billing fields — `armedBillRate`, `unarmedBillRate`, `contractRate`, `overtimeRate`, `billingCycle`, `paymentTermsDays`, `billingEmail`?
+- Does the POST route accept all these fields and write them to the DB — not strip or ignore any?
+- Are numeric rate fields coerced from strings to numbers before Zod validation — HTML forms always send strings?
+- Does the client record returned after creation include all rate fields — or does the response omit them causing the UI to show empty?
+- Does the client list query return all rate fields — or does it use an explicit `.select()` that omits billing fields causing the edit modal to open empty?
+- Does editing a client and saving correctly PATCH only the changed fields — not overwrite unchanged fields with null?
+- After saving a client edit, does the UI immediately reflect the updated rates without requiring a page refresh?
+- Does `queryClient.invalidateQueries` fire after client create and client update to refresh all related queries?
+- Are client rates stored in the `client_rates` table, the `clients` table, or both — and are both kept in sync?
+- Is there a unique constraint preventing duplicate client records for the same workspace?
+
+Fix every gap found.
+
+---
+
+**SECTION 2 — EMPLOYEE CREATION & PAY RATE PERSISTENCE**
+
+Trace the complete path from the frontend "Add Employee" form submission to the DB write and back to the UI.
+
+Scan for:
+- Does the employee creation form submit `hourlyRate`, `payType` (W2/1099), `payFrequency` (weekly/biweekly/semimonthly/monthly), `employmentType`, and `position`?
+- Does the POST route accept all these fields — are any silently stripped before the DB write?
+- Is `payType` correctly mapped to W4 for W2 employees and W9 for 1099 contractors in the DB and in payroll processing?
+- Is `hourlyRate` stored as a decimal not an integer — confirm schema column type?
+- Does the employee list query return `hourlyRate`, `payType`, `payFrequency` — or are these omitted from the list query?
+- Does the employee edit dialog correctly initialize all pay fields from the loaded employee record?
+- Does saving employee edits persist `payType` and `payFrequency` changes — or are these fields not included in the PATCH body?
+- After an employee pay rate is updated does Trinity receive a `settings.propagate_pay_rate_change` event — confirm the event fires
+- Is the pay rate change written to an audit log with before and after values?
+- Can an employee be created with `payType: null` — and if so does Trinity flag this as incomplete data before payroll runs?
+
+Fix every gap found.
+
+---
+
+**SECTION 3 — SETTINGS SAVE & SYNC**
+
+Trace every org settings field from the frontend settings form to the DB and back.
+
+Scan for:
+- Does the org settings form submit and save: `payrollCycle`, `billingCycle`, `timezone`, `defaultTaxRate`, `platformFeePercentage`, `invoicePrefix`, `payrollBankRouting`, `payrollBankAccount`?
+- Does the settings save route write all these fields to the workspace record atomically — not one field at a time?
+- After saving settings does the UI immediately reflect changes — does the form re-populate with saved values?
+- Does `payrollCycle` saved in settings correctly propagate to Trinity's `detectPayPeriod()` function — confirm the canonical source
+- Does `billingCycle` saved in settings correctly propagate to invoice generation logic as the workspace default?
+- Does `defaultTaxRate` saved in settings correctly propagate to invoice tax calculations — confirm `|| 0` fallback is intact?
+- Does `timezone` saved in settings affect shift scheduling, payroll period detection, and invoice due date calculations?
+- Are payroll bank fields encrypted before storage?
+- Does a settings change broadcast a real-time update to any open settings forms in other browser tabs for the same workspace?
+
+Fix every gap found.
+
+---
+
+**SECTION 4 — DATA ISOLATION PER WORKSPACE**
+
+Verify that every piece of data entered by Tenant A is completely invisible to Tenant B.
+
+Scan for:
+- Does every client query include `WHERE workspace_id = $workspaceId` from the JWT?
+- Does every employee query include `WHERE workspace_id = $workspaceId` from the JWT?
+- Does every settings query scope to the authenticated workspace?
+- Can a user from Workspace A access clients or employees from Workspace B through any API route — test with a cross-workspace request
+- Does Trinity's context for Workspace A ever include data from Workspace B — confirm org intelligence service is keyed strictly by workspaceId
+- Are file uploads scoped to workspace — can a document uploaded by Tenant A be accessed by Tenant B?
+- Does the client portal for Tenant A's clients only show Tenant A's data?
+
+Fix every gap found.
+
+---
+
+**SECTION 5 — TRINITY SESSION DATA AVAILABILITY**
+
+Verify Trinity has access to all client and employee data needed for autonomous operations immediately after it is saved.
+
+Scan for:
+- When a new client is saved, does Trinity's context for that workspace include the new client on the next action execution — or does it use a stale cache?
+- When a client bill rate is updated, does Trinity use the new rate for the next invoice generation — or does it read a cached old rate?
+- When an employee pay rate is updated, does Trinity use the new rate for the next payroll run — or does it read a cached old rate?
+- When org settings are saved, does Trinity read the new `payrollCycle` and `billingCycle` immediately — or on next server restart?
+- Does Trinity have a data cache invalidation mechanism — when DB data changes does Trinity's context refresh?
+- Can Trinity answer "what is Client ABC's bill rate?" correctly after a rate change — or does she give the old rate?
+
+Fix every gap found.
+
+---
+
+**SECTION 6 — FORM VALIDATION & ERROR SURFACES**
+
+Verify that every form gives clear actionable errors when required data is missing or invalid.
+
+Scan for:
+- If a client is submitted with no `billingEmail` — does the UI show a clear field-level error or a generic failure?
+- If an employee is submitted with no `hourlyRate` — does the UI show a clear error?
+- If a settings save fails on the backend — does the UI surface the specific error or silently fail?
+- Are Zod validation errors from the backend mapped to field-level errors in the frontend form — not just a toast saying "something went wrong"?
+- Does the client creation form prevent submission if required fields are empty — client-side validation before the API call?
+- Does the employee creation form prevent submission if `payType` is not selected?
+- When a numeric field like `hourlyRate` receives non-numeric input — does the form show a validation error or send NaN to the backend?
+
+Fix every gap found.
+
+---
+
+**SECTION 7 — REAL-TIME SYNC & LIVE UPDATES**
+
+Verify that all data changes sync live across the platform without requiring page refreshes.
+
+Scan for:
+- After a client is created — does the client list update immediately without refresh?
+- After an employee is created — does the employee roster update immediately?
+- After settings are saved — do other components that depend on those settings (invoice preview, payroll calculator) update immediately?
+- After a client rate is changed — does any open invoice draft recalculate immediately?
+- After an employee pay rate is changed — does any open payroll draft recalculate immediately?
+- Do WebSocket broadcasts fire for all these mutations — confirm `broadcastToWorkspace()` is called after each create and update?
+- Are the correct `queryClient.invalidateQueries` keys used on every mutation — confirm no stale query keys
+
+Fix every gap found.
+
+---
+
+**SECTION 8 — SCHEMA & ENUM COMPLETENESS**
+
+Verify the DB schema supports all required data for the tenant onboarding flow.
+
+Scan for:
+- Does the `employees` table have `payType` with correct enum values — `'w2'` and `'1099'`?
+- Does the `employees` table have `payFrequency` with correct enum values — `'weekly'`, `'biweekly'`, `'semimonthly'`, `'monthly'`?
+- Does the `clients` table have all billing rate columns — `armedBillRate`, `unarmedBillRate`, `contractRate`, `overtimeRate`?
+- Does the `clients` table have `billingCycle` with correct enum values?
+- Does the `workspaces` table have `payrollCycle`, `billingCycle`, `timezone`, `defaultTaxRate`?
+- Are all decimal/money fields defined as `decimal` not `integer` or `float` in the schema?
+- Are all enum types defined as PostgreSQL enums — not varchar with application-level validation only?
+- Do all financial tables have `workspace_id` as a non-nullable indexed column?
+
+Fix every gap found.
+
+---
+
+**SECTION 9 — END-TO-END SMOKE TEST**
+
+After all fixes — execute this exact sequence and confirm every step succeeds:
+
+1. Create a new test workspace via the registration flow
+2. Complete onboarding — set org name, timezone, payroll cycle weekly, billing cycle monthly
+3. Add a client — name "Test Client", armed bill rate $25/hr, billing email test@client.com, billing cycle monthly
+4. Edit the client — change armed bill rate to $27/hr and save
+5. Confirm the edit persisted — reload the client and verify rate shows $27
+6. Add an employee — name "Test Officer", hourly rate $15/hr, pay type W2, pay frequency weekly
+7. Edit the employee — change hourly rate to $16/hr and save
+8. Confirm the edit persisted — reload employee and verify rate shows $16
+9. Change org setting — set default tax rate to 8.25%
+10. Create an invoice for Test Client — confirm tax calculates correctly as 8.25% not NaN
+11. Confirm all data is isolated — create a second test workspace and confirm Test Client and Test Officer are NOT visible
+
+Report PASS or FAIL for each step with the exact response or error observed.
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 9 sections:
+
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Smoke test — all 11 steps pass
+5. Report by section:
+
+```
+Section 1 — Client creation & rates:     N gaps found | N fixed
+Section 2 — Employee creation & pay:     N gaps found | N fixed
+Section 3 — Settings save & sync:        N gaps found | N fixed
+Section 4 — Data isolation:              N gaps found | N fixed
+Section 5 — Trinity data availability:   N gaps found | N fixed
+Section 6 — Form validation & errors:    N gaps found | N fixed
+Section 7 — Real-time sync:              N gaps found | N fixed
+Section 8 — Schema completeness:         N gaps found | N fixed
+Section 9 — Smoke test:                  N/11 steps passing
+
+TOTAL GAPS FOUND: N
+TOTAL GAPS FIXED: N
+REMAINING: N
+```
+
+6. If smoke test passes all 11 steps and remaining gaps is zero — state: **TENANT ONBOARDING FLOW VERIFIED — READY FOR FIRST REAL TENANT**
+7. Stop and wait
+
+---
+
+Paste results back here. If all 11 smoke test steps pass that is your green light to onboard Statewide Protective Services today.

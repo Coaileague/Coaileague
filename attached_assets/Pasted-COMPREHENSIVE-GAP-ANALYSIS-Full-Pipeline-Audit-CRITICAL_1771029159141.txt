@@ -1,0 +1,44 @@
+COMPREHENSIVE GAP ANALYSIS - Full Pipeline Audit
+CRITICAL BUGS (Will cause runtime failures - must fix)
+#	Location	Issue
+1	sales-crm.tsx:155,167,175	apiRequest called with wrong argument order (URL as method). All CRM lead/deal create & update mutations are broken - buttons do nothing.
+2	workspace-sales.tsx:76,99	Same apiRequest argument swap. Send Invitation and Create Proposal buttons are broken.
+3	flex-staffing.tsx:197,207	Same apiRequest argument swap. Create Gig and Review Application buttons are broken.
+4	financial-intelligence.tsx:594	Frontend sends POST /api/finance/pl/insights but backend only has GET. "Generate Insights" button returns 404.
+5	universal-inbox.tsx:1067,1081	Frontend calls DELETE /api/notifications/:id but no DELETE route exists anywhere on the server. Delete notification buttons return 404.
+6	useWorkflowProposals.ts:139	Frontend sends POST for schedule/invoice/payroll proposal approve/reject, but backend expects PATCH. All workflow approval buttons return 404.
+HIGH SEVERITY (Security/Isolation issues)
+#	Location	Issue
+7	orchestratedScheduleRoutes.ts (5 routes)	Takes workspaceId from request body/query without verifying the user belongs to that workspace. Any authenticated user can operate on any workspace's schedule.
+8	coverageRoutes.ts:87-109	GET /request/:requestId has no authentication check at all - anyone can view any coverage request.
+9	coverageRoutes.ts:32-34,67-69	Employee lookup has no workspace filter - cross-workspace data leak possible.
+10	autonomousSchedulingRoutes.ts:288-362	Daemon control routes (start/stop/status) have no workspace check - any authenticated user can control the global scheduling daemon.
+11	autonomousSchedulingRoutes.ts:265-278	Template delete has no workspace verification - any user can delete any template by ID.
+12	invoices routes (routes.ts:11592,11479)	POST /api/invoices uses only isAuthenticated (no role check), POST /api/invoices/:id/send-email same. Any authenticated user can create and send invoices.
+MEDIUM SEVERITY (Broken features/stale data)
+#	Location	Issue
+13	No PATCH or DELETE invoice routes	Invoices cannot be edited or deleted after creation. No UI buttons exist either. Missing end-to-end.
+14	No invoice "Mark as Paid"	No route to manually mark invoice as paid for cash/check payments. Only Stripe flow works.
+15	No payroll run delete/edit	Once a payroll run is created, it cannot be deleted or individual entries corrected.
+16	clients-table.tsx:348	Client edit save invalidates ['/api/clients'] but NOT ['/api/clients/lookup']. Dropdown data goes stale after client name change.
+17	payroll-dashboard.tsx:85	Query key ['/api/payroll/runs'] doesn't match centralized queryKeys.payroll.all = ["payroll"]. Cross-page cache invalidation won't work.
+18	time-tracking.tsx:261-267,279-285	Break start/end mutations use raw fetch() without CSRF token, while clock in/out use apiPost() with CSRF. Security gap.
+19	document-library.tsx:523-559	Upload form creates metadata record but never uploads actual file binary. No file input in the form.
+20	document-library.tsx:381	Signature query key structure won't auto-construct correct URL with default fetcher.
+21	contractPipelineRoutes.ts:500,519	Uses req.session?.workspaceId instead of req.workspaceId from attachWorkspaceId middleware. May be null.
+22	compliance/records.ts:17	Uses req.user.currentWorkspaceId instead of req.workspaceId from attachWorkspaceId. May cause 400 errors.
+23	broadcasts.ts:39-43	getUserInfo() extracts role from req.user?.role which may not match how auth middleware populates roles. Could cause all broadcast creation to 403.
+24	automation.ts	Duplicate route registrations for GET /trinity/settings and GET /trinity/pending - database-persisted versions unreachable.
+25	automation-events.ts:128-158	GET /jobs returns hardcoded mock data array, not from database.
+26	Missing WebSocket broadcasts	schedulerRoutes, orchestratedScheduleRoutes, autonomousSchedulingRoutes, flexStaffingRoutes, coverageRoutes, automation.ts - mutations don't trigger live refresh.
+LOW SEVERITY (Orphaned code/inconsistencies)
+#	Location	Issue
+27	6 dead route files	employees.ts, clients.ts, invoices.ts, payroll.ts, organizations.ts, users.ts, reports.ts, analytics.ts, analyticsRoutes.ts, hr.ts, documents.ts - all never imported. ~5,000+ lines of dead code duplicated inline in routes.ts.
+28	dashboardRoutes.ts	All 4 endpoints (/, /metrics, /layout GET/POST) have zero frontend callers.
+29	enterpriseOnboardingRoutes.ts	All enterprise onboarding routes have zero frontend callers.
+30	externalEmailRoutes.ts + emails.ts	Email automation/campaign routes have no frontend caller from email-intelligence page.
+31	aiBrainControlRoutes.ts	Service pause/resume, workflow cancel/retry routes have no frontend caller.
+32	support-chat.ts	Sessions stored in-memory only. Server restart loses all active support sessions.
+33	ai-brain-console.ts	Conversations stored in-memory Map. Server restart loses all AI console history.
+34	BroadcastComposer.tsx	Missing broadcast types pass_down, survey and target type site_shift that backend accepts.
+35	advancedSchedulingRoutes.ts:1096	Template apply doesn't create shifts - says "frontend should handle" but frontend doesn't.

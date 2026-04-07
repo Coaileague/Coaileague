@@ -10,16 +10,17 @@
  * Flow: Simulate → Quote → Agree → Reserve → Execute → Finalize
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { 
-  trinityCredits, 
-  trinityCreditTransactions,
-  aiWorkboardTasks,
   workspaces,
   users
 } from '@shared/schema';
+import { creditManager } from '../../services/billing/creditManager';
 import { eq, and, sql, desc, gte } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('subagentBanker');
 
 export interface WorkloadSimulation {
   taskType: string;
@@ -121,7 +122,7 @@ class SubagentBanker {
   private activeReservations: Map<string, CreditReservation> = new Map();
   
   private constructor() {
-    console.log('[SubagentBanker] Initializing AI Brain Credit Management...');
+    log.info('[SubagentBanker] Initializing AI Brain Credit Management...');
     
     setInterval(() => this.cleanupExpiredQuotes(), 60000);
     setInterval(() => this.cleanupExpiredReservations(), 30000);
@@ -167,7 +168,7 @@ class SubagentBanker {
     
     const estimatedDurationMs = this.estimateDuration(complexity, executionMode, estimatedAgents);
     
-    console.log(`[SubagentBanker] Simulated workload: ${totalCredits} credits for ${taskType} (${complexity}/${executionMode})`);
+    log.info(`[SubagentBanker] Simulated workload: ${totalCredits} credits for ${taskType} (${complexity}/${executionMode})`);
     
     return {
       taskType,
@@ -199,17 +200,12 @@ class SubagentBanker {
   }): Promise<CreditQuote> {
     const { workspaceId, userId, simulation, validityMinutes = 5 } = params;
     
-    const [credits] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, workspaceId))
-      .limit(1);
-    
-    const currentBalance = credits?.balance || 0;
+    const currentBalance = await creditManager.getBalance(workspaceId);
     const balanceAfter = currentBalance - simulation.totalCredits;
     const canProceed = balanceAfter >= 0;
     const insufficientBy = canProceed ? 0 : Math.abs(balanceAfter);
     
-    const quoteId = `quote_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const quoteId = `quote_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
     const expiresAt = new Date(Date.now() + validityMinutes * 60 * 1000);
     
     const quote: CreditQuote = {
@@ -227,7 +223,7 @@ class SubagentBanker {
     
     this.activeQuotes.set(quoteId, quote);
     
-    console.log(`[SubagentBanker] Generated quote ${quoteId}: ${simulation.totalCredits} credits (can proceed: ${canProceed})`);
+    log.info(`[SubagentBanker] Generated quote ${quoteId}: ${simulation.totalCredits} credits (can proceed: ${canProceed})`);
     
     return quote;
   }
@@ -258,19 +254,16 @@ class SubagentBanker {
       };
     }
     
-    const [freshCredits] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, quote.workspaceId))
-      .limit(1);
+    const freshBalance = await creditManager.getBalance(quote.workspaceId);
     
-    if (!freshCredits || freshCredits.balance < quote.simulation.totalCredits) {
+    if (freshBalance < quote.simulation.totalCredits) {
       return { 
         success: false, 
-        error: `Balance changed. Current balance: ${freshCredits?.balance || 0}, need: ${quote.simulation.totalCredits}` 
+        error: `Balance changed. Current balance: ${freshBalance}, need: ${quote.simulation.totalCredits}` 
       };
     }
     
-    const reservationId = `res_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const reservationId = `res_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     
     const reservation: CreditReservation = {
@@ -288,7 +281,7 @@ class SubagentBanker {
     this.activeReservations.set(reservationId, reservation);
     this.activeQuotes.delete(quoteId);
     
-    console.log(`[SubagentBanker] Reserved ${reservation.credits} credits (${reservationId}) for workspace ${quote.workspaceId}`);
+    log.info(`[SubagentBanker] Reserved ${reservation.credits} credits (${reservationId}) for workspace ${quote.workspaceId}`);
     
     return { success: true, reservation };
   }
@@ -318,65 +311,43 @@ class SubagentBanker {
     if (!taskSuccess) {
       reservation.status = 'released';
       this.activeReservations.delete(reservationId);
-      console.log(`[SubagentBanker] Released reservation ${reservationId} due to task failure`);
+      log.info(`[SubagentBanker] Released reservation ${reservationId} due to task failure`);
       return { success: true, creditsDeducted: 0, newBalance: 0 };
     }
     
-    const [currentCredits] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, reservation.workspaceId))
-      .limit(1);
+    const deductResult = await creditManager.deductCredits({
+      workspaceId: reservation.workspaceId,
+      userId: reservation.userId,
+      featureKey: 'ai_general',
+      featureName: 'Task Execution',
+      amountOverride: creditsToDeduct,
+      relatedEntityType: 'automation_task',
+      relatedEntityId: taskId,
+      description: `Task execution: ${taskId.substring(0, 8)}`,
+    });
     
-    if (!currentCredits || currentCredits.balance < creditsToDeduct) {
+    if (!deductResult.success) {
       reservation.status = 'released';
       this.activeReservations.delete(reservationId);
       return { 
         success: false, 
         creditsDeducted: 0, 
-        newBalance: currentCredits?.balance || 0, 
-        error: 'Insufficient balance at consumption time' 
+        newBalance: deductResult.newBalance, 
+        error: deductResult.errorMessage || 'Insufficient balance at consumption time' 
       };
     }
-    
-    const newBalance = currentCredits.balance - creditsToDeduct;
-    
-    await db.update(trinityCredits)
-      .set({
-        balance: newBalance,
-        lifetimeUsed: sql`${trinityCredits.lifetimeUsed} + ${creditsToDeduct}`,
-        lastUsedAt: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(trinityCredits.workspaceId, reservation.workspaceId));
-    
-    await db.insert(trinityCreditTransactions).values({
-      workspaceId: reservation.workspaceId,
-      userId: reservation.userId,
-      transactionType: 'usage',
-      credits: -creditsToDeduct,
-      balanceAfter: newBalance,
-      description: `Task execution: ${taskId.substring(0, 8)}`,
-      actionType: 'automation_task',
-      actionId: taskId,
-      metadata: {
-        reservationId,
-        taskId,
-        originalQuote: reservation.credits,
-        actualCharge: creditsToDeduct
-      }
-    });
     
     reservation.status = 'consumed';
     reservation.taskId = taskId;
     this.activeReservations.delete(reservationId);
     
-    if (newBalance < 50) {
-      this.emitLowBalanceWarning(reservation.workspaceId, newBalance);
+    if (deductResult.newBalance < 50) {
+      this.emitLowBalanceWarning(reservation.workspaceId, deductResult.newBalance);
     }
     
-    console.log(`[SubagentBanker] Consumed ${creditsToDeduct} credits from reservation ${reservationId}. New balance: ${newBalance}`);
+    log.info(`[SubagentBanker] Consumed ${creditsToDeduct} credits from reservation ${reservationId}. New balance: ${deductResult.newBalance}`);
     
-    return { success: true, creditsDeducted: creditsToDeduct, newBalance };
+    return { success: true, creditsDeducted: creditsToDeduct, newBalance: deductResult.newBalance };
   }
 
   /**
@@ -392,53 +363,29 @@ class SubagentBanker {
   }): Promise<{ success: boolean; newBalance: number; error?: string }> {
     const { workspaceId, userId, credits, actionType, actionId, description } = params;
     
-    const [currentCredits] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, workspaceId))
-      .limit(1);
+    const deductResult = await creditManager.deductCredits({
+      workspaceId,
+      userId,
+      featureKey: 'ai_general',
+      featureName: actionType,
+      amountOverride: credits,
+      relatedEntityType: actionType,
+      relatedEntityId: actionId,
+      description: description || `${actionType} usage`,
+    });
     
-    if (!currentCredits) {
-      await db.insert(trinityCredits).values({
-        workspaceId,
-        balance: 0,
-        isActive: true
-      });
-      return { success: false, newBalance: 0, error: 'No credit account. Please add credits first.' };
-    }
-    
-    if (currentCredits.balance < credits) {
+    if (!deductResult.success) {
+      log.info(`[SubagentBanker] Direct deduction failed: ${deductResult.errorMessage}`);
       return { 
         success: false, 
-        newBalance: currentCredits.balance, 
-        error: `Insufficient credits. Need ${credits}, have ${currentCredits.balance}` 
+        newBalance: deductResult.newBalance, 
+        error: deductResult.errorMessage || `Insufficient credits for ${actionType}` 
       };
     }
     
-    const newBalance = currentCredits.balance - credits;
+    log.info(`[SubagentBanker] Direct deduction: ${credits} credits for ${actionType}. New balance: ${deductResult.newBalance}`);
     
-    await db.update(trinityCredits)
-      .set({
-        balance: newBalance,
-        lifetimeUsed: sql`${trinityCredits.lifetimeUsed} + ${credits}`,
-        lastUsedAt: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(trinityCredits.workspaceId, workspaceId));
-    
-    await db.insert(trinityCreditTransactions).values({
-      workspaceId,
-      userId,
-      transactionType: 'usage',
-      credits: -credits,
-      balanceAfter: newBalance,
-      description: description || `${actionType} usage`,
-      actionType,
-      actionId
-    });
-    
-    console.log(`[SubagentBanker] Direct deduction: ${credits} credits for ${actionType}. New balance: ${newBalance}`);
-    
-    return { success: true, newBalance };
+    return { success: true, newBalance: deductResult.newBalance };
   }
 
   /**
@@ -456,49 +403,36 @@ class SubagentBanker {
     const { workspaceId, userId, credits, source, stripePaymentId, packageId, description } = params;
     
     try {
-      let [creditRecord] = await db.select()
-        .from(trinityCredits)
-        .where(eq(trinityCredits.workspaceId, workspaceId))
-        .limit(1);
+      let result;
       
-      if (!creditRecord) {
-        [creditRecord] = await db.insert(trinityCredits).values({
+      if (source === 'refund') {
+        result = await creditManager.refundCredits({
           workspaceId,
-          balance: 0,
-          isActive: true
-        }).returning();
+          amount: credits,
+          reason: description || `Credit refund: ${credits} credits`,
+          issuedByUserId: userId,
+          issuedByName: 'SubagentBanker',
+        });
+      } else {
+        result = await creditManager.addPurchasedCredits({
+          workspaceId,
+          userId,
+          amount: credits,
+          creditPackId: packageId || `${source}_pack`,
+          stripePaymentIntentId: stripePaymentId || `${source}_${Date.now()}`,
+          amountPaid: 0,
+          description: description || `Credit ${source}: ${credits} credits`,
+        });
       }
       
-      const newBalance = creditRecord.balance + credits;
-      
-      const updateData: any = {
-        balance: newBalance,
-        updatedAt: new Date()
-      };
-      
-      if (source === 'purchase') {
-        updateData.lifetimePurchased = sql`${trinityCredits.lifetimePurchased} + ${credits}`;
-        updateData.lastPurchasedAt = new Date();
-      } else if (source === 'bonus' || source === 'promo') {
-        updateData.lifetimeBonuses = sql`${trinityCredits.lifetimeBonuses} + ${credits}`;
+      if (!result.success) {
+        return {
+          success: false,
+          creditsAdded: 0,
+          newBalance: result.newBalance,
+          error: result.errorMessage || 'Failed to add credits'
+        };
       }
-      
-      await db.update(trinityCredits)
-        .set(updateData)
-        .where(eq(trinityCredits.workspaceId, workspaceId));
-      
-      const transactionType = source === 'refund' ? 'refund' : source === 'purchase' ? 'purchase' : 'bonus';
-      
-      const [transaction] = await db.insert(trinityCreditTransactions).values({
-        workspaceId,
-        userId,
-        transactionType,
-        credits,
-        balanceAfter: newBalance,
-        description: description || `Credit ${source}: ${credits} credits`,
-        stripePaymentId,
-        packageId
-      }).returning();
       
       platformEventBus.publish({
         type: 'announcement',
@@ -507,20 +441,20 @@ class SubagentBanker {
         description: `${credits} credits added to your account`,
         workspaceId,
         userId,
-        metadata: { credits, source, newBalance }
-      });
+        metadata: { credits, source, newBalance: result.newBalance }
+      }).catch((err) => log.warn('[subagentBanker] Fire-and-forget failed:', err));
       
-      console.log(`[SubagentBanker] Refilled ${credits} credits (${source}) for workspace ${workspaceId}. New balance: ${newBalance}`);
+      log.info(`[SubagentBanker] Refilled ${credits} credits (${source}) for workspace ${workspaceId}. New balance: ${result.newBalance}`);
       
       return {
         success: true,
         creditsAdded: credits,
-        newBalance,
-        transactionId: transaction.id
+        newBalance: result.newBalance,
+        transactionId: result.transactionId || undefined
       };
       
     } catch (error) {
-      console.error('[SubagentBanker] Refill error:', error);
+      log.error('[SubagentBanker] Refill error:', error);
       return {
         success: false,
         creditsAdded: 0,
@@ -547,32 +481,19 @@ class SubagentBanker {
       createdAt: Date;
     }>;
   }> {
-    const [credits] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, workspaceId))
-      .limit(1);
-    
-    const recentTx = await db.select({
-      type: trinityCreditTransactions.transactionType,
-      credits: trinityCreditTransactions.credits,
-      description: trinityCreditTransactions.description,
-      createdAt: trinityCreditTransactions.createdAt
-    })
-      .from(trinityCreditTransactions)
-      .where(eq(trinityCreditTransactions.workspaceId, workspaceId))
-      .orderBy(desc(trinityCreditTransactions.createdAt))
-      .limit(10);
+    const creditsAccount = await creditManager.getCreditsAccount(workspaceId);
+    const recentTx = await creditManager.getTransactionHistory(workspaceId, 10, 0);
     
     return {
-      balance: credits?.balance || 0,
-      lifetimePurchased: credits?.lifetimePurchased || 0,
-      lifetimeUsed: credits?.lifetimeUsed || 0,
-      lifetimeBonuses: credits?.lifetimeBonuses || 0,
-      isActive: credits?.isActive ?? true,
-      lowBalanceWarning: (credits?.balance || 0) < (credits?.lowBalanceThreshold || 50),
+      balance: creditsAccount?.currentBalance || 0,
+      lifetimePurchased: creditsAccount?.totalCreditsEarned || 0,
+      lifetimeUsed: creditsAccount?.totalCreditsUsed || 0,
+      lifetimeBonuses: 0,
+      isActive: creditsAccount ? !creditsAccount.isSuspended : true,
+      lowBalanceWarning: (creditsAccount?.currentBalance || 0) < (creditsAccount?.lowBalanceThreshold || 50),
       recentTransactions: recentTx.map(tx => ({
-        type: tx.type,
-        credits: tx.credits,
+        type: tx.transactionType,
+        credits: tx.amount,
         description: tx.description || '',
         createdAt: tx.createdAt || new Date()
       }))
@@ -598,27 +519,23 @@ class SubagentBanker {
   }> {
     const { workspaceId, limit = 50, offset = 0, startDate } = params;
     
-    const whereClause = startDate 
-      ? and(eq(trinityCreditTransactions.workspaceId, workspaceId), gte(trinityCreditTransactions.createdAt, startDate))
-      : eq(trinityCreditTransactions.workspaceId, workspaceId);
+    const transactions = await creditManager.getTransactionHistory(workspaceId, limit, offset);
     
-    const transactions = await db.select()
-      .from(trinityCreditTransactions)
-      .where(whereClause)
-      .orderBy(desc(trinityCreditTransactions.createdAt))
-      .limit(limit)
-      .offset(offset);
+    let filteredTransactions = transactions;
+    if (startDate) {
+      filteredTransactions = transactions.filter(tx => tx.createdAt && new Date(tx.createdAt) >= startDate);
+    }
     
-    const entries: LedgerEntry[] = transactions.map(tx => ({
+    const entries: LedgerEntry[] = filteredTransactions.map(tx => ({
       id: tx.id,
       workspaceId: tx.workspaceId,
       userId: tx.userId,
-      type: tx.credits >= 0 ? 'credit' : 'debit',
-      amount: Math.abs(tx.credits),
+      type: tx.amount >= 0 ? 'credit' : 'debit',
+      amount: Math.abs(tx.amount),
       balanceAfter: tx.balanceAfter,
-      category: tx.actionType || tx.transactionType,
+      category: tx.featureKey || tx.transactionType,
       description: tx.description || '',
-      taskId: tx.actionId || undefined,
+      taskId: tx.relatedEntityId || undefined,
       metadata: tx.metadata as Record<string, any> | undefined,
       createdAt: tx.createdAt || new Date()
     }));
@@ -704,7 +621,7 @@ class SubagentBanker {
     });
     
     if (cleaned > 0) {
-      console.log(`[SubagentBanker] Cleaned up ${cleaned} expired quotes`);
+      log.info(`[SubagentBanker] Cleaned up ${cleaned} expired quotes`);
     }
   }
 
@@ -721,7 +638,7 @@ class SubagentBanker {
     });
     
     if (cleaned > 0) {
-      console.log(`[SubagentBanker] Released ${cleaned} expired reservations`);
+      log.info(`[SubagentBanker] Released ${cleaned} expired reservations`);
     }
   }
 
@@ -733,7 +650,7 @@ class SubagentBanker {
       description: `Your credit balance is low (${balance} credits). Add more credits to continue using AI features.`,
       workspaceId,
       metadata: { balance, threshold: 50, alertType: 'low_balance' }
-    });
+    }).catch((err) => log.warn('[subagentBanker] Fire-and-forget failed:', err));
   }
 }
 

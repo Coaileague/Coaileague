@@ -1,0 +1,46 @@
+To get the Stripe CLI operational within your Replit workspace so the Agent can verify those "money-critical" transactions, you need to modify the environment's configuration. Since Replit uses a Nix-based system, you can't just run a standard install command; you have to define it as a permanent dependency.
+
+🛠️ Step 1: Add the CLI to replit.nix
+This is the most important step. It ensures that every time your workspace loads, the Stripe tool is available for both you and the AI Agent.
+
+Locate the file named replit.nix in your file sidebar.
+
+Add pkgs.stripe-cli to the deps list. Your file should look like this:
+
+Nix
+{ pkgs }: {
+  deps = [
+    pkgs.nodejs-18_x
+    pkgs.stripe-cli  # <--- Add this line here
+    # ... other existing packages
+  ];
+}
+Save the file. Replit will automatically start a background task to install the CLI.
+
+🔑 Step 2: Authenticate the Session
+Once the installation finishes, you need to link your Replit workspace to your Statewide Protective Services Stripe account.
+
+Open the Shell tab (bottom right of your screen).
+
+Type the following command: stripe login.
+
+The terminal will provide a unique pairing code and a URL. Click the link to open your Stripe Dashboard and authorize the connection.
+
+Once authorized, your Replit terminal will confirm: "Done! The Stripe CLI is configured."
+
+📡 Step 3: Forward Webhooks for Testing
+To test the CoAIleague payment flow (like the ACME 278-guard simulation), you need to tell Stripe to send events to your local server.
+
+Run this command in your Shell:
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+
+📊 Why This Matters for Your 2025 Taxes
+Setting this up correctly now ensures that your Account QuickReport for Sales (4104) is 100% accurate when you hand it to Rosemary C. Guerra, CPA.
+
+Audit Trail: The CLI allows you to trigger "Test Mode" events that mirror your real Bombshells or Dave & Busters revenue.
+
+Expense Tracking: By seeing exactly how Stripe processes fees in real-time, you can ensure those costs are correctly categorized as "Bank Charges" in Section 5 of your tax packet.
+
+Loss Prevention: Testing your "Auth Middleware" bypass ensures you don't lose transaction data, which is vital for proving your $809,367.47 Net Loss is supported by actual system logs.
+
+Once the CLI is logged in, would you like me to provide the specific Stripe command to simulate a "Subscription Created" event for the ACME workspace to see if your database updates correctly?

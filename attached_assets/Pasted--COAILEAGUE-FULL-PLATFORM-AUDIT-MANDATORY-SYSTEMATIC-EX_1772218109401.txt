@@ -1,0 +1,629 @@
+# ⚠️ COAILEAGUE FULL-PLATFORM AUDIT — MANDATORY SYSTEMATIC EXECUTION ⚠️
+
+## AGENT OPERATING DIRECTIVES — READ BEFORE PROCEEDING
+
+**YOU ARE NOT ALLOWED TO SKIP, SUMMARIZE, BATCH, OR DEVIATE FROM ANY STEP IN THIS PROMPT.**
+
+This audit addresses recurring platform-breaking issues that have been found repeatedly across multiple scan cycles. Previous scans have missed critical issues due to skipping steps, making assumptions, batching checks, or deviating from instructions. That ends now.
+
+### RULES OF ENGAGEMENT:
+1. **Execute each numbered step ONE AT A TIME in exact order.** Do not jump ahead.
+2. **After completing each step, output a status line:** `✅ STEP [X.X] COMPLETE — [summary of what was found/fixed]` or `🚨 STEP [X.X] ISSUE FOUND — [description of issue and fix applied]`
+3. **Do NOT make autonomous decisions** about what to skip, what seems fine, or what can be batched. Every single step gets executed and reported.
+4. **If you encounter an issue, fix it immediately** before moving to the next step. Do not log it for later.
+5. **If a step requires sub-agents or specialized analysis**, spawn them. Use Architect mode, Trinity awareness, or any tool at your disposal. Ask Trinity herself about assets, services, routes, and schemas if needed.
+6. **At the end of each PHASE, produce a PHASE SUMMARY** listing every issue found, every fix applied, and every area that passed clean.
+7. **At the end of the full audit, produce a MASTER SUMMARY** with pass/fail for every phase and an overall platform readiness score.
+8. **Do not trust previous scan results.** Treat every check as if it has never been done before.
+9. **Use previously found issues as a pattern guide** — if an issue was found in one area, proactively check all similar areas for the same class of issue.
+10. **Silent failures are the #1 enemy.** Every workflow, every execution, every mutation must have explicit error handling and logging. If something can fail silently, that is a critical bug.
+
+---
+
+# PHASE 1: DATABASE SCHEMA & ENUM INTEGRITY AUDIT
+
+**Purpose:** Eliminate all missing tables, misnamed tables, missing columns, missing enums, missing identifiers, improperly named fields, and workspace_id/UUID issues that break workflows and cause silent failures.
+
+### Step 1.1 — Full Schema Inventory
+- Pull the complete database schema (all tables, all columns, all types, all enums, all constraints, all foreign keys, all indexes).
+- Output a complete list of every table and its columns with data types.
+- Confirm this matches what the codebase expects.
+
+### Step 1.2 — Enum Validation
+- List every enum defined in the database.
+- List every enum referenced in the codebase (TypeScript types, Zod schemas, form selectors, API validators).
+- Cross-reference: Flag every mismatch where a code enum value does not exist in the database enum, or a database enum value is not handled in code.
+- Fix every mismatch found. Do not skip any.
+
+### Step 1.3 — Table Name Consistency
+- Compare every table name referenced in queries, ORM models, API routes, and migration files against actual database tables.
+- Flag every instance where code references a table name that does not exist or is misspelled.
+- Fix every instance found.
+
+### Step 1.4 — Column Name & Type Consistency
+- For every table, compare every column reference in the codebase against the actual schema.
+- Flag missing columns, misspelled column names, and type mismatches (e.g., code expects UUID but column is TEXT, code expects integer but column is varchar).
+- Fix every instance found.
+
+### Step 1.5 — workspace_id / org_id / UUID Propagation Audit
+- Trace every workflow, API call, mutation, and query that requires a workspace_id, org_id, or user UUID.
+- Verify that these identifiers are properly passed through every layer: frontend → API → service → database.
+- Flag every instance where a workspace_id/org_id/UUID is undefined, null, missing from the query, or not included in the request context.
+- Fix every instance found.
+
+### Step 1.6 — Foreign Key & Relationship Integrity
+- Verify all foreign key relationships are properly defined.
+- Check for orphaned references (foreign keys pointing to non-existent tables/columns).
+- Verify cascade rules are appropriate (ON DELETE, ON UPDATE).
+- Fix every issue found.
+
+### Step 1.7 — Migration File Consistency
+- Review all migration files in order.
+- Verify they produce the current expected schema when run sequentially.
+- Flag any migrations that reference tables/columns that don't exist at that point in the migration chain.
+- Flag any missing migrations for tables/columns that exist in the schema but have no migration.
+
+### 📋 PHASE 1 SUMMARY
+Output: Total tables checked, total enums validated, total mismatches found, total fixes applied, pass/fail status.
+
+---
+
+# PHASE 2: RACE CONDITIONS & WORKFLOW PIPELINE INTEGRITY
+
+**Purpose:** Eliminate all race conditions, timing issues, and workflow pipeline failures that cause silent execution failures.
+
+### Step 2.1 — Identify All Async Operations
+- List every async operation in the platform: API calls, database transactions, real-time subscriptions, webhook handlers, cron jobs, AI orchestration calls, QuickBooks sync operations.
+- For each, document the expected execution order and dependencies.
+
+### Step 2.2 — Race Condition Scan
+- For every pair of operations that share state (same table, same row, same cache key), verify that proper locking, transactions, or serialization is in place.
+- Flag every instance where two operations can read/write the same data without protection.
+- Pay special attention to:
+  - Trinity AI orchestration (multi-model calls with fallback chains — are responses handled atomically?)
+  - QuickBooks sync (are sync operations serialized per org? Can two syncs overlap?)
+  - Real-time subscriptions (are mutations and subscription updates properly ordered?)
+  - Scheduling operations (can two scheduling requests for the same employee conflict?)
+  - Credit/token tracking (are credit deductions atomic? Can double-spend occur?)
+  - Clock in/out operations (GPS + time verification — can race conditions create duplicate entries?)
+- Fix every race condition found with appropriate locking/transaction mechanisms.
+
+### Step 2.3 — Silent Failure Audit
+- Search the entire codebase for:
+  - `catch` blocks that are empty or only log without re-throwing or returning error state
+  - `.then()` chains without `.catch()`
+  - `async` functions called without `await`
+  - Database operations without error handling
+  - API calls that don't check response status
+  - Webhook handlers that return 200 regardless of processing outcome
+- Every silent failure point must be converted to explicit error handling with:
+  - User-visible error messaging where appropriate
+  - Logging with context (workspace_id, user_id, operation type, timestamp)
+  - Proper error propagation to calling functions
+
+### Step 2.4 — AI Token & Credit Tracking Verification
+- Trace the complete flow of AI token usage from request → execution → cost calculation → credit deduction → org attribution.
+- Verify that EVERY AI call (Gemini, Claude, OpenAI) properly:
+  - Records input/output token counts
+  - Calculates cost accurately per model
+  - Attributes cost to the correct organization (never to the platform)
+  - Deducts from the org's credit balance atomically
+  - Handles failed/partial responses (no phantom charges)
+  - Logs the transaction with full audit trail
+- Verify the fallback chain (primary model fails → secondary → tertiary) properly tracks costs for whichever model actually responds.
+- Fix every gap found.
+
+### Step 2.5 — Execution Pipeline End-to-End Test
+- Trace every major workflow from trigger to completion:
+  - User signup → org creation → onboarding pipeline
+  - Employee invite → acceptance → workspace join
+  - Schedule creation → Trinity AI processing → assignment
+  - Clock in → GPS verification → time entry → payroll calculation
+  - QB sync trigger → data transformation → API call → confirmation
+  - AI chat request → model selection → execution → response → token tracking
+  - Broadcast creation → recipient resolution → delivery → confirmation
+- For each, verify every step has proper error handling, state tracking, and rollback capability.
+- Fix every gap found.
+
+### 📋 PHASE 2 SUMMARY
+Output: Total async operations audited, race conditions found/fixed, silent failures found/fixed, token tracking issues found/fixed, pipeline gaps found/fixed, pass/fail status.
+
+---
+
+# PHASE 3: AUTHENTICATION & AUTHORIZATION AUDIT
+
+**Purpose:** Ensure all auth flows are bulletproof, all routes are protected, and all role-based access is enforced.
+
+### Step 3.1 — Auth Flow Verification
+- Trace the complete authentication flow:
+  - Org signup → email verification → session creation → token issuance
+  - Employee invite flow → invite validation → account creation → workspace join
+  - Login → credential verification → session/token creation → refresh flow
+  - Password reset → token generation → validation → update
+  - Session expiry → refresh → re-authentication
+- Verify each step handles errors properly and cannot be bypassed.
+
+### Step 3.2 — Route Protection Audit
+- List EVERY API route and page route in the application.
+- For each route, verify:
+  - Authentication middleware is applied (no unprotected routes that should be protected)
+  - Authorization checks verify the user has permission for the specific workspace/org
+  - workspace_id scoping is enforced (users cannot access data from other orgs)
+  - Role-based access control is checked where required (admin vs manager vs officer)
+- Flag and fix every unprotected or improperly scoped route.
+
+### Step 3.3 — Invite-Only Enforcement
+- Verify that users CANNOT sign up as standalone users — they must either:
+  - Create an org (org signup flow), OR
+  - Accept a valid invite from an existing org
+- Verify that expired/revoked invites are properly rejected.
+- Verify that invite tokens cannot be reused after acceptance.
+- Verify seat limits are enforced at invite creation time.
+
+### Step 3.4 — Session & Token Security
+- Verify tokens have appropriate expiry times.
+- Verify refresh token rotation is implemented.
+- Verify sessions are invalidated on password change/account deactivation.
+- Verify CSRF protection is in place for state-changing operations.
+
+### 📋 PHASE 3 SUMMARY
+Output: Total routes audited, unprotected routes found/fixed, auth flow gaps found/fixed, invite enforcement status, pass/fail.
+
+---
+
+# PHASE 4: FRONTEND VISUAL & UI AUDIT — DESKTOP
+
+**Purpose:** Eliminate ALL visual issues on desktop: text bleeding, improper sizing, card rendering, badge rendering, text overlap, button overlap, and ensure Fortune-500 visual polish.
+
+### Step 4.1 — Global CSS & Layout Foundation Check
+- Review the global CSS/Tailwind configuration:
+  - Verify consistent spacing scale is used across the platform
+  - Verify consistent font sizing scale (no arbitrary pixel values)
+  - Verify consistent color palette usage
+  - Verify consistent border-radius, shadow, and transition values
+  - Verify responsive breakpoints are properly defined
+  - Verify z-index layering scale (modals > sheets > menus > tooltips > content)
+
+### Step 4.2 — Typography & Text Rendering Audit
+- Check EVERY page/component for:
+  - Text overflow/bleeding outside containers (missing `overflow-hidden`, `truncate`, `line-clamp`, or `text-ellipsis`)
+  - Text overlapping other text (z-index issues, absolute positioning conflicts)
+  - Text overlapping buttons/action elements (insufficient spacing, missing padding)
+  - Font sizes that are inconsistent with the design system
+  - Line heights that cause text to appear cramped or overly spaced
+  - Long text strings (names, descriptions, addresses) that break layouts
+- Apply proper text containment: `overflow-hidden`, `text-ellipsis`, `whitespace-nowrap`, or `line-clamp-N` as appropriate for each context.
+- Fix every instance found.
+
+### Step 4.3 — Card & Container Rendering Audit
+- Check EVERY card component for:
+  - Cards that are too wide (exceeding their grid column)
+  - Cards that are too narrow (text wrapping excessively or being cut off)
+  - Inconsistent card heights in grid layouts (missing equal-height handling)
+  - Card content overflowing card boundaries
+  - Inconsistent internal padding between cards
+  - Missing or inconsistent borders/shadows
+  - Grid layouts that break at certain content lengths
+- Ensure all cards use proper `min-width`, `max-width`, and `flex`/`grid` properties for responsive containment.
+- Fix every instance found.
+
+### Step 4.4 — Badge & Icon Audit
+- Check EVERY badge component for:
+  - Badges that are oversized relative to their container
+  - Badges that are squashed or distorted (aspect ratio issues)
+  - Badge stacking that is misaligned or overlapping incorrectly
+  - Badge text that overflows the badge container
+  - Inconsistent badge sizing across different contexts
+  - Hero badges that are disproportionate to their section
+- Check EVERY icon for:
+  - Inconsistent sizing (icons should follow a consistent size scale)
+  - Icons that are too large or too small for their context
+  - Icons that are misaligned with adjacent text
+  - Missing icons or broken icon references
+- Fix every instance found.
+
+### Step 4.5 — ChatDock Desktop Audit (Facebook Messenger Style)
+- Review the ChatDock component structure and verify it matches Facebook Messenger patterns:
+  - Left sidebar: conversation list with search, filters (groups, condos, DMs), unread indicators, last message preview, timestamp, user avatars
+  - Main panel: active conversation with message bubbles (sent vs received styling), timestamps, read receipts, typing indicators
+  - Right panel (if applicable): group/condo info, member list, shared media
+  - Message input: text area with expand, emoji picker, attachment button, send button
+  - Proper conversation switching without flicker or layout shift
+- Verify visual polish:
+  - Consistent bubble styling (border-radius, padding, max-width)
+  - Proper avatar rendering and alignment
+  - Smooth scroll behavior with virtualized list for performance
+  - Unread message indicators and notification badges
+  - Online/offline status indicators
+  - Group chat visual differentiation from DMs
+  - Condo channel organization and visual hierarchy
+- Fix every issue found.
+
+### Step 4.6 — Header, Menu & Navigation Audit
+- Check all navigation elements:
+  - Top header bar: proper height, alignment, spacing, branding
+  - Side navigation menu: proper width, item spacing, active state highlighting, collapse/expand behavior
+  - Breadcrumbs: proper formatting, clickable links, overflow handling
+  - Tab bars: proper alignment, active state, content switching without layout shift
+- Fix every issue found.
+
+### Step 4.7 — Modal, Dialog, Sheet & Drawer Audit
+- For EVERY modal, dialog, sheet, bottom sheet, and drawer in the platform:
+  - Verify proper backdrop/overlay (click-outside-to-close, proper z-index)
+  - Verify proper padding (content should not touch edges)
+  - Verify proper header (title, close button, consistent styling)
+  - Verify proper borders and separation between header/body/footer
+  - Verify proper max-height with scroll for long content
+  - Verify proper width constraints (not too wide, not too narrow)
+  - Verify proper animation/transition (smooth open/close)
+  - Verify proper focus trapping (tab key stays within modal)
+  - Verify consistent styling across ALL modals/dialogs/sheets (no one-offs)
+  - Verify nested modals stack properly with increasing z-index
+  - Verify body scroll lock when modal is open
+- Fix every issue found.
+
+### Step 4.8 — Button & Interactive Element Audit
+- Check all buttons and interactive elements:
+  - Consistent sizing across the platform (small, medium, large variants)
+  - Proper hover, active, disabled, and loading states
+  - Text not overflowing button boundaries
+  - Icon + text alignment within buttons
+  - Sufficient touch/click target size (minimum 44x44px for accessibility)
+  - Proper spacing between adjacent buttons
+  - Consistent color usage (primary, secondary, danger, ghost variants)
+- Fix every issue found.
+
+### 📋 PHASE 4 SUMMARY
+Output: Total components audited per category, issues found per category, fixes applied, pass/fail status.
+
+---
+
+# PHASE 5: FRONTEND VISUAL & UI AUDIT — MOBILE
+
+**Purpose:** Eliminate ALL mobile-specific visual issues. Mobile is where the majority of field officers will use the platform. Every screen must be polished and functional.
+
+### Step 5.1 — Mobile Viewport & Responsive Layout Audit
+- Check EVERY page for proper mobile rendering:
+  - No horizontal scroll on any page
+  - Content fills the viewport width properly (no excessive side margins or wasted space)
+  - Touch targets are minimum 44x44px
+  - Font sizes are readable without zooming (minimum 14px body text)
+  - Input fields are properly sized and don't cause zoom on focus (iOS)
+- Fix every issue found.
+
+### Step 5.2 — Mobile Workspace Pages Audit
+- For EVERY workspace page, verify on mobile viewport:
+  - Page header renders properly (no overflow, proper back button, action buttons accessible)
+  - Page content is properly stacked (single column where appropriate)
+  - Cards render full-width or appropriate mobile width
+  - Tables are replaced with card/list views or have horizontal scroll
+  - Forms are single-column with proper input spacing
+  - Action buttons are reachable (bottom-positioned or sticky)
+  - Loading states are visible and properly positioned
+  - Empty states render properly on mobile
+- Fix every issue found.
+
+### Step 5.3 — Mobile Navigation & Menu Audit
+- Verify mobile navigation:
+  - Hamburger menu or bottom tab bar is present and functional
+  - Side drawer opens/closes smoothly with proper animation
+  - Menu items have proper touch targets and spacing
+  - Active page is visually indicated in navigation
+  - Navigation doesn't overlap page content
+  - Bottom sheet menus (if used) have proper handle, scroll, and snap behavior
+- Fix every issue found.
+
+### Step 5.4 — Mobile Modal, Sheet & Drawer Audit
+- For EVERY modal/sheet/drawer on mobile:
+  - Bottom sheets snap to proper heights (half screen, full screen)
+  - Drag handle is present and functional for bottom sheets
+  - Content within sheets is scrollable when exceeding viewport
+  - Close/dismiss gestures work properly (swipe down, tap outside)
+  - Keyboard doesn't push content off-screen when input is focused
+  - Modals don't overflow viewport (proper max-height)
+- Fix every issue found.
+
+### Step 5.5 — Mobile ChatDock Audit
+- Verify ChatDock on mobile:
+  - Conversation list takes full screen (no split view)
+  - Tapping a conversation navigates to full-screen message view
+  - Back button returns to conversation list
+  - Message input is fixed to bottom with proper keyboard handling
+  - Messages are properly sized for mobile viewport
+  - Sent/received bubbles have appropriate max-width (70-80% of screen)
+  - Media messages (images, files) render properly
+  - Pull-to-refresh for loading older messages
+- Fix every issue found.
+
+### Step 5.6 — Mobile Touch Interaction Audit
+- Verify all touch interactions:
+  - No double-tap-to-zoom issues on interactive elements
+  - Swipe gestures don't conflict with system gestures
+  - Long-press actions work where expected (message options, etc.)
+  - Scroll performance is smooth (no janky animations)
+  - Pull-to-refresh is implemented where appropriate
+  - Form submission doesn't trigger accidental double-submits
+- Fix every issue found.
+
+### 📋 PHASE 5 SUMMARY
+Output: Total mobile pages audited, issues found per category, fixes applied, pass/fail status.
+
+---
+
+# PHASE 6: ONBOARDING PIPELINE AUDIT
+
+**Purpose:** Ensure the onboarding experience is seamless, role-aware, and guides users to full platform utilization.
+
+### Step 6.1 — Org Signup Onboarding Flow
+- Trace the complete org signup → onboarding pipeline:
+  1. Org creation form (company name, industry, size)
+  2. Admin account creation (name, email, password)
+  3. Email verification
+  4. Onboarding wizard activation (step-by-step setup):
+     - Company profile configuration
+     - Billing/payment setup
+     - QuickBooks integration prompt
+     - First employee invite
+     - Schedule template creation
+     - Compliance settings
+     - Trinity AI configuration introduction
+  5. Dashboard first-view with guided tour
+- Verify each step:
+  - Is the step triggered automatically at the right time?
+  - Can the user skip steps? If so, is there a persistent reminder to complete them?
+  - Is progress tracked and persisted across sessions?
+  - Are error states handled with clear messaging?
+  - Is the onboarding state stored in the database with proper workspace_id association?
+
+### Step 6.2 — Employee Invite Onboarding Flow
+- Trace the complete invite → join → onboarding pipeline:
+  1. Admin sends invite (email, role, assigned workspace)
+  2. Invite email with unique token link
+  3. Invite landing page (validate token, show org info)
+  4. Account creation (pre-populated email, name, password)
+  5. Role-specific onboarding:
+     - Manager: Team overview, scheduling tools, reporting
+     - Officer: Mobile app setup, clock-in tutorial, GPS permissions, post assignments
+  6. First-use guided experience
+- Verify:
+  - Invalid/expired invites show clear error (not a generic 404)
+  - Users CANNOT bypass invite requirement to join an org
+  - Seat limits are checked before invite creation AND before acceptance
+  - Role assignment persists correctly
+  - Onboarding state is distinct per role
+
+### Step 6.3 — Onboarding Pipeline Activation Logic
+- Verify the pipeline knows WHEN to activate:
+  - New org signup → org onboarding automatically starts
+  - Invite acceptance → employee onboarding automatically starts
+  - Returning user who abandoned onboarding → resume from last step
+  - Completed onboarding → never shown again unless reset
+- Verify the pipeline knows WHO the user is:
+  - Org admin vs manager vs officer → correct flow
+  - workspace_id properly associated → correct org context
+- Fix every gap found.
+
+### Step 6.4 — Onboarding Data Persistence
+- Verify all onboarding state is stored in the database:
+  - Onboarding step progress per user
+  - Skipped steps tracking
+  - Completion timestamp
+  - workspace_id association
+- Verify no onboarding state is stored only in localStorage or client-side state.
+
+### 📋 PHASE 6 SUMMARY
+Output: Onboarding flows verified, activation logic status, data persistence status, gaps found/fixed, pass/fail.
+
+---
+
+# PHASE 7: TRINITY AI & SEMANTIC PLATFORM AWARENESS AUDIT
+
+**Purpose:** Ensure Trinity functions as the nervous system of the platform — aware of every asset, service, button, link, bot, credit economy, and execution state.
+
+### Step 7.1 — Trinity Awareness Inventory
+- Document everything Trinity should be aware of:
+  - All platform services and their current state
+  - All bot ecosystem members (HelpAI, MeetingBot, ReportBot, ClockBot) and their capabilities
+  - All workspace data (orgs, employees, schedules, posts, compliance records)
+  - All credit/billing state per org
+  - All active workflows and their status
+  - All UI routes and what they do
+  - All available actions/mutations and their parameters
+- Verify Trinity has access to query/check each of these.
+
+### Step 7.2 — Cross-Feature Communication Audit
+- Verify that platform features communicate properly:
+  - Schedule changes → notify affected employees → update clock-in availability → adjust payroll projections
+  - Employee status change → update scheduling availability → update seat count → adjust billing
+  - QB sync → verify all required data exists → transform → send → confirm → update local state
+  - Broadcast → resolve recipients → deliver → track delivery status → log
+  - AI chat → context includes relevant workspace data → response → token tracking → credit deduction
+- For each chain, verify every link passes data correctly with proper error handling.
+
+### Step 7.3 — Real-Time Sync & Persistence Audit
+- Verify all real-time features:
+  - Subscription connections are established on page load
+  - Mutations trigger subscription updates to all connected clients
+  - Stale data is properly invalidated and refreshed
+  - Reconnection logic handles dropped connections
+  - Optimistic updates are rolled back on server rejection
+  - All state that should persist across sessions is stored server-side (not just in React state)
+
+### Step 7.4 — QuickBooks Integration Integrity
+- Verify the complete QB integration:
+  - OAuth flow: token acquisition → storage → refresh → expiry handling
+  - Data mapping: CoAIleague schema → QB schema (employees, time entries, payroll items, invoices)
+  - Required tables and columns exist for QB data storage
+  - Sync operations are idempotent (re-running doesn't create duplicates)
+  - Error handling for QB API failures (rate limits, auth expiry, data validation errors)
+  - Trinity can orchestrate QB migration for new orgs with proper data validation
+- Fix every gap found.
+
+### Step 7.5 — Bot Ecosystem Verification
+- For each bot (HelpAI, MeetingBot, ReportBot, ClockBot):
+  - Verify the bot is registered and accessible
+  - Verify the bot's capabilities match its documentation
+  - Verify the bot can receive and respond to requests
+  - Verify the bot properly authenticates and scopes to the requesting workspace
+  - Verify the bot's responses are tracked for token/credit accounting
+  - Verify the bot can communicate with other bots when needed (orchestration)
+- Fix every gap found.
+
+### Step 7.6 — Credit Economy Integrity
+- Verify the complete credit system:
+  - Credit purchase → balance update → proper org association
+  - AI usage → accurate cost calculation → atomic credit deduction
+  - Credit balance checks BEFORE execution (prevent negative balance operations)
+  - Usage history with full audit trail (timestamp, model, tokens, cost, org, user)
+  - Billing cycle tracking and reporting
+  - Seat cost calculation and enforcement
+- Fix every gap found.
+
+### 📋 PHASE 7 SUMMARY
+Output: Trinity awareness status, cross-feature chains verified, real-time sync status, QB integration status, bot ecosystem status, credit economy status, pass/fail.
+
+---
+
+# PHASE 8: ROUTE-LEVEL FULL STACK VERIFICATION
+
+**Purpose:** Verify every single route from frontend to backend is properly wired with correct schema references, correct API calls, correct auth, and correct error handling.
+
+### Step 8.1 — Route Inventory
+- List EVERY frontend route (page route) and EVERY backend route (API endpoint).
+- Map each frontend route to the API endpoints it calls.
+- Map each API endpoint to the database tables/queries it touches.
+
+### Step 8.2 — Frontend → API Verification
+- For each frontend route:
+  - Verify it calls the correct API endpoints
+  - Verify request payloads match the API's expected schema
+  - Verify all required parameters (workspace_id, auth tokens, etc.) are included
+  - Verify error responses are handled and displayed to the user
+  - Verify loading states are shown during API calls
+  - Verify empty states are handled when no data is returned
+
+### Step 8.3 — API → Database Verification
+- For each API endpoint:
+  - Verify it queries the correct tables
+  - Verify column names in queries match actual schema
+  - Verify query parameters are properly typed and validated
+  - Verify responses are properly typed and serialized
+  - Verify workspace/org scoping is enforced in every query
+  - Verify pagination is implemented where needed
+
+### Step 8.4 — Dead Route & Orphan Cleanup
+- Identify:
+  - Frontend routes that call non-existent API endpoints
+  - API endpoints that no frontend route calls
+  - Database tables/columns that no API endpoint references
+  - Imported components/modules that are never used
+- Flag all orphans. Remove or wire up as appropriate.
+
+### 📋 PHASE 8 SUMMARY
+Output: Total frontend routes, total API endpoints, total route mismatches found/fixed, dead routes removed, pass/fail.
+
+---
+
+# PHASE 9: STRESS TEST & PATTERN-BASED ISSUE DISCOVERY
+
+**Purpose:** Use all previously found issues as pattern templates to proactively discover similar issues across the entire platform.
+
+### Step 9.1 — Issue Pattern Catalog
+- Review every issue found in Phases 1-8.
+- Categorize each issue by pattern type:
+  - Missing identifier propagation (workspace_id, org_id, user_id)
+  - Enum mismatch (code vs database)
+  - Silent failure (missing error handling)
+  - Visual overflow (text/content exceeding container)
+  - Race condition (concurrent access without protection)
+  - Auth bypass (missing middleware or scope check)
+  - Schema drift (code references vs actual schema)
+
+### Step 9.2 — Pattern Replication Search
+- For EACH pattern type identified in 9.1:
+  - Search the ENTIRE codebase for all instances of the same pattern
+  - Don't just check obvious locations — check every file, every component, every service
+  - Example: If workspace_id was missing in the scheduling service, check EVERY other service for the same issue
+  - Example: If an enum mismatch was found for employee status, check EVERY other enum in the system
+- Fix every new instance found.
+
+### Step 9.3 — Simulated Execution Stress Test
+- For each major workflow, mentally simulate (or actually test) these scenarios:
+  - What happens if the database is slow (2-3 second query time)?
+  - What happens if an AI model returns an error?
+  - What happens if the user rapidly clicks a button 5 times?
+  - What happens if two users edit the same schedule simultaneously?
+  - What happens if a webhook is received out of order?
+  - What happens if the QB sync runs while an admin is editing the same data?
+  - What happens if a user's session expires mid-workflow?
+  - What happens if the websocket disconnects during a real-time update?
+- Flag every scenario that would cause data corruption, silent failure, or user-visible error without recovery.
+- Fix every gap found.
+
+### Step 9.4 — Dependency & Environment Audit
+- Verify all environment variables are properly set and used
+- Verify all third-party API keys are validated on startup
+- Verify all required packages are in dependencies (not devDependencies for production code)
+- Verify build process produces correct output without warnings
+- Verify no sensitive data is exposed in client bundles
+
+### 📋 PHASE 9 SUMMARY
+Output: Issue patterns cataloged, pattern replication results (new issues found per pattern), stress test results, dependency issues found/fixed, pass/fail.
+
+---
+
+# 🏁 MASTER AUDIT SUMMARY
+
+After completing ALL phases, produce this summary:
+
+```
+═══════════════════════════════════════════════════════
+       COAILEAGUE PLATFORM AUDIT — MASTER REPORT
+═══════════════════════════════════════════════════════
+
+PHASE 1 — Schema & Enum Integrity:        [PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 2 — Race Conditions & Workflows:    [PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 3 — Authentication & Authorization: [PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 4 — Desktop Visual/UI:              [PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 5 — Mobile Visual/UI:               [PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 6 — Onboarding Pipelines:           [PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 7 — Trinity AI & Semantic Awareness:[PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 8 — Full Stack Route Verification:  [PASS/FAIL] — [X] issues found, [X] fixed
+PHASE 9 — Stress Test & Pattern Discovery:[PASS/FAIL] — [X] issues found, [X] fixed
+
+TOTAL ISSUES FOUND:  [X]
+TOTAL ISSUES FIXED:  [X]
+REMAINING ISSUES:    [X] (list each with severity and location)
+
+PLATFORM READINESS SCORE: [X]/100
+
+CRITICAL BLOCKERS FOR GO-LIVE: (list any remaining)
+═══════════════════════════════════════════════════════
+```
+
+---
+
+# ⚠️ FINAL DIRECTIVE — NON-NEGOTIABLE
+
+**DO NOT:**
+- Skip any step because it "looks fine" or "was already checked"
+- Batch multiple steps into a single check
+- Make assumptions about what is or isn't working
+- Prioritize speed over thoroughness
+- Stop mid-phase without completing all steps
+- Ignore steps because of context window or performance limitations — if you need sub-agents, use them
+- Output "everything looks good" without showing the actual verification work
+
+**DO:**
+- Execute each numbered step individually
+- Show your work for each verification
+- Fix issues immediately upon discovery
+- Report status after every single step
+- Use sub-agents, Architect mode, or Trinity for specialized checks
+- Treat this as a pre-launch certification audit — nothing ships until every phase passes
+
+**If at any point you are unsure about a step, do NOT skip it. Ask for clarification or investigate deeper. The cost of a missed issue in production far exceeds the cost of thoroughness now.**
+
+---
+
+*This audit was generated to address recurring patterns of missed issues across multiple development cycles. Every phase targets specific, documented failure categories that have been observed in the CoAIleague platform. Execute with precision.*

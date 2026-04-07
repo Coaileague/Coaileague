@@ -7,6 +7,9 @@ import { db } from '../db';
 import { supportTickets, workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { checkDatabase } from './healthCheck';
+import { createLogger } from '../lib/logger';
+const log = createLogger('autoTicketCreation');
+
 
 export interface AutoTicketConfig {
   workspaceId: string;
@@ -62,14 +65,14 @@ export async function createHealthCheckTicket(
       .returning();
 
     // Log ticket creation for audit trail
-    console.log(`[AutoTicket] Created ticket ${ticket.id} for ${healthCheckName} failure in workspace ${workspaceId}`);
+    log.info(`[AutoTicket] Created ticket ${ticket.id} for ${healthCheckName} failure in workspace ${workspaceId}`);
 
     return {
       ticketId: ticket.id,
       created: true,
     };
   } catch (error) {
-    console.error('[AutoTicketCreation] Error creating health check ticket:', error);
+    log.error('[AutoTicketCreation] Error creating health check ticket:', error);
     return { ticketId: '', created: false };
   }
 }
@@ -102,7 +105,7 @@ export async function createQuotaWarningTicket(
 
     return ticket.id;
   } catch (error) {
-    console.error('[AutoTicketCreation] Error creating quota ticket:', error);
+    log.error('[AutoTicketCreation] Error creating quota ticket:', error);
     return null;
   }
 }
@@ -132,7 +135,7 @@ export async function createSecurityAlertTicket(
 
     return ticket.id;
   } catch (error) {
-    console.error('[AutoTicketCreation] Error creating security ticket:', error);
+    log.error('[AutoTicketCreation] Error creating security ticket:', error);
     return null;
   }
 }
@@ -153,7 +156,7 @@ export async function autoResolveHealthTicket(ticketId: string): Promise<boolean
 
     return true;
   } catch (error) {
-    console.error('[AutoTicketCreation] Error resolving ticket:', error);
+    log.error('[AutoTicketCreation] Error resolving ticket:', error);
     return false;
   }
 }

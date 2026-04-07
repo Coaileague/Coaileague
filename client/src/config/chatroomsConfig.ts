@@ -5,7 +5,7 @@
 
 import { Building2, HeartHandshake, Briefcase, Video, MessageCircle, Shield, Crown, LucideIcon, Users, Headphones, Bot, Calendar } from "lucide-react";
 
-export type RoomType = 'support' | 'work' | 'meeting' | 'org' | 'shift' | 'dm_support' | 'dm_bot' | 'open_chat' | 'platform';
+export type RoomType = 'support' | 'work' | 'meeting' | 'org' | 'shift' | 'dm_support' | 'dm_bot' | 'dm_user' | 'open_chat' | 'platform';
 
 export type RoomVisibility = 'workspace' | 'public' | 'private' | 'platform';
 
@@ -111,6 +111,16 @@ export const ROOM_TYPES: Record<RoomType, RoomTypeConfig> = {
     borderColor: 'border-teal-500/30',
     badgeVariant: 'default',
   },
+  dm_user: {
+    type: 'dm_user',
+    label: 'Direct Message',
+    description: 'Private 1-to-1 conversation',
+    icon: MessageCircle,
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-400/10',
+    borderColor: 'border-blue-400/30',
+    badgeVariant: 'default',
+  },
   open_chat: {
     type: 'open_chat',
     label: 'Open Chat',
@@ -126,9 +136,9 @@ export const ROOM_TYPES: Record<RoomType, RoomTypeConfig> = {
     label: 'Platform',
     description: 'Official platform channel',
     icon: Crown,
-    color: 'text-amber-400',
-    bgColor: 'bg-gradient-to-br from-amber-500/10 to-orange-500/10',
-    borderColor: 'border-amber-500/40',
+    color: 'text-cyan-400',
+    bgColor: 'bg-gradient-to-br from-cyan-500/10 to-teal-500/10',
+    borderColor: 'border-cyan-500/40',
     badgeVariant: 'default',
   },
 };
@@ -148,33 +158,45 @@ export const CHATROOM_UI: ChatroomUIConfig = {
 export const ROOM_FILTERS: FilterConfig[] = [
   {
     id: 'all',
-    label: 'All Rooms',
+    label: 'All',
     filter: () => true,
   },
   {
-    id: 'available',
-    label: 'Available',
-    filter: (room, { isParticipant }) => !isParticipant,
+    id: 'dms',
+    label: 'DMs',
+    filter: (room) => {
+      const t = room.type || room.conversationType;
+      return t === 'dm_user' || t === 'dm_bot' || t === 'dm_support' || t === 'direct' || t === 'dm';
+    },
+  },
+  {
+    id: 'chatrooms',
+    label: 'Chatrooms',
+    filter: (room) => {
+      const t = room.type || room.conversationType;
+      return t === 'work' || t === 'org' || t === 'open_chat' || t === 'shift' || t === 'shift_chat' || t === 'meeting' || t === 'platform';
+    },
+  },
+  {
+    id: 'shift',
+    label: 'Shift',
+    filter: (room) => {
+      const t = room.type || room.conversationType;
+      return t === 'shift' || t === 'shift_chat';
+    },
+  },
+  {
+    id: 'support',
+    label: 'Support',
+    filter: (room) => {
+      const t = room.type || room.conversationType;
+      return t === 'support' || t === 'dm_support';
+    },
   },
   {
     id: 'joined',
     label: 'My Rooms',
     filter: (room, { isParticipant }) => !!isParticipant,
-  },
-  {
-    id: 'support',
-    label: 'Support',
-    filter: (room) => room.type === 'support' || room.conversationType === 'dm_support',
-  },
-  {
-    id: 'work',
-    label: 'Work',
-    filter: (room) => room.type === 'work' || room.conversationType === 'shift_chat',
-  },
-  {
-    id: 'meeting',
-    label: 'Meetings',
-    filter: (room) => room.type === 'meeting',
   },
 ];
 
@@ -191,8 +213,8 @@ export const OWNERSHIP_INDICATORS = {
     icon: Crown,
     label: 'Platform',
     tooltip: 'Official CoAIleague channel',
-    className: 'text-amber-400 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/40',
-    color: 'text-amber-400',
+    className: 'text-cyan-400 bg-gradient-to-r from-cyan-500/20 to-teal-500/20 border-cyan-500/40',
+    color: 'text-cyan-400',
   },
   organization: {
     icon: Building2,
@@ -228,6 +250,10 @@ export function getRoomTypeConfig(type?: string, conversationType?: string): Roo
       return ROOM_TYPES.dm_support;
     case 'dm_bot':
       return ROOM_TYPES.dm_bot;
+    case 'dm_user':
+    case 'direct':
+    case 'dm':
+      return ROOM_TYPES.dm_user;
     case 'open_chat':
       return ROOM_TYPES.open_chat;
     default:

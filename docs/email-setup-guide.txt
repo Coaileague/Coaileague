@@ -1,0 +1,164 @@
+================================================================================
+COAILEAGUE EMAIL SYSTEM SETUP GUIDE
+================================================================================
+
+GOAL:
+Set up automated email processing for work requests sent to staffing@mail.coaileague.com
+so Trinity AI can automatically parse, classify, and process staffing requests.
+
+================================================================================
+ARCHITECTURE OVERVIEW
+================================================================================
+
+We have TWO email systems:
+
+1. GOOGLE WORKSPACE (main domain: coaileague.com)
+   - Handles regular business email
+   - MX records point to Google (ASPMX.L.GOOGLE.COM, etc.)
+   - Already configured and working
+
+2. RESEND (subdomain: mail.coaileague.com)
+   - Handles automated work request emails
+   - MX record points to Resend (inbound-smtp.resend.com)
+   - Webhook calls our API when email arrives
+   - Trinity AI processes the email
+
+EMAIL FLOW:
+  Client sends email to: staffing@mail.coaileague.com
+           ↓
+  Resend receives email (via MX record)
+           ↓
+  Resend calls webhook: https://coaileague.com/api/webhooks/resend/inbound
+           ↓
+  Our server receives the email data
+           ↓
+  Trinity AI parses and processes the work request
+           ↓
+  Shifts are created, employees notified, client confirmation sent
+
+================================================================================
+CURRENT STATUS
+================================================================================
+
+COMPLETED:
+- Google Workspace verified with MX records on coaileague.com
+- Resend verified for SENDING emails from coaileague.com
+- DKIM record added (resend._domainkey)
+- SPF records added (send subdomain)
+- Webhook endpoint ready at /api/webhooks/resend/inbound
+- Code updated to recognize staffing@mail.coaileague.com
+
+NOT YET COMPLETED:
+- Add subdomain mail.coaileague.com in Resend Dashboard
+- Add MX record for mail subdomain in Replit DNS
+- Configure webhook in Resend Dashboard
+- Enable Receiving in Resend Dashboard
+
+================================================================================
+STEP-BY-STEP SETUP INSTRUCTIONS
+================================================================================
+
+STEP 1: ADD SUBDOMAIN IN RESEND
+-------------------------------
+1. Go to https://resend.com/domains
+2. Click "Add Domain"
+3. Enter: mail.coaileague.com
+4. Resend will show DNS records to add (DKIM, SPF, etc.)
+5. Note down these records for Step 2
+
+STEP 2: ADD DNS RECORDS IN REPLIT
+---------------------------------
+In Replit: Deployments → coaileague.com → Edit → Add DNS Record
+
+Add this MX record:
+  Type: MX
+  Name: mail
+  Value: inbound-smtp.resend.com
+  Priority: 10
+
+Add any additional records Resend requires for the subdomain (DKIM, SPF, etc.)
+
+STEP 3: VERIFY SUBDOMAIN IN RESEND
+----------------------------------
+1. Wait 5-10 minutes for DNS propagation
+2. Click "Verify" in Resend for mail.coaileague.com
+3. All records should show green checkmarks
+
+STEP 4: ADD WEBHOOK IN RESEND
+-----------------------------
+1. Go to https://resend.com/webhooks
+2. Click "Add Webhook"
+3. Enter URL: https://coaileague.com/api/webhooks/resend/inbound
+4. Select events: email.sent, email.delivered, email.bounced, email.opened, email.clicked
+5. Save
+
+STEP 5: ENABLE RECEIVING IN RESEND
+----------------------------------
+1. Go to https://resend.com/domains
+2. Find mail.coaileague.com
+3. Toggle "Enable Receiving" to ON
+
+STEP 6: TEST THE FLOW
+---------------------
+1. Send an email to: staffing@mail.coaileague.com
+2. Check server logs for webhook receipt
+3. Verify Trinity AI processes the request
+
+================================================================================
+TECHNICAL DETAILS
+================================================================================
+
+WEBHOOK ENDPOINT:
+  POST /api/webhooks/resend/inbound
+  File: server/routes/resendWebhooks.ts
+
+STAFFING EMAIL CONFIG:
+  Primary: staffing@coaileague.com
+  Aliases: 
+    - work@coaileague.com
+    - jobs@coaileague.com
+    - requests@coaileague.com
+    - staffing@mail.coaileague.com (NEW)
+    - work@mail.coaileague.com (NEW)
+    - jobs@mail.coaileague.com (NEW)
+    - requests@mail.coaileague.com (NEW)
+
+PROCESSING SERVICE:
+  File: server/services/inboundOpportunityAgent.ts
+  Uses Trinity AI (Gemini) to:
+    - Classify email type
+    - Extract work request details
+    - Create shifts
+    - Auto-assign employees
+    - Send confirmations
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+IF MX RECORD FAILS TO ADD:
+- Check if "mail" subdomain already exists
+- Try different priority (1, 5, or 10)
+- Ensure no conflicting records
+
+IF RESEND VERIFICATION FAILS:
+- Wait longer for DNS propagation (up to 1 hour)
+- Check dnschecker.org for propagation status
+- Ensure TXT/DKIM records are exact matches
+
+IF WEBHOOK NOT RECEIVING:
+- Check webhook URL is correct (https, not http)
+- Verify domain is verified in Resend
+- Check server logs for incoming requests
+- Test with: curl -X POST https://coaileague.com/api/webhooks/resend/inbound
+
+================================================================================
+SUMMARY
+================================================================================
+
+Main Domain (coaileague.com) → Google Workspace → Regular business email
+Subdomain (mail.coaileague.com) → Resend → Automated work request processing
+
+This separation keeps Google Workspace intact while allowing Resend to handle
+automated inbound email processing for the Trinity AI staffing system.
+================================================================================

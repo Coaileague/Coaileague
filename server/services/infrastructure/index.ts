@@ -61,6 +61,9 @@ import { chaosTestingService } from './chaosTestingService';
 import { operationsRunbookService } from './operationsRunbookService';
 import { complianceSignoffService } from './complianceSignoffService';
 import { launchRehearsalService } from './launchRehearsalService';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('infrastructure');
+
 
 // Q1 exports
 export { durableJobQueue } from './durableJobQueue';
@@ -101,7 +104,7 @@ export { initializeProductionSeeding, seedProductionAlertRules, seedProductionDa
  * Should be called during server startup
  */
 export async function initializeInfrastructureServices(): Promise<void> {
-  console.log('[Infrastructure] Initializing 2026 infrastructure services + Launch Hardening...');
+  log.info('[Infrastructure] Initializing 2026 infrastructure services + Launch Hardening...');
   
   // Initialize Q1 services
   const q1Results = await Promise.allSettled([
@@ -150,7 +153,7 @@ export async function initializeInfrastructureServices(): Promise<void> {
   
   if (failures.length > 0) {
     for (const failure of failures) {
-      console.error('[Infrastructure] Service initialization failed:', (failure as PromiseRejectedResult).reason);
+      log.error('[Infrastructure] Service initialization failed:', (failure as PromiseRejectedResult).reason);
     }
   }
   
@@ -166,13 +169,13 @@ export async function initializeInfrastructureServices(): Promise<void> {
   // Initialize production seeding (alert rules, dashboards, extended health checks)
   await initializeProductionSeeding();
   
-  console.log(`[Infrastructure] ${successes}/${allResults.length} services initialized successfully`);
-  console.log('[Infrastructure] Q1: Job Queue, Backups, Error Tracking, API Key Rotation');
-  console.log('[Infrastructure] Q2: Distributed Tracing, Connection Pooling, Rate Limiting, Health Checks, Metrics Dashboard');
-  console.log('[Infrastructure] Q3: Circuit Breaker, SLA Monitoring');
-  console.log('[Infrastructure] Q4: Disaster Recovery, Log Aggregation, Security Hardening, CDN Caching, Audit Trail Export');
-  console.log('[Infrastructure] Launch Hardening: Readiness, Chaos Testing, Runbooks, Compliance Sign-off, Rehearsal');
-  console.log('[Infrastructure] Production: SRE alerts, dashboards, extended health checks');
+  log.info(`[Infrastructure] ${successes}/${allResults.length} services initialized successfully`);
+  log.info('[Infrastructure] Q1: Job Queue, Backups, Error Tracking, API Key Rotation');
+  log.info('[Infrastructure] Q2: Distributed Tracing, Connection Pooling, Rate Limiting, Health Checks, Metrics Dashboard');
+  log.info('[Infrastructure] Q3: Circuit Breaker, SLA Monitoring');
+  log.info('[Infrastructure] Q4: Disaster Recovery, Log Aggregation, Security Hardening, CDN Caching, Audit Trail Export');
+  log.info('[Infrastructure] Launch Hardening: Readiness, Chaos Testing, Runbooks, Compliance Sign-off, Rehearsal');
+  log.info('[Infrastructure] Production: SRE alerts, dashboards, extended health checks');
 }
 
 /**
@@ -198,19 +201,19 @@ function registerTrinityRecoveryHandler(): void {
       const result = await trinitySelfEditGovernance.applyApprovedChanges(proposalId);
       
       if (result.success) {
-        console.log(`[Infrastructure] Trinity recovery job completed for proposal ${proposalId}`);
+        log.info(`[Infrastructure] Trinity recovery job completed for proposal ${proposalId}`);
         return { success: true, result };
       } else {
-        console.warn(`[Infrastructure] Trinity recovery job failed for proposal ${proposalId}: ${result.error}`);
+        log.warn(`[Infrastructure] Trinity recovery job failed for proposal ${proposalId}: ${result.error}`);
         return { success: false, error: result.error };
       }
     } catch (error: any) {
-      console.error(`[Infrastructure] Trinity recovery job error for proposal ${proposalId}:`, error);
-      return { success: false, error: error.message };
+      log.error(`[Infrastructure] Trinity recovery job error for proposal ${proposalId}:`, error);
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   });
   
-  console.log('[Infrastructure] Trinity recovery handler registered');
+  log.info('[Infrastructure] Trinity recovery handler registered');
 }
 
 /**
@@ -224,8 +227,10 @@ function registerDefaultCircuits(): void {
   circuitBreaker.registerCircuit('twilio', 'Twilio SMS API');
   circuitBreaker.registerCircuit('database', 'PostgreSQL Database');
   circuitBreaker.registerCircuit('websocket', 'WebSocket Server');
+circuitBreaker.registerCircuit('plaid', 'Plaid Banking API');  // FIX-10
+circuitBreaker.registerCircuit('quickbooks', 'QuickBooks Integration');  // FIX-10
   
-  console.log('[Infrastructure] Registered 6 default circuit breakers');
+  log.info('[Infrastructure] Registered 6 default circuit breakers');
 }
 
 /**
@@ -245,14 +250,14 @@ function registerDefaultSLAMonitoring(): void {
   slaMonitoring.registerService('websocket', 'WebSocket Server', 'silver');
   slaMonitoring.registerService('background_jobs', 'Background Jobs', 'silver');
   
-  console.log('[Infrastructure] Registered 7 SLA monitoring targets');
+  log.info('[Infrastructure] Registered 7 SLA monitoring targets');
 }
 
 /**
  * Shutdown all infrastructure services gracefully
  */
 export function shutdownInfrastructureServices(): void {
-  console.log('[Infrastructure] Shutting down infrastructure services...');
+  log.info('[Infrastructure] Shutting down infrastructure services...');
   
   // Q1 services
   durableJobQueue.shutdown();
@@ -278,7 +283,7 @@ export function shutdownInfrastructureServices(): void {
   cdnCachingService.shutdown();
   auditTrailExportService.shutdown();
   
-  console.log('[Infrastructure] All infrastructure services shut down');
+  log.info('[Infrastructure] All infrastructure services shut down');
 }
 
 /**

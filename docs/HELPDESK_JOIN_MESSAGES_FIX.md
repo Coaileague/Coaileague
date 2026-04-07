@@ -5,8 +5,8 @@
 ### 1. ❌ Duplicate Join Messages (FIXED)
 **Problem:**
 ```
-⚖️ Root Brigido joined HelpOS (platform staff - role: root)
-⚖️ Root Brigido joined conversation main-chatroom-workforceos
+⚖️ Root Admin joined HelpOS (platform staff - role: root)
+⚖️ Root Admin joined conversation main-chatroom-workforceos
 ```
 Two separate console logs for every user join!
 
@@ -68,7 +68,7 @@ If queue system errors, users get NO welcome at all (bad UX)
 
 ### Staff Joining:
 ```
-*** Root Brigido has joined the HelpDesk
+*** Root Admin has joined the HelpDesk
 HelpOS™: Queue Status: 3 customers waiting, 1 being helped. Avg wait: 5 minutes.
 ```
 
@@ -90,13 +90,13 @@ System: Welcome to HelpDesk! Support staff will assist you shortly.
 
 ### Before (Duplicate):
 ```
-⚖️ Root Brigido joined HelpOS (platform staff - role: root)
-⚖️ Root Brigido joined conversation main-chatroom-workforceos
+⚖️ Root Admin joined HelpOS (platform staff - role: root)
+⚖️ Root Admin joined conversation main-chatroom-workforceos
 ```
 
 ### After (Clean):
 ```
-✅ Root Brigido joined HelpDesk (platform staff - root)
+✅ Root Admin joined HelpDesk (platform staff - root)
 ```
 
 ---

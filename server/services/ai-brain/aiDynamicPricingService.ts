@@ -25,6 +25,9 @@ import {
   workspaces,
 } from '@shared/schema';
 import { usageMeteringService } from '../billing/usageMetering';
+import { meteredGemini } from '../billing/meteredGeminiClient';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('aiDynamicPricingService');
 
 export interface PricingSuggestion {
   currentRate: number;
@@ -95,7 +98,7 @@ class AIDynamicPricingService {
     try {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        console.warn('[AIDynamicPricing] GEMINI_API_KEY not configured');
+        log.warn('[AIDynamicPricing] GEMINI_API_KEY not configured');
         return;
       }
 
@@ -108,9 +111,9 @@ class AIDynamicPricingService {
         }
       });
       this.initialized = true;
-      console.log('[AIDynamicPricing] Service initialized');
+      log.info('[AIDynamicPricing] Service initialized');
     } catch (error: any) {
-      console.error('[AIDynamicPricing] Initialization failed:', error.message);
+      log.error('[AIDynamicPricing] Initialization failed:', (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -186,7 +189,7 @@ class AIDynamicPricingService {
         suggestion
       };
     } catch (error: any) {
-      console.error('[AIDynamicPricing] Client analysis error:', error.message);
+      log.error('[AIDynamicPricing] Client analysis error:', (error instanceof Error ? error.message : String(error)));
       return null;
     }
   }
@@ -272,7 +275,7 @@ class AIDynamicPricingService {
       confidence = 65;
     }
 
-    if (this.model && userId) {
+    if (userId) {
       try {
         const prompt = `As a pricing strategist, analyze this client service pricing:
 
@@ -293,30 +296,28 @@ Provide a refined recommendation in JSON:
   "additionalFactors": ["any other considerations"]
 }`;
 
-        const result = await this.model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        await usageMeteringService.recordUsage({
-          workspaceId,
+        const result = await meteredGemini.generate({
+          workspaceId: workspaceId,
           userId,
           featureKey: 'ai_pricing_analysis',
-          usageType: 'token',
-          usageAmount: 300,
-          usageUnit: 'tokens',
-          metadata: { source: 'ai_dynamic_pricing' }
+          prompt,
+          model: 'gemini-2.5-flash',
+          temperature: 0.5,
+          maxOutputTokens: 500,
         });
 
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (parsed.adjustedRate) suggestedRate = parsed.adjustedRate;
-          if (parsed.reasoning) reasoning = parsed.reasoning;
-          if (parsed.confidence) confidence = parsed.confidence;
-          if (parsed.riskLevel) riskLevel = parsed.riskLevel;
+        if (result.success) {
+          const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.adjustedRate) suggestedRate = parsed.adjustedRate;
+            if (parsed.reasoning) reasoning = parsed.reasoning;
+            if (parsed.confidence) confidence = parsed.confidence;
+            if (parsed.riskLevel) riskLevel = parsed.riskLevel;
+          }
         }
       } catch (error: any) {
-        console.log('[AIDynamicPricing] AI enhancement skipped:', error.message);
+        log.info('[AIDynamicPricing] AI enhancement skipped:', (error instanceof Error ? error.message : String(error)));
       }
     }
 

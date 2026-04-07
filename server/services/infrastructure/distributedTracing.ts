@@ -12,6 +12,9 @@
 import { randomUUID } from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('distributedTracing');
+
 
 // Trace context for async propagation
 const traceContext = new Map<string, TraceContext>();
@@ -78,7 +81,7 @@ class DistributedTracingService {
     setInterval(() => this.cleanupOldTraces(), 60000); // Every minute
     
     this.isInitialized = true;
-    console.log('[DistributedTracing] Service initialized');
+    log.info('[DistributedTracing] Service initialized');
   }
 
   /**
@@ -324,7 +327,7 @@ class DistributedTracingService {
    */
   setSampleRate(rate: number): void {
     this.sampleRate = Math.max(0, Math.min(1, rate));
-    console.log(`[DistributedTracing] Sample rate set to ${this.sampleRate * 100}%`);
+    log.info(`[DistributedTracing] Sample rate set to ${this.sampleRate * 100}%`);
   }
 
   /**
@@ -339,21 +342,21 @@ class DistributedTracingService {
     try {
       await db.insert(systemAuditLogs).values({
         id: randomUUID(),
-        eventType: 'trace_exported',
-        severity: 'info',
-        source: 'distributed_tracing',
-        message: `Trace exported: ${rootSpan?.operationName || 'unknown'}`,
+        action: 'trace_exported',
+        entityType: 'trace_exported',
         metadata: {
+          severity: 'info',
+          source: 'distributed_tracing',
+          message: `Trace exported: ${rootSpan?.operationName || 'unknown'}`,
           traceId: context.traceId,
           spanCount: spans.length,
           duration: rootSpan?.duration || 0,
           status: rootSpan?.status || 'unknown',
           operationName: rootSpan?.operationName
         },
-        timestamp: new Date()
       });
     } catch (error) {
-      console.error('[DistributedTracing] Failed to export trace to audit:', error);
+      log.error('[DistributedTracing] Failed to export trace to audit:', error);
     }
   }
 
@@ -395,14 +398,14 @@ class DistributedTracingService {
 
     for (const [traceId, context] of this.activeTraces) {
       if (now - context.startTime > maxAge) {
-        console.warn(`[DistributedTracing] Cleaning up stale trace: ${traceId}`);
+        log.warn(`[DistributedTracing] Cleaning up stale trace: ${traceId}`);
         this.endTrace(context, 'error');
       }
     }
   }
 
   shutdown(): void {
-    console.log('[DistributedTracing] Shutting down...');
+    log.info('[DistributedTracing] Shutting down...');
     this.activeTraces.clear();
     this.completedTraces = [];
   }

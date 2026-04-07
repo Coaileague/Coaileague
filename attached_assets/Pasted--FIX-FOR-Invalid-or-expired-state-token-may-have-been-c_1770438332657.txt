@@ -1,0 +1,263 @@
+/**
+ * FIX FOR: "Invalid or expired state token (may have been consumed by a duplicate request)"
+ * 
+ * PROBLEM: Browser sometimes sends duplicate callback requests. First request consumes 
+ * the state token, second request fails because state is gone.
+ * 
+ * SOLUTION: Add a "processing" status and cache successful results to handle duplicates gracefully.
+ */
+
+// ============================================================================
+// STEP 1: Update the oauthStates schema (if not already present)
+// ============================================================================
+// In your schema file, add a 'status' column to oauthStates:
+// 
+// status: text('status').default('pending'), // 'pending' | 'processing' | 'completed'
+// completedAt: timestamp('completed_at'),
+// resultCache: jsonb('result_cache'), // Cache the success result for duplicates
+
+
+// ============================================================================
+// STEP 2: Replace exchangeCodeForTokens in server/services/oauth/quickbooks.ts
+// ============================================================================
+
+/*
+async exchangeCodeForTokens(
+  code: string,
+  state: string,
+  realmId: string,
+  requestDomain?: string
+): Promise<{ workspaceId: string; connection: any }> {
+  // Clean up expired states before validation
+  await this.cleanupExpiredStates();
+  
+  // STEP 1: Find and LOCK the state token
+  const [oauthState] = await db.select()
+    .from(oauthStates)
+    .where(
+      and(
+        eq(oauthStates.state, state),
+        eq(oauthStates.partnerType, 'quickbooks')
+      )
+    )
+    .limit(1);
+  
+  if (!oauthState) {
+    throw new Error('Invalid or expired state token (may have been consumed by a duplicate request)');
+  }
+  
+  // STEP 2: Check if already processing or completed (duplicate request handling)
+  if (oauthState.status === 'processing') {
+    // Another request is handling this - wait briefly and check for result
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const [updatedState] = await db.select()
+      .from(oauthStates)
+      .where(eq(oauthStates.id, oauthState.id))
+      .limit(1);
+    
+    if (updatedState?.status === 'completed' && updatedState.resultCache) {
+      console.log('[QuickBooks OAuth] Returning cached result for duplicate request');
+      return updatedState.resultCache as { workspaceId: string; connection: any };
+    }
+    
+    throw new Error('OAuth request is being processed by another request');
+  }
+  
+  if (oauthState.status === 'completed' && oauthState.resultCache) {
+    console.log('[QuickBooks OAuth] Returning cached result for duplicate request');
+    return oauthState.resultCache as { workspaceId: string; connection: any };
+  }
+  
+  // Check expiry
+  if (new Date() > oauthState.expiresAt) {
+    await db.delete(oauthStates).where(eq(oauthStates.id, oauthState.id));
+    throw new Error('State token expired - please try again');
+  }
+  
+  // STEP 3: Mark as processing (atomic update with status check)
+  const updateResult = await db.update(oauthStates)
+    .set({ status: 'processing' })
+    .where(
+      and(
+        eq(oauthStates.id, oauthState.id),
+        eq(oauthStates.status, 'pending') // Only update if still pending
+      )
+    )
+    .returning();
+  
+  if (updateResult.length === 0) {
+    // Another request beat us to it - wait and check for result
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const [updatedState] = await db.select()
+      .from(oauthStates)
+      .where(eq(oauthStates.id, oauthState.id))
+      .limit(1);
+    
+    if (updatedState?.status === 'completed' && updatedState.resultCache) {
+      return updatedState.resultCache as { workspaceId: string; connection: any };
+    }
+    
+    throw new Error('OAuth request is being processed by another request');
+  }
+  
+  const workspaceId = oauthState.workspaceId;
+  
+  try {
+    // Get credentials and exchange code for tokens (existing logic)
+    const { clientId, clientSecret, isProduction } = this.getCredentialsForDomain(requestDomain);
+    const qbEnvironment = isProduction ? 'production' : 'sandbox';
+    const dynamicRedirectUri = this.buildRedirectUri(requestDomain);
+    
+    console.log(`[QuickBooks OAuth] Token exchange using redirect URI: ${dynamicRedirectUri}`);
+
+    const response = await fetch(this.tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: dynamicRedirectUri,
+        code_verifier: oauthState.codeVerifier || '',
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to exchange code for tokens: ${error}`);
+    }
+
+    const tokens = await response.json();
+
+    // Calculate expiry and encrypt tokens (existing logic)
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + tokens.expires_in * 1000);
+    const refreshTokenExpiresAt = new Date(now.getTime() + tokens.x_refresh_token_expires_in * 1000);
+    const encryptedAccessToken = encryptToken(tokens.access_token);
+    const encryptedRefreshToken = encryptToken(tokens.refresh_token);
+
+    // Create or update connection (existing logic)
+    // ... your existing connection creation code ...
+    
+    const result = { workspaceId, connection };
+    
+    // STEP 4: Mark as completed and cache result (instead of deleting)
+    await db.update(oauthStates)
+      .set({ 
+        status: 'completed',
+        completedAt: new Date(),
+        resultCache: result,
+      })
+      .where(eq(oauthStates.id, oauthState.id));
+    
+    // Schedule deletion after 60 seconds (gives time for duplicate requests)
+    setTimeout(async () => {
+      try {
+        await db.delete(oauthStates).where(eq(oauthStates.id, oauthState.id));
+      } catch (e) {
+        // Ignore - might already be cleaned up
+      }
+    }, 60000);
+    
+    return result;
+    
+  } catch (error) {
+    // On error, reset status so user can retry
+    await db.update(oauthStates)
+      .set({ status: 'pending' })
+      .where(eq(oauthStates.id, oauthState.id));
+    throw error;
+  }
+}
+*/
+
+
+// ============================================================================
+// STEP 3: SIMPLER ALTERNATIVE - Just add idempotency at the route level
+// ============================================================================
+// If you don't want to modify the schema, add this to integrationRoutes.ts:
+
+const processingCallbacks = new Map<string, Promise<any>>();
+
+// In the callback handler, wrap the exchange logic:
+/*
+router.get('/quickbooks/callback', async (req: Request, res: Response) => {
+  // ... existing setup code ...
+  
+  try {
+    const { code, state, realmId, error } = req.query;
+    
+    // Handle OAuth errors
+    if (error) {
+      if (state) await quickbooksOAuthService.cleanupFailedState(state as string);
+      return sendPopupResponse(false, `Authorization failed: ${error}`);
+    }
+
+    if (!code || !state || !realmId) {
+      if (state) await quickbooksOAuthService.cleanupFailedState(state as string);
+      return sendPopupResponse(false, 'Missing required parameters from QuickBooks');
+    }
+
+    // IDEMPOTENCY: Check if we're already processing this state
+    const stateKey = state as string;
+    
+    if (processingCallbacks.has(stateKey)) {
+      console.log('[QuickBooks Callback] Duplicate request detected, waiting for original...');
+      try {
+        const result = await processingCallbacks.get(stateKey);
+        return sendPopupResponse(true, 'Successfully connected to QuickBooks!', result?.companyName);
+      } catch (err: any) {
+        return sendPopupResponse(false, err.message || 'Failed to connect to QuickBooks');
+      }
+    }
+
+    // Create promise for this request
+    const exchangePromise = quickbooksOAuthService.exchangeCodeForTokens(
+      code as string,
+      stateKey,
+      realmId as string,
+      canonicalHost
+    );
+    
+    // Store promise so duplicate requests can await it
+    processingCallbacks.set(stateKey, exchangePromise);
+    
+    try {
+      const { workspaceId, connection } = await exchangePromise;
+      
+      // Emit event
+      platformEventBus.emit('quickbooks_oauth_complete', {
+        workspaceId,
+        connectionId: connection?.id,
+        realmId: realmId as string,
+        companyName: connection?.companyName,
+        environment: qbEnvironment,
+      });
+      
+      // Clean up after 30 seconds
+      setTimeout(() => processingCallbacks.delete(stateKey), 30000);
+      
+      return sendPopupResponse(true, 'Successfully connected to QuickBooks!', connection?.companyName);
+      
+    } catch (err) {
+      processingCallbacks.delete(stateKey);
+      throw err;
+    }
+    
+  } catch (error: any) {
+    console.error('QuickBooks callback error:', error);
+    const { state } = req.query;
+    if (state) {
+      await quickbooksOAuthService.cleanupFailedState(state as string).catch(() => {});
+    }
+    return sendPopupResponse(false, error.message || 'Failed to connect to QuickBooks');
+  }
+});
+*/
+
+export {};

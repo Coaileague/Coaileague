@@ -11,6 +11,7 @@
  * - Semantic memory recall for intelligent suggestions
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { eq, and, desc, gte, sql, inArray } from 'drizzle-orm';
 import { 
@@ -21,6 +22,8 @@ import {
   trinityOrgStats,
 } from '@shared/schema';
 import { TTLCache } from './cacheUtils';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityMemoryService');
 
 // Type aliases for DB records
 type SessionRecord = typeof trinityConversationSessions.$inferSelect;
@@ -30,6 +33,33 @@ type GapRecord = typeof knowledgeGapLogs.$inferSelect;
 // ============================================================================
 // TYPES
 // ============================================================================
+
+export type OrgActionCategory = 
+  | 'scheduling' | 'payroll' | 'time_tracking' | 'compliance' 
+  | 'onboarding' | 'billing' | 'analytics' | 'hr_management'
+  | 'document_processing' | 'communication' | 'support'
+  | 'employee_management' | 'shift_management' | 'reporting'
+  | 'integration' | 'automation' | 'configuration' | 'financial';
+
+export interface OrgActionSummary {
+  workspaceId: string;
+  periodDays: number;
+  totalActions: number;
+  topCategories: {
+    category: string;
+    total: number;
+    success: number;
+    failure: number;
+    successRate: number;
+  }[];
+  recentHighImpactActions: {
+    category: string;
+    name: string;
+    description: string;
+    when: Date;
+  }[];
+  overallSuccessRate: number;
+}
 
 export interface UserMemoryProfile {
   userId: string;
@@ -180,7 +210,7 @@ class TrinityMemoryService {
   }
 
   // ============================================================================
-  // USER MEMORY PROFILE
+  // USER MEMORY PROFILE (WORKSPACE-SCOPED for tenant isolation)
   // ============================================================================
 
   async getUserMemoryProfile(userId: string, workspaceId?: string): Promise<UserMemoryProfile> {
@@ -193,7 +223,7 @@ class TrinityMemoryService {
       this.profileCache.set(cacheKey, profile);
       return profile;
     } catch (error) {
-      console.error('[TrinityMemoryService] Error building user profile:', error);
+      log.error('[TrinityMemoryService] Error building user profile:', error);
       return this.createDefaultProfile(userId, workspaceId);
     }
   }
@@ -591,19 +621,19 @@ class TrinityMemoryService {
 
       return Array.from(workspaceTools.values());
     } catch (error) {
-      console.error('[TrinityMemoryService] Error getting workspace-scoped catalog:', error);
+      log.error('[TrinityMemoryService] Error getting workspace-scoped catalog:', error);
       return [];
     }
   }
 
   // ============================================================================
-  // CROSS-BOT KNOWLEDGE SHARING
+  // CROSS-BOT KNOWLEDGE SHARING (WORKSPACE-SCOPED via workspaceScope field)
   // ============================================================================
 
   async shareInsight(insight: Omit<SharedInsight, 'insightId' | 'createdAt' | 'usageCount' | 'effectivenessScore'>): Promise<SharedInsight> {
     const sharedInsight: SharedInsight = {
       ...insight,
-      insightId: `shared-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      insightId: `shared-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
       createdAt: new Date(),
       usageCount: 0,
       effectivenessScore: 0,
@@ -618,7 +648,7 @@ class TrinityMemoryService {
         .slice(0, 400);
     }
 
-    console.log(`[TrinityMemoryService] Insight shared by ${insight.sourceAgent}: ${insight.title}`);
+    log.info(`[TrinityMemoryService] Insight shared by ${insight.sourceAgent}: ${insight.title}`);
     return sharedInsight;
   }
 
@@ -646,7 +676,7 @@ class TrinityMemoryService {
   }
 
   // ============================================================================
-  // CONTEXT FOR AI PROMPTS
+  // CONTEXT FOR AI PROMPTS (WORKSPACE-SCOPED - all sub-queries filter by workspaceId)
   // ============================================================================
 
   async buildMemoryContext(userId: string, workspaceId?: string, currentTopic?: string): Promise<string> {
@@ -704,9 +734,33 @@ class TrinityMemoryService {
       context += '\n';
     }
     
+    // Org-wide action intelligence (business context for better advice)
+    if (workspaceId) {
+      try {
+        const orgSummary = await this.getOrgActionSummary(workspaceId, 14);
+        if (orgSummary.totalActions > 0) {
+          context += `### Organization Activity (Last 14 Days)\n`;
+          context += `- Total actions tracked: ${orgSummary.totalActions}\n`;
+          context += `- Overall success rate: ${orgSummary.overallSuccessRate.toFixed(0)}%\n`;
+          if (orgSummary.topCategories.length > 0) {
+            context += `- Most active areas: ${orgSummary.topCategories.slice(0, 5).map(c => `${c.category} (${c.total} actions, ${c.successRate.toFixed(0)}% success)`).join(', ')}\n`;
+          }
+          if (orgSummary.recentHighImpactActions.length > 0) {
+            context += `- Recent significant actions:\n`;
+            for (const action of orgSummary.recentHighImpactActions.slice(0, 3)) {
+              context += `  - ${action.category}: ${action.description}\n`;
+            }
+          }
+          context += '\n';
+        }
+      } catch {
+        // Non-critical - continue without org action context
+      }
+    }
+
     // Relevant shared insights from other bots
     if (currentTopic) {
-      const sharedInsights = this.getRelevantInsights([currentTopic], 3);
+      const sharedInsights = this.getRelevantInsights([currentTopic], 3, workspaceId);
       if (sharedInsights.length > 0) {
         context += `### Learned from Platform Experience\n`;
         for (const insight of sharedInsights) {
@@ -804,8 +858,8 @@ class TrinityMemoryService {
       sections.push({ priority: 1, content: profileContext, tokens });
     }
 
-    // 2. Shared insights (medium priority)
-    const insights = this.getRelevantInsights([currentQuery], 3);
+    // 2. Shared insights (medium priority) - WORKSPACE SCOPED to prevent cross-org leakage
+    const insights = this.getRelevantInsights([currentQuery], 3, workspaceId);
     if (insights.length > 0) {
       let insightsContext = '### Platform Insights\n';
       for (const insight of insights) {
@@ -887,6 +941,96 @@ class TrinityMemoryService {
     return summary.substring(0, maxLength);
   }
 
+  // ============================================================================
+  // SESSION SUMMARY — Updates working memory after every conversation turn
+  // ============================================================================
+
+  /**
+   * updateSessionSummaryAfterTurn
+   * Called after each Trinity conversation turn to keep working memory current.
+   * Updates: summary (rolling text), turn_count, last_action_id, context_memory.
+   */
+  async updateSessionSummaryAfterTurn(params: {
+    sessionId: string;
+    workspaceId: string;
+    userId: string;
+    userMessage: string;
+    assistantResponse: string;
+    actionId?: string;
+    confidenceScore?: number;
+    toolUsed?: string;
+  }): Promise<void> {
+    const {
+      sessionId, workspaceId, userId, userMessage, assistantResponse,
+      actionId, confidenceScore, toolUsed,
+    } = params;
+
+    try {
+      // Fetch the current session state (summary + turn_count)
+      const [current] = await db
+        .select({
+          summary: trinityConversationSessions.summary,
+          turnCount: trinityConversationSessions.turnCount,
+          contextMemory: trinityConversationSessions.contextMemory,
+        })
+        .from(trinityConversationSessions)
+        .where(
+          and(
+            eq(trinityConversationSessions.id, sessionId),
+            eq(trinityConversationSessions.workspaceId, workspaceId),
+          )
+        )
+        .limit(1);
+
+      if (!current) return; // Session not found — nothing to update
+
+      const newTurnCount = ((current.turnCount as number) || 0) + 1;
+
+      // Rolling summary: keep the last 3 turns visible
+      const userSnippet = userMessage.substring(0, 120).replace(/\n/g, ' ');
+      const assistantSnippet = assistantResponse.substring(0, 200).replace(/\n/g, ' ');
+      const turnEntry = `[T${newTurnCount}] U: "${userSnippet}" → A: "${assistantSnippet}"`;
+
+      // Append to existing summary, keeping last 2000 chars
+      const prevSummary = current.summary ?? '';
+      const combined = prevSummary ? `${prevSummary}\n${turnEntry}` : turnEntry;
+      const truncatedSummary = combined.length > 2000
+        ? combined.substring(combined.length - 2000)
+        : combined;
+
+      // Merge context memory patch
+      const prevContext = (current.contextMemory as Record<string, unknown>) ?? {};
+      const contextPatch: Record<string, unknown> = {
+        ...prevContext,
+        lastTurn: newTurnCount,
+        lastUserIntent: userSnippet,
+        lastActionTaken: actionId ?? prevContext.lastActionTaken ?? null,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await db
+        .update(trinityConversationSessions)
+        .set({
+          summary: truncatedSummary,
+          turnCount: newTurnCount,
+          lastActionId: actionId ?? null,
+          lastConfidenceScore: typeof confidenceScore === 'number' ? Math.round(confidenceScore) : null,
+          lastToolUsed: toolUsed ?? null,
+          contextMemory: contextPatch,
+          updatedAt: new Date(),
+          lastActivityAt: new Date(),
+        } as any)
+        .where(
+          and(
+            eq(trinityConversationSessions.id, sessionId),
+            eq(trinityConversationSessions.workspaceId, workspaceId),
+          )
+        );
+    } catch (err) {
+      log.warn('[TrinityMemoryService] updateSessionSummaryAfterTurn failed:', err instanceof Error ? err.message : String(err));
+    }
+  }
+
   /**
    * Prune old memories to maintain performance
    */
@@ -902,21 +1046,26 @@ class TrinityMemoryService {
       this.profileCache.clear();
       pruned++;
 
-      // Clear expired shared insights
+      // Clear expired shared insights - WORKSPACE SCOPED to prevent cross-org pruning
       const now = new Date();
       const initialCount = this.sharedInsights.length;
       this.sharedInsights = this.sharedInsights.filter(insight => {
-        // Keep insights that don't have expiry or haven't expired
         const createdDate = insight.createdAt;
         const daysSinceCreated = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-        return daysSinceCreated <= daysToKeep;
+        if (daysSinceCreated > daysToKeep) {
+          if (workspaceId) {
+            return insight.workspaceScope !== workspaceId && insight.workspaceScope !== null;
+          }
+          return false;
+        }
+        return true;
       });
       pruned += initialCount - this.sharedInsights.length;
 
-      console.log(`[TrinityMemoryService] Pruned ${pruned} old memory entries`);
+      log.info(`[TrinityMemoryService] Pruned ${pruned} old memory entries`);
       return pruned;
     } catch (error) {
-      console.error('[TrinityMemoryService] Error pruning memories:', error);
+      log.error('[TrinityMemoryService] Error pruning memories:', error);
       return 0;
     }
   }
@@ -954,7 +1103,7 @@ class TrinityMemoryService {
     if (currentEstimate > this.SUMMARY_THRESHOLD) {
       // Force profile refresh with summarization
       this.profileCache.delete(cacheKey);
-      console.log(`[TrinityMemoryService] Compacted memory for ${cacheKey}`);
+      log.info(`[TrinityMemoryService] Compacted memory for ${cacheKey}`);
     }
   }
 
@@ -1118,10 +1267,10 @@ class TrinityMemoryService {
         aggregatedAt: new Date(),
       };
 
-      console.log(`[TrinityMemoryService] Aggregated org learning for workspace ${workspaceId}: ${uniqueUserIds.length} users, ${sessions.length} sessions`);
+      log.info(`[TrinityMemoryService] Aggregated org learning for workspace ${workspaceId}: ${uniqueUserIds.length} users, ${sessions.length} sessions`);
       return insights;
     } catch (error) {
-      console.error('[TrinityMemoryService] Error aggregating org learning:', error);
+      log.error('[TrinityMemoryService] Error aggregating org learning:', error);
       return {
         workspaceId,
         totalActiveUsers: 0,
@@ -1214,7 +1363,6 @@ class TrinityMemoryService {
     lessonsLearned?: string;
   }): Promise<void> {
     try {
-      // If there's a lesson learned, share it as an insight
       if (params.lessonsLearned && params.outcome !== 'partial') {
         await this.shareInsight({
           sourceAgent: 'trinity',
@@ -1227,15 +1375,248 @@ class TrinityMemoryService {
         });
       }
 
-      // Invalidate user profile cache to force refresh
       const cacheKey = `${params.userId}:${params.workspaceId || 'global'}`;
       this.profileCache.delete(cacheKey);
 
-      console.log(`[TrinityMemoryService] Recorded outcome for ${params.actionName}: ${params.outcome}`);
+      log.info(`[TrinityMemoryService] Recorded outcome for ${params.actionName}: ${params.outcome}`);
     } catch (error) {
-      console.error('[TrinityMemoryService] Error recording interaction outcome:', error);
+      log.error('[TrinityMemoryService] Error recording interaction outcome:', error);
+    }
+  }
+
+  // ============================================================================
+  // ORG-WIDE ACTION TRACKING (Phase 2 - WORKSPACE-SCOPED per org)
+  // ============================================================================
+
+  async recordOrgAction(params: {
+    workspaceId: string;
+    userId?: string;
+    actionCategory: OrgActionCategory;
+    actionName: string;
+    actionDescription: string;
+    outcome: 'success' | 'failure' | 'partial' | 'pending';
+    metadata?: Record<string, any>;
+    impactLevel?: 'low' | 'medium' | 'high' | 'critical';
+  }): Promise<void> {
+    try {
+      await db.insert(automationActionLedger).values({
+        workspaceId: params.workspaceId,
+        actionId: `org_${params.actionCategory}_${Date.now()}`,
+        actionName: params.actionName,
+        actionCategory: params.actionCategory,
+        confidenceScore: params.outcome === 'success' ? 95 : params.outcome === 'failure' ? 20 : 60,
+        computedLevel: 'NOTIFY_ONLY',
+        policyLevel: 'NOTIFY_ONLY',
+        executionStatus: params.outcome === 'success' ? 'success' : params.outcome === 'failure' ? 'error' : 'pending',
+        executedBy: params.userId || null,
+        executedByBot: !params.userId,
+        executorType: params.userId ? 'user' : 'system',
+        inputPayload: {
+          description: params.actionDescription,
+          impactLevel: params.impactLevel || 'low',
+          source: 'org_action_tracker',
+          ...params.metadata,
+        },
+        outputResult: params.outcome === 'success' ? { status: 'completed' } : null,
+        approvalState: 'executed',
+      });
+
+      if (params.outcome === 'success' && params.impactLevel && ['high', 'critical'].includes(params.impactLevel)) {
+        await this.shareInsight({
+          sourceAgent: 'automation',
+          insightType: 'pattern',
+          workspaceScope: params.workspaceId,
+          title: `${params.actionCategory}: ${params.actionName}`,
+          content: params.actionDescription,
+          confidence: 0.8,
+          applicableScenarios: [params.actionCategory, 'org_learning', 'business_intelligence'],
+        });
+      }
+
+      const cacheKey = `${params.userId || 'system'}:${params.workspaceId}`;
+      this.profileCache.delete(cacheKey);
+    } catch (error) {
+      log.error('[TrinityMemoryService] Error recording org action:', error);
+    }
+  }
+
+  async getOrgActionSummary(workspaceId: string, daysBack: number = 30): Promise<OrgActionSummary> {
+    try {
+      const cutoff = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+
+      const actions = await db
+        .select({
+          actionCategory: automationActionLedger.actionCategory,
+          actionName: automationActionLedger.actionName,
+          executionStatus: automationActionLedger.executionStatus,
+          createdAt: automationActionLedger.createdAt,
+          inputPayload: automationActionLedger.inputPayload,
+        })
+        .from(automationActionLedger)
+        .where(
+          and(
+            eq(automationActionLedger.workspaceId, workspaceId),
+            gte(automationActionLedger.createdAt, cutoff)
+          )
+        )
+        .orderBy(desc(automationActionLedger.createdAt))
+        .limit(500);
+
+      const categoryCounts: Record<string, { total: number; success: number; failure: number }> = {};
+      const recentHighImpact: { category: string; name: string; description: string; when: Date }[] = [];
+
+      for (const action of actions) {
+        const cat = action.actionCategory;
+        if (!categoryCounts[cat]) {
+          categoryCounts[cat] = { total: 0, success: 0, failure: 0 };
+        }
+        categoryCounts[cat].total++;
+        if (action.executionStatus === 'success') categoryCounts[cat].success++;
+        if (action.executionStatus === 'error') categoryCounts[cat].failure++;
+
+        const payload = action.inputPayload as Record<string, any> | null;
+        if (payload?.impactLevel && ['high', 'critical'].includes(payload.impactLevel)) {
+          recentHighImpact.push({
+            category: cat,
+            name: action.actionName,
+            description: payload.description || action.actionName,
+            when: action.createdAt ? new Date(action.createdAt) : new Date(),
+          });
+        }
+      }
+
+      const topCategories = Object.entries(categoryCounts)
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 10)
+        .map(([category, stats]) => ({
+          category,
+          ...stats,
+          successRate: stats.total > 0 ? (stats.success / stats.total) * 100 : 0,
+        }));
+
+      return {
+        workspaceId,
+        periodDays: daysBack,
+        totalActions: actions.length,
+        topCategories,
+        recentHighImpactActions: recentHighImpact.slice(0, 10),
+        overallSuccessRate: actions.length > 0
+          ? (actions.filter(a => a.executionStatus === 'success').length / actions.length) * 100
+          : 0,
+      };
+    } catch (error) {
+      log.error('[TrinityMemoryService] Error getting org action summary:', error);
+      return {
+        workspaceId,
+        periodDays: daysBack,
+        totalActions: 0,
+        topCategories: [],
+        recentHighImpactActions: [],
+        overallSuccessRate: 0,
+      };
     }
   }
 }
 
 export const trinityMemoryService = TrinityMemoryService.getInstance();
+
+// ============================================================================
+// PLATFORM EVENT BUS INTEGRATION - Learn from ALL org automations
+// ============================================================================
+// Hooks into the centralized automation orchestration pipeline so Trinity 
+// captures every scheduling, payroll, compliance, onboarding, and other
+// organizational action for building business intelligence and better advice.
+
+let eventBusConnected = false;
+
+export async function connectTrinityMemoryToEventBus(): Promise<void> {
+  if (eventBusConnected) return;
+  
+  try {
+    const { platformEventBus } = await import('../platformEventBus');
+
+    platformEventBus.on('automation_completed', (p: any) => {
+      if (!p?.workspaceId || !p?.domain) return;
+      
+      const domainToCategoryMap: Record<string, OrgActionCategory> = {
+        scheduling: 'scheduling',
+        payroll: 'payroll',
+        compliance: 'compliance',
+        onboarding: 'onboarding',
+        billing: 'billing',
+        analytics: 'analytics',
+        hr: 'hr_management',
+        documents: 'document_processing',
+        communication: 'communication',
+        support: 'support',
+        employee: 'employee_management',
+        reporting: 'reporting',
+        financial: 'financial',
+        integration: 'integration',
+      };
+      
+      const category = domainToCategoryMap[p.domain] || 'automation';
+      
+      trinityMemoryService.recordOrgAction({
+        workspaceId: p.workspaceId,
+        userId: p.userId,
+        actionCategory: category,
+        actionName: p.automationName || 'unknown',
+        actionDescription: `${p.domain} automation "${p.automationName}" completed successfully in ${p.durationMs || 0}ms`,
+        outcome: 'success',
+        metadata: {
+          orchestrationId: p.orchestrationId,
+          automationType: p.automationType,
+          durationMs: p.durationMs,
+        },
+        impactLevel: p.durationMs > 30000 ? 'high' : 'medium',
+      }).catch(err => log.warn('[TrinityMemory] Failed to record automation success:', err?.message));
+    });
+    
+    platformEventBus.on('automation_execution_failed', (p: any) => {
+      if (!p?.workspaceId || !p?.domain) return;
+      
+      const domainToCategoryMap: Record<string, OrgActionCategory> = {
+        scheduling: 'scheduling',
+        payroll: 'payroll',
+        compliance: 'compliance',
+        onboarding: 'onboarding',
+        billing: 'billing',
+        analytics: 'analytics',
+        hr: 'hr_management',
+        documents: 'document_processing',
+        communication: 'communication',
+        support: 'support',
+        employee: 'employee_management',
+        reporting: 'reporting',
+        financial: 'financial',
+        integration: 'integration',
+      };
+      
+      const category = domainToCategoryMap[p.domain] || 'automation';
+      
+      trinityMemoryService.recordOrgAction({
+        workspaceId: p.workspaceId,
+        userId: p.userId,
+        actionCategory: category,
+        actionName: p.automationName || 'unknown',
+        actionDescription: `${p.domain} automation "${p.automationName}" failed: ${p.error || 'unknown error'}`,
+        outcome: 'failure',
+        metadata: {
+          orchestrationId: p.orchestrationId,
+          errorCode: p.errorCode,
+          retryable: p.retryable,
+          remediation: p.remediation,
+        },
+        impactLevel: p.retryable ? 'medium' : 'high',
+      }).catch(err => log.warn('[TrinityMemory] Failed to record automation failure:', err?.message));
+    });
+    
+    eventBusConnected = true;
+    log.info('[TrinityMemoryService] Connected to platform event bus - learning from ALL org automations');
+  } catch (error) {
+    log.warn('[TrinityMemoryService] Platform event bus not available yet, will retry on next import');
+  }
+}
+
+connectTrinityMemoryToEventBus();

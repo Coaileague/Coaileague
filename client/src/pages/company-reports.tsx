@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -11,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { 
   FileText, 
   Download, 
@@ -83,6 +83,13 @@ export default function CompanyReports() {
         description: `${data.filename} is ready for download`,
       });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Export Report Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const printReport = () => {
@@ -107,45 +114,51 @@ export default function CompanyReports() {
         title: "Report Shared",
         description: "Report workflow initiated successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/reports/history'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Share Report Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
     },
   });
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <FileText className="h-8 w-8" />
-            Company Reports & Analytics
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            View, export, print, and share organizational data
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={printReport} data-testid="button-print">
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
-          <Button variant="outline" onClick={() => setShareDialogOpen(true)} data-testid="button-share">
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
-          </Button>
-          <Select onValueChange={(val) => exportMutation.mutate(val as any)}>
-            <SelectTrigger className="w-[140px]">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pdf">PDF</SelectItem>
-              <SelectItem value="excel">Excel</SelectItem>
-              <SelectItem value="csv">CSV</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+  const actionButtons = (
+    <div className="flex gap-2">
+      <Button variant="outline" onClick={printReport} data-testid="button-print">
+        <Printer className="h-4 w-4 mr-2" />
+        Print
+      </Button>
+      <Button variant="outline" onClick={() => setShareDialogOpen(true)} data-testid="button-share">
+        <Share2 className="h-4 w-4 mr-2" />
+        Share
+      </Button>
+      <Select onValueChange={(val) => exportMutation.mutate(val as any)}>
+        <SelectTrigger className="w-full md:w-[140px]">
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="pdf">PDF</SelectItem>
+          <SelectItem value="excel">Excel</SelectItem>
+          <SelectItem value="csv">CSV</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'company-reports',
+    title: 'Company Reports & Analytics',
+    subtitle: 'View, export, print, and share organizational data',
+    category: 'operations',
+    headerActions: actionButtons,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -217,7 +230,7 @@ export default function CompanyReports() {
       {/* Report Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Payroll</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -230,7 +243,7 @@ export default function CompanyReports() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -243,7 +256,7 @@ export default function CompanyReports() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -256,7 +269,7 @@ export default function CompanyReports() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -283,7 +296,7 @@ export default function CompanyReports() {
           ) : reportData?.details ? (
             <div className="space-y-4">
               {reportData.details.map((item: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={index} className="flex items-center justify-between gap-2 p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">{item.name || item.description}</p>
                     <p className="text-sm text-muted-foreground">{item.details}</p>
@@ -304,14 +317,14 @@ export default function CompanyReports() {
       </Card>
 
       {/* Share Dialog */}
-      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Share Report Workflow</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Share Report Workflow</UniversalModalTitle>
+            <UniversalModalDescription>
               Send this report to team members with optional notes
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4 py-4">
             <div>
               <Label>Recipients (comma-separated emails)</Label>
@@ -337,8 +350,8 @@ export default function CompanyReports() {
               {shareMutation.isPending ? "Sending..." : "Send Report"}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Print Styles */}
       <style>{`
@@ -360,6 +373,6 @@ export default function CompanyReports() {
           }
         }
       `}</style>
-    </div>
+    </CanvasHubPage>
   );
 }

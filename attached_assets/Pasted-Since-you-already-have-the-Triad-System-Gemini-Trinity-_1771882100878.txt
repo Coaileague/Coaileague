@@ -1,0 +1,33 @@
+Since you already have the Triad System (Gemini/Trinity \rightarrow Claude as Chief Justice) in place, the goal isn't to replace it, but to instrument it. We need to capture the "deliberations" between Trinity and Claude so they can be displayed in that Premium Scorecard.
+To make this a premium feature, we are adding a "Justice Review" layer to the schema. This proves to the client that the AI didn't just "guess"—it was peer-reviewed by a second, higher-reasoning model.
+The "Triad Intelligence" Enhancement
+Add these fields to your existing DecisionLog model in Replit to support the Triad/Claude Judge logic:
+{
+  "triad_review": {
+    "judge_model": "Claude-3.5-Sonnet",
+    "low_score_threshold": 0.75,
+    "trinity_original_score": 0.62,
+    "claude_verdict": "OVERRIDE" | "AFFIRM",
+    "claude_reasoning": "Original choice ignored a 12-hour rest period violation. Overriding to Guard C to maintain legal compliance.",
+    "final_confidence_score": 0.98
+  }
+}
+
+Replit Implementation Prompt (The "Upgrade")
+Use this prompt to tell Replit to hook into your existing triad system and add the Premium Scorecard data:
+> "I have an existing Triad System where Trinity (Gemini) makes decisions and Claude acts as a Final Judge for low-score thresholds. Enhance this system to support the 'Premium Scorecard' feature:
+>  * Instrument the 'Judge' Hook: When Claude is called to review a decision, capture his claude_reasoning and claude_verdict into the DecisionLog.
+>  * Context Injection: When Trinity passes a case to Claude, ensure she also passes the candidates_evaluated array so Claude sees the same 'evidence.'
+>  * UI Bridge: Update the TrinityScorecard component to show a 'Judge Certified' badge whenever Claude affirms or overrides a decision.
+>  * Logic: If claude_verdict == 'OVERRIDE', the UI must clearly show the 'Original Choice' vs 'Justice Choice' to demonstrate the value of our high-end automation."
+> 
+The "Going Live" Competitive Advantage
+By "Premiumizing" this, you change the sales pitch for Statewide Protective Services:
+ * Standard Competitors: Use a basic algorithm to find the closest guard.
+ * CoAIleague: Uses a Dual-Model Justice System. If Trinity’s decision confidence drops, a "Chief Justice" (Claude) automatically reviews the labor law and compliance data to prevent a $50,000 lawsuit.
+Final Audit Step: The "Justice Loop"
+During Phase 7.4 of your Master Audit (Fallback Chain), test this:
+ * Force Trinity to make a "bad" choice (e.g., pick a guard with 50 hours already worked).
+ * Verify Claude triggers the override.
+ * Verify the Decision Log records the "Justice Review."
+Would you like me to draft the "Client Report" template that automatically emails the Org Owner a weekly summary of every time the 'Justice System' saved them from a compliance error?

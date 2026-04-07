@@ -98,7 +98,7 @@ export function FastModeToggle({
         <TooltipContent side="bottom">
           <div className="text-xs">
             <p className="font-medium">Trinity Fast Mode</p>
-            <p className="text-muted-foreground">2x credits, 60% faster with parallel agents</p>
+            <p className="text-muted-foreground">Faster with parallel agents</p>
             {showCredits && (
               <p className={`mt-1 ${hasEnoughCredits ? 'text-green-500' : 'text-destructive'}`}>
                 Balance: {creditBalance} credits
@@ -112,7 +112,7 @@ export function FastModeToggle({
   
   return (
     <div className={`${className}`}>
-      <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+      <div className={`flex items-center justify-between gap-2 p-3 rounded-lg border transition-colors ${
         enabled ? 'bg-amber-500/10 border-amber-500/50' : 'bg-muted/50'
       }`}>
         <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export function FastModeToggle({
           
           <Popover open={showDetails} onOpenChange={setShowDetails}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6" data-testid="button-fast-mode-info">
+              <Button variant="ghost" size="icon" data-testid="button-fast-mode-info">
                 <Info className="h-3 w-3" />
               </Button>
             </PopoverTrigger>
@@ -237,7 +237,7 @@ function FastModeBenefitsPanel({ valueComparison }: FastModeBenefitsPanelProps) 
         {benefits.map((benefit, index) => (
           <div 
             key={benefit.title}
-            className="flex items-center justify-between text-xs py-1 border-b border-border/50 last:border-0"
+            className="flex items-center justify-between gap-1 text-xs py-1 border-b border-border/50 last:border-0"
           >
             <div className="flex items-center gap-2">
               <benefit.icon className="h-3 w-3 text-muted-foreground" />
@@ -264,7 +264,7 @@ function FastModeBenefitsPanel({ valueComparison }: FastModeBenefitsPanelProps) 
       
       <div className="pt-2 border-t">
         <p className="text-xs text-muted-foreground">
-          Fast Mode uses 2x credits but completes tasks 60% faster with multiple AI agents working in parallel.
+          Fast Mode completes tasks 60% faster with multiple AI agents working in parallel.
         </p>
       </div>
     </div>

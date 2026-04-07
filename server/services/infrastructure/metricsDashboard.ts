@@ -13,6 +13,9 @@
 import { randomUUID } from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('metricsDashboard');
+
 
 export interface MetricPoint {
   timestamp: number;
@@ -103,7 +106,7 @@ class MetricsDashboardService {
     this.collectBuiltInMetrics();
 
     this.isInitialized = true;
-    console.log('[MetricsDashboard] Service initialized');
+    log.info('[MetricsDashboard] Service initialized');
   }
 
   /**
@@ -306,7 +309,7 @@ class MetricsDashboardService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('[MetricsDashboard] Failed to export metrics:', error);
+      log.error('[MetricsDashboard] Failed to export metrics:', error);
     }
   }
 
@@ -424,7 +427,7 @@ class MetricsDashboardService {
   }
 
   private async logAlertTriggered(rule: AlertRule, value: number): Promise<void> {
-    console.warn(`[MetricsDashboard] Alert triggered: ${rule.metricName} ${rule.condition} ${rule.threshold} (current: ${value})`);
+    log.warn(`[MetricsDashboard] Alert triggered: ${rule.metricName} ${rule.condition} ${rule.threshold} (current: ${value})`);
     
     try {
       await db.insert(systemAuditLogs).values({
@@ -444,7 +447,7 @@ class MetricsDashboardService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('[MetricsDashboard] Failed to log alert:', error);
+      log.error('[MetricsDashboard] Failed to log alert:', error);
     }
   }
 
@@ -502,7 +505,7 @@ class MetricsDashboardService {
     this.alertStates.clear();
     this.dashboards.clear();
     
-    console.log('[MetricsDashboard] Service shut down');
+    log.info('[MetricsDashboard] Service shut down');
   }
 }
 

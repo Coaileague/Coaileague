@@ -2,20 +2,19 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useModules } from "@/config/moduleConfig";
+import { DsPageWrapper, DsPageHeader, DsStatCard, DsTabBar, DsDataRow, DsSectionCard, DsBadge, DsButton, DsInput, DsEmptyState } from "@/components/ui/ds-components";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   GraduationCap, BookOpen, Award, Play, CheckCircle2, Clock,
   Plus, Search, Filter, TrendingUp, Users, Calendar, FileText,
@@ -23,6 +22,96 @@ import {
   AlertCircle, XCircle, Lock, Unlock, Settings, Edit
 } from "lucide-react";
 import { CourseCardSkeleton, MetricsCardsSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
+import { useModules } from "@/config/moduleConfig";
+
+function TrainingAnalyticsDashboard() {
+  const { data, isLoading } = useQuery<{ summary: any; courseStats: any[]; categoryBreakdown: any[] }>({
+    queryKey: ['/api/training/analytics'],
+  });
+
+  if (isLoading) return <div className="py-12 text-center text-sm text-muted-foreground">Loading analytics...</div>;
+
+  const s = data?.summary;
+  const courses = data?.courseStats || [];
+  const categories = data?.categoryBreakdown || [];
+
+  return (
+    <div className="space-y-6">
+      {s && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Courses', value: s.totalCourses, icon: BookOpen },
+            { label: 'Total Enrollments', value: s.totalEnrollments, icon: Users },
+            { label: 'Completion Rate', value: `${s.completionRate}%`, icon: CheckCircle2 },
+            { label: 'Avg Score', value: s.avgScore > 0 ? `${s.avgScore}%` : '—', icon: Star },
+          ].map(({ label, value, icon: Icon }) => (
+            <Card key={label}>
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </div>
+                <p className="text-xl font-bold">{value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      {categories.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Completion by Category</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {categories.map((cat: any) => (
+              <div key={cat.category} data-testid={`analytics-category-${cat.category}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm capitalize">{cat.category}</span>
+                  <span className="text-xs text-muted-foreground">{cat.completed}/{cat.enrolled} · {cat.completionRate}%</span>
+                </div>
+                <Progress value={cat.completionRate} className="h-2" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Course Performance</CardTitle>
+          <CardDescription>Completion rates and average scores per course</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {courses.map((course: any) => (
+              <div key={course.id} className="rounded-md border p-3" data-testid={`analytics-course-${course.id}`}>
+                <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{course.title}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{course.category}{course.isRequired ? ' · Required' : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {course.avgScore !== null && (
+                      <Badge variant="outline" className="text-xs">{course.avgScore}% avg</Badge>
+                    )}
+                    <Badge variant={course.completionRate >= 80 ? 'default' : course.completionRate >= 50 ? 'secondary' : 'outline'} className="text-xs">
+                      {course.completionRate}%
+                    </Badge>
+                  </div>
+                </div>
+                <Progress value={course.completionRate} className="h-1.5" />
+                <div className="flex gap-3 mt-1.5 text-xs text-muted-foreground">
+                  <span>{course.completed} completed</span>
+                  <span>{course.inProgress} in progress</span>
+                  <span>{course.notStarted} not started</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 interface Course {
   id: string;
@@ -117,7 +206,7 @@ export default function LearningManagement() {
   // Create course mutation
   const createCourseMutation = useMutation({
     mutationFn: async (courseData: typeof newCourse) => {
-      return await apiRequest('/api/training/courses', 'POST', courseData);
+      return await apiRequest('POST', '/api/training/courses', courseData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/training/courses'] });
@@ -148,7 +237,7 @@ export default function LearningManagement() {
   // Enroll in course mutation
   const enrollMutation = useMutation({
     mutationFn: async (courseId: string) => {
-      return await apiRequest(`/api/training/courses/${courseId}/enroll`, 'POST', {});
+      return await apiRequest('POST', `/api/training/courses/${courseId}/enroll`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/training/enrollments'] });
@@ -177,117 +266,75 @@ export default function LearningManagement() {
 
   const isAdmin = (user as any)?.workspaceRole === "org_owner" || (user as any)?.platformRole === "root_admin";
 
-  return (authLoading || coursesLoading) ? (
-    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
-      <PageHeaderSkeleton />
-      <div className="mb-6">
-        <MetricsCardsSkeleton count={3} columns={3} />
-      </div>
-      <CourseCardSkeleton count={6} />
-    </div>
-  ) : (
-    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md shadow-blue-500/30">
-              <GraduationCap className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">AI Training™</h1>
-              <p className="text-sm text-muted-foreground">
-                Learning Management & Certification Platform
-              </p>
-            </div>
-          </div>
-          {isAdmin && (
-            <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-course">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Course
-            </Button>
-          )}
-        </div>
-      </div>
+  const createCourseButton = isAdmin ? (
+    <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-course">
+      <Plus className="h-4 w-4 mr-2" />
+      Create Course
+    </Button>
+  ) : null;
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-blue-500" />
-              Active Courses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{courses.filter((c) => c.status === "active").length}</p>
-            <p className="text-xs text-muted-foreground">Available for enrollment</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Play className="h-4 w-4 text-blue-500" />
-              In Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {enrollments.filter((e) => e.status === "in_progress").length}
-            </p>
-            <p className="text-xs text-muted-foreground">Courses you're taking</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              Completed
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {enrollments.filter((e) => e.status === "completed").length}
-            </p>
-            <p className="text-xs text-muted-foreground">Courses finished</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Award className="h-4 w-4 text-yellow-500" />
-              Certifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {certifications.filter((c) => c.status === "valid").length}
-            </p>
-            <p className="text-xs text-muted-foreground">Active certificates</p>
-          </CardContent>
-        </Card>
+
+  if (authLoading || coursesLoading) {
+    return (
+      <DsPageWrapper>
+        <DsPageHeader title="AI Training™" subtitle="Learning Management & Certification Platform" />
+        <div className="mb-6">
+          <MetricsCardsSkeleton count={3} columns={3} />
+        </div>
+        <CourseCardSkeleton count={6} />
+      </DsPageWrapper>
+    );
+  }
+
+  return (
+    <DsPageWrapper>
+
+      <DsPageHeader
+        title="AI Training™"
+        subtitle="Learning Management & Certification Platform"
+        actions={createCourseButton}
+      />
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <DsStatCard
+          label="Active Courses"
+          value={courses.filter((c) => c.status === "active").length}
+          icon={BookOpen}
+          color="gold"
+        />
+        <DsStatCard
+          label="In Progress"
+          value={enrollments.filter((e) => e.status === "in_progress").length}
+          icon={Play}
+          color="info"
+        />
+        <DsStatCard
+          label="Completed"
+          value={enrollments.filter((e) => e.status === "completed").length}
+          icon={CheckCircle2}
+          color="success"
+        />
+        <DsStatCard
+          label="Certifications"
+          value={certifications.filter((c) => c.status === "valid").length}
+          icon={Award}
+          color="warning"
+        />
       </div>
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="catalog" data-testid="tab-catalog">
-            <BookOpen className="h-4 w-4 mr-2" />
-            Course Catalog
-          </TabsTrigger>
-          <TabsTrigger value="my-learning" data-testid="tab-my-learning">
-            <Play className="h-4 w-4 mr-2" />
-            My Learning
-          </TabsTrigger>
-          <TabsTrigger value="certifications" data-testid="tab-certifications">
-            <Award className="h-4 w-4 mr-2" />
-            Certifications
-          </TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="tab-analytics">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Analytics
-          </TabsTrigger>
-        </TabsList>
+        <DsTabBar
+          tabs={[
+            { id: 'catalog', label: 'Course Catalog' },
+            { id: 'my-learning', label: 'My Learning' },
+            { id: 'certifications', label: 'Certifications' },
+            { id: 'analytics', label: 'Analytics' },
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
 
         {/* Course Catalog Tab */}
         <TabsContent value="catalog" className="space-y-4">
@@ -381,7 +428,7 @@ export default function LearningManagement() {
 
                             {isEnrolled && enrollment.progress > 0 && (
                               <div className="space-y-1">
-                                <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center justify-between gap-1 text-xs">
                                   <span className="text-muted-foreground">Progress</span>
                                   <span className="font-medium">{enrollment.progress}%</span>
                                 </div>
@@ -482,7 +529,7 @@ export default function LearningManagement() {
                               </Badge>
                             </div>
                             <div className="space-y-2">
-                              <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center justify-between gap-1 text-xs">
                                 <span className="text-muted-foreground">Progress</span>
                                 <span className="font-medium">{enrollment.progress}%</span>
                               </div>
@@ -543,7 +590,7 @@ export default function LearningManagement() {
                   {certifications.map((cert) => (
                     <Card key={cert.id} className="hover-elevate border-2 border-yellow-500/20" data-testid={`cert-${cert.id}`}>
                       <CardHeader>
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between gap-2">
                           <Trophy className="h-8 w-8 text-yellow-500" />
                           <Badge
                             variant={cert.status === "valid" ? "default" : "destructive"}
@@ -588,31 +635,19 @@ export default function LearningManagement() {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Learning Analytics</CardTitle>
-              <CardDescription>Track your learning performance and progress</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium mb-2">Analytics Dashboard Coming Soon</p>
-                <p className="text-sm">View detailed insights about your learning journey</p>
-              </div>
-            </CardContent>
-          </Card>
+          <TrainingAnalyticsDashboard />
         </TabsContent>
       </Tabs>
 
       {/* Create Course Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent data-testid="dialog-create-course" className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create New Course</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <UniversalModalContent data-testid="dialog-create-course" size="xl">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Create New Course</UniversalModalTitle>
+            <UniversalModalDescription>
               Add a new training course to the platform
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="course-title">Course Title *</Label>
@@ -706,7 +741,7 @@ export default function LearningManagement() {
               </label>
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancel
             </Button>
@@ -717,9 +752,9 @@ export default function LearningManagement() {
             >
               {createCourseMutation.isPending ? "Creating..." : "Create Course"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </DsPageWrapper>
   );
 }

@@ -13,23 +13,44 @@
 import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { integrationManagementService, type IntegrationAccessContext } from './integrationManagementService';
 import { integrationPartnerService, type SupportContext } from './integrationPartnerService';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('integrationBrainActions');
+
+function requireContext(request: ActionRequest): { userId: string; workspaceId: string } | null {
+  if (!request.userId || !request.workspaceId) {
+    return null;
+  }
+  return { userId: request.userId, workspaceId: request.workspaceId };
+}
+
+function missingContextResult(request: ActionRequest, startTime: number): ActionResult {
+  log.warn(`[Integration Brain] Missing workspaceId or userId for ${request.actionId}`);
+  return {
+    success: false,
+    actionId: request.actionId,
+    message: 'Missing workspace or user context — cannot execute integration action',
+    executionTimeMs: Date.now() - startTime,
+  };
+}
 
 export function registerIntegrationBrainActions(): void {
-  console.log('[Integration Brain] Registering integration management actions...');
+  log.info('[Integration Brain] Registering integration management actions...');
 
   helpaiOrchestrator.registerAction({
     actionId: 'integrations.list_available',
     name: 'List Available Integrations',
     category: 'integrations',
     description: 'List all available integration partners in the marketplace',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -51,7 +72,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to list integrations: ${error.message}`,
+          message: `Failed to list integrations: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -63,14 +84,16 @@ export function registerIntegrationBrainActions(): void {
     name: 'Get Workspace Connections',
     category: 'integrations',
     description: 'List all active integration connections for a workspace',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -92,7 +115,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to get connections: ${error.message}`,
+          message: `Failed to get connections: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -104,9 +127,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Connect Integration',
     category: 'integrations',
     description: 'Connect an integration partner to the workspace',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { integrationId, displayName, authType, credentials, syncConfig } = request.payload || {};
       
       if (!integrationId || !displayName || !authType) {
@@ -120,8 +145,8 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -149,7 +174,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to connect integration: ${error.message}`,
+          message: `Failed to connect integration: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -161,9 +186,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Disconnect Integration',
     category: 'integrations',
     description: 'Disconnect an integration from the workspace',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { connectionId } = request.payload || {};
       
       if (!connectionId) {
@@ -177,8 +204,8 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -199,7 +226,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to disconnect integration: ${error.message}`,
+          message: `Failed to disconnect integration: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -211,9 +238,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Update Integration Credentials',
     category: 'integrations',
     description: 'Update credentials for an existing integration connection',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { connectionId, credentials } = request.payload || {};
       
       if (!connectionId || !credentials) {
@@ -227,8 +256,8 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -249,7 +278,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to update credentials: ${error.message}`,
+          message: `Failed to update credentials: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -261,9 +290,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Create API Key',
     category: 'integrations',
     description: 'Create a new API key for the workspace',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { name, scopes, expiresAt } = request.payload || {};
       
       if (!name || !scopes) {
@@ -277,8 +308,8 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -305,7 +336,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to create API key: ${error.message}`,
+          message: `Failed to create API key: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -317,14 +348,18 @@ export function registerIntegrationBrainActions(): void {
     name: 'List API Keys',
     category: 'integrations',
     description: 'List all API keys for the workspace',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       
+      const ctx = requireContext(request);
+      
+      if (!ctx) return missingContextResult(request, startTime);
+      
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -347,7 +382,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to list API keys: ${error.message}`,
+          message: `Failed to list API keys: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -359,9 +394,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Revoke API Key',
     category: 'integrations',
     description: 'Revoke an API key for the workspace',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { keyId } = request.payload || {};
       
       if (!keyId) {
@@ -375,8 +412,8 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -397,7 +434,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to revoke API key: ${error.message}`,
+          message: `Failed to revoke API key: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -409,14 +446,18 @@ export function registerIntegrationBrainActions(): void {
     name: 'Get Service Health',
     category: 'integrations',
     description: 'Get health status for all connected integrations',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       
+      const ctx = requireContext(request);
+      
+      if (!ctx) return missingContextResult(request, startTime);
+      
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -439,7 +480,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to get service health: ${error.message}`,
+          message: `Failed to get service health: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -451,9 +492,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Analyze Service Outage',
     category: 'integrations',
     description: 'Analyze an integration outage and provide AI-powered guidance to user',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { integrationId } = request.payload || {};
       
       if (!integrationId) {
@@ -467,8 +510,8 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: IntegrationAccessContext = {
-          userId: request.userId || '',
-          workspaceId: request.workspaceId || '',
+          userId: request.userId,
+          workspaceId: request.workspaceId!,
           platformRole: request.platformRole || '',
           workspaceRole: request.workspaceRole || '',
           accessLevel: integrationManagementService.determineAccessLevel(
@@ -490,28 +533,30 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to analyze outage: ${error.message}`,
+          message: `Failed to analyze outage: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
     }
   });
 
-  console.log('[Integration Brain] Registered 10 workspace integration actions');
+  log.info('[Integration Brain] Registered 10 workspace integration actions');
 
   helpaiOrchestrator.registerAction({
     actionId: 'partner.list_all',
     name: 'List All Partners',
     category: 'integrations',
     description: 'List all integration partners in the marketplace (support role)',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { category, status, search, limit, offset } = request.payload || {};
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -535,7 +580,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to list partners: ${error.message}`,
+          message: `Failed to list partners: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -547,9 +592,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Get Partner Details',
     category: 'integrations',
     description: 'Get detailed information about an integration partner',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { partnerId } = request.payload || {};
       
       if (!partnerId) {
@@ -563,7 +610,7 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -581,7 +628,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to get partner details: ${error.message}`,
+          message: `Failed to get partner details: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -593,9 +640,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Create Partner',
     category: 'integrations',
     description: 'Add a new integration partner to the marketplace (support role)',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { partner } = request.payload || {};
       
       if (!partner || !partner.name || !partner.slug || !partner.category) {
@@ -609,7 +658,7 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -627,7 +676,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to create partner: ${error.message}`,
+          message: `Failed to create partner: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -639,9 +688,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Update Partner',
     category: 'integrations',
     description: 'Update an existing integration partner',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { partnerId, updates } = request.payload || {};
       
       if (!partnerId || !updates) {
@@ -655,7 +706,7 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -672,7 +723,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to update partner: ${error.message}`,
+          message: `Failed to update partner: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -684,9 +735,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Suspend Partner',
     category: 'integrations',
     description: 'Suspend an integration partner (affects all connected workspaces)',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { partnerId, reason } = request.payload || {};
       
       if (!partnerId || !reason) {
@@ -700,7 +753,7 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -720,7 +773,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to suspend partner: ${error.message}`,
+          message: `Failed to suspend partner: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -732,9 +785,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Reactivate Partner',
     category: 'integrations',
     description: 'Reactivate a suspended integration partner',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { partnerId } = request.payload || {};
       
       if (!partnerId) {
@@ -748,7 +803,7 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -765,7 +820,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to reactivate partner: ${error.message}`,
+          message: `Failed to reactivate partner: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -777,9 +832,11 @@ export function registerIntegrationBrainActions(): void {
     name: 'Delete Partner',
     category: 'integrations',
     description: 'Permanently delete an integration partner',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { partnerId, force } = request.payload || {};
       
       if (!partnerId) {
@@ -793,7 +850,7 @@ export function registerIntegrationBrainActions(): void {
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -810,7 +867,7 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to delete partner: ${error.message}`,
+          message: `Failed to delete partner: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
@@ -822,14 +879,16 @@ export function registerIntegrationBrainActions(): void {
     name: 'Get Partner Stats',
     category: 'integrations',
     description: 'Get usage statistics for integration partners',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
+      const ctx = requireContext(request);
+      if (!ctx) return missingContextResult(request, startTime);
       const { partnerId } = request.payload || {};
       
       try {
         const context: SupportContext = {
-          userId: request.userId || '',
+          userId: request.userId,
           platformRole: request.platformRole || '',
           accessLevel: integrationPartnerService.determineSupportAccessLevel(request.platformRole || '')
         };
@@ -847,14 +906,14 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `Failed to get partner stats: ${error.message}`,
+          message: `Failed to get partner stats: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime
         };
       }
     }
   });
 
-  console.log('[Integration Brain] Registered 8 partner management actions');
-  console.log('[Integration Brain] Total: 18 integration management actions registered');
-  console.log('[Integration Brain] Categories: Workspace Integrations (10), Partner Management (8)');
+  log.info('[Integration Brain] Registered 8 partner management actions');
+  log.info('[Integration Brain] Total: 18 integration management actions registered');
+  log.info('[Integration Brain] Categories: Workspace Integrations (10), Partner Management (8)');
 }

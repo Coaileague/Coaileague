@@ -1,0 +1,200 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 31 — CLIENT AND OFFICER LIFECYCLE MANAGEMENT**
+
+This phase owns the complete lifecycle of every officer and client on the platform — from first activation through offboarding. Every transition must be clean, audited, and produce the correct downstream effects. A terminated officer with active shift assignments is a liability. A departed client with outstanding invoices is a revenue gap. Every lifecycle state must be explicitly managed. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row. Every row green before Phase 31 closes.
+
+**TWO DEFERRED ITEMS FROM PHASE 30 — fix these first:**
+- Overage confirmation dialog before officer activation — when activating an officer that would exceed included seat count show a confirmation dialog with projected overage charge before completing activation
+- Hard cap setting in workspace settings — org_owner can set a hard cap to block activation at seat limit instead of allowing overage
+
+---
+
+**STEP 1 — LIFECYCLE SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of every lifecycle state and transition:
+- Officer lifecycle states: pending → active → suspended → deactivated → terminated → rehired
+- Client lifecycle states: prospect → active → suspended → offboarded
+- Where each state is stored and enforced
+- What transitions are currently implemented vs missing
+- What downstream effects each transition should trigger but currently does not
+- Any officer or client in an inconsistent state in the current database — flag and resolve
+
+---
+
+**STEP 2 — OFFICER ONBOARDING LIFECYCLE**
+
+Officer activation must be complete and correct:
+- Overage confirmation dialog confirmed — shows projected charge before activation completes (Phase 30 deferred item)
+- Hard cap enforcement confirmed — blocks activation if org_owner has set a hard cap
+- On activation: onboarding task list generated (Phase 48 scope — flag if not yet built), license record created or linked, onboarding documents generated and routed for signing, NDS notification to officer and supervisor, audit record written
+- Pending officer cannot be assigned to shifts — confirmed blocked
+- Pending officer cannot clock in — confirmed blocked
+- Activation requires completed onboarding documents — configurable per workspace
+
+**STEP 3 — OFFICER SUSPENSION**
+
+Suspension is temporary — officer retains their record but cannot work:
+- Suspension requires a reason — not a blank status change
+- Suspension immediately removes officer from all future shift assignments — not just blocks new ones
+- Open shifts created for any shifts the suspended officer was assigned to
+- Suspended officer cannot clock in — confirmed blocked at clock-in gate
+- Suspended officer's license records and pay history preserved
+- Active shift assignments at time of suspension flagged and manager notified via NDS
+- Suspension audit record written: officer_id, reason, suspended_by, timestamp
+- Reactivation from suspension restores officer to active state — does not require full re-onboarding unless workspace requires it
+
+---
+
+**STEP 4 — OFFICER TERMINATION AND OFFBOARDING**
+
+Termination is permanent — must trigger complete offboarding:
+- Termination requires reason — voluntary resignation, involuntary termination, contract end, abandonment
+- On termination:
+  - All active shift assignments removed immediately — open shifts created
+  - Access revoked immediately — session invalidated, portal access deactivated
+  - Final timesheet period locked — supervisor notified to approve final hours
+  - Final paycheck calculated and staged — cannot be processed until final hours approved
+  - License records archived with termination date
+  - All assigned documents retained — not deleted
+  - Equipment return checklist generated if configured
+  - NDS notification to officer (termination confirmation), supervisor, and manager
+  - Audit record written with full termination details
+- Terminated officer cannot be reassigned to shifts
+- Terminated officer's pay history remains accessible to compliance officer
+- Termination is reversible via rehire flow — not a permanent delete
+
+---
+
+**STEP 5 — OFFICER REHIRE FLOW**
+
+Returning officers must be handled correctly:
+- Rehire detected when an email address matches a previously terminated officer record
+- Prior employment record surfaced to the hiring manager before activation
+- Prior pay history, incidents, and compliance records visible to manager during rehire review
+- License validity re-checked — expired licenses flagged before activation
+- New onboarding documents generated if required by workspace policy
+- Rehire audit record written linking to prior termination record
+- Seat count updated immediately on rehire activation
+
+---
+
+**STEP 6 — CLIENT ONBOARDING LIFECYCLE**
+
+New client setup must be guided and complete:
+- Client record created with all required fields: company name, primary contact, billing contact, service address, contract rate, post configuration
+- Initial contract generated from template and routed to client for signing
+- Client portal provisioned — access link generated and delivered via NDS
+- Billing activated on Stripe — first invoice schedule set based on contract start date
+- Rate table configured — base rate per post, any differential rates
+- First post created with GPS geofence configured
+- Client onboarding task list generated — tracks completion of each setup step
+- Client activated only after initial contract is executed — not before
+- NDS notification to client on portal activation
+
+---
+
+**STEP 7 — CLIENT SUSPENSION**
+
+Client suspension pauses service without terminating the relationship:
+- Suspension requires reason and authorized approver (org_owner or org_admin)
+- On suspension: all scheduled shifts for client's posts flagged, officers notified of temporary suspension, invoice generation paused, client portal access suspended
+- Client's existing invoices and payment history preserved
+- Suspension audit record written
+- Reactivation restores all prior configuration — posts, rates, portal access
+
+---
+
+**STEP 8 — CLIENT OFFBOARDING**
+
+Client departure must be handled completely:
+- Offboarding initiated by org_owner with reason recorded
+- On offboarding:
+  - Final invoice generated for all unbilled confirmed hours
+  - All outstanding invoices flagged for collection
+  - Upcoming scheduled shifts cancelled — officers notified
+  - Client portal access deactivated immediately
+  - All client posts archived — not deleted
+  - Contract marked as terminated with end date
+  - Data export package generated — all client-related records exportable as CSV/PDF
+  - QuickBooks final sync triggered — all pending records pushed
+  - NDS notification to client confirming offboarding and final invoice
+  - Audit record written with full offboarding details
+- Offboarded client data retained per retention policy — not permanently deleted
+- Client record remains accessible to compliance officer for audit purposes
+
+---
+
+**STEP 9 — DATA RETENTION AND EXPORT**
+
+Every departing entity's data must be handled per policy:
+- Officer data retention: employment records, pay stubs, compliance records, incident reports retained for minimum 7 years per Texas employment law
+- Client data retention: contracts, invoices, service records retained for minimum 7 years
+- Data export: departing workspace can request full data export before account closure
+- Export format: structured JSON or CSV, all tables included
+- Export delivery: secure download link with 48-hour expiry
+- Deletion procedure: PII fields anonymized after retention period, audit records preserved with anonymized actor IDs
+- Retention policy documented in replit.md as a permanent compliance truth
+
+---
+
+**STEP 10 — LIFECYCLE AUDIT TRAIL**
+
+Every lifecycle event must be fully logged:
+- Every state transition writes an audit record with: entity_type, entity_id, from_state, to_state, actor_id, reason, workspace_id, timestamp
+- Audit records for lifecycle events immutable — no updates or deletes
+- Lifecycle history queryable per officer and per client — full history visible to compliance officer
+- Trinity can query lifecycle history via registered action
+- Lifecycle events trigger correct NDS notifications at each step
+
+---
+
+**STEP 11 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. Phase 30 deferred items confirmed resolved in their own dedicated rows
+6. All rows green before summary written
+
+---
+
+**STEP 12 — VERIFICATION**
+
+Run all checks before Phase 31 is marked complete:
+- Check 1: Overage confirmation dialog confirmed — shows projected charge before activation (Phase 30 deferred)
+- Check 2: Hard cap setting in workspace settings confirmed (Phase 30 deferred)
+- Check 3: Officer lifecycle states defined and enforced — all 6 states confirmed
+- Check 4: Pending officer blocked from shift assignment and clock-in
+- Check 5: Suspension removes officer from future shift assignments immediately
+- Check 6: Suspended officer blocked at clock-in gate
+- Check 7: Suspension audit record written with reason and actor
+- Check 8: Termination removes all active shift assignments and creates open shifts
+- Check 9: Termination revokes access immediately — session invalidated
+- Check 10: Final timesheet locked on termination — supervisor notified
+- Check 11: Final paycheck staged on termination — cannot process before final hours approved
+- Check 12: Rehire flow detects prior record and surfaces history to manager
+- Check 13: Client onboarding complete — contract, portal, billing, post all configured before activation
+- Check 14: Client portal access deactivated immediately on offboarding
+- Check 15: Final invoice generated on client offboarding — all unbilled hours included
+- Check 16: Data export package generatable for departing client
+- Check 17: QuickBooks final sync triggered on client offboarding
+- Check 18: Officer data retention policy confirmed — 7 years minimum
+- Check 19: Every lifecycle transition writes audit record with full context
+- Check 20: Lifecycle history queryable per officer and client — compliance officer access confirmed
+- Check 21: Trinity lifecycle query action registered and callable
+- Check 22: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 23: Server starts clean with zero TypeScript errors across all lifecycle files
+
+Do not mark Phase 31 complete until all 23 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. Nothing left behind.
+
+---
+
+Paste that. Lifecycle management is what separates a platform from a system — every officer and client must have a clean, complete, audited journey from first activation to final offboarding.

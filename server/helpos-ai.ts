@@ -2,16 +2,13 @@
  * HelpAI Intelligence Service
  * Client-pays-all model - AI costs are tracked and billed to the customer
  * Can be toggled on/off by support staff
+ * ALL billing routed through universal aiCreditGateway - ZERO TOKEN LOSS
  */
 
-import OpenAI from "openai";
-import { usageMeteringService } from './services/billing/usageMetering';
+import { getMeteredOpenAICompletion } from './services/billing/universalAIBillingInterceptor';
+import { createLogger } from './lib/logger';
+const log = createLogger('helposAI');
 
-// Using AI Integrations service for OpenAI-compatible API access
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
-});
 
 export interface HelpAIConfig {
   enabled: boolean;
@@ -50,7 +47,7 @@ export class HelpAIService {
   toggleAI(enabled: boolean): boolean {
     this.config.enabled = enabled;
     aiEnabledMap.set(this.workspaceId, enabled);
-    console.log(`[HelpAI] ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${this.workspaceId}`);
+    log.info(`[HelpAI] ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${this.workspaceId}`);
     return this.config.enabled;
   }
 
@@ -84,37 +81,28 @@ Generate a warm, professional greeting that:
 
 Return ONLY the greeting text, no extra formatting.`;
 
-      const completion = await openai.chat.completions.create({
-        model: this.config.model,
+      const result = await getMeteredOpenAICompletion({
+        workspaceId: this.workspaceId,
+        featureKey: 'helpdesk_ai_greeting',
         messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: this.config.maxTokens,
-        temperature: this.config.temperature
+        model: this.config.model,
+        maxTokens: this.config.maxTokens,
+        temperature: this.config.temperature,
       });
 
-      const greeting = completion.choices[0]?.message?.content?.trim();
-      
-      // Record token usage for billing
-      const tokensUsed = completion.usage?.total_tokens || 0;
-      if (tokensUsed > 0) {
-        await usageMeteringService.recordUsage({
-          workspaceId: this.workspaceId,
-          featureKey: 'helpdesk_ai_greeting',
-          usageType: 'token',
-          usageAmount: tokensUsed,
-          usageUnit: 'tokens',
-          activityType: 'ai_greeting',
-          metadata: {
-            model: this.config.model,
-            userName,
-            userType,
-          }
-        });
-        console.log(`[HelpAI] Greeting generated (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+      if (result.blocked) {
+        log.warn(`[HelpAI] Greeting blocked: ${result.error}`);
+        return null;
       }
 
-      return greeting || null;
+      if (result.success && result.content) {
+        log.info(`[HelpAI] Greeting generated (${result.tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+        return result.content.trim();
+      }
+
+      return null;
     } catch (error) {
-      console.error('[HelpAI] Greeting failed:', error);
+      log.error('[HelpAI] Greeting failed:', error);
       return null; // Fallback to default greeting on error
     }
   }
@@ -145,45 +133,37 @@ Based on the conversation, suggest a helpful, professional response that:
 
 Return ONLY the suggested response text.`;
 
-      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: 'system', content: systemPrompt },
-        ...chatHistory.slice(-5).map(msg => ({ // Only last 5 messages to save tokens
-          role: msg.role,
+      const allMessages = [
+        { role: 'system' as const, content: systemPrompt },
+        ...chatHistory.slice(-5).map(msg => ({
+          role: msg.role as 'user' | 'assistant',
           content: msg.content
         })),
-        { role: 'user', content: userMessage }
+        { role: 'user' as const, content: userMessage }
       ];
 
-      const completion = await openai.chat.completions.create({
+      const result = await getMeteredOpenAICompletion({
+        workspaceId: this.workspaceId,
+        featureKey: 'helpdesk_ai_response',
+        messages: allMessages,
         model: this.config.model,
-        messages,
-        max_completion_tokens: this.config.maxTokens,
-        temperature: this.config.temperature
+        maxTokens: this.config.maxTokens,
+        temperature: this.config.temperature,
       });
 
-      const response = completion.choices[0]?.message?.content?.trim();
-      
-      // Record token usage for billing
-      const tokensUsed = completion.usage?.total_tokens || 0;
-      if (tokensUsed > 0) {
-        await usageMeteringService.recordUsage({
-          workspaceId: this.workspaceId,
-          featureKey: 'helpdesk_ai_response',
-          usageType: 'token',
-          usageAmount: tokensUsed,
-          usageUnit: 'tokens',
-          activityType: 'ai_response_suggestion',
-          metadata: {
-            model: this.config.model,
-            messageLength: userMessage.length,
-          }
-        });
-        console.log(`[HelpAI] Response suggested (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+      if (result.blocked) {
+        log.warn(`[HelpAI] Response suggestion blocked: ${result.error}`);
+        return null;
       }
 
-      return response || null;
+      if (result.success && result.content) {
+        log.info(`[HelpAI] Response suggested (${result.tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+        return result.content.trim();
+      }
+
+      return null;
     } catch (error) {
-      console.error('[HelpAI] Response suggestion failed:', error);
+      log.error('[HelpAI] Response suggestion failed:', error);
       return null;
     }
   }
@@ -213,37 +193,30 @@ High: can't login, payment failed, urgent deadline
 Medium: feature not working, slow performance
 Low: general question, feature request`;
 
-      const completion = await openai.chat.completions.create({
-        model: this.config.model,
+      const aiResult = await getMeteredOpenAICompletion({
+        workspaceId: this.workspaceId,
+        featureKey: 'helpdesk_ai_analysis',
         messages: [{ role: 'user', content: prompt }],
-        response_format: { type: "json_object" },
-        max_completion_tokens: 150,
-        temperature: 0.3 // Lower temperature for more consistent analysis
+        model: this.config.model,
+        maxTokens: 150,
+        temperature: 0.3,
+        jsonMode: true,
       });
 
-      const result = JSON.parse(completion.choices[0]?.message?.content || '{}');
-      
-      // Record token usage for billing
-      const tokensUsed = completion.usage?.total_tokens || 0;
-      if (tokensUsed > 0) {
-        await usageMeteringService.recordUsage({
-          workspaceId: this.workspaceId,
-          featureKey: 'helpdesk_ai_analysis',
-          usageType: 'token',
-          usageAmount: tokensUsed,
-          usageUnit: 'tokens',
-          activityType: 'urgency_analysis',
-          metadata: {
-            model: this.config.model,
-            urgency: result.urgency,
-          }
-        });
-        console.log(`[HelpAI] Urgency analyzed (${tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+      if (aiResult.blocked) {
+        log.warn(`[HelpAI] Urgency analysis blocked: ${aiResult.error}`);
+        return null;
       }
 
-      return result.urgency ? result : null;
+      if (aiResult.success && aiResult.content) {
+        const parsed = JSON.parse(aiResult.content);
+        log.info(`[HelpAI] Urgency analyzed (${aiResult.tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
+        return parsed.urgency ? parsed : null;
+      }
+
+      return null;
     } catch (error) {
-      console.error('[HelpAI] Urgency analysis failed:', error);
+      log.error('[HelpAI] Urgency analysis failed:', error);
       return null;
     }
   }

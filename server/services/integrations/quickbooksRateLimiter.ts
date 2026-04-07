@@ -16,6 +16,8 @@
  * 
  * @see https://developer.intuit.com/app/developer/qbo/docs/learn/throttling
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quickbooksRateLimiter');
 
 interface RealmBucket {
   tokens: number;
@@ -196,7 +198,7 @@ class QuickBooksRateLimiter {
     
     bucket.backoffUntil = Date.now() + backoffMs;
     
-    console.warn(`[QB RateLimit] Throttled for realm ${realmId}, backing off for ${backoffMs}ms`);
+    log.warn(`[QB RateLimit] Throttled for realm ${realmId}, backing off for ${backoffMs}ms`);
     
     return backoffMs;
   }
@@ -222,7 +224,7 @@ class QuickBooksRateLimiter {
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
-    console.warn(`[QB RateLimit] Timeout waiting for slot for realm ${realmId}`);
+    log.warn(`[QB RateLimit] Timeout waiting for slot for realm ${realmId}`);
     return false;
   }
   
@@ -277,7 +279,7 @@ class QuickBooksRateLimiter {
     this.buckets.delete(key);
     this.requestHistory.delete(key);
     this.requestQueues.delete(key);
-    console.log(`[QB RateLimit] Reset rate limit state for realm ${realmId}`);
+    log.info(`[QB RateLimit] Reset rate limit state for realm ${realmId}`);
   }
 }
 

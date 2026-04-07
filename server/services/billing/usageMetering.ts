@@ -1,19 +1,13 @@
+import { createLogger } from '../../lib/logger';
 import { db } from '../../db';
-import {
-  aiUsageEvents,
-  aiUsageDailyRollups,
-  aiTokenWallets,
-  workspaces,
-  workspaceAddons,
-  billingAddons,
-  billingAuditLog,
-  type InsertAiUsageEvent,
-  type AiUsageEvent,
-} from '@shared/schema';
+import { aiUsageEvents, aiUsageDailyRollups, workspaces, workspaceAddons, billingAddons, billingAuditLog, type InsertAiUsageEvent, type AiUsageEvent } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
-import { CreditLedgerService } from './creditLedger';
+import { creditManager } from './creditManager';
 import { platformEventBus } from '../platformEventBus';
+import { calculateProviderCostUsd } from './platformAIBudgetService';
+import { typedExec } from '../../lib/typedSql';
 
+const log = createLogger('usageMetering');
 export interface UsageEventInput {
   workspaceId: string;
   userId?: string;
@@ -30,6 +24,13 @@ export interface UsageEventInput {
   userAgent?: string;
   // Control event bus emission - set to false when caller emits its own billing event
   emitEvent?: boolean;
+  // Skip credit deduction - set to true when caller already deducted credits (e.g., aiCreditGateway.finalizeBilling)
+  skipBillingDeduction?: boolean;
+  // AI model tracking — provider cost calculation
+  aiModel?: string;           // e.g., 'gemini-2.5-flash', 'gpt-4o', 'claude-sonnet'
+  inputTokens?: number;       // Input tokens for raw cost calculation
+  outputTokens?: number;      // Output tokens for raw cost calculation
+  creditsDeducted?: number;   // Credits deducted from org balance for this event
 }
 
 export interface UsageMetrics {
@@ -50,16 +51,24 @@ export interface UsageMetrics {
 }
 
 export class UsageMeteringService {
-  private creditLedgerService: CreditLedgerService;
-
   constructor() {
-    this.creditLedgerService = new CreditLedgerService();
   }
 
   /**
    * Record a single usage event and apply hybrid billing (allowance + overage)
    */
   async recordUsage(input: UsageEventInput): Promise<AiUsageEvent> {
+    if (!input.featureKey) {
+      input.featureKey = 'unknown_feature';
+    }
+    if (!input.workspaceId) {
+      log.warn('[UsageMetering] recordUsage called without workspaceId — attributing to PLATFORM_COST_CENTER', {
+        featureKey: input.featureKey,
+        userId: input.userId,
+        usageType: input.usageType,
+      });
+      input.workspaceId = 'PLATFORM_COST_CENTER';
+    }
     // Get addon details if addonId provided
     let addon = null;
     let workspaceAddon = null;
@@ -120,75 +129,95 @@ export class UsageMeteringService {
         isOverage = true;
         const overageRate = Number(addon.overageRatePer1kTokens || 0.03);
         totalCost = (input.usageAmount / 1000) * overageRate;
-        unitPrice = totalCost / input.usageAmount;
+        // GAP-60 FIX: Guard against division by zero when usageAmount=0.
+        // If input.usageAmount is 0 (empty batch), totalCost is also 0, and 0/0=NaN
+        // would propagate into billingAuditLog.unitPrice as the string "NaN", corrupting
+        // downstream reporting and any downstream multiplications using this field.
+        const { multiplyFinancialValues, toFinancialString } = await import('../financialCalculator');
+        unitPrice = input.usageAmount > 0 
+          ? parseFloat(multiplyFinancialValues(toFinancialString(String(totalCost)), toFinancialString(String(1 / input.usageAmount))))
+          : 0;
         overageAmount = input.usageAmount;
       }
 
-      // Update workspace addon usage tracking
-      await db.update(workspaceAddons)
-        .set({
-          monthlyTokensUsed: needsReset ? input.usageAmount.toString() : (actualCurrentUsage + input.usageAmount).toString(),
-          lastUsageResetAt: needsReset ? new Date() : workspaceAddon.lastUsageResetAt,
-          updatedAt: new Date(),
-        })
-        .where(eq(workspaceAddons.id, workspaceAddon.id));
+      // GAP-71 FIX: Move the addon usage UPDATE inside the upcoming db.transaction
+      // so it is atomic with the aiUsageEvents INSERT. Flag for below.
+      // (actual UPDATE happens inside the transaction block below)
     }
 
-    // Create usage event with overage tracking
-    const [event] = await db.insert(aiUsageEvents).values({
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      featureKey: input.featureKey,
-      addonId: input.addonId,
-      usageType: input.usageType,
-      usageAmount: input.usageAmount.toString(),
-      usageUnit: input.usageUnit,
-      unitPrice: unitPrice.toString(),
-      totalCost: totalCost.toString(),
-      sessionId: input.sessionId,
-      activityType: input.activityType,
-      metadata: {
-        ...input.metadata,
-        isOverage,
-        allowanceUsed,
-        overageAmount,
-        addonName: addon?.name,
-      },
-      ipAddress: input.ipAddress,
-      userAgent: input.userAgent,
-    }).returning();
+    // Calculate raw provider API cost (not marked up) for platform spend tracking
+    const providerCostUsd = input.aiModel && (input.inputTokens || input.outputTokens)
+      ? calculateProviderCostUsd(input.aiModel, input.inputTokens || 0, input.outputTokens || 0)
+      : 0;
 
-    // Deduct from token wallet ONLY if there's overage cost
-    if (totalCost > 0) {
-      try {
-        await this.creditLedgerService.deductCredits(
-          input.workspaceId,
-          totalCost,
-          isOverage 
-            ? `Overage: ${input.featureKey} - ${overageAmount.toLocaleString()} tokens beyond allowance`
-            : `Usage: ${input.featureKey} - ${input.usageAmount} ${input.usageUnit}`,
-          event.id
-        );
-      } catch (error) {
-        // If deduction fails (insufficient balance), log but continue
-        // The usage is still tracked for invoicing
-        console.error(`Failed to deduct credits for workspace ${input.workspaceId}:`, error);
+    // GAP-71 FIX: Wrap the conditional addon UPDATE + aiUsageEvents INSERT in db.transaction().
+    // Previously: if (addon hybrid path) { UPDATE workspaceAddons } ; INSERT aiUsageEvents
+    // A crash between the two writes leaves the addon balance decremented with no usage event record,
+    // causing reconcileCredits to flag ghost deductions and breaking overage invoice generation.
+    const [event] = await db.transaction(async (tx) => {
+      // Conditionally update addon usage inside the transaction
+      if (addon && addon.pricingType === 'hybrid' && addon.monthlyTokenAllowance && workspaceAddon && input.usageType === 'token') {
+        const needsReset = this.shouldResetMonthlyUsage(workspaceAddon.lastUsageResetAt);
+        const actualCurrentUsage = needsReset ? 0 : Number(workspaceAddon.monthlyTokensUsed || 0);
+        await tx.update(workspaceAddons)
+          .set({
+            monthlyTokensUsed: needsReset ? input.usageAmount.toString() : (actualCurrentUsage + input.usageAmount).toString(),
+            lastUsageResetAt: needsReset ? new Date() : workspaceAddon.lastUsageResetAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(workspaceAddons.id, workspaceAddon.id));
       }
+
+      // Always insert the usage event (including new provider cost tracking columns)
+      return tx.insert(aiUsageEvents).values({
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        featureKey: input.featureKey,
+        addonId: input.addonId,
+        usageType: input.usageType,
+        usageAmount: input.usageAmount.toString(),
+        usageUnit: input.usageUnit,
+        unitPrice: unitPrice.toString(),
+        totalCost: totalCost.toString(),
+        sessionId: input.sessionId,
+        activityType: input.activityType,
+        metadata: {
+          ...input.metadata,
+          isOverage,
+          allowanceUsed,
+          overageAmount,
+          addonName: addon?.name,
+          aiModel: input.aiModel,
+          inputTokens: input.inputTokens,
+          outputTokens: input.outputTokens,
+        },
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+      }).returning();
+    });
+
+    // Store provider cost and model outside transaction (new columns via raw SQL to bypass Drizzle schema mismatch)
+    if (event && (providerCostUsd > 0 || input.aiModel || input.creditsDeducted)) {
+      await db.update(aiUsageEvents).set({ providerCostUsd: providerCostUsd, aiModel: input.aiModel || null, creditsDeducted: input.creditsDeducted || 0 }).where(eq(aiUsageEvents.id, event.id)).catch(() => {/* non-critical — usage event already recorded */});
     }
+
+    // Phase 16: Credit deduction removed — credit_transactions table dropped.
+    // AI usage is now metered via aiMeteringService and workspace_ai_usage only.
 
     // Update daily rollup asynchronously
-    this.updateDailyRollup(input.workspaceId, input.featureKey, event.createdAt!).catch(console.error);
+    this.updateDailyRollup(input.workspaceId, input.featureKey, event.createdAt!).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
 
     // Emit usage event to Trinity for tracking (unless caller handles its own event emission)
     if (input.emitEvent !== false) {
-      platformEventBus.emit({
-        type: 'billing',
-        category: isOverage ? 'ai_overage_recorded' : 'ai_usage_recorded',
+      platformEventBus.publish({
+        type: 'ai_brain_action',
+        category: 'ai_brain',
         title: isOverage ? 'AI Overage Recorded' : 'AI Usage Recorded',
-        message: `${input.featureKey}: ${input.usageAmount} ${input.usageUnit}${isOverage ? ` (overage: ${overageAmount})` : ''}`,
+        description: `${input.featureKey}: ${input.usageAmount} ${input.usageUnit}${isOverage ? ` (overage: ${overageAmount})` : ''}`,
         workspaceId: input.workspaceId,
-        userId: input.userId,
         metadata: {
+          billingCategory: isOverage ? 'ai_overage_recorded' : 'ai_usage_recorded',
+          userId: input.userId,
           featureKey: input.featureKey,
           usageType: input.usageType,
           usageAmount: input.usageAmount,
@@ -198,7 +227,7 @@ export class UsageMeteringService {
           overageAmount,
           eventId: event.id,
         },
-      });
+      }).catch((err) => log.warn('[usageMetering] Fire-and-forget failed:', err));
     }
 
     // Log audit event
@@ -252,7 +281,7 @@ export class UsageMeteringService {
         const result = await this.recordUsage(event);
         results.push(result);
       } catch (error) {
-        console.error('Failed to record usage event:', error);
+        log.error('Failed to record usage event:', error);
         // Continue with other events
       }
     }
@@ -412,9 +441,9 @@ export class UsageMeteringService {
   private async getUnitPrice(featureKey: string, usageType: string): Promise<number> {
     // Default pricing (per 1000 tokens/units)
     // CRITICAL: Prices MUST exceed supplier costs to ensure profitability
-    // Gemini 2.0 Flash: ~$0.35/1K output tokens
+    // Gemini 2.5 Flash: ~$0.15/1M input, ~$0.60/1M output ($0.0006/1K output)
+    // Gemini 2.5 Pro: ~$1.25/1M input, ~$5/1M output ($0.005/1K output)
     // GPT-4o-mini: ~$0.60/1K output tokens
-    // GPT-5: Higher than GPT-4o-mini
     const defaultPricing: Record<string, number> = {
       // HelpDesk AI (Profitable pricing with 50%+ margin)
       'helpdesk_gemini_chat': 0.50, // $0.50 per 1000 tokens (50% margin over Gemini 2.0 Flash)
@@ -477,11 +506,8 @@ export class UsageMeteringService {
     workspaceId: string,
     estimatedCost: number
   ): Promise<boolean> {
-    const wallet = await this.creditLedgerService.getWallet(workspaceId);
-    if (!wallet) return false;
-
-    const currentBalance = Number(wallet.currentBalance) || 0;
-    return currentBalance >= estimatedCost;
+    const balance = await creditManager.getBalance(workspaceId);
+    return balance >= estimatedCost;
   }
 
   /**
@@ -493,7 +519,8 @@ export class UsageMeteringService {
     usageType: string = 'token'
   ): Promise<number> {
     const unitPrice = await this.getUnitPrice(featureKey, usageType);
-    return usageAmount * unitPrice;
+    const { multiplyFinancialValues, toFinancialString } = await import('../financialCalculator');
+    return parseFloat(multiplyFinancialValues(toFinancialString(String(usageAmount)), toFinancialString(String(unitPrice))));
   }
 }
 

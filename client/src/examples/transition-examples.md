@@ -1,3 +1,5 @@
+DEPRECATED: These examples use the old transition system. Use Canvas Hub TransitionLoader instead (see client/src/components/canvas-hub/TransitionLoader.tsx)
+
 # Universal Transition System - Usage Guide
 
 The WorkforceOS transition system provides a branded, animated overlay for all major user actions throughout the platform. It ensures smooth transitions between pages, during authentication, and for form submissions.

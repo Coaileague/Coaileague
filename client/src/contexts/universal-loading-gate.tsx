@@ -33,6 +33,7 @@ const PUBLIC_ROUTES = new Set([
   "/privacy",
   "/helpdesk",
   "/chat",
+  "/chatrooms",
   "/mobile-chat",
   "/live-chat",
   "/helpdesk5",

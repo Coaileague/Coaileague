@@ -13,8 +13,11 @@
 import { db } from '../../db';
 import { exchangeRates } from '@shared/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
-import { circuitBreaker } from '../resilience/circuitBreaker';
+import { circuitBreaker } from '../infrastructure/circuitBreaker';
 import { auditLogger } from '../audit-logger';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('exchangeRateService');
+
 
 interface ExchangeRate {
   fromCurrency: string;
@@ -61,15 +64,14 @@ class ExchangeRateService {
 
   constructor() {
     this.initializeCircuitBreaker();
-    console.log('[ExchangeRate] Service initialized with', SUPPORTED_CURRENCIES.length, 'currencies');
+    log.info('[ExchangeRate] Service initialized with', SUPPORTED_CURRENCIES.length, 'currencies');
   }
 
   private initializeCircuitBreaker(): void {
-    circuitBreaker.getOrCreateCircuit('exchangeRate', {
+    circuitBreaker.registerCircuit('exchangeRate', 'Exchange Rate Service', {
       failureThreshold: 3,
-      recoveryTimeMs: 300000,
-      halfOpenMaxAttempts: 1,
-      timeoutMs: 10000,
+      timeout: 300000,
+      successThreshold: 1,
     });
   }
 
@@ -141,7 +143,7 @@ class ExchangeRateService {
       
       return null;
     } catch (error) {
-      console.error('[ExchangeRate] Database fetch error:', error);
+      log.error('[ExchangeRate] Database fetch error:', error);
       return null;
     }
   }
@@ -153,11 +155,11 @@ class ExchangeRateService {
       try {
         const rate = await this.fetchFromProvider(provider, from, to);
         if (rate) {
-          console.log(`[ExchangeRate] Fetched ${from}/${to} = ${rate.rate} from ${provider}`);
+          log.info(`[ExchangeRate] Fetched ${from}/${to} = ${rate.rate} from ${provider}`);
           return rate;
         }
       } catch (error) {
-        console.warn(`[ExchangeRate] Provider ${provider} failed:`, (error as Error).message);
+        log.warn(`[ExchangeRate] Provider ${provider} failed:`, (error as Error).message);
       }
     }
 
@@ -173,7 +175,7 @@ class ExchangeRateService {
       return this.getFallbackRate(from, to);
     }
 
-    return circuitBreaker.execute(
+    const result = await circuitBreaker.execute(
       'exchangeRate',
       async () => {
         if (provider === 'openexchangerates') {
@@ -183,8 +185,10 @@ class ExchangeRateService {
         }
         return null;
       },
-      () => this.getFallbackRate(from, to)
+      async () => this.getFallbackRate(from, to)
     );
+
+    return result.data ?? this.getFallbackRate(from, to);
   }
 
   private async fetchFromOpenExchangeRates(from: string, to: string): Promise<ExchangeRate | null> {
@@ -257,7 +261,7 @@ class ExchangeRateService {
       rate = fromToUSD * usdToTarget;
     }
 
-    console.warn(`[ExchangeRate] Using fallback rate for ${from}/${to}: ${rate}`);
+    log.warn(`[ExchangeRate] Using fallback rate for ${from}/${to}: ${rate}`);
 
     return {
       fromCurrency: from,
@@ -272,14 +276,15 @@ class ExchangeRateService {
   private async storeRate(rate: ExchangeRate): Promise<void> {
     try {
       await db.insert(exchangeRates).values({
-        fromCurrency: rate.fromCurrency,
-        toCurrency: rate.toCurrency,
+        baseCurrency: rate.fromCurrency,
+        targetCurrency: rate.toCurrency,
         rate: rate.rate.toString(),
         source: rate.source,
+        rateDate: rate.fetchedAt,
         fetchedAt: rate.fetchedAt,
       }).onConflictDoNothing();
     } catch (error) {
-      console.error('[ExchangeRate] Error storing rate:', error);
+      log.error('[ExchangeRate] Error storing rate:', error);
     }
   }
 
@@ -334,7 +339,7 @@ class ExchangeRateService {
       }
     }
 
-    console.log(`[ExchangeRate] Refresh complete: ${updated} updated, ${failed.length} failed`);
+    log.info(`[ExchangeRate] Refresh complete: ${updated} updated, ${failed.length} failed`);
     return { updated, failed };
   }
 

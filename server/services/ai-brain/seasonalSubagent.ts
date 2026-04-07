@@ -15,9 +15,12 @@
  * - Hit detection preserving main UI elements
  */
 
-import { UnifiedGeminiClient, GEMINI_MODELS } from './providers/geminiClient';
+import { geminiClient, GEMINI_MODELS } from './providers/geminiClient';
 import { modelRoutingEngine } from './modelRoutingEngine';
 import { platformEventBus, PlatformEventType } from '../platformEventBus';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('seasonalSubagent');
 
 // Holiday definitions with theming periods
 export interface HolidayDefinition {
@@ -208,28 +211,30 @@ export interface SoundConfig {
 let seasonalSubagentInstance: SeasonalSubagent | null = null;
 
 export class SeasonalSubagent {
-  private geminiClient: UnifiedGeminiClient;
   private activeTheme: ActiveSeasonalTheme | null = null;
   private checkInterval: NodeJS.Timeout | null = null;
   private readonly CHECK_INTERVAL_MS = 60 * 60 * 1000; // Check every hour
 
   constructor() {
-    this.geminiClient = new UnifiedGeminiClient();
-    console.log('[SeasonalSubagent] Initialized - Holiday theming orchestrator ready');
+    log.info('[SeasonalSubagent] Initialized - Holiday theming orchestrator ready');
   }
 
   /**
    * Start the seasonal monitoring service
    */
   async start(): Promise<void> {
-    console.log('[SeasonalSubagent] Starting autonomous holiday monitoring...');
+    log.info('[SeasonalSubagent] Starting autonomous holiday monitoring...');
     
     // Initial check
     await this.checkAndApplySeasonalTheme();
     
     // Set up periodic checking
     this.checkInterval = setInterval(async () => {
-      await this.checkAndApplySeasonalTheme();
+      try {
+        await this.checkAndApplySeasonalTheme();
+      } catch (error: any) {
+        log.warn('[SeasonalSubagent] Theme check failed (will retry):', error?.message || 'unknown');
+      }
     }, this.CHECK_INTERVAL_MS);
 
     // Register with AI Brain orchestration via event bus
@@ -254,7 +259,7 @@ export class SeasonalSubagent {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
     }
-    console.log('[SeasonalSubagent] Stopped holiday monitoring');
+    log.info('[SeasonalSubagent] Stopped holiday monitoring');
   }
 
   /**
@@ -263,7 +268,7 @@ export class SeasonalSubagent {
   async checkAndApplySeasonalTheme(): Promise<void> {
     // Skip if seasonal theming is disabled by orchestration
     if (this.seasonalDisabled) {
-      console.log('[SeasonalSubagent] Seasonal theming is disabled - skipping auto-check');
+      log.info('[SeasonalSubagent] Seasonal theming is disabled - skipping auto-check');
       return;
     }
     
@@ -274,12 +279,12 @@ export class SeasonalSubagent {
       // We're in a holiday period
       if (!this.activeTheme || this.activeTheme.holidayId !== currentHoliday.id) {
         // Need to activate new theme
-        console.log(`[SeasonalSubagent] Holiday detected: ${currentHoliday.name} ${currentHoliday.emoji}`);
+        log.info(`[SeasonalSubagent] Holiday detected: ${currentHoliday.name} ${currentHoliday.emoji}`);
         await this.activateHolidayTheme(currentHoliday);
       }
     } else if (this.activeTheme) {
       // Holiday ended, revert to normal
-      console.log('[SeasonalSubagent] Holiday ended, reverting to normal theme');
+      log.info('[SeasonalSubagent] Holiday ended, reverting to normal theme');
       await this.deactivateTheme();
     }
   }
@@ -329,7 +334,7 @@ export class SeasonalSubagent {
    * Activate a holiday theme using AI-generated creativity
    */
   async activateHolidayTheme(holiday: HolidayDefinition): Promise<ActiveSeasonalTheme> {
-    console.log(`[SeasonalSubagent] Generating AI-powered theme for ${holiday.name}...`);
+    log.info(`[SeasonalSubagent] Generating AI-powered theme for ${holiday.name}...`);
 
     // Use Gemini to generate creative theme
     const themeConfig = await this.generateAITheme(holiday);
@@ -349,12 +354,11 @@ export class SeasonalSubagent {
       isActive: true,
     };
 
-    // Publish theme activation event
-    await platformEventBus.publish({
-      type: 'feature_released' as PlatformEventType,
+    // Publish theme activation via Trinity AI for contextual enrichment
+    await universalNotificationEngine.sendPlatformUpdate({
+      title: `${holiday.name} Holiday Theme Now Active`,
+      description: `The platform has applied ${holiday.name} seasonal theming with festive decorations and color schemes. ${themeConfig.greetingMessage}`,
       category: 'feature',
-      title: `${holiday.emoji} ${holiday.name} Theme Activated!`,
-      description: themeConfig.greetingMessage,
       metadata: {
         holidayId: holiday.id,
         holidayName: holiday.name,
@@ -362,10 +366,11 @@ export class SeasonalSubagent {
         themeConfig: this.activeTheme,
         expiresAt: expiresAt.toISOString(),
         seasonal: true,
+        source: 'seasonal_subagent',
       },
     });
 
-    console.log(`[SeasonalSubagent] Theme activated for ${holiday.name}, expires: ${expiresAt.toISOString()}`);
+    log.info(`[SeasonalSubagent] Theme activated for ${holiday.name}, expires: ${expiresAt.toISOString()}`);
     
     return this.activeTheme;
   }
@@ -437,7 +442,8 @@ Respond with ONLY valid JSON in this exact format:
 }`;
 
     try {
-      const response = await this.geminiClient.generate({
+      const response = await geminiClient.generate({
+        workspaceId: undefined, // Platform-level seasonal theming, no workspace billing
         featureKey: 'seasonal_theming',
         systemPrompt: 'You are a creative AI theme designer for enterprise software.',
         userMessage: prompt,
@@ -450,12 +456,12 @@ Respond with ONLY valid JSON in this exact format:
         const jsonMatch = response.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const config = JSON.parse(jsonMatch[0]) as GeneratedThemeConfig;
-          console.log('[SeasonalSubagent] AI generated creative theme successfully');
+          log.info('[SeasonalSubagent] AI generated creative theme successfully');
           return config;
         }
       }
     } catch (error) {
-      console.error('[SeasonalSubagent] AI theme generation failed, using defaults:', error);
+      log.error('[SeasonalSubagent] AI theme generation failed, using defaults:', error);
     }
 
     // Fallback to default theme
@@ -545,21 +551,21 @@ Respond with ONLY valid JSON in this exact format:
     const previousTheme = this.activeTheme;
     this.activeTheme = null;
 
-    // Publish deactivation event
-    await platformEventBus.publish({
-      type: 'announcement' as PlatformEventType,
+    // Publish deactivation via Trinity AI for contextual enrichment
+    await universalNotificationEngine.sendPlatformUpdate({
+      title: `${previousTheme.holidayName} Theme Has Concluded`,
+      description: `The ${previousTheme.holidayName} seasonal celebration has ended. The platform has been restored to its standard professional appearance. Thank you for celebrating with us!`,
       category: 'announcement',
-      title: `${previousTheme.holidayName} Theme Ended`,
-      description: `The ${previousTheme.holidayName} seasonal theme has been deactivated. Platform restored to standard theme.`,
       metadata: {
         holidayId: previousTheme.holidayId,
         holidayName: previousTheme.holidayName,
         duration: Date.now() - previousTheme.activatedAt.getTime(),
         seasonal: true,
+        source: 'seasonal_subagent',
       },
     });
 
-    console.log(`[SeasonalSubagent] Theme deactivated: ${previousTheme.holidayName}`);
+    log.info(`[SeasonalSubagent] Theme deactivated: ${previousTheme.holidayName}`);
   }
 
   /**
@@ -568,7 +574,7 @@ Respond with ONLY valid JSON in this exact format:
   async forceActivateHoliday(holidayId: string): Promise<ActiveSeasonalTheme | null> {
     const holiday = HOLIDAY_CALENDAR.find(h => h.id === holidayId);
     if (!holiday) {
-      console.error(`[SeasonalSubagent] Holiday not found: ${holidayId}`);
+      log.error(`[SeasonalSubagent] Holiday not found: ${holidayId}`);
       return null;
     }
 
@@ -587,7 +593,7 @@ Respond with ONLY valid JSON in this exact format:
   private seasonalDisabled: boolean = false;
 
   async forceDeactivateTheme(reason?: string): Promise<{ success: boolean; message: string }> {
-    console.log(`[SeasonalSubagent] Force deactivation requested: ${reason || 'No reason provided'}`);
+    log.info(`[SeasonalSubagent] Force deactivation requested: ${reason || 'No reason provided'}`);
     
     // Stop the automatic checking
     if (this.checkInterval) {
@@ -603,20 +609,7 @@ Respond with ONLY valid JSON in this exact format:
       await this.deactivateTheme();
     }
 
-    // Publish deactivation event
-    await platformEventBus.publish({
-      type: 'announcement' as PlatformEventType,
-      category: 'announcement',
-      title: 'Seasonal Theming Disabled',
-      description: `Seasonal theming has been disabled by orchestration. Reason: ${reason || 'Manual override'}`,
-      metadata: {
-        seasonal: false,
-        disabledBy: 'orchestration',
-        reason: reason,
-      },
-    });
-
-    console.log('[SeasonalSubagent] Seasonal theming FORCE DISABLED - will not auto-activate');
+    log.info('[SeasonalSubagent] Seasonal theming FORCE DISABLED - will not auto-activate');
     return { success: true, message: 'Seasonal theming disabled successfully' };
   }
 
@@ -631,7 +624,7 @@ Respond with ONLY valid JSON in this exact format:
       await this.start();
     }
     
-    console.log('[SeasonalSubagent] Seasonal theming re-enabled');
+    log.info('[SeasonalSubagent] Seasonal theming re-enabled');
     return { success: true, message: 'Seasonal theming re-enabled' };
   }
 
@@ -681,7 +674,7 @@ export async function initializeSeasonalSubagent(): Promise<SeasonalSubagent> {
   
   // Check for environment variable to disable seasonal theming
   if (process.env.DISABLE_SEASONAL_THEMING === 'true') {
-    console.log('[SeasonalSubagent] Seasonal theming disabled via DISABLE_SEASONAL_THEMING env var');
+    log.info('[SeasonalSubagent] Seasonal theming disabled via DISABLE_SEASONAL_THEMING env var');
     await agent.forceDeactivateTheme('Disabled via environment variable');
   } else {
     await agent.start();

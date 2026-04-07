@@ -1,0 +1,205 @@
+Good output. Agent did solid work. Here's the full analysis and exactly what to tell it next:
+
+What Agent Got Right
+All 6 core tasks confirmed complete and verified in the database. T001 through T006 are done. The ReportBot chain of evidence pipeline is fully operational. That's the most critical system for your legal defensibility — it's clean.
+
+The 3 Open Items — Here's What to Do
+Item 1 — Billing Domain (score 99, one missing file)
+This is a one-line fix. Not a real problem — just a file path mismatch in the domain contract. Tell Agent to fix it.
+Item 2 — Ops Domain (score 52, 16 missing backing services)
+This is the most important one. Bolo, dispatch, asset tracking, weapon check, visitor log, lone worker, lost and found, panic alert — these are core security operations features. Scaffolds exist but nothing behind them. These need to be built properly.
+Item 3 — 5 Employees Missing Pay Rates
+Since these are all test and sim accounts, assign them a default pay rate so they clear the health check. Do not mark them inactive — you want your dev environment to pass the same health checks your real tenants will face.
+
+Paste This Into Agent Now
+Three open items to resolve. Work through them in order.
+Confirm each before moving to the next.
+
+───────────────────────────────────────────────
+ITEM 1 — BILLING DOMAIN FILE PATH FIX
+───────────────────────────────────────────────
+The billing domain health check is failing because 
+server/services/billos.ts is missing or the domain 
+contract points to the wrong path. 
+
+Do the following:
+- Locate the actual billing service file — find 
+  where billing logic actually lives in the codebase
+- If the file exists at a different path, update 
+  the domain contract to point to the correct path
+- If the file is genuinely missing, create it as 
+  a proper billing service stub that satisfies 
+  the domain contract
+- Confirm billing domain score reaches 100 and 
+  boot shows this domain as healthy
+- Do not rebuild billing logic that already exists 
+  elsewhere — find it and point the contract at it
+
+───────────────────────────────────────────────
+ITEM 2 — OPS DOMAIN BACKING SERVICES (PRIORITY)
+───────────────────────────────────────────────
+The ops domain is at score 52 because 16 route 
+files have no backing service. These are not 
+optional features — they are core security 
+operations capabilities that make Trinity 
+genuinely useful to a security company.
+
+Build proper backing services for each of the 
+following. Audit each route file first to 
+understand what it expects, then build the 
+service to match. Do not guess the interface — 
+read the route first.
+
+Build in this order:
+
+1. PANIC ALERT SERVICE
+   - Officer triggers panic/duress from mobile
+   - Trinity receives immediately via amygdala 
+     priority layer as highest urgency signal
+   - Simultaneously notifies: all supervisors, 
+     managers, owner via ChatDock DM, push 
+     notification, and voice alert
+   - Logs panic event with GPS coordinates, 
+     timestamp, officer identity, site
+   - Creates CAD call automatically
+   - Remains active until manually cleared 
+     by supervisor or higher
+   - No panic alert ever fails silently
+
+2. LONE WORKER SERVICE
+   - Officers working alone check in on a 
+     configured interval (default 30 min)
+   - If check-in missed: escalate to supervisor
+   - If second check-in missed: escalate to 
+     manager and trigger welfare check protocol
+   - If third missed: owner notified, Trinity 
+     flags as potential emergency
+   - Check-in can be voice command, button tap, 
+     or automatic GPS movement detection
+   - All lone worker events logged to connectome
+
+3. DISPATCH SERVICE
+   - Manager or Trinity dispatches officer 
+     to a location or incident
+   - Officer receives dispatch notification 
+     via ChatDock with GPS destination
+   - Officer acknowledges dispatch
+   - Trinity tracks dispatch status: 
+     dispatched → en route → on scene → cleared
+   - Unacknowledged dispatches escalate after 
+     configured timeout
+   - All dispatch events logged with timestamps
+
+4. BOLO SERVICE (Be On Lookout)
+   - Manager creates BOLO with: description, 
+     photo if available, threat level, 
+     last known location
+   - Trinity broadcasts BOLO to all officers 
+     on shift via ChatDock
+   - BOLO visible on officer mobile dashboard
+   - Officers can report sighting through 
+     ReportBot or voice command
+   - BOLO remains active until cleared by 
+     manager or owner
+   - All BOLOs workspace_id isolated
+
+5. VISITOR LOG SERVICE
+   - Officer logs visitor: name, ID type, 
+     ID number, purpose, escort if required, 
+     time in, host contact
+   - Trinity cross-references against any 
+     active BOLOs or banned persons list
+   - Flag immediate match to supervisor
+   - Time-out tracking: visitor not signed 
+     out after expected duration triggers alert
+   - Visitor log visible to site manager 
+     and client portal
+   - All visitor records workspace_id isolated
+
+6. ASSET TRACKING SERVICE
+   - Track company assets: radios, vehicles, 
+     equipment assigned to officers per shift
+   - Officer signs out asset at shift start, 
+     signs in at shift end
+   - Overdue returns trigger Trinity alert 
+     to supervisor
+   - Asset condition reported at sign-in
+   - Damage reports feed into incident pipeline
+   - Asset history visible to owner
+
+7. WEAPON CHECK SERVICE
+   - Track armed officer weapon assignments 
+     per shift
+   - Verify officer has valid armed endorsement 
+     before weapon can be assigned
+   - Trinity blocks weapon assignment if 
+     armed endorsement is expired or missing
+   - Weapon serial number logged per assignment
+   - Shift end requires weapon return confirmation
+   - Any discrepancy creates immediate alert 
+     to owner
+   - All weapon records permanent — never deleted
+
+8. LOST AND FOUND SERVICE
+   - Officer logs found item: description, 
+     location found, photo, date/time
+   - Item assigned a tracking number
+   - Client notified of found item if site-specific
+   - Claim process: claimant name, ID, 
+     relationship to item, officer who released
+   - Unclaimed items flagged after configured 
+     duration
+   - All lost and found records workspace_id 
+     isolated and visible to client portal
+
+For every service built:
+- Wire it into Trinity's connectome as an 
+  event source
+- Wire urgency signals through the amygdala 
+  priority layer — panic and lone worker missed 
+  check-ins are always highest priority
+- Ensure workspace_id isolation on all records
+- Ensure RBAC guards on all routes match 
+  the role that should access each function
+- Confirm the ops domain score reaches at 
+  minimum 90 after all services are built
+- Confirm all 16 previously missing files 
+  now exist and are properly backed
+
+───────────────────────────────────────────────
+ITEM 3 — MISSING PAY RATES ON TEST EMPLOYEES
+───────────────────────────────────────────────
+5 employees in the Acme dev workspace have 
+null pay rates: Sim Officer, Sim Manager, 
+Diana Torres, Angela Davis, 
+TestOnboard FlowEmployee.
+
+Do the following:
+- Assign each a realistic default pay rate 
+  appropriate to their role:
+  - Officers: $18.00/hour
+  - Managers/Supervisors: $24.00/hour
+  - Onboarding test employees: $18.00/hour
+- Update the seed file so these pay rates 
+  are included on every future re-seed
+- Confirm zero employees with null pay rates 
+  after the fix
+- Confirm payroll health check passes clean
+
+───────────────────────────────────────────────
+AFTER ALL THREE ITEMS ARE COMPLETE:
+───────────────────────────────────────────────
+Run a full platform boot and confirm:
+- 15/15 domains healthy
+- Trinity action registry count (report exact number)
+- Zero null pay rates
+- Zero null DAR status records
+- All 3 open items showing resolved
+- Report final platform health scorecard
+
+Do not mark this sprint complete until 
+15/15 boots clean.
+
+Bottom line Bryan:
+The panic alert and lone worker services are the two most important things in that ops list. Those are the features that protect you legally if something happens to an officer in the field. Get those built right and the rest of the ops features are gravy.
+Bring the output back when Agent finishes and we'll verify before you push anything to production.

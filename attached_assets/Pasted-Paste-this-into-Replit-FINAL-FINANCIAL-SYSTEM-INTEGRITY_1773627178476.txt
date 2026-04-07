@@ -1,0 +1,127 @@
+Paste this into Replit:
+
+---
+
+**FINAL FINANCIAL SYSTEM INTEGRITY AUDIT & FIX — CANONICAL PASS**
+**READ BEFORE EVERY TOUCH | NO NEW FEATURES | FIX WHAT EXISTS**
+
+This is the definitive pass on every system that touches money, credits, or financial state. Based on all prior audit sessions, the following gaps have been identified. Work through them in exact order. Do not skip ahead. Do not start a new fix until the prior one is confirmed clean.
+
+---
+
+**PHASE 1 — FINANCIAL RECORD INTEGRITY**
+
+**1A — Write-protection on closed financial records**
+Read every PATCH and PUT route in `invoiceRoutes.ts` and `payrollRoutes.ts`. Add a guard at the top of each handler that checks the current record status before allowing mutation. Rules:
+- Invoice in status `paid` or `voided` → return 403 `"This record has been closed and cannot be modified"`
+- Payroll run in status `paid` → return 403 same message
+- Time entries associated with a `paid` payroll run → read-only, same guard
+Confirm the guard fires before any DB write. Show before/after for each route.
+
+**1B — Payroll period unique constraint**
+Add a database-level unique constraint on `payroll_runs(workspace_id, pay_period_start, pay_period_end)`. Run the migration. Confirm the constraint exists in the DB. This prevents double-payroll for the same period under any circumstance including race conditions.
+
+**1C — Financial audit log coverage**
+Search every route and background job that mutates invoices, payroll runs, pay stubs, payments, or credit balances. For any mutation that does NOT write a row to `billingAuditLog` or `auditLogs` with `previousState` and `newState`, add it. Background jobs count — nightly billing automation, overdue scanners, auto-close jobs. No financial mutation is silent to the audit trail.
+
+---
+
+**PHASE 2 — CREDIT SYSTEM INTEGRITY**
+
+**2A — Verify atomic credit deduction is the only path**
+Search the entire codebase for every location that reads or writes `current_balance`, `credits`, or any credit balance field. Confirm every single one goes through `creditLedger.ts` using the atomic `UPDATE WHERE current_balance >= amount` pattern fixed in a prior session. If ANY caller bypasses this and does a direct DB update to a credit balance field, replace it with the canonical path. Report every location found.
+
+**2B — Deprecated credit path is fully dead**
+Confirm `creditsLedgerService.ts` deprecated export has zero callers remaining after the prior fix. If any caller still exists, update it to `creditLedger.ts`. Remove the deprecated export entirely after confirming zero callers.
+
+**2C — Credit deduction failure handling**
+Confirm `creditWrapper.ts` now throws on deduction failure and logs to `trinity_credit_failures` table as fixed in prior session. Verify the table exists in the DB with correct schema. Verify at least one test path exercises the failure scenario. If the table was created but never confirmed in DB, create it now via SQL.
+
+**2D — Partner API credit fire-and-forget**
+In `partnerApiUsage.ts` lines 137 and 162-171, `deductCreditsAsync()` was identified as fire-and-forget with only `.catch(console.error)`. Confirm this was fixed. If not, fix it now — failed deductions must log to `trinity_credit_failures` and alert the org owner, not silently drop.
+
+**2E — Hard cap enforcement for overages**
+Search for every place where credit balance is checked before an AI action executes. Confirm there is a hard stop — not a warning — when `current_balance <= 0`. Trinity must not execute any credit-consuming action for a workspace at zero balance. If any path allows execution past zero balance, add the hard stop. Return a structured error to the caller with `code: 'INSUFFICIENT_CREDITS'` and surface an actionable notification to the org owner.
+
+---
+
+**PHASE 3 — SUBSCRIPTION & PAYMENT PIPELINE**
+
+**3A — Stripe subscription ID preserved on period-end cancel**
+Confirm the fix from prior session is in place: `cancelSubscription` with `immediate=false` does NOT null `stripeSubscriptionId` until `customer.subscription.deleted` webhook fires. Confirm `handleSubscriptionUpdated` correctly maps `cancel_at_period_end=true` to `pending_cancel` status without overwriting it back to `active`. If either fix regressed, re-apply.
+
+**3B — Stripe tier metadata on all checkout paths**
+Confirm both checkout paths pass `tier` in Stripe metadata:
+- `stripeInlineRoutes.ts` — `create-checkout-session`
+- `billing-api.ts` — `redirectToCheckout` helper
+If either path still defaults to `enterprise` regardless of purchased tier, fix it now. A wrong tier on checkout is direct revenue loss.
+
+**3C — QuickBooks auto-sync after invoice send and payroll approval**
+Wire non-blocking QB sync triggers:
+- Invoice status changes to `sent` → execute `qb.create_invoice` Trinity action
+- Payroll run status changes to `approved` → execute `qb.sync_payroll` Trinity action
+Both must be non-blocking — wrap in try/catch, queue retry on failure, notify org owner of sync failure via `notify.send_to_user`. The primary operation must never fail because QB sync failed.
+
+**3D — Subscription webhook idempotency confirmed**
+Confirm the in-memory 2000-event deduplication cache in Stripe webhooks covers all event types including `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, and `invoice.payment_failed`. If any event type bypasses the dedup check, add it.
+
+**3E — Per-client billing cycle**
+Add `billingCycle` field (`weekly` | `biweekly` | `monthly`) to the clients table. Default to workspace billing cycle if null. Invoice generation logic must check `client.billingCycle` first, fall back to `workspace.billingCycle` if null. Push migration. Confirm in DB.
+
+---
+
+**PHASE 4 — ACH PAYROLL PIPELINE**
+
+**4A — NACHA bank column name fix confirmed**
+Confirm the fix from prior session: NACHA route now reads `payrollBankRouting` and `payrollBankAccount` — not `payrollBankRoutingNumber` and `payrollBankAccountNumber`. Verify by reading the current route. If it regressed, re-fix.
+
+**4B — Direct deposit encryption**
+Routing numbers and account numbers in the employees or workspace payroll settings table are currently plain varchar. Implement AES-256 encryption at rest for both fields. Add `encrypt(value)` and `decrypt(value)` helpers. All writes encrypt before insert. All reads decrypt transparently. This is a hard compliance requirement for ACH — a real bank will not accept unencrypted routing/account data in your system.
+
+**4C — Payroll mark-as-paid loop confirmed**
+Confirm `POST /api/payroll/runs/:id/mark-paid` endpoint exists, transitions `processed → paid`, writes a `payroll_disbursed` ledger entry, creates an audit log row, and broadcasts `payroll_updated` via WebSocket. Verify the UI shows "Mark as Paid" button on processed runs.
+
+**4D — Trinity pre-payroll data readiness scan**
+Add a scheduled check that runs 48 hours before any workspace's scheduled payroll run. It must:
+- Scan all active employees for: missing pay rate (zero or null), missing direct deposit account, missing employment type (W2/1099)
+- If any employee has missing data, send a prioritized in-app notification AND email to the org owner listing every affected employee by name with the specific missing field
+- Do not block the payroll run — warn early so the owner can fix it in time
+- This check must be workspace-scoped and idempotent — firing once per 48-hour window per workspace, not repeatedly
+
+---
+
+**PHASE 5 — TRINITY ONE-GATE ORCHESTRATION**
+
+**5A — All financial events flow through platformEventBus**
+Confirm the dual-emit law is enforced everywhere:
+- `invoiceRoutes.ts` — all lifecycle points emit to `platformEventBus`
+- `payrollRoutes.ts` — approve, process, paid all emit to `platformEventBus`
+- `billingAutomation.ts` — overdue milestone scanner publishes `invoice_overdue`
+- `orchestratedBusinessOps.ts` — uses `.publish()` not `.emit()` for payroll approval
+- `billing/invoice.ts recordPartialPayment` — defense-in-depth emit confirmed
+Search for any remaining `.emit('payroll` or `.emit('invoice` raw Node EventEmitter calls that bypass the canonical `.publish()` path. Replace every one found.
+
+**5B — Trinity financial event subscribers confirmed active**
+Confirm all 7 Trinity financial event subscribers are registered and active at startup:
+`invoice_paid`, `invoice_overdue`, `payroll_run_paid`, `stripe_payment_received`, `payroll_run_approved`, `payroll_run_processed`, `payment_received_partial`
+Log confirms subscription count at startup. If any subscriber is missing, re-register it.
+
+**5C — Kill switch covers financial actions**
+Confirm the per-workspace Trinity pause (`workspacePauseMap` added in prior session) blocks financial action execution when active. A paused workspace must not have Trinity execute any `billing.*`, `payroll.*`, or credit-deducting action. Verify this guard is checked before financial action dispatch.
+
+---
+
+**COMPLETION CRITERIA**
+
+After all 5 phases:
+1. TypeScript compile — zero errors
+2. Server restart — clean start, 29/29 services
+3. All regression tests pass
+4. Run a targeted smoke test: create a test invoice → send it → confirm QB sync triggered → mark paid → confirm record is now read-only → confirm audit log entry exists
+5. Report pass/fail per phase and per fix item
+6. Report final registered action count, active Trinity subscriptions count, and credit system call sites audited
+7. Stop and wait for production sign-off
+
+---
+
+Paste results back here. This is the last pass before real tenants go live.

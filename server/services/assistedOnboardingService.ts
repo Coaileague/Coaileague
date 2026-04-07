@@ -18,6 +18,9 @@ import { workspaces, users, employees } from '@shared/schema';
 import { eq, and, lt, isNull } from 'drizzle-orm';
 import crypto from 'crypto';
 import { sendAssistedOnboardingHandoff } from './emailService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('assistedOnboardingService');
+
 
 // Handoff token expiry: 72 hours
 const HANDOFF_TOKEN_EXPIRY_HOURS = 72;
@@ -120,7 +123,7 @@ class AssistedOnboardingService {
         name: workspaceName,
         ownerId: supportUserId,
         organizationId: orgId,
-        workspaceType: 'business',
+        workspaceType: 'production',
         subscriptionTier: 'free',
         subscriptionStatus: 'active',
         
@@ -150,16 +153,26 @@ class AssistedOnboardingService {
         ...(industryData?.customIndustryDescription && { customIndustryDescription: industryData.customIndustryDescription }),
       }).returning();
 
-      console.log(`[AssistedOnboarding] Created workspace ${workspace.id} for ${targetUserEmail} by support ${supportUserId}`);
+      log.info(`[AssistedOnboarding] Created workspace ${workspace.id} for ${targetUserEmail} by support ${supportUserId}`);
 
       // Auto-initialize onboarding pipeline for the new workspace
       try {
         const { onboardingPipelineService } = await import('./onboardingPipelineService');
         await onboardingPipelineService.initializeOnboarding(workspace.id);
-        console.log(`[AssistedOnboarding] Initialized onboarding pipeline for workspace ${workspace.id}`);
+        log.info(`[AssistedOnboarding] Initialized onboarding pipeline for workspace ${workspace.id}`);
       } catch (onboardingError) {
-        console.warn(`[AssistedOnboarding] Failed to initialize onboarding pipeline:`, onboardingError);
+        log.warn(`[AssistedOnboarding] Failed to initialize onboarding pipeline:`, onboardingError);
         // Don't fail workspace creation if onboarding init fails
+      }
+
+      // Provision email addresses for the workspace
+      try {
+        const { emailProvisioningService } = await import('./email/emailProvisioningService');
+        const emailSlug = workspace.emailSlug || workspace.id.replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase();
+        await emailProvisioningService.provisionWorkspaceAddresses(workspace.id, emailSlug);
+        log.info(`[AssistedOnboarding] Email addresses provisioned for workspace ${workspace.id}`);
+      } catch (emailError) {
+        log.warn(`[AssistedOnboarding] Email provisioning failed (non-fatal):`, emailError);
       }
 
       return {
@@ -167,10 +180,10 @@ class AssistedOnboardingService {
         workspaceId: workspace.id,
       };
     } catch (error: any) {
-      console.error('[AssistedOnboarding] Failed to create workspace:', error);
+      log.error('[AssistedOnboarding] Failed to create workspace:', error);
       return {
         success: false,
-        error: error.message || 'Failed to create workspace',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to create workspace',
       };
     }
   }
@@ -195,7 +208,7 @@ class AssistedOnboardingService {
 
       return true;
     } catch (error) {
-      console.error('[AssistedOnboarding] Failed to record document upload:', error);
+      log.error('[AssistedOnboarding] Failed to record document upload:', error);
       return false;
     }
   }
@@ -220,7 +233,7 @@ class AssistedOnboardingService {
       return {
         success: false,
         status: 'failed',
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }
@@ -268,7 +281,7 @@ class AssistedOnboardingService {
       return {
         success: false,
         status: 'failed',
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
     }
   }
@@ -287,7 +300,7 @@ class AssistedOnboardingService {
 
       return true;
     } catch (error) {
-      console.error('[AssistedOnboarding] Failed to mark ready for handoff:', error);
+      log.error('[AssistedOnboarding] Failed to mark ready for handoff:', error);
       return false;
     }
   }
@@ -334,7 +347,7 @@ class AssistedOnboardingService {
           expiresAt,
         });
       } catch (emailError: any) {
-        console.error('[AssistedOnboarding] Failed to send handoff email:', emailError);
+        log.error('[AssistedOnboarding] Failed to send handoff email:', emailError);
         // Rollback status if email fails
         await db.update(workspaces)
           .set({
@@ -351,7 +364,7 @@ class AssistedOnboardingService {
         };
       }
 
-      console.log(`[AssistedOnboarding] Handoff initiated for workspace ${workspaceId} to ${workspace.targetUserEmail}`);
+      log.info(`[AssistedOnboarding] Handoff initiated for workspace ${workspaceId} to ${workspace.targetUserEmail}`);
 
       return {
         success: true,
@@ -359,10 +372,10 @@ class AssistedOnboardingService {
         expiresAt,
       };
     } catch (error: any) {
-      console.error('[AssistedOnboarding] Failed to initiate handoff:', error);
+      log.error('[AssistedOnboarding] Failed to initiate handoff:', error);
       return {
         success: false,
-        error: error.message || 'Failed to initiate handoff',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to initiate handoff',
       };
     }
   }
@@ -428,8 +441,8 @@ class AssistedOnboardingService {
         lastName: user.lastName || workspace.targetUserName?.split(' ').slice(1).join(' ') || 'Owner',
         email: user.email,
         workspaceRole: 'org_owner',
-        employmentType: 'full_time',
-        status: 'active',
+        payType: 'salary',
+        isActive: true,
       }).onConflictDoNothing();
 
       // Update user's current workspace
@@ -441,7 +454,54 @@ class AssistedOnboardingService {
         })
         .where(eq(users.id, userId));
 
-      console.log(`[AssistedOnboarding] Handoff complete: workspace ${workspace.id} transferred to user ${userId}`);
+      log.info(`[AssistedOnboarding] Handoff complete: workspace ${workspace.id} transferred to user ${userId}`);
+
+      // Fire-and-forget: emit workspace.created event + welcome email + audit log (non-blocking)
+      Promise.resolve().then(async () => {
+        try {
+          const { platformEventBus } = await import('./platformEventBus');
+          platformEventBus.publish({
+            type: 'workspace.created',
+            workspaceId: workspace.id,
+            metadata: {
+              ownerId: userId,
+              ownerEmail: user.email || undefined,
+              workspaceName: workspace.name,
+              source: 'assisted_onboarding_handoff',
+            },
+          }).catch(() => null);
+        } catch (_) { /* non-blocking */ }
+        try {
+          const { emailService } = await import('./emailService');
+          await emailService.send({
+            to: user.email || '',
+            subject: `Welcome to CoAIleague — ${workspace.name} is ready`,
+            html: `<h2>Your workspace is ready, ${user.firstName || 'there'}!</h2>
+<p>Your CoAIleague workspace <strong>${workspace.name}</strong> has been set up and is now yours to manage.</p>
+<p>Here's what to do next:</p>
+<ol>
+  <li><strong>Add your team</strong> — Invite managers and officers from the Employee Portal.</li>
+  <li><strong>Add your clients</strong> — Create client profiles and set billing rates.</li>
+  <li><strong>Set up billing</strong> — Connect your bank account for payroll and configure invoicing.</li>
+  <li><strong>Publish your first schedule</strong> — Trinity will auto-fill open shifts once clients and officers are added.</li>
+</ol>
+<p>Questions? Reply to this email or open a support ticket from your dashboard.</p>`,
+          }).catch(() => null);
+        } catch (_) { /* non-blocking */ }
+        try {
+          const { db: database } = await import('../db');
+          const { auditLogs } = await import('@shared/schema');
+          await database.insert(auditLogs).values({
+            workspaceId: workspace.id,
+            entityType: 'workspace',
+            entityId: workspace.id,
+            action: 'workspace_claimed',
+            description: `Workspace "${workspace.name}" claimed by ${user.firstName || ''} ${user.lastName || ''} (${user.email}) via assisted onboarding handoff`,
+            metadata: JSON.stringify({ ownerId: userId, ownerEmail: user.email }),
+            createdAt: new Date(),
+          });
+        } catch (_) { /* non-blocking */ }
+      }).catch(() => null);
 
       return {
         success: true,
@@ -449,10 +509,10 @@ class AssistedOnboardingService {
         workspaceName: workspace.name,
       };
     } catch (error: any) {
-      console.error('[AssistedOnboarding] Failed to complete handoff:', error);
+      log.error('[AssistedOnboarding] Failed to complete handoff:', error);
       return {
         success: false,
-        error: error.message || 'Failed to complete handoff',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to complete handoff',
       };
     }
   }
@@ -504,7 +564,7 @@ class AssistedOnboardingService {
         },
       };
     } catch (error: any) {
-      return { valid: false, error: error.message };
+      return { valid: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -538,7 +598,7 @@ class AssistedOnboardingService {
 
       return results;
     } catch (error) {
-      console.error('[AssistedOnboarding] Failed to get assisted workspaces:', error);
+      log.error('[AssistedOnboarding] Failed to get assisted workspaces:', error);
       return [];
     }
   }
@@ -560,12 +620,12 @@ class AssistedOnboardingService {
         .returning({ id: workspaces.id });
 
       if (result.length > 0) {
-        console.log(`[AssistedOnboarding] Expired ${result.length} handoff tokens`);
+        log.info(`[AssistedOnboarding] Expired ${result.length} handoff tokens`);
       }
 
       return result.length;
     } catch (error) {
-      console.error('[AssistedOnboarding] Failed to expire tokens:', error);
+      log.error('[AssistedOnboarding] Failed to expire tokens:', error);
       return 0;
     }
   }

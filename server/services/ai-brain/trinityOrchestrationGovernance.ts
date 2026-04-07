@@ -20,11 +20,14 @@ import {
   aiWorkflowApprovals,
 } from '@shared/schema';
 import { eq, and, gte, lte, desc, sql, inArray } from 'drizzle-orm';
+import { OWNER_ROLES, APPROVER_ROLES } from '@shared/platformConfig';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 import { createNotification } from '../notificationService';
 import { sendAutomationEmail } from '../emailService';
-import { PLATFORM_WORKSPACE_ID } from '../../seed-platform-workspace';
+import { PLATFORM_WORKSPACE_ID } from '../../services/billing/billingConstants';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityOrchestrationGovernance');
 
 // ============================================================================
 // TYPES
@@ -51,6 +54,58 @@ export interface HotpatchWindow {
   reason: string;
   patchesToday: number;
   dailyLimit: number;
+}
+
+// ============================================================================
+// GRADUATED AUTO MODE TYPES
+// ============================================================================
+
+export type AutoModeLevel = 'manual' | 'supervised' | 'full_auto';
+
+export interface OrgAutomationSettings {
+  workspaceId: string;
+  autoModeLevel: AutoModeLevel;
+  reviewWindowMinutes: number; // Time before auto-publish (0 = immediate)
+  successThresholdForAutoMode: number; // Success rate required (0.95 = 95%)
+  minSuccessfulRunsForAutoMode: number; // Minimum successful runs before auto mode
+  enabledDomains: AutomationDomain[];
+  requireReviewForFinancial: boolean; // Always require review for payroll/invoicing
+  notifyBeforeAutoExecute: boolean;
+  lastUpdated: Date;
+  updatedBy: string;
+}
+
+export interface AutomationHistoryStats {
+  domain: AutomationDomain;
+  totalRuns: number;
+  successfulRuns: number;
+  failedRuns: number;
+  successRate: number;
+  lastRunAt: Date | null;
+  averageConfidence: number;
+  qualifiesForAutoMode: boolean;
+}
+
+export interface ReviewWindowStatus {
+  orchestrationId: string;
+  workspaceId: string;
+  domain: AutomationDomain;
+  stagedAt: Date;
+  reviewWindowEndsAt: Date;
+  autoExecuteScheduled: boolean;
+  executedAt: Date | null;
+  cancelledAt: Date | null;
+  cancelledBy: string | null;
+  status: 'pending_review' | 'auto_executed' | 'manually_approved' | 'cancelled';
+}
+
+export interface GraduatedModeCheckResult extends GovernanceCheckResult {
+  autoModeLevel: AutoModeLevel;
+  reviewWindowMinutes: number;
+  reviewWindowEndsAt: Date | null;
+  historyStats: AutomationHistoryStats | null;
+  canAutoExecute: boolean;
+  userNotified: boolean;
 }
 
 interface GeminiTierTelemetry {
@@ -85,7 +140,38 @@ const GOVERNANCE_CONFIG = {
     diagnostic: 0.2,
   },
   
-  escalationRoles: ['root_admin', 'support', 'org_owner', 'org_admin'],
+  escalationRoles: ['root_admin', 'support', 'org_owner', 'co_owner'],
+  
+  // GRADUATED AUTO MODE CONFIGURATION
+  graduatedAutoMode: {
+    // Thresholds for progression to full auto
+    minSuccessfulRuns: 50, // Minimum runs before considering auto mode
+    successRateThreshold: 0.95, // 95% success rate required
+    confidenceFloor: 0.90, // Minimum average confidence
+    
+    // Default review window (org can override)
+    defaultReviewWindowMinutes: 15,
+    maxReviewWindowMinutes: 1440, // 24 hours max
+    minReviewWindowMinutes: 5,
+    
+    // Financial actions always get extra scrutiny
+    financialDomains: ['payroll', 'invoicing'] as AutomationDomain[],
+    financialReviewMultiplier: 2, // 2x review window for financial
+    
+    // Lookback period for history stats
+    historyLookbackDays: 30,
+  },
+};
+
+// Default org automation settings for new organizations
+const DEFAULT_ORG_AUTOMATION_SETTINGS: Omit<OrgAutomationSettings, 'workspaceId' | 'lastUpdated' | 'updatedBy'> = {
+  autoModeLevel: 'manual', // Start in manual mode
+  reviewWindowMinutes: 15,
+  successThresholdForAutoMode: 0.95,
+  minSuccessfulRunsForAutoMode: 50,
+  enabledDomains: ['scheduling', 'diagnostic'], // Start with low-risk domains
+  requireReviewForFinancial: true,
+  notifyBeforeAutoExecute: true,
 };
 
 // ============================================================================
@@ -114,6 +200,12 @@ class GeminiTelemetryService {
   async flush() {
     if (this.telemetryBuffer.length === 0) return;
     
+    // Don't flush to DB when circuit breaker is open — keep buffer for later
+    try {
+      const { isDbCircuitOpen } = await import('../../db');
+      if (isDbCircuitOpen()) return;
+    } catch { /* ignore */ }
+    
     const batch = [...this.telemetryBuffer];
     this.telemetryBuffer = [];
 
@@ -135,9 +227,9 @@ class GeminiTelemetryService {
           ipAddress: 'internal',
         });
       }
-      console.log(`[GeminiTelemetry] Flushed ${batch.length} telemetry entries`);
+      log.info(`[GeminiTelemetry] Flushed ${batch.length} telemetry entries`);
     } catch (error) {
-      console.error('[GeminiTelemetry] Failed to flush telemetry:', error);
+      log.error('[GeminiTelemetry] Failed to flush telemetry:', error);
       this.telemetryBuffer.push(...batch);
     }
   }
@@ -227,7 +319,7 @@ class HotpatchCadenceController {
     });
 
     if (!user || !['root_admin', 'support'].includes(user.role)) {
-      console.log(`[HotpatchCadence] Override denied for user ${userId} - insufficient role`);
+      log.info(`[HotpatchCadence] Override denied for user ${userId} - insufficient role`);
       return false;
     }
 
@@ -245,7 +337,7 @@ class HotpatchCadenceController {
       ipAddress: 'internal',
     });
 
-    console.log(`[HotpatchCadence] Override granted to ${userId}: ${reason}`);
+    log.info(`[HotpatchCadence] Override granted to ${userId}: ${reason}`);
     return true;
   }
 
@@ -415,7 +507,7 @@ class AutomationApprovalGate {
       affectedFiles: [],
       rollbackPlan: 'Revert to previous state via automation rollback',
       status: 'pending',
-      requiredRole: 'org_admin',
+      requiredRole: 'co_owner',
       proposedChanges: {
         domain,
         workspaceId,
@@ -439,7 +531,7 @@ class AutomationApprovalGate {
     const approvers = await db.query.employees.findMany({
       where: and(
         eq(employees.workspaceId, workspaceId),
-        inArray(employees.workspaceRole, ['org_owner', 'org_admin'])
+        inArray(employees.workspaceRole, [...APPROVER_ROLES])
       ),
     });
 
@@ -477,7 +569,7 @@ class AutomationApprovalGate {
             },
           });
         } catch (emailError) {
-          console.error('[ApprovalGate] Failed to send email notification:', emailError);
+          log.error('[ApprovalGate] Failed to send email notification:', emailError);
         }
       }
     }
@@ -554,7 +646,7 @@ export function registerOrchestrationGovernanceActions() {
     name: 'Evaluate Automation Approval',
     category: 'automation',
     description: 'Evaluate if an automation action should auto-execute or require human approval (99/1 pattern)',
-    requiredRoles: ['admin', 'super_admin', 'support'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
     handler: async (params: {
       domain: AutomationDomain;
       workspaceId: string;
@@ -575,7 +667,7 @@ export function registerOrchestrationGovernanceActions() {
     name: 'Check Hotpatch Window',
     category: 'automation',
     description: 'Check if hotpatches can be applied (daily limit + maintenance window)',
-    requiredRoles: ['admin', 'super_admin', 'support'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
     handler: async () => {
       return await service.checkHotpatchWindow();
     },
@@ -586,7 +678,7 @@ export function registerOrchestrationGovernanceActions() {
     name: 'Record Hotpatch Applied',
     category: 'automation',
     description: 'Record that a hotpatch was applied (increments daily counter)',
-    requiredRoles: ['super_admin', 'support'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin', 'support_agent'],
     handler: async () => {
       await service.recordHotpatch();
       return { success: true, message: 'Hotpatch recorded' };
@@ -598,7 +690,7 @@ export function registerOrchestrationGovernanceActions() {
     name: 'Override Hotpatch Limit',
     category: 'automation',
     description: 'Force override the daily hotpatch limit (requires support role)',
-    requiredRoles: ['super_admin', 'support'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin', 'support_agent'],
     handler: async (params: { userId: string; reason: string }) => {
       const success = await service.overrideHotpatchLimit(params.userId, params.reason);
       return { success, message: success ? 'Override granted' : 'Override denied - insufficient permissions' };
@@ -610,13 +702,13 @@ export function registerOrchestrationGovernanceActions() {
     name: 'Get Gemini Tier Telemetry',
     category: 'analytics',
     description: 'Get telemetry statistics for Gemini tier usage across automation domains',
-    requiredRoles: ['admin', 'super_admin', 'support'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
     handler: async () => {
       return service.getGeminiTelemetry();
     },
   });
 
-  console.log('[OrchestrationGovernance] Registered 5 AI Brain governance actions');
+  log.info('[OrchestrationGovernance] Registered 5 AI Brain governance actions');
 }
 
 // ============================================================================

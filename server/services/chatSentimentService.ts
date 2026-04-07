@@ -14,6 +14,9 @@ import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { db } from '../db';
 import { chatMessages } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { createLogger } from '../lib/logger';
+const log = createLogger('chatSentimentService');
+
 
 export interface ChatSentimentAnalysisResult {
   sentiment: 'positive' | 'neutral' | 'negative' | 'urgent';
@@ -73,7 +76,7 @@ Classification rules:
 - shouldEscalate: true if sentiment is negative or urgency >= 3`;
 
     const aiResult = await meteredGemini.generate({
-      workspaceId: workspaceId || 'platform',
+      workspaceId: workspaceId,
       featureKey: 'ai_chat_sentiment',
       prompt,
       model: 'gemini-2.5-flash',
@@ -99,7 +102,12 @@ Classification rules:
       }
     }
 
-    const parsed = JSON.parse(jsonText);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      parsed = { sentiment: 'neutral', sentimentScore: 0, confidence: 50, urgencyLevel: 2, shouldEscalate: false, summary: 'Parse error — defaulting to neutral' };
+    }
 
     const result: ChatSentimentAnalysisResult = {
       sentiment: parsed.sentiment || 'neutral',
@@ -110,10 +118,10 @@ Classification rules:
       summary: parsed.summary || 'Sentiment analysis complete',
     };
 
-    console.log(`[ChatSentiment] Analyzed message sentiment: ${result.sentiment} (score: ${result.sentimentScore}, urgency: ${result.urgencyLevel})`);
+    log.info(`[ChatSentiment] Analyzed message sentiment: ${result.sentiment} (score: ${result.sentimentScore}, urgency: ${result.urgencyLevel})`);
     return result;
   } catch (error) {
-    console.error('[ChatSentiment] Error analyzing sentiment:', error);
+    log.error('[ChatSentiment] Error analyzing sentiment:', error);
     // Return neutral sentiment on error to avoid breaking the chat flow
     return {
       sentiment: 'neutral',
@@ -147,9 +155,9 @@ export async function updateMessageSentiment(
       })
       .where(eq(chatMessages.id, messageId));
 
-    console.log(`[ChatSentiment] Updated message ${messageId} with sentiment analysis`);
+    log.info(`[ChatSentiment] Updated message ${messageId} with sentiment analysis`);
   } catch (error) {
-    console.error('[ChatSentiment] Error updating message sentiment:', error);
+    log.error('[ChatSentiment] Error updating message sentiment:', error);
     // Don't throw - sentiment update failure shouldn't break chat
   }
 }
@@ -195,7 +203,7 @@ export async function getMessageSentimentStats(
 
     return stats;
   } catch (error) {
-    console.error('[ChatSentiment] Error getting sentiment stats:', error);
+    log.error('[ChatSentiment] Error getting sentiment stats:', error);
     return {
       totalMessages: 0,
       positiveCount: 0,

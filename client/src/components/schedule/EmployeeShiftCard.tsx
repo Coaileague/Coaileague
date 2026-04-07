@@ -5,16 +5,39 @@
  * Actions hidden in expandable section for mobile space efficiency
  */
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { format } from 'date-fns';
+import { useLocation } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, Edit2, Trash2, Plus, ChevronRight, ChevronDown, Calendar, Coffee, AlertTriangle, Copy, ArrowRightLeft } from 'lucide-react';
+import { MapPin, Clock, Edit2, Trash2, Plus, ChevronRight, ChevronDown, Calendar, Coffee, AlertTriangle, Copy, ArrowRightLeft, MessageSquare, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn, formatRoleDisplay } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { SHIFT_STATUS, POSITION_TYPES, getShiftStatus, getPositionType, getPositionCategoryColor } from '@/constants/scheduling';
 import type { Employee, Shift, ScheduledBreak } from '@shared/schema';
+import { getPositionById, inferPositionFromTitle } from '@shared/positionRegistry';
+import type { PositionDefinition } from '@shared/positionRegistry';
+
+function HardBlockBadge({ employeeId }: { employeeId: string }) {
+  const { data } = useQuery<{ success: boolean; data: { isHardBlocked: boolean } }>({
+    queryKey: ['/api/compliance/regulatory-portal/officer-score', employeeId],
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (!data?.data?.isHardBlocked) return null;
+  return (
+    <Badge
+      className="text-[9px] px-1.5 py-0 bg-red-600 text-white flex-shrink-0"
+      data-testid={`badge-hard-block-${employeeId}`}
+    >
+      <ShieldAlert className="h-2.5 w-2.5 mr-0.5" />
+      Blocked
+    </Badge>
+  );
+}
 
 interface ShiftWithBreaks extends Shift {
   scheduledBreaks?: ScheduledBreak[];
@@ -42,6 +65,19 @@ interface EmployeeShiftCardProps {
   showBreakCompliance?: boolean;
 }
 
+function resolveEmployeePosition(employee: Employee): PositionDefinition | undefined {
+  const emp = employee as any;
+  if (emp.position) {
+    const byId = getPositionById(emp.position);
+    if (byId) return byId;
+  }
+  const title = emp.jobTitle || emp.role || emp.organizationalTitle || '';
+  if (title) {
+    return inferPositionFromTitle(title);
+  }
+  return undefined;
+}
+
 const roleGradients: Record<string, string> = {
   paramedic: 'from-red-500 to-red-600',
   emt: 'from-emerald-500 to-emerald-600',
@@ -59,7 +95,7 @@ function getRoleGradient(role: string | null): string {
   return roleGradients[normalized] || roleGradients.default;
 }
 
-export function EmployeeShiftCard({
+export const EmployeeShiftCard = memo(function EmployeeShiftCard({
   employee,
   shifts,
   weeklyHours,
@@ -73,17 +109,37 @@ export function EmployeeShiftCard({
   showBreakCompliance = true,
 }: EmployeeShiftCardProps) {
   const role = formatRoleDisplay(employee.role);
+  const employeePosition = resolveEmployeePosition(employee);
+  const positionCatColor = employeePosition ? getPositionCategoryColor(employeePosition.category) : null;
 
   return (
-    <Card className="overflow-hidden touch-manipulation" data-testid={`employee-card-${employee.id}`}>
+    <Card 
+      className="overflow-hidden touch-manipulation" 
+      data-testid={`employee-card-${employee.id}`}
+      style={positionCatColor ? { borderLeftWidth: '4px', borderLeftColor: positionCatColor.color, borderLeftStyle: 'solid' } : undefined}
+    >
       <CardHeader className="bg-muted/50 border-b p-2 sm:p-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-sm sm:text-base truncate">
+            <div className="font-semibold text-sm sm:text-base truncate flex items-center gap-1.5 flex-wrap">
+              {positionCatColor && (
+                <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", positionCatColor.dotClass)} />
+              )}
               {employee.firstName} {employee.lastName}
+              <HardBlockBadge employeeId={employee.id} />
             </div>
-            <div className="text-xs sm:text-sm text-muted-foreground capitalize truncate">
-              {role}
+            <div className="text-xs sm:text-sm text-muted-foreground capitalize truncate flex items-center gap-1.5 flex-wrap">
+              {employeePosition ? employeePosition.label : role}
+              {employeePosition && positionCatColor && (
+                <Badge
+                  variant="outline"
+                  className="text-[9px] px-1 py-0 font-medium ml-1"
+                  style={{ borderColor: positionCatColor.color, color: positionCatColor.color }}
+                  data-testid={`badge-position-card-${employee.id}`}
+                >
+                  {positionCatColor.label}
+                </Badge>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -96,6 +152,7 @@ export function EmployeeShiftCard({
                 variant="ghost"
                 onClick={() => onAddShift(employee)}
                 data-testid={`button-add-shift-${employee.id}`}
+                aria-label={`Add shift for ${employee.firstName} ${employee.lastName}`}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -138,7 +195,7 @@ export function EmployeeShiftCard({
       </CardContent>
     </Card>
   );
-}
+});
 
 interface ShiftBlockProps {
   shift: ShiftWithBreaks;
@@ -154,6 +211,22 @@ interface ShiftBlockProps {
 
 function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap, canEdit, showBreakCompliance = true }: ShiftBlockProps) {
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [, navigate] = useLocation();
+  const [roomLoading, setRoomLoading] = useState(false);
+
+  const openShiftRoom = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRoomLoading(true);
+    try {
+      const res = await fetch(`/api/shift-chatrooms/by-shift/${shift.id}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        navigate(`/chatrooms/${data.chatroom.id}`);
+      }
+    } finally {
+      setRoomLoading(false);
+    }
+  };
   const start = new Date(shift.startTime);
   const end = new Date(shift.endTime);
   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -161,8 +234,21 @@ function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap
   
   const gradient = getRoleGradient(role);
   const isOpen = !shift.employeeId;
-  const isPending = shift.status === 'draft';
   const isTodayShift = format(start, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+  
+  // Use centralized status configuration from /constants/scheduling.ts
+  const shiftStatus = getShiftStatus({
+    startTime: shift.startTime,
+    endTime: shift.endTime,
+    officerId: shift.employeeId,
+    isPublished: shift.status === 'published',
+    clockedIn: (shift as any).clockedIn || false,
+    status: shift.status || undefined,
+  });
+  const isActive = shiftStatus.key === 'active';
+  const isUnfilled = shiftStatus.key === 'unfilled';
+  const isDraft = shiftStatus.key === 'draft';
+  const isAssigned = shiftStatus.key === 'assigned';
   
   const hasScheduledBreaks = shift.scheduledBreaks && shift.scheduledBreaks.length > 0;
   const isCompliant = shift.breakCompliance?.isCompliant ?? true;
@@ -179,14 +265,23 @@ function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap
     }
   };
 
+  // Use centralized Tailwind classes from configuration
+  const statusBorderClass = shiftStatus.tailwindBorder;
+  const statusBgClass = shiftStatus.tailwindBg;
+
   return (
     <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
       <div
         className={cn(
-          "relative rounded-lg overflow-hidden text-white shadow-md cursor-pointer active:scale-[0.99] transition-transform touch-manipulation",
-          isOpen
-            ? "border-2 border-dashed border-amber-500 bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 text-amber-900 dark:text-amber-100"
-            : `bg-gradient-to-br ${gradient}`
+          "relative rounded-lg overflow-hidden shadow-md cursor-pointer active:scale-[0.99] transition-transform touch-manipulation",
+          statusBorderClass,
+          isActive && "shift-card-active",
+          // Background: use status-based bg for draft/unfilled/active, gradient for assigned/published/completed
+          (isDraft || isOpen)
+            ? cn(statusBgClass, "bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 text-amber-900 dark:text-amber-100")
+            : isUnfilled
+            ? cn(statusBgClass, "bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 text-red-900 dark:text-red-100")
+            : cn(statusBgClass, `bg-gradient-to-br ${gradient} text-white`)
         )}
         data-testid={`shift-block-${shift.id}`}
       >
@@ -223,13 +318,14 @@ function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap
                       Break
                     </Badge>
                   )}
-                  {isOpen && (
-                    <Badge className="bg-white/25 text-[10px] px-1.5 py-0">OPEN</Badge>
-                  )}
-                  {isPending && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Pending</Badge>
-                  )}
-                  {isTodayShift && !isOpen && !isPending && (
+                  {/* Status badge using centralized configuration */}
+                  <Badge 
+                    className="text-[10px] px-1.5 py-0 text-white"
+                    style={{ backgroundColor: shiftStatus.badgeColor }}
+                  >
+                    {shiftStatus.label}
+                  </Badge>
+                  {isTodayShift && !isOpen && !isUnfilled && (
                     <Badge className="bg-white/25 text-[10px] px-1.5 py-0">TODAY</Badge>
                   )}
                 </div>
@@ -266,6 +362,17 @@ function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap
                   Details
                 </Button>
               )}
+              <Button
+                size="default"
+                variant="secondary"
+                className="flex-1 min-w-[70px] bg-white/20 hover:bg-white/30 text-current border-0"
+                onClick={openShiftRoom}
+                disabled={roomLoading}
+                data-testid={`button-open-shift-room-${shift.id}`}
+              >
+                <MessageSquare className="h-4 w-4 mr-1" />
+                {roomLoading ? 'Opening...' : 'Shift Room'}
+              </Button>
               {onSwap && !isOpen && (
                 <Button
                   size="default"

@@ -1,15 +1,17 @@
 import { db } from '../../db';
 import { 
-  partnerConnections, 
+  partnerConnections,
   partnerDataMappings,
   clients,
   invoices,
+  payrollRuns,
   InsertPartnerDataMapping
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { withUsageTracking } from '../../middleware/usageTracking';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { isQuickbooksEnabled } from '../finance/financeSettingsService';
 
 /**
  * QuickBooks Online API Service
@@ -121,6 +123,7 @@ export class QuickBooksService {
 
     const response = await fetch(url, {
       method,
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
@@ -150,7 +153,10 @@ export class QuickBooksService {
     clientId: string,
     userId: string
   ): Promise<string> {
-    // Get connection
+    if (!(await isQuickbooksEnabled(workspaceId))) {
+      throw new Error('QuickBooks sync is not enabled for this workspace');
+    }
+
     const connection = await this.getConnection(workspaceId);
     const accessToken = await this.getAccessToken(connection.id);
     const realmId = connection.realmId!;
@@ -185,10 +191,10 @@ export class QuickBooksService {
 
     // Prepare QuickBooks customer data
     const qboCustomer: QBOCustomer = {
-      DisplayName: client.name,
-      CompanyName: client.companyName || client.name,
-      PrimaryEmailAddr: client.contactEmail ? { Address: client.contactEmail } : undefined,
-      PrimaryPhone: client.contactPhone ? { FreeFormNumber: client.contactPhone } : undefined,
+      DisplayName: client.companyName || `${client.firstName} ${client.lastName}`,
+      CompanyName: client.companyName || `${client.firstName} ${client.lastName}`,
+      PrimaryEmailAddr: client.email ? { Address: client.email } : undefined,
+      PrimaryPhone: client.phone ? { FreeFormNumber: client.phone } : undefined,
       BillAddr: client.billingAddress ? {
         Line1: client.billingAddress,
       } : undefined,
@@ -258,7 +264,7 @@ export class QuickBooksService {
       await db.update(partnerDataMappings)
         .set({
           partnerEntityId: result.customerId,
-          partnerEntityName: client.name,
+          partnerEntityName: client.companyName || `${client.firstName} ${client.lastName}`,
           syncStatus: 'synced',
           lastSyncAt: new Date(),
         })
@@ -271,7 +277,7 @@ export class QuickBooksService {
         entityType: 'client',
         coaileagueEntityId: clientId,
         partnerEntityId: result.customerId,
-        partnerEntityName: client.name,
+        partnerEntityName: client.companyName || `${client.firstName} ${client.lastName}`,
         syncStatus: 'synced',
         lastSyncAt: new Date(),
         mappingSource: 'auto',
@@ -295,7 +301,10 @@ export class QuickBooksService {
     invoiceId: string,
     userId: string
   ): Promise<string> {
-    // Get connection
+    if (!(await isQuickbooksEnabled(workspaceId))) {
+      throw new Error('QuickBooks sync is not enabled for this workspace');
+    }
+
     const connection = await this.getConnection(workspaceId);
     const accessToken = await this.getAccessToken(connection.id);
     const realmId = connection.realmId!;
@@ -337,19 +346,19 @@ export class QuickBooksService {
       qboCustomerId = customerMapping.partnerEntityId;
     }
 
-    // Create QuickBooks invoice
     const qboInvoice: QBOInvoice = {
-      TxnDate: invoice.invoiceDate.toISOString().split('T')[0],
+      DocNumber: invoice.invoiceNumber,
+      TxnDate: (invoice.issueDate ? new Date(invoice.issueDate).toISOString() : new Date().toISOString()).split('T')[0],
       CustomerRef: { value: qboCustomerId },
       Line: [
         {
           DetailType: 'SalesItemLineDetail',
-          Amount: Number(invoice.totalAmount),
+          Amount: Number(invoice.total),
           Description: `CoAIleague Invoice #${invoice.invoiceNumber}`,
           SalesItemLineDetail: {
-            ItemRef: { value: '1', name: 'Services' }, // Default service item
+            ItemRef: { value: '1', name: 'Services' },
             Qty: 1,
-            UnitPrice: Number(invoice.totalAmount),
+            UnitPrice: Number(invoice.total),
           },
         },
       ],
@@ -380,7 +389,7 @@ export class QuickBooksService {
         metadata: {
           coaileagueInvoiceId: invoiceId,
           invoiceNumber: invoice.invoiceNumber,
-          amount: invoice.totalAmount,
+          amount: invoice.total,
         },
       }
     );
@@ -414,6 +423,10 @@ export class QuickBooksService {
     amount: number,
     userId: string
   ): Promise<string> {
+    if (!(await isQuickbooksEnabled(workspaceId))) {
+      throw new Error('QuickBooks sync is not enabled for this workspace');
+    }
+
     const connection = await this.getConnection(workspaceId);
     const accessToken = await this.getAccessToken(connection.id);
     const realmId = connection.realmId!;
@@ -505,6 +518,115 @@ export class QuickBooksService {
 
     const result = await recordQBOPayment();
     return result.paymentId;
+  }
+
+  /**
+   * Sync a completed payroll run to QuickBooks as a journal entry.
+   * Creates a JournalEntry in QBO: debit Payroll Expense, credit Payroll Liability (AP).
+   */
+  async syncPayroll(
+    workspaceId: string,
+    payrollRunId: string,
+    userId: string
+  ): Promise<string> {
+    if (!(await isQuickbooksEnabled(workspaceId))) {
+      throw new Error('QuickBooks sync is not enabled for this workspace');
+    }
+
+    const connection = await this.getConnection(workspaceId);
+    const accessToken = await this.getAccessToken(connection.id);
+    const realmId = connection.realmId!;
+
+    const [run] = await db.select()
+      .from(payrollRuns)
+      .where(and(eq(payrollRuns.id, payrollRunId), eq(payrollRuns.workspaceId, workspaceId)))
+      .limit(1);
+
+    if (!run) throw new Error('Payroll run not found');
+
+    const grossPay = parseFloat(run.totalGrossPay as string || '0');
+    const netPay = parseFloat(run.totalNetPay as string || '0');
+    const deductions = grossPay - netPay;
+
+    const txnDate = (run.periodEnd
+      ? new Date(run.periodEnd).toISOString()
+      : new Date().toISOString()
+    ).split('T')[0];
+
+    const journalEntry = {
+      TxnDate: txnDate,
+      PrivateNote: `CoAIleague Payroll Run — period ${run.periodStart ? new Date(run.periodStart).toISOString().split('T')[0] : ''} to ${txnDate}`,
+      Line: [
+        {
+          JournalEntryLineDetail: {
+            PostingType: 'Debit',
+            AccountRef: { name: 'Payroll Expenses' },
+          },
+          DetailType: 'JournalEntryLineDetail',
+          Amount: grossPay,
+          Description: `Gross payroll for period ending ${txnDate}`,
+        },
+        {
+          JournalEntryLineDetail: {
+            PostingType: 'Credit',
+            AccountRef: { name: 'Payroll Liabilities' },
+          },
+          DetailType: 'JournalEntryLineDetail',
+          Amount: netPay,
+          Description: `Net pay disbursed for period ending ${txnDate}`,
+        },
+        ...(deductions > 0 ? [{
+          JournalEntryLineDetail: {
+            PostingType: 'Credit',
+            AccountRef: { name: 'Payroll Tax Payable' },
+          },
+          DetailType: 'JournalEntryLineDetail',
+          Amount: deductions,
+          Description: `Taxes & deductions withheld for period ending ${txnDate}`,
+        }] : []),
+      ],
+    };
+
+    const createJournalEntry = withUsageTracking(
+      async (requestId: string) => {
+        const result = await this.makeRequest<{ JournalEntry: { Id: string } }>(
+          'POST',
+          '/journalentry',
+          realmId,
+          accessToken,
+          journalEntry,
+          requestId
+        );
+        return { journalEntryId: result.JournalEntry.Id };
+      },
+      {
+        workspaceId,
+        userId,
+        partnerType: 'quickbooks',
+        partnerConnectionId: connection.id,
+        operationType: 'sync_payroll',
+        featureKey: 'payroll_sync',
+        metadata: { payrollRunId, grossPay, netPay, txnDate },
+      }
+    );
+
+    const result = await createJournalEntry();
+
+    await db.insert(partnerDataMappings).values({
+      workspaceId,
+      partnerConnectionId: connection.id,
+      partnerType: 'quickbooks',
+      entityType: 'payroll_run',
+      coaileagueEntityId: payrollRunId,
+      partnerEntityId: result.journalEntryId,
+      partnerEntityName: `Payroll JE — ${txnDate}`,
+      syncStatus: 'synced',
+      lastSyncAt: new Date(),
+      mappingSource: 'auto',
+      createdBy: userId,
+    }).onConflictDoNothing();
+
+    return result.journalEntryId;
   }
 }
 

@@ -1,0 +1,539 @@
+# COAILEAGUE - MASTER LAUNCH CHECKLIST
+
+## THE COMPLETE ZERO-ISSUES LAUNCH PLAN
+
+This document combines **ALL 8 AUDIT PROMPTS** into one cohesive execution strategy. Follow this in order to achieve a **FLAWLESS LAUNCH**.
+
+---
+
+# EXECUTIVE SUMMARY
+
+## The 8 Pillars of Platform Perfection
+
+| # | Audit | What It Fixes | Priority |
+|---|-------|---------------|----------|
+| 1 | **React Hooks & Events** | Crashes, duplicate notifications | 🚨 CRITICAL |
+| 2 | **Schema & Route Integrity** | Silent failures, missing tables, unmounted routes | 🚨 CRITICAL |
+| 3 | **Real-Time Sync & Persistence** | Desktop/mobile sync, data consistency | 🔴 HIGH |
+| 4 | **Exhaustive Bug Hunt** | Race conditions, dead code, 500 errors | 🔴 HIGH |
+| 5 | **UI/UX Visual Audit** | Modals, cards, mobile rendering, overflow | 🟡 MEDIUM |
+| 6 | **Deep Crawl Audit** | API, AI, workflow verification | 🟡 MEDIUM |
+| 7 | **Comprehensive Platform Audit** | Full platform + AI intelligence upgrades | 🟢 ENHANCEMENT |
+| 8 | **Employee Onboarding System** | New feature (build after stable) | 🔵 NEW FEATURE |
+
+---
+
+# PHASE 1: STOP THE CRASHES (Days 1-2)
+
+## 1.1 React Hooks & Event Audit
+
+**FILE:** `REACT_HOOKS_EVENT_AUDIT.md`
+
+**THE PROBLEM:**
+- "Rendered more hooks than during the previous render" crashes pages
+- Duplicate "New Update Available" notifications
+- Affects ALL pages universally
+
+**WHAT TO FIX:**
+```
+[ ] Hooks called after early returns → Move ALL hooks before returns
+[ ] Hooks inside conditionals → Move outside, use 'enabled' flag
+[ ] Hooks inside loops → Extract to separate components
+[ ] Missing useEffect cleanup → Add return () => {} cleanup
+[ ] addEventListener without remove → Add removeEventListener
+[ ] socket.on without socket.off → Add cleanup
+[ ] setInterval without clear → Add clearInterval
+[ ] Multiple notification triggers → Deduplicate
+```
+
+**VERIFICATION:**
+```bash
+# Run ESLint hooks rule
+npx eslint client/src --ext .tsx --rule 'react-hooks/rules-of-hooks: error'
+
+# Should return: 0 errors
+```
+
+**DONE WHEN:**
+- [ ] Zero hooks violations in ESLint
+- [ ] All pages render without crash
+- [ ] Notifications appear once only
+- [ ] No duplicate events in console
+
+---
+
+## 1.2 Schema & Route Integrity Audit
+
+**FILE:** `SCHEMA_ROUTE_INTEGRITY_AUDIT.md`
+
+**THE PROBLEM:**
+- Missing tables cause silent failures
+- Missing enums cause data inconsistency
+- Unmounted routes return 404
+- Frontend calls non-existent backends
+
+**WHAT TO FIX:**
+```
+[ ] Missing tables → Create in schema.ts, run migration
+[ ] Missing enums → Define pgEnum in schema.ts
+[ ] Missing foreign keys → Add references()
+[ ] Unmounted routes → Add to app.use() in index.ts
+[ ] Frontend-backend mismatch → Align endpoint paths
+[ ] Workflows with missing dependencies → Add required tables/routes
+```
+
+**VERIFICATION:**
+```bash
+# Check for missing tables
+npx drizzle-kit push:pg --dry-run
+
+# Check for unmounted routes
+grep -rn "app.use.*api" server/index.ts
+
+# Should list ALL route files
+```
+
+**DONE WHEN:**
+- [ ] All expected tables exist in database
+- [ ] All enums defined and consistent
+- [ ] All routes mounted and accessible
+- [ ] All frontend API calls have backend handlers
+- [ ] No silent workflow failures
+
+---
+
+# PHASE 2: ESTABLISH SYNC (Days 3-4)
+
+## 2.1 Real-Time Sync & Persistence Audit
+
+**FILE:** `REALTIME_SYNC_PERSISTENCE_AUDIT.md`
+
+**THE PROBLEM:**
+- Desktop and mobile not synchronized
+- Changes don't reflect across devices
+- Trinity AI actions don't sync
+- Session data inconsistent
+- Conflicts when multiple users edit
+
+**WHAT TO FIX:**
+```
+[ ] Every mutation emits socket event
+[ ] Every socket event has client listener
+[ ] Every listener invalidates React Query cache
+[ ] Session persists correctly (Zustand persist)
+[ ] Cross-device session validation
+[ ] Trinity actions broadcast to workspace
+[ ] Conflict detection and resolution
+```
+
+**SOCKET EVENT COVERAGE:**
+```
+For EVERY data type:
+[ ] :created event emitted and handled
+[ ] :updated event emitted and handled  
+[ ] :deleted event emitted and handled
+[ ] Cache invalidation triggers
+[ ] UI updates without refresh
+```
+
+**VERIFICATION:**
+```
+Test with Desktop and Mobile side by side:
+1. Create employee on Desktop → Appears on Mobile instantly
+2. Update shift on Mobile → Reflects on Desktop instantly
+3. Trinity creates schedule → Both devices show it
+4. Clock in on Mobile → Manager's Desktop shows it
+```
+
+**DONE WHEN:**
+- [ ] All CRUD operations sync in < 1 second
+- [ ] Desktop ↔ Mobile perfectly synchronized
+- [ ] Trinity actions reflect everywhere
+- [ ] No stale data anywhere
+- [ ] Conflicts handled gracefully
+
+---
+
+# PHASE 3: FIX ALL BUGS (Days 5-7)
+
+## 3.1 Exhaustive Bug Hunt
+
+**FILE:** `EXHAUSTIVE_BUG_HUNT.md`
+
+**THE PROBLEM:**
+- Dead imports bloating code
+- Race conditions in timeouts
+- Unwired button handlers
+- 500 errors on various routes
+- Missing error handling
+
+**WHAT TO FIX:**
+```
+[ ] Dead imports → Remove unused imports
+[ ] Race conditions → Fix timeout values (logout: 2500ms min)
+[ ] Unwired handlers → Wire onClick to actual functions
+[ ] Empty handlers → Implement actual logic
+[ ] Missing try/catch → Add error handling to all routes
+[ ] Missing await → Add await to async calls
+[ ] Floating promises → Handle with .then/.catch or await
+```
+
+**SPECIFIC FIXES FROM YOUR REPORTS:**
+```
+[ ] ProgressiveHeader.tsx → Wire performLogout to useLogoutTransition
+[ ] command-palette.tsx → Wire performLogout to useLogoutTransition
+[ ] dashboard.tsx → Remove dead import
+[ ] Logout race timeout → Increase to 2500ms
+```
+
+**VERIFICATION:**
+```bash
+# TypeScript compile check
+npx tsc --noEmit
+
+# Should return: 0 errors
+
+# Check for empty handlers
+grep -rn "onClick={() => {}}" client/src/
+# Should return: 0 results
+```
+
+**DONE WHEN:**
+- [ ] Zero TypeScript errors
+- [ ] Zero dead imports
+- [ ] All buttons have working handlers
+- [ ] No 500 errors on any route
+- [ ] All race conditions fixed
+
+---
+
+# PHASE 4: POLISH THE UI (Days 8-10)
+
+## 4.1 UI/UX Visual Audit
+
+**FILE:** `UI_UX_VISUAL_AUDIT.md`
+
+**THE PROBLEM:**
+- Modals/sheets too wide on desktop (like Help Desk screenshot)
+- Text overflowing buttons and cards
+- Badges bleeding over container edges
+- Mobile layout issues
+
+**WHAT TO FIX:**
+```
+[ ] All modals/dialogs → Add max-w-md, center with mx-auto
+[ ] All bottom sheets → Constrain on desktop (max-w-sm mx-auto)
+[ ] All cards → Add overflow-hidden
+[ ] All text → Add truncate or line-clamp
+[ ] All badges → Position within containers
+[ ] All buttons → Ensure text doesn't overflow
+[ ] All forms → Consistent input heights (h-10)
+[ ] All tables → Responsive with scroll or card view
+```
+
+**PAGE-BY-PAGE MOBILE CHECK:**
+```
+Test at 375px width:
+[ ] /dashboard - No overflow, cards stack
+[ ] /employees - List readable, actions accessible
+[ ] /clients - No horizontal scroll
+[ ] /schedule - Calendar navigable
+[ ] /timeclock - Clock in button prominent
+[ ] /settings - All forms usable
+[ ] All modals - Fit viewport, scrollable if needed
+```
+
+**DONE WHEN:**
+- [ ] All modals constrained (not full-width on desktop)
+- [ ] No text overflow anywhere
+- [ ] No horizontal scroll on any page
+- [ ] All touch targets 44px minimum
+- [ ] Consistent spacing throughout
+
+---
+
+# PHASE 5: VERIFY EVERYTHING (Days 11-12)
+
+## 5.1 Deep Crawl Audit
+
+**FILE:** `DEEP_CRAWL_AUDIT_PROMPT.md`
+
+**PURPOSE:** Systematic verification of ALL features
+
+**WHAT TO VERIFY:**
+```
+API ENDPOINTS:
+[ ] Every endpoint exists and responds
+[ ] Auth middleware on protected routes
+[ ] workspaceId isolation enforced
+[ ] Proper error responses
+
+AI EXECUTIONS:
+[ ] Trinity responds correctly
+[ ] Fallback chain works (Gemini → Claude → GPT)
+[ ] Cost tracking accurate
+[ ] Actions execute properly
+
+WORKFLOWS:
+[ ] Contract signing → Client/Sites created
+[ ] Employee onboarding → Employee/User created
+[ ] Shift assignment → Compliance checked
+[ ] Time clock → Entry created with GPS
+[ ] Invoice generation → PDF created, email sent
+
+DATABASE:
+[ ] All queries filter by workspaceId
+[ ] No N+1 queries
+[ ] Transactions used for multi-step operations
+```
+
+**DONE WHEN:**
+- [ ] All API endpoints verified
+- [ ] All AI features working
+- [ ] All workflows complete successfully
+- [ ] No data leakage between workspaces
+
+---
+
+# PHASE 6: ENHANCE & UPGRADE (Days 13-14)
+
+## 6.1 Comprehensive Platform Audit
+
+**FILE:** `COMPREHENSIVE_PLATFORM_AUDIT.md`
+
+**PURPOSE:** Full platform verification + AI intelligence upgrades
+
+**AI UPGRADES:**
+```
+TRINITY (Gemini):
+[ ] Enhanced persona with industry knowledge
+[ ] Logic loop framework implemented
+[ ] 7 tools integrated (query, create, assign, etc.)
+[ ] Sub-agent delegation working
+
+CLAUDE (Judge):
+[ ] 5-dimension evaluation framework
+[ ] Scoring system (1-10)
+[ ] Decision authority (APPROVE/REVISE/REJECT)
+[ ] Revision capability
+
+GPT-4 (Workhorse):
+[ ] Specialized task prompts
+[ ] Structured JSON output
+[ ] Batch processing
+```
+
+**FEATURE MATRIX:**
+```
+Verify ALL features work:
+[ ] Authentication (login, logout, password reset)
+[ ] Employees (CRUD, documents, credentials)
+[ ] Clients (CRUD, contracts, contacts)
+[ ] Sites (CRUD, geofencing, post orders)
+[ ] Scheduling (views, shifts, assignments)
+[ ] Time tracking (clock in/out, GPS, breaks)
+[ ] Payroll (runs, calculations, exports)
+[ ] Invoicing (generation, PDF, email)
+[ ] Communications (chat, notifications)
+[ ] Reports (generation, export)
+[ ] Integrations (QuickBooks, etc.)
+```
+
+**DONE WHEN:**
+- [ ] All features verified working
+- [ ] AI systems upgraded
+- [ ] Mobile parity with desktop
+- [ ] Support system functional
+- [ ] Maintenance mode works
+
+---
+
+# PHASE 7: NEW FEATURE (After Stable)
+
+## 7.1 Employee Onboarding System
+
+**FILE:** `EMPLOYEE_PACKET_REPLIT_PROMPT.md`
+
+**PURPOSE:** Build universal 50-state employee onboarding
+
+**ONLY BUILD AFTER:**
+- [ ] All crashes fixed
+- [ ] All sync working
+- [ ] All bugs resolved
+- [ ] All UI polished
+- [ ] Platform stable
+
+**FEATURES:**
+- 16-step onboarding wizard
+- State-specific license requirements
+- 15-day deadline enforcement
+- Document upload and approval
+- Trinity integration for eligibility
+
+---
+
+# EXECUTION TIMELINE
+
+```
+WEEK 1: FOUNDATION
+├── Day 1-2: React Hooks + Schema/Routes (CRITICAL)
+├── Day 3-4: Real-Time Sync (HIGH)
+└── Day 5-7: Bug Hunt (HIGH)
+
+WEEK 2: POLISH & VERIFY
+├── Day 8-10: UI/UX Visual (MEDIUM)
+├── Day 11-12: Deep Crawl Verification (MEDIUM)
+└── Day 13-14: Platform Audit + AI Upgrades (ENHANCEMENT)
+
+WEEK 3+: NEW FEATURES
+└── Employee Onboarding System (only when stable)
+```
+
+---
+
+# ITERATION PROTOCOL
+
+## After Each Phase:
+
+1. **Re-run all verification commands**
+2. **Test on both desktop AND mobile**
+3. **Document any new issues found**
+4. **Fix new issues before proceeding**
+5. **DO NOT move to next phase with open issues**
+
+## Iteration Tracking:
+
+```
+PHASE 1 - React Hooks:
+[ ] Pass 1: ___ issues found
+[ ] Pass 2: ___ issues remaining
+[ ] Pass 3: ___ issues remaining
+[ ] ZERO ISSUES ✓
+
+PHASE 2 - Schema/Routes:
+[ ] Pass 1: ___ issues found
+[ ] Pass 2: ___ issues remaining
+[ ] ZERO ISSUES ✓
+
+PHASE 3 - Sync:
+[ ] Pass 1: ___ issues found
+[ ] Pass 2: ___ issues remaining
+[ ] ZERO ISSUES ✓
+
+... continue for all phases
+```
+
+---
+
+# FINAL LAUNCH CHECKLIST
+
+## Before Going Live:
+
+```
+CRITICAL (Must be 100%):
+[ ] Zero React hooks violations
+[ ] All tables exist in database
+[ ] All routes mounted
+[ ] All API endpoints working
+[ ] Real-time sync working
+[ ] Desktop-mobile parity
+
+HIGH (Must be 95%+):
+[ ] All bugs fixed
+[ ] All error handling in place
+[ ] All workflows complete
+[ ] Trinity AI functional
+
+MEDIUM (Must be 90%+):
+[ ] UI polished
+[ ] Mobile fully responsive
+[ ] All modals constrained
+
+NICE TO HAVE:
+[ ] AI intelligence upgrades
+[ ] Performance optimizations
+```
+
+---
+
+# FILES TO SEND TO REPLIT
+
+**In this exact order:**
+
+1. `REACT_HOOKS_EVENT_AUDIT.md` - Stop crashes first
+2. `SCHEMA_ROUTE_INTEGRITY_AUDIT.md` - Fix foundation
+3. `REALTIME_SYNC_PERSISTENCE_AUDIT.md` - Establish sync
+4. `EXHAUSTIVE_BUG_HUNT.md` - Find all bugs
+5. `UI_UX_VISUAL_AUDIT.md` - Polish UI
+6. `DEEP_CRAWL_AUDIT_PROMPT.md` - Verify features
+7. `COMPREHENSIVE_PLATFORM_AUDIT.md` - Full audit + AI
+8. `EMPLOYEE_PACKET_REPLIT_PROMPT.md` - New feature (last)
+
+---
+
+# INSTRUCTIONS FOR REPLIT
+
+```
+MISSION: Zero issues for launch
+
+APPROACH:
+1. Use Architect mode for comprehensive analysis
+2. Work through phases IN ORDER
+3. Do NOT skip ahead
+4. Iterate until ZERO issues in each phase
+5. Document EVERYTHING
+6. Test on BOTH desktop AND mobile
+7. Verify sync works across devices
+
+MINDSET:
+- No issue is too small
+- Silent failures are the worst bugs
+- Foundation must be solid before features
+- Every page, every route, every component
+- Iterate as many times as needed
+
+GOAL:
+A platform that works PERFECTLY:
+- No crashes
+- No sync issues
+- No visual bugs
+- No silent failures
+- Desktop and mobile in harmony
+- Trinity AI actions reflect everywhere
+- Professional, polished, production-ready
+```
+
+---
+
+# SUMMARY
+
+**8 COMPREHENSIVE AUDITS** covering:
+
+1. ⚡ React fundamentals (hooks, events)
+2. 🏗️ Database foundation (schema, tables, enums)
+3. 🔄 Real-time infrastructure (sync, persistence)
+4. 🐛 Code quality (bugs, race conditions)
+5. 🎨 Visual polish (UI/UX, mobile)
+6. 🔍 Feature verification (deep crawl)
+7. 🤖 AI enhancement (Trinity, Claude, GPT)
+8. 📋 New features (onboarding)
+
+**TOTAL COVERAGE:**
+- Every page
+- Every component
+- Every route
+- Every API
+- Every database table
+- Every workflow
+- Every AI feature
+- Every mobile screen
+- Every desktop view
+
+**OUTCOME:**
+A flawless, professional, enterprise-grade platform ready for production.
+
+---
+
+**THE ENDGAME: PERFECT HARMONIOUS PLATFORM**
+
+**BEGIN EXECUTION NOW.**

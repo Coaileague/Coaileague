@@ -23,6 +23,8 @@ import { toolCapabilityRegistry } from './toolCapabilityRegistry';
 import { platformEventBus } from '../../platformEventBus';
 import type { TrinityToolCall } from '@shared/schema';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('secureToolExecutor');
 
 // ============================================================================
 // TYPES
@@ -104,14 +106,14 @@ const DEFAULT_TOOL_POLICIES: Record<string, Partial<ToolAuthorizationPolicy>> = 
     sensitiveActions: ['create', 'update', 'delete'],
   },
   'payroll': {
-    requiredMinimumRole: 'org_admin',
+    requiredMinimumRole: 'co_owner',
     requiresWorkspaceAccess: true,
     allowedActions: ['view_summary'],
     sensitiveActions: ['calculate', 'approve', 'submit'],
     bypassAllowedRoles: ['root_admin', 'deputy_admin'],
   },
   'invoice': {
-    requiredMinimumRole: 'org_admin',
+    requiredMinimumRole: 'co_owner',
     requiresWorkspaceAccess: true,
     allowedActions: ['list', 'view', 'generate'],
     sensitiveActions: ['send', 'void', 'apply_discount'],
@@ -150,7 +152,7 @@ const DEFAULT_TOOL_POLICIES: Record<string, Partial<ToolAuthorizationPolicy>> = 
     sensitiveActions: ['create_shift', 'delete_shift', 'bulk_update'],
   },
   'compliance': {
-    requiredMinimumRole: 'org_admin',
+    requiredMinimumRole: 'co_owner',
     requiresWorkspaceAccess: true,
     allowedActions: ['check', 'report', 'list_violations'],
     sensitiveActions: ['remediate', 'waive', 'override'],
@@ -167,7 +169,7 @@ const ROLE_HIERARCHY: Record<string, number> = {
   'support_agent': 60,
   'compliance_officer': 55,
   'org_owner': 50,
-  'org_admin': 45,
+  'co_owner': 45,
   'department_manager': 40,
   'supervisor': 35,
   'team_lead': 30,
@@ -187,7 +189,7 @@ class SecureToolExecutor {
   private toolPolicies: Map<string, ToolAuthorizationPolicy> = new Map();
 
   private constructor() {
-    console.log('[SecureToolExecutor] Initializing secure tool executor...');
+    log.info('[SecureToolExecutor] Initializing secure tool executor...');
     this.initializeDefaultPolicies();
   }
 
@@ -277,7 +279,7 @@ class SecureToolExecutor {
         };
       }
       // Bypass role can use undeclared actions, log it
-      console.warn(`[SecureToolExecutor] Bypass role ${callerRole} using undeclared action '${action}' on tool '${toolId}'`);
+      log.warn(`[SecureToolExecutor] Bypass role ${callerRole} using undeclared action '${action}' on tool '${toolId}'`);
     }
 
     // Check if action is sensitive and requires elevated permissions
@@ -307,7 +309,7 @@ class SecureToolExecutor {
           };
         }
       } catch (error) {
-        console.warn('[SecureToolExecutor] Workspace access check failed:', error);
+        log.warn('[SecureToolExecutor] Workspace access check failed:', error);
         // Fail closed - deny if we can't verify
         return {
           authorized: false,
@@ -320,14 +322,14 @@ class SecureToolExecutor {
   }
 
   private getElevatedRoleForSensitiveAction(policy: ToolAuthorizationPolicy): string {
-    // Sensitive actions require at least org_admin or the first bypass role
+    // Sensitive actions require at least co_owner or the first bypass role
     const minimumLevel = ROLE_HIERARCHY[policy.requiredMinimumRole] ?? 0;
-    const orgAdminLevel = ROLE_HIERARCHY['org_admin'] ?? 45;
+    const orgAdminLevel = ROLE_HIERARCHY['co_owner'] ?? 45;
     
     if (minimumLevel >= orgAdminLevel) {
       return policy.bypassAllowedRoles[0] || 'root_admin';
     }
-    return 'org_admin';
+    return 'co_owner';
   }
 
   /**
@@ -337,7 +339,7 @@ class SecureToolExecutor {
     const startTime = Date.now();
     const callId = `call-${crypto.randomUUID().slice(0, 8)}`;
 
-    console.log(`[SecureToolExecutor] ${callId} Executing ${request.toolName}.${request.action}`);
+    log.info(`[SecureToolExecutor] ${callId} Executing ${request.toolName}.${request.action}`);
 
     // Build tool call record
     const toolCall: TrinityToolCall = {
@@ -420,15 +422,15 @@ class SecureToolExecutor {
         toolCall,
       };
     } catch (error: any) {
-      toolCall.error = error.message;
+      toolCall.error = (error instanceof Error ? error.message : String(error));
       toolCall.durationMs = Date.now() - startTime;
 
-      await this.logToolCallError(request, error.message, callId);
+      await this.logToolCallError(request, (error instanceof Error ? error.message : String(error)), callId);
 
       return {
         success: false,
         authorized: true,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
         durationMs: Date.now() - startTime,
         toolCall,
       };
@@ -455,19 +457,11 @@ class SecureToolExecutor {
         throw new Error(`Tool '${toolId}' not found in registry. Only elevated roles can execute unregistered tools.`);
       }
 
-      // Bypass role: warn but allow simulated execution
-      console.warn(`[SecureToolExecutor] BYPASS: Tool ${toolId} not in registry, simulated execution by ${callerContext.platformRole}`);
-      return {
-        simulated: true,
-        tool: toolId,
-        action,
-        parameters,
-        message: 'Tool executed (simulated - elevated role bypass)',
-        warning: 'Tool not in registry - execution simulated',
-      };
+      log.warn(`[SecureToolExecutor] BYPASS: Tool ${toolId} not found in registry. Elevated role ${callerContext.platformRole} attempted execution.`);
+      throw new Error(`Tool '${toolId}' is not registered. Cannot execute unregistered tools even with elevated privileges.`);
     } catch (error: any) {
       // If registry lookup fails, re-throw
-      throw new Error(`Tool execution failed: ${error.message}`);
+      throw new Error(`Tool execution failed: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
 
@@ -482,10 +476,10 @@ class SecureToolExecutor {
     try {
       await db.insert(systemAuditLogs).values({
         id: `audit-${crypto.randomUUID()}`,
-        eventType: 'tool_call_denied',
-        severity: 'warning',
-        source: 'SecureToolExecutor',
-        message: `Tool call DENIED: ${request.toolName}.${request.action} - ${reason}`,
+        userId: request.callerContext.userId,
+        workspaceId: request.callerContext.workspaceId,
+        createdAt: new Date(),
+        metadata: { eventType: 'tool_call_denied', severity: 'warning', source: 'SecureToolExecutor', message: `Tool call DENIED: ${request.toolName}.${request.action} - ${reason}`,
         metadata: {
           callId,
           toolId: request.toolId,
@@ -497,15 +491,12 @@ class SecureToolExecutor {
           taskId: request.callerContext.taskId,
           subagentId: request.callerContext.subagentId,
           reason,
-        },
-        userId: request.callerContext.userId,
-        workspaceId: request.callerContext.workspaceId,
-        createdAt: new Date(),
+        } },
       });
 
-      console.warn(`[SecureToolExecutor] ${callId} DENIED: ${request.toolName}.${request.action} - ${reason}`);
+      log.warn(`[SecureToolExecutor] ${callId} DENIED: ${request.toolName}.${request.action} - ${reason}`);
     } catch (e) {
-      console.error('[SecureToolExecutor] Failed to log denial:', e);
+      log.error('[SecureToolExecutor] Failed to log denial:', e);
     }
   }
 
@@ -520,10 +511,10 @@ class SecureToolExecutor {
     try {
       await db.insert(systemAuditLogs).values({
         id: `audit-${crypto.randomUUID()}`,
-        eventType: 'tool_call_executed',
-        severity: 'info',
-        source: 'SecureToolExecutor',
-        message: `Tool call executed: ${request.toolName}.${request.action} (${durationMs}ms)`,
+        userId: request.callerContext.userId,
+        workspaceId: request.callerContext.workspaceId,
+        createdAt: new Date(),
+        metadata: { eventType: 'tool_call_executed', severity: 'info', source: 'SecureToolExecutor', message: `Tool call executed: ${request.toolName}.${request.action} (${durationMs}ms)`,
         metadata: {
           callId,
           toolId: request.toolId,
@@ -534,13 +525,10 @@ class SecureToolExecutor {
           workspaceId: request.callerContext.workspaceId,
           taskId: request.callerContext.taskId,
           durationMs,
-        },
-        userId: request.callerContext.userId,
-        workspaceId: request.callerContext.workspaceId,
-        createdAt: new Date(),
+        } },
       });
     } catch (e) {
-      console.error('[SecureToolExecutor] Failed to log success:', e);
+      log.error('[SecureToolExecutor] Failed to log success:', e);
     }
   }
 
@@ -555,10 +543,10 @@ class SecureToolExecutor {
     try {
       await db.insert(systemAuditLogs).values({
         id: `audit-${crypto.randomUUID()}`,
-        eventType: 'tool_call_error',
-        severity: 'error',
-        source: 'SecureToolExecutor',
-        message: `Tool call ERROR: ${request.toolName}.${request.action} - ${error}`,
+        userId: request.callerContext.userId,
+        workspaceId: request.callerContext.workspaceId,
+        createdAt: new Date(),
+        metadata: { eventType: 'tool_call_error', severity: 'error', source: 'SecureToolExecutor', message: `Tool call ERROR: ${request.toolName}.${request.action} - ${error}`,
         metadata: {
           callId,
           toolId: request.toolId,
@@ -569,13 +557,10 @@ class SecureToolExecutor {
           workspaceId: request.callerContext.workspaceId,
           taskId: request.callerContext.taskId,
           error,
-        },
-        userId: request.callerContext.userId,
-        workspaceId: request.callerContext.workspaceId,
-        createdAt: new Date(),
+        } },
       });
     } catch (e) {
-      console.error('[SecureToolExecutor] Failed to log error:', e);
+      log.error('[SecureToolExecutor] Failed to log error:', e);
     }
   }
 

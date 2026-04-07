@@ -10,10 +10,10 @@ import {
   invoices, 
   employees, 
   clients,
-  payrollEntries,
-  payments
+  payrollEntries
 } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, sum, avg, desc, asc, isNotNull } from "drizzle-orm";
+import { typedCount, typedQuery } from '../lib/typedSql';
 
 export interface DateRange {
   startDate: Date;
@@ -253,9 +253,9 @@ async function getMetricsForPeriod(workspaceId: string, range: DateRange) {
     )),
     
     db.select({
-      totalInvoiced: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} != 'draft' THEN ${invoices.total} ELSE 0 END), 0)`,
-      pendingCount: sql<number>`COUNT(CASE WHEN ${invoices.status} IN ('sent', 'overdue') THEN 1 END)`,
-      paidCount: sql<number>`COUNT(CASE WHEN ${invoices.status} = 'paid' THEN 1 END)`
+      totalInvoiced: sql<number>`coalesce(sum(case when ${invoices.status} != 'draft' then ${invoices.total} else 0 end), 0)`,
+      pendingCount: sql<number>`count(case when ${invoices.status} in ('sent', 'overdue') then 1 end)::int`,
+      paidCount: sql<number>`count(case when ${invoices.status} = 'paid' then 1 end)::int`
     })
     .from(invoices)
     .where(and(
@@ -314,7 +314,8 @@ async function getTrendData(workspaceId: string, range: DateRange): Promise<Tren
     format = 'YYYY-MM';
   }
 
-  const trendQuery = await db.execute(sql`
+  // CATEGORY C — Raw SQL retained: generate_series | Tables: time_entries, invoices, date_series, time_data, invoice_data | Verified: 2026-03-23
+  const trendQuery = await typedQuery(sql`
     WITH date_series AS (
       SELECT generate_series(
         ${range.startDate}::date,
@@ -373,7 +374,8 @@ export async function getTimeUsageMetrics(
     : getDateRange(datePreset);
 
   const [byEmployee, byClient, byDay, totals] = await Promise.all([
-    db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: time_entries, employees | Verified: 2026-03-23
+    typedQuery(sql`
       SELECT 
         te.employee_id,
         CONCAT(e.first_name, ' ', e.last_name) as name,
@@ -389,10 +391,11 @@ export async function getTimeUsageMetrics(
       ORDER BY total_hours DESC
     `),
     
-    db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: time_entries, clients | Verified: 2026-03-23
+    typedQuery(sql`
       SELECT 
         te.client_id,
-        c.name,
+        COALESCE(c.company_name, CONCAT(c.first_name, ' ', c.last_name)) as name,
         COALESCE(SUM(te.total_hours), 0) as total_hours,
         COALESCE(SUM(te.total_amount), 0) as revenue
       FROM time_entries te
@@ -401,11 +404,12 @@ export async function getTimeUsageMetrics(
         AND te.clock_in >= ${range.startDate}
         AND te.clock_in <= ${range.endDate}
         AND te.client_id IS NOT NULL
-      GROUP BY te.client_id, c.name
+      GROUP BY te.client_id, c.company_name, c.first_name, c.last_name
       ORDER BY total_hours DESC
     `),
     
-    db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: time_entries | Verified: 2026-03-23
+    typedQuery(sql`
       SELECT 
         DATE(clock_in)::text as date,
         COALESCE(SUM(total_hours), 0) as hours,
@@ -418,21 +422,23 @@ export async function getTimeUsageMetrics(
       ORDER BY date
     `),
     
-    db.execute(sql`
-      SELECT 
-        COALESCE(SUM(total_hours), 0) as total_hours,
-        COALESCE(SUM(CASE WHEN total_hours > 8 THEN total_hours - 8 ELSE 0 END), 0) as overtime_hours,
-        COUNT(DISTINCT DATE(clock_in)) as work_days
-      FROM time_entries
-      WHERE workspace_id = ${workspaceId}
-        AND clock_in >= ${range.startDate}
-        AND clock_in <= ${range.endDate}
-    `)
+    // Converted to Drizzle ORM: CASE WHEN → sql fragment
+    db.select({
+      totalHours: sql<number>`coalesce(sum(${timeEntries.totalHours}), 0)`,
+      overtimeHours: sql<number>`coalesce(sum(case when ${timeEntries.totalHours} > 8 then ${timeEntries.totalHours} - 8 else 0 end), 0)`,
+      workDays: sql<number>`count(distinct date(${timeEntries.clockIn}))::int`
+    })
+    .from(timeEntries)
+    .where(and(
+      eq(timeEntries.workspaceId, workspaceId),
+      gte(timeEntries.clockIn, range.startDate),
+      lte(timeEntries.clockIn, range.endDate)
+    ))
   ]);
 
-  const totalHours = parseFloat((totals.rows[0] as any)?.total_hours) || 0;
-  const overtimeHours = parseFloat((totals.rows[0] as any)?.overtime_hours) || 0;
-  const workDays = parseInt((totals.rows[0] as any)?.work_days) || 1;
+  const totalHours = parseFloat(totals[0]?.totalHours?.toString() || '0');
+  const overtimeHours = parseFloat(totals[0]?.overtimeHours?.toString() || '0');
+  const workDays = parseInt(totals[0]?.workDays?.toString() || '1');
 
   return {
     totalHours: Math.round(totalHours * 100) / 100,
@@ -471,7 +477,8 @@ export async function getSchedulingMetrics(
     : getDateRange(datePreset);
 
   const [statusData, dailyData, totals] = await Promise.all([
-    db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: shifts | Verified: 2026-03-23
+    typedQuery(sql`
       SELECT 
         status,
         COUNT(*) as count
@@ -482,7 +489,8 @@ export async function getSchedulingMetrics(
       GROUP BY status
     `),
     
-    db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: shifts, start_time | Verified: 2026-03-23
+    typedQuery(sql`
       SELECT 
         TO_CHAR(start_time, 'Day') as day,
         COUNT(*) as scheduled,
@@ -495,34 +503,36 @@ export async function getSchedulingMetrics(
       ORDER BY EXTRACT(DOW FROM start_time)
     `),
     
-    db.execute(sql`
-      SELECT 
-        COUNT(*) as total_shifts,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_shifts,
-        COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_shifts,
-        COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_shows,
-        AVG(EXTRACT(EPOCH FROM (end_time - start_time)) / 3600) as avg_duration,
-        COUNT(CASE WHEN employee_id IS NOT NULL THEN 1 END) as filled_shifts
-      FROM shifts
-      WHERE workspace_id = ${workspaceId}
-        AND start_time >= ${range.startDate}
-        AND start_time <= ${range.endDate}
-    `)
+    // Converted to Drizzle ORM: CASE WHEN → sql fragment
+    db.select({
+      totalShifts: sql<number>`count(*)::int`,
+      completedShifts: sql<number>`count(case when ${shifts.status} = 'completed' then 1 end)::int`,
+      cancelledShifts: sql<number>`count(case when ${shifts.status} = 'cancelled' then 1 end)::int`,
+      noShows: sql<number>`0`,
+      avgDuration: sql<number>`avg(extract(epoch from (${shifts.endTime} - ${shifts.startTime})) / 3600)`,
+      filledShifts: sql<number>`count(case when ${shifts.employeeId} is not null then 1 end)::int`
+    })
+    .from(shifts)
+    .where(and(
+      eq(shifts.workspaceId, workspaceId),
+      gte(shifts.startTime, range.startDate),
+      lte(shifts.startTime, range.endDate)
+    ))
   ]);
 
-  const stats = totals.rows[0] as any;
-  const totalShifts = parseInt(stats?.total_shifts) || 0;
-  const completedShifts = parseInt(stats?.completed_shifts) || 0;
-  const filledShifts = parseInt(stats?.filled_shifts) || 0;
+  const stats = totals[0] || {};
+  const totalShifts = stats.totalShifts || 0;
+  const completedShifts = stats.completedShifts || 0;
+  const filledShifts = stats.filledShifts || 0;
 
   return {
     totalShifts,
     completedShifts,
-    cancelledShifts: parseInt(stats?.cancelled_shifts) || 0,
-    noShows: parseInt(stats?.no_shows) || 0,
+    cancelledShifts: stats.cancelledShifts || 0,
+    noShows: stats.noShows || 0,
     fillRate: totalShifts > 0 ? Math.round((filledShifts / totalShifts) * 100) : 0,
     coverageRate: totalShifts > 0 ? Math.round((completedShifts / totalShifts) * 100) : 0,
-    averageShiftDuration: Math.round(parseFloat(stats?.avg_duration || '0') * 10) / 10,
+    averageShiftDuration: Math.round((Number(stats.avgDuration) || 0) * 10) / 10,
     byStatus: (statusData.rows as any[]).map(row => ({
       status: row.status,
       count: parseInt(row.count)
@@ -546,28 +556,31 @@ export async function getRevenueMetrics(
     : getDateRange(datePreset);
 
   const [totals, byClient, byMonth] = await Promise.all([
-    db.execute(sql`
-      SELECT 
-        COALESCE(SUM(total), 0) as total_invoiced,
-        COALESCE(SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END), 0) as total_paid,
-        COALESCE(SUM(CASE WHEN status IN ('sent', 'overdue') THEN total ELSE 0 END), 0) as total_pending,
-        COALESCE(SUM(CASE WHEN status IN ('sent', 'overdue') AND due_date < NOW() THEN total ELSE 0 END), 0) as total_overdue,
-        COALESCE(AVG(total), 0) as avg_invoice,
-        COALESCE(SUM(platform_fee_amount), 0) as platform_fees,
-        COALESCE(SUM(business_amount), 0) as net_revenue,
-        COUNT(*) as invoice_count,
-        COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_count
-      FROM invoices
-      WHERE workspace_id = ${workspaceId}
-        AND created_at >= ${range.startDate}
-        AND created_at <= ${range.endDate}
-        AND status != 'draft'
-    `),
+    // Converted to Drizzle ORM: CASE WHEN → sql fragment
+    db.select({
+      totalInvoiced: sql<number>`coalesce(sum(${invoices.total}), 0)`,
+      totalPaid: sql<number>`coalesce(sum(case when ${invoices.status} = 'paid' then ${invoices.total} else 0 end), 0)`,
+      totalPending: sql<number>`coalesce(sum(case when ${invoices.status} in ('sent', 'overdue') then ${invoices.total} else 0 end), 0)`,
+      totalOverdue: sql<number>`coalesce(sum(case when ${invoices.status} in ('sent', 'overdue') and ${invoices.dueDate} < now() then ${invoices.total} else 0 end), 0)`,
+      avgInvoice: sql<number>`coalesce(avg(${invoices.total}), 0)`,
+      platformFees: sql<number>`coalesce(sum(${invoices.platformFeeAmount}), 0)`,
+      netRevenue: sql<number>`coalesce(sum(${invoices.businessAmount}), 0)`,
+      invoiceCount: sql<number>`count(*)::int`,
+      paidCount: sql<number>`count(case when ${invoices.status} = 'paid' then 1 end)::int`
+    })
+    .from(invoices)
+    .where(and(
+      eq(invoices.workspaceId, workspaceId),
+      gte(invoices.createdAt, range.startDate),
+      lte(invoices.createdAt, range.endDate),
+      sql`${invoices.status} != 'draft'`
+    )),
     
-    db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: invoices, clients | Verified: 2026-03-23
+    typedQuery(sql`
       SELECT 
         i.client_id,
-        c.name,
+        COALESCE(c.company_name, CONCAT(c.first_name, ' ', c.last_name)) as name,
         COALESCE(SUM(i.total), 0) as invoiced,
         COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total ELSE 0 END), 0) as paid
       FROM invoices i
@@ -576,12 +589,13 @@ export async function getRevenueMetrics(
         AND i.created_at >= ${range.startDate}
         AND i.created_at <= ${range.endDate}
         AND i.status != 'draft'
-      GROUP BY i.client_id, c.name
+      GROUP BY i.client_id, c.company_name, c.first_name, c.last_name
       ORDER BY invoiced DESC
       LIMIT 10
     `),
     
-    db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: invoices | Verified: 2026-03-23
+    typedQuery(sql`
       SELECT 
         TO_CHAR(created_at, 'YYYY-MM') as month,
         COALESCE(SUM(total), 0) as invoiced,
@@ -596,16 +610,16 @@ export async function getRevenueMetrics(
     `)
   ]);
 
-  const stats = totals.rows[0] as any;
-  const invoiceCount = parseInt(stats?.invoice_count) || 0;
-  const paidCount = parseInt(stats?.paid_count) || 0;
+  const stats = totals[0] || {};
+  const invoiceCount = stats.invoiceCount || 0;
+  const paidCount = stats.paidCount || 0;
 
   return {
-    totalInvoiced: parseFloat(stats?.total_invoiced) || 0,
-    totalPaid: parseFloat(stats?.total_paid) || 0,
-    totalPending: parseFloat(stats?.total_pending) || 0,
-    totalOverdue: parseFloat(stats?.total_overdue) || 0,
-    averageInvoiceAmount: parseFloat(stats?.avg_invoice) || 0,
+    totalInvoiced: Number(stats.totalInvoiced) || 0,
+    totalPaid: Number(stats.totalPaid) || 0,
+    totalPending: Number(stats.totalPending) || 0,
+    totalOverdue: Number(stats.totalOverdue) || 0,
+    averageInvoiceAmount: Number(stats.avgInvoice) || 0,
     collectionRate: invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 100) : 0,
     byClient: (byClient.rows as any[]).map(row => ({
       clientId: row.client_id,
@@ -618,8 +632,8 @@ export async function getRevenueMetrics(
       invoiced: parseFloat(row.invoiced) || 0,
       paid: parseFloat(row.paid) || 0
     })),
-    platformFees: parseFloat(stats?.platform_fees) || 0,
-    netRevenue: parseFloat(stats?.net_revenue) || 0
+    platformFees: Number(stats.platformFees) || 0,
+    netRevenue: Number(stats.netRevenue) || 0
   };
 }
 
@@ -633,13 +647,14 @@ export async function getEmployeePerformanceMetrics(
     ? { startDate: customStart, endDate: customEnd }
     : getDateRange(datePreset);
 
-  const performanceData = await db.execute(sql`
+  // CATEGORY C — Raw SQL retained: WITH shift_data AS ( | Tables: shifts, time_entries | Verified: 2026-03-23
+  const performanceData = await typedQuery(sql`
     WITH shift_data AS (
       SELECT 
         s.employee_id,
         COUNT(*) as total_shifts,
         COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_shifts,
-        COUNT(CASE WHEN s.status = 'no_show' THEN 1 END) as no_shows
+        0 as no_shows
       FROM shifts s
       WHERE s.workspace_id = ${workspaceId}
         AND s.start_time >= ${range.startDate}
@@ -678,7 +693,7 @@ export async function getEmployeePerformanceMetrics(
     LEFT JOIN shift_data sd ON e.id = sd.employee_id
     LEFT JOIN time_data td ON e.id = td.employee_id
     WHERE e.workspace_id = ${workspaceId}
-      AND e.status = 'active'
+      AND e.is_active = true
     ORDER BY attendance_rate DESC, total_hours DESC
   `);
 

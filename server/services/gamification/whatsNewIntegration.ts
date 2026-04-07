@@ -1,5 +1,8 @@
 import { gamificationEvents, type AchievementEvent } from './gamificationEvents';
 import { publishPlatformUpdate } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('whatsNewIntegration');
+
 
 /**
  * Integrates gamification with "What's New" feature updates
@@ -13,14 +16,14 @@ export class WhatsNewGamificationBridge {
    */
   static initializeListeners(): void {
     if (this.initialized) {
-      console.log('[WhatsNewGamificationBridge] Already initialized, skipping');
+      log.info('[WhatsNewGamificationBridge] Already initialized, skipping');
       return;
     }
 
     gamificationEvents.on('achievement_unlocked', (data: AchievementEvent) => this.announceAchievement(data));
 
     this.initialized = true;
-    console.log('[WhatsNewGamificationBridge] What\'s New integration initialized');
+    log.info('[WhatsNewGamificationBridge] What\'s New integration initialized');
   }
 
   private static async announceAchievement(data: AchievementEvent): Promise<void> {
@@ -47,12 +50,12 @@ export class WhatsNewGamificationBridge {
 
       // If it's a rare/legendary achievement, also create a platform-wide announcement
       if (['rare', 'epic', 'legendary'].includes(achievement.rarity)) {
-        console.log(`[WhatsNewGamificationBridge] Broadcasting rare achievement: ${achievement.name}`);
+        log.info(`[WhatsNewGamificationBridge] Broadcasting rare achievement: ${achievement.name}`);
       }
 
-      console.log(`[WhatsNewGamificationBridge] Created update: ${achievement.name}`);
+      log.info(`[WhatsNewGamificationBridge] Created update: ${achievement.name}`);
     } catch (error) {
-      console.error('[WhatsNewGamificationBridge] Error announcing achievement:', error);
+      log.error('[WhatsNewGamificationBridge] Error announcing achievement:', error);
     }
   }
 
@@ -91,7 +94,7 @@ export class WhatsNewGamificationBridge {
         priority: 3,
       });
     } catch (error) {
-      console.error('[WhatsNewGamificationBridge] Error announcing feature discovery:', error);
+      log.error('[WhatsNewGamificationBridge] Error announcing feature discovery:', error);
     }
   }
 }

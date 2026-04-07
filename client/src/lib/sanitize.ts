@@ -53,6 +53,63 @@ export function sanitizeMessage(message: string): string {
 }
 
 /**
+ * Sanitize rich HTML content (emails, documents, contracts)
+ * Allows formatting, tables, images but strips scripts and event handlers
+ * SECURITY: Prevents XSS from user-generated or external HTML content
+ */
+export function sanitizeRichHtml(html: string): string {
+  if (!html || typeof html !== 'string') {
+    return '';
+  }
+
+  DOMPurify.removeAllHooks();
+
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName === 'A') {
+      node.setAttribute('target', '_blank');
+      node.removeAttribute('rel');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+    if (node.tagName === 'IMG') {
+      node.setAttribute('loading', 'lazy');
+    }
+  });
+
+  const clean = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'hr', 'div', 'span',
+      'b', 'i', 'u', 'strong', 'em', 's', 'strike', 'sub', 'sup',
+      'a', 'img',
+      'ul', 'ol', 'li',
+      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
+      'blockquote', 'pre', 'code',
+      'dl', 'dt', 'dd',
+      'figure', 'figcaption',
+      'address', 'small', 'mark', 'abbr', 'cite',
+    ],
+    ALLOWED_ATTR: [
+      'href', 'src', 'alt', 'title', 'width', 'height',
+      'class', 'style',
+      'colspan', 'rowspan', 'scope', 'headers',
+      'align', 'valign', 'border', 'cellpadding', 'cellspacing',
+      'dir', 'lang',
+    ],
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|cid):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    ALLOW_DATA_ATTR: false,
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+    RETURN_DOM: false,
+    RETURN_DOM_FRAGMENT: false,
+    RETURN_TRUSTED_TYPE: false,
+  });
+
+  DOMPurify.removeAllHooks();
+
+  return clean;
+}
+
+/**
  * Sanitize plain text (strips ALL HTML)
  * Use for usernames, status messages, etc.
  */

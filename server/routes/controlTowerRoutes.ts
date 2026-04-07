@@ -14,15 +14,23 @@ import {
   invoices,
   payrollRuns,
   employees,
-  employeeCertifications,
   shifts,
   workspaces,
   timeEntries,
   ptoRequests,
   paymentRecords,
 } from '@shared/schema';
+import { requireAuth } from '../auth';
+import { requirePlatformRole } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('ControlTowerRoutes');
+
 
 const router = Router();
+
+// Apply authentication to all Control Tower routes - root admin only
+router.use(requireAuth);
+router.use(requirePlatformRole(['root_admin', 'deputy_admin', 'sysop']));
 
 interface ControlTowerSummary {
   systemHealth: {
@@ -75,7 +83,7 @@ router.get('/summary', async (req: Request, res: Response) => {
       // Overdue invoices
       db.select({
         count: count(),
-        total: sql<number>`COALESCE(SUM(CAST(${invoices.totalAmount} AS NUMERIC)), 0)`,
+        total: sql<number>`COALESCE(SUM(CAST(${invoices.total} AS NUMERIC)), 0)`,
       })
         .from(invoices)
         .where(eq(invoices.status, 'overdue')),
@@ -107,7 +115,7 @@ router.get('/summary', async (req: Request, res: Response) => {
 
       // Monthly revenue from paid invoices
       db.select({
-        total: sql<number>`COALESCE(SUM(CAST(${invoices.totalAmount} AS NUMERIC)), 0)`,
+        total: sql<number>`COALESCE(SUM(CAST(${invoices.total} AS NUMERIC)), 0)`,
       })
         .from(invoices)
         .where(
@@ -185,8 +193,8 @@ router.get('/summary', async (req: Request, res: Response) => {
     };
 
     res.json(summary);
-  } catch (error: any) {
-    console.error('[Control Tower] Error generating summary:', error);
+  } catch (error: unknown) {
+    log.error('[Control Tower] Error generating summary:', error);
     res.status(500).json({ error: 'Failed to generate control tower summary' });
   }
 });
@@ -199,8 +207,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
   try {
     // For now, just confirm refresh - actual data is fetched on each GET
     res.json({ success: true, message: 'Metrics will be refreshed on next fetch' });
-  } catch (error: any) {
-    console.error('[Control Tower] Error refreshing metrics:', error);
+  } catch (error: unknown) {
+    log.error('[Control Tower] Error refreshing metrics:', error);
     res.status(500).json({ error: 'Failed to refresh metrics' });
   }
 });

@@ -1,0 +1,8 @@
+containsTechnicalJargon
+generateEndUserSummary
+generateStructuredBreakdown
+getFriendlyMessage
+humanizeNotification
+humanizeText
+humanizeTitle
+sanitizeForEndUser

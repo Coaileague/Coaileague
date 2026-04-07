@@ -13,21 +13,21 @@ import {
   quickFixActions, 
   quickFixRolePolicies, 
   quickFixRequests,
-  quickFixApprovals,
   quickFixExecutions,
-  quickFixAuditLinks,
   type QuickFixAction,
   type QuickFixRolePolicy,
   type QuickFixRequest,
-  type QuickFixApproval,
   type QuickFixExecution,
   type InsertQuickFixRequest,
-  type InsertQuickFixApproval,
   type InsertQuickFixExecution,
 } from '@shared/schema';
 import { eq, and, gte, sql, desc, count } from 'drizzle-orm';
 import { aiBrainEvents } from '../ai-brain/internalEventEmitter';
 import crypto from 'crypto';
+import { typedPool } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quickFixService');
+
 
 // Platform role hierarchy for permission checking
 const ROLE_HIERARCHY: Record<string, number> = {
@@ -97,7 +97,7 @@ class QuickFixService {
         return roleLevel >= requiredLevel;
       });
     } catch (error) {
-      console.error('[QuickFix] Error getting available actions:', error);
+      log.error('[QuickFix] Error getting available actions:', error);
       // Return default safe actions if DB not ready
       return this.getDefaultActions(context.platformRole);
     }
@@ -333,18 +333,8 @@ class QuickFixService {
         aiConfidenceScore: aiRecommendation?.confidence,
         aiReasoning: aiRecommendation?.reasoning,
         status,
-        priority: 'normal',
+        priority: 'medium',
         requestedAt: new Date(),
-      });
-
-      // Create audit link
-      const auditEntryId = `qf-${requestId}-${Date.now()}`;
-      await db.insert(quickFixAuditLinks).values({
-        requestId,
-        auditEntryId,
-        eventType: 'requested',
-        aiBrainNotified: true,
-        aiBrainSummary: `Quick fix "${action.name}" requested by ${context.platformRole}`,
       });
 
       // Notify AI Brain
@@ -376,7 +366,7 @@ class QuickFixService {
           : 'Request queued for execution.',
       };
     } catch (error) {
-      console.error('[QuickFix] Error creating request:', error);
+      log.error('[QuickFix] Error creating request:', error);
       return { success: false, status: 'error', message: 'Failed to create request' };
     }
   }
@@ -429,34 +419,23 @@ class QuickFixService {
         this.approvalCodes.delete(requestId);
       }
 
-      // Create approval record
-      await db.insert(quickFixApprovals).values({
-        requestId,
-        approverId: approverContext.userId,
-        approverRole: approverContext.platformRole,
-        approvalMethod,
-        decision: 'approved',
-        decisionNotes: notes,
-      });
-
-      // Update request status
+      // Update request status — approval recorded via status transition + AI brain event
       await db
         .update(quickFixRequests)
         .set({ status: 'approved', updatedAt: new Date() })
         .where(eq(quickFixRequests.id, requestId));
 
-      // Audit
-      await db.insert(quickFixAuditLinks).values({
+      aiBrainEvents.emit('quick_fix_approved', {
         requestId,
-        auditEntryId: `qf-approve-${requestId}-${Date.now()}`,
-        eventType: 'approved',
-        aiBrainNotified: true,
-        aiBrainSummary: `Quick fix approved by ${approverContext.platformRole} (${approverContext.userId})`,
+        approverId: approverContext.userId,
+        approverRole: approverContext.platformRole,
+        approvalMethod,
+        notes,
       });
 
       return { success: true, message: 'Request approved. Ready for execution.' };
     } catch (error) {
-      console.error('[QuickFix] Approval error:', error);
+      log.error('[QuickFix] Approval error:', error);
       return { success: false, message: 'Failed to approve request' };
     }
   }
@@ -576,16 +555,7 @@ class QuickFixService {
         })
         .where(eq(quickFixRequests.id, requestId));
 
-      // Audit
-      await db.insert(quickFixAuditLinks).values({
-        requestId,
-        auditEntryId: `qf-exec-${requestId}-${Date.now()}`,
-        eventType: success ? 'executed' : 'failed',
-        aiBrainNotified: true,
-        aiBrainSummary: `Quick fix "${action.name}" ${success ? 'executed successfully' : 'failed'} by ${executorContext.platformRole}. Duration: ${durationMs}ms`,
-      });
-
-      // Notify AI Brain
+      // Notify AI Brain (captures execution audit trail)
       aiBrainEvents.emit('quick_fix_executed', {
         requestId,
         actionCode: action.code,
@@ -600,7 +570,7 @@ class QuickFixService {
         result,
       };
     } catch (error) {
-      console.error('[QuickFix] Execution error:', error);
+      log.error('[QuickFix] Execution error:', error);
       return { success: false, message: 'Execution failed with error' };
     }
   }
@@ -608,29 +578,54 @@ class QuickFixService {
   // Action executors
   private async executeClearCache(payload: any): Promise<any> {
     const cacheType = payload?.cacheType || 'all';
-    console.log(`[QuickFix] Clearing cache: ${cacheType}`);
-    // Placeholder - implement actual cache clearing
-    return { cleared: cacheType, timestamp: new Date().toISOString() };
+    log.info(`[QuickFix] Clearing cache: ${cacheType}`);
+    try {
+      const { cacheManager } = await import('../platform/cacheManager');
+      cacheManager.clearAll();
+      return { cleared: cacheType, success: true, timestamp: new Date().toISOString() };
+    } catch (error) {
+      log.warn('[QuickFix] Cache manager not available:', error);
+      return { cleared: cacheType, success: false, note: 'No server-side cache service active', timestamp: new Date().toISOString() };
+    }
   }
 
   private async executeRestartService(payload: any): Promise<any> {
     const serviceName = payload?.serviceName;
-    console.log(`[QuickFix] Restarting service: ${serviceName}`);
-    // Placeholder - implement actual service restart
-    return { service: serviceName, restarted: true, timestamp: new Date().toISOString() };
+    log.info(`[QuickFix] Service restart requested: ${serviceName}`);
+    return { service: serviceName, restarted: false, note: 'Service restart requires manual deployment action', timestamp: new Date().toISOString() };
   }
 
   private async executeRefreshConnections(): Promise<any> {
-    console.log('[QuickFix] Refreshing database connections');
-    // Placeholder - implement connection pool refresh
-    return { connectionsRefreshed: true, timestamp: new Date().toISOString() };
+    log.info('[QuickFix] Verifying database connections');
+    try {
+      const { pool } = await import('../../db');
+      const result = await typedPool('SELECT 1 AS alive');
+      const isAlive = (result as any[])?.[0]?.alive === 1;
+      return { connectionAlive: isAlive, connectionsRefreshed: false, note: 'Connection pool is managed by the database driver', timestamp: new Date().toISOString() };
+    } catch (error) {
+      log.error('[QuickFix] Connection verification failed:', error);
+      return { connectionAlive: false, connectionsRefreshed: false, note: 'Connection verification failed', timestamp: new Date().toISOString() };
+    }
   }
 
   private async executeForceLogout(payload: any): Promise<any> {
     const targetUserId = payload?.targetUserId;
-    console.log(`[QuickFix] Force logout user: ${targetUserId}`);
-    // Placeholder - implement session invalidation
-    return { userId: targetUserId, sessionsCleared: true, timestamp: new Date().toISOString() };
+    log.info(`[QuickFix] Force logout user: ${targetUserId}`);
+    if (!targetUserId) {
+      return { userId: null, sessionsCleared: false, note: 'No target user ID provided', timestamp: new Date().toISOString() };
+    }
+    try {
+      const { sessions } = await import('@shared/schema');
+      const deleted = await db.delete(sessions).where(
+        sql`sess->>'userId' = ${targetUserId} OR sess->'passport'->>'user' = ${targetUserId}`
+      ).returning({ sid: sessions.sid });
+      const count = deleted.length;
+      log.info(`[QuickFix] Cleared ${count} sessions for user ${targetUserId}`);
+      return { userId: targetUserId, sessionsCleared: count > 0, sessionCount: count, timestamp: new Date().toISOString() };
+    } catch (error) {
+      log.error('[QuickFix] Session invalidation failed:', error);
+      return { userId: targetUserId, sessionsCleared: false, note: 'Session invalidation failed', timestamp: new Date().toISOString() };
+    }
   }
 
   /**

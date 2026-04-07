@@ -60,7 +60,7 @@ export function CostTracker({ costs, showDetails = true }: CostTrackerProps) {
         )}
         
         <div className="p-3 rounded-lg bg-muted/50 border">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <span className="text-sm font-medium">Net Profit</span>
             <div className="flex items-center gap-2">
               {isProfit ? (
@@ -82,7 +82,7 @@ export function CostTracker({ costs, showDetails = true }: CostTrackerProps) {
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between gap-1 text-xs">
             <span className="text-muted-foreground">Budget Used</span>
             <span className="font-medium">{costs.budgetUsed}/{costs.budgetTotal}</span>
           </div>

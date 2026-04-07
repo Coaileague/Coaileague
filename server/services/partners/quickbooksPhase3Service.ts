@@ -18,7 +18,6 @@ import {
   timeEntries,
   workspaces,
   partnerConnections,
-  partnerDataMappings,
   industryServiceTemplates,
   workspaceServiceCatalog,
   evvBillingCodes,
@@ -38,6 +37,10 @@ import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { platformEventBus } from '../platformEventBus';
 import { auditLogger } from '../audit-logger';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('quickbooksPhase3Service');
+
 
 const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
 
@@ -152,6 +155,7 @@ export class QuickBooksPhase3Service {
       const vendorResponse = await fetch(
         `${QBO_API_BASE}/${realmId}/query?query=SELECT * FROM Vendor WHERE Active = true`,
         {
+          signal: AbortSignal.timeout(15000),
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/json',
@@ -230,7 +234,7 @@ export class QuickBooksPhase3Service {
       
       return { synced, flagged, errors };
     } catch (error: any) {
-      errors.push(error.message);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return { synced, flagged, errors };
     }
   }
@@ -284,7 +288,7 @@ export class QuickBooksPhase3Service {
       }
     }
     
-    console.log(`[Phase3] Seeded ${inserted} industry templates`);
+    log.info(`[Phase3] Seeded ${inserted} industry templates`);
     return { inserted };
   }
   
@@ -391,6 +395,7 @@ export class QuickBooksPhase3Service {
           
           const response = await fetch(`${QBO_API_BASE}/${realmId}/item`, {
             method: 'POST',
+            signal: AbortSignal.timeout(15000),
             headers: {
               'Authorization': `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
@@ -419,7 +424,7 @@ export class QuickBooksPhase3Service {
       
       return { synced, errors };
     } catch (error: any) {
-      errors.push(error.message);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return { synced, errors };
     }
   }
@@ -511,12 +516,12 @@ export class QuickBooksPhase3Service {
         .limit(1);
       
       if (existing.length === 0) {
-        await db.insert(evvBillingCodes).values(code);
+        await db.insert(evvBillingCodes).values({ ...code, workspaceId: PLATFORM_WORKSPACE_ID });
         inserted++;
       }
     }
     
-    console.log(`[Phase3] Seeded ${inserted} EVV billing codes`);
+    log.info(`[Phase3] Seeded ${inserted} EVV billing codes`);
     return { inserted };
   }
   
@@ -634,6 +639,7 @@ export class QuickBooksPhase3Service {
       const qboInvoiceResponse = await fetch(
         `${QBO_API_BASE}/${realmId}/query?query=SELECT * FROM Invoice WHERE TxnDate >= '${periodStart.toISOString().split('T')[0]}' AND TxnDate <= '${periodEnd.toISOString().split('T')[0]}'`,
         {
+          signal: AbortSignal.timeout(15000),
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/json',
@@ -667,7 +673,7 @@ export class QuickBooksPhase3Service {
             });
           } else if (qboMatch) {
             // Check amount mismatch
-            const localAmount = parseFloat(localInv.totalAmount || '0');
+            const localAmount = parseFloat(localInv.total || '0');
             const qboAmount = parseFloat(qboMatch.TotalAmt || '0');
             
             if (Math.abs(localAmount - qboAmount) > 0.01) {
@@ -702,7 +708,7 @@ export class QuickBooksPhase3Service {
       
       const invoicesByClient = new Map<string, any[]>();
       for (const inv of duplicateCheck) {
-        const key = `${inv.clientId}-${inv.issueDate}-${inv.totalAmount}`;
+        const key = `${inv.clientId}-${inv.issueDate}-${inv.total}`;
         if (!invoicesByClient.has(key)) {
           invoicesByClient.set(key, []);
         }
@@ -752,13 +758,14 @@ export class QuickBooksPhase3Service {
       
       // Emit event for notifications
       if (criticalCount > 0 || highCount > 0) {
-        platformEventBus.emit('reconciliation_alert', {
+        platformEventBus.publish({
+          type: 'quickbooks_operation_failed',
+          category: 'partner',
+          title: `Reconciliation Alert: ${criticalCount} Critical, ${highCount} High`,
+          description: `Financial watchdog scan found discrepancies totalling $${totalDiscrepancy.toFixed(2)}`,
           workspaceId,
-          runId,
-          criticalCount,
-          highCount,
-          totalDiscrepancy,
-        });
+          metadata: { runId, criticalCount, highCount, totalDiscrepancy },
+        }).catch((err) => log.warn('[quickbooksPhase3Service] Fire-and-forget failed:', err));
       }
       
       await auditLogger.log({
@@ -775,7 +782,7 @@ export class QuickBooksPhase3Service {
       };
     } catch (error: any) {
       await db.update(reconciliationRuns)
-        .set({ status: 'failed', errorMessage: error.message })
+        .set({ status: 'failed', errorMessage: (error instanceof Error ? error.message : String(error)) })
         .where(eq(reconciliationRuns.id, runId));
       throw error;
     }
@@ -819,18 +826,18 @@ export class QuickBooksPhase3Service {
    * Initialize Phase 3 features - seed templates and EVV codes
    */
   async initialize(): Promise<void> {
-    console.log('[QuickBooks Phase 3] Initializing Intelligence & Compliance features...');
+    log.info('[QuickBooks Phase 3] Initializing Intelligence & Compliance features...');
     
     try {
       const templateResult = await this.seedIndustryTemplates();
-      console.log(`[QuickBooks Phase 3] Industry templates: ${templateResult.inserted} seeded`);
+      log.info(`[QuickBooks Phase 3] Industry templates: ${templateResult.inserted} seeded`);
       
       const evvResult = await this.seedEvvBillingCodes();
-      console.log(`[QuickBooks Phase 3] EVV billing codes: ${evvResult.inserted} seeded`);
+      log.info(`[QuickBooks Phase 3] EVV billing codes: ${evvResult.inserted} seeded`);
       
-      console.log('[QuickBooks Phase 3] Initialization complete');
+      log.info('[QuickBooks Phase 3] Initialization complete');
     } catch (error: any) {
-      console.error('[QuickBooks Phase 3] Initialization error:', error.message);
+      log.error('[QuickBooks Phase 3] Initialization error:', (error instanceof Error ? error.message : String(error)));
     }
   }
 }
@@ -839,4 +846,6 @@ export class QuickBooksPhase3Service {
 export const quickbooksPhase3Service = new QuickBooksPhase3Service();
 
 // Auto-initialize on import
-quickbooksPhase3Service.initialize().catch(console.error);
+quickbooksPhase3Service.initialize().catch((err: unknown) => {
+  log.error('QuickBooks Phase 3 auto-initialize failed', err);
+});

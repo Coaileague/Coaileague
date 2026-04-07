@@ -1,147 +1,97 @@
 /**
- * useBusinessBuddyTier - Resolves user's Business Buddy subscription tier
- * 
- * Tiers:
- * - PUBLIC_DEMO: Not logged in, free demo mode on public pages
- * - LOGGED_IN_FREE: Logged in but no Business Buddy purchase
- * - BUSINESS_BUDDY: Full Business Buddy subscription active
- * 
- * Features by tier:
- * - PUBLIC_DEMO: Demo animations, limited interactions, promo messages
- * - LOGGED_IN_FREE: Same as demo + reminder nudges to upgrade
- * - BUSINESS_BUDDY: Full AI assistant, all modes, personalized insights
+ * useTrinityMode — Resolves the active Trinity operational mode for the current user.
+ *
+ * Trinity has two distinct intelligent modes:
+ *   - COO Mode      : For org owners and managers at security companies. Full
+ *                     business intelligence, ops management, payroll, scheduling.
+ *   - Tech Guru Mode: For platform support agents. Platform diagnostics, health
+ *                     monitoring, escalation management.
+ *   - Standard      : All other authenticated users.
+ *
+ * NOTE: "Business Buddy" was an old concept and has been fully removed.
+ *       All references should use trinityMode ('coo' | 'guru' | 'standard').
  */
 
 import { useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
+import { useTrinityContext } from './use-trinity-context';
 
-export type BusinessBuddyTier = 'PUBLIC_DEMO' | 'LOGGED_IN_FREE' | 'BUSINESS_BUDDY';
+export type TrinityMode = 'coo' | 'guru' | 'standard';
 
-interface BusinessBuddyTierResult {
-  tier: BusinessBuddyTier;
+export interface TrinityModeResult {
+  mode: TrinityMode;
+  isCOO: boolean;
+  isGuru: boolean;
+  isStandard: boolean;
+  modeLabel: string;
+  modeDescription: string;
+  /** @deprecated Use mode instead. Kept for compatibility during migration. */
+  tier: TrinityMode;
+  /** @deprecated No longer meaningful — Trinity is not gated by subscription add-ons. */
   isDemo: boolean;
+  /** @deprecated Always true for authenticated users with COO or Guru mode. */
   hasFullAccess: boolean;
-  shouldShowUpgradeNudge: boolean;
+  /** @deprecated Upgrade nudges removed. Always false. */
+  shouldShowUpgradeNudge: false;
+  /** @deprecated Use modeLabel instead. */
   tierLabel: string;
-  tierDescription: string;
 }
 
-// Demo modes allowed for non-subscribers
-const DEMO_MODES = ['IDLE', 'HOLIDAY', 'GREETING', 'CELEBRATING'] as const;
+export function useTrinityMode(): TrinityModeResult {
+  const { user } = useAuth();
+  const { context } = useTrinityContext();
 
-// All modes available for Business Buddy subscribers
-const FULL_MODES = [
+  const mode = useMemo((): TrinityMode => {
+    if (!user) return 'standard';
+    return context?.trinityMode ?? 'standard';
+  }, [user, context?.trinityMode]);
+
+  return useMemo((): TrinityModeResult => {
+    const isCOO = mode === 'coo';
+    const isGuru = mode === 'guru';
+    const label = isCOO ? 'COO Mode' : isGuru ? 'Tech Guru Mode' : 'Standard';
+    const description = isCOO
+      ? 'Full business intelligence and org oversight for security companies'
+      : isGuru
+      ? 'Platform diagnostics and health monitoring for support agents'
+      : 'AI assistant';
+    return {
+      mode,
+      isCOO,
+      isGuru,
+      isStandard: !isCOO && !isGuru,
+      modeLabel: label,
+      modeDescription: description,
+      tier: mode,
+      isDemo: false,
+      hasFullAccess: isCOO || isGuru,
+      shouldShowUpgradeNudge: false,
+      tierLabel: label,
+    };
+  }, [mode]);
+}
+
+/** @deprecated Use useTrinityMode instead. */
+export const useBusinessBuddyTier = useTrinityMode;
+
+/** All mascot modes — no longer filtered by tier. */
+const ALL_MODES = [
   'IDLE', 'SEARCHING', 'THINKING', 'ANALYZING', 'CODING',
   'UPLOADING', 'LISTENING', 'SUCCESS', 'ERROR', 'ADVISING',
-  'HOLIDAY', 'CELEBRATING', 'GREETING'
+  'HOLIDAY', 'CELEBRATING', 'GREETING',
 ] as const;
 
-export function useBusinessBuddyTier(): BusinessBuddyTierResult {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  
-  // Check if user has Business Buddy subscription
-  // Uses staleTime to reduce redundant fetches during rapid auth changes
-  const { data: subscriptionData } = useQuery<{ hasBusinessBuddy?: boolean }>({
-    queryKey: ['/api/subscription/business-buddy'],
-    enabled: isAuthenticated && !authLoading,
-    staleTime: 60000, // Cache for 1 minute
-    gcTime: 300000,   // Keep in cache for 5 minutes
-  });
-  
-  const tier = useMemo((): BusinessBuddyTier => {
-    if (authLoading) return 'PUBLIC_DEMO';
-    
-    if (!isAuthenticated || !user) {
-      return 'PUBLIC_DEMO';
-    }
-    
-    // Check for Business Buddy subscription
-    // This checks both workspace subscription and individual add-on
-    const userAny = user as Record<string, any>;
-    const hasBusinessBuddy = 
-      subscriptionData?.hasBusinessBuddy ||
-      userAny?.hasBusinessBuddy ||
-      userAny?.workspace?.hasBusinessBuddy;
-    
-    if (hasBusinessBuddy) {
-      return 'BUSINESS_BUDDY';
-    }
-    
-    return 'LOGGED_IN_FREE';
-  }, [authLoading, isAuthenticated, user, subscriptionData]);
-  
-  const result = useMemo((): BusinessBuddyTierResult => {
-    switch (tier) {
-      case 'BUSINESS_BUDDY':
-        return {
-          tier,
-          isDemo: false,
-          hasFullAccess: true,
-          shouldShowUpgradeNudge: false,
-          tierLabel: 'Business Buddy',
-          tierDescription: 'Your AI-powered business expert partner',
-        };
-      case 'LOGGED_IN_FREE':
-        return {
-          tier,
-          isDemo: true,
-          hasFullAccess: false,
-          shouldShowUpgradeNudge: true,
-          tierLabel: 'Demo Mode',
-          tierDescription: 'Upgrade to Business Buddy for full AI assistance',
-        };
-      case 'PUBLIC_DEMO':
-      default:
-        return {
-          tier,
-          isDemo: true,
-          hasFullAccess: false,
-          shouldShowUpgradeNudge: false, // Don't show upgrade nudge on public pages
-          tierLabel: 'Try Trinity',
-          tierDescription: 'Sign up to unlock your AI business partner',
-        };
-    }
-  }, [tier]);
-  
-  return result;
+/** @deprecated Mode filtering is no longer needed. All modes are always allowed. */
+export function getAllowedModes(_mode?: TrinityMode): readonly string[] {
+  return ALL_MODES;
 }
 
-// Helper to filter allowed modes based on tier
-export function getAllowedModes(tier: BusinessBuddyTier): readonly string[] {
-  return tier === 'BUSINESS_BUDDY' ? FULL_MODES : DEMO_MODES;
+/** @deprecated Mode gating removed. Always returns true. */
+export function isModeAllowed(_mode: TrinityMode, _mascotMode: string): boolean {
+  return true;
 }
 
-// Helper to check if a mode is allowed for a tier
-export function isModeAllowed(tier: BusinessBuddyTier, mode: string): boolean {
-  const allowedModes = getAllowedModes(tier);
-  return allowedModes.includes(mode as any);
-}
-
-// Upgrade nudge messages for different contexts
-export const UPGRADE_NUDGE_MESSAGES = {
-  general: [
-    "Want me to help with your business tasks? Upgrade to Business Buddy!",
-    "I could analyze your data if you unlock Business Buddy mode...",
-    "Business Buddy gives you full AI-powered insights. Ready to upgrade?",
-    "Unlock your personal AI business expert with Business Buddy!",
-  ],
-  scheduling: [
-    "I can optimize your schedules with Business Buddy AI!",
-    "Smart scheduling awaits with Business Buddy mode!",
-  ],
-  analytics: [
-    "Want deep analytics insights? Upgrade to Business Buddy!",
-    "Business Buddy can help you understand your metrics better!",
-  ],
-  coding: [
-    "I can help with code tasks in Business Buddy mode!",
-    "Unlock coding assistance with Business Buddy!",
-  ],
-};
-
-// Get a random upgrade nudge message
-export function getUpgradeNudgeMessage(context: keyof typeof UPGRADE_NUDGE_MESSAGES = 'general'): string {
-  const messages = UPGRADE_NUDGE_MESSAGES[context] || UPGRADE_NUDGE_MESSAGES.general;
-  return messages[Math.floor(Math.random() * messages.length)];
+/** @deprecated Upgrade nudges removed. Returns empty string. */
+export function getUpgradeNudgeMessage(_context?: string): string {
+  return '';
 }

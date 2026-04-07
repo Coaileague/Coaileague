@@ -21,6 +21,14 @@ import {
 } from "lucide-react";
 import type { OrgInvitation, Proposal, Deal, Lead } from "@shared/schema";
 import { MARKETING } from "@shared/marketingConfig";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+
+const pageConfig: CanvasPageConfig = {
+  id: 'workspace-sales',
+  title: 'Sales Command Center',
+  subtitle: 'Invite organizations to sign up or send custom proposals',
+  category: 'operations',
+};
 
 /**
  * UNIFIED WORKSPACE SALES PAGE
@@ -65,7 +73,7 @@ export default function WorkspaceSales() {
   // MUTATIONS
   const sendInvitation = useMutation({
     mutationFn: async (data: { email: string; organizationName: string; contactName: string; offeredTier: string }) => {
-      return await apiRequest("/api/sales/invitations/send", "POST", data);
+      return await apiRequest("POST", "/api/sales/invitations/send", data);
     },
     onSuccess: () => {
       toast({
@@ -88,7 +96,7 @@ export default function WorkspaceSales() {
       dealId: string;
       status?: string;
     }) => {
-      return await apiRequest("/api/sales/proposals", "POST", data);
+      return await apiRequest("POST", "/api/sales/proposals", data);
     },
     onSuccess: () => {
       toast({ title: "Proposal Created", description: "Proposal draft created and linked to deal." });
@@ -123,33 +131,23 @@ export default function WorkspaceSales() {
   };
 
   // METRICS
-  const activeInvitations = invitations.filter(i => i.status === "pending" || i.status === "accepted");
-  const completedInvitations = invitations.filter(i => i.status === "completed");
-  const sentProposals = proposals.filter(p => p.status !== "draft");
-  const totalPipelineValue = deals.reduce((sum, d) => sum + (parseFloat(d.estimatedValue?.toString() || "0")), 0);
+  const safeInvitations = Array.isArray(invitations) ? invitations : [];
+  const safeProposals = Array.isArray(proposals) ? proposals : [];
+  const safeDeals = Array.isArray(deals) ? deals : [];
+  const safeLeads = Array.isArray(leads) ? leads : [];
+  const activeInvitations = safeInvitations.filter(i => i.status === "pending" || i.status === "accepted");
+  const completedInvitations = safeInvitations.filter(i => i.status === "completed");
+  const sentProposals = safeProposals.filter(p => p.status !== "draft");
+  const totalPipelineValue = safeDeals.reduce((sum, d) => sum + (parseFloat(d.estimatedValue?.toString() || "0")), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Target className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl sm:text-3xl font-bold">Sales Command Center</h1>
-            <Badge variant="outline">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Invitations & Proposals
-            </Badge>
-          </div>
-          <p className="text-muted-foreground">Invite organizations to sign up or send custom proposals</p>
-        </div>
-
-        {/* Key Metrics */}
+    <CanvasHubPage config={pageConfig}>
+      {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Invites</CardTitle>
-              <Mail className="h-4 w-4 text-blue-500" />
+              <Mail className="h-4 w-4 text-blue-500 dark:text-blue-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{activeInvitations.length}</div>
@@ -158,9 +156,9 @@ export default function WorkspaceSales() {
           </Card>
 
           <Card className="hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Onboarded</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{completedInvitations.length}</div>
@@ -169,9 +167,9 @@ export default function WorkspaceSales() {
           </Card>
 
           <Card className="hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Proposals Sent</CardTitle>
-              <FileText className="h-4 w-4 text-purple-500" />
+              <FileText className="h-4 w-4 text-purple-500 dark:text-purple-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{sentProposals.length}</div>
@@ -180,13 +178,13 @@ export default function WorkspaceSales() {
           </Card>
 
           <Card className="hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
-              <TrendingUp className="h-4 w-4 text-orange-500" />
+              <TrendingUp className="h-4 w-4 text-orange-500 dark:text-orange-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${(totalPipelineValue / 1000).toFixed(0)}K</div>
-              <p className="text-xs text-muted-foreground">{deals.length} deals tracked</p>
+              <p className="text-xs text-muted-foreground">{safeDeals.length} deals tracked</p>
             </CardContent>
           </Card>
         </div>
@@ -241,7 +239,7 @@ export default function WorkspaceSales() {
                     <Label htmlFor="invite-contact">Contact Name</Label>
                     <Input
                       id="invite-contact"
-                      placeholder="John Doe"
+                      placeholder="Enter contact name"
                       value={inviteContact}
                       onChange={(e) => setInviteContact(e.target.value)}
                       data-testid="input-invite-contact"
@@ -296,7 +294,7 @@ export default function WorkspaceSales() {
                   ) : (
                     activeInvitations.map((inv) => (
                       <div key={inv.id} className="border rounded-lg p-4 space-y-2">
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="font-medium">{inv.organizationName}</p>
                             <p className="text-sm text-muted-foreground">{inv.email}</p>
@@ -307,7 +305,7 @@ export default function WorkspaceSales() {
                           </Badge>
                         </div>
                         <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center justify-between gap-1 text-xs">
                             <span>Onboarding Progress</span>
                             <span>{inv.onboardingProgress}%</span>
                           </div>
@@ -325,14 +323,14 @@ export default function WorkspaceSales() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                     Completed Onboarding
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {completedInvitations.map((inv) => (
-                      <div key={inv.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div key={inv.id} className="flex items-center justify-between gap-2 p-3 border rounded-lg">
                         <div>
                           <p className="font-medium">{inv.organizationName}</p>
                           <p className="text-sm text-muted-foreground">{inv.email}</p>
@@ -374,10 +372,10 @@ export default function WorkspaceSales() {
                         <SelectValue placeholder="Select a deal" />
                       </SelectTrigger>
                       <SelectContent>
-                        {deals.length === 0 ? (
+                        {safeDeals.length === 0 ? (
                           <SelectItem value="none" disabled>No deals available</SelectItem>
                         ) : (
-                          deals.map((deal) => (
+                          safeDeals.map((deal) => (
                             <SelectItem key={deal.id} value={deal.id}>
                               {deal.companyName || deal.id} - ${deal.estimatedValue || 0}
                             </SelectItem>
@@ -385,14 +383,14 @@ export default function WorkspaceSales() {
                         )}
                       </SelectContent>
                     </Select>
-                    {deals.length === 0 && (
+                    {safeDeals.length === 0 && (
                       <p className="text-xs text-muted-foreground">Create a deal in the CRM first to link proposals</p>
                     )}
                   </div>
 
                   <Button
                     onClick={handleCreateProposal}
-                    disabled={createProposal.isPending || deals.length === 0}
+                    disabled={createProposal.isPending || safeDeals.length === 0}
                     className="w-full"
                     data-testid="button-create-proposal"
                   >
@@ -419,7 +417,7 @@ export default function WorkspaceSales() {
                   ) : (
                     sentProposals.map((proposal) => (
                       <div key={proposal.id} className="border rounded-lg p-4 space-y-2">
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{proposal.proposalName}</p>
                             <p className="text-sm text-muted-foreground">Version {proposal.version || 1}</p>
@@ -433,7 +431,7 @@ export default function WorkspaceSales() {
                             {proposal.status}
                           </Badge>
                         </div>
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
                           <span>{proposal.submittedAt ? `Submitted: ${new Date(proposal.submittedAt).toLocaleDateString()}` : 'Draft'}</span>
                         </div>
                       </div>
@@ -444,7 +442,6 @@ export default function WorkspaceSales() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }

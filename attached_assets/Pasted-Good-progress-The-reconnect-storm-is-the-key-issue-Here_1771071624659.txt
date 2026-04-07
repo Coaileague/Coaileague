@@ -1,0 +1,109 @@
+Good progress! The reconnect storm is the key issue. Here's what's likely happening:
+
+RECONNECT STORM DIAGNOSIS
+Current Broken Flow:
+User clicks Room A
+→ Create/get socket, join Room A
+→ User clicks Room B  
+→ Code thinks: "new room = close old socket, create new one"
+→ Old socket closes
+→ Reconnect logic sees close → tries to reconnect
+→ New socket created for Room B
+→ Meanwhile reconnect creates ANOTHER socket
+→ Both sockets fight
+→ Storm
+Correct Flow (WhatsApp-style):
+User logs in
+→ Create ONE socket, subscribe to ALL user's rooms
+→ User clicks Room A
+→ Send: "I'm viewing Room A now" (for read receipts)
+→ User clicks Room B
+→ Send: "I'm viewing Room B now"
+→ Socket NEVER closes until logout
+→ Messages for ALL rooms come through same socket
+
+THE FIX PATTERN
+typescript// WRONG: One socket per room
+const connect = (roomId) => {
+  if (socket) socket.close(); // ← THIS CAUSES THE STORM
+  socket = new WebSocket(url);
+  socket.onopen = () => join(roomId);
+};
+
+// RIGHT: One socket, multiple room subscriptions
+const globalSocket = {
+  socket: null,
+  subscribedRooms: new Set(),
+  activeRoom: null, // Which room user is VIEWING (for read receipts)
+  
+  ensureConnected() {
+    if (this.socket?.readyState === WebSocket.OPEN) return;
+    if (this.socket?.readyState === WebSocket.CONNECTING) return;
+    
+    this.socket = new WebSocket(url);
+    this.socket.onopen = () => {
+      // Rejoin ALL previously subscribed rooms
+      this.subscribedRooms.forEach(roomId => {
+        this.send({ type: 'join_conversation', conversationId: roomId });
+      });
+    };
+    // NEVER manually close this socket
+  },
+  
+  viewRoom(roomId) {
+    this.ensureConnected();
+    this.activeRoom = roomId;
+    
+    if (!this.subscribedRooms.has(roomId)) {
+      this.subscribedRooms.add(roomId);
+      this.send({ type: 'join_conversation', conversationId: roomId });
+    }
+    
+    // Mark as read since user is viewing
+    this.send({ type: 'mark_read', conversationId: roomId });
+  },
+  
+  // Called on LOGOUT only, not room switch
+  disconnect() {
+    this.socket?.close();
+    this.socket = null;
+    this.subscribedRooms.clear();
+  }
+};
+```
+
+---
+
+## KEY CHANGES NEEDED
+
+| Current Behavior | Required Behavior |
+|-----------------|-------------------|
+| Close socket when switching rooms | NEVER close socket on room switch |
+| One socket per room | One socket per session |
+| Join on connect | Subscribe to all rooms on connect |
+| Reconnect on any close | Reconnect only on unexpected close |
+
+---
+
+## QUICK VERIFICATION
+
+After the fix, browser console should show:
+```
+[ChatSocket] Connected (ONCE on page load)
+[ChatSocket] Joined: Help Desk
+[ChatSocket] Joined: Site Alpha  
+[ChatSocket] Viewing: Help Desk
+// User clicks Site Alpha
+[ChatSocket] Viewing: Site Alpha  ← NO new connection, just viewing change
+// User clicks back to Help Desk
+[ChatSocket] Viewing: Help Desk   ← Still same socket
+```
+
+**NOT:**
+```
+[ChatSocket] Connected
+[ChatSocket] Disconnected
+[ChatSocket] Connected
+[ChatSocket] Disconnected
+[ChatSocket] Connected
+... (storm)

@@ -7,10 +7,13 @@
  */
 
 import { db } from '../db';
-import { employees, shifts, clients, workspaces } from '@shared/schema';
+import { employees, shifts, clients, workspaces, complianceChecklists, complianceRequirements } from '@shared/schema';
 import { eq, and, sql, gte, lte, or } from 'drizzle-orm';
 import { differenceInDays, addDays, format } from 'date-fns';
 import { trinityPlatformConnector } from './ai-brain/trinityPlatformConnector';
+import { createLogger } from '../lib/logger';
+const log = createLogger('complianceMonitoring');
+
 
 export interface ComplianceIssue {
   id: string;
@@ -67,14 +70,14 @@ export class ComplianceMonitoringService {
           highCount: issues.filter(i => i.severity === 'HIGH').length,
           issueTypes: [...new Set(issues.map(i => i.type))],
         },
-      }).catch(err => console.error('[ComplianceMonitoring] Failed to emit event:', err));
+      }).catch(err => log.error('[ComplianceMonitoring] Failed to emit event:', err));
     } else {
       trinityPlatformConnector.emitServiceEvent('compliance', 'scan_completed', {
         action: 'Compliance scan completed with no issues',
         workspaceId,
         severity: 'info',
         data: { issueCount: 0 },
-      }).catch(err => console.error('[ComplianceMonitoring] Failed to emit event:', err));
+      }).catch(err => log.error('[ComplianceMonitoring] Failed to emit event:', err));
     }
 
     return issues;
@@ -141,16 +144,62 @@ export class ComplianceMonitoringService {
   /**
    * Check documentation compliance
    * Flag missing I-9, W-4, or expired documents
-   * 
-   * NOTE: Document checking currently disabled until file cabinet integration is complete.
-   * This prevents false positives flagging all employees as missing documents.
    */
   private static async checkDocumentationCompliance(workspaceId: string): Promise<ComplianceIssue[]> {
     const issues: ComplianceIssue[] = [];
 
-    // FUTURE: Integrate with file cabinet/document management system
-    // For now, skip document checks to avoid false positives
-    // This will be enabled once we have proper document tracking in place
+    try {
+      // Get all active employees for this workspace
+      const activeEmployees = await db.select()
+        .from(employees)
+        .where(and(
+          eq(employees.workspaceId, workspaceId),
+          eq(employees.onboardingStatus, 'completed')
+        ));
+
+      if (activeEmployees.length === 0) return [];
+
+      // Get all requirements for these employees via checklists
+      const checklists = await db.select({
+        checklist: complianceChecklists,
+        requirement: complianceRequirements,
+        employee: employees
+      })
+      .from(complianceChecklists)
+      .innerJoin(complianceRequirements, eq(complianceChecklists.requirementId, complianceRequirements.id))
+      .innerJoin(employees, eq(complianceChecklists.employeeId, employees.id))
+      .where(and(
+        eq(complianceChecklists.workspaceId, workspaceId),
+        eq(complianceRequirements.isRequired, true)
+      ));
+
+      for (const item of checklists) {
+        if (!item.checklist.isCompleted && !item.checklist.isOverridden) {
+          const isCritical = item.requirement.isCritical || 
+                            ['I9_FORM', 'W4_FORM', 'GOVT_ID'].includes(item.requirement.requirementCode || '');
+          
+          issues.push({
+            id: `doc-missing-${item.checklist.id}-${Date.now()}`,
+            type: 'DOCUMENTATION',
+            severity: isCritical ? 'CRITICAL' : 'HIGH',
+            title: `Missing Required Document: ${item.requirement.requirementName}`,
+            description: `Employee ${item.employee.firstName} ${item.employee.lastName} is missing the required "${item.requirement.requirementName}" document. This is a regulatory compliance requirement.`,
+            affectedEntity: {
+              type: 'employee',
+              id: item.employee.id,
+              name: `${item.employee.firstName} ${item.employee.lastName}`,
+            },
+            regulation: item.requirement.requirementCode === 'I9_FORM' 
+              ? 'Immigration Reform and Control Act (IRCA)' 
+              : 'Federal/State Compliance Requirements',
+            detected_at: new Date(),
+            resolution: `Request and upload ${item.requirement.requirementName} for this employee immediately.`,
+          });
+        }
+      }
+    } catch (error) {
+      log.error('[ComplianceMonitoring] Error checking documentation:', error);
+    }
 
     return issues;
   }
@@ -217,7 +266,7 @@ export class ComplianceMonitoringService {
         }
       }
     } catch (error) {
-      console.error('[ComplianceMonitoring] Error checking certifications:', error);
+      log.error('[ComplianceMonitoring] Error checking certifications:', error);
       // Non-critical - continue with other checks
     }
 

@@ -6,23 +6,35 @@
  */
 
 import { db } from '../../db';
-import { systemAuditLogs, users, governanceApprovals } from '@shared/schema';
-import { eq, and, lt, desc } from 'drizzle-orm';
+import { createLogger } from '../../lib/logger';
+import { systemAuditLogs, users, trinityWorkspacePauses } from '@shared/schema';
+
+const log = createLogger('AIBrainAuth');
+import { eq, and, lt, desc, sql } from 'drizzle-orm';
+import { typedQuery } from '../../lib/typedSql';
 
 export const ROLE_HIERARCHY: Record<string, number> = {
   'none': 0,
-  'employee': 1,
-  'manager': 2,
+  'contractor': 1,
+  'auditor': 1,
+  'staff': 2,
+  'employee': 2,
   'supervisor': 3,
-  'support_agent': 4,
-  'support_manager': 5,
-  'sysop': 6,
-  'deputy_admin': 7,
-  'root_admin': 8,
-  'trinity_root': 9, // Trinity has highest authority - equivalent to root user
+  'manager': 4,
+  'department_manager': 4,
+  'dept_manager': 4,
+  'co_owner': 5,
+  'org_owner': 6,
+  'compliance_officer': 7,
+  'support_agent': 8,
+  'support_manager': 9,
+  'sysop': 10,
+  'deputy_admin': 11,
+  'root_admin': 12,
+  'trinity_root': 13,
 };
 
-export const SUPPORT_ROLES = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
+export { SUPPORT_ROLES } from '@shared/platformConfig';
 
 // Trinity AI identity constants - grants full platform control
 export const TRINITY_AGENT_ID = 'trinity-orchestrator';
@@ -38,22 +50,23 @@ export const TRINITY_SERVICE_IDENTIFIERS = [
 ];
 
 export const AI_BRAIN_AUTHORITY_ROLES: Record<string, string[]> = {
-  'scheduling': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'payroll': ['sysop', 'deputy_admin', 'root_admin'],
-  'invoicing': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'analytics': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'compliance': ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'notifications': ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'gamification': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'automation': ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'communication': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'health': ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'user_assistance': ['employee', 'manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'scheduling': ['supervisor', 'manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'payroll': ['org_owner', 'sysop', 'deputy_admin', 'root_admin'],
+  'invoicing': ['manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'analytics': ['supervisor', 'manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'compliance': ['co_owner', 'org_owner', 'compliance_officer', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'notifications': ['co_owner', 'org_owner', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'gamification': ['supervisor', 'manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'automation': ['co_owner', 'org_owner', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'communication': ['supervisor', 'manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'health': ['co_owner', 'org_owner', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'user_assistance': ['employee', 'staff', 'supervisor', 'manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
   'system': ['sysop', 'deputy_admin', 'root_admin'],
   'session_checkpoint': ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'integrations': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'data_migration': ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-  'onboarding': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'integrations': ['manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'data_migration': ['org_owner', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'onboarding': ['supervisor', 'manager', 'department_manager', 'co_owner', 'org_owner', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+  'memory_optimization': ['co_owner', 'org_owner', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
 };
 
 export interface AuthorizationContext {
@@ -72,14 +85,23 @@ export interface ActionAuthCheck {
   reason?: string;
 }
 
+interface WorkspacePauseRecord {
+  pausedBy: string;
+  pausedAt: Date;
+  reason: string;
+}
+
 class AIBrainAuthorizationService {
   private static instance: AIBrainAuthorizationService;
-  
-  // KILL SWITCH: Emergency revocation of Trinity's root access
+
+  // PLATFORM KILL SWITCH: Emergency revocation of Trinity's root access for ALL workspaces
   private trinityKillSwitchActive = false;
   private trinityKillSwitchActivatedBy: string | null = null;
   private trinityKillSwitchActivatedAt: Date | null = null;
   private trinityKillSwitchReason: string | null = null;
+
+  // PER-WORKSPACE PAUSE MAP: Suspend Trinity in a specific workspace without affecting others
+  private workspacePauseMap = new Map<string, WorkspacePauseRecord>();
 
   static getInstance(): AIBrainAuthorizationService {
     if (!this.instance) {
@@ -98,11 +120,27 @@ class AIBrainAuthorizationService {
     this.trinityKillSwitchActivatedAt = new Date();
     this.trinityKillSwitchReason = reason;
     
-    console.log(`[KILL SWITCH] Trinity root access REVOKED by ${userId}: ${reason}`);
+    log.info(`[KILL SWITCH] Trinity root access REVOKED by ${userId}: ${reason}`);
+
+    // Persist to DB so kill switch survives server restarts
+    const ksValue = JSON.stringify({ active: true, activatedBy: userId, activatedAt: new Date().toISOString(), reason });
+    // CATEGORY C — Raw SQL retained: ::jsonb | Tables: platform_config_registry | Verified: 2026-03-23
+    typedQuery(sql`
+      DO $$
+      BEGIN
+        UPDATE platform_config_registry
+          SET value = ${ksValue}::jsonb, updated_by = ${userId}, updated_at = NOW()
+          WHERE domain = 'trinity' AND key = 'global_kill_switch' AND workspace_id = 'platform';
+        IF NOT FOUND THEN
+          INSERT INTO platform_config_registry (domain, key, value, value_type, workspace_id, is_global, description, updated_by)
+          VALUES ('trinity', 'global_kill_switch', ${ksValue}::jsonb, 'json', 'platform', true, 'Global Trinity kill switch state', ${userId});
+        END IF;
+      END $$;
+    `).catch(err => log.error('[KILL SWITCH] Failed to persist kill switch activation to DB:', (err instanceof Error ? err.message : String(err))));
     
     return {
       success: true,
-      message: `Trinity kill switch activated. All Trinity root operations are now blocked.`
+      message: `Kill switch activated. All my root operations are now blocked.`
     };
   }
 
@@ -119,8 +157,24 @@ class AIBrainAuthorizationService {
     this.trinityKillSwitchReason = null;
     
     if (wasActive) {
-      console.log(`[KILL SWITCH] Trinity root access RESTORED by ${userId}`);
+      log.info(`[KILL SWITCH] Trinity root access RESTORED by ${userId}`);
     }
+
+    // Persist deactivation to DB
+    const ksOffValue = JSON.stringify({ active: false, deactivatedBy: userId, deactivatedAt: new Date().toISOString() });
+    // CATEGORY C — Raw SQL retained: ::jsonb | Tables: platform_config_registry | Verified: 2026-03-23
+    typedQuery(sql`
+      DO $$
+      BEGIN
+        UPDATE platform_config_registry
+          SET value = ${ksOffValue}::jsonb, updated_by = ${userId}, updated_at = NOW()
+          WHERE domain = 'trinity' AND key = 'global_kill_switch' AND workspace_id = 'platform';
+        IF NOT FOUND THEN
+          INSERT INTO platform_config_registry (domain, key, value, value_type, workspace_id, is_global, description, updated_by)
+          VALUES ('trinity', 'global_kill_switch', ${ksOffValue}::jsonb, 'json', 'platform', true, 'Global Trinity kill switch state', ${userId});
+        END IF;
+      END $$;
+    `).catch(err => log.error('[KILL SWITCH] Failed to persist kill switch deactivation to DB:', (err instanceof Error ? err.message : String(err))));
     
     return {
       success: true,
@@ -148,6 +202,121 @@ class AIBrainAuthorizationService {
   }
 
   /**
+   * Reload all active workspace pauses from DB into the in-memory map.
+   * Called on server startup so pauses survive restarts.
+   * The map is the runtime cache; DB is the source of truth.
+   */
+  async loadPausesFromDB(): Promise<void> {
+    try {
+      // CATEGORY C — Raw SQL retained: AI brain engine authorization status query | Tables: trinity_workspace_pauses | Verified: 2026-03-23
+      const rows = await typedQuery(
+        sql`SELECT workspace_id, paused_by, paused_at, reason FROM trinity_workspace_pauses WHERE is_active = true`
+      );
+      for (const row of (rows as any[]) || []) {
+        this.workspacePauseMap.set(row.workspace_id as string, {
+          pausedBy: row.paused_by as string,
+          pausedAt: new Date(row.paused_at as string),
+          reason: row.reason as string,
+        });
+      }
+      const count = (rows as any[]).length ?? 0;
+      log.info(`Reloaded ${count} active workspace pause(s) from DB`);
+    } catch (err: any) {
+      log.error('Failed to reload workspace pauses from DB (non-blocking):', (err instanceof Error ? err.message : String(err)));
+    }
+  }
+
+  /**
+   * Reload global kill switch state from DB on startup so it survives server restarts.
+   */
+  async loadKillSwitchFromDB(): Promise<void> {
+    try {
+      // CATEGORY C — Raw SQL retained: LIMIT | Tables: platform_config_registry | Verified: 2026-03-23
+      const rows = await typedQuery(
+        sql`SELECT value FROM platform_config_registry WHERE domain = 'trinity' AND key = 'global_kill_switch' AND workspace_id = 'platform' AND is_active = true LIMIT 1`
+      );
+      const row = (rows as any[])[0];
+      if (row?.value) {
+        const state = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+        if (state.active) {
+          this.trinityKillSwitchActive = true;
+          this.trinityKillSwitchActivatedBy = state.activatedBy || null;
+          this.trinityKillSwitchActivatedAt = state.activatedAt ? new Date(state.activatedAt) : null;
+          this.trinityKillSwitchReason = state.reason || null;
+          log.info(`Global kill switch RESTORED from DB — activated by ${state.activatedBy}`);
+        } else {
+          log.info('Global kill switch is NOT active (confirmed from DB)');
+        }
+      }
+    } catch (err: any) {
+      log.error('Failed to reload kill switch state from DB (non-blocking):', (err instanceof Error ? err.message : String(err)));
+    }
+  }
+
+  /**
+   * PER-WORKSPACE PAUSE: Suspend Trinity in one workspace without affecting others.
+   * Persists to DB so the pause survives server restarts.
+   * The platform kill switch still overrides all workspaces simultaneously.
+   */
+  pauseWorkspaceTrinity(workspaceId: string, userId: string, reason: string): { success: boolean; message: string } {
+    this.workspacePauseMap.set(workspaceId, {
+      pausedBy: userId,
+      pausedAt: new Date(),
+      reason,
+    });
+    // Persist to DB (fire-and-forget; in-memory map is authoritative at runtime)
+    db.insert(trinityWorkspacePauses).values({
+      workspaceId: workspaceId,
+      pausedBy: userId,
+      reason: reason,
+      isActive: true,
+    }).catch(err => log.error('Failed to persist workspace pause to DB:', (err instanceof Error ? err.message : String(err))));
+    log.info(`Workspace ${workspaceId} Trinity PAUSED by ${userId}: ${reason}`);
+    return {
+      success: true,
+      message: `Trinity paused for workspace ${workspaceId}. Other workspaces are unaffected.`,
+    };
+  }
+
+  /**
+   * Resume Trinity for a specific workspace after a per-workspace pause.
+   * Clears DB row so the resume survives server restarts.
+   */
+  resumeWorkspaceTrinity(workspaceId: string, userId: string): { success: boolean; message: string } {
+    const wasPaused = this.workspacePauseMap.has(workspaceId);
+    this.workspacePauseMap.delete(workspaceId);
+    db.update(trinityWorkspacePauses).set({
+      isActive: false,
+    }).where(and(eq(trinityWorkspacePauses.workspaceId, workspaceId), eq(trinityWorkspacePauses.isActive, true)))
+    .catch(err => log.error('Failed to persist workspace resume to DB:', (err instanceof Error ? err.message : String(err))));
+    log.info(`Workspace ${workspaceId} Trinity RESUMED by ${userId}`);
+    return {
+      success: true,
+      message: wasPaused
+        ? `Trinity resumed for workspace ${workspaceId}.`
+        : `Workspace ${workspaceId} was not paused.`,
+    };
+  }
+
+  /**
+   * Check if Trinity is paused for a specific workspace
+   */
+  isWorkspaceTrinityPaused(workspaceId: string): { paused: boolean; record?: WorkspacePauseRecord } {
+    const record = this.workspacePauseMap.get(workspaceId);
+    return { paused: !!record, record };
+  }
+
+  /**
+   * List all currently paused workspaces
+   */
+  listPausedWorkspaces(): Array<{ workspaceId: string } & WorkspacePauseRecord> {
+    return Array.from(this.workspacePauseMap.entries()).map(([workspaceId, record]) => ({
+      workspaceId,
+      ...record,
+    }));
+  }
+
+  /**
    * Check if the given entity is Trinity AI
    * Trinity has root-level platform control - equivalent to root user
    */
@@ -172,26 +341,42 @@ class AIBrainAuthorizationService {
     let bypassReason = '';
     
     // TRINITY ROOT BYPASS: Trinity AI has full platform control
-    // BUT: Check kill switch first - if active, Trinity is blocked
+    // Check order: (1) per-workspace pause, (2) platform kill switch, (3) grant access
     if (this.isTrinityEntity(context.userId, entityType)) {
+      // 1. Per-workspace pause check — isolates one workspace without halting others
+      if (context.workspaceId) {
+        const pauseStatus = this.isWorkspaceTrinityPaused(context.workspaceId);
+        if (pauseStatus.paused && pauseStatus.record) {
+          log.info(`WORKSPACE PAUSED: Trinity blocked from ${category}.${actionId} in ${context.workspaceId}`);
+          return {
+            userId: context.userId,
+            userRole: 'trinity_root',
+            actionCategory: category,
+            actionId,
+            isAuthorized: false,
+            reason: `Trinity PAUSED for workspace ${context.workspaceId} by ${pauseStatus.record.pausedBy}: ${pauseStatus.record.reason}`,
+          };
+        }
+      }
+
+      // 2. Platform kill switch — blocks Trinity across ALL workspaces
       const killSwitchStatus = this.isTrinityKillSwitchActive();
-      
       if (killSwitchStatus.active) {
-        // Kill switch is active - block Trinity operations
-        console.log(`[AIBrainAuth] KILL SWITCH ACTIVE: Trinity blocked from ${category}.${actionId}`);
+        log.info(`KILL SWITCH ACTIVE: Trinity blocked from ${category}.${actionId}`);
         return {
           userId: context.userId,
           userRole: 'trinity_root',
           actionCategory: category,
           actionId,
           isAuthorized: false,
-          reason: `Trinity root access BLOCKED: Kill switch activated by ${killSwitchStatus.activatedBy} - ${killSwitchStatus.reason}`
+          reason: `Trinity root access BLOCKED: Kill switch activated by ${killSwitchStatus.activatedBy} - ${killSwitchStatus.reason}`,
         };
       }
-      
+
+      // 3. Neither paused nor killed — grant Trinity root access
       isAuthorized = true;
       bypassReason = ' (Trinity root authority - full platform control)';
-      console.log(`[AIBrainAuth] Trinity root bypass for ${category}.${actionId}`);
+      log.info(`Trinity root bypass for ${category}.${actionId}`);
     }
     
     // Check elevated session
@@ -248,7 +433,7 @@ class AIBrainAuthorizationService {
       }
       return { isElevated: false };
     } catch (error) {
-      console.warn('[AIBrainAuthorizationService] Elevation check failed:', error);
+      log.warn('Elevation check failed:', error);
       return { isElevated: false };
     }
   }
@@ -315,6 +500,7 @@ class AIBrainAuthorizationService {
   }): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
         userId: data.userId,
         action: 'ai_brain_authorization_check',
         entityType: 'ai_brain_orchestrator',
@@ -328,7 +514,7 @@ class AIBrainAuthorizationService {
         }
       });
     } catch (error) {
-      console.warn('[AIBrainAuthorizationService] Failed to log auth check:', error);
+      log.warn('Failed to log auth check:', error);
     }
   }
 
@@ -343,6 +529,7 @@ class AIBrainAuthorizationService {
   }): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
         userId: data.userId,
         action: 'ai_brain_command_execution',
         entityType: 'ai_brain_orchestrator',
@@ -355,7 +542,7 @@ class AIBrainAuthorizationService {
         }
       });
     } catch (error) {
-      console.warn('[AIBrainAuthorizationService] Failed to log execution:', error);
+      log.warn('Failed to log execution:', error);
     }
   }
 
@@ -429,6 +616,7 @@ class AIBrainAuthorizationService {
 
     try {
       const [approval] = await db.insert(governanceApprovals).values({
+        workspaceId: 'system',
         actionType: data.actionType,
         requesterId: data.requesterId,
         requesterRole: data.requesterRole,
@@ -443,7 +631,7 @@ class AIBrainAuthorizationService {
 
       await this.logApprovalAction(data.requesterId, data.actionType, 'pending', `Approval requested for ${actionDetails.description}`);
 
-      console.log(`[GovernanceGate] Approval requested: ${approval.id} for ${data.actionType} (DB persisted)`);
+      log.info(`[GovernanceGate] Approval requested: ${approval.id} for ${data.actionType} (DB persisted)`);
 
       return { 
         approved: false, 
@@ -451,7 +639,7 @@ class AIBrainAuthorizationService {
         reason: `Approval required from ${actionDetails.minApprovalRole} or higher. ${actionDetails.requiresSecondApproval ? 'Second approval required.' : ''}`
       };
     } catch (error) {
-      console.error('[GovernanceGate] Failed to persist approval:', error);
+      log.error('[GovernanceGate] Failed to persist approval:', error);
       return { approved: false, reason: 'Failed to create approval request' };
     }
   }
@@ -506,7 +694,7 @@ class AIBrainAuthorizationService {
       }).where(eq(governanceApprovals.id, approvalId));
 
       if (fullyApproved) {
-        console.log(`[GovernanceGate] Action ${approvalId} FULLY APPROVED (DB persisted)`);
+        log.info(`[GovernanceGate] Action ${approvalId} FULLY APPROVED (DB persisted)`);
       }
 
       await this.logApprovalAction(approverId, approval.actionType, fullyApproved ? 'approved' : 'partial_approval', 
@@ -518,7 +706,7 @@ class AIBrainAuthorizationService {
         reason: fullyApproved ? 'Action fully approved and ready to execute' : `${updatedApprovals.length}/${approval.requiredApprovals} approvals received`
       };
     } catch (error) {
-      console.error('[GovernanceGate] Approval failed:', error);
+      log.error('[GovernanceGate] Approval failed:', error);
       return { success: false, fullyApproved: false, reason: 'Database error during approval' };
     }
   }
@@ -544,11 +732,11 @@ class AIBrainAuthorizationService {
       
       await this.logApprovalAction(rejecterId, approval.actionType, 'rejected', reason);
 
-      console.log(`[GovernanceGate] Action ${approvalId} REJECTED by ${rejecterId} (DB persisted)`);
+      log.info(`[GovernanceGate] Action ${approvalId} REJECTED by ${rejecterId} (DB persisted)`);
 
       return { success: true, message: `Action rejected: ${reason}` };
     } catch (error) {
-      console.error('[GovernanceGate] Rejection failed:', error);
+      log.error('[GovernanceGate] Rejection failed:', error);
       return { success: false, message: 'Database error during rejection' };
     }
   }
@@ -562,10 +750,10 @@ class AIBrainAuthorizationService {
         updatedAt: new Date(),
       }).where(eq(governanceApprovals.id, approvalId));
       
-      console.log(`[GovernanceGate] Action ${approvalId} marked as EXECUTED`);
+      log.info(`[GovernanceGate] Action ${approvalId} marked as EXECUTED`);
       return true;
     } catch (error) {
-      console.error('[GovernanceGate] Failed to mark executed:', error);
+      log.error('[GovernanceGate] Failed to mark executed:', error);
       return false;
     }
   }
@@ -635,7 +823,7 @@ class AIBrainAuthorizationService {
         };
       });
     } catch (error) {
-      console.error('[GovernanceGate] Failed to fetch pending approvals:', error);
+      log.error('[GovernanceGate] Failed to fetch pending approvals:', error);
       return [];
     }
   }
@@ -657,7 +845,7 @@ class AIBrainAuthorizationService {
         required: approval.requiredApprovals,
       };
     } catch (error) {
-      console.error('[GovernanceGate] Failed to get approval status:', error);
+      log.error('[GovernanceGate] Failed to get approval status:', error);
       return { found: false };
     }
   }
@@ -665,6 +853,7 @@ class AIBrainAuthorizationService {
   private async logApprovalAction(userId: string, actionType: string, status: string, details: string): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
         userId,
         action: 'governance_approval_gate',
         entityType: 'destructive_action',
@@ -676,7 +865,7 @@ class AIBrainAuthorizationService {
         }
       });
     } catch (error) {
-      console.warn('[AIBrainAuthorizationService] Failed to log approval action:', error);
+      log.warn('[AIBrainAuthorizationService] Failed to log approval action:', error);
     }
   }
 
@@ -694,10 +883,10 @@ class AIBrainAuthorizationService {
           lt(governanceApprovals.expiresAt, now)
         ));
       
-      console.log(`[GovernanceGate] Cleaned up expired approvals (DB persisted)`);
+      log.info(`[GovernanceGate] Cleaned up expired approvals (DB persisted)`);
       return 0;
     } catch (error) {
-      console.error('[GovernanceGate] Failed to cleanup expired approvals:', error);
+      log.error('[GovernanceGate] Failed to cleanup expired approvals:', error);
       return 0;
     }
   }
@@ -743,3 +932,20 @@ class AIBrainAuthorizationService {
 }
 
 export const aiBrainAuthorizationService = AIBrainAuthorizationService.getInstance();
+
+// Reload active workspace pauses from DB on startup so pauses survive server restarts.
+// Deferred 120s — fires after seeding + circuit stabilizes; probes DB first.
+setTimeout(async () => {
+  try {
+    const { probeDbConnection } = await import('../../db');
+    const dbOk = await probeDbConnection();
+    if (!dbOk) {
+      log.warn('[AIBrainAuth] Skipping workspace pause reload — DB probe failed');
+      return;
+    }
+    aiBrainAuthorizationService.loadPausesFromDB();
+    aiBrainAuthorizationService.loadKillSwitchFromDB();
+  } catch (err: any) {
+    log.warn('[AIBrainAuth] Startup pause reload failed (non-blocking):', err?.message);
+  }
+}, 120000);

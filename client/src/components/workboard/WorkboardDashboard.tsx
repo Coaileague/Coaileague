@@ -17,8 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal'
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -126,7 +125,7 @@ function TaskCard({
             </div>
           </div>
           
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
             <span data-testid={`text-task-time-${task.id}`}>
               {task.createdAt ? new Date(task.createdAt).toLocaleString() : 'Unknown time'}
             </span>
@@ -194,17 +193,17 @@ function TaskDetailSheet({
   if (!task) return null;
   
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg" data-testid="sheet-task-details">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+    <UniversalModal open={open} onOpenChange={onOpenChange}>
+      <UniversalModalContent className="w-full sm:max-w-lg" data-testid="sheet-task-details">
+        <UniversalModalHeader>
+          <UniversalModalTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
             Task Details
-          </SheetTitle>
-          <SheetDescription>
+          </UniversalModalTitle>
+          <UniversalModalDescription>
             ID: {task.id?.slice(0, 8)}...
-          </SheetDescription>
-        </SheetHeader>
+          </UniversalModalDescription>
+        </UniversalModalHeader>
         
         <ScrollArea className="h-[calc(100vh-10rem)] mt-4">
           <div className="space-y-4 pr-4">
@@ -244,7 +243,7 @@ function TaskDetailSheet({
                   data-testid="badge-task-fast-mode"
                 >
                   <Zap className="h-3 w-3" />
-                  Trinity Fast Mode (2x credits)
+                  Trinity Fast Mode
                 </Badge>
               </div>
             )}
@@ -295,8 +294,8 @@ function TaskDetailSheet({
             </div>
           </div>
         </ScrollArea>
-      </SheetContent>
-    </Sheet>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }
 
@@ -441,7 +440,7 @@ function SubmitTaskDialog({ isMobile }: { isMobile: boolean }) {
             </Select>
           </div>
           
-          <div className={`flex items-center justify-between p-3 rounded-lg border ${
+          <div className={`flex items-center justify-between gap-2 p-3 rounded-lg border ${
             fastModeEnabled ? 'bg-amber-500/10 border-amber-500/50' : 'bg-muted/50'
           }`}>
             <div className="flex items-center gap-3">
@@ -453,7 +452,7 @@ function SubmitTaskDialog({ isMobile }: { isMobile: boolean }) {
                   Trinity Fast Mode
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Parallel subagent execution (2x credits)
+                  Parallel subagent execution
                 </p>
               </div>
             </div>
@@ -525,7 +524,7 @@ export default function WorkboardDashboard() {
   return (
     <div className={`${isMobile ? 'p-3' : 'p-6'} space-y-4`} data-testid="workboard-dashboard">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold flex items-center gap-2`}>
               <Brain className="h-6 w-6" />
@@ -657,7 +656,7 @@ export default function WorkboardDashboard() {
                         acc[t.status || 'unknown'] = (acc[t.status || 'unknown'] || 0) + 1;
                         return acc;
                       }, {} as Record<string, number>) || {}).map(([status, count]) => (
-                        <div key={status} className="flex items-center justify-between text-sm">
+                        <div key={status} className="flex items-center justify-between gap-2 text-sm">
                           <StatusBadge status={status} />
                           <span className="font-medium">{count}</span>
                         </div>
@@ -673,7 +672,7 @@ export default function WorkboardDashboard() {
                         acc[agent] = (acc[agent] || 0) + 1;
                         return acc;
                       }, {} as Record<string, number>) || {}).map(([agent, count]) => (
-                        <div key={agent} className="flex items-center justify-between text-sm">
+                        <div key={agent} className="flex items-center justify-between gap-2 text-sm">
                           <span className="flex items-center gap-1">
                             <Bot className="h-3 w-3" />
                             {agent}

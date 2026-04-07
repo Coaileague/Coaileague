@@ -1,24 +1,35 @@
 import { db } from "../db";
 import { eq, and } from "drizzle-orm";
+import { EMAIL } from '../config/platformConfig';
 import { 
   pushSubscriptions, 
   users, 
   employees, 
   notifications,
+  notificationDeliveries,
   type InsertPushSubscription 
 } from "@shared/schema";
+import { createLogger } from '../lib/logger';
+const log = createLogger('pushNotificationService');
+
 
 interface PushPayload {
   title: string;
   body: string;
   icon?: string;
   badge?: string;
+  image?: string;
   tag?: string;
   data?: Record<string, any>;
   actions?: { action: string; title: string; icon?: string }[];
   requireInteraction?: boolean;
   vibrate?: number[];
   timestamp?: number;
+  type?: string;
+  url?: string;
+  category?: string;
+  renotify?: boolean;
+  silent?: boolean;
 }
 
 type PushSubscriptionData = {
@@ -31,7 +42,7 @@ type PushSubscriptionData = {
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@coaileague.com';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || EMAIL.vapidSubject;
 
 async function getWebPush() {
   try {
@@ -47,7 +58,7 @@ async function getWebPush() {
     
     return webpush.default;
   } catch (error) {
-    console.warn('[PushNotification] web-push not available:', error);
+    log.warn('[PushNotification] web-push not available:', error);
     return null;
   }
 }
@@ -74,7 +85,7 @@ export async function registerPushSubscription(
         })
         .where(eq(pushSubscriptions.id, existingSub.id));
       
-      console.log(`[PushNotification] Updated subscription for user ${userId}`);
+      log.info(`[PushNotification] Updated subscription for user ${userId}`);
       return { success: true, subscriptionId: existingSub.id };
     }
 
@@ -92,11 +103,11 @@ export async function registerPushSubscription(
       .values(newSubscription)
       .returning();
 
-    console.log(`[PushNotification] Created subscription ${inserted.id} for user ${userId}`);
+    log.info(`[PushNotification] Created subscription ${inserted.id} for user ${userId}`);
     return { success: true, subscriptionId: inserted.id };
   } catch (error: any) {
-    console.error('[PushNotification] Registration error:', error);
-    return { success: false, error: error.message };
+    log.error('[PushNotification] Registration error:', error);
+    return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
 
@@ -120,10 +131,10 @@ export async function unregisterPushSubscription(
       unsubscribed = 1;
     }
 
-    console.log(`[PushNotification] Unsubscribed ${unsubscribed} subscription(s) for user ${userId}`);
+    log.info(`[PushNotification] Unsubscribed ${unsubscribed} subscription(s) for user ${userId}`);
     return { success: true, unsubscribed };
   } catch (error: any) {
-    console.error('[PushNotification] Unsubscribe error:', error);
+    log.error('[PushNotification] Unsubscribe error:', error);
     return { success: false, unsubscribed: 0 };
   }
 }
@@ -134,7 +145,7 @@ export async function sendPushToUser(
 ): Promise<{ sent: number; failed: number; errors: string[] }> {
   const webpush = await getWebPush();
   if (!webpush || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-    console.warn('[PushNotification] VAPID keys not configured, skipping push');
+    log.warn('[PushNotification] VAPID keys not configured, skipping push');
     return { sent: 0, failed: 0, errors: ['Push notifications not configured'] };
   }
 
@@ -152,10 +163,15 @@ export async function sendPushToUser(
   const results = { sent: 0, failed: 0, errors: [] as string[] };
   const notificationPayload = JSON.stringify({
     ...payload,
+    id: payload.data?.notificationId || `push-${Date.now()}`,
+    type: payload.type || payload.data?.type,
+    url: payload.url || payload.data?.url,
+    category: payload.category || payload.data?.category,
     timestamp: payload.timestamp || Date.now()
   });
 
   for (const sub of subscriptions) {
+    const deliveryIdempotencyKey = `push-${userId}-${payload.type || 'notification'}-${sub.id}-${Math.floor(Date.now() / 5000)}`;
     try {
       await webpush.sendNotification(
         {
@@ -168,20 +184,49 @@ export async function sendPushToUser(
         notificationPayload
       );
       results.sent++;
+
+      // Log successful push delivery to notification_deliveries for audit trail
+      await db.insert(notificationDeliveries).values({
+        workspaceId: payload.data?.workspaceId || 'unknown',
+        recipientUserId: userId,
+        notificationType: payload.type || payload.data?.type || 'push_notification',
+        channel: 'push',
+        subject: payload.title,
+        payload: { title: payload.title, body: payload.body, type: payload.type, url: payload.url, subscriptionId: sub.id },
+        idempotencyKey: deliveryIdempotencyKey,
+        status: 'sent',
+        attemptCount: 1,
+        sentAt: new Date(),
+      }).onConflictDoNothing().catch((err) => log.warn('[pushNotificationService] Fire-and-forget failed:', err));
     } catch (error: any) {
       results.failed++;
-      results.errors.push(error.message);
+      results.errors.push((error instanceof Error ? error.message : String(error)));
 
       if (error.statusCode === 410 || error.statusCode === 404) {
         await db.update(pushSubscriptions)
           .set({ isActive: false })
           .where(eq(pushSubscriptions.id, sub.id));
-        console.log(`[PushNotification] Deactivated expired subscription ${sub.id}`);
+        log.info(`[PushNotification] Deactivated expired subscription ${sub.id}`);
       }
+
+      // Log failed push delivery for retry tracking
+      await db.insert(notificationDeliveries).values({
+        workspaceId: payload.data?.workspaceId || 'unknown',
+        recipientUserId: userId,
+        notificationType: payload.type || payload.data?.type || 'push_notification',
+        channel: 'push',
+        subject: payload.title,
+        payload: { title: payload.title, body: payload.body, type: payload.type, subscriptionId: sub.id },
+        idempotencyKey: `${deliveryIdempotencyKey}-fail`,
+        status: 'failed',
+        attemptCount: 1,
+        lastError: error instanceof Error ? error.message : String(error),
+        nextRetryAt: new Date(Date.now() + 30000),
+      }).onConflictDoNothing().catch((err) => log.warn('[pushNotificationService] Fire-and-forget failed:', err));
     }
   }
 
-  console.log(`[PushNotification] Sent to user ${userId}: ${results.sent}/${subscriptions.length}`);
+  log.info(`[PushNotification] Sent to user ${userId}: ${results.sent}/${subscriptions.length}`);
   return results;
 }
 
@@ -214,7 +259,7 @@ export async function sendPushToWorkspace(
     results.totalFailed += userResult.failed;
   }
 
-  console.log(`[PushNotification] Workspace ${workspaceId}: ${results.totalSent} sent, ${results.totalFailed} failed`);
+  log.info(`[PushNotification] Workspace ${workspaceId}: ${results.totalSent} sent, ${results.totalFailed} failed`);
   return results;
 }
 

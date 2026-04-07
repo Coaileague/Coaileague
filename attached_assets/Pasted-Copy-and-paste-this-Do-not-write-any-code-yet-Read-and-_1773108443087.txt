@@ -1,0 +1,116 @@
+Copy and paste this:
+
+---
+
+**Do not write any code yet. Read and scan everything first.**
+
+Run a complete platform-wide schema audit. Work through each check in order. Do not skip any. Do not fix anything until you have the full picture from all checks combined.
+
+**CHECK 1 — Missing workspace_id indexes:**
+```sql
+SELECT table_name FROM information_schema.columns
+WHERE column_name = 'workspace_id' AND table_schema = 'public'
+AND NOT EXISTS (
+  SELECT 1 FROM pg_indexes
+  WHERE tablename = information_schema.columns.table_name
+  AND indexdef ILIKE '%workspace_id%'
+);
+```
+
+**CHECK 2 — Tables with workspace_id in DB but missing from Drizzle schema:**
+Search every file in `shared/schema.ts` and any other schema files for tables that have `workspace_id` in the DB but no `workspaceId` field defined in the Drizzle table definition. List every mismatch.
+
+**CHECK 3 — Tables missing workspace_id entirely:**
+```sql
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+AND table_name NOT IN (
+  SELECT table_name FROM information_schema.columns
+  WHERE column_name = 'workspace_id' AND table_schema = 'public'
+)
+ORDER BY table_name;
+```
+Review this list and identify which of these tables SHOULD have workspace_id based on their purpose (anything storing per-org data needs it).
+
+**CHECK 4 — Missing primary key indexes:**
+```sql
+SELECT t.table_name FROM information_schema.tables t
+WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+AND NOT EXISTS (
+  SELECT 1 FROM information_schema.table_constraints tc
+  WHERE tc.table_name = t.table_name
+  AND tc.constraint_type = 'PRIMARY KEY'
+);
+```
+
+**CHECK 5 — Foreign key columns with no index:**
+```sql
+SELECT tc.table_name, kcu.column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND NOT EXISTS (
+  SELECT 1 FROM pg_indexes
+  WHERE tablename = tc.table_name
+  AND indexdef ILIKE '%' || kcu.column_name || '%'
+);
+```
+
+**CHECK 6 — Columns that exist in DB but are missing from Drizzle schema:**
+For every table, compare the actual DB columns (`information_schema.columns`) against what is defined in the Drizzle schema files. List every column that exists in the database but has no corresponding field in the TypeScript schema definition.
+
+**CHECK 7 — NOT NULL columns with no default that could break inserts:**
+```sql
+SELECT table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND is_nullable = 'NO'
+AND column_default IS NULL
+AND column_name NOT IN ('id', 'created_at', 'updated_at')
+ORDER BY table_name, column_name;
+```
+Cross-reference this list against insert routes in the codebase — identify any where the insert does not supply a value for these required columns.
+
+**CHECK 8 — Enum mismatches:**
+Find every column with `data_type = 'USER-DEFINED'` (enums). For each one, compare the allowed enum values in the DB against the TypeScript enum or string literal type used in the Drizzle schema and application code. List any mismatch where the DB allows a value the code doesn't use, or the code sends a value the DB doesn't accept.
+
+---
+
+**After all 8 checks complete, produce this report before touching anything:**
+
+```
+PLATFORM-WIDE SCHEMA AUDIT REPORT
+
+CHECK 1 — workspace_id missing indexes: [count] tables
+CHECK 2 — workspace_id in DB but not Drizzle: [count] tables, list them
+CHECK 3 — tables that should have workspace_id but don't: [count] tables, list them
+CHECK 4 — tables missing primary key: [count] tables
+CHECK 5 — foreign key columns with no index: [count] columns
+CHECK 6 — DB columns missing from Drizzle schema: [count] columns, list them
+CHECK 7 — NOT NULL columns that could break inserts: [count] columns, list them
+CHECK 8 — enum mismatches: [count] mismatches, list them
+
+TOTAL ISSUES FOUND: [number]
+```
+
+**Then fix in this order:**
+1. CREATE INDEX CONCURRENTLY for all CHECK 1 gaps
+2. Add missing workspaceId fields to Drizzle schemas (CHECK 2)
+3. ALTER TABLE to add workspace_id where it belongs (CHECK 3) — ask me before doing this one
+4. Fix missing primary keys (CHECK 4)
+5. CREATE INDEX CONCURRENTLY for foreign key gaps (CHECK 5)
+6. Add missing columns to Drizzle schema (CHECK 6)
+7. Add defaults or fix insert routes for NOT NULL gaps (CHECK 7)
+8. Fix enum values to match (CHECK 8)
+
+After all fixes, re-run the original queries and confirm every count is zero. Then run:
+```
+npx tsx tests/workspaceIsolationTest.ts
+```
+
+Do not declare done until all counts are zero and the isolation test passes. Show me the before and after counts for every check.
+
+---
+
+That prompt won't let it wriggle out of anything. The report-before-fix step is the key — it forces a complete picture before it starts making changes so it can't fix three things and declare victory while 200 others are still broken.

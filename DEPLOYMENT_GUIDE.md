@@ -34,10 +34,10 @@ VITE_STRIPE_PUBLIC_KEY=pk_live_xxxx
 
 # Email
 RESEND_API_KEY=re_xxxx
-RESEND_FROM_EMAIL=noreply@workforceos.com
+RESEND_FROM_EMAIL=noreply@coaileague.com
 
 # Production URL
-VITE_APP_URL=app.workforceos.com
+VITE_APP_URL=app.coaileague.com
 NODE_ENV=production
 ```
 

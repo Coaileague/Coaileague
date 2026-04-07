@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 /**
  * SCHEDULING SUBAGENT - Fortune 500-Grade Workforce Scheduling
  * =============================================================
@@ -27,6 +29,8 @@ import { enhancedLLMJudge } from '../llmJudgeEnhanced';
 import { platformEventBus } from '../../platformEventBus';
 import { auditLogger } from '../../audit-logger';
 import { strategicOptimizationService, EmployeeBusinessMetrics, ClientBusinessMetrics, StrategicAssignment } from '../strategicOptimizationService';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('SchedulingSubagent');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -122,7 +126,7 @@ class SchedulingSubagentService {
     workspaceId: string,
     forecastWeeksAhead: number = 2
   ): Promise<ForecastResult[]> {
-    console.log(`[SchedulingSubagent] Generating ${forecastWeeksAhead}-week staffing forecast`);
+    log.info(`[SchedulingSubagent] Generating ${forecastWeeksAhead}-week staffing forecast`);
 
     // Gather historical data
     const [historicalShifts, upcomingTimeOff, attendancePatterns] = await Promise.all([
@@ -182,7 +186,7 @@ class SchedulingSubagentService {
       });
     }
 
-    console.log(`[SchedulingSubagent] Generated ${forecasts.length} week forecasts`);
+    log.info(`[SchedulingSubagent] Generated ${forecasts.length} week forecasts`);
     return forecasts;
   }
 
@@ -193,7 +197,7 @@ class SchedulingSubagentService {
     workspaceId: string,
     proposedShifts: Array<{ employeeId: string; date: Date; startTime: string; endTime: string }>
   ): Promise<ConflictResolution[]> {
-    console.log(`[SchedulingSubagent] Resolving conflicts for ${proposedShifts.length} proposed shifts`);
+    log.info(`[SchedulingSubagent] Resolving conflicts for ${proposedShifts.length} proposed shifts`);
 
     const resolutions: ConflictResolution[] = [];
     
@@ -216,7 +220,7 @@ class SchedulingSubagentService {
         );
 
         resolutions.push({
-          conflictId: `conflict-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          conflictId: `conflict-${randomUUID()}`,
           type: 'overlap',
           severity: 'critical',
           description: `${employee.firstName} ${employee.lastName} already has a shift during ${proposed.startTime}-${proposed.endTime}`,
@@ -225,15 +229,17 @@ class SchedulingSubagentService {
             suggestedEmployee: suggestion?.employeeId,
             reason: suggestion?.reason || 'No suitable replacement found',
           },
-          aiConfidence: suggestion?.confidence || 0.5,
+          aiConfidence: suggestion?.confidence ?? (suggestion ? 0.6 : 0.1),
         });
       }
 
       // Check for overtime
       const weeklyHours = this.calculateWeeklyHours(proposed.employeeId, proposed.date, existingShifts, proposed);
       if (weeklyHours > 40) {
+        const overtimeExcess = weeklyHours - 40;
+        const overtimeConfidence = overtimeExcess > 20 ? 0.99 : overtimeExcess > 10 ? 0.95 : overtimeExcess > 5 ? 0.9 : 0.8;
         resolutions.push({
-          conflictId: `conflict-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          conflictId: `conflict-${randomUUID()}`,
           type: 'overtime',
           severity: weeklyHours > 50 ? 'critical' : 'high',
           description: `${employee.firstName} ${employee.lastName} would have ${weeklyHours}h this week (exceeds 40h)`,
@@ -241,7 +247,7 @@ class SchedulingSubagentService {
             action: 'split_or_reassign',
             reason: `Consider splitting shift or finding replacement. Overtime cost: +${((weeklyHours - 40) * 1.5).toFixed(1)}h equivalent`,
           },
-          aiConfidence: 0.85,
+          aiConfidence: overtimeConfidence,
         });
       }
     }
@@ -256,7 +262,7 @@ class SchedulingSubagentService {
     workspaceId: string,
     scheduleData: Array<{ employeeId: string; shifts: Array<{ date: Date; startTime: string; endTime: string }> }>
   ): Promise<ComplianceCheck> {
-    console.log(`[SchedulingSubagent] Validating compliance for ${scheduleData.length} employees`);
+    log.info(`[SchedulingSubagent] Validating compliance for ${scheduleData.length} employees`);
 
     // Fetch labor law configurations
     const laborLaws = await this.fetchLaborLawConfigs(workspaceId);
@@ -353,7 +359,7 @@ class SchedulingSubagentService {
     workspaceId: string,
     shiftId: string
   ): Promise<ShiftSwapSuggestion> {
-    console.log(`[SchedulingSubagent] Finding replacements for shift ${shiftId}`);
+    log.info(`[SchedulingSubagent] Finding replacements for shift ${shiftId}`);
 
     // Fetch shift details
     const [shiftData] = await db.select()
@@ -424,7 +430,7 @@ class SchedulingSubagentService {
     };
     aiInsights: string;
   }> {
-    console.log(`[SchedulingSubagent] Generating optimized schedule with Deep Think mode`);
+    log.info(`[SchedulingSubagent] Generating optimized schedule with Deep Think mode`);
 
     // Gather all required data
     const [employeeData, historicalPatterns, timeOffData, skillMatrix] = await Promise.all([
@@ -467,7 +473,7 @@ Generate a JSON schedule with format:
       });
 
       if (!aiResult.success) {
-        console.error('[SchedulingSubagent] AI schedule generation blocked:', aiResult.error);
+        log.error('[SchedulingSubagent] AI schedule generation blocked:', aiResult.error);
         return {
           schedule: [],
           metrics: { coveragePercent: 0, overtimeHours: 0, preferenceScore: 0, costEfficiency: 0 },
@@ -518,7 +524,7 @@ Generate a JSON schedule with format:
             actionType: 'schedule.publish',
           });
 
-          console.log(`[SchedulingSubagent] LLM Judge evaluation: ${riskEvaluation.verdict} (risk: ${riskEvaluation.riskScore})`);
+          log.info(`[SchedulingSubagent] LLM Judge evaluation: ${riskEvaluation.verdict} (risk: ${riskEvaluation.riskScore})`);
 
           // Audit log the LLM Judge decision
           await auditLogger.logEvent(
@@ -544,24 +550,30 @@ Generate a JSON schedule with format:
               },
             },
             { generateHash: true }
-          ).catch(err => console.error('[SchedulingSubagent] Audit log failed:', err.message));
+          ).catch(err => log.error('[SchedulingSubagent] Audit log failed:', (err instanceof Error ? err.message : String(err))));
 
           if (riskEvaluation.verdict === 'blocked' || riskEvaluation.verdict === 'rejected') {
             llmJudgeApproved = false;
-            console.log(`[SchedulingSubagent] LLM Judge BLOCKED schedule: ${riskEvaluation.reasoning}`);
+            log.info(`[SchedulingSubagent] LLM Judge BLOCKED schedule: ${riskEvaluation.reasoning}`);
             
-            platformEventBus.publish('schedule_escalation', {
+            platformEventBus.publish({
+              type: 'schedule_escalation',
+              category: 'automation',
+              title: 'Schedule Blocked — LLM Judge Review Required',
+              description: `LLM Judge blocked schedule generation. Risk score: ${riskEvaluation.riskScore}. Reason: ${riskEvaluation.reasoning}`,
               workspaceId,
-              reason: riskEvaluation.reasoning,
-              riskScore: riskEvaluation.riskScore,
-              recommendations: riskEvaluation.recommendations,
-              requiresApproval: true,
-            });
+              metadata: {
+                reason: riskEvaluation.reasoning,
+                riskScore: riskEvaluation.riskScore,
+                recommendations: riskEvaluation.recommendations,
+                requiresApproval: true,
+              },
+            }).catch((err) => log.warn('[schedulingSubagent] Fire-and-forget failed:', err));
           } else if (riskEvaluation.verdict === 'needs_review') {
             llmJudgeWarning = riskEvaluation.reasoning;
           }
         } catch (judgeError: any) {
-          console.error('[SchedulingSubagent] LLM Judge evaluation failed, proceeding:', judgeError.message);
+          log.error('[SchedulingSubagent] LLM Judge evaluation failed, proceeding:', judgeError.message);
         }
 
         // If blocked, return empty schedule with explanation
@@ -597,7 +609,7 @@ Generate a JSON schedule with format:
         };
       }
     } catch (error) {
-      console.error('[SchedulingSubagent] AI schedule generation failed:', error);
+      log.error('[SchedulingSubagent] AI schedule generation failed:', error);
     }
 
     // Fallback: Basic schedule generation
@@ -826,11 +838,21 @@ Generate a JSON schedule with format:
     
     if (available.length === 0) return null;
     
-    // Return first available (could enhance with scoring)
+    const sorted = available.sort((a, b) => {
+      const scoreA = Number(a.compositeScore || a.performanceRating || 0);
+      const scoreB = Number(b.compositeScore || b.performanceRating || 0);
+      return scoreB - scoreA;
+    });
+
+    const best = sorted[0];
+    const alternativeCount = sorted.length;
+    const baseConfidence = alternativeCount >= 5 ? 0.95 : alternativeCount >= 3 ? 0.85 : alternativeCount >= 2 ? 0.75 : 0.6;
+    const scoreBoost = Number(best.compositeScore || best.performanceRating || 0) > 0 ? 0.05 : 0;
+    
     return {
-      employeeId: available[0].id,
-      reason: `${available[0].firstName} ${available[0].lastName} is available`,
-      confidence: 0.8,
+      employeeId: best.id,
+      reason: `${best.firstName} ${best.lastName} is available (${alternativeCount} options evaluated)`,
+      confidence: Math.min(0.99, baseConfidence + scoreBoost),
     };
   }
 
@@ -960,7 +982,7 @@ Generate a JSON schedule with format:
       recommendation: 'AUTO_APPROVE' | 'REVIEW_RECOMMENDED' | 'MANUAL_REQUIRED';
     };
   }> {
-    console.log(`[SchedulingSubagent] Generating strategic profit-first schedule for ${openShifts.length} shifts`);
+    log.info(`[SchedulingSubagent] Generating strategic profit-first schedule for ${openShifts.length} shifts`);
 
     // Gather strategic business context
     const strategicContext = await strategicOptimizationService.generateStrategicContext(workspaceId);
@@ -985,7 +1007,7 @@ Generate a JSON schedule with format:
     });
 
     if (!aiResult.success) {
-      console.error('[SchedulingSubagent] Strategic schedule blocked:', aiResult.error);
+      log.error('[SchedulingSubagent] Strategic schedule blocked:', aiResult.error);
       return this.generateFallbackStrategicSchedule(openShifts, employees, clients);
     }
 
@@ -1001,7 +1023,7 @@ Generate a JSON schedule with format:
         throw new Error('No JSON found in response');
       }
     } catch (parseError) {
-      console.error('[SchedulingSubagent] Failed to parse Gemini strategic response:', parseError);
+      log.error('[SchedulingSubagent] Failed to parse Gemini strategic response:', parseError);
       // Return fallback response with basic assignments
       return this.generateFallbackStrategicSchedule(openShifts, employees, clients);
     }
@@ -1023,7 +1045,7 @@ Generate a JSON schedule with format:
     });
 
     if (!judgeResult.approved) {
-      console.warn('[SchedulingSubagent] LLM Judge rejected strategic schedule:', judgeResult.reason);
+      log.warn('[SchedulingSubagent] LLM Judge rejected strategic schedule:', judgeResult.reason);
       parsedResponse.confidence = {
         score: 0.4,
         reasoning: `LLM Judge concern: ${judgeResult.reason}`,
@@ -1099,7 +1121,7 @@ SUMMARY:
 CLIENTS (${clients.length} total):
 ${clients.map(c => `
   - ${c.clientName}:
-    * Tier: ${c.tier.toUpperCase()} (Score: ${c.tierScore}/100)
+    * Tier: ${c.strategicTier.toUpperCase()} (Score: ${c.tierScore}/100)
     * Monthly Revenue: $${c.monthlyRevenue.toLocaleString()}
     * Client Since: ${c.yearsAsClient.toFixed(1)} years ${c.isLegacyClient ? '(LEGACY)' : '(NEW)'}
     * Hourly Rate: $${c.averageHourlyRate}/hr
@@ -1125,7 +1147,7 @@ ${openShifts.map(s => {
   const client = clients.find(c => c.clientId === s.clientId);
   return `
   - Shift ${s.shiftId}:
-    * Client: ${client?.clientName || 'Unknown'} (${client?.tier || 'standard'} tier)
+    * Client: ${client?.clientName || 'Unknown'} (${client?.strategicTier || 'standard'} tier)
     * Date: ${new Date(s.date).toLocaleDateString()}
     * Time: ${s.startTime} - ${s.endTime} (${s.durationHours}h)
     * Billable Rate: $${client?.averageHourlyRate || 0}/hr
@@ -1221,7 +1243,7 @@ ${openShifts.map(s => {
     employees: EmployeeBusinessMetrics[],
     clients: ClientBusinessMetrics[]
   ): any {
-    console.log('[SchedulingSubagent] Generating fallback strategic schedule');
+    log.info('[SchedulingSubagent] Generating fallback strategic schedule');
 
     const schedule: StrategicAssignment[] = [];
     const usedEmployees = new Set<string>();
@@ -1236,7 +1258,7 @@ ${openShifts.map(s => {
     const sortedShifts = [...openShifts].sort((a, b) => {
       const clientA = clients.find(c => c.clientId === a.clientId);
       const clientB = clients.find(c => c.clientId === b.clientId);
-      return (tierPriority[clientA?.tier || 'standard'] || 2) - (tierPriority[clientB?.tier || 'standard'] || 2);
+      return (tierPriority[clientA?.strategicTier || 'standard'] || 2) - (tierPriority[clientB?.strategicTier || 'standard'] || 2);
     });
 
     for (const shift of sortedShifts) {
@@ -1244,7 +1266,7 @@ ${openShifts.map(s => {
       if (!client) continue;
 
       // Find best available employee for this client tier
-      const minScore = strategicOptimizationService.getMinimumEmployeeScoreForClient(client.tier);
+      const minScore = strategicOptimizationService.getMinimumEmployeeScoreForClient(client.strategicTier);
       const availableEmployee = sortedEmployees.find(e => 
         !usedEmployees.has(e.employeeId) && e.overallScore >= minScore
       );
@@ -1255,7 +1277,7 @@ ${openShifts.map(s => {
           employeeCostPerHour: availableEmployee.effectiveCostPerHour,
           shiftDurationHours: shift.durationHours,
           employeeScore: availableEmployee.overallScore,
-          clientTier: client.tier,
+          clientTier: client.strategicTier,
           clientIsAtRisk: client.isAtRisk,
           employeeNoShows: availableEmployee.noShows,
           employeeCallIns: availableEmployee.callIns,
@@ -1268,7 +1290,7 @@ ${openShifts.map(s => {
           employeeName: availableEmployee.employeeName,
           clientId: client.clientId,
           clientName: client.clientName,
-          clientTier: client.tier,
+          clientTier: client.strategicTier,
           assignment: {
             billableRate: profitMetrics.billableRate,
             employeeCost: profitMetrics.employeeCost,

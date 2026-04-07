@@ -1,0 +1,1100 @@
+Perfect. That's the right call architecturally and experientially. HelpAI feels like a conversation participant — her status lives in the thread where the conversation is happening, exactly like watching Claude or Replit Agent think in real time. Trinity feels like an operating system — her thought bar lives above everything, persistent, always visible, because she's always working on something whether you're talking to her or not. Two different altitudes, two different UI patterns, both consistent with who they are.
+
+Now the prompt:
+
+---
+
+```
+TRINITY + HELPAI — ANIMATED STATUS SYSTEM
+CSS, UI Components, Phrase Libraries, 
+Fallback Intelligence Layer
+CoAIleague Platform — Additive Only
+
+═══════════════════════════════════════════════════════════════
+PHASE 0 — PRE-IMPLEMENTATION SCAN
+═══════════════════════════════════════════════════════════════
+
+Before writing any code scan and document:
+
+1. Existing ChatDock component structure — 
+   how messages are rendered, what the thread 
+   container looks like, how bot messages 
+   are currently displayed vs user messages, 
+   existing message component file paths
+
+2. Existing Trinity UI elements — any current 
+   status indicators, thought displays, 
+   or broadcast components already built, 
+   exact file paths
+
+3. Existing HelpAI UI elements — any current 
+   inline status or indicator components, 
+   exact file paths
+
+4. Global layout structure — where the top 
+   of the ChatDock viewport is, how the 
+   nav bar and header are structured, 
+   what space exists above the chat thread 
+   on mobile and desktop, exact file paths 
+   for layout components
+
+5. Design system file — confirm purple is 
+   Trinity's reserved color, gold is HelpAI's 
+   color, dark navy is the base, confirm 
+   exact hex values in use for each
+
+6. Existing CSS or Tailwind configuration — 
+   what animation utilities are already 
+   available, what custom CSS exists
+
+7. Existing fallback or degradation logic 
+   for Trinity and HelpAI — any current 
+   offline handling, graceful degradation 
+   mode implemented in prior build
+
+8. Mobile breakpoints currently defined — 
+   exact breakpoint values in use
+
+Document all findings before building anything.
+STOP if layout structure or design system 
+cannot be located. Report before proceeding.
+
+═══════════════════════════════════════════════════════════════
+PHASE 1 — DESIGN TOKENS AND ANIMATION FOUNDATION
+═══════════════════════════════════════════════════════════════
+
+Add to the existing design system / CSS config.
+Do not create a new stylesheet. Extend what exists.
+
+─────────────────────────────────────────────
+COLOR TOKENS (confirm against existing values)
+─────────────────────────────────────────────
+
+--trinity-purple: #7C3AED (or existing value)
+--trinity-purple-dim: #7C3AED33
+--trinity-purple-glow: #7C3AED66
+--trinity-purple-text: #C4B5FD
+
+--helpai-gold: #D97706 (or existing value)
+--helpai-gold-dim: #D9770633
+--helpai-gold-glow: #D9770666
+--helpai-gold-text: #FCD34D
+
+--status-bg-dark: #0F172A
+--status-border-subtle: #1E293B
+--fallback-amber: #B45309
+--fallback-amber-dim: #B4530933
+
+─────────────────────────────────────────────
+KEYFRAME ANIMATIONS
+─────────────────────────────────────────────
+
+Add all keyframes to global CSS. 
+Name them clearly. Never duplicate 
+an existing keyframe by a different name — 
+check scan results first.
+
+@keyframes coai-bounce-dot
+Bouncing dots animation — 3 dots, 
+each delays 0.15s offset from previous.
+Scale: 0.6 → 1.0 → 0.6 over 1.2s infinite.
+Used by both Trinity and HelpAI, 
+colored by parent context.
+
+@keyframes coai-pulse-glow
+Soft outer glow pulse on status container.
+Opacity: 0.4 → 0.9 → 0.4 over 2s infinite.
+Used on Trinity bar when in active state.
+Purple for Trinity. Gold for HelpAI.
+
+@keyframes coai-text-fade-cycle
+Text content crossfades when phrase rotates.
+Opacity: 1 → 0 over 0.3s, then 
+new phrase fades in 0 → 1 over 0.3s.
+Applied to phrase text spans.
+
+@keyframes coai-shimmer-sweep
+Subtle left-to-right shimmer across 
+status bar background when processing.
+Linear gradient sweep over 2.5s infinite.
+Trinity: purple shimmer on dark navy.
+HelpAI: gold shimmer on dark navy.
+
+@keyframes coai-critical-pulse
+Fast urgent pulse for CRITICAL state only.
+Border color flashes between 
+normal state and bright alert red.
+1s infinite. Only fires on CRITICAL priority.
+
+@keyframes coai-fallback-amber-blink
+Slow steady amber blink for fallback mode.
+Opacity: 1 → 0.5 → 1 over 3s infinite.
+Communicates degraded state without alarm.
+
+@keyframes coai-scan-line
+Subtle horizontal scan line moves 
+top to bottom across status container.
+Opacity very low (0.06). 
+Gives a live-system feel during active work.
+5s infinite. Trinity bar only.
+
+@keyframes coai-icon-spin
+Slow rotation for processing icon state.
+360deg over 3s linear infinite.
+Stops when processing completes.
+
+═══════════════════════════════════════════════════════════════
+PHASE 2 — TRINITY PERSISTENT THOUGHT BAR
+Universal Top Bar Component
+═══════════════════════════════════════════════════════════════
+
+Create component: TrinityThoughtBar
+
+This component lives at the top of the ChatDock 
+view, above the message thread, outside the 
+scrollable chat window. It is always visible 
+when ChatDock is open. It persists regardless 
+of which channel or conversation is active.
+
+It is NOT inside the thread. It is a fixed 
+UI element that belongs to the layout layer, 
+not the message layer.
+
+─────────────────────────────────────────────
+MOBILE LAYOUT (below mobile breakpoint)
+─────────────────────────────────────────────
+
+Height: 36px — compact single row
+Full width of screen
+Background: dark navy (#0F172A) with 
+  subtle bottom border in Trinity purple dim
+Left section (fixed width ~28px): 
+  Small Trinity sigil or T icon in purple, 
+  slow coai-pulse-glow animation when active
+Center section (fluid, truncated with ellipsis): 
+  Single phrase text — Trinity's current 
+  thought or action status
+  Font: 11px, letter-spacing: 0.08em, 
+  uppercase, Trinity purple text color
+  Phrase rotates via coai-text-fade-cycle
+Right section (fixed width ~48px): 
+  Three bouncing dots (coai-bounce-dot) 
+  in Trinity purple — visible only 
+  when Trinity is actively processing
+  When idle: subtle steady dot indicators 
+  at low opacity to show Trinity is present 
+  but not active
+  
+Tap anywhere on bar: expands to full 
+desktop layout as a bottom sheet overlay 
+sliding up from bar position. 
+Tap again or swipe down to collapse.
+
+─────────────────────────────────────────────
+DESKTOP LAYOUT (above mobile breakpoint)
+─────────────────────────────────────────────
+
+Height: 48px — single row with more breathing room
+Full width of ChatDock panel
+Background: dark navy with bottom border 
+  Trinity purple dim, coai-shimmer-sweep 
+  and coai-scan-line animations running 
+  continuously at very low opacity 
+  to suggest a live operational system
+
+Left section (fixed ~160px):
+  Trinity sigil/icon + "TRINITY" label
+  Font: 10px uppercase, wide letter spacing
+  Purple text, coai-pulse-glow on icon 
+  when active
+
+Left-center section (fixed ~220px):
+  CURRENT ACTION label (8px uppercase, 
+  muted purple) above
+  Current phrase text below 
+  (13px, purple text, fade-cycle rotation)
+  
+Center section (fluid):
+  Parallel thread status indicators —
+  small labeled pill badges showing 
+  which of Trinity's 8 monitoring threads 
+  are currently active
+  Each pill: thread name abbreviated 
+  (SCHED · INCIDENT · CLOCK · HIRE · 
+  COMPLY · CLIENT · HELPAI · AGENTS)
+  Active thread: filled purple pill, white text
+  Idle thread: outline only, muted
+  Critical thread: red-amber fill, 
+  coai-critical-pulse animation
+  
+Right-center section (fixed ~140px):
+  Cognitive layer indicator:
+  Shows which model is currently engaged
+  GPT · CLAUDE · GEMINI as small 
+  labeled indicators
+  Active model: illuminated in its 
+  associated color (GPT green, 
+  Claude orange, Gemini blue)
+  Inactive: dim
+
+Right section (fixed ~80px):
+  Bouncing dots when processing
+  (coai-bounce-dot, purple)
+  Checkmark flash when task completes 
+  (brief 0.8s green flash then returns 
+  to idle state)
+  Lock icon when in CRITICAL state
+
+─────────────────────────────────────────────
+TRINITY BAR STATES
+─────────────────────────────────────────────
+
+IDLE: 
+  Scan line running at minimal opacity.
+  Static "Standing by..." phrase.
+  Dots at very low opacity, not bouncing.
+  All thread pills outline only.
+  Glow pulse slow and dim.
+
+ACTIVE: 
+  Shimmer sweep running.
+  Phrase rotating through vocabulary.
+  Dots bouncing.
+  Active thread pills illuminated.
+  Glow pulse brighter and faster.
+
+CRITICAL: 
+  coai-critical-pulse on border.
+  Phrase locked to critical-specific vocabulary.
+  Dots replaced by alert indicator.
+  All non-critical threads dimmed.
+  CRITICAL thread pill red, pulsing.
+
+FALLBACK: 
+  coai-fallback-amber-blink on border.
+  Amber color replaces purple throughout.
+  Phrase locked to fallback vocabulary.
+  Cognitive layer shows "FALLBACK" 
+  in amber instead of model names.
+  Scan line stops.
+
+OFFLINE: 
+  All animations stopped.
+  Border dim red.
+  Static phrase: "TRINITY OFFLINE"
+  No dots.
+
+═══════════════════════════════════════════════════════════════
+PHASE 3 — HELPAI INLINE THREAD STATUS
+─────────────────────────────────────────────
+This component renders inside the message 
+thread, exactly like watching an AI think 
+in real time. It appears as a message 
+from HelpAI before her actual response 
+is ready and is replaced by the real 
+response on completion.
+═══════════════════════════════════════════════════════════════
+
+Create component: HelpAIStatusMessage
+
+Renders as a chat message bubble from HelpAI 
+in the thread. Visually distinct from a 
+completed message — it has an active, 
+in-progress appearance that resolves 
+into a real message when done.
+
+─────────────────────────────────────────────
+VISUAL STRUCTURE
+─────────────────────────────────────────────
+
+HelpAI avatar/icon: gold, left-aligned 
+  as with all HelpAI messages
+Bubble background: dark navy, 
+  gold left border (3px), 
+  coai-shimmer-sweep in gold running 
+  on bubble background at low opacity
+  
+Top micro-label (8px uppercase, 
+  muted gold, letter-spacing wide):
+  "HELPAI · WORKING"
+  Changes to "HELPAI · COMPLETE" 
+  briefly before message replaces status
+
+Phrase text (13px, gold text):
+  Current status phrase, 
+  rotates via coai-text-fade-cycle 
+  every 3-4 seconds while processing
+
+Bouncing dots row below phrase:
+  Three dots, gold, coai-bounce-dot
+  Disappear on completion
+
+Subtle coai-pulse-glow on bubble border 
+  while active. Stops when complete.
+
+On completion: 
+  Status bubble does NOT disappear abruptly.
+  It smoothly transitions — 
+  dots fade out, shimmer stops, 
+  content crossfades to actual response text, 
+  border settles from active gold 
+  to resting completed style.
+  Feels like a thought resolving into a statement.
+
+─────────────────────────────────────────────
+HELPAI STATUS STATES IN THREAD
+─────────────────────────────────────────────
+
+PROCESSING: full animation, phrase rotating, dots bouncing
+CRITICAL: phrase locked to emergency vocabulary, 
+  border pulses coai-critical-pulse in gold-red
+FALLBACK: amber tint replaces gold, 
+  coai-fallback-amber-blink on border, 
+  fallback vocabulary only
+COMPLETE: animations resolve, content replaces status
+
+═══════════════════════════════════════════════════════════════
+PHASE 4 — PHRASE LIBRARIES
+Complete vocabulary sets for all states
+═══════════════════════════════════════════════════════════════
+
+Store phrase libraries as structured constants 
+in a single file:
+lib/ai-status/phrases.ts
+
+Export separate arrays for each category. 
+Components import and select randomly 
+with no immediate repeat logic 
+(track last phrase, never serve it again 
+until full rotation is complete).
+
+─────────────────────────────────────────────
+TRINITY PHRASES — OPERATIONAL
+Security and platform operations vocabulary
+─────────────────────────────────────────────
+
+const TRINITY_OPERATIONAL = [
+  "Analyzing...",
+  "Thinking...",
+  "Deliberating...",
+  "Processing...",
+  "Reviewing all data...",
+  "Assessing...",
+  "Evaluating...",
+  "Cross-referencing records...",
+  "Running diagnostics...",
+  "Checking credentials...",
+  "Verifying authorization...",
+  "Scanning for anomalies...",
+  "Delegating to specialist...",
+  "Coordinating response...",
+  "Reviewing post orders...",
+  "Checking coverage...",
+  "Monitoring all channels...",
+  "Reviewing incident data...",
+  "Running compliance check...",
+  "Scanning all threads...",
+  "Pulling field data...",
+  "Reviewing shift status...",
+  "Checking officer records...",
+  "Verifying license data...",
+  "Reviewing site history...",
+  "Analyzing patterns...",
+  "Consulting conscience layer...",
+  "Routing to specialist agent...",
+  "Synthesizing reports...",
+  "Calculating liability exposure...",
+  "Reviewing documentation...",
+  "Assessing risk level...",
+  "Coordinating with HelpAI...",
+  "Reviewing client data...",
+  "Monitoring active incidents...",
+  "Checking payroll records...",
+  "Reviewing clock data...",
+  "Scanning schedule gaps...",
+  "Evaluating coverage needs...",
+  "Reviewing hiring pipeline...",
+  "Stand by...",
+  "Stand by — updating...",
+  "Stand by — upgrading system...",
+  "Recalibrating...",
+  "Reconfiguring parameters...",
+  "Rebuilding context...",
+  "Preparing deployment...",
+  "Issuing directive...",
+  "Reviewing chain of command...",
+  "Verifying command source...",
+  "Delegating assignment...",
+  "Briefing HelpAI...",
+  "Awaiting agent report...",
+  "Reviewing agent payload...",
+  "Approving task result...",
+  "Running full audit...",
+  "Compiling evidence package...",
+  "Reviewing escalation...",
+  "Assessing priority level...",
+  "Triaging incoming requests...",
+  "Preparing situation report...",
+  "Updating operational status...",
+  "Reviewing broadcast...",
+  "Preparing command order...",
+  "Standing watch...",
+  "All clear — monitoring...",
+  "Verifying data integrity...",
+  "Reviewing platform health...",
+]
+
+─────────────────────────────────────────────
+TRINITY PHRASES — CRITICAL STATE ONLY
+─────────────────────────────────────────────
+
+const TRINITY_CRITICAL = [
+  "Emergency protocol active...",
+  "Routing to all channels — stand by...",
+  "Alerting command immediately...",
+  "Safety protocol initiated...",
+  "All units — stand by...",
+  "Escalating now — hold position...",
+  "Priority override active...",
+  "Command notified — responding...",
+  "Assessing threat level...",
+  "Securing the situation...",
+  "Dispatching support now...",
+  "All resources redirected...",
+]
+
+─────────────────────────────────────────────
+TRINITY PHRASES — FALLBACK STATE ONLY
+─────────────────────────────────────────────
+
+const TRINITY_FALLBACK = [
+  "Operating in fallback mode...",
+  "Primary systems recovering — stand by...",
+  "Running on hardcoded protocols...",
+  "Maintaining post — limited capacity...",
+  "Core functions active — 
+    advanced reasoning temporarily offline...",
+  "Stand by — systems coming back online...",
+  "Holding position — reduced capacity...",
+  "Fallback intelligence active...",
+  "Awaiting primary system restore...",
+  "Critical functions maintained — 
+    full service resuming shortly...",
+]
+
+─────────────────────────────────────────────
+HELPAI PHRASES — OPERATIONAL
+Customer service and field support vocabulary
+─────────────────────────────────────────────
+
+const HELPAI_OPERATIONAL = [
+  "Looking into this...",
+  "Pulling that up...",
+  "Working on it...",
+  "One moment...",
+  "Checking records...",
+  "On it...",
+  "Let me get that for you...",
+  "Reviewing now...",
+  "Almost there...",
+  "Clocking you in...",
+  "Clocking you out...",
+  "Checking your schedule...",
+  "Pulling your shift details...",
+  "Reviewing your timesheet...",
+  "Checking credentials...",
+  "Verifying your license...",
+  "Reviewing the incident...",
+  "Pulling the report...",
+  "Drafting your report...",
+  "Formatting your report...",
+  "Filing that for you...",
+  "Summarizing the situation...",
+  "Contemplating the best approach...",
+  "Deliberating on this one...",
+  "Finding the root cause...",
+  "Reporting the issue...",
+  "Logging the complaint...",
+  "Documenting this for you...",
+  "Speaking with a supervisor — 
+    one moment...",
+  "Escalating to your manager — 
+    stand by...",
+  "Looping in the right person...",
+  "Coordinating with the team...",
+  "Handling the conflict — 
+    bear with me...",
+  "Working through this with you...",
+  "Pulling post orders for that site...",
+  "Checking coverage for your shift...",
+  "Reviewing the client account...",
+  "Pulling your site history...",
+  "Checking active incidents...",
+  "Reviewing field conditions...",
+  "Researching that for you...",
+  "Searching the platform...",
+  "Scanning available records...",
+  "Cross-referencing data...",
+  "Compiling your summary...",
+  "Building your document...",
+  "Formatting that document...",
+  "Almost ready — finalizing...",
+  "Running a quick check...",
+  "Verifying that information...",
+  "Pulling your assignment...",
+  "Checking officer availability...",
+  "Reviewing your request...",
+  "Processing your submission...",
+  "Submitting on your behalf...",
+  "Sending that over now...",
+  "Delivering your message...",
+  "Notifying the right person...",
+  "Flagging this for management...",
+  "Routing your request...",
+  "Taking a quick look...",
+  "Be right back...",
+  "Taking a break — stand by...",
+  "Stand by...",
+  "Give me just a moment...",
+  "Running that down...",
+  "Tracking that for you...",
+  "Reviewing your history...",
+  "Checking your credentials...",
+  "Delegating this task...",
+  "Updating the record...",
+  "Saving your information...",
+  "Logging that entry...",
+  "Confirming the details...",
+  "Double-checking that...",
+]
+
+─────────────────────────────────────────────
+HELPAI PHRASES — CRITICAL STATE ONLY
+─────────────────────────────────────────────
+
+const HELPAI_CRITICAL = [
+  "I hear you — getting help now...",
+  "On it — alerting the team immediately...",
+  "Help is on the way — stay with me...",
+  "Routing to emergency response now...",
+  "Notifying command — hold on...",
+  "Priority response active — 
+    stay on the line...",
+  "Securing assistance — 
+    do not disconnect...",
+  "Alerting all available personnel...",
+  "Emergency escalation in progress...",
+  "You are not alone — 
+    response coming now...",
+]
+
+─────────────────────────────────────────────
+HELPAI PHRASES — OFFLINE / UNAVAILABLE
+─────────────────────────────────────────────
+
+const HELPAI_UNAVAILABLE = [
+  "Unavailable at the moment — 
+    leave a message and I'll respond 
+    as soon as I'm back...",
+  "Away briefly — your message is logged 
+    and I'll follow up the moment 
+    I'm back online...",
+  "Temporarily offline — 
+    your request has been saved...",
+  "Be right back — 
+    your message is in the queue...",
+  "Stepped away — 
+    as soon as I return I'll execute 
+    on your request...",
+]
+
+─────────────────────────────────────────────
+HELPAI PHRASES — FALLBACK STATE ONLY
+─────────────────────────────────────────────
+
+const HELPAI_FALLBACK = [
+  "Running on backup systems — 
+    limited but still here...",
+  "Primary AI temporarily offline — 
+    handling critical functions only...",
+  "Fallback mode active — 
+    I've got you for essential requests...",
+  "Reduced capacity right now — 
+    clocking, reports, and 
+    emergencies are still fully covered...",
+  "Backup protocols active — 
+    full service resuming shortly...",
+  "Holding the post — 
+    limited mode until systems recover...",
+  "Core functions maintained — 
+    advanced requests queued for 
+    when we're back at full strength...",
+]
+
+═══════════════════════════════════════════════════════════════
+PHASE 5 — FALLBACK INTELLIGENCE LAYER
+Hardcoded Decision Tree + Cache Layer
+═══════════════════════════════════════════════════════════════
+
+Create: lib/ai-status/fallback-intelligence.ts
+
+This module activates when all three AI models 
+(GPT, Claude, Gemini) are unreachable. 
+It does not simulate AI reasoning — 
+it executes pre-defined deterministic 
+logic for the highest-impact scenarios 
+and serves cached responses for everything else.
+
+Two-layer fallback architecture:
+
+LAYER 1 — HARDCODED DECISION TREE
+For CRITICAL and HIGH priority scenarios. 
+These must work regardless of any model availability.
+
+LAYER 2 — CACHED INTELLIGENCE
+For NORMAL and LOW scenarios. 
+Serves last-known-good responses and 
+platform data lookups that don't require AI reasoning.
+
+─────────────────────────────────────────────
+LAYER 1 — HARDCODED DECISION TREE
+─────────────────────────────────────────────
+
+function handleFallbackRequest(
+  input: string,
+  context: ConversationContext,
+  priority: Priority
+): FallbackResponse
+
+Emergency / Safety (always first check):
+  Trigger: CRITICAL priority classification 
+  OR safety keywords detected
+  Action:
+    1. Immediately respond with hardcoded 
+       acknowledgment in session language:
+       EN: "I hear you. Help is being 
+           dispatched right now. 
+           Stay with me. 
+           [Emergency contact for workspace]"
+       ES: "Te escucho. La ayuda está 
+           en camino ahora mismo. 
+           Quédate conmigo. 
+           [Contacto de emergencia]"
+    2. Fire notification to management 
+       via existing notification system 
+       (no AI required — direct DB write 
+       + notification trigger)
+    3. Create CRITICAL incident record 
+       via ReportBot interface 
+       (no AI required — direct API call)
+    4. Log to trinity_helpai_command_bus 
+       as ALERT type with status = pending
+    5. Return hardcoded response immediately
+
+Clock In / Clock Out:
+  Trigger: clock-in or clock-out keywords 
+  detected in either language
+  Action:
+    1. Route directly to ClockBot interface
+    2. Execute clock action
+    3. Return hardcoded confirmation:
+       EN: "Got it — you're clocked [in/out] 
+           at [timestamp]. Logged."
+       ES: "Listo — registrado [entrada/salida] 
+           a las [timestamp]. Confirmado."
+    4. No AI reasoning required
+
+Escalation Request:
+  Trigger: "supervisor" "manager" 
+  "escalate" "need help" + urgency signal
+  Action:
+    1. Fire notification to management 
+       via existing notification system
+    2. Log conversation context to 
+       escalation queue
+    3. Return hardcoded response:
+       EN: "I've notified your supervisor. 
+           Someone will be with you shortly. 
+           Your request is logged."
+       ES: "He notificado a tu supervisor. 
+           Alguien estará contigo pronto. 
+           Tu solicitud está registrada."
+
+Incident Report Request:
+  Trigger: "incident" "report" 
+  "file" "document" keywords
+  Action:
+    1. Return hardcoded incident report 
+       template in session language 
+       with fill-in-the-blank fields
+    2. Collect responses sequentially
+    3. Compile into structured record
+    4. File via existing Document Management 
+       direct API (no AI required)
+    5. Notify management via notification system
+
+Platform Error / Technical Issue:
+  Trigger: error keywords + 
+  platform feature names
+  Action:
+    1. Log issue type to error queue
+    2. Return hardcoded response:
+       EN: "I've logged that issue. 
+           Our team will review it. 
+           If urgent, please contact 
+           platform support directly."
+    3. Alert platform support queue 
+       via notification system
+
+─────────────────────────────────────────────
+LAYER 2 — CACHED INTELLIGENCE
+─────────────────────────────────────────────
+
+On startup and every 30 minutes, 
+build and refresh a local cache of:
+
+SCHEDULE_CACHE: 
+  Current and next 48 hours of 
+  shift data per workspace
+  Serves: "what's my schedule" 
+  "when is my shift" "who's on tonight"
+
+FAQ_CACHE: 
+  Full FAQ knowledge base snapshot 
+  per workspace in both languages
+  Serves: all FAQ queries without 
+  AI intent resolution 
+  (keyword matching in fallback mode)
+
+POLICY_CACHE: 
+  Current post orders and 
+  policy document text per workspace
+  Serves: "what's the policy on X" 
+  "what do the post orders say about Y"
+
+CONTACT_CACHE: 
+  Management contacts, emergency contacts, 
+  supervisor assignments per workspace
+  Serves: "who do I contact about X" 
+  "what's the supervisor's number"
+
+CLOCK_CACHE: 
+  Last 7 days of clock data per officer
+  Serves: "what were my hours this week" 
+  without requiring AI analysis
+
+Cache is stored in-memory and 
+periodically refreshed from the database. 
+When serving from cache in fallback mode, 
+HelpAI always discloses:
+  EN: "I'm in backup mode right now — 
+      here's what I have from 
+      my last update:"
+  ES: "Estoy en modo de respaldo ahora — 
+      esto es lo que tengo de 
+      mi última actualización:"
+
+─────────────────────────────────────────────
+FALLBACK STATE MANAGER
+─────────────────────────────────────────────
+
+function detectModelAvailability(): 
+  ModelStatus
+
+Checks all three model API endpoints 
+on a 30-second heartbeat.
+
+Returns:
+{
+  gpt: 'online' | 'degraded' | 'offline',
+  claude: 'online' | 'degraded' | 'offline',
+  gemini: 'online' | 'degraded' | 'offline',
+  overall: 'full' | 'partial' | 'fallback'
+}
+
+overall = 'full': all three reachable — 
+  normal operation, no fallback
+overall = 'partial': one or two models 
+  reachable — Trinity routes away from 
+  offline models, Graceful Degradation Mode 
+  (built in prior implementation) active 
+  for HelpAI
+overall = 'fallback': all three unreachable — 
+  Fallback Intelligence Layer activates 
+  for both Trinity and HelpAI
+
+State changes trigger:
+- Trinity bar state update 
+  (ACTIVE → FALLBACK or OFFLINE)
+- HelpAI inline status update 
+  (phrase library switches to FALLBACK set)
+- Management notification via 
+  existing notification system:
+  "Trinity models offline — 
+   fallback intelligence active. 
+   Critical functions maintained."
+- Log to system health record
+
+On model restoration:
+- Heartbeat detects recovery
+- Queue of held requests processed 
+  in priority order
+- Trinity bar returns to ACTIVE state
+- HelpAI phrase library returns to OPERATIONAL
+- Management notification:
+  "Trinity fully restored. 
+   Processing queued requests now."
+
+═══════════════════════════════════════════════════════════════
+PHASE 6 — COMPONENT INTEGRATION
+═══════════════════════════════════════════════════════════════
+
+─────────────────────────────────────────────
+SHARED STATUS ENGINE
+─────────────────────────────────────────────
+
+Create: lib/ai-status/status-engine.ts
+
+Single shared engine that both 
+TrinityThoughtBar and HelpAIStatusMessage 
+import from. Parameterized — not duplicated.
+
+Exports:
+
+getStatusPhrase(
+  entity: 'trinity' | 'helpai',
+  state: 'operational' | 'critical' | 
+         'fallback' | 'unavailable',
+  lastPhrase: string
+): string
+  — Returns next phrase from appropriate 
+    library, never repeating last phrase
+
+getStatusState(
+  entity: 'trinity' | 'helpai',
+  modelStatus: ModelStatus,
+  priority: Priority
+): StatusState
+  — Derives correct visual state from 
+    model availability and priority
+
+getBroadcastColor(
+  entity: 'trinity' | 'helpai',
+  state: StatusState
+): ColorToken
+  — Returns correct color token 
+    for current entity and state
+
+─────────────────────────────────────────────
+TRINITY BAR INTEGRATION
+─────────────────────────────────────────────
+
+Mount TrinityThoughtBar in the existing 
+ChatDock layout component found in scan — 
+above the message thread container, 
+outside the scrollable area.
+
+TrinityThoughtBar subscribes to:
+- Trinity orchestration events 
+  (which thread is active, what task is running)
+- Model availability heartbeat 
+  (for state transitions)
+- Priority interrupt events 
+  (for CRITICAL state)
+- Active cognitive layer 
+  (to illuminate correct model indicator)
+
+Trinity bar updates in real time as 
+Trinity's orchestration state changes. 
+It is a live operational readout, 
+not a static display.
+
+─────────────────────────────────────────────
+HELPAI INLINE INTEGRATION
+─────────────────────────────────────────────
+
+HelpAIStatusMessage is injected into the 
+existing ChatDock message thread renderer 
+when HelpAI begins processing.
+
+It uses the same message container 
+as a normal HelpAI message — 
+same avatar, same left-alignment, 
+same bubble container — 
+but with the active status treatment 
+applied via CSS state classes.
+
+On processing complete: 
+smooth transition to completed message. 
+No flash. No jump. Continuous visual experience.
+
+Phrase rotation interval: 3.5 seconds
+Status-to-response transition: 0.4s crossfade
+
+═══════════════════════════════════════════════════════════════
+PHASE 7 — ACCESSIBILITY AND PERFORMANCE
+═══════════════════════════════════════════════════════════════
+
+All animations must respect 
+prefers-reduced-motion media query.
+When reduced motion is preferred:
+  - All keyframe animations disabled
+  - Phrase text still rotates 
+    but without fade transition
+  - Bouncing dots replaced by 
+    static ellipsis "..."
+  - Status state still functions fully
+
+Performance requirements:
+  - All animations use CSS transforms 
+    and opacity only — never animate 
+    layout properties (no width, height, 
+    margin, padding animations)
+  - Phrase rotation uses 
+    requestAnimationFrame or CSS 
+    animation — not setInterval
+  - Trinity bar does not cause layout 
+    reflow on update
+  - Status message component does not 
+    re-render parent thread on phrase change
+
+ARIA requirements:
+  - Trinity bar has role="status" 
+    aria-live="polite" aria-label="Trinity AI status"
+  - HelpAI status message has 
+    role="status" aria-live="polite" 
+    aria-label="HelpAI is working"
+  - Both announce state changes to 
+    screen readers appropriately
+  - CRITICAL state upgrades to 
+    aria-live="assertive"
+
+═══════════════════════════════════════════════════════════════
+PHASE 8 — FULL DEBUG SWEEP (THREE PASSES)
+═══════════════════════════════════════════════════════════════
+
+Run three complete sequential sweeps. 
+Each pass must be clean before proceeding.
+
+──────────────────────────────
+SWEEP 1 — STRUCTURAL
+──────────────────────────────
+□ All keyframes defined in global CSS, 
+  no duplicates of existing animations
+□ All color tokens added without 
+  overwriting existing tokens
+□ phrases.ts exports all arrays correctly, 
+  no TypeScript errors
+□ fallback-intelligence.ts exports 
+  all functions without errors
+□ status-engine.ts exports all functions 
+  without errors
+□ TrinityThoughtBar renders without errors
+□ HelpAIStatusMessage renders without errors
+□ Both components import from 
+  status-engine.ts — no duplicated logic
+□ No new routes created — 
+  bar mounted in existing layout only
+□ Fallback decision tree all branches 
+  reachable and returning correct types
+□ Cache refresh logic runs on correct interval
+□ Model heartbeat runs on correct interval
+
+──────────────────────────────
+SWEEP 2 — LOGIC AND BEHAVIOR
+──────────────────────────────
+□ Phrase rotation never repeats 
+  last phrase consecutively
+□ Language lock respected — 
+  fallback responses fire in 
+  session language correctly
+□ CRITICAL state activates correctly 
+  on priority classification
+□ FALLBACK state activates when 
+  all three models offline
+□ PARTIAL degradation routes away 
+  from offline models correctly
+□ Model restoration correctly clears 
+  fallback state and processes queue
+□ Trinity bar correctly reads active 
+  thread from parallel monitoring system
+□ Trinity bar cognitive layer indicator 
+  correctly reflects which model 
+  is currently engaged
+□ HelpAI status message correctly 
+  transitions to completed response 
+  without flash or jump
+□ Emergency fallback fires correct 
+  notification and incident record 
+  without any model availability
+□ Clock action fallback routes 
+  to ClockBot without model availability
+□ Cache serves data correctly when 
+  AI unavailable
+□ Status engine state derivation 
+  correct for all combinations of 
+  model status and priority
+□ prefers-reduced-motion correctly 
+  disables animations while 
+  maintaining functionality
+
+──────────────────────────────
+SWEEP 3 — INTEGRATION
+──────────────────────────────
+□ Trinity bar mounted correctly 
+  in existing layout — 
+  above thread, outside scroll area, 
+  not inside message list
+□ Trinity bar visible on mobile 
+  at correct 36px height
+□ Trinity bar visible on desktop 
+  at correct 48px height with 
+  all sections rendering
+□ Mobile tap-to-expand works correctly
+□ HelpAI status message appears 
+  in thread before response is ready 
+  and resolves correctly on completion
+□ Purple reserved exclusively for Trinity 
+  — HelpAI gold never bleeds 
+  into Trinity purple
+□ Fallback notification fires via 
+  existing notification system — 
+  not a new notification mechanism
+□ Fallback incident creation uses 
+  existing ReportBot interface — 
+  not a new one
+□ Fallback clock action uses 
+  existing ClockBot interface — 
+  not a new one
+□ Cache populates correctly from 
+  existing database queries — 
+  no new data access patterns created
+□ No layout shift on Trinity bar 
+  state change
+□ No thread re-render on HelpAI 
+  phrase rotation
+□ ARIA attributes present and 
+  correctly configured on both components
+
+After all 3 sweeps pass produce 
+final implementation report:
+- All files created or modified
+- All animations defined
+- Phrase library totals per category
+- Fallback decision tree branches confirmed
+- Cache types confirmed
+- Mobile and desktop layouts confirmed
+- Any assumptions made
+- Any items flagged for roadmap
+
+DO NOT mark implementation complete 
+until all three sweeps pass 
+with zero outstanding issues.
+═══════════════════════════════════════════════════════════════
+END OF PROMPT
+═══════════════════════════════════════════════════════════════
+```
+
+---
+
+This builds the complete visual and intelligence system. The phrase libraries are deep enough that users will rarely see a repeat in normal use. The fallback layer means the platform never goes dark on a field officer even if all three models simultaneously go down. The Trinity bar is a live operational readout — not decorative — and HelpAI's inline status feels like watching a real partner work. Ready to paste.

@@ -1,0 +1,318 @@
+# CoAIleague — Post-Refactor Damage Assessment & Recovery Prompt
+## Feed This Immediately After Table Consolidation Is Complete
+### READ DEVELOPMENT LAWS V2 BEFORE STARTING THIS
+
+---
+
+## ⚠️ CRITICAL CONTEXT BEFORE YOU BEGIN
+
+This platform is **pre-launch**. We have no live customers yet. That means:
+
+- **Zero rows in a table = the feature is ready and waiting, NOT unused**
+- **Empty tables are NOT dead tables — they are future tables**
+- Any table dropped because it had zero records was dropped by mistake
+- We need to find every single one of those and restore them
+
+Do not make any further changes until this full assessment is complete and Bryan has reviewed the findings.
+
+---
+
+## PHASE 1 — ESTABLISH CURRENT STATE (READ ONLY)
+
+### Step 1A — Generate complete current table list
+Run this and output every table currently in the database, alphabetically:
+```sql
+SELECT table_name, 
+       pg_size_pretty(pg_total_relation_size(quote_ident(table_name))) as size,
+       (SELECT COUNT(*) FROM information_schema.columns 
+        WHERE table_name = t.table_name) as column_count
+FROM information_schema.tables t
+WHERE table_schema = 'public'
+ORDER BY table_name;
+```
+Save this output. Label it: **CURRENT TABLE LIST**
+
+### Step 1B — Get original table list from git history
+Run:
+```bash
+git log --oneline | head -20
+```
+Find the commit BEFORE the refactor started. Then:
+```bash
+git show [pre-refactor-commit-hash]:path/to/schema/file > /tmp/original_schema.sql
+```
+Or if the schema is tracked differently:
+```bash
+git diff [pre-refactor-commit-hash] HEAD -- . | grep "^-.*CREATE TABLE" > /tmp/dropped_tables.txt
+cat /tmp/dropped_tables.txt
+```
+Save this output. Label it: **ORIGINAL TABLE LIST**
+
+### Step 1C — Generate the diff
+Compare ORIGINAL vs CURRENT and produce three lists:
+
+**List A — TABLES THAT WERE DROPPED** (in original, not in current)
+**List B — TABLES THAT WERE ADDED/RENAMED** (in current, not in original)  
+**List C — TABLES THAT SURVIVED** (in both)
+
+Output all three lists clearly before proceeding.
+
+---
+
+## PHASE 2 — FEATURE IMPACT MAPPING
+
+For every table in **List A (dropped tables)**, map it to the feature it serves.
+
+Use this reference to identify what each dropped table supported:
+
+### Core Feature Areas to Check
+
+| Feature Area | Tables Likely Affected | Impact if Missing |
+|---|---|---|
+| **Trinity AI Scheduling** | schedules, schedule_templates, schedule_assignments, schedule_conflicts, trinity_jobs, ai_scheduling_queue, scheduling_preferences | Trinity cannot create or manage shifts |
+| **GPS Time Tracking** | clock_events, gps_locations, geofence_zones, location_history, time_entries | Employees cannot clock in/out, no GPS verification |
+| **Payroll Automation** | payroll_runs, payroll_line_items, pay_periods, earnings_records, deductions, overtime_calculations | No payroll processing, paychecks break |
+| **QuickBooks Integration** | qb_sync_queue, qb_mappings, qb_transactions, integration_logs | QuickBooks sync fails silently |
+| **Stripe/Billing** | billing_plans, subscriptions, invoices, payment_methods, billing_history, stripe_events, usage_records | Org billing completely broken |
+| **Compliance Management** | licenses, certifications, compliance_records, expiration_alerts, document_requirements | License tracking gone |
+| **Document Management** | documents, document_signatures, document_templates, signature_requests | Doc signing broken |
+| **DockChat / Messaging** | chat_rooms, messages, chat_participants, shift_rooms, message_attachments | Comms system broken |
+| **Notifications** | notifications, notification_queue, notification_preferences, push_tokens | All alerts broken |
+| **Audit & Logging** | audit_log, activity_feed, change_history, system_events | No audit trail |
+| **Multi-Org Structure** | organizations, sub_organizations, org_hierarchy, org_settings, mother_orgs | Multi-tenant broken |
+| **Employee Management** | employees, employee_profiles, roles, permissions, employee_settings | Core user system at risk |
+| **Incident Reporting** | incidents, incident_types, incident_attachments, incident_notifications | Incident workflow gone |
+| **Client/Site Management** | clients, sites, site_assignments, site_requirements, post_orders | Client management broken |
+| **Reports** | report_templates, report_runs, report_schedules, report_outputs | Reporting broken |
+| **Onboarding** | onboarding_steps, onboarding_progress, org_registration_queue | New org signup broken |
+| **AI Cost Tracking** | ai_usage_logs, token_usage, ai_cost_records, model_usage_by_org | Cost attribution broken |
+
+For each dropped table, output:
+```
+TABLE: [table_name]
+FEATURE: [which feature this serves]
+IMPACT: [what breaks without it]
+ROWS AT TIME OF DROP: [0 — this is expected pre-launch]
+PRIORITY: [Critical / High / Medium / Low]
+```
+
+---
+
+## PHASE 3 — PIPELINE & WORKFLOW INTEGRITY CHECK
+
+Even if individual tables survived, relationships between them may be broken. Check every workflow:
+
+### Workflow 1 — Employee Clock-In Flow
+```
+Employee taps Clock In
+→ clock_events table receives record ✓/✗
+→ gps_locations table receives coordinates ✓/✗
+→ geofence_zones checked for valid location ✓/✗
+→ time_entries record opened ✓/✗
+→ notification sent to manager ✓/✗
+```
+
+### Workflow 2 — Trinity Scheduling Pipeline
+```
+Org requests schedule generation
+→ Trinity receives job via scheduling queue ✓/✗
+→ Trinity reads employee availability ✓/✗
+→ Trinity reads site requirements ✓/✗
+→ Trinity generates schedule draft ✓/✗
+→ Schedule written to schedules table ✓/✗
+→ Employees notified of shifts ✓/✗
+→ Conflicts flagged if any ✓/✗
+```
+
+### Workflow 3 — Payroll Run Pipeline
+```
+Pay period closes
+→ Approved timesheets collected ✓/✗
+→ Overtime calculated per state rules ✓/✗
+→ Deductions applied ✓/✗
+→ Payroll line items written ✓/✗
+→ Payroll run record created ✓/✗
+→ QuickBooks sync queued ✓/✗
+→ Employees can view earnings ✓/✗
+```
+
+### Workflow 4 — Org Billing Pipeline
+```
+Org subscription active
+→ Usage tracked by org ✓/✗
+→ Stripe billing event fires at period end ✓/✗
+→ Invoice generated ✓/✗
+→ Payment recorded ✓/✗
+→ Billing history updated ✓/✗
+```
+
+### Workflow 5 — New Org Onboarding
+```
+New org registers
+→ Organization record created ✓/✗
+→ Owner user created and linked ✓/✗
+→ Default settings applied ✓/✗
+→ Stripe customer created ✓/✗
+→ Onboarding steps initialized ✓/✗
+→ Welcome notifications sent ✓/✗
+```
+
+### Workflow 6 — Document Signing Pipeline
+```
+Admin uploads document
+→ Document record created ✓/✗
+→ Signature request created ✓/✗
+→ Employee notified ✓/✗
+→ Employee signs ✓/✗
+→ Signature recorded ✓/✗
+→ Completion logged in audit trail ✓/✗
+```
+
+### Workflow 7 — Trinity AI Orchestration Chain
+```
+Request enters Trinity
+→ Primary model (Gemini) receives job ✓/✗
+→ Claude validates output ✓/✗
+→ If primary fails → fallback to Claude ✓/✗
+→ If Claude fails → fallback to OpenAI ✓/✗
+→ Token usage logged per org ✓/✗
+→ Cost attributed correctly ✓/✗
+→ Result returned to requesting system ✓/✗
+```
+
+For each ✗ found, note:
+- Which table is missing that breaks it
+- Whether it's a missing table, broken foreign key, or missing column
+
+---
+
+## PHASE 4 — FOREIGN KEY & RELATIONSHIP INTEGRITY
+
+Run this to find broken foreign key references (tables referenced that no longer exist):
+```sql
+SELECT
+    tc.table_name as referencing_table,
+    kcu.column_name as referencing_column,
+    ccu.table_name AS referenced_table,
+    ccu.column_name AS referenced_column,
+    tc.constraint_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND ccu.table_name NOT IN (
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public'
+)
+ORDER BY tc.table_name;
+```
+
+List every broken foreign key relationship found. These are features that will fail at runtime even if the code looks fine.
+
+---
+
+## PHASE 5 — RECONSTRUCTION PLAN
+
+Based on Phases 1–4, produce a prioritized reconstruction list:
+
+### Priority 1 — CRITICAL (platform cannot function without these)
+List every dropped table that breaks a core workflow. For each:
+```
+TABLE TO RESTORE: [name]
+REASON: [what breaks without it]
+COLUMNS NEEDED: [restore from git history — git show HEAD~N:schema.sql | grep -A 50 "CREATE TABLE table_name"]
+FOREIGN KEYS: [list relationships to restore]
+RESTORE METHOD: Recreate from git history
+```
+
+### Priority 2 — HIGH (features broken but platform partially works)
+Same format as above.
+
+### Priority 3 — MEDIUM (nice-to-have features affected)
+Same format as above.
+
+---
+
+## PHASE 6 — RESTORATION EXECUTION
+
+**⚠️ RULES FOR RESTORATION:**
+1. Restore ONE table at a time
+2. Git commit after each successful restoration
+3. Verify foreign keys after each restoration
+4. Do NOT insert data — only recreate the structure
+5. Report completion of each table before moving to the next
+
+**For each table restoration, use this exact pattern:**
+```sql
+-- Restore [table_name]
+-- Source: git history from pre-refactor commit
+-- Restored on: [date]
+
+CREATE TABLE IF NOT EXISTS [table_name] (
+  -- exact columns from git history
+);
+
+-- Verify
+SELECT COUNT(*) FROM [table_name]; -- Should return 0, that is correct and expected
+```
+
+After each restoration, confirm:
+- [ ] Table exists
+- [ ] All columns present
+- [ ] Foreign keys valid
+- [ ] Zero rows (expected — this is pre-launch)
+- [ ] Git committed
+
+---
+
+## PHASE 7 — FINAL HEALTH REPORT
+
+After all restorations are complete, produce a final report:
+
+```
+COALLEAGUE POST-REFACTOR HEALTH REPORT
+=======================================
+Date: [date]
+Starting table count: [original]
+Tables after refactor: [count mid-way]
+Tables incorrectly dropped: [count]
+Tables successfully restored: [count]
+Final table count: [current]
+
+WORKFLOWS STATUS:
+- Clock In/Out Pipeline: ✅/❌
+- Trinity Scheduling: ✅/❌
+- Payroll Processing: ✅/❌
+- Org Billing: ✅/❌
+- New Org Onboarding: ✅/❌
+- Document Signing: ✅/❌
+- Trinity AI Chain: ✅/❌
+
+FOREIGN KEYS: [X] broken / [X] repaired
+CONSOLE ERRORS: [X] new errors introduced / 0
+
+READY FOR NEXT PHASE: YES / NO
+```
+
+Do not mark this prompt complete until the final health report shows all workflows green.
+
+---
+
+## WHAT COMES AFTER THIS PROMPT (IN ORDER)
+
+Once Bryan reviews and approves the health report:
+
+1. **Development Laws v2** — pinned as standing orders
+2. **Re-feed all 19 platform docs** — verify semantic integrity
+3. **Trinity intelligence layers** — docs 8, 9, 10, 11
+4. **Dashboard redesign** — mobile and desktop
+5. **System integrity audit** — full 8-phase verification
+6. **Production readiness** — Statewide real data simulation
+7. **Money flow audit** — Stripe, payroll, billing
+8. **Launch preparation**
+
+---
+
+*Remember: Empty tables are not broken tables. Zero rows means the platform is ready and waiting for its first customer. Protect every table. Every feature was built for a reason.*

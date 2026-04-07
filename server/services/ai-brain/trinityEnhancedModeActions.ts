@@ -23,9 +23,11 @@
 import { trinityGuruMode } from './trinityGuruMode';
 import { trinityBusinessProMode } from './trinityBusinessProMode';
 import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityEnhancedModeActions');
 
 export function registerTrinityEnhancedModeActions(orchestrator: any): void {
-  console.log('[TrinityEnhanced] Registering Enhanced Guru Mode + Business Pro Mode actions...');
+  log.info('[TrinityEnhanced] Registering Enhanced Guru Mode + Business Pro Mode actions...');
 
   // -------------------------------------------------------------------------
   // GURU MODE ACTIONS
@@ -91,6 +93,8 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     category: 'guru',
     description: 'Propose safe self-evolution with sandbox testing and A/B validation',
     requiredRoles: ['root_admin', 'deputy_admin'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { parameter, currentValue, proposedValue } = request.payload || {};
@@ -124,6 +128,8 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     category: 'guru',
     description: 'Run intelligent scenario simulation with ROI-based auto-execution',
     requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { scenarioId } = request.payload || {};
@@ -228,7 +234,9 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     name: 'Get Industry Playbook',
     category: 'business_pro',
     description: 'Get revenue optimization playbook for specific industry vertical',
-    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { vertical } = request.payload || {};
@@ -269,7 +277,9 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     name: 'Discover Hidden Money',
     category: 'business_pro',
     description: 'Run 4-mode money discovery (Recovery, Protection, Growth, Multiplication)',
-    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { mode, vertical, businessData } = request.payload || {};
@@ -301,7 +311,9 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     name: 'Run Benchmark Analysis',
     category: 'business_pro',
     description: 'Compare performance against industry standards or top quartile',
-    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { vertical, currentMetrics, tier } = request.payload || {};
@@ -338,7 +350,9 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     name: 'Calculate Total ROI',
     category: 'business_pro',
     description: 'Calculate 3-year ROI projection across all money discovery modes',
-    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { recoveryData, protectionData, growthData, multiplicationData, investmentCost } = request.payload || {};
@@ -382,7 +396,9 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     name: 'Get Business Pro Agents',
     category: 'business_pro',
     description: 'List all 8 Business Pro specialized agents',
-    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin', 'support_manager'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner', 'support_manager'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const agents = trinityBusinessProMode.getBusinessProAgents();
@@ -402,7 +418,9 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     name: 'Get Business Pro Summary',
     category: 'business_pro',
     description: 'Get complete Business Pro Mode status and capabilities',
-    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'org_owner', 'co_owner'],
+    /* DEFERRED — requires real org data integration before production use */
+    isDeferred: true,
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const summary = trinityBusinessProMode.getBusinessProSummary();
@@ -460,5 +478,5 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
     }
   });
 
-  console.log('[TrinityEnhanced] Registered 12 enhanced mode actions (6 Guru + 5 BusinessPro + 1 Knowledge)');
+  log.info('[TrinityEnhanced] Registered 12 enhanced mode actions (6 Guru + 5 BusinessPro + 1 Knowledge)');
 }

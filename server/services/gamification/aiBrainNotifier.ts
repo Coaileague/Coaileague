@@ -1,8 +1,13 @@
 import { gamificationEvents, type MilestoneEvent, type AchievementEvent } from './gamificationEvents';
 import { publishPlatformUpdate } from '../platformEventBus';
 import { db } from '../../db';
-import { employees, employeePoints } from '@shared/schema';
+import {
+  employees
+} from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('aiBrainNotifier');
+
 
 /**
  * Sends gamification milestones to AI Brain for onboarding insight
@@ -16,7 +21,7 @@ export class AiBrainNotifier {
    */
   static initializeListeners(): void {
     if (this.initialized) {
-      console.log('[AiBrainNotifier] Already initialized, skipping');
+      log.info('[AiBrainNotifier] Already initialized, skipping');
       return;
     }
 
@@ -25,7 +30,7 @@ export class AiBrainNotifier {
     gamificationEvents.on('achievement_unlocked', (data: AchievementEvent) => this.notifyAchievement(data));
 
     this.initialized = true;
-    console.log('[AiBrainNotifier] AI Brain notification system initialized');
+    log.info('[AiBrainNotifier] AI Brain notification system initialized');
   }
 
   private static async notifyAiBrain(data: MilestoneEvent): Promise<void> {
@@ -80,9 +85,9 @@ export class AiBrainNotifier {
         visibility: 'staff',
       });
 
-      console.log(`[AiBrainNotifier] Notified AI Brain: ${type} for ${employeeId}`);
+      log.info(`[AiBrainNotifier] Notified AI Brain: ${type} for ${employeeId}`);
     } catch (error) {
-      console.error('[AiBrainNotifier] Error notifying AI Brain:', error);
+      log.error('[AiBrainNotifier] Error notifying AI Brain:', error);
     }
   }
 
@@ -108,9 +113,9 @@ export class AiBrainNotifier {
         priority: achievement.rarity === 'legendary' ? 1 : achievement.rarity === 'rare' ? 2 : 3,
       });
 
-      console.log(`[AiBrainNotifier] Achievement notification: ${achievement.name}`);
+      log.info(`[AiBrainNotifier] Achievement notification: ${achievement.name}`);
     } catch (error) {
-      console.error('[AiBrainNotifier] Error notifying achievement:', error);
+      log.error('[AiBrainNotifier] Error notifying achievement:', error);
     }
   }
 
@@ -147,7 +152,7 @@ export class AiBrainNotifier {
         last_active: pointsRecord.lastActivityAt,
       };
     } catch (error) {
-      console.error('[AiBrainNotifier] Error getting engagement insights:', error);
+      log.error('[AiBrainNotifier] Error getting engagement insights:', error);
       return null;
     }
   }

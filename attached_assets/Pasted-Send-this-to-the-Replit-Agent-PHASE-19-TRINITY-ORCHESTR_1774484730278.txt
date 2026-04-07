@@ -1,0 +1,189 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 19 — TRINITY ORCHESTRATION AND ACTION REGISTRY CERTIFICATION**
+
+This phase owns the complete Trinity AI orchestration layer — the brain that coordinates every bot, every action, and every automated workflow across the platform. Trinity touches every other system. A broken action, a duplicate registration, a permission bypass, or a silent bot failure cascades across the entire platform. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+Before writing your completion summary you must produce a reconciliation table listing every finding from your findings report — PASS, GAP, PARTIAL, and CRITICAL — with a corresponding fix confirmation or a statement that no fix was needed. If any finding does not have a confirmed fix with evidence, you cannot mark Phase 19 complete. This rule is non-negotiable and applies to every item in the findings report without exception.
+
+---
+
+**STEP 1 — TRINITY SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, and registration point in the Trinity orchestration layer. Include:
+- Trinity core orchestrator and intent router
+- Action registry — total action count, all registered namespaces
+- All bot registrations: ReportBot, HelpAI, ClockBot, MeetingBot
+- Event subscription system — all registered subscriptions
+- Proactive action system — all registered proactive triggers
+- Trinity memory system — what is stored, how it is retrieved
+- Trinity audit trail — what is logged per execution
+- platformActionHub — what it exposes and how it is called
+- All Trinity-facing routes and authentication
+- Any scheduled job that involves Trinity execution
+
+Flag any Trinity action registration that is duplicated, orphaned, or inconsistent with the canonical action ID format.
+
+---
+
+**STEP 2 — ACTION REGISTRY AUDIT**
+
+The action registry must be lean, canonical, and complete:
+- Produce the exact total count of registered actions across all namespaces
+- Target confirmed below 300 — if above 300 identify which namespace has bloat and trim
+- Every action must have: canonical action ID, description, required role, workspace context flag, audit log flag
+- Duplicate action IDs — any action registered more than once must be identified and deduplicated
+- Orphaned actions — any action that has no corresponding handler function must be identified and removed
+- Inconsistent naming — action IDs must follow the `namespace.verb` pattern (examples: `schedule.query`, `payroll.run`, `license.alert`) — flag any that deviate
+- Actions added in Phases 13–18 verified present: `inbound.*`, `license.*`, `document.*`, `permissions.*` namespaces confirmed
+- Actions from prior phases that may have been removed or renamed — verify no regressions
+
+---
+
+**STEP 3 — BOT ECOSYSTEM VERIFICATION**
+
+Every bot must be confirmed running under Trinity orchestration:
+
+**ReportBot** — generates operational reports on demand and on schedule:
+- Confirm registration and handler
+- Verify it can generate: shift summary, incident summary, payroll summary, compliance status
+- Confirm output routed via NDS to requesting user
+- Confirm Trinity can invoke ReportBot via a registered action
+
+**HelpAI** — the user-facing assistant and supervisor bot:
+- Confirm registration as supervisor of other bots
+- Verify it can delegate to ReportBot, ClockBot, MeetingBot correctly
+- Confirm it respects the requesting user's role when delegating — does not elevate permissions
+- Verify HelpAI cannot trigger platform-wide actions without explicit platform staff authorization
+
+**ClockBot** — handles time entry automation:
+- Confirm registration and handler
+- Verify it processes clock-in and clock-out events correctly
+- Confirm it cannot clock in an officer for a shift they are not assigned to
+- Verify clock events produce correct time entries with GPS and timestamp
+
+**MeetingBot** — handles scheduling and calendar coordination:
+- Confirm registration and handler
+- Verify it can create, update, and cancel meetings
+- Confirm meeting records are workspace-scoped
+- Verify MeetingBot actions respect the requesting user's calendar permissions
+
+---
+
+**STEP 4 — EVENT SUBSCRIPTION VERIFICATION**
+
+Every event subscription must fire on the correct trigger:
+- Produce a complete list of all registered event subscriptions
+- For each subscription: what event triggers it, what action it calls, what the expected output is
+- Duplicate subscriptions — same event triggering the same action more than once must be identified and removed
+- Orphaned subscriptions — subscriptions pointing to actions that no longer exist must be removed
+- Missing subscriptions — events that should trigger Trinity actions but have no subscription (examples: officer activated, shift created, payroll run completed, document executed) — identify and add
+- Subscription audit: every fired subscription must produce an audit log entry with: event_type, action_called, triggered_by, timestamp, outcome
+
+---
+
+**STEP 5 — PROACTIVE ACTION VERIFICATION**
+
+Trinity proactive actions fire without user prompting:
+- Produce a complete list of all registered proactive triggers
+- For each trigger: what condition activates it, what action fires, what the expected output is
+- Verify proactive actions run on their defined schedule without missed fires
+- Verify proactive actions do not fire duplicate notifications — idempotency confirmed
+- Verify proactive actions respect workspace context — they do not cross workspace boundaries
+- Proactive action failures are logged and do not silently drop — failure produces an audit entry and admin alert
+
+---
+
+**STEP 6 — TRINITY MEMORY VERIFICATION**
+
+Trinity memory must be accurate and workspace-scoped:
+- What data is stored in Trinity memory — produce the complete list
+- Memory is workspace-scoped — Trinity cannot retrieve memory from another workspace
+- Memory is not stale — define the maximum age of memory entries and confirm staleness detection
+- Memory retrieval does not leak PII outside its workspace
+- Memory health endpoint confirmed live — `GET /api/trinity/memory-health` returns current status
+- Trinity memory used in action execution — verify context is correctly injected into prompts
+
+---
+
+**STEP 7 — TRINITY AUDIT TRAIL VERIFICATION**
+
+Every Trinity execution must be fully logged:
+- Every action execution writes an audit entry: action_id, requesting_user_id, workspace_id, input_params, output_result, execution_time_ms, success/failure, timestamp
+- Failed actions log the error — not just success state
+- Permission denials logged — when Trinity blocks an action due to insufficient role, the denial is recorded
+- Proactive action executions logged — not just user-triggered actions
+- Audit log accessible to org_owner and platform staff — not editable by anyone
+- Audit log retention policy defined — entries not deleted within the retention window
+
+---
+
+**STEP 8 — TRINITY AUTHENTICATION AND PERMISSION VERIFICATION**
+
+Trinity must never be a permission bypass:
+- Trinity system context confirmed cannot be spoofed from a user-level request (confirmed Phase 9 — regression check)
+- Every action checks the requesting user's role before executing — not after
+- Actions that modify financial data require financial role — Trinity cannot execute payroll actions on behalf of an officer
+- Actions that modify permissions require org_owner or platform staff — Trinity cannot elevate a user's role on behalf of that user
+- HelpAI delegation respects the delegating user's permissions — delegated action cannot exceed the delegator's role
+- Rate limiting applied to Trinity endpoints — no bulk action execution abuse
+- Trinity bot token confirmed never exposed in logs or API responses
+
+---
+
+**STEP 9 — CROSS-PHASE INTEGRATION VERIFICATION**
+
+Trinity actions added across all prior phases must be confirmed registered and functional:
+- Phase 13: `inbound.calloff.process`, `inbound.incident.process`, `inbound.docs.process`, `inbound.support.process`, `inbound.email.query`, `inbound.email.reprocess` — all 6 confirmed
+- Phase 16: `qb.sync_status` — confirmed
+- Phase 17: `license.query`, `license.alert`, `license.update`, `license.export` — all 4 confirmed
+- Phase 18: `document.query`, `document.generate`, `document.route`, `document.void`, `document.export` — all 5 confirmed
+- Phase 9B: `permissions.*` actions — all confirmed
+- For each namespace: confirm the action ID matches exactly what was registered, handler exists, and role check fires before execution
+
+---
+
+**STEP 10 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing the completion summary you must:
+1. List every finding from your findings report in a reconciliation table
+2. For every PASS — confirm it is still passing with a one-line evidence statement
+3. For every GAP — confirm it was fixed with file name and line reference
+4. For every PARTIAL — confirm it was fully resolved, not just partially improved
+5. For every CRITICAL — confirm it was fixed with grep or query evidence
+6. If any finding cannot be confirmed with evidence — fix it before proceeding
+7. Only after every row in the reconciliation table is green may you write the Phase 19 completion summary
+
+---
+
+**STEP 11 — VERIFICATION**
+
+Run all checks before Phase 19 is marked complete:
+- Check 1: Total action count confirmed below 300 — exact number shown
+- Check 2: Zero duplicate action IDs — grep confirms
+- Check 3: Zero orphaned actions — every registered action has a live handler
+- Check 4: All action IDs follow `namespace.verb` pattern — deviations fixed
+- Check 5: All Phase 13–18 cross-phase actions confirmed registered with correct IDs
+- Check 6: ReportBot, HelpAI, ClockBot, MeetingBot all confirmed running under Trinity
+- Check 7: HelpAI delegation confirmed respecting delegating user's role — no permission elevation
+- Check 8: Zero duplicate event subscriptions
+- Check 9: Zero orphaned event subscriptions
+- Check 10: Missing event subscriptions identified and added
+- Check 11: Proactive actions confirmed idempotent — no duplicate notifications
+- Check 12: Trinity memory confirmed workspace-scoped — no cross-workspace retrieval
+- Check 13: Memory health endpoint live and returning correct status
+- Check 14: Every action execution writes a complete audit entry
+- Check 15: Permission denials logged — not silently dropped
+- Check 16: Trinity bot token confirmed not in logs or API responses
+- Check 17: HelpAI cannot trigger platform-wide actions without platform staff authorization
+- Check 18: Nothing Left Behind reconciliation table complete — every finding accounted for
+- Check 19: Server starts clean with zero TypeScript errors across all Trinity files
+
+Do not mark Phase 19 complete until all 19 checks pass and the Nothing Left Behind reconciliation table is fully green. Findings first. Full picture assembled. Then fixes. Every gap from low to critical gets fixed. Every PARTIAL gets fully resolved. No finding is left unaddressed.
+
+---
+
+Paste that. The Nothing Left Behind rule is now baked into the prompt at Step 10 and Check 18 — the agent cannot close the phase without running it explicitly. Let it run.

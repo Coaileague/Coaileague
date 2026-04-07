@@ -1,0 +1,1179 @@
+# CoAIleague — DockChat Architecture, Shift Rooms, Proof of Service & System Bots
+## "Never Lose a Photo, Message, or Proof of Service Again"
+
+**Date:** March 4, 2026
+**Context:** Security companies currently rely on WhatsApp groups for field communication. Photos fill phones, auto-save gets disabled, proof of service vanishes, client payment disputes become he-said-she-said, and wage claims lack documentation. This spec solves ALL of it by making DockChat the single source of truth for every field operation.
+
+**THE CORE PROMISE:**
+Every photo, every message, every report, every clock event — captured, timestamped, GPS-tagged, organized by shift, compiled into proof-of-service PDFs, and stored permanently in the org's document vault. Nothing gets lost. Everything is evidence.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 1: SHIFT ROOMS — AUTO-CREATED GROUP DMS
+# ═══════════════════════════════════════════════════
+
+## 1A: What Shift Rooms Are
+
+A Shift Room is an auto-created DockChat group conversation tied to a specific shift at a specific site. It exists for the duration of the shift and serves as the operational communication channel for everyone involved with that shift.
+
+**Shift Room = Site + Date + Shift Time**
+
+If Pinnacle Tower has a Day Shift (8AM-4PM) on March 4, there is ONE Shift Room for that shift. If three officers are assigned, all three are in the room. If one officer is on a solo overnight shift, the room has one officer plus system bots.
+
+## 1B: Auto-Creation Triggers
+
+Shift Rooms are created automatically. Officers never need to manually create them.
+
+```
+TRIGGER 1 — SHIFT START TIME:
+  System clock hits shift start time → Shift Room auto-created
+  All assigned officers auto-added to room
+  System bots auto-joined (ClockBot, ReportBot)
+  Room name: "[Site Name] — [Shift Type] — [Date]"
+  Example: "Pinnacle Tower — Overnight — Mar 4, 2026"
+
+TRIGGER 2 — FIRST CLOCK-IN:
+  If Trigger 1 hasn't fired yet (edge case), first officer
+  clocking in at the site triggers room creation
+  Remaining assigned officers added when they clock in
+
+TRIGGER 3 — MANUAL CREATION (Manager):
+  Manager can create a Shift Room early (for pre-shift briefing)
+  or create ad-hoc rooms for special events
+```
+
+## 1C: Who Gets Access (RBAC)
+
+```
+ROLE                    AUTO-JOIN?    CAN JOIN?    CAN SEE HISTORY?
+─────────────────────────────────────────────────────────────────────
+Assigned officers       ✅ Auto        —            ✅ Own shifts only
+Site supervisor         ✅ Auto        —            ✅ All shifts at their sites
+Manager                 ❌ No          ✅ Can join   ✅ All shifts in org
+Org owner               ❌ No          ✅ Can join   ✅ All shifts in org
+Other officers          ❌ No          ❌ Cannot     ❌ Cannot
+(not assigned)
+System bots             ✅ Auto        —            ✅ All rooms they join
+Support agents          ❌ No          ✅ Can join   ✅ When invited
+Client contacts         ❌ No          ❌ Cannot     ❌ Via client portal only
+(client portal)                                       (sees proof-of-service PDF)
+```
+
+**KEY: Officers CANNOT see other officers' shift rooms unless they are assigned to that shift.** This prevents information leaking between sites and protects client confidentiality.
+
+## 1D: Shift Room Lifecycle
+
+```
+TIMELINE:
+
+  30min before shift ─── Room created, pre-shift message posted:
+                         "Shift Room opened for Pinnacle Tower Overnight.
+                          Assigned: Marcus Rivera, Angel Jackson.
+                          Post orders: [link]. Start time: 12:00 AM."
+
+  Shift starts ───────── ClockBot monitors for clock-ins
+                         Officers post photos, updates, incidents
+                         Every message auto-tagged with timestamp + GPS
+
+  During shift ────────── All content captured:
+                          - Text messages (preserved)
+                          - Photos (stored permanently in media vault)
+                          - Voice messages (transcribed + stored)
+                          - Location check-ins (GPS pins)
+                          - Incident reports (linked to room)
+                          - Daily reports (linked to room)
+
+  End of shift ────────── Auto-compilation trigger:
+                          1. ClockBot verifies all officers clocked out
+                          2. ReportBot compiles Proof of Service PDF
+                          3. PDF includes ALL content chronologically
+                          4. PDF sent to manager for review
+                          5. PDF stored in document vault
+                          6. Room marked as "archived" (read-only)
+
+  Post-shift ──────────── Room stays accessible (read-only) forever
+                          Searchable, downloadable, printable
+                          Evidence for disputes, claims, audits
+```
+
+## 1E: What Gets Captured in Shift Rooms
+
+EVERY message in a Shift Room is permanently stored with metadata:
+
+```
+MESSAGE RECORD:
+{
+  id: UUID,
+  room_id: UUID (shift room),
+  shift_id: UUID,
+  sender_id: UUID (officer or bot),
+  message_type: "text" | "photo" | "voice" | "location" | "file" | "system",
+  
+  // Content
+  text_content: "Completed patrol of Level 3, all clear",
+  
+  // Media (if photo/voice/file)
+  media_url: "https://storage.../shift-photos/2026-03-04/pinnacle-overnight/img_001.jpg",
+  media_thumbnail_url: "https://storage.../thumbs/...",
+  media_mime_type: "image/jpeg",
+  media_size_bytes: 2048000,
+  
+  // Voice specific
+  voice_duration_seconds: 15,
+  voice_transcript: "Just completed the Level 3 patrol, everything looks good...",
+  
+  // CRITICAL METADATA — always captured
+  timestamp: "2026-03-04T02:15:33Z",
+  gps_latitude: 32.7767,
+  gps_longitude: -96.7970,
+  gps_accuracy_meters: 8.5,
+  gps_address: "123 Commerce St, Level 3, Pinnacle Tower",
+  device_info: "Samsung Galaxy S24, Android 15",
+  
+  // Relationships
+  related_incident_id: null,        // If this message is about an incident
+  related_report_id: null,          // If this message is part of a daily report
+  hourly_check_in_number: 3,        // Which hourly check-in this belongs to (1-12 for 12hr shift)
+  
+  // Flags
+  is_pinned: false,                 // Manager can pin important messages
+  is_evidence: true,                // Auto-flagged if contains photo or incident reference
+  requires_followup: false          // Bot can flag messages needing manager attention
+}
+```
+
+## 1F: Photo Storage — Never Lost Again
+
+```
+PHOTO LIFECYCLE:
+
+  Officer takes photo in Shift Room
+       │
+       ▼
+  Photo uploaded to permanent cloud storage (S3/R2/Cloudflare)
+  NOT stored on device (device storage is unreliable)
+       │
+       ▼
+  Metadata auto-attached:
+    - GPS coordinates at time of capture
+    - Timestamp (server-verified, not device clock)
+    - Officer who took it
+    - Shift room it belongs to
+    - Site and client it relates to
+       │
+       ▼
+  Thumbnail generated for chat display
+  Full-resolution original preserved
+       │
+       ▼
+  Photo appears in:
+    1. Shift Room chat (inline)
+    2. Shift media gallery (all photos from this shift)
+    3. Proof of Service PDF (chronological)
+    4. Site media archive (all photos ever taken at this site)
+    5. Document vault (searchable by date, site, officer)
+
+  RETENTION: Photos are NEVER auto-deleted.
+  Only org owner can delete, and deletion is soft-delete
+  (marked as removed but recoverable for 90 days).
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 2: PROOF OF SERVICE PDF — AUTO-GENERATED
+# ═══════════════════════════════════════════════════
+
+## 2A: What It Is
+
+At the end of every shift, the system automatically compiles everything from the Shift Room into a professional Proof of Service PDF. This document proves:
+
+1. Officers were on site (GPS + photos + clock records)
+2. What they did (patrol logs, check-ins, incident responses)
+3. When they did it (timestamped chronologically, every hour verified)
+4. What they found (photos with GPS, incident reports)
+5. Who was there (officer names, badge numbers, clock in/out times)
+
+**This PDF is the document you hand to a client who claims "your guards didn't show up" or "nothing was done." It's also the document you submit to TWC when an employee files a wage claim.**
+
+## 2B: PDF Structure
+
+```
+PROOF OF SERVICE — AUTO-GENERATED PDF
+
+PAGE 1: COVER / SUMMARY
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│  [Company Logo]                                  │
+│  PROOF OF SERVICE REPORT                         │
+│                                                  │
+│  Client: Pinnacle Tower LLC                      │
+│  Site Address: 123 Commerce St, Dallas, TX 75201 │
+│  Date: March 4, 2026                             │
+│  Shift: Overnight (12:00 AM — 8:00 AM)           │
+│  Duration: 8 hours                               │
+│                                                  │
+│  OFFICERS ON DUTY:                               │
+│  ┌────────────────────────────────────────┐      │
+│  │ Marcus Rivera (Badge #147)            │      │
+│  │ Clock In:  12:02 AM (GPS verified ✅)  │      │
+│  │ Clock Out: 8:01 AM  (GPS verified ✅)  │      │
+│  │ Total Hours: 7.98                     │      │
+│  ├────────────────────────────────────────┤      │
+│  │ Angel Jackson (Badge #203)            │      │
+│  │ Clock In:  12:05 AM (GPS verified ✅)  │      │
+│  │ Clock Out: 8:00 AM  (GPS verified ✅)  │      │
+│  │ Total Hours: 7.92                     │      │
+│  └────────────────────────────────────────┘      │
+│                                                  │
+│  SHIFT SUMMARY:                                  │
+│  Total Check-Ins: 16 (8 per officer)             │
+│  Incidents Reported: 1                           │
+│  Photos Captured: 23                             │
+│  Patrols Completed: 8                            │
+│                                                  │
+│  Generated by CoAIleague™ on March 4, 2026      │
+│  Document ID: POS-2026-0304-PINN-ON             │
+│                                                  │
+└──────────────────────────────────────────────────┘
+
+PAGE 2+: CHRONOLOGICAL ACTIVITY LOG
+┌──────────────────────────────────────────────────┐
+│  HOURLY ACTIVITY LOG                             │
+│                                                  │
+│  ═══ HOUR 1: 12:00 AM — 1:00 AM ═══            │
+│                                                  │
+│  12:02 AM — Marcus Rivera clocked in             │
+│    📍 123 Commerce St (GPS: 32.7767, -96.7970)   │
+│    ✅ Within geofence (8.5m accuracy)            │
+│                                                  │
+│  12:05 AM — Angel Jackson clocked in             │
+│    📍 123 Commerce St (GPS: 32.7768, -96.7971)   │
+│    ✅ Within geofence (6.2m accuracy)            │
+│                                                  │
+│  12:15 AM — Marcus Rivera: "Beginning patrol     │
+│    of parking garage levels 1-5"                 │
+│                                                  │
+│  12:32 AM — Marcus Rivera: [PHOTO]               │
+│    📍 Parking Garage Level 3                      │
+│    Caption: "Level 3 clear, all cameras          │
+│    operational"                                   │
+│    ┌──────────────────┐                          │
+│    │                  │                          │
+│    │  [Photo embed]   │                          │
+│    │                  │                          │
+│    └──────────────────┘                          │
+│    GPS: 32.7769, -96.7972 | 12:32:15 AM CST     │
+│                                                  │
+│  12:45 AM — Angel Jackson: "Lobby secure,        │
+│    front entrance locked per post orders"        │
+│                                                  │
+│  ═══ HOUR 2: 1:00 AM — 2:00 AM ═══             │
+│                                                  │
+│  1:15 AM — Marcus Rivera: [PHOTO]                │
+│    Caption: "Perimeter fence intact, east side"  │
+│    ...                                           │
+│                                                  │
+│  ═══ HOUR 3: 2:00 AM — 3:00 AM ═══             │
+│                                                  │
+│  2:15 AM — Marcus Rivera: ⚠️ INCIDENT REPORTED   │
+│    Severity: Medium | Type: Trespass             │
+│    (See Incident Report INC-2026-0047 attached)  │
+│    ...                                           │
+│                                                  │
+└──────────────────────────────────────────────────┘
+
+FINAL PAGES: ATTACHED DOCUMENTS
+  - Incident Report INC-2026-0047 (full report)
+  - Daily Report summaries from each officer
+  - All photos at full resolution (thumbnail grid + appendix)
+```
+
+## 2C: Hourly Check-In Requirement
+
+For sites that require hourly proof of service, the system enforces check-ins:
+
+```
+HOURLY CHECK-IN FLOW:
+
+  Every hour (configurable per site: 30min, 1hr, 2hr intervals):
+    1. ClockBot posts in Shift Room: "📸 Hourly check-in due.
+       Please send a photo of your current location."
+    2. Timer starts (15 minute grace period)
+    3. Officer sends photo → GPS + timestamp captured → check-in recorded ✅
+    4. If NO photo within 15 minutes:
+       - ClockBot DMs officer: "Reminder: hourly check-in overdue"
+    5. If NO photo within 30 minutes:
+       - ClockBot notifies manager/supervisor
+       - Merit point deducted from officer's behavior score
+       - Logged as "Missed Check-In" on proof of service PDF
+    6. Officer can also send text update + photo at any time
+       (voluntary updates also count as check-ins)
+
+  SITE CONFIGURATION:
+    - check_in_interval: 60 (minutes)
+    - check_in_requires_photo: true
+    - check_in_grace_period: 15 (minutes)
+    - check_in_escalation_delay: 30 (minutes)
+    - auto_notify_manager_on_miss: true
+```
+
+## 2D: Database Schema — Shift Rooms & Media
+
+```sql
+-- ═══════════════════════════════════════════════════
+-- SHIFT ROOMS (Auto-created DockChat rooms)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS shift_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  shift_id UUID REFERENCES shifts(id),          -- Can link to a specific shift
+  site_id UUID REFERENCES clients(id),          -- Which client site
+  
+  -- Room identity
+  room_name VARCHAR(300) NOT NULL,
+  room_type VARCHAR(30) NOT NULL DEFAULT 'shift',
+  -- Types: shift, meeting, briefing, support, ad_hoc
+  
+  -- Timing
+  shift_date DATE NOT NULL,
+  shift_start_time TIMESTAMP NOT NULL,
+  shift_end_time TIMESTAMP NOT NULL,
+  
+  -- DockChat integration
+  dockchat_channel_id UUID,                      -- Links to existing DockChat channel/room
+  
+  -- Status
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  -- Status: pending, active, compiling, archived
+  opened_at TIMESTAMP,
+  closed_at TIMESTAMP,
+  archived_at TIMESTAMP,
+  
+  -- Proof of service
+  proof_of_service_pdf_url VARCHAR(500),
+  proof_of_service_generated_at TIMESTAMP,
+  proof_of_service_status VARCHAR(20) DEFAULT 'pending',
+  -- Status: pending, generating, generated, reviewed, sent_to_client
+  document_vault_id UUID REFERENCES document_vault(id),
+  
+  -- Check-in config (inherited from site settings, can override)
+  check_in_interval_minutes INTEGER DEFAULT 60,
+  check_in_requires_photo BOOLEAN DEFAULT true,
+  
+  -- Stats (updated in real-time)
+  total_messages INTEGER DEFAULT 0,
+  total_photos INTEGER DEFAULT 0,
+  total_check_ins INTEGER DEFAULT 0,
+  missed_check_ins INTEGER DEFAULT 0,
+  incidents_reported INTEGER DEFAULT 0,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_shift_rooms_workspace ON shift_rooms(workspace_id, shift_date);
+CREATE INDEX idx_shift_rooms_site ON shift_rooms(site_id, shift_date);
+CREATE INDEX idx_shift_rooms_status ON shift_rooms(status);
+
+-- ═══════════════════════════════════════════════════
+-- SHIFT ROOM MEMBERS
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS shift_room_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES shift_rooms(id),
+  user_id UUID REFERENCES users(id),            -- NULL for system bots
+  member_type VARCHAR(20) NOT NULL,
+  -- Types: officer, supervisor, manager, owner, bot, support
+  bot_type VARCHAR(30),                          -- clock_bot, report_bot, meeting_bot, help_bot
+  joined_at TIMESTAMP DEFAULT NOW(),
+  left_at TIMESTAMP,
+  join_reason VARCHAR(50) DEFAULT 'auto_assigned',
+  -- Reasons: auto_assigned, manual_join, escalation, bot_summoned
+  is_active BOOLEAN DEFAULT true
+);
+
+CREATE INDEX idx_room_members ON shift_room_members(room_id, is_active);
+CREATE INDEX idx_room_members_user ON shift_room_members(user_id, is_active);
+
+-- ═══════════════════════════════════════════════════
+-- SHIFT ROOM MESSAGES (Extended from DockChat)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS shift_room_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES shift_rooms(id),
+  sender_id UUID REFERENCES users(id),           -- NULL for system messages
+  sender_bot_type VARCHAR(30),                   -- If sent by a bot
+  
+  -- Content
+  message_type VARCHAR(20) NOT NULL,
+  -- Types: text, photo, voice, video, location, file, system,
+  --        check_in, incident_link, report_link, bot_prompt, bot_analysis
+  text_content TEXT,
+  
+  -- Media
+  media_url VARCHAR(500),
+  media_thumbnail_url VARCHAR(500),
+  media_mime_type VARCHAR(50),
+  media_size_bytes INTEGER,
+  media_original_filename VARCHAR(300),
+  
+  -- Voice specific
+  voice_duration_seconds INTEGER,
+  voice_transcript TEXT,
+  
+  -- CRITICAL: Location metadata (ALWAYS captured when available)
+  gps_latitude DECIMAL(10, 8),
+  gps_longitude DECIMAL(11, 8),
+  gps_accuracy_meters DECIMAL(6, 2),
+  gps_address TEXT,                              -- Reverse-geocoded address
+  
+  -- Timestamp (server-verified)
+  server_timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+  device_timestamp TIMESTAMP,                    -- What the device reported
+  
+  -- Relationships
+  hourly_check_in_number INTEGER,                -- Which check-in period (1, 2, 3...)
+  is_check_in BOOLEAN DEFAULT false,
+  related_incident_id UUID REFERENCES incident_reports(id),
+  related_report_id UUID,
+  
+  -- Flags
+  is_pinned BOOLEAN DEFAULT false,
+  is_evidence BOOLEAN DEFAULT false,             -- Auto-flagged: photos, incidents, issues
+  requires_followup BOOLEAN DEFAULT false,       -- Bot-flagged for manager attention
+  flagged_by_bot VARCHAR(30),                    -- Which bot flagged it
+  
+  -- Device info (for audit trail)
+  device_info TEXT,
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_room_msgs_room ON shift_room_messages(room_id, server_timestamp);
+CREATE INDEX idx_room_msgs_type ON shift_room_messages(room_id, message_type);
+CREATE INDEX idx_room_msgs_checkin ON shift_room_messages(room_id, is_check_in) WHERE is_check_in = true;
+CREATE INDEX idx_room_msgs_evidence ON shift_room_messages(room_id, is_evidence) WHERE is_evidence = true;
+
+-- ═══════════════════════════════════════════════════
+-- SHIFT CHECK-INS (Hourly tracking)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS shift_check_ins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES shift_rooms(id),
+  officer_id UUID NOT NULL REFERENCES users(id),
+  check_in_number INTEGER NOT NULL,              -- 1, 2, 3... for each hour
+  due_at TIMESTAMP NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  -- Status: pending, completed, missed, excused
+  completed_at TIMESTAMP,
+  message_id UUID REFERENCES shift_room_messages(id),  -- The message that fulfilled the check-in
+  photo_url VARCHAR(500),
+  gps_latitude DECIMAL(10, 8),
+  gps_longitude DECIMAL(11, 8),
+  gps_within_geofence BOOLEAN,
+  reminder_sent_at TIMESTAMP,
+  escalated_at TIMESTAMP,
+  escalated_to UUID REFERENCES users(id),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_checkins_room ON shift_check_ins(room_id, check_in_number);
+CREATE INDEX idx_checkins_officer ON shift_check_ins(officer_id, status);
+
+-- ═══════════════════════════════════════════════════
+-- MEDIA VAULT (Permanent photo/file storage)
+-- ═══════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS media_vault (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  
+  -- Source
+  uploaded_by UUID REFERENCES users(id),
+  source_type VARCHAR(30) NOT NULL,
+  -- Sources: shift_room, incident_report, daily_report, expense, manual_upload
+  source_id UUID,                                -- ID of the source record
+  shift_room_id UUID REFERENCES shift_rooms(id),
+  shift_id UUID REFERENCES shifts(id),
+  site_id UUID REFERENCES clients(id),
+  
+  -- File info
+  file_url VARCHAR(500) NOT NULL,
+  thumbnail_url VARCHAR(500),
+  original_filename VARCHAR(300),
+  mime_type VARCHAR(50) NOT NULL,
+  file_size_bytes INTEGER NOT NULL,
+  
+  -- Metadata
+  gps_latitude DECIMAL(10, 8),
+  gps_longitude DECIMAL(11, 8),
+  gps_address TEXT,
+  captured_at TIMESTAMP NOT NULL,                -- When the photo was actually taken
+  device_info TEXT,
+  
+  -- Organization
+  tags JSONB DEFAULT '[]',
+  description TEXT,
+  
+  -- Retention
+  is_deleted BOOLEAN DEFAULT false,              -- Soft delete only
+  deleted_at TIMESTAMP,
+  deleted_by UUID REFERENCES users(id),
+  retention_locked_until TIMESTAMP,              -- Cannot delete before this date
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_media_vault_workspace ON media_vault(workspace_id, captured_at);
+CREATE INDEX idx_media_vault_site ON media_vault(site_id, captured_at);
+CREATE INDEX idx_media_vault_shift ON media_vault(shift_id);
+CREATE INDEX idx_media_vault_room ON media_vault(shift_room_id);
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 3: SYSTEM BOTS — TRINITY-POWERED SPECIALISTS
+# ═══════════════════════════════════════════════════
+
+## 3A: Bot Architecture
+
+System bots are specialized AI agents powered by Trinity's layered intelligence (Gemini Flash for quick analysis, Claude Sonnet for complex reasoning, OpenAI as fallback). Each bot has:
+
+1. **Specialization** — trained focus area with specific system prompts
+2. **Triggers** — events that summon the bot or cause it to act
+3. **Capabilities** — what the bot can read, write, and create
+4. **Output** — what the bot produces (PDFs, alerts, messages, pipeline items)
+
+```
+BOT HIERARCHY:
+
+  TRINITY (Orchestrator)
+    │
+    ├── ClockBot        — Workforce time & attendance specialist
+    │
+    ├── ReportBot       — Incident/daily report writing specialist
+    │
+    ├── MeetingBot      — Meeting analysis & minutes specialist
+    │
+    ├── HelpBot         — Employee support & helpdesk specialist (already exists)
+    │
+    └── GuardBot        — Real-time shift monitoring & compliance specialist
+
+  Trinity summons bots based on events.
+  Bots can also self-activate when they detect relevant activity.
+  All bot actions consume org credits.
+```
+
+## 3B: ClockBot — Workforce Time & Attendance Specialist
+
+```
+IDENTITY:
+  Name: ClockBot
+  Icon: ⏰ (clock emoji or custom icon)
+  Color: Teal (#06b6d4)
+  Personality: Professional, firm but fair, efficiency-focused
+
+TRIGGERS (auto-summon):
+  - Shift Room created → ClockBot joins automatically
+  - Shift start time reached → ClockBot posts "shift has begun" message
+  - Officer clocks in → ClockBot acknowledges, verifies GPS
+  - Officer clocks in LATE → ClockBot starts late-clock protocol
+  - Officer clocks in OUTSIDE geofence → ClockBot flags and alerts manager
+  - Hourly check-in timer expires → ClockBot sends reminder
+  - Shift end time reached → ClockBot prompts clock-out
+  - Officer clocks out outside geofence → ClockBot flags
+  - Manual clock edit by manager → ClockBot logs who approved it
+
+CAPABILITIES:
+  READ: Shift schedule, clock records, GPS data, shift room messages, employee behavior scores
+  WRITE: Clock records (force clock-in), check-in records, behavior score merits/demerits
+  CREATE: Clock summary reports, attendance alerts, escalation messages
+  SEND: DMs to officers, messages to shift rooms, notifications to managers
+
+BEHAVIORS:
+
+  1. SHIFT START MONITORING:
+     - At shift start time, posts in Shift Room:
+       "⏰ Shift has begun. Assigned officers: Marcus Rivera, Angel Jackson.
+       Please clock in now. First hourly check-in due at 1:00 AM."
+     - Checks GPS of each officer's clock-in against site geofence
+     - If within geofence: "✅ Marcus Rivera clocked in at 12:02 AM (GPS verified)"
+     - If outside geofence: "⚠️ Marcus Rivera clocked in 0.3 miles from site.
+       @Manager — manual approval may be needed."
+
+  2. LATE CLOCK-IN PROTOCOL:
+     Timeline after shift start:
+     +5 min:  ClockBot DMs officer: "Your shift at Pinnacle Tower started
+              at 12:00 AM. Please clock in."
+     +10 min: ClockBot posts in Shift Room: "⚠️ Marcus Rivera has not clocked in.
+              10 minutes past shift start."
+     +15 min: ClockBot DMs officer: "FINAL REMINDER: Clock in immediately.
+              Failure to clock in within the next 5 minutes will result in a
+              force clock-in and a merit point deduction."
+              ClockBot notifies supervisor via DM.
+     +20 min: ClockBot checks Shift Room for activity from that officer
+              (photos, messages proving they are on site).
+              If evidence found: Force clock-in at original shift start time.
+              Post: "🔄 Marcus Rivera force-clocked-in at 12:00 AM based on
+              Shift Room activity. 1 merit point deducted for late clock-in."
+              If NO evidence: Alert manager for manual resolution.
+              Post: "🔴 Marcus Rivera has not clocked in and shows no activity.
+              @Manager — please verify if officer is on site."
+
+  3. HOURLY CHECK-IN ENFORCEMENT:
+     - Posts check-in prompt at each interval
+     - Monitors for photo responses
+     - Records GPS of photo submission
+     - If missed: escalation per check-in config
+     
+  4. CLOCK-OUT MONITORING:
+     - At shift end time: "⏰ Shift ending. Please clock out."
+     - Verifies GPS at clock-out
+     - If officer doesn't clock out within 15 min:
+       DMs officer, then notifies manager
+     - Calculates total hours and posts summary
+
+  5. OVERTIME DETECTION:
+     - Monitors weekly hours for each officer across all shifts
+     - If approaching 40 hours: alerts manager
+       "⚠️ Robert Williams is at 36 hours this week with a 12-hour shift
+       tomorrow. This will result in 8 hours of overtime."
+     - If already in OT: flags every additional hour in real-time
+
+  6. ATTENDANCE PATTERN DETECTION:
+     - Tracks late clock-ins over time
+     - After 3 late clock-ins in 30 days: alerts manager
+       "📊 Marcus Rivera has been late 3 times in the last 30 days
+       (12/15, 12/22, 1/3). Pattern suggests scheduling conflict."
+     - After 5 missed check-ins in 30 days: alerts manager with recommendation
+
+CREDIT COST:
+  ClockBot monitoring (per shift):    0 credits (free — it's basic logic + DB queries)
+  ClockBot force clock-in:            1 credit (records the action + notifies)
+  ClockBot pattern analysis:          3 credits (AI-powered trend detection)
+  ClockBot attendance report:         5 credits (monthly summary PDF)
+```
+
+## 3C: ReportBot — Incident & Report Writing Specialist
+
+```
+IDENTITY:
+  Name: ReportBot
+  Icon: 📋 (clipboard or custom icon)
+  Color: Amber (#f59e0b)
+  Personality: Thorough, professional, asks good follow-up questions,
+               writes like a seasoned security supervisor
+
+TRIGGERS (auto-summon):
+  - Officer submits incident report → ReportBot processes it (see Feature 3)
+  - Officer submits daily report → ReportBot polishes it
+  - ReportBot detects incident-like content in Shift Room:
+    Keywords: "trespasser", "theft", "fight", "medical", "fire", "police",
+    "ambulance", "weapon", "break-in", "suspicious", "injured", "damage"
+    → ReportBot joins room and initiates report workflow
+  - Shift Room closes → ReportBot compiles proof of service PDF
+  - Manager requests report compilation → ReportBot generates
+
+CAPABILITIES:
+  READ: Shift room messages, photos, incidents, daily reports, site info,
+        officer info, shift schedule, clock records, check-in records
+  WRITE: Incident reports (polished version), daily reports, proof of service PDFs
+  CREATE: Professional PDF reports with photos, GPS data, timestamps
+  SEND: Reports to approval pipeline, PDFs to document vault
+
+BEHAVIORS:
+
+  1. INCIDENT DETECTION IN SHIFT ROOM:
+     ReportBot monitors all messages. When it detects incident-like content:
+     
+     [Officer in Shift Room]: "just found a broken window on the east side,
+     looks like someone tried to break in. glass everywhere"
+     
+     [ReportBot joins room]
+     "🔍 I've detected a potential incident. Let me help you document this
+     properly. I'll ask a few questions:
+     
+     1. When did you discover this? (approximate time)
+     2. Is anyone injured or in danger?
+     3. Can you send a photo of the damage?
+     4. Have you notified police or emergency services?
+     5. Is the area secure now?"
+     
+     [Officer responds with answers + photos]
+     
+     [ReportBot]:
+     "✅ I have enough to build the report. Here's what I've drafted:
+     
+     INCIDENT: Attempted Break-In — East Side Window
+     Severity: HIGH
+     Type: Break-In / Vandalism
+     ...
+     
+     Does this look accurate? I'll send it to your supervisor for review."
+
+  2. PROOF OF SERVICE COMPILATION:
+     At shift end, ReportBot gathers ALL content from the Shift Room and builds
+     the Proof of Service PDF (structure defined in Part 2B above).
+     
+     Steps:
+     a. Query all shift_room_messages ordered by server_timestamp
+     b. Query all shift_check_ins for this room
+     c. Query all clock records for assigned officers
+     d. Query any incident_reports linked to this room
+     e. Query any daily reports linked to this room
+     f. Organize chronologically by hour
+     g. Embed photos with GPS and timestamps
+     h. Generate cover page with summary stats
+     i. Generate PDF using pdf-lib (or reportlab)
+     j. Store PDF in document vault
+     k. Create pipeline item for manager review
+     l. Notify manager: "Proof of Service ready for review — Pinnacle Tower Overnight Mar 4"
+     
+     CREDIT COST: 8 credits per proof of service PDF (significant AI processing)
+
+  3. DAILY REPORT POLISHING:
+     When officer submits a daily report, ReportBot:
+     a. Reads the raw submission
+     b. Cross-references with shift room activity (photos, messages, check-ins)
+     c. Rewrites into professional format
+     d. Adds relevant photos from shift room
+     e. Adds clock-in/out times and total hours
+     f. Sends to manager for approval
+     
+     CREDIT COST: 5 credits per daily report polished
+```
+
+## 3D: MeetingBot — Meeting Analysis & Minutes Specialist
+
+```
+IDENTITY:
+  Name: MeetingBot
+  Icon: 📝 (notepad or custom icon)
+  Color: Purple (#8b5cf6)
+  Personality: Attentive listener, organized, identifies action items,
+               creates structured meeting minutes
+
+TRIGGERS:
+  - Room type = "meeting" created → MeetingBot auto-joins
+  - Manager creates a meeting room manually → MeetingBot auto-joins
+  - Manager types "@MeetingBot" in any room → MeetingBot joins that room
+
+CAPABILITIES:
+  READ: All messages in the meeting room
+  WRITE: Meeting minutes document, action item list
+  CREATE: Meeting minutes PDF, follow-up task assignments
+  SEND: Minutes to participants, action items to assignees, PDF to document vault
+
+BEHAVIORS:
+
+  1. MEETING START:
+     [MeetingBot]: "📝 Meeting recording started. I'll capture key points,
+     decisions, and action items. Just have your discussion naturally —
+     I'll compile minutes when the meeting ends.
+     
+     Tip: Say 'ACTION ITEM: [person] — [task]' and I'll track it."
+
+  2. DURING MEETING:
+     - Silently monitors all messages
+     - Identifies key topics being discussed
+     - Tracks any messages prefixed with "ACTION ITEM:" or "DECISION:"
+     - If meeting goes longer than 2 hours, gently prompts:
+       "📝 Meeting has been active for 2 hours. Would you like me to
+       generate an interim summary?"
+     - If asked for advice (@MeetingBot what do you think about...):
+       Provides analysis using Trinity intelligence
+
+  3. MEETING END (room closed by creator):
+     MeetingBot generates Meeting Minutes PDF:
+     
+     MEETING MINUTES
+     ═══════════════
+     Date: March 4, 2026
+     Participants: Marcus Rivera, Sarah Chen, Mike Johnson
+     Duration: 45 minutes
+     
+     TOPICS DISCUSSED:
+     1. Q1 Contract Renewals
+        - North Star DC renewal due March 15
+        - Grand Plaza requesting rate increase discussion
+        - Retail Solutions Group — terminate or renegotiate?
+     
+     2. Staffing for Spring Event Season
+        - 15 additional guards needed for April events
+        - Recruiting push starting next week
+     
+     3. Robert Williams Overtime Issue
+        - 64 hours last week, 24 hours overtime
+        - Decision: Redistribute his Thursday/Friday shifts
+     
+     DECISIONS MADE:
+     ✅ Proceed with North Star renewal at current rates
+     ✅ Schedule meeting with Grand Plaza for rate discussion
+     ✅ Terminate Retail Solutions contract (unprofitable)
+     ✅ Robert Williams limited to 40 hours/week max
+     
+     ACTION ITEMS:
+     □ Sarah Chen — Draft North Star renewal contract by March 10
+     □ Marcus Rivera — Call Grand Plaza to schedule rate meeting
+     □ Mike Johnson — Send termination notice to Retail Solutions
+     □ Sarah Chen — Post 15 guard positions to job boards by March 7
+     
+     Generated by MeetingBot™ | CoAIleague
+
+     PDF sent to:
+     - All participants via DM
+     - Document vault under "Meeting Minutes" category
+     - Org ownership notification
+
+  CREDIT COST:
+    MeetingBot monitoring (per meeting):  0 credits (just capturing messages)
+    Meeting minutes generation:           10 credits (AI summarization + PDF)
+    Mid-meeting advice/analysis:          3 credits per question
+```
+
+## 3E: GuardBot — Real-Time Shift Compliance Specialist
+
+```
+IDENTITY:
+  Name: GuardBot
+  Icon: 🛡️ (shield or custom icon)
+  Color: Blue (#3b82f6)
+  Personality: Vigilant, compliance-focused, supportive but firm
+
+TRIGGERS:
+  - Shift Room active → GuardBot monitors passively
+  - Geofence violation detected → GuardBot alerts
+  - Post order violation detected → GuardBot alerts
+  - Extended silence from officer (no messages for 2+ hours) → GuardBot checks
+  - Break time exceeded → GuardBot notifies
+
+BEHAVIORS:
+
+  1. POST ORDER COMPLIANCE:
+     If the site has post orders (patrol route, check-in points, restricted areas):
+     - Monitors GPS data against expected patrol routes
+     - If officer hasn't moved in expected pattern: gentle prompt
+       "🛡️ Reminder: Post orders require Level 3 patrol every 2 hours.
+       Last patrol was 2.5 hours ago."
+
+  2. SILENCE DETECTION:
+     If an officer hasn't sent any message or photo in 2+ hours during an active shift:
+     "🛡️ Checking in — we haven't heard from you in a while.
+     Everything okay? Please confirm."
+     If no response in 15 min → escalate to supervisor
+
+  3. BREAK COMPLIANCE:
+     Monitors break times against federal/state requirements:
+     "🛡️ You've been on duty for 5 hours without a break.
+     Federal guidelines require a 30-minute break after 6 hours.
+     Please plan your break soon."
+
+  CREDIT COST:
+    GuardBot passive monitoring:     0 credits (rule-based, no AI)
+    GuardBot compliance analysis:    2 credits (when AI reasoning needed)
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 4: APPROVAL PIPELINES — EVERYTHING FLOWS UP
+# ═══════════════════════════════════════════════════
+
+## 4A: Universal Pipeline Architecture
+
+Every document, report, and compilation flows through the same pipeline:
+
+```
+CREATED ──► PENDING REVIEW ──► APPROVED ──► DELIVERED ──► STORED
+                │                                │           │
+                ▼                                ▼           ▼
+           REVISION REQUESTED              Client Portal  Document Vault
+                │                          Email           Searchable
+                ▼                          DockChat        Downloadable
+           Back to creator                                 Printable
+           (officer or bot)
+```
+
+## 4B: Pipeline Items Table
+
+```sql
+CREATE TABLE IF NOT EXISTS approval_pipeline (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  
+  -- What is being reviewed
+  item_type VARCHAR(30) NOT NULL,
+  -- Types: incident_report, daily_report, proof_of_service,
+  --        meeting_minutes, expense_report, time_correction,
+  --        document_signing, contract, custom_form
+  item_id UUID NOT NULL,                         -- ID of the item being reviewed
+  item_title VARCHAR(300) NOT NULL,
+  item_summary TEXT,
+  item_pdf_url VARCHAR(500),
+  
+  -- Who
+  created_by UUID REFERENCES users(id),          -- Officer or bot that created it
+  created_by_bot VARCHAR(30),                    -- If created by a bot
+  assigned_to UUID REFERENCES users(id),         -- Manager/supervisor who reviews
+  
+  -- Pipeline status
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  -- Status: pending, in_review, approved, rejected, revision_requested, delivered
+  priority VARCHAR(10) DEFAULT 'normal',         -- low, normal, high, urgent
+  
+  -- Review
+  reviewed_at TIMESTAMP,
+  reviewer_notes TEXT,
+  revision_request_notes TEXT,
+  
+  -- Delivery
+  deliver_to_client BOOLEAN DEFAULT false,
+  client_id UUID REFERENCES clients(id),
+  delivered_at TIMESTAMP,
+  delivery_method VARCHAR(20),                   -- client_portal, email, dockchat
+  
+  -- Storage
+  stored_in_vault BOOLEAN DEFAULT false,
+  vault_document_id UUID REFERENCES document_vault(id),
+  
+  -- Meta
+  due_date TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_pipeline_workspace ON approval_pipeline(workspace_id, status);
+CREATE INDEX idx_pipeline_assigned ON approval_pipeline(assigned_to, status);
+CREATE INDEX idx_pipeline_type ON approval_pipeline(item_type, status);
+```
+
+## 4C: Manager Approval Screen
+
+```
+APPROVALS PAGE:
+┌─────────────────────────────────────────┐
+│ Approvals                    3 pending  │
+├─────────────────────────────────────────┤
+│ [All] [Incidents] [Reports] [Expenses]  │
+├─────────────────────────────────────────┤
+│ 🔴 HIGH                                │
+│ ┌─────────────────────────────────────┐ │
+│ │ ⚠️ Incident: Attempted Break-In     │ │
+│ │ Pinnacle Tower — Mar 4, 2:15 AM    │ │
+│ │ By: Marcus Rivera via ReportBot     │ │
+│ │ [Review] [Quick Approve]            │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ 🟡 NORMAL                              │
+│ ┌─────────────────────────────────────┐ │
+│ │ 📋 Proof of Service                 │ │
+│ │ Pinnacle Tower Overnight — Mar 4    │ │
+│ │ Generated by ReportBot              │ │
+│ │ 23 photos, 16 check-ins, 1 incident│ │
+│ │ [Review] [Quick Approve]            │ │
+│ └─────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────┐ │
+│ │ 📝 Meeting Minutes                  │ │
+│ │ Q1 Planning Meeting — Mar 3        │ │
+│ │ Generated by MeetingBot             │ │
+│ │ 4 decisions, 4 action items         │ │
+│ │ [Review] [Quick Approve]            │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 5: THE EVIDENCE CHAIN — LEGAL PROTECTION
+# ═══════════════════════════════════════════════════
+
+## 5A: How This Protects You
+
+Every scenario Bryan has faced is now covered:
+
+```
+SCENARIO 1: CLIENT REFUSES TO PAY
+  "Your guards didn't show up Saturday night."
+  
+  YOUR RESPONSE:
+  → Pull Proof of Service PDF for that shift
+  → Shows: Clock-in at 6:00 PM (GPS verified at client site),
+    16 hourly check-in photos with timestamps,
+    Clock-out at 6:00 AM (GPS verified)
+  → "Here are 16 timestamped, GPS-verified photos proving service was rendered."
+  → Client pays.
+
+SCENARIO 2: WAGE CLAIM (Nathan Hill situation)
+  "I wasn't paid for my hours."
+  
+  YOUR RESPONSE:
+  → Pull all clock records (GPS verified)
+  → Pull Shift Room messages showing officer activity
+  → Pull signed employment agreement (Document Signing feature)
+  → Pull QuickBooks payroll records
+  → Pull Proof of Service PDFs for every shift worked
+  → "Here is GPS-verified proof of every hour worked, the signed agreement,
+     and payroll records showing payment."
+
+SCENARIO 3: CLIENT INCIDENT DISPUTE
+  "The incident didn't happen that way / your officer caused it."
+  
+  YOUR RESPONSE:
+  → Pull Incident Report (officer's raw statement preserved)
+  → Pull Shift Room messages with real-time updates
+  → Pull timestamped photos from the incident
+  → Pull GPS data showing officer's location at time of incident
+  → "Here is the real-time communication chain, GPS-verified photos,
+     and the officer's contemporaneous statement."
+
+SCENARIO 4: EMPLOYEE MISCONDUCT
+  "Officer was sleeping on duty / not doing patrols."
+  
+  YOUR RESPONSE:
+  → Pull Shift Room activity (or lack thereof)
+  → Pull missed check-ins with timestamps
+  → Pull GPS data showing no movement
+  → ClockBot alerts showing escalation
+  → "ClockBot detected 4 missed hourly check-ins and no movement
+     between 2:00 AM and 5:00 AM. Here is the documented evidence."
+```
+
+## 5B: Document Vault Search
+
+Everything is searchable:
+
+```
+SEARCH CAPABILITIES:
+  - By date range
+  - By site/client
+  - By officer
+  - By document type (proof of service, incident, daily report, meeting minutes)
+  - By keyword (full-text search across all messages and reports)
+  - By shift
+  - By GPS location
+  
+FILTERS:
+  - Has photos
+  - Has incidents
+  - Has missed check-ins
+  - Client-deliverable documents only
+  - Signed documents only
+
+EXPORT:
+  - Download individual PDFs
+  - Download bulk ZIP (all documents for a date range or client)
+  - Print-ready formatting
+  - Email to attorney/adjuster/TWC examiner
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 6: IMPLEMENTATION ORDER & CREDIT COSTS
+# ═══════════════════════════════════════════════════
+
+## Build Order
+
+```
+PHASE 1 — Foundation (Week 1-2):
+  1. Shift Rooms table + auto-creation on shift start / clock-in
+  2. Shift Room Messages table + media capture with GPS/timestamps
+  3. Media Vault (permanent photo storage — NEVER delete)
+  4. DockChat integration: Shift Rooms appear as rooms in DockChat
+  5. RBAC enforcement: only assigned officers + managers see rooms
+
+PHASE 2 — ClockBot (Week 2-3):
+  6. ClockBot joins shift rooms automatically
+  7. Late clock-in detection + escalation protocol
+  8. Geofence verification on clock-in/out
+  9. Hourly check-in system (prompt, remind, escalate)
+  10. Force clock-in after 20 minutes with merit deduction
+
+PHASE 3 — ReportBot + Proof of Service (Week 3-4):
+  11. Incident detection in shift rooms (keyword monitoring)
+  12. ReportBot follow-up questions workflow
+  13. Proof of Service PDF auto-generation at shift end
+  14. Chronological activity log with embedded photos
+  15. Approval pipeline for manager review
+
+PHASE 4 — MeetingBot + GuardBot (Week 4-5):
+  16. MeetingBot auto-join on meeting room creation
+  17. Meeting minutes generation on room close
+  18. GuardBot passive monitoring (silence detection, break compliance)
+  19. Post order compliance checking (GPS vs expected routes)
+
+PHASE 5 — Pipeline & Vault (Week 5-6):
+  20. Universal approval pipeline (all document types)
+  21. Document vault search with full-text search
+  22. Client delivery (portal, email, DockChat)
+  23. Bulk export for legal/audit purposes
+```
+
+## Credit Costs Summary
+
+```
+ACTION                                         CREDITS
+───────────────────────────────────────────────────────
+Shift Room creation + monitoring                0 (free)
+All messages, photos, check-ins in rooms        0 (free)
+ClockBot basic monitoring                       0 (free)
+ClockBot force clock-in                         1
+ClockBot pattern analysis                       3
+ClockBot monthly attendance report              5
+ReportBot incident detection                    0 (free — keyword matching)
+ReportBot incident report polishing            10
+ReportBot proof of service PDF generation       8
+ReportBot daily report polishing                5
+MeetingBot monitoring                           0 (free)
+MeetingBot minutes generation                  10
+MeetingBot mid-meeting advice                   3
+GuardBot passive monitoring                     0 (free)
+GuardBot compliance analysis                    2
+Document vault search                           0 (free)
+Document vault bulk export                      0 (free)
+```
+
+**DESIGN PRINCIPLE: Capturing evidence is ALWAYS free. Processing it with AI costs credits.** An org should never feel friction about posting photos or messages — that data is what protects them. The AI polish and PDF generation is where credits are consumed.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 7: SITE CONFIGURATION
+# ═══════════════════════════════════════════════════
+
+Each client site can be configured for its specific requirements:
+
+```sql
+-- Add to clients/sites table:
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS site_config JSONB DEFAULT '{}';
+
+-- Site config structure:
+{
+  "check_in_interval_minutes": 60,
+  "check_in_requires_photo": true,
+  "check_in_grace_period_minutes": 15,
+  "check_in_escalation_delay_minutes": 30,
+  "auto_proof_of_service": true,
+  "proof_of_service_deliver_to_client": true,
+  "geofence_radius_meters": 200,
+  "require_gps_on_clock": true,
+  "post_order_compliance_enabled": false,
+  "patrol_route_points": [],
+  "silence_alert_minutes": 120,
+  "break_compliance_enabled": true,
+  "auto_create_shift_rooms": true,
+  "bots_enabled": ["clock_bot", "report_bot", "guard_bot"]
+}
+```
+
+---
+
+END OF DOCKCHAT ARCHITECTURE SPEC v1.0
+
+This system turns every shift into a documented, GPS-verified, timestamped evidence chain.
+Photos never get lost. Messages never get deleted. Service is always provable.
+Build it in order: Rooms → Media → ClockBot → ReportBot → Proof of Service → Pipeline → Vault.

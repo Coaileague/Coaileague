@@ -1,0 +1,644 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — MONEY, CREDITS, AND FINANCIAL SYSTEMS ABSOLUTE TRUTH AUDIT
+This is the most critical audit in the entire build.
+Everything that touches real money, real credits, real Stripe charges,
+real Resend delivery, real invoices, real payroll must be perfect.
+Not close. Not mostly working. Perfect.
+A bug here means Bryan's clients are billed wrong, employees are paid wrong,
+credits disappear or appear from nowhere, or Stripe charges fire incorrectly.
+Read every file completely. Test every code path with real data.
+Fix every gap before a single real dollar flows through this platform.
+Report everything before fixing anything.
+
+---
+
+PART 1 — STRIPE PRODUCTS AND PRICE OBJECTS TRUTH AUDIT
+
+Read every Stripe-related configuration file in the codebase.
+Then query the live Stripe account and compare against what the code expects.
+
+STEP 1 — MAP EVERY STRIPE PRODUCT AND PRICE IN THE CODE:
+Find every place in the code that references a Stripe price ID or product ID.
+List every hardcoded Stripe ID found.
+List every environment variable that holds a Stripe ID.
+List every database record that holds a Stripe customer ID, subscription ID, or price ID.
+
+STEP 2 — VERIFY AGAINST LIVE STRIPE ACCOUNT:
+For every price ID referenced in the code confirm it exists in the live Stripe account.
+For every product ID referenced confirm it exists in the live Stripe account.
+Confirm each product has the correct metadata:
+Starter product: price $899/month, 15 seats included, credits 5000, cap type hard.
+Professional product: price $1999/month, 50 seats included, credits 10000, cap type soft,
+per seat overage rate $8.00.
+Enterprise product: price $9999/month, all seats at $15 each, credits 22000, cap type soft.
+Credits pack: price $59 one-time, credits 5000, never expire.
+Seat overage products: $10/seat for Starter above 15, $8/seat for Professional above 50.
+If any product or price ID in the code does not exist in live Stripe that is a critical gap.
+If any product has wrong metadata the billing calculations will be wrong.
+Fix every mismatch immediately.
+
+STEP 3 — STRIPE LIVE KEY VERIFICATION:
+Confirm STRIPE_SECRET_KEY starts with sk_live not sk_test.
+Confirm STRIPE_PUBLISHABLE_KEY starts with pk_live not pk_test.
+Confirm STRIPE_WEBHOOK_SECRET is the live webhook signing secret from the Stripe dashboard.
+Confirm the webhook endpoint registered in Stripe matches the production URL exactly.
+Confirm the webhook is configured to receive these exact events and no others are missing:
+invoice.payment_succeeded
+invoice.payment_failed
+invoice.created
+invoice.finalized
+payment_intent.succeeded
+payment_intent.payment_failed
+customer.subscription.created
+customer.subscription.updated
+customer.subscription.deleted
+checkout.session.completed
+customer.created
+customer.deleted
+If any of these events is not configured in the Stripe webhook dashboard the platform
+will not receive that event and the corresponding financial record will not update.
+
+---
+
+PART 2 — STRIPE WEBHOOK HANDLER TRUTH AUDIT
+
+Read stripeWebhooks.ts, stripeEventBridge.ts, and every file they import completely.
+
+For every webhook event the platform handles verify this exact sequence:
+
+SEQUENCE THAT MUST HAPPEN FOR EVERY WEBHOOK:
+1. Stripe signature is verified using stripe.webhooks.constructEvent before ANY processing.
+   If signature verification fails return 400 immediately — process nothing.
+2. The event ID is checked against the idempotency_keys table before processing.
+   If the event ID already exists return 200 immediately — do not process again.
+3. The event ID is inserted into idempotency_keys before processing begins.
+   This prevents duplicate processing even if the handler crashes mid-execution.
+4. The business logic executes.
+5. The idempotency key is marked complete after successful processing.
+6. Return 200 to Stripe.
+
+If any webhook handler skips step 1 that is a security vulnerability.
+If any webhook handler skips steps 2-3 that is a duplicate-charge risk.
+
+Now verify the specific business logic for each event:
+
+EVENT: checkout.session.completed
+What it must do:
+Find the workspace from session.metadata.workspaceId.
+Create or update the orgSubscriptions record with the correct tier.
+Set subscription status to active.
+Set the Stripe subscription ID on the workspace or subscription record.
+Set the Stripe customer ID on the workspace record.
+Allocate the correct first-month credits:
+Starter: exactly 5000 credits, transaction_type subscription_allocation,
+stripe_invoice_id from the session.
+Professional: exactly 10000 credits, same fields.
+Enterprise: exactly 22000 credits, same fields.
+Send the subscription confirmation email via Resend.
+Send the subscription confirmation in-platform notification.
+Broadcast a WebSocket event to update the billing widget.
+Log to the universal audit trail.
+Verify every one of these 9 things actually happens for this event.
+Report which ones do and which ones do not.
+
+EVENT: invoice.payment_succeeded
+What it must do:
+Find the invoice record using the Stripe invoice ID or payment intent ID.
+Update invoice.status to paid.
+Update invoice.amountPaid to the exact payment amount from the Stripe event
+— stripe_event.data.object.amount_paid divided by 100 for cents to dollars.
+Update invoice.paidAt to the payment timestamp.
+Store invoice.stripePaymentIntentId.
+Create a revenue ledger entry with all required fields populated.
+Cancel any active collections escalation for this invoice.
+Send the invoice paid confirmation email to org_owner via Resend.
+Send the invoice paid in-platform notification to org_owner.
+Broadcast a WebSocket event to update the revenue widget.
+Log to the universal audit trail.
+Verify all 11 things happen. Report any that do not.
+
+EVENT: invoice.payment_failed
+What it must do:
+Find the subscription record for this workspace.
+Update subscription status to past_due.
+Record the failure in a payment_failures table or equivalent.
+Send the payment failed email to org_owner via Resend.
+Send the payment failed in-platform notification.
+Start the grace period timer — what is the grace period value in the code?
+Report the exact value.
+During grace period all credit-gated features must still work.
+After grace period expires if still unpaid switch to restricted mode.
+Log to universal audit trail.
+Verify every step.
+
+EVENT: customer.subscription.updated
+What it must do:
+Find the workspace from the Stripe customer ID.
+Read the new price ID from the subscription items.
+Map the price ID to the correct internal tier name.
+Update orgSubscriptions.tier to the new tier.
+Update the credit allocation for the new tier — updateTierAllocation.
+Switch between hard cap and soft cap based on the new tier.
+If upgrade: do NOT immediately top up credits. Update monthly allocation for next cycle.
+Immediately unlock soft cap if upgrading to Professional or Enterprise.
+If downgrade: switch from soft cap to hard cap immediately.
+Do NOT reduce current balance on downgrade — only change the cap behavior.
+Send upgrade or downgrade confirmation email and notification.
+Log to universal audit trail.
+Verify every step for both upgrade and downgrade scenarios.
+
+EVENT: customer.subscription.deleted
+What it must do:
+Find the workspace.
+Mark subscription as cancelled.
+Preserve all data — employees, clients, schedules, invoices, documents.
+Switch to restricted mode — prevent new credit-gated actions.
+Allow read-only access to existing data.
+Send cancellation confirmation email and notification.
+Log to universal audit trail.
+Do NOT delete any workspace data under any circumstance.
+Verify every step.
+
+---
+
+PART 3 — CREDIT SYSTEM ABSOLUTE TRUTH AUDIT
+
+The credit system is the heartbeat of the platform's revenue model.
+Every credit event must be recorded. No credits appear or disappear without a record.
+
+STEP 1 — LEDGER INTEGRITY CHECK:
+Query the live database right now.
+For every workspace calculate:
+SUM of all credit_transactions where type is positive (allocations, purchases).
+SUM of all credit_transactions where type is negative (deductions, overages).
+NET must equal workspace_credits.current_balance exactly.
+Run this for Acme, Statewide, all test workspaces, and any other workspace in the DB.
+Report the result for each workspace: BALANCED or DISCREPANCY with the exact amount.
+If any workspace has a discrepancy find every transaction that is missing its record
+and create the missing audit entries. The ledger must balance.
+
+STEP 2 — CREDIT DEDUCTION TRUTH:
+Find every place in the codebase where credits are deducted.
+For each deduction point verify:
+isBillingExempt is checked before the deduction — exempt workspaces never deducted.
+The correct credit amount for the action is read from the billing config — not hardcoded.
+The deduction is atomic — uses a database transaction so concurrent deductions
+cannot both succeed if only one set of credits remains.
+A credit_transactions record is created for every deduction with:
+workspace_id, action_type, credits_deducted, actor_id, timestamp,
+and a reference to what triggered the deduction.
+If the workspace is at zero credits and hard capped the deduction is rejected
+before the action executes — the action does not run and then fail to deduct.
+The rejection happens first.
+If the workspace is in soft cap mode the deduction records the overage
+and the action still executes.
+
+STEP 3 — CREDIT ALLOCATION TRUTH:
+Find every place in the codebase where credits are allocated.
+For each allocation verify:
+A credit_transactions record is created with the correct positive amount.
+The workspace_credits.current_balance is updated atomically.
+The allocation has the correct reference — system_grant for trial signup,
+stripe_invoice_id for subscription payments, one_time_purchase for credits pack.
+No allocation fires twice for the same event — idempotency enforced.
+
+STEP 4 — HARD CAP ENFORCEMENT TEST:
+Set a test Starter workspace to exactly 1 credit remaining.
+Attempt to execute an action that costs 2 credits.
+Confirm the action is rejected before execution.
+Confirm the rejection message is clear and includes the upgrade prompt.
+Confirm the credit_transactions table has no deduction record for this rejected attempt.
+Confirm the balance is still 1 — not 0 or negative.
+
+STEP 5 — SOFT CAP OVERAGE TEST:
+Set a test Professional workspace to exactly 0 credits remaining.
+Attempt to execute an action that costs 10 credits.
+Confirm the action executes successfully.
+Confirm a credit_transactions record is created showing -10 with overage flag.
+Confirm the workspace_credits.current_balance goes to -10.
+Confirm the overage accumulator increments by 10.
+Confirm the overage will be charged at end of cycle at $0.01 per credit.
+
+STEP 6 — CREDITS PACK PURCHASE TRUTH:
+Simulate a credits pack purchase in Stripe test mode.
+Confirm the checkout.session.completed webhook fires.
+Confirm exactly 5000 credits are allocated — not 4999, not 5001, exactly 5000.
+Confirm the credit_transactions record shows the Stripe session ID as reference.
+Attempt to trigger the same webhook a second time with the same event ID.
+Confirm exactly 0 additional credits are allocated on the second delivery.
+Confirm the idempotency_keys table shows one record for this event ID.
+
+STEP 7 — STATEWIDE EXEMPTION UNDER CONCURRENT LOAD:
+Write a script that fires 20 concurrent credit deduction requests
+against the Statewide workspace simultaneously.
+Confirm zero credits are deducted across all 20 requests.
+Confirm all 20 requests logged as EXEMPTED with reason founder_exemption.
+Confirm the Statewide workspace_credits balance is unchanged after all 20 requests.
+Confirm no Stripe customer or Stripe charge exists for the Statewide workspace.
+
+---
+
+PART 4 — INVOICE FINANCIAL ACCURACY AUDIT
+
+Every invoice must have mathematically correct amounts.
+No rounding errors. No rate mismatches. No double-billing.
+
+DECIMAL MATH VERIFICATION:
+Generate test invoices for these exact scenarios and confirm the totals:
+7.5 hours at $26.00/hour = $195.00 exactly.
+40 hours at $18.75/hour = $750.00 exactly.
+3.25 hours at $32.00/hour = $104.00 exactly.
+168 hours at $22.50/hour = $3,780.00 exactly.
+If any calculation produces a different result there is a rounding error.
+Identify the exact calculation in the code and fix the precision issue.
+All monetary calculations must use integer arithmetic in cents
+or a decimal library — never floating point division or multiplication.
+
+BILLING RATE SOURCE VERIFICATION:
+Query 5 random invoices in the database.
+For each invoice: find the client record and confirm the billing_rate on the invoice
+matches the billing_rate on the client record at the time the invoice was generated.
+If the invoice stores a snapshot of the rate at generation time confirm the snapshot exists.
+If the invoice references the current client rate verify a rate change would not
+retroactively change a sent invoice's amount.
+
+DOUBLE-BILLING PREVENTION:
+Find the 482 test invoices that were the subject of the bulk resend operation.
+Confirm none of them have been double-generated for the same billing period.
+Confirm the time_entry_invoiced flag or equivalent exists to prevent
+any time entry from appearing in two different invoices.
+Query the time_entries table and confirm no time entry is referenced by more than one invoice.
+If any time entry is in multiple invoices that is a billing error — fix it.
+
+MANUAL PAYMENT RECORDING:
+Create a test invoice. Mark it as paid manually with payment method check
+and a reference number CHK-001 for $500.00.
+Confirm invoice.status is paid.
+Confirm invoice.amountPaid is $500.00.
+Confirm invoice.paymentMethod is check.
+Confirm invoice.paymentReference is CHK-001.
+Confirm a revenue ledger entry exists with all these fields.
+Confirm collections escalation is cancelled for this invoice.
+Confirm the org_owner receives the payment confirmation notification.
+
+COLLECTIONS ESCALATION TIMING:
+Create a test invoice with a due date of yesterday.
+Run the collections cron manually.
+Confirm the Tier 1 email fires to the client with Track B branding.
+Confirm the in-platform alert fires to the org_owner.
+Set the due date to 8 days ago. Run the cron.
+Confirm the Tier 2 email fires — different tone from Tier 1.
+Set the due date to 31 days ago. Run the cron.
+Confirm the Tier 3 email fires — formal demand tone.
+Pay the invoice manually.
+Run the cron again.
+Confirm no further escalation emails fire for a paid invoice.
+Confirm a paid invoice can never re-enter the escalation queue.
+
+---
+
+PART 5 — PAYROLL FINANCIAL ACCURACY AUDIT
+
+Employees must be paid exactly what they earned. No more, no less.
+
+PAYROLL CYCLE DETECTION POST-FIX VERIFICATION:
+The payrollCycle bug was fixed earlier. Verify it survived all subsequent builds.
+Set a workspace's payrollCycle to weekly in billing settings.
+Create a payroll run.
+Confirm the pay period start and end span exactly 7 consecutive days.
+Set payrollCycle to biweekly. Create a payroll run.
+Confirm exactly 14 days.
+Set to semimonthly. Confirm the period is the 1st through 15th or 16th through end of month.
+Set to monthly. Confirm the period is the full calendar month.
+If any cycle produces the wrong date range the fix did not survive. Fix it again.
+
+GROSS PAY CALCULATION VERIFICATION:
+Create payroll runs for these exact scenarios and confirm gross pay:
+Employee A: 40 hours at $18.00/hour = $720.00 gross.
+Employee B: 32.5 hours at $22.50/hour = $731.25 gross.
+Employee C: salaried $52,000/year biweekly = $2,000.00 per period exactly.
+Employee D: salaried $52,000/year weekly = $1,000.00 per period exactly.
+If any calculation differs from expected there is a payroll math error.
+
+OVERTIME CALCULATION:
+Create a scenario where an employee works 45 hours in a single workweek.
+Confirm the payroll calculation shows:
+40 hours at regular rate.
+5 hours at 1.5x the regular rate.
+Total reflects the overtime premium.
+If overtime is not calculated confirm this is explicitly documented and
+the org_owner sees a warning that overtime must be calculated manually.
+
+PAY RATE AT TIME OF PAYROLL:
+Create an employee with a pay rate of $20.00/hour.
+Create time entries for 40 hours at this rate.
+Change the employee's pay rate to $25.00/hour.
+Run the payroll for the period that contains the $20.00/hour time entries.
+Confirm the payroll uses $20.00/hour — the rate during the work period.
+Not $25.00/hour — the current rate.
+If the payroll uses the current rate instead of the historical rate
+employees can be underpaid or overpaid based on timing of rate changes.
+Fix this by storing the pay rate on the time entry at clock-in time.
+
+PAYROLL APPROVAL GATE RACE CONDITION:
+Open two browser tabs both showing the same pending payroll run.
+Click approve in both tabs within 1 second of each other.
+Confirm only one approval is recorded.
+Confirm the second attempt returns a clear message that the payroll was already approved.
+Confirm no duplicate payroll records are created.
+Confirm no employee receives a double pay stub notification.
+
+PAYROLL RECORD IMMUTABILITY:
+Approve a test payroll run.
+Attempt to change the gross pay on a paycheck record via direct API call.
+Confirm the API call is rejected at the route handler level with a 403.
+Confirm the rejection is logged in the audit trail.
+Confirm the paycheck record is unchanged after the attempt.
+
+---
+
+PART 6 — RESEND EMAIL FINANCIAL NOTIFICATIONS AUDIT
+
+Every financial email must deliver. A missed financial email means
+a client never knew their invoice was due, or an employee never knew they were paid.
+
+RESEND CONFIGURATION VERIFICATION:
+Confirm the RESEND_API_KEY is set in the production environment.
+Confirm it is a production key not a test key.
+Send one test email to a real inbox right now and confirm delivery within 60 seconds.
+
+RESEND DELIVERY WEBHOOK CONFIGURATION:
+Confirm the Resend webhook is configured to fire on email.delivered and email.bounced.
+Confirm the webhook endpoint is accessible without authentication.
+Confirm the webhook updates delivery_confirmed on the correct record.
+This was fixed earlier — confirm the fix is still in place.
+
+FINANCIAL EMAIL DELIVERY VERIFICATION:
+Test every financial email type with a real email address and confirm delivery:
+
+Invoice delivery to client:
+Send a test invoice to a real email address.
+Confirm delivery within 60 seconds.
+Confirm the email shows the security company name in the header — not CoAIleague.
+Confirm the Pay Now button links to a valid Stripe payment page.
+Confirm delivery_confirmed updates to true after the Resend webhook fires.
+Confirm the invoice record shows the Resend message ID for tracking.
+
+Invoice paid confirmation to org_owner:
+Simulate a payment and confirm the payment confirmation email fires.
+Confirm it shows the correct amount, client name, and invoice number.
+Confirm delivery within 60 seconds.
+
+Payment failed to org_owner:
+Simulate a failed payment event.
+Confirm the payment failed email fires with clear instructions to update payment method.
+Confirm delivery within 60 seconds.
+
+Credit warning to org_owner:
+Set a workspace to 25 percent of its credit allocation.
+Confirm the warning email fires with the current balance, burn rate, and days remaining.
+Confirm delivery within 60 seconds.
+Confirm all three channels fired simultaneously — email, in-platform, briefing channel.
+
+Pay stub notification to employee:
+Approve a test payroll run.
+Confirm the pay stub email fires for each employee.
+Confirm each email shows the correct pay period and gross pay summary.
+Confirm the View Pay Stub button links to the correct employee portal.
+Confirm delivery within 60 seconds for each employee.
+
+Collections escalation to client:
+Create an overdue test invoice.
+Trigger the collections cron.
+Confirm the escalation email delivers with security company branding.
+Confirm the Pay Now button in the escalation email links to the correct payment page.
+
+RESEND FAILURE HANDLING:
+Temporarily disable the Resend API key or point to an invalid key.
+Trigger an invoice email send.
+Confirm the invoice record is still created in the database.
+Confirm the email failure is logged in the emailEvents table or equivalent.
+Confirm the org_owner or platform_staff receives an alert about the delivery failure.
+Confirm the system queues the email for retry or flags it for manual resend.
+The invoice must NOT be rolled back because email failed.
+Restore the correct key and confirm the system resumes normal delivery.
+
+---
+
+PART 7 — SUBSCRIPTION MIDDLEWARE FINANCIAL ACCURACY AUDIT
+
+Every middleware transaction fee must fire correctly and only for non-exempt orgs.
+
+Read middlewareTransactionFees.ts completely.
+List every fee function: payroll processing fee, invoice generation fee,
+payout fee, AI overage fee, seat overage fee.
+
+For each fee function verify:
+isBillingExemptByRecord is checked before ANY Stripe API call.
+If exempt: function returns immediately, no Stripe invoice item created, logs as exempted.
+If not exempt: Stripe invoice item is created with the correct amount and description.
+The amount is calculated correctly based on the current org tier and usage.
+The fee is logged in the audit trail with the exact amount.
+
+Test each fee function for a non-exempt org:
+Payroll processing fee: approve a payroll run and confirm the fee fires.
+Invoice generation fee: generate an invoice and confirm the fee fires.
+Confirm the fee amount matches the billing config for the org's tier.
+
+Test each fee function for the Statewide workspace:
+Approve a payroll run for Statewide. Confirm ZERO fees fire. Confirm exemption logged.
+Generate an invoice for a Statewide client. Confirm ZERO fees fire.
+Query Stripe and confirm no invoice items were created for the Statewide customer.
+Actually confirm no Stripe customer record exists for Statewide at all.
+
+---
+
+PART 8 — SEAT BILLING ACCURACY AUDIT
+
+Seat overage billing must charge correctly for every tier.
+
+Create test workspaces at each tier and add employees above the seat limit:
+
+Starter tier (15 seats included, $10/seat overage):
+Add 17 employees to a Starter workspace.
+Confirm Trinity detects 2 seats above the limit.
+Confirm the end-of-cycle overage charge calculates as 2 multiplied by $10 = $20.
+Confirm the Stripe invoice item is created for exactly $20.
+Confirm the org_owner receives a seat overage notification before the charge fires.
+
+Professional tier (50 seats included, $8/seat overage):
+Add 53 employees to a Professional workspace.
+Confirm 3 seat overage detected.
+Confirm overage charge is 3 multiplied by $8 = $24.
+
+Enterprise tier ($15 per seat, all seats):
+Add 100 employees to an Enterprise workspace.
+Confirm the charge is 100 multiplied by $15 = $1,500.
+
+For Statewide on Enterprise with founder exemption:
+Add 200 employees.
+Confirm ZERO seat overage charge.
+Confirm ZERO Stripe invoice items created.
+
+---
+
+PART 9 — WIDGET AND BADGE REAL-TIME SYNC AUDIT
+
+Every financial widget on every dashboard must show accurate live data.
+A widget that shows stale data makes the org_owner distrust the platform.
+
+CREDITS WIDGET:
+Execute a credit-gated action on a test workspace.
+Confirm the credits widget on the dashboard updates within 2 seconds without page refresh.
+Confirm the widget shows the correct balance after the deduction.
+Set the balance to 500 manually.
+Confirm the widget shows 500 immediately.
+Execute an action costing 10 credits.
+Confirm the widget shows 490 immediately.
+
+REVENUE WIDGET:
+Generate an invoice for $1,000.
+Confirm the invoice appears in the pending revenue section of the dashboard.
+Mark the invoice as paid.
+Confirm the revenue widget updates within 2 seconds to show $1,000 received.
+Confirm the outstanding balance decreases by $1,000.
+
+SUBSCRIPTION STATUS BADGE:
+Upgrade a workspace from trial to Starter via Stripe webhook.
+Confirm the subscription status badge on the dashboard updates from Trial to Starter
+immediately — within 2 seconds of the webhook processing.
+
+SEAT COUNT BADGE:
+Add a new employee to a Starter workspace at 14 employees.
+Confirm the seat count badge updates to 15 of 15 immediately.
+Add one more employee.
+Confirm the seat count badge shows OVER LIMIT or equivalent immediately.
+
+OVERDUE INVOICE BADGE:
+Create an invoice and set the due date to yesterday.
+Confirm a badge or indicator appears on the org_owner dashboard showing 1 overdue invoice.
+Pay the invoice.
+Confirm the overdue badge disappears immediately.
+
+---
+
+PART 10 — PERSISTENCE AND SYNC TRUTH AUDIT
+
+Financial data must persist across server restarts, session changes, and org switches.
+
+SERVER RESTART PERSISTENCE:
+Record the current credit balance for Acme.
+Record the current revenue total for Acme.
+Record the current subscription tier for Acme.
+Restart the server.
+After restart confirm all three values are identical to what they were before restart.
+Confirm Trinity's startup log shows the Statewide exemption verification.
+Confirm all credit balances are restored correctly from the database.
+
+SESSION CHANGE PERSISTENCE:
+While logged in as org_owner execute a credit deduction.
+Log out.
+Log back in.
+Confirm the credit balance reflects the deduction — it did not reset on logout.
+
+ORG SWITCH PERSISTENCE:
+If the platform supports users belonging to multiple workspaces
+confirm that switching orgs shows the correct financial data for each org.
+Credits for Org A must never appear in Org B's widget.
+Revenue for Org A must never appear in Org B's billing view.
+
+CONCURRENT USER PERSISTENCE:
+Open the same dashboard in two browser tabs as org_owner.
+In tab 1 execute a credit deduction.
+Confirm tab 2 receives the WebSocket update and shows the correct balance.
+In tab 2 execute another deduction.
+Confirm tab 1 updates.
+Confirm the final balance is correct for both deductions — not just the last one.
+
+---
+
+FINAL FINANCIAL AUDIT REPORT
+
+After completing all 10 parts produce this exact report:
+
+STRIPE PRODUCTS AND PRICES:
+Every product verified in live Stripe: yes or no — list any missing.
+Every price ID in code exists in Stripe: yes or no — list any missing.
+All product metadata correct: yes or no — list any incorrect.
+Live keys confirmed: yes or no.
+All required webhook events configured: yes or no — list any missing.
+
+WEBHOOK HANDLERS:
+checkout.session.completed: all 9 required actions confirmed or gaps listed.
+invoice.payment_succeeded: all 11 required actions confirmed or gaps listed.
+invoice.payment_failed: all steps confirmed or gaps listed.
+customer.subscription.updated: upgrade and downgrade both confirmed or gaps listed.
+customer.subscription.deleted: all steps confirmed or gaps listed.
+Signature verification on all handlers: confirmed.
+Idempotency on all handlers: confirmed.
+
+CREDIT SYSTEM:
+Ledger balanced for every workspace: confirmed with numbers or gaps listed.
+Hard cap enforcement: confirmed or gap.
+Soft cap overage: confirmed or gap.
+Credits pack idempotency: confirmed or gap.
+Statewide exemption under concurrent load: confirmed or gap.
+
+INVOICE ACCURACY:
+Decimal math verified for 4 scenarios: all correct or errors listed.
+Double-billing prevention confirmed: yes or no.
+Manual payment recording complete: yes or no.
+Collections escalation timing correct: yes or no.
+Paid invoice excluded from escalation: yes or no.
+
+PAYROLL ACCURACY:
+All 4 pay cycles produce correct date ranges: confirmed or gaps listed.
+Gross pay calculations correct for 4 scenarios: confirmed or errors listed.
+Overtime calculated or explicitly documented as limitation: confirmed.
+Pay rate at time of work used not current rate: confirmed or gap.
+Approval race condition blocked: confirmed or gap.
+Payroll records immutable after approval: confirmed or gap.
+
+RESEND FINANCIAL EMAILS:
+All 6 financial email types deliver to real inbox: confirmed or failures listed.
+Track B branding on client-facing emails: confirmed.
+Resend failure does not roll back invoice: confirmed.
+Delivery webhook updates confirmed field: confirmed.
+
+MIDDLEWARE FEES:
+All fee functions exempt Statewide: confirmed.
+No Stripe customer exists for Statewide: confirmed or gap.
+Fee amounts match billing config for each tier: confirmed or errors listed.
+
+SEAT BILLING:
+Starter overage calculation correct: confirmed or error.
+Professional overage calculation correct: confirmed or error.
+Enterprise seat billing correct: confirmed or error.
+Statewide no seat charges: confirmed.
+
+WIDGET SYNC:
+Credits widget updates within 2 seconds: confirmed or gap.
+Revenue widget updates within 2 seconds: confirmed or gap.
+Subscription badge updates within 2 seconds: confirmed or gap.
+Seat count badge updates immediately: confirmed or gap.
+Overdue badge appears and clears correctly: confirmed or gap.
+
+PERSISTENCE:
+Server restart preserves all financial data: confirmed or gap.
+Session change preserves balance: confirmed or gap.
+Concurrent users see consistent data: confirmed or gap.
+
+TOTAL BUGS FOUND: [number]
+TOTAL BUGS FIXED: [number]
+
+FINANCIAL SYSTEM VERDICT:
+PRODUCTION READY — every financial path confirmed accurate and persistent.
+NOT READY — exact list of remaining items in priority order.
+
+This report determines whether real money can safely flow through CoAIleague.
+Every item must show confirmed before Bryan invites his first paying client
+or processes the first real Statewide payroll.
+No assumption. No guessing. Every answer from real tests with real data.

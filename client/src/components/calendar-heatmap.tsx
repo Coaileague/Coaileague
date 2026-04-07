@@ -183,7 +183,7 @@ function HeatmapLegend({ maxValue }: { maxValue: number }) {
 function LoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-10 w-40" />
       </div>
@@ -400,7 +400,7 @@ export function CalendarHeatmap({ className, onCellClick, showAIInsights = true 
                           getPriorityColor(rec.priority)
                         )}
                       >
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center justify-between gap-1 mb-1">
                           <span className="font-medium">
                             {DAY_NAMES_FULL[rec.dayOfWeek]} at {HOUR_LABELS[rec.hour]}
                           </span>
@@ -469,7 +469,7 @@ export function CompactHeatmap({ className }: { className?: string }) {
 
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+      <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground mb-1">
         <span>Weekly Activity</span>
         <span>{data.totalShifts} shifts</span>
       </div>

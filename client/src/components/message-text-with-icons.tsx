@@ -1,6 +1,6 @@
 /**
  * Message Text with Icons
- * Replaces staff marker (🔨) with WorkforceOS logo in any text
+ * Replaces staff marker (🔨) with CoAIleague staff icon in any text
  */
 
 import { StaffGavelIcon } from "./staff-gavel-icon";

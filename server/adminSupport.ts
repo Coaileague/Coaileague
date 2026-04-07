@@ -1,7 +1,10 @@
 // Admin Support Service - Platform-level customer support tools
 // For non-technical support staff to help customers
 
+import { createLogger } from './lib/logger';
+const log = createLogger('adminSupport');
 import { eq, like, or, desc, and, isNull, sql } from "drizzle-orm";
+import { PLATFORM, EMAIL } from './config/platformConfig';
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import {
@@ -15,16 +18,13 @@ import {
   shifts,
   clients,
   systemAuditLogs,
-  type Workspace,
-  type User,
-  type Employee,
   type Subscription,
   type SupportTicket,
   type Invoice,
   type TimeEntry,
   type Shift,
-} from "@shared/schema";
-import { getUncachableResendClient } from "./email";
+} from '@shared/schema';
+import { getUncachableResendClient } from "./services/emailCore";
 
 // ============================================================================
 // Customer Search & Discovery
@@ -342,7 +342,7 @@ export async function sendPasswordResetEmail(
       };
     }
 
-    const resetToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    const resetToken = randomUUID() + '-' + randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await db.insert(systemAuditLogs).values({
@@ -358,30 +358,30 @@ export async function sendPasswordResetEmail(
       createdAt: new Date(),
     }).catch(() => null);
 
-    const resetUrl = `${process.env.APP_URL || 'https://app.replit.dev'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.APP_URL || PLATFORM.appUrl}/reset-password?token=${resetToken}`;
     
     try {
-      const { client, fromEmail } = await getUncachableResendClient();
-      await client.emails.send({
-        from: fromEmail || 'noreply@resend.dev',
-        to: user.email,
-        subject: 'Password Reset Request',
-        html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 24 hours.</p>`,
-      });
+      const { emailService } = await import('./services/emailService');
+      await emailService.sendCustomEmail(
+        user.email,
+        'Password Reset Request',
+        `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 24 hours.</p>`,
+        'admin_password_reset'
+      );
 
       return {
         success: true,
         message: `Password reset email sent to ${user.email}`,
       };
     } catch (emailError) {
-      console.error('[Admin] Email send error:', emailError);
+      log.error('[Admin] Email send error:', emailError);
       return {
         success: false,
         message: 'Failed to send reset email via email service',
       };
     }
   } catch (error) {
-    console.error('[Admin] Password reset error:', error);
+    log.error('[Admin] Password reset error:', error);
     return {
       success: false,
       message: 'Error processing password reset',
@@ -395,7 +395,7 @@ export async function sendPasswordResetEmail(
  */
 export async function changeUserRole(
   employeeId: string,
-  newRole: "org_owner" | "org_admin" | "department_manager" | "supervisor" | "staff",
+  newRole: "org_owner" | "co_owner" | "department_manager" | "supervisor" | "staff",
   adminUserId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
@@ -407,14 +407,18 @@ export async function changeUserRole(
       })
       .where(eq(employees.id, employeeId));
 
-    // Log the action (audit trail)
-    // await createSystemAuditLog({
-    //   userId: adminUserId,
-    //   action: 'change_user_role',
-    //   entityType: 'employee',
-    //   entityId: employeeId,
-    //   changes: { newRole },
-    // });
+    try {
+      await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
+        userId: adminUserId,
+        action: 'change_user_role',
+        entityType: 'employee',
+        entityId: employeeId,
+        details: { newRole },
+      });
+    } catch (auditErr) {
+      log.error('[AdminSupport] Failed to log role change audit entry:', auditErr);
+    }
 
     return {
       success: true,
@@ -434,7 +438,7 @@ export async function changeUserRole(
  */
 export async function updateSubscriptionTier(
   workspaceId: string,
-  newTier: "free" | "starter" | "professional" | "enterprise",
+  newTier: "free" | "trial" | "starter" | "professional" | "business" | "enterprise" | "strategic",
   adminUserId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
@@ -460,6 +464,19 @@ export async function updateSubscriptionTier(
           updatedAt: new Date(),
         })
         .where(eq(subscriptions.workspaceId, workspaceId));
+    }
+
+    try {
+      await db.insert(systemAuditLogs).values({
+        userId: adminUserId,
+        workspaceId,
+        action: 'update_subscription_tier',
+        entityType: 'subscription',
+        entityId: workspaceId,
+        details: { newTier, previousTier: subscription?.plan || 'none' },
+      });
+    } catch (auditErr) {
+      log.error('[AdminSupport] Failed to log subscription tier audit entry:', auditErr);
     }
 
     return {
@@ -554,6 +571,19 @@ export async function createSupportTicket(data: {
       })
       .returning();
 
+    try {
+      await db.insert(systemAuditLogs).values({
+        userId: data.createdByAdmin,
+        workspaceId: data.workspaceId,
+        action: 'create_support_ticket',
+        entityType: 'support_ticket',
+        entityId: ticket.id,
+        details: { ticketNumber, type: data.type, priority: data.priority, subject: data.subject },
+      });
+    } catch (auditErr) {
+      log.error('[AdminSupport] Failed to log ticket creation audit entry:', auditErr);
+    }
+
     return {
       success: true,
       ticket,
@@ -586,6 +616,19 @@ export async function updateTicketStatus(
         updatedAt: new Date(),
       })
       .where(eq(supportTickets.id, ticketId));
+
+    try {
+      await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
+        userId: resolvedBy || 'system',
+        action: 'update_ticket_status',
+        entityType: 'support_ticket',
+        entityId: ticketId,
+        details: { newStatus: status, resolution: resolution || null },
+      });
+    } catch (auditErr) {
+      log.error('[AdminSupport] Failed to log ticket status audit entry:', auditErr);
+    }
 
     return { success: true };
   } catch (error) {

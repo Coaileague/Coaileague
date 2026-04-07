@@ -1,0 +1,1304 @@
+Send this to the agent:
+
+---
+
+**SEMANTIC AUDIT — ONLINE FORMS ENGINE, ESIGNATURE, AND FORM-TO-PDF PIPELINE**
+
+You are the Architect and Gatekeeper. This audit asks what the online forms system is SUPPOSED to do at every step, then verifies the code actually does it, then fixes what does not match intent, then confirms it works end to end. Deploy specialized semantic auditors in parallel. Every auditor asks questions, finds the code, verifies behavior, fixes gaps, and reports back.
+
+**Zero tolerance. No deferred issues. All tests against ACME sandbox only. Statewide untouchable.**
+
+---
+
+**SEMANTIC QUESTION SET — WHAT IS THE ONLINE FORMS SYSTEM SUPPOSED TO DO?**
+
+Before any code is touched answer these questions semantically then verify the code matches each answer:
+
+```
+Q1: When Trinity sends an onboarding form to a new officer 
+    does the officer receive a link they can open on their phone 
+    without logging in and fill out completely?
+
+Q2: When an officer draws their signature on a phone touchscreen 
+    does that signature get captured, embedded into a PDF, 
+    and stored in the document vault linked to their employee record?
+
+Q3: When a form is submitted does Trinity automatically process it 
+    and advance the relevant workflow — onboarding task completion,
+    candidate creation, proposal acceptance — without human intervention?
+
+Q4: When a client receives a proposal link and clicks Accept 
+    does the signature get captured, the contract PDF get generated,
+    the lead advance to Contract Executed, and the org owner get notified 
+    all automatically?
+
+Q5: When an org owner goes to Forms Manager can they see 
+    which officers have not yet completed their forms,
+    send reminders with one click,
+    and see the generated PDFs after submission?
+
+Q6: Are all generated form PDFs correctly branded to the org 
+    with the correct officer or client name, 
+    a document reference number, 
+    a SHA-256 integrity hash,
+    and a legal signature footer?
+
+Q7: Does the form pre-population work — does an officer opening 
+    their W-4 form already see their name, email, and position 
+    filled in so they only need to complete the blanks?
+
+Q8: Are forms workspace-isolated — can a form invitation from 
+    ACME Security never be submitted in a way that affects 
+    Statewide Protective Services data?
+
+Q9: Does Trinity get notified of every form submission and 
+    does she write an audit record attributing the action 
+    to her system actor identity?
+
+Q10: Does the multi-party signing sequence work — 
+     does the manager only receive their signing request 
+     AFTER the officer has signed, not before?
+```
+
+For each question: find the code that should implement it, test it, document the result, fix what fails.
+
+---
+
+**SUBAGENT 1 — PUBLIC FORM ACCESSIBILITY AND RENDERING AUDIT**
+
+*Semantic question: Can anyone with the link open and complete the form on any device without logging in?*
+
+```bash
+# Step 1: Verify public route exists with no auth middleware
+grep -rn "GET.*forms.*public\|forms/public\|/forms/:token" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# Verify requireAuth is NOT on the public form endpoint
+grep -n "requireAuth" server/routes/platformFormsRoutes.ts | head -20
+# Lines with requireAuth must NOT include the public GET and POST routes
+# Only authenticated management routes should have requireAuth
+
+# Step 2: Test public form access without any token
+curl -s -o /dev/null -w "%{http_code}" \
+  http://localhost:5000/api/forms/public/invalid_token_123
+# Expected: 404 — not 401 (401 would mean auth required, which is wrong)
+
+# Step 3: Create a test invitation and verify access
+TEST_FORM_ID=$(
+  psql $DATABASE_URL -t -c "
+    SELECT id FROM platform_forms 
+    WHERE form_type = 'job_application' 
+    AND workspace_id IS NULL 
+    LIMIT 1
+  " | tr -d ' '
+)
+
+echo "Testing with form: $TEST_FORM_ID"
+
+# Create invitation (authenticated)
+INVITATION=$(curl -s -X POST "http://localhost:5000/api/forms/$TEST_FORM_ID/invite" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test.applicant@example.com",
+    "name": "Test Applicant",
+    "contextType": null
+  }')
+
+echo $INVITATION | jq .
+TOKEN=$(echo $INVITATION | jq -r '.invitation.token')
+FORM_URL=$(echo $INVITATION | jq -r '.formUrl')
+
+echo "Form token: $TOKEN"
+echo "Form URL: $FORM_URL"
+
+# Step 4: Access form without any authentication
+FORM_DATA=$(curl -s "http://localhost:5000/api/forms/public/$TOKEN")
+echo $FORM_DATA | jq .
+
+# Verify response contains required fields
+echo "Has title: $(echo $FORM_DATA | jq 'has("title")')"
+echo "Has fields: $(echo $FORM_DATA | jq 'has("fields")')"
+echo "Field count: $(echo $FORM_DATA | jq '.fields | length')"
+echo "Requires signature: $(echo $FORM_DATA | jq '.requires_signature')"
+
+# If any of these are null or missing: the public form endpoint is broken
+# Fix: verify the SQL query joins correctly and returns all required columns
+
+# Step 5: Verify invitation status updated to opened
+sleep 1
+psql $DATABASE_URL -c "
+  SELECT token, status, opened_at 
+  FROM form_invitations 
+  WHERE token = '$TOKEN'
+"
+# Status must change from 'sent' to 'opened' after the GET request
+
+# Step 6: Verify the frontend route exists
+grep -rn "forms/:token\|forms/\[token\]" client/src/App.tsx | head -5
+# Must show the public form route registered
+
+# Step 7: Verify page component exists
+ls client/src/pages/forms/ 2>/dev/null
+# Must show index.tsx or [token] directory
+
+# Step 8: Verify no auth redirect on public form page
+grep -rn "RequireAuth\|ProtectedRoute\|isAuthenticated" \
+  client/src/pages/forms/ --include="*.tsx" 2>/dev/null | head -5
+# Must be zero — public form must not redirect to login
+
+# FIXES IF ISSUES FOUND:
+# - If 401 on public route: remove requireAuth from public endpoints
+# - If form data missing fields: fix SQL SELECT to include all needed columns
+# - If frontend redirects to login: remove auth wrapper from form route
+# - If opened_at not updating: fix the UPDATE query after GET
+```
+
+---
+
+**SUBAGENT 2 — FORM PRE-POPULATION AUDIT**
+
+*Semantic question: Does an officer opening their onboarding form already see their name and details filled in?*
+
+```bash
+# Step 1: Create an employee to test pre-population
+OFFICER_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM employees 
+  WHERE workspace_id = '[acme_id]'
+  AND status = 'active'
+  LIMIT 1
+" | tr -d ' ')
+
+echo "Testing pre-population for officer: $OFFICER_ID"
+
+# Step 2: Send a W-4 form with employee context
+W4_FORM_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM platform_forms WHERE form_type = 'onboarding_w4' LIMIT 1
+" | tr -d ' ')
+
+INVITATION=$(curl -s -X POST "http://localhost:5000/api/forms/$W4_FORM_ID/invite" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"email\": \"officer@test.com\",
+    \"contextType\": \"employee\",
+    \"contextId\": \"$OFFICER_ID\"
+  }")
+
+TOKEN=$(echo $INVITATION | jq -r '.invitation.token')
+
+# Step 3: Fetch the form and check pre-populated data
+FORM=$(curl -s "http://localhost:5000/api/forms/public/$TOKEN")
+echo "Pre-populated data:"
+echo $FORM | jq '.pre_populated_data'
+
+# Expected: should contain firstName, lastName, email, phone, position, employeeNumber
+# If pre_populated_data is empty {}: pre-population query is broken
+
+# Step 4: Verify the invitation stored the pre-populated data in DB
+psql $DATABASE_URL -c "
+  SELECT pre_populated_data 
+  FROM form_invitations 
+  WHERE token = '$TOKEN'
+"
+# Must show the employee's data
+
+# Step 5: Verify pre-populated fields show as readOnly display in form definition
+echo $FORM | jq '.fields[] | select(.readOnly == true or .type == "display")'
+# Name, email, employee number should be display/readOnly
+# SSN, bank account should NOT be pre-populated
+
+# Step 6: Test client pre-population
+CLIENT_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM clients 
+  WHERE workspace_id = '[acme_id]'
+  LIMIT 1
+" | tr -d ' ')
+
+INTAKE_FORM_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM platform_forms WHERE form_type = 'client_intake_form' LIMIT 1
+" | tr -d ' ')
+
+CLIENT_INV=$(curl -s -X POST "http://localhost:5000/api/forms/$INTAKE_FORM_ID/invite" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"email\": \"client@test.com\",
+    \"contextType\": \"client\",
+    \"contextId\": \"$CLIENT_ID\"
+  }")
+
+CLIENT_TOKEN=$(echo $CLIENT_INV | jq -r '.invitation.token')
+CLIENT_FORM=$(curl -s "http://localhost:5000/api/forms/public/$CLIENT_TOKEN")
+echo "Client pre-populated data:"
+echo $CLIENT_FORM | jq '.pre_populated_data'
+# Expected: companyName, contactName, contactEmail, clientNumber
+
+# FIXES IF ISSUES FOUND:
+# If pre_populated_data is empty:
+# Check the invite route — verify the employee/client query runs
+# Check the query uses correct column names (snake_case in DB)
+# Verify JSON.stringify is called before storing
+# Verify the public form GET endpoint returns pre_populated_data in response
+```
+
+---
+
+**SUBAGENT 3 — FORM FIELD RENDERING AND VALIDATION AUDIT**
+
+*Semantic question: Does every field type render correctly and validate before submission?*
+
+```bash
+# Step 1: Verify SignatureCapture component exists and is importable
+ls client/src/components/forms/SignatureCapture.tsx 2>/dev/null && \
+  echo "EXISTS" || echo "MISSING — CRITICAL"
+
+# Step 2: Verify react-signature-canvas is installed
+cat package.json | grep -i signature
+node_modules/.bin/ls 2>/dev/null | grep signature || \
+  ls node_modules | grep signature 2>/dev/null
+
+# Step 3: Verify all field types are handled in form renderer
+grep -rn "case 'text'\|case 'email'\|case 'phone'\|case 'date'\|case 'select'\|case 'radio'\|case 'checkbox'\|case 'signature'\|case 'file'\|case 'ssn'\|case 'currency'\|case 'display'\|case 'textarea'" \
+  client/src/pages/forms/ --include="*.tsx" | head -20
+
+# Count field types handled
+TYPES_HANDLED=$(grep -c "case '" client/src/pages/forms/ -r --include="*.tsx")
+echo "Field types handled: $TYPES_HANDLED"
+# Expected: at least 12 types
+
+# Step 4: Verify validation runs before submission
+grep -rn "validateForm\|validation\|required.*error\|error.*required" \
+  client/src/pages/forms/ --include="*.tsx" | head -10
+
+# Step 5: Verify required field check
+grep -rn "field\.required\|isRequired\|required.*true" \
+  client/src/pages/forms/ --include="*.tsx" | head -10
+# Must show required fields are checked
+
+# Step 6: Verify email format validation
+grep -rn "emailRegex\|email.*valid\|validateEmail" \
+  client/src/pages/forms/ --include="*.tsx" | head -5
+
+# Step 7: Verify SSN masking (never show full SSN)
+grep -rn "ssn\|SSN\|social.*security" \
+  client/src/pages/forms/ --include="*.tsx" | head -10
+# Must show SSN field uses password type or masking
+
+# Step 8: Verify signature required check
+grep -rn "requires_signature.*signature\|signature.*required\|!signature" \
+  client/src/pages/forms/ --include="*.tsx" | head -5
+# Must validate signature before allowing submit if requires_signature = true
+
+# Step 9: Verify submit button is disabled while submitting
+grep -rn "isPending\|isSubmitting\|disabled.*loading\|loading.*disabled" \
+  client/src/pages/forms/ --include="*.tsx" | head -5
+# Must prevent double submission
+
+# Step 10: Test actual form submission with missing required fields
+curl -s -X POST "http://localhost:5000/api/forms/public/$TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d '{"data": {}, "signatureData": null}'
+# Expected: validation should catch missing signature on server side too
+# If server returns 200 with empty data: add server-side validation
+
+# FIXES IF ISSUES FOUND:
+# Missing SignatureCapture: copy from spec and create file
+# Missing react-signature-canvas: npm install react-signature-canvas
+# Missing field types: add case handlers for each type
+# No server validation: add required field check in submit route
+# No signature validation: add check for requires_signature flag
+```
+
+---
+
+**SUBAGENT 4 — FORM SUBMISSION AND DATABASE PERSISTENCE AUDIT**
+
+*Semantic question: When a form is submitted does the data actually save to the database correctly?*
+
+```bash
+# Step 1: Submit a complete test form
+SUBMIT_RESULT=$(curl -s -X POST "http://localhost:5000/api/forms/public/$TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "firstName": "Test",
+      "lastName": "Officer",
+      "email": "test@example.com",
+      "phone": "210-555-0001",
+      "positionApplied": "Unarmed Security Officer",
+      "hasLicense": "Yes",
+      "licenseNumber": "B01234567",
+      "licenseState": "TX",
+      "yearsExperience": "1-3 years",
+      "availability": "Any shift",
+      "smsConsent": true,
+      "certifyAccurate": true
+    },
+    "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    "signatureType": "drawn",
+    "typedName": null,
+    "deviceType": "desktop"
+  }')
+
+echo "Submit result:"
+echo $SUBMIT_RESULT | jq .
+
+SUBMISSION_ID=$(echo $SUBMIT_RESULT | jq -r '.submissionId')
+echo "Submission ID: $SUBMISSION_ID"
+
+# Step 2: Verify data persisted to form_submissions
+sleep 2
+psql $DATABASE_URL -c "
+  SELECT id, form_id, workspace_id, submitted_by_email, 
+         data->>'firstName' as first_name,
+         data->>'lastName' as last_name,
+         signature_type, trinity_processing_status,
+         submitted_at
+  FROM form_submissions 
+  WHERE id = '$SUBMISSION_ID'
+"
+# Must show all fields correctly stored
+# trinity_processing_status should be 'processing' or 'complete'
+
+# Step 3: Verify invitation status updated
+psql $DATABASE_URL -c "
+  SELECT status, submitted_at 
+  FROM form_invitations 
+  WHERE token = '$TOKEN'
+"
+# Must show status = 'submitted' and submitted_at populated
+
+# Step 4: Wait for async processing and check PDF generation
+sleep 5
+psql $DATABASE_URL -c "
+  SELECT trinity_processing_status, generated_document_url, processed_at
+  FROM form_submissions 
+  WHERE id = '$SUBMISSION_ID'
+"
+# trinity_processing_status must be 'complete' not 'failed' or 'pending'
+# generated_document_url must be a real URL not null
+
+# Step 5: Verify PDF is accessible
+DOC_URL=$(psql $DATABASE_URL -t -c "
+  SELECT generated_document_url FROM form_submissions WHERE id = '$SUBMISSION_ID'
+" | tr -d ' ')
+
+curl -s -o /dev/null -w "%{http_code}" "$DOC_URL"
+# Must return 200 — PDF must be accessible
+
+# Step 6: Verify document appears in document vault
+psql $DATABASE_URL -c "
+  SELECT id, document_number, document_type, integrity_hash, workspace_id
+  FROM document_vault 
+  WHERE created_at > NOW() - INTERVAL '30 seconds'
+  ORDER BY created_at DESC LIMIT 1
+"
+# Must show: document_number in DOC-YYYYMMDD-NNNNN format
+# integrity_hash must be populated (SHA-256)
+# workspace_id must be ACME workspace
+
+# Step 7: Verify audit record written
+psql $DATABASE_URL -c "
+  SELECT actor_id, action_type, entity_type, created_at
+  FROM universal_audit_log
+  WHERE created_at > NOW() - INTERVAL '30 seconds'
+  ORDER BY created_at DESC LIMIT 5
+"
+# Must show form submission audit entry
+
+# Step 8: Verify duplicate submission is blocked
+SECOND_SUBMIT=$(curl -s -X POST "http://localhost:5000/api/forms/public/$TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d '{"data": {"firstName": "Duplicate"}}')
+echo "Duplicate submit result:"
+echo $SECOND_SUBMIT | jq .
+# Expected: 409 Conflict — already submitted
+
+# FIXES IF ISSUES FOUND:
+# If submission_id is null: check INSERT RETURNING clause
+# If trinity_processing_status stays 'pending': async processing not triggering
+# If generated_document_url is null: formToPdfService not being called
+# If PDF returns 404: document storage path is wrong
+# If no audit record: universalAuditService not called in processing
+```
+
+---
+
+**SUBAGENT 5 — TRINITY PROCESSING AND WORKFLOW ADVANCEMENT AUDIT**
+
+*Semantic question: Does Trinity process the submission and advance the correct workflow automatically?*
+
+```bash
+# Step 1: Verify Trinity processing function exists
+grep -rn "processFormSubmissionAsync\|processFormSubmission\|trinityProcessor" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# Step 2: Verify submit_action routing exists
+grep -rn "complete_onboarding_task\|create_candidate\|advance_signing_sequence\|execute_proposal" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+# Must show all four actions handled
+
+# Step 3: Test onboarding task completion via form submission
+
+# First create an onboarding task for the test officer
+psql $DATABASE_URL -c "
+  INSERT INTO onboarding_tasks 
+  (workspace_id, employee_id, task_title, task_type, tier, is_blocking, status)
+  VALUES ('[acme_id]', '$OFFICER_ID', 'Complete W-4', 'onboarding_w4', 1, true, 'pending')
+  ON CONFLICT DO NOTHING
+"
+
+# Send the W-4 form linked to this officer
+W4_INV=$(curl -s -X POST "http://localhost:5000/api/forms/$W4_FORM_ID/invite" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"contextType\": \"employee\",
+    \"contextId\": \"$OFFICER_ID\",
+    \"email\": \"officer@test.com\"
+  }")
+
+W4_TOKEN=$(echo $W4_INV | jq -r '.invitation.token')
+
+# Submit the W-4
+curl -s -X POST "http://localhost:5000/api/forms/public/$W4_TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "firstName": "Test",
+      "lastName": "Officer",
+      "ssn": "123456789",
+      "address": "123 Main St",
+      "cityStateZip": "San Antonio TX 78201",
+      "filingStatus": "Single or Married filing separately"
+    },
+    "signatureData": "data:image/png;base64,[base64]",
+    "signatureType": "drawn"
+  }'
+
+# Wait for processing
+sleep 5
+
+# Step 4: Verify onboarding task auto-completed
+psql $DATABASE_URL -c "
+  SELECT task_title, status, completed_at
+  FROM onboarding_tasks
+  WHERE employee_id = '$OFFICER_ID'
+  AND task_type = 'onboarding_w4'
+"
+# Status must be 'completed' and completed_at must be populated
+
+# Step 5: Verify if all Tier 1 tasks complete — officer auto-activated
+psql $DATABASE_URL -c "
+  SELECT COUNT(*) as pending_tier1 
+  FROM onboarding_tasks 
+  WHERE employee_id = '$OFFICER_ID' 
+  AND tier = 1 
+  AND is_blocking = true 
+  AND status != 'completed'
+"
+# If 0: verify officer status changed to 'active'
+psql $DATABASE_URL -c "
+  SELECT status FROM employees WHERE id = '$OFFICER_ID'
+"
+
+# Step 6: Verify candidate creation from job application
+# Get a candidate created from the job application submission
+psql $DATABASE_URL -c "
+  SELECT id, full_name, email, stage, trinity_score
+  FROM interview_candidates
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 1
+"
+# Must show candidate created from the job application submission above
+
+# Step 7: Verify NDS notification sent to org on submission
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE workspace_id = '[acme_id]'
+  AND notification_type IN ('form_submitted', 'onboarding_task_completed')
+  AND created_at > NOW() - INTERVAL '5 minutes'
+  ORDER BY created_at DESC LIMIT 5
+"
+# Must show notifications fired
+
+# Step 8: Verify WebSocket broadcast fired
+grep -rn "form_submission_received\|FORM_SUBMITTED\|formSubmitted" \
+  server/ --include="*.ts" | grep -v node_modules | head -5
+# Must show broadcast call in processing function
+
+# Step 9: Verify Trinity audit record with system actor
+psql $DATABASE_URL -c "
+  SELECT actor_id, action_type, entity_type
+  FROM universal_audit_log
+  WHERE actor_id = 'trinity-system-actor-000000000000'
+  AND created_at > NOW() - INTERVAL '5 minutes'
+  ORDER BY created_at DESC LIMIT 5
+"
+# Must show Trinity processing attributed to system actor
+
+# FIXES IF ISSUES FOUND:
+# If onboarding task not completing: check submit_action routing
+# If candidate not created: check create_candidate handler exists
+# If no NDS notification: verify notificationDeliveryService called in async processor
+# If no WebSocket broadcast: add broadcastToWorkspace call after processing
+# If Trinity not attributed: add universalAuditService call with TRINITY_ACTOR_ID
+```
+
+---
+
+**SUBAGENT 6 — PDF GENERATION AND SIGNATURE EMBEDDING AUDIT**
+
+*Semantic question: Does the generated PDF contain the signature, look professional, and have all required legal elements?*
+
+```bash
+# Step 1: Verify PDF generation dependencies installed
+node -e "require('pdfkit'); console.log('PDFKit: OK')" 2>/dev/null || echo "PDFKit: MISSING"
+node -e "require('pdf-lib'); console.log('pdf-lib: OK')" 2>/dev/null || echo "pdf-lib: MISSING"
+
+# Install if missing
+npm install pdfkit pdf-lib --save 2>/dev/null
+
+# Step 2: Verify formToPdfService exists
+ls server/services/formToPdfService.ts 2>/dev/null && \
+  echo "EXISTS" || echo "MISSING — CRITICAL"
+
+# Step 3: Verify the service handles all form types
+grep -rn "case 'offer_letter'\|case 'onboarding_w4'\|case 'job_application'\|case 'client_service_agreement'" \
+  server/services/formToPdfService.ts | head -10
+# Must show handlers for all form types
+
+# Step 4: Download and inspect the generated PDF
+DOC_URL=$(psql $DATABASE_URL -t -c "
+  SELECT generated_document_url 
+  FROM form_submissions 
+  ORDER BY submitted_at DESC 
+  LIMIT 1
+" | tr -d ' \n')
+
+if [ -n "$DOC_URL" ]; then
+  curl -s "$DOC_URL" -o /tmp/test_form.pdf
+  ls -lh /tmp/test_form.pdf
+  # Must be > 1KB — indicates real PDF not empty file
+  
+  # Check PDF is valid
+  file /tmp/test_form.pdf
+  # Must say "PDF document" not "data" or "ASCII"
+else
+  echo "NO GENERATED PDF FOUND — formToPdfService not working"
+fi
+
+# Step 5: Verify signature is embedded in PDF
+# Check that signature_data is actually processed
+grep -rn "embedSignatureIntoPdf\|embedSignature\|drawImage.*signature\|signature.*drawImage" \
+  server/services/formToPdfService.ts | head -5
+# Must show signature embedding logic
+
+# Step 6: Verify document footer contains legal elements
+grep -rn "ESIGN Act\|electronic.*signature.*legally\|ip_address\|submitted_at\|integrity\|SHA" \
+  server/services/formToPdfService.ts | head -10
+# Must show legal footer elements
+
+# Step 7: Verify document_number is populated in generated PDF
+grep -rn "document_number\|documentNumber\|DOC-" \
+  server/services/formToPdfService.ts | head -5
+# Must reference document number in PDF footer
+
+# Step 8: Verify SHA-256 hash is calculated and stored
+grep -rn "sha256\|createHash\|integrity_hash\|integrityHash" \
+  server/services/formToPdfService.ts | head -5
+
+# Step 9: Verify document stored in vault with correct entity links
+psql $DATABASE_URL -c "
+  SELECT document_number, document_type, employee_id, client_id, 
+         integrity_hash, workspace_id, created_at
+  FROM document_vault
+  ORDER BY created_at DESC LIMIT 3
+"
+# document_number must be populated (DOC-YYYYMMDD-NNNNN)
+# employee_id or client_id must be set based on form context
+# integrity_hash must be 64 character SHA-256 hex
+
+# Step 10: Verify confirmation email sent to submitter with PDF link
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE notification_type = 'form_submission_confirmation'
+  AND created_at > NOW() - INTERVAL '5 minutes'
+"
+
+# FIXES IF ISSUES FOUND:
+# If PDFKit missing: npm install pdfkit
+# If pdf-lib missing: npm install pdf-lib
+# If formToPdfService missing: create it from spec
+# If PDF is empty or invalid: check PDFDocument stream handling
+# If signature not embedded: verify base64 parsing and pdf-lib embedPng call
+# If document_number null: verify trigger fires on document_vault INSERT
+# If integrity_hash null: verify SHA-256 calculation before vault store
+```
+
+---
+
+**SUBAGENT 7 — PROPOSAL FLOW AND CONTRACT EXECUTION AUDIT**
+
+*Semantic question: Does the complete proposal-to-contract pipeline work from client clicking Accept to org owner being notified?*
+
+```bash
+# Step 1: Verify sales_proposals_online table exists
+psql $DATABASE_URL -c "
+  SELECT table_name FROM information_schema.tables 
+  WHERE table_schema = 'public' 
+  AND table_name = 'sales_proposals_online'
+"
+
+# If missing: create it
+psql $DATABASE_URL -c "
+  CREATE TABLE IF NOT EXISTS sales_proposals_online (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES workspaces(id),
+    lead_id UUID REFERENCES sales_leads(id),
+    client_id UUID REFERENCES clients(id),
+    proposal_number VARCHAR(30) UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    token VARCHAR(255) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+    status VARCHAR(50) DEFAULT 'draft',
+    content JSONB NOT NULL DEFAULT '{}',
+    client_viewed_at TIMESTAMPTZ,
+    client_action_at TIMESTAMPTZ,
+    client_action VARCHAR(50),
+    client_decline_reason TEXT,
+    client_change_requests TEXT,
+    client_name VARCHAR(255),
+    client_email VARCHAR(255),
+    client_signature_data TEXT,
+    client_signed_at TIMESTAMPTZ,
+    converted_to_contract_id UUID,
+    total_monthly_value DECIMAL(10,2),
+    expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days',
+    sent_at TIMESTAMPTZ,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )
+"
+
+# Step 2: Verify proposal routes exist
+grep -rn "salesProposalRoutes\|/api/proposals\|proposals.*public" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# If missing: verify file exists
+ls server/routes/salesProposalRoutes.ts 2>/dev/null && \
+  echo "EXISTS" || echo "MISSING — needs to be created"
+
+# Step 3: Create a test proposal
+PROPOSAL=$(curl -s -X POST "http://localhost:5000/api/proposals" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "leadId": null,
+    "title": "Security Services Proposal — Tech Campus Corp",
+    "clientName": "John Smith",
+    "clientEmail": "john@techcampus.com",
+    "totalMonthlyValue": 4500.00,
+    "content": {
+      "companyName": "ACME Security",
+      "services": [
+        { "description": "Armed Security Officer — Main Entrance", "details": "Monday-Friday 8AM-8PM", "amount": "2400.00" },
+        { "description": "Unarmed Patrol Officer — Parking", "details": "24/7 Coverage", "amount": "2100.00" }
+      ],
+      "pricing": {
+        "lineItems": [
+          { "label": "Armed Officer (1 post × 60hrs/week × $20/hr)", "amount": "2400.00" },
+          { "label": "Unarmed Patrol (1 post × 84hrs/week × $15/hr)", "amount": "2100.00" }
+        ]
+      },
+      "terms": "12-month service agreement. 30-day written notice required for cancellation. Payment due net-30."
+    }
+  }')
+
+echo $PROPOSAL | jq .
+PROPOSAL_TOKEN=$(echo $PROPOSAL | jq -r '.token')
+PROPOSAL_URL=$(echo $PROPOSAL | jq -r '.proposalUrl')
+echo "Proposal URL: $PROPOSAL_URL"
+
+# Step 4: Client views proposal
+PROPOSAL_DATA=$(curl -s "http://localhost:5000/api/proposals/public/$PROPOSAL_TOKEN")
+echo "Proposal data:"
+echo $PROPOSAL_DATA | jq .
+
+# Verify viewed timestamp updated
+sleep 1
+psql $DATABASE_URL -c "
+  SELECT status, client_viewed_at 
+  FROM sales_proposals_online 
+  WHERE token = '$PROPOSAL_TOKEN'
+"
+# Status should update to 'viewed'
+
+# Step 5: Client accepts proposal with signature
+ACCEPT_RESULT=$(curl -s -X POST "http://localhost:5000/api/proposals/public/$PROPOSAL_TOKEN/action" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "accept",
+    "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    "signatureType": "drawn"
+  }')
+
+echo "Accept result:"
+echo $ACCEPT_RESULT | jq .
+
+# Step 6: Verify proposal status updated to accepted
+sleep 3
+psql $DATABASE_URL -c "
+  SELECT status, client_action, client_signed_at, client_signature_data IS NOT NULL as has_signature
+  FROM sales_proposals_online 
+  WHERE token = '$PROPOSAL_TOKEN'
+"
+# status must be 'accepted'
+# client_signed_at must be populated
+# has_signature must be true
+
+# Step 7: Verify contract PDF generated
+psql $DATABASE_URL -c "
+  SELECT converted_to_contract_id 
+  FROM sales_proposals_online 
+  WHERE token = '$PROPOSAL_TOKEN'
+"
+# Must show a document_vault ID (not null)
+
+# Step 8: Verify lead advanced to Contract Executed stage (if lead_id was set)
+# And NDS notification sent to org owner
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE workspace_id = '[acme_id]'
+  AND notification_type IN ('proposal_accepted', 'contract_executed', 'proposal_signed')
+  AND created_at > NOW() - INTERVAL '5 minutes'
+"
+# Must show notification to org owner
+
+# Step 9: Test decline flow
+DECLINE_PROPOSAL=$(curl -s -X POST "http://localhost:5000/api/proposals" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Test Decline Proposal",
+    "clientName": "Jane Doe",
+    "clientEmail": "jane@test.com",
+    "totalMonthlyValue": 1000.00,
+    "content": {"companyName": "ACME Security", "services": [], "pricing": {}}
+  }')
+
+DECLINE_TOKEN=$(echo $DECLINE_PROPOSAL | jq -r '.token')
+
+curl -s -X POST "http://localhost:5000/api/proposals/public/$DECLINE_TOKEN/action" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "decline", "declineReason": "Budget constraints for this quarter"}'
+
+psql $DATABASE_URL -c "
+  SELECT status, client_action, client_decline_reason 
+  FROM sales_proposals_online 
+  WHERE token = '$DECLINE_TOKEN'
+"
+# status must be 'declined', reason must be stored
+
+# Step 10: Test changes_requested flow
+CHANGES_TOKEN=$(psql $DATABASE_URL -t -c "
+  SELECT token FROM sales_proposals_online 
+  WHERE status = 'draft' 
+  ORDER BY created_at DESC LIMIT 1
+" | tr -d ' ')
+
+curl -s -X POST "http://localhost:5000/api/proposals/public/$CHANGES_TOKEN/action" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "changes_requested", "changeRequests": "Need 3 officers instead of 2"}'
+
+psql $DATABASE_URL -c "
+  SELECT status, client_change_requests 
+  FROM sales_proposals_online 
+  WHERE token = '$CHANGES_TOKEN'
+"
+# status must be 'changes_requested', requests must be stored
+
+# FIXES IF ISSUES FOUND:
+# If table missing: SQL above creates it
+# If routes missing: create salesProposalRoutes.ts
+# If accept does not generate PDF: wire formToPdfService to proposal acceptance
+# If lead not advancing: wire sales lead status update
+# If no NDS notification: add notification call in acceptance handler
+```
+
+---
+
+**SUBAGENT 8 — WORKSPACE ISOLATION AND SECURITY AUDIT**
+
+*Semantic question: Can a form from ACME ever affect Statewide data? Can someone exploit the token to access wrong org data?*
+
+```bash
+# Step 1: Verify all form routes scope by workspace_id from session
+grep -rn "req\.user\.workspaceId\|workspaceId.*req\.user\|session.*workspaceId" \
+  server/routes/platformFormsRoutes.ts | head -20
+# Management routes must get workspaceId from session not query params
+
+# Step 2: Verify public form routes validate workspace from token only
+grep -rn "req\.query\.workspaceId\|req\.body\.workspaceId" \
+  server/routes/platformFormsRoutes.ts | head -10
+# Public form submit must determine workspace from token/invitation
+# NEVER from user-provided workspaceId in body
+
+# Step 3: Test cross-workspace token exploitation attempt
+# Try to submit an ACME form token but include Statewide workspace_id in body
+STATEWIDE_ID="37a04d24-51bd-4856-9faa-d26a2fe82094"
+
+EXPLOIT_ATTEMPT=$(curl -s -X POST "http://localhost:5000/api/forms/public/$TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"data\": {\"firstName\": \"Hacker\"},
+    \"workspaceId\": \"$STATEWIDE_ID\"
+  }")
+
+echo "Exploit attempt result:"
+echo $EXPLOIT_ATTEMPT | jq .
+
+# Verify data went to ACME not Statewide
+sleep 2
+psql $DATABASE_URL -c "
+  SELECT workspace_id, submitted_by_email 
+  FROM form_submissions 
+  ORDER BY created_at DESC LIMIT 1
+"
+# workspace_id MUST be ACME — never Statewide
+# If workspace_id is Statewide: CRITICAL SECURITY BUG — fix immediately
+
+# Step 4: Verify expired token is rejected
+# Create an expired invitation
+psql $DATABASE_URL -c "
+  UPDATE form_invitations 
+  SET expires_at = NOW() - INTERVAL '1 hour'
+  WHERE token = '$TOKEN'
+"
+
+EXPIRED_RESULT=$(curl -s "http://localhost:5000/api/forms/public/$TOKEN")
+echo "Expired token result:"
+echo $EXPIRED_RESULT | jq .
+# Expected: error message, not form data
+
+# Restore the token
+psql $DATABASE_URL -c "
+  UPDATE form_invitations 
+  SET expires_at = NOW() + INTERVAL '7 days'
+  WHERE token = '$TOKEN'
+"
+
+# Step 5: Verify submitted form cannot be submitted again
+psql $DATABASE_URL -c "
+  UPDATE form_invitations 
+  SET status = 'submitted', submitted_at = NOW()
+  WHERE token = '$TOKEN'
+"
+
+RESUBMIT=$(curl -s -X POST "http://localhost:5000/api/forms/public/$TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d '{"data": {"firstName": "Duplicate"}}')
+
+echo "Resubmit result (should be 409):"
+echo $RESUBMIT | jq .
+# Expected: 409 Conflict
+
+# Step 6: Verify SSN is never stored in plaintext
+psql $DATABASE_URL -c "
+  SELECT data->>'ssn' FROM form_submissions 
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 1
+"
+# If SSN shows full 9 digits: we need to encrypt it before storage
+
+# Step 7: Verify form invitations are workspace-scoped
+curl -s "http://localhost:5000/api/forms/invitations/pending" \
+  -H "Authorization: Bearer [acme_org_owner_token]" | jq 'length'
+# Count must only include ACME invitations
+
+# Try with different workspace token
+curl -s "http://localhost:5000/api/forms/invitations/pending" \
+  -H "Authorization: Bearer [different_workspace_token]" | jq '.[0].workspace_id'
+# Must NOT return ACME workspace data
+
+# Step 8: Verify generated PDFs are workspace-scoped
+psql $DATABASE_URL -c "
+  SELECT workspace_id FROM document_vault 
+  WHERE created_at > NOW() - INTERVAL '10 minutes'
+  ORDER BY created_at DESC LIMIT 5
+"
+# All must show ACME workspace_id — never Statewide or other
+
+# FIXES IF ISSUES FOUND:
+# If exploit allows cross-workspace write: remove workspaceId from body trust
+# If expired token not rejected: verify expires_at check in query
+# If resubmit allowed: verify allow_multiple_submissions = false check
+# If SSN stored plaintext: encrypt SSN field before INSERT
+# If invitation list returns wrong workspace: add workspace_id filter to query
+```
+
+---
+
+**SUBAGENT 9 — FORMS MANAGER UI AND INVITATION MANAGEMENT AUDIT**
+
+*Semantic question: Can an org owner see all pending forms, send reminders, and view submitted PDFs from the platform?*
+
+```bash
+# Step 1: Verify forms manager page exists
+ls client/src/pages/forms-manager/ 2>/dev/null && \
+  echo "EXISTS" || echo "MISSING — needs to be created"
+
+# If missing — create it with these core elements:
+cat > client/src/pages/forms-manager/index.tsx << 'EOF'
+// [Create forms manager page — see spec below]
+EOF
+
+# Step 2: Verify forms manager route in App.tsx
+grep -rn "forms-manager\|FormsManager" client/src/App.tsx | head -5
+# If missing: add route
+
+# Step 3: Verify pending invitations endpoint returns correct data
+curl -s "http://localhost:5000/api/forms/invitations/pending" \
+  -H "Authorization: Bearer [acme_org_owner_token]" | jq '.[0]'
+# Expected: { id, form_title, form_type, sent_to_email, sent_to_name, status, expires_at, created_at }
+
+# Step 4: Verify reminder endpoint works
+PENDING_ID=$(curl -s "http://localhost:5000/api/forms/invitations/pending" \
+  -H "Authorization: Bearer [acme_org_owner_token]" | jq -r '.[0].id')
+
+REMIND=$(curl -s -X POST "http://localhost:5000/api/forms/invitations/$PENDING_ID/remind" \
+  -H "Authorization: Bearer [acme_org_owner_token]")
+echo "Reminder result:"
+echo $REMIND | jq .
+# Expected: { success: true, message: "Reminder sent" }
+
+# Verify reminder_sent_at updated
+psql $DATABASE_URL -c "
+  SELECT reminder_sent_at FROM form_invitations WHERE id = '$PENDING_ID'
+"
+# Must show timestamp
+
+# Verify NDS email sent
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE notification_type IN ('form_reminder', 'form_reminder_sms')
+  AND created_at > NOW() - INTERVAL '1 minute'
+"
+
+# Step 5: Verify submissions endpoint with PDF links
+SUBMISSIONS=$(curl -s "http://localhost:5000/api/forms/$TEST_FORM_ID/submissions" \
+  -H "Authorization: Bearer [acme_org_owner_token]")
+
+echo "Submissions:"
+echo $SUBMISSIONS | jq '.[0] | {id, submitted_at, generated_document_url}'
+# generated_document_url must be populated and accessible
+
+# Step 6: Verify quick send onboarding bundle works
+# This should send all 6 onboarding forms to a new officer in sequence
+BUNDLE_RESULT=$(curl -s -X POST "http://localhost:5000/api/forms/onboarding-bundle" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"employeeId\": \"$OFFICER_ID\",
+    \"email\": \"newemployee@test.com\"
+  }")
+
+echo "Bundle result:"
+echo $BUNDLE_RESULT | jq .
+# Expected: array of 6 invitations created, one per onboarding form
+
+# If endpoint does not exist: create it
+grep -rn "onboarding-bundle\|onboardingBundle" server/ --include="*.ts" | head -5
+
+# Step 7: Verify form analytics (submission rate)
+curl -s "http://localhost:5000/api/forms/analytics?workspaceId=[acme_id]" \
+  -H "Authorization: Bearer [acme_org_owner_token]" | jq .
+# Expected: { totalSent, totalSubmitted, submissionRate, pendingCount }
+
+# FIXES IF ISSUES FOUND:
+# If forms-manager page missing: create it
+# If no route: add to App.tsx
+# If pending invitations return wrong fields: fix SQL SELECT
+# If reminder not working: debug notificationDeliveryService call
+# If no bundle endpoint: add it to routes
+```
+
+---
+
+**SUBAGENT 10 — MULTI-PARTY SIGNING AND CONTRACT EXECUTION AUDIT**
+
+*Semantic question: Does the signing sequence enforce correct order — officer signs first, THEN manager countersigns?*
+
+```bash
+# Step 1: Verify document_signing_sequences table exists
+psql $DATABASE_URL -c "
+  SELECT table_name FROM information_schema.tables 
+  WHERE table_schema = 'public'
+  AND table_name IN ('document_signing_sequences', 'document_signing_tokens')
+"
+# Must show both tables
+
+# Step 2: Verify signing sequence creation works
+# Create an offer letter that requires both officer and manager signature
+OFFER_FORM_ID=$(psql $DATABASE_URL -t -c "
+  SELECT id FROM platform_forms WHERE form_type = 'offer_letter' LIMIT 1
+" | tr -d ' ')
+
+OFFER_INV=$(curl -s -X POST "http://localhost:5000/api/forms/$OFFER_FORM_ID/invite" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"email\": \"officer@test.com\",
+    \"name\": \"Test Officer\",
+    \"contextType\": \"employee\",
+    \"contextId\": \"$OFFICER_ID\",
+    \"signingSequence\": [
+      { \"order\": 1, \"role\": \"employee\", \"email\": \"officer@test.com\", \"name\": \"Test Officer\" },
+      { \"order\": 2, \"role\": \"manager\", \"userId\": \"[manager_user_id]\", \"name\": \"Manager Name\" }
+    ]
+  }")
+
+echo $OFFER_INV | jq .
+OFFER_TOKEN=$(echo $OFFER_INV | jq -r '.invitation.token')
+
+# Step 3: Verify signing sequence was created
+psql $DATABASE_URL -c "
+  SELECT id, current_signer_index, status, signers
+  FROM document_signing_sequences
+  WHERE created_at > NOW() - INTERVAL '1 minute'
+  ORDER BY created_at DESC LIMIT 1
+"
+# Must show: current_signer_index = 0 (employee is first)
+# signers array must have both employee and manager
+
+# Step 4: Officer submits their signature
+curl -s -X POST "http://localhost:5000/api/forms/public/$OFFER_TOKEN/submit" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "fullName": "Test Officer",
+      "confirmUnderstand": true,
+      "confirmAtWill": true
+    },
+    "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUh...",
+    "signatureType": "drawn",
+    "typedName": "Test Officer"
+  }'
+
+# Step 5: Verify sequence advanced to manager
+sleep 3
+psql $DATABASE_URL -c "
+  SELECT current_signer_index, status
+  FROM document_signing_sequences
+  WHERE created_at > NOW() - INTERVAL '5 minutes'
+  ORDER BY created_at DESC LIMIT 1
+"
+# current_signer_index must advance to 1 (manager)
+
+# Step 6: Verify manager received signing notification
+psql $DATABASE_URL -c "
+  SELECT notification_type, created_at
+  FROM notification_deliveries
+  WHERE notification_type = 'document_awaiting_your_signature'
+  AND created_at > NOW() - INTERVAL '2 minutes'
+"
+# Must show notification sent to manager
+
+# Step 7: Verify manager token created
+psql $DATABASE_URL -c "
+  SELECT token, signer_role, signer_order, status
+  FROM document_signing_tokens
+  WHERE created_at > NOW() - INTERVAL '2 minutes'
+  ORDER BY signer_order DESC LIMIT 1
+"
+# Must show manager token with status 'pending'
+
+# Step 8: Manager signs their token
+MANAGER_TOKEN=$(psql $DATABASE_URL -t -c "
+  SELECT token FROM document_signing_tokens 
+  WHERE signer_role = 'manager'
+  AND status = 'pending'
+  ORDER BY created_at DESC LIMIT 1
+" | tr -d ' ')
+
+curl -s -X POST "http://localhost:5000/api/sign/$MANAGER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signatureData": "data:image/png;base64,iVBORw0KGgoAAAANSUh...",
+    "signatureType": "drawn",
+    "typedName": "Manager Name"
+  }'
+
+# Step 9: Verify document fully executed
+sleep 3
+psql $DATABASE_URL -c "
+  SELECT status, completed_at
+  FROM document_signing_sequences
+  WHERE created_at > NOW() - INTERVAL '10 minutes'
+  ORDER BY created_at DESC LIMIT 1
+"
+# status must be 'complete' and completed_at populated
+
+# Step 10: Verify final document has both signatures
+psql $DATABASE_URL -c "
+  SELECT document_number, integrity_hash, document_type
+  FROM document_vault
+  WHERE created_at > NOW() - INTERVAL '5 minutes'
+  ORDER BY created_at DESC LIMIT 1
+"
+# Must show final document with both signatures embedded
+
+# FIXES IF ISSUES FOUND:
+# If signing sequence not created: add sequence creation in invite route
+# If manager not notified: check advanceSigningSequence function
+# If second signature not embedding: verify pdf-lib embeds both signatures
+# If document not marked complete: verify sequence completion logic
+```
+
+---
+
+**ARCHITECT DEEP ANALYSIS — After All 10 Subagents Report**
+
+After all subagent results are in perform your own independent cross-system analysis:
+
+```bash
+# 1. Does the complete officer onboarding flow work end-to-end?
+# New officer created → bundle sent → all 6 forms completed → 
+# all tasks complete → officer auto-activated → Trinity welcomes in DockChat
+
+# Trace through each step and verify the chain holds
+
+# 2. Does the proposal-to-client pipeline flow correctly?
+# Lead at Proposal Sent → online proposal sent → client accepts →
+# signature captured → contract PDF generated → lead advances →
+# org owner notified → client onboarding pipeline starts
+
+# 3. Are all form submissions appearing in document vault with correct IDs?
+SELECT 
+  dv.document_number,
+  dv.document_type,
+  dv.workspace_id,
+  dv.employee_id,
+  dv.integrity_hash IS NOT NULL as has_hash,
+  fs.submitted_at
+FROM document_vault dv
+JOIN form_submissions fs ON fs.generated_document_id = dv.id
+ORDER BY dv.created_at DESC LIMIT 10;
+# All document_number values must follow DOC-YYYYMMDD-NNNNN format
+# All integrity_hash values must be populated
+
+# 4. Are forms correctly synced with Trinity's orchestration?
+# Check that Trinity can find and reference form submissions
+curl -s -X POST "http://localhost:5000/api/helpai/chat" \
+  -H "Authorization: Bearer [acme_org_owner_token]" \
+  -d '{"message":"Show me pending onboarding forms for officers","workspaceId":"[acme_id]"}'
+# Trinity should be able to answer this from form_invitations table
+
+# 5. Cross-check notification coverage
+# Every form event should have a notification:
+# - Form sent → NDS to recipient
+# - Form opened → no notification needed
+# - Form submitted → NDS to org
+# - Form expired without submission → NDS to org
+# - Reminder sent → NDS to recipient
+# - PDF generated → confirmation to submitter
+# Verify all exist in notificationDeliveryService
+
+# 6. Final TypeScript compilation
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+# Must be 0
+
+# 7. Final server restart verification
+# Server must start clean with all new routes mounted
+grep -rn "platformFormsRoutes\|salesProposalRoutes" server/routes.ts | head -5
+# Must show both route files mounted
+
+# 8. Verify form pages accessible in App.tsx
+grep -rn "forms/:token\|proposals/:token\|forms-manager\|sign/:token" \
+  client/src/App.tsx | head -10
+# All 4 routes must be registered
+```
+
+---
+
+**CERTIFICATION CRITERIA — Architect Signs Off When:**
+
+```
+PUBLIC FORM ACCESS:
+✅ Form renders without auth using token only
+✅ Expired tokens return 404 not form
+✅ Already submitted tokens return 409 on resubmit
+
+FIELD RENDERING:
+✅ All 12 field types render correctly on desktop
+✅ All 12 field types render correctly on mobile (375px)
+✅ Required field validation prevents submission
+✅ SSN masked — never displayed or stored in plaintext
+✅ Signature capture works with mouse and touch
+
+PRE-POPULATION:
+✅ Employee forms pre-filled with name, email, position
+✅ Client forms pre-filled with company, contact info
+✅ Pre-filled fields shown as read-only display
+
+SUBMISSION PERSISTENCE:
+✅ All form data stored in form_submissions with workspace_id
+✅ Invitation status updated to submitted
+✅ Duplicate submission returns 409
+
+PDF GENERATION:
+✅ Every submission generates a PDF
+✅ PDF contains signature embedded not just attached
+✅ PDF has legal footer with timestamp and IP
+✅ PDF stored in document vault with document_number and SHA-256 hash
+✅ PDF accessible via URL
+
+TRINITY PROCESSING:
+✅ Onboarding forms auto-complete matching tasks
+✅ Completed Tier 1 tasks auto-activate officer
+✅ Job applications create candidate records
+✅ Proposal acceptances advance lead stage
+✅ All actions attributed to Trinity system actor in audit log
+✅ NDS notifications fire on every processing event
+✅ WebSocket broadcast fires to workspace on submission
+
+PROPOSAL FLOW:
+✅ Proposal page renders services and pricing
+✅ Accept captures signature and generates contract PDF
+✅ Decline stores reason and notifies org owner
+✅ Changes_requested stores requests and notifies org owner
+
+MULTI-PARTY SIGNING:
+✅ Signing sequence enforces order — signer 1 before signer 2
+✅ Signer 2 only notified after signer 1 completes
+✅ Both signatures embedded in final document
+
+WORKSPACE ISOLATION:
+✅ Form data always stored in invitation's workspace
+✅ workspaceId from user body is ignored
+✅ Cross-workspace exploit attempt writes to correct workspace
+
+FORMS MANAGER:
+✅ Pending invitations list shows who has not submitted
+✅ Reminder sends NDS to pending recipient
+✅ Submissions list shows generated PDF links
+✅ Onboarding bundle sends all 6 forms in sequence
+
+SYSTEM INTEGRATION:
+✅ TypeScript zero errors
+✅ Server starts clean
+✅ All routes mounted
+✅ Trinity can query form submission data
+✅ Form notifications in NDS type registry
+
+PRODUCTION READINESS: [SCORE]/100
+```
+
+---
+
+Paste that. This semantic audit asks whether the forms system actually does what it is supposed to do at every step — from the officer opening the link on their phone to Trinity processing the submission and advancing the workflow. Every gap gets fixed. Every flow gets verified end to end.

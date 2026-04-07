@@ -32,9 +32,9 @@ export function SchedulePreview() {
   };
 
   return (
-    <div className="w-full h-full bg-background rounded-lg overflow-hidden shadow-xl">
+    <div className="w-full h-full bg-background rounded-md overflow-hidden shadow-sm">
       {/* Header - Modern AI Scheduling branding */}
-      <div className="border-b bg-gradient-to-r from-primary/10 via-primary/5 to-background px-4 py-3 flex items-center justify-between">
+      <div className="border-b bg-gradient-to-r from-primary/10 via-primary/5 to-background px-4 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
           <h3 className="font-bold text-sm">AI Scheduling™</h3>
@@ -65,8 +65,8 @@ export function SchedulePreview() {
               <div key={employee.id} className="flex gap-0.5 sm:gap-1">
                 {/* Employee header cell */}
                 <div className="w-16 sm:w-24 flex-shrink-0 flex items-center gap-1 sm:gap-2 py-1 px-1 sm:px-2 rounded bg-muted/30">
-                  <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
-                    <AvatarFallback className="text-[8px] sm:text-[10px]">{employee.initials}</AvatarFallback>
+                  <Avatar className="h-6 w-6 sm:h-7 sm:w-7">
+                    <AvatarFallback className="text-[10px] sm:text-xs font-semibold">{employee.initials}</AvatarFallback>
                   </Avatar>
                   <span className="text-[10px] sm:text-xs font-medium truncate hidden xs:block sm:block">{employee.name}</span>
                 </div>
@@ -77,7 +77,7 @@ export function SchedulePreview() {
                   return (
                     <div key={time} className="flex-1 min-h-[40px] sm:min-h-[48px] p-0.5 min-w-[40px]">
                       {shift ? (
-                        <Card className={`h-full p-1 sm:p-2 relative border-2 ${getStatusColor(shift.status)} hover-elevate cursor-grab active:cursor-grabbing transition-all overflow-hidden`}>
+                        <Card className={`h-full p-1 sm:p-2 relative border ${getStatusColor(shift.status)} hover-elevate cursor-grab active:cursor-grabbing transition-all`}>
                           <div className="absolute top-0.5 left-0.5 text-muted-foreground/50 hidden sm:block">
                             <GripVertical className="h-3 w-3" />
                           </div>

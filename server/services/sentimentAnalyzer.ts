@@ -6,6 +6,9 @@
 
 import { meteredGemini } from './billing/meteredGeminiClient';
 import { aiGuardRails, type AIRequestContext } from "./aiGuardRails";
+import { createLogger } from '../lib/logger';
+const log = createLogger('sentimentAnalyzer');
+
 
 export interface SentimentAnalysisResult {
   sentiment: "positive" | "neutral" | "negative" | "hostile";
@@ -27,14 +30,14 @@ export async function analyzeSentiment(
     workspaceId: workspaceId || 'unknown',
     userId: userId || 'unknown',
     organizationId: 'platform',
-    requestId: Math.random().toString(36).substring(7),
+    requestId: crypto.randomUUID().slice(0, 8),
     timestamp: new Date(),
     operation: 'sentiment_analysis'
   };
 
   const validation = aiGuardRails.validateRequest(message, requestContext, 'sentiment_analysis');
   if (!validation.isValid) {
-    console.warn('Sentiment analysis validation failed:', validation.errors);
+    log.warn('Sentiment analysis validation failed:', validation.errors);
     return {
       sentiment: 'neutral',
       confidence: 0,
@@ -69,7 +72,7 @@ Rules:
 - Action: Specific next step (e.g., "Route to manager", "Create urgent ticket", "Immediate callback required")`;
 
     const aiResult = await meteredGemini.generate({
-      workspaceId: workspaceId || 'platform',
+      workspaceId: workspaceId,
       userId: userId || 'system',
       featureKey: 'ai_sentiment_analysis',
       prompt,
@@ -79,7 +82,7 @@ Rules:
     });
 
     if (!aiResult.success) {
-      console.warn('Sentiment analysis AI call failed:', aiResult.error);
+      log.warn('Sentiment analysis AI call failed:', aiResult.error);
       return {
         sentiment: 'neutral',
         confidence: 0,
@@ -105,7 +108,12 @@ Rules:
       }
     }
 
-    const parsed = JSON.parse(jsonText);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      parsed = { sentiment: 'neutral', confidence: 50, urgencyLevel: 2, reasoning: 'Parse error — defaulting to neutral' };
+    }
 
     const result: SentimentAnalysisResult = {
       sentiment: parsed.sentiment || "neutral",
@@ -132,7 +140,7 @@ Rules:
 
     return result;
   } catch (error) {
-    console.error("Sentiment analysis error:", error);
+    log.error("Sentiment analysis error:", error);
     
     // Guard Rails: Use fallback response
     const fallback = aiGuardRails.createFallbackResponse(

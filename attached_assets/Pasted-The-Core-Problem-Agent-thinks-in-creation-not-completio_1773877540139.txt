@@ -1,0 +1,486 @@
+The Core Problem
+Agent thinks in creation not completion. It measures done by whether the code exists, not whether the code actually works end to end. So you get:
+
+Route defined ✅ — but never called from the frontend ❌
+Database table created ✅ — but never seeded with real data ❌
+Component built ✅ — but wired to a dead endpoint ❌
+Document record inserted ✅ — but no actual file behind it ❌
+Event subscriber registered ✅ — but no publisher ever fires it ❌
+Action registered ✅ — but nothing ever calls it ❌
+
+716 actions. 72 orphaned subscribers. 15 financial events never published. Placeholder document paths. All the same root cause — creation without completion.
+
+The Master Front-to-Back Trace Prompt
+This is the prompt that fixes the pattern permanently. Paste this into Replit Agent:
+COALEAGUE — FULL FRONT-TO-BACK TRACE AUDIT
+COMPLETION VERIFICATION SPRINT
+
+THE CORE PRINCIPLE:
+A feature is not done when the code exists.
+A feature is done when a real user can touch it 
+on their screen, it does what it promises, 
+the data is saved correctly, the confirmation 
+comes back to the screen, and every connected 
+system that should know about it gets notified.
+
+Code existing is 20% of done.
+The other 80% is the electricity and plumbing.
+
+This audit traces every single feature in the 
+platform from the user's finger on the screen 
+all the way to the database and back.
+Nothing passes until the full circuit is live.
+
+PRIME DIRECTIVE:
+DO NOT BUILD ANYTHING NEW.
+DO NOT ASSUME ANYTHING WORKS UNTIL YOU TRACE IT.
+TRACE FIRST. REPORT GAPS. FIX GAPS. CONFIRM LIVE.
+
+═══════════════════════════════════════════════════════
+WHAT A COMPLETE FEATURE LOOKS LIKE
+Every feature must pass all 8 checkpoints to be 
+considered complete. If any checkpoint fails, 
+the feature is INCOMPLETE regardless of how much 
+code exists behind it.
+═══════════════════════════════════════════════════════
+
+CHECKPOINT 1 — UI ENTRY POINT
+Does the button, form, link, or trigger actually 
+exist and render in the frontend for the correct role?
+
+CHECKPOINT 2 — FRONTEND TO API
+Does the frontend call make it to the correct 
+API route? Is the route mounted? Is it protected 
+with the correct role guard? Does the request 
+include workspace_id?
+
+CHECKPOINT 3 — VALIDATION
+Does the API validate the input correctly? 
+Are numeric fields coerced before validation? 
+Do invalid inputs return clean error messages 
+back to the frontend?
+
+CHECKPOINT 4 — BUSINESS LOGIC
+Does the service layer execute the correct 
+business logic? Are edge cases handled? 
+Are constraints enforced?
+
+CHECKPOINT 5 — DATABASE WRITE
+Does the data actually get written to the 
+correct table with all required fields populated? 
+Is workspace_id present? Are relationships 
+correctly linked?
+
+CHECKPOINT 6 — EVENT PUBLISHED
+Does the correct platform event get published 
+after the operation? Does Trinity get notified? 
+Do any other subscribers receive the event?
+
+CHECKPOINT 7 — RESPONSE AND CACHE
+Does a success response return to the frontend? 
+Does the frontend cache invalidate so the UI 
+reflects the change immediately without a 
+page refresh?
+
+CHECKPOINT 8 — REAL DATA VISIBLE
+Can a real user see the result of their action 
+immediately after completing it? Is the data 
+visible, correct, and properly formatted on screen?
+
+═══════════════════════════════════════════════════════
+FEATURES TO TRACE — COMPLETE LIST
+Trace every feature below through all 8 checkpoints.
+Mark each checkpoint PASS or FAIL.
+If FAIL: describe exactly what is missing and where.
+═══════════════════════════════════════════════════════
+
+───────────────────────────────────────────────
+EMPLOYEE MANAGEMENT
+───────────────────────────────────────────────
+TRACE 1: Create new employee
+- UI form renders for manager/owner ✓/✗
+- Form submits to correct API route ✓/✗
+- Input validates correctly ✓/✗
+- Employee record created in DB with all fields ✓/✗
+- employee_hired event published ✓/✗
+- Employee appears in employee list immediately ✓/✗
+- Onboarding checklist created for new employee ✓/✗
+- Trinity notified of new hire ✓/✗
+
+TRACE 2: Employee document upload and viewing
+- Documents section visible on employee profile ✓/✗
+- All 8 document types listed ✓/✗
+- Upload button functional for each type ✓/✗
+- Uploaded file actually stored at real path ✓/✗
+- View button opens real document in browser ✓/✗
+- Download button downloads real file ✓/✗
+- Document status updates after upload ✓/✗
+- Owner sees document completion status ✓/✗
+
+TRACE 3: Employee onboarding flow
+- Onboarding checklist visible to employee ✓/✗
+- Each checklist item links to correct action ✓/✗
+- Completing item marks it complete in DB ✓/✗
+- Progress percentage updates in real time ✓/✗
+- Manager sees onboarding progress ✓/✗
+- Trinity flags incomplete onboarding ✓/✗
+- Completion triggers employee_onboarded event ✓/✗
+
+TRACE 4: Employee profile edit
+- Edit form pre-populated with current data ✓/✗
+- Changes save to DB correctly ✓/✗
+- employee_updated event published ✓/✗
+- Profile reflects changes immediately ✓/✗
+- Audit log entry created ✓/✗
+
+───────────────────────────────────────────────
+SCHEDULING
+───────────────────────────────────────────────
+TRACE 5: Create a shift
+- Shift creation form renders ✓/✗
+- All required fields present: site, officer, 
+  start time, end time, post orders ✓/✗
+- Shift saved to DB with workspace_id ✓/✗
+- shift_created event published ✓/✗
+- Shift appears on schedule view immediately ✓/✗
+- Assigned officer notified via ChatDock ✓/✗
+- Trinity aware of new shift ✓/✗
+
+TRACE 6: Publish schedule
+- Publish button functional ✓/✗
+- All shifts in period marked published ✓/✗
+- schedule_published event fires ✓/✗
+- Officers receive schedule notification ✓/✗
+- Schedule visible to officers in their view ✓/✗
+
+TRACE 7: Process a calloff
+- Officer submits calloff ✓/✗
+- Calloff recorded in DB ✓/✗
+- calloff_received event published ✓/✗
+- Manager notified immediately ✓/✗
+- Trinity flags coverage gap ✓/✗
+- Replacement recommendation surfaced ✓/✗
+- Shift marked as uncovered ✓/✗
+
+TRACE 8: Shift conflict detection
+- Overlapping shift assignment detected ✓/✗
+- Conflict shown to manager before saving ✓/✗
+- Double-booking prevented at DB level ✓/✗
+
+───────────────────────────────────────────────
+TIMEKEEPING
+───────────────────────────────────────────────
+TRACE 9: Officer clock in
+- Clock in button visible to officer on mobile ✓/✗
+- Clock in records GPS coordinates ✓/✗
+- Time entry created in DB with all fields ✓/✗
+- clock_in event published ✓/✗
+- Active shift status updates for manager ✓/✗
+- Trinity confirms officer on post ✓/✗
+- Late clock in flagged if applicable ✓/✗
+
+TRACE 10: Officer clock out
+- Clock out button functional ✓/✗
+- Duration calculated correctly ✓/✗
+- Time entry updated in DB ✓/✗
+- clock_out event published ✓/✗
+- Overtime calculated if applicable ✓/✗
+- Timesheet updated for payroll ✓/✗
+
+TRACE 11: Manager timesheet approval
+- Timesheet visible to manager ✓/✗
+- Approve/reject actions functional ✓/✗
+- Approval recorded in DB ✓/✗
+- timesheet_approved event published ✓/✗
+- Approved hours flow to payroll ✓/✗
+
+───────────────────────────────────────────────
+INCIDENT REPORTING — REPORTBOT CHAIN
+───────────────────────────────────────────────
+TRACE 12: Officer files incident via ReportBot
+- /incident command triggers 9-question flow ✓/✗
+- All 9 questions asked in sequence ✓/✗
+- Answers captured and stored ✓/✗
+- GPS photo logging functional ✓/✗
+- DAR generated with real content ✓/✗
+- DAR saved to DB with all 55 fields ✓/✗
+- dar_generated event published ✓/✗
+- Trinity notified and processes DAR ✓/✗
+- Manager receives DAR notification ✓/✗
+- DAR visible in manager review queue ✓/✗
+
+TRACE 13: Manager DAR approval workflow
+- DAR appears in manager review queue ✓/✗
+- Approve action works and saves to DB ✓/✗
+- Reject action works with reason ✓/✗
+- Escalate action works ✓/✗
+- Legal hold action works and locks DAR ✓/✗
+- dar_approved event published on approval ✓/✗
+- Officer notified of decision ✓/✗
+- Audit log entry created ✓/✗
+
+TRACE 14: Incident narrative auto-generation
+- Trinity synthesizes officer report + GPS + 
+  post orders + officer cert status ✓/✗
+- Legally formatted narrative document created ✓/✗
+- Narrative attached to DAR record ✓/✗
+- Narrative accessible and readable ✓/✗
+- Format suitable for insurance/legal use ✓/✗
+
+───────────────────────────────────────────────
+INVOICING AND BILLING
+───────────────────────────────────────────────
+TRACE 15: Create invoice
+- Invoice creation form renders ✓/✗
+- Form submits and saves to DB ✓/✗
+- invoice_created event published ✓/✗
+- Invoice appears in invoice list immediately ✓/✗
+- Audit log entry created ✓/✗
+- Trinity notified ✓/✗
+- Client can see invoice in client portal ✓/✗
+
+TRACE 16: Send invoice to client
+- Send action functional ✓/✗
+- Email delivered via Resend ✓/✗
+- Invoice status updated to sent ✓/✗
+- invoice_sent event published ✓/✗
+- Sent timestamp recorded ✓/✗
+
+TRACE 17: Record invoice payment
+- Payment recording form functional ✓/✗
+- Payment saved to DB ✓/✗
+- invoice_paid event published ✓/✗
+- Invoice status updated to paid ✓/✗
+- Audit log entry created ✓/✗
+- QuickBooks sync triggered ✓/✗
+- Trinity notified of payment ✓/✗
+
+TRACE 18: Invoice appears in client portal
+- Client logs into portal ✓/✗
+- Invoice list visible with correct invoices only ✓/✗
+- Workspace_id isolation confirmed ✓/✗
+- Invoice detail view functional ✓/✗
+- Download invoice as PDF works ✓/✗
+
+───────────────────────────────────────────────
+PAYROLL
+───────────────────────────────────────────────
+TRACE 19: Run payroll
+- Run payroll action functional ✓/✗
+- Correct approved hours pulled per employee ✓/✗
+- Pay calculations correct ✓/✗
+- Overtime calculated correctly ✓/✗
+- Payroll run saved to DB ✓/✗
+- payroll_run_created event published ✓/✗
+- Dual-AI gate fires before approval ✓/✗
+- Governance check fires before approval ✓/✗
+
+TRACE 20: Approve payroll
+- Approval action functional ✓/✗
+- Approval recorded in DB ✓/✗
+- payroll_run_approved event published ✓/✗
+- Pay stubs generated for each employee ✓/✗
+- Pay stubs visible to employees ✓/✗
+- Audit log entry created ✓/✗
+- ACH/payment triggered ✓/✗
+
+───────────────────────────────────────────────
+COMPLIANCE
+───────────────────────────────────────────────
+TRACE 21: License expiration alert cascade
+- 90-day alert fires and reaches owner ✓/✗
+- 60-day alert fires ✓/✗
+- 30-day alert fires ✓/✗
+- 7-day alert fires ✓/✗
+- Expired alert fires and blocks scheduling ✓/✗
+- Trinity surfaces in compliance dashboard ✓/✗
+- Alert appears in correct user's notifications ✓/✗
+
+TRACE 22: Armed post assignment guard
+- Unlicensed officer cannot be assigned 
+  to armed post ✓/✗
+- Block enforced at API level not just UI ✓/✗
+- Clear error message shown to manager ✓/✗
+- Trinity flags the block attempt ✓/✗
+
+TRACE 23: Compliance report generation
+- Generate compliance report action functional ✓/✗
+- Report contains real employee data ✓/✗
+- Report is downloadable ✓/✗
+- Format matches DPS audit requirements ✓/✗
+- Auditor portal can access report ✓/✗
+
+───────────────────────────────────────────────
+CHATDOCK MESSENGER
+───────────────────────────────────────────────
+TRACE 24: Send a message in a group room
+- Message input functional on mobile ✓/✗
+- Message delivered to all room members ✓/✗
+- Message persisted in DB ✓/✗
+- Real-time delivery confirmed ✓/✗
+- Message visible without page refresh ✓/✗
+
+TRACE 25: Send a direct message
+- DM creation functional ✓/✗
+- Message delivered to recipient ✓/✗
+- Notification received by recipient ✓/✗
+- Message persisted in DB ✓/✗
+- Workspace_id isolation confirmed ✓/✗
+
+TRACE 26: Trinity sends a message
+- Trinity can write to group rooms ✓/✗
+- Trinity can write to DMs ✓/✗
+- Trinity messages visually distinct ✓/✗
+- Trinity messages persisted correctly ✓/✗
+
+───────────────────────────────────────────────
+OPS SERVICES — NEWLY BUILT
+───────────────────────────────────────────────
+TRACE 27: Panic alert
+- Officer triggers panic on mobile ✓/✗
+- Alert fires immediately to all supervisors ✓/✗
+- Notification reaches manager and owner ✓/✗
+- GPS coordinates captured ✓/✗
+- CAD call created automatically ✓/✗
+- Alert persists until manually cleared ✓/✗
+- Trinity processes at highest priority ✓/✗
+
+TRACE 28: Lone worker check-in
+- Check-in mechanism visible to officer ✓/✗
+- Check-in recorded in DB ✓/✗
+- Missed check-in escalates correctly ✓/✗
+- Second miss escalates to manager ✓/✗
+- Third miss reaches owner ✓/✗
+- All lone worker events logged ✓/✗
+
+TRACE 29: BOLO creation and broadcast
+- Manager creates BOLO with all fields ✓/✗
+- BOLO saved to DB ✓/✗
+- Trinity broadcasts to all on-shift officers ✓/✗
+- BOLO visible on officer mobile dashboard ✓/✗
+- Officer can report sighting ✓/✗
+- BOLO clears when manager resolves it ✓/✗
+
+TRACE 30: Visitor log entry
+- Officer logs visitor with all fields ✓/✗
+- Visitor record saved to DB ✓/✗
+- BOLO cross-reference check runs ✓/✗
+- Match flags to supervisor immediately ✓/✗
+- Visitor log visible to site manager ✓/✗
+- Client portal shows visitor log for their site ✓/✗
+- Time-out alert fires when visitor overdue ✓/✗
+
+───────────────────────────────────────────────
+VOICE SYSTEM
+───────────────────────────────────────────────
+TRACE 31: User records and sends voice message
+- Hold-to-record button visible on mobile ✓/✗
+- Recording captures audio correctly ✓/✗
+- Audio sent to Whisper for transcription ✓/✗
+- Transcription returned correctly ✓/✗
+- Trinity processes transcription ✓/✗
+- Voice response generated via ElevenLabs ✓/✗
+- Voice message bubble appears in ChatDock ✓/✗
+- Audio plays correctly ✓/✗
+- Transcript toggle shows text version ✓/✗
+- Usage metered to voice_usage table ✓/✗
+- Wallet deducted correctly ✓/✗
+
+TRACE 32: Voice command triggers action
+- Officer speaks clock-in command ✓/✗
+- Whisper transcribes correctly ✓/✗
+- Intent matched to clock_in action ✓/✗
+- Clock in executes with GPS stamp ✓/✗
+- Voice confirmation returned to officer ✓/✗
+
+───────────────────────────────────────────────
+TRINITY INTELLIGENCE
+───────────────────────────────────────────────
+TRACE 33: Trinity morning briefing
+- Dream state runs at configured time ✓/✗
+- Briefing generated with real data ✓/✗
+- Coverage status accurate ✓/✗
+- Risk flags populated ✓/✗
+- Briefing delivered to owner/manager ✓/✗
+- Delivered via voice and text ✓/✗
+
+TRACE 34: Trinity escalation
+- Trinity detects escalation trigger ✓/✗
+- Correct tier notified per trust hierarchy ✓/✗
+- Escalation logged in connectome ✓/✗
+- Human can acknowledge escalation ✓/✗
+- Trinity records acknowledgment ✓/✗
+
+TRACE 35: Trinity kill switch
+- Kill switch toggle functional in dashboard ✓/✗
+- Kill switch state persisted to DB ✓/✗
+- Trinity stops acting immediately on kill ✓/✗
+- Trinity stays killed after server restart ✓/✗
+- Reactivation functional ✓/✗
+- Kill/reactivate events audit logged ✓/✗
+
+═══════════════════════════════════════════════════════
+REPORTING FORMAT
+═══════════════════════════════════════════════════════
+
+For every trace report exactly this format:
+
+TRACE [N]: [Feature Name]
+CP1 UI Entry: PASS / FAIL — [detail if fail]
+CP2 Frontend to API: PASS / FAIL — [detail if fail]
+CP3 Validation: PASS / FAIL — [detail if fail]
+CP4 Business Logic: PASS / FAIL — [detail if fail]
+CP5 Database Write: PASS / FAIL — [detail if fail]
+CP6 Event Published: PASS / FAIL — [detail if fail]
+CP7 Response and Cache: PASS / FAIL — [detail if fail]
+CP8 Real Data Visible: PASS / FAIL — [detail if fail]
+OVERALL: COMPLETE / INCOMPLETE
+GAPS: [list every gap found]
+
+═══════════════════════════════════════════════════════
+FIX SPRINT
+═══════════════════════════════════════════════════════
+
+After all 35 traces are reported:
+
+1. List every INCOMPLETE feature with its 
+   specific failing checkpoints
+2. Prioritize by impact: 
+   CRITICAL (blocking real tenant use) first
+   HIGH (degraded experience) second  
+   MEDIUM (minor gaps) third
+3. Fix every CRITICAL gap first — one at a time, 
+   confirm each before moving on
+4. Fix every HIGH gap second
+5. Fix every MEDIUM gap third
+6. After all fixes re-trace every feature 
+   that had gaps to confirm COMPLETE
+
+═══════════════════════════════════════════════════════
+FINAL SCORECARD
+═══════════════════════════════════════════════════════
+
+After all fixes deliver:
+
+Total features traced: 35
+Fully complete at start: [number]
+Had gaps at start: [number]
+Fixed this sprint: [number]
+Still incomplete: [number]
+
+Feature completion rate: [X]%
+
+If completion rate is below 90%:
+List every remaining incomplete feature 
+and what is needed to complete it.
+
+GRAND OPENING VERDICT:
+Is every customer-facing feature complete 
+end to end for Statewide Protective Services?
+YES or NO — no ambiguity.
+
+The house is not done until every room has 
+walls, doors, windows, furniture, electricity, 
+running water, and the lights actually 
+turn on when you flip the switch.
+That is the standard. Nothing less.

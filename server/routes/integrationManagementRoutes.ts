@@ -15,17 +15,29 @@
  * - View usage statistics
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { integrationManagementService, type IntegrationAccessContext } from '../services/ai-brain/integrationManagementService';
 import { integrationPartnerService, type SupportContext } from '../services/ai-brain/integrationPartnerService';
+import { requireAuth } from '../auth';
+import { db } from '../db';
+import { integrationConnections, notifications } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+import crypto from 'crypto';
+import { createLogger } from '../lib/logger';
+const log = createLogger('IntegrationManagementRoutes');
+
 
 const router = Router();
 
+// Apply authentication to all integration management routes
+router.use(requireAuth);
+
 function getIntegrationContext(req: Request): IntegrationAccessContext {
-  const user = (req as any).user || {};
+  const user = req.user || {};
   return {
     userId: user.id || '',
-    workspaceId: user.activeWorkspaceId || (req as any).session?.activeWorkspaceId || '',
+    workspaceId: req.workspaceId || user.workspaceId || user.activeWorkspaceId || user.currentWorkspaceId || '',
     platformRole: user.platformRole || '',
     workspaceRole: user.workspaceRole || '',
     accessLevel: integrationManagementService.determineAccessLevel(
@@ -36,7 +48,7 @@ function getIntegrationContext(req: Request): IntegrationAccessContext {
 }
 
 function getSupportContext(req: Request): SupportContext {
-  const user = (req as any).user || {};
+  const user = req.user || {};
   return {
     userId: user.id || '',
     platformRole: user.platformRole || '',
@@ -54,10 +66,10 @@ router.get('/available', async (req: Request, res: Response) => {
       data: integrations,
       count: integrations.length
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -72,10 +84,10 @@ router.get('/connections', async (req: Request, res: Response) => {
       data: connections,
       count: connections.length
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -101,10 +113,10 @@ router.post('/connect', async (req: Request, res: Response) => {
     });
     
     res.status(result.success ? 201 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -117,10 +129,10 @@ router.delete('/connections/:connectionId', async (req: Request, res: Response) 
     const result = await integrationManagementService.disconnectIntegration(context, connectionId);
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -141,10 +153,10 @@ router.patch('/connections/:connectionId/credentials', async (req: Request, res:
     const result = await integrationManagementService.updateConnectionCredentials(context, connectionId, credentials);
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -161,10 +173,10 @@ router.get('/api-keys', async (req: Request, res: Response) => {
       data: sanitizedKeys,
       count: keys.length
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -196,10 +208,10 @@ router.post('/api-keys', async (req: Request, res: Response) => {
         ? 'API key created. Save this key securely - it will only be shown once.'
         : result.error
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -212,10 +224,10 @@ router.delete('/api-keys/:keyId', async (req: Request, res: Response) => {
     const result = await integrationManagementService.revokeApiKey(context, keyId);
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -236,10 +248,10 @@ router.get('/health', async (req: Request, res: Response) => {
         unhealthy: unhealthyCount
       }
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -255,11 +267,98 @@ router.get('/analyze/:integrationId', async (req: Request, res: Response) => {
       success: true,
       data: analysis
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
+  }
+});
+
+/**
+ * POST /api/integrations/connection-request
+ * Submit an accounting/payroll integration connection request.
+ * Stores credentials for platform-team verification and notifies the submitting user.
+ */
+router.post('/connection-request', async (req: Request, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required' });
+
+    const { integrationId, integrationName, apiKey, notes } = req.body;
+
+    if (!integrationId || !integrationName) {
+      return res.status(400).json({ success: false, error: 'integrationId and integrationName are required' });
+    }
+
+    const workspaceId = req.workspaceId || user.workspaceId || user.workspace_id;
+    if (!workspaceId) {
+      return res.status(400).json({ success: false, error: 'No workspace associated with this session' });
+    }
+
+    // Check for existing pending request for this integration
+    const existing = await db
+      .select({ id: integrationConnections.id, lastSyncStatus: integrationConnections.lastSyncStatus })
+      .from(integrationConnections)
+      .where(eq(integrationConnections.workspaceId, workspaceId))
+      .execute();
+
+    const alreadyPending = existing.find(
+      (c) => c.lastSyncStatus === 'pending_verification'
+    );
+    if (alreadyPending) {
+      return res.status(409).json({
+        success: false,
+        error: 'A connection request is already pending verification for this workspace. Our team will contact you within 24-48 hours.',
+      });
+    }
+
+    // Store the connection request
+    const [connection] = await db
+      .insert(integrationConnections)
+      .values({
+        workspaceId,
+        integrationId,
+        connectionName: integrationName,
+        authType: 'api_key',
+        apiKey: apiKey || null,
+        isActive: false,
+        lastSyncStatus: 'pending_verification',
+        connectedByUserId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] || null,
+        syncConfig: {
+          syncDirection: 'bidirectional',
+          syncFrequency: 'manual',
+          enabledFeatures: [],
+        },
+      })
+      .returning({ id: integrationConnections.id });
+
+    // Notify the submitting user that the request was received
+    await db.insert(notifications).values({
+      scope: 'workspace',
+      category: 'activity',
+      workspaceId,
+      userId: user.id,
+      type: 'action_required',
+      title: `${integrationName} Connection Request Submitted`,
+      message: `Your request to connect ${integrationName} has been received. Our platform team will verify your credentials and activate the integration within 24-48 business hours. You will be notified once it is live.`,
+      actionUrl: '/accounting-integrations',
+      relatedEntityType: 'integration_connection',
+      relatedEntityId: connection.id,
+      metadata: { integrationId, integrationName, notes: notes || null },
+      createdBy: 'system',
+    });
+
+    return res.status(201).json({
+      success: true,
+      connectionId: connection.id,
+      message: `Your ${integrationName} connection request has been submitted. Our team will verify and activate it within 24-48 business hours.`,
+    });
+  } catch (error: unknown) {
+    log.error('[connection-request] Error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to submit connection request' });
   }
 });
 
@@ -293,10 +392,10 @@ partnerRoutes.get('/', async (req: Request, res: Response) => {
       data: result.partners,
       total: result.total
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -320,10 +419,10 @@ partnerRoutes.get('/stats', async (req: Request, res: Response) => {
       success: true,
       data: stats
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -354,10 +453,10 @@ partnerRoutes.get('/:partnerId', async (req: Request, res: Response) => {
       success: true,
       data: details
     });
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -376,10 +475,10 @@ partnerRoutes.post('/', async (req: Request, res: Response) => {
     const result = await integrationPartnerService.createPartner(context, req.body);
     
     res.status(result.success ? 201 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -399,10 +498,10 @@ partnerRoutes.patch('/:partnerId', async (req: Request, res: Response) => {
     const result = await integrationPartnerService.updatePartner(context, partnerId, req.body);
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -430,10 +529,10 @@ partnerRoutes.post('/:partnerId/suspend', async (req: Request, res: Response) =>
     const result = await integrationPartnerService.suspendPartner(context, partnerId, reason);
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -453,10 +552,10 @@ partnerRoutes.post('/:partnerId/reactivate', async (req: Request, res: Response)
     const result = await integrationPartnerService.reactivatePartner(context, partnerId);
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });
@@ -477,10 +576,10 @@ partnerRoutes.delete('/:partnerId', async (req: Request, res: Response) => {
     const result = await integrationPartnerService.deletePartner(context, partnerId, force === 'true');
     
     res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    res.status(error.message.includes('permission') ? 403 : 500).json({
+  } catch (error: unknown) {
+    res.status(sanitizeError(error).includes('permission') ? 403 : 500).json({
       success: false,
-      error: error.message
+      error: sanitizeError(error)
     });
   }
 });

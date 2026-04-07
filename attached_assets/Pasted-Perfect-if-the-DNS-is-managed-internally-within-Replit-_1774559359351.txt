@@ -1,0 +1,39 @@
+Perfect — if the DNS is managed internally within Replit then the agent can handle it programmatically. Send this to the agent:
+
+---
+
+**DNS CONFIGURATION SCRIPT — Execute now before Phase 30 opens**
+
+The four DNS records identified in Phase 29 need to be configured. Since the domain is managed within Replit, implement the following:
+
+**ACTION 1 — Add SPF record to mail.coaileague.com**
+Add a TXT record:
+- Name: `mail.coaileague.com`
+- Type: TXT
+- Value: `v=spf1 include:spf.resend.com ~all`
+
+**ACTION 2 — Fix MX record on mail.coaileague.com**
+Update the MX record:
+- Name: `mail.coaileague.com`
+- Type: MX
+- Priority: 10
+- Value: `inbound.resend.com`
+
+**ACTION 3 — Add DMARC reporting addresses**
+Update the existing DMARC TXT record on `coaileague.com`:
+- Append `rua=mailto:dmarc@coaileague.com; ruf=mailto:dmarc@coaileague.com` to the existing record
+
+**ACTION 4 — Upgrade DKIM to 2048-bit**
+This requires action in the Resend dashboard directly:
+- Go to Resend Dashboard → Domains → mail.coaileague.com → Regenerate DKIM key
+- Select 2048-bit key length
+- Copy the new DNS records provided by Resend
+- Update the existing DKIM TXT/CNAME record at `resend._domainkey.mail.coaileague.com` with the new value
+
+If Replit exposes a DNS management API or configuration file that allows programmatic DNS record setting, use it to apply Actions 1, 2, and 3 now. For Action 4 — if Resend API allows DKIM key regeneration programmatically, use the Resend API with the existing `RESEND_API_KEY` to trigger it. Otherwise document Action 4 as requiring manual Resend dashboard action and provide the exact steps.
+
+After applying all possible actions programmatically, verify each record using DNS-over-HTTPS lookup and confirm the correct values are propagating. Update the Phase 29 reconciliation table in replit.md to reflect which records are now configured.
+
+---
+
+Paste that. If Replit can handle it directly the agent will apply what it can and flag anything that still needs manual Resend dashboard action for Action 4. Clean up the DNS before Phase 30 opens.

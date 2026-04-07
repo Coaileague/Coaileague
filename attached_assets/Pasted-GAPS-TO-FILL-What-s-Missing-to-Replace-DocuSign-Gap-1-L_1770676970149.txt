@@ -1,0 +1,62 @@
+GAPS TO FILL (What's Missing to Replace DocuSign)
+
+Gap 1: Live Document Editor - CRITICAL
+
+No real-time collaborative document editing (like Google Docs or DocuSign's editor)
+Need: Rich text editor for contracts/proposals with both parties able to make live edits
+Need: Change tracking with accept/reject (like Word track changes)
+Need: Consent-based editing - both parties must consent or changes revert
+Need: Version history showing who changed what and when
+Gap 2: Client-Facing Signing Experience - CRITICAL
+
+The backend for signatures exists, but no frontend signing page
+Need: A contract-portal/:token page where external clients can view, sign (draw/type/upload), accept, decline, or request changes
+Need: Signature pad component (canvas-based drawing)
+Need: Type-to-sign with multiple font options
+Need: Upload signature image option
+Gap 3: Unified Document Tab/Center - HIGH
+
+The Document Library and Employee File Cabinet exist separately
+Need: A single unified "Documents" tab per org that combines all document types
+Need: Search across ALL documents (employee files, client contracts, compliance docs, proposals) by employee name, client name, document type, date range
+Need: Quick filters and folder-like organization
+Gap 4: Auditor Portal Enhancement - HIGH
+
+Current auditor portal shows financial data but NOT employee files
+Need: Auditors must be able to search employees by name and pull up their file
+Need: View, download, and print employee documents
+Need: Time-limited, scope-limited access (can only see what they're granted)
+Need: In-app messaging to org owners/supervisors/managers for audit questions
+Need: Audit-specific document request workflow
+Gap 5: PDF Generation & Printing - MEDIUM
+
+Basic PDF packet generation exists for onboarding docs
+Need: Full contract/proposal PDF rendering with signatures embedded
+Need: Print-ready formatting
+Need: Download as PDF for any document
+Gap 6: Document Notifications & Reminders - MEDIUM
+
+Need: Email notifications when documents are sent, viewed, signed
+Need: Signature reminders (auto-resend after X days)
+Need: Expiration warnings for time-sensitive documents
+Email infrastructure exists (Resend integration) but isn't connected to contract pipeline
+Gap 7: Bulk Document Operations - LOW
+
+Need: Upload multiple files at once
+Need: Bulk send contracts to multiple clients
+Need: Bulk download/export for auditors
+Gap 8: Document Templates with Dynamic Fields - MEDIUM
+
+Template system exists in backend but limited
+Need: Template variables/merge fields ({{client_name}}, {{effective_date}}, etc.)
+Need: Auto-fill from client/employee data
+Need: Template preview before sending
+BOTTOM LINE:
+You have roughly 60-65% of what's needed to replace DocuSign built out on the backend. The contract pipeline, signatures, audit trails, personnel files, and compliance systems are all solidly built. The biggest missing pieces are the client-facing signing experience (the external portal page), the live collaborative editing, and the unified document search center that ties everything together. The auditor portal needs employee file access added. Once those gaps are filled, you'd have a genuinely competitive DocuSign replacement built directly into the platform.
+
+Would you like me to start building out these gaps? I'd recommend prioritizing in this order:
+
+Client signing portal page (makes contracts actually usable end-to-end)
+Unified document center with search
+Auditor portal with employee file access
+Live collaborative editing

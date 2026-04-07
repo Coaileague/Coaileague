@@ -1,4 +1,5 @@
 import { skillRegistry } from './skill-registry';
+import { createLogger } from '../../../lib/logger';
 import type { BaseSkill } from './base-skill';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -13,6 +14,10 @@ const __dirname = dirname(__filename);
 import { payrollValidationSkill } from './payrollValidation';
 import { invoiceReconciliationSkill } from './invoiceReconciliation';
 import IntelligentSchedulerSkill from './intelligentScheduler';
+import { trinityStaffingSkill } from './trinity-staffing-skill';
+import { documentGeneratorSkill } from './documentGeneratorSkill';
+import { dataResearchSkill } from './dataResearchSkill';
+import { financialMathVerifierSkill } from './financialMathVerifierSkill';
 
 // Create instances of revenue-critical skills
 const intelligentSchedulerSkill = new IntelligentSchedulerSkill();
@@ -38,6 +43,7 @@ const intelligentSchedulerSkill = new IntelligentSchedulerSkill();
 export class SkillLoader {
   private skillsDirectory: string;
   private loadedModules: Map<string, any> = new Map();
+  private readonly log = createLogger('SkillLoader');
 
   constructor(skillsDirectory?: string) {
     this.skillsDirectory = skillsDirectory || path.join(__dirname, '.');
@@ -48,7 +54,7 @@ export class SkillLoader {
    */
   async loadAllSkills(): Promise<number> {
     if (!fs.existsSync(this.skillsDirectory)) {
-      console.warn(`[SkillLoader] Skills directory not found: ${this.skillsDirectory}`);
+      this.log.warn(`Skills directory not found: ${this.skillsDirectory}`);
       return 0;
     }
 
@@ -64,18 +70,18 @@ export class SkillLoader {
 
         // Check if skill entry point exists
         if (!fs.existsSync(skillPath) && !fs.existsSync(skillPathJs)) {
-          console.log(`[SkillLoader] Skipping ${dir.name} - no index.ts/js found`);
+          this.log.info(`Skipping ${dir.name} - no index.ts/js found`);
           continue;
         }
 
         await this.loadSkill(dir.name);
         loadedCount++;
       } catch (error: any) {
-        console.error(`[SkillLoader] Failed to load skill ${dir.name}:`, error.message);
+        this.log.error(`Failed to load skill ${dir.name}:`, (error instanceof Error ? error.message : String(error)));
       }
     }
 
-    console.log(`✅ [SkillLoader] Loaded ${loadedCount} AI Brain Skills`);
+    this.log.info(`✅ Loaded ${loadedCount} AI Brain Skills`);
     return loadedCount;
   }
 
@@ -105,9 +111,9 @@ export class SkillLoader {
       // Track loaded module for hot reload
       this.loadedModules.set(skillName, module);
 
-      console.log(`✅ [SkillLoader] Loaded skill: ${skillName}`);
+      this.log.info(`✅ Loaded skill: ${skillName}`);
     } catch (error: any) {
-      throw new Error(`Failed to load skill ${skillName}: ${error.message}`);
+      throw new Error(`Failed to load skill ${skillName}: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
 
@@ -125,7 +131,7 @@ export class SkillLoader {
     this.loadedModules.delete(skillName);
     await this.loadSkill(skillName);
     
-    console.log(`🔄 [SkillLoader] Reloaded skill: ${skillName}`);
+    this.log.info(`🔄 Reloaded skill: ${skillName}`);
   }
 
   /**
@@ -139,7 +145,7 @@ export class SkillLoader {
       await skillRegistry.unregister(manifest.id);
       this.loadedModules.delete(skillName);
       
-      console.log(`🗑️  [SkillLoader] Unloaded skill: ${skillName}`);
+      this.log.info(`🗑️ Unloaded skill: ${skillName}`);
     }
   }
 
@@ -159,18 +165,18 @@ export class SkillLoader {
 
         const skillName = filename.split(path.sep)[0];
         
-        console.log(`[SkillLoader] Detected change in ${skillName}, reloading...`);
+        this.log.info(`Detected change in ${skillName}, reloading...`);
         
         try {
           await this.reloadSkill(skillName);
         } catch (error: any) {
-          console.error(`[SkillLoader] Hot reload failed for ${skillName}:`, error.message);
+          this.log.error(`Hot reload failed for ${skillName}:`, (error instanceof Error ? error.message : String(error)));
         }
       });
 
-      console.log(`👀 [SkillLoader] Watching skills directory for changes`);
+      this.log.info(`👀 Watching skills directory for changes`);
     } catch (error: any) {
-      console.warn(`[SkillLoader] Could not watch skills directory:`, error.message);
+      this.log.warn(`Could not watch skills directory:`, (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -190,36 +196,67 @@ export const skillLoader = new SkillLoader();
  * Call this from server startup
  */
 export async function initializeSkillsSystem(): Promise<void> {
-  console.log('\n╔════════════════════════════════════════════════╗');
-  console.log('║     🧠 AI BRAIN SKILLS SYSTEM STARTING        ║');
-  console.log('╚════════════════════════════════════════════════╝\n');
+  const log = createLogger('SkillLoader');
+  log.info('\n╔════════════════════════════════════════════════╗');
+  log.info('║     🧠 AI BRAIN SKILLS SYSTEM STARTING        ║');
+  log.info('╚════════════════════════════════════════════════╝\n');
 
   try {
     // CRITICAL: Register revenue-critical skills first (payroll, invoicing, scheduling)
     // These are core value proposition skills and must always be available
-    console.log('[SkillLoader] Registering revenue-critical skills...');
+    log.info('Registering revenue-critical skills...');
     
     try {
       await skillRegistry.register(payrollValidationSkill);
-      console.log('  ✅ PayrollValidationSkill registered');
+      log.info('  ✅ PayrollValidationSkill registered');
     } catch (e: any) {
-      console.warn('  ⚠️  PayrollValidationSkill skipped:', e.message);
+      log.warn('  ⚠️  PayrollValidationSkill skipped:', e.message);
     }
     
     try {
       await skillRegistry.register(invoiceReconciliationSkill);
-      console.log('  ✅ InvoiceReconciliationSkill registered');
+      log.info('  ✅ InvoiceReconciliationSkill registered');
     } catch (e: any) {
-      console.warn('  ⚠️  InvoiceReconciliationSkill skipped:', e.message);
+      log.warn('  ⚠️  InvoiceReconciliationSkill skipped:', e.message);
     }
     
     try {
       await skillRegistry.register(intelligentSchedulerSkill);
-      console.log('  ✅ IntelligentSchedulerSkill registered');
+      log.info('  ✅ IntelligentSchedulerSkill registered');
     } catch (e: any) {
-      console.warn('  ⚠️  IntelligentSchedulerSkill skipped:', e.message);
+      log.warn('  ⚠️  IntelligentSchedulerSkill skipped:', e.message);
     }
     
+    try {
+      await skillRegistry.register(trinityStaffingSkill);
+      log.info('  ✅ TrinityStaffingSkill registered (Premier)');
+    } catch (e: any) {
+      log.warn('  ⚠️  TrinityStaffingSkill skipped:', e.message);
+    }
+
+    log.info('Registering v3 brain skills...');
+
+    try {
+      await skillRegistry.register(documentGeneratorSkill);
+      log.info('  ✅ DocumentGeneratorSkill registered');
+    } catch (e: any) {
+      log.warn('  ⚠️  DocumentGeneratorSkill skipped:', e.message);
+    }
+
+    try {
+      await skillRegistry.register(dataResearchSkill);
+      log.info('  ✅ DataResearchSkill registered');
+    } catch (e: any) {
+      log.warn('  ⚠️  DataResearchSkill skipped:', e.message);
+    }
+
+    try {
+      await skillRegistry.register(financialMathVerifierSkill);
+      log.info('  ✅ FinancialMathVerifierSkill registered');
+    } catch (e: any) {
+      log.warn('  ⚠️  FinancialMathVerifierSkill skipped:', e.message);
+    }
+
     // Load directory-based skills
     const loadedCount = await skillLoader.loadAllSkills();
 
@@ -231,15 +268,16 @@ export async function initializeSkillsSystem(): Promise<void> {
     // Health check
     const health = await skillRegistry.getHealth();
 
-    console.log('\n╔════════════════════════════════════════════════╗');
-    console.log(`║  ✅ AI BRAIN SKILLS: ${loadedCount + 3} LOADED              ║`);
-    console.log(`║  ✅ HEALTHY: ${health.healthySkills}/${health.totalSkills}                           ║`);
-    console.log(`║  💰 REVENUE-CRITICAL: 3 (payroll, invoice, sched)║`);
+    log.info('\n╔════════════════════════════════════════════════╗');
+    log.info(`║  AI BRAIN SKILLS: ${loadedCount + 7} LOADED                ║`);
+    log.info(`║  HEALTHY: ${health.healthySkills}/${health.totalSkills}                             ║`);
+    log.info(`║  REVENUE-CRITICAL: 4 (payroll, invoice, sched, staffing)║`);
+    log.info(`║  V3 BRAIN: 3 (docgen, research, math-verify)            ║`);
     if (health.unhealthySkills.length > 0) {
-      console.log(`║  ⚠️  UNHEALTHY: ${health.unhealthySkills.join(', ')}  ║`);
+      log.info(`║  ⚠️  UNHEALTHY: ${health.unhealthySkills.join(', ')}  ║`);
     }
-    console.log('╚════════════════════════════════════════════════╝\n');
+    log.info('╚════════════════════════════════════════════════╝\n');
   } catch (error: any) {
-    console.error('❌ [SkillLoader] Failed to initialize skills system:', error.message);
+    log.error('❌ Failed to initialize skills system:', (error instanceof Error ? error.message : String(error)));
   }
 }

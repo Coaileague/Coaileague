@@ -1,0 +1,128 @@
+Paste this into Replit:
+
+---
+
+**CRITICAL & HIGH GAP FIXES — READ BEFORE TOUCH | NO NEW FEATURES**
+
+Fix in exact order. Read each file before touching. Show before/after per fix.
+
+---
+
+**FIX 1 — CRITICAL — Invite acceptance race condition**
+
+File: invite acceptance route
+
+The current flow is read → check → write as three separate operations. Two simultaneous clicks on the same invite link both pass the check and both create user records.
+
+Wrap the entire invite acceptance in a database transaction with a `SELECT FOR UPDATE` on the invite row as the first operation inside the transaction. If the invite status is already `accepted` when the lock is acquired, return 409 immediately without creating a user. The lock must be acquired before any user creation attempt. Only one request can hold the lock at a time — the second waits, then sees the already-accepted status and exits cleanly.
+
+---
+
+**FIX 2 — CRITICAL — Stripe webhook duplicate payment after restart**
+
+File: `stripeWebhooks.ts`
+
+The in-memory dedup cache resets on server restart. A Stripe webhook that fired just before restart and was processed will fire again after restart and pass the dedup check, writing a duplicate `payment_received` ledger entry.
+
+Replace the in-memory dedup check with a DB-backed check using the existing `processed_stripe_events` table. Before processing any webhook event — check if the Stripe event ID exists in `processed_stripe_events`. If it does, return 200 immediately. If not, insert the event ID into `processed_stripe_events` BEFORE processing, inside a transaction. This makes dedup restart-safe. The in-memory LRU cache can remain as a fast-path layer on top but the DB check is the authoritative gate.
+
+---
+
+**FIX 3 — HIGH — Plaid polling silent failure**
+
+File: `payrollTransferMonitor.ts`
+
+When `getTransferStatus()` throws an error, the catch block swallows it silently. The pay stub stays in `transfer_initiated` forever with no one notified.
+
+In the catch block:
+- Log the error with workspace context
+- Write to `trinity_credit_failures` table with `source: 'plaid_transfer_monitor'`
+- Create an in-app notification to the org owner: `"Payroll transfer status check failed for [employee name]. Manual verification required."`
+- After 3 consecutive failed polls for the same `transferId` — set pay stub status to `poll_failed` and send an email to the org owner in addition to the in-app notification
+- Add a `consecutive_poll_failures` counter column to the pay stub record or track in a separate monitoring table
+
+---
+
+**FIX 4 — HIGH — Auto-invoice duplicate generation**
+
+File: invoice auto-generation service
+
+The concurrent trigger gap — two requests both read time entries, both pass the "no invoice exists" check, both generate separate invoices from different subsets of time entries.
+
+Add a unique constraint on `(workspace_id, client_id, billing_period_start, billing_period_end)` to the invoices table if it does not exist. Run migration.
+
+Additionally wrap invoice generation in a `SELECT FOR UPDATE` advisory lock on `(workspaceId, clientId)` at the start of the generation function. If a lock cannot be acquired immediately return a structured error — do not wait and do not retry. The calling cron can retry on next cycle.
+
+---
+
+**FIX 5 — HIGH — Missing DB indexes**
+
+Run these index migrations immediately:
+
+```sql
+-- shifts table
+CREATE INDEX IF NOT EXISTS idx_shifts_workspace_id ON shifts(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_start_time ON shifts(start_time);
+CREATE INDEX IF NOT EXISTS idx_shifts_workspace_start ON shifts(workspace_id, start_time);
+
+-- time_entries table  
+CREATE INDEX IF NOT EXISTS idx_time_entries_workspace_id ON time_entries(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_time_entries_created_at ON time_entries(created_at);
+CREATE INDEX IF NOT EXISTS idx_time_entries_workspace_created ON time_entries(workspace_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_time_entries_employee_id ON time_entries(employee_id);
+
+-- notifications table
+CREATE INDEX IF NOT EXISTS idx_notifications_workspace_id ON notifications(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_workspace_created ON notifications(workspace_id, created_at);
+
+-- audit_logs table
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workspace_id ON audit_logs(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workspace_created ON audit_logs(workspace_id, created_at);
+```
+
+Run all indexes. Confirm each was created. Report which already existed vs newly created.
+
+---
+
+**FIX 6 — MEDIUM — Shift auto-fill double-booking**
+
+File: shift auto-fill service
+
+The current SELECT-then-UPDATE pattern allows manual and auto-fill to both read "officer is available" before either writes the assignment.
+
+Replace with an atomic `UPDATE shifts SET employee_id = $employeeId WHERE id = $shiftId AND employee_id IS NULL` pattern. Check `rowCount` after the update — if `rowCount === 0` the shift was already assigned by a concurrent request. Return a structured `ALREADY_ASSIGNED` error and pick the next available officer from the candidate list. Do not use a separate SELECT to check availability — the UPDATE itself is the atomic check-and-assign.
+
+---
+
+**FIX 7 — MEDIUM — Knowledge graph and RL loop workspace isolation**
+
+Files: knowledge graph service, reinforcement learning loop
+
+Entries stored with `workspaceId: 'global'` are readable by every workspace. This means one org's learned patterns can influence Trinity's behavior in another org.
+
+Search every write to the knowledge graph and RL loop that uses `'global'` as the workspaceId. For each one determine:
+- If the data is genuinely platform-wide (e.g. Trinity's own operational learnings, not org-specific) — keep `'global'` but add a flag `crossWorkspaceReadable: false` so it is never surfaced in per-workspace queries
+- If the data is org-specific behavior that was incorrectly tagged as global — update to use the correct `workspaceId`
+
+Update all read queries on the knowledge graph and RL loop to filter by `workspaceId = currentWorkspace OR (workspaceId = 'global' AND crossWorkspaceReadable = true)`. This ensures org-specific learnings never bleed across tenants while genuinely global platform knowledge remains accessible.
+
+---
+
+**COMPLETION CRITERIA**
+
+1. TypeScript compile — zero errors
+2. Server restart — clean start
+3. Verify Fix 1 — attempt two simultaneous invite acceptances, confirm only one user created
+4. Verify Fix 2 — confirm `processed_stripe_events` table is checked before any webhook processing
+5. Verify Fix 5 — run `\d shifts` and `\d time_entries` in DB and confirm indexes exist
+6. Verify Fix 6 — confirm shift assignment uses atomic UPDATE pattern
+7. Report: all 7 fixes pass/fail status
+8. Report: any fixes that could not be completed and why
+9. Stop and wait
+
+---
+
+Paste results back. If all 7 pass you are done. Zero critical issues remaining means you ship today.

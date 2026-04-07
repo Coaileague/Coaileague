@@ -67,14 +67,18 @@ export function ShiftSwapDrawer({
   const [notes, setNotes] = useState('');
   const [activeTab, setActiveTab] = useState('request');
 
-  const { data: swapRequests, isLoading: loadingRequests } = useQuery<ShiftSwapRequest[]>({
-    queryKey: ['/api/advanced-scheduling/swap-requests'],
+  const { data: swapRequests = [], isLoading: loadingRequests } = useQuery<ShiftSwapRequest[]>({
+    queryKey: ['/api/scheduling/swap-requests'],
     enabled: open,
+    select: (data: any): ShiftSwapRequest[] => Array.isArray(data) ? data : (data?.requests || []),
   });
 
   const requestSwapMutation = useMutation({
     mutationFn: async (data: { shiftId: string; targetEmployeeId: string; notes?: string }) => {
-      const response = await apiRequest('POST', '/api/advanced-scheduling/swap/request', data);
+      const response = await apiRequest('POST', `/api/scheduling/shifts/${data.shiftId}/swap-request`, {
+        targetEmployeeId: data.targetEmployeeId,
+        reason: data.notes,
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -82,7 +86,7 @@ export function ShiftSwapDrawer({
         title: 'Swap Requested',
         description: 'Your shift swap request has been submitted.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/advanced-scheduling/swap-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
       setSelectedEmployeeId('');
       setNotes('');
       onOpenChange(false);
@@ -98,7 +102,7 @@ export function ShiftSwapDrawer({
 
   const approveSwapMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      const response = await apiRequest('POST', `/api/advanced-scheduling/swap-requests/${requestId}/approve`);
+      const response = await apiRequest('POST', `/api/scheduling/swap-requests/${requestId}/approve`);
       return response.json();
     },
     onSuccess: () => {
@@ -106,7 +110,7 @@ export function ShiftSwapDrawer({
         title: 'Swap Approved',
         description: 'The shift swap has been approved.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/advanced-scheduling/swap-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
     },
     onError: (error: Error) => {
@@ -120,7 +124,7 @@ export function ShiftSwapDrawer({
 
   const rejectSwapMutation = useMutation({
     mutationFn: async ({ requestId, reason }: { requestId: string; reason?: string }) => {
-      const response = await apiRequest('POST', `/api/advanced-scheduling/swap-requests/${requestId}/reject`, { responseMessage: reason });
+      const response = await apiRequest('POST', `/api/scheduling/swap-requests/${requestId}/reject`, { responseMessage: reason });
       return response.json();
     },
     onSuccess: () => {
@@ -128,7 +132,7 @@ export function ShiftSwapDrawer({
         title: 'Swap Rejected',
         description: 'The shift swap has been rejected.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/advanced-scheduling/swap-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
     },
     onError: (error: Error) => {
       toast({
@@ -141,7 +145,7 @@ export function ShiftSwapDrawer({
 
   const cancelSwapMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      const response = await apiRequest('POST', `/api/advanced-scheduling/swap-requests/${requestId}/cancel`);
+      const response = await apiRequest('POST', `/api/scheduling/swap-requests/${requestId}/cancel`);
       return response.json();
     },
     onSuccess: () => {
@@ -149,7 +153,7 @@ export function ShiftSwapDrawer({
         title: 'Request Cancelled',
         description: 'Your swap request has been cancelled.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/advanced-scheduling/swap-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
     },
     onError: (error: Error) => {
       toast({
@@ -195,10 +199,10 @@ export function ShiftSwapDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[85vh] focus:outline-none">
-        <div className="mx-auto w-full max-w-md">
-          <DrawerHeader className="pb-2 pt-3 px-4">
-            <div className="flex items-center justify-between">
+      <DrawerContent className="max-h-[100dvh] focus:outline-none">
+        <div data-vaul-no-drag className="mx-auto w-full max-w-md flex flex-col max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch]">
+          <DrawerHeader className="pb-2 pt-3 px-4 shrink-0">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-primary/10">
                   <ArrowRightLeft className="h-4 w-4 text-primary" />
@@ -213,100 +217,100 @@ export function ShiftSwapDrawer({
                 </div>
               </div>
               <DrawerClose asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Button variant="ghost" size="icon">
                   <X className="h-4 w-4" />
                 </Button>
               </DrawerClose>
             </div>
           </DrawerHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
-            <TabsList className="w-full grid grid-cols-3 h-9">
-              <TabsTrigger value="request" className="text-xs" data-testid="tab-request">
-                Request
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="text-xs" data-testid="tab-pending">
-                Pending
-                {pendingRequests.length > 0 && (
-                  <span className="ml-1.5 bg-primary text-primary-foreground text-[10px] px-1.5 rounded-full">
-                    {pendingRequests.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="history" className="text-xs" data-testid="tab-history">
-                History
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="w-full grid grid-cols-3 h-9 sticky top-0 z-10 bg-background">
+                <TabsTrigger value="request" className="text-xs" data-testid="tab-request">
+                  Request
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="text-xs" data-testid="tab-pending">
+                  Pending
+                  {pendingRequests.length > 0 && (
+                    <span className="ml-1.5 bg-primary text-primary-foreground text-[10px] px-1.5 rounded-full">
+                      {pendingRequests.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="history" className="text-xs" data-testid="tab-history">
+                  History
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="request" className="mt-3">
-              {shift ? (
-                <div className="space-y-4">
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <div className="text-xs text-muted-foreground mb-1">Selected Shift</div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold">{shift.title || 'Shift'}</div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(shift.startTime), 'EEE, MMM d')}
+              <TabsContent value="request" className="mt-3">
+                {shift ? (
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <div className="text-xs text-muted-foreground mb-1">Selected Shift</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm truncate">{shift.title || 'Shift'}</div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                            <Calendar className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{format(new Date(shift.startTime), 'EEE, MMM d')}</span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
-                          {format(new Date(shift.startTime), 'h:mm a')}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          to {format(new Date(shift.endTime), 'h:mm a')}
+                        <div className="text-right shrink-0">
+                          <div className="text-sm font-medium">
+                            {format(new Date(shift.startTime), 'h:mm a')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            to {format(new Date(shift.endTime), 'h:mm a')}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Swap With</Label>
-                    <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                      <SelectTrigger className="h-10" data-testid="select-swap-employee">
-                        <SelectValue placeholder="Select employee..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {otherEmployees.map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-5 w-5">
-                                <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">
-                                  {getInitials(`${employee.firstName} ${employee.lastName}`)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span>{employee.firstName} {employee.lastName}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Swap With</Label>
+                      <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+                        <SelectTrigger className="h-11" data-testid="select-swap-employee">
+                          <SelectValue placeholder="Select employee..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {otherEmployees.map((employee) => (
+                            <SelectItem key={employee.id} value={employee.id}>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-7 w-7">
+                                  <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
+                                    {getInitials(`${employee.firstName} ${employee.lastName}`)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span>{employee.firstName} {employee.lastName}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Reason (Optional)</Label>
-                    <Textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Why do you need to swap this shift?"
-                      rows={2}
-                      className="text-sm resize-none"
-                      data-testid="input-swap-notes"
-                    />
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Reason (Optional)</Label>
+                      <Textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Why do you need to swap this shift?"
+                        rows={2}
+                        className="text-sm resize-none"
+                        data-testid="input-swap-notes"
+                      />
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Select a shift to request a swap</p>
-                </div>
-              )}
-            </TabsContent>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Select a shift to request a swap</p>
+                  </div>
+                )}
+              </TabsContent>
 
-            <TabsContent value="pending" className="mt-3">
-              <ScrollArea className="h-[300px]">
+              <TabsContent value="pending" className="mt-3">
                 {loadingRequests ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -333,11 +337,9 @@ export function ShiftSwapDrawer({
                     ))}
                   </div>
                 )}
-              </ScrollArea>
-            </TabsContent>
+              </TabsContent>
 
-            <TabsContent value="history" className="mt-3">
-              <ScrollArea className="h-[300px]">
+              <TabsContent value="history" className="mt-3">
                 {loadingRequests ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -361,20 +363,20 @@ export function ShiftSwapDrawer({
                     ))}
                   </div>
                 )}
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
 
           {activeTab === 'request' && shift && (
-            <DrawerFooter className="px-4 pt-3 pb-4">
+            <DrawerFooter className="px-4 pt-3 pb-4 shrink-0 border-t">
               <div className="flex gap-2">
                 <DrawerClose asChild>
-                  <Button variant="outline" className="flex-1 h-10" data-testid="button-cancel-swap">
+                  <Button variant="outline" className="flex-1" data-testid="button-cancel-swap">
                     Cancel
                   </Button>
                 </DrawerClose>
                 <Button
-                  className="flex-1 h-10"
+                  className="flex-1"
                   onClick={handleRequestSwap}
                   disabled={!selectedEmployeeId || requestSwapMutation.isPending}
                   data-testid="button-submit-swap"
@@ -443,7 +445,7 @@ function SwapRequestCard({
 
   return (
     <div className="bg-muted/30 rounded-lg p-3 border" data-testid={`swap-request-${request.id}`}>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
           <Repeat2 className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
@@ -455,8 +457,8 @@ function SwapRequestCard({
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Avatar className="h-7 w-7 flex-shrink-0">
-            <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
               {requestingEmployee ? getInitials(`${requestingEmployee.firstName} ${requestingEmployee.lastName}`) : '??'}
             </AvatarFallback>
           </Avatar>
@@ -471,8 +473,8 @@ function SwapRequestCard({
           <span className="text-sm font-medium truncate text-right">
             {targetEmployee ? `${targetEmployee.firstName} ${targetEmployee.lastName}` : 'Unknown'}
           </span>
-          <Avatar className="h-7 w-7 flex-shrink-0">
-            <AvatarFallback className="text-[10px] bg-muted-foreground/20">
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarFallback className="text-xs font-semibold bg-muted-foreground/20">
               {targetEmployee ? getInitials(`${targetEmployee.firstName} ${targetEmployee.lastName}`) : '??'}
             </AvatarFallback>
           </Avatar>

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle2, Clock, FileText } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 export default function I9CompliancePage() {
   const { data: allRecords = [], isLoading: allLoading } = useQuery<any[]>({
@@ -40,18 +41,25 @@ export default function I9CompliancePage() {
     r.status === 'verified' && (!r.expirationDate || differenceInDays(new Date(r.expirationDate), new Date()) > 30)
   );
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'i9-compliance',
+    title: 'I-9 Compliance Dashboard',
+    subtitle: 'Monitor work authorization expiration and re-verification requirements',
+    category: 'operations',
+  };
+
   if (allLoading || expiring30Loading || expiring7Loading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <CanvasHubPage config={pageConfig}>
+        <div className="p-6">Loading...</div>
+      </CanvasHubPage>
+    );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl" data-testid="page-i9-compliance">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold" data-testid="heading-i9-compliance">I-9 Compliance Dashboard</h1>
-        <p className="text-muted-foreground">Monitor work authorization expiration and re-verification requirements</p>
-      </div>
-
-      {expiring7.length > 0 && (
+    <CanvasHubPage config={pageConfig}>
+      <div data-testid="page-i9-compliance">
+        {expiring7.length > 0 && (
         <Alert variant="destructive" className="mb-6" data-testid="alert-urgent">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -98,7 +106,7 @@ export default function I9CompliancePage() {
               {expiring7.map((record: any) => (
                 <Card key={record.id} className="border-red-200" data-testid={`card-urgent-${record.id}`}>
                   <CardHeader>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
                         <CardTitle className="text-lg">Employee ID: {record.employeeId}</CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-1">
@@ -139,7 +147,7 @@ export default function I9CompliancePage() {
               {expiring30.filter((r: any) => !expiring7.some((e: any) => e.id === r.id)).map((record: any) => (
                 <Card key={record.id} data-testid={`card-upcoming-${record.id}`}>
                   <CardHeader>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
                         <CardTitle className="text-lg">Employee ID: {record.employeeId}</CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-1">
@@ -192,6 +200,7 @@ export default function I9CompliancePage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </CanvasHubPage>
   );
 }

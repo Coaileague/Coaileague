@@ -1,0 +1,84 @@
+**Phase 9B — Permission Matrix Editor**
+
+Send this to the agent after Phase 9A's 5 checks pass clean:
+
+---
+
+**PHASE 9B — WORKSPACE PERMISSION MATRIX EDITOR**
+
+This phase builds a live permission control system on top of the locked RBAC foundation from Phase 9A. Canonical and systematic — schema first, middleware second, UI last. Do not skip steps or build out of order.
+
+**STEP 1 — DATABASE SCHEMA**
+
+Create a `workspace_permissions` table with the following columns:
+- `id` — uuid primary key
+- `workspace_id` — foreign key, not null, indexed
+- `role` — text, must be a valid workspace role from roleDefinitions.ts
+- `feature_key` — text, not null (examples: `page:financials`, `page:clients`, `page:endusers`, `action:export_payroll`, `action:view_reports`)
+- `enabled` — boolean, default true
+- `updated_by` — uuid foreign key to users
+- `updated_at` — timestamp
+
+Add a unique constraint on `(workspace_id, role, feature_key)`. Run the migration. Confirm the table exists before proceeding.
+
+**STEP 2 — FEATURE KEY REGISTRY**
+
+Create `server/lib/rbac/featureRegistry.ts` as the canonical list of all controllable features. Every page and action that can be toggled must have an entry here with: `key`, `label`, `category` (page or action), and `defaultRoles` (which roles have access by default). This file is the single source of truth for what can be permission-managed. Nothing not in this registry can be toggled.
+
+**STEP 3 — PERMISSION RESOLVER MIDDLEWARE**
+
+Create `server/middleware/workspacePermissions.ts`. This middleware:
+- Runs after `requireAuth` and `ensureWorkspaceAccess` — never before
+- Accepts a `feature_key` parameter
+- Queries `workspace_permissions` for the current `workspace_id` + `role` + `feature_key` combination
+- If a record exists and `enabled = false`, returns 403 immediately
+- If no record exists, falls back to `featureRegistry.ts` defaults
+- Results are cached per request — no redundant queries
+- Never blocks `org_owner`, `co_owner`, or Trinity regardless of table state
+
+**STEP 4 — API ENDPOINTS**
+
+Create `server/routes/permissionMatrixRoutes.ts` with the following endpoints — all require `requireAuth` + `requireOwner` guard:
+
+- `GET /api/permissions/matrix` — returns the full matrix for the workspace: all roles × all feature keys with current enabled state
+- `PATCH /api/permissions/matrix` — accepts `{ role, feature_key, enabled }`, upserts the record, triggers sync event
+- `POST /api/permissions/matrix/reset` — resets all workspace overrides to registry defaults
+
+**STEP 5 — REAL-TIME SYNC**
+
+When a PATCH is saved, emit a WebSocket event to all active sessions in that workspace with payload `{ type: 'permission_update', role, feature_key, enabled }`. The frontend listens for this event and immediately updates the local permission state — no page reload required. A manager mid-session loses or gains access instantly.
+
+**STEP 6 — FRONTEND PAGE**
+
+Create the Permission Matrix Editor page. Access restricted to `org_owner` and `co_owner` only — no other role can see or reach this page.
+
+Layout:
+- Header: "Workspace Permissions" with a Reset to Defaults button
+- Matrix grid: feature categories as row groups, roles as columns (`manager`, `department_manager`, `supervisor`, `employee`, `contractor`, `auditor`)
+- Each cell: a toggle switch — green enabled, gray disabled
+- Owner and co_owner columns are locked and always shown as enabled — not toggleable
+- Changes save on toggle with an instant visual confirmation — no save button required
+- If a role is mid-session and their permission changes, display a non-blocking toast: "Your access has been updated by your administrator"
+
+**STEP 7 — WIRE THE MIDDLEWARE**
+
+Apply `checkFeaturePermission('page:financials')` and equivalent calls to the relevant existing routes and page guards. Use the feature keys defined in featureRegistry.ts. Do not apply this middleware to auth routes, owner-only routes, or Trinity routes.
+
+**STEP 8 — VERIFICATION**
+
+Run and confirm all of the following before Phase 9B is marked complete:
+
+- Check 1: `workspace_permissions` table exists with correct schema and unique constraint
+- Check 2: `featureRegistry.ts` exists and contains entries for all controllable pages and actions
+- Check 3: Permission middleware correctly blocks a non-owner role when `enabled = false` in the table
+- Check 4: Permission middleware correctly falls back to registry defaults when no table record exists
+- Check 5: org_owner and co_owner are never blocked regardless of table state
+- Check 6: PATCH to the matrix endpoint triggers a WebSocket event received by active sessions
+- Check 7: The Permission Matrix page is unreachable by any role below co_owner
+- Check 8: Server starts clean with no TypeScript errors in any new or modified file
+
+Do not mark Phase 9B complete until all 8 checks pass. Report step-by-step as you go.
+
+---
+
+That's your 9B. Clean foundation from 9A, real enforcement in the middleware, live sync, and a locked UI. Phase 10 bug sweep will run on top of a platform where permissions are not just defined — they're operator-controlled in real time.

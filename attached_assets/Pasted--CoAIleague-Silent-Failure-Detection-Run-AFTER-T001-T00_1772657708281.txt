@@ -1,0 +1,336 @@
+# CoAIleague — Silent Failure Detection
+## Run AFTER T001-T004 Complete
+
+**Context:** 44 tables were missing workspace_id. If that many tables lacked basic org scoping, there are almost certainly workflows that fail silently — no error shown to user, no notification to manager, no record that anything went wrong. This audit exposes them.
+
+---
+
+## STEP 1: Find Every try/catch That Swallows Errors
+
+```bash
+# Find all catch blocks that only console.log/console.error (no user notification, no DB logging)
+grep -rn "catch" server/ --include="*.ts" --include="*.js" -A 5 | grep -B 1 "console\.\(log\|error\|warn\)" | grep -v "node_modules"
+
+# Find all catch blocks that are completely empty (swallow errors silently)
+grep -rn "catch.*{" server/ --include="*.ts" --include="*.js" -A 1 | grep -B 1 "}" | grep -v "node_modules"
+
+# Find all catch blocks that just "return" without handling
+grep -rn "catch" server/ --include="*.ts" --include="*.js" -A 3 | grep "return\s*;" | grep -v "node_modules"
+
+# Find all catch blocks that return null/undefined/false (silent failure disguised as "no result")
+grep -rn "catch" server/ --include="*.ts" --include="*.js" -A 3 | grep "return\s*\(null\|undefined\|false\|\[\]\|{}\)" | grep -v "node_modules"
+```
+
+**What to look for:** Every catch block should do ONE of these:
+1. Throw the error up (let the caller handle it)
+2. Return a clear error response to the user
+3. Log to the audit_log table (not just console)
+4. Send a notification to the manager/owner
+
+If a catch block does NONE of these — it's a silent failure point.
+
+---
+
+## STEP 2: Find Every Cron/Automation That Doesn't Report Failures
+
+```bash
+# Find all cron jobs / scheduled tasks
+grep -rn "cron\|schedule\|setInterval\|setTimeout" server/ --include="*.ts" --include="*.js" | grep -v "node_modules" | grep -v "test"
+
+# For each one, check: does it have error handling that notifies someone?
+# Many cron jobs look like:
+#   cron.schedule('0 0 * * *', async () => {
+#     const result = await doSomething()  // If this fails... nobody knows
+#   })
+```
+
+**Every cron job MUST have:**
+```typescript
+cron.schedule('...', async () => {
+  try {
+    const result = await doSomething();
+    // Log success
+    await auditLog.log({ action: 'cron.job_name.success', ... });
+  } catch (error) {
+    // Log failure WHERE SOMEONE WILL SEE IT
+    await auditLog.log({ action: 'cron.job_name.failed', metadata: { error: error.message } });
+    // Notify org owner or platform admin
+    await notificationService.sendAlert({
+      title: 'Automation Failed: [Job Name]',
+      body: error.message,
+      severity: 'high',
+    });
+  }
+});
+```
+
+---
+
+## STEP 3: Find Trinity Actions Without Success/Failure Tracking
+
+```bash
+# Find all places Trinity/AI is called
+grep -rn "trinity\|gemini\|claude\|openai\|anthropic\|ai\.\|llm\|completion\|generate" server/ --include="*.ts" --include="*.js" -i | grep -v "node_modules" | grep -v "test" | grep -v "\.md"
+
+# For each AI call, verify:
+# 1. Does it check if the response is valid before using it?
+# 2. Does it deduct credits ONLY on success (not on failure)?
+# 3. Does it record the action in audit_log?
+# 4. Does it have a fallback if the AI call fails?
+# 5. Does it track token usage in ai_token_usage table?
+```
+
+---
+
+## STEP 4: Find Database Writes Without Error Handling
+
+```bash
+# Find all db.insert / db.update / db.delete calls
+grep -rn "db\.\(insert\|update\|delete\)\|\.insert(\|\.update(\|\.delete(" server/ --include="*.ts" --include="*.js" | grep -v "node_modules" | grep -v "test"
+
+# For each one, check: is it wrapped in a try/catch?
+# Database writes can fail for many reasons:
+# - Unique constraint violation (duplicate)
+# - Foreign key violation (orphaned reference)
+# - NOT NULL violation (missing required field)
+# - Connection timeout
+# If ANY of these happen without error handling, data is silently lost.
+```
+
+---
+
+## STEP 5: Find API Routes Without Error Responses
+
+```bash
+# Find all route handlers
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)\|app\.\(get\|post\|put\|patch\|delete\)" server/ --include="*.ts" --include="*.js" | grep -v "node_modules"
+
+# For each route, verify it has:
+# 1. try/catch wrapping the handler
+# 2. Proper error response: res.status(500).json({ error: message })
+# 3. NOT just: res.json({}) or res.send() on error (which looks like success to the frontend)
+```
+
+---
+
+## STEP 6: Find Financial Operations Without Idempotency Guards
+
+These are the ones that can LOSE MONEY:
+
+```bash
+# Find all credit deduction calls
+grep -rn "deduct\|consume\|spend\|charge\|credit" server/ --include="*.ts" --include="*.js" | grep -v "node_modules" | grep -v "test" | grep -v "\.md"
+
+# For each credit deduction:
+# 1. Is there a check for existing transaction (idempotency)?
+# 2. Is it inside a database transaction (BEGIN/COMMIT)?
+# 3. Is there a SELECT FOR UPDATE lock on the balance?
+# 4. What happens if it fails mid-deduction? (credits gone but action didn't complete)
+
+# Find all invoice generation calls
+grep -rn "invoice\|billing\|bill\|fee\|charge" server/ --include="*.ts" --include="*.js" | grep -v "node_modules" | grep -v "test" | grep -v "\.md"
+
+# For each financial operation:
+# 1. Is there duplicate prevention?
+# 2. Is the amount calculated correctly (integers/cents, not floating point dollars)?
+# 3. Is the operation logged?
+```
+
+---
+
+## STEP 7: Find Workflows That Don't Complete
+
+Test each automation toggle end-to-end. For each one, answer: does the FULL pipeline complete, or does it stop partway?
+
+```
+WORKFLOW: Auto Invoicing
+  Step 1: Cron fires on billing cycle           → Does it fire?
+  Step 2: Queries approved time entries          → Does it find them?
+  Step 3: Calculates invoice amounts             → Math correct?
+  Step 4: Creates invoice record                 → Record created with workspace_id?
+  Step 5: Creates invoice line items             → Line items linked to invoice?
+  Step 6: Records financial processing fee       → Fee recorded (not credit)?
+  Step 7: Sends notification to manager          → Notification delivered?
+  Step 8: If auto-send enabled, emails client    → Email sent?
+  WHERE DOES IT STOP? ___
+
+WORKFLOW: Auto Payroll
+  Step 1: Cron fires on payroll cycle            → Does it fire?
+  Step 2: Queries clock records for period       → Does it find them?
+  Step 3: Calculates gross per employee          → Math correct (hours × rate)?
+  Step 4: Calculates overtime per state rules    → OT rules applied correctly?
+  Step 5: Calculates tax withholdings            → Taxes computed?
+  Step 6: Creates payroll run record             → Record created with workspace_id?
+  Step 7: Creates payroll entries per employee   → Each employee has entry?
+  Step 8: Records financial processing fee       → Fee recorded (not credit)?
+  Step 9: Sends to manager approval gate         → Manager notified?
+  Step 10: After approval, syncs to QuickBooks   → QB sync works?
+  Step 11: Employee sees paycheck in My Paychecks→ Data appears?
+  WHERE DOES IT STOP? ___
+
+WORKFLOW: AI Scheduling (Trinity)
+  Step 1: Trinity reads all open shifts          → Finds unfilled shifts?
+  Step 2: Trinity reads employee availability    → Availability data accessible?
+  Step 3: Trinity reads behavior scores          → Scores accessible?
+  Step 4: Trinity reads certifications           → Cert data accessible?
+  Step 5: Trinity scores and ranks candidates    → AI model responds?
+  Step 6: Trinity assigns best candidates        → Shift records updated?
+  Step 7: Trinity deducts credits                → Credits consumed?
+  Step 8: Trinity logs assignment reasoning      → Audit trail created?
+  Step 9: Assigned officers notified             → Notification sent?
+  Step 10: Schedule view updates                 → UI reflects new assignments?
+  WHERE DOES IT STOP? ___
+
+WORKFLOW: Shift Reminders
+  Step 1: Cron checks for upcoming shifts        → Finds shifts within reminder window?
+  Step 2: Identifies officers to notify          → Correct officers found?
+  Step 3: Generates reminder message             → Message created with shift details?
+  Step 4: Sends notification                     → Push/email delivered?
+  Step 5: Reminder logged                        → Record of reminder exists?
+  WHERE DOES IT STOP? ___
+
+WORKFLOW: Break Compliance
+  Step 1: Monitors active clock records          → Knows who's on duty?
+  Step 2: Calculates time since last break       → Timer accurate?
+  Step 3: Triggers alert at threshold            → Alert fires at 6 hours?
+  Step 4: Sends notification to officer          → Officer receives alert?
+  Step 5: Sends notification to manager          → Manager receives alert?
+  Step 6: Logs compliance event                  → Record created?
+  WHERE DOES IT STOP? ___
+
+WORKFLOW: Incident Report → AI Analysis
+  Step 1: Officer submits incident               → Record created?
+  Step 2: "Analyze with ReportBot AI" clicked    → API call made?
+  Step 3: AI model receives raw report           → Model responds?
+  Step 4: Polished report generated              → Professional rewrite returned?
+  Step 5: Credits deducted                       → 10 credits consumed?
+  Step 6: Polished version saved                 → polished_description populated?
+  Step 7: Sent to manager for review             → Appears in approvals?
+  Step 8: Manager approves                       → Status updated?
+  Step 9: Report available in history            → Viewable by officer + manager?
+  WHERE DOES IT STOP? ___
+
+WORKFLOW: Behavior Scoring
+  Step 1: Clock event occurs (on time/late)      → Event detected?
+  Step 2: Score adjustment calculated            → Points added/removed?
+  Step 3: Score record updated                   → Database updated?
+  Step 4: If threshold crossed, alert sent       → Notification to manager?
+  Step 5: Score visible on employee profile      → UI displays current score?
+  Step 6: Trinity reads score for scheduling     → Scheduling considers score?
+  WHERE DOES IT STOP? ___
+```
+
+---
+
+## STEP 8: Compile Silent Failure Report
+
+After running Steps 1-7, compile this report:
+
+```
+SILENT FAILURE REPORT
+═════════════════════
+
+CATEGORY 1: Error-Swallowing Code
+  Total catch blocks that swallow errors: ___
+  Files affected: [list]
+  
+CATEGORY 2: Cron Jobs Without Failure Reporting
+  Total cron jobs found: ___
+  Cron jobs with proper error handling: ___
+  Cron jobs that fail silently: ___
+  
+CATEGORY 3: AI Calls Without Tracking
+  Total AI/Trinity calls: ___
+  Calls with success/failure tracking: ___
+  Calls without tracking: ___
+  Calls without credit deduction: ___
+  
+CATEGORY 4: Database Writes Without Error Handling
+  Total DB write operations: ___
+  Operations with try/catch: ___
+  Operations without error handling: ___
+  
+CATEGORY 5: API Routes Without Error Responses
+  Total routes: ___
+  Routes with proper error responses: ___
+  Routes that return success on failure: ___
+  
+CATEGORY 6: Financial Operations Without Guards
+  Credit operations without idempotency: ___
+  Invoice operations without duplicate check: ___
+  Operations using floating-point dollars: ___
+  
+CATEGORY 7: Incomplete Workflow Pipelines
+  Auto Invoicing stops at step: ___
+  Auto Payroll stops at step: ___
+  AI Scheduling stops at step: ___
+  Shift Reminders stops at step: ___
+  Break Compliance stops at step: ___
+  Incident → AI Analysis stops at step: ___
+  Behavior Scoring stops at step: ___
+
+PRIORITY FIXES:
+  1. [highest impact silent failure]
+  2. [second highest]
+  3. ...
+```
+
+---
+
+## THE FIX PATTERN
+
+For every silent failure found, apply this pattern:
+
+```typescript
+// BEFORE (silent failure):
+try {
+  const result = await someAction();
+} catch (error) {
+  console.error(error);  // Nobody sees this
+}
+
+// AFTER (visible failure):
+try {
+  const result = await someAction();
+  
+  // Log success
+  await auditLog.log({
+    workspaceId,
+    action: 'action_name.success',
+    actorType: context.type,
+    entityType: 'table_name',
+    entityId: result.id,
+    changeType: 'create',
+  });
+  
+} catch (error) {
+  // Log failure to database (permanent, queryable)
+  await auditLog.log({
+    workspaceId,
+    action: 'action_name.failed',
+    actorType: context.type,
+    entityType: 'table_name',
+    changeType: 'action',
+    metadata: { error: error.message, stack: error.stack },
+  });
+  
+  // Notify someone who can act on it
+  await notificationService.create({
+    workspaceId,
+    type: 'system_error',
+    title: `Action Failed: ${actionName}`,
+    body: `${error.message}. This may require manual intervention.`,
+    targetRoles: ['owner', 'manager'],
+    severity: 'high',
+  });
+  
+  // Return clear error to caller
+  throw new AppError(`Failed to ${actionName}: ${error.message}`, 500);
+}
+```
+
+**RULE: If it can fail, it must VISIBLY fail. Console.log is NOT visibility.**
+
+---
+
+END OF SILENT FAILURE DETECTION v1.0

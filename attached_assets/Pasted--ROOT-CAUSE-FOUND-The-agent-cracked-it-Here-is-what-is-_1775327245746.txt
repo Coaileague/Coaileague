@@ -1,0 +1,110 @@
+**ROOT CAUSE FOUND.**
+
+The agent cracked it. Here is what is happening and the exact fix.
+
+---
+
+**THE PROBLEM**
+
+```
+showSplash = true on first visit because localStorage item is not set.
+
+SplashScreen renders as:
+  position: fixed
+  inset: 0 (covers entire screen)
+  z-index: 99999 (covers everything)
+
+This means:
+  AppContent IS rendering correctly underneath
+  public-page-scroll-root IS in the DOM
+  Everything IS working
+
+But SplashScreen sits on top of ALL of it
+covering the entire viewport with no way through
+Cookie banner still shows because it has z-index higher than splash
+Everything else is buried underneath
+```
+
+---
+
+**SEND THIS TO AGENT — ONE FIX**
+
+---
+
+Root cause confirmed. showSplash is true on first visit because the localStorage key is not set. SplashScreen renders fixed inset-0 z-99999 covering all page content. Fix this immediately.
+
+```typescript
+// Find the showSplash logic — likely something like:
+const [showSplash, setShowSplash] = useState(() => {
+  return !localStorage.getItem('splash_shown');
+});
+```
+
+The fix has two parts:
+
+PART 1 — Do not show splash on public routes. Find where showSplash state is initialized and add a public route check:
+
+```typescript
+const [showSplash, setShowSplash] = useState(() => {
+  // Never show splash on public marketing routes
+  const publicPaths = ['/', '/pricing', '/login', '/register', 
+    '/about', '/contact', '/sms-consent', '/privacy', '/terms'];
+  const isPublic = publicPaths.some(p => 
+    window.location.pathname === p || 
+    window.location.pathname.startsWith(p)
+  );
+  if (isPublic) return false;
+  return !localStorage.getItem('splash_shown');
+});
+```
+
+PART 2 — Make sure splash dismisses correctly and sets localStorage:
+
+```typescript
+const dismissSplash = () => {
+  localStorage.setItem('splash_shown', 'true');
+  setShowSplash(false);
+};
+```
+
+PART 3 — Conditionally render SplashScreen only when needed:
+
+```tsx
+// In App.tsx or wherever SplashScreen renders:
+{showSplash && !isPublicRoute && (
+  <SplashScreen onDismiss={dismissSplash} />
+)}
+```
+
+After applying verify:
+
+```bash
+# Clear localStorage in browser and visit /
+# Page must show marketing homepage not splash screen
+
+# Log in as org owner
+# Splash screen must show on first login then dismiss
+
+# After dismissing refresh page
+# Splash must NOT show again (localStorage key set)
+```
+
+Also clear any corrupted localStorage state that may have been set incorrectly. Add this to the fix:
+
+```typescript
+// Safety: if localStorage has invalid state clear it
+try {
+  const stored = localStorage.getItem('splash_shown');
+  if (stored !== null && stored !== 'true' && stored !== 'false') {
+    localStorage.removeItem('splash_shown');
+  }
+} catch (e) {
+  // localStorage unavailable ignore
+}
+```
+
+Deploy and test on mobile and desktop. Report result.
+
+---
+
+**This is a 5 minute fix.** The entire app is working correctly underneath. SplashScreen just needs to not render on public routes and needs to check localStorage correctly on authenticated routes.

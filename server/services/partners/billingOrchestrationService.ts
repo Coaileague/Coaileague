@@ -3,11 +3,10 @@ import { eq, and, desc, sql, gte, lte, isNull } from 'drizzle-orm';
 import {
   partnerConnections,
   partnerDataMappings,
-  partnerInvoiceIdempotency,
   partnerManualReviewQueue,
+  partnerInvoiceIdempotency,
   invoiceLifecycleStates,
   billingPolicyProfiles,
-  accountingDimensionMappings,
   auditProofPacks,
   rateThrottleLogs,
   exceptionTriageQueue,
@@ -15,13 +14,17 @@ import {
   shifts,
   employees,
   workspaces,
-  type InvoiceLifecycleState,
   type BillingPolicyProfile,
   type ExceptionTriageQueue,
 } from '@shared/schema';
+import type { InferSelectModel } from 'drizzle-orm';
+type InvoiceLifecycleState = InferSelectModel<typeof invoiceLifecycleStates>;
 import { createHash } from 'crypto';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('billingOrchestrationService');
+
 
 type RiskSignal = 
   | 'MAPPING_AMBIGUOUS'
@@ -130,7 +133,7 @@ class IdentityReconcilerAgent {
         });
       } else if (!mapping) {
         missing.push({ entityType: 'customer', internalId: customerId });
-      } else if (mapping.status === 'stale') {
+      } else if (mapping.syncStatus === 'stale') {
         stale.push({
           entityType: 'customer',
           internalId: customerId,
@@ -145,7 +148,7 @@ class IdentityReconcilerAgent {
 
       if (!mapping) {
         missing.push({ entityType: 'employee', internalId: employeeId });
-      } else if (mapping.status === 'stale') {
+      } else if (mapping.syncStatus === 'stale') {
         stale.push({
           entityType: 'employee',
           internalId: employeeId,
@@ -167,7 +170,7 @@ class IdentityReconcilerAgent {
         });
       } else if (!mapping) {
         missing.push({ entityType: 'item', internalId: itemId });
-      } else if (mapping.status === 'stale') {
+      } else if (mapping.syncStatus === 'stale') {
         stale.push({
           entityType: 'item',
           internalId: itemId,
@@ -192,8 +195,8 @@ class IdentityReconcilerAgent {
   ): Promise<boolean> {
     await db.update(partnerDataMappings)
       .set({ 
-        status: 'active',
-        lastVerifiedAt: new Date(),
+        syncStatus: 'active',
+        lastSyncAt: new Date(),
         updatedAt: new Date(),
       })
       .where(and(
@@ -230,8 +233,8 @@ class IdempotencyGuardAgent {
       return {
         shouldExecute: false,
         existingResult: {
-          invoiceId: existing[0].qboInvoiceId || '',
-          docNumber: existing[0].qboDocNumber || '',
+          invoiceId: existing[0].partnerInvoiceId || '',
+          docNumber: existing[0].partnerInvoiceNumber || '',
           status: existing[0].status,
         },
       };
@@ -250,21 +253,29 @@ class IdempotencyGuardAgent {
   ): Promise<void> {
     const requestId = `${workflowType}:${realmId}:${cycleKey}:${dedupeKey}`;
 
+    const connections = await db.select().from(partnerConnections)
+      .where(and(
+        eq(partnerConnections.workspaceId, workspaceId),
+        eq(partnerConnections.partnerType, 'quickbooks')
+      ))
+      .limit(1);
+    const connectionId = connections[0]?.id || 'unknown';
+
     await db.insert(partnerInvoiceIdempotency)
       .values({
         workspaceId,
+        partnerConnectionId: connectionId,
         requestId,
-        qboInvoiceId: result.invoiceId,
-        qboDocNumber: result.docNumber,
+        partnerInvoiceId: result.invoiceId,
+        partnerInvoiceNumber: result.docNumber,
         status: 'completed',
-        inputHash: dedupeKey,
       })
       .onConflictDoUpdate({
         target: [partnerInvoiceIdempotency.workspaceId, partnerInvoiceIdempotency.requestId],
         set: {
           status: 'completed',
-          qboInvoiceId: result.invoiceId,
-          qboDocNumber: result.docNumber,
+          partnerInvoiceId: result.invoiceId,
+          partnerInvoiceNumber: result.docNumber,
           updatedAt: new Date(),
         },
       });
@@ -483,18 +494,14 @@ class BillingStateManagerAgent {
       })
       .where(eq(invoiceLifecycleStates.id, lifecycle.id));
 
-    platformEventBus.emit({
+    platformEventBus.publish({
       type: 'ai_brain_action',
-      data: {
-        action: 'billing.state_transition',
-        workspaceId,
-        cycleKey,
-        clientId,
-        fromState: currentState,
-        toState: newState,
-      },
-      timestamp: new Date(),
-    });
+      category: 'ai_brain',
+      title: 'Billing State Transition',
+      description: `Invoice lifecycle for client ${clientId} transitioned from ${currentState} → ${newState}`,
+      workspaceId,
+      metadata: { action: 'billing.state_transition', cycleKey, clientId, fromState: currentState, toState: newState },
+    }).catch((err) => log.warn('[billingOrchestrationService] Fire-and-forget failed:', err));
 
     return { success: true };
   }
@@ -654,17 +661,14 @@ class ExceptionTriageAgent {
       .returning();
 
     if (this.humanRequiredErrors.includes(errorType)) {
-      platformEventBus.emit({
+      platformEventBus.publish({
         type: 'ai_brain_action',
-        data: {
-          action: 'exception.human_review_required',
-          workspaceId,
-          errorType,
-          recommendedAction,
-          inboxItemId: inboxItem.id,
-        },
-        timestamp: new Date(),
-      });
+        category: 'ai_brain',
+        title: 'Billing Exception: Human Review Required',
+        description: `${errorType} requires human intervention. Recommended: ${recommendedAction}`,
+        workspaceId,
+        metadata: { action: 'exception.human_review_required', errorType, recommendedAction, inboxItemId: inboxItem.id },
+      }).catch((err) => log.warn('[billingOrchestrationService] Fire-and-forget failed:', err));
     }
 
     return {
@@ -707,7 +711,7 @@ class AuditPackAgent {
       id: shifts.id,
       date: shifts.date,
       employeeId: shifts.employeeId,
-      totalHours: shifts.totalHours,
+      totalHours: sql<number>`EXTRACT(EPOCH FROM (${shifts.endTime} - ${shifts.startTime})) / 3600`,
       siteId: shifts.siteId,
     })
       .from(shifts)
@@ -830,7 +834,7 @@ class WeeklyInvoiceOrchestrator {
           );
 
           if (!idempotencyCheck.shouldExecute) {
-            console.log(`[BillingOrchestrator] Skipping duplicate invoice for client ${billable.clientId}`);
+            log.info(`[BillingOrchestrator] Skipping duplicate invoice for client ${billable.clientId}`);
             continue;
           }
 
@@ -890,22 +894,18 @@ class WeeklyInvoiceOrchestrator {
               sourceEntityId: billable.clientId,
             }
           );
-          errors.push(`Client ${billable.clientId}: ${error.message}`);
+          errors.push(`Client ${billable.clientId}: ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
 
-      platformEventBus.emit({
+      platformEventBus.publish({
         type: 'ai_brain_action',
-        data: {
-          action: 'billing.weekly_invoice_complete',
-          workspaceId,
-          cycleKey,
-          invoicesCreated,
-          invoicesPendingApproval,
-          errorCount: errors.length,
-        },
-        timestamp: new Date(),
-      });
+        category: 'ai_brain',
+        title: 'Weekly Invoice Run Complete',
+        description: `${invoicesCreated} invoices created, ${invoicesPendingApproval} pending approval, ${errors.length} errors`,
+        workspaceId,
+        metadata: { action: 'billing.weekly_invoice_complete', cycleKey, invoicesCreated, invoicesPendingApproval, errorCount: errors.length },
+      }).catch((err) => log.warn('[billingOrchestrationService] Fire-and-forget failed:', err));
 
       return {
         success: errors.length === 0,
@@ -919,7 +919,7 @@ class WeeklyInvoiceOrchestrator {
         success: false,
         invoicesCreated,
         invoicesPendingApproval,
-        errors: [error.message],
+        errors: [(error instanceof Error ? error.message : String(error))],
       };
     }
   }
@@ -936,12 +936,12 @@ export const auditPackAgent = new AuditPackAgent();
 export const weeklyInvoiceOrchestrator = new WeeklyInvoiceOrchestrator();
 
 export function registerBillingOrchestrationActions() {
-  helpaiOrchestrator.registerAction({
+  (helpaiOrchestrator.registerAction as any)({
     actionId: 'billing.run_weekly_invoice',
     name: 'Run Weekly Invoice Workflow',
     category: 'invoicing',
     description: 'Execute the weekly invoice orchestration workflow for a workspace',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (params: { workspaceId: string; cycleKey: string; userId?: string }) => {
       return await weeklyInvoiceOrchestrator.runWeeklyInvoice(
         params.workspaceId,
@@ -951,12 +951,12 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  helpaiOrchestrator.registerAction({
+  (helpaiOrchestrator.registerAction as any)({
     actionId: 'billing.check_identity_mappings',
     name: 'Check Identity Mappings',
     category: 'invoicing',
     description: 'Verify QBO identity mappings are valid and not stale',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (params: { workspaceId: string; connectionId: string; customers?: string[]; employees?: string[] }) => {
       return await identityReconcilerAgent.reconcile(
         params.workspaceId,
@@ -966,12 +966,12 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  helpaiOrchestrator.registerAction({
+  (helpaiOrchestrator.registerAction as any)({
     actionId: 'billing.evaluate_risk',
     name: 'Evaluate Invoice Risk',
     category: 'invoicing',
     description: 'Evaluate risk signals for an invoice to determine if auto-send or approval required',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (params: { workspaceId: string; cycleKey: string; clientId: string; invoiceTotal: number; connectionId?: string }) => {
       let mappingStatus: { ok: boolean; missing: any[]; ambiguous: any[]; stale?: any[] } = { ok: true, missing: [], ambiguous: [] };
       
@@ -999,12 +999,12 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  helpaiOrchestrator.registerAction({
+  (helpaiOrchestrator.registerAction as any)({
     actionId: 'billing.transition_state',
     name: 'Transition Invoice State',
     category: 'invoicing',
     description: 'Transition an invoice through the lifecycle state machine',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (params: { workspaceId: string; cycleKey: string; clientId: string; newState: string; userId?: string; reason?: string }) => {
       return await billingStateManagerAgent.transition(
         params.workspaceId,
@@ -1016,12 +1016,12 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  helpaiOrchestrator.registerAction({
+  (helpaiOrchestrator.registerAction as any)({
     actionId: 'billing.get_exception_queue',
     name: 'Get Exception Queue',
     category: 'invoicing',
     description: 'Get list of exceptions requiring review or auto-remediation',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (params: { workspaceId: string; status?: string }) => {
       return await db.select()
         .from(exceptionTriageQueue)
@@ -1034,12 +1034,12 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  helpaiOrchestrator.registerAction({
+  (helpaiOrchestrator.registerAction as any)({
     actionId: 'billing.resolve_exception',
     name: 'Resolve Exception',
     category: 'invoicing',
     description: 'Mark an exception as resolved with resolution details',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (params: { itemId: string; method: string; userId?: string; notes?: string }) => {
       await exceptionTriageAgent.resolveItem(params.itemId, {
         method: params.method,
@@ -1050,12 +1050,12 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  helpaiOrchestrator.registerAction({
+  (helpaiOrchestrator.registerAction as any)({
     actionId: 'billing.generate_audit_pack',
     name: 'Generate Audit Pack',
     category: 'invoicing',
     description: 'Generate an audit proof pack for an invoice for dispute resolution',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (params: { workspaceId: string; cycleKey: string; clientId: string }) => {
       const policyResult = await policyRulesAgent.computeBillableHours(
         params.workspaceId,
@@ -1072,5 +1072,5 @@ export function registerBillingOrchestrationActions() {
     },
   });
 
-  console.log('[BillingOrchestration] Registered 7 AI Brain billing orchestration actions');
+  log.info('[BillingOrchestration] Registered 7 AI Brain billing orchestration actions');
 }

@@ -15,6 +15,9 @@ import { db } from '../db';
 import { systemAuditLogs } from '@shared/schema';
 import { broadcastToAllClients } from '../websocket';
 import { aiActivityService } from './aiActivityService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('automationEventsService');
+
 
 export type AutomationJobType = 
   | 'invoicing'
@@ -96,7 +99,7 @@ class AutomationEventsService {
     type: AutomationJobType,
     options: { workspaceId?: string; retryCount?: number } = {}
   ): string {
-    const id = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const id = `${type}-${Date.now()}-${crypto.randomUUID().slice(0, 7)}`;
     
     const event: AutomationJobEvent = {
       id,
@@ -117,7 +120,7 @@ class AutomationEventsService {
     });
 
     this.broadcastEvent('automation_job_started', event);
-    console.log(`[Automation] Started: ${type} (${id})`);
+    log.info(`[Automation] Started: ${type} (${id})`);
 
     return id;
   }
@@ -150,7 +153,7 @@ class AutomationEventsService {
 
     this.broadcastEvent('automation_job_completed', event);
     this.logToDatabase(event);
-    console.log(`[Automation] Completed: ${event.type} (${jobId}) in ${event.duration}ms`);
+    log.info(`[Automation] Completed: ${event.type} (${jobId}) in ${event.duration}ms`);
   }
 
   /**
@@ -173,7 +176,7 @@ class AutomationEventsService {
 
     this.broadcastEvent('automation_job_failed', event);
     this.logToDatabase(event);
-    console.error(`[Automation] Failed: ${event.type} (${jobId}): ${error}`);
+    log.error(`[Automation] Failed: ${event.type} (${jobId}): ${error}`);
   }
 
   /**
@@ -191,7 +194,7 @@ class AutomationEventsService {
     aiActivityService.idle('Automation', { workspaceId: event.workspaceId });
 
     this.broadcastEvent('automation_job_skipped', event);
-    console.log(`[Automation] Skipped: ${event.type} (${jobId}): ${reason}`);
+    log.info(`[Automation] Skipped: ${event.type} (${jobId}): ${reason}`);
   }
 
   /**
@@ -213,7 +216,9 @@ class AutomationEventsService {
       events = events.filter(e => e.status === options.status);
     }
     if (options.workspaceId) {
-      events = events.filter(e => !e.workspaceId || e.workspaceId === options.workspaceId);
+      // G22 FIX: Strict tenant isolation — only return events explicitly tagged to
+      // this workspace. Events stored without a workspaceId must not bleed across tenants.
+      events = events.filter(e => e.workspaceId === options.workspaceId);
     }
 
     return events
@@ -317,7 +322,7 @@ class AutomationEventsService {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('[Automation] Failed to broadcast event:', error);
+      log.error('[Automation] Failed to broadcast event:', error);
     }
   }
 
@@ -337,10 +342,10 @@ class AutomationEventsService {
           result: event.result,
           error: event.error,
         },
-        ipAddress: '127.0.0.1',
+        ipAddress: 'system-automation',
       });
     } catch (error) {
-      console.error('[Automation] Failed to log to database:', error);
+      log.error('[Automation] Failed to log to database:', error);
     }
   }
 }

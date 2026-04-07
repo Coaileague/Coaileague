@@ -311,17 +311,28 @@ export const SEASONAL_THEMES: Record<SeasonalTheme, SeasonalThemeConfig> = {
 };
 
 /**
+ * Global flag to disable all seasonal effects
+ * Set to true to use default theme regardless of date
+ */
+export const DISABLE_SEASONAL_EFFECTS = true;
+
+/**
  * Determines the current seasonal theme based on date
  */
 export function getCurrentSeasonalTheme(date: Date = new Date()): SeasonalTheme {
+  // Global override - disable all seasonal effects
+  if (DISABLE_SEASONAL_EFFECTS) {
+    return 'default';
+  }
+
   const month = date.getMonth() + 1; // 1-12
   const day = date.getDate();
-  
+
   // Christmas: Dec 1-26
   if (month === 12 && day >= 1 && day <= 26) {
     return 'christmas';
   }
-  
+
   // New Year: Dec 27 - Jan 3
   if ((month === 12 && day >= 27) || (month === 1 && day <= 3)) {
     return 'newYear';

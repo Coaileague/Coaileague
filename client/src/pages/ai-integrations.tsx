@@ -8,12 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import {
   Plug, Plus, Search, CheckCircle2, XCircle, AlertCircle, Settings,
   Key, Webhook, FileText, ExternalLink, Copy, Trash2, ToggleLeft,
@@ -105,7 +106,7 @@ export default function AIIntegrations() {
   // Connect integration mutation
   const connectMutation = useMutation({
     mutationFn: async (integrationId: string) => {
-      return await apiRequest('/api/integrations/connections', 'POST', { integrationId });
+      return await apiRequest('POST', '/api/integrations/connections', { integrationId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
@@ -127,7 +128,7 @@ export default function AIIntegrations() {
   // Create API key mutation
   const createApiKeyMutation = useMutation({
     mutationFn: async (name: string) => {
-      return await apiRequest('/api/integrations/api-keys', 'POST', { name });
+      return await apiRequest('POST', '/api/integrations/api-keys', { name });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/api-keys'] });
@@ -150,7 +151,7 @@ export default function AIIntegrations() {
   // Create webhook mutation
   const createWebhookMutation = useMutation({
     mutationFn: async ({ url, events }: { url: string; events: string[] }) => {
-      return await apiRequest('/api/integrations/webhooks', 'POST', { url, events });
+      return await apiRequest('POST', '/api/integrations/webhooks', { url, events });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/webhooks'] });
@@ -174,13 +175,20 @@ export default function AIIntegrations() {
   // Delete connection mutation
   const deleteConnectionMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/integrations/connections/${id}`, 'DELETE', {});
+      return await apiRequest('DELETE', `/api/integrations/connections/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
       toast({
         title: "Connection removed",
         description: "Integration has been disconnected",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Remove Connection Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
       });
     },
   });
@@ -201,104 +209,94 @@ export default function AIIntegrations() {
     return <Plug className="h-8 w-8" />;
   };
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'ai-integrations',
+    title: 'AI Integrations™',
+    subtitle: 'External Service Ecosystem & API Management',
+    category: 'admin',
+  };
+
   return (authLoading || marketplaceLoading || connectionsLoading) ? (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <CanvasHubPage config={pageConfig}>
       <PageHeaderSkeleton />
       <MarketplaceCardSkeleton count={6} />
-    </div>
+    </CanvasHubPage>
   ) : (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-              <Plug className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">AI Integrations™</h1>
-              <p className="text-sm text-muted-foreground">
-                External Service Ecosystem & API Management
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <CanvasHubPage config={pageConfig}>
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-blue-500" />
-              Active Connections
+          <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500 dark:text-blue-400 shrink-0" />
+              <span className="truncate">Active</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <p className="text-lg sm:text-2xl font-bold">
               {connections.filter((c) => c.status === "active").length}
             </p>
-            <p className="text-xs text-muted-foreground">Connected services</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Connected services</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Plug className="h-4 w-4 text-blue-500" />
-              Available Integrations
+          <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <Plug className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500 dark:text-blue-400 shrink-0" />
+              <span className="truncate">Integrations</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{marketplace.length}</p>
-            <p className="text-xs text-muted-foreground">In marketplace</p>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <p className="text-lg sm:text-2xl font-bold">{marketplace.length}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">In marketplace</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Key className="h-4 w-4 text-orange-500" />
-              API Keys
+          <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <Key className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500 dark:text-orange-400 shrink-0" />
+              <span className="truncate">API Keys</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{apiKeys.length}</p>
-            <p className="text-xs text-muted-foreground">Active keys</p>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <p className="text-lg sm:text-2xl font-bold">{apiKeys.length}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Active keys</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Webhook className="h-4 w-4 text-purple-500" />
-              Webhooks
+          <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-3">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <Webhook className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500 dark:text-purple-400 shrink-0" />
+              <span className="truncate">Webhooks</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <p className="text-lg sm:text-2xl font-bold">
               {webhooks.filter((w) => w.isActive).length}
             </p>
-            <p className="text-xs text-muted-foreground">Active webhooks</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Active webhooks</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Tabs */}
       <Tabs defaultValue="marketplace" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="w-full overflow-x-auto grid grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="marketplace" data-testid="tab-marketplace">
-            <Plug className="h-4 w-4 mr-2" />
-            Marketplace
+            <Plug className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">Marketplace</span>
           </TabsTrigger>
           <TabsTrigger value="connections" data-testid="tab-connections">
-            <LinkIcon className="h-4 w-4 mr-2" />
-            Connections
+            <LinkIcon className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">Connections</span>
           </TabsTrigger>
           <TabsTrigger value="api-keys" data-testid="tab-api-keys">
-            <Key className="h-4 w-4 mr-2" />
-            API Keys
+            <Key className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">API Keys</span>
           </TabsTrigger>
           <TabsTrigger value="webhooks" data-testid="tab-webhooks">
-            <Webhook className="h-4 w-4 mr-2" />
-            Webhooks
+            <Webhook className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">Webhooks</span>
           </TabsTrigger>
         </TabsList>
 
@@ -355,7 +353,7 @@ export default function AIIntegrations() {
                     return (
                       <Card key={integration.id} className="hover-elevate" data-testid={`integration-${integration.id}`}>
                         <CardHeader>
-                          <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
                               {getIntegrationIcon(integration.name)}
                             </div>
@@ -447,29 +445,29 @@ export default function AIIntegrations() {
                 <div className="space-y-3">
                   {connections.map((connection) => (
                     <Card key={connection.id} className="hover-elevate" data-testid={`connection-${connection.id}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                               {getIntegrationIcon(connection.integrationName)}
                             </div>
-                            <div>
-                              <h4 className="font-medium">{connection.integrationName}</h4>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <div className="min-w-0">
+                              <h4 className="font-medium text-sm sm:text-base truncate">{connection.integrationName}</h4>
+                              <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
                                 <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  Connected {new Date(connection.connectedAt).toLocaleDateString()}
+                                  <Calendar className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">{new Date(connection.connectedAt).toLocaleDateString()}</span>
                                 </span>
                                 {connection.lastSync && (
                                   <span className="flex items-center gap-1">
-                                    <Activity className="h-3 w-3" />
-                                    Synced {new Date(connection.lastSync).toLocaleDateString()}
+                                    <Activity className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{new Date(connection.lastSync).toLocaleDateString()}</span>
                                   </span>
                                 )}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                             <Badge
                               variant={
                                 connection.status === "active"
@@ -485,7 +483,7 @@ export default function AIIntegrations() {
                               {connection.status}
                             </Badge>
                             <Button
-                              size="sm"
+                              size="icon"
                               variant="ghost"
                               onClick={() => deleteConnectionMutation.mutate(connection.id)}
                               data-testid={`button-disconnect-${connection.id}`}
@@ -507,14 +505,14 @@ export default function AIIntegrations() {
         <TabsContent value="api-keys" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
                   <CardTitle>API Keys</CardTitle>
                   <CardDescription>Manage API keys for external access</CardDescription>
                 </div>
-                <Button onClick={() => setShowApiKeyDialog(true)} data-testid="button-create-api-key">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Key
+                <Button onClick={() => setShowApiKeyDialog(true)} className="flex-shrink-0" data-testid="button-create-api-key">
+                  <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Create </span>Key
                 </Button>
               </div>
             </CardHeader>
@@ -535,25 +533,25 @@ export default function AIIntegrations() {
                 <div className="space-y-2">
                   {apiKeys.map((key) => (
                     <Card key={key.id} className="hover-elevate" data-testid={`api-key-${key.id}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-medium">{key.name}</h4>
+                              <h4 className="font-medium text-sm sm:text-base truncate">{key.name}</h4>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span className="font-mono">{key.keyPreview}</span>
-                              <span>Created {new Date(key.createdAt).toLocaleDateString()}</span>
+                            <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
+                              <span className="font-mono truncate">{key.keyPreview}</span>
+                              <span className="truncate">{new Date(key.createdAt).toLocaleDateString()}</span>
                               {key.lastUsedAt && (
-                                <span>Last used {new Date(key.lastUsedAt).toLocaleDateString()}</span>
+                                <span className="truncate">Used {new Date(key.lastUsedAt).toLocaleDateString()}</span>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" variant="ghost" data-testid={`button-copy-key-${key.id}`}>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button size="icon" variant="ghost" data-testid={`button-copy-key-${key.id}`}>
                               <Copy className="h-3 w-3" />
                             </Button>
-                            <Button size="sm" variant="ghost" data-testid={`button-delete-key-${key.id}`}>
+                            <Button size="icon" variant="ghost" data-testid={`button-delete-key-${key.id}`}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -571,14 +569,14 @@ export default function AIIntegrations() {
         <TabsContent value="webhooks" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
                   <CardTitle>Webhooks</CardTitle>
                   <CardDescription>Configure event notifications</CardDescription>
                 </div>
-                <Button onClick={() => setShowWebhookDialog(true)} data-testid="button-create-webhook">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Webhook
+                <Button onClick={() => setShowWebhookDialog(true)} className="flex-shrink-0" data-testid="button-create-webhook">
+                  <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Add </span>Webhook
                 </Button>
               </div>
             </CardHeader>
@@ -599,38 +597,38 @@ export default function AIIntegrations() {
                 <div className="space-y-2">
                   {webhooks.map((webhook) => (
                     <Card key={webhook.id} className="hover-elevate" data-testid={`webhook-${webhook.id}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-medium font-mono text-sm">{webhook.url}</h4>
-                              <Badge variant={webhook.isActive ? "default" : "secondary"} className="h-5">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <h4 className="font-medium font-mono text-xs sm:text-sm truncate">{webhook.url}</h4>
+                              <Badge variant={webhook.isActive ? "default" : "secondary"} className="h-5 flex-shrink-0">
                                 {webhook.isActive ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
                                 {webhook.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-                              <span>Created {new Date(webhook.createdAt).toLocaleDateString()}</span>
+                            <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground mb-2 flex-wrap">
+                              <span>{new Date(webhook.createdAt).toLocaleDateString()}</span>
                               {webhook.lastDelivery && (
-                                <span>Last delivery {new Date(webhook.lastDelivery).toLocaleDateString()}</span>
+                                <span>Last {new Date(webhook.lastDelivery).toLocaleDateString()}</span>
                               )}
                               {webhook.deliveryCount !== undefined && (
-                                <span>{webhook.deliveryCount} deliveries</span>
+                                <span>{webhook.deliveryCount} sent</span>
                               )}
                             </div>
                             <div className="flex items-center gap-1 flex-wrap">
                               {webhook.events.map((event) => (
-                                <Badge key={event} variant="outline" className="h-5 text-xs">
+                                <Badge key={event} variant="outline" className="h-5 text-[10px] sm:text-xs">
                                   {event}
                                 </Badge>
                               ))}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" variant="ghost" data-testid={`button-toggle-webhook-${webhook.id}`}>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button size="icon" variant="ghost" data-testid={`button-toggle-webhook-${webhook.id}`}>
                               {webhook.isActive ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
                             </Button>
-                            <Button size="sm" variant="ghost" data-testid={`button-delete-webhook-${webhook.id}`}>
+                            <Button size="icon" variant="ghost" data-testid={`button-delete-webhook-${webhook.id}`}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -646,14 +644,14 @@ export default function AIIntegrations() {
       </Tabs>
 
       {/* Connect Integration Dialog */}
-      <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
-        <DialogContent size="md" data-testid="dialog-connect-integration">
-          <DialogHeader>
-            <DialogTitle>Connect {selectedIntegration?.name}</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showConnectDialog} onOpenChange={setShowConnectDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-connect-integration">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Connect {selectedIntegration?.name}</UniversalModalTitle>
+            <UniversalModalDescription>
               Configure and authorize this integration
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm">
@@ -663,7 +661,7 @@ export default function AIIntegrations() {
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setShowConnectDialog(false)}>
               Cancel
             </Button>
@@ -674,19 +672,19 @@ export default function AIIntegrations() {
             >
               {connectMutation.isPending ? "Connecting..." : "Connect"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Create API Key Dialog */}
-      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
-        <DialogContent size="md" data-testid="dialog-create-api-key">
-          <DialogHeader>
-            <DialogTitle>Create API Key</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-create-api-key">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Create API Key</UniversalModalTitle>
+            <UniversalModalDescription>
               Generate a new API key for programmatic access
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="api-key-name">Key Name *</Label>
@@ -699,7 +697,7 @@ export default function AIIntegrations() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setShowApiKeyDialog(false)}>
               Cancel
             </Button>
@@ -710,26 +708,26 @@ export default function AIIntegrations() {
             >
               {createApiKeyMutation.isPending ? "Creating..." : "Create"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Create Webhook Dialog */}
-      <Dialog open={showWebhookDialog} onOpenChange={setShowWebhookDialog}>
-        <DialogContent size="md" data-testid="dialog-create-webhook">
-          <DialogHeader>
-            <DialogTitle>Add Webhook</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showWebhookDialog} onOpenChange={setShowWebhookDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-create-webhook">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Add Webhook</UniversalModalTitle>
+            <UniversalModalDescription>
               Configure a webhook endpoint to receive events
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="webhook-url">Webhook URL *</Label>
               <Input
                 id="webhook-url"
                 type="url"
-                placeholder="https://example.com/webhook"
+                placeholder="Enter webhook URL"
                 value={newWebhookUrl}
                 onChange={(e) => setNewWebhookUrl(e.target.value)}
                 data-testid="input-webhook-url"
@@ -758,7 +756,7 @@ export default function AIIntegrations() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setShowWebhookDialog(false)}>
               Cancel
             </Button>
@@ -771,9 +769,9 @@ export default function AIIntegrations() {
             >
               {createWebhookMutation.isPending ? "Creating..." : "Create"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

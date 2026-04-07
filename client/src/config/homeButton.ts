@@ -1,9 +1,32 @@
 /**
- * Universal Home Button Configuration
- * Centralized settings for all home buttons across dialogs and sheets
+ * Universal Modal Button Configuration
+ * Centralized settings for all modal/dialog/sheet header buttons
  * 
  * All values are configurable - NO hardcoded values anywhere
  */
+
+// Button styling configuration for modal headers
+export const MODAL_BUTTON_STYLES = {
+  // Spacing between header buttons
+  buttonGap: "gap-2",
+  
+  // Home button styling (blue theme)
+  homeButton: {
+    className: "flex items-center justify-center rounded-md min-h-10 min-w-10 border border-primary/30 bg-primary/10 text-primary ring-offset-background transition-all hover:bg-primary/20 hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 active:bg-primary/30",
+    iconSize: "h-4 w-4",
+  },
+  
+  // Close button styling (muted theme)
+  closeButton: {
+    className: "flex items-center justify-center rounded-md min-h-10 min-w-10 border border-border bg-muted/50 text-muted-foreground ring-offset-background transition-all hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none active:bg-muted/80",
+    iconSize: "h-4 w-4",
+  },
+  
+  // Responsive sizing for desktop
+  desktop: {
+    minSize: "sm:min-h-9 sm:min-w-9",
+  },
+};
 
 export const HOME_BUTTON_CONFIG = {
   // General settings
@@ -16,7 +39,7 @@ export const HOME_BUTTON_CONFIG = {
   className: "opacity-70 hover:opacity-100", // Custom CSS classes
   
   // Behavior
-  navigationPath: "/",                     // Default path for non-authenticated users
+  navigationPath: "/dashboard",            // Default path navigates to workspace dashboard
   dashboardPath: "/dashboard",             // Path for authenticated users
   useFullPageReload: false,                // Force full page reload instead of SPA navigation
   

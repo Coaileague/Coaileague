@@ -1,3 +1,4 @@
+import { secureFetch } from "@/lib/csrf";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,7 @@ export function IssueDetectionViewer({
   const { data, isLoading, error } = useQuery({
     queryKey: ["/api/ai-brain/detect-issues", documentType],
     queryFn: async () => {
-      const response = await fetch("/api/ai-brain/detect-issues", {
+      const response = await secureFetch("/api/ai-brain/detect-issues", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

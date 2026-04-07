@@ -8,13 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import {
   BookOpen, RefreshCw, Lock, Unlock, UserX, UserCheck,
   Mail, Key, Shield, AlertCircle, CheckCircle, Copy,
@@ -247,17 +241,17 @@ export function TutorialManagerPanel({ isOpen, onClose }: TutorialManagerPanelPr
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent size="full" className="max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <UniversalModal open={isOpen} onOpenChange={onClose}>
+      <UniversalModalContent size="full" className="max-h-[90vh] overflow-hidden">
+        <UniversalModalHeader>
+          <UniversalModalTitle className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-blue-600" />
             Support Tutorials & Macros
-          </DialogTitle>
-          <DialogDescription>
+          </UniversalModalTitle>
+          <UniversalModalDescription>
             Step-by-step guides for account management and support operations
-          </DialogDescription>
-        </DialogHeader>
+          </UniversalModalDescription>
+        </UniversalModalHeader>
 
         {/* Search */}
         <div className="relative">
@@ -316,7 +310,7 @@ export function TutorialManagerPanel({ isOpen, onClose }: TutorialManagerPanelPr
               <Card className="h-full">
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-md bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                       <selectedTutorial.icon className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
@@ -398,7 +392,7 @@ export function TutorialManagerPanel({ isOpen, onClose }: TutorialManagerPanelPr
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
           <div className="text-xs text-muted-foreground">
             {filteredTutorials.length} tutorials available
           </div>
@@ -406,7 +400,7 @@ export function TutorialManagerPanel({ isOpen, onClose }: TutorialManagerPanelPr
             Close
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

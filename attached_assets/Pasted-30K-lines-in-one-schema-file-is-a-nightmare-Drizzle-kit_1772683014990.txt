@@ -1,0 +1,17 @@
+30K lines in one schema file is a nightmare. Drizzle-kit has to parse the entire thing on every push, every migration, every type generation. It's probably timing out or running out of memory. Here's the fix:
+
+30K lines in one file is like putting every employee in your company into one room and expecting them to all work efficiently. The fix is simple in concept — split it into ~18 domain-specific files that each handle one area (scheduling, billing, payroll, etc.) and one index file that re-exports everything so Drizzle still has its single entry point.
+
+**The key points:**
+
+**One file becomes 18 files** — core.ts (workspaces, users), scheduling.ts (shifts, assignments), billing.ts (subscriptions, credits, fees), payroll.ts, invoicing.ts, etc. Each file is 200-600 lines instead of 30,000.
+
+**Dependency hierarchy prevents circular imports** — core.ts imports nothing. clients.ts imports core. scheduling.ts imports core + clients. This layered approach means you never get the "A imports B which imports A" death spiral.
+
+**Do it incrementally** — extract one module at a time, verify it works, then move to the next. Don't try to split 30K lines in one shot. Start with core.ts (the foundation), then billing.ts (most critical for money), then scheduling.ts (most referenced).
+
+**Dead code removal** — a 30K line file almost certainly has duplicate table definitions, commented-out tables, and tables that exist in the schema but are never used by any code. The prompt includes a bash script to find unused tables.
+
+**After the split:** drizzle-kit push goes from timing out to completing in seconds. Your IDE stops freezing. Finding a table takes seconds instead of scrolling through 30K lines. And future changes only touch the relevant 300-line file instead of risking the whole schema.
+
+Feed this to the agent when he's ready for it — but I'd prioritize the system integrity audit and production readiness verification first. The schema refactor is important for developer experience and deployment reliability, but it doesn't block you from testing with real data.

@@ -7,8 +7,12 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { usageMeteringService } from './billing/usageMetering';
+import { aiCreditGateway } from './billing/aiCreditGateway';
 import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
 import { z } from 'zod';
+import { createLogger } from '../lib/logger';
+const log = createLogger('scheduleMigration');
+
 
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
@@ -63,7 +67,7 @@ export async function extractScheduleFromFile(
     workspaceId: request.workspaceId,
     userId: request.userId || 'system',
     organizationId: 'platform',
-    requestId: Math.random().toString(36).substring(7),
+    requestId: crypto.randomUUID().slice(0, 8),
     timestamp: new Date(),
     operation: 'schedule_migration'
   };
@@ -78,7 +82,16 @@ export async function extractScheduleFromFile(
     throw new Error(`Schedule migration validation failed: ${validation.errors.join(', ')}`);
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+  const authResult = await aiCreditGateway.preAuthorize(
+    request.workspaceId,
+    request.userId,
+    'ai_migration'
+  );
+  if (!authResult.authorized) {
+    throw new Error(`Schedule migration blocked: ${authResult.reason}`);
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const systemPrompt = `You are CoAIleague AI Scheduling™ Migration Assistant.
 
@@ -145,7 +158,7 @@ export async function extractScheduleFromFile(
       },
     ];
 
-    const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+    const result = await model.generateContent({ contents: [{ role: 'user', parts }] }); // withGemini
     const response = result.response;
     const text = response.text();
 
@@ -156,17 +169,34 @@ export async function extractScheduleFromFile(
       const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
       jsonData = JSON.parse(cleanedText);
     } catch (parseError) {
-      console.error("Failed to parse Gemini response:", text);
+      log.error("Failed to parse Gemini response:", text);
       throw new Error("AI returned invalid JSON format");
     }
 
     const validatedResponse = migrationResponseSchema.parse(jsonData);
 
-    // Record token usage for billing
+    // Finalize billing through credit gateway (pre-authorized above)
     const usage = response.usageMetadata;
     const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
 
+    await aiCreditGateway.finalizeBilling(
+      authResult.effectiveWorkspaceId,
+      request.userId,
+      'ai_migration',
+      totalTokens,
+      { model: 'gemini-2.5-flash', sourceApp: request.sourceApp }
+    ).catch(err => log.error('[ScheduleMigration] Billing error:', err));
+
     if (totalTokens > 0 && request.workspaceId) {
+      const { aiMeteringService } = await import('./billing/aiMeteringService');
+      aiMeteringService.recordAiCall({
+        workspaceId: request.workspaceId,
+        modelName: 'gemini-2.5-flash',
+        callType: 'schedule_migration_vision',
+        inputTokens: usage?.promptTokenCount ?? 0,
+        outputTokens: usage?.candidatesTokenCount ?? 0,
+        triggeredByUserId: request.userId,
+      });
       await usageMeteringService.recordUsage({
         workspaceId: request.workspaceId,
         userId: request.userId,
@@ -176,7 +206,7 @@ export async function extractScheduleFromFile(
         usageUnit: 'tokens',
         activityType: 'schedule_migration_vision',
         metadata: {
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-2.5-flash',
           sourceApp: request.sourceApp,
           shiftsExtracted: validatedResponse.shifts.length,
           extractionConfidence: validatedResponse.extractionConfidence,
@@ -184,12 +214,12 @@ export async function extractScheduleFromFile(
           completionTokens: usage?.candidatesTokenCount,
         }
       });
-      console.log(`📸 Schedule Migration (Vision) - ${totalTokens} tokens - ${validatedResponse.shifts.length} shifts extracted`);
+      log.info(`📸 Schedule Migration (Vision) - ${totalTokens} tokens - ${validatedResponse.shifts.length} shifts extracted`);
     }
 
     return validatedResponse;
   } catch (error: any) {
-    console.error("Schedule migration error:", error);
-    throw new Error(`Failed to extract schedule: ${error.message}`);
+    log.error("Schedule migration error:", error);
+    throw new Error(`Failed to extract schedule: ${(error instanceof Error ? error.message : String(error))}`);
   }
 }

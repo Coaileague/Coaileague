@@ -1,0 +1,31 @@
+SUPPORT PLATFORM AUDIT - KEY FINDINGS
+
+A. CRITICAL ISSUES (Blocking support from functioning properly)
+
+Support org treated as normal org - The core problem. Many endpoints filter by req.workspaceId which scopes support staff to only see their own platform workspace data, not all orgs' data. Support staff can't view/manage employees, schedules, timesheets, etc. from client organizations.
+
+Several support endpoints use isAuthenticated instead of requirePlatformStaff - Endpoints like delete-client, process-payment, force-clear-invoice, reset-chat, force-close-service, update-subscription lack proper platform role checks - any authenticated user could potentially call them.
+
+Missing /admin-command-center page - Route is declared in App.tsx but no actual page file exists, causing broken navigation.
+
+Support CRUD operations not going through orchestration - Most support actions (user management, ticket operations, account suspend/unsuspend) call the database directly without routing through automationOrchestration.executeAutomation(), meaning they aren't tracked, auditable, or visible to Trinity AI.
+
+B. MAJOR GAPS (Missing functionality)
+
+No cross-org employee viewer for support - Support can't browse/search employees across ALL organizations to assist with issues.
+No cross-org schedule/timesheet viewer - Can't see or modify schedules/time entries for client orgs.
+No cross-org financial overview - Can't view invoices, payments, payroll across orgs.
+No support action audit log viewer - No dedicated page showing what support staff did, when, and to which org.
+No platform-wide search - Can't search across all users, orgs, tickets, employees in one place.
+C. REDUNDANCIES (Duplicate tools/pages)
+
+Root Admin Dashboard vs Platform Admin - Both have system health monitoring, user management, workspace management, and revenue metrics.
+Trinity AI Console vs Trinity Command Center - Two separate pages for Trinity AI operations with overlapping functionality.
+Multiple system health views - System Health page, Infrastructure page, plus health sections embedded in Root Admin Dashboard and Platform Admin.
+Support Console vs Help Desk - Overlapping ticket/support management.
+D. ENHANCEMENT OPPORTUNITIES
+
+Unified Support Command Center - Single page with tabs for all support operations.
+Platform-wide context switching - Support staff should be able to "view as" any org to see their data.
+Support action templates - Pre-built workflows for common support tasks.
+Real-time cross-org WebSocket feeds - Support staff getting live updates from all orgs.

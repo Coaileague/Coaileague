@@ -8,9 +8,12 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../db";
-import { workspaces, users } from "@shared/schema";
-import { eq, and, desc, sql, lt, isNull, gte } from "drizzle-orm";
+import { workspaces, users, platformRoles } from "@shared/schema";
+import { eq, and, desc, sql, lt, isNull, gte, inArray } from "drizzle-orm";
 import { requireAuth } from "../auth";
+import { createLogger } from '../lib/logger';
+const log = createLogger('Testimonials');
+
 
 const router = Router();
 
@@ -57,7 +60,7 @@ const testimonials: Testimonial[] = [
     companyName: "Allied Guard Services",
     industry: "security",
     rating: 5,
-    quote: "The GPS time tracking eliminated timesheet fraud completely. We saved $15,000 in the first quarter alone.",
+    quote: "The GPS time tracking dramatically reduced timesheet discrepancies. We recovered significant time and reduced billing disputes in the first quarter.",
     title: "CEO",
     isApproved: true,
     isPublished: true,
@@ -103,7 +106,7 @@ router.get("/public", async (_req: Request, res: Response) => {
       photoUrl: t.photoUrl,
     })));
   } catch (error) {
-    console.error("Error fetching testimonials:", error);
+    log.error("Error fetching testimonials:", error);
     res.status(500).json({ error: "Failed to fetch testimonials" });
   }
 });
@@ -143,7 +146,7 @@ router.get("/prompt-status", requireAuth, async (req: Request, res: Response) =>
       hasSubmitted: !!existing,
     });
   } catch (error) {
-    console.error("Error checking prompt status:", error);
+    log.error("Error checking prompt status:", error);
     res.json({ shouldPrompt: false });
   }
 });
@@ -168,7 +171,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     }
 
     const testimonial: Testimonial = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: crypto.randomUUID(),
       workspaceId: user.workspaceId,
       userId: user.id,
       userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Anonymous',
@@ -195,7 +198,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error("Error submitting testimonial:", error);
+    log.error("Error submitting testimonial:", error);
     res.status(500).json({ error: "Failed to submit testimonial" });
   }
 });
@@ -203,15 +206,17 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 // GET /api/testimonials/pending - Get pending testimonials (admin only)
 router.get("/pending", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as { role?: string };
-    if (!user?.role || !['root_admin', 'deputy_admin'].includes(user.role)) {
+    const user = req.user as { id?: string };
+    const [adminRole] = await db.select({ role: platformRoles.role }).from(platformRoles)
+      .where(and(eq(platformRoles.userId, user.id || ''), inArray(platformRoles.role, ['root_admin', 'deputy_admin'] as any), isNull(platformRoles.revokedAt))).limit(1);
+    if (!adminRole) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
     const pending = testimonials.filter(t => t.isApproved && !t.isPublished);
     res.json(pending);
   } catch (error) {
-    console.error("Error fetching pending testimonials:", error);
+    log.error("Error fetching pending testimonials:", error);
     res.status(500).json({ error: "Failed to fetch pending testimonials" });
   }
 });
@@ -219,8 +224,10 @@ router.get("/pending", requireAuth, async (req: Request, res: Response) => {
 // POST /api/testimonials/:id/publish - Publish a testimonial (admin only)
 router.post("/:id/publish", requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = req.user as { role?: string };
-    if (!user?.role || !['root_admin', 'deputy_admin'].includes(user.role)) {
+    const user = req.user as { id?: string };
+    const [adminRole] = await db.select({ role: platformRoles.role }).from(platformRoles)
+      .where(and(eq(platformRoles.userId, user.id || ''), inArray(platformRoles.role, ['root_admin', 'deputy_admin'] as any), isNull(platformRoles.revokedAt))).limit(1);
+    if (!adminRole) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -236,7 +243,7 @@ router.post("/:id/publish", requireAuth, async (req: Request, res: Response) => 
 
     res.json({ success: true, message: "Testimonial published" });
   } catch (error) {
-    console.error("Error publishing testimonial:", error);
+    log.error("Error publishing testimonial:", error);
     res.status(500).json({ error: "Failed to publish testimonial" });
   }
 });

@@ -19,7 +19,7 @@ interface Employee {
   emergencyContactPhone: string | null;
   emergencyContactRelation: string | null;
   role: string | null; // Job title
-  workspaceRole: 'org_owner' | 'org_admin' | 'manager' | 'staff' | null;
+  workspaceRole: 'org_owner' | 'co_owner' | 'manager' | 'staff' | null;
   platformRole: string | null; // Platform role for support staff (root_admin, support_manager, support_agent, etc.)
   hourlyRate: string | null;
   color: string | null;

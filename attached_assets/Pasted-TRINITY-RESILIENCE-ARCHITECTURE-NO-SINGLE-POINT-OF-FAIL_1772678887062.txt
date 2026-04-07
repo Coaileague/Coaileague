@@ -1,0 +1,502 @@
+TRINITY RESILIENCE ARCHITECTURE — NO SINGLE POINT OF FAILURE
+
+═══════════════════════════════════════════════════
+THE PROBLEM
+═══════════════════════════════════════════════════
+
+Trinity currently runs as a fixed triad:
+  Gemini = Brain/Orchestrator (Thought model)
+  GPT = Grunt work/Execution
+  Claude = Judge/Complex decisions
+
+If Gemini goes down, Trinity's brain is dead. The entire platform's AI stops.
+If GPT goes down, routine tasks stop.
+If Claude goes down, complex reasoning stops.
+
+This is unacceptable for a platform handling real money, real schedules, and real people's paychecks. We need Trinity to be unkillable.
+
+═══════════════════════════════════════════════════
+THE SOLUTION: ROLE-BASED FAILOVER, NOT HARDCODED ROLES
+═══════════════════════════════════════════════════
+
+Every model can fill every role. Each role has a ranked preference list. 
+If the preferred model is down, the next one takes over automatically.
+The system never stops — it may run slightly differently, but it never stops.
+
+ROLE ASSIGNMENTS WITH FAILOVER CHAIN:
+
+  ROLE: ORCHESTRATOR (planning, reasoning, deciding what tools to use)
+    Priority 1: Gemini Pro / Gemini Thinking    (best at planning)
+    Priority 2: Claude Sonnet                    (strong reasoning)
+    Priority 3: GPT-4o                           (capable fallback)
+
+  ROLE: EXECUTOR (routine tasks, formatting, simple generation)
+    Priority 1: Gemini Flash                     (fastest, cheapest)
+    Priority 2: GPT-4o-mini                      (fast, cheap)
+    Priority 3: Claude Haiku                     (fast, cheap)
+
+  ROLE: JUDGE (complex decisions, quality review, legal/compliance analysis)
+    Priority 1: Claude Sonnet                    (best at nuanced reasoning)
+    Priority 2: Gemini Pro                       (strong alternative)
+    Priority 3: GPT-4o                           (capable fallback)
+
+  ROLE: WRITER (emails, proposals, reports, persuasive content)
+    Priority 1: Claude Sonnet                    (best writing quality)
+    Priority 2: GPT-4o                           (strong writing)
+    Priority 3: Gemini Pro                       (acceptable fallback)
+
+  ROLE: CALCULATOR (payroll, invoicing, financial math)
+    Priority 1: LOCAL CODE                       (deterministic — no AI needed)
+    Priority 2: Gemini Flash                     (verification pass)
+    Priority 3: Any available model              (secondary verification)
+    NOTE: Financial calculations should NEVER depend on AI. They should be
+    deterministic code (hours × rate = gross). AI is only used to verify
+    the math, not to perform it. This way, even if ALL models go down,
+    payroll and invoicing still work.
+
+  ROLE: ANALYZER (document scanning, incident analysis, pattern detection)
+    Priority 1: Claude Sonnet                    (best comprehension)
+    Priority 2: Gemini Pro                       (strong alternative)
+    Priority 3: GPT-4o                           (capable fallback)
+
+═══════════════════════════════════════════════════
+IMPLEMENTATION: THE MODEL ROUTER
+═══════════════════════════════════════════════════
+
+Create: server/trinity/modelRouter.ts
+
+This is the SINGLE entry point for all AI calls. No service should
+call Gemini, Claude, or GPT directly. Everything goes through the router.
+
+```typescript
+// server/trinity/modelRouter.ts
+
+interface ModelConfig {
+  name: string;           // 'gemini_pro', 'gemini_flash', 'claude_sonnet', 'claude_haiku', 'gpt4o', 'gpt4o_mini'
+  provider: string;       // 'google', 'anthropic', 'openai'
+  endpoint: string;       // API endpoint
+  apiKeyEnvVar: string;   // Environment variable name for API key
+  maxTokens: number;
+  costPer1kInput: number;  // Cost tracking in cents
+  costPer1kOutput: number;
+  timeoutMs: number;       // How long to wait before considering it "down"
+  isAvailable: boolean;    // Runtime flag — set to false when model is detected as down
+  lastFailure: Date | null;
+  consecutiveFailures: number;
+  cooldownUntil: Date | null;  // Don't retry until this time
+}
+
+// Role-to-model priority chains
+const ROLE_CHAINS = {
+  orchestrator: ['gemini_pro', 'claude_sonnet', 'gpt4o'],
+  executor:     ['gemini_flash', 'gpt4o_mini', 'claude_haiku'],
+  judge:        ['claude_sonnet', 'gemini_pro', 'gpt4o'],
+  writer:       ['claude_sonnet', 'gpt4o', 'gemini_pro'],
+  analyzer:     ['claude_sonnet', 'gemini_pro', 'gpt4o'],
+};
+
+class ModelRouter {
+  private models: Map<string, ModelConfig>;
+  
+  /**
+   * Route an AI request to the best available model for the given role.
+   * Automatically fails over to the next model if the primary is down.
+   */
+  async route(params: {
+    role: 'orchestrator' | 'executor' | 'judge' | 'writer' | 'analyzer';
+    systemPrompt: string;
+    userPrompt: string;
+    workspaceId: string;
+    maxRetries?: number;
+  }): Promise<AIResponse> {
+    
+    const chain = ROLE_CHAINS[params.role];
+    
+    for (const modelName of chain) {
+      const model = this.models.get(modelName);
+      
+      // Skip models that are in cooldown (recently failed)
+      if (model.cooldownUntil && new Date() < model.cooldownUntil) {
+        console.log(`[ModelRouter] ${modelName} in cooldown until ${model.cooldownUntil}, skipping`);
+        continue;
+      }
+      
+      // Skip models with missing API keys
+      if (!process.env[model.apiKeyEnvVar]) {
+        console.log(`[ModelRouter] ${modelName} has no API key configured, skipping`);
+        continue;
+      }
+      
+      try {
+        console.log(`[ModelRouter] Attempting ${modelName} for role=${params.role}`);
+        
+        const startTime = Date.now();
+        const response = await this.callModel(model, params.systemPrompt, params.userPrompt);
+        const duration = Date.now() - startTime;
+        
+        // Success — reset failure tracking
+        model.consecutiveFailures = 0;
+        model.isAvailable = true;
+        model.cooldownUntil = null;
+        
+        // Track token usage and cost
+        await this.trackUsage({
+          workspaceId: params.workspaceId,
+          modelName: model.name,
+          provider: model.provider,
+          role: params.role,
+          inputTokens: response.usage.inputTokens,
+          outputTokens: response.usage.outputTokens,
+          costCents: this.calculateCost(model, response.usage),
+          durationMs: duration,
+          wasFailover: modelName !== chain[0],  // True if this wasn't the primary model
+        });
+        
+        return {
+          content: response.content,
+          modelUsed: model.name,
+          wasFailover: modelName !== chain[0],
+          latencyMs: duration,
+        };
+        
+      } catch (error) {
+        // Model failed — track failure and try next in chain
+        model.consecutiveFailures++;
+        model.lastFailure = new Date();
+        
+        console.error(`[ModelRouter] ${modelName} failed (${model.consecutiveFailures} consecutive): ${error.message}`);
+        
+        // Cooldown logic: back off exponentially
+        if (model.consecutiveFailures >= 3) {
+          // 3+ failures: cooldown for 5 minutes
+          model.cooldownUntil = new Date(Date.now() + 5 * 60 * 1000);
+          model.isAvailable = false;
+          console.warn(`[ModelRouter] ${modelName} placed in 5-minute cooldown after ${model.consecutiveFailures} failures`);
+        }
+        if (model.consecutiveFailures >= 5) {
+          // 5+ failures: cooldown for 30 minutes
+          model.cooldownUntil = new Date(Date.now() + 30 * 60 * 1000);
+          console.warn(`[ModelRouter] ${modelName} placed in 30-minute cooldown`);
+        }
+        if (model.consecutiveFailures >= 10) {
+          // 10+ failures: cooldown for 2 hours
+          model.cooldownUntil = new Date(Date.now() + 2 * 60 * 60 * 1000);
+          console.warn(`[ModelRouter] ${modelName} placed in 2-hour cooldown — likely a major outage`);
+          
+          // Notify platform admin
+          await this.notifyOutage(model);
+        }
+        
+        // Continue to next model in chain
+        continue;
+      }
+    }
+    
+    // ALL models in the chain failed
+    console.error(`[ModelRouter] ALL MODELS FAILED for role=${params.role}`);
+    
+    // Notify immediately — this is a platform-level emergency
+    await this.notifyAllModelFailure(params.role);
+    
+    throw new AllModelsDownError(
+      `All AI models are currently unavailable for ${params.role}. ` +
+      `The platform will continue operating with non-AI features. ` +
+      `AI features will resume automatically when models recover.`
+    );
+  }
+  
+  /**
+   * Call a specific model's API
+   */
+  private async callModel(model: ModelConfig, systemPrompt: string, userPrompt: string): Promise<RawResponse> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), model.timeoutMs);
+    
+    try {
+      switch (model.provider) {
+        case 'google':
+          return await this.callGemini(model, systemPrompt, userPrompt, controller.signal);
+        case 'anthropic':
+          return await this.callClaude(model, systemPrompt, userPrompt, controller.signal);
+        case 'openai':
+          return await this.callOpenAI(model, systemPrompt, userPrompt, controller.signal);
+        default:
+          throw new Error(`Unknown provider: ${model.provider}`);
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  
+  /**
+   * Health check — runs every 60 seconds to test models in cooldown
+   * If a model recovers, it's automatically put back in rotation
+   */
+  async healthCheck(): Promise<ModelHealthReport> {
+    const report: ModelHealthReport = { models: [], timestamp: new Date() };
+    
+    for (const [name, model] of this.models) {
+      // Only health-check models that are in cooldown
+      if (!model.cooldownUntil || new Date() < model.cooldownUntil) {
+        report.models.push({ name, status: model.isAvailable ? 'healthy' : 'cooldown' });
+        continue;
+      }
+      
+      // Cooldown expired — test if model is back
+      try {
+        await this.callModel(model, 'You are a test.', 'Respond with OK.');
+        
+        // Model recovered!
+        model.isAvailable = true;
+        model.consecutiveFailures = 0;
+        model.cooldownUntil = null;
+        report.models.push({ name, status: 'recovered' });
+        
+        console.log(`[ModelRouter] ${name} has RECOVERED and is back in rotation`);
+        
+      } catch {
+        // Still down — extend cooldown
+        model.cooldownUntil = new Date(Date.now() + 5 * 60 * 1000);
+        report.models.push({ name, status: 'still_down' });
+      }
+    }
+    
+    return report;
+  }
+  
+  /**
+   * Track AI usage for billing and monitoring
+   */
+  private async trackUsage(usage: TokenUsage): Promise<void> {
+    await db.insert(aiTokenUsage).values({
+      workspace_id: usage.workspaceId,
+      model_name: usage.modelName,
+      provider: usage.provider,
+      role: usage.role,
+      input_tokens: usage.inputTokens,
+      output_tokens: usage.outputTokens,
+      cost_cents: usage.costCents,
+      duration_ms: usage.durationMs,
+      was_failover: usage.wasFailover,
+      created_at: new Date(),
+    });
+  }
+}
+```
+
+═══════════════════════════════════════════════════
+WHAT HAPPENS IN EACH FAILURE SCENARIO
+═══════════════════════════════════════════════════
+
+SCENARIO 1: Gemini goes down (Google outage)
+  
+  BEFORE (current): Trinity's brain is dead. All AI stops.
+  
+  AFTER (with router):
+    - Orchestrator role: Claude Sonnet takes over as brain
+    - Executor role: GPT-4o-mini handles routine tasks
+    - Judge role: Claude was already judge, no change
+    - Impact: Slightly higher cost (Claude is more expensive than Gemini),
+      slightly different reasoning style, but ZERO downtime
+    - User experience: Trinity may respond 1-2 seconds slower. That's it.
+
+SCENARIO 2: Claude goes down (Anthropic outage)
+  
+  AFTER (with router):
+    - Judge role: Gemini Pro takes over complex decisions
+    - Writer role: GPT-4o handles writing tasks
+    - Analyzer role: Gemini Pro handles document analysis
+    - Impact: Writing quality may be slightly different, 
+      but all features continue working
+
+SCENARIO 3: OpenAI goes down
+  
+  AFTER (with router):
+    - Executor role: Gemini Flash or Claude Haiku takes over
+    - Impact: Minimal — GPT was already the lowest-priority model 
+      in most chains
+
+SCENARIO 4: TWO providers go down simultaneously
+  
+  AFTER (with router):
+    - Whichever single provider remains handles ALL roles
+    - Claude alone can be orchestrator + executor + judge + writer + analyzer
+    - Gemini alone can do the same
+    - GPT alone can do the same
+    - Impact: Higher latency (one model doing everything), higher cost,
+      but the platform still works
+
+SCENARIO 5: ALL THREE providers go down simultaneously
+  
+  This is extremely rare (has basically never happened), but if it does:
+    - All AI features gracefully degrade
+    - Scheduling falls back to template-based (no AI scoring)
+    - Invoicing/payroll use deterministic code (no AI verification)
+    - ReportBot/MeetingBot/etc. are unavailable
+    - Trinity posts: "AI services are temporarily unavailable. 
+      Core platform features (scheduling, time tracking, invoicing, 
+      payroll) continue to work normally. AI features will resume 
+      automatically when services recover."
+    - 0 credits consumed during outage
+    - Health check runs every 60 seconds and auto-recovers when 
+      any model comes back online
+
+═══════════════════════════════════════════════════
+CRITICAL RULE: FINANCIAL MATH NEVER DEPENDS ON AI
+═══════════════════════════════════════════════════
+
+This is non-negotiable:
+
+  PAYROLL CALCULATION = deterministic code (hours × rate = gross)
+  INVOICE CALCULATION = deterministic code (hours × bill rate + tax = total)
+  TAX CALCULATION = deterministic code (gross × tax rate = withholding)
+  CREDIT DEDUCTION = deterministic code (balance - cost = new balance)
+  OVERTIME DETECTION = deterministic code (hours > 40 = overtime)
+  BILLING = deterministic code (subscription + fees + overage = total)
+
+AI is ONLY used for:
+  - Scheduling optimization (which employee is the BEST fit — not whether 
+    a shift exists or what time it is)
+  - Report writing and polishing
+  - Document analysis
+  - Pattern detection and insights
+  - Communication drafting
+  - Natural language responses in Ask Trinity
+
+If all AI goes down:
+  - Payroll still runs ✅ (it's just math)
+  - Invoicing still runs ✅ (it's just math)
+  - Billing still runs ✅ (it's just math)
+  - Clock in/out still works ✅ (it's just timestamps)
+  - Scheduling still works ✅ (managers assign manually)
+  - Reports can still be submitted ✅ (just not AI-polished)
+  
+The platform's CORE VALUE PROPOSITION (scheduling + time tracking + 
+payroll + invoicing) works with ZERO AI. AI makes it smarter, but 
+the foundation stands on its own.
+
+═══════════════════════════════════════════════════
+MODEL CONFIGURATION
+═══════════════════════════════════════════════════
+
+Create: server/trinity/modelConfig.ts
+
+```typescript
+export const MODEL_CONFIGS = {
+  gemini_pro: {
+    name: 'gemini_pro',
+    provider: 'google',
+    model: 'gemini-2.0-pro',   // or whatever the current model string is
+    apiKeyEnvVar: 'GEMINI_API_KEY',
+    maxTokens: 8192,
+    costPer1kInput: 0.125,     // cents
+    costPer1kOutput: 0.5,
+    timeoutMs: 30000,          // 30 second timeout
+  },
+  gemini_flash: {
+    name: 'gemini_flash',
+    provider: 'google',
+    model: 'gemini-2.0-flash',
+    apiKeyEnvVar: 'GEMINI_API_KEY',
+    maxTokens: 8192,
+    costPer1kInput: 0.0375,
+    costPer1kOutput: 0.15,
+    timeoutMs: 15000,
+  },
+  claude_sonnet: {
+    name: 'claude_sonnet',
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-5-20250929',
+    apiKeyEnvVar: 'ANTHROPIC_API_KEY',
+    maxTokens: 8192,
+    costPer1kInput: 0.3,
+    costPer1kOutput: 1.5,
+    timeoutMs: 30000,
+  },
+  claude_haiku: {
+    name: 'claude_haiku',
+    provider: 'anthropic',
+    model: 'claude-haiku-4-5-20251001',
+    apiKeyEnvVar: 'ANTHROPIC_API_KEY',
+    maxTokens: 8192,
+    costPer1kInput: 0.08,
+    costPer1kOutput: 0.4,
+    timeoutMs: 15000,
+  },
+  gpt4o: {
+    name: 'gpt4o',
+    provider: 'openai',
+    model: 'gpt-4o',
+    apiKeyEnvVar: 'OPENAI_API_KEY',
+    maxTokens: 4096,
+    costPer1kInput: 0.25,
+    costPer1kOutput: 1.0,
+    timeoutMs: 30000,
+  },
+  gpt4o_mini: {
+    name: 'gpt4o_mini',
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    apiKeyEnvVar: 'OPENAI_API_KEY',
+    maxTokens: 4096,
+    costPer1kInput: 0.015,
+    costPer1kOutput: 0.06,
+    timeoutMs: 15000,
+  },
+};
+```
+
+═══════════════════════════════════════════════════
+HEALTH DASHBOARD (for org owner / platform admin)
+═══════════════════════════════════════════════════
+
+Add a Trinity Health section to the Settings or Admin page:
+
+  Trinity AI Status
+  ┌─────────────────────────────────────────────┐
+  │ 🟢 Gemini Pro      — Healthy (12ms avg)     │
+  │ 🟢 Gemini Flash    — Healthy (8ms avg)      │
+  │ 🟢 Claude Sonnet   — Healthy (15ms avg)     │
+  │ 🟢 Claude Haiku    — Healthy (9ms avg)      │
+  │ 🟡 GPT-4o          — Slow (2100ms avg)      │
+  │ 🟢 GPT-4o Mini     — Healthy (11ms avg)     │
+  │                                              │
+  │ Active Role Assignments:                     │
+  │   Brain:    Gemini Pro (primary)             │
+  │   Tasks:    Gemini Flash (primary)           │
+  │   Judge:    Claude Sonnet (primary)          │
+  │   Writer:   Claude Sonnet (primary)          │
+  │                                              │
+  │ Failovers today: 0                           │
+  │ Total AI calls today: 347                    │
+  │ Credits consumed today: 89                   │
+  └─────────────────────────────────────────────┘
+
+If a model is down:
+
+  │ 🔴 Gemini Pro      — DOWN (cooldown 4:32)    │
+  │ 🟢 Claude Sonnet   — Healthy (acting as Brain)│
+
+The status indicators:
+  🟢 Healthy — responding normally
+  🟡 Degraded — responding but slow (>2 seconds)
+  🔴 Down — in cooldown after consecutive failures
+  ⚫ Not configured — API key missing
+
+═══════════════════════════════════════════════════
+IMPLEMENTATION STEPS
+═══════════════════════════════════════════════════
+
+1. Create server/trinity/modelConfig.ts with all model definitions
+2. Create server/trinity/modelRouter.ts with the routing and failover logic
+3. Find EVERY place in the codebase that calls Gemini, Claude, or OpenAI directly
+4. Replace ALL direct calls with modelRouter.route({ role, prompts })
+5. Add the health check cron (runs every 60 seconds)
+6. Add token usage tracking to ai_token_usage table
+7. Add the Trinity Health UI to settings/admin page
+8. Test failover by temporarily removing one API key at a time
+9. Verify financial calculations work with ALL API keys removed
+
+DO NOT leave any direct model calls in the codebase. Everything 
+goes through the router. This is the single enforcement point for 
+failover, cost tracking, and resilience.

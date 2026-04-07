@@ -1,0 +1,123 @@
+Here is the exact, master directive to feed your agent. It integrates the 12-step end-to-end simulation with the negative-path friction tests, followed by the five structural sweeps.
+Because you have a guard in place protecting production, the agent can safely run this against your dev sandbox.
+Copy and paste this entire block directly to your agent.
+MASTER GO-LIVE SIMULATION & VERIFICATION DIRECTIVE
+
+You are acting as an integration tester and production release engineer. 
+Do not audit code statically. Do not suggest feature additions. Do not 
+refactor for style. You are to prove the platform works via runtime 
+execution, fixing only what breaks during this test.
+
+RULES OF ENGAGEMENT:
+1. Run this end-to-end simulation using an isolated sandbox workspace 
+   (e.g., ACME Security).
+2. Execute every step chronologically. 
+3. If a step fails, diagnose the root cause, fix the specific code, 
+   verify the fix works, and then proceed to the next step.
+4. Do not report success until all 12 steps pass and all 5 sweeps 
+   return zero violations.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1: NEGATIVE-PATH RUNTIME SIMULATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Report each step as PASS or FAIL with the exact error. 
+
+STEP 1: Create a new workspace via the /trial signup flow.
+  PASS = workspace record exists, 6 email addresses provisioned via 
+  emailProvisioningService, Canvas folders created, NDS welcome email sent.
+
+STEP 2: Org owner selects Professional plan ($999); Stripe subscription fires.
+  PASS = workspace.tier = professional, Stripe subscription active, 
+  feature gates (like ACH and Voice) unlock instantly.
+
+STEP 3: Create officer (John Smith) with an EXPIRED guard card.
+  Attempt to assign John to a shift.
+  PASS = System strictly blocks assignment. 
+  ACTION: Update license to valid. 
+  PASS = System now allows assignment. Expiry alert scheduled via NDS.
+
+STEP 4: Create client (Crestview Mall), site, and contract.
+  PASS = Records exist and are linked. Site is schedulable.
+
+STEP 5: Create a shift (John, Crestview, next Monday 0800-1600). Attempt 
+  to assign John to a second overlapping shift at a different site.
+  PASS = System strictly blocks the double-booking. Shift 1 remains ASSIGNED.
+
+STEP 6: Publish the schedule.
+  PASS = NDS notification fires to John. WebSocket broadcast pushes 
+  update ONLY to the workspace_id room. Confirm no cross-tenant leak.
+
+STEP 7: Send a typo-ridden email to calloffs@{slug} (e.g. "cant mak it tmrw").
+  PASS = Trinity Brain successfully classifies it as CALL_OFF, finds 
+  John's shift, marks it OPEN, and triggers the coverage engine to find 
+  an alternate.
+
+STEP 8: Mark the original shift COMPLETED. Simulate GPS coordinates 
+  5 miles outside the client site radius.
+  PASS = Shift completes, but system flags 'Out-of-Bounds' in the 
+  scheduling_audit_log without crashing.
+
+STEP 9: Generate an invoice from the completed shift.
+  PASS = Invoice in DRAFT. Line item math is perfectly accurate 
+  (rate x hours). Org owner receives NDS review link.
+
+STEP 10: Approve and send the invoice.
+  PASS = Status = SENT. Client receives email with tamper-proof portal link.
+
+STEP 11: Client pays via the portal.
+  PASS = Invoice status = PAID. DB ledger updated. 2.9% + $0.25 middleware 
+  fee is accurately calculated and deducted from disbursable_funds. 
+  All DB writes happen in a single SQL transaction.
+
+STEP 12: Open payroll period, import hours, close period.
+  PASS = Period closed. Write-protection activates on shifts. ACH transfer 
+  queued via Plaid.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2: FINAL ARCHITECTURAL SWEEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+After the 12-step simulation passes perfectly, run these 5 specific 
+codebase sweeps. These target silent failures that tests miss.
+
+SWEEP A: Silent Catches
+  Search for: catch (e) {}, catch (err) {}, catch (error) { return null }, 
+  .catch(() => {})
+  FIX: Add structured logging (e.g., logger.error({ workspace_id, error })). 
+  Report count found and fixed.
+
+SWEEP B: Unhandled Promises
+  Search all external API calls (Resend, Stripe, Plaid, Twilio, Gemini, 
+  Claude, OpenAI, QuickBooks).
+  FIX: Ensure every call is wrapped in a try/catch or has a .catch() block. 
+  Report count found and fixed.
+
+SWEEP C: Unscoped DB Queries
+  Search SELECT/UPDATE/DELETE queries on tenant tables (employees, shifts, 
+  schedules, invoices, clients, call_offs, payroll).
+  FIX: Ensure every single query includes workspace_id in the WHERE clause. 
+  Report count found and fixed.
+
+SWEEP D: Trinity Action Guardrails
+  Scan the Trinity Action Registry.
+  FIX: Ensure every action strictly defines an input_schema and checks 
+  workspace AI credit availability before execution. 
+  Report count found and fixed.
+
+SWEEP E: API Route RBAC
+  Scan all /api/v1/ mutating routes (POST, PUT, DELETE).
+  FIX: Ensure every route utilizes the RBAC middleware and tier-gate wrapper 
+  (e.g., Starter cannot hit ACH endpoints). 
+  Report count found and fixed.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FINAL OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When finished, output strictly:
+- Simulation 1-12: [PASS/FAIL details]
+- Sweep A: N fixed
+- Sweep B: N fixed
+- Sweep C: N fixed
+- Sweep D: N fixed
+- Sweep E: N fixed
+- Platform Verdict: [GO / NOT GO]
+

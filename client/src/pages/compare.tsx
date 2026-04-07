@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { Link, useParams } from "wouter";
 import { 
   CheckCircle2, 
@@ -18,6 +19,17 @@ import {
   Globe,
   ArrowRight,
 } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { SEO, PAGE_SEO } from '@/components/seo';
+
+const compareConfig: CanvasPageConfig = {
+  id: 'compare',
+  title: 'Compare Solutions',
+  category: 'public',
+  variant: 'fullWidth',
+  showHeader: false,
+  requiresAuth: false,
+};
 
 interface ComparisonFeature {
   name: string;
@@ -49,7 +61,7 @@ const competitors: Record<string, Competitor> = {
       competitor: '$4.50/user/mo (scheduling only)',
     },
     features: [
-      { name: 'AI-Powered Scheduling', category: 'Scheduling', coaileague: 'yes', competitor: 'partial', coaileagueNote: 'Trinity AI optimizes for profit & compliance', competitorNote: 'Basic auto-fill only' },
+      { name: 'AI-Powered Scheduling', category: 'Scheduling', coaileague: 'yes', competitor: 'partial', coaileagueNote: 'Trinity AI assists scheduling with compliance monitoring', competitorNote: 'Basic auto-fill only' },
       { name: 'GPS Geofenced Time Tracking', category: 'Time Tracking', coaileague: 'yes', competitor: 'yes' },
       { name: '50-State Labor Compliance', category: 'Compliance', coaileague: 'yes', competitor: 'partial', competitorNote: 'Limited states' },
       { name: 'Automated Break Scheduling', category: 'Compliance', coaileague: 'yes', competitor: 'no' },
@@ -118,11 +130,18 @@ export default function ComparePage() {
   
   const testimonialsQuery = useQuery({
     queryKey: ['/api/testimonials/public'],
+    queryFn: () => apiFetch('/api/testimonials/public', AnyResponse),
   });
 
   if (!competitorSlug) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16">
+      <CanvasHubPage config={compareConfig}>
+        <SEO
+          title={PAGE_SEO.compare.title}
+          description={PAGE_SEO.compare.description}
+          canonical="https://coaileague.com/compare"
+        />
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <Badge variant="outline" className="mb-4 text-primary border-primary/30">
@@ -156,7 +175,8 @@ export default function ComparePage() {
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      </CanvasHubPage>
     );
   }
 
@@ -164,7 +184,8 @@ export default function ComparePage() {
   
   if (!competitor) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <CanvasHubPage config={compareConfig}>
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
             <h2 className="text-xl font-bold mb-2">Competitor not found</h2>
@@ -174,7 +195,8 @@ export default function ComparePage() {
             </Link>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </CanvasHubPage>
     );
   }
 
@@ -184,17 +206,23 @@ export default function ComparePage() {
   const testimonials = (testimonialsQuery.data || []) as { userName: string; companyName: string; quote: string; title?: string }[];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <Link href="/compare">
-            <Button variant="ghost" size="sm" className="mb-4 text-slate-400">
-              View All Comparisons
-            </Button>
-          </Link>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            CoAIleague vs {competitor.name}
-          </h1>
+    <CanvasHubPage config={compareConfig}>
+      <SEO
+        title={`CoAIleague vs ${competitor.name} — Security Guard Software Comparison`}
+        description={`Compare CoAIleague with ${competitor.name} for security guard company workforce management. See feature-by-feature comparison of scheduling, payroll, and compliance tools.`}
+        canonical={`https://coaileague.com/compare/${competitorSlug}`}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center mb-12">
+            <Link href="/compare">
+              <Button variant="ghost" size="sm" className="mb-4 text-slate-400">
+                View All Comparisons
+              </Button>
+            </Link>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              CoAIleague vs {competitor.name}
+            </h2>
           <p className="text-lg text-slate-300 max-w-2xl mx-auto">
             {competitor.description} See how they compare to CoAIleague's AI-powered platform.
           </p>
@@ -207,7 +235,7 @@ export default function ComparePage() {
 
         <Card className="max-w-4xl mx-auto mb-8">
           <CardHeader className="bg-muted/50">
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div></div>
               <div>
                 <Badge className="bg-primary text-primary-foreground">CoAIleague</Badge>
@@ -226,7 +254,7 @@ export default function ComparePage() {
                   .map((feature, idx) => (
                     <div 
                       key={feature.name} 
-                      className={`grid grid-cols-3 gap-4 px-4 py-3 items-center ${idx % 2 === 0 ? '' : 'bg-muted/10'}`}
+                      className={`grid grid-cols-1 sm:grid-cols-3 gap-4 px-4 py-3 items-center ${idx % 2 === 0 ? '' : 'bg-muted/10'}`}
                     >
                       <div className="text-sm">{feature.name}</div>
                       <div className="text-center flex flex-col items-center gap-1">
@@ -248,7 +276,7 @@ export default function ComparePage() {
             
             <Separator />
             
-            <div className="grid grid-cols-3 gap-4 px-4 py-4 bg-primary/5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-4 py-4 bg-primary/5">
               <div className="font-semibold">Pricing</div>
               <div className="text-center text-sm font-medium text-primary">{competitor.pricing.coaileague}</div>
               <div className="text-center text-sm text-muted-foreground">{competitor.pricing.competitor}</div>
@@ -297,7 +325,7 @@ export default function ComparePage() {
                 <Brain className="w-12 h-12 text-primary mx-auto mb-4" />
                 <h3 className="font-semibold text-white mb-2">AI-First Design</h3>
                 <p className="text-sm text-slate-400">
-                  Trinity AI handles scheduling, compliance, and insights automatically.
+                  Trinity AI assists your team with scheduling, compliance monitoring, and business insights.
                 </p>
               </CardContent>
             </Card>
@@ -321,7 +349,8 @@ export default function ComparePage() {
             </Card>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

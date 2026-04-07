@@ -1,0 +1,135 @@
+# TRINITY PRODUCTION VERIFICATION — Statewide Protective Services
+
+## CONTEXT
+Statewide is the production workspace (workspace_type: 'production'). It's factory clean — 1 owner (Brigido Guillen), zero clients, zero everything else. Before publishing, I need to see Trinity actually work in this workspace with real-looking data. This is the final production verification.
+
+**Do NOT use seed scripts. Do NOT use training tools. These are blocked by the production guard and that's correct. Everything in this test happens through the actual application UI flows and Trinity's autonomous operations.**
+
+---
+
+## PART 1: AUTONOMOUS TOGGLE PERSISTENCE BUG
+
+The "Trinity Autonomous" toggle (the setting that tells Trinity to auto-fill shifts, auto-send invoices, auto-process the pipeline) resets when the page is refreshed. This is a critical bug — an org owner turns on autonomous mode, refreshes their browser, and Trinity stops working because the setting reverted.
+
+### Investigation needed:
+1. Find where the autonomous toggle state is stored. Is it in:
+   - React state only (lost on refresh — BUG)
+   - localStorage (lost on clear/different device — NOT IDEAL)
+   - Database org_settings table (correct — persists everywhere)
+   
+2. If it's React state or localStorage, fix it:
+   - The autonomous toggle must be stored in the database (org_settings or workspace_settings table)
+   - When the page loads, it reads the current setting from the DB
+   - When the user toggles it, it writes to the DB immediately
+   - Trinity's daemon reads this setting from the DB, not from any frontend state
+   - The setting persists across refreshes, devices, and server restarts
+
+3. Verify these related autonomous settings all persist to DB:
+   - Auto-fill shifts (Trinity places employees automatically)
+   - Auto-send invoices (invoices go to 'sent' not 'draft')
+   - Auto-approve time entries (from ShiftCompletionBridge)
+   - Auto-process billing (billing triggers from approved entries)
+   - Any other Trinity automation toggle
+
+4. After fixing, verify: toggle autonomous ON → refresh the page → the toggle should still be ON. Toggle it OFF → refresh → still OFF. The daemon should respect the DB value, not any cached frontend state.
+
+---
+
+## PART 2: VERIFY TRINITY WORKS IN STATEWIDE
+
+I need to walk through the full flow as an org owner would, using Statewide's production workspace. Trinity should handle scheduling and filling with the data available to her.
+
+### Step 1: Add test clients to Statewide (through the UI/API, NOT seed scripts)
+
+Create 3 clients in Statewide with realistic staffing demands. Use the actual client creation API endpoint — the same one an org owner would use:
+
+**Client 1: River Walk Shopping Center**
+- Contract rate: $32/hr
+- Minimum staffing: 2 guards
+- Coverage: Mon-Sat, 8:00 AM - 10:00 PM (custom, 14 hours — should auto-split into 2 shifts)
+- Location: San Antonio, TX
+
+**Client 2: Alamo Heights Medical Plaza**  
+- Contract rate: $28/hr
+- Minimum staffing: 1 guard
+- Coverage: 24/7 (should create 3 × 8-hour shifts)
+- Location: San Antonio, TX
+
+**Client 3: Dominion Country Club**
+- Contract rate: $35/hr
+- Minimum staffing: 1 guard  
+- Coverage: Fri-Sun, 6:00 PM - 6:00 AM (overnight, 12 hours — at the cap, no split needed)
+- Location: San Antonio, TX
+
+### Step 2: Add test employees to Statewide (through the UI/API, NOT seed scripts)
+
+Create 5 employees. Use the actual employee creation endpoint:
+
+- Officer Maria Santos — $18/hr, W2, available Mon-Sat
+- Officer Derek Williams — $20/hr, W2, available Mon-Fri  
+- Officer James Cooper — $19/hr, W2, available all days
+- Officer Lisa Chen — $17/hr, 1099 contractor, available Fri-Sun
+- Officer Marcus Rivera — $22/hr, W2, available Mon-Sat
+
+Set overtime_rate to hourly_rate × 1.5 for each.
+
+### Step 3: Enable Trinity autonomous mode
+
+Turn ON all autonomous settings for Statewide:
+- Auto-fill shifts: ON
+- Auto-send invoices: ON  
+- Auto-approve time entries: ON
+
+**Verify these persist to the database, not just frontend state.**
+
+### Step 4: Trigger Trinity shift generation
+
+Either wait for the daemon's next cycle or use the "Fill Open Shifts" button (NOT a seed script). Trinity should:
+- Read the 3 clients' staffing demands
+- Generate shifts based on their coverage schedules
+- River Walk: 2 guards × 2 shifts/day (14h split into 7+7) × 6 days = 24 shifts
+- Alamo Heights: 1 guard × 3 shifts/day (8h each, 24/7) × 7 days = 21 shifts  
+- Dominion: 1 guard × 1 shift/day (12h) × 3 days (Fri-Sun) = 3 shifts
+- Total: approximately 48 shifts for the week
+
+### Step 5: Verify Trinity fills the shifts
+
+Trinity should assign employees to shifts using her scoring logic:
+- Distance, rate, availability, OT awareness, rest compliance
+- She should NOT assign Derek Williams (Mon-Fri only) to Dominion weekend shifts
+- She should NOT assign Lisa Chen (Fri-Sun only) to Monday shifts
+- She should flag if she can't fill all shifts with 5 employees and 48 needed positions
+
+### Step 6: Report results
+
+Show me:
+- How many shifts were generated (expected ~48)
+- How many were filled and by whom
+- How many couldn't be filled and why
+- Did the 14-hour River Walk coverage split correctly into 2 shifts?
+- Did the 24/7 Alamo Heights create 3 × 8-hour shifts?
+- Did Trinity respect availability constraints?
+- Are all autonomous settings still ON after the generation ran?
+
+---
+
+## PART 3: WHAT I NEED TO SEE BEFORE PUBLISHING
+
+After Trinity generates and fills the Statewide schedule:
+
+1. I can see the filled schedule in the UI with real client names and real employee assignments
+2. The autonomous toggle is ON and stays ON after refresh
+3. Trinity's status shows meaningful activity (not "Processing 0/0")
+4. Shifts are correctly split (no 14-hour or 18-hour single shifts)
+5. Employee availability is respected
+6. The schedule makes sense — right people at the right places at the right times
+
+If all of this works in Statewide's production workspace, Trinity is verified for launch.
+
+---
+
+## RULES
+- Do NOT use seed scripts or training tools — production guard will block them anyway
+- Use actual API endpoints and UI flows — the same paths a real org owner would use
+- Do NOT touch mobile UX / schedule page layout
+- Report findings at each step before proceeding to the next

@@ -2,20 +2,34 @@
  * API Endpoints Configuration
  * Single source of truth for EVERY API route
  * Change an endpoint here, it updates everywhere instantly
+ * 
+ * IMPORTANT: These paths MUST match the actual backend route mounts in server/routes.ts.
+ * Backend mounts use these canonical prefixes:
+ *   /api/auth/*          - Authentication
+ *   /api/employees/*     - Employee management
+ *   /api/shifts/*        - Scheduling/shifts
+ *   /api/time-entries/*  - Time tracking
+ *   /api/invoices/*      - Invoicing
+ *   /api/billing/*       - Billing/subscriptions
+ *   /api/ai-brain/*      - AI Brain system
+ *   /api/trinity/*       - Trinity chat, alerts, maintenance, self-edit
+ *   /api/mascot/*        - Trinity AI Mascot
+ *   /api/trinity-staffing/* - Trinity Staffing
+ *   /api/helpai/*        - HelpAI assistant
+ *   /api/training/*      - Training courses
+ *   /api/trinity-training/* - Trinity training scenarios
  */
 
 export const API_ENDPOINTS = {
-  // Authentication
   auth: {
     login: "/api/auth/login",
     logout: "/api/auth/logout",
     register: "/api/auth/register",
     me: "/api/auth/me",
     current: "/api/auth/me",
-    passwordResetRequest: "/api/auth/reset-password-request",
-    passwordResetConfirm: "/api/auth/reset-password-confirm",
+    passwordResetRequest: "/api/auth/forgot-password",
+    passwordResetConfirm: "/api/auth/reset-password",
     changePassword: "/api/auth/change-password",
-    // MFA endpoints
     setupMfa: "/api/auth/mfa/setup",
     enableMfa: "/api/auth/mfa/enable",
     disableMfa: "/api/auth/mfa/disable",
@@ -24,12 +38,11 @@ export const API_ENDPOINTS = {
     regenerateBackupCodes: "/api/auth/mfa/regenerate-backup-codes",
   },
 
-  // Workspace
   workspace: {
     list: "/api/workspaces/all",
     switch: "/api/workspace/switch/:workspaceId",
-    get: "/api/workspace",
-    current: "/api/workspace",
+    get: "/api/workspace/current",
+    current: "/api/workspace/current",
     health: "/api/workspace/health",
     getHealth: "/api/workspace/health",
     status: "/api/workspace/status",
@@ -40,7 +53,6 @@ export const API_ENDPOINTS = {
     access: "/api/workspace/access",
   },
 
-  // Employees
   employees: {
     list: "/api/employees",
     create: "/api/employees",
@@ -51,7 +63,6 @@ export const API_ENDPOINTS = {
     bulk: "/api/employees/bulk",
   },
 
-  // Shifts
   shifts: {
     list: "/api/shifts",
     create: "/api/shifts",
@@ -61,13 +72,12 @@ export const API_ENDPOINTS = {
     publish: "/api/shifts/:id/publish",
     approve: "/api/shifts/:shiftId/approve",
     bulkApprove: "/api/shifts/bulk-approve",
-    pendingActions: "/api/shift-actions/pending",
-    approveAction: "/api/shift-actions/:id/approve",
+    pendingActions: "/api/shifts/actions/pending",
+    approveAction: "/api/shifts/actions/:id/approve",
   },
 
-  // Time Entries
   timeEntries: {
-    list: "/api/time-entries/entries",
+    list: "/api/time-entries",
     create: "/api/time-entries",
     get: "/api/time-entries/:id",
     update: "/api/time-entries/:id",
@@ -80,9 +90,11 @@ export const API_ENDPOINTS = {
     bulkApprove: "/api/time-entries/bulk-approve",
     calculateHours: "/api/time-entries/calculate-hours",
     exportCsv: "/api/time-entries/export/csv",
+    startBreak: "/api/time-entries/:id/start-break",
+    endBreak: "/api/time-entries/:id/end-break",
+    approveEdit: "/api/time-entries/timesheet-edits/:id/review",
   },
 
-  // Invoices & Billing
   invoices: {
     list: "/api/invoices",
     create: "/api/invoices",
@@ -99,7 +111,6 @@ export const API_ENDPOINTS = {
     usage: "/api/billing/usage",
   },
 
-  // Payroll
   payroll: {
     list: "/api/payroll",
     process: "/api/payroll/process",
@@ -107,7 +118,6 @@ export const API_ENDPOINTS = {
     export: "/api/payroll/export",
   },
 
-  // Reports
   reports: {
     list: "/api/reports",
     create: "/api/reports",
@@ -117,7 +127,6 @@ export const API_ENDPOINTS = {
     submit: "/api/reports/:id/submit",
   },
 
-  // Support & Help
   support: {
     createTicket: "/api/support/create-ticket",
     escalate: "/api/support/escalate",
@@ -126,7 +135,6 @@ export const API_ENDPOINTS = {
     faq: "/api/support/faq",
   },
 
-  // Chat & Messaging
   chat: {
     conversations: "/api/chat/conversations",
     messages: "/api/chat/conversations/:id/messages",
@@ -143,7 +151,6 @@ export const API_ENDPOINTS = {
     markAsRead: "/api/chat/mark-as-read",
   },
 
-  // Notifications
   notifications: {
     list: "/api/notifications",
     markRead: "/api/notifications/:id/read",
@@ -151,7 +158,6 @@ export const API_ENDPOINTS = {
     delete: "/api/notifications/:id",
   },
 
-  // AI & Analytics
   ai: {
     brain: "/api/ai-brain",
     schedule: "/api/ai-brain/schedule",
@@ -159,14 +165,34 @@ export const API_ENDPOINTS = {
     sentiment: "/api/ai-brain/sentiment",
   },
 
-  // Platform/Admin
+  trinity: {
+    chat: "/api/trinity/chat",
+    alerts: "/api/trinity/alerts",
+    status: "/api/trinity/status",
+    insights: "/api/trinity/insights",
+    session: "/api/trinity/session",
+    selfEdit: "/api/trinity/self-edit",
+    maintenance: "/api/trinity/maintenance",
+    memoryHealth: "/api/trinity/memory-health",
+    scheduling: "/api/trinity/scheduling",
+  },
+
+  mascot: {
+    ask: "/api/mascot/ask",
+    insights: "/api/mascot/insights",
+    faqs: "/api/mascot/faqs",
+    tasks: "/api/mascot/tasks",
+    completeTask: "/api/mascot/complete-task",
+    holiday: "/api/mascot/holiday",
+    seasonal: "/api/mascot/seasonal/state",
+  },
+
   admin: {
     stats: "/api/analytics/stats",
     getStats: "/api/analytics/stats",
     health: "/api/health",
     featureUpdates: "/api/feature-updates",
     feedback: "/api/feedback",
-    // User management
     changeUserRole: "/api/admin/users/:id/role",
     lockAccount: "/api/admin/users/:id/lock",
     unlockAccount: "/api/admin/users/:id/unlock",
@@ -175,8 +201,7 @@ export const API_ENDPOINTS = {
     freezeAccount: "/api/admin/users/:id/freeze",
     unfreezeAccount: "/api/admin/users/:id/unfreeze",
   },
-  
-  // Platform Staff Management
+
   platform: {
     staff: "/api/platform/staff",
     grantRole: "/api/platform/staff/grant-role",
@@ -185,13 +210,11 @@ export const API_ENDPOINTS = {
     unsuspendStaff: "/api/platform/staff/:userId/unsuspend",
     changeRole: "/api/platform/staff/:userId/change-role",
   },
-  
-  // Analytics
+
   analytics: {
     getStats: "/api/analytics/stats",
   },
 
-  // User Settings
   user: {
     me: "/api/auth/me",
     workspace: "/api/me/workspace-role",
@@ -199,13 +222,11 @@ export const API_ENDPOINTS = {
     features: "/api/me/workspace-features",
   },
 
-  // Credits
   credits: {
-    balance: "/api/credits/balance/:workspaceId",
-    usage: "/api/credits/usage-breakdown/:workspaceId",
+    balance: "/api/credits/balance",
+    usage: "/api/credits/usage-breakdown",
   },
 
-  // Benefits
   benefits: {
     list: "/api/benefits",
     create: "/api/benefits",
@@ -214,7 +235,6 @@ export const API_ENDPOINTS = {
     delete: "/api/benefits/:id",
   },
 
-  // Disputes (Time Entry Disputes, Grievances)
   disputes: {
     list: "/api/disputes",
     create: "/api/disputes",
@@ -232,7 +252,6 @@ export const API_ENDPOINTS = {
     analyzeSentiment: "/api/disputes/analyze-sentiment",
   },
 
-  // Grievances (alias for disputes for frontend compatibility)
   grievances: {
     list: "/api/disputes",
     file: "/api/disputes",
@@ -241,7 +260,6 @@ export const API_ENDPOINTS = {
     resolve: "/api/disputes/:id/resolve",
   },
 
-  // PTO (Paid Time Off) - uses pto and time-off-requests endpoints
   pto: {
     list: "/api/pto",
     create: "/api/pto",
@@ -250,7 +268,6 @@ export const API_ENDPOINTS = {
     deny: "/api/pto/:id/deny",
   },
 
-  // Time Off Requests (extended PTO system)
   timeOffRequests: {
     list: "/api/time-off-requests",
     create: "/api/time-off-requests",
@@ -258,7 +275,6 @@ export const API_ENDPOINTS = {
     updateStatus: "/api/time-off-requests/:id/status",
   },
 
-  // Timesheet Edit Requests
   timesheetEditRequests: {
     list: "/api/timesheet-edit-requests",
     create: "/api/timesheet-edit-requests",
@@ -266,7 +282,6 @@ export const API_ENDPOINTS = {
     review: "/api/timesheet-edit-requests/:id/review",
   },
 
-  // Performance Reviews
   reviews: {
     list: "/api/reviews",
     create: "/api/reviews",
@@ -275,7 +290,6 @@ export const API_ENDPOINTS = {
     submit: "/api/reviews/:id/submit",
   },
 
-  // Sales/CRM
   sales: {
     leads: "/api/sales/leads",
     addLead: "/api/sales/leads",
@@ -283,6 +297,38 @@ export const API_ENDPOINTS = {
     updateLead: "/api/sales/leads/:id",
     templates: "/api/sales/templates",
     sendEmail: "/api/sales/send-email",
+  },
+
+  contracts: {
+    list: "/api/contracts",
+    create: "/api/contracts",
+    get: "/api/contracts/:id",
+    portal: "/api/contracts/portal",
+  },
+
+  documents: {
+    list: "/api/documents",
+    create: "/api/documents",
+    get: "/api/documents/:id",
+    extract: "/api/documents/extract",
+  },
+
+  training: {
+    courses: "/api/training/courses",
+    enrollments: "/api/training/enrollments",
+    certifications: "/api/training/certifications",
+  },
+
+  staffing: {
+    settings: "/api/trinity-staffing/settings",
+    workflows: "/api/trinity-staffing/workflows",
+    escalationTiers: "/api/trinity-staffing/escalation-tiers",
+  },
+
+  helpai: {
+    registry: "/api/helpai/registry",
+    auditLog: "/api/helpai/audit-log",
+    integrations: "/api/helpai/integrations/config",
   },
 };
 
@@ -306,7 +352,6 @@ export function getEndpoint(
     }
   }
 
-  // Replace path parameters
   if (params && typeof endpoint === "string") {
     Object.entries(params).forEach(([key, value]) => {
       endpoint = endpoint.replace(`:${key}`, value);

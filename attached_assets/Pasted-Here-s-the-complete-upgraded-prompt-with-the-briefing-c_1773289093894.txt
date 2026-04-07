@@ -1,0 +1,213 @@
+Here's the complete upgraded prompt with the briefing channel and email system fully woven in:
+
+---
+
+**NOTIFICATION SYSTEM & TRINITY COO UPGRADE — ACTIONABLE INTELLIGENCE PROTOCOL V2**
+
+This is a complete overhaul of the notification system and Trinity's proactive COO behavior. Read all existing notification, Trinity, chat, email, and routing code first before touching anything.
+
+---
+
+**THE VISION**
+
+Trinity operates as a silent COO running the organization proactively. She communicates through five unified channels — notification panel, chat dock, org operations briefing channel, internal email pipeline, and direct deep links. Every signal Trinity generates must be intelligent, contextual, and actionable. Users should never have to navigate away to act on something Trinity surfaces. The action, the context, and the path forward all come to them.
+
+---
+
+**TRINITY'S FIVE COMMUNICATION CHANNELS**
+
+**Channel 1 — Notification Panel**
+Real time alerts, approvals, advisories, and document actions. Always visible. Role filtered. Priority sorted.
+
+**Channel 2 — Chat Dock**
+Direct conversational interface. User initiated and Trinity initiated. Full context handoff from notification panel. Command execution with credit transparency.
+
+**Channel 3 — Org Operations Briefing Channel**
+A dedicated broadcast chatroom visible to org owners and managers only. Trinity posts here automatically for organizational awareness — not individual alerts. This is the command center feed. Owners and managers see the full operational picture in one place without hunting through individual notifications. Trinity posts to this channel for shift coverage issues, overtime spikes, payroll anomalies, compliance gaps, client billing readiness, schedule conflicts, and any organizational health metric that leadership needs to be aware of. Posts are structured briefings not casual messages — timestamp, category, summary, recommended action, and confidence score where applicable.
+
+**Channel 4 — Internal Email Pipeline**
+Trinity uses the Resend email system for document routing, formal approvals, HR pipelines, and any action that requires a paper trail. Email is used when the action has legal, HR, or contractual significance. Notification panel handles real time. Email handles formal record. Both fire for document pipeline events — notification for immediate awareness, email for official routing and archiving.
+
+**Channel 5 — Deep Links**
+Every Trinity communication regardless of channel includes a direct link to the exact record, page, or action being referenced. Never a generic tab. Always the specific context.
+
+---
+
+**PART 1 — ACTIONABLE NOTIFICATION ARCHITECTURE**
+
+Every notification classified into one of these types and rendered accordingly:
+
+**Type 1 — Informational**
+No action required. Display only.
+- Render as info card — no buttons
+- Trinity also posts summary to Org Operations Briefing Channel if org-wide significance
+
+**Type 2 — Navigational**
+User needs to see something. Deep link button navigates to exact record.
+- Example: "56 shift entries auto-approved — View Schedule →"
+- Lands on specific record not just the tab
+
+**Type 3 — Actionable**
+User must approve, deny, or verify. Inline action buttons inside notification card. User never leaves panel.
+- Approve / Deny with confirmation micro-interaction
+- Action fires API call immediately on tap
+- Card updates in real time
+- Examples: timesheet approval, shift swap, expense approval, document signature
+- On denial — Trinity auto-generates internal report with denial reason and routes to supervisor via notification AND email
+
+**Type 4 — Document Pipeline**
+Requires document signing, HR form, or report generation.
+- Button opens document pipeline inline or navigates directly
+- Trinity simultaneously sends email via Resend with document attached or linked for formal routing
+- On manager denial — internal report generated, routed back to supervisor with denial reason via notification panel AND email trail
+- Examples: onboarding documents, incident reports, disciplinary forms, contract signing
+
+**Type 5 — Credit or Billing Action**
+Requires upgrade, credit purchase, or billing decision.
+- Direct link to billing or upgrade page
+- Current credit balance shown in notification context before user acts
+
+**Type 6 — Trinity Advisory**
+Trinity has analyzed data and is advising action. Human verification always required.
+- Trinity's reasoning summary displayed
+- Confidence score displayed
+- Always "Verify & Approve" never just "Approve"
+- Trinity simultaneously posts advisory summary to Org Operations Briefing Channel so leadership is aware
+- For anything touching money or client relations — verification step is mandatory and never skippable regardless of confidence score
+
+---
+
+**PART 2 — NOTIFICATION CARD COMPONENT UPGRADE**
+
+Each notification card must support:
+- Type badge — INFO, ACTION REQUIRED, DOCUMENT, APPROVAL, BILLING, TRINITY ADVISORY
+- Contextual inline action buttons rendered by type
+- Deep link to exact record
+- Trinity avatar attribution on all Trinity generated notifications
+- Timestamp and NEW badge — keep existing
+- Expandable detail section — full context without leaving panel
+- On approval or denial — card updates immediately, archived not deleted
+- Bulk action — select multiple same-type and act on all at once
+- Unread count badge shows exact number — never capped at 9+. If 32 unread show 32
+
+---
+
+**PART 3 — ORG OPERATIONS BRIEFING CHANNEL**
+
+This is Trinity's leadership broadcast room. Build or verify this channel exists as a dedicated space separate from general employee chat.
+
+**Access:** Org owners and managers only. Employees do not see this channel.
+
+**Trinity posts here automatically for:**
+- Daily org briefing — shift coverage status, clock in summary, any overnight anomalies
+- Overtime spike alerts — who, how many hours, which department, recommended action
+- Payroll anomalies — missing records, rate mismatches, approval bottlenecks
+- Schedule conflicts or uncovered shifts requiring manager attention
+- Compliance gaps — expired certifications, missing documentation, licensing issues
+- Client billing readiness — unbilled hours, invoice approval queue
+- Any Trinity Advisory notification — summary version posted here simultaneously
+- App or system health alerts if relevant to operations
+
+**Post format — structured not casual:**
+- Category header — PAYROLL ALERT / SCHEDULE ALERT / COMPLIANCE / CLIENT BILLING etc
+- Timestamp
+- Summary of finding in plain language
+- Data supporting finding
+- Recommended action with deep link
+- Credit cost if autonomous scan triggered it
+- Confidence score if recommendation involved
+
+**Trinity does not flood this channel.** Consolidate related findings into single briefing posts. Batch minor updates into daily summary. Only urgent findings get immediate standalone posts.
+
+---
+
+**PART 4 — INTERNAL EMAIL PIPELINE INTEGRATION**
+
+Trinity uses Resend for all formal document routing. Email and notification panel fire together for document events — notification for real time awareness, email for official record and routing.
+
+**Trinity sends email automatically for:**
+- HR document routing — onboarding forms, disciplinary documents, policy acknowledgments
+- Contract pipeline — new client contracts, renewals, amendments requiring signature
+- Incident reports — formal incident documentation routed to relevant parties with PDF attached
+- Payroll approval — formal payroll run approval request sent to authorized approver
+- Manager denial workflow — denial reason, internal report, and routing instructions sent via email to supervisor with full context
+- Compliance notifications — expiration warnings sent with enough lead time to act
+- Invoice delivery — client invoices sent directly through email pipeline
+
+**Email routing rules:**
+- Role based routing — email goes to correct person based on their role and the action type
+- Workspace isolation enforced — zero cross-tenant email routing possible
+- All emails include deep link back to relevant record in platform
+- All emails Trinity sends include her avatar and CoAIleague branding
+- Sent email logged in platform against relevant record for full audit trail
+- inbound email addresses — calloffs@, incidents@, docs@, support@ — all routed to Trinity for processing and auto-classification into correct pipeline
+
+**Inbound email processing:**
+- Trinity receives inbound emails on all configured addresses
+- Auto-classifies by address and content
+- Creates appropriate record — incident, calloff, document, support ticket
+- Notifies relevant manager via notification panel AND posts to Org Operations Briefing Channel if org-wide significance
+- Responds to sender confirming receipt where appropriate
+
+---
+
+**PART 5 — CHAT DOCK INTEGRATION**
+
+Trinity's chat dock and all other channels form a unified COO communication system:
+
+- Tap Ask Trinity from notification panel — chat opens with full notification context pre-loaded
+- Trinity pushes proactive messages to chat dock — daily briefing, urgent alerts, schedule summaries without user initiating
+- User commands Trinity from chat — "run payroll analysis", "analyze this week's schedule", "show overtime risks" — Trinity executes, uses credits, returns results as notification AND chat response AND briefing channel post
+- Document pipeline accessible from chat — Trinity initiates, routes, and tracks HR documents, incident reports, contracts from chat commands
+- Manager denial workflow completable from chat — deny, add reason, Trinity generates report, routes to supervisor, sends email, logs everything
+- Chat context is persistent — Trinity remembers the conversation thread and the org context she has been building
+
+---
+
+**PART 6 — NOTIFICATION ROUTING INTELLIGENCE**
+
+- Notifications route to correct role — employee sees own approvals, manager sees team, admin sees everything
+- Workspace isolation enforced — zero cross-tenant notification bleed
+- Priority queue — ACTION REQUIRED always above INFO regardless of timestamp
+- Org Operations Briefing Channel visible to owners and managers only — never employees
+- Email routing role verified before every send — no misdirected documents
+- Notification history preserved and searchable — never permanently deleted, always archived
+- Mark all read, clear all, filter by type all functional
+
+---
+
+**EXECUTION ORDER**
+1. Read all existing notification, chat, email, and Trinity action code first
+2. Verify Org Operations Briefing Channel exists — if not build it with correct access controls
+3. Classify every existing notification type against the new type system
+4. Build upgraded notification card component with type-based rendering and inline actions
+5. Wire inline action buttons to existing API endpoints
+6. Build deep link routing to exact records across all channels
+7. Connect Resend email pipeline to all document and formal approval events
+8. Wire inbound email addresses to Trinity auto-classification and routing
+9. Wire Trinity to post to Org Operations Briefing Channel on all org-significant events
+10. Upgrade Trinity autonomous scan triggers with credit tracking output to notification, chat, and briefing channel simultaneously
+11. Connect chat dock context handoff from notification panel
+12. Enforce 1% human intervention model on all money, client, payroll, and legal actions across all channels
+13. Verify workspace isolation on all notification, email, and channel routing
+14. Test every notification type and channel end to end in Acme sandbox
+
+---
+
+**SUCCESS CRITERIA**
+
+- Every notification informs, navigates, or enables action without leaving the panel
+- Org Operations Briefing Channel receiving correct structured posts from Trinity — owners and managers only
+- Email pipeline firing correctly for all document, HR, contract, and formal approval events
+- Inbound email addresses routing to Trinity and creating correct records automatically
+- Chat dock context handoff working from notification panel
+- Trinity advises and prepares across all five channels simultaneously where appropriate
+- Humans verify and confirm — 1% intervention model enforced on all critical actions
+- Zero notifications that are dead ends
+- Zero document events without email trail
+- Zero org-significant events that don't reach the briefing channel
+- Trinity is the operating system of the organization — not a chatbot
+
+---
+
+That's the full V2 upgrade Bryan. Trinity now has complete situational awareness across every communication layer. Notification panel for real time. Chat dock for conversation. Briefing channel for leadership. Email for formal record. Deep links connecting everything together. She's not just advising anymore — she's running the show with you watching the dashboard.

@@ -12,8 +12,18 @@
 import { Router, Request, Response } from 'express';
 import { trinityControlConsole, sanitizeQueryResult } from '../services/ai-brain/trinityControlConsole';
 import { requirePlatformStaff, requirePlatformAdmin } from '../rbac';
+import { createLogger } from '../lib/logger';
+import { sanitizeError } from '../middleware/errorHandler';
+const log = createLogger('TrinityControlConsoleRoutes');
+
 
 const router = Router();
+
+// Type for authenticated request
+interface AuthenticatedRequest extends Request {
+  workspaceId?: string;
+  user?: any;
+}
 
 /**
  * GET /api/trinity/control-console/stream
@@ -21,12 +31,13 @@ const router = Router();
  * Scoped to workspace for security
  */
 router.get('/stream', requirePlatformStaff, (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
   const sessionId = (req.query.sessionId as string) || 'default';
   const requestedWorkspaceId = req.query.workspaceId as string | undefined;
   
   // For security, use the user's current workspace if available
-  const user = (req as any).user;
-  const workspaceId = requestedWorkspaceId || user?.currentWorkspaceId;
+  const user = authReq.user;
+  const workspaceId = authReq.workspaceId || user?.workspaceId || requestedWorkspaceId || user?.currentWorkspaceId;
 
   // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -52,7 +63,7 @@ router.get('/stream', requirePlatformStaff, (req: Request, res: Response) => {
       };
       res.write(`data: ${JSON.stringify(safePayload)}\n\n`);
     } catch (error) {
-      console.error('[TrinityConsole SSE] Write error:', error);
+      log.error('[TrinityConsole SSE] Write error:', error);
     }
   }, workspaceId); // Pass workspace ID for multi-tenant filtering
 
@@ -74,7 +85,7 @@ router.get('/stream', requirePlatformStaff, (req: Request, res: Response) => {
   req.on('close', () => {
     unsubscribe();
     clearInterval(keepAlive);
-    console.log(`[TrinityConsole] SSE client disconnected for session ${sessionId}`);
+    log.info(`[TrinityConsole] SSE client disconnected for session ${sessionId}`);
   });
   
   // Handle errors
@@ -91,15 +102,15 @@ router.get('/stream', requirePlatformStaff, (req: Request, res: Response) => {
 router.get('/timeline', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const sessionId = (req.query.sessionId as string) || 'default';
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500); // M06: clamp to 500
 
     const timeline = await trinityControlConsole.getSessionTimeline(sessionId);
 
     // Sanitize all data before sending to client
     res.json(sanitizeQueryResult(timeline.slice(0, limit)));
-  } catch (error: any) {
-    console.error('[TrinityConsole] Timeline error:', error);
-    res.status(500).json({ error: 'Failed to fetch timeline' });
+  } catch (error: unknown) {
+    log.error('[TrinityConsole] Timeline error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to fetch timeline' });
   }
 });
 
@@ -112,7 +123,7 @@ router.get('/thoughts', requirePlatformStaff, async (req: Request, res: Response
     const sessionId = req.query.sessionId as string | undefined;
     const workspaceId = req.query.workspaceId as string | undefined;
     const runId = req.query.runId as string | undefined;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 500); // M07: clamp to 500
 
     const thoughts = await trinityControlConsole.getRecentThoughts({
       sessionId,
@@ -127,9 +138,9 @@ router.get('/thoughts', requirePlatformStaff, async (req: Request, res: Response
       thoughts: sanitizeQueryResult(thoughts),
       count: thoughts.length,
     });
-  } catch (error: any) {
-    console.error('[TrinityConsole] Thoughts error:', error);
-    res.status(500).json({ error: 'Failed to fetch thoughts' });
+  } catch (error: unknown) {
+    log.error('[TrinityConsole] Thoughts error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to fetch thoughts' });
   }
 });
 
@@ -142,7 +153,7 @@ router.get('/actions', requirePlatformStaff, async (req: Request, res: Response)
     const sessionId = req.query.sessionId as string | undefined;
     const workspaceId = req.query.workspaceId as string | undefined;
     const runId = req.query.runId as string | undefined;
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500); // M08: clamp to 500
 
     const actions = await trinityControlConsole.getRecentActions({
       sessionId,
@@ -157,9 +168,9 @@ router.get('/actions', requirePlatformStaff, async (req: Request, res: Response)
       actions: sanitizeQueryResult(actions),
       count: actions.length,
     });
-  } catch (error: any) {
-    console.error('[TrinityConsole] Actions error:', error);
-    res.status(500).json({ error: 'Failed to fetch actions' });
+  } catch (error: unknown) {
+    log.error('[TrinityConsole] Actions error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to fetch actions' });
   }
 });
 
@@ -180,9 +191,9 @@ router.get('/awareness', requirePlatformStaff, async (req: Request, res: Respons
       streamCount: trinityControlConsole.getActiveStreamCount(),
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[TrinityConsole] Awareness error:', error);
-    res.status(500).json({ error: 'Failed to fetch awareness' });
+  } catch (error: unknown) {
+    log.error('[TrinityConsole] Awareness error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to fetch awareness' });
   }
 });
 

@@ -5,17 +5,25 @@
  * All routes require authentication. Approval actions require support staff role.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, type Request, type Response, type RequestHandler } from 'express';
 import { bugReportOrchestrator } from '../services/ai-brain/bugReportOrchestrator';
 import { z } from 'zod';
+import { requireAuth } from '../auth';
+import { requirePlatformStaff } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('BugRemediation');
+
 
 interface AuthenticatedRequest extends Request {
-  user?: { id: string; email?: string; isAdmin?: boolean; isSupportStaff?: boolean };
+  user?: any;
   userId?: string;
   workspaceId?: string;
 }
 
 const router = Router();
+
+router.use(requireAuth);
 
 const bugReportSchema = z.object({
   type: z.enum(['bug', 'feature', 'question', 'other']),
@@ -33,15 +41,6 @@ const rejectReasonSchema = z.object({
 const requireUserAuth = (req: AuthenticatedRequest, res: Response): boolean => {
   if (!req.user?.id && !req.userId) {
     res.status(401).json({ success: false, error: 'Authentication required' });
-    return false;
-  }
-  return true;
-};
-
-const requireSupportAccess = (req: AuthenticatedRequest, res: Response): boolean => {
-  if (!requireUserAuth(req, res)) return false;
-  if (!req.user?.isSupportStaff && !req.user?.isAdmin) {
-    res.status(403).json({ success: false, error: 'Support staff or admin role required' });
     return false;
   }
   return true;
@@ -76,9 +75,9 @@ router.post('/submit', (async (req: AuthenticatedRequest, res: Response) => {
     });
 
     res.json({ success: true, data: result });
-  } catch (error: any) {
-    console.error('[BugRemediation] Submit error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to submit bug report' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Submit error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to submit bug report' });
   }
 }) as RequestHandler);
 
@@ -94,9 +93,9 @@ router.get('/report/:id', (async (req: AuthenticatedRequest, res: Response) => {
     }
 
     res.json({ success: true, data: report });
-  } catch (error: any) {
-    console.error('[BugRemediation] Get report error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to get bug report' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Get report error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get bug report' });
   }
 }) as RequestHandler);
 
@@ -112,40 +111,34 @@ router.get('/analysis/:id', (async (req: AuthenticatedRequest, res: Response) =>
     }
 
     res.json({ success: true, data: analysis });
-  } catch (error: any) {
-    console.error('[BugRemediation] Get analysis error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to get analysis' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Get analysis error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get analysis' });
   }
 }) as RequestHandler);
 
-router.get('/pending', (async (req: AuthenticatedRequest, res: Response) => {
+router.get('/pending', requirePlatformStaff, (async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!requireSupportAccess(req, res)) return;
-
     const pending = bugReportOrchestrator.getPendingRemediations();
     res.json({ success: true, data: pending });
-  } catch (error: any) {
-    console.error('[BugRemediation] Get pending error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to get pending remediations' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Get pending error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get pending remediations' });
   }
-}) as RequestHandler);
+}) as any);
 
-router.get('/all', (async (req: AuthenticatedRequest, res: Response) => {
+router.get('/all', requirePlatformStaff, (async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!requireSupportAccess(req, res)) return;
-
     const remediations = bugReportOrchestrator.getAllRemediations();
     res.json({ success: true, data: remediations });
-  } catch (error: any) {
-    console.error('[BugRemediation] Get all error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to get remediations' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Get all error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get remediations' });
   }
-}) as RequestHandler);
+}) as any);
 
-router.post('/:id/approve', (async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:id/approve', requirePlatformStaff, (async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!requireSupportAccess(req, res)) return;
-
     const { id } = req.params;
     const approverId = req.userId || req.user?.id;
 
@@ -168,16 +161,14 @@ router.post('/:id/approve', (async (req: AuthenticatedRequest, res: Response) =>
         hint: 'The remediation remains in pending state. You can retry after investigating the error.'
       });
     }
-  } catch (error: any) {
-    console.error('[BugRemediation] Approve error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to approve remediation', canRetry: true });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Approve error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to approve remediation', canRetry: true });
   }
 }) as RequestHandler);
 
-router.post('/:id/reject', (async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:id/reject', requirePlatformStaff, (async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!requireSupportAccess(req, res)) return;
-
     const { id } = req.params;
     const validation = rejectReasonSchema.safeParse(req.body);
     const reason = validation.success ? validation.data.reason : undefined;
@@ -194,9 +185,9 @@ router.post('/:id/reject', (async (req: AuthenticatedRequest, res: Response) => 
     } else {
       res.status(404).json({ success: false, error: 'Remediation not found' });
     }
-  } catch (error: any) {
-    console.error('[BugRemediation] Reject error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to reject remediation' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Reject error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to reject remediation' });
   }
 }) as RequestHandler);
 
@@ -206,9 +197,9 @@ router.get('/stats', (async (req: AuthenticatedRequest, res: Response) => {
 
     const stats = bugReportOrchestrator.getStats();
     res.json({ success: true, data: stats });
-  } catch (error: any) {
-    console.error('[BugRemediation] Get stats error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to get statistics' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Get stats error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get statistics' });
   }
 }) as RequestHandler);
 
@@ -224,9 +215,9 @@ router.get('/:id', (async (req: AuthenticatedRequest, res: Response) => {
     }
 
     res.json({ success: true, data: remediation });
-  } catch (error: any) {
-    console.error('[BugRemediation] Get remediation error:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to get remediation' });
+  } catch (error: unknown) {
+    log.error('[BugRemediation] Get remediation error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) || 'Failed to get remediation' });
   }
 }) as RequestHandler);
 

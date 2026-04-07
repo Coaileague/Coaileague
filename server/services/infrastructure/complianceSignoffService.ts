@@ -4,6 +4,8 @@
  * Pre-launch approval workflows, regulatory compliance verification,
  * and sign-off tracking for production readiness.
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('complianceSignoffService');
 
 interface ComplianceRequirement {
   id: string;
@@ -99,7 +101,7 @@ class ComplianceSignoffService {
     this.seedRequirements();
     this.seedSignoffs();
     this.initialized = true;
-    console.log('[ComplianceSignoff] Service initialized with regulatory compliance verification');
+    log.info('[ComplianceSignoff] Service initialized with regulatory compliance verification');
   }
 
   private seedRequirements(): void {
@@ -137,7 +139,7 @@ class ComplianceSignoffService {
       this.requirements.set(req.id, req);
     });
 
-    console.log(`[ComplianceSignoff] Seeded ${requirements.length} compliance requirements`);
+    log.info(`[ComplianceSignoff] Seeded ${requirements.length} compliance requirements`);
   }
 
   private seedSignoffs(): void {
@@ -191,7 +193,7 @@ class ComplianceSignoffService {
       this.signoffs.set(so.id, so);
     });
 
-    console.log(`[ComplianceSignoff] Seeded ${signoffs.length} sign-off requests`);
+    log.info(`[ComplianceSignoff] Seeded ${signoffs.length} sign-off requests`);
   }
 
   async updateRequirement(id: string, updates: Partial<ComplianceRequirement>): Promise<ComplianceRequirement | null> {
@@ -204,7 +206,7 @@ class ComplianceSignoffService {
     }
 
     this.requirements.set(id, updated);
-    console.log(`[ComplianceSignoff] Updated requirement: ${req.name} -> ${updated.status}`);
+    log.info(`[ComplianceSignoff] Updated requirement: ${req.name} -> ${updated.status}`);
     return updated;
   }
 
@@ -218,7 +220,7 @@ class ComplianceSignoffService {
     };
 
     req.evidence.push(newEvidence);
-    console.log(`[ComplianceSignoff] Added evidence to ${req.name}: ${evidence.title}`);
+    log.info(`[ComplianceSignoff] Added evidence to ${req.name}: ${evidence.title}`);
     return newEvidence;
   }
 
@@ -231,7 +233,7 @@ class ComplianceSignoffService {
 
     evidence.verified = true;
     evidence.verifiedBy = verifiedBy;
-    console.log(`[ComplianceSignoff] Evidence verified: ${evidence.title}`);
+    log.info(`[ComplianceSignoff] Evidence verified: ${evidence.title}`);
     return true;
   }
 
@@ -244,7 +246,7 @@ class ComplianceSignoffService {
     };
 
     this.signoffs.set(newSignoff.id, newSignoff);
-    console.log(`[ComplianceSignoff] Created sign-off request: ${signoff.scope}`);
+    log.info(`[ComplianceSignoff] Created sign-off request: ${signoff.scope}`);
     return newSignoff;
   }
 
@@ -271,9 +273,9 @@ class ComplianceSignoffService {
     if (allApproved) {
       signoff.status = 'approved';
       signoff.completedAt = new Date();
-      console.log(`[ComplianceSignoff] Sign-off approved: ${signoff.scope}`);
+      log.info(`[ComplianceSignoff] Sign-off approved: ${signoff.scope}`);
     } else {
-      console.log(`[ComplianceSignoff] Sign-off partially approved: ${signoff.scope} (${userId})`);
+      log.info(`[ComplianceSignoff] Sign-off partially approved: ${signoff.scope} (${userId})`);
     }
 
     return signoff;
@@ -298,7 +300,7 @@ class ComplianceSignoffService {
       timestamp: new Date()
     });
 
-    console.log(`[ComplianceSignoff] Sign-off rejected: ${signoff.scope} - ${reason}`);
+    log.info(`[ComplianceSignoff] Sign-off rejected: ${signoff.scope} - ${reason}`);
     return signoff;
   }
 
@@ -313,7 +315,7 @@ class ComplianceSignoffService {
     };
 
     this.audits.set(audit.id, audit);
-    console.log(`[ComplianceSignoff] Started ${framework} audit by ${auditor}`);
+    log.info(`[ComplianceSignoff] Started ${framework} audit by ${auditor}`);
     return audit;
   }
 
@@ -327,7 +329,7 @@ class ComplianceSignoffService {
     };
 
     audit.findings.push(newFinding);
-    console.log(`[ComplianceSignoff] Added finding to audit: ${finding.description}`);
+    log.info(`[ComplianceSignoff] Added finding to audit: ${finding.description}`);
     return newFinding;
   }
 
@@ -338,7 +340,7 @@ class ComplianceSignoffService {
     audit.completedAt = new Date();
     audit.overallResult = result;
 
-    console.log(`[ComplianceSignoff] Audit completed: ${audit.framework} - ${result}`);
+    log.info(`[ComplianceSignoff] Audit completed: ${audit.framework} - ${result}`);
     return audit;
   }
 
@@ -417,7 +419,7 @@ class ComplianceSignoffService {
   }
 
   async shutdown(): Promise<void> {
-    console.log('[ComplianceSignoff] Service shutdown');
+    log.info('[ComplianceSignoff] Service shutdown');
   }
 }
 

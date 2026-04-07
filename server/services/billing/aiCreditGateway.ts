@@ -1,35 +1,33 @@
 /**
- * AI CREDIT GATEWAY
- * =================
- * Fortune 500-grade centralized billing enforcement for all AI operations.
- * 
- * This gateway intercepts ALL AI requests and enforces billing based on:
- * - Request type (chit-chat vs business operation)
- * - User role (subscriber-pays-all model)
- * - Workspace credit balance
- * 
- * BILLING PHILOSOPHY:
- * - Chit-chat is FREE: Trinity conversations, mascot interactions, casual help
- * - Business ops are PAID: Scheduling, payroll, invoicing, analytics
- * - Subscriber-pays-all: Workspace owner is billed, not individual users
+ * AI CREDIT GATEWAY — TOKEN USAGE TRACKING + SOFT/HARD CAP ENFORCEMENT
+ * ======================================================================
+ * Credits removed (CREDITS=0). All AI usage now metered via aiMeteringService
+ * and tracked in workspace_ai_usage / ai_call_log / token_usage_log.
+ *
+ * ENFORCEMENT MODEL (every tenant, every AI call):
+ * - Free/trial tiers:  hardCapK enforced — blocked when monthly limit exhausted.
+ *                      Prevents abuse. No overage billing (null rate).
+ * - Paid tiers:        Soft cap only. NEVER blocked. Overage billed on monthly invoice.
+ *                      "We profit always."
+ * - Founder-exempt:    Tracked, NEVER alerted, NEVER billed, NEVER blocked.
+ *
+ * OMEGA LAW 14 — TOKEN USAGE INTEGRITY:
+ * preAuthorize() enforces hard caps. finalizeBilling() writes token_usage_log.
+ * Both are fire-and-check — never delay execution for paid workspaces.
  */
 
-import { creditManager, CREDIT_COSTS, CREDIT_EXEMPT_FEATURES, isUnlimitedCreditUser } from './creditManager';
-import { usageMeteringService } from './usageMetering';
-import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+import { CREDIT_COSTS, CREDIT_EXEMPT_FEATURES, creditManager } from './creditManager';
+import { recordTokenUsageAsync } from './tokenUsageService';
+import { aiMeteringService } from './aiMeteringService';
+
+const log = createLogger('aiCreditGateway');
 
 // ============================================================================
-// REQUEST CLASSIFICATION
+// EXPORTED TYPES (preserved for compatibility)
 // ============================================================================
 
-/**
- * Request classification tiers
- * CHIT_CHAT: Casual conversations, greetings, help - FREE
- * BUSINESS_LIGHT: Simple queries about data - LOW COST
- * BUSINESS_STANDARD: Standard business operations - STANDARD COST
- * BUSINESS_HEAVY: Complex AI operations - HIGH COST
- */
-export type RequestTier = 'CHIT_CHAT' | 'BUSINESS_LIGHT' | 'BUSINESS_STANDARD' | 'BUSINESS_HEAVY';
+export type RequestTier = 'BUSINESS_LIGHT' | 'BUSINESS_STANDARD' | 'BUSINESS_HEAVY';
 
 export interface RequestClassification {
   tier: RequestTier;
@@ -39,33 +37,8 @@ export interface RequestClassification {
   reason: string;
 }
 
-/**
- * Patterns that indicate chit-chat (FREE tier)
- */
-const CHIT_CHAT_PATTERNS = [
-  /^(hi|hello|hey|good morning|good afternoon|good evening)/i,
-  /^(thanks|thank you|thx|ty)/i,
-  /^(how are you|what's up|whats up)/i,
-  /^(help|what can you do|tell me about yourself)/i,
-  /^(bye|goodbye|see you|later)/i,
-  /\?$/,  // Simple questions often are chit-chat
-];
-
-/**
- * Keywords that indicate business operations (PAID tier)
- */
-const BUSINESS_KEYWORDS = [
-  'schedule', 'shift', 'roster', 'calendar',
-  'payroll', 'salary', 'wage', 'pay',
-  'invoice', 'bill', 'charge', 'payment',
-  'report', 'analytics', 'metrics', 'dashboard',
-  'employee', 'staff', 'team', 'worker',
-  'compliance', 'certification', 'license',
-  'timesheet', 'clock', 'hours', 'overtime',
-];
-
 // ============================================================================
-// GATEWAY CLASS
+// NO-OP GATEWAY CLASS
 // ============================================================================
 
 export class AICreditGateway {
@@ -80,351 +53,164 @@ export class AICreditGateway {
     return AICreditGateway.instance;
   }
 
-  /**
-   * Classify a request to determine billing tier
-   */
-  classifyRequest(
+  classifyRequest(featureKey: string): RequestClassification {
+    return {
+      tier: 'BUSINESS_STANDARD',
+      featureKey,
+      creditCost: 0,
+      isFree: true,
+      reason: 'CREDITS_ZERO_PASSTHROUGH',
+    };
+  }
+
+  async preAuthorize(
+    workspaceId: string,
+    userId: string | null | undefined,
     featureKey: string,
-    userMessage?: string
-  ): RequestClassification {
-    // First check if feature is explicitly exempt (FREE)
-    if (CREDIT_EXEMPT_FEATURES.has(featureKey)) {
-      return {
-        tier: 'CHIT_CHAT',
-        featureKey,
-        creditCost: 0,
-        isFree: true,
-        reason: `Feature "${featureKey}" is credit-exempt (Trinity conversations are FREE)`,
-      };
-    }
+    _options?: Record<string, unknown>,
+  ): Promise<{
+    authorized: boolean;
+    reason: string;
+    creditCost: number;
+    isFree: boolean;
+    featureKey: string;
+    tier?: RequestTier;
+    classification: { tier: RequestTier; featureKey: string; creditCost: number; isFree: boolean; reason: string };
+  }> {
+    log.info(`[AICreditGateway] preAuthorize: ${featureKey} ws=${workspaceId}`);
+    const creditCost = (CREDIT_COSTS as Record<string, number>)[featureKey] ?? 0;
+    const isFree = CREDIT_EXEMPT_FEATURES.has(featureKey) || creditCost === 0;
 
-    // Check if feature has zero cost defined
-    const definedCost = CREDIT_COSTS[featureKey as keyof typeof CREDIT_COSTS];
-    if (definedCost === 0) {
-      return {
-        tier: 'CHIT_CHAT',
-        featureKey,
-        creditCost: 0,
-        isFree: true,
-        reason: `Feature "${featureKey}" has zero credit cost`,
-      };
-    }
-
-    // If user message provided, analyze content
-    if (userMessage) {
-      const isChitChat = this.isChitChatMessage(userMessage);
-      if (isChitChat) {
+    // TOKEN HARD CAP GATE — free/trial only (paid tiers return allowed:true always).
+    // This is the universal enforcement point: all 5 AI providers call preAuthorize.
+    if (workspaceId) {
+      const tokenGuard = await aiMeteringService.checkUsageAllowedById(workspaceId);
+      if (!tokenGuard.allowed) {
+        const classification: RequestClassification = { tier: 'BUSINESS_HEAVY', featureKey, creditCost, isFree: false, reason: 'TOKEN_HARD_CAP_REACHED' };
         return {
-          tier: 'CHIT_CHAT',
-          featureKey,
+          authorized: false,
+          reason: tokenGuard.warning ?? 'Monthly AI token limit reached. Upgrade to continue.',
           creditCost: 0,
-          isFree: true,
-          reason: 'Message detected as casual chit-chat conversation',
+          isFree: false,
+          featureKey,
+          tier: 'BUSINESS_HEAVY',
+          classification,
         };
       }
     }
 
-    // Determine tier based on feature key
-    const tier = this.getFeatureTier(featureKey);
-    const cost = definedCost ?? CREDIT_COSTS.ai_general;
-
-    return {
-      tier,
-      featureKey,
-      creditCost: cost,
-      isFree: false,
-      reason: `Business operation: ${featureKey}`,
-    };
-  }
-
-  /**
-   * Check if a message is casual chit-chat
-   */
-  private isChitChatMessage(message: string): boolean {
-    const normalized = message.toLowerCase().trim();
-    
-    // Check against chit-chat patterns
-    for (const pattern of CHIT_CHAT_PATTERNS) {
-      if (pattern.test(normalized)) {
-        // But verify no business keywords present
-        const hasBusinessKeyword = BUSINESS_KEYWORDS.some(kw => 
-          normalized.includes(kw.toLowerCase())
-        );
-        if (!hasBusinessKeyword) {
-          return true;
+    if (!isFree && workspaceId) {
+      const check = await creditManager.checkCredits(workspaceId, featureKey, userId || undefined);
+      if (!check.hasEnoughCredits) {
+        // OMEGA-L2: Degraded-mode split — Brain tasks (creditCost >= 15) are hard-blocked at 0 credits.
+        // Standard/lightweight tasks (creditCost < 15) are allowed in degraded mode so the org
+        // remains operational (basic scheduling, reads, exports) while AI-heavy features pause.
+        const isBrainTask = creditCost >= 15;
+        if (isBrainTask) {
+          log.warn(`[AICreditGateway] DEGRADED_MODE: Brain task '${featureKey}' blocked — workspace ${workspaceId} has exhausted AI credits. Standard actions remain available.`);
+          const classification: RequestClassification = { tier: 'BUSINESS_HEAVY', featureKey, creditCost, isFree: false, reason: 'DEGRADED_MODE_BRAIN_BLOCKED' };
+          return { authorized: false, reason: 'DEGRADED_MODE_BRAIN_BLOCKED', creditCost, isFree: false, featureKey, tier: 'BUSINESS_HEAVY', classification };
         }
+        // Standard-tier feature: allow with degraded-mode marker (metering continues)
+        log.info(`[AICreditGateway] DEGRADED_MODE: Standard task '${featureKey}' allowed under degraded mode for workspace ${workspaceId}.`);
+        const classification: RequestClassification = { tier: 'BUSINESS_STANDARD', featureKey, creditCost, isFree: false, reason: 'DEGRADED_MODE_STANDARD_ALLOWED' };
+        return { authorized: true, reason: 'DEGRADED_MODE_STANDARD_ALLOWED', creditCost, isFree: false, featureKey, tier: 'BUSINESS_STANDARD', classification };
       }
     }
 
-    // Very short messages without business keywords are likely chit-chat
-    if (normalized.length < 20) {
-      const hasBusinessKeyword = BUSINESS_KEYWORDS.some(kw => 
-        normalized.includes(kw.toLowerCase())
-      );
-      if (!hasBusinessKeyword) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Determine feature tier based on feature key
-   */
-  private getFeatureTier(featureKey: string): RequestTier {
-    // Heavy operations
-    if (featureKey.includes('scheduling') || featureKey.includes('payroll')) {
-      return 'BUSINESS_HEAVY';
-    }
-
-    // Standard operations
-    if (featureKey.includes('invoice') || featureKey.includes('analytics')) {
-      return 'BUSINESS_STANDARD';
-    }
-
-    // Light operations
-    if (featureKey.includes('chat') || featureKey.includes('query')) {
-      return 'BUSINESS_LIGHT';
-    }
-
-    return 'BUSINESS_STANDARD';
-  }
-
-  /**
-   * Pre-authorize an AI request
-   * Returns true if request can proceed, false if blocked
-   */
-  async preAuthorize(
-    workspaceId: string,
-    userId: string,
-    featureKey: string,
-    userMessage?: string
-  ): Promise<{
-    authorized: boolean;
-    classification: RequestClassification;
-    reason: string;
-  }> {
-    const classification = this.classifyRequest(featureKey, userMessage);
-
-    // FREE tier always authorized
-    if (classification.isFree) {
-      console.log(`[AICreditGateway] FREE request authorized: ${featureKey}`);
-      return {
-        authorized: true,
-        classification,
-        reason: classification.reason,
-      };
-    }
-
-    // Check if user has unlimited credits
-    const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
-    if (hasUnlimited) {
-      console.log(`[AICreditGateway] Unlimited credits user: ${userId}`);
-      return {
-        authorized: true,
-        classification,
-        reason: 'User has unlimited credits (support/admin/owner)',
-      };
-    }
-
-    // Check workspace credit balance with proper type casting
-    const creditCheck = await creditManager.checkCredits(
-      workspaceId,
-      featureKey as keyof typeof CREDIT_COSTS,
-      userId
-    );
-
-    if (!creditCheck.hasEnoughCredits) {
-      console.log(`[AICreditGateway] Insufficient credits for ${featureKey}`);
-      
-      // Emit low credit event
-      platformEventBus.emit({
-        type: 'billing',
-        category: 'credit_alert',
-        title: 'Insufficient Credits',
-        message: `Workspace lacks ${creditCheck.shortfall} credits for ${featureKey}`,
-        workspaceId,
-        userId,
-        metadata: {
-          featureKey,
-          required: creditCheck.required,
-          currentBalance: creditCheck.currentBalance,
-          shortfall: creditCheck.shortfall,
-        },
-      });
-
-      return {
-        authorized: false,
-        classification,
-        reason: `Insufficient credits: need ${creditCheck.required}, have ${creditCheck.currentBalance}`,
-      };
-    }
-
+    const classification: RequestClassification = {
+      tier: creditCost >= 15 ? 'BUSINESS_HEAVY' : creditCost >= 5 ? 'BUSINESS_STANDARD' : 'BUSINESS_LIGHT',
+      featureKey,
+      creditCost,
+      isFree,
+      reason: isFree ? 'EXEMPT' : 'SOFT_CAP_ALLOWED',
+    };
     return {
       authorized: true,
+      reason: classification.reason,
+      creditCost,
+      isFree,
+      featureKey,
+      tier: classification.tier,
       classification,
-      reason: 'Sufficient credits available',
     };
   }
 
-  /**
-   * Finalize billing after AI request completes
-   * Records usage and deducts credits
-   */
   async finalizeBilling(
     workspaceId: string,
-    userId: string,
+    userId: string | null | undefined,
     featureKey: string,
-    tokensUsed: number,
-    metadata?: Record<string, any>
-  ): Promise<{
-    charged: boolean;
-    creditsDeducted: number;
-    newBalance: number;
-  }> {
-    const classification = this.classifyRequest(featureKey);
+    tokensUsed?: number,
+    metadata?: Record<string, unknown>,
+    quantity: number = 1,
+  ): Promise<{ charged: boolean; creditsDeducted: number; newBalance: number }> {
+    // OMEGA LAW 14 — TOKEN USAGE INTEGRITY (CLASS A BLOCKER #17)
+    // Fire-and-forget: NEVER block or delay the AI execution path.
+    if (workspaceId) {
+      const tokensInput = typeof metadata?.inputTokens === 'number' ? metadata.inputTokens :
+                          typeof tokensUsed === 'number' ? Math.ceil(tokensUsed / 2) : 0;
+      const tokensOutput = typeof metadata?.outputTokens === 'number' ? metadata.outputTokens :
+                           typeof tokensUsed === 'number' ? Math.ceil(tokensUsed / 2) : 0;
+      const modelUsed = (typeof metadata?.model === 'string' ? metadata.model : null) ||
+                        (featureKey?.toLowerCase().includes('gemini') ? 'gemini' :
+                         featureKey?.toLowerCase().includes('claude') ? 'claude' : 'openai');
 
-    // FREE tier - record usage but don't charge
-    if (classification.isFree) {
-      console.log(`[AICreditGateway] FREE usage recorded (no charge): ${featureKey}, ${tokensUsed} tokens`);
-      
-      // Still record for analytics (don't emit event - geminiClient handles that)
-      await usageMeteringService.recordUsage({
+      recordTokenUsageAsync({
         workspaceId,
-        userId,
-        featureKey,
-        usageType: 'token',
-        usageAmount: tokensUsed,
-        usageUnit: 'tokens',
-        emitEvent: false, // Prevent duplicate events - geminiClient emits usage events
-        metadata: {
-          ...metadata,
-          tier: 'FREE',
-          charged: false,
-        },
+        userId: userId ?? null,
+        modelUsed,
+        tokensInput,
+        tokensOutput,
+        actionType: 'ai_action',
+        featureName: featureKey ?? null,
       });
-
-      return {
-        charged: false,
-        creditsDeducted: 0,
-        newBalance: -1, // Sentinel for free tier
-      };
     }
 
-    // PAID tier - deduct credits using correct object signature
-    const deduction = await creditManager.deductCredits({
-      workspaceId,
-      userId,
-      featureKey: featureKey as keyof typeof CREDIT_COSTS,
-      featureName: `AI operation: ${featureKey}`,
-      description: `AI operation: ${featureKey}`,
-      relatedEntityType: metadata?.entityType,
-      relatedEntityId: metadata?.entityId,
-    });
-
-    // Record usage (don't emit event - we emit our own billing event below)
-    await usageMeteringService.recordUsage({
-      workspaceId,
-      userId,
-      featureKey,
-      usageType: 'token',
-      usageAmount: tokensUsed,
-      usageUnit: 'tokens',
-      emitEvent: false, // Prevent duplicate events - we emit billing event below
-      metadata: {
-        ...metadata,
-        tier: classification.tier,
-        charged: deduction.success,
-        creditsDeducted: classification.creditCost,
-      },
-    });
-
-    console.log(`[AICreditGateway] PAID usage: ${featureKey}, ${classification.creditCost} credits, ${tokensUsed} tokens`);
-
-    // Emit billing event for Trinity awareness
-    platformEventBus.emit({
-      type: 'billing',
-      category: 'ai_usage_billed',
-      title: 'AI Usage Billed',
-      message: `${featureKey}: ${tokensUsed} tokens, ${classification.creditCost} credits`,
-      workspaceId,
-      userId,
-      metadata: {
-        featureKey,
-        tier: classification.tier,
-        tokensUsed,
-        creditsDeducted: classification.creditCost,
-        newBalance: deduction.newBalance,
-        charged: deduction.success,
-      },
-    });
-
-    return {
-      charged: deduction.success,
-      creditsDeducted: classification.creditCost,
-      newBalance: deduction.newBalance,
-    };
+    const creditCost = ((CREDIT_COSTS as Record<string, number>)[featureKey] ?? 0) * quantity;
+    if (creditCost <= 0 || CREDIT_EXEMPT_FEATURES.has(featureKey) || !workspaceId) {
+      return { charged: false, creditsDeducted: 0, newBalance: -1 };
+    }
+    const result = await creditManager.deductCredits({ workspaceId, featureKey, quantity, userId: userId || undefined });
+    return { charged: result.success, creditsDeducted: result.success ? creditCost : 0, newBalance: result.newBalance };
   }
 
-  /**
-   * Get billing summary for a feature
-   */
-  getBillingSummary(featureKey: string): {
-    isFree: boolean;
-    tier: RequestTier;
-    creditCost: number;
-    description: string;
+  getBillingSummary(_featureKey: string): {
+    featureKey: string;
+    totalCallsThisHour: number;
+    totalCreditsThisHour: number;
   } {
-    const classification = this.classifyRequest(featureKey);
-    
-    const descriptions: Record<RequestTier, string> = {
-      CHIT_CHAT: 'Free casual conversation - no credits charged',
-      BUSINESS_LIGHT: 'Light business query - low credit cost',
-      BUSINESS_STANDARD: 'Standard business operation - standard credit cost',
-      BUSINESS_HEAVY: 'Complex AI operation - higher credit cost',
-    };
+    return { featureKey: _featureKey, totalCallsThisHour: 0, totalCreditsThisHour: 0 };
+  }
 
-    return {
-      isFree: classification.isFree,
-      tier: classification.tier,
-      creditCost: classification.creditCost,
-      description: descriptions[classification.tier],
-    };
+  async gate(
+    workspaceId: string,
+    userId: string | null | undefined,
+    featureKey: string,
+    fn: () => Promise<unknown>,
+    _options?: Record<string, unknown>,
+  ): Promise<unknown> {
+    return fn();
   }
 }
 
-// Export singleton
 export const aiCreditGateway = AICreditGateway.getInstance();
 
 // ============================================================================
-// HELPER EXPORTS
+// UTILITY FUNCTIONS (preserved for compatibility)
 // ============================================================================
 
-/**
- * Quick check if a feature is free
- */
-export function isFeatureFree(featureKey: string): boolean {
-  return aiCreditGateway.classifyRequest(featureKey).isFree;
+export function isFeatureFree(_featureKey: string): boolean {
+  return true;
 }
 
-/**
- * Get credit cost for a feature
- */
-export function getFeatureCreditCost(featureKey: string): number {
-  return aiCreditGateway.classifyRequest(featureKey).creditCost;
+export function getFeatureCreditCost(_featureKey: string): number {
+  return 0;
 }
 
-/**
- * List all free features
- */
 export function listFreeFeatures(): string[] {
   return Array.from(CREDIT_EXEMPT_FEATURES);
 }
 
-/**
- * List all paid features with costs
- */
 export function listPaidFeatures(): Array<{ feature: string; cost: number }> {
   return Object.entries(CREDIT_COSTS)
     .filter(([key, cost]) => cost > 0 && !CREDIT_EXEMPT_FEATURES.has(key))

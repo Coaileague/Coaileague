@@ -109,12 +109,12 @@ export function DataSummaryCard({
             
             {/* Subtitle */}
             {cardSubtitle && (
-              <p 
+              <div 
                 className="text-sm text-muted-foreground mt-1"
                 data-testid={testId ? `${testId}-${id}-subtitle` : `card-${id}-subtitle`}
               >
                 {cardSubtitle}
-              </p>
+              </div>
             )}
           </div>
           

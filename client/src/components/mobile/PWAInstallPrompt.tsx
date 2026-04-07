@@ -12,9 +12,12 @@
 import { useState, useEffect } from "react";
 import { useMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Download, X, Smartphone, Share, Plus } from "lucide-react";
+import { UniversalModal, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
+import { Download, X, Share, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TrinityLogo } from "@/components/trinity-logo";
+
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
 const DISMISS_KEY = 'coaileague_pwa_prompt_dismissed';
 const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -64,59 +67,62 @@ export function PWAInstallPrompt() {
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetContent 
+    <UniversalModal open={isOpen} onOpenChange={setIsOpen}>
+      <UniversalModalContent 
         side="bottom" 
-        className="rounded-t-2xl bg-slate-900 border-slate-700 px-4 pt-6"
+        className="rounded-t-2xl px-4 pt-6"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 24px)' }}
+        showHomeButton={false}
+        hideBuiltInClose
       >
-        <SheetTitle className="sr-only">Install CoAIleague App</SheetTitle>
+        <UniversalModalTitle className="sr-only">Install {PLATFORM_NAME} App</UniversalModalTitle>
         
         <button 
           onClick={handleDismiss}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white"
+          className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground z-10"
           data-testid="button-dismiss-pwa-prompt"
         >
           <X className="w-5 h-5" />
         </button>
         
         <div className="flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/30">
-            <Smartphone className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 rounded-md bg-muted flex items-center justify-center mb-4 shadow-sm border">
+            <TrinityLogo size={40} />
           </div>
           
-          <h2 className="text-xl font-bold text-white mb-2">
-            Install CoAIleague
+          <h2 className="text-xl font-bold text-foreground mb-2">
+            Install {PLATFORM_NAME}
           </h2>
-          <p className="text-slate-400 text-sm mb-6 max-w-[280px]">
+          <p className="text-muted-foreground text-sm mb-6 max-w-[280px]">
             Add to your home screen for quick access to clock in, view your schedule, and report incidents.
           </p>
           
           {isIOS ? (
             <>
-              <div className="w-full p-4 bg-slate-800/50 rounded-xl mb-4">
+              <div className="w-full p-4 bg-muted/50 rounded-md mb-4">
                 <div className="flex items-start gap-3 text-left">
-                  <div className="p-2 bg-slate-700 rounded-lg">
-                    <Share className="w-5 h-5 text-cyan-400" />
+                  <div className="p-2 bg-muted rounded-lg">
+                    <Share className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-white font-medium">Tap the Share button</p>
-                    <p className="text-xs text-slate-400">At the bottom of your browser</p>
+                    <p className="text-sm text-foreground font-medium">Tap the Share button</p>
+                    <p className="text-xs text-muted-foreground">At the bottom of your browser</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 text-left mt-3">
-                  <div className="p-2 bg-slate-700 rounded-lg">
-                    <Plus className="w-5 h-5 text-cyan-400" />
+                  <div className="p-2 bg-muted rounded-lg">
+                    <Plus className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-white font-medium">Tap "Add to Home Screen"</p>
-                    <p className="text-xs text-slate-400">Then tap "Add" to confirm</p>
+                    <p className="text-sm text-foreground font-medium">Tap "Add to Home Screen"</p>
+                    <p className="text-xs text-muted-foreground">Then tap "Add" to confirm</p>
                   </div>
                 </div>
               </div>
               <Button 
                 onClick={handleDismiss}
-                className="w-full h-12 bg-cyan-600 hover:bg-cyan-700"
+                className="w-full"
+                size="lg"
                 data-testid="button-got-it"
               >
                 Got it
@@ -126,7 +132,8 @@ export function PWAInstallPrompt() {
             <>
               <Button 
                 onClick={handleInstall}
-                className="w-full h-12 bg-cyan-600 hover:bg-cyan-700 mb-3"
+                className="w-full mb-3"
+                size="lg"
                 data-testid="button-install-app"
               >
                 <Download className="w-5 h-5 mr-2" />
@@ -134,7 +141,7 @@ export function PWAInstallPrompt() {
               </Button>
               <button
                 onClick={handleDismiss}
-                className="text-sm text-slate-400 hover:text-white"
+                className="text-sm text-muted-foreground hover:text-foreground"
                 data-testid="button-not-now"
               >
                 Not now
@@ -142,8 +149,8 @@ export function PWAInstallPrompt() {
             </>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }
 

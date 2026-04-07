@@ -10,24 +10,23 @@
  * @see https://developer.intuit.com/app/developer/qbo/docs/develop/webhooks
  * 
  * ============================================================================
- * MIGRATION REQUIRED: CloudEvents Format (Deadline: May 15, 2026)
+ * CloudEvents Migration: COMPLETE (Deadline: May 15, 2026)
  * ============================================================================
- * Intuit is requiring migration from legacy webhook format to CloudEvents.
+ * Dual-format support: handles BOTH legacy and new CloudEvents format.
+ * Intuit's Developer Portal toggle controls which format is sent.
  * 
- * Current (Legacy):
+ * Legacy format (pre-May 2026):
  *   { eventNotifications: [{ realmId, dataChangeEvent: { entities: [...] } }] }
  * 
- * New (CloudEvents):
- *   { specversion, type, source, id, time, datacontenttype, data: {...} }
+ * CloudEvents format (post-May 2026):
+ *   [ { specversion, id, source, type, time, data: { realmId, dataChangeEvent } } ]
+ *   Note: CloudEvents payload is a TOP-LEVEL ARRAY, not an object.
+ *   One notification can contain multiple events for different QBO companies.
  * 
- * Migration Steps:
- * 1. Q2 2025: Test new format in Intuit Developer Portal sandbox (toggle available)
- * 2. Q3 2025: Update WebhookNotification interface and processWebhookNotification()
- * 3. Q4 2025: Deploy to production with new format
- * 4. Q1 2026: Remove legacy format support
+ * Signature verification: unchanged (HMAC-SHA256 with Verifier Token).
  * 
  * Resources:
- * - https://blogs.intuit.com/2025/12/01/upcoming-changes-to-apis-and-tools-that-may-impact-your-application/
+ * - https://blogs.intuit.com/2025/11/12/upcoming-change-to-webhooks-payload-structure/
  * - Developer Portal: Use webhook toggle to switch between formats for testing
  * ============================================================================
  */
@@ -38,13 +37,16 @@ import {
   partnerConnections, 
   clients, 
   employees,
-  partnerSyncLogs,
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { platformEventBus } from '../platformEventBus';
 import { auditLogger } from '../audit-logger';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quickbooksWebhookService');
+
 
 // Use centralized config - NO HARDCODED URLs
 const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
@@ -57,13 +59,68 @@ interface WebhookEvent {
   lastUpdated: string;
 }
 
-interface WebhookNotification {
+// Legacy format (pre-May 2026)
+interface LegacyWebhookNotification {
   eventNotifications: Array<{
     realmId: string;
     dataChangeEvent: {
       entities: WebhookEvent[];
     };
   }>;
+}
+
+// CloudEvents format (post-May 2026) - payload is a TOP-LEVEL ARRAY
+// Each element is a CloudEvent with Intuit data in the `data` field
+interface CloudEventNotification {
+  specversion: string;         // "1.0"
+  id: string;                  // Unique event ID
+  source: string;              // "quickbooks.com" or similar
+  type: string;                // "com.intuit.qbo.datachange.notification"
+  datacontenttype?: string;    // "application/json"
+  time: string;                // ISO-8601 timestamp
+  data: {
+    realmId: string;
+    dataChangeEvent: {
+      entities: WebhookEvent[];
+    };
+  };
+}
+
+// Union type - can be legacy object or CloudEvents array
+type WebhookNotification = LegacyWebhookNotification | CloudEventNotification[];
+
+/**
+ * Detect if the incoming payload is the new CloudEvents format.
+ * CloudEvents payload is a TOP-LEVEL ARRAY (vs legacy which is an object with eventNotifications).
+ */
+function isCloudEventsFormat(payload: any): payload is CloudEventNotification[] {
+  return Array.isArray(payload) && payload.length > 0 && 
+    typeof payload[0]?.specversion === 'string' &&
+    typeof payload[0]?.data?.realmId === 'string';
+}
+
+/**
+ * Normalize either format into a flat list of { realmId, entities } pairs.
+ * This is the single extraction point - both formats produce the same output.
+ */
+function extractNotificationBatches(
+  notification: WebhookNotification
+): Array<{ realmId: string; entities: WebhookEvent[]; eventId?: string }> {
+  // CloudEvents format: top-level array of cloud events
+  if (isCloudEventsFormat(notification)) {
+    return notification.map(cloudEvent => ({
+      realmId: cloudEvent.data.realmId,
+      entities: cloudEvent.data.dataChangeEvent?.entities || [],
+      eventId: cloudEvent.id,
+    }));
+  }
+
+  // Legacy format: { eventNotifications: [...] }
+  const legacy = notification as LegacyWebhookNotification;
+  return (legacy.eventNotifications || []).map(n => ({
+    realmId: n.realmId,
+    entities: n.dataChangeEvent?.entities || [],
+  }));
 }
 
 interface WebhookSubscription {
@@ -82,24 +139,24 @@ class QuickBooksWebhookService {
 
   constructor() {
     setInterval(() => this.cleanupProcessedEvents(), 60 * 60 * 1000);
-    console.log('[QuickBooksWebhooks] Service initialized');
+    log.info('[QuickBooksWebhooks] Service initialized');
   }
 
   private cleanupProcessedEvents(): void {
     this.processedEventIds.clear();
-    console.log('[QuickBooksWebhooks] Cleaned up processed event IDs');
+    log.info('[QuickBooksWebhooks] Cleaned up processed event IDs');
   }
 
   verifyWebhookSignature(payload: string, signature: string): boolean {
     const verifierToken = process.env.QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN;
     
     if (!verifierToken) {
-      console.warn('[QuickBooksWebhooks] QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN not configured');
+      log.warn('[QuickBooksWebhooks] QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN not configured');
       return false;
     }
 
     if (!signature || typeof signature !== 'string') {
-      console.warn('[QuickBooksWebhooks] Missing or invalid signature header');
+      log.warn('[QuickBooksWebhooks] Missing or invalid signature header');
       return false;
     }
 
@@ -118,7 +175,7 @@ class QuickBooksWebhookService {
 
       return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
     } catch (error) {
-      console.error('[QuickBooksWebhooks] Signature verification error:', error);
+      log.error('[QuickBooksWebhooks] Signature verification error:', error);
       return false;
     }
   }
@@ -127,14 +184,19 @@ class QuickBooksWebhookService {
     processed: number;
     skipped: number;
     errors: string[];
+    format: 'legacy' | 'cloudevents';
   }> {
     let processed = 0;
     let skipped = 0;
     const errors: string[] = [];
+    const format = isCloudEventsFormat(notification) ? 'cloudevents' : 'legacy';
 
-    for (const eventNotification of notification.eventNotifications) {
-      const realmId = eventNotification.realmId;
-      const entities = eventNotification.dataChangeEvent?.entities || [];
+    log.info(`[QuickBooksWebhooks] Processing webhook in ${format} format`);
+
+    const batches = extractNotificationBatches(notification);
+
+    for (const batch of batches) {
+      const { realmId, entities, eventId } = batch;
 
       const [connection] = await db.select()
         .from(partnerConnections)
@@ -148,13 +210,16 @@ class QuickBooksWebhookService {
         .limit(1);
 
       if (!connection) {
-        console.log(`[QuickBooksWebhooks] No connection found for realm ${realmId}, skipping`);
+        log.info(`[QuickBooksWebhooks] No connection found for realm ${realmId}, skipping`);
         skipped += entities.length;
         continue;
       }
 
       for (const entity of entities) {
-        const eventKey = `${realmId}:${entity.name}:${entity.id}:${entity.lastUpdated}`;
+        // Deduplication key: prefer CloudEvent ID + entity info, fallback to timestamp-based
+        const eventKey = eventId
+          ? `ce:${eventId}:${entity.name}:${entity.id}`
+          : `${realmId}:${entity.name}:${entity.id}:${entity.lastUpdated}`;
         
         if (this.processedEventIds.has(eventKey)) {
           skipped++;
@@ -166,12 +231,12 @@ class QuickBooksWebhookService {
           this.processedEventIds.add(eventKey);
           processed++;
         } catch (error: any) {
-          errors.push(`${entity.name} ${entity.id}: ${error.message}`);
+          errors.push(`${entity.name} ${entity.id}: ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
     }
 
-    return { processed, skipped, errors };
+    return { processed, skipped, errors, format };
   }
 
   private async processEntityChange(
@@ -180,20 +245,16 @@ class QuickBooksWebhookService {
   ): Promise<void> {
     const { name: entityType, id: entityId, operation } = entity;
 
-    console.log(`[QuickBooksWebhooks] Processing ${operation} for ${entityType} ${entityId}`);
+    log.info(`[QuickBooksWebhooks] Processing ${operation} for ${entityType} ${entityId}`);
 
-    platformEventBus.emit({
+    platformEventBus.publish({
       type: 'ai_brain_action',
-      data: {
-        action: 'quickbooks.webhook_received',
-        workspaceId: connection.workspaceId,
-        entityType,
-        entityId,
-        operation,
-        timestamp: entity.lastUpdated,
-      },
-      timestamp: new Date(),
-    });
+      category: 'ai_brain',
+      title: `QuickBooks Webhook: ${entityType} ${operation}`,
+      description: `${operation} event received for ${entityType} ${entityId} in workspace ${connection.workspaceId}`,
+      workspaceId: connection.workspaceId,
+      metadata: { action: 'quickbooks.webhook_received', entityType, entityId, operation, entityLastUpdated: entity.lastUpdated },
+    }).catch((err) => log.warn('[quickbooksWebhookService] Fire-and-forget failed:', err));
 
     switch (entityType) {
       case 'Customer':
@@ -209,7 +270,7 @@ class QuickBooksWebhookService {
         await this.syncInvoiceChange(connection, entityId, operation);
         break;
       default:
-        console.log(`[QuickBooksWebhooks] Unsupported entity type: ${entityType}`);
+        log.info(`[QuickBooksWebhooks] Unsupported entity type: ${entityType}`);
     }
 
     await auditLogger.logEvent(
@@ -226,7 +287,7 @@ class QuickBooksWebhookService {
         payload: { realmId: connection.realmId, operation },
       },
       { generateHash: true }
-    ).catch(err => console.error('[QuickBooksWebhooks] Audit log failed:', err.message));
+    ).catch(err => log.error('[QuickBooksWebhooks] Audit log failed:', (err instanceof Error ? err.message : String(err))));
   }
 
   private async syncCustomerChange(
@@ -245,15 +306,15 @@ class QuickBooksWebhookService {
       .limit(1);
 
     if (!existingClient) {
-      console.log(`[QuickBooksWebhooks] Customer ${qboCustomerId} not mapped, skipping`);
+      log.info(`[QuickBooksWebhooks] Customer ${qboCustomerId} not mapped, skipping`);
       return;
     }
 
     if (operation === 'Delete') {
       await db.update(clients)
         .set({ 
-          status: 'inactive',
-          quickbooksSyncStatus: 'orphaned',
+          isActive: false,
+          quickbooksSyncStatus: 'deleted_in_partner',
         })
         .where(eq(clients.id, existingClient.id));
       return;
@@ -280,7 +341,7 @@ class QuickBooksWebhookService {
 
       await db.update(clients)
         .set({
-          name: customer.DisplayName || existingClient.name,
+          companyName: customer.DisplayName || existingClient.companyName,
           email: customer.PrimaryEmailAddr?.Address || existingClient.email,
           phone: customer.PrimaryPhone?.FreeFormNumber || existingClient.phone,
           quickbooksSyncStatus: 'synced',
@@ -288,9 +349,9 @@ class QuickBooksWebhookService {
         })
         .where(eq(clients.id, existingClient.id));
 
-      console.log(`[QuickBooksWebhooks] Updated client ${existingClient.id} from QB customer ${qboCustomerId}`);
+      log.info(`[QuickBooksWebhooks] Updated client ${existingClient.id} from QB customer ${qboCustomerId}`);
     } catch (error: any) {
-      console.error(`[QuickBooksWebhooks] Failed to sync customer ${qboCustomerId}:`, error.message);
+      log.error(`[QuickBooksWebhooks] Failed to sync customer ${qboCustomerId}:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   }
@@ -311,15 +372,15 @@ class QuickBooksWebhookService {
       .limit(1);
 
     if (!existingEmployee) {
-      console.log(`[QuickBooksWebhooks] Employee ${qboEmployeeId} not mapped, skipping`);
+      log.info(`[QuickBooksWebhooks] Employee ${qboEmployeeId} not mapped, skipping`);
       return;
     }
 
     if (operation === 'Delete') {
       await db.update(employees)
         .set({ 
-          status: 'inactive',
-          quickbooksSyncStatus: 'orphaned',
+          isActive: false,
+          quickbooksSyncStatus: 'deleted_in_partner',
         })
         .where(eq(employees.id, existingEmployee.id));
       return;
@@ -355,9 +416,9 @@ class QuickBooksWebhookService {
         })
         .where(eq(employees.id, existingEmployee.id));
 
-      console.log(`[QuickBooksWebhooks] Updated employee ${existingEmployee.id} from QB employee ${qboEmployeeId}`);
+      log.info(`[QuickBooksWebhooks] Updated employee ${existingEmployee.id} from QB employee ${qboEmployeeId}`);
     } catch (error: any) {
-      console.error(`[QuickBooksWebhooks] Failed to sync employee ${qboEmployeeId}:`, error.message);
+      log.error(`[QuickBooksWebhooks] Failed to sync employee ${qboEmployeeId}:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   }
@@ -378,21 +439,21 @@ class QuickBooksWebhookService {
       .limit(1);
 
     if (!existingEmployee) {
-      console.log(`[QuickBooksWebhooks] Vendor ${qboVendorId} not mapped, skipping`);
+      log.info(`[QuickBooksWebhooks] Vendor ${qboVendorId} not mapped, skipping`);
       return;
     }
 
     if (operation === 'Delete') {
       await db.update(employees)
         .set({ 
-          status: 'inactive',
+          isActive: false,
           quickbooksSyncStatus: 'orphaned',
         })
         .where(eq(employees.id, existingEmployee.id));
       return;
     }
 
-    console.log(`[QuickBooksWebhooks] Vendor ${qboVendorId} ${operation} received - sync pending`);
+    log.info(`[QuickBooksWebhooks] Vendor ${qboVendorId} ${operation} received - sync pending`);
   }
 
   private async syncInvoiceChange(
@@ -400,24 +461,20 @@ class QuickBooksWebhookService {
     qboInvoiceId: string,
     operation: string
   ): Promise<void> {
-    console.log(`[QuickBooksWebhooks] Invoice ${qboInvoiceId} ${operation} received for workspace ${connection.workspaceId}`);
+    log.info(`[QuickBooksWebhooks] Invoice ${qboInvoiceId} ${operation} received for workspace ${connection.workspaceId}`);
     
-    platformEventBus.emit({
+    platformEventBus.publish({
       type: 'ai_brain_action',
-      data: {
-        action: 'quickbooks.invoice_changed',
-        workspaceId: connection.workspaceId,
-        invoiceId: qboInvoiceId,
-        operation,
-      },
-      timestamp: new Date(),
-    });
+      category: 'ai_brain',
+      title: `QuickBooks Invoice ${operation}`,
+      description: `Invoice ${qboInvoiceId} ${operation} synced from QuickBooks`,
+      workspaceId: connection.workspaceId,
+      metadata: { action: 'quickbooks.invoice_changed', invoiceId: qboInvoiceId, operation },
+    }).catch((err) => log.warn('[quickbooksWebhookService] Fire-and-forget failed:', err));
   }
 
   async getWebhookEndpointUrl(): Promise<string> {
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : process.env.APP_URL || 'http://localhost:5000';
+    const baseUrl = getAppBaseUrl();
     return `${baseUrl}/api/webhooks/quickbooks`;
   }
 

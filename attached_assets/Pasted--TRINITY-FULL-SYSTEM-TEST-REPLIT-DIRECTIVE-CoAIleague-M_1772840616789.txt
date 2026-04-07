@@ -1,0 +1,381 @@
+# TRINITY FULL SYSTEM TEST — REPLIT DIRECTIVE
+## CoAIleague | March 2026 | Production Simulation
+---
+
+## CRITICAL RULE BEFORE ANYTHING ELSE
+
+**DO NOT recreate, reseed, or overwrite any existing data.**
+The org, officers, clients, sites, and settings are already in the database.
+Your job is to SEARCH first. CREATE only what is confirmed missing.
+Every step below follows this pattern: Query → Evaluate → Fill Gap if needed.
+
+---
+
+## STEP 1: VERIFY EXISTING DATA IS ACCESSIBLE
+
+Run these queries against the live database before proceeding.
+If any query returns null or empty, flag it — do not assume it needs to be rebuilt.
+
+```
+QUERY CHECKLIST:
+[ ] GET /api/org/:orgId → confirm org settings load (payPeriod, overtimeRule, state)
+[ ] GET /api/org/:orgId/clients → confirm all clients load with billing rates
+[ ] GET /api/org/:orgId/officers → confirm all officers load with payRate, level, availability, licenseExp, percExp
+[ ] GET /api/org/:orgId/sites → confirm all sites load linked to correct clients
+[ ] GET /api/org/:orgId/shifts/open?month=2026-03 → confirm open shifts exist for March
+[ ] GET /api/org/:orgId/schedule?month=2026-03 → confirm schedule is CLEAR (no assignments yet)
+[ ] GET /api/org/:orgId/payroll/settings → confirm pay period structure and rates accessible
+[ ] GET /api/org/:orgId/clients/:clientId/invoice-settings → confirm billing rates per client
+```
+
+If schedule is NOT clear → confirm with Bryan before clearing. Do not auto-clear production data.
+If open shifts for March do NOT exist → generate them from shift templates in org settings.
+If billing rates are missing from any client → flag to Bryan, do not guess.
+
+---
+
+## STEP 2: MAKE ALL DATA AVAILABLE TO TRINITY
+
+Trinity needs the following context object built and passed into her system prompt
+for the scheduling session. Pull each field from existing database records:
+
+```javascript
+const trinitySessionContext = {
+  org: {
+    id: orgId,
+    name: org.name,
+    state: org.state,                    // for legal/overtime rules
+    payPeriod: org.payPeriod,            // semimonthly / biweekly / weekly
+    overtimeRule: org.overtimeRule,      // weekly_40 / daily_8 / california
+    overtimeMultiplier: 1.5,
+    payrollApprovalRequired: true,
+  },
+
+  officers: officers.map(o => ({
+    id: o.id,
+    name: o.name,
+    level: o.level,                      // unarmed / armed / supervisor
+    payRate: o.payRate,
+    availability: o.availability,        // days of week available
+    licenseExp: o.licenseExp,            // CRITICAL for compliance block
+    percExp: o.percExp,                  // CRITICAL for TX compliance
+    hoursThisMonth: 0,                   // will accumulate during scheduling
+    hoursThisWeek: {},                   // keyed by week number
+    scheduledShifts: [],                 // will populate as schedule builds
+    active: o.active,
+  })),
+
+  clients: clients.map(c => ({
+    id: c.id,
+    name: c.name,
+    sites: c.sites,
+    billingRates: c.billingRates,        // per level: unarmed/armed/supervisor
+    invoiceCycle: c.billingCycle,
+    invoiceDueNet: c.invoiceDueNet,
+    slaMinCoverage: c.slaMinCoverage,
+  })),
+
+  openShifts: openShifts.map(s => ({
+    id: s.id,
+    site: s.site,
+    clientId: s.clientId,
+    date: s.date,
+    start: s.start,
+    end: s.end,
+    durationHours: s.durationHours,
+    requiredLevel: s.level,             // officer must meet or exceed
+    assignedOfficer: null,              // empty = open
+    status: 'open',
+  })),
+
+  testPeriod: {
+    start: '2026-03-01',
+    end: '2026-03-31',
+    weeks: ['W1','W2','W3','W4','W5'], // for OT tracking
+  }
+};
+```
+
+---
+
+## STEP 3: TRIGGER TRINITY SCHEDULING SCAN
+
+Call Trinity with the following prompt. Pass the full context object above.
+
+```
+TRINITY SCHEDULING PROMPT:
+
+You are Trinity. You have full access to the org context below.
+Your task is to schedule all open shifts for March 2026.
+
+SCHEDULING RULES — ENFORCE ALL OF THEM:
+
+1. LICENSE/PERC COMPLIANCE (HARD BLOCK — non-negotiable)
+   - Never assign an officer whose licenseExp or percExp is expired as of shift date
+   - Flag any officer whose license expires DURING March — do not schedule them
+     past their expiration date
+   - If an armed shift has no compliant armed officer available → flag as UNFILLABLE
+     and escalate to manager. Do not assign an unarmed officer to an armed post.
+
+2. LEVEL MATCHING
+   - Armed post = armed or above only
+   - Supervisor post = supervisor level only
+   - Unarmed post = any level (use lowest qualified to preserve specialized officers)
+
+3. AVAILABILITY
+   - Only assign officers on their available days
+   - Never override availability without flagging it as an exception
+
+4. OVERTIME PREVENTION (Texas: weekly 40hr rule)
+   - Track hours per officer per calendar week (Mon–Sun)
+   - Do not schedule any officer past 40 hours in a single week
+     without explicit manager approval flag
+   - If scheduling someone to 40hrs would leave a shift uncovered →
+     flag the conflict, show the math, propose alternatives
+
+5. CONFLICT DETECTION
+   - No officer can work two shifts simultaneously
+   - No officer can work a shift that starts within 8 hours of their previous shift end
+     (fatigue/safety standard) — flag if necessary, do not silently assign
+
+6. FILL PRIORITY ORDER
+   - Preferred site match first
+   - Then availability match
+   - Then level match (lowest qualified for the role)
+   - Then fewest hours that week (distribute evenly)
+   - Overtime risk officers = last resort only
+
+7. WHEN YOU CANNOT FILL A SHIFT
+   - Do not leave it blank silently
+   - Log it as: UNFILLED | reason | recommended resolution
+   - Offer to check shift marketplace or send open shift notification
+
+AFTER SCHEDULING:
+- Produce the full schedule payload (see Step 4)
+- Run the payroll calculation (see Step 5)
+- Run the invoice calculation (see Step 6)
+- Run the math verification (see Step 7)
+- Produce the final audit report (see Step 8)
+```
+
+---
+
+## STEP 4: SCHEDULE PAYLOAD OUTPUT FORMAT
+
+Trinity must produce this structure for every assigned shift:
+
+```json
+{
+  "schedulePayload": [
+    {
+      "shiftId": "shift_xxx",
+      "officerId": "off_xxx",
+      "officerName": "string",
+      "officerLevel": "unarmed|armed|supervisor",
+      "site": "string",
+      "clientId": "string",
+      "date": "YYYY-MM-DD",
+      "start": "HH:MM",
+      "end": "HH:MM",
+      "durationHours": 8,
+      "payRate": 16.00,
+      "billRate": 22.50,
+      "payAmount": 128.00,
+      "billAmount": 180.00,
+      "margin": 52.00,
+      "marginPercent": 28.9,
+      "overtimeFlag": false,
+      "weekNumber": 1,
+      "weekHoursAfterThisShift": 32,
+      "complianceStatus": "clear",
+      "status": "scheduled"
+    }
+  ],
+  "conflicts": [],
+  "unfilled": [],
+  "warnings": []
+}
+```
+
+---
+
+## STEP 5: PAYROLL CALCULATION
+
+For each officer, Trinity calculates:
+
+```
+FOR EACH OFFICER:
+  regularHours = all hours up to 40/week per pay period week
+  overtimeHours = all hours above 40/week
+  regularPay = regularHours × payRate
+  overtimePay = overtimeHours × payRate × 1.5
+  grossPay = regularPay + overtimePay
+
+  employerFICA = grossPay × 0.0765
+  workersComp = grossPay × 0.032
+  totalLaborCost = grossPay + employerFICA + workersComp
+
+PAYROLL VERIFICATION CHECK:
+  [ ] Every shift has a corresponding pay line
+  [ ] Overtime calculated at 1.5x (not straight time)
+  [ ] No officer paid for hours not on schedule
+  [ ] Total payroll = sum of all officer gross pay (verify arithmetic)
+  [ ] Flag any officer with 0 hours (were they supposed to work?)
+  [ ] Flag any officer with >160 hours for the month (sanity check)
+```
+
+---
+
+## STEP 6: CLIENT INVOICE CALCULATION
+
+For each client, Trinity calculates:
+
+```
+FOR EACH CLIENT:
+  FOR EACH SITE UNDER CLIENT:
+    FOR EACH SHIFT AT SITE:
+      billableHours = shift.durationHours
+      billRate = client.billingRates[officer.level]
+      lineAmount = billableHours × billRate
+
+  subtotal = sum of all line amounts
+  invoiceTotal = subtotal
+  dueDate = lastDayOfMonth + client.invoiceDueNet
+
+INVOICE VERIFICATION CHECK:
+  [ ] Every scheduled shift appears on exactly one invoice line
+  [ ] Bill rate matches client contract rate for officer level
+  [ ] No shift billed twice
+  [ ] No shift missed from invoice
+  [ ] Armed shifts billed at armed rate (not unarmed rate)
+  [ ] Supervisor shifts billed at supervisor rate
+  [ ] Total invoice = sum of all line items (verify arithmetic)
+```
+
+---
+
+## STEP 7: MARGIN & MATH VERIFICATION
+
+Trinity runs this final check across the entire month:
+
+```
+GLOBAL MATH VERIFICATION:
+
+totalBillable = sum of all invoice totals across all clients
+totalPayroll = sum of all officer gross pay
+totalLaborBurden = sum of all employer taxes + workers comp
+totalLaborCost = totalPayroll + totalLaborBurden
+grossMargin = totalBillable - totalLaborCost
+grossMarginPercent = (grossMargin / totalBillable) × 100
+
+VERIFY:
+[ ] grossMargin > 0 (org is not losing money)
+[ ] grossMarginPercent >= 15% (minimum viable margin for security industry)
+[ ] No individual shift has billAmount < payAmount (never bill less than you pay)
+[ ] Overtime shifts: confirm OT pay increase is reflected — check margin
+    doesn't go negative on any OT shift
+[ ] Cross-check: totalBillable = sum(all client invoices)
+[ ] Cross-check: totalPayroll = sum(all officer pay)
+[ ] Both cross-checks must balance to the penny
+
+IF ANY CHECK FAILS:
+  Trinity flags it with:
+  - Which check failed
+  - The specific shift/officer/client involved
+  - The exact dollar discrepancy
+  - Recommended correction
+```
+
+---
+
+## STEP 8: TRINITY AUDIT REPORT OUTPUT
+
+After completing all steps, Trinity produces this report:
+
+```
+TRINITY SCHEDULING & PAYROLL AUDIT — MARCH 2026
+================================================
+
+SCHEDULING SUMMARY:
+  Total open shifts:          [n]
+  Successfully scheduled:     [n]
+  Unfilled shifts:            [n]
+  Conflicts detected:         [n]
+  Conflicts auto-resolved:    [n]
+  Conflicts requiring review: [n]
+
+COMPLIANCE FLAGS:
+  Officers with expired credentials: [list]
+  Officers expiring during period:   [list]
+  Shifts blocked due to compliance:  [n]
+
+OVERTIME SUMMARY:
+  Officers who hit 40hr limit:       [list with hours]
+  OT hours approved:                 [n]
+  OT cost impact:                    $[amount]
+
+PAYROLL SUMMARY:
+  Total officers paid:         [n]
+  Total regular hours:         [n]
+  Total overtime hours:        [n]
+  Total gross payroll:         $[amount]
+  Total labor burden:          $[amount]
+  Total labor cost:            $[amount]
+
+INVOICE SUMMARY:
+  Client: Oakwood Residential   $[amount]
+  Client: Heritage National     $[amount]
+  Client: Pinnacle Tower        $[amount]
+  Total billable:               $[amount]
+
+MARGIN ANALYSIS:
+  Gross margin:                 $[amount]
+  Gross margin %:               [n]%
+  Status:                       HEALTHY / WARNING / CRITICAL
+
+MATH VERIFICATION:
+  Payroll cross-check:          PASS / FAIL
+  Invoice cross-check:          PASS / FAIL
+  No shift billed below cost:   PASS / FAIL
+  No OT margin inversion:       PASS / FAIL
+
+ISSUES REQUIRING MANAGER REVIEW:
+  [numbered list of anything Trinity could not auto-resolve]
+```
+
+---
+
+## STEP 9: WRITE RESULTS BACK TO DATABASE
+
+After Trinity produces verified output:
+
+```
+[ ] POST /api/org/:orgId/schedule/bulk → write all scheduled shifts
+[ ] POST /api/org/:orgId/payroll/draft → write payroll draft for approval
+[ ] POST /api/org/:orgId/invoices/draft → write invoice drafts per client
+[ ] POST /api/org/:orgId/trinity/audit-log → store the full audit report
+[ ] NOTIFY Marcus Rivera (org owner) → "Trinity has completed March scheduling.
+    Review and approve payroll and invoices in your dashboard."
+[ ] NOTIFY any officer with compliance flag → appropriate message per issue
+```
+
+---
+
+## WHAT THIS TEST PROVES
+
+If Trinity completes all 9 steps without errors:
+- Her scheduling logic works against real org data
+- Her compliance enforcement blocks illegal assignments
+- Her OT math is correct per Texas law
+- Her payroll math balances
+- Her invoices match contracted rates
+- Her margin math confirms the org is profitable
+- Her audit trail is complete and reviewable
+- Everything CoAIleague claims on the features page is verified true
+
+**If anything fails — Trinity tells you exactly what failed, why, and how to fix it.
+That is also a feature working correctly.**
+
+---
+
+*CoAIleague · Trinity Test Directive · March 2026 · Send to Replit developer as-is*

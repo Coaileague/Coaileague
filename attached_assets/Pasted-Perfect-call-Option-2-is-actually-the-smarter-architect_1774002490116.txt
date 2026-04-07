@@ -1,0 +1,269 @@
+Perfect call. Option 2 is actually the smarter architecture long-term too — because it creates a human-attested, AI-verified paper trail that protects the org legally in ways a raw API ping never could. Trinity does the cognitive heavy lifting, the applicant provides the sworn proof.
+
+Here's the full Replit Agent prompt to build this:
+
+---
+
+**REPLIT AGENT PROMPT — Hiring Module with Trinity-Verified Licensing**
+
+```
+Build a Hiring Module for CoAIleague inside the existing architecture. 
+This module must be self-contained, follow all existing naming conventions, 
+use the current database schema patterns, and integrate with Trinity 
+orchestration and the existing ChatDock and Document Management systems. 
+Do not create standalone files outside the organized module structure.
+
+---
+
+OVERVIEW:
+A full-cycle hiring pipeline that gives each organization a public-facing 
+job board, an AI-managed applicant pool, Trinity-led interviews via ChatDock, 
+license verification using AI image analysis, and a management review 
+dashboard with pipeline stages.
+
+---
+
+SECTION 1 — DATABASE SCHEMA (add to existing Drizzle schema)
+
+Create the following tables with workspace_id on all of them for 
+multi-tenant isolation. All foreign keys must be indexed.
+
+Table: job_postings
+- id, workspace_id, title, description, location, shift_type 
+  (armed/unarmed/supervisor/concierge), pay_rate, schedule_details, 
+  status (draft/active/paused/closed), requires_license (boolean), 
+  posted_at, closed_at, created_by, auto_generated (boolean — true if 
+  Trinity created it), demand_trigger (text — reason Trinity generated 
+  it: 'scheduling_gap' | 'contract_start' | 'disciplinary_termination' 
+  | 'manual')
+
+Table: applicants
+- id, workspace_id, job_posting_id, first_name, last_name, email, phone,
+  has_license (boolean), license_number (text, nullable), 
+  license_state (text, nullable), license_type (text, nullable),
+  license_screenshot_url (text, nullable), license_verified (boolean, 
+  default false), license_verification_notes (text, nullable),
+  pipeline_stage (enum: applied | pre_screened | interview_scheduled | 
+  interview_complete | management_review | offer_extended | onboarding | 
+  disqualified), interview_score (integer, nullable), 
+  liability_score (integer, nullable), trinity_summary (text, nullable),
+  submitted_at, updated_at
+
+Table: interview_sessions
+- id, workspace_id, applicant_id, chatdock_thread_id (links to existing 
+  ChatDock), session_type (async | live), status (pending | in_progress | 
+  complete), question_set_id, raw_transcript (text), score_breakdown 
+  (jsonb), completed_at
+
+Table: interview_question_sets
+- id, workspace_id, role_type (armed | unarmed | supervisor | concierge), 
+  questions (jsonb array of {question, weight, category}), is_default 
+  (boolean), created_by, created_at
+
+---
+
+SECTION 2 — PUBLIC JOB BOARD (unauthenticated)
+
+Route: /jobs/[workspace_slug]
+
+- Displays org name, logo, and all active job_postings for that workspace
+- Each listing shows: title, shift type, schedule, pay rate, 
+  location, posted date
+- "Apply Now" button opens application form inline (no redirect)
+- Application form collects:
+  * First name, last name, email, phone
+  * Dropdown: "Do you hold an active security license in your state?"
+    - YES path: license number field, state selector, license type 
+      selector, file upload for TOPS screenshot or state equivalent
+    - NO path: checkbox "I am interested in sponsorship/training 
+      consideration" — routes to training_pipeline_pool, not 
+      main applicant pool
+  * Submit button creates applicant record and triggers Trinity 
+    pre-screen webhook
+
+- No login required for applicants
+- Page is branded per workspace but hosted on CoAIleague domain:
+  coaileague.com/jobs/[workspace_slug]
+
+---
+
+SECTION 3 — TRINITY LICENSE VERIFICATION (Option 2 Architecture)
+
+When an applicant submits with has_license = true and uploads a screenshot:
+
+Trigger a Trinity action called: VERIFY_LICENSE_SCREENSHOT
+
+Trinity does the following using AI image analysis:
+1. Extract: license number, full name, license type, expiration date, 
+   issuing state, and status text visible on the document
+2. Cross-check extracted name against applicant submitted name 
+   (flag mismatch)
+3. Cross-check extracted license number against submitted license number 
+   (flag mismatch)
+4. Check expiration date — if expired, auto-flag and note expiration date
+5. Check for visual anomalies: pixelation inconsistencies, mismatched 
+   fonts, suspicious alterations (flag if detected)
+6. Produce a verification_result object:
+   {
+     extracted_name, extracted_license_number, extracted_expiration,
+     extracted_status, name_match (boolean), number_match (boolean),
+     is_expired (boolean), anomaly_detected (boolean),
+     confidence_score (0-100), verification_notes (text summary),
+     verified (boolean — true only if all checks pass and 
+     confidence >= 80)
+   }
+7. Write result back to applicant record fields: license_verified, 
+   license_verification_notes
+8. If verified = false for any reason, move applicant to 
+   pipeline_stage = 'pre_screened' with a flag for management review 
+   rather than auto-disqualifying — let management make final call
+9. If verified = true, advance applicant to 
+   pipeline_stage = 'interview_scheduled' and trigger ChatDock 
+   interview invite
+
+---
+
+SECTION 4 — TRINITY INTERVIEW VIA CHATDOCK
+
+When pipeline_stage = 'interview_scheduled':
+
+1. Trinity sends applicant an email (via Resend) with a unique 
+   ChatDock invite link for their interview session
+2. Interview session opens in ChatDock as a dedicated thread under 
+   Trinity's orchestration — tagged as interview_session type
+3. Trinity uses the role-appropriate question_set for that job posting
+4. For each question:
+   - Trinity asks the question in conversational tone
+   - Waits for applicant response
+   - Scores the response against the weight and category defined 
+     in the question set
+   - Asks natural follow-up if answer is vague or incomplete 
+     (max 1 follow-up per question)
+5. After all questions complete:
+   - Trinity calculates interview_score (weighted average 0-100)
+   - Calculates liability_score based on:
+     * License verified status (pass/fail)
+     * Scenario question responses (use of force, chain of command)
+     * Prior termination or incident disclosures
+     * Document anomaly flags
+   - Generates trinity_summary: 2-3 paragraph written assessment 
+     of the applicant in plain English for management
+   - Updates applicant record with all scores and summary
+   - Moves pipeline_stage to 'interview_complete'
+   - Notifies management via platform notification
+
+Default question sets to seed on install (one per role type):
+Each set should have 8-10 questions covering:
+availability/scheduling, prior experience, reason for leaving last 
+employer, situational judgment (2-3 scenario questions), 
+physical requirements acknowledgment, license/compliance awareness
+
+---
+
+SECTION 5 — MANAGEMENT DASHBOARD (authenticated, inside workspace)
+
+Route: /workspace/[workspace_slug]/hiring
+
+Kanban-style pipeline board with columns:
+Applied | Pre-Screened | Interview Scheduled | Interview Complete | 
+Management Review | Offer Extended | Onboarding | Disqualified
+
+Each applicant card shows:
+- Name, applied position, applied date
+- License verified badge (green check / red flag / pending)
+- Interview score (if complete)
+- Liability score (if complete)
+- Trinity summary preview (first 2 lines)
+
+Clicking a card opens full applicant detail panel:
+- All submitted info
+- License screenshot viewer
+- Full verification result breakdown
+- Full interview transcript
+- Complete Trinity summary
+- Score breakdown by category
+- Action buttons: Move to Offer | Disqualify | Request Manager Review | 
+  Move to Onboarding
+
+Moving to Onboarding triggers the existing onboarding document flow 
+already built in the Document Management system.
+
+Job Postings sub-tab:
+- Lists all job_postings for workspace
+- Status toggles (draft/active/paused/closed)
+- "New Posting" button for manual creation
+- Trinity-auto-generated postings show a purple Trinity badge 
+  with the demand_trigger reason
+
+Training Pipeline sub-tab:
+- Lists all applicants who applied without a license
+- Shows interest in sponsorship, contact info, date applied
+- Management can manually promote to main pool when ready to sponsor
+
+---
+
+SECTION 6 — TRINITY DEMAND TRIGGER (auto job posting)
+
+Trinity monitors three signals on a nightly basis per workspace:
+
+1. SCHEDULING_GAP: Any shift in the next 14 days that has been 
+   posted for open coverage more than 48 hours without being filled
+2. CONTRACT_START: Any new client contract with a start date within 
+   30 days that requires headcount not yet assigned
+3. DISCIPLINARY_TERMINATION: Any employee whose status was changed 
+   to 'terminated' with reason containing 'disciplinary' in the 
+   last 7 days
+
+When any signal fires:
+- Trinity drafts a job_posting record with auto_generated = true 
+  and the appropriate demand_trigger value
+- Status is set to 'draft' — NOT published automatically
+- Management receives a platform notification: 
+  "Trinity has drafted a new job posting for [position] based on 
+  [reason]. Review and publish when ready."
+- Management approves with one click → status flips to 'active' 
+  and posting goes live on the public board
+
+---
+
+SECTION 7 — RBAC PERMISSIONS
+
+Hiring module access follows existing RBAC roles:
+
+Owner/Admin: Full access — all tabs, all applicant data, 
+  publish/close postings, move pipeline stages, view liability scores
+Manager: View pipeline, view applicant cards, move stages, 
+  cannot publish postings or view raw liability score breakdown
+Supervisor: View-only on pipeline — no actions
+Guard/Officer: No access to hiring module
+Trinity (system): Full read/write for pipeline automation actions
+
+---
+
+INTEGRATION POINTS (do not rebuild, connect to existing):
+
+- ChatDock: Create interview_session thread type within existing 
+  ChatDock architecture
+- Document Management: Trigger existing onboarding flow when 
+  applicant moves to Onboarding stage
+- Resend: Use existing email routing for interview invite, 
+  verification result notifications, and offer communications
+- Trinity Action Registry: Register the following new Trinity actions:
+  VERIFY_LICENSE_SCREENSHOT
+  CONDUCT_INTERVIEW
+  SCORE_INTERVIEW
+  GENERATE_APPLICANT_SUMMARY
+  CALCULATE_LIABILITY_SCORE
+  DRAFT_JOB_POSTING (demand trigger)
+  NOTIFY_MANAGEMENT_HIRING
+
+All Trinity actions must be added to the existing action registry 
+and counted toward the consolidated action total. Keep total 
+below 300.
+```
+
+---
+
+That prompt covers the entire hiring module end to end — public board, Option 2 license verification, Trinity ChatDock interview, scoring, liability assessment, management pipeline, and demand-triggered auto-drafting — all wired into what you already have. Nothing built outside the existing architecture.
+
+Ready to paste to Replit Agent whenever you are.

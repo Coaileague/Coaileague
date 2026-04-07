@@ -4,6 +4,8 @@
  * Production go-live validation, checklists, and readiness assessments
  * for the 16 Q1-Q4 2026 infrastructure services.
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('launchReadinessService');
 
 interface ReadinessCheck {
   id: string;
@@ -62,7 +64,7 @@ class LaunchReadinessService {
     this.seedReadinessChecks();
     this.seedLaunchGates();
     this.initialized = true;
-    console.log('[LaunchReadiness] Service initialized with production readiness validation');
+    log.info('[LaunchReadiness] Service initialized with production readiness validation');
   }
 
   private seedReadinessChecks(): void {
@@ -116,7 +118,7 @@ class LaunchReadinessService {
       this.checks.set(check.id, check);
     });
 
-    console.log(`[LaunchReadiness] Seeded ${checks.length} readiness checks`);
+    log.info(`[LaunchReadiness] Seeded ${checks.length} readiness checks`);
   }
 
   private seedLaunchGates(): void {
@@ -179,7 +181,7 @@ class LaunchReadinessService {
       this.gates.set(gate.id, gate);
     });
 
-    console.log(`[LaunchReadiness] Seeded ${gates.length} launch gates`);
+    log.info(`[LaunchReadiness] Seeded ${gates.length} launch gates`);
   }
 
   getChecks(category?: 'infrastructure' | 'security' | 'compliance' | 'operations' | 'performance'): ReadinessCheck[] {
@@ -204,7 +206,7 @@ class LaunchReadinessService {
     }
     
     this.checks.set(id, updated);
-    console.log(`[LaunchReadiness] Updated check: ${check.name} -> ${updated.status}`);
+    log.info(`[LaunchReadiness] Updated check: ${check.name} -> ${updated.status}`);
     return updated;
   }
 
@@ -218,7 +220,7 @@ class LaunchReadinessService {
     });
 
     if (!requiredChecksPassed) {
-      console.log(`[LaunchReadiness] Gate ${gate.name} cannot be approved - required checks not passed`);
+      log.info(`[LaunchReadiness] Gate ${gate.name} cannot be approved - required checks not passed`);
       return null;
     }
 
@@ -237,7 +239,7 @@ class LaunchReadinessService {
     };
 
     this.gates.set(gateId, updated);
-    console.log(`[LaunchReadiness] Gate ${gate.name} approved by ${approver}. Status: ${updated.status}`);
+    log.info(`[LaunchReadiness] Gate ${gate.name} approved by ${approver}. Status: ${updated.status}`);
     return updated;
   }
 
@@ -336,7 +338,7 @@ class LaunchReadinessService {
   }
 
   async shutdown(): Promise<void> {
-    console.log('[LaunchReadiness] Service shutdown');
+    log.info('[LaunchReadiness] Service shutdown');
   }
 }
 

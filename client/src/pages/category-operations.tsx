@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, DollarSign, FileText, Package, Users, UserCircle, Sparkles, ArrowRight } from "lucide-react";
+import { Calendar, Clock, DollarSign, FileText, Package, Users, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 export default function OperationsFamilyPage() {
   const modules = [
@@ -44,7 +45,7 @@ export default function OperationsFamilyPage() {
       description: "Learning management system with courses, certifications, and compliance tracking",
       features: ["Course Catalog", "Certifications", "Progress Tracking", "Compliance"],
       url: "/training",
-      color: "from-purple-500 to-pink-500"
+      color: "from-cyan-500 to-blue-600"
     },
     {
       name: "Workforce Management",
@@ -56,28 +57,21 @@ export default function OperationsFamilyPage() {
     }
   ];
 
-  return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/30">
-              <Sparkles className="h-12 w-12 text-blue-700 dark:text-blue-400" />
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-indigo-400 via-blue-400 to-blue-500 bg-clip-text text-transparent">
-            Workforce Operations
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Automate and optimize your daily workforce operations with integrated scheduling, time tracking, and payroll
-          </p>
-          <Badge variant="outline" className="text-sm px-4 py-1">
-            6 Modules
-          </Badge>
-        </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'category-operations',
+    title: 'Workforce Operations',
+    subtitle: 'Automate and optimize your daily workforce operations with integrated scheduling, time tracking, and payroll',
+    category: 'operations',
+    headerActions: (
+      <Badge variant="outline" className="text-sm px-4 py-1">
+        6 Modules
+      </Badge>
+    ),
+  };
 
-        {/* Modules Grid */}
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-8">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => {
             const Icon = module.icon;
@@ -113,7 +107,6 @@ export default function OperationsFamilyPage() {
           })}
         </div>
 
-        {/* ROI Section */}
         <Card className="border-2 border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="text-2xl">Operational Excellence & ROI</CardTitle>
@@ -136,6 +129,6 @@ export default function OperationsFamilyPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

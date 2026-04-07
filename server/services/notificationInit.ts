@@ -1,7 +1,13 @@
 import { db } from "../db";
 import { platformUpdates, maintenanceAlerts } from "@shared/schema";
-import { sql, eq } from "drizzle-orm";
-import aiNotificationService from "./aiNotificationService";
+import { sql, eq, and, gte, or } from "drizzle-orm";
+import { notificationEngine } from "./universalNotificationEngine";
+import aiNotificationService from "./aiNotificationService"; // For maintenance alerts and automation notifications
+import { typedExec } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+const log = createLogger('notificationInit');
+
 
 const INITIAL_UPDATES = [
   {
@@ -47,7 +53,7 @@ const INITIAL_UPDATES = [
 ];
 
 export async function initializeNotifications(): Promise<void> {
-  console.log("[NotificationInit] Checking for initial platform updates...");
+  log.info("[NotificationInit] Checking for initial platform updates...");
   
   try {
     // Check if there are ANY platform updates - if so, skip seeding entirely
@@ -55,7 +61,7 @@ export async function initializeNotifications(): Promise<void> {
       .from(platformUpdates);
     
     if (existingCount[0]?.count > 0) {
-      console.log("[NotificationInit] Platform updates already exist, skipping seed");
+      log.info("[NotificationInit] Platform updates already exist, skipping seed");
       return;
     }
     
@@ -67,25 +73,27 @@ export async function initializeNotifications(): Promise<void> {
         description: update.description,
         category: update.category,
         priority: update.priority,
+        workspaceId: PLATFORM_WORKSPACE_ID,
         isNew: true,
         visibility: "all",
         learnMoreUrl: update.learnMoreUrl,
         date: new Date(),
         metadata: { source: "system-init", version: "1.0.0" },
       });
-      console.log(`[NotificationInit] Created update: ${update.title}`);
+      log.info(`[NotificationInit] Created update: ${update.title}`);
     }
     
-    console.log("[NotificationInit] Initial updates seeded successfully");
+    log.info("[NotificationInit] Initial updates seeded successfully");
   } catch (error) {
-    console.error("[NotificationInit] Failed to seed updates:", error);
+    log.error("[NotificationInit] Failed to seed updates:", error);
   }
 }
 
 // Cleanup old platform updates, keeping only the most recent 3
 export async function cleanupOldPlatformUpdates(): Promise<number> {
   try {
-    const result = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: IN subquery | Tables: platform_updates | Verified: 2026-03-23
+    const result = await typedExec(sql`
       DELETE FROM platform_updates 
       WHERE id NOT IN (
         SELECT id FROM platform_updates ORDER BY created_at DESC LIMIT 3
@@ -93,11 +101,11 @@ export async function cleanupOldPlatformUpdates(): Promise<number> {
     `);
     const deleted = result.rowCount || 0;
     if (deleted > 0) {
-      console.log(`[NotificationInit] Cleaned up ${deleted} old platform updates`);
+      log.info(`[NotificationInit] Cleaned up ${deleted} old platform updates`);
     }
     return deleted;
   } catch (error) {
-    console.error("[NotificationInit] Failed to cleanup updates:", error);
+    log.error("[NotificationInit] Failed to cleanup updates:", error);
     return 0;
   }
 }
@@ -111,16 +119,55 @@ export async function pushSystemNotification(
     priority?: number;
     learnMoreUrl?: string;
     broadcast?: boolean;
+    metadata?: Record<string, any>;
   } = {}
 ): Promise<{ id: string } | null> {
-  return aiNotificationService.generatePlatformUpdate({
+  // Route through UniversalNotificationEngine - SINGLE SOURCE OF TRUTH
+  const result = await notificationEngine.sendPlatformUpdate({
     title,
     description,
     category,
     workspaceId: options.broadcast === false ? options.workspaceId : undefined,
     priority: options.priority || 2,
     learnMoreUrl: options.learnMoreUrl,
+    metadata: options.metadata,
   });
+  
+  if (result.success && result.id) {
+    return { id: result.id };
+  }
+  return null;
+}
+
+/**
+ * Announce significant platform upgrades (one-time, deduplicated)
+ * Uses 24h title-based deduplication to prevent spam
+ */
+export async function announceUpgrade(payload: {
+  title: string;
+  description: string;
+  category?: "feature" | "improvement";
+  highlights?: string[];
+  version?: string;
+  learnMoreUrl?: string;
+}): Promise<{ id: string; isDuplicate?: boolean } | null> {
+  const result = await notificationEngine.sendPlatformUpdate({
+    title: payload.title,
+    description: payload.description,
+    category: payload.category || "feature",
+    priority: 3,
+    learnMoreUrl: payload.learnMoreUrl || "/whats-new",
+    metadata: {
+      announcementType: "platform_upgrade",
+      highlights: payload.highlights || [],
+      version: payload.version,
+    },
+  });
+  
+  if (result.success) {
+    return { id: result.id || "", isDuplicate: result.isDuplicate };
+  }
+  return null;
 }
 
 export async function pushMaintenanceAlert(

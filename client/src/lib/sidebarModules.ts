@@ -6,6 +6,7 @@ import {
   DollarSign,
   Users,
   Building2,
+  GitBranch,
   BarChart3,
   Settings,
   Shield,
@@ -25,16 +26,46 @@ import {
   BadgeDollarSign,
   Award,
   TrendingUp,
+  HeartPulse,
   PieChart,
   FileBarChart,
   Zap,
   CheckCircle,
+  Trophy,
   Activity,
   Brain,
   UserCog,
   Server,
   ArrowRightLeft,
   Bell,
+  FileSignature,
+  ShoppingBag,
+  ClipboardList,
+  Inbox,
+  Scale,
+  Globe,
+  Receipt,
+  CreditCard,
+  Star,
+  Paintbrush,
+  Car,
+  Crosshair,
+  Key,
+  UserCheck,
+  ScanSearch,
+  ClipboardCheck,
+  Code2,
+  Megaphone,
+  Radio,
+  MapPin,
+  ShieldAlert,
+  FolderOpen,
+  Eye,
+  FileBox,
+  Send,
+  DoorOpen,
+  PhoneCall,
+  PhoneIncoming,
   type LucideIcon,
 } from "lucide-react";
 import { isRouteVisibleInMVP } from "@/config/mvpFeatures";
@@ -46,14 +77,15 @@ export type WorkspaceRole =
   | 'support_agent'
   // Workspace roles (for workspace members)
   | 'org_owner' 
-  | 'org_admin' 
+  | 'co_owner' 
   | 'department_manager' 
   | 'supervisor' 
+  | 'employee'
   | 'staff' 
   | 'auditor' 
   | 'contractor';
 
-export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'enterprise';
+export type SubscriptionTier = 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
 
 export type Capability =
   | 'view_schedules'
@@ -175,7 +207,7 @@ export const roleCapabilities: Record<WorkspaceRole, Capability[]> = {
     'view_messages',
     'manage_integrations', 'data_migration', 'onboarding_orchestration', 'view_onboarding_status',
   ],
-  org_admin: [
+  co_owner: [
     'view_schedules', 'manage_schedules',
     'view_timesheets', 'approve_timesheets',
     'view_invoices', 'manage_invoices',
@@ -198,6 +230,11 @@ export const roleCapabilities: Record<WorkspaceRole, Capability[]> = {
     'view_schedules',
     'view_timesheets', 'approve_timesheets',
     'view_reports',
+    'view_messages',
+  ],
+  employee: [
+    'view_schedules',
+    'view_timesheets',
     'view_messages',
   ],
   staff: [
@@ -252,32 +289,37 @@ export function hasTierAccess(
 
 /**
  * Check if user can access a route
+ * positionCapabilities: additional capabilities derived from employee's position in the registry
  */
 export function canAccessRoute(
   role: WorkspaceRole,
   tier: SubscriptionTier,
-  route: ModuleRoute
+  route: ModuleRoute,
+  positionCapabilities?: Capability[]
 ): boolean {
-  // Check tier access
   if (!hasTierAccess(tier, route.minimumTier)) {
     return false;
   }
 
-  // Check if route should be excluded for user's capabilities
   if (route.excludeForCapabilities && route.excludeForCapabilities.length > 0) {
     const shouldExclude = route.excludeForCapabilities.some(cap => hasCapability(role, cap));
     if (shouldExclude) {
-      return false; // User has an excluded capability, hide this route
+      return false;
     }
   }
 
-  // Check capability access
   if (!route.capabilities || route.capabilities.length === 0) {
-    return true; // No capability requirement
+    return true;
   }
 
-  // User must have at least one required capability
-  return route.capabilities.some(cap => hasCapability(role, cap));
+  const hasRoleCap = route.capabilities.some(cap => hasCapability(role, cap));
+  if (hasRoleCap) return true;
+
+  if (positionCapabilities && positionCapabilities.length > 0) {
+    return route.capabilities.some(cap => positionCapabilities.includes(cap));
+  }
+
+  return false;
 }
 
 /**
@@ -310,6 +352,17 @@ export const sidebarModules: SidebarModule[] = [
         // Hide from platform staff who have Control Center instead
         excludeForCapabilities: ['support_dashboard'],
       },
+      {
+        id: 'developers',
+        label: 'Developer Portal',
+        href: '/developers',
+        icon: Code2,
+        description: 'API keys and developer documentation',
+        capabilities: ['manage_workspace'],
+        familyId: 'platform',
+        isPrimary: false,
+        order: 98,
+      },
     ],
   },
   {
@@ -323,10 +376,10 @@ export const sidebarModules: SidebarModule[] = [
     routes: [
       {
         id: 'schedule',
-        label: 'AI Scheduling',
+        label: 'My Schedule',
         href: '/schedule',
         icon: CalendarDays,
-        description: 'Intelligent shift scheduling',
+        description: 'View your assigned shifts',
         capabilities: ['view_schedules'],
         familyId: 'operations',
         isPrimary: true,
@@ -334,21 +387,21 @@ export const sidebarModules: SidebarModule[] = [
       },
       {
         id: 'time-tracking',
-        label: 'Time Platform',
+        label: 'Time Tracking',
         href: '/time-tracking',
         icon: Clock,
-        description: 'GPS-verified time tracking',
+        description: 'Clock in/out and track hours',
         capabilities: ['view_timesheets'],
         familyId: 'operations',
         isPrimary: true,
-        order: 2,
+        order: 3,
       },
       {
         id: 'workflow-approvals',
-        label: 'Workflow Approvals',
+        label: 'Approvals',
         href: '/workflow-approvals',
         icon: CheckCircle,
-        description: '99% AI, 1% Human Governance - Approve AI workflows',
+        description: 'Review and approve pending workflows',
         capabilities: ['manage_schedules', 'manage_invoices', 'process_payroll'],
         badge: 'Manager',
         familyId: 'operations',
@@ -357,7 +410,7 @@ export const sidebarModules: SidebarModule[] = [
       },
       {
         id: 'timesheets-pending',
-        label: 'Pending Approvals',
+        label: 'Timesheet Review',
         href: '/timesheets/pending',
         icon: Clock,
         description: 'Review and approve submitted hours',
@@ -367,12 +420,166 @@ export const sidebarModules: SidebarModule[] = [
         isPrimary: false,
         order: 4,
       },
+      {
+        id: 'shift-marketplace',
+        label: 'Shift Marketplace',
+        href: '/shift-marketplace',
+        icon: ShoppingBag,
+        description: 'Browse and claim open shifts',
+        capabilities: ['view_schedules'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 5,
+      },
+      {
+        id: 'disputes',
+        label: 'Disputes',
+        href: '/disputes',
+        icon: Scale,
+        description: 'Time entry and schedule disputes',
+        capabilities: ['view_timesheets'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 6,
+      },
+      {
+        id: 'labor-law-config',
+        label: 'Labor Laws',
+        href: '/labor-law-config',
+        icon: Shield,
+        description: '50-state labor law rules and compliance',
+        capabilities: ['manage_workspace'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 7,
+      },
+      {
+        id: 'gate-duty',
+        label: 'Gate Duty',
+        href: '/gate-duty',
+        icon: DoorOpen,
+        description: 'Gate access control and vehicle/personnel entry logs',
+        capabilities: ['manage_compliance'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 7,
+      },
+      {
+        id: 'rms-hub',
+        label: 'Records (RMS)',
+        href: '/records',
+        icon: FolderOpen,
+        description: 'Incident reports, DARs, visitor log, key control, cases',
+        capabilities: ['view_schedules'],
+        familyId: 'operations',
+        isPrimary: true,
+        order: 8,
+      },
+      {
+        id: 'cad-console',
+        label: 'CAD Dispatch',
+        href: '/cad',
+        icon: Radio,
+        description: 'Real-time dispatch console and unit management',
+        capabilities: ['manage_schedules'],
+        familyId: 'operations',
+        isPrimary: true,
+        order: 9,
+      },
+      {
+        id: 'visitor-management',
+        label: 'Visitor Management',
+        href: '/visitor-management',
+        icon: UserCheck,
+        description: 'Check-in/out visitors, pre-registrations, active visitor board, overstay alerts',
+        capabilities: ['view_schedules'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 9.5,
+      },
+      {
+        id: 'site-survey',
+        label: 'Site Surveys',
+        href: '/site-survey',
+        icon: ClipboardCheck,
+        description: 'Facility assessment and site survey workflow',
+        capabilities: ['manage_workspace'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 8
+      },
+      {
+        id: 'safety-hub',
+        label: 'Safety & SLA',
+        href: '/safety-check',
+        icon: ShieldAlert,
+        description: 'Panic alerts, geofencing, SLA contracts and breaches',
+        capabilities: ['manage_schedules'],
+        familyId: 'operations',
+        isPrimary: true,
+        order: 10,
+      },
+      {
+        id: 'rfp-manager',
+        label: 'RFP Manager',
+        href: '/rfp',
+        icon: FileBox,
+        description: 'AI-powered proposal generation and RFP tracking',
+        capabilities: ['manage_clients'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 12,
+      },
+      {
+        id: 'tx-service-agreement',
+        label: 'TX Service Agreement',
+        href: '/tx-service-agreement',
+        icon: Scale,
+        description: 'Generate Texas Security Services Agreements for clients — fillable, signed, auditable',
+        capabilities: ['manage_clients'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 13,
+      },
+      {
+        id: 'ethics-hotline',
+        label: 'Ethics Hotline',
+        href: '/ethics',
+        icon: Eye,
+        description: 'Anonymous reports and ethics review dashboard',
+        capabilities: ['manage_employees'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 13,
+      },
+    ],
+  },
+  {
+    id: 'org-network',
+    name: 'Organization Network',
+    description: 'Multi-branch management, consolidated billing, batch operations',
+    icon: GitBranch,
+    color: 'hsl(var(--chart-1))',
+    capabilities: ['manage_workspace'],
+    familyId: 'executive',
+    routes: [
+      {
+        id: 'multi-company',
+        label: 'Multi-Company',
+        href: '/multi-company',
+        icon: Building2,
+        description: 'Manage subsidiaries and franchises',
+        capabilities: ['manage_workspace'],
+        familyId: 'executive',
+        isPrimary: false,
+        order: 99,
+      },
     ],
   },
   {
     id: 'billing-platform',
-    name: 'Billing Platform',
-    description: 'Administrative Billing & Financial Management',
+    name: 'Billing & Payroll',
+    description: 'Billing, payroll, and financial management',
     icon: Wallet,
     color: 'hsl(var(--chart-2))',
     capabilities: ['view_invoices', 'manage_invoices', 'view_payroll', 'process_payroll'],
@@ -380,10 +587,10 @@ export const sidebarModules: SidebarModule[] = [
     routes: [
       {
         id: 'ai-payroll',
-        label: 'AI Payroll',
+        label: 'Payroll',
         href: '/payroll',
         icon: Wallet,
-        description: 'FLSA-compliant payroll processing',
+        description: 'Payroll processing and compliance',
         capabilities: ['view_payroll'],
         minimumTier: 'professional',
         familyId: 'executive',
@@ -392,10 +599,10 @@ export const sidebarModules: SidebarModule[] = [
       },
       {
         id: 'billing-invoices',
-        label: 'Billing Platform',
+        label: 'Invoices',
         href: '/invoices',
         icon: FileCheck2,
-        description: 'Automated invoice generation',
+        description: 'Invoice generation and tracking',
         capabilities: ['view_invoices'],
         familyId: 'executive',
         isPrimary: true,
@@ -406,22 +613,55 @@ export const sidebarModules: SidebarModule[] = [
         label: 'Integrations',
         href: '/integrations',
         icon: Zap,
-        description: 'QuickBooks & Gusto integrations',
+        description: 'Connect accounting and payroll tools',
         capabilities: ['manage_invoices', 'process_payroll'],
         familyId: 'executive',
         isPrimary: false,
         order: 4,
       },
       {
-        id: 'quickbooks-migration',
-        label: 'QuickBooks Migration',
-        href: '/quickbooks-import',
-        icon: ArrowRightLeft,
-        description: '7-step data migration wizard',
-        capabilities: ['data_migration'],
+        id: 'billing',
+        label: 'Billing',
+        href: '/billing',
+        icon: CreditCard,
+        description: 'Subscription plans and payment management',
+        capabilities: ['manage_workspace'],
         familyId: 'executive',
         isPrimary: true,
         order: 5,
+      },
+      {
+        id: 'expenses',
+        label: 'Expenses',
+        href: '/expenses',
+        icon: Receipt,
+        description: 'Submit and track expense reimbursements',
+        capabilities: ['view_timesheets'],
+        familyId: 'executive',
+        isPrimary: false,
+        order: 6,
+      },
+      {
+        id: 'mileage',
+        label: 'Mileage',
+        href: '/mileage',
+        icon: Car,
+        description: 'Log and track mileage reimbursements',
+        capabilities: ['view_timesheets'],
+        familyId: 'executive',
+        isPrimary: false,
+        order: 7,
+      },
+      {
+        id: 'quickbooks-migration',
+        label: 'QuickBooks Setup',
+        href: '/quickbooks-import',
+        icon: ArrowRightLeft,
+        description: 'Import and sync with QuickBooks',
+        capabilities: ['data_migration'],
+        familyId: 'executive',
+        isPrimary: true,
+        order: 7,
       },
     ],
   },
@@ -436,7 +676,7 @@ export const sidebarModules: SidebarModule[] = [
     routes: [
       {
         id: 'training',
-        label: 'AI Training',
+        label: 'Training',
         href: '/training',
         icon: GraduationCap,
         description: 'Employee onboarding and compliance training',
@@ -444,6 +684,39 @@ export const sidebarModules: SidebarModule[] = [
         familyId: 'operations',
         isPrimary: false,
         order: 4,
+      },
+      {
+        id: 'training-certification',
+        label: 'Training & Certification',
+        href: '/training-certification',
+        icon: CheckCircle,
+        description: 'TCOLE hours, continuing education, and officer certification tracking',
+        capabilities: ['manage_employees'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 4.5,
+      },
+      {
+        id: 'compliance-evidence',
+        label: 'Compliance Evidence',
+        href: '/compliance-evidence',
+        icon: FileCheck2,
+        description: 'Officer license vault and evidence verification',
+        capabilities: ['manage_employees'],
+        familyId: 'platform',
+        isPrimary: false,
+        order: 7,
+      },
+      {
+        id: 'insurance',
+        label: 'Insurance',
+        href: '/insurance',
+        icon: Shield,
+        description: 'Insurance policies, bonding and coverage management',
+        capabilities: ['manage_workspace'],
+        familyId: 'platform',
+        isPrimary: false,
+        order: 6,
       },
       {
         id: 'employees',
@@ -467,12 +740,148 @@ export const sidebarModules: SidebarModule[] = [
         isPrimary: true,
         order: 2,
       },
+      {
+        id: 'service-requests',
+        label: 'Service Requests',
+        href: '/service-requests',
+        icon: ClipboardList,
+        description: 'Client service requests and inquiries',
+        capabilities: ['manage_clients'],
+        familyId: 'people',
+        isPrimary: true,
+        order: 3,
+      },
+      {
+        id: 'surveys',
+        label: 'Client Surveys',
+        href: '/surveys',
+        icon: ClipboardList,
+        description: 'Client satisfaction surveys and NPS tracking',
+        capabilities: ['manage_clients'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 6,
+      },
+      {
+        id: 'security-compliance',
+        label: 'Security Compliance',
+        href: '/security-compliance',
+        icon: Shield,
+        description: 'Licenses, certifications, and required documents',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: true,
+        badge: 'Vault',
+        order: 3,
+      },
+      {
+        id: 'document-library',
+        label: 'Document Library',
+        href: '/document-library',
+        icon: FileSignature,
+        description: 'Send documents for signature and manage templates',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: true,
+        order: 4,
+      },
+      {
+        id: 'document-vault',
+        label: 'Document Vault',
+        href: '/document-vault',
+        icon: FolderOpen,
+        description: 'Browse and search signed documents',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 6,
+      },
+      {
+        id: 'employee-packets',
+        label: 'Onboarding Packets',
+        href: '/employee-packets',
+        icon: FileText,
+        description: 'Digital onboarding packets for new hires — fillable, signable, auditable. Templates for reference only.',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: true,
+        badge: 'TX',
+        order: 5,
+      },
+      {
+        id: 'hr-document-requests',
+        label: 'Document Requests',
+        href: '/hr-document-requests',
+        icon: Send,
+        description: 'Mass-send or select employees for I-9, W-4, W-9, drug testing, guard card, and onboarding requests',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: true,
+        badge: 'HR',
+        order: 5,
+      },
+      {
+        id: 'sps-document-safe',
+        label: 'Document Safe',
+        href: '/sps-document-safe',
+        icon: LockKeyhole,
+        description: 'Sealed documents — employee packets and client contracts',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: true,
+        order: 6,
+      },
+      {
+        id: 'sps-client-pipeline',
+        label: 'Client Pipeline',
+        href: '/sps-client-pipeline',
+        icon: FileSignature,
+        description: 'Proposals, negotiations, and contracts for security service clients',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: true,
+        order: 7,
+      },
+      {
+        id: 'recognition',
+        label: 'Recognition',
+        href: '/recognition',
+        icon: Trophy,
+        description: 'Officer awards, recognition wall and culture building',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 6,
+      },
+      {
+        id: 'wellness',
+        label: 'Lone Worker Safety',
+        href: '/wellness',
+        icon: HeartPulse,
+        description: 'Lone worker safety and wellness check system',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 7,
+      },
+      {
+        id: 'recruitment',
+        label: 'Interview Pipeline',
+        href: '/recruitment',
+        icon: Inbox,
+        description: 'Trinity-powered three-channel candidate recruitment pipeline',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 8,
+        badge: 'AI',
+      },
     ],
   },
   {
     id: 'intelligence',
     name: 'Intelligence',
-    description: 'AI-Powered Automation & Analytics',
+    description: 'Automation and analytics',
     icon: FileBarChart,
     color: 'hsl(var(--chart-4))',
     capabilities: ['view_reports', 'advanced_analytics'],
@@ -483,7 +892,7 @@ export const sidebarModules: SidebarModule[] = [
         label: 'Sales',
         href: '/sales',
         icon: BadgeDollarSign,
-        description: 'AI-powered RFP hunting and contract generation',
+        description: 'Proposals, bids, and contract management',
         capabilities: ['manage_workspace'],
         minimumTier: 'enterprise',
         familyId: 'intelligence',
@@ -492,7 +901,7 @@ export const sidebarModules: SidebarModule[] = [
       },
       {
         id: 'talent',
-        label: 'Talent Management',
+        label: 'Leadership',
         href: '/leaders-hub',
         icon: Award,
         description: 'Leadership development and recognition',
@@ -513,11 +922,45 @@ export const sidebarModules: SidebarModule[] = [
         order: 4,
       },
       {
+        id: 'behavior-scoring',
+        label: 'Behavior Scoring',
+        href: '/behavior-scoring',
+        icon: Activity,
+        description: 'Employee reliability, engagement and performance metrics',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 5,
+        badge: 'AI',
+      },
+      {
+        id: 'performance',
+        label: 'Performance',
+        href: '/performance',
+        icon: Star,
+        description: 'Officer performance reviews, disciplinary records and risk roster',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 5.5,
+      },
+      {
+        id: 'hris-management',
+        label: 'HRIS Integrations',
+        href: '/hris-management',
+        icon: ArrowRightLeft,
+        description: 'Connect and sync with external HR systems',
+        capabilities: ['manage_employees'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 6,
+      },
+      {
         id: 'analytics',
         label: 'Analytics',
         href: '/analytics',
         icon: PieChart,
-        description: 'AI-powered predictive analytics',
+        description: 'Trends, forecasts, and business insights',
         capabilities: ['advanced_analytics'],
         minimumTier: 'enterprise',
         badge: 'Enterprise',
@@ -526,11 +969,24 @@ export const sidebarModules: SidebarModule[] = [
         order: 1,
       },
       {
+        id: 'bi-analytics',
+        label: 'Business Intelligence',
+        href: '/bi-analytics',
+        icon: BarChart3,
+        description: 'Financial, workforce, and operational BI dashboard',
+        capabilities: ['advanced_analytics'],
+        minimumTier: 'enterprise',
+        badge: 'Enterprise',
+        familyId: 'intelligence',
+        isPrimary: true,
+        order: 2,
+      },
+      {
         id: 'reports',
         label: 'Reports',
         href: '/reports',
         icon: FileBarChart,
-        description: 'Comprehensive business intelligence',
+        description: 'Customizable reports and summaries',
         capabilities: ['view_reports'],
         minimumTier: 'starter',
         familyId: 'intelligence',
@@ -538,27 +994,64 @@ export const sidebarModules: SidebarModule[] = [
         order: 2,
       },
       {
-        id: 'insights',
-        label: 'AI Analytics Reports',
-        href: '/analytics/reports',
-        icon: FileCheck2,
-        description: 'Management reports with role-based access',
-        capabilities: ['view_reports'],
-        minimumTier: 'starter',
-        familyId: 'intelligence',
-        isPrimary: false,
-        order: 3,
-      },
-      {
         id: 'trinity-chat',
         label: 'Trinity Chat',
         href: '/trinity',
         icon: Brain,
-        description: 'AI-powered conversational assistant with business insights',
+        description: 'Conversational assistant with business insights',
         capabilities: ['manage_workspace'],
         familyId: 'intelligence',
         isPrimary: true,
         order: 0,
+        badge: 'AI',
+      },
+      {
+        id: 'resolution-inbox',
+        label: 'Resolution Inbox',
+        href: '/resolution-inbox',
+        icon: Inbox,
+        description: 'AI-resolved issues and action items',
+        capabilities: ['manage_workspace'],
+        familyId: 'intelligence',
+        isPrimary: false,
+        order: 6,
+        badge: 'AI',
+      },
+      {
+        id: 'outreach',
+        label: 'Outreach',
+        href: '/outreach',
+        icon: Globe,
+        description: 'AI-powered prospect discovery and automated outreach',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise',
+        familyId: 'intelligence',
+        isPrimary: false,
+        order: 7,
+        badge: 'AI',
+      },
+      {
+        id: 'trinity-memory',
+        label: 'Trinity Memory',
+        href: '/trinity-memory',
+        icon: Brain,
+        description: 'AI memory optimization and knowledge management',
+        capabilities: ['manage_workspace'],
+        familyId: 'intelligence',
+        isPrimary: false,
+        order: 8,
+        badge: 'AI',
+      },
+      {
+        id: 'inbound-opportunities',
+        label: 'Inbound Opportunities',
+        href: '/inbound-opportunities',
+        icon: Inbox,
+        description: 'AI-powered staffing opportunity processing',
+        capabilities: ['manage_workspace'],
+        familyId: 'intelligence',
+        isPrimary: false,
+        order: 9,
         badge: 'AI',
       },
     ],
@@ -566,7 +1059,7 @@ export const sidebarModules: SidebarModule[] = [
   {
     id: 'communications',
     name: 'Chatrooms',
-    description: 'Unified Communications Platform',
+    description: 'Team messaging and conversations',
     icon: MessagesSquare,
     color: 'hsl(var(--chart-5))',
     capabilities: ['view_messages'],
@@ -584,9 +1077,31 @@ export const sidebarModules: SidebarModule[] = [
         order: 5,
       },
       {
+        id: 'broadcasts',
+        label: 'Broadcasts',
+        href: '/broadcasts',
+        icon: Megaphone,
+        description: 'Company announcements and alerts',
+        capabilities: ['view_messages'],
+        familyId: 'people',
+        isPrimary: false,
+        order: 5.5,
+      },
+      {
+        id: 'briefing-channel',
+        label: 'Ops Briefing',
+        href: '/briefing-channel',
+        icon: Radio,
+        description: 'Org Operations Briefing Channel — Trinity intelligence for leadership',
+        capabilities: ['manage_employees'],
+        familyId: 'operations',
+        isPrimary: false,
+        order: 5.7,
+      },
+      {
         id: 'private-messages',
         label: 'Messages',
-        href: '/messages',
+        href: '/private-messages',
         icon: LockKeyhole,
         description: 'Direct messaging',
         capabilities: ['view_messages'],
@@ -596,31 +1111,57 @@ export const sidebarModules: SidebarModule[] = [
       },
       {
         id: 'get-support',
-        label: 'Support',
-        href: '/support',
+        label: 'HelpDesk',
+        href: '/helpdesk',
         icon: Headphones,
-        description: 'Get help and submit tickets',
+        description: 'Chat with HelpAI for instant support',
         familyId: 'people',
         isPrimary: false,
         order: 7,
       },
       {
-        id: 'inbox',
-        label: 'Inbox',
-        href: '/inbox',
-        icon: Mail,
-        description: 'Internal email system',
-        capabilities: ['view_messages'],
+        id: 'bridge-channels',
+        label: 'Bridge Channels',
+        href: '/bridge-channels',
+        icon: ArrowRightLeft,
+        description: 'Manage SMS, WhatsApp, Email, and Messenger bridges',
+        capabilities: ['manage_workspace'],
         familyId: 'people',
         isPrimary: false,
         order: 8,
+        badge: 'Bridges',
+      },
+      {
+        id: 'voice-calls',
+        label: 'Voice Calls',
+        href: '/voice-calls',
+        icon: PhoneIncoming,
+        description: 'Call history, recordings, and transcripts',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'professional',
+        familyId: 'people',
+        isPrimary: false,
+        order: 9,
+        badge: 'Voice',
+      },
+      {
+        id: 'voice-settings',
+        label: 'Phone System',
+        href: '/voice-settings',
+        icon: PhoneCall,
+        description: 'Configure phone numbers, IVR, and Trinity Voice',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'professional',
+        familyId: 'people',
+        isPrimary: false,
+        order: 9.5,
       },
     ],
   },
   {
     id: 'audit-os',
-    name: 'AI Compliance Auditing',
-    description: 'AI-Powered Compliance & Audit Trail Management',
+    name: 'Compliance',
+    description: 'Compliance and audit trail management',
     icon: Shield,
     color: 'hsl(var(--destructive))',
     capabilities: ['view_audit_logs'],
@@ -628,10 +1169,10 @@ export const sidebarModules: SidebarModule[] = [
     routes: [
       {
         id: 'audit-logs',
-        label: 'AI Compliance',
+        label: 'Audit Trail',
         href: '/audit-logs',
         icon: Shield,
-        description: 'AI-powered compliance and activity tracking',
+        description: 'Activity log and compliance history',
         capabilities: ['view_audit_logs'],
         minimumTier: 'professional',
         familyId: 'intelligence',
@@ -643,7 +1184,7 @@ export const sidebarModules: SidebarModule[] = [
   {
     id: 'usage-dashboard',
     name: 'Usage & Billing',
-    description: 'AI Usage & Cost Transparency',
+    description: 'Usage and cost tracking',
     icon: TrendingUp,
     color: 'hsl(var(--primary))',
     capabilities: ['manage_workspace'],
@@ -654,22 +1195,113 @@ export const sidebarModules: SidebarModule[] = [
         label: 'Usage & Costs',
         href: '/usage',
         icon: TrendingUp,
-        description: 'Track AI usage and partner API costs',
+        description: 'Track usage and costs',
         capabilities: ['manage_workspace'],
         familyId: 'platform',
         isPrimary: false,
         order: 1,
       },
+    ],
+  },
+  {
+    id: 'enterprise-features',
+    name: 'Enterprise',
+    description: 'Enterprise-grade features and integrations',
+    icon: Building2,
+    color: 'hsl(var(--chart-5))',
+    capabilities: ['manage_workspace'],
+    familyId: 'platform',
+    routes: [
       {
-        id: 'owner-analytics',
-        label: 'Usage Analytics',
-        href: '/owner-analytics',
-        icon: BarChart3,
-        description: 'Executive usage insights for business owners',
+        id: 'white-label-branding',
+        label: 'White-Label Branding',
+        href: '/enterprise/branding',
+        icon: Paintbrush,
+        description: 'Customize branding, colors, and domain',
         capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise' as SubscriptionTier,
+        badge: 'Enterprise',
+        familyId: 'platform',
+        isPrimary: true,
+        order: 1,
+      },
+      {
+        id: 'fleet-management',
+        label: 'Fleet Management',
+        href: '/enterprise/fleet',
+        icon: Car,
+        description: 'Vehicle tracking and fleet operations',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise' as SubscriptionTier,
+        badge: 'Enterprise',
         familyId: 'platform',
         isPrimary: false,
         order: 2,
+      },
+      {
+        id: 'armory-management',
+        label: 'Armory Management',
+        href: '/enterprise/armory',
+        icon: Crosshair,
+        description: 'Weapon tracking, checkout, and compliance',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise' as SubscriptionTier,
+        badge: 'Enterprise',
+        familyId: 'platform',
+        isPrimary: false,
+        order: 3,
+      },
+      {
+        id: 'sso-configuration',
+        label: 'Single Sign-On',
+        href: '/enterprise/sso',
+        icon: Key,
+        description: 'SAML, OAuth2, and OpenID Connect configuration',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise' as SubscriptionTier,
+        badge: 'Enterprise',
+        familyId: 'platform',
+        isPrimary: false,
+        order: 4,
+      },
+      {
+        id: 'account-manager',
+        label: 'Account Manager',
+        href: '/enterprise/account-manager',
+        icon: UserCheck,
+        description: 'Dedicated account manager contact and support',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise' as SubscriptionTier,
+        badge: 'Enterprise',
+        familyId: 'platform',
+        isPrimary: false,
+        order: 5,
+      },
+      {
+        id: 'background-checks',
+        label: 'Background Checks',
+        href: '/enterprise/background-checks',
+        icon: ScanSearch,
+        description: 'Employee screening and verification',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise' as SubscriptionTier,
+        badge: 'Enterprise',
+        familyId: 'platform',
+        isPrimary: false,
+        order: 6,
+      },
+      {
+        id: 'api-access',
+        label: 'API Access',
+        href: '/enterprise/api-access',
+        icon: Code2,
+        description: 'Public API keys and developer access',
+        capabilities: ['manage_workspace'],
+        minimumTier: 'enterprise' as SubscriptionTier,
+        badge: 'Enterprise',
+        familyId: 'platform',
+        isPrimary: false,
+        order: 7,
       },
     ],
   },
@@ -734,19 +1366,6 @@ export const platformSupportModule: SidebarModule = {
       isPrimary: false,
       order: 1,
     },
-    {
-      id: 'infrastructure-monitoring',
-      label: 'Infrastructure',
-      href: '/infrastructure',
-      icon: Server,
-      description: 'Circuit breakers, SLA monitoring, and service telemetry',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      groupId: 'core',
-      badge: 'SRE',
-      isPrimary: false,
-      order: 2,
-    },
     // AI & Automation Group
     {
       id: 'support-ai-console',
@@ -761,46 +1380,7 @@ export const platformSupportModule: SidebarModule = {
       isPrimary: false,
       order: 2,
     },
-    {
-      id: 'trinity-command-center',
-      label: 'Trinity Command Center',
-      href: '/trinity/command-center',
-      icon: Brain,
-      description: 'Full Trinity AI orchestration with quick actions and real-time output',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      groupId: 'ai_automation',
-      badge: 'Root',
-      isPrimary: false,
-      order: 3,
-    },
     // Administration Group
-    {
-      id: 'admin-command-center',
-      label: 'Admin Command Center',
-      href: '/admin-command-center',
-      icon: Settings,
-      description: 'Platform administration controls',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      groupId: 'administration',
-      badge: 'Admin',
-      isPrimary: false,
-      order: 4,
-    },
-    {
-      id: 'end-user-controls',
-      label: 'End-User Controls',
-      href: '/admin/end-user-controls',
-      icon: Users,
-      description: 'Manage organization access, Trinity, and user permissions',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      groupId: 'administration',
-      badge: 'Admin',
-      isPrimary: false,
-      order: 5,
-    },
     {
       id: 'org-management',
       label: 'Org Management',
@@ -812,32 +1392,32 @@ export const platformSupportModule: SidebarModule = {
       groupId: 'administration',
       badge: 'Admin',
       isPrimary: false,
-      order: 6,
-    },
-    {
-      id: 'platform-users',
-      label: 'Platform Users',
-      href: '/platform/users',
-      icon: UserCog,
-      description: 'Manage all platform users and roles',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      groupId: 'administration',
-      badge: 'Root',
-      isPrimary: false,
-      order: 7,
+      order: 5,
     },
     // Support & QA Group
     {
       id: 'support-console',
       label: 'Support Console',
-      href: '/support/console',
+      href: '/admin/support-console',
       icon: Headphones,
-      description: 'Customer support command center',
+      description: 'Ticket management, workspace deep-dive, and Trinity action panel',
       capabilities: ['support_dashboard'],
       familyId: 'platform',
       groupId: 'support_qa',
       badge: 'Support',
+      isPrimary: true,
+      order: 7,
+    },
+    {
+      id: 'admin-helpai-console',
+      label: 'HelpAI Console',
+      href: '/admin/helpai',
+      icon: Brain,
+      description: 'HelpAI session management, action log, and proactive alerts',
+      capabilities: ['support_dashboard'],
+      familyId: 'platform',
+      groupId: 'support_qa',
+      badge: 'HelpAI',
       isPrimary: false,
       order: 8,
     },
@@ -875,11 +1455,13 @@ const curatedWorkspaceRoutesForPlatformStaff: string[] = [
 
 /**
  * Get accessible modules and routes for a given role and tier
+ * positionCapabilities: additional capabilities derived from the employee's canonical position
  */
 export function getAccessibleModules(
   role: WorkspaceRole,
   tier: SubscriptionTier,
-  isPlatformStaff: boolean = false
+  isPlatformStaff: boolean = false,
+  positionCapabilities?: Capability[]
 ): SidebarModule[] {
   const modules = isPlatformStaff 
     ? [platformSupportModule, ...sidebarModules]
@@ -889,7 +1471,7 @@ export function getAccessibleModules(
     .map(module => ({
       ...module,
       routes: module.routes.filter(route => 
-        canAccessRoute(role, tier, route)
+        canAccessRoute(role, tier, route, positionCapabilities)
       ),
     }))
     .filter(module => module.routes.length > 0);
@@ -941,7 +1523,8 @@ const familyConfig: Record<FamilyId, { label: string; order: number }> = {
 export function selectSidebarFamilies(
   role: WorkspaceRole,
   tier: SubscriptionTier,
-  isPlatformStaff: boolean = false
+  isPlatformStaff: boolean = false,
+  positionCapabilities?: Capability[]
 ): SidebarFamily[] {
   // Collect all routes from all modules
   const allRoutes: ModuleRoute[] = [];
@@ -1002,20 +1585,18 @@ export function selectSidebarFamilies(
     intelligence: { accessible: [], locked: [] },
   };
 
-  // Categorize each route as accessible or locked
-  // Note: Exclusion filtering already happened when building allRoutes
   allRoutes.forEach(route => {
     if (!route.familyId) return;
 
     const hasRoleAccess = !route.capabilities || 
       route.capabilities.some(cap => hasCapability(role, cap));
+    const hasPositionAccess = !hasRoleAccess && positionCapabilities && positionCapabilities.length > 0 &&
+      route.capabilities?.some(cap => positionCapabilities.includes(cap));
     const hasTier = hasTierAccess(tier, route.minimumTier);
 
-    if (isPlatformStaff || (hasRoleAccess && hasTier)) {
-      // User can access this route
+    if (isPlatformStaff || ((hasRoleAccess || hasPositionAccess) && hasTier)) {
       familyMap[route.familyId].accessible.push(route);
-    } else if (hasRoleAccess && !hasTier && route.minimumTier) {
-      // User has role access but not tier (locked)
+    } else if ((hasRoleAccess || hasPositionAccess) && !hasTier && route.minimumTier) {
       familyMap[route.familyId].locked.push({
         ...route,
         badge: route.minimumTier.charAt(0).toUpperCase() + route.minimumTier.slice(1),
@@ -1044,20 +1625,51 @@ export function selectSidebarFamilies(
 /**
  * CONDENSED MOBILE MENU
  * Returns only mobile-friendly routes for limited mobile capabilities
- * Forces users to desktop for major operations (Trinity™ automations, bulk data, analytics)
+ * Mobile = workforce employees (clock in/out, schedule, chat, timesheets)
+ * Desktop = full platform (analytics, billing, admin, automation)
+ * 
+ * Route IDs must match those defined in SIDEBAR_MODULES above
  */
 export function selectCondensedMobileFamilies(
   role: WorkspaceRole,
   tier: SubscriptionTier,
   isPlatformStaff: boolean = false
 ): SidebarFamily[] {
-  // Mobile-friendly route IDs - Essential features only
-  const mobileFriendlyRouteIds = [
+  // EMPLOYEE features - Core workforce tools only
+  // IDs must match actual SIDEBAR_MODULES route IDs
+  const employeeRouteIds = [
     'dashboard-home',          // Dashboard overview
-    'time-os',                 // Time tracking (clock in/out)
+    'time-tracking',           // Clock in/out, timesheets
+    'schedule',                // View schedule
+    'org-chatrooms',           // Team chat
+    'broadcasts',              // Company broadcasts
     'private-messages',        // Private messaging
-    'support-chat',            // Support (if applicable)
+    'inbox',                   // Personal inbox
+    'get-support',             // Help/support
   ];
+  
+  // MANAGER features - Everything above + team management
+  const managerRouteIds = [
+    ...employeeRouteIds,
+    'workflow-approvals',      // Time/shift approvals
+    'timesheets-pending',      // Pending time entries
+    'employees',               // Team directory
+    'training',                // Training tracking
+  ];
+  
+  // SUPPORT STAFF features - IRC-style tools for helping users
+  const supportRouteIds = [
+    ...managerRouteIds,
+    'support-ai-console',      // AI support console
+    'support-bugs',            // Bug reports
+    'system-health',           // System status
+  ];
+  
+  // Determine which routes to show based on role
+  const isManager = ['org_owner', 'co_owner', 'admin', 'org_manager', 'manager', 'department_manager', 'supervisor'].includes(role);
+  const mobileFriendlyRouteIds = isPlatformStaff 
+    ? supportRouteIds 
+    : (isManager ? managerRouteIds : employeeRouteIds);
 
   // Get full navigation families
   const fullFamilies = selectSidebarFamilies(role, tier, isPlatformStaff);
@@ -1083,12 +1695,27 @@ export function getDesktopOnlyRoutes(
   tier: SubscriptionTier,
   isPlatformStaff: boolean = false
 ): ModuleRoute[] {
-  const mobileFriendlyIds = [
-    'dashboard-home',
-    'time-os',
-    'private-messages',
-    'support-chat',
+  // Must match the IDs used in selectCondensedMobileFamilies
+  const isManager = ['org_owner', 'co_owner', 'admin', 'org_manager', 'manager', 'department_manager', 'supervisor'].includes(role);
+  
+  const baseMobileIds = [
+    'dashboard-home', 'time-tracking', 'schedule',
+    'org-chatrooms', 'broadcasts', 'private-messages', 'inbox', 'get-support',
   ];
+  
+  const managerMobileIds = [
+    ...baseMobileIds,
+    'workflow-approvals', 'timesheets-pending', 'employees', 'training',
+  ];
+  
+  const supportMobileIds = [
+    ...managerMobileIds,
+    'support-ai-console', 'support-bugs', 'system-health',
+  ];
+  
+  const mobileFriendlyIds = isPlatformStaff
+    ? supportMobileIds
+    : (isManager ? managerMobileIds : baseMobileIds);
 
   const fullFamilies = selectSidebarFamilies(role, tier, isPlatformStaff);
   const desktopOnlyRoutes: ModuleRoute[] = [];

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { SEO, PAGE_SEO } from '@/components/seo';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { apiPost } from "@/lib/apiClient";
@@ -92,11 +93,16 @@ export default function CustomRegister() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-gradient p-3 sm:p-4 overflow-x-hidden">
-      <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-background p-3 sm:p-4 overflow-x-hidden">
+      <SEO
+        title={PAGE_SEO.register.title}
+        description={PAGE_SEO.register.description}
+        noindex={true}
+      />
+      <div className="w-full max-w-xs space-y-4 sm:space-y-6">
         {/* Logo and Branding */}
         <div className="flex flex-col items-center gap-3 sm:gap-4">
-          <CoAIleagueLogo width={160} height={40} showTagline={false} className="sm:w-[200px] sm:h-[50px]" />
+          <UnifiedBrandLogo size="lg" />
         </div>
 
         {/* Register Card */}
@@ -245,6 +251,12 @@ export default function CustomRegister() {
                 <div className="text-xs text-muted-foreground">
                   Password must contain at least 8 characters, including uppercase, lowercase, numbers, and a special character (!@#$%^&*(),.?":{}|&lt;&gt;)
                 </div>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  By creating an account, you agree to our{" "}
+                  <a href="/terms" target="_blank" className="underline hover:text-foreground" data-testid="link-terms">Terms of Service</a>{" "}and{" "}
+                  <a href="/privacy" target="_blank" className="underline hover:text-foreground" data-testid="link-privacy">Privacy Policy</a>.
+                </p>
 
                 <Button
                   type="submit"

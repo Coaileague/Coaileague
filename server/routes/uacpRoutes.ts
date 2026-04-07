@@ -24,13 +24,16 @@ import { eq, and, or, desc, inArray, gte, lte, isNull, sql } from 'drizzle-orm';
 import { policyDecisionPoint, EntityType } from '../services/uacp/policyDecisionPoint';
 import { agentIdentityService } from '../services/uacp/agentIdentityService';
 import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('UacpRoutes');
+
 
 const router = Router();
 
 // Middleware to check admin access
 const requireAdminAccess = (req: any, res: any, next: any) => {
   const user = req.user as any;
-  const allowedRoles = ['root', 'platform_admin', 'support_lead', 'owner', 'admin', 'root_admin', 'deputy_admin', 'sysop'];
+  const allowedRoles = ['org_owner', 'co_owner', 'org_admin', 'root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
   
   if (!allowedRoles.includes(user?.role) && !allowedRoles.includes(user?.platformRole)) {
     return res.status(403).json({ error: 'Insufficient permissions for UACP access' });
@@ -46,10 +49,10 @@ const requireAdminAccess = (req: any, res: any, next: any) => {
  * GET /api/uacp/dashboard
  * Get UACP dashboard overview
  */
-router.get('/dashboard', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/dashboard', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
-    const workspaceId = user.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
 
     // Count agents by status
     const agentStats = await db.select({
@@ -59,7 +62,7 @@ router.get('/dashboard', requireAuth, requireAdminAccess, async (req, res) => {
     .from(agentIdentities)
     .where(or(
       eq(agentIdentities.isGlobal, true),
-      eq(agentIdentities.workspaceId, workspaceId || '')
+      ...(workspaceId ? [eq(agentIdentities.workspaceId, workspaceId)] : [])
     ))
     .groupBy(agentIdentities.status);
 
@@ -72,7 +75,7 @@ router.get('/dashboard', requireAuth, requireAdminAccess, async (req, res) => {
       eq(accessPolicies.isActive, true),
       or(
         eq(accessPolicies.isGlobal, true),
-        eq(accessPolicies.workspaceId, workspaceId || '')
+        ...(workspaceId ? [eq(accessPolicies.workspaceId, workspaceId)] : [])
       )
     ));
 
@@ -81,7 +84,7 @@ router.get('/dashboard', requireAuth, requireAdminAccess, async (req, res) => {
       .from(accessControlEvents)
       .where(or(
         isNull(accessControlEvents.workspaceId),
-        eq(accessControlEvents.workspaceId, workspaceId || '')
+        ...(workspaceId ? [eq(accessControlEvents.workspaceId, workspaceId)] : [])
       ))
       .orderBy(desc(accessControlEvents.createdAt))
       .limit(10);
@@ -99,7 +102,7 @@ router.get('/dashboard', requireAuth, requireAdminAccess, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[UACP] Dashboard error:', error);
+    log.error('[UACP] Dashboard error:', error);
     res.status(500).json({ error: 'Failed to load dashboard' });
   }
 });
@@ -124,7 +127,7 @@ router.post('/authorize', requireAuth, async (req, res) => {
     res.json(decision);
 
   } catch (error) {
-    console.error('[UACP] Authorization error:', error);
+    log.error('[UACP] Authorization error:', error);
     res.status(500).json({ error: 'Authorization check failed' });
   }
 });
@@ -133,7 +136,7 @@ router.post('/authorize', requireAuth, async (req, res) => {
  * GET /api/uacp/access-summary/:entityType/:entityId
  * Get access summary for an entity
  */
-router.get('/access-summary/:entityType/:entityId', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/access-summary/:entityType/:entityId', requireAdminAccess, async (req, res) => {
   try {
     const { entityType, entityId } = req.params;
     const user = req.user as any;
@@ -147,7 +150,7 @@ router.get('/access-summary/:entityType/:entityId', requireAuth, requireAdminAcc
     res.json(summary);
 
   } catch (error) {
-    console.error('[UACP] Access summary error:', error);
+    log.error('[UACP] Access summary error:', error);
     res.status(500).json({ error: 'Failed to get access summary' });
   }
 });
@@ -160,14 +163,14 @@ router.get('/access-summary/:entityType/:entityId', requireAuth, requireAdminAcc
  * GET /api/uacp/agents
  * List all agent identities
  */
-router.get('/agents', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/agents', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const agents = await agentIdentityService.listAgents(user.currentWorkspaceId);
     res.json({ agents });
 
   } catch (error) {
-    console.error('[UACP] List agents error:', error);
+    log.error('[UACP] List agents error:', error);
     res.status(500).json({ error: 'Failed to list agents' });
   }
 });
@@ -176,7 +179,7 @@ router.get('/agents', requireAuth, requireAdminAccess, async (req, res) => {
  * GET /api/uacp/agents/:agentId
  * Get a specific agent
  */
-router.get('/agents/:agentId', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/agents/:agentId', requireAdminAccess, async (req, res) => {
   try {
     const agent = await agentIdentityService.getAgent(req.params.agentId);
     
@@ -187,7 +190,7 @@ router.get('/agents/:agentId', requireAuth, requireAdminAccess, async (req, res)
     res.json({ agent });
 
   } catch (error) {
-    console.error('[UACP] Get agent error:', error);
+    log.error('[UACP] Get agent error:', error);
     res.status(500).json({ error: 'Failed to get agent' });
   }
 });
@@ -196,7 +199,7 @@ router.get('/agents/:agentId', requireAuth, requireAdminAccess, async (req, res)
  * POST /api/uacp/agents
  * Register a new agent
  */
-router.post('/agents', requireAuth, requireAdminAccess, async (req, res) => {
+router.post('/agents', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const { 
@@ -234,7 +237,7 @@ router.post('/agents', requireAuth, requireAdminAccess, async (req, res) => {
     res.status(201).json({ agent: result.agent });
 
   } catch (error) {
-    console.error('[UACP] Register agent error:', error);
+    log.error('[UACP] Register agent error:', error);
     res.status(500).json({ error: 'Failed to register agent' });
   }
 });
@@ -243,7 +246,7 @@ router.post('/agents', requireAuth, requireAdminAccess, async (req, res) => {
  * PATCH /api/uacp/agents/:agentId
  * Update an agent's access settings
  */
-router.patch('/agents/:agentId', requireAuth, requireAdminAccess, async (req, res) => {
+router.patch('/agents/:agentId', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const { agentId } = req.params;
@@ -259,7 +262,7 @@ router.patch('/agents/:agentId', requireAuth, requireAdminAccess, async (req, re
     res.json({ agent });
 
   } catch (error) {
-    console.error('[UACP] Update agent error:', error);
+    log.error('[UACP] Update agent error:', error);
     res.status(500).json({ error: 'Failed to update agent' });
   }
 });
@@ -268,7 +271,7 @@ router.patch('/agents/:agentId', requireAuth, requireAdminAccess, async (req, re
  * POST /api/uacp/agents/:agentId/suspend
  * Suspend an agent's access
  */
-router.post('/agents/:agentId/suspend', requireAuth, requireAdminAccess, async (req, res) => {
+router.post('/agents/:agentId/suspend', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const { agentId } = req.params;
@@ -287,7 +290,7 @@ router.post('/agents/:agentId/suspend', requireAuth, requireAdminAccess, async (
     res.json({ message: `Agent ${agentId} suspended`, suspended: true });
 
   } catch (error) {
-    console.error('[UACP] Suspend agent error:', error);
+    log.error('[UACP] Suspend agent error:', error);
     res.status(500).json({ error: 'Failed to suspend agent' });
   }
 });
@@ -296,7 +299,7 @@ router.post('/agents/:agentId/suspend', requireAuth, requireAdminAccess, async (
  * POST /api/uacp/agents/:agentId/reactivate
  * Reactivate a suspended agent
  */
-router.post('/agents/:agentId/reactivate', requireAuth, requireAdminAccess, async (req, res) => {
+router.post('/agents/:agentId/reactivate', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const { agentId } = req.params;
@@ -310,7 +313,7 @@ router.post('/agents/:agentId/reactivate', requireAuth, requireAdminAccess, asyn
     res.json({ message: `Agent ${agentId} reactivated`, active: true });
 
   } catch (error) {
-    console.error('[UACP] Reactivate agent error:', error);
+    log.error('[UACP] Reactivate agent error:', error);
     res.status(500).json({ error: 'Failed to reactivate agent' });
   }
 });
@@ -319,7 +322,7 @@ router.post('/agents/:agentId/reactivate', requireAuth, requireAdminAccess, asyn
  * POST /api/uacp/agents/:agentId/token
  * Issue a short-lived token for an agent
  */
-router.post('/agents/:agentId/token', requireAuth, requireAdminAccess, async (req, res) => {
+router.post('/agents/:agentId/token', requireAdminAccess, async (req, res) => {
   try {
     const { agentId } = req.params;
 
@@ -332,7 +335,7 @@ router.post('/agents/:agentId/token', requireAuth, requireAdminAccess, async (re
     res.json({ token: result.token });
 
   } catch (error) {
-    console.error('[UACP] Issue token error:', error);
+    log.error('[UACP] Issue token error:', error);
     res.status(500).json({ error: 'Failed to issue token' });
   }
 });
@@ -345,7 +348,7 @@ router.post('/agents/:agentId/token', requireAuth, requireAdminAccess, async (re
  * GET /api/uacp/attributes/:entityType/:entityId
  * Get attributes for an entity
  */
-router.get('/attributes/:entityType/:entityId', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/attributes/:entityType/:entityId', requireAdminAccess, async (req, res) => {
   try {
     const { entityType, entityId } = req.params;
     const user = req.user as any;
@@ -357,7 +360,7 @@ router.get('/attributes/:entityType/:entityId', requireAuth, requireAdminAccess,
         eq(entityAttributes.isActive, true),
         or(
           isNull(entityAttributes.workspaceId),
-          eq(entityAttributes.workspaceId, user.currentWorkspaceId || '')
+          eq(entityAttributes.workspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace')
         )
       ))
       .orderBy(entityAttributes.attributeName);
@@ -365,7 +368,7 @@ router.get('/attributes/:entityType/:entityId', requireAuth, requireAdminAccess,
     res.json({ attributes });
 
   } catch (error) {
-    console.error('[UACP] Get attributes error:', error);
+    log.error('[UACP] Get attributes error:', error);
     res.status(500).json({ error: 'Failed to get attributes' });
   }
 });
@@ -374,7 +377,7 @@ router.get('/attributes/:entityType/:entityId', requireAuth, requireAdminAccess,
  * POST /api/uacp/attributes
  * Create a new attribute for an entity
  */
-router.post('/attributes', requireAuth, requireAdminAccess, async (req, res) => {
+router.post('/attributes', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const { entityType, entityId, attributeName, attributeValue, attributeType, expiresAt } = req.body;
@@ -399,11 +402,11 @@ router.post('/attributes', requireAuth, requireAdminAccess, async (req, res) => 
 
     res.status(201).json({ attribute });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error.code === '23505') { // Unique violation
       return res.status(409).json({ error: 'Attribute already exists for this entity' });
     }
-    console.error('[UACP] Create attribute error:', error);
+    log.error('[UACP] Create attribute error:', error);
     res.status(500).json({ error: 'Failed to create attribute' });
   }
 });
@@ -412,20 +415,21 @@ router.post('/attributes', requireAuth, requireAdminAccess, async (req, res) => 
  * DELETE /api/uacp/attributes/:id
  * Delete an attribute
  */
-router.delete('/attributes/:id', requireAuth, requireAdminAccess, async (req, res) => {
+router.delete('/attributes/:id', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
+    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
 
     await db.update(entityAttributes)
       .set({ isActive: false, updatedAt: new Date() })
-      .where(eq(entityAttributes.id, req.params.id));
+      .where(and(eq(entityAttributes.id, req.params.id), eq(entityAttributes.workspaceId, workspaceId)));
 
     policyDecisionPoint.invalidateCache(user.currentWorkspaceId);
 
     res.json({ deleted: true });
 
   } catch (error) {
-    console.error('[UACP] Delete attribute error:', error);
+    log.error('[UACP] Delete attribute error:', error);
     res.status(500).json({ error: 'Failed to delete attribute' });
   }
 });
@@ -438,7 +442,7 @@ router.delete('/attributes/:id', requireAuth, requireAdminAccess, async (req, re
  * GET /api/uacp/policies
  * List all access policies
  */
-router.get('/policies', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/policies', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
 
@@ -446,14 +450,14 @@ router.get('/policies', requireAuth, requireAdminAccess, async (req, res) => {
       .from(accessPolicies)
       .where(or(
         eq(accessPolicies.isGlobal, true),
-        eq(accessPolicies.workspaceId, user.currentWorkspaceId || '')
+        eq(accessPolicies.workspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace')
       ))
       .orderBy(accessPolicies.priority);
 
     res.json({ policies });
 
   } catch (error) {
-    console.error('[UACP] List policies error:', error);
+    log.error('[UACP] List policies error:', error);
     res.status(500).json({ error: 'Failed to list policies' });
   }
 });
@@ -462,7 +466,7 @@ router.get('/policies', requireAuth, requireAdminAccess, async (req, res) => {
  * POST /api/uacp/policies
  * Create a new access policy
  */
-router.post('/policies', requireAuth, requireAdminAccess, async (req, res) => {
+router.post('/policies', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const { 
@@ -507,7 +511,7 @@ router.post('/policies', requireAuth, requireAdminAccess, async (req, res) => {
     res.status(201).json({ policy });
 
   } catch (error) {
-    console.error('[UACP] Create policy error:', error);
+    log.error('[UACP] Create policy error:', error);
     res.status(500).json({ error: 'Failed to create policy' });
   }
 });
@@ -516,14 +520,15 @@ router.post('/policies', requireAuth, requireAdminAccess, async (req, res) => {
  * PATCH /api/uacp/policies/:id
  * Update a policy
  */
-router.patch('/policies/:id', requireAuth, requireAdminAccess, async (req, res) => {
+router.patch('/policies/:id', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const updates = req.body;
+    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
 
     await db.update(accessPolicies)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(accessPolicies.id, req.params.id));
+      .where(and(eq(accessPolicies.id, req.params.id), eq(accessPolicies.workspaceId, workspaceId)));
 
     policyDecisionPoint.invalidateCache();
 
@@ -535,7 +540,7 @@ router.patch('/policies/:id', requireAuth, requireAdminAccess, async (req, res) 
     res.json({ policy });
 
   } catch (error) {
-    console.error('[UACP] Update policy error:', error);
+    log.error('[UACP] Update policy error:', error);
     res.status(500).json({ error: 'Failed to update policy' });
   }
 });
@@ -544,18 +549,20 @@ router.patch('/policies/:id', requireAuth, requireAdminAccess, async (req, res) 
  * DELETE /api/uacp/policies/:id
  * Deactivate a policy
  */
-router.delete('/policies/:id', requireAuth, requireAdminAccess, async (req, res) => {
+router.delete('/policies/:id', requireAdminAccess, async (req, res) => {
   try {
+    const user = req.user as any;
+    const workspaceId = req.workspaceId || user.workspaceId || user.currentWorkspaceId;
     await db.update(accessPolicies)
       .set({ isActive: false, updatedAt: new Date() })
-      .where(eq(accessPolicies.id, req.params.id));
+      .where(and(eq(accessPolicies.id, req.params.id), eq(accessPolicies.workspaceId, workspaceId)));
 
     policyDecisionPoint.invalidateCache();
 
     res.json({ deleted: true });
 
   } catch (error) {
-    console.error('[UACP] Delete policy error:', error);
+    log.error('[UACP] Delete policy error:', error);
     res.status(500).json({ error: 'Failed to delete policy' });
   }
 });
@@ -568,7 +575,7 @@ router.delete('/policies/:id', requireAuth, requireAdminAccess, async (req, res)
  * GET /api/uacp/events
  * Get access control event history
  */
-router.get('/events', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/events', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     const { limit = 50, eventType, targetId } = req.query;
@@ -577,17 +584,17 @@ router.get('/events', requireAuth, requireAdminAccess, async (req, res) => {
       .from(accessControlEvents)
       .where(or(
         isNull(accessControlEvents.workspaceId),
-        eq(accessControlEvents.workspaceId, user.currentWorkspaceId || '')
+        eq(accessControlEvents.workspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace')
       ))
       .orderBy(desc(accessControlEvents.createdAt))
-      .limit(Number(limit));
+      .limit(Math.min(Number(limit) || 50, 500));
 
     const events = await query;
 
     res.json({ events });
 
   } catch (error) {
-    console.error('[UACP] Get events error:', error);
+    log.error('[UACP] Get events error:', error);
     res.status(500).json({ error: 'Failed to get events' });
   }
 });
@@ -600,7 +607,7 @@ router.get('/events', requireAuth, requireAdminAccess, async (req, res) => {
  * GET /api/uacp/users
  * List users with their access levels
  */
-router.get('/users', requireAuth, requireAdminAccess, async (req, res) => {
+router.get('/users', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
 
@@ -614,13 +621,13 @@ router.get('/users', requireAuth, requireAdminAccess, async (req, res) => {
       lastLoginAt: users.lastLoginAt,
     })
     .from(users)
-    .where(eq(users.currentWorkspaceId, user.currentWorkspaceId || ''))
+    .where(eq(users.currentWorkspaceId, req.workspaceId || user.workspaceId || user.currentWorkspaceId || 'no-workspace'))
     .orderBy(users.email);
 
     res.json({ users: userList });
 
   } catch (error) {
-    console.error('[UACP] List users error:', error);
+    log.error('[UACP] List users error:', error);
     res.status(500).json({ error: 'Failed to list users' });
   }
 });
@@ -629,7 +636,7 @@ router.get('/users', requireAuth, requireAdminAccess, async (req, res) => {
  * PATCH /api/uacp/users/:userId/role
  * Change a user's role
  */
-router.patch('/users/:userId/role', requireAuth, requireAdminAccess, async (req, res) => {
+router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
   try {
     const actor = req.user as any;
     const { userId } = req.params;
@@ -637,6 +644,27 @@ router.patch('/users/:userId/role', requireAuth, requireAdminAccess, async (req,
 
     if (!role) {
       return res.status(400).json({ error: 'Role is required' });
+    }
+
+    // Allowlist: only valid workspace roles may be assigned via this endpoint.
+    // org_owner is excluded — ownership transfer requires a dedicated flow.
+    const ASSIGNABLE_WORKSPACE_ROLES = [
+      'co_owner', 'org_admin', 'org_manager', 'manager',
+      'department_manager', 'supervisor', 'staff', 'employee',
+      'auditor', 'contractor',
+    ];
+    if (!ASSIGNABLE_WORKSPACE_ROLES.includes(role)) {
+      return res.status(400).json({
+        error: `Invalid role. Assignable workspace roles: ${ASSIGNABLE_WORKSPACE_ROLES.join(', ')}`,
+      });
+    }
+
+    // Anti-escalation: actor cannot assign a role at or above their own level.
+    const { WORKSPACE_ROLE_HIERARCHY } = await import('../rbac');
+    const actorLevel = WORKSPACE_ROLE_HIERARCHY[actor.role] ?? 0;
+    const targetRoleLevel = WORKSPACE_ROLE_HIERARCHY[role] ?? 0;
+    if (targetRoleLevel >= actorLevel) {
+      return res.status(403).json({ error: 'You cannot assign a role at or above your own level' });
     }
 
     // Get previous state
@@ -647,6 +675,18 @@ router.patch('/users/:userId/role', requireAuth, requireAdminAccess, async (req,
 
     if (!targetUser) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Workspace scope: actor can only manage users in their own workspace.
+    // Prevents cross-tenant role manipulation.
+    if (targetUser.currentWorkspaceId !== actor.currentWorkspaceId) {
+      return res.status(403).json({ error: 'You can only manage users within your own workspace' });
+    }
+
+    // Anti-escalation: actor cannot demote/change someone at or above their own level.
+    const currentTargetLevel = WORKSPACE_ROLE_HIERARCHY[targetUser.role ?? ''] ?? 0;
+    if (currentTargetLevel >= actorLevel) {
+      return res.status(403).json({ error: 'You cannot change the role of someone at or above your own level' });
     }
 
     const previousRole = targetUser.role;
@@ -685,7 +725,7 @@ router.patch('/users/:userId/role', requireAuth, requireAdminAccess, async (req,
     });
 
   } catch (error) {
-    console.error('[UACP] Change role error:', error);
+    log.error('[UACP] Change role error:', error);
     res.status(500).json({ error: 'Failed to change role' });
   }
 });
@@ -694,7 +734,7 @@ router.patch('/users/:userId/role', requireAuth, requireAdminAccess, async (req,
  * POST /api/uacp/seed-agents
  * Seed default platform agents (admin only)
  */
-router.post('/seed-agents', requireAuth, requireAdminAccess, async (req, res) => {
+router.post('/seed-agents', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user as any;
     
@@ -709,7 +749,7 @@ router.post('/seed-agents', requireAuth, requireAdminAccess, async (req, res) =>
     res.json({ message: 'Platform agents seeded successfully' });
 
   } catch (error) {
-    console.error('[UACP] Seed agents error:', error);
+    log.error('[UACP] Seed agents error:', error);
     res.status(500).json({ error: 'Failed to seed agents' });
   }
 });

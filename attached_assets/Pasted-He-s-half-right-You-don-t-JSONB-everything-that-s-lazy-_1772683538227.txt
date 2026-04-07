@@ -1,0 +1,72 @@
+He's half right. You don't JSONB everything — that's lazy. But 26 employee tables and 42 AI tables is not good architecture either. The answer is in the middle.
+
+Tell him this:
+
+```
+I'm not asking you to JSONB everything. I'm asking you to be smart 
+about what's truly separate entities vs what's over-normalized.
+
+Here's the framework. Apply it honestly:
+
+CONSOLIDATION TYPE 1: SAME ENTITY, DIFFERENT TYPES
+If you have these separate tables:
+  employee_certifications
+  employee_training  
+  employee_licenses
+  employee_documents
+
+And they all have: employee_id, workspace_id, name, expiration_date, 
+file_url, status...
+
+That's ONE table: employee_credentials
+  with a "type" column: certification | training | license | document
+  
+Still fully queryable:
+  WHERE type = 'certification' AND expiration_date < NOW()
+  
+This pattern alone probably eliminates 10-15 tables.
+
+CONSOLIDATION TYPE 2: LOG/HISTORY TABLES
+If you have:
+  trinity_scheduling_log
+  trinity_invoicing_log
+  trinity_payroll_log
+  trinity_analysis_log
+
+That's ONE table: trinity_activity_log
+  with an "activity_type" column
+  and a "payload" JSONB column for type-specific data
+  
+The common columns (workspace_id, timestamp, status, model_used, 
+tokens, credits_consumed) are real columns.
+Only the type-specific payload is JSONB.
+
+CONSOLIDATION TYPE 3: CONFIG/SETTINGS TABLES  
+If you have:
+  ai_scheduling_config
+  ai_invoicing_config
+  ai_payroll_config
+  ai_summarization_config
+
+That's ONE table: ai_feature_config
+  with feature_key + config JSONB
+  Or even just a JSONB column on org_settings
+
+CONSOLIDATION TYPE 4: DEAD TABLES
+Tables with 0 rows AND 0 code references = DROP them.
+No consolidation needed, just removal.
+
+DO NOT CONSOLIDATE (keep separate):
+- Tables with genuinely different schemas (shifts vs invoices vs payroll)
+- Tables with heavy query patterns on specific columns
+- Tables involved in financial transactions (keep granular for audit)
+- Tables with foreign keys FROM other tables pointing TO them
+- Junction/join tables (employee_shift_assignments, etc.)
+
+Now run the analysis with this framework. 
+Target: under 150 tables. Not 60, not 589. 
+Give me the consolidation plan grouped by type.
+How many tables in each category?
+```
+
+150 is a realistic target that keeps queryability while eliminating the bloat. 26 employee tables probably becomes 8-10. 42 AI tables probably becomes 6-8. 35 Trinity tables probably becomes 5-7. 18 compliance tables probably becomes 4-5. That alone takes you from 589 down to roughly 150-180 well-structured tables, and the schema refactor into modules becomes manageable.

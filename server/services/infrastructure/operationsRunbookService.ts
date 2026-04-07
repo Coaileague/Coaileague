@@ -4,6 +4,8 @@
  * Incident response procedures, playbooks, and operational documentation
  * for the platform operations team.
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('operationsRunbookService');
 
 interface Runbook {
   id: string;
@@ -76,7 +78,7 @@ class OperationsRunbookService {
 
     this.seedRunbooks();
     this.initialized = true;
-    console.log('[OperationsRunbook] Service initialized with incident response procedures');
+    log.info('[OperationsRunbook] Service initialized with incident response procedures');
   }
 
   private seedRunbooks(): void {
@@ -226,7 +228,7 @@ class OperationsRunbookService {
       this.runbooks.set(rb.id, rb);
     });
 
-    console.log(`[OperationsRunbook] Seeded ${runbooks.length} runbooks`);
+    log.info(`[OperationsRunbook] Seeded ${runbooks.length} runbooks`);
   }
 
   async startResponse(runbookId: string, incidentId: string, responders: string[]): Promise<IncidentResponse | null> {
@@ -249,7 +251,7 @@ class OperationsRunbookService {
     };
 
     this.responses.set(response.id, response);
-    console.log(`[OperationsRunbook] Started response for ${runbook.title} (incident: ${incidentId})`);
+    log.info(`[OperationsRunbook] Started response for ${runbook.title} (incident: ${incidentId})`);
     return response;
   }
 
@@ -273,7 +275,7 @@ class OperationsRunbookService {
     if (runbook && response.currentStep > runbook.steps.length) {
       response.status = 'completed';
       response.completedAt = new Date();
-      console.log(`[OperationsRunbook] Response completed for incident ${response.incidentId}`);
+      log.info(`[OperationsRunbook] Response completed for incident ${response.incidentId}`);
     }
 
     return response;
@@ -291,7 +293,7 @@ class OperationsRunbookService {
     stepResult.output = reason;
 
     response.notes.push(`Step ${stepOrder} failed: ${reason}`);
-    console.log(`[OperationsRunbook] Step ${stepOrder} failed for response ${responseId}`);
+    log.info(`[OperationsRunbook] Step ${stepOrder} failed for response ${responseId}`);
 
     return response;
   }
@@ -302,7 +304,7 @@ class OperationsRunbookService {
 
     response.status = 'escalated';
     response.notes.push(`Escalated: ${reason}`);
-    console.log(`[OperationsRunbook] Response ${responseId} escalated: ${reason}`);
+    log.info(`[OperationsRunbook] Response ${responseId} escalated: ${reason}`);
 
     return response;
   }
@@ -377,7 +379,7 @@ class OperationsRunbookService {
   }
 
   async shutdown(): Promise<void> {
-    console.log('[OperationsRunbook] Service shutdown');
+    log.info('[OperationsRunbook] Service shutdown');
   }
 }
 

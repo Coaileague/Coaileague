@@ -24,6 +24,9 @@ import { eq, and, desc } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { policyDecisionPoint, EntityType } from './policyDecisionPoint';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('agentIdentityService');
+
 
 export interface AgentToken {
   token: string;
@@ -119,11 +122,11 @@ class AgentIdentityService {
         newState: agent,
       });
 
-      console.log(`[AgentIdentity] Registered new agent: ${request.agentId} (${request.entityType})`);
+      log.info(`[AgentIdentity] Registered new agent: ${request.agentId} (${request.entityType})`);
       return { success: true, agent };
 
     } catch (error) {
-      console.error('[AgentIdentity] Registration failed:', error);
+      log.error('[AgentIdentity] Registration failed:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -188,7 +191,7 @@ class AgentIdentityService {
       return { success: true, token };
 
     } catch (error) {
-      console.error('[AgentIdentity] Token issuance failed:', error);
+      log.error('[AgentIdentity] Token issuance failed:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -289,11 +292,11 @@ class AgentIdentityService {
       // Invalidate PDP cache
       policyDecisionPoint.invalidateCache(agent.workspaceId || undefined);
 
-      console.log(`[AgentIdentity] Agent ${agentId} SUSPENDED by ${suspendedBy}: ${reason}`);
+      log.info(`[AgentIdentity] Agent ${agentId} SUSPENDED by ${suspendedBy}: ${reason}`);
       return { success: true };
 
     } catch (error) {
-      console.error('[AgentIdentity] Suspension failed:', error);
+      log.error('[AgentIdentity] Suspension failed:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -345,11 +348,11 @@ class AgentIdentityService {
 
       policyDecisionPoint.invalidateCache(agent.workspaceId || undefined);
 
-      console.log(`[AgentIdentity] Agent ${agentId} REACTIVATED by ${reactivatedBy}`);
+      log.info(`[AgentIdentity] Agent ${agentId} REACTIVATED by ${reactivatedBy}`);
       return { success: true };
 
     } catch (error) {
-      console.error('[AgentIdentity] Reactivation failed:', error);
+      log.error('[AgentIdentity] Reactivation failed:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -392,7 +395,7 @@ class AgentIdentityService {
       return { success: true };
 
     } catch (error) {
-      console.error('[AgentIdentity] Mission update failed:', error);
+      log.error('[AgentIdentity] Mission update failed:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -453,7 +456,7 @@ class AgentIdentityService {
       return { success: true };
 
     } catch (error) {
-      console.error('[AgentIdentity] Access update failed:', error);
+      log.error('[AgentIdentity] Access update failed:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -545,7 +548,7 @@ class AgentIdentityService {
         });
       }
     } catch (error) {
-      console.error('[AgentIdentity] Failed to emit event:', error);
+      log.error('[AgentIdentity] Failed to emit event:', error);
     }
   }
 
@@ -614,7 +617,7 @@ class AgentIdentityService {
     for (const agentReq of defaultAgents) {
       const result = await this.registerAgent(agentReq);
       if (result.success) {
-        console.log(`[AgentIdentity] Seeded platform agent: ${agentReq.agentId}`);
+        log.info(`[AgentIdentity] Seeded platform agent: ${agentReq.agentId}`);
       }
     }
   }

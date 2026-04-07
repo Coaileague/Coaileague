@@ -6,29 +6,17 @@
  * to safely handle re-runs.
  * 
  * Trigger: Runs on server startup when REPLIT_DEPLOYMENT=1 (production)
- * Guard: Checks for sentinel user (root@getdc360.com) to avoid duplicate runs
+ * Guard: Checks for sentinel user to avoid duplicate runs
  */
 
 import { db } from "../db";
-import { users, platformRoles, workspaces, employees } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { users, platformRoles, workspaces, employees, invoices, payrollEntries, orgLedger } from "@shared/schema";
+import { eq, sql, and, notInArray, ne, inArray } from "drizzle-orm";
+import { typedCount, typedExec, typedQuery } from '../lib/typedSql';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
 
 const SENTINEL_USER_ID = 'root-user-00000000';
-const SENTINEL_EMAIL = 'root@getdc360.com';
-
-/**
- * Detect production across hosting providers:
- *   - NODE_ENV=production:        standard Node.js convention (Railway, generic hosts)
- *   - REPLIT_DEPLOYMENT=1:        legacy Replit-specific marker (kept for back-compat)
- *   - RAILWAY_ENVIRONMENT=production: Railway-injected env var
- */
-function isProductionEnvironment(): boolean {
-  return (
-    process.env.NODE_ENV === 'production' ||
-    process.env.REPLIT_DEPLOYMENT === '1' ||
-    process.env.RAILWAY_ENVIRONMENT === 'production'
-  );
-}
+const SENTINEL_EMAIL = process.env.ROOT_ADMIN_EMAIL || 'root@coaileague.local';
 
 /**
  * One-time data corrections - runs on PRODUCTION startup only
@@ -36,25 +24,191 @@ function isProductionEnvironment(): boolean {
  * EXPORTED so it can be called independently in server/index.ts
  */
 export async function runDataCorrections(): Promise<void> {
-  const isProduction = isProductionEnvironment();
+  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
   if (!isProduction) return;
   
   console.log('🔧 Data Corrections Service: Starting...');
-  
-  // Fix TXPS org owner role - employee was created without workspace_role
+
   try {
-    await db.execute(sql`
-      UPDATE employees 
-      SET workspace_role = 'org_owner', employee_number = 'EMP-TXPS-00001'
-      WHERE id = '3fd50980-85f8-4f18-8b7a-5906ba8ccfe0'
-        AND (workspace_role IS NULL OR workspace_role != 'org_owner')
+    // CATEGORY C — Raw SQL retained: Production seed data correction | Tables: users | Verified: 2026-03-23
+    await typedExec(sql`
+      UPDATE users
+      SET email = 'admin@coaileague.com',
+          login_attempts = 0,
+          email_verified = TRUE
+      WHERE id = 'root-user-00000000'
     `);
-    console.log('🔧 Data Correction: Fixed TXPS org owner workspace_role');
+    console.log('🔧 Data Correction: root admin email set to admin@coaileague.com');
   } catch (err) {
-    console.log('🔧 Data Correction: TXPS org owner fix skipped (may not exist)');
+    console.log('🔧 Data Correction: root admin email fix skipped:', (err as any)?.message);
   }
-  
+
   console.log('🔧 Data Corrections Service: Complete');
+}
+
+/**
+ * One-time production data cleanup — removes ALL dev/sandbox/test data
+ * Keeps ONLY: Grandfathered production tenant, CoAIleague Platform, System Automation
+ * Everything else (dev-*, demo-*, test-*, ops-*, UUID test orgs) is contamination and gets removed
+ * EXPORTED so it can be called from server/index.ts
+ */
+export async function runProductionDataCleanup(): Promise<void> {
+  // Guard: only runs in deployed production (REPLIT_DEPLOYMENT=1)
+  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
+  if (!isProduction) return;
+
+  console.log('🧹 Production Data Cleanup: Starting...');
+
+  const GRANDFATHERED_WS = process.env.GRANDFATHERED_TENANT_ID || process.env.STATEWIDE_WORKSPACE_ID;
+  const GRANDFATHERED_OWNER = process.env.GRANDFATHERED_TENANT_OWNER_ID;
+  const PLATFORM_WS = PLATFORM_WORKSPACE_ID;           // coaileague-platform-workspace
+  const SYSTEM_WS = 'system';                           // system automation workspace
+
+  // Financial record protection — refuse to run if grandfathered tenant financial data exists
+  // CATEGORY C — Raw SQL retained: COUNT( | Tables: invoices, payroll_entries, org_ledger | Verified: 2026-03-23
+  const protectedWs = GRANDFATHERED_WS;
+  if (protectedWs) {
+    const [sentInvoices, payrollEntriesCount, ledgerEntries] = await Promise.all([
+      db.select({ count: sql`COUNT(*)` }).from(invoices).where(and(eq(invoices.status, 'sent'), eq(invoices.workspaceId, protectedWs))),
+      db.select({ count: sql`COUNT(*)` }).from(payrollEntries).where(eq(payrollEntries.workspaceId, protectedWs)),
+      db.select({ count: sql`COUNT(*)` }).from(orgLedger).where(eq(orgLedger.workspaceId, protectedWs)),
+    ]);
+
+    const sentInvoicesCount = parseInt(String((sentInvoices[0] as any)?.count || '0'));
+    const payrollCount = parseInt(String((payrollEntriesCount[0] as any)?.count || '0'));
+    const ledgerCount = parseInt(String((ledgerEntries[0] as any)?.count || '0'));
+
+    if (sentInvoicesCount > 0 || payrollCount > 0 || ledgerCount > 0) {
+      console.error(`[BLOCKED] runProductionDataCleanup REFUSED — financial records exist in protected workspace:`);
+      console.error(`  Sent invoices: ${sentInvoicesCount}`);
+      console.error(`  Payroll entries: ${payrollCount}`);
+      console.error(`  Ledger entries: ${ledgerCount}`);
+      console.error(`  These records are PROTECTED. Cannot bulk-delete workspace data when financial pipeline has processed records.`);
+      return;
+    }
+  }
+
+  // Keep ONLY: Grandfathered production tenant, CoAIleague Platform, System Automation
+  // ALL others are contamination — dev/test/sandbox/demo workspaces that bled into production
+  const KEEP_WORKSPACES = [...(protectedWs ? [protectedWs] : []), PLATFORM_WS, SYSTEM_WS];
+
+  const WORKSPACE_SCOPED_TABLES = [
+    'employees', 'clients', 'shifts', 'time_entries', 'schedules',
+    'invoices', 'notifications', 'chat_messages', 'chatrooms',
+    'incidents', 'visitor_logs', 'daily_activity_reports',
+    'pay_stubs', 'payroll_runs', 'compliance_documents',
+    'availability', 'break_records', 'contracts', 'documents',
+    'form_templates', 'form_submissions', 'automation_executions',
+    'workspace_configs', 'geofences', 'bolo_alerts',
+    'shift_swap_requests', 'recurring_shifts', 'tax_forms',
+  ];
+
+  try {
+    // Converted to Drizzle ORM: NOT IN → notInArray()
+    const devWorkspaces = await db.select({ id: workspaces.id, name: workspaces.name })
+      .from(workspaces)
+      .where(notInArray(workspaces.id, KEEP_WORKSPACES));
+
+    // CATEGORY C — Raw SQL retained: Count( | Tables: employees | Verified: 2026-03-23
+    const protectedEmp = protectedWs ? await db.select({ count: sql`COUNT(*)` })
+      .from(employees)
+      .where(and(
+        eq(employees.workspaceId, protectedWs),
+        ...(GRANDFATHERED_OWNER ? [ne(employees.userId, GRANDFATHERED_OWNER)] : [])
+      )) : [{ count: '0' }];
+    const sandboxEmpCount = parseInt(String((protectedEmp[0] as any)?.count || '0'));
+
+    if (devWorkspaces.length === 0 && sandboxEmpCount === 0) {
+      console.log('🧹 Production Data Cleanup: Already clean — nothing to do');
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      if (devWorkspaces.length > 0) {
+        console.log(`🧹 Step 1: Removing ${devWorkspaces.length} non-production workspaces:`);
+        for (const ws of devWorkspaces) {
+          console.log(`   - ${ws.id} (${ws.name})`);
+        }
+
+        for (const ws of devWorkspaces) {
+          for (const table of WORKSPACE_SCOPED_TABLES) {
+            try {
+              await tx.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${ws.id}'`));
+            } catch {}
+          }
+          try {
+            await tx.execute(sql.raw(`DELETE FROM workspaces WHERE id = '${ws.id}'`));
+          } catch (err) {
+            console.log(`🧹 Could not delete workspace ${ws.id}: ${(err as any)?.message}`);
+          }
+        }
+        console.log('🧹 Step 1: Complete');
+      }
+
+      console.log('🧹 Step 2: Cleaning Statewide workspace — removing all non-owner data...');
+      const deleted = await tx.execute(sql`
+        DELETE FROM employees 
+        WHERE workspace_id = ${protectedWs} 
+        AND user_id IS DISTINCT FROM ${REAL_OWNER_USER_ID}
+      `);
+      console.log(`🧹 Step 2a: Removed ${deleted.rowCount || 0} sandbox employees`);
+
+      for (const table of WORKSPACE_SCOPED_TABLES) {
+        if (table === 'employees') continue;
+        try {
+          await tx.execute(sql.raw(`DELETE FROM "${table}" WHERE workspace_id = '${protectedWs || ""}'`));
+        } catch {}
+      }
+      console.log('🧹 Step 2b: All sandbox clients, shifts, invoices, etc. removed');
+
+      console.log('🧹 Step 3: Removing phantom users (dev/test/tenant IDs)...');
+      try {
+        await tx.execute(sql`
+          DELETE FROM platform_roles 
+          WHERE user_id IN (
+            SELECT id FROM users 
+            WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%' 
+            OR id LIKE 'demo-%' OR id = 'root-admin-workfos'
+          )
+        `);
+      } catch {}
+      try {
+        await tx.execute(sql`
+          DELETE FROM employees 
+          WHERE user_id IN (
+            SELECT id FROM users 
+            WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%' 
+            OR id LIKE 'demo-%'
+          )
+        `);
+      } catch {}
+      await tx.execute(sql`
+        DELETE FROM users 
+        WHERE id LIKE 'dev-%' OR id LIKE 'tenant-%' OR id LIKE 'txps-%' 
+        OR id LIKE 'demo-%' OR id = 'root-admin-workfos'
+      `);
+      console.log('🧹 Step 3: Phantom users removed');
+
+      console.log('🧹 Step 4: Cleaning platform workspace of non-system employees...');
+      await tx.execute(sql`
+        DELETE FROM employees 
+        WHERE workspace_id = ${PLATFORM_WS}
+        AND id NOT IN ('8d31a497-e9fe-48d9-b819-9c6869948c39', 'helpai-employee', 'trinity-employee')
+      `);
+      console.log('🧹 Step 4: Platform workspace cleaned');
+    });
+
+    console.log('🧹 ========================================');
+    console.log('🧹 Production Data Cleanup: COMPLETE');
+    console.log('🧹 Remaining workspaces:');
+    console.log('🧹   1. CoAIleague Platform (support/root org)');
+    console.log('🧹   2. Grandfathered tenant (owner only — ready for QB import)');
+    console.log('🧹   3. System Automation (internal)');
+    console.log('🧹 ========================================');
+  } catch (err) {
+    console.error('🧹 Production Data Cleanup: ERROR', (err as any)?.message);
+    console.error('🧹 Full error:', err);
+  }
 }
 
 /**
@@ -65,8 +219,25 @@ export async function runDataCorrections(): Promise<void> {
 export async function runPasswordMigrations(): Promise<void> {
   console.log('🔑 Password Migration Service: Starting...');
   
-  // Password migrations now empty - login working, password preserved
-  const migrations: Array<{ email: string; newHash: string; note: string }> = [];
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1';
+  if (isProduction) {
+    console.log('🔑 Password Migration: SKIPPED in production (passwords must be changed via user flow)');
+    console.log('🔑 Password Migration Service: Complete');
+    return;
+  }
+  
+  const migrations: Array<{ email: string; newHash: string; note: string }> = [
+    {
+      email: 'admin@coaileague.com',
+      newHash: '$2b$12$Z2CsEFb.K/Y6ySBE5k5LEe79ien8SNZmg8mS8lovdL6ZyTeJ.7Xo.',
+      note: 'DEV ONLY: Platform root admin password reset to admin123@*',
+    },
+    {
+      email: 'txpsinvestigations@gmail.com',
+      newHash: '$2b$12$hOeQmgFMh8.vDrMgVstFM.LCdci5NuhKOFNfOygA0A5VzG4NDE3hu',
+      note: 'DEV ONLY: TXPS org owner password reset to admin123@*',
+    },
+  ];
   
   if (migrations.length === 0) {
     console.log('🔑 Password Migration: No pending migrations');
@@ -76,7 +247,8 @@ export async function runPasswordMigrations(): Promise<void> {
   
   for (const migration of migrations) {
     try {
-      const result = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: Production seed password migration | Tables: users | Verified: 2026-03-23
+      const result = await typedExec(sql`
         UPDATE users 
         SET password_hash = ${migration.newHash}, login_attempts = 0
         WHERE email = ${migration.email}
@@ -91,80 +263,92 @@ export async function runPasswordMigrations(): Promise<void> {
 }
 
 /**
- * Enforce billing-exempt flags on strategic workspaces. Idempotent — runs on
- * every production startup. Safe to call before or after the main seed.
- *
- * Strategic workspaces (founder's company, internal support orgs):
- *   - subscriptionTier = enterprise (max)
- *   - subscriptionStatus = active
- *   - billingExempt = true (bypasses subscription invoicing + AI credit gates)
- *   - platformFeePercentage = 0.00 (no middleware fee on invoicing/payroll)
- *
- * If the workspace row doesn't exist yet (drizzle-kit push hasn't run, or
- * the workspace was deleted), this is a no-op for that row. If the
- * billing_exempt column doesn't exist yet, the UPDATE silently fails and
- * is logged but doesn't crash the boot.
+ * Workspace health corrections - runs EVERY startup (dev and prod)
+ * Ensures known first-party workspaces stay active regardless of trial expiry jobs.
+ * Only updates workspaces that are genuinely suspended/cancelled — leaves active ones alone.
  */
-export async function enforceBillingExemptions(): Promise<void> {
-  console.log('💰 Enforcing billing exemptions on strategic workspaces...');
+export async function runWorkspaceHealthCorrections(): Promise<void> {
+  console.log('🏢 Workspace Health: Starting corrections...');
 
-  const STRATEGIC_WORKSPACES: Array<{ id: string; name: string; reason: string }> = [
-    { id: '37a04d24-51bd-4856-9faa-d26a2fe82094', name: 'Statewide Protective Services', reason: 'Founder strategic account — enterprise tier, no billing, no middleware fees' },
-    { id: 'ops-workspace-00000000',               name: 'CoAIleague Support',             reason: 'Internal platform support workspace' },
-    { id: 'demo-workspace-00000000',              name: 'Demo Workspace',                 reason: 'Demo / internal sandbox workspace' },
-    { id: 'autoforce-platform-workspace',         name: 'AutoForce Platform',             reason: 'Internal platform workspace' },
-    { id: 'coaileague-platform-workspace',        name: 'CoAIleague Platform',            reason: 'Internal HelpAI host workspace' },
-  ];
-
-  for (const ws of STRATEGIC_WORKSPACES) {
-    try {
-      const result = await db.execute(sql`
-        UPDATE workspaces
-        SET
-          subscription_tier = 'enterprise',
-          subscription_status = 'active',
-          billing_exempt = TRUE,
-          billing_exempt_reason = ${ws.reason},
-          billing_exempt_at = COALESCE(billing_exempt_at, NOW()),
-          billing_exempt_by = COALESCE(billing_exempt_by, 'root-user-00000000'),
-          platform_fee_percentage = '0.00',
-          updated_at = NOW()
-        WHERE id = ${ws.id}
-      `);
-      console.log(`💰 Billing exempt enforced: ${ws.name} (${ws.id})`);
-    } catch (err: any) {
-      // The column may not exist yet on first deploy after the schema change —
-      // drizzle-kit push will add it on the next start. Log + continue.
-      console.log(`💰 Billing exempt skipped for ${ws.name}: ${err?.message || err}`);
-    }
+  // Restore the TXPS org owner's workspace to enterprise/active.
+  // The daily trial-expiry cron may have suspended it — override that here.
+  try {
+    // Converted to Drizzle ORM: IN subquery → inArray()
+    await db.update(workspaces).set({
+      subscriptionStatus: 'active',
+      subscriptionTier: 'enterprise',
+      trialEndsAt: null,
+      updatedAt: sql`now()`,
+    }).where(and(
+      inArray(workspaces.ownerId,
+        db.select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, 'txpsinvestigations@gmail.com'))
+      ),
+      inArray(workspaces.subscriptionStatus, ['suspended', 'cancelled', 'trial'])
+    ));
+    console.log('🏢 Workspace Health: TXPS workspace restored to enterprise/active (if it was suspended)');
+  } catch (err) {
+    console.log('🏢 Workspace Health: TXPS workspace fix skipped:', (err as any)?.message);
   }
 
-  console.log('💰 Billing exemption enforcement complete');
+  // Same for the root admin platform workspace
+  try {
+    // Converted to Drizzle ORM
+    await db.update(workspaces).set({
+      subscriptionStatus: 'active',
+      updatedAt: sql`now()`,
+    }).where(and(eq(workspaces.id, PLATFORM_WORKSPACE_ID), sql`subscription_status != 'active'`));
+  } catch (err) {
+    // Non-fatal
+  }
+
+  console.log('🏢 Workspace Health: Complete');
+}
+
+/**
+ * Ensure the system automation user and workspace exist.
+ * These are required by autonomousScheduler for audit log FK constraints.
+ * Runs on EVERY startup (dev + production), idempotent via ON CONFLICT.
+ */
+export async function ensureSystemEntities(): Promise<void> {
+  try {
+    // Converted to Drizzle ORM: ON CONFLICT
+    await db.insert(users).values({
+      id: 'system-coaileague',
+      email: 'automation@coaileague.ai',
+      firstName: 'CoAIleague',
+      lastName: 'Automation',
+      role: 'system',
+      emailVerified: true,
+    }).onConflictDoNothing();
+    // Converted to Drizzle ORM: ON CONFLICT
+    await db.insert(workspaces).values({
+      id: 'system',
+      name: 'System Automation',
+      ownerId: 'system-coaileague',
+      subscriptionTier: 'enterprise',
+      subscriptionStatus: 'active',
+    }).onConflictDoNothing();
+    console.log('[SystemSeed] System automation user and workspace verified');
+  } catch (err) {
+    console.error('[SystemSeed] Failed to ensure system entities (non-fatal):', (err as any)?.message);
+  }
 }
 
 export async function runProductionSeed(): Promise<{ success: boolean; message: string }> {
-  const isProduction = isProductionEnvironment();
+  const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
   
-  console.log(
-    `🌱 Production Seed: Environment check - NODE_ENV=${process.env.NODE_ENV} ` +
-    `REPLIT_DEPLOYMENT=${process.env.REPLIT_DEPLOYMENT} ` +
-    `RAILWAY_ENVIRONMENT=${process.env.RAILWAY_ENVIRONMENT}`
-  );
-
+  console.log(`🌱 Production Seed: Environment check - REPLIT_DEPLOYMENT=${process.env.REPLIT_DEPLOYMENT}`);
+  
   if (!isProduction) {
-    console.log('🌱 Production Seed: Skipping (not in production)');
+    console.log('🌱 Production Seed: Skipping (not in production deployment)');
     return { success: true, message: 'Skipped - not in production' };
   }
-
+  
   // Always run password migrations first (for existing users)
   console.log('🔑 Running password migrations...');
   await runPasswordMigrations();
-
-  // Always enforce billing-exempt flags on strategic workspaces, even if the
-  // sentinel user already exists (i.e. seed has run before). This ensures the
-  // flag gets applied to existing rows after the column is added by drizzle-kit
-  // push, and protects against accidental UI/admin flips of the bit.
-  await enforceBillingExemptions();
   
   try {
     // Check if sentinel user already exists
@@ -188,15 +372,8 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
       console.log('🌱 Seeding users...');
       
       const usersData = [
-        { id: 'GTa1Ag', email: 'Root@getdc360.com', firstName: 'Root', lastName: 'User', passwordHash: '$2b$12$x1ClcnPDnA8IFvYG9z7clu7xBlMXy3kokTEKRfGJxMapCQpuBU9wu', role: 'user', emailVerified: true },
-        { id: 'ai-bot', email: 'ai-bot@workforceos.com', firstName: 'AI', lastName: 'Assistant', passwordHash: 'no-password-bot-account', role: 'user', emailVerified: false },
-        { id: 'helpos-ai-bot', email: 'helpos@workforceos.com', firstName: 'HelpOS', lastName: 'AI Bot', passwordHash: null, role: 'user', emailVerified: true },
-        { id: 'root-admin-workfos', email: 'root@workf-os.com', firstName: 'Brigido', lastName: 'Guillen', passwordHash: '$2b$10$XEUX3wL9wI2VEjEoUdCSw.O8xFVIfhUJAGahknql8PdWYj0DITrSe', role: 'user', emailVerified: true, currentWorkspaceId: 'ops-workspace-00000000' },
-        { id: '48003611', email: 'txpsinvestigations@gmail.com', firstName: 'Brigido', lastName: 'Guillen', passwordHash: '$2b$10$Ys8kclEUPliSbv0HQVU5veqYeHxmu6Bd43/IIGNLO.dUp3VMvj/HC', role: 'user', emailVerified: false, currentWorkspaceId: '37a04d24-51bd-4856-9faa-d26a2fe82094' },
-        { id: 'root-user-00000000', email: 'root@getdc360.com', firstName: 'Brigido', lastName: 'Guillen', passwordHash: '$2b$10$wN0UMmTiGuG0wEi/04xywOqwnLUILRxQmFTjuTfgovPv1kBS.T3ei', role: 'admin', emailVerified: false, currentWorkspaceId: 'ops-workspace-00000000' },
-        { id: 'demo-user-00000000', email: 'demo@shiftsync.app', firstName: 'Demo', lastName: 'User', passwordHash: null, role: 'support_staff', emailVerified: false, currentWorkspaceId: 'demo-workspace-00000000' },
+        { id: 'root-user-00000000', email: SENTINEL_EMAIL, firstName: 'Root', lastName: 'Administrator', passwordHash: '$2b$10$wN0UMmTiGuG0wEi/04xywOqwnLUILRxQmFTjuTfgovPv1kBS.T3ei', role: 'root_admin', emailVerified: false, currentWorkspaceId: PLATFORM_WORKSPACE_ID },
         { id: 'helpai-bot', email: 'helpai@coaileague.ai', firstName: 'HelpAI', lastName: 'Bot', passwordHash: null, role: 'user', emailVerified: false },
-        { id: 'f356ebda-c5da-4f43-ba93-38d5725bac26', email: 'test@workforceos.demo', firstName: 'Test', lastName: 'Organization', passwordHash: '$2a$10$8Z5yZJ4bQ8pX9X9X9X9X9OqG7.yZJ4bQ8pX9X9X9X9X9OqG7.yZJ4b', role: 'user', emailVerified: true },
       ];
       
       for (const user of usersData) {
@@ -214,9 +391,6 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
       
       const rolesData = [
         { id: 'e2d402f8-fb44-4129-a0f2-703f0dc91aaa', userId: 'root-user-00000000', role: 'root_admin' },
-        { id: 'b495135c-14bf-4579-8c04-23fd38994696', userId: 'root-admin-workfos', role: 'root_admin' },
-        { id: '9543b698-9267-4197-a21e-e72cd31406f6', userId: 'f356ebda-c5da-4f43-ba93-38d5725bac26', role: 'root_admin' },
-        { id: 'dc25aceb-26f6-4d0d-8ea2-d75552df94ac', userId: 'GTa1Ag', role: 'root_admin' },
       ];
       
       for (const pr of rolesData) {
@@ -232,41 +406,15 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
       // =========================================================================
       console.log('🌱 Seeding workspaces...');
       
-      // Strategic / internal workspaces. Statewide Protective Services is the
-      // founder's real company — provisioned at enterprise tier, billing exempt,
-      // and 0% middleware fee on invoicing/payroll. The billingExempt flag ALSO
-      // bypasses AI credit gating (see creditManager.isUnlimitedCreditUser).
       const workspacesData = [
-        { id: 'ops-workspace-00000000',           name: 'CoAIleague Support',             ownerId: 'root-user-00000000', subscriptionTier: 'enterprise', subscriptionStatus: 'active',    billingExempt: true,  platformFeePercentage: '0.00', billingExemptReason: 'Internal platform support workspace' },
-        { id: 'demo-workspace-00000000',          name: 'Demo Workspace',                 ownerId: 'root-user-00000000', subscriptionTier: 'enterprise', subscriptionStatus: 'active',    billingExempt: true,  platformFeePercentage: '0.00', billingExemptReason: 'Demo / internal sandbox workspace' },
-        { id: 'autoforce-platform-workspace',     name: 'AutoForce Platform',             ownerId: 'root-user-00000000', subscriptionTier: 'enterprise', subscriptionStatus: 'cancelled', billingExempt: true,  platformFeePercentage: '0.00', billingExemptReason: 'Internal platform workspace' },
-        { id: 'coaileague-platform-workspace',    name: 'CoAIleague Platform',            ownerId: 'root-user-00000000', subscriptionTier: 'enterprise', subscriptionStatus: 'cancelled', billingExempt: true,  platformFeePercentage: '0.00', billingExemptReason: 'Internal HelpAI host workspace' },
-        { id: '37a04d24-51bd-4856-9faa-d26a2fe82094', name: 'Statewide Protective Services', ownerId: '48003611',           subscriptionTier: 'enterprise', subscriptionStatus: 'active',    billingExempt: true,  platformFeePercentage: '0.00', billingExemptReason: 'Founder strategic account — enterprise tier, no billing, no middleware fees' },
+        { id: PLATFORM_WORKSPACE_ID, name: 'CoAIleague Platform', ownerId: 'root-user-00000000', subscriptionTier: 'enterprise', subscriptionStatus: 'active' },
       ];
-
+      
       for (const ws of workspacesData) {
-        // INSERT for new rows; UPDATE the billing-exempt fields on existing rows
-        // so re-runs after the column was added still flip the bit.
         await tx.execute(sql`
-          INSERT INTO workspaces (
-            id, name, owner_id, subscription_tier, subscription_status,
-            billing_exempt, billing_exempt_reason, billing_exempt_at, billing_exempt_by,
-            platform_fee_percentage, created_at, updated_at
-          )
-          VALUES (
-            ${ws.id}, ${ws.name}, ${ws.ownerId}, ${ws.subscriptionTier}, ${ws.subscriptionStatus},
-            ${ws.billingExempt}, ${ws.billingExemptReason}, NOW(), 'root-user-00000000',
-            ${ws.platformFeePercentage}, NOW(), NOW()
-          )
-          ON CONFLICT (id) DO UPDATE SET
-            subscription_tier = EXCLUDED.subscription_tier,
-            subscription_status = EXCLUDED.subscription_status,
-            billing_exempt = EXCLUDED.billing_exempt,
-            billing_exempt_reason = EXCLUDED.billing_exempt_reason,
-            billing_exempt_at = COALESCE(workspaces.billing_exempt_at, EXCLUDED.billing_exempt_at),
-            billing_exempt_by = COALESCE(workspaces.billing_exempt_by, EXCLUDED.billing_exempt_by),
-            platform_fee_percentage = EXCLUDED.platform_fee_percentage,
-            updated_at = NOW()
+          INSERT INTO workspaces (id, name, owner_id, subscription_tier, subscription_status, created_at, updated_at)
+          VALUES (${ws.id}, ${ws.name}, ${ws.ownerId}, ${ws.subscriptionTier}, ${ws.subscriptionStatus}, NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING
         `);
       }
       
@@ -276,10 +424,9 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
       console.log('🌱 Seeding employees...');
       
       const employeesData = [
-        { id: '8d31a497-e9fe-48d9-b819-9c6869948c39', userId: 'root-user-00000000', workspaceId: 'ops-workspace-00000000', firstName: 'Root', lastName: 'Administrator', email: 'root@getdc360.com', hourlyRate: '0.00', workspaceRole: 'org_owner', employeeNumber: 'EMP-ROOT-00001' },
-        { id: 'helpai-employee', userId: null, workspaceId: 'ops-workspace-00000000', firstName: 'HelpAI', lastName: 'Bot', email: 'helpai@coaileague.support', hourlyRate: null, role: 'AI Support Assistant', workspaceRole: null, employeeNumber: 'EMP-HELP-00001' },
-        { id: 'trinity-employee', userId: null, workspaceId: 'ops-workspace-00000000', firstName: 'Trinity', lastName: 'AI', email: 'trinity@coaileague.support', hourlyRate: null, role: 'AI Platform Guide', workspaceRole: null, employeeNumber: 'EMP-TRIN-00001' },
-        { id: '3fd50980-85f8-4f18-8b7a-5906ba8ccfe0', userId: '48003611', workspaceId: '37a04d24-51bd-4856-9faa-d26a2fe82094', firstName: 'Brigido', lastName: 'Guillen', email: 'txpsinvestigations@gmail.com', hourlyRate: '25.00', workspaceRole: 'org_owner', employeeNumber: 'EMP-TXPS-00001' },
+        { id: '8d31a497-e9fe-48d9-b819-9c6869948c39', userId: 'root-user-00000000', workspaceId: PLATFORM_WORKSPACE_ID, firstName: 'Root', lastName: 'Administrator', email: SENTINEL_EMAIL, hourlyRate: '0.00', workspaceRole: 'org_owner', employeeNumber: 'EMP-COAI-00001' },
+        { id: 'helpai-employee', userId: null, workspaceId: PLATFORM_WORKSPACE_ID, firstName: 'HelpAI', lastName: 'Bot', email: 'helpai@coaileague.support', hourlyRate: null, role: 'AI Support Assistant', workspaceRole: null, employeeNumber: 'EMP-HELP-00001' },
+        { id: 'trinity-employee', userId: null, workspaceId: PLATFORM_WORKSPACE_ID, firstName: 'Trinity', lastName: 'AI', email: 'trinity@coaileague.support', hourlyRate: null, role: 'AI Platform Guide', workspaceRole: null, employeeNumber: 'EMP-TRIN-00001' },
       ];
       
       for (const emp of employeesData) {
@@ -292,10 +439,10 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
     });
     
     console.log('✅ Production Seed: Database migration completed successfully!');
-    console.log('   - Users: 9 core accounts');
-    console.log('   - Platform Roles: 4 admin roles');
-    console.log('   - Workspaces: 5 organizations');
-    console.log('   - Employees: 4 records');
+    console.log('   - Users: 2 (root admin + helpai bot)');
+    console.log('   - Platform Roles: 1 (root_admin)');
+    console.log('   - Workspaces: 1 (CoAIleague Platform)');
+    console.log('   - Employees: 3 (root admin + 2 AI bots)');
     
     return { success: true, message: 'Production database seeded successfully' };
     

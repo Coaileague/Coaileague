@@ -3,7 +3,7 @@
  * Determines which features are available based on workspace subscription tier
  */
 
-export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'enterprise' | 'elite';
+export type SubscriptionTier = 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic' | 'elite';
 
 export interface FeatureFlags {
   // Portal Access
@@ -194,6 +194,102 @@ export const TIER_FEATURES: Record<SubscriptionTier, FeatureFlags> = {
     maxReportsPerMonth: 1000,
   },
   
+  trial: {
+    // Portal Access
+    employeePortal: true,
+    clientPortal: false,
+    auditorPortal: false,
+    // Core Features
+    timeTracking: true,
+    scheduling: true,
+    invoicing: false,
+    analytics: false,
+    // Advanced Features
+    gpsClockIn: false,
+    automatedPayroll: false,
+    rmsReports: false,
+    shiftOrders: false,
+    smartSchedule: false,
+    // Export & Integration
+    csvExports: false,
+    pdfExports: false,
+    apiAccess: false,
+    webhooks: false,
+    // Support & SLA
+    prioritySupport: false,
+    dedicatedAccountManager: false,
+    customIntegrations: false,
+    whiteLabel: false,
+    // Limits
+    maxEmployees: 10,
+    maxClients: 5,
+    maxReportsPerMonth: 20,
+  },
+
+  business: {
+    // Portal Access - All enabled
+    employeePortal: true,
+    clientPortal: true,
+    auditorPortal: true,
+    // Core Features
+    timeTracking: true,
+    scheduling: true,
+    invoicing: true,
+    analytics: true,
+    // Advanced Features
+    gpsClockIn: true,
+    automatedPayroll: true,
+    rmsReports: true,
+    shiftOrders: true,
+    smartSchedule: true,
+    // Export & Integration
+    csvExports: true,
+    pdfExports: true,
+    apiAccess: true,
+    webhooks: true,
+    // Support & SLA
+    prioritySupport: true,
+    dedicatedAccountManager: false,
+    customIntegrations: false,
+    whiteLabel: false,
+    // Limits
+    maxEmployees: 200,
+    maxClients: 100,
+    maxReportsPerMonth: 500,
+  },
+
+  strategic: {
+    // Portal Access - All enabled
+    employeePortal: true,
+    clientPortal: true,
+    auditorPortal: true,
+    // Core Features
+    timeTracking: true,
+    scheduling: true,
+    invoicing: true,
+    analytics: true,
+    // Advanced Features
+    gpsClockIn: true,
+    automatedPayroll: true,
+    rmsReports: true,
+    shiftOrders: true,
+    smartSchedule: true,
+    // Export & Integration
+    csvExports: true,
+    pdfExports: true,
+    apiAccess: true,
+    webhooks: true,
+    // Support & SLA
+    prioritySupport: true,
+    dedicatedAccountManager: true,
+    customIntegrations: true,
+    whiteLabel: true,
+    // Limits - Unlimited
+    maxEmployees: 9999,
+    maxClients: 9999,
+    maxReportsPerMonth: 9999,
+  },
+
   elite: {
     // Portal Access - All enabled
     employeePortal: true,
@@ -255,10 +351,10 @@ export function getUpgradeMessage(currentTier: string | null | undefined, featur
   const tier = currentTier?.toLowerCase() || 'free';
   
   const upgradeMap: Record<string, string> = {
-    free: 'Upgrade to Starter ($1,499/mo) to unlock this feature',
-    starter: 'Upgrade to Professional ($2,999/mo) to unlock this feature',
-    professional: 'Upgrade to Enterprise ($7,999/mo) to unlock this feature',
-    enterprise: 'Upgrade to Elite ($19,999/mo) for unlimited access',
+    free: 'Upgrade to Starter to unlock this feature',
+    starter: 'Upgrade to Professional to unlock this feature',
+    professional: 'Upgrade to Enterprise to unlock this feature',
+    enterprise: 'Contact sales for custom solutions',
   };
   
   return upgradeMap[tier] || 'Upgrade your plan to unlock this feature';

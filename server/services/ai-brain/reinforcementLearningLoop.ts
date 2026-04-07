@@ -14,9 +14,13 @@
 
 import { platformEventBus } from '../platformEventBus';
 import { sharedKnowledgeGraph, type KnowledgeDomain } from './sharedKnowledgeGraph';
-import { aiBrainService } from './aiBrainService';
 import { rlLoopRepository } from './cognitiveRepositories';
+import { meteredGemini } from '../billing/meteredGeminiClient';
+import { strengthenPath, weakenPath } from './hebbianLearningService';
+import { broadcastToGlobalWorkspace } from './trinityConnectomeService';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('reinforcementLearningLoop');
 
 // ============================================================================
 // TYPES
@@ -25,6 +29,7 @@ import crypto from 'crypto';
 export interface Experience {
   id: string;
   agentId: string;
+  workspaceId?: string;
   domain: KnowledgeDomain;
   action: string;
   state: StateRepresentation;
@@ -62,6 +67,7 @@ export interface StrategyAdaptation {
 
 export interface ConfidenceModel {
   agentId: string;
+  workspaceId?: string;
   domain: KnowledgeDomain;
   action: string;
   baseConfidence: number;
@@ -101,6 +107,10 @@ class ReinforcementLearningLoop {
   private strategyAdaptations: StrategyAdaptation[] = [];
   private rewardHistory: { timestamp: Date; reward: number; domain: KnowledgeDomain }[] = [];
 
+  // Memory caps — prevent unbounded growth in long-running processes
+  private readonly MAX_EXPERIENCES = 10000;
+  private readonly MAX_REWARD_HISTORY = 5000;
+
   // Learning hyperparameters
   private readonly LEARNING_RATE = 0.1;
   private readonly DISCOUNT_FACTOR = 0.9;
@@ -109,15 +119,29 @@ class ReinforcementLearningLoop {
   private readonly SUCCESS_REWARD = 1.0;
   private readonly PARTIAL_REWARD = 0.5;
   private readonly MIN_EXPERIENCES_FOR_ADAPTATION = 10;
+  // Prevent adaptation burst: each agent/action combo can only adapt once per 5 minutes
+  private readonly ADAPTATION_COOLDOWN_MS = 5 * 60 * 1000;
+  private lastAdaptationTime: Map<string, number> = new Map();
 
   private dbInitialized = false;
 
   static getInstance(): ReinforcementLearningLoop {
     if (!this.instance) {
       this.instance = new ReinforcementLearningLoop();
-      this.instance.loadFromDatabase().catch(err => {
-        console.error('[RL Loop] Failed to load from database:', err.message);
-      });
+      // Defer DB load 120s — probes DB first to avoid circuit-open storms
+      setTimeout(async () => {
+        try {
+          const { probeDbConnection } = await import('../../db');
+          const dbOk = await probeDbConnection();
+          if (!dbOk) {
+            log.warn('[RL Loop] Skipping deferred DB load — probe failed');
+            return;
+          }
+          await this.instance.loadFromDatabase();
+        } catch (err: any) {
+          log.warn('[RL Loop] Deferred DB load failed (non-fatal):', err?.message);
+        }
+      }, 120000);
     }
     return this.instance;
   }
@@ -174,9 +198,9 @@ class ReinforcementLearningLoop {
       }
 
       this.dbInitialized = true;
-      console.log(`[RL Loop] Loaded ${dbExperiences.length} experiences and ${dbModels.length} confidence models from database`);
+      log.info(`[RL Loop] Loaded ${dbExperiences.length} experiences and ${dbModels.length} confidence models from database`);
     } catch (error: any) {
-      console.error('[RL Loop] Database load error:', error.message);
+      log.error('[RL Loop] Database load error:', (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -189,6 +213,7 @@ class ReinforcementLearningLoop {
    */
   recordExperience(params: {
     agentId: string;
+    workspaceId?: string;
     domain: KnowledgeDomain;
     action: string;
     outcome: 'success' | 'failure' | 'partial' | 'escalated';
@@ -197,15 +222,16 @@ class ReinforcementLearningLoop {
     contextWindow?: Record<string, any>;
     executionTimeMs?: number;
   }): Experience {
-    const { agentId, domain, action, outcome, humanIntervention = false, feedback, contextWindow = {}, executionTimeMs = 0 } = params;
+    const { agentId, workspaceId, domain, action, outcome, humanIntervention = false, feedback, contextWindow = {}, executionTimeMs = 0 } = params;
 
     // Calculate reward
     let reward = this.calculateReward(outcome, humanIntervention, feedback);
 
-    // Get prior state
-    const confidenceKey = `${agentId}-${domain}-${action}`;
+    // TENANT ISOLATION: Confidence models scoped per workspace
+    const wsScope = workspaceId || 'global';
+    const confidenceKey = `${agentId}-${domain}-${action}-${wsScope}`;
     const model = this.confidenceModels.get(confidenceKey);
-    const similarExperiences = this.getSimilarExperiences(agentId, domain, action);
+    const similarExperiences = this.getSimilarExperiences(agentId, domain, action, workspaceId);
 
     const state: StateRepresentation = {
       domain,
@@ -220,6 +246,7 @@ class ReinforcementLearningLoop {
     const experience: Experience = {
       id: crypto.randomUUID(),
       agentId,
+      workspaceId,
       domain,
       action,
       state,
@@ -233,7 +260,17 @@ class ReinforcementLearningLoop {
     };
 
     this.experiences.set(experience.id, experience);
+    // Evict oldest entry when cap is reached (Map preserves insertion order)
+    if (this.experiences.size > this.MAX_EXPERIENCES) {
+      const oldestKey = this.experiences.keys().next().value;
+      if (oldestKey) this.experiences.delete(oldestKey);
+    }
+
     this.rewardHistory.push({ timestamp: new Date(), reward, domain });
+    // Trim reward history to avoid unbounded array growth
+    if (this.rewardHistory.length > this.MAX_REWARD_HISTORY) {
+      this.rewardHistory.splice(0, this.rewardHistory.length - this.MAX_REWARD_HISTORY);
+    }
 
     // Persist to database (async, non-blocking)
     rlLoopRepository.createExperience({
@@ -245,13 +282,13 @@ class ReinforcementLearningLoop {
       reward,
       executionTimeMs,
       humanValidated: humanIntervention,
-    }).catch(err => console.error('[RL Loop] DB persist error:', err.message));
+    }).catch(err => log.error('[RL Loop] DB persist error:', (err instanceof Error ? err.message : String(err))));
 
-    // Update confidence model
-    this.updateConfidenceModel(agentId, domain, action, outcome, reward);
+    // Update confidence model (workspace-scoped)
+    this.updateConfidenceModel(agentId, domain, action, outcome, reward, workspaceId);
 
-    // Check if adaptation is needed
-    this.checkForAdaptation(agentId, domain, action);
+    // Check if adaptation is needed (workspace-scoped)
+    this.checkForAdaptation(agentId, domain, action, workspaceId);
 
     // Record to shared knowledge graph
     sharedKnowledgeGraph.recordLearning({
@@ -263,6 +300,31 @@ class ReinforcementLearningLoop {
       reward,
       insights: this.generateInsights(experience),
     });
+
+    // HEBBIAN: Strengthen decision pathways when Trinity succeeds; weaken them
+    // on failure.  entityIds drawn from the context window (any knowledge
+    // entity IDs the caller embedded) form the "decision pathway".
+    const knowledgeEntityIds: string[] = [
+      ...(contextWindow.entityIds || []),
+      ...(contextWindow.knowledgeIds || []),
+    ].filter((id: any) => typeof id === 'string' && id.length > 0);
+
+    if (knowledgeEntityIds.length >= 2) {
+      if (outcome === 'success') {
+        strengthenPath(knowledgeEntityIds, 0.05);
+      } else if (outcome === 'failure' || outcome === 'escalated') {
+        weakenPath(knowledgeEntityIds, 0.025);
+      }
+    }
+
+    // BASAL_GANGLIA → GLOBAL_WORKSPACE broadcast: report reward signal
+    broadcastToGlobalWorkspace(
+      'BASAL_GANGLIA',
+      'experience_recorded',
+      { agentId, domain, action, outcome, reward },
+      workspaceId,
+      Math.abs(reward),
+    );
 
     // Emit learning event
     platformEventBus.publish({
@@ -278,9 +340,9 @@ class ReinforcementLearningLoop {
         outcome,
         reward,
       },
-    });
+    }).catch((err) => log.warn('[reinforcementLearningLoop] Fire-and-forget failed:', err));
 
-    console.log(`[RL Loop] Experience recorded: ${agentId}/${action} -> ${outcome} (reward: ${reward.toFixed(2)})`);
+    log.info(`[RL Loop] Experience recorded: ${agentId}/${action} -> ${outcome} (reward: ${reward.toFixed(2)})`);
 
     return experience;
   }
@@ -333,9 +395,19 @@ class ReinforcementLearningLoop {
     return 'high';
   }
 
-  private getSimilarExperiences(agentId: string, domain: KnowledgeDomain, action: string): Experience[] {
+  private getSimilarExperiences(agentId: string, domain: KnowledgeDomain, action: string, workspaceId?: string): Experience[] {
     return Array.from(this.experiences.values())
-      .filter(e => e.agentId === agentId && e.domain === domain && e.action === action);
+      .filter(e => {
+        const matchesBase = e.agentId === agentId && e.domain === domain && e.action === action;
+        // G22 FIX: Strict tenant isolation — exclude experiences stored without a
+        // workspaceId (previously tagged 'global'). Only experiences explicitly
+        // belonging to this workspace are returned, preventing RL patterns from
+        // one org's data from influencing another org's confidence models.
+        if (workspaceId) {
+          return matchesBase && e.workspaceId === workspaceId;
+        }
+        return matchesBase;
+      });
   }
 
   private generateInsights(experience: Experience): string[] {
@@ -368,14 +440,17 @@ class ReinforcementLearningLoop {
     domain: KnowledgeDomain,
     action: string,
     outcome: string,
-    reward: number
+    reward: number,
+    workspaceId?: string
   ): void {
-    const key = `${agentId}-${domain}-${action}`;
+    const wsScope = workspaceId || 'global';
+    const key = `${agentId}-${domain}-${action}-${wsScope}`;
     let model = this.confidenceModels.get(key);
 
     if (!model) {
       model = {
         agentId,
+        workspaceId,
         domain,
         action,
         baseConfidence: 0.5,
@@ -404,8 +479,8 @@ class ReinforcementLearningLoop {
       if (factor.name === 'historical_success') {
         factor.currentValue = model.successRate;
       } else if (factor.name === 'recent_performance') {
-        // Get last 5 experiences
-        const recent = this.getSimilarExperiences(agentId, domain, action).slice(-5);
+        // Get last 5 experiences (workspace-scoped)
+        const recent = this.getSimilarExperiences(agentId, domain, action, workspaceId).slice(-5);
         factor.currentValue = recent.filter(e => e.outcome === 'success').length / Math.max(recent.length, 1);
       }
       factor.impact = factor.currentValue * factor.weight;
@@ -427,14 +502,15 @@ class ReinforcementLearningLoop {
       sampleCount: model.experienceCount,
       successRate: model.successRate,
       recentTrend: model.successRate > 0.6 ? 'improving' : model.successRate < 0.4 ? 'declining' : 'stable',
-    }).catch(err => console.error('[RL Loop] DB confidence model persist error:', err.message));
+    }).catch(err => log.error('[RL Loop] DB confidence model persist error:', (err instanceof Error ? err.message : String(err))));
   }
 
   /**
    * Get confidence for a specific action
    */
-  getConfidence(agentId: string, domain: KnowledgeDomain, action: string): number {
-    const key = `${agentId}-${domain}-${action}`;
+  getConfidence(agentId: string, domain: KnowledgeDomain, action: string, workspaceId?: string): number {
+    const wsScope = workspaceId || 'global';
+    const key = `${agentId}-${domain}-${action}-${wsScope}`;
     const model = this.confidenceModels.get(key);
     return model?.adjustedConfidence || 0.5;
   }
@@ -442,8 +518,8 @@ class ReinforcementLearningLoop {
   /**
    * Should the agent explore (try new approach) or exploit (use known approach)?
    */
-  shouldExplore(agentId: string, domain: KnowledgeDomain, action: string): boolean {
-    const confidence = this.getConfidence(agentId, domain, action);
+  shouldExplore(agentId: string, domain: KnowledgeDomain, action: string, workspaceId?: string): boolean {
+    const confidence = this.getConfidence(agentId, domain, action, workspaceId);
     
     // Higher exploration when confidence is low or moderate
     const explorationThreshold = confidence < 0.6 ? 0.3 : this.EXPLORATION_RATE;
@@ -458,8 +534,8 @@ class ReinforcementLearningLoop {
   /**
    * Check if strategy adaptation is needed based on performance
    */
-  private checkForAdaptation(agentId: string, domain: KnowledgeDomain, action: string): void {
-    const experiences = this.getSimilarExperiences(agentId, domain, action);
+  private checkForAdaptation(agentId: string, domain: KnowledgeDomain, action: string, workspaceId?: string): void {
+    const experiences = this.getSimilarExperiences(agentId, domain, action, workspaceId);
     
     if (experiences.length < this.MIN_EXPERIENCES_FOR_ADAPTATION) {
       return; // Not enough data
@@ -471,6 +547,12 @@ class ReinforcementLearningLoop {
 
     // Trigger adaptation if performance is poor
     if (recentSuccessRate < 0.5 || escalationRate > 0.3) {
+      const cooldownKey = `${agentId}/${domain}/${action}`;
+      const lastAdapt = this.lastAdaptationTime.get(cooldownKey) ?? 0;
+      if (Date.now() - lastAdapt < this.ADAPTATION_COOLDOWN_MS) {
+        return; // Cooldown: skip adaptation — already proposed within last 5 min
+      }
+      this.lastAdaptationTime.set(cooldownKey, Date.now());
       this.proposeAdaptation({
         agentId,
         domain,
@@ -518,15 +600,24 @@ Suggest a strategy improvement:
 }`;
 
     try {
-      const response = await aiBrainService.processRequest({
-        type: 'strategy_adaptation',
-        userId: 'system',
+      // Platform-level RL adaptation — Gemini acts as Trinity's brain for strategy reasoning
+      // GPT handles grunt data aggregation upstream; Claude is the architect judge for escalations.
+      // This call uses Gemini (brain) for mid-tier strategy proposals with no workspace billing.
+      const geminiResult = await meteredGemini.generate({
         workspaceId: 'system',
-        messages: [{ role: 'user', content: prompt }],
-        contextLevel: 'minimal',
+        userId: 'system',
+        featureKey: 'rl_strategy_adaptation',
+        prompt,
+        systemInstruction: `You are Trinity's reinforcement learning strategy advisor.
+Your role in the Trinity Triad: Gemini = Brain (strategic reasoning).
+GPT handles data aggregation; Claude is the architect/judge for critical escalations.
+You must respond ONLY with valid JSON — no prose, no markdown fencing.`,
+        model: 'gemini-2.5-flash-lite',
+        maxOutputTokens: 600,
+        temperature: 0.3,
       });
 
-      const suggestion = this.extractJSON(response.response);
+      const suggestion = this.extractJSON(geminiResult.text);
 
       const adaptation: StrategyAdaptation = {
         id: crypto.randomUUID(),
@@ -556,12 +647,12 @@ Suggest a strategy improvement:
           action,
           newStrategy: adaptation.newStrategy,
         },
-      });
+      }).catch((err) => log.warn('[reinforcementLearningLoop] Fire-and-forget failed:', err));
 
-      console.log(`[RL Loop] Strategy adaptation proposed for ${agentId}/${action}`);
+      log.info(`[RL Loop] Strategy adaptation proposed for ${agentId}/${action}`);
 
     } catch (error) {
-      console.warn('[RL Loop] Failed to generate adaptation:', error);
+      log.warn('[RL Loop] Failed to generate adaptation:', error);
     }
   }
 
@@ -693,4 +784,48 @@ Suggest a strategy improvement:
 
 export const reinforcementLearningLoop = ReinforcementLearningLoop.getInstance();
 
-console.log('[RL Loop] Reinforcement learning system initialized');
+function deriveRLActionName(p: any): string {
+  if (p.automationName) return p.automationName;
+  if (p.metadata?.automationName) return p.metadata.automationName;
+  const title = (p.title || '') as string;
+  const colonIdx = title.indexOf(': ');
+  if (colonIdx !== -1) return title.slice(colonIdx + 2).trim().toLowerCase().replace(/\s+/g, '_');
+  return title.replace(/\s+completed\s*$/i, '').trim().toLowerCase().replace(/[\s\-]+/g, '_').replace(/[^a-z0-9_]/g, '') || 'unknown';
+}
+
+function deriveRLDomain(p: any): KnowledgeDomain {
+  if (p.domain && p.domain !== 'undefined') return p.domain as KnowledgeDomain;
+  if (p.metadata?.domain) return p.metadata.domain as KnowledgeDomain;
+  return 'automation';
+}
+
+platformEventBus.on('automation_completed', (p: any) => {
+  if (!p) return;
+  reinforcementLearningLoop.recordExperience({
+    agentId: p.automationType || 'automation',
+    domain: deriveRLDomain(p),
+    action: deriveRLActionName(p),
+    outcome: 'success',
+    executionTimeMs: p.durationMs || 0,
+    contextWindow: { orchestrationId: p.orchestrationId, workspaceId: p.workspaceId },
+  });
+});
+
+platformEventBus.on('automation_execution_failed', (p: any) => {
+  if (!p) return;
+  reinforcementLearningLoop.recordExperience({
+    agentId: p.automationType || 'automation',
+    domain: deriveRLDomain(p),
+    action: deriveRLActionName(p),
+    outcome: p.retryable ? 'partial' : 'failure',
+    executionTimeMs: 0,
+    contextWindow: { 
+      orchestrationId: p.orchestrationId, 
+      workspaceId: p.workspaceId,
+      errorCode: p.errorCode,
+      retryable: p.retryable,
+    },
+  });
+});
+
+log.info('[RL Loop] Reinforcement learning system initialized with automation event listeners');

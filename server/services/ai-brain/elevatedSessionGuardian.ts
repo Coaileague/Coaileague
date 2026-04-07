@@ -12,6 +12,7 @@
  * run smoothly with full observability and automatic recovery.
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { eq, and, lt, desc, gt } from 'drizzle-orm';
 import {
@@ -24,6 +25,8 @@ import {
 import { platformEventBus } from '../platformEventBus';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import * as elevatedSessionService from '../session/elevatedSessionService';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('elevatedSessionGuardian');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -117,7 +120,7 @@ class ElevatedSessionGuardian {
     reason: string
   ): Promise<{ success: boolean; elevationId?: string; expiresAt?: Date; error?: string; telemetry: TelemetryEvent }> {
     const startTime = Date.now();
-    const executionId = `esg-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const executionId = `esg-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     
     try {
       // Map reason string to valid ElevationReason
@@ -135,7 +138,7 @@ class ElevatedSessionGuardian {
       });
 
       if (result.success) {
-        console.log(`[ElevatedSessionGuardian] Elevation issued for user ${userId} (${platformRole})`);
+        log.info(`[ElevatedSessionGuardian] Elevation issued for user ${userId} (${platformRole})`);
       }
       
       return { 
@@ -155,7 +158,7 @@ class ElevatedSessionGuardian {
         status: 'failure',
         durationMs: Date.now() - startTime,
         anomalyCode,
-        metadata: { userId, platformRole, error: error.message }
+        metadata: { userId, platformRole, error: (error instanceof Error ? error.message : String(error)) }
       });
 
       this.recordAnomaly(anomalyCode);
@@ -196,7 +199,7 @@ class ElevatedSessionGuardian {
         status: 'failure',
         durationMs: Date.now() - startTime,
         anomalyCode,
-        metadata: { userId, sessionId, error: error.message }
+        metadata: { userId, sessionId, error: (error instanceof Error ? error.message : String(error)) }
       });
 
       this.recordAnomaly(anomalyCode);
@@ -219,7 +222,7 @@ class ElevatedSessionGuardian {
         metadata: { elevationId, revokedBy, reason }
       });
 
-      console.log(`[ElevatedSessionGuardian] Elevation ${elevationId} revoked by ${revokedBy}: ${reason}`);
+      log.info(`[ElevatedSessionGuardian] Elevation ${elevationId} revoked by ${revokedBy}: ${reason}`);
       
       return { success: true, telemetry };
     } catch (error: any) {
@@ -230,7 +233,7 @@ class ElevatedSessionGuardian {
         status: 'failure',
         durationMs: Date.now() - startTime,
         anomalyCode: 'revocation_failed',
-        metadata: { elevationId, revokedBy, error: error.message }
+        metadata: { elevationId, revokedBy, error: (error instanceof Error ? error.message : String(error)) }
       });
 
       this.recordAnomaly('revocation_failed');
@@ -243,9 +246,9 @@ class ElevatedSessionGuardian {
   // ============================================================================
 
   async runDiagnostics(): Promise<DiagnosticReport> {
-    const executionId = `diag-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const executionId = `diag-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const startTime = Date.now();
-    console.log(`[ElevatedSessionGuardian] Running diagnostics (${executionId})...`);
+    log.info(`[ElevatedSessionGuardian] Running diagnostics (${executionId})...`);
 
     const anomalies: SessionAnomalyCode[] = [];
     const recommendations: string[] = [];
@@ -344,11 +347,11 @@ class ElevatedSessionGuardian {
       this.lastHealthCheck = new Date();
       return report;
     } catch (error: any) {
-      console.error('[ElevatedSessionGuardian] Diagnostics failed:', error);
+      log.error('[ElevatedSessionGuardian] Diagnostics failed:', error);
       return {
         executionId,
         phase: 'diagnose',
-        diagnosis: `Diagnostics failed: ${error.message}`,
+        diagnosis: `Diagnostics failed: ${(error instanceof Error ? error.message : String(error))}`,
         fixAttempted: false,
         riskLevel: 'critical',
         recommendations: ['Manual review required - diagnostics system error'],
@@ -367,13 +370,13 @@ class ElevatedSessionGuardian {
     context: { userId?: string; sessionId?: string; platformRole?: string; executionId?: string }
   ): Promise<{ healed: boolean; action: HealingAction; details: string }> {
     if (this.healingInProgress) {
-      console.log('[ElevatedSessionGuardian] Healing already in progress, queuing...');
+      log.info('[ElevatedSessionGuardian] Healing already in progress, queuing...');
       return { healed: false, action: 'queue_and_retry', details: 'Queued for next healing cycle' };
     }
 
     this.healingInProgress = true;
     const startTime = Date.now();
-    console.log(`[ElevatedSessionGuardian] Attempting healing for ${anomalyCode}...`);
+    log.info(`[ElevatedSessionGuardian] Attempting healing for ${anomalyCode}...`);
 
     try {
       let action: HealingAction;
@@ -440,7 +443,7 @@ class ElevatedSessionGuardian {
         metadata: { context, healed, details }
       });
 
-      console.log(`[ElevatedSessionGuardian] Healing ${healed ? 'succeeded' : 'incomplete'}: ${details}`);
+      log.info(`[ElevatedSessionGuardian] Healing ${healed ? 'succeeded' : 'incomplete'}: ${details}`);
 
       // If healing failed, create support ticket and notify Trinity
       if (!healed) {
@@ -470,7 +473,7 @@ class ElevatedSessionGuardian {
   }
 
   async runHealingCycle(): Promise<{ healed: number; failures: number; details: string[] }> {
-    console.log('[ElevatedSessionGuardian] Starting healing cycle...');
+    log.info('[ElevatedSessionGuardian] Starting healing cycle...');
     
     const report = await this.runDiagnostics();
     const details: string[] = [];
@@ -498,7 +501,7 @@ class ElevatedSessionGuardian {
     // Clear old anomaly history (keep last 10 minutes)
     this.anomalyHistory.clear();
 
-    console.log(`[ElevatedSessionGuardian] Healing cycle complete: ${healed} healed, ${failures} failures`);
+    log.info(`[ElevatedSessionGuardian] Healing cycle complete: ${healed} healed, ${failures} failures`);
     return { healed, failures, details };
   }
 
@@ -633,7 +636,7 @@ class ElevatedSessionGuardian {
   // ============================================================================
 
   private async broadcastToTrinity(report: DiagnosticReport): Promise<void> {
-    console.log(`[ElevatedSessionGuardian] Broadcasting to Trinity: ${report.diagnosis}`);
+    log.info(`[ElevatedSessionGuardian] Broadcasting to Trinity: ${report.diagnosis}`);
     
     platformEventBus.publish({
       type: 'ai_brain_action',
@@ -646,7 +649,7 @@ class ElevatedSessionGuardian {
         requiresIntervention: report.escalationRequired,
         severity: report.riskLevel
       }
-    });
+    }).catch((err) => log.warn('[elevatedSessionGuardian] Fire-and-forget failed:', err));
 
     // Also send system notification
     try {
@@ -660,7 +663,7 @@ class ElevatedSessionGuardian {
         metadata: { report }
       });
     } catch (error) {
-      console.error('[ElevatedSessionGuardian] Failed to send notification:', error);
+      log.error('[ElevatedSessionGuardian] Failed to send notification:', error);
     }
   }
 
@@ -670,7 +673,7 @@ class ElevatedSessionGuardian {
     details: string,
     riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'medium'
   ): Promise<void> {
-    console.log(`[ElevatedSessionGuardian] Creating support ticket for ${anomalyCode}...`);
+    log.info(`[ElevatedSessionGuardian] Creating support ticket for ${anomalyCode}...`);
     
     // Map risk level to severity
     const severityMap: Record<string, string> = {
@@ -691,7 +694,7 @@ class ElevatedSessionGuardian {
         proposedFix: { action: 'manual_review', anomalyCode, context, riskLevel }
       });
 
-      console.log('[ElevatedSessionGuardian] Support ticket created');
+      log.info('[ElevatedSessionGuardian] Support ticket created');
 
       // Notify support staff via event bus
       platformEventBus.publish({
@@ -705,9 +708,9 @@ class ElevatedSessionGuardian {
           details, 
           context 
         }
-      });
+      }).catch((err) => log.warn('[elevatedSessionGuardian] Fire-and-forget failed:', err));
     } catch (error) {
-      console.error('[ElevatedSessionGuardian] Failed to create support ticket:', error);
+      log.error('[ElevatedSessionGuardian] Failed to create support ticket:', error);
     }
   }
 
@@ -715,7 +718,8 @@ class ElevatedSessionGuardian {
     try {
       const telemetryRecord: InsertSubagentTelemetry = {
         subagentId: event.subagentId,
-        executionId: `tel-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        workspaceId: (event as any).workspaceId || 'system',
+        executionId: `tel-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
         actionId: event.actionId,
         status: event.status === 'success' ? 'completed' : event.status === 'failure' ? 'failed' : 'escalating',
         phase: 'execute',
@@ -725,7 +729,7 @@ class ElevatedSessionGuardian {
 
       await db.insert(subagentTelemetry).values(telemetryRecord);
     } catch (error) {
-      console.error('[ElevatedSessionGuardian] Failed to emit telemetry:', error);
+      log.error('[ElevatedSessionGuardian] Failed to emit telemetry:', error);
     }
 
     return event;

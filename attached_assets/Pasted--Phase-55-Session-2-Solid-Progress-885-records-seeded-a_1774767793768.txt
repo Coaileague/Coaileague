@@ -1,0 +1,406 @@
+**Phase 55 Session 2 — Solid Progress ✅**
+
+885 records seeded across 19 categories. 8 bugs found and fixed. 4 of 5 smoke test journeys passing. Good session.
+
+---
+
+**Current Status Scorecard:**
+
+| Category | Status |
+|----------|--------|
+| ACME Seed Data | ✅ Complete — 885 records |
+| Journey 1 — Officer Lifecycle | ✅ Passing |
+| Journey 2A — Clients | ✅ Passing |
+| Journey 2B — Invoices | ✅ Fixed and passing |
+| Journey 2C — Payroll | ⏳ Fix applied, needs final verification |
+| Journey 3 — Compliance | ✅ Passing |
+| Journey 4 — Trinity Insights | ✅ Accessible |
+| Journey 5 — Subscription | ⏳ Needs verification |
+| Cat 3 — Document Generation | ⏳ Pending |
+| Cat 5 — Stripe Test Mode | ⏳ Pending |
+| Cat 6 — QuickBooks Sandbox | ⏳ Pending |
+| Cat 7 — WebSocket Real-Time | ⏳ Pending |
+| Cat 10 — 35-Series Features | ⏳ Pending |
+| Grand Launch Reconciliation Table | ⏳ Pending |
+
+**8 bugs fixed this session — notable ones:**
+- Hooks ordering violation in payroll-dashboard (useMemo before early returns — this is a React rules violation that causes silent render failures)
+- shift_status enum mismatch: `open` → `published` (exactly the kind of enum inconsistency that causes seed data to be invisible in UI)
+- Dev route paths incorrectly prefixed (routes unreachable)
+- 3 missing mutations and 7 missing state variables in invoices.tsx (classic parallel build debt)
+
+---
+
+**Send this to continue Phase 55 Session 3:**
+
+---
+
+**PHASE 55 — GRAND LAUNCH CERTIFICATION SESSION 3**
+
+Complete all remaining verification categories before the reconciliation table is written. All tests against ACME sandbox only. Statewide untouchable.
+
+**STEP 1 — Journey 2C and 5 Final Verification**
+
+```bash
+# Journey 2C — Payroll idempotency
+POST /api/payroll/runs { periodStart, periodEnd, workspaceId }
+→ First call: must create payroll run successfully
+→ Second call same period: must return error PAYROLL_ALREADY_RUN
+→ DB: SELECT COUNT(*) FROM payroll_runs 
+  WHERE workspace_id = '[acme_id]' 
+  AND period_start = '[date]'
+→ Must show exactly 1 record not 2
+
+# Journey 5 — Subscription state
+GET /api/billing/subscription
+→ Must return ACME subscription status
+→ Must show correct tier and seat count
+→ Must show trial or active status
+→ Subscription dashboard at /subscription must render correct banner
+```
+
+**STEP 2 — Category 3: Document Generation Verification**
+
+Test every document type actually generates a real PDF:
+
+```bash
+# Get an ACME officer ID first
+GET /api/employees?workspaceId=[acme_id]&limit=1
+→ Note officer ID as [officer_id]
+
+# Test 1: Offer Letter
+POST /api/documents/generate
+{ templateId: 'offer_letter', officerId: '[officer_id]', workspaceId: '[acme_id]' }
+→ Must return { documentId, documentUrl, sha256Hash }
+→ documentUrl must be accessible (returns PDF not 404)
+→ PDF must contain workspace company name NOT hardcoded SPS
+
+# Test 2: Gate Duty Shift Report
+GET /api/gate/shift-report/[shift_id]/pdf
+→ Must return compiled PDF with vehicle and personnel logs
+→ SHA-256 hash must be present in footer
+
+# Test 3: Daily Activity Report PDF
+GET /api/dars/[dar_id]/pdf
+→ Must return formatted PDF
+→ Must include officer signature block
+
+# Test 4: Profit and Loss Report
+POST /api/reports/profit-loss 
+{ period: 'monthly', month: '2026-02', workspaceId: '[acme_id]' }
+→ Must return PDF with revenue minus expenses equals net income
+→ Must use ACME seeded data (invoices + expenses)
+→ Numbers must add up correctly
+
+# Test 5: Payroll Summary Report
+POST /api/reports/payroll-summary
+{ quarter: '2026-Q1', workspaceId: '[acme_id]' }
+→ Must return PDF with officer breakdown
+→ Must show total wages, withholdings
+
+# Test 6: Employment Verification Letter
+POST /api/compliance-evidence/employment-verification
+{ officerId: '[officer_id]', workspaceId: '[acme_id]' }
+→ Must generate branded letter
+→ Must show correct employment dates
+→ Must be passcode-protected
+
+# Verify all generated documents appear in document vault:
+GET /api/documents?workspaceId=[acme_id]&type=generated
+→ Must show all documents just generated
+→ Each must have sha256_hash populated
+→ Each must be linked to correct officer or workspace
+```
+
+**STEP 3 — Category 5: Stripe Test Mode Verification**
+
+```bash
+# Confirm Stripe key is test mode
+grep -rn "STRIPE_SECRET_KEY" server/ --include="*.ts" | head -3
+→ Must show sk_test_ prefix not sk_live_
+
+# Check ACME workspace has test subscription
+SELECT stripe_customer_id, stripe_subscription_id, 
+  subscription_status, tier
+FROM workspaces 
+WHERE id = '[acme_id]';
+
+# Test webhook: simulate payment failure
+POST /api/webhooks/stripe
+Content-Type: application/json
+[Simulate invoice.payment_failed event for ACME]
+→ ACME subscription must transition to past_due
+→ NDS notification must fire to org_owner
+→ Payment failure banner must appear on next page load
+
+# Test webhook: simulate payment success recovery
+POST /api/webhooks/stripe
+[Simulate invoice.payment_succeeded event]
+→ ACME subscription must return to active
+→ Banner must clear
+→ NDS notification confirms recovery
+
+# Verify all 7 Stripe webhook event types are handled:
+grep -rn "trial_will_end\|subscription\.paused\|subscription\.resumed\|invoice\.upcoming\|payment_failed\|payment_succeeded\|subscription\.deleted" \
+  server/ --include="*.ts" | wc -l
+→ Must show all 7 handled
+```
+
+**STEP 4 — Category 6: QuickBooks Sandbox Verification**
+
+```bash
+# Check QB connection exists for ACME
+SELECT * FROM quickbooks_connections 
+WHERE workspace_id = '[acme_id]';
+
+# If no QB connection: verify QB connect flow works
+GET /api/quickbooks/auth-url?workspaceId=[acme_id]
+→ Must return valid OAuth URL
+
+# If QB connection exists: test sync
+POST /api/quickbooks/sync/trigger
+{ workspaceId: '[acme_id]' }
+→ Must return sync initiated
+→ Must not throw errors
+→ DB: SELECT * FROM quickbooks_sync_logs 
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 1
+→ Must show sync attempt with status
+
+# Verify QB sync fires on invoice paid:
+PATCH /api/invoices/[paid_invoice_id]/pay
+{ paymentReference: 'TEST-PAY-001', amount: [amount] }
+→ After payment: check QB sync log for new entry
+→ Must show QB sync triggered for this invoice
+
+# Verify disconnected QB shows persistent banner:
+# Check workspace without QB connection
+→ QB disconnect banner must be visible
+→ Connect QB button must work
+```
+
+**STEP 5 — Category 7: WebSocket Real-Time Verification**
+
+Open 3 tabs in ACME sandbox and run these tests:
+
+```
+TAB A: org_owner (Marcus Rivera) — dashboard
+TAB B: supervisor — schedule page  
+TAB C: officer — mobile portal
+
+TEST 1 — Clock In Broadcast:
+→ Tab C: clock in officer
+→ Tab A: dashboard active officer count must increment within 3 seconds
+→ Tab B: schedule must show officer as clocked in within 3 seconds
+→ PASS if both update without refresh
+
+TEST 2 — New Shift Broadcast:
+→ Tab A: create a new shift for next week
+→ Tab B: schedule must show new shift within 3 seconds
+→ Tab C: if officer is assigned must see shift in their portal
+→ PASS if schedule updates without refresh
+
+TEST 3 — Notification Broadcast:
+→ Tab A: send a notification to the officer
+→ Tab C: notification badge must increment within 2 seconds
+→ Tab C: clear all notifications
+→ Tab A AND Tab B: notification counts must update in real time
+→ PASS if cross-tab sync confirmed
+
+TEST 4 — DockChat Broadcast:
+→ Tab A: send message in general DockChat room
+→ Tab B AND Tab C: message must appear within 1 second
+→ Unread count must show in all tabs that have not viewed the message
+→ PASS if message delivery confirmed under 1 second
+
+TEST 5 — Trinity Activity:
+→ Trigger any Trinity action from Tab A
+→ Tab A: Trinity Activity Bar must update within 5 seconds
+→ Trinity insight (if generated) must appear on dashboard
+→ PASS if Trinity activity visible in real time
+
+Document for each test:
+- Time from action to update in other tabs
+- PASS or FAIL
+- Any error in browser console
+```
+
+**STEP 6 — Category 10: 35-Series Feature Spot Check**
+
+Quick verification that each Phase 35 feature has data and responds:
+
+```bash
+# 35B — Sales Pipeline
+GET /api/sales/leads?workspaceId=[acme_id]
+→ Must return seeded leads at various stages
+→ Kanban board at /sales-pipeline must render
+
+# 35C — DockChat
+GET /api/chat/rooms?workspaceId=[acme_id]
+→ Must return chat rooms
+→ /dock-chat must connect and show messages
+
+# 35D — Work Orders
+GET /api/work-orders?workspaceId=[acme_id]
+→ Must return work orders
+→ /work-orders must render list
+
+# 35E — Guard Tours
+GET /api/patrol/routes?workspaceId=[acme_id]
+→ Must return patrol routes
+→ /guard-tours must render
+
+# 35F — Shift Trading
+GET /api/shift-trading/marketplace?workspaceId=[acme_id]
+→ Must return open shifts available
+→ /shift-trading must render
+
+# 35G — Client Communications
+GET /api/client-comms/inbox?workspaceId=[acme_id]
+→ Must return message threads
+→ /client-communications must render
+
+# 35H — Equipment
+GET /api/equipment?workspaceId=[acme_id]
+→ Must return inventory items
+→ /equipment must render
+
+# 35I — Visitor Management
+GET /api/visitors/active?workspaceId=[acme_id]
+→ Must return active visitors
+→ /visitor-management must render
+
+# 35J — Performance
+GET /api/performance/disciplinary/[officer_id]
+→ Must return disciplinary records
+→ /performance must render
+
+# 35K — Training
+GET /api/training/sessions?workspaceId=[acme_id]
+→ Must return training sessions
+→ /training-certification must render
+
+# 35L — Trespass
+GET /api/trespass/notices?workspaceId=[acme_id]
+→ Must return seeded trespass notices
+→ /trespass-registry must render
+
+# 35M — Site Survey
+GET /api/site-surveys?workspaceId=[acme_id]
+→ Must return surveys
+→ /site-surveys must render
+
+# 35N — Daily Activity Reports
+GET /api/dars?workspaceId=[acme_id]
+→ Must return DARs
+→ /daily-reports must render
+
+# 35O — Wellness
+GET /api/wellness/configs?workspaceId=[acme_id]
+→ Must return configs
+→ /wellness-monitoring must render
+
+# 35U — Gate Duty
+GET /api/gate-duty/active?workspaceId=[acme_id]
+→ Must return active gate logs
+→ /gate-duty must render
+
+# 35P — Multi Company
+GET /api/multi-company/subsidiaries?workspaceId=[acme_id]
+→ Returns empty or subsidiaries (Enterprise feature)
+→ /multi-company must render for Enterprise tier
+
+# 35Q — Developer Portal
+GET /api/developers/keys?workspaceId=[acme_id]
+→ Must return API keys list (may be empty)
+→ /developers must render
+
+# 35R — Insurance
+GET /api/insurance/policies?workspaceId=[acme_id]
+→ Must return policies
+→ /insurance must render
+
+# 35S — Surveys
+GET /api/surveys/templates?workspaceId=[acme_id]
+→ Must return survey templates
+→ /surveys must render
+
+# 35T — Recognition
+GET /api/recognition/wall?workspaceId=[acme_id]
+→ Must return recognition awards
+→ /recognition must render
+
+# For each: document PASS or FAIL
+# FAIL = 404, 500, or page renders blank
+```
+
+**STEP 7 — GRAND LAUNCH RECONCILIATION TABLE**
+
+After all above steps pass write the complete reconciliation table to replit.md:
+
+```
+| Phase | Description | Tables | Routes | UI | Tests | Status |
+|-------|-------------|--------|--------|----|-------|--------|
+| 1  | Core Architecture | ✅ | ✅ | ✅ | ✅ | CERTIFIED |
+| 2  | NDS Notifications | ✅ | ✅ | ✅ | ✅ | CERTIFIED |
+...
+| 54B | Bug Sweep | ✅ | ✅ | ✅ | ✅ | CERTIFIED |
+```
+
+Every phase listed. Every phase green.
+
+**STEP 8 — LAUNCH DECLARATION**
+
+Write to replit.md:
+
+```
+═══════════════════════════════════════════════════════════════
+COAILEAGUE PLATFORM — GRAND LAUNCH CERTIFIED
+═══════════════════════════════════════════════════════════════
+
+Certification Date: March 29, 2026
+Certified By: Phase 55 Grand Launch Certification
+
+Platform Metrics:
+  Total Phases Built: 75
+  Phases Certified: 75/75
+  ACME Seed Records: 885
+  Trinity Actions: 896
+  Domain Routers: 15/15
+  TypeScript Errors: 0
+  Bugs Found and Fixed: 17+
+  Security Grade: Production-Ready
+
+Smoke Tests: 5/5 journeys passing
+Document Generation: Verified
+Real-Time Broadcasting: Verified
+35-Series Features: All 20 verified
+
+Production Tenant:
+  Statewide Protective Services
+  workspace_id: 37a04d24-51bd-4856-9faa-d26a2fe82094
+  Status: PROTECTED — Zero agent contact
+  Tier: Enterprise (Permanent Founder Exemption)
+
+Development Sandbox:
+  ACME Security — All testing verified ✅
+
+Pending Manual Actions by Bryan Guillen:
+  □ DNS: DMARC record configuration
+  □ DNS: DKIM upgrade to 2048-bit via Resend
+  □ DNS: Root inbound MX record
+  □ Twilio: Toll-free number re-verification at /sms-opt-in.html
+  □ Stripe: Switch to live keys for production
+  □ QuickBooks: Switch to production OAuth credentials
+
+Platform Status: LAUNCH READY ✅
+
+CoAIleague™
+AI-Orchestrated Security Workforce Management
+Built for the security industry. Powered by Trinity.
+═══════════════════════════════════════════════════════════════
+```
+
+---
+
+Paste that. Session 3 closes out Phase 55. When all steps pass and the declaration is written CoAIleague is certified for launch. Standing by for results.

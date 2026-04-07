@@ -1,0 +1,1053 @@
+Paste this into Replit:
+
+---
+
+**PAYMENT INFORMATION MANAGEMENT SYSTEM — FULL BUILD | READ BEFORE TOUCH | SECURE | ENCRYPTED | RATE-LIMITED**
+
+Before building anything — audit every existing file related to payment information, bank accounts, Plaid integration, Stripe Connect, direct deposit, and subscription billing.
+
+---
+
+**PRE-BUILD AUDIT — READ ONLY FIRST**
+
+Search and report:
+- Every existing Plaid service file and current capabilities
+- Every existing Stripe Connect implementation
+- Current employee bank account storage — table, columns, encryption status
+- Current workspace/org bank account storage — table, columns, encryption status
+- Current subscription payment method storage
+- Current direct deposit flow — what exists end to end
+- Current invoice payment collection flow — how client payments reach org bank
+- Any existing rate limiting on payment information changes
+- Current encryption utilities in use
+- Any existing payment change audit log
+
+Report everything. Build only what is missing. Extend what exists.
+
+---
+
+**SECTION 1 — SCHEMA AND ENCRYPTION FOUNDATION**
+
+Read existing schema before adding anything.
+
+**1A — Encryption utility (verify exists, create if missing):**
+
+Create `server/utils/encryption.ts` if not present:
+
+```typescript
+import crypto from 'crypto'
+
+const ENCRYPTION_KEY = process.env.PAYMENT_ENCRYPTION_KEY  // 32 bytes hex
+const ALGORITHM = 'aes-256-gcm'
+
+export function encryptPaymentData(plaintext: string): string {
+  // AES-256-GCM with random IV per encryption
+  // Returns: iv:authTag:encryptedData (all hex)
+  // Never store plaintext routing numbers, account numbers, or card data
+  const iv = crypto.randomBytes(16)
+  const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv)
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
+  const authTag = cipher.getAuthTag()
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`
+}
+
+export function decryptPaymentData(encryptedString: string): string {
+  const [ivHex, authTagHex, encryptedHex] = encryptedString.split(':')
+  const iv = Buffer.from(ivHex, 'hex')
+  const authTag = Buffer.from(authTagHex, 'hex')
+  const encrypted = Buffer.from(encryptedHex, 'hex')
+  const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv)
+  decipher.setAuthTag(authTag)
+  return decipher.update(encrypted) + decipher.final('utf8')
+}
+
+export function maskAccountNumber(account: string): string {
+  return '****' + account.slice(-4)
+}
+
+export function maskRoutingNumber(routing: string): string {
+  return '****' + routing.slice(-4)
+}
+
+// Hash for deduplication checks — never reversible
+export function hashPaymentIdentifier(value: string): string {
+  return crypto.createHmac('sha256', process.env.PAYMENT_HASH_SECRET)
+    .update(value.toLowerCase().trim())
+    .digest('hex')
+}
+```
+
+Add to `.env.example`:
+```
+PAYMENT_ENCRYPTION_KEY=   # 32-byte hex key for AES-256-GCM — generate with: openssl rand -hex 32
+PAYMENT_HASH_SECRET=      # Secret for HMAC hashing of payment identifiers
+```
+
+Add startup validation — server must not start without these in production.
+
+**1B — Employee bank accounts table (verify or create):**
+
+```sql
+CREATE TABLE IF NOT EXISTS employee_bank_accounts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL,
+  employee_id varchar NOT NULL,
+  
+  -- Plaid fields (preferred path)
+  plaid_access_token_encrypted text,
+  plaid_item_id varchar,
+  plaid_account_id varchar,
+  plaid_institution_name varchar,
+  
+  -- Manual ACH fallback (when Plaid not available)
+  routing_number_encrypted text,
+  account_number_encrypted text,
+  account_type varchar(20),  -- 'checking' or 'savings'
+  
+  -- Display only (never store sensitive data unmasked)
+  routing_number_last4 varchar(4),
+  account_number_last4 varchar(4),
+  bank_name varchar(255),
+  
+  -- Account hash for deduplication
+  account_hash varchar(255),
+  
+  -- Status
+  is_primary boolean DEFAULT true,
+  is_verified boolean DEFAULT false,
+  verification_method varchar(50),  -- 'plaid' | 'micro_deposit' | 'manual_review'
+  verified_at timestamptz,
+  
+  -- Rate limiting
+  last_updated_at timestamptz DEFAULT now(),
+  update_count_this_month integer DEFAULT 0,
+  month_reset_at timestamptz,
+  
+  -- Audit
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  created_by varchar NOT NULL,
+  last_updated_by varchar NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_employee_bank_workspace ON employee_bank_accounts(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_employee_bank_employee ON employee_bank_accounts(employee_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_bank_primary ON employee_bank_accounts(employee_id, workspace_id) WHERE is_primary = true;
+```
+
+**1C — Workspace/org bank account table (verify or create):**
+
+```sql
+CREATE TABLE IF NOT EXISTS workspace_bank_accounts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL UNIQUE,
+  
+  -- Plaid fields for org bank (invoice deposits land here)
+  plaid_access_token_encrypted text,
+  plaid_item_id varchar,
+  plaid_account_id varchar,
+  plaid_institution_name varchar,
+  
+  -- Stripe Connect (platform-managed payouts)
+  stripe_connect_account_id varchar,
+  stripe_connect_onboarding_complete boolean DEFAULT false,
+  stripe_connect_charges_enabled boolean DEFAULT false,
+  stripe_connect_payouts_enabled boolean DEFAULT false,
+  
+  -- ACH payroll origination (outgoing payroll payments)
+  payroll_routing_encrypted text,
+  payroll_account_encrypted text,
+  payroll_account_type varchar(20),
+  payroll_routing_last4 varchar(4),
+  payroll_account_last4 varchar(4),
+  payroll_bank_name varchar(255),
+  
+  -- Rate limiting for business bank account changes
+  last_bank_updated_at timestamptz,
+  bank_update_count_this_month integer DEFAULT 0,
+  bank_month_reset_at timestamptz,
+  
+  -- Status
+  is_active boolean DEFAULT true,
+  is_verified boolean DEFAULT false,
+  verified_at timestamptz,
+  
+  -- Audit
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  last_updated_by varchar
+);
+```
+
+**1D — Payment change audit log table:**
+
+```sql
+CREATE TABLE IF NOT EXISTS payment_change_audit_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL,
+  entity_type varchar(50) NOT NULL,  -- 'employee_bank' | 'org_bank' | 'subscription'
+  entity_id varchar NOT NULL,
+  change_type varchar(100) NOT NULL,  -- 'bank_account_updated' | 'routing_updated' | etc
+  changed_by_user_id varchar NOT NULL,
+  changed_by_role varchar(50) NOT NULL,
+  previous_masked_value text,  -- masked previous value for audit
+  new_masked_value text,       -- masked new value for audit
+  change_reason text,
+  ip_address varchar(100),
+  user_agent text,
+  is_override boolean DEFAULT false,
+  override_authorized_by varchar,
+  override_reason text,
+  monthly_change_count_at_time integer,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_audit_workspace ON payment_change_audit_log(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_payment_audit_entity ON payment_change_audit_log(entity_id);
+CREATE INDEX IF NOT EXISTS idx_payment_audit_created ON payment_change_audit_log(created_at);
+```
+
+**1E — Subscription payment methods table:**
+
+```sql
+CREATE TABLE IF NOT EXISTS subscription_payment_methods (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL UNIQUE,
+  stripe_customer_id varchar NOT NULL,
+  stripe_payment_method_id varchar,
+  card_brand varchar(50),
+  card_last4 varchar(4),
+  card_exp_month integer,
+  card_exp_year integer,
+  billing_name varchar(255),
+  billing_email varchar(255),
+  billing_address_line1 varchar,
+  billing_city varchar,
+  billing_state varchar,
+  billing_postal_code varchar,
+  is_active boolean DEFAULT true,
+  
+  -- Rate limiting
+  last_updated_at timestamptz DEFAULT now(),
+  update_count_this_month integer DEFAULT 0,
+  month_reset_at timestamptz,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  last_updated_by varchar
+);
+```
+
+Update all Drizzle schema files to match.
+
+---
+
+**SECTION 2 — RATE LIMITING ENFORCEMENT SERVICE**
+
+Create `server/services/payments/paymentChangeLimiter.ts`:
+
+```typescript
+export interface RateLimitConfig {
+  entityType: 'employee_bank' | 'org_bank' | 'subscription'
+  monthlyLimit: number      // standard monthly limit
+  ownerOverrideLimit: number  // how many times owner can override
+  supportOverrideUnlimited: boolean
+}
+
+export const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
+  employee_bank: {
+    entityType: 'employee_bank',
+    monthlyLimit: 1,           // employee can change once per month
+    ownerOverrideLimit: 2,     // owner can override up to 2 times per month for an employee
+    supportOverrideUnlimited: true
+  },
+  org_bank: {
+    entityType: 'org_bank',
+    monthlyLimit: 1,           // org bank account changes once per month
+    ownerOverrideLimit: 0,     // owner CANNOT override org bank — support only
+    supportOverrideUnlimited: true
+  },
+  subscription: {
+    entityType: 'subscription',
+    monthlyLimit: 1,           // subscription payment method once per month
+    ownerOverrideLimit: 0,     // owner cannot override subscription changes — support only
+    supportOverrideUnlimited: true
+  }
+}
+
+export async function checkRateLimit(
+  workspaceId: string,
+  entityId: string,
+  entityType: string,
+  requestorRole: string,
+  isOverride: boolean
+): Promise<{ allowed: boolean, reason?: string, changesThisMonth: number, limit: number }> {
+  
+  // Platform support can always make changes
+  if (requestorRole === 'platform_support' || requestorRole === 'platform_admin') {
+    return { allowed: true, changesThisMonth: 0, limit: 999 }
+  }
+  
+  const config = RATE_LIMIT_CONFIGS[entityType]
+  const currentMonth = new Date().toISOString().slice(0, 7)  // YYYY-MM
+  
+  // Count changes this month
+  const changesThisMonth = await countChangesThisMonth(workspaceId, entityId, entityType, currentMonth)
+  
+  // Standard limit check
+  if (changesThisMonth < config.monthlyLimit) {
+    return { allowed: true, changesThisMonth, limit: config.monthlyLimit }
+  }
+  
+  // Over standard limit — check if override is valid
+  if (isOverride) {
+    // Only org_owner can use override
+    if (!['org_owner', 'org_co_owner'].includes(requestorRole)) {
+      return {
+        allowed: false,
+        reason: `Payment information can only be changed once per month. Override requires org owner authorization.`,
+        changesThisMonth,
+        limit: config.monthlyLimit
+      }
+    }
+    
+    // Check override limit
+    if (config.ownerOverrideLimit === 0) {
+      return {
+        allowed: false,
+        reason: `This payment information can only be changed once per month. Changes beyond this limit require support agent assistance. Contact support for help.`,
+        changesThisMonth,
+        limit: config.monthlyLimit
+      }
+    }
+    
+    // Count owner overrides this month
+    const overridesThisMonth = await countOverridesThisMonth(workspaceId, entityId, entityType, currentMonth)
+    
+    if (overridesThisMonth >= config.ownerOverrideLimit) {
+      return {
+        allowed: false,
+        reason: `Maximum overrides reached for this month (${config.ownerOverrideLimit} overrides allowed). Contact support for additional changes.`,
+        changesThisMonth,
+        limit: config.monthlyLimit
+      }
+    }
+    
+    return { allowed: true, changesThisMonth, limit: config.monthlyLimit }
+  }
+  
+  // Over limit, no override
+  return {
+    allowed: false,
+    reason: `Payment information has already been updated ${changesThisMonth} time(s) this month. The next change can be made on ${getFirstOfNextMonth()}. If this is urgent, contact your org owner for an override or reach out to support.`,
+    changesThisMonth,
+    limit: config.monthlyLimit
+  }
+}
+
+export async function recordPaymentChange(
+  workspaceId: string,
+  entityId: string,
+  entityType: string,
+  changeType: string,
+  changedByUserId: string,
+  changedByRole: string,
+  previousMasked: string,
+  newMasked: string,
+  reason: string,
+  ipAddress: string,
+  isOverride: boolean,
+  overrideAuthorizedBy?: string,
+  overrideReason?: string
+): Promise<void> {
+  // Insert into payment_change_audit_log
+  // Increment monthly change counter on the entity
+  // Reset counter if new month
+}
+```
+
+---
+
+**SECTION 3 — EMPLOYEE DIRECT DEPOSIT ROUTES**
+
+Create or extend routes for employee payment information:
+
+**`GET /api/payroll/employees/:employeeId/bank-info`**
+
+```typescript
+// 7-Step:
+// 1. TRIGGER: Employee or authorized manager requests bank info
+// 2. FETCH: Get employee bank account record
+// 3. VALIDATE: Confirm employee belongs to workspace, confirm requestor role
+// 4. PROCESS: Filter response based on role
+//    - Employee seeing own: show masked account, bank name, type, status, last updated
+//    - Manager/admin: show status only (connected/not connected) — no account details ever
+//    - Owner: show masked account, bank name, type, status
+//    - Support: show all masked details + audit log
+// 5. MUTATE: None — read only
+// 6. CONFIRM: Return filtered data
+// 7. NOTIFY: None
+
+// Never return: routing number, account number, Plaid access token
+// Always return: masked last 4, bank name, account type, verification status, last updated
+```
+
+**`POST /api/payroll/employees/:employeeId/bank/plaid-link-token`**
+
+```typescript
+// 7-Step:
+// 1. TRIGGER: Employee initiates Plaid connection
+// 2. FETCH: Get employee record, check rate limit
+// 3. VALIDATE:
+//    - Rate limit check — has employee already changed this month?
+//    - If over limit: return rate limit error with next available date
+//    - Employee can only update own bank info (unless manager with override)
+// 4. PROCESS: Call plaidService.createLinkToken()
+// 5. MUTATE: Store pending link token
+// 6. CONFIRM: Return link token to frontend
+// 7. NOTIFY: None — connection not complete yet
+```
+
+**`POST /api/payroll/employees/:employeeId/bank/plaid-connect`**
+
+```typescript
+// 7-Step:
+// 1. TRIGGER: Plaid Link returns public token after successful bank connection
+// 2. FETCH: Get employee record, verify ownership, check rate limit
+// 3. VALIDATE:
+//    - Rate limit check
+//    - Public token is valid
+//    - isOverride flag in body — verify override authorization if needed
+// 4. PROCESS:
+//    - Exchange public token for access token
+//    - Get account details from Plaid
+//    - Encrypt access token using encryptPaymentData()
+//    - Generate account hash for deduplication
+//    - Prepare employee_bank_accounts record
+// 5. MUTATE:
+//    - Upsert employee_bank_accounts — encrypt all sensitive fields
+//    - Store only last4, bank name for display
+//    - Increment monthly change counter
+//    - Write to payment_change_audit_log
+// 6. CONFIRM: Verify record saved and retrievable
+// 7. NOTIFY:
+//    - Notify employee: "Your direct deposit has been updated to [Bank Name] ending in [last4]"
+//    - If override: notify org owner that override was used
+//    - Publish: { type: 'employee_payment_info_updated', workspaceId, employeeId, maskedAccount }
+//    - Trinity updates org intelligence
+```
+
+**`POST /api/payroll/employees/:employeeId/bank/manual-ach`** (fallback if Plaid unavailable)
+
+```typescript
+// Body: { routingNumber, accountNumber, accountType, bankName, reason }
+// Only available to: platform_support, platform_admin, org_owner with override
+// NOT available to employees directly — must use Plaid for self-service
+// 7-Step same as above — encrypt before storing
+```
+
+**`POST /api/payroll/employees/:employeeId/bank/override-request`**
+
+```typescript
+// Employee requests owner override when rate limit blocks them
+// Body: { reason }
+// Creates override request notification to org owner
+// Owner sees: "[Employee Name] is requesting an override to update their direct deposit information.
+//              Reason: [reason]
+//              This will use [N of 2] override slots for this month.
+//              Approve or Deny"
+// Owner approves → employee receives email link to update their bank info
+// Override token expires in 24 hours
+```
+
+---
+
+**SECTION 4 — ORG BANK ACCOUNT ROUTES (Invoice Deposits and Payroll Origination)**
+
+**`GET /api/settings/bank-accounts`**
+
+```typescript
+// Returns org bank account status
+// Requires: org_owner or org_co_owner role
+// Returns:
+// {
+//   invoiceDepositAccount: {
+//     stripeConnectStatus: 'not_connected' | 'onboarding' | 'active',
+//     stripeConnectChargesEnabled: boolean,
+//     stripeConnectPayoutsEnabled: boolean,
+//     maskedAccount: '****1234',
+//     bankName: 'Chase Business',
+//     lastUpdated: Date
+//   },
+//   payrollOriginationAccount: {
+//     status: 'not_connected' | 'connected' | 'verified',
+//     maskedRouting: '****5678',
+//     maskedAccount: '****9012',
+//     bankName: 'Wells Fargo',
+//     lastUpdated: Date,
+//     changesThisMonth: N,
+//     nextChangeAvailable: Date
+//   }
+// }
+```
+
+**`POST /api/settings/stripe-connect/onboard`**
+
+```typescript
+// Initiate Stripe Connect onboarding for the org
+// This is how client invoice payments flow to the org's bank account
+// 7-Step:
+// 1. TRIGGER: Org owner initiates Stripe Connect setup
+// 2. FETCH: Get workspace, check if Stripe Connect already exists
+// 3. VALIDATE: Confirm org_owner role, confirm not already connected
+// 4. PROCESS:
+//    - Create Stripe Connect Express account via Stripe API
+//    - Generate onboarding URL
+// 5. MUTATE:
+//    - Store stripe_connect_account_id in workspace_bank_accounts
+//    - Set onboarding_complete = false
+// 6. CONFIRM: Return onboarding URL to redirect org owner
+// 7. NOTIFY: None — onboarding not complete yet
+
+// After Stripe Connect onboarding complete:
+// Stripe sends webhook: account.updated with charges_enabled and payouts_enabled
+// Update workspace_bank_accounts accordingly
+// Notify org owner: "Your bank account is now connected. Invoice payments will be deposited automatically."
+```
+
+**`POST /api/settings/bank-accounts/payroll`**
+
+```typescript
+// Update payroll origination bank account (where payroll ACH pulls from)
+// Requires: org_owner or org_co_owner role
+// Rate limited: once per month, no owner override, support only for additional changes
+// 7-Step:
+// 1. TRIGGER: Org owner updates payroll bank account
+// 2. FETCH: Get current workspace bank account, check rate limit
+// 3. VALIDATE:
+//    - Role check: org_owner or org_co_owner only
+//    - Rate limit check: once per month — if over, return error
+//    - If isOverride: require platform_support role — owner CANNOT override this
+//    - Routing number format validation (9 digits)
+//    - Account number format validation
+// 4. PROCESS:
+//    - Encrypt routing and account numbers using encryptPaymentData()
+//    - Generate masked versions for display and audit
+// 5. MUTATE:
+//    - Update workspace_bank_accounts with encrypted values
+//    - Store last4 and bank name for display
+//    - Increment monthly change counter
+//    - Write to payment_change_audit_log
+// 6. CONFIRM: Verify encrypted values stored correctly
+// 7. NOTIFY:
+//    - Notify org owner: "Payroll bank account updated to [Bank Name] ending in [last4]"
+//    - Notify all org admins: "Payroll bank account has been updated"
+//    - Publish: { type: 'org_bank_account_updated', workspaceId, maskedAccount }
+//    - Trinity: logs to org intelligence, includes in next morning brief
+```
+
+**`POST /api/settings/bank-accounts/plaid-connect`**
+
+```typescript
+// Connect org bank account via Plaid (preferred over manual entry)
+// Same rate limiting as manual — once per month, support only for overrides
+// Uses plaidService.exchangePublicToken() after Plaid Link completes
+// Stores encrypted access token in workspace_bank_accounts
+```
+
+---
+
+**SECTION 5 — SUBSCRIPTION PAYMENT METHOD ROUTES**
+
+**`GET /api/billing/payment-method`**
+
+```typescript
+// Returns current subscription payment method (masked)
+// Requires: org_owner or org_co_owner
+// Returns: card brand, last4, expiry, billing name — never full card number
+```
+
+**`POST /api/billing/payment-method/update`**
+
+```typescript
+// Update subscription payment method
+// Rate limited: once per month, no owner override, support only
+// 7-Step:
+// 1. TRIGGER: Org owner updates subscription payment method
+// 2. FETCH: Get current Stripe customer, check rate limit
+// 3. VALIDATE:
+//    - org_owner or org_co_owner role only
+//    - Rate limit: once per month
+//    - If over limit: return error with contact support message
+// 4. PROCESS:
+//    - Create Stripe Setup Intent for collecting new payment method
+//    - Return client secret for Stripe Elements on frontend
+// 5. MUTATE (after Stripe confirms):
+//    - Update Stripe customer default payment method
+//    - Update subscription_payment_methods record with new card details (masked)
+//    - Increment monthly change counter
+//    - Write to payment_change_audit_log
+// 6. CONFIRM: Verify Stripe subscription using new payment method
+// 7. NOTIFY:
+//    - "Subscription payment method updated to [Brand] ending in [last4]"
+//    - Publish: { type: 'subscription_payment_method_updated', workspaceId }
+```
+
+**`POST /api/billing/payment-method/override-request`**
+
+```typescript
+// For changes beyond monthly limit — creates support ticket
+// Body: { reason }
+// Creates urgent support ticket: "Org [name] needs subscription payment method change beyond monthly limit"
+// Support agent receives notification
+// Support agent can make change via platform_support role
+```
+
+---
+
+**SECTION 6 — STRIPE PAYMENT FLOW — INVOICE TO ORG BANK**
+
+Verify and fix the complete flow from client paying an invoice to money landing in org bank:
+
+**6A — Invoice payment flow with Stripe Connect:**
+
+```
+CLIENT PAYS INVOICE:
+1. Client receives invoice with payment link
+2. Client clicks payment link → Stripe Payment Intent or Invoice
+3. Stripe charges client's card/bank
+4. Platform fee deducted automatically at Stripe level (application_fee_amount)
+5. Remaining amount routed to org's Stripe Connect account
+6. Stripe Connect account pays out to org's connected bank account on schedule
+
+STRIPE FLOW:
+stripe.paymentIntents.create({
+  amount: invoiceTotal * 100,  // in cents
+  currency: 'usd',
+  application_fee_amount: platformFee * 100,  // platform takes fee here
+  transfer_data: {
+    destination: workspace.stripeConnectAccountId  // goes to org's Stripe Connect
+  }
+})
+
+AFTER PAYMENT:
+- payment_intent.succeeded webhook fires
+- Invoice status updated to 'paid'
+- Ledger entry written
+- Org receives notification: "Payment of $[amount] received from [client] for invoice #[number]"
+- Trinity updates AR intelligence
+```
+
+**6B — Platform fee calculation:**
+
+```typescript
+// Fee is calculated and deducted at Stripe level — not manually
+// Platform fee percentage comes from workspace subscription tier:
+// free: 2.5%
+// starter: 2.0%
+// pro: 1.5%
+// enterprise: 1.0%
+
+// Fee is visible on invoice as a line item if required by jurisdiction
+// Fee audit trail: every invoice stores: invoiceTotal, platformFeePercentage, platformFeeAmount, netToOrg
+```
+
+**6C — Stripe Connect payout schedule:**
+
+```typescript
+// Default: daily automatic payouts to org's connected bank account
+// Org can configure: daily, weekly, monthly
+// This setting stored in workspace_bank_accounts.payout_schedule
+// Configurable via settings page
+```
+
+---
+
+**SECTION 7 — FRONTEND UI**
+
+**7A — Employee direct deposit settings page:**
+
+Employee profile → Payment tab:
+
+```
+DIRECT DEPOSIT SETTINGS
+
+Current Account:
+[Bank Name] [Account Type] ending in [last4]    [Status: Verified ✓]
+Last updated: [date]
+
+[Connect New Bank Account via Plaid] — primary button
+[Update Manually] — secondary, only shown if Plaid unavailable
+
+Rate limit notice:
+"Bank account information can be updated once per month.
+[N] of 1 update used this month.
+Next update available: [first of next month]"
+
+If at limit:
+"You have used your monthly update.
+Next update available: [date]
+Need to update sooner? Request an override from your organization owner."
+[Request Override from Owner] — button
+
+If override requested but not yet approved:
+"Override request pending approval from [Owner Name]"
+```
+
+**7B — Org bank account settings page:**
+
+Settings → Bank Accounts tab (org_owner only):
+
+```
+INVOICE PAYMENT ACCOUNT (Stripe Connect)
+────────────────────────────────────────
+Where client invoice payments are deposited.
+
+[Status indicator: Connected ✓ / Not Connected]
+Bank: [Bank Name] ending in [last4]
+Charges: Enabled ✓ | Payouts: Enabled ✓
+Payout schedule: Daily
+
+[View Stripe Dashboard] — external link
+[Reconnect Account] — if issues detected
+
+────────────────────────────────────────
+PAYROLL ORIGINATION ACCOUNT
+────────────────────────────────────────
+Where payroll ACH transfers originate from.
+
+[Status: Connected ✓ / Not Connected]
+Bank: [Bank Name] ending in [last4]
+Last updated: [date]
+
+[Connect via Plaid] — preferred
+[Enter Account Manually] — fallback
+
+Rate limit notice:
+"Business bank account can only be changed once per month.
+This limit cannot be overridden by the organization owner.
+Contact support if an urgent change is required."
+
+Monthly change count: [N] of 1 used
+Next change available: [date]
+
+────────────────────────────────────────
+SUBSCRIPTION PAYMENT METHOD
+────────────────────────────────────────
+[Card Brand icon] [Card Brand] ending in [last4]
+Expires: [MM/YYYY]
+Billing name: [name]
+
+[Update Payment Method]
+
+Rate limit: 1 update per month — support required for additional changes.
+```
+
+**7C — Mobile rendering:**
+
+All payment settings pages on mobile:
+- Full-width single column layout
+- Card/account details in clear readable format
+- Rate limit notice prominently displayed
+- Action buttons full-width 48px height
+- Sensitive field masking visible on mobile
+- Plaid Link opens correctly on mobile
+- Stripe Elements renders correctly on mobile
+
+**7D — Rate limit error UI:**
+
+When rate limit blocks a change:
+
+```
+[Modal or inline error]
+────────────────────────
+⚠ Monthly Update Limit Reached
+
+You have already updated this information once this month.
+
+Next available update: [Day, Month Date, Year]
+
+Need to change sooner?
+• [Request Override from Owner] (for direct deposit — employee only)
+• [Contact Support] (for org bank and subscription)
+
+Why this limit? Payment information changes are limited to protect 
+your account from unauthorized modifications.
+────────────────────────
+```
+
+---
+
+**SECTION 8 — TRINITY PAYMENT AWARENESS**
+
+**Add Trinity event subscribers:**
+
+`employee_payment_info_updated`:
+```typescript
+// Log to org intelligence
+// If employee had pending payroll — flag for review:
+//   "Note: [Employee Name] updated their direct deposit. 
+//    Review the upcoming payroll run to confirm the new account is correct."
+// Add to morning brief if payroll is scheduled within 7 days
+```
+
+`org_bank_account_updated`:
+```typescript
+// CRITICAL priority notification to org owner (even if they made the change):
+//   "Organization payroll bank account has been updated to [Bank Name] ending in [last4].
+//    If you did not authorize this change, contact support immediately."
+// Log to Trinity intelligence
+// Add to morning brief
+// If payroll scheduled within 7 days — urgent alert:
+//   "Payroll is scheduled for [date]. Confirm the new bank account is funded 
+//    with sufficient balance before processing."
+```
+
+`subscription_payment_method_updated`:
+```typescript
+// Notify org owner of change
+// Log to Trinity intelligence
+// Check if subscription renewal is within 7 days — if yes:
+//   "Your subscription renews on [date]. The new payment method will be used."
+```
+
+**Trinity payment queries:**
+
+Trinity must be able to answer:
+- "Is our payroll bank account connected?" → real status
+- "When was our last bank account change?" → from audit log
+- "Are there any payment alerts I should know about?" → checks all payment statuses
+- "Is our Stripe Connect account receiving payments?" → real status from workspace_bank_accounts
+- "How many direct deposit changes has Officer X made this month?" → from audit log
+
+**Pre-payroll payment readiness check:**
+
+Add to the 48-hour pre-payroll scan:
+
+```typescript
+// Check payroll bank account:
+const orgBank = await getOrgBankAccount(workspaceId)
+if (!orgBank?.isVerified) {
+  blockingIssues.push({
+    type: 'org_bank_not_verified',
+    severity: 'CRITICAL',
+    message: 'Organization payroll bank account is not connected or verified. Connect your bank account before payroll can be processed.',
+    actionUrl: '/settings/bank-accounts'
+  })
+}
+
+// Check for recent bank changes that might need confirmation:
+const recentChange = orgBank?.lastBankUpdatedAt
+if (recentChange && daysSince(recentChange) < 7) {
+  warnings.push({
+    type: 'recent_bank_change',
+    message: `Payroll bank account was updated ${daysSince(recentChange)} days ago. Confirm the account is funded.`
+  })
+}
+
+// Check all employees' direct deposit status:
+for (const employee of activeEmployees) {
+  const bankAccount = await getEmployeeBankAccount(employee.id, workspaceId)
+  if (!bankAccount) {
+    warnings.push({
+      type: 'missing_direct_deposit',
+      employeeId: employee.id,
+      employeeName: employee.fullName,
+      message: `${employee.fullName} has no direct deposit account on file. Will require NACHA manual processing.`
+    })
+  }
+}
+```
+
+---
+
+**SECTION 9 — SECURITY AUDIT**
+
+**9A — Verify no plaintext payment data anywhere:**
+
+```bash
+# Search for any routing/account number patterns in non-encrypted columns
+grep -r "routing_number\|account_number" server/ --include="*.ts" | grep -v "encrypted\|last4\|hash"
+
+# Search for any hardcoded test payment data
+grep -r "021000021\|checking\|savings" server/ --include="*.ts"
+
+# Verify no payment data in console logs
+grep -r "console.log.*routing\|console.log.*account" server/ --include="*.ts"
+```
+
+**9B — Encryption key rotation plan:**
+
+Document in `.env.example`:
+```
+# PAYMENT_ENCRYPTION_KEY rotation procedure:
+# 1. Generate new key: openssl rand -hex 32
+# 2. Add NEW_PAYMENT_ENCRYPTION_KEY to env
+# 3. Run migration: decrypt all values with old key, re-encrypt with new key
+# 4. Update PAYMENT_ENCRYPTION_KEY to new key value
+# 5. Remove NEW_PAYMENT_ENCRYPTION_KEY
+# Perform rotation every 90 days in production
+```
+
+**9C — Access control verification:**
+
+- Payment data endpoints accessible only to correct roles
+- Employee bank data — employee sees own, owner sees masked, manager sees status only
+- Org bank data — org_owner and org_co_owner only
+- Audit log — org_owner and platform support only
+- No payment data in any API response to manager role or below
+
+---
+
+**SECTION 10 — CONTINUOUS SCAN LOOP — 10 PASSES**
+
+After implementing all sections:
+
+```
+REPEAT 10 TIMES OR UNTIL ZERO GAPS:
+
+SCAN EVERY ITERATION:
+
+1. Encryption
+   - All routing numbers encrypted? (grep for plaintext patterns)
+   - All account numbers encrypted? (grep for plaintext patterns)
+   - All Plaid access tokens encrypted?
+   - Encryption key loaded from env — not hardcoded?
+   - No sensitive data in console logs?
+   - No sensitive data in audit log entries (only masked values)?
+
+2. Rate limiting
+   - Employee bank: blocks after 1 change per month?
+   - Employee bank: owner override works up to 2 times?
+   - Employee bank: owner cannot override beyond 2?
+   - Org bank: blocks after 1 change per month?
+   - Org bank: owner cannot override — support only?
+   - Subscription: blocks after 1 change per month?
+   - Subscription: owner cannot override — support only?
+   - Support agents bypass all rate limits?
+   - Monthly counter resets correctly on first of month?
+
+3. Payment flows
+   - Stripe Connect onboarding flow works?
+   - Client invoice payment routes to org Stripe Connect?
+   - Platform fee deducted at Stripe level?
+   - Plaid Link connects employee bank correctly?
+   - Plaid Link connects org bank correctly?
+   - ACH payroll uses org bank account correctly?
+   - NACHA fallback for employees without Plaid?
+
+4. Data persistence
+   - Bank account changes persist after server restart?
+   - Rate limit counters persist after server restart?
+   - Audit log entries written correctly?
+   - Trinity receives all payment events?
+
+5. Frontend UI
+   - Rate limit notice visible to employee?
+   - Rate limit notice visible on org settings?
+   - Override request button shown when at limit?
+   - Masked account numbers displayed correctly?
+   - Plaid Link opens on mobile correctly?
+   - Stripe Elements renders on mobile?
+   - Error messages actionable and specific?
+
+6. Trinity awareness
+   - Trinity notified of all payment changes?
+   - Pre-payroll scan checks bank account status?
+   - Morning brief includes payment alerts?
+   - Trinity answers payment queries correctly?
+
+7. Security
+   - Role checks on all payment endpoints?
+   - Manager cannot see employee account numbers?
+   - Cross-workspace payment data isolation?
+   - Override authorization logged in audit trail?
+
+8. Race conditions
+   - Two simultaneous bank updates blocked?
+   - Monthly counter increment is atomic?
+   - Plaid token exchange is idempotent?
+
+FIX EVERY GAP
+VERIFY server clean
+REPORT results
+```
+
+---
+
+**SCAN REPORT FORMAT:**
+
+```
+══════════════════════════════════════════════
+PAYMENT SYSTEM AUDIT — SCAN [N] of 10
+══════════════════════════════════════════════
+Encryption:         Found:N Fixed:N
+Rate limiting:      Found:N Fixed:N
+Payment flows:      Found:N Fixed:N
+Data persistence:   Found:N Fixed:N
+Frontend UI:        Found:N Fixed:N
+Trinity awareness:  Found:N Fixed:N
+Security:           Found:N Fixed:N
+Race conditions:    Found:N Fixed:N
+
+Severity:
+  CRITICAL: Found:N Fixed:N Remaining:N
+  HIGH:     Found:N Fixed:N Remaining:N
+  MEDIUM:   Found:N Fixed:N Remaining:N
+  LOW:      Found:N Fixed:N Remaining:N
+
+Verified:
+  No plaintext routing numbers: YES/NO
+  No plaintext account numbers: YES/NO
+  Rate limits enforced: YES/NO
+  Stripe Connect routing payments: YES/NO
+  Platform fee at Stripe level: YES/NO
+  Trinity payment awareness: YES/NO
+
+Cumulative: Found:N Fixed:N Remaining:N
+Server: CLEAN | TypeScript: ZERO ERRORS
+
+Continue: YES/NO
+══════════════════════════════════════════════
+```
+
+---
+
+**FINAL COMPLETION REPORT:**
+
+```
+══════════════════════════════════════════════════════
+PAYMENT INFORMATION MANAGEMENT — COMPLETE
+══════════════════════════════════════════════════════
+Total scans: N | Total fixed: N | Remaining: ZERO
+
+✓ AES-256-GCM encryption on all routing and account numbers
+✓ AES-256-GCM encryption on all Plaid access tokens
+✓ No plaintext payment data in any DB column
+✓ No payment data in console logs or audit entries
+✓ Employee direct deposit: 1 change/month | owner override up to 2x
+✓ Org bank account: 1 change/month | support only for overrides
+✓ Subscription payment: 1 change/month | support only for overrides
+✓ All rate limits enforced and reset monthly
+✓ Stripe Connect routes invoice payments to org bank automatically
+✓ Platform fee deducted at Stripe level
+✓ Plaid Link connects both employee and org bank accounts
+✓ Pre-payroll scan verifies bank account status
+✓ Trinity notified of all payment changes
+✓ Morning brief includes payment alerts
+✓ Mobile Plaid Link and Stripe Elements working
+✓ Role-based access: employees see own masked data only
+✓ Complete payment change audit log
+✓ Override request and approval flow working
+
+PAYMENT SYSTEM VERIFIED — PRODUCTION READY
+══════════════════════════════════════════════════════
+```
+
+---
+
+**BEGIN SCAN 1 NOW. AUDIT EXISTING CODE. BUILD MISSING PIECES. VERIFY ENCRYPTION. TEST ALL PAYMENT FLOWS. SCAN 10 TIMES. REPORT EACH SCAN.**
+
+---
+
+Paste scan reports back here. When all 10 scans report zero remaining the payment system is production ready and Statewide can process real payroll and collect real invoice payments.

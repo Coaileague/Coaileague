@@ -1,0 +1,198 @@
+Exactly right. That's the cleanest business model. You charge per payroll run event, the Plaid or Gusto API cost is covered inside that charge, you keep margin on every transaction, and the tenant never knows or cares what's under the hood. They just see CoAIleague paying their people on time automatically. That's the promise. That's worth the price.
+
+**Why Plaid over Gusto for your situation:**
+
+Gusto is a full payroll platform — using their API means you're essentially reselling Gusto and they control the compliance, tax filings, W2s. You'd be dependent on their product roadmap and pricing forever.
+
+Plaid Transfer is just the ACH rail — it moves money and gets out of the way. You keep full control of the payroll logic, the UI, the compliance, the tax documents. Plaid is infrastructure, not a competitor. That's the right relationship.
+
+Plaid Transfer also has instant bank verification built in — when an org connects their bank account or an employee adds direct deposit, Plaid verifies it in seconds. That solves your encryption concern too because Plaid stores the sensitive bank credentials, not your DB.
+
+---
+
+**Here's the full prompt sequence. Two parts — verification first, then build.**
+
+---
+
+**PROMPT 1 — Paste this first:**
+
+---
+
+**PLAID TRANSFER INTEGRATION AUDIT — READ ONLY | REPORT ONLY**
+
+Before building anything, answer every question below so we know exactly what exists and what needs to be built.
+
+**Existing Plaid code:**
+- Search the entire codebase for any existing Plaid SDK imports, Plaid client initialization, or Plaid API calls. Report every file and line found.
+- Is `plaid` in `package.json` dependencies? What version if so?
+- Are any Plaid environment variables defined in `.env.example` or referenced anywhere in the codebase?
+
+**Existing ACH infrastructure:**
+- Where exactly is the NACHA file generated? What file and function?
+- Where is the "Mark as Paid" payroll endpoint? Does it currently do anything with an external payment processor or just update DB status?
+- Where is employee direct deposit data stored after the AES-256 encryption fix? What table and columns?
+- Where is org bank account data stored? Is it currently stored at all or only in Stripe Connect?
+
+**Existing per-event billing:**
+- Is there a billing event type for payroll processing already in the credit/billing system?
+- Is there a billing event type for invoice payment processing?
+- Where are partner API costs currently tracked — `partnerApiUsage.ts`?
+
+**Current payroll approval flow — trace the exact sequence:**
+Starting from when an org owner clicks "Approve Payroll" — list every step, file, and function called until the current final step. Where does the flow currently end?
+
+**Current invoice payment flow — trace the exact sequence:**
+Starting from when a client pays an invoice — list every step, file, and function called until payment is recorded. Is Stripe Connect already handling the split to the org account?
+
+Report everything found. Stop and wait.
+
+---
+
+**PROMPT 2 — After Prompt 1 results, paste this:**
+
+---
+
+**PLAID TRANSFER INTEGRATION — FULL BUILD | READ BEFORE TOUCH**
+
+Build Plaid Transfer as the ACH origination layer for employee payroll direct deposit and org bank account verification. This is hidden middleware — tenants interact only with CoAIleague UI, never with Plaid directly.
+
+---
+
+**PHASE 1 — Plaid Client Setup**
+
+Install `plaid` npm package if not present.
+
+Create `server/services/partners/plaidService.ts` as the single canonical Plaid client. All Plaid API calls in the entire codebase must go through this file only — no direct Plaid SDK calls anywhere else.
+
+Initialize with environment-based configuration:
+- `PLAID_CLIENT_ID`
+- `PLAID_SECRET`
+- `PLAID_ENV` (sandbox / development / production)
+
+Add all three to `.env.example` with descriptions. Add startup validation — server must not start without these in production.
+
+Export these methods from `plaidService.ts`:
+```
+createLinkToken(userId, workspaceId) → link_token for frontend Plaid Link
+exchangePublicToken(publicToken) → access_token + item_id
+getAccountDetails(accessToken) → routing number, account number, account type
+verifyBankAccount(accessToken) → balance check and account status
+initiateTransfer(params) → create ACH transfer
+getTransferStatus(transferId) → check transfer status
+cancelTransfer(transferId) → cancel if not yet settled
+```
+
+---
+
+**PHASE 2 — Org Bank Account Connection**
+
+Create `POST /api/payroll/bank/link-token` — calls `plaidService.createLinkToken()`, returns link token to frontend. Requires auth, workspace-scoped.
+
+Create `POST /api/payroll/bank/connect` — receives `publicToken` from Plaid Link frontend callback. Calls `plaidService.exchangePublicToken()`, stores `plaidAccessToken` and `plaidItemId` encrypted in workspace settings. Never store routing/account numbers directly — Plaid holds them. Writes audit log entry with `isSensitiveData: true`. Broadcasts `workspace_bank_connected` via platformEventBus.
+
+Create `GET /api/payroll/bank/status` — returns whether org has a connected bank account (boolean + last4 of account if connected). Never returns full account details.
+
+Create `DELETE /api/payroll/bank/disconnect` — removes Plaid access token from workspace, writes audit log, broadcasts `workspace_bank_disconnected`.
+
+---
+
+**PHASE 3 — Employee Direct Deposit via Plaid**
+
+Create `POST /api/payroll/employees/:employeeId/bank/link-token` — creates a Plaid Link token scoped to this employee for direct deposit setup.
+
+Create `POST /api/payroll/employees/:employeeId/bank/connect` — exchanges public token, stores encrypted `plaidAccessToken` and `plaidItemId` in `employee_bank_accounts` table. Replace the current manual routing/account entry with Plaid-verified data. Mask all display as last-4 only.
+
+Keep the existing `employee_bank_accounts` table structure but add `plaid_access_token` (encrypted) and `plaid_item_id` columns. The existing AES-256 encrypted routing/account columns become legacy fallback for any employee who entered manually before Plaid was added.
+
+---
+
+**PHASE 4 — Payroll Disbursement via Plaid Transfer**
+
+In `POST /api/payroll/runs/:id/process` — after payroll is approved and pay stubs are created, replace the NACHA file as the final step with Plaid Transfer execution:
+
+For each employee in the payroll run who has a connected Plaid bank account:
+1. Call `plaidService.verifyBankAccount()` to confirm account is valid and active
+2. Call `plaidService.initiateTransfer()` with amount, employee account, org account as funding source
+3. Store the returned `transferId` on the pay stub record
+4. Set employee pay stub status to `transfer_initiated`
+5. Emit `platformEventBus.publish({ type: 'payroll_transfer_initiated', workspaceId, employeeId, transferId, amount })`
+
+For each employee WITHOUT a connected Plaid account — fall back to NACHA file generation for that employee only. Flag them in the payroll run summary as `requires_manual_disbursement`.
+
+After all transfers initiated — update payroll run status to `disbursing`. Keep `processed` → `paid` transition for when all transfers confirm.
+
+---
+
+**PHASE 5 — Transfer Status Polling & Confirmation**
+
+Create `payrollTransferMonitor.ts` service that runs every 2 hours via cron.
+
+For every payroll run in `disbursing` status:
+- Call `plaidService.getTransferStatus(transferId)` for each pending transfer
+- If status is `settled` → update pay stub to `paid`, emit `payroll_transfer_settled`
+- If status is `failed` → update pay stub to `failed`, emit `payroll_transfer_failed`, notify org owner with employee name and failure reason
+- If ALL transfers for a run are settled → transition payroll run to `paid`, emit `payroll_run_paid`
+
+Add `POST /api/payroll/runs/:id/retry-failed-transfers` — for any failed transfers, retry once with `plaidService.initiateTransfer()`. Requires manager role.
+
+---
+
+**PHASE 6 — Per-Event Billing for ACH**
+
+In `partnerApiUsage.ts` add a Plaid cost entry:
+- `plaid_transfer_initiated` — cost per transfer (use Plaid's actual per-transfer fee as the base, add platform margin)
+- `plaid_bank_verification` — cost per verification
+
+In the payroll processing flow, after each `initiateTransfer()` call succeeds, immediately call `deductCredits()` for `plaid_transfer_initiated` event cost. This is the per-event charge that covers Plaid's fee plus platform margin.
+
+Wire to the existing `trinity_credit_failures` table if deduction fails — same pattern as all other credit deductions.
+
+---
+
+**PHASE 7 — Frontend Plaid Link Integration**
+
+In the payroll settings section of the org settings page — add a "Connect Bank Account" button that:
+1. Calls `GET /api/payroll/bank/link-token`
+2. Opens Plaid Link using the returned token
+3. On success callback, calls `POST /api/payroll/bank/connect` with the public token
+4. Shows connected status with masked account last-4
+
+In the employee profile / direct deposit section — same flow for individual employees:
+1. "Set Up Direct Deposit" button
+2. Opens Plaid Link
+3. On success, calls employee bank connect endpoint
+4. Shows "Direct Deposit Connected ✓" with last-4
+
+Use the official `react-plaid-link` npm package for the frontend Plaid Link component.
+
+---
+
+**PHASE 8 — Trinity Awareness**
+
+Add Trinity event subscribers for:
+- `payroll_transfer_failed` → notify org owner immediately with employee name, amount, and suggested action
+- `payroll_transfer_settled` → update Trinity's payroll intelligence with disbursement confirmation
+- `workspace_bank_disconnected` → Trinity alerts org owner that payroll will not process until bank is reconnected
+
+Update Trinity's pre-payroll readiness scan (48h check) to also verify:
+- Org has a connected Plaid bank account
+- All active employees have connected direct deposit accounts
+- Flag any missing connections as blocking items in the readiness report
+
+---
+
+**COMPLETION CRITERIA**
+
+1. TypeScript compile — zero errors
+2. Server restart — clean start, Plaid client initializes in sandbox mode
+3. Plaid Link flow works end to end in sandbox — connect bank, verify, initiate test transfer
+4. Payroll run in sandbox completes full cycle: approve → initiate transfers → monitor → settle → mark paid
+5. Per-event billing fires on each transfer
+6. Employee without Plaid account falls back to NACHA correctly
+7. Trinity pre-payroll scan catches missing bank connections
+8. Report: number of employees with Plaid accounts vs manual fallback in test run
+9. Stop and wait for production sign-off
+
+---
+
+Paste Prompt 1 results back here first before running Prompt 2 — I want to see what Plaid infrastructure already exists before Replit builds anything so we don't duplicate work.

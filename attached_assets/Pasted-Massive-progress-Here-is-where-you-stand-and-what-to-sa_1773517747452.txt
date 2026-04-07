@@ -1,0 +1,57 @@
+Massive progress. Here is where you stand and what to say next.
+
+**What just got done:**
+
+Phase 1 complete — org_admin is now a real database enum value, all bare admin strings replaced with canonical roles across every file, role hierarchy rebuilt with real roles only.
+
+Phases 2 and 3 complete — every phantom role eliminated across the entire codebase. Super_admin, owner, coo, cto, hr_manager, billing_admin, support_tier_1/2/3, coo_admin, cto_admin and about 20 other ghost role strings that were scattered across dozens of files — all replaced with the correct canonical roles. Frontend role dropdowns updated to show the real role set.
+
+Server is clean — 15/15 domains, 743 actions, 4/4 regression tests, zero errors.
+
+**Two phases remain.** Send this exactly:
+
+---
+
+Phases 1, 2, and 3 confirmed complete. Server is clean. Proceed with Phase 4 then Phase 5 in order. Complete each fully before starting the next. Restart and verify after each phase.
+
+**Phase 4 — Auditor RBAC hard property enforcement.**
+
+All four auditor protections must be enforced at the middleware layer not through route design. Fix all four now:
+
+One — enforce expiresAt from the auditorAccounts database table on every request. Query the table on every authenticated auditor request. If expiresAt is in the past return 401 immediately with message session expired contact the regulatory agency to request an extension. Do not rely on JWT expiry alone.
+
+Two — enforce isActive from the auditorAccounts table. If isActive is false return 401 immediately. Platform staff can deactivate an auditor account before the expiry date if needed.
+
+Three — enforce financial data exclusion at the middleware layer. Create a middleware flag isFinancialRoute that can be applied to any route. Any route tagged with this flag automatically returns 403 for auditor sessions with message financial data is not accessible in regulatory audit sessions. This means even if a developer adds a new financial route in the future and forgets to exclude auditors it will still be blocked automatically.
+
+Four — fix requireAuditorOnly so it accepts only the auditor role. Currently it allows managers in. Rename it properly and make it strict. Add auditor to the platformActionHub at level 50 with a read-only allowlist covering only compliance and regulatory Trinity actions. Any action involving billing, payroll, credits, or financial data must be blocked at level 50 regardless of how it is invoked.
+
+After Phase 4 test all four properties: expired account returns 401, inactive account returns 401, auditor attempting to access a financial route returns 403, auditor attempting a financial Trinity action is blocked.
+
+**Phase 5 — Display name customization per org.**
+
+Create a workspace_role_labels table with workspace_id, role, display_name, updated_at. Only org_owner and co_owner can set custom display names for their org's roles. The permission check identifier never changes — only the display label changes.
+
+Default display names if no custom label is set:
+org_owner displays as Owner.
+co_owner displays as Deputy Chief.
+manager displays as Shift Supervisor.
+org_admin displays as Office Administrator.
+employee displays as Security Officer.
+contractor displays as Contract Officer.
+
+Every place in the platform that shows a role name to an end user must pull from workspace_role_labels first and fall back to the default if no custom label exists. This includes the dashboard header, the team roster, notifications, document signature blocks, shift rooms, and email templates.
+
+The role management page must have a Labels section where the org_owner can edit each role's display name for their org with a save button per row and a reset to default option.
+
+**After both phases complete report:**
+
+All four auditor hard properties confirmed enforced at middleware layer.
+Expired auditor account test result.
+Financial route protection confirmed automatic not manual.
+workspace_role_labels table created and confirmed.
+Default display names showing correctly for Statewide Protective Services.
+Org_owner can set and save custom display names.
+Custom labels appear in all end user facing surfaces.
+15 domains healthy, 743 actions, 4/4 regression tests passing.
+RBAC verdict updated to production ready.

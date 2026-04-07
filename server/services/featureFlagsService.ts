@@ -7,13 +7,22 @@
  * and safety guardrails.
  */
 
-import { db } from '../db';
+import { db, withRetry } from '../db';
 import { trinityRuntimeFlags, trinityRuntimeFlagChanges, type TrinityRuntimeFlag, type InsertTrinityRuntimeFlag, type InsertTrinityRuntimeFlagChange } from '@shared/schema';
 import { eq, and, inArray, desc, sql } from 'drizzle-orm';
+import { TIMEOUTS } from '../config/platformConfig';
+import { createLogger } from '../lib/logger';
+const log = createLogger('featureFlagsService');
 
-// In-memory cache for fast flag lookups
+
+// In-memory cache for fast flag lookups - longer TTL for resilience
 const flagCache = new Map<string, { value: any; expiresAt: number; flag: TrinityRuntimeFlag }>();
-const CACHE_TTL_MS = 30000; // 30 second cache
+const CACHE_TTL_MS = TIMEOUTS.featureFlagCacheTtlMs;
+const STALE_CACHE_TTL_MS = TIMEOUTS.featureFlagStaleTtlMs;
+
+// Track cache state
+let cacheWarmed = false;
+let lastCacheWarmTime = 0;
 
 export type SafetyLevel = 'low_risk' | 'medium_risk' | 'high_risk';
 export type ActorType = 'trinity' | 'admin' | 'system' | 'diagnostics';
@@ -80,34 +89,51 @@ export const trinityRuntimeFlagsService = {
 
   /**
    * Get a single flag by key
+   * Returns cached value if DB is unavailable (graceful degradation)
    */
   async getFlagByKey(key: string, workspaceId?: string): Promise<TrinityRuntimeFlag | null> {
     const cacheKey = workspaceId ? `${key}:${workspaceId}` : key;
     const cached = flagCache.get(cacheKey);
     
+    // Return valid cache
     if (cached && cached.expiresAt > Date.now()) {
       return cached.flag;
     }
     
-    const conditions = [eq(trinityRuntimeFlags.key, key)];
-    if (workspaceId) {
-      conditions.push(eq(trinityRuntimeFlags.workspaceId, workspaceId));
+    try {
+      const conditions = [eq(trinityRuntimeFlags.key, key)];
+      if (workspaceId) {
+        conditions.push(eq(trinityRuntimeFlags.workspaceId, workspaceId));
+      }
+      
+      // Use retry logic for cold-start resilience
+      const [flag] = await withRetry(
+        () => db.select()
+          .from(trinityRuntimeFlags)
+          .where(and(...conditions))
+          .limit(1),
+        { maxRetries: 2, operationName: `getFlagByKey(${key})` }
+      );
+      
+      if (flag) {
+        flagCache.set(cacheKey, {
+          value: JSON.parse(flag.currentValue),
+          expiresAt: Date.now() + CACHE_TTL_MS,
+          flag
+        });
+      }
+      
+      return flag || null;
+    } catch (error) {
+      // If DB is unavailable, return stale cache if available
+      if (cached) {
+        log.warn(`[FeatureFlags] DB unavailable, using stale cache for ${key}`);
+        return cached.flag;
+      }
+      // No cache available, log and return null (will use default value)
+      log.warn(`[FeatureFlags] DB unavailable, no cache for ${key}, using default`);
+      return null;
     }
-    
-    const [flag] = await db.select()
-      .from(trinityRuntimeFlags)
-      .where(and(...conditions))
-      .limit(1);
-    
-    if (flag) {
-      flagCache.set(cacheKey, {
-        value: JSON.parse(flag.currentValue),
-        expiresAt: Date.now() + CACHE_TTL_MS,
-        flag
-      });
-    }
-    
-    return flag || null;
   },
 
   /**
@@ -192,7 +218,7 @@ export const trinityRuntimeFlagsService = {
     
     // Check if Trinity needs approval for this flag
     if (actor.type === 'trinity' && flag.requiresApproval) {
-      console.log(`[TrinityRuntimeFlags] Trinity modification of '${key}' requires approval`);
+      log.info(`[TrinityRuntimeFlags] Trinity modification of '${key}' requires approval`);
       return { 
         success: false, 
         requiresApproval: true,
@@ -202,10 +228,10 @@ export const trinityRuntimeFlagsService = {
     
     // Safety level check for Trinity
     if (actor.type === 'trinity' && flag.safetyLevel === 'high_risk') {
-      console.log(`[TrinityRuntimeFlags] Trinity blocked from modifying high-risk flag '${key}'`);
+      log.info(`[TrinityRuntimeFlags] Trinity blocked from modifying high-risk flag '${key}'`);
       return {
         success: false,
-        error: 'Trinity cannot modify high-risk flags autonomously'
+        error: 'I can\'t modify high-risk flags autonomously — a human needs to approve this change'
       };
     }
     
@@ -244,7 +270,7 @@ export const trinityRuntimeFlagsService = {
         flagCache.delete(`${key}:${flag.workspaceId}`);
       }
       
-      console.log(`[TrinityRuntimeFlags] ${actor.type} updated '${key}': ${previousValue} → ${newValueJson}`);
+      log.info(`[TrinityRuntimeFlags] ${actor.type} updated '${key}': ${previousValue} → ${newValueJson}`);
       
       return { success: true, flag: updated };
     } catch (error: any) {
@@ -259,10 +285,10 @@ export const trinityRuntimeFlagsService = {
         actorId: actor.id || null,
         source,
         wasSuccessful: false,
-        errorMessage: error.message
+        errorMessage: (error instanceof Error ? error.message : String(error))
       });
       
-      return { success: false, error: error.message };
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   },
 
@@ -324,7 +350,7 @@ export const trinityRuntimeFlagsService = {
       lastModifiedBy: 'system'
     }).returning();
     
-    console.log(`[TrinityRuntimeFlags] Created new flag '${data.key}'`);
+    log.info(`[TrinityRuntimeFlags] Created new flag '${data.key}'`);
     return flag;
   },
 
@@ -451,7 +477,7 @@ export const trinityRuntimeFlagsService = {
       }
     }
     
-    console.log('[TrinityRuntimeFlags] Default flags initialized');
+    log.info('[TrinityRuntimeFlags] Default flags initialized');
   },
 
   /**
@@ -459,6 +485,49 @@ export const trinityRuntimeFlagsService = {
    */
   clearCache(): void {
     flagCache.clear();
+    cacheWarmed = false;
+  },
+
+  /**
+   * Warm the cache by preloading commonly used flags
+   * Call this at startup to reduce cold-start latency
+   */
+  async warmCache(): Promise<void> {
+    // Skip if recently warmed
+    if (cacheWarmed && Date.now() - lastCacheWarmTime < CACHE_TTL_MS) {
+      return;
+    }
+
+    try {
+      log.info('[FeatureFlags] Warming cache...');
+      
+      // Load all enabled flags into cache
+      const flags = await db.select()
+        .from(trinityRuntimeFlags)
+        .where(eq(trinityRuntimeFlags.isEnabled, true));
+      
+      for (const flag of flags) {
+        const cacheKey = flag.workspaceId ? `${flag.key}:${flag.workspaceId}` : flag.key;
+        flagCache.set(cacheKey, {
+          value: JSON.parse(flag.currentValue),
+          expiresAt: Date.now() + CACHE_TTL_MS,
+          flag
+        });
+      }
+
+      cacheWarmed = true;
+      lastCacheWarmTime = Date.now();
+      log.info(`[FeatureFlags] Cache warmed with ${flags.length} flags`);
+    } catch (error) {
+      log.warn('[FeatureFlags] Cache warming failed, will use on-demand loading:', error);
+    }
+  },
+
+  /**
+   * Check if cache is warmed and healthy
+   */
+  isCacheHealthy(): boolean {
+    return cacheWarmed && Date.now() - lastCacheWarmTime < STALE_CACHE_TTL_MS;
   }
 };
 

@@ -1,0 +1,1212 @@
+Let me do the actual cost math first so we know the $25/seat overage is properly defended, then build the complete solution.
+
+---
+
+**ACTUAL COST ANALYSIS — WHAT WE PAY PER SEAT**
+
+```
+AI API COSTS (what we pay the providers):
+
+GEMINI 2.5 PRO — Primary Cortex (most used)
+  Input tokens:  $0.00125 per 1,000
+  Output tokens: $0.01 per 1,000
+  Gemini handles: scheduling, action execution,
+    pattern recognition, proactive monitoring,
+    all routine Trinity tasks
+
+CLAUDE SONNET — Consciousness/Judge (every response)
+  Input tokens:  $0.003 per 1,000
+  Output tokens: $0.015 per 1,000
+  Claude handles: validation of every Gemini response,
+    hallucination detection, ethical review,
+    document quality review, complex reasoning
+
+GPT-4o — Backbone Workhorse (documents, extraction)
+  Input tokens:  $0.005 per 1,000
+  Output tokens: $0.015 per 1,000
+  GPT handles: document generation, structured
+    extraction, email drafting, form processing,
+    high-volume batch operations
+```
+
+---
+
+**PER SEAT COST REALITY**
+
+```
+TYPICAL OFFICER (basic usage per month):
+  Clock-in/out via Trinity: 60 events × 500 tokens = 30k tokens
+  Schedule notifications:   30 events × 200 tokens = 6k tokens
+  HelpAI interactions:      10 × 1,000 tokens = 10k tokens
+  Cascade SMS processing:   20 × 300 tokens = 6k tokens
+  Total tokens/month:       ~52,000 tokens
+
+  Gemini primary (80%):     41,600 tokens
+    Cost: 41.6 × $0.00125 input + 41.6 × $0.01 output × 0.3
+    = $0.052 + $0.125 = $0.177
+
+  Claude validation (every Gemini response):
+    ~30 validations × 2,000 tokens = 60,000 tokens
+    Cost: 60 × $0.003 + 60 × $0.015 × 0.3
+    = $0.180 + $0.270 = $0.450
+
+  GPT documents (monthly pay stub, forms):
+    ~5 documents × 3,000 tokens = 15,000 tokens
+    Cost: 15 × $0.005 + 15 × $0.015 × 0.5
+    = $0.075 + $0.113 = $0.188
+
+  TOTAL AI COST PER OFFICER/MONTH: ~$0.82
+
+TYPICAL SUPERVISOR (heavy usage per month):
+  All officer costs PLUS:
+  Schedule generation for team: 400k tokens/month
+  Payroll processing: 100k tokens
+  Compliance monitoring: 150k tokens
+  Reporting and analytics: 200k tokens
+  Total tokens/month: ~900,000 tokens blended
+  TOTAL AI COST PER SUPERVISOR/MONTH: ~$8-12
+
+PLATFORM INFRASTRUCTURE PER SEAT:
+  Database storage:    $0.08/seat
+  Compute:             $0.15/seat
+  Storage/CDN:         $0.05/seat
+  Twilio SMS absorbed: $0.30/seat (light SMS use)
+  Total infra:         ~$0.58/seat/month
+```
+
+---
+
+**DOES $25/SEAT OVERAGE COVER IT?**
+
+```
+COST PER OVERAGE SEAT (worst case supervisor):
+  AI usage:        $12.00
+  Infrastructure:  $0.58
+  Twilio absorbed: $0.30
+  Total cost:      $12.88
+
+REVENUE PER OVERAGE SEAT: $25.00
+MARGIN: ($25 - $12.88) / $25 = 48.5%
+
+For a typical officer overage seat:
+  AI usage:        $0.82
+  Infrastructure:  $0.58
+  Twilio:          $0.30
+  Total cost:      $1.70
+  Revenue:         $25.00
+  Margin:          93.2%
+
+BLENDED REALISTIC MARGIN ON OVERAGE: ~75-85%
+CONCLUSION: $25/seat overage is well defended ✓
+```
+
+---
+
+**THE PROBLEM THAT NEEDS SOLVING**
+
+The margin is only protected if AI usage is tracked and capped. Right now every Trinity action fires Gemini + Claude with no metering. A single workspace could consume unlimited AI tokens at no additional cost. Heavy users subsidized by light users. That breaks the model.
+
+The fix: every AI call tracked, soft cap per tier, overage billed back.
+
+---
+
+**HERE IS THE COMPLETE PROMPT TO SEND TO REPLIT:**
+
+---
+
+**AI USAGE METERING — TRACK EVERY GEMINI CLAUDE GPT CALL PER WORKSPACE WITH SOFT CAPS AND OVERAGE BILLING**
+
+Read everything completely before touching any code. This phase ensures every AI API call made by Trinity's biological brain is tracked per workspace, metered against the tier's soft cap, and billed correctly for overages. The $25/seat overage only stays profitable if AI consumption is bounded. Gemini is the primary cortex, Claude is the consciousness judge, GPT is the workhorse backbone. All three must be individually tracked, attributed, and metered. Execute in exact order. Server must stay running throughout.
+
+**ACME sandbox only. Statewide untouchable.**
+
+---
+
+**STEP 0 — AUDIT CURRENT AI CALL POINTS**
+
+```bash
+# Find every place we call Gemini
+grep -rn "gemini\|generativeai\|GoogleGenerativeAI\|genAI\|gemini-pro\|gemini-2" \
+  server/ --include="*.ts" | grep -v node_modules | \
+  grep -v "\.test\." | grep -v "billingConfig" | \
+  grep "generate\|generateContent\|sendMessage\|chat\." | \
+  head -30
+
+# Find every place we call Claude
+grep -rn "anthropic\|Anthropic\|claude\|claude-sonnet\|claude-opus" \
+  server/ --include="*.ts" | grep -v node_modules | \
+  grep -v "\.test\." | grep -v "billingConfig" | \
+  grep "messages\.create\|complete\|generate" | \
+  head -30
+
+# Find every place we call OpenAI/GPT
+grep -rn "openai\|OpenAI\|gpt-4\|gpt-3\|chat\.completions" \
+  server/ --include="*.ts" | grep -v node_modules | \
+  grep -v "\.test\." | grep -v "billingConfig" | \
+  grep "create\|generate\|complete" | \
+  head -30
+
+# Count total AI call sites
+echo "Gemini call sites: $(grep -rn "generateContent\|sendMessage" server/ --include="*.ts" | grep -v node_modules | wc -l)"
+echo "Claude call sites: $(grep -rn "messages\.create" server/ --include="*.ts" | grep -v node_modules | wc -l)"
+echo "GPT call sites: $(grep -rn "chat\.completions\.create" server/ --include="*.ts" | grep -v node_modules | wc -l)"
+
+# Check if any usage tracking exists already
+grep -rn "token_usage\|tokensUsed\|inputTokens\|outputTokens\|usage\.prompt_tokens" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# Report all findings — do not change anything yet
+```
+
+---
+
+**STEP 1 — UPDATE BILLING CONFIG WITH AI COST BASIS AND SOFT CAPS**
+
+Add to `shared/billingConfig.ts`:
+
+```typescript
+// ============================================
+// AI MODEL COST BASIS — WHAT WE PAY PROVIDERS
+// Update these when provider pricing changes
+// All values in microcents (1 microcent = $0.000001)
+// Using microcents for precision on small token costs
+// ============================================
+
+export const AI_MODEL_COSTS = {
+  // GEMINI — Primary Cortex
+  // Handles: action execution, scheduling, pattern recognition,
+  // routine Trinity tasks, proactive monitoring
+  'gemini-2.5-pro': {
+    role: 'primary_cortex',
+    inputPer1kTokensMicrocents: 1250,  // $0.00125/1k
+    outputPer1kTokensMicrocents: 10000, // $0.01/1k
+    avgOutputInputRatio: 0.3,           // output is ~30% of input
+  },
+  'gemini-2.0-flash': {
+    role: 'primary_cortex_fast',
+    inputPer1kTokensMicrocents: 750,
+    outputPer1kTokensMicrocents: 3000,
+    avgOutputInputRatio: 0.3,
+  },
+
+  // CLAUDE — Consciousness and Judge
+  // Handles: validation of every Gemini response,
+  // hallucination detection, ethical review,
+  // quality control before any output reaches user
+  'claude-sonnet-4-5': {
+    role: 'consciousness_judge',
+    inputPer1kTokensMicrocents: 3000,  // $0.003/1k
+    outputPer1kTokensMicrocents: 15000, // $0.015/1k
+    avgOutputInputRatio: 0.25,
+  },
+  'claude-opus-4': {
+    role: 'consciousness_judge_deep',
+    inputPer1kTokensMicrocents: 15000,
+    outputPer1kTokensMicrocents: 75000,
+    avgOutputInputRatio: 0.2,
+  },
+
+  // GPT — Backbone Workhorse
+  // Handles: document generation, structured extraction,
+  // email drafting, form processing, high-volume batch ops
+  'gpt-4o': {
+    role: 'backbone_workhorse',
+    inputPer1kTokensMicrocents: 5000,  // $0.005/1k
+    outputPer1kTokensMicrocents: 15000, // $0.015/1k
+    avgOutputInputRatio: 0.5,           // docs need more output
+  },
+  'gpt-4o-mini': {
+    role: 'backbone_workhorse_fast',
+    inputPer1kTokensMicrocents: 150,
+    outputPer1kTokensMicrocents: 600,
+    avgOutputInputRatio: 0.4,
+  },
+} as const;
+
+// ============================================
+// AI USAGE SOFT CAPS PER PLATFORM TIER
+// These protect platform margin on heavy users
+// Soft cap = warn and bill overage, not hard block
+// ============================================
+
+export const AI_TIER_LIMITS = {
+  free_trial: {
+    // Very limited — push to upgrade
+    monthlyTokenBudgetK: 500,          // 500k tokens total
+    softCapK: 400,                     // warn at 400k
+    hardCapK: 500,                     // block at 500k
+    overagePer100kTokensCents: null,   // blocked — must upgrade
+    estimatedAiCostCents: 75,          // ~$0.75 cost at this usage
+    // Free trial fully subsidized — acquisition cost
+  },
+
+  starter: {
+    // 10 seats × ~100k tokens/seat = 1M tokens budget
+    // Reality: officers use less, managers use more
+    // Budget covers ~12 seats of mixed usage with margin
+    monthlyTokenBudgetK: 1500,         // 1.5M tokens included
+    softCapK: 1200,                    // warn at 1.2M (80%)
+    hardCapK: null,                    // no hard cap — bill overage
+    overagePer100kTokensCents: 150,    // $1.50 per 100k tokens
+    // Overage cost: 100k × blended $0.008/1k = $0.80
+    // We charge: $1.50 → 47% margin on overage
+    estimatedCostAtBudgetCents: 1200,  // ~$12 AI cost at 1.5M tokens
+    revenueFromBaseMonthly: 29900,     // $299 seat plan
+    // Even heavy starter: $12 AI cost vs $299 revenue = 96% margin
+  },
+
+  professional: {
+    // 100 seats × ~100k tokens/seat = 10M tokens budget
+    // Supervisors and managers use significantly more
+    // Budget set conservatively to protect margin
+    monthlyTokenBudgetK: 12000,        // 12M tokens included
+    softCapK: 9600,                    // warn at 9.6M (80%)
+    hardCapK: null,
+    overagePer100kTokensCents: 120,    // $1.20 per 100k tokens
+    // Overage cost: $0.80 → 33% margin (acceptable — volume)
+    estimatedCostAtBudgetCents: 9600,  // ~$96 AI cost at 12M tokens
+    revenueFromBaseMonthly: 99900,     // $999 seat plan
+    // $96 AI cost vs $999 revenue = 90% gross margin before infra
+  },
+
+  business: {
+    // 300 seats — significant Trinity orchestration
+    monthlyTokenBudgetK: 40000,        // 40M tokens included
+    softCapK: 32000,                   // warn at 32M (80%)
+    hardCapK: null,
+    overagePer100kTokensCents: 100,    // $1.00 per 100k tokens
+    estimatedCostAtBudgetCents: 32000, // ~$320 AI cost at 40M
+    revenueFromBaseMonthly: 299900,
+    // $320 AI cost vs $2,999 revenue = 89% gross margin
+  },
+
+  enterprise: {
+    // 1,000 seats — full autonomous operations
+    monthlyTokenBudgetK: 150000,       // 150M tokens included
+    softCapK: 120000,                  // warn at 120M (80%)
+    hardCapK: null,
+    overagePer100kTokensCents: 80,     // $0.80 per 100k tokens
+    estimatedCostAtBudgetCents: 120000, // ~$1,200 AI cost at 150M
+    revenueFromBaseMonthly: 799900,
+    // $1,200 AI cost vs $7,999 revenue = 85% gross margin
+  },
+
+  strategic: {
+    // Custom — negotiated per contract
+    // Floor: same as enterprise overage rate
+    monthlyTokenBudgetK: null,         // custom per contract
+    overagePer100kTokensCents: 60,     // $0.60/100k (volume discount)
+  },
+} as const;
+
+// ============================================
+// SEAT OVERAGE COST DEFENSE
+// Verify $25/seat overage always profitable
+// ============================================
+export const SEAT_OVERAGE_COST_ANALYSIS = {
+  // Worst case: supervisor seat (heaviest AI user)
+  supervisorSeatAiCostCents: 1200,    // ~$12 AI/month worst case
+  infrastructureCostPerSeatCents: 58, // $0.58 infra
+  twilioSmsAbsorbedCents: 30,         // $0.30 SMS
+  totalWorstCaseCostCents: 1288,      // $12.88 total
+  revenuePerOverageSeatCents: 2500,   // $25.00
+  worstCaseMarginPercent: 48.5,       // protected ✓
+
+  // Typical officer seat (light AI user)
+  officerSeatAiCostCents: 82,         // ~$0.82 AI/month
+  officerTotalCostCents: 170,         // $1.70 total
+  officerMarginPercent: 93.2,         // strong ✓
+
+  // Blended realistic margin
+  blendedMarginPercent: 78,           // comfortable ✓
+} as const;
+
+export type AiModelKey = keyof typeof AI_MODEL_COSTS;
+export type AiTierLimitKey = keyof typeof AI_TIER_LIMITS;
+```
+
+---
+
+**STEP 2 — CREATE AI USAGE TRACKING TABLES**
+
+```sql
+-- AI usage metering per workspace per billing period
+CREATE TABLE IF NOT EXISTS workspace_ai_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  billing_period_start DATE NOT NULL,
+  billing_period_end DATE NOT NULL,
+
+  -- Token budgets from tier config
+  included_tokens_k INTEGER NOT NULL,          -- total budget in thousands
+  soft_cap_tokens_k INTEGER NOT NULL,          -- warn threshold
+  overage_per_100k_tokens_cents INTEGER,       -- overage rate
+
+  -- Consumption by model (tokens in thousands, rounded)
+  gemini_input_tokens_k DECIMAL(12,3) DEFAULT 0,
+  gemini_output_tokens_k DECIMAL(12,3) DEFAULT 0,
+  claude_input_tokens_k DECIMAL(12,3) DEFAULT 0,
+  claude_output_tokens_k DECIMAL(12,3) DEFAULT 0,
+  gpt_input_tokens_k DECIMAL(12,3) DEFAULT 0,
+  gpt_output_tokens_k DECIMAL(12,3) DEFAULT 0,
+
+  -- Totals
+  total_tokens_k DECIMAL(12,3) DEFAULT 0,
+  overage_tokens_k DECIMAL(12,3) DEFAULT 0,
+
+  -- Cost tracking (in microcents for precision)
+  gemini_cost_microcents BIGINT DEFAULT 0,
+  claude_cost_microcents BIGINT DEFAULT 0,
+  gpt_cost_microcents BIGINT DEFAULT 0,
+  total_cost_microcents BIGINT DEFAULT 0,
+
+  -- Billing
+  overage_charges_cents INTEGER DEFAULT 0,
+  invoiced_at TIMESTAMPTZ,
+  invoice_id UUID REFERENCES invoices(id),
+
+  -- Alerts
+  soft_cap_warning_sent_at TIMESTAMPTZ,
+  soft_cap_80pct_sent_at TIMESTAMPTZ,
+  soft_cap_90pct_sent_at TIMESTAMPTZ,
+  soft_cap_100pct_sent_at TIMESTAMPTZ,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  UNIQUE(workspace_id, billing_period_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_usage_workspace
+  ON workspace_ai_usage(workspace_id, billing_period_start DESC);
+
+-- Individual AI call log — every single API call
+CREATE TABLE IF NOT EXISTS ai_call_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  usage_period_id UUID REFERENCES workspace_ai_usage(id),
+
+  -- Which model in the triad
+  model_name VARCHAR(50) NOT NULL,
+  model_role VARCHAR(50) NOT NULL,
+  -- primary_cortex, consciousness_judge, backbone_workhorse
+
+  -- Call context
+  call_type VARCHAR(100) NOT NULL,
+  -- trinity_chat, schedule_generation, payroll_processing,
+  -- compliance_scan, document_generation, claude_validation,
+  -- cascade_management, invoice_generation, onboarding_task,
+  -- proactive_insight, form_processing, helpai_triage,
+  -- voice_processing, email_processing, support_action
+
+  -- Token usage (actual from API response)
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  total_tokens INTEGER NOT NULL DEFAULT 0,
+
+  -- Cost calculation
+  cost_microcents BIGINT NOT NULL DEFAULT 0,
+  -- calculated: (input/1000 × inputRate) + (output/1000 × outputRate)
+
+  -- Attribution
+  triggered_by_user_id UUID REFERENCES users(id),
+  triggered_by_session_id VARCHAR(255),
+  trinity_action_id VARCHAR(255),
+  employee_id UUID REFERENCES employees(id),
+
+  -- Performance
+  response_time_ms INTEGER,
+  was_cached BOOLEAN DEFAULT false,
+  fallback_used BOOLEAN DEFAULT false,
+  fallback_from VARCHAR(50),
+
+  -- Validation
+  claude_validated BOOLEAN DEFAULT false,
+  claude_validation_passed BOOLEAN,
+  claude_validation_action VARCHAR(50),
+  -- approved, rewritten, rejected
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_call_log_workspace
+  ON ai_call_log(workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_call_log_model
+  ON ai_call_log(model_name, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_call_log_type
+  ON ai_call_log(call_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_call_log_period
+  ON ai_call_log(usage_period_id);
+
+-- Nightly aggregation table for fast dashboard queries
+CREATE TABLE IF NOT EXISTS ai_usage_daily_summary (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  summary_date DATE NOT NULL,
+  gemini_tokens_k DECIMAL(10,3) DEFAULT 0,
+  claude_tokens_k DECIMAL(10,3) DEFAULT 0,
+  gpt_tokens_k DECIMAL(10,3) DEFAULT 0,
+  total_tokens_k DECIMAL(10,3) DEFAULT 0,
+  total_cost_microcents BIGINT DEFAULT 0,
+  call_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(workspace_id, summary_date)
+);
+```
+
+---
+
+**STEP 3 — BUILD THE AI METERING SERVICE**
+
+Create `server/services/billing/aiMeteringService.ts`:
+
+```typescript
+import { pool } from '../../db';
+import { 
+  AI_MODEL_COSTS, 
+  AI_TIER_LIMITS,
+  type AiModelKey 
+} from '../../../shared/billingConfig';
+import { notificationDeliveryService } from '../notificationDeliveryService';
+import { logger } from '../../utils/logger';
+
+interface RecordAiCallParams {
+  workspaceId: string;
+  workspaceTier: string;
+  modelName: AiModelKey;
+  callType: string;
+  inputTokens: number;
+  outputTokens: number;
+  responseTimeMs?: number;
+  triggeredByUserId?: string;
+  triggeredBySessionId?: string;
+  trinityActionId?: string;
+  employeeId?: string;
+  wasCached?: boolean;
+  fallbackUsed?: boolean;
+  fallbackFrom?: string;
+  claudeValidated?: boolean;
+  claudeValidationPassed?: boolean;
+  claudeValidationAction?: string;
+}
+
+export class AiMeteringService {
+
+  // ============================================
+  // RECORD EVERY AI CALL
+  // Called after every Gemini, Claude, or GPT call
+  // Non-blocking — never delays Trinity response
+  // ============================================
+  async recordAiCall(params: RecordAiCallParams): Promise<void> {
+    try {
+      const modelConfig = AI_MODEL_COSTS[params.modelName];
+      if (!modelConfig) {
+        logger.warn(`Unknown model for metering: ${params.modelName}`);
+        return;
+      }
+
+      // Calculate cost in microcents for precision
+      const inputCostMicrocents = Math.ceil(
+        (params.inputTokens / 1000) * modelConfig.inputPer1kTokensMicrocents
+      );
+      const outputCostMicrocents = Math.ceil(
+        (params.outputTokens / 1000) * modelConfig.outputPer1kTokensMicrocents
+      );
+      const totalCostMicrocents = inputCostMicrocents + outputCostMicrocents;
+      const totalTokens = params.inputTokens + params.outputTokens;
+
+      // Get or create usage period
+      const usagePeriod = await this.getOrCreateUsagePeriod(
+        params.workspaceId,
+        params.workspaceTier
+      );
+
+      // Write to call log — fire and forget
+      await pool.query(`
+        INSERT INTO ai_call_log (
+          workspace_id, usage_period_id,
+          model_name, model_role, call_type,
+          input_tokens, output_tokens, total_tokens,
+          cost_microcents,
+          triggered_by_user_id, triggered_by_session_id,
+          trinity_action_id, employee_id,
+          response_time_ms, was_cached, fallback_used, fallback_from,
+          claude_validated, claude_validation_passed, claude_validation_action
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+        )
+      `, [
+        params.workspaceId, usagePeriod.id,
+        params.modelName, modelConfig.role, params.callType,
+        params.inputTokens, params.outputTokens, totalTokens,
+        totalCostMicrocents,
+        params.triggeredByUserId || null,
+        params.triggeredBySessionId || null,
+        params.trinityActionId || null,
+        params.employeeId || null,
+        params.responseTimeMs || null,
+        params.wasCached || false,
+        params.fallbackUsed || false,
+        params.fallbackFrom || null,
+        params.claudeValidated || false,
+        params.claudeValidationPassed || null,
+        params.claudeValidationAction || null,
+      ]);
+
+      // Update period totals
+      const modelPrefix = this.getModelPrefix(params.modelName);
+      await pool.query(`
+        UPDATE workspace_ai_usage SET
+          ${modelPrefix}_input_tokens_k = 
+            ${modelPrefix}_input_tokens_k + $1,
+          ${modelPrefix}_output_tokens_k = 
+            ${modelPrefix}_output_tokens_k + $2,
+          ${modelPrefix}_cost_microcents = 
+            ${modelPrefix}_cost_microcents + $3,
+          total_tokens_k = total_tokens_k + $4,
+          total_cost_microcents = total_cost_microcents + $3,
+          updated_at = NOW()
+        WHERE id = $5
+      `, [
+        params.inputTokens / 1000,
+        params.outputTokens / 1000,
+        totalCostMicrocents,
+        totalTokens / 1000,
+        usagePeriod.id
+      ]);
+
+      // Check soft caps asynchronously
+      this.checkSoftCapsAndNotify(
+        params.workspaceId,
+        params.workspaceTier,
+        usagePeriod
+      ).catch(err => logger.error('Soft cap check error:', err));
+
+    } catch (err) {
+      // Metering must never break Trinity
+      logger.error('AI metering error (non-blocking):', err);
+    }
+  }
+
+  // ============================================
+  // PRE-CALL CHECK — SHOULD WE ALLOW THIS CALL?
+  // Returns { allowed: boolean, warning?: string }
+  // Free trial has hard cap — all others soft cap only
+  // ============================================
+  async checkUsageAllowed(
+    workspaceId: string,
+    tier: string,
+    estimatedTokens: number = 2000
+  ): Promise<{ allowed: boolean; warning?: string; approaching?: boolean }> {
+    const tierLimits = AI_TIER_LIMITS[tier as keyof typeof AI_TIER_LIMITS];
+    if (!tierLimits) return { allowed: true };
+
+    const usagePeriod = await this.getOrCreateUsagePeriod(workspaceId, tier);
+    const currentTokensK = Number(usagePeriod.total_tokens_k);
+    const estimatedTokensK = estimatedTokens / 1000;
+    const projectedTokensK = currentTokensK + estimatedTokensK;
+
+    // Hard cap — only free trial
+    if (tierLimits.hardCapK && projectedTokensK >= tierLimits.hardCapK) {
+      return {
+        allowed: false,
+        warning: `Monthly AI limit reached. Please upgrade to continue using Trinity.`
+      };
+    }
+
+    // Approaching soft cap warning
+    const softCapK = tierLimits.softCapK;
+    if (softCapK && currentTokensK >= softCapK * 0.9) {
+      return {
+        allowed: true,
+        approaching: true,
+        warning: `Trinity AI usage at ${Math.round((currentTokensK / softCapK) * 100)}% of monthly limit.`
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  // ============================================
+  // CALCULATE OVERAGE CHARGES FOR BILLING PERIOD
+  // Called by billing service at period end
+  // ============================================
+  async calculatePeriodOverage(
+    workspaceId: string,
+    periodStart: string
+  ): Promise<{ overageTokensK: number; overageChargesCents: number }> {
+    const usage = await pool.query(
+      `SELECT * FROM workspace_ai_usage 
+       WHERE workspace_id = $1 AND billing_period_start = $2`,
+      [workspaceId, periodStart]
+    );
+
+    if (!usage.rows[0]) return { overageTokensK: 0, overageChargesCents: 0 };
+
+    const u = usage.rows[0];
+    const totalTokensK = Number(u.total_tokens_k);
+    const includedTokensK = u.included_tokens_k;
+    const overagePer100kCents = u.overage_per_100k_tokens_cents;
+
+    if (totalTokensK <= includedTokensK || !overagePer100kCents) {
+      return { overageTokensK: 0, overageChargesCents: 0 };
+    }
+
+    const overageTokensK = totalTokensK - includedTokensK;
+    const overageChargesCents = Math.ceil(
+      (overageTokensK / 100) * overagePer100kCents
+    );
+
+    // Update usage record with overage
+    await pool.query(`
+      UPDATE workspace_ai_usage SET
+        overage_tokens_k = $1,
+        overage_charges_cents = $2
+      WHERE workspace_id = $3 AND billing_period_start = $4
+    `, [overageTokensK, overageChargesCents, workspaceId, periodStart]);
+
+    return { overageTokensK, overageChargesCents };
+  }
+
+  // ============================================
+  // SOFT CAP NOTIFICATIONS
+  // ============================================
+  private async checkSoftCapsAndNotify(
+    workspaceId: string,
+    tier: string,
+    usagePeriod: any
+  ): Promise<void> {
+    const tierLimits = AI_TIER_LIMITS[tier as keyof typeof AI_TIER_LIMITS];
+    if (!tierLimits?.softCapK) return;
+
+    const currentTokensK = Number(usagePeriod.total_tokens_k);
+    const softCapK = tierLimits.softCapK;
+    const pct = currentTokensK / softCapK;
+
+    // Refetch to get latest alert states
+    const latest = await pool.query(
+      `SELECT * FROM workspace_ai_usage WHERE id = $1`,
+      [usagePeriod.id]
+    );
+    const u = latest.rows[0];
+
+    const alerts = [
+      { threshold: 0.8, column: 'soft_cap_80pct_sent_at', 
+        pctLabel: '80%', type: 'ai_usage_80pct' },
+      { threshold: 0.9, column: 'soft_cap_90pct_sent_at', 
+        pctLabel: '90%', type: 'ai_usage_90pct' },
+      { threshold: 1.0, column: 'soft_cap_100pct_sent_at', 
+        pctLabel: '100%', type: 'ai_usage_at_cap' },
+    ];
+
+    for (const alert of alerts) {
+      if (pct >= alert.threshold && !u[alert.column]) {
+        await notificationDeliveryService.send({
+          workspaceId,
+          type: alert.type as any,
+          targetRoles: ['org_owner'],
+          data: {
+            currentTokensK: Math.round(currentTokensK),
+            softCapK,
+            percentUsed: Math.round(pct * 100),
+            pctLabel: alert.pctLabel,
+            tier,
+            overageRate: tierLimits.overagePer100kTokensCents,
+            daysLeftInPeriod: this.getDaysLeftInPeriod(),
+          }
+        });
+
+        await pool.query(
+          `UPDATE workspace_ai_usage SET ${alert.column} = NOW() WHERE id = $1`,
+          [usagePeriod.id]
+        );
+      }
+    }
+  }
+
+  // ============================================
+  // GET OR CREATE USAGE PERIOD
+  // ============================================
+  private async getOrCreateUsagePeriod(
+    workspaceId: string,
+    tier: string
+  ) {
+    const today = new Date();
+    const periodStart = new Date(
+      today.getFullYear(), today.getMonth(), 1
+    ).toISOString().split('T')[0];
+    const periodEnd = new Date(
+      today.getFullYear(), today.getMonth() + 1, 0
+    ).toISOString().split('T')[0];
+
+    const existing = await pool.query(
+      `SELECT * FROM workspace_ai_usage 
+       WHERE workspace_id = $1 AND billing_period_start = $2`,
+      [workspaceId, periodStart]
+    );
+    if (existing.rows[0]) return existing.rows[0];
+
+    const tierLimits = AI_TIER_LIMITS[tier as keyof typeof AI_TIER_LIMITS];
+    const created = await pool.query(`
+      INSERT INTO workspace_ai_usage (
+        workspace_id, billing_period_start, billing_period_end,
+        included_tokens_k, soft_cap_tokens_k,
+        overage_per_100k_tokens_cents
+      ) VALUES ($1,$2,$3,$4,$5,$6)
+      ON CONFLICT (workspace_id, billing_period_start) 
+      DO UPDATE SET updated_at = NOW()
+      RETURNING *
+    `, [
+      workspaceId, periodStart, periodEnd,
+      tierLimits?.monthlyTokenBudgetK || 1500,
+      tierLimits?.softCapK || 1200,
+      tierLimits?.overagePer100kTokensCents || 150,
+    ]);
+    return created.rows[0];
+  }
+
+  private getModelPrefix(modelName: string): string {
+    if (modelName.includes('gemini')) return 'gemini';
+    if (modelName.includes('claude')) return 'claude';
+    if (modelName.includes('gpt') || modelName.includes('openai')) return 'gpt';
+    return 'gemini'; // default
+  }
+
+  private getDaysLeftInPeriod(): number {
+    const today = new Date();
+    const lastDay = new Date(
+      today.getFullYear(), today.getMonth() + 1, 0
+    );
+    return lastDay.getDate() - today.getDate();
+  }
+}
+
+export const aiMeteringService = new AiMeteringService();
+```
+
+---
+
+**STEP 4 — WRAP EVERY AI CALL WITH METERING**
+
+Create `server/services/ai/aiCallWrapper.ts`:
+
+```typescript
+import { aiMeteringService } from '../billing/aiMeteringService';
+import { logger } from '../../utils/logger';
+
+interface AiCallContext {
+  workspaceId: string;
+  workspaceTier: string;
+  callType: string;
+  triggeredByUserId?: string;
+  triggeredBySessionId?: string;
+  trinityActionId?: string;
+  employeeId?: string;
+}
+
+// ============================================
+// WRAP GEMINI CALL — Primary Cortex
+// ============================================
+export async function withGeminiMetering<T>(
+  modelName: string,
+  context: AiCallContext,
+  geminiCall: () => Promise<{ response: T; usage: { inputTokens: number; outputTokens: number } }>
+): Promise<T> {
+  const start = Date.now();
+
+  // Pre-call check
+  const check = await aiMeteringService.checkUsageAllowed(
+    context.workspaceId,
+    context.workspaceTier,
+    2000 // estimated tokens
+  );
+
+  if (!check.allowed) {
+    throw new Error(check.warning || 'AI usage limit reached');
+  }
+
+  try {
+    const result = await geminiCall();
+    const responseTimeMs = Date.now() - start;
+
+    // Record metering — fire and forget — never blocks response
+    aiMeteringService.recordAiCall({
+      workspaceId: context.workspaceId,
+      workspaceTier: context.workspaceTier,
+      modelName: modelName as any,
+      callType: context.callType,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens,
+      responseTimeMs,
+      triggeredByUserId: context.triggeredByUserId,
+      triggeredBySessionId: context.triggeredBySessionId,
+      trinityActionId: context.trinityActionId,
+      employeeId: context.employeeId,
+    }).catch(err => logger.error('Gemini metering error:', err));
+
+    return result.response;
+  } catch (err) {
+    // Log failed call with 0 tokens — still track the attempt
+    aiMeteringService.recordAiCall({
+      workspaceId: context.workspaceId,
+      workspaceTier: context.workspaceTier,
+      modelName: modelName as any,
+      callType: `${context.callType}_failed`,
+      inputTokens: 0,
+      outputTokens: 0,
+      responseTimeMs: Date.now() - start,
+    }).catch(() => {});
+    throw err;
+  }
+}
+
+// ============================================
+// WRAP CLAUDE CALL — Consciousness/Judge
+// ============================================
+export async function withClaudeMetering<T>(
+  modelName: string,
+  context: AiCallContext & {
+    validationResult?: 'approved' | 'rewritten' | 'rejected';
+  },
+  claudeCall: () => Promise<{ 
+    response: T; 
+    usage: { input_tokens: number; output_tokens: number } 
+  }>
+): Promise<T> {
+  const start = Date.now();
+
+  try {
+    const result = await claudeCall();
+    const responseTimeMs = Date.now() - start;
+
+    aiMeteringService.recordAiCall({
+      workspaceId: context.workspaceId,
+      workspaceTier: context.workspaceTier,
+      modelName: modelName as any,
+      callType: context.callType,
+      inputTokens: result.usage.input_tokens,
+      outputTokens: result.usage.output_tokens,
+      responseTimeMs,
+      triggeredByUserId: context.triggeredByUserId,
+      triggeredBySessionId: context.triggeredBySessionId,
+      trinityActionId: context.trinityActionId,
+      claudeValidated: true,
+      claudeValidationPassed: context.validationResult !== 'rejected',
+      claudeValidationAction: context.validationResult || 'approved',
+    }).catch(err => logger.error('Claude metering error:', err));
+
+    return result.response;
+  } catch (err) {
+    throw err;
+  }
+}
+
+// ============================================
+// WRAP GPT CALL — Backbone Workhorse
+// ============================================
+export async function withGptMetering<T>(
+  modelName: string,
+  context: AiCallContext,
+  gptCall: () => Promise<{ 
+    response: T; 
+    usage: { prompt_tokens: number; completion_tokens: number } 
+  }>
+): Promise<T> {
+  const start = Date.now();
+
+  try {
+    const result = await gptCall();
+    const responseTimeMs = Date.now() - start;
+
+    aiMeteringService.recordAiCall({
+      workspaceId: context.workspaceId,
+      workspaceTier: context.workspaceTier,
+      modelName: modelName as any,
+      callType: context.callType,
+      inputTokens: result.usage.prompt_tokens,
+      outputTokens: result.usage.completion_tokens,
+      responseTimeMs,
+      triggeredByUserId: context.triggeredByUserId,
+      triggeredBySessionId: context.triggeredBySessionId,
+      trinityActionId: context.trinityActionId,
+    }).catch(err => logger.error('GPT metering error:', err));
+
+    return result.response;
+  } catch (err) {
+    throw err;
+  }
+}
+```
+
+---
+
+**STEP 5 — WIRE WRAPPERS INTO TRINITY BRAIN SERVICES**
+
+```bash
+# Find all Gemini generateContent calls and wrap them
+# For each file found in Step 0:
+
+# Pattern to find in Gemini services:
+# const response = await model.generateContent(prompt);
+# OR: const result = await chat.sendMessage(message);
+
+# Replace with:
+# const response = await withGeminiMetering(
+#   'gemini-2.5-pro',
+#   { workspaceId, workspaceTier: workspace.tier, callType: 'schedule_generation' },
+#   async () => {
+#     const raw = await model.generateContent(prompt);
+#     return {
+#       response: raw,
+#       usage: {
+#         inputTokens: raw.response.usageMetadata?.promptTokenCount || 0,
+#         outputTokens: raw.response.usageMetadata?.candidatesTokenCount || 0,
+#       }
+#     };
+#   }
+# );
+
+# Pattern for Claude calls:
+# const response = await anthropic.messages.create({...});
+
+# Replace with:
+# const response = await withClaudeMetering(
+#   'claude-sonnet-4-5',
+#   { workspaceId, workspaceTier: workspace.tier, callType: 'claude_validation' },
+#   async () => {
+#     const raw = await anthropic.messages.create({...});
+#     return {
+#       response: raw,
+#       usage: {
+#         input_tokens: raw.usage.input_tokens,
+#         output_tokens: raw.usage.output_tokens,
+#       }
+#     };
+#   }
+# );
+
+# Pattern for GPT calls:
+# const response = await openai.chat.completions.create({...});
+
+# Replace with:
+# const response = await withGptMetering(
+#   'gpt-4o',
+#   { workspaceId, workspaceTier: workspace.tier, callType: 'document_generation' },
+#   async () => {
+#     const raw = await openai.chat.completions.create({...});
+#     return {
+#       response: raw,
+#       usage: {
+#         prompt_tokens: raw.usage?.prompt_tokens || 0,
+#         completion_tokens: raw.usage?.completion_tokens || 0,
+#       }
+#     };
+#   }
+# );
+
+# Apply wrappers to every AI call site found in Step 0
+# Every single one — no exceptions
+```
+
+---
+
+**STEP 6 — ADD AI USAGE TO BILLING DASHBOARD**
+
+Create `client/src/components/billing/AiUsageDashboard.tsx`:
+
+```tsx
+// AI Usage Dashboard for org owners
+// Shows per-model usage, cost breakdown, soft cap status
+// Updates in real time via WebSocket
+
+// Required API endpoint:
+// GET /api/billing/ai-usage?period=current
+// Returns: {
+//   tier, includedTokensK, softCapK,
+//   geminiTokensK, claudeTokensK, gptTokensK,
+//   totalTokensK, totalCostMicrocents,
+//   overageTokensK, overageChargesCents,
+//   percentUsed, daysLeftInPeriod,
+//   dailyBreakdown: [{date, totalTokensK, costMicrocents}]
+// }
+
+// Visual elements:
+// - Progress bar: used vs included, color-coded green/yellow/red
+// - Breakdown donut chart: Gemini vs Claude vs GPT share
+// - Daily usage line chart last 30 days
+// - Cost breakdown: AI cost vs infrastructure cost vs margin
+// - Overage alert if over soft cap
+// - Upgrade prompt if approaching hard cap (free trial only)
+
+// Build this component and wire it into the billing settings page
+```
+
+---
+
+**STEP 7 — WIRE OVERAGE INTO PERIOD-END BILLING**
+
+```typescript
+// In server/services/billing/billingService.ts
+// Find the period-end billing function and add:
+
+// After existing seat overage calculation:
+const aiOverage = await aiMeteringService.calculatePeriodOverage(
+  workspaceId,
+  periodStart
+);
+
+if (aiOverage.overageChargesCents > 0) {
+  // Add AI overage line item to invoice
+  await addInvoiceLineItem(invoiceId, {
+    description: `Trinity AI Usage Overage — ${aiOverage.overageTokensK.toFixed(0)}k tokens over included limit`,
+    amountCents: aiOverage.overageChargesCents,
+    type: 'ai_overage',
+  });
+
+  // Mark period as invoiced
+  await pool.query(
+    `UPDATE workspace_ai_usage 
+     SET invoiced_at = NOW(), invoice_id = $1
+     WHERE workspace_id = $2 AND billing_period_start = $3`,
+    [invoiceId, workspaceId, periodStart]
+  );
+}
+```
+
+---
+
+**STEP 8 — VERIFICATION**
+
+```bash
+# 1. Every AI call site is wrapped
+grep -rn "generateContent\|sendMessage\|messages\.create\|chat\.completions\.create" \
+  server/ --include="*.ts" | grep -v node_modules | \
+  grep -v "withGeminiMetering\|withClaudeMetering\|withGptMetering" | \
+  grep -v "\.test\." | wc -l
+# Must be 0 — every call is wrapped
+
+# 2. Metering tables exist
+psql $DATABASE_URL -c "
+  SELECT table_name FROM information_schema.tables
+  WHERE table_schema = 'public'
+  AND table_name IN (
+    'workspace_ai_usage',
+    'ai_call_log',
+    'ai_usage_daily_summary'
+  )
+"
+# Must show all 3
+
+# 3. Test metering works — fire a Trinity action and verify log entry
+# Make a test Trinity chat request then check:
+psql $DATABASE_URL -c "
+  SELECT model_name, model_role, call_type,
+    input_tokens, output_tokens, total_tokens,
+    cost_microcents,
+    ROUND(cost_microcents::numeric / 10000, 4) as cost_dollars
+  FROM ai_call_log
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY created_at DESC LIMIT 10
+"
+
+# 4. Verify soft cap check works
+psql $DATABASE_URL -c "
+  SELECT workspace_id, billing_period_start,
+    included_tokens_k, soft_cap_tokens_k,
+    total_tokens_k,
+    ROUND((total_tokens_k / soft_cap_tokens_k::numeric) * 100, 1) as pct_used,
+    overage_per_100k_tokens_cents
+  FROM workspace_ai_usage
+  WHERE workspace_id = '[acme_id]'
+  ORDER BY billing_period_start DESC LIMIT 1
+"
+
+# 5. Verify cost basis math
+psql $DATABASE_URL -c "
+  SELECT 
+    model_name,
+    SUM(total_tokens) as total_tokens,
+    SUM(cost_microcents) as total_cost_microcents,
+    ROUND(SUM(cost_microcents)::numeric / 10000, 2) as total_cost_dollars,
+    ROUND(SUM(cost_microcents)::numeric / NULLIF(SUM(total_tokens),0) * 1000, 2) 
+      as cost_per_1k_tokens_microcents
+  FROM ai_call_log
+  WHERE workspace_id = '[acme_id]'
+  AND created_at > NOW() - INTERVAL '24 hours'
+  GROUP BY model_name
+  ORDER BY total_cost_microcents DESC
+"
+# Verify Gemini cheapest, Claude middle, GPT varies by task
+
+# 6. Zero TypeScript errors
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+# Must be 0
+
+# 7. Server starts clean
+curl -s http://localhost:5000/health | jq .status
+```
+
+---
+
+**CERTIFICATION:**
+
+```
+AI METERING PRODUCTION READY WHEN:
+
+COST BASIS:
+✅ AI_MODEL_COSTS in billingConfig has all 6 models
+✅ Gemini cheapest — primary cortex — most volume
+✅ Claude mid-price — consciousness — validates everything
+✅ GPT varies — workhorse — documents and extraction
+✅ Cost microcents precision preserved throughout
+
+SOFT CAPS PER TIER:
+✅ Free trial: 500k hard cap — blocked at limit
+✅ Starter: 1.5M included, warn at 1.2M, $1.50/100k overage
+✅ Professional: 12M included, warn at 9.6M, $1.20/100k overage
+✅ Business: 40M included, warn at 32M, $1.00/100k overage
+✅ Enterprise: 150M included, warn at 120M, $0.80/100k overage
+✅ 80%, 90%, 100% threshold alerts fire to org owner via NDS
+✅ Overage charges at correct rate — never hard blocked
+✅ Pre-call check for free trial hard cap
+
+TRACKING:
+✅ Every Gemini call wrapped with withGeminiMetering
+✅ Every Claude call wrapped with withClaudeMetering
+✅ Every GPT call wrapped with withGptMetering
+✅ Zero unwrapped AI calls anywhere in codebase
+✅ ai_call_log records every call with model, tokens, cost
+✅ workspace_ai_usage aggregates per period
+✅ Daily summary table for fast dashboard queries
+✅ Claude validation result tracked per validation call
+
+BILLING:
+✅ Period-end overage calculates from actual token usage
+✅ Overage line item adds to invoice automatically
+✅ Overage charges never applied to free trial
+✅ Margin verified: 33-47% on AI overage across tiers
+✅ $25/seat overage always profitable:
+   - Worst case supervisor: 48.5% margin
+   - Typical officer: 93.2% margin
+   - Blended: ~78% margin
+
+DASHBOARD:
+✅ Org owner sees usage by model in real time
+✅ Progress bar shows pct of monthly budget used
+✅ Daily usage chart shows 30-day trend
+✅ Cost breakdown shows Gemini vs Claude vs GPT
+✅ Overage alert shows current charges if over cap
+✅ Upgrade prompt shows for free trial hard cap
+
+MARGIN PROTECTION:
+✅ No workspace can consume unlimited AI at flat price
+✅ Every dollar of AI cost tracked and attributable
+✅ Platform profitable on every seat including overages
+✅ Gemini carrying 70-80% of volume at lowest cost
+✅ Claude adding quality control at controlled volume
+✅ GPT handling documents at task-appropriate cost
+```
+
+---
+
+Send that to Replit. When it comes back run the verification queries and paste the results. I want to see the actual cost per model from the first day of metering so we can confirm the math holds against real Trinity usage in ACME.

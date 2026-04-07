@@ -1,0 +1,24 @@
+To ensure a seamless launch of CoAIleague and verify that the Trinity AI intelligence layer is production-ready, testing should focus on the intersection of autonomous decision-making and financial transactions.
+Here are the critical areas to test for the credit-based system, sign-up flow, and Trinity's automation capabilities:
+1. The "Trinity" Automation Stress Test
+Since Trinity is designed to handle scheduling, payroll, and invoicing autonomously, you must verify its "reasoning" in edge cases:
+ * Conflict Resolution: Manually trigger a scheduling conflict (e.g., two guards booked for one shift) and see if Trinity resolves it or alerts a human based on your set parameters.
+ * 2 AM Automation: Simulate a "call-out" (guard cancels last minute) in the middle of the night. Verify if Trinity identifies an available guard, sends the notification, and updates the roster without manual intervention.
+ * Data Integrity: Ensure that manual changes made by an admin do not get "overwritten" by Trinity’s next autonomous cycle unless intended.
+2. Credit-Based System & Consumption
+You need to ensure the "Burn Rate" of credits matches the value delivered:
+ * Credit Triggering: Define exactly what "costs" a credit (e.g., one AI-generated schedule, one automated payroll export, or one Trinity-resolved shift). Test if credits are deducted in real-time.
+ * Low Balance Behavior: Test what happens when a user runs out of credits mid-automation. Does Trinity stop scheduling? Does the user get a "grace period" or an immediate notification?
+ * Refund Logic: If an automated task fails (e.g., a QuickBooks export error), test the mechanism for manual or automatic credit reversals.
+3. Sign-Up & Subscription Lifecycle
+The onboarding flow must be frictionless to convert "Free Trial" users:
+ * The "First 5 Minutes": Test the sign-up flow from a mobile device (since field ops often use mobile). Ensure the transition from account creation to the first "Trinity-powered" action is under 120 seconds.
+ * The Cancellation "Kill Switch": Verify that clicking "Cancel" immediately stops future billing but allows the user to use their remaining credits until the end of the period.
+ * Downgrade Logic: If a user moves from an Enterprise plan to a lower tier, verify which Trinity features are locked and how the system handles existing automated workflows that exceed the new tier's limits.
+4. Integration & Security (SOC 2 Readiness)
+ * QuickBooks/Payroll Sync: Perform a "Load Test" by exporting a payroll run for 50+ guards at once. Ensure Trinity maps the GPS-tracked hours to the payroll fields with 100% accuracy.
+ * Audit Logs: Because Trinity acts autonomously, there must be a clear "Audit Trail" for every action it takes. Test the visibility of these logs so an admin can see why Trinity made a specific scheduling change.
+Workforce Automation Platform Features
+This video provides a walkthrough of how administrative dashboards function in similar enterprise environments, which can help in structuring the user interface for Trinity’s automation logs.
+
+YouTube video views will be stored in your YouTube History, and your data will be stored and used by YouTube according to its Terms of Service

@@ -14,6 +14,8 @@ import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../he
 import specIndex from '../../../spec-index.json';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('cleanupAgentSubagent');
 
 interface UnusedFile {
   path: string;
@@ -77,9 +79,9 @@ class CleanupAgentSubagent {
           component.files.forEach((file: string) => this.specIndexedFiles.add(file));
         }
       }
-      console.log(`[CAS] Loaded ${this.specIndexedFiles.size} files from spec-index.json`);
+      log.info(`[CAS] Loaded ${this.specIndexedFiles.size} files from spec-index.json`);
     } catch (error) {
-      console.error('[CAS] Failed to load spec-index.json:', error);
+      log.error('[CAS] Failed to load spec-index.json:', error);
     }
   }
 
@@ -95,12 +97,12 @@ class CleanupAgentSubagent {
     const allowedRoots = ['attached_assets', 'client/src', 'server', 'shared'];
     const normalizedDir = path.normalize(directory);
     if (normalizedDir.includes('..') || path.isAbsolute(normalizedDir)) {
-      console.error('[CAS] Path traversal attempt blocked:', directory);
+      log.error('[CAS] Path traversal attempt blocked:', directory);
       return false;
     }
     const isAllowed = allowedRoots.some(root => normalizedDir.startsWith(root));
     if (!isAllowed) {
-      console.error('[CAS] Directory not in allowed roots:', directory);
+      log.error('[CAS] Directory not in allowed roots:', directory);
       return false;
     }
     return true;
@@ -158,7 +160,7 @@ class CleanupAgentSubagent {
         scanDuration: Date.now() - startTime
       };
     } catch (error) {
-      console.error('[CAS] Discovery error:', error);
+      log.error('[CAS] Discovery error:', error);
       return {
         unusedFiles: [],
         protectedFiles: [],
@@ -181,7 +183,7 @@ class CleanupAgentSubagent {
         }
       }
     } catch (error) {
-      console.error(`[CAS] Error reading directory ${dir}:`, error);
+      log.error(`[CAS] Error reading directory ${dir}:`, error);
     }
     return files;
   }
@@ -212,7 +214,7 @@ class CleanupAgentSubagent {
         }
       }
     } catch (error) {
-      console.error(`[CAS] Error searching ${dir}:`, error);
+      log.error(`[CAS] Error searching ${dir}:`, error);
     }
     return false;
   }
@@ -260,7 +262,7 @@ class CleanupAgentSubagent {
   private async requestLLMJudgeReview(proposal: CleanupProposal): Promise<{ score: number; reasoning: string }> {
     try {
       const result = await helpaiOrchestrator.executeAction({
-        actionId: 'judge.evaluate_risk',
+        actionId: 'security.evaluate_risk',
         category: 'automation',
         name: 'Evaluate Cleanup Risk',
         userId: 'system',
@@ -280,7 +282,7 @@ class CleanupAgentSubagent {
       const reasoning = result?.data?.reasoning;
 
       if (typeof score !== 'number' || score < 0 || score > 1) {
-        console.warn('[CAS] Invalid LLM Judge score, failing closed:', score);
+        log.warn('[CAS] Invalid LLM Judge score, failing closed:', score);
         return {
           score: 0.3,
           reasoning: 'Invalid score from LLM Judge - manual review required'
@@ -288,7 +290,7 @@ class CleanupAgentSubagent {
       }
 
       if (typeof reasoning !== 'string' || reasoning.length < 10) {
-        console.warn('[CAS] Missing LLM Judge reasoning, failing closed');
+        log.warn('[CAS] Missing LLM Judge reasoning, failing closed');
         return {
           score: 0.3,
           reasoning: 'Missing reasoning from LLM Judge - manual review required'
@@ -297,7 +299,7 @@ class CleanupAgentSubagent {
 
       return { score, reasoning };
     } catch (error) {
-      console.error('[CAS] LLM Judge review failed:', error);
+      log.error('[CAS] LLM Judge review failed:', error);
       return {
         score: 0.3,
         reasoning: 'LLM Judge unavailable - manual review required'
@@ -370,7 +372,7 @@ export function registerCleanupAgentActions(): void {
     name: 'Discover Unused Files',
     category: 'automation',
     description: 'Scan for unused files and assets in the codebase',
-    requiredRoles: ['root_admin', 'coo', 'cto', 'support_lead'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const result = await cleanupAgentSubagent.discoverUnusedAssets(request.payload?.directory || 'attached_assets');
@@ -394,7 +396,7 @@ export function registerCleanupAgentActions(): void {
     name: 'Create Cleanup Proposal',
     category: 'automation',
     description: 'Create a cleanup proposal for unused files with LLM-as-Judge review',
-    requiredRoles: ['root_admin', 'coo', 'cto', 'support_lead'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       if (!request.payload?.files || !Array.isArray(request.payload.files)) {
@@ -421,7 +423,7 @@ export function registerCleanupAgentActions(): void {
     name: 'Get Component by Spec ID',
     category: 'system',
     description: 'Retrieve component details from spec-index.json by ID',
-    requiredRoles: ['root_admin', 'coo', 'cto', 'support_lead', 'support_agent'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const component = await cleanupAgentSubagent.getComponentBySpecId(request.payload?.specId);
@@ -440,7 +442,7 @@ export function registerCleanupAgentActions(): void {
     name: 'Search Components',
     category: 'system',
     description: 'Search for components by name or intent in spec-index.json',
-    requiredRoles: ['root_admin', 'coo', 'cto', 'support_lead', 'support_agent'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const matches = await cleanupAgentSubagent.findComponentByName(request.payload?.searchTerm || '');
@@ -459,7 +461,7 @@ export function registerCleanupAgentActions(): void {
     name: 'Get Editing Rules',
     category: 'system',
     description: 'Get AI editing rules for a component based on its tier',
-    requiredRoles: ['root_admin', 'coo', 'cto', 'support_lead', 'support_agent'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const rules = await cleanupAgentSubagent.getEditingRulesForComponent(request.payload?.specId);
@@ -478,7 +480,7 @@ export function registerCleanupAgentActions(): void {
     name: 'Get Spec Index Stats',
     category: 'system',
     description: 'Get statistics about the spec-index.json registry',
-    requiredRoles: ['root_admin', 'coo', 'cto', 'support_lead', 'support_agent'],
+    requiredRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const stats = cleanupAgentSubagent.getStats();
@@ -492,5 +494,5 @@ export function registerCleanupAgentActions(): void {
     }
   });
 
-  console.log('[CAS] Registered 6 Cleanup Agent Subagent actions');
+  log.info('[CAS] Registered 6 Cleanup Agent Subagent actions');
 }

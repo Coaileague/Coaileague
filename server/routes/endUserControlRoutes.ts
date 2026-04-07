@@ -12,6 +12,9 @@ import { eq, or, ilike, and, sql, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { workspaces, users, employees, clients, systemAuditLogs } from '@shared/schema';
 import { type AuthenticatedRequest } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('EndUserControlRoutes');
+
 
 export const endUserControlRouter = Router();
 
@@ -31,16 +34,15 @@ function requireSupportRole(req: AuthenticatedRequest, res: Response, next: Next
 async function logAdminAction(actorId: string, action: string, details: any) {
   try {
     await db.insert(systemAuditLogs).values({
-      actorId,
-      actorType: 'platform_support',
+      userId: actorId,
       action,
-      resourceType: 'workspace',
-      resourceId: details.workspaceId || 'unknown',
-      details,
-      severity: action.includes('suspend') ? 'high' : 'medium',
+      entityType: 'workspace',
+      entityId: details.workspaceId || 'unknown',
+      workspaceId: details.workspaceId || undefined,
+      metadata: details,
     });
   } catch (error) {
-    console.error('[EndUserControl] Failed to log action:', error);
+    log.error('[EndUserControl] Failed to log action:', error);
   }
 }
 
@@ -104,9 +106,9 @@ endUserControlRouter.get('/workspaces', requireSupportRole, async (req: Authenti
     );
 
     res.json(enrichedResults);
-  } catch (error: any) {
-    console.error('[EndUserControl] Search error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Search error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -158,9 +160,9 @@ endUserControlRouter.get('/workspace/:id', requireSupportRole, async (req: Authe
       users: workspaceUsers,
       accessConfig: [],
     });
-  } catch (error: any) {
-    console.error('[EndUserControl] Get workspace error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Get workspace error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -192,9 +194,9 @@ endUserControlRouter.post('/suspend', requireSupportRole, async (req: Authentica
     });
 
     res.json({ success: true, message: 'Workspace suspended' });
-  } catch (error: any) {
-    console.error('[EndUserControl] Suspend error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Suspend error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -225,9 +227,9 @@ endUserControlRouter.post('/unsuspend', requireSupportRole, async (req: Authenti
     });
 
     res.json({ success: true, message: 'Workspace unsuspended' });
-  } catch (error: any) {
-    console.error('[EndUserControl] Unsuspend error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Unsuspend error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -263,15 +265,15 @@ endUserControlRouter.post('/toggle-ai-brain', requireSupportRole, async (req: Au
     });
 
     res.json({ success: true, message: enabled ? 'AI Brain enabled' : 'AI Brain suspended' });
-  } catch (error: any) {
-    console.error('[EndUserControl] Toggle AI Brain error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Toggle AI Brain error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
 /**
  * PATCH /api/admin/end-users/access-config
- * Update user access configuration
+ * Update user access configuration (role, permissions)
  */
 endUserControlRouter.patch('/access-config', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -281,16 +283,210 @@ endUserControlRouter.patch('/access-config', requireSupportRole, async (req: Aut
       return res.status(400).json({ error: 'Workspace ID and User ID are required' });
     }
 
+    if (!config || typeof config !== 'object') {
+      return res.status(400).json({ error: 'Config object is required' });
+    }
+
+    const allowedFields: Record<string, boolean> = { role: true, isActive: true, loginAttempts: true, lockedUntil: true };
+    const updateData: Record<string, any> = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (allowedFields[key]) {
+        updateData[key] = value;
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'No valid config fields provided. Allowed: role, isActive, loginAttempts, lockedUntil' });
+    }
+
+    const [targetUser] = await db.select({ id: users.id, email: users.email, currentWorkspaceId: users.currentWorkspaceId })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.currentWorkspaceId, workspaceId)))
+      .limit(1);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found in specified workspace' });
+    }
+
+    await db.update(users).set(updateData).where(eq(users.id, userId));
+
+    // G24-04: If password was reset or account locked/unlocked, invalidate sessions
+    if (updateData.passwordHash || updateData.lockedUntil) {
+      const { authService } = await import('../services/authService');
+      await authService.logoutAllSessions(userId);
+      log.info(`[EndUserControl] Sessions invalidated for user ${userId} due to security update`);
+    }
+
     await logAdminAction(req.user?.id || 'system', 'access_config_updated', {
       workspaceId,
       userId,
-      config,
+      targetEmail: targetUser.email,
+      updatedFields: Object.keys(updateData),
+      config: updateData,
     });
 
-    res.json({ success: true, message: 'Access configuration updated' });
-  } catch (error: any) {
-    console.error('[EndUserControl] Update access config error:', error);
-    res.status(500).json({ error: error.message });
+    res.json({ success: true, message: 'Access configuration updated', updatedFields: Object.keys(updateData) });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Update access config error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
+  }
+});
+
+// ============================================================================
+// Individual end-user freeze/suspend/lock capability
+// These operate at the employee level (not workspace level) so support staff
+// can target individual problematic end-users without affecting the whole org.
+// ============================================================================
+
+const PROTECTIVE_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'];
+const RESTORATIVE_ROLES = [...PROTECTIVE_ROLES, 'support_agent'];
+
+function requireProtectiveRole(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const userRole = req.platformRole || 'none';
+  if (!PROTECTIVE_ROLES.includes(userRole)) {
+    return res.status(403).json({ error: 'Protective actions require support_manager or higher' });
+  }
+  next();
+}
+
+endUserControlRouter.post('/freeze-user', requireSupportRole, requireProtectiveRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { workspaceId, userId, reason } = req.body;
+    if (!workspaceId || !userId || !reason) {
+      return res.status(400).json({ error: 'Workspace ID, User ID, and reason are required' });
+    }
+
+    const [targetUser] = await db.select({ id: users.id, email: users.email })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.currentWorkspaceId, workspaceId)))
+      .limit(1);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found in specified workspace' });
+    }
+
+    await db.update(users).set({ lockedUntil: new Date('2099-12-31'), loginAttempts: 999 }).where(eq(users.id, userId));
+
+    // G24-04: Invalidate all sessions for frozen user
+    const { authService } = await import('../services/authService');
+    await authService.logoutAllSessions(userId);
+
+    await logAdminAction(req.user?.id || 'system', 'user_frozen', {
+      workspaceId,
+      userId,
+      targetEmail: targetUser.email,
+      reason,
+      frozenBy: req.user?.id,
+      actionType: 'individual_user_freeze',
+    });
+
+    res.json({ success: true, message: 'User account frozen', userId, reason });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Freeze user error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
+  }
+});
+
+endUserControlRouter.post('/unfreeze-user', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { workspaceId, userId } = req.body;
+    if (!workspaceId || !userId) {
+      return res.status(400).json({ error: 'Workspace ID and User ID are required' });
+    }
+
+    const [targetUser] = await db.select({ id: users.id, email: users.email })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.currentWorkspaceId, workspaceId)))
+      .limit(1);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found in specified workspace' });
+    }
+
+    await db.update(users).set({ lockedUntil: null, loginAttempts: 0 }).where(eq(users.id, userId));
+
+    await logAdminAction(req.user?.id || 'system', 'user_unfrozen', {
+      workspaceId,
+      userId,
+      targetEmail: targetUser.email,
+      unfrozenBy: req.user?.id,
+      actionType: 'individual_user_unfreeze',
+    });
+
+    res.json({ success: true, message: 'User account unfrozen', userId });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Unfreeze user error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
+  }
+});
+
+endUserControlRouter.post('/suspend-employee', requireSupportRole, requireProtectiveRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { workspaceId, employeeId, reason } = req.body;
+    if (!workspaceId || !employeeId || !reason) {
+      return res.status(400).json({ error: 'Workspace ID, Employee ID, and reason are required' });
+    }
+
+    const employee = await db.select()
+      .from(employees)
+      .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+      .limit(1);
+    if (!employee.length) {
+      return res.status(404).json({ error: 'Employee not found in specified workspace' });
+    }
+
+    await db.update(employees).set({ isActive: false }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
+
+    // G24-04: Invalidate all sessions for suspended employee
+    const { authService } = await import('../services/authService');
+    const [empUser] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, employeeId)).limit(1);
+    if (empUser?.userId) {
+      await authService.logoutAllSessions(empUser.userId);
+    }
+
+    await logAdminAction(req.user?.id || 'system', 'employee_suspended_by_support', {
+      workspaceId,
+      employeeId,
+      employeeName: `${employee[0].firstName} ${employee[0].lastName}`,
+      reason,
+      suspendedBy: req.user?.id,
+      actionType: 'individual_employee_suspend',
+    });
+
+    res.json({ success: true, message: 'Employee suspended', employeeId, reason });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Suspend employee error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
+  }
+});
+
+endUserControlRouter.post('/reactivate-employee', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { workspaceId, employeeId } = req.body;
+    if (!workspaceId || !employeeId) {
+      return res.status(400).json({ error: 'Workspace ID and Employee ID are required' });
+    }
+
+    const employee = await db.select()
+      .from(employees)
+      .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)))
+      .limit(1);
+    if (!employee.length) {
+      return res.status(404).json({ error: 'Employee not found in specified workspace' });
+    }
+
+    await db.update(employees).set({ isActive: true }).where(and(eq(employees.id, employeeId), eq(employees.workspaceId, workspaceId)));
+
+    await logAdminAction(req.user?.id || 'system', 'employee_reactivated_by_support', {
+      workspaceId,
+      employeeId,
+      employeeName: `${employee[0].firstName} ${employee[0].lastName}`,
+      reactivatedBy: req.user?.id,
+      actionType: 'individual_employee_reactivate',
+    });
+
+    res.json({ success: true, message: 'Employee reactivated', employeeId });
+  } catch (error: unknown) {
+    log.error('[EndUserControl] Reactivate employee error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 

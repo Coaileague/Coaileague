@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +17,7 @@ import { Trash2, Plus, AlertTriangle, CheckCircle, AlertCircle, Scale } from "lu
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { garnishmentTypesConfig, priorityConfig, payrollMessages } from "@/config/payrollConfig";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const garnishmentSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),
@@ -49,8 +49,9 @@ export default function PayrollGarnishmentsPage() {
   });
 
   // Fetch employees
-  const { data: employees, isLoading: loadingEmployees } = useQuery<any[]>({
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery<{ data: any[] }, Error, any[]>({
     queryKey: ['/api/employees'],
+    select: (res) => res?.data ?? [],
     enabled: !!user,
   });
 
@@ -116,34 +117,34 @@ export default function PayrollGarnishmentsPage() {
   // Sort by priority (lower = higher priority)
   const sortedGarnishments = [...(garnishments || [])].sort((a, b) => (a.priority || 999) - (b.priority || 999));
 
-  return (
-    <div className="space-y-6 p-6">
-      <div className="text-center space-y-4 mb-8 p-6 border-b">
-        <CoAIleagueLogo 
-          width={200} 
-          height={50} 
-          showTagline={true}
-          showWordmark={true}
-        />
-      </div>
+  const addGarnishmentButton = (
+    <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+      <UniversalModalTrigger asChild>
+        <Button className="gap-2" data-testid="button-add-garnishment">
+          <Plus className="w-4 h-4" />
+          {payrollMessages.garnishments.addButton}
+        </Button>
+      </UniversalModalTrigger>
+    </UniversalModal>
+  );
 
-      <div className="flex items-center justify-between gap-4 mobile-flex-col">
-        <div className="mobile-w-full">
-          <h1 className="text-3xl font-bold tracking-tight mobile-text-xl">{payrollMessages.garnishments.title}</h1>
-          <p className="text-muted-foreground mt-2 mobile-text-sm">{payrollMessages.garnishments.description}</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" data-testid="button-add-garnishment">
-              <Plus className="w-4 h-4" />
-              {payrollMessages.garnishments.addButton}
-            </Button>
-          </DialogTrigger>
-          <DialogContent size="md">
-            <DialogHeader>
-              <DialogTitle>{payrollMessages.garnishments.addDialogTitle}</DialogTitle>
-              <DialogDescription>{payrollMessages.garnishments.addDialogDescription}</DialogDescription>
-            </DialogHeader>
+  const pageConfig: CanvasPageConfig = {
+    id: 'payroll-garnishments',
+    title: payrollMessages.garnishments.title,
+    subtitle: payrollMessages.garnishments.description,
+    category: 'operations',
+    headerActions: addGarnishmentButton,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6">
+        <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+          <UniversalModalContent size="md">
+            <UniversalModalHeader>
+              <UniversalModalTitle>{payrollMessages.garnishments.addDialogTitle}</UniversalModalTitle>
+              <UniversalModalDescription>{payrollMessages.garnishments.addDialogDescription}</UniversalModalDescription>
+            </UniversalModalHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit((data) => addGarnishmentMutation.mutate(data))} className="space-y-4">
                 <FormField
@@ -294,8 +295,8 @@ export default function PayrollGarnishmentsPage() {
                 </Button>
               </form>
             </Form>
-          </DialogContent>
-        </Dialog>
+          </UniversalModalContent>
+        </UniversalModal>
       </div>
 
       <Card>
@@ -352,7 +353,7 @@ export default function PayrollGarnishmentsPage() {
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t mobile-flex-col mobile-gap-2">
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t mobile-flex-col mobile-gap-2">
                       <p className="text-xs text-muted-foreground mobile-w-full">{priorityConfig[garnishment.priority as keyof typeof priorityConfig]?.label || `Priority ${garnishment.priority}`}</p>
                       <Button
                         variant="ghost"
@@ -371,6 +372,6 @@ export default function PayrollGarnishmentsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </CanvasHubPage>
   );
 }

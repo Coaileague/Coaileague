@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Zap, TrendingUp, Shield, LayoutDashboard, Sparkles, ArrowRight, Lock } from "lucide-react";
+import { Activity, Zap, TrendingUp, Shield, LayoutDashboard, ArrowRight, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 export default function PlatformFamilyPage() {
   const modules = [
@@ -36,7 +37,7 @@ export default function PlatformFamilyPage() {
       icon: Shield,
       description: "Administrative command center with system health, user management, and platform controls",
       features: ["System Health", "User Management", "Platform Config", "Security"],
-      url: "/admin/command",
+      url: "/root-admin-dashboard",
       color: "from-violet-500 to-purple-500",
       adminOnly: true
     },
@@ -50,28 +51,21 @@ export default function PlatformFamilyPage() {
     }
   ];
 
-  return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-red-500/20 to-purple-500/20 border border-red-500/30">
-              <Sparkles className="h-12 w-12 text-red-400" />
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-red-400 via-orange-400 to-blue-400 bg-clip-text text-transparent">
-            Platform & Control
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Enterprise-grade platform administration, diagnostics, and integration management for complete control
-          </p>
-          <Badge variant="outline" className="text-sm px-4 py-1">
-            5 Modules
-          </Badge>
-        </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'category-platform',
+    title: 'Platform & Control',
+    subtitle: 'Enterprise-grade platform administration, diagnostics, and integration management for complete control',
+    category: 'admin',
+    headerActions: (
+      <Badge variant="outline" className="text-sm px-4 py-1">
+        5 Modules
+      </Badge>
+    ),
+  };
 
-        {/* Modules Grid */}
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-8">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => {
             const Icon = module.icon;
@@ -115,7 +109,6 @@ export default function PlatformFamilyPage() {
           })}
         </div>
 
-        {/* Security & Compliance */}
         <Card className="border-2 border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
@@ -126,25 +119,25 @@ export default function PlatformFamilyPage() {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">🔒 SOC 2 Type II Compliant</h3>
+                <h3 className="font-bold text-lg">SOC 2 Type II Compliant</h3>
                 <p className="text-sm text-muted-foreground">
                   Full audit trails, encryption at rest and in transit, and comprehensive access controls
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">🛡️ Role-Based Access Control</h3>
+                <h3 className="font-bold text-lg">Role-Based Access Control</h3>
                 <p className="text-sm text-muted-foreground">
                   Granular permissions system with root, admin, manager, and employee role hierarchies
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">📊 Real-Time Monitoring</h3>
+                <h3 className="font-bold text-lg">Real-Time Monitoring</h3>
                 <p className="text-sm text-muted-foreground">
                   Live system health dashboards, performance metrics, and automated alerting
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold text-lg">🔌 Enterprise Integrations</h3>
+                <h3 className="font-bold text-lg">Enterprise Integrations</h3>
                 <p className="text-sm text-muted-foreground">
                   Connect to QuickBooks, Salesforce, Slack, ADP, and 50+ enterprise platforms
                 </p>
@@ -153,6 +146,6 @@ export default function PlatformFamilyPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

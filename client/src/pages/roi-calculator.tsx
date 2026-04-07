@@ -1,575 +1,874 @@
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { useState, useCallback } from "react";
+
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { 
-  Calculator, 
-  DollarSign, 
-  Users, 
-  Clock, 
-  TrendingDown, 
-  CheckCircle2, 
-  ArrowRight, 
-  Building2, 
+import { Checkbox } from "@/components/ui/checkbox";
+import { UniversalHeader } from "@/components/universal-header";
+import { Footer } from "@/components/footer";
+import { SEO, PAGE_SEO } from "@/components/seo";
+import { Link } from "wouter";
+import {
+  DollarSign,
+  Users,
+  Calculator,
+  TrendingDown,
+  CheckCircle2,
+  ArrowRight,
+  Building2,
   Shield,
-  Brain,
-  Zap,
-  BarChart3,
-  Star,
+  Clock,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { recommendTier, PRICING_TIERS } from "@/config/pricing";
 
-const roiFormSchema = z.object({
-  numberOfGuards: z.coerce.number().min(1, "Enter at least 1 guard"),
-  averageHoursPerWeek: z.coerce.number().min(1).max(80, "Maximum 80 hours"),
-  currentOvertimePercent: z.coerce.number().min(0).max(100),
-  averageHourlyRate: z.coerce.number().min(10).max(100),
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
-const leadFormSchema = z.object({
-  companyName: z.string().min(1, "Company name required"),
-  contactName: z.string().min(1, "Your name required"),
-  contactEmail: z.string().email("Valid email required"),
-  contactPhone: z.string().optional(),
-  contactTitle: z.string().optional(),
-  industry: z.string().default("security"),
-});
+interface ROIInputs {
+  // Section 1 — Team
+  officerCount: number;
+  clientSites: number;
+  stateCount: number;
 
-type ROIFormData = z.infer<typeof roiFormSchema>;
-type LeadFormData = z.infer<typeof leadFormSchema>;
+  // Operations staff
+  hasOpsManager: boolean;
+  opsMgrSalary: number;
+  schedulerCount: number;
+  schedulerAvgSalary: number;
+  hasHrAdmin: boolean;
+  hrAdminSalary: number;
+  hasPayrollCoord: boolean;
+  payrollCoordSalary: number;
+  hasBillingPerson: boolean;
+  billingPersonSalary: number;
+  hasComplianceCoord: boolean;
+  complianceCoordSalary: number;
 
-interface ROIResults {
-  estimatedAnnualSavings: number;
-  estimatedOvertimeReduction: number;
-  estimatedSchedulingTimeReduction: number;
-  payrollProcessingSavings: number;
-  compliancePenaltyAvoidance: number;
+  // Section 2 — Software
+  schedulingSoftwareMonthlyCost: number;
+  payrollProvider: string;
+  payrollMonthlyCost: number;
+  payrollEmployeeCount: number;
+  hrSoftwareMonthlyCost: number;
+  invoicingSoftwareMonthlyCost: number;
+  complianceSoftwareMonthlyCost: number;
+  otherSoftwareMonthlyCost: number;
+
+  // Section 3 — Pain points
+  monthlyOvertimeCost: number;
+  annualTurnoverRate: number;
+  replacementCostPerOfficer: number;
+  complianceViolationsCategory: string;
+  complianceFinesPaid: number;
+  contractsLost: number;
+  avgContractAnnualValue: number;
+  mgmtHoursPerWeek: number;
+  mgmtHourlyValue: number;
+
+  // Section 4 — Invoicing
+  monthlyInvoicingVolume: number;
+  currentCardRate: number;
+  currentAchFee: number;
 }
 
-function calculateROI(data: ROIFormData): ROIResults {
-  const { numberOfGuards, averageHoursPerWeek, currentOvertimePercent, averageHourlyRate } = data;
-  
-  const annualHours = numberOfGuards * averageHoursPerWeek * 52;
-  const currentOvertimeHours = annualHours * (currentOvertimePercent / 100);
-  const overtimeRate = averageHourlyRate * 1.5;
-  
-  const currentOvertimeCost = currentOvertimeHours * overtimeRate;
-  const projectedOvertimeReduction = 0.35;
-  const estimatedOvertimeSavings = currentOvertimeCost * projectedOvertimeReduction;
-  
-  const managerHoursPerWeekScheduling = Math.ceil(numberOfGuards / 15) * 8;
-  const schedulingTimeSavings = managerHoursPerWeekScheduling * 52 * 0.6 * 35;
-  
-  const payrollProcessingSavings = numberOfGuards * 2 * 12;
-  const compliancePenaltyAvoidance = numberOfGuards * 50;
-  
+const defaultInputs: ROIInputs = {
+  officerCount: 50,
+  clientSites: 12,
+  stateCount: 1,
+
+  hasOpsManager: true,
+  opsMgrSalary: 72000,
+  schedulerCount: 2,
+  schedulerAvgSalary: 38000,
+  hasHrAdmin: false,
+  hrAdminSalary: 48000,
+  hasPayrollCoord: false,
+  payrollCoordSalary: 44000,
+  hasBillingPerson: false,
+  billingPersonSalary: 42000,
+  hasComplianceCoord: false,
+  complianceCoordSalary: 52000,
+
+  schedulingSoftwareMonthlyCost: 150,
+  payrollProvider: "quickbooks",
+  payrollMonthlyCost: 300,
+  payrollEmployeeCount: 50,
+  hrSoftwareMonthlyCost: 0,
+  invoicingSoftwareMonthlyCost: 80,
+  complianceSoftwareMonthlyCost: 0,
+  otherSoftwareMonthlyCost: 0,
+
+  monthlyOvertimeCost: 6500,
+  annualTurnoverRate: 80,
+  replacementCostPerOfficer: 4500,
+  complianceViolationsCategory: "0",
+  complianceFinesPaid: 0,
+  contractsLost: 0,
+  avgContractAnnualValue: 180000,
+  mgmtHoursPerWeek: 20,
+  mgmtHourlyValue: 45,
+
+  monthlyInvoicingVolume: 120000,
+  currentCardRate: 2.9,
+  currentAchFee: 1.5,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Calculation engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+function calculateROI(inp: ROIInputs) {
+  // --- Current annual costs ---
+  const opsManagerAnnual   = inp.hasOpsManager   ? inp.opsMgrSalary    * 1.18 : 0; // +18% benefits
+  const schedulersAnnual   = inp.schedulerCount  * inp.schedulerAvgSalary * 1.18;
+  const hrAdminAnnual      = inp.hasHrAdmin      ? inp.hrAdminSalary    * 1.18 : 0;
+  const payrollCoordAnnual = inp.hasPayrollCoord ? inp.payrollCoordSalary * 1.18 : 0;
+  const billingAnnual      = inp.hasBillingPerson ? inp.billingPersonSalary * 1.18 : 0;
+  const complianceAnnual   = inp.hasComplianceCoord ? inp.complianceCoordSalary * 1.18 : 0;
+  const totalStaffAnnual   = opsManagerAnnual + schedulersAnnual + hrAdminAnnual +
+                             payrollCoordAnnual + billingAnnual + complianceAnnual;
+
+  const softwareAnnual = (
+    inp.schedulingSoftwareMonthlyCost +
+    inp.payrollMonthlyCost +
+    inp.hrSoftwareMonthlyCost +
+    inp.invoicingSoftwareMonthlyCost +
+    inp.complianceSoftwareMonthlyCost +
+    inp.otherSoftwareMonthlyCost
+  ) * 12;
+
+  const overtimeAnnual   = inp.monthlyOvertimeCost * 12;
+  const turnoverCost     = inp.officerCount * (inp.annualTurnoverRate / 100) * inp.replacementCostPerOfficer;
+  const complianceCost   = inp.complianceFinesPaid;
+  const lostClientCost   = inp.contractsLost * inp.avgContractAnnualValue;
+  const ownerTimeCost    = inp.mgmtHoursPerWeek * 52 * inp.mgmtHourlyValue;
+
+  // Payment processing premium
+  const annualInvoicingVolume = inp.monthlyInvoicingVolume * 12;
+  const currentCardCost   = annualInvoicingVolume * (inp.currentCardRate / 100);
+  const coaCardRate       = inp.officerCount <= 100 ? 2.4 : 2.2; // professional vs business
+  const coaCardCost       = annualInvoicingVolume * (coaCardRate / 100);
+  const cardSavings       = Math.max(0, currentCardCost - coaCardCost);
+
+  const payrollTransactions = inp.payrollEmployeeCount * 24; // 24 payroll runs/yr (bi-weekly)
+  const currentAchTotal   = payrollTransactions * inp.currentAchFee;
+  const coaAchFee         = inp.officerCount <= 100 ? 0.50 : 0.40;
+  const coaAchTotal       = payrollTransactions * coaAchFee;
+  const achSavings        = Math.max(0, currentAchTotal - coaAchTotal);
+
+  // Payroll processing premium (per employee per run)
+  const runsPerYear = 24;
+  const currentPayrollPerEmpPerRun = inp.payrollProvider === "manual" ? 0 : 
+                                     inp.payrollProvider === "adp" ? 12 :
+                                     inp.payrollProvider === "gusto" ? 9 : 8; // quickbooks
+  const coaPayrollPerEmpPerRun     = inp.officerCount <= 100 ? 4.95 : 3.95;
+  const payrollPremium = Math.max(0, (currentPayrollPerEmpPerRun - coaPayrollPerEmpPerRun) * inp.payrollEmployeeCount * runsPerYear);
+
+  const totalCurrentAnnual = totalStaffAnnual + softwareAnnual + overtimeAnnual + turnoverCost +
+                             complianceCost + lostClientCost + ownerTimeCost;
+
+  // --- What CoAIleague eliminates ---
+  const savedOpsManager    = opsManagerAnnual;                          // 100% eliminated
+  const savedSchedulers    = schedulersAnnual;                          // 100% eliminated
+  const savedHrAdmin       = hrAdminAnnual * 0.60;                     // 60% reduced
+  const savedPayrollCoord  = payrollCoordAnnual;                       // 100% eliminated
+  const savedBilling       = billingAnnual;                             // 100% eliminated
+  const savedCompliance    = complianceAnnual;                         // 100% eliminated
+  const savedSchedulingSw  = inp.schedulingSoftwareMonthlyCost * 12;   // eliminated
+  const savedPayrollSw     = inp.payrollMonthlyCost * 12;              // eliminated
+  const savedInvoicingSw   = inp.invoicingSoftwareMonthlyCost * 12;    // eliminated
+  const savedOvertime      = inp.monthlyOvertimeCost * 0.30 * 12;      // 30% reduction
+  const savedTurnover      = turnoverCost * 0.25;                      // 25% reduction
+  const savedComplFines    = complianceCost * 0.85;                    // 85% prevention rate
+  const savedOwnerTime     = ownerTimeCost * 0.65;                     // 65% of time recovered
+  const savedCardProcessing = cardSavings;
+  const savedAch            = achSavings;
+  const savedPayrollFees    = payrollPremium;
+
+  const totalAnnualSavings = savedOpsManager + savedSchedulers + savedHrAdmin + savedPayrollCoord +
+    savedBilling + savedCompliance + savedSchedulingSw + savedPayrollSw + savedInvoicingSw +
+    savedOvertime + savedTurnover + savedComplFines + savedOwnerTime + savedCardProcessing +
+    savedAch + savedPayrollFees;
+
+  // --- CoAIleague annual cost ---
+  const tier         = recommendTier(inp.officerCount);
+  const tierConfig   = PRICING_TIERS[tier];
+  const baseMonthly  = tierConfig.monthlyPrice ?? 0;
+  const officersOver = Math.max(0, inp.officerCount - (tierConfig.seatsIncluded ?? 0));
+  const officerOverageMonthly = officersOver * (tierConfig.seatOverageMonthly ?? 0);
+  const estimatedPayrollFees  = coaPayrollPerEmpPerRun * inp.payrollEmployeeCount * runsPerYear;
+  const estimatedCardFees     = coaCardCost;
+  const totalAnnualCoaleague  = (baseMonthly + officerOverageMonthly) * 12 + estimatedPayrollFees + estimatedCardFees;
+
+  // --- Net result ---
+  const netAnnualSavings  = totalAnnualSavings - totalAnnualCoaleague;
+  const roi               = totalAnnualCoaleague > 0 ? (netAnnualSavings / totalAnnualCoaleague) * 100 : 0;
+  const paybackDays       = totalAnnualSavings > 0 ? Math.round((totalAnnualCoaleague / totalAnnualSavings) * 365) : 999;
+
   return {
-    estimatedAnnualSavings: Math.round(
-      estimatedOvertimeSavings + 
-      schedulingTimeSavings + 
-      payrollProcessingSavings + 
-      compliancePenaltyAvoidance
-    ),
-    estimatedOvertimeReduction: Math.round(currentOvertimeCost * projectedOvertimeReduction),
-    estimatedSchedulingTimeReduction: Math.round(schedulingTimeSavings),
-    payrollProcessingSavings: Math.round(payrollProcessingSavings),
-    compliancePenaltyAvoidance: Math.round(compliancePenaltyAvoidance),
+    // Inputs
+    tier, tierConfig, baseMonthly, officersOver, officerOverageMonthly,
+    // Current costs breakdown
+    totalStaffAnnual, opsManagerAnnual, schedulersAnnual, hrAdminAnnual,
+    payrollCoordAnnual, billingAnnual, complianceAnnual,
+    softwareAnnual, overtimeAnnual, turnoverCost, complianceCost,
+    lostClientCost, ownerTimeCost, totalCurrentAnnual,
+    // Savings breakdown
+    savedOpsManager, savedSchedulers, savedHrAdmin, savedPayrollCoord,
+    savedBilling, savedCompliance, savedSchedulingSw, savedPayrollSw,
+    savedInvoicingSw, savedOvertime, savedTurnover, savedComplFines,
+    savedOwnerTime, savedCardProcessing, savedAch, savedPayrollFees,
+    totalAnnualSavings,
+    // CoAIleague cost
+    estimatedPayrollFees, estimatedCardFees, totalAnnualCoaleague,
+    // Net
+    netAnnualSavings, roi, paybackDays,
+    // Payroll comparison
+    currentPayrollPerEmpPerRun, coaPayrollPerEmpPerRun,
+    currentCardRate: inp.currentCardRate, coaCardRate,
+    annualInvoicingVolume,
   };
 }
 
-export default function ROICalculator() {
-  const [step, setStep] = useState<'calculate' | 'results' | 'contact'>('calculate');
-  const [roiResults, setRoiResults] = useState<ROIResults | null>(null);
-  const [roiInputs, setRoiInputs] = useState<ROIFormData | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const { toast } = useToast();
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper components
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const statsQuery = useQuery({
-    queryKey: ['/api/public/leads/stats'],
-  });
+function fmt(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `$${Math.round(n).toLocaleString()}`;
+  return `$${Math.round(n)}`;
+}
 
-  const roiForm = useForm<ROIFormData>({
-    resolver: zodResolver(roiFormSchema),
-    defaultValues: {
-      numberOfGuards: 25,
-      averageHoursPerWeek: 40,
-      currentOvertimePercent: 15,
-      averageHourlyRate: 18,
-    },
-  });
+function pct(n: number): string { return `${Math.round(n)}%`; }
 
-  const leadForm = useForm<LeadFormData>({
-    resolver: zodResolver(leadFormSchema),
-    defaultValues: {
-      industry: "security",
-    },
-  });
-
-  const leadMutation = useMutation({
-    mutationFn: async (data: LeadFormData & { roiData?: ROIResults & ROIFormData }) => {
-      return apiRequest('/api/public/leads', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-    },
-    onSuccess: () => {
-      setSubmitted(true);
-      toast({ title: "Thank you! We'll contact you within 24 hours." });
-    },
-    onError: () => {
-      toast({ title: "Something went wrong. Please try again.", variant: "destructive" });
-    },
-  });
-
-  const onCalculate = (data: ROIFormData) => {
-    const results = calculateROI(data);
-    setRoiResults(results);
-    setRoiInputs(data);
-    setStep('results');
-  };
-
-  const onSubmitLead = (data: LeadFormData) => {
-    const submitData = {
-      ...data,
-      estimatedEmployees: roiInputs?.numberOfGuards,
-      roiData: roiResults && roiInputs ? {
-        ...roiInputs,
-        ...roiResults,
-      } : undefined,
-    };
-    leadMutation.mutate(submitData);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const stats = statsQuery.data as { totalCompanies: string; totalGuardsManaged: string; averageSavings: string; satisfactionRate: string } | undefined;
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg text-center">
-          <CardContent className="pt-12 pb-8">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Thank You!</h2>
-            <p className="text-muted-foreground mb-6">
-              Our team will contact you within 24 hours to discuss how CoAIleague 
-              can help you save {roiResults ? formatCurrency(roiResults.estimatedAnnualSavings) : 'thousands'} annually.
-            </p>
-            <div className="bg-primary/10 rounded-lg p-4 text-sm">
-              <p className="font-medium text-primary">Your Estimated Annual Savings</p>
-              <p className="text-3xl font-bold text-primary mt-1">
-                {roiResults ? formatCurrency(roiResults.estimatedAnnualSavings) : '--'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
+function NumberInput({
+  label, value, onChange, prefix = "$", suffix = "", min = 0, step = 1, hint,
+}: {
+  label: string; value: number; onChange: (v: number) => void;
+  prefix?: string; suffix?: string; min?: number; step?: number; hint?: string;
+}) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-4 py-8 md:py-16">
-        <div className="text-center mb-12">
-          <Badge variant="outline" className="mb-4 text-primary border-primary/30">
-            <Brain className="w-3 h-3 mr-1" />
-            AI-Powered Workforce Management
-          </Badge>
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
-            Calculate Your ROI with CoAIleague
-          </h1>
-          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-            See how much your security company could save with AI-powered scheduling, 
-            GPS time tracking, and automated compliance management.
-          </p>
-        </div>
-
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-4xl mx-auto">
-            <div className="bg-white/5 backdrop-blur rounded-lg p-4 text-center border border-white/10">
-              <Building2 className="w-6 h-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{stats.totalCompanies}</p>
-              <p className="text-sm text-slate-400">Companies</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur rounded-lg p-4 text-center border border-white/10">
-              <Users className="w-6 h-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{stats.totalGuardsManaged}</p>
-              <p className="text-sm text-slate-400">Guards Managed</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur rounded-lg p-4 text-center border border-white/10">
-              <TrendingDown className="w-6 h-6 text-green-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{stats.averageSavings}</p>
-              <p className="text-sm text-slate-400">Avg. Savings</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur rounded-lg p-4 text-center border border-white/10">
-              <Star className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{stats.satisfactionRate}</p>
-              <p className="text-sm text-slate-400">Satisfaction</p>
-            </div>
-          </div>
+    <div className="space-y-1">
+      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      <div className="relative flex items-center">
+        {prefix && (
+          <span className="absolute left-3 text-sm text-muted-foreground">{prefix}</span>
         )}
-
-        <div className="max-w-5xl mx-auto">
-          {step === 'calculate' && (
-            <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Calculator className="w-6 h-6 text-primary" />
-                  <CardTitle>Enter Your Current Operations</CardTitle>
-                </div>
-                <CardDescription>
-                  Tell us about your workforce to see your potential savings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...roiForm}>
-                  <form onSubmit={roiForm.handleSubmit(onCalculate)} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <FormField
-                        control={roiForm.control}
-                        name="numberOfGuards"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Users className="w-4 h-4" />
-                              Number of Guards/Employees
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="25" 
-                                {...field}
-                                data-testid="input-guards"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={roiForm.control}
-                        name="averageHoursPerWeek"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              Average Hours per Week
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="40" 
-                                {...field}
-                                data-testid="input-hours"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={roiForm.control}
-                        name="currentOvertimePercent"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <TrendingDown className="w-4 h-4" />
-                              Current Overtime % of Hours
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="15" 
-                                {...field}
-                                data-testid="input-overtime"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={roiForm.control}
-                        name="averageHourlyRate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <DollarSign className="w-4 h-4" />
-                              Average Hourly Rate ($)
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="18" 
-                                {...field}
-                                data-testid="input-rate"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Button type="submit" size="lg" className="w-full" data-testid="button-calculate">
-                      <Calculator className="w-4 h-4 mr-2" />
-                      Calculate My Savings
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          )}
-
-          {step === 'results' && roiResults && (
-            <div className="space-y-6">
-              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
-                <CardHeader className="text-center pb-2">
-                  <CardTitle className="text-lg text-muted-foreground">Your Estimated Annual Savings</CardTitle>
-                  <p className="text-5xl md:text-6xl font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(roiResults.estimatedAnnualSavings)}
-                  </p>
-                </CardHeader>
-              </Card>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
-                        <TrendingDown className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Overtime Reduction</p>
-                        <p className="text-2xl font-bold">{formatCurrency(roiResults.estimatedOvertimeReduction)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">35% reduction through AI scheduling</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center shrink-0">
-                        <Clock className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Scheduling Time Saved</p>
-                        <p className="text-2xl font-bold">{formatCurrency(roiResults.estimatedSchedulingTimeReduction)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">60% less time on manual scheduling</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center shrink-0">
-                        <Zap className="w-6 h-6 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Payroll Automation</p>
-                        <p className="text-2xl font-bold">{formatCurrency(roiResults.payrollProcessingSavings)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Automated timesheet processing</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center shrink-0">
-                        <Shield className="w-6 h-6 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Compliance Protection</p>
-                        <p className="text-2xl font-bold">{formatCurrency(roiResults.compliancePenaltyAvoidance)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">50-state labor law automation</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="flex gap-4 justify-center">
-                <Button variant="outline" onClick={() => setStep('calculate')} data-testid="button-recalculate">
-                  Recalculate
-                </Button>
-                <Button size="lg" onClick={() => setStep('contact')} data-testid="button-get-demo">
-                  Get Your Free Assessment
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === 'contact' && (
-            <Card className="bg-white/95 dark:bg-slate-900/95 backdrop-blur max-w-lg mx-auto">
-              <CardHeader>
-                <CardTitle>Get Your Free Assessment</CardTitle>
-                <CardDescription>
-                  Our team will analyze your operations and show you exactly how to 
-                  save {roiResults ? formatCurrency(roiResults.estimatedAnnualSavings) : 'thousands'} annually.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...leadForm}>
-                  <form onSubmit={leadForm.handleSubmit(onSubmitLead)} className="space-y-4">
-                    <FormField
-                      control={leadForm.control}
-                      name="companyName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="ABC Security Services" {...field} data-testid="input-company" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={leadForm.control}
-                      name="contactName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Your Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Smith" {...field} data-testid="input-name" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={leadForm.control}
-                      name="contactEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="john@abcsecurity.com" {...field} data-testid="input-email" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={leadForm.control}
-                      name="contactPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone (Optional)</FormLabel>
-                          <FormControl>
-                            <Input type="tel" placeholder="(555) 123-4567" {...field} data-testid="input-phone" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={leadForm.control}
-                      name="industry"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Industry</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-industry">
-                                <SelectValue placeholder="Select industry" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="security">Security Services</SelectItem>
-                              <SelectItem value="healthcare">Healthcare</SelectItem>
-                              <SelectItem value="cleaning">Cleaning/Janitorial</SelectItem>
-                              <SelectItem value="construction">Construction</SelectItem>
-                              <SelectItem value="property_management">Property Management</SelectItem>
-                              <SelectItem value="events">Event Staffing</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button 
-                      type="submit" 
-                      size="lg" 
-                      className="w-full" 
-                      disabled={leadMutation.isPending}
-                      data-testid="button-submit-lead"
-                    >
-                      {leadMutation.isPending ? 'Submitting...' : 'Get My Free Assessment'}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-              <CardFooter className="justify-center">
-                <Button variant="link" onClick={() => setStep('results')} className="text-sm">
-                  Back to Results
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
-        </div>
-
-        <div className="mt-16 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-white text-center mb-8">Why Security Companies Choose CoAIleague</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white/5 backdrop-blur rounded-lg p-6 border border-white/10">
-              <Brain className="w-10 h-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">AI-Powered Scheduling</h3>
-              <p className="text-slate-400 text-sm">
-                Trinity AI creates optimal schedules in seconds, matching the right guards to the right sites.
-              </p>
-            </div>
-            <div className="bg-white/5 backdrop-blur rounded-lg p-6 border border-white/10">
-              <BarChart3 className="w-10 h-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">GPS Time Tracking</h3>
-              <p className="text-slate-400 text-sm">
-                Geofenced clock-in/out with real-time verification. No more buddy punching or timesheet fraud.
-              </p>
-            </div>
-            <div className="bg-white/5 backdrop-blur rounded-lg p-6 border border-white/10">
-              <Shield className="w-10 h-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">50-State Compliance</h3>
-              <p className="text-slate-400 text-sm">
-                Automatic break scheduling, certification tracking, and labor law compliance for all 50 states.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Input
+          type="number"
+          value={value || ""}
+          min={min}
+          step={step}
+          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          className={prefix ? "pl-7" : ""}
+        />
+        {suffix && (
+          <span className="absolute right-3 text-sm text-muted-foreground">{suffix}</span>
+        )}
       </div>
     </div>
+  );
+}
+
+function SavingsRow({ label, amount, note }: { label: string; amount: number; note?: string }) {
+  if (amount <= 0) return null;
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
+      <div>
+        <span className="text-sm text-foreground">{label}</span>
+        {note && <span className="text-xs text-muted-foreground ml-2">{note}</span>}
+      </div>
+      <span className="text-sm font-semibold text-green-400">{fmt(amount)}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function ROICalculator() {
+  const [inp, setInp] = useState<ROIInputs>(defaultInputs);
+  const [showSection2, setShowSection2] = useState(true);
+  const [showSection3, setShowSection3] = useState(true);
+  const [showSection4, setShowSection4] = useState(true);
+
+  const update = useCallback(<K extends keyof ROIInputs>(key: K, val: ROIInputs[K]) => {
+    setInp(prev => ({ ...prev, [key]: val }));
+  }, []);
+
+  const result = calculateROI(inp);
+  const isStrategic = result.tier === "strategic";
+
+  return (
+    <>
+      <SEO
+        title={`ROI Calculator — ${PLATFORM_NAME}`}
+        description="See exactly how much you save replacing schedulers, HR, payroll, and compliance coordinators with Trinity AI. Real numbers, real savings."
+      />
+      <UniversalHeader />
+      <main className="min-h-screen bg-background">
+        {/* Hero */}
+        <section className="border-b border-border bg-card py-12">
+          <div className="max-w-5xl mx-auto px-4 text-center">
+            <Badge variant="secondary" className="mb-4">ROI Calculator</Badge>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              What Trinity Eliminates from Your Books
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              This is not an estimate of savings. It is an accounting of what you are currently paying — and what you stop paying the day Trinity starts.
+            </p>
+          </div>
+        </section>
+
+        <div className="max-w-5xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-5 gap-8">
+          {/* ── Left: Inputs ── */}
+          <div className="lg:col-span-3 space-y-6">
+
+            {/* Section 1 — Team */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Users className="w-5 h-5 text-primary" />
+                  Your Current Team
+                </CardTitle>
+                <CardDescription>What Trinity replaces on your payroll</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <NumberInput
+                    label="Security officers"
+                    value={inp.officerCount}
+                    onChange={v => update("officerCount", v)}
+                    prefix=""
+                    hint="Active officers on roster"
+                  />
+                  <NumberInput
+                    label="Active client sites"
+                    value={inp.clientSites}
+                    onChange={v => update("clientSites", v)}
+                    prefix=""
+                  />
+                </div>
+                <NumberInput
+                  label="States you operate in"
+                  value={inp.stateCount}
+                  onChange={v => update("stateCount", v)}
+                  prefix=""
+                  hint="1 state = home state compliance only; 2+ = multi-state"
+                />
+
+                <Separator />
+                <p className="text-sm font-semibold text-foreground">Operations Staff You Currently Employ</p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="hasOpsManager"
+                      checked={inp.hasOpsManager}
+                      onCheckedChange={v => update("hasOpsManager", Boolean(v))}
+                      data-testid="checkbox-ops-manager"
+                    />
+                    <Label htmlFor="hasOpsManager" className="flex-1 cursor-pointer">
+                      Operations Manager / Deputy Chief
+                    </Label>
+                    {inp.hasOpsManager && (
+                      <NumberInput
+                        label=""
+                        value={inp.opsMgrSalary}
+                        onChange={v => update("opsMgrSalary", v)}
+                        hint="Annual salary"
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="hasSchedulers"
+                        checked={inp.schedulerCount > 0}
+                        onCheckedChange={v => update("schedulerCount", v ? 1 : 0)}
+                        data-testid="checkbox-schedulers"
+                      />
+                      <Label htmlFor="hasSchedulers" className="cursor-pointer">Dedicated Scheduler(s)</Label>
+                    </div>
+                    {inp.schedulerCount > 0 && (
+                      <div className="grid grid-cols-2 gap-3 ml-7">
+                        <NumberInput
+                          label="How many"
+                          value={inp.schedulerCount}
+                          onChange={v => update("schedulerCount", v)}
+                          prefix=""
+                          min={1}
+                        />
+                        <NumberInput
+                          label="Avg annual salary each"
+                          value={inp.schedulerAvgSalary}
+                          onChange={v => update("schedulerAvgSalary", v)}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {[
+                    { key: "hasHrAdmin" as keyof ROIInputs, salaryKey: "hrAdminSalary" as keyof ROIInputs, label: "HR Administrator", defSalary: 48000 },
+                    { key: "hasPayrollCoord" as keyof ROIInputs, salaryKey: "payrollCoordSalary" as keyof ROIInputs, label: "Payroll Coordinator", defSalary: 44000 },
+                    { key: "hasBillingPerson" as keyof ROIInputs, salaryKey: "billingPersonSalary" as keyof ROIInputs, label: "Billing / Invoicing Person", defSalary: 42000 },
+                    { key: "hasComplianceCoord" as keyof ROIInputs, salaryKey: "complianceCoordSalary" as keyof ROIInputs, label: "Compliance Coordinator", defSalary: 52000 },
+                  ].map(({ key, salaryKey, label }) => (
+                    <div key={key} className="flex items-center gap-3">
+                      <Checkbox
+                        id={key}
+                        checked={Boolean(inp[key])}
+                        onCheckedChange={v => update(key, Boolean(v) as ROIInputs[typeof key])}
+                        data-testid={`checkbox-${key}`}
+                      />
+                      <Label htmlFor={key} className="flex-1 cursor-pointer">{label}</Label>
+                      {inp[key] && (
+                        <NumberInput
+                          label=""
+                          value={inp[salaryKey] as number}
+                          onChange={v => update(salaryKey, v as ROIInputs[typeof salaryKey])}
+                          hint="Annual salary"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Section 2 — Software */}
+            <Card>
+              <CardHeader
+                className="cursor-pointer"
+                onClick={() => setShowSection2(p => !p)}
+              >
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <span className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-primary" />
+                    Current Software Costs
+                  </span>
+                  {showSection2 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </CardTitle>
+              </CardHeader>
+              {showSection2 && (
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <NumberInput
+                      label="Scheduling software (monthly)"
+                      value={inp.schedulingSoftwareMonthlyCost}
+                      onChange={v => update("schedulingSoftwareMonthlyCost", v)}
+                    />
+                    <NumberInput
+                      label="HR software (monthly)"
+                      value={inp.hrSoftwareMonthlyCost}
+                      onChange={v => update("hrSoftwareMonthlyCost", v)}
+                    />
+                    <NumberInput
+                      label="Invoicing software (monthly)"
+                      value={inp.invoicingSoftwareMonthlyCost}
+                      onChange={v => update("invoicingSoftwareMonthlyCost", v)}
+                    />
+                    <NumberInput
+                      label="Compliance tracking (monthly)"
+                      value={inp.complianceSoftwareMonthlyCost}
+                      onChange={v => update("complianceSoftwareMonthlyCost", v)}
+                    />
+                    <NumberInput
+                      label="Other workforce software (monthly)"
+                      value={inp.otherSoftwareMonthlyCost}
+                      onChange={v => update("otherSoftwareMonthlyCost", v)}
+                    />
+                  </div>
+                  <Separator />
+                  <p className="text-sm font-semibold text-foreground">Payroll Processing</p>
+                  <div className="space-y-1">
+                    <Label className="text-sm">Current provider</Label>
+                    <Select
+                      value={inp.payrollProvider}
+                      onValueChange={v => update("payrollProvider", v)}
+                    >
+                      <SelectTrigger data-testid="select-payroll-provider">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="quickbooks">QuickBooks Payroll</SelectItem>
+                        <SelectItem value="gusto">Gusto</SelectItem>
+                        <SelectItem value="adp">ADP</SelectItem>
+                        <SelectItem value="paychex">Paychex</SelectItem>
+                        <SelectItem value="manual">Manual / In-house</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <NumberInput
+                      label="Monthly payroll processing cost"
+                      value={inp.payrollMonthlyCost}
+                      onChange={v => update("payrollMonthlyCost", v)}
+                    />
+                    <NumberInput
+                      label="Employees on payroll"
+                      value={inp.payrollEmployeeCount}
+                      onChange={v => update("payrollEmployeeCount", v)}
+                      prefix=""
+                    />
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Section 3 — Pain Points */}
+            <Card>
+              <CardHeader
+                className="cursor-pointer"
+                onClick={() => setShowSection3(p => !p)}
+              >
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <span className="flex items-center gap-2">
+                    <TrendingDown className="w-5 h-5 text-primary" />
+                    Current Pain Points
+                  </span>
+                  {showSection3 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </CardTitle>
+              </CardHeader>
+              {showSection3 && (
+                <CardContent className="space-y-4">
+                  <NumberInput
+                    label="Estimated monthly overtime costs"
+                    value={inp.monthlyOvertimeCost}
+                    onChange={v => update("monthlyOvertimeCost", v)}
+                    hint="Trinity reduces this by an estimated 30%"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <NumberInput
+                      label="Annual employee turnover rate"
+                      value={inp.annualTurnoverRate}
+                      onChange={v => update("annualTurnoverRate", v)}
+                      prefix=""
+                      suffix="%"
+                      hint="Industry avg: 80–150%"
+                    />
+                    <NumberInput
+                      label="Cost to replace one officer"
+                      value={inp.replacementCostPerOfficer}
+                      onChange={v => update("replacementCostPerOfficer", v)}
+                      hint="Recruiting + training. Default: $4,500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm">Compliance violations in last 2 years</Label>
+                    <Select
+                      value={inp.complianceViolationsCategory}
+                      onValueChange={v => update("complianceViolationsCategory", v)}
+                    >
+                      <SelectTrigger data-testid="select-compliance-violations">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">None</SelectItem>
+                        <SelectItem value="1">1–2 violations</SelectItem>
+                        <SelectItem value="3">3–5 violations</SelectItem>
+                        <SelectItem value="5">5+ violations</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <NumberInput
+                    label="Estimated total fines paid"
+                    value={inp.complianceFinesPaid}
+                    onChange={v => update("complianceFinesPaid", v)}
+                    hint="Leave $0 if none"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <NumberInput
+                      label="Client contracts lost (last 12 mo)"
+                      value={inp.contractsLost}
+                      onChange={v => update("contractsLost", v)}
+                      prefix=""
+                    />
+                    <NumberInput
+                      label="Avg annual value per lost contract"
+                      value={inp.avgContractAnnualValue}
+                      onChange={v => update("avgContractAnnualValue", v)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <NumberInput
+                      label="Hrs/week you spend on operations"
+                      value={inp.mgmtHoursPerWeek}
+                      onChange={v => update("mgmtHoursPerWeek", v)}
+                      prefix=""
+                      suffix="hrs"
+                    />
+                    <NumberInput
+                      label="Your hourly value (salary ÷ 2,080)"
+                      value={inp.mgmtHourlyValue}
+                      onChange={v => update("mgmtHourlyValue", v)}
+                    />
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Section 4 — Invoicing */}
+            <Card>
+              <CardHeader
+                className="cursor-pointer"
+                onClick={() => setShowSection4(p => !p)}
+              >
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <span className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-primary" />
+                    Current Invoicing
+                  </span>
+                  {showSection4 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </CardTitle>
+              </CardHeader>
+              {showSection4 && (
+                <CardContent className="space-y-4">
+                  <NumberInput
+                    label="Monthly invoicing volume"
+                    value={inp.monthlyInvoicingVolume}
+                    onChange={v => update("monthlyInvoicingVolume", v)}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <NumberInput
+                      label="Current card processing rate"
+                      value={inp.currentCardRate}
+                      onChange={v => update("currentCardRate", v)}
+                      prefix=""
+                      suffix="%"
+                      hint="e.g. 2.9 for QuickBooks"
+                    />
+                    <NumberInput
+                      label="Current ACH fee per transaction"
+                      value={inp.currentAchFee}
+                      onChange={v => update("currentAchFee", v)}
+                      hint="e.g. $1.50 for QuickBooks"
+                    />
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          </div>
+
+          {/* ── Right: Results ── */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* Big numbers */}
+            <Card className="border-primary/30 bg-card">
+              <CardContent className="pt-6 space-y-4">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-1">Net Annual Savings</p>
+                  <p className="text-4xl font-bold text-green-400">{fmt(result.netAnnualSavings)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">per year with {PLATFORM_NAME}</p>
+                </div>
+                <Separator />
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{pct(result.roi)}</p>
+                    <p className="text-xs text-muted-foreground">First-year ROI</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">
+                      {result.paybackDays < 365 ? `${result.paybackDays} days` : "Year 2+"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Payback period</p>
+                  </div>
+                </div>
+                <div className="bg-muted/40 rounded-md p-3 text-center">
+                  <p className="text-xs text-muted-foreground">Recommended plan</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {isStrategic ? "Strategic — Contact Us" : `${result.tierConfig.displayName} — ${fmt(result.baseMonthly)}/mo`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Current costs */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Your Current Annual Overhead</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <div className="flex justify-between text-sm py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">Operations staff (w/ benefits)</span>
+                  <span className="font-medium">{fmt(result.totalStaffAnnual)}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">Software stack</span>
+                  <span className="font-medium">{fmt(result.softwareAnnual)}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">Overtime waste</span>
+                  <span className="font-medium">{fmt(result.overtimeAnnual)}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">Turnover cost</span>
+                  <span className="font-medium">{fmt(result.turnoverCost)}</span>
+                </div>
+                {result.ownerTimeCost > 0 && (
+                  <div className="flex justify-between text-sm py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">Your time cost</span>
+                    <span className="font-medium">{fmt(result.ownerTimeCost)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm py-2 font-semibold border-t border-border">
+                  <span>Total Annual Overhead</span>
+                  <span className="text-red-400">{fmt(result.totalCurrentAnnual)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Savings breakdown */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-green-400">What {PLATFORM_NAME} Eliminates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SavingsRow label="Operations Manager" amount={result.savedOpsManager} note="eliminated" />
+                <SavingsRow label="Schedulers" amount={result.savedSchedulers} note="eliminated" />
+                <SavingsRow label="HR Admin" amount={result.savedHrAdmin} note="60% reduced" />
+                <SavingsRow label="Payroll Coordinator" amount={result.savedPayrollCoord} note="eliminated" />
+                <SavingsRow label="Billing Person" amount={result.savedBilling} note="eliminated" />
+                <SavingsRow label="Compliance Coordinator" amount={result.savedCompliance} note="eliminated" />
+                <SavingsRow label="Scheduling software" amount={result.savedSchedulingSw} />
+                <SavingsRow label="Payroll software" amount={result.savedPayrollSw} />
+                <SavingsRow label="Invoicing software" amount={result.savedInvoicingSw} />
+                <SavingsRow label="Overtime reduction (30%)" amount={result.savedOvertime} />
+                <SavingsRow label="Turnover reduction (25%)" amount={result.savedTurnover} />
+                <SavingsRow label="Compliance protection" amount={result.savedComplFines} />
+                <SavingsRow label="Owner time recovered" amount={result.savedOwnerTime} />
+                <SavingsRow label="Card processing savings" amount={result.savedCardProcessing} />
+                <SavingsRow label="ACH savings" amount={result.savedAch} />
+                <SavingsRow label="Payroll fee savings" amount={result.savedPayrollFees} />
+                <div className="flex justify-between text-sm py-2 font-semibold border-t border-border mt-2">
+                  <span>Total Annual Savings</span>
+                  <span className="text-green-400">{fmt(result.totalAnnualSavings)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* CoAIleague cost */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Your {PLATFORM_NAME} Investment</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <div className="flex justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">
+                    {isStrategic ? "Strategic" : `${result.tierConfig.displayName} base`}
+                  </span>
+                  <span>{isStrategic ? "Custom" : fmt((result.baseMonthly + result.officerOverageMonthly) * 12)}</span>
+                </div>
+                {result.estimatedPayrollFees > 0 && (
+                  <div className="flex justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">Payroll service fees (est.)</span>
+                    <span>{fmt(result.estimatedPayrollFees)}</span>
+                  </div>
+                )}
+                {result.estimatedCardFees > 0 && (
+                  <div className="flex justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">Payment processing (est.)</span>
+                    <span>{fmt(result.estimatedCardFees)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-2 font-semibold border-t border-border">
+                  <span>Total Annual Investment</span>
+                  <span>{isStrategic ? "Custom" : fmt(result.totalAnnualCoaleague)}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payroll comparison */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Payroll Processing — You vs {PLATFORM_NAME}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 text-muted-foreground font-medium"></th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">You Pay Now</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">{PLATFORM_NAME}</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium text-green-400">You Save</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-border/40">
+                        <td className="py-2">Per employee/run</td>
+                        <td className="text-right py-2">${result.currentPayrollPerEmpPerRun.toFixed(2)}</td>
+                        <td className="text-right py-2">${result.coaPayrollPerEmpPerRun.toFixed(2)}</td>
+                        <td className="text-right py-2 text-green-400">
+                          ${(result.currentPayrollPerEmpPerRun - result.coaPayrollPerEmpPerRun).toFixed(2)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2">Annual savings</td>
+                        <td className="text-right py-2"></td>
+                        <td className="text-right py-2"></td>
+                        <td className="text-right py-2 font-semibold text-green-400">
+                          {fmt(result.savedPayrollFees)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  {PLATFORM_NAME} processes payroll internally — no QuickBooks, no Gusto, no ADP.
+                  You get the same direct deposit, tax filing, and year-end forms at 60–75% less cost.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* CTA */}
+            <div className="space-y-3">
+              {isStrategic ? (
+                <Link href="/pricing">
+                  <Button className="w-full" size="lg" data-testid="button-get-strategic-quote">
+                    Get Strategic Quote
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/register">
+                  <Button className="w-full" size="lg" data-testid="button-start-trial">
+                    Start Free 14-Day Trial — No Credit Card Required
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
+              )}
+              <Link href="/pricing">
+                <Button variant="outline" className="w-full" data-testid="button-view-pricing">
+                  View Full Pricing
+                </Button>
+              </Link>
+            </div>
+
+            <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-md">
+              <Shield className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                Estimates based on industry averages. Your actual savings may be higher.
+                Critical operations (panic alerts, incidents, compliance) never stop
+                regardless of usage — no hard cutoffs.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
   );
 }

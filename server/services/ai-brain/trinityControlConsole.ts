@@ -13,6 +13,7 @@
  * Frontend → Trinity → This Console → Database → This Console → Frontend
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { 
   trinityThoughtSignatures,
@@ -23,6 +24,8 @@ import {
 import { eq, desc, and, gte, sql } from 'drizzle-orm';
 import { aiBrainEvents } from './internalEventEmitter';
 import { realTimeBridge } from './realTimeBridge';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityControlConsole');
 
 // Types for Control Console
 export type ThoughtType = 'reasoning' | 'planning' | 'diagnosis' | 'reflection' | 'decision' | 'observation';
@@ -139,7 +142,7 @@ class TrinityControlConsoleService {
 
   private constructor() {
     this.initializeEventListeners();
-    console.log('[TrinityControlConsole] Initialized - Real-time cognitive streaming active');
+    log.info('[TrinityControlConsole] Initialized - Real-time cognitive streaming active');
   }
 
   static getInstance(): TrinityControlConsoleService {
@@ -221,10 +224,10 @@ class TrinityControlConsoleService {
       // Also emit via realTimeBridge for mascot reactions
       realTimeBridge.triggerMascotThought(thought.content, 5000);
 
-      console.log(`[TrinityConsole] Thought: "${thought.content.substring(0, 60)}..."`);
+      log.info(`[TrinityConsole] Thought: "${thought.content.substring(0, 60)}..."`);
       return inserted.id;
     } catch (error) {
-      console.error('[TrinityConsole] Failed to log thought:', error);
+      log.error('[TrinityConsole] Failed to log thought:', error);
       throw error;
     }
   }
@@ -282,10 +285,10 @@ class TrinityControlConsoleService {
       // Stream to all subscribed clients
       this.broadcastToSession(action.sessionId, { type: 'action', data: payload });
 
-      console.log(`[TrinityConsole] Action: ${action.actionName} (${action.status})`);
+      log.info(`[TrinityConsole] Action: ${action.actionName} (${action.status})`);
       return inserted.id;
     } catch (error) {
-      console.error('[TrinityConsole] Failed to log action:', error);
+      log.error('[TrinityConsole] Failed to log action:', error);
       throw error;
     }
   }
@@ -411,7 +414,7 @@ class TrinityControlConsoleService {
       timestamp: payload.timestamp,
     });
 
-    console.log(`[TrinityConsole] Task progress: ${current}/${total}${options?.taskName ? ` - ${options.taskName}` : ''}`);
+    log.info(`[TrinityConsole] Task progress: ${current}/${total}${options?.taskName ? ` - ${options.taskName}` : ''}`);
   }
 
   /**
@@ -429,7 +432,7 @@ class TrinityControlConsoleService {
     }
   ): Promise<void> {
     const payload: ActionLogPayload = {
-      id: `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `quick-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
       sessionId,
       actionType,
       actionName,
@@ -476,7 +479,7 @@ class TrinityControlConsoleService {
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
-        console.error('[TrinityConsole] Failed to register database event:', error);
+        log.error('[TrinityConsole] Failed to register database event:', error);
       }
     });
   }
@@ -502,7 +505,7 @@ class TrinityControlConsoleService {
 
     return {
       unmonitoredEndpoints: [
-        '/api/employees/* (partial coverage)',
+        '/api/hr/employees/* (partial coverage)',
         '/api/shifts/* (partial coverage)',
         '/api/invoices/* (needs integration)',
       ],
@@ -537,14 +540,14 @@ class TrinityControlConsoleService {
     const subscription: StreamSubscription = { callback, workspaceId };
     this.activeStreams.get(sessionId)!.add(subscription);
 
-    console.log(`[TrinityConsole] Stream subscribed for session ${sessionId}${workspaceId ? ` (workspace: ${workspaceId})` : ''}`);
+    log.info(`[TrinityConsole] Stream subscribed for session ${sessionId}${workspaceId ? ` (workspace: ${workspaceId})` : ''}`);
 
     return () => {
       this.activeStreams.get(sessionId)?.delete(subscription);
       if (this.activeStreams.get(sessionId)?.size === 0) {
         this.activeStreams.delete(sessionId);
       }
-      console.log(`[TrinityConsole] Stream unsubscribed for session ${sessionId}`);
+      log.info(`[TrinityConsole] Stream unsubscribed for session ${sessionId}`);
     };
   }
 
@@ -569,7 +572,7 @@ class TrinityControlConsoleService {
           }
           subscription.callback(safePayload);
         } catch (error) {
-          console.error('[TrinityConsole] Subscriber error:', error);
+          log.error('[TrinityConsole] Subscriber error:', error);
         }
       });
     }
@@ -597,7 +600,7 @@ class TrinityControlConsoleService {
           }
           subscription.callback(safePayload);
         } catch (error) {
-          console.error('[TrinityConsole] Global broadcast error:', error);
+          log.error('[TrinityConsole] Global broadcast error:', error);
         }
       });
     });

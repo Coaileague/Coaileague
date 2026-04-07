@@ -13,8 +13,15 @@
  */
 
 import { db } from '../../db';
+import { platformExceptions } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
+import { typedQuery } from '../../lib/typedSql';
+import { publishEvent } from './pipelineErrorHandler';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('crossDomainExceptionService');
+
 
 export type ExceptionDomain = 
   | 'scheduling'
@@ -253,21 +260,24 @@ class CrossDomainExceptionService {
     this.exceptions.set(id, exception);
     await this.persistException(exception);
 
-    platformEventBus.publish({
-      type: 'exception_raised',
-      workspaceId,
-      payload: {
-        exceptionId: id,
-        domain,
-        code,
-        severity,
-        title,
-        slaDeadline: exception.slaDeadline,
-      },
-      metadata: { source: 'CrossDomainExceptionService', priority: severity === 'critical' ? 'critical' : 'high' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'exception_raised',
+        workspaceId,
+        payload: {
+          exceptionId: id,
+          domain,
+          code,
+          severity,
+          title,
+          slaDeadline: exception.slaDeadline,
+        },
+        metadata: { source: 'CrossDomainExceptionService', priority: severity === 'critical' ? 'critical' : 'high' },
+      }),
+      '[CrossDomainExceptionService] event publish',
+    );
 
-    console.log(`[ExceptionService] Exception raised: ${domain}/${code} - ${title} (severity: ${severity})`);
+    log.info(`[ExceptionService] Exception raised: ${domain}/${code} - ${title} (severity: ${severity})`);
 
     await this.attemptAutoResolution(exception);
 
@@ -295,19 +305,22 @@ class CrossDomainExceptionService {
         exception.resolvedAt = new Date();
         exception.resolutionNotes = result.notes;
 
-        platformEventBus.publish({
-          type: 'exception_auto_resolved',
-          workspaceId: exception.workspaceId,
-          payload: {
-            exceptionId: exception.id,
-            domain: exception.domain,
-            code: exception.code,
-            notes: result.notes,
-          },
-          metadata: { source: 'CrossDomainExceptionService' },
-        });
+        publishEvent(
+          () => platformEventBus.publish({
+            type: 'exception_auto_resolved',
+            workspaceId: exception.workspaceId,
+            payload: {
+              exceptionId: exception.id,
+              domain: exception.domain,
+              code: exception.code,
+              notes: result.notes,
+            },
+            metadata: { source: 'CrossDomainExceptionService' },
+          }),
+          '[CrossDomainExceptionService] event publish',
+        );
 
-        console.log(`[ExceptionService] Auto-resolved: ${exception.domain}/${exception.code}`);
+        log.info(`[ExceptionService] Auto-resolved: ${exception.domain}/${exception.code}`);
       } else {
         exception.status = 'awaiting_action';
       }
@@ -345,21 +358,24 @@ class CrossDomainExceptionService {
     this.exceptions.set(exceptionId, exception);
     await this.persistException(exception);
 
-    platformEventBus.publish({
-      type: 'exception_resolved',
-      workspaceId: exception.workspaceId,
-      payload: {
-        exceptionId,
-        domain: exception.domain,
-        code: exception.code,
-        resolvedBy,
-        resolutionNotes,
-        slaBreached: exception.slaBreached,
-      },
-      metadata: { source: 'CrossDomainExceptionService' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'exception_resolved',
+        workspaceId: exception.workspaceId,
+        payload: {
+          exceptionId,
+          domain: exception.domain,
+          code: exception.code,
+          resolvedBy,
+          resolutionNotes,
+          slaBreached: exception.slaBreached,
+        },
+        metadata: { source: 'CrossDomainExceptionService' },
+      }),
+      '[CrossDomainExceptionService] event publish',
+    );
 
-    console.log(`[ExceptionService] Resolved: ${exception.domain}/${exception.code} by ${resolvedBy}`);
+    log.info(`[ExceptionService] Resolved: ${exception.domain}/${exception.code} by ${resolvedBy}`);
 
     return { success: true, message: 'Exception resolved' };
   }
@@ -378,21 +394,24 @@ class CrossDomainExceptionService {
     this.exceptions.set(exceptionId, exception);
     await this.persistException(exception);
 
-    platformEventBus.publish({
-      type: 'exception_escalated',
-      workspaceId: exception.workspaceId,
-      payload: {
-        exceptionId,
-        domain: exception.domain,
-        code: exception.code,
-        severity: exception.severity,
-        escalationLevel: exception.escalationLevel,
-        reason,
-      },
-      metadata: { source: 'CrossDomainExceptionService', priority: 'critical' },
-    });
+    publishEvent(
+      () => platformEventBus.publish({
+        type: 'exception_escalated',
+        workspaceId: exception.workspaceId,
+        payload: {
+          exceptionId,
+          domain: exception.domain,
+          code: exception.code,
+          severity: exception.severity,
+          escalationLevel: exception.escalationLevel,
+          reason,
+        },
+        metadata: { source: 'CrossDomainExceptionService', priority: 'critical' },
+      }),
+      '[CrossDomainExceptionService] event publish',
+    );
 
-    console.log(`[ExceptionService] Escalated: ${exception.domain}/${exception.code} to level ${exception.escalationLevel}`);
+    log.info(`[ExceptionService] Escalated: ${exception.domain}/${exception.code} to level ${exception.escalationLevel}`);
 
     return { success: true, newLevel: exception.escalationLevel };
   }
@@ -443,21 +462,24 @@ class CrossDomainExceptionService {
         this.exceptions.set(id, exception);
         await this.persistException(exception);
 
-        platformEventBus.publish({
-          type: 'exception_sla_breached',
-          workspaceId: exception.workspaceId,
-          payload: {
-            exceptionId: id,
-            domain: exception.domain,
-            code: exception.code,
-            severity: exception.severity,
-            title: exception.title,
-            slaDeadline: exception.slaDeadline,
-          },
-          metadata: { source: 'CrossDomainExceptionService', priority: 'critical' },
-        });
+        publishEvent(
+          () => platformEventBus.publish({
+            type: 'exception_sla_breached',
+            workspaceId: exception.workspaceId,
+            payload: {
+              exceptionId: id,
+              domain: exception.domain,
+              code: exception.code,
+              severity: exception.severity,
+              title: exception.title,
+              slaDeadline: exception.slaDeadline,
+            },
+            metadata: { source: 'CrossDomainExceptionService', priority: 'critical' },
+          }),
+          '[CrossDomainExceptionService] event publish',
+        );
 
-        console.log(`[ExceptionService] SLA breached: ${exception.domain}/${exception.code}`);
+        log.info(`[ExceptionService] SLA breached: ${exception.domain}/${exception.code}`);
 
         if (exception.escalationLevel < 3) {
           await this.escalateException(id, 'SLA breach');
@@ -467,18 +489,24 @@ class CrossDomainExceptionService {
   }
 
   private generateExceptionId(): string {
-    return `exc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `exc-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
   }
 
   private async persistException(exception: PlatformException): Promise<void> {
     try {
-      await db.execute(`
-        INSERT INTO platform_exceptions (id, workspace_id, exception_data, updated_at)
-        VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (id) DO UPDATE SET exception_data = $3, updated_at = NOW()
-      `, [exception.id, exception.workspaceId, JSON.stringify(exception)]);
+      // Converted to Drizzle ORM: ON CONFLICT
+      const exceptionJson = JSON.stringify(exception);
+      await db.insert(platformExceptions).values({
+        id: exception.id,
+        workspaceId: exception.workspaceId,
+        exceptionData: exceptionJson,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: platformExceptions.id,
+        set: { exceptionData: exceptionJson, updatedAt: sql`now()` },
+      });
     } catch (error) {
-      console.warn('[ExceptionService] Failed to persist exception (table may not exist):', error);
+      log.warn('[ExceptionService] Failed to persist exception (table may not exist):', error);
     }
   }
 
@@ -529,7 +557,7 @@ export function registerExceptionActions(orchestrator: typeof helpaiOrchestrator
     name: 'Raise Exception',
     category: 'automation',
     description: 'Raise a platform exception for tracking and resolution',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'owner', 'Bot'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request) => {
       const { domain, code, title, description, severity, metadata, suggestedResolution } = request.payload || {};
 
@@ -569,7 +597,7 @@ export function registerExceptionActions(orchestrator: typeof helpaiOrchestrator
     name: 'Resolve Exception',
     category: 'automation',
     description: 'Mark an exception as resolved',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { exceptionId, resolutionNotes } = request.payload || {};
 
@@ -602,7 +630,7 @@ export function registerExceptionActions(orchestrator: typeof helpaiOrchestrator
     name: 'Escalate Exception',
     category: 'automation',
     description: 'Escalate an exception to the next level',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { exceptionId, reason } = request.payload || {};
 
@@ -632,7 +660,7 @@ export function registerExceptionActions(orchestrator: typeof helpaiOrchestrator
     name: 'Get Open Exceptions',
     category: 'analytics',
     description: 'Get all open exceptions for a workspace',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       if (!request.workspaceId) {
         return {
@@ -660,7 +688,7 @@ export function registerExceptionActions(orchestrator: typeof helpaiOrchestrator
     name: 'Get Exceptions by Domain',
     category: 'analytics',
     description: 'Get exceptions filtered by domain',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'owner'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request) => {
       const { domain } = request.payload || {};
 
@@ -690,7 +718,7 @@ export function registerExceptionActions(orchestrator: typeof helpaiOrchestrator
     name: 'Get Exception Stats',
     category: 'analytics',
     description: 'Get platform-wide exception statistics',
-    requiredRoles: ['support', 'admin', 'super_admin'],
+    requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request) => {
       const stats = crossDomainExceptionService.getStats();
       return {
@@ -703,5 +731,5 @@ export function registerExceptionActions(orchestrator: typeof helpaiOrchestrator
     },
   });
 
-  console.log('[CrossDomainExceptionService] Registered 6 AI Brain actions');
+  log.info('[CrossDomainExceptionService] Registered 6 AI Brain actions');
 }

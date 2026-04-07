@@ -16,10 +16,12 @@ import {
   Wrench
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
+import { TrinityLogo } from "@/components/trinity-logo";
 import TrinityRedesign from "@/components/trinity-redesign";
 import { errorConfig, getErrorMessage, getRecoveryActions } from "@/config/errorConfig";
 import { apiRequest } from "@/lib/queryClient";
+
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
 type ErrorType = "404" | "403" | "500" | "generic";
 
@@ -52,36 +54,36 @@ const errorTypeConfigs: Record<ErrorType, ErrorTypeConfig> = {
     defaultTitle: "Page Not Found",
     defaultMessage: "We couldn't find the page you're looking for. It may have been moved, deleted, or the URL might be incorrect.",
     mascotMode: "SEARCHING",
-    mascotMessage: "I'm searching for that page, but it seems to have wandered off. Let me help you find your way back!",
+    mascotMessage: "I`m searching for that page, but it seems to have wandered off. Let me help you find your way back!",
     icon: FileQuestion,
     bubbleStyle: "bg-sky-950/50 border-sky-800/30",
     textStyle: "text-sky-200",
     accentColor: "text-sky-400",
-    tagline: "CoAIleague - Autonomous Workforce Management"
+    tagline: `${PLATFORM_NAME} - Autonomous Workforce Management`
   },
   "403": {
     code: "403",
     defaultTitle: "Access Denied",
-    defaultMessage: "You don't have permission to access this resource. This area requires specific permissions or a higher subscription tier.",
+    defaultMessage: "You don`t have permission to access this resource. This area requires specific permissions or a higher subscription tier.",
     mascotMode: "THINKING",
     mascotMessage: "This area is restricted. You may need additional permissions or a subscription upgrade to access this feature.",
     icon: ShieldAlert,
     bubbleStyle: "bg-amber-950/50 border-amber-800/30",
     textStyle: "text-amber-200",
     accentColor: "text-amber-400",
-    tagline: "CoAIleague - Enterprise-Grade Security & Access Control"
+    tagline: `${PLATFORM_NAME} - Enterprise-Grade Security & Access Control`
   },
   "500": {
     code: "500",
     defaultTitle: "Server Error",
     defaultMessage: "Something went wrong on our end. Our team has been notified and is working to fix it. This is usually temporary.",
     mascotMode: "ERROR",
-    mascotMessage: "I've detected a hiccup in our systems. Don't worry - our team is already on it. Try refreshing or come back shortly!",
+    mascotMessage: "I've detected a hiccup in our systems. Don`t worry - our team is already on it. Try refreshing or come back shortly!",
     icon: ServerCrash,
     bubbleStyle: "bg-red-950/30 border-red-800/30",
     textStyle: "text-red-200",
     accentColor: "text-red-400",
-    tagline: "CoAIleague - 99.9% Uptime SLA Guarantee"
+    tagline: `${PLATFORM_NAME} - 99.9% Uptime SLA Guarantee`
   },
   "generic": {
     code: "ERR",
@@ -93,7 +95,7 @@ const errorTypeConfigs: Record<ErrorType, ErrorTypeConfig> = {
     bubbleStyle: "bg-orange-950/30 border-orange-800/30",
     textStyle: "text-orange-200",
     accentColor: "text-orange-400",
-    tagline: "CoAIleague - Autonomous Workforce Management"
+    tagline: `${PLATFORM_NAME} - Autonomous Workforce Management`
   }
 };
 
@@ -148,7 +150,7 @@ export function UniversalErrorPage({
         <CardHeader className="text-center pb-4 pt-8">
           <div className="flex justify-center mb-6">
             <div className="p-3 bg-muted rounded-lg border">
-              <CoAIleagueStaticLogo size="md" variant="icon" />
+              <TrinityLogo size={32} />
             </div>
           </div>
 
@@ -158,7 +160,7 @@ export function UniversalErrorPage({
 
           <div className={`${config.bubbleStyle} border rounded-lg p-3 mb-4 mx-auto max-w-sm`}>
             <p className={`text-[11px] ${config.textStyle} text-center leading-relaxed`}>
-              <span className={`${config.accentColor} font-semibold`}>CoAI says:</span> {config.mascotMessage}
+              <span className={`${config.accentColor} font-semibold`}>Trinity says:</span> {config.mascotMessage}
             </p>
           </div>
 
@@ -266,7 +268,7 @@ export function UniversalErrorPage({
           {showSupportButton && (
             <div className="bg-muted border rounded-lg p-3">
               <Button 
-                onClick={() => setLocation("/chat")} 
+                onClick={() => setLocation("/chatrooms")} 
                 variant="secondary"
                 className="w-full gap-2"
                 data-testid="button-live-support"

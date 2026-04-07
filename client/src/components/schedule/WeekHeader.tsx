@@ -29,7 +29,7 @@ export function WeekHeader({ weekStart, onPreviousWeek, onNextWeek, stats, isLoa
   const weekDisplay = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'd, yyyy')}`;
 
   return (
-    <div className="bg-background border-b sticky top-0 z-50">
+    <div className="bg-background border-b sticky top-0 z-30">
       {/* Week Navigation */}
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <Button

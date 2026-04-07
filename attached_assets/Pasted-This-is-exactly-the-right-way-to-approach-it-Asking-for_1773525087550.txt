@@ -1,0 +1,135 @@
+This is exactly the right way to approach it. Asking for the plan before touching anything is the correct instinct. Copy this exactly:
+
+---
+
+COAILEAGUE — TRINITY ACTION REGISTRY UNIFICATION PLAN
+This is a planning session only. Touch nothing. Build nothing. Change nothing.
+I need a precise architect-level game plan before any work begins.
+Read the complete platformActionHub.ts and every action registration file in full.
+Then produce the plan described below.
+
+---
+
+WHAT I NEED FROM YOU
+
+Analyze the complete action registry as it stands at 737 actions.
+Produce a unification plan that will bring the count to 300 or below.
+The target is 300 maximum. Not 480. Not 500. 300 or below.
+Every action above 300 is either a duplicate, a variant that should be a parameter,
+or something that should not exist in Trinity's registry at all.
+
+---
+
+THE PLAN MUST ANSWER THESE EXACT QUESTIONS
+
+QUESTION 1 — WHAT IS THE REAL FUNCTIONAL SURFACE?
+How many genuinely distinct things can Trinity do for a security company?
+Not how many actions are registered. How many real distinct functions exist.
+List every real distinct function in plain English.
+Example: schedule a shift, approve a timesheet, generate an invoice, scan for compliance gaps.
+This list is the target. Everything in the registry that does not map to something on this list
+should not exist.
+
+QUESTION 2 — WHERE ARE THE DUPLICATES?
+For every group of actions that do the same thing list them together.
+Show the canonical action that should be kept.
+Show every duplicate that should be removed.
+Show the total count reduction per group.
+
+QUESTION 3 — WHERE ARE THE VARIANTS THAT SHOULD BE PARAMETERS?
+An action like report.generate_daily and report.generate_weekly and report.generate_monthly
+should be one action report.generate with a period parameter.
+Find every group of actions that differ only by a parameter value not by actual logic.
+List each group, the canonical parameterized action it becomes, and the count reduction.
+
+QUESTION 4 — WHAT SHOULD NOT BE IN TRINITY AT ALL?
+Some actions belong in background cron jobs not in Trinity's action registry.
+Some actions belong in direct API calls not in Trinity.
+Some actions are platform infrastructure that has no business being in the AI action layer.
+List every action that should be moved out of Trinity entirely with the reason
+and where it should live instead.
+
+QUESTION 5 — WHAT IS THE SAFE CONSOLIDATION SEQUENCE?
+Some consolidations are safe to do in any order.
+Some depend on others being done first.
+Some touch high-risk areas like billing and payroll that need extra care.
+Give me the exact sequence of consolidation phases with the estimated count
+reduction per phase so I can see the math adding up to 300 or below.
+
+---
+
+THE PLAN FORMAT
+
+Produce the plan in this exact format:
+
+CURRENT STATE:
+Total actions: [number]
+Total domain prefixes: [number]
+Actions that are real distinct functions: [number]
+Actions that are duplicates: [number]
+Actions that are variants needing parameterization: [number]
+Actions that do not belong in Trinity: [number]
+
+FUNCTIONAL SURFACE — THE REAL LIST:
+[numbered list of every genuinely distinct thing Trinity should be able to do]
+Target count from this list: [number]
+
+CONSOLIDATION PHASES:
+
+Phase 1 — [name]: [what gets consolidated] — removes [X] actions — new count [Y]
+Phase 2 — [name]: [what gets consolidated] — removes [X] actions — new count [Y]
+[continue until count reaches 300 or below]
+
+RISK ASSESSMENT PER PHASE:
+For each phase: LOW RISK / MEDIUM RISK / HIGH RISK with the reason.
+HIGH RISK phases require extra verification steps listed explicitly.
+
+WHAT MOVES OUT OF TRINITY:
+List every action being removed from the registry with where it moves to.
+[action name] — moves to [cron job / direct API / background service] — reason
+
+FINAL PROJECTED STATE:
+Total actions after full consolidation: [number must be 300 or below]
+Total domain prefixes after consolidation: [number must be 20 or below]
+Estimated sessions to execute: [number]
+Zero functionality lost: confirmed or list exceptions
+
+---
+
+CONSTRAINTS THE PLAN MUST RESPECT
+
+Do not touch the domain file structure.
+Do not touch any route handlers.
+Do not touch any service files.
+Do not touch the database schema.
+Do not touch any frontend components.
+Changes are to the action registry definitions only.
+
+Every action that survives consolidation must:
+Have exactly one canonical name following domain.verb_noun convention.
+Have a real handler that queries the database and returns real data.
+Have the correct credit cost from the billing config.
+Have RBAC enforcement matching what the action does.
+Have an audit trail entry on execution.
+
+The 8 deferred business_pro and guru actions stay deferred.
+They are not counted toward the 300 target.
+They will be decided after go-live.
+
+The Statewide founder exemption must survive consolidation intact.
+The RBAC role hierarchy that was just fixed must survive intact.
+The auditor hard properties that were just built must survive intact.
+
+---
+
+WHAT HAPPENS AFTER I SEE THE PLAN
+
+You show me the plan.
+I review it.
+I approve or modify specific phases.
+Only after my explicit approval does any work begin.
+Each phase executes one at a time with a server restart and verification between phases.
+No phase starts until the previous one is confirmed healthy.
+
+This is the sequence. Plan first. Approval second. Execution third.
+Show me the plan now.

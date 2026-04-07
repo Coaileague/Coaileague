@@ -15,6 +15,9 @@ import {
   workspaceRateHistory
 } from '../../../shared/schema';
 import { eq, isNull } from 'drizzle-orm';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('migrateExistingRates');
+
 
 interface MigrationStats {
   employeeRatesMigrated: number;
@@ -28,7 +31,7 @@ interface MigrationStats {
  * Creates initial rate history entries for all employees with configured rates
  */
 async function migrateEmployeeRates(): Promise<{ count: number; errors: string[] }> {
-  console.log('\n=== Migrating Employee Rates to History ===');
+  log.info('\n=== Migrating Employee Rates to History ===');
   
   const errors: string[] = [];
   let count = 0;
@@ -44,7 +47,7 @@ async function migrateEmployeeRates(): Promise<{ count: number; errors: string[]
       })
       .from(employees);
 
-    console.log(`Found ${employeesWithRates.length} employees to migrate`);
+    log.info(`Found ${employeesWithRates.length} employees to migrate`);
 
     for (const employee of employeesWithRates) {
       // Skip employees without rates
@@ -63,7 +66,7 @@ async function migrateEmployeeRates(): Promise<{ count: number; errors: string[]
           .limit(1);
 
         if (existing) {
-          console.log(`  ⏭️  Employee ${employee.id} already has rate history, skipping`);
+          log.info(`  ⏭️  Employee ${employee.id} already has rate history, skipping`);
           continue;
         }
 
@@ -81,19 +84,19 @@ async function migrateEmployeeRates(): Promise<{ count: number; errors: string[]
           });
 
         count++;
-        console.log(`  ✅ Migrated employee ${employee.id}: $${employee.hourlyRate}/hr`);
+        log.info(`  ✅ Migrated employee ${employee.id}: $${employee.hourlyRate}/hr`);
       } catch (error: any) {
-        const errorMsg = `Failed to migrate employee ${employee.id}: ${error.message}`;
-        console.error(`  ❌ ${errorMsg}`);
+        const errorMsg = `Failed to migrate employee ${employee.id}: ${(error instanceof Error ? error.message : String(error))}`;
+        log.error(`  ❌ ${errorMsg}`);
         errors.push(errorMsg);
       }
     }
 
-    console.log(`\n✅ Employee rate migration complete: ${count} rates migrated`);
+    log.info(`\n✅ Employee rate migration complete: ${count} rates migrated`);
     return { count, errors };
   } catch (error: any) {
-    console.error(`❌ Employee rate migration failed: ${error.message}`);
-    errors.push(`Migration error: ${error.message}`);
+    log.error(`❌ Employee rate migration failed: ${(error instanceof Error ? error.message : String(error))}`);
+    errors.push(`Migration error: ${(error instanceof Error ? error.message : String(error))}`);
     return { count, errors };
   }
 }
@@ -102,7 +105,7 @@ async function migrateEmployeeRates(): Promise<{ count: number; errors: string[]
  * Migrate existing workspace default rates to workspace_rate_history
  */
 async function migrateWorkspaceRates(): Promise<{ count: number; errors: string[] }> {
-  console.log('\n=== Migrating Workspace Default Rates to History ===');
+  log.info('\n=== Migrating Workspace Default Rates to History ===');
   
   const errors: string[] = [];
   let count = 0;
@@ -118,7 +121,7 @@ async function migrateWorkspaceRates(): Promise<{ count: number; errors: string[
       })
       .from(workspaces);
 
-    console.log(`Found ${allWorkspaces.length} workspaces to migrate`);
+    log.info(`Found ${allWorkspaces.length} workspaces to migrate`);
 
     for (const workspace of allWorkspaces) {
       try {
@@ -132,13 +135,13 @@ async function migrateWorkspaceRates(): Promise<{ count: number; errors: string[
           .limit(1);
 
         if (existing) {
-          console.log(`  ⏭️  Workspace ${workspace.id} already has rate history, skipping`);
+          log.info(`  ⏭️  Workspace ${workspace.id} already has rate history, skipping`);
           continue;
         }
 
         // Only create history entry if workspace has configured rates
         if (!workspace.defaultBillableRate && !workspace.defaultHourlyRate) {
-          console.log(`  ⏭️  Workspace ${workspace.id} has no default rates, skipping`);
+          log.info(`  ⏭️  Workspace ${workspace.id} has no default rates, skipping`);
           continue;
         }
 
@@ -156,21 +159,21 @@ async function migrateWorkspaceRates(): Promise<{ count: number; errors: string[
           });
 
         count++;
-        console.log(`  ✅ Migrated workspace ${workspace.id}:`);
-        console.log(`      Billable: $${workspace.defaultBillableRate || 'N/A'}/hr`);
-        console.log(`      Payroll: $${workspace.defaultHourlyRate || 'N/A'}/hr`);
+        log.info(`  ✅ Migrated workspace ${workspace.id}:`);
+        log.info(`      Billable: $${workspace.defaultBillableRate || 'N/A'}/hr`);
+        log.info(`      Payroll: $${workspace.defaultHourlyRate || 'N/A'}/hr`);
       } catch (error: any) {
-        const errorMsg = `Failed to migrate workspace ${workspace.id}: ${error.message}`;
-        console.error(`  ❌ ${errorMsg}`);
+        const errorMsg = `Failed to migrate workspace ${workspace.id}: ${(error instanceof Error ? error.message : String(error))}`;
+        log.error(`  ❌ ${errorMsg}`);
         errors.push(errorMsg);
       }
     }
 
-    console.log(`\n✅ Workspace rate migration complete: ${count} workspaces migrated`);
+    log.info(`\n✅ Workspace rate migration complete: ${count} workspaces migrated`);
     return { count, errors };
   } catch (error: any) {
-    console.error(`❌ Workspace rate migration failed: ${error.message}`);
-    errors.push(`Migration error: ${error.message}`);
+    log.error(`❌ Workspace rate migration failed: ${(error instanceof Error ? error.message : String(error))}`);
+    errors.push(`Migration error: ${(error instanceof Error ? error.message : String(error))}`);
     return { count, errors };
   }
 }
@@ -179,11 +182,11 @@ async function migrateWorkspaceRates(): Promise<{ count: number; errors: string[
  * Run full rate migration
  */
 export async function migrateAllRates(): Promise<MigrationStats> {
-  console.log('\n╔════════════════════════════════════════════════════════════╗');
-  console.log('║  COAILEAGUE RATE HISTORY MIGRATION                        ║');
-  console.log('║  Phase 1: Idempotency & Rate Versioning                   ║');
-  console.log('╚════════════════════════════════════════════════════════════╝');
-  console.log(`\nTimestamp: ${new Date().toISOString()}\n`);
+  log.info('\n╔════════════════════════════════════════════════════════════╗');
+  log.info('║  COAILEAGUE RATE HISTORY MIGRATION                        ║');
+  log.info('║  Phase 1: Idempotency & Rate Versioning                   ║');
+  log.info('╚════════════════════════════════════════════════════════════╝');
+  log.info(`\nTimestamp: ${new Date().toISOString()}\n`);
 
   const stats: MigrationStats = {
     employeeRatesMigrated: 0,
@@ -202,17 +205,17 @@ export async function migrateAllRates(): Promise<MigrationStats> {
   stats.errors.push(...workspaceResult.errors);
 
   // Summary
-  console.log('\n╔════════════════════════════════════════════════════════════╗');
-  console.log('║  MIGRATION SUMMARY                                         ║');
-  console.log('╚════════════════════════════════════════════════════════════╝');
-  console.log(`\n✅ Employee rates migrated: ${stats.employeeRatesMigrated}`);
-  console.log(`✅ Workspace rates migrated: ${stats.workspaceRatesMigrated}`);
-  console.log(`⚠️  Errors encountered: ${stats.errors.length}\n`);
+  log.info('\n╔════════════════════════════════════════════════════════════╗');
+  log.info('║  MIGRATION SUMMARY                                         ║');
+  log.info('╚════════════════════════════════════════════════════════════╝');
+  log.info(`\n✅ Employee rates migrated: ${stats.employeeRatesMigrated}`);
+  log.info(`✅ Workspace rates migrated: ${stats.workspaceRatesMigrated}`);
+  log.info(`⚠️  Errors encountered: ${stats.errors.length}\n`);
 
   if (stats.errors.length > 0) {
-    console.log('Errors:');
+    log.info('Errors:');
     stats.errors.forEach((error, i) => {
-      console.log(`  ${i + 1}. ${error}`);
+      log.info(`  ${i + 1}. ${error}`);
     });
   }
 
@@ -223,11 +226,11 @@ export async function migrateAllRates(): Promise<MigrationStats> {
 if (require.main === module) {
   migrateAllRates()
     .then((stats) => {
-      console.log('\n✅ Migration complete!');
+      log.info('\n✅ Migration complete!');
       process.exit(stats.errors.length > 0 ? 1 : 0);
     })
     .catch((error) => {
-      console.error('\n❌ Migration failed:', error);
+      log.error('\n❌ Migration failed:', error);
       process.exit(1);
     });
 }

@@ -10,11 +10,11 @@
  * Human managers make final decision with AI insight.
  */
 
-import OpenAI from 'openai';
+import { getMeteredOpenAICompletion } from './billing/universalAIBillingInterceptor';
+import { platformEventBus } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+const log = createLogger('disputeAI');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface DisputeAnalysis {
   summary: string;
@@ -79,8 +79,14 @@ Consider:
 
 Respond ONLY with valid JSON, no other text.`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo',
+    if (!billingContext?.workspaceId) {
+      throw new Error('Workspace ID required for dispute AI analysis - cannot process unbilled operations');
+    }
+    const wsId = billingContext.workspaceId;
+    const result = await getMeteredOpenAICompletion({
+      workspaceId: wsId,
+      userId: billingContext?.userId,
+      featureKey: 'disputeai_analysis',
       messages: [
         {
           role: 'system',
@@ -91,32 +97,22 @@ Respond ONLY with valid JSON, no other text.`;
           content: prompt
         }
       ],
-      temperature: 0.3, // Lower temperature for more consistent analysis
-      max_tokens: 1000,
+      model: 'gpt-4o-mini',
+      temperature: 0.3,
+      maxTokens: 1000,
+      jsonMode: true,
     });
 
-    // USAGE-BASED BILLING: Track AI token usage for customer billing
-    const tokenUsage = completion.usage;
-    if (tokenUsage && billingContext?.workspaceId) {
-      const { usageMeteringService } = await import('./billing/usageMetering');
-      await usageMeteringService.recordUsage({
-        workspaceId: billingContext.workspaceId,
-        userId: billingContext.userId,
-        featureKey: 'disputeai_analysis',
-        usageType: 'token',
-        usageAmount: tokenUsage.total_tokens,
-        usageUnit: 'tokens',
-        metadata: {
-          model: 'gpt-4-turbo',
-          promptTokens: tokenUsage.prompt_tokens,
-          completionTokens: tokenUsage.completion_tokens,
-          disputeType,
-        },
-      });
-      console.log(`[DisputeAI] Billed ${tokenUsage.total_tokens} tokens to workspace ${billingContext.workspaceId}`);
+    if (!result.success) {
+      if (result.blocked) {
+        throw new Error(`Insufficient credits for dispute analysis: ${result.error}`);
+      }
+      throw new Error(`AI analysis failed: ${result.error}`);
     }
 
-    const responseText = completion.choices[0]?.message?.content?.trim() || '{}';
+    log.info(`[DisputeAI] Billed ${result.tokensUsed} tokens to workspace ${wsId}`);
+
+    const responseText = result.content?.trim() || '{}';
     
     // Parse AI response
     let aiResponse: any;
@@ -124,7 +120,7 @@ Respond ONLY with valid JSON, no other text.`;
       aiResponse = JSON.parse(responseText);
     } catch (parseError) {
       // Fallback if JSON parsing fails
-      console.error('Failed to parse AI response:', responseText);
+      log.error('Failed to parse AI response:', responseText);
       return {
         summary: 'AI analysis unavailable - manual review required',
         recommendation: 'needs_review',
@@ -135,20 +131,33 @@ Respond ONLY with valid JSON, no other text.`;
     }
 
     // Validate and sanitize AI response
-    return {
+    const disputeResult: DisputeAnalysis = {
       summary: aiResponse.summary || 'No summary provided',
       recommendation: ['approve', 'reject', 'needs_review', 'escalate'].includes(aiResponse.recommendation)
         ? aiResponse.recommendation
         : 'needs_review',
       confidenceScore: Math.min(Math.max(parseFloat(aiResponse.confidenceScore) || 0, 0), 1),
       analysisFactors: Array.isArray(aiResponse.analysisFactors)
-        ? aiResponse.analysisFactors.slice(0, 10) // Max 10 factors
+        ? aiResponse.analysisFactors.slice(0, 10)
         : ['AI analysis completed'],
       model: 'gpt-4-turbo'
     };
 
+    if (billingContext?.workspaceId) {
+      platformEventBus.publish({
+        type: 'dispute_analyzed',
+        category: 'workforce',
+        title: 'Dispute AI Analysis Completed',
+        description: `AI analyzed dispute "${disputeTitle}" — recommendation: ${disputeResult.recommendation} (confidence: ${Math.round(disputeResult.confidenceScore * 100)}%)`,
+        workspaceId: billingContext.workspaceId,
+        metadata: { disputeType, recommendation: disputeResult.recommendation, confidenceScore: disputeResult.confidenceScore },
+      });
+    }
+
+    return disputeResult;
+
   } catch (error: any) {
-    console.error('Error analyzing dispute with AI:', error);
+    log.error('Error analyzing dispute with AI:', error);
     
     // Return fallback analysis
     return {

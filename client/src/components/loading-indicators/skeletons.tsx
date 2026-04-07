@@ -57,7 +57,7 @@ export function MetricsCardsSkeleton({
     <div className={`grid gap-4 ${gridClass}`}>
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-4 w-4 rounded" />
           </CardHeader>
@@ -128,7 +128,7 @@ export function FormSkeleton() {
 export function PageHeaderSkeleton() {
   return (
     <div className="space-y-4 mb-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="space-y-2">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-64" />
@@ -213,7 +213,7 @@ export function CourseCardSkeleton({ count = 6 }: { count?: number }) {
               </div>
             </div>
             <Skeleton className="h-2 w-full" />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-8 w-24" />
             </div>

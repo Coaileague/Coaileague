@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Employee Onboarding Packet</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @page { size: letter; margin: 0.75in; }
+
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: #f5f5f5;
+  }
+
+  .page-wrapper {
+    max-width: 850px;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.12);
+  }
+
+  /* ── COVER / HEADER ─────────────────────────────── */
+  .doc-cover {
+    background: #0d1b2a;
+    color: #fff;
+    padding: 48px 60px 40px;
+    text-align: center;
+  }
+
+  .cover-logo-placeholder {
+    width: 90px; height: 90px;
+    border: 2px dashed rgba(255,255,255,0.35);
+    border-radius: 8px;
+    margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9pt;
+    color: rgba(255,255,255,0.45);
+    font-family: Arial, sans-serif;
+  }
+
+  .cover-company-name {
+    font-size: 24pt;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    color: #c9a84c;
+  }
+
+  .cover-legal-name {
+    font-size: 11pt;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 6px;
+  }
+
+  .cover-license {
+    font-size: 9.5pt;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 28px;
+    font-family: Arial, sans-serif;
+  }
+
+  .cover-title {
+    font-size: 17pt;
+    font-weight: bold;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-top: 1px solid rgba(201,168,76,0.5);
+    border-bottom: 1px solid rgba(201,168,76,0.5);
+    padding: 10px 0;
+    margin-bottom: 16px;
+  }
+
+  .cover-subtitle {
+    font-size: 10pt;
+    color: rgba(255,255,255,0.6);
+    font-family: Arial, sans-serif;
+  }
+
+  /* ── DOCUMENT HEADER (reused per section) ───────── */
+  .doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #0d1b2a;
+    padding: 16px 60px 12px;
+    background: #fff;
+  }
+
+  .doc-header-left { font-size: 9pt; color: #555; font-family: Arial, sans-serif; }
+  .doc-header-left .company { font-size: 11pt; font-weight: bold; color: #0d1b2a; }
+  .doc-header-right { text-align: right; font-family: Arial, sans-serif; font-size: 9pt; color: #555; }
+
+  /* ── DOCUMENT BODY ──────────────────────────────── */
+  .doc-body { padding: 32px 60px 48px; }
+
+  .doc-title {
+    font-size: 15pt;
+    font-weight: bold;
+    color: #0d1b2a;
+    margin-bottom: 4px;
+  }
+
+  .doc-version {
+    font-family: Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #888;
+    margin-bottom: 24px;
+  }
+
+  .notice-box {
+    background: #fef9ed;
+    border: 1px solid #c9a84c;
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #5a4500;
+    margin-bottom: 24px;
+  }
+
+  .notice-box strong { color: #3a2c00; }
+
+  /* ── SECTIONS ────────────────────────────────────── */
+  .section {
+    margin-bottom: 32px;
+    page-break-inside: avoid;
+  }
+
+  .section-title {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #0d1b2a;
+    border-bottom: 1px solid #0d1b2a;
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .section-desc {
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #555;
+    margin-bottom: 16px;
+    font-style: italic;
+  }
+
+  /* ── FORM FIELDS ─────────────────────────────────── */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 28px;
+  }
+
+  .field-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .field-grid.cols-1 { grid-template-columns: 1fr; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .field.full-width { grid-column: 1 / -1; }
+
+  .field label {
+    font-family: Arial, sans-serif;
+    font-size: 8.5pt;
+    font-weight: bold;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .field label .required { color: #c0392b; margin-left: 2px; }
+
+  .field-line {
+    border: none;
+    border-bottom: 1.5px solid #aaa;
+    min-height: 22px;
+    width: 100%;
+    background: transparent;
+  }
+
+  .field-box {
+    border: 1.5px solid #aaa;
+    min-height: 22px;
+    border-radius: 2px;
+    background: transparent;
+    width: 100%;
+  }
+
+  .field-textarea {
+    border: 1.5px solid #aaa;
+    min-height: 56px;
+    border-radius: 2px;
+    background: transparent;
+    width: 100%;
+  }
+
+  .field-select {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+
+  .field-select label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
+  }
+
+  .field-select input[type="checkbox"],
+  .field-select input[type="radio"] {
+    width: 13px; height: 13px;
+    accent-color: #0d1b2a;
+    flex-shrink: 0;
+  }
+
+  .field-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+  }
+
+  .field-check input[type="checkbox"] {
+    width: 14px; height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    accent-color: #0d1b2a;
+  }
+
+  .field-check-label {
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #333;
+    line-height: 1.4;
+  }
+
+  /* ── LEGAL TEXT ──────────────────────────────────── */
+  .legal-box {
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 14px 16px;
+    font-family: Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #444;
+    line-height: 1.6;
+    margin-bottom: 14px;
+    white-space: pre-wrap;
+  }
+
+  .legal-title {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 9pt;
+    color: #0d1b2a;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  /* ── SIGNATURE BLOCK ─────────────────────────────── */
+  .sig-block {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 28px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+  }
+
+  .sig-block.three-col { grid-template-columns: 2fr 1fr 1fr; }
+
+  .sig-field { display: flex; flex-direction: column; gap: 6px; }
+
+  .sig-line {
+    border: none;
+    border-bottom: 1.5px solid #333;
+    min-height: 36px;
+    display: block;
+  }
+
+  .sig-label {
+    font-family: Arial, sans-serif;
+    font-size: 8pt;
+    color: #666;
+    text-align: center;
+  }
+
+  /* ── INITIALS BOX ────────────────────────────────── */
+  .initials-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .initials-box {
+    border: 1.5px solid #333;
+    width: 56px; height: 32px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .initials-label {
+    font-family: Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #555;
+  }
+
+  /* ── PAGE BREAKS ─────────────────────────────────── */
+  .page-break { page-break-before: always; padding-top: 32px; }
+
+  /* ── DOCUMENT INDEX ──────────────────────────────── */
+  .index-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    margin-bottom: 24px;
+  }
+
+  .index-table th {
+    background: #0d1b2a;
+    color: #fff;
+    padding: 7px 12px;
+    text-align: left;
+    font-size: 9pt;
+  }
+
+  .index-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    color: #333;
+  }
+
+  .index-table tr:nth-child(even) td { background: #f9f9f9; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 8pt;
+    font-weight: bold;
+    font-family: Arial, sans-serif;
+  }
+
+  .badge-critical { background: #fdecea; color: #c0392b; }
+  .badge-high { background: #fff3e0; color: #d35400; }
+  .badge-medium { background: #e8f5e9; color: #27ae60; }
+
+  /* ── STATE BLOCK ─────────────────────────────────── */
+  .state-block {
+    background: #edf4fb;
+    border: 1px solid #aad0f4;
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    color: #1a4a6e;
+    margin-bottom: 16px;
+  }
+
+  .state-block strong { color: #0d2d4a; }
+
+  .variable-pill {
+    display: inline-block;
+    background: #e8f0fe;
+    border: 1px solid #a8c7fa;
+    color: #1a56db;
+    border-radius: 4px;
+    padding: 0px 6px;
+    font-family: monospace;
+    font-size: 8.5pt;
+  }
+
+  /* ── FOOTER ──────────────────────────────────────── */
+  .doc-footer {
+    background: #0d1b2a;
+    color: rgba(255,255,255,0.45);
+    font-family: Arial, sans-serif;
+    font-size: 7.5pt;
+    padding: 12px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .doc-footer { position: fixed; bottom: 0; width: 100%; }
+    .no-print { display: none; }
+  }
+
+  /* ── PRINT BUTTON ────────────────────────────────── */
+  .print-bar {
+    background: #0d1b2a;
+    padding: 12px 60px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .print-btn {
+    background: #c9a84c;
+    color: #0d1b2a;
+    border: none;
+    padding: 8px 22px;
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .print-btn:hover { background: #b8943f; }
+
+  .print-label {
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    color: rgba(255,255,255,0.65);
+  }
+</style>
+</head>
+<body>
+
+<!-- Print Bar -->
+<div class="print-bar no-print">
+  <span class="print-label">CoAIleague Onboarding Packet — White-Label Template v1.0</span>
+  <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<div class="page-wrapper">
+
+  <!-- ══ COVER PAGE ══════════════════════════════════════════════════════ -->
+  <div class="doc-cover">
+    <div class="cover-logo-placeholder">Company Logo</div>
+    <div class="cover-company-name">{{company_name}}</div>
+    <div class="cover-legal-name">{{company_legal_name}}</div>
+    <div class="cover-license">License No. {{company_license_number}} &nbsp;|&nbsp; {{company_phone}} &nbsp;|&nbsp; {{company_support_email}}</div>
+    <div class="cover-title">New Employee Onboarding Packet</div>
+    <div class="cover-subtitle">
+      Confidential &nbsp;&bull;&nbsp; Complete all forms before your start date &nbsp;&bull;&nbsp; {{document_date}}
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT INDEX ══════════════════════════════════════════════════ -->
+  <div class="doc-body">
+    <div class="doc-title">Onboarding Packet Index</div>
+    <div class="doc-version">Template v1.0 &nbsp;|&nbsp; Generated: {{document_date}} &nbsp;|&nbsp; For: {{officer_full_name}}</div>
+
+    <div class="notice-box">
+      <strong>Instructions:</strong> Complete all forms in order. Forms marked <strong>CRITICAL</strong> must be submitted before your first shift assignment. Upload all required documents to the platform portal or deliver originals to your supervisor. Your e-signature is legally binding.
+    </div>
+
+    <table class="index-table">
+      <tr>
+        <th>#</th>
+        <th>Document</th>
+        <th>Category</th>
+        <th>Priority</th>
+        <th>Est. Time</th>
+      </tr>
+      <tr><td>1</td><td>Employment Application</td><td>Employment</td><td><span class="badge badge-critical">CRITICAL</span></td><td>15 min</td></tr>
+      <tr><td>2</td><td>New Employee Regulatory Packet</td><td>Compliance</td><td><span class="badge badge-critical">CRITICAL</span></td><td>20 min</td></tr>
+      <tr><td>3</td><td>W-4 Employee Withholding Certificate</td><td>Tax</td><td><span class="badge badge-high">HIGH</span></td><td>10 min</td></tr>
+      <tr><td>4</td><td>Direct Deposit Authorization</td><td>Payroll</td><td><span class="badge badge-medium">MEDIUM</span></td><td>5 min</td></tr>
+      <tr><td>5</td><td>I-9 Employment Eligibility Verification</td><td>Federal</td><td><span class="badge badge-critical">CRITICAL</span></td><td>10 min</td></tr>
+      <tr><td>6</td><td>Employee Handbook Acknowledgment</td><td>Policy</td><td><span class="badge badge-medium">MEDIUM</span></td><td>5 min</td></tr>
+      <tr><td>7</td><td>Confidentiality Agreement</td><td>Legal</td><td><span class="badge badge-medium">MEDIUM</span></td><td>5 min</td></tr>
+      <tr><td>8</td><td>Welcome Letter &amp; Checklist</td><td>Orientation</td><td><span class="badge badge-high">HIGH</span></td><td>5 min</td></tr>
+    </table>
+
+    <div class="state-block">
+      <strong>State-Specific Addendum:</strong> Additional documents may be required based on your work state. Your state-specific requirements will be shown in the platform portal. All regulatory citations reference your workspace's registered state.
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT 1: EMPLOYMENT APPLICATION ══════════════════════════════ -->
+  <div class="page-break">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <div class="company">{{company_name}}</div>
+        <div>{{company_legal_name}}</div>
+        <div>License No. {{company_license_number}}</div>
+      </div>
+      <div class="doc-header-right">
+        <div>Document 1 of 8</div>
+        <div>Date: {{document_date}}</div>
+        <div>v1.0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-body">
+    <div class="doc-title">Employment Application</div>
+    <div class="doc-version">Category: Employment &nbsp;|&nbsp; Est. 15 minutes &nbsp;|&nbsp; Signature required</div>
+
+    <!-- Section 1: Personal Information -->
+    <div class="section">
+      <div class="section-title">Section 1 — Personal Information</div>
+      <div class="section-desc">Provide your full legal name and contact information exactly as it appears on your government-issued ID.</div>
+      <div class="field-grid">
+        <div class="field"><label>First Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Last Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Middle Name</label><div class="field-line"></div></div>
+        <div class="field"><label>Date of Birth <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Place of Birth</label><div class="field-line"></div></div>
+        <div class="field"><label>SSN — Last 4 Digits <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field full-width"><label>Current Address (Street, City, State, ZIP) <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Phone Number <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Email Address <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Emergency Contact Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Emergency Contact Phone <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Relationship to Emergency Contact <span class="required">*</span></label><div class="field-line"></div></div>
+      </div>
+    </div>
+
+    <!-- Section 2: License and Certifications -->
+    <div class="section">
+      <div class="section-title">Section 2 — License &amp; Certifications</div>
+      <div class="section-desc">Provide your current security license details. You will be required to upload a color copy of your guard card.</div>
+      <div class="field-grid">
+        <div class="field"><label>Guard Card / License Number <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field">
+          <label>License Type <span class="required">*</span></label>
+          <div class="field-select">
+            <label><input type="radio" name="licType"> Level II – Unarmed</label>
+            <label><input type="radio" name="licType"> Level III – Armed</label>
+            <label><input type="radio" name="licType"> Level IV – PPO</label>
+            <label><input type="radio" name="licType"> Other</label>
+          </div>
+        </div>
+        <div class="field"><label>Issue Date <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Expiry Date <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>State Issued <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Guard Card Upload — Front <span class="required">*</span></label><div class="field-box" style="min-height:32px;padding:4px 8px;font-family:Arial;font-size:8.5pt;color:#aaa;">Attach clear color photo</div></div>
+        <div class="field"><label>Guard Card Upload — Back <span class="required">*</span></label><div class="field-box" style="min-height:32px;padding:4px 8px;font-family:Arial;font-size:8.5pt;color:#aaa;">Attach clear color photo</div></div>
+      </div>
+    </div>
+
+    <!-- Section 3: Employment History -->
+    <div class="section">
+      <div class="section-title">Section 3 — Employment History</div>
+      <div class="section-desc">List your last three employers, beginning with the most recent. Attach additional sheet if needed.</div>
+      <div class="field-grid" style="gap:10px 28px;">
+        <div class="field"><label>Employer 1 — Company Name</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 1 — Phone</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 1 — Start Date</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 1 — End Date</label><div class="field-line"></div></div>
+        <div class="field full-width"><label>Employer 1 — Reason for Leaving</label><div class="field-line"></div></div>
+
+        <div class="field"><label>Employer 2 — Company Name</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 2 — Phone</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 2 — Start Date</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 2 — End Date</label><div class="field-line"></div></div>
+        <div class="field full-width"><label>Employer 2 — Reason for Leaving</label><div class="field-line"></div></div>
+
+        <div class="field"><label>Employer 3 — Company Name</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 3 — Start Date</label><div class="field-line"></div></div>
+        <div class="field"><label>Employer 3 — End Date</label><div class="field-line"></div></div>
+        <div class="field full-width"><label>Employer 3 — Reason for Leaving</label><div class="field-line"></div></div>
+      </div>
+    </div>
+
+    <!-- Section 4: References -->
+    <div class="section">
+      <div class="section-title">Section 4 — Professional References</div>
+      <div class="field-grid">
+        <div class="field"><label>Reference 1 — Full Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Relationship <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Phone <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Email</label><div class="field-line"></div></div>
+        <div class="field"><label>Reference 2 — Full Name</label><div class="field-line"></div></div>
+        <div class="field"><label>Relationship</label><div class="field-line"></div></div>
+        <div class="field"><label>Phone</label><div class="field-line"></div></div>
+        <div class="field"><label>Reference 3 — Full Name</label><div class="field-line"></div></div>
+        <div class="field"><label>Phone</label><div class="field-line"></div></div>
+      </div>
+    </div>
+
+    <!-- Section 5: Legal Questions -->
+    <div class="section">
+      <div class="section-title">Section 5 — Legal Questions</div>
+      <div class="section-desc">Answer all questions honestly. A "Yes" answer does not automatically disqualify you.</div>
+      <div class="field-grid cols-1">
+        <div class="field">
+          <label>Have you been convicted of a felony? <span class="required">*</span></label>
+          <div class="field-select"><label><input type="radio" name="felony"> No</label><label><input type="radio" name="felony"> Yes</label></div>
+        </div>
+        <div class="field"><label>If yes, explain (conviction details, date, jurisdiction, disposition)</label><div class="field-textarea"></div></div>
+        <div class="field">
+          <label>Do you have any pending criminal charges? <span class="required">*</span></label>
+          <div class="field-select"><label><input type="radio" name="pending"> No</label><label><input type="radio" name="pending"> Yes</label></div>
+        </div>
+        <div class="field"><label>If yes, explain</label><div class="field-textarea"></div></div>
+        <div class="field">
+          <label>Have you ever been terminated for cause? <span class="required">*</span></label>
+          <div class="field-select"><label><input type="radio" name="fired"> No</label><label><input type="radio" name="fired"> Yes</label></div>
+        </div>
+        <div class="field"><label>If yes, explain</label><div class="field-textarea"></div></div>
+      </div>
+    </div>
+
+    <!-- Section 6: Acknowledgment and Signature -->
+    <div class="section">
+      <div class="section-title">Section 6 — Acknowledgment &amp; Signature</div>
+      <div class="legal-box">I certify that all information provided in this application is true, correct, and complete to the best of my knowledge. I understand that false or misleading statements or omissions may result in denial of employment or immediate termination if discovered after employment begins.</div>
+      <div class="sig-block">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Applicant Signature</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date</div>
+        </div>
+      </div>
+      <div class="initials-row">
+        <span class="initials-label">Applicant Initials:</span>
+        <div class="initials-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT 2: REGULATORY PACKET ═══════════════════════════════════ -->
+  <div class="page-break">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <div class="company">{{company_name}}</div>
+        <div>{{company_legal_name}}</div>
+        <div>License No. {{company_license_number}}</div>
+      </div>
+      <div class="doc-header-right">
+        <div>Document 2 of 8</div>
+        <div>Date: {{document_date}}</div>
+        <div>v1.0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-body">
+    <div class="doc-title">New Employee Regulatory Packet</div>
+    <div class="doc-version">Category: Compliance &nbsp;|&nbsp; Est. 20 minutes &nbsp;|&nbsp; Initials + Signature required</div>
+
+    <!-- Personal -->
+    <div class="section">
+      <div class="section-title">Personal Information</div>
+      <div class="field-grid">
+        <div class="field"><label>First Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Last Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Date of Birth <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>SSN — Last 4 Digits <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field full-width"><label>Current Address <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Phone <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Email <span class="required">*</span></label><div class="field-line"></div></div>
+      </div>
+    </div>
+
+    <!-- Identity Documents -->
+    <div class="section">
+      <div class="section-title">Identity Documents</div>
+      <div class="section-desc">Attach clear color photos of all documents listed below.</div>
+      <div class="field-grid">
+        <div class="field"><label>State ID / Driver's License — Front <span class="required">*</span></label><div class="field-box" style="min-height:32px;padding:4px 8px;font-family:Arial;font-size:8.5pt;color:#aaa;">Attach document</div></div>
+        <div class="field"><label>State ID / Driver's License — Back <span class="required">*</span></label><div class="field-box" style="min-height:32px;padding:4px 8px;font-family:Arial;font-size:8.5pt;color:#aaa;">Attach document</div></div>
+        <div class="field"><label>Social Security Card — Front <span class="required">*</span></label><div class="field-box" style="min-height:32px;padding:4px 8px;font-family:Arial;font-size:8.5pt;color:#aaa;">Attach document</div></div>
+      </div>
+    </div>
+
+    <!-- Drug-Free Workplace -->
+    <div class="section">
+      <div class="section-title">Drug-Free Workplace Policy</div>
+      <div class="legal-box"><span class="legal-title">DRUG-FREE WORKPLACE POLICY</span>This organization maintains a drug-free workplace in compliance with applicable federal and state laws. The use, possession, sale, transfer, purchase, or manufacture of illegal drugs or controlled substances on company property or while performing company business is strictly prohibited.
+
+Employees must report to work free from the influence of alcohol, illegal drugs, or any substance that may impair performance or judgment. Prescription medications must be disclosed if they may affect job performance.
+
+Violation of this policy is grounds for immediate termination. Drug testing may be required pre-employment, randomly, post-incident, or upon reasonable suspicion.</div>
+      <div class="field-check">
+        <input type="checkbox">
+        <div class="field-check-label">I have read, understand, and agree to comply with the organization's Drug-Free Workplace Policy. I understand that violation of this policy may result in immediate termination. I consent to drug testing as a condition of employment and during employment as required.</div>
+      </div>
+      <div class="initials-row">
+        <span class="initials-label">Employee Initials:</span>
+        <div class="initials-box"></div>
+        <span style="font-family:Arial;font-size:9pt;margin-left:24px;">Date:&nbsp;</span>
+        <div class="field-line" style="width:120px;display:inline-block;"></div>
+      </div>
+    </div>
+
+    <!-- At-Will -->
+    <div class="section">
+      <div class="section-title">At-Will Employment Acknowledgment</div>
+      <div class="legal-box"><span class="legal-title">AT-WILL EMPLOYMENT STATEMENT</span>Your employment with this organization is at-will, meaning either you or the organization may terminate the employment relationship at any time, with or without cause, and with or without advance notice. Nothing in this document, the employee handbook, or any other communication creates a contract of employment for a specific duration.
+
+This at-will status cannot be altered by any verbal statements made by supervisors or managers. Only a written agreement signed by the organization's executive officer can modify this at-will relationship.</div>
+      <div class="field-check">
+        <input type="checkbox">
+        <div class="field-check-label">I acknowledge that my employment is at-will and may be terminated by either party at any time, with or without cause, and with or without notice.</div>
+      </div>
+      <div class="initials-row">
+        <span class="initials-label">Employee Initials:</span>
+        <div class="initials-box"></div>
+        <span style="font-family:Arial;font-size:9pt;margin-left:24px;">Date:&nbsp;</span>
+        <div class="field-line" style="width:120px;display:inline-block;"></div>
+      </div>
+    </div>
+
+    <!-- Liability Waiver -->
+    <div class="section">
+      <div class="section-title">Liability Acknowledgment</div>
+      <div class="legal-box"><span class="legal-title">LIABILITY ACKNOWLEDGMENT</span>As a security officer, you are employed as a private citizen. You are not a law enforcement officer and do not have powers of arrest beyond those of any private citizen. You have no authority to detain individuals except under the doctrine of citizen's arrest as defined by applicable state law.
+
+The organization shall not be liable for actions taken by security personnel that exceed the scope of their lawful authority as private citizens. You agree to hold harmless the organization for any claims arising from unauthorized use of force or unlawful detention.
+
+You are responsible for knowing and complying with all applicable laws. The use of excessive force is strictly prohibited and may result in civil and criminal liability.</div>
+      <div class="field-check">
+        <input type="checkbox">
+        <div class="field-check-label">I have read and understand the liability limitations described above and agree to the terms.</div>
+      </div>
+      <div class="initials-row">
+        <span class="initials-label">Employee Initials:</span>
+        <div class="initials-box"></div>
+        <span style="font-family:Arial;font-size:9pt;margin-left:24px;">Date:&nbsp;</span>
+        <div class="field-line" style="width:120px;display:inline-block;"></div>
+      </div>
+    </div>
+
+    <!-- Background Check Consent -->
+    <div class="section">
+      <div class="section-title">Background Check Authorization</div>
+      <div class="legal-box"><span class="legal-title">FAIR CREDIT REPORTING ACT (FCRA) DISCLOSURE</span>In accordance with the Fair Credit Reporting Act, 15 U.S.C. § 1681 et seq., this organization may obtain consumer reports and/or investigative consumer reports about you for employment purposes. These reports may contain information about your character, general reputation, personal characteristics, mode of living, criminal records, and employment history.
+
+You have the right to request a copy of any report obtained and to dispute inaccurate information directly with the reporting agency.</div>
+      <div class="field-check">
+        <input type="checkbox">
+        <div class="field-check-label">I authorize the organization to obtain consumer reports and investigative consumer reports for employment purposes. I understand this may include criminal history, employment verification, and education records.</div>
+      </div>
+    </div>
+
+    <!-- Final Signature -->
+    <div class="section">
+      <div class="section-title">Final Signature — Regulatory Packet</div>
+      <div class="sig-block">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Employee Signature</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State Conditional Block -->
+    <div class="state-block">
+      <strong>Texas Residents Only:</strong> On TOPS, add your guard card to the company license (License No. <span class="variable-pill">{{company_license_number}}</span>). Visit <em>tops.portal.texas.gov</em> to complete this step. Non-Texas residents: refer to your state-specific addendum provided by your supervisor.
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT 3: W-4 ═════════════════════════════════════════════════ -->
+  <div class="page-break">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <div class="company">{{company_name}}</div>
+        <div>{{company_legal_name}}</div>
+      </div>
+      <div class="doc-header-right">
+        <div>Document 3 of 8</div>
+        <div>Date: {{document_date}}</div>
+        <div>IRS Form W-4 (2024)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-body">
+    <div class="doc-title">Employee's Withholding Certificate (W-4)</div>
+    <div class="doc-version">IRS Form W-4 — 2024 Version &nbsp;|&nbsp; Est. 10 minutes</div>
+
+    <div class="section">
+      <div class="section-title">Step 1 — Personal Information &amp; Filing Status</div>
+      <div class="field-grid">
+        <div class="field"><label>First Name &amp; Middle Initial <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Last Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Social Security Number <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field full-width"><label>Home Address <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field full-width">
+          <label>Filing Status <span class="required">*</span></label>
+          <div class="field-select">
+            <label><input type="radio" name="filing"> Single or Married filing separately</label>
+            <label><input type="radio" name="filing"> Married filing jointly or Qualifying surviving spouse</label>
+            <label><input type="radio" name="filing"> Head of household</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Step 2 — Multiple Jobs or Spouse Works</div>
+      <div class="field-grid cols-1">
+        <div class="field">
+          <label>Multiple Jobs Option</label>
+          <div class="field-select">
+            <label><input type="radio" name="multijob"> None — this is my only job</label>
+            <label><input type="radio" name="multijob"> Use IRS withholding estimator at irs.gov/W4App</label>
+            <label><input type="radio" name="multijob"> Check this box (higher withholding)</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Step 3 — Claim Dependents</div>
+      <div class="section-desc">Complete only if your income is $200,000 or less ($400,000 or less if married filing jointly).</div>
+      <div class="field-grid cols-3">
+        <div class="field"><label>Qualifying Children Under 17 × $2,000</label><div class="field-box" style="min-height:28px;"></div></div>
+        <div class="field"><label>Other Dependents × $500</label><div class="field-box" style="min-height:28px;"></div></div>
+        <div class="field"><label>Total</label><div class="field-box" style="min-height:28px;"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Step 4 — Other Adjustments (Optional)</div>
+      <div class="field-grid cols-3">
+        <div class="field"><label>Other Income (not from jobs)</label><div class="field-box" style="min-height:28px;"></div></div>
+        <div class="field"><label>Deductions</label><div class="field-box" style="min-height:28px;"></div></div>
+        <div class="field"><label>Extra Withholding per Pay Period</label><div class="field-box" style="min-height:28px;"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Step 5 — Sign Here</div>
+      <div class="legal-box">Under penalties of perjury, I declare that this certificate, to the best of my knowledge and belief, is true, correct, and complete.</div>
+      <div class="sig-block">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Employee's Signature</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date</div>
+        </div>
+      </div>
+      <div class="field-grid" style="margin-top:20px;">
+        <div class="field"><label>Employer Name &amp; Address (Completed by {{company_name}})</label><div class="field-box" style="min-height:44px;"></div></div>
+        <div class="field"><label>Employer Identification Number (EIN)</label><div class="field-box" style="min-height:28px;"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT 4: DIRECT DEPOSIT ══════════════════════════════════════ -->
+  <div class="page-break">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <div class="company">{{company_name}}</div>
+        <div>{{company_legal_name}}</div>
+      </div>
+      <div class="doc-header-right">
+        <div>Document 4 of 8</div>
+        <div>Date: {{document_date}}</div>
+        <div>v1.0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-body">
+    <div class="doc-title">Direct Deposit Authorization</div>
+    <div class="doc-version">Category: Payroll &nbsp;|&nbsp; Est. 5 minutes</div>
+
+    <div class="section">
+      <div class="section-title">Employee Information</div>
+      <div class="field-grid">
+        <div class="field"><label>Employee Full Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Employee ID / Last 4 SSN <span class="required">*</span></label><div class="field-line"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Bank Account Information</div>
+      <div class="field-grid">
+        <div class="field"><label>Bank Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Account Type <span class="required">*</span></label>
+          <div class="field-select"><label><input type="radio" name="accttype"> Checking</label><label><input type="radio" name="accttype"> Savings</label></div>
+        </div>
+        <div class="field"><label>Routing Number (9 digits) <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Account Number <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Confirm Account Number <span class="required">*</span></label><div class="field-line"></div></div>
+      </div>
+      <div class="notice-box" style="margin-top:16px;">Attach a voided check or official bank letter to confirm routing and account numbers.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Authorization</div>
+      <div class="legal-box">I authorize {{company_name}} to initiate credit entries and, if necessary, debit entries and adjustments for any credit entries made in error to my account at the financial institution listed above. This authorization will remain in effect until I notify the payroll department in writing.</div>
+      <div class="sig-block">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Employee Signature</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT 5: I-9 ════════════════════════════════════════════════ -->
+  <div class="page-break">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <div class="company">{{company_name}}</div>
+        <div>{{company_legal_name}}</div>
+      </div>
+      <div class="doc-header-right">
+        <div>Document 5 of 8</div>
+        <div>Date: {{document_date}}</div>
+        <div>USCIS Form I-9</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-body">
+    <div class="doc-title">I-9 Employment Eligibility Verification</div>
+    <div class="doc-version">USCIS Form I-9 &nbsp;|&nbsp; Federal law requires completion within 3 business days of hire</div>
+
+    <div class="notice-box">The official USCIS I-9 form must be completed using the current federal version. This is a packet placeholder directing the employee to complete the digital I-9 in the platform portal. The employer ({{company_name}}) must verify Section 2 documents in-person or via remote examination procedure.</div>
+
+    <div class="section">
+      <div class="section-title">Section 1 — Employee Information (Complete on First Day)</div>
+      <div class="field-grid">
+        <div class="field"><label>First Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Last Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Middle Initial</label><div class="field-line"></div></div>
+        <div class="field"><label>Other Last Names Used</label><div class="field-line"></div></div>
+        <div class="field full-width"><label>Current Address <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Date of Birth <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>US Social Security Number <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field full-width">
+          <label>Citizenship/Immigration Status <span class="required">*</span></label>
+          <div class="field-select">
+            <label><input type="radio" name="i9status"> A citizen of the United States</label>
+            <label><input type="radio" name="i9status"> A noncitizen national of the United States</label>
+            <label><input type="radio" name="i9status"> A lawful permanent resident</label>
+            <label><input type="radio" name="i9status"> An alien authorized to work</label>
+          </div>
+        </div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Employee Signature</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date (Today's Date)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Section 2 — Employer Review (Completed by {{company_name}})</div>
+      <div class="section-desc">Examine one document from List A, OR one document from List B AND one from List C. Enter document information below.</div>
+      <div class="field-grid cols-3">
+        <div class="field"><label>List A Document Title</label><div class="field-line"></div></div>
+        <div class="field"><label>Issuing Authority</label><div class="field-line"></div></div>
+        <div class="field"><label>Expiration Date</label><div class="field-line"></div></div>
+        <div class="field"><label>List B Document Title</label><div class="field-line"></div></div>
+        <div class="field"><label>Issuing Authority</label><div class="field-line"></div></div>
+        <div class="field"><label>Expiration Date</label><div class="field-line"></div></div>
+        <div class="field"><label>List C Document Title</label><div class="field-line"></div></div>
+        <div class="field"><label>Issuing Authority</label><div class="field-line"></div></div>
+        <div class="field"><label>Expiration Date</label><div class="field-line"></div></div>
+      </div>
+      <div class="field-grid" style="margin-top:16px;">
+        <div class="field"><label>First Day of Employment <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Employer EIN ({{company_name}})</label><div class="field-line"></div></div>
+      </div>
+      <div class="sig-block three-col">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">{{verified_by_name}} — Authorized Representative</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Title</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT 6 + 7: HANDBOOK ACK + CONFIDENTIALITY ════════════════ -->
+  <div class="page-break">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <div class="company">{{company_name}}</div>
+        <div>{{company_legal_name}}</div>
+      </div>
+      <div class="doc-header-right">
+        <div>Documents 6–7 of 8</div>
+        <div>Date: {{document_date}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-body">
+    <div class="doc-title">Employee Handbook Acknowledgment</div>
+    <div class="doc-version">Category: Policy &nbsp;|&nbsp; Est. 5 minutes</div>
+
+    <div class="section">
+      <div class="legal-box">I acknowledge that I have received, read, and understood the {{company_name}} Employee Handbook. I agree to comply with all policies, procedures, and standards of conduct described therein. I understand that the handbook is not a contract of employment and that policies may be updated at any time. I will be notified of material changes and required to re-acknowledge if policies are updated.</div>
+      <div class="field-grid" style="margin-top:16px;">
+        <div class="field"><label>Employee Full Name <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Position Title <span class="required">*</span></label><div class="field-line"></div></div>
+        <div class="field"><label>Handbook Version / Date</label><div class="field-line"></div></div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Employee Signature</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-title" style="margin-top:36px;">Confidentiality Agreement</div>
+    <div class="doc-version">Category: Legal &nbsp;|&nbsp; Est. 5 minutes</div>
+
+    <div class="section">
+      <div class="legal-box">As an employee of {{company_name}}, I understand that I may have access to confidential information about client sites, security protocols, personnel, and business operations. I agree to:
+
+1. Keep all client site information, security procedures, and patrol routes strictly confidential.
+2. Not disclose any proprietary information to unauthorized persons during or after employment.
+3. Return all company materials upon separation.
+4. Immediately report any breach of confidentiality to management.
+
+I understand that violation of this agreement may result in immediate termination and legal action.</div>
+      <div class="field-grid" style="margin-top:16px;">
+        <div class="field"><label>Employee Full Name <span class="required">*</span></label><div class="field-line"></div></div>
+      </div>
+      <div class="sig-block three-col">
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Employee Signature</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">{{signing_rep_name}} — {{signing_rep_title}}</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-line"></div>
+          <div class="sig-label">Date</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DOCUMENT 8: WELCOME LETTER ════════════════════════════════════ -->
+  <div class="page-break">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <div class="company">{{company_name}}</div>
+        <div>{{company_legal_name}}</div>
+      </div>
+      <div class="doc-header-right">
+        <div>Document 8 of 8</div>
+        <div>Date: {{document_date}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-body">
+    <div class="doc-title">Welcome Letter &amp; New Hire Checklist</div>
+    <div class="doc-version">Orientation &nbsp;|&nbsp; Est. 5 minutes</div>
+
+    <div class="section">
+      <p style="margin-bottom:14px;">Dear <strong>{{officer_full_name}}</strong>,</p>
+      <p style="margin-bottom:12px;">Welcome to <strong>{{company_name}}</strong>. We are pleased to have you join our team as a <strong>{{officer_position}}</strong>. Your start date is <strong>{{officer_hire_date}}</strong>.</p>
+      <p style="margin-bottom:12px;">To get you ready for your first assignment, please complete the steps below. All onboarding documents are submitted through the <strong>{{company_name}} platform portal</strong>. You will receive a platform invitation at <strong>{{officer_full_name}}'s</strong> email address on file.</p>
+      <p style="margin-bottom:12px;">Your primary post assignment is: <strong>{{officer_post_assignment}}</strong> — <em>{{officer_post_address}}</em>.</p>
+      <p style="margin-bottom:24px;">Please do not hesitate to contact us at <strong>{{company_support_email}}</strong> or <strong>{{company_phone}}</strong> with any questions.</p>
+      <p style="font-weight:bold;">Welcome to the team,</p>
+      <p style="margin-bottom:4px;">{{signing_rep_name}}</p>
+      <p style="color:#666;font-family:Arial;font-size:9.5pt;">{{signing_rep_title}} — {{company_name}}</p>
+    </div>
+
+    <div class="section">
+      <div class="section-title">New Hire Checklist</div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Complete all 8 documents in this onboarding packet</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Upload color copies of guard card (front &amp; back)</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Upload state ID / driver's license (front &amp; back)</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Upload social security card</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Upload pre-employment drug test results</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Upload Level II (or Level III) training certificate</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Upload fingerprint submission receipt (IdentoGO/LiveScan)</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Provide current color photograph for personnel file</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Download the {{company_name}} app from the App Store or Google Play to access your schedule, clock in/out, and communicate with your team</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Complete all incident reports and daily activity reports through the {{company_name}} platform</div></div>
+      <div class="field-check"><input type="checkbox"><div class="field-check-label">Confirm uniform size: <strong>{{officer_uniform_size}}</strong></div></div>
+
+      <div class="state-block" style="margin-top:20px;">
+        <strong>Texas Officers:</strong> Add your guard card to the company TOPS portal (License No. <span class="variable-pill">{{company_license_number}}</span>) at <em>tops.portal.texas.gov</em> before your first shift.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FOOTER ══════════════════════════════════════════════════════════ -->
+  <div class="doc-footer">
+    <span>{{company_name}} &nbsp;|&nbsp; {{company_legal_name}} &nbsp;|&nbsp; License No. {{company_license_number}}</span>
+    <span>Confidential — CoAIleague Platform &nbsp;|&nbsp; Template v1.0 &nbsp;|&nbsp; {{document_date}}</span>
+  </div>
+
+</div>
+
+<script>
+  // Auto-fill preview date
+  document.querySelectorAll('*').forEach(el => {
+    if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+      el.innerHTML = el.innerHTML.replace(/\{\{document_date\}\}/g,
+        new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}));
+    }
+  });
+</script>
+</body>
+</html>

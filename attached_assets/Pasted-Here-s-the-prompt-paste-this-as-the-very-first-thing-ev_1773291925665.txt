@@ -1,0 +1,108 @@
+Here's the prompt — paste this as the very first thing every single session before anything else:
+
+---
+
+**COAILEAGUE DEVELOPMENT LAW — READ THIS COMPLETELY BEFORE TOUCHING ANYTHING**
+
+These rules are non-negotiable. They apply to every task, every fix, every change, every session. No exceptions.
+
+---
+
+**LAW 1 — NO BAND-AIDS**
+
+Before writing a single line of code identify the root cause of the problem. A band-aid is any fix that makes a symptom disappear without eliminating the cause. Band-aids are forbidden.
+
+Ask yourself before every fix — am I fixing the data or am I adjusting the display to hide bad data? If the answer is adjusting the display — stop. Go deeper. Find where the bad data comes from and fix that instead.
+
+If a number is wrong — find the query producing it. If two numbers conflict — find both queries and eliminate one. If a display looks broken — find the data feeding it before touching the UI.
+
+A fix that makes the screen look correct while the underlying data remains incorrect is not a fix. It is a lie the platform tells its users. It will break again. Do not do it.
+
+---
+
+**LAW 2 — ONE SOURCE OF TRUTH**
+
+Every piece of data on this platform has exactly one authoritative source. One table. One service. One query. One endpoint owns each data domain.
+
+Before creating any new query ask — does a canonical source already exist for this data? If yes consume from it. Never create a second independent query for data that already has an owner.
+
+If two endpoints are returning the same data type and producing different answers — that is a critical architectural violation. Do not reconcile the outputs. Eliminate one endpoint entirely and route everything through the surviving canonical source.
+
+The credit ledger is one table. One service reads it. One query calculates balance, used, remaining, and itemized breakdown simultaneously. Every widget that displays credit data reads from that one service. Nothing else touches credit calculations. Ever.
+
+---
+
+**LAW 3 — PROVE THE MATH BEFORE TOUCHING THE DISPLAY**
+
+Any feature involving numbers — credits, earnings, hours, pay, invoices, balances — must satisfy this check before any display code is written or modified:
+
+- Open the database
+- Run the canonical query manually
+- Verify the raw numbers are correct
+- Verify all related numbers are mathematically consistent with each other
+- Only then update the display to show those verified numbers
+
+If the raw query returns wrong numbers — fix the query. If the raw query returns correct numbers but the display shows something different — fix the display. Never fix the display when the query is wrong.
+
+Specifically for credits — these four must always be true simultaneously or nothing ships:
+
+itemized line items sum must equal used total exactly
+used total plus remaining must equal allocation plus purchased exactly
+denominator must always equal allocation plus purchased — never a fabricated calculated value
+header balance must equal remaining from the ledger calculation exactly
+
+If any of these four fail — the fix is incomplete regardless of how the screen looks.
+
+---
+
+**LAW 4 — READ BEFORE YOU TOUCH**
+
+Every session. Every task. Every fix. Read the relevant existing code completely before writing anything new.
+
+Before fixing a bug — read the file containing the bug
+Before adding a feature — read every file the feature will touch
+Before changing a query — read the table schema and all existing queries against that table
+Before modifying a component — read every place that component is used
+
+Assumptions cause more bugs than they fix. Read first. Always.
+
+---
+
+**LAW 5 — VERIFY WITH DATA NOT EYES**
+
+After every fix run a verification that uses actual data not visual inspection.
+
+For database fixes — run record counts before and after. Document both numbers.
+For calculation fixes — run the math manually against real ledger rows and confirm the output matches.
+For API fixes — call the endpoint and inspect the raw response before checking the UI.
+For integration fixes — trace the full data chain from source to display and confirm every handoff passes the correct value.
+
+If you cannot produce a data-verified proof that the fix is correct — the fix is not complete.
+
+---
+
+**LAW 6 — NO FEATURE SHIPS WITH A KNOWN VIOLATION**
+
+If a fix reveals a deeper architectural violation — stop and fix the architecture first. Do not ship a feature on top of a broken foundation.
+
+If fixing one thing breaks another thing — that is a hidden dependency that must be resolved before either fix is marked complete.
+
+If a phase cannot be fully resolved — document the exact file, exact line, exact reason, and escalate. Do not silently skip and move on.
+
+---
+
+**THE ONE QUESTION TO ASK BEFORE EVERY FIX:**
+
+Am I eliminating the cause or hiding the symptom?
+
+If the answer is hiding — stop. Start over. Find the cause.
+
+---
+
+**THIS IS THE STANDARD. EVERY SESSION. NO EXCEPTIONS.**
+
+Now read the current task and apply all six laws before writing anything.
+
+---
+
+Paste that at the top of every Replit session Bryan. It forces the agent to confront its own reasoning before it reaches for a quick fix. The one question at the end is the kill shot — it's hard to rationalize a band-aid when you've just been forced to name what you're doing.

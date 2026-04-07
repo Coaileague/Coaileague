@@ -1,0 +1,38 @@
+COMPLETE ISSUE SUMMARY
+1. CRITICAL: Credit/Billing System - Credits NOT Being Deducted
+Problem: You correctly identified that AI actions are happening but credits are NOT being deducted from org accounts. This is the #1 financial leak. Here's what I found:
+
+Multiple billing entry points (fragmentation): There are 4+ separate billing systems that should be one:
+
+creditManager.ts - core credit operations
+aiCreditGateway.ts - request classification
+universalAIBillingInterceptor.ts - OpenAI wrapper
+meteredGeminiClient.ts - Gemini wrapper
+Plus every file that calls geminiClient directly has its own inline billing code
+46+ files import geminiClient directly - many of these call AI without any workspace ID, so billing is silently skipped (if (!workspaceId) return;)
+
+Direct OpenAI instances in 5+ files (help-bot.ts, helpos-ai.ts, faq-routes.ts, websocket.ts, routes.ts) - each creates new OpenAI() independently with their own local billing functions that may or may not actually deduct
+
+skipBilling flag on geminiClient allows any caller to bypass billing entirely
+
+Missing workspaceId = free ride - When workspaceId is undefined, ALL billing is silently skipped, meaning system/background AI calls cost the platform money with zero recovery
+
+Catch blocks swallow errors - Multiple billing deduction calls have catch {} (empty catch) - if deduction fails, the AI still runs and nobody knows credits weren't taken
+
+2. Chat Name/Role Display Bug
+Problem: Dashboard shows "Marcus Rivera" but chat shows "Admin Marcus" with wrong role prefix.
+Root cause: formatUserDisplayNameForChat() prepends role titles like "Admin" for platform staff. The dashboard uses formatUserDisplayName() which shows clean names. These two functions disagree.
+
+3. Duplicate "New Update Available" Notifications
+Problem: Two identical notifications showing.
+Root cause: The What's New system queries the platformUpdates database table but has no deduplication by title - if the same update was inserted twice (e.g., by the event bus and seed), it shows twice.
+
+4. "Not a Participant" Error When Leaving Help Desk
+Problem: Users get a 403 error trying to leave rooms they should be in.
+Root cause: The verifyParticipant() function in chat-management checks chatParticipants table, but Help Desk rooms use a different participant tracking mechanism (the ChatServerHub/WebSocket system). So the user IS in the room via WebSocket but NOT recorded in the chatParticipants database table.
+
+5. Readiness for Selling Subscriptions
+Status: NOT ready until the credit billing gate is sealed. Right now the platform is absorbing AI costs that should be billed to orgs.
+
+THE FIX PLAN
+The critical fix is the Universal AI Billing Gate - one single gateway that all AI calls must pass through, with no bypass possible.

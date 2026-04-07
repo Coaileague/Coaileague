@@ -79,7 +79,6 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
   const fetchInterceptorSetRef = useRef(false);
 
   const handleActivate = useCallback(() => {
-    console.log('[PaymentEnforcement] User acknowledged - navigating to:', modalState.redirectTo);
     setStoredModalState(null);
     setModalState(prev => ({ ...prev, isOpen: false }));
     window.location.href = modalState.redirectTo;
@@ -97,7 +96,6 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
     const checkStorage = () => {
       const stored = getStoredModalState();
       if (stored && stored.isOpen && !modalState.isOpen) {
-        console.log('[PaymentEnforcement] Restoring modal from localStorage');
         setModalState(stored);
       }
     };
@@ -124,7 +122,6 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
       if (url.includes('/api/auth/me') && response.status === 200) {
         const existingModal = getStoredModalState();
         if (existingModal?.isOpen) {
-          console.log('[PaymentEnforcement] Auth succeeded - clearing stale modal state');
           setStoredModalState(null);
           setModalState(prev => ({ ...prev, isOpen: false }));
         }
@@ -137,16 +134,12 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
           const data = await clonedResponse.json() as PaymentErrorResponse;
           
           if (data.code === 'PAYMENT_REQUIRED' || data.code === 'ORGANIZATION_INACTIVE') {
-            console.log('[PaymentEnforcement] Intercepted:', response.status, data.code, 'isOwner:', data.isOwner);
-            
             const existingModal = getStoredModalState();
             if (existingModal?.isOpen) {
-              console.log('[PaymentEnforcement] Modal already stored, skipping');
               return response;
             }
             
             if (data.isOwner === true) {
-              console.log('[PaymentEnforcement] Owner detected - showing persistent modal');
               const newState: PaymentModalState = {
                 isOpen: true,
                 workspaceName: data.workspaceName || 'Your organization',
@@ -161,7 +154,6 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
             
             if (data.isOwner === false && data.forceLogout === true) {
               if (!logoutTimerRef.current) {
-                console.log('[PaymentEnforcement] Non-owner - scheduling logout');
                 logoutTimerRef.current = setTimeout(() => {
                   apiRequest('POST', '/api/auth/logout').finally(() => {
                     window.location.href = '/';
@@ -174,6 +166,15 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
       }
       
       return response;
+    };
+
+    // Cleanup: restore original fetch on unmount
+    return () => {
+      window.fetch = originalFetch;
+      if (logoutTimerRef.current) {
+        clearTimeout(logoutTimerRef.current);
+        logoutTimerRef.current = null;
+      }
     };
   }, []);
 

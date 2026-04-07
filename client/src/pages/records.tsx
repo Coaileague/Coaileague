@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { useModules } from "@/config/moduleConfig";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Search, Clock, Users, FileText, DollarSign, Calendar, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface SearchResult {
   employees: any[];
@@ -50,6 +52,7 @@ export default function Records() {
   // Fetch search history
   const { data: searchHistory } = useQuery({
     queryKey: ['/api/search/history'],
+    queryFn: () => apiFetch('/api/search/history', AnyResponse),
   });
 
   // Search mutation
@@ -83,21 +86,15 @@ export default function Records() {
     }
   };
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg">
-            <Search className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">AI Records™</h1>
-            <p className="text-muted-foreground">Natural language search across all your data</p>
-          </div>
-        </div>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'ai-records',
+    title: 'AI Records™',
+    subtitle: 'Natural language search across all your data',
+    category: 'operations',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Search Bar */}
       <Card className="p-6">
         <form onSubmit={handleSearch} className="space-y-4">
@@ -134,7 +131,7 @@ export default function Records() {
 
           {/* Search Type Tabs */}
           <Tabs value={searchType} onValueChange={setSearchType} className="w-full">
-            <TabsList className="grid grid-cols-6 w-full">
+            <TabsList className="w-full overflow-x-auto grid grid-cols-3 sm:grid-cols-6">
               <TabsTrigger value="all" data-testid="tab-search-all">All</TabsTrigger>
               <TabsTrigger value="employees" data-testid="tab-search-employees">
                 <Users className="h-4 w-4 mr-1" />
@@ -164,7 +161,7 @@ export default function Records() {
       {/* Search Results */}
       {results && metadata && (
         <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h2 className="text-xl font-semibold">Search Results</h2>
             <Badge variant="outline">
               {metadata.totalResults} results in {metadata.executionTimeMs}ms
@@ -172,7 +169,7 @@ export default function Records() {
           </div>
 
           <Tabs defaultValue="employees" className="w-full">
-            <TabsList>
+            <TabsList className="w-full sm:w-auto overflow-x-auto">
               <TabsTrigger value="employees" data-testid="tab-results-employees">
                 Employees ({results.employees.length})
               </TabsTrigger>
@@ -196,7 +193,7 @@ export default function Records() {
               ) : (
                 results.employees.map((employee) => (
                   <Card key={employee.id} className="p-4 hover-elevate" data-testid={`card-employee-${employee.id}`}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
                         <h3 className="font-semibold">{employee.firstName} {employee.lastName}</h3>
                         <p className="text-sm text-muted-foreground">{employee.email}</p>
@@ -214,12 +211,12 @@ export default function Records() {
               ) : (
                 results.clients.map((client) => (
                   <Card key={client.id} className="p-4 hover-elevate" data-testid={`card-client-${client.id}`}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
-                        <h3 className="font-semibold">{client.name}</h3>
-                        <p className="text-sm text-muted-foreground">{client.contactEmail}</p>
+                        <h3 className="font-semibold">{client.companyName || `${client.firstName} ${client.lastName}`.trim() || 'Unknown Client'}</h3>
+                        <p className="text-sm text-muted-foreground">{client.email}</p>
                       </div>
-                      <Badge variant="outline">{client.status || 'Active'}</Badge>
+                      <Badge variant="outline">{client.isActive ? 'Active' : 'Inactive'}</Badge>
                     </div>
                   </Card>
                 ))
@@ -249,7 +246,7 @@ export default function Records() {
             {searchHistory.slice(0, 5).map((item: any) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                className="flex items-center justify-between gap-2 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
                 onClick={() => {
                   setSearchQuery(item.query);
                   setSearchType(item.searchType);
@@ -266,6 +263,6 @@ export default function Records() {
           </div>
         </Card>
       )}
-    </div>
+    </CanvasHubPage>
   );
 }

@@ -1,0 +1,917 @@
+# CoAIleague Platform Audit Assignment
+## For Replit Development Team
+
+**Document Purpose:** This document provides competitor research, feature checklists, and the platform vision. Your job is to audit what we have, identify what's missing that matters, filter out what's outside our scope, and come back with a game plan before building.
+
+**Date:** February 26, 2026  
+**Prepared by:** Bryan Guillen (Founder/CEO)
+
+---
+
+## YOUR DELIVERABLES BEFORE BUILDING
+
+### What I Need From You:
+
+1. **Platform Audit Summary**
+   - Review each checklist section against our current build
+   - Mark what's DONE, what's PARTIAL, what's MISSING
+   - Note any bugs or semantic issues you find
+
+2. **Parity Gap Analysis**
+   - Identify gaps that matter for our endgame (security workforce management)
+   - Explicitly call out what's NOT needed (outside our scope)
+   - Prioritize: Critical vs Nice-to-Have vs Out of Scope
+
+3. **Semantic Integration Review**
+   - Are CAD + Schedule + Map talking properly?
+   - Are there race conditions or workflow conflicts?
+   - Is data flowing canonically (single source of truth)?
+
+4. **Your Game Plan**
+   - What needs to be built/fixed and in what order?
+   - Estimated effort for each item
+   - What can we ship now vs what needs more work?
+
+5. **Summary Document**
+   - Give me a clear summary of your findings
+   - Your recommended approach
+   - Then we discuss before you start building
+
+---
+
+## TABLE OF CONTENTS
+
+1. [Executive Summary & Vision](#1-executive-summary--vision)
+2. [Core Platform Philosophy](#2-core-platform-philosophy)
+3. [Competitor Analysis & Parity Assessment](#3-competitor-analysis--parity-assessment)
+4. [CAD System Deep Dive](#4-cad-system-deep-dive)
+5. [DockChat Messaging System Analysis](#5-dockchat-messaging-system-analysis)
+6. [Form Builder & Document System](#6-form-builder--document-system)
+7. [Field Operations & Report Submission UX](#7-field-operations--report-submission-ux)
+8. [Trinity AI Orchestration System](#8-trinity-ai-orchestration-system)
+9. [Regulatory Partnership & Auditor Integration](#9-regulatory-partnership--auditor-integration)
+10. [Technical Requirements & Race Conditions](#10-technical-requirements--race-conditions)
+11. [Mobile & Desktop Optimization](#11-mobile--desktop-optimization)
+12. [Feature Validation Checklist](#12-feature-validation-checklist)
+13. [Priority Action Items](#13-priority-action-items)
+
+---
+
+## 1. EXECUTIVE SUMMARY & VISION
+
+### The Big Picture
+CoAIleague is designed to be a **complete replacement ecosystem** for multiple enterprise tools currently used by security companies. The goal is semantic unity—every system, service, and AI component working in organized orchestration toward the platform's end goal.
+
+### What We're Replacing (Parity Targets)
+| Current Tool | CoAIleague Replacement | Parity Status |
+|--------------|----------------------|---------------|
+| GetSling | Schedule + Time Clock | **NEEDS AUDIT** |
+| THERMS | Security Guard Management | **NEEDS AUDIT** |
+| DocuSign | E-Signature System | **NEEDS AUDIT** |
+| Formstack | Custom Form Builder | **NEEDS AUDIT** |
+| Police CAD Systems | CAD + Dispatch | **NEEDS AUDIT** |
+| Facebook Messenger | DockChat | **NEEDS ENHANCEMENT** |
+| QuickBooks | QB Integration + Trinity | **NEEDS AUDIT** |
+
+### The Ultimate Vision
+- Partnership with regulatory services in any state
+- Become a vetted vendor/partner creating a compliance ecosystem
+- Security companies cannot operate efficiently without CoAIleague
+- Auditors get free access (org pays), making their job easier/faster
+- Complete automation of schedule → payroll → invoice → compliance
+
+---
+
+## 2. CORE PLATFORM PHILOSOPHY
+
+### Semantic Integration Principles
+
+**Everything Must Be:**
+1. **Canonical** - Single source of truth for all data
+2. **Chronological** - Proper timestamping and audit trails
+3. **Systematic** - Predictable workflows and behaviors
+4. **Semantic** - Meaningful relationships between all components
+5. **Universal** - Same data, same state across mobile/desktop/offline
+
+### The "Speak and Be Compatible" Rule
+- CAD ↔ Map ↔ Schedule = Full bidirectional communication
+- All systems must share context and state
+- No siloed features or data islands
+- Real-time sync across all touchpoints
+
+---
+
+## 3. COMPETITOR ANALYSIS & PARITY ASSESSMENT
+
+### 3.1 GetSling Analysis
+
+**GetSling Core Features:**
+- Drag-and-drop shift scheduling with color coding
+- Time clock with GPS/geofencing
+- Shift swapping and availability management
+- Internal messaging and news feed
+- Labor cost tracking and overtime control
+- Multi-location administration
+- Task management per shift
+- Employee document storage (licenses, contracts)
+- Mobile app for clock-in/out and schedule viewing
+- Automatic clock-out for forgotten punches
+- Shift reminders and notifications
+- Payroll export and reporting
+
+**CoAIleague Parity Checklist - VALIDATE THESE:**
+| Feature | GetSling Has | CoAIleague Has? | Gap? |
+|---------|--------------|-----------------|------|
+| Drag-drop schedule builder | ✅ | ? | ? |
+| Color-coded shifts by role/position | ✅ | ? | ? |
+| Recurring shift templates | ✅ | ? | ? |
+| Shift swap requests | ✅ | ? | ? |
+| Availability management | ✅ | ? | ? |
+| Time-off requests with approval | ✅ | ? | ? |
+| GPS time clock | ✅ | ? | ? |
+| Geofencing alerts | ✅ | ? | ? |
+| Automatic clock-out | ✅ | ? | ? |
+| Labor cost forecasting | ✅ | ? | ? |
+| Overtime tracking/alerts | ✅ | ? | ? |
+| Multi-location filtering | ✅ | ? | ? |
+| Task assignments per shift | ✅ | ? | ? |
+| Employee document storage | ✅ | ? | ? |
+| License/certification expiry alerts | ✅ | ? | ? |
+| Shift reminder notifications | ✅ | ? | ? |
+| News feed/announcements | ✅ | ? | ? |
+| Payroll report export | ✅ | ? | ? |
+
+**GetSling Weaknesses We Can Exploit:**
+- No biometric verification or MFA
+- Mobile app reported as less intuitive than desktop
+- Messaging feature has freezing issues
+- No real CAD/dispatch integration
+- No AI assistance
+- Per-user pricing gets expensive at scale
+
+### 3.2 THERMS Analysis
+
+**THERMS Core Features:**
+- Real-time GPS tracking of guards
+- Incident reporting with photo/video/notes
+- Dispatch management system
+- Client portal for transparency
+- Guard tour patrol system with QR checkpoints
+- Geofencing for patrol routes
+- BOLO (Be On Lookout) management
+- Post order management
+- Scheduling and shifts
+- Panic alert feature
+- Communication tools (in-app messaging)
+- Custom report builder
+- Analytics and data management
+- Mobile app for field operations
+- Lone worker protection features
+- Visitor management
+- Certificate/permit expiry tracking
+
+**CoAIleague Parity Checklist - VALIDATE THESE:**
+| Feature | THERMS Has | CoAIleague Has? | Gap? |
+|---------|------------|-----------------|------|
+| Real-time GPS guard tracking | ✅ | ? | ? |
+| Incident reports with media upload | ✅ | ? | ? |
+| Photo/video attachment to reports | ✅ | ? | ? |
+| Dispatch management | ✅ | ? | ? |
+| Client portal (read-only view) | ✅ | ? | ? |
+| QR code checkpoint scanning | ✅ | ? | ? |
+| Guard tour verification | ✅ | ? | ? |
+| Geofencing alerts | ✅ | ? | ? |
+| BOLO management | ✅ | ? | ? |
+| Post orders digital access | ✅ | ? | ? |
+| Panic/emergency alert button | ✅ | ? | ? |
+| Custom report templates | ✅ | ? | ? |
+| Analytics dashboard | ✅ | ? | ? |
+| Certificate expiry tracking | ✅ | ? | ? |
+| Lone worker safety features | ✅ | ? | ? |
+| Visitor management | ✅ | ? | ? |
+
+**THERMS Pricing:** $45+/month for full features - we can undercut this
+
+### 3.3 DocuSign Analysis
+
+**DocuSign Core Features:**
+- Electronic signature capture (legally binding)
+- Reusable templates with drag-drop field placement
+- Sequential and parallel signing workflows
+- Recipient roles (signer, CC, certified delivery)
+- Embedded signing (no redirect needed)
+- Bulk send to multiple recipients
+- Real-time tracking and notifications
+- Reminders and expiration settings
+- Audit trail with timestamps
+- Document generation from data
+- Mobile signing experience
+- SMS/email authentication
+- Integration with CRM/ERP systems
+- Maestro workflow automation
+- Template management
+- 99.99% uptime SLA
+
+**CoAIleague Parity Checklist - VALIDATE THESE:**
+| Feature | DocuSign Has | CoAIleague Has? | Gap? |
+|---------|--------------|-----------------|------|
+| Legally binding e-signatures | ✅ | ? | ? |
+| Drag-drop signature field placement | ✅ | ? | ? |
+| Reusable document templates | ✅ | ? | ? |
+| Sequential signing order | ✅ | ? | ? |
+| Parallel signing (all at once) | ✅ | ? | ? |
+| Mixed signing workflows | ✅ | ? | ? |
+| Embedded signing in-app | ✅ | ? | ? |
+| Bulk document sending | ✅ | ? | ? |
+| Real-time status tracking | ✅ | ? | ? |
+| Automatic reminders | ✅ | ? | ? |
+| Document expiration settings | ✅ | ? | ? |
+| Complete audit trail | ✅ | ? | ? |
+| Document generation from form data | ✅ | ? | ? |
+| SMS/email authentication | ✅ | ? | ? |
+| Mobile-optimized signing | ✅ | ? | ? |
+| Recipient notifications | ✅ | ? | ? |
+
+### 3.4 Formstack Analysis
+
+**Formstack Core Features:**
+- Drag-and-drop form builder (no coding)
+- 15+ field types (dropdown, radio, checkbox, date, file upload, etc.)
+- Conditional logic (show/hide fields)
+- Multi-step forms with sections
+- Workflow forms (multiple participants)
+- Form prefill from data sources
+- Custom branding (logos, colors, fonts)
+- Payment integration (Stripe, PayPal)
+- Document generation from form data
+- E-signature collection
+- Form analytics and conversion tracking
+- Data export and integrations
+- Salesforce native integration
+- Template library
+- Mobile-responsive forms
+- HIPAA/FERPA compliance options
+
+**CoAIleague Parity Checklist - VALIDATE THESE:**
+| Feature | Formstack Has | CoAIleague Has? | Gap? |
+|---------|---------------|-----------------|------|
+| Drag-drop form builder | ✅ | ? | ? |
+| Multiple field types | ✅ | ? | ? |
+| Conditional logic | ✅ | ? | ? |
+| Multi-step forms | ✅ | ? | ? |
+| File upload fields | ✅ | ? | ? |
+| Form templates (save/reuse) | ✅ | ? | ? |
+| Custom branding | ✅ | ? | ? |
+| Payment collection | ✅ | ? | ? |
+| Document generation | ✅ | ? | ? |
+| E-signature fields | ✅ | ? | ? |
+| Form analytics | ✅ | ? | ? |
+| Data prefill | ✅ | ? | ? |
+| Mobile responsive | ✅ | ? | ? |
+| Workflow routing | ✅ | ? | ? |
+
+---
+
+## 4. CAD SYSTEM DEEP DIVE
+
+### What Real CAD Systems Do (Police/Security Standard)
+
+**Core CAD Functionality:**
+1. **Call Handling & Input**
+   - Incident logging with type codes
+   - Automatic number/location identification
+   - Priority classification
+   - Call queuing
+
+2. **Dispatch Management**
+   - Unit status tracking (available, en route, on scene, busy)
+   - Automatic unit recommendations based on GPS proximity
+   - Manual and automatic dispatch assignment
+   - Real-time status updates
+
+3. **Resource Management**
+   - Track all units/officers in real-time
+   - GPS location of every asset
+   - Availability status
+   - Capability matching (who can handle what)
+
+4. **Mapping & Geolocation**
+   - Real-time map display of all units
+   - Incident locations plotted
+   - Route optimization
+   - Geofencing boundaries
+
+5. **Communication**
+   - Messaging to field units
+   - Status updates via mobile data terminal
+   - Alerts and notifications
+   - Integration with radio systems
+
+6. **Reporting & Analysis**
+   - Incident reports with full audit trail
+   - Response time analytics
+   - Historical incident data
+   - Trend identification
+
+### CoAIleague CAD Requirements
+
+**CRITICAL INTEGRATION: CAD + Map + Schedule Must Speak**
+
+```
+SCHEDULE says: Officer John is on duty at Site A from 8am-4pm
+          ↓
+CAD should show: John as "available" for Site A during that window
+          ↓
+MAP should show: John's GPS location in real-time
+          ↓
+GEOFENCE checks: Is John inside Site A's boundary?
+          ↓
+IF John leaves boundary:
+  - AUTO alert to dispatch
+  - AUTO clock-out trigger
+  - REQUIRE manual clock-in with explanation
+  - LOG for training/audit purposes
+```
+
+**CAD Feature Requirements:**
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| Officer status board | CRITICAL | Show who is on duty per schedule in real-time |
+| GPS tracking integration | CRITICAL | Live location of all on-duty officers |
+| Geofence monitoring | CRITICAL | Alert when officer leaves assigned site |
+| Auto clock-out on boundary exit | HIGH | Automatic with explanation required |
+| Incident dispatch | CRITICAL | Assign nearest available officer |
+| Call/incident logging | CRITICAL | Quick entry with type codes |
+| Priority queuing | HIGH | Sort incidents by severity |
+| Status updates from field | CRITICAL | Officers update own status via app |
+| Unit history/timeline | HIGH | See all activity for any unit |
+| Response time tracking | HIGH | Measure dispatch to on-scene |
+| Integration with reports | CRITICAL | Incidents flow to report system |
+
+**Could We Service Police Departments?**
+Yes, with these additions:
+- CJIS compliance (Criminal Justice Information Services)
+- HIPAA compliance for medical incidents
+- Integration with 911 systems (ANI/ALI)
+- Records Management System (RMS) integration
+- Mobile Data Terminal (MDT) support
+- Radio system integration
+- Multi-agency coordination
+
+---
+
+## 5. DOCKCHAT MESSAGING SYSTEM ANALYSIS
+
+### Facebook Messenger Feature Comparison
+
+**Messenger Core Features:**
+- One-on-one direct messages
+- Group chats with multiple participants
+- Message reactions (❤️ 😂 😮 😢 😡 👍 👎)
+- Reply to specific messages (quoted reply)
+- @mentions in group chats
+- Voice messages with playback speed control
+- Photo/video sharing with preview
+- File attachments
+- Link previews (clickable)
+- Message editing (15-minute window)
+- Disappearing messages
+- Read receipts
+- Typing indicators
+- Emoji reactions with animation
+- Chat heads / floating bubbles (minimize and bounce between chats)
+- Persistent chat history
+- Leave conversation option
+- Mute notifications per chat
+- End-to-end encryption
+- Voice and video calls
+- Screen sharing
+
+### WhatsApp Feature Comparison
+
+**WhatsApp Core Features:**
+- All Messenger features plus:
+- Double-check delivery/read indicators
+- Last seen / online status
+- Status stories
+- Forward messages
+- Star important messages
+- Archive chats
+- Pinned chats
+- Broadcast lists
+- Business profiles
+- Quick replies (templates)
+- Labels for organizing
+- Catalog integration
+
+### DockChat Enhancement Requirements
+
+**CRITICAL UX ENHANCEMENTS NEEDED:**
+
+1. **Message Reactions Polish**
+   - Current: Basic reaction system
+   - Needed: Smooth animation, clear visual feedback
+   - Needed: Hold-to-react gesture (not sheet popup)
+   - Needed: Reaction count display on messages
+
+2. **Reply System**
+   - Current: ? (needs audit)
+   - Needed: Long-press to reveal reply option
+   - Needed: Quoted reply showing original message snippet
+   - Needed: Tap quoted portion to jump to original
+
+3. **Media Handling**
+   - Current: ? (needs audit)
+   - Needed: Image preview before sending
+   - Needed: Video thumbnail preview
+   - Needed: Voice message recording with waveform
+   - Needed: Voice playback speed (1x, 1.5x, 2x)
+   - Needed: Resume voice from where left off
+   - Needed: Continue playing when navigating away
+
+4. **Chat Window Behavior**
+   - Current: ? (needs audit)
+   - Needed: Minimize to floating bubble
+   - Needed: Bounce between active chats while maintaining history
+   - Needed: Persistent history for ongoing conversations
+   - Needed: Clean slate when entering NEW chat/DM
+
+5. **Conversation Management**
+   - Needed: Leave conversation permanently
+   - Needed: Close conversation (get notified only on new messages)
+   - Needed: Mute options (1 hour, 8 hours, 1 day, always)
+   - Needed: Archive old conversations
+
+6. **Link Handling**
+   - Needed: Clickable links with preview cards
+   - Needed: URL preview generation
+
+**DockChat Use Cases to Support:**
+- Group chats for teams
+- Meetings coordination
+- Training sessions
+- Helpdesk support conversations
+- Direct messages between staff
+- Group DMs for specific topics
+
+---
+
+## 6. FORM BUILDER & DOCUMENT SYSTEM
+
+### Required Form Builder Capabilities
+
+**Drag-and-Drop Form Creation:**
+```
+Admin/Support Staff should be able to:
+1. Open form builder
+2. Drag field types onto canvas:
+   - Text input (short/long)
+   - Dropdown menus
+   - Radio buttons
+   - Checkboxes
+   - Date/time picker
+   - File upload (image/video/document)
+   - Signature field
+   - GPS location capture
+   - Photo capture (camera integration)
+3. Configure each field:
+   - Required vs optional
+   - Validation rules
+   - Conditional show/hide logic
+   - Default values
+   - Help text
+4. Set form workflow:
+   - Who can submit
+   - Approval routing
+   - Notifications
+5. Save as template for reuse
+```
+
+**Form Templates Pipeline:**
+- Create template → Save to org library → Deploy to users
+- Templates should generate documents (contracts, proposals, reports)
+- Data from forms should auto-populate document fields
+- Completed documents stored to correct org/user
+
+**Form Data Persistence Questions:**
+- Are forms saved to the right organization? **VERIFY**
+- Are forms associated with the right end-user? **VERIFY**
+- Do form submissions persist properly? **VERIFY**
+- Can historical form data be retrieved? **VERIFY**
+
+---
+
+## 7. FIELD OPERATIONS & REPORT SUBMISSION UX
+
+### The Problem (Bryan's Observation)
+> "Officers don't want to type in the client name or address in dire situations or emergencies"
+
+### The Solution: Smart Report Forms
+
+**Required Enhancements:**
+
+1. **Client Dropdown Pre-Population**
+   ```
+   When officer opens report form:
+   - Show dropdown of ALL clients associated with current org session
+   - Auto-populate client details on selection
+   - Include: Name, Address, Contact info, Site-specific instructions
+   ```
+
+2. **Address Auto-Fill**
+   ```
+   On client selection:
+   - Address fields auto-populate
+   - GPS can verify they're at the location
+   - Discrepancy flagged if GPS doesn't match
+   ```
+
+3. **Media Upload on All Reports**
+   - Every report form MUST support:
+     - Photo upload (multiple)
+     - Video upload
+     - Voice memo attachment
+     - File attachments
+
+4. **Quick Report Types**
+   ```
+   One-tap incident type selection:
+   - Suspicious Activity
+   - Trespassing
+   - Theft/Burglary
+   - Medical Emergency
+   - Fire/Safety Hazard
+   - Property Damage
+   - Alarm Response
+   - Welfare Check
+   - Other (custom)
+   ```
+
+5. **Emergency Mode**
+   - Big "EMERGENCY" button
+   - Minimal required fields
+   - Auto-captures GPS, timestamp, officer ID
+   - Immediate dispatch notification
+   - Add details after crisis resolved
+
+---
+
+## 8. TRINITY AI ORCHESTRATION SYSTEM
+
+### Trinity Architecture Review
+
+**Current Design:**
+- Trinity = Meta-cognition layer (executive function)
+- Orchestration Triad: GPT + Claude + Gemini
+- Automatic fallback chains between models
+- Cost monitoring to prevent unprofitable operations
+
+### Validation Questions:
+
+1. **Tool Access**
+   - Does Trinity have access to all necessary platform tools?
+   - Can Trinity call scheduling functions?
+   - Can Trinity access CAD/dispatch?
+   - Can Trinity read/write to QB integration?
+   - Can Trinity manage user sessions?
+
+2. **Memory & Context**
+   - Is conversation history persistent per user session?
+   - Is org context maintained across interactions?
+   - Are actions logged and auditable?
+   - Does context sync live across platform?
+
+3. **Cost Attribution**
+   - Are ALL token costs attributed to organizations (not platform)?
+   - Is there cost monitoring per org?
+   - Are there safeguards against runaway costs?
+
+4. **Specialized Bots**
+   - HelpAI: Functioning properly?
+   - MeetingBot: Functioning properly?
+   - ReportBot: Functioning properly?
+   - ClockBot: Functioning properly?
+
+### QB Integration Safety
+- Can Trinity safely read QB data?
+- Are migrations to Trinity data store working?
+- Is there rollback capability?
+- Are sync conflicts handled?
+
+---
+
+## 9. REGULATORY PARTNERSHIP & AUDITOR INTEGRATION
+
+### The Vision
+> "Partnership with regulatory services in any state... become a vetted vendor/partner making a monopoly—companies can't exist or operate without CoAIleague"
+
+### Auditor Experience Requirements
+
+**Free Access for Auditors (Org Pays):**
+```
+Auditor Portal:
+1. Read-only access to:
+   - All compliance documentation
+   - Officer certifications/licenses
+   - Training records
+   - Incident reports
+   - Schedule history
+   - Time/attendance records
+   - GPS verification logs
+   - Client contracts
+
+2. Search & Filter:
+   - By date range
+   - By officer
+   - By site/client
+   - By incident type
+   - By compliance category
+
+3. Export Capabilities:
+   - PDF reports
+   - Excel data exports
+   - Audit trail downloads
+
+4. Compliance Dashboard:
+   - At-a-glance compliance status
+   - Expiring certifications
+   - Missing documentation
+   - Training due dates
+```
+
+**What Makes Auditor Job Easier:**
+- Everything in one place (no chasing paperwork)
+- Digital trail for every action
+- Timestamp verification (GPS + system time)
+- Automatic compliance tracking
+- Exception flagging
+- Pre-built audit reports
+
+### Client Portal (For Clients Being Serviced)
+- Real-time officer location on their site
+- Incident reports for their property
+- Patrol verification
+- Communication with security company
+- Service quality metrics
+
+---
+
+## 10. TECHNICAL REQUIREMENTS & RACE CONDITIONS
+
+### Race Condition Prevention
+
+**Areas Requiring Attention:**
+1. **Schedule + Clock Conflicts**
+   - Two users editing same schedule simultaneously
+   - Clock-in while schedule being modified
+   - Shift swap while shift being reassigned
+
+2. **CAD + Dispatch**
+   - Multiple dispatchers assigning same incident
+   - Officer status update during dispatch
+   - GPS data delayed causing stale assignments
+
+3. **Form Submissions**
+   - Duplicate submission prevention
+   - Offline submission sync conflicts
+   - Media upload interruption handling
+
+4. **QB Sync**
+   - Concurrent invoice generation
+   - Payroll calculation during data update
+   - Data migration conflicts
+
+**Solutions to Implement:**
+- Optimistic locking with version numbers
+- Queue-based processing for critical operations
+- Real-time conflict detection and resolution UI
+- Automatic retry with exponential backoff
+- Idempotent operations where possible
+
+### Data Consistency Requirements
+- Single source of truth for all entities
+- Event sourcing for audit trail
+- Eventually consistent with clear sync status
+- Offline-first with conflict resolution strategy
+
+---
+
+## 11. MOBILE & DESKTOP OPTIMIZATION
+
+### Performance Goals
+
+**Mobile:**
+- App load: < 2 seconds
+- Screen transitions: < 300ms
+- Offline capability: Core features work without network
+- Memory: Stay under 150MB active
+- Battery: Minimize background drain
+- GPS: Efficient location tracking (batch updates)
+
+**Desktop:**
+- Initial load: < 3 seconds
+- Dashboard render: < 1 second
+- Real-time updates: < 500ms latency
+- Multi-tab support without conflicts
+
+### Offline Mode Requirements
+- Queue actions when offline
+- Sync queue on reconnect
+- Show clear offline indicator
+- Prioritize sync order (critical first)
+- Handle conflict resolution gracefully
+- GPS data cached for later sync
+
+---
+
+## 12. FEATURE VALIDATION CHECKLIST
+
+### Schedule System
+- [ ] Create shifts with drag-drop
+- [ ] Color coding by role
+- [ ] Recurring templates
+- [ ] Shift swap requests
+- [ ] Availability management
+- [ ] Time-off requests
+- [ ] Overtime alerts
+- [ ] Multi-site views
+- [ ] Publish/notify employees
+- [ ] Mobile schedule view
+
+### Time Clock
+- [ ] GPS clock-in/out
+- [ ] Geofence enforcement
+- [ ] Photo verification
+- [ ] Break tracking
+- [ ] Automatic clock-out
+- [ ] Missed punch alerts
+- [ ] Overtime calculation
+- [ ] Payroll export
+
+### CAD/Dispatch
+- [ ] Incident logging
+- [ ] Unit status board
+- [ ] GPS unit tracking
+- [ ] Auto-dispatch suggestions
+- [ ] Manual dispatch
+- [ ] Status updates from field
+- [ ] Map integration
+- [ ] Geofence alerts
+- [ ] Response time tracking
+
+### Reports/Incidents
+- [ ] Client dropdown selection
+- [ ] Address auto-populate
+- [ ] Photo upload
+- [ ] Video upload
+- [ ] Voice memo
+- [ ] GPS capture
+- [ ] Timestamp logging
+- [ ] Report templates
+- [ ] Quick incident types
+- [ ] Emergency mode
+
+### DockChat
+- [ ] Direct messages
+- [ ] Group chats
+- [ ] Message reactions
+- [ ] Reply to message
+- [ ] Voice messages
+- [ ] Photo/video sharing
+- [ ] Link previews
+- [ ] Minimize/bubble mode
+- [ ] Persistent history
+- [ ] Leave/mute conversation
+
+### Form Builder
+- [ ] Drag-drop interface
+- [ ] All field types
+- [ ] Conditional logic
+- [ ] Template saving
+- [ ] Data persistence
+- [ ] Document generation
+- [ ] E-signature fields
+- [ ] Mobile responsive
+
+### E-Signature
+- [ ] Signature capture
+- [ ] Multiple signers
+- [ ] Sequential routing
+- [ ] Template system
+- [ ] Audit trail
+- [ ] Mobile signing
+- [ ] Reminders
+- [ ] Status tracking
+
+### Compliance/Auditor
+- [ ] Auditor portal access
+- [ ] Read-only views
+- [ ] Search/filter
+- [ ] Export reports
+- [ ] Compliance dashboard
+- [ ] Certificate tracking
+- [ ] Training records
+
+### Trinity AI
+- [ ] Tool access verified
+- [ ] Memory persistence
+- [ ] Cost attribution
+- [ ] Bot functionality
+- [ ] QB integration safe
+- [ ] Fallback chains working
+
+---
+
+## 13. AUDIT PRIORITY ORDER
+
+### Start Here (Critical Path):
+1. **CAD ↔ Schedule ↔ Map Integration** - This is the core differentiator. Verify these systems are semantically connected.
+2. **Report Form UX** - Check client dropdown, address auto-populate, media upload
+3. **Time Clock + Geofencing** - Verify GPS boundary enforcement and auto clock-out
+4. **Trinity Tool Access** - Confirm AI has access to all systems it needs
+
+### Then Check:
+1. **DockChat** - Compare to Messenger/WhatsApp feature list
+2. **Form Builder** - Drag-drop, templates, persistence
+3. **E-Signature** - Workflow and audit trail
+4. **Mobile Performance** - Speed and memory usage
+
+### Lower Priority (Validate Later):
+1. **Auditor Portal** - May need to build out more
+2. **Advanced CAD features** - Police-grade capabilities
+3. **Full DocuSign parity** - Complex workflow scenarios
+4. **Formstack parity** - Advanced conditional logic
+
+---
+
+## SUMMARY & NEXT STEPS FOR REPLIT
+
+### Your Workflow:
+
+```
+STEP 1: AUDIT
+├── Go through each checklist
+├── Test each feature in current build
+├── Mark: ✅ DONE | ⚠️ PARTIAL | ❌ MISSING | 🐛 BROKEN
+└── Document any semantic issues or race conditions
+
+STEP 2: ANALYZE
+├── Which missing features matter for security workforce management?
+├── Which are outside our scope? (explicitly call these out)
+├── What's the priority order?
+└── What dependencies exist?
+
+STEP 3: SUMMARIZE
+├── Write up your findings
+├── Propose your game plan with effort estimates
+├── Identify quick wins vs bigger lifts
+└── Send back to me for review
+
+STEP 4: DISCUSS
+├── We review your findings together
+├── Align on priorities and approach
+├── Clarify any questions
+└── Agree on what to build first
+
+STEP 5: BUILD
+├── Only after we've aligned
+├── Work in priority order
+├── Ship incrementally
+└── Validate as we go
+```
+
+### Our Endgame (Keep This In Focus):
+
+CoAIleague replaces GetSling + THERMS + DocuSign + Formstack + standalone CAD for security companies. Everything works together semantically. Regulatory partnerships make us essential for compliance.
+
+**In Scope:**
+- Security workforce management
+- GPS time tracking with geofencing
+- Scheduling with Trinity AI
+- Incident/report management
+- CAD/dispatch for security operations
+- E-signatures for security contracts
+- Forms for security-specific workflows
+- Compliance/audit tools for regulators
+- QuickBooks integration for payroll/invoicing
+- Team communication (DockChat)
+
+**Out of Scope (Don't Build These):**
+- General restaurant/retail scheduling features that don't apply to security
+- Consumer-facing social features
+- E-commerce or payment processing beyond invoicing
+- Features specific to police that security companies don't need
+
+### Questions to Answer in Your Summary:
+
+1. What percentage of competitor parity do we currently have?
+2. What are the top 5 gaps that hurt us most?
+3. What semantic integration issues did you find?
+4. What race conditions need fixing?
+5. What's your recommended build order?
+6. What can we ship in the next sprint?
+
+---
+
+*Audit the platform, analyze the gaps, summarize your findings, then we discuss before building.*

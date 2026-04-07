@@ -9,6 +9,9 @@ import { EventEmitter } from 'events';
 import { platformEventBus, type PlatformEvent, type EventCategory } from '../platformEventBus';
 import { db } from '../../db';
 import { aiBrainActionLogs } from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('eventBus');
+
 
 /**
  * General-purpose event bus for internal service communication
@@ -44,21 +47,15 @@ export async function emitTrinityEvent(
   data: Record<string, any>
 ): Promise<void> {
   try {
-    // Log to AI Brain action logs for Trinity awareness
-    await db.insert(aiBrainActionLogs).values({
-      workspaceId: data.workspaceId || null,
-      userId: data.actorId || data.userId || null,
-      sessionId: data.sessionId || null,
-      actionType: `${domain}.${eventType}`,
-      actionCategory: domain,
-      inputData: JSON.stringify(data),
-      status: 'completed',
-      startedAt: new Date(),
-      completedAt: new Date(),
-      durationMs: 0,
-      tokenCost: 0,
-      creditsUsed: 0,
-    });
+    // Log to AI Brain action logs for Trinity awareness (only existing DB columns)
+    if (data.workspaceId) {
+      await db.insert(aiBrainActionLogs).values({
+        workspaceId: data.workspaceId,
+        actionType: `${domain}.${eventType}`,
+        actionData: { actor: data.actorId || data.userId || 'trinity-event-bus', ...data },
+        result: 'COMPLETED',
+      });
+    }
 
     // Also emit to platform event bus for real-time updates
     const platformEvent: PlatformEvent = {
@@ -75,10 +72,12 @@ export async function emitTrinityEvent(
       },
     };
 
-    await platformEventBus.emit(platformEvent);
+    // CANONICAL LAW: .publish() routes through DB persist + Trinity subscribers + WebSocket.
+    // .emit(object) was broken — EventEmitter treats the first arg as event name string.
+    await platformEventBus.publish(platformEvent);
   } catch (error) {
     // Silently fail - event logging should never block main operations
-    console.error('[Trinity EventBus] Failed to emit event:', error);
+    log.error('[Trinity EventBus] Failed to emit event:', error);
   }
 }
 

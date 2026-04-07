@@ -3,8 +3,7 @@
  * Detects overtime, double-booking, insufficient rest, missing certifications
  */
 
-import { useMemo } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,19 +41,33 @@ interface ConflictAlertsProps {
 export function ConflictAlerts({
   shifts,
   employees,
-  isCollapsed = false,
+  isCollapsed: externalCollapsed = false,
   onToggleCollapse,
   onDismissConflict,
   onResolve,
   onDismiss,
   className = '',
 }: ConflictAlertsProps) {
+  const [internalCollapsed, setInternalCollapsed] = useState(externalCollapsed);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const isControlled = !!onToggleCollapse;
+  const isCollapsed = isControlled ? externalCollapsed : internalCollapsed;
+
+  const handleToggle = () => {
+    if (isControlled) {
+      onToggleCollapse?.();
+    } else {
+      setInternalCollapsed(prev => !prev);
+    }
+  };
+
   const conflicts = useMemo(() => {
     return detectConflicts(shifts, employees);
   }, [shifts, employees]);
 
   const errorCount = conflicts.filter(c => c.severity === 'error').length;
   const warningCount = conflicts.filter(c => c.severity === 'warning').length;
+  const visibleConflicts = conflicts.filter(c => !dismissedIds.has(c.id));
 
   if (conflicts.length === 0) {
     return null;
@@ -76,84 +89,95 @@ export function ConflictAlerts({
         return <AlertTriangle className="w-4 h-4" />;
     }
   };
+  
+  const handleDismissOne = (conflictId: string) => {
+    setDismissedIds(prev => new Set([...prev, conflictId]));
+    onDismissConflict?.(conflictId);
+  };
+  
+  if (visibleConflicts.length === 0) return null;
 
   return (
-    <Collapsible open={!isCollapsed} onOpenChange={onToggleCollapse}>
+    <Collapsible open={!isCollapsed} onOpenChange={handleToggle}>
       <Card className={`border-amber-500/50 ${className}`} data-testid="conflict-alerts">
-        <CardHeader className="py-3">
-          <CollapsibleTrigger className="flex items-center justify-between w-full">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              Schedule Conflicts
-              <div className="flex gap-1 ml-2">
-                {errorCount > 0 && (
-                  <Badge variant="destructive" className="text-xs">
-                    {errorCount} Critical
-                  </Badge>
-                )}
-                {warningCount > 0 && (
-                  <Badge variant="outline" className="text-xs text-amber-500 border-amber-500">
-                    {warningCount} Warnings
-                  </Badge>
-                )}
-              </div>
-            </CardTitle>
-            <div className="flex items-center gap-2">
+        <CardHeader className="py-2 px-3">
+          <CollapsibleTrigger className="flex flex-wrap items-center w-full gap-x-2 gap-y-1">
+            <div className="flex items-center gap-1.5 min-w-0 mr-auto">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+              <CardTitle className="text-xs font-semibold truncate">
+                Schedule Conflicts
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-400 dark:text-amber-400 dark:border-amber-600">
+                {visibleConflicts.length}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
               {onDismiss && (
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onDismiss(); }}>
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDismiss(); }} data-testid="button-dismiss-conflicts" aria-label="Dismiss conflicts">
                   <X className="w-3 h-3" />
                 </Button>
               )}
-              <ChevronDown className={`w-4 h-4 transition-transform ${!isCollapsed ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${!isCollapsed ? 'rotate-180' : ''}`} />
             </div>
           </CollapsibleTrigger>
         </CardHeader>
         
         <CollapsibleContent>
-          <CardContent className="pt-0">
-            <ScrollArea className="max-h-48">
-              <div className="space-y-2">
-                {conflicts.map(conflict => (
-                  <Alert 
+          <CardContent className="pt-0 px-3 pb-2">
+            <ScrollArea className="max-h-[30vh] sm:max-h-[40vh]">
+              <div className="space-y-1.5 pr-2">
+                {visibleConflicts.map(conflict => (
+                  <div 
                     key={conflict.id}
-                    variant={conflict.severity === 'error' ? 'destructive' : 'default'}
-                    className="py-2"
+                    className={`rounded-md border p-1.5 ${
+                      conflict.severity === 'error' 
+                        ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30' 
+                        : 'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30'
+                    }`}
                     data-testid={`conflict-${conflict.id}`}
                   >
-                    <div className="flex items-start gap-2">
-                      {getIcon(conflict.type)}
-                      <div className="flex-1 min-w-0">
-                        <AlertTitle className="text-sm mb-1">
-                          {conflict.employeeName}: {conflict.message}
-                        </AlertTitle>
-                        <AlertDescription className="text-xs">
-                          {conflict.details}
-                        </AlertDescription>
+                    <div className="flex items-start gap-1.5">
+                      <div className={`shrink-0 mt-0.5 ${conflict.severity === 'error' ? 'text-red-500' : 'text-amber-500'}`}>
+                        {getIcon(conflict.type)}
                       </div>
-                      <div className="flex gap-1">
-                        {onResolve && conflict.shiftIds.length > 0 && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 text-xs"
-                            onClick={() => onResolve(conflict.shiftIds[0])}
-                          >
-                            Resolve
-                          </Button>
-                        )}
-                        {onDismissConflict && (
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-semibold leading-none" data-testid={`conflict-name-${conflict.id}`}>
+                            {conflict.employeeName}
+                          </span>
+                          <span className={`text-[10px] font-medium leading-none ${
+                            conflict.severity === 'error' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
+                          }`}>
+                            {conflict.message}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">
+                          {conflict.details}
+                        </p>
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          {onResolve && conflict.shiftIds.length > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onResolve(conflict.shiftIds[0])}
+                              data-testid={`button-resolve-${conflict.id}`}
+                            >
+                              Resolve
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => onDismissConflict(conflict.id)}
+                            size="sm"
+                            onClick={() => handleDismissOne(conflict.id)}
+                            data-testid={`button-acknowledge-${conflict.id}`}
                           >
-                            <X className="w-3 h-3" />
+                            <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                            Dismiss
                           </Button>
-                        )}
+                        </div>
                       </div>
                     </div>
-                  </Alert>
+                  </div>
                 ))}
               </div>
             </ScrollArea>
@@ -168,8 +192,11 @@ function detectConflicts(shifts: Shift[], employees: Employee[]): ScheduleConfli
   const conflicts: ScheduleConflict[] = [];
   const employeeMap = new Map(employees.map(e => [e.id, e]));
 
+  const activeStatuses = new Set(['published', 'scheduled', 'in_progress', 'completed', 'confirmed', 'approved', 'auto_approved']);
+  const activeShifts = shifts.filter(s => s.status && activeStatuses.has(s.status));
+
   const shiftsByEmployee = new Map<string, Shift[]>();
-  shifts.forEach(shift => {
+  activeShifts.forEach(shift => {
     if (shift.employeeId) {
       const empShifts = shiftsByEmployee.get(shift.employeeId) || [];
       empShifts.push(shift);
@@ -200,8 +227,8 @@ function detectConflicts(shifts: Shift[], employees: Employee[]): ScheduleConfli
         severity: totalHours > 50 ? 'error' : 'warning',
         employeeId,
         employeeName,
-        message: 'Overtime Warning',
-        details: `${totalHours.toFixed(1)} hours scheduled (${(totalHours - 40).toFixed(1)}h overtime)`,
+        message: 'Too Many Hours',
+        details: `Scheduled for ${totalHours.toFixed(0)}hrs this week — that's ${(totalHours - 40).toFixed(0)}hrs over the 40hr limit`,
         shiftIds: sortedShifts.map(s => s.id),
       });
     }
@@ -223,8 +250,8 @@ function detectConflicts(shifts: Shift[], employees: Employee[]): ScheduleConfli
             severity: 'error',
             employeeId,
             employeeName,
-            message: 'Double Booked',
-            details: `Overlapping shifts on ${format(new Date(shiftA.startTime), 'EEE, MMM d')}`,
+            message: 'Shift Overlap',
+            details: `Has two shifts at the same time on ${format(new Date(shiftA.startTime), 'EEE, MMM d')} — one needs to be moved or removed`,
             shiftIds: [shiftA.id, shiftB.id],
           });
         }
@@ -243,8 +270,8 @@ function detectConflicts(shifts: Shift[], employees: Employee[]): ScheduleConfli
           severity: 'warning',
           employeeId,
           employeeName,
-          message: 'Insufficient Rest',
-          details: `Only ${restHours}h between shifts (minimum 8h recommended)`,
+          message: 'Not Enough Rest',
+          details: `Only ${restHours}hrs of rest between back-to-back shifts — needs at least 8hrs to recover`,
           shiftIds: [sortedShifts[i].id, sortedShifts[i + 1].id],
         });
       }
@@ -261,8 +288,8 @@ function detectConflicts(shifts: Shift[], employees: Employee[]): ScheduleConfli
           severity: 'warning',
           employeeId,
           employeeName,
-          message: 'Consecutive Days',
-          details: `Scheduled ${shiftDates.size} consecutive days without break`,
+          message: 'No Day Off',
+          details: `Working ${shiftDates.size} days straight with no break — consider adding a rest day`,
           shiftIds: sortedShifts.map(s => s.id),
         });
       }
@@ -354,7 +381,7 @@ export function getShiftTimeClockStatus(
     return {
       status: 'completed',
       label: 'Completed',
-      color: 'text-green-600',
+      color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/30',
       icon: 'check',
     };
@@ -376,7 +403,7 @@ export function getShiftTimeClockStatus(
     return {
       status: 'clocked_in',
       label: 'Working',
-      color: 'text-blue-600',
+      color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',
       icon: 'play',
     };
@@ -412,7 +439,7 @@ export function getShiftTimeClockStatus(
         return {
           status: 'scheduled',
           label: 'Starting',
-          color: 'text-blue-600',
+          color: 'text-blue-600 dark:text-blue-400',
           bgColor: 'bg-blue-100 dark:bg-blue-900/30',
           icon: 'clock',
         };
@@ -420,7 +447,7 @@ export function getShiftTimeClockStatus(
       return {
         status: 'late',
         label: 'Late',
-        color: 'text-red-600',
+        color: 'text-red-600 dark:text-red-400',
         bgColor: 'bg-red-100 dark:bg-red-900/30',
         icon: 'alert',
       };
@@ -431,7 +458,7 @@ export function getShiftTimeClockStatus(
       return {
         status: 'missed',
         label: 'No Show',
-        color: 'text-red-600',
+        color: 'text-red-600 dark:text-red-400',
         bgColor: 'bg-red-100 dark:bg-red-900/30',
         icon: 'x',
       };

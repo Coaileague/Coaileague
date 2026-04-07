@@ -1,0 +1,426 @@
+Here is where you stand and what comes next. Copy everything below this line:
+
+---
+
+COAILEAGUE — GRAND OPENING FINAL SPRINT
+743 Trinity actions confirmed. All 6 exemption layers verified. Build is clean.
+What remains is proving every real user flow works end to end before a single
+real customer or real employee touches this platform.
+Read everything before touching anything. Report findings before fixing.
+
+---
+
+WHAT IS CONFIRMED COMPLETE — DO NOT RETEST
+
+Statewide founder exemption: all 6 layers verified. Schema, creditManager,
+middlewareTransactionFees 5 guard points, weeklyBillingRunService,
+subscriptionManager, usageTracker. EMPLOYEE_OVERAGE_RATE NaN bug fixed.
+No Stripe customer exists for Statewide adding a physical sixth barrier.
+
+Auth and role boundaries: 5 critical bugs fixed. org_admin blocked from all
+financial routes. Managers blocked from Stripe payment methods. Cross-workspace
+isolation confirmed at resolver level.
+
+Email pipeline: 5-point verification passed with real Resend delivery.
+Tags, webhook handler, delivery_confirmed, audit trail all proven working.
+
+Credit system: all 10 verification tests passed. Hard cap, soft cap, overage,
+seat billing, credits pack, ledger math all confirmed.
+
+CSV import backend: live at /api/import/employees and /api/import/clients
+with preview dry-run and duplicate detection.
+
+Go-live checklist: 10-step page at /go-live with auto-green as data fills in.
+
+Trinity startup: 743 actions, drift=0, 15/15 domains, 28/28 services,
+4/4 regression tests passing, 0 compile errors.
+
+---
+
+PRIORITY 1 — DOCUMENT SYSTEM SIMULATION
+This must run before anything else because documents gate operational flows.
+An employee cannot be scheduled until their onboarding packet is executed.
+A contractor cannot be assigned until their agreement is executed.
+Prove the document system works for Texas security companies using Acme.
+
+NEW EMPLOYEE SIMULATION — ACME SECURITY SERVICES TEXAS:
+Create a simulated employee with this exact data:
+Name: Marcus Johnson
+Position: Level II Security Officer
+Texas PSB License: B12345678 Class B expires 2027-06-15
+Pay Rate: $18.00 per hour hourly
+Start Date: today plus 7 days
+
+Generate the complete employee onboarding packet for Marcus Johnson.
+The packet must contain all of these documents:
+Employee Application with background check consent and drug screening consent.
+Employment Offer Letter signed by org_owner first then employee.
+W-4 Employee Withholding Certificate in IRS-compliant format.
+I-9 Employment Eligibility Verification in USCIS-compliant format.
+Direct Deposit Authorization.
+Texas Security Officer License Verification.
+Company Employee Handbook Acknowledgment.
+At-Will Employment Agreement.
+Confidentiality and Non-Disclosure Agreement.
+Background Check Authorization standalone form.
+
+For every document in the packet confirm:
+Generated without errors.
+Correct employee data populated from database — no blank fields.
+Header is uniform with org name, license number, document title, document ID.
+Footer shows page numbers, document status, org name, QR code.
+Signature blocks have visible borders and are finger-tap sized on mobile.
+Routing goes to correct signers in correct order.
+Signing flow completes without errors.
+Executed PDF saves to Acme document safe automatically.
+Marcus receives executed copy in his personal document portal.
+After all 10 documents are executed confirm Trinity allows scheduling Marcus.
+
+NEW CONTRACTOR SIMULATION — ACME SECURITY SERVICES TEXAS:
+Create a simulated contractor:
+Name: Rosa Delgado — Delgado Security LLC
+Texas PSB License: C98765432 Class C expires 2026-12-01
+Rate: $22.00 per hour 1099 contractor
+Services: Armed Security Coverage weekend shifts
+
+Generate the contractor onboarding packet:
+Independent Contractor Agreement.
+W-9 Request for Taxpayer Identification in IRS-compliant format.
+Texas Security Contractor License Verification.
+Contractor Confidentiality Agreement.
+
+Same confirmation checklist as employee packet above.
+After all 4 documents are executed confirm Trinity allows assigning Rosa to shifts.
+
+POST ORDERS SIMULATION:
+Generate post orders for one Acme client site with realistic Texas security language.
+Assign both Marcus Johnson and Rosa Delgado to the site.
+Confirm both must sign post orders before being scheduled there.
+Simulate both signing. Confirm site shows fully acknowledged by all assigned officers.
+
+SERVICE PROPOSAL AND CONTRACT SIMULATION:
+Generate a professional service proposal from Acme to:
+Client: Lone Star Industrial Park, San Antonio Texas.
+Confirm the proposal PDF looks professional enough to send to a real client.
+Simulate client acceptance. Generate the full service agreement.
+Simulate org_owner signing then client signing.
+Confirm executed contract saves to Acme document safe.
+
+DESKTOP AND MOBILE RENDERING VERIFICATION:
+Open every generated document on desktop at 1440px wide.
+Confirm uniform header and footer on all document types.
+Confirm action sidebar visible on right with signer status and download button.
+Confirm print preview matches screen exactly.
+Open every document on 375px mobile viewport.
+Confirm no horizontal scrolling required.
+Confirm signature blocks are minimum 44px height.
+Confirm finger-draw signature capture works on mobile.
+Confirm sign button always visible without scrolling.
+
+---
+
+PRIORITY 2 — TRINITY COMPLIANCE INTELLIGENCE SCENARIOS
+Six scenarios must pass before the compliance system is production ready.
+
+Scenario 1 — License expiring in 25 days:
+Set one Acme employee license expiration to today plus 25 days.
+Confirm Trinity fires the 30-day URGENT alert via all three channels simultaneously.
+Notification panel, Org Operations Briefing Channel, and Resend email must all fire
+at the same moment not sequentially.
+Confirm the employee still appears as scheduling-eligible at 25 days.
+The hard block only applies on the actual expiration date not before.
+
+Scenario 2 — License expired yesterday:
+Set one Acme employee license expiration to yesterday.
+Confirm Trinity marks license as EXPIRED immediately.
+Confirm Trinity removes the employee from all future scheduling eligibility.
+Attempt to assign this employee to a shift.
+Confirm Trinity blocks the assignment with a clear message stating the reason.
+Confirm manager and org_owner both receive the expired license alert.
+
+Scenario 3 — Renewed guard card upload:
+The expired employee from Scenario 2 uploads a renewed Texas PSB license document.
+Confirm Trinity scans it and extracts the new expiration date.
+Confirm Trinity presents the extracted data to the manager for confirmation.
+Manager confirms the data is correct.
+Confirm Trinity restores scheduling eligibility after manager confirmation.
+Confirm license status updates to Active with the new expiration date.
+Confirm manager and org_owner receive the eligibility restored notification.
+Confirm the new expiration date appears in the daily compliance briefing.
+
+Scenario 4 — Post requiring First Aid certification:
+Create a client site post that requires First Aid certification as a requirement.
+Attempt to assign an officer who has no First Aid cert on file.
+Confirm Trinity blocks the assignment with a message about the specific
+certification requirement for this post.
+Have the officer upload their First Aid certification card.
+Confirm Trinity extracts the expiration date and adds it to their training profile.
+Attempt the assignment again.
+Confirm Trinity allows the assignment now that the cert is active.
+
+Scenario 5 — Company insurance expiring in 45 days:
+Set the Acme insurance certificate expiration to today plus 45 days.
+Confirm Trinity fires the 60-day WARNING alert to the org_owner.
+Confirm it appears in the daily compliance briefing under company compliance status.
+Confirm the alert fires via all three channels.
+Confirm the status indicator in the briefing shows yellow for warning.
+
+Scenario 6 — Out of state license:
+Create an Acme employee with a Louisiana security license instead of Texas.
+Confirm Trinity notes the out-of-state license and flags it for manager review.
+Confirm Trinity includes a note about verifying whether the Louisiana license
+is valid for Texas operations.
+Confirm the manager can override and approve the out-of-state license
+with a documented reason.
+Confirm the override is logged in the audit trail with the manager's reason.
+
+Report every scenario as pass or fail with the specific data that confirms it.
+Any failure is a bug that must be fixed before this system is production ready.
+
+---
+
+PRIORITY 3 — NEW ORG COLD SIGNUP END TO END
+A stranger finds CoAIleague and signs up. Walk through every step.
+
+Open the landing page on both mobile 375px and desktop 1440px.
+Confirm it loads correctly on both with no broken links, no 404s, no missing images.
+Confirm the pricing page shows all four tiers with correct prices.
+Confirm the Start Free Trial buttons navigate to signup correctly.
+
+Complete the full signup flow as a brand new user with a real email address.
+Confirm the workspace is created with a unique workspace_id.
+Confirm the user is assigned org_owner role in workspace_members.
+Confirm the subscription record is created with free_trial tier.
+Confirm exactly 500 credits are allocated in the credit ledger with a
+system event reference not a Stripe reference since trial is free.
+Confirm the welcome email arrives at the signup email address.
+Confirm the in-platform welcome notification fires.
+Confirm Trinity is available immediately on first login.
+
+Complete this core loop as the new org_owner:
+Add one employee manually and confirm invite email delivers.
+Employee accepts invite and sets password — confirm they land on onboarding not 404.
+Create one client and one site.
+Build one shift and assign the employee.
+Employee receives shift notification.
+Employee clocks in via GPS — confirm coordinates in database.
+Employee clocks out — confirm time entry created with correct duration.
+Generate one invoice for the client — confirm email delivers to client address.
+
+Trigger the credit warning at 75 credits remaining.
+Confirm warning fires via notification panel.
+Reach zero credits and confirm hard block with upgrade prompt.
+Confirm no credit-gated action executes at zero.
+Simulate 14 days passing and confirm trial expiry gates access with data preserved.
+Confirm org_owner can select paid plan and continue immediately after expiry.
+
+---
+
+PRIORITY 4 — STRIPE SUBSCRIPTION FLOW
+
+Click upgrade to Starter from the trial org.
+Confirm a real Stripe checkout session is created server-side.
+Complete checkout with Stripe test card 4242424242424242.
+Confirm post-payment redirect lands on success page not 404.
+Confirm Stripe webhook invoice.payment_succeeded fires and activates subscription.
+The webhook must activate the subscription not the redirect URL.
+Confirm 5000 credits allocate from the webhook confirmation with Stripe reference.
+Confirm org_owner receives subscription confirmation notification and email.
+Confirm managers and org_admin cannot see the billing settings page.
+
+Upgrade from Starter to Professional.
+Confirm Stripe subscription is updated not canceled and recreated.
+Confirm credit allocation upgrades from 5000 to 10000 immediately.
+Confirm soft cap behavior activates — overage mode replaces hard block.
+Confirm org_owner receives upgrade confirmation.
+
+---
+
+PRIORITY 5 — CORE DAILY OPERATIONS LOOP
+
+Five employees clock in simultaneously at five different sites.
+Confirm all five clock-in records created independently with correct GPS data.
+Confirm no records crossed between employees.
+Confirm manager dashboard updates in real time for each.
+
+Run full call-off flow: officer submits on mobile, manager notified immediately,
+Trinity finds replacement, presents ranked list, manager assigns with one action,
+replacement officer notified. Confirm audit trail logs every step.
+
+Run complete timesheet approval: timesheets auto-generate from clock records,
+employee submits, manager approves, locked timesheet cannot be edited via API.
+Test the API edit attempt directly — confirm it is blocked at database level.
+
+Run complete payroll flow: approved timesheets feed calculation, Trinity presents
+for human review and does NOT auto-execute, org_owner approves, pay stubs generate,
+employees notified. Verify Trinity never auto-executes payroll under any circumstance.
+
+Run complete client billing flow: invoice generates from approved timesheets,
+email delivers to client with working payment link, client payment updates invoice
+to paid, revenue ledger entry created, org_owner revenue widget updates in real time.
+
+---
+
+PRIORITY 6 — WEBSOCKET LIVE TEST SCRIPT
+
+Write a manual test script I can follow myself with two browser windows open.
+Tell me exactly: what to open in each window, what to do in window 1, and what
+to look for in window 2 within 2 seconds without a page refresh.
+
+Cover all seven events:
+Employee clocks in — manager dashboard updates.
+New incident submitted — notification badge increments.
+Shift assigned — employee schedule updates.
+Invoice paid — org_owner revenue widget updates.
+Credit balance changes — credits widget updates.
+Trinity posts briefing — Briefing Channel shows it.
+New notification — badge count updates within 2 seconds.
+
+Then programmatically test reconnection: disconnect a client, trigger 3 events,
+reconnect, verify all 3 missed events delivered on reconnect.
+If missed events are lost build a 5 minute event buffer holding last 50 events
+per workspace for reconnecting clients.
+
+---
+
+PRIORITY 7 — MOBILE END TO END TEST SCRIPT
+
+Write a step-by-step manual test script I can follow on my phone.
+Tell me exactly what to tap, what to expect, and what to verify in the database.
+
+GPS clock-in: what screen, what button, what GPS confirmation looks like,
+what to check in DB, what geofence rejection looks like from wrong location.
+
+Overnight shift: create shift from 10pm to 6am, clock in and out, confirm
+single time entry with exactly 8 hours — not split at midnight.
+
+Duplicate clock-in: attempt second clock-in while already clocked in,
+confirm blocked with clear message, confirm no duplicate DB entry.
+
+Shift swap: full flow from both employees and manager approval.
+
+Call-off: officer submits, manager sees, Trinity presents replacements,
+manager assigns with one tap, replacement notified.
+
+Incident report: photo attachment, GPS auto-populate, real-time manager notification
+with deep link to the report.
+
+Schedule view: next shift at top with site address and post orders,
+no horizontal scrolling, readable on small screen.
+
+---
+
+PRIORITY 8 — MULTI-TENANT SIMULTANEOUS STRESS TEST
+
+Create three orgs simultaneously in the dev environment:
+Org Alpha on Starter with 10 employees.
+Org Beta on Professional with 30 employees.
+Org Gamma on Enterprise with 100 employees.
+
+Run simultaneous operations across all three at the exact same moment:
+All three orgs have employees clocking in simultaneously.
+All three orgs have Trinity chat active simultaneously.
+All three orgs have notifications firing simultaneously.
+All three orgs have credit deductions happening simultaneously.
+
+After simultaneous operations verify absolute isolation:
+Org Alpha sees only Org Alpha data on every screen.
+Org Beta sees only Org Beta data on every screen.
+Org Gamma sees only Org Gamma data on every screen.
+No notification from one org appears in another org.
+No employee from one org appears in another org schedule.
+No invoice from one org appears in another org billing.
+Credit ledgers are completely independent per org.
+Trinity responses are scoped to the requesting org data only.
+
+---
+
+PRIORITY 9 — FAILURE AND RECOVERY SCENARIOS
+
+Stripe payment failure on Starter org:
+Simulate failed subscription payment.
+Confirm org_owner receives payment failed notification and email.
+Confirm platform continues working through grace period — not instant lockout.
+Confirm automatic retry fires.
+Confirm successful retry restores full access immediately.
+
+Overage charge failure on Professional:
+Simulate failed end-of-cycle overage charge.
+Confirm three retry attempts with exponential backoff.
+Confirm after three failures org switches to hard cap mode temporarily.
+Confirm platform_staff receives alert.
+Confirm org_owner receives payment update request.
+Confirm resolving payment restores soft cap mode.
+
+Session expiry mid-payroll:
+Begin payroll review as org_owner.
+Simulate session expiry before approval.
+Confirm payroll is NOT auto-approved.
+Confirm payroll returns to pending state.
+Confirm no partial execution occurred.
+Confirm org_owner can log back in and resume cleanly.
+
+GPS unavailable during clock-in:
+Officer attempts clock-in with GPS unavailable.
+Confirm graceful handling — queued for when GPS available or clear message.
+Confirm no phantom clock-in record created without GPS data.
+
+---
+
+PRIORITY 10 — GRAND OPENING FINAL CHECKLIST SIGN-OFF
+
+After all priorities above complete report the confirmed status of every item.
+Every item must show confirmed with real data from real tests.
+No item is marked complete based on code existing. It must be verified running.
+
+New org signup flow works end to end with no errors confirmed.
+Welcome email delivers to real inbox confirmed.
+500 trial credits allocate correctly on signup confirmed.
+Trial hard block fires at zero credits confirmed.
+Trial expiry gates access with data preserved confirmed.
+Stripe checkout creates subscription via webhook not redirect confirmed.
+Credit allocation upgrades correctly on plan change confirmed.
+Employee invite email delivers with working token confirmed.
+Employee onboarding from invite link lands on correct screen confirmed.
+GPS clock-in captures coordinates in database confirmed.
+Overnight shift creates single correct time entry confirmed.
+Duplicate clock-in blocked confirmed.
+Timesheet auto-generates from clock records confirmed.
+Locked timesheet blocked from API edit confirmed.
+Payroll requires human approval every time confirmed.
+Pay stub notification delivers to employee confirmed.
+Client invoice delivers with working payment link confirmed.
+Invoice updates to paid on client payment confirmed.
+Revenue ledger entry created on payment confirmed.
+Incident report saves with GPS and photo from mobile confirmed.
+WORM lock blocks API write on locked document confirmed.
+All 10 employee onboarding documents execute correctly for Texas confirmed.
+All 4 contractor documents execute correctly for Texas confirmed.
+Post orders route and execute acknowledgments correctly confirmed.
+Service proposal and contract execute and save to document safe confirmed.
+All documents render correctly on desktop and mobile confirmed.
+Trinity compliance scenarios all 6 pass confirmed.
+License expiry alerts fire at 90 60 and 30 days confirmed.
+Expired license blocks scheduling eligibility confirmed.
+Renewed guard card restores eligibility after manager confirmation confirmed.
+Trinity daily compliance briefing posts automatically confirmed.
+Trinity chat responds with real data-driven answers confirmed.
+Shift escalation alerts fire at 72h 24h and 4h confirmed.
+All notifications are workspace-scoped with zero cross-tenant leakage confirmed.
+WebSocket updates fire without page refresh for all 7 event types confirmed.
+Missed events delivered on WebSocket reconnect confirmed.
+Auth error messages expose zero internal detail confirmed.
+Dev routes blocked in production environment confirmed.
+All Stripe products have correct prices and metadata confirmed.
+Statewide exemption prevents all credit deductions and Stripe charges confirmed.
+Statewide role checks enforce identically to all other orgs confirmed.
+Statewide go-live checklist all 10 steps trackable confirmed.
+Employee CSV import works with preview mode and invite emails confirmed.
+Client and site CSV import works with preview mode confirmed.
+Multi-tenant isolation confirmed with three simultaneous active orgs confirmed.
+Payment failure recovery works for subscription and overage charges confirmed.
+Session expiry mid-payroll leaves payroll pending not auto-approved confirmed.
+
+When every item on this list shows confirmed with data CoAIleague is ready
+to open for business and Statewide is ready to begin the go-live migration.
+That is the finish line. Every session from here runs toward it.

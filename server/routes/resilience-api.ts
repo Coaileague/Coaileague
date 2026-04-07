@@ -3,13 +3,18 @@
  * Exposes Fortune 500-grade resilience infrastructure
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, RequestHandler } from 'express';
-import { circuitBreaker } from '../services/resilience/circuitBreaker';
+import { circuitBreaker } from '../services/infrastructure/circuitBreaker';
 import { rateLimitQueue } from '../services/resilience/rateLimitQueue';
 import { webhookVerifier } from '../services/integrations/webhookVerifier';
 import { exchangeRateService } from '../services/currency/exchangeRateService';
 import { financialAuditService } from '../services/compliance/financialAuditService';
 import { requireAuth } from '../auth';
+import { runSchemaParityCheck } from '../services/schemaParityService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('ResilienceApi');
+
 
 const router = Router();
 
@@ -28,7 +33,17 @@ const requireRole = (allowedRoles: string[]): RequestHandler => {
 };
 
 router.get('/circuit-breaker/status', requireAuth, requireRole(['root_admin', 'deputy_admin', 'sysop']), (req, res) => {
-  const statuses = circuitBreaker.getAllStatuses();
+  const circuits = circuitBreaker.getAllCircuits();
+  const statuses: Record<string, any> = {};
+  
+  for (const circuit of circuits) {
+    statuses[circuit.serviceId] = {
+      state: circuit.state.toLowerCase(),
+      failures: circuit.stats.consecutiveFailures,
+      lastFailure: circuit.stats.lastFailureTime ? new Date(circuit.stats.lastFailureTime) : null,
+    };
+  }
+
   res.json({
     success: true,
     circuits: statuses,
@@ -36,13 +51,18 @@ router.get('/circuit-breaker/status', requireAuth, requireRole(['root_admin', 'd
   });
 });
 
-router.post('/circuit-breaker/:service/reset', requireAuth, requireRole(['root_admin', 'sysop']), (req, res) => {
-  const { service } = req.params;
-  circuitBreaker.reset(service);
-  res.json({
-    success: true,
-    message: `Circuit breaker for ${service} has been reset`,
-  });
+router.post('/circuit-breaker/:service/reset', requireAuth, requireRole(['root_admin', 'sysop']), async (req, res) => {
+  try {
+    const { service } = req.params;
+    await circuitBreaker.forceClose(service);
+    res.json({
+      success: true,
+      message: `Circuit breaker for ${service} has been reset`,
+    });
+  } catch (error) {
+    log.error('[resilience-api] circuit-breaker reset error:', error);
+    res.status(500).json({ success: false, message: 'Failed to reset circuit breaker' });
+  }
 });
 
 router.get('/rate-limit/status', requireAuth, requireRole(['root_admin', 'deputy_admin', 'sysop']), (req, res) => {
@@ -149,7 +169,7 @@ router.get('/webhooks/stats', requireAuth, requireRole(['root_admin', 'deputy_ad
   });
 });
 
-router.post('/financial-audit/report', requireAuth, requireRole(['root_admin', 'deputy_admin', 'owner', 'auditor']), async (req, res) => {
+router.post('/financial-audit/report', requireAuth, requireRole(['root_admin', 'deputy_admin', 'org_owner', 'co_owner', 'owner', 'auditor']), async (req, res) => {
   try {
     const { workspaceId, periodStart, periodEnd } = req.body;
     const user = req.user as any;
@@ -209,7 +229,7 @@ router.post('/financial-audit/verify-chain', requireAuth, requireRole(['root_adm
   }
 });
 
-router.post('/financial-audit/check-segregation', requireAuth, requireRole(['root_admin', 'deputy_admin', 'owner']), async (req, res) => {
+router.post('/financial-audit/check-segregation', requireAuth, requireRole(['root_admin', 'deputy_admin', 'org_owner', 'co_owner', 'owner']), async (req, res) => {
   try {
     const { workspaceId, entityId, actorId, actionType } = req.body;
 
@@ -239,11 +259,21 @@ router.post('/financial-audit/check-segregation', requireAuth, requireRole(['roo
   }
 });
 
-router.get('/health', (req, res) => {
-  const circuitStatuses = circuitBreaker.getAllStatuses();
+router.get('/health', requireAuth, (req, res) => {
+  const circuits = circuitBreaker.getAllCircuits();
+  const circuitStatuses: Record<string, any> = {};
+  
+  for (const circuit of circuits) {
+    circuitStatuses[circuit.serviceId] = {
+      state: circuit.state.toLowerCase(),
+      failures: circuit.stats.consecutiveFailures,
+      lastFailure: circuit.stats.lastFailureTime ? new Date(circuit.stats.lastFailureTime) : null,
+    };
+  }
+
   const queueStatuses = rateLimitQueue.getAllStatuses();
   
-  const hasOpenCircuits = Object.values(circuitStatuses).some(c => c.state === 'open');
+  const hasOpenCircuits = Object.values(circuitStatuses).some((c: any) => c.state === 'open');
   const hasFullQueues = Object.values(queueStatuses).some(q => q.state === 'near-limit');
 
   res.json({
@@ -253,6 +283,39 @@ router.get('/health', (req, res) => {
     queues: queueStatuses,
     timestamp: new Date().toISOString(),
   });
+});
+
+router.get('/schema-parity', requireAuth, requireRole(['root_admin', 'sysop']), async (req, res) => {
+  try {
+    const report = await runSchemaParityCheck(false);
+    res.json({
+      success: true,
+      report,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    res.status(500).json({
+      success: false,
+      error: sanitizeError(error),
+    });
+  }
+});
+
+router.post('/schema-parity/fix', requireAuth, requireRole(['root_admin', 'sysop']), async (req, res) => {
+  try {
+    const report = await runSchemaParityCheck(true);
+    res.json({
+      success: true,
+      message: 'Auto-fix attempted for safe issues',
+      report,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    res.status(500).json({
+      success: false,
+      error: sanitizeError(error),
+    });
+  }
 });
 
 export default router;

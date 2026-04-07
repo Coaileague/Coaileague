@@ -1,0 +1,615 @@
+Send this to the agent:
+
+---
+
+**EXECUTION ORDER AND DEPENDENCY AUDIT — Silent Failure Detection**
+
+Incorrect execution order is one of the most dangerous categories of bugs because everything appears to work but the result is wrong or incomplete. Middleware that runs after the code that needs it. Routes mounted in wrong order causing shadow matches. Services initialized after their first use. Async operations without proper await. This audit finds every ordering issue across the entire platform.
+
+**Do not fix anything until the full audit is complete. Document every finding first.**
+
+---
+
+**SUBAGENT 1 — SERVER STARTUP ORDER AUDIT**
+
+The server must initialize services in the correct dependency order. A service that tries to use the database before the pool is ready causes silent failures.
+
+```bash
+# 1A: Extract the complete startup sequence
+cat server/index.ts | grep -n "await\|initialize\|init\|connect\|register\|mount\|use\|listen\|start\|setup" | head -100
+
+# 1B: Map the dependency chain
+# For each initialization call find what it depends on
+grep -rn "export.*initialize\|export.*init\|export.*setup\|export.*connect" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# 1C: Find any service that uses the DB before pool is initialized
+grep -n "pool\|db\." server/index.ts | head -30
+# The pool initialization must come before ANY service that queries the DB
+
+# 1D: Find any cron job registered before DB is ready
+grep -n "cron\|schedule\|setInterval" server/index.ts | head -20
+# Crons that query DB must register AFTER pool is confirmed ready
+
+# 1E: Find any route mounted before auth middleware is registered
+grep -n "app\.use\|router\|mount\|route" server/index.ts | head -50
+# Auth middleware must come before protected routes
+
+# 1F: Find services initializing other services they depend on
+grep -rn "import.*Service\|require.*Service" server/services/ --include="*.ts" | \
+  grep -v node_modules | head -30
+
+# 1G: Check if WebSocket server starts before HTTP server is ready
+grep -n "WebSocketServer\|wss\|httpServer\|app\.listen" server/index.ts | head -20
+# WebSocket must attach to HTTP server AFTER server.listen()
+
+# 1H: Check if Trinity action registry is populated before routes that need it
+grep -n "registerAction\|platformActionHub\|actionRegistry" server/index.ts | head -20
+# Actions must be registered before any route can call them
+
+# 1I: Check circuit breaker initialization order
+grep -n "circuitBreaker\|probeDb\|isDbCircuitOpen" server/index.ts | head -10
+# Circuit breaker must initialize before any DB query
+
+# 1J: Check session middleware order
+grep -n "session\|passport\|cookie" server/index.ts | head -20
+# Session → Passport → Routes (in this exact order)
+
+# Expected correct startup order:
+echo "EXPECTED ORDER:
+1. Environment validation
+2. Database pool initialization
+3. Circuit breaker setup
+4. Session store connection
+5. Session middleware registration
+6. Passport initialization
+7. Body parser and compression middleware
+8. Rate limiting middleware
+9. CORS and security headers
+10. Auth middleware registration
+11. Domain route mounting
+12. WebSocket server attachment
+13. Cron job registration (after DB confirmed ready)
+14. Trinity action registry population
+15. Performance indexes (non-blocking)
+16. HTTP server listen
+17. Startup probe and health check"
+```
+
+---
+
+**SUBAGENT 2 — MIDDLEWARE EXECUTION ORDER AUDIT**
+
+Express middleware runs in registration order. Wrong order causes auth bypasses, missing data, or silent failures.
+
+```bash
+# 2A: Extract complete middleware stack in order
+grep -n "app\.use\|router\.use" server/index.ts server/routes.ts | sort -n | head -80
+
+# 2B: Verify security middleware comes before routes
+# Order must be:
+# 1. Helmet (security headers)
+# 2. CORS
+# 3. Compression
+# 4. Body parser
+# 5. Rate limiting
+# 6. Session
+# 7. Passport
+# 8. requireAuth (on protected routes)
+# 9. Actual routes
+
+grep -n "helmet\|cors\|compression\|bodyParser\|json()\|urlencoded\|rateLimit\|session\|passport" \
+  server/index.ts | sort -n | head -30
+
+# 2C: Find routes that are mounted BEFORE their required middleware
+# If a route uses req.user but passport hasn't run yet = silent failure
+grep -n "passport.initialize\|passport.session" server/index.ts
+grep -n "router.*use\|app.*use.*router" server/index.ts | head -20
+# Passport lines must have LOWER line numbers than any route using req.user
+
+# 2D: Find any requireAuth placed incorrectly
+grep -rn "requireAuth\|requireSRAAuth\|requirePlan" \
+  server/routes/ --include="*.ts" | grep -v node_modules | head -30
+# requireAuth must be a parameter to the route not outside it
+
+# 2E: Check subscription guard order
+grep -n "subscriptionGuard\|terminatedEmployeeGuard\|cancelledWorkspaceGuard" \
+  server/index.ts server/routes.ts | sort -n | head -10
+# Guards must run AFTER auth but BEFORE route handlers
+
+# 2F: Find any middleware that reads req.workspaceId before it is set
+grep -n "req\.workspaceId\|workspaceId.*req\." server/middleware/ --include="*.ts" -r | head -20
+# workspaceId must be set by a middleware that runs BEFORE any code reading it
+
+# 2G: Check error handler position
+grep -n "errorHandler\|app\.use.*error\|err.*middleware" server/index.ts | head -5
+# Error handler MUST be last app.use() call
+# Any error handler registered before routes will not catch route errors
+
+# 2H: Check if maintenance middleware runs at right time
+grep -n "maintenanceMiddleware\|maintenance" server/index.ts | head -5
+# Must run before routes but after health check endpoint
+# /health must never be blocked by maintenance mode
+
+# 2I: Verify CORS runs before preflight OPTIONS requests hit routes
+grep -n "cors\|OPTIONS" server/index.ts | head -5
+# CORS must be first middleware or OPTIONS requests fail silently
+
+# 2J: Check if request logging middleware captures all requests
+grep -n "morgan\|requestLog\|httpLog\|accessLog" server/index.ts | head -5
+# Must be before all routes to capture everything
+```
+
+---
+
+**SUBAGENT 3 — ROUTE SHADOW AND CONFLICT AUDIT**
+
+When two routes match the same URL pattern Express uses the first one registered. Second route silently never runs.
+
+```bash
+# 3A: Find all routes registered in each domain file
+for file in server/routes/*.ts; do
+  echo "=== $file ==="
+  grep -n "router\.\(get\|post\|patch\|put\|delete\)" "$file" | \
+    grep -oP "'[^']+'" | head -20
+done
+
+# 3B: Find exact duplicate route definitions
+grep -rn "router\.\(get\|post\|patch\|put\|delete\)" \
+  server/routes/ --include="*.ts" | \
+  grep -oP "'\/(api\/)?[^']+'" | sort | uniq -d
+
+# 3C: Find wildcard routes that shadow specific routes
+# Example: GET /api/employees/:id shadows GET /api/employees/me
+# :id will match 'me' so /me never runs
+grep -rn "router\.get.*:id\|router\.get.*:employeeId\|router\.get.*:userId" \
+  server/routes/ --include="*.ts" | \
+  grep -v node_modules | sort
+
+# For each :id route check if there is a specific route with same prefix
+# /api/employees/:id SHADOWS /api/employees/me if :id is registered first
+grep -rn "router\.get.*'/me'\|router\.get.*\"/me\"" \
+  server/routes/ --include="*.ts" | head -10
+
+# 3D: Check route ordering within each file
+# Specific routes must come before parameterized routes
+# WRONG ORDER:
+# router.get('/:id', handler)    ← registered first, shadows everything
+# router.get('/me', handler)     ← never reached
+# router.get('/active', handler) ← never reached
+
+# CORRECT ORDER:
+# router.get('/me', handler)     ← specific first
+# router.get('/active', handler) ← specific second
+# router.get('/:id', handler)    ← parameterized last
+
+for file in server/routes/*.ts; do
+  echo "=== Checking route order in $file ==="
+  grep -n "router\.\(get\|post\|patch\|put\|delete\).*'/" "$file" | head -30
+done
+
+# 3E: Find routes that could conflict across domain files
+# Two different domain files mounting routes at same path
+grep -rn "app\.use\|router\.use" server/routes.ts | \
+  grep -oP "'/[^']+'" | sort | uniq -d
+
+# 3F: Check for routes defined after router export
+grep -n "export.*router\|module\.exports.*router" server/routes/*.ts | head -20
+# Any route defined after export is silently ignored
+
+# 3G: Find async route handlers missing await
+grep -rn "router\.\(get\|post\|patch\|put\|delete\).*async" \
+  server/routes/ --include="*.ts" | grep -v node_modules | head -30
+# Check each one - if inner await is missing the route returns before completing
+
+# 3H: Find routes missing next(error) for caught errors
+grep -rn "catch.*{" server/routes/ --include="*.ts" | grep -v node_modules | head -20
+# Caught errors must call next(err) not just console.error
+# Without next(err) the route hangs or returns empty response
+```
+
+---
+
+**SUBAGENT 4 — ASYNC OPERATION ORDER AUDIT**
+
+Async operations without proper sequencing cause data to be read before it is written, or actions to fire before their prerequisites complete.
+
+```bash
+# 4A: Find Promise.all() where order matters
+grep -rn "Promise\.all\|Promise\.allSettled" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# Promise.all is fine for independent operations
+# But if operation B depends on result of operation A they cannot be in Promise.all
+
+# 4B: Find await inside forEach (common silent failure)
+grep -rn "\.forEach.*async\|forEach.*await" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# await inside forEach does NOT wait - use Promise.all or for...of instead
+
+# 4C: Find fire-and-forget async calls that should be awaited
+grep -rn "notificationDeliveryService\.\|webhookDeliveryService\.\|broadcastToWorkspace(" \
+  server/routes/ --include="*.ts" | grep -v "await " | grep -v node_modules | head -20
+# If these are not awaited the route returns before confirming delivery
+# Some intentionally fire-and-forget - document which ones
+
+# 4D: Find database transactions without proper rollback
+grep -rn "BEGIN\|transaction\|db\.transaction" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# Every BEGIN must have a corresponding COMMIT and ROLLBACK on error
+
+# 4E: Find operations that must be atomic but aren't
+# Shift trade: both shifts must swap or neither swaps
+grep -rn "shiftTrade\|trade.*shift\|atomic\|SELECT FOR UPDATE" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# Payroll run: all calculations must complete before any record is written
+grep -rn "payroll.*run\|runPayroll\|processPayroll" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 4F: Find webhook events fired before database write confirms
+# Pattern: write to DB then fire webhook
+# Wrong: fire webhook then write to DB
+grep -rn "deliverWebhookEvent\|webhookDelivery" \
+  server/routes/ --include="*.ts" | grep -v node_modules | head -20
+# Each webhook emit must come AFTER the db write that triggered it
+
+# 4G: Find NDS notifications sent before audit record written
+grep -rn "notificationDeliveryService\." \
+  server/routes/ --include="*.ts" | grep -v node_modules | head -20
+# Pattern should be: mutate → audit → notify (in this order)
+# If notify comes before audit: notification sent for unconfirmed action
+
+# 4H: Find any race conditions in concurrent requests
+# SELECT then INSERT pattern without locking
+grep -rn "SELECT.*WHERE.*INSERT\|find.*create\|findOne.*save" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# These need SELECT FOR UPDATE or ON CONFLICT handling
+
+# 4I: Find session writes before response
+grep -rn "req\.session\.\|session\.save\|session\.destroy" \
+  server/routes/ --include="*.ts" | grep -v node_modules | head -20
+# session.save() must complete before res.json() or session changes are lost
+
+# 4J: Find cache invalidation timing issues
+grep -rn "invalidateCache\|cache\.delete\|clearCache" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# Cache must be invalidated AFTER successful DB write not before
+```
+
+---
+
+**SUBAGENT 5 — DATABASE OPERATION ORDER AUDIT**
+
+Database operations that depend on each other must execute in the correct sequence. A foreign key insert before its parent exists causes a silent failure or constraint error.
+
+```bash
+# 5A: Find inserts that depend on other inserts
+# Example: inserting an employee before their workspace exists
+grep -rn "INSERT INTO employees\|INSERT INTO shifts\|INSERT INTO invoices\|INSERT INTO clients" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# Each must verify parent record exists before inserting
+
+# 5B: Find missing transaction wrappers on multi-step operations
+# These operations must be atomic (all succeed or all rollback):
+# - Creating an employee + onboarding tasks
+# - Running payroll + creating pay stubs
+# - Generating invoice + line items
+# - Terminating employee + creating open shifts
+
+grep -rn "onboardingTask\|payStub\|lineItem\|terminat" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "transaction\|BEGIN\|COMMIT" | head -20
+
+# 5C: Check migration execution order
+# Tables with foreign keys must be created after the tables they reference
+grep -rn "CREATE TABLE\|REFERENCES\|FOREIGN KEY" \
+  server/ --include="*.ts" | grep -v node_modules | head -30
+
+# 5D: Find seed data with wrong insertion order
+grep -rn "seed\|Seed" server/scripts/ --include="*.ts" 2>/dev/null | head -20
+# Seed order must be:
+# workspaces → users → employees → clients → shifts → invoices
+# Never insert a child record before its parent
+
+# 5E: Find UPDATE operations that depend on SELECT result
+# Classic TOCTOU (time-of-check-time-of-use) race condition
+grep -rn "SELECT.*then.*UPDATE\|find.*update\|get.*then.*patch" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# These need SELECT FOR UPDATE to prevent race conditions
+
+# 5F: Check trigger execution order
+# DB triggers fire in creation order
+# Find any interdependent triggers
+grep -rn "CREATE TRIGGER\|trg_\|trigger_" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 5G: Find queries that assume data exists without checking
+grep -rn "rows\[0\]\.\|result\[0\]\.\|data\[0\]\." \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "if.*rows\|rows\.length\|check" | head -30
+# rows[0] without checking rows.length first = potential undefined crash
+
+# 5H: Find missing RETURNING clauses after INSERT
+grep -rn "INSERT INTO.*VALUES\|db\.insert\|pool\.query.*INSERT" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "RETURNING\|returning" | head -20
+# Without RETURNING you cannot get the inserted ID for subsequent operations
+```
+
+---
+
+**SUBAGENT 6 — TRINITY EXECUTION ORDER AUDIT**
+
+Trinity actions must execute in the correct sequence. An action that notifies before it validates, or mutates before it checks permissions, is a silent failure.
+
+```bash
+# 6A: Verify 7-step framework order in Trinity handlers
+# Every Trinity action handler should follow:
+# 1. Validate input
+# 2. Check permissions
+# 3. Fetch required data
+# 4. Process/calculate
+# 5. Mutate database
+# 6. Write audit record
+# 7. Notify/broadcast
+
+grep -rn "handler.*async" server/services/helpai/ --include="*.ts" | head -10
+# Check each handler follows this order
+
+# 6B: Find Trinity actions that mutate before validating
+grep -rn "INSERT\|UPDATE\|DELETE" server/services/helpai/ --include="*.ts" | \
+  grep -v node_modules | head -20
+# Each mutation should be preceded by validation
+
+# 6C: Find Trinity actions that notify before confirming mutation
+grep -rn "notificationDelivery\|sendNotification" server/services/helpai/ --include="*.ts" | \
+  head -20
+# Notifications must come after successful DB write
+
+# 6D: Verify Trinity approval gate runs before action execution
+grep -rn "pending.*approval\|approval.*gate\|requiresApproval\|pendingApproval" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# Any action requiring approval must check approval status FIRST
+
+# 6E: Check Trinity session context is loaded before action runs
+grep -rn "trinityContext\|loadContext\|sessionContext\|workspaceContext" \
+  server/services/helpai/ --include="*.ts" | head -10
+# Context must be loaded before any data-dependent action
+
+# 6F: Find Trinity actions calling other Trinity actions
+grep -rn "platformActionHub\.execute\|actionHub\.run\|executeAction" \
+  server/services/helpai/ --include="*.ts" | head -10
+# Nested Trinity calls must handle circular dependencies
+
+# 6G: Check HelpAI intent classification happens before routing
+grep -rn "classifyIntent\|intent.*classify\|route.*intent\|intent.*route" \
+  server/services/helpai/ --include="*.ts" | head -10
+# Intent must be classified BEFORE routing to sub-handler
+
+# 6H: Verify Trinity memory writes happen in correct order
+grep -rn "working_memory\|long_term_memory\|trinityMemory" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+# Working memory updated during session
+# Long-term memory written only on session close or significant event
+
+# 6I: Check spawned sub-agent execution order
+grep -rn "spawnAgent\|subAgent\|spawn.*agent" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+# Parent agent must wait for sub-agent completion before acting on results
+
+# 6J: Verify Trinity action audit written synchronously not async
+grep -rn "auditService\|writeAudit\|universalAudit" \
+  server/services/helpai/ --include="*.ts" | head -10
+# Audit must be awaited - fire-and-forget audit means action has no audit trail
+```
+
+---
+
+**SUBAGENT 7 — NOTIFICATION AND BROADCAST ORDER AUDIT**
+
+Notifications and broadcasts must fire in the correct sequence. A notification for an event that has not happened yet is confusing. A broadcast before the DB write means stale data.
+
+```bash
+# 7A: Verify notification fires AFTER database write
+grep -rn "notificationDeliveryService\." server/routes/ --include="*.ts" | \
+  grep -v node_modules | head -30
+# For each: check that DB write precedes the notification call
+
+# 7B: Verify broadcast fires AFTER notification
+# Order should be: DB write → audit → NDS notification → WebSocket broadcast
+grep -rn "broadcastToWorkspace\(" server/routes/ --include="*.ts" | \
+  grep -v node_modules | head -20
+
+# 7C: Find notifications sent inside transactions before commit
+grep -rn "BEGIN\|transaction" server/ --include="*.ts" | grep -v node_modules | head -10
+# Notifications inside a transaction that rolls back = ghost notifications
+
+# 7D: Check NDS retry queue processes in correct order
+grep -rn "retry.*order\|ORDER BY.*retry\|queue.*order" \
+  server/services/notificationDeliveryService.ts | head -10
+# Should process oldest failed notifications first (FIFO)
+
+# 7E: Verify WebSocket auth message processed before join messages
+grep -rn "ws_authenticate\|join_conversation\|subscribe_notifications" \
+  server/websocket.ts | head -20
+# ws_authenticate MUST be processed before any join/subscribe
+# If join arrives before auth: reject and send ws_auth_required
+
+# 7F: Check broadcast message type ordering
+# Some broadcasts must arrive before others to make sense
+# Example: shift_unassigned must arrive before shift_open_marketplace
+grep -rn "shift_unassigned\|shift_open\|calloff.*broadcast\|broadcast.*calloff" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 7G: Verify email batch compilation order for daily reports
+grep -rn "compileBatch\|dailyBatch\|batchEmail\|batch.*report" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+# Individual DARs must all be in DB before batch compilation runs
+# Compilation must complete before email send
+
+# 7H: Check webhook event ordering for related events
+# invoice.generated must fire before invoice.sent
+# officer.activated must fire before shift.assigned
+grep -rn "deliverWebhookEvent" server/ --include="*.ts" | \
+  grep -v node_modules | head -20
+```
+
+---
+
+**SUBAGENT 8 — FRONTEND RENDER ORDER AND DATA DEPENDENCY AUDIT**
+
+React components that render before their data is available cause visual flashes, errors, or stale displays.
+
+```bash
+# 8A: Find components that access data before checking loading state
+grep -rn "data\.\|response\.\|result\." client/src/pages/ --include="*.tsx" | \
+  grep -v "isLoading\|loading\|isFetching" | \
+  grep -v "node_modules" | head -30
+# data.X before checking isLoading can crash if data is undefined
+
+# 8B: Find useEffect with missing dependencies
+grep -rn "useEffect\(\(\)" client/src/ --include="*.tsx" | \
+  grep -v node_modules | head -20
+# useEffect(() => {}, []) - empty deps array
+# If the effect uses variables not in deps array it runs with stale values
+
+# 8C: Find queries that depend on other query results
+grep -rn "useQuery\|useInfiniteQuery" client/src/pages/ --include="*.tsx" | \
+  grep -v node_modules | head -30
+# A query that uses data from another query must have 'enabled' flag:
+# enabled: !!firstQueryData
+# Without it the second query runs with undefined parameters
+
+# 8D: Find mutations that redirect before invalidation completes
+grep -rn "navigate\|router\.push" client/src/ --include="*.tsx" | \
+  grep -B2 "invalidateQueries\|refetch" | grep -v node_modules | head -20
+# invalidateQueries must complete before navigation
+# Otherwise navigated page shows stale data
+
+# 8E: Find optimistic updates that apply before validation
+grep -rn "optimistic\|onMutate\|previousData" client/src/ --include="*.tsx" | \
+  grep -v node_modules | head -20
+# Optimistic updates that apply before server confirms can show invalid state
+
+# 8F: Find forms that submit before all required data is loaded
+grep -rn "onSubmit\|handleSubmit" client/src/pages/ --include="*.tsx" | \
+  grep -v node_modules | head -20
+# Form submit handlers must check that all required referenced data is loaded
+
+# 8G: Find components rendering before auth is confirmed
+grep -rn "isAuthenticated\|isLoading.*auth\|authLoading" \
+  client/src/ --include="*.tsx" | grep -v node_modules | head -20
+# Protected components must not render until isAuthenticated = true
+# AND isLoading = false
+
+# 8H: Find WebSocket subscriptions before connection confirmed
+grep -rn "bus\.subscribe\|sendJoin\|joinRoom" \
+  client/src/ --include="*.tsx" | grep -v node_modules | head -20
+# Must subscribe only after WebSocket is authenticated and connected
+
+# 8I: Find toast notifications before action completes
+grep -rn "toast\.\|showToast\|addToast" client/src/ --include="*.tsx" | \
+  grep -B3 "mutate\|submit\|save" | grep -v node_modules | head -20
+# Success toast must only fire in onSuccess callback not before mutation
+
+# 8J: Find page data refresh order issues
+grep -rn "invalidateQueries\(\[" client/src/ --include="*.tsx" | \
+  grep -v node_modules | head -30
+# When invalidating multiple related queries invalidate in dependency order
+# Parent data before child data
+```
+
+---
+
+**ARCHITECT GATEKEEPER — AFTER ALL 8 SUBAGENTS REPORT**
+
+Compile every finding into the master issue log. Categorize by severity:
+
+**P0 — Causes data corruption or security failure:**
+- Route shadow where auth-protected route is shadowed by public route
+- Transaction that notifies before committing
+- Async operation that writes incorrect data due to race condition
+- Trinity action that mutates before validating permissions
+
+**P1 — Causes silent failure where action appears to succeed but does not:**
+- await inside forEach
+- Fire-and-forget DB write that fails silently
+- Notification sent before DB write confirms
+- Session save missing before response
+- Cache invalidated before write confirms
+
+**P2 — Causes incorrect order of operations visible to user:**
+- Broadcast before DB write (stale data shown)
+- Success toast before mutation confirms
+- Redirect before invalidation completes
+- Component renders before auth confirmed
+
+**P3 — Causes degraded behavior but not total failure:**
+- Missing RETURNING clause requiring extra query
+- Unordered retry queue
+- Missing enabled flag on dependent queries
+
+---
+
+**FIX EXECUTION ORDER:**
+
+For every finding document the fix in this format:
+
+```
+ISSUE: [description]
+FILE: [file:line]
+CURRENT ORDER: [what happens now]
+CORRECT ORDER: [what must happen]
+FIX: [specific code change]
+RISK: [what could break if we fix this]
+VERIFIED BY: [how to confirm fix works]
+```
+
+Apply P0 fixes immediately one at a time with server restart after each.
+Apply P1 fixes in batches of 3 with TypeScript check after each batch.
+Apply P2 and P3 fixes in a single pass.
+
+**After all fixes:**
+```bash
+# Confirm no TypeScript errors
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+
+# Confirm server starts clean
+# Check startup log for any initialization errors
+
+# Confirm all routes still respond correctly
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/auth/me
+
+# Run regression suite
+npm run test
+```
+
+**Final report format:**
+
+```
+EXECUTION ORDER AUDIT — RESULTS
+
+P0 Issues Found: [N] — Fixed: [N]
+P1 Issues Found: [N] — Fixed: [N]
+P2 Issues Found: [N] — Fixed: [N]
+P3 Issues Found: [N] — Fixed: [N]
+
+Critical fixes applied:
+1. [description of fix]
+2. [description of fix]
+...
+
+Route shadows eliminated: [N]
+Async ordering fixed: [N]
+DB transaction wrappers added: [N]
+Notification timing corrected: [N]
+Frontend render guards added: [N]
+
+TypeScript: 0 errors
+Server startup: Clean
+Tests: [X]/[X] passing
+
+Status: EXECUTION ORDER CANONICAL ✅
+```
+
+---
+
+Paste that. Silent failures from wrong execution order are the hardest bugs to find because everything looks like it worked. This audit finds them systematically before they hit production. Standing by for results.

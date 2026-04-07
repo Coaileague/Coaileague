@@ -22,7 +22,11 @@ import {
   timeEntryBreaks 
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, isNull, count, sum } from 'drizzle-orm';
-import { meteredGemini } from '../../../billing/meteredGeminiClient';
+import { createLogger } from '../../../lib/logger';
+import { meteredGemini } from '../../billing/meteredGeminiClient';
+import { PLATFORM } from '../../../config/platformConfig';
+
+const log = createLogger('PayrollValidation');
 
 interface PayrollValidationParams {
   workspaceId: string;
@@ -73,10 +77,10 @@ export class PayrollValidationSkill extends BaseSkill {
       name: 'Payroll Pre-Run Validation',
       version: '1.0.0',
       description: 'AI-powered validation and gap analysis for payroll runs using Gemini 3 Pro',
-      author: 'CoAIleague AI Brain',
+      author: PLATFORM.name + " AI Brain",
       category: 'payroll',
       requiredTier: 'professional',
-      requiredRole: ['owner', 'admin'],
+      requiredRole: ['org_owner', 'co_owner', 'manager'],
       capabilities: [
         'anomaly-detection',
         'gap-analysis',
@@ -184,12 +188,12 @@ export class PayrollValidationSkill extends BaseSkill {
       };
 
     } catch (error: any) {
-      logs.push(`[PayrollValidation] Error: ${error.message}`);
+      logs.push(`[PayrollValidation] Error: ${(error instanceof Error ? error.message : String(error))}`);
       return {
         success: false,
         error: {
           code: 'PAYROLL_VALIDATION_ERROR',
-          message: error.message,
+          message: (error instanceof Error ? error.message : String(error)),
         },
         logs,
         tokensUsed: 0,
@@ -206,8 +210,8 @@ export class PayrollValidationSkill extends BaseSkill {
         lastName: employees.lastName,
         email: employees.email,
         hourlyRate: employees.hourlyRate,
-        employmentType: employees.employmentType,
-        status: employees.status,
+        workerType: employees.workerType,
+        isActive: employees.isActive,
       })
       .from(employees)
       .where(eq(employees.workspaceId, workspaceId));
@@ -246,15 +250,15 @@ export class PayrollValidationSkill extends BaseSkill {
     return await db
       .select({
         id: payrollRuns.id,
-        payPeriodStart: payrollRuns.payPeriodStart,
-        payPeriodEnd: payrollRuns.payPeriodEnd,
-        totalGross: payrollRuns.totalGross,
-        totalNet: payrollRuns.totalNet,
+        periodStart: payrollRuns.periodStart,
+        periodEnd: payrollRuns.periodEnd,
+        totalGrossPay: payrollRuns.totalGrossPay,
+        totalNetPay: payrollRuns.totalNetPay,
         status: payrollRuns.status,
       })
       .from(payrollRuns)
       .where(eq(payrollRuns.workspaceId, workspaceId))
-      .orderBy(sql`${payrollRuns.payPeriodEnd} DESC`)
+      .orderBy(sql`${payrollRuns.periodEnd} DESC`)
       .limit(6);
   }
 
@@ -267,7 +271,7 @@ export class PayrollValidationSkill extends BaseSkill {
     const employeesWithTimesheets = new Set(timesheetData.map(t => t.employeeId));
 
     for (const emp of employeeData) {
-      if (emp.status !== 'active') continue;
+      if (!emp.isActive) continue;
       
       if (!employeesWithTimesheets.has(emp.id)) {
         issues.push({
@@ -370,7 +374,7 @@ export class PayrollValidationSkill extends BaseSkill {
     if (historicalData.length === 0) return issues;
 
     const currentTotal = timesheetData.reduce((sum, t) => sum + ((t.hoursWorked || 0) * (t.hourlyRate || 0)), 0);
-    const historicalAvg = historicalData.reduce((sum, h) => sum + (parseFloat(h.totalGross) || 0), 0) / historicalData.length;
+    const historicalAvg = historicalData.reduce((sum, h) => sum + (parseFloat(h.totalGrossPay) || 0), 0) / historicalData.length;
 
     if (historicalAvg > 0) {
       const variance = ((currentTotal - historicalAvg) / historicalAvg * 100);
@@ -396,15 +400,7 @@ export class PayrollValidationSkill extends BaseSkill {
     context: SkillContext
   ): Promise<string> {
     try {
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODELS.BRAIN,
-        generationConfig: {
-          maxOutputTokens: ANTI_YAP_PRESETS.diagnostics.maxTokens,
-          temperature: ANTI_YAP_PRESETS.diagnostics.temperature,
-        },
-      });
-
-      const prompt = `You are an AI Payroll Analyst for CoAIleague. Analyze these payroll validation results and provide actionable insights.
+      const prompt = `You are an AI Payroll Analyst for ${PLATFORM.name}. Analyze these payroll validation results and provide actionable insights.
 
 SUMMARY:
 - Employees: ${summary.totalEmployees}
@@ -418,10 +414,19 @@ ${issues.slice(0, 10).map(i => `- [${i.severity.toUpperCase()}] ${i.category}: $
 
 Provide 2-3 sentences of actionable insights. Be specific and direct.`;
 
-      const result = await model.generateContent(prompt);
-      return result.response.text();
+      const result = await meteredGemini.generate({
+        workspaceId: context.workspaceId,
+        userId: context.userId,
+        featureKey: 'payroll_validation_insights',
+        prompt,
+        model: 'gemini-2.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 500,
+      });
+
+      return result.success ? result.text : 'AI insights unavailable. Please review issues manually.';
     } catch (error) {
-      console.error('[PayrollValidation] AI insights generation failed:', error);
+      log.error('[PayrollValidation] AI insights generation failed:', error);
       return 'AI insights unavailable. Please review issues manually.';
     }
   }
@@ -432,7 +437,7 @@ Provide 2-3 sentences of actionable insights. Be specific and direct.`;
     params: PayrollValidationParams
   ) {
     const employeesWithData = new Set(timesheetData.map(t => t.employeeId));
-    const activeEmployees = employeeData.filter(e => e.status === 'active').length;
+    const activeEmployees = employeeData.filter(e => e.isActive).length;
     const coveragePercent = activeEmployees > 0 
       ? (employeesWithData.size / activeEmployees) * 100 
       : 0;
@@ -441,7 +446,7 @@ Provide 2-3 sentences of actionable insights. Be specific and direct.`;
       coveragePercent,
       missingDays: [],
       incompleteRecords: employeeData
-        .filter(e => e.status === 'active' && !employeesWithData.has(e.id))
+        .filter(e => e.isActive && !employeesWithData.has(e.id))
         .map(e => `${e.firstName} ${e.lastName}`),
     };
   }

@@ -66,7 +66,7 @@ export function UndoStackPanel({
   return (
     <Card data-testid="panel-undo-stack">
       <CardHeader className="py-3 px-4 border-b">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <History className="h-4 w-4 text-primary" />
             Recent Changes

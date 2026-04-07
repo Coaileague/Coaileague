@@ -1,0 +1,156 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 14 — INVOICE AND BILLING ENGINE HARDENING**
+
+This phase owns the complete invoice lifecycle from shift data through client payment. Every gap found here has direct revenue consequences. Report all findings before fixing anything. No exceptions. Same discipline as Phase 11.
+
+---
+
+**STEP 1 — INVOICE SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, scheduled job, and Trinity action that touches invoices. Include:
+- Invoice generation and line item calculation
+- Invoice delivery and NDS routing
+- Invoice state machine and status transitions
+- Client portal invoice access
+- Payment processing and acknowledgment
+- Overdue detection and escalation
+- Disputed invoice handling
+- Credit memo and partial payment logic
+- Any cron or scheduled job that reads or writes invoice records
+
+Flag any file that mutates invoice records without a corresponding audit trail write.
+
+---
+
+**STEP 2 — INVOICE GENERATION VERIFICATION**
+
+Trace invoice generation from shift data to final document:
+- Every confirmed shift in the billing period is included — no missing records, no duplicates
+- Shift rate applied correctly per officer per post — post-specific overrides take precedence over base rates
+- Overtime, differential, holiday, and hazard pay line items appear as distinct entries — not bundled into base
+- Invoice number generation is sequential and collision-free under concurrent generation
+- Invoice PDF contains all required fields: workspace name, client name, billing period, line items per officer/shift, subtotal, tax if applicable, total, payment terms, invoice number, due date
+- Draft invoice can be reviewed before sending — generation does not auto-send
+- Invoice generation is idempotent — running generation twice for the same period produces one invoice not two
+- Verify the Phase 10 scheduled auto-generation trigger fires correctly and produces complete invoices
+
+---
+
+**STEP 3 — INVOICE STATE MACHINE VERIFICATION**
+
+The invoice state machine must be airtight:
+- Valid states confirmed: `draft → sent → viewed → paid → overdue → disputed → cancelled → void`
+- Every transition is explicitly enforced — no jumping from draft to paid, no transition from void to any state
+- `markInvoicePaid` blocks disputed and cancelled invoices (confirmed added in Phase 11 — verify still intact)
+- Disputed status freezes all payment processing until explicitly resolved
+- Overdue transition fires automatically from the scheduled sweep (confirmed added in Phase 11 — verify timing and accuracy)
+- Cancelled invoices cannot be reactivated — a new invoice must be created
+- Every state transition writes an audit record: invoice_id, from_state, to_state, actor_id, timestamp, reason
+
+---
+
+**STEP 4 — INVOICE DELIVERY AND CLIENT NOTIFICATION**
+
+Verify delivery pipeline:
+- Invoice delivered to correct client contact via NDS on send
+- Delivery confirmed in notification_deliveries table
+- Client receives email with secure portal link — not the invoice PDF as an attachment
+- Portal link is workspace-scoped and client-scoped (confirmed in Phase 11 — verify still intact)
+- Client viewing the invoice triggers status transition from `sent → viewed` — logged with timestamp
+- Invoice viewed event fires a notification to the manager: client has viewed the invoice
+- Failed delivery retries via NDS exponential backoff — invoice stays in sent state during retry
+- If all retries exhausted — invoice flagged for manual follow-up, manager notified
+
+---
+
+**STEP 5 — PAYMENT PROCESSING VERIFICATION**
+
+Trace the complete payment flow:
+- Payment acknowledgment updates invoice status to `paid` with payment timestamp and method
+- Partial payment supported — invoice transitions to `partial` state with remaining balance tracked
+- Credit memo application verified — credits reduce invoice balance correctly before payment processing
+- Overpayment handled — excess credited to client account, not silently absorbed
+- Payment recorded with: invoice_id, amount, method, reference_number, processed_by, timestamp
+- Duplicate payment prevention — same reference number cannot be applied twice
+- Stripe payment flow verified if applicable — webhook idempotency confirmed
+
+---
+
+**STEP 6 — OVERDUE AND COLLECTIONS VERIFICATION**
+
+Verify the overdue pipeline end-to-end:
+- Overdue sweep runs on schedule — confirm cron timing
+- Sweep correctly identifies invoices past due date with status `sent` or `viewed`
+- Status transitions to `overdue` atomically in the DB (confirmed added in Phase 11 — verify still working)
+- Three-tier escalation confirmed: day 1 reminder, day 7 follow-up, day 30 collections escalation
+- Each escalation tier fires the correct NDS notification to the correct recipient
+- Escalation history logged — same invoice does not trigger duplicate escalation emails
+- Manager can manually trigger an overdue sweep for a specific invoice
+- Collections escalation at day 30 notifies org_owner, not just manager
+
+---
+
+**STEP 7 — DISPUTED INVOICE HANDLING**
+
+Verify the dispute flow:
+- Client or manager can open a dispute on a sent or overdue invoice
+- Dispute creation requires a reason — not a blank flag
+- Disputed status freezes payment processing immediately
+- Dispute routed to correct internal handler via NDS
+- Dispute resolution options: accept client's dispute (issue credit memo), reject dispute (revert to prior status), partial adjustment (create revised invoice)
+- All dispute actions logged with actor, timestamp, and outcome
+- Resolved dispute transitions invoice to correct next state based on resolution type
+
+---
+
+**STEP 8 — CREDIT MEMO AND ADJUSTMENTS**
+
+Verify credit handling:
+- Credit memo can be created against a specific invoice
+- Credit reduces the outstanding balance — not applied to future invoices without explicit direction
+- Credit memo has its own audit trail: created_by, amount, reason, applied_to_invoice_id, timestamp
+- Zero-balance invoices after credit application transition to paid automatically
+- Credit memo cannot exceed the invoice amount — hard block
+- Credit memos visible to client in portal alongside the original invoice
+
+---
+
+**STEP 9 — FINANCIAL RECONCILIATION READINESS**
+
+Verify invoice data is clean for QuickBooks sync (Phase 16):
+- Every invoice has workspace_id, client_id, period_start, period_end, amount, status, and created_at populated — no nulls on required fields
+- Invoice line items are structured correctly for export
+- Payment records are linked to invoice records with correct foreign keys
+- No orphaned invoice records — every invoice traces to a workspace and client
+- Invoice totals match the sum of line items — run a verification query
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 14 is marked complete:
+- Check 1: Invoice generation includes all confirmed shifts — no missing, no duplicates
+- Check 2: Line items show distinct entries for overtime, differential, holiday, and hazard pay
+- Check 3: Invoice number generation is collision-free — confirm advisory lock or sequence
+- Check 4: Invoice state machine enforced — invalid transitions rejected with explicit error
+- Check 5: `markInvoicePaid` still blocks disputed invoices (Phase 11 regression check)
+- Check 6: Overdue sweep still auto-transitions status in DB (Phase 11 regression check)
+- Check 7: Client portal link is workspace-scoped and time-bounded
+- Check 8: Invoice viewed event triggers sent → viewed transition and manager notification
+- Check 9: Partial payment tracked correctly — remaining balance accurate
+- Check 10: Duplicate payment prevention confirmed — same reference number blocked on second submission
+- Check 11: Three-tier escalation fires correct notifications to correct recipients without duplicates
+- Check 12: Dispute flow creates reason, freezes payment, routes for resolution, logs all actions
+- Check 13: Credit memo cannot exceed invoice amount — hard block confirmed
+- Check 14: All invoice mutations have audit trail entries — grep confirms zero untracked writes
+- Check 15: Invoice totals match sum of line items — verification query shows zero mismatches
+- Check 16: Server starts clean with zero TypeScript errors across all invoice-related files
+
+Do not mark Phase 14 complete until all 16 checks pass. Report findings step by step before beginning any fixes. Findings first — full picture assembled — then fixes. Every gap from low to critical gets fixed before this phase closes.
+
+---
+
+Paste that and hold the line. Revenue phase — same zero-tolerance standard as Phase 11.

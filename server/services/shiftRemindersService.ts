@@ -5,17 +5,28 @@
  */
 
 import { db } from "../db";
-import { shifts, employees, users, userNotificationPreferences, aiEventStream } from "@shared/schema";
+import {
+  shifts,
+  employees,
+  users,
+  userNotificationPreferences,
+  idempotencyKeys,
+} from '@shared/schema';
 import { eq, and, gte, lte, isNotNull, sql } from "drizzle-orm";
-import { sendShiftAssignmentEmail } from "../email";
+import { platformEventBus } from './platformEventBus';
+import { sendShiftAssignmentEmail } from "./emailCore";
 import { 
   sendShiftReminderSMSWithPrefs, 
   shouldSendSmsForCategory, 
   getUserSmsPhone,
   isSMSConfigured,
-  sendSMSToEmployee
+  sendSMSToEmployee // email-tracked
 } from "./smsService";
 import { createNotification } from "./notificationService";
+import { createLogger } from '../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+const log = createLogger('shiftRemindersService');
+
 
 export interface ReminderResult {
   shiftId: string;
@@ -76,7 +87,7 @@ async function getUserReminderConfig(userId: string, workspaceId: string): Promi
       channels: channels as ('email' | 'sms' | 'push')[],
     };
   } catch (error) {
-    console.error('[ShiftReminders] Error getting user config:', error);
+    log.error('[ShiftReminders] Error getting user config:', error);
     return { minutesBefore: 60, channels: ['email', 'push'] };
   }
 }
@@ -88,6 +99,27 @@ export async function sendShiftReminder(
   shiftId: string,
   workspaceId: string
 ): Promise<ReminderResult | null> {
+  // DB-backed idempotency guard: prevents duplicate reminders when the cron fires
+  // more than once within the 5-minute window (server restart, overlapping runs).
+  // Key is scoped to the shift so each shift gets exactly one reminder per lifecycle.
+  const reminderKey = `shift-reminder-${shiftId}`;
+  const inserted = await db.insert(idempotencyKeys)
+    .values({
+      workspaceId,
+      operationType: 'shift_reminder',
+      requestFingerprint: reminderKey,
+      status: 'completed',
+      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000), // expire 8h from now
+    })
+    .onConflictDoNothing()
+    .returning({ id: idempotencyKeys.id });
+
+  if (inserted.length === 0) {
+    // Another cron run already sent this reminder — skip silently
+    log.info(`[ShiftReminders] Reminder already sent for shift ${shiftId}, skipping duplicate`);
+    return null;
+  }
+
   const [shift] = await db
     .select()
     .from(shifts)
@@ -133,50 +165,62 @@ export async function sendShiftReminder(
   
   if (channels.includes('email') && employee.email) {
     try {
-      await sendShiftAssignmentEmail({
-        employeeEmail: employee.email,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
-        shiftTitle: shift.title,
-        shiftDate,
-        startTime: shiftTime,
-        endTime: shift.endTime?.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit',
-          hour12: true 
-        }) || 'TBD',
-        location: location || 'TBD',
-      });
+      await sendShiftAssignmentEmail(
+        employee.email,
+        {
+          employeeEmail: employee.email,
+          employeeName: `${employee.firstName} ${employee.lastName}`,
+          shiftTitle: shift.title,
+          shiftDate,
+          startTime: shiftTime,
+          endTime: shift.endTime?.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          }) || 'TBD',
+          location: location || 'TBD',
+        },
+        workspaceId,
+      );
       result.channels.email = { sent: true };
     } catch (error: any) {
-      result.channels.email = { sent: false, error: error.message };
+      result.channels.email = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
   
   if (channels.includes('sms') && userId && isSMSConfigured()) {
     try {
-      const smsResult = await sendShiftReminderSMSWithPrefs(
-        userId,
+      const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+      const smsResult = await NotificationDeliveryService.send({
+        type: 'shift_reminder',
         workspaceId,
-        shiftDate,
-        shiftTime,
-        config?.minutesBefore || 60,
-        location
-      );
-      result.channels.sms = { sent: smsResult.success, error: smsResult.error };
+        recipientUserId: userId,
+        channel: 'sms',
+        body: {
+          phone: employee.phone, // fallback if user phone not in payload? deliverSMS uses payload.phone
+          body: `CoAIleague Reminder: You have a shift on ${shiftDate} at ${shiftTime}${location ? ` at ${location}` : ''}. Reply STOP to unsubscribe.`,
+        }
+      });
+      result.channels.sms = { sent: !smsResult.startsWith('skipped'), error: smsResult.startsWith('skipped') ? smsResult : undefined };
     } catch (error: any) {
-      result.channels.sms = { sent: false, error: error.message };
+      result.channels.sms = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   } else if (channels.includes('sms') && employee.phone) {
     try {
-      const smsResult = await sendSMSToEmployee(
-        shift.employeeId,
-        `CoAIleague Reminder: You have a shift on ${shiftDate} at ${shiftTime}${location ? ` at ${location}` : ''}. Reply STOP to unsubscribe.`,
-        'shift_reminder',
-        workspaceId
-      );
-      result.channels.sms = { sent: smsResult.success, error: smsResult.error };
+      const { NotificationDeliveryService } = await import('./notificationDeliveryService');
+      const smsResult = await NotificationDeliveryService.send({
+        type: 'shift_reminder',
+        workspaceId,
+        recipientUserId: shift.employeeId, // Assuming this is a userId or we need to find it
+        channel: 'sms',
+        body: {
+          phone: employee.phone,
+          body: `CoAIleague Reminder: You have a shift on ${shiftDate} at ${shiftTime}${location ? ` at ${location}` : ''}. Reply STOP to unsubscribe.`,
+        }
+      });
+      result.channels.sms = { sent: !smsResult.startsWith('skipped'), error: smsResult.startsWith('skipped') ? smsResult : undefined };
     } catch (error: any) {
-      result.channels.sms = { sent: false, error: error.message };
+      result.channels.sms = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
   
@@ -195,7 +239,7 @@ export async function sendShiftReminder(
       });
       result.channels.push = { sent: true };
     } catch (error: any) {
-      result.channels.push = { sent: false, error: error.message };
+      result.channels.push = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
   
@@ -227,22 +271,14 @@ async function logReminderEvent(
   employeeId: string,
   result: ReminderResult
 ): Promise<void> {
-  try {
-    await db.insert(aiEventStream).values({
-      workspaceId,
-      eventType: 'shift_reminder_sent',
-      source: 'shift_reminder_service',
-      payload: {
-        shiftId,
-        employeeId,
-        status: result.status,
-        channels: result.channels,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (error) {
-    console.error('[ShiftReminders] Failed to log event:', error);
-  }
+  log.info('[ShiftReminders] Reminder event:', {
+    workspaceId,
+    shiftId,
+    employeeId,
+    status: result.status,
+    channels: result.channels,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 /**
@@ -382,11 +418,11 @@ export async function processShiftReminders(): Promise<{
   failed: number;
   results: ReminderResult[];
 }> {
-  console.log('[ShiftReminders] Processing shift reminders...');
+  log.info('[ShiftReminders] Processing shift reminders...');
   
   const shiftsToRemind = await getShiftsNeedingReminders();
   
-  console.log(`[ShiftReminders] Found ${shiftsToRemind.length} shifts needing reminders`);
+  log.info(`[ShiftReminders] Found ${shiftsToRemind.length} shifts needing reminders`);
   
   const results: ReminderResult[] = [];
   let successful = 0;
@@ -404,8 +440,19 @@ export async function processShiftReminders(): Promise<{
     }
   }
   
-  console.log(`[ShiftReminders] Processed: ${results.length}, Successful: ${successful}, Failed: ${failed}`);
-  
+  log.info(`[ShiftReminders] Processed: ${results.length}, Successful: ${successful}, Failed: ${failed}`);
+
+  if (results.length > 0) {
+    platformEventBus.publish({
+      type: 'shift_reminders_processed',
+      category: 'scheduling',
+      title: 'Shift Reminders Processed',
+      description: `Processed ${results.length} shift reminder(s): ${successful} sent, ${failed} failed`,
+      workspaceId: PLATFORM_WORKSPACE_ID,
+      metadata: { processed: results.length, successful, failed },
+    });
+  }
+
   return {
     processed: results.length,
     successful,

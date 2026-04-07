@@ -1,0 +1,83 @@
+Here are the exact data structures you need to feed into Replit. This is the "bridge" that takes your native CoAIleague data (like guard hours and billing rates) and formats it perfectly so Stripe can collect the money and your Payroll API can file the taxes.
+
+By using these exact structures, you maintain the strict data isolation (org_id and workspace_id) we established in your architecture, ensuring everything tracks correctly back to your CFO dashboard.
+
+You can copy and paste this entire block directly into Replit to instruct the AI on how to build the API integrations.
+
+1. Stripe API Data Structure (For Client Invoicing & Payments)
+This structure tells Replit how to take a generated CoAIleague invoice and create a secure Stripe checkout session so the client can pay.
+
+Prompt for Replit:
+"Architect, implement the Stripe Checkout integration using the following data structure. Ensure all CoAIleague internal IDs are passed in the metadata object so the webhook can execute the 7-Step Process (TRIGGER → VALIDATE → PROCESS → PERSIST → PROPAGATE → NOTIFY → CONFIRM) and mark the invoice as 'Paid' in our database once Stripe processes the transaction."
+
+JSON
+{
+  "stripe_payload": {
+    "customer_email": "client@example.com",
+    "payment_method_types": ["card", "us_bank_account"],
+    "line_items": [
+      {
+        "price_data": {
+          "currency": "usd",
+          "product_data": {
+            "name": "Security Officer Services - Armed",
+            "description": "Week of Oct 10 - Oct 17"
+          },
+          "unit_amount": 4500, // Amount in cents ($45.00/hr)
+        },
+        "quantity": 40 // Total hours calculated natively in CoAIleague
+      }
+    ],
+    "mode": "payment",
+    "metadata": {
+      "org_id": "org_12345ABC",
+      "workspace_id": "ws_9876XYZ",
+      "invoice_id": "inv_55555",
+      "client_id": "cli_77777"
+    },
+    "success_url": "https://coaileague.com/dashboard/billing/success?session_id={CHECKOUT_SESSION_ID}",
+    "cancel_url": "https://coaileague.com/dashboard/billing/cancel"
+  }
+}
+2. Payroll API Data Structure (For Taxes, W2s, & Direct Deposit)
+This structure tells Replit how to package the approved timesheets and send them to the Payroll provider (like Check or Patriot) to handle the federal/state tax filings and direct deposits.
+
+Prompt for Replit:
+"Architect, implement the Payroll API sync using the following data payload. CoAIleague will natively calculate the raw hours and overtime based on geofenced clock-ins. This payload bridges our raw data to the external Payroll processor. Ensure the employee_reference_id strictly matches our internal user_id to prevent data isolation leaks."
+
+JSON
+{
+  "payroll_payload": {
+    "company_id": "ext_payroll_comp_888", 
+    "pay_period": {
+      "start_date": "2026-10-10",
+      "end_date": "2026-10-17"
+    },
+    "employees": [
+      {
+        "employee_reference_id": "usr_guard_999", // Maps to CoAIleague user_id
+        "earnings": [
+          {
+            "type": "regular",
+            "hours": 40.0,
+            "rate": 20.00 // $20.00/hr pay rate
+          },
+          {
+            "type": "overtime",
+            "hours": 5.5,
+            "rate": 30.00 // Time and a half calculated natively
+          }
+        ],
+        "metadata": {
+          "org_id": "org_12345ABC",
+          "location_id": "loc_tx_san_antonio"
+        }
+      }
+    ],
+    "auto_approve": false // Keeps the final approval button inside CoAIleague's CFO dashboard
+  }
+}
+How This Protects You
+Notice the metadata blocks in both structures. That is the secret sauce. When Stripe or the Payroll API finishes their job, they send a silent ping (a webhook) back to CoAIleague with that metadata attached. That is how CoAIleague instantly updates your internal CFO dashboards and marks invoices as paid or guards as compensated, all without you lifting a finger.
+
+Would you like me to draft the exact Replit prompt to build the Webhooks that listen for those success pings from Stripe and Patriot?

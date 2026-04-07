@@ -1,0 +1,94 @@
+Paste this into Replit:
+
+---
+
+**DEEP LAYER INTEGRITY SCAN — READ ONLY | REPORT ONLY | NO FIXES YET**
+
+This is a full-platform wiring audit. Do not fix anything. Do not build anything. Read every layer and report every broken connection you find.
+
+Scan every area below simultaneously. For each finding report:
+```
+[SEVERITY] System > File:Line
+Broken: what is disconnected or unwired
+Impact: what fails silently in production
+Fix: what needs to be done
+```
+
+---
+
+**SCAN 1 — BROKEN EVENT HANDLERS & EMISSIONS**
+- Search every `platformEventBus.subscribe(` call across the entire codebase. For each subscriber, verify the event type it listens for is actually published somewhere. If the event type has zero `.publish()` calls matching it, flag it as a dead subscriber.
+- Search every `platformEventBus.publish(` call. For each event type published, verify at least one subscriber is registered for it. If published but no subscriber, flag it as a silent emission.
+- Search for any remaining raw Node `.emit(` calls on the event bus that bypass `.publish()`. Flag every one found.
+
+---
+
+**SCAN 2 — UNWIRED ROUTES**
+- List every route file in `server/routes/` and confirm each one is mounted in the main router or `server/index.ts`. Any route file that exists but is never mounted is dead code — flag it.
+- For every mounted route, confirm the auth middleware is applied. Any route that handles workspace-scoped data without `ensureAuth` or equivalent is a security gap — flag it.
+- Search for any `router.get`, `router.post`, `router.patch`, `router.delete` that references a service or handler function that does not exist or is not imported. Flag every broken reference.
+
+---
+
+**SCAN 3 — BROKEN TRINITY ACTION HANDLERS**
+- For every registered Trinity action (all 685), verify the handler function it points to actually exists and is not a stub returning `{ success: true }` with no logic. Flag every stub handler.
+- Verify every action that calls `executeAction()` internally has a valid action ID that is registered. Flag any `executeAction('some.action')` call where `some.action` is not in the registry.
+- Flag any action handler that does a DB operation without a `workspace_id` WHERE clause on a multi-tenant table.
+
+---
+
+**SCAN 4 — WEBSOCKET BROADCAST GAPS**
+- List every `broadcastToWorkspace(` call in the backend. For each one, verify the frontend has a corresponding handler in `ForceRefreshProvider.tsx` or equivalent WebSocket consumer. Flag any event type broadcast from the backend with no frontend handler.
+- List every WebSocket event type the frontend listens for. Verify the backend actually broadcasts each one somewhere. Flag any frontend handler listening for an event the backend never sends.
+
+---
+
+**SCAN 5 — UI TO BACKEND WIRING**
+- For every `useQuery` and `useMutation` call in the frontend, verify the API endpoint it calls actually exists in the backend routing. Flag any frontend call pointing to a non-existent or unmounted route.
+- For every form submission and button action in the frontend, verify there is a corresponding backend handler. Flag any UI action with no backend implementation.
+- Search for any hardcoded API paths in the frontend that differ from the actual mounted route paths in the backend.
+
+---
+
+**SCAN 6 — DATA PERSISTENCE GAPS**
+- Search for any `useState` or in-memory storage in components that should be persisted to the DB — wizard progress, form drafts, settings that survive page reload.
+- Search for any background job or cron that writes to a local variable or in-memory Map as its primary state store with no DB backup. Flag any that were not already converted to DB persistence.
+- Verify every table that has a `workspace_id` column also has an index on that column. Flag any missing indexes.
+
+---
+
+**SCAN 7 — ORCHESTRATION & BRIDGE SYNC GAPS**
+- For every orchestration service (trinityOrchestrator, orchestratedBusinessOps, orchestratedPayroll, scheduleLifecycleOrchestrator, billingOrchestrationService, etc.), verify it emits to `platformEventBus` after every significant state transition. Flag any orchestration that mutates state silently with no event.
+- Verify every bridge service (QB sync, Stripe, Resend email, NACHA) has a retry queue or failure notification path. Flag any bridge that fails silently with only a console.error.
+- Verify the 7-step universal pipeline (Trigger→Fetch→Validate→Process→Mutate→Confirm→Notify) is followed for every major workflow. Flag any workflow that skips Validate, skips Confirm, or skips Notify.
+
+---
+
+**SCAN 8 — WEBHOOK INTEGRITY**
+- List every incoming webhook endpoint (Stripe, Resend, QuickBooks, any others). For each one verify: signature validation exists, idempotency check exists, failure path writes to a log not just console.error.
+- For any webhook that processes money or subscription state, verify a DB record is written before any response is sent to the webhook provider.
+
+---
+
+**OUTPUT FORMAT**
+
+Group findings by scan number. Use severity: CRITICAL, HIGH, MEDIUM, LOW.
+
+At the bottom produce:
+```
+CRITICAL: N
+HIGH: N
+MEDIUM: N
+LOW: N
+TOTAL: N
+```
+
+Then two lists:
+**Must fix before first real tenant** — anything CRITICAL or HIGH
+**Fix in first week of production** — MEDIUM and LOW
+
+Stop and wait. Do not fix anything.
+
+---
+
+Paste the full report back here and I'll triage everything into one final fix batch.

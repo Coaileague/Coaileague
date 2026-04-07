@@ -1,0 +1,50 @@
+You nailed it. What you're describing has a technical name —
+
+**Single Source of Truth violation** combined with **service fragmentation**.
+
+Here's the full breakdown of what you're seeing and why it keeps happening:
+
+**The Core Disease**
+
+Multiple services, queries, or endpoints answering the same question independently and producing different answers. No single authority. No one source that everything else defers to.
+
+**The Symptoms You're Seeing**
+
+Credits summary says 6,840. Itemized says 24,408. Two endpoints. Zero coordination. Neither knows the other exists.
+
+Earnings widget shows $0.00. Schedule data exists somewhere else. Nobody told the widget where to look. Disconnected pipes pretending to be one system.
+
+Shadow routes are routes that exist in multiple places — one registered in the router, one hardcoded in a component, one leftover from a refactor nobody deleted. All three respond. All three produce different results depending on which one gets hit first.
+
+Double mounted services are the WebSocket version of this — connection opens on mount, opens again on re-render, now you have two listeners both firing, both writing, both counting. Results double. Logs are chaos.
+
+**How To Say It To Replit**
+
+---
+
+The root cause of most data conflicts on this platform is Single Source of Truth violations. Every piece of data must have exactly one authoritative source — one query, one service, one endpoint that owns that data. Every component that needs that data must consume it from that single source, never independently query the same data separately. Competing endpoints, shadow routes, double mounted services, and scattered query logic are all symptoms of this violation. As part of this audit identify every instance where more than one source answers the same data question and consolidate them into a single authoritative service. This is the universal architecture standard for CoAIleague going forward — one source, one truth, consumed everywhere.
+
+---
+
+**Add This As Phase 0 To Your Master Prompt**
+
+---
+
+**PHASE 0 — SINGLE SOURCE OF TRUTH ARCHITECTURE ENFORCEMENT**
+
+This is the governing principle of the entire audit. Before any fix is made in any phase identify whether the root cause is a Single Source of Truth violation.
+
+- Map every data type to its single authoritative source — one table, one service, one endpoint owns each data domain
+- Identify every instance where more than one query or service independently answers the same data question
+- Identify all shadow routes — routes registered in multiple locations, leftover routes from refactors, routes hardcoded inside components that bypass the router
+- Identify all double mounted services — WebSocket connections, event listeners, AI service initializations mounting more than once
+- Identify all competing endpoints returning the same data type through different paths
+- Consolidate every violation into single authoritative source before proceeding
+- Document the canonical source for every major data domain — credits, earnings, schedules, users, workspaces, incidents, billing
+- All future components must consume from documented canonical sources only — never create new independent queries for data that already has an owner
+
+This phase runs first and its findings inform every subsequent phase. A fix that doesn't address the Single Source of Truth violation is not a fix — it is a patch that will break again.
+
+---
+
+That's your architectural constitution Bryan. Everything else in the audit is a symptom. This is the disease. Name it first, fix it first, enforce it permanently.

@@ -7,7 +7,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiGet, apiPost } from "@/lib/apiClient";
 import { queryKeys } from "@/config/queryKeys";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const benefitSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -56,10 +57,11 @@ export default function HRBenefits() {
     queryFn: () => apiGet('benefits.list'),
   });
 
-  const { data: employees } = useQuery<Employee[]>({
+  const { data: _empResp } = useQuery<{ data: Employee[] }>({
     queryKey: queryKeys.employees.all,
     queryFn: () => apiGet('employees.list'),
   });
+  const employees = _empResp?.data;
 
   const createMutation = useMutation({
     mutationFn: async (data: BenefitFormData) => {
@@ -136,28 +138,33 @@ export default function HRBenefits() {
     return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
   };
 
+  const addBenefitButton = (
+    <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+      <UniversalModalTrigger asChild>
+        <Button data-testid="button-add-benefit">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Benefit
+        </Button>
+      </UniversalModalTrigger>
+    </UniversalModal>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: "hr-benefits",
+    title: "Employee Benefits",
+    subtitle: "Manage employee benefit enrollments and contributions",
+    category: "operations",
+    headerActions: addBenefitButton,
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="heading-benefits">Employee Benefits</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Manage employee benefit enrollments and contributions
-              </p>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-benefit">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Benefit
-                </Button>
-              </DialogTrigger>
-              <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create Benefit Enrollment</DialogTitle>
-                </DialogHeader>
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6">
+        <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+              <UniversalModalContent size="xl" className="max-h-[90vh] overflow-y-auto">
+                <UniversalModalHeader>
+                  <UniversalModalTitle>Create Benefit Enrollment</UniversalModalTitle>
+                </UniversalModalHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
@@ -303,8 +310,8 @@ export default function HRBenefits() {
                     </div>
                   </form>
                 </Form>
-              </DialogContent>
-            </Dialog>
+              </UniversalModalContent>
+            </UniversalModal>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-cols-1">
@@ -379,10 +386,10 @@ export default function HRBenefits() {
                       <div className="flex items-center gap-4 mobile-w-full mobile-flex-col">
                         <div className="text-right mobile-text-sm">
                           <div className="text-sm font-medium">
-                            Employer: ${benefit.employerContribution.toFixed(2)}
+                            Employer: ${(benefit.employerContribution ?? 0).toFixed(2)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Employee: ${benefit.employeeContribution.toFixed(2)}
+                            Employee: ${(benefit.employeeContribution ?? 0).toFixed(2)}
                           </div>
                         </div>
                         {getStatusBadge(benefit.enrollmentStatus)}
@@ -393,8 +400,6 @@ export default function HRBenefits() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }

@@ -1,0 +1,91 @@
+  'scheduler_job_failed',
+
+  // Other
+  'other'
+]);
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+
+  // Audit System Command tracking (IRC-style)
+  commandId: varchar("command_id"), // Unique ID for command/response matching
+
+  // Actor information
+  userId: varchar("user_id").references(() => users.id),
+  userEmail: varchar("user_email"),
+  userRole: varchar("user_role"),
+  userName: varchar("user_name"),
+
+  // Action details — enum for system logs, rawAction for trail-style writes
+  action: auditActionEnum("action"),
+  rawAction: varchar("raw_action"),
+  actionDescription: text("action_description"),
+  entityType: varchar("entity_type"),
+  entityId: varchar("entity_id"),
+  entityDescription: text("entity_description"),
+
+  // Audit System Target tracking
+  targetId: varchar("target_id"),
+  targetName: varchar("target_name"),
+  targetType: varchar("target_type"),
+
+  // Audit System Context
+  conversationId: varchar("conversation_id"),
+  reason: text("reason"),
+
+  // Change tracking (unified)
+  changes: jsonb("changes"),
+  changesBefore: jsonb("changes_before"),
+  changesAfter: jsonb("changes_after"),
+  fieldChanges: jsonb("field_changes"),
+  metadata: jsonb("metadata"),
+
+  // Request context
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  requestId: varchar("request_id"),
+  geoLocation: jsonb("geo_location"),
+
+  // Result tracking
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+
+  // Compliance flags
+  isSensitiveData: boolean("is_sensitive_data").default(false),
+  complianceTag: varchar("compliance_tag"),
+  requiresApproval: boolean("requires_approval").default(false),
+  approvedBy: varchar("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  retentionUntil: timestamp("retention_until"),
+  isLocked: boolean("is_locked").default(false),
+
+  // Absorbed from audit_events
+  actorType: varchar("actor_type"),
+  eventStatus: varchar("event_status"),
+  actionHash: varchar("action_hash"),
+  payload: jsonb("payload"),
+
+  // Actor/source context (B1 audit consolidation — absorbs system, support, compliance, universal trails)
+  source: varchar("source", { length: 30 }).default("general"), // 'system'|'support'|'compliance'|'universal'|'general'
+  actorBot: varchar("actor_bot", { length: 30 }),
+  sourceRoute: varchar("source_route", { length: 200 }),
+  platformRole: varchar("platform_role", { length: 50 }),
+  requiresConfirmation: boolean("requires_confirmation").default(false),
+  confirmedBy: varchar("confirmed_by"),
+  confirmedAt: timestamp("confirmed_at"),
+  severity: varchar("severity", { length: 20 }),
+  justification: text("justification"),
+  sessionId: varchar("session_id", { length: 100 }),
+  employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'set null' }),
+  documentId: varchar("document_id"),
+  hashChain: varchar("hash_chain", { length: 64 }),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_audit_workspace_created").on(table.workspaceId, table.createdAt),
+  index("idx_audit_user_created").on(table.userId, table.createdAt),
+  index("idx_audit_entity").on(table.entityType, table.entityId),
+  index("idx_audit_action_created").on(table.action, table.createdAt),
+  index("idx_audit_command_id").on(table.commandId),
+  index("idx_audit_target").on(table.targetId),

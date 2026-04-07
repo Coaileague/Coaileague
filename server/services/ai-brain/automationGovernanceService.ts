@@ -19,20 +19,23 @@
 import { db } from '../../db';
 import { eq, and, desc, gte, isNull, sql } from 'drizzle-orm';
 import {
-  workspaceAutomationPolicies,
+  workspaces,
   userAutomationConsents,
   automationActionLedger,
-  automationAcknowledgments,
+
   systemAuditLogs,
   type WorkspaceAutomationPolicy,
+  type InsertWorkspaceAutomationPolicy,
   type UserAutomationConsent,
   type AutomationActionLedger,
   type InsertAutomationActionLedger,
-  type InsertUserAutomationConsent,
-  type InsertWorkspaceAutomationPolicy,
+  type InsertUserAutomationConsent
 } from '@shared/schema';
 import { trinityMemoryService } from './trinityMemoryService';
 import { TTLCache } from './cacheUtils';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('AutomationGovernanceService');
 
 // ============================================================================
 // TYPES
@@ -148,40 +151,54 @@ class AutomationGovernanceService {
     }
 
     try {
-      // Try to get existing policy
-      const [existing] = await db
-        .select()
-        .from(workspaceAutomationPolicies)
-        .where(eq(workspaceAutomationPolicies.workspaceId, workspaceId))
+      // Read automation policy from workspaces JSONB blob
+      const [ws] = await db
+        .select({ blob: workspaces.automationPolicyBlob })
+        .from(workspaces)
+        .where(eq(workspaces.id, workspaceId))
         .limit(1);
+      const blob = (ws?.blob || {}) as Record<string, any>;
 
-      if (existing) {
-        this.policyCache.set(workspaceId, existing);
-        return existing;
+      if (blob.currentLevel) {
+        const policy = { id: `${workspaceId}-policy`, workspaceId, ...blob } as WorkspaceAutomationPolicy;
+        this.policyCache.set(workspaceId, policy);
+        return policy;
       }
 
-      // Create default policy
-      const [newPolicy] = await db
-        .insert(workspaceAutomationPolicies)
-        .values({
-          workspaceId,
-          currentLevel: 'hand_held',
-          handHeldThreshold: 40,
-          graduatedThreshold: 75,
-          highRiskCategories: DEFAULT_HIGH_RISK_CATEGORIES,
-        })
-        .returning();
-
-      this.policyCache.set(workspaceId, newPolicy);
-      return newPolicy;
+      // Return default policy (stored lazily when first updated)
+      const defaultPolicy: WorkspaceAutomationPolicy = {
+        id: 'default',
+        workspaceId,
+        currentLevel: 'hand_held',
+        handHeldThreshold: 40,
+        graduatedThreshold: 75,
+        highRiskCategories: DEFAULT_HIGH_RISK_CATEGORIES,
+        reviewCadenceDays: 30,
+        lastReviewedAt: null,
+        lastReviewedBy: null,
+        nextReviewAt: null,
+        autoEscalateOnLowConfidence: true,
+        minConfidenceForAutoExecute: 60,
+        enableAuditNotifications: true,
+        orgOwnerConsent: false,
+        orgOwnerConsentAt: null,
+        orgOwnerConsentUserId: null,
+        waiverAccepted: false,
+        waiverAcceptedAt: null,
+        waiverVersion: '1.0',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.policyCache.set(workspaceId, defaultPolicy);
+      return defaultPolicy;
     } catch (error: any) {
       // Only log schema mismatch errors once to prevent log spam
       const isSchemaError = error?.code === '42703'; // Column does not exist
       if (!this.schemaErrorLogged && isSchemaError) {
-        console.warn('[AutomationGovernance] Schema mismatch detected - using fallback policy. Run db:push to sync schema.');
+        log.warn('[AutomationGovernance] Schema mismatch detected - using fallback policy. Run db:push to sync schema.');
         this.schemaErrorLogged = true;
       } else if (!isSchemaError) {
-        console.error('[AutomationGovernance] Error getting policy:', error);
+        log.error('[AutomationGovernance] Error getting policy:', error);
       }
       // Return default policy structure if DB fails
       return {
@@ -236,19 +253,18 @@ class AutomationGovernanceService {
         }
       }
 
-      const [updated] = await db
-        .update(workspaceAutomationPolicies)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(workspaceAutomationPolicies.workspaceId, request.workspaceId))
-        .returning();
-
-      if (updated) {
-        this.policyCache.set(request.workspaceId, updated);
-      }
-      
-      return updated || null;
+      const [ws] = await db.select({ blob: workspaces.automationPolicyBlob })
+        .from(workspaces).where(eq(workspaces.id, request.workspaceId)).limit(1);
+      const current = ((ws?.blob || {}) as Record<string, any>);
+      const merged = { ...current, ...updates, updatedAt: new Date().toISOString() };
+      await db.update(workspaces)
+        .set({ automationPolicyBlob: merged })
+        .where(eq(workspaces.id, request.workspaceId));
+      const updated = { id: `${request.workspaceId}-policy`, workspaceId: request.workspaceId, ...merged } as WorkspaceAutomationPolicy;
+      this.policyCache.set(request.workspaceId, updated);
+      return updated;
     } catch (error) {
-      console.error('[AutomationGovernance] Error updating policy:', error);
+      log.error('[AutomationGovernance] Error updating policy:', error);
       return null;
     }
   }
@@ -282,7 +298,7 @@ class AutomationGovernanceService {
 
       return true;
     } catch (error) {
-      console.error('[AutomationGovernance] Error checking consent:', error);
+      log.error('[AutomationGovernance] Error checking consent:', error);
       return false;
     }
   }
@@ -340,7 +356,7 @@ class AutomationGovernanceService {
 
       return newConsent;
     } catch (error) {
-      console.error('[AutomationGovernance] Error granting consent:', error);
+      log.error('[AutomationGovernance] Error granting consent:', error);
       return null;
     }
   }
@@ -363,7 +379,7 @@ class AutomationGovernanceService {
         );
       return true;
     } catch (error) {
-      console.error('[AutomationGovernance] Error revoking consent:', error);
+      log.error('[AutomationGovernance] Error revoking consent:', error);
       return false;
     }
   }
@@ -382,7 +398,7 @@ class AutomationGovernanceService {
           )
         );
     } catch (error) {
-      console.error('[AutomationGovernance] Error getting consents:', error);
+      log.error('[AutomationGovernance] Error getting consents:', error);
       return [];
     }
   }
@@ -443,13 +459,12 @@ class AutomationGovernanceService {
     userPlatformRole?: string
   ): Promise<ExecutionDecision> {
     // Check if targeting a platform workspace (not a customer tenant workspace)
-    const isPlatformWorkspace = context.workspaceId === 'coaileague-platform-workspace' || 
-                                 context.workspaceId === 'ops-workspace-00000000' ||
+    const isPlatformWorkspace = context.workspaceId === PLATFORM_WORKSPACE_ID || 
                                  context.workspaceId === 'system-automation';
     
     // PLATFORM ADMIN BYPASS: Only allowed when targeting platform workspaces
     // This prevents platform admins from bypassing tenant consent in customer workspaces
-    const isPlatformAdmin = userPlatformRole === 'root_admin' || userPlatformRole === 'superadmin';
+    const isPlatformAdmin = userPlatformRole === 'root_admin' || userPlatformRole === 'deputy_admin' || userPlatformRole === 'sysop';
     const canBypassConsent = isPlatformAdmin && isPlatformWorkspace;
     
     // SECURITY: Require workspaceId for all non-system actions
@@ -457,7 +472,7 @@ class AutomationGovernanceService {
     if (!context.workspaceId && context.executorType !== 'automation_job') {
       if (isPlatformAdmin) {
         // Platform admins without workspace context use platform workspace by default
-        context = { ...context, workspaceId: 'ops-workspace-00000000' };
+        context = { ...context, workspaceId: PLATFORM_WORKSPACE_ID };
       } else {
         return {
           canExecute: false,
@@ -519,22 +534,27 @@ class AutomationGovernanceService {
       requiredConsents.push('high_risk_waiver');
     }
 
-    // Determine approval requirements based on levels
-    if (canExecute) {
-      switch (policyLevel) {
-        case 'hand_held':
-          // All actions require explicit approval
-          requiresApproval = true;
-          break;
-          
-        case 'graduated':
-          // High-risk or low-confidence actions require approval
-          if (isHighRisk || computedLevel === 'hand_held') {
+      // Determine approval requirements based on levels
+      if (canExecute) {
+        switch (policyLevel) {
+          case 'hand_held':
+            // All actions require explicit approval
             requiresApproval = true;
-          }
-          break;
-          
-        case 'full_automation':
+            break;
+            
+          case 'graduated':
+            // Routine actions (low risk AND moderate+ confidence) auto-execute
+            // High-risk or low-confidence actions require approval
+            if (isHighRisk || computedLevel === 'hand_held') {
+              requiresApproval = true;
+            } else {
+              // GRADUATED TIER: Routine actions auto-execute if they meet confidence threshold
+              // If we are here, it's not high risk and computedLevel is at least graduated (41%+)
+              requiresApproval = false;
+            }
+            break;
+            
+          case 'full_automation':
           // Only extremely low confidence requires approval
           if (confidenceScore < 20) {
             requiresApproval = true;
@@ -610,7 +630,7 @@ class AutomationGovernanceService {
 
       return ledgerEntry;
     } catch (error) {
-      console.error('[AutomationGovernance] Error creating ledger entry:', error);
+      log.error('[AutomationGovernance] Error creating ledger entry:', error);
       return null;
     }
   }
@@ -641,7 +661,7 @@ class AutomationGovernanceService {
         .where(eq(automationActionLedger.id, ledgerEntryId));
       return true;
     } catch (error) {
-      console.error('[AutomationGovernance] Error updating ledger entry:', error);
+      log.error('[AutomationGovernance] Error updating ledger entry:', error);
       return false;
     }
   }
@@ -691,7 +711,7 @@ class AutomationGovernanceService {
 
       return await query;
     } catch (error) {
-      console.error('[AutomationGovernance] Error getting ledger entries:', error);
+      log.error('[AutomationGovernance] Error getting ledger entries:', error);
       return [];
     }
   }
@@ -710,7 +730,7 @@ class AutomationGovernanceService {
         )
         .orderBy(automationActionLedger.createdAt);
     } catch (error) {
-      console.error('[AutomationGovernance] Error getting pending approvals:', error);
+      log.error('[AutomationGovernance] Error getting pending approvals:', error);
       return [];
     }
   }
@@ -753,7 +773,7 @@ class AutomationGovernanceService {
 
       return auditLog?.id || null;
     } catch (error) {
-      console.error('[AutomationGovernance] Error creating audit trail:', error);
+      log.error('[AutomationGovernance] Error creating audit trail:', error);
       return null;
     }
   }
@@ -826,7 +846,7 @@ class AutomationGovernanceService {
         levelBreakdown,
       };
     } catch (error) {
-      console.error('[AutomationGovernance] Error getting metrics:', error);
+      log.error('[AutomationGovernance] Error getting metrics:', error);
       return {
         totalActions: 0,
         autoApproved: 0,
@@ -904,9 +924,9 @@ class AutomationGovernanceService {
         });
       }
 
-      console.log(`[AutomationGovernance] Learning recorded: ${params.context.actionName} - ${params.outcome} (conf adjustment: ${confidenceAdjustment})`);
+      log.info(`[AutomationGovernance] Learning recorded: ${params.context.actionName} - ${params.outcome} (conf adjustment: ${confidenceAdjustment})`);
     } catch (error) {
-      console.error('[AutomationGovernance] Error recording outcome for learning:', error);
+      log.error('[AutomationGovernance] Error recording outcome for learning:', error);
     }
   }
 
@@ -940,7 +960,7 @@ class AutomationGovernanceService {
 
       return Math.round((successCount / entries.length) * 100);
     } catch (error) {
-      console.error('[AutomationGovernance] Error getting historical success rate:', error);
+      log.error('[AutomationGovernance] Error getting historical success rate:', error);
       return 50;
     }
   }
@@ -949,9 +969,9 @@ class AutomationGovernanceService {
   async refreshToolCatalogMetrics(): Promise<void> {
     try {
       await trinityMemoryService.refreshToolCatalog();
-      console.log('[AutomationGovernance] Tool catalog metrics refreshed');
+      log.info('[AutomationGovernance] Tool catalog metrics refreshed');
     } catch (error) {
-      console.error('[AutomationGovernance] Error refreshing tool catalog:', error);
+      log.error('[AutomationGovernance] Error refreshing tool catalog:', error);
     }
   }
 }

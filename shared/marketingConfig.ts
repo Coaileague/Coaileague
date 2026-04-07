@@ -17,7 +17,7 @@ export const MARKETING = {
     name: 'CoAIleague',
     tagline: 'AI-Powered Workforce Intelligence Platform',
     taglineShort: 'Replace $250K-$430K in Administrative Salaries',
-    description: 'Fortune 500-grade autonomous workforce management powered by Gemini 2.0 Flash AI',
+    description: 'Fortune 500-grade autonomous workforce management powered by Trinity AI',
     mission: 'Eliminate administrative overhead through AI automation',
   },
 
@@ -49,7 +49,7 @@ export const MARKETING = {
     features: [
       {
         title: 'AI Scheduling',
-        description: 'Gemini 2.0 Flash generates optimal schedules in milliseconds. Reduces scheduling time by 95%.',
+        description: 'Trinity AI generates optimal schedules in milliseconds. Reduces scheduling time by 95%.',
         icon: 'Calendar',
         benefits: ['Smart shift optimization', 'Conflict resolution', 'Cost minimization'],
       },
@@ -67,7 +67,7 @@ export const MARKETING = {
       },
       {
         title: 'AI Analytics',
-        description: 'Predictive analytics, cost optimization, and workforce insights powered by Gemini.',
+        description: 'Predictive analytics, cost optimization, and workforce insights powered by Trinity AI.',
         icon: 'TrendingUp',
         benefits: ['Predictive insights', 'Cost optimization', 'Performance trends'],
       },
@@ -90,19 +90,19 @@ export const MARKETING = {
         name: 'Alex Rodriguez',
         title: 'CFO, TechCorp',
         quote: 'CoAIleague cut our administrative costs by 70%. Worth every penny.',
-        avatar: '👨‍💼',
+        avatar: 'AR',
       },
       {
         name: 'Sarah Chen',
         title: 'HR Director, HealthCo',
         quote: 'The AI scheduling alone saves us 20 hours per week. Game changer.',
-        avatar: '👩‍💼',
+        avatar: 'SC',
       },
       {
         name: 'Marcus Johnson',
         title: 'CEO, LogisticsPro',
         quote: 'Enterprise-grade automation that actually works. Best investment in 2025.',
-        avatar: '👨‍💼',
+        avatar: 'MJ',
       },
     ],
 
@@ -117,7 +117,7 @@ export const MARKETING = {
       },
       {
         question: 'Can we integrate with our tools?',
-        answer: 'Yes. Native integrations with Stripe, Gusto, QuickBooks, Gemini AI, and WebSocket for real-time notifications.',
+        answer: 'Yes. Native integrations with Stripe, Gusto, QuickBooks, Trinity AI, and WebSocket for real-time notifications.',
       },
       {
         question: 'How long is the free trial?',

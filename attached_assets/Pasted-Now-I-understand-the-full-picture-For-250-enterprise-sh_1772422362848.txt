@@ -1,0 +1,29 @@
+Now I understand the full picture. For 250 enterprise shifts across 7 days (35-36 per day), with shift durations of 6-10 hours (avg ~8h), and 30 employees: each employee can handle ~5 shifts per week (40h ÷ 8h/shift). Total capacity = 30 × 5 = 150 shifts. That means ~100 shifts will legitimately be skipped because there aren't enough employees to fill them without OT.
+
+This is actually correct production behavior — Trinity should NOT create overtime. But the user's current demo has 250 shifts with only 30 employees, which mathematically requires OT. The solution: either the scenario seeder needs to create shifts proportional to workforce capacity, OR Trinity should clearly communicate why some shifts can't be filled.
+
+Let me also ensure the evaluateShiftForTraining uses a more realistic maxShiftsPerEmployee based on the actual employee count and shift volume:
+
+fix any issue you see while in there Now I see the full data issue — no demo employees have workerType or is1099Eligible set, and clients have no contractRate. But these are demo seeding issues, not the core scheduling logic. The more important fix for production is to check that the scenario seeder which generates the training scenario properly seeds some 1099 workers. Let me check:
+
+The scenario seeder doesn't set any workers as 1099 contractors. That means in a training run, EVERY employee is treated as W2 with the 40h cap. That's actually the correct behavior for production — the 1099 distinction should come from real employee data, not training seeds.
+
+Now let me also verify that the training run's config has useContractorFallback properly set, and check if there's an issue with the evaluateShiftForTraining hardcoded config:
+
+I see one more issue. maxShiftsPerEmployee: 7 in the training config — with 30 employees and 250 shifts across a week, that's 30 × 7 = 210 max shift capacity. With the new 40h weekly cap, if shifts average ~8 hours, each W2 employee can only handle 5 shifts before hitting 40h. That's 30 × 5 = 150 shift capacity, meaning ~100 shifts would fail. This is actually the correct, production-safe behavior — Trinity should skip shifts that would create OT rather than assign them.
+
+But wait — the scenario seeder creates the training shifts spread across a week (7 days). Let me check how many employees are in the demo scenario:
+
+this too Now let me also verify that the training run's config has useContractorFallback properly set, and check if there's an issue with the evaluateShiftForTraining hardcoded config:
+
+I see one more issue. maxShiftsPerEmployee: 7 in the training config — with 30 employees and 250 shifts across a week, that's 30 × 7 = 210 max shift capacity. With the new 40h weekly cap, if shifts average ~8 hours, each W2 employee can only handle 5 shifts before hitting 40h. That's 30 × 5 = 150 shift capacity, meaning ~100 shifts would fail. This is actually the correct, production-safe behavior — Trinity should skip shifts that would create OT rather than assign them.
+
+But wait — the scenario seeder creates the training shifts spread across a week (7 days). Let me check how many employees are in the demo scenario:
+
+Now let me check the seeder for shift count and duration patterns:
+
+Now I understand the full picture. For 250 enterprise shifts across 7 days (35-36 per day), with shift durations of 6-10 hours (avg ~8h), and 30 employees: each employee can handle ~5 shifts per week (40h ÷ 8h/shift). Total capacity = 30 × 5 = 150 shifts. That means ~100 shifts will legitimately be skipped because there aren't enough employees to fill them without OT.
+
+This is actually correct production behavior — Trinity should NOT create overtime. But the user's current demo has 250 shifts with only 30 employees, which mathematically requires OT. The solution: either the scenario seeder needs to create shifts proportional to workforce capacity, OR Trinity should clearly communicate why some shifts can't be filled.
+
+Let me also ensure the evaluateShiftForTraining uses a more realistic maxShiftsPerEmployee based on the actual employee count and shift volume:

@@ -14,7 +14,8 @@ import {
 } from '../helpai/platformActionHub';
 import { serviceController, featureToggleManager, consoleCommandExecutor, endUserBotSupport, supportStaffAssistant } from './orchestratorCapabilities';
 import { db } from '../../db';
-import { creditManager, CREDIT_COSTS } from '../billing/creditManager';
+import { aiCreditGateway } from '../billing/aiCreditGateway';
+import { CREDIT_COSTS } from '../billing/creditManager';
 import { FAST_MODE_TIERS, type FastModeTier } from './fastModeService';
 import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm';
 import {
@@ -27,6 +28,15 @@ import {
   notifications,
   workspaces,
 } from '@shared/schema';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+import { broadcastShiftUpdate, broadcastToWorkspace } from '../../websocket';
+import { assertWorkspaceActive } from '../../middleware/workspaceGuard';
+import { typedExec, typedQuery } from '../../lib/typedSql';
+import { NotificationDeliveryService } from '../notificationDeliveryService';
+import { registerTrainingSessionActions } from './trinityTrainingSessionActions';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('actionRegistry');
 
 // ============================================================================
 // HELPER: Create ActionResult
@@ -58,7 +68,14 @@ class AIBrainActionRegistry {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log('[AI Brain Action Registry] Initializing action registry...');
+    // Fix: check if it's already being initialized to prevent duplicate calls from module load + server/index.ts
+    if ((global as any)._aiBrainActionRegistryInitializing) {
+      log.info('[AI Brain Action Registry] Initialization already in progress, skipping duplicate call');
+      return;
+    }
+    (global as any)._aiBrainActionRegistryInitializing = true;
+
+    log.info('[AI Brain Action Registry] Initializing action registry...');
 
     // Register all action categories
     this.registerServiceActions();
@@ -69,14 +86,20 @@ class AIBrainActionRegistry {
     this.registerClientActions();
     this.registerTimeTrackingActions();
     this.registerNotificationActions();
+    this.registerDirectActions(); // NEW: Direct autonomous actions
     this.registerBulkOperationActions();
     this.registerIntegrationActions();
     this.registerOnboardingActions();
     this.registerStrategicOptimizationActions();
     this.registerContractPipelineActions();
+    this.registerMemoryOptimizationActions();
+    this.registerBillingSettingsActions();
+    this.registerInvoiceActions();
+    registerTrainingSessionActions();
 
     this.initialized = true;
-    console.log(`[AI Brain Action Registry] Initialization complete`);
+    (global as any)._aiBrainActionRegistryInitializing = false;
+    log.info(`[AI Brain Action Registry] Initialization complete`);
   }
 
   // ============================================================================
@@ -241,7 +264,6 @@ class AIBrainActionRegistry {
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { schedulingSubagent } = await import('./subagents/schedulingSubagent');
-        const { broadcastShiftUpdate, broadcastToWorkspace } = require('../../websocket');
         
         try {
           // Determine execution mode and credit multiplier
@@ -256,46 +278,17 @@ class AIBrainActionRegistry {
           const totalCredits = Math.ceil(baseCost * creditMultiplier);
           
           // Check and deduct credits before proceeding (with multiplier for FAST modes)
-          const creditResult = await creditManager.deductCredits({
-            workspaceId: request.workspaceId!,
-            userId: request.userId,
-            featureKey: 'ai_open_shift_fill',
-            featureName: 'AI Open Shift Auto-Fill',
-            description: `Trinity AI shift auto-fill (${executionMode} mode, ${totalCredits} credits)`,
-            amountOverride: totalCredits, // Apply execution mode multiplier
-          });
+          const creditAuth = await aiCreditGateway.preAuthorize(request.workspaceId!, request.userId, 'ai_open_shift_fill');
           
-          if (!creditResult.success) {
+          if (!creditAuth.authorized) {
             return createResult(request.actionId, false, 
-              creditResult.errorMessage || 'Insufficient credits for AI scheduling', 
+              creditAuth.reason || 'Insufficient credits for AI scheduling', 
               { creditsRequired: totalCredits, executionMode },
               start
             );
           }
           
-          console.log(`[ActionRegistry] Charged ${totalCredits} credits for open shift fill (${executionMode} mode)`);
-          
-          // Record usage event for telemetry (track the correct multiplied amount)
-          const { UsageMeteringService } = await import('../billing/usageMetering');
-          const usageMeteringService = new UsageMeteringService();
-          await usageMeteringService.recordUsage({
-            workspaceId: request.workspaceId!,
-            userId: request.userId,
-            featureKey: 'ai_open_shift_fill',
-            usageType: 'activity',
-            usageAmount: totalCredits, // Correct multiplied amount
-            usageUnit: 'credits',
-            metadata: {
-              executionMode,
-              baseCost,
-              creditMultiplier,
-              totalCredits,
-              actionId: request.actionId,
-            },
-            emitEvent: false, // Don't double-emit, credit deduction already handled
-          });
-          
-          // Step 1: Create the open shift (no employee assigned)
+          // Step 1: Create the open shift FIRST — only bill after mutation succeeds
           const [openShift] = await db.insert(shifts).values({
             workspaceId: request.workspaceId!,
             employeeId: null, // Open shift - no employee yet
@@ -307,14 +300,30 @@ class AIBrainActionRegistry {
             status: 'draft',
             aiGenerated: true,
           }).returning();
+
+          // Bill AFTER shift is created — credits are only deducted on successful mutation
+          await aiCreditGateway.finalizeBilling(request.workspaceId!, request.userId, 'ai_open_shift_fill', totalCredits);
+          log.info(`[ActionRegistry] Charged ${totalCredits} credits for open shift fill (${executionMode} mode)`);
+          const { UsageMeteringService } = await import('../billing/usageMetering');
+          const usageMeteringService = new UsageMeteringService();
+          await usageMeteringService.recordUsage({
+            workspaceId: request.workspaceId!,
+            userId: request.userId,
+            featureKey: 'ai_open_shift_fill',
+            usageType: 'activity',
+            usageAmount: totalCredits,
+            usageUnit: 'credits',
+            metadata: { executionMode, baseCost, creditMultiplier, totalCredits, actionId: request.actionId },
+            skipBillingDeduction: true,
+            emitEvent: false,
+          });
           
-          // Broadcast: Open shift created, Trinity is analyzing
           broadcastToWorkspace(request.workspaceId!, {
             type: 'trinity_scheduling_progress',
             data: {
               shiftId: openShift.id,
               step: 'analyzing',
-              message: 'Trinity is analyzing available employees...',
+              message: 'I\'m analyzing available employees...',
               progress: 20,
               executionMode,
               creditsCharged: totalCredits,
@@ -365,7 +374,9 @@ class AIBrainActionRegistry {
               }
             });
             
-            // Update the shift with the assigned employee
+            // G21-pattern FIX: Atomic conditional UPDATE — only succeeds if shift is
+            // still unassigned. A concurrent request that already claimed this shift
+            // will cause RETURNING to be empty; we skip the broadcast in that case.
             const [filledShift] = await db.update(shifts)
               .set({
                 employeeId: assignment.employeeId,
@@ -373,10 +384,19 @@ class AIBrainActionRegistry {
                 aiConfidenceScore: String(result.confidence.score),
                 updatedAt: new Date(),
               })
-              .where(eq(shifts.id, openShift.id))
+              .where(and(eq(shifts.id, openShift.id), isNull(shifts.employeeId)))
               .returning();
             
             // Broadcast: Shift filled successfully
+            if (!filledShift) {
+              // Concurrent assignment already claimed this shift — skip broadcasts
+              return createResult(request.actionId, false,
+                `Shift ${openShift.id} was already assigned by a concurrent request (ALREADY_ASSIGNED)`,
+                { shiftId: openShift.id },
+                start
+              );
+            }
+
             broadcastToWorkspace(request.workspaceId!, {
               type: 'trinity_scheduling_progress',
               data: {
@@ -419,8 +439,8 @@ class AIBrainActionRegistry {
             );
           }
         } catch (error: any) {
-          console.error('[ActionRegistry] Create open shift fill error:', error);
-          return createResult(request.actionId, false, error.message || 'Failed to create and fill shift', null, start);
+          log.error('[ActionRegistry] Create open shift fill error:', error);
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)) || 'Failed to create and fill shift', null, start);
         }
       },
     };
@@ -484,14 +504,166 @@ class AIBrainActionRegistry {
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const employee = await db.query.employees.findFirst({
-          where: eq(employees.id, request.payload?.employeeId),
+          where: and(
+            eq(employees.id, request.payload?.employeeId),
+            eq(employees.workspaceId, request.workspaceId!)
+          ),
         });
+        if (!employee) return createResult(request.actionId, false, 'Employee not found in this workspace', null, start);
         return createResult(request.actionId, true, `Employee retrieved`, employee, start);
+      },
+    };
+
+    const activateEmployee: ActionHandler = {
+      actionId: 'employees.activate',
+      name: 'Activate Employee',
+      category: 'scheduling',
+      description: 'Activate an employee account - restore their access to the platform',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const [updated] = await db.update(employees)
+          .set({ isActive: true })
+          .where(and(eq(employees.id, request.payload?.employeeId), eq(employees.workspaceId, request.workspaceId!)))
+          .returning();
+        if (!updated) return createResult(request.actionId, false, 'Employee not found', null, start);
+        return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been activated`, updated, start);
+      },
+    };
+
+    const deactivateEmployee: ActionHandler = {
+      actionId: 'employees.deactivate',
+      name: 'Deactivate Employee',
+      category: 'scheduling',
+      description: 'Deactivate an employee account - revoke their access without deleting records',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const [updated] = await db.update(employees)
+          .set({ isActive: false })
+          .where(and(eq(employees.id, request.payload?.employeeId), eq(employees.workspaceId, request.workspaceId!)))
+          .returning();
+        if (!updated) return createResult(request.actionId, false, 'Employee not found', null, start);
+        return createResult(request.actionId, true, `${updated.firstName} ${updated.lastName} has been deactivated`, updated, start);
+      },
+    };
+
+    const updateEmployee: ActionHandler = {
+      actionId: 'employees.update',
+      name: 'Update Employee',
+      category: 'scheduling',
+      description: 'Update employee details such as pay rate, position, phone, email, or other profile fields',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { employeeId, ...updates } = request.payload || {};
+        if (!employeeId) return createResult(request.actionId, false, 'Employee ID required', null, start);
+        const safeFields: Record<string, any> = {};
+        const allowed = ['firstName', 'lastName', 'email', 'phone', 'position', 'payRate', 'payType', 'department'];
+        for (const key of allowed) {
+          if (updates[key] !== undefined) safeFields[key] = updates[key];
+        }
+        if (Object.keys(safeFields).length === 0) return createResult(request.actionId, false, 'No valid fields to update', null, start);
+        const [updated] = await db.update(employees)
+          .set(safeFields)
+          .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, request.workspaceId!)))
+          .returning();
+        if (!updated) return createResult(request.actionId, false, 'Employee not found', null, start);
+        return createResult(request.actionId, true, `Employee ${updated.firstName} ${updated.lastName} updated`, updated, start);
+      },
+    };
+
+    // employees.create — Phase 1 CRUD gap fill
+    const createEmployee: ActionHandler = {
+      actionId: 'employees.create',
+      name: 'Create Employee',
+      category: 'scheduling',
+      description: 'Create a new employee record in the workspace',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { firstName, lastName, email, phone, position, role, payRate, payType, department } = request.payload || {};
+        if (!firstName || !lastName) return createResult(request.actionId, false, 'firstName and lastName are required', null, start);
+        if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+        await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        const [created] = await db.insert(employees).values({
+          workspaceId: request.workspaceId,
+          firstName,
+          lastName,
+          email: email || null,
+          phone: phone || null,
+          position: position || null,
+          role: role || 'employee',
+          hourlyRate: payRate ? String(payRate) : null,
+          payType: payType || 'hourly',
+          department: department || null,
+          isActive: true,
+        } as any).returning();
+
+        if (!created) return createResult(request.actionId, false, 'Failed to create employee', null, start);
+
+        // Publish employee_hired event
+        const { platformEventBus } = await import('../platformEventBus');
+        await platformEventBus.publish({
+          type: 'employee_hired',
+          workspaceId: request.workspaceId,
+          title: 'Employee Created',
+          description: `New employee ${firstName} ${lastName} added`,
+          metadata: { employeeId: (created as any).id, createdBy: request.userId },
+        } as any).catch(() => null);
+
+        return createResult(request.actionId, true, `Employee ${firstName} ${lastName} created`, created, start);
+      },
+    };
+
+    const getEmployeeLifecycleHistory: ActionHandler = {
+      actionId: 'employee.lifecycle.history',
+      name: 'Get Employee Lifecycle History',
+      category: 'workforce',
+      description: 'Retrieve the full lifecycle audit history for an officer — all state transitions (activated, suspended, terminated, rehired) with actor, reason, and timestamp. Payload: employeeId (required), limit (optional, default 50).',
+      requiredRoles: ['manager', 'owner', 'root_admin', 'compliance_officer'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { employeeId, limit = 50 } = request.payload || {};
+        if (!employeeId) {
+          return createResult(request.actionId, false, 'employeeId is required', null, start);
+        }
+        const { universalAuditService } = await import('../universalAuditService');
+        const history = await universalAuditService.getEntityHistory('employee', employeeId, request.workspaceId, limit);
+        const lifecycleEvents = history.filter((e: any) =>
+          ['employee.activated', 'employee.suspended', 'employee.terminated', 'employee.rehired', 'employee.deactivated', 'employee.reactivated'].includes(e.action)
+        );
+        return createResult(request.actionId, true, `Lifecycle history retrieved for employee ${employeeId}`, { employeeId, total: lifecycleEvents.length, history: lifecycleEvents }, start);
+      },
+    };
+
+    const getClientLifecycleHistory: ActionHandler = {
+      actionId: 'client.lifecycle.history',
+      name: 'Get Client Lifecycle History',
+      category: 'invoicing',
+      description: 'Retrieve the full lifecycle audit history for a client — onboarding, suspension, offboarding events with actor, reason, and timestamp. Payload: clientId (required), limit (optional, default 50).',
+      requiredRoles: ['manager', 'owner', 'root_admin', 'compliance_officer'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { clientId, limit = 50 } = request.payload || {};
+        if (!clientId) {
+          return createResult(request.actionId, false, 'clientId is required', null, start);
+        }
+        const { universalAuditService } = await import('../universalAuditService');
+        const history = await universalAuditService.getEntityHistory('client', clientId, request.workspaceId, limit);
+        return createResult(request.actionId, true, `Lifecycle history retrieved for client ${clientId}`, { clientId, total: history.length, history }, start);
       },
     };
 
     helpaiOrchestrator.registerAction(listEmployees);
     helpaiOrchestrator.registerAction(getEmployee);
+    helpaiOrchestrator.registerAction(createEmployee);
+    helpaiOrchestrator.registerAction(activateEmployee);
+    helpaiOrchestrator.registerAction(deactivateEmployee);
+    helpaiOrchestrator.registerAction(updateEmployee);
+    helpaiOrchestrator.registerAction(getEmployeeLifecycleHistory);
+    helpaiOrchestrator.registerAction(getClientLifecycleHistory);
   }
 
   // ============================================================================
@@ -515,6 +687,190 @@ class AIBrainActionRegistry {
     };
 
     helpaiOrchestrator.registerAction(listClients);
+
+    const createClient: ActionHandler = {
+      actionId: 'clients.create',
+      name: 'Create Client',
+      category: 'invoicing',
+      description: 'Create a new client in the workspace — Trinity can pre-fill all fields from context (email, conversation, or staffing request). Payload: firstName, lastName, companyName, email, phone, address, city, state, postalCode, contractRate, billingEmail, notes.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const p = request.payload || {};
+        if (!p.firstName || !p.lastName) {
+          return createResult(request.actionId, false, 'firstName and lastName are required to create a client', null, start);
+        }
+        const clientId = `cli_${Date.now()}`;
+        const [newClient] = await db.insert(clients).values({
+          id: clientId,
+          workspaceId: request.workspaceId!,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          companyName: p.companyName || null,
+          email: p.email || null,
+          phone: p.phone || null,
+          address: p.address || null,
+          city: p.city || null,
+          state: p.state || null,
+          postalCode: p.postalCode || null,
+          billingEmail: p.billingEmail || p.email || null,
+          contractRate: p.contractRate ? String(p.contractRate) : null,
+          category: p.category || 'other',
+          isActive: true,
+        }).returning();
+        await universalNotificationEngine.sendNotification({
+          workspaceId: request.workspaceId!,
+          type: 'client_created',
+          title: 'New Client Added',
+          message: `${p.companyName || `${p.firstName} ${p.lastName}`} has been created as a client by Trinity.`,
+          metadata: { clientId, createdBy: 'trinity' },
+          severity: 'info',
+        });
+        return createResult(request.actionId, true, `Client "${p.companyName || `${p.firstName} ${p.lastName}`}" created successfully`, { client: newClient, clientId }, start);
+      },
+    };
+
+    const createPortalInvite: ActionHandler = {
+      actionId: 'clients.create_portal_invite',
+      name: 'Send Client Portal Invite',
+      category: 'invoicing',
+      description: 'Send a portal invitation email to a client so they can create their account and access the client portal. Payload: clientId, email (required), clientName.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const p = request.payload || {};
+        if (!p.email) {
+          return createResult(request.actionId, false, 'email is required to send portal invite', null, start);
+        }
+        await NotificationDeliveryService.send({ type: 'client_welcome', workspaceId: request.workspaceId || 'system', recipientUserId: p.clientId || p.email, channel: 'email', body: { to: p.email, subject: `You've been invited to the client portal`, html: `<p>Hello ${p.clientName || 'there'},</p><p>You've been set up as a client in our staffing platform. You can access your portal to view schedules, invoices, and service summaries.</p><p>If you have any questions, simply reply to this email and our team will assist you.</p><p>— Trinity, CoAIleague Staffing Intelligence</p>` } });
+        await universalNotificationEngine.sendNotification({
+          workspaceId: request.workspaceId!,
+          type: 'client_invited',
+          title: 'Client Portal Invite Sent',
+          message: `Portal invitation sent to ${p.email}`,
+          metadata: { clientId: p.clientId, email: p.email },
+          severity: 'info',
+        });
+        return createResult(request.actionId, true, `Portal invite sent to ${p.email}`, { email: p.email, clientId: p.clientId }, start);
+      },
+    };
+
+    const scanOpenShifts: ActionHandler = {
+      actionId: 'scheduling.scan_open_shifts',
+      name: 'Scan Open Shifts',
+      category: 'scheduling',
+      description: 'Trinity self-aware schedule scan — returns all unfilled or open shifts in the next 14 days, grouped by urgency. Trinity calls this proactively when talking to owners or managers.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const now = new Date();
+        const in14Days = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const in4Hours = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+
+        const openShifts = await db.query.shifts.findMany({
+          where: and(
+            eq(shifts.workspaceId, request.workspaceId!),
+            gte(shifts.startTime, now),
+            lte(shifts.startTime, in14Days),
+            isNull(shifts.employeeId),
+          ),
+          with: { client: true } as any,
+          orderBy: [shifts.startTime],
+        });
+
+        const critical = openShifts.filter(s => s.startTime <= in4Hours);
+        const urgent = openShifts.filter(s => {
+          const hoursAway = (s.startTime.getTime() - now.getTime()) / 3600000;
+          return hoursAway > 4 && hoursAway <= 24;
+        });
+        const upcoming = openShifts.filter(s => {
+          const hoursAway = (s.startTime.getTime() - now.getTime()) / 3600000;
+          return hoursAway > 24;
+        });
+
+        const summary = {
+          totalOpen: openShifts.length,
+          critical: critical.length,
+          urgent: urgent.length,
+          upcoming: upcoming.length,
+          criticalShifts: critical,
+          urgentShifts: urgent,
+          upcomingShifts: upcoming,
+        };
+
+        const msg = openShifts.length === 0
+          ? 'No open shifts found in the next 14 days — schedule is fully covered.'
+          : `Found ${openShifts.length} open shifts: ${critical.length} critical (within 4 hrs), ${urgent.length} urgent (within 24 hrs), ${upcoming.length} upcoming.`;
+
+        return createResult(request.actionId, true, msg, summary, start);
+      },
+    };
+
+    const detectDemandChange: ActionHandler = {
+      actionId: 'scheduling.detect_demand_change',
+      name: 'Detect Client Demand Changes',
+      category: 'scheduling',
+      description: 'Analyze shift patterns over the last 60 days to detect clients whose scheduling demand is trending up or down. Trinity uses this to proactively recommend creating new shifts or renegotiating contracts.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+        const recentShifts = await db.query.shifts.findMany({
+          where: and(
+            eq(shifts.workspaceId, request.workspaceId!),
+            gte(shifts.startTime, thirtyDaysAgo),
+            lte(shifts.startTime, now),
+          ),
+        });
+
+        const priorShifts = await db.query.shifts.findMany({
+          where: and(
+            eq(shifts.workspaceId, request.workspaceId!),
+            gte(shifts.startTime, sixtyDaysAgo),
+            lte(shifts.startTime, thirtyDaysAgo),
+          ),
+        });
+
+        const recentByClient: Record<string, number> = {};
+        const priorByClient: Record<string, number> = {};
+
+        recentShifts.forEach(s => {
+          if (s.clientId) recentByClient[s.clientId] = (recentByClient[s.clientId] || 0) + 1;
+        });
+        priorShifts.forEach(s => {
+          if (s.clientId) priorByClient[s.clientId] = (priorByClient[s.clientId] || 0) + 1;
+        });
+
+        const allClientIds = new Set([...Object.keys(recentByClient), ...Object.keys(priorByClient)]);
+        const changes: Array<{ clientId: string; recent: number; prior: number; pctChange: number; trend: string }> = [];
+
+        allClientIds.forEach(clientId => {
+          const recent = recentByClient[clientId] || 0;
+          const prior = priorByClient[clientId] || 0;
+          if (prior === 0 && recent === 0) return;
+          const pctChange = prior === 0 ? 100 : Math.round(((recent - prior) / prior) * 100);
+          if (Math.abs(pctChange) >= 20) {
+            changes.push({ clientId, recent, prior, pctChange, trend: pctChange > 0 ? 'increasing' : 'decreasing' });
+          }
+        });
+
+        changes.sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange));
+
+        const msg = changes.length === 0
+          ? 'Demand is stable across all clients — no significant shifts in the last 60 days.'
+          : `Detected demand changes in ${changes.length} clients: ${changes.filter(c => c.trend === 'increasing').length} trending up, ${changes.filter(c => c.trend === 'decreasing').length} trending down.`;
+
+        return createResult(request.actionId, true, msg, { changes, analyzed: allClientIds.size }, start);
+      },
+    };
+
+    helpaiOrchestrator.registerAction(createClient);
+    helpaiOrchestrator.registerAction(createPortalInvite);
+    helpaiOrchestrator.registerAction(scanOpenShifts);
+    helpaiOrchestrator.registerAction(detectDemandChange);
   }
 
   // ============================================================================
@@ -522,24 +878,6 @@ class AIBrainActionRegistry {
   // ============================================================================
 
   private registerTimeTrackingActions(): void {
-    const clockIn: ActionHandler = {
-      actionId: 'time_tracking.clock_in',
-      name: 'Clock In',
-      category: 'scheduling',
-      description: 'Clock in an employee',
-      requiredRoles: ['employee', 'manager', 'owner', 'root_admin'],
-      handler: async (request: ActionRequest): Promise<ActionResult> => {
-        const start = Date.now();
-        const [entry] = await db.insert(timeEntries).values({
-          workspaceId: request.workspaceId!,
-          employeeId: request.payload?.employeeId,
-          clockIn: new Date(),
-          status: 'active',
-        }).returning();
-        return createResult(request.actionId, true, `Clock in recorded`, entry, start);
-      },
-    };
-
     const getTimeEntries: ActionHandler = {
       actionId: 'time_tracking.get_entries',
       name: 'Get Time Entries',
@@ -560,8 +898,36 @@ class AIBrainActionRegistry {
       },
     };
 
-    helpaiOrchestrator.registerAction(clockIn);
+    const editTimeEntry: ActionHandler = {
+      actionId: 'time_tracking.edit_entry',
+      name: 'Edit Time Entry',
+      category: 'scheduling',
+      description: 'Edit a time entry - adjust clock in/out times, add notes, or change status',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { entryId, clockIn: newClockIn, clockOut: newClockOut, notes, status } = request.payload || {};
+        if (!entryId) return createResult(request.actionId, false, 'Time entry ID required', null, start);
+        const updates: Record<string, any> = {};
+        if (newClockIn) updates.clockIn = new Date(newClockIn);
+        if (newClockOut) updates.clockOut = new Date(newClockOut);
+        if (notes !== undefined) updates.notes = notes;
+        if (status) updates.status = status;
+        if (updates.clockIn && updates.clockOut) {
+          updates.totalHours = Math.round((new Date(updates.clockOut).getTime() - new Date(updates.clockIn).getTime()) / (1000 * 60 * 60) * 100) / 100;
+        }
+        if (Object.keys(updates).length === 0) return createResult(request.actionId, false, 'No valid fields to update', null, start);
+        const [updated] = await db.update(timeEntries)
+          .set(updates)
+          .where(and(eq(timeEntries.id, entryId), eq(timeEntries.workspaceId, request.workspaceId!)))
+          .returning();
+        if (!updated) return createResult(request.actionId, false, 'Time entry not found', null, start);
+        return createResult(request.actionId, true, `Time entry updated`, updated, start);
+      },
+    };
+
     helpaiOrchestrator.registerAction(getTimeEntries);
+    helpaiOrchestrator.registerAction(editTimeEntry);
   }
 
   // ============================================================================
@@ -569,90 +935,403 @@ class AIBrainActionRegistry {
   // ============================================================================
 
   private registerNotificationActions(): void {
+    // Consolidated notify.send — replaces notify.send, notify.send_critical,
+    // notify.send_priority, and notify.send_platform_update.
+    // Dispatch is controlled by request.payload?.priority:
+    //   'critical' | 'P0'              → critical severity, multi-user alert
+    //   'high' | 'P1' | 'P2'          → high severity, tiered delivery
+    //   'platform_update'              → info severity, platform update type
+    //   normal / low / undefined       → base send logic (medium severity)
     const sendNotification: ActionHandler = {
-      actionId: 'notifications.send',
+      actionId: 'notify.send',
       name: 'Send Notification',
       category: 'notifications',
-      description: 'Send a notification to a user',
+      description: 'Send a notification to a user. Supports priority dispatch: critical/P0, high/P1/P2, platform_update, or normal.',
       requiredRoles: ['manager', 'owner', 'support_agent', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
-        const [notification] = await db.insert(notifications).values({
-          userId: request.payload?.userId,
+        const { priority, severity, type, title, message, userId, userIds } = request.payload || {};
+
+        // Derive effective severity from priority hint
+        const effectiveSeverity =
+          priority === 'critical' || priority === 'P0' ? 'critical'
+          : priority === 'high' || priority === 'P1' || priority === 'P2' ? 'high'
+          : priority === 'platform_update' ? 'info'
+          : severity || 'medium';
+
+        // Derive effective type
+        const effectiveType =
+          priority === 'platform_update' ? 'platform_update'
+          : type || 'system';
+
+        // Collect target user IDs (critical path may pass an array via userIds)
+        const targetUserIds: string[] = userIds
+          ? (Array.isArray(userIds) ? userIds : [userIds])
+          : userId ? [userId] : [];
+
+        // Route through UniversalNotificationEngine for Trinity AI enrichment and validation
+        await universalNotificationEngine.sendNotification({
+          type: effectiveType,
+          title: title,
+          message: message,
+          workspaceId: request.workspaceId || undefined,
+          targetUserIds,
+          severity: effectiveSeverity,
+          source: 'action_registry',
+        });
+
+        return createResult(request.actionId, true, `Notification sent`, { sent: true, effectiveSeverity, effectiveType }, start);
+      },
+    };
+
+    // Consolidated notify.manage — replaces notify.clear_all, notify.mark_all_read,
+    // and delegates stats to notify.stats (renamed from notify.get_stats).
+    // Dispatch is controlled by request.payload?.action:
+    //   'clear'     → clear all notifications (former notify.clear_all logic)
+    //   'mark_read' → mark all as read (former notify.mark_all_read logic)
+    //   'stats'     → delegate to notify.stats action
+    //   Default     → stats
+    const manageNotifications: ActionHandler = {
+      actionId: 'notify.manage',
+      name: 'Manage Notifications',
+      category: 'notifications',
+      description: 'Unified notification management: clear, mark_read, or stats (set payload.action).',
+      requiredRoles: ['employee', 'manager', 'owner', 'support_agent', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { storage } = await import('../../storage');
+        const aiNotificationService = await import('../aiNotificationService').then(m => m.default);
+
+        const manageAction = request.payload?.action ?? 'stats';
+        const userId = request.userId;
+
+        if (manageAction === 'clear') {
+          if (!userId) {
+            return createResult(request.actionId, false, 'User ID required to clear notifications', null, start);
+          }
+          // Clear both regular notifications and AI maintenance alerts
+          const clearedNotifications = await storage.clearAllNotifications(userId);
+          const clearedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
+          const totalCleared = clearedNotifications + clearedAlerts;
+          return createResult(
+            request.actionId,
+            true,
+            `Successfully cleared ${totalCleared} notifications for user`,
+            { clearedNotifications, clearedAlerts, totalCleared },
+            start
+          );
+        }
+
+        if (manageAction === 'mark_read') {
+          if (!userId) {
+            return createResult(request.actionId, false, 'User ID required', null, start);
+          }
+          // Mark both regular notifications and AI maintenance alerts as read
+          await storage.markAllNotificationsAsRead(userId);
+          const acknowledgedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
+          return createResult(
+            request.actionId,
+            true,
+            `All notifications marked as read (including ${acknowledgedAlerts} AI alerts)`,
+            { acknowledgedAlerts },
+            start
+          );
+        }
+
+        // Default: stats — delegate to notify.stats
+        const statsResult = await helpaiOrchestrator.executeAction({
+          actionId: 'notify.stats',
           workspaceId: request.workspaceId,
-          title: request.payload?.title,
-          message: request.payload?.message,
-          type: request.payload?.type || 'system',
-          isRead: false,
-        }).returning();
-        return createResult(request.actionId, true, `Notification sent`, notification, start);
-      },
-    };
-
-    const clearAllNotifications: ActionHandler = {
-      actionId: 'notifications.clear_all',
-      name: 'Clear All Notifications',
-      category: 'notifications',
-      description: 'Clear all notifications for the current user. Use when user asks Trinity to clear their notifications.',
-      requiredRoles: ['employee', 'manager', 'owner', 'support_agent', 'root_admin'],
-      handler: async (request: ActionRequest): Promise<ActionResult> => {
-        const start = Date.now();
-        const { storage } = await import('../../storage');
-        const aiNotificationService = await import('../aiNotificationService').then(m => m.default);
-        
-        const userId = request.userId;
-        if (!userId) {
-          return createResult(request.actionId, false, 'User ID required to clear notifications', null, start);
-        }
-        
-        // Clear both regular notifications and AI maintenance alerts
-        const clearedNotifications = await storage.clearAllNotifications(userId);
-        const clearedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
-        
-        const totalCleared = clearedNotifications + clearedAlerts;
+          userId: request.userId,
+          userRole: request.userRole,
+          payload: request.payload,
+        });
         return createResult(
-          request.actionId, 
-          true, 
-          `Successfully cleared ${totalCleared} notifications for user`, 
-          { clearedNotifications, clearedAlerts, totalCleared },
+          request.actionId,
+          statsResult.success,
+          statsResult.message || 'Stats retrieved',
+          statsResult.data,
           start
         );
       },
     };
 
-    const markAllRead: ActionHandler = {
-      actionId: 'notifications.mark_all_read',
-      name: 'Mark All Notifications Read',
+    // notify.mark_all_read is now handled by notify.manage (action='mark_read')
+    // const markAllRead: ActionHandler = { actionId: 'notify.mark_all_read', ... };
+
+    // P27-G03 FIX: Trinity delivery stats action — queries notification_deliveries table
+    // Check 21 compliance: Trinity can query delivery stats by workspace, channel, status, date range
+    const deliveryStats: ActionHandler = {
+      actionId: 'notify.delivery_stats',
+      name: 'Notification Delivery Stats',
       category: 'notifications',
-      description: 'Mark all notifications as read for the current user.',
-      requiredRoles: ['employee', 'manager', 'owner', 'support_agent', 'root_admin'],
+      description: 'Query notification_deliveries stats by workspace, channel, status, and date range. Returns counts, failure rates, and recent delivery records.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
-        const { storage } = await import('../../storage');
-        const aiNotificationService = await import('../aiNotificationService').then(m => m.default);
-        
-        const userId = request.userId;
-        if (!userId) {
-          return createResult(request.actionId, false, 'User ID required', null, start);
+        try {
+          const { db } = await import('../../db');
+          const { notificationDeliveries } = await import('@shared/schema');
+          const { eq, and, gte, lte, sql: drizzleSql, count } = await import('drizzle-orm');
+
+          const workspaceId = request.payload?.workspaceId || request.workspaceId;
+          const channel = request.payload?.channel;
+          const status = request.payload?.status;
+          const sinceHours = request.payload?.sinceHours ?? 24;
+
+          const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
+
+          const conditions: any[] = [gte(notificationDeliveries.createdAt, since)];
+          if (workspaceId) conditions.push(eq(notificationDeliveries.workspaceId, workspaceId));
+          if (channel) conditions.push(eq(notificationDeliveries.channel, channel));
+          if (status) conditions.push(eq(notificationDeliveries.status, status));
+
+          const [totals] = await db.select({
+            total: count(),
+            totalSent: drizzleSql<number>`SUM(CASE WHEN ${notificationDeliveries.status} IN ('sent','delivered') THEN 1 ELSE 0 END)`,
+            totalFailed: drizzleSql<number>`SUM(CASE WHEN ${notificationDeliveries.status} IN ('failed','permanently_failed') THEN 1 ELSE 0 END)`,
+            totalPending: drizzleSql<number>`SUM(CASE WHEN ${notificationDeliveries.status} = 'pending' THEN 1 ELSE 0 END)`,
+          }).from(notificationDeliveries).where(and(...conditions));
+
+          const recentFailures = await db.select({
+            id: notificationDeliveries.id,
+            notificationType: notificationDeliveries.notificationType,
+            channel: notificationDeliveries.channel,
+            status: notificationDeliveries.status,
+            attemptCount: notificationDeliveries.attemptCount,
+            lastError: notificationDeliveries.lastError,
+            createdAt: notificationDeliveries.createdAt,
+          }).from(notificationDeliveries)
+            .where(and(
+              gte(notificationDeliveries.createdAt, since),
+              ...(workspaceId ? [eq(notificationDeliveries.workspaceId, workspaceId)] : []),
+              drizzleSql`${notificationDeliveries.status} IN ('failed','permanently_failed')`,
+            ))
+            .orderBy(notificationDeliveries.createdAt)
+            .limit(10);
+
+          const total = Number(totals.total) || 0;
+          const totalSent = Number(totals.totalSent) || 0;
+          const totalFailed = Number(totals.totalFailed) || 0;
+          const deliveryRate = total > 0 ? `${((totalSent / total) * 100).toFixed(1)}%` : 'N/A';
+
+          return createResult(request.actionId, true, `Notification delivery stats for last ${sinceHours}h: ${totalSent}/${total} delivered (${deliveryRate} success rate), ${totalFailed} failed.`, {
+            sinceHours,
+            total,
+            totalSent,
+            totalFailed,
+            totalPending: Number(totals.totalPending) || 0,
+            deliveryRate,
+            recentFailures,
+          }, start);
+        } catch (err: any) {
+          return createResult(request.actionId, false, `Failed to query delivery stats: ${err.message}`, null, start);
         }
-        
-        // Mark both regular notifications and AI maintenance alerts as read
-        await storage.markAllNotificationsRead(userId);
-        const acknowledgedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
-        
-        return createResult(
-          request.actionId, 
-          true, 
-          `All notifications marked as read (including ${acknowledgedAlerts} AI alerts)`, 
-          { acknowledgedAlerts },
-          start
-        );
       },
     };
 
     helpaiOrchestrator.registerAction(sendNotification);
-    helpaiOrchestrator.registerAction(clearAllNotifications);
-    helpaiOrchestrator.registerAction(markAllRead);
+    helpaiOrchestrator.registerAction(manageNotifications);
+    helpaiOrchestrator.registerAction(deliveryStats);
+    // helpaiOrchestrator.registerAction(markAllRead); // consolidated into notify.manage
+  }
+
+  // ============================================================================
+  // DIRECT AUTONOMOUS ACTIONS (Critical Workflows)
+  // ============================================================================
+
+  private registerDirectActions(): void {
+    // 1. Fill Open Shift
+    const fillOpenShift: ActionHandler = {
+      actionId: 'scheduling.fill_open_shift',
+      name: 'Fill Open Shift',
+      category: 'scheduling',
+      description: 'Assign an employee to an unassigned shift',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { shiftId, employeeId } = request.payload || {};
+        if (!shiftId || !employeeId) return createResult(request.actionId, false, 'shiftId and employeeId required', null, start);
+        if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        const [updated] = await db.update(shifts)
+          .set({ 
+            employeeId, 
+            status: 'scheduled',
+            updatedAt: new Date() 
+          })
+          .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, request.workspaceId!)))
+          .returning();
+
+        if (!updated) return createResult(request.actionId, false, 'Shift not found or access denied', null, start);
+        
+        broadcastShiftUpdate(request.workspaceId!, 'shift_updated', updated);
+        return createResult(request.actionId, true, `Shift ${shiftId} assigned to employee ${employeeId}`, updated, start);
+      },
+    };
+
+    // 2. Approve Timesheet
+    const approveTimesheet: ActionHandler = {
+      actionId: 'payroll.approve_timesheet',
+      name: 'Approve Timesheet',
+      category: 'payroll',
+      description: 'Approve a time entry for payroll',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { timeEntryId } = request.payload || {};
+        if (!timeEntryId) return createResult(request.actionId, false, 'timeEntryId required', null, start);
+        if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        const [updated] = await db.update(timeEntries)
+          .set({ 
+            status: 'approved',
+            approvedAt: new Date(),
+            approvedBy: request.userId,
+            updatedAt: new Date()
+          })
+          .where(and(eq(timeEntries.id, timeEntryId), eq(timeEntries.workspaceId, request.workspaceId!)))
+          .returning();
+
+        if (!updated) return createResult(request.actionId, false, 'Time entry not found or access denied', null, start);
+        return createResult(request.actionId, true, `Time entry ${timeEntryId} approved`, updated, start);
+      },
+    };
+
+    // 3a. Create Invoice — Phase 1 CRUD gap fill
+    const createInvoice: ActionHandler = {
+      actionId: 'billing.invoice_create',
+      name: 'Create Invoice',
+      category: 'invoicing',
+      description: 'Create a new invoice for a client in the workspace',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { clientId, amount, dueDate, lineItems, notes } = request.payload || {};
+        if (!clientId) return createResult(request.actionId, false, 'clientId is required', null, start);
+        if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+        await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        const [created] = await db.insert(invoices).values({
+          workspaceId: request.workspaceId,
+          clientId,
+          status: 'draft',
+          total: amount ? String(amount) : '0',
+          dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
+          notes: notes || null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as any).returning();
+
+        if (!created) return createResult(request.actionId, false, 'Failed to create invoice', null, start);
+
+        // Publish invoice_created event
+        const { platformEventBus } = await import('../platformEventBus');
+        await platformEventBus.publish({
+          type: 'invoice_created',
+          workspaceId: request.workspaceId,
+          title: 'Invoice Created',
+          description: `New invoice created for client ${clientId}`,
+          metadata: { invoiceId: (created as any).id, clientId, createdBy: request.userId },
+        } as any).catch(() => null);
+
+        return createResult(request.actionId, true, `Invoice created`, created, start);
+      },
+    };
+
+    // 3b. Send Invoice (canonical version is billing.invoice_send in trinityInvoiceEmailActions.ts)
+    const sendInvoice: ActionHandler = {
+      actionId: 'billing.invoice_send',
+      name: 'Send Invoice',
+      category: 'invoicing',
+      description: 'Send a finalized invoice to a client',
+      requiredRoles: ['owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId } = request.payload || {};
+        if (!invoiceId) return createResult(request.actionId, false, 'invoiceId required', null, start);
+        if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        const { invoiceService } = await import('../finance/invoiceService');
+        const result = await invoiceService.sendInvoice(invoiceId, request.workspaceId!);
+        
+        return createResult(request.actionId, result.success, result.message, result.data, start);
+      },
+    };
+
+    // 4. Clock Out Officer
+    const clockOutOfficer: ActionHandler = {
+      actionId: 'time_tracking.clock_out_officer',
+      name: 'Clock Out Officer',
+      category: 'scheduling',
+      description: 'Force clock-out an officer who forgot to clock out',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { timeEntryId, clockOutTime } = request.payload || {};
+        if (!timeEntryId) return createResult(request.actionId, false, 'timeEntryId required', null, start);
+        if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+
+        const logoutTime = clockOutTime ? new Date(clockOutTime) : new Date();
+        const [updated] = await db.update(timeEntries)
+          .set({ 
+            clockOut: logoutTime,
+            status: 'completed',
+            updatedAt: new Date()
+          })
+          .where(and(eq(timeEntries.id, timeEntryId), eq(timeEntries.workspaceId, request.workspaceId!)))
+          .returning();
+
+        if (!updated) return createResult(request.actionId, false, 'Time entry not found or access denied', null, start);
+        return createResult(request.actionId, true, `Officer clocked out at ${logoutTime.toISOString()}`, updated, start);
+      },
+    };
+
+    // 5. Escalate Compliance
+    const escalateCompliance: ActionHandler = {
+      actionId: 'compliance.escalate',
+      name: 'Escalate Compliance Issue',
+      category: 'compliance',
+      description: 'Create a compliance alert and notify stakeholders',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { title, description, severity, relatedEntityId, relatedEntityType } = request.payload || {};
+        if (request.workspaceId) await assertWorkspaceActive(request.workspaceId, { bypassForSystemActor: true });
+        
+        const { complianceService } = await import('../compliance/complianceService');
+        const alert = await complianceService.createAlert({
+          workspaceId: request.workspaceId!,
+          title: title || 'Compliance Escalation',
+          description: description || 'Manual escalation via Trinity AI',
+          severity: severity || 'high',
+          status: 'open',
+          relatedEntityId,
+          relatedEntityType,
+          createdBy: request.userId
+        });
+
+        await universalNotificationEngine.sendNotification({
+          type: 'compliance_alert',
+          title: `Compliance Escalation: ${alert.title}`,
+          message: alert.description,
+          workspaceId: request.workspaceId!,
+          severity: alert.severity === 'critical' ? 'high' : 'medium',
+          source: 'trinity_compliance_escalation',
+          metadata: { alertId: alert.id }
+        });
+
+        return createResult(request.actionId, true, 'Compliance issue escalated', alert, start);
+      },
+    };
+
+    helpaiOrchestrator.registerAction(fillOpenShift);
+    helpaiOrchestrator.registerAction(approveTimesheet);
+    helpaiOrchestrator.registerAction(createInvoice);
+    // billing.invoice_send canonical is in trinityInvoiceEmailActions.ts — not registering here
+    // helpaiOrchestrator.registerAction(sendInvoice);
+    helpaiOrchestrator.registerAction(clockOutOfficer);
+    helpaiOrchestrator.registerAction(escalateCompliance);
   }
 
   // ============================================================================
@@ -660,6 +1339,8 @@ class AIBrainActionRegistry {
   // ============================================================================
 
   private registerOnboardingActions(): void {
+    // onboarding.get_checklist CONSOLIDATED into onboarding.track (view='checklist') in domainSupervisorActions.ts
+    // Handler kept here for reference only — not registered separately:
     const getChecklist: ActionHandler = {
       actionId: 'onboarding.get_checklist',
       name: 'Get Onboarding Checklist',
@@ -673,18 +1354,78 @@ class AIBrainActionRegistry {
       },
     };
 
+    // onboarding.invite — consolidates: send_invitation (default/action='send'), resend_invitation (action='resend'),
+    //                      revoke_invitation (action='revoke'), send_client_welcome (action='client_welcome')
     const sendInvitation: ActionHandler = {
-      actionId: 'onboarding.send_invitation',
-      name: 'Send Employee Invitation',
+      actionId: 'onboarding.invite',
+      name: 'Send / Manage Employee or Client Invitation',
       category: 'lifecycle',
-      description: 'Send an invitation email to a new employee',
+      description: 'Manage invitations. Use payload.action="resend" to resend an existing invitation (requires invitationId); action="revoke" to revoke (requires invitationId); action="client_welcome" to send a client welcome email (requires email, clientName); default sends a new employee invitation (requires email, firstName, lastName).',
       requiredRoles: ['manager', 'owner', 'root_admin'],
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
-        const { email, firstName, lastName, role } = request.payload || {};
+        const { action: subAction, email, firstName, lastName, role, invitationId, clientId, clientName, companyName } = request.payload || {};
         const { storage } = await import('../../storage');
         const { emailService } = await import('../emailService');
-        
+
+        if (subAction === 'resend') {
+          // Consolidated from onboarding.resend_invitation
+          if (!invitationId) {
+            return createResult(request.actionId, false, 'Invitation ID is required', null, start);
+          }
+
+          const invitation = await storage.getEmployeeInvitationById(invitationId);
+          if (!invitation) {
+            return createResult(request.actionId, false, 'Invitation not found', null, start);
+          }
+
+          const workspace = await storage.getWorkspace(invitation.workspaceId);
+          await emailService.sendEmployeeInvitation( // nds-exempt: one-time invite token delivery
+            invitation.workspaceId,
+            invitation.email,
+            invitation.inviteToken!,
+            {
+              firstName: invitation.firstName,
+              inviterName: 'System',
+              workspaceName: workspace?.name || 'Your Organization',
+              roleName: invitation.role || 'Team Member',
+            }
+          );
+
+          await storage.updateEmployeeInvitation(invitation.id, {
+            invitedAt: new Date(),
+          });
+
+          return createResult(request.actionId, true, 'Invitation resent successfully', { invitationId }, start);
+        }
+
+        if (subAction === 'revoke') {
+          // Consolidated from onboarding.revoke_invitation
+          if (!invitationId) {
+            return createResult(request.actionId, false, 'Invitation ID is required', null, start);
+          }
+
+          await storage.updateEmployeeInvitation(invitationId, {
+            inviteStatus: 'revoked',
+          });
+
+          return createResult(request.actionId, true, 'Invitation revoked successfully', { invitationId }, start);
+        }
+
+        if (subAction === 'client_welcome') {
+          // Consolidated from onboarding.send_client_welcome
+          if (!email || !clientName) {
+            return createResult(request.actionId, false, 'Email and clientName are required', null, start);
+          }
+
+          const workspace = await storage.getWorkspace(request.workspaceId!);
+          const _welcomeEmail = emailService.buildClientWelcomeEmail(clientId || '', email, clientName, companyName || '', workspace?.name || '');
+          await NotificationDeliveryService.send({ type: 'client_welcome', workspaceId: request.workspaceId || 'system', recipientUserId: clientId || email, channel: 'email', body: _welcomeEmail });
+
+          return createResult(request.actionId, true, 'Client welcome email sent', { clientId }, start);
+        }
+
+        // Default (action='send' or undefined): send new employee invitation
         if (!email || !firstName || !lastName) {
           return createResult(request.actionId, false, 'Email, firstName, and lastName are required', null, start);
         }
@@ -699,19 +1440,24 @@ class AIBrainActionRegistry {
         });
 
         const workspace = await storage.getWorkspace(request.workspaceId!);
-        await emailService.sendEmployeeInvitationEmail(
+        await emailService.sendEmployeeInvitation( // nds-exempt: one-time invite token delivery
           request.workspaceId!,
-          invitation.id,
           email,
-          firstName,
-          workspace?.name || 'Your Organization',
-          invitation.token!
+          invitation.inviteToken!,
+          {
+            firstName,
+            inviterName: 'System',
+            workspaceName: workspace?.name || 'Your Organization',
+            roleName: role || 'Team Member',
+          }
         );
 
         return createResult(request.actionId, true, 'Invitation sent successfully', { invitationId: invitation.id }, start);
       },
     };
 
+    // onboarding.resend_invitation CONSOLIDATED into onboarding.invite (action='resend')
+    // Handler kept for reference only — not registered separately:
     const resendInvitation: ActionHandler = {
       actionId: 'onboarding.resend_invitation',
       name: 'Resend Employee Invitation',
@@ -723,7 +1469,7 @@ class AIBrainActionRegistry {
         const { invitationId } = request.payload || {};
         const { storage } = await import('../../storage');
         const { emailService } = await import('../emailService');
-        
+
         if (!invitationId) {
           return createResult(request.actionId, false, 'Invitation ID is required', null, start);
         }
@@ -734,24 +1480,28 @@ class AIBrainActionRegistry {
         }
 
         const workspace = await storage.getWorkspace(invitation.workspaceId);
-        await emailService.sendEmployeeInvitationEmail(
+        await emailService.sendEmployeeInvitation( // nds-exempt: one-time invite token delivery
           invitation.workspaceId,
-          invitation.id,
-          invitation.email!,
-          invitation.firstName,
-          workspace?.name || 'Your Organization',
-          invitation.token!
+          invitation.email,
+          invitation.inviteToken!,
+          {
+            firstName: invitation.firstName,
+            inviterName: 'System',
+            workspaceName: workspace?.name || 'Your Organization',
+            roleName: invitation.role || 'Team Member',
+          }
         );
 
         await storage.updateEmployeeInvitation(invitation.id, {
           invitedAt: new Date(),
-          resentCount: (invitation.resentCount || 0) + 1,
         });
 
         return createResult(request.actionId, true, 'Invitation resent successfully', { invitationId }, start);
       },
     };
 
+    // onboarding.revoke_invitation CONSOLIDATED into onboarding.invite (action='revoke')
+    // Handler kept for reference only — not registered separately:
     const revokeInvitation: ActionHandler = {
       actionId: 'onboarding.revoke_invitation',
       name: 'Revoke Employee Invitation',
@@ -762,20 +1512,21 @@ class AIBrainActionRegistry {
         const start = Date.now();
         const { invitationId } = request.payload || {};
         const { storage } = await import('../../storage');
-        
+
         if (!invitationId) {
           return createResult(request.actionId, false, 'Invitation ID is required', null, start);
         }
 
         await storage.updateEmployeeInvitation(invitationId, {
           inviteStatus: 'revoked',
-          revokedAt: new Date(),
         });
 
         return createResult(request.actionId, true, 'Invitation revoked successfully', { invitationId }, start);
       },
     };
 
+    // onboarding.send_client_welcome CONSOLIDATED into onboarding.invite (action='client_welcome')
+    // Handler kept for reference only — not registered separately:
     const sendClientWelcome: ActionHandler = {
       actionId: 'onboarding.send_client_welcome',
       name: 'Send Client Welcome Email',
@@ -787,20 +1538,14 @@ class AIBrainActionRegistry {
         const { clientId, email, clientName, companyName } = request.payload || {};
         const { emailService } = await import('../emailService');
         const { storage } = await import('../../storage');
-        
+
         if (!email || !clientName) {
           return createResult(request.actionId, false, 'Email and clientName are required', null, start);
         }
 
         const workspace = await storage.getWorkspace(request.workspaceId!);
-        await emailService.sendClientWelcomeEmail(
-          request.workspaceId!,
-          clientId || '',
-          email,
-          clientName,
-          companyName || '',
-          workspace?.name || ''
-        );
+        const _welcomeEmail2 = emailService.buildClientWelcomeEmail(clientId || '', email, clientName, companyName || '', workspace?.name || '');
+        await NotificationDeliveryService.send({ type: 'client_welcome', workspaceId: request.workspaceId || 'system', recipientUserId: clientId || email, channel: 'email', body: _welcomeEmail2 });
 
         return createResult(request.actionId, true, 'Client welcome email sent', { clientId }, start);
       },
@@ -832,6 +1577,7 @@ class AIBrainActionRegistry {
 
         if (role !== 'none') {
           await db.insert(platformRoles).values({
+            workspaceId: PLATFORM_WORKSPACE_ID,
             userId,
             role,
             grantedBy: request.userId,
@@ -843,6 +1589,8 @@ class AIBrainActionRegistry {
       },
     };
 
+    // onboarding.get_platform_status CONSOLIDATED into onboarding.track (view='status') in domainSupervisorActions.ts
+    // Handler kept for reference only — not registered separately:
     const getPlatformOnboarding: ActionHandler = {
       actionId: 'onboarding.get_platform_status',
       name: 'Get Platform Onboarding Status',
@@ -852,11 +1600,11 @@ class AIBrainActionRegistry {
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { employeeInvitations } = await import('@shared/schema');
-        
+
         const pending = await db.select({ count: sql`count(*)::int` })
           .from(employeeInvitations)
           .where(eq(employeeInvitations.inviteStatus, 'pending' as any));
-        
+
         const accepted = await db.select({ count: sql`count(*)::int` })
           .from(employeeInvitations)
           .where(eq(employeeInvitations.inviteStatus, 'accepted' as any));
@@ -873,13 +1621,84 @@ class AIBrainActionRegistry {
       },
     };
 
-    helpaiOrchestrator.registerAction(getChecklist);
+    // onboarding.gather_billing_preferences CONSOLIDATED into onboarding.recommend (type='billing_prefs') in domainSupervisorActions.ts
+    // Handler kept for reference only — not registered separately:
+    const gatherBillingPreferences: ActionHandler = {
+      actionId: 'onboarding.gather_billing_preferences',
+      name: 'Gather Client Billing Preferences During Onboarding',
+      category: 'lifecycle',
+      description: 'During client onboarding, gather and persist billing preferences. Accepts clientId plus optional: billingCycle (daily/weekly/bi_weekly/monthly), paymentTerms (net_7/net_15/net_30/net_60/due_on_receipt), defaultBillRate, invoiceFormat (summary/detailed/itemized), autoSendInvoice, invoiceRecipientEmails. Missing fields use workspace defaults.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { clientId, ...prefs } = request.payload || {};
+          if (!clientId) return createResult(request.actionId, false, 'clientId required', null, start);
+
+          const existing = await db
+            .select()
+            .from(clientBillingSettings)
+            .where(
+              and(
+                eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                eq(clientBillingSettings.clientId, clientId)
+              )
+            )
+            .limit(1);
+
+          let settings;
+          if (existing.length > 0) {
+            [settings] = await db
+              .update(clientBillingSettings)
+              .set({ ...prefs, updatedAt: new Date() })
+              .where(eq(clientBillingSettings.id, existing[0].id))
+              .returning();
+          } else {
+            [settings] = await db
+              .insert(clientBillingSettings)
+              .values({ ...prefs, workspaceId: request.workspaceId!, clientId })
+              .returning();
+          }
+
+          const summary = [
+            prefs.billingCycle ? `Billing: ${prefs.billingCycle}` : null,
+            prefs.paymentTerms ? `Terms: ${prefs.paymentTerms}` : null,
+            prefs.defaultBillRate ? `Rate: $${prefs.defaultBillRate}/hr` : null,
+            prefs.autoSendInvoice ? 'Auto-send: enabled' : null,
+          ].filter(Boolean).join(', ');
+
+          return createResult(request.actionId, true,
+            `Billing preferences saved for client ${clientId}: ${summary || 'defaults applied'}`,
+            settings, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    // onboarding.get_checklist — CONSOLIDATED into onboarding.track (view='checklist') in domainSupervisorActions.ts
+    // helpaiOrchestrator.registerAction(getChecklist);
+
+    // onboarding.invite — consolidated action (replaces send_invitation, resend_invitation, revoke_invitation, send_client_welcome)
     helpaiOrchestrator.registerAction(sendInvitation);
-    helpaiOrchestrator.registerAction(resendInvitation);
-    helpaiOrchestrator.registerAction(revokeInvitation);
-    helpaiOrchestrator.registerAction(sendClientWelcome);
-    helpaiOrchestrator.registerAction(assignPlatformRole);
-    helpaiOrchestrator.registerAction(getPlatformOnboarding);
+
+    // onboarding.resend_invitation — CONSOLIDATED into onboarding.invite (action='resend')
+    // helpaiOrchestrator.registerAction(resendInvitation);
+
+    // onboarding.revoke_invitation — CONSOLIDATED into onboarding.invite (action='revoke')
+    // helpaiOrchestrator.registerAction(revokeInvitation);
+
+    // onboarding.send_client_welcome — CONSOLIDATED into onboarding.invite (action='client_welcome')
+    // helpaiOrchestrator.registerAction(sendClientWelcome);
+
+    // platform_roles.assign REMOVED — duplicate of uacp.assign_platform_role
+    // Backward-compatible shim registered in actionCompatibilityShims.ts
+
+    // onboarding.get_platform_status — CONSOLIDATED into onboarding.track (view='status') in domainSupervisorActions.ts
+    // helpaiOrchestrator.registerAction(getPlatformOnboarding);
+
+    // onboarding.gather_billing_preferences — CONSOLIDATED into onboarding.recommend (type='billing_prefs') in domainSupervisorActions.ts
+    // helpaiOrchestrator.registerAction(gatherBillingPreferences);
   }
   // ============================================================================
   // BULK OPERATION ACTIONS
@@ -887,7 +1706,7 @@ class AIBrainActionRegistry {
 
   private registerBulkOperationActions(): void {
     const bulkImportEmployees: ActionHandler = {
-      actionId: 'bulk.import_employees',
+      actionId: 'employees.import',
       name: 'Bulk Import Employees',
       category: 'scheduling',
       description: 'Import multiple employees from CSV data',
@@ -914,11 +1733,11 @@ class AIBrainActionRegistry {
               email: row.email,
               phone: row.phone,
               role: row.role || 'employee',
-              status: 'active',
+              isActive: true,
             }).returning();
             imported.push(emp);
           } catch (error: any) {
-            errors.push({ row, error: error.message });
+            errors.push({ row, error: (error instanceof Error ? error.message : String(error)) });
           }
         }
 
@@ -933,7 +1752,7 @@ class AIBrainActionRegistry {
     };
 
     const bulkExportEmployees: ActionHandler = {
-      actionId: 'bulk.export_employees',
+      actionId: 'employees.export',
       name: 'Bulk Export Employees',
       category: 'scheduling',
       description: 'Export all employees to CSV format',
@@ -1265,11 +2084,640 @@ class AIBrainActionRegistry {
   }
 
   // ============================================================================
+  // MEMORY OPTIMIZATION ACTIONS (Trinity Self-Optimization)
+  // ============================================================================
+
+  private registerMemoryOptimizationActions(): void {
+    const getMemoryHealth: ActionHandler = {
+      actionId: 'memory.get_health',
+      name: 'Get Memory Health Report',
+      category: 'system',
+      description: 'Get a full health diagnostic of Trinity memory systems including table sizes, retention status, and optimization recommendations',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { trinityMemoryOptimizer } = await import('./trinityMemoryOptimizer');
+          const health = await trinityMemoryOptimizer.getMemoryHealth();
+          return createResult(request.actionId, true, `Memory health: ${health.overallHealth} (score: ${health.healthScore}/100, ${health.totalRecordsManaged} records managed)`, health, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const optimizeMemory: ActionHandler = {
+      actionId: 'memory.optimize',
+      name: 'Run Memory Optimization',
+      category: 'system',
+      description: 'Run full memory optimization: cleanup old records, decay stale knowledge confidence, prune dead entities, consolidate duplicates. This permanently removes expired data.',
+      requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { trinityMemoryOptimizer } = await import('./trinityMemoryOptimizer');
+          if (trinityMemoryOptimizer.isCurrentlyOptimizing()) {
+            return createResult(request.actionId, false, 'Optimization already in progress', null, start);
+          }
+          const results = await trinityMemoryOptimizer.runFullOptimization(false);
+          const totalDeleted = results.reduce((s, r) => s + r.recordsDeleted, 0);
+          const totalDecayed = results.reduce((s, r) => s + r.recordsDecayed, 0);
+          const totalConsolidated = results.reduce((s, r) => s + r.recordsConsolidated, 0);
+          const failures = results.filter(r => !r.success);
+          return createResult(request.actionId, failures.length === 0, 
+            `Optimization complete: ${totalDeleted} deleted, ${totalDecayed} decayed, ${totalConsolidated} consolidated${failures.length > 0 ? ` (${failures.length} failures)` : ''}`,
+            results, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const optimizeDryRun: ActionHandler = {
+      actionId: 'memory.optimize_dry_run',
+      name: 'Memory Optimization Dry Run',
+      category: 'system',
+      description: 'Preview what a full memory optimization would do without making any changes. Shows counts of records that would be affected.',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { trinityMemoryOptimizer } = await import('./trinityMemoryOptimizer');
+          const results = await trinityMemoryOptimizer.runFullOptimization(true);
+          const totalWouldProcess = results.reduce((s, r) => s + r.recordsProcessed, 0);
+          return createResult(request.actionId, true,
+            `Dry run: ${totalWouldProcess} records would be affected across ${results.length} optimization jobs`,
+            results, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const getRetentionPolicies: ActionHandler = {
+      actionId: 'memory.get_policies',
+      name: 'Get Memory Retention Policies',
+      category: 'system',
+      description: 'View the retention policies for all Trinity memory tables including retention periods and cleanup strategies',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { trinityMemoryOptimizer } = await import('./trinityMemoryOptimizer');
+          const policies = trinityMemoryOptimizer.getRetentionPolicies();
+          return createResult(request.actionId, true, `${policies.length} retention policies configured`, policies, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const getOptimizationHistory: ActionHandler = {
+      actionId: 'memory.get_history',
+      name: 'Get Optimization History',
+      category: 'system',
+      description: 'View the history of recent memory optimization runs with their results',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { trinityMemoryOptimizer } = await import('./trinityMemoryOptimizer');
+          const history = trinityMemoryOptimizer.getOptimizationHistory();
+          return createResult(request.actionId, true, `${history.length} optimization runs in history`, history, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    helpaiOrchestrator.registerAction(getMemoryHealth);
+    helpaiOrchestrator.registerAction(optimizeMemory);
+    helpaiOrchestrator.registerAction(optimizeDryRun);
+    helpaiOrchestrator.registerAction(getRetentionPolicies);
+    helpaiOrchestrator.registerAction(getOptimizationHistory);
+  }
+
+  // ============================================================================
+  // BILLING & PAYROLL SETTINGS ACTIONS
+  // ============================================================================
+
+  private registerBillingSettingsActions(): void {
+    const getWorkspaceBillingSettings: ActionHandler = {
+      actionId: 'billing.settings',
+      name: 'Billing Settings',
+      category: 'billing',
+      description: 'Consolidated billing settings action. Dispatch via payload.entity (workspace|client) and payload.action (get|set|list|learn). Defaults to get workspace settings.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const entity = request.payload?.entity;
+        const action = request.payload?.action;
+
+        try {
+          // action=learn → learn billing preference logic
+          if (action === 'learn') {
+            const { preferenceType, entityId, value, confidence, source } = request.payload || {};
+            const learnEntity = entity || 'workspace';
+
+            if (learnEntity === 'client' && entityId && preferenceType && value) {
+              const fieldMap: Record<string, string> = {
+                billing_cycle: 'billingCycle',
+                payment_terms: 'paymentTerms',
+                bill_rate: 'defaultBillRate',
+                pay_rate: 'defaultPayRate',
+              };
+              const field = fieldMap[preferenceType];
+              if (field && (confidence || 0) >= 0.8) {
+                const existing = await db
+                  .select()
+                  .from(clientBillingSettings)
+                  .where(
+                    and(
+                      eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                      eq(clientBillingSettings.clientId, entityId)
+                    )
+                  )
+                  .limit(1);
+
+                if (existing.length > 0) {
+                  await db
+                    .update(clientBillingSettings)
+                    .set({ [field]: value, updatedAt: new Date() })
+                    .where(eq(clientBillingSettings.id, existing[0].id));
+                } else {
+                  await db
+                    .insert(clientBillingSettings)
+                    .values({ workspaceId: request.workspaceId!, clientId: entityId, [field]: value });
+                }
+              }
+            }
+
+            return createResult(request.actionId, true,
+              `Learned ${preferenceType} preference for ${learnEntity} ${entityId || ''} (confidence: ${confidence || 'unknown'}, source: ${source || 'unknown'})`,
+              request.payload, start);
+          }
+
+          // entity=client, action=list → list all client billing settings
+          if (entity === 'client' && action === 'list') {
+            const settings = await db
+              .select({
+                billingSettings: clientBillingSettings,
+                clientName: clients.companyName,
+              })
+              .from(clientBillingSettings)
+              .leftJoin(clients, eq(clientBillingSettings.clientId, clients.id))
+              .where(eq(clientBillingSettings.workspaceId, request.workspaceId!));
+
+            return createResult(request.actionId, true,
+              `${settings.length} client(s) with custom billing settings`,
+              settings, start);
+          }
+
+          // entity=client, action=set → set client billing settings
+          if (entity === 'client' && action === 'set') {
+            const { clientId, ...payload } = request.payload || {};
+            if (!clientId) return createResult(request.actionId, false, 'clientId required', null, start);
+
+            const existing = await db
+              .select()
+              .from(clientBillingSettings)
+              .where(
+                and(
+                  eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                  eq(clientBillingSettings.clientId, clientId)
+                )
+              )
+              .limit(1);
+
+            let settings;
+            if (existing.length > 0) {
+              [settings] = await db
+                .update(clientBillingSettings)
+                .set({ ...payload, updatedAt: new Date() })
+                .where(eq(clientBillingSettings.id, existing[0].id))
+                .returning();
+            } else {
+              [settings] = await db
+                .insert(clientBillingSettings)
+                .values({ ...payload, workspaceId: request.workspaceId!, clientId })
+                .returning();
+            }
+            return createResult(request.actionId, true, `Client ${clientId} billing settings updated`, settings, start);
+          }
+
+          // entity=client, action=get → get client billing settings
+          if (entity === 'client' && action === 'get') {
+            const clientId = request.payload?.clientId;
+            if (!clientId) return createResult(request.actionId, false, 'clientId required', null, start);
+
+            const [settings] = await db
+              .select()
+              .from(clientBillingSettings)
+              .where(
+                and(
+                  eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                  eq(clientBillingSettings.clientId, clientId)
+                )
+              )
+              .limit(1);
+
+            return createResult(request.actionId, true,
+              settings ? `Billing settings for client ${clientId}` : 'No custom settings - using workspace defaults',
+              settings, start);
+          }
+
+          // entity=workspace, action=set → set workspace billing settings
+          if (entity === 'workspace' && action === 'set') {
+            const payload = request.payload || {};
+            // CATEGORY C — Raw SQL retained: ::jsonb | Tables: workspaces | Verified: 2026-03-23
+            await typedExec(sql`
+              UPDATE workspaces
+              SET billing_settings_blob = billing_settings_blob || ${JSON.stringify(payload)}::jsonb,
+                  updated_at = NOW()
+              WHERE id = ${request.workspaceId!}
+            `);
+            return createResult(request.actionId, true, 'Workspace billing settings updated', payload, start);
+          }
+
+          // Default: entity=workspace, action=get (or no entity/action specified for backward compat)
+          // CATEGORY C — Raw SQL retained: LIMIT | Tables: workspaces | Verified: 2026-03-23
+          const result = await typedQuery(sql`
+            SELECT payroll_schedule, payroll_day_of_week, payroll_day_of_month, payroll_cutoff_day,
+                   billing_cycle_day, billing_preferences, billing_settings_blob,
+                   platform_fee_percentage, auto_payroll_enabled
+            FROM workspaces WHERE id = ${request.workspaceId!} LIMIT 1
+          `);
+          const settings = (result as any[])[0];
+          return createResult(request.actionId, true,
+            settings ? 'Workspace billing settings retrieved' : 'No billing settings found',
+            settings || { payrollCycle: 'bi_weekly', defaultBillingCycle: 'monthly', defaultPaymentTerms: 'net_30' },
+            start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const setWorkspaceBillingSettings: ActionHandler = {
+      actionId: 'billing.set_workspace_settings',
+      name: 'Set Workspace Billing Settings',
+      category: 'billing',
+      description: 'Configure workspace billing settings. Accepts: payrollCycle (daily/weekly/bi_weekly/semi_monthly/monthly), defaultBillingCycle, defaultPaymentTerms (net_7/net_15/net_30/net_60/due_on_receipt), overtime thresholds and multipliers, invoice automation',
+      requiredRoles: ['owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const payload = request.payload || {};
+          // CATEGORY C — Raw SQL retained: ::jsonb | Tables: workspaces | Verified: 2026-03-23
+          await typedExec(sql`
+            UPDATE workspaces
+            SET billing_settings_blob = billing_settings_blob || ${JSON.stringify(payload)}::jsonb,
+                updated_at = NOW()
+            WHERE id = ${request.workspaceId!}
+          `);
+          return createResult(request.actionId, true, 'Workspace billing settings updated', payload, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const getClientBillingSettings: ActionHandler = {
+      actionId: 'billing.get_client_settings',
+      name: 'Get Client Billing Settings',
+      category: 'billing',
+      description: 'Get billing settings for a specific client. Provide clientId in payload. Returns the client billing cycle, payment terms, rates, and invoice preferences that override workspace defaults.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const clientId = request.payload?.clientId;
+          if (!clientId) return createResult(request.actionId, false, 'clientId required', null, start);
+
+          const [settings] = await db
+            .select()
+            .from(clientBillingSettings)
+            .where(
+              and(
+                eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                eq(clientBillingSettings.clientId, clientId)
+              )
+            )
+            .limit(1);
+
+          return createResult(request.actionId, true,
+            settings ? `Billing settings for client ${clientId}` : 'No custom settings - using workspace defaults',
+            settings, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const setClientBillingSettings: ActionHandler = {
+      actionId: 'billing.set_client_settings',
+      name: 'Set Client Billing Settings',
+      category: 'billing',
+      description: 'Configure per-client billing overrides. Accepts clientId plus: billingCycle (daily/weekly/bi_weekly/monthly), paymentTerms, defaultBillRate, defaultPayRate, overtimeBillMultiplier, overtimePayMultiplier, invoiceFormat, autoSendInvoice, invoiceRecipientEmails',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { clientId, ...payload } = request.payload || {};
+          if (!clientId) return createResult(request.actionId, false, 'clientId required', null, start);
+
+          const existing = await db
+            .select()
+            .from(clientBillingSettings)
+            .where(
+              and(
+                eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                eq(clientBillingSettings.clientId, clientId)
+              )
+            )
+            .limit(1);
+
+          let settings;
+          if (existing.length > 0) {
+            [settings] = await db
+              .update(clientBillingSettings)
+              .set({ ...payload, updatedAt: new Date() })
+              .where(eq(clientBillingSettings.id, existing[0].id))
+              .returning();
+          } else {
+            [settings] = await db
+              .insert(clientBillingSettings)
+              .values({ ...payload, workspaceId: request.workspaceId!, clientId })
+              .returning();
+          }
+          return createResult(request.actionId, true, `Client ${clientId} billing settings updated`, settings, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const listClientBillingSettings: ActionHandler = {
+      actionId: 'billing.list_client_settings',
+      name: 'List All Client Billing Settings',
+      category: 'billing',
+      description: 'List billing settings for all clients in the workspace, showing which clients have custom billing cycles different from the workspace default',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const settings = await db
+            .select({
+              billingSettings: clientBillingSettings,
+              clientName: clients.companyName,
+            })
+            .from(clientBillingSettings)
+            .leftJoin(clients, eq(clientBillingSettings.clientId, clients.id))
+            .where(eq(clientBillingSettings.workspaceId, request.workspaceId!));
+
+          return createResult(request.actionId, true,
+            `${settings.length} client(s) with custom billing settings`,
+            settings, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    const learnBillingPreference: ActionHandler = {
+      actionId: 'billing.learn_preference',
+      name: 'Learn Billing Preference',
+      category: 'billing',
+      description: 'Record a learned billing/payroll preference from user conversation or onboarding. Accepts: preferenceType (billing_cycle/payment_terms/payroll_schedule/overtime_rules), entity (workspace/client), entityId, value, confidence (0-1), source (conversation/onboarding/migration)',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          const { preferenceType, entity, entityId, value, confidence, source } = request.payload || {};
+
+          if (entity === 'client' && entityId && preferenceType && value) {
+            const fieldMap: Record<string, string> = {
+              billing_cycle: 'billingCycle',
+              payment_terms: 'paymentTerms',
+              bill_rate: 'defaultBillRate',
+              pay_rate: 'defaultPayRate',
+            };
+            const field = fieldMap[preferenceType];
+            if (field && (confidence || 0) >= 0.8) {
+              const existing = await db
+                .select()
+                .from(clientBillingSettings)
+                .where(
+                  and(
+                    eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                    eq(clientBillingSettings.clientId, entityId)
+                  )
+                )
+                .limit(1);
+
+              if (existing.length > 0) {
+                await db
+                  .update(clientBillingSettings)
+                  .set({ [field]: value, updatedAt: new Date() })
+                  .where(eq(clientBillingSettings.id, existing[0].id));
+              } else {
+                await db
+                  .insert(clientBillingSettings)
+                  .values({ workspaceId: request.workspaceId!, clientId: entityId, [field]: value });
+              }
+            }
+          }
+
+          return createResult(request.actionId, true,
+            `Learned ${preferenceType} preference for ${entity} ${entityId || ''} (confidence: ${confidence || 'unknown'}, source: ${source || 'unknown'})`,
+            request.payload, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+
+    helpaiOrchestrator.registerAction(getWorkspaceBillingSettings); // billing.settings (consolidated)
+    // Consolidated into billing.settings — not registering separately:
+    // helpaiOrchestrator.registerAction(setWorkspaceBillingSettings);
+    // helpaiOrchestrator.registerAction(getClientBillingSettings);
+    // helpaiOrchestrator.registerAction(setClientBillingSettings);
+    // helpaiOrchestrator.registerAction(listClientBillingSettings);
+    // helpaiOrchestrator.registerAction(learnBillingPreference);
+
+    // Phase 30: workspace.tier.status — canonical tier/seat status for Trinity
+    const getWorkspaceTierStatus: ActionHandler = {
+      actionId: 'workspace.tier.status',
+      name: 'Workspace Tier Status',
+      category: 'billing',
+      description: 'Returns the workspace\'s current subscription tier, seat usage vs. limit, available features for this tier, and upgrade path options. Use this to answer "what plan am I on?", "how many seats do I have left?", or "what features are available to me?"',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        try {
+          if (!request.workspaceId) return createResult(request.actionId, false, 'workspaceId required', null, start);
+
+          // CATEGORY C — Raw SQL retained: LIMIT 1 | Tables: workspaces | Verified: Phase-30
+          const result = await typedQuery(sql`
+            SELECT subscription_tier, subscription_status,
+                   (SELECT COUNT(*) FROM employees WHERE workspace_id = ${request.workspaceId} AND status = 'active') AS active_employees
+            FROM workspaces WHERE id = ${request.workspaceId} LIMIT 1
+          `);
+
+          const row = (result as any[])[0];
+          if (!row) return createResult(request.actionId, false, 'Workspace not found', null, start);
+
+          const tier = row.subscription_tier || 'free';
+          const status = row.subscription_status || 'active';
+          const activeEmployees = parseInt(row.active_employees || '0', 10);
+
+          // Seat limits per tier
+          const seatLimits: Record<string, number> = {
+            free: 5, trial: 5, starter: 10, professional: 30,
+            business: 75, enterprise: 200, strategic: 999999,
+          };
+          const seatLimit = seatLimits[tier] ?? 10;
+          const seatsRemaining = Math.max(0, seatLimit - activeEmployees);
+          const seatUsagePct = seatLimit > 0 ? Math.round((activeEmployees / seatLimit) * 100) : 0;
+
+          // Tier hierarchy for upgrade suggestions
+          const tierOrder = ['free', 'trial', 'starter', 'professional', 'business', 'enterprise', 'strategic'];
+          const tierIndex = tierOrder.indexOf(tier);
+          const nextTier = tierIndex >= 0 && tierIndex < tierOrder.length - 1 ? tierOrder[tierIndex + 1] : null;
+
+          const summary = {
+            currentTier: tier,
+            subscriptionStatus: status,
+            seats: { used: activeEmployees, limit: seatLimit, remaining: seatsRemaining, usagePct: seatUsagePct },
+            isNearSeatLimit: seatUsagePct >= 80,
+            isAtSeatLimit: seatsRemaining === 0,
+            nextTier,
+            upgradeUrl: nextTier ? `/billing/upgrade?tier=${nextTier}` : null,
+            message: seatsRemaining === 0
+              ? `Seat limit reached (${activeEmployees}/${seatLimit}). Upgrade to ${nextTier || 'a higher plan'} to add more team members.`
+              : seatUsagePct >= 80
+              ? `Approaching seat limit: ${activeEmployees}/${seatLimit} seats used (${seatUsagePct}%).`
+              : `${tier} plan — ${activeEmployees}/${seatLimit} seats used (${seatsRemaining} remaining).`,
+          };
+
+          return createResult(request.actionId, true, summary.message, summary, start);
+        } catch (error: any) {
+          return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+        }
+      },
+    };
+    helpaiOrchestrator.registerAction(getWorkspaceTierStatus); // workspace.tier.status
+  }
+
+  // ============================================================================
   // PUBLIC API
   // ============================================================================
 
+  // ============================================================================
+  // INVOICE & ANALYTICS ACTIONS
+  // ============================================================================
+
+  private registerInvoiceActions(): void {
+    const listInvoices: ActionHandler = {
+      actionId: 'billing.invoice',
+      name: 'Get or List Invoices',
+      category: 'invoicing',
+      description: 'Get a single invoice by ID/number (pass payload.id or payload.invoiceNumber) or list all invoices filtered by status/client. Consolidates billing.invoices_get and billing.invoices_list.',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+
+        // Single invoice fetch: if id or invoiceNumber provided
+        if (request.payload?.id || request.payload?.invoiceId || request.payload?.invoiceNumber) {
+          const invoiceId = request.payload?.id || request.payload?.invoiceId;
+          const invoiceNumber = request.payload?.invoiceNumber;
+          let invoice;
+          if (invoiceId) {
+            invoice = await db.query.invoices.findFirst({
+              where: and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, request.workspaceId!)),
+            });
+          } else if (invoiceNumber) {
+            invoice = await db.query.invoices.findFirst({
+              where: and(eq(invoices.invoiceNumber, invoiceNumber), eq(invoices.workspaceId, request.workspaceId!)),
+            });
+          }
+          if (!invoice) return createResult(request.actionId, false, 'Invoice not found', null, start);
+          return createResult(request.actionId, true, 'Invoice retrieved', invoice, start);
+        }
+
+        // List invoices
+        const conditions: any[] = [eq(invoices.workspaceId, request.workspaceId!)];
+        if (request.payload?.status) {
+          conditions.push(eq(invoices.status, request.payload.status));
+        }
+        if (request.payload?.clientId) {
+          conditions.push(eq(invoices.clientId, request.payload.clientId));
+        }
+        const invoiceList = await db.query.invoices.findMany({
+          where: and(...conditions),
+          orderBy: [desc(invoices.issueDate)],
+          limit: request.payload?.limit || 50,
+        });
+        return createResult(request.actionId, true, `Found ${invoiceList.length} invoices`, invoiceList, start);
+      },
+    };
+
+    const getInvoice: ActionHandler = {
+      actionId: 'billing.invoices_get',
+      name: 'Get Invoice Details',
+      category: 'invoicing',
+      description: 'Get detailed information about a specific invoice by ID or invoice number',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invoiceId, invoiceNumber } = request.payload || {};
+        let invoice;
+        if (invoiceId) {
+          invoice = await db.query.invoices.findFirst({
+            where: and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, request.workspaceId!)),
+          });
+        } else if (invoiceNumber) {
+          invoice = await db.query.invoices.findFirst({
+            where: and(eq(invoices.invoiceNumber, invoiceNumber), eq(invoices.workspaceId, request.workspaceId!)),
+          });
+        }
+        if (!invoice) return createResult(request.actionId, false, 'Invoice not found', null, start);
+        return createResult(request.actionId, true, 'Invoice retrieved', invoice, start);
+      },
+    };
+
+    const getInvoiceSummary: ActionHandler = {
+      actionId: 'billing.invoice_summary',
+      name: 'Invoice Summary & Analytics',
+      category: 'invoicing',
+      description: 'Get a summary of invoice analytics: total billed, paid, outstanding, overdue amounts',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const [summary] = await db
+          .select({
+            totalInvoices: sql<number>`count(*)`,
+            totalBilled: sql<string>`coalesce(sum(${invoices.total}::numeric), 0)`,
+            totalPaid: sql<string>`coalesce(sum(case when ${invoices.status} = 'paid' then ${invoices.total}::numeric else 0 end), 0)`,
+            totalOutstanding: sql<string>`coalesce(sum(case when ${invoices.status} in ('sent', 'overdue', 'pending') then ${invoices.total}::numeric else 0 end), 0)`,
+            totalOverdue: sql<string>`coalesce(sum(case when ${invoices.status} = 'overdue' then ${invoices.total}::numeric else 0 end), 0)`,
+            overdueCount: sql<number>`count(case when ${invoices.status} = 'overdue' then 1 end)`,
+          })
+          .from(invoices)
+          .where(eq(invoices.workspaceId, request.workspaceId!));
+        return createResult(request.actionId, true, 'Invoice summary retrieved', summary, start);
+      },
+    };
+
+    helpaiOrchestrator.registerAction(listInvoices); // billing.invoice (consolidated — replaces invoices_list + invoices_get)
+    // billing.invoices_get consolidated into billing.invoice above — not registering separately:
+    // helpaiOrchestrator.registerAction(getInvoice);
+    helpaiOrchestrator.registerAction(getInvoiceSummary); // billing.invoice_summary
+    log.info('[AI Brain] Invoice & analytics actions registered (2 actions)');
+  }
+
   getRegisteredActionCount(): number {
-    return 40; // Updated count including 8 strategic + 7 contract pipeline actions
+    return helpaiOrchestrator.getRegisteredActions?.()?.length || 45;
   }
 }
 
@@ -1277,6 +2725,366 @@ class AIBrainActionRegistry {
 export const aiBrainActionRegistry = new AIBrainActionRegistry();
 
 // Initialize on import
-aiBrainActionRegistry.initialize().catch(console.error);
+aiBrainActionRegistry.initialize().then(async () => {
+  registerAutonomousSchedulingBrainActions();
+  const { registerFinanceOrchestratorActions } = await import('./trinityFinanceOrchestrator');
+  registerFinanceOrchestratorActions();
+  const { registerInfraActions } = await import('./trinityInfraActions');
+  registerInfraActions();
+  const { registerInvoiceEmailActions } = await import('./trinityInvoiceEmailActions');
+  registerInvoiceEmailActions();
+  const { registerReportAnalyticsActions } = await import('./trinityReportAnalyticsActions');
+  registerReportAnalyticsActions();
+  const { registerOpsActions } = await import('./trinityOpsActions');
+  registerOpsActions();
+  const { registerExtendedActions } = await import('./trinityExtendedActions');
+  registerExtendedActions();
+  const { registerScheduleTimeclockActions } = await import('./trinityScheduleTimeclockActions');
+  registerScheduleTimeclockActions();
+  const { registerTimesheetPayrollCycleActions } = await import('./trinityTimesheetPayrollCycleActions');
+  registerTimesheetPayrollCycleActions();
+  const { registerComplianceIncidentActions } = await import('./trinityComplianceIncidentActions');
+  registerComplianceIncidentActions();
+  const { registerCommsProactiveActions } = await import('./trinityCommsProactiveActions');
+  registerCommsProactiveActions();
+  const { registerPostOrdersSafetyActions } = await import('./trinityPostOrdersSafetyActions');
+  registerPostOrdersSafetyActions();
+  const { registerCashFlowActions } = await import('./trinityCashFlowActions');
+  registerCashFlowActions();
+  const { registerHiringPipelineActions } = await import('./trinityHiringPipelineActions');
+  registerHiringPipelineActions();
+  const { registerDelegationTrackerActions } = await import('./trinityDelegationTrackerActions');
+  registerDelegationTrackerActions();
+  const { registerShiftConfirmationActions } = await import('./trinityShiftConfirmationActions');
+  registerShiftConfirmationActions();
+  const { registerChangePropagationActions } = await import('./trinityChangePropagationActions');
+  registerChangePropagationActions();
+
+  const { registerSubcontractorActions } = await import('./trinitySubcontractorActions');
+  await registerSubcontractorActions();
+  const { registerDrugTestingActions } = await import('./trinityDrugTestingActions');
+  registerDrugTestingActions();
+  const { registerEmergencyStaffingActions } = await import('./trinityEmergencyStaffingActions');
+  registerEmergencyStaffingActions();
+  const { registerExternalIntelligenceActions } = await import('./trinityExternalIntelligenceActions');
+  registerExternalIntelligenceActions();
+  const { registerMilestoneActions } = await import('./trinityMilestoneActions');
+  registerMilestoneActions();
+  const { registerSchedulingPlatformActions } = await import('./trinitySchedulingPlatformActions');
+  registerSchedulingPlatformActions();
+  const { registerWorkspaceTimeActions } = await import('./trinityWorkspaceTimeActions');
+  registerWorkspaceTimeActions();
+  const { registerIntelligenceLayerActions } = await import('./trinityIntelligenceLayers');
+  registerIntelligenceLayerActions();
+
+  const { registerTaxComplianceActions } = await import('./trinityTaxComplianceActions');
+  registerTaxComplianceActions();
+
+  // Agent Spawning System (Phase 4)
+  const { registerAgentSpawningActions } = await import('./trinityAgentSpawningActions');
+  registerAgentSpawningActions();
+
+  // License Management (Phase 17)
+  const { registerLicenseActions } = await import('./trinityLicenseActions');
+  registerLicenseActions();
+
+  // Portal Actions (Phase 20) — portal.client.query, portal.officer.query, portal.auditor.status, portal.send_link
+  const { registerPortalActions } = await import('./trinityPortalActions');
+  registerPortalActions();
+
+  // Helpdesk Actions (Phase 23B) — helpdesk.ticket.create, helpdesk.ticket.query, helpdesk.ticket.resolve, helpdesk.faq.search, helpdesk.faq.suggest, helpdesk.workspace.history
+  const { registerHelpdeskActions } = await import('./trinityHelpdeskActions');
+  registerHelpdeskActions();
+
+  // Performance Management Actions (Phase 35J) — performance.summary, performance.flag, performance.commend
+  const { registerTrinityPerformanceActions } = await import('./trinityPerformanceActions');
+  await registerTrinityPerformanceActions();
+
+  // Phase 58 — Missing Domain Actions: voice, forms, esignature, proposals, hr_docs
+  const { registerMissingDomainActions } = await import('./trinityMissingDomainActions');
+  registerMissingDomainActions();
+}).catch((e: any) => log.error(e instanceof Error ? e.message : String(e)));
 
 export default aiBrainActionRegistry;
+
+// ============================================================================
+// AUTONOMOUS SCHEDULING ACTIONS (Trinity Intelligent Scheduling Brain)
+// ============================================================================
+
+// NOTE: Autonomous scheduling actions are registered via registerAutonomousSchedulingBrainActions()
+// This provides Trinity with day-by-day systematic scheduling, demand prioritization,
+// historical pattern learning, and continuous background automation.
+
+export async function registerAutonomousSchedulingBrainActions(): Promise<void> {
+  const { trinityAutonomousScheduler } = await import('../scheduling/trinityAutonomousScheduler');
+  
+  const executeAutonomousScheduling: ActionHandler = {
+    actionId: 'scheduling.execute_autonomous',
+    name: 'Execute Autonomous Scheduling',
+    category: 'scheduling',
+    description: 'Run Trinity intelligent autonomous scheduling with day-by-day processing, demand prioritization, and historical pattern learning. Processes current day first, then tomorrow, then rest of week.',
+    requiredRoles: ['manager', 'owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const result = await trinityAutonomousScheduler.executeAutonomousScheduling({
+          workspaceId: request.workspaceId!,
+          userId: request.userId || 'trinity-brain',
+          mode: request.payload?.mode || 'current_week',
+          prioritizeBy: request.payload?.prioritizeBy || 'urgency',
+          useContractorFallback: request.payload?.useContractorFallback ?? true,
+          maxShiftsPerEmployee: request.payload?.maxShiftsPerEmployee || 0,
+          respectAvailability: request.payload?.respectAvailability ?? true,
+        });
+        return createResult(request.actionId, result.success, result.summary, result, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)) || 'Autonomous scheduling failed', null, start);
+      }
+    },
+  };
+  
+  const getSchedulingStatus: ActionHandler = {
+    actionId: 'scheduling.get_autonomous_status',
+    name: 'Get Autonomous Scheduling Status',
+    category: 'scheduling',
+    description: 'Get the current status of Trinity autonomous scheduling daemon and session progress',
+    requiredRoles: ['manager', 'owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const { autonomousSchedulingDaemon } = await import('../scheduling/autonomousSchedulingDaemon');
+        const status = await autonomousSchedulingDaemon.getStatus();
+        return createResult(request.actionId, true, 'Autonomous scheduling status retrieved', status, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+      }
+    },
+  };
+  
+  const enableBackgroundScheduling: ActionHandler = {
+    actionId: 'scheduling.enable_background_daemon',
+    name: 'Enable Background Scheduling Daemon',
+    category: 'scheduling',
+    description: 'Enable Trinity continuous background scheduling daemon that automatically fills open shifts',
+    requiredRoles: ['owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const { autonomousSchedulingDaemon } = await import('../scheduling/autonomousSchedulingDaemon');
+        await autonomousSchedulingDaemon.start(request.workspaceId!);
+        return createResult(request.actionId, true, 'Background scheduling daemon enabled', { running: true }, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+      }
+    },
+  };
+  
+  const disableBackgroundScheduling: ActionHandler = {
+    actionId: 'scheduling.disable_background_daemon',
+    name: 'Disable Background Scheduling Daemon',
+    category: 'scheduling',
+    description: 'Disable Trinity continuous background scheduling daemon',
+    requiredRoles: ['owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const { autonomousSchedulingDaemon } = await import('../scheduling/autonomousSchedulingDaemon');
+        await autonomousSchedulingDaemon.stop(request.workspaceId!);
+        return createResult(request.actionId, true, 'Background scheduling daemon disabled', { running: false }, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+      }
+    },
+  };
+  
+  const importHistoricalPatterns: ActionHandler = {
+    actionId: 'scheduling.import_historical_patterns',
+    name: 'Import Historical Scheduling Patterns',
+    category: 'scheduling',
+    description: 'Import historical scheduling data from CSV to train Trinity on past assignment patterns and employee preferences',
+    requiredRoles: ['owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const { historicalScheduleImporter } = await import('../scheduling/historicalScheduleImporter');
+        const result = await historicalScheduleImporter.importFromCSV(
+          request.workspaceId!,
+          request.payload?.csvData || '',
+          request.payload?.options
+        );
+        return createResult(request.actionId, result.success, result.summary, result, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+      }
+    },
+  };
+  
+  const createRecurringTemplate: ActionHandler = {
+    actionId: 'scheduling.create_recurring_template',
+    name: 'Create Recurring Schedule Template',
+    category: 'scheduling',
+    description: 'Create a weekly recurring schedule template that I\'ll automatically apply each week',
+    requiredRoles: ['manager', 'owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const { recurringScheduleTemplates } = await import('../scheduling/recurringScheduleTemplates');
+        const result = await recurringScheduleTemplates.createTemplate(
+          request.workspaceId!,
+          request.payload?.template
+        );
+        return createResult(request.actionId, true, 'Recurring template created', result, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
+      }
+    },
+  };
+  
+  // Register all autonomous scheduling actions with Trinity's brain
+  helpaiOrchestrator.registerAction(executeAutonomousScheduling);
+  helpaiOrchestrator.registerAction(getSchedulingStatus);
+  helpaiOrchestrator.registerAction(enableBackgroundScheduling);
+  helpaiOrchestrator.registerAction(disableBackgroundScheduling);
+  helpaiOrchestrator.registerAction(importHistoricalPatterns);
+  helpaiOrchestrator.registerAction(createRecurringTemplate);
+  
+  log.info('[AI Brain] Autonomous scheduling actions registered (6 new actions)');
+}
+
+// ============================================================================
+// PHASE 57 — UNIVERSAL ENTITY RESOLVER ACTIONS
+// Allows Trinity to resolve any canonical human-readable ID to its full record
+// ============================================================================
+
+export function registerUniversalIdActions(): void {
+  // ── universal.resolve_entity ───────────────────────────────────────────────
+  const resolveEntityAction: ActionHandler = {
+    actionId: 'universal.resolve_entity',
+    name: 'Resolve Entity by Canonical ID',
+    category: 'intelligence' as ActionCategory,
+    description: 'Resolve any human-readable canonical ID (EMP-ACM-00034, CLT-ACM-00891, SHF-20260329-00612, etc.) to its full database record and display name',
+    requiredRoles: ['officer', 'supervisor', 'manager', 'owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const humanId = request.payload?.id || request.payload?.humanId || request.payload?.canonical_id;
+        if (!humanId) {
+          return createResult(request.actionId, false, 'No ID provided. Please supply a canonical ID like EMP-ACM-00034.', null, start);
+        }
+        const { resolveEntityById } = await import('../universalIdService');
+        const entity = await resolveEntityById(humanId, request.workspaceId);
+        if (!entity) {
+          return createResult(request.actionId, false, `No entity found for ID: ${humanId}`, null, start);
+        }
+        return createResult(request.actionId, true, `Found ${entity.type}: ${entity.displayName} (${entity.humanId})`, entity, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, error.message, null, start);
+      }
+    },
+  };
+
+  // ── universal.lookup_by_id ─────────────────────────────────────────────────
+  const lookupByIdAction: ActionHandler = {
+    actionId: 'universal.lookup_by_id',
+    name: 'Universal ID Lookup',
+    category: 'intelligence' as ActionCategory,
+    description: 'Look up and navigate to any entity using its canonical ID. Works for officers, clients, shifts, invoices, tickets, clock records, and documents.',
+    requiredRoles: ['officer', 'supervisor', 'manager', 'owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const rawInput = request.payload?.query || request.payload?.id || request.payload?.humanId || '';
+        // Extract canonical ID pattern from free text (e.g. "look up EMP-ACM-00034")
+        const match = rawInput.toUpperCase().match(/(ORG|CLT|EMP|USR|SHF|CLK|DOC|INV|TKT)-[A-Z0-9-]+/);
+        const humanId = match ? match[0] : rawInput.toUpperCase().trim();
+        if (!humanId) {
+          return createResult(request.actionId, false, 'Please provide a canonical ID to look up.', null, start);
+        }
+        const { resolveEntityById } = await import('../universalIdService');
+        const entity = await resolveEntityById(humanId, request.workspaceId);
+        if (!entity) {
+          return createResult(request.actionId, false, `Could not find any entity with ID "${humanId}". Please check the ID and try again.`, null, start);
+        }
+        const deepLinks: Record<string, string> = {
+          workspace: `/settings/organization`,
+          client: `/clients/${entity.id}`,
+          employee: `/officers/${entity.id}`,
+          user: `/settings/profile`,
+          shift: `/schedule?shiftId=${entity.id}`,
+          time_entry: `/timeclock?entryId=${entity.id}`,
+          document: `/documents/${entity.id}`,
+          invoice: `/invoices/${entity.id}`,
+          support_ticket: `/help-desk/tickets/${entity.id}`,
+        };
+        const deepLink = deepLinks[entity.type] || null;
+        return createResult(request.actionId, true,
+          `Found ${entity.type}: **${entity.displayName}** (${entity.humanId})${deepLink ? ` — [View →](${deepLink})` : ''}`,
+          { ...entity, deepLink }, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, error.message, null, start);
+      }
+    },
+  };
+
+  // ── universal.backfill_ids ─────────────────────────────────────────────────
+  // Root-admin only: trigger backfill for any remaining NULL canonical IDs
+  const backfillIdsAction: ActionHandler = {
+    actionId: 'universal.backfill_ids',
+    name: 'Backfill Missing Canonical IDs',
+    category: 'intelligence' as ActionCategory,
+    description: 'Root admin: scan all entities for missing canonical IDs and generate them',
+    requiredRoles: ['root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const { backfillOrgIds, backfillClientNumbers, backfillEmployeeNumbers, backfillUserNumbers } = await import('../universalIdService');
+        const [orgs, clients, employees, users] = await Promise.all([
+          backfillOrgIds(),
+          backfillClientNumbers(),
+          backfillEmployeeNumbers(),
+          backfillUserNumbers(),
+        ]);
+        const summary = `Backfilled: ${orgs} orgs, ${clients} clients, ${employees} employees, ${users} users`;
+        return createResult(request.actionId, true, summary, { orgs, clients, employees, users }, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, error.message, null, start);
+      }
+    },
+  };
+
+  // ── system.resolve_id ─────────────────────────────────────────────────────
+  // Canonical alias required by Phase 57 spec and Phase 56 voice system
+  const systemResolveIdAction: ActionHandler = {
+    actionId: 'system.resolve_id',
+    name: 'Resolve Canonical ID',
+    category: 'intelligence' as ActionCategory,
+    description: 'Resolve any human-readable canonical ID (EMP-, CLT-, ORG-, INV-, DOC-, CLK-, SHF-) to its full entity record. Used by voice, interview, and Trinity pipelines.',
+    requiredRoles: ['officer', 'supervisor', 'manager', 'owner', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const start = Date.now();
+      try {
+        const rawInput = request.payload?.id || request.payload?.humanId || request.payload?.canonical_id || request.payload?.query || '';
+        const match = String(rawInput).toUpperCase().match(/(ORG|CLT|EMP|USR|SHF|CLK|DOC|INV|TKT|INC)-[A-Z0-9-]+/);
+        const humanId = match ? match[0] : String(rawInput).toUpperCase().trim();
+        if (!humanId) {
+          return createResult(request.actionId, false, 'No ID provided. Provide a canonical ID like EMP-ACM-00034 or CLT-XX-00071.', null, start);
+        }
+        const { resolveEntityById } = await import('../universalIdService');
+        const entity = await resolveEntityById(humanId, request.workspaceId);
+        if (!entity) {
+          return createResult(request.actionId, false, `No entity found for ID: ${humanId}`, null, start);
+        }
+        return createResult(request.actionId, true, `Resolved ${entity.type}: ${entity.displayName} (${entity.humanId})`, entity, start);
+      } catch (error: any) {
+        return createResult(request.actionId, false, error.message, null, start);
+      }
+    },
+  };
+
+  helpaiOrchestrator.registerAction(resolveEntityAction);
+  helpaiOrchestrator.registerAction(lookupByIdAction);
+  helpaiOrchestrator.registerAction(backfillIdsAction);
+  helpaiOrchestrator.registerAction(systemResolveIdAction);
+
+  log.info('[AI Brain] Phase 57 Universal ID Resolver actions registered (4 actions: universal.resolve_entity, universal.lookup_by_id, universal.backfill_ids, system.resolve_id)');
+}

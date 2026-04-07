@@ -1,0 +1,40 @@
+# IMMEDIATE FIXES — Schedule Generation Issues
+
+## Paste this to Replit to address what's visible in the current screenshot
+
+---
+
+**Three issues visible in the schedule right now. Fix in this order:**
+
+### Issue 1: Duplicate shifts in the same generation batch
+
+Metro Transit Authority Hub has 2 identical shifts at 11:00PM-5:00PM Monday.
+Dallas Warehouse District has 2 identical shifts at 12:00PM-8:00PM Monday.
+North Star Data Center has 2 identical shifts at 10:00AM-6:00PM Monday.
+Grand Plaza Hotel has 2 identical shifts at 10:00AM-6:00PM Monday.
+Westfield Regional Mall has 3 identical shifts at 3:00AM-4:00PM Monday.
+
+The generator's demand-cap dedup is not working within the same batch. It checks for EXISTING shifts in the database, but when it generates multiple shifts in one batch, each new shift isn't visible to the others yet. The fix: after generating a shift for a client/day/time slot, immediately count it toward the demand cap WITHIN the current batch, not just against what's already in the DB.
+
+**Also check:** Are these duplicates because the client's staffing demand actually requires 2-3 guards at that time? If Metro Transit needs 2 guards for the AM shift, then 2 shifts is correct. If they only need 1, it's a bug. The generator must read the client's `minimumStaffing` or `guardsNeeded` field and create exactly that many shifts per slot — no more, no less.
+
+### Issue 2: Shift duration compliance
+
+Westfield Regional Mall: 3:00AM-4:00PM = 13 hour shift
+Metro Transit Authority Hub: 11:00PM-5:00PM = 18 hour shift
+
+Per the Trinity Orchestration Spec Section 2.2, compliance is the #1 priority. No shift should exceed 12 hours without explicit override. The generator must:
+- Cap shift duration at 12 hours maximum by default
+- If a client's schedule requires coverage beyond 12 hours, split it into two shifts (e.g., 3AM-3PM becomes 3AM-9AM + 9AM-3PM)
+- Flag any client demanding 18-hour continuous coverage as a compliance risk
+
+### Issue 3: "Auto-fill for 0 shifts" despite 385 pending
+
+Trinity shows "Processing 0/0 — Starting auto-fill for 0 shifts" but there are 385 pending unfilled shifts. The auto-fill function is finding 0 eligible shifts to fill. Investigate:
+- Is it filtering by status and only looking for 'open' (which doesn't exist in the enum)?
+- Is it looking for shifts with a specific flag that these don't have?
+- Is the query returning empty because of a workspace filter mismatch?
+
+Find the auto-fill query, log what it's actually selecting, and fix the filter so it finds the 385 unfilled shifts.
+
+**Do NOT work on any mobile UX tasks. Fix these three generation/compliance issues only.**

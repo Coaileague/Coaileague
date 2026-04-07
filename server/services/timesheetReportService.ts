@@ -81,9 +81,8 @@ function calculateHours(clockIn: Date | null, clockOut: Date | null, breakMinute
 }
 
 async function getBreakMinutesForEntry(timeEntryId: string): Promise<number> {
-  const breaks = await db.query.timeEntryBreaks.findMany({
-    where: eq(timeEntryBreaks.timeEntryId, timeEntryId),
-  });
+  const breaks = await db.select().from(timeEntryBreaks)
+    .where(eq(timeEntryBreaks.timeEntryId, timeEntryId));
   
   let totalMinutes = 0;
   for (const brk of breaks) {
@@ -120,19 +119,29 @@ export async function generateTimesheetReport(params: TimesheetReportParams): Pr
     conditions.push(eq(timeEntries.status, status));
   }
 
-  const entries = await db.query.timeEntries.findMany({
-    where: and(...conditions),
-    with: {
-      employee: true,
-      client: true,
-      shift: true,
-    },
-    orderBy: [desc(timeEntries.clockIn)],
-  });
+  const rawEntries = await db.select({
+    id: timeEntries.id,
+    employeeId: timeEntries.employeeId,
+    clientId: timeEntries.clientId,
+    shiftId: timeEntries.shiftId,
+    clockIn: timeEntries.clockIn,
+    clockOut: timeEntries.clockOut,
+    status: timeEntries.status,
+    approvedAt: timeEntries.approvedAt,
+    approvedBy: timeEntries.approvedBy,
+    employeeFirstName: employees.firstName,
+    employeeLastName: employees.lastName,
+    clientName: clients.companyName,
+  })
+    .from(timeEntries)
+    .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
+    .leftJoin(clients, eq(timeEntries.clientId, clients.id))
+    .where(and(...conditions))
+    .orderBy(desc(timeEntries.clockIn));
 
   const reportEntries: TimesheetReportEntry[] = [];
   
-  for (const entry of entries) {
+  for (const entry of rawEntries) {
     const breakMinutes = await getBreakMinutesForEntry(entry.id);
     const { total, regular, overtime } = calculateHours(
       entry.clockIn,
@@ -140,12 +149,15 @@ export async function generateTimesheetReport(params: TimesheetReportParams): Pr
       breakMinutes
     );
 
+    const empFirstName = entry.employeeFirstName || '';
+    const empLastName = entry.employeeLastName || '';
+
     reportEntries.push({
       id: entry.id,
       employeeId: entry.employeeId,
-      employeeName: entry.employee ? `${entry.employee.firstName} ${entry.employee.lastName}` : 'Unknown',
+      employeeName: (empFirstName || empLastName) ? `${empFirstName} ${empLastName}`.trim() : 'Unknown',
       clientId: entry.clientId,
-      clientName: entry.client?.companyName || null,
+      clientName: entry.clientName || null,
       shiftId: entry.shiftId,
       date: entry.clockIn ? format(entry.clockIn, 'yyyy-MM-dd') : '',
       clockInTime: entry.clockIn ? format(entry.clockIn, 'HH:mm') : null,
@@ -156,7 +168,7 @@ export async function generateTimesheetReport(params: TimesheetReportParams): Pr
       overtimeHours: overtime,
       status: entry.status || 'pending',
       notes: null,
-      approvedAt: entry.approvedAt ? entry.approvedAt.toISOString() : null,
+      approvedAt: entry.approvedAt ? new Date(entry.approvedAt).toISOString() : null,
       approvedBy: entry.approvedBy,
     });
   }

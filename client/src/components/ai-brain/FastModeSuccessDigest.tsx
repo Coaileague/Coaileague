@@ -103,9 +103,9 @@ export function FastModeSuccessDigest({
       animate={{ opacity: 1, y: 0 }}
       className={className}
     >
-      <Card className={`border-2 ${digest.slaMet ? 'border-green-500/30 bg-green-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+      <Card className={`border ${digest.slaMet ? 'border-green-500/30 bg-green-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="h-5 w-5 text-amber-500" />
               Fast Mode Complete
@@ -226,7 +226,7 @@ export function FastModeSuccessDigest({
                   <Button
                     key={index}
                     variant="outline"
-                    className={`w-full justify-between ${getPriorityColor(action.priority)}`}
+                    className={`w-full justify-between gap-2 ${getPriorityColor(action.priority)}`}
                     onClick={() => onActionClick?.(action.action)}
                     data-testid={`action-${action.action}`}
                   >

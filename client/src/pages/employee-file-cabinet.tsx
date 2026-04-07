@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,27 +7,43 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Download, Eye, Lock, Unlock, CheckCircle, XCircle, Clock, Shield, AlertTriangle, Printer, Share2, FileDown, History } from "lucide-react";
+import { FileText, Download, Eye, Lock, Unlock, CheckCircle, XCircle, Clock, Shield, AlertTriangle, Printer, Share2, FileDown, History, Pen, Send, ChevronLeft } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 // Document type labels
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  cover_sheet: "Officer File Cover Sheet",
+  guard_card: "Security Guard Card",
+  guard_card_copy: "Guard Card Copy (Front & Back, Color)",
+  zero_policy_drug_form: "Zero Tolerance Drug Policy Form",
+  drug_test: "Drug Screening Results",
   government_id: "Government ID",
+  photo_id_copy: "Photo ID Copy (Front & Back, Color)",
   passport: "Passport",
   ssn_card: "Social Security Card",
   i9_form: "I-9 Form",
   w4_form: "W-4 Form",
   w9_form: "W-9 Form",
+  tax_form: "Tax Withholding Form",
   certification: "Professional Certification",
   license: "Professional License",
   background_check: "Background Check",
-  drug_test: "Drug Test Results",
+  training_certificate: "Training Certificate",
+  firearms_permit: "Firearms Permit",
+  firearms_qualification: "Firearms Qualification",
+  supervisor_training: "Supervisor Training",
+  social_security_card: "Social Security Card",
+  direct_deposit_form: "Direct Deposit Authorization",
+  policy_acknowledgment: "Policy Acknowledgment",
   employment_contract: "Employment Contract",
   sop_acknowledgement: "SOP Acknowledgement",
   policy_signature: "Policy Signature",
@@ -51,7 +68,7 @@ function DocumentCard({ document, onViewAccess, onLogAccess }: any) {
   return (
     <Card className="hover-elevate" data-testid={`document-card-${document.id}`}>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <FileText className="h-5 w-5 text-primary" />
@@ -167,17 +184,17 @@ function DocumentCard({ document, onViewAccess, onLogAccess }: any) {
 
 function AccessLogDialog({ open, onOpenChange, documentId }: { open: boolean; onOpenChange: (open: boolean) => void; documentId: string | null }) {
   const { data: accessLogs, isLoading } = useQuery<any[]>({
-    queryKey: [`/api/hireos/documents/${documentId}/access-logs`],
+    queryKey: ['/api/hireos/documents', documentId, 'access-logs'],
     enabled: open && !!documentId,
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="full" className="max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>Document Access Audit Trail</DialogTitle>
-          <DialogDescription>Complete record of all access events for compliance</DialogDescription>
-        </DialogHeader>
+    <UniversalModal open={open} onOpenChange={onOpenChange}>
+      <UniversalModalContent size="full" className="max-h-[80vh]">
+        <UniversalModalHeader>
+          <UniversalModalTitle>Document Access Audit Trail</UniversalModalTitle>
+          <UniversalModalDescription>Complete record of all access events for compliance</UniversalModalDescription>
+        </UniversalModalHeader>
 
         <ScrollArea className="h-[500px]">
           {isLoading ? (
@@ -189,7 +206,7 @@ function AccessLogDialog({ open, onOpenChange, documentId }: { open: boolean; on
               {accessLogs.map((log: any) => (
                 <Card key={log.id} data-testid={`access-log-${log.id}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           {log.accessType === 'view' && <Eye className="h-4 w-4 text-blue-500" />}
@@ -224,8 +241,53 @@ function AccessLogDialog({ open, onOpenChange, documentId }: { open: boolean; on
             </div>
           )}
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
+  );
+}
+
+function PendingSignatureCard({ sig, onSign }: { sig: any; onSign: (sig: any) => void }) {
+  return (
+    <Card className="hover-elevate border-amber-200 dark:border-amber-900" data-testid={`pending-sig-${sig.id}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+            <Pen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium truncate">{sig.document?.fileName || 'Document'}</h4>
+            <p className="text-sm text-muted-foreground truncate">
+              {sig.document?.description || 'Signature requested'}
+            </p>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <Badge variant="outline" className="text-xs">
+                <Clock className="w-3 h-3 mr-1" /> Awaiting Your Signature
+              </Badge>
+              {sig.requestedAt && (
+                <span className="text-xs text-muted-foreground">
+                  Requested {format(new Date(sig.requestedAt), "MMM d, yyyy")}
+                </span>
+              )}
+            </div>
+            {sig.expiresAt && (
+              <div className="mt-1">
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  Expires {format(new Date(sig.expiresAt), "MMM d, yyyy")}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2 mt-3 pt-3 border-t">
+          <Button size="sm" onClick={() => onSign(sig)} data-testid={`button-sign-pending-${sig.id}`}>
+            <Pen className="w-4 h-4 mr-1" /> Sign Now
+          </Button>
+          <Button size="sm" variant="ghost" data-testid={`button-view-pending-${sig.id}`}>
+            <Eye className="w-4 h-4 mr-1" /> Preview
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -237,23 +299,52 @@ export default function EmployeeFileCabinet() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  const [showSignDialog, setShowSignDialog] = useState(false);
+  const [signingItem, setSigningItem] = useState<any>(null);
+  const [signatureData, setSignatureData] = useState("");
+  const canvasRef = useState<HTMLCanvasElement | null>(null);
+
   const employeeId = params?.employeeId;
 
-  // Fetch employee data
   const { data: employee } = useQuery<any>({
-    queryKey: [`/api/employees/${employeeId}`],
+    queryKey: ['/api/employees', employeeId],
     enabled: !!employeeId,
   });
 
-  // Fetch documents
+  const { data: pendingSignatures } = useQuery<any>({
+    queryKey: ["/api/documents/my/pending-signatures"],
+  });
+
+  const signMutation = useMutation({
+    mutationFn: async ({ signatureRequestId, signatureData: sigData }: { signatureRequestId: string; signatureData: string }) => {
+      return await apiRequest('POST', `/api/documents/${signatureRequestId}/sign-internal`, { signatureData: sigData, signatureType: "drawn" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents/my/pending-signatures"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hireos/documents', employeeId] });
+      setShowSignDialog(false);
+      setSigningItem(null);
+      setSignatureData("");
+      toast({ title: "Document signed successfully" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Signing failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleSignPending = (sig: any) => {
+    setSigningItem(sig);
+    setShowSignDialog(true);
+  };
+
   const { data: documents, isLoading: isLoadingDocs } = useQuery<any[]>({
-    queryKey: [`/api/hireos/documents/${employeeId}`, filterType, filterStatus],
+    queryKey: ['/api/hireos/documents', employeeId, filterType, filterStatus],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filterType !== "all") params.append("documentType", filterType);
       if (filterStatus !== "all") params.append("status", filterStatus);
       
-      const response = await fetch(`/api/hireos/documents/${employeeId}?${params.toString()}`, {
+      const response = await secureFetch(`/api/hireos/documents/${employeeId}?${params.toString()}`, {
         credentials: 'include'
       });
       if (!response.ok) throw new Error("Failed to fetch documents");
@@ -265,10 +356,10 @@ export default function EmployeeFileCabinet() {
   // Log document access
   const logAccessMutation = useMutation({
     mutationFn: async ({ documentId, accessType }: { documentId: string; accessType: string }) => {
-      return await apiRequest(`/api/hireos/documents/${documentId}/access`, 'POST', { accessType });
+      return await apiRequest('POST', `/api/hireos/documents/${documentId}/access`, { accessType });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/hireos/documents/${variables.documentId}/access-logs`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hireos/documents', variables.documentId, 'access-logs'] });
       
       if (variables.accessType === 'view') {
         toast({
@@ -281,6 +372,13 @@ export default function EmployeeFileCabinet() {
           description: "Download action recorded in audit trail",
         });
       }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Log Access Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -314,37 +412,52 @@ export default function EmployeeFileCabinet() {
     setSelectedDocId(documentId);
   };
 
+  const errorConfig: CanvasPageConfig = {
+    id: "employee-file-cabinet-error",
+    title: "Employee File Cabinet",
+    subtitle: "Invalid employee ID",
+    category: "operations",
+  };
+
   if (!employeeId) {
     return (
-      <div className="container mx-auto py-6">
+      <CanvasHubPage config={errorConfig}>
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>Invalid employee ID</AlertDescription>
         </Alert>
-      </div>
+      </CanvasHubPage>
     );
   }
 
+  const actionButton = (
+    <Button onClick={() => generatePDFMutation.mutate()} data-testid="button-generate-pdf">
+      <FileDown className="h-4 w-4 mr-2" />
+      Generate Onboarding Packet PDF
+    </Button>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: "employee-file-cabinet",
+    title: "Employee File Cabinet",
+    subtitle: employee ? `${employee.firstName} ${employee.lastName} - ${employee.email}` : undefined,
+    category: "operations",
+    headerActions: actionButton,
+  };
+
   return (
-    <div className="container mx-auto py-6 max-w-7xl">
+    <CanvasHubPage config={pageConfig}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => window.history.back()}
+        data-testid="button-back-file-cabinet"
+        className="mb-4 gap-1"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </Button>
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <FileText className="h-8 w-8" />
-              Employee File Cabinet
-            </h1>
-            {employee && (
-              <p className="text-muted-foreground mt-1">
-                {employee.firstName} {employee.lastName} - {employee.email}
-              </p>
-            )}
-          </div>
-          <Button onClick={() => generatePDFMutation.mutate()} data-testid="button-generate-pdf">
-            <FileDown className="h-4 w-4 mr-2" />
-            Generate Onboarding Packet PDF
-          </Button>
-        </div>
         <Alert>
           <Shield className="h-4 w-4" />
           <AlertDescription>
@@ -392,7 +505,26 @@ export default function EmployeeFileCabinet() {
         </CardContent>
       </Card>
 
-      {/* Documents */}
+      {pendingSignatures?.data && pendingSignatures.data.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Pen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h3 className="text-lg font-semibold">Pending Signatures</h3>
+            <Badge variant="outline" className="text-xs">{pendingSignatures.data.length}</Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pendingSignatures.data.map((sig: any) => (
+              <PendingSignatureCard
+                key={sig.id}
+                sig={sig}
+                onSign={handleSignPending}
+              />
+            ))}
+          </div>
+          <Separator className="mt-6" />
+        </div>
+      )}
+
       {isLoadingDocs ? (
         <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
@@ -427,6 +559,92 @@ export default function EmployeeFileCabinet() {
         onOpenChange={(open) => !open && setSelectedDocId(null)}
         documentId={selectedDocId}
       />
-    </div>
+
+      <UniversalModal open={showSignDialog} onOpenChange={(open) => {
+        setShowSignDialog(open);
+        if (!open) { setSigningItem(null); setSignatureData(""); }
+      }}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Sign Document</UniversalModalTitle>
+            <UniversalModalDescription>
+              {signingItem?.document?.fileName ? `Sign "${signingItem.document.fileName}"` : "Draw your signature below"}
+            </UniversalModalDescription>
+          </UniversalModalHeader>
+          <div className="space-y-4">
+            <div className="border rounded-lg p-2 bg-white dark:bg-gray-900">
+              <canvas
+                id="employee-sign-canvas"
+                width={400}
+                height={150}
+                className="w-full cursor-crosshair"
+                ref={(el) => {
+                  if (el) {
+                    const ctx = el.getContext("2d");
+                    if (ctx) {
+                      el.onmousedown = (e) => {
+                        ctx.beginPath();
+                        ctx.moveTo(e.offsetX, e.offsetY);
+                        el.dataset.drawing = "true";
+                      };
+                      el.onmousemove = (e) => {
+                        if (el.dataset.drawing !== "true") return;
+                        ctx.lineTo(e.offsetX, e.offsetY);
+                        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--foreground').trim() ? '#000' : '#000';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                      };
+                      el.onmouseup = () => {
+                        el.dataset.drawing = "false";
+                        setSignatureData(el.toDataURL());
+                      };
+                      el.onmouseleave = () => {
+                        if (el.dataset.drawing === "true") {
+                          el.dataset.drawing = "false";
+                          setSignatureData(el.toDataURL());
+                        }
+                      };
+                    }
+                  }
+                }}
+                data-testid="canvas-employee-signature"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const canvas = document.getElementById("employee-sign-canvas") as HTMLCanvasElement;
+                if (canvas) {
+                  const ctx = canvas.getContext("2d");
+                  ctx?.clearRect(0, 0, canvas.width, canvas.height);
+                  setSignatureData("");
+                }
+              }}
+              data-testid="button-clear-employee-sig"
+            >
+              Clear
+            </Button>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSignDialog(false)} data-testid="button-cancel-sign">Cancel</Button>
+            <Button
+              disabled={!signatureData || signMutation.isPending}
+              onClick={() => {
+                if (signingItem && signatureData) {
+                  signMutation.mutate({
+                    signatureRequestId: signingItem.documentId || signingItem.id,
+                    signatureData,
+                  });
+                }
+              }}
+              data-testid="button-submit-employee-sig"
+            >
+              {signMutation.isPending ? "Signing..." : "Sign Document"}
+            </Button>
+          </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

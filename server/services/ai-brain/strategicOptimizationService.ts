@@ -15,8 +15,16 @@
  */
 
 import { db } from '../../db';
-import { employees, clients, employeeMetrics, shifts, timeEntries } from '@shared/schema';
+import {
+  employees,
+  clients,
+  shifts,
+  timeEntries
+} from '@shared/schema';
 import { eq, and, gte, lte, desc, sql, count, avg } from 'drizzle-orm';
+
+import { createLogger } from '../../lib/logger';
+const log = createLogger('strategicOptimizationService');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -63,7 +71,7 @@ export interface ClientBusinessMetrics {
   clientName: string;
   
   // Tier (Strategic prioritization)
-  tier: 'enterprise' | 'premium' | 'standard' | 'trial';
+  strategicTier: 'enterprise' | 'premium' | 'standard' | 'trial';
   tierScore: number;
   
   // Financial Value
@@ -584,7 +592,7 @@ class StrategicOptimizationService {
           clientLatitude: client.latitude,
           clientLongitude: client.longitude,
           employeeScore: employee.overallScore,
-          clientTier: client.tier,
+          clientTier: client.strategicTier,
           clientIsAtRisk: client.isAtRisk,
           employeeNoShows: employee.noShows,
           employeeCallIns: employee.callIns,
@@ -633,13 +641,12 @@ class StrategicOptimizationService {
    * Get enriched employee metrics for strategic scheduling
    */
   async getEmployeeBusinessMetrics(workspaceId: string): Promise<EmployeeBusinessMetrics[]> {
+    // employee_metrics table merged into employees JSONB blobs
     const results = await db
       .select({
         employee: employees,
-        metrics: employeeMetrics,
       })
       .from(employees)
-      .leftJoin(employeeMetrics, eq(employees.id, employeeMetrics.employeeId))
       .where(and(
         eq(employees.workspaceId, workspaceId),
         eq(employees.isActive, true)
@@ -647,7 +654,7 @@ class StrategicOptimizationService {
 
     return results.map(r => {
       const emp = r.employee;
-      const m = r.metrics;
+      const m: Record<string, any> | null = null; // employee_metrics merged into employees JSONB
 
       const noShows = m?.noShowCount || 0;
       const callIns = m?.lastMinuteCancellations || 0;
@@ -731,7 +738,7 @@ class StrategicOptimizationService {
       return {
         clientId: c.id,
         clientName: c.companyName || `${c.firstName} ${c.lastName}`,
-        tier,
+        strategicTier: tier,
         tierScore,
         monthlyRevenue,
         lifetimeValue: parseFloat(c.lifetimeValue?.toString() || '0'),
@@ -783,7 +790,7 @@ class StrategicOptimizationService {
         totalEmployees: employeeMetrics.length,
         topPerformers: employeeMetrics.filter(e => e.overallScore >= 85).length,
         problematicEmployees: employeeMetrics.filter(e => e.overallScore < 60 || e.noShows > 2).length,
-        enterpriseClients: clientMetrics.filter(c => c.tier === 'enterprise').length,
+        enterpriseClients: clientMetrics.filter(c => c.strategicTier === 'enterprise').length,
         atRiskClients: clientMetrics.filter(c => c.isAtRisk).length,
         legacyClients: clientMetrics.filter(c => c.isLegacyClient).length,
       },

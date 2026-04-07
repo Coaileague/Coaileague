@@ -2,29 +2,35 @@
 
 import type { ServiceHealth, ServiceStatus, HealthSummary } from '../../shared/healthTypes';
 import { db } from '../db';
-import { sql } from 'drizzle-orm';
+import { sql, eq, and, desc, like } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { wsCounter } from './websocketCounter';
 import { objectStorageClient } from '../objectStorage';
 import { storage } from '../storage';
 import { getFeatureToggle } from '../../shared/config/featureToggleAccess';
+import { TIMEOUTS } from '../config/platformConfig';
+import { typedCount, typedQuery } from '../lib/typedSql';
+import { partnerConnections } from '@shared/schema';
+import { createLogger } from '../lib/logger';
+const log = createLogger('healthCheck');
+
 
 // Platform workspace ID for system-level support tickets
-// Sourced from the canonical seed-platform-workspace constant; env var override
-// allowed for tests. Falls back to the canonical UUID, NOT the literal 'platform'
-// (which has no row in the workspaces table and would FK-violate on insert).
-import { PLATFORM_WORKSPACE_ID as CANONICAL_PLATFORM_WORKSPACE_ID } from '../seed-platform-workspace';
-const PLATFORM_WORKSPACE_ID = process.env.PLATFORM_WORKSPACE_ID || CANONICAL_PLATFORM_WORKSPACE_ID;
+// This should be configured during platform initialization
+const PLATFORM_WORKSPACE_ID = process.env.PLATFORM_WORKSPACE_ID || 'platform';
 
 // Cache health check results to prevent thrashing
 // Don't cache failures so recovery is detected quickly
 const healthCache = new Map<string, { result: ServiceHealth; expiresAt: number }>();
-const CACHE_TTL_MS = 30000; // 30 seconds for successful checks
-const FAILURE_CACHE_TTL_MS = 5000; // 5 seconds for failed checks (faster recovery detection)
+const CACHE_TTL_MS = TIMEOUTS.healthCheckCacheTtlMs;
+const FAILURE_CACHE_TTL_MS = TIMEOUTS.healthCheckFailCacheTtlMs;
 
 // Track last ticket creation time per service to prevent spam
 // Only create 1 ticket per service per hour
 const lastTicketCreation = new Map<string, number>();
+
+// Track which services were previously down — for auto-resolve on recovery
+const previouslyDownServices = new Set<string>();
 const TICKET_CREATION_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
 function getCached(key: string): ServiceHealth | null {
@@ -93,7 +99,7 @@ async function createHealthCheckTicket(serviceHealth: ServiceHealth): Promise<vo
   const lastCreated = lastTicketCreation.get(serviceHealth.service);
   const now = Date.now();
   if (lastCreated && (now - lastCreated) < TICKET_CREATION_COOLDOWN_MS) {
-    console.log(`[HealthCheck] Skipping ticket creation for ${serviceHealth.service} - cooldown active`);
+    log.info(`[HealthCheck] Skipping ticket creation for ${serviceHealth.service} - cooldown active`);
     return;
   }
 
@@ -122,56 +128,122 @@ This is an automated ticket created by the health monitoring system. Immediate i
       requestedBy: 'system-health-monitor',
     });
 
-    // Update last ticket creation time
+    // Update last ticket creation time and mark service as down
     lastTicketCreation.set(serviceHealth.service, now);
+    previouslyDownServices.add(serviceHealth.service);
 
-    console.log(`[HealthCheck] Created support ticket ${ticket.ticketNumber} for critical ${serviceHealth.service} failure`);
+    log.info(`[HealthCheck] Created support ticket ${ticket.ticketNumber} for critical ${serviceHealth.service} failure`);
   } catch (error: any) {
-    console.error(`[HealthCheck] Failed to create support ticket for ${serviceHealth.service}:`, error.message);
-    // Don't throw - health check should continue even if ticket creation fails
+    log.error(`[HealthCheck] Failed to create support ticket for ${serviceHealth.service}:`, (error instanceof Error ? error.message : String(error)));
   }
 }
 
-// Database health check with real connectivity probe
+async function checkAndAutoResolveRecoveredServices(serviceHealth: ServiceHealth): Promise<void> {
+  if (serviceHealth.status !== 'operational' && serviceHealth.status !== 'degraded') {
+    return;
+  }
+
+  if (!previouslyDownServices.has(serviceHealth.service)) {
+    return;
+  }
+
+  previouslyDownServices.delete(serviceHealth.service);
+
+  try {
+    const { autoResolveHealthTicket } = await import('./autoTicketCreation');
+    const { supportTickets } = await import('@shared/schema');
+    const { eq, and, desc, like } = await import('drizzle-orm');
+
+    const [openTicket] = await db
+      .select({ id: supportTickets.id })
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.status, 'open'),
+          eq(supportTickets.requestedBy, 'system-health-monitor'),
+          like(supportTickets.subject, `%${serviceHealth.service}%`)
+        )
+      )
+      .orderBy(desc(supportTickets.createdAt))
+      .limit(1);
+
+    if (openTicket) {
+      await autoResolveHealthTicket(openTicket.id);
+      log.info(`[HealthCheck] Auto-resolved ticket ${openTicket.id} — ${serviceHealth.service} recovered`);
+    }
+  } catch (err: any) {
+    log.warn(`[HealthCheck] Auto-resolve failed for ${serviceHealth.service}: ${(err instanceof Error ? err.message : String(err))}`);
+  }
+}
+
+// Track startup time for cold start grace period
+const serverStartTime = Date.now();
+const COLD_START_GRACE_PERIOD_MS = TIMEOUTS.healthCheckGracePeriodMs;
+const COLD_START_LATENCY_THRESHOLD_MS = TIMEOUTS.healthCheckLatencyThresholdMs;
+
+// Database health check with real connectivity probe and cold start resilience
 export async function checkDatabase(): Promise<ServiceHealth> {
   const cached = getCached('database');
   if (cached) return cached;
 
   const startTime = Date.now();
-  try {
-    // Real connectivity probe
-    await db.execute(sql`SELECT 1 as health_check`);
-    const latencyMs = Date.now() - startTime;
+  const isInColdStartPeriod = (Date.now() - serverStartTime) < COLD_START_GRACE_PERIOD_MS;
+  
+  // Use more lenient threshold during cold start
+  const latencyThreshold = isInColdStartPeriod ? COLD_START_LATENCY_THRESHOLD_MS : 1000;
+  
+  // Retry logic for transient failures
+  const maxRetries = isInColdStartPeriod ? 3 : 1;
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Converted to Drizzle ORM: health check ping
+      await db.execute(sql`SELECT 1 as health_check`);
+      const latencyMs = Date.now() - startTime;
 
-    const status: ServiceStatus = latencyMs < 1000 ? 'operational' : 'degraded';
-    const result: ServiceHealth = {
-      service: 'database',
-      status,
-      isCritical: true,
-      message: latencyMs < 1000 ? 'Database responding normally' : 'Database slow response',
-      lastChecked: new Date().toISOString(),
-      latencyMs,
-    };
+      const status: ServiceStatus = latencyMs < latencyThreshold ? 'operational' : 'degraded';
+      const result: ServiceHealth = {
+        service: 'database',
+        status,
+        isCritical: true,
+        message: latencyMs < latencyThreshold ? 'Database responding normally' : 'Database slow response',
+        lastChecked: new Date().toISOString(),
+        latencyMs,
+        metadata: isInColdStartPeriod ? { coldStart: true, threshold: latencyThreshold } : undefined,
+      };
 
-    setCache('database', result, CACHE_TTL_MS);
-    return result;
-  } catch (error: any) {
-    const result: ServiceHealth = {
-      service: 'database',
-      status: 'down',
-      isCritical: true,
-      message: `Database connection failed: ${error.message}`,
-      lastChecked: new Date().toISOString(),
-      latencyMs: Date.now() - startTime,
-    };
-
-    setCache('database', result, FAILURE_CACHE_TTL_MS); // Short cache for failures
-    
-    // Auto-create support ticket for critical failure
-    await createHealthCheckTicket(result);
-    
-    return result;
+      setCache('database', result, CACHE_TTL_MS);
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      
+      // Only retry if in cold start period and not the last attempt
+      if (attempt < maxRetries - 1) {
+        const retryDelay = Math.min(500 * Math.pow(2, attempt), 2000);
+        log.info(`[HealthCheck] Database check failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
   }
+
+  // All retries failed
+  const result: ServiceHealth = {
+    service: 'database',
+    status: 'down',
+    isCritical: true,
+    message: `Database connection failed: ${lastError?.message || 'Unknown error'}`,
+    lastChecked: new Date().toISOString(),
+    latencyMs: Date.now() - startTime,
+    metadata: isInColdStartPeriod ? { coldStart: true, retryAttempts: maxRetries } : undefined,
+  };
+
+  setCache('database', result, FAILURE_CACHE_TTL_MS); // Short cache for failures
+  
+  // Auto-create support ticket for critical failure
+  await createHealthCheckTicket(result);
+  
+  return result;
 }
 
 // WebSocket Chat Server health check
@@ -209,7 +281,7 @@ export async function checkChatWebSocket(): Promise<ServiceHealth> {
       service: 'chat_websocket',
       status: 'down',
       isCritical: true,
-      message: `Chat WebSocket server unavailable: ${error.message}`,
+      message: `Chat WebSocket server unavailable: ${(error instanceof Error ? error.message : String(error))}`,
       lastChecked: new Date().toISOString(),
     };
 
@@ -262,7 +334,7 @@ export async function checkGeminiAI(): Promise<ServiceHealth> {
       service: 'gemini_ai',
       status: 'degraded',
       isCritical: true,
-      message: `Gemini AI configuration issue: ${error.message}`,
+      message: `Gemini AI configuration issue: ${(error instanceof Error ? error.message : String(error))}`,
       lastChecked: new Date().toISOString(),
     };
 
@@ -319,7 +391,7 @@ export async function checkObjectStorage(): Promise<ServiceHealth> {
       service: 'object_storage',
       status: 'degraded',
       isCritical: false,
-      message: `Object storage connectivity failed: ${error.message}`,
+      message: `Object storage connectivity failed: ${(error instanceof Error ? error.message : String(error))}`,
       lastChecked: new Date().toISOString(),
       latencyMs: Date.now() - startTime,
     };
@@ -371,7 +443,7 @@ export async function checkStripe(): Promise<ServiceHealth> {
       service: 'stripe',
       status: 'down',
       isCritical: false,
-      message: `Stripe API unavailable: ${error.message}`,
+      message: `Stripe API unavailable: ${(error instanceof Error ? error.message : String(error))}`,
       lastChecked: new Date().toISOString(),
       latencyMs: Date.now() - startTime,
     };
@@ -387,19 +459,20 @@ export async function checkQuickBooks(): Promise<ServiceHealth> {
   if (cached) return cached;
 
   try {
-    // Use aggregation to get accurate counts across all connections
-    const countResult = await db.execute(sql`
-      SELECT 
-        COUNT(*) as total_connected,
-        COUNT(CASE WHEN expires_at < NOW() + INTERVAL '24 hours' THEN 1 END) as expiring_soon
-      FROM partner_connections 
-      WHERE partner_type = 'quickbooks' 
-      AND status = 'connected'
-    `);
+    // Converted to Drizzle ORM: CASE WHEN → sql fragment
+    const countResult = await db.select({
+      totalConnected: sql<number>`count(*)::int`,
+      expiringSoon: sql<number>`count(case when ${partnerConnections.expiresAt} < now() + interval '24 hours' then 1 end)::int`
+    })
+    .from(partnerConnections)
+    .where(and(
+      eq(partnerConnections.partnerType, 'quickbooks'),
+      eq(partnerConnections.status, 'connected')
+    ));
     
-    const row = countResult.rows?.[0] as { total_connected: string; expiring_soon: string } | undefined;
-    const connectedCount = parseInt(row?.total_connected || '0', 10);
-    const expiringCount = parseInt(row?.expiring_soon || '0', 10);
+    const row = countResult[0];
+    const connectedCount = row?.totalConnected || 0;
+    const expiringCount = row?.expiringSoon || 0;
     
     if (connectedCount === 0) {
       const result: ServiceHealth = {
@@ -436,7 +509,7 @@ export async function checkQuickBooks(): Promise<ServiceHealth> {
       service: 'quickbooks',
       status: 'degraded',
       isCritical: false,
-      message: `QuickBooks status check failed: ${error.message}`,
+      message: `QuickBooks status check failed: ${(error instanceof Error ? error.message : String(error))}`,
       lastChecked: new Date().toISOString(),
     };
     setCache('quickbooks', result, FAILURE_CACHE_TTL_MS);
@@ -450,19 +523,20 @@ export async function checkGusto(): Promise<ServiceHealth> {
   if (cached) return cached;
 
   try {
-    // Use aggregation to get accurate counts across all connections
-    const countResult = await db.execute(sql`
-      SELECT 
-        COUNT(*) as total_connected,
-        COUNT(CASE WHEN expires_at < NOW() + INTERVAL '24 hours' THEN 1 END) as expiring_soon
-      FROM partner_connections 
-      WHERE partner_type = 'gusto' 
-      AND status = 'connected'
-    `);
+    // Converted to Drizzle ORM: CASE WHEN → sql fragment
+    const countResult = await db.select({
+      totalConnected: sql<number>`count(*)::int`,
+      expiringSoon: sql<number>`count(case when ${partnerConnections.expiresAt} < now() + interval '24 hours' then 1 end)::int`
+    })
+    .from(partnerConnections)
+    .where(and(
+      eq(partnerConnections.partnerType, 'gusto'),
+      eq(partnerConnections.status, 'connected')
+    ));
     
-    const row = countResult.rows?.[0] as { total_connected: string; expiring_soon: string } | undefined;
-    const connectedCount = parseInt(row?.total_connected || '0', 10);
-    const expiringCount = parseInt(row?.expiring_soon || '0', 10);
+    const row = countResult[0];
+    const connectedCount = row?.totalConnected || 0;
+    const expiringCount = row?.expiringSoon || 0;
     
     if (connectedCount === 0) {
       const result: ServiceHealth = {
@@ -499,7 +573,7 @@ export async function checkGusto(): Promise<ServiceHealth> {
       service: 'gusto',
       status: 'degraded',
       isCritical: false,
-      message: `Gusto status check failed: ${error.message}`,
+      message: `Gusto status check failed: ${(error instanceof Error ? error.message : String(error))}`,
       lastChecked: new Date().toISOString(),
     };
     setCache('gusto', result, FAILURE_CACHE_TTL_MS);
@@ -514,36 +588,74 @@ export async function checkEmail(): Promise<ServiceHealth> {
   if (cached) return cached;
 
   try {
+    // Check for RESEND_API_KEY env var first
     const resendKey = process.env.RESEND_API_KEY;
-    if (!resendKey) {
+    if (resendKey) {
       const result: ServiceHealth = {
         service: 'email',
-        status: 'down',
-        isCritical: false, // Non-critical - emails can be queued
-        message: 'Email service not configured',
+        status: 'operational',
+        isCritical: false,
+        message: 'Email service configured (API key)',
         lastChecked: new Date().toISOString(),
       };
-      setCache('email', result, FAILURE_CACHE_TTL_MS);
+      setCache('email', result, CACHE_TTL_MS);
       return result;
     }
-
-    // Configuration check (actual email send test would be too expensive)
+    
+    // Try Replit connector system for Resend
+    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+    const xReplitToken = process.env.REPL_IDENTITY 
+      ? 'repl ' + process.env.REPL_IDENTITY 
+      : process.env.WEB_REPL_RENEWAL 
+      ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+      : null;
+    
+    if (hostname && xReplitToken) {
+      try {
+        const connResponse = await fetch(
+          'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
+          {
+            headers: {
+              'Accept': 'application/json',
+              'X_REPLIT_TOKEN': xReplitToken
+            }
+          }
+        );
+        const connData = await connResponse.json();
+        const connectionSettings = connData.items?.[0];
+        
+        if (connectionSettings?.settings?.api_key) {
+          const result: ServiceHealth = {
+            service: 'email',
+            status: 'operational',
+            isCritical: false,
+            message: 'Email service configured (Replit connector)',
+            lastChecked: new Date().toISOString(),
+          };
+          setCache('email', result, CACHE_TTL_MS);
+          return result;
+        }
+      } catch (connError) {
+        // Connector check failed, continue to fallback
+      }
+    }
+    
+    // Neither env var nor connector available
     const result: ServiceHealth = {
       service: 'email',
-      status: 'operational',
-      isCritical: false,
-      message: 'Email service configured',
+      status: 'down',
+      isCritical: false, // Non-critical - emails can be queued
+      message: 'Email service not configured',
       lastChecked: new Date().toISOString(),
     };
-
-    setCache('email', result, CACHE_TTL_MS);
+    setCache('email', result, FAILURE_CACHE_TTL_MS);
     return result;
   } catch (error: any) {
     const result: ServiceHealth = {
       service: 'email',
       status: 'degraded',
       isCritical: false,
-      message: `Email service issue: ${error.message}`,
+      message: `Email service issue: ${(error instanceof Error ? error.message : String(error))}`,
       lastChecked: new Date().toISOString(),
     };
 
@@ -564,6 +676,14 @@ export async function getHealthSummary(): Promise<HealthSummary> {
     checkQuickBooks(),
     checkGusto(),
   ]);
+
+  for (const svc of checks) {
+    if (svc.status === 'down') {
+      createHealthCheckTicket(svc).catch((err) => log.warn('[healthCheck] Fire-and-forget failed:', err));
+    } else {
+      checkAndAutoResolveRecoveredServices(svc).catch((err) => log.warn('[healthCheck] Fire-and-forget failed:', err));
+    }
+  }
 
   // Calculate stats
   const criticalServices = checks.filter(c => c.isCritical);
@@ -738,7 +858,7 @@ export async function getGatewayHealth(): Promise<GatewayHealthResponse> {
       timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
-    console.error('[HealthCheck] Error computing gateway health:', error);
+    log.error('[HealthCheck] Error computing gateway health:', error);
     
     // Return degraded response if we can't compute full health
     return {

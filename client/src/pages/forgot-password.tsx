@@ -1,3 +1,4 @@
+import { secureFetch } from "@/lib/csrf";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
+import { CanvasHubPage, PAGE_CONFIGS } from "@/components/canvas-hub";
+import { SEO } from "@/components/seo";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -34,7 +37,7 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/reset-password-request", {
+      const response = await secureFetch("/api/auth/reset-password-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -66,11 +69,11 @@ export default function ForgotPassword() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
+      <CanvasHubPage config={PAGE_CONFIGS.forgotPassword}>
+        <Card className="w-full max-w-xs mx-auto">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto">
-              <CoAIleagueLogo size="md" />
+              <UnifiedBrandLogo size="md" />
             </div>
             <div className="flex justify-center">
               <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -112,16 +115,21 @@ export default function ForgotPassword() {
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md">
+    <CanvasHubPage config={PAGE_CONFIGS.forgotPassword}>
+      <SEO
+        title="Reset Your Password"
+        description="Reset your CoAIleague account password."
+        noindex={true}
+      />
+      <Card className="w-full max-w-xs mx-auto">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto">
-            <CoAIleagueLogo size="md" />
+            <UnifiedBrandLogo size="md" />
           </div>
           <div className="flex justify-center">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -183,6 +191,6 @@ export default function ForgotPassword() {
           </Form>
         </CardContent>
       </Card>
-    </div>
+    </CanvasHubPage>
   );
 }

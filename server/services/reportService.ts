@@ -20,7 +20,7 @@ import {
   payrollRuns,
   shifts,
 } from "@shared/schema";
-import { eq, and, gte, lte, desc, asc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, inArray } from "drizzle-orm";
 
 export interface ReportFilters {
   workspaceId: string;
@@ -459,21 +459,22 @@ export async function getAuditLogsReport(filters: ReportFilters & { action?: str
     conditions.push(eq(auditLogs.action, filters.action as any));
   }
 
-  const logs = await db.query.auditLogs.findMany({
+  const rawLogs = await db.query.auditLogs.findMany({
     where: and(...conditions),
-    with: {
-      user: {
-        columns: {
-          firstName: true,
-          lastName: true,
-          email: true,
-        },
-      },
-    },
     orderBy: [desc(auditLogs.createdAt)],
     limit: filters.limit || 500,
     offset: filters.offset || 0,
   });
+
+  const logUserIds = [...new Set(rawLogs.map((l: any) => l.userId).filter(Boolean))];
+  const logUsers = logUserIds.length > 0
+    ? await db.query.users.findMany({
+        where: inArray(users.id, logUserIds),
+        columns: { id: true, firstName: true, lastName: true, email: true },
+      })
+    : [];
+  const logUserMap = new Map(logUsers.map(u => [u.id, u]));
+  const logs = rawLogs.map((l: any) => ({ ...l, user: logUserMap.get(l.userId) || null }));
 
   // Group by action type
   const actionCounts = logs.reduce((acc: Record<string, number>, log: any) => {

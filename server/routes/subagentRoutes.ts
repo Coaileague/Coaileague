@@ -6,6 +6,7 @@
  * RBAC: Most endpoints require sysop or higher platform role.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { eq, and, desc } from 'drizzle-orm';
@@ -21,8 +22,14 @@ import { subagentPerformanceMeetingService, MeetingMode } from '../services/ai-b
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from '../services/ai-brain/aiBrainAuthorizationService';
 import { storage } from '../storage';
 import type { AuthenticatedRequest } from '../rbac';
+import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('SubagentRoutes');
+
 
 const router = Router();
+
+router.use(requireAuth);
 
 // ============================================================================
 // VALIDATION SCHEMAS (Security hardening)
@@ -81,8 +88,7 @@ async function requireSubagentAccess(req: AuthenticatedRequest, res: Response, n
     return res.status(401).json({ success: false, error: 'Authentication required' });
   }
 
-  const platformUser = await storage.getPlatformUserById(userId);
-  const platformRole = platformUser?.platformRole || 'none';
+  const platformRole = await storage.getUserPlatformRole(userId) || 'none';
   
   // Subagent management requires sysop or higher
   const authorizedRoles = ['root_admin', 'deputy_admin', 'sysop'];
@@ -93,8 +99,8 @@ async function requireSubagentAccess(req: AuthenticatedRequest, res: Response, n
     });
   }
 
-  (req as any).platformRole = platformRole;
-  (req as any).userId = userId;
+  req.platformRole = platformRole;
+  req.userId = userId;
   next();
 }
 
@@ -106,9 +112,9 @@ router.get('/subagents', requireSubagentAccess, async (req: Request, res: Respon
   try {
     const subagents = await subagentSupervisor.getAllSubagents();
     res.json({ success: true, subagents });
-  } catch (error: any) {
-    console.error('[SubagentRoutes] Error fetching subagents:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SubagentRoutes] Error fetching subagents:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -119,8 +125,8 @@ router.get('/subagents/:id', requireSubagentAccess, async (req: Request, res: Re
       return res.status(404).json({ success: false, error: 'Subagent not found' });
     }
     res.json({ success: true, subagent });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -128,8 +134,8 @@ router.get('/subagents/domain/:domain', requireSubagentAccess, async (req: Reque
   try {
     const subagents = await subagentSupervisor.getSubagentsByDomain(req.params.domain as any);
     res.json({ success: true, subagents });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -157,8 +163,8 @@ router.patch('/subagents/:id', requireSubagentAccess, async (req: Request, res: 
     }
     
     res.json({ success: true, subagent: updated });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -185,8 +191,8 @@ router.post('/subagents/:id/toggle', requireSubagentAccess, async (req: Request,
     }
     
     res.json({ success: true, subagent: updated, message: `Subagent ${validation.data.isActive ? 'enabled' : 'disabled'}` });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -198,8 +204,8 @@ router.get('/health', requireSubagentAccess, async (req: Request, res: Response)
   try {
     const health = await subagentSupervisor.getSubagentHealth();
     res.json({ success: true, health });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -218,11 +224,11 @@ router.get('/telemetry', requireSubagentAccess, async (req: Request, res: Respon
     
     const telemetry = await query
       .orderBy(desc(subagentTelemetry.createdAt))
-      .limit(parseInt(limit as string));
+      .limit(Math.min(Math.max(1, parseInt(limit as string) || 50), 200));
     
     res.json({ success: true, telemetry });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -236,8 +242,8 @@ router.get('/telemetry/:executionId', requireSubagentAccess, async (req: Request
     }
     
     res.json({ success: true, telemetry });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -260,9 +266,9 @@ router.get('/metrics/self-correction', requireSubagentAccess, async (req: Reques
       metrics,
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
-    console.error('[SubagentRoutes] Error fetching self-correction metrics:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SubagentRoutes] Error fetching self-correction metrics:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -347,9 +353,9 @@ router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedR
       },
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
-    console.error('[SubagentRoutes] Error fetching credit metrics:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SubagentRoutes] Error fetching credit metrics:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -376,8 +382,8 @@ router.get('/interventions', requireSubagentAccess, async (req: Request, res: Re
     }
     
     res.json({ success: true, interventions });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -391,16 +397,16 @@ router.get('/interventions/:id', requireSubagentAccess, async (req: Request, res
     }
     
     res.json({ success: true, intervention });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
 router.post('/interventions/:id/approve', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
-    const platformRole = (req as any).platformRole;
+    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
+    const platformRole = req.platformRole;
     
     const approved = await subagentSupervisor.approveIntervention(
       req.params.id,
@@ -413,15 +419,15 @@ router.post('/interventions/:id/approve', requireSubagentAccess, async (req: Req
     }
     
     res.json({ success: true, message: 'Intervention approved and fix executed' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
 router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
     
     // Validate input
     const validation = interventionRejectSchema.safeParse(req.body);
@@ -448,8 +454,8 @@ router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Requ
     }
     
     res.json({ success: true, message: 'Intervention rejected', intervention: updated });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -472,8 +478,8 @@ router.get('/access-control', requireSubagentAccess, async (req: Request, res: R
     
     const controls = await query;
     res.json({ success: true, controls });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -493,15 +499,15 @@ router.get('/access-control/:workspaceId/:resourceType/:resourceId', requireSuba
     }
     
     res.json({ success: true, control });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
 router.post('/access-control', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
     
     // Validate input - reject unknown fields
     const validation = accessControlSchema.safeParse(req.body);
@@ -524,15 +530,15 @@ router.post('/access-control', requireSubagentAccess, async (req: Request, res: 
     );
     
     res.json({ success: true, control });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
 router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
     
     // Validate input - reject unknown fields
     const validation = accessControlUpdateSchema.safeParse(req.body);
@@ -559,8 +565,8 @@ router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, 
     }
     
     res.json({ success: true, control: updated });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -575,8 +581,8 @@ router.delete('/access-control/:id', requireSubagentAccess, async (req: Request,
     }
     
     res.json({ success: true, message: 'Access control deleted' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -587,8 +593,8 @@ router.delete('/access-control/:id', requireSubagentAccess, async (req: Request,
 router.post('/execute', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
-    const platformRole = (req as any).platformRole;
+    const userId = authReq.user?.id || authReq.session?.userId || req.userId;
+    const platformRole = req.platformRole;
     
     // Validate input - reject unknown fields
     const validation = executeTestSchema.safeParse(req.body);
@@ -618,8 +624,8 @@ router.post('/execute', requireSubagentAccess, async (req: Request, res: Respons
     );
     
     res.json({ success: result.success, result });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -634,7 +640,7 @@ const meetingModeSchema = z.object({
 router.post('/performance-meetings/conduct', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = req.body.workspaceId || authReq.session?.workspaceId || 'platform-system';
+    const workspaceId = req.workspaceId || authReq.session?.workspaceId || 'platform-system';
     
     const validation = meetingModeSchema.safeParse(req.body);
     if (!validation.success) {
@@ -649,23 +655,23 @@ router.post('/performance-meetings/conduct', requireSubagentAccess, async (req: 
     const result = await subagentPerformanceMeetingService.triggerManualMeeting(workspaceId, mode);
     
     res.json({ success: true, meeting: result });
-  } catch (error: any) {
-    console.error('[SubagentRoutes] Performance meeting failed:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SubagentRoutes] Performance meeting failed:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
 router.post('/performance-meetings/fast', requireSubagentAccess, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = req.body.workspaceId || authReq.session?.workspaceId || 'platform-system';
+    const workspaceId = req.workspaceId || authReq.session?.workspaceId || 'platform-system';
     
     const result = await subagentPerformanceMeetingService.triggerFastMeeting(workspaceId);
     
     res.json({ success: true, meeting: result });
-  } catch (error: any) {
-    console.error('[SubagentRoutes] FAST meeting failed:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[SubagentRoutes] FAST meeting failed:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -675,8 +681,28 @@ router.get('/performance-meetings/history', requireSubagentAccess, async (req: R
     const meetings = subagentPerformanceMeetingService.getMeetingHistory(limit);
     
     res.json({ success: true, meetings });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
+router.get('/performance-meetings/supervisors/status', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const supervisors = subagentPerformanceMeetingService.getHandlerSupervisors();
+    
+    res.json({ success: true, supervisors });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
+  }
+});
+
+router.get('/performance-meetings/schedule', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const config = subagentPerformanceMeetingService.getScheduleConfig();
+    
+    res.json({ success: true, schedule: config });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -689,28 +715,8 @@ router.get('/performance-meetings/:meetingId', requireSubagentAccess, async (req
     }
     
     res.json({ success: true, meeting });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-router.get('/performance-meetings/supervisors/status', requireSubagentAccess, async (req: Request, res: Response) => {
-  try {
-    const supervisors = subagentPerformanceMeetingService.getHandlerSupervisors();
-    
-    res.json({ success: true, supervisors });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-router.get('/performance-meetings/schedule', requireSubagentAccess, async (req: Request, res: Response) => {
-  try {
-    const config = subagentPerformanceMeetingService.getScheduleConfig();
-    
-    res.json({ success: true, schedule: config });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -738,8 +744,8 @@ router.put('/performance-meetings/schedule', requireSubagentAccess, async (req: 
     const config = subagentPerformanceMeetingService.getScheduleConfig();
     
     res.json({ success: true, schedule: config });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -751,9 +757,9 @@ router.put('/performance-meetings/schedule', requireSubagentAccess, async (req: 
   try {
     await subagentSupervisor.initialize();
     await subagentPerformanceMeetingService.initialize();
-    console.log('[SubagentRoutes] Subagent supervisor and performance meeting service initialized');
+    log.info('[SubagentRoutes] Subagent supervisor and performance meeting service initialized');
   } catch (error) {
-    console.error('[SubagentRoutes] Failed to initialize subagent services:', error);
+    log.error('[SubagentRoutes] Failed to initialize subagent services:', error);
   }
 })();
 

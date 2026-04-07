@@ -1,0 +1,565 @@
+Paste this into Replit:
+
+---
+
+**UNIVERSAL DOCUMENT TEMPLATE SYSTEM — FULL BUILD | READ BEFORE TOUCH | NO DUPLICATION | CANONICAL SINGLE SOURCE**
+
+Before building anything — audit what already exists. Read every file related to document templates, form rendering, PDF generation, document signing, and onboarding forms before writing a single line.
+
+---
+
+**PRE-BUILD AUDIT — READ ONLY FIRST**
+
+Search and report:
+
+- Every existing form component in `client/src/` that renders fillable fields
+- Every existing document template — HTML, PDF, or JSON template files
+- Every existing PDF generation service or library in use
+- Every existing document signing flow — provider, routes, components
+- Every existing onboarding form or wizard component
+- The current document safe — how documents are stored and retrieved
+- Any existing universal header or footer component
+- Any existing form validation library in use — Zod, React Hook Form, etc.
+- Every document type that currently has a template vs those that need one built
+- Current mobile rendering approach — do forms use full-sheet mobile layout?
+
+Report everything found. Build only what does not exist. Wire into what does.
+
+---
+
+**SECTION 1 — UNIVERSAL DOCUMENT TEMPLATE ARCHITECTURE**
+
+Create a single source of truth for all document templates.
+
+**Create `server/services/documents/templateRegistry.ts`**
+
+This is the canonical registry for every document template in the platform. Every form in every workflow reads from this registry. Editing a template here updates it everywhere it is used.
+
+```typescript
+export interface DocumentTemplate {
+  id: string
+  documentType: string
+  title: string
+  version: string
+  sections: TemplateSection[]
+  universalHeader: boolean  // use the platform universal header
+  universalFooter: boolean  // use the platform universal footer
+  requiresSignature: boolean
+  requiresInitials: boolean[]  // one per section that needs initials
+  requiresDateStamp: boolean
+  requiresGpsCapture: boolean
+  requiresIpCapture: boolean
+  captureDeviceInfo: boolean
+  allowSaveForLater: boolean
+  trinityValidationRules: ValidationRule[]
+  completionWebhook: string  // event type to publish on completion
+}
+
+export interface TemplateSection {
+  id: string
+  title: string
+  order: number
+  fields: TemplateField[]
+  requiresAcknowledgment: boolean
+  acknowledgmentText?: string
+  requiresInitials: boolean
+  requiresSignature: boolean
+}
+
+export interface TemplateField {
+  id: string
+  label: string
+  type: 'text' | 'email' | 'phone' | 'date' | 'select' | 'checkbox' | 'signature' | 'initials' | 'upload' | 'textarea' | 'ssn' | 'address_block' | 'acknowledgment_check'
+  required: boolean
+  placeholder?: string
+  options?: string[]  // for select fields
+  validationPattern?: string
+  helpText?: string
+  mobileFullWidth: boolean  // always true for mobile
+  sensitiveData: boolean  // mask in display, encrypt in storage
+}
+```
+
+**Create the universal template registry with all required templates:**
+
+```typescript
+export const TEMPLATE_REGISTRY: Record<string, DocumentTemplate> = {
+  EMPLOYMENT_APPLICATION: { ... },
+  REGULATORY_PACKET: { ... },
+  W4: { ... },
+  W9: { ... },
+  I9: { ... },
+  DIRECT_DEPOSIT_AUTHORIZATION: { ... },
+  EMPLOYEE_HANDBOOK_ACKNOWLEDGMENT: { ... },
+  LIABILITY_WAIVER: { ... },
+  DRUG_FREE_WORKPLACE: { ... },
+  REFERENCE_CHECK: { ... },
+  POST_ORDERS_ACKNOWLEDGMENT: { ... },
+  SOP_ACKNOWLEDGMENT: { ... },
+  UNIFORM_EQUIPMENT_ISSUANCE: { ... },
+  SERVICE_PROPOSAL: { ... },
+  SERVICES_CONTRACT: { ... },
+  TRAINING_CERTIFICATE: { ... },
+  INTERVENTION_RECORD: { ... },
+  INCIDENT_REPORT: { ... },
+  DISCIPLINARY_NOTICE: { ... },
+  SEPARATION_NOTICE: { ... },
+  OFFER_LETTER: { ... },
+  BACKGROUND_CHECK_AUTHORIZATION: { ... },
+  OJT_LOG: { ... },
+  COLLECTIONS_DEMAND_LETTER: { ... }
+}
+```
+
+---
+
+**SECTION 2 — UNIVERSAL HEADER AND FOOTER**
+
+Create `client/src/components/documents/UniversalDocumentHeader.tsx`
+
+Header must include:
+- Organization logo (loaded from workspace settings — falls back to CoAIleague logo)
+- Organization name (large, centered)
+- Document title (medium, centered below org name)
+- Document version and form number (small, right aligned)
+- Date generated (auto-populated)
+- CoAIleague platform branding (subtle, bottom of header)
+
+Create `client/src/components/documents/UniversalDocumentFooter.tsx`
+
+Footer must include:
+- Page number (Page N of N)
+- Document ID and submission tracking number
+- Verification stamp area (GPS coordinates, IP address, submission timestamp — populated on submit)
+- "Powered by CoAIleague" branding (small)
+- Legal disclaimer: "This document was completed electronically. Electronic signatures are legally binding under applicable federal and state law."
+
+**These components are used by every document template — change the header or footer once and it updates everywhere.**
+
+---
+
+**SECTION 3 — UNIVERSAL FORM RENDERER**
+
+Create `client/src/components/documents/UniversalFormRenderer.tsx`
+
+This single component renders any document template from the registry. It receives a `templateId` and renders the complete form with all sections, fields, navigation, and controls.
+
+**Universal controls that appear on every form:**
+
+Top bar:
+- Back button (with confirmation if data entered)
+- Document title
+- Progress indicator (Section N of N)
+- Save for Later button (if template allows it)
+
+Section navigation:
+- Previous Section button
+- Section title and description
+- Field rendering (see Section 4)
+- Section acknowledgment if required
+- Section initials field if required
+- Next Section button (disabled until section is complete)
+
+Bottom action bar (fixed at bottom — never scrolls away):
+- Save for Later (saves current progress, sends reminder)
+- Back to Previous Section
+- Continue to Next Section / Submit
+
+Final submission screen:
+- Review summary — all sections with entered data
+- Edit button per section
+- Signature capture (full signature — not just typed name)
+- Date stamp (auto-populated, not editable)
+- GPS capture if required (with user permission request)
+- IP address capture (automatic, no user action)
+- Device info capture (automatic)
+- "I certify that all information provided is accurate and complete" acknowledgment checkbox
+- Submit button (disabled until all required fields complete and acknowledgment checked)
+- After submit: loading state → Trinity validation → success or error with specific missing items
+
+**Progress auto-save:**
+- Save form progress to localStorage AND to DB (draft document record) every 30 seconds
+- On page load — check for saved draft and offer to continue
+- Draft expires after 7 days
+
+---
+
+**SECTION 4 — FIELD RENDERING COMPONENTS**
+
+Create `client/src/components/documents/fields/` directory with these field components:
+
+**`TextField.tsx`** — standard text input
+- Full width on mobile always
+- Label above field always (not placeholder-only)
+- Error message below field in red
+- Character counter if maxLength set
+- Minimum height 48px on mobile
+
+**`SignatureField.tsx`** — captures actual drawn signature
+- Canvas-based signature pad
+- Works with mouse on desktop, touch on mobile
+- "Clear" and "Done" buttons
+- On mobile — full screen signature capture modal for easier signing
+- Stores as base64 PNG
+- Displays miniature of captured signature after completion
+
+**`InitialsField.tsx`** — smaller signature for section acknowledgments
+- Same canvas approach but compact
+- 3-letter initials box
+- Tappable on mobile
+
+**`DateField.tsx`** — date input
+- Date picker on desktop
+- Native date picker on mobile
+- Auto-populate with today for stamp fields (not editable when auto-stamped)
+
+**`CheckboxField.tsx`** — acknowledgment checkboxes
+- Large tap target (minimum 44px) on mobile
+- Clear checked/unchecked visual state
+- Label text fully visible — never truncated
+
+**`AcknowledgmentField.tsx`** — scrollable text with acknowledgment checkbox
+- Full text displayed in scrollable box
+- User must scroll to bottom before checkbox enables
+- Checkbox text: "I have read and understand the above"
+- Scroll position tracked — checkbox disabled until bottom reached
+
+**`UploadField.tsx`** — document/image upload
+- Drag and drop on desktop
+- Camera capture option on mobile (for ID photos, guard card photos)
+- Front/Back upload pair option for IDs
+- Preview thumbnail after upload
+- File type and size validation with clear error messages
+- Progress indicator during upload
+
+**`AddressBlock.tsx`** — structured address entry
+- Street address line 1
+- Street address line 2 (optional)
+- City, State (dropdown), ZIP
+- All fields in one logical group
+
+**`SSNField.tsx`** — sensitive data field
+- Masked input — shows XXX-XX-XXXX as typed
+- Only last 4 visible after completion
+- Never logged in plain text
+- Encrypted before transmission
+
+**`SelectField.tsx`** — dropdown selection
+- Native select on mobile for best UX
+- Custom styled select on desktop
+- Search/filter for long option lists
+
+**`GpsStampField.tsx`** — automatic GPS capture
+- Requests location permission if not granted
+- Shows "Capturing location..." spinner
+- Displays city/state after capture (not full coordinates in UI)
+- Full coordinates stored in document metadata
+- Graceful fallback if location denied — records denial
+
+**`VerificationStamp.tsx`** — auto-populated on submission
+- Submission timestamp (UTC and local timezone)
+- IP address
+- GPS coordinates (if captured)
+- Device type (mobile/desktop, browser)
+- Session ID for audit trail
+- Displayed on final submitted document
+
+---
+
+**SECTION 5 — DOCUMENT TEMPLATES**
+
+Using the template registry and field components — build every required template.
+
+**TEMPLATE 1 — Employment Application**
+Sections:
+1. Personal Information: full legal name, DOB, place of birth, SSN (last 4 only displayed), current address, phone, email, emergency contact
+2. License and Certifications: guard card number, license type (Level 2/3/4), issue date, expiry date, state issued, upload front and back of guard card
+3. Employment History: last employer name, address, phone, dates, reason for leaving (last 3 employers)
+4. References: 3 professional references with name, relationship, phone, email
+5. Legal Questions: convicted of felony yes/no with explanation, pending criminal charges yes/no, fired for cause yes/no with explanation
+6. Acknowledgment: "I certify all information is true and accurate" — signature required
+
+**TEMPLATE 2 — Regulatory Packet**
+Sections:
+1. Personal Information: same as application (auto-populate if already submitted)
+2. Identity Documents: upload state ID front and back, upload social security card front
+3. Drug-Free Workplace Acknowledgment: full policy text with scroll-to-bottom requirement, initials, date
+4. At-Will Employment Acknowledgment: text with scroll requirement, initials, date
+5. Liability Waiver: full text explaining private citizen status and limitations of liability, scroll requirement, initials, date
+6. Background Check Authorization: FCRA-compliant language, checkbox consent, signature, date
+7. Final Signature: full signature, date, GPS stamp, IP stamp
+
+**TEMPLATE 3 — W4 (Employee's Withholding Certificate)**
+Follow IRS Form W4 layout exactly:
+Step 1: Personal information and filing status
+Step 2: Multiple jobs or spouse works
+Step 3: Claim dependents
+Step 4: Other adjustments
+Step 5: Signature and date
+
+**TEMPLATE 4 — W9 (Request for Taxpayer Identification Number)**
+Follow IRS Form W9 layout exactly:
+Name, business name, federal tax classification, exemptions, address, TIN (SSN or EIN), certification signature
+
+**TEMPLATE 5 — I9 (Employment Eligibility Verification)**
+Section 1: Employee — name, DOB, SSN, attestation, signature, date
+Section 2: Employer — document verification (List A or Lists B+C), employer certification
+Upload fields for identity and employment authorization documents
+
+**TEMPLATE 6 — Direct Deposit Authorization**
+Fields: employee name, bank name, routing number (masked), account number (masked), account type, authorization signature, date
+Note: if Plaid is connected — auto-populate from Plaid data and display masked only
+
+**TEMPLATE 7 — Employee Handbook Acknowledgment**
+Full handbook text displayed in scrollable area (link to full version + embedded summary)
+Acknowledgment: "I have received, read, and understand the Employee Handbook"
+Signature, date, GPS, IP
+
+**TEMPLATE 8 — Liability Acknowledgment**
+Full liability clause text with private citizen legal status language (updated language from prior session)
+Scroll-to-bottom required
+Initials per paragraph
+Final signature, date
+
+**TEMPLATE 9 — Post Orders / SOP Acknowledgment**
+Dynamic template — content populated from client's post orders for the specific site
+Sections: Site rules, Emergency procedures, Client-specific requirements, Prohibited items/behaviors
+Each section requires initials
+Final acknowledgment signature, date, timestamp
+
+**TEMPLATE 10 — Uniform and Equipment Issuance Record**
+Fields: employee name, date issued, list of items issued (uniform pieces, equipment) with condition noted per item, officer signature acknowledging receipt, issuing officer signature, return section (for when items are returned with condition noted)
+
+**TEMPLATE 11 — Offer Letter**
+Dynamic fields: employee name, position title, start date, hourly rate, pay type, pay frequency, supervisor name
+Standard offer letter text with acceptance signature line, date
+
+**TEMPLATE 12 — OJT (On the Job Training) Log**
+Fields: employee name, trainer name, training date, duration, topics covered (checklist), site trained at, trainer signature, employee signature confirming training received, notes
+
+**TEMPLATE 13 — Disciplinary Notice**
+Fields: employee name, date of incident, description of incident, policy violated, previous warnings, corrective action required, consequence if repeated, employee acknowledgment signature (does not indicate agreement — just receipt), management signature
+
+**TEMPLATE 14 — Separation Notice**
+Fields: employee name, last day of employment, reason for separation (from enum), COBRA/benefits notice, equipment return acknowledgment, final pay information, management signature
+
+**TEMPLATE 15 — Collections Demand Letter**
+Dynamic: client name, billing address, outstanding invoice list with amounts and dates, total due, payment deadline, payment link, legal notice language, org owner name and signature, CoAIleague platform letterhead
+
+---
+
+**SECTION 6 — TRINITY VALIDATION ON SUBMISSION**
+
+Create `server/services/documents/trinityDocumentValidator.ts`
+
+When any document is submitted — before it is accepted and saved — Trinity runs completeness validation:
+
+```typescript
+// 7-Step Validation Pipeline:
+// 1. TRIGGER: Document submitted by user
+// 2. FETCH: Load document data, load template requirements, load employee/client record
+// 3. VALIDATE:
+//    - All required fields present and non-empty
+//    - Signature fields contain actual signature data (not empty canvas)
+//    - Date fields are valid dates
+//    - Upload fields have file URLs (uploads completed)
+//    - SSN/EIN fields match expected format
+//    - Acknowledgment fields confirm scroll completion before check
+//    - GPS captured if required
+//    - IP address captured
+// 4. PROCESS:
+//    - Check each required field against template requirements
+//    - Build list of missing or invalid fields
+//    - Calculate completion percentage
+// 5. MUTATE:
+//    IF validation passes (completion === 100%):
+//      - Set document status to 'completed'
+//      - Append to employee/org document safe
+//      - Generate final PDF with verification stamps
+//      - Update employee onboarding status
+//      - Emit document_completed event
+//    IF validation fails:
+//      - Do NOT save as completed
+//      - Return specific list of missing/invalid fields
+//      - Highlight each issue for the user
+// 6. CONFIRM: Return validation result to frontend
+// 7. NOTIFY:
+//    IF passed: notify org owner, notify employee, emit to event bus
+//    IF failed: show user specific actionable error list
+```
+
+**Validation response format:**
+```typescript
+{
+  valid: boolean,
+  completionPercentage: number,
+  missingFields: Array<{
+    sectionTitle: string,
+    fieldLabel: string,
+    reason: string,
+    fieldId: string  // for UI to scroll to and highlight
+  }>,
+  warnings: Array<{
+    message: string,
+    fieldId: string
+  }>
+}
+```
+
+Frontend behavior on validation failure:
+- Modal showing exact list of missing items
+- Click any item to scroll directly to that field
+- Each missing field highlighted with red border and error message
+- Submit button remains disabled until all issues resolved
+
+---
+
+**SECTION 7 — PDF GENERATION FOR SUBMITTED DOCUMENTS**
+
+After successful validation and submission — generate a final PDF version of the completed document.
+
+Use the existing PDF library already in the codebase.
+
+**PDF must include:**
+- Universal header with org logo and document title
+- All form data in a clean two-column layout where appropriate
+- Signature images embedded at correct positions
+- Upload images embedded (ID photos, guard card photos)
+- Initials embedded at each section
+- Verification stamp block at bottom:
+  - Submission date and time
+  - IP address
+  - GPS coordinates (if captured)
+  - Device info
+  - Document ID and tracking number
+  - "Electronically submitted via CoAIleague platform"
+- Universal footer with page numbers
+
+**PDF storage:**
+- Store in employee document safe or org document safe based on document type
+- Update document record with `pdfUrl`
+- Make available for download immediately after generation
+
+---
+
+**SECTION 8 — SAVE FOR LATER FUNCTIONALITY**
+
+When user clicks "Save for Later":
+
+```typescript
+// 1. Save current form state to DB as draft document
+// 2. Store: documentType, employeeId/clientId, workspaceId, formData (JSON), currentSectionIndex, lastSavedAt
+// 3. Send email to employee: "You have an incomplete [Document Name]. Complete it here: [link]"
+// 4. Create in-app notification with link
+// 5. Schedule reminder: if not completed in 24 hours — send another reminder
+// 6. After 7 days — Trinity flags as overdue, notifies org owner
+// 7. Reduce employee compliance score if document is required
+```
+
+**On return to incomplete form:**
+- Show "Welcome back — continue where you left off" banner
+- Restore all previously entered data
+- Highlight section where they stopped
+- Show time remaining before draft expires
+
+---
+
+**SECTION 9 — MOBILE AND DESKTOP RENDERING**
+
+**Mobile rules (max-width 768px):**
+- Every field full width — no side-by-side fields on mobile
+- All text minimum 16px — prevents auto-zoom on iOS
+- All buttons minimum 48px height
+- All tap targets minimum 44x44px
+- Signature pad full screen modal on mobile
+- Bottom action bar fixed — always visible
+- No horizontal scroll anywhere
+- Upload area shows camera icon prominently for mobile
+- Date fields use native mobile date picker
+- GPS capture triggered automatically with permission prompt on mobile
+- Back/forward navigation uses full-width buttons
+
+**Desktop rules:**
+- Two-column layout where logical (name + last name side by side)
+- Sidebar section navigation for long forms
+- Signature pad inline (not modal)
+- Keyboard shortcuts for navigation
+
+**Full-sheet mobile view:**
+- Forms render as full-screen pages on mobile — no sidebars, no modals except signature
+- Each section takes full screen — swipe or button to advance
+- Progress bar at top showing section completion
+- All content scrolls vertically — no tabs or accordions
+
+---
+
+**SECTION 10 — CONTINUOUS SCAN-FIX-VERIFY LOOP**
+
+After completing all sections above — enter the continuous improvement loop:
+
+```
+REPEAT UNTIL ZERO GAPS:
+
+SCAN these categories every iteration:
+1. Template registry — all required templates defined with all required fields?
+2. Field components — all field types render correctly on mobile and desktop?
+3. Universal header/footer — appears on every template?
+4. Form renderer — handles all field types without errors?
+5. Save for later — saves and restores correctly?
+6. Trinity validation — catches all missing fields before saving?
+7. PDF generation — generates correctly for all templates?
+8. Document safe storage — every completed document stored correctly?
+9. Event bus — all document events published and subscribed?
+10. Employee/org assignment — every document correctly linked?
+11. Verification stamps — GPS, IP, timestamp all captured?
+12. Signature capture — works on mobile touch and desktop mouse?
+13. Mobile rendering — no overflow, no tiny text, no small tap targets?
+14. TypeScript errors — zero?
+15. Server health — 29/29 services?
+
+FIX every gap found
+VERIFY server starts clean after every fix
+COUNT gaps found and fixed
+REPORT iteration results
+IF gaps > 0: repeat
+IF gaps = 0: report COMPLETE
+```
+
+**Iteration report format:**
+```
+═══════════════════════════════════
+DOCUMENT TEMPLATE SYSTEM — ITERATION [N]
+═══════════════════════════════════
+Gaps found: N (CRITICAL: N | HIGH: N | MEDIUM: N | LOW: N)
+Gaps fixed: N
+Remaining: N
+Server: CLEAN / ERRORS
+TypeScript: CLEAN / ERRORS
+Continue: YES / NO
+═══════════════════════════════════
+```
+
+---
+
+**COMPLETION CRITERIA**
+
+When zero gaps are found across all 15 scan categories:
+
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All 15 document templates render on mobile and desktop
+4. Universal header and footer appear on all templates
+5. All field types work correctly on mobile touch
+6. Trinity validation catches incomplete submissions
+7. PDF generated and stored after every successful submission
+8. Every submitted document linked to correct employee or org
+9. Save for later works and reminders fire
+10. Verification stamp includes GPS, IP, timestamp on every submission
+
+**REPORT: DOCUMENT TEMPLATE SYSTEM VERIFIED — PRODUCTION READY**
+
+Stop and wait.
+
+---
+
+Paste iteration reports back as they complete. When the loop reports zero gaps the document system is production ready.

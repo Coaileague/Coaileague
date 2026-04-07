@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTrinityWebSocket, TrinityStreamEvent } from './use-trinity-websocket';
+import { secureFetch } from '@/lib/csrf';
 
 export interface ThinkingStep {
   id: string;
@@ -203,7 +204,7 @@ export function useTrinityState(options: UseTrinityStateOptions): UseTrinityStat
 
   const undoAction = useCallback(async (actionId: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/trinity/undo/${actionId}`, {
+      const response = await secureFetch(`/api/trinity/undo/${actionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });

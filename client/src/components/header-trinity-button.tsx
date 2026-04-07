@@ -31,7 +31,7 @@ export function HeaderTrinityButton() {
           size="icon"
           onClick={openModal}
           data-testid="button-header-trinity"
-          className="h-9 w-9 relative"
+          className="relative"
           aria-label="Open Trinity AI Assistant"
         >
           <div className="w-5 h-5 flex items-center justify-center">

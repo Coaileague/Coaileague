@@ -1,0 +1,822 @@
+# CoAIleague — DEFINITIVE Database Integrity Audit & Fix
+## "Find Every Missing workspace_id, Broken Reference, and Orphan in ONE Pass"
+
+**Date:** March 4, 2026
+**Context:** The Replit agent has been finding and fixing missing workspace_id columns, broken foreign keys, and duplicate records incrementally — fixing 5, then finding 10 more, then accidentally creating duplicates. This document gives the agent ONE comprehensive script to run that exposes EVERY issue at once, then a systematic fix plan.
+
+**THE RULE: Run the FULL diagnostic FIRST. Fix NOTHING until the full picture is known. Then fix everything in one coordinated pass.**
+
+---
+
+# ═══════════════════════════════════════════════════
+# PHASE 1: FULL DIAGNOSTIC — RUN ALL OF THESE FIRST
+# ═══════════════════════════════════════════════════
+
+**INSTRUCTIONS TO REPLIT AGENT:**
+Run every single query below. Collect ALL results. Do NOT start fixing anything until you have run every diagnostic query and compiled the full results. This prevents the pattern of "fix one thing, break another, create a duplicate."
+
+---
+
+## DIAGNOSTIC 1: Tables Missing workspace_id
+
+Every table that stores org-specific data MUST have a workspace_id column. This query finds tables that don't.
+
+```sql
+-- Tables that are MISSING workspace_id entirely
+SELECT t.table_name, 
+       (SELECT COUNT(*) FROM information_schema.columns c2 
+        WHERE c2.table_name = t.table_name AND c2.table_schema = 'public') as column_count
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  -- Exclude tables that legitimately don't need workspace_id:
+  AND t.table_name NOT IN (
+    'workspaces',                    -- IS the workspace table
+    'subscription_tiers',            -- Global config, not org-specific
+    'drizzle_migrations',            -- Migration tracking
+    '__drizzle_migrations',          -- Migration tracking alt
+    'migrations',                    -- Migration tracking alt
+    'session',                       -- Auth sessions (have user_id which links to workspace)
+    'sessions',                      -- Auth sessions alt
+    'system_config',                 -- Global system config
+    'platform_credit_pool'           -- Cross-org pool
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name 
+      AND c.table_schema = 'public'
+      AND c.column_name = 'workspace_id'
+  )
+ORDER BY t.table_name;
+```
+
+**EXPECTED RESULT:** Zero rows. If ANY table appears, it needs workspace_id added.
+
+---
+
+## DIAGNOSTIC 2: Tables Missing created_by / created_at
+
+```sql
+-- Tables missing created_by
+SELECT t.table_name, 'missing created_by' as issue
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  AND t.table_name NOT IN ('workspaces', 'subscription_tiers', 'drizzle_migrations', 
+    '__drizzle_migrations', 'migrations', 'session', 'sessions', 'system_config')
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name AND c.column_name = 'created_by'
+  )
+
+UNION ALL
+
+-- Tables missing created_at
+SELECT t.table_name, 'missing created_at' as issue
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  AND t.table_name NOT IN ('drizzle_migrations', '__drizzle_migrations', 'migrations')
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name AND c.column_name = 'created_at'
+  )
+
+UNION ALL
+
+-- Tables missing updated_at
+SELECT t.table_name, 'missing updated_at' as issue
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  AND t.table_name NOT IN ('drizzle_migrations', '__drizzle_migrations', 'migrations',
+    'audit_log', 'credit_transactions')  -- Immutable ledgers don't need updated_at
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_name = t.table_name AND c.column_name = 'updated_at'
+  )
+
+ORDER BY table_name, issue;
+```
+
+---
+
+## DIAGNOSTIC 3: Records with NULL workspace_id (Orphaned Data)
+
+For every table that HAS a workspace_id column, check if any rows have NULL values:
+
+```sql
+-- GENERATE queries to check every table for NULL workspace_id
+-- Run the output of this query as a second step
+SELECT 
+  'SELECT ''' || table_name || ''' as table_name, COUNT(*) as null_workspace_count FROM ' 
+  || table_name || ' WHERE workspace_id IS NULL UNION ALL' as check_query
+FROM information_schema.columns
+WHERE column_name = 'workspace_id' 
+  AND table_schema = 'public'
+ORDER BY table_name;
+```
+
+**Then manually run the generated queries** (remove the trailing UNION ALL from the last one, add a final SELECT to terminate).
+
+**SHORTCUT — Run this dynamic query directly:**
+
+```sql
+DO $$
+DECLARE
+  tbl TEXT;
+  cnt INTEGER;
+BEGIN
+  RAISE NOTICE '=== NULL WORKSPACE_ID CHECK ===';
+  FOR tbl IN 
+    SELECT table_name FROM information_schema.columns 
+    WHERE column_name = 'workspace_id' AND table_schema = 'public'
+    ORDER BY table_name
+  LOOP
+    EXECUTE format('SELECT COUNT(*) FROM %I WHERE workspace_id IS NULL', tbl) INTO cnt;
+    IF cnt > 0 THEN
+      RAISE NOTICE 'TABLE: % — % records with NULL workspace_id', tbl, cnt;
+    END IF;
+  END LOOP;
+  RAISE NOTICE '=== CHECK COMPLETE ===';
+END $$;
+```
+
+**EXPECTED RESULT:** Zero notices. Every record in every table should have a workspace_id.
+
+---
+
+## DIAGNOSTIC 4: Foreign Key Integrity — Orphaned References
+
+Check that every foreign key reference actually points to a valid record:
+
+```sql
+-- Find all foreign keys in the database
+SELECT
+  tc.table_name as child_table,
+  kcu.column_name as child_column,
+  ccu.table_name as parent_table,
+  ccu.column_name as parent_column
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu 
+  ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu 
+  ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = 'public'
+ORDER BY child_table, child_column;
+```
+
+**Then for EACH foreign key, generate an orphan check:**
+
+```sql
+-- GENERATE orphan checks for every foreign key relationship
+SELECT 
+  'SELECT ''' || tc.table_name || '.' || kcu.column_name || ' → ' || ccu.table_name || '.' || ccu.column_name 
+  || ''' as relationship, COUNT(*) as orphan_count FROM ' || tc.table_name 
+  || ' child WHERE child.' || kcu.column_name || ' IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ' 
+  || ccu.table_name || ' parent WHERE parent.' || ccu.column_name || ' = child.' || kcu.column_name 
+  || ') UNION ALL' as check_query
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu 
+  ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu 
+  ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = 'public'
+ORDER BY tc.table_name;
+```
+
+**EXPECTED RESULT:** Zero orphan counts. Every foreign key should point to a real record.
+
+---
+
+## DIAGNOSTIC 5: Workspace Consistency — Cross-Table workspace_id Mismatch
+
+When table A references table B via foreign key, BOTH records should have the same workspace_id. This catches the scenario where a record in workspace 1 accidentally references a record in workspace 2:
+
+```sql
+-- Check that employees belong to the same workspace as their shifts
+-- (Adapt this pattern for every parent-child relationship)
+
+-- Example: shifts referencing employees in different workspaces
+SELECT 'shifts ↔ employees' as relationship, COUNT(*) as mismatch_count
+FROM shifts s
+JOIN users u ON s.assigned_to = u.id  -- or however shifts reference employees
+WHERE s.workspace_id != u.workspace_id
+  AND s.assigned_to IS NOT NULL
+
+UNION ALL
+
+-- Invoices referencing clients in different workspaces
+SELECT 'invoices ↔ clients', COUNT(*)
+FROM invoices i
+JOIN clients c ON i.client_id = c.id
+WHERE i.workspace_id != c.workspace_id
+  AND i.client_id IS NOT NULL
+
+UNION ALL
+
+-- Clock records referencing employees in different workspaces
+SELECT 'clock_records ↔ employees', COUNT(*)
+FROM clock_records cr
+JOIN users u ON cr.user_id = u.id
+WHERE cr.workspace_id != u.workspace_id
+  AND cr.user_id IS NOT NULL
+
+UNION ALL
+
+-- Credit transactions referencing wrong workspace
+SELECT 'credit_transactions ↔ credit_balances', COUNT(*)
+FROM credit_transactions ct
+JOIN credit_balances cb ON ct.workspace_id = cb.workspace_id
+WHERE ct.workspace_id != cb.workspace_id;
+
+-- ADD MORE PAIRS for every parent-child table relationship in your schema
+```
+
+**EXPECTED RESULT:** Zero mismatches. If any appear, data is leaking across orgs.
+
+---
+
+## DIAGNOSTIC 6: Duplicate Records
+
+Check for duplicates that the agent may have accidentally created:
+
+```sql
+-- Duplicate employees (same name + email in same workspace)
+SELECT workspace_id, email, full_name, COUNT(*) as dupes
+FROM users
+WHERE email IS NOT NULL
+GROUP BY workspace_id, email, full_name
+HAVING COUNT(*) > 1;
+
+-- Duplicate clients (same name in same workspace)
+SELECT workspace_id, name, COUNT(*) as dupes
+FROM clients
+GROUP BY workspace_id, name
+HAVING COUNT(*) > 1;
+
+-- Duplicate shifts (same employee + date + time in same workspace)
+SELECT workspace_id, assigned_to, date, start_time, end_time, COUNT(*) as dupes
+FROM shifts
+WHERE assigned_to IS NOT NULL
+GROUP BY workspace_id, assigned_to, date, start_time, end_time
+HAVING COUNT(*) > 1;
+
+-- Duplicate invoices (same client + period in same workspace)
+SELECT workspace_id, client_id, billing_period, COUNT(*) as dupes
+FROM invoices
+WHERE client_id IS NOT NULL AND billing_period IS NOT NULL
+GROUP BY workspace_id, client_id, billing_period
+HAVING COUNT(*) > 1;
+
+-- Duplicate org_subscriptions (should be exactly 1 per workspace)
+SELECT workspace_id, COUNT(*) as dupes
+FROM org_subscriptions
+GROUP BY workspace_id
+HAVING COUNT(*) > 1;
+
+-- Duplicate credit_balances (should be exactly 1 per workspace)
+SELECT workspace_id, COUNT(*) as dupes
+FROM credit_balances
+GROUP BY workspace_id
+HAVING COUNT(*) > 1;
+
+-- Duplicate platform_invoices (same workspace + billing cycle)
+SELECT workspace_id, billing_cycle, COUNT(*) as dupes
+FROM platform_invoices
+GROUP BY workspace_id, billing_cycle
+HAVING COUNT(*) > 1;
+
+-- Duplicate usage_caps (same workspace + billing cycle + feature)
+SELECT workspace_id, billing_cycle, feature_key, COUNT(*) as dupes
+FROM usage_caps
+GROUP BY workspace_id, billing_cycle, feature_key
+HAVING COUNT(*) > 1;
+
+-- Duplicate subscription_tiers (same tier ID)
+SELECT id, COUNT(*) as dupes
+FROM subscription_tiers
+GROUP BY id
+HAVING COUNT(*) > 1;
+```
+
+**EXPECTED RESULT:** Zero duplicates. If any exist, keep the most recently updated one and soft-delete the others.
+
+---
+
+## DIAGNOSTIC 7: Tables Without Primary Keys or Indexes
+
+```sql
+-- Tables without a primary key (every table MUST have one)
+SELECT t.table_name
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+  AND NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints tc
+    WHERE tc.table_name = t.table_name 
+      AND tc.constraint_type = 'PRIMARY KEY'
+      AND tc.table_schema = 'public'
+  );
+
+-- Tables with workspace_id but NO index on workspace_id
+-- (Every query filters by workspace_id, so it MUST be indexed)
+SELECT c.table_name
+FROM information_schema.columns c
+WHERE c.column_name = 'workspace_id' AND c.table_schema = 'public'
+AND NOT EXISTS (
+  SELECT 1 FROM pg_indexes pi
+  WHERE pi.tablename = c.table_name
+    AND pi.indexdef LIKE '%workspace_id%'
+);
+```
+
+---
+
+## DIAGNOSTIC 8: Drizzle Schema vs Actual Database
+
+```sql
+-- List ALL tables in database
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+ORDER BY table_name;
+
+-- For each table, list ALL columns with types
+SELECT table_name, column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+```
+
+**Cross-reference this output with the Drizzle schema file (shared/schema.ts or server/db/schema.ts).** Every table in the database must be in Drizzle. Every column must match. Any mismatch means Drizzle operations will fail at runtime.
+
+---
+
+## DIAGNOSTIC 9: Clients Not Connected to Org
+
+This is the specific issue Bryan flagged — clients/sites that aren't properly linked to their workspace:
+
+```sql
+-- Clients with NULL workspace_id
+SELECT id, name, 'NULL workspace_id' as issue FROM clients WHERE workspace_id IS NULL;
+
+-- Clients whose workspace_id doesn't match any actual workspace
+SELECT c.id, c.name, c.workspace_id, 'workspace does not exist' as issue
+FROM clients c
+LEFT JOIN workspaces w ON c.workspace_id = w.id
+WHERE w.id IS NULL AND c.workspace_id IS NOT NULL;
+
+-- Invoices referencing clients that don't exist
+SELECT i.id, i.client_id, 'client does not exist' as issue
+FROM invoices i
+LEFT JOIN clients c ON i.client_id = c.id
+WHERE c.id IS NULL AND i.client_id IS NOT NULL;
+
+-- Shifts referencing clients/sites that don't exist
+SELECT s.id, s.site_id, 'site does not exist' as issue
+FROM shifts s
+LEFT JOIN clients c ON s.site_id = c.id
+WHERE c.id IS NULL AND s.site_id IS NOT NULL;
+
+-- Financial processing fees referencing non-existent workspace
+SELECT f.id, f.workspace_id, 'workspace does not exist' as issue
+FROM financial_processing_fees f
+LEFT JOIN workspaces w ON f.workspace_id = w.id
+WHERE w.id IS NULL;
+
+-- Credit balances for non-existent workspaces
+SELECT cb.id, cb.workspace_id, 'workspace does not exist' as issue
+FROM credit_balances cb
+LEFT JOIN workspaces w ON cb.workspace_id = w.id
+WHERE w.id IS NULL;
+
+-- Employees (users) with NULL workspace_id or non-existent workspace
+SELECT u.id, u.full_name, u.email, u.workspace_id,
+  CASE 
+    WHEN u.workspace_id IS NULL THEN 'NULL workspace_id'
+    WHEN w.id IS NULL THEN 'workspace does not exist'
+  END as issue
+FROM users u
+LEFT JOIN workspaces w ON u.workspace_id = w.id
+WHERE u.workspace_id IS NULL OR w.id IS NULL;
+```
+
+---
+
+## DIAGNOSTIC 10: Billing Chain Integrity
+
+The money chain must be unbroken: workspace → subscription → credits → fees → platform invoice.
+
+```sql
+-- Workspaces WITHOUT an org_subscription (can't bill them)
+SELECT w.id, w.name, 'no org_subscription' as issue
+FROM workspaces w
+LEFT JOIN org_subscriptions os ON w.id = os.workspace_id
+WHERE os.id IS NULL;
+
+-- Workspaces WITHOUT credit_balances (credits will fail)
+SELECT w.id, w.name, 'no credit_balance' as issue
+FROM workspaces w
+LEFT JOIN credit_balances cb ON w.id = cb.workspace_id
+WHERE cb.id IS NULL;
+
+-- Workspaces WITHOUT usage_caps for current period
+SELECT w.id, w.name, 'no current usage_cap' as issue
+FROM workspaces w
+LEFT JOIN usage_caps uc ON w.id = uc.workspace_id 
+  AND uc.billing_cycle = TO_CHAR(NOW(), 'YYYY-MM')
+WHERE uc.id IS NULL;
+
+-- org_subscriptions referencing non-existent tier
+SELECT os.id, os.workspace_id, os.tier_id, 'tier does not exist' as issue
+FROM org_subscriptions os
+LEFT JOIN subscription_tiers st ON os.tier_id = st.id
+WHERE st.id IS NULL;
+
+-- Financial processing fees not linked to any platform invoice 
+-- but from a PAST billing cycle (they should have been billed)
+SELECT f.id, f.workspace_id, f.billing_cycle, f.fee_type, f.amount_cents,
+  'unbilled fee from past cycle' as issue
+FROM financial_processing_fees f
+WHERE f.billed_on_platform_invoice_id IS NULL
+  AND f.billing_cycle < TO_CHAR(NOW(), 'YYYY-MM');
+
+-- Platform invoices with $0 total (suspicious — may indicate broken fee linking)
+SELECT pi.id, pi.workspace_id, pi.billing_cycle, pi.total_cents, 
+  'zero dollar invoice' as issue
+FROM platform_invoices pi
+WHERE pi.total_cents = 0;
+```
+
+---
+
+## DIAGNOSTIC 11: Column Name Consistency
+
+Check for inconsistent column naming that could cause query bugs:
+
+```sql
+-- Find tables that use 'user_id' vs 'employee_id' vs 'assigned_to' vs 'created_by'
+-- for referencing users (inconsistency causes join bugs)
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND (column_name LIKE '%user_id%' 
+    OR column_name LIKE '%employee_id%' 
+    OR column_name LIKE '%assigned_to%'
+    OR column_name LIKE '%officer_id%'
+    OR column_name LIKE '%reported_by%'
+    OR column_name LIKE '%created_by%'
+    OR column_name LIKE '%reviewed_by%'
+    OR column_name LIKE '%manager_id%'
+    OR column_name LIKE '%owner_id%')
+  AND data_type = 'uuid'
+ORDER BY column_name, table_name;
+```
+
+**This shows you every column that references a user.** Verify they ALL reference the same `users` table and have consistent naming. If some columns say `employee_id` and reference an `employees` table while others say `user_id` and reference `users`, you have a split identity problem.
+
+---
+
+## DIAGNOSTIC 12: Full Table Inventory with Row Counts
+
+```sql
+-- Complete inventory of every table, its row count, and whether it has key columns
+SELECT 
+  t.table_name,
+  pg_stat_user_tables.n_live_tup as row_count,
+  CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.column_name = 'workspace_id') THEN '✅' ELSE '❌' END as has_workspace_id,
+  CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.column_name = 'created_by') THEN '✅' ELSE '❌' END as has_created_by,
+  CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.column_name = 'created_at') THEN '✅' ELSE '❌' END as has_created_at,
+  CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.column_name = 'updated_at') THEN '✅' ELSE '❌' END as has_updated_at,
+  CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.column_name = 'is_deleted') THEN '✅' ELSE '❌' END as has_soft_delete
+FROM information_schema.tables t
+LEFT JOIN pg_stat_user_tables ON pg_stat_user_tables.relname = t.table_name
+WHERE t.table_schema = 'public' 
+  AND t.table_type = 'BASE TABLE'
+ORDER BY t.table_name;
+```
+
+**This is your master checklist.** Every row should show ✅ across the board (except legitimate exceptions like subscription_tiers and migration tables).
+
+---
+
+# ═══════════════════════════════════════════════════
+# PHASE 2: THE FIX PLAN — AFTER ALL DIAGNOSTICS RUN
+# ═══════════════════════════════════════════════════
+
+**ONLY proceed to Phase 2 after ALL 12 diagnostics have been run and results compiled.**
+
+## FIX ORDER (This order prevents cascading issues):
+
+### Step 1: Add Missing Columns
+
+For every table identified in Diagnostics 1-2:
+
+```sql
+-- TEMPLATE: Add workspace_id to a table that's missing it
+ALTER TABLE [table_name] ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id);
+ALTER TABLE [table_name] ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
+ALTER TABLE [table_name] ADD COLUMN IF NOT EXISTS created_by_type VARCHAR(20) DEFAULT 'system';
+ALTER TABLE [table_name] ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE [table_name] ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+-- Create index on workspace_id
+CREATE INDEX IF NOT EXISTS idx_[table_name]_workspace ON [table_name](workspace_id);
+```
+
+**CRITICAL: After adding workspace_id, you must POPULATE it for existing rows.** If there's a logical way to determine the workspace (e.g., through a foreign key to another table that has workspace_id), use that:
+
+```sql
+-- Example: Populate workspace_id on a child table from its parent
+UPDATE child_table c
+SET workspace_id = p.workspace_id
+FROM parent_table p
+WHERE c.parent_id = p.id
+  AND c.workspace_id IS NULL;
+```
+
+**If there's only one workspace in the system (dev/Statewide), you can bulk-set:**
+
+```sql
+-- ONLY for dev/single-workspace: Set all NULL workspace_ids to the one workspace
+UPDATE [table_name] SET workspace_id = (SELECT id FROM workspaces LIMIT 1)
+WHERE workspace_id IS NULL;
+```
+
+**Then make the column NOT NULL:**
+
+```sql
+ALTER TABLE [table_name] ALTER COLUMN workspace_id SET NOT NULL;
+```
+
+### Step 2: Fix Orphaned References (Diagnostic 4)
+
+For each orphaned foreign key found:
+- Determine if the parent record was accidentally deleted
+- If restorable: recreate the parent record
+- If not: decide whether the orphaned child record should be deleted (soft-delete) or re-linked
+
+### Step 3: Fix Cross-Workspace Mismatches (Diagnostic 5)
+
+For each mismatch found:
+- Determine which workspace_id is correct (usually the parent record's workspace)
+- Update the child record to match
+
+### Step 4: Deduplicate Records (Diagnostic 6)
+
+For each duplicate set found:
+- Keep the record with the most recent updated_at
+- Soft-delete the duplicates (set is_deleted = true)
+- Verify no other records reference the duplicates before soft-deleting
+
+**CRITICAL: Do NOT hard-delete duplicates. Soft-delete them.** The agent has been creating duplicates precisely because it doesn't check for existing records before inserting. After deduplication, add UNIQUE constraints to prevent recurrence:
+
+```sql
+-- Prevent future duplicates
+ALTER TABLE org_subscriptions ADD CONSTRAINT unique_org_sub_workspace 
+  UNIQUE (workspace_id) WHERE is_deleted = false;
+
+ALTER TABLE credit_balances ADD CONSTRAINT unique_credit_bal_workspace 
+  UNIQUE (workspace_id) WHERE is_deleted = false;
+  
+-- Note: Partial unique constraints (WHERE is_deleted = false) allow 
+-- soft-deleted records to exist alongside the active record
+```
+
+### Step 5: Fix Billing Chain (Diagnostic 10)
+
+For each workspace missing billing records:
+- Create org_subscription record with appropriate tier
+- Create credit_balance record with tier's monthly credits
+- Create usage_cap record for current billing cycle
+
+### Step 6: Sync Drizzle Schema (Diagnostic 8)
+
+After all SQL changes are made:
+1. Update the Drizzle schema file to match the actual database
+2. Verify every table definition matches
+3. Verify every column, type, default, and constraint matches
+4. Do NOT run drizzle-kit push until schema is verified
+5. Run drizzle-kit push --dry-run first to see what it would change
+
+### Step 7: Add Missing Indexes (Diagnostic 7)
+
+```sql
+-- For every table with workspace_id but no index on it:
+CREATE INDEX IF NOT EXISTS idx_[table_name]_workspace ON [table_name](workspace_id);
+
+-- For tables frequently queried by date:
+CREATE INDEX IF NOT EXISTS idx_[table_name]_created ON [table_name](created_at);
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PHASE 3: PREVENTION — STOP IT FROM HAPPENING AGAIN
+# ═══════════════════════════════════════════════════
+
+## 3A: NOT NULL Constraints
+
+After populating all NULL workspace_ids, make the column NOT NULL on every table:
+
+```sql
+-- For EVERY table with workspace_id:
+ALTER TABLE [table_name] ALTER COLUMN workspace_id SET NOT NULL;
+```
+
+This means future INSERTs that forget workspace_id will FAIL at the database level — not silently succeed with NULL.
+
+## 3B: UNIQUE Constraints for 1-to-1 Relationships
+
+```sql
+-- Each workspace has exactly ONE subscription
+ALTER TABLE org_subscriptions 
+  ADD CONSTRAINT IF NOT EXISTS uq_org_sub_workspace UNIQUE (workspace_id);
+
+-- Each workspace has exactly ONE credit balance
+ALTER TABLE credit_balances 
+  ADD CONSTRAINT IF NOT EXISTS uq_credit_bal_workspace UNIQUE (workspace_id);
+
+-- Each workspace + billing cycle has exactly ONE platform invoice
+-- (already defined in schema but verify it exists)
+ALTER TABLE platform_invoices 
+  ADD CONSTRAINT IF NOT EXISTS uq_platform_invoice UNIQUE (workspace_id, billing_cycle);
+
+-- Each workspace + billing cycle + feature has exactly ONE usage cap
+ALTER TABLE usage_caps 
+  ADD CONSTRAINT IF NOT EXISTS uq_usage_cap UNIQUE (workspace_id, billing_cycle, feature_key);
+```
+
+## 3C: Check Constraints
+
+```sql
+-- Ensure created_by_type is always a valid value
+ALTER TABLE [each_table] ADD CONSTRAINT IF NOT EXISTS chk_created_by_type
+  CHECK (created_by_type IN ('user', 'bot', 'system', 'cron', 'trinity'));
+```
+
+## 3D: INSERT Guards in Service Layer
+
+Every service that creates records MUST use this pattern:
+
+```typescript
+// PATTERN: Safe insert with attribution
+async function safeInsert(table: any, data: any, context: RequestContext) {
+  // 1. Validate workspace_id exists
+  if (!data.workspace_id && !context.workspaceId) {
+    throw new Error(`Cannot insert into ${table.name}: no workspace_id`);
+  }
+  
+  // 2. Check for duplicates BEFORE inserting (prevents the agent's duplicate problem)
+  if (data.uniqueKey) {
+    const existing = await db.select().from(table)
+      .where(and(
+        eq(table.workspace_id, data.workspace_id || context.workspaceId),
+        eq(table[data.uniqueKey.column], data[data.uniqueKey.column])
+      ))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      // UPDATE existing instead of creating duplicate
+      return db.update(table)
+        .set({ ...data, updated_at: new Date() })
+        .where(eq(table.id, existing[0].id))
+        .returning();
+    }
+  }
+  
+  // 3. Insert with full attribution
+  return db.insert(table).values({
+    ...data,
+    workspace_id: data.workspace_id || context.workspaceId,
+    created_by: context.userId || null,
+    created_by_type: context.type || 'system',
+    created_at: new Date(),
+    updated_at: new Date(),
+  }).returning();
+}
+```
+
+## 3E: Upsert Pattern for Idempotent Operations
+
+The agent keeps creating duplicates because it uses INSERT when it should use UPSERT:
+
+```sql
+-- PATTERN: Upsert (insert or update if exists)
+-- Use this for any table with a natural unique key
+
+-- Example: org_subscriptions (one per workspace)
+INSERT INTO org_subscriptions (workspace_id, tier_id, status, current_period_start, current_period_end)
+VALUES ($1, $2, 'active', $3, $4)
+ON CONFLICT (workspace_id) 
+DO UPDATE SET 
+  tier_id = EXCLUDED.tier_id,
+  status = EXCLUDED.status,
+  current_period_start = EXCLUDED.current_period_start,
+  current_period_end = EXCLUDED.current_period_end,
+  updated_at = NOW();
+
+-- Example: credit_balances (one per workspace)
+INSERT INTO credit_balances (workspace_id, subscription_credits, carryover_credits, purchased_credits)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (workspace_id)
+DO UPDATE SET
+  subscription_credits = EXCLUDED.subscription_credits,
+  updated_at = NOW();
+```
+
+**RULE FOR THE AGENT: Before every INSERT, ask yourself: "Can this record already exist?" If yes, use UPSERT (ON CONFLICT DO UPDATE), NOT raw INSERT.**
+
+---
+
+# ═══════════════════════════════════════════════════
+# PHASE 4: VERIFICATION — PROVE IT'S FIXED
+# ═══════════════════════════════════════════════════
+
+After all fixes, re-run EVERY diagnostic from Phase 1. The expected results:
+
+```
+Diagnostic 1  (Missing workspace_id):     0 tables found
+Diagnostic 2  (Missing created_by/at):     0 tables found
+Diagnostic 3  (NULL workspace_ids):        0 records found
+Diagnostic 4  (Orphaned foreign keys):     0 orphans found
+Diagnostic 5  (Cross-workspace mismatch):  0 mismatches found
+Diagnostic 6  (Duplicate records):         0 duplicates found
+Diagnostic 7  (Missing indexes/PKs):       0 tables found
+Diagnostic 8  (Drizzle vs DB mismatch):    0 differences
+Diagnostic 9  (Disconnected clients):      0 orphaned clients
+Diagnostic 10 (Billing chain breaks):      0 missing records
+Diagnostic 11 (Column naming):            Consistent naming verified
+Diagnostic 12 (Master inventory):          All ✅ across the board
+```
+
+**If ANY diagnostic still shows issues after the fix pass, loop back and fix them.** Do NOT move on to new feature development until all 12 diagnostics pass clean.
+
+---
+
+# ═══════════════════════════════════════════════════
+# PHASE 5: ONGOING HEALTH CHECK
+# ═══════════════════════════════════════════════════
+
+Add a scheduled health check that runs the critical diagnostics daily:
+
+```typescript
+// server/crons/databaseHealthCheck.ts
+
+// Runs daily at 3 AM
+async function databaseHealthCheck() {
+  const issues = [];
+  
+  // Check for NULL workspace_ids across all tables
+  const nullWorkspaceResults = await checkNullWorkspaceIds();
+  if (nullWorkspaceResults.length > 0) {
+    issues.push(`NULL workspace_id found in: ${nullWorkspaceResults.map(r => r.table_name).join(', ')}`);
+  }
+  
+  // Check for orphaned foreign keys
+  const orphanResults = await checkOrphanedForeignKeys();
+  if (orphanResults.length > 0) {
+    issues.push(`Orphaned references found: ${orphanResults.map(r => r.relationship).join(', ')}`);
+  }
+  
+  // Check for duplicate billing records
+  const dupeResults = await checkBillingDuplicates();
+  if (dupeResults.length > 0) {
+    issues.push(`Duplicate billing records: ${JSON.stringify(dupeResults)}`);
+  }
+  
+  // Check billing chain integrity
+  const billingGaps = await checkBillingChain();
+  if (billingGaps.length > 0) {
+    issues.push(`Billing chain gaps: ${billingGaps.map(g => g.issue).join(', ')}`);
+  }
+  
+  if (issues.length > 0) {
+    // Send alert notification to org owner / platform admin
+    await notificationService.sendSystemAlert({
+      title: 'Database Health Check — Issues Found',
+      body: issues.join('\n'),
+      severity: 'high',
+    });
+    
+    // Log to audit trail
+    await auditLog.log({
+      workspaceId: 'system',
+      actorType: 'cron',
+      action: 'health_check.issues_found',
+      entityType: 'system',
+      changeType: 'action',
+      metadata: { issues },
+    });
+  }
+}
+```
+
+---
+
+END OF DATABASE INTEGRITY AUDIT v1.0
+
+RUN PHASE 1 FIRST. COMPILE ALL RESULTS. THEN FIX IN PHASE 2 ORDER.
+DO NOT FIX INCREMENTALLY — THAT'S HOW DUPLICATES GET CREATED.

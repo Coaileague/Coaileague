@@ -105,7 +105,6 @@ export function WhatsNewBadge() {
   
   useEffect(() => {
     const handlePlatformUpdate = (event: CustomEvent) => {
-      console.log('[WhatsNew] Platform update received via WebSocket:', event.detail);
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
@@ -114,7 +113,6 @@ export function WhatsNewBadge() {
     };
     
     const handleWhatsNewCleared = (event: CustomEvent) => {
-      console.log('[WhatsNew] All cleared via WebSocket:', event.detail);
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
@@ -123,7 +121,6 @@ export function WhatsNewBadge() {
     };
     
     const handleWhatsNewViewed = (event: CustomEvent) => {
-      console.log('[WhatsNew] Item viewed via WebSocket (cross-tab sync):', event.detail);
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
@@ -154,7 +151,14 @@ export function WhatsNewBadge() {
 
   const updates = updatesData?.updates || [];
   
-  const acknowledgedIds = new Set(JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]'));
+  const getAcknowledgedIds = () => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]'));
+    } catch {
+      return new Set();
+    }
+  };
+  const acknowledgedIds = getAcknowledgedIds();
   const filteredUpdates = updates.filter(u => !acknowledgedIds.has(u.id));
   
   const unviewedCount = unviewedData?.count ?? 0;
@@ -197,32 +201,48 @@ export function WhatsNewBadge() {
       const idsToAcknowledge = Array.from(selectedIds);
       if (idsToAcknowledge.length === 0) return { markedCount: 0 };
       
-      console.log('[WhatsNew] Acknowledging IDs:', idsToAcknowledge);
+      const MAX_ACK_ENTRIES = 500;
+      const getAcknowledgedList = () => {
+        try {
+          return JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]');
+        } catch {
+          return [];
+        }
+      };
+
       try {
         const response = await apiRequest('POST', '/api/whats-new/mark-all-viewed', { 
           updateIds: idsToAcknowledge, 
           source: 'badge-selection' 
         });
         const data = await response.json();
-        console.log('[WhatsNew] Response:', data);
-        const acknowledged = JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]');
+        const acknowledged = getAcknowledgedList();
         idsToAcknowledge.forEach(id => {
           if (!acknowledged.includes(id)) acknowledged.push(id);
         });
+        
+        if (acknowledged.length > MAX_ACK_ENTRIES) {
+          acknowledged.splice(0, acknowledged.length - MAX_ACK_ENTRIES);
+        }
+        
         localStorage.setItem('whats-new-acknowledged', JSON.stringify(acknowledged));
         return data;
       } catch (error) {
         console.error('[WhatsNew] API error:', error);
-        const acknowledged = JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]');
+        const acknowledged = getAcknowledgedList();
         idsToAcknowledge.forEach(id => {
           if (!acknowledged.includes(id)) acknowledged.push(id);
         });
+        
+        if (acknowledged.length > MAX_ACK_ENTRIES) {
+          acknowledged.splice(0, acknowledged.length - MAX_ACK_ENTRIES);
+        }
+        
         localStorage.setItem('whats-new-acknowledged', JSON.stringify(acknowledged));
         throw error;
       }
     },
     onSuccess: (data) => {
-      console.log('[WhatsNew] Success! Marked:', data);
       setSelectedIds(new Set());
       setTimeout(() => {
         refetchUpdates();
@@ -341,7 +361,7 @@ export function WhatsNewBadge() {
       data-testid={`update-${update.id}`}
     >
       {!update.hasViewed && (
-        <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500" />
+        <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600" />
       )}
       
       <div className="flex items-start gap-3 pr-6">
@@ -476,7 +496,7 @@ export function WhatsNewBadge() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 max-h-[85vh] sm:max-h-[600px] p-0" align="start" side="right" sideOffset={8}>
-        <div className="p-4 flex items-center justify-between">
+        <div className="p-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
             <h3 className="font-semibold">What's New</h3>

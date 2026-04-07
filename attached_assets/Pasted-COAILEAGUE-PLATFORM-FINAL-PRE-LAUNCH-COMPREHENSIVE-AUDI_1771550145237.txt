@@ -1,0 +1,1325 @@
+COAILEAGUE PLATFORM - FINAL PRE-LAUNCH COMPREHENSIVE AUDIT
+DIRECTIVE: This is the FINAL deep-dive audit before live testing. Leave NO stone unturned. Every route, button, link, page, API, action, schema, table, service, bot, and pixel must be verified. Run this audit in PARALLEL with multiple sub-agents if needed. Report ALL findings before fixing.
+
+AUDIT EXECUTION STRATEGY
+PARALLEL WORKSTREAMS:
+├── Agent 1: Routes, API Endpoints, CRUD Operations
+├── Agent 2: Frontend Pages, Components, UI/UX
+├── Agent 3: Mobile Parity & Responsive Design
+├── Agent 4: Database Schema, Tables, Enums
+├── Agent 5: Services, Bots, AI Systems
+├── Agent 6: Chat/Messaging System (Facebook Parity)
+├── Agent 7: Financial, Subscriptions, Billing
+├── Agent 8: Navigation, Breadcrumbs, Broken Links
+└── Agent 9: Semantic & Platform Scope Alignment
+
+Combine all findings into unified report.
+
+PHASE 1: ROUTE & API ENDPOINT AUDIT
+1.1 Mounted Routes Discovery
+bash# Find ALL route definitions
+grep -rn "router\." --include="*.ts" server/
+grep -rn "app\.get\|app\.post\|app\.put\|app\.patch\|app\.delete" --include="*.ts" server/
+grep -rn "Route\|path=" --include="*.tsx" client/
+
+# List all mounted route files
+find server -name "*route*" -o -name "*Route*"
+```
+
+**For EACH route file, document:**
+```
+| File | Endpoint | Method | Auth Required | Workspace Isolated | Handler Exists | Actually Used |
+|------|----------|--------|---------------|-------------------|----------------|---------------|
+```
+
+### 1.2 API Endpoint Verification
+
+**For EVERY endpoint:**
+```
+[ ] Endpoint exists in route file
+[ ] Handler function exists and is implemented (not empty/TODO)
+[ ] Authentication middleware applied where needed
+[ ] workspaceId validation present for tenant-specific data
+[ ] userId extracted from session (not from request body)
+[ ] Input validation implemented
+[ ] Error handling with proper status codes
+[ ] Response format consistent with platform standards
+[ ] Actually called by frontend (trace the call)
+[ ] Returns expected data structure
+```
+
+### 1.3 CRUD Operations Trace
+
+**For EACH entity (employees, clients, sites, shifts, schedules, invoices, etc.):**
+```
+ENTITY: _______________
+
+CREATE:
+[ ] Frontend form exists
+[ ] Form validation works
+[ ] Submit calls correct API endpoint
+[ ] API endpoint creates record in database
+[ ] workspaceId automatically assigned (not from client)
+[ ] Response returns created entity
+[ ] UI refreshes/updates after creation
+[ ] Success toast/notification shown
+[ ] Error handling for failures
+
+READ (List):
+[ ] List page/component exists
+[ ] Calls correct API endpoint
+[ ] Filters by workspaceId (no cross-tenant data leak)
+[ ] Pagination implemented (if large dataset)
+[ ] Search/filter functionality works
+[ ] Empty state displayed when no data
+[ ] Loading state while fetching
+
+READ (Detail):
+[ ] Detail page/view exists
+[ ] Fetches single record by ID
+[ ] Validates user has access to this record
+[ ] All fields display correctly
+[ ] Related data loads (foreign key relationships)
+
+UPDATE:
+[ ] Edit form/modal exists
+[ ] Pre-populates with current data
+[ ] Submit calls correct API endpoint (PUT/PATCH)
+[ ] Validates user can edit this record
+[ ] Only changed fields sent (or full update)
+[ ] Optimistic UI update or refetch after save
+[ ] Success feedback shown
+
+DELETE:
+[ ] Delete button/action exists
+[ ] Confirmation dialog shown
+[ ] Calls correct API endpoint (DELETE)
+[ ] Validates user can delete this record
+[ ] Cascade deletes handled (or prevented if has dependencies)
+[ ] UI removes item after deletion
+[ ] Success feedback shown
+
+PHASE 2: FRONTEND PAGES AUDIT
+2.1 Page Discovery
+bash# Find ALL pages
+find client/src/pages -name "*.tsx" | sort
+find client/src/app -name "page.tsx" | sort  # if using app router
+```
+
+### 2.2 Public Pages (No Auth Required)
+```
+[ ] / - Landing page
+    [ ] Renders correctly
+    [ ] All images load
+    [ ] All links work
+    [ ] CTA buttons functional
+    [ ] Mobile responsive
+    [ ] Performance acceptable (<3s load)
+
+[ ] /login - Login page
+    [ ] Form renders
+    [ ] Validation works
+    [ ] Submit authenticates
+    [ ] Redirects to dashboard on success
+    [ ] Error messages display
+    [ ] "Forgot password" link works
+
+[ ] /register - Registration page
+    [ ] Form renders with all fields
+    [ ] Validation works (email, password strength)
+    [ ] Creates account
+    [ ] Creates workspace/organization
+    [ ] Sends verification email (if implemented)
+    [ ] Redirects appropriately
+
+[ ] /pricing - Pricing page
+    [ ] All tiers display correctly
+    [ ] Features listed accurately
+    [ ] CTA buttons work
+    [ ] Links to signup/checkout
+
+[ ] /about, /contact, /terms, /privacy - Static pages
+    [ ] All render
+    [ ] Content is accurate
+    [ ] Links work
+
+(List any other public pages)
+```
+
+### 2.3 Workspace/Authenticated Pages
+
+**For EACH authenticated page:**
+```
+PAGE: _______________
+ROUTE: _______________
+
+BASIC CHECKS:
+[ ] Page loads without error
+[ ] Auth redirect works (if not logged in → login)
+[ ] Correct layout wrapper applied
+[ ] Page title set correctly
+[ ] Breadcrumbs accurate and clickable
+[ ] Navigation highlights correct menu item
+
+DATA LOADING:
+[ ] Fetches correct data on mount
+[ ] Loading state shown while fetching
+[ ] Error state handles API failures
+[ ] Empty state when no data
+[ ] Data displays correctly
+
+ACTIONS:
+[ ] All buttons have onClick handlers
+[ ] All buttons perform their stated action
+[ ] All links navigate correctly
+[ ] All forms submit correctly
+[ ] All modals open/close correctly
+
+UI/UX:
+[ ] Consistent with platform design system
+[ ] No visual glitches
+[ ] No overlapping elements
+[ ] Proper spacing and alignment
+[ ] Readable text (contrast, size)
+[ ] Icons display correctly
+```
+
+### 2.4 Complete Page Inventory
+```
+DASHBOARD:
+[ ] /dashboard - Main dashboard
+[ ] /dashboard/analytics - Analytics (if exists)
+
+EMPLOYEES:
+[ ] /employees - Employee list
+[ ] /employees/new - Create employee
+[ ] /employees/:id - Employee detail
+[ ] /employees/:id/edit - Edit employee
+[ ] /employees/:id/documents - Employee documents
+[ ] /employees/:id/schedule - Employee schedule history
+
+CLIENTS:
+[ ] /clients - Client list
+[ ] /clients/new - Create client
+[ ] /clients/:id - Client detail
+[ ] /clients/:id/edit - Edit client
+[ ] /clients/:id/sites - Client sites
+[ ] /clients/:id/contracts - Client contracts
+
+SITES:
+[ ] /sites - Site list
+[ ] /sites/new - Create site
+[ ] /sites/:id - Site detail
+[ ] /sites/:id/edit - Edit site
+[ ] /sites/:id/posts - Post orders
+
+SCHEDULING:
+[ ] /schedule - Main schedule view
+[ ] /schedule/day - Day view
+[ ] /schedule/week - Week view
+[ ] /schedule/month - Month view
+[ ] /schedule/templates - Schedule templates
+[ ] /shifts - Shift list
+[ ] /shifts/open - Open shifts
+[ ] /shifts/marketplace - Shift marketplace
+
+TIME TRACKING:
+[ ] /time-tracking - Time entries
+[ ] /time-clock - Clock in/out
+[ ] /timesheets - Timesheet review
+[ ] /timesheets/approvals - Approval queue
+
+PAYROLL:
+[ ] /payroll - Payroll dashboard
+[ ] /payroll/run - Run payroll
+[ ] /payroll/history - Payroll history
+[ ] /payroll/settings - Payroll settings
+
+INVOICING:
+[ ] /invoices - Invoice list
+[ ] /invoices/new - Create invoice
+[ ] /invoices/:id - Invoice detail
+[ ] /invoices/recurring - Recurring invoices
+
+REPORTS:
+[ ] /reports - Reports dashboard
+[ ] /reports/labor - Labor reports
+[ ] /reports/attendance - Attendance reports
+[ ] /reports/compliance - Compliance reports
+[ ] /reports/financial - Financial reports
+
+COMMUNICATIONS:
+[ ] /chatrooms - Chat room list
+[ ] /chatrooms/:id - Chat room view
+[ ] /notifications - Notifications
+[ ] /announcements - Announcements
+
+AI/TRINITY:
+[ ] /trinity - Trinity dashboard
+[ ] /trinity/scheduling - Trinity scheduling
+[ ] /trinity/chat - Trinity chat interface
+
+INTEGRATIONS:
+[ ] /integrations - Integration hub
+[ ] /integrations/quickbooks - QuickBooks setup
+[ ] /integrations/gusto - Gusto setup
+[ ] /quickbooks-import - QuickBooks import wizard
+
+SETTINGS:
+[ ] /settings - Settings hub
+[ ] /settings/organization - Organization settings
+[ ] /settings/billing - Billing & subscription
+[ ] /settings/users - User management
+[ ] /settings/roles - Role/permission management
+[ ] /settings/notifications - Notification preferences
+[ ] /settings/integrations - Integration settings
+[ ] /settings/api - API keys
+
+ONBOARDING:
+[ ] /onboarding - Organization onboarding
+[ ] /onboarding/employee - Employee onboarding
+[ ] /onboarding/compliance - Compliance checklist
+
+ADMIN (Platform Admin):
+[ ] /admin - Admin dashboard
+[ ] /admin/organizations - All organizations
+[ ] /admin/users - All users
+[ ] /admin/billing - Platform billing
+[ ] /admin/support - Support queue
+
+FORMS:
+[ ] /forms - Form templates
+[ ] /forms/:id - Form detail
+[ ] /forms/:id/submissions - Form submissions
+[ ] /forms/builder - Form builder (if exists)
+
+DOCUMENTS:
+[ ] /documents - Document library
+[ ] /documents/:id - Document detail
+[ ] /contracts - Contract management
+[ ] /contracts/:id - Contract detail
+[ ] /contracts/:id/sign - Contract signing
+
+(Add any pages I've missed)
+```
+
+---
+
+## PHASE 3: MOBILE PARITY & RESPONSIVE AUDIT
+
+### 3.1 Viewport Testing
+
+**Test EVERY page at these breakpoints:**
+```
+MOBILE:
+[ ] 320px (iPhone SE)
+[ ] 375px (iPhone X/11/12/13)
+[ ] 390px (iPhone 12/13 Pro)
+[ ] 414px (iPhone Plus models)
+
+TABLET:
+[ ] 768px (iPad portrait)
+[ ] 1024px (iPad landscape)
+
+DESKTOP:
+[ ] 1280px (laptop)
+[ ] 1440px (desktop)
+[ ] 1920px (large desktop)
+```
+
+### 3.2 Mobile-Specific Checks
+
+**For EACH page on mobile:**
+```
+[ ] No horizontal scroll
+[ ] Text readable without zooming
+[ ] Touch targets minimum 44px
+[ ] Buttons/links not too close together
+[ ] Forms usable (inputs not tiny)
+[ ] Modals fit in viewport
+[ ] Dropdowns/selects work
+[ ] Tables scroll horizontally OR convert to cards
+[ ] Navigation accessible (hamburger menu?)
+[ ] Fixed headers don't cover content
+[ ] Keyboard doesn't break layout
+```
+
+### 3.3 Mobile vs Desktop Feature Parity
+
+**Document what should be MOBILE ONLY (field workers):**
+```
+MOBILE-ONLY FEATURES:
+[ ] Clock in/out with GPS - Available on mobile?
+[ ] View assigned shifts - Available on mobile?
+[ ] Duress/panic button - Available on mobile?
+[ ] Proof of service photos - Available on mobile?
+[ ] Chat/messaging - Available on mobile?
+[ ] Notifications - Available on mobile?
+[ ] Basic schedule view - Available on mobile?
+
+DESKTOP-ONLY FEATURES (should be HIDDEN on mobile):
+[ ] Trinity scheduling interface - Hidden on mobile?
+[ ] Full schedule editing - Hidden on mobile?
+[ ] Admin dashboards - Hidden on mobile?
+[ ] Payroll processing - Hidden on mobile?
+[ ] Report generation - Hidden on mobile?
+[ ] Integration management - Hidden on mobile?
+[ ] Billing/subscription - Hidden on mobile?
+[ ] Form builder - Hidden on mobile?
+```
+
+### 3.4 Mobile Navigation
+```
+[ ] Bottom navigation bar present (if mobile app style)
+[ ] Hamburger menu works
+[ ] Back navigation works
+[ ] Swipe gestures work (if implemented)
+[ ] Pull-to-refresh works (if implemented)
+[ ] Tab bar highlights correct item
+
+PHASE 4: DATABASE SCHEMA & TABLES AUDIT
+4.1 Schema Discovery
+bash# Examine schema file
+cat shared/schema.ts
+
+# Or check database directly
+psql -c "\dt" # List all tables
+psql -c "\d+ table_name" # Describe each table
+```
+
+### 4.2 Table Organization Check
+
+**For EACH table:**
+```
+TABLE: _______________
+
+STRUCTURE:
+[ ] Has primary key (id, typically UUID)
+[ ] Has created_at timestamp
+[ ] Has updated_at timestamp
+[ ] Has workspace_id (if tenant-specific)
+[ ] Foreign keys properly defined
+[ ] Indexes exist for common queries
+[ ] Column names follow convention (camelCase or snake_case - PICK ONE)
+
+RELATIONSHIPS:
+[ ] Foreign keys reference existing tables
+[ ] ON DELETE behavior defined (CASCADE, SET NULL, RESTRICT)
+[ ] No orphan records possible
+[ ] Junction tables for many-to-many relationships
+
+DATA INTEGRITY:
+[ ] NOT NULL constraints where required
+[ ] UNIQUE constraints where needed
+[ ] CHECK constraints for valid values
+[ ] DEFAULT values set appropriately
+```
+
+### 4.3 Missing Tables Check
+
+**Verify these tables exist:**
+```
+CORE TABLES:
+[ ] users
+[ ] workspaces / organizations
+[ ] workspace_members / organization_members
+[ ] roles
+[ ] permissions
+
+EMPLOYEE MANAGEMENT:
+[ ] employees
+[ ] employee_documents
+[ ] employee_certifications
+[ ] employee_availability
+
+CLIENT MANAGEMENT:
+[ ] clients
+[ ] sites
+[ ] post_orders
+[ ] client_contracts
+
+SCHEDULING:
+[ ] shifts
+[ ] schedules
+[ ] schedule_templates
+[ ] shift_swaps
+[ ] open_shifts
+
+TIME TRACKING:
+[ ] time_entries
+[ ] clock_events
+[ ] breaks
+[ ] timesheets
+[ ] timesheet_approvals
+
+PAYROLL:
+[ ] payroll_runs
+[ ] payroll_items
+[ ] pay_rates
+[ ] deductions
+[ ] pay_stubs
+
+INVOICING:
+[ ] invoices
+[ ] invoice_items
+[ ] payments
+[ ] recurring_invoices
+
+COMMUNICATIONS:
+[ ] chat_rooms
+[ ] chat_room_members
+[ ] chat_messages
+[ ] notifications
+[ ] announcements
+
+AI/TRINITY:
+[ ] trinity_conversations
+[ ] trinity_client_intelligence
+[ ] trinity_staff_intelligence
+[ ] trinity_org_context
+[ ] trinity_learned_patterns
+[ ] ai_cost_tracking
+
+FORMS:
+[ ] form_templates
+[ ] form_fields
+[ ] form_submissions
+[ ] form_responses
+
+DOCUMENTS:
+[ ] documents
+[ ] document_signatures
+[ ] contracts
+[ ] contract_signatures
+
+INTEGRATIONS:
+[ ] integration_connections
+[ ] integration_sync_logs
+[ ] quickbooks_tokens
+[ ] gusto_tokens
+
+BILLING:
+[ ] subscriptions
+[ ] subscription_plans
+[ ] billing_events
+[ ] usage_tracking
+
+ONBOARDING:
+[ ] onboarding_tasks
+[ ] onboarding_progress
+[ ] compliance_requirements
+[ ] compliance_status
+
+AUDIT/LOGGING:
+[ ] audit_logs
+[ ] activity_logs
+[ ] error_logs
+4.4 Enum & Type Consistency
+bash# Find all enum definitions
+grep -rn "enum\|pgEnum\|z\.enum" --include="*.ts" shared/
+
+# Find all status fields
+grep -rn "status" --include="*.ts" shared/schema.ts
+```
+
+**Verify enums are consistent:**
+```
+SHIFT STATUS:
+[ ] Same values used in schema, backend, and frontend
+[ ] Values: draft, published, assigned, in_progress, completed, cancelled
+
+EMPLOYEE STATUS:
+[ ] Same values everywhere
+[ ] Values: active, inactive, pending, suspended, terminated
+
+INVOICE STATUS:
+[ ] Same values everywhere
+[ ] Values: draft, sent, viewed, paid, overdue, cancelled
+
+TIMESHEET STATUS:
+[ ] Same values everywhere
+[ ] Values: pending, submitted, approved, rejected
+
+(Check ALL status enums for consistency)
+```
+
+### 4.5 Naming Convention Check
+
+**Pick ONE and enforce everywhere:**
+```
+DATABASE COLUMNS:
+[ ] All snake_case: workspace_id, created_at, employee_id
+    OR
+[ ] All camelCase: workspaceId, createdAt, employeeId
+
+CODE VARIABLES:
+[ ] All camelCase in TypeScript
+
+DISCREPANCIES FOUND:
+- _____________ uses snake_case but should be camelCase
+- _____________ uses camelCase but should be snake_case
+
+PHASE 5: SERVICES, BOTS & AI SYSTEMS AUDIT
+5.1 Service Discovery
+bash# Find all services
+find server/services -name "*.ts" | sort
+```
+
+### 5.2 Service Verification
+
+**For EACH service file:**
+```
+SERVICE: _______________
+FILE: _______________
+
+[ ] Service is imported where needed
+[ ] No duplicate service doing same thing
+[ ] Error handling implemented
+[ ] Logging for important operations
+[ ] workspaceId passed/validated where needed
+[ ] Returns consistent response format
+[ ] Actually used (not dead code)
+```
+
+### 5.3 Bot System Audit
+```
+BOT: HelpAI
+[ ] Endpoint exists
+[ ] Responds to queries
+[ ] Context-aware responses
+[ ] Workspace isolation
+[ ] Cost tracking
+
+BOT: MeetingBot
+[ ] Endpoint exists
+[ ] Can schedule meetings
+[ ] Can send reminders
+[ ] Integration with calendar
+
+BOT: ReportBot
+[ ] Endpoint exists
+[ ] Can generate reports
+[ ] Correct data access
+[ ] Export functionality
+
+BOT: SysOpBot
+[ ] Endpoint exists
+[ ] System monitoring
+[ ] Alert capabilities
+[ ] Admin-only access
+
+BOT: ClockBot
+[ ] Endpoint exists
+[ ] Clock in/out assistance
+[ ] GPS validation
+[ ] Time entry creation
+
+(List all bots and verify each)
+```
+
+### 5.4 Trinity AI System Audit
+```
+TRINITY ORCHESTRATION:
+[ ] Multi-model routing works (Gemini → Claude → OpenAI)
+[ ] Fallback chain triggers on failure
+[ ] Confidence scoring implemented
+[ ] Model selection logic correct
+
+TRINITY SCHEDULING:
+[ ] Auto-schedule algorithm exists
+[ ] Considers employee availability
+[ ] Considers skills/certifications
+[ ] Considers client preferences
+[ ] Handles conflicts
+[ ] Real-time progress feedback (WebSocket)
+
+TRINITY MEMORY:
+[ ] Conversation persistence
+[ ] Context retrieval before responses
+[ ] Client intelligence updates
+[ ] Staff intelligence updates
+[ ] Pattern learning
+
+TRINITY COST TRACKING:
+[ ] Token counting per request
+[ ] Cost calculation accurate
+[ ] Workspace billing attribution
+[ ] Rate limiting per workspace
+[ ] Cost alerts configured
+```
+
+### 5.5 AI Action Verification
+
+**For EACH AI-powered feature:**
+```
+AI FEATURE: _______________
+
+[ ] Endpoint exists
+[ ] Prompt is well-structured
+[ ] Input validation
+[ ] Output parsing handles errors
+[ ] Cost tracked
+[ ] Response time acceptable
+[ ] Fallback if AI fails
+[ ] User feedback mechanism
+```
+
+---
+
+## PHASE 6: CHAT/MESSAGING SYSTEM AUDIT (Facebook Parity)
+
+### 6.1 Facebook Messenger Features Comparison
+```
+FEATURE                          | FB HAS | WE HAVE | STATUS
+---------------------------------|--------|---------|--------
+Persistent connection            | ✓      | [ ]     | 
+Multiple room subscriptions      | ✓      | [ ]     |
+Background message receiving     | ✓      | [ ]     |
+Unread counts per room          | ✓      | [ ]     |
+Real-time message delivery      | ✓      | [ ]     |
+Typing indicators               | ✓      | [ ]     |
+Read receipts                   | ✓      | [ ]     |
+Photo/image sharing             | ✓      | [ ]     |
+File attachments                | ✓      | [ ]     |
+Message reactions               | ✓      | [ ]     |
+Reply to specific message       | ✓      | [ ]     |
+Message search                  | ✓      | [ ]     |
+Pin conversations               | ✓      | [ ]     |
+Mute notifications per room     | ✓      | [ ]     |
+Online/offline status           | ✓      | [ ]     |
+Last seen timestamp             | ✓      | [ ]     |
+Group chats                     | ✓      | [ ]     |
+Direct messages                 | ✓      | [ ]     |
+Add/remove members              | ✓      | [ ]     |
+Admin roles in rooms            | ✓      | [ ]     |
+Message deletion                | ✓      | [ ]     |
+Message editing                 | ✓      | [ ]     |
+Push notifications              | ✓      | [ ]     |
+Offline message queue           | ✓      | [ ]     |
+Message delivery status         | ✓      | [ ]     |
+Emoji support                   | ✓      | [ ]     |
+Link previews                   | ✓      | [ ]     |
+```
+
+### 6.2 WebSocket Architecture Check
+```
+CURRENT STATE:
+[ ] How many WebSocket connections per user? (Should be 1)
+[ ] Connection persists across page navigation?
+[ ] Connection persists when switching rooms?
+[ ] Reconnection logic works on disconnect?
+[ ] No connection storms (rapid connect/disconnect)?
+
+REQUIRED STATE (WhatsApp/Facebook model):
+[ ] ONE socket per user session
+[ ] Connect on login, disconnect on logout ONLY
+[ ] Subscribe to ALL user's rooms on connect
+[ ] Messages for ALL rooms flow through one pipe
+[ ] Room switching = UI filter change, NOT reconnection
+```
+
+### 6.3 Chat Database Schema
+```
+[ ] chat_rooms table exists
+    [ ] Has workspace_id
+    [ ] Has name, type (group/direct)
+    [ ] Has created_by, created_at
+
+[ ] chat_room_members table exists
+    [ ] Has room_id, user_id
+    [ ] Has workspace_id
+    [ ] Has joined_at, last_read_at
+    [ ] Has role (admin/member)
+    [ ] Has is_muted
+
+[ ] chat_messages table exists
+    [ ] Has room_id, sender_id
+    [ ] Has workspace_id
+    [ ] Has content, attachments
+    [ ] Has reply_to_id (threading)
+    [ ] Has created_at, edited_at
+    [ ] Has is_deleted flag
+
+[ ] chat_read_receipts table exists (optional)
+    [ ] Has message_id, user_id
+    [ ] Has read_at
+
+[ ] Indexes for performance
+    [ ] Index on room_id + created_at
+    [ ] Index on user_id for membership queries
+```
+
+### 6.4 Chat UI/UX Check
+
+**Desktop View:**
+```
+[ ] Room list shows on left sidebar
+[ ] Room list shows unread counts
+[ ] Room list shows last message preview
+[ ] Clicking room loads messages
+[ ] Messages display correctly (bubbles, alignment)
+[ ] Sender info visible
+[ ] Timestamps visible
+[ ] Message input at bottom
+[ ] Send button works
+[ ] Enter key sends message
+[ ] Shift+Enter for new line
+[ ] Loading state while fetching history
+[ ] Infinite scroll for older messages
+[ ] New message auto-scrolls to bottom
+[ ] New message notification if scrolled up
+```
+
+**Mobile View:**
+```
+[ ] Room list is full screen
+[ ] Tapping room opens full-screen chat
+[ ] Back button returns to room list
+[ ] Messages fit mobile width
+[ ] Keyboard doesn't break layout
+[ ] Send button accessible with keyboard open
+[ ] Pull-to-refresh for new messages
+```
+
+---
+
+## PHASE 7: FINANCIAL, SUBSCRIPTIONS & BILLING AUDIT
+
+### 7.1 Subscription System
+```
+SUBSCRIPTION PLANS:
+[ ] Plans defined in database or code
+[ ] Plan tiers: Free, Pro, Enterprise (or similar)
+[ ] Features per tier documented
+[ ] Pricing accurate
+
+SUBSCRIPTION FLOW:
+[ ] User can view current plan
+[ ] User can upgrade plan
+[ ] User can downgrade plan
+[ ] Payment method collection (Stripe?)
+[ ] Subscription created on payment
+[ ] Webhook handles payment events
+[ ] Failed payment handling
+[ ] Cancellation flow works
+[ ] Prorated billing (if applicable)
+
+FEATURE GATING:
+[ ] Free tier limits enforced
+[ ] Pro features gated for free users
+[ ] Enterprise features gated appropriately
+[ ] Upgrade prompts shown when limit hit
+[ ] Grace period for payment failures
+```
+
+### 7.2 Billing UI
+```
+[ ] /settings/billing page exists
+[ ] Current plan displayed
+[ ] Next billing date shown
+[ ] Payment method shown (masked)
+[ ] Billing history/invoices accessible
+[ ] Update payment method works
+[ ] Cancel subscription works
+[ ] Change plan works
+```
+
+### 7.3 Usage Tracking
+```
+[ ] AI token usage tracked per workspace
+[ ] Employee count tracked per workspace
+[ ] Storage usage tracked (if applicable)
+[ ] API call usage tracked (if applicable)
+[ ] Usage displayed to user
+[ ] Alerts when approaching limits
+```
+
+### 7.4 Financial Reports
+```
+[ ] Platform revenue dashboard (admin)
+[ ] MRR/ARR calculations
+[ ] Churn tracking
+[ ] Per-customer revenue
+```
+
+---
+
+## PHASE 8: NAVIGATION, BREADCRUMBS & LINKS AUDIT
+
+### 8.1 Navigation Structure
+```
+MAIN NAVIGATION:
+[ ] All menu items present
+[ ] All menu items link to correct routes
+[ ] Active state highlights correctly
+[ ] Submenu/dropdowns work
+[ ] Icons display correctly
+[ ] Mobile navigation works (hamburger)
+
+BREADCRUMBS:
+[ ] Present on all interior pages
+[ ] Accurately reflect page hierarchy
+[ ] All breadcrumb links work
+[ ] Home/Dashboard link present
+8.2 Broken Link Discovery
+bash# Find all Link components and href attributes
+grep -rn "<Link\|href=" --include="*.tsx" client/src/
+
+# Find all navigate() calls
+grep -rn "navigate\|useNavigate\|router\.push" --include="*.tsx" --include="*.ts" client/src/
+```
+
+**For EACH link/navigation:**
+```
+[ ] Target route exists
+[ ] Route renders without error
+[ ] No 404 pages
+[ ] No blank pages
+```
+
+### 8.3 Post-Refactoring Link Check
+
+**Pages that may have broken navigation due to refactoring:**
+```
+[ ] Check all pages that were recently modified
+[ ] Check all pages that import refactored components
+[ ] Check all pages that use renamed routes
+[ ] Check all pages with dynamic routes (:id parameters)
+[ ] Check all redirect logic
+[ ] Check all error boundary redirects
+[ ] Check all authentication redirects
+```
+
+---
+
+## PHASE 9: SEMANTIC & PLATFORM SCOPE ALIGNMENT
+
+### 9.1 Platform Mission Alignment
+
+**CoAIleague Mission:**
+> B2B SaaS workforce management platform for security companies featuring GPS time tracking, Trinity AI autonomous scheduling, payroll automation, QuickBooks integration, and multi-model AI orchestration.
+
+**Verify each core promise is delivered:**
+```
+GPS TIME TRACKING:
+[ ] Clock in captures GPS
+[ ] Clock out captures GPS
+[ ] Geofencing validates location
+[ ] Time entries store coordinates
+[ ] Location displayed in admin view
+[ ] Offline capability with queue
+[ ] Mobile-optimized interface
+
+TRINITY AI AUTONOMOUS SCHEDULING:
+[ ] Auto-schedule endpoint exists
+[ ] Considers all constraints
+[ ] Real-time progress feedback
+[ ] Learning from outcomes
+[ ] Confidence scoring
+[ ] Manual override capability
+
+PAYROLL AUTOMATION:
+[ ] Hours calculation automatic
+[ ] Overtime calculation correct
+[ ] Pay rates applied correctly
+[ ] Deductions applied
+[ ] Export to QuickBooks
+[ ] Pay stub generation
+
+QUICKBOOKS INTEGRATION:
+[ ] OAuth connection works
+[ ] Employee sync bidirectional
+[ ] Time entry sync works
+[ ] Invoice sync works
+[ ] Payment sync works
+[ ] Error recovery works
+
+MULTI-MODEL AI ORCHESTRATION:
+[ ] Multiple models configured
+[ ] Fallback chain works
+[ ] Cost tracking per model
+[ ] Response quality monitoring
+```
+
+### 9.2 Security Industry Specific Features
+```
+[ ] Guard licensing tracking
+[ ] Certification expiration alerts
+[ ] Post orders management
+[ ] Incident reporting
+[ ] Daily activity logs
+[ ] Proof of service capture
+[ ] Client-specific requirements
+[ ] Site-specific instructions
+[ ] Duress/panic button
+[ ] Real-time officer location (if promised)
+[ ] Compliance document storage
+[ ] Background check tracking
+[ ] Drug test tracking
+[ ] Uniform/equipment tracking
+```
+
+### 9.3 Terminology Consistency
+
+**Pick ONE term and use everywhere:**
+```
+[ ] "Employee" vs "Staff" vs "Worker" vs "Officer" vs "Guard"
+    DECISION: _______________
+    
+[ ] "Client" vs "Customer" vs "Account"
+    DECISION: _______________
+    
+[ ] "Site" vs "Location" vs "Post" vs "Property"
+    DECISION: _______________
+    
+[ ] "Shift" vs "Schedule" vs "Assignment"
+    DECISION: _______________
+    
+[ ] "Workspace" vs "Organization" vs "Company" vs "Account"
+    DECISION: _______________
+
+Search for inconsistencies:
+grep -rn "staff\|worker\|officer\|guard" --include="*.tsx" --include="*.ts" client/src/
+```
+
+---
+
+## PHASE 10: UI/UX AESTHETIC CONSISTENCY
+
+### 10.1 Design System Check
+```
+COLORS:
+[ ] Primary color consistent across platform
+[ ] Secondary colors consistent
+[ ] Error/danger color consistent (red)
+[ ] Warning color consistent (yellow/orange)
+[ ] Success color consistent (green)
+[ ] Text colors consistent
+[ ] Background colors consistent
+
+TYPOGRAPHY:
+[ ] Font family consistent
+[ ] Heading sizes consistent (h1, h2, h3, etc.)
+[ ] Body text size consistent
+[ ] Line heights consistent
+[ ] Font weights consistent
+
+SPACING:
+[ ] Padding consistent (8px, 16px, 24px increments)
+[ ] Margins consistent
+[ ] Gap between elements consistent
+[ ] Section spacing consistent
+
+COMPONENTS:
+[ ] Buttons look the same everywhere
+[ ] Inputs look the same everywhere
+[ ] Cards look the same everywhere
+[ ] Tables look the same everywhere
+[ ] Modals look the same everywhere (COMPACT, not max-width)
+[ ] Dropdowns look the same everywhere
+[ ] Tabs look the same everywhere
+[ ] Loading spinners look the same everywhere
+[ ] Empty states look the same everywhere
+[ ] Error states look the same everywhere
+```
+
+### 10.2 Image & Icon Audit
+```
+[ ] All images load (no broken images)
+[ ] Images have alt text for accessibility
+[ ] Images are optimized (not huge file sizes)
+[ ] Icons consistent (same icon library throughout)
+[ ] Icons have proper sizing
+[ ] Icons have proper colors
+[ ] Logo displays correctly everywhere
+[ ] Favicon present
+```
+
+### 10.3 Form Consistency
+```
+[ ] Labels positioned consistently (above or beside)
+[ ] Required field indicators consistent (*)
+[ ] Error messages styled consistently
+[ ] Error messages positioned consistently
+[ ] Helper text styled consistently
+[ ] Placeholder text styled consistently
+[ ] Input heights consistent
+[ ] Button placement consistent (right-aligned or full-width)
+[ ] Cancel/Submit button order consistent
+
+PHASE 11: BUTTON & ACTION AUDIT
+11.1 Button Discovery
+bash# Find all buttons
+grep -rn "<Button\|<button\|onClick" --include="*.tsx" client/src/
+```
+
+### 11.2 Button Verification
+
+**For EVERY button:**
+```
+[ ] Has onClick handler (not empty)
+[ ] onClick does something (not just console.log)
+[ ] Loading state during async action
+[ ] Disabled state when appropriate
+[ ] Success feedback after action
+[ ] Error feedback on failure
+[ ] Accessible (can be focused, has label)
+```
+
+### 11.3 Common Unwired Buttons to Check
+```
+[ ] "Save" buttons - actually save
+[ ] "Delete" buttons - actually delete
+[ ] "Edit" buttons - open edit mode
+[ ] "Cancel" buttons - close/reset
+[ ] "Submit" buttons - submit forms
+[ ] "Export" buttons - export data
+[ ] "Import" buttons - import data
+[ ] "Download" buttons - download files
+[ ] "Print" buttons - print content
+[ ] "Share" buttons - share content
+[ ] "Copy" buttons - copy to clipboard
+[ ] "Refresh" buttons - refresh data
+[ ] "Filter" buttons - apply filters
+[ ] "Clear" buttons - clear filters/form
+[ ] "Enhance" buttons (AI) - actually enhance
+[ ] "Generate" buttons (AI) - actually generate
+```
+
+---
+
+## PHASE 12: SETTINGS AUDIT
+
+### 12.1 All Settings Pages
+```
+ORGANIZATION SETTINGS:
+[ ] Company name editable and saves
+[ ] Company logo upload works
+[ ] Address fields save
+[ ] Time zone setting works
+[ ] Date format setting works
+[ ] Business hours setting works
+
+USER SETTINGS:
+[ ] Profile name editable
+[ ] Email change works (with verification)
+[ ] Password change works
+[ ] Avatar upload works
+[ ] Notification preferences save
+[ ] Theme/appearance preferences save
+
+NOTIFICATION SETTINGS:
+[ ] Email notification toggles work
+[ ] Push notification toggles work
+[ ] In-app notification toggles work
+[ ] Per-category settings work
+
+SECURITY SETTINGS:
+[ ] Two-factor auth setup works
+[ ] Session management works
+[ ] API key generation works
+[ ] API key revocation works
+
+BILLING SETTINGS:
+[ ] Payment method update works
+[ ] Plan change works
+[ ] Billing address saves
+[ ] Invoice download works
+
+INTEGRATION SETTINGS:
+[ ] QuickBooks connect/disconnect works
+[ ] Gusto connect/disconnect works
+[ ] Other integrations work
+```
+
+---
+
+## PHASE 13: WORKFLOW & AUTOMATION AUDIT
+
+### 13.1 Automated Workflows
+```
+ONBOARDING WORKFLOWS:
+[ ] New org triggers onboarding task creation
+[ ] New employee triggers onboarding task creation
+[ ] Task completion updates progress
+[ ] Deadline reminders sent
+[ ] Incomplete status enforced after 15 days
+
+SCHEDULING WORKFLOWS:
+[ ] Shift assignment notifies employee
+[ ] Shift change notifies affected parties
+[ ] Shift swap request workflow
+[ ] Open shift broadcast workflow
+[ ] Auto-schedule workflow
+
+TIME TRACKING WORKFLOWS:
+[ ] Clock in triggers notifications (if configured)
+[ ] Clock out triggers time entry creation
+[ ] Missed clock-out alerts
+[ ] Overtime alerts
+[ ] Timesheet submission workflow
+[ ] Timesheet approval workflow
+
+PAYROLL WORKFLOWS:
+[ ] Pay period close trigger
+[ ] Payroll calculation automation
+[ ] Approval workflow
+[ ] Payment processing workflow
+[ ] Pay stub delivery
+
+COMPLIANCE WORKFLOWS:
+[ ] Certification expiration alerts
+[ ] License expiration alerts
+[ ] Document expiration alerts
+[ ] Training due alerts
+
+BILLING WORKFLOWS:
+[ ] Invoice generation automation
+[ ] Payment reminders
+[ ] Late payment escalation
+[ ] Subscription renewal
+```
+
+### 13.2 Pipeline Verification
+
+**For each automated pipeline:**
+```
+PIPELINE: _______________
+
+[ ] Trigger event defined
+[ ] Trigger correctly fires
+[ ] Each step executes
+[ ] Error handling at each step
+[ ] Notification on completion
+[ ] Notification on failure
+[ ] Logging for debugging
+[ ] Can be manually triggered (if needed)
+[ ] Can be cancelled mid-process
+```
+
+---
+
+## PHASE 14: ERROR HANDLING & EDGE CASES
+
+### 14.1 Error States
+```
+[ ] 404 page exists and displays correctly
+[ ] 500 error handling works
+[ ] Network error handling works
+[ ] Auth error redirects to login
+[ ] Permission error shows appropriate message
+[ ] Validation errors display inline
+[ ] API errors show user-friendly messages
+[ ] Error boundaries catch React errors
+```
+
+### 14.2 Edge Cases
+```
+[ ] Empty data states (first-time user)
+[ ] Single item states
+[ ] Large data sets (1000+ items)
+[ ] Long text handling (truncation, wrapping)
+[ ] Special characters in input
+[ ] Unicode/emoji handling
+[ ] Very long names/titles
+[ ] Concurrent edits handling
+[ ] Session timeout handling
+[ ] Token refresh edge cases
+```
+
+---
+
+## PHASE 15: PERFORMANCE CHECK
+
+### 15.1 Load Time
+```
+[ ] Initial page load < 3 seconds
+[ ] Navigation between pages < 1 second
+[ ] API responses < 500ms for simple queries
+[ ] API responses < 2 seconds for complex queries
+[ ] Images lazy load
+[ ] Code splitting implemented
+```
+
+### 15.2 Database Performance
+```
+[ ] No N+1 query problems
+[ ] Indexes on frequently queried columns
+[ ] Pagination for large result sets
+[ ] Query caching where appropriate
+```
+
+---
+
+## OUTPUT FORMAT
+```
+# COAILEAGUE PRE-LAUNCH AUDIT REPORT
+Date: [DATE]
+Audited by: Replit Agent Team
+
+## EXECUTIVE SUMMARY
+- Total items audited: X
+- Critical issues: X
+- High priority issues: X
+- Medium priority issues: X
+- Low priority issues: X
+- LAUNCH READY: YES / NO
+
+## CRITICAL BLOCKERS (Must fix before ANY testing)
+1. [Issue] - [Location] - [Impact] - [Fix estimate]
+2. ...
+
+## HIGH PRIORITY (Must fix before public launch)
+1. [Issue] - [Location] - [Impact] - [Fix estimate]
+2. ...
+
+## MEDIUM PRIORITY (Should fix soon after launch)
+1. [Issue] - [Location] - [Impact] - [Fix estimate]
+2. ...
+
+## LOW PRIORITY (Technical debt / Nice to have)
+1. [Issue] - [Location] - [Impact] - [Fix estimate]
+2. ...
+
+## BROKEN PAGES/ROUTES
+| Route | Issue | Severity |
+|-------|-------|----------|
+| /path | Description | Critical/High/Medium/Low |
+
+## UNWIRED BUTTONS/ACTIONS
+| Location | Element | Issue |
+|----------|---------|-------|
+| file:line | Button name | onClick empty |
+
+## DATABASE ISSUES
+| Table | Issue | Fix |
+|-------|-------|-----|
+| table_name | Missing index | Add index on X |
+
+## MOBILE ISSUES
+| Page | Issue | Fix |
+|------|-------|-----|
+| /path | Horizontal scroll | Fix container width |
+
+## CHAT SYSTEM GAPS (vs Facebook)
+| Feature | Status | Priority |
+|---------|--------|----------|
+| Feature name | Missing/Broken/Working | Critical/High/Medium/Low |
+
+## FEATURE PARITY ISSUES
+| Feature | Promised | Delivered | Gap |
+|---------|----------|-----------|-----|
+| GPS Tracking | Full GPS | Partial | Missing geofencing |
+
+## RECOMMENDED FIX ORDER
+1. [First - why]
+2. [Second - why]
+3. ...
+
+## ESTIMATED EFFORT
+- Critical fixes: X hours
+- High priority: X hours
+- Medium priority: X hours
+- Total to launch-ready: X hours
+
+BEGIN COMPREHENSIVE AUDIT. USE PARALLEL SUB-AGENTS. REPORT ALL FINDINGS BEFORE FIXING ANYTHING.

@@ -5,6 +5,7 @@
 import { db } from "../db";
 import { shifts, employees, timeEntries } from "@shared/schema";
 import { eq, and, gte } from "drizzle-orm";
+import { platformEventBus } from './platformEventBus';
 
 export interface EmployeePattern {
   employeeId: string;
@@ -140,6 +141,15 @@ export async function getWorkspacePatterns(
     const pattern = await getEmployeePattern(workspaceId, emp.id);
     if (pattern) patterns.push(pattern);
   }
+
+  platformEventBus.publish({
+    type: 'employee_patterns_analyzed',
+    category: 'workforce',
+    title: 'Employee Pattern Analysis Completed',
+    description: `Analyzed scheduling patterns for ${patterns.length} employee(s) in workspace`,
+    workspaceId,
+    metadata: { employeeCount: patterns.length },
+  });
 
   return patterns;
 }

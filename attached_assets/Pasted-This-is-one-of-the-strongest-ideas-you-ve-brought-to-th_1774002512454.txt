@@ -1,0 +1,48 @@
+This is one of the strongest ideas you've brought to the table for CoAIleague — and it's not just a hiring tool, it's a **full talent pipeline engine** that no competing platform (GetSling, Homebase, etc.) has built natively with AI orchestration. Here's my honest assessment plus the enhancements I'd layer on.
+
+---
+
+**What you've described is architecturally sound and buildable with what you already have.**
+
+The job board, application pool, Trinity-led interview via ChatDock, license vetting, scoring, and pipeline to onboarding — that's a complete hiring loop. And critically, it reuses things already built: ChatDock, the onboarding document system, Trinity orchestration, and the RBAC role structure. You're not building from scratch, you're extending.
+
+---
+
+**Enhancements I'd add:**
+
+**1. State License Verification API Hook**
+Instead of just accepting a license upload and trusting it, Trinity should ping the state licensing API (Texas DPS, for example) against the license number submitted and return a live status — active, expired, suspended, or not found. This turns a manual vetting step into an automated hard gate. Unlicensed applicants who check "I have a license" get flagged instantly before they even reach the interview pool.
+
+**2. Demand-Triggered Job Publishing**
+You mentioned forecasted demand and turnover — make this explicit. Trinity monitors three signals: scheduling gaps that can't be filled internally, upcoming contract start dates that need headcount, and disciplinary actions that resulted in termination. When any threshold is crossed, Trinity auto-drafts the job post and flags management to approve before publishing. Management approves in one tap, Trinity posts it. No manual job posting ever.
+
+**3. Structured Interview Scoring Rubric**
+When Trinity interviews in ChatDock, she needs a standardized question set per role type (unarmed patrol, armed, concierge, supervisor) and a scoring matrix. Each answer gets weighted — availability, prior experience, reason for leaving last employer, scenario responses. Trinity produces a numerical score plus a written summary for management to review. This protects you legally because every applicant was evaluated on the same criteria.
+
+**4. Liability Assessment Layer**
+This is your security-industry differentiator. After the interview, Trinity runs a composite liability score based on: license status (verified), any disclosed incidents or terminations, how they answered scenario-based questions (use of force judgment, chain of command), and whether uploaded documents match claimed credentials. This score goes on their applicant card visible to management.
+
+**5. Applicant Status Pipeline (Kanban-style)**
+The pool shouldn't be a flat list. It should be a pipeline with clear stages: Applied → Pre-Screened by Trinity → Interview Scheduled → Interview Complete → Management Review → Offer Extended → Onboarding → Active. Management can see every applicant's stage at a glance, and Trinity moves them through automatically until a human decision is required.
+
+**6. Sponsorship/Training Track**
+For applicants without a license, Trinity routes them into a separate track — she collects their info, explains the sponsorship process, and parks them in a "Training Pipeline" pool. When the org has bandwidth to sponsor someone, management can pull from that pool. This is a competitive advantage because most platforms ignore unlicensed applicants entirely.
+
+**7. ChatDock Interview as Async or Scheduled**
+Trinity should support both modes — she can conduct a fully async text interview (applicant answers on their own time, Trinity evaluates responses) or schedule a live session where Trinity walks them through questions in real time. Async works better for volume; live works better for supervisory roles.
+
+---
+
+**Architecture placement:**
+
+This lives as a `Hiring` module inside the platform, sitting between the public-facing job board (unauthenticated) and the internal workspace (authenticated management view). Trinity connects it to three existing systems: ChatDock (for the interview), the Document Management system (for license uploads and onboarding docs), and Scheduling (for headcount demand signals). No new infrastructure needed — just new flows hung on existing rails.
+
+---
+
+**One honest flag:**
+
+The public job board needs to be carefully scoped. It should be a lightweight, org-specific public page — not a full marketplace. Each org gets their own URL (e.g., `coaileague.com/jobs/statewide-protective`) and Trinity manages that page. You don't want to build an Indeed competitor — you want Trinity to be the hiring engine *behind* each org's own front door.
+
+---
+
+This is ready to spec and build. Want me to write the full Replit Agent prompt to implement this as a new Hiring module — job board, applicant pool, Trinity interview flow, pipeline stages, and management review dashboard — all within your existing architecture?

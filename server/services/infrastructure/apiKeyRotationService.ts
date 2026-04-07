@@ -14,10 +14,14 @@
  */
 
 import { db } from '../../db';
-import { systemAuditLogs } from '@shared/schema';
-import { sql } from 'drizzle-orm';
+import { systemAuditLogs, managedApiKeys, keyRotationHistory } from '@shared/schema';
+import { sql, eq, and, inArray } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
+import { typedExec, typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('apiKeyRotationService');
+
 
 // ============================================================================
 // TYPES
@@ -83,15 +87,16 @@ class ApiKeyRotationService {
       this.startExpiryChecking();
       
       this.initialized = true;
-      console.log('[ApiKeyRotation] Service initialized');
+      log.info('[ApiKeyRotation] Service initialized');
     } catch (error) {
-      console.error('[ApiKeyRotation] Failed to initialize:', error);
+      log.error('[ApiKeyRotation] Failed to initialize:', error);
     }
   }
 
   private async ensureTableExists(): Promise<void> {
     try {
-      await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: CREATE TABLE | Tables:  | Verified: 2026-03-23
+      await typedExec(sql`
         CREATE TABLE IF NOT EXISTS managed_api_keys (
           id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
           name VARCHAR(200) NOT NULL,
@@ -126,7 +131,7 @@ class ApiKeyRotationService {
         CREATE INDEX IF NOT EXISTS idx_rotation_history_key ON key_rotation_history(key_id);
       `);
     } catch (error) {
-      console.error('[ApiKeyRotation] Failed to create tables:', error);
+      log.error('[ApiKeyRotation] Failed to create tables:', error);
     }
   }
 
@@ -174,7 +179,7 @@ class ApiKeyRotationService {
       await this.performAutoRotations();
     }, 60 * 60 * 1000);
     
-    console.log('[ApiKeyRotation] Expiry checking started');
+    log.info('[ApiKeyRotation] Expiry checking started');
   }
 
   /**
@@ -200,24 +205,27 @@ class ApiKeyRotationService {
     const expiresAt = new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000);
 
     try {
-      await db.execute(sql`
-        INSERT INTO managed_api_keys (
-          id, name, key_type, key_prefix, key_hash, status, workspace_id, 
-          created_at, expires_at, metadata
-        ) VALUES (
-          ${keyId}, ${params.name}, ${params.keyType}, ${keyPrefix}, ${keyHash},
-          'active', ${params.workspaceId || null}, ${now}, ${expiresAt},
-          ${JSON.stringify(params.metadata || {})}::jsonb
-        )
-      `);
+      // CATEGORY C — Raw SQL retained: ::jsonb | Tables: managed_api_keys | Verified: 2026-03-23
+      await db.insert(managedApiKeys).values({
+        id: keyId,
+        name: params.name,
+        keyType: params.keyType,
+        keyPrefix: keyPrefix,
+        keyHash: keyHash,
+        status: 'active',
+        workspaceId: params.workspaceId || null,
+        createdAt: now,
+        expiresAt: expiresAt,
+        metadata: params.metadata || {},
+      });
 
       // Log key generation
       await this.logRotationAction(keyId, 'generated', undefined, keyHash, 'Initial key generation');
 
       await db.insert(systemAuditLogs).values({
         action: 'api_key_generated',
-        resource: 'security',
-        details: {
+        entityId: 'security',
+        metadata: {
           keyId,
           keyType: params.keyType,
           name: params.name,
@@ -226,11 +234,11 @@ class ApiKeyRotationService {
         },
       });
 
-      console.log(`[ApiKeyRotation] Generated new ${params.keyType}: ${params.name}`);
+      log.info(`[ApiKeyRotation] Generated new ${params.keyType}: ${params.name}`);
       return { keyId, keyValue };
 
     } catch (error: any) {
-      console.error('[ApiKeyRotation] Failed to generate key:', error);
+      log.error('[ApiKeyRotation] Failed to generate key:', error);
       throw error;
     }
   }
@@ -260,17 +268,20 @@ class ApiKeyRotationService {
     const keyHash = this.hashKey(keyValue);
     
     try {
-      const result = await db.execute(sql`
-        SELECT * FROM managed_api_keys 
-        WHERE key_hash = ${keyHash} AND status IN ('active', 'expiring_soon')
-      `);
+      // Converted to Drizzle ORM: IN subquery → inArray()
+      const resultRows = await db.select()
+        .from(managedApiKeys)
+        .where(and(
+          eq(managedApiKeys.keyHash, keyHash),
+          inArray(managedApiKeys.status, ['active', 'expiring_soon'])
+        ));
       
-      const row = (result.rows as any[])[0];
+      const row = resultRows[0];
       if (!row) return null;
       
       return this.rowToManagedKey(row);
     } catch (error) {
-      console.error('[ApiKeyRotation] Key validation failed:', error);
+      log.error('[ApiKeyRotation] Key validation failed:', error);
       return null;
     }
   }
@@ -281,9 +292,7 @@ class ApiKeyRotationService {
   async rotateKey(keyId: string, performedBy?: string, reason?: string): Promise<RotationResult> {
     try {
       // Get existing key
-      const result = await db.execute(sql`
-        SELECT * FROM managed_api_keys WHERE id = ${keyId}
-      `);
+      const result = await db.select().from(managedApiKeys).where(eq(managedApiKeys.id, keyId));
       
       const oldKey = (result.rows as any[])[0];
       if (!oldKey) {
@@ -301,17 +310,14 @@ class ApiKeyRotationService {
       const now = new Date();
       const newExpiresAt = new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000);
 
-      // Update key with new value
-      await db.execute(sql`
-        UPDATE managed_api_keys SET
-          key_prefix = ${newKeyPrefix},
-          key_hash = ${newKeyHash},
-          status = 'active',
-          last_rotated_at = ${now},
-          expires_at = ${newExpiresAt},
-          rotation_count = rotation_count + 1
-        WHERE id = ${keyId}
-      `);
+      await db.update(managedApiKeys).set({
+        keyPrefix: newKeyPrefix,
+        keyHash: newKeyHash,
+        status: 'active',
+        lastRotatedAt: now,
+        expiresAt: newExpiresAt,
+        rotationCount: sql`${managedApiKeys.rotationCount} + 1`,
+      }).where(eq(managedApiKeys.id, keyId));
 
       // Log rotation
       await this.logRotationAction(keyId, 'rotated', oldKey.key_hash, newKeyHash, reason, performedBy);
@@ -319,8 +325,8 @@ class ApiKeyRotationService {
       await db.insert(systemAuditLogs).values({
         userId: performedBy,
         action: 'api_key_rotated',
-        resource: 'security',
-        details: {
+        entityId: 'security',
+        metadata: {
           keyId,
           keyType: oldKey.key_type,
           name: oldKey.name,
@@ -337,9 +343,9 @@ class ApiKeyRotationService {
         description: `Key "${oldKey.name}" has been rotated`,
         userId: performedBy,
         metadata: { keyId, keyType: oldKey.key_type },
-      });
+      }).catch((err) => log.warn('[apiKeyRotationService] Fire-and-forget failed:', err));
 
-      console.log(`[ApiKeyRotation] Rotated key: ${oldKey.name}`);
+      log.info(`[ApiKeyRotation] Rotated key: ${oldKey.name}`);
       
       return {
         success: true,
@@ -349,8 +355,8 @@ class ApiKeyRotationService {
       };
 
     } catch (error: any) {
-      console.error('[ApiKeyRotation] Rotation failed:', error);
-      return { success: false, oldKeyId: keyId, error: error.message };
+      log.error('[ApiKeyRotation] Rotation failed:', error);
+      return { success: false, oldKeyId: keyId, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -359,23 +365,23 @@ class ApiKeyRotationService {
    */
   async revokeKey(keyId: string, performedBy?: string, reason?: string): Promise<boolean> {
     try {
-      await db.execute(sql`
-        UPDATE managed_api_keys SET status = 'revoked' WHERE id = ${keyId}
-      `);
+      await db.update(managedApiKeys).set({
+        status: 'revoked',
+      }).where(eq(managedApiKeys.id, keyId));
 
       await this.logRotationAction(keyId, 'revoked', undefined, undefined, reason, performedBy);
 
       await db.insert(systemAuditLogs).values({
         userId: performedBy,
         action: 'api_key_revoked',
-        resource: 'security',
-        details: { keyId, reason },
+        entityId: 'security',
+        metadata: { keyId, reason },
       });
 
-      console.log(`[ApiKeyRotation] Revoked key: ${keyId}`);
+      log.info(`[ApiKeyRotation] Revoked key: ${keyId}`);
       return true;
     } catch (error) {
-      console.error('[ApiKeyRotation] Revocation failed:', error);
+      log.error('[ApiKeyRotation] Revocation failed:', error);
       return false;
     }
   }
@@ -385,42 +391,40 @@ class ApiKeyRotationService {
       for (const [keyType, policy] of this.policies) {
         const warningDate = new Date(Date.now() + policy.warningDays * 24 * 60 * 60 * 1000);
         
-        // Mark keys as expiring soon
-        await db.execute(sql`
-          UPDATE managed_api_keys 
-          SET status = 'expiring_soon'
-          WHERE key_type = ${keyType}
-            AND status = 'active'
-            AND expires_at <= ${warningDate}
-        `);
+        await db.update(managedApiKeys).set({
+          status: 'expiring_soon',
+        }).where(and(
+          eq(managedApiKeys.keyType, keyType),
+          eq(managedApiKeys.status, 'active'),
+          sql`${managedApiKeys.expiresAt} <= ${warningDate}`
+        ));
 
-        // Mark expired keys
-        await db.execute(sql`
-          UPDATE managed_api_keys 
-          SET status = 'expired'
-          WHERE key_type = ${keyType}
-            AND status IN ('active', 'expiring_soon')
-            AND expires_at <= NOW()
-        `);
+        await db.update(managedApiKeys).set({
+          status: 'expired',
+        }).where(and(
+          eq(managedApiKeys.keyType, keyType),
+          inArray(managedApiKeys.status, ['active', 'expiring_soon']),
+          sql`${managedApiKeys.expiresAt} <= NOW()`
+        ));
       }
 
-      // Get expiring keys for notifications
-      const expiringResult = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: Infrastructure service SELECT * | Tables: managed_api_keys | Verified: 2026-03-23
+      const expiringResult = await typedQuery(sql`
         SELECT * FROM managed_api_keys WHERE status = 'expiring_soon'
       `);
 
-      for (const key of (expiringResult.rows as any[]) || []) {
+      for (const key of (expiringResult as any[]) || []) {
         platformEventBus.publish({
           type: 'api_key_expiring',
           category: 'feature',
           title: 'API Key Expiring Soon',
           description: `Key "${key.name}" expires on ${new Date(key.expires_at).toLocaleDateString()}`,
           metadata: { keyId: key.id, expiresAt: key.expires_at },
-        });
+        }).catch((err) => log.warn('[apiKeyRotationService] Fire-and-forget failed:', err));
       }
 
     } catch (error) {
-      console.error('[ApiKeyRotation] Expiry check failed:', error);
+      log.error('[ApiKeyRotation] Expiry check failed:', error);
     }
   }
 
@@ -429,17 +433,18 @@ class ApiKeyRotationService {
       if (!policy.autoRotate) continue;
 
       try {
-        const result = await db.execute(sql`
+        // CATEGORY C — Raw SQL retained: Infrastructure service auto-rotation query | Tables: managed_api_keys | Verified: 2026-03-23
+        const result = await typedQuery(sql`
           SELECT id FROM managed_api_keys 
           WHERE key_type = ${keyType}
             AND status = 'expiring_soon'
         `);
 
-        for (const row of (result.rows as any[]) || []) {
+        for (const row of (result as any[]) || []) {
           await this.rotateKey(row.id, 'system', 'Auto-rotation due to expiry');
         }
       } catch (error) {
-        console.error(`[ApiKeyRotation] Auto-rotation failed for ${keyType}:`, error);
+        log.error(`[ApiKeyRotation] Auto-rotation failed for ${keyType}:`, error);
       }
     }
   }
@@ -452,10 +457,14 @@ class ApiKeyRotationService {
     reason?: string,
     performedBy?: string
   ): Promise<void> {
-    await db.execute(sql`
-      INSERT INTO key_rotation_history (key_id, action, old_key_hash, new_key_hash, performed_by, reason)
-      VALUES (${keyId}, ${action}, ${oldHash || null}, ${newHash || null}, ${performedBy || null}, ${reason || null})
-    `);
+    await db.insert(keyRotationHistory).values({
+      keyId: keyId,
+      action: action,
+      oldKeyHash: oldHash || null,
+      newKeyHash: newHash || null,
+      performedBy: performedBy || null,
+      reason: reason || null,
+    });
   }
 
   private rowToManagedKey(row: any): ManagedKey {
@@ -487,10 +496,11 @@ class ApiKeyRotationService {
         query = sql`SELECT * FROM managed_api_keys ORDER BY created_at DESC`;
       }
       
-      const result = await db.execute(query);
-      return ((result.rows as any[]) || []).map(this.rowToManagedKey);
+      // CATEGORY C — Raw SQL retained: Dynamic query execution | Tables: managed_api_keys | Verified: 2026-03-23
+      const result = await typedQuery(query);
+      return (result as any[]).map(this.rowToManagedKey);
     } catch (error) {
-      console.error('[ApiKeyRotation] Failed to get keys:', error);
+      log.error('[ApiKeyRotation] Failed to get keys:', error);
       return [];
     }
   }
@@ -507,7 +517,7 @@ class ApiKeyRotationService {
    */
   updatePolicy(policy: RotationPolicy): void {
     this.policies.set(policy.keyType, policy);
-    console.log(`[ApiKeyRotation] Updated policy for ${policy.keyType}`);
+    log.info(`[ApiKeyRotation] Updated policy for ${policy.keyType}`);
   }
 
   shutdown(): void {
@@ -515,7 +525,7 @@ class ApiKeyRotationService {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
     }
-    console.log('[ApiKeyRotation] Service shutdown');
+    log.info('[ApiKeyRotation] Service shutdown');
   }
 }
 

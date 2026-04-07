@@ -1,0 +1,242 @@
+# COAILEAGUE - UNIVERSAL EMPLOYEE ONBOARDING PACKET SYSTEM
+
+## OVERVIEW
+
+Build a universal employee onboarding packet system that works for security companies operating in **ALL 50 US STATES**. The system must:
+
+1. Handle federal requirements (I-9, W-4) that apply everywhere
+2. Dynamically adjust for state-specific requirements (licenses, training, tax forms)
+3. Track security-industry-specific credentials (guard cards, firearms permits, certifications)
+4. Integrate with Trinity AI for compliance monitoring and scheduling eligibility
+5. Enforce the 15-day onboarding deadline with visual warnings
+6. Block scheduling for employees with incomplete critical documents
+
+---
+
+## PART 1: DATABASE SCHEMA
+
+```typescript
+// /shared/schema.ts - Employee Onboarding Tables
+
+// ============================================
+// STATE REQUIREMENTS REFERENCE TABLE
+// ============================================
+export const stateSecurityRequirements = pgTable('state_security_requirements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  stateCode: varchar('state_code', { length: 2 }).notNull().unique(), // TX, CA, FL, etc.
+  stateName: varchar('state_name', { length: 100 }).notNull(),
+  
+  // Regulatory Body
+  regulatoryAgency: varchar('regulatory_agency', { length: 255 }), // e.g., "Texas DPS", "California BSIS"
+  regulatoryWebsite: text('regulatory_website'),
+  
+  // License Requirements
+  requiresStateLicense: boolean('requires_state_license').notNull().default(true),
+  unarmedLicenseName: varchar('unarmed_license_name', { length: 100 }), // e.g., "Level II", "Guard Card", "Class D"
+  armedLicenseName: varchar('armed_license_name', { length: 100 }), // e.g., "Level III", "Firearm Permit", "Class G"
+  
+  // Age Requirements
+  minimumAgeUnarmed: integer('minimum_age_unarmed').notNull().default(18),
+  minimumAgeArmed: integer('minimum_age_armed').notNull().default(21),
+  
+  // Training Hours
+  unarmedTrainingHours: integer('unarmed_training_hours').default(0),
+  armedTrainingHours: integer('armed_training_hours').default(0), // Additional hours beyond unarmed
+  
+  // Background Check
+  requiresBackgroundCheck: boolean('requires_background_check').notNull().default(true),
+  requiresFingerprinting: boolean('requires_fingerprinting').notNull().default(true),
+  fingerprintProvider: varchar('fingerprint_provider', { length: 100 }), // e.g., "IdentoGO", "Live Scan"
+  
+  // Psychological Exam (for armed)
+  requiresPsychExam: boolean('requires_psych_exam').default(false),
+  
+  // State Tax
+  hasStateIncomeTax: boolean('has_state_income_tax').notNull().default(true),
+  stateTaxFormName: varchar('state_tax_form_name', { length: 50 }), // e.g., "DE-4" for California
+  
+  // E-Verify
+  requiresEverify: boolean('requires_everify').default(false),
+  
+  // License Renewal
+  licenseRenewalYears: integer('license_renewal_years').default(2),
+  
+  // Special Notes
+  specialRequirements: text('special_requirements'), // JSON or text for state-specific quirks
+  
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// ============================================
+// EMPLOYEE ONBOARDING PACKET
+// ============================================
+export const employeeOnboardingPackets = pgTable('employee_onboarding_packets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id),
+  employeeId: uuid('employee_id').references(() => employees.id), // Linked after approval
+  
+  // Packet Identification
+  packetNumber: varchar('packet_number', { length: 50 }).notNull(), // e.g., "ONB-2026-0001"
+  inviteToken: varchar('invite_token', { length: 100 }).unique(), // For email link
+  inviteEmail: varchar('invite_email', { length: 255 }).notNull(),
+  inviteSentAt: timestamp('invite_sent_at'),
+  
+  // Work State (determines requirements)
+  primaryWorkState: varchar('primary_work_state', { length: 2 }).notNull(),
+  
+  // ============================================
+  // SECTION 1: PERSONAL INFORMATION
+  // ============================================
+  legalFirstName: varchar('legal_first_name', { length: 100 }),
+  legalMiddleName: varchar('legal_middle_name', { length: 100 }),
+  legalLastName: varchar('legal_last_name', { length: 100 }),
+  preferredName: varchar('preferred_name', { length: 100 }),
+  dateOfBirth: date('date_of_birth'),
+  ssn: varchar('ssn', { length: 255 }), // ENCRYPTED - store encrypted, never plain text
+  gender: varchar('gender', { length: 20 }), // 'male', 'female', 'non_binary', 'prefer_not_to_say'
+  
+  // Contact Information
+  personalEmail: varchar('personal_email', { length: 255 }),
+  personalPhone: varchar('personal_phone', { length: 20 }),
+  
+  // Address
+  streetAddress: text('street_address'),
+  apartmentUnit: varchar('apartment_unit', { length: 50 }),
+  city: varchar('city', { length: 100 }),
+  state: varchar('state', { length: 2 }),
+  zipCode: varchar('zip_code', { length: 10 }),
+  
+  // Mailing Address (if different)
+  mailingAddressDifferent: boolean('mailing_address_different').default(false),
+  mailingStreetAddress: text('mailing_street_address'),
+  mailingCity: varchar('mailing_city', { length: 100 }),
+  mailingState: varchar('mailing_state', { length: 2 }),
+  mailingZipCode: varchar('mailing_zip_code', { length: 10 }),
+  
+  // ============================================
+  // SECTION 2: EMERGENCY CONTACT
+  // ============================================
+  emergencyContactName: varchar('emergency_contact_name', { length: 255 }),
+  emergencyContactRelationship: varchar('emergency_contact_relationship', { length: 50 }),
+  emergencyContactPhone: varchar('emergency_contact_phone', { length: 20 }),
+  emergencyContactEmail: varchar('emergency_contact_email', { length: 255 }),
+  emergencyContactAddress: text('emergency_contact_address'),
+  
+  // Secondary Emergency Contact (optional)
+  emergencyContact2Name: varchar('emergency_contact2_name', { length: 255 }),
+  emergencyContact2Relationship: varchar('emergency_contact2_relationship', { length: 50 }),
+  emergencyContact2Phone: varchar('emergency_contact2_phone', { length: 20 }),
+  
+  // ============================================
+  // SECTION 3: EMPLOYMENT ELIGIBILITY (I-9)
+  // ============================================
+  citizenshipStatus: varchar('citizenship_status', { length: 50 }),
+  // 'us_citizen', 'us_national', 'permanent_resident', 'alien_authorized'
+  
+  alienRegistrationNumber: varchar('alien_registration_number', { length: 50 }), // If applicable
+  alienAuthorizationExpires: date('alien_authorization_expires'), // If applicable
+  
+  i9Section1Completed: boolean('i9_section1_completed').default(false),
+  i9Section1CompletedAt: timestamp('i9_section1_completed_at'),
+  i9Section1Signature: text('i9_section1_signature'), // Base64
+  
+  i9Section2Completed: boolean('i9_section2_completed').default(false), // Employer completes
+  i9Section2CompletedAt: timestamp('i9_section2_completed_at'),
+  i9Section2CompletedBy: uuid('i9_section2_completed_by').references(() => users.id),
+  
+  // Document verification (List A OR List B + List C)
+  i9DocumentsVerified: boolean('i9_documents_verified').default(false),
+  i9ListADocument: varchar('i9_list_a_document', { length: 100 }), // e.g., "US Passport"
+  i9ListBDocument: varchar('i9_list_b_document', { length: 100 }), // e.g., "Driver's License"
+  i9ListCDocument: varchar('i9_list_c_document', { length: 100 }), // e.g., "Social Security Card"
+  
+  // E-Verify
+  everifySubmitted: boolean('everify_submitted').default(false),
+  everifyCaseNumber: varchar('everify_case_number', { length: 50 }),
+  everifyStatus: varchar('everify_status', { length: 50 }), // 'pending', 'authorized', 'tentative_nonconfirmation', 'final_nonconfirmation'
+  
+  // ============================================
+  // SECTION 4: TAX WITHHOLDING
+  // ============================================
+  // Federal W-4
+  w4Completed: boolean('w4_completed').default(false),
+  w4CompletedAt: timestamp('w4_completed_at'),
+  w4FilingStatus: varchar('w4_filing_status', { length: 30 }), // 'single', 'married_jointly', 'head_of_household'
+  w4MultipleJobs: boolean('w4_multiple_jobs').default(false),
+  w4Dependents: integer('w4_dependents').default(0),
+  w4OtherIncome: decimal('w4_other_income', { precision: 10, scale: 2 }).default('0'),
+  w4Deductions: decimal('w4_deductions', { precision: 10, scale: 2 }).default('0'),
+  w4ExtraWithholding: decimal('w4_extra_withholding', { precision: 10, scale: 2 }).default('0'),
+  w4Exempt: boolean('w4_exempt').default(false),
+  w4Signature: text('w4_signature'),
+  
+  // State Tax Form (dynamic based on state)
+  stateTaxFormCompleted: boolean('state_tax_form_completed').default(false),
+  stateTaxFormData: jsonb('state_tax_form_data'), // Store state-specific fields as JSON
+  stateTaxFormSignature: text('state_tax_form_signature'),
+  
+  // ============================================
+  // SECTION 5: DIRECT DEPOSIT / PAYMENT
+  // ============================================
+  paymentMethod: varchar('payment_method', { length: 20 }).default('direct_deposit'), // 'direct_deposit', 'check', 'paycard'
+  
+  // Primary Bank Account
+  bankName: varchar('bank_name', { length: 255 }),
+  bankRoutingNumber: varchar('bank_routing_number', { length: 9 }),
+  bankAccountNumber: varchar('bank_account_number', { length: 255 }), // ENCRYPTED
+  bankAccountType: varchar('bank_account_type', { length: 20 }), // 'checking', 'savings'
+  depositAmountType: varchar('deposit_amount_type', { length: 20 }).default('full'), // 'full', 'percentage', 'fixed'
+  depositAmount: decimal('deposit_amount', { precision: 10, scale: 2 }), // If percentage or fixed
+  
+  // Secondary Bank Account (optional split deposit)
+  bank2Name: varchar('bank2_name', { length: 255 }),
+  bank2RoutingNumber: varchar('bank2_routing_number', { length: 9 }),
+  bank2AccountNumber: varchar('bank2_account_number', { length: 255 }), // ENCRYPTED
+  bank2AccountType: varchar('bank2_account_type', { length: 20 }),
+  bank2DepositAmount: decimal('bank2_deposit_amount', { precision: 10, scale: 2 }),
+  
+  directDepositAuthSigned: boolean('direct_deposit_auth_signed').default(false),
+  directDepositAuthSignedAt: timestamp('direct_deposit_auth_signed_at'),
+  directDepositAuthSignature: text('direct_deposit_auth_signature'),
+  
+  // ============================================
+  // SECTION 6: SECURITY LICENSE & CREDENTIALS
+  // ============================================
+  // Position Type
+  positionType: varchar('position_type', { length: 20 }), // 'unarmed', 'armed', 'supervisor', 'manager'
+  
+  // State Security License
+  hasSecurityLicense: boolean('has_security_license').default(false),
+  securityLicenseState: varchar('security_license_state', { length: 2 }),
+  securityLicenseType: varchar('security_license_type', { length: 100 }), // State-specific name
+  securityLicenseNumber: varchar('security_license_number', { length: 100 }),
+  securityLicenseIssueDate: date('security_license_issue_date'),
+  securityLicenseExpiration: date('security_license_expiration'),
+  securityLicenseStatus: varchar('security_license_status', { length: 20 }), // 'active', 'expired', 'pending', 'suspended'
+  
+  // If license is pending
+  licenseApplicationSubmitted: boolean('license_application_submitted').default(false),
+  licenseApplicationDate: date('license_application_date'),
+  licenseApplicationReceiptNumber: varchar('license_application_receipt_number', { length: 100 }),
+  
+  // Firearms / Armed Credentials (if applicable)
+  hasFirearmsPermit: boolean('has_firearms_permit').default(false),
+  firearmsPermitState: varchar('firearms_permit_state', { length: 2 }),
+  firearmsPermitType: varchar('firearms_permit_type', { length: 100 }),
+  firearmsPermitNumber: varchar('firearms_permit_number', { length: 100 }),
+  firearmsPermitExpiration: date('firearms_permit_expiration'),
+  
+  // Firearms Qualification
+  firearmsQualificationCompleted: boolean('firearms_qualification_completed').default(false),
+  firearmsQualificationDate: date('firearms_qualification_date'),
+  firearmsQualificationExpiration: date('firearms_qualification_expiration'), // Usually annual
+  firearmsQualificationScore: integer('firearms_qualification_score'), // If tracked
+  
+  // ============================================
+  // SECTION 7: TRAINING & CERTIFICATIONS
+  // ============================================
+  // Pre-Employment Training
+  preEmploymentTrainingCompleted: boolean('pre_employment_training_completed').default(false),
+  preEmploymentTrainingDate: date('pre_employment_training_date'),
+  preEmploymentTrainingProvider: varchar('pre_employment_training_provider', { length: 255 }),
+  preEmploymentTrainingHours: integer('pre_employment_training_hours'),

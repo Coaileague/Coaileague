@@ -10,6 +10,8 @@
  * - Recovery verification and testing
  * - Cross-region backup validation
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('disasterRecoveryService');
 
 interface RecoveryPoint {
   id: string;
@@ -77,7 +79,7 @@ class DisasterRecoveryService {
     this.startHealthMonitoring();
     
     this.initialized = true;
-    console.log('[DisasterRecovery] Service initialized with RPO: 15min, RTO: 4hr');
+    log.info('[DisasterRecovery] Service initialized with RPO: 15min, RTO: 4hr');
   }
   
   /**
@@ -89,7 +91,7 @@ class DisasterRecoveryService {
     location: string
   ): RecoveryPoint {
     const point: RecoveryPoint = {
-      id: `rp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `rp-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
       timestamp: new Date(),
       type,
       size,
@@ -121,10 +123,10 @@ class DisasterRecoveryService {
       point.verified = true;
       point.verifiedAt = new Date();
       
-      console.log(`[DisasterRecovery] Recovery point ${pointId} verified`);
+      log.info(`[DisasterRecovery] Recovery point ${pointId} verified`);
       return true;
     } catch (error) {
-      console.error(`[DisasterRecovery] Recovery point verification failed:`, error);
+      log.error(`[DisasterRecovery] Recovery point verification failed:`, error);
       return false;
     }
   }
@@ -154,7 +156,7 @@ class DisasterRecoveryService {
     };
     
     this.failoverConfigs.set(service, config);
-    console.log(`[DisasterRecovery] Registered failover for ${service}`);
+    log.info(`[DisasterRecovery] Registered failover for ${service}`);
     
     return config;
   }
@@ -185,7 +187,7 @@ class DisasterRecoveryService {
       
       // Internal event: failover_triggered
       
-      console.log(`[DisasterRecovery] Failover triggered for ${service}: ${previousState} -> ${config.currentState}`);
+      log.info(`[DisasterRecovery] Failover triggered for ${service}: ${previousState} -> ${config.currentState}`);
       
       return {
         success: true,
@@ -194,7 +196,7 @@ class DisasterRecoveryService {
         duration,
       };
     } catch (error: any) {
-      console.error(`[DisasterRecovery] Failover failed for ${service}:`, error);
+      log.error(`[DisasterRecovery] Failover failed for ${service}:`, error);
       throw error;
     }
   }
@@ -235,7 +237,7 @@ class DisasterRecoveryService {
       test.details.push('Test completed successfully');
     } catch (error: any) {
       test.status = 'failed';
-      test.details.push(`Test failed: ${error.message}`);
+      test.details.push(`Test failed: ${(error instanceof Error ? error.message : String(error))}`);
     }
     
     test.completedAt = new Date();
@@ -357,7 +359,7 @@ class DisasterRecoveryService {
       clearInterval(interval);
     }
     this.healthCheckIntervals.clear();
-    console.log('[DisasterRecovery] Service shut down');
+    log.info('[DisasterRecovery] Service shut down');
   }
   
   // Private methods
@@ -388,7 +390,7 @@ class DisasterRecoveryService {
   private startHealthMonitoring(): void {
     // In production, this would actually check endpoint health
     // For now, we simulate healthy status
-    console.log('[DisasterRecovery] Health monitoring started for failover endpoints');
+    log.info('[DisasterRecovery] Health monitoring started for failover endpoints');
   }
   
   private async testRPO(test: RecoveryTest): Promise<void> {

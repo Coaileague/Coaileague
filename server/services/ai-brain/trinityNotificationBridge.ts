@@ -10,6 +10,7 @@
  * - End-user notification personalization
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { 
   notifications, 
@@ -26,6 +27,9 @@ import { publishPlatformUpdate, platformEventBus } from '../platformEventBus';
 import { notificationStateManager } from '../notificationStateManager';
 import { UniversalNotificationEngine } from '../universalNotificationEngine';
 import { platformFeatureRegistry } from './platformFeatureRegistry';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('TrinityNotificationBridge');
 
 export type NotificationPriority = 'critical' | 'high' | 'normal' | 'low' | 'batch';
 export type DeliveryChannel = 'websocket' | 'push' | 'email' | 'in_app' | 'sms';
@@ -104,7 +108,7 @@ class TrinityNotificationBridge {
 
   constructor() {
     this.startBatchProcessor();
-    console.log('[TrinityNotificationBridge] Fortune 500-grade notification orchestration initialized');
+    log.info('[TrinityNotificationBridge] Fortune 500-grade notification orchestration initialized');
   }
 
   /**
@@ -143,8 +147,8 @@ class TrinityNotificationBridge {
       };
     } catch (error: any) {
       this.deliveryMetrics.totalFailed++;
-      errors.push(error.message);
-      console.error('[TrinityNotificationBridge] Delivery error:', error);
+      errors.push((error instanceof Error ? error.message : String(error)));
+      log.error('[TrinityNotificationBridge] Delivery error:', error);
 
       return {
         success: false,
@@ -160,7 +164,7 @@ class TrinityNotificationBridge {
    * Deliver live patch notification with deployment tracking
    */
   async deliverLivePatch(patch: LivePatchDelivery): Promise<NotificationDeliveryResult> {
-    console.log(`[TrinityNotificationBridge] Delivering live patch: ${patch.patchId} v${patch.version}`);
+    log.info(`[TrinityNotificationBridge] Delivering live patch: ${patch.patchId} v${patch.version}`);
 
     const priority = patch.severity === 'critical' ? 'critical' : 
                      patch.severity === 'high' ? 'high' : 'normal';
@@ -217,7 +221,7 @@ class TrinityNotificationBridge {
 
     // Refresh Trinity's feature registry sync on each deployment
     const syncStatus = platformFeatureRegistry.refreshSync();
-    console.log(`[TrinityNotificationBridge] Feature registry synced: v${syncStatus.syncVersion}`);
+    log.info(`[TrinityNotificationBridge] Feature registry synced: v${syncStatus.syncVersion}`);
 
     return this.sendNotification(payload);
   }
@@ -237,7 +241,7 @@ class TrinityNotificationBridge {
     workspaceId?: string;
     pushedBy?: string;
   }): Promise<{ updateId: string; recipientCount: number }> {
-    console.log(`[TrinityNotificationBridge] Pushing What's New: ${options.title}`);
+    log.info(`[TrinityNotificationBridge] Pushing What's New: ${options.title}`);
 
     const updateId = `update-${options.category}-${Date.now()}`;
     
@@ -251,7 +255,7 @@ class TrinityNotificationBridge {
       badge: options.badge || 'NEW',
       version: options.version,
       learnMoreUrl: options.learnMoreUrl,
-      workspaceId: options.workspaceId,
+      workspaceId: options.workspaceId || PLATFORM_WORKSPACE_ID,
       createdBy: options.pushedBy,
       isNew: true,
       date: new Date(),
@@ -287,7 +291,7 @@ class TrinityNotificationBridge {
     actionUrl?: string;
     pushedBy: string;
   }): Promise<NotificationDeliveryResult> {
-    console.log(`[TrinityNotificationBridge] Support escalation: ${options.title} (${options.severity})`);
+    log.info(`[TrinityNotificationBridge] Support escalation: ${options.title} (${options.severity})`);
 
     const priority: NotificationPriority = 
       options.severity === 'critical' ? 'critical' :
@@ -324,6 +328,7 @@ class TrinityNotificationBridge {
     };
 
     await db.insert(systemAuditLogs).values({
+      workspaceId: 'system',
       action: 'support_escalation',
       entityType: 'notification',
       entityId: `escalation-${Date.now()}`,
@@ -392,7 +397,7 @@ class TrinityNotificationBridge {
     workspaceId?: string;
     createdBy: string;
   }): Promise<{ alertId: string; recipientCount: number }> {
-    console.log(`[TrinityNotificationBridge] Maintenance alert: ${options.title}`);
+    log.info(`[TrinityNotificationBridge] Maintenance alert: ${options.title}`);
 
     const [alert] = await db.insert(maintenanceAlerts).values({
       title: options.title,
@@ -464,40 +469,33 @@ class TrinityNotificationBridge {
         });
         recipientCount = 1;
       } else if (payload.targetAudience?.type === 'user' && payload.targetAudience.userIds) {
+        // Route through UniversalNotificationEngine for Trinity AI enrichment and validation
+        const { universalNotificationEngine } = await import('../universalNotificationEngine');
+        
         for (const userId of payload.targetAudience.userIds) {
-          const [notification] = await db.insert(notifications).values({
-            workspaceId: payload.targetAudience.workspaceId || null,
-            scope: payload.targetAudience.workspaceId ? 'workspace' : 'user',
-            userId,
-            type: 'system',
-            title: payload.title,
-            message: payload.message,
-            actionUrl: payload.metadata?.actionUrl,
-            isRead: false,
-            metadata: {
-              source: payload.source,
-              category: payload.category,
-              priority: payload.priority,
-              aiGenerated: payload.metadata?.aiGenerated,
-              trinityMode: payload.metadata?.trinityMode,
-              badge: payload.metadata?.badge,
-            },
-          }).returning();
-
-          broadcastNotificationToUser(
-            payload.targetAudience.workspaceId || 'global',
-            userId,
-            {
-              id: notification.id,
+          try {
+            await universalNotificationEngine.sendNotification({
               type: 'system',
               title: payload.title,
               message: payload.message,
-              severity: payload.priority,
-              actionUrl: payload.metadata?.actionUrl,
-              createdAt: notification.createdAt,
-            }
-          );
-          recipientCount++;
+              workspaceId: payload.targetAudience.workspaceId || undefined,
+              userId: userId,
+              severity: payload.priority === 'critical' ? 'critical' : payload.priority === 'high' ? 'high' : 'medium',
+              source: 'trinity_notification_bridge',
+              metadata: {
+                source: payload.source,
+                category: payload.category,
+                priority: payload.priority,
+                aiGenerated: payload.metadata?.aiGenerated,
+                trinityMode: payload.metadata?.trinityMode,
+                badge: payload.metadata?.badge,
+                actionUrl: payload.metadata?.actionUrl,
+              },
+            });
+            recipientCount++;
+          } catch (uneError) {
+            log.info(`[TrinityNotificationBridge] UNE validation blocked notification for user ${userId}`);
+          }
         }
       }
     }
@@ -514,7 +512,7 @@ class TrinityNotificationBridge {
 
   private queueForBatch(payload: TrinityNotificationPayload): void {
     const batchItem: BatchedNotification = {
-      id: `batch-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      id: `batch-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
       payload,
       scheduledFor: new Date(Date.now() + 5 * 60 * 1000),
       status: 'pending',
@@ -525,13 +523,14 @@ class TrinityNotificationBridge {
 
   private startBatchProcessor(): void {
     this.batchInterval = setInterval(async () => {
+      try {
       const now = new Date();
       const dueItems = this.batchQueue.filter(
         b => b.status === 'pending' && b.scheduledFor <= now
       );
 
       if (dueItems.length > 0) {
-        console.log(`[TrinityNotificationBridge] Processing ${dueItems.length} batched notifications`);
+        log.info(`[TrinityNotificationBridge] Processing ${dueItems.length} batched notifications`);
         
         for (const item of dueItems) {
           try {
@@ -551,6 +550,9 @@ class TrinityNotificationBridge {
           b => b.status === 'pending' || (b.status !== 'delivered' && b.retryCount < 3)
         );
       }
+      } catch (error: any) {
+        log.warn('[TrinityNotificationBridge] Batch processing failed (will retry):', error?.message || 'unknown');
+      }
     }, 30 * 1000);
   }
 
@@ -562,6 +564,7 @@ class TrinityNotificationBridge {
 
   private async logDeployment(patch: LivePatchDelivery): Promise<void> {
     await db.insert(systemAuditLogs).values({
+      workspaceId: 'system',
       action: 'live_patch_deployed',
       entityType: 'deployment',
       entityId: patch.patchId,
@@ -643,17 +646,27 @@ class TrinityNotificationBridge {
   startWatchdog(): void {
     if (this.watchdogInterval) return;
 
-    console.log('[TrinityNotificationWatchdog] Starting self-monitoring...');
+    log.info('[TrinityNotificationWatchdog] Starting self-monitoring...');
     
     this.watchdogInterval = setInterval(async () => {
-      await this.runWatchdogCheck();
-    }, 2 * 60 * 1000); // Every 2 minutes
+      try {
+        await this.runWatchdogCheck();
+      } catch (error: any) {
+        log.warn('[TrinityNotificationWatchdog] Check failed (will retry):', error?.message || 'unknown');
+      }
+    }, 2 * 60 * 1000);
 
     // Run initial check after 30 seconds
     setTimeout(() => this.runWatchdogCheck(), 30 * 1000);
   }
 
   private async runWatchdogCheck(): Promise<void> {
+    // Skip watchdog check when DB circuit breaker is open — don't pile on a frozen DB
+    try {
+      const { isDbCircuitOpen } = await import('../../db');
+      if (isDbCircuitOpen()) return;
+    } catch { /* ignore */ }
+    
     const issues: string[] = [];
     const metrics = this.getMetrics();
 
@@ -686,7 +699,7 @@ class TrinityNotificationBridge {
       // Log connection stats for monitoring
       if (wsTest.activeConnections !== undefined && wsTest.activeConnections === 0) {
         // Not an issue - just informational that no clients are connected
-        console.log('[TrinityNotificationWatchdog] No active WebSocket connections (normal during quiet periods)');
+        log.info('[TrinityNotificationWatchdog] No active WebSocket connections (normal during quiet periods)');
       }
     } catch (error) {
       issues.push('WebSocket connectivity check failed');
@@ -699,7 +712,7 @@ class TrinityNotificationBridge {
         issues.push(`Database notification access issue: ${dbTest.error}`);
       }
     } catch (error: any) {
-      issues.push(`Database access error: ${error.message}`);
+      issues.push(`Database access error: ${(error instanceof Error ? error.message : String(error))}`);
     }
 
     if (issues.length > 0) {
@@ -714,11 +727,11 @@ class TrinityNotificationBridge {
         this.lastWatchdogAlert = new Date();
       }
 
-      console.warn('[TrinityNotificationWatchdog] Issues detected:', issues);
+      log.warn('[TrinityNotificationWatchdog] Issues detected:', issues);
     } else {
       // Reset failure counter on successful check
       if (this.consecutiveFailures > 0) {
-        console.log('[TrinityNotificationWatchdog] Issues resolved, system healthy');
+        log.info('[TrinityNotificationWatchdog] Issues resolved, system healthy');
         this.consecutiveFailures = 0;
       }
     }
@@ -749,17 +762,28 @@ class TrinityNotificationBridge {
         .limit(1);
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message };
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
   private async alertTrinityAboutIssues(issues: string[], metrics: any): Promise<void> {
-    console.log('[TrinityNotificationWatchdog] Alerting Trinity/AI Brain about notification system issues');
+    log.info('[TrinityNotificationWatchdog] Alerting Trinity/AI Brain about notification system issues');
 
     // Create internal alert for support/admin staff
     try {
+      const { probeDbConnection } = await import('../../db');
+      const dbOk = await probeDbConnection();
+      if (!dbOk) {
+        log.warn('[TrinityNotificationWatchdog] Skipping DB alert — probe failed');
+        broadcastToAllClients({
+          type: 'trinity_system_alert',
+          payload: { source: 'notification_watchdog', issues, metrics, timestamp: new Date().toISOString() },
+        });
+        return;
+      }
       // Log to system audit for tracking
       await db.insert(systemAuditLogs).values({
+        workspaceId: 'system',
         action: 'notification_watchdog_alert',
         entityType: 'notification_system',
         entityId: 'watchdog',
@@ -778,7 +802,7 @@ class TrinityNotificationBridge {
           source: 'notification_watchdog',
           severity: this.consecutiveFailures >= 3 ? 'critical' : 'warning',
           title: 'Notification System Issue Detected',
-          message: `Trinity detected ${issues.length} notification system issue(s) requiring attention`,
+          message: `I detected ${issues.length} notification system issue(s) requiring attention`,
           issues,
           metrics: {
             health: metrics.health,
@@ -795,7 +819,7 @@ class TrinityNotificationBridge {
       await platformEventBus.publish({
         type: 'bugfix_deployed',
         title: 'Notification System Issue Detected',
-        description: `Trinity watchdog detected ${issues.length} issue(s): ${issues.join('; ')}`,
+        description: `I detected ${issues.length} notification issue(s): ${issues.join('; ')}`,
         category: 'system',
         version: '1.0.0',
         metadata: {
@@ -805,7 +829,7 @@ class TrinityNotificationBridge {
       });
 
     } catch (error) {
-      console.error('[TrinityNotificationWatchdog] Failed to send alert:', error);
+      log.error('[TrinityNotificationWatchdog] Failed to send alert:', error);
     }
   }
 

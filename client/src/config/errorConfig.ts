@@ -46,7 +46,7 @@ export const errorConfig = {
     global: true, // Enable global error boundary
     perPage: true, // Enable error boundaries per page
     fallbackRoute: "/dashboard", // Where to redirect on critical error
-    showDetails: process.env.NODE_ENV === "development", // Show error details in dev
+    showDetails: import.meta.env.MODE === "development", // Show error details in dev
     logToService: true, // Log errors to monitoring service
   },
 

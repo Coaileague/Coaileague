@@ -8,6 +8,9 @@
 
 import type { StreamEvent } from '../agent/goalExecutionService';
 import { platformEventBus } from '../../platformEventBus';
+import { TIMEOUTS } from '../../../config/platformConfig';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('trinityWebSocketService');
 
 interface Connection {
   id: string;
@@ -25,11 +28,11 @@ class TrinityWebSocketService {
   private connections: Map<string, Connection> = new Map();
   private conversationConnections: Map<string, Set<string>> = new Map();
   
-  private readonly heartbeatInterval = 30000;
-  private readonly connectionTimeout = 300000; // 5 minutes
+  private readonly heartbeatInterval = TIMEOUTS.wsHeartbeatIntervalMs;
+  private readonly connectionTimeout = TIMEOUTS.wsConnectionTimeoutMs;
 
   private constructor() {
-    console.log('[TrinityWebSocket] Initializing real-time streaming service...');
+    log.info('[TrinityWebSocket] Initializing real-time streaming service...');
     this.setupPlatformEventListener();
     this.startHeartbeat();
   }
@@ -61,7 +64,7 @@ class TrinityWebSocketService {
           this.disconnect(id);
         }
       }
-    }, this.heartbeatInterval);
+    }, this.heartbeatInterval).unref();
   }
 
   /**
@@ -93,7 +96,7 @@ class TrinityWebSocketService {
     convConnections.add(connectionId);
     this.conversationConnections.set(conversationId, convConnections);
 
-    console.log(`[TrinityWebSocket] Connection registered: ${connectionId} for conversation ${conversationId}`);
+    log.info(`[TrinityWebSocket] Connection registered: ${connectionId} for conversation ${conversationId}`);
     
     // Send welcome message
     this.send(connectionId, {
@@ -127,7 +130,7 @@ class TrinityWebSocketService {
     }
     
     this.connections.delete(connectionId);
-    console.log(`[TrinityWebSocket] Connection disconnected: ${connectionId}`);
+    log.info(`[TrinityWebSocket] Connection disconnected: ${connectionId}`);
   }
 
   /**
@@ -139,13 +142,13 @@ class TrinityWebSocketService {
 
     try {
       connection.send(JSON.stringify({
-        event: event.type.toLowerCase(),
+        event: event.type?.toLowerCase() ?? '',
         data: event.data,
         timestamp: event.timestamp
       }));
       connection.lastActivity = new Date();
     } catch (error) {
-      console.error(`[TrinityWebSocket] Failed to send to ${connectionId}:`, error);
+      log.error(`[TrinityWebSocket] Failed to send to ${connectionId}:`, error);
       this.disconnect(connectionId);
     }
   }
@@ -206,10 +209,10 @@ class TrinityWebSocketService {
           break;
           
         default:
-          console.log(`[TrinityWebSocket] Unknown message type: ${parsed.type}`);
+          log.info(`[TrinityWebSocket] Unknown message type: ${parsed.type}`);
       }
     } catch (error) {
-      console.error('[TrinityWebSocket] Failed to parse message:', error);
+      log.error('[TrinityWebSocket] Failed to parse message:', error);
     }
   }
 }

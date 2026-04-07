@@ -64,7 +64,6 @@ const SeasonalEffectsLayer = memo(function SeasonalEffectsLayer() {
           htmlElement.classList.add('dark');
         }
         localStorage.removeItem(STORAGE_KEY);
-        console.log('[Seasonal] Server disabled seasonal - restored theme:', stored.originalTheme);
       }
     }
   }, [seasonId, isLoading]);
@@ -84,7 +83,6 @@ const SeasonalEffectsLayer = memo(function SeasonalEffectsLayer() {
           originalTheme: stored?.originalTheme || (currentTheme as 'light' | 'dark'),
           timestamp: Date.now(),
         });
-        console.log('[Seasonal] Saved state for', seasonId);
       }
     }
   }, [seasonId, isLoading]);

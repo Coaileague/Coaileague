@@ -1,0 +1,1306 @@
+# COAILEAGUE - COMPREHENSIVE UI/UX VISUAL AUDIT
+
+## MISSION: PIXEL-PERFECT PROFESSIONAL UI
+
+This audit systematically searches EVERY page, component, modal, dialog, sheet, card, button, and element for visual issues. The goal is **ZERO visual bugs** - a polished, professional interface that rivals enterprise SaaS products.
+
+**ITERATION APPROACH:** This may require multiple passes. Document everything, fix in batches, re-audit until zero issues remain.
+
+---
+
+# PART 1: MODAL / SHEET / DIALOG AUDIT
+
+## 1.1 The Problem You Showed Me
+
+The screenshot shows a **Help Desk bottom sheet** that:
+- Stretches across the ENTIRE viewport width on desktop
+- Should be compact and centered (max-width ~400-500px)
+- Options (Mute, Archive, Leave) have too much empty space
+- Cancel button spans full width unnecessarily
+
+**This is a UNIVERSAL pattern issue** - likely affects all modals/sheets/dialogs.
+
+## 1.2 Find ALL Modals/Sheets/Dialogs
+
+```bash
+# Find all modal/dialog/sheet components
+grep -rn "Dialog\|Modal\|Sheet\|Drawer\|Popover\|AlertDialog" --include="*.tsx" client/src/
+
+# Find modal styling
+grep -rn "modal\|dialog\|sheet\|drawer" --include="*.css" --include="*.scss" client/src/
+
+# Find Radix/Shadcn dialog usage
+grep -rn "DialogContent\|SheetContent\|DrawerContent\|AlertDialogContent" --include="*.tsx" client/src/
+
+# Find custom modal implementations
+grep -rn "fixed.*inset\|fixed.*z-\|overlay\|backdrop" --include="*.tsx" client/src/
+```
+
+## 1.3 Modal/Sheet Audit Checklist
+
+**For EVERY modal, sheet, dialog, drawer, popover:**
+
+```
+COMPONENT: _______________
+FILE: _______________
+TYPE: [Modal/Sheet/Dialog/Drawer/Popover/AlertDialog]
+
+DESKTOP (1280px+):
+[ ] Has max-width constraint (not full screen)
+[ ] Appropriate width for content (400-600px typical)
+[ ] Centered horizontally
+[ ] Proper vertical positioning (centered or top with margin)
+[ ] Backdrop/overlay present and clickable to close
+[ ] Close button visible and functional
+[ ] Content doesn't overflow container
+[ ] Padding consistent (16-24px typical)
+
+TABLET (768px-1279px):
+[ ] Width adjusts appropriately
+[ ] Still has side margins (not edge-to-edge)
+[ ] Content remains readable
+[ ] Touch targets adequate
+
+MOBILE (< 768px):
+[ ] Full width OR appropriate bottom sheet
+[ ] If bottom sheet: rounded top corners, drag handle
+[ ] If centered modal: has side margins (16px min)
+[ ] Content scrollable if exceeds viewport
+[ ] Safe area respected (notch, home indicator)
+
+CONTENT:
+[ ] Text doesn't overflow
+[ ] Buttons properly sized and spaced
+[ ] Form inputs full width within container
+[ ] Images/icons contained
+[ ] Loading states handled
+```
+
+## 1.4 Standard Modal Sizing Guidelines
+
+```typescript
+/**
+ * MODAL SIZE STANDARDS
+ * 
+ * Apply these max-widths consistently:
+ */
+
+const MODAL_SIZES = {
+  // Small: Confirmations, simple actions
+  sm: 'max-w-sm',      // 384px - "Are you sure?" dialogs
+  
+  // Medium: Forms, options, settings
+  md: 'max-w-md',      // 448px - Most common size
+  
+  // Large: Complex forms, multi-step
+  lg: 'max-w-lg',      // 512px - Detailed forms
+  
+  // XL: Data tables, previews
+  xl: 'max-w-xl',      // 576px - Content-heavy modals
+  
+  // 2XL: Full editors, complex UIs
+  '2xl': 'max-w-2xl',  // 672px - Maximum for modals
+  
+  // Full: Rare, usually mobile only
+  full: 'max-w-full',  // 100% - Avoid on desktop
+};
+
+/**
+ * SHEET SIZE STANDARDS (Bottom/Side Sheets)
+ */
+
+const SHEET_SIZES = {
+  // Bottom sheets on mobile: full width, auto height
+  bottomMobile: 'w-full max-h-[85vh]',
+  
+  // Bottom sheets on desktop: centered, constrained
+  bottomDesktop: 'max-w-md mx-auto',
+  
+  // Side sheets: fixed width
+  sideSheet: 'w-80 max-w-[90vw]', // 320px, but never more than 90%
+};
+```
+
+## 1.5 Fix Pattern for Modals
+
+```tsx
+// BAD - No max-width, stretches full screen
+<DialogContent className="w-full">
+  {content}
+</DialogContent>
+
+// GOOD - Constrained width, responsive
+<DialogContent className="w-full max-w-md mx-auto sm:max-w-lg">
+  {content}
+</DialogContent>
+
+// BAD - Bottom sheet full width on desktop
+<SheetContent side="bottom" className="w-full">
+  {content}
+</SheetContent>
+
+// GOOD - Bottom sheet constrained on desktop
+<SheetContent 
+  side="bottom" 
+  className="w-full sm:max-w-md sm:mx-auto sm:rounded-t-xl"
+>
+  {content}
+</SheetContent>
+```
+
+---
+
+# PART 2: TEXT OVERFLOW & BLEEDING AUDIT
+
+## 2.1 Find Text Overflow Issues
+
+```bash
+# Find text that might overflow
+grep -rn "truncate\|overflow\|ellipsis\|whitespace\|text-overflow" --include="*.tsx" --include="*.css" client/src/
+
+# Find long text without truncation
+grep -rn "className=.*text-\|<p\|<span\|<h[1-6]" --include="*.tsx" client/src/
+
+# Find potential overflow containers
+grep -rn "flex\|grid" --include="*.tsx" client/src/ | grep -v "flex-wrap\|overflow"
+```
+
+## 2.2 Text Overflow Checklist
+
+```
+For EVERY text element:
+
+TRUNCATION:
+[ ] Long text truncates with ellipsis (if single line)
+[ ] Multi-line text has line-clamp
+[ ] Tooltips show full text on hover (for truncated)
+
+CONTAINERS:
+[ ] Text container has overflow handling
+[ ] Flex items have min-w-0 (prevents flex blowout)
+[ ] Grid items have overflow handling
+
+RESPONSIVE:
+[ ] Text doesn't overflow on mobile
+[ ] Font sizes appropriate for viewport
+[ ] Line heights comfortable
+```
+
+## 2.3 Common Text Overflow Fixes
+
+```tsx
+// BAD - Text can blow out flex container
+<div className="flex">
+  <span>{veryLongText}</span>
+</div>
+
+// GOOD - Truncate and prevent blowout
+<div className="flex min-w-0">
+  <span className="truncate">{veryLongText}</span>
+</div>
+
+// BAD - Button text can overflow
+<Button>{dynamicText}</Button>
+
+// GOOD - Button text truncates
+<Button className="max-w-full">
+  <span className="truncate">{dynamicText}</span>
+</Button>
+
+// Multi-line truncation
+<p className="line-clamp-2">{description}</p>
+<p className="line-clamp-3">{longerDescription}</p>
+```
+
+---
+
+# PART 3: BUTTON AUDIT
+
+## 3.1 Find ALL Buttons
+
+```bash
+# Find all buttons
+grep -rn "<Button\|<button\|type=\"button\"\|type=\"submit\"" --include="*.tsx" client/src/
+
+# Count total buttons
+grep -rn "<Button\|<button" --include="*.tsx" client/src/ | wc -l
+```
+
+## 3.2 Button Visual Checklist
+
+```
+For EVERY button:
+
+SIZING:
+[ ] Appropriate padding (px-4 py-2 minimum)
+[ ] Touch target 44px minimum on mobile
+[ ] Text doesn't overflow button
+[ ] Icon + text properly spaced
+
+STATES:
+[ ] Default state styled
+[ ] Hover state visible
+[ ] Active/pressed state
+[ ] Disabled state (opacity, cursor)
+[ ] Loading state (spinner, disabled)
+[ ] Focus ring for accessibility
+
+RESPONSIVE:
+[ ] Button width appropriate for content
+[ ] Full-width buttons have max-width on desktop
+[ ] Button groups wrap or stack on mobile
+[ ] Icon-only buttons have tooltips
+
+SPACING:
+[ ] Adequate margin between buttons
+[ ] Button groups have consistent gap
+[ ] Not touching container edges
+```
+
+## 3.3 Button Size Standards
+
+```typescript
+const BUTTON_SIZES = {
+  xs: 'h-7 px-2 text-xs',      // 28px - Compact tables
+  sm: 'h-8 px-3 text-sm',      // 32px - Secondary actions
+  md: 'h-10 px-4 text-sm',     // 40px - Primary (default)
+  lg: 'h-11 px-6 text-base',   // 44px - CTAs
+  xl: 'h-12 px-8 text-base',   // 48px - Hero actions
+};
+
+// Icon-only buttons
+const ICON_BUTTON_SIZES = {
+  xs: 'h-7 w-7',   // 28px
+  sm: 'h-8 w-8',   // 32px
+  md: 'h-10 w-10', // 40px
+  lg: 'h-11 w-11', // 44px
+};
+```
+
+---
+
+# PART 4: CARD & CONTAINER AUDIT
+
+## 4.1 Find ALL Cards
+
+```bash
+# Find card components
+grep -rn "<Card\|card\|Card>\|CardContent\|CardHeader" --include="*.tsx" client/src/
+
+# Find card-like containers
+grep -rn "rounded.*shadow\|border.*rounded\|bg-white.*rounded" --include="*.tsx" client/src/
+```
+
+## 4.2 Card Visual Checklist
+
+```
+For EVERY card:
+
+CONTAINMENT:
+[ ] Content doesn't overflow card bounds
+[ ] Images contained within card
+[ ] Badges/chips don't bleed over edges
+[ ] Avatars properly positioned
+[ ] Icons within bounds
+
+PADDING:
+[ ] Consistent internal padding (16-24px)
+[ ] Header/body/footer separation clear
+[ ] Content not touching edges
+
+BORDERS & SHADOWS:
+[ ] Border radius consistent (8px typical)
+[ ] Shadow appropriate for elevation
+[ ] Border color consistent with theme
+
+RESPONSIVE:
+[ ] Card width appropriate for container
+[ ] Card stacks vertically on mobile
+[ ] Content reflows gracefully
+[ ] Images scale proportionally
+
+OVERFLOW HANDLING:
+[ ] Long titles truncate
+[ ] Long descriptions clamp
+[ ] Action buttons don't wrap awkwardly
+[ ] Metadata (dates, counts) doesn't overflow
+```
+
+## 4.3 Card Containment Fixes
+
+```tsx
+// BAD - Image can overflow card
+<Card>
+  <img src={url} className="w-full" />
+</Card>
+
+// GOOD - Image contained with overflow hidden
+<Card className="overflow-hidden">
+  <img src={url} className="w-full object-cover" />
+</Card>
+
+// BAD - Badge bleeds over card edge
+<Card className="relative">
+  <Badge className="absolute -top-2 -right-2">New</Badge>
+</Card>
+
+// GOOD - Badge contained or properly positioned
+<Card className="relative overflow-visible">
+  <Badge className="absolute top-2 right-2">New</Badge>
+</Card>
+// OR
+<Card>
+  <CardHeader className="flex justify-between">
+    <span>Title</span>
+    <Badge>New</Badge>
+  </CardHeader>
+</Card>
+
+// BAD - Avatar overflows
+<Card>
+  <Avatar className="absolute -left-4" />
+</Card>
+
+// GOOD - Avatar properly contained
+<Card className="pl-12"> {/* Make room for avatar */}
+  <Avatar className="absolute left-4 top-4" />
+</Card>
+```
+
+---
+
+# PART 5: IMAGE & MEDIA AUDIT
+
+## 5.1 Find ALL Images
+
+```bash
+# Find all images
+grep -rn "<img\|<Image\|background-image\|backgroundImage" --include="*.tsx" --include="*.css" client/src/
+
+# Find avatar components
+grep -rn "<Avatar\|avatar" --include="*.tsx" client/src/
+
+# Find icons
+grep -rn "<Icon\|icon\|Icon>\|lucide\|heroicons" --include="*.tsx" client/src/
+```
+
+## 5.2 Image Visual Checklist
+
+```
+For EVERY image:
+
+CONTAINMENT:
+[ ] Image doesn't overflow container
+[ ] Aspect ratio maintained (object-fit)
+[ ] No stretching or squishing
+[ ] Placeholder shown while loading
+
+SIZING:
+[ ] Explicit width/height or aspect ratio
+[ ] Responsive sizing (max-w-full)
+[ ] Retina/HiDPI support
+
+AVATARS:
+[ ] Circular with overflow hidden
+[ ] Fallback for missing image (initials)
+[ ] Consistent sizes across app
+[ ] Border/ring for visibility on light backgrounds
+
+ICONS:
+[ ] Consistent sizing
+[ ] Proper alignment with text
+[ ] Color matches context
+[ ] Touch target adequate if clickable
+```
+
+## 5.3 Image Containment Standards
+
+```tsx
+// Avatar sizes (consistent across app)
+const AVATAR_SIZES = {
+  xs: 'h-6 w-6',   // 24px - Inline, compact
+  sm: 'h-8 w-8',   // 32px - List items
+  md: 'h-10 w-10', // 40px - Standard
+  lg: 'h-12 w-12', // 48px - Profiles
+  xl: 'h-16 w-16', // 64px - Profile headers
+  '2xl': 'h-24 w-24', // 96px - Profile pages
+};
+
+// Image containment
+<div className="relative aspect-video overflow-hidden rounded-lg">
+  <img 
+    src={url} 
+    alt={alt}
+    className="absolute inset-0 h-full w-full object-cover"
+  />
+</div>
+
+// Avatar with fallback
+<Avatar className="h-10 w-10">
+  <AvatarImage src={user.avatar} alt={user.name} />
+  <AvatarFallback>{user.initials}</AvatarFallback>
+</Avatar>
+```
+
+---
+
+# PART 6: BADGE & CHIP AUDIT
+
+## 6.1 Find ALL Badges/Chips
+
+```bash
+# Find badge components
+grep -rn "<Badge\|badge\|Badge>\|chip\|Chip\|tag\|Tag" --include="*.tsx" client/src/
+
+# Find status indicators
+grep -rn "status\|Status\|indicator\|Indicator" --include="*.tsx" client/src/
+```
+
+## 6.2 Badge Visual Checklist
+
+```
+For EVERY badge/chip:
+
+CONTAINMENT:
+[ ] Badge fits within parent container
+[ ] Doesn't overlap other elements
+[ ] Positioned predictably
+
+SIZING:
+[ ] Consistent padding
+[ ] Text readable (min 10px font)
+[ ] Not oversized relative to content
+
+COLORS:
+[ ] Semantic colors (green=success, red=error, etc.)
+[ ] Sufficient contrast
+[ ] Consistent with design system
+
+RESPONSIVE:
+[ ] Doesn't break layout on mobile
+[ ] Wraps or truncates gracefully
+[ ] Multiple badges handled well
+```
+
+## 6.3 Badge Standards
+
+```tsx
+// Badge sizes
+const BADGE_SIZES = {
+  sm: 'text-xs px-2 py-0.5',     // Compact
+  md: 'text-xs px-2.5 py-0.5',   // Standard
+  lg: 'text-sm px-3 py-1',       // Prominent
+};
+
+// Status badge colors
+const STATUS_COLORS = {
+  success: 'bg-green-100 text-green-800',
+  warning: 'bg-yellow-100 text-yellow-800',
+  error: 'bg-red-100 text-red-800',
+  info: 'bg-blue-100 text-blue-800',
+  neutral: 'bg-gray-100 text-gray-800',
+};
+
+// Badge with proper containment
+<div className="flex items-center gap-2 min-w-0">
+  <span className="truncate">{title}</span>
+  <Badge className="shrink-0">{status}</Badge>
+</div>
+```
+
+---
+
+# PART 7: FORM INPUT AUDIT
+
+## 7.1 Find ALL Form Inputs
+
+```bash
+# Find all inputs
+grep -rn "<Input\|<input\|<Textarea\|<textarea\|<Select\|<select" --include="*.tsx" client/src/
+
+# Find form components
+grep -rn "<Form\|useForm\|FormField\|FormControl" --include="*.tsx" client/src/
+```
+
+## 7.2 Form Input Visual Checklist
+
+```
+For EVERY form input:
+
+SIZING:
+[ ] Consistent height (40px standard)
+[ ] Full width in container
+[ ] Padding adequate for text
+
+BORDERS & FOCUS:
+[ ] Border visible in default state
+[ ] Focus ring visible and accessible
+[ ] Error state border color (red)
+
+LABELS:
+[ ] Label associated with input
+[ ] Label positioned correctly
+[ ] Required indicator visible
+
+HELPER TEXT:
+[ ] Error messages visible
+[ ] Error messages don't cause layout shift
+[ ] Helper text readable (smaller, muted)
+
+RESPONSIVE:
+[ ] Inputs stack vertically on mobile
+[ ] Labels above inputs on mobile
+[ ] Touch-friendly on mobile
+```
+
+## 7.3 Form Input Standards
+
+```tsx
+// Input sizes
+const INPUT_HEIGHTS = {
+  sm: 'h-8',   // 32px - Compact
+  md: 'h-10',  // 40px - Standard
+  lg: 'h-12',  // 48px - Large touch targets
+};
+
+// Consistent form input styling
+<div className="space-y-2">
+  <Label htmlFor="email">Email</Label>
+  <Input 
+    id="email"
+    type="email"
+    className="h-10 w-full"
+    placeholder="Enter email"
+  />
+  {error && (
+    <p className="text-sm text-red-600">{error}</p>
+  )}
+</div>
+```
+
+---
+
+# PART 8: TABLE & LIST AUDIT
+
+## 8.1 Find ALL Tables/Lists
+
+```bash
+# Find tables
+grep -rn "<Table\|<table\|<thead\|<tbody\|<tr\|<td\|<th" --include="*.tsx" client/src/
+
+# Find list components
+grep -rn "<List\|<ul\|<ol\|<li\|listitem" --include="*.tsx" client/src/
+
+# Find data grids
+grep -rn "DataTable\|DataGrid\|AgGrid" --include="*.tsx" client/src/
+```
+
+## 8.2 Table Visual Checklist
+
+```
+For EVERY table:
+
+CONTAINMENT:
+[ ] Table doesn't overflow container
+[ ] Horizontal scroll when needed
+[ ] Columns have appropriate widths
+
+CELLS:
+[ ] Cell content doesn't overflow
+[ ] Long text truncates
+[ ] Actions accessible
+[ ] Alignment consistent (numbers right, text left)
+
+HEADERS:
+[ ] Sticky headers (if long tables)
+[ ] Clear column labels
+[ ] Sort indicators visible
+
+RESPONSIVE:
+[ ] Mobile-friendly alternative (cards/stacked)
+[ ] Or horizontal scroll with shadow indicators
+[ ] Key columns visible first
+
+ROWS:
+[ ] Adequate row height
+[ ] Hover state
+[ ] Selected state (if applicable)
+[ ] Zebra striping (optional)
+```
+
+## 8.3 Responsive Table Patterns
+
+```tsx
+// Pattern 1: Horizontal scroll
+<div className="overflow-x-auto">
+  <Table className="min-w-[800px]">
+    {/* Table content */}
+  </Table>
+</div>
+
+// Pattern 2: Stack on mobile
+<div className="hidden md:block">
+  <Table>{/* Full table */}</Table>
+</div>
+<div className="md:hidden space-y-4">
+  {data.map(item => (
+    <Card key={item.id}>{/* Card view */}</Card>
+  ))}
+</div>
+
+// Pattern 3: Priority columns
+<Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>Name</TableHead>
+      <TableHead className="hidden sm:table-cell">Email</TableHead>
+      <TableHead className="hidden md:table-cell">Date</TableHead>
+      <TableHead>Actions</TableHead>
+    </TableRow>
+  </TableHeader>
+</Table>
+```
+
+---
+
+# PART 9: NAVIGATION & HEADER AUDIT
+
+## 9.1 Find Navigation Components
+
+```bash
+# Find navigation
+grep -rn "<Nav\|<nav\|Navbar\|Header\|Sidebar\|Menu" --include="*.tsx" client/src/
+
+# Find header components
+grep -rn "header\|Header" --include="*.tsx" client/src/
+
+# Find sidebar components  
+grep -rn "sidebar\|Sidebar" --include="*.tsx" client/src/
+```
+
+## 9.2 Navigation Visual Checklist
+
+```
+HEADER:
+[ ] Fixed/sticky positioning correct
+[ ] Doesn't overlap content
+[ ] Logo properly sized
+[ ] Navigation items don't overflow
+[ ] User menu accessible
+[ ] Mobile menu hamburger visible
+
+SIDEBAR:
+[ ] Width appropriate (240-280px typical)
+[ ] Collapses gracefully
+[ ] Active item highlighted
+[ ] Scroll for long menus
+[ ] Icons aligned
+[ ] Labels truncate if needed
+
+MOBILE NAVIGATION:
+[ ] Hamburger menu works
+[ ] Menu slides in/out smoothly
+[ ] Overlay dismisses menu
+[ ] All items accessible
+[ ] Safe areas respected
+```
+
+---
+
+# PART 10: SPACING & LAYOUT AUDIT
+
+## 10.1 Spacing Consistency Check
+
+```bash
+# Find spacing classes
+grep -rn "space-\|gap-\|p-\|px-\|py-\|m-\|mx-\|my-" --include="*.tsx" client/src/ | \
+  grep -oE "(space|gap|p|px|py|m|mx|my)-[0-9]+" | sort | uniq -c | sort -rn
+```
+
+## 10.2 Spacing Standards
+
+```typescript
+/**
+ * SPACING SCALE (Tailwind default)
+ * 
+ * Use consistently across app:
+ */
+
+const SPACING = {
+  // Tight spacing (within components)
+  1: '0.25rem',  // 4px
+  2: '0.5rem',   // 8px
+  
+  // Standard spacing (between elements)
+  3: '0.75rem',  // 12px
+  4: '1rem',     // 16px
+  
+  // Section spacing
+  6: '1.5rem',   // 24px
+  8: '2rem',     // 32px
+  
+  // Page spacing
+  12: '3rem',    // 48px
+  16: '4rem',    // 64px
+};
+
+/**
+ * COMMON PATTERNS:
+ */
+
+// Card internal padding
+<Card className="p-4 md:p-6">
+
+// Between form fields
+<div className="space-y-4">
+
+// Between sections
+<div className="space-y-8">
+
+// Page container
+<div className="px-4 py-6 md:px-6 lg:px-8">
+
+// Between buttons
+<div className="flex gap-2">
+// OR
+<div className="flex gap-4">
+```
+
+---
+
+# PART 11: PAGE-BY-PAGE AUDIT
+
+## 11.1 Complete Page List
+
+```
+AUDIT EVERY PAGE:
+
+AUTHENTICATION:
+[ ] /login
+[ ] /register
+[ ] /forgot-password
+[ ] /reset-password
+
+DASHBOARD:
+[ ] /dashboard (the screenshot you showed)
+
+EMPLOYEES:
+[ ] /employees (list)
+[ ] /employees/:id (detail)
+[ ] /employees/new (create)
+[ ] /employees/:id/edit (edit)
+[ ] /employees/:id/documents
+[ ] /employees/:id/schedule
+
+CLIENTS:
+[ ] /clients (list)
+[ ] /clients/:id (detail)
+[ ] /clients/new
+[ ] /clients/:id/edit
+[ ] /clients/:id/contracts
+[ ] /clients/:id/sites
+
+SITES:
+[ ] /sites (list)
+[ ] /sites/:id (detail)
+[ ] /sites/new
+[ ] /sites/:id/edit
+
+SCHEDULING:
+[ ] /schedule (calendar view)
+[ ] /schedule/day
+[ ] /schedule/week
+[ ] /schedule/month
+
+TIME TRACKING:
+[ ] /timeclock
+[ ] /timesheets
+[ ] /timesheets/:id
+
+PAYROLL:
+[ ] /payroll
+[ ] /payroll/run
+[ ] /payroll/history
+
+INVOICING:
+[ ] /invoices (list)
+[ ] /invoices/:id (detail)
+[ ] /invoices/new
+[ ] /invoices/:id/edit
+
+CONTRACTS:
+[ ] /contracts (list)
+[ ] /contracts/:id (detail)
+[ ] /contracts/new
+[ ] /contracts/:id/sign (public)
+
+COMMUNICATIONS:
+[ ] /messages
+[ ] /messages/:roomId
+[ ] /announcements
+
+REPORTS:
+[ ] /reports
+[ ] /reports/:type
+
+SETTINGS:
+[ ] /settings
+[ ] /settings/profile
+[ ] /settings/workspace
+[ ] /settings/billing
+[ ] /settings/integrations
+[ ] /settings/team
+
+SUPPORT:
+[ ] /support
+[ ] /support/tickets
+[ ] /support/tickets/:id
+
+ONBOARDING:
+[ ] /onboarding/:token (public)
+```
+
+## 11.2 Per-Page Audit Template
+
+```
+PAGE: _______________
+URL: _______________
+
+DESKTOP (1280px+):
+[ ] Layout balanced
+[ ] No horizontal scroll
+[ ] Content width appropriate
+[ ] Sidebars/panels sized correctly
+[ ] Modals constrained
+[ ] Tables don't overflow
+
+TABLET (768px-1279px):
+[ ] Layout adapts
+[ ] Sidebar collapses or overlays
+[ ] Content still readable
+[ ] Forms usable
+
+MOBILE (< 768px):
+[ ] Single column layout
+[ ] Navigation accessible
+[ ] Touch targets adequate
+[ ] Forms usable
+[ ] Tables scroll or stack
+[ ] Modals full-width or bottom sheet
+
+SPECIFIC ISSUES:
+[ ] _______________
+[ ] _______________
+[ ] _______________
+```
+
+---
+
+# PART 12: SPECIFIC FIXES FOR SCREENSHOT ISSUES
+
+## 12.1 Help Desk Bottom Sheet Fix
+
+```tsx
+// CURRENT (BROKEN) - Full width on desktop
+<Sheet>
+  <SheetContent side="bottom">
+    <div className="w-full">
+      <h2>Help Desk</h2>
+      <p>Support Room</p>
+      
+      <div>
+        <button>Mute notifications</button>
+        <button>Archive conversation</button>
+        <button>Leave conversation</button>
+      </div>
+      
+      <button className="w-full">Cancel</button>
+    </div>
+  </SheetContent>
+</Sheet>
+
+// FIXED - Constrained and professional
+<Sheet>
+  <SheetContent 
+    side="bottom" 
+    className="
+      mx-auto 
+      max-w-md 
+      rounded-t-xl 
+      sm:max-w-sm
+      pb-safe
+    "
+  >
+    <div className="px-4 py-6">
+      {/* Header */}
+      <div className="mb-6 text-center">
+        <h2 className="text-lg font-semibold">Help Desk</h2>
+        <p className="text-sm text-muted-foreground">Support Room</p>
+      </div>
+      
+      {/* Actions */}
+      <div className="space-y-2">
+        <button className="
+          flex w-full items-center gap-3 
+          rounded-lg px-4 py-3 
+          hover:bg-muted transition-colors
+        ">
+          <BellOffIcon className="h-5 w-5 text-muted-foreground" />
+          <div className="text-left">
+            <div className="font-medium">Mute notifications</div>
+            <div className="text-sm text-muted-foreground">Stop receiving alerts</div>
+          </div>
+        </button>
+        
+        <button className="
+          flex w-full items-center gap-3 
+          rounded-lg px-4 py-3 
+          hover:bg-muted transition-colors
+        ">
+          <ArchiveIcon className="h-5 w-5 text-muted-foreground" />
+          <div className="text-left">
+            <div className="font-medium">Archive conversation</div>
+            <div className="text-sm text-muted-foreground">Hide from list, returns with new messages</div>
+          </div>
+        </button>
+        
+        <button className="
+          flex w-full items-center gap-3 
+          rounded-lg px-4 py-3 
+          text-red-600
+          hover:bg-red-50 transition-colors
+        ">
+          <LogOutIcon className="h-5 w-5" />
+          <div className="text-left">
+            <div className="font-medium">Leave conversation</div>
+            <div className="text-sm text-red-500">Remove from your list permanently</div>
+          </div>
+        </button>
+      </div>
+      
+      {/* Cancel */}
+      <button className="
+        mt-4 w-full 
+        rounded-lg py-3 
+        bg-muted 
+        font-medium
+        hover:bg-muted/80 transition-colors
+      ">
+        Cancel
+      </button>
+    </div>
+  </SheetContent>
+</Sheet>
+```
+
+## 12.2 Global Sheet/Modal Component Fix
+
+```tsx
+// Create a standardized BottomSheet component
+
+interface BottomSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title?: string;
+  description?: string;
+  children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const SHEET_SIZES = {
+  sm: 'max-w-sm',
+  md: 'max-w-md', 
+  lg: 'max-w-lg',
+};
+
+export function BottomSheet({ 
+  open, 
+  onOpenChange, 
+  title, 
+  description, 
+  children,
+  size = 'md'
+}: BottomSheetProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent 
+        side="bottom"
+        className={cn(
+          "mx-auto rounded-t-2xl pb-safe",
+          SHEET_SIZES[size],
+          // On very small screens, go full width with small margin
+          "w-[calc(100%-2rem)] sm:w-full"
+        )}
+      >
+        {/* Drag handle indicator */}
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted" />
+        
+        {(title || description) && (
+          <div className="mb-6 text-center">
+            {title && <SheetTitle>{title}</SheetTitle>}
+            {description && (
+              <SheetDescription>{description}</SheetDescription>
+            )}
+          </div>
+        )}
+        
+        <div className="px-1">
+          {children}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+```
+
+## 12.3 Global Dialog Component Fix
+
+```tsx
+// Create a standardized Dialog component
+
+interface StandardDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title?: string;
+  description?: string;
+  children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+}
+
+const DIALOG_SIZES = {
+  sm: 'max-w-sm',   // 384px
+  md: 'max-w-md',   // 448px
+  lg: 'max-w-lg',   // 512px
+  xl: 'max-w-xl',   // 576px
+};
+
+export function StandardDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  size = 'md'
+}: StandardDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className={cn(
+          "w-[calc(100%-2rem)] sm:w-full",
+          DIALOG_SIZES[size]
+        )}
+      >
+        {(title || description) && (
+          <DialogHeader>
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {description && (
+              <DialogDescription>{description}</DialogDescription>
+            )}
+          </DialogHeader>
+        )}
+        
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+---
+
+# PART 13: CSS/TAILWIND AUDIT
+
+## 13.1 Find Inconsistent Styling
+
+```bash
+# Find hardcoded colors (should use theme)
+grep -rn "bg-\[#\|text-\[#\|border-\[#" --include="*.tsx" client/src/
+
+# Find hardcoded pixel values
+grep -rn "\[.*px\]" --include="*.tsx" client/src/
+
+# Find inline styles (prefer Tailwind)
+grep -rn "style={{" --include="*.tsx" client/src/
+
+# Find conflicting responsive classes
+grep -rn "sm:.*md:.*sm:" --include="*.tsx" client/src/
+```
+
+## 13.2 Theme Consistency
+
+```bash
+# Verify theme usage
+grep -rn "bg-primary\|text-primary\|bg-secondary" --include="*.tsx" client/src/
+
+# Find colors that should be theme colors
+grep -rn "bg-blue-\|text-blue-\|bg-red-\|text-red-" --include="*.tsx" client/src/
+```
+
+---
+
+# PART 14: ACCESSIBILITY VISUAL AUDIT
+
+## 14.1 Focus States
+
+```bash
+# Find focus ring styling
+grep -rn "focus:\|focus-visible:" --include="*.tsx" client/src/
+
+# Find elements without focus styling
+grep -rn "onClick\|href=" --include="*.tsx" client/src/ | grep -v "focus"
+```
+
+## 14.2 Contrast Check
+
+```
+For EVERY text/background combination:
+
+[ ] Normal text: 4.5:1 contrast ratio minimum
+[ ] Large text (18px+): 3:1 contrast ratio minimum
+[ ] Interactive elements: 3:1 against adjacent colors
+[ ] Icons: 3:1 if meaningful
+
+COMMON ISSUES:
+[ ] Light gray text on white
+[ ] Low contrast placeholder text
+[ ] Colored buttons with white text
+```
+
+---
+
+# PART 15: PERFORMANCE VISUAL AUDIT
+
+## 15.1 Layout Shift
+
+```
+CHECK FOR CUMULATIVE LAYOUT SHIFT:
+
+[ ] Images have width/height or aspect-ratio
+[ ] Fonts don't cause text reflow
+[ ] Dynamically loaded content has placeholders
+[ ] Ads/embeds have reserved space
+[ ] Skeleton loaders match final content size
+```
+
+## 15.2 Loading States
+
+```
+For EVERY data-loading component:
+
+[ ] Skeleton/placeholder shown during load
+[ ] Skeleton matches layout of final content
+[ ] No layout shift when data arrives
+[ ] Error state displayed if load fails
+[ ] Empty state shown if no data
+```
+
+---
+
+# OUTPUT FORMAT
+
+```markdown
+# UI/UX VISUAL AUDIT REPORT
+
+## Date: [DATE]
+## Viewport Tested: Desktop (1440px), Tablet (768px), Mobile (375px)
+## Total Issues: [NUMBER]
+
+---
+
+## CRITICAL VISUAL ISSUES
+
+| # | Category | Component | File | Issue | Fix |
+|---|----------|-----------|------|-------|-----|
+| 1 | Modal | HelpDesk BottomSheet | chat-options.tsx | Full width on desktop | Add max-w-md mx-auto |
+| 2 | ... | ... | ... | ... | ... |
+
+---
+
+## HIGH PRIORITY
+
+| # | Category | Component | File | Issue | Fix |
+|---|----------|-----------|------|-------|-----|
+
+---
+
+## MEDIUM PRIORITY
+
+| # | Category | Component | File | Issue | Fix |
+|---|----------|-----------|------|-------|-----|
+
+---
+
+## LOW PRIORITY
+
+| # | Category | Component | File | Issue | Fix |
+|---|----------|-----------|------|-------|-----|
+
+---
+
+## ISSUES BY CATEGORY
+
+### Modals/Sheets (X issues)
+### Text Overflow (X issues)
+### Button Issues (X issues)
+### Card Issues (X issues)
+### Image Issues (X issues)
+### Form Issues (X issues)
+### Table Issues (X issues)
+### Navigation Issues (X issues)
+### Spacing Issues (X issues)
+
+---
+
+## PAGE-BY-PAGE STATUS
+
+| Page | Desktop | Tablet | Mobile | Issues |
+|------|---------|--------|--------|--------|
+| /dashboard | ✓/✗ | ✓/✗ | ✓/✗ | [list] |
+| /employees | ✓/✗ | ✓/✗ | ✓/✗ | [list] |
+| ... | ... | ... | ... | ... |
+
+---
+
+## STANDARDIZED COMPONENTS NEEDED
+
+1. StandardDialog - Consistent dialog with size variants
+2. BottomSheet - Constrained bottom sheet for mobile
+3. ResponsiveTable - Table with mobile card view
+4. TruncatedText - Text with tooltip on truncate
+5. ...
+
+---
+
+## RECOMMENDED GLOBAL FIXES
+
+1. Add max-width to ALL dialogs/sheets
+2. Add overflow handling to ALL cards
+3. Standardize button sizes
+4. ...
+
+---
+
+## ITERATION NEEDED
+
+[ ] Pass 1 complete - X issues found
+[ ] Pass 2 complete - X issues remaining
+[ ] Pass 3 complete - X issues remaining
+[ ] ZERO ISSUES - Ready for launch
+```
+
+---
+
+# EXECUTION INSTRUCTIONS
+
+1. **Run in phases** - This is too much for one pass
+2. **Start with modals/sheets** - The most visible issues
+3. **Then cards/containment** - Bleeding content issues
+4. **Then page-by-page** - Systematic verification
+5. **Document everything** - Screenshots help
+6. **Create standardized components** - Fix once, use everywhere
+7. **Re-audit after fixes** - Verify nothing new broke
+8. **Iterate until ZERO issues**
+
+**THE GOAL: Pixel-perfect professional UI on every page, every viewport.**
+
+**BEGIN COMPREHENSIVE UI/UX AUDIT NOW.**

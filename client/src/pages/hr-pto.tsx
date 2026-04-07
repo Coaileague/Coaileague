@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, CheckCircle2, XCircle, Plus, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { apiGet, apiPost } from "@/lib/apiClient";
 import { queryKeys } from "@/config/queryKeys";
 import { useState, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { MobilePageWrapper } from "@/components/mobile-page-wrapper";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub/CanvasHubRegistry";
 import { SwipeableApprovalCard } from "@/components/ui/swipeable-approval-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -67,10 +67,11 @@ export default function HRPTO() {
     await refetch();
   }, [refetch]);
 
-  const { data: employees } = useQuery<Employee[]>({
+  const { data: _empResp } = useQuery<{ data: Employee[] }>({
     queryKey: queryKeys.employees.all,
     queryFn: () => apiGet('employees.list'),
   });
+  const employees = _empResp?.data;
 
   const createMutation = useMutation({
     mutationFn: async (data: PTOFormData) => {
@@ -95,8 +96,13 @@ export default function HRPTO() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async ({ id, approved }: { id: number; approved: boolean }) => {
-      return apiPost('pto.approve', { id, approved });
+    mutationFn: async ({ id, approved, denialReason }: { id: number; approved: boolean; denialReason?: string }) => {
+      const endpoint = approved ? `/api/pto/${id}/approve` : `/api/pto/${id}/deny`;
+      const body: Record<string, string> = {};
+      if (!approved && denialReason) {
+        body.denialReason = denialReason;
+      }
+      return await apiRequest('PATCH', endpoint, body);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pto.all });
@@ -162,36 +168,19 @@ export default function HRPTO() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
       <div className="max-w-7xl mx-auto w-full">
         <div className="space-y-4 md:space-y-6">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1" data-testid="heading-pto">PTO Management</h2>
-              <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-                Manage vacation and time-off requests
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {isMobile && (
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={handleRefresh}
-                  data-testid="button-refresh"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              )}
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
+          <div className="flex items-center justify-end gap-3 mb-4 flex-wrap">
+            <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+                <UniversalModalTrigger asChild>
                   <Button data-testid="button-add-pto" size={isMobile ? "sm" : "default"}>
                     <Plus className="h-4 w-4 mr-1 md:mr-2" />
                     <span className="hidden sm:inline">New Request</span>
                     <span className="sm:hidden">New</span>
                   </Button>
-                </DialogTrigger>
-                <DialogContent size="xl">
-                <DialogHeader>
-                  <DialogTitle>Create PTO Request</DialogTitle>
-                </DialogHeader>
+                </UniversalModalTrigger>
+                <UniversalModalContent size="xl">
+                <UniversalModalHeader>
+                  <UniversalModalTitle>Create PTO Request</UniversalModalTitle>
+                </UniversalModalHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
@@ -298,9 +287,8 @@ export default function HRPTO() {
                     </div>
                   </form>
                 </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
+              </UniversalModalContent>
+            </UniversalModal>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-cols-1">
@@ -430,16 +418,19 @@ export default function HRPTO() {
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <MobilePageWrapper
-        onRefresh={handleRefresh}
-        enablePullToRefresh
-      >
-        {pageContent}
-      </MobilePageWrapper>
-    );
-  }
+  const pageConfig: CanvasPageConfig = {
+    id: "hr-pto",
+    title: "PTO Management",
+    subtitle: "Manage vacation and time-off requests",
+    category: "operations",
+    enablePullToRefresh: true,
+    onRefresh: handleRefresh,
+    withBottomNav: isMobile,
+  };
 
-  return pageContent;
+  return (
+    <CanvasHubPage config={pageConfig}>
+      {pageContent}
+    </CanvasHubPage>
+  );
 }

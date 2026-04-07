@@ -18,6 +18,9 @@ import {
 } from '@shared/schema';
 import { eq, and, or, gte, lte, desc, asc, sql, isNull, between } from 'drizzle-orm';
 import { aiBrainService } from './ai-brain/aiBrainService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('availabilityService');
+
 
 export interface AvailabilitySlot {
   dayOfWeek: number;
@@ -556,12 +559,12 @@ class AvailabilityService {
           shiftsPerDay: options.shiftsPerDay || 2,
           shiftDurationHours: options.shiftDurationHours || 8,
         },
-        priority: 'normal',
+        priority: 'medium',
       });
 
       return result.output;
     } catch (error) {
-      console.error('[AvailabilityService] Failed to get AI schedule suggestion:', error);
+      log.error('[AvailabilityService] Failed to get AI schedule suggestion:', error);
       
       // Fallback to basic availability-based schedule
       return this.generateBasicSchedule(teamAvailability, options);
@@ -622,7 +625,7 @@ class AvailabilityService {
         priority: 'low',
       });
     } catch (error) {
-      console.error('[AvailabilityService] Failed to emit availability change event:', error);
+      log.error('[AvailabilityService] Failed to emit availability change event:', error);
     }
   }
 
@@ -644,10 +647,10 @@ class AvailabilityService {
           endDate: request.endDate,
           timestamp: new Date().toISOString(),
         },
-        priority: 'normal',
+        priority: 'medium',
       });
     } catch (error) {
-      console.error('[AvailabilityService] Failed to emit time-off request event:', error);
+      log.error('[AvailabilityService] Failed to emit time-off request event:', error);
     }
   }
 

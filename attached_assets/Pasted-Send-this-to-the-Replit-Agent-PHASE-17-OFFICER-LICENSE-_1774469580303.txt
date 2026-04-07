@@ -1,0 +1,149 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 17 — OFFICER LICENSE AND CERTIFICATION TRACKING**
+
+This phase owns the complete license and certification lifecycle for every officer on the platform. Texas security companies operate under DPS regulation — an officer working with an expired license is a compliance violation with real legal consequences for the company. Every license must be tracked, every expiration must be surfaced before it happens, and every scheduling system must enforce license validity in real time. Report all findings before fixing anything. No exceptions.
+
+---
+
+**STEP 1 — LICENSE SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, scheduled job, and Trinity action that touches officer licenses or certifications. Include:
+- License storage schema — what fields exist, what is required vs optional
+- Certification type registry — what types are defined and where
+- License validation logic — where it runs and what it checks
+- Expiration tracking — how expiration dates are stored and queried
+- Renewal alert system — what triggers alerts and when
+- Scheduling enforcement — where license checks gate shift assignment and clock-in
+- Bulk license status dashboard — what exists today
+- DPS compliance export — what exists today
+- Any cron or scheduled job that checks license expiration
+
+Flag any license mutation that has no corresponding audit trail write.
+
+---
+
+**STEP 2 — LICENSE SCHEMA VERIFICATION**
+
+The license data model must be complete and correct:
+- Every officer record has a field for DPS license number — not optional for armed or unarmed security roles
+- License type stored and validated against a canonical list of Texas DPS license types
+- License expiration date stored — verified not null for active officers
+- License status field: `active`, `expired`, `suspended`, `pending_renewal`, `revoked`
+- Multiple licenses per officer supported — an officer may hold both a Level II and a Level III license
+- License history preserved — when a license is renewed, the old record is not overwritten but archived
+- License documents stored in the document vault — linked to the license record
+- Verify every license record has `workspace_id` scoping — no cross-workspace license data accessible
+
+---
+
+**STEP 3 — CERTIFICATION TYPE REGISTRY VERIFICATION**
+
+Texas DPS requires specific certification types for specific post types:
+- Canonical list of certification types defined in a single registry file — not hardcoded inline
+- At minimum the registry must include: Level II (unarmed), Level III (armed), Level IV (personal protection), Crowd Manager, Fire Life Safety, Handcuff, Baton, Chemical Agent
+- Each certification type maps to: which post types require it, renewal interval in days, whether it requires a DPS-issued card
+- Armed post auto-injection confirmed still active from Phase 12 (regression check) — armed posts automatically require Level III regardless of what was manually specified
+- New certification types can be added to the registry without code changes — data-driven
+
+---
+
+**STEP 4 — EXPIRATION TRACKING AND RENEWAL ALERTS**
+
+Expiration must be surfaced before it happens — not after:
+- Automated renewal alerts fire at 90, 60, 30, and 7 days before expiration via NDS
+- Each alert tier sends to: the officer (primary), their direct supervisor, and the compliance officer role
+- Alert content includes: officer name, license type, license number, expiration date, days remaining, renewal instructions link
+- Alerts are idempotent — the same officer does not receive duplicate alerts for the same expiration window if the job runs multiple times
+- Expired licenses trigger an immediate alert to the compliance officer and the officer's manager — not just the next scheduled sweep
+- License renewed by the officer — renewal date updates correctly, old expiration archived, new alert schedule begins from new expiration date
+- Verify the expiration check cron runs on its defined schedule — show timing
+
+---
+
+**STEP 5 — SCHEDULING ENFORCEMENT REGRESSION CHECK**
+
+Confirmed added in Phase 12 — full regression verification required:
+- Assignment-time license check still active — `checkSchedulingEligibility()` called on every manual assignment
+- Clock-in license check still active — `checkSchedulingEligibility()` called at clock-in (non-owner path)
+- Supervisor alerted when expired license detected at clock-in — confirm NDS notification fires
+- Autonomous scheduler respects license requirements — unqualified officers not auto-assigned
+- License expiry between assignment and clock-in is caught at clock-in — not silently passed
+- Post-level license requirements enforced — officer without required cert cannot be assigned to that post regardless of other eligibility
+
+---
+
+**STEP 6 — BULK LICENSE STATUS DASHBOARD**
+
+Managers and compliance officers need visibility across all officers:
+- Dashboard endpoint returns all officers in workspace with: name, license type, license number, expiration date, days until expiration, current status
+- Dashboard sortable by expiration date — expiring soonest shown first
+- Dashboard filterable by status: active, expiring soon (within 30 days), expired, suspended, revoked
+- Officers with no license on file flagged separately — not grouped with expired
+- Dashboard accessible to org_owner, co_owner, org_admin, compliance_officer roles — not visible to officers or supervisors without explicit permission
+- Dashboard data exportable as CSV for DPS audit purposes
+
+---
+
+**STEP 7 — DPS COMPLIANCE EXPORT**
+
+Texas DPS audits require specific data formats:
+- Export includes: officer name, DPS license number, license type, issue date, expiration date, current status, post assignments
+- Export is workspace-scoped — only officers in the requesting workspace included
+- Export format verified for DPS submission requirements
+- Export role-gated to compliance_officer and org_owner
+- Every export run writes an audit record: exported_by, workspace_id, timestamp, record count
+- Export can be filtered by date range and license status
+
+---
+
+**STEP 8 — TRINITY LICENSE ACTIONS**
+
+Trinity must be able to query and act on license data:
+- `license.query` — query license status for a specific officer or all officers expiring within N days
+- `license.alert` — manually trigger renewal alert for a specific officer
+- `license.update` — update license information with proper audit trail (requires compliance_officer or above)
+- `license.export` — trigger DPS export for the workspace
+- All 4 actions respect workspace context and role permissions
+
+---
+
+**STEP 9 — FAILURE MODE VERIFICATION**
+
+Every failure scenario must be handled:
+- Renewal alert job fails mid-run — partial alerts sent, job logs which officers were alerted and which were not, resumes correctly on next run without duplicating alerts already sent
+- Officer record has no expiration date — flagged as incomplete, compliance officer notified, not silently treated as valid
+- License number format invalid for Texas DPS — validation rejects on save, explicit error returned
+- Officer's license is revoked mid-assignment (compliance officer updates status to revoked) — active shift assignments for that officer are immediately flagged, supervisor and manager notified
+- License document in vault becomes inaccessible — license record flagged, compliance officer notified
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 17 is marked complete:
+- Check 1: License schema complete — DPS number, type, expiration, status, multi-license support, history preservation all confirmed
+- Check 2: Certification type registry exists as a single canonical file — all required Texas DPS types present
+- Check 3: Armed post auto-injection still active — regression check from Phase 12
+- Check 4: Renewal alerts fire at 90/60/30/7 days — idempotency confirmed, all three recipient types notified
+- Check 5: Expired license triggers immediate alert — not waiting for next scheduled sweep
+- Check 6: Expiration check cron confirmed running on schedule — show timing
+- Check 7: Assignment-time license check still active — regression check from Phase 12
+- Check 8: Clock-in license check still active — regression check from Phase 12
+- Check 9: Supervisor alerted via NDS on expired license at clock-in — confirmed firing
+- Check 10: Bulk dashboard returns correct data with all required fields, sortable and filterable
+- Check 11: Dashboard exportable as CSV, role-gated correctly
+- Check 12: DPS compliance export contains all required fields and is role-gated
+- Check 13: All 4 Trinity license actions registered and callable
+- Check 14: Revoked license mid-assignment flags active shifts and notifies supervisor and manager
+- Check 15: Officer with no expiration date on file is flagged — not treated as valid
+- Check 16: All license mutations have audit trail entries — grep confirms zero untracked writes
+- Check 17: Server starts clean with zero TypeScript errors across all license-related files
+
+Do not mark Phase 17 complete until all 17 checks pass. Produce a structured findings report — every component investigated, pass or gap — before beginning any fixes. Findings first. Full picture assembled. Then fixes. Every gap from low to critical gets fixed before this phase closes.
+
+---
+
+Paste that and hold the line. DPS compliance is not optional — an officer working with an expired license is a liability the platform must prevent.

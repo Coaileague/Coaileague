@@ -1,0 +1,199 @@
+# TRINITY LIVE THOUGHT STREAM — Implementation Spec
+
+## OVERVIEW
+
+Trinity currently shows "Processing..." and "Analyzing staffing" in her status bar and workbox. This is boring and opaque. Users have no idea what she's actually doing, whether she's stuck, or what decisions she's making.
+
+**The goal:** Trinity should show her real-time thinking, reasoning, and execution steps in natural language — like watching an AI agent work. This builds trust, shows transparency, and lets managers understand WHY Trinity made each decision.
+
+## WHERE IT SHOWS
+
+### 1. Status Bar (the blue bar at the top of schedule)
+Currently shows: "Processing 0/0 — Starting auto-fill for 0 shifts..."
+Should show: A single-line summary that updates as Trinity progresses through her cycle.
+
+Examples of what it should say at each phase:
+```
+"Scanning 44 clients for staffing needs..."
+"Found 12 clients needing coverage for Monday..."
+"Generating 38 shifts across 12 clients..."
+"Evaluating 115 employees for best fit..."
+"Placing employees — 24 of 38 shifts filled..."
+"Completed — 34 shifts filled, 4 unfilled (staffing shortage). Ready for review."
+```
+
+### 2. Trinity Workbox (the expandable panel showing execution steps)
+Currently shows: "1 steps — Analyzing staffing" (same message repeated)
+Should show: A scrollable feed of Trinity's actual thinking, organized by phase.
+
+Example of a full cycle:
+
+```
+Phase 1: Data Gathering
+─────────────────────────────
+✓ Fetching client data for Acme Security... 44 active clients found
+✓ Fetching employee roster... 115 active employees (87 W2, 28 contractors)  
+✓ Loading current schedule state... 138 shifts this week, 102 unfilled
+✓ Loading employee availability and scores...
+✓ All data loaded in 1.2s
+
+Phase 2: Client Demand Analysis  
+─────────────────────────────
+✓ Metro Transit Authority Hub — needs 3 guards, Day shift, Mon-Fri
+✓ Dallas Warehouse District — needs 2 guards, Night shift, Mon-Sat
+✓ Pioneer Heights HOA — needs 1 guard, Night shift, Wed/Fri/Sun
+⚠ Westfield Regional Mall — requesting 13hr shifts (3AM-4PM). 
+  Flagged: exceeds 12hr max shift duration policy. Capping at 12hrs.
+✓ 12 clients analyzed, 38 shifts need filling
+
+Phase 3: Employee Matching
+─────────────────────────────
+✓ Shift: Metro Transit Hub — Mon Day Shift
+  → Best match: Officer James Wilson (score: 92)
+    Distance: 4.2mi | Rate: $18/hr vs $32/hr bill = $14 margin
+    Availability: ✓ | Rest compliance: ✓ (14hrs since last shift)
+    No complaints from this client | Reliability: 96%
+  → Assigned ✓
+
+✓ Shift: Dallas Warehouse — Mon Night Shift  
+  → Best match: Officer Maria Santos (score: 88)
+    Distance: 7.1mi | Rate: $20/hr vs $28/hr bill = $8 margin
+    Availability: ✓ | Rest compliance: ✓
+  → Assigned ✓
+
+⚠ Shift: North Star Data Center — Mon PM Shift
+  → Top candidate: Officer Derek Brown (score: 85)
+    BUT: Already at 38hrs this week. Assigning would push to 46hrs (OT).
+  → Skipping Derek — OT threshold exceeded
+  → Next candidate: Officer Lisa Chen (score: 79)
+    Distance: 11.3mi | Rate: $19/hr vs $35/hr bill = $16 margin
+    Availability: ✓ | Rest compliance: ✓
+  → Assigned ✓ (with note: higher distance than ideal)
+
+✗ Shift: Grand Plaza Hotel — Mon Night Shift
+  → No eligible employees available
+    Reason: All night-shift-available employees already assigned
+  → Escalating to org owner for manual fill or call-out
+
+Phase 4: Compliance Check
+─────────────────────────────
+✓ OT scan: 3 employees approaching 40hr threshold — no new assignments
+✓ Rest compliance: All assignments have 8hr+ gaps — PASS
+✓ Double-booking check: 0 conflicts — PASS
+⚠ 1 shift flagged: Westfield Mall duration capped from 13hrs to 12hrs
+
+Phase 5: Summary
+─────────────────────────────
+✓ 34 of 38 shifts filled (89.5% fill rate)
+✗ 4 shifts unfilled — staffing shortage
+  → 3 Night shifts (insufficient night-shift employees)
+  → 1 PM shift (all eligible employees at OT threshold)
+  
+Recommendation: Org needs 3-4 more night-shift employees to 
+meet current client demand. Consider recruiting.
+
+Ready for review. Approve to publish or make manual adjustments.
+```
+
+## HOW TO IMPLEMENT
+
+### Backend: Trinity Thought Stream Service
+
+Create a service that Trinity writes to as she works. Each step is a "thought" with a type, message, timestamp, and optional metadata.
+
+```typescript
+// Thought types
+type TrinityThoughtType = 
+  | 'phase_start'    // Starting a new phase
+  | 'info'           // Normal progress update
+  | 'success'        // Something completed successfully
+  | 'warning'        // Issue detected but handled
+  | 'error'          // Something failed
+  | 'decision'       // Trinity made a choice (employee placement, skip, etc.)
+  | 'recommendation' // Trinity has a suggestion for the org
+  | 'summary'        // End-of-phase or end-of-cycle summary
+
+interface TrinityThought {
+  id: string;
+  workspaceId: string;
+  sessionId: string;        // Groups thoughts for one execution cycle
+  type: TrinityThoughtType;
+  phase: string;            // 'data_gathering' | 'demand_analysis' | 'employee_matching' | 'compliance_check' | 'summary'
+  message: string;          // Natural language message
+  metadata?: {              // Optional structured data for the UI
+    shiftId?: string;
+    employeeId?: string;
+    clientId?: string;
+    score?: number;
+    reason?: string;
+  };
+  timestamp: Date;
+}
+```
+
+### Where Trinity Writes Thoughts
+
+In the scheduling pipeline, at each decision point, Trinity calls:
+
+```typescript
+// Phase 1: Data gathering
+await trinity.think('info', 'data_gathering', `Fetching client data... ${clients.length} active clients found`);
+await trinity.think('info', 'data_gathering', `Loading employee roster... ${employees.length} active employees`);
+
+// Phase 3: Employee matching (for each shift)
+await trinity.think('decision', 'employee_matching', 
+  `Shift: ${client.name} — ${shiftType}. Best match: ${employee.name} (score: ${score}). ` +
+  `Distance: ${distance}mi | Rate margin: $${margin}/hr | Assigned ✓`,
+  { shiftId, employeeId, clientId, score }
+);
+
+// When skipping an employee
+await trinity.think('warning', 'employee_matching',
+  `Skipping ${employee.name} for ${client.name} — would push to ${projectedHours}hrs (OT threshold)`,
+  { employeeId, reason: 'ot_threshold' }
+);
+
+// When a shift can't be filled
+await trinity.think('error', 'employee_matching',
+  `Cannot fill ${client.name} ${shiftType} — no eligible employees available. Escalating.`,
+  { shiftId, clientId, reason: 'no_candidates' }
+);
+```
+
+### Frontend: Real-Time Stream
+
+The thoughts are broadcast via WebSocket as they happen. The Trinity workbox subscribes and renders them as a scrolling feed. Each thought type gets a visual treatment:
+
+- ✓ success = green checkmark
+- ⚠ warning = yellow/orange warning icon  
+- ✗ error = red X
+- → decision = blue arrow (Trinity made a choice)
+- 💡 recommendation = lightbulb
+
+The status bar shows the LATEST thought as a single line, updating in real-time.
+
+### Persistence
+
+Thoughts are stored in a `trinity_thought_log` table so managers can review past cycles. Each cycle gets a `sessionId` so you can replay what Trinity did and why.
+
+This also feeds into the LEARNING pipeline — if a manager overrides one of Trinity's decisions, the system can look at the thought log to understand what Trinity's reasoning was and adjust scoring weights.
+
+## WHY THIS MATTERS
+
+1. **Trust** — Managers see exactly why Trinity placed each employee. No black box.
+2. **Debugging** — When something goes wrong, you can read Trinity's thought process to find where the logic broke.
+3. **Training** — Trinity's reasoning becomes visible, so managers can provide feedback on her decision quality.
+4. **Sales** — Demo this to a prospect and it sells itself. Watching an AI reason through a schedule in real-time is impressive.
+5. **Differentiation** — No competitor has this. GetSling, Deputy, When I Work — none of them show AI reasoning transparently.
+
+## WHAT NOT TO DO
+
+- Don't make the thoughts generic like "Analyzing staffing..." repeated 10 times
+- Don't show internal technical details like database query times or API calls
+- Don't show every single micro-step — group related actions into meaningful updates
+- Don't block the UI waiting for thoughts — stream them as they arrive
+- Don't lose thoughts on page refresh — they should persist for the current session at minimum
+
+## PRIORITY
+
+This is a post-launch enhancement, not a launch blocker. The current "Processing..." status works functionally — it just doesn't build trust or show transparency. Implement this after the core revenue cycle is verified in production with a real org.

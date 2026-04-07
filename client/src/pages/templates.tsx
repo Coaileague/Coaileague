@@ -16,6 +16,7 @@ import {
   FileText,
   Brain,
 } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface SecurityTemplate {
   id: string;
@@ -480,6 +481,13 @@ function TemplateDetail({ template }: { template: SecurityTemplate }) {
   );
 }
 
+const pageConfig: CanvasPageConfig = {
+  id: "templates",
+  title: "Security Industry Templates",
+  subtitle: "Pre-configured scheduling templates, compliance checklists, and shift patterns tailored to your specific security industry.",
+  category: "public",
+};
+
 export default function TemplatesPage() {
   const { templateId } = useParams<{ templateId?: string }>();
 
@@ -488,47 +496,31 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <Badge variant="outline" className="mb-4 text-primary border-primary/30">
-            <Shield className="w-3 h-3 mr-1" />
-            Security Industry Templates
-          </Badge>
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
-            Built for Your Security Vertical
-          </h1>
-          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-            Pre-configured scheduling templates, compliance checklists, and shift patterns 
-            tailored to your specific security industry.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {Object.values(templates).map((template) => (
-            <TemplateCard key={template.id} template={template} />
-          ))}
-        </div>
-
-        <div className="mt-16 text-center">
-          <Card className="inline-block bg-white/5 backdrop-blur border-white/10">
-            <CardContent className="pt-6 px-8">
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Don't see your industry?
-              </h3>
-              <p className="text-slate-400 mb-4">
-                CoAIleague works for any security operation. Let us configure it for you.
-              </p>
-              <Link href="/roi-calculator" data-testid="link-get-started">
-                <Button data-testid="button-get-started">
-                  Get Started
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+    <CanvasHubPage config={pageConfig}>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Object.values(templates).map((template) => (
+          <TemplateCard key={template.id} template={template} />
+        ))}
       </div>
-    </div>
+
+      <div className="mt-16 text-center">
+        <Card className="inline-block">
+          <CardContent className="pt-6 px-8">
+            <h3 className="text-xl font-semibold mb-2">
+              Don't see your industry?
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              CoAIleague works for any security operation. Let us configure it for you.
+            </p>
+            <Link href="/roi-calculator" data-testid="link-get-started">
+              <Button data-testid="button-get-started">
+                Get Started
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    </CanvasHubPage>
   );
 }

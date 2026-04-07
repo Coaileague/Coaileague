@@ -991,3 +991,73 @@ pre, code, .font-mono {
     font-size: 1.5rem !important;
   }
 }
+
+/* ============================================================================
+   MOBILE TAB SCROLL UTILITY - OPT-IN
+   Wraps TabsList to allow horizontal scrolling on narrow screens
+   Usage: <div className="mobile-tab-scroll"><TabsList>...</TabsList></div>
+   ============================================================================ */
+
+.mobile-tab-scroll {
+  width: 100%;
+}
+
+@media (max-width: 639px) {
+  .mobile-tab-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  
+  .mobile-tab-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .mobile-tab-scroll > [role="tablist"],
+  .mobile-tab-scroll > * > [role="tablist"] {
+    display: inline-flex !important;
+    min-width: max-content;
+    width: 100%;
+  }
+  
+  .mobile-tab-scroll [role="tab"] {
+    font-size: 0.6875rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    white-space: nowrap;
+  }
+}
+
+/* ============================================================================
+   MOBILE STAT CARD COMPACT - OPT-IN
+   Reduces stat card padding/font on mobile for 3-col grids
+   ============================================================================ */
+
+@media (max-width: 639px) {
+  .stat-card-compact .card-header,
+  .stat-card-compact [class*="CardHeader"] {
+    padding: 0.5rem;
+    padding-bottom: 0.25rem;
+  }
+  
+  .stat-card-compact .card-content,
+  .stat-card-compact [class*="CardContent"] {
+    padding: 0.5rem;
+    padding-top: 0;
+  }
+  
+  .stat-card-compact .stat-value,
+  .stat-card-compact .text-3xl,
+  .stat-card-compact .text-2xl {
+    font-size: 1.125rem !important;
+  }
+  
+  .stat-card-compact .text-sm {
+    font-size: 0.625rem !important;
+    line-height: 1.3;
+  }
+}

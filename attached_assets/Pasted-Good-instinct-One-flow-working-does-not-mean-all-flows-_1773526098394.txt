@@ -1,0 +1,214 @@
+Good instinct. One flow working does not mean all flows work. Copy everything below this line:
+
+---
+
+Before Bryan sends the real invite confirm the three environment variables and then run a comprehensive bug sweep using the exact same method that found the 5 invite bugs. The method is: actually execute the flow end to end, not just read the code. Code reading misses field name mismatches, missing DB defaults, CSRF gaps, and type errors. Only running the flow finds them.
+
+Run every flow below as a real execution test. For each one report pass or fail and list every bug found and fixed.
+
+---
+
+FLOW 1 — PRODUCTION ENVIRONMENT CONFIRMATION
+Confirm APP_URL is set to https://coaileague.com in production secrets.
+Confirm RESEND_API_KEY is set and is a production key not a sandbox key.
+Confirm NODE_ENV is set to production.
+Confirm STRIPE_SECRET_KEY starts with sk_live.
+Confirm STRIPE_WEBHOOK_SECRET is the live signing secret.
+Send one test invite from the Statewide workspace to a real email address Bryan controls.
+Confirm the email arrives in the inbox not spam within 60 seconds.
+Confirm the link in the email contains the full domain https://coaileague.com not a relative path.
+Confirm clicking the link loads the accept invite page correctly.
+
+---
+
+FLOW 2 — NEW ORG SIGNUP END TO END
+Execute a complete new org signup with a real email address.
+Confirm the workspace is created with a unique workspace_id.
+Confirm exactly 500 trial credits are allocated with transaction_type system_grant.
+Confirm the welcome email arrives at the signup address within 60 seconds.
+Confirm the welcome email link works and lands on a real page not a 404.
+Confirm Trinity is available and responds on first login.
+Confirm the org_owner lands on a useful dashboard not a blank page.
+Report every bug found.
+
+---
+
+FLOW 3 — EMPLOYEE ONBOARDING PACKET AUTO-TRIGGER
+Create a new employee record in the Statewide workspace.
+Confirm the onboarding packet triggers automatically within 5 minutes.
+Confirm the invite email fires to the employee's email address.
+Confirm the invite email link works and lands on the onboarding page.
+Confirm all 10 documents are generated with real employee data and no blank fields.
+Confirm the employee appears in the onboarding dashboard with status pending.
+Report every bug found.
+
+---
+
+FLOW 4 — DOCUMENT SIGNING END TO END
+Take one document from the employee onboarding packet.
+Send it for signature to a real email address.
+Confirm the signature request email arrives within 60 seconds.
+Confirm the Sign Now button in the email links to a working signing page.
+Complete the signature on the signing page.
+Confirm the document status updates to signed.
+Confirm the executed copy saves to the document safe.
+Confirm the signer receives the executed copy via email.
+Report every bug found.
+
+---
+
+FLOW 5 — STRIPE SUBSCRIPTION UPGRADE
+From a trial workspace click upgrade to Starter.
+Confirm the Stripe checkout session is created server-side before redirect.
+Complete checkout with test card 4242 4242 4242 4242.
+Confirm the redirect lands on a success page not a 404.
+Confirm the Stripe webhook fires and activates the subscription in the database.
+Confirm exactly 5000 credits are allocated with the Stripe invoice ID as reference.
+Confirm the org_owner receives the subscription confirmation email.
+Confirm the subscription badge on the dashboard updates within 2 seconds.
+Report every bug found.
+
+---
+
+FLOW 6 — INVOICE GENERATION AND PAYMENT
+Create a client with a billing rate and billing cycle configured.
+Create time entries for that client totaling exactly 8 hours.
+Generate an invoice from those time entries.
+Confirm the invoice amount is exactly 8 multiplied by the billing rate with no rounding error.
+Confirm the invoice email delivers to the client contact email with Track B branding.
+Confirm the Pay Now button in the email links to a working Stripe payment page.
+Simulate a Stripe test payment.
+Confirm invoice status updates to paid.
+Confirm amountPaid is populated with the correct amount.
+Confirm the revenue ledger entry is created.
+Confirm the org_owner revenue widget updates.
+Report every bug found.
+
+---
+
+FLOW 7 — PAYROLL END TO END
+Create time entries for one employee for a full pay period.
+Approve the timesheets.
+Run a payroll calculation.
+Confirm the gross pay equals total hours multiplied by the employee pay rate exactly.
+Confirm the org_owner must explicitly approve before payroll executes.
+Approve the payroll run.
+Confirm the pay stub notification email fires to the employee.
+Confirm the pay stub email link works and shows correct earnings.
+Confirm the payroll record is locked after approval.
+Attempt to edit the approved payroll via direct API call.
+Confirm it is rejected at the route handler level.
+Report every bug found.
+
+---
+
+FLOW 8 — CREDIT DEDUCTION AND WARNING
+Execute a credit-gated Trinity action on a test workspace.
+Confirm the credit deduction is recorded in credit_transactions.
+Confirm the credits widget updates within 2 seconds without page refresh.
+Set the balance to 25 percent of the monthly allocation.
+Confirm the warning notification fires in the platform.
+Confirm the warning email fires via Resend within 60 seconds.
+Confirm the Briefing Channel receives the warning post.
+All three channels must fire simultaneously.
+Set the balance to zero.
+Confirm the hard block fires and upgrade prompt appears.
+Confirm no credit-gated action executes at zero balance.
+Report every bug found.
+
+---
+
+FLOW 9 — SHIFT ROOM AND REPORTBOT
+Create a shift for an officer at a client site.
+Confirm the shift room is auto-created with ReportBot and HelpAI present.
+Have the officer post a photo in the shift room.
+Confirm ReportBot acknowledges within 3 seconds with GPS status.
+Have the officer post an incident message.
+Confirm ReportBot escalates to the manager within 30 seconds.
+Confirm the manager receives the escalation notification.
+Advance to shift end time.
+Confirm ReportBot compiles the shift report PDF.
+Confirm the PDF saves to the document safe under Shifts category.
+Confirm the manager receives the report notification.
+Report every bug found.
+
+---
+
+FLOW 10 — CLOCKBOT SUPERVISED CLOCK-IN
+Create a shift for an officer who cannot GPS clock in.
+Manager types @ClockBot in the shift room.
+Confirm ClockBot asks for confirmation before proceeding.
+Confirm ClockBot validates the officer's license and onboarding status before showing CONFIRM.
+Manager provides a reason and types CONFIRM.
+Confirm a time entry is created with clockInMethod supervisor_override.
+Confirm the officer receives a notification.
+Confirm the audit trail entry exists with the reason recorded.
+Attempt to use ClockBot as an employee role user.
+Confirm it is rejected with a clear message.
+Report every bug found.
+
+---
+
+FLOW 11 — COMPLIANCE SCAN AND SCHEDULING GATE
+Set one officer's license to expire yesterday.
+Attempt to assign that officer to a shift via the UI.
+Confirm Trinity blocks the assignment with a clear message naming the officer and expiration date.
+Attempt the same assignment via direct API call bypassing the UI.
+Confirm the API call is also blocked at the route handler level.
+Confirm the manager receives a compliance alert notification.
+Have the officer upload a renewed license document.
+Confirm Trinity scans it and presents extracted data to the manager for confirmation.
+Manager confirms. Confirm the officer's scheduling eligibility is restored.
+Report every bug found.
+
+---
+
+FLOW 12 — RESEND DELIVERY ACROSS ALL EMAIL TYPES
+Send each of these emails to a real inbox and confirm delivery within 60 seconds:
+Welcome email on new org signup.
+Employee invite email with working accept link.
+Password reset email with working reset link.
+Subscription confirmation email after Stripe upgrade.
+Invoice delivery email to client with working Pay Now button.
+Invoice paid confirmation to org_owner.
+Pay stub notification to employee with working portal link.
+Credit warning email with correct balance and burn rate.
+Compliance alert email with officer name and expiration date.
+Document signature request with working Sign Now button.
+Document executed confirmation with working download link.
+Collections escalation email to client with working Pay Now button.
+For every email confirm Track A or Track B branding is correct.
+For every email confirm it renders correctly on mobile viewport 375px.
+For every email confirm plain text fallback exists.
+Report every email that fails to deliver or renders incorrectly.
+
+---
+
+FINAL REPORT FORMAT
+
+After all 12 flows produce this report:
+
+FLOW RESULTS:
+Each flow: PASS or FAIL — bugs found listed with fix applied.
+
+BUGS FOUND TOTAL: [number]
+BUGS FIXED TOTAL: [number]
+
+ENVIRONMENT VARIABLES:
+APP_URL confirmed as https://coaileague.com: yes or no.
+NODE_ENV confirmed as production: yes or no.
+STRIPE_SECRET_KEY confirmed as live key: yes or no.
+RESEND_API_KEY confirmed as production key: yes or no.
+
+RESEND EMAIL DELIVERY:
+Each of the 12 email types: delivered or failed.
+Any emails going to spam: listed.
+Any emails with broken links: listed.
+
+OVERALL VERDICT:
+READY — Bryan can send the real invite now and the platform handles all flows correctly.
+NOT READY — exact list of remaining bugs in priority order.
+
+The goal is zero bugs across all 12 flows before Bryan sends the real invite to his manager.
+Every bug found here is a bug that would have hit a real user.
+Find them all now.

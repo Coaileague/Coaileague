@@ -73,7 +73,7 @@ export async function triggerAIScheduleGeneration(
       workspaceId,
       shiftsGenerated: 0,
       confidence: 0,
-      message: `AI scheduling failed: ${error.message}`,
+      message: `AI scheduling failed: ${(error instanceof Error ? error.message : String(error))}`,
       processingTimeMs,
     };
   }

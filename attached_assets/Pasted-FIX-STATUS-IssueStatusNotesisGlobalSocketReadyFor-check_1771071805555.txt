@@ -1,0 +1,62 @@
+FIX STATUS
+IssueStatusNotesisGlobalSocketReadyFor checks conversationId✅ FIXEDNow only checks userIdgetOrCreateGlobalSocket closes on room switch✅ FIXEDOnly closes on user changeEarly return skips handler setup (line 994-996)🔧 IN PROGRESSRemoving problematic check
+
+REMAINING CONCERN: Message Handler Management
+When switching rooms, you need to ensure:
+typescript// Room A is active, handler attached for Room A messages
+// User clicks Room B
+
+// MUST happen:
+// 1. Detach Room A handler (or it will still fire)
+// 2. Attach Room B handler
+// 3. Send join_conversation for Room B
+// 4. DO NOT close socket
+
+// The message handler should filter by conversationId
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  
+  // Only process messages for the CURRENT room
+  if (data.conversationId === currentConversationId) {
+    // Update UI
+  }
+  
+  // BUT also update unread counts for OTHER rooms
+  if (data.type === 'message' && data.conversationId !== currentConversationId) {
+    updateUnreadCount(data.conversationId);
+  }
+};
+```
+
+---
+
+## QUICK TEST AFTER FIX
+
+1. Open chatrooms page
+2. Click "Help Desk" → Should load, console shows ONE "Connected" and ONE "Joined"
+3. Click "Site Alpha" → Should load, **NO** "Disconnected" or "Reconnecting" in console
+4. Click back to "Help Desk" → Should load instantly, still no reconnect
+5. Send a message in Help Desk → Should appear
+6. Have another user send message to Site Alpha → Should increment unread badge (future feature)
+
+---
+
+## WHAT TO WATCH IN CONSOLE
+
+**Good (after fix):**
+```
+[ChatSocket] Connected
+[ChatSocket] Joining: Help Desk
+[ChatSocket] Joined: Help Desk
+[ChatSocket] Joining: Site Alpha    ← Same socket, no disconnect
+[ChatSocket] Joined: Site Alpha
+```
+
+**Bad (still broken):**
+```
+[ChatSocket] Connected
+[ChatSocket] Joining: Help Desk
+[ChatSocket] Disconnected           ← Should NOT see this on room switch
+[ChatSocket] Reconnecting...
+
+Let me know when you're ready to test. Once this basic room switching works without the storm, we can move on to the persistent background connection (staying connected even when leaving the chatrooms page entirely).

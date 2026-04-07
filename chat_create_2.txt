@@ -1,0 +1,51 @@
+router.post("/api/chats/create", requireAuth, chatConversationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { subject, chatType, shiftId, participantIds, guestInvitations, conversationType } = req.body;
+
+    const conversationData: InsertChatConversation = {
+      workspaceId,
+      subject: subject || "Team Chat",
+      isActive: true,
+      conversationType: conversationType || "open_chat",
+      shiftId: shiftId || null,
+      isEncrypted: false,
+      isSilenced: false,
+    };
+
+    const conversation = await storage.createChatConversation(conversationData);
+
+    const addedParticipants = [];
+    if (participantIds && participantIds.length > 0) {
+      for (const participantId of participantIds) {
+        const participant = await storage.getUser(participantId);
+        if (participant) {
+          addedParticipants.push({
+            id: participant.id,
+            name: participant.displayName || participant.email,
+            email: participant.email,
+          });
+        }
+      }
+    }
+
+    const createdGuestTokens = [];
+    if (guestInvitations && guestInvitations.length > 0) {
+      for (const guest of guestInvitations) {
+        const token = crypto.randomUUID();
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + (guest.expiresInDays || 7));
+
+        createdGuestTokens.push({

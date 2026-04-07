@@ -1,0 +1,171 @@
+Here's your prompt:
+
+---
+
+**COAILEAGUE — SEO & GOOGLE INDEXING READINESS PROTOCOL**
+
+Before touching anything research the current SEO and meta tag state of the entire platform. Read all existing head tags, routing files, sitemap configuration, and robots.txt. Then research how top B2B SaaS platforms — Sling, Deputy, Rippling, Gusto, Workday, ServiceTitan — structure their SEO and apply the same standards to CoAIleague.
+
+---
+
+**PHASE 1 — AUDIT CURRENT STATE**
+
+- Scan every page for existing meta tags — title, description, og tags, twitter cards
+- Check if sitemap.xml exists and is accurate
+- Check if robots.txt exists and is correctly configured
+- Check if Google Search Console verification tag is present
+- Check canonical tags on all pages
+- Check for duplicate title tags or missing descriptions
+- Check page load performance — Core Web Vitals directly impact Google ranking
+- Check if structured data schema markup exists anywhere
+- Report everything found before touching anything
+
+---
+
+**PHASE 2 — TARGET AUDIENCE SEO STRATEGY**
+
+CoAIleague is a B2B SaaS workforce management platform built specifically for security companies. Every SEO decision must target this specific audience.
+
+**Primary keywords to own:**
+- Security company workforce management software
+- Security guard scheduling software
+- Security company payroll automation
+- Guard management platform
+- Security company HR software
+- AI scheduling for security companies
+- Security officer time tracking software
+- Security company compliance management
+
+**Secondary keywords:**
+- Workforce management SaaS security industry
+- Security company employee management
+- Guard tour management software
+- Security company billing automation
+- AI workforce scheduling platform
+
+Apply these keywords naturally across all meta content — never stuffed, always contextual and readable.
+
+---
+
+**PHASE 3 — META TAG IMPLEMENTATION**
+
+Apply to every page with page-specific content — never the same generic description on every page:
+
+**Global defaults:**
+- Title format: [Page Name] — CoAIleague | AI Workforce Management for Security Companies
+- Meta description: 150-160 characters, keyword rich, benefit focused, action oriented
+- Canonical tag on every page pointing to correct URL
+- Robots meta tag — index follow on all public pages, noindex on all authenticated dashboard pages
+
+**Open Graph tags — every public page:**
+- og:title
+- og:description
+- og:image — branded CoAIleague graphic, minimum 1200x630px
+- og:url
+- og:type
+- og:site_name — CoAIleague
+
+**Twitter Card tags:**
+- twitter:card — summary_large_image
+- twitter:title
+- twitter:description
+- twitter:image
+
+**Page specific meta priorities:**
+- Landing page — highest priority, primary keywords, strongest value proposition
+- Features pages — feature specific keywords, specific benefit language
+- Pricing page — conversion focused, include pricing related keywords
+- Blog or resources if present — long tail keyword opportunities
+- Login and dashboard pages — noindex, these should never appear in search results
+
+---
+
+**PHASE 4 — TECHNICAL SEO FOUNDATION**
+
+**Sitemap:**
+- Generate sitemap.xml containing all public facing pages
+- Exclude all authenticated routes — no dashboard pages in sitemap
+- Submit ready format — proper lastmod dates, priority values, changefreq values
+- Place at /sitemap.xml
+
+**Robots.txt:**
+- Allow all public pages
+- Disallow all authenticated routes — /dashboard, /admin, /settings, /api and all subdirectories
+- Reference sitemap location
+- Place at /robots.txt
+
+**Google Search Console:**
+- Add Google Search Console verification meta tag to head — get the correct tag format ready for owner to insert their verification code
+- Add placeholder comment in head showing exactly where to paste the GSC verification tag
+
+**Structured Data — JSON-LD Schema Markup:**
+Apply to landing page and key public pages:
+- Organization schema — company name, logo, URL, contact, social profiles
+- SoftwareApplication schema — application category, operating system, pricing
+- FAQPage schema if FAQ section exists — major ranking opportunity for B2B SaaS
+- BreadcrumbList schema on interior pages
+
+**Performance — Core Web Vitals directly affect Google ranking:**
+- Largest Contentful Paint target under 2.5 seconds
+- Cumulative Layout Shift target under 0.1
+- First Input Delay target under 100ms
+- Compress and lazy load all images
+- Verify no render blocking scripts in head
+- Check font loading strategy — use font-display swap
+
+**Canonical and URL structure:**
+- All URLs lowercase, hyphen separated, no underscores
+- No trailing slashes inconsistency — pick one standard and enforce it
+- Canonical tag on every page — no duplicate content signals to Google
+
+---
+
+**PHASE 5 — CONTENT SIGNALS**
+
+These tell Google what CoAIleague is and who it serves:
+
+- Landing page H1 must contain primary keyword naturally
+- Every page must have one H1 only — never multiple H1 tags
+- H2 and H3 hierarchy must be logical and keyword aware
+- Alt text on every image — descriptive, keyword relevant where natural
+- Internal linking — features pages link to each other and back to landing page
+- If no blog exists recommend creating one — B2B SaaS content marketing is the highest ROI organic channel for this audience
+
+---
+
+**PHASE 6 — LOCAL AND INDUSTRY SIGNALS**
+
+CoAIleague serves the security industry specifically — own that niche in search:
+
+- Add industry specific language throughout meta content — security company, guard management, licensed security operations
+- Add Texas and San Antonio geographic signals where appropriate — security companies searching locally should find CoAIleague
+- Research and identify 3-5 security industry directories or SaaS listing sites — Capterra, G2, Software Advice, GetApp — and prepare CoAIleague listing content so owner can submit manually
+
+---
+
+**EXECUTION RULES**
+
+- Research top B2B SaaS platform SEO structure before writing a single tag
+- Never use the same meta description on two pages
+- Never index authenticated pages
+- Never keyword stuff — Google penalizes this
+- All changes must be verified in page source after implementation
+- Generate a final SEO checklist showing every item implemented and its status
+
+---
+
+**SUCCESS CRITERIA**
+
+- Every public page has unique, keyword optimized title and meta description
+- Open Graph and Twitter Card tags present on all public pages
+- sitemap.xml accurate and submission ready
+- robots.txt correctly blocking all authenticated routes
+- Google Search Console verification placeholder in place for owner activation
+- Structured data schema on landing page verified with no errors
+- Core Web Vitals passing thresholds on landing page
+- Zero authenticated pages indexable by Google
+- CoAIleague positioned to rank for security company workforce management keywords organically
+
+---
+
+Run this after your final bug audit pass Bryan. Clean platform first, then Google sees a polished product when it crawls. You don't want Google indexing a platform mid-fix.

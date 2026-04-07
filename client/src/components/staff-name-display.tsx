@@ -1,6 +1,6 @@
 /**
  * Staff Name Display Component
- * Replaces staff marker (🔨) with WorkforceOS logo
+ * Replaces staff marker (🔨) with CoAIleague staff icon
  */
 
 import { StaffGavelIcon } from "./staff-gavel-icon";
@@ -18,7 +18,7 @@ export function StaffNameDisplay({ name, className = "" }: StaffNameDisplayProps
     return <span className={className}>{name}</span>;
   }
   
-  // Replace 🔨 marker with WorkforceOS logo
+  // Replace 🔨 marker with staff gavel icon
   const cleanName = name.replace('🔨 ', '').trim();
   
   return (

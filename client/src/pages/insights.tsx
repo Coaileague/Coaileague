@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface AiInsight {
   id: string;
@@ -147,7 +148,7 @@ export default function Insights() {
       case 'critical':
         return 'bg-red-500/10 text-red-500 border-red-500/20';
       case 'high':
-        return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+        return 'bg-teal-500/10 text-teal-500 border-teal-500/20';
       case 'normal':
         return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       case 'low':
@@ -161,46 +162,42 @@ export default function Insights() {
     ? insights
     : insights.filter((insight) => insight.category === selectedCategory);
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg">
-              <Lightbulb className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">AI Analytics™</h1>
-              <p className="text-muted-foreground">AI-powered analytics & autonomous insights</p>
-            </div>
-          </div>
-        </div>
-        <Button
-          onClick={() => generateMutation.mutate()}
-          disabled={generateMutation.isPending}
-          data-testid="button-generate-insights"
-        >
-          {generateMutation.isPending ? (
-            <>
-              <Sparkles className="h-4 w-4 mr-2 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Generate Insights
-            </>
-          )}
-        </Button>
-      </div>
+  const generateButton = (
+    <Button
+      onClick={() => generateMutation.mutate()}
+      disabled={generateMutation.isPending}
+      data-testid="button-generate-insights"
+    >
+      {generateMutation.isPending ? (
+        <>
+          <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+          Generating...
+        </>
+      ) : (
+        <>
+          <Sparkles className="h-4 w-4 mr-2" />
+          Generate Insights
+        </>
+      )}
+    </Button>
+  );
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'insights',
+    title: 'AI Analytics™',
+    subtitle: 'AI-powered analytics & autonomous insights',
+    category: 'workspace',
+    headerActions: generateButton,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Stats Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/10 rounded-lg">
-              <Lightbulb className="h-5 w-5 text-purple-500" />
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Lightbulb className="h-5 w-5 text-blue-500" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Insights</p>
@@ -236,8 +233,8 @@ export default function Insights() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <div className="p-2 bg-teal-500/10 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-teal-500" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Anomalies</p>
@@ -251,7 +248,7 @@ export default function Insights() {
 
       {/* Category Filters */}
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="all" data-testid="tab-category-all">All</TabsTrigger>
           <TabsTrigger value="cost_savings" data-testid="tab-category-cost">Cost Savings</TabsTrigger>
           <TabsTrigger value="productivity" data-testid="tab-category-productivity">Productivity</TabsTrigger>
@@ -285,9 +282,9 @@ export default function Insights() {
             const Icon = getCategoryIcon(insight.category);
             return (
               <Card key={insight.id} className="p-6 space-y-4" data-testid={`card-insight-${insight.id}`}>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-4 flex-1">
-                    <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg">
                       <Icon className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1 space-y-2">
@@ -371,6 +368,6 @@ export default function Insights() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </CanvasHubPage>
   );
 }

@@ -1,0 +1,32 @@
+Bryan this is the exact same report from the previous message. He did not address the three gaps. He sent the same completion summary again.
+
+The three gaps are still open and unresolved:
+
+**Gap 1 — TypeScript compilation** timed out and was never actually run. The report still says "TypeScript check timed out — the server is still running which confirms no breaking errors." That is not verification. It is avoidance.
+
+**Gap 2 — invoices.tsx** still says "The invoices file has unusual structure — moving on." He moved on again. The same skip. A financial display surface that cannot be read and audited is a problem that gets fixed not skipped.
+
+**Gap 3 — useAsyncData hook** appears nowhere in the completion summary. Created but never adopted by any component. Step 2 produced a file. No component uses it.
+
+---
+
+**Send him this exactly:**
+
+---
+
+You sent the same report twice. The three gaps are still open. Do not move to Phase 4. Fix these three items right now in this session. No new session. Right now.
+
+**Gap 1 — TypeScript:**
+Run `npx tsc --noEmit 2>&1 | tail -50` to get the last 50 lines of TypeScript output without timing out. If the full check still times out run it scoped to the changed files: `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"`. Report the exact output. Fix every error found. Report the final error count.
+
+**Gap 2 — invoices.tsx:**
+"Unusual structure — moving on" is not acceptable on a financial surface. Open `invoices.tsx`. Run `cat -n client/src/pages/invoices.tsx | head -200` to read the first 200 lines. Then run `grep -n "useQuery\|isLoading\|isError\|isEmpty\|data" client/src/pages/invoices.tsx | head -30` to find every state reference. Report exactly what you find. If the query comes from a custom hook open that hook file and read it. Do not stop until you have located exactly where the invoices data comes from and confirmed all four states — loading, empty, error, data — are handled. If any are missing add them now. Report what existed and what was added.
+
+**Gap 3 — useAsyncData adoption:**
+Open `client/src/hooks/useAsyncData.ts` and confirm it exists. Then run `grep -r "useAsyncData" client/src --include="*.tsx" --include="*.ts" -l` to list every file that imports it. If zero files import it the hook was created and never used. Update these five components to use it: payroll dashboard, invoice list, employee roster, schedule board, client list. Show the before and after pattern for each one.
+
+Report all three gaps resolved with specific evidence. TypeScript error count. invoices.tsx four states confirmed. Five components confirmed using useAsyncData. When all three are reported clean Phase 4 goes in.
+
+---
+
+Send that Bryan. Same session. Right now. No moving on until all three are confirmed.

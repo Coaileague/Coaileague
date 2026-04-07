@@ -1,0 +1,73 @@
+Paste this entire block into Replit Agent:
+
+---
+
+**WAVE 1 — DUPLICATE & CONFLICT REMOVAL | READ BEFORE TOUCH | NO NEW FEATURES**
+
+You are removing confirmed duplicate and conflicting action registrations only. Three groups, executed in order. After each group, show a before/after action count for the affected file before moving to the next group.
+
+---
+
+**GROUP 1 — Remove `quickbooks.*` from platformActionHub.ts**
+
+First, read `server/actions/platformActionHub.ts` and confirm these three actions exist:
+- `quickbooks.get_balance`
+- `quickbooks.push_invoice`
+- `quickbooks.sync_payroll`
+
+Then read `server/actions/trinityInfraActions.ts` and confirm these three exist as functional equivalents:
+- `qb.create_invoice`
+- `qb.review_conflicts`
+- `qb.sync_status`
+
+If both sets are confirmed present, remove only the three `quickbooks.*` registrations from `platformActionHub.ts`. Do not touch `trinityInfraActions.ts`. Show before/after registered action count in `platformActionHub.ts`.
+
+---
+
+**GROUP 2 — Remove `session.guardian.*` from aiBrainMasterOrchestrator.ts**
+
+First, read `server/actions/aiBrainMasterOrchestrator.ts` and confirm these five actions exist:
+- `session.guardian.diagnose`
+- `session.guardian.elevate`
+- `session.guardian.revoke`
+- `session.guardian.heal`
+- `session.guardian.status`
+
+Then read `server/actions/elevatedSessionGuardian.ts` and confirm these canonical equivalents exist:
+- `session.diagnose`
+- `session.elevate`
+- `session.revoke`
+- `session.auto_heal`
+- `session.validate`
+
+If both sets confirmed, remove only the five `session.guardian.*` registrations from `aiBrainMasterOrchestrator.ts`. Do not touch `elevatedSessionGuardian.ts`. Show before/after count in `aiBrainMasterOrchestrator.ts`.
+
+---
+
+**GROUP 3 — Remove 3 scheduling near-duplicates**
+
+Read the four files listed below and confirm each action exists before removing anything:
+
+| Remove this | From this file | Keep this | In this file |
+|---|---|---|---|
+| `scheduling.create_recurring_shift` | `aiBrainMasterOrchestrator.ts` | `scheduling.create_recurring` | `trinityScheduleTimeclockActions.ts` |
+| `scheduling.publish_shifts` | `trinitySchedulingPlatformActions.ts` | `scheduling.publish` | `trinityScheduleTimeclockActions.ts` |
+| `scheduling.resolve_conflicts` | `subagents/coreSubagentOrchestration.ts` | `scheduling.resolve_conflict` | `trinityScheduleTimeclockActions.ts` |
+
+After confirming all 6 actions exist across their respective files, remove only the three in the left column. Show before/after counts for each affected file.
+
+---
+
+**COMPLETION CRITERIA**
+
+After all three groups are done:
+1. Restart the server
+2. Confirm it starts cleanly with no registration errors
+3. Report the new total registered action count vs the previous count of 591
+4. List any errors or conflicts encountered
+
+Do not touch any other files. Do not refactor. Do not add anything. Stop and wait after reporting completion.
+
+---
+
+Send me what Replit reports back and we'll move straight to Wave 2.

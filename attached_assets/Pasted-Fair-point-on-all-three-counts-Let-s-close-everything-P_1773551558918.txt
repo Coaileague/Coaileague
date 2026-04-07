@@ -1,0 +1,71 @@
+Fair point on all three counts. Let's close everything. Paste this into Replit:
+
+---
+
+**MEDIUM POLISH FIXES — READ BEFORE TOUCH | NO NEW FEATURES**
+
+Fix every item below in order. Read each file before editing. Show before/after per fix.
+
+---
+
+**FIX 1 — Hardcoded URLs in email templates**
+Search every file in `server/` for `https://coaileague.com` hardcoded strings. Replace every instance with `getAppBaseUrl()` or the equivalent dynamic base URL utility already used elsewhere in the codebase. Do not leave a single hardcoded URL in any email template or email automation file.
+
+---
+
+**FIX 2 — Missing workspaceId on sendEmail callers**
+Find every caller of `sendEmail` in `externalEmailRoutes.ts` and `internalEmails.ts` that does not pass `workspaceId`. Add the `workspaceId` parameter to each call, sourced from `req.workspaceId` from the JWT middleware. If `workspaceId` is not available at a call site, trace where it should come from and thread it through.
+
+---
+
+**FIX 3 — Trial expired goes straight to suspended with no free tier option**
+In `TrialConversionOrchestrator.ts` line 345, when a trial expires and the workspace has no paid subscription, downgrade to free tier instead of immediately suspending. Set `subscriptionTier: 'free'`, `subscriptionStatus: 'active'`, reset credits to free tier limits via `creditManager.initializeCredits(workspaceId, 'free')`. Only suspend if the workspace has an explicitly failed payment on a paid plan.
+
+---
+
+**FIX 4 — Dashboard layout endpoint is a stub**
+In `dashboardRoutes.ts` line 230, `POST /api/dashboard/layout` currently returns `{ success: true }` without saving anything. Implement persistence — create a `dashboard_layouts` table with columns `id`, `workspace_id`, `user_id`, `layout_config` (jsonb), `updated_at`. Upsert on `(workspace_id, user_id)`. Add a corresponding `GET /api/dashboard/layout` endpoint that returns the saved layout for the authenticated user, or a default layout object if none exists.
+
+---
+
+**FIX 5 — Duplicate Stripe webhook endpoints**
+Two entry points (`/api/stripe/webhook` and `/api/billing/webhooks/stripe`) both call the same handler. Remove the duplicate. Keep whichever one is referenced in your Stripe dashboard webhook configuration — check the README or `.env.example` for the canonical URL. Remove the other route entirely and add a comment on the surviving route noting it is the single canonical Stripe webhook entry point.
+
+---
+
+**FIX 6 — shiftChatroomRoutes workspace resolution**
+In `shiftChatroomRoutes.ts` lines 29-40, replace the `getWorkspaceByOwner/Membership` pattern with the canonical `ensureWorkspaceAccess` middleware used everywhere else. Workspace context must come from the JWT, not a custom lookup.
+
+---
+
+**FIX 7 — Mark-as-read throttle causing missed read status**
+In `chatConnectionManager.ts` line 351, the 5-second throttle on mark-as-read can drop read status when a user switches rooms quickly. Change the throttle to a debounce — fire on the trailing edge so the final state is always flushed even during rapid room switching. Use a per-room debounce key so switching rooms triggers an immediate flush of the previous room's read state before starting the debounce for the new room.
+
+---
+
+**FIX 8 — week_end and month_end trigger types are dead stubs**
+In `automationTriggerService.ts` lines 39-40, `week_end` and `month_end` trigger types are defined but no cron job ever fires them. Either wire them to actual cron jobs (preferred) or remove the type definitions entirely. Do not leave defined trigger types that can never fire — it creates false confidence in automation configuration.
+
+---
+
+**FIX 9 — Onboarding page unreachable**
+`client/src/pages/onboarding.tsx` exists but is not registered in `App.tsx`. Add the route. Check what path it expects and register it at that path. Confirm the route is protected (requires auth) and that it is reachable from the post-registration flow.
+
+---
+
+**FIX 10 — Bounce email dedup null collision**
+In the `email_unsubscribes` table, the unique index on `(email, workspaceId)` does not deduplicate rows where `workspaceId` is NULL because `NULL != NULL` in SQL. Add a partial unique index: `UNIQUE (email) WHERE workspace_id IS NULL` to prevent multiple global unsubscribe rows per bounced address.
+
+---
+
+**COMPLETION CRITERIA**
+1. TypeScript compile — zero errors
+2. Server restart — clean start
+3. Report fix status per item
+4. Then run one final full audit sweep across all 12 areas from the original audit prompt
+5. Report only NEW findings not previously identified — if none, say "No new findings"
+6. Stop and wait
+
+---
+
+When Replit's done paste the final audit result here and I'll give you the green light.

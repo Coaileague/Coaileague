@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +8,12 @@ import { ArrowRight, ArrowLeft, X, CheckCircle2, Sparkles, MessageSquare, Calend
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || 'CoAIleague';
 
 interface OnboardingStep {
   id: string;
@@ -28,13 +30,13 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: "welcome",
     family: "overview",
-    title: "Welcome to CoAIleague",
+    title: `Welcome to ${PLATFORM_NAME}`,
     description: "The complete workforce optimization platform built for modern enterprises",
     icon: Sparkles,
     features: [
       "4 Feature Families with 20+ integrated modules",
       "Consolidate multiple HR workflows into one unified platform",
-      "Potential savings up to $255K annually with automation*",
+      "Reduces administrative overhead across scheduling, payroll, and compliance — actual impact varies by organization",
       "Enterprise-grade security (SOC 2, GDPR, ISO 27001)"
     ]
   },
@@ -42,7 +44,7 @@ const onboardingSteps: OnboardingStep[] = [
     id: "feature-families",
     family: "overview",
     title: "4 Feature Families Overview",
-    description: "CoAIleague organizes features into 4 logical families for easy navigation",
+    description: `${PLATFORM_NAME} organizes features into 4 logical families for easy navigation`,
     icon: Sparkles,
     features: [
       "Communication & Collaboration - Team chat, DMs, support",
@@ -226,7 +228,7 @@ const onboardingSteps: OnboardingStep[] = [
     id: "completion",
     family: "overview",
     title: "Tour Complete!",
-    description: "You're ready to start using CoAIleague",
+    description: `You're ready to start using ${PLATFORM_NAME}`,
     icon: CheckCircle2,
     features: [
       "Click any Feature Family in the sidebar to explore modules",
@@ -262,7 +264,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
   const handleNext = () => {
     if (currentStepIndex < totalSteps - 1) {
       if (!completedSteps.includes(currentStep.id)) {
-        setCompletedSteps([...completedSteps, currentStep.id]);
+        setCompletedSteps(prev => [...prev, currentStep.id]);
       }
       setCurrentStepIndex(currentStepIndex + 1);
     } else {
@@ -301,7 +303,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
       });
       toast({
         title: "Onboarding complete!",
-        description: "You've completed the platform tour. Welcome to CoAIleague!",
+        description: `You've completed the platform tour. Welcome to ${PLATFORM_NAME}!`,
       });
       onClose();
     } catch (error) {
@@ -317,16 +319,16 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
   const StepIcon = currentStep.icon;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={cn(
+    <UniversalModal open={isOpen} onOpenChange={onClose}>
+      <UniversalModalContent className={cn(
         "overflow-y-auto",
         isMobile 
           ? "!max-w-[75vw] !w-[75vw] !p-2 !max-h-[60vh] pb-safe mx-auto" 
           : "max-w-4xl max-h-[90vh]"
       )}>
-        <DialogHeader className={cn(isMobile && "space-y-1")}>
+        <UniversalModalHeader className={cn(isMobile && "space-y-1")}>
           <div className={cn("flex justify-center", isMobile ? "mb-1" : "mb-4 md:mb-6")}>
-            <CoAIleagueLogo width={isMobile ? 100 : 200} height={isMobile ? 24 : 50} showTagline={false} />
+            <UnifiedBrandLogo size={isMobile ? "sm" : "xl"} />
           </div>
           <div className={cn(
             "flex items-start justify-between gap-2",
@@ -340,21 +342,21 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                 <StepIcon className={cn(isMobile ? "h-4 w-4" : "h-6 w-6", "text-primary")} />
               </div>
               <div className="flex-1 min-w-0">
-                <DialogTitle className={cn(isMobile ? "text-sm leading-tight" : "text-2xl")}>{currentStep.title}</DialogTitle>
-                <DialogDescription className={cn(isMobile ? "text-[11px] leading-tight" : "text-base", "line-clamp-2")}>
+                <UniversalModalTitle className={cn(isMobile ? "text-sm leading-tight" : "text-2xl")}>{currentStep.title}</UniversalModalTitle>
+                <UniversalModalDescription className={cn(isMobile ? "text-[11px] leading-tight" : "text-base", "line-clamp-2")}>
                   {currentStep.description}
-                </DialogDescription>
+                </UniversalModalDescription>
               </div>
             </div>
             <Badge variant="outline" className={cn(isMobile && "self-end mt-1")}>
               {currentStepIndex + 1} / {totalSteps}
             </Badge>
           </div>
-        </DialogHeader>
+        </UniversalModalHeader>
 
         {/* Progress Bar */}
         <div className={cn("space-y-1", isMobile && "py-1")}>
-          <div className={cn("flex items-center justify-between", isMobile ? "text-xs" : "text-sm")}>
+          <div className={cn("flex items-center justify-between gap-2", isMobile ? "text-xs" : "text-sm")}>
             <span className="text-muted-foreground">Progress</span>
             <span className="font-bold">{progressPercentage}%</span>
           </div>
@@ -370,7 +372,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            <Card className={cn(isMobile ? "border" : "border-2")}>
+            <Card className="border">
               <CardContent className={cn("pt-4 space-y-3", isMobile ? "pt-1.5 space-y-1 px-1.5 pb-1.5" : "pt-6 space-y-4")}>
                 {/* Screenshot Placeholder */}
                 {currentStep.screenshot && (
@@ -528,7 +530,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

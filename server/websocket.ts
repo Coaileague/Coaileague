@@ -7,15 +7,22 @@ import { formatUserDisplayName, formatUserDisplayNameForChat } from './utils/for
 import { parseSlashCommand, validateCommand, getHelpText, COMMAND_REGISTRY } from '@shared/commands';
 import { queueManager } from './services/helpOsQueue';
 import type { ChatMessage } from '@shared/schema';
+import { chatConversations, helpaiActionLog } from '@shared/schema';
 import { trackConnection, trackDisconnection, checkMessageRateLimit } from './middleware/wsRateLimiter';
 import { randomUUID } from 'crypto';
 import { sanitizeChatMessage, sanitizePlainText } from './lib/sanitization';
 import { CHAT_SERVER_CONFIG } from './config/chatServer';
 import { ChatServerHub } from './services/ChatServerHub';
+import { ircEmitter, roomPresence, IRC_EVENTS } from './services/ircEventRegistry';
 import cookie from 'cookie';
 import { unsign } from 'cookie-signature';
 import { hasPlatformWideAccess, getUserPlatformRole } from './rbac';
-import { PLATFORM_WORKSPACE_ID } from './seed-platform-workspace';
+import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
+import { botPool } from './bots/pool';
+import { BOT_REGISTRY } from './bots/registry';
+import { createLogger } from './lib/logger';
+
+const log = createLogger('WebSocket');
 
 // ============================================================================
 // SESSION-BASED WEBSOCKET AUTHENTICATION
@@ -27,6 +34,39 @@ interface AuthenticatedSession {
   workspaceId?: string;
   role?: string;
   email?: string;
+}
+
+// ============================================================================
+// WS AUTH TOKEN STORE
+// Short-lived (60s), one-time-use tokens issued via HTTP /api/auth/ws-token
+// Used as a fallback when session cookie lookup fails at WS connection time
+// (e.g., DB hiccup during upgrade, cookie path issues in certain environments)
+// ============================================================================
+interface WsAuthTokenEntry {
+  userId: string;
+  workspaceId?: string;
+  role?: string;
+  expiresAt: number;
+}
+const _wsAuthTokens = new Map<string, WsAuthTokenEntry>();
+
+// Sweep expired tokens every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  _wsAuthTokens.forEach((v, k) => { if (v.expiresAt < now) _wsAuthTokens.delete(k); });
+}, 5 * 60 * 1000).unref?.();
+
+export function createWsAuthToken(userId: string, workspaceId?: string, role?: string): string {
+  const token = randomUUID() + '-' + Date.now().toString(36);
+  _wsAuthTokens.set(token, { userId, workspaceId, role, expiresAt: Date.now() + 60_000 });
+  return token;
+}
+
+function _consumeWsAuthToken(token: string): WsAuthTokenEntry | null {
+  const entry = _wsAuthTokens.get(token);
+  if (!entry || entry.expiresAt < Date.now()) { _wsAuthTokens.delete(token); return null; }
+  _wsAuthTokens.delete(token); // one-time use
+  return entry;
 }
 
 /**
@@ -49,7 +89,7 @@ async function getSessionFromRequest(request: IncomingMessage): Promise<Authenti
     // connect.sid format: s:sessionId.signature
     const sessionSecret = process.env.SESSION_SECRET;
     if (!sessionSecret) {
-      console.error('[WebSocket Auth] SESSION_SECRET not configured');
+      log.error('SESSION_SECRET not configured');
       return null;
     }
     
@@ -59,22 +99,24 @@ async function getSessionFromRequest(request: IncomingMessage): Promise<Authenti
       sessionId = sessionId.substring(2);
       const unsigned = unsign(sessionId, sessionSecret);
       if (unsigned === false) {
-        console.warn('[WebSocket Auth] Invalid session signature');
+        log.warn('Invalid session signature');
         return null;
       }
       sessionId = unsigned;
     }
     
     // Look up session in PostgreSQL sessions table
-    const result = await db.execute(
+    // CATEGORY C — Genuine schema mismatch: sessions table managed by connect-pg-simple, no Drizzle schema defined
+    // NOTE: typedQuery returns T[] directly — DO NOT use .rows (that's only for pool.query / db.$client.query)
+    const rows = await typedQuery<{ sess: any }>(
       sql`SELECT sess FROM sessions WHERE sid = ${sessionId} AND expire > NOW()`
     );
     
-    if (!result.rows || result.rows.length === 0) {
+    if (!rows || rows.length === 0) {
       return null;
     }
     
-    const sess = result.rows[0].sess as any;
+    const sess = rows[0].sess as any;
     
     // Extract user info from session data
     // Session structure: { userId: "...", passport: { user: { claims: {...} } } }
@@ -82,7 +124,7 @@ async function getSessionFromRequest(request: IncomingMessage): Promise<Authenti
     const userId = sess?.userId || sess?.passport?.user?.id || sess?.passport?.user?.claims?.sub;
     
     if (!userId) {
-      console.log('[WebSocket Auth] No userId found in session');
+      log.debug('No userId found in session');
       return null;
     }
     
@@ -99,7 +141,7 @@ async function getSessionFromRequest(request: IncomingMessage): Promise<Authenti
     
     // If still no workspace, try to get from tenant membership list
     if (!workspaceId && sess.passport?.user?.claims?.tenantMembership) {
-      const memberships = sess.passport.user.claims.tenantMembership;
+      const memberships = sess.passport?.user?.claims?.tenantMembership;
       if (Array.isArray(memberships) && memberships.length > 0) {
         // Use first membership workspace as default
         workspaceId = memberships[0]?.workspaceId || memberships[0];
@@ -116,10 +158,10 @@ async function getSessionFromRequest(request: IncomingMessage): Promise<Authenti
         if (resolved.workspaceId) {
           workspaceId = resolved.workspaceId;
           resolvedRole = resolved.role || resolvedRole;
-          console.log(`[WebSocket Auth] Dynamically resolved workspace for user ${userId}: ${workspaceId} (role: ${resolvedRole})`);
+          log.info('Dynamically resolved workspace for user', { userId, workspaceId, role: resolvedRole });
         }
       } catch (resolveError) {
-        console.warn('[WebSocket Auth] Failed to dynamically resolve workspace:', resolveError);
+        log.warn('Failed to dynamically resolve workspace', { error: resolveError });
       }
     }
     
@@ -130,7 +172,7 @@ async function getSessionFromRequest(request: IncomingMessage): Promise<Authenti
       email,
     };
   } catch (error) {
-    console.error('[WebSocket Auth] Session lookup failed:', error);
+    log.error('Session lookup failed', { error });
     return null;
   }
 }
@@ -229,11 +271,32 @@ interface WebSocketClient extends WebSocket {
   
   // Connection metadata
   conversationId?: string;
+  roomMode?: string; // IRC-style room mode (sup, org, met, field, coai)
+  supportsBots?: boolean; // Dynamic flag - room supports bot deployment
+  inTriage?: boolean; // True when user is in HelpAI triage (can type to bot)
+  inHumanHandoff?: boolean; // True when escalated to human agent (still whisper-only, no voice)
   userStatus?: 'online' | 'away' | 'busy';
   isAlive?: boolean;
   pingInterval?: NodeJS.Timeout;
   ipAddress?: string;
   userAgent?: string;
+
+  // IRC-style away status
+  isAway?: boolean;
+  awayMessage?: string | null;
+
+  // Staff identification (for Trinity AI visibility filtering)
+  isStaff?: boolean;
+
+  // DM visibility filtering for helpdesk inline DMs
+  platformRole?: string; // For standalone access (also in serverAuth)
+  threadId?: string; // Session/thread ID for DM isolation in helpdesk
+
+  // HelpAI session tracking
+  helpAISessionId?: string;
+
+  // Workspace role (set on join_conversation from employee record)
+  workspaceRole?: string;
 }
 
 interface ChatMessagePayload {
@@ -242,6 +305,10 @@ interface ChatMessagePayload {
   message: string;
   senderName: string;
   senderType: 'customer' | 'support' | 'system';
+  // DM visibility fields for helpdesk inline DM threading
+  isPrivateMessage?: boolean;
+  recipientId?: string;
+  threadId?: string;
 }
 
 interface JoinConversationPayload {
@@ -420,14 +487,74 @@ interface SessionSyncPingPayload {
 
 type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload | BanUserPayload | JoinShiftUpdatesPayload | ShiftUpdatePayload | JoinNotificationsPayload | NotificationUpdatePayload | CallInitiatedPayload | CallAcceptedPayload | CallRejectedPayload | CallEndedPayload | WebRTCOfferPayload | WebRTCAnswerPayload | WebRTCIceCandidatePayload | JoinDispatchUpdatesPayload | DispatchGPSUpdatePayload | DispatchIncidentUpdatePayload | DispatchUnitStatusUpdatePayload | SessionSyncRegisterPayload | SessionSyncPingPayload;
 
-// In-memory MOTD storage (staff can update)
-let currentMOTD = "Welcome to HelpAI Support - Your satisfaction is our priority - 24/7/365";
+// In-memory MOTD storage (staff can update, or dynamically generated)
+// Empty string means use dynamic AI generation
+let currentMOTD = "";
 
-// Main HelpDesk room identifier (consistent across all handlers)
-const MAIN_ROOM_ID = 'helpdesk';
+// Room mode check - bots deploy based on mode, not slug
+// This is the IRC way: all rooms use UUIDs, modes determine behavior
+import { RoomMode } from '@shared/types/chat';
+
+// Helper: Check if room mode supports HelpAI bot
+function roomSupportsBots(mode: RoomMode | string | undefined): boolean {
+  return mode === RoomMode.SUP || mode === RoomMode.COAI;
+}
 
 // Permanently banned users tracking (in-memory)
 const bannedUsers = new Set<string>();
+
+// =============================================================================
+// WEBSOCKET MESSAGE IDEMPOTENCY - LRU Cache for Deduplication
+// Prevents duplicate processing of WebSocket messages from reconnections
+// =============================================================================
+class MessageIdempotencyCache {
+  private cache = new Map<string, number>();
+  private maxSize: number;
+  private ttlMs: number;
+
+  constructor(maxSize = 1000, ttlMs = 60000) {
+    this.maxSize = maxSize;
+    this.ttlMs = ttlMs;
+  }
+
+  isDuplicate(messageId: string): boolean {
+    const now = Date.now();
+    const seen = this.cache.get(messageId);
+    if (seen !== undefined) {
+      if (now - seen < this.ttlMs) {
+        return true;
+      }
+      this.cache.delete(messageId);
+    }
+    return false;
+  }
+
+  track(messageId: string): void {
+    const now = Date.now();
+    if (this.cache.size >= this.maxSize) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest !== undefined) {
+        this.cache.delete(oldest);
+      }
+    }
+    this.cache.set(messageId, now);
+  }
+
+  prune(): void {
+    const now = Date.now();
+    for (const [key, timestamp] of this.cache) {
+      if (now - timestamp >= this.ttlMs) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+const wsMessageIdempotencyCache = new MessageIdempotencyCache(1000, 60000);
+
+setInterval(() => {
+  wsMessageIdempotencyCache.prune();
+}, 30000);
 
 // GLOBAL CONNECTION TRACKING for Platform Stats
 const globalConnections = {
@@ -450,6 +577,32 @@ export function getLiveConnectionStats() {
 // Track active connections by conversation ID (module-level for export access)
 const conversationClients = new Map<string, Set<WebSocketClient>>();
 
+// Track voiced users per conversation (IRC-style +v mode)
+// Users without voice can read but not send messages until granted voice by staff
+const voicedUsers = new Map<string, Set<string>>(); // conversationId -> Set of userIds with voice
+
+// Helper function to check if a user has voice in a conversation
+function hasVoiceInConversation(conversationId: string, userId: string): boolean {
+  const voicedSet = voicedUsers.get(conversationId);
+  return voicedSet ? voicedSet.has(userId) : false;
+}
+
+// Helper function to grant voice to a user in a conversation
+function grantVoice(conversationId: string, userId: string): void {
+  if (!voicedUsers.has(conversationId)) {
+    voicedUsers.set(conversationId, new Set());
+  }
+  voicedUsers.get(conversationId)!.add(userId);
+}
+
+// Helper function to revoke voice from a user in a conversation
+function revokeVoice(conversationId: string, userId: string): void {
+  const voicedSet = voicedUsers.get(conversationId);
+  if (voicedSet) {
+    voicedSet.delete(userId);
+  }
+}
+
 // Global broadcast function for force-refresh events (used by support command console)
 let globalWSS: WebSocketServer | null = null;
 
@@ -466,7 +619,7 @@ export function broadcastNotificationToUser(
   notification: any
 ) {
   if (!globalBroadcaster) {
-    console.warn('[WebSocket] Global broadcaster not initialized for notification');
+    log.warn('Global broadcaster not initialized for notification');
     return false;
   }
   
@@ -480,7 +633,27 @@ export function broadcastNotificationToUser(
     );
     return true;
   } catch (err) {
-    console.warn('[WebSocket] Failed to broadcast notification:', err);
+    log.warn('Failed to broadcast notification', { error: err });
+    return false;
+  }
+}
+
+export function broadcastShiftUpdate(
+  workspaceId: string,
+  updateType: 'shift_created' | 'shift_updated' | 'shift_deleted',
+  shift?: any,
+  shiftId?: string
+) {
+  if (!globalBroadcaster) {
+    log.warn('Global broadcaster not initialized for shift update');
+    return false;
+  }
+  
+  try {
+    globalBroadcaster.broadcastShiftUpdate(workspaceId, updateType, shift, shiftId);
+    return true;
+  } catch (err) {
+    log.warn('Failed to broadcast shift update', { error: err });
     return false;
   }
 }
@@ -495,7 +668,7 @@ export function broadcastUserScopedNotification(
   notification: any
 ) {
   if (!globalWSS) {
-    console.warn('[WebSocket] Global WSS not initialized for user-scoped notification');
+    log.warn('Global WSS not initialized for user-scoped notification');
     return false;
   }
   
@@ -514,37 +687,56 @@ export function broadcastUserScopedNotification(
       if (client.readyState === WebSocket.OPEN) {
         const clientUserId = client.userId || client._userId;
         if (clientUserId === userId) {
-          client.send(payload);
-          sentCount++;
+          try {
+            client.send(payload);
+            sentCount++;
+          } catch (sendErr: any) {
+            log.warn('User-scoped WS send failed — dead connection', { userId, error: sendErr?.message });
+          }
         }
       }
     });
     
-    console.log(`[WebSocket] User-scoped notification sent to ${sentCount} connections for user ${userId}`);
+    log.debug('User-scoped notification sent', { sentCount, userId });
     return sentCount > 0;
   } catch (err) {
-    console.warn('[WebSocket] Failed to broadcast user-scoped notification:', err);
+    log.warn('Failed to broadcast user-scoped notification', { error: err });
     return false;
   }
 }
 
 export function broadcastToAllClients(message: any) {
   if (!globalWSS) {
-    console.warn('[WebSocket] Global WSS not initialized for broadcast');
+    log.warn('Global WSS not initialized for broadcast');
     return 0;
   }
   
+  // CRITICAL SECURITY: broadcastToAllClients is restricted to SYSTEM-LEVEL updates only.
+  // It MUST NOT be used for workspace-specific data.
+  // We verify that the message type is one of the allowed global types.
+  const payloadObj = typeof message === 'string' ? JSON.parse(message) : message;
+  const allowedGlobalTypes = ['platform_update', 'system_maintenance', 'server_restart', 'global_notification', 'health_alert'];
+  
+  if (payloadObj.type && !allowedGlobalTypes.includes(payloadObj.type)) {
+     log.warn('Security blocked unauthorized global broadcast type', { type: payloadObj.type });
+     return 0;
+  }
+
   let count = 0;
   const payload = typeof message === 'string' ? message : JSON.stringify(message);
   
   globalWSS.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(payload);
-      count++;
+      try {
+        client.send(payload);
+        count++;
+      } catch (sendErr: any) {
+        log.warn('broadcastToAllClients: WS send failed — dead connection', { error: sendErr?.message });
+      }
     }
   });
   
-  console.log(`[WebSocket] Broadcast sent to ${count} clients`);
+  log.debug('Broadcast sent', { clientCount: count });
   return count;
 }
 
@@ -553,6 +745,7 @@ export function broadcastToAllClients(message: any) {
 // =============================================================================
 import { sessionSyncService } from './services/ai-brain/sessionSyncService';
 import { platformEventBus } from './services/platformEventBus';
+import { typedQuery } from './lib/typedSql';
 
 // Support roles that receive Trinity alerts
 const TRINITY_ALERT_ROLES = ['root_admin', 'co_admin', 'sysops', 'platform_support', 'org_owner', 'co_owner'];
@@ -563,7 +756,7 @@ const TRINITY_ALERT_ROLES = ['root_admin', 'co_admin', 'sysops', 'platform_suppo
  */
 export function broadcastTrinityAlertToSupport(message: any) {
   if (!globalWSS) {
-    console.warn('[WebSocket] Global WSS not initialized for Trinity alert');
+    log.warn('Global WSS not initialized for Trinity alert');
     return 0;
   }
   
@@ -574,14 +767,18 @@ export function broadcastTrinityAlertToSupport(message: any) {
     if (client.readyState === WebSocket.OPEN) {
       const role = client.serverAuth?.role || client.serverAuth?.platformRole;
       if (role && TRINITY_ALERT_ROLES.includes(role)) {
-        client.send(payload);
-        sentCount++;
+        try {
+          client.send(payload);
+          sentCount++;
+        } catch (sendErr: any) {
+          log.warn('broadcastTrinityAlertToSupport: WS send failed — dead connection', { role, error: sendErr?.message });
+        }
       }
     }
   });
   
   if (sentCount > 0) {
-    console.log(`🚨 [WebSocket] Trinity message broadcast to ${sentCount} support staff`);
+    log.info('Trinity message broadcast to support staff', { sentCount });
   }
   return sentCount;
 }
@@ -593,9 +790,9 @@ setTimeout(async () => {
     trinityAutonomousNotifier.setBroadcastHandler((message: any) => {
       broadcastTrinityAlertToSupport(message);
     });
-    console.log('[WebSocket] Trinity autonomous notifier broadcast handler registered');
+    log.info('Trinity autonomous notifier broadcast handler registered');
   } catch (error) {
-    console.warn('[WebSocket] Failed to register Trinity notifier:', error);
+    log.warn('Failed to register Trinity notifier', { error });
   }
 }, 2000);
 
@@ -659,18 +856,50 @@ export function getSessionSyncStats(): { totalUsers: number; totalConnections: n
 
 export { sessionSyncService };
 
+// ============================================================================
+// PER-WORKSPACE EVENT REPLAY BUFFER
+// Holds last 50 events per workspace for up to 5 minutes.
+// Clients that reconnect within 5 minutes receive missed events instead of a
+// full page refresh. Clients disconnected longer receive full_refresh_required.
+// ============================================================================
+const EVENT_BUFFER_MAX = 50;
+const EVENT_BUFFER_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface BufferedEvent {
+  eventId: string;
+  timestamp: number;
+  workspaceId: string;
+  data: any;
+}
+
+const workspaceEventBuffer = new Map<string, BufferedEvent[]>();
+
+function pushEventToBuffer(workspaceId: string, data: any): string {
+  const eventId = `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const entry: BufferedEvent = { eventId, timestamp: Date.now(), workspaceId, data: { ...data, eventId } };
+  const existing = workspaceEventBuffer.get(workspaceId) ?? [];
+  existing.push(entry);
+  const now = Date.now();
+  const trimmed = existing.filter(e => now - e.timestamp < EVENT_BUFFER_TTL_MS).slice(-EVENT_BUFFER_MAX);
+  workspaceEventBuffer.set(workspaceId, trimmed);
+  return eventId;
+}
+
 export function broadcastToWorkspace(workspaceId: string, data: any) {
   if (!globalBroadcaster) {
-    console.warn('[WebSocket] Global broadcaster not initialized for workspace broadcast');
+    log.warn('Global broadcaster not initialized for workspace broadcast');
     return 0;
   }
   
   try {
-    globalBroadcaster.broadcastToWorkspace(workspaceId, data);
-    console.log(`[WebSocket] Workspace broadcast sent to ${workspaceId}`);
+    // Push to replay buffer so reconnecting clients can catch up
+    const eventId = pushEventToBuffer(workspaceId, data);
+    const enrichedData = { ...data, eventId };
+    globalBroadcaster.broadcastToWorkspace(workspaceId, enrichedData);
+    log.debug('Workspace broadcast sent', { workspaceId, eventId });
     return 1;
   } catch (err) {
-    console.warn('[WebSocket] Failed to broadcast to workspace:', err);
+    log.warn('Failed to broadcast to workspace', { error: err });
     return 0;
   }
 }
@@ -691,7 +920,7 @@ export function broadcastPlatformUpdateGlobal(update: {
   visibility?: string;
 }): boolean {
   if (!globalBroadcaster) {
-    console.warn('[WebSocket] Global broadcaster not initialized for platform update');
+    log.warn('Global broadcaster not initialized for platform update');
     return false;
   }
   
@@ -712,7 +941,7 @@ export function broadcastPlatformUpdateGlobal(update: {
     });
     return true;
   } catch (err) {
-    console.warn('[WebSocket] Failed to broadcast platform update:', err);
+    log.warn('Failed to broadcast platform update', { error: err });
     return false;
   }
 }
@@ -832,7 +1061,7 @@ async function revalidateUserAuth(ws: WebSocketClient): Promise<{
     // Fetch fresh user info from database (server-side truth)
     const user = await storage.getUser(ws.userId);
     if (!user) {
-      console.error('[WS SECURITY] User not found during revalidation:', ws.userId);
+      log.error('User not found during revalidation', { userId: ws.userId });
       return null;
     }
     
@@ -847,7 +1076,7 @@ async function revalidateUserAuth(ws: WebSocketClient): Promise<{
       isStaff: !!isStaff,
     };
   } catch (error) {
-    console.error('[WS SECURITY] Auth revalidation failed:', error);
+    log.error('Auth revalidation failed', { error });
     return null;
   }
 }
@@ -967,7 +1196,11 @@ export function setupWebSocket(server: Server) {
         clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             if (!userId || client.userId === userId) {
-              client.send(eventPayload);
+              try {
+                client.send(eventPayload);
+              } catch (sendErr: any) {
+                log.warn('ChatServerHub conversation send failed — dead connection', { error: sendErr?.message });
+              }
             }
           }
         });
@@ -983,14 +1216,84 @@ export function setupWebSocket(server: Server) {
         wsClients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             if (!userId || client.userId === userId) {
-              client.send(eventPayload);
+              try {
+                client.send(eventPayload);
+              } catch (sendErr: any) {
+                log.warn('ChatServerHub workspace send failed — dead connection', { error: sendErr?.message });
+              }
             }
           }
         });
       }
     }
   });
-  console.log('[WebSocket] ChatServerHub broadcaster registered');
+  log.info('ChatServerHub broadcaster registered');
+
+  // =========================================================================
+  // ROOM LIFECYCLE BROADCASTER - For close/reopen status changes
+  // =========================================================================
+  import('./services/roomLifecycleService').then(({ registerRoomBroadcaster }) => {
+    registerRoomBroadcaster((roomId: string, message: any) => {
+      const clients = conversationClients.get(roomId);
+      if (clients) {
+        const payload = JSON.stringify(message);
+        clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            try {
+              client.send(payload);
+            } catch (sendErr: any) {
+              log.warn('Room lifecycle broadcaster send failed — dead connection', { roomId, error: sendErr?.message });
+            }
+          }
+        });
+      }
+    });
+    log.info('Room lifecycle broadcaster registered');
+  }).catch(err => log.error('Room lifecycle broadcaster registration failed', { error: err }));
+
+  // =========================================================================
+  // IRC EVENT EMITTER - Fast real-time event broadcasting
+  // =========================================================================
+  ircEmitter.setBroadcaster((event) => {
+    const { roomId, conversationId, targetUserId } = event;
+    const targetRoom = roomId || conversationId;
+    
+    if (targetRoom) {
+      const clients = conversationClients.get(targetRoom);
+      if (clients) {
+        const eventPayload = JSON.stringify(event);
+        clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            // If targetUserId is specified, only send to that specific user (for ACKs, notices)
+            // Otherwise broadcast to ALL clients in the room (for JOIN, PART, TYPING, etc.)
+            if (!targetUserId || client.userId === targetUserId) {
+              try {
+                client.send(eventPayload);
+              } catch (sendErr: any) {
+                log.warn('IRC emitter room send failed — dead connection', { targetRoom, error: sendErr?.message });
+              }
+            }
+          }
+        });
+      }
+    } else {
+      // Global broadcast (QUIT, global notices) - send to all connected clients
+      // If targetUserId is specified, filter to just that user
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          const wsClient = client as WebSocketClient;
+          if (!targetUserId || wsClient.userId === targetUserId) {
+            try {
+              client.send(JSON.stringify(event));
+            } catch (sendErr: any) {
+              log.warn('IRC emitter global send failed — dead connection', { error: sendErr?.message });
+            }
+          }
+        }
+      });
+    }
+  });
+  log.info('IRC event emitter registered');
 
   wss.on('connection', async (ws: WebSocketClient, request: IncomingMessage) => {
     // Extract IP address and user agent from request
@@ -1006,64 +1309,61 @@ export function setupWebSocket(server: Server) {
     ws.userAgent = userAgent;
     
     // =========================================================================
-    // SESSION-BASED AUTHENTICATION AT CONNECTION TIME
-    // Securely extract authenticated user identity from HTTP session cookies
-    // This is done ONCE at connection time - not per-message
+    // CRITICAL: Register message handler IMMEDIATELY before any awaits!
+    // Messages that arrive during authentication would be lost otherwise.
+    // We buffer messages until authentication completes.
     // =========================================================================
-    const authenticatedSession = await getSessionFromRequest(request);
-    if (authenticatedSession) {
-      // Store authenticated identity on WebSocket - NEVER trust client-supplied IDs
-      ws.userId = authenticatedSession.userId;
-      ws.workspaceId = authenticatedSession.workspaceId;
-      
-      // Fetch platform role for platform-wide access checks (root_admin, support_agent, Bot, etc.)
-      const platformRole = await getUserPlatformRole(authenticatedSession.userId);
-      
-      ws.serverAuth = {
-        userId: authenticatedSession.userId,
-        workspaceId: authenticatedSession.workspaceId || '',
-        role: authenticatedSession.role || 'user',
-        platformRole: platformRole !== 'none' ? platformRole : undefined,
-        sessionId: connectionId,
-        authenticatedAt: new Date(),
-      };
-      console.log(`New authenticated WebSocket connection from ${ipAddress} (user: ${authenticatedSession.userId}, platformRole: ${platformRole}, connection: ${connectionId})`);
-      
-      // TRINITY STAFF REGISTRATION: Register support staff for Trinity alerts
-      const staffRoles = ['root_admin', 'co_admin', 'sysops', 'platform_support', 'org_owner', 'co_owner'];
-      const userRole = ws.serverAuth.platformRole || ws.serverAuth.role;
-      if (userRole && staffRoles.includes(userRole)) {
-        import('./services/ai-brain/trinityAutonomousNotifier').then(({ registerSupportConnection }) => {
-          registerSupportConnection(authenticatedSession.userId, ws, userRole);
-        }).catch(() => {});
-      }
-    } else {
-      // Guest/anonymous connection - allowed for helpdesk but limited permissions
-      console.log(`New guest WebSocket connection from ${ipAddress} (connection: ${connectionId})`);
-    }
+    let authComplete = false;
+    const messageBuffer: (Buffer | ArrayBuffer | Buffer[])[] = [];
     
-    // Initialize heartbeat
-    ws.isAlive = true;
-    
-    // Handle pong responses (heartbeat)
-    ws.on('pong', () => {
-      ws.isAlive = true;
-    });
-    
-    // Start heartbeat interval (30 seconds)
-    ws.pingInterval = setInterval(() => {
-      if (ws.isAlive === false) {
-        console.log('WebSocket connection terminated due to no heartbeat');
-        clearInterval(ws.pingInterval);
-        return ws.terminate();
-      }
-      ws.isAlive = false;
-      ws.ping();
-    }, 30000);
-
-    ws.on('message', async (data: string) => {
+    // This is the actual message processor (called after auth or from buffer)
+    const MAX_WS_MESSAGE_BYTES = 512 * 1024; // 512 KB per message — prevents memory exhaustion
+    const processMessage = async (data: Buffer | ArrayBuffer | Buffer[]) => {
       try {
-        const payload: WebSocketMessage = JSON.parse(data.toString());
+        // Enforce message size limit BEFORE toString() to prevent large-buffer DoS
+        const byteLength = Buffer.isBuffer(data)
+          ? data.length
+          : data instanceof ArrayBuffer
+            ? data.byteLength
+            : (data as Buffer[]).reduce((sum, b) => sum + b.length, 0);
+        if (byteLength > MAX_WS_MESSAGE_BYTES) {
+          log.warn('[WebSocket] Message rejected: exceeds 512 KB limit', { byteLength });
+          ws.send(JSON.stringify({ type: 'error', message: 'Message too large' }));
+          return;
+        }
+        const rawMessage = data.toString();
+        let payload: WebSocketMessage;
+        try {
+          payload = JSON.parse(rawMessage);
+        } catch (parseError) {
+          log.warn('Malformed WebSocket message received', { error: parseError, rawMessage: rawMessage.substring(0, 100) });
+          return;
+        }
+
+        if (!payload || !payload.type) {
+          log.warn('WebSocket message missing type', { payload });
+          return;
+        }
+
+        const incomingMessageId = (payload as any).messageId;
+        if (incomingMessageId && typeof incomingMessageId === 'string') {
+          if (wsMessageIdempotencyCache.isDuplicate(incomingMessageId)) {
+            log.debug('Duplicate message skipped', { messageId: incomingMessageId, type: payload.type });
+            if (ws.readyState === WebSocket.OPEN) {
+              try {
+                ws.send(JSON.stringify({
+                  type: 'message_ack',
+                  messageId: incomingMessageId,
+                  status: 'duplicate',
+                }));
+              } catch (sendErr: any) {
+                log.warn('Failed to send duplicate ack', { error: sendErr?.message });
+              }
+            }
+            return;
+          }
+          wsMessageIdempotencyCache.track(incomingMessageId);
+        }
 
         switch (payload.type) {
           case 'session_sync_register': {
@@ -1085,7 +1385,7 @@ export function setupWebSocket(server: Server) {
                 deviceCount: sessionSyncService.getUserDeviceCount(ws.serverAuth.userId),
                 timestamp: new Date().toISOString(),
               }));
-              console.log(`[SessionSync] Registered device for user ${ws.serverAuth.userId} (${deviceType})`);
+              log.debug('SessionSync registered device', { userId: ws.serverAuth.userId, deviceType });
             } else {
               ws.send(JSON.stringify({
                 type: 'session_sync_registered',
@@ -1099,6 +1399,74 @@ export function setupWebSocket(server: Server) {
             // Update last activity for session sync
             if (ws.serverAuth?.userId) {
               sessionSyncService.updatePing(ws.serverAuth.userId, connectionId);
+            }
+            break;
+          }
+          case 'reconnect_sync': {
+            // Client reconnected and sends the timestamp of the last event it received.
+            // Server replays missed events from the per-workspace buffer, or instructs
+            // the client to do a full state refresh if the gap is too large.
+            const wsId = ws.serverAuth?.workspaceId;
+            if (!wsId) {
+              ws.send(JSON.stringify({ type: 'reconnect_sync_error', error: 'No workspace context' }));
+              break;
+            }
+            const lastEventTimestamp = Number((payload as any).lastEventTimestamp) || 0;
+            const now = Date.now();
+            const gapMs = lastEventTimestamp ? now - lastEventTimestamp : EVENT_BUFFER_TTL_MS + 1;
+            if (gapMs > EVENT_BUFFER_TTL_MS || !lastEventTimestamp) {
+              ws.send(JSON.stringify({
+                type: 'full_refresh_required',
+                reason: gapMs > EVENT_BUFFER_TTL_MS ? 'gap_too_large' : 'no_timestamp',
+                timestamp: new Date().toISOString(),
+              }));
+              break;
+            }
+            const buffer = workspaceEventBuffer.get(wsId) ?? [];
+            const missed = buffer.filter(e => e.timestamp > lastEventTimestamp);
+            ws.send(JSON.stringify({
+              type: 'reconnect_sync_replay',
+              events: missed.map(e => e.data),
+              count: missed.length,
+              timestamp: new Date().toISOString(),
+            }));
+            log.info('Reconnect sync replay sent', { workspaceId: wsId, missedCount: missed.length, gapMs });
+            break;
+          }
+          case 'lone_worker_ack': {
+            if (!ws.serverAuth?.userId) {
+              ws.send(JSON.stringify({
+                type: 'lone_worker_ack_result',
+                success: false,
+                error: 'Authentication required',
+              }));
+              break;
+            }
+            try {
+              const { loneWorkerSafetyService } = await import('./services/automation/loneWorkerSafetyService');
+              const ackCheckId = (payload as any).checkId;
+              const ackEmployeeId = (payload as any).employeeId;
+              if (!ackCheckId || !ackEmployeeId) {
+                ws.send(JSON.stringify({
+                  type: 'lone_worker_ack_result',
+                  success: false,
+                  error: 'checkId and employeeId required',
+                }));
+                break;
+              }
+              const ackResult = await loneWorkerSafetyService.acknowledgeWelfareCheck(ackCheckId, ackEmployeeId);
+              ws.send(JSON.stringify({
+                type: 'lone_worker_ack_result',
+                success: ackResult,
+                checkId: ackCheckId,
+              }));
+            } catch (lwErr: any) {
+              log.error('Lone worker ack WS error', { error: lwErr?.message });
+              ws.send(JSON.stringify({
+                type: 'lone_worker_ack_result',
+                success: false,
+                error: 'Internal error',
+              }));
             }
             break;
           }
@@ -1130,7 +1498,7 @@ export function setupWebSocket(server: Server) {
               userId: ws.serverAuth.userId,
               timestamp: new Date().toISOString(),
             }));
-            console.log(`[TrinityAgent] User ${ws.serverAuth.userId} subscribed to conversation ${trinityConversationId}`);
+            log.debug('TrinityAgent user subscribed', { userId: ws.serverAuth.userId, conversationId: trinityConversationId });
             break;
           }
           case 'trinity_agent_ping': {
@@ -1141,30 +1509,125 @@ export function setupWebSocket(server: Server) {
             }));
             break;
           }
+
+          case 'ws_authenticate': {
+            // Token-based auth fallback — handles cases where session cookie lookup
+            // failed at connection time (DB hiccup, cookie edge cases in Replit env)
+            const token = (payload as any).token;
+            if (!token || typeof token !== 'string') {
+              ws.send(JSON.stringify({ type: 'ws_auth_failed', reason: 'Missing token' }));
+              break;
+            }
+            if (ws.serverAuth) {
+              // Already authenticated via session cookie — ack and skip
+              ws.send(JSON.stringify({ type: 'ws_authenticated', userId: ws.serverAuth.userId, source: 'session' }));
+              break;
+            }
+            const authEntry = _consumeWsAuthToken(token);
+            if (!authEntry) {
+              ws.send(JSON.stringify({ type: 'ws_auth_failed', reason: 'Invalid or expired token' }));
+              log.warn('ws_authenticate: invalid/expired token', { ip: ws.ipAddress });
+              break;
+            }
+            // Fetch platform role — DB may be temporarily unavailable, so gracefully default
+            let wsTokenPlatformRole: string | undefined;
+            try {
+              const pr = await getUserPlatformRole(authEntry.userId);
+              wsTokenPlatformRole = pr !== 'none' ? pr : undefined;
+            } catch {
+              wsTokenPlatformRole = undefined;
+            }
+            ws.serverAuth = {
+              userId: authEntry.userId,
+              workspaceId: authEntry.workspaceId || '',
+              role: authEntry.role || 'user',
+              platformRole: wsTokenPlatformRole,
+              sessionId: connectionId,
+              authenticatedAt: new Date(),
+            };
+            ws.userId = authEntry.userId;
+            ws.workspaceId = authEntry.workspaceId;
+            ws.platformRole = wsTokenPlatformRole;
+            log.info('WebSocket authenticated via token fallback', { userId: authEntry.userId, workspaceId: authEntry.workspaceId });
+            ws.send(JSON.stringify({ type: 'ws_authenticated', userId: authEntry.userId, source: 'token' }));
+            break;
+          }
+
           case 'join_conversation': {
-            // Check if this is a support room slug instead of conversation ID
+            // Check if this is a support room slug or ID instead of conversation ID
             let conversationId = payload.conversationId;
-            let isMainRoom = false; // Track if this is the main helpdesk room
+            let roomMode: string | undefined; // IRC-style room mode
+            let supportsBots = false; // Dynamic bot deployment flag
+            
+            log.debug('join_conversation: looking up conversation', { conversationId });
             let conversation = await storage.getChatConversation(conversationId);
             
-            // If conversation not found, check if it's a support room slug
+            // If conversation not found, check if it's a support room slug or ID
             if (!conversation) {
-              const supportRoom = await storage.getSupportRoomBySlug(conversationId);
+              log.debug('join_conversation: not found as chat_conversation, trying support_rooms');
+              // First try by slug (e.g., "helpdesk")
+              let supportRoom = await storage.getSupportRoomBySlug(conversationId);
+              
+              // If not found by slug, try by room ID (UUID)
+              if (!supportRoom) {
+                log.debug('join_conversation: not found by slug, trying by ID');
+                supportRoom = await storage.getSupportRoomById(conversationId);
+              }
+              
+              // Also try organization_chat_rooms if still not found
+              if (!supportRoom) {
+                log.debug('join_conversation: not found in support_rooms, trying organization_chat_rooms');
+                try {
+                  const orgRoom = await storage.getOrganizationChatRoom(conversationId);
+                  if (orgRoom) {
+                    if (orgRoom.conversationId) {
+                      conversationId = orgRoom.conversationId;
+                      conversation = await storage.getChatConversation(conversationId);
+                    }
+                    
+                    // Auto-create conversation if missing or stale reference
+                    if (!conversation) {
+                      log.info('Org chat room has stale/missing conversation, auto-creating', { orgRoomId: orgRoom.id, roomName: orgRoom.roomName, staleConversationId: orgRoom.conversationId });
+                      const newConversation = await storage.createChatConversation({
+                        subject: orgRoom.roomName || 'Organization Chat',
+                        conversationType: 'open_chat',
+                        workspaceId: orgRoom.workspaceId,
+                      });
+                      
+                      // Link conversation to org room
+                      await storage.updateOrganizationChatRoom(orgRoom.id, { conversationId: newConversation.id });
+                      
+                      conversationId = newConversation.id;
+                      conversation = newConversation;
+                      log.info('join_conversation: auto-created conversation for org room', { orgRoomId: orgRoom.id, conversationId });
+                    } else {
+                      log.debug('join_conversation: found org chat room', { conversationId });
+                    }
+                  }
+                } catch (err) {
+                  log.debug('join_conversation: org chat room lookup failed', { error: err });
+                }
+              }
+              
               if (supportRoom) {
-                // Track if this is the main helpdesk room
-                isMainRoom = (supportRoom.slug === MAIN_ROOM_ID);
+                log.debug('join_conversation: found support room', { slug: supportRoom.slug, conversationId: supportRoom.conversationId });
+                // Store room mode - IRC-style: modes determine behavior, not slugs
+                roomMode = supportRoom.mode;
+                supportsBots = roomSupportsBots(roomMode);
                 
                 // Support room exists - get or create its conversation
                 if (supportRoom.conversationId) {
                   conversationId = supportRoom.conversationId;
                   conversation = await storage.getChatConversation(conversationId);
-                } else {
-                  // Auto-create conversation for this support room
-                  // Use platform workspace for platform-wide rooms (null workspaceId)
+                }
+                
+                // Auto-create conversation if missing or stale reference
+                if (!conversation) {
+                  log.info('Support room has stale conversation reference, auto-creating', { slug: supportRoom.slug, staleConversationId: supportRoom.conversationId });
                   const newConversation = await storage.createChatConversation({
                     subject: supportRoom.name,
                     conversationType: 'open_chat',
-                    workspaceId: supportRoom.workspaceId || 'coaileague-platform-workspace',
+                    workspaceId: supportRoom.workspaceId || PLATFORM_WORKSPACE_ID,
                   });
                   
                   // Link conversation to support room
@@ -1178,12 +1641,14 @@ export function setupWebSocket(server: Server) {
             
             // SECURITY: Verify conversation exists before allowing join
             if (!conversation) {
+              log.warn('join_conversation: conversation not found', { originalId: payload.conversationId });
               ws.send(JSON.stringify({
                 type: 'error',
                 message: 'Conversation not found',
               }));
               return;
             }
+            log.debug('join_conversation: resolved successfully', { conversationId });
 
             // =========================================================================
             // SECURITY: Use session-based authentication - NEVER trust client-supplied IDs
@@ -1200,8 +1665,9 @@ export function setupWebSocket(server: Server) {
             const claimsGuest = typeof payload.userId === 'string' && 
                                payload.userId.startsWith('guest-') && 
                                /^guest-[a-f0-9-]{8,}$/i.test(payload.userId);
-            const isMainRoomRequest = isMainRoom || payload.conversationId === MAIN_ROOM_ID;
-            const isGuestUser = !hasSessionAuth && claimsGuest && isMainRoomRequest;
+            // Guest access determined by room mode - only support rooms allow guests
+            const allowsGuests = supportsBots; // Rooms with bots (sup/coai) allow guest access
+            const isGuestUser = !hasSessionAuth && claimsGuest && allowsGuests;
             
             // For authenticated users, use the server-verified identity only
             // For guests, use the claimed guest ID (only allowed in helpdesk)
@@ -1217,17 +1683,26 @@ export function setupWebSocket(server: Server) {
             
             // If not authenticated and not a valid guest, reject
             if (!effectiveUserId) {
-              const reason = !hasSessionAuth && payload.userId && !claimsGuest 
-                ? 'Invalid user ID format. Guests must use guest-* prefix.'
-                : !isMainRoomRequest && claimsGuest
+              // Case 1: An authenticated-looking userId was provided but serverAuth is not set.
+              // This is a timing race — the join_conversation arrived before ws_authenticate
+              // completed (e.g., component mounted before auth handshake finished).
+              // Signal the client to re-authenticate silently; the client will retry the join
+              // upon receiving ws_authenticated.
+              if (!hasSessionAuth && payload.userId && !claimsGuest) {
+                ws.send(JSON.stringify({ type: 'ws_auth_required' }));
+                log.debug('join_conversation: auth not yet complete, requesting re-auth', { ip: ws.ipAddress });
+                return;
+              }
+
+              const reason = !allowsGuests && claimsGuest
                 ? 'Guests can only join the public HelpDesk.'
                 : 'Authentication required. Please log in or connect as a guest.';
-              
+
               ws.send(JSON.stringify({
                 type: 'error',
                 message: reason,
               }));
-              console.warn(`[Security] Rejected join attempt - ${reason} (IP: ${ws.ipAddress})`);
+              log.warn('Rejected join attempt', { reason, ip: ws.ipAddress });
               return;
             }
             
@@ -1245,8 +1720,8 @@ export function setupWebSocket(server: Server) {
               userType = 'guest';
               userRoleInfo = 'anonymous guest';
               
-              // Guests can only join the main helpdesk room (not private workspaces)
-              if (!isMainRoom && payload.conversationId !== MAIN_ROOM_ID) {
+              // Guests can only join rooms that support guests (sup/coai modes)
+              if (!supportsBots) {
                 ws.send(JSON.stringify({
                   type: 'error',
                   message: 'Guests can only join the public HelpDesk',
@@ -1276,9 +1751,9 @@ export function setupWebSocket(server: Server) {
                 userType = 'org_user';
               }
               
-              // Set role info for authenticated users
-              if (isMainRoom || payload.conversationId === MAIN_ROOM_ID) {
-                // This is the main HelpDesk public chatroom
+              // Set role info for authenticated users (based on room mode)
+              if (supportsBots) {
+                // This is a support/platform chatroom with bots
                 if (isStaff) {
                   userRoleInfo = `platform staff - ${platformRole}`;
                 } else {
@@ -1288,7 +1763,7 @@ export function setupWebSocket(server: Server) {
               
               // SECURITY: Validate workspace access for authenticated users
               // Non-staff users must have workspace context and can only access matching workspaces
-              if (!isMainRoom) {
+              if (!supportsBots) {
                 const userWorkspaceId = ws.serverAuth?.workspaceId;
                 
                 // Authenticated non-staff users REQUIRE valid workspace in session
@@ -1297,7 +1772,7 @@ export function setupWebSocket(server: Server) {
                     type: 'error',
                     message: 'Your session lacks workspace context. Please refresh and try again.',
                   }));
-                  console.warn(`[Security] User ${effectiveUserId} has no workspace in session`);
+                  log.warn('User has no workspace in session', { userId: effectiveUserId });
                   return;
                 }
                 
@@ -1308,7 +1783,7 @@ export function setupWebSocket(server: Server) {
                     type: 'error',
                     message: 'Invalid conversation: no workspace context.',
                   }));
-                  console.warn(`[Security] Conversation ${conversationId} has no workspace - blocked for user ${effectiveUserId}`);
+                  log.warn('Conversation has no workspace, blocked', { conversationId, userId: effectiveUserId });
                   return;
                 }
                 
@@ -1318,7 +1793,7 @@ export function setupWebSocket(server: Server) {
                     type: 'error',
                     message: 'Access denied: You do not have permission to access this conversation.',
                   }));
-                  console.warn(`[Security] User ${effectiveUserId} blocked from workspace ${conversation.workspaceId} (belongs to ${userWorkspaceId})`);
+                  log.warn('User blocked from cross-workspace conversation', { userId: effectiveUserId, conversationWorkspace: conversation.workspaceId, userWorkspace: userWorkspaceId });
                   return;
                 }
               }
@@ -1355,6 +1830,21 @@ export function setupWebSocket(server: Server) {
             ws.conversationId = conversationId; // Use resolved conversation ID
             ws.userStatus = 'online'; // Default status
             ws.userType = userType;
+            ws.roomMode = roomMode; // IRC-style room mode
+            ws.supportsBots = supportsBots; // Dynamic flag for bot deployment
+            ws.inTriage = supportsBots && !isStaff; // Non-staff in support rooms start in triage
+            ws.inHumanHandoff = false; // Not in human handoff until HelpAI escalates
+            ws.isStaff = isStaff; // Staff flag for Trinity AI visibility filtering
+            ws.isAway = false; // IRC-style away status
+            
+            // IRC MODEL: Auto-grant voice in public chatrooms (ORG, MET, FIELD, COAI)
+            // Users speak freely in public rooms. Only SUP (HelpDesk) rooms enforce whisper-only.
+            // Staff always get voice everywhere. COAI rooms have supportsBots=true (for platform bots)
+            // but should still auto-grant voice since they're internal platform rooms, not helpdesk.
+            const isHelpdeskRoom = roomMode === 'sup';
+            if (!isHelpdeskRoom || isStaff) {
+              grantVoice(conversationId, effectiveUserId!);
+            }
 
             // Check if user already has an active connection in this room
             const existingClients = conversationClients.get(conversationId);
@@ -1366,6 +1856,22 @@ export function setupWebSocket(server: Server) {
               conversationClients.set(conversationId, new Set());
             }
             conversationClients.get(conversationId)!.add(ws);
+
+            if (!isGuestUser && !userAlreadyInRoom) {
+              try {
+                await storage.ensureChatParticipant(conversationId, effectiveUserId);
+                platformEventBus.emit('chat:participant_joined', {
+                  conversationId,
+                  userId: effectiveUserId,
+                  userName: displayName,
+                  userType,
+                  workspaceId: conversation.workspaceId || undefined,
+                  source: 'websocket',
+                });
+              } catch (err: any) {
+                log.warn('Failed to register participant in DB', { error: err.message });
+              }
+            }
 
             // GLOBAL TRACKING: Add to platform-wide stats
             globalConnections.totalConnections++;
@@ -1394,29 +1900,63 @@ export function setupWebSocket(server: Server) {
                 workspaceId: conversation.workspaceId || undefined,
                 userId: effectiveUserId,
                 userName: displayName,
-              }).catch(err => console.error('[ChatServerHub] Failed to emit user_joined_room:', err));
+              }).catch(err => log.error('ChatServerHub failed to emit user_joined_room', { error: err }));
             }
 
-            // Send conversation history - but only for escalated tickets, not main HelpDesk
-            // Main HelpDesk starts fresh each time (users get individual help)
-            // Escalated tickets need history for staff context
-            if (!isMainRoom) {
-              const messages = await storage.getChatMessagesByConversation(conversationId);
-              ws.send(JSON.stringify({
-                type: 'conversation_history',
-                conversationId, // CRITICAL: Include conversationId so frontend filter accepts messages
-                messages,
-              }));
-              
-              // Mark messages as read for escalated tickets
-              await storage.markMessagesAsRead(conversationId, effectiveUserId);
-            } else {
-              // For main HelpDesk: Send empty history (start fresh)
+            // IRC-STYLE JOIN EVENT: Fast broadcast for real-time presence updates
+            const memberCount = roomPresence.join(conversationId, effectiveUserId, {
+              userName: displayName,
+              role: userType,
+              isBot: false,
+            });
+            
+            if (!userAlreadyInRoom) {
+              ircEmitter.join({
+                roomId: conversationId,
+                roomName: conversation.subject || 'Chat',
+                userId: effectiveUserId,
+                userName: displayName,
+                userRole: userType,
+                memberCount,
+              });
+            }
+
+            // HISTORY BEHAVIOR:
+            // - Staff in any room: See all messages (need context for support)
+            // - End users in PLATFORM support rooms (sup/coai): Start fresh each session
+            // - End users in ORG rooms (org/met/field): See full history until room is closed
+            // Platform support rooms are specifically 'sup' or 'coai' mode rooms
+            const isPlatformSupportRoom = roomMode === 'sup' || roomMode === 'coai';
+            const isEndUserInPlatformSupport = isPlatformSupportRoom && !isStaff;
+            
+            if (isEndUserInPlatformSupport) {
+              // End users in platform support rooms start fresh each session — no history shown.
+              // They only see messages generated during their current session.
               ws.send(JSON.stringify({
                 type: 'conversation_history',
                 conversationId,
                 messages: [],
+                totalMessages: 0,
               }));
+            } else {
+              // Staff or other rooms: Load recent conversation history, filtering out join/leave noise
+              const allMessages = await storage.getChatMessagesByConversation(conversationId);
+              const staffMessages = allMessages
+                .filter((m: any) => {
+                  if (m.senderType !== 'system') return true;
+                  const text = (m.message || '').toLowerCase();
+                  return !(text.includes('joined') || text.includes('left') || text.includes('connected') || text.includes('disconnected'));
+                })
+                .slice(-100);
+              ws.send(JSON.stringify({
+                type: 'conversation_history',
+                conversationId,
+                messages: staffMessages,
+                totalMessages: staffMessages.length,
+              }));
+              
+              // Mark messages as read for staff
+              await storage.markMessagesAsRead(conversationId, effectiveUserId);
             }
 
             // Broadcast updated user list to all clients in this conversation
@@ -1425,15 +1965,31 @@ export function setupWebSocket(server: Server) {
               if (clients) {
                 const onlineUsers = [];
 
-                // Add HelpAI Bot from config (always first in list for main room)
-                if (payload.conversationId === MAIN_ROOM_ID) {
+                // Add HelpAI Bot from config for rooms with bot support
+                // Uses dynamic roomMode flag instead of hardcoded slug comparisons
+                if (supportsBots) {
                   onlineUsers.push({
                     id: CHAT_SERVER_CONFIG.helpai.userId,
                     name: CHAT_SERVER_CONFIG.helpai.name,
                     role: 'bot',
                     status: 'online',
-                    userType: 'staff'
+                    userType: 'bot'
                   });
+                }
+
+                // Add deployed bots from bot pool
+                const deployedBots = botPool.getRoomBots(conversationId);
+                for (const botInstance of deployedBots) {
+                  const botDef = BOT_REGISTRY[botInstance.botId];
+                  if (botDef) {
+                    onlineUsers.push({
+                      id: botInstance.id,
+                      name: botDef.name,
+                      role: 'bot',
+                      status: botInstance.status === 'active' ? 'online' : 'busy',
+                      userType: 'bot'
+                    });
+                  }
                 }
 
                 // Add real users from database - fetch fresh display info for sync consistency
@@ -1453,10 +2009,15 @@ export function setupWebSocket(server: Server) {
                       workspaceRole: userInfo.workspaceRole || undefined,
                     }) : (client.userName || 'User');
                     
+                    // Map platform role to frontend category (staff/customer/guest)
+                    const isClientStaffForList = hasPlatformWideAccess(userRole);
+                    const clientCategory = isClientStaffForList ? 'staff' : (client.userType === 'guest' ? 'guest' : 'customer');
+                    
                     onlineUsers.push({
                       id: client.userId,
                       name: displayName,
-                      role: userRole || 'guest',
+                      role: clientCategory,
+                      platformRole: userRole, // Keep original platform role for display
                       status: client.userStatus || 'online',
                       userType: client.userType || 'guest'
                     });
@@ -1486,7 +2047,7 @@ export function setupWebSocket(server: Server) {
             await broadcastUserList();
 
             // Broadcast participants update with detailed user info
-            const clients2 = conversationClients.get(payload.conversationId);
+            const clients2 = conversationClients.get(conversationId);
             if (clients2) {
               const participants = [];
               for (const client of Array.from(clients2)) {
@@ -1526,14 +2087,62 @@ export function setupWebSocket(server: Server) {
               });
             }
 
-            // HELPDESK ANNOUNCEMENTS: System + HelpAI (only if user is joining for the first time)
-            if (isMainRoom && !userAlreadyInRoom) {
+            // STEP 1: MOTD (Message of the Day) - FIRST thing shown on join
+            // Order: MOTD → User Joined → HelpAI Welcome
+            // Uses dynamic AI generation for natural, contextual messages
+            if (!userAlreadyInRoom) {
+              try {
+                const { RoomMode } = await import('@shared/types/chat');
+                const { dynamicMessageService } = await import('./services/dynamicMessageService');
+                
+                // Get room modes from conversation metadata
+                const joinedConversation = await storage.getChatConversation(conversationId);
+                const roomModes = (joinedConversation?.metadata as any)?.modes || 
+                                  (roomMode ? [roomMode] : [RoomMode.ORG]);
+                const activeBots = (joinedConversation?.metadata as any)?.activeBots || [];
+                const roomName = joinedConversation?.subject || 'Chat Room';
+                
+                // Use staff-set MOTD if available, otherwise generate dynamically
+                let motdMessage: string;
+                if (currentMOTD && currentMOTD.trim().length > 0) {
+                  motdMessage = currentMOTD;
+                } else {
+                  // Dynamic AI-generated MOTD based on room context
+                  motdMessage = await dynamicMessageService.generateMOTD(
+                    roomName,
+                    roomModes,
+                    activeBots,
+                    ws.workspaceId
+                  );
+                }
+                
+                // Send MOTD as a private system message to the joining user only
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({
+                    type: 'system_message',
+                    conversationId,
+                    message: motdMessage,
+                    metadata: {
+                      messageType: 'motd',
+                      roomModes,
+                      activeBots,
+                      dynamicallyGenerated: !currentMOTD,
+                    },
+                  }));
+                }
+              } catch (motdError) {
+                log.error('Failed to send MOTD on join', { error: motdError });
+              }
+            }
+
+            // STEP 2-3: SUPPORT ROOM ANNOUNCEMENTS: User Joined + HelpAI Welcome
+            if (supportsBots && !userAlreadyInRoom) {
               try {
                 const announcePlatformRole = await storage.getUserPlatformRole(payload.userId) || undefined;
                 const isAnnounceStaff = hasPlatformWideAccess(announcePlatformRole);
                 
-                // 1. SYSTEM announcement (IRC-style): User joined
-                // displayName already includes title for staff (e.g., "Admin Brigido", "SysOp James")
+                // STEP 2: SYSTEM announcement (IRC-style): User joined
+                // displayName already includes title for staff (e.g., "Admin Jane", "SysOp James")
                 const systemJoinMessage = await storage.createChatMessage({
                   conversationId: conversationId,
                   senderId: null,
@@ -1559,86 +2168,137 @@ export function setupWebSocket(server: Server) {
                   });
                 }
 
-                // 2. HelpAI announcement (AI Bot): Only for customers (not staff)
+                // STEP 3: HelpAI announcement (AI Bot): Only for customers (not staff)
                 if (!isAnnounceStaff) {
-                  // AUTO-VOICE for public HelpDesk room: Give guests immediate ability to send messages
-                  if (isMainRoom) {
+                  // IRC-STYLE SILENCE BY DEFAULT: Customers join without voice
+                  // They must wait for HelpAI or staff to grant them voice
+                  if (supportsBots) {
                     if (ws.readyState === WebSocket.OPEN) {
                       ws.send(JSON.stringify({ 
-                        type: 'voice_granted',
-                        conversationId: conversationId // CRITICAL: Include conversationId to prevent front-end security rejection
+                        type: 'voice_pending',
+                        conversationId: conversationId,
+                        message: 'You are connected to HelpAI. Type your message below to get started.'
                       }));
-                      console.log(`[HelpAI] Auto-granted voice to ${displayName} in public HelpDesk`);
+                      log.debug('User joined HelpDesk in triage mode', { displayName });
                     }
                   }
 
-                  // Check if user has an active support ticket
-                  const existingTicket = await storage.getActiveSupportTicket(payload.userId ?? '', ws.workspaceId ?? '');
-                  
+                  // AUTO-TICKET + WELCOME: Classify user, create ticket, send personalized greeting
                   let welcomeMessage: string;
                   let ticketNumber: string;
                   
-                  if (!existingTicket && ws.workspaceId) {
-                    // NO TICKET: Use default greeting from config
-                    welcomeMessage = CHAT_SERVER_CONFIG.helpai.greetings.default;
-                    ticketNumber = `INTAKE-${Date.now().toString().slice(-6)}`; // Temp ID until real ticket created
-                  } else {
-                    // HAS TICKET: Use existing ticket or create temp one
-                    ticketNumber = existingTicket?.ticketNumber || `TKT-${Date.now().toString().slice(-6)}`;
+                  // Classify user role and fetch org name for personalized greeting
+                  const sessionUserId = effectiveUserId || `guest-${Date.now()}`;
+                  const isGuestSession = sessionUserId.startsWith('guest-');
+                  let userClassRole = isGuestSession ? 'guest' : (ws.serverAuth?.role || userType);
+                  let userOrgName: string | undefined;
+                  let userEmail: string | undefined;
+
+                  if (!isGuestSession && ws.workspaceId) {
+                    try {
+                      const [wsRecord] = await db
+                        .select({ name: (await import('@shared/schema')).workspaces.name })
+                        .from((await import('@shared/schema')).workspaces)
+                        .where(eq((await import('@shared/schema')).workspaces.id, ws.workspaceId))
+                        .limit(1);
+                      if (wsRecord) userOrgName = wsRecord.name;
+                    } catch { /* best-effort */ }
+                    try {
+                      const [uRecord] = await db
+                        .select({ email: (await import('@shared/schema')).users.email, role: (await import('@shared/schema')).users.role })
+                        .from((await import('@shared/schema')).users)
+                        .where(eq((await import('@shared/schema')).users.id, sessionUserId))
+                        .limit(1);
+                      if (uRecord) {
+                        userEmail = uRecord.email || undefined;
+                        if (!ws.serverAuth?.role && uRecord.role) userClassRole = uRecord.role;
+                      }
+                    } catch { /* best-effort */ }
+                  }
+
+                  try {
+                    const { helpAIBotService } = await import('./services/helpai/helpAIBotService');
+                    const sessionResult = await helpAIBotService.startSession(
+                      ws.workspaceId || PLATFORM_WORKSPACE_ID,
+                      sessionUserId,
+                      conversationId
+                    );
                     
+                    ticketNumber = sessionResult.ticketNumber;
+                    ws.helpAISessionId = sessionResult.sessionId;
+                    welcomeMessage = await helpAIBotService.generateUserGreeting({
+                      conversationId,
+                      customerName: displayName,
+                      customerEmail: userEmail,
+                      workspaceId: ws.workspaceId || PLATFORM_WORKSPACE_ID,
+                      userId: sessionUserId,
+                      userRole: userClassRole,
+                      orgName: userOrgName,
+                      ticketNumber,
+                    });
+                    
+                    // Enqueue for support queue tracking
                     const queueEntry = await queueManager.enqueue({
                       conversationId: conversationId,
                       userId: payload.userId?.startsWith('guest-') ? undefined : payload.userId,
                       ticketNumber,
                       userName: displayName,
                       workspaceId: ws.workspaceId,
-                    });
-
-                    await queueManager.updateQueuePositions();
-                    const updatedEntry = await queueManager.getQueueEntry(conversationId);
+                    }).catch(() => null);
                     
-                    if (updatedEntry) {
-                      const queueStatus = await queueManager.getQueueStatus();
-                      const position = updatedEntry.queuePosition || 1;
-                      const waitTime = updatedEntry.estimatedWaitMinutes || 5;
-                      welcomeMessage = CHAT_SERVER_CONFIG.helpai.messages.ticketCreated(displayName, ticketNumber, position, waitTime, queueStatus.waitingCount);
-                      await queueManager.markWelcomeSent(queueEntry.id);
-                    } else {
-                      welcomeMessage = CHAT_SERVER_CONFIG.helpai.messages.ticketCreatedSimple(displayName, ticketNumber);
+                    if (queueEntry) {
+                      await queueManager.updateQueuePositions().catch(() => {});
+                      await queueManager.markWelcomeSent(queueEntry.id).catch(() => {});
                     }
+                  } catch (ticketErr) {
+                    log.error('HelpAI auto-ticket on join failed', { error: ticketErr });
+                    welcomeMessage = CHAT_SERVER_CONFIG.helpai.greetings.default;
+                    ticketNumber = `HLP-${Date.now().toString(36).toUpperCase()}`;
                   }
                   
-                  // EPHEMERAL welcome message - NOT saved to database to prevent doubles
-                  const botMessage = {
-                    id: `temp-${Date.now()}`,
+                  // Save welcome message to DB so staff can see it
+                  const welcomeBotMsg = await storage.createChatMessage({
                     conversationId: conversationId,
                     senderId: CHAT_SERVER_CONFIG.helpai.userId,
                     senderName: CHAT_SERVER_CONFIG.helpai.name,
                     senderType: 'bot',
                     message: welcomeMessage,
                     messageType: 'text',
-                    createdAt: new Date(),
-                    isPrivateMessage: true,
-                    recipientId: payload.userId,
-                    isSystemMessage: false,
-                    attachmentUrl: null,
-                    attachmentName: null,
-                    isRead: false,
-                    readAt: null,
-                  };
-
-                  // Send PRIVATE HelpAI welcome DM (only to this user, ephemeral)
-                  const privateWelcome = JSON.stringify({
-                    type: 'private_message',
-                    message: botMessage,
-                    from: CHAT_SERVER_CONFIG.helpai.name,
                   });
+                  
+                  // Send welcome to user
                   if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(privateWelcome);
+                    ws.send(JSON.stringify({
+                      type: 'new_message',
+                      conversationId: conversationId,
+                      message: welcomeBotMsg,
+                    }));
                   }
+                  
+                  // Send welcome to staff too so they see the ticket info
+                  const allClients = conversationClients.get(conversationId);
+                  if (allClients) {
+                    for (const client of allClients) {
+                      if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        const cRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
+                        if (hasPlatformWideAccess(cRole ?? undefined)) {
+                          client.send(JSON.stringify({
+                            type: 'new_message',
+                            conversationId: conversationId,
+                            message: welcomeBotMsg,
+                          }));
+                        }
+                      }
+                    }
+                  }
+                  
+                  // IRC HELPDESK MODEL: Customer stays whisper-only for entire session
+                  // Voice is NEVER granted in HelpDesk rooms (privacy protection)
+                  // Flow: triage with HelpAI → if unresolved → human handoff via whisper DM
+                  log.debug('User in triage mode with ticket (whisper-only)', { displayName, ticketNumber });
                 }
               } catch (announceError) {
-                console.error('Failed to send join announcements:', announceError);
+                log.error('Failed to send join announcements', { error: announceError });
                 
                 // FALLBACK: Send basic welcome if queue system fails
                 try {
@@ -1665,55 +2325,111 @@ export function setupWebSocket(server: Server) {
                     });
                   }
                 } catch (fallbackError) {
-                  console.error('Fallback welcome also failed:', fallbackError);
+                  log.error('Fallback welcome also failed', { error: fallbackError });
                 }
               }
             }
 
-            // HelpAI greets everyone who joins (only send to the joining user, not the entire room, and only if first time joining)
-            if (isMainRoom && !userAlreadyInRoom) {
+            // STAFF JOIN: IRC-style CHANOP grant + situational queue briefing
+            if (supportsBots && !userAlreadyInRoom && isStaff) {
               try {
-                // Determine greeting based on user type - use config greetings
-                let greeting = '';
-                if (isStaff) {
-                  // Staff returning greeting
-                  greeting = CHAT_SERVER_CONFIG.helpai.greetings.returning.replace('I\'m HelpAI, ready to assist you.', `Support chat is active. Right-click users for quick actions, ${displayName}!`);
-                } else {
-                  // Guest/user greeting
-                  greeting = CHAT_SERVER_CONFIG.helpai.greetings.default;
+                // Auto-grant IRC voice to staff in support rooms (they have full send authority)
+                grantVoice(conversationId, effectiveUserId!);
+
+                // Broadcast +v mode grant to all room clients so UI shows staff as voiced
+                const modePayload = JSON.stringify({
+                  type: 'mode_change',
+                  conversationId,
+                  mode: '+v',
+                  target: effectiveUserId,
+                  targetName: displayName,
+                  by: CHAT_SERVER_CONFIG.helpai.name,
+                });
+                const modeClients = conversationClients.get(conversationId);
+                if (modeClients) {
+                  modeClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(modePayload); });
                 }
 
-                // Send welcome message ONLY to the joining user (not saved to DB)
-                const welcomePayload = JSON.stringify({
-                  type: 'private_message',
-                  message: {
-                    id: `welcome-${Date.now()}`,
-                    createdAt: new Date(),
-                    conversationId: conversationId,
-                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
-                    senderName: CHAT_SERVER_CONFIG.helpai.name,
-                    senderType: 'bot',
-                    message: greeting,
-                    messageType: 'text',
-                    isSystemMessage: false,
-                  },
+                // Get live queue stats for staff situational awareness
+                const { helpAIBotService } = await import('./services/helpai/helpAIBotService');
+                const queueStatus = await queueManager.getQueueStatus().catch(() => ({
+                  waitingCount: 0,
+                  beingHelpedCount: 0,
+                  averageWaitMinutes: 0,
+                }));
+
+                // Count agents currently online in this support room
+                let onlineAgents = 1; // include self
+                const agentClients = conversationClients.get(conversationId);
+                if (agentClients) {
+                  for (const c of agentClients) {
+                    if (c !== ws && c.readyState === WebSocket.OPEN && c.isStaff) {
+                      onlineAgents++;
+                    }
+                  }
+                }
+
+                // Generate intelligent staff briefing with queue stats
+                const staffBriefing = await helpAIBotService.generateStaffGreeting(displayName, {
+                  queueWaiting: queueStatus.waitingCount,
+                  agentsOnline: onlineAgents,
+                  avgWaitMinutes: queueStatus.averageWaitMinutes,
                 });
-                
-                // Send ONLY to the user who just joined
+
+                // Send private briefing to the joining staff member
                 if (ws.readyState === WebSocket.OPEN) {
-                  ws.send(welcomePayload);
+                  ws.send(JSON.stringify({
+                    type: 'private_message',
+                    message: {
+                      id: `staff-brief-${Date.now()}`,
+                      createdAt: new Date(),
+                      conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: staffBriefing,
+                      messageType: 'text',
+                      isSystemMessage: false,
+                    },
+                  }));
+                }
+
+                // Notify other staff agents that a new agent has joined
+                if (onlineAgents > 1 && agentClients) {
+                  const agentJoinPayload = JSON.stringify({
+                    type: 'private_message',
+                    message: {
+                      id: `agent-join-${Date.now()}`,
+                      createdAt: new Date(),
+                      conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: `[STAFFROOM] Agent ${displayName} has connected. ${onlineAgents} agents now online.`,
+                      messageType: 'text',
+                      isSystemMessage: true,
+                    },
+                  });
+                  agentClients.forEach(c => {
+                    if (c !== ws && c.readyState === WebSocket.OPEN && c.isStaff) {
+                      c.send(agentJoinPayload);
+                    }
+                  });
                 }
               } catch (greetError) {
-                console.error('[HelpAI] Greeting failed:', greetError);
+                log.error('HelpAI staff greeting failed', { error: greetError });
               }
             }
+
+            // NOTE: MOTD is now sent FIRST in the join flow (see STEP 1 above)
+            // Order is: MOTD → User Joined → HelpAI Welcome
 
             // Single consolidated log message (only for NEW joins, not reconnections)
             if (!userAlreadyInRoom) {
-              if (isMainRoom) {
-                console.log(`✅ ${displayName} joined HelpDesk (${userRoleInfo})`);
+              if (supportsBots) {
+                log.info('User joined support room', { displayName, roomMode, roleInfo: userRoleInfo });
               } else {
-                console.log(`${displayName} joined conversation ${payload.conversationId}`);
+                log.info('User joined conversation', { displayName, conversationId: payload.conversationId });
               }
 
               // CHAT SERVER HUB: Emit user_joined event for unified event system
@@ -1723,7 +2439,7 @@ export function setupWebSocket(server: Server) {
                 description: `${displayName} joined the chat`,
                 metadata: {
                   conversationId: conversationId,
-                  roomSlug: isMainRoom ? MAIN_ROOM_ID : undefined,
+                  roomMode: roomMode, // IRC-style room mode instead of slug
                   workspaceId: ws.workspaceId,
                   userId: payload.userId,
                   userName: displayName,
@@ -1731,7 +2447,19 @@ export function setupWebSocket(server: Server) {
                 },
                 shouldPersistToWhatsNew: false,
                 shouldNotify: isStaff, // Only notify when staff joins
-              }).catch(err => console.error('[ChatServerHub] Failed to emit user_joined:', err));
+              }).catch(err => log.error('ChatServerHub failed to emit user_joined', { error: err }));
+            }
+            break;
+          }
+
+          case 'leave_conversation': {
+            const leaveConvId = payload.conversationId || ws.conversationId;
+            if (leaveConvId) {
+              conversationClients.get(leaveConvId)?.delete(ws);
+              if (ws.conversationId === leaveConvId) {
+                ws.conversationId = undefined;
+              }
+              log.debug('leave_conversation: client unsubscribed', { conversationId: leaveConvId, userId: ws.userId });
             }
             break;
           }
@@ -1763,6 +2491,430 @@ export function setupWebSocket(server: Server) {
                 retryAfter: rateCheck.retryAfter
               }));
               return;
+            }
+
+            // ROOM CLOSED CHECK: Block messages in closed rooms/DMs
+            const convCheck = await storage.getChatConversation(ws.conversationId);
+            if (convCheck && convCheck.status === 'closed') {
+              const isDM = convCheck.conversationType === 'dm_user' || convCheck.conversationType === 'dm_support';
+              ws.send(JSON.stringify({
+                type: 'error',
+                errorType: isDM ? 'DM_CLOSED' : 'ROOM_CLOSED',
+                message: isDM
+                  ? 'This conversation has been closed and no further messages can be sent.'
+                  : 'This room is closed. Messages cannot be sent until a manager reopens it.',
+              }));
+              return;
+            }
+
+            // IRC-STYLE VOICE CHECK: Only applies in helpdesk/support rooms (supportsBots)
+            // DMs, group chats, and org chatrooms allow all users to send freely
+            const senderPlatformRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
+            const senderIsStaff = hasPlatformWideAccess(senderPlatformRole ?? undefined);
+            
+            const isSupportRoom = ws.supportsBots === true;
+            if (isSupportRoom && !senderIsStaff && !hasVoiceInConversation(ws.conversationId, ws.userId)) {
+              const isSlashCommand = payload.message?.startsWith('/');
+              
+              // HELPAI TRIAGE PIPELINE: Only route to HelpAI when user is in active triage
+              // Manually silenced users (moderation) do NOT get routed to bot
+              if (!isSlashCommand && ws.inTriage === true) {
+                try {
+                  const { helpAIBotService } = await import('./services/helpai/helpAIBotService');
+                  const userMessage = sanitizeChatMessage(payload.message || '');
+                  if (!userMessage.trim()) return;
+                  
+                  // Save user message as private (only visible to user + staff)
+                  const userMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: ws.userId,
+                    senderName: ws.userName || 'User',
+                    senderType: ws.userType || 'guest',
+                    message: userMessage,
+                    messageType: 'text',
+                    isPrivateMessage: true,
+                    recipientId: CHAT_SERVER_CONFIG.helpai.userId,
+                  });
+                  
+                  // Send message back to user so they see it in their chat
+                  ws.send(JSON.stringify({ 
+                    type: 'new_message', 
+                    conversationId: ws.conversationId, 
+                    message: userMsg 
+                  }));
+                  
+                  // Also send to staff so they can see the triage conversation
+                  const staffClients = conversationClients.get(ws.conversationId);
+                  if (staffClients) {
+                    for (const client of staffClients) {
+                      if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
+                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                          client.send(JSON.stringify({ 
+                            type: 'new_message', 
+                            conversationId: ws.conversationId, 
+                            message: userMsg 
+                          }));
+                        }
+                      }
+                    }
+                  }
+                  
+                  // Route to HelpAI for AI-driven triage
+                  let _botResponseText: string;
+                  if (ws.helpAISessionId) {
+                    const _helpResult = await helpAIBotService.handleMessage(ws.helpAISessionId, userMessage);
+                    _botResponseText = _helpResult.response;
+                  } else {
+                    _botResponseText = await helpAIBotService.generateUserResponse(userMessage, {
+                      conversationId: ws.conversationId!,
+                      customerName: ws.userName || undefined,
+                      workspaceId: ws.workspaceId || undefined,
+                      userId: ws.userId || undefined,
+                    });
+                  }
+                  const helpResponse = { response: _botResponseText };
+                  
+                  // Save and broadcast HelpAI's response
+                  const botMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: helpResponse.response,
+                    messageType: 'text',
+                  });
+                  
+                  // Send bot response to user
+                  ws.send(JSON.stringify({ 
+                    type: 'new_message', 
+                    conversationId: ws.conversationId, 
+                    message: botMsg 
+                  }));
+
+                  // Notify Trinity of ChatDock HelpAI interaction — cross-channel awareness (non-blocking)
+                  if (ws.userId && ws.workspaceId && ws.conversationId) {
+                    import('./services/helpai/trinityHelpaiCommandBus').then(({ trinityHelpaiCommandBus: cBus }) => {
+                      cBus.broadcastCrossChannelActivity({
+                        workspaceId: ws.workspaceId!,
+                        userId: ws.userId!,
+                        activeChannels: ['chatdock'],
+                        currentChannel: 'chatdock',
+                        conversationId: ws.conversationId!,
+                      }).catch(() => {});
+                    }).catch(() => {});
+                  }
+
+                  // Send bot response to staff
+                  if (staffClients) {
+                    for (const client of staffClients) {
+                      if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
+                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                          client.send(JSON.stringify({ 
+                            type: 'new_message', 
+                            conversationId: ws.conversationId, 
+                            message: botMsg 
+                          }));
+                        }
+                      }
+                    }
+                  }
+                  
+                  // ESCALATION: If HelpAI can't solve, queue for human support
+                  if (helpResponse.shouldEscalate) {
+                    const conversation = helpAIBotService.getConversation(ws.conversationId);
+                    const issueSummary = conversation?.conversationHistory
+                      ?.filter(h => h.role === 'user')
+                      .map(h => h.message)
+                      .join(' | ') || userMessage;
+                    
+                    // Create ticket if none exists
+                    const existingTicket = await storage.getActiveSupportTicket(ws.userId, ws.workspaceId || '');
+                    let ticketNumber = existingTicket?.ticketNumber;
+                    
+                    if (!ticketNumber) {
+                      const newTicket = await storage.createSupportTicket({
+                        userId: ws.userId.startsWith('guest-') ? undefined : ws.userId,
+                        workspaceId: ws.workspaceId || PLATFORM_WORKSPACE_ID,
+                        subject: conversation?.intakeData?.subject || 'Support Request',
+                        description: issueSummary,
+                        priority: conversation?.intakeData?.priority || 'normal',
+                        status: 'open',
+                      }).catch(() => null);
+                      ticketNumber = newTicket?.ticketNumber || `ESC-${Date.now().toString().slice(-6)}`;
+                    }
+                    
+                    // Enqueue for human support
+                    await queueManager.enqueue({
+                      conversationId: ws.conversationId,
+                      userId: ws.userId.startsWith('guest-') ? undefined : ws.userId,
+                      ticketNumber,
+                      userName: ws.userName || 'User',
+                      workspaceId: ws.workspaceId,
+                    }).catch(err => log.error('HelpAI queue enqueue failed', { error: err }));
+                    
+                    // Announce to staff: new customer needs help
+                    const staffNotice = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: `[STAFF NOTICE] ${ws.userName || 'A customer'} needs human assistance.\nTicket: ${ticketNumber}\nIssue Summary: ${issueSummary.substring(0, 200)}\nHelpAI was unable to resolve this issue. Please use /intro to begin assisting.`,
+                      messageType: 'text',
+                      visibleToStaffOnly: true,
+                    });
+                    
+                    // Broadcast staff notice only to staff
+                    if (staffClients) {
+                      for (const client of staffClients) {
+                        if (client.readyState === WebSocket.OPEN) {
+                          const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
+                          if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                            client.send(JSON.stringify({ 
+                              type: 'new_message', 
+                              conversationId: ws.conversationId, 
+                              message: staffNotice 
+                            }));
+                          }
+                        }
+                      }
+                    }
+                    
+                    // IRC HELPDESK MODEL: NO voice granting in HelpDesk — privacy protection
+                    // End-user stays in whisper-only mode. Human agent continues via
+                    // inline whisper DM thread, picking up where HelpAI left off.
+                    // The user's inTriage flag transitions to 'human_handoff' state
+                    // but they NEVER get voice in the main channel.
+                    ws.inTriage = false; // Exit bot triage — now waiting for human agent
+                    ws.inHumanHandoff = true; // New state: human agent whisper thread
+                    
+                    // Send handoff notification to user (stays in their whisper thread)
+                    const handoffUserMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: `I'm truly sorry I wasn't able to fully resolve this for you. I know how frustrating that can be, and I want to make sure you get the help you need.\n\nI'm passing you to a real support agent now — they'll have a complete summary of our conversation so you won't need to repeat yourself.\n\nYour ticket **${ticketNumber}** is active and a support agent will be with you shortly. Thank you for your patience.`,
+                      messageType: 'text',
+                      isPrivateMessage: true,
+                      recipientId: ws.userId,
+                    });
+                    
+                    ws.send(JSON.stringify({ 
+                      type: 'new_message', 
+                      conversationId: ws.conversationId, 
+                      message: handoffUserMsg 
+                    }));
+                    
+                    // Send escalation event so frontend knows state changed
+                    ws.send(JSON.stringify({
+                      type: 'escalated_to_human',
+                      conversationId: ws.conversationId,
+                      ticketNumber,
+                      message: 'A support agent will continue assisting you in this private thread.',
+                    }));
+                    
+                    // Generate conversation summary for the human agent
+                    let agentSummary = '';
+                    try {
+                      agentSummary = await helpAIBotService.generateEscalationSummary(
+                        userMessage,
+                        conversation?.conversationHistory?.map(h => ({
+                          role: h.role as string,
+                          message: h.message,
+                        })) || [],
+                        ws.workspaceId || undefined
+                      );
+                    } catch (summaryErr) {
+                      agentSummary = `User: ${ws.userName || 'Unknown'}\nIssue: ${userMessage.substring(0, 300)}\nConversation turns: ${conversation?.conversationHistory?.length || 0}`;
+                    }
+                    
+                    // Send summary to human agents as inline whisper DM
+                    const agentHandoffMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: `**[AGENT HANDOFF — ${ticketNumber}]**\n\n**User:** ${ws.userName || 'Unknown'}\n**Status:** HelpAI unable to resolve — human assistance required\n\n**Conversation Summary:**\n${agentSummary}\n\n**Instructions:** Use \`/intro\` to introduce yourself, then respond to this user via private messages. The user is in a whisper-only thread and cannot see main channel messages.`,
+                      messageType: 'text',
+                      visibleToStaffOnly: true,
+                      isPrivateMessage: true,
+                    });
+                    
+                    // Broadcast handoff summary only to staff
+                    if (staffClients) {
+                      for (const client of staffClients) {
+                        if (client.readyState === WebSocket.OPEN) {
+                          const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
+                          if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                            client.send(JSON.stringify({ 
+                              type: 'new_message', 
+                              conversationId: ws.conversationId, 
+                              message: agentHandoffMsg 
+                            }));
+                            // Also notify staff about the handoff state
+                            client.send(JSON.stringify({
+                              type: 'agent_handoff_request',
+                              conversationId: ws.conversationId,
+                              ticketNumber,
+                              userName: ws.userName,
+                              userId: ws.userId,
+                              summary: agentSummary.substring(0, 500),
+                            }));
+                          }
+                        }
+                      }
+                    }
+                    
+                    log.info('HelpAI escalated to human support (whisper-only, no voice)', { userName: ws.userName, ticketNumber });
+                  }
+                  
+                  // RESOLUTION: If HelpAI resolved the issue, close the session
+                  if (helpResponse.shouldClose) {
+                    const closeMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: CHAT_SERVER_CONFIG.helpai.messages.ticketClosed('Resolved by HelpAI - Issue addressed successfully'),
+                      messageType: 'text',
+                    });
+                    
+                    ws.send(JSON.stringify({ 
+                      type: 'new_message', 
+                      conversationId: ws.conversationId, 
+                      message: closeMsg 
+                    }));
+                    
+                    // Send ticket_closed event so frontend can clean up
+                    ws.send(JSON.stringify({
+                      type: 'ticket_closed',
+                      conversationId: ws.conversationId,
+                      reason: 'resolved_by_helpai',
+                      message: 'Your issue has been resolved. Thank you for using CoAIleague support!',
+                    }));
+                    
+                    // Clean up: exit triage, revoke voice, remove from queue
+                    ws.inTriage = false;
+                    revokeVoice(ws.conversationId, ws.userId);
+                    await queueManager.dequeue(ws.conversationId).catch(() => {});
+                    
+                    log.info('HelpAI session resolved', { userName: ws.userName });
+                  }
+                  
+                } catch (botError) {
+                  log.error('HelpAI bot pipeline error', { error: botError });
+                  // IRC HELPDESK MODEL: Even on error, do NOT grant voice.
+                  // Instead, escalate to human agent inline. User stays whisper-only.
+                  ws.inTriage = false;
+                  ws.inHumanHandoff = true;
+                  
+                  const errorFallbackMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: `I apologize — I encountered a temporary issue processing your request. I'm connecting you with a human support agent who can help right away. Please hold tight.`,
+                    messageType: 'text',
+                    isPrivateMessage: true,
+                    recipientId: ws.userId,
+                  });
+                  
+                  ws.send(JSON.stringify({ 
+                    type: 'new_message', 
+                    conversationId: ws.conversationId, 
+                    message: errorFallbackMsg 
+                  }));
+                  
+                  // Notify staff about the error-escalation
+                  const errorStaffNotice = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: `**[AGENT HANDOFF — ERROR FALLBACK]**\nHelpAI encountered an error while assisting ${ws.userName || 'a user'}. Please assist them via private messages.`,
+                    messageType: 'text',
+                    visibleToStaffOnly: true,
+                  });
+                  
+                  const staffClientsErr = conversationClients.get(ws.conversationId);
+                  if (staffClientsErr) {
+                    for (const client of staffClientsErr) {
+                      if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
+                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                          client.send(JSON.stringify({ 
+                            type: 'new_message', 
+                            conversationId: ws.conversationId, 
+                            message: errorStaffNotice 
+                          }));
+                        }
+                      }
+                    }
+                  }
+                }
+                return;
+              }
+              
+              // IRC HELPDESK MODEL: Human handoff whisper routing
+              // When user has been escalated from HelpAI to human agent,
+              // their messages route as private whispers to staff (no main channel access)
+              if (!isSlashCommand && ws.inHumanHandoff === true) {
+                try {
+                  const handoffMessage = sanitizeChatMessage(payload.message || '');
+                  if (!handoffMessage.trim()) return;
+                  
+                  // Save as private message visible to user + staff only
+                  const userWhisperMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: ws.userId,
+                    senderName: ws.userName || 'User',
+                    senderType: ws.userType || 'guest',
+                    message: handoffMessage,
+                    messageType: 'text',
+                    isPrivateMessage: true,
+                  });
+                  
+                  // Echo back to user so they see it in their whisper thread
+                  ws.send(JSON.stringify({ 
+                    type: 'new_message', 
+                    conversationId: ws.conversationId, 
+                    message: userWhisperMsg 
+                  }));
+                  
+                  // Route to all staff in the room
+                  const handoffStaffClients = conversationClients.get(ws.conversationId);
+                  if (handoffStaffClients) {
+                    for (const client of handoffStaffClients) {
+                      if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
+                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                          client.send(JSON.stringify({ 
+                            type: 'new_message', 
+                            conversationId: ws.conversationId, 
+                            message: userWhisperMsg 
+                          }));
+                        }
+                      }
+                    }
+                  }
+                } catch (handoffErr) {
+                  log.error('Human handoff whisper routing error', { error: handoffErr });
+                }
+                return;
+              }
+              
+              // Support room moderation: user silenced by staff (not in triage, not in handoff)
+              if (!isSlashCommand) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  errorType: 'VOICE_REQUIRED',
+                  message: 'You are silenced by a moderator. Please wait for staff to grant you voice.',
+                }));
+                log.debug('Blocked message from silenced user', { userName: ws.userName, conversationId: ws.conversationId });
+                return;
+              }
             }
 
             // Get user display info for formatted name (server-side formatting for security)
@@ -1806,14 +2958,15 @@ export function setupWebSocket(server: Server) {
               const clients = conversationClients.get(ws.conversationId);
               
               // Get staff member info for command execution
+              // PRIVACY: Use first-name-only for end-user-facing contexts
               const staffInfo = await storage.getUserDisplayInfo(ws.userId);
-              const staffDisplayName = staffInfo ? formatUserDisplayName({
+              const staffDisplayName = staffInfo ? formatUserDisplayNameForChat({
                 firstName: staffInfo.firstName,
                 lastName: staffInfo.lastName,
                 email: staffInfo.email || undefined,
                 platformRole: staffInfo.platformRole || undefined,
                 workspaceRole: staffInfo.workspaceRole || undefined,
-              }) : ws.userName || 'Support Staff';
+              }) : ws.userName || 'Support';
               
               const staffRole = staffInfo?.platformRole || 'support';
               const staffRoleName = staffRole === 'root_admin' ? 'Senior Support Administrator' :
@@ -1835,13 +2988,19 @@ export function setupWebSocket(server: Server) {
                     messageType: 'text',
                   });
                   
-                  if (clients) {
-                    clients.forEach((client) => {
-                      if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({ type: 'new_message', message: botMsg }));
-                      }
-                    });
-                  }
+                  // Broadcast via IRC event system for real-time messaging
+                  ircEmitter.botMessage({
+                    roomId: ws.conversationId,
+                    messageId: String(botMsg.id),
+                    botId: CHAT_SERVER_CONFIG.helpai.userId,
+                    botName: CHAT_SERVER_CONFIG.helpai.name,
+                    content: introMessage,
+                    metadata: {
+                      messageType: 'intro',
+                      savedToDb: true,
+                      dbMessageId: botMsg.id,
+                    },
+                  });
                   break;
                 }
                 
@@ -2017,7 +3176,7 @@ export function setupWebSocket(server: Server) {
                     
                     const resetMsg = `❌ Rate Limit Exceeded\n\nToo many password reset attempts.\n\nBlocked by: ${rateLimit.blockedBy}\nLimit: 5 attempts per hour\n\nPlease try again later.`;
                     
-                    ws.send(JSON.stringify({ type: 'system_message', message: resetMsg }));
+                    ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: resetMsg }));
                     break;
                   }
                   
@@ -2048,6 +3207,7 @@ export function setupWebSocket(server: Server) {
                       
                       ws.send(JSON.stringify({ 
                         type: 'system_message', 
+                        conversationId: ws.conversationId,
                         message: resetMsg 
                       }));
                       break; // BLOCK action (don't proceed to email send)
@@ -2104,10 +3264,10 @@ export function setupWebSocket(server: Server) {
                       
                       resetMsg = `✅ Password Reset Email Sent\n\nA password reset link has been sent to:\n${redactedEmail}\n\nUser: ${user.firstName} ${user.lastName?.substring(0, 1)}***\n\nThe link will expire in 1 hour.`;
                       
-                      console.log(`[AUDIT] Password reset triggered via WebSocket by ${userId} for ${user.id} from IP ${ws.ipAddress}`);
+                      log.info('Password reset triggered via WebSocket', { triggeredBy: userId, targetUserId: user.id, ip: ws.ipAddress });
                     } catch (emailError) {
                       // Email sending failed
-                      console.error('[WEBSOCKET] Password reset email error:', emailError);
+                      log.error('Password reset email error', { error: emailError });
                       
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
@@ -2125,7 +3285,7 @@ export function setupWebSocket(server: Server) {
                       resetMsg = `❌ Password Reset Failed\n\nFailed to send password reset email.\n\nReason: ${(emailError as Error).message}\n\nPlease try again or contact system administrator.`;
                     }
                   } catch (error) {
-                    console.error('[WEBSOCKET] Password reset error:', error);
+                    log.error('Password reset error', { error });
                     resetMsg = `❌ Password Reset Failed\n\nAn error occurred while processing the password reset.\n\nPlease try again or contact a system administrator.`;
                   }
                   
@@ -2470,7 +3630,90 @@ export function setupWebSocket(server: Server) {
                     message: whisperMsg,
                   }));
                   
-                  console.log(`✅ Whisper delivered: ${displayName} → ${targetUserName}: "${privateMessage.substring(0, 50)}..."`);
+                  log.debug('Whisper delivered', { from: displayName, to: targetUserName });
+                  break;
+                }
+                
+                case 'privmsg': {
+                  // IRC-style private message by username (available to all users)
+                  const targetUsername = parsedCommand.args[0];
+                  const privateMsg = parsedCommand.args.slice(1).join(' ');
+                  
+                  if (!targetUsername || !privateMsg) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /privmsg <username> <message>',
+                    }));
+                    break;
+                  }
+                  
+                  // Find target user by display name or email prefix in this conversation
+                  let privMsgTargetClient: any = null;
+                  let privMsgTargetName: string = targetUsername;
+                  let privMsgTargetId: string = '';
+                  
+                  if (clients) {
+                    clients.forEach((client) => {
+                      // Match by userName, email prefix, or userId
+                      const clientName = client.userName || '';
+                      const clientEmail = client.userEmail || '';
+                      const clientEmailPrefix = clientEmail.split('@')[0] || '';
+                      
+                      if (
+                        (clientName.toLowerCase() === targetUsername.toLowerCase() ||
+                         clientEmailPrefix.toLowerCase() === targetUsername.toLowerCase() ||
+                         client.userId === targetUsername) &&
+                        client.readyState === WebSocket.OPEN
+                      ) {
+                        privMsgTargetClient = client;
+                        privMsgTargetName = clientName || clientEmailPrefix || targetUsername;
+                        privMsgTargetId = client.userId || '';
+                      }
+                    });
+                  }
+                  
+                  if (!privMsgTargetClient) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: `User "${targetUsername}" not found or not currently online. Check the user list for available recipients.`,
+                    }));
+                    break;
+                  }
+                  
+                  // Create private message with purple styling indicator
+                  const privMsgRecord = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: ws.userId!,
+                    senderName: displayName,
+                    senderType: 'user',
+                    message: privateMsg,
+                    messageType: 'text',
+                    isPrivateMessage: true,
+                    recipientId: privMsgTargetId,
+                  });
+                  
+                  // Add private message indicator for purple styling
+                  const privMsgWithStyle = {
+                    ...privMsgRecord,
+                    isPrivateMessage: true,
+                    messageKind: 'private' as const,
+                  };
+                  
+                  // Send to target user only
+                  if (privMsgTargetClient.readyState === WebSocket.OPEN) {
+                    privMsgTargetClient.send(JSON.stringify({
+                      type: 'private_message',
+                      message: privMsgWithStyle,
+                    }));
+                  }
+                  
+                  // Send confirmation back to sender
+                  ws.send(JSON.stringify({
+                    type: 'private_message',
+                    message: privMsgWithStyle,
+                  }));
+                  
+                  log.debug('Private message sent', { from: displayName, to: privMsgTargetName });
                   break;
                 }
                 
@@ -2526,11 +3769,310 @@ export function setupWebSocket(server: Server) {
                 case 'help': {
                   const helpPlatformRole = await storage.getUserPlatformRole(ws.userId) || undefined;
                   const isHelpStaff = hasPlatformWideAccess(helpPlatformRole);
-                  const helpText = getHelpText(isHelpStaff);
+                  
+                  // Get room modes dynamically from conversation metadata
+                  const helpConversation = await storage.getChatConversation(ws.conversationId);
+                  const roomModes = (helpConversation?.metadata as any)?.modes || [];
+                  const activeBots = (helpConversation?.metadata as any)?.activeBots || [];
+                  
+                  // Import the chatroom command service for dynamic bot command help
+                  const { formatHelpMessage, getCommandsForModes } = await import('./services/chatroomCommandService');
+                  const { RoomMode } = await import('@shared/types/chat');
+                  
+                  // Check if user requested help for a specific command
+                  const specificCommand = parsedCommand.args[0];
+                  
+                  // Generate comprehensive help including both system and bot commands
+                  const systemHelpText = getHelpText(isHelpStaff);
+                  const botHelpText = formatHelpMessage(roomModes.length > 0 ? roomModes : [RoomMode.ORG], activeBots, specificCommand);
+                  
+                  // Combine help texts
+                  const combinedHelp = specificCommand 
+                    ? botHelpText  // For specific command, just show that
+                    : `${systemHelpText}\n\n━━━━ Bot Commands ━━━━\n\n${botHelpText}`;
                   
                   ws.send(JSON.stringify({
                     type: 'system_message',
-                    message: helpText,
+                    conversationId: ws.conversationId,
+                    message: combinedHelp,
+                    metadata: {
+                      commandType: 'help',
+                      roomModes,
+                      activeBots,
+                      isStaff: isHelpStaff,
+                    },
+                  }));
+                  break;
+                }
+                
+                case 'commands': {
+                  // Quick command list for the room
+                  const { formatCommandsMessage } = await import('./services/chatroomCommandService');
+                  const { RoomMode } = await import('@shared/types/chat');
+                  
+                  const cmdConversation = await storage.getChatConversation(ws.conversationId);
+                  const cmdRoomModes = (cmdConversation?.metadata as any)?.modes || [RoomMode.ORG];
+                  
+                  ws.send(JSON.stringify({
+                    type: 'system_message',
+                    conversationId: ws.conversationId,
+                    message: formatCommandsMessage(cmdRoomModes),
+                    metadata: { commandType: 'commands' },
+                  }));
+                  break;
+                }
+                
+                case 'helpai': {
+                  const helpaiQuestion = parsedCommand.args.join(' ');
+                  let helpaiMsg = '';
+
+                  try {
+                    const { botAIService } = await import('./bots/botAIService');
+                    const helpaiWorkspace = ws.workspaceId || 'platform';
+
+                    if (helpaiQuestion) {
+                      // Real AI response for specific questions
+                      const aiResp = await botAIService.generate({
+                        botId: 'helpai',
+                        workspaceId: helpaiWorkspace,
+                        userId: ws.userId,
+                        action: 'response',
+                        prompt: `User "${displayName}" asks: "${helpaiQuestion}"\n\nProvide a helpful, concise answer. You are HelpAI, the support assistant for CoAIleague workforce management platform. You can help with account issues, password resets, platform questions, and connecting with support staff. If you cannot directly solve the issue, suggest relevant slash commands or offer to escalate.`,
+                        context: { conversationId: ws.conversationId },
+                      });
+                      helpaiMsg = aiResp.text;
+                    } else {
+                      // Greeting when invoked without a question
+                      const aiGreet = await botAIService.generate({
+                        botId: 'helpai',
+                        workspaceId: helpaiWorkspace,
+                        userId: ws.userId,
+                        action: 'greeting',
+                        prompt: `Greet user "${displayName}" who just summoned HelpAI. Briefly introduce yourself and list what you can help with (account issues, password resets, platform questions, live support). Keep it warm and concise (3-4 lines).`,
+                      });
+                      helpaiMsg = aiGreet.text;
+                    }
+                  } catch (aiErr: any) {
+                    log.error('HelpAI AI generation failed, using fallback', { error: aiErr.message });
+                    helpaiMsg = helpaiQuestion
+                      ? `You asked: "${helpaiQuestion}"\n\nI'm HelpAI, your support assistant. I can help with:\n- Account issues and verification\n- Password resets\n- General platform questions\n- Connecting you with support staff\n\nLet me look into that for you. A support agent will be notified if needed.`
+                      : `Hi! I'm HelpAI, your support assistant.\n\nHow can I help you today? I can assist with:\n- Account issues and verification\n- Password resets and access problems\n- General platform questions\n- Connecting you with live support staff\n\nJust type your question and I'll do my best to help!`;
+                  }
+
+                  const helpaiResponseMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: helpaiMsg,
+                    messageType: 'text',
+                    metadata: { botCommand: 'helpai', question: helpaiQuestion || null, aiPowered: true },
+                  });
+
+                  ircEmitter.botMessage({
+                    roomId: ws.conversationId,
+                    messageId: String(helpaiResponseMsg.id),
+                    botId: CHAT_SERVER_CONFIG.helpai.userId,
+                    botName: CHAT_SERVER_CONFIG.helpai.name,
+                    content: helpaiMsg,
+                    metadata: {
+                      messageType: 'helpai_response',
+                      savedToDb: true,
+                      dbMessageId: helpaiResponseMsg.id,
+                    },
+                  });
+
+                  // H004: Log chatroom /helpai command to helpai_action_log
+                  db.insert(helpaiActionLog).values({
+                    actionType: 'query',
+                    actionName: 'helpai_chatroom_command',
+                    commandUsed: '/helpai',
+                    toolUsed: 'botAIService',
+                    inputPayload: { question: helpaiQuestion || null, conversationId: ws.conversationId } as any,
+                    outputPayload: { response: helpaiMsg.substring(0, 500), messageId: helpaiResponseMsg.id } as any,
+                    success: true,
+                    workspaceId: ws.workspaceId || null,
+                    userId: ws.userId || null,
+                  }).catch(e => log.warn('HelpAI action log insert failed (non-fatal)', { error: e.message }));
+
+                  break;
+                }
+
+                case 'dm': {
+                  const dmTarget = parsedCommand.args[0];
+                  const dmMessage = parsedCommand.args.slice(1).join(' ');
+                  
+                  const dmClients = conversationClients.get(ws.conversationId);
+                  let targetClient: any = null;
+                  if (dmClients) {
+                    dmClients.forEach((client) => {
+                      if (client.userName === dmTarget || client.userId === dmTarget) {
+                        targetClient = client;
+                      }
+                    });
+                  }
+                  
+                  if (!targetClient) {
+                    ws.send(JSON.stringify({ type: 'error', message: `User "${dmTarget}" not found in this room.` }));
+                    break;
+                  }
+                  
+                  const dmPayload = {
+                    type: 'private_message',
+                    senderId: ws.userId,
+                    senderName: displayName,
+                    message: dmMessage,
+                    timestamp: new Date().toISOString(),
+                  };
+                  targetClient.send(JSON.stringify(dmPayload));
+                  ws.send(JSON.stringify({ ...dmPayload, message: `[DM to ${dmTarget}] ${dmMessage}` }));
+                  break;
+                }
+
+                case 'screenshot': {
+                  const screenshotDesc = parsedCommand.args.join(' ') || 'Screenshot request';
+                  const screenshotMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: `Screenshot requested by ${displayName}: "${screenshotDesc}"\n\nTo share a screenshot, please use your device's screenshot feature and paste or upload it when the upload feature is available.`,
+                    messageType: 'text',
+                  });
+                  ircEmitter.botMessage({
+                    roomId: ws.conversationId,
+                    messageId: String(screenshotMsg.id),
+                    botId: CHAT_SERVER_CONFIG.helpai.userId,
+                    botName: CHAT_SERVER_CONFIG.helpai.name,
+                    content: screenshotMsg.message,
+                    metadata: { messageType: 'screenshot_request', savedToDb: true, dbMessageId: screenshotMsg.id },
+                  });
+                  break;
+                }
+
+                case 'verifyme': {
+                  const verifymeMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: `Account Verification Request\n\n${displayName} has requested account verification.\n\nA support staff member will verify your identity shortly. Please have the following ready:\n- Your registered email address\n- Organization/company name\n- Any relevant account details`,
+                    messageType: 'text',
+                  });
+                  ircEmitter.botMessage({
+                    roomId: ws.conversationId,
+                    messageId: String(verifymeMsg.id),
+                    botId: CHAT_SERVER_CONFIG.helpai.userId,
+                    botName: CHAT_SERVER_CONFIG.helpai.name,
+                    content: verifymeMsg.message,
+                    metadata: { messageType: 'verifyme', savedToDb: true, dbMessageId: verifymeMsg.id },
+                  });
+                  break;
+                }
+
+                case 'issue': {
+                  const issueDescription = parsedCommand.args.join(' ');
+                  const issueMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                    senderName: CHAT_SERVER_CONFIG.helpai.name,
+                    senderType: 'bot',
+                    message: `Issue Report from ${displayName}\n\nDescription: ${issueDescription}\n\nYour issue has been logged and a support agent will review it. Thank you for reporting this.`,
+                    messageType: 'text',
+                  });
+                  ircEmitter.botMessage({
+                    roomId: ws.conversationId,
+                    messageId: String(issueMsg.id),
+                    botId: CHAT_SERVER_CONFIG.helpai.userId,
+                    botName: CHAT_SERVER_CONFIG.helpai.name,
+                    content: issueMsg.message,
+                    metadata: { messageType: 'issue_report', savedToDb: true, dbMessageId: issueMsg.id },
+                  });
+                  break;
+                }
+
+                case 'mention': {
+                  const mentionTarget = parsedCommand.args[0];
+                  const mentionMessage = parsedCommand.args.slice(1).join(' ') || '';
+                  
+                  const mentionText = `@${mentionTarget} ${mentionMessage}`.trim();
+                  const mentionChatMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: ws.userId,
+                    senderName: displayName,
+                    senderType: senderIsStaff ? 'support' : 'customer',
+                    message: mentionText,
+                    messageType: 'text',
+                  });
+                  
+                  const mentionClients = conversationClients.get(ws.conversationId);
+                  if (mentionClients) {
+                    mentionClients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: mentionChatMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+
+                case 'bots': {
+                  // Show available bots for this room (live from botPool + metadata)
+                  const { formatBotsMessage } = await import('./services/chatroomCommandService');
+                  const { RoomMode } = await import('@shared/types/chat');
+                  const { botPool: botsPool } = await import('./bots');
+                  
+                  const botConversation = await storage.getChatConversation(ws.conversationId);
+                  const botRoomModes = (botConversation?.metadata as any)?.modes || [RoomMode.ORG];
+                  const metadataBots = (botConversation?.metadata as any)?.activeBots || [];
+                  
+                  // Merge metadata bots with live pool instances
+                  const liveInstances = botsPool.getRoomBots(ws.conversationId);
+                  const liveBotIds = liveInstances.map((inst: any) => inst.botId);
+                  const allActiveBots = [...new Set([...metadataBots, ...liveBotIds])];
+                  
+                  ws.send(JSON.stringify({
+                    type: 'system_message',
+                    conversationId: ws.conversationId,
+                    message: formatBotsMessage(botRoomModes, allActiveBots),
+                    metadata: { commandType: 'bots', activeBots: allActiveBots },
+                  }));
+                  break;
+                }
+                
+                case 'who': {
+                  // List participants in the room
+                  const roomClients = conversationClients.get(ws.conversationId);
+                  const participants: string[] = [];
+                  
+                  if (roomClients) {
+                    roomClients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN && client.userName) {
+                        const statusIcon = client.isStaff ? '⭐' : '👤';
+                        participants.push(`${statusIcon} ${client.userName}`);
+                      }
+                    });
+                  }
+                  
+                  const whoMessage = [
+                    '━━━━ Room Participants ━━━━',
+                    '',
+                    participants.length > 0 
+                      ? participants.join('\n') 
+                      : 'No participants currently visible',
+                    '',
+                    `Total: ${participants.length} online`,
+                    '━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+                  ].join('\n');
+                  
+                  ws.send(JSON.stringify({
+                    type: 'system_message',
+                    conversationId: ws.conversationId,
+                    message: whoMessage,
+                    metadata: { 
+                      commandType: 'who',
+                      participantCount: participants.length,
+                    },
                   }));
                   break;
                 }
@@ -2649,34 +4191,32 @@ export function setupWebSocket(server: Server) {
                     
                     let aiResponse = '';
                     
-                    // Try AI if available
                     if (process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
                       try {
-                        const { default: OpenAI } = await import('openai');
-                        const openai = new OpenAI({ 
-                          apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-                          baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-                        });
-                        
-                        const completion = await openai.chat.completions.create({
-                          model: 'gpt-4',
+                        const { getMeteredOpenAICompletion } = await import('./services/billing/universalAIBillingInterceptor');
+                        const result = await getMeteredOpenAICompletion({
+                          workspaceId: workspaceId || '',
+                          userId: String(userId || 'system'),
+                          featureKey: 'chatroom_hr_ai',
                           messages: [
                             {
                               role: 'system',
-                              content: `You are a helpful HR assistant for CoAIleague™. Answer employee questions about company policies, procedures, and benefits using the provided knowledge base. Be concise, friendly, and accurate. If you don't know the answer, say so and suggest contacting HR.`
+                              content: `You are a helpful HR assistant for CoAIleague. Answer employee questions about company policies, procedures, and benefits using the provided knowledge base. Be concise, friendly, and accurate. If you don't know the answer, say so and suggest contacting HR.`
                             },
                             {
                               role: 'user',
                               content: `Context from knowledge base:\n${context}\n\nEmployee question: ${query}`
                             }
                           ],
+                          model: 'gpt-4o-mini',
+                          maxTokens: 500,
                           temperature: 0.3,
-                          max_tokens: 500,
                         });
-                        
-                        aiResponse = completion.choices[0]?.message?.content || '';
+                        if (result.success) {
+                          aiResponse = result.content;
+                        }
                       } catch (aiError) {
-                        console.error('AI generation error:', aiError);
+                        log.error('AI generation error', { error: aiError });
                       }
                     }
                     
@@ -2723,7 +4263,7 @@ export function setupWebSocket(server: Server) {
                       });
                     }
                   } catch (error) {
-                    console.error('Error in /ask command:', error);
+                    log.error('Error in /ask command', { error });
                     
                     const errorMsg = await storage.createChatMessage({
                       conversationId: ws.conversationId,
@@ -2802,7 +4342,7 @@ export function setupWebSocket(server: Server) {
                       });
                     }
                   } catch (error) {
-                    console.error('[WebSocket] Error assigning conversation:', error);
+                    log.error('Error assigning conversation', { error });
                     ws.send(JSON.stringify({ type: 'error', message: 'Failed to assign conversation' }));
                   }
                   break;
@@ -2841,6 +4381,7 @@ export function setupWebSocket(server: Server) {
                   
                   ws.send(JSON.stringify({ 
                     type: 'system_message', 
+                    conversationId: ws.conversationId,
                     message: `Broadcast sent to ${broadcastCount} connections` 
                   }));
                   break;
@@ -2882,10 +4423,11 @@ export function setupWebSocket(server: Server) {
                     
                     ws.send(JSON.stringify({ 
                       type: 'system_message', 
+                      conversationId: ws.conversationId,
                       message: `User ${targetUsername} has been suspended. Reason: ${reason}` 
                     }));
                   } catch (error) {
-                    console.error('[WebSocket] Error suspending user:', error);
+                    log.error('Error suspending user', { error });
                     ws.send(JSON.stringify({ type: 'error', message: 'Failed to suspend user' }));
                   }
                   break;
@@ -2926,10 +4468,11 @@ export function setupWebSocket(server: Server) {
                     
                     ws.send(JSON.stringify({ 
                       type: 'system_message', 
+                      conversationId: ws.conversationId,
                       message: `User ${targetUsername} has been reactivated` 
                     }));
                   } catch (error) {
-                    console.error('[WebSocket] Error reactivating user:', error);
+                    log.error('Error reactivating user', { error });
                     ws.send(JSON.stringify({ type: 'error', message: 'Failed to reactivate user' }));
                   }
                   break;
@@ -2964,9 +4507,9 @@ export function setupWebSocket(server: Server) {
                       `Status: ${isOnline ? 'Online' : 'Offline'}\n` +
                       `Account: ${isSuspended ? 'Suspended' : 'Active'}`;
                     
-                    ws.send(JSON.stringify({ type: 'system_message', message: statusMsg }));
+                    ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: statusMsg }));
                   } catch (error) {
-                    console.error('[WebSocket] Error checking staff status:', error);
+                    log.error('Error checking staff status', { error });
                     ws.send(JSON.stringify({ type: 'error', message: 'Failed to check staff status' }));
                   }
                   break;
@@ -2995,10 +4538,1011 @@ export function setupWebSocket(server: Server) {
                     });
                   });
                   
-                  ws.send(JSON.stringify({ type: 'system_message', message: 'Restart notification sent to all clients' }));
+                  ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: 'Restart notification sent to all clients' }));
                   break;
                 }
                 
+                // ============================================================================
+                // SUPPORT ACTIONS COMMANDS (MSN-style HelpDesk)
+                // ============================================================================
+                
+                case 'lock': {
+                  // Lock user account - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  const lockTargetId = parsedCommand.args[0];
+                  const lockReason = parsedCommand.args.slice(1).join(' ') || 'Locked by support';
+                  
+                  if (!lockTargetId) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /lock <userId> [reason]' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.lockAccount(ws.serverAuth.userId, lockTargetId, lockReason);
+                    
+                    const actionMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: result.message,
+                      messageType: 'action',
+                      isSystemMessage: true,
+                    });
+                    
+                    ws.send(JSON.stringify({ type: 'new_message', message: actionMsg }));
+                  } catch (error) {
+                    log.error('Lock account error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to lock account' }));
+                  }
+                  break;
+                }
+                
+                case 'unlock': {
+                  // Unlock user account - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  const unlockTargetId = parsedCommand.args[0];
+                  
+                  if (!unlockTargetId) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /unlock <userId>' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.unlockAccount(ws.serverAuth.userId, unlockTargetId);
+                    
+                    const actionMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: result.message,
+                      messageType: 'action',
+                      isSystemMessage: true,
+                    });
+                    
+                    ws.send(JSON.stringify({ type: 'new_message', message: actionMsg }));
+                  } catch (error) {
+                    log.error('Unlock account error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to unlock account' }));
+                  }
+                  break;
+                }
+                
+                case 'userinfo': {
+                  // Get user info - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  const infoTarget = parsedCommand.args[0];
+                  
+                  if (!infoTarget) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /userinfo <userId or email>' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.getUserInfo(ws.serverAuth.userId, infoTarget);
+                    
+                    ws.send(JSON.stringify({ 
+                      type: 'system_message', 
+                      message: result.message,
+                      messageKind: result.messageKind,
+                    }));
+                  } catch (error) {
+                    log.error('User info error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to get user info' }));
+                  }
+                  break;
+                }
+                
+                case 'requestinfo': {
+                  // Request verification info from user - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  const reqTargetId = parsedCommand.args[0];
+                  const infoType = parsedCommand.args[1];
+                  
+                  if (!reqTargetId || !infoType) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /requestinfo <userId> <identity|address|phone|organization|billing>' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.requestInfo(ws.serverAuth.userId, reqTargetId, infoType);
+                    
+                    // Send the request message to the target user as a DM
+                    const reqMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: result.message,
+                      messageType: 'text',
+                      isPrivateMessage: true,
+                      recipientId: reqTargetId,
+                    });
+                    
+                    // Send to target user only
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN && (client.userId === reqTargetId || hasPlatformWideAccess(client.serverAuth?.role))) {
+                          client.send(JSON.stringify({ type: 'new_message', message: reqMsg }));
+                        }
+                      });
+                    }
+                    
+                    ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: `✓ Verification request sent to user` }));
+                  } catch (error) {
+                    log.error('Request info error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to send info request' }));
+                  }
+                  break;
+                }
+                
+                case 'escalate': {
+                  // Escalate to human support - available to all users
+                  const escPriority = parsedCommand.args[0] || 'normal';
+                  const escReason = parsedCommand.args.slice(1).join(' ');
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.escalateTicket(
+                      ws.conversationId,
+                      ws.userId,
+                      escPriority,
+                      escReason
+                    );
+                    
+                    const escMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: result.message,
+                      messageType: 'text',
+                      isSystemMessage: true,
+                    });
+                    
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({ type: 'new_message', message: escMsg }));
+                        }
+                      });
+                    }
+                  } catch (error) {
+                    log.error('Escalate error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to escalate ticket' }));
+                  }
+                  break;
+                }
+                
+                case 'resolve': {
+                  // Resolve ticket - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  const resolutionNotes = parsedCommand.args.join(' ');
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.resolveTicket(
+                      ws.serverAuth.userId,
+                      ws.conversationId,
+                      resolutionNotes
+                    );
+                    
+                    const resolveMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: result.message,
+                      messageType: 'action',
+                      isSystemMessage: true,
+                    });
+                    
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({ type: 'new_message', message: resolveMsg }));
+                          // Send rating prompt to non-staff users
+                          if (!hasPlatformWideAccess(client.serverAuth?.role)) {
+                            client.send(JSON.stringify({ 
+                              type: 'ticket_resolved',
+                              conversationId: ws.conversationId,
+                              showRating: true,
+                            }));
+                          }
+                        }
+                      });
+                    }
+                  } catch (error) {
+                    log.error('Resolve error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to resolve ticket' }));
+                  }
+                  break;
+                }
+                
+                case 'resetemail': {
+                  // Reset user email - requires elevated privileges
+                  if (!ws.serverAuth || !['root_admin', 'co_admin'].includes(ws.serverAuth.platformRole || '')) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires admin privileges' }));
+                    break;
+                  }
+                  
+                  const emailTargetId = parsedCommand.args[0];
+                  const newEmail = parsedCommand.args[1];
+                  
+                  if (!emailTargetId || !newEmail) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /resetemail <userId> <newEmail>' }));
+                    break;
+                  }
+                  
+                  // Validate email format
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  if (!emailRegex.test(newEmail)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '❌ Invalid email format' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.resetEmail(ws.serverAuth.userId, emailTargetId, newEmail);
+                    
+                    const actionMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: result.message,
+                      messageType: 'action',
+                      isSystemMessage: true,
+                    });
+                    
+                    ws.send(JSON.stringify({ type: 'new_message', message: actionMsg }));
+                  } catch (error) {
+                    log.error('Reset email error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to reset email' }));
+                  }
+                  break;
+                }
+                
+                case 'resetpassword': {
+                  // Reset user password - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  const pwdTargetId = parsedCommand.args[0];
+                  
+                  if (!pwdTargetId) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /resetpassword <userId>' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.resetPassword(ws.serverAuth.userId, pwdTargetId);
+                    
+                    const actionMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: result.message,
+                      messageType: 'action',
+                      isSystemMessage: true,
+                    });
+                    
+                    ws.send(JSON.stringify({ type: 'new_message', message: actionMsg }));
+                  } catch (error) {
+                    log.error('Reset password error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to reset password' }));
+                  }
+                  break;
+                }
+                
+                case 'approve': {
+                  // Approve a pending destructive action - requires root_admin/co_admin
+                  if (!ws.serverAuth || !['root_admin', 'co_admin'].includes(ws.serverAuth.role || '')) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ Only root_admin or co_admin can approve actions' }));
+                    break;
+                  }
+                  
+                  const approvalId = parsedCommand.args[0];
+                  
+                  if (!approvalId) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /approve <approvalId>' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const result = await supportActionsService.approveAction(approvalId, ws.serverAuth.userId);
+                    
+                    const actionMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: null,
+                      senderName: 'System',
+                      senderType: 'system',
+                      message: result.success ? `✓ ${result.message}` : `✗ ${result.message}`,
+                      messageType: 'action',
+                      isSystemMessage: true,
+                    });
+                    
+                    ws.send(JSON.stringify({ type: 'new_message', message: actionMsg }));
+                  } catch (error) {
+                    log.error('Approve action error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to approve action' }));
+                  }
+                  break;
+                }
+                
+                case 'ratelimits': {
+                  // View rate limit status - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const status = supportActionsService.getRateLimitStatus(ws.serverAuth.userId);
+                    
+                    let statusMessage = '📊 **Your Rate Limit Status**\n\n';
+                    for (const [action, data] of Object.entries(status.actions)) {
+                      statusMessage += `**${action}**: ${data.hourly}/${data.limits.maxPerHour} hourly, ${data.daily}/${data.limits.maxPerDay} daily\n`;
+                    }
+                    statusMessage += `\nPending approvals: ${status.pendingApprovals}`;
+                    
+                    ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: statusMessage }));
+                  } catch (error) {
+                    log.error('Rate limits error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to get rate limit status' }));
+                  }
+                  break;
+                }
+                
+                case 'pendingapprovals': {
+                  // View pending approvals - requires root_admin/co_admin
+                  if (!ws.serverAuth || !['root_admin', 'co_admin'].includes(ws.serverAuth.role || '')) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ Only root_admin or co_admin can view pending approvals' }));
+                    break;
+                  }
+                  
+                  try {
+                    const { supportActionsService } = await import('./services/supportActionsService');
+                    const pending = supportActionsService.getPendingApprovals();
+                    
+                    if (pending.length === 0) {
+                      ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: '✓ No pending approval requests' }));
+                    } else {
+                      let message = '📋 **Pending Approval Requests**\n\n';
+                      for (const p of pending) {
+                        const expiresIn = Math.round((p.expiresAt.getTime() - Date.now()) / 60000);
+                        message += `• **${p.action}** on user ${p.targetUserId}\n  Requested by: ${p.requestedBy}\n  Expires in: ${expiresIn} minutes\n  ID: \`${p.id.slice(0, 8)}...\`\n  Use: /approve ${p.id}\n\n`;
+                      }
+                      ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message }));
+                    }
+                  } catch (error) {
+                    log.error('Pending approvals error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to get pending approvals' }));
+                  }
+                  break;
+                }
+                
+                case 'sessions': {
+                  // View/revoke user sessions - requires staff privileges
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ This command requires support team privileges' }));
+                    break;
+                  }
+                  
+                  const sessTargetId = parsedCommand.args[0];
+                  const sessAction = parsedCommand.args[1];
+                  
+                  if (!sessTargetId) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /sessions <userId> [revoke]' }));
+                    break;
+                  }
+                  
+                  try {
+                    if (sessAction === 'revoke') {
+                      const { supportActionsService } = await import('./services/supportActionsService');
+                      const result = await supportActionsService.revokeSessions(ws.serverAuth.userId, sessTargetId);
+                      ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: result.message }));
+                    } else {
+                      // Just viewing sessions
+                      ws.send(JSON.stringify({ 
+                        type: 'system_message', 
+                        conversationId: ws.conversationId,
+                        message: `📱 Session information for ${sessTargetId}:\n\nUse /sessions ${sessTargetId} revoke to log out all devices.`
+                      }));
+                    }
+                  } catch (error) {
+                    log.error('Sessions error', { error });
+                    ws.send(JSON.stringify({ type: 'error', message: 'Failed to manage sessions' }));
+                  }
+                  break;
+                }
+
+                // ============================================================================
+                // IRC-STYLE ACTION COMMANDS
+                // ============================================================================
+
+                case 'me': {
+                  // IRC-style action message: /me does something
+                  const action = parsedCommand.args.join(' ');
+
+                  if (!action) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /me <action>\n\nExample: /me is thinking...' }));
+                    break;
+                  }
+
+                  // Create action message (IRC style: * username action)
+                  const actionMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: ws.userId,
+                    senderName: displayName,
+                    senderType: ws.isStaff ? 'staff' : 'user',
+                    message: `* ${displayName} ${action}`,
+                    messageType: 'action',
+                    metadata: { isIrcAction: true },
+                  });
+
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: 'new_message', message: actionMsg }));
+                      }
+                    });
+                  }
+                  break;
+                }
+
+                case 'away': {
+                  // Set away status with optional message
+                  const awayMessage = parsedCommand.args.join(' ') || 'Away';
+
+                  // Update client state
+                  ws.isAway = true;
+                  ws.awayMessage = awayMessage;
+
+                  // Broadcast to room that user is away
+                  const awayNotice = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: null,
+                    senderName: 'irc.wfos.com',
+                    senderType: 'system',
+                    message: `${displayName} is now away: ${awayMessage}`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                    metadata: { isAwayNotice: true },
+                  });
+
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                          type: 'user_away',
+                          userId: ws.userId,
+                          userName: displayName,
+                          awayMessage,
+                          message: awayNotice
+                        }));
+                      }
+                    });
+                  }
+                  break;
+                }
+
+                case 'back': {
+                  // Return from away status
+                  if (!ws.isAway) {
+                    ws.send(JSON.stringify({ type: 'system_message', conversationId: ws.conversationId, message: 'You are not marked as away.' }));
+                    break;
+                  }
+
+                  ws.isAway = false;
+                  ws.awayMessage = null;
+
+                  // Broadcast to room that user is back
+                  const backNotice = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: null,
+                    senderName: 'irc.wfos.com',
+                    senderType: 'system',
+                    message: `${displayName} is back`,
+                    messageType: 'text',
+                    isSystemMessage: true,
+                    metadata: { isBackNotice: true },
+                  });
+
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                          type: 'user_back',
+                          userId: ws.userId,
+                          userName: displayName,
+                          message: backNotice
+                        }));
+                      }
+                    });
+                  }
+                  break;
+                }
+
+                // ============================================================================
+                // TRINITY AI INLINE ASSISTANT
+                // ============================================================================
+
+                case 'trinity': {
+                  // Summon Trinity AI for inline assistance (staff only)
+                  if (!ws.serverAuth || !hasPlatformWideAccess(ws.serverAuth.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '⛔ /trinity requires support team privileges' }));
+                    break;
+                  }
+
+                  const trinityQuery = parsedCommand.args.join(' ');
+
+                  if (!trinityQuery || trinityQuery.trim().length === 0) {
+                    ws.send(JSON.stringify({
+                      type: 'error',
+                      message: 'Usage: /trinity <question or command>\n\nI\'m your platform orchestrator. Ask me about:\n• User issues & troubleshooting\n• System status & health\n• Command help & documentation\n• Workflow automation\n\nExample: /trinity what commands can help with password resets?',
+                    }));
+                    break;
+                  }
+
+                  // Send "thinking" indicator from Trinity (staff-only visibility)
+                  const trinityThinking = await storage.createChatMessage({
+                    conversationId: ws.conversationId,
+                    senderId: 'trinity-ai',
+                    senderName: '🔮 Trinity AI',
+                    senderType: 'bot',
+                    message: `Processing: "${trinityQuery}"...`,
+                    messageType: 'text',
+                    metadata: { isTrinityThinking: true, staffOnly: true },
+                  });
+
+                  // Only send Trinity messages to staff clients (not end users)
+                  if (clients) {
+                    clients.forEach((client) => {
+                      if (client.readyState === WebSocket.OPEN && client.isStaff) {
+                        client.send(JSON.stringify({ type: 'new_message', message: trinityThinking }));
+                      }
+                    });
+                  }
+
+                  try {
+                    let trinityResponse = '';
+
+                    // Build context for Trinity
+                    const trinityContext = {
+                      agentName: displayName,
+                      agentRole: ws.serverAuth?.platformRole || 'support',
+                      conversationId: ws.conversationId,
+                      workspaceId: ws.workspaceId,
+                      query: trinityQuery,
+                    };
+
+                    if (process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+                      try {
+                        const { getMeteredOpenAICompletion } = await import('./services/billing/universalAIBillingInterceptor');
+                        const result = await getMeteredOpenAICompletion({
+                          workspaceId: ws.workspaceId || '',
+                          userId: String(ws.userId || 'system'),
+                          featureKey: 'chatroom_trinity_summon',
+                          messages: [
+                            {
+                              role: 'system',
+                              content: `You are Trinity AI, the central orchestrator for CoAIleague (WFOS). You are being summoned inline in a support chatroom by ${trinityContext.agentName} (${trinityContext.agentRole}).
+
+Your responsibilities:
+- Help support agents troubleshoot user issues
+- Explain available slash commands and features
+- Provide system status and health information
+- Guide agents through complex workflows
+
+Keep responses concise and actionable. Format for chat readability.
+Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unlock, /userinfo, /resetpw, /notes, /escalate, /broadcast, and more.`
+                            },
+                            {
+                              role: 'user',
+                              content: trinityQuery
+                            }
+                          ],
+                          model: 'gpt-4o-mini',
+                          maxTokens: 600,
+                          temperature: 0.5,
+                        });
+                        if (result.success) {
+                          trinityResponse = result.content;
+                        }
+                      } catch (aiError) {
+                        log.error('Trinity AI generation error', { error: aiError });
+                      }
+                    }
+
+                    // Fallback if AI unavailable
+                    if (!trinityResponse) {
+                      trinityResponse = `🔮 **Trinity AI** (Offline Mode)\n\nI'm currently operating in limited mode. Here's what I can tell you:\n\n**Common Support Commands:**\n• \`/help\` - Full command list\n• \`/userinfo <email>\` - Lookup user details\n• \`/resetpw <userId>\` - Reset password\n• \`/lock <userId>\` - Lock account\n• \`/unlock <userId>\` - Unlock account\n• \`/escalate <reason>\` - Escalate to admin\n\nFor complex queries, please try again when AI services are available.`;
+                    }
+
+                    // Send Trinity's response (staff-only visibility)
+                    const trinityMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: 'trinity-ai',
+                      senderName: '🔮 Trinity AI',
+                      senderType: 'bot',
+                      message: trinityResponse,
+                      messageType: 'text',
+                      metadata: {
+                        isTrinityResponse: true,
+                        staffOnly: true, // Never visible to end users
+                        query: trinityQuery,
+                        requestedBy: ws.userId,
+                      },
+                    });
+
+                    // Only send Trinity responses to staff/bots (protect enduser privacy)
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN && client.isStaff) {
+                          client.send(JSON.stringify({ type: 'new_message', message: trinityMsg }));
+                        }
+                      });
+                    }
+                  } catch (error) {
+                    log.error('Trinity AI error', { error });
+
+                    const errorMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: 'trinity-ai',
+                      senderName: '🔮 Trinity AI',
+                      senderType: 'bot',
+                      message: `⚠️ I encountered an error processing your request. Please try again or use \`/help\` for command reference.`,
+                      messageType: 'text',
+                      metadata: { staffOnly: true },
+                    });
+
+                    // Error messages also staff-only
+                    if (clients) {
+                      clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN && client.isStaff) {
+                          client.send(JSON.stringify({ type: 'new_message', message: errorMsg }));
+                        }
+                      });
+                    }
+                  }
+                  break;
+                }
+
+                // ═══════════════════════════════════════════════════════
+                // WORKFORCE BOT COMMANDS - MeetingBot, ReportBot, ClockBot
+                // RBAC: Org members can use these; some require supervisor+
+                // ═══════════════════════════════════════════════════════
+
+                case 'meetingstart': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const meetingTitle = parsedCommand.args.join(' ') || 'Untitled Meeting';
+                  try {
+                    const { botPool } = await import('./bots');
+                    const { BOT_REGISTRY } = await import('./bots/registry');
+                    await botPool.deployBot('meetingbot', ws.conversationId, ws.workspaceId);
+                    const { botAIService } = await import('./bots/botAIService');
+                    const aiResp = await botAIService.generate({
+                      botId: 'meetingbot', workspaceId: ws.workspaceId, userId: ws.userId,
+                      action: 'transcription',
+                      prompt: `Meeting "${meetingTitle}" has been started by ${displayName}. Acknowledge the start and remind participants to use /actionitem, /decision, and /note commands to track important items. Keep it brief.`,
+                    });
+                    const botMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'meetingbot',
+                      senderName: BOT_REGISTRY.meetingbot.name, senderType: 'bot',
+                      message: aiResp.text || `Meeting "${meetingTitle}" started. Recording in progress.\n\nUse /actionitem, /decision, /note to track items.\nUse /meetingend to finish and generate summary.`,
+                      messageType: 'text',
+                      metadata: { meetingTitle, startedBy: ws.userId, startedAt: new Date().toISOString(), botCommand: 'meetingstart' },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: botMsg })); }); }
+                    // Update room metadata
+                    await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ meetingActive: true, meetingTitle, meetingStartedAt: new Date().toISOString(), meetingStartedBy: ws.userId })}::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
+                  break;
+                }
+
+                case 'meetingend': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  try {
+                    const { BOT_REGISTRY } = await import('./bots/registry');
+                    // Notify room that meeting is ending and report is being generated
+                    const processingMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'meetingbot',
+                      senderName: BOT_REGISTRY.meetingbot.name, senderType: 'bot',
+                      message: `Meeting ended by ${displayName}. Generating meeting summary PDF and saving to Document Safe...`,
+                      messageType: 'text',
+                      metadata: { botCommand: 'meetingend', endedBy: ws.userId, endedAt: new Date().toISOString() },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: processingMsg })); }); }
+                    await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || '{"meetingActive": false}'::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
+                    // Generate PDF in background (non-blocking to UI)
+                    const capturedConvId = ws.conversationId;
+                    const capturedWsId = ws.workspaceId;
+                    const capturedUserId = ws.userId || 'system';
+                    const capturedDisplayName = displayName;
+                    const capturedClients = clients;
+                    (async () => {
+                      try {
+                        const { meetingBotPdfService } = await import('./services/bots/meetingBotPdfService');
+                        const result = await meetingBotPdfService.generateAndSaveMeetingSummary(
+                          capturedConvId, capturedWsId, capturedUserId, capturedDisplayName
+                        );
+                        const { BOT_REGISTRY: rb2 } = await import('./bots/registry');
+                        const doneMsg = await storage.createChatMessage({
+                          conversationId: capturedConvId, senderId: 'meetingbot',
+                          senderName: rb2.meetingbot.name, senderType: 'bot',
+                          message: result.success
+                            ? `Meeting summary saved to Document Safe.\n\n${result.summaryText || ''}\n\nDocument ID: ${result.documentId}`
+                            : `Meeting summary could not be saved: ${result.error}. The AI summary:\n\n${result.summaryText || 'N/A'}`,
+                          messageType: 'text',
+                          metadata: { botCommand: 'meetingend_complete', documentId: result.documentId },
+                        });
+                        if (capturedClients) { capturedClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: doneMsg })); }); }
+                      } catch (pdfErr: any) {
+                        log.warn('[MeetingBot] PDF generation failed (non-blocking):', { error: pdfErr?.message });
+                      }
+                    })();
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
+                  break;
+                }
+
+                case 'meetingpause': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const { BOT_REGISTRY: mb3 } = await import('./bots/registry');
+                  const pauseMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId, senderId: 'meetingbot',
+                    senderName: mb3.meetingbot.name, senderType: 'bot',
+                    message: `Meeting recording paused by ${displayName}. Use /meetingcontinue to resume.`,
+                    messageType: 'text', metadata: { botCommand: 'meetingpause' },
+                  });
+                  if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: pauseMsg })); }); }
+                  break;
+                }
+
+                case 'meetingcontinue': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const { BOT_REGISTRY: mb4 } = await import('./bots/registry');
+                  const resumeMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId, senderId: 'meetingbot',
+                    senderName: mb4.meetingbot.name, senderType: 'bot',
+                    message: `Meeting recording resumed by ${displayName}.`,
+                    messageType: 'text', metadata: { botCommand: 'meetingcontinue' },
+                  });
+                  if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: resumeMsg })); }); }
+                  break;
+                }
+
+                case 'actionitem': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const actionText = parsedCommand.args.join(' ');
+                  const { BOT_REGISTRY: mb5 } = await import('./bots/registry');
+                  const actionMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId, senderId: 'meetingbot',
+                    senderName: mb5.meetingbot.name, senderType: 'bot',
+                    message: `Action Item recorded by ${displayName}: ${actionText}`,
+                    messageType: 'text', metadata: { botCommand: 'actionitem', actionItem: actionText, recordedBy: ws.userId },
+                  });
+                  if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: actionMsg })); }); }
+                  break;
+                }
+
+                case 'decision': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const decisionText = parsedCommand.args.join(' ');
+                  const { BOT_REGISTRY: mb6 } = await import('./bots/registry');
+                  const decMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId, senderId: 'meetingbot',
+                    senderName: mb6.meetingbot.name, senderType: 'bot',
+                    message: `Decision recorded by ${displayName}: ${decisionText}`,
+                    messageType: 'text', metadata: { botCommand: 'decision', decision: decisionText, recordedBy: ws.userId },
+                  });
+                  if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: decMsg })); }); }
+                  break;
+                }
+
+                case 'note': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const noteText = parsedCommand.args.join(' ');
+                  const { BOT_REGISTRY: mb7 } = await import('./bots/registry');
+                  const noteMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId, senderId: 'meetingbot',
+                    senderName: mb7.meetingbot.name, senderType: 'bot',
+                    message: `Note by ${displayName}: ${noteText}`,
+                    messageType: 'text', metadata: { botCommand: 'note', note: noteText, recordedBy: ws.userId },
+                  });
+                  if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: noteMsg })); }); }
+                  break;
+                }
+
+                // ReportBot commands
+                case 'report': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  try {
+                    const { botPool: rPool } = await import('./bots');
+                    const { BOT_REGISTRY: rb } = await import('./bots/registry');
+                    await rPool.deployBot('reportbot', ws.conversationId, ws.workspaceId);
+                    const reportStartMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'reportbot',
+                      senderName: rb.reportbot.name, senderType: 'bot',
+                      message: `Incident report started by ${displayName}.\n\nDescribe the incident in your next messages. When finished, type /endreport to finalize.\n\nTip: Use /incident <type> to categorize (theft, trespass, medical, damage, fire, assault, other).`,
+                      messageType: 'text', metadata: { botCommand: 'report', reportStartedBy: ws.userId, reportStartedAt: new Date().toISOString() },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: reportStartMsg })); }); }
+                    await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ reportActive: true, reportStartedBy: ws.userId })}::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  break;
+                }
+
+                case 'incident': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const incidentType = parsedCommand.args.join(' ');
+                  const { BOT_REGISTRY: rb2 } = await import('./bots/registry');
+                  const incidentMsg = await storage.createChatMessage({
+                    conversationId: ws.conversationId, senderId: 'reportbot',
+                    senderName: rb2.reportbot.name, senderType: 'bot',
+                    message: `Incident type set: ${incidentType.toUpperCase()}\nReported by: ${displayName}\nTimestamp: ${new Date().toLocaleString()}\n\nContinue describing the incident details. Type /endreport when done.`,
+                    messageType: 'text', metadata: { botCommand: 'incident', incidentType, reportedBy: ws.userId },
+                  });
+                  if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: incidentMsg })); }); }
+                  break;
+                }
+
+                case 'endreport': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  try {
+                    const { BOT_REGISTRY: rb3 } = await import('./bots/registry');
+                    const { botAIService: rAI } = await import('./bots/botAIService');
+                    const reportMsgs = await storage.getChatMessages(ws.conversationId, 50);
+                    const reportText = reportMsgs.filter(m => m.senderType === 'user' || m.senderType === 'customer').map(m => m.message).join('\n');
+                    const reportSummary = await rAI.generateReportSummary(ws.workspaceId, 'general', reportText, ws.userId);
+                    const endReportMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'reportbot',
+                      senderName: rb3.reportbot.name, senderType: 'bot',
+                      message: `Report finalized by ${displayName}.\n\n${reportSummary.text}`,
+                      messageType: 'text', metadata: { botCommand: 'endreport', finalizedBy: ws.userId, finalizedAt: new Date().toISOString() },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: endReportMsg })); }); }
+                    await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || '{"reportActive": false}'::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  break;
+                }
+
+                case 'analyzereports': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  // RBAC: supervisor+ only (check workspace role)
+                  const analyzeUserInfo = await storage.getUserDisplayInfo(ws.userId);
+                  const analyzeWsRole = analyzeUserInfo?.workspaceRole || 'employee';
+                  const supervisorRoles = ['supervisor', 'manager', 'org_admin', 'co_owner', 'org_owner'];
+                  if (!supervisorRoles.includes(analyzeWsRole) && !hasPlatformWideAccess(ws.serverAuth?.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '/analyzereports requires supervisor or higher privileges.' }));
+                    break;
+                  }
+                  try {
+                    const { BOT_REGISTRY: rb4 } = await import('./bots/registry');
+                    const { botAIService: rAI2 } = await import('./bots/botAIService');
+                    const filter = parsedCommand.args.join(' ') || 'all recent';
+                    const aiAnalysis = await rAI2.generate({
+                      botId: 'reportbot', workspaceId: ws.workspaceId, userId: ws.userId,
+                      action: 'summary',
+                      prompt: `Analyze reports for filter: "${filter}". Provide a professional summary of patterns, trends, and recommendations. If no specific data is available, provide a template analysis structure that supervisors can use.`,
+                    });
+                    const analyzeMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'reportbot',
+                      senderName: rb4.reportbot.name, senderType: 'bot',
+                      message: `Report Analysis requested by ${displayName} (filter: ${filter})\n\n${aiAnalysis.text}`,
+                      messageType: 'text', metadata: { botCommand: 'analyzereports', filter, requestedBy: ws.userId },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: analyzeMsg })); }); }
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  break;
+                }
+
+                // ClockBot commands
+                case 'clockme': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const clockAction = parsedCommand.args[0]?.toLowerCase();
+                  const clockReason = parsedCommand.args.slice(1).join(' ') || 'Manual via chat';
+                  if (clockAction !== 'in' && clockAction !== 'out') {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /clockme <in|out> [reason]\nExample: /clockme in GPS not working' }));
+                    break;
+                  }
+                  try {
+                    const { botPool: cPool } = await import('./bots');
+                    const { BOT_REGISTRY: cb } = await import('./bots/registry');
+                    await cPool.deployBot('clockbot', ws.conversationId, ws.workspaceId);
+                    const clockMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'clockbot',
+                      senderName: cb.clockbot.name, senderType: 'bot',
+                      message: `Clock ${clockAction.toUpperCase()} recorded for ${displayName}\nTime: ${new Date().toLocaleString()}\nReason: ${clockReason}\nMethod: Manual (chat command)`,
+                      messageType: 'text', metadata: { botCommand: 'clockme', clockAction, reason: clockReason, userId: ws.userId, timestamp: new Date().toISOString() },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: clockMsg })); }); }
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  break;
+                }
+
+                case 'forceclock': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  // RBAC: supervisor+ only (check workspace role)
+                  const forceClockUserInfo = await storage.getUserDisplayInfo(ws.userId);
+                  const forceClockWsRole = forceClockUserInfo?.workspaceRole || 'employee';
+                  if (!['supervisor', 'manager', 'org_manager', 'department_manager', 'admin', 'org_owner', 'co_owner', 'owner'].includes(forceClockWsRole) && !hasPlatformWideAccess(ws.serverAuth?.role)) {
+                    ws.send(JSON.stringify({ type: 'error', message: '/forceclock requires supervisor or higher privileges.' }));
+                    break;
+                  }
+                  const targetEmp = parsedCommand.args[0]?.replace('@', '');
+                  const forceAction = parsedCommand.args[1]?.toLowerCase();
+                  const forceReason = parsedCommand.args.slice(2).join(' ');
+                  if (!targetEmp || (forceAction !== 'in' && forceAction !== 'out') || !forceReason) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Usage: /forceclock @user <in|out> <reason>' }));
+                    break;
+                  }
+                  try {
+                    const { BOT_REGISTRY: cb2 } = await import('./bots/registry');
+                    const forceClockMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'clockbot',
+                      senderName: cb2.clockbot.name, senderType: 'bot',
+                      message: `SUPERVISOR OVERRIDE: Clock ${forceAction.toUpperCase()} forced for @${targetEmp}\nAuthorized by: ${displayName}\nTime: ${new Date().toLocaleString()}\nReason: ${forceReason}`,
+                      messageType: 'text', metadata: { botCommand: 'forceclock', targetEmployee: targetEmp, clockAction: forceAction, reason: forceReason, authorizedBy: ws.userId, timestamp: new Date().toISOString() },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: forceClockMsg })); }); }
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  break;
+                }
+
+                case 'clockstatus': {
+                  if (!ws.workspaceId) { ws.send(JSON.stringify({ type: 'error', message: 'You must be in an organization to use bot commands.' })); break; }
+                  const statusTarget = parsedCommand.args[0]?.replace('@', '') || displayName;
+                  try {
+                    const { BOT_REGISTRY: cb3 } = await import('./bots/registry');
+                    const { botAIService: cAI } = await import('./bots/botAIService');
+                    const statusResp = await cAI.generate({
+                      botId: 'clockbot', workspaceId: ws.workspaceId, userId: ws.userId,
+                      action: 'summary',
+                      prompt: `Provide clock status for ${statusTarget}. Show current status (clocked in or out), today's total hours, and any flags. If no data is available, show a helpful status template.`,
+                    });
+                    const clockStatusMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId, senderId: 'clockbot',
+                      senderName: cb3.clockbot.name, senderType: 'bot',
+                      message: `Clock Status for ${statusTarget}:\n\n${statusResp.text}`,
+                      messageType: 'text', metadata: { botCommand: 'clockstatus', target: statusTarget },
+                    });
+                    if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: clockStatusMsg })); }); }
+                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  break;
+                }
+
                 default: {
                   // Command Not Implemented Handler
                   const errorMsg = await storage.createChatMessage({
@@ -3037,7 +5581,7 @@ export function setupWebSocket(server: Server) {
               } catch (tableError: any) {
                 // If abuse_violations table doesn't exist, treat as first violation
                 if (tableError?.code === '42P01') {
-                  console.warn('⚠️ abuse_violations table not found, treating as first violation');
+                  log.warn('abuse_violations table not found, treating as first violation');
                   currentViolationCount = 0;
                 } else {
                   throw tableError; // Re-throw if it's a different error
@@ -3069,9 +5613,9 @@ export function setupWebSocket(server: Server) {
               } catch (violationError: any) {
                 // If abuse_violations table doesn't exist, just log the warning
                 if (violationError?.code === '42P01') {
-                  console.warn('⚠️ abuse_violations table not found, skipping violation logging');
+                  log.warn('abuse_violations table not found, skipping violation logging');
                 } else {
-                  console.error('Error logging abuse violation:', violationError);
+                  log.error('Error logging abuse violation', { error: violationError });
                 }
               }
               
@@ -3137,51 +5681,104 @@ export function setupWebSocket(server: Server) {
             // SECURITY: Sanitize message content to prevent XSS attacks
             const sanitizedMessage = sanitizeChatMessage(payload.message);
 
-            // Save message to database
-            const savedMessage = await storage.createChatMessage({
-              conversationId: ws.conversationId, // Use server-bound conversation, not client payload
-              senderId: ws.userId?.startsWith('guest-') ? null : ws.userId, // Guests don't have user records - use null for FK compatibility
-              senderName: displayName, // Use server-formatted display name
-              senderType: payload.senderType,
-              message: sanitizedMessage, // Use sanitized message
-              messageType: 'text',
-            });
+            // DM VISIBILITY: Extract private message fields from payload
+            const isPrivateMessage = payload.isPrivateMessage === true;
+            const recipientId = payload.recipientId || null;
+            const threadId = payload.threadId || null; // Session/thread ID for helpdesk DM isolation
 
-            // SENTIMENT ANALYSIS: Analyze message sentiment asynchronously (non-blocking)
-            (async () => {
-              try {
-                const { analyzeChatMessageSentiment, updateMessageSentiment } = await import('./services/chatSentimentService');
-                
-                const sentimentAnalysis = await analyzeChatMessageSentiment(sanitizedMessage, {
-                  senderType: payload.senderType,
-                  conversationContext: `User: ${displayName} in conversation ${ws.conversationId}`,
-                });
-                
-                // Update message with sentiment data
-                await updateMessageSentiment(savedMessage.id, sentimentAnalysis);
-                
-                // ALERT ROUTING: Emit alert event for support staff if negative/urgent
-                if (sentimentAnalysis.shouldEscalate) {
-                  console.log(`[ChatSentiment] Alert triggered for message ${savedMessage.id}: ${sentimentAnalysis.sentiment} (urgency: ${sentimentAnalysis.urgencyLevel})`);
-                  
-                  ChatServerHub.emitSentimentAlert({
-                    conversationId: ws.conversationId ?? '',
-                    workspaceId: ws.workspaceId || '',
-                    messageId: savedMessage.id,
-                    userId: ws.userId ?? '',
-                    userName: displayName,
-                    sentiment: sentimentAnalysis.sentiment,
-                    sentimentScore: sentimentAnalysis.sentimentScore,
-                    urgencyLevel: sentimentAnalysis.urgencyLevel,
-                    messagePreview: sanitizedMessage.substring(0, 150),
-                    summary: sentimentAnalysis.summary,
-                  }).catch(err => console.error('[ChatSentiment] Failed to emit alert:', err));
+            // Save message to database (with optional attachment metadata)
+            const messageData: any = {
+              conversationId: ws.conversationId,
+              senderId: ws.userId?.startsWith('guest-') ? null : ws.userId,
+              senderName: displayName,
+              senderType: payload.senderType,
+              message: sanitizedMessage,
+              messageType: (payload as any).messageType || 'text',
+              isPrivateMessage,
+              recipientId,
+            };
+
+            if ((payload as any).attachmentUrl) {
+              messageData.attachmentUrl = (payload as any).attachmentUrl;
+              messageData.attachmentName = (payload as any).attachmentName;
+              messageData.attachmentType = (payload as any).attachmentType;
+              messageData.attachmentSize = (payload as any).attachmentSize ? parseInt((payload as any).attachmentSize) : null;
+            }
+
+            const savedMessage = await storage.createChatMessage(messageData);
+
+            // 🤖 SHIFT ROOM BOT ORCHESTRATOR: Route to autonomous bot handlers
+            // Fires after message is saved — bots respond asynchronously (non-blocking)
+            if (ws.workspaceId && ws.conversationId) {
+              (async () => {
+                try {
+                  const conv = await storage.getChatConversation(ws.conversationId!);
+                  const isShiftRoom = conv?.conversationType === 'shift_chat';
+                  const isMeetingRoom = conv?.conversationType === 'open_chat' && /^meeting\s*—/i.test(conv?.subject || '');
+
+                  if (isShiftRoom || isMeetingRoom || (payload as any).attachmentType?.startsWith('image/')) {
+                    const { shiftRoomBotOrchestrator } = await import('./services/bots/shiftRoomBotOrchestrator');
+                    await shiftRoomBotOrchestrator.handleShiftRoomMessage({
+                      conversationId: ws.conversationId!,
+                      workspaceId: ws.workspaceId!,
+                      senderId: ws.userId || '',
+                      senderName: displayName,
+                      senderRole: ws.workspaceRole || ws.userType || 'employee',
+                      message: sanitizedMessage,
+                      messageType: (payload as any).messageType || 'text',
+                      attachmentUrl: (payload as any).attachmentUrl,
+                      attachmentType: (payload as any).attachmentType,
+                      gpsLat: (payload as any).gpsLat ? parseFloat((payload as any).gpsLat) : undefined,
+                      gpsLng: (payload as any).gpsLng ? parseFloat((payload as any).gpsLng) : undefined,
+                      gpsAddress: (payload as any).gpsAddress,
+                      messageId: savedMessage.id,
+                    });
+                  }
+                } catch (orchErr: any) {
+                  // Orchestrator is always non-blocking
+                  log.warn('ShiftBotOrchestrator error (non-blocking):', { error: orchErr?.message });
                 }
-              } catch (sentimentError) {
-                console.error('[ChatSentiment] Sentiment analysis failed (non-blocking):', sentimentError);
-                // Don't throw - sentiment analysis failure shouldn't break chat
-              }
-            })();
+              })();
+            }
+
+            // SENTIMENT ANALYSIS: Only run on messages that warrant it (cost protection)
+            // Pre-screen with keyword heuristic to avoid burning AI credits on every message
+            const SENTIMENT_TRIGGER_KEYWORDS = /\b(urgent|emergency|help|threat|unsafe|danger|attack|fire|weapon|injury|complaint|angry|furious|unacceptable|lawsuit|quit|resign|harassment|discrimination|assault|abuse|alarming|critical|sos|911)\b/i;
+            const shouldAnalyzeSentiment = ws.workspaceId && sanitizedMessage.length >= 15 && SENTIMENT_TRIGGER_KEYWORDS.test(sanitizedMessage);
+
+            if (shouldAnalyzeSentiment) {
+              (async () => {
+                try {
+                  const { analyzeChatMessageSentiment, updateMessageSentiment } = await import('./services/chatSentimentService');
+                  
+                  const sentimentAnalysis = await analyzeChatMessageSentiment(sanitizedMessage, {
+                    senderType: payload.senderType,
+                    conversationContext: `User: ${displayName} in conversation ${ws.conversationId}`,
+                  }, ws.workspaceId);
+                  
+                  await updateMessageSentiment(savedMessage.id, sentimentAnalysis);
+                  
+                  if (sentimentAnalysis.shouldEscalate) {
+                    log.info('ChatSentiment alert triggered', { messageId: savedMessage.id, sentiment: sentimentAnalysis.sentiment, urgencyLevel: sentimentAnalysis.urgencyLevel });
+                    
+                    ChatServerHub.emitSentimentAlert({
+                      conversationId: ws.conversationId ?? '',
+                      workspaceId: ws.workspaceId || '',
+                      messageId: savedMessage.id,
+                      userId: ws.userId ?? '',
+                      userName: displayName,
+                      sentiment: sentimentAnalysis.sentiment,
+                      sentimentScore: sentimentAnalysis.sentimentScore,
+                      urgencyLevel: sentimentAnalysis.urgencyLevel,
+                      messagePreview: sanitizedMessage.substring(0, 150),
+                      summary: sentimentAnalysis.summary,
+                    }).catch(err => log.error('ChatSentiment failed to emit alert', { error: err }));
+                  }
+                } catch (sentimentError) {
+                  log.error('ChatSentiment analysis failed (non-blocking)', { error: sentimentError });
+                }
+              })();
+            }
 
             // Enrich message with user's platform role for frontend display
             const userPlatformRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
@@ -3191,20 +5788,54 @@ export function setupWebSocket(server: Server) {
               userType: ws.userType || 'guest', // Add userType for avatar display
             };
 
-            // Broadcast to all clients in this conversation
+            // Broadcast to clients with DM visibility filtering
+            // Private DMs: Only visible to sender, recipient, and support roles
+            // Public messages: Visible to all in conversation
             const clients = conversationClients.get(ws.conversationId);
             if (clients) {
               const messagePayload = JSON.stringify({
                 type: 'new_message',
-                message: enrichedMessage, // Send enriched message with role and userType
+                message: {
+                  ...enrichedMessage,
+                  threadId, // Include threadId for frontend filtering
+                },
               });
 
-              clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
+              // DM VISIBILITY FILTERING (inline MSN-style)
+              // Support roles can see ALL messages in helpdesk
+              const supportRoles = ['root_admin', 'co_admin', 'sysops', 'platform_support'];
+              
+              for (const client of Array.from(clients)) {
+                if (client.readyState !== WebSocket.OPEN) continue;
+                
+                // Check if this client should see this message
+                let shouldReceive = true;
+                
+                if (isPrivateMessage) {
+                  // Private DM: Only sender, recipient, and support roles can see
+                  const clientPlatformRole = client.platformRole || '';
+                  const hasSupportAccess = supportRoles.includes(clientPlatformRole);
+                  const isSender = client.userId === ws.userId;
+                  const isRecipient = client.userId === recipientId;
+                  
+                  // Also check threadId for helpdesk DM isolation
+                  const isInThread = threadId ? (
+                    client.threadId === threadId || // Client is in this thread
+                    client.userId === ws.userId || // Sender
+                    hasSupportAccess // Support can see all threads
+                  ) : true;
+                  
+                  shouldReceive = (isSender || isRecipient || hasSupportAccess) && isInThread;
+                  
+                  if (!shouldReceive) {
+                    log.debug('DM filter blocking message', { from: ws.userId, to: recipientId, clientUserId: client.userId, clientRole: clientPlatformRole });
+                  }
+                }
+                
+                if (shouldReceive) {
                   client.send(messagePayload);
                   
                   // Emit read_receipt when other clients receive the message
-                  // (simulate immediate read for real-time chat experience)
                   if (client.userId !== ws.userId) {
                     setTimeout(() => {
                       if (client.readyState === WebSocket.OPEN) {
@@ -3216,22 +5847,174 @@ export function setupWebSocket(server: Server) {
                           readAt: new Date().toISOString(),
                         }));
                       }
-                    }, 1000); // 1 second delay to simulate reading
+                    }, 1000);
                   }
                 }
-              });
+              }
             }
 
             // CHAT SERVER HUB: Emit message_posted event for unified event system
             ChatServerHub.emitMessagePosted({
               conversationId: ws.conversationId,
-              roomSlug: ws.conversationId === MAIN_ROOM_ID ? MAIN_ROOM_ID : undefined,
+              roomMode: ws.roomMode, // IRC-style room mode instead of hardcoded slug
               workspaceId: ws.workspaceId,
               userId: ws.userId,
               userName: displayName,
               messageId: savedMessage.id,
               messagePreview: sanitizedMessage.substring(0, 100),
-            }).catch(err => console.error('[ChatServerHub] Failed to emit message_posted:', err));
+            }).catch(err => log.error('ChatServerHub failed to emit message_posted', { error: err }));
+
+            // HELPAI AUTO-RESPONDER: Provide acknowledgment when no staff is present
+            // Only respond to non-staff users in rooms with bot support
+            (async () => {
+              try {
+                // Check if this is a non-staff user message in a support room
+                // Uses dynamic ws.supportsBots flag set during join
+                const isSupportRoom = ws.supportsBots === true;
+                
+                const userPlatformRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
+                const isStaffUser = hasPlatformWideAccess(userPlatformRole);
+                
+                // Only auto-respond to non-staff in support rooms
+                if (!isSupportRoom || isStaffUser) return;
+                
+                // Check if any staff is currently connected to this conversation
+                const connectedClients = conversationClients.get(ws.conversationId);
+                let staffPresent = false;
+                if (connectedClients) {
+                  for (const client of Array.from(connectedClients)) {
+                    if (client.isStaff && client.readyState === WebSocket.OPEN) {
+                      staffPresent = true;
+                      break;
+                    }
+                  }
+                }
+                
+                // If staff is present, they'll respond - no need for bot
+                if (staffPresent) return;
+                
+                // Rate limit: Prevent rapid-fire duplicate responses (3s cooldown per user)
+                const autoResponseKey = `helpai_response_${ws.userId}`;
+                const lastResponse = (globalThis as any)[autoResponseKey];
+                const now = Date.now();
+                if (lastResponse && (now - lastResponse) < 3000) return;
+                (globalThis as any)[autoResponseKey] = now;
+                
+                // TRINITY-POWERED RESPONSE: Use actual AI brain for intelligent conversation
+                // Brief delay feels natural (like the bot is "thinking")
+                setTimeout(async () => {
+                  try {
+                    // Import HelpAI capabilities for Trinity-powered response
+                    const { helpAIExecutor } = await import('./services/helpAICapabilities');
+                    
+                    // Get conversation history for context
+                    const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
+                    const conversationHistory = recentMessages
+                      .slice(-5)
+                      .filter(m => m.senderType !== 'system')
+                      .map(m => ({
+                        role: m.senderType === 'bot' ? 'assistant' as const : 'user' as const,
+                        content: m.message
+                      }));
+                    
+                    // Generate dynamic AI response with Trinity brain
+                    const aiResponse = await helpAIExecutor.generateDynamicResponse(
+                      ws.userId,
+                      ws.workspaceId || 'platform-external',
+                      sanitizedMessage,
+                      conversationHistory
+                    );
+                    
+                    // Save bot message to database
+                    const botMsg = await storage.createChatMessage({
+                      conversationId: ws.conversationId,
+                      senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                      senderName: CHAT_SERVER_CONFIG.helpai.name,
+                      senderType: 'bot',
+                      message: aiResponse.message,
+                      messageType: 'text',
+                    });
+
+                    // Broadcast bot reply to all connected room clients in real-time
+                    const botRoomClients = conversationClients.get(ws.conversationId);
+                    if (botRoomClients) {
+                      const botMsgPayload = JSON.stringify({ type: 'new_message', message: botMsg });
+                      botRoomClients.forEach((rc: any) => {
+                        if (rc.readyState === WebSocket.OPEN) rc.send(botMsgPayload);
+                      });
+                    }
+                    
+                    // Broadcast via IRC event system
+                    ircEmitter.botMessage({
+                      roomId: ws.conversationId,
+                      messageId: String(botMsg.id),
+                      botId: CHAT_SERVER_CONFIG.helpai.userId,
+                      botName: CHAT_SERVER_CONFIG.helpai.name,
+                      content: aiResponse.message,
+                      metadata: {
+                        messageType: 'trinity_ai_response',
+                        savedToDb: true,
+                        dbMessageId: botMsg.id,
+                        shouldEscalate: aiResponse.shouldEscalate,
+                      },
+                    });
+                    
+                    // Handle escalation if needed
+                    if (aiResponse.shouldEscalate) {
+                      log.info('HelpAI Trinity suggests escalation', { displayName, reason: aiResponse.escalationReason });
+                      ChatServerHub.emitSupportEscalation({
+                        conversationId: ws.conversationId,
+                        userId: ws.userId,
+                        userName: displayName,
+                        reason: aiResponse.escalationReason || 'User needs human assistance',
+                        messagePreview: sanitizedMessage.substring(0, 100),
+                      }).catch(err => log.error('HelpAI escalation emit failed', { error: err }));
+                    }
+                    
+                    log.debug('HelpAI Trinity responded (no staff online)', { displayName });
+                  } catch (botErr) {
+                    log.error('HelpAI Trinity response failed', { error: botErr });
+                    // Dynamic fallback - still uses AI patterns, never static text
+                    try {
+                      const { dynamicMessageService } = await import('./services/dynamicMessageService');
+                      const fallbackMsg = await dynamicMessageService.generateMessage(
+                        'fallback_help',
+                        { userName: displayName },
+                        ws.workspaceId
+                      );
+                      const botMsg = await storage.createChatMessage({
+                        conversationId: ws.conversationId,
+                        senderId: CHAT_SERVER_CONFIG.helpai.userId,
+                        senderName: CHAT_SERVER_CONFIG.helpai.name,
+                        senderType: 'bot',
+                        message: fallbackMsg,
+                        messageType: 'text',
+                      });
+                      // Broadcast fallback bot reply to room clients
+                      const fallbackRoomClients = conversationClients.get(ws.conversationId);
+                      if (fallbackRoomClients) {
+                        const fPayload = JSON.stringify({ type: 'new_message', message: botMsg });
+                        fallbackRoomClients.forEach((rc: any) => {
+                          if (rc.readyState === WebSocket.OPEN) rc.send(fPayload);
+                        });
+                      }
+                      ircEmitter.botMessage({
+                        roomId: ws.conversationId,
+                        messageId: String(botMsg.id),
+                        botId: CHAT_SERVER_CONFIG.helpai.userId,
+                        botName: CHAT_SERVER_CONFIG.helpai.name,
+                        content: fallbackMsg,
+                        metadata: { messageType: 'dynamic_fallback', savedToDb: true, dbMessageId: botMsg.id },
+                      });
+                    } catch (fallbackErr) {
+                      log.error('HelpAI dynamic fallback also failed', { error: fallbackErr });
+                    }
+                  }
+                }, 800); // Brief delay so the bot feels responsive but not instant
+              } catch (autoErr) {
+                log.error('HelpAI auto-responder error', { error: autoErr });
+              }
+            })();
 
             // REAL-TIME NOTIFICATIONS: Send toast notifications to users not viewing this chat
             // Get users currently in the conversation to exclude from notifications
@@ -3270,76 +6053,18 @@ export function setupWebSocket(server: Server) {
                       messagePreview: sanitizedMessage.substring(0, 50) + (sanitizedMessage.length > 50 ? '...' : ''),
                       timestamp: new Date().toISOString(),
                     }));
-                    console.log(`💬 Chat notification sent to user ${userId}`);
+                    log.debug('Chat notification sent', { userId });
                   } catch (err) {
-                    console.error('[ChatNotification] Failed to send notification:', err);
+                    log.error('ChatNotification failed to send', { error: err });
                   }
                 }
               });
             });
 
-            // GEMINI Q&A BOT: Intelligent responses using Gemini 2.0 Flash
-            const { shouldBotRespond, getAiResponse } = await import('./services/geminiQABot');
-            
-            if (ws.conversationId === MAIN_ROOM_ID && shouldBotRespond(payload.message)) {
-              try {
-                // Determine if user is staff (subscriber)
-                const botPlatformRole = await storage.getUserPlatformRole(ws.userId) || undefined;
-                const isSubscriber = hasPlatformWideAccess(botPlatformRole);
-                
-                // Get conversation history (last 5 messages for context)
-                const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
-                const conversationHistory = recentMessages
-                  .slice(-5)
-                  .filter(m => m.senderType !== 'system')
-                  .map(m => ({
-                    role: m.senderType === 'bot' ? 'assistant' as const : 'user' as const,
-                    content: m.message
-                  }));
-
-                // Get AI response with Gemini
-                const aiResponse = await getAiResponse(
-                  ws.userId,
-                  ws.workspaceId || 'platform-external',
-                  ws.conversationId,
-                  payload.message,
-                  conversationHistory,
-                  isSubscriber
-                );
-
-                if (aiResponse.shouldRespond) {
-                  // Save AI response to database
-                  const aiMessage = await storage.createChatMessage({
-                    conversationId: ws.conversationId,
-                    senderId: CHAT_SERVER_CONFIG.helpai.userId,
-                    senderName: CHAT_SERVER_CONFIG.helpai.name,
-                    senderType: 'bot',
-                    message: aiResponse.message,
-                    messageType: 'text',
-                  });
-
-                  // Log cost for debugging
-                  if (aiResponse.tokenUsage) {
-                    console.log(`✨ Gemini Q&A: $${aiResponse.tokenUsage.totalCost.toFixed(6)} (${aiResponse.tokenUsage.totalTokens} tokens)`);
-                  }
-
-                  // Broadcast AI response to all clients
-                  if (clients) {
-                    const aiPayload = JSON.stringify({
-                      type: 'new_message',
-                      message: aiMessage,
-                    });
-                    clients.forEach((client) => {
-                      if (client.readyState === WebSocket.OPEN) {
-                        client.send(aiPayload);
-                      }
-                    });
-                  }
-                }
-              } catch (aiError) {
-                console.error('Gemini Q&A Bot error:', aiError);
-              }
-            }
+            // NOTE: Trinity-powered HelpAI responses are now handled in the unified block above
+            // (lines 4113-4199) which checks for staff presence, rate limits, and uses 
+            // helpAIExecutor.generateDynamicResponse() for intelligent AI conversation.
+            // This prevents duplicate responses and ensures consistent behavior.
             break;
           }
 
@@ -3348,13 +6073,32 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // Broadcast typing status to ALL clients in same conversation (including sender for debug)
+            const typingUserName = payload.userName || ws.userName || 'User';
+            
+            // IRC-STYLE TYPING EVENT: Fast broadcast with auto-timeout
+            if (payload.isTyping) {
+              ircEmitter.typing({
+                roomId: ws.conversationId,
+                userId: ws.userId,
+                userName: typingUserName,
+              });
+              // Update activity for presence tracking
+              roomPresence.updateActivity(ws.conversationId, ws.userId);
+            } else {
+              ircEmitter.typingStop({
+                roomId: ws.conversationId,
+                userId: ws.userId,
+                userName: typingUserName,
+              });
+            }
+
+            // Also broadcast legacy typing payload for backwards compatibility
             const clients = conversationClients.get(ws.conversationId);
             if (clients) {
               const typingPayload = JSON.stringify({
                 type: 'user_typing',
                 userId: ws.userId,
-                typingUserName: payload.userName || ws.userName || 'User',
+                typingUserName: typingUserName,
                 typingUserIsStaff: payload.isStaff || ws.userType === 'staff',
                 isTyping: payload.isTyping,
               });
@@ -3376,6 +6120,33 @@ export function setupWebSocket(server: Server) {
 
             // Update user's status
             ws.userStatus = payload.status;
+            
+            // IRC-STYLE PRESENCE EVENT: Fast broadcast for status changes
+            // Emit ONLY to rooms user is in (no global broadcast to avoid cross-room leakage)
+            if (payload.status === 'away') {
+              roomPresence.setAway(ws.userId, true);
+              // Emit to all rooms user is in with proper roomId
+              const userRooms = roomPresence.getUserRooms(ws.userId);
+              for (const roomId of userRooms) {
+                ircEmitter.away({
+                  userId: ws.userId,
+                  userName: ws.userName,
+                  awayMessage: payload.message,
+                  roomId, // Always include roomId for room-scoped broadcast
+                });
+              }
+            } else if (payload.status === 'online') {
+              roomPresence.setAway(ws.userId, false);
+              // Emit to all rooms user is in with proper roomId
+              const userRooms = roomPresence.getUserRooms(ws.userId);
+              for (const roomId of userRooms) {
+                ircEmitter.back({
+                  userId: ws.userId,
+                  userName: ws.userName,
+                  roomId, // Always include roomId for room-scoped broadcast
+                });
+              }
+            }
 
             // Create system message for status change
             const statusMessage = createSystemMessage(
@@ -3393,7 +6164,7 @@ export function setupWebSocket(server: Server) {
                 senderType: 'system',
               });
             } catch (err) {
-              console.error('Failed to save status change message:', err);
+              log.error('Failed to save status change message', { error: err });
             }
 
             // Broadcast status change to all clients in this conversation
@@ -3480,7 +6251,7 @@ export function setupWebSocket(server: Server) {
                   isSystemMessage: true,
                 });
               } catch (err) {
-                console.error('Failed to save error message:', err);
+                log.error('Failed to save error message', { error: err });
               }
               
               // IRC-style command acknowledgment for root protection
@@ -3526,7 +6297,7 @@ export function setupWebSocket(server: Server) {
                   isSystemMessage: true,
                 });
               } catch (err) {
-                console.error('Failed to save error message:', err);
+                log.error('Failed to save error message', { error: err });
               }
               
               // IRC-style command acknowledgment for staff protection
@@ -3569,7 +6340,7 @@ export function setupWebSocket(server: Server) {
                 }
               } catch (err) {
                 // If user lookup fails, use generic message
-                console.error('Failed to check user existence for kick:', err);
+                log.error('Failed to check user existence for kick', { error: err });
               }
               
               // IRC-style command acknowledgment for user not found
@@ -3598,7 +6369,7 @@ export function setupWebSocket(server: Server) {
                   });
                 }
               } catch (err) {
-                console.error('Failed to get target user name:', err);
+                log.error('Failed to get target user name', { error: err });
               }
             }
 
@@ -3619,7 +6390,7 @@ export function setupWebSocket(server: Server) {
                 senderType: 'system',
               });
             } catch (err) {
-              console.error('Failed to save kick message:', err);
+              log.error('Failed to save kick message', { error: err });
             }
 
             // Broadcast kick message to all clients FIRST
@@ -3646,27 +6417,37 @@ export function setupWebSocket(server: Server) {
             if (targetClient) {
               clients.delete(targetClient);
             }
-            console.log(`[HelpAI] User ${targetUserName} kicked by ${ws.userName} - Reason: ${reason}`);
+            log.info('User kicked', { targetUser: targetUserName, kickedBy: ws.userName, reason });
 
             // Broadcast updated user list with real users only (+ HelpAI bot from config)
-            const realUsers = Array.from(clients)
-              .filter(c => c.userId && c.userName)
-              .map(c => ({
+            // Need to fetch platform roles for proper categorization
+            const clientsArray = Array.from(clients).filter(c => c.userId && c.userName);
+            const realUsers = await Promise.all(clientsArray.map(async (c) => {
+              const platformRole = await storage.getUserPlatformRole(c.userId!).catch(() => null);
+              const isStaffUser = hasPlatformWideAccess(platformRole || undefined);
+              const category = isStaffUser ? 'staff' : (c.userType === 'guest' ? 'guest' : 'customer');
+              return {
                 id: c.userId!,
                 name: c.userName!,
-                role: c.workspaceId || 'guest',
+                role: category,
+                platformRole: platformRole || undefined,
                 status: c.userStatus || 'online',
                 userType: c.userType || 'guest',
-              }));
+              };
+            }));
 
-            // Add HelpAI bot from config for main room
-            const allUsers = (ws.conversationId === MAIN_ROOM_ID) 
+            // Add HelpAI bot from config for rooms with bot support
+            // Check room mode dynamically instead of hardcoded slug
+            const supportRoomForKick = await storage.getSupportRoomByConversationId(ws.conversationId);
+            const roomSupportsBotsDynamic = roomSupportsBots(supportRoomForKick?.mode);
+            
+            const allUsers = roomSupportsBotsDynamic 
               ? [{
                   id: CHAT_SERVER_CONFIG.helpai.userId,
                   name: CHAT_SERVER_CONFIG.helpai.name,
                   role: 'bot',
                   status: 'online',
-                  userType: 'staff'
+                  userType: 'bot'
                 }, ...realUsers]
               : realUsers;
 
@@ -3721,7 +6502,7 @@ export function setupWebSocket(server: Server) {
                 errorMessage: null,
               });
             } catch (auditErr) {
-              console.error('AuditOS™ failed to log kick action:', auditErr);
+              log.error('AuditOS failed to log kick action', { error: auditErr });
             }
 
             // ===================================================================
@@ -3796,7 +6577,7 @@ export function setupWebSocket(server: Server) {
                   errorMessage: 'Permission denied - Staff role required',
                 });
               } catch (auditErr) {
-                console.error('AuditOS™ failed to log silence attempt:', auditErr);
+                log.error('AuditOS failed to log silence attempt', { error: auditErr });
               }
               return;
             }
@@ -3826,6 +6607,22 @@ export function setupWebSocket(server: Server) {
               }
             }
 
+            // Revoke voice in the in-memory tracking system
+            revokeVoice(ws.conversationId, payload.targetUserId);
+            
+            // Send voice_removed event to the target user
+            for (const client of Array.from(clients)) {
+              if (client.userId === payload.targetUserId && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'voice_removed',
+                  conversationId: ws.conversationId,
+                  duration: payload.duration || 5,
+                  reason: payload.reason || 'Chat violation',
+                }));
+                break;
+              }
+            }
+
             // Create system announcement message
             const duration = payload.duration || 5;
             const reason = payload.reason || 'Chat violation';
@@ -3844,7 +6641,7 @@ export function setupWebSocket(server: Server) {
                 senderType: 'system',
               });
             } catch (err) {
-              console.error('Failed to save silence message:', err);
+              log.error('Failed to save silence message', { error: err });
             }
 
             // Broadcast to all clients
@@ -3857,7 +6654,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`[HelpAI] ${targetUserName} silenced by ${ws.userName} for ${duration} minutes - Reason: ${reason}`);
+            log.info('User silenced', { targetUser: targetUserName, silencedBy: ws.userName, durationMinutes: duration, reason });
 
             // ===================================================================
             // AUDITOS™ - Log the moderation action for compliance tracking
@@ -3901,7 +6698,7 @@ export function setupWebSocket(server: Server) {
                 errorMessage: null,
               });
             } catch (auditErr) {
-              console.error('AuditOS™ failed to log silence action:', auditErr);
+              log.error('AuditOS failed to log silence action', { error: auditErr });
             }
 
             // ===================================================================
@@ -3926,6 +6723,22 @@ export function setupWebSocket(server: Server) {
           case 'give_voice': {
             // Unmute a user (give them voice back) with IRC-style acknowledgments
             if (!ws.conversationId || !ws.userId) {
+              return;
+            }
+
+            // IRC HELPDESK MODEL: Voice granting is BLOCKED in SUP (helpdesk) rooms
+            // This protects end-user privacy — all helpdesk communication stays whisper-only
+            if (ws.roomMode === 'sup') {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'command_ack',
+                  commandId: payload.commandId,
+                  action: 'give_voice',
+                  success: false,
+                  message: 'Voice granting is not permitted in HelpDesk rooms for privacy protection. Use private messages to communicate with users.',
+                  errorType: 'HELPDESK_NO_VOICE',
+                }));
+              }
               return;
             }
 
@@ -3975,7 +6788,7 @@ export function setupWebSocket(server: Server) {
                   errorMessage: 'Permission denied - Staff role required',
                 });
               } catch (auditErr) {
-                console.error('AuditOS™ failed to log give_voice attempt:', auditErr);
+                log.error('AuditOS failed to log give_voice attempt', { error: auditErr });
               }
               return;
             }
@@ -4005,10 +6818,25 @@ export function setupWebSocket(server: Server) {
               }
             }
 
+            // Grant voice in the in-memory tracking system
+            grantVoice(ws.conversationId, payload.targetUserId);
+            
+            // Send voice_granted event to the target user specifically
+            for (const client of Array.from(clients)) {
+              if (client.userId === payload.targetUserId && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'voice_granted',
+                  conversationId: ws.conversationId,
+                  grantedBy: ws.userName,
+                }));
+                break;
+              }
+            }
+
             // Create system announcement message
             const unmuteMessage = createSystemMessage(
               ws.conversationId,
-              `🔊 ${targetUserName} has been unmuted by ${ws.userName} and can now speak.`
+              `[+v] ${targetUserName} has been granted voice by ${ws.userName}`
             );
 
             // Save and broadcast the unmute message FIRST
@@ -4021,7 +6849,7 @@ export function setupWebSocket(server: Server) {
                 senderType: 'system',
               });
             } catch (err) {
-              console.error('Failed to save unmute message:', err);
+              log.error('Failed to save unmute message', { error: err });
             }
 
             // Broadcast to all clients
@@ -4034,7 +6862,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`🔊 ${targetUserName} unmuted by ${ws.userName}`);
+            log.info('User unmuted', { targetUser: targetUserName, unmutedBy: ws.userName });
 
             // ===================================================================
             // AUDITOS™ - Log the moderation action for compliance tracking
@@ -4075,7 +6903,7 @@ export function setupWebSocket(server: Server) {
                 errorMessage: null,
               });
             } catch (auditErr) {
-              console.error('AuditOS™ failed to log give_voice action:', auditErr);
+              log.error('AuditOS failed to log give_voice action', { error: auditErr });
             }
 
             // ===================================================================
@@ -4106,7 +6934,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Authentication required. Please log in first.',
               }));
-              console.warn(`[Shifts] Rejected unauthenticated shift subscription from ${ws.ipAddress}`);
+              log.warn('Rejected unauthenticated shift subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4116,7 +6944,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Guests cannot subscribe to shift updates.',
               }));
-              console.warn(`[Shifts] Rejected guest shift subscription from ${ws.ipAddress}`);
+              log.warn('Rejected guest shift subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4131,13 +6959,13 @@ export function setupWebSocket(server: Server) {
             if (!workspaceId) {
               if (isStaff) {
                 // Staff without workspace context get platform-wide access (logged for audit)
-                console.log(`[Shifts] Staff ${userId} (${platformRole}) accessing shifts without workspace context`);
+                log.debug('Staff accessing shifts without workspace context', { userId, platformRole });
               } else {
                 ws.send(JSON.stringify({
                   type: 'error',
                   message: 'Your session lacks workspace context. Please refresh and try again.',
                 }));
-                console.warn(`[Shifts] User ${userId} rejected - no workspace in session`);
+                log.warn('Shift subscription rejected - no workspace in session', { userId });
                 return;
               }
             }
@@ -4149,7 +6977,7 @@ export function setupWebSocket(server: Server) {
             }
             shiftUpdateClients.get(effectiveWorkspaceId)!.add(ws);
 
-            console.log(`✅ User ${userId} subscribed to shift updates for workspace ${workspaceId || 'platform-wide (staff)'}`);
+            log.debug('User subscribed to shift updates', { userId, workspaceId: workspaceId || 'platform-wide (staff)' });
 
             // Send confirmation
             ws.send(JSON.stringify({
@@ -4168,7 +6996,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Authentication required. Please log in first.',
               }));
-              console.warn(`[SchedulingProgress] Rejected unauthenticated subscription from ${ws.ipAddress}`);
+              log.warn('Rejected unauthenticated scheduling progress subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4177,7 +7005,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Guests cannot subscribe to scheduling progress.',
               }));
-              console.warn(`[SchedulingProgress] Rejected guest subscription from ${ws.ipAddress}`);
+              log.warn('Rejected guest scheduling progress subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4189,7 +7017,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Your session lacks workspace context. Please refresh and try again.',
               }));
-              console.warn(`[SchedulingProgress] User ${userId} rejected - no workspace in session`);
+              log.warn('Scheduling progress subscription rejected - no workspace', { userId });
               return;
             }
 
@@ -4203,7 +7031,7 @@ export function setupWebSocket(server: Server) {
             }
             schedulingProgressClients.get(workspaceId)!.add(ws);
 
-            console.log(`✅ User ${userId} subscribed to scheduling progress for workspace ${workspaceId}`);
+            log.debug('User subscribed to scheduling progress', { userId, workspaceId });
 
             // Send confirmation
             ws.send(JSON.stringify({
@@ -4222,7 +7050,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Authentication required. Please log in first.',
               }));
-              console.warn(`[CreditUpdates] Rejected unauthenticated subscription from ${ws.ipAddress}`);
+              log.warn('Rejected unauthenticated credit updates subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4231,7 +7059,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Guests cannot subscribe to credit updates.',
               }));
-              console.warn(`[CreditUpdates] Rejected guest subscription from ${ws.ipAddress}`);
+              log.warn('Rejected guest credit updates subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4243,7 +7071,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Your session lacks workspace context. Please refresh and try again.',
               }));
-              console.warn(`[CreditUpdates] User ${userId} rejected - no workspace in session`);
+              log.warn('Credit updates subscription rejected - no workspace', { userId });
               return;
             }
 
@@ -4257,7 +7085,7 @@ export function setupWebSocket(server: Server) {
             }
             creditUpdateClients.get(workspaceId)!.add(ws);
 
-            console.log(`✅ User ${userId} subscribed to credit updates for workspace ${workspaceId}`);
+            log.debug('User subscribed to credit updates', { userId, workspaceId });
 
             // Send confirmation
             ws.send(JSON.stringify({
@@ -4277,7 +7105,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Authentication required. Please log in first.',
               }));
-              console.warn(`[Notifications] Rejected unauthenticated subscription attempt from ${ws.ipAddress}`);
+              log.warn('Rejected unauthenticated notification subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4287,7 +7115,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Guests cannot subscribe to notifications.',
               }));
-              console.warn(`[Notifications] Rejected guest notification subscription from ${ws.ipAddress}`);
+              log.warn('Rejected guest notification subscription', { ip: ws.ipAddress });
               return;
             }
             
@@ -4304,7 +7132,7 @@ export function setupWebSocket(server: Server) {
                 type: 'error',
                 message: 'Your session lacks workspace context. Please refresh and try again.',
               }));
-              console.warn(`[Notifications] User ${userId} rejected - no workspace in session`);
+              log.warn('Notification subscription rejected - no workspace', { userId });
               return;
             }
             
@@ -4314,7 +7142,7 @@ export function setupWebSocket(server: Server) {
               ? PLATFORM_WORKSPACE_ID
               : workspaceId;
             
-            console.log(`[Notifications] Authenticated subscription for ${userId} in workspace ${effectiveWorkspaceId || 'unknown'} (platform role: ${platformRole || 'none'})`);
+            log.debug('Authenticated notification subscription', { userId, workspaceId: effectiveWorkspaceId, platformRole: platformRole || 'none' });
 
             // Add to notification clients for this workspace/user combination
             if (!notificationClients.has(effectiveWorkspaceId)) {
@@ -4328,13 +7156,64 @@ export function setupWebSocket(server: Server) {
             const unreadPlatformUpdates = await storage.getUnreadPlatformUpdatesCount(userId, effectiveWorkspaceId);
             const unreadCount = unreadNotifications + unreadPlatformUpdates;
 
-            console.log(`✅ User ${userId} subscribed to notifications for workspace ${effectiveWorkspaceId} (${unreadCount} unread: ${unreadNotifications} notifs + ${unreadPlatformUpdates} updates)`);
+            log.debug('User subscribed to notifications', { userId, workspaceId: effectiveWorkspaceId, unreadCount, unreadNotifications, unreadPlatformUpdates });
 
             // Send confirmation with current unread count
             ws.send(JSON.stringify({
               type: 'notifications_subscribed',
               workspaceId: effectiveWorkspaceId,
               unreadCount,
+            }));
+            break;
+          }
+
+          case 'join_dispatch_updates': {
+            // Subscribe to real-time GPS/dispatch updates for a workspace (CAD Console)
+            // SECURITY: Require session authentication — no client-supplied IDs
+            if (!ws.serverAuth) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Authentication required to subscribe to dispatch updates.',
+              }));
+              log.warn('Rejected unauthenticated dispatch subscription', { ip: ws.ipAddress });
+              return;
+            }
+
+            if (ws.serverAuth.userId.startsWith('guest-')) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Guests cannot subscribe to dispatch updates.',
+              }));
+              return;
+            }
+
+            const dispatchUserId = ws.serverAuth.userId;
+            const dispatchWorkspaceId = ws.serverAuth.workspaceId;
+            const dispatchPlatformRole = ws.serverAuth.platformRole;
+
+            const isDispatchStaff = hasPlatformWideAccess(dispatchPlatformRole);
+            if (!dispatchWorkspaceId && !isDispatchStaff) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Your session lacks workspace context for dispatch updates.',
+              }));
+              return;
+            }
+
+            const effectiveDispatchWorkspaceId = dispatchWorkspaceId || PLATFORM_WORKSPACE_ID;
+            if (!dispatchUpdateClients.has(effectiveDispatchWorkspaceId)) {
+              dispatchUpdateClients.set(effectiveDispatchWorkspaceId, new Set());
+            }
+            dispatchUpdateClients.get(effectiveDispatchWorkspaceId)!.add(ws);
+
+            log.debug('User subscribed to dispatch/GPS updates', {
+              userId: dispatchUserId,
+              workspaceId: effectiveDispatchWorkspaceId,
+            });
+
+            ws.send(JSON.stringify({
+              type: 'dispatch_updates_subscribed',
+              workspaceId: effectiveDispatchWorkspaceId,
             }));
             break;
           }
@@ -4361,17 +7240,24 @@ export function setupWebSocket(server: Server) {
             const targetUser = await storage.getUserDisplayInfo(payload.targetUserId);
             const targetUserName = targetUser ? `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email || 'Unknown' : 'Unknown';
             
-            // Get staff display name
+            // Get staff display name (first-name-only for end-user-facing messages, full for audit)
             const staffRole = staffInfo?.platformRole || 'unknown';
-            const staffDisplayName = staffInfo ? formatUserDisplayName({
+            const staffDisplayNameFull = staffInfo ? formatUserDisplayName({
               firstName: staffInfo.firstName,
               lastName: staffInfo.lastName,
               email: staffInfo.email || undefined,
               platformRole: staffInfo.platformRole || undefined,
               workspaceRole: staffInfo.workspaceRole || undefined,
             }) : ws.userName || 'Unknown';
+            const staffDisplayName = staffInfo ? formatUserDisplayNameForChat({
+              firstName: staffInfo.firstName,
+              lastName: staffInfo.lastName,
+              email: staffInfo.email || undefined,
+              platformRole: staffInfo.platformRole || undefined,
+              workspaceRole: staffInfo.workspaceRole || undefined,
+            }) : ws.userName || 'Support';
 
-            // Audit log the ban action
+            // Audit log the ban action (uses full name internally)
             try {
               await storage.createAuditLog({
                 commandId: payload.commandId || null,
@@ -4379,7 +7265,7 @@ export function setupWebSocket(server: Server) {
                 userEmail: staffInfo?.email || ws.userName || 'unknown',
                 userRole: staffRole || 'unknown',
                 action: 'ban_user',
-                actionDescription: `${staffDisplayName} permanently banned ${targetUserName}`,
+                actionDescription: `${staffDisplayNameFull} permanently banned ${targetUserName}`,
                 entityType: 'user',
                 entityId: payload.targetUserId,
                 targetId: payload.targetUserId,
@@ -4400,7 +7286,7 @@ export function setupWebSocket(server: Server) {
                 errorMessage: null,
               });
             } catch (auditErr) {
-              console.error('AuditOS™ failed to log ban action:', auditErr);
+              log.error('AuditOS failed to log ban action', { error: auditErr });
             }
 
             // Find and disconnect target user from all conversations
@@ -4421,7 +7307,7 @@ export function setupWebSocket(server: Server) {
                   // Remove from conversation and close connection
                   clients.delete(client);
                   client.close();
-                  console.log(`🚫 ${payload.targetUserId} has been permanently banned by ${staffDisplayName}`);
+                  log.info('User permanently banned', { targetUserId: payload.targetUserId, bannedBy: staffDisplayName });
                 }
               }
             }
@@ -4505,7 +7391,7 @@ export function setupWebSocket(server: Server) {
               message: payload.message || '',
             }));
 
-            console.log(`🔐 ${ws.userName} requested ${payload.requestType} from user ${payload.targetUserId}`);
+            log.info('Secure request initiated', { requestedBy: ws.userName, requestType: payload.requestType, targetUserId: payload.targetUserId });
             break;
           }
 
@@ -4532,7 +7418,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`📥 Secure data received from ${ws.userName}`);
+            log.info('Secure data received', { from: ws.userName });
             break;
           }
 
@@ -4573,7 +7459,7 @@ export function setupWebSocket(server: Server) {
               conversationId: ws.conversationId // CRITICAL: Include conversationId to prevent front-end security rejection
             }));
 
-            console.log(`🎤 ${ws.userName} released ${payload.targetUserId} from hold`);
+            log.info('User released from hold', { releasedBy: ws.userName, targetUserId: payload.targetUserId });
             break;
           }
 
@@ -4611,10 +7497,10 @@ export function setupWebSocket(server: Server) {
                 });
               }
             } catch (err) {
-              console.error('Failed to save transfer message:', err);
+              log.error('Failed to save transfer message', { error: err });
             }
 
-            console.log(`🔄 ${ws.userName} transferred user ${payload.targetUserId}`);
+            log.info('User transferred', { transferredBy: ws.userName, targetUserId: payload.targetUserId });
             break;
           }
 
@@ -4653,7 +7539,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`📞 Call initiated by ${payload.callerName} in room ${payload.roomId}`);
+            log.info('Call initiated', { callerName: payload.callerName, roomId: payload.roomId });
             break;
           }
 
@@ -4674,7 +7560,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`✅ Call accepted in room ${payload.roomId}`);
+            log.info('Call accepted', { roomId: payload.roomId });
             break;
           }
 
@@ -4695,7 +7581,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`❌ Call rejected in room ${payload.roomId}`);
+            log.info('Call rejected', { roomId: payload.roomId });
             break;
           }
 
@@ -4716,7 +7602,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`📴 Call ended in room ${payload.roomId}`);
+            log.info('Call ended', { roomId: payload.roomId });
             break;
           }
 
@@ -4754,7 +7640,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`📡 WebRTC offer sent for room ${payload.roomId}`);
+            log.debug('WebRTC offer sent', { roomId: payload.roomId });
             break;
           }
 
@@ -4792,7 +7678,7 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`📡 WebRTC answer sent for room ${payload.roomId}`);
+            log.debug('WebRTC answer sent', { roomId: payload.roomId });
             break;
           }
 
@@ -4830,24 +7716,127 @@ export function setupWebSocket(server: Server) {
               }
             });
 
-            console.log(`🧊 WebRTC ICE candidate sent for room ${payload.roomId}`);
+            log.debug('WebRTC ICE candidate sent', { roomId: payload.roomId });
+            break;
+          }
+
+          case 'join_platform_updates': {
+            // Client subscribes to platform-wide update broadcasts.
+            // Platform updates are already broadcast to all authenticated connections;
+            // this message is a client-side signal only — no server-side subscription
+            // record is needed. Silently acknowledge to suppress the default warning.
+            break;
+          }
+
+          default: {
+            log.warn('Unhandled WebSocket message type', { type: (payload as any).type, payload });
             break;
           }
         }
       } catch (error) {
-        console.error('❌ WebSocket message processing error:', error);
-        console.error('Error details:', {
-          name: error instanceof Error ? error.name : 'Unknown',
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          rawMessage: data ? String(data).substring(0, 500) : 'N/A' // First 500 chars of raw data
+        log.error('WebSocket message processing error', { error });
+        log.error('Message processing error details', {
+          errorName: error instanceof Error ? error.name : 'Unknown',
+          errorMessage: error instanceof Error ? error.message : String(error),
+          rawMessagePreview: data ? String(data).substring(0, 500) : 'N/A',
         });
         ws.send(JSON.stringify({
           type: 'error',
           message: 'Failed to process message',
         }));
       }
+    };
+    
+    // =========================================================================
+    // CRITICAL: Register message handler IMMEDIATELY - before any awaits!
+    // This ensures no messages are lost during async authentication.
+    // =========================================================================
+    ws.on('message', (data: Buffer | ArrayBuffer | Buffer[]) => {
+      log.debug('Message received', { authComplete });
+      if (authComplete) {
+        // Auth done - process directly
+        processMessage(data);
+      } else {
+        // Auth in progress - buffer for later
+        log.debug('Buffering message until auth completes');
+        messageBuffer.push(data);
+      }
     });
+    
+    // Initialize heartbeat
+    ws.isAlive = true;
+    
+    // Handle pong responses (heartbeat)
+    ws.on('pong', () => {
+      ws.isAlive = true;
+    });
+    
+    // Start heartbeat interval (30 seconds)
+    ws.pingInterval = setInterval(() => {
+      if (ws.isAlive === false) {
+        // Silent cleanup of stale connection - this is normal when tabs close without proper disconnect
+        clearInterval(ws.pingInterval);
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    }, 30000);
+    
+    // =========================================================================
+    // SESSION-BASED AUTHENTICATION AT CONNECTION TIME
+    // Securely extract authenticated user identity from HTTP session cookies
+    // This is done ONCE at connection time - not per-message
+    // =========================================================================
+    const authenticatedSession = await getSessionFromRequest(request);
+    if (authenticatedSession) {
+      // Store authenticated identity on WebSocket - NEVER trust client-supplied IDs
+      ws.userId = authenticatedSession.userId;
+      ws.workspaceId = authenticatedSession.workspaceId;
+      
+      // Fetch platform role for platform-wide access checks (root_admin, support_agent, Bot, etc.)
+      const platformRole = await getUserPlatformRole(authenticatedSession.userId);
+      
+      ws.serverAuth = {
+        userId: authenticatedSession.userId,
+        workspaceId: authenticatedSession.workspaceId || '',
+        role: authenticatedSession.role || 'user',
+        platformRole: platformRole !== 'none' ? platformRole : undefined,
+        sessionId: connectionId,
+        authenticatedAt: new Date(),
+      };
+      
+      // Copy platformRole to standalone property for DM visibility filtering
+      ws.platformRole = platformRole !== 'none' ? platformRole : undefined;
+      
+      log.info('New authenticated WebSocket connection', { ip: ipAddress, userId: authenticatedSession.userId, platformRole, connectionId });
+      
+      // TRINITY STAFF REGISTRATION: Register support staff for Trinity alerts
+      const staffRoles = ['root_admin', 'co_admin', 'sysops', 'platform_support', 'org_owner', 'co_owner'];
+      const userRole = ws.serverAuth.platformRole || ws.serverAuth.role;
+      if (userRole && staffRoles.includes(userRole) && authenticatedSession.userId) {
+        import('./services/ai-brain/trinityAutonomousNotifier').then(({ registerSupportConnection }) => {
+          registerSupportConnection({
+            userId: authenticatedSession.userId,
+            role: userRole,
+            workspaceId: authenticatedSession.workspaceId || 'platform',
+            socket: ws,
+          });
+        }).catch(() => {});
+      }
+    } else {
+      // Guest/anonymous connection - allowed for helpdesk but limited permissions
+      log.info('New guest WebSocket connection', { ip: ipAddress, connectionId });
+    }
+    
+    // =========================================================================
+    // CRITICAL: Mark auth complete and process buffered messages
+    // =========================================================================
+    authComplete = true;
+    log.debug('Auth complete, processing buffered messages', { bufferedCount: messageBuffer.length });
+    for (const bufferedData of messageBuffer) {
+      processMessage(bufferedData);
+    }
+    messageBuffer.length = 0; // Clear buffer
 
     ws.on('close', async () => {
       // RATE LIMITING: Track disconnection in database
@@ -4886,7 +7875,7 @@ export function setupWebSocket(server: Server) {
         if (clients.size === 0) {
           shiftUpdateClients.delete(ws.workspaceId);
         }
-        console.log(`🔌 Removed client from shift updates for workspace ${ws.workspaceId}`);
+        log.debug('Removed client from shift updates', { workspaceId: ws.workspaceId });
       }
       
       // NOTIFICATIONS CLEANUP: Remove from notification clients
@@ -4897,7 +7886,7 @@ export function setupWebSocket(server: Server) {
         if (userClients.size === 0) {
           notificationClients.delete(ws.workspaceId);
         }
-        console.log(`🔌 Removed client from notifications for user ${ws.userId} in workspace ${ws.workspaceId}`);
+        log.debug('Removed client from notifications', { userId: ws.userId, workspaceId: ws.workspaceId });
       }
       
       // SCHEDULING PROGRESS CLEANUP: Remove from scheduling progress clients
@@ -4907,7 +7896,7 @@ export function setupWebSocket(server: Server) {
         if (clients.size === 0) {
           schedulingProgressClients.delete(ws.workspaceId);
         }
-        console.log(`🔌 Removed client from scheduling progress for workspace ${ws.workspaceId}`);
+        log.debug('Removed client from scheduling progress', { workspaceId: ws.workspaceId });
       }
       
       // CREDIT UPDATES CLEANUP: Remove from credit update clients
@@ -4917,11 +7906,21 @@ export function setupWebSocket(server: Server) {
         if (clients.size === 0) {
           creditUpdateClients.delete(ws.workspaceId);
         }
-        console.log(`🔌 Removed client from credit updates for workspace ${ws.workspaceId}`);
+        log.debug('Removed client from credit updates', { workspaceId: ws.workspaceId });
+      }
+
+      // DISPATCH/GPS UPDATES CLEANUP: Remove from dispatch update clients
+      if (ws.workspaceId && dispatchUpdateClients.has(ws.workspaceId)) {
+        const clients = dispatchUpdateClients.get(ws.workspaceId)!;
+        clients.delete(ws);
+        if (clients.size === 0) {
+          dispatchUpdateClients.delete(ws.workspaceId);
+        }
+        log.debug('Removed client from dispatch updates', { workspaceId: ws.workspaceId });
       }
       
-      // Send leave announcement for main helpdesk room
-      if (ws.conversationId === MAIN_ROOM_ID && ws.userId) {
+      // Send leave announcement for rooms with bot support (uses stored flag)
+      if (ws.supportsBots && ws.userId) {
         try {
           // Get user display info for leave announcement
           const userInfo = await storage.getUserDisplayInfo(ws.userId);
@@ -4958,9 +7957,9 @@ export function setupWebSocket(server: Server) {
             });
           }
 
-          console.log(`${displayName} left conversation ${ws.conversationId}`);
+          log.info('User left conversation', { displayName, conversationId: ws.conversationId });
         } catch (error) {
-          console.error('Error sending leave announcement:', error);
+          log.error('Error sending leave announcement', { error });
         }
       }
 
@@ -4969,6 +7968,25 @@ export function setupWebSocket(server: Server) {
         const clients = conversationClients.get(ws.conversationId);
         if (clients) {
           clients.delete(ws);
+          
+          const memberCount = roomPresence.part(ws.conversationId, ws.userId || '');
+          if (ws.userId && ws.userName) {
+            ircEmitter.part({
+              roomId: ws.conversationId,
+              roomName: 'Chat',
+              userId: ws.userId,
+              userName: ws.userName,
+              reason: 'disconnected',
+              memberCount,
+            });
+            platformEventBus.emit('chat:participant_left', {
+              conversationId: ws.conversationId,
+              userId: ws.userId,
+              userName: ws.userName,
+              workspaceId: ws.workspaceId || undefined,
+              source: 'websocket',
+            });
+          }
           
           // Broadcast updated participants list after user leaves
           const participants = [];
@@ -4993,7 +8011,11 @@ export function setupWebSocket(server: Server) {
 
           clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-              client.send(participantsPayload);
+              try {
+                client.send(participantsPayload);
+              } catch (sendErr: any) {
+                log.warn('Failed to send participants_update to client', { error: sendErr?.message });
+              }
             }
           });
           
@@ -5002,11 +8024,11 @@ export function setupWebSocket(server: Server) {
           }
         }
       }
-      console.log('WebSocket connection closed');
+      log.debug('WebSocket connection closed');
     });
 
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      log.error('WebSocket error', { error });
       // Clean up heartbeat interval on error
       if (ws.pingInterval) {
         clearInterval(ws.pingInterval);
@@ -5017,7 +8039,7 @@ export function setupWebSocket(server: Server) {
   // NOTE: Chat simulation removed - system uses only live data from database with real users
   // All user data now comes from storage.getUserDisplayInfo() for consistency
 
-  console.log('WebSocket server initialized on /ws/chat');
+  log.info('WebSocket server initialized on /ws/chat');
   
   // Export broadcast function for shift updates
   const broadcaster = {
@@ -5025,7 +8047,7 @@ export function setupWebSocket(server: Server) {
     broadcastShiftUpdate: (workspaceId: string, updateType: 'shift_created' | 'shift_updated' | 'shift_deleted', shift?: any, shiftId?: string) => {
       const clients = shiftUpdateClients.get(workspaceId);
       if (!clients || clients.size === 0) {
-        console.log(`No clients subscribed to shift updates for workspace ${workspaceId}`);
+        log.debug('No clients subscribed to shift updates', { workspaceId });
         return;
       }
 
@@ -5052,11 +8074,15 @@ export function setupWebSocket(server: Server) {
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`📡 Broadcasting ${updateType} to ${clients.size} clients in workspace ${workspaceId}`);
+      log.debug('Broadcasting shift update', { updateType, clientCount: clients.size, workspaceId });
 
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(payload);
+          try {
+            client.send(payload);
+          } catch (sendErr: any) {
+            log.warn('Failed to send shift update to client', { error: sendErr?.message });
+          }
         } else {
           // Clean up dead connections
           clients.delete(client);
@@ -5066,13 +8092,13 @@ export function setupWebSocket(server: Server) {
     broadcastNotification: (workspaceId: string, userId: string, updateType: 'notification_new' | 'notification_read' | 'notification_count_updated', notification?: any, unreadCount?: number) => {
       const workspaceClients = notificationClients.get(workspaceId);
       if (!workspaceClients) {
-        console.log(`No notification clients for workspace ${workspaceId}`);
+        log.debug('No notification clients for workspace', { workspaceId });
         return;
       }
 
       const userClient = workspaceClients.get(userId);
       if (!userClient || userClient.readyState !== WebSocket.OPEN) {
-        console.log(`User ${userId} not subscribed to notifications or connection not open`);
+        log.debug('User not subscribed to notifications or connection not open', { userId });
         return;
       }
 
@@ -5112,7 +8138,7 @@ export function setupWebSocket(server: Server) {
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`🔔 Broadcasting ${updateType} to user ${userId} in workspace ${workspaceId} (count: ${unreadCount})`);
+      log.debug('Broadcasting notification', { updateType, userId, workspaceId, unreadCount });
 
       userClient.send(payload);
     },
@@ -5191,45 +8217,100 @@ export function setupWebSocket(server: Server) {
       });
     },
     broadcastToWorkspace: (workspaceId: string, data: any) => {
+      if (!workspaceId) {
+        log.warn('broadcastToWorkspace called without workspaceId');
+        return;
+      }
+
       const payload = JSON.stringify({
         ...data,
         timestamp: new Date().toISOString(),
       });
 
-      // Send to shift update clients (for all shift CRUD events)
-      const shiftClients = shiftUpdateClients.get(workspaceId);
-      if (shiftClients && shiftClients.size > 0) {
-        shiftClients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(payload);
+      const sendToWorkspaceClients = (wsId: string) => {
+        let sent = 0;
+
+        const wsClients = notificationClients.get(wsId);
+        if (wsClients && wsClients.size > 0) {
+          wsClients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              // Extra security check: Verify client workspace matches target
+              if (client.workspaceId === wsId || client.serverAuth?.workspaceId === wsId || client.isStaff) {
+                client.send(payload);
+                sent++;
+              } else {
+                log.warn('Security blocked cross-workspace broadcast attempt', { 
+                  clientWorkspace: client.workspaceId, 
+                  targetWorkspace: wsId 
+                });
+              }
+            }
+          });
+        }
+
+        const shiftClients = shiftUpdateClients.get(wsId);
+        if (shiftClients && shiftClients.size > 0) {
+          shiftClients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              // Extra security check: Verify client workspace matches target
+              if (client.workspaceId === wsId || client.serverAuth?.workspaceId === wsId || client.isStaff) {
+                client.send(payload);
+                sent++;
+              }
+            }
+          });
+        }
+
+        if (data.type === 'trinity_scheduling_progress' || data.type === 'trinity_scheduling_started' || data.type === 'trinity_scheduling_completed') {
+          const scheduleClients = schedulingProgressClients.get(wsId);
+          if (scheduleClients && scheduleClients.size > 0) {
+            scheduleClients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                // Extra security check: Verify client workspace matches target
+                if (client.workspaceId === wsId || client.serverAuth?.workspaceId === wsId || client.isStaff) {
+                  client.send(payload);
+                  sent++;
+                }
+              }
+            });
           }
+        }
+
+        if (data.type === 'credit_balance_updated' || data.type === 'credits_deducted' || data.type === 'credits_added') {
+          const creditClients = creditUpdateClients.get(wsId);
+          if (creditClients && creditClients.size > 0) {
+            creditClients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                // Extra security check: Verify client workspace matches target
+                if (client.workspaceId === wsId || client.serverAuth?.workspaceId === wsId || client.isStaff) {
+                  client.send(payload);
+                  sent++;
+                }
+              }
+            });
+          }
+        }
+
+        return sent;
+      };
+
+      let totalSent = 0;
+      if (workspaceId === '*') {
+        const allWorkspaceIds = new Set([
+          ...notificationClients.keys(),
+          ...shiftUpdateClients.keys(),
+          ...schedulingProgressClients.keys(),
+          ...creditUpdateClients.keys(),
+        ]);
+        allWorkspaceIds.forEach((wsId) => {
+          totalSent += sendToWorkspaceClients(wsId);
         });
+      } else {
+        totalSent = sendToWorkspaceClients(workspaceId);
       }
-      
-      // Only send scheduling progress events to scheduling progress subscribers
-      // Filter to prevent unrelated shift CRUD events from being sent
-      if (data.type === 'trinity_scheduling_progress') {
-        const scheduleClients = schedulingProgressClients.get(workspaceId);
-        if (scheduleClients && scheduleClients.size > 0) {
-          scheduleClients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(payload);
-            }
-          });
-        }
-      }
-      
-      // Send credit update events to credit update subscribers
-      if (data.type === 'credit_balance_updated' || data.type === 'credits_deducted' || data.type === 'credits_added') {
-        const creditClients = creditUpdateClients.get(workspaceId);
-        if (creditClients && creditClients.size > 0) {
-          creditClients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(payload);
-            }
-          });
-          console.log(`[CreditUpdates] Broadcast ${data.type} to ${creditClients.size} clients in workspace ${workspaceId}`);
-        }
+
+      if (totalSent > 0) {
+        log.debug('Workspace broadcast sent', { type: data.type, clientCount: totalSent, workspaceId });
       }
     },
     // Platform-wide broadcast for What's New and announcements
@@ -5270,7 +8351,7 @@ export function setupWebSocket(server: Server) {
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`[WebSocket] Broadcasting platform update: ${update.title}`);
+      log.info('Broadcasting platform update', { title: update.title });
 
       // Broadcast to all chat clients (all conversations)
       let clientCount = 0;
@@ -5293,7 +8374,7 @@ export function setupWebSocket(server: Server) {
         });
       });
 
-      console.log(`[WebSocket] Platform update sent to ${clientCount} clients`);
+      log.debug('Platform update sent', { clientCount });
     },
     
     broadcastTrinityAgentEvent: (conversationId: string, event: {
@@ -5304,7 +8385,7 @@ export function setupWebSocket(server: Server) {
       const payload = JSON.stringify({
         type: 'trinity_stream',
         conversationId,
-        event: event.type.toLowerCase(),
+        event: event.type?.toLowerCase() ?? '',
         data: event.data,
         timestamp: event.timestamp || Date.now(),
       });
@@ -5320,14 +8401,14 @@ export function setupWebSocket(server: Server) {
       });
       
       if (clientCount > 0) {
-        console.log(`[TrinityAgent] Broadcast ${event.type} to ${clientCount} clients for conversation ${conversationId}`);
+        log.debug('TrinityAgent broadcast', { eventType: event.type, clientCount, conversationId });
       }
     },
   };
 
   // Initialize global broadcaster for use by other services (e.g., platformChangeMonitor)
   setGlobalBroadcaster(broadcaster);
-  console.log('[WebSocket] Global broadcaster initialized');
+  log.info('Global broadcaster initialized');
 
   // Subscribe to Trinity stream events from GoalExecutionService
   platformEventBus.on('trinity:stream', (payload: { conversationId: string; event: any }) => {
@@ -5339,7 +8420,349 @@ export function setupWebSocket(server: Server) {
       });
     }
   });
-  console.log('[WebSocket] Trinity stream event listener registered');
+  log.info('Trinity stream event listener registered');
+
+  // Subscribe to Trinity scheduling events for real-time visual feedback
+  platformEventBus.on('trinity_scheduling_started', (payload: { workspaceId: string; metadata: any }) => {
+    if (payload?.workspaceId) {
+      broadcastToWorkspace(payload.workspaceId, {
+        type: 'trinity_scheduling_started',
+        ...payload.metadata,
+      });
+      log.info('Trinity scheduling started broadcast', { workspaceId: payload.workspaceId });
+    }
+  });
+
+  platformEventBus.on('trinity_scheduling_progress', (payload: { workspaceId: string; metadata: any }) => {
+    if (payload?.workspaceId) {
+      broadcastToWorkspace(payload.workspaceId, {
+        type: 'trinity_scheduling_progress',
+        ...payload.metadata,
+      });
+    }
+  });
+
+  platformEventBus.on('trinity_scheduling_completed', (payload: { workspaceId: string; metadata: any }) => {
+    if (payload?.workspaceId) {
+      broadcastToWorkspace(payload.workspaceId, {
+        type: 'trinity_scheduling_completed',
+        ...payload.metadata,
+      });
+      log.info('Trinity scheduling completed broadcast', { workspaceId: payload.workspaceId });
+    }
+  });
+  log.info('Trinity scheduling event listeners registered');
+
+  // Subscribe to support session resolved events - disconnect user and notify queue
+  platformEventBus.on('support_session_resolved', (payload: {
+    sessionId: string;
+    ticketId?: string;
+    staffId?: string;
+    userId?: string;
+    workspaceId?: string;
+  }) => {
+    if (payload?.sessionId) {
+      log.info('Support session resolved', { sessionId: payload.sessionId });
+
+      // Find and disconnect the user from all helpdesk rooms
+      if (payload.userId) {
+        conversationClients.forEach((clientSet, conversationId) => {
+          clientSet.forEach((client) => {
+            if (client.userId === payload.userId && client.readyState === WebSocket.OPEN) {
+              // Send resolution notification to user
+              client.send(JSON.stringify({
+                type: 'session_resolved',
+                sessionId: payload.sessionId,
+                message: 'Your support session has been resolved. Thank you for contacting us!',
+                showRating: true,
+              }));
+
+              // Close the connection after a short delay to allow message delivery
+              setTimeout(() => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'force_disconnect',
+                    reason: 'Session resolved - Please start a new chat if you need further assistance.',
+                  }));
+                  client.close(1000, 'Session resolved');
+                }
+              }, 3000);
+            }
+          });
+        });
+      }
+    }
+  });
+
+  // Subscribe to support ticket resolved events - notify staff about next in queue
+  platformEventBus.on('support_ticket_resolved', (payload: {
+    sessionId: string;
+    ticketNumber?: string;
+    resolvedBy: string;
+    summary?: string;
+    userId?: string;
+    workspaceId?: string;
+  }) => {
+    if (payload?.resolvedBy) {
+      log.info('Ticket resolved, checking queue', { resolvedBy: payload.resolvedBy });
+
+      // Notify all staff clients about the resolution and queue status
+      conversationClients.forEach((clientSet) => {
+        clientSet.forEach((client) => {
+          if (client.isStaff && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'ticket_resolved_notification',
+              ticketNumber: payload.ticketNumber,
+              resolvedBy: payload.resolvedBy,
+              summary: payload.summary,
+              timestamp: new Date().toISOString(),
+            }));
+          }
+        });
+      });
+    }
+  });
+  log.info('Support session event listeners registered');
+
+  platformEventBus.on('RBAC_ROLE_CHANGED', (payload: {
+    userId?: string;
+    workspaceId?: string;
+    previousRole?: string;
+    newRole?: string;
+    changedBy?: string;
+    employeeId?: string;
+  }) => {
+    if (!payload?.userId) return;
+    const { userId, workspaceId, newRole } = payload;
+
+    let updatedCount = 0;
+    wss.clients.forEach((client: any) => {
+      if (client.readyState !== WebSocket.OPEN) return;
+      const clientUserId = client.serverAuth?.userId || client.userId;
+      if (clientUserId !== userId) return;
+
+      if (client.serverAuth && workspaceId && client.serverAuth.workspaceId === workspaceId && newRole) {
+        client.serverAuth.role = newRole;
+      }
+
+      client.send(JSON.stringify({
+        type: 'role_updated',
+        payload: {
+          userId,
+          workspaceId,
+          newRole: newRole || null,
+          previousRole: payload.previousRole || null,
+          timestamp: new Date().toISOString(),
+        },
+      }));
+      updatedCount++;
+    });
+
+    if (updatedCount > 0) {
+      invalidateUserQueries(userId, [
+        '/api/user',
+        '/api/employees',
+        '/api/me',
+      ], 'rbac_role');
+      log.info('RBAC role sync pushed to active connections', {
+        userId,
+        workspaceId,
+        newRole,
+        connectionsUpdated: updatedCount,
+      });
+    }
+  });
+
+  platformEventBus.on('TRINITY_ACCESS_CHANGED', (payload: {
+    userId?: string;
+    workspaceId?: string;
+    newRole?: string;
+    previousRole?: string;
+    changedBy?: string;
+  }) => {
+    if (!payload?.userId) return;
+    const { userId, workspaceId, newRole } = payload;
+
+    let updatedCount = 0;
+    wss.clients.forEach((client: any) => {
+      if (client.readyState !== WebSocket.OPEN) return;
+      const clientUserId = client.serverAuth?.userId || client.userId;
+      if (clientUserId !== userId) return;
+
+      client.send(JSON.stringify({
+        type: 'trinity_access_updated',
+        payload: {
+          userId,
+          workspaceId,
+          newRole: newRole || null,
+          timestamp: new Date().toISOString(),
+        },
+      }));
+      updatedCount++;
+    });
+
+    if (updatedCount > 0) {
+      invalidateUserQueries(userId, [
+        '/api/user',
+        '/api/trinity',
+        '/api/employees',
+      ], 'trinity_access');
+      log.info('Trinity access sync pushed to active connections', {
+        userId,
+        workspaceId,
+        newRole,
+        connectionsUpdated: updatedCount,
+      });
+    }
+  });
+  log.info('RBAC real-time sync event listeners registered');
+
+  platformEventBus.on('officer_clocked_in', (payload: {
+    workspaceId?: string;
+    employeeId?: string;
+    employeeName?: string;
+    userId?: string;
+    timeEntryId?: string;
+    shiftId?: string | null;
+    clientId?: string | null;
+    timestamp?: string;
+    gpsLat?: string | null;
+    gpsLng?: string | null;
+  }) => {
+    if (!payload?.workspaceId) return;
+    broadcastToWorkspace(payload.workspaceId, {
+      type: 'officer_clocked_in',
+      employeeId: payload.employeeId,
+      employeeName: payload.employeeName,
+      userId: payload.userId,
+      timeEntryId: payload.timeEntryId,
+      shiftId: payload.shiftId,
+      timestamp: payload.timestamp,
+    });
+    log.info('Officer clocked in broadcast', { workspaceId: payload.workspaceId, employeeName: payload.employeeName });
+  });
+
+  platformEventBus.on('officer_clocked_out', (payload: {
+    workspaceId?: string;
+    employeeId?: string;
+    employeeName?: string;
+    userId?: string;
+    timeEntryId?: string;
+    shiftId?: string | null;
+    timestamp?: string;
+    totalHours?: number;
+    grossHours?: number;
+    breakMinutes?: number;
+  }) => {
+    if (!payload?.workspaceId) return;
+    broadcastToWorkspace(payload.workspaceId, {
+      type: 'officer_clocked_out',
+      employeeId: payload.employeeId,
+      employeeName: payload.employeeName,
+      userId: payload.userId,
+      timeEntryId: payload.timeEntryId,
+      shiftId: payload.shiftId,
+      timestamp: payload.timestamp,
+      totalHours: payload.totalHours,
+    });
+    log.info('Officer clocked out broadcast', { workspaceId: payload.workspaceId, employeeName: payload.employeeName, totalHours: payload.totalHours });
+  });
+
+  platformEventBus.on('dar_submitted', (payload: { workspaceId?: string; darId?: string; reportNumber?: string; employeeName?: string }) => {
+    if (!payload?.workspaceId) return;
+    broadcastToWorkspace(payload.workspaceId, {
+      type: 'dar_status_changed',
+      darId: payload.darId,
+      reportNumber: payload.reportNumber,
+      status: 'submitted',
+      employeeName: payload.employeeName,
+    });
+  });
+
+  // dar_generated — shift chatroom DAR auto-compiled after /endshift
+  platformEventBus.on('dar_generated', (payload: {
+    workspaceId?: string; darId?: string; shiftId?: string;
+    employeeName?: string; flaggedForReview?: boolean; forceUsed?: boolean;
+  }) => {
+    if (!payload?.workspaceId) return;
+    broadcastToWorkspace(payload.workspaceId, {
+      type: 'dar_generated',
+      darId: payload.darId,
+      shiftId: payload.shiftId,
+      employeeName: payload.employeeName,
+      flaggedForReview: payload.flaggedForReview || false,
+      forceUsed: payload.forceUsed || false,
+      status: payload.flaggedForReview ? 'pending_review' : 'draft',
+    });
+  });
+
+  platformEventBus.on('dar_verified', (payload: { workspaceId?: string; darId?: string; reportNumber?: string; verifiedBy?: string }) => {
+    if (!payload?.workspaceId) return;
+    broadcastToWorkspace(payload.workspaceId, {
+      type: 'dar_status_changed',
+      darId: payload.darId,
+      reportNumber: payload.reportNumber,
+      status: 'verified',
+      verifiedBy: payload.verifiedBy,
+    });
+  });
+
+  platformEventBus.on('dar_sent_to_client', (payload: { workspaceId?: string; darId?: string; reportNumber?: string }) => {
+    if (!payload?.workspaceId) return;
+    broadcastToWorkspace(payload.workspaceId, {
+      type: 'dar_status_changed',
+      darId: payload.darId,
+      reportNumber: payload.reportNumber,
+      status: 'sent',
+    });
+  });
+
+  platformEventBus.on('visitor_never_left', (payload: { workspaceId?: string; visitorLogId?: string; visitorName?: string; siteName?: string; hoursCheckedIn?: number }) => {
+    if (!payload?.workspaceId) return;
+    broadcastToWorkspace(payload.workspaceId, {
+      type: 'visitor_never_left_alert',
+      visitorLogId: payload.visitorLogId,
+      visitorName: payload.visitorName,
+      siteName: payload.siteName,
+      hoursCheckedIn: payload.hoursCheckedIn,
+    });
+  });
+
+  log.info('Clock-in/out and DAR real-time event listeners registered');
+
+  platformEventBus.on('trinity_thought', (payload: {
+    thoughtId: string;
+    phase: string;
+    thoughtType: string;
+    content: string;
+    confidence: number;
+    wasConfused: boolean;
+    timestamp: Date;
+    workspaceId?: string;
+    sessionId?: string;
+    userId?: string;
+  }) => {
+    if (!payload.sessionId) return;
+    const wsId = payload.workspaceId;
+    if (!wsId) return;
+
+    const thoughtMsg = {
+      type: 'trinity_thinking',
+      thoughtId: payload.thoughtId,
+      phase: payload.phase,
+      thoughtType: payload.thoughtType,
+      confidence: payload.confidence,
+      sessionId: payload.sessionId,
+      timestamp: payload.timestamp,
+    };
+
+    if (payload.userId) {
+      sessionSyncService.broadcastToUser(payload.userId, thoughtMsg);
+    } else {
+      broadcastToWorkspace(wsId, thoughtMsg);
+    }
+  });
+  log.info('Trinity thought broadcast listener registered');
 
   return broadcaster;
 }

@@ -12,27 +12,36 @@
  * The AI Brain (Gemini) uses this to orchestrate the ENTIRE platform.
  */
 
+import crypto from 'crypto';
 import { helpaiOrchestrator, type ActionRequest, type ActionResult, type ActionHandler } from '../helpai/platformActionHub';
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
+import { universalNotificationEngine } from '../universalNotificationEngine';
 import { AIBrainService } from './aiBrainService';
 import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';
+import { createLogger } from "../../lib/logger";
+const log = createLogger("aiBrainMasterOrchestrator");
 import { aiBrainFileSystemTools } from './aiBrainFileSystemTools';
+import { trinityThoughtEngine } from './trinityThoughtEngine';
 import { aiBrainWorkflowExecutor } from './aiBrainWorkflowExecutor';
 import { aiBrainTestRunner } from './aiBrainTestRunner';
 import { aiNotificationService } from '../aiNotificationService';
 import { aiExpenseCategorizationService } from './aiExpenseCategorizationService';
 import { aiDynamicPricingService } from './aiDynamicPricingService';
-import { broadcastNotificationToUser, broadcastUserScopedNotification, broadcastToAllClients } from '../../websocket';
+import { broadcastNotificationToUser, broadcastUserScopedNotification, broadcastToAllClients, broadcastToWorkspace } from '../../websocket';
 import { registerUACPActions } from "../uacp/uacpOrchestrationActions";
 import { registerCoreSubagentActions } from "./subagents/coreSubagentOrchestration";
 import { registerTrinityCodeOpsActions } from "./trinityCodeOpsActions";
 import { registerScheduleLiveNotifierActions } from "./scheduleLiveNotifierActions";
+import { registerActionCompatibilityShims } from "./actionCompatibilityShims";
 import { registerTrinityWorkOrderActions } from "./trinityWorkOrderActions";
 import { registerTrinityFrontierActions } from "./trinityFrontierActions";
 import { registerTrinityEnhancedModeActions } from "./trinityEnhancedModeActions";
 import { registerCognitiveBrainActions } from "./cognitiveBrainActions";
 import { registerIntegrationBrainActions } from "./integrationBrainActions";
 import { registerDomainSupervisorActions } from "./domainSupervisorActions";
+import { registerUIShellBrainActions } from "./uiShellBrainActions";
+import { registerBusinessIntelligenceActions } from "./trinityBusinessIntelligence";
+import { registerTrinityDocumentActions } from "./trinityDocumentActions";
 import { db } from '../../db';
 import { eq, desc, and, gte, sql, isNotNull } from 'drizzle-orm';
 import {
@@ -45,7 +54,6 @@ import {
   platformUpdates,
   workspaces,
   systemAuditLogs,
-  employeeCertifications,
 } from '@shared/schema';
 
 // ============================================================================
@@ -154,7 +162,7 @@ class AIBrainMasterOrchestrator {
           message,
           type: notificationType_db as any,
           isRead: false,
-          actionUrl: '/notifications',
+          actionUrl: '/dashboard',
           metadata,
         });
         
@@ -187,10 +195,10 @@ class AIBrainMasterOrchestrator {
         });
       }
 
-      console.log(`[AI Brain Orchestrator] Notified user ${userId} (scope: ${workspaceId ? 'workspace' : 'user'}): ${title}`);
+      log.info(`[AI Brain Orchestrator] Notified user ${userId} (scope: ${workspaceId ? 'workspace' : 'user'}): ${title}`);
       return true;
     } catch (error) {
-      console.error('[AI Brain Orchestrator] Failed to notify user:', error);
+      log.error('[AI Brain Orchestrator] Failed to notify user:', error);
       return false;
     }
   }
@@ -221,19 +229,18 @@ class AIBrainMasterOrchestrator {
         metadata: { source: 'ai_brain_orchestrator', broadcastAt: new Date().toISOString() },
       });
 
-      broadcastToAllClients({
+      broadcastToWorkspace(workspaceId, {
         type: 'orchestration_update',
-        workspaceId,
         title,
         message,
         category,
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`[AI Brain Orchestrator] Broadcast to workspace ${workspaceId}: ${title}`);
+      log.info(`[AI Brain Orchestrator] Broadcast to workspace ${workspaceId}: ${title}`);
       return true;
     } catch (error) {
-      console.error('[AI Brain Orchestrator] Failed to broadcast:', error);
+      log.error('[AI Brain Orchestrator] Failed to broadcast:', error);
       return false;
     }
   }
@@ -334,9 +341,9 @@ class AIBrainMasterOrchestrator {
             isSuccess ? 'success' : 'error',
             workflow.id
           );
-          console.log(`[AI Brain Orchestrator] Sent ${memberInfo?.workspaceId ? 'workspace' : 'user'}-scoped notification to user ${userId}`);
+          log.info(`[AI Brain Orchestrator] Sent ${memberInfo?.workspaceId ? 'workspace' : 'user'}-scoped notification to user ${userId}`);
         } catch (lookupError: any) {
-          console.error(`[AI Brain Orchestrator] Failed to lookup workspace, falling back to user-scoped: ${lookupError.message}`);
+          log.error(`[AI Brain Orchestrator] Failed to lookup workspace, falling back to user-scoped: ${lookupError.message}`);
           // Fall back to user-scoped notification via notifyUser with null workspaceId
           await this.notifyUser(
             userId,
@@ -370,9 +377,9 @@ class AIBrainMasterOrchestrator {
         },
       });
 
-      console.log(`[AI Brain Orchestrator] Workflow ${workflow.id} ${workflow.status}: ${completedSteps}/${totalSteps} steps, notification sent`);
+      log.info(`[AI Brain Orchestrator] Workflow ${workflow.id} ${workflow.status}: ${completedSteps}/${totalSteps} steps, notification sent`);
     } catch (error: any) {
-      console.error(`[AI Brain Orchestrator] Failed to send workflow notification: ${error.message}`);
+      log.error(`[AI Brain Orchestrator] Failed to send workflow notification: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
 
@@ -382,20 +389,18 @@ class AIBrainMasterOrchestrator {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log('[AI Brain Master Orchestrator] Initializing...');
+    log.info('[AI Brain Master Orchestrator] Initializing...');
     
     // Register all orchestration actions
     await this.registerSchedulingActions();
     await this.registerPayrollActions();
     await this.registerComplianceActions();
     await this.registerEscalationActions();
-    await this.registerAnalyticsActions();
     await this.registerNotificationActions();
     await this.registerAutomationActions();
     await this.registerEmployeeLifecycleActions();
     await this.registerHealthCheckActions();
     await this.registerUserAssistanceActions();
-    this.registerFileSystemActions();
     this.registerWorkflowActions();
     this.registerTestRunnerActions();
     this.registerOnboardingAssistantActions();
@@ -404,7 +409,7 @@ class AIBrainMasterOrchestrator {
     // DISABLED: Phase 1 cleanup - dynamic pricing is not MVP
     // this.registerDynamicPricingActions();
     await this.registerSessionCheckpointActions();
-    await this.registerElevatedSessionGuardianActions();
+    // session.guardian.* removed — canonical session.* actions live in elevatedSessionGuardian.ts
     this.registerMemoryAndGovernanceActions();
     await this.registerGemini3ToolActions();
     await this.registerArchitectGradeActions();
@@ -418,16 +423,24 @@ class AIBrainMasterOrchestrator {
     // registerTrinityFrontierActions(helpaiOrchestrator);
     // DISABLED: Phase 1 cleanup - Guru Mode + Business Pro Mode are not MVP
     // registerTrinityEnhancedModeActions(helpaiOrchestrator);
-    // DISABLED: Phase 1 cleanup - Cognitive Brain is not MVP (API integrations, Knowledge Graph, A2A, Reinforcement Learning)
-    // registerCognitiveBrainActions();
+    // Cognitive Brain: API integrations (QuickBooks/Gusto/ADP), A2A messaging,
+    // Knowledge Graph actions — enabled as part of Trinity cognitive architecture
+    registerCognitiveBrainActions();
     registerIntegrationBrainActions(); // Integration Management: Workspace integrations, API keys, Partner management
     registerDomainSupervisorActions(); // Domain Lead Supervisors: RevenueOps, SecurityOps, OnboardingOps + Enhanced LLM Judge
-    
+    registerUIShellBrainActions(); // UI Shell: Universal 7-step containment, validation, auditing
+    registerBusinessIntelligenceActions(); // Business Intelligence: Invoice/Payroll/Schedule pattern learning, QB formatting, deep analysis
+    registerTrinityDocumentActions(helpaiOrchestrator); // Document Orchestration: generate, send, check status, escalate overdue, compliance scan, license expiry, post orders
+
+    // Phase 1 Consolidation — backward-compatible shims for renamed/merged/deleted actions
+    // MUST be registered LAST so all canonical actions exist first
+    registerActionCompatibilityShims();
+
     // Subscribe to platform events
     this.subscribeToEvents();
     
     this.initialized = true;
-    console.log('[AI Brain Master Orchestrator] Initialized successfully');
+    log.info('[AI Brain Master Orchestrator] Initialized successfully');
   }
 
   // ============================================================================
@@ -440,7 +453,7 @@ class AIBrainMasterOrchestrator {
       name: 'Generate AI Schedule',
       category: 'scheduling',
       description: 'Use Gemini AI to generate optimal weekly schedules based on employee availability, skills, and business needs',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, weekStart, weekEnd } = request.payload || {};
@@ -463,55 +476,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'scheduling.detect_conflicts',
-      name: 'Detect Schedule Conflicts',
-      category: 'scheduling',
-      description: 'AI scans for scheduling conflicts, overtime violations, and availability issues',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { workspaceId } = request.payload || {};
-        
-        try {
-          const today = new Date().toISOString().split('T')[0];
-          const activeShifts = await db.select().from(shifts)
-            .where(and(
-              eq(shifts.workspaceId, workspaceId || request.workspaceId!),
-              gte(shifts.startTime, new Date(today))
-            ))
-            .limit(200);
-          
-          // Simple conflict detection logic
-          const conflicts: any[] = [];
-          const employeeShifts = new Map<string, typeof activeShifts>();
-          
-          for (const shift of activeShifts) {
-            if (!employeeShifts.has(shift.employeeId!)) {
-              employeeShifts.set(shift.employeeId!, []);
-            }
-            employeeShifts.get(shift.employeeId!)!.push(shift);
-          }
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: `Scanned ${activeShifts.length} shifts, found ${conflicts.length} potential conflicts`,
-            data: { shiftsScanned: activeShifts.length, conflicts },
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -524,7 +489,7 @@ class AIBrainMasterOrchestrator {
       name: 'Clock In Employee',
       category: 'scheduling',
       description: 'Clock in an employee and start tracking their work hours',
-      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { notes } = request.payload || {};
@@ -598,7 +563,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -610,7 +575,7 @@ class AIBrainMasterOrchestrator {
       name: 'Clock Out Employee',
       category: 'scheduling',
       description: 'Clock out an employee and finalize their time entry',
-      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const effectiveWorkspaceId = request.workspaceId;
@@ -684,7 +649,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -696,7 +661,7 @@ class AIBrainMasterOrchestrator {
       name: 'Get Employee Timesheet',
       category: 'scheduling',
       description: 'Retrieve timesheet data for an employee within a date range',
-      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { startDate, endDate } = request.payload || {};
@@ -715,7 +680,7 @@ class AIBrainMasterOrchestrator {
           }
           
           // Staff can only see their own timesheet
-          const isManager = ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'].includes(userRole);
+          const isManager = ['manager', 'org_admin', 'org_owner', 'co_owner'].includes(userRole);
           
           // Get the employee ID for the requesting user
           const employeeRecord = await db.select().from(employees)
@@ -763,99 +728,21 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    // Advanced Scheduling Actions - With proper workspace scoping and authorization
-    helpaiOrchestrator.registerAction({
-      actionId: 'scheduling.create_recurring_shift',
-      name: 'Create Recurring Shift Pattern',
-      category: 'scheduling',
-      description: 'Create a recurring shift pattern that automatically generates shifts',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { employeeId, title, daysOfWeek, startTime: shiftStart, endTime, recurrencePattern } = request.payload || {};
-        const effectiveWorkspaceId = request.workspaceId;
-        
-        try {
-          if (!effectiveWorkspaceId) {
-            return {
-              success: false,
-              actionId: request.actionId,
-              message: 'Workspace ID required',
-              executionTimeMs: Date.now() - startTime
-            };
-          }
-          
-          if (!title) {
-            return {
-              success: false,
-              actionId: request.actionId,
-              message: 'Shift title required',
-              executionTimeMs: Date.now() - startTime
-            };
-          }
-          
-          // Verify employee belongs to this workspace if specified
-          if (employeeId) {
-            const emp = await db.select().from(employees)
-              .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, effectiveWorkspaceId)))
-              .limit(1);
-            
-            if (!emp.length) {
-              return {
-                success: false,
-                actionId: request.actionId,
-                message: 'Employee not found in this workspace',
-                executionTimeMs: Date.now() - startTime
-              };
-            }
-          }
-          
-          const { createRecurringPattern } = await import('../advancedSchedulingService');
-          
-          const pattern = await createRecurringPattern({
-            workspaceId: effectiveWorkspaceId,
-            employeeId,
-            title,
-            daysOfWeek: daysOfWeek || [],
-            startTimeOfDay: shiftStart || '09:00',
-            endTimeOfDay: endTime || '17:00',
-            recurrencePattern: recurrencePattern || 'weekly',
-            startDate: new Date(),
-            isActive: true,
-          });
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: `Created recurring shift pattern: ${title}`,
-            data: { patternId: pattern.id, pattern },
-            executionTimeMs: Date.now() - startTime,
-            notificationSent: true
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
+    // scheduling.create_recurring_shift removed — canonical: scheduling.create_recurring in trinityScheduleTimeclockActions.ts
 
     helpaiOrchestrator.registerAction({
       actionId: 'scheduling.request_shift_swap',
       name: 'Request Shift Swap',
       category: 'scheduling',
       description: 'Request to swap a shift with another employee',
-      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { originalShiftId, requestedEmployeeId, reason } = request.payload || {};
@@ -936,7 +823,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -948,7 +835,7 @@ class AIBrainMasterOrchestrator {
       name: 'Approve Shift Swap',
       category: 'scheduling',
       description: 'Approve or reject a shift swap request',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { swapRequestId, approved, managerNotes } = request.payload || {};
@@ -1019,7 +906,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1031,7 +918,7 @@ class AIBrainMasterOrchestrator {
       name: 'Duplicate Week Schedule',
       category: 'scheduling',
       description: 'One-click duplication of an entire week schedule to the next week',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { sourceWeekStart, targetWeekStart } = request.payload || {};
@@ -1076,14 +963,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered scheduling and time tracking actions');
+    log.info('[AI Brain Master Orchestrator] Registered scheduling and time tracking actions');
   }
 
   // ============================================================================
@@ -1091,12 +978,71 @@ class AIBrainMasterOrchestrator {
   // ============================================================================
 
   private async registerPayrollActions(): Promise<void> {
+    // payroll.create_run — Phase 1 CRUD gap fill
+    helpaiOrchestrator.registerAction({
+      actionId: 'payroll.create_run',
+      name: 'Create Payroll Run',
+      category: 'payroll',
+      description: 'Initiate a new payroll run for a specified pay period. Must be created before it can be calculated or approved.',
+      requiredRoles: ['org_owner', 'co_owner'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, periodStart, periodEnd, payDate, notes } = request.payload || {};
+
+        if (!workspaceId && !request.workspaceId) {
+          return { success: false, actionId: request.actionId, message: 'workspaceId required', executionTimeMs: Date.now() - startTime };
+        }
+        if (!periodStart || !periodEnd) {
+          return { success: false, actionId: request.actionId, message: 'periodStart and periodEnd are required', executionTimeMs: Date.now() - startTime };
+        }
+
+        const effectiveWs = workspaceId || request.workspaceId;
+
+        try {
+          const { payrollRuns } = await import('@shared/schema');
+          const [created] = await db.insert(payrollRuns).values({
+            workspaceId: effectiveWs,
+            periodStart: new Date(periodStart),
+            periodEnd: new Date(periodEnd),
+            payDate: payDate ? new Date(payDate) : null,
+            status: 'draft',
+            notes: notes || null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as any).returning();
+
+          if (!created) {
+            return { success: false, actionId: request.actionId, message: 'Failed to create payroll run', executionTimeMs: Date.now() - startTime };
+          }
+
+          // Publish payroll_run_created event
+          await platformEventBus.publish({
+            type: 'payroll_run_created',
+            workspaceId: effectiveWs!,
+            title: 'Payroll Run Created',
+            description: `New payroll run for period ${periodStart} to ${periodEnd}`,
+            metadata: { payrollRunId: (created as any).id, periodStart, periodEnd, createdBy: request.userId },
+          } as any).catch(() => null);
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Payroll run created for period ${periodStart} to ${periodEnd}`,
+            data: created,
+            executionTimeMs: Date.now() - startTime,
+          };
+        } catch (error: any) {
+          return { success: false, actionId: request.actionId, message: `Failed to create payroll run: ${(error instanceof Error ? error.message : String(error))}`, executionTimeMs: Date.now() - startTime };
+        }
+      },
+    });
+
     helpaiOrchestrator.registerAction({
       actionId: 'payroll.calculate_run',
       name: 'Calculate Payroll Run',
       category: 'payroll',
       description: 'AI calculates payroll for all employees including overtime, deductions, and taxes',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, periodStart, periodEnd } = request.payload || {};
@@ -1122,7 +1068,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1134,7 +1080,7 @@ class AIBrainMasterOrchestrator {
       name: 'Detect Payroll Anomalies',
       category: 'payroll',
       description: 'AI scans for unusual patterns in time entries and payroll calculations',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId } = request.payload || {};
@@ -1171,56 +1117,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // Payroll submission action
-    helpaiOrchestrator.registerAction({
-      actionId: 'payroll.submit_for_approval',
-      name: 'Submit Payroll for Approval',
-      category: 'payroll',
-      description: 'AI submits calculated payroll run for manager approval',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { workspaceId, payrollRunId } = request.payload || {};
-        
-        try {
-          const wsId = workspaceId || request.workspaceId!;
-          
-          // Update payroll run status
-          if (payrollRunId) {
-            await db.update(payrollRuns)
-              .set({ status: 'pending', updatedAt: new Date() })
-              .where(eq(payrollRuns.id, payrollRunId));
-          }
-          
-          // Notify approvers
-          await this.notifyUser(
-            request.userId!,
-            wsId,
-            'Payroll Submitted for Approval',
-            'Payroll run has been submitted and is awaiting manager approval',
-            'info'
-          );
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Payroll submitted for approval',
-            data: { payrollRunId, status: 'pending' },
-            executionTimeMs: Date.now() - startTime,
-            notificationSent: true
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1233,7 +1130,7 @@ class AIBrainMasterOrchestrator {
       name: 'Approve Payroll Run',
       category: 'payroll',
       description: 'AI approves payroll run and triggers payment processing',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, payrollRunId, approverNotes } = request.payload || {};
@@ -1242,6 +1139,9 @@ class AIBrainMasterOrchestrator {
           const wsId = workspaceId || request.workspaceId!;
           
           if (payrollRunId) {
+            // GAP-18 FIX: Previously filtered only by payrollRunId — a request with the right UUID
+            // could approve a payroll run belonging to a different workspace. wsId is now added to
+            // the WHERE clause so the update is structurally scoped to the requesting workspace.
             await db.update(payrollRuns)
               .set({ 
                 status: 'approved', 
@@ -1249,7 +1149,7 @@ class AIBrainMasterOrchestrator {
                 processedAt: new Date(),
                 updatedAt: new Date() 
               })
-              .where(eq(payrollRuns.id, payrollRunId));
+              .where(and(eq(payrollRuns.id, payrollRunId), eq(payrollRuns.workspaceId, wsId)));
           }
           
           // Log approval audit
@@ -1274,7 +1174,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1287,7 +1187,7 @@ class AIBrainMasterOrchestrator {
       name: 'Bulk Process Payroll',
       category: 'payroll',
       description: 'AI processes payroll for multiple employees in batch',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, employeeIds, periodStart, periodEnd } = request.payload || {};
@@ -1321,14 +1221,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered payroll actions');
+    log.info('[AI Brain Master Orchestrator] Registered payroll actions');
   }
 
   // ============================================================================
@@ -1342,7 +1242,7 @@ class AIBrainMasterOrchestrator {
       name: 'Check Certification Expiry',
       category: 'compliance',
       description: 'AI scans for expiring employee certifications and licenses',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, daysAhead } = request.payload || {};
@@ -1413,7 +1313,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1426,7 +1326,7 @@ class AIBrainMasterOrchestrator {
       name: 'Detect Policy Violations',
       category: 'compliance',
       description: 'AI scans for overtime, break, and labor law violations',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, periodDays } = request.payload || {};
@@ -1518,7 +1418,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1531,7 +1431,7 @@ class AIBrainMasterOrchestrator {
       name: 'Auto-Remediate Compliance Issues',
       category: 'compliance',
       description: 'AI automatically resolves common compliance issues',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, violationType, autoFix } = request.payload || {};
@@ -1585,14 +1485,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered compliance actions');
+    log.info('[AI Brain Master Orchestrator] Registered compliance actions');
   }
 
   // ============================================================================
@@ -1606,7 +1506,7 @@ class AIBrainMasterOrchestrator {
       name: 'Escalate Critical Issue',
       category: 'system',
       description: 'AI escalates critical issues to appropriate personnel',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'support_agent'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, issueType, severity, description, affectedUsers } = request.payload || {};
@@ -1616,9 +1516,9 @@ class AIBrainMasterOrchestrator {
           
           // Determine escalation path based on severity
           const escalationPath = severity === 'critical' 
-            ? ['super_admin', 'support'] 
+            ? ['root_admin', 'support_manager'] 
             : severity === 'high'
-            ? ['admin', 'manager']
+            ? ['org_admin', 'manager']
             : ['manager'];
           
           // Create escalation record
@@ -1669,7 +1569,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1682,7 +1582,7 @@ class AIBrainMasterOrchestrator {
       name: 'Escalate System Health Issue',
       category: 'health',
       description: 'AI escalates system health degradation to operations team',
-      requiredRoles: ['admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'support_agent', 'sysop'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { service, healthStatus, metrics, threshold } = request.payload || {};
@@ -1690,6 +1590,7 @@ class AIBrainMasterOrchestrator {
         try {
           // Log health escalation
           await db.insert(systemAuditLogs).values({
+            workspaceId: 'system',
             action: 'health_escalation',
             entityType: 'health',
             entityId: service,
@@ -1724,7 +1625,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1737,7 +1638,7 @@ class AIBrainMasterOrchestrator {
       name: 'Execute Incident Runbook',
       category: 'system',
       description: 'AI executes predefined incident response runbook',
-      requiredRoles: ['admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'support_agent', 'sysop'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { runbookId, incidentId, parameters } = request.payload || {};
@@ -1774,6 +1675,7 @@ class AIBrainMasterOrchestrator {
           
           // Log runbook execution
           await db.insert(systemAuditLogs).values({
+            workspaceId: 'system',
             action: 'runbook_execution',
             entityType: 'runbook',
             entityId: runbookId as string,
@@ -1804,7 +1706,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -1817,7 +1719,7 @@ class AIBrainMasterOrchestrator {
       name: 'Configure Auto-Escalation Rules',
       category: 'system',
       description: 'AI configures automatic escalation triggers',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { rules } = request.payload || {};
@@ -1831,6 +1733,7 @@ class AIBrainMasterOrchestrator {
           
           // Log rule configuration
           await db.insert(systemAuditLogs).values({
+            workspaceId: 'system',
             action: 'escalation_rules_configured',
             entityType: 'escalation_rules',
             userId: request.userId!,
@@ -1848,116 +1751,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered escalation actions');
-  }
-
-  // ============================================================================
-  // ANALYTICS ORCHESTRATION
-  // ============================================================================
-
-  private async registerAnalyticsActions(): Promise<void> {
-    helpaiOrchestrator.registerAction({
-      actionId: 'analytics.generate_insights',
-      name: 'Generate Business Insights',
-      category: 'analytics',
-      description: 'AI generates actionable business insights from platform data',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { insightType, timeframe } = request.payload || {};
-        
-        try {
-          const result = await this.aiBrain.enqueueJob({
-            skill: 'BusinessInsight',
-            input: {
-              insightType: insightType || 'operations',
-              timeframe: timeframe || 'weekly'
-            },
-            priority: 'normal',
-            workspaceId: request.workspaceId,
-            userId: request.userId
-          });
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Business insight generation queued',
-            data: result,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'analytics.workforce_summary',
-      name: 'Workforce Summary',
-      category: 'analytics',
-      description: 'AI provides comprehensive workforce analytics summary',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { workspaceId } = request.payload || {};
-        const wsId = workspaceId || request.workspaceId!;
-        
-        try {
-          // Get workforce stats
-          const [employeeCount] = await db.select({ count: sql<number>`count(*)` })
-            .from(employees)
-            .where(eq(employees.workspaceId, wsId));
-          
-          const today = new Date().toISOString().split('T')[0];
-          const [activeShifts] = await db.select({ count: sql<number>`count(*)` })
-            .from(shifts)
-            .where(and(
-              eq(shifts.workspaceId, wsId),
-              gte(shifts.startTime, new Date(today))
-            ));
-          
-          const [openTimeEntries] = await db.select({ count: sql<number>`count(*)` })
-            .from(timeEntries)
-            .where(and(
-              eq(timeEntries.workspaceId, wsId),
-              sql`${timeEntries.clockOut} IS NULL`
-            ));
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Workforce summary generated',
-            data: {
-              totalEmployees: employeeCount?.count || 0,
-              upcomingShifts: activeShifts?.count || 0,
-              currentlyClockedIn: openTimeEntries?.count || 0
-            },
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    console.log('[AI Brain Master Orchestrator] Registered analytics actions');
+    log.info('[AI Brain Master Orchestrator] Registered escalation actions');
   }
 
   // ============================================================================
@@ -1965,61 +1766,97 @@ class AIBrainMasterOrchestrator {
   // ============================================================================
 
   private async registerNotificationActions(): Promise<void> {
-    helpaiOrchestrator.registerAction({
-      actionId: 'notifications.send_platform_update',
-      name: 'Send Platform Update',
-      category: 'notifications',
-      description: 'AI sends platform update to all users via What\'s New',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { title, content, priority, targetAudience } = request.payload || {};
-        
-        try {
-          await publishPlatformUpdate({
-            type: 'announcement',
-            title: title || 'Platform Update',
-            description: content || 'New features available',
-            category: 'feature',
-            priority: priority === 'high' ? 3 : priority === 'low' ? 1 : 2,
-            visibility: targetAudience || 'all'
-          });
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Platform update sent',
-            data: { title, targetAudience },
-            executionTimeMs: Date.now() - startTime,
-            notificationSent: true,
-            broadcastSent: true
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
+    /* notify.send_platform_update — consolidated into notify.send (use priority='platform_update' param)
+        helpaiOrchestrator.registerAction({
+          actionId: 'notify.send_platform_update',
+          name: 'Send Platform Update',
+          category: 'notifications',
+          description: 'AI sends platform update to all users via What\'s New',
+          requiredRoles: ['org_owner', 'co_owner'],
+          handler: async (request: ActionRequest) => {
+            const startTime = Date.now();
+            const { title, content, priority, targetAudience } = request.payload || {};
+            
+            try {
+              await publishPlatformUpdate({
+                type: 'announcement',
+                title: title || 'Platform Update',
+                description: content || 'New features available',
+                category: 'feature',
+                priority: priority === 'high' ? 3 : priority === 'low' ? 1 : 2,
+                visibility: targetAudience || 'all'
+              });
+              
+              return {
+                success: true,
+                actionId: request.actionId,
+                message: 'Platform update sent',
+                data: { title, targetAudience },
+                executionTimeMs: Date.now() - startTime,
+                notificationSent: true,
+                broadcastSent: true
+              };
+            } catch (error: any) {
+              return {
+                success: false,
+                actionId: request.actionId,
+                message: (error instanceof Error ? error.message : String(error)),
+                executionTimeMs: Date.now() - startTime
+              };
+            }
+          }
+        });
+    */
 
+    // Consolidated notify.broadcast — replaces notify.broadcast_message and notify.bulk_by_role.
+    // Dispatch is controlled by request.payload?.scope:
+    //   'role'    → send personalized notifications by role (former notify.bulk_by_role logic)
+    //   Default   → broadcast to all connected users via WebSocket (former notify.broadcast_message)
     helpaiOrchestrator.registerAction({
-      actionId: 'notifications.broadcast_message',
+      actionId: 'notify.broadcast',
       name: 'Broadcast Message',
       category: 'notifications',
-      description: 'AI broadcasts message to all connected users via WebSocket',
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      description: 'Broadcast to all users (default) or by role (scope=\'role\'). Replaces notify.broadcast_message and notify.bulk_by_role.',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin', 'org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
-        const { message, type, workspaceId } = request.payload || {};
-        
+        const { message, type, workspaceId, scope, targetRoles, priority, title, personalizeByRole } = request.payload || {};
+
         try {
+          if (scope === 'role') {
+            // Role-scoped broadcast: send personalized notifications by role
+            if (!workspaceId || !targetRoles || !title || !message) {
+              return {
+                success: false,
+                actionId: request.actionId,
+                message: 'Missing required fields for role broadcast: workspaceId, targetRoles, title, message',
+                executionTimeMs: Date.now() - startTime
+              };
+            }
+            await universalNotificationEngine.sendNotification({
+              type: type || 'announcement',
+              title,
+              message,
+              workspaceId,
+              targetRoles: Array.isArray(targetRoles) ? targetRoles : [targetRoles],
+              severity: priority === 'P0' ? 'critical' : priority === 'P1' ? 'high' : 'medium',
+              source: 'ai_brain_orchestrator',
+            });
+            return {
+              success: true,
+              actionId: request.actionId,
+              message: `Role broadcast sent to roles: ${Array.isArray(targetRoles) ? targetRoles.join(', ') : targetRoles}`,
+              data: { scope, targetRoles },
+              executionTimeMs: Date.now() - startTime,
+              broadcastSent: true
+            };
+          }
+
+          // Default: broadcast to all connected users via WebSocket
           await platformEventBus.publish({
             type: 'announcement',
             category: 'announcement',
-            title: 'System Broadcast',
+            title: title || 'System Broadcast',
             description: message || 'System notification',
             workspaceId,
             metadata: {
@@ -2028,7 +1865,7 @@ class AIBrainMasterOrchestrator {
               userId: request.userId,
             },
           });
-          
+
           return {
             success: true,
             actionId: request.actionId,
@@ -2041,14 +1878,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered notification actions');
+    log.info('[AI Brain Master Orchestrator] Registered notification actions');
   }
 
   // ============================================================================
@@ -2061,7 +1898,7 @@ class AIBrainMasterOrchestrator {
       name: 'Trigger Scheduled Job',
       category: 'system',
       description: 'Manually trigger any scheduled automation job',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { jobName } = request.payload || {};
@@ -2106,7 +1943,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2118,7 +1955,7 @@ class AIBrainMasterOrchestrator {
       name: 'Run Platform Diagnostics',
       category: 'system',
       description: 'AI performs comprehensive platform diagnostics',
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         
@@ -2137,7 +1974,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2149,7 +1986,7 @@ class AIBrainMasterOrchestrator {
       name: 'Control Platform Animation',
       category: 'system',
       description: 'AI controls universal animation system for visual feedback',
-      requiredRoles: ['support', 'admin', 'super_admin'],
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { mode, duration, message } = request.payload || {};
@@ -2176,14 +2013,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered automation actions');
+    log.info('[AI Brain Master Orchestrator] Registered automation actions');
   }
 
   // ============================================================================
@@ -2197,7 +2034,7 @@ class AIBrainMasterOrchestrator {
       name: 'Check 90-Day New Hire Reviews',
       category: 'compliance',
       description: 'AI monitors new employees approaching 90-day review period',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, daysAhead, probationDays } = request.payload || {};
@@ -2267,7 +2104,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2280,7 +2117,7 @@ class AIBrainMasterOrchestrator {
       name: 'Send Certification Renewal Reminders',
       category: 'compliance',
       description: 'AI sends reminders for expiring certifications and licenses',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, daysAhead } = request.payload || {};
@@ -2362,7 +2199,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2375,7 +2212,7 @@ class AIBrainMasterOrchestrator {
       name: 'Check Work Anniversaries',
       category: 'system',
       description: 'AI identifies upcoming work anniversaries for recognition',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId, daysAhead } = request.payload || {};
@@ -2435,14 +2272,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered employee lifecycle actions');
+    log.info('[AI Brain Master Orchestrator] Registered employee lifecycle actions');
   }
 
   // ============================================================================
@@ -2456,7 +2293,7 @@ class AIBrainMasterOrchestrator {
       name: 'Run System Self-Check',
       category: 'health',
       description: 'AI performs comprehensive system health check and identifies issues',
-      requiredRoles: ['admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'support_agent', 'sysop'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         
@@ -2526,7 +2363,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2539,7 +2376,7 @@ class AIBrainMasterOrchestrator {
       name: 'Auto-Remediate Health Issues',
       category: 'health',
       description: 'AI attempts to automatically fix common system health issues',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { issues } = request.payload || {};
@@ -2601,6 +2438,7 @@ class AIBrainMasterOrchestrator {
           
           // Log remediation
           await db.insert(systemAuditLogs).values({
+            workspaceId: 'system',
             action: 'health_auto_remediation',
             entityType: 'health',
             userId: request.userId!,
@@ -2618,7 +2456,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2631,7 +2469,7 @@ class AIBrainMasterOrchestrator {
       name: 'Generate Performance Report',
       category: 'health',
       description: 'AI generates a comprehensive system performance report',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         
@@ -2673,14 +2511,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered health check actions');
+    log.info('[AI Brain Master Orchestrator] Registered health check actions');
   }
 
   // ============================================================================
@@ -2693,7 +2531,7 @@ class AIBrainMasterOrchestrator {
       name: 'Find Platform Feature',
       category: 'system',
       description: 'AI helps users find and navigate to platform features',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { query } = request.payload || {};
@@ -2721,7 +2559,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2733,7 +2571,7 @@ class AIBrainMasterOrchestrator {
       name: 'Troubleshoot Issue',
       category: 'system',
       description: 'AI diagnoses and provides solutions for platform issues',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { description, symptoms, affectedFeature } = request.payload || {};
@@ -2762,7 +2600,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2774,7 +2612,7 @@ class AIBrainMasterOrchestrator {
       name: 'Get AI Recommendation',
       category: 'system',
       description: 'AI provides personalized recommendations based on user context',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { context, userNeed } = request.payload || {};
@@ -2786,7 +2624,7 @@ class AIBrainMasterOrchestrator {
               userNeed: userNeed || 'improve workflow',
               currentUsage: context
             },
-            priority: 'normal',
+            priority: 'medium',
             workspaceId: request.workspaceId,
             userId: request.userId
           });
@@ -2802,280 +2640,17 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered user assistance actions');
+    log.info('[AI Brain Master Orchestrator] Registered user assistance actions');
   }
 
   // ============================================================================
-  // FILE SYSTEM TOOLS - AI Brain file access capabilities
-  // ============================================================================
-
-  private registerFileSystemActions(): void {
-    // File Read Action
-    helpaiOrchestrator.registerAction({
-      actionId: 'filesystem.read',
-      name: 'Read File',
-      category: 'system',
-      description: 'Read file contents with optional line range',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { filePath, startLine, endLine } = request.payload || {};
-        
-        try {
-          const result = await aiBrainFileSystemTools.readFile(
-            filePath,
-            { startLine, endLine },
-            request.userId
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success ? `Read ${filePath}` : (result.error || 'Operation failed'),
-            data: result.success ? { content: result.data, metadata: result.metadata } : undefined,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // File Write Action
-    helpaiOrchestrator.registerAction({
-      actionId: 'filesystem.write',
-      name: 'Write File',
-      category: 'system',
-      description: 'Write content to a file',
-      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { filePath, content, createDirectories, backup } = request.payload || {};
-        
-        try {
-          const result = await aiBrainFileSystemTools.writeFile(
-            filePath,
-            content,
-            { createDirectories, backup },
-            request.userId
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success ? `Wrote to ${filePath}` : (result.error || 'Write operation failed'),
-            data: result.success ? { metadata: result.metadata } : undefined,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // File Edit Action
-    helpaiOrchestrator.registerAction({
-      actionId: 'filesystem.edit',
-      name: 'Edit File',
-      category: 'system',
-      description: 'Search and replace content in a file',
-      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { filePath, searchPattern, replacement, all, regex } = request.payload || {};
-        
-        try {
-          const result = await aiBrainFileSystemTools.editFile(
-            filePath,
-            searchPattern,
-            replacement,
-            { all, regex },
-            request.userId
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success 
-              ? `Edited ${filePath} (${result.data?.matchCount} replacements)` 
-              : (result.error || 'Edit operation failed'),
-            data: result.success ? result.data : undefined,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // File Delete Action
-    helpaiOrchestrator.registerAction({
-      actionId: 'filesystem.delete',
-      name: 'Delete File',
-      category: 'system',
-      description: 'Delete a file (moves to backup)',
-      requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { filePath } = request.payload || {};
-        
-        try {
-          const result = await aiBrainFileSystemTools.deleteFile(filePath, request.userId);
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success ? `Deleted ${filePath}` : (result.error || 'Delete operation failed'),
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // Directory List Action
-    helpaiOrchestrator.registerAction({
-      actionId: 'filesystem.list',
-      name: 'List Directory',
-      category: 'system',
-      description: 'List directory contents with filtering options',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { dirPath, recursive, maxDepth, filePattern, excludePatterns } = request.payload || {};
-        
-        try {
-          const result = await aiBrainFileSystemTools.listDirectory(
-            dirPath || '.',
-            { recursive, maxDepth, filePattern, excludePatterns },
-            request.userId
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success 
-              ? `Listed ${result.data?.length || 0} entries in ${dirPath || '.'}` 
-              : (result.error || 'List operation failed'),
-            data: result.success ? { entries: result.data } : undefined,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // File Search Action
-    helpaiOrchestrator.registerAction({
-      actionId: 'filesystem.search',
-      name: 'Search Files',
-      category: 'system',
-      description: 'Search for patterns across files',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { searchPath, pattern, filePattern, caseSensitive, maxResults } = request.payload || {};
-        
-        try {
-          const result = await aiBrainFileSystemTools.searchFiles(
-            searchPath || '.',
-            { pattern, filePattern, caseSensitive, maxResults, includeLineNumbers: true },
-            request.userId
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success 
-              ? `Found ${result.data?.length || 0} matches` 
-              : (result.error || 'Search operation failed'),
-            data: result.success ? { matches: result.data } : undefined,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // File Diff Action
-    helpaiOrchestrator.registerAction({
-      actionId: 'filesystem.diff',
-      name: 'Generate Diff',
-      category: 'system',
-      description: 'Generate diff between files or file and content',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { file1, file2OrContent, isContent } = request.payload || {};
-        
-        try {
-          const result = await aiBrainFileSystemTools.generateDiff(
-            file1,
-            file2OrContent,
-            isContent,
-            request.userId
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success ? 'Diff generated' : (result.error || 'Diff operation failed'),
-            data: result.success ? { diff: result.data } : undefined,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    console.log('[AI Brain Master Orchestrator] Registered file system actions');
-  }
 
   // ============================================================================
   // WORKFLOW EXECUTOR - Step-based workflow execution
@@ -3107,7 +2682,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3152,7 +2727,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3190,7 +2765,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3230,7 +2805,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3279,14 +2854,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered workflow actions');
+    log.info('[AI Brain Master Orchestrator] Registered workflow actions');
   }
 
   // ============================================================================
@@ -3319,7 +2894,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3361,7 +2936,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3402,7 +2977,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3441,7 +3016,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -3480,14 +3055,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered test runner actions');
+    log.info('[AI Brain Master Orchestrator] Registered test runner actions');
   }
 
   // ============================================================================
@@ -3495,22 +3070,23 @@ class AIBrainMasterOrchestrator {
   // ============================================================================
 
   private registerOnboardingAssistantActions(): void {
+    // onboarding.diagnose — renamed from onboarding.run_diagnostics
     helpaiOrchestrator.registerAction({
-      actionId: 'onboarding.run_diagnostics',
+      actionId: 'onboarding.diagnose',
       name: 'Run Org Onboarding Diagnostics',
       category: 'health',
       description: 'Run comprehensive diagnostics for a workspace to verify database, file, and routing configuration',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'org_admin'],
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { workspaceId } = request.payload || {};
-        
+
         try {
           const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
           const report = await orgOnboardingAssistant.runDiagnostics(
             workspaceId || request.workspaceId!
           );
-          
+
           return {
             success: true,
             actionId: request.actionId,
@@ -3522,64 +3098,74 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'onboarding.apply_auto_fixes',
-      name: 'Apply Auto Fixes',
-      category: 'automation',
-      description: 'Apply automatic fixes for detected onboarding issues',
-      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { workspaceId, fixActions } = request.payload || {};
-        
-        try {
-          const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
-          const result = await orgOnboardingAssistant.applyAutoFixes(
-            workspaceId || request.workspaceId!,
-            fixActions || []
-          );
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: `Applied ${result.applied.length} fixes, ${result.failed.length} failed`,
-            data: result,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
+    // onboarding.apply_auto_fixes CONSOLIDATED into onboarding.migrate (action='auto_fix') in domainSupervisorActions.ts
+    // helpaiOrchestrator.registerAction({ actionId: 'onboarding.apply_auto_fixes', ... });
 
+    // onboarding.configure — consolidates: get_routing_config (default/action='get_routing'), validate_routing (action='validate_routing'), connect_integration (action='connect_integration')
     helpaiOrchestrator.registerAction({
-      actionId: 'onboarding.get_routing_config',
-      name: 'Get Data Routing Config',
+      actionId: 'onboarding.configure',
+      name: 'Configure Onboarding Routing',
       category: 'system',
-      description: 'Get the data routing configuration for a workspace including database isolation and file paths',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'org_admin'],
+      description: 'Configure and validate onboarding routing. Use payload.action="validate_routing" to validate all feature routing; action="connect_integration" to connect a third-party integration; default retrieves the data routing configuration.',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
-        const { workspaceId } = request.payload || {};
-        
+        const { action: subAction, workspaceId } = request.payload || {};
+
         try {
+          if (subAction === 'validate_routing') {
+            // Consolidated from onboarding.validate_routing
+            const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
+            const validation = await orgOnboardingAssistant.validateUniversalRouting(
+              workspaceId || request.workspaceId!
+            );
+
+            return {
+              success: validation.valid,
+              actionId: request.actionId,
+              message: validation.valid
+                ? 'All features routing correctly'
+                : `${validation.issues.length} routing issues detected`,
+              data: validation,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          if (subAction === 'connect_integration') {
+            // Consolidated from onboarding.connect_integration (domainSupervisorActions.ts)
+            const { domainLeadSupervisorService } = await import('./domainLeadSupervisorService');
+            const result = await domainLeadSupervisorService.submitTask(
+              'onboarding_ops',
+              'connect_integration',
+              request.payload || {},
+              {
+                requestedBy: request.userId || 'system',
+                workspaceId: request.workspaceId,
+                priority: 'medium',
+              }
+            );
+            return {
+              success: result.success,
+              actionId: request.actionId,
+              data: result.data,
+              message: result.error || 'Integration connected',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          // Default: get_routing_config
           const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
           const config = await orgOnboardingAssistant.getDataRoutingConfig(
             workspaceId || request.workspaceId!
           );
-          
+
           return {
             success: true,
             actionId: request.actionId,
@@ -3591,50 +3177,17 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'onboarding.validate_routing',
-      name: 'Validate Universal Routing',
-      category: 'health',
-      description: 'Validate that all features route correctly to the workspace',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'org_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { workspaceId } = request.payload || {};
-        
-        try {
-          const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
-          const validation = await orgOnboardingAssistant.validateUniversalRouting(
-            workspaceId || request.workspaceId!
-          );
-          
-          return {
-            success: validation.valid,
-            actionId: request.actionId,
-            message: validation.valid 
-              ? 'All features routing correctly' 
-              : `${validation.issues.length} routing issues detected`,
-            data: validation,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
+    // onboarding.validate_routing CONSOLIDATED into onboarding.configure (action='validate_routing')
+    // helpaiOrchestrator.registerAction({ actionId: 'onboarding.validate_routing', ... });
 
-    console.log('[AI Brain Master Orchestrator] Registered onboarding assistant actions');
+    log.info('[AI Brain Master Orchestrator] Registered onboarding assistant actions (consolidated: diagnose, configure)');
   }
 
   // ============================================================================
@@ -3651,7 +3204,7 @@ class AIBrainMasterOrchestrator {
     userId: string,
     userRole: string
   ): Promise<WorkflowChain> {
-    const workflowId = `wf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const workflowId = `wf-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     
     const workflow: WorkflowChain = {
       id: workflowId,
@@ -3678,12 +3231,17 @@ class AIBrainMasterOrchestrator {
         category: 'automation',
         error: `Authorization failed: ${authCheck.reason}`
       });
-      console.warn(`[AI Brain Master Orchestrator] Unauthorized workflow execution: ${authCheck.reason}`);
+      log.warn(`[AI Brain Master Orchestrator] Unauthorized workflow execution: ${authCheck.reason}`);
       throw new Error(`Unauthorized: ${authCheck.reason}`);
     }
     
-    console.log(`[AI Brain Master Orchestrator] Starting workflow: ${name} (${workflowId}) by ${userId} (${userRole})`);
+    log.info(`[AI Brain Master Orchestrator] Starting workflow: ${name} (${workflowId}) by ${userId} (${userRole})`);
     
+    trinityThoughtEngine.perceive(
+      `Workflow chain "${name}" (${workflowId}) initiated by ${userId} with ${workflow.steps.length} steps`,
+      { triggeredBy: 'workflow_chain' }
+    ).catch((err) => log.warn('[AIBrainOrchestrator] Fire-and-forget failed:', err));
+
     workflow.status = 'running';
     
     for (let i = 0; i < workflow.steps.length; i++) {
@@ -3743,14 +3301,14 @@ class AIBrainMasterOrchestrator {
         }
       } catch (error: any) {
         step.executedAt = new Date();
-        step.error = error.message;
+        step.error = (error instanceof Error ? error.message : String(error));
         workflow.status = 'failed';
         await aiBrainAuthorizationService.logCommandExecution({
           userId,
           userRole,
           actionId: `${step.category}.${step.action}`,
           category: step.category,
-          error: error.message
+          error: (error instanceof Error ? error.message : String(error))
         });
         break;
       }
@@ -3766,7 +3324,7 @@ class AIBrainMasterOrchestrator {
     const workspaceId = workflow.steps[0]?.parameters?.workspaceId;
     await this.notifyWorkflowComplete(workflow, userId, workspaceId);
     
-    console.log(`[AI Brain Master Orchestrator] Workflow ${workflowId} ${workflow.status}`);
+    log.info(`[AI Brain Master Orchestrator] Workflow ${workflowId} ${workflow.status}`);
     
     return workflow;
   }
@@ -3782,7 +3340,7 @@ class AIBrainMasterOrchestrator {
    * List all registered orchestration actions
    */
   getRegisteredActions(): string[] {
-    return helpaiOrchestrator.getAvailableActions('super_admin')
+    return helpaiOrchestrator.getAvailableActions('root_admin')
       .map((a: ActionHandler) => a.actionId);
   }
 
@@ -3790,7 +3348,7 @@ class AIBrainMasterOrchestrator {
    * Get action count by category
    */
   getActionSummary(): Record<string, number> {
-    const actions = helpaiOrchestrator.getAvailableActions('super_admin');
+    const actions = helpaiOrchestrator.getAvailableActions('root_admin');
     const summary: Record<string, number> = {};
     
     for (const action of actions) {
@@ -3806,125 +3364,102 @@ class AIBrainMasterOrchestrator {
   // ============================================================================
 
   private subscribeToEvents(): void {
+    // AI Brain Orchestrator intentionally uses '*' — it handles all ai_* prefix events
+    // plus automation_* events for WebSocket broadcasting and RL logging. Narrowing
+    // requires a complete registry of all ai_* event types; '*' is the correct tradeoff.
+    // Handlers are type-gated internally (automation_completed, ai_brain_action, etc.).
     platformEventBus.subscribe('*', {
       name: 'AI Brain Master Orchestrator',
       handler: async (event) => {
-        // Log significant events for AI learning
-        if (event.type.startsWith('ai_') || event.type.includes('automation')) {
-          console.log(`[AI Brain Master Orchestrator] Event: ${event.type}`);
+        // Log significant events for AI learning (orchestration_lifecycle is internal telemetry — skip log)
+        if (event.type?.startsWith('ai_') || (event.type?.includes('automation') && event.type !== 'automation_completed')) {
+          log.info(`[AI Brain Master Orchestrator] Event: ${event.type}`);
         }
 
-        // Bridge automation_completed events to notifications based on metadata
+        // Bridge automation_completed events to real-time WebSocket broadcasts only.
+        // NOTE: Platform update records and per-user notifications are already created
+        // by platformEventBus.storeInWhatsNew() → notificationEngine.sendPlatformUpdate().
+        // Previously this block ALSO called notifyAutomationComplete() AND broadcastToWorkspace()
+        // which each created ADDITIONAL platform update records, causing double/triple notifications.
+        // Now we only send a lightweight WebSocket broadcast for instant UI feedback.
         if (event.type === 'automation_completed' && event.metadata) {
           const metadata = event.metadata as Record<string, any>;
           const workspaceId = event.workspaceId;
-          
-          if (workspaceId && metadata.automationType) {
-            await aiNotificationService.notifyAutomationComplete(
-              metadata.automationType || 'scheduling',
-              workspaceId,
-              metadata.details || {}
-            );
-          }
+          const jobLabel = metadata.jobName || metadata.automationType;
 
-          // Handle specific automation types
-          if (metadata.jobName === 'scheduling' && workspaceId) {
-            await this.broadcastToWorkspace(
-              workspaceId,
-              'AI Schedule Generated',
-              `Your optimized schedule has been generated.`,
-              'automation'
-            );
-          }
-
-          if (metadata.jobName === 'payroll' && workspaceId) {
-            await this.broadcastToWorkspace(
-              workspaceId,
-              'Payroll Processed',
-              `Payroll has been calculated successfully.`,
-              'automation'
-            );
-          }
-
-          if (metadata.jobName === 'billing' && workspaceId) {
-            await this.broadcastToWorkspace(
-              workspaceId,
-              'Invoices Generated',
-              `Invoice(s) have been automatically generated.`,
-              'automation'
-            );
-          }
-
-          if (metadata.jobName === 'compliance' && workspaceId) {
-            await this.broadcastToWorkspace(
-              workspaceId,
-              'Compliance Check Complete',
-              `Compliance verification completed successfully.`,
-              'system'
-            );
+          if (workspaceId && jobLabel) {
+            const titles: Record<string, string> = {
+              scheduling: 'AI Schedule Generated',
+              payroll: 'Payroll Processed',
+              billing: 'Invoices Generated',
+              invoicing: 'Invoices Generated',
+              compliance: 'Compliance Check Complete',
+            };
+            const title = titles[jobLabel] || `Automation Complete: ${jobLabel}`;
+            broadcastToWorkspace(workspaceId, {
+              type: 'orchestration_update',
+              title,
+              message: event.description,
+              category: 'automation',
+              timestamp: new Date().toISOString(),
+            });
           }
         }
 
-        // Bridge system_maintenance events to notifications
-        if (event.type === 'system_maintenance' && event.workspaceId) {
-          await aiNotificationService.notifySystemIssue(
-            event.title,
-            event.description,
-            event.workspaceId
-          );
-        }
-
-        // Bridge AI brain action events to notifications (from external sources)
-        // Skip if source is ai_brain_orchestrator to avoid duplicate notifications
+        // For ai_brain_action, ai_error, ai_escalation: storeInWhatsNew already creates
+        // platform_updates + per-user notifications. We only send a targeted WebSocket
+        // broadcast to the specific user for immediate UI feedback (no duplicate DB records).
         if (event.type === 'ai_brain_action' && event.userId && event.workspaceId) {
           const metadata = event.metadata as Record<string, any> | undefined;
           if (metadata?.source !== 'ai_brain_orchestrator') {
-            await this.notifyUser(
-              event.userId,
-              event.workspaceId,
-              event.title,
-              event.description,
-              'success'
-            );
+            broadcastNotificationToUser(event.userId, {
+              type: 'ai_action_update',
+              title: event.title,
+              message: event.description,
+              severity: 'success',
+              timestamp: new Date().toISOString(),
+            });
           }
         }
 
-        // Bridge AI error events to notifications
         if (event.type === 'ai_error' && event.userId && event.workspaceId) {
-          await this.notifyUser(
-            event.userId,
-            event.workspaceId,
-            event.title || 'AI Error',
-            event.description || 'An error occurred during AI processing',
-            'error'
-          );
-        }
-
-        // Bridge AI suggestion events to platform updates
-        if (event.type === 'ai_suggestion' && event.workspaceId) {
-          await aiNotificationService.pushAIInsight('automation', {
-            title: event.title,
-            description: event.description,
-            workspaceId: event.workspaceId,
-            category: 'feature',
-            priority: 2,
+          broadcastNotificationToUser(event.userId, {
+            type: 'ai_action_update',
+            title: event.title || 'AI Error',
+            message: event.description || 'An error occurred during AI processing',
+            severity: 'error',
+            timestamp: new Date().toISOString(),
           });
         }
 
-        // Bridge AI escalation events to alerts
         if (event.type === 'ai_escalation' && event.userId && event.workspaceId) {
-          await this.notifyUser(
-            event.userId,
-            event.workspaceId,
-            event.title || 'AI Escalation',
-            event.description || 'An issue requires your attention',
-            'warning'
-          );
+          broadcastNotificationToUser(event.userId, {
+            type: 'ai_action_update',
+            title: event.title || 'AI Escalation',
+            message: event.description || 'An issue requires your attention',
+            severity: 'warning',
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        // ai_suggestion and system_maintenance: storeInWhatsNew handles platform updates
+        // and per-user notifications. No additional notification creation needed here
+        // since these events always flow through platformEventBus.publish().
+
+        // GLOBAL WORKSPACE: Brain region broadcasts (from Hebbian/Connectome layer).
+        // When CEREBELLUM (bots), BASAL_GANGLIA (RL), or other regions complete work,
+        // the Connectome Service publishes brain.<region>.* events.  We log them here
+        // for observability and to feed them into the knowledge graph if significant.
+        if (event.type?.startsWith('brain.')) {
+          const parts = event.type.split('.');   // ['brain', 'cerebellum', 'reportbot', 'completed']
+          const regionName = parts[1]?.toUpperCase();
+          const eventLabel = parts.slice(2).join('.');
+          log.info(`[Global Workspace] ${regionName} → ${eventLabel} (confidence: ${(event.metadata as any)?.confidence ?? '?'})`);
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Event subscriptions active');
+    log.info('[AI Brain Master Orchestrator] Event subscriptions active');
   }
 
   /**
@@ -3948,13 +3483,26 @@ class AIBrainMasterOrchestrator {
       userId,
       userRole,
       workspaceId,
-      priority: 'normal',
+      priority: 'medium',
     };
 
     const action = helpaiOrchestrator.getAvailableActions(userRole)
       .find((a: ActionHandler) => a.actionId === actionId);
 
     const actionName = action?.name || actionId;
+    const thoughtCtx = { workspaceId, triggeredBy: 'orchestrator_action' };
+
+    trinityThoughtEngine.perceive(
+      `Action request: ${actionId} (${actionName}) by user ${userId} [role: ${userRole}]`,
+      thoughtCtx
+    ).catch((err) => log.warn('[AIBrainOrchestrator] Fire-and-forget failed:', err));
+
+    trinityThoughtEngine.deliberate(
+      `Evaluating action "${actionName}" — checking feature gates, credits, and authorization`,
+      [actionName, `Skip: insufficient permissions`, `Defer: needs human review`],
+      0.85,
+      thoughtCtx
+    ).catch((err) => log.warn('[AIBrainOrchestrator] Fire-and-forget failed:', err));
 
     try {
       // Check FeatureGate if workspace is provided (credits/access control)
@@ -3973,7 +3521,7 @@ class AIBrainMasterOrchestrator {
           );
 
           if (!gateResult.allowed) {
-            console.log(`[AI Brain Orchestrator] Feature gate blocked: ${actionId} for workspace ${workspaceId}. Reason: ${gateResult.reason}`);
+            log.info(`[AI Brain Orchestrator] Feature gate blocked: ${actionId} for workspace ${workspaceId}. Reason: ${gateResult.reason}`);
             return {
               success: false,
               actionId,
@@ -3998,7 +3546,7 @@ class AIBrainMasterOrchestrator {
           );
 
           if (!consumeResult.success) {
-            console.log(`[AI Brain Orchestrator] Credit consumption failed: ${consumeResult.error}`);
+            log.info(`[AI Brain Orchestrator] Credit consumption failed: ${consumeResult.error}`);
             return {
               success: false,
               actionId,
@@ -4009,21 +3557,43 @@ class AIBrainMasterOrchestrator {
           }
 
           // Add credits used to request metadata for logging
-          (request as any).creditsUsed = consumeResult.creditsUsed;
+          request.creditsUsed = consumeResult.creditsUsed;
         }
       }
 
+      trinityThoughtEngine.decide(
+        `Executing action: ${actionName}`,
+        `Authorization passed, credits consumed, proceeding with execution via helpaiOrchestrator`,
+        0.9,
+        thoughtCtx
+      ).catch((err) => log.warn('[AIBrainOrchestrator] Fire-and-forget failed:', err));
+
       const result = await helpaiOrchestrator.executeAction(request);
       
-      // Always notify about action completion
+      trinityThoughtEngine.reflect(
+        'action',
+        actionId,
+        `Action "${actionName}" ${result.success ? 'succeeded' : 'failed'}: ${result.message || 'no message'}. Took ${result.executionTimeMs || 0}ms.`,
+        { success: result.success, score: result.success ? 0.9 : 0.4 },
+        workspaceId
+      ).catch((err) => log.warn('[AIBrainOrchestrator] Fire-and-forget failed:', err));
+
       await this.notifyActionComplete(request, result, actionName);
 
       return result;
     } catch (error: any) {
+      trinityThoughtEngine.reflect(
+        'action',
+        actionId,
+        `Action "${actionName}" threw error: ${(error instanceof Error ? error.message : String(error))}`,
+        { success: false, score: 0.2 },
+        workspaceId
+      ).catch((err) => log.warn('[AIBrainOrchestrator] Fire-and-forget failed:', err));
+
       const errorResult: ActionResult = {
         success: false,
         actionId,
-        message: error.message,
+        message: (error instanceof Error ? error.message : String(error)),
         executionTimeMs: 0,
       };
 
@@ -4093,7 +3663,7 @@ class AIBrainMasterOrchestrator {
       name: 'Extract Receipt Data',
       category: 'analytics',
       description: 'AI extracts merchant, amount, and date from receipt images using OCR',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { imageBase64, mimeType } = request.payload || {};
@@ -4128,7 +3698,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4140,11 +3710,12 @@ class AIBrainMasterOrchestrator {
       name: 'Suggest Expense Category',
       category: 'analytics',
       description: 'AI suggests the best category for an expense based on description and merchant',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { description, merchant, amount } = request.payload || {};
-        const wsId = request.workspaceId!;
+        if (!request.workspaceId) return { success: false, actionId: request.actionId, message: 'Workspace context required', executionTimeMs: 0 };
+        const wsId = request.workspaceId;
 
         try {
           if (!description || !amount) {
@@ -4177,7 +3748,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4189,11 +3760,12 @@ class AIBrainMasterOrchestrator {
       name: 'Batch Categorize Expenses',
       category: 'analytics',
       description: 'AI processes and categorizes multiple uncategorized expenses',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { limit } = request.payload || {};
-        const wsId = request.workspaceId!;
+        if (!request.workspaceId) return { success: false, actionId: request.actionId, message: 'Workspace context required', executionTimeMs: 0 };
+        const wsId = request.workspaceId;
 
         try {
           const summary = await aiExpenseCategorizationService.batchCategorize(
@@ -4224,7 +3796,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4236,11 +3808,12 @@ class AIBrainMasterOrchestrator {
       name: 'Match Receipt to Expense',
       category: 'analytics',
       description: 'AI matches uploaded receipts to existing expenses based on amount and date',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { receiptId } = request.payload || {};
-        const wsId = request.workspaceId!;
+        if (!request.workspaceId) return { success: false, actionId: request.actionId, message: 'Workspace context required', executionTimeMs: 0 };
+        const wsId = request.workspaceId;
 
         try {
           if (!receiptId) {
@@ -4271,7 +3844,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4283,11 +3856,12 @@ class AIBrainMasterOrchestrator {
       name: 'Analyze Expense Patterns',
       category: 'analytics',
       description: 'AI analyzes expense patterns, identifies top categories, and detects anomalies',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { employeeId, startDate, endDate } = request.payload || {};
-        const wsId = request.workspaceId!;
+        if (!request.workspaceId) return { success: false, actionId: request.actionId, message: 'Workspace context required', executionTimeMs: 0 };
+        const wsId = request.workspaceId;
 
         try {
           const dateRange = startDate && endDate ? {
@@ -4312,14 +3886,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered expense categorization actions');
+    log.info('[AI Brain Master Orchestrator] Registered expense categorization actions');
   }
 
   // ============================================================================
@@ -4332,11 +3906,12 @@ class AIBrainMasterOrchestrator {
       name: 'Analyze Client Pricing',
       category: 'analytics',
       description: 'AI analyzes a client\'s billing history and suggests optimal pricing',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { clientId } = request.payload || {};
-        const wsId = request.workspaceId!;
+        if (!request.workspaceId) return { success: false, actionId: request.actionId, message: 'Workspace context required', executionTimeMs: 0 };
+        const wsId = request.workspaceId;
 
         try {
           if (!clientId) {
@@ -4374,7 +3949,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4386,10 +3961,11 @@ class AIBrainMasterOrchestrator {
       name: 'Generate Pricing Report',
       category: 'analytics',
       description: 'AI generates comprehensive pricing analysis for all clients with recommendations',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
-        const wsId = request.workspaceId!;
+        if (!request.workspaceId) return { success: false, actionId: request.actionId, message: 'Workspace context required', executionTimeMs: 0 };
+        const wsId = request.workspaceId;
 
         try {
           const report = await aiDynamicPricingService.generatePricingReport(
@@ -4417,7 +3993,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4429,7 +4005,7 @@ class AIBrainMasterOrchestrator {
       name: 'Check Rate Competitiveness',
       category: 'analytics',
       description: 'Compare a rate against industry benchmarks',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { rate, industry } = request.payload || {};
@@ -4460,7 +4036,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4472,11 +4048,12 @@ class AIBrainMasterOrchestrator {
       name: 'Simulate Bulk Rate Adjustment',
       category: 'analytics',
       description: 'Project the revenue impact of a bulk rate adjustment across all clients',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { adjustmentPercent } = request.payload || {};
-        const wsId = request.workspaceId!;
+        if (!request.workspaceId) return { success: false, actionId: request.actionId, message: 'Workspace context required', executionTimeMs: 0 };
+        const wsId = request.workspaceId;
 
         try {
           if (adjustmentPercent === undefined) {
@@ -4505,14 +4082,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered dynamic pricing actions');
+    log.info('[AI Brain Master Orchestrator] Registered dynamic pricing actions');
   }
 
   // ============================================================================
@@ -4557,7 +4134,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4597,7 +4174,7 @@ class AIBrainMasterOrchestrator {
             userId,
             request.workspaceId,
             'Session Recovery Available',
-            reason || 'Trinity has prepared a recovery point for your previous work session',
+            reason || 'I\'ve prepared a recovery point for your previous work session',
             'info',
             request.actionId
           );
@@ -4614,7 +4191,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4682,7 +4259,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4742,7 +4319,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4772,202 +4349,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered session checkpoint actions');
-  }
-
-  // ============================================================================
-  // ELEVATED SESSION GUARDIAN ORCHESTRATION
-  // ============================================================================
-
-  private async registerElevatedSessionGuardianActions(): Promise<void> {
-    const { elevatedSessionGuardian } = await import('./elevatedSessionGuardian');
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'session.guardian.diagnose',
-      name: 'Run Session Guardian Diagnostics',
-      category: 'security',
-      description: 'Trinity runs Dr. Holmes-style diagnostics on elevated session system health',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        
-        try {
-          const report = await elevatedSessionGuardian.runDiagnostics();
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: report.diagnosis,
-            data: report,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'session.guardian.heal',
-      name: 'Run Session Healing Cycle',
-      category: 'security',
-      description: 'Trinity initiates self-healing cycle for elevated sessions',
-      requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        
-        try {
-          const result = await elevatedSessionGuardian.runHealingCycle();
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: `Healing complete: ${result.healed} healed, ${result.failures} failures`,
-            data: result,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'session.guardian.status',
-      name: 'Get Session Guardian Health Status',
-      category: 'security',
-      description: 'Get current health status of elevated session system',
-      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        
-        try {
-          const status = await elevatedSessionGuardian.getHealthStatus();
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: status.healthy ? 'Session system healthy' : 'Session system has issues',
-            data: status,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'session.guardian.elevate',
-      name: 'Issue Elevated Session',
-      category: 'security',
-      description: 'Issue a new elevated session for support/AI service with full telemetry',
-      requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { targetUserId, sessionId, platformRole, reason } = request.payload || {};
-        
-        try {
-          if (!targetUserId || !sessionId || !platformRole) {
-            return {
-              success: false,
-              actionId: request.actionId,
-              message: 'targetUserId, sessionId, and platformRole are required',
-              executionTimeMs: Date.now() - startTime
-            };
-          }
-          
-          const result = await elevatedSessionGuardian.issueElevation(
-            targetUserId,
-            sessionId,
-            platformRole,
-            reason || 'AI Brain initiated elevation'
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success ? 'Elevation issued successfully' : result.error || 'Elevation failed',
-            data: result.elevationId ? { elevationId: result.elevationId } : undefined,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'session.guardian.revoke',
-      name: 'Revoke Elevated Session',
-      category: 'security',
-      description: 'Revoke an elevated session with telemetry tracking',
-      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const { elevationId, reason } = request.payload || {};
-        
-        try {
-          if (!elevationId) {
-            return {
-              success: false,
-              actionId: request.actionId,
-              message: 'elevationId is required',
-              executionTimeMs: Date.now() - startTime
-            };
-          }
-          
-          const result = await elevatedSessionGuardian.revokeElevation(
-            elevationId,
-            request.userId!,
-            reason || 'AI Brain initiated revocation'
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            message: result.success ? 'Elevation revoked' : 'Revocation failed',
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: error.message,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    console.log('[AI Brain Master Orchestrator] Registered elevated session guardian actions');
+    log.info('[AI Brain Master Orchestrator] Registered session checkpoint actions');
   }
 
   private registerMemoryAndGovernanceActions() {
@@ -5000,7 +4389,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5035,7 +4424,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5083,7 +4472,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5138,7 +4527,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5211,14 +4600,14 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: (error instanceof Error ? error.message : String(error)),
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered memory and governance actions');
+    log.info('[AI Brain Master Orchestrator] Registered memory and governance actions');
   }
 
   // ============================================================================
@@ -5237,7 +4626,7 @@ class AIBrainMasterOrchestrator {
       }
       return { allowed: true };
     } catch (error: any) {
-      console.error(`[Gemini3Tools] Access validation error: ${error.message}`);
+      log.error(`[Gemini3Tools] Access validation error: ${(error instanceof Error ? error.message : String(error))}`);
       return { allowed: false, reason: 'Access validation failed' };
     }
   }
@@ -5249,7 +4638,7 @@ class AIBrainMasterOrchestrator {
       name: 'Deep Think Analysis',
       category: 'analytics',
       description: 'Use Gemini 3 Pro deep reasoning for complex multi-step analysis, strategic planning, and critical decision-making with extended thinking time',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { query, context, maxThinkingTokens } = request.payload || {};
@@ -5257,7 +4646,7 @@ class AIBrainMasterOrchestrator {
         try {
           const accessCheck = await this.validateGemini3Access('deep-think');
           if (!accessCheck.allowed) {
-            console.warn(`[Gemini3Tools] Deep think access denied: ${accessCheck.reason}`);
+            log.warn(`[Gemini3Tools] Deep think access denied: ${accessCheck.reason}`);
             return {
               success: false,
               actionId: request.actionId,
@@ -5267,7 +4656,7 @@ class AIBrainMasterOrchestrator {
           }
 
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
-          const result = await unifiedGeminiClient.generateContent({
+          const result = await unifiedGeminiClient.generateContent({ // withGemini
             prompt: `You are an expert strategic analyst. Think deeply and thoroughly about this query, considering multiple perspectives, potential implications, and actionable recommendations.
 
 Query: ${query}
@@ -5284,7 +4673,7 @@ Provide a comprehensive analysis with:
             userId: request.userId,
           });
           
-          console.log(`[Gemini3Tools] Deep think completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
+          log.info(`[Gemini3Tools] Deep think completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -5298,11 +4687,11 @@ Provide a comprehensive analysis with:
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
-          console.error(`[Gemini3Tools] Deep think failed: ${error.message}`);
+          log.error(`[Gemini3Tools] Deep think failed: ${(error instanceof Error ? error.message : String(error))}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: `Deep think failed: ${error.message}`,
+            message: `Deep think failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5315,7 +4704,7 @@ Provide a comprehensive analysis with:
       name: 'Generate UI Component',
       category: 'automation',
       description: 'Use Gemini 3 to generate React UI components from natural language descriptions with styling and interactivity',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { description, componentType, styling, interactivity } = request.payload || {};
@@ -5323,7 +4712,7 @@ Provide a comprehensive analysis with:
         try {
           const accessCheck = await this.validateGemini3Access('generate-ui');
           if (!accessCheck.allowed) {
-            console.warn(`[Gemini3Tools] Generate UI access denied: ${accessCheck.reason}`);
+            log.warn(`[Gemini3Tools] Generate UI access denied: ${accessCheck.reason}`);
             return {
               success: false,
               actionId: request.actionId,
@@ -5333,7 +4722,7 @@ Provide a comprehensive analysis with:
           }
 
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
-          const result = await unifiedGeminiClient.generateContent({
+          const result = await unifiedGeminiClient.generateContent({ // withGemini
             prompt: `You are an expert React/TypeScript developer. Generate a production-ready React component based on this description:
 
 Description: ${description}
@@ -5354,7 +4743,7 @@ Return the complete component code with all imports.`,
             userId: request.userId,
           });
           
-          console.log(`[Gemini3Tools] Generate UI completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
+          log.info(`[Gemini3Tools] Generate UI completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -5367,11 +4756,11 @@ Return the complete component code with all imports.`,
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
-          console.error(`[Gemini3Tools] Generate UI failed: ${error.message}`);
+          log.error(`[Gemini3Tools] Generate UI failed: ${(error instanceof Error ? error.message : String(error))}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: `Generate UI failed: ${error.message}`,
+            message: `Generate UI failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5384,7 +4773,7 @@ Return the complete component code with all imports.`,
       name: 'Context Memory Operations',
       category: 'analytics',
       description: 'Manage long-term AI conversation context and memory for personalized interactions across sessions',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { operation, key, value, namespace } = request.payload || {};
@@ -5392,7 +4781,7 @@ Return the complete component code with all imports.`,
         try {
           const accessCheck = await this.validateGemini3Access('context-memory');
           if (!accessCheck.allowed) {
-            console.warn(`[Gemini3Tools] Context memory access denied: ${accessCheck.reason}`);
+            log.warn(`[Gemini3Tools] Context memory access denied: ${accessCheck.reason}`);
             return {
               success: false,
               actionId: request.actionId,
@@ -5434,7 +4823,7 @@ Return the complete component code with all imports.`,
               result = { error: 'Unknown operation' };
           }
           
-          console.log(`[Gemini3Tools] Context memory '${operation}' completed in ${Date.now() - startTime}ms`);
+          log.info(`[Gemini3Tools] Context memory '${operation}' completed in ${Date.now() - startTime}ms`);
           return {
             success: true,
             actionId: request.actionId,
@@ -5443,11 +4832,11 @@ Return the complete component code with all imports.`,
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
-          console.error(`[Gemini3Tools] Context memory failed: ${error.message}`);
+          log.error(`[Gemini3Tools] Context memory failed: ${(error instanceof Error ? error.message : String(error))}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: `Context memory failed: ${error.message}`,
+            message: `Context memory failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5460,7 +4849,7 @@ Return the complete component code with all imports.`,
       name: 'Vibe Coding',
       category: 'automation',
       description: 'Translate natural language intent into production-ready code following project conventions and patterns',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { intent, language, framework, conventions } = request.payload || {};
@@ -5468,7 +4857,7 @@ Return the complete component code with all imports.`,
         try {
           const accessCheck = await this.validateGemini3Access('vibe-coding');
           if (!accessCheck.allowed) {
-            console.warn(`[Gemini3Tools] Vibe coding access denied: ${accessCheck.reason}`);
+            log.warn(`[Gemini3Tools] Vibe coding access denied: ${accessCheck.reason}`);
             return {
               success: false,
               actionId: request.actionId,
@@ -5478,7 +4867,7 @@ Return the complete component code with all imports.`,
           }
 
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
-          const result = await unifiedGeminiClient.generateContent({
+          const result = await unifiedGeminiClient.generateContent({ // withGemini
             prompt: `You are an expert programmer with deep knowledge of ${framework || 'modern web development'}. Generate production-ready code based on this natural language intent:
 
 Intent: ${intent}
@@ -5499,7 +4888,7 @@ Return the complete implementation.`,
             userId: request.userId,
           });
           
-          console.log(`[Gemini3Tools] Vibe coding completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
+          log.info(`[Gemini3Tools] Vibe coding completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -5513,11 +4902,11 @@ Return the complete implementation.`,
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
-          console.error(`[Gemini3Tools] Vibe coding failed: ${error.message}`);
+          log.error(`[Gemini3Tools] Vibe coding failed: ${(error instanceof Error ? error.message : String(error))}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: `Vibe coding failed: ${error.message}`,
+            message: `Vibe coding failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5530,7 +4919,7 @@ Return the complete implementation.`,
       name: 'Fact Check',
       category: 'analytics',
       description: 'AI-powered fact verification with confidence scores, cross-referencing, and source validation',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const { claim, context, sources } = request.payload || {};
@@ -5538,7 +4927,7 @@ Return the complete implementation.`,
         try {
           const accessCheck = await this.validateGemini3Access('fact-check');
           if (!accessCheck.allowed) {
-            console.warn(`[Gemini3Tools] Fact check access denied: ${accessCheck.reason}`);
+            log.warn(`[Gemini3Tools] Fact check access denied: ${accessCheck.reason}`);
             return {
               success: false,
               actionId: request.actionId,
@@ -5548,7 +4937,7 @@ Return the complete implementation.`,
           }
 
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
-          const result = await unifiedGeminiClient.generateContent({
+          const result = await unifiedGeminiClient.generateContent({ // withGemini
             prompt: `You are a fact-checking expert. Analyze the following claim and provide a thorough verification:
 
 Claim: ${claim}
@@ -5568,7 +4957,7 @@ Provide your analysis in the following format:
             userId: request.userId,
           });
           
-          console.log(`[Gemini3Tools] Fact check completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
+          log.info(`[Gemini3Tools] Fact check completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -5581,18 +4970,18 @@ Provide your analysis in the following format:
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
-          console.error(`[Gemini3Tools] Fact check failed: ${error.message}`);
+          log.error(`[Gemini3Tools] Fact check failed: ${(error instanceof Error ? error.message : String(error))}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: `Fact check failed: ${error.message}`,
+            message: `Fact check failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered 5 Gemini 3 reasoning tool actions');
+    log.info('[AI Brain Master Orchestrator] Registered 5 Gemini 3 reasoning tool actions');
   }
 
   // ============================================================================
@@ -5611,7 +5000,7 @@ Provide your analysis in the following format:
       name: 'Plan Workflow',
       category: 'automation',
       description: 'Use AI to create an execution plan for a complex task',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -5643,7 +5032,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Workflow planning failed: ${error.message}`,
+            message: `Workflow planning failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5655,7 +5044,7 @@ Provide your analysis in the following format:
       name: 'Run Platform Tests',
       category: 'health',
       description: 'Execute platform health and integration tests',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -5676,7 +5065,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Test execution failed: ${error.message}`,
+            message: `Test execution failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -5688,7 +5077,7 @@ Provide your analysis in the following format:
       name: 'File Operation',
       category: 'system',
       description: 'Perform secure file operations (read/write/edit/search)',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -5741,227 +5130,15 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `File operation failed: ${error.message}`,
+            message: `File operation failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    // Platform Intent Routing Actions
-    helpaiOrchestrator.registerAction({
-      actionId: 'routing.submit_intent',
-      name: 'Submit Platform Intent',
-      category: 'automation',
-      description: 'Submit an intent to be routed through AI Brain orchestration',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const payload = request.payload || {};
-        const intent = payload.intent || payload.query;
-        
-        if (!intent) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: 'Missing required parameter: intent or query',
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-        
-        try {
-          const result = await platformIntentRouter.routeIntent({
-            intent,
-            source: payload.source || 'api',
-            userId: request.userId,
-            workspaceId: request.workspaceId,
-            category: payload.category,
-            priority: payload.priority || 'normal',
-            metadata: payload.metadata
-          });
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Intent routed successfully',
-            data: result,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Intent routing failed: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
 
-    helpaiOrchestrator.registerAction({
-      actionId: 'routing.get_telemetry',
-      name: 'Get Routing Telemetry',
-      category: 'analytics',
-      description: 'Get telemetry data from the platform intent router',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        try {
-          const telemetry = platformIntentRouter.getTelemetryBuffer();
-          const metrics = platformIntentRouter.getMetrics();
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Telemetry retrieved',
-            data: { telemetry, metrics },
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Telemetry retrieval failed: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    // Sentinel Monitoring Actions
-    helpaiOrchestrator.registerAction({
-      actionId: 'sentinel.get_status',
-      name: 'Get Sentinel Status',
-      category: 'health',
-      description: 'Get the current status of the Trinity Sentinel monitoring system',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        try {
-          const status = trinitySentinel.getStatus();
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Sentinel status retrieved',
-            data: status,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Status retrieval failed: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'sentinel.get_alerts',
-      name: 'Get Sentinel Alerts',
-      category: 'health',
-      description: 'Get active alerts from the Trinity Sentinel',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        try {
-          const alerts = trinitySentinel.getActiveAlerts();
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: `Retrieved ${alerts.length} active alerts`,
-            data: { alerts, count: alerts.length },
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Alert retrieval failed: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'sentinel.acknowledge_alert',
-      name: 'Acknowledge Alert',
-      category: 'health',
-      description: 'Acknowledge and optionally resolve a Sentinel alert',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const payload = request.payload || {};
-        const { alertId, resolution } = payload;
-        
-        if (!alertId) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: 'Missing required parameter: alertId',
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-        
-        try {
-          const result = trinitySentinel.acknowledgeAlert(alertId, request.userId, resolution);
-          return {
-            success: result,
-            actionId: request.actionId,
-            message: result ? 'Alert acknowledged' : 'Alert not found',
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Alert acknowledgment failed: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'sentinel.trigger_remediation',
-      name: 'Trigger Remediation',
-      category: 'automation',
-      description: 'Trigger self-healing remediation for a specific alert or issue',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const payload = request.payload || {};
-        const { alertId, remediationType } = payload;
-        
-        if (!alertId) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: 'Missing required parameter: alertId',
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-        
-        try {
-          await trinitySentinel.triggerRemediation(alertId, remediationType);
-          return {
-            success: true,
-            actionId: request.actionId,
-            message: 'Remediation triggered',
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Remediation failed: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    console.log('[AI Brain Master Orchestrator] Registered 10 architect-grade execution actions');
+    log.info('[AI Brain Master Orchestrator] Registered 4 architect-grade execution actions');
 
     // ============================================================================
     // AUTONOMOUS ORCHESTRATION TOOLS
@@ -5981,7 +5158,7 @@ Provide your analysis in the following format:
       name: 'Self-Reflect on Execution',
       category: 'automation',
       description: 'Analyze execution results and suggest corrections using AI self-reflection',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6010,7 +5187,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Self-reflection failed: ${error.message}`,
+            message: `Self-reflection failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6022,7 +5199,7 @@ Provide your analysis in the following format:
       name: 'Auto-Correct Execution',
       category: 'automation',
       description: 'Automatically correct execution issues based on reflection results',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6055,7 +5232,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Auto-correction failed: ${error.message}`,
+            message: `Auto-correction failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6068,7 +5245,7 @@ Provide your analysis in the following format:
       name: 'LLM Judge Evaluation',
       category: 'automation',
       description: 'Evaluate content quality using AI judge with configurable criteria',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6109,7 +5286,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Evaluation failed: ${error.message}`,
+            message: `Evaluation failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6121,7 +5298,7 @@ Provide your analysis in the following format:
       name: 'Consensus Evaluation',
       category: 'automation',
       description: 'Evaluate with multiple AI judges for high-stakes decisions',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6150,7 +5327,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Consensus evaluation failed: ${error.message}`,
+            message: `Consensus evaluation failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6163,7 +5340,7 @@ Provide your analysis in the following format:
       name: 'Create Execution Plan',
       category: 'automation',
       description: 'Create structured execution plan using CoT, ReAct, or decomposition',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6201,7 +5378,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Planning failed: ${error.message}`,
+            message: `Planning failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6213,7 +5390,7 @@ Provide your analysis in the following format:
       name: 'Validate Execution Plan',
       category: 'automation',
       description: 'Validate a plan for circular dependencies and other issues',
-      requiredRoles: ['manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6243,7 +5420,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Validation failed: ${error.message}`,
+            message: `Validation failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6256,7 +5433,7 @@ Provide your analysis in the following format:
       name: 'Adaptive Task Routing',
       category: 'automation',
       description: 'Intelligently route task based on complexity and risk assessment',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6292,7 +5469,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Routing failed: ${error.message}`,
+            message: `Routing failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6304,7 +5481,7 @@ Provide your analysis in the following format:
       name: 'Subagent Handoff',
       category: 'automation',
       description: 'Transfer task from one subagent to another with bidirectional communication',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6343,7 +5520,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Handoff failed: ${error.message}`,
+            message: `Handoff failed: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6356,7 +5533,7 @@ Provide your analysis in the following format:
       name: 'Record Behavior Sample',
       category: 'analytics',
       description: 'Record a behavior sample for drift detection and monitoring',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6387,7 +5564,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to record sample: ${error.message}`,
+            message: `Failed to record sample: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6399,7 +5576,7 @@ Provide your analysis in the following format:
       name: 'Get Behavioral Health',
       category: 'analytics',
       description: 'Get behavioral health summary including drift and anomaly counts',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         
@@ -6419,7 +5596,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to get health: ${error.message}`,
+            message: `Failed to get health: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6431,7 +5608,7 @@ Provide your analysis in the following format:
       name: 'Get Behavior Profile',
       category: 'analytics',
       description: 'Get detailed behavioral profile for a specific subagent',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         const payload = request.payload || {};
@@ -6471,204 +5648,14 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to get profile: ${error.message}`,
+            message: `Failed to get profile: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered 12 autonomous orchestration tool actions');
-
-    // ============================================================================
-    // GAMIFICATION DOMAIN ACTIONS - DISABLED: Phase 1 cleanup - not MVP
-    // ============================================================================
-    /* DISABLED: Gamification not in MVP
-    helpaiOrchestrator.registerAction({
-      actionId: 'gamification.award_points',
-      name: 'Award Points',
-      category: 'gamification',
-      description: 'Award points to an employee for achievements, activities, or manual recognition',
-      requiredRoles: ['workspace_admin', 'manager', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const payload = request.payload || {};
-        const { employeeId, points, reason, transactionType } = payload;
-        
-        // Validate workspace context
-        if (!request.workspaceId) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: 'Workspace context required for gamification actions',
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-        
-        if (!employeeId || points === undefined || points === null) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: 'Missing required parameters: employeeId, points',
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-        
-        // Validate points is a valid number
-        const pointsNum = parseInt(String(points), 10);
-        if (isNaN(pointsNum) || pointsNum <= 0) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: 'Points must be a positive integer',
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-        
-        try {
-          const { gamificationService } = await import('../gamification/gamificationService');
-          const result = await gamificationService.awardPoints({
-            workspaceId: request.workspaceId,
-            employeeId,
-            points: pointsNum,
-            transactionType: transactionType || 'manual_award',
-            description: reason || 'Manual points award via Trinity',
-            awardedBy: request.userId,
-          });
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            data: result,
-            message: `Awarded ${pointsNum} points to employee. New total: ${result.newTotal}${result.levelUp ? ` (Level Up to ${result.newLevel}!)` : ''}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to award points: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'gamification.get_leaderboard',
-      name: 'Get Leaderboard',
-      category: 'gamification',
-      description: 'Retrieve the gamification leaderboard for a workspace',
-      requiredRoles: ['employee', 'manager', 'workspace_admin', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const payload = request.payload || {};
-        const { period, limit } = payload;
-        
-        try {
-          const { gamificationService } = await import('../gamification/gamificationService');
-          const leaderboard = await gamificationService.getLeaderboard(
-            request.workspaceId || '',
-            period || 'all_time',
-            limit || 10
-          );
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            data: { leaderboard, period: period || 'all_time', count: leaderboard.length },
-            message: `Retrieved ${leaderboard.length} entries for ${period || 'all_time'} leaderboard`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to get leaderboard: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'gamification.list_achievements',
-      name: 'List Achievements',
-      category: 'gamification',
-      description: 'List all available achievements in the workspace',
-      requiredRoles: ['employee', 'manager', 'workspace_admin', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        
-        try {
-          const { gamificationService } = await import('../gamification/gamificationService');
-          const achievements = await gamificationService.getWorkspaceAchievements(request.workspaceId || '');
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            data: { achievements, count: achievements.length },
-            message: `Found ${achievements.length} achievements in workspace`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to list achievements: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'gamification.get_engagement_stats',
-      name: 'Get Engagement Stats',
-      category: 'gamification',
-      description: 'Get gamification engagement statistics for the workspace',
-      requiredRoles: ['manager', 'workspace_admin', 'admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        
-        try {
-          const { gamificationService } = await import('../gamification/gamificationService');
-          const [leaderboardAll, leaderboardWeek, leaderboardMonth, achievements] = await Promise.all([
-            gamificationService.getLeaderboard(request.workspaceId || '', 'all_time', 100),
-            gamificationService.getLeaderboard(request.workspaceId || '', 'weekly', 100),
-            gamificationService.getLeaderboard(request.workspaceId || '', 'monthly', 100),
-            gamificationService.getWorkspaceAchievements(request.workspaceId || ''),
-          ]);
-          
-          const stats = {
-            totalActiveParticipants: leaderboardAll.length,
-            weeklyActiveParticipants: leaderboardWeek.length,
-            monthlyActiveParticipants: leaderboardMonth.length,
-            totalAchievements: achievements.length,
-            topPerformers: leaderboardAll.slice(0, 5),
-            weeklyTopPerformers: leaderboardWeek.slice(0, 5),
-          };
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            data: stats,
-            message: `Engagement stats: ${stats.totalActiveParticipants} active participants, ${stats.totalAchievements} achievements available`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to get engagement stats: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    console.log('[AI Brain Master Orchestrator] Registered 4 gamification domain actions');
-    */ // END DISABLED: Gamification not in MVP
+    log.info('[AI Brain Master Orchestrator] Registered 12 autonomous orchestration tool actions');
 
     // ============================================================================
     // DEPLOYMENT DOMAIN ACTIONS
@@ -6679,7 +5666,7 @@ Provide your analysis in the following format:
       name: 'Get Deployment Status',
       category: 'automation',
       description: 'Get current deployment status and environment info',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         
@@ -6705,7 +5692,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to get deployment status: ${error.message}`,
+            message: `Failed to get deployment status: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -6717,7 +5704,7 @@ Provide your analysis in the following format:
       name: 'List Platform Services',
       category: 'automation',
       description: 'List all registered platform services and their health status',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         
@@ -6742,212 +5729,25 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to list services: ${error.message}`,
+            message: `Failed to list services: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered 2 deployment domain actions');
-
-    // ============================================================================
-    // RECOVERY DOMAIN ACTIONS
-    // ============================================================================
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'recovery.get_system_health',
-      name: 'Get System Health Summary',
-      category: 'automation',
-      description: 'Get comprehensive system health summary for recovery assessment',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        
-        try {
-          const [sentinelStatus, routerHealth] = await Promise.all([
-            trinitySentinel.getStatus(),
-            platformIntentRouter.getHealth(),
-          ]);
-          
-          const healthSummary = {
-            sentinel: sentinelStatus,
-            router: routerHealth,
-            overallHealth: sentinelStatus.overallHealth,
-            unresolvedAlerts: sentinelStatus.unresolvedAlerts,
-            recommendedActions: [] as string[],
-          };
-          
-          if (sentinelStatus.unresolvedAlerts > 0) {
-            healthSummary.recommendedActions.push('Review and resolve pending alerts');
-          }
-          if (sentinelStatus.overallHealth === 'critical') {
-            healthSummary.recommendedActions.push('Immediate intervention required - check critical components');
-          }
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            data: healthSummary,
-            message: `System health: ${sentinelStatus.overallHealth}, ${sentinelStatus.unresolvedAlerts} unresolved alerts`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to get system health: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'recovery.list_alerts',
-      name: 'List Recovery Alerts',
-      category: 'automation',
-      description: 'List all active alerts that may require recovery actions',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const payload = request.payload || {};
-        const { severity, limit } = payload;
-        
-        try {
-          const alerts = trinitySentinel.getAlerts(severity, limit || 50);
-          
-          const categorized = {
-            critical: alerts.filter(a => a.severity === 'critical'),
-            error: alerts.filter(a => a.severity === 'error'),
-            warning: alerts.filter(a => a.severity === 'warning'),
-            info: alerts.filter(a => a.severity === 'info'),
-          };
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            data: {
-              alerts,
-              totalCount: alerts.length,
-              bySeverity: {
-                critical: categorized.critical.length,
-                error: categorized.error.length,
-                warning: categorized.warning.length,
-                info: categorized.info.length,
-              },
-            },
-            message: `Found ${alerts.length} alerts: ${categorized.critical.length} critical, ${categorized.error.length} errors`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to list alerts: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'recovery.list_checkpoints',
-      name: 'List Recovery Checkpoints',
-      category: 'automation',
-      description: 'List available session checkpoints for recovery (alias for session.get_recoverable)',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        
-        try {
-          const { elevatedSessionGuardian } = await import('./elevatedSessionGuardian');
-          const recoverables = await elevatedSessionGuardian.getRecoverableSessions(
-            request.userId,
-            request.workspaceId
-          );
-          
-          return {
-            success: true,
-            actionId: request.actionId,
-            data: {
-              checkpoints: recoverables,
-              count: recoverables.length,
-            },
-            message: `Found ${recoverables.length} recoverable checkpoints`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to list checkpoints: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    helpaiOrchestrator.registerAction({
-      actionId: 'recovery.restore_checkpoint',
-      name: 'Restore Checkpoint',
-      category: 'automation',
-      description: 'Restore from a specific checkpoint (alias for session.rollback_to_checkpoint)',
-      requiredRoles: ['admin', 'super_admin'],
-      handler: async (request: ActionRequest) => {
-        const startTime = Date.now();
-        const payload = request.payload || {};
-        const { sessionId, checkpointId, reason } = payload;
-        
-        if (!sessionId && !checkpointId) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: 'Missing required parameter: sessionId or checkpointId',
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-        
-        try {
-          const { elevatedSessionGuardian } = await import('./elevatedSessionGuardian');
-          const result = await elevatedSessionGuardian.rollbackToCheckpoint(
-            sessionId || checkpointId,
-            request.userId,
-            reason || 'Recovery initiated via Trinity'
-          );
-          
-          return {
-            success: result.success,
-            actionId: request.actionId,
-            data: result,
-            message: result.success 
-              ? `Checkpoint restored successfully: ${result.message}` 
-              : `Checkpoint restore failed: ${result.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            actionId: request.actionId,
-            message: `Failed to restore checkpoint: ${error.message}`,
-            executionTimeMs: Date.now() - startTime
-          };
-        }
-      }
-    });
-
-    console.log('[AI Brain Master Orchestrator] Registered 4 recovery domain actions');
+    log.info('[AI Brain Master Orchestrator] Registered 2 deployment domain actions');
 
     // ============================================================================
     // UNIFIED MONITORING DASHBOARD ACTION
     // ============================================================================
 
     helpaiOrchestrator.registerAction({
-      actionId: 'monitoring.unified_dashboard',
+      actionId: 'diagnostics.monitoring_dashboard',
       name: 'Unified Monitoring Dashboard',
       category: 'automation',
       description: 'Aggregates all supervisor/monitor data into a single unified dashboard view for Trinity',
-      requiredRoles: ['admin', 'super_admin'],
+      requiredRoles: ['org_owner', 'co_owner'],
       handler: async (request: ActionRequest) => {
         const startTime = Date.now();
         
@@ -7047,15 +5847,15 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to build unified dashboard: ${error.message}`,
+            message: `Failed to build unified dashboard: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered unified monitoring dashboard action');
-    console.log('[AI Brain Master Orchestrator] Total new domain actions: 11 (gamification: 4, deployment: 2, recovery: 4, monitoring: 1)');
+    log.info('[AI Brain Master Orchestrator] Registered unified monitoring dashboard action');
+    log.info('[AI Brain Master Orchestrator] Total new domain actions: 11 (gamification: 4, deployment: 2, recovery: 4, monitoring: 1)');
 
     // ============================================================================
     // TRINITY ROOT SERVICE CONTROL ACTIONS
@@ -7085,7 +5885,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to list services: ${error.message}`,
+            message: `Failed to list services: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -7128,7 +5928,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to pause service: ${error.message}`,
+            message: `Failed to pause service: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -7170,7 +5970,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to resume service: ${error.message}`,
+            message: `Failed to resume service: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -7208,7 +6008,7 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to clear service error: ${error.message}`,
+            message: `Failed to clear service error: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -7250,14 +6050,14 @@ Provide your analysis in the following format:
           return {
             success: false,
             actionId: request.actionId,
-            message: `Failed to restart services: ${error.message}`,
+            message: `Failed to restart services: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: Date.now() - startTime
           };
         }
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered 5 Trinity root service control actions');
+    log.info('[AI Brain Master Orchestrator] Registered 5 Trinity root service control actions');
   }
 }
 

@@ -1,0 +1,155 @@
+Based on every pattern that has repeated across this entire session, here's what still needs scanning. The same root causes keep spawning new symptoms in areas not yet checked. Paste this into Replit:
+
+---
+
+**PATTERN-BASED GAP SCAN — UNAUDITED AREAS | READ ONLY | REPORT ONLY**
+
+Based on confirmed recurring patterns across all prior audits, scan every area below for the same root causes appearing in new locations. Report every finding. Fix nothing yet.
+
+---
+
+**PATTERN 1 — WRONG FIELD NAMES (totalGross → totalGrossPay pattern)**
+
+The `totalGross` bug appeared in 6 files. The same pattern likely exists elsewhere — code referencing a field name that doesn't match the actual DB column name, causing silent crashes or zero values.
+
+Search every service file for these specific mismatches:
+- Any reference to fields on `payrollRuns` — compare every field name used in code against the actual Drizzle schema definition for `payrollRuns`. Report every mismatch.
+- Any reference to fields on `invoices` — same check. Do code field names match the schema exactly?
+- Any reference to fields on `employees` — same check.
+- Any reference to fields on `clients` — same check.
+- Any reference to fields on `shifts` — same check.
+- Any reference to fields on `timeEntries` — same check.
+
+Report every field name mismatch found — file, line, wrong name used, correct name from schema.
+
+---
+
+**PATTERN 2 — DB ENUM VS TYPESCRIPT TYPE OUT OF SYNC**
+
+`knowledge_domain`, `notification_type`, `platform_update_category` all had values in DB not in TypeScript or vice versa. The same drift likely exists in other enums.
+
+For every DB enum in the schema, compare its values against the corresponding TypeScript union type or Drizzle enum definition:
+- `audit_log_action` enum — does the TypeScript type match DB exactly?
+- `employee_status` enum — match?
+- `invoice_status` enum — match?
+- `payroll_status` enum — match?
+- `shift_status` enum — match?
+- `subscription_status` enum — match?
+- `document_type` enum — match?
+- `automation_trigger_type` enum — match?
+- `compliance_status` enum — match?
+
+For each — report values in DB not in TypeScript, and values in TypeScript not in DB.
+
+---
+
+**PATTERN 3 — SYSTEM ACTOR CALLS MISSING userId**
+
+`task.track_overdue` was called with `userId: undefined` from the autonomous scheduler. The same pattern exists anywhere Trinity or a daemon calls an action without a proper system actor identifier.
+
+Search every cron job, autonomous scheduler, background daemon, and event subscriber for `executeAction(` calls where `userId` is undefined, missing, or not explicitly set. Report every location.
+
+Also search for `createAuditLog(` calls where `performedBy` or `userId` is undefined or `null`. These create audit records with no attribution.
+
+---
+
+**PATTERN 4 — RL LOOP AND INTELLIGENCE LAYER DATA EXTRACTION**
+
+The RL loop was extracting wrong field names from events, causing all learning to collapse into `automation/unknown`. The same pattern likely exists in other intelligence services.
+
+Check these specific services for field extraction against actual event payload shapes:
+- `trinityOrgIntelligenceService.ts` — does it read fields that actually exist on the events it consumes?
+- `cognitiveRepositories.ts` — does it extract correct fields from learning events?
+- `trinityBusinessIntelligence.ts` — does it read correct field names from billing and payroll events?
+- `anomalyDetector` — does it compare against fields that actually exist in the data it receives?
+- `trinityFinancialBriefingService.ts` — beyond the totalGross fix, are there other field mismatches?
+
+For each service — report any field access on event payloads where the field name does not match what is actually published in the event.
+
+---
+
+**PATTERN 5 — SILENT ZERO VALUES MASKING REAL DATA**
+
+`payrollSubagent` was reading `r.totalGross` which returned `undefined`, causing anomaly detection to always see zero variance — a silent data quality failure with no error. Search for similar patterns:
+
+- Any service that aggregates financial data and could silently return 0 due to a wrong field name
+- Any `reduce()` or `sum()` operation on financial fields where the field might be undefined — causing NaN or 0 without throwing
+- Any `parseFloat()` or `parseInt()` on a field that could be undefined — returns NaN silently
+- Any financial calculation that divides by a value that could be zero — causing Infinity or NaN silently
+
+Report every location where a financial calculation could silently produce wrong results due to undefined or mismatched fields.
+
+---
+
+**PATTERN 6 — CRON JOB ERROR ISOLATION**
+
+Multiple cron jobs were found where one workspace failure could affect others or where errors were swallowed entirely. Scan every cron/scheduled job:
+
+- Does each cron that iterates workspaces wrap each workspace in its own try/catch so one failure doesn't skip remaining workspaces?
+- Does each cron log the specific workspace that failed with enough context to diagnose?
+- Does each cron have a maximum execution time guard — or can one slow workspace block the entire cron?
+- Does each cron write a completion record to the DB so you can tell whether it ran successfully or was interrupted by a restart?
+
+Report every cron that fails any of these checks.
+
+---
+
+**PATTERN 7 — EXTERNAL API CALLS WITHOUT TIMEOUTS**
+
+Stripe, Plaid, QuickBooks, Resend calls were found without timeout configuration. Extend this scan:
+
+- Every `fetch()` call to an external service — does it have a timeout configured?
+- Every Stripe SDK call — does it have a `timeout` option or `maxNetworkRetries`?
+- Every Resend email send — does it have a timeout?
+- Every QuickBooks API call — does it have a timeout?
+- Any external HTTP call using axios — does it have a `timeout` configured?
+
+Report every external call without a timeout. A hanging external call with no timeout can block the event loop indefinitely.
+
+---
+
+**PATTERN 8 — AUDIT LOG COVERAGE ON FINANCIAL MUTATIONS**
+
+Prior audits found selective audit log coverage. With all the new fixes applied, re-check:
+
+- Every route that creates, updates, or deletes an invoice — does it write to `billingAuditLog` with `previousState` and `newState`?
+- Every route that creates, approves, or processes a payroll run — same check?
+- Every Trinity autonomous action that mutates financial state — does it write an audit entry with `performedBy: 'trinity-system'` and the action reasoning?
+- Every credit deduction — does it write a ledger entry with full attribution?
+
+Report every financial mutation with no audit trail.
+
+---
+
+**OUTPUT FORMAT**
+
+Group findings by pattern number. For each finding:
+```
+[SEVERITY] Pattern N > File:Line
+Found: what the code does
+Problem: why it is wrong
+Impact: what fails silently in production
+```
+
+Summary table:
+```
+Pattern 1 — Field name mismatches: N found
+Pattern 2 — Enum sync gaps: N found
+Pattern 3 — Missing userId on system calls: N found
+Pattern 4 — RL/intelligence field extraction errors: N found
+Pattern 5 — Silent zero value calculations: N found
+Pattern 6 — Cron error isolation gaps: N found
+Pattern 7 — External calls without timeouts: N found
+Pattern 8 — Missing audit log coverage: N found
+TOTAL: N
+```
+
+Then two lists:
+**Fix before first real tenant**
+**Fix in first week of production**
+
+Stop and wait. Do not fix anything yet.
+
+---
+
+Paste results back here and I'll build the final fix batch. These eight patterns cover every root cause that has repeated across this entire session — finding them all in one pass closes the loop permanently.

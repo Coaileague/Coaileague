@@ -1,0 +1,619 @@
+COAILEAGUE PLATFORM - FEATURE PROMISE vs REALITY AUDIT + CHATROOM PERSISTENCE FIX
+
+PART 1: FEATURE PROMISE vs IMPLEMENTATION AUDIT
+CoAIleague claims to REPLACE these platforms. Audit each one - what do we actually deliver?
+
+1. DOCUSIGN REPLACEMENT
+What DocuSign Does:
+
+Document upload and preparation
+Signature field placement
+Email invitation to sign
+Legally binding e-signatures
+Signature tracking and reminders
+Signed document storage
+Audit trail / certificate of completion
+Multiple signers workflow
+Templates for reusable documents
+
+Audit Our Implementation:
+[ ] Can users upload documents for signature?
+[ ] Can users place signature fields on documents?
+[ ] Can users send signature requests via email?
+[ ] Do we capture legally valid e-signatures?
+[ ] Is there a signing workflow with status tracking?
+[ ] Are signed documents stored and retrievable?
+[ ] Is there an audit trail for compliance?
+[ ] Can multiple people sign the same document?
+[ ] Can users create reusable templates?
+[ ] Does the mobile experience work for signing?
+
+GAPS FOUND:
+1. _______________
+2. _______________
+
+2. FORMSTACK REPLACEMENT
+What Formstack Does:
+
+Drag-and-drop form builder
+Conditional logic in forms
+Form templates
+Data collection and storage
+Form analytics
+Integrations (payment, CRM, etc.)
+Workflow automation on submission
+Document generation from form data
+E-signatures on forms
+
+Audit Our Implementation:
+[ ] Can users build custom forms?
+[ ] Is there a drag-and-drop form builder?
+[ ] Does conditional logic work (show/hide fields)?
+[ ] Are form submissions stored in database?
+[ ] Can forms trigger automated workflows?
+[ ] Can forms generate documents?
+[ ] Do forms work on mobile?
+[ ] Can forms be embedded or shared via link?
+[ ] Is there form analytics (views, completions)?
+
+GAPS FOUND:
+1. _______________
+2. _______________
+
+3. GETSLING REPLACEMENT
+What GetSling Does:
+
+Visual schedule builder (day/week/month views)
+Drag-and-drop shift assignment
+Employee availability management
+Time-off request management
+Shift swapping between employees
+Open shift broadcasting
+Labor cost calculation in real-time
+Schedule templates
+Schedule publishing with notifications
+Mobile app for employees to view shifts
+Clock in/out with GPS
+Timesheet management
+Team messaging
+Task management
+Reporting and analytics
+
+Audit Our Implementation:
+SCHEDULING:
+[ ] Day view works correctly
+[ ] Week view shows 7-day columns (not 24-hour timeline)
+[ ] Month view available
+[ ] Drag-and-drop shift creation
+[ ] Drag-and-drop shift moving
+[ ] Shift copying/duplication
+[ ] Schedule templates (save and reapply)
+[ ] Copy previous week
+[ ] Real-time labor cost display
+[ ] Overtime warnings
+[ ] Conflict detection (double-booking)
+
+EMPLOYEE MANAGEMENT:
+[ ] Availability patterns (recurring)
+[ ] Time-off requests submission
+[ ] Time-off approval workflow
+[ ] Shift swap requests
+[ ] Open shift claiming
+[ ] Skills/certifications filtering
+
+TIME TRACKING:
+[ ] Clock in with GPS
+[ ] Clock out with GPS
+[ ] Geofence validation
+[ ] Break tracking
+[ ] Timesheet review
+[ ] Timesheet approval
+[ ] Export timesheets
+
+COMMUNICATION:
+[ ] Team messaging (THIS IS THE CHATROOM - SEE PART 2)
+[ ] Shift notifications
+[ ] Schedule change alerts
+
+GAPS FOUND:
+1. _______________
+2. _______________
+
+4. WHATSAPP REPLACEMENT (CHATROOMS)
+What WhatsApp Does for Field Teams:
+
+Persistent connection (always logged in)
+Multiple group chats simultaneously
+Messages received even when in different chat
+Push notifications for new messages
+Photo/image sharing
+Voice messages
+Read receipts
+Typing indicators
+Offline message queue
+Message search
+Pin important chats
+Mute notifications per chat
+Reply to specific messages
+React to messages
+
+Audit Our Implementation:
+[ ] Users can join multiple chatrooms
+[ ] Messages persist when user navigates away ← BROKEN
+[ ] Messages received in background ← BROKEN
+[ ] Push notifications for new messages
+[ ] Photo/image sharing in chat
+[ ] Read receipts
+[ ] Typing indicators
+[ ] Unread message counts per room
+[ ] Message search
+[ ] Reply to specific messages
+[ ] Mobile-optimized chat UI
+[ ] Desktop IRC/MSN style room list
+
+CRITICAL GAPS (See Part 2 for fix):
+1. User disconnects from room when navigating away
+2. No background message receiving
+3. Must be "in" a room to get messages
+
+PART 2: CHATROOM PERSISTENCE FIX (WhatsApp Replacement)
+CURRENT BROKEN BEHAVIOR:
+
+User joins chatroom
+User navigates to another page OR another chatroom
+User is DISCONNECTED from original chatroom
+User MISSES messages sent while away
+User must rejoin to see new messages
+
+REQUIRED BEHAVIOR (Like WhatsApp):
+Mobile Experience:
+┌─────────────────────────────┐
+│  CoAIleague                 │
+├─────────────────────────────┤
+│  Chats                   ⋮  │
+├─────────────────────────────┤
+│ 🔴 Site Alpha Team      (3) │  ← 3 unread messages
+│     "Photo received"    2m  │
+├─────────────────────────────┤
+│    HQ Operations            │
+│     "10-4, confirmed"   5m  │
+├─────────────────────────────┤
+│ 🔴 All Officers         (1) │  ← 1 unread
+│     "Schedule updated" 10m  │
+├─────────────────────────────┤
+│    Bryan (DM)               │
+│     "Check site B"     15m  │
+└─────────────────────────────┘
+
+User taps "Site Alpha Team" → Opens chat
+User sends message → Returns to list
+User is STILL CONNECTED to all rooms
+New message in "HQ Operations" → Shows (1) badge
+User gets push notification
+Desktop Experience:
+┌──────────────────────────────────────────────────────────────────┐
+│  CoAIleague - Communications                                      │
+├────────────────┬─────────────────────────────────────────────────┤
+│ ROOMS          │  # Site Alpha Team                              │
+│                │  ─────────────────────────────────────────────  │
+│ # Site Alpha ● │  [Officer1] Just completed patrol, all clear    │
+│ # HQ Ops       │  [Officer2] Photo attached 📷                   │
+│ # All Officers │  [You] 10-4, good work                          │
+│ # Incidents    │                                                 │
+│                │                                                 │
+│ DIRECT         │  ────────────────────────────────────────────── │
+│ @ Bryan        │  Type a message...                    [Send]    │
+│ @ Sarah        │                                                 │
+│                │                                                 │
+├────────────────┴─────────────────────────────────────────────────┤
+│ ● = unread messages     User is connected to ALL rooms always    │
+└──────────────────────────────────────────────────────────────────┘
+
+TECHNICAL IMPLEMENTATION REQUIRED:
+1. WebSocket Connection Architecture:
+typescript// CURRENT (BROKEN): One connection per room
+// User enters room → Connect to room's WebSocket
+// User leaves room → Disconnect from WebSocket
+// Result: Misses messages
+
+// REQUIRED: Single persistent connection, multiple room subscriptions
+// User logs in → Connect to main WebSocket
+// WebSocket subscribes to ALL user's rooms
+// User navigates anywhere → Connection stays open
+// Messages for ANY room come through same connection
+// Result: Never misses messages
+2. Connection Manager (New Service):
+typescript// /client/src/services/chatConnectionManager.ts
+
+class ChatConnectionManager {
+  private socket: WebSocket | null = null;
+  private subscribedRooms: Set<string> = new Set();
+  private messageHandlers: Map<string, (message: ChatMessage) => void> = new Map();
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+  
+  // Initialize on app load (not on room enter)
+  async initialize(userId: string, workspaceId: string) {
+    if (this.socket?.readyState === WebSocket.OPEN) return;
+    
+    this.socket = new WebSocket(`wss://${host}/ws/chat`);
+    
+    this.socket.onopen = () => {
+      this.reconnectAttempts = 0;
+      // Authenticate
+      this.send({ type: 'auth', userId, workspaceId });
+      // Subscribe to all user's rooms
+      this.subscribeToAllRooms();
+    };
+    
+    this.socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      this.handleIncomingMessage(data);
+    };
+    
+    this.socket.onclose = () => {
+      this.handleDisconnect();
+    };
+  }
+  
+  // Called on app load - get user's rooms and subscribe
+  async subscribeToAllRooms() {
+    const rooms = await this.fetchUserRooms();
+    rooms.forEach(room => {
+      this.subscribedRooms.add(room.id);
+      this.send({ type: 'subscribe', roomId: room.id });
+    });
+  }
+  
+  // Handle message for ANY room
+  handleIncomingMessage(data: any) {
+    if (data.type === 'message') {
+      const { roomId, message } = data;
+      
+      // Update unread count (even if not viewing this room)
+      this.incrementUnreadCount(roomId);
+      
+      // Trigger notification (even if not viewing this room)
+      this.triggerNotification(roomId, message);
+      
+      // If there's a handler for this room (user is viewing it), call it
+      const handler = this.messageHandlers.get(roomId);
+      if (handler) {
+        handler(message);
+      }
+      
+      // Always update the room list preview
+      this.updateRoomPreview(roomId, message);
+    }
+  }
+  
+  // User opens a specific room - register handler for live updates
+  setActiveRoom(roomId: string, handler: (message: ChatMessage) => void) {
+    this.messageHandlers.set(roomId, handler);
+    // Mark messages as read
+    this.markAsRead(roomId);
+  }
+  
+  // User leaves room view - remove handler but STAY SUBSCRIBED
+  clearActiveRoom(roomId: string) {
+    this.messageHandlers.delete(roomId);
+    // DO NOT unsubscribe - keep receiving messages
+  }
+  
+  // Auto-reconnect on disconnect
+  handleDisconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      setTimeout(() => this.initialize(), 1000 * this.reconnectAttempts);
+    }
+  }
+  
+  // Send message to any room
+  sendMessage(roomId: string, content: string, attachments?: string[]) {
+    this.send({
+      type: 'message',
+      roomId,
+      content,
+      attachments,
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+
+export const chatManager = new ChatConnectionManager();
+3. App-Level Initialization:
+typescript// /client/src/App.tsx or main layout
+
+useEffect(() => {
+  if (user && workspace) {
+    // Initialize chat connection ONCE on app load
+    chatManager.initialize(user.id, workspace.id);
+    
+    // Request notification permission
+    if ('Notification' in window) {
+      Notification.requestPermission();
+    }
+  }
+  
+  return () => {
+    // Only disconnect on logout, NOT on navigation
+  };
+}, [user, workspace]);
+4. Room List Component (Always Shows Unread):
+typescript// Shows ALL rooms with unread counts
+// Updates in real-time even when not viewing any specific room
+
+function ChatRoomList() {
+  const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  
+  useEffect(() => {
+    // Subscribe to room list updates
+    chatManager.onRoomUpdate((updatedRooms) => {
+      setRooms(updatedRooms);
+    });
+  }, []);
+  
+  return (
+    <div>
+      {rooms.map(room => (
+        <RoomListItem
+          key={room.id}
+          room={room}
+          unreadCount={room.unreadCount}
+          lastMessage={room.lastMessage}
+          onClick={() => navigate(`/chat/${room.id}`)}
+        />
+      ))}
+    </div>
+  );
+}
+5. Individual Room View:
+typescriptfunction ChatRoom({ roomId }: { roomId: string }) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  
+  useEffect(() => {
+    // Load existing messages
+    loadMessages(roomId).then(setMessages);
+    
+    // Register handler for new messages while viewing
+    chatManager.setActiveRoom(roomId, (newMessage) => {
+      setMessages(prev => [...prev, newMessage]);
+    });
+    
+    // On unmount: CLEAR HANDLER but STAY SUBSCRIBED
+    return () => {
+      chatManager.clearActiveRoom(roomId);
+      // NOT: chatManager.unsubscribe(roomId) ← This was the bug
+    };
+  }, [roomId]);
+  
+  return (
+    <div>
+      <MessageList messages={messages} />
+      <MessageInput onSend={(text) => chatManager.sendMessage(roomId, text)} />
+    </div>
+  );
+}
+6. Push Notifications (Mobile):
+typescript// Service Worker for background notifications
+// /public/sw.js
+
+self.addEventListener('push', (event) => {
+  const data = event.data.json();
+  
+  self.registration.showNotification(data.roomName, {
+    body: `${data.senderName}: ${data.preview}`,
+    icon: '/icon.png',
+    badge: '/badge.png',
+    tag: data.roomId, // Collapse multiple from same room
+    data: { roomId: data.roomId }
+  });
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  // Open the specific chat room
+  clients.openWindow(`/chat/${event.notification.data.roomId}`);
+});
+7. Server-Side WebSocket Handler:
+typescript// /server/websocket/chatHandler.ts
+
+class ChatWebSocketServer {
+  private connections: Map<string, WebSocket> = new Map(); // userId -> socket
+  private userRooms: Map<string, Set<string>> = new Map(); // userId -> roomIds
+  
+  handleConnection(ws: WebSocket) {
+    ws.on('message', (data) => {
+      const message = JSON.parse(data);
+      
+      switch (message.type) {
+        case 'auth':
+          this.authenticateUser(ws, message.userId, message.workspaceId);
+          break;
+          
+        case 'subscribe':
+          this.subscribeToRoom(ws, message.userId, message.roomId);
+          break;
+          
+        case 'message':
+          this.broadcastToRoom(message.roomId, message);
+          this.saveMessage(message);
+          this.sendPushNotifications(message);
+          break;
+      }
+    });
+  }
+  
+  // Send to ALL users in a room, regardless of what they're viewing
+  broadcastToRoom(roomId: string, message: any) {
+    const roomMembers = await this.getRoomMembers(roomId);
+    
+    roomMembers.forEach(userId => {
+      const socket = this.connections.get(userId);
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'message',
+          roomId,
+          message
+        }));
+      }
+    });
+  }
+  
+  // For offline users, queue and send push notification
+  async sendPushNotifications(message: any) {
+    const roomMembers = await this.getRoomMembers(message.roomId);
+    
+    for (const userId of roomMembers) {
+      const socket = this.connections.get(userId);
+      
+      // User not connected - send push notification
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        await this.sendPushNotification(userId, message);
+      }
+    }
+  }
+}
+
+PART 3: DATABASE SCHEMA FOR CHAT PERSISTENCE
+sql-- Ensure these tables exist and have correct structure
+
+-- Chat rooms
+CREATE TABLE IF NOT EXISTS chat_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL DEFAULT 'group', -- 'group', 'direct', 'broadcast'
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Room memberships (who is in what rooms)
+CREATE TABLE IF NOT EXISTS chat_room_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id),
+  workspace_id UUID NOT NULL,
+  joined_at TIMESTAMP DEFAULT NOW(),
+  last_read_at TIMESTAMP DEFAULT NOW(), -- For unread tracking
+  is_muted BOOLEAN DEFAULT FALSE,
+  role VARCHAR(50) DEFAULT 'member', -- 'admin', 'member'
+  UNIQUE(room_id, user_id)
+);
+
+-- Messages
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES users(id),
+  workspace_id UUID NOT NULL,
+  content TEXT NOT NULL,
+  attachments JSONB DEFAULT '[]', -- [{url, type, name}]
+  reply_to_id UUID REFERENCES chat_messages(id), -- For threading
+  created_at TIMESTAMP DEFAULT NOW(),
+  edited_at TIMESTAMP,
+  is_deleted BOOLEAN DEFAULT FALSE
+);
+
+-- Read receipts (optional, for "seen by")
+CREATE TABLE IF NOT EXISTS chat_read_receipts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id),
+  read_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(message_id, user_id)
+);
+
+-- Push notification subscriptions
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  workspace_id UUID NOT NULL,
+  endpoint TEXT NOT NULL,
+  keys JSONB NOT NULL, -- {p256dh, auth}
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, endpoint)
+);
+
+-- Indexes for performance
+CREATE INDEX idx_chat_messages_room_created ON chat_messages(room_id, created_at DESC);
+CREATE INDEX idx_chat_room_members_user ON chat_room_members(user_id);
+CREATE INDEX idx_chat_room_members_room ON chat_room_members(room_id);
+```
+
+---
+
+## PART 4: VERIFICATION CHECKLIST
+
+After implementation, verify:
+```
+CHATROOM PERSISTENCE:
+[ ] User stays connected to rooms when navigating away
+[ ] Messages received in background update unread counts
+[ ] Room list shows accurate unread badges
+[ ] Push notifications work when app is in background
+[ ] Push notifications work when app is closed (mobile)
+[ ] Clicking notification opens correct room
+[ ] Messages load when returning to a room
+[ ] No duplicate messages on reconnect
+[ ] Reconnection works after network drop
+[ ] Works on mobile browsers
+[ ] Works on desktop browsers
+
+FEATURE PARITY:
+[ ] Photo sharing works in chat
+[ ] Multiple simultaneous room memberships work
+[ ] Direct messages work
+[ ] Group chats work
+[ ] Message timestamps display correctly
+[ ] User online/offline status shows (optional)
+[ ] Typing indicators work (optional)
+[ ] Message search works (optional)
+```
+
+---
+
+## OUTPUT FORMAT
+```
+# FEATURE AUDIT REPORT
+
+## DOCUSIGN REPLACEMENT
+- Status: X% Complete
+- Working: [list]
+- Missing: [list]
+- Effort to complete: X hours
+
+## FORMSTACK REPLACEMENT
+- Status: X% Complete
+- Working: [list]
+- Missing: [list]
+- Effort to complete: X hours
+
+## GETSLING REPLACEMENT
+- Status: X% Complete
+- Working: [list]
+- Missing: [list]
+- Effort to complete: X hours
+
+## WHATSAPP REPLACEMENT (Chatrooms)
+- Status: X% Complete
+- CRITICAL FIX NEEDED: Persistent connection
+- Working: [list]
+- Missing: [list]
+- Implementation plan: [above]
+- Effort to complete: X hours
+
+## RECOMMENDED PRIORITY ORDER
+1. Fix chatroom persistence (field officers depend on this)
+2. [Next priority]
+3. [Next priority]
+
+## TOTAL EFFORT TO REACH FEATURE PARITY
+- Chatrooms: X hours
+- DocuSign features: X hours
+- FormStack features: X hours
+- GetSling features: X hours
+- TOTAL: X hours
+
+BEGIN AUDIT. Report findings for each platform replacement, then implement chatroom persistence fix as highest priority.

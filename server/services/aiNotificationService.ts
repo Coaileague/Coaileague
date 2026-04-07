@@ -1,17 +1,29 @@
 import { db } from "../db";
+import { createLogger } from '../lib/logger';
 import { 
   platformUpdates, 
   userPlatformUpdateViews,
   notifications,
   maintenanceAlerts,
-  maintenanceAcknowledgments
+  maintenanceAcknowledgments,
+  workspaces
 } from "@shared/schema";
 import { eq, and, or, desc, isNull, sql, lt, gte } from "drizzle-orm";
+import { SCHEDULING } from '../config/platformConfig';
 import { meteredGemini } from './billing/meteredGeminiClient';
-import { PLATFORM_WORKSPACE_ID } from '../seed-platform-workspace';
+import { usageMeteringService } from './billing/usageMetering';
 import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { broadcastPlatformUpdateGlobal } from '../websocket';
-import { humanizeTitle, containsTechnicalJargon } from '@shared/utils/humanFriendlyCopy';
+import { humanizeTitle, containsTechnicalJargon, sanitizeForEndUser } from '@shared/utils/humanFriendlyCopy';
+import { featureRegistryService, ValidationResult } from './featureRegistryService';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+
+const log = createLogger('AiNotificationService');
+
+// Direct Gemini client for fallback when metered billing fails (for system notifications)
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const directGenAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 type UpdateCategory = "feature" | "improvement" | "bugfix" | "security" | "announcement";
 type AlertSeverity = "info" | "warning" | "critical";
@@ -76,20 +88,42 @@ interface MaintenanceAlertData {
 }
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const workspaceTierCache = new Map<string, { tier: string; expiresAt: number }>();
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
-const RATE_LIMIT_MAX = 20;
+const TIER_CACHE_TTL = 5 * 60 * 1000;
 
-function checkRateLimit(workspaceId: string): boolean {
+function getRateLimitMax(tier?: string): number {
+  const tierKey = (tier || 'professional') as keyof typeof SCHEDULING.notificationRateLimitByTier;
+  return SCHEDULING.notificationRateLimitByTier[tierKey] || SCHEDULING.notificationRateLimitByTier.professional;
+}
+
+async function resolveWorkspaceTier(workspaceId: string): Promise<string> {
+  if (!workspaceId || workspaceId === 'global') return 'professional';
+  const now = Date.now();
+  const cached = workspaceTierCache.get(workspaceId);
+  if (cached && cached.expiresAt > now) return cached.tier;
+  try {
+    const [row] = await db.select({ tier: workspaces.subscriptionTier }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const tier = row?.tier || 'professional';
+    workspaceTierCache.set(workspaceId, { tier, expiresAt: now + TIER_CACHE_TTL });
+    return tier;
+  } catch {
+    return 'professional';
+  }
+}
+
+function checkRateLimit(workspaceId: string, tier: string): boolean {
   const now = Date.now();
   const key = workspaceId || "global";
   const limit = rateLimitMap.get(key);
+  const maxLimit = getRateLimitMax(tier);
   
   if (!limit || now > limit.resetAt) {
     rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
     return true;
   }
   
-  if (limit.count >= RATE_LIMIT_MAX) {
+  if (limit.count >= maxLimit) {
     return false;
   }
   
@@ -114,11 +148,50 @@ export interface PlatformUpdateResult {
 
 export async function generatePlatformUpdate(data: AIInsightData): Promise<PlatformUpdateResult | null> {
   const workspaceKey = data.workspaceId || "global";
+  const workspaceTier = await resolveWorkspaceTier(workspaceKey);
   
-  if (!checkRateLimit(workspaceKey)) {
-    console.log(`[AINotification] Rate limit exceeded for ${workspaceKey}`);
+  if (!checkRateLimit(workspaceKey, workspaceTier)) {
+    log.info(`[AINotification] Rate limit exceeded for ${workspaceKey}`);
     return null;
   }
+  
+  // TRINITY FEATURE VALIDATION: Validate content before processing
+  // This catches stale data, vague language, and missing feature references
+  const skipFeatureCheck = (data.metadata as Record<string, any>)?.skipFeatureCheck === true;
+  const preValidation = featureRegistryService.validateNotificationContent(
+    data.title,
+    data.description,
+    { ...data.metadata as Record<string, any>, skipFeatureCheck }
+  );
+  
+  // Block notifications with critical validation failures (unless skipFeatureCheck is set)
+  const blockCheck = featureRegistryService.shouldBlockNotification(data.title, data.description);
+  if (blockCheck.block && !skipFeatureCheck) {
+    log.info(`[AINotification] BLOCKED - Validation failed: ${blockCheck.reason}`);
+    log.info(`[AINotification] Title: "${data.title}", Issues: ${preValidation.issues.map(i => i.type).join(', ')}`);
+    // Return null to prevent stale/vague content from reaching users
+    return null;
+  } else if (blockCheck.block && skipFeatureCheck) {
+    log.info(`[AINotification] Bypass active - skipping validation block for: "${data.title}"`);
+  }
+  
+  // Log warnings but allow notification to proceed
+  if (preValidation.issues.length > 0) {
+    const warnings = preValidation.issues.filter(i => i.severity === 'warning');
+    if (warnings.length > 0) {
+      log.info(`[AINotification] Validation warnings for "${data.title}":`, 
+        warnings.map(w => `${w.type}: ${w.message}`).join('; '));
+    }
+  }
+  
+  // Attach feature context to metadata for Trinity enrichment
+  const featureContext = preValidation.enrichedContent?.metadata?.featureContext || {};
+  const enrichedMetadataBase = {
+    ...data.metadata,
+    featureReferences: preValidation.enrichedContent?.featureReferences || [],
+    featureContext,
+    validatedAt: preValidation.enrichedContent?.metadata?.validatedAt,
+  };
   
   // Humanize title if it contains technical jargon for better end-user readability
   const humanizedTitle = containsTechnicalJargon(data.title) 
@@ -153,7 +226,7 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<Platf
     .limit(1);
   
   if (existingByTitle.length > 0) {
-    console.log(`[AINotification] Duplicate update detected (title match within 24h), skipping: ${humanizedTitle}`);
+    log.info(`[AINotification] Duplicate update detected (title match within 24h), skipping: ${humanizedTitle}`);
     return { id: existingByTitle[0].id, isDuplicate: true };
   }
   
@@ -164,56 +237,151 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<Platf
     : generateIdempotencyKey("update", data.workspaceId || null, JSON.stringify(data));
   
   let enhancedDescription = data.description;
+  let structuredBreakdown: {
+    technicalSummary?: string;
+    impact?: string;
+    resolution?: string;
+    endUserSummary?: string;
+  } = {};
   
   try {
-    const prompt = `You are Trinity, the AI brain behind CoAIleague. Write platform update notifications in your humanized senior engineer voice.
+    // Generate structured breakdown with Problem → Issue → Solution → Outcome
+    const structuredPrompt = `You are Trinity, the AI brain behind CoAIleague. Generate a structured notification breakdown for end users.
 
-TRINITY'S VOICE RULES:
-1. Speak naturally like a helpful senior engineer, NOT corporate PR
-2. Use conversational language: "Just pushed...", "Quick update:", "Got a fix for..."
-3. Keep it SHORT (1-2 sentences, max 180 chars)
-4. Focus on WHAT changed and WHY it matters to users
-5. Use contractions (we've, it's, you'll) - sound human
-6. NEVER say "We have updated" or "We've completed" - that's boring corporate speak
-7. Show personality: "Heads up:", "Nice one:", "Fixed!", "Boosted the..."
+CONTEXT:
+- Title: ${data.title || 'Platform Update'}
+- Description: ${data.description || 'A platform improvement was made'}
+- Category: ${data.category || 'improvement'}
 
-GOOD EXAMPLES:
-- "Just improved how your dashboard loads - should feel snappier now."
-- "Heads up: seasonal themes are off for now. Keeps things clean."
-- "Fixed a hiccup with daily digest emails. You'll get 'em now."
-- "Boosted the API routing to handle more at once. Smoother performance ahead."
+YOUR TASK: Generate a JSON response with these 5 fields that explain this update to non-technical users:
 
-BAD EXAMPLES (NEVER write like this):
-- "We have updated our internal system guidelines..."
-- "We've completed data storage maintenance..."
-- "This update ensures a smoother transition..."
+1. "title": A clear, descriptive title (max 60 chars). Describe WHAT happened, not generic "System Update"
+   GOOD: "Dashboard Loading Improved", "Email Delivery Fixed", "New Shift Swap Feature"
+   BAD: "System Update", "Maintenance Complete", "Configuration Changed"
 
-INPUT TITLE: ${data.title || 'Platform Update'}
-INPUT DESCRIPTION: ${data.description || 'A platform improvement was made'}
-CATEGORY: ${data.category || 'improvement'}
+2. "technicalSummary": PROBLEM - What was the situation? (1 sentence, max 100 chars)
+   Explain what issue/opportunity existed in plain language
 
-Write Trinity's notification (short, human, helpful):
-SUMMARY:`;
+3. "impact": ISSUE - Why did this matter? (1 sentence, max 100 chars)  
+   Explain what users experienced or what was at stake
+
+4. "resolution": SOLUTION - What did Trinity do? (1 sentence, max 100 chars)
+   Describe the action taken in simple terms
+
+5. "endUserSummary": OUTCOME - What's the result for users? (1 sentence, max 100 chars)
+   Focus on the user benefit or current state
+
+VOICE: Be conversational, helpful, human. Use contractions. No corporate speak.
+
+CRITICAL RULES - NEVER include:
+- File names (e.g. trinityMemoryService.ts, routes.ts, schema.ts)
+- Code references, backtick-wrapped code, or variable names
+- Service class names (e.g. trinityMemoryService, platformChangeMonitor)
+- File paths (e.g. server/services/..., client/src/...)
+- Technical jargon like "edge cases", "data persistence", "runtime errors", "pipeline", "context state"
+Instead, describe what USERS will notice in plain everyday language.
+
+Respond with ONLY valid JSON, no markdown:`;
     
     const result = await meteredGemini.generate({
       workspaceId: data.workspaceId || PLATFORM_WORKSPACE_ID,
       featureKey: 'ai_notification',
-      prompt,
+      prompt: structuredPrompt,
       model: 'gemini-2.5-flash',
-      temperature: ANTI_YAP_PRESETS.notification.temperature,
-      maxOutputTokens: ANTI_YAP_PRESETS.notification.maxTokens,
+      temperature: 0.3,
+      maxOutputTokens: 400,
     });
-    if (result.success && result.text && result.text.length < 500) {
-      enhancedDescription = result.text.trim();
+    
+    if (result.success && result.text) {
+      try {
+        // Parse the JSON response, handling potential markdown code blocks
+        let jsonText = result.text.trim();
+        if (jsonText.startsWith('```json')) {
+          jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
+        let parsed: any;
+        try {
+          parsed = JSON.parse(jsonText);
+        } catch (initialErr) {
+          const firstBrace = jsonText.indexOf('{');
+          if (firstBrace >= 0) {
+            let depth = 0, inString = false, escaped = false, lastValidPos = firstBrace;
+            for (let i = firstBrace; i < jsonText.length; i++) {
+              const ch = jsonText[i];
+              if (escaped) { escaped = false; continue; }
+              if (ch === '\\') { escaped = true; continue; }
+              if (ch === '"') { inString = !inString; continue; }
+              if (!inString) {
+                if (ch === '{') depth++;
+                else if (ch === '}') { depth--; if (depth === 0) { lastValidPos = i; break; } }
+              }
+              if (!inString && depth === 1 && (ch === ',' || ch === '}')) lastValidPos = i;
+            }
+            let repaired = jsonText.substring(0, lastValidPos + 1);
+            const opens = (repaired.match(/\{/g) || []).length;
+            const closes = (repaired.match(/\}/g) || []).length;
+            const lastQuoteComma = repaired.lastIndexOf('",');
+            const lastQuoteClose = repaired.lastIndexOf('"}');
+            const bestCut = Math.max(lastQuoteComma, lastQuoteClose);
+            if (bestCut > 0 && (opens > closes || opens === closes)) {
+              repaired = repaired.substring(0, bestCut + (repaired[bestCut + 1] === '}' ? 2 : 1));
+            }
+            const finalOpens = (repaired.match(/\{/g) || []).length;
+            const finalCloses = (repaired.match(/\}/g) || []).length;
+            for (let i = 0; i < finalOpens - finalCloses; i++) repaired += '}';
+            try {
+              parsed = JSON.parse(repaired);
+              log.info('[AINotification] Repaired truncated JSON in generatePlatformUpdate');
+            } catch (_) {
+              throw initialErr;
+            }
+          } else {
+            throw initialErr;
+          }
+        }
+        
+        if (parsed.technicalSummary) structuredBreakdown.technicalSummary = sanitizeForEndUser(parsed.technicalSummary);
+        if (parsed.impact) structuredBreakdown.impact = sanitizeForEndUser(parsed.impact);
+        if (parsed.resolution) structuredBreakdown.resolution = sanitizeForEndUser(parsed.resolution);
+        if (parsed.endUserSummary) {
+          structuredBreakdown.endUserSummary = sanitizeForEndUser(parsed.endUserSummary);
+          enhancedDescription = structuredBreakdown.endUserSummary;
+        }
+        
+        // Override humanized title with AI-generated descriptive title if provided
+        if (parsed.title && typeof parsed.title === 'string' && parsed.title.length > 5) {
+          // Store original for reference, use AI title for display
+          structuredBreakdown.technicalSummary = structuredBreakdown.technicalSummary || data.title;
+        }
+        
+        log.info('[AINotification] Generated structured breakdown:', Object.keys(structuredBreakdown));
+      } catch (parseError) {
+        log.info('[AINotification] JSON parse failed, using original description:', parseError);
+        // Never use raw AI text as fallback — it often contains JSON or technical fragments
+        // Keep the original description which is already human-readable
+      }
     }
   } catch (error) {
-    console.log("[AINotification] Gemini enhancement skipped:", error);
+    log.info("[AINotification] Gemini enhancement skipped:", error);
   }
+  
+  // Merge structured breakdown AND feature context into metadata for frontend consumption
+  const enrichedMetadata = {
+    ...enrichedMetadataBase,
+    idempotencyKey,
+    generatedAt: new Date().toISOString(),
+    originalTitle: data.title,
+    // Include Trinity-generated structured breakdown fields
+    ...structuredBreakdown,
+  };
   
   // TRINITY-EXCLUSIVE ARCHITECTURE: Skip DB insert if this is just for enrichment
   // Trinity Notification Bridge handles all What's New inserts - we only enrich content here
   if (data.skipInsert) {
-    console.log(`[AINotification] Returning enriched content only (skipInsert=true): ${humanizedTitle}`);
+    log.info(`[AINotification] Returning enriched content only (skipInsert=true): ${humanizedTitle}`);
     return {
       id: idempotencyKey,
       enrichedTitle: humanizedTitle,
@@ -223,43 +391,50 @@ SUMMARY:`;
   }
   
   const updateId = idempotencyKey;
+  const finalTitle = sanitizeForEndUser(humanizedTitle);
+  const finalDescription = sanitizeForEndUser(enhancedDescription);
+
+  // Use onConflictDoNothing — same idempotency key on the same day means it's a duplicate
   const [update] = await db.insert(platformUpdates).values({
     id: updateId,
-    title: humanizedTitle,
-    description: enhancedDescription,
+    title: finalTitle,
+    description: finalDescription,
     category: data.category || "announcement",
-    workspaceId: data.workspaceId,
+    workspaceId: data.workspaceId || PLATFORM_WORKSPACE_ID,
     priority: data.priority || 1,
     isNew: true,
     visibility: "all",
     learnMoreUrl: data.learnMoreUrl,
-    metadata: { ...data.metadata, idempotencyKey, generatedAt: new Date().toISOString(), originalTitle: data.title },
+    metadata: enrichedMetadata,
     date: new Date(),
-  }).returning({ id: platformUpdates.id });
+  }).onConflictDoNothing().returning({ id: platformUpdates.id });
+
+  // If nothing was inserted (id collision = same update already exists today), skip broadcast
+  if (!update) {
+    log.info(`[AINotification] Skipped duplicate platform update (idempotency key exists): ${finalTitle}`);
+    return { id: updateId, isDuplicate: true };
+  }
   
-  console.log(`[AINotification] Platform update created for: ${humanizedTitle}`);
+  log.info(`[AINotification] Platform update created for: ${humanizedTitle}`);
   
-  // Broadcast via WebSocket for real-time UNS updates
-  // SKIP if called from platformEventBus (it handles its own broadcast with enriched data)
   if (!data.skipBroadcast) {
     broadcastPlatformUpdateGlobal({
       id: update.id,
-      title: humanizedTitle,
-      description: enhancedDescription,
+      title: finalTitle,
+      description: finalDescription,
       category: data.category || "announcement",
       priority: data.priority || 1,
       learnMoreUrl: data.learnMoreUrl,
-      metadata: data.metadata,
+      metadata: enrichedMetadata,
       workspaceId: data.workspaceId,
       visibility: "all",
     });
   }
   
-  // Return enriched data when skipBroadcast is true so caller can broadcast with AI-enhanced content
   return {
     id: update.id,
-    enrichedTitle: humanizedTitle,
-    enrichedDescription: enhancedDescription,
+    enrichedTitle: finalTitle,
+    enrichedDescription: finalDescription,
     category: (data.category || "announcement") as string,
   };
 }
@@ -377,10 +552,10 @@ export async function createMaintenanceAlert(
       status: "scheduled",
     }).returning({ id: maintenanceAlerts.id });
     
-    console.log(`[AINotification] Created maintenance alert: ${alert.id} - ${data.title}`);
+    log.info(`[AINotification] Created maintenance alert: ${alert.id} - ${data.title}`);
     return alert;
   } catch (error) {
-    console.error("[AINotification] Failed to create maintenance alert:", error);
+    log.error("[AINotification] Failed to create maintenance alert:", error);
     return null;
   }
 }
@@ -465,7 +640,7 @@ export async function acknowledgeMaintenanceAlert(
     
     return true;
   } catch (error) {
-    console.error("[AINotification] Failed to acknowledge alert:", error);
+    log.error("[AINotification] Failed to acknowledge alert:", error);
     return false;
   }
 }
@@ -476,49 +651,21 @@ export async function acknowledgeAllMaintenanceAlerts(
   workspaceId?: string
 ): Promise<number> {
   try {
-    // Get ALL alerts regardless of status - user wants to clear everything in System tab
-    // This includes scheduled, in_progress, completed, and cancelled alerts
     const allAlerts = await db.select({ id: maintenanceAlerts.id })
       .from(maintenanceAlerts);
-    
-    console.log(`[AINotification] acknowledgeAllMaintenanceAlerts: Found ${allAlerts.length} total alerts to acknowledge for user ${userId}`);
-    
-    if (allAlerts.length === 0) {
-      return 0;
-    }
-    
-    let acknowledged = 0;
-    for (const alert of allAlerts) {
-      // Check if already acknowledged
-      const existing = await db.select()
-        .from(maintenanceAcknowledgments)
-        .where(
-          and(
-            eq(maintenanceAcknowledgments.alertId, alert.id),
-            eq(maintenanceAcknowledgments.userId, userId)
-          )
-        )
-        .limit(1);
-      
-      if (existing.length === 0) {
-        await db.insert(maintenanceAcknowledgments).values({
-          alertId: alert.id,
-          userId,
-        });
-        
-        await db.update(maintenanceAlerts)
-          .set({ 
-            acknowledgedByCount: sql`${maintenanceAlerts.acknowledgedByCount} + 1`
-          })
-          .where(eq(maintenanceAlerts.id, alert.id));
-        
-        acknowledged++;
-      }
-    }
-    
-    return acknowledged;
+
+    if (allAlerts.length === 0) return 0;
+
+    // Bulk insert all acknowledgments — onConflictDoNothing handles already-acked alerts
+    // and prevents unique constraint violations on double-tap or concurrent requests
+    await db.insert(maintenanceAcknowledgments)
+      .values(allAlerts.map(alert => ({ alertId: alert.id, userId })))
+      .onConflictDoNothing();
+
+    log.info(`[AINotification] acknowledgeAllMaintenanceAlerts: Acknowledged up to ${allAlerts.length} alerts for user ${userId}`);
+    return allAlerts.length;
   } catch (error) {
-    console.error("[AINotification] Failed to acknowledge all alerts:", error);
+    log.error("[AINotification] Failed to acknowledge all alerts:", error);
     return 0;
   }
 }
@@ -604,10 +751,10 @@ export async function handlePlatformChangeEvent(event: any): Promise<void> {
     });
     
     if (result) {
-      console.log(`[AINotification] Platform update created for: ${title}`);
+      log.info(`[AINotification] Platform update created for: ${title}`);
     }
   } catch (error) {
-    console.error('[AINotification] Failed to handle platform change event:', error);
+    log.error('[AINotification] Failed to handle platform change event:', error);
   }
 }
 
@@ -678,7 +825,7 @@ export async function getNewUserWelcomeSummary(
         welcomeMessage = result.text.trim();
       }
     } catch (error) {
-      console.log("[AINotification] Welcome summary AI enhancement skipped:", error);
+      log.info("[AINotification] Welcome summary AI enhancement skipped:", error);
     }
 
     return {
@@ -687,7 +834,7 @@ export async function getNewUserWelcomeSummary(
       welcomeMessage,
     };
   } catch (error) {
-    console.error("[AINotification] Failed to get new user welcome summary:", error);
+    log.error("[AINotification] Failed to get new user welcome summary:", error);
     return {
       updates: [],
       aiSummary: "Welcome to CoAIleague!",
@@ -708,6 +855,403 @@ export async function markWelcomeUpdatesViewed(
   }
 }
 
+/**
+ * Universal AI Enrichment for ANY notification
+ * This is the single source of truth for Trinity AI-generated contextual breakdowns.
+ * Should be called by ALL notification creation paths to ensure consistent, meaningful content.
+ */
+export interface NotificationEnrichmentInput {
+  title: string;
+  message: string;
+  type?: string;
+  category?: string;
+  workspaceId?: string;
+  metadata?: Record<string, unknown>;
+  // Personalization context — pass these to get role-specific, name-aware messages
+  recipientFirstName?: string;
+  recipientRole?: string;   // workspace role: org_owner, co_owner, manager, supervisor, staff
+  workspaceName?: string;   // company name — fetched from DB if not provided
+}
+
+export interface NotificationEnrichmentOutput {
+  title: string;
+  message: string;
+  metadata: {
+    technicalSummary?: string;
+    impact?: string;
+    resolution?: string;
+    endUserSummary?: string;
+    aiEnriched?: boolean;
+    [key: string]: unknown;
+  };
+}
+
+// Lightweight cache: workspaceId → company name. TTL 5 minutes.
+const wsNameCache = new Map<string, { name: string; expiresAt: number }>();
+
+async function resolveWorkspaceName(workspaceId?: string): Promise<string> {
+  if (!workspaceId || workspaceId === PLATFORM_WORKSPACE_ID) return process.env.PLATFORM_NAME || 'CoAIleague';
+  const now = Date.now();
+  const cached = wsNameCache.get(workspaceId);
+  if (cached && cached.expiresAt > now) return cached.name;
+  try {
+    const [row] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const name = row?.name || 'your organization';
+    wsNameCache.set(workspaceId, { name, expiresAt: now + 5 * 60 * 1000 });
+    return name;
+  } catch {
+    return 'your organization';
+  }
+}
+
+// Role labels and framing instructions Trinity uses when writing for each audience
+const ROLE_CONTEXT: Record<string, { label: string; frame: string }> = {
+  org_owner:  { label: 'Owner',      frame: 'Frame around profitability, business risk, and strategic decisions. Lead with dollars, percentages, and impact on the bottom line.' },
+  co_owner:   { label: 'Co-Owner',   frame: 'Frame around profitability, business risk, and strategic decisions. Lead with dollars, percentages, and impact on the bottom line.' },
+  manager:    { label: 'Manager',    frame: 'Frame around team coverage, operational efficiency, and upcoming deadlines. Emphasize what action is needed and by when.' },
+  supervisor: { label: 'Supervisor', frame: 'Frame around shift coverage, officer status, and immediate field operations. Be direct and operational — what needs attention right now.' },
+  staff:      { label: 'Employee',   frame: 'Frame around what directly affects this person — their shifts, their pay, their documents, their schedule. Keep it personal and clear.' },
+};
+
+// Role-aware smart fallback when AI is unavailable
+function buildFallbackMessage(
+  title: string,
+  message: string,
+  firstName?: string,
+  role?: string
+): string {
+  const greeting = firstName ? `Hi ${firstName} — ` : '';
+  const roleCtx = ROLE_CONTEXT[role || ''];
+
+  // Determine what kind of event this is and give a relevant summary
+  const t = title.toLowerCase();
+  if (t.includes('shift') || t.includes('schedule') || t.includes('coverage')) {
+    if (role === 'org_owner' || role === 'co_owner') {
+      return `${greeting}A scheduling change needs your attention. Review coverage and confirm staffing is within budget.`;
+    } else if (role === 'supervisor') {
+      return `${greeting}There's a shift coverage update — check your schedule and confirm officer assignments are set.`;
+    } else {
+      return `${greeting}Your schedule has been updated. Check the Schedule tab to see your upcoming shifts.`;
+    }
+  }
+  if (t.includes('payroll') || t.includes('pay') || t.includes('invoice')) {
+    if (role === 'org_owner' || role === 'co_owner' || role === 'manager') {
+      return `${greeting}A payroll or billing action needs your review. Head to Payroll to see the details and approve or act.`;
+    }
+    return `${greeting}There's an update related to payroll — check your Payroll tab for details.`;
+  }
+  if (t.includes('compliance') || t.includes('document') || t.includes('certification') || t.includes('expir')) {
+    if (role === 'staff') {
+      return `${greeting}One of your compliance documents needs attention — check the Compliance tab to keep your record current.`;
+    }
+    return `${greeting}A compliance item needs attention. Review the Compliance tab to avoid scheduling conflicts.`;
+  }
+  if (t.includes('trinity') || t.includes('ai') || t.includes('automat')) {
+    return `${greeting}Trinity completed an automated task for your organization. Check the activity log for the full summary.`;
+  }
+  // Generic smart fallback
+  return `${greeting}${message && message.length < 200 ? message : title + ' — review your dashboard for details.'}`;
+}
+
+export async function enrichNotificationWithAI(
+  input: NotificationEnrichmentInput
+): Promise<NotificationEnrichmentOutput> {
+  const { title, message, type, category, workspaceId, metadata = {},
+    recipientFirstName, recipientRole } = input;
+
+  // Resolve company name for context
+  const companyName = input.workspaceName || await resolveWorkspaceName(workspaceId);
+  const roleCtx = ROLE_CONTEXT[recipientRole || ''];
+  const greeting = recipientFirstName ? `Hi ${recipientFirstName}` : '';
+
+  let enrichedTitle = title;
+  let enrichedMessage = message;
+  let structuredBreakdown: Record<string, string> = {};
+
+  try {
+    // Compact prompt — no inline JSON template to avoid model stopping early
+    const recipientLine = [
+      recipientFirstName ? `Name: ${recipientFirstName}` : '',
+      roleCtx ? `Role: ${roleCtx.label}` : '',
+      companyName !== 'CoAIleague' ? `Company: ${companyName}` : '',
+      roleCtx ? `Audience framing: ${roleCtx.frame}` : '',
+    ].filter(Boolean).join('\n');
+
+    const structuredPrompt = `You are Trinity, the AI brain of CoAIleague workforce platform. Write a clear, friendly notification for the security industry.
+
+RECIPIENT:
+${recipientLine || 'Security company team member'}
+
+EVENT TO NOTIFY ABOUT:
+Title: ${title}
+Details: ${(message || 'No additional details').slice(0, 300)}
+
+OUTPUT: Return only a JSON object with these 5 string fields (no markdown, no code fences):
+- title: Specific headline under 55 chars. Never generic (not "System Update" or "Notification").
+- summary: 1-2 plain-English sentences. Warm and direct.${recipientFirstName ? ` Start with "Hi ${recipientFirstName}".` : ''} Never mention file names or tech terms.
+- actionHint: Shortest possible next step (under 40 chars), or the word null if no action needed.
+- impact: One sentence: what happens if ignored.
+- resolution: One sentence: what was already done.
+
+JSON:`;
+    
+    // Try metered billing first, then fallback to direct Gemini for system notifications
+    let aiResponseText: string | null = null;
+    
+    try {
+      const result = await meteredGemini.generate({
+        workspaceId: workspaceId || PLATFORM_WORKSPACE_ID,
+        featureKey: 'ai_notification',
+        prompt: structuredPrompt,
+        model: 'gemini-2.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 700,
+      });
+      
+      if (result.success && result.text) {
+        aiResponseText = result.text;
+        log.info('[AINotification] Metered billing succeeded for notification enrichment');
+      } else if (result.error) {
+        log.info('[AINotification] Metered billing failed, using direct Gemini fallback:', result.error);
+      }
+    } catch (meteredError: any) {
+      log.info('[AINotification] Metered billing exception, using direct Gemini fallback:', meteredError.message || meteredError);
+    }
+    
+    // No unbilled fallback — if metered billing fails (insufficient credits), skip AI enrichment
+    if (!aiResponseText) {
+      log.info('[AINotification] Metered AI unavailable — delivering notification without AI enrichment');
+    }
+    
+    // Parse AI response if we got one
+    if (aiResponseText) {
+      try {
+        // Parse the JSON response, handling potential markdown code blocks
+        let jsonText = aiResponseText.trim();
+        if (jsonText.startsWith('```json')) {
+          jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
+        // Robust JSON repair for AI responses (handles truncation and malformed output)
+        let parsed: any = null;
+        
+        // Helper: Count unescaped quotes to detect unterminated strings
+        const countUnescapedQuotes = (s: string): number => {
+          let count = 0;
+          let escaped = false;
+          for (const char of s) {
+            if (escaped) { escaped = false; continue; }
+            if (char === '\\') { escaped = true; continue; }
+            if (char === '"') count++;
+          }
+          return count;
+        };
+        
+        // Helper: Extract JSON string value handling escaped quotes
+        const extractJsonString = (text: string, fieldName: string): string | null => {
+          const pattern = new RegExp(`"${fieldName}"\\s*:\\s*"`, 'i');
+          const match = text.match(pattern);
+          if (!match || match.index === undefined) return null;
+          
+          const startIdx = match.index + match[0].length;
+          let result = '';
+          let escaped = false;
+          
+          for (let i = startIdx; i < text.length; i++) {
+            const char = text[i];
+            if (escaped) {
+              result += char;
+              escaped = false;
+              continue;
+            }
+            if (char === '\\') {
+              escaped = true;
+              continue;
+            }
+            if (char === '"') {
+              return result;
+            }
+            result += char;
+          }
+          return result.length > 0 ? result : null; // Return partial if truncated
+        };
+        
+        try {
+          parsed = JSON.parse(jsonText);
+        } catch (initialParseError) {
+          // Detect truncation: unbalanced braces OR odd unescaped quotes
+          const openBraces = (jsonText.match(/\{/g) || []).length;
+          const closeBraces = (jsonText.match(/\}/g) || []).length;
+          const unescapedQuotes = countUnescapedQuotes(jsonText);
+          const isTruncated = openBraces > closeBraces || unescapedQuotes % 2 === 1;
+          
+          if (isTruncated || initialParseError) {
+            // Strategy 1: Find JSON object bounds via brace matching
+            let repairedJson = jsonText;
+            const firstBrace = repairedJson.indexOf('{');
+            
+            if (firstBrace >= 0) {
+              // Scan for balanced braces from first '{'
+              let depth = 0;
+              let lastValidPos = firstBrace;
+              let inString = false;
+              let escaped = false;
+              
+              for (let i = firstBrace; i < repairedJson.length; i++) {
+                const char = repairedJson[i];
+                
+                if (escaped) { escaped = false; continue; }
+                if (char === '\\') { escaped = true; continue; }
+                
+                if (char === '"') {
+                  inString = !inString;
+                  continue;
+                }
+                
+                if (!inString) {
+                  if (char === '{') depth++;
+                  else if (char === '}') {
+                    depth--;
+                    if (depth === 0) {
+                      lastValidPos = i;
+                      break;
+                    }
+                  }
+                }
+                
+                // Track last valid position after complete field
+                if (!inString && depth === 1 && (char === ',' || char === '}')) {
+                  lastValidPos = i;
+                }
+              }
+              
+              // If string was open at end, find last complete string
+              if (inString || depth > 0) {
+                // Find the last complete key-value pair
+                const completeFieldPatterns = [
+                  /"\s*,\s*$/,  // ends with ", 
+                  /"\s*}\s*$/,  // ends with "}
+                  /\d\s*,\s*$/, // ends with number,
+                  /\d\s*}\s*$/, // ends with number}
+                  /true\s*,\s*$/i,
+                  /false\s*,\s*$/i,
+                  /null\s*,\s*$/i,
+                ];
+                
+                // Truncate at lastValidPos and close
+                let truncated = repairedJson.substring(0, lastValidPos + 1);
+                
+                // Remove trailing incomplete content
+                const lastCompleteComma = truncated.lastIndexOf('",');
+                const lastCompleteClose = truncated.lastIndexOf('"}');
+                const lastNumComma = truncated.search(/\d\s*,\s*[^,]*$/);
+                
+                let bestCut = Math.max(lastCompleteComma, lastCompleteClose);
+                if (bestCut > 0) {
+                  truncated = truncated.substring(0, bestCut + (truncated[bestCut + 1] === '}' ? 2 : 1));
+                }
+                
+                // Ensure proper closing
+                const newOpenBraces = (truncated.match(/\{/g) || []).length;
+                const newCloseBraces = (truncated.match(/\}/g) || []).length;
+                for (let i = 0; i < newOpenBraces - newCloseBraces; i++) {
+                  truncated += '}';
+                }
+                
+                try {
+                  parsed = JSON.parse(truncated);
+                  log.info('[AINotification] Repaired truncated JSON via brace matching');
+                } catch (braceRepairError) {
+                  // Fall through to regex extraction
+                }
+              }
+            }
+            
+            // Strategy 2: Direct field extraction via robust regex (handles escaped quotes)
+            if (!parsed) {
+              log.info('[AINotification] Using robust field extraction fallback');
+              parsed = {};
+
+              const extTitle = extractJsonString(jsonText, 'title');
+              const extSummary = extractJsonString(jsonText, 'summary');
+              const extTechnicalSummary = extractJsonString(jsonText, 'technicalSummary');
+              const extImpact = extractJsonString(jsonText, 'impact');
+              const extResolution = extractJsonString(jsonText, 'resolution');
+              const extEndUserSummary = extractJsonString(jsonText, 'endUserSummary');
+              const extActionHint = extractJsonString(jsonText, 'actionHint');
+
+              if (extTitle) parsed.title = extTitle;
+              if (extSummary) parsed.summary = extSummary;
+              if (extTechnicalSummary) parsed.technicalSummary = extTechnicalSummary;
+              if (extImpact) parsed.impact = extImpact;
+              if (extResolution) parsed.resolution = extResolution;
+              if (extEndUserSummary) parsed.endUserSummary = extEndUserSummary;
+              if (extActionHint) parsed.actionHint = extActionHint;
+
+              if (Object.keys(parsed).length === 0) {
+                parsed = null;
+                log.info('[AINotification] Field extraction found no valid fields');
+              } else {
+                log.info('[AINotification] Extracted fields via regex:', Object.keys(parsed));
+              }
+            }
+          }
+        }
+        
+        if (parsed) {
+          if (parsed.title && typeof parsed.title === 'string' && parsed.title.length > 5) {
+            enrichedTitle = sanitizeForEndUser(parsed.title);
+          }
+          // Accept both new "summary" field and legacy "endUserSummary"
+          const primaryMessage = parsed.summary || parsed.endUserSummary;
+          if (primaryMessage) {
+            enrichedMessage = sanitizeForEndUser(primaryMessage);
+            structuredBreakdown.endUserSummary = enrichedMessage;
+          }
+          if (parsed.technicalSummary) structuredBreakdown.technicalSummary = sanitizeForEndUser(parsed.technicalSummary);
+          if (parsed.impact) structuredBreakdown.impact = sanitizeForEndUser(parsed.impact);
+          if (parsed.resolution) structuredBreakdown.resolution = sanitizeForEndUser(parsed.resolution);
+          if (parsed.actionHint && parsed.actionHint !== 'null') {
+            structuredBreakdown.actionHint = sanitizeForEndUser(parsed.actionHint);
+          }
+
+          log.info('[AINotification] Trinity enrichment complete:', Object.keys(structuredBreakdown));
+        }
+      } catch (parseError) {
+        log.info('[AINotification] JSON parse failed in universal enrichment:', parseError);
+      }
+    }
+  } catch (error) {
+    log.info("[AINotification] Universal AI enrichment error (fallback to original):", error);
+  }
+
+  const aiEnriched = Object.keys(structuredBreakdown).length > 0;
+
+  // When AI enrichment produced no result, use the smart role-aware fallback
+  // instead of silently returning the raw technical title/message
+  if (!aiEnriched) {
+    const fallback = buildFallbackMessage(title, message, recipientFirstName, recipientRole);
+    enrichedMessage = fallback;
+    log.info('[AINotification] Using smart role-aware fallback message');
+  }
+
+  return {
+    title: enrichedTitle,
+    message: enrichedMessage,
+    metadata: {
+      ...metadata,
+      ...structuredBreakdown,
+      aiEnriched,
+      originalTitle: title,
+      originalMessage: message,
+      recipientRole: recipientRole || undefined,
+      workspaceName: companyName !== 'CoAIleague' ? companyName : undefined,
+    },
+  };
+}
+
 export const aiNotificationService = {
   generatePlatformUpdate,
   pushAIInsight,
@@ -723,6 +1267,7 @@ export const aiNotificationService = {
   handlePlatformChangeEvent,
   getNewUserWelcomeSummary,
   markWelcomeUpdatesViewed,
+  enrichNotificationWithAI,
 };
 
 export default aiNotificationService;

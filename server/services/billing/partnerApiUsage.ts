@@ -1,20 +1,22 @@
+import { createLogger } from '../../lib/logger';
 import { db } from '../../db';
 import {
-  partnerApiUsageEvents,
   partnerConnections,
   workspaces,
   billingAuditLog,
+  trinityCreditFailures,
   type InsertPartnerApiUsageEvent,
   type PartnerApiUsageEvent,
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
-import { CreditLedgerService } from './creditLedger';
+import { creditManager } from './creditManager';
 
+const log = createLogger('partnerApiUsage');
 export interface PartnerApiCallInput {
   workspaceId: string;
   userId?: string;
   partnerConnectionId: string;
-  partnerType: 'quickbooks' | 'gusto' | 'stripe' | 'other';
+  partnerType: 'quickbooks' | 'gusto' | 'stripe' | 'plaid' | 'other';
   
   // API call details
   endpoint: string; // e.g., '/v3/invoice', '/v1/companies/{id}/payrolls'
@@ -65,10 +67,7 @@ export interface PartnerApiMetrics {
 }
 
 export class PartnerApiUsageService {
-  private creditLedgerService: CreditLedgerService;
-  
   constructor() {
-    this.creditLedgerService = new CreditLedgerService();
   }
   
   /**
@@ -96,7 +95,7 @@ export class PartnerApiUsageService {
       
       if (existingEvent.length > 0) {
         // Event already tracked - return existing event to prevent double-billing
-        console.log(`Deduplicated partner API call with key: ${idempotencyKey}`);
+        log.info(`Deduplicated partner API call with key: ${idempotencyKey}`);
         return existingEvent[0];
       }
       
@@ -144,20 +143,20 @@ export class PartnerApiUsageService {
           `${input.partnerType} API: ${input.endpoint}`,
           event.id
         ).catch(err => {
-          console.error(`Failed to deduct credits for partner API call ${event.id}:`, err);
+          log.error(`Failed to deduct credits for partner API call ${event.id}:`, err);
         });
       }
       
       // Async: Log audit event (don't block)
       this.logAuditEventAsync(input.workspaceId, input.userId, event).catch(err => {
-        console.error(`Failed to log audit event for partner API call ${event.id}:`, err);
+        log.error(`Failed to log audit event for partner API call ${event.id}:`, err);
       });
       
       return event;
     } catch (error) {
       // CRITICAL: Never throw - just log and return null
       // Partner operations must never fail due to billing failures
-      console.error('Failed to record partner API call (non-fatal):', error, input);
+      log.error('Failed to record partner API call (non-fatal):', error, input);
       return null;
     }
   }
@@ -172,15 +171,54 @@ export class PartnerApiUsageService {
     usageEventId: string
   ): Promise<void> {
     try {
-      await this.creditLedgerService.deductCredits(
+      await creditManager.deductCredits({
         workspaceId,
-        amount,
+        featureKey: 'partner_api_call',
+        featureName: 'Partner API',
+        amountOverride: amount,
         description,
-        usageEventId
-      );
+        aiUsageEventId: usageEventId,
+        relatedEntityType: 'partner_api_usage',
+        relatedEntityId: usageEventId,
+      });
     } catch (error) {
-      // Log but don't throw - this is async
-      console.error('Credit deduction failed:', error);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      log.error(`[PartnerApiUsage] Credit deduction FAILED for workspace ${workspaceId} — event ${usageEventId}: ${errMsg}`);
+
+      // Log to canonical failure table — never silently drop
+      db.insert(trinityCreditFailures).values({
+        workspaceId,
+        featureKey: 'partner_api_call',
+        featureName: 'Partner API',
+        amountAttempted: String(amount),
+        description,
+        errorMessage: errMsg,
+        source: 'partner_api_usage',
+        relatedEntityType: 'partner_api_usage_event',
+        relatedEntityId: usageEventId,
+        aiUsageEventId: usageEventId,
+        notifiedOwner: false,
+        resolved: false,
+      }).catch(e => log.error('[PartnerApiUsage] Failed to write credit failure row:', e));
+
+      // Best-effort owner notification
+      import('../../services/notificationService').then(async ({ createNotification }) => {
+        const { db } = await import('../../db');
+        const { workspaces } = await import('@shared/schema');
+        const { eq } = await import('drizzle-orm');
+        const [ws] = await db.select({ ownerId: workspaces.ownerId }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        if (!ws?.ownerId) { log.warn('[PartnerApiUsage] No owner found for workspace', workspaceId); return; }
+        createNotification({
+          workspaceId,
+          userId: ws.ownerId,
+          title: 'Partner API Credit Deduction Failed',
+          message: `A Partner API call ran successfully but the credit deduction of ${amount} credits failed: ${errMsg}. Please contact support to reconcile.`,
+          type: 'error',
+          category: 'billing',
+          priority: 'high',
+          actionUrl: '/billing',
+        });
+      }).catch((err) => log.warn('[partnerApiUsage] Fire-and-forget failed:', err));
     }
   }
   
@@ -238,7 +276,7 @@ export class PartnerApiUsageService {
         userAgent: event.userAgent,
       });
     } catch (error) {
-      console.error('Audit logging failed:', error);
+      log.error('Audit logging failed:', error);
     }
   }
   
@@ -287,6 +325,17 @@ export class PartnerApiUsageService {
         // Stripe is free for API calls (only charges transaction fees)
         // We don't charge for Stripe API usage
         'default': 0.0000,
+      },
+      plaid: {
+        // Plaid pricing: Link token creation ~$0.05, ACH transfer auth ~$0.50, transfer initiation ~$0.25
+        'POST /link/token/create': 0.0500,   // Link token creation
+        'POST /item/public_token/exchange': 0.0500, // Token exchange
+        'POST /auth/get': 0.0200,             // Account auth read
+        'POST /transfer/authorization/create': 0.5000, // Transfer auth (highest value)
+        'POST /transfer/create': 0.2500,      // Initiate ACH transfer
+        'GET /transfer/get': 0.0100,          // Transfer status check
+        'POST /transfer/cancel': 0.0100,      // Cancel transfer
+        'default': 0.0500, // Default for unlisted Plaid endpoints
       },
       other: {
         'default': 0.0100, // Generic $0.01/call for unknown partners

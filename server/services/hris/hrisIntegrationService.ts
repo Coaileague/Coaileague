@@ -25,7 +25,7 @@
 
 import { db } from '../../db';
 import { 
-  partnerConnections, 
+  partnerConnections,
   partnerDataMappings,
   partnerSyncLogs,
   employees,
@@ -41,6 +41,9 @@ import { aiBrainService } from '../ai-brain/aiBrainService';
 import { trinityOrchestration } from '../trinity/trinityOrchestrationAdapter';
 import crypto from 'crypto';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('hrisIntegrationService');
+
 
 // ============================================================================
 // TYPES
@@ -460,18 +463,18 @@ class HRISIntegrationService {
           connectionId: connection.id,
           supportedEntities: config.supportedEntities,
         },
-      });
+      }).catch((err) => log.warn('[hrisIntegrationService] Fire-and-forget failed:', err));
 
       trinityOrchestration.hris.oauthSuccess(workspaceId, provider, connection.id);
 
-      console.log(`[HRISIntegration] ${provider} connected for workspace ${workspaceId}`);
+      log.info(`[HRISIntegration] ${provider} connected for workspace ${workspaceId}`);
 
       return { success: true, connectionId: connection.id };
 
     } catch (error: any) {
-      console.error(`[HRISIntegration] OAuth callback failed:`, error);
-      trinityOrchestration.hris.oauthFailed('unknown', provider, error.message);
-      return { success: false, error: error.message };
+      log.error(`[HRISIntegration] OAuth callback failed:`, error);
+      trinityOrchestration.hris.oauthFailed('unknown', provider, (error instanceof Error ? error.message : String(error)));
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -497,13 +500,13 @@ class HRISIntegrationService {
         description: `${HRIS_PROVIDERS[provider].name} integration disconnected`,
         workspaceId,
         metadata: { provider },
-      });
+      }).catch((err) => log.warn('[hrisIntegrationService] Fire-and-forget failed:', err));
 
-      console.log(`[HRISIntegration] ${provider} disconnected for workspace ${workspaceId}`);
+      log.info(`[HRISIntegration] ${provider} disconnected for workspace ${workspaceId}`);
       return true;
 
     } catch (error) {
-      console.error(`[HRISIntegration] Disconnect failed:`, error);
+      log.error(`[HRISIntegration] Disconnect failed:`, error);
       return false;
     }
   }
@@ -632,11 +635,10 @@ class HRISIntegrationService {
         .set({
           status: result.success ? 'completed' : 'completed_with_errors',
           completedAt: new Date(),
-          recordsProcessed: result.recordsProcessed,
-          recordsCreated: result.recordsCreated,
-          recordsUpdated: result.recordsUpdated,
-          recordsSkipped: result.recordsSkipped,
-          recordsFailed: result.errors.length,
+          itemsProcessed: result.recordsProcessed,
+          itemsCreated: result.recordsCreated,
+          itemsUpdated: result.recordsUpdated,
+          itemsFailed: result.errors.length,
           errorMessage: result.errors.length > 0 ? result.errors.join('; ') : null,
         })
         .where(eq(partnerSyncLogs.id, logEntry.id));
@@ -655,11 +657,11 @@ class HRISIntegrationService {
         description: `${provider} sync: ${result.recordsProcessed} records processed`,
         workspaceId,
         metadata: {
+          ...result,
           provider,
           jobId,
-          ...result,
         },
-      });
+      }).catch((err) => log.warn('[hrisIntegrationService] Fire-and-forget failed:', err));
 
       trinityOrchestration.hris.syncCompleted(workspaceId, provider, correlationId, {
         imported: result.recordsCreated,
@@ -668,9 +670,9 @@ class HRISIntegrationService {
       });
 
     } catch (error: any) {
-      result.errors.push(error.message);
-      console.error(`[HRISIntegration] Sync failed:`, error);
-      trinityOrchestration.hris.syncFailed(workspaceId, provider, correlationId, error.message);
+      result.errors.push((error instanceof Error ? error.message : String(error)));
+      log.error(`[HRISIntegration] Sync failed:`, error);
+      trinityOrchestration.hris.syncFailed(workspaceId, provider, correlationId, (error instanceof Error ? error.message : String(error)));
     } finally {
       this.syncInProgress.set(syncKey, false);
       result.durationMs = Date.now() - startTime;
@@ -759,7 +761,7 @@ class HRISIntegrationService {
       }
 
     } catch (error) {
-      console.error(`[HRISIntegration] Inbound sync error for ${entityType}:`, error);
+      log.error(`[HRISIntegration] Inbound sync error for ${entityType}:`, error);
       throw error;
     }
 
@@ -799,7 +801,7 @@ class HRISIntegrationService {
 
         if (existingMapping.length > 0) {
           if (!dryRun) {
-            await this.updateRemoteRecord(connection, entityType, existingMapping[0].partnerEntityId, localRecord);
+            await this.updateRemoteRecord(connection, entityType, existingMapping[0].partnerEntityId ?? '', localRecord);
           }
           result.updated++;
         } else {
@@ -808,7 +810,7 @@ class HRISIntegrationService {
       }
 
     } catch (error) {
-      console.error(`[HRISIntegration] Outbound sync error for ${entityType}:`, error);
+      log.error(`[HRISIntegration] Outbound sync error for ${entityType}:`, error);
       throw error;
     }
 
@@ -862,7 +864,7 @@ class HRISIntegrationService {
       return [];
 
     } catch (error) {
-      console.error(`[HRISIntegration] Failed to fetch ${entityType} from ${provider}:`, error);
+      log.error(`[HRISIntegration] Failed to fetch ${entityType} from ${provider}:`, error);
       return [];
     }
   }
@@ -989,10 +991,9 @@ class HRISIntegrationService {
         lastName: data.lastName || 'Employee',
         email: data.email,
         phone: data.phone,
-        department: data.department,
-        position: data.jobTitle,
-        status: 'active',
-        employmentType: 'full_time',
+        role: data.jobTitle,
+        workerType: 'employee',
+        isActive: true,
       })
       .returning();
 
@@ -1034,8 +1035,6 @@ class HRISIntegrationService {
           lastName: data.lastName,
           email: data.email,
           phone: data.phone,
-          department: data.department,
-          position: data.jobTitle,
           updatedAt: new Date(),
         })
         .where(eq(employees.id, localId));
@@ -1043,7 +1042,7 @@ class HRISIntegrationService {
   }
 
   private async updateRemoteRecord(connection: any, entityType: EntityType, remoteId: string, localRecord: any): Promise<void> {
-    console.log(`[HRISIntegration] Would update remote ${entityType} ${remoteId} with local data`);
+    log.info(`[HRISIntegration] Would update remote ${entityType} ${remoteId} with local data`);
   }
 
   // ============================================================================

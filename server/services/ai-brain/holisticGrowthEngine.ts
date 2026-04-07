@@ -23,6 +23,8 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, count, sql, desc, sum } from 'drizzle-orm';
 import { subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('holisticGrowthEngine');
 
 export interface BusinessGoal {
   id: string;
@@ -121,7 +123,7 @@ class HolisticGrowthEngineService {
       return cached.report;
     }
 
-    console.log(`[HolisticGrowth] Analyzing business health for workspace ${workspaceId}`);
+    log.info(`[HolisticGrowth] Analyzing business health for workspace ${workspaceId}`);
 
     const workspace = await db.query.workspaces.findFirst({
       where: eq(workspaces.id, workspaceId),
@@ -157,7 +159,7 @@ class HolisticGrowthEngineService {
     };
 
     this.healthCache.set(workspaceId, { report, timestamp: Date.now() });
-    console.log(`[HolisticGrowth] Analysis complete: Health Score ${healthScore}, ${strategies.length} strategies`);
+    log.info(`[HolisticGrowth] Analysis complete: Health Score ${healthScore}, ${strategies.length} strategies`);
 
     return report;
   }
@@ -199,7 +201,7 @@ class HolisticGrowthEngineService {
 
       lastMonthIncome = lastMonthInvoices[0]?.total || 0;
     } catch (error) {
-      console.error('[HolisticGrowth] Error gathering income data:', error);
+      log.error('[HolisticGrowth] Error gathering income data:', error);
     }
 
     const incomeTrend = thisMonthIncome > lastMonthIncome ? 'up' : thisMonthIncome < lastMonthIncome ? 'down' : 'stable';
@@ -275,7 +277,7 @@ class HolisticGrowthEngineService {
       scheduledHours = totalEmployees * 40;
       overtimeHours = Math.max(0, actualHours - scheduledHours);
     } catch (error) {
-      console.error('[HolisticGrowth] Error gathering manpower data:', error);
+      log.error('[HolisticGrowth] Error gathering manpower data:', error);
     }
 
     const utilizationRate = scheduledHours > 0 ? Math.min(1, actualHours / scheduledHours) : 0;

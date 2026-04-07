@@ -1,0 +1,1054 @@
+This is the onboarding problem that kills SaaS adoption. Most platforms make new tenants spend weeks manually entering data before they see any value. By the time they're done entering data they've already lost confidence in the product. Let me give you the full honest analysis and then the prompt.
+
+---
+
+## The Core Problem You're Solving
+
+There are three types of new tenants:
+
+**Type 1 — QuickBooks migrators:**
+Already have structured data. Trinity pulls it directly. This is mostly solved by what you described. The gap is making sure the migration is complete, validated, and not missing critical fields before going live.
+
+**Type 2 — Spreadsheet and paper companies:**
+The majority of small to mid-size security companies in Texas. They have schedules in Excel or Google Sheets. They have officer lists in a spreadsheet. They have client contacts in their phone or a folder. They have payroll history in a payroll provider's export. They do not have QuickBooks.
+
+**Type 3 — Starting fresh:**
+New companies or companies who kept nothing. They need to enter everything from scratch but they should not feel like they are filling out a government form.
+
+For Type 2 and Type 3 the experience needs to feel less like data entry and more like having a conversation with Trinity where she figures out what she needs and pulls it from wherever it exists.
+
+---
+
+## The Intelligent Onboarding Architecture
+
+### Phase 1 — The Onboarding Interview
+
+Instead of forms Trinity has a conversation with the new owner during setup. She asks smart questions and extracts structured data from natural answers.
+
+**Trinity says:**
+"Welcome to CoAIleague. I am going to get your operation set up. This usually takes 15-30 minutes depending on how much history you want to bring over. Let us start with your team. How many officers are currently working for you?"
+
+Owner says: "About 45 officers, some full-time some part-time."
+
+Trinity: "Got it. Do you have their information in any of these formats I can read right now?"
+
+Shows options:
+- Upload a spreadsheet (Excel, CSV, Google Sheets export)
+- Connect QuickBooks
+- Connect Gusto or ADP
+- Connect another payroll provider
+- I will share a file or document
+- Let me enter them manually (guided form, one at a time, autocomplete)
+
+This is the right first question because it determines the entire onboarding path and prevents wasted effort.
+
+---
+
+### Phase 2 — Universal File Ingestion
+
+Trinity needs to be able to read almost any format a security company might have their data in.
+
+**Supported input formats:**
+
+**Spreadsheets:**
+- Excel (.xlsx, .xls)
+- CSV
+- Google Sheets (via export or direct connection)
+- Numbers files
+
+**Documents:**
+- PDF rosters
+- Word document officer lists
+- Scanned physical documents (OCR via Claude Vision)
+
+**Direct integrations:**
+- QuickBooks (existing)
+- Gusto API
+- ADP export files
+- Paychex export files
+- When I Work export
+- GetSling export
+- Deputy export
+
+**Manual with intelligence:**
+When a tenant enters manually Trinity autocompletes from context. If they enter a phone number Trinity fills in the carrier. If they enter a name Trinity suggests common guard card formats. If they enter a city Trinity fills in Texas and suggests the DPS region.
+
+---
+
+### Phase 3 — Trinity's Intelligent Parsing
+
+When a file is uploaded Trinity does not just import it. She analyzes it.
+
+**For an officer roster spreadsheet Trinity identifies:**
+- Which column is the officer name
+- Which column is the phone number
+- Which column is the email
+- Which column looks like a license number
+- Which column looks like a pay rate
+- Which column looks like a hire date
+- Which column looks like a role or position
+- Which columns she does not recognize and asks about
+
+Trinity shows the owner a preview:
+
+"I found what looks like 43 officers in this file. Here is what I identified:
+
+Column A → Officer Name ✓
+Column B → Phone Number ✓
+Column C → Email ✓
+Column D → License Number ✓
+Column E → Pay Rate ✓ (hourly)
+Column F → I am not sure what this is — it looks like it might be a supervisor assignment. Is that right?
+Column G → Hire Date ✓
+
+Does this look correct? I will create all 43 officers once you confirm."
+
+One confirmation. 43 officers created. All fields populated. All records saved.
+
+---
+
+### Phase 4 — Historical Data Ingestion
+
+This is the piece that makes Trinity genuinely intelligent from day one instead of starting blind.
+
+**Payroll history:**
+When a tenant uploads 12 months of payroll exports Trinity extracts:
+- Each officer's pay rate history
+- Pay schedule (weekly, bi-weekly, semi-monthly)
+- Overtime patterns per officer
+- Average hours per officer per week
+- Seasonal patterns (holidays, summer, winter)
+- Any pay rate changes over time
+
+Trinity uses this to:
+- Set correct current pay rates for each officer
+- Know who historically works overtime
+- Predict next payroll cost accurately
+- Avoid creating conflicts with prior payroll cycles
+- Know where the company is in the current pay cycle
+
+**Schedule history:**
+When a tenant uploads past schedules Trinity extracts:
+- Which officers work which sites
+- Which officers work which shifts
+- Calloff frequency per officer
+- Coverage patterns by day of week
+- Seasonal staffing changes
+
+Trinity uses this to:
+- Build the first schedule with intelligent defaults
+- Warn about officers with high calloff history
+- Suggest shift assignments based on past preferences
+- Predict next week's coverage needs
+
+**Client history:**
+When a tenant uploads client data Trinity extracts:
+- Client name, address, contact info
+- Services provided per client
+- Billing rates per client
+- Payment history and patterns
+- Any notes or special requirements
+
+Trinity uses this to:
+- Build site profiles immediately
+- Set correct billing rates
+- Generate accurate P&L projections
+- Identify at-risk clients based on payment patterns
+
+**Invoice history:**
+When a tenant uploads past invoices Trinity extracts:
+- Monthly revenue by client
+- Average invoice amounts
+- Payment timing patterns
+- Outstanding balances
+
+Trinity uses this to:
+- Build immediate financial baseline
+- Generate revenue forecasts from day one
+- Identify clients who pay late
+- Calculate real profit margin per client
+
+---
+
+### Phase 5 — The Staged Commit System
+
+Trinity never writes to the production database during ingestion without showing the tenant what she is about to create.
+
+**The staging flow:**
+
+Step 1 — Trinity analyzes all uploaded files
+Step 2 — Trinity creates a staging summary:
+"Here is what I am ready to add to your account:
+- 43 officers with all fields populated
+- 12 clients with contact info and billing rates
+- 847 historical schedule records for pattern learning
+- 24 months of payroll history for 43 employees
+- 156 past invoices totaling $2.3M in historical revenue
+
+I found 3 things I need your help with before I proceed:
+1. Officer Maria Garcia appears twice with different phone numbers — which is correct?
+2. Client Pinnacle Tower has two different billing rates in your history — $18.50 and $19.00/hour. Which should I use going forward?
+3. I found 4 officers with no license number on file. Would you like to add those now or flag them for compliance review later?
+
+Once you resolve these 3 items I will create everything simultaneously and your account will be fully active."
+
+Step 3 — Owner resolves the 3 issues
+Step 4 — Trinity commits everything to database simultaneously
+Step 5 — All records live, synced, and searchable immediately
+Step 6 — Trinity sends the owner a setup completion summary
+
+---
+
+### Phase 6 — Day One Intelligence
+
+After onboarding Trinity immediately produces:
+
+**Financial baseline report:**
+"Based on your 24 months of history your average monthly revenue is $187,000. Your top 3 clients by revenue are Pinnacle Tower ($45K/month), Lone Star Medical ($38K/month), and Downtown Properties ($22K/month). Your three clients with the slowest payment history are [names]. Your estimated annual payroll cost based on current rates and historical hours is $1.2M. Your estimated gross margin is 34%."
+
+This is not a generic report. This is their specific numbers from their specific history on day one.
+
+**First schedule recommendation:**
+"Based on your past 6 months of scheduling I have pre-built your first week's schedule using your historical patterns. 43 shifts across 12 sites. 3 officers I flagged as high calloff risk are scheduled with backups already identified. Would you like to review and publish?"
+
+**Payroll position:**
+"You are currently 3 days into your bi-weekly pay period based on your historical cycle. I have calculated payroll for the current partial period. Your next full payroll run is due in 11 days covering approximately $48,500 based on scheduled hours."
+
+This is the experience that makes a tenant say "how does it already know all of this" on day one.
+
+---
+
+## The Prompt
+
+```
+COALEAGUE INTELLIGENT TENANT ONBOARDING SYSTEM
+UNIVERSAL DATA INGESTION + STAGED COMMIT +
+DAY ONE INTELLIGENCE
+
+PRIME DIRECTIVE:
+Audit every existing onboarding implementation
+before building anything.
+Read all onboarding routes, components,
+migration services, and database schemas.
+Map what exists vs what is missing.
+Build only what is genuinely absent.
+Every new tenant must be able to go from
+zero to fully operational in under 30 minutes
+regardless of how their data currently exists.
+
+═══════════════════════════════════════════════
+PHASE 1 — AUDIT EXISTING ONBOARDING
+═══════════════════════════════════════════════
+
+Read and map:
+1. All existing onboarding routes and flows
+2. QuickBooks migration service — what it
+   actually migrates and what it misses
+3. Current manual tenant setup process
+4. Any existing file upload or import features
+5. Current workspace provisioning flow
+6. Any existing data staging system
+7. Current employee creation flow
+8. Current client creation flow
+
+Present findings:
+- What onboarding already works well
+- What is missing entirely
+- What exists but is incomplete
+- What needs to be rebuilt vs extended
+
+═══════════════════════════════════════════════
+PHASE 2 — ONBOARDING DATA TABLES
+═══════════════════════════════════════════════
+
+Create these tables if they do not exist:
+
+onboarding_sessions table:
+- id, workspace_id
+- status (in_progress | staging | review |
+  committed | complete | abandoned)
+- method (quickbooks | file_upload | manual |
+  mixed | fresh_start)
+- started_at, completed_at
+- owner_user_id
+- files_uploaded (jsonb array of file references)
+- trinity_analysis_complete (boolean)
+- staging_summary (jsonb — what Trinity found)
+- conflicts_found (jsonb array)
+- conflicts_resolved (boolean)
+- records_staged (jsonb counts per type)
+- records_committed (jsonb counts per type)
+- day_one_report_generated (boolean)
+- last_updated_at
+
+onboarding_staged_records table:
+- id, workspace_id, session_id
+- record_type (employee | client | site |
+  schedule_history | payroll_history |
+  invoice_history | contract)
+- staged_data (jsonb — complete record as parsed)
+- source_file, source_row
+- confidence_score (0-100 — Trinity's
+  confidence in the parsing)
+- status (staged | conflict | approved |
+  committed | rejected)
+- conflict_description (if status is conflict)
+- conflict_resolution (how owner resolved it)
+- committed_record_id (foreign key after commit)
+- created_at
+
+onboarding_file_uploads table:
+- id, workspace_id, session_id
+- original_filename
+- file_type (xlsx | csv | pdf | docx | image)
+- file_purpose (officer_roster | client_list |
+  schedule_history | payroll_history |
+  invoice_history | contracts | other)
+- file_path (stored securely)
+- file_size_bytes
+- parsing_status (pending | parsing |
+  complete | failed)
+- records_found (integer)
+- records_parsed_successfully (integer)
+- parsing_errors (jsonb array)
+- trinity_analysis (jsonb — what Trinity extracted)
+- uploaded_at, parsed_at
+
+historical_payroll_data table:
+- id, workspace_id, employee_identifier
+- matched_employee_id (null until matched)
+- period_start, period_end
+- pay_type (hourly | salary | contract)
+- pay_rate_at_time
+- regular_hours, overtime_hours
+- gross_pay, deductions, net_pay
+- pay_schedule (weekly | biweekly |
+  semimonthly | monthly)
+- source (imported)
+- import_session_id
+
+historical_schedule_data table:
+- id, workspace_id
+- officer_identifier
+- matched_employee_id (null until matched)
+- site_identifier
+- matched_site_id (null until matched)
+- shift_date, shift_start, shift_end
+- was_calloff (boolean)
+- was_filled (boolean)
+- source (imported)
+- import_session_id
+
+historical_invoice_data table:
+- id, workspace_id
+- invoice_identifier_original
+- client_identifier
+- matched_client_id (null until matched)
+- invoice_date, due_date, paid_date
+- amount, paid_amount, balance
+- days_to_payment (calculated)
+- source (imported)
+- import_session_id
+
+═══════════════════════════════════════════════
+PHASE 3 — TRINITY ONBOARDING INTERVIEW
+═══════════════════════════════════════════════
+
+BUILD: TrinityOnboardingInterview
+
+This is the first thing an owner experiences
+after account creation and payment.
+It is a conversation with Trinity —
+not a series of forms.
+
+ONBOARDING ENTRY POINT:
+After workspace provisioned and owner logs in:
+Trinity greets in the owner's preferred language:
+
+English:
+"Welcome to CoAIleague. I am Trinity —
+I will be running your operation from here.
+Let me get you set up. This typically takes
+15-30 minutes depending on how much history
+you want to bring over.
+
+First question: how many officers or
+security personnel are currently working
+in your organization?"
+
+Spanish:
+"Bienvenido a CoAIleague. Soy Trinity —
+estaré administrando su operación desde aquí.
+Permítame configurarlo. Esto generalmente
+toma 15-30 minutos dependiendo de cuánto
+historial desea importar.
+
+Primera pregunta: ¿cuántos oficiales o
+personal de seguridad trabajan actualmente
+en su organización?"
+
+CONVERSATION FLOW:
+
+STEP 1 — Team size
+After owner answers:
+"Got it — [X] officers. Do you have their
+information somewhere I can read it, or
+would you prefer to add them another way?"
+
+Show options as clickable cards:
+[📊 Upload a spreadsheet or CSV]
+[💼 Connect QuickBooks]
+[💰 Connect Gusto or ADP]
+[📄 Upload a document or PDF]
+[✋ I will enter them one at a time]
+[🆕 Starting fresh — no prior records]
+
+STEP 2 — Client data
+After officer data method chosen:
+"Now for your clients — the companies or
+properties you provide security services to.
+How many active clients do you currently have?"
+
+After answer — same format options for client data.
+
+STEP 3 — Historical data
+"Do you have any records you want me to
+learn from — past schedules, payroll history,
+or invoices? The more history I have the
+better I can predict your needs and build
+your financial picture from day one."
+
+Options:
+[Yes — I have files to upload]
+[Yes — I can export from my payroll system]
+[No — start fresh]
+[Skip for now — add later]
+
+STEP 4 — Current payroll position
+"One more thing before we start.
+What is your current pay schedule?"
+
+Options:
+[Weekly] [Bi-weekly] [Semi-monthly] [Monthly]
+
+"And when did your current pay period start?"
+Date picker
+
+This ensures Trinity knows exactly where
+the company is in their payroll cycle so
+she does not create conflicts.
+
+STEP 5 — Confirmation and go
+"I have everything I need to get started.
+Upload your files and I will analyze them
+while you complete your account settings.
+I will show you exactly what I found before
+creating anything in your account."
+
+═══════════════════════════════════════════════
+PHASE 4 — UNIVERSAL FILE PARSER
+═══════════════════════════════════════════════
+
+BUILD: TrinityFileParserService
+
+This service reads any file format a
+security company might have and extracts
+structured data intelligently.
+
+SUPPORTED FORMATS:
+
+Excel and CSV parsing:
+Use SheetJS for Excel files.
+Use Papa Parse for CSV files.
+Auto-detect delimiter.
+Auto-detect header row.
+Handle merged cells gracefully.
+Handle multiple sheets in one Excel file.
+
+PDF parsing:
+Use existing PDF skill for text extraction.
+If PDF is a scan (image-based):
+Use Claude Vision API to OCR the content.
+Extract tables and structured data from PDF.
+
+Word document parsing:
+Use existing DOCX skill.
+Extract tables and lists.
+
+Image files:
+Use Claude Vision to extract data from
+photos of physical documents or screens.
+
+INTELLIGENT COLUMN MAPPING:
+
+After parsing Trinity analyzes column headers
+and sample data to identify what each column is.
+
+Column identification rules:
+
+Officer name patterns:
+- Headers containing: name, officer, employee,
+  personnel, staff, guard, agent
+- Data pattern: two-word strings, capitalized
+
+Phone number patterns:
+- Headers containing: phone, cell, mobile, contact
+- Data pattern: 10 digits with various formatting
+
+Email patterns:
+- Headers containing: email, mail
+- Data pattern: contains @ symbol
+
+License number patterns:
+- Headers containing: license, DPS, card, guard card
+- Data pattern: alphanumeric 6-12 characters
+
+Pay rate patterns:
+- Headers containing: rate, pay, wage, hourly, salary
+- Data pattern: decimal numbers 10-150 range
+
+Hire date patterns:
+- Headers containing: hire, start, date, joined
+- Data pattern: date formats
+
+Role patterns:
+- Headers containing: role, position, title, type
+- Data pattern: officer, supervisor, manager, etc.
+
+Site/location patterns:
+- Headers containing: site, location, property,
+  client, assigned, post
+- Data pattern: place names or addresses
+
+For each identified column:
+confidence_score: 0-100
+Show owner: "This looks like [column type]"
+Allow owner to confirm or correct
+
+PARSING OUTPUT:
+For each row parsed:
+- Create staged_record in onboarding_staged_records
+- Store all extracted fields in staged_data jsonb
+- Store source_file and source_row
+- Set confidence_score based on data quality
+- Flag conflicts if duplicate records found
+
+═══════════════════════════════════════════════
+PHASE 5 — CONFLICT DETECTION AND RESOLUTION
+═══════════════════════════════════════════════
+
+BUILD: TrinityOnboardingConflictResolver
+
+Before committing any data Trinity identifies
+conflicts and presents them clearly to the owner.
+
+CONFLICT TYPES:
+
+DUPLICATE OFFICER:
+Same name appears twice in different files
+or in same file.
+Resolution options:
+- These are the same person — merge records
+- These are different people — keep both
+- One is inactive — mark the other active only
+
+CONFLICTING PAY RATE:
+Officer appears in multiple files with
+different pay rates.
+Resolution options:
+- Use the most recent rate: $[X]
+- Use this specific rate: [dropdown of found rates]
+- I will set it manually: [input]
+
+CONFLICTING CLIENT BILLING RATE:
+Client appears with different rates in
+different historical documents.
+Resolution options:
+- Use the most recent: $[X]
+- Use this rate going forward: [dropdown]
+- I will set it manually: [input]
+
+MISSING REQUIRED FIELD:
+Officer record missing license number,
+pay rate, or other required field.
+Resolution options:
+- Enter the missing value now: [input]
+- Flag for later — add within 7 days: [compliance warning]
+- This person is inactive — mark inactive
+
+UNMATCHED REFERENCE:
+Historical schedule references an officer name
+that does not match anyone in the officer list.
+Resolution options:
+- This is the same person as [suggested match]
+- This person is no longer employed — skip
+- Create a new inactive record for history
+
+STAGING SUMMARY UI:
+Show owner a clean summary screen:
+"I have analyzed everything you uploaded.
+Here is what I found:
+
+✓ 43 officers ready to create
+✓ 12 clients ready to create
+✓ 847 historical schedule records
+✓ 24 months of payroll history
+✓ 156 historical invoices
+
+⚠️ 3 items need your attention before I proceed:"
+
+Show each conflict with clear resolution UI.
+Owner resolves each one.
+When all conflicts resolved:
+"Everything is ready. Shall I create your
+account now? This will take about 60 seconds."
+
+[Yes — Set Up My Account Now] button
+
+═══════════════════════════════════════════════
+PHASE 6 — ATOMIC COMMIT SYSTEM
+═══════════════════════════════════════════════
+
+BUILD: TrinityOnboardingCommitService
+
+When owner approves:
+Trinity commits all records simultaneously
+in a database transaction.
+
+Transaction order:
+1. Create all client records
+2. Create all site records (linked to clients)
+3. Create all employee/officer records
+4. Link officers to sites based on historical data
+5. Import historical_payroll_data records
+6. Import historical_schedule_data records
+7. Import historical_invoice_data records
+8. Create initial compliance records per officer
+   (license data from imported records)
+9. Calculate initial performance baselines
+10. Initialize workspace_cost_summary
+11. Mark onboarding_session as committed
+
+If any step fails:
+Roll back entire transaction.
+No partial data in the system.
+Show owner: "Something went wrong with [step].
+Your account is unchanged. Let me try again."
+Auto-retry once.
+If second attempt fails: alert CoAIleague support.
+
+After successful commit:
+All records live and searchable immediately.
+No sync delay.
+Owner sees their full account active.
+
+Publish event: workspace_onboarding_complete
+Trinity receives this event and begins
+day-one intelligence generation.
+
+═══════════════════════════════════════════════
+PHASE 7 — DAY ONE INTELLIGENCE REPORT
+═══════════════════════════════════════════════
+
+BUILD: TrinityDayOneIntelligenceEngine
+
+After onboarding_complete event received
+Trinity immediately generates:
+
+FINANCIAL BASELINE:
+From historical_invoice_data:
+- Average monthly revenue (last 12 months)
+- Revenue trend (growing | stable | declining)
+- Top 3 clients by revenue
+- Bottom 3 clients by margin
+- Clients with slow payment history
+  (average days to payment > 30)
+- Estimated annual revenue run rate
+- Estimated gross margin based on
+  revenue vs historical payroll costs
+
+PAYROLL POSITION:
+From historical_payroll_data:
+- Current pay period start date
+- Days remaining in current period
+- Estimated current period payroll cost
+  based on scheduled hours × current rates
+- Next payroll run date
+- Year-to-date payroll cost per employee
+- Officers whose pay rates have changed
+  recently — flag to confirm correct rate
+- Overtime patterns — who historically
+  works OT and how much it costs
+
+STAFFING INTELLIGENCE:
+From historical_schedule_data:
+- Calloff rates per officer (ranked)
+- Most reliable officers (zero or rare calloffs)
+- Site coverage patterns by day of week
+- Understaffed days historically
+- Suggested first week schedule
+  based on historical patterns
+
+COMPLIANCE STATUS:
+From imported license data:
+- Officers with licenses expiring within 90 days
+- Officers with missing license data
+- Armed endorsement status per officer
+- Any compliance gaps to address immediately
+
+FIRST WEEK SCHEDULE RECOMMENDATION:
+Based on historical patterns Trinity builds
+the first week's schedule automatically:
+- Correct officer-to-site assignments
+  based on history
+- Correct shift times based on history
+- Backup officers identified for
+  historically high-calloff officers
+- Ready to publish with one click
+
+DAY ONE REPORT DELIVERY:
+Trinity delivers this as a voice message
+in the owner's ChatDock DM plus a
+detailed written report:
+
+"Good morning [Owner Name]. I have finished
+analyzing everything you brought over and
+I am ready to run your operation.
+
+Here is where things stand today:
+
+Your operation generates approximately
+$[X]/month in revenue from [X] clients.
+Your top revenue client is [Name] at $[X]/month.
+
+I noticed [Client Name] has paid late
+on [X] of their last [Y] invoices.
+I will monitor this closely.
+
+You have [X] officers with licenses
+expiring in the next 90 days.
+I have already scheduled alerts for
+each of them.
+
+Your next payroll run is in [X] days
+covering approximately $[X] for [X] employees.
+
+I have pre-built your first week's schedule
+based on your historical patterns.
+[X] shifts across [X] sites.
+I flagged [X] officers as higher calloff
+risk based on their history — I have
+backup coverage identified for each.
+
+One more thing — I noticed [Officer Name]
+worked [X] hours last week. If that
+pattern continues this week they will
+hit overtime on [day]. I will alert you
+on [day] if that is tracking.
+
+Your account is fully set up.
+Everything is live. Let us get to work."
+
+═══════════════════════════════════════════════
+PHASE 8 — QUICKBOOKS MIGRATION ENHANCEMENT
+═══════════════════════════════════════════════
+
+Audit existing QuickBooks migration first.
+Identify what it currently pulls and what it misses.
+
+REQUIRED QB MIGRATION DATA:
+
+Customers (clients):
+- Company name, billing address
+- Contact name, email, phone
+- Payment terms
+- Outstanding balance
+- Invoice history (last 24 months)
+- Notes
+
+Employees:
+- Full name, address, SSN last 4 (masked)
+- Pay rate, pay type, pay schedule
+- Direct deposit info (flag — not stored,
+  officer must re-enter for security)
+- Hire date
+- Year-to-date earnings
+
+Invoices (last 24 months):
+- Invoice number, date, due date
+- Client linked
+- Line items and amounts
+- Payment date if paid
+- Outstanding if unpaid
+
+Payroll history (last 24 months):
+- Pay period dates
+- Employee pay per period
+- Hours worked per period
+- Tax withholdings
+
+QB MIGRATION GAPS TO FILL:
+After QB migration run Trinity validates:
+- Every customer has a matching site record
+- Every employee has required fields populated
+- License data is NOT in QB — flag for manual entry
+- Direct deposit must be re-entered — security
+- Trinity identifies what QB did not have:
+  license numbers, armed status, site assignments
+
+QB migration completion summary shows:
+"QuickBooks migration complete.
+
+I imported:
+✓ [X] clients with full history
+✓ [X] employees with payroll history
+✓ [X] invoices across 24 months
+
+You will need to add:
+⚠️ License numbers for [X] officers
+⚠️ Armed endorsement status for [X] officers
+⚠️ Site assignments for [X] officers
+⚠️ Direct deposit must be re-entered
+  by each employee (security requirement)
+
+I have created the records with everything
+QuickBooks had. The missing items are
+flagged in your compliance dashboard."
+
+═══════════════════════════════════════════════
+PHASE 9 — MANUAL ENTRY ACCELERATION
+═══════════════════════════════════════════════
+
+For tenants who enter data manually
+Trinity makes it as fast as possible.
+
+BULK ENTRY MODE:
+Instead of one form per officer
+show a spreadsheet-style inline editor:
+- Rows: one per officer
+- Columns: name, phone, email, role, rate
+- Tab between cells like a spreadsheet
+- Enter to add new row
+- Paste from clipboard into cells works
+- Autocomplete on role column
+- Autocomplete on pay rate (suggests
+  common rates for their state)
+- Can add 50 officers in 5 minutes
+  with keyboard navigation
+
+CLIENT FAST ENTRY:
+- Quick-add card: company name, address,
+  primary contact, billing rate
+- That is all that is required to start
+- Trinity fills in defaults for everything else
+- Additional details can be added later
+- Client is live and billable immediately
+
+INVITE SYSTEM:
+After officers are created in the system:
+Trinity auto-generates invitation emails
+for each officer.
+Email contains:
+- Personal greeting by name
+- Company name
+- Link to create their password
+- Download link for the mobile app
+- Brief "what CoAIleague does for you"
+  in their preferred language
+- QR code for fast mobile setup
+
+Bulk invite: select all → send all invitations
+with one click.
+
+Trinity tracks who has accepted:
+- Accepted invitation: marked active
+- Not accepted after 48 hours: reminder sent
+- Not accepted after 7 days: owner notified
+
+═══════════════════════════════════════════════
+PHASE 10 — PROGRESSIVE ONBOARDING
+═══════════════════════════════════════════════
+
+Not every tenant will complete onboarding
+in one session. Build progressive save.
+
+CHECKPOINT SYSTEM:
+After each major step completed:
+Save progress automatically.
+Owner can leave and return.
+Trinity picks up exactly where they left off.
+
+Progress indicator in dashboard:
+"Your account setup is [X]% complete.
+[Resume Setup] or [I will finish later]"
+
+MINIMUM VIABLE ONBOARDING:
+The minimum required to go live:
+- At least 1 officer created
+- At least 1 client created
+- At least 1 site created
+- Payment method on file
+- Owner email verified
+
+Everything else can be added progressively.
+Trinity flags what is missing:
+"You are operational but I noticed:
+- [X] officers have no license number
+- [X] clients have no billing rate
+- No historical data imported yet
+  (I am working with limited history)
+These are flagged in your compliance
+and settings dashboards."
+
+═══════════════════════════════════════════════
+PHASE 11 — ONBOARDING VERIFICATION
+═══════════════════════════════════════════════
+
+□ onboarding_sessions table created
+□ onboarding_staged_records table created
+□ onboarding_file_uploads table created
+□ historical_payroll_data table created
+□ historical_schedule_data table created
+□ historical_invoice_data table created
+
+□ Trinity onboarding interview renders
+□ Conversation flow works in English
+□ Conversation flow works in Spanish
+□ All 5 data source options functional
+
+FILE PARSING:
+□ Excel file uploads and parses
+□ CSV file uploads and parses
+□ PDF file uploads and extracts text
+□ Scanned PDF: Claude Vision OCR works
+□ Column mapping identifies correctly:
+  Officer names identified ✓
+  Phone numbers identified ✓
+  Email addresses identified ✓
+  License numbers identified ✓
+  Pay rates identified ✓
+  Hire dates identified ✓
+□ Unknown columns flagged for owner review
+□ Trinity shows parsing preview before commit
+□ Owner can correct column mappings
+
+CONFLICT DETECTION:
+□ Duplicate officer detected and flagged
+□ Conflicting pay rate flagged
+□ Conflicting billing rate flagged
+□ Missing required field flagged
+□ Unmatched reference flagged
+□ Owner can resolve each conflict type
+□ All conflicts must be resolved before commit
+
+ATOMIC COMMIT:
+□ All records commit simultaneously
+□ Transaction rolls back fully on failure
+□ No partial data in system after failure
+□ After commit all records immediately live
+□ workspace_onboarding_complete event published
+
+DAY ONE INTELLIGENCE:
+□ Financial baseline generated with real data
+□ Revenue figures accurate from history
+□ Payroll position accurate
+□ Calloff risk officers identified
+□ First week schedule pre-built
+□ Compliance gaps flagged
+□ Day one report delivered via ChatDock DM
+□ Report contains specific numbers not templates
+
+QB MIGRATION:
+□ All customer/client data migrated
+□ All employee data migrated
+□ Invoice history migrated (24 months)
+□ Payroll history migrated (24 months)
+□ Missing fields flagged after migration
+□ License data gap identified and flagged
+
+MANUAL ENTRY:
+□ Bulk entry spreadsheet-style works
+□ Tab navigation between cells works
+□ Clipboard paste into cells works
+□ Officer fast-add creates correctly
+□ Client fast-add creates correctly
+□ Bulk invite sends to all officers
+□ Invitation email arrives with correct content
+□ Invite tracking shows accepted/pending
+
+PROGRESSIVE ONBOARDING:
+□ Progress saves automatically
+□ Owner can leave and return
+□ Trinity resumes from last checkpoint
+□ Minimum viable onboarding defined
+□ Progress indicator in dashboard
+□ Missing items flagged clearly
+
+ISOLATION AND SECURITY:
+□ Uploaded files stored per workspace
+  No cross-tenant file access possible
+□ Historical data workspace-scoped
+□ Staged records workspace-scoped
+□ Committed records workspace-scoped
+□ File upload paths include workspace_id
+□ Signed URLs for file access with expiration
+
+PERFORMANCE:
+□ 50-officer roster parses in under 10 seconds
+□ 200-officer roster parses in under 30 seconds
+□ Commit of 200 officers completes in under 60s
+□ Day one report generates in under 2 minutes
+□ No timeout on large file uploads
+
+FINAL ONBOARDING TEST — full end to end:
+Create a fresh test workspace.
+Upload a test Excel file with 20 officers,
+5 clients, 6 months of schedule history,
+and 12 months of invoice history.
+Confirm:
+□ File parsed correctly
+□ All columns identified
+□ Staging summary shows 20 officers,
+  5 clients, schedule and invoice history
+□ No conflicts in test data
+□ Commit completes successfully
+□ All 20 officers in employees table
+□ All 5 clients in clients table
+□ Historical data in correct tables
+□ Day one report generated with real numbers
+□ First week schedule pre-built
+□ All records workspace-scoped correctly
+□ No data from this test workspace
+  visible in any other workspace
+
+REPORT:
+Tables created: [list]
+Features built: [list]
+File formats supported: [list]
+Conflict types handled: [list]
+Average parse time for 50 officers: [seconds]
+Average commit time for 50 officers: [seconds]
+Day one report generation time: [seconds]
+Full end to end test: PASS / FAIL
+Any features that could not be completed: [list]
+Boot status: CLEAN / ERRORS
+
+DO NOT STOP UNTIL ALL VERIFICATION
+CHECKS PASS AND THE FULL END-TO-END
+ONBOARDING TEST PASSES WITH REAL DATA.
+
+A new tenant must be able to go from
+zero to fully operational with day one
+intelligence in under 30 minutes.
+That is the standard.
+```
+
+---
+
+Bryan the onboarding system is actually one of the most important features in the entire platform because it determines whether a new tenant ever sees value from Trinity at all.
+
+If onboarding takes 3 days of manual data entry the tenant loses confidence before Trinity ever does anything impressive. If onboarding takes 30 minutes and ends with Trinity already knowing their revenue baseline, their problem officers, and their first week's schedule pre-built — the tenant is sold for life before they even pay their second invoice.
+
+The day one intelligence report is the moment that closes the deal permanently. When an owner uploads their data and Trinity comes back saying "your average monthly revenue is $187,000, your client Pinnacle Tower pays late 40% of the time, and your officer Garcia has the highest calloff rate on the night shift" — that owner will never consider switching platforms.
+
+Run it. Bring the output back.

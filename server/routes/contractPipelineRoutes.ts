@@ -5,13 +5,26 @@
  * Includes public portal endpoints for client access.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { contractPipelineService } from '../services/contracts/contractPipelineService';
 import { z } from 'zod';
+import { requireAuth } from '../auth';
+import { hasManagerAccess } from '../rbac';
+import { creditManager } from '../services/billing/creditManager';
+import { requirePlan } from '../tierGuards';
+import { createLogger } from '../lib/logger';
+const log = createLogger('ContractPipelineRoutes');
+
 
 const router = Router();
 
+// Contract pipeline is a Professional+ feature (contract_pipeline, e_signatures, document_signing)
+router.use(requireAuth);
+router.use(requirePlan('professional'));
+
 // Public router for portal endpoints (no auth required)
+// Clients access their portal via signed token — intentionally outside the tier gate.
 export const publicPortalRouter = Router();
 
 // Middleware types
@@ -50,7 +63,7 @@ function getAuditContext(req: AuthenticatedRequest, actorType: 'user' | 'client'
 
 router.get('/templates', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const workspaceId = req.session?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -58,16 +71,16 @@ router.get('/templates', async (req: AuthenticatedRequest, res: Response) => {
     const category = req.query.category as string | undefined;
     const templates = await contractPipelineService.getTemplates(workspaceId, category);
     res.json({ templates });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get templates error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get templates' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get templates error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get templates' });
   }
 });
 
 router.post('/templates', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const workspaceId = req.session?.workspaceId;
-    const userId = req.session?.userId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || req.session?.userId;
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -90,9 +103,9 @@ router.post('/templates', async (req: AuthenticatedRequest, res: Response) => {
     });
 
     res.status(201).json({ template });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Create template error:', error);
-    res.status(400).json({ error: error.message || 'Failed to create template' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Create template error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to create template' });
   }
 });
 
@@ -102,36 +115,53 @@ router.get('/templates/:id', async (req: AuthenticatedRequest, res: Response) =>
     if (!template) {
       return res.status(404).json({ error: 'Template not found' });
     }
+    if (template.workspaceId !== req.workspaceId) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
     res.json({ template });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get template error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get template' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get template error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get template' });
   }
 });
 
 router.patch('/templates/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasManagerAccess(req.workspaceRole || '')) {
+      return res.status(403).json({ error: 'Manager access required to update contract templates' });
+    }
+    const existing = await contractPipelineService.getTemplate(req.params.id);
+    if (!existing || existing.workspaceId !== req.workspaceId) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
     const template = await contractPipelineService.updateTemplate(req.params.id, req.body);
     if (!template) {
       return res.status(404).json({ error: 'Template not found' });
     }
     res.json({ template });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Update template error:', error);
-    res.status(400).json({ error: error.message || 'Failed to update template' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Update template error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to update template' });
   }
 });
 
 router.delete('/templates/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasManagerAccess(req.workspaceRole || '')) {
+      return res.status(403).json({ error: 'Manager access required to delete contract templates' });
+    }
+    const existing = await contractPipelineService.getTemplate(req.params.id);
+    if (!existing || existing.workspaceId !== req.workspaceId) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
     const deleted = await contractPipelineService.deleteTemplate(req.params.id);
     if (!deleted) {
       return res.status(404).json({ error: 'Template not found' });
     }
     res.json({ success: true });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Delete template error:', error);
-    res.status(500).json({ error: error.message || 'Failed to delete template' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Delete template error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to delete template' });
   }
 });
 
@@ -141,7 +171,7 @@ router.delete('/templates/:id', async (req: AuthenticatedRequest, res: Response)
 
 router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const workspaceId = req.session?.workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -151,22 +181,22 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       docType: req.query.docType as any,
       clientId: req.query.clientId as string,
       search: req.query.search as string,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      limit: Math.min(Math.max(1, req.query.limit ? parseInt(req.query.limit as string) : 50), 500),
       offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
     };
 
     const result = await contractPipelineService.getContracts(workspaceId, filters);
     res.json(result);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get contracts error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get contracts' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get contracts error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get contracts' });
   }
 });
 
 router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const workspaceId = req.session?.workspaceId;
-    const userId = req.session?.userId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+    const userId = req.user?.id || req.session?.userId;
     if (!workspaceId || !userId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -199,9 +229,51 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
     );
 
     res.status(201).json(result);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Create contract error:', error);
-    res.status(400).json({ error: error.message || 'Failed to create proposal' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Create contract error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to create proposal' });
+  }
+});
+
+router.get('/usage', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    const usage = await contractPipelineService.getUsage(workspaceId);
+    res.json(usage);
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get usage error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get usage' });
+  }
+});
+
+router.get('/access', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    const access = await contractPipelineService.checkAccess(workspaceId);
+    res.json(access);
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Check access error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to check access' });
+  }
+});
+
+router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    const stats = await contractPipelineService.getStatistics(workspaceId);
+    res.json(stats);
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get stats error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get statistics' });
   }
 });
 
@@ -211,15 +283,25 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
     if (!contract) {
       return res.status(404).json({ error: 'Contract not found' });
     }
+    if (contract.workspaceId !== req.workspaceId) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get contract error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get contract' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get contract error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get contract' });
   }
 });
 
 router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasManagerAccess(req.workspaceRole || '')) {
+      return res.status(403).json({ error: 'Manager access required to update contracts' });
+    }
+    const existing = await contractPipelineService.getContract(req.params.id);
+    if (!existing || existing.workspaceId !== req.workspaceId) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
     const contract = await contractPipelineService.updateContract(
       req.params.id,
       req.body,
@@ -229,9 +311,9 @@ router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ error: 'Contract not found' });
     }
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Update contract error:', error);
-    res.status(400).json({ error: error.message || 'Failed to update contract' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Update contract error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to update contract' });
   }
 });
 
@@ -245,10 +327,28 @@ router.post('/:id/send', async (req: AuthenticatedRequest, res: Response) => {
       req.params.id,
       getAuditContext(req)
     );
+
+    // Deduct 3 credits per document sent for e-signature (contract pipeline)
+    const workspaceId = req.workspaceId;
+    if (workspaceId) {
+      creditManager.deductCredits({
+        workspaceId,
+        userId: req.user?.id || 'system',
+        featureKey: 'document_signing_send',
+        featureName: 'Digital E-Signature Send (Contract)',
+        description: `Contract/proposal ${req.params.id} sent for signature`,
+        amountOverride: 3,
+        relatedEntityType: 'contract',
+        relatedEntityId: req.params.id,
+      }).catch((err: Error) => {
+        log.error('[ContractPipeline] Credit deduction failed (non-blocking):', err.message);
+      });
+    }
+
     res.json(result);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Send proposal error:', error);
-    res.status(400).json({ error: error.message || 'Failed to send proposal' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Send proposal error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to send proposal' });
   }
 });
 
@@ -259,9 +359,9 @@ router.post('/:id/accept', async (req: AuthenticatedRequest, res: Response) => {
       getAuditContext(req, 'client')
     );
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Accept proposal error:', error);
-    res.status(400).json({ error: error.message || 'Failed to accept proposal' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Accept proposal error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to accept proposal' });
   }
 });
 
@@ -277,9 +377,9 @@ router.post('/:id/request-changes', async (req: AuthenticatedRequest, res: Respo
       getAuditContext(req, 'client')
     );
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Request changes error:', error);
-    res.status(400).json({ error: error.message || 'Failed to request changes' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Request changes error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to request changes' });
   }
 });
 
@@ -292,9 +392,9 @@ router.post('/:id/decline', async (req: AuthenticatedRequest, res: Response) => 
       getAuditContext(req, 'client')
     );
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Decline proposal error:', error);
-    res.status(400).json({ error: error.message || 'Failed to decline proposal' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Decline proposal error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to decline proposal' });
   }
 });
 
@@ -306,9 +406,9 @@ router.get('/:id/signatures', async (req: AuthenticatedRequest, res: Response) =
   try {
     const signatures = await contractPipelineService.getSignatures(req.params.id);
     res.json({ signatures });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get signatures error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get signatures' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get signatures error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get signatures' });
   }
 });
 
@@ -342,9 +442,100 @@ router.post('/:id/sign', async (req: AuthenticatedRequest, res: Response) => {
     );
 
     res.status(201).json({ signature });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Capture signature error:', error);
-    res.status(400).json({ error: error.message || 'Failed to capture signature' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Capture signature error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to capture signature' });
+  }
+});
+
+// ============================================================================
+// SIGNER MANAGEMENT & SEQUENCING
+// ============================================================================
+
+router.post('/:id/signers', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const schema = z.object({
+      signers: z.array(z.object({
+        signerRole: z.enum(['company', 'client', 'witness', 'notary']),
+        signerName: z.string().min(1),
+        signerEmail: z.string().email(),
+        signerTitle: z.string().optional(),
+        order: z.number().int().min(1),
+      })).min(1),
+    });
+
+    const { signers } = schema.parse(req.body);
+    const result = await contractPipelineService.addSigners(
+      req.params.id,
+      signers,
+      getAuditContext(req)
+    );
+
+    res.status(201).json({ signers: result });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Add signers error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to add signers' });
+  }
+});
+
+router.get('/:id/signers', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const signers = await contractPipelineService.getSignersForContract(req.params.id);
+    const nextSigner = await contractPipelineService.getNextSigner(req.params.id);
+    res.json({ signers, nextSigner });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get signers error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get signers' });
+  }
+});
+
+router.post('/:id/remind', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const schema = z.object({
+      signerId: z.string().min(1),
+    });
+
+    const { signerId } = schema.parse(req.body);
+    const result = await contractPipelineService.sendReminder(
+      req.params.id,
+      signerId,
+      getAuditContext(req)
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+
+    res.json(result);
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Send reminder error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to send reminder' });
+  }
+});
+
+router.patch('/:id/signers/reorder', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!hasManagerAccess(req.workspaceRole || '')) {
+      return res.status(403).json({ error: 'Manager access required to reorder contract signers' });
+    }
+    const schema = z.object({
+      signerOrders: z.array(z.object({
+        signerId: z.string().min(1),
+        order: z.number().int().min(1),
+      })).min(1),
+    });
+
+    const { signerOrders } = schema.parse(req.body);
+    const result = await contractPipelineService.reorderSigners(
+      req.params.id,
+      signerOrders,
+      getAuditContext(req)
+    );
+
+    res.json({ signers: result });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Reorder signers error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to reorder signers' });
   }
 });
 
@@ -356,9 +547,9 @@ router.get('/:id/audit', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const auditTrail = await contractPipelineService.getAuditTrail(req.params.id);
     res.json({ auditTrail });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get audit trail error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get audit trail' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Get audit trail error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to get audit trail' });
   }
 });
 
@@ -370,9 +561,9 @@ router.get('/:id/evidence', async (req: AuthenticatedRequest, res: Response) => 
   try {
     const evidencePackage = await contractPipelineService.generateEvidencePackage(req.params.id);
     res.json(evidencePackage);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Generate evidence error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate evidence package' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Generate evidence error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to generate evidence package' });
   }
 });
 
@@ -380,9 +571,9 @@ router.get('/:id/verify', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const verification = await contractPipelineService.verifyDocumentIntegrity(req.params.id);
     res.json(verification);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Verify document error:', error);
-    res.status(500).json({ error: error.message || 'Failed to verify document' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Verify document error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to verify document' });
   }
 });
 
@@ -390,51 +581,6 @@ router.get('/:id/verify', async (req: AuthenticatedRequest, res: Response) => {
 // USAGE & QUOTA
 // ============================================================================
 
-router.get('/usage', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const workspaceId = req.session?.workspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    const usage = await contractPipelineService.getUsage(workspaceId);
-    res.json(usage);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get usage error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get usage' });
-  }
-});
-
-router.get('/access', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const workspaceId = req.session?.workspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    const access = await contractPipelineService.checkAccess(workspaceId);
-    res.json(access);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Check access error:', error);
-    res.status(500).json({ error: error.message || 'Failed to check access' });
-  }
-});
-
-// ============================================================================
-// STATISTICS
-// ============================================================================
-
-router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const workspaceId = req.session?.workspaceId;
-    if (!workspaceId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    const stats = await contractPipelineService.getStatistics(workspaceId);
-    res.json(stats);
-  } catch (error: any) {
-    console.error('[ContractPipeline] Get stats error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get statistics' });
-  }
-});
 
 // ============================================================================
 // PUBLIC PORTAL (No Auth Required) - Uses publicPortalRouter
@@ -457,9 +603,9 @@ publicPortalRouter.get('/:token', async (req: Request, res: Response) => {
     });
 
     res.json({ contract: result.contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Portal view error:', error);
-    res.status(500).json({ error: error.message || 'Failed to view contract' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Portal view error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to view contract' });
   }
 });
 
@@ -481,9 +627,9 @@ publicPortalRouter.post('/:token/accept', async (req: Request, res: Response) =>
     );
 
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Portal accept error:', error);
-    res.status(400).json({ error: error.message || 'Failed to accept proposal' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Portal accept error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to accept proposal' });
   }
 });
 
@@ -507,14 +653,24 @@ publicPortalRouter.post('/:token/sign', async (req: Request, res: Response) => {
         accuracy: z.number(),
       }).optional(),
       timezone: z.string().optional(),
+      clientInitials: z.record(z.boolean()).optional(),
+      governmentIdData: z.string().optional(),
+      governmentIdType: z.string().optional(),
     });
 
     const input = schema.parse(req.body);
+    const { clientInitials, governmentIdData, governmentIdType, ...sigInput } = input;
+
+    const signerCheck = await contractPipelineService.canSignerSign(result.contract!.id, input.signerEmail);
+    if (!signerCheck.canSign) {
+      return res.status(403).json({ error: signerCheck.reason || 'Not allowed to sign at this time' });
+    }
+
     const signature = await contractPipelineService.captureSignature(
       {
         contractId: result.contract!.id,
         signerRole: 'client',
-        ...input,
+        ...sigInput,
         ipAddress: getClientIP(req),
         userAgent: req.headers['user-agent'] || 'unknown',
       },
@@ -526,10 +682,28 @@ publicPortalRouter.post('/:token/sign', async (req: Request, res: Response) => {
       }
     );
 
+    // Store initials + government ID on the contract record
+    if (clientInitials || governmentIdData || governmentIdType) {
+      try {
+        const { db } = await import('../db');
+        const { clientContracts } = await import('@shared/schema');
+        const { eq } = await import('drizzle-orm');
+        await db.update(clientContracts)
+          .set({
+            ...(clientInitials ? { clientInitials } : {}),
+            ...(governmentIdData ? { governmentIdUrl: governmentIdData } : {}),
+            ...(governmentIdType ? { governmentIdType } : {}),
+          })
+          .where(eq(clientContracts.id, result.contract!.id));
+      } catch (updateErr) {
+        log.error('[ContractPipeline] Failed to store initials/govId:', updateErr);
+      }
+    }
+
     res.status(201).json({ signature });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Portal sign error:', error);
-    res.status(400).json({ error: error.message || 'Failed to sign contract' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Portal sign error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to sign contract' });
   }
 });
 
@@ -553,9 +727,9 @@ publicPortalRouter.post('/:token/decline', async (req: Request, res: Response) =
     );
 
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Portal decline error:', error);
-    res.status(400).json({ error: error.message || 'Failed to decline proposal' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Portal decline error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to decline proposal' });
   }
 });
 
@@ -583,9 +757,9 @@ publicPortalRouter.post('/:token/request-changes', async (req: Request, res: Res
     );
 
     res.json({ contract });
-  } catch (error: any) {
-    console.error('[ContractPipeline] Portal request changes error:', error);
-    res.status(400).json({ error: error.message || 'Failed to request changes' });
+  } catch (error: unknown) {
+    log.error('[ContractPipeline] Portal request changes error:', error);
+    res.status(400).json({ error: sanitizeError(error) || 'Failed to request changes' });
   }
 });
 

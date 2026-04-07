@@ -1,0 +1,355 @@
+SCHEMA REFACTORING — 30K LINES → MODULAR ARCHITECTURE
+
+The current schema file is ~30,000 lines in a single file. This causes:
+- drizzle-kit push timeouts and failures
+- Slow TypeScript compilation
+- IDE freezing when editing the file
+- Merge conflicts on every change
+- Impossible to understand what belongs to what
+
+THE FIX: Split the schema into domain-specific module files that are re-exported from one index.
+
+═══════════════════════════════════════════════════
+STEP 1: PLAN THE MODULE STRUCTURE
+═══════════════════════════════════════════════════
+
+Before touching any code, categorize every table in the schema into these domain modules:
+
+```
+shared/schema/
+  ├── index.ts              ← Re-exports everything (Drizzle needs one entry point)
+  ├── core.ts               ← workspaces, users, sessions, system_config
+  ├── scheduling.ts         ← shifts, shift_assignments, shift_templates, availability, shift_rooms
+  ├── timekeeping.ts        ← clock_records, time_entries, timesheets, break_records
+  ├── clients.ts            ← clients, client_contacts, post_orders, geofences
+  ├── billing.ts            ← org_subscriptions, subscription_tiers, credit_balances, 
+  │                            credit_transactions, financial_processing_fees, 
+  │                            platform_invoices, usage_caps
+  ├── invoicing.ts          ← invoices, invoice_line_items, invoice_templates
+  ├── payroll.ts            ← payroll_runs, payroll_entries, tax_configs
+  ├── communication.ts      ← messages, channels, rooms, shift_room_messages, broadcasts
+  ├── incidents.ts          ← incident_reports, incident_activity, daily_reports, 
+  │                            safety_checklists, form_submissions
+  ├── documents.ts          ← document_templates, document_instances, signature_requests,
+  │                            signatures, document_vault, media_vault
+  ├── hr.ts                 ← training_records, compliance_records, behavior_scores,
+  │                            recognition, certifications, equipment_records
+  ├── pipeline.ts           ← pipeline_deals, pipeline_activities
+  ├── trinity.ts            ← trinity_requests, trinity_knowledge_base, 
+  │                            trinity_org_knowledge, ai_token_usage
+  ├── notifications.ts      ← notifications, notification_preferences
+  ├── expenses.ts           ← expenses, expense_categories
+  ├── approvals.ts          ← approval_pipeline, approval_rules
+  ├── audit.ts              ← audit_log
+  └── settings.ts           ← org_settings, feature_flags, integrations
+```
+
+FIRST: Run this to count tables and see what you're working with:
+
+```sql
+SELECT COUNT(*) as total_tables FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+```
+
+Then list them all:
+
+```sql
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+ORDER BY table_name;
+```
+
+Map each table to the module it belongs in. If a table doesn't fit any category, put it in the closest match or create a new module.
+
+═══════════════════════════════════════════════════
+STEP 2: CREATE THE MODULE FILES
+═══════════════════════════════════════════════════
+
+For each module file, follow this pattern:
+
+```typescript
+// shared/schema/scheduling.ts
+
+import { pgTable, uuid, varchar, timestamp, boolean, integer, decimal, jsonb, text,
+         index, uniqueIndex, foreignKey } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { workspaces, users } from './core';
+import { clients } from './clients';
+
+// ═══════════════════════════════════════
+// SHIFTS
+// ═══════════════════════════════════════
+export const shifts = pgTable('shifts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: varchar('workspace_id').notNull().references(() => workspaces.id),
+  // ... all columns
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+  workspaceIdx: index('idx_shifts_workspace').on(table.workspaceId),
+  // ... other indexes
+}));
+
+// ═══════════════════════════════════════
+// SHIFT ASSIGNMENTS
+// ═══════════════════════════════════════
+export const shiftAssignments = pgTable('shift_assignments', {
+  // ...
+});
+
+// ═══════════════════════════════════════
+// RELATIONS
+// ═══════════════════════════════════════
+export const shiftsRelations = relations(shifts, ({ one, many }) => ({
+  workspace: one(workspaces, { fields: [shifts.workspaceId], references: [workspaces.id] }),
+  client: one(clients, { fields: [shifts.clientId], references: [clients.id] }),
+  assignments: many(shiftAssignments),
+}));
+```
+
+CRITICAL RULES:
+- Each module file imports ONLY what it needs from other modules
+- NO circular imports — if A imports from B, B cannot import from A
+- The dependency order is: core → clients → scheduling → timekeeping → etc.
+- core.ts has ZERO imports from other schema modules (it's the root)
+
+═══════════════════════════════════════════════════
+STEP 3: CREATE THE INDEX FILE
+═══════════════════════════════════════════════════
+
+```typescript
+// shared/schema/index.ts
+
+// This is the ONLY file drizzle-kit reads.
+// It re-exports everything from all modules.
+
+export * from './core';
+export * from './scheduling';
+export * from './timekeeping';
+export * from './clients';
+export * from './billing';
+export * from './invoicing';
+export * from './payroll';
+export * from './communication';
+export * from './incidents';
+export * from './documents';
+export * from './hr';
+export * from './pipeline';
+export * from './trinity';
+export * from './notifications';
+export * from './expenses';
+export * from './approvals';
+export * from './audit';
+export * from './settings';
+```
+
+Update drizzle.config.ts to point to the new index:
+
+```typescript
+// drizzle.config.ts
+export default {
+  schema: './shared/schema/index.ts',  // Points to the re-export index
+  // ... rest of config unchanged
+};
+```
+
+═══════════════════════════════════════════════════
+STEP 4: HANDLE CIRCULAR DEPENDENCY RISKS
+═══════════════════════════════════════════════════
+
+The biggest risk in splitting schemas is circular imports. Follow this dependency hierarchy:
+
+```
+LAYER 0 (no imports from other schema modules):
+  core.ts (workspaces, users, sessions)
+
+LAYER 1 (can import from Layer 0 only):
+  clients.ts (imports: core)
+  settings.ts (imports: core)
+  billing.ts (imports: core)
+  notifications.ts (imports: core)
+  audit.ts (imports: core)
+
+LAYER 2 (can import from Layer 0-1):
+  scheduling.ts (imports: core, clients)
+  invoicing.ts (imports: core, clients, billing)
+  payroll.ts (imports: core, billing)
+  hr.ts (imports: core)
+  expenses.ts (imports: core)
+  communication.ts (imports: core)
+  trinity.ts (imports: core)
+  pipeline.ts (imports: core, clients)
+
+LAYER 3 (can import from Layer 0-2):
+  timekeeping.ts (imports: core, scheduling, clients)
+  incidents.ts (imports: core, scheduling, clients)
+  documents.ts (imports: core, clients)
+  approvals.ts (imports: core — references entity IDs generically)
+```
+
+If you encounter a circular dependency:
+- Move the shared type/table to the LOWER layer
+- Or use string references instead of direct imports for foreign keys:
+  ```typescript
+  // Instead of importing the table directly for FK:
+  workspaceId: varchar('workspace_id').notNull(),
+  // Add the FK constraint in a separate migration or via raw SQL
+  // This breaks the import cycle while keeping DB integrity
+  ```
+
+═══════════════════════════════════════════════════
+STEP 5: REMOVE DEAD CODE
+═══════════════════════════════════════════════════
+
+A 30K line file almost certainly has dead code. During the split, identify and remove:
+
+- Duplicate table definitions (same table defined twice with slight variations)
+- Commented-out table definitions
+- Tables that exist in schema but NOT in the actual database
+- Tables that exist in the database but are completely unused by any code
+- Columns defined in schema that don't exist in the database
+- Old migration artifacts
+
+To find unused tables:
+
+```bash
+# For each table in the schema, check if any server code references it
+# If a table is defined but never queried/inserted/updated, it's dead code
+
+# List all table names from schema
+grep -o "pgTable('[^']*'" shared/schema.ts | sed "s/pgTable('//;s/'$//" | sort > /tmp/schema_tables.txt
+
+# For each table, check if server code references it
+while read table; do
+  count=$(grep -rn "$table" server/ --include="*.ts" | grep -v "schema" | grep -v "node_modules" | wc -l)
+  if [ "$count" -eq "0" ]; then
+    echo "UNUSED TABLE: $table (0 references in server code)"
+  fi
+done < /tmp/schema_tables.txt
+```
+
+═══════════════════════════════════════════════════
+STEP 6: CLEAN UP COLUMN INCONSISTENCIES
+═══════════════════════════════════════════════════
+
+While splitting, standardize column patterns:
+
+EVERY org-scoped table must have these columns in this order at the end:
+```typescript
+  // ... table-specific columns above ...
+  
+  // Standard attribution columns (EVERY table)
+  createdBy: varchar('created_by'),
+  createdByType: varchar('created_by_type').default('system'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  
+  // Soft delete columns (tables that support deletion)
+  isDeleted: boolean('is_deleted').default(false),
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: varchar('deleted_by'),
+```
+
+EVERY org-scoped table must have workspace_id as the FIRST column after id:
+```typescript
+export const someTable = pgTable('some_table', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: varchar('workspace_id').notNull().references(() => workspaces.id),
+  // ... rest of columns
+});
+```
+
+═══════════════════════════════════════════════════
+STEP 7: VERIFY AFTER SPLIT
+═══════════════════════════════════════════════════
+
+After the split is complete:
+
+7A. Verify the total export count matches:
+```bash
+# Count table exports from old single file
+grep -c "pgTable(" shared/schema.ts
+
+# Count table exports from new index (across all modules)  
+grep -rc "pgTable(" shared/schema/*.ts | tail -1
+```
+Both numbers should match.
+
+7B. Run TypeScript compilation:
+```bash
+npx tsc --noEmit
+```
+Zero errors expected. Any errors mean an import is wrong or a type is missing.
+
+7C. Run drizzle-kit check:
+```bash
+npx drizzle-kit push --dry-run
+```
+Should report ZERO changes needed. If it wants to create or drop tables, the schema doesn't match the database.
+
+7D. Run the application and test a few routes:
+- Login works
+- Dashboard loads
+- Schedule page loads  
+- Employee list loads
+If these work, the schema split is clean.
+
+7E. Delete the old monolithic schema file ONLY after all verifications pass.
+
+═══════════════════════════════════════════════════
+STEP 8: PREVENT FUTURE BLOAT
+═══════════════════════════════════════════════════
+
+Add a check to prevent any single schema file from growing too large:
+
+```bash
+# Add to CI/CD or pre-commit hook:
+MAX_LINES=500
+for file in shared/schema/*.ts; do
+  lines=$(wc -l < "$file")
+  if [ "$lines" -gt "$MAX_LINES" ]; then
+    echo "ERROR: $file has $lines lines (max $MAX_LINES). Split it further."
+    exit 1
+  fi
+done
+```
+
+When adding new tables in the future:
+1. Identify which domain module it belongs to
+2. Add it to that module file
+3. Export it from that file
+4. The index.ts re-export automatically picks it up
+5. Never add to a "misc" or "other" file — if it doesn't fit, create a new module
+
+═══════════════════════════════════════════════════
+EXPECTED RESULT
+═══════════════════════════════════════════════════
+
+BEFORE:
+  shared/schema.ts — 30,000 lines, one massive file
+  drizzle-kit push: timeout/failure
+  IDE: freezes when opening file
+  Developer experience: miserable
+
+AFTER:
+  shared/schema/index.ts — ~40 lines (just re-exports)
+  shared/schema/core.ts — ~200-400 lines
+  shared/schema/scheduling.ts — ~300-500 lines
+  shared/schema/billing.ts — ~400-600 lines
+  ... (15-18 module files, each 200-600 lines)
+  
+  drizzle-kit push: fast, reliable
+  IDE: responsive
+  Developer experience: find any table in seconds
+  Maintenance: change one domain without touching others
+
+DO THIS INCREMENTALLY:
+1. Start with core.ts (workspaces, users — the foundation everything imports)
+2. Then billing.ts (most critical for money flow)
+3. Then scheduling.ts (most referenced by other modules)
+4. Continue module by module
+5. After each module is extracted, run verification (Step 7)
+6. Only delete from the original file after the module is verified
+7. When the original file is empty, delete it
+
+DO NOT try to split all 30K lines in one shot. Extract one module at a time, verify, then continue. This prevents the "everything broke" scenario.

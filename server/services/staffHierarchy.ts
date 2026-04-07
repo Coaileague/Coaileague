@@ -85,6 +85,10 @@ export function getRoleDescription(role: string | null | undefined): string {
       return 'System Operator';
     case 'support_agent':
       return 'Support Staff';
+    case 'customer':
+      return 'Customer';
+    case 'guest':
+      return 'Guest';
     default:
       return 'User';
   }

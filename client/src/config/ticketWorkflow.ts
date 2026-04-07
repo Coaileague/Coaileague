@@ -191,3 +191,153 @@ export function getSLAForTicket(priority: string) {
   const priorityConfig = TICKET_STATUS_CONFIG.priorities[priority as keyof typeof TICKET_STATUS_CONFIG.priorities];
   return priorityConfig?.slaHours || 24;
 }
+
+/**
+ * 7-Step Pipeline Configuration
+ * Universal orchestration pattern for ticket creation workflow
+ * TRIGGER → FETCH → VALIDATE → PROCESS → MUTATE → CONFIRM → NOTIFY
+ * 
+ * NO HARDCODED VALUES - All timing and display configurable here
+ */
+
+// Pipeline animation timing configuration
+export const PIPELINE_TIMING = {
+  stepDelay: 200, // Delay between steps in ms
+  initialDelay: 150, // Initial delay before starting
+  clearDelay: 1500, // Delay before clearing completed pipeline
+} as const;
+
+// Pipeline status styling configuration  
+export const PIPELINE_STATUS_STYLES = {
+  completed: {
+    bg: 'bg-emerald-500',
+    border: 'border-emerald-500',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    textWhite: 'text-white',
+    dot: 'bg-emerald-500',
+    connector: 'bg-emerald-500',
+  },
+  current: {
+    dotAnimation: 'animate-pulse',
+    iconAnimation: 'animate-spin',
+  },
+  pending: {
+    bg: 'bg-slate-100 dark:bg-slate-800',
+    border: 'border-slate-300 dark:border-slate-600',
+    text: 'text-slate-400',
+    dot: 'bg-slate-300 dark:bg-slate-600',
+    connector: 'bg-slate-300 dark:bg-slate-600',
+  },
+  error: {
+    bg: 'bg-red-500/10',
+    border: 'border-red-500',
+    text: 'text-red-500',
+    dot: 'bg-red-500',
+    containerBg: 'bg-red-50 dark:bg-red-950/30',
+    containerBorder: 'border-red-200 dark:border-red-800',
+    containerText: 'text-red-700 dark:text-red-300',
+  },
+} as const;
+
+export const TICKET_PIPELINE_STEPS = [
+  {
+    id: 'trigger',
+    label: 'Trigger',
+    description: 'Ticket submission received',
+    icon: 'Play',
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10',
+    borderColor: 'border-blue-500',
+  },
+  {
+    id: 'fetch',
+    label: 'Fetch',
+    description: 'Loading context & user data',
+    icon: 'Download',
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/10',
+    borderColor: 'border-cyan-500',
+  },
+  {
+    id: 'validate',
+    label: 'Validate',
+    description: 'Verifying ticket data',
+    icon: 'Shield',
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/10',
+    borderColor: 'border-purple-500',
+  },
+  {
+    id: 'process',
+    label: 'Process',
+    description: 'AI categorization & routing',
+    icon: 'Cpu',
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-500/10',
+    borderColor: 'border-orange-500',
+  },
+  {
+    id: 'mutate',
+    label: 'Mutate',
+    description: 'Creating ticket record',
+    icon: 'Database',
+    color: 'text-emerald-500',
+    bgColor: 'bg-emerald-500/10',
+    borderColor: 'border-emerald-500',
+  },
+  {
+    id: 'confirm',
+    label: 'Confirm',
+    description: 'Ticket saved successfully',
+    icon: 'CheckCircle',
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/10',
+    borderColor: 'border-green-500',
+  },
+  {
+    id: 'notify',
+    label: 'Notify',
+    description: 'Sending confirmation',
+    icon: 'Bell',
+    color: 'text-pink-500',
+    bgColor: 'bg-pink-500/10',
+    borderColor: 'border-pink-500',
+  },
+] as const;
+
+export type PipelineStepId = typeof TICKET_PIPELINE_STEPS[number]['id'];
+
+export interface PipelineState {
+  currentStep: PipelineStepId;
+  completedSteps: PipelineStepId[];
+  error?: { step: PipelineStepId; message: string };
+  isComplete: boolean;
+}
+
+export function getInitialPipelineState(): PipelineState {
+  return {
+    currentStep: 'trigger',
+    completedSteps: [],
+    isComplete: false,
+  };
+}
+
+export function advancePipeline(state: PipelineState): PipelineState {
+  const stepIndex = TICKET_PIPELINE_STEPS.findIndex(s => s.id === state.currentStep);
+  if (stepIndex === -1 || stepIndex >= TICKET_PIPELINE_STEPS.length - 1) {
+    return { ...state, isComplete: true, completedSteps: [...state.completedSteps, state.currentStep] };
+  }
+  
+  return {
+    ...state,
+    currentStep: TICKET_PIPELINE_STEPS[stepIndex + 1].id,
+    completedSteps: [...state.completedSteps, state.currentStep],
+  };
+}
+
+export function setStepError(state: PipelineState, message: string): PipelineState {
+  return {
+    ...state,
+    error: { step: state.currentStep, message },
+  };
+}

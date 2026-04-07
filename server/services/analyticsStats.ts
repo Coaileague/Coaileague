@@ -14,6 +14,10 @@ import type { AnalyticsStats } from "../../shared/schema";
 import { monitoringService } from "../monitoring";
 import { getAutomationMetrics } from "./automationMetrics";
 import { checkDatabase, getActiveConnectionCount } from "./healthCheck";
+import { typedQuery } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+const log = createLogger('analyticsStats');
+
 
 // Simple in-memory cache with 60s TTL
 interface CacheEntry {
@@ -96,28 +100,28 @@ export async function getAnalyticsStats(
       : db.select({ count: count() }).from(subscriptions)
           .where(eq(subscriptions.status, 'active')),
     
-    // Current month revenue
+    // Current month revenue (total invoiced, regardless of payment status)
     workspaceId
       ? db.select({ total: sum(invoices.total) }).from(invoices)
           .where(and(
             eq(invoices.workspaceId, workspaceId),
-            gte(invoices.paidAt, currentMonthStart)
+            gte(invoices.createdAt, currentMonthStart)
           ))
       : db.select({ total: sum(invoices.total) }).from(invoices)
-          .where(gte(invoices.paidAt, currentMonthStart)),
+          .where(gte(invoices.createdAt, currentMonthStart)),
     
-    // Previous month revenue
+    // Previous month revenue (total invoiced, regardless of payment status)
     workspaceId
       ? db.select({ total: sum(invoices.total) }).from(invoices)
           .where(and(
             eq(invoices.workspaceId, workspaceId),
-            gte(invoices.paidAt, previousMonthStart),
-            lte(invoices.paidAt, previousMonthEnd)
+            gte(invoices.createdAt, previousMonthStart),
+            lte(invoices.createdAt, previousMonthEnd)
           ))
       : db.select({ total: sum(invoices.total) }).from(invoices)
           .where(and(
-            gte(invoices.paidAt, previousMonthStart),
-            lte(invoices.paidAt, previousMonthEnd)
+            gte(invoices.createdAt, previousMonthStart),
+            lte(invoices.createdAt, previousMonthEnd)
           )),
     
     // Open support tickets
@@ -173,14 +177,16 @@ export async function getAnalyticsStats(
       .where(eq(workspaces.id, workspaceId))
       .limit(1);
     
+    log.info(`[AnalyticsStats] workspaceId=${workspaceId}, workspaceFound=${!!workspace[0]}, employeesRaw=${JSON.stringify(employeesData[0])}, clientsRaw=${JSON.stringify(clientsData[0])}`);
+    
     if (workspace[0]) {
       workspaceDetails = {
         id: workspace[0].id,
         name: workspace[0].name || 'My Workspace',
         tier: workspace[0].subscriptionTier || 'free',
-        activeEmployees: employeesData[0]?.count || 0,
-        activeClients: clientsData[0]?.count || 0,
-        upcomingShifts: shiftsData[0]?.count || 0,
+        activeEmployees: Number(employeesData[0]?.count) || 0,
+        activeClients: Number(clientsData[0]?.count) || 0,
+        upcomingShifts: Number(shiftsData[0]?.count) || 0,
       };
     }
   }
@@ -194,7 +200,8 @@ export async function getAnalyticsStats(
   const dbStatus = dbHealthResult.status === 'operational' ? 'healthy' : 'degraded';
   
   // Calculate average first response time from actual ticket data
-  const avgResponseQuery = await db.execute(sql`
+  // CATEGORY C — Raw SQL retained: AVG( | Tables: support_tickets | Verified: 2026-03-23
+  const avgResponseQuery = await typedQuery(sql`
     SELECT 
       COALESCE(
         AVG(EXTRACT(EPOCH FROM (COALESCE(first_response_at, updated_at) - created_at)) / 3600),
@@ -205,25 +212,24 @@ export async function getAnalyticsStats(
     LIMIT 1000
   `).catch(() => null);
   
-  const avgFirstResponseHours = avgResponseQuery?.rows?.[0]?.avg_hours 
-    ? Math.round(parseFloat((avgResponseQuery.rows[0] as any).avg_hours) * 10) / 10
+  const avgFirstResponseHours = (avgResponseQuery as any)?.[0]?.avg_hours 
+    ? Math.round(parseFloat((avgResponseQuery as any)[0].avg_hours) * 10) / 10
     : 2.5;
 
   const stats: AnalyticsStats = {
     summary: {
-      totalWorkspaces: workspacesData[0]?.count || 0,
-      // CRITICAL FIX: Always use platform-wide count for summary, even when workspace-scoped
-      totalCustomers: workspaceId 
+      totalWorkspaces: Number(workspacesData[0]?.count) || 0,
+      totalCustomers: Number(workspaceId 
         ? (platformClientsData[0]?.count || 0)
-        : (clientsData[0]?.count || 0),
-      activeEmployees: employeesData[0]?.count || 0,
+        : (clientsData[0]?.count || 0)),
+      activeEmployees: Number(employeesData[0]?.count) || 0,
       monthlyRevenue: {
         amount: currentRevenue,
         currency: 'USD',
         previousMonth: previousRevenue,
         delta: revenueDelta,
       },
-      activeSubscriptions: subscriptionsData[0]?.count || 0,
+      activeSubscriptions: Number(subscriptionsData[0]?.count) || 0,
     },
     workspace: workspaceDetails,
     support: {

@@ -1,0 +1,207 @@
+Here it is — plain text, copy everything below this line:
+
+---
+
+COAILEAGUE — FULL FRONT TO BACK GAP SWEEP
+Unwired Code, Silent Failures, Dead Ends, Incomplete Pipelines
+Read everything before touching anything. Report all findings first. Then fix in order.
+
+This session established a critical discovery: dynamic imports inside try/catch blocks can be permanently broken and never surface in logs or startup checks. unifiedGeminiClient was silently broken for three code paths with zero alerts. The accounting integration form showed a success message while storing nothing. These two patterns — silent dynamic import failures and fake UI flows — must now be hunted across the entire codebase systematically.
+
+---
+
+PHASE 1 — SILENT FAILURE HUNT
+
+Scan every file for this pattern: dynamic import (await import()) inside a try/catch block where the catch block does NOT rethrow, does NOT alert platform_staff, and does NOT create any visible notification or log entry.
+
+For every instance found document: which file contains it, which file it is trying to import, whether that target file actually exists at that exact path, whether the catch block swallows the error silently, what functionality is lost when this import fails.
+
+Any dynamic import pointing to a file that does not exist is a silent broken path. Fix every instance: either create the missing file with real implementation or remove the import and the dead code path entirely.
+
+Also scan for: static imports at top of files pointing to non-existent files, functions called but never defined, services referenced in routes but never registered, Action Hub actions registered but pointing to handler functions that do not exist.
+
+Report every finding before fixing anything.
+
+---
+
+PHASE 2 — FAKE UI FLOWS AND BROKEN PROMISES
+
+Scan every form submission, every button onClick handler, every modal confirm action, and every API call in the frontend. For each one verify: the frontend makes a real API call not a setTimeout fake, the API endpoint actually exists on the backend, the endpoint writes to the database, the endpoint returns a real response the frontend uses, error states are handled and shown to the user.
+
+Specifically check these high-risk flows:
+
+ONBOARDING FLOW: New org signup — does it actually create a workspace, org_owner record, and initial subscription record? Trial credit allocation of 500 — does it fire on signup completion? Welcome notification to new org_owner — does it fire?
+
+STRIPE CHECKOUT FLOW: Plan selection button — does it create a real Stripe checkout session or navigate to a placeholder? Post-payment redirect — does it actually activate the subscription in the DB? Webhook confirmation — subscription must be activated by webhook confirmation, never by trusting the redirect URL alone.
+
+PASSWORD RESET FLOW: Request reset — does it actually send an email via Resend? Token validation — is the token checked server-side? Password update — is it actually written to the DB?
+
+EMPLOYEE INVITE FLOW: Send invite — does it actually send an email via Resend? Is the invite token stored in the DB for validation? Does accepting the invite actually create the employee record?
+
+DOCUMENT UPLOAD FLOW: 26 pending compliance documents exist — can org owners actually upload, approve, and lock documents? Is the WORM lock enforced at the DB level not just the UI level? Once locked no edits ever.
+
+INCIDENT REPORT SUBMISSION: Can officers submit from mobile? Does the report save with GPS coordinates, timestamp, and officer ID? Does it trigger a notification to the manager?
+
+CALL-OFF SUBMISSION: Can officers submit from mobile? Does it trigger Trinity to find a replacement? Does it notify the manager? Does it create an audit trail entry?
+
+PAYROLL APPROVAL FLOW: Does the approve button actually lock the records? Does it trigger pay stub generation? Does it notify employees their pay stub is ready? Verify Trinity NEVER auto-executes payroll — it only advises. Human must approve every time without exception.
+
+CLIENT INVOICE APPROVAL AND DELIVERY: 468 invoices exist but only 4 are paid — verify invoice delivery is actually sending invoices via Resend to client email addresses. Does the invoice have a payment link? Does a client paying update the invoice status to paid? Does payment trigger a revenue ledger entry?
+
+BACKGROUND CHECK INTEGRATION: Is this a real integration or a placeholder button? If placeholder — UI must say Coming Soon not pretend to submit.
+
+SSO SINGLE SIGN-ON (Enterprise): Is this implemented or a placeholder? If placeholder — hide from UI until implemented.
+
+WHITE LABEL OPTIONS (Enterprise): Is this implemented or a placeholder? If placeholder — hide from UI.
+
+REGULATOR PORTAL (Enterprise): Is this implemented or a placeholder? If not built — hide from UI.
+
+FLEET MANAGEMENT: Is vehicle assignment wired to real data? Is mileage logging storing actual records? Is maintenance scheduling functional?
+
+ARMORY AND WEAPON MANAGEMENT (Enterprise): Is this implemented or a placeholder?
+
+For every placeholder found: either build the real implementation or change the UI to clearly say Coming Soon. A feature that looks functional but does nothing is a trust-destroying bug.
+
+---
+
+PHASE 3 — TRINITY BROKEN CODE PATHS NOW UNBLOCKED
+
+Three specific Trinity paths were silently broken because unifiedGeminiClient.ts did not exist. Now that the file exists verify each path executes correctly end to end:
+
+PATH 1 — COO-Mode Strategic Analysis: Trigger a strategic analysis request through Trinity. Verify it reaches unifiedGeminiClient.generateContent. Verify a real response comes back from Gemini. Verify credit deduction fires at the correct 2x premium rate. Verify ledger entry notes it as a premium action.
+
+PATH 2 — Autonomous Scheduler Shift-Placement AI: Trigger an autonomous scheduling decision. Verify it reaches unifiedGeminiClient. Verify the AI recommendation is generated. Verify it is presented to the manager for approval and NOT auto-executed. Verify the credit deduction and manager notification both fire.
+
+PATH 3 — Maintenance Health Check Endpoint: Hit the maintenance health endpoint. Verify it returns real data not a 500 error. Verify unifiedGeminiClient responds correctly.
+
+---
+
+PHASE 4 — THE 200 OPEN UNASSIGNED SHIFTS
+
+200 future unassigned shifts for a 55-guard org is approximately 7 per day. Trinity must be proactively alerting on these.
+
+Verify: Does Trinity scan for unassigned shifts and alert managers? If not build the proactive gap detection now:
+
+Scan for unassigned shifts every hour.
+At 72 hours before shift start with no officer: WARNING to manager via notification panel and Org Operations Briefing Channel.
+At 24 hours before shift start with no officer: URGENT to manager and org_owner via all three channels.
+At 4 hours before shift start with no officer: CRITICAL alert all channels plus Trinity automatically begins finding replacement candidates and presents ranked list to manager for one-click assignment.
+
+---
+
+PHASE 5 — THE 1 SCHEDULER JOB FAILED NOTIFICATION
+
+A failed scheduler job that is only monitored is not fixed. Find the scheduler_job_failed notification in the notifications table. Identify exactly which job failed, when, what it was supposed to do, and why it failed. Fix the underlying job failure. Verify the job runs successfully after the fix. Add permanent monitoring: if any scheduled job fails more than once consecutively alert platform_staff immediately.
+
+---
+
+PHASE 6 — FIVE COMMUNICATION CHANNELS END TO END
+
+CHANNEL 1 — Notification Panel: All 6 types fire and display correctly: Informational, Navigational, Actionable, Document Pipeline, Credit/Billing, Trinity Advisory. Notifications are workspace-scoped — org A never sees org B notifications. Mark as read works and persists. Notification badge updates in real time via WebSocket.
+
+CHANNEL 2 — Trinity Chat Dock: Chat opens from notification context handoff with context pre-loaded. Command execution works in chat. Credit deduction fires on every exchange. Conversation history persists per session.
+
+CHANNEL 3 — Org Operations Briefing Channel: Visible to org_owner and manager only — employee role cannot see it. Daily briefings post automatically. Briefings include deep links to exact records.
+
+CHANNEL 4 — Internal Email Pipeline via Resend: calloffs@ address — does an email create a call-off record? incidents@ address — does an email create an incident record? docs@ address — does an email attach a document? support@ address — does an email create a support ticket? If inbound routing is not yet live — document exactly what is needed to activate it.
+
+CHANNEL 5 — Deep Links: Every notification referencing a record must contain a deep link to that exact record. Deep links work when user is logged in. Deep links redirect to login then return to target when user is not logged in.
+
+---
+
+PHASE 7 — WEBSOCKET REAL-TIME VERIFICATION
+
+Verify WebSocket events fire correctly for every one of these: employee clocks in (manager dashboard updates), employee clocks out (timesheet updates), new incident reported (manager notified), shift assigned or changed (affected employee notified), call-off submitted (manager notified), invoice paid (revenue widget updates), credit balance changes (credits widget updates), Trinity posts a briefing (Briefing Channel updates), new notification (badge count updates).
+
+For each event verify: the backend emits the event when the trigger occurs, the frontend listener handles it and updates the UI, the event is workspace-scoped and never leaks to other workspaces, disconnected clients reconnect and receive missed events.
+
+---
+
+PHASE 8 — MOBILE END TO END
+
+GPS CLOCK-IN: Officer opens app on mobile. GPS coordinates captured. Geofence validation fires — is officer within range of the site? If outside geofence — is it blocked or warned and logged? Clock-in record created with GPS coordinates, timestamp, officer ID, site ID. Manager sees real-time notification.
+
+GPS CLOCK-OUT: Captures GPS coordinates. If officer clocks out from unexpected location flag it. Overnight shift — does the time entry handle midnight correctly as one entry not two?
+
+SHIFT SWAP FROM MOBILE: Officer requests swap. Target officer notified. Target accepts or declines from mobile. Manager approves final swap from mobile. Both officers receive confirmation.
+
+INCIDENT REPORT FROM MOBILE: Officer submits with photo attachment. GPS auto-populates. Submission fires manager notification in real time.
+
+SCHEDULE VIEW FROM MOBILE: Officer sees their schedule clearly on small screen. Next shift prominently displayed with site address, post orders, contact info.
+
+CALL-OFF FROM MOBILE: Officer submits with reason. Manager and Trinity notified immediately. Trinity begins finding replacement and presents options to manager.
+
+---
+
+PHASE 9 — ZERO TOLERANCE SYSTEMS FINAL VERIFICATION
+
+CLOCK IN/OUT PIPELINE: Clock in to GPS capture to geofence validation to record created to manager notified. Duplicate clock-in prevention — cannot clock in twice without clocking out. Overnight shift handling is one time entry not two.
+
+SCHEDULE SYSTEM: Shift created triggers conflict detection. If conflict found block and notify. Shift published notifies all assigned officers. Unassigned shift Trinity alerts fire on escalating timeline.
+
+TIMESHEET SYSTEM: Time entries auto-generate from clock records — no manual entry required. Approval workflow: employee reviews, manager approves. Locked timesheets cannot be edited — enforced at DB level not UI level.
+
+PAYROLL PIPELINE: 10 payroll runs exist — verify each has approved_by set not null. Trinity advisory only — verify no payroll has ever auto-executed without human approval. Pay stub generation produces correct PDFs. Employees notified when pay stub is ready.
+
+CLIENT BILLING PIPELINE: 468 invoices sent, 4 paid — verify invoice delivery is actually happening via Resend. Does each invoice contain a working payment link? When a client pays does invoice status update to paid? Does payment trigger a revenue ledger entry? The 1 overdue invoice at $3.12K — is Trinity generating a collections alert? Build overdue escalation: 1 day past due reminder, 7 days escalation, 30 days Trinity flags for org_owner with recommended action.
+
+MONEY MOVEMENT AUDIT TRAIL: Every financial transaction has an immutable audit entry. Audit trail is exportable as PDF. Audit entries cannot be edited or deleted — enforced at DB level.
+
+---
+
+PHASE 10 — AUTH AND ROLE BOUNDARY FINAL SWEEP
+
+For every API route in every router file document: route path and method, authentication middleware present yes or no, which roles can access this route, whether the route correctly scopes data to the requesting org's workspace only.
+
+Boundaries that must be enforced absolutely:
+
+org_admin (Administrative Internal) — NO access to: billing and credit information, platform staff views, other workspace data, payroll calculation details.
+
+employee role — NO access to: other employees schedules (own only), payroll data (own pay stubs only), client information, financial data, Trinity COO interface.
+
+platform_staff — NO access to: actual org financial data, employee PII beyond support requirements, client data.
+
+Cross-workspace isolation: no query should return data from a workspace different from the authenticated user's workspace. This must be enforced at the query level with workspace_id filter not just at the UI level. Run a targeted check: for every database query that does not include a workspace_id filter — is it intentionally global or is it a workspace isolation leak?
+
+---
+
+PHASE 11 — ENVIRONMENT AND DEPLOYMENT READINESS
+
+Verify every environment variable required by the application: documented in .env.example, present in production environment, present in test environment, application fails gracefully with a clear error if missing rather than crashing.
+
+Specifically verify: STRIPE_SECRET_KEY is production key not test key in production, STRIPE_WEBHOOK_SECRET is set with signature verification active, RESEND_API_KEY is set and email delivery functional, DATABASE_URL points to production DB, SESSION_SECRET is set and not a placeholder value, GEMINI_API_KEY is set and Trinity operational, all other keys required by services built in recent sessions.
+
+Rate limiting: is rate limiting active on auth endpoints (login, signup, password reset)? Minimum 10 attempts per 15 minutes per IP on all auth endpoints. Without this brute force attacks on login are trivial.
+
+Error handling: unhandled promise rejections have a global handler that logs without crashing. 500 errors return a generic message to the client never a stack trace. Stack traces expose codebase structure to attackers.
+
+---
+
+PHASE 12 — PRODUCTION DATA PROTECTION
+
+Statewide Protective Services is production. Acme is dev sandbox. This boundary must be enforced by code not convention.
+
+Add a guard to every seed script, migration script, and test utility:
+if workspace name equals Statewide Protective Services or workspace_id equals Statewide workspace ID then throw error: PRODUCTION WORKSPACE WRITE BLOCKED — USE ACME SANDBOX.
+
+No test or development API endpoint is reachable in production. Any route prefixed with /dev/ or /test/ or /seed/ or /debug/ must be completely disabled when NODE_ENV is production.
+
+Verify there is no shared data between workspaces at the DB level.
+
+---
+
+FINAL VERIFICATION AFTER ALL PHASES COMPLETE
+
+Clean build: exit 0, zero errors.
+Server restart: zero unhandled rejections, zero missing module errors.
+Trinity startup: 736+ actions, drift=0, 15/15 domains, 28/28 services.
+Silent failure scan: zero dynamic imports pointing to missing files.
+Fake UI scan: zero setTimeout calls replacing real API calls.
+Auth boundary: zero routes missing auth middleware where auth is required.
+Workspace isolation: zero queries missing workspace_id filter where required.
+Environment variables: all required vars documented and present.
+Production guard: Statewide workspace write-protected in all scripts.
+Scheduler job: the 1 failed job is fixed and running cleanly.
+All 10 verification tests from credit system prompt still passing.
+
+Document every finding from every phase. Document every fix applied. Document everything still pending that could not be fixed this session. Nothing undocumented. Nothing assumed complete without verification.

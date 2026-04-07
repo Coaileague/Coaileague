@@ -136,7 +136,7 @@ export function useWorkflowProposals() {
       const endpoint = type === 'schedule' ? '/api/scheduleos/proposals' : 
                        type === 'invoice' ? '/api/invoices/proposals' :
                        '/api/payroll/proposals';
-      await apiRequest('POST', `${endpoint}/${id}/${action}`, reason ? { reason } : {});
+      await apiRequest('PATCH', `${endpoint}/${id}/${action}`, reason ? { reason } : {});
     },
     onSuccess: (_, { action, type }) => {
       // Invalidate all proposal queries to sync across views

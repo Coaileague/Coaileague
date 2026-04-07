@@ -169,7 +169,7 @@ export function HelpDeskCommandBar({
           {/* Staff Controls */}
           {isStaff && (
             <>
-              <div className="flex items-center gap-2 pr-4 border-r-2 border-slate-300 bg-muted/50 px-3 py-1 rounded-md">
+              <div className="flex items-center gap-2 pr-4 bg-muted/50 px-3 py-1 rounded-md">
                 <div className="flex items-center gap-2">
                   <label className="text-xs font-bold text-foreground flex items-center gap-1">
                     Status:
@@ -180,7 +180,7 @@ export function HelpDeskCommandBar({
                   <select
                     value={userStatus}
                     onChange={(e) => onStatusChange?.(e.target.value as any)}
-                    className="h-9 px-3 border-2 border-primary rounded-md text-xs font-semibold bg-white text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
+                    className="h-9 px-3 border border-primary rounded-md text-xs font-semibold bg-white text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
                     data-testid="select-status"
                   >
                     <option value="online">● Available</option>
@@ -206,7 +206,7 @@ export function HelpDeskCommandBar({
                   size="sm"
                   className={`h-9 text-xs gap-2 font-semibold transition-all ${
                     aiEnabled 
-                      ? 'bg-gradient-to-r from-violet-500 to-purple-600 border-violet-400 text-white hover:from-violet-600 hover:to-purple-700' 
+                      ? 'bg-gradient-to-r from-violet-500 to-purple-600 border-violet-400 text-white' 
                       : 'bg-slate-50 border-slate-400 text-slate-600 hover:bg-slate-100'
                   }`}
                   data-testid="button-toggle-ai"

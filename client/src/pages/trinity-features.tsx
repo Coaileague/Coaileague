@@ -1,352 +1,766 @@
-import { motion } from 'framer-motion';
 import { Link } from 'wouter';
-import { Helmet } from 'react-helmet-async';
-import { 
-  Brain, Zap, Heart, Shield, Clock, Target, TrendingUp, Users, 
-  MessageSquare, CheckCircle, ArrowRight, Sparkles, Eye, Bot,
-  Calendar, DollarSign, FileText, Bell, Settings, BarChart3
-} from 'lucide-react';
+import { SEO } from '@/components/seo';
 import { UniversalHeader } from '@/components/universal-header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import TrinityMarketingHero, { TrinitySpotlight } from '@/components/trinity-marketing-hero';
+import {
+  Brain, Shield, Users, MessageSquare, ArrowRight, Calendar, DollarSign,
+  FileText, BarChart3, MapPin, Briefcase, Building2, Zap, Eye, BookOpen,
+  Lightbulb, Heart, Network, ListChecks, Layers, Mic, Clock, Calculator,
+  CheckCircle2, Star, AlarmClock, Wallet, Leaf, Sparkles, Bot, Lock,
+  Activity, Cpu, GitBranch,
+} from 'lucide-react';
+import { PRICING_TIERS } from '@/config/pricing';
 
-export default function TrinityFeatures() {
-  const features = [
-    {
-      icon: Eye,
-      title: 'Context-Aware Intelligence',
-      headline: 'Trinity Knows What You\'re Working On',
-      description: 'Trinity doesn\'t just wait for questions. She understands what page you\'re on, what data you\'re viewing, and what challenges you\'re facing. Working on next week\'s schedule? Trinity notices open shifts and offers to fill them optimally. Reviewing payroll? She flags overtime issues before they become problems.',
-      benefits: [
-        'Proactive suggestions based on your current context',
-        'Automatic issue detection and recommendations',
-        'No need to explain what you\'re doing - Trinity already knows'
-      ],
-      color: 'cyan'
-    },
-    {
-      icon: BarChart3,
-      title: 'Business Optimization',
-      headline: 'Data-Driven Insights That Actually Help',
-      description: 'Trinity has access to your complete business data: employee schedules, client contracts, time tracking with GPS, payroll costs, overtime trends, and QuickBooks financials. She doesn\'t just show you numbers—she tells you what they MEAN and what to DO about them.',
-      benefits: [
-        'Ask "Why is my profit down?" and get actionable answers',
-        'Real-time financial health monitoring',
-        'Proactive alerts before small issues become big problems'
-      ],
-      color: 'teal'
-    },
-    {
-      icon: Zap,
-      title: 'Intelligent Automation',
-      headline: 'Trinity Doesn\'t Just Advise—She Acts',
-      description: 'With your approval, Trinity can execute tasks on your behalf: auto-fill open shifts based on availability and certifications, send payment reminders to overdue clients, flag overtime violations, sync QuickBooks data, and notify employees of schedule changes.',
-      benefits: [
-        'Execute actions with a single approval',
-        'High-risk actions require confirmation for safety',
-        'Save hours every week on repetitive tasks'
-      ],
-      color: 'blue'
-    },
-    {
-      icon: Heart,
-      title: 'Personal Growth & Accountability',
-      headline: 'We Care About YOU, Not Just Your Business',
-      description: 'Enable Personal Mode and Trinity becomes BUDDY—your accountability partner who challenges you to become a better leader, holds you accountable to commitments, and provides honest feedback even when uncomfortable. Optional spiritual guidance (Christian, general, or none) supports your whole self.',
-      benefits: [
-        'Personal development coaching tailored to you',
-        'Accountability that actually works',
-        'Business success starts with personal growth'
-      ],
-      color: 'purple'
-    },
-    {
-      icon: Brain,
-      title: 'Holistic Insights',
-      headline: 'Trinity Sees What You Can\'t',
-      description: 'Trinity\'s Integrated Mode connects business performance to personal patterns. She might notice your employee turnover spiked when you started working 80-hour weeks, or your profit dropped when you stopped holding team meetings. Business problems are often leadership problems in disguise.',
-      benefits: [
-        'Connect personal habits to business outcomes',
-        'Pattern recognition across all your data',
-        'Insights no other platform offers'
-      ],
-      color: 'amber'
-    },
-    {
-      icon: Clock,
-      title: 'Always Available',
-      headline: '24/7 Support When You Need It',
-      description: '3 AM and can\'t sleep because you\'re worried about payroll? Trinity\'s there. Stuck on a tough decision? Trinity helps you think it through. Unlike robotic AI assistants, Trinity feels like a real partner who knows you and remembers your history.',
-      benefits: [
-        'Available any time, any device',
-        'Remembers your preferences and history',
-        'Genuinely cares about your success'
-      ],
-      color: 'green'
-    }
-  ];
+// ─── Who Is Trinity? — Full Spotlight ────────────────────────────────────────
 
-  const comparisonData = [
-    { feature: 'AI-Powered Scheduling', coaileague: true, whenIWork: false, deputy: false, gusto: false },
-    { feature: 'Context-Aware Assistant', coaileague: true, whenIWork: false, deputy: false, gusto: false },
-    { feature: 'QuickBooks Deep Integration', coaileague: true, whenIWork: 'Basic', deputy: 'Basic', gusto: true },
-    { feature: 'Personal Development Coaching', coaileague: true, whenIWork: false, deputy: false, gusto: false },
-    { feature: 'Proactive Business Insights', coaileague: true, whenIWork: false, deputy: false, gusto: false },
-    { feature: 'Intelligent Automation', coaileague: true, whenIWork: false, deputy: false, gusto: false },
-    { feature: 'Actually Cares About Your Growth', coaileague: true, whenIWork: false, deputy: false, gusto: false },
-  ];
+const BRAIN_SYSTEMS = [
+  {
+    icon: Brain,
+    name: "Memory System",
+    plain: "Trinity remembers every officer — their history, certifications, performance patterns, and past issues. She uses that memory to make smarter decisions today.",
+  },
+  {
+    icon: Eye,
+    name: "Perception Engine",
+    plain: "She scans your entire operation constantly, the way a great manager would scan a room. She notices things before they become problems: a coverage gap, an overtime risk, a license expiring.",
+  },
+  {
+    icon: Zap,
+    name: "Pattern Recognition",
+    plain: "Trinity sees patterns humans miss. She knows which officer is likely to call off before they do. She knows which site consistently goes short on Fridays. She acts before you have to.",
+  },
+  {
+    icon: Lightbulb,
+    name: "Planning Mind",
+    plain: "She does not just react. She thinks days ahead — running simulations of possible conflicts, payroll risks, and compliance gaps, then resolving them in advance.",
+  },
+  {
+    icon: Heart,
+    name: "Emotional Intelligence",
+    plain: "Trinity tracks the human side of your team. She notices burnout signs, monitors morale indicators, and flags officers who may be struggling — so people want to keep working for you.",
+  },
+  {
+    icon: Network,
+    name: "Learning Engine",
+    plain: "Every action Trinity takes teaches her something. She learns your preferences, your company's patterns, and what works for your specific team — getting smarter every single day.",
+  },
+  {
+    icon: Activity,
+    name: "Autonomous Execution",
+    plain: "She does not just identify problems and hand them to you. She resolves them — filling shifts, sending alerts, processing payroll, generating reports — without being asked.",
+  },
+  {
+    icon: GitBranch,
+    name: "Reasoning Engine",
+    plain: "Before Trinity acts, she reasons through the options. She weighs fairness, safety, legal compliance, and your budget — then makes a decision she can explain to you in plain English.",
+  },
+  {
+    icon: Shield,
+    name: "Compliance Guard",
+    plain: "A built-in compliance layer monitors schedules, payroll, and incident reports against your configured policies and state requirements. Flags potential issues for manager review before they escalate.",
+  },
+];
 
-  const testimonials = [
-    {
-      quote: "Trinity noticed I was scheduling too many overtime shifts and suggested hiring one more guard. I did, and my labor costs dropped 12% in one month. She paid for herself immediately.",
-      author: "Security Company Owner",
-      role: "Beta Customer"
-    },
-    {
-      quote: "I was skeptical about Personal Mode at first. But Trinity called me out on avoiding a difficult conversation with an underperforming manager. She was right. My entire team improved.",
-      author: "Operations Manager",
-      role: "Beta Customer"
-    },
-    {
-      quote: "I've used When I Work, Deputy, and Homebase. Trinity is in a different league. She doesn't just track time—she thinks WITH me about how to grow my business.",
-      author: "CEO",
-      role: "Beta Customer"
-    }
+const CONSCIENCE_ITEMS = [
+  "She is configured to flag potential license conflicts before scheduling — managers make the final call.",
+  "She surfaces decisions that affect someone's job or pay for your review before acting.",
+  "She escalates officer safety concerns immediately — always contact 911 for emergencies.",
+  "She routes major financial and personnel actions to your approval queue, never bypassing them.",
+  "She logs all actions and flags anomalies in the audit trail — your team reviews outcomes.",
+  "She applies your configured data access controls to protect officer personal information.",
+];
+
+const TRINITY_CAPABILITIES = [
+  {
+    icon: Calendar,
+    name: "Scheduling (Her Core Job)",
+    description: "Runs your entire schedule around the clock. Fills gaps, handles calloffs, prevents overtime, and keeps every site covered every night — no phone calls to you required.",
+    color: "bg-primary/10 text-primary",
+  },
+  {
+    icon: Bot,
+    name: "HelpAI — Officer Field Assistant",
+    description: "The face your officers see. Lives in every shift room. Answers questions, takes calloffs, files incident reports, and looks up schedules — by text or voice, instantly.",
+    color: "bg-teal-500/10 text-teal-400",
+  },
+  {
+    icon: DollarSign,
+    name: "Payroll — Automated, Fully",
+    description: "Automates payroll data collection, hours calculation, and report generation — direct deposit, tax withholding, W-2s and 1099s. All runs require manager review and approval before funds are processed.",
+    color: "bg-green-500/10 text-green-400",
+  },
+  {
+    icon: FileText,
+    name: "Incident Reports — Structured & Time-Stamped",
+    description: "Analyzes incidents and drafts structured narratives. GPS-stamped and time-verified — reviewed and finalized by your supervisors before submission.",
+    color: "bg-blue-500/10 text-blue-400",
+  },
+  {
+    icon: Shield,
+    name: "Compliance — Real-Time Legal Guard",
+    description: "Monitors every license and certification. Blocks unqualified assignments before they happen. Cites the exact statute for every decision. All 50 states covered.",
+    color: "bg-yellow-500/10 text-yellow-400",
+  },
+  {
+    icon: Briefcase,
+    name: "Business Advisor — Strategic Partner",
+    description: "Analyzes your margins, flags unprofitable contracts, identifies your best and worst clients, and tells you where your money is going — and what to do about it.",
+    color: "bg-violet-500/10 text-violet-400",
+  },
+  {
+    icon: MapPin,
+    name: "Officer Safety — Always Watching",
+    description: "Tracks GPS and check-ins in real time. Responds to panic alerts in seconds. Notifies supervisors, dispatches help, and documents everything — automatically.",
+    color: "bg-red-500/10 text-red-400",
+  },
+  {
+    icon: MessageSquare,
+    name: "Client Relations — Proactive",
+    description: "Manages client service requests and contract health. Alerts you when a relationship is at risk and recommends exactly what to do to keep the account.",
+    color: "bg-orange-500/10 text-orange-400",
+  },
+];
+
+function WhoIsTrinitySection() {
+  return (
+    <section className="py-20 border-b border-border bg-gradient-to-b from-violet-950/10 to-background">
+      <div className="max-w-5xl mx-auto px-4">
+
+        <div className="text-center mb-16">
+          <Badge className="mb-4 bg-violet-500/10 text-violet-400 border-violet-500/20">
+            <Sparkles className="w-3 h-3 mr-1.5" />
+            Trinity — The Heart of CoAIleague
+          </Badge>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-5 leading-tight">
+            She Is Not Software.
+            <span className="block text-violet-400">She Is a Mind Built for Your Business.</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Trinity is CoAIleague's core product and the reason everything works. She is an artificial intelligence with a simulated human brain — one that thinks ahead, learns from experience, recognizes patterns before they become problems, and refuses to do anything that could hurt your company or your people. She does not just follow instructions. She understands your business and runs it.
+          </p>
+        </div>
+
+        <div className="mb-16">
+          <div className="text-center mb-8">
+            <p className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-2">Her Mind</p>
+            <h3 className="text-2xl font-bold text-foreground">Trinity Has a Brain. An Actual One.</h3>
+            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto text-sm">
+              Engineers built Trinity with an architecture that mirrors how the human brain works — because it produces better decisions than traditional software. Here is what is running inside her.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {BRAIN_SYSTEMS.map(({ icon: Icon, name, plain }) => (
+              <div key={name} className="bg-card border border-border rounded-md p-4 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded bg-violet-500/10 flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">{name}</p>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{plain}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-8 mb-16">
+          <div className="flex items-start gap-5">
+            <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+              <Heart className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">Her Conscience</p>
+              <h3 className="text-xl font-bold text-foreground mb-3">She Has Values She Will Not Compromise On.</h3>
+              <p className="text-muted-foreground leading-relaxed mb-5 text-sm">
+                Trinity does not just do whatever you ask. She was built with a conscience — a set of principles she holds regardless of any instruction. These are not bugs or limitations. They are what make her trustworthy. She works for you. But she also protects you from yourself, from legal risk, and from anything that could harm your people.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {CONSCIENCE_ITEMS.map((item) => (
+                  <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="text-center mb-8">
+            <p className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-2">Her Capabilities</p>
+            <h3 className="text-2xl font-bold text-foreground">One Mind. Every Job in Your Company.</h3>
+            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto text-sm">
+              Trinity works in different modes depending on what is needed. These are not separate bots — they are all her, the same mind wearing different hats. HelpAI, scheduling, payroll, compliance, reports, safety — Trinity handles all of it.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {TRINITY_CAPABILITIES.map(({ icon: Icon, name, description, color }) => (
+              <div key={name} className="flex gap-4 items-start bg-card border border-border rounded-md p-4">
+                <div className={`w-9 h-9 rounded flex items-center justify-center shrink-0 ${color}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+// ─── Stats bar ────────────────────────────────────────────────────────────────
+
+const STATS = [
+  { icon: DollarSign, value: "$8K–$25K", label: "Monthly overhead eliminated in first 60 days" },
+  { icon: AlarmClock, value: "47 days", label: "Average payback period" },
+  { icon: Shield, value: "All 50", label: "States covered for compliance" },
+  { icon: Clock, value: "40+", label: "Hours automated per week per client" },
+];
+
+function StatsBar() {
+  return (
+    <div className="bg-primary py-6">
+      <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6">
+        {STATS.map(({ icon: Icon, value, label }) => (
+          <div key={label} className="flex flex-col items-center text-center gap-1">
+            <Icon className="w-5 h-5 text-primary-foreground/70 mb-1" />
+            <p className="text-xl font-bold text-primary-foreground">{value}</p>
+            <p className="text-xs text-primary-foreground/70">{label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Feature bullet list ──────────────────────────────────────────────────────
+
+function FeatureList({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-2 mt-4">
+      {items.map(item => (
+        <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-1.5" />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ─── Feature section (alternating layouts) ────────────────────────────────────
+
+interface FeatureSectionProps {
+  eyebrow: string;
+  headline: string;
+  body: string;
+  items: string[];
+  visual: React.ReactNode;
+  reverse?: boolean;
+  gold?: boolean;
+  purple?: boolean;
+}
+
+function FeatureSection({ eyebrow, headline, body, items, visual, reverse, gold, purple }: FeatureSectionProps) {
+  const bg = gold ? "bg-primary/5 border-t border-b border-primary/20" : "border-t border-border";
+  const eyebrowColor = purple ? "text-violet-400" : gold ? "text-foreground/60" : "text-primary";
+
+  return (
+    <section className={`${bg} py-16`}>
+      <div className="max-w-5xl mx-auto px-4">
+        <div className={`grid md:grid-cols-2 gap-12 items-center ${reverse ? "md:[&>*:first-child]:order-2" : ""}`}>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-widest mb-2 ${eyebrowColor}`}>{eyebrow}</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4 leading-tight">{headline}</h2>
+            <p className="text-muted-foreground leading-relaxed">{body}</p>
+            <FeatureList items={items} />
+          </div>
+          <div className="flex items-center justify-center">
+            {visual}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Dashboard mock visual ────────────────────────────────────────────────────
+
+function DashboardMock() {
+  return (
+    <div className="w-full max-w-sm rounded-md bg-card border border-border p-4 space-y-3 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-foreground">Trinity Morning Brief</span>
+        <Badge variant="secondary" className="text-xs">6:00 AM</Badge>
+      </div>
+      <div className="space-y-2">
+        {[
+          { icon: CheckCircle2, color: "text-green-400", label: "23/23 sites covered" },
+          { icon: Shield, color: "text-yellow-400", label: "2 license expirations in 7 days" },
+          { icon: Users, color: "text-primary", label: "1 predicted calloff — backup ready" },
+          { icon: DollarSign, color: "text-green-400", label: "Payroll runs in 3 days — on track" },
+          { icon: BarChart3, color: "text-primary", label: "Site A contract at 94% health" },
+        ].map(({ icon: Icon, color, label }) => (
+          <div key={label} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Icon className={`w-3.5 h-3.5 shrink-0 ${color}`} />
+            {label}
+          </div>
+        ))}
+      </div>
+      <div className="pt-2 border-t border-border text-xs text-muted-foreground italic">
+        "Good morning. Your operation is stable. I resolved 3 overnight issues without waking you."
+      </div>
+    </div>
+  );
+}
+
+function OfficerProfileMock() {
+  return (
+    <div className="w-full max-w-sm rounded-md bg-card border border-border p-4 space-y-3 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+          <Users className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Marcus T.</p>
+          <p className="text-xs text-muted-foreground">2 years, 4 months</p>
+        </div>
+        <Badge className="ml-auto bg-green-500/10 text-green-400 border-green-500/20">Top Performer</Badge>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {[
+          { label: "Reliability", value: "98%" },
+          { label: "Report Quality", value: "A+" },
+          { label: "Peer Score", value: "4.9" },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-muted/30 rounded-md py-2">
+            <p className="text-sm font-bold text-foreground">{value}</p>
+            <p className="text-xs text-muted-foreground">{label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="text-xs text-primary font-medium">
+        Trinity recommends: $0.75/hr raise — 18 months of excellence
+      </div>
+    </div>
+  );
+}
+
+function PayrollMock() {
+  return (
+    <div className="w-full max-w-sm rounded-md bg-card border border-border p-4 space-y-3 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-foreground">Payroll Run — March</span>
+        <Badge variant="secondary">Ready to Process</Badge>
+      </div>
+      <div className="space-y-1.5 text-xs">
+        {[
+          ["Employees processed", "47"],
+          ["Total gross wages", "$187,250"],
+          ["Federal income tax", "$28,900 withheld"],
+          ["FICA (OASDI + Medicare)", "$14,325 withheld"],
+          ["State income tax (TX)", "No state income tax"],
+          ["Direct deposits queued", "43 of 47"],
+          ["Paper checks", "4"],
+        ].map(([label, value]) => (
+          <div key={label} className="flex justify-between">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="text-foreground">{value}</span>
+          </div>
+        ))}
+      </div>
+      <Button size="sm" className="w-full" variant="outline">Process Payroll</Button>
+    </div>
+  );
+}
+
+function ComplianceMock() {
+  return (
+    <div className="w-full max-w-sm rounded-md bg-card border border-border p-4 space-y-3 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-foreground">Compliance — Texas DPS</span>
+        <Badge className="bg-green-500/10 text-green-400 border-green-500/20">Compliant</Badge>
+      </div>
+      <div className="space-y-2">
+        {[
+          { label: "Officer K. Rodriguez", status: "Expires in 8 days", color: "text-yellow-400" },
+          { label: "Post: Armed Commercial Site", status: "License guard verified", color: "text-green-400" },
+          { label: "Statute: Tex. Occ. Code §1702.323", status: "Shift blocked — unlicensed guard", color: "text-red-400" },
+        ].map(({ label, status, color }) => (
+          <div key={label} className="border-b border-border/40 pb-2 text-xs last:border-b-0 last:pb-0">
+            <p className="text-muted-foreground">{label}</p>
+            <p className={`font-medium ${color}`}>{status}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SafetyMock() {
+  return (
+    <div className="w-full max-w-sm rounded-md bg-card border border-border p-4 space-y-3 shadow-sm">
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+        <span className="text-xs font-semibold text-red-400">PANIC ALERT — Downtown Site 3</span>
+      </div>
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>Officer: J. Williams</p>
+        <p>GPS: 29.7604° N, 95.3698° W</p>
+        <p>Time: 2:17 AM</p>
+        <p className="text-yellow-400 font-medium">5 supervisors notified in 0.8 seconds</p>
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1 text-xs">Dispatch</Button>
+        <Button size="sm" className="flex-1 text-xs">Alert Supervisor</Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">Officers should call 911 directly in emergencies</p>
+    </div>
+  );
+}
+
+function VoiceMock() {
+  return (
+    <div className="w-full max-w-sm rounded-md bg-card border border-border p-4 space-y-3 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <Mic className="w-4 h-4 text-primary" />
+        <span className="text-xs font-semibold text-foreground">HelpAI Voice — Officer Mode</span>
+      </div>
+      <div className="space-y-2 text-xs">
+        <div className="flex justify-end">
+          <div className="bg-primary/20 text-primary-foreground rounded-md px-3 py-1.5 max-w-[80%]">
+            "Clock me in at Site B"
+          </div>
+        </div>
+        <div className="flex justify-start">
+          <div className="bg-muted rounded-md px-3 py-1.5 max-w-[80%] text-muted-foreground">
+            "Clocked in at Site B — 10:02 PM. Your post orders are: patrol south perimeter every 30 minutes. Stay safe out there."
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <div className="bg-primary/20 text-primary-foreground rounded-md px-3 py-1.5 max-w-[80%]">
+            "File an incident report"
+          </div>
+        </div>
+        <div className="flex justify-start">
+          <div className="bg-muted rounded-md px-3 py-1.5 max-w-[80%] text-muted-foreground">
+            "Ready. Describe what happened — I'll write the full legal narrative."
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Trinity Intelligence cards ───────────────────────────────────────────────
+
+const AI_CARDS = [
+  {
+    icon: BookOpen,
+    title: "Remembers Everything",
+    body: "Trinity knows every officer, every client, every incident, and every decision in your organization's history. She never forgets. She never starts fresh.",
+  },
+  {
+    icon: BarChart3,
+    title: "Predicts Problems",
+    body: "Calloffs before they happen. Overtime before payroll closes. Client churn before the complaint. Coverage gaps before the shift starts.",
+  },
+  {
+    icon: Zap,
+    title: "Acts Without Being Asked",
+    body: "Trinity self-assigns tasks she knows need to be done. She tries three different approaches before escalating to a human. She runs while you sleep.",
+  },
+  {
+    icon: Brain,
+    title: "Gets Smarter Every Night",
+    body: "13-phase overnight processing cycle. Hebbian learning from every decision outcome. Counterfactual simulation from every mistake. She improves continuously.",
+  },
+  {
+    icon: Shield,
+    title: "Cites the Law",
+    body: "When Trinity makes a compliance recommendation, she cites the exact statute. Not a general warning. The specific law, the specific section, the specific penalty.",
+  },
+  {
+    icon: Heart,
+    title: "Treats People Like People",
+    body: "Trinity celebrates birthdays, flags burnout, remembers anniversaries, and sends personal messages. Your officers feel known by their AI — not managed by software.",
+  },
+];
+
+// ─── Pricing teaser ───────────────────────────────────────────────────────────
+
+function PricingTeaser() {
+  const TEASER_TIERS = [
+    { name: "Starter", price: "$199/month", seats: "10 seats" },
+    { name: "Professional", price: "$749/month", seats: "30 seats" },
+    { name: "Business", price: "$2,249/month", seats: "75 seats" },
+    { name: "Enterprise", price: "$6,999/month", seats: "200 seats" },
+    { name: "Strategic", price: "Contact Us", seats: "300+ officers" },
   ];
 
   return (
+    <section className="border-t border-primary/20 bg-primary/5 py-14">
+      <div className="max-w-4xl mx-auto px-4 text-center">
+        <h2 className="text-2xl font-bold text-foreground mb-2">Simple Per-Seat Pricing. Everything Included.</h2>
+        <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+          From 10 officers to 10,000 — your seat price includes Trinity's full AI brain and every
+          feature in your plan. No add-ons. No credits. No surprises.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
+          {TEASER_TIERS.map(({ name, price, seats }) => (
+            <div key={name} className="bg-card border border-border rounded-md p-3 text-center">
+              <p className="text-sm font-semibold text-foreground">{name}</p>
+              <p className="text-xs text-primary font-medium mt-1">{price}</p>
+              <p className="text-xs text-muted-foreground">{seats}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <Link href="/pricing">
+            <Button data-testid="button-teaser-see-pricing">
+              See Full Pricing
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button variant="outline" data-testid="button-teaser-trial">
+              Start Free Trial
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function TrinityFeatures() {
+  return (
     <>
-      <Helmet>
-        <title>Trinity AI Assistant - Your Always-On Business Partner | CoAIleague</title>
-        <meta name="description" content="Meet Trinity: The only workforce management AI that understands your business, supports your growth, and actually cares about your success. Context-aware, always available, truly intelligent." />
-      </Helmet>
+      <SEO
+        title="Features — CoAIleague"
+        description="Trinity AI runs your security company's scheduling, payroll, compliance, invoicing, and field safety — autonomously. Built for Texas security companies."
+      />
+      <UniversalHeader />
+      <main className="min-h-screen bg-background">
 
-      <div className="min-h-screen bg-white dark:bg-slate-950">
-        <UniversalHeader variant="public" />
-
-        {/* Hero Section */}
-        <section className="pt-20 pb-16 px-4 sm:px-6 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 relative overflow-hidden">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-20 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-          </div>
-
-          <div className="max-w-5xl mx-auto text-center relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="flex justify-center mb-6">
-                <TrinityMarketingHero variant="hero" iconOnly showGlow showSparkles />
-              </div>
-
-              <Badge className="mb-4 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20">
-                <Sparkles className="w-3 h-3 mr-1" />
-                Included Free with Every Plan
-              </Badge>
-
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 dark:text-white mb-6 tracking-tight">
-                Meet Trinity: Your AI Partner for{' '}
-                <span className="bg-gradient-to-r from-cyan-600 to-purple-600 bg-clip-text text-transparent">
-                  Business, Leadership & Life
-                </span>
-              </h1>
-
-              <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-                The only workforce management platform with an AI assistant that understands your business challenges, supports your personal growth, and{' '}
-                <span className="font-semibold text-slate-800 dark:text-white">actually cares about your success.</span>
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700" asChild>
-                  <Link href="/register" data-testid="button-start-trial">
-                    Start Free Trial
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Link>
+        {/* Hero */}
+        <section className="border-b border-border py-20 text-center">
+          <div className="max-w-3xl mx-auto px-4">
+            <Badge variant="secondary" className="mb-4">AI-Powered Security Operations</Badge>
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
+              Trinity Doesn't Assist Your Operation.
+              <span className="block text-primary">She Runs It.</span>
+            </h1>
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Trinity is the first AI system purpose-built for security workforce operations. Not a chatbot. Not a scheduling tool with AI bolted on. A cognitive operating system that manages your schedules, payroll, compliance, invoicing, officer safety, and client relationships — autonomously.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Link href="/pricing#roi-calculator">
+                <Button size="lg" variant="outline" data-testid="button-hero-calculator">
+                  <Calculator className="mr-2 w-4 h-4" />
+                  Calculate Your Savings
                 </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link href="/support" data-testid="button-see-demo">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    See Trinity in Action
-                  </Link>
+              </Link>
+              <Link href="/register">
+                <Button size="lg" data-testid="button-hero-trial">
+                  Start Free Trial
+                  <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Core Value Proposition */}
-        <section className="py-16 px-4 sm:px-6 bg-slate-900 text-white">
-          <div className="max-w-5xl mx-auto">
-            <TrinitySpotlight
-              title="What Makes Trinity Different"
-              message="Most workforce management platforms help you schedule shifts and process payroll. Trinity does that—and so much more. She's an AI assistant who knows your business inside and out, understands what you're working on, and proactively helps you succeed."
-            />
-            
-            <div className="grid md:grid-cols-3 gap-6 mt-8">
-              <div className="text-center p-6">
-                <div className="text-4xl font-bold text-cyan-400 mb-2">24/7</div>
-                <div className="text-slate-300">Always Available</div>
-              </div>
-              <div className="text-center p-6">
-                <div className="text-4xl font-bold text-cyan-400 mb-2">100%</div>
-                <div className="text-slate-300">Context Aware</div>
-              </div>
-              <div className="text-center p-6">
-                <div className="text-4xl font-bold text-cyan-400 mb-2">$0</div>
-                <div className="text-slate-300">Extra Cost</div>
-              </div>
+              </Link>
             </div>
           </div>
         </section>
 
-        {/* Features Deep Dive */}
-        <section className="py-20 px-4 sm:px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-                Everything Trinity Can Do For You
+        {/* Who is Trinity? — Full Spotlight */}
+        <WhoIsTrinitySection />
+
+        {/* Stats bar */}
+        <StatsBar />
+
+        {/* Section 1 — Autonomous Operations */}
+        <FeatureSection
+          eyebrow="Autonomous Operations"
+          headline={"Runs Your Operation.\nWhile You Sleep."}
+          body="Trinity manages your business the way you would if you never needed to sleep. She fills coverage gaps before shifts start, predicts calloffs before they happen, prevents overtime before it hits your payroll, and keeps every site covered every night — without a single phone call to you."
+          items={[
+            "AI-powered scheduling and coverage management",
+            "Calloff prediction and automatic backfill",
+            "Overtime prevention and labor optimization",
+            "Autonomous task execution 24 hours a day",
+            "Daily morning briefings delivered to your phone",
+            "Problems solved before you know they exist",
+          ]}
+          visual={<DashboardMock />}
+        />
+
+        {/* Section 2 — People Intelligence */}
+        <FeatureSection
+          eyebrow="People Intelligence"
+          headline={"Knows Every Officer.\nBuilds Every Career."}
+          body="Trinity tracks every officer's performance, attendance, report quality, and career trajectory. She celebrates birthdays, flags burnout before it becomes a resignation, suggests raises when they are earned, and identifies discipline issues with evidence — not gut feelings. Your team feels known. Your turnover drops."
+          items={[
+            "Officer performance scoring and tracking",
+            "Automatic milestone recognition",
+            "Data-driven raise and promotion recommendations",
+            "Disciplinary pattern detection with full analysis",
+            "Career development and advancement tracking",
+            "HelpAI — one AI assistant for every officer, available 24/7 directly in their shift room",
+          ]}
+          visual={<OfficerProfileMock />}
+          reverse
+        />
+
+        {/* Section 3 — Payroll and Invoicing (gold section) */}
+        <section className="border-t border-primary/20 bg-primary/5 py-16">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="text-center mb-10">
+              <p className="text-xs font-semibold text-foreground/60 uppercase tracking-widest mb-2">Payroll and Invoicing</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+                Handle Your Finances.
+                <span className="block">At a Fraction of the Cost.</span>
               </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                From intelligent automation to personal growth coaching, Trinity is your complete AI partner.
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                CoAIleague processes payroll and client invoicing internally — the same direct deposit,
+                tax filing, and year-end forms you expect, at $3.95–5.95 per employee per run.
+                ADP charges $8–15. Gusto charges $6–12. No subscriptions. No markups. Just results.
               </p>
             </div>
-
-            <div className="space-y-16">
-              {features.map((feature, idx) => (
-                <motion.div
-                  key={idx}
-                  className={`flex flex-col ${idx % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-8 lg:gap-12 items-center`}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <div className="flex-1">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
-                      feature.color === 'cyan' ? 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' :
-                      feature.color === 'teal' ? 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400' :
-                      feature.color === 'blue' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
-                      feature.color === 'purple' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' :
-                      feature.color === 'amber' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
-                      'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                    }`}>
-                      <feature.icon className="w-6 h-6" />
-                    </div>
-                    <Badge variant="outline" className="mb-3">{feature.title}</Badge>
-                    <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4">
-                      {feature.headline}
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-                      {feature.description}
-                    </p>
-                    <ul className="space-y-3">
-                      {feature.benefits.map((benefit, bIdx) => (
-                        <li key={bIdx} className="flex items-start gap-3">
-                          <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-                          <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="flex-1 w-full">
-                    <Card className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700">
-                      <CardContent className="p-8 flex items-center justify-center min-h-[250px]">
-                        <feature.icon className={`w-24 h-24 opacity-20 ${
-                          feature.color === 'cyan' ? 'text-cyan-500' :
-                          feature.color === 'teal' ? 'text-teal-500' :
-                          feature.color === 'blue' ? 'text-blue-500' :
-                          feature.color === 'purple' ? 'text-purple-500' :
-                          feature.color === 'amber' ? 'text-amber-500' :
-                          'text-green-500'
-                        }`} />
-                      </CardContent>
-                    </Card>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Comparison Table */}
-        <section className="py-20 px-4 sm:px-6 bg-slate-50 dark:bg-slate-900">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-                How Trinity Compares to Other Platforms
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">
-                See why businesses choose CoAIleague over the competition.
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="text-left p-4 font-semibold text-slate-900 dark:text-white">Feature</th>
-                    <th className="text-center p-4 font-semibold text-cyan-600 dark:text-cyan-400">CoAIleague + Trinity</th>
-                    <th className="text-center p-4 font-medium text-slate-500">When I Work</th>
-                    <th className="text-center p-4 font-medium text-slate-500">Deputy</th>
-                    <th className="text-center p-4 font-medium text-slate-500">Gusto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonData.map((row, idx) => (
-                    <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/50 last:border-0">
-                      <td className="p-4 text-slate-700 dark:text-slate-300">{row.feature}</td>
-                      <td className="text-center p-4">
-                        <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
-                      </td>
-                      <td className="text-center p-4 text-slate-400">
-                        {row.whenIWork === true ? <CheckCircle className="w-5 h-5 text-green-500 mx-auto" /> : 
-                         row.whenIWork === 'Basic' ? <span className="text-xs">Basic</span> : '—'}
-                      </td>
-                      <td className="text-center p-4 text-slate-400">
-                        {row.deputy === true ? <CheckCircle className="w-5 h-5 text-green-500 mx-auto" /> : 
-                         row.deputy === 'Basic' ? <span className="text-xs">Basic</span> : '—'}
-                      </td>
-                      <td className="text-center p-4 text-slate-400">
-                        {row.gusto === true ? <CheckCircle className="w-5 h-5 text-green-500 mx-auto" /> : '—'}
-                      </td>
-                    </tr>
+            <div className="grid md:grid-cols-2 gap-8 items-start">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Internal Payroll Processing</p>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {[
+                    "Internal payroll processing — W-4 and W-9 collection",
+                    "Direct deposit included — all 4 pay frequencies",
+                    "Quarterly 940/941 tax calculations and filings",
+                    "Year-end W-2 and 1099-NEC generation",
+                    "Federal and state income tax withholding",
+                    "FICA calculations (OASDI and Medicare)",
+                    "FUTA/SUTA employer contributions",
+                    "Automated compliance withholding per jurisdiction",
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
                   ))}
-                </tbody>
-              </table>
+                </ul>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Client Invoicing and Payment Collection</p>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground mb-4">
+                  {[
+                    "Client invoice generation and automated delivery",
+                    "Automated payment collection — ACH and card",
+                    "ACH bank transfers at below-market rates",
+                    "Card processing at 2.0–2.4% + $0.15–0.25",
+                    "Real-time P&L per site and contract",
+                    "QuickBooks sync if you prefer to keep it",
+                    "Auto-reconciliation with your invoices",
+                    "Funds in your account in 1–2 business days",
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 p-3 rounded-md bg-card border border-border text-xs text-muted-foreground">
+                  Payments processed through bank-grade secure infrastructure. Provider details not disclosed.
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 text-center">
+              <Link href="/pricing">
+                <Button variant="outline" data-testid="button-payroll-see-pricing">
+                  See Payroll Fee Comparison
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="py-20 px-4 sm:px-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-                What Our Customers Say
-              </h2>
-            </div>
+        {/* Section 4 — Legal Compliance */}
+        <FeatureSection
+          eyebrow="Legal Compliance"
+          headline={"Protected in Every State.\nCited to the Statute."}
+          body="Trinity knows security licensing law in every state you operate in. When she flags a compliance issue, she cites the exact statute. She blocks assignments that would create violations before they happen. She generates audit-ready compliance reports automatically. One DPS violation can cost more than a year of CoAIleague. Trinity makes sure you never face one."
+          items={[
+            "Texas DPS Chapter 1702 compliance built in",
+            "All 50 states licensing requirements monitored",
+            "License expiration alerts — 90, 60, 30, 7 days",
+            "Armed post assignment guard at API level",
+            "Statute-cited compliance recommendations",
+            "Audit-ready reports on demand",
+            "State regulatory auditor portal",
+            "Compliance dashboard always current",
+          ]}
+          visual={<ComplianceMock />}
+        />
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {testimonials.map((testimonial, idx) => (
-                <Card key={idx} className="bg-white dark:bg-slate-800">
-                  <CardContent className="p-6">
-                    <div className="flex gap-1 mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Sparkles key={i} className="w-4 h-4 text-amber-400" />
-                      ))}
+        {/* Section 5 — Field Safety */}
+        <FeatureSection
+          eyebrow="Field Safety"
+          headline={"Your Officers Are Never\nAlone Out There."}
+          body="Trinity is the operations center your officers never had. Panic alerts reach every supervisor simultaneously. Lone worker check-ins are monitored automatically. Dispatch status is tracked in real time. GPS-stamped proof of service protects you legally on every shift."
+          items={[
+            "One-touch panic alert — all supervisors notified",
+            "Lone worker automated check-in monitoring",
+            "Real-time dispatch tracking and acknowledgment",
+            "BOLO broadcast to all on-shift officers",
+            "Visitor log with threat cross-reference",
+            "GPS-stamped proof of service every shift",
+            "Weapon and asset tracking per shift",
+            "Incident narrative generation for legal use",
+          ]}
+          visual={<SafetyMock />}
+          reverse
+        />
+
+        {/* Section 6 — Trinity AI Intelligence */}
+        <section className="border-t border-border py-16 bg-card/30">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="text-center mb-10">
+              <p className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-2">Trinity AI Intelligence</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+                An AI That Thinks, Learns, and Gets Better.
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Trinity is not a chatbot. She is a cognitive system built on three AI models — each
+                checking the others' work. She has persistent memory that spans your entire company
+                history. She runs a 13-phase overnight processing cycle to learn from the day. She
+                gets meaningfully smarter at running your specific company every single month.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {AI_CARDS.map(({ icon: Icon, title, body }) => (
+                <Card key={title} data-testid={`card-ai-${title.toLowerCase().replace(/\s/g, "-")}`}>
+                  <CardContent className="pt-5 pb-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-md bg-violet-500/10 flex items-center justify-center">
+                        <Icon className="w-4 h-4 text-violet-400" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">{title}</p>
                     </div>
-                    <p className="text-slate-700 dark:text-slate-300 mb-4 italic">
-                      "{testimonial.quote}"
-                    </p>
-                    <div>
-                      <div className="font-semibold text-slate-900 dark:text-white">{testimonial.author}</div>
-                      <div className="text-sm text-slate-500">{testimonial.role}</div>
-                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -354,36 +768,29 @@ export default function TrinityFeatures() {
           </div>
         </section>
 
-        {/* Pricing Callout */}
-        <section className="py-20 px-4 sm:px-6 bg-gradient-to-r from-cyan-600 to-blue-600">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <div className="flex justify-center mb-6">
-              <TrinityMarketingHero variant="standard" iconOnly showGlow={false} />
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Trinity AI Assistant — Included Free
-            </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-              Other platforms charge $50-100/month for basic AI features. Trinity is included FREE with your CoAIleague subscription.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-white text-cyan-600 hover:bg-slate-100" asChild>
-                <Link href="/pricing" data-testid="button-view-pricing">
-                  View Pricing
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
-                <Link href="/register" data-testid="button-start-free">
-                  Start Free Trial
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
+        {/* Section 7 — Voice */}
+        <FeatureSection
+          eyebrow="Voice Powered"
+          headline={"Officers Don't Type\nReports at 2am."}
+          body="Trinity speaks and listens. Officers can clock in, file incidents, check schedules, and get post orders by voice — right in their shift room on their phone. Trinity responds by voice. Your workforce has a real operational assistant in their pocket, not another app to learn."
+          items={[
+            "Voice clock in and clock out",
+            "Voice incident report filing",
+            "Voice schedule and post order lookup",
+            "Voice calloff processing",
+            "Trinity voice briefings daily",
+            "Works on all devices including iPhone",
+            "Available in ChatDock rooms and DMs",
+            "No wake word required — push to talk",
+          ]}
+          visual={<VoiceMock />}
+          reverse
+        />
 
-        <Footer />
-      </div>
+        {/* Pricing teaser */}
+        <PricingTeaser />
+      </main>
+      <Footer />
     </>
   );
 }

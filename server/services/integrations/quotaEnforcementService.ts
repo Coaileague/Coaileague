@@ -14,10 +14,15 @@
  */
 
 import { db } from '../../db';
-import { workspaces, organizations } from '@shared/schema';
+import { workspaces, quickbooksApiUsage } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { quickbooksRateLimiter, type RateLimitResult } from './quickbooksRateLimiter';
 import { platformEventBus } from '../platformEventBus';
+import { INTEGRATIONS } from '@shared/platformConfig';
+import { typedCount, typedExec, typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quotaEnforcementService');
+
 
 export type QuotaType = 
   | 'quickbooks_api'
@@ -109,27 +114,28 @@ class QuotaEnforcementService {
     const tier = await this.getWorkspaceTier(workspaceId);
     const limits = TIER_LIMITS[tier] || TIER_LIMITS.free_trial;
     
+    let result: QuotaCheckResult;
     switch (quotaType) {
       case 'quickbooks_api':
-        return this.checkQuickBooksQuota(workspaceId, realmId, limits);
-        
+        result = await this.checkQuickBooksQuota(workspaceId, realmId, limits);
+        break;
       case 'ai_credits':
-        return this.checkAICreditsQuota(workspaceId, requestedAmount, limits);
-        
+        result = await this.checkAICreditsQuota(workspaceId, requestedAmount, limits);
+        break;
       case 'employee_count':
-        return this.checkEmployeeQuota(workspaceId, requestedAmount, limits);
-        
+        result = await this.checkEmployeeQuota(workspaceId, requestedAmount, limits);
+        break;
       case 'email_sends':
-        return this.checkEmailQuota(workspaceId, requestedAmount, limits);
-        
+        result = await this.checkEmailQuota(workspaceId, requestedAmount, limits);
+        break;
       case 'sms_sends':
-        return this.checkSMSQuota(workspaceId, requestedAmount, limits);
-        
+        result = await this.checkSMSQuota(workspaceId, requestedAmount, limits);
+        break;
       case 'storage_bytes':
-        return this.checkStorageQuota(workspaceId, requestedAmount, limits);
-        
+        result = await this.checkStorageQuota(workspaceId, requestedAmount, limits);
+        break;
       default:
-        return {
+        result = {
           allowed: true,
           quotaType,
           currentUsage: 0,
@@ -137,6 +143,23 @@ class QuotaEnforcementService {
           remainingPercentage: 100,
         };
     }
+
+    // Publish quota_exceeded so TrinityOrchestrationGateway can detect
+    // resource-limit upsell opportunities and track conversion pressure
+    if (!result.allowed && workspaceId) {
+      import('../platformEventBus').then(({ platformEventBus }) => {
+        platformEventBus.publish({
+          type: 'quota_exceeded',
+          category: 'automation',
+          title: `Quota Exceeded: ${quotaType}`,
+          description: `Workspace ${workspaceId} hit ${quotaType} quota (${result.currentUsage}/${result.limit}) — ${result.reason || 'limit reached'}`,
+          workspaceId,
+          metadata: { quotaType, limit: result.limit, used: result.currentUsage, reason: result.reason, tier, requestedAmount },
+        }).catch(() => null);
+      }).catch(() => null);
+    }
+
+    return result;
   }
   
   private async checkQuickBooksQuota(
@@ -168,7 +191,7 @@ class QuotaEnforcementService {
       };
     }
     
-    const environment = process.env.QUICKBOOKS_ENVIRONMENT as 'production' | 'sandbox' || 'sandbox';
+    const environment = INTEGRATIONS.quickbooks.getEnvironment();
     const maxRequests = environment === 'production' ? 500 : 100;
     
     let persistedUsage = 0;
@@ -374,7 +397,7 @@ class QuotaEnforcementService {
   private async getWorkspaceTier(workspaceId: string): Promise<string> {
     try {
       const [workspace] = await db
-        .select({ tier: workspaces.tier })
+        .select({ tier: workspaces.subscriptionTier })
         .from(workspaces)
         .where(eq(workspaces.id, workspaceId))
         .limit(1);
@@ -387,10 +410,11 @@ class QuotaEnforcementService {
   
   private async getEmployeeCount(workspaceId: string): Promise<number> {
     try {
-      const result = await db.execute(
-        `SELECT COUNT(*) as count FROM employees WHERE workspace_id = '${workspaceId}' AND status = 'active'`
+      // CATEGORY C — Raw SQL retained: Count( | Tables: employees | Verified: 2026-03-23
+      const result = await typedCount(
+        sql`SELECT COUNT(*) as count FROM employees WHERE workspace_id = ${workspaceId} AND status = 'active'`
       );
-      return parseInt((result.rows[0] as any)?.count || '0', 10);
+      return Number(result);
     } catch {
       return 0;
     }
@@ -477,7 +501,7 @@ class QuotaEnforcementService {
       description: `${quotaType} usage: ${amount} for workspace ${workspaceId}`,
       workspaceId,
       metadata: { quotaType, amount },
-    });
+    }).catch((err) => log.warn('[quotaEnforcementService] Fire-and-forget failed:', err));
   }
   
   async recordQBApiUsage(
@@ -495,22 +519,32 @@ class QuotaEnforcementService {
       description: `QB API usage: ${amount} request(s) for realm ${realmId}`,
       workspaceId,
       metadata: { quotaType: 'quickbooks_api', realmId, amount },
-    });
+    }).catch((err) => log.warn('[quotaEnforcementService] Fire-and-forget failed:', err));
   }
   
+  private static readonly ALLOWED_USAGE_COLUMNS = new Set([
+    'qb_api_calls_used', 'qb_sync_calls_used', 'ai_credits_used',
+    'email_sends_used', 'sms_sends_used', 'storage_bytes_used',
+  ]);
+
   private async persistUsageIncrement(
     workspaceId: string,
     column: string,
     amount: number
   ): Promise<void> {
+    if (!QuotaEnforcementService.ALLOWED_USAGE_COLUMNS.has(column)) {
+      log.warn(`[QuotaEnforcement] Rejected unknown column: ${column}`);
+      return;
+    }
     try {
-      await db.execute(
+      // CATEGORY C — Raw SQL retained: COALESCE + self-referencing arithmetic + sql.raw() | Tables: workspaces | Verified: 2026-03-23
+      await typedExec(
         sql`UPDATE workspaces 
         SET ${sql.raw(column)} = COALESCE(${sql.raw(column)}, 0) + ${amount}
         WHERE id = ${workspaceId}`
       );
     } catch (error) {
-      console.warn(`[QuotaEnforcement] Failed to persist ${column} increment:`, error);
+      log.warn(`[QuotaEnforcement] Failed to persist ${column} increment:`, error);
     }
   }
   
@@ -533,14 +567,18 @@ class QuotaEnforcementService {
     }
     
     try {
-      await db.execute(
-        sql`INSERT INTO quickbooks_api_usage (realm_id, workspace_id, request_count, period_start)
-        VALUES (${realmId}, ${workspaceId}, ${amount}, DATE_TRUNC('minute', NOW()))
-        ON CONFLICT ON CONSTRAINT qb_api_usage_realm_period_unique 
-        DO UPDATE SET request_count = quickbooks_api_usage.request_count + ${amount}`
-      );
+      // Converted to Drizzle ORM: ON CONFLICT
+      await db.insert(quickbooksApiUsage).values({
+        realmId,
+        workspaceId,
+        requestCount: amount,
+        periodStart: sql`DATE_TRUNC('minute', NOW())`,
+      }).onConflictDoUpdate({
+        target: [quickbooksApiUsage.realmId, quickbooksApiUsage.periodStart],
+        set: { requestCount: sql`quickbooks_api_usage.request_count + ${amount}` },
+      });
     } catch (error) {
-      console.error('[QuotaEnforcement] Failed to persist QB API usage:', error);
+      log.error('[QuotaEnforcement] Failed to persist QB API usage:', error);
       throw new Error('QuickBooks usage tracking failed - compliance requires persistence');
     }
   }
@@ -557,20 +595,21 @@ class QuotaEnforcementService {
     }
     
     try {
-      const result = await db.execute(
+      // CATEGORY C — Raw SQL retained: COALESCE(SUM(request_count), 0) as count | Tables: quickbooks_api_usage | Verified: 2026-03-23
+      const result = await typedQuery(
         sql`SELECT COALESCE(SUM(request_count), 0) as count
         FROM quickbooks_api_usage
         WHERE realm_id = ${realmId}
           AND period_start >= DATE_TRUNC('minute', NOW())`
       );
-      const count = parseInt((result.rows[0] as any)?.count || '0', 10);
+      const count = parseInt((result as any[])[0]?.count || '0', 10);
       
       const resetAt = new Date(Date.now() + 60000);
       this.qbUsageCache.set(cacheKey, { count, resetAt });
       
       return count;
     } catch (error) {
-      console.error('[QuotaEnforcement] Failed to read QB API usage:', error);
+      log.error('[QuotaEnforcement] Failed to read QB API usage:', error);
       throw new Error('QuickBooks usage tracking failed - compliance requires persistence');
     }
   }
@@ -597,7 +636,7 @@ class QuotaEnforcementService {
           percentage,
           severity: percentage >= 100 ? 'critical' : 'warning',
         },
-      });
+      }).catch((err) => log.warn('[quotaEnforcementService] Fire-and-forget failed:', err));
     }
   }
   

@@ -1,0 +1,95 @@
+FINAL PATTERN SWEEP — ENTITY DATA COMPLETENESS | READ ONLY | REPORT ONLY
+The last bug sweep found that the clients paginated query was missing 30 fields, billingCycle was silently dropped on save, and numeric strings were rejected on create/update. Scan every other major entity for the same three patterns.
+
+PATTERN A — PAGINATED/LIST QUERIES MISSING FIELDS
+The clients listClients() query had an explicit .select() that omitted fields, causing edit modals to open with empty values even when data existed in the DB.
+Check every storage function that returns a list or paginated result for these entities and verify the .select() includes every column from the schema — not just a subset:
+
+listEmployees() or equivalent — does it return all fields needed by the employee edit form and employee detail page?
+listShifts() — does it return all fields needed by the schedule view and shift edit modal?
+listInvoices() — does it return all fields needed by the invoice detail and edit views?
+listPayrollRuns() — does it return all fields needed by the payroll dashboard?
+listClients() — already fixed, confirm fix is intact
+getWorkspaceSettings() — does it return all settings fields or only a subset?
+Any other list/paginated query that feeds an edit modal or detail view
+
+For each — report which fields are in the schema but missing from the query select. A missing field means the edit form silently opens with empty/null values and any save overwrites real data with blank.
+
+PATTERN B — FIELDS SILENTLY DROPPED ON CREATE OR UPDATE
+The billingCycle field was destructured out of the request body for a side purpose and never written to the actual record. The same pattern exists anywhere a field is extracted from the payload before the Zod validation runs.
+Check every POST (create) and PATCH (update) route for these entities:
+
+employeeRoutes.ts — are any fields destructured out of req.body before the validated object is written to DB?
+shiftRoutes.ts — same check
+invoiceRoutes.ts — same check
+payrollRoutes.ts — same check
+clientRoutes.ts — already fixed, confirm fix is intact
+onboardingInlineRoutes.ts — same check
+settingsRoutes.ts or equivalent — same check
+
+For each route — list every field that is destructured from req.body separately and confirm it is either written back to the DB record OR intentionally excluded with a comment explaining why.
+
+PATTERN C — NUMERIC STRING COERCION MISSING
+HTML forms always send numbers as strings. coerceClientNumbers() was added to the client routes. The same problem exists on every entity that has numeric fields submitted from a form.
+Check every POST and PATCH route for numeric fields — hourlyRate, payRate, billRate, contractRate, amount, totalHours, overtimeRate, paymentTermsDays, any field that should be a number — and verify there is a coercion step before Zod validation runs.
+Check these routes specifically:
+
+employeeRoutes.ts — hourlyRate, payRate, overtimeRate
+shiftRoutes.ts — billableHours, hourlyRate
+invoiceRoutes.ts — total, subtotal, taxAmount, line item amounts
+payrollRoutes.ts — totalGrossPay, totalNetPay, hourlyRate
+clientRoutes.ts — already fixed, confirm intact
+timeOffRoutes.ts — any numeric fields
+contractRoutes.ts — any rate or amount fields
+
+For each route missing coercion — report the field names and the route file and line.
+
+PATTERN D — EDIT MODAL STATE INITIALIZATION GAPS
+The client edit modal was opening with empty values because the list query omitted fields. Even after fixing the query, check that every edit modal correctly initializes its form state from the full entity object.
+Check these frontend edit modals/forms:
+
+Employee edit dialog — does useEffect on the employee object populate every field including payType, payFrequency, emergencyContact, directDepositStatus?
+Shift edit modal — does it populate all fields including postOrders, specialInstructions, requiredCertifications?
+Client edit modal — does it populate all fields including coverage schedule, billing settings, POC details?
+Invoice edit view — does it populate all line items and tax settings?
+Org settings form — does it populate all workspace settings fields on load?
+
+For each — report any field present in the DB entity but not initialized in the edit form state. A missing initialization means editing and saving always clears that field.
+
+PATTERN E — SCHEMA COLUMN NAME MISMATCHES IN FRONTEND
+The invoiceDate vs issueDate bug crashed QB sync. The same mismatch likely exists in the frontend where components reference field names that don't match the actual API response.
+Search the frontend for these specific patterns:
+
+Any reference to employee.employeeId when the field is actually employee.id
+Any reference to client.clientName when the field is actually client.name
+Any reference to invoice.invoiceDate when the field is actually invoice.issueDate
+Any reference to shift.shiftDate when the actual field name differs
+Any reference to payroll.totalGross when the field is totalGrossPay
+
+Search both frontend components AND backend service files for these mismatches. Report every location.
+
+PATTERN F — MISSING REQUIRED FIELDS ON ENTITY CREATION
+Check every entity creation flow end to end — what happens when required fields are missing:
+
+If an employee is created without a payRate — does the system give a clear error or silently create with null?
+If a client is created without a billRate — same question
+If a shift is created without an assigned site — same question
+If an invoice is created without a client email — same question
+
+For each — report whether there is server-side validation that returns a clear error, or whether the entity is silently created with missing data that breaks downstream workflows.
+
+OUTPUT FORMAT
+For each pattern, report every finding as:
+[SEVERITY] Pattern X > File:Line
+Found: what the code does
+Problem: what is wrong or missing
+Impact: what breaks silently in production
+Summary table:
+Pattern A — List query missing fields: N entities affected
+Pattern B — Fields silently dropped on save: N routes affected
+Pattern C — Numeric coercion missing: N routes affected
+Pattern D — Edit modal init gaps: N modals affected
+Pattern E — Schema column name mismatches: N found
+Pattern F — Missing required field validation: N found
+TOTAL: N findings
+Stop and wait. Do not fix anything yet.

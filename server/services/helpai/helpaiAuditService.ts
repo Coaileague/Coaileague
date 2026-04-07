@@ -11,6 +11,9 @@ import {
 } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('helpaiAuditService');
+
 
 export interface AuditLogEntry {
   workspaceId: string;
@@ -77,11 +80,11 @@ export class HelpaiAuditService {
 
     // Log to console for monitoring
     if (entry.status === 'error') {
-      console.error(
+      log.error(
         `🚨 [HelpAI Audit] Error logged - ${entry.action}: ${entry.responseMessage}`
       );
     } else if (entry.status === 'success') {
-      console.log(
+      log.info(
         `✅ [HelpAI Audit] ${entry.action} - ${entry.apiName || 'N/A'} (${entry.durationMs}ms)`
       );
     }

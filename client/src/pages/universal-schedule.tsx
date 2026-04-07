@@ -12,119 +12,132 @@
  * - RBAC enforcement (manager/admin create, employees view own)
  */
 
-import { useState, useMemo } from 'react';
+import '@/styles/smart-schedule.css';
+import { useLocation } from 'wouter';
+import { secureFetch } from "@/lib/csrf";
+import { markCoreActionPerformed } from "@/lib/pushNotifications";
+
+/** Parse compliance / eligibility block errors into a user-readable string */
+function parseScheduleError(error: any): string {
+  if (!error) return 'An unexpected error occurred';
+  const raw: string = error.message || String(error);
+  // Strip leading "NNN: " status prefix from ApiError
+  const body = raw.replace(/^\d{3}:\s*/, '');
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed.code === 'COMPLIANCE_BLOCK') {
+      const failures: Array<{ name?: string; reason?: string }> =
+        parsed.eligibilityFailures || [];
+      if (failures.length > 0) {
+        const names = failures.map(f => {
+          const reason = f.reason?.toLowerCase() || '';
+          if (reason.includes('not active') || reason.includes('terminated') || reason.includes('deactivated')) {
+            return `${f.name} (inactive — not eligible for shifts)`;
+          }
+          if (reason.includes('license') || reason.includes('credential')) {
+            return `${f.name} (license or credential issue)`;
+          }
+          return f.name || 'Unknown employee';
+        });
+        return `Cannot assign: ${names.join(', ')}. Check the Compliance tab to resolve.`;
+      }
+      return parsed.message || 'Shift blocked due to compliance requirements.';
+    }
+    return parsed.message || body;
+  } catch {
+    // Not JSON — return as-is but strip raw code artifacts
+    return body.replace(/\[?'code':\s*'[A-Z_]+']/g, '').trim() || raw;
+  }
+}
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useAsyncData } from '@/hooks/useAsyncData';
+import { apiFetch } from '@/lib/apiError';
+import { PaginatedShiftListResponse } from '@shared/schemas/responses/shifts';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent, DragOverlay, useDraggable, useDroppable } from '@dnd-kit/core';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEmployee } from '@/hooks/useEmployee';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
+import { isManagerOrAbove, isOrgLeadership } from '@/lib/roleHierarchy';
 import { useClientLookup } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalTrigger, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle } from '@/components/ui/universal-modal'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Calendar, Clock, Users, Edit2, Trash2, Copy, ChevronLeft, ChevronRight, Plus, Download,
-  Bot, CheckCircle, AlertCircle, BarChart3, Play, X, Camera, MessageSquare, FileText,
+  Bot, CheckCircle, CheckCircle2, AlertCircle, BarChart3, Play, X, Camera, MessageSquare, FileText,
   CheckSquare, MapPin, Menu, Sparkles, Zap, Bell, Settings, Shield, UserCheck, XCircle,
-  PauseCircle, Send, AlertTriangle, Repeat, ArrowRightLeft, CalendarDays, CopyPlus, Loader2
+  PauseCircle, Send, AlertTriangle, Repeat, ArrowRightLeft, CalendarDays, CopyPlus, Loader2, Check,
+  ChevronDown, Filter, Wand2, ToggleLeft, ToggleRight, Briefcase, Save, Undo2, ArrowLeftRight
 } from 'lucide-react';
 import type { Shift, Employee, Client, ShiftOrder, RecurringShiftPattern, ShiftSwapRequest } from '@shared/schema';
 import ScheduleMobileFirst from '@/pages/schedule-mobile-first';
 import { WorkspaceLayout } from '@/components/workspace-layout';
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { HideInSimpleMode } from "@/components/SimpleMode";
 import { AskTrinityButton, TrinityIconStatic } from '@/components/trinity-button';
-import { ScheduleToolbar } from '@/components/schedule/ScheduleToolbar';
+import { useTrinityModal } from '@/components/trinity-chat-modal';
+import { TrinitySchedulingSummaryModal } from '@/components/trinity-scheduling-summary-modal';
 import { ScheduleFilters, type ScheduleFilterState } from '@/components/schedule/ScheduleFilters';
 import { WeekStatsBar } from '@/components/schedule/WeekStatsBar';
 import { UnassignedShiftsPanel } from '@/components/schedule/UnassignedShiftsPanel';
 import { ConflictAlerts, getShiftConflictBadge, getShiftTimeClockStatus } from '@/components/schedule/ConflictAlerts';
 import { TrinityInsightsPanel } from '@/components/schedule/TrinityInsightsPanel';
 import { TrinityTrainingPanel } from '@/components/schedule/TrinityTrainingPanel';
+import { ScheduleUploadPanel } from '@/components/schedule/ScheduleUploadPanel';
+import { ViewModeToggle } from '@/components/schedule/ViewModeToggle';
 import { TrinitySchedulingProgress } from '@/components/schedule/TrinitySchedulingProgress';
+import { TrinityStatusBar, TrinityThinkingPanel } from '@/components/schedule/TrinitySchedulingFeedback';
+import { useTrinitySchedulingProgress } from '@/hooks/use-trinity-scheduling-progress';
+import { ShiftCreationModal, type ShiftFormData, DAYS_OF_WEEK, POST_ORDER_TEMPLATES } from '@/components/schedule/ShiftCreationModal';
+import { DuplicateShiftModal, SwapRequestModal, EditShiftModal, ShiftActionDialog, EscalationMatrixDialog } from '@/components/schedule/ScheduleDialogs';
+import type { EditShiftFormData } from '@/components/schedule/ScheduleDialogs';
+import { ScheduleLeftSidebar } from '@/components/schedule/ScheduleLeftSidebar';
+import { IsolatedScheduleToolbar } from '@/components/schedule/IsolatedScheduleToolbar';
+import { OperationVisibilityPanel } from '@/components/schedule/ScheduleCreditPanel';
+import { ScheduleGridSkeleton } from '@/components/schedule/ScheduleGridSkeleton';
+import { WeekGrid } from '@/components/schedule/WeekGrid';
 
-// Post order template data (will be pre-created in database)
-const POST_ORDER_TEMPLATES = [
-  {
-    id: '1',
-    title: 'Security Patrol Requirements',
-    description: 'Complete hourly patrols of all assigned areas',
-    requiresAcknowledgment: true,
-    requiresSignature: true,
-    requiresPhotos: true,
-    photoFrequency: 'hourly' as const,
-    photoInstructions: 'Take photos of each checkpoint during patrol'
-  },
-  {
-    id: '2',
-    title: 'Opening Procedures',
-    description: 'Follow all opening checklist items',
-    requiresAcknowledgment: true,
-    requiresSignature: false,
-    requiresPhotos: false,
-    photoFrequency: null,
-    photoInstructions: null
-  },
-  {
-    id: '3',
-    title: 'Closing Procedures',
-    description: 'Complete all closing duties and security checks',
-    requiresAcknowledgment: true,
-    requiresSignature: true,
-    requiresPhotos: true,
-    photoFrequency: 'at_completion' as const,
-    photoInstructions: 'Document all secured areas before leaving'
-  },
-  {
-    id: '4',
-    title: 'Equipment Inspection',
-    description: 'Inspect and document condition of all equipment',
-    requiresAcknowledgment: true,
-    requiresSignature: false,
-    requiresPhotos: true,
-    photoFrequency: 'hourly' as const,
-    photoInstructions: 'Photo evidence of equipment status'
-  }
-];
+const schedulePageConfig: CanvasPageConfig = {
+  id: 'schedule',
+  category: 'operations',
+  title: 'Schedule',
+  withBottomNav: true,
+};
 
-interface ShiftFormData {
-  employeeId: string | null;
-  position: string;
-  clockIn: string;
-  clockOut: string;
-  notes: string;
-  postOrders: string[];
-  isOpenShift: boolean;
-  clientId: string;
-  location: string;
-  isRecurring: boolean;
-  recurrencePattern: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  daysOfWeek: string[];
-  endDate: string;
-}
+const scheduleLoadingConfig: CanvasPageConfig = {
+  id: 'schedule-loading',
+  category: 'operations',
+  title: 'Schedule',
+  subtitle: 'Loading...',
+};
 
-type DayOfWeek = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
-const DAYS_OF_WEEK: { value: DayOfWeek; label: string }[] = [
-  { value: 'monday', label: 'Mon' },
-  { value: 'tuesday', label: 'Tue' },
-  { value: 'wednesday', label: 'Wed' },
-  { value: 'thursday', label: 'Thu' },
-  { value: 'friday', label: 'Fri' },
-  { value: 'saturday', label: 'Sat' },
-  { value: 'sunday', label: 'Sun' },
-];
+// POST_ORDER_TEMPLATES, ShiftFormData, and DAYS_OF_WEEK are imported from ShiftCreationModal
 
 // Draggable Employee Component (Memoized for performance)
+// Note: Currently used for DragOverlay display; employees shown as grid row labels
 const DraggableEmployee = ({ employee, isSelected, onSelect, getEmployeeColor }: {
   employee: Employee;
   isSelected: boolean;
@@ -138,7 +151,7 @@ const DraggableEmployee = ({ employee, isSelected, onSelect, getEmployeeColor }:
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    opacity: isDragging ? 0 : 1  // Hide original during drag (DragOverlay shows clone)
+    opacity: isDragging ? 0 : 1
   } : undefined;
 
   return (
@@ -148,21 +161,21 @@ const DraggableEmployee = ({ employee, isSelected, onSelect, getEmployeeColor }:
       {...listeners}
       {...attributes}
       onClick={onSelect}
-      className={`p-3 rounded-lg border-2 cursor-grab active:cursor-grabbing transition-all ${
-        isSelected ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
-      } ${isDragging ? 'z-50' : ''}`}
+      className={`p-3 rounded-md border cursor-grab active:cursor-grabbing transition-all ${
+        isSelected ? 'border-primary bg-primary/10' : 'border-border'
+      } ${isDragging ? 'z-50' : ''} hover-elevate`}
       data-testid={`employee-card-${employee.id}`}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center space-x-2">
           <div
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: getEmployeeColor(employee.id) }}
           />
-          <span className="font-medium text-sm">{employee.firstName} {employee.lastName}</span>
+          <span className="font-medium text-sm text-foreground">{employee.firstName} {employee.lastName}</span>
         </div>
         {employee.performanceScore && (
-          <span className="text-xs font-bold text-green-600">{employee.performanceScore}</span>
+          <span className="text-xs font-bold text-green-600 dark:text-green-400">{employee.performanceScore}</span>
         )}
       </div>
       <div className="text-xs text-muted-foreground">{employee.role || 'Employee'}</div>
@@ -199,17 +212,151 @@ const DroppableSlot = ({ day, hour, children, onClick }: {
   );
 };
 
-export default function UniversalSchedule() {
+const DroppableEmployeeRow = ({ employeeId, children, isDropTarget }: {
+  employeeId: string;
+  children: React.ReactNode;
+  isDropTarget: boolean;
+}) => {
+  const { setNodeRef } = useDroppable({
+    id: `emp-row-${employeeId}`,
+    data: { type: 'employee-drop-row', employeeId },
+  });
+
+  return (
+    <div ref={setNodeRef} className="relative">
+      {isDropTarget && (
+        <div className="absolute inset-0 z-40 pointer-events-none border-2 border-dashed schedule-drop-zone-active transition-all duration-150" data-testid={`inline-drop-indicator-${employeeId}`}>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[11px] font-bold text-primary bg-white/95 dark:bg-slate-800/95 px-3 py-1.5 rounded-md shadow-sm ring-1 ring-primary/20">
+              Reassign here
+            </span>
+          </div>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+};
+
+const InlineDraggableShift = ({ shift, children, canDrag, style: passedStyle, className, isPending }: {
+  shift: Shift;
+  children: React.ReactNode;
+  canDrag: boolean;
+  style?: React.CSSProperties;
+  className?: string;
+  isPending?: boolean;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `inline-shift-${shift.id}`,
+    data: { type: 'inline-shift', shift },
+    disabled: !canDrag,
+  });
+
+  const combinedStyle: React.CSSProperties = {
+    ...passedStyle,
+    ...(transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      zIndex: 100,
+    } : {}),
+    opacity: isDragging ? 0.4 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={combinedStyle}
+      {...listeners}
+      {...attributes}
+      className={`${className || ''} ${isPending ? 'shift-pending-reassign' : ''}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+const PendingChangesBar = ({
+  count,
+  isSaving,
+  onSave,
+  onDiscard,
+}: {
+  count: number;
+  isSaving: boolean;
+  onSave: () => void;
+  onDiscard: () => void;
+}) => {
+  if (count === 0) return null;
+  return (
+    <div className="pending-changes-bar flex items-center gap-3 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/30 border-b-2 border-amber-400/60 dark:border-amber-600/60 z-50" data-testid="pending-changes-bar">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <ArrowLeftRight className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+        <span className="text-sm font-semibold text-amber-800 dark:text-amber-200 truncate">
+          {count} unsaved reassignment{count !== 1 ? 's' : ''} — review before saving
+        </span>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDiscard}
+          disabled={isSaving}
+          data-testid="button-discard-pending"
+          className="text-amber-700 dark:text-amber-300 hover:text-amber-900"
+        >
+          <Undo2 className="h-3.5 w-3.5 mr-1" />
+          Discard
+        </Button>
+        <Button
+          size="sm"
+          onClick={onSave}
+          disabled={isSaving}
+          data-testid="button-save-pending"
+          className="bg-amber-500 hover:bg-amber-600 text-white border-amber-600"
+        >
+          {isSaving ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+          ) : (
+            <Save className="h-3.5 w-3.5 mr-1" />
+          )}
+          Save {count} Change{count !== 1 ? 's' : ''}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode?: 'my' | 'full' | 'pending' } = {}) {
+  const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const { openModal: openTrinityChat } = useTrinityModal();
   const { employee: currentEmployee } = useEmployee();
   const { workspaceRole, platformRole, workspaceId } = useWorkspaceAccess();
+
+  const scheduleInteractionRef = useRef(false);
+  const handleScheduleInteraction = useCallback(() => {
+    if (!scheduleInteractionRef.current) {
+      scheduleInteractionRef.current = true;
+      markCoreActionPerformed();
+    }
+  }, []);
   
-  // RBAC permissions - prefer workspaceRole, fallback to platformRole
-  // This ensures users with platformRole set (but workspaceRole null) retain access
-  const effectiveRole = workspaceRole || platformRole;
-  const isManager = ['manager', 'admin', 'owner', 'org_owner'].includes(effectiveRole);
-  const isAdmin = ['admin', 'owner', 'org_owner'].includes(effectiveRole);
+  // Trinity real-time scheduling feedback - shows visual updates during auto-fill
+  const { 
+    session, 
+    activeProgress,
+    isShiftBeingProcessed, 
+    wasShiftJustAssigned, 
+    trinityWorking,
+    clearSession,
+    completionResult,
+    clearCompletion,
+  } = useTrinitySchedulingProgress(workspaceId);
+  
+  // RBAC permissions — workspace roles take priority; platform staff get manager access
+  const isPlatformStaff = ['root_admin', 'root', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'].includes(platformRole || '');
+  const isManager = isManagerOrAbove(workspaceRole) || isPlatformStaff;
+  const isAdmin = isOrgLeadership(workspaceRole) || isPlatformStaff;
   
   // Admin-only action handler with permission check
   const handleAdminOnlyAction = (actionName: string) => {
@@ -238,8 +385,9 @@ export default function UniversalSchedule() {
       toast({
         title: enabled ? 'Trinity Automation Enabled' : 'Trinity Automation Disabled',
         description: enabled 
-          ? 'Trinity AI will now automatically optimize schedules'
-          : 'Manual scheduling mode activated',
+          ? 'Trinity AI will suggest shift assignments, flag conflicts, and recommend schedule improvements for your review. All suggestions can be accepted, modified, or rejected. Watch the status bar for real-time progress.'
+          : 'Manual scheduling mode activated. You can still use individual AI features from the toolbar.',
+        duration: 5000,
       });
     },
     onError: (error: any) => {
@@ -251,13 +399,56 @@ export default function UniversalSchedule() {
     }
   });
 
+
+  const { data: allShiftsData = [], isLoading: allShiftsLoading } = useQuery<Shift[]>({
+    queryKey: ['/api/shifts', workspaceId],
+    queryFn: async () => {
+      const response = await fetch(`/api/shifts?workspaceId=${workspaceId}`, { credentials: 'include' });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.shifts || data.data || []);
+    },
+    enabled: !!workspaceId,
+  });
+
+  const triggerSchedulingMutation = useMutation({
+    mutationFn: async (mode: 'optimize' | 'fill_gaps' | 'full_generate') => {
+      if (!workspaceId) throw new Error('Workspace ID is required');
+      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/trigger-session', { 
+        workspaceId, 
+        mode 
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setSchedulingResult(data);
+      setShowSchedulingSummary(true);
+      if (data?.orchestrationId) {
+        setActiveOrchestrationId(data.orchestrationId);
+        setTimeout(() => setActiveOrchestrationId(null), 30000);
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
+    },
+    onError: (error: any) => {
+      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
+      toast({
+        variant: 'destructive',
+        title: isCredits ? 'Insufficient Credits' : 'Scheduling Session Failed',
+        description: isCredits 
+          ? 'You need more AI credits to run this operation.'
+          : error.message,
+      });
+    }
+  });
   // Delete shift mutation
   const deleteShiftMutation = useMutation({
     mutationFn: async (shiftId: string) => {
-      return await apiRequest('DELETE', `/api/shifts/${shiftId}`);
+      return await apiRequest('DELETE', `/api/shifts/${shiftId}`, { workspaceId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       setSelectedShiftForAction(null);
       toast({
         title: 'Shift deleted',
@@ -273,16 +464,81 @@ export default function UniversalSchedule() {
     }
   });
 
+  const reassignShiftMutation = useMutation({
+    mutationFn: async ({ shiftId, newEmployeeId }: { shiftId: string; newEmployeeId: string; newStartTime: string }) => {
+      return await apiRequest('PATCH', `/api/shifts/${shiftId}`, {
+        employeeId: newEmployeeId,
+        workspaceId,
+      });
+    },
+    onMutate: async ({ shiftId, newEmployeeId }) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/shifts', workspaceId] });
+      const previousQueries = queryClient.getQueriesData<any>({ queryKey: ['/api/shifts', workspaceId] });
+      queryClient.setQueriesData<any>({ queryKey: ['/api/shifts', workspaceId] }, (old: any) => {
+        if (!old) return old;
+        const list: any[] = Array.isArray(old) ? old : (old.shifts || old.data || []);
+        const updated = list.map((s: any) => s.id === shiftId ? { ...s, employeeId: newEmployeeId } : s);
+        if (Array.isArray(old)) return updated;
+        if (old.shifts) return { ...old, shifts: updated };
+        if (old.data) return { ...old, data: updated };
+        return old;
+      });
+      return { previousQueries };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+      toast({
+        title: 'Shift reassigned',
+        description: 'The shift has been moved to the new employee',
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+    },
+    onError: (error: any, _, context: any) => {
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([key, data]: [any, any]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Failed to reassign shift',
+        description: error.message,
+      });
+    },
+  });
+
+  const handleShiftDrop = useCallback((shift: Shift, newEmployeeId: string, newStartTime: Date) => {
+    handleScheduleInteraction();
+    reassignShiftMutation.mutate({
+      shiftId: shift.id,
+      newEmployeeId,
+      newStartTime: newStartTime.toISOString(),
+    });
+  }, [reassignShiftMutation, handleScheduleInteraction]);
+
   // Publish schedule mutation
   const publishScheduleMutation = useMutation({
     mutationFn: async () => {
+      // Get draft shift IDs for current week
+      const draftShiftIds = filteredShifts
+        .filter(s => s.status === 'draft' || !s.status)
+        .map(s => s.id);
+      
+      if (draftShiftIds.length === 0) {
+        throw new Error('No draft shifts to publish');
+      }
+      
       return await apiRequest('POST', '/api/schedules/publish', {
-        weekStart: weekStart.toISOString(),
-        weekEnd: weekEnd.toISOString(),
+        weekStartDate: weekStart.toISOString(),
+        weekEndDate: weekEnd.toISOString(),
+        shiftIds: draftShiftIds,
+        workspaceId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       toast({
         title: 'Schedule published',
         description: 'All employees have been notified of their shifts',
@@ -301,33 +557,41 @@ export default function UniversalSchedule() {
   const generateScheduleMutation = useMutation({
     mutationFn: async () => {
       if (!workspaceId) throw new Error('Workspace ID required');
-      const nextWeekStart = new Date(weekStart);
-      nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-      return await apiRequest('POST', '/api/scheduleos/smart-generate', {
+      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/trigger-session', {
         workspaceId,
-        openShiftIds: [], /* Will be auto-filled by AI */
-        constraints: {},
+        mode: 'full_generate',
       });
+      return await response.json();
     },
-    onSuccess: async (response) => {
-      const data = await response.json().catch(() => ({}));
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance', workspaceId] });
+      if (data?.orchestrationId) {
+        setActiveOrchestrationId(data.orchestrationId);
+        setTimeout(() => setActiveOrchestrationId(null), 30000);
+      }
+      const creditsUsed = data?.creditsDeducted || 0;
       toast({
         title: 'Schedule Generated',
-        description: data.message || 'Trinity AI has optimized next week\'s schedule',
+        description: `Trinity AI has optimized the schedule${creditsUsed > 0 ? ` (${creditsUsed} credits used)` : ''}`,
       });
     },
     onError: (error: any) => {
+      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
-        title: 'Failed to generate schedule',
-        description: error.message?.includes('402') 
-          ? 'This feature requires a Professional subscription or credits' 
+        title: isCredits ? 'Insufficient Credits' : 'Failed to generate schedule',
+        description: isCredits
+          ? 'You need more AI credits to generate a schedule.'
           : error.message,
       });
     }
   });
   
+  const isAnyActionPending = toggleAutomationMutation.isPending || triggerSchedulingMutation.isPending || deleteShiftMutation.isPending || reassignShiftMutation.isPending || publishScheduleMutation.isPending || generateScheduleMutation.isPending;
+
   // Detect touch device for drag-and-drop (disable on mobile per architect)
   const isTouchDevice = useMemo(() => 
     'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -346,29 +610,91 @@ export default function UniversalSchedule() {
   // Drag state for DragOverlay
   const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
   
-  // Drag start handler
   const handleDragStart = (event: any) => {
-    setActiveEmployeeId(event.active.id as string);
+    const data = event.active.data.current;
+    if (data?.type === 'inline-shift') {
+      setDraggedShiftId(data.shift.id);
+    } else {
+      setActiveEmployeeId(event.active.id as string);
+    }
   };
   
-  // Drag-and-drop handler
+  const [draggedShiftId, setDraggedShiftId] = useState<string | null>(null);
+  const [dropTargetEmployeeId, setDropTargetEmployeeId] = useState<string | null>(null);
+
+  // Staging architecture: pending reassignments staged client-side before batch save
+  const [pendingReassignments, setPendingReassignments] = useState<Map<string, { newEmployeeId: string; originalEmployeeId: string | null }>>(new Map());
+
+  const stageShiftReassignment = useCallback((shift: Shift, newEmployeeId: string) => {
+    setPendingReassignments(prev => {
+      const next = new Map(prev);
+      const existingPending = next.get(shift.id);
+      const originalEmployeeId = existingPending ? existingPending.originalEmployeeId : (shift.employeeId ?? null);
+      // If dropping back to original employee, cancel the pending change
+      if (originalEmployeeId === newEmployeeId) {
+        next.delete(shift.id);
+      } else {
+        next.set(shift.id, { newEmployeeId, originalEmployeeId });
+      }
+      return next;
+    });
+  }, []);
+
+  const discardPendingReassignments = useCallback(() => {
+    setPendingReassignments(new Map());
+  }, []);
+
+  const savePendingMutation = useMutation({
+    mutationFn: async () => {
+      const entries = Array.from(pendingReassignments.entries());
+      const count = entries.length;
+      await Promise.all(
+        entries.map(([shiftId, { newEmployeeId }]) =>
+          apiRequest('PATCH', `/api/shifts/${shiftId}`, { employeeId: newEmployeeId, workspaceId })
+        )
+      );
+      return count;
+    },
+    onSuccess: (count) => {
+      setPendingReassignments(new Map());
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+      toast({ title: `${count} shift${count !== 1 ? 's' : ''} reassigned`, description: 'All pending changes have been saved.' });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Failed to save changes', description: parseScheduleError(error) });
+    },
+  });
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveEmployeeId(null); // Clear active drag
+    setActiveEmployeeId(null);
+    setDraggedShiftId(null);
+    setDropTargetEmployeeId(null);
     if (!over) return;
-    
+
+    const activeData = active.data.current;
+
+    if (activeData?.type === 'inline-shift' && over.data.current?.type === 'employee-drop-row') {
+      const shift = activeData.shift as Shift;
+      const newEmployeeId = over.data.current.employeeId as string;
+      if (shift.employeeId !== newEmployeeId) {
+        // Stage instead of immediately persisting
+        stageShiftReassignment(shift, newEmployeeId);
+      }
+      return;
+    }
+
+    const overData = over.data.current as { day: number; hour: number };
+    if (overData?.day === undefined || overData?.hour === undefined) return;
     const employeeId = active.id as string;
-    const { day, hour } = over.data.current as { day: number; hour: number };
-    
-    // Calculate date from day index
+    const { day, hour } = overData;
+
     const shiftDate = new Date(weekStart);
     shiftDate.setDate(shiftDate.getDate() + day);
-    
-    // Calculate clock times (default 8-hour shift)
+
     const clockInHour = hour.toString().padStart(2, '0');
     const clockOutHour = Math.min(hour + 8, 23).toString().padStart(2, '0');
-    
-    // Prefill shift form and open modal
+
     setShiftForm({
       ...shiftForm,
       employeeId,
@@ -378,7 +704,7 @@ export default function UniversalSchedule() {
     });
     setModalPosition({ day, hour });
     setShowShiftModal(true);
-    
+
     toast({
       title: 'Shift Draft Created',
       description: 'Review and save shift details',
@@ -386,12 +712,18 @@ export default function UniversalSchedule() {
   };
   
   // State management
+  const [myScheduleOnly, setMyScheduleOnly] = useState(defaultViewMode === 'my');
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [viewMode, setViewMode] = useState<'week' | 'day'>('day'); // Default to day view for GetSling-style
+  const [viewMode, setViewMode] = useState<'week' | 'day' | 'month'>('day'); // Default to day view for GetSling-style
   const [selectedDay, setSelectedDay] = useState(new Date()); // Current day for day view
+  const [currentMonth, setCurrentMonth] = useState(new Date()); // Current month for month view
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
+  const lastAutoFillRef = useRef<number>(0); // Debounce auto-fill
+  const [schedulingResult, setSchedulingResult] = useState<any>(null);
+  const [showSchedulingSummary, setShowSchedulingSummary] = useState(false);
+  const [activeOrchestrationId, setActiveOrchestrationId] = useState<string | null>(null);
   const [manualApprovalMode, setManualApprovalMode] = useState(true);
   const [mobileEmployeePanelOpen, setMobileEmployeePanelOpen] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -427,9 +759,12 @@ export default function UniversalSchedule() {
   });
   
   // Advanced scheduling states
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [selectedShiftForAction, setSelectedShiftForAction] = useState<Shift | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [shiftToDelete, setShiftToDelete] = useState<string | null>(null);
   const [duplicateTargetDate, setDuplicateTargetDate] = useState('');
   const [duplicateTargetEmployee, setDuplicateTargetEmployee] = useState<string | null>(null);
   const [swapReason, setSwapReason] = useState('');
@@ -438,15 +773,26 @@ export default function UniversalSchedule() {
   // GetSling-style filter state
   const [scheduleFilters, setScheduleFilters] = useState<ScheduleFilterState>({
     searchQuery: '',
-    locations: [],
+    clientIds: [],
     positions: [],
+    positionCategories: [],
+    armedStatus: [],
     employeeStatuses: [],
     skills: [],
   });
   const [showFiltersPanel, setShowFiltersPanel] = useState(true);
-  const [showTrinityInsights, setShowTrinityInsights] = useState(true);
+  
+  // Cell-level hover tracking for GetSling-style interaction
+  const [hoveredCell, setHoveredCell] = useState<{ empId: string; hour: number } | null>(null);
+  
+  // Keyboard navigation - focused cell for arrow key movement
+  const [focusedCell, setFocusedCell] = useState<{ empIndex: number; hour: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  
+  const [showTrinityInsights, setShowTrinityInsights] = useState(false);
   const [showUnassignedPanel, setShowUnassignedPanel] = useState(true);
   const [showConflictAlerts, setShowConflictAlerts] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Default collapsed for GetSling style
   
   // Panel toggle handlers for toolbar actions
   const [showTasksPanel, setShowTasksPanel] = useState(false);
@@ -469,62 +815,179 @@ export default function UniversalSchedule() {
 
   const weekEnd = useMemo(() => {
     const date = new Date(weekStart);
-    date.setDate(date.getDate() + 6);
+    date.setDate(date.getDate() + 7);
     return date;
   }, [weekStart]);
 
   const weekDisplay = useMemo(() => {
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    return `${weekStart.toLocaleDateString('en-US', options)} - ${weekEnd.toLocaleDateString('en-US', options)}, ${weekEnd.getFullYear()}`;
+    const displayEnd = new Date(weekEnd);
+    displayEnd.setDate(displayEnd.getDate() - 1);
+    return `${weekStart.toLocaleDateString('en-US', options)} - ${displayEnd.toLocaleDateString('en-US', options)}, ${displayEnd.getFullYear()}`;
   }, [weekStart, weekEnd]);
 
   // Fetch shifts for current week with date range filtering
-  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
+  const shiftsQuery = useQuery<Shift[]>({
     queryKey: ['/api/shifts', weekStart.toISOString(), weekEnd.toISOString()],
     queryFn: async () => {
-      const response = await fetch(
-        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`,
+      const result = await apiFetch(
+        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}&limit=500`,
+        PaginatedShiftListResponse
+      );
+      return result.data as Shift[];
+    },
+  });
+  const {
+    data: shiftsData,
+    isLoading: shiftsLoading,
+    isError: shiftsError,
+    isEmpty: isShiftsEmpty,
+  } = useAsyncData(shiftsQuery, (d) => d.length === 0);
+  const shifts = shiftsData ?? [];
+
+  const monthStart = useMemo(() => {
+    return new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  }, [currentMonth]);
+
+  const monthEnd = useMemo(() => {
+    return new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+  }, [currentMonth]);
+
+  const { data: monthShifts = [], isLoading: monthShiftsLoading } = useQuery<Shift[]>({
+    queryKey: ['/api/shifts', 'month', monthStart.toISOString(), monthEnd.toISOString()],
+    queryFn: async () => {
+      const response = await secureFetch(
+        `/api/shifts?weekStart=${monthStart.toISOString()}&weekEnd=${monthEnd.toISOString()}`,
         { credentials: 'include' }
       );
-      if (!response.ok) throw new Error('Failed to fetch shifts');
-      return response.json();
-    }
+      if (!response.ok) throw new Error('Failed to fetch monthly shifts');
+      const json = await response.json();
+      return Array.isArray(json) ? json : (json?.data ?? []);
+    },
+    enabled: viewMode === 'month',
   });
 
   // Fetch employees
-  const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
-    queryKey: ['/api/employees'],
+  const { data: employees = [], isLoading: employeesLoading } = useQuery<{ data: Employee[] }, Error, Employee[]>({
+    queryKey: ['/api/employees', workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return { data: [] };
+      const res = await fetch(`/api/employees?workspaceId=${workspaceId}&limit=500`, { credentials: 'include' });
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+    select: (res) => res?.data ?? [],
+    enabled: !!workspaceId,
   });
 
   // Fetch clients for dropdown
   const { data: clients = [], isLoading: clientsLoading } = useClientLookup();
 
-  const isLoading = shiftsLoading || employeesLoading || clientsLoading;
+  const isLoading = shiftsLoading || employeesLoading || clientsLoading || (viewMode === 'month' && monthShiftsLoading);
+  const isError = shiftsError;
 
-  // Filter employees based on schedule filters
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
+      if (myScheduleOnly && currentEmployee?.id) {
+        if (emp.id !== currentEmployee.id) return false;
+      }
       if (scheduleFilters.searchQuery) {
         const searchLower = scheduleFilters.searchQuery.toLowerCase();
         const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
         if (!fullName.includes(searchLower)) return false;
-      }
-      if (scheduleFilters.locations.length > 0) {
-        if (!emp.city || !scheduleFilters.locations.includes(emp.city)) return false;
       }
       if (scheduleFilters.positions.length > 0) {
         if (!emp.role && !emp.organizationalTitle) return false;
         if (!scheduleFilters.positions.includes(emp.role || '') && 
             !scheduleFilters.positions.includes(emp.organizationalTitle || '')) return false;
       }
+      if (scheduleFilters.employeeStatuses.length > 0) {
+        const empState = (emp.state || 'active').toLowerCase();
+        if (!scheduleFilters.employeeStatuses.includes(empState)) return false;
+      }
       return true;
     });
-  }, [employees, scheduleFilters]);
+  }, [employees, scheduleFilters, myScheduleOnly, currentEmployee]);
+  
+  // Keyboard navigation handler - scoped to schedule grid only
+  // Only activates when a cell is focused and not inside an input/modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if typing in an input, textarea, or modal
+      const target = e.target as HTMLElement;
+      const tagName = target.tagName.toLowerCase();
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
+      if (target.closest('[role="dialog"]') || target.closest('[data-radix-portal]')) return;
+      
+      if (!focusedCell || !filteredEmployees.length) return;
+      
+      const { empIndex, hour } = focusedCell;
+      let newEmpIndex = empIndex;
+      let newHour = hour;
+      
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          newEmpIndex = Math.max(0, empIndex - 1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          newEmpIndex = Math.min(filteredEmployees.length - 1, empIndex + 1);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          newHour = Math.max(0, hour - 1);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          newHour = Math.min(23, hour + 1);
+          break;
+        case 'Enter':
+          e.preventDefault();
+          // Create shift at focused cell
+          const emp = filteredEmployees[empIndex];
+          if (emp) {
+            handleGridClick(selectedDay.getDay() === 0 ? 6 : selectedDay.getDay() - 1, hour);
+          }
+          return;
+        case 'Escape':
+          e.preventDefault();
+          setFocusedCell(null);
+          return;
+        default:
+          return;
+      }
+      
+      setFocusedCell({ empIndex: newEmpIndex, hour: newHour });
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedCell, filteredEmployees, selectedDay]);
+
+  // computedShifts: applies pending reassignment overrides on top of server data
+  const computedShifts = useMemo(() => {
+    if (pendingReassignments.size === 0) return shifts;
+    return shifts.map(shift => {
+      const pending = pendingReassignments.get(shift.id);
+      if (!pending) return shift;
+      return { ...shift, employeeId: pending.newEmployeeId };
+    });
+  }, [shifts, pendingReassignments]);
+
+  // Filter shifts by selected clientIds (derives from computedShifts for pending-aware filtering)
+  const filteredShifts = useMemo(() => {
+    if (scheduleFilters.clientIds.length === 0) return computedShifts;
+    return computedShifts.filter(shift => 
+      shift.clientId && scheduleFilters.clientIds.includes(shift.clientId)
+    );
+  }, [computedShifts, scheduleFilters.clientIds]);
 
   // Calculate schedule stats for toolbar
   const scheduleStats = useMemo(() => {
     const draftShifts = shifts.filter(s => s.status === 'draft').length;
     const publishedShifts = shifts.filter(s => s.status === 'published' || s.status === 'scheduled').length;
+    const openShifts = shifts.filter(s => !s.employeeId).length;
     let laborCost = 0;
     
     shifts.forEach(shift => {
@@ -540,6 +1003,7 @@ export default function UniversalSchedule() {
       totalShifts: shifts.length,
       publishedShifts,
       draftShifts,
+      openShifts,
       laborCost: Math.round(laborCost),
     };
   }, [shifts, employees]);
@@ -579,11 +1043,12 @@ export default function UniversalSchedule() {
         endTime: clockOutDate.toISOString(),
         status: 'draft', // Open shifts are indicated by employeeId: null, not status
         aiGenerated: false,
-        postOrders: shiftData.postOrders // ✅ CRITICAL: Include post orders array
+        postOrders: shiftData.postOrders, // ✅ CRITICAL: Include post orders array
+        workspaceId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       setShowShiftModal(false);
       toast({
         title: 'Shift created',
@@ -602,20 +1067,37 @@ export default function UniversalSchedule() {
   // AI Fill mutation (single shift)
   const aiFillMutation = useMutation({
     mutationFn: async (shiftId: string) => {
-      return await apiRequest('POST', `/api/shifts/${shiftId}/ai-fill`, {});
+      if (!workspaceId) throw new Error('Workspace ID required');
+      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/fill-shift', {
+        workspaceId,
+        shiftId,
+      });
+      return await response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats', workspaceId] });
+      if (data?.orchestrationId) {
+        setActiveOrchestrationId(data.orchestrationId);
+        setTimeout(() => setActiveOrchestrationId(null), 15000);
+      }
+      const creditsUsed = data?.creditsDeducted || 0;
       toast({
         title: 'AI auto-filled shift',
-        description: 'Smart AI found the best available employee for this shift',
+        description: `Best available employee assigned${creditsUsed > 0 ? ` (${creditsUsed} credits used)` : ''}`,
       });
     },
     onError: (error: any) => {
+      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
-        title: 'AI fill failed',
-        description: error.message,
+        title: isCredits ? 'Insufficient Credits' : 'AI fill failed',
+        description: isCredits
+          ? 'You need more AI credits to run this operation.'
+          : error.message,
       });
     }
   });
@@ -625,11 +1107,12 @@ export default function UniversalSchedule() {
     mutationFn: async ({ shiftId, employeeId }: { shiftId: string; employeeId: string }) => {
       return await apiRequest('PATCH', `/api/shifts/${shiftId}`, { 
         employeeId,
-        status: 'scheduled'
+        status: 'scheduled',
+        workspaceId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       toast({
         title: 'Shift assigned',
         description: 'Employee has been assigned to the shift',
@@ -644,31 +1127,233 @@ export default function UniversalSchedule() {
     }
   });
 
-  // Trigger AI Fill for all unassigned shifts mutation
+  // Trigger AI Fill for all unassigned shifts mutation (orchestrated with credit check)
   const triggerAIFillMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', '/api/trinity/scheduling/auto-fill', {
+      if (!workspaceId) throw new Error('Workspace ID required');
+      const openCount = scheduleStats.openShifts;
+      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/trigger-session', {
+        workspaceId,
+        mode: 'fill_gaps',
         weekStart: weekStart.toISOString(),
-        weekEnd: weekEnd.toISOString(),
+      });
+      const data = await response.json();
+      return { ...data, totalOpen: openCount };
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats', workspaceId] });
+      queryClient.refetchQueries({ queryKey: ['/api/shifts', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/usage/summary', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/credit-status', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
+      if (data?.orchestrationId) {
+        setActiveOrchestrationId(data.orchestrationId);
+        setTimeout(() => setActiveOrchestrationId(null), 15000);
+      }
+      
+      const filled = data?.shiftsUpdated || 0;
+      const total = data?.totalOpen || 0;
+      const creditsUsed = data?.creditsDeducted || 0;
+      if (!data?.sessionId) {
+        toast({
+          title: 'Trinity AI Auto-Fill Complete',
+          description: filled > 0 
+            ? `Filled ${filled} of ${total} shifts${creditsUsed > 0 ? ` (${creditsUsed} credits used)` : ''}`
+            : 'No unassigned shifts to fill',
+        });
+      }
+    },
+    onError: (error: any) => {
+      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
+      toast({
+        variant: 'destructive',
+        title: isCredits ? 'Insufficient Credits' : 'AI auto-fill failed',
+        description: isCredits
+          ? 'You need more AI credits to fill shifts.'
+          : error.message,
+      });
+    }
+  });
+
+  // Continuous Auto-Schedule: When automation is ON and new open shifts appear, auto-fill them
+  // Skip when Trinity training is actively running to prevent competing assignment operations
+  useEffect(() => {
+    if (!automationEnabled || scheduleStats.openShifts === 0) return;
+    if (trinityWorking) return;
+    
+    const now = Date.now();
+    if (now - lastAutoFillRef.current < 30000) return;
+    
+    if (triggerAIFillMutation.isPending) return;
+    
+    lastAutoFillRef.current = now;
+    triggerAIFillMutation.mutate();
+  }, [automationEnabled, scheduleStats.openShifts, triggerAIFillMutation.isPending, trinityWorking]);
+
+  // Auto-open review modal when Trinity completes scheduling (works in both dev and production)
+  useEffect(() => {
+    if (completionResult) {
+      setSchedulingResult({
+        success: true,
+        sessionId: completionResult.sessionId,
+        executionId: completionResult.executionId || completionResult.sessionId,
+        totalMutations: completionResult.mutationCount,
+        mutations: completionResult.mutations || [],
+        summary: completionResult.summary,
+        aiSummary: completionResult.aiSummary || '',
+        requiresVerification: completionResult.requiresVerification,
+      });
+      setShowSchedulingSummary(true);
+      clearCompletion();
+    }
+  }, [completionResult, clearCompletion]);
+
+  // ============================================
+  // STABLE CALLBACKS FOR ISOLATED TOOLBAR
+  // Using useCallback to prevent unnecessary re-renders
+  // These must be defined AFTER all mutations they depend on
+  // ============================================
+  
+  const handleToolbarToggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => !prev);
+  }, []);
+  
+  const handleToolbarCreateShift = useCallback(() => {
+    setModalPosition({ day: 0, hour: 8 });
+    setShiftForm({
+      employeeId: null,
+      position: '',
+      clockIn: '08:00',
+      clockOut: '16:00',
+      notes: '',
+      postOrders: [],
+      isOpenShift: false,
+      clientId: '',
+      location: '',
+      isRecurring: false,
+      recurrencePattern: 'weekly',
+      daysOfWeek: [days[0].toLowerCase()],
+      endDate: '',
+    });
+    setShowShiftModal(true);
+  }, [days]);
+  
+  const handleToolbarPublish = useCallback(async () => {
+    const draftShiftIds = shifts
+      .filter(s => s.status === 'draft' || !s.status)
+      .map(s => s.id);
+    
+    if (draftShiftIds.length === 0) {
+      toast({ title: 'No Drafts', description: 'No draft shifts to publish' });
+      return;
+    }
+    
+    try {
+      const weekStartCalc = new Date(selectedDay);
+      weekStartCalc.setDate(weekStartCalc.getDate() - weekStartCalc.getDay());
+      const weekEndCalc = new Date(weekStartCalc);
+      weekEndCalc.setDate(weekEndCalc.getDate() + 6);
+      
+      await apiRequest('POST', '/api/schedules/publish', {
+        weekStartDate: weekStartCalc.toISOString(),
+        weekEndDate: weekEndCalc.toISOString(),
+        shiftIds: draftShiftIds,
+        workspaceId,
+      });
+      toast({ title: 'Published', description: `${draftShiftIds.length} shifts published` });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Publish Failed', description: error.message });
+    }
+  }, [shifts, selectedDay, toast]);
+  
+  const handleToolbarAutoFill = useCallback(() => {
+    triggerAIFillMutation.mutate();
+  }, [triggerAIFillMutation]);
+  
+  const handleToolbarToggleAutomation = useCallback(() => {
+    toggleAutomationMutation.mutate(!automationEnabled);
+  }, [toggleAutomationMutation, automationEnabled]);
+  
+  const handleToolbarOpenTrinityInsights = useCallback(() => {
+    setShowTrinityInsights(true);
+  }, []);
+  
+  const handleToolbarOpenEmployeeFilters = useCallback(() => {
+    setSidebarCollapsed(false);
+  }, []);
+  
+  const handleToolbarOpenLocationFilters = useCallback(() => {
+    setSidebarCollapsed(false);
+  }, []);
+  
+  const handleToolbarClearFilters = useCallback(() => {
+    setScheduleFilters({ searchQuery: '', clientIds: [], positions: [], positionCategories: [], armedStatus: [], employeeStatuses: [], skills: [] });
+  }, []);
+  
+  const handleToolbarViewModeChange = useCallback((mode: 'day' | 'week' | 'month') => {
+    setViewMode(mode);
+  }, []);
+  
+  const handleToolbarDayChange = useCallback((day: Date) => {
+    setSelectedDay(day);
+    setCurrentWeek(day);
+  }, []);
+
+  const handleToolbarMonthChange = useCallback((month: Date) => {
+    setCurrentMonth(month);
+  }, []);
+
+  const duplicateWeekMutation = useMutation({
+    mutationFn: async ({ sourceWeekStart, targetWeekStart }: { sourceWeekStart: string; targetWeekStart: string }) => {
+      return await apiRequest('POST', '/api/scheduling/duplicate-week', {
+        sourceWeekStart,
+        targetWeekStart,
+        skipExisting: true,
+        workspaceId,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       toast({
-        title: 'Trinity AI Auto-Fill Complete',
-        description: 'All unassigned shifts have been optimally assigned',
+        title: 'Week duplicated',
+        description: `Copied ${data?.copiedShifts || 0} shifts to the next week`,
       });
     },
     onError: (error: any) => {
       toast({
         variant: 'destructive',
-        title: 'AI auto-fill failed',
+        title: 'Failed to duplicate week',
         description: error.message,
       });
     }
   });
 
-  const handleGridClick = (dayIndex: number, hourIndex: number) => {
+  const handleCopyPreviousWeek = useCallback(() => {
+    const previousWeekStart = new Date(weekStart);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+    duplicateWeekMutation.mutate({
+      sourceWeekStart: previousWeekStart.toISOString(),
+      targetWeekStart: weekStart.toISOString(),
+    });
+  }, [weekStart, duplicateWeekMutation]);
+
+  const handleWeekNav = useCallback((direction: 'prev' | 'next') => {
+    setCurrentWeek(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + (direction === 'next' ? 7 : -7));
+      return d;
+    });
+    setSelectedDay(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + (direction === 'next' ? 7 : -7));
+      return d;
+    });
+  }, []);
+
+  const handleGridClick = useCallback((dayIndex: number, hourIndex: number) => {
     setModalPosition({ day: dayIndex, hour: hourIndex });
     setShiftForm({
       employeeId: null,
@@ -686,7 +1371,7 @@ export default function UniversalSchedule() {
       endDate: '',
     });
     setShowShiftModal(true);
-  };
+  }, [days]);
   
   // Duplicate shift mutation
   const duplicateShiftMutation = useMutation({
@@ -695,10 +1380,11 @@ export default function UniversalSchedule() {
         targetDate,
         targetEmployeeId,
         copyNotes: true,
+        workspaceId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       setShowDuplicateModal(false);
       setSelectedShiftForAction(null);
       toast({
@@ -715,16 +1401,48 @@ export default function UniversalSchedule() {
     }
   });
 
+  // Edit shift mutation
+  const editShiftMutation = useMutation({
+    mutationFn: async ({ shiftId, data }: { shiftId: string; data: Partial<EditShiftFormData> }) => {
+      const payload: Record<string, any> = {};
+      if (data.employeeId !== undefined) payload.employeeId = data.employeeId;
+      if (data.title) payload.title = data.title;
+      if (data.clientId) payload.clientId = data.clientId;
+      if (data.description) payload.description = data.description;
+      if (data.startTime) payload.startTime = data.startTime;
+      if (data.endTime) payload.endTime = data.endTime;
+      if (data.date) payload.date = data.date;
+      return await apiRequest('PATCH', `/api/shifts/${shiftId}`, { ...payload, workspaceId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
+      setShowEditModal(false);
+      setSelectedShiftForAction(null);
+      toast({
+        title: 'Shift updated',
+        description: 'The shift has been updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update shift',
+        description: error.message,
+      });
+    }
+  });
+
   // Request swap mutation
   const requestSwapMutation = useMutation({
     mutationFn: async ({ shiftId, reason, targetEmployeeId }: { shiftId: string; reason: string; targetEmployeeId?: string }) => {
       return await apiRequest('POST', `/api/scheduling/shifts/${shiftId}/swap-request`, {
         reason,
         targetEmployeeId,
+        workspaceId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       setShowSwapModal(false);
       setSelectedShiftForAction(null);
       setSwapReason('');
@@ -746,10 +1464,10 @@ export default function UniversalSchedule() {
   // Create recurring pattern mutation
   const createRecurringMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('POST', '/api/scheduling/recurring', data);
+      return await apiRequest('POST', '/api/scheduling/recurring', { ...data, workspaceId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
       setShowShiftModal(false);
       toast({
         title: 'Recurring shifts created',
@@ -765,41 +1483,16 @@ export default function UniversalSchedule() {
     }
   });
   
-  // Duplicate week mutation
-  const duplicateWeekMutation = useMutation({
-    mutationFn: async ({ sourceWeekStart, targetWeekStart }: { sourceWeekStart: string; targetWeekStart: string }) => {
-      return await apiRequest('POST', '/api/scheduling/duplicate-week', {
-        sourceWeekStart,
-        targetWeekStart,
-        skipExisting: true,
-      });
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
-      toast({
-        title: 'Week duplicated',
-        description: `Copied ${data?.copiedShifts || 0} shifts to the next week`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to duplicate week',
-        description: error.message,
-      });
-    }
-  });
-  
-  const handleDuplicateShift = (shift: Shift) => {
+  const handleDuplicateShift = useCallback((shift: Shift) => {
     setSelectedShiftForAction(shift);
     const nextDay = new Date(shift.startTime);
     nextDay.setDate(nextDay.getDate() + 7);
     setDuplicateTargetDate(nextDay.toISOString().split('T')[0]);
     setDuplicateTargetEmployee(shift.employeeId);
     setShowDuplicateModal(true);
-  };
+  }, []);
   
-  const handleQuickDuplicate = (shift: Shift) => {
+  const handleQuickDuplicate = useCallback((shift: Shift) => {
     const nextWeek = new Date(shift.startTime);
     nextWeek.setDate(nextWeek.getDate() + 7);
     duplicateShiftMutation.mutate({
@@ -807,14 +1500,14 @@ export default function UniversalSchedule() {
       targetDate: nextWeek.toISOString().split('T')[0],
       targetEmployeeId: shift.employeeId || undefined,
     });
-  };
+  }, [duplicateShiftMutation]);
   
-  const handleSwapShift = (shift: Shift) => {
+  const handleSwapShift = useCallback((shift: Shift) => {
     setSelectedShiftForAction(shift);
     setSwapReason('');
     setSwapTargetEmployee(null);
     setShowSwapModal(true);
-  };
+  }, []);
   
   const handleDuplicateWeek = () => {
     const nextWeekStart = new Date(weekStart);
@@ -903,515 +1596,374 @@ export default function UniversalSchedule() {
     // Open shifts have no assigned employee
     return !shift.employeeId;
   };
+  
+  // GetSling-style color-coding for shift status (uses explicit status fields only)
+  // Blue=confirmed, Yellow=pending, Green=clocked-in, Red=unassigned, Purple=overtime
+  const getShiftStatusColor = (shift: Shift) => {
+    // Check if unassigned (red) - no employee assigned
+    if (!shift.employeeId) {
+      return { bg: '#ef4444', label: 'Unassigned' }; // Red
+    }
+    
+    // Check if employee is clocked in (green) - based on actual time clock status
+    const timeClockStatus = getShiftTimeClockStatus(shift);
+    if (timeClockStatus.label === 'Active') {
+      return { bg: '#10b981', label: 'Clocked In' }; // Green
+    }
+    
+    // Check explicit overtime flag if available (purple)
+    if ((shift as any).isOvertime === true) {
+      return { bg: '#8b5cf6', label: 'Overtime' }; // Purple
+    }
+    
+    // Check status for pending/draft approval (yellow) vs confirmed (blue)
+    if (shift.status === 'draft' || shift.status === 'in_progress') {
+      return { bg: '#f59e0b', label: 'Pending' }; // Yellow
+    }
+    
+    // Default: confirmed/published/scheduled (blue)
+    return { bg: '#3b82f6', label: 'Confirmed' }; // Blue
+  };
 
-  // Helper for week navigation
-  const handleWeekChange = (direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
+  // Helper for week navigation - accepts Date range from ScheduleToolbar
+  const handleWeekChange = (start: Date, end: Date) => {
+    // Determine direction based on whether new start is before or after current weekStart
+    if (start < weekStart) {
       goToPreviousWeek();
     } else {
       goToNextWeek();
     }
   };
 
+  // Mobile: Render mobile-first schedule first — it has its own data fetching and error states.
+  // This must come before desktop isLoading/isError checks to prevent mobile users from
+  // seeing desktop-only error screens caused by desktop-specific queries.
+  if (isMobile) {
+    return <ScheduleMobileFirst defaultViewMode={defaultViewMode || 'my'} />;
+  }
+
   if (isLoading) {
     return (
-      <WorkspaceLayout>
-        <div className="p-4 space-y-3">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
-          ))}
-          <p className="text-center text-sm text-muted-foreground">Loading schedule...</p>
-        </div>
-      </WorkspaceLayout>
+      <CanvasHubPage config={scheduleLoadingConfig}>
+        <ScheduleGridSkeleton viewMode={viewMode} />
+      </CanvasHubPage>
     );
   }
 
-  // Mobile: Render new mobile-first schedule wrapped in WorkspaceLayout
-  if (isMobile) {
+  if (isError) {
     return (
-      <WorkspaceLayout>
-        <ScheduleMobileFirst />
-      </WorkspaceLayout>
+      <CanvasHubPage config={scheduleLoadingConfig}>
+        <div className="flex flex-col items-center justify-center h-64 gap-3">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+          <p className="text-sm text-muted-foreground">Failed to load schedule data. Please refresh.</p>
+        </div>
+      </CanvasHubPage>
     );
   }
 
-  // Desktop: Render grid-based schedule wrapped in WorkspaceLayout
+  // Desktop: Sling-style layout with proper overflow containment
+  // Structure: page-shell → left-filters → schedule-canvas → right-panel (collapsible)
+  // Note: No WorkspaceLayout wrapper to maximize schedule viewport (schedule starts immediately)
   return (
-    <WorkspaceLayout maxWidth="full">
-      <DndContext
-        sensors={isTouchDevice ? [] : sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex h-screen bg-background">
-        {/* Desktop Employee Sidebar with Filters */}
+    <DndContext
+      sensors={isTouchDevice ? [] : sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={(event) => {
+        const overData = event.over?.data.current;
+        if (overData?.type === 'employee-drop-row') {
+          setDropTargetEmployeeId(overData.employeeId);
+        } else {
+          setDropTargetEmployeeId(null);
+        }
+      }}
+      onDragEnd={handleDragEnd}
+    >
+      {/* GETSLING-STYLE: Fixed height container - schedule dominates viewport, minimal chrome */}
+      <div className="flex h-[calc(100vh-6.5rem)] bg-background overflow-hidden overflow-x-hidden">
+        {/* Left Filters Panel - COLLAPSIBLE (default collapsed for max schedule space) */}
         {!isMobile && (
-        <div className="w-72 bg-card border-r flex flex-col">
-          <div className="p-4 border-b">
-            <ScheduleFilters
+          <div className={`transition-all duration-200 flex-shrink-0 ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64'}`}>
+            <ScheduleLeftSidebar
               filters={scheduleFilters}
               onFiltersChange={setScheduleFilters}
               employees={employees}
               clients={clients}
+              filteredEmployees={filteredEmployees}
+              filteredShifts={filteredShifts}
+              laborCost={scheduleStats.laborCost}
             />
           </div>
-
-          <div className="p-3 border-b">
-            <h3 className="text-sm font-semibold mb-2">
-              Employees ({filteredEmployees.length})
-            </h3>
-          </div>
-
-          <ScrollArea className="flex-1 p-3">
-            <div className="space-y-2">
-              {filteredEmployees.map(employee => (
-                <DraggableEmployee
-                  key={employee.id}
-                  employee={employee}
-                  isSelected={selectedEmployee?.id === employee.id}
-                  onSelect={() => setSelectedEmployee(employee)}
-                  getEmployeeColor={getEmployeeColor}
-                />
-              ))}
-            </div>
-          </ScrollArea>
-
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* GetSling-style Toolbar */}
-        <ScheduleToolbar
-          weekStart={weekStart}
-          weekEnd={weekEnd}
-          onWeekChange={handleWeekChange}
-          onAddShift={() => {
-            setModalPosition({ day: 0, hour: 8 });
-            setShowShiftModal(true);
-          }}
-          onPublish={() => {
-            toast({ 
-              title: 'Publishing',
-              description: 'Publishing all draft shifts for this week'
-            });
-          }}
-          totalShifts={scheduleStats.totalShifts}
-          laborCost={scheduleStats.laborCost}
-          publishedShifts={scheduleStats.publishedShifts}
-          draftShifts={scheduleStats.draftShifts}
-          onShowTasks={() => setShowTasksPanel(!showTasksPanel)}
-          onShowTimeClock={() => setShowTimeClockPanel(!showTimeClockPanel)}
-          onShowMessages={() => setShowMessagesPanel(!showMessagesPanel)}
-          onShowReports={() => setShowReportsPanel(!showReportsPanel)}
-          onShowAvailability={() => setShowAvailabilityPanel(!showAvailabilityPanel)}
-          onShowSettings={() => setShowSettingsPanel(!showSettingsPanel)}
-          onShowTrinityInsights={() => setShowTrinityInsights(!showTrinityInsights)}
-          showTrinityInsights={showTrinityInsights}
-        />
-        
-        {/* Week Stats Bar */}
-        <WeekStatsBar
-          shifts={shifts}
-          employees={employees}
-          clients={clients}
-          weekStart={weekStart}
-          weekEnd={weekEnd}
-        />
-        
-        {/* Conflict Alerts */}
-        {showConflictAlerts && (
-          <ConflictAlerts
-            shifts={shifts}
-            employees={employees}
-            onResolve={(shiftId) => {
-              toast({
-                title: 'Opening shift',
-                description: 'Edit shift to resolve the conflict'
-              });
-              const shift = shifts.find(s => s.id === shiftId);
-              if (shift) setSelectedShiftForAction(shift);
-            }}
-            onDismiss={() => setShowConflictAlerts(false)}
-            className="mx-4 mt-2"
-          />
         )}
-        
-        {/* Unassigned Shifts Panel */}
-        {showUnassignedPanel && shifts.some(s => !s.employeeId) && (
-          <UnassignedShiftsPanel
-            shifts={shifts}
-            employees={employees}
-            clients={clients}
-            onAssign={(shiftId, employeeId) => {
-              assignShiftMutation.mutate({ shiftId, employeeId });
-            }}
-            onTriggerAIFill={() => {
-              triggerAIFillMutation.mutate();
-            }}
-            isAIFillPending={triggerAIFillMutation.isPending}
-            className="mx-4 mt-2"
-          />
-        )}
-        
-        {/* Header */}
-        <div className="bg-card border-b p-4">
-          <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-            <div className="flex items-center gap-4 min-w-0">
-              {/* Mobile Menu */}
-              {isMobile && (
-                <Sheet open={mobileEmployeePanelOpen} onOpenChange={setMobileEmployeePanelOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" data-testid="button-menu">
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="w-80 p-0">
-                    <div className="p-4 border-b">
-                      <h2 className="text-lg font-bold">Employees</h2>
-                      <p className="text-sm text-muted-foreground">{employees.length} active</p>
-                    </div>
-                    <ScrollArea className="h-[calc(100vh-120px)] p-4">
-                      <div className="space-y-2">
-                        {employees.map(employee => (
-                          <div
-                            key={employee.id}
-                            onClick={() => {
-                              setSelectedEmployee(employee);
-                              setMobileEmployeePanelOpen(false);
-                            }}
-                            className="p-3 rounded-lg border-2 cursor-pointer transition-all"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: getEmployeeColor(employee.id) }}
-                              />
-                              <span className="font-medium text-sm">{employee.firstName} {employee.lastName}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </SheetContent>
-                </Sheet>
-              )}
 
-              <h1 className="text-2xl font-bold">Weekly Schedule</h1>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="icon" onClick={goToPreviousWeek} data-testid="button-prev-week">
-                  <ChevronLeft className="w-5 h-5" />
-                </Button>
-                <span className="text-sm font-medium whitespace-nowrap">{weekDisplay}</span>
-                <Button variant="outline" size="icon" onClick={goToNextWeek} data-testid="button-next-week">
-                  <ChevronRight className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Schedule Tools - RBAC-aware toolbar */}
-            {isManager ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Shift Governance */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="button-shift-governance">
-                      <UserCheck className="w-4 h-4 mr-1" />
-                      Approvals
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Shift Governance</h4>
-                      <Separator />
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={async () => {
-                        try {
-                          const response = await apiRequest('GET', '/api/shifts/pending');
-                          const data = await response.json();
-                          setPendingShifts(data || []);
-                          setShowApproveDialog(true);
-                        } catch (error: any) {
-                          toast({ description: error.message, variant: "destructive" });
-                        }
-                      }} data-testid="button-approve-shifts">
-                        <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                        Approve Pending Shifts
-                      </Button>
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => {
-                        toast({ description: "Review rejections - filtering pending shifts with 'rejected' status" });
-                        setShowApproveDialog(true);
-                      }} data-testid="button-reject-shifts">
-                        <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                        Review Rejections
-                      </Button>
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setShowEscalationMatrix(true)} data-testid="button-escalations">
-                        <AlertCircle className="w-4 h-4 mr-2 text-orange-600" />
-                        Escalation Matrix
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start" 
-                        onClick={() => handleAdminOnlyAction('Lock Schedule')}
-                        data-testid="button-lock-schedule"
-                      >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Lock Schedule {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start" 
-                        onClick={() => handleAdminOnlyAction('Override Rules')}
-                        data-testid="button-override-rules"
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Override Rules {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {/* Process Automation */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="button-process-automation">
-                      <Zap className="w-4 h-4 mr-1" />
-                      Workflows
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Automation & Workflows</h4>
-                      <Separator />
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={async () => {
-                        try {
-                          const response = await apiRequest('GET', '/api/workflows/active');
-                          const data = await response.json();
-                          setActiveWorkflows(data || []);
-                          setShowWorkflowsDialog(true);
-                        } catch (error: any) {
-                          toast({ description: error.message, variant: "destructive" });
-                        }
-                      }} data-testid="button-view-workflows">
-                        <Clock className="w-4 h-4 mr-2" />
-                        View Active Workflows
-                      </Button>
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={async () => {
-                        try {
-                          await apiRequest('POST', '/api/ai/trigger-fill', {});
-                          toast({ title: "AI Fill Triggered", description: "Trinity AI is optimizing your schedule" });
-                        } catch (error: any) {
-                          toast({ description: error.message, variant: "destructive" });
-                        }
-                      }} data-testid="button-trigger-fill">
-                        <Bot className="w-4 h-4 mr-2 text-blue-600" />
-                        Trigger AI Fill
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start" 
-                        onClick={() => handleAdminOnlyAction('Pause Automation')}
-                        data-testid="button-pause-automation"
-                      >
-                        <PauseCircle className="w-4 h-4 mr-2" />
-                        Pause Automation {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start" 
-                        onClick={() => handleAdminOnlyAction('Manage Rules')}
-                        data-testid="button-manage-rules"
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Manage Rules {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {/* Communications */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="button-communications">
-                      <Bell className="w-4 h-4 mr-1" />
-                      Alerts
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Communications & Alerts</h4>
-                      <Separator />
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setShowReminderDialog(true)} data-testid="button-send-reminder">
-                        <Send className="w-4 h-4 mr-2" />
-                        Send Shift Reminder
-                      </Button>
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setShowEscalationMatrix(true)} data-testid="button-escalation-matrix">
-                        <AlertCircle className="w-4 h-4 mr-2" />
-                        Escalation Matrix
-                      </Button>
-                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => toast({ description: "Exception alerts feature coming soon" })} data-testid="button-exception-alerts">
-                        <AlertTriangle className="w-4 h-4 mr-2" />
-                        Exception Alerts
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start" 
-                        onClick={() => handleAdminOnlyAction('Compliance Audit')}
-                        data-testid="button-compliance-audit"
-                      >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Compliance Audit {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start" 
-                        onClick={() => handleAdminOnlyAction('AI Override Log')}
-                        data-testid="button-ai-override-log"
-                      >
-                        <Bot className="w-4 h-4 mr-2" />
-                        AI Override Log {!isAdmin && <span className="ml-auto text-xs text-muted-foreground">(Admin)</span>}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Employee view - minimal toolbar (Ask Trinity in chat) */}
-              </div>
-            )}
-          </div>
-
-          {/* Trinity Status Bar with Live Progress */}
-          <div className="p-3 bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/10 to-[#FFD700]/10 rounded-lg border border-[#00BFFF]/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <TrinityIconStatic size={20} />
-                  <span className="font-medium text-sm">Trinity Automation</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleAutomationMutation.mutate(!automationEnabled)}
-                    disabled={toggleAutomationMutation.isPending}
-                    className={`h-6 px-2 ${automationEnabled ? 'text-green-600' : 'text-muted-foreground'}`}
-                    data-testid="button-ai-toggle"
-                  >
-                    {toggleAutomationMutation.isPending ? '...' : automationEnabled ? 'ON' : 'OFF'}
-                  </Button>
-                </div>
-
-                <div className="h-6 w-px bg-border" />
-
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Smart AI Engine</span>
-                </div>
-              </div>
-
-              {manualApprovalMode && (
-                <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900/20 border-yellow-600 text-yellow-800 dark:text-yellow-200">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  Manual Approval Required
-                </Badge>
-              )}
-            </div>
-            
-            {/* Trinity Thought Box - Live Progress Display */}
-            <TrinitySchedulingProgress workspaceId={workspaceId} embedded={true} />
-          </div>
-        </div>
-
-        {/* View Mode Toggle & Day Navigation */}
-        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 rounded-lg border mb-2">
-          <div className="flex items-center gap-2">
+      {/* Main Content - SLING-STYLE: Bounded scroll container */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden overflow-x-hidden">
+        <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+          <div className="flex items-center gap-1 rounded-md border p-0.5" data-testid="schedule-view-toggle">
             <Button
-              variant={viewMode === 'day' ? 'default' : 'outline'}
+              variant={myScheduleOnly ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode('day')}
-              data-testid="button-day-view"
+              onClick={() => { setMyScheduleOnly(true); handleScheduleInteraction(); }}
+              data-testid="button-my-schedule"
             >
               <CalendarDays className="w-4 h-4 mr-1" />
-              Day
+              My Schedule
             </Button>
             <Button
-              variant={viewMode === 'week' ? 'default' : 'outline'}
+              variant={!myScheduleOnly ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode('week')}
-              data-testid="button-week-view"
+              onClick={() => { setMyScheduleOnly(false); handleScheduleInteraction(); }}
+              data-testid="button-team-schedule"
             >
-              <Calendar className="w-4 h-4 mr-1" />
-              Week
+              <Users className="w-4 h-4 mr-1" />
+              Team Schedule
             </Button>
           </div>
-          
-          {/* Day Navigation (for day view) */}
-          {viewMode === 'day' && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  const prev = new Date(selectedDay);
-                  prev.setDate(prev.getDate() - 1);
-                  setSelectedDay(prev);
-                }}
-                data-testid="button-prev-day"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <div className="font-medium text-sm min-w-[140px] text-center">
-                {selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  const next = new Date(selectedDay);
-                  next.setDate(next.getDate() + 1);
-                  setSelectedDay(next);
-                }}
-                data-testid="button-next-day"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedDay(new Date())}
-                data-testid="button-today"
-              >
-                Today
-              </Button>
+        </div>
+        <IsolatedScheduleToolbar
+          workspaceId={workspaceId}
+          isManager={isManager}
+          draftShiftsCount={scheduleStats.draftShifts}
+          openShiftsCount={scheduleStats.openShifts}
+          automationEnabled={automationEnabled}
+          isAutoFilling={triggerAIFillMutation.isPending}
+          isTogglingAutomation={toggleAutomationMutation.isPending}
+          viewMode={viewMode}
+          selectedDay={selectedDay}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToolbarToggleSidebar}
+          onCreateShift={handleToolbarCreateShift}
+          onPublish={handleToolbarPublish}
+          onAutoFill={handleToolbarAutoFill}
+          onToggleAutomation={handleToolbarToggleAutomation}
+          onOpenTrinityInsights={handleToolbarOpenTrinityInsights}
+          onOpenTrinityChat={openTrinityChat}
+          onOpenEmployeeFilters={handleToolbarOpenEmployeeFilters}
+          onOpenLocationFilters={handleToolbarOpenLocationFilters}
+          onClearFilters={handleToolbarClearFilters}
+          onViewModeChange={handleToolbarViewModeChange}
+          onDayChange={handleToolbarDayChange}
+          currentMonth={currentMonth}
+          onMonthChange={handleToolbarMonthChange}
+          onCopyPreviousWeek={isManager ? handleCopyPreviousWeek : undefined}
+        />
+
+        {/* Week Stats Bar - Labor cost, hours, overtime, fill rate */}
+        {viewMode !== 'month' && (
+          <WeekStatsBar
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+            weekDisplay={weekDisplay}
+            shifts={shifts}
+            employees={employees}
+            onViewDetailedReport={() => setLocation('/analytics/reports')}
+          />
+        )}
+
+        {/* Trinity Live Scheduling Status Bar - Shows prominent feedback during automation */}
+        <TrinityStatusBar session={session} />
+        
+        {/* Trinity Legacy Progress - Uses data from parent hook to avoid duplicate WebSocket */}
+        <TrinitySchedulingProgress embedded progressData={activeProgress} />
+        
+        {/* Pipeline Operation Visibility - 7-step progress tracker */}
+        {activeOrchestrationId && (
+          <div className="px-2 py-1">
+            <OperationVisibilityPanel workspaceId={workspaceId} orchestrationId={activeOrchestrationId} />
+          </div>
+        )}
+
+        {/* Pending Reassignments Bar - appears when unsaved staged changes exist */}
+        <PendingChangesBar
+          count={pendingReassignments.size}
+          isSaving={savePendingMutation.isPending}
+          onSave={() => savePendingMutation.mutate()}
+          onDiscard={discardPendingReassignments}
+        />
+
+        {/* Main Schedule Area - MAXIMIZED - GetSling style 70%+ viewport */}
+        <div className="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden isolate">
+
+          {/* Trinity Working Skeleton Overlay - fades to reveal live mutations underneath */}
+          {trinityWorking && session.currentIndex === 0 && (
+            <div className="absolute inset-0 z-30 pointer-events-none animate-in fade-in duration-300" data-testid="trinity-working-skeleton-overlay">
+              <ScheduleGridSkeleton viewMode={viewMode} />
             </div>
           )}
-        </div>
+          {trinityWorking && session.currentIndex > 0 && (
+            <div className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-700 opacity-0" data-testid="trinity-skeleton-fade-out" />
+          )}
 
-        {/* Main Schedule Area with Right Panel for Trinity Insights */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Schedule Grid - GetSling Style Horizontal Timeline */}
-          <ScrollArea className="flex-1 p-4">
-          <div className="bg-card rounded-lg border overflow-hidden min-w-[1200px]">
-            {/* GetSling-Style Horizontal Timeline Header */}
-            <div className="sticky top-0 z-10 bg-card">
-              {/* Hour Timeline Header - Spans Full Width */}
-              <div className="flex border-b bg-gradient-to-r from-muted/80 to-muted/50">
-                {/* Employee Column Header */}
-                <div className="w-48 min-w-48 p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2 flex-shrink-0">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <span>Employee</span>
+          {/* === WEEK VIEW: GetSling-style 7-day column grid === */}
+          {viewMode === 'week' && (
+            <div className="bg-slate-50/50 dark:bg-slate-900/30 border-t min-h-full">
+              <WeekGrid
+                weekStart={weekStart}
+                weekEnd={weekEnd}
+                selectedDay={selectedDay}
+                shifts={shifts}
+                filteredShifts={filteredShifts}
+                employees={employees}
+                filteredEmployees={filteredEmployees}
+                clients={clients}
+                trinityWorking={trinityWorking}
+                isShiftBeingProcessed={isShiftBeingProcessed}
+                wasShiftJustAssigned={wasShiftJustAssigned}
+                getEmployeeColor={getEmployeeColor}
+                getShiftStatusColor={getShiftStatusColor}
+                onShiftClick={(shift) => setSelectedShiftForAction(shift)}
+                onCellClick={handleGridClick}
+                onAIFillOpenShift={handleAIFillOpenShift}
+                onDaySelect={handleToolbarDayChange}
+                onWeekNav={handleWeekNav}
+                isManager={isManager}
+                aiFillPending={aiFillMutation.isPending}
+              />
+            </div>
+          )}
+
+          {/* === MONTH VIEW: Calendar-style overview grid === */}
+          {viewMode === 'month' && (() => {
+            const monthYear = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+            const firstDayOfMonth = new Date(monthYear.getFullYear(), monthYear.getMonth(), 1);
+            const lastDayOfMonth = new Date(monthYear.getFullYear(), monthYear.getMonth() + 1, 0);
+            const startDayOfWeek = firstDayOfMonth.getDay();
+            const daysInMonth = lastDayOfMonth.getDate();
+            const totalCells = Math.ceil((startDayOfWeek + daysInMonth) / 7) * 7;
+            const today = new Date();
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+            const getShiftsForDate = (date: Date) => {
+              return monthShifts.filter(s => {
+                const shiftDate = new Date(s.startTime);
+                return shiftDate.getFullYear() === date.getFullYear() &&
+                       shiftDate.getMonth() === date.getMonth() &&
+                       shiftDate.getDate() === date.getDate();
+              });
+            };
+
+            const getTotalHours = (dayShifts: Shift[]) => {
+              return dayShifts.reduce((total, s) => {
+                const start = new Date(s.startTime);
+                const end = new Date(s.endTime);
+                return total + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+              }, 0);
+            };
+
+            const cells = [];
+            for (let i = 0; i < totalCells; i++) {
+              const dayOffset = i - startDayOfWeek;
+              const cellDate = new Date(monthYear.getFullYear(), monthYear.getMonth(), 1 + dayOffset);
+              const isCurrentMonth = cellDate.getMonth() === monthYear.getMonth();
+              const isToday = cellDate.toDateString() === today.toDateString();
+              const dayShifts = getShiftsForDate(cellDate);
+              const totalHours = getTotalHours(dayShifts);
+
+              const maxShiftsToShow = 4;
+              const overflowCount = Math.max(0, dayShifts.length - maxShiftsToShow);
+              const visibleShifts = dayShifts.slice(0, maxShiftsToShow);
+
+              cells.push(
+                <div
+                  key={i}
+                  className={`border border-slate-200/60 dark:border-slate-700/60 p-2 min-h-[140px] cursor-pointer transition-colors ${
+                    isToday ? 'bg-blue-50/50 dark:bg-blue-900/15' : ''
+                  } ${!isCurrentMonth ? 'opacity-40' : ''} ${
+                    isCurrentMonth ? 'hover:bg-slate-50 dark:hover:bg-slate-800/60' : ''
+                  }`}
+                  onClick={() => {
+                    setSelectedDay(cellDate);
+                    setCurrentWeek(cellDate);
+                    setViewMode('day');
+                  }}
+                  data-testid={`month-cell-${cellDate.getFullYear()}-${cellDate.getMonth() + 1}-${cellDate.getDate()}`}
+                >
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className={`text-xs font-medium ${
+                      isToday ? 'text-primary font-bold' : 'text-foreground/80'
+                    }`}>
+                      {cellDate.getDate()}
+                    </span>
+                    {totalHours > 0 && (
+                      <span className="text-[9px] text-muted-foreground">{totalHours.toFixed(0)}h</span>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {visibleShifts.map(shift => {
+                      const sStart = new Date(shift.startTime);
+                      const sEnd = new Date(shift.endTime);
+                      const dur = ((sEnd.getTime() - sStart.getTime()) / (1000 * 60 * 60)).toFixed(0);
+                      const fmt = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                      const shiftColor = getShiftStatusColor(shift);
+                      const emp = shift.employeeId ? employees.find(e => e.id === shift.employeeId) : null;
+                      const cl = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                      const isOpen = !shift.employeeId;
+
+                      return (
+                        <div
+                          key={shift.id}
+                          className={`rounded-md px-1.5 py-1 text-[10px] leading-snug cursor-pointer transition-all duration-150 hover:shadow-sm hover:-translate-y-px ${
+                            isOpen
+                              ? 'border border-dashed border-emerald-400 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                              : 'text-white'
+                          }`}
+                          style={isOpen ? undefined : { backgroundColor: shiftColor.bg }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedShiftForAction(shift);
+                          }}
+                          data-testid={`month-shift-${shift.id}`}
+                        >
+                          <div className="truncate">
+                            <span className="font-semibold">{fmt(sStart)}</span>
+                            <span className="opacity-70"> - {fmt(sEnd)}</span>
+                            <span className="opacity-60 ml-0.5">{dur}h</span>
+                          </div>
+                          {emp && <div className="truncate opacity-85 font-medium">{emp.firstName} {emp.lastName}</div>}
+                          {cl && <div className="truncate opacity-65">{cl.companyName}</div>}
+                        </div>
+                      );
+                    })}
+                    {overflowCount > 0 && (
+                      <div className="text-[9px] text-muted-foreground font-medium pl-1">+{overflowCount} more</div>
+                    )}
+                  </div>
                 </div>
-                {/* 24-Hour Timeline - GetSling style */}
-                <div className="flex-1 flex">
+              );
+            }
+
+            return (
+              <div className="bg-slate-50/50 dark:bg-slate-900/30 border-t min-h-full p-4" data-testid="month-view-container">
+                <div className="max-w-6xl mx-auto">
+                  <div className="grid grid-cols-7 mb-1">
+                    {dayNames.map(name => (
+                      <div key={name} className="text-center text-xs font-semibold text-muted-foreground py-2 border-b border-slate-200/60 dark:border-slate-700/60">
+                        {name}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7">
+                    {cells}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* === DAY VIEW: 24-hour horizontal timeline grid === */}
+          {viewMode === 'day' && (
+          <div className="bg-slate-50/50 dark:bg-slate-900/30 border-t min-h-full flex flex-col overflow-x-auto">
+            <div className="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur-sm min-w-[1700px]">
+              
+              <div className="flex border-b border-slate-200/80 dark:border-slate-600/80">
+                <div className="w-[200px] min-w-[200px] px-3 py-2.5 font-semibold text-sm border-r border-slate-200/80 dark:border-slate-600/80 bg-slate-100 dark:bg-slate-800 flex items-center gap-2 flex-shrink-0">
+                  <Users className="w-4 h-4 text-slate-500" />
+                  <span className="text-slate-700 dark:text-slate-200">Employee</span>
+                </div>
+                <div className="flex flex-1 bg-slate-50/80 dark:bg-slate-800/50">
                   {hours.map((hour) => {
                     const isNowHour = new Date().getHours() === hour && selectedDay.toDateString() === new Date().toDateString();
+                    const isWorkHour = hour >= 6 && hour < 22;
                     const formatHour = (h: number) => {
                       if (h === 0) return '12AM';
                       if (h === 12) return '12PM';
@@ -1420,8 +1972,12 @@ export default function UniversalSchedule() {
                     return (
                       <div 
                         key={hour}
-                        className={`flex-1 min-w-[50px] text-center py-2 text-[11px] font-medium border-r last:border-r-0 ${
-                          isNowHour ? 'bg-primary/20 text-primary font-bold' : 'text-muted-foreground'
+                        className={`min-w-[62px] flex-1 text-center py-2.5 text-[10px] font-semibold border-r border-slate-200/60 dark:border-slate-700/60 last:border-r-0 ${
+                          isNowHour 
+                            ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold' 
+                            : isWorkHour 
+                              ? 'text-slate-600 dark:text-slate-300' 
+                              : 'text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-slate-800/30'
                         }`}
                       >
                         {formatHour(hour)}
@@ -1432,21 +1988,21 @@ export default function UniversalSchedule() {
               </div>
             </div>
 
-            {/* Unassigned/Open Shifts Row - FIRST like GetSling */}
-            <div className="flex bg-orange-50/50 dark:bg-orange-900/10 border-b-2 border-orange-300 dark:border-orange-700">
-              <div className="w-48 min-w-48 p-2 border-r flex items-center gap-2 flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-4 h-4 text-orange-500" />
+            {/* Unassigned Shifts Row - GetSling Green Style */}
+            <div className="flex bg-emerald-50/50 dark:bg-emerald-900/15 border-b-2 border-emerald-300 dark:border-emerald-700 min-w-[1700px]">
+              <div className="w-[200px] min-w-[200px] px-3 py-2 border-r border-emerald-200/60 dark:border-emerald-700/60 flex items-center gap-2.5 flex-shrink-0 bg-emerald-50/80 dark:bg-emerald-900/30">
+                <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <div className="font-medium text-sm text-orange-600 dark:text-orange-400">Unassigned</div>
-                  <div className="text-xs text-muted-foreground">Open Shifts</div>
+                  <div className="font-bold text-xs text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">Unassigned</div>
+                  <div className="text-[9px] text-emerald-600/60 dark:text-emerald-400/60">Shifts</div>
                 </div>
               </div>
 
-              {/* Unassigned Shifts Timeline Row */}
+              {/* Unassigned Shifts Timeline Row - Flex to fill remaining width */}
               <div 
-                className="flex-1 relative min-h-[60px] cursor-pointer group/timeline"
+                className="relative min-h-[44px] cursor-pointer group/timeline flex-1"
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const clickX = e.clientX - rect.left;
@@ -1464,34 +2020,83 @@ export default function UniversalSchedule() {
                 }}
                 data-testid="unassigned-shifts-timeline"
               >
-                {/* Hour Grid Lines */}
+                {/* Hour Grid Cells - GetSling cell-level selection for open shifts - Roomier cells */}
                 <div className="absolute inset-0 flex">
-                  {hours.map((hour) => (
-                    <div 
-                      key={hour} 
-                      className="flex-1 border-r border-orange-200/50 dark:border-orange-800/30 last:border-r-0 hover:bg-orange-100/50 dark:hover:bg-orange-900/30 transition-colors"
-                    />
-                  ))}
-                </div>
-                
-                {/* Plus icon on hover when no open shifts */}
-                {(() => {
-                  const openShifts = shifts.filter(s => {
-                    if (s.employeeId) return false;
-                    const shiftDate = new Date(s.startTime);
-                    return shiftDate.toDateString() === selectedDay.toDateString();
-                  });
-                  return openShifts.length === 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/timeline:opacity-100 transition-opacity pointer-events-none">
-                      <div className="bg-orange-400 rounded-full p-1.5 shadow-sm">
-                        <Plus className="w-3 h-3 text-white" />
+                  {hours.map((hour) => {
+                    const isHovered = hoveredCell?.empId === 'open-shifts' && hoveredCell?.hour === hour;
+                    // Check if there's an open shift at this hour
+                    const hasShiftAtHour = filteredShifts.filter(s => {
+                      if (s.employeeId) return false;
+                      const shiftDate = new Date(s.startTime);
+                      return shiftDate.toDateString() === selectedDay.toDateString();
+                    }).some(shift => {
+                      const startHour = new Date(shift.startTime).getHours();
+                      const endHour = new Date(shift.endTime).getHours();
+                      return hour >= startHour && hour < endHour;
+                    });
+                    
+                    return (
+                      <div 
+                        key={hour}
+                        className={`min-w-[62px] flex-1 border-r border-emerald-200/60 dark:border-emerald-800/40 last:border-r-0 transition-all duration-150 relative ${
+                          isHovered ? 'bg-emerald-100/80 dark:bg-emerald-900/50 ring-1 ring-inset ring-emerald-300/50' : ''
+                        }`}
+                        onMouseEnter={() => setHoveredCell({ empId: 'open-shifts', hour })}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Open create shift modal with no employee assigned
+                          setShiftForm(prev => ({
+                            ...prev,
+                            startTime: `${hour.toString().padStart(2, '0')}:00`,
+                            endTime: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
+                            employeeId: null
+                          }));
+                          setShowShiftModal(true);
+                        }}
+                        data-testid={`cell-open-${hour}`}
+                      >
+                        {/* "+" button - centered in THIS cell only */}
+                        {isHovered && !hasShiftAtHour && (
+                          <div className="absolute inset-0 flex items-center justify-center z-10">
+                            <button 
+                              className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShiftForm(prev => ({
+                                  ...prev,
+                                  startTime: `${hour.toString().padStart(2, '0')}:00`,
+                                  endTime: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
+                                  employeeId: null
+                                }));
+                                setShowShiftModal(true);
+                              }}
+                              data-testid={`add-open-shift-${hour}`}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
+
+                {/* GetSling-style Blue Hour Highlight for unassigned row */}
+                {selectedDay.toDateString() === new Date().toDateString() && (() => {
+                  const currentHour = new Date().getHours();
+                  const leftPct = (currentHour / 24) * 100;
+                  const widthPct = (1 / 24) * 100;
+                  return (
+                    <div 
+                      className="absolute top-0 bottom-0 z-[1] pointer-events-none bg-blue-100/30 dark:bg-blue-800/15 border-l border-r border-blue-300/30 dark:border-blue-600/20"
+                      style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                    />
                   );
                 })()}
 
                 {/* Render open shifts as horizontal bars */}
-                {shifts.filter(s => {
+                {filteredShifts.filter(s => {
                   if (s.employeeId) return false;
                   const shiftDate = new Date(s.startTime);
                   return shiftDate.toDateString() === selectedDay.toDateString();
@@ -1501,20 +2106,24 @@ export default function UniversalSchedule() {
                   const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
                   const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                   
-                  // Calculate position as percentage of 24-hour day
                   const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
-                  const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
+                  const durationMs = endTime.getTime() - startTime.getTime();
+                  const durationMinutes = Math.max(durationMs / 60000, 60);
                   const leftPercent = (startMinutes / 1440) * 100;
-                  const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
+                  const widthPercent = (durationMinutes / 1440) * 100;
 
+                  const isProcessing = isShiftBeingProcessed(shift.id);
+                  
                   return (
                     <div
                       key={shift.id}
-                      className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-20 border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/50 text-xs flex flex-col justify-center overflow-hidden"
+                      className={`absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all duration-200 hover:shadow-sm hover:z-20 hover:-translate-y-px border border-dashed border-emerald-400 bg-emerald-50 dark:bg-emerald-900/60 text-xs flex flex-col justify-center overflow-hidden ${
+                        isProcessing ? 'trinity-shift-processing' : ''
+                      } ${trinityWorking ? 'trinity-grid-processing' : ''}`}
                       style={{ 
                         left: `${leftPercent}%`,
-                        width: `${Math.max(widthPercent, 6)}%`,
-                        minWidth: '80px'
+                        width: `${Math.max(widthPercent, 5)}%`,
+                        minWidth: '60px'
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1522,45 +2131,171 @@ export default function UniversalSchedule() {
                       }}
                       data-testid={`unassigned-shift-${shift.id}`}
                     >
-                      <div className="font-medium text-orange-600 truncate flex items-center gap-1 text-[11px]">
-                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <div className="font-semibold text-emerald-700 dark:text-emerald-300 truncate flex items-center gap-0.5 text-[10px] leading-tight">
+                        <Users className="w-3 h-3 flex-shrink-0" />
                         {formatTime(startTime)} - {formatTime(endTime)}
                       </div>
                       {client && (
-                        <div className="text-orange-600/70 text-[10px] truncate">{client.companyName}</div>
+                        <div className="text-emerald-600/70 text-[9px] truncate leading-tight">{client.companyName}</div>
                       )}
-                      <Button
-                        size="sm"
-                        className="mt-0.5 h-4 text-[9px] w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAIFillOpenShift(shift.id);
-                        }}
-                        disabled={aiFillMutation.isPending}
-                        data-testid={`button-ai-fill-unassigned-${shift.id}`}
-                      >
-                        <TrinityIconStatic size={8} className="mr-0.5" />
-                        {aiFillMutation.isPending ? '...' : 'Fill'}
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-4 text-[8px] px-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAIFillOpenShift(shift.id);
+                          }}
+                          disabled={aiFillMutation.isPending}
+                          data-testid={`button-ai-fill-unassigned-${shift.id}`}
+                        >
+                          <TrinityIconStatic size={8} className="mr-0.5" />
+                          {aiFillMutation.isPending ? '...' : 'AI Fill'}
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Employee Rows - GetSling Style Horizontal Timeline */}
-            <div className="divide-y">
+            {/* Available Shifts Row - GetSling Green/Blue Style */}
+            <div className="flex bg-sky-50/40 dark:bg-sky-900/10 border-b-2 border-sky-200 dark:border-sky-800 min-w-[1700px]">
+              <div className="w-[200px] min-w-[200px] px-3 py-2 border-r border-sky-200/60 dark:border-sky-700/60 flex items-center gap-2.5 flex-shrink-0 bg-sky-50/60 dark:bg-sky-900/20">
+                <div className="w-9 h-9 rounded-full bg-sky-100 dark:bg-sky-800 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <CheckCircle className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                </div>
+                <div>
+                  <div className="font-bold text-xs text-sky-700 dark:text-sky-300 uppercase tracking-wide">Available</div>
+                  <div className="text-[9px] text-sky-600/60 dark:text-sky-400/60">Shifts</div>
+                </div>
+              </div>
+              <div
+                className="relative min-h-[38px] flex-1 cursor-pointer"
+                data-testid="available-shifts-timeline"
+              >
+                <div className="absolute inset-0 flex">
+                  {hours.map((hour) => {
+                    const isHovered = hoveredCell?.empId === 'available-shifts' && hoveredCell?.hour === hour;
+                    const availShiftsForDay = filteredShifts.filter(s => {
+                      if (s.employeeId) return false;
+                      if (s.status !== 'draft' && s.status !== 'in_progress') return false;
+                      return new Date(s.startTime).toDateString() === selectedDay.toDateString();
+                    });
+                    const hasShiftAtHour = availShiftsForDay.some(shift => {
+                      const sH = new Date(shift.startTime).getHours();
+                      const eH = new Date(shift.endTime).getHours();
+                      return hour >= sH && hour < (eH <= sH ? 24 : eH);
+                    });
+                    return (
+                      <div
+                        key={hour}
+                        className={`min-w-[62px] flex-1 border-r border-sky-200/40 dark:border-sky-800/30 last:border-r-0 transition-all duration-150 relative ${
+                          isHovered ? 'bg-sky-100/80 dark:bg-sky-900/50 ring-1 ring-inset ring-sky-300/50' : ''
+                        }`}
+                        onMouseEnter={() => setHoveredCell({ empId: 'available-shifts', hour })}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShiftForm(prev => ({
+                            ...prev,
+                            startTime: `${hour.toString().padStart(2, '0')}:00`,
+                            endTime: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
+                            employeeId: null,
+                            isOpenShift: true,
+                          }));
+                          setShowShiftModal(true);
+                        }}
+                        data-testid={`cell-available-${hour}`}
+                      >
+                        {isHovered && !hasShiftAtHour && (
+                          <div className="absolute inset-0 flex items-center justify-center z-10">
+                            <button
+                              className="w-6 h-6 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShiftForm(prev => ({
+                                  ...prev,
+                                  startTime: `${hour.toString().padStart(2, '0')}:00`,
+                                  endTime: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
+                                  employeeId: null,
+                                  isOpenShift: true,
+                                }));
+                                setShowShiftModal(true);
+                              }}
+                              data-testid={`add-available-shift-${hour}`}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {filteredShifts.filter(s => {
+                  if (s.employeeId) return false;
+                  if (s.status !== 'draft' && s.status !== 'in_progress') return false;
+                  const shiftDate = new Date(s.startTime);
+                  return shiftDate.toDateString() === selectedDay.toDateString();
+                }).map(shift => {
+                  const startTime = new Date(shift.startTime);
+                  const endTime = new Date(shift.endTime);
+                  const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+                  const durationMs = endTime.getTime() - startTime.getTime();
+                  const durationMinutes = Math.max(durationMs / 60000, 60);
+                  const leftPercent = (startMinutes / 1440) * 100;
+                  const widthPercent = (durationMinutes / 1440) * 100;
+                  const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                  const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+
+                  return (
+                    <div
+                      key={shift.id}
+                      className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer border border-sky-300 dark:border-sky-600 bg-sky-100 dark:bg-sky-900/50 text-xs flex flex-col justify-center overflow-hidden transition-all duration-200 hover:shadow-sm hover:z-20 hover:-translate-y-px"
+                      style={{
+                        left: `${leftPercent}%`,
+                        width: `${Math.max(widthPercent, 5)}%`,
+                        minWidth: '60px',
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedShiftForAction(shift);
+                      }}
+                      data-testid={`available-shift-${shift.id}`}
+                    >
+                      <div className="font-semibold text-sky-700 dark:text-sky-300 truncate text-[9px] leading-tight">
+                        {formatTime(startTime)} - {formatTime(endTime)}
+                      </div>
+                      {client && (
+                        <div className="text-sky-600/70 dark:text-sky-400/70 text-[8px] truncate leading-tight">{client.companyName}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Employee Rows - GetSling Style Contained Grid */}
+            <div className={`min-w-[1700px] ${trinityWorking ? 'trinity-processing-shimmer' : ''}`}>
+              <div className="flex items-center px-3 py-1.5 bg-slate-100/80 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-700/60">
+                <div className="w-[200px] min-w-[200px] flex items-center gap-2 flex-shrink-0">
+                  <Briefcase className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  <span className="font-bold text-[10px] text-slate-600 dark:text-slate-300 uppercase tracking-wider">Scheduled Shifts</span>
+                </div>
+              </div>
               {filteredEmployees.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p>No employees match current filters</p>
                 </div>
               ) : (
-                filteredEmployees.map((emp) => {
+                filteredEmployees.map((emp, empIndex) => {
                   const empColor = getEmployeeColor(emp.id);
                   
                   // Get shifts for this employee on the selected day (day view) or all week (week view)
-                  const employeeShifts = shifts.filter(s => {
+                  const employeeShifts = filteredShifts.filter(s => {
                     if (s.employeeId !== emp.id) return false;
                     const shiftDate = new Date(s.startTime);
                     if (viewMode === 'day') {
@@ -1570,33 +2305,58 @@ export default function UniversalSchedule() {
                     }
                   });
                   
+                  // Check if any cell in this row is being hovered or keyboard-focused
+                  const isRowHighlighted = hoveredCell?.empId === emp.id || focusedCell?.empIndex === empIndex;
+                  
+                  // Calculate actual stacking rows for dynamic height
+                  const stackRows: Shift[][] = [];
+                  const sortedForHeight = [...employeeShifts].sort((a, b) => 
+                    new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+                  );
+                  sortedForHeight.forEach(shift => {
+                    const sStart = new Date(shift.startTime).getTime();
+                    let placed = false;
+                    for (const row of stackRows) {
+                      const lastInRow = row[row.length - 1];
+                      if (new Date(lastInRow.endTime).getTime() <= sStart) {
+                        row.push(shift);
+                        placed = true;
+                        break;
+                      }
+                    }
+                    if (!placed) stackRows.push([shift]);
+                  });
+                  const numStackRows = Math.max(stackRows.length, 1);
+                  const dynamicRowHeight = numStackRows * 48 + 12;
+                  
                   return (
-                    <div key={emp.id} className="flex hover:bg-muted/20 transition-colors group">
-                      {/* Employee Info - Fixed Width */}
+                    <DroppableEmployeeRow key={emp.id} employeeId={emp.id} isDropTarget={dropTargetEmployeeId === emp.id}>
+                    <div className={`flex border-b border-slate-200/60 dark:border-slate-700/60 transition-colors group ${empIndex % 2 === 0 ? 'bg-white/70 dark:bg-slate-900/50 schedule-zebra-even' : 'bg-slate-50/80 dark:bg-slate-800/40 schedule-zebra-odd'} ${isRowHighlighted ? 'schedule-row-hovered' : ''}`} style={{ minHeight: `${dynamicRowHeight}px` }}>
                       <div 
-                        className="w-48 min-w-48 p-2 border-r bg-card flex items-center gap-2 cursor-pointer hover-elevate flex-shrink-0"
+                        className="w-[200px] min-w-[200px] px-3 py-2.5 border-r border-slate-200/60 dark:border-slate-600/60 bg-slate-50/90 dark:bg-slate-800/80 flex items-center gap-2.5 cursor-pointer hover:bg-white dark:hover:bg-slate-700/80 flex-shrink-0 transition-colors"
                         onClick={() => setSelectedEmployee(emp)}
                         data-testid={`employee-row-${emp.id}`}
                       >
                         <div 
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
                           style={{ backgroundColor: empColor }}
                         >
                           {(emp.firstName?.[0] || '')}{(emp.lastName?.[0] || '')}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">
+                          <div className="font-semibold text-[11px] truncate leading-tight text-foreground/90">
                             {emp.firstName} {emp.lastName}
                           </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {(emp as any).position || 'Employee'}
+                          <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate">
+                            {(emp as any).position || 'Staff'}
                           </div>
                         </div>
                       </div>
 
-                      {/* Timeline Row - Horizontal 24-hour grid with shifts positioned by time */}
+                      {/* Timeline Row - GetSling grid - flex to fill remaining width */}
                       <div 
-                        className="flex-1 relative min-h-[60px] cursor-pointer group/timeline"
+                        className="relative cursor-pointer group/timeline flex-1"
+                        style={{ minHeight: `${dynamicRowHeight}px` }}
                         onClick={(e) => {
                           // Calculate which hour was clicked based on position
                           const rect = e.currentTarget.getBoundingClientRect();
@@ -1607,130 +2367,248 @@ export default function UniversalSchedule() {
                         }}
                         data-testid={`timeline-row-${emp.id}`}
                       >
-                        {/* Hour Grid Lines */}
+                        {/* Hour Grid Cells - GetSling cell-level selection - Roomier 52px */}
                         <div className="absolute inset-0 flex">
-                          {hours.map((hour) => (
-                            <div 
-                              key={hour} 
-                              className="flex-1 border-r border-muted/40 last:border-r-0 hover:bg-primary/5 transition-colors"
-                            />
-                          ))}
+                          {hours.map((hour) => {
+                            const isHovered = hoveredCell?.empId === emp.id && hoveredCell?.hour === hour;
+                            const isFocused = focusedCell?.empIndex === empIndex && focusedCell?.hour === hour;
+                            // Check if there's a shift at this hour
+                            const hasShiftAtHour = employeeShifts.some(shift => {
+                              const startHour = new Date(shift.startTime).getHours();
+                              const endHour = new Date(shift.endTime).getHours();
+                              return hour >= startHour && hour < endHour;
+                            });
+                            
+                            return (
+                              <div 
+                                key={hour}
+                                tabIndex={0}
+                                className={`min-w-[62px] flex-1 border-r border-slate-200/50 dark:border-slate-700/50 last:border-r-0 transition-all duration-150 relative schedule-grid-cell ${
+                                  isHovered ? 'bg-blue-100/70 dark:bg-blue-900/40 ring-1 ring-inset ring-blue-300/50 dark:ring-blue-600/40' : ''
+                                } ${isFocused ? 'schedule-cell-focused' : ''}`}
+                                onMouseEnter={() => setHoveredCell({ empId: emp.id, hour })}
+                                onMouseLeave={() => setHoveredCell(null)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Set keyboard focus to this cell
+                                  setFocusedCell({ empIndex, hour });
+                                  handleGridClick(selectedDay.getDay() === 0 ? 6 : selectedDay.getDay() - 1, hour);
+                                }}
+                                onFocus={() => setFocusedCell({ empIndex, hour })}
+                                data-testid={`cell-${emp.id}-${hour}`}
+                              >
+                                {/* Trinity Processing Skeleton - shows animated placeholder when autofill is running */}
+                                {trinityWorking && !hasShiftAtHour && empIndex % 3 === hour % 3 && (
+                                  <div className="absolute inset-2 flex items-center justify-center z-5">
+                                    <div className="w-full h-6 bg-gradient-to-r from-purple-200/40 via-purple-300/60 to-purple-200/40 dark:from-purple-700/30 dark:via-purple-600/50 dark:to-purple-700/30 rounded animate-pulse" />
+                                  </div>
+                                )}
+                                
+                                {/* "+" button - centered in THIS cell only */}
+                                {(isHovered || isFocused) && !hasShiftAtHour && !trinityWorking && (
+                                  <div className="absolute inset-0 flex items-center justify-center z-10">
+                                    <button 
+                                      className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleGridClick(selectedDay.getDay() === 0 ? 6 : selectedDay.getDay() - 1, hour);
+                                      }}
+                                      data-testid={`add-shift-${emp.id}-${hour}`}
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                         
-                        {/* Current Time Indicator */}
-                        {selectedDay.toDateString() === new Date().toDateString() && (
-                          <div 
-                            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
-                            style={{ 
-                              left: `${((new Date().getHours() * 60 + new Date().getMinutes()) / 1440) * 100}%` 
-                            }}
-                          />
-                        )}
-                        
-                        {/* Plus icon on hover when no shifts */}
-                        {employeeShifts.length === 0 && (
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/timeline:opacity-100 transition-opacity pointer-events-none">
-                            <div className="bg-primary/80 rounded-full p-1.5 shadow-sm">
-                              <Plus className="w-3 h-3 text-primary-foreground" />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Render Shifts as Horizontal Bars Positioned by Time */}
-                        {employeeShifts.map(shift => {
-                          const startTime = new Date(shift.startTime);
-                          const endTime = new Date(shift.endTime);
-                          const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
-                          const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                          const timeClockStatus = getShiftTimeClockStatus(shift);
-                          const conflictBadge = getShiftConflictBadge(shift, shifts, employees);
-                          
-                          // Calculate position as percentage of 24-hour day
-                          const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
-                          const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
-                          const leftPercent = (startMinutes / 1440) * 100;
-                          const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
-
+                        {/* GetSling-style Blue Hour Highlight Column - no red line */}
+                        {selectedDay.toDateString() === new Date().toDateString() && (() => {
+                          const currentHour = new Date().getHours();
+                          const leftPct = (currentHour / 24) * 100;
+                          const widthPct = (1 / 24) * 100;
                           return (
-                            <div
-                              key={shift.id}
-                              className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-20 text-white text-xs flex flex-col justify-center overflow-hidden"
-                              style={{ 
-                                backgroundColor: empColor,
-                                left: `${leftPercent}%`,
-                                width: `${Math.max(widthPercent, 3)}%`,
-                                minWidth: '60px'
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedShiftForAction(shift);
-                              }}
-                              data-testid={`shift-${shift.id}`}
-                            >
-                              {/* Time Clock Status Badge */}
-                              <div className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${timeClockStatus.bgColor} ${timeClockStatus.color}`}>
-                                {timeClockStatus.label}
-                              </div>
-                              
-                              <div className="font-medium truncate text-[11px]">
-                                {formatTime(startTime)} - {formatTime(endTime)}
-                              </div>
-                              {shift.title && (
-                                <div className="opacity-90 text-[10px] truncate">{shift.title}</div>
-                              )}
-                              {client && (
-                                <div className="opacity-70 text-[10px] truncate">{client.companyName}</div>
-                              )}
-                              
-                              {/* Conflict Badge */}
-                              {conflictBadge && (
-                                <Badge 
-                                  variant="outline" 
-                                  className={`absolute -bottom-1 -left-1 text-[8px] px-1 py-0 ${
-                                    conflictBadge.severity === 'error' 
-                                      ? 'bg-red-100 border-red-500 text-red-700' 
-                                      : 'bg-yellow-100 border-yellow-500 text-yellow-700'
-                                  }`}
-                                >
-                                  {conflictBadge.type}
-                                </Badge>
-                              )}
-                              
-                              {shift.aiGenerated && (
-                                <TrinityIconStatic size={10} className="absolute top-1 right-6" />
-                              )}
-                            </div>
+                            <div 
+                              className="absolute top-0 bottom-0 z-[1] pointer-events-none bg-blue-100/40 dark:bg-blue-800/25 border-l border-r border-blue-300/40 dark:border-blue-600/30"
+                              style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                              data-testid="current-hour-highlight"
+                            />
                           );
-                        })}
+                        })()}
+                        
+                        {/* Render Shifts as Horizontal Bars - reuses stackRows from height calc */}
+                        {sortedForHeight.map(shift => {
+                            const rowIdx = stackRows.findIndex(row => row.includes(shift));
+                            const startTime = new Date(shift.startTime);
+                            const endTime = new Date(shift.endTime);
+                            const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                            const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                            const timeClockStatus = getShiftTimeClockStatus(shift);
+                            const conflictBadge = getShiftConflictBadge(shift, shifts, employees);
+                            const statusColor = getShiftStatusColor(shift);
+                            
+                            const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+                            const durationMs = endTime.getTime() - startTime.getTime();
+                            const durationMinutes = Math.max(durationMs / 60000, 60);
+                            const leftPercent = (startMinutes / 1440) * 100;
+                            const widthPercent = (durationMinutes / 1440) * 100;
+
+                            const isProcessing = isShiftBeingProcessed(shift.id);
+                            const justAssigned = wasShiftJustAssigned(shift.id);
+                            const isPendingShift = pendingReassignments.has(shift.id);
+                            
+                            const gapPx = 2;
+                            const rowHeight = numStackRows > 1 
+                              ? `calc(${100 / numStackRows}% - ${gapPx}px)` 
+                              : undefined;
+                            const topOffset = numStackRows > 1 
+                              ? `calc(${(rowIdx / numStackRows) * 100}% + ${gapPx / 2}px)` 
+                              : undefined;
+                            
+                            return (
+                              <InlineDraggableShift
+                                key={shift.id}
+                                shift={shift}
+                                canDrag={isManager && !isMobile && !isTouchDevice}
+                                isPending={isPendingShift}
+                                style={{ 
+                                  position: 'absolute' as const,
+                                  backgroundColor: statusColor.bg,
+                                  left: `${leftPercent}%`,
+                                  width: `${Math.max(widthPercent, 4.5)}%`,
+                                  minWidth: '65px',
+                                  top: topOffset || '3px',
+                                  height: rowHeight || 'calc(100% - 6px)',
+                                  zIndex: 10 + rowIdx,
+                                }}
+                                className={`rounded-md px-2 py-1 cursor-pointer text-white flex flex-col justify-center overflow-hidden border transition-all duration-200 hover:shadow-sm hover:z-30 hover:-translate-y-px ${
+                                  isPendingShift ? 'border-amber-300/80 border-dashed' : 'border-white/20'
+                                } ${isProcessing ? 'trinity-shift-processing' : ''} ${justAssigned ? 'trinity-shift-assigned' : ''}`}
+                              >
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedShiftForAction(shift);
+                                  }}
+                                  data-testid={`shift-${shift.id}`}
+                                  className="h-full flex flex-col justify-center relative"
+                                >
+                                  <div className="flex items-center gap-1">
+                                    <div className="font-semibold truncate text-[11px] leading-snug">
+                                      {formatTime(startTime)} - {formatTime(endTime)}
+                                    </div>
+                                    {shift.aiGenerated && (
+                                      <TrinityIconStatic size={10} className="flex-shrink-0" />
+                                    )}
+                                    {isPendingShift && (
+                                      <span className="ml-auto flex-shrink-0 text-[8px] font-bold bg-amber-400/30 text-amber-900 dark:text-amber-100 px-1 py-px rounded-sm">
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+                                  {shift.title && (
+                                    <div className="opacity-90 text-[9px] truncate leading-tight">{shift.title}</div>
+                                  )}
+                                  {client && (
+                                    <div className="opacity-75 text-[9px] truncate leading-tight">{client.companyName}</div>
+                                  )}
+
+                                  {timeClockStatus.label !== 'Scheduled' && !isPendingShift && (
+                                    <div className={`absolute top-1 right-1 px-1 py-px rounded text-[8px] font-bold ${timeClockStatus.bgColor} ${timeClockStatus.color}`}>
+                                      {timeClockStatus.label}
+                                    </div>
+                                  )}
+                                  
+                                  {conflictBadge && (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`absolute bottom-0.5 left-0.5 text-[7px] px-1 py-0 ${
+                                        conflictBadge.severity === 'error' 
+                                          ? 'bg-red-100 dark:bg-red-900/60 border-red-500 text-red-700 dark:text-red-300' 
+                                          : 'bg-yellow-100 dark:bg-yellow-900/60 border-yellow-500 text-yellow-700 dark:text-yellow-300'
+                                      }`}
+                                    >
+                                      {conflictBadge.type}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </InlineDraggableShift>
+                            );
+                          })}
                       </div>
                     </div>
+                    </DroppableEmployeeRow>
                   );
                 })
               )}
 
             </div>
           </div>
-        </ScrollArea>
+          )}
 
-          {/* Trinity Insights Right Panel - Like Gemini */}
-          {showTrinityInsights && (
-            <div className="w-80 border-l bg-card flex flex-col shrink-0" data-testid="panel-trinity-insights-right">
-              <div className="p-3 border-b flex items-center justify-between bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/10 to-[#FFD700]/10">
-                <div className="flex items-center gap-2">
-                  <TrinityIconStatic size={20} />
-                  <span className="font-medium text-sm">Trinity Insights</span>
+        </div>
+
+        {/* Trinity Thinking Panel - Fixed at bottom when processing */}
+        <TrinityThinkingPanel 
+          thoughts={session.thoughts} 
+          isWorking={trinityWorking} 
+          onClear={clearSession}
+          onReviewRequested={() => {
+            if (schedulingResult) {
+              setShowSchedulingSummary(true);
+            } else if (completionResult) {
+              setSchedulingResult({
+                success: true,
+                sessionId: completionResult.sessionId,
+                executionId: completionResult.executionId || completionResult.sessionId,
+                totalMutations: completionResult.mutationCount,
+                mutations: completionResult.mutations || [],
+                summary: completionResult.summary,
+                aiSummary: completionResult.aiSummary || '',
+                requiresVerification: completionResult.requiresVerification,
+              });
+              setShowSchedulingSummary(true);
+            } else {
+              queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+              toast({ title: 'Schedule Updated', description: 'Shifts have been refreshed with latest data.' });
+            }
+          }}
+        />
+
+        {/* Trinity Insights Slide-in Panel - hidden when Trinity is actively scheduling to avoid duplicate AI processing */}
+        {showTrinityInsights && !trinityWorking && (
+          <>
+            {/* Backdrop - click to close - starts below all navigation (header ~56px + tabs ~44px = 100px) */}
+            <div 
+              className="fixed inset-0 top-[100px] bg-black/20 z-[1500] transition-opacity"
+              onClick={() => setShowTrinityInsights(false)}
+              data-testid="trinity-backdrop"
+            />
+            {/* Panel - fixed position, slides from right - positioned below header + tabs */}
+            <div 
+              className="fixed top-[100px] right-0 w-[calc(100vw-16px)] max-w-[400px] sm:max-w-[450px] h-[calc(100vh-100px)] bg-card border-l shadow-sm z-[1501] flex flex-col animate-in slide-in-from-right duration-300"
+              data-testid="panel-trinity-insights-right"
+            >
+              <div className="p-4 border-b flex items-center justify-between gap-2 bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/10 to-[#FFD700]/10">
+                <div className="flex items-center gap-3">
+                  <TrinityIconStatic size={24} />
+                  <span className="font-semibold text-base">Trinity Insights</span>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-7 w-7"
                   onClick={() => setShowTrinityInsights(false)}
-                  data-testid="button-close-trinity-insights"
+                  data-testid="button-close-trinity"
+                  aria-label="Close Trinity Insights"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
               <ScrollArea className="flex-1">
-                <div className="p-3 space-y-4">
+                <div className="p-4 space-y-4">
                   <TrinityInsightsPanel
                     weekStart={weekStart}
                     weekEnd={weekEnd}
@@ -1741,13 +2619,16 @@ export default function UniversalSchedule() {
                     onToggleCollapse={() => setShowTrinityInsights(!showTrinityInsights)}
                   />
                   
-                  {/* Trinity Training Panel - AI Confidence Building */}
-                  <TrinityTrainingPanel />
+                  {/* Schedule Upload - Production visible - Pattern Learning */}
+                  <ScheduleUploadPanel />
+                  
+                  {/* Trinity Training Panel - DEV ONLY - AI Confidence Building */}
+                  {import.meta.env.DEV && <TrinityTrainingPanel />}
                 </div>
               </ScrollArea>
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Legacy Grid Hidden - Kept for Reference */}
         <div className="hidden">
@@ -1787,7 +2668,7 @@ export default function UniversalSchedule() {
                     return (
                       <div
                         key={shift.id}
-                        className={`absolute left-1 right-1 rounded-lg p-2 cursor-pointer transition-all hover:shadow-lg hover:z-10 group ${
+                        className={`absolute left-1 right-1 rounded-lg p-2 cursor-pointer transition-all hover:shadow-sm hover:z-10 group ${
                           isOpen ? 'border-2 border-dashed border-orange-400' : ''
                         }`}
                         style={{
@@ -1801,19 +2682,20 @@ export default function UniversalSchedule() {
                       >
                         {isOpen ? (
                           <div>
-                            <div className="text-orange-600 text-xs font-bold flex items-center space-x-1">
+                            <div className="text-orange-600 dark:text-orange-400 text-xs font-bold flex items-center space-x-1">
                               <AlertCircle className="w-3 h-3" />
                               <span>OPEN SHIFT</span>
                             </div>
-                            <div className="text-gray-700 text-xs font-medium truncate">{shift.title}</div>
-                            {client && <div className="text-gray-600 text-xs truncate">{client.companyName}</div>}
+                            <div className="text-foreground text-xs font-medium truncate">{shift.title}</div>
+                            {client && <div className="text-muted-foreground text-xs truncate">{client.companyName}</div>}
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAIFillOpenShift(shift.id);
                               }}
                               size="sm"
-                              className="mt-1 h-6 text-xs bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
+                              variant="default"
+                              className="mt-1 h-6 text-xs"
                               data-testid={`button-ai-fill-${shift.id}`}
                             >
                               <Bot className="w-3 h-3 mr-1" />
@@ -1829,27 +2711,45 @@ export default function UniversalSchedule() {
                               {shift.title || 'Shift'}
                               {client && ` - ${client.companyName}`}
                             </div>
-                            {shift.aiGenerated && (
-                              <div className="absolute top-1 right-1 bg-white rounded-full p-1">
-                                <Bot className="w-3 h-3" style={{ color: '#3b82f6' }} />
-                              </div>
-                            )}
+                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                              {(shift.status === 'published' || shift.status === 'scheduled') && (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold bg-white/25 text-white px-1 py-0.5 rounded" data-testid={`badge-published-${shift.id}`}>
+                                  <CheckCircle2 className="w-2.5 h-2.5" />
+                                  Published
+                                </span>
+                              )}
+                              {shift.status === 'draft' && (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold bg-yellow-500/30 text-yellow-100 px-1 py-0.5 rounded" data-testid={`badge-draft-${shift.id}`}>
+                                  Draft
+                                </span>
+                              )}
+                              {shift.aiGenerated && (
+                                <span className="inline-flex items-center text-[9px] bg-white/25 text-white px-1 py-0.5 rounded">
+                                  <Bot className="w-2.5 h-2.5" />
+                                </span>
+                              )}
+                            </div>
 
                             {/* Hover actions */}
-                            <div className="absolute top-1 right-1 hidden group-hover:flex space-x-1">
-                              <Button variant="secondary" size="icon" className="h-6 w-6" title="Edit shift">
+                            <div className="absolute top-1 right-1 invisible group-hover:visible flex space-x-1">
+                              <Button 
+                                variant="secondary" 
+                                size="sm" 
+                                title="Edit shift"
+                                data-testid={`button-edit-shift-${shift.id}`}
+                              >
                                 <Edit2 className="w-3 h-3" />
                               </Button>
                               <Button 
                                 variant="secondary" 
-                                size="icon" 
-                                className="h-6 w-6" 
+                                size="sm" 
+                                className="" 
                                 title="Duplicate shift"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDuplicateShift(shift);
                                 }}
-                                data-testid={`button-duplicate-${shift.id}`}
+                                data-testid={`button-duplicate-shift-${shift.id}`}
                               >
                                 <CopyPlus className="w-3 h-3" />
                               </Button>
@@ -1862,11 +2762,22 @@ export default function UniversalSchedule() {
                                   e.stopPropagation();
                                   handleSwapShift(shift);
                                 }}
-                                data-testid={`button-swap-${shift.id}`}
+                                data-testid={`button-swap-shift-${shift.id}`}
+                                aria-label="Request swap"
                               >
                                 <ArrowRightLeft className="w-3 h-3" />
                               </Button>
-                              <Button variant="destructive" size="icon" className="h-6 w-6" title="Delete shift">
+                              <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                title="Delete shift"
+                                data-testid={`button-delete-shift-${shift.id}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedShiftForAction(shift);
+                                  setConfirmDeleteDialogOpen(true);
+                                }}
+                              >
                                 <Trash2 className="w-3 h-3" />
                               </Button>
                             </div>
@@ -1882,17 +2793,25 @@ export default function UniversalSchedule() {
         </div>
       </div>
 
-      {/* Right Sidebar - Trinity AI Panel (hidden in Simple Mode) */}
+      {/* Right Sidebar - Trinity AI Panel (hidden in Simple Mode) - FIXED OVERLAY */}
       <HideInSimpleMode>
       {showAIPanel && !isMobile && (
-        <div className="w-96 bg-card border-l flex flex-col">
+        <>
+          {/* Backdrop - click to close - positioned below header+tabs (100px) */}
+          <div 
+            className="fixed inset-0 top-[100px] bg-black/20 z-[1499] transition-opacity"
+            onClick={() => setShowAIPanel(false)}
+            data-testid="ai-panel-backdrop"
+          />
+          {/* Panel - fixed position overlay, doesn't push content - positioned below header+tabs */}
+          <div className="fixed top-[100px] right-0 w-96 h-[calc(100vh-100px)] bg-card border-l flex flex-col z-[1500] shadow-sm transform transition-transform duration-300 animate-in slide-in-from-right">
           <div className="p-4 border-b bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/5 to-[#FFD700]/10">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
                 <TrinityIconStatic size={24} />
                 <h2 className="text-lg font-bold">Trinity AI</h2>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowAIPanel(false)}>
+              <Button variant="ghost" size="icon" onClick={() => setShowAIPanel(false)} aria-label="Close Trinity AI panel">
                 <X className="w-5 h-5" />
               </Button>
             </div>
@@ -1903,13 +2822,13 @@ export default function UniversalSchedule() {
 
           <ScrollArea className="flex-1 p-4">
             {/* Open Shifts Alert */}
-            {shifts.filter(s => !s.employeeId).length > 0 ? (
+            {filteredShifts.filter(s => !s.employeeId).length > 0 ? (
               <div className="space-y-3">
                 <div className="p-3 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="w-4 h-4 text-orange-500" />
+                    <AlertCircle className="w-4 h-4 text-orange-500 dark:text-orange-400" />
                     <span className="font-medium text-sm text-orange-700 dark:text-orange-300">
-                      {shifts.filter(s => !s.employeeId).length} Open Shifts
+                      {filteredShifts.filter(s => !s.employeeId).length} Open Shifts
                     </span>
                   </div>
                   <p className="text-xs text-orange-600 dark:text-orange-400">
@@ -1917,45 +2836,47 @@ export default function UniversalSchedule() {
                   </p>
                   <Button
                     size="sm"
-                    className="mt-2 w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
+                    variant="default"
+                    className="mt-2 w-full"
                     onClick={() => {
-                      shifts.filter(s => !s.employeeId).forEach(s => handleAIFillOpenShift(s.id));
+                      filteredShifts.filter(s => !s.employeeId).forEach(s => handleAIFillOpenShift(s.id));
                     }}
-                    disabled={aiFillMutation.isPending}
+                    disabled={isAnyActionPending}
                     data-testid="button-fill-all-open"
                   >
-                    <TrinityIconStatic size={14} className="mr-1" />
+                    {aiFillMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <TrinityIconStatic size={14} className="mr-1" />}
                     {aiFillMutation.isPending ? 'Filling...' : 'Fill All Open Shifts'}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="text-center py-8">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                <CheckCircle className="w-12 h-12 text-green-500 dark:text-green-400 mx-auto mb-3" />
                 <p className="font-medium">All shifts covered!</p>
                 <p className="text-sm text-muted-foreground">No open shifts this week</p>
               </div>
             )}
           </ScrollArea>
 
-          <div className="p-4 border-t">
-            <div className="bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/5 to-[#FFD700]/10 rounded-lg p-3 mb-3">
-              <div className="flex items-center justify-between text-sm mb-2">
+          <div className="p-4 border-t space-y-2">
+            <div className="bg-muted/30 rounded-lg p-3 mb-3">
+              <div className="flex items-center justify-between gap-2 text-sm mb-2">
                 <span>Trinity Status</span>
-                <Badge variant="outline" className="bg-background/50">
+                <Badge variant="outline">
                   <TrinityIconStatic size={12} className="mr-1" />
                   {automationEnabled ? 'Active' : 'Standby'}
                 </Badge>
               </div>
               <div className="text-xs text-muted-foreground">
-                99% AI automation, 1% human oversight
+                AI-assisted operations with human approval gates
               </div>
             </div>
 
             <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
+              variant="default"
+              className="w-full"
               onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
+              disabled={isAnyActionPending}
               data-testid="button-generate-schedule"
             >
               {generateScheduleMutation.isPending ? (
@@ -1963,833 +2884,178 @@ export default function UniversalSchedule() {
               ) : (
                 <Play className="w-4 h-4 mr-2" />
               )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 hover:from-purple-500/90 hover:via-teal-500/90 hover:to-amber-500/90"
-              onClick={() => generateScheduleMutation.mutate()}
-              disabled={generateScheduleMutation.isPending}
-              data-testid="button-generate-schedule"
-            >
-              {generateScheduleMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule for Next Week'}
+              {generateScheduleMutation.isPending ? 'Generating...' : 'Generate Schedule'}
             </Button>
             
             <Button
               variant="outline"
-              className="w-full mt-2"
+              className="w-full"
               onClick={handleDuplicateWeek}
-              disabled={duplicateWeekMutation.isPending}
+              disabled={isAnyActionPending}
               data-testid="button-duplicate-week"
             >
-              <CalendarDays className="w-4 h-4 mr-2" />
-              {duplicateWeekMutation.isPending ? 'Duplicating...' : 'Duplicate Week to Next Week'}
+              {duplicateWeekMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarDays className="w-4 h-4 mr-2" />}
+              {duplicateWeekMutation.isPending ? 'Duplicating...' : 'Duplicate Week'}
             </Button>
 
             <Button
               variant="outline"
-              className="w-full mt-2"
+              className="w-full"
               onClick={() => publishScheduleMutation.mutate()}
-              disabled={publishScheduleMutation.isPending}
+              disabled={isAnyActionPending}
               data-testid="button-publish-schedule"
             >
-              <Send className="w-4 h-4 mr-2" />
-              {publishScheduleMutation.isPending ? 'Publishing...' : 'Publish & Notify Staff'}
+              {publishScheduleMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              {publishScheduleMutation.isPending ? 'Publishing...' : 'Publish & Notify'}
             </Button>
           </div>
         </div>
+        </>
       )}
       </HideInSimpleMode>
 
-      {/* Shift Creation Modal - Compact GetSling-style popup */}
-      <Dialog open={showShiftModal} onOpenChange={setShowShiftModal}>
-        <DialogContent size="md">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-base">New Shift</DialogTitle>
-            <DialogDescription className="text-sm">
-              {days[modalPosition.day]} at {modalPosition.hour}:00
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2.5">
-            {/* Open Shift Toggle - Compact */}
-            <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-              <Checkbox
-                id="open-shift"
-                checked={shiftForm.isOpenShift}
-                onCheckedChange={(checked) =>
-                  setShiftForm(prev => ({ ...prev, isOpenShift: checked as boolean }))
-                }
-                data-testid="checkbox-open-shift"
-              />
-              <Label htmlFor="open-shift" className="flex items-center gap-1.5 text-sm cursor-pointer">
-                <AlertCircle className="w-3.5 h-3.5 text-orange-600" />
-                <span className="font-medium">Open Shift</span>
-                <span className="text-xs text-muted-foreground ml-1">(AI fills)</span>
-              </Label>
-            </div>
-
-            {/* Employee Selection */}
-            {!shiftForm.isOpenShift && (
-              <div className="space-y-1.5">
-                <Label htmlFor="employee" className="text-sm">Employee *</Label>
-                <Select value={shiftForm.employeeId || ''} onValueChange={(value) =>
-                  setShiftForm(prev => ({ ...prev, employeeId: value }))
-                }>
-                  <SelectTrigger id="employee" data-testid="select-employee">
-                    <SelectValue placeholder="Select employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Position & Client - Side by side */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="position" className="text-sm">Position *</Label>
-                <Select value={shiftForm.position} onValueChange={(value) =>
-                  setShiftForm(prev => ({ ...prev, position: value }))
-                }>
-                  <SelectTrigger id="position" data-testid="select-position">
-                    <SelectValue placeholder="Select position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="armed_guard">Armed Security Officer</SelectItem>
-                    <SelectItem value="unarmed_guard">Unarmed Security Officer</SelectItem>
-                    <SelectItem value="patrol_officer">Patrol Officer</SelectItem>
-                    <SelectItem value="site_supervisor">Site Supervisor</SelectItem>
-                    <SelectItem value="access_control">Access Control</SelectItem>
-                    <SelectItem value="concierge">Concierge Security</SelectItem>
-                    <SelectItem value="event_security">Event Security</SelectItem>
-                    <SelectItem value="mobile_patrol">Mobile Patrol</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="client" className="text-sm">Client</Label>
-                <Select value={shiftForm.clientId} onValueChange={(value) =>
-                  setShiftForm(prev => ({ ...prev, clientId: value }))
-                }>
-                  <SelectTrigger id="client" data-testid="select-client">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map(client => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.companyName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Location - Dropdown based on selected client or common locations */}
-            <div className="space-y-1.5">
-              <Label htmlFor="location" className="text-sm">Location</Label>
-              <Select value={shiftForm.location} onValueChange={(value) =>
-                setShiftForm(prev => ({ ...prev, location: value }))
-              }>
-                <SelectTrigger id="location" data-testid="select-location">
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {shiftForm.clientId && clients.find(c => c.id === shiftForm.clientId) ? (
-                    <>
-                      <SelectItem value={clients.find(c => c.id === shiftForm.clientId)?.companyName || 'main'}>
-                        {clients.find(c => c.id === shiftForm.clientId)?.companyName} - Main Site
-                      </SelectItem>
-                      <SelectItem value="front_entrance">Front Entrance</SelectItem>
-                      <SelectItem value="back_entrance">Back Entrance</SelectItem>
-                      <SelectItem value="lobby">Lobby</SelectItem>
-                      <SelectItem value="parking">Parking Area</SelectItem>
-                      <SelectItem value="roving">Roving Patrol</SelectItem>
-                    </>
-                  ) : (
-                    <>
-                      <SelectItem value="main_site">Main Site</SelectItem>
-                      <SelectItem value="front_entrance">Front Entrance</SelectItem>
-                      <SelectItem value="back_entrance">Back Entrance</SelectItem>
-                      <SelectItem value="lobby">Lobby</SelectItem>
-                      <SelectItem value="parking">Parking Area</SelectItem>
-                      <SelectItem value="roving">Roving Patrol</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Clock In/Out - Compact */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="clock-in" className="text-sm">Start</Label>
-                <Input
-                  id="clock-in"
-                  type="time"
-                  value={shiftForm.clockIn}
-                  onChange={(e) => setShiftForm(prev => ({ ...prev, clockIn: e.target.value }))}
-                  data-testid="input-clock-in"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="clock-out" className="text-sm">End</Label>
-                <Input
-                  id="clock-out"
-                  type="time"
-                  value={shiftForm.clockOut}
-                  onChange={(e) => setShiftForm(prev => ({ ...prev, clockOut: e.target.value }))}
-                  data-testid="input-clock-out"
-                />
-              </div>
-            </div>
-
-            {/* Notes - Compact */}
-            <div className="space-y-1.5">
-              <Label htmlFor="notes" className="text-sm">Notes</Label>
-              <Textarea
-                id="notes"
-                value={shiftForm.notes}
-                onChange={(e) => setShiftForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Instructions..."
-                className="min-h-[60px] text-sm"
-                data-testid="textarea-notes"
-              />
-            </div>
-
-            {/* Recurring Shift Toggle */}
-            <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border-dashed border border-muted-foreground/20">
-              <Checkbox
-                id="recurring-shift"
-                checked={shiftForm.isRecurring}
-                onCheckedChange={(checked) =>
-                  setShiftForm(prev => ({ ...prev, isRecurring: checked as boolean }))
-                }
-                data-testid="checkbox-recurring"
-              />
-              <Label htmlFor="recurring-shift" className="flex items-center gap-1.5 text-sm cursor-pointer">
-                <Repeat className="w-3.5 h-3.5 text-blue-600" />
-                <span className="font-medium">Make Recurring</span>
-                <span className="text-xs text-muted-foreground ml-1">(repeating shifts)</span>
-              </Label>
-            </div>
-            
-            {/* Recurring Options */}
-            {shiftForm.isRecurring && (
-              <div className="space-y-3 p-3 rounded-md bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50">
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Repeat Pattern</Label>
-                  <Select 
-                    value={shiftForm.recurrencePattern} 
-                    onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') =>
-                      setShiftForm(prev => ({ ...prev, recurrencePattern: value }))
-                    }
-                  >
-                    <SelectTrigger data-testid="select-recurrence">
-                      <SelectValue placeholder="Select pattern" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Days of Week</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {DAYS_OF_WEEK.map((day) => (
-                      <Button
-                        key={day.value}
-                        type="button"
-                        variant={shiftForm.daysOfWeek.includes(day.value) ? 'default' : 'outline'}
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => {
-                          setShiftForm(prev => ({
-                            ...prev,
-                            daysOfWeek: prev.daysOfWeek.includes(day.value)
-                              ? prev.daysOfWeek.filter(d => d !== day.value)
-                              : [...prev.daysOfWeek, day.value]
-                          }));
-                        }}
-                        data-testid={`day-${day.value}`}
-                      >
-                        {day.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <Label htmlFor="end-date" className="text-sm">End Date (optional)</Label>
-                  <Input
-                    id="end-date"
-                    type="date"
-                    value={shiftForm.endDate}
-                    onChange={(e) => setShiftForm(prev => ({ ...prev, endDate: e.target.value }))}
-                    data-testid="input-end-date"
-                  />
-                  <p className="text-xs text-muted-foreground">Leave empty for 30-day default</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Post Orders - Collapsible */}
-            <div className="space-y-1.5">
-              <Label className="text-sm">Post Orders</Label>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {POST_ORDER_TEMPLATES.map(order => {
-                  const isSelected = shiftForm.postOrders.includes(order.id);
-                  return (
-                    <div
-                      key={order.id}
-                      className={`border rounded-md p-2 cursor-pointer transition-colors ${
-                        isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                      }`}
-                      onClick={() => togglePostOrder(order.id)}
-                      data-testid={`post-order-${order.id}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Checkbox checked={isSelected} />
-                        <span className="text-xs font-medium flex-1">{order.title}</span>
-                        <div className="flex gap-1">
-                          {order.requiresAcknowledgment && (
-                            <CheckSquare className="w-3 h-3 text-muted-foreground" />
-                          )}
-                          {order.requiresSignature && (
-                            <FileText className="w-3 h-3 text-muted-foreground" />
-                          )}
-                          {order.requiresPhotos && (
-                            <Camera className="w-3 h-3 text-muted-foreground" />
-                          )}
-                        </div>
-                      </div>
-                      {order.photoInstructions && isSelected && (
-                        <div className="mt-2 text-xs bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded p-2">
-                          <MessageSquare className="w-3 h-3 inline mr-1" />
-                          {order.photoInstructions}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowShiftModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateShift}
-              disabled={(createShiftMutation.isPending || createRecurringMutation.isPending) || (!shiftForm.isOpenShift && !shiftForm.employeeId) || !shiftForm.position || (shiftForm.isRecurring && shiftForm.daysOfWeek.length === 0)}
-              className="bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
-              data-testid="button-create-shift"
-            >
-              {createShiftMutation.isPending || createRecurringMutation.isPending ? 'Creating...' : shiftForm.isRecurring ? 'Create Recurring Shifts' : 'Create Shift'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Shift Creation Modal - Extracted Component */}
+      <ShiftCreationModal
+        open={showShiftModal}
+        onOpenChange={setShowShiftModal}
+        shiftForm={shiftForm}
+        setShiftForm={setShiftForm}
+        modalPosition={modalPosition}
+        employees={employees}
+        clients={clients}
+        onCreateShift={handleCreateShift}
+        isCreating={createShiftMutation.isPending}
+        isCreatingRecurring={createRecurringMutation.isPending}
+        togglePostOrder={togglePostOrder}
+      />
       
-      {/* Duplicate Shift Modal */}
-      <Dialog open={showDuplicateModal} onOpenChange={setShowDuplicateModal}>
-        <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CopyPlus className="w-5 h-5 text-blue-600" />
-              Duplicate Shift
-            </DialogTitle>
-            <DialogDescription>
-              Copy this shift to another date
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedShiftForAction && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                <div className="font-medium">{selectedShiftForAction.title}</div>
-                <div className="text-muted-foreground">
-                  {new Date(selectedShiftForAction.startTime).toLocaleDateString()} at {new Date(selectedShiftForAction.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="target-date">Target Date</Label>
-                <Input
-                  id="target-date"
-                  type="date"
-                  value={duplicateTargetDate}
-                  onChange={(e) => setDuplicateTargetDate(e.target.value)}
-                  data-testid="input-duplicate-date"
-                />
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="target-employee">Assign to Employee (optional)</Label>
-                <Select value={duplicateTargetEmployee || ''} onValueChange={setDuplicateTargetEmployee}>
-                  <SelectTrigger id="target-employee" data-testid="select-duplicate-employee">
-                    <SelectValue placeholder="Same employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_keep">Keep same employee</SelectItem>
-                    {employees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDuplicateModal(false)}>
-              Cancel
-            </Button>
-            <Button
+      {/* Edit Shift Modal - Extracted Component */}
+      <EditShiftModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        selectedShift={selectedShiftForAction}
+        employees={employees}
+        clients={clients}
+        onSave={(params) => editShiftMutation.mutate(params)}
+        isPending={editShiftMutation.isPending}
+      />
+      
+      {/* Duplicate Shift Modal - Extracted Component */}
+      <DuplicateShiftModal
+        open={showDuplicateModal}
+        onOpenChange={setShowDuplicateModal}
+        selectedShift={selectedShiftForAction}
+        duplicateTargetDate={duplicateTargetDate}
+        setDuplicateTargetDate={setDuplicateTargetDate}
+        duplicateTargetEmployee={duplicateTargetEmployee}
+        setDuplicateTargetEmployee={setDuplicateTargetEmployee}
+        employees={employees}
+        onDuplicate={(params) => duplicateShiftMutation.mutate(params)}
+        isPending={duplicateShiftMutation.isPending}
+      />
+      
+      {/* Swap Request Modal - Extracted Component */}
+      <SwapRequestModal
+        open={showSwapModal}
+        onOpenChange={setShowSwapModal}
+        selectedShift={selectedShiftForAction}
+        swapReason={swapReason}
+        setSwapReason={setSwapReason}
+        swapTargetEmployee={swapTargetEmployee}
+        setSwapTargetEmployee={setSwapTargetEmployee}
+        employees={employees}
+        onRequestSwap={(params) => requestSwapMutation.mutate(params)}
+        isPending={requestSwapMutation.isPending}
+      />
+      
+      {/* Shift Action Dialog - Extracted Component */}
+      <ShiftActionDialog
+        selectedShift={selectedShiftForAction}
+        onClose={() => setSelectedShiftForAction(null)}
+        employees={employees}
+        clients={clients}
+        getEmployeeColor={getEmployeeColor}
+        onShowEditModal={() => setShowEditModal(true)}
+        onShowDuplicateModal={() => setShowDuplicateModal(true)}
+        onShowSwapModal={() => setShowSwapModal(true)}
+        onAIFill={(shiftId) => {
+          handleAIFillOpenShift(shiftId);
+          setSelectedShiftForAction(null);
+        }}
+        onDelete={(shiftId) => {
+          setShiftToDelete(shiftId);
+          setIsDeleteDialogOpen(true);
+          setSelectedShiftForAction(null);
+        }}
+        isAIFillPending={aiFillMutation.isPending}
+        isDeletePending={deleteShiftMutation.isPending}
+        showEditModal={showEditModal}
+        showDuplicateModal={showDuplicateModal}
+        showSwapModal={showSwapModal}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Shift?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this shift? This action cannot be undone and will remove the shift from the schedule.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
               onClick={() => {
-                if (selectedShiftForAction && duplicateTargetDate) {
-                  duplicateShiftMutation.mutate({
-                    shiftId: selectedShiftForAction.id,
-                    targetDate: duplicateTargetDate,
-                    targetEmployeeId: duplicateTargetEmployee === '_keep' ? undefined : duplicateTargetEmployee || undefined,
-                  });
+                if (shiftToDelete) {
+                  deleteShiftMutation.mutate(shiftToDelete);
+                  setShiftToDelete(null);
                 }
               }}
-              disabled={duplicateShiftMutation.isPending || !duplicateTargetDate}
-              className="bg-gradient-to-r from-[#3b82f6] to-[#22d3ee]"
-              data-testid="button-confirm-duplicate"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {duplicateShiftMutation.isPending ? 'Duplicating...' : 'Duplicate Shift'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Swap Request Modal */}
-      <Dialog open={showSwapModal} onOpenChange={setShowSwapModal}>
-        <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArrowRightLeft className="w-5 h-5 text-orange-600" />
-              Request Shift Swap
-            </DialogTitle>
-            <DialogDescription>
-              Request to swap this shift with another employee
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedShiftForAction && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                <div className="font-medium">{selectedShiftForAction.title}</div>
-                <div className="text-muted-foreground">
-                  {new Date(selectedShiftForAction.startTime).toLocaleDateString()} at {new Date(selectedShiftForAction.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="swap-reason">Reason for Swap</Label>
-                <Textarea
-                  id="swap-reason"
-                  value={swapReason}
-                  onChange={(e) => setSwapReason(e.target.value)}
-                  placeholder="Why do you need to swap this shift?"
-                  className="min-h-[80px]"
-                  data-testid="textarea-swap-reason"
-                />
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="swap-target">Preferred Swap With (optional)</Label>
-                <Select value={swapTargetEmployee || ''} onValueChange={setSwapTargetEmployee}>
-                  <SelectTrigger id="swap-target" data-testid="select-swap-target">
-                    <SelectValue placeholder="Anyone available" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_any">Anyone available</SelectItem>
-                    {employees.filter(emp => emp.id !== selectedShiftForAction.employeeId).map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Manager approval required</p>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSwapModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (selectedShiftForAction) {
-                  requestSwapMutation.mutate({
-                    shiftId: selectedShiftForAction.id,
-                    reason: swapReason,
-                    targetEmployeeId: swapTargetEmployee === '_any' ? undefined : swapTargetEmployee || undefined,
-                  });
-                }
-              }}
-              disabled={requestSwapMutation.isPending}
-              className="bg-gradient-to-r from-orange-500 to-amber-500"
-              data-testid="button-confirm-swap"
-            >
-              {requestSwapMutation.isPending ? 'Requesting...' : 'Request Swap'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Shift Action Dialog - Quick actions when shift is clicked */}
-      <Dialog open={!!selectedShiftForAction && !showDuplicateModal && !showSwapModal} onOpenChange={(open) => !open && setSelectedShiftForAction(null)}>
-        <DialogContent size="sm">
-          {selectedShiftForAction && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {selectedShiftForAction.employeeId ? (
-                    <>
-                      <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                        style={{ backgroundColor: getEmployeeColor(selectedShiftForAction.employeeId) }}
-                      >
-                        {employees.find(e => e.id === selectedShiftForAction.employeeId)?.firstName?.[0] || '?'}
-                      </div>
-                      {employees.find(e => e.id === selectedShiftForAction.employeeId)?.firstName} {employees.find(e => e.id === selectedShiftForAction.employeeId)?.lastName}
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="w-5 h-5 text-orange-500" />
-                      Open Shift
-                    </>
-                  )}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedShiftForAction.title || 'Shift'} - {new Date(selectedShiftForAction.startTime).toLocaleDateString()}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-3 py-2">
-                {/* Shift Details */}
-                <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Time:</span>
-                    <span className="font-medium">
-                      {new Date(selectedShiftForAction.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - {new Date(selectedShiftForAction.endTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  {selectedShiftForAction.clientId && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Client:</span>
-                      <span className="font-medium">{clients.find(c => c.id === selectedShiftForAction.clientId)?.companyName || 'Unknown'}</span>
-                    </div>
-                  )}
-                  {selectedShiftForAction.aiGenerated && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-                      <TrinityIconStatic size={12} />
-                      <span>Created by Trinity AI</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick Actions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowDuplicateModal(true);
-                    }}
-                    data-testid="button-action-duplicate"
-                  >
-                    <CopyPlus className="w-4 h-4 mr-2" />
-                    Duplicate
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowSwapModal(true);
-                    }}
-                    disabled={!selectedShiftForAction.employeeId}
-                    data-testid="button-action-swap"
-                  >
-                    <ArrowRightLeft className="w-4 h-4 mr-2" />
-                    Swap
-                  </Button>
-                  {!selectedShiftForAction.employeeId && (
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-[#00BFFF] to-[#FFD700]"
-                      onClick={() => {
-                        handleAIFillOpenShift(selectedShiftForAction.id);
-                        setSelectedShiftForAction(null);
-                      }}
-                      disabled={aiFillMutation.isPending}
-                      data-testid="button-action-ai-fill"
-                    >
-                      <TrinityIconStatic size={14} className="mr-2" />
-                      {aiFillMutation.isPending ? 'Filling...' : 'Trinity Fill'}
-                    </Button>
-                  )}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      deleteShiftMutation.mutate(selectedShiftForAction.id);
-                    }}
-                    disabled={deleteShiftMutation.isPending}
-                    data-testid="button-action-delete"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {deleteShiftMutation.isPending ? 'Deleting...' : 'Delete'}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
 
-    {/* Escalation Matrix Dialog */}
-    <Dialog open={showEscalationMatrix} onOpenChange={setShowEscalationMatrix}>
-      <DialogContent size="xl">
-        <DialogHeader>
-          <DialogTitle>Escalation Matrix - Shift Coverage</DialogTitle>
-          <DialogDescription>
-            Automated escalation rules for unfilled shift coverage
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          {escalationRules.map((rule) => (
-            <div key={rule.level} className="border rounded-lg p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-orange-100 text-orange-800">Level {rule.level}</Badge>
-                  <span className="font-medium">{rule.condition}</span>
-                </div>
-                <span className="text-xs text-muted-foreground font-mono">{rule.timeout}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AlertCircle className="w-4 h-4" />
-                <span>Action: {rule.action}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setShowEscalationMatrix(false)}>
-            Close
-          </Button>
-          <Button onClick={() => {
-            toast({ title: "Escalation rules saved", description: "System will monitor and enforce these rules" });
-            setShowEscalationMatrix(false);
-          }}>
-            Apply Rules
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    {/* Escalation Matrix Dialog - Extracted Component */}
+    <EscalationMatrixDialog
+      open={showEscalationMatrix}
+      onOpenChange={setShowEscalationMatrix}
+      escalationRules={escalationRules}
+      onApplyRules={() => {
+        toast({ title: "Escalation rules saved", description: "System will monitor and enforce these rules" });
+        setShowEscalationMatrix(false);
+      }}
+    />
+    
+    {/* Trinity Scheduling Summary Modal */}
+    <TrinitySchedulingSummaryModal
+      open={showSchedulingSummary}
+      onOpenChange={setShowSchedulingSummary}
+      result={schedulingResult}
+      workspaceId={workspaceId || ''}
+      onVerified={() => {
+        setAutomationEnabled(true);
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      }}
+      onRejected={() => {
+        setAutomationEnabled(false);
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      }}
+    />
     
     {/* DragOverlay - shows full-opacity clone during drag */}
-    <DragOverlay>
+    <DragOverlay dropAnimation={{ duration: 200, easing: 'ease-out' }}>
       {activeEmployeeId && employees.find(e => e.id === activeEmployeeId) ? (
-        <div className="p-3 rounded-lg border-2 border-primary bg-card cursor-grabbing opacity-100 shadow-2xl">
+        <div className="p-3 rounded-lg border border-primary bg-card cursor-grabbing opacity-100 shadow-2xl">
           {(() => {
             const activeEmployee = employees.find(e => e.id === activeEmployeeId)!;
             return (
               <>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center space-x-2">
                     <div
                       className="w-3 h-3 rounded-full"
@@ -2798,7 +3064,7 @@ export default function UniversalSchedule() {
                     <span className="font-medium text-sm">{activeEmployee.firstName} {activeEmployee.lastName}</span>
                   </div>
                   {activeEmployee.performanceScore && (
-                    <span className="text-xs font-bold text-green-600">{activeEmployee.performanceScore}</span>
+                    <span className="text-xs font-bold text-green-600 dark:text-green-400">{activeEmployee.performanceScore}</span>
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">{activeEmployee.role || 'Employee'}</div>
@@ -2810,11 +3076,31 @@ export default function UniversalSchedule() {
           })()}
         </div>
       ) : null}
+      {draggedShiftId && (() => {
+        const draggedShift = shifts.find(s => s.id === draggedShiftId);
+        if (!draggedShift) return null;
+        const startTime = new Date(draggedShift.startTime);
+        const endTime = new Date(draggedShift.endTime);
+        const client = draggedShift.clientId ? clients.find(c => c.id === draggedShift.clientId) : null;
+        const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const statusColor = getShiftStatusColor(draggedShift);
+        const emp = draggedShift.employeeId ? employees.find(e => e.id === draggedShift.employeeId) : null;
+        return (
+          <div
+            className="rounded-lg shadow-2xl ring-2 ring-primary/50 px-3 py-2 text-white pointer-events-none"
+            style={{ backgroundColor: statusColor.bg, width: 220, transform: 'scale(1.05)' }}
+            data-testid="inline-shift-drag-overlay"
+          >
+            <div className="font-bold text-[11px] truncate">
+              {formatTime(startTime)} - {formatTime(endTime)}
+            </div>
+            {emp && <div className="text-[10px] opacity-90 truncate">{emp.firstName} {emp.lastName}</div>}
+            {client && <div className="text-[10px] opacity-75 truncate">{client.companyName}</div>}
+            <div className="text-[9px] opacity-60 mt-1">Drop on another employee to reassign</div>
+          </div>
+        );
+      })()}
     </DragOverlay>
-      </DndContext>
-      
-      {/* Trinity Live Scheduling Progress Indicator */}
-      <TrinitySchedulingProgress workspaceId={workspaceId} />
-    </WorkspaceLayout>
+    </DndContext>
   );
 }

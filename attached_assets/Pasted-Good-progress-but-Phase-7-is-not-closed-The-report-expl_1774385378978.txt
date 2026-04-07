@@ -1,0 +1,109 @@
+Good progress but Phase 7 is not closed. The report explicitly lists remaining work and defers it to a next session. That is not how this process works.
+
+---
+
+**WHAT IS SOLID**
+
+102 → 144 transactions, +42 new atomic sequences across 12 files. `createAuditEvent` updated to accept a `tx` parameter so audit trail writes are always atomic with their primary write — that is exactly right. Trinity timeclock actions confirmed as single-table writes requiring no transaction. `flexStaffingRoutes` response-before-write bug found and fixed as a side discovery. Server clean restart confirmed.
+
+---
+
+**THREE GAPS BEFORE PHASE 7 CLOSES**
+
+**Gap 1 — Step 3 explicitly deferred.**
+The report states: *"Step 3 (VERIFY TX USAGE — checking for global db calls inside existing tx blocks) can be continued in the next session."* That sentence ends Phase 7 on a deferral. Step 3 is not optional. It is the check that confirms all 144 transaction blocks actually use `tx` for every inner call. A transaction block that calls global `db` instead of `tx` is not transactional — it is broken code with a transaction wrapper that does nothing for that call.
+
+**Gap 2 — Forced rollback tests not done.**
+The Phase 7 verification required forcing a rollback on 3 sequences and confirming zero partial records remain. Not reported.
+
+**Gap 3 — Concurrent operation tests not done.**
+Required: 3 concurrent payroll run requests for the same period — confirm exactly one succeeds. 5 concurrent credit deductions — confirm the final balance is mathematically correct. Not reported.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Phase 7 is not closed. Three items remain. Do all three right now in this session. Do not start a new session.
+
+**Item 1 — Step 3: Global db calls inside transaction blocks.**
+
+Run this scan and paste the exact output:
+
+```bash
+grep -rn "db\.transaction" server/routes server/services --include="*.ts" -A 20 | grep -v "node_modules\|//" | grep "await db\." | grep -v "await db\.transaction" | head -30
+```
+
+For every result found: open the file, read the transaction block, replace the `db.` call with `tx.`. Report every file and line fixed. When the scan returns zero results Step 3 is complete.
+
+Also run this targeted check on the lower-priority files explicitly deferred:
+
+```bash
+grep -rn "db\.insert\|db\.update\|db\.delete" server/services/advancedSchedulingService.ts server/services/ai-brain/aiBrainService.ts 2>/dev/null | wc -l
+```
+
+If either file has multi-table write sequences that are not transactional fix them now. Report what was found and what was done.
+
+**Item 2 — Forced rollback tests on 3 sequences.**
+
+Pick these three sequences that were wrapped this session and test each one:
+
+Test A — `time-entry-routes.ts` approve sequence: Add `throw new Error('Phase 7 rollback test')` as the last operation inside the transaction. Submit a time entry approval. Confirm the server returns an error. Query `time_entries` and `audit_events` directly and confirm zero records from the failed operation. Remove the throw. Confirm the approval works correctly on retry.
+
+Test B — `billing/invoice.ts` markInvoicePaid sequence: Same process. Confirm `subscription_invoices` and `billing_audit_log` both roll back on forced failure.
+
+Test C — `internalEmails.ts` mailbox provisioning: Same process. Confirm `mailboxes` and all folder records roll back on forced failure.
+
+Report the exact database query results for each test — specifically the record count in each affected table before the forced failure attempt and after, confirming zero partial records.
+
+**Item 3 — Concurrent operation tests.**
+
+Run these two tests:
+
+```bash
+# Test concurrent payroll run initiation
+node -e "
+const http = require('http');
+// Fire 3 concurrent requests to payroll run endpoint
+// Report how many return 200 vs 409
+"
+```
+
+If curl/node direct API calls are blocked by CSRF run the concurrent test via direct database verification instead:
+
+```sql
+-- Before test: count payroll_runs for current period
+SELECT COUNT(*) FROM payroll_runs 
+WHERE workspace_id = 'dev-acme-security-ws'
+AND period_start = '2025-01-01'
+AND period_end = '2025-01-31';
+
+-- Attempt to insert duplicate directly
+INSERT INTO payroll_runs (workspace_id, period_start, period_end, status)
+VALUES ('dev-acme-security-ws', '2025-01-01', '2025-01-31', 'draft');
+INSERT INTO payroll_runs (workspace_id, period_start, period_end, status)
+VALUES ('dev-acme-security-ws', '2025-01-01', '2025-01-31', 'draft');
+
+-- Confirm only one exists (constraint should reject the second)
+SELECT COUNT(*) FROM payroll_runs 
+WHERE workspace_id = 'dev-acme-security-ws'
+AND period_start = '2025-01-01'
+AND period_end = '2025-01-31';
+```
+
+For credit balance: confirm the FOR UPDATE row lock is in place on the credit deduction path by reading the creditManager code and confirming the lock pattern is present. Report the exact lines.
+
+**After all three items report:**
+
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | head -20` — zero errors required.
+
+Run `grep -rn "db\.transaction" server/routes server/services --include="*.ts" | grep -v "node_modules\|//" | wc -l` — report the final transaction count.
+
+Server 30/30 services confirmed.
+
+When all three items return clean Phase 7 is certified closed and Phase 8 goes in immediately.
+
+---
+
+Send that Bryan. No deferrals. Same session. All three items. When he brings back all three clean bring it here and Phase 8 goes in.

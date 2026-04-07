@@ -15,7 +15,10 @@ import { trinityExecutionFabric, ExecutionContext, ExecutionManifest } from './t
 import { knowledgeOrchestrationService } from './knowledgeOrchestrationService';
 import { subagentSupervisor } from './subagentSupervisor';
 import { platformEventBus } from '../platformEventBus';
+import { AI_BRAIN } from '../../config/platformConfig';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('platformIntentRouter');
 
 // ============================================================================
 // TYPES
@@ -124,10 +127,12 @@ class PlatformIntentRouter {
   private intentQueue: PlatformIntent[] = [];
   
   // Processing configuration
-  private readonly MAX_CONCURRENT_INTENTS = 20;
+  private readonly MAX_CONCURRENT_INTENTS = AI_BRAIN.maxConcurrentIntents;
   private readonly QUEUE_PROCESS_INTERVAL = 100;
   private readonly TELEMETRY_FLUSH_INTERVAL = 30000;
-  private readonly MAX_HISTORY_SIZE = 1000;
+  private queueProcessorInterval: ReturnType<typeof setInterval> | null = null;
+  private telemetryFlusherInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly MAX_HISTORY_SIZE = AI_BRAIN.intentHistorySize;
   
   // Health tracking
   private successCount = 0;
@@ -144,7 +149,7 @@ class PlatformIntentRouter {
   constructor() {
     this.startQueueProcessor();
     this.startTelemetryFlusher();
-    console.log('[PlatformIntentRouter] Initialized - All operations routed through AI Brain');
+    log.info('[PlatformIntentRouter] Initialized - All operations routed through AI Brain');
   }
 
   // ============================================================================
@@ -191,7 +196,7 @@ class PlatformIntentRouter {
     // Check if we should queue or process immediately
     if (this.activeIntents.size >= this.MAX_CONCURRENT_INTENTS) {
       this.intentQueue.push(platformIntent);
-      console.log(`[PlatformIntentRouter] Intent ${intentId} queued (queue depth: ${this.intentQueue.length})`);
+      log.info(`[PlatformIntentRouter] Intent ${intentId} queued (queue depth: ${this.intentQueue.length})`);
       return platformIntent;
     }
     
@@ -284,7 +289,7 @@ class PlatformIntentRouter {
       intent.routingDecision = routingDecision;
       intent.routed = true;
       
-      console.log(`[PlatformIntentRouter] Routed ${intent.id} to ${routingDecision.handler} (confidence: ${routingDecision.confidence})`);
+      log.info(`[PlatformIntentRouter] Routed ${intent.id} to ${routingDecision.handler} (confidence: ${routingDecision.confidence})`);
       
       // Check if approval needed
       if (routingDecision.requiresApproval) {
@@ -314,7 +319,7 @@ class PlatformIntentRouter {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       intent.status = 'failed';
       intent.error = errorMessage;
-      console.error(`[PlatformIntentRouter] Intent ${intent.id} failed:`, errorMessage);
+      log.error(`[PlatformIntentRouter] Intent ${intent.id} failed:`, errorMessage);
     } finally {
       // Record completion
       intent.completedAt = new Date();
@@ -352,7 +357,7 @@ class PlatformIntentRouter {
         intent.intent,
         {
           userId: intent.userId,
-          userRole: 'admin',
+          userRole: 'org_owner',
           workspaceId: intent.workspaceId,
         }
       );
@@ -396,7 +401,7 @@ class PlatformIntentRouter {
     const context: ExecutionContext = {
       workspaceId: intent.workspaceId,
       userId: intent.userId,
-      userRole: 'admin',
+      userRole: 'org_owner',
       conversationId: intent.conversationId,
       creditsAvailable: 100,
       permissions: ['*'],
@@ -453,7 +458,7 @@ class PlatformIntentRouter {
       intent.intent,
       {
         userId: intent.userId,
-        userRole: 'admin',
+        userRole: 'org_owner',
         workspaceId: intent.workspaceId,
       }
     );
@@ -467,12 +472,13 @@ class PlatformIntentRouter {
   // ============================================================================
 
   private startQueueProcessor(): void {
-    setInterval(async () => {
+    if (this.queueProcessorInterval) clearInterval(this.queueProcessorInterval);
+    this.queueProcessorInterval = setInterval(async () => {
       while (this.intentQueue.length > 0 && this.activeIntents.size < this.MAX_CONCURRENT_INTENTS) {
         const intent = this.intentQueue.shift();
         if (intent) {
           this.routeAndExecute(intent).catch(err => {
-            console.error(`[PlatformIntentRouter] Queue processing error:`, err);
+            log.error(`[PlatformIntentRouter] Queue processing error:`, err);
           });
         }
       }
@@ -503,13 +509,24 @@ class PlatformIntentRouter {
   }
 
   private startTelemetryFlusher(): void {
-    setInterval(() => {
+    if (this.telemetryFlusherInterval) clearInterval(this.telemetryFlusherInterval);
+    this.telemetryFlusherInterval = setInterval(() => {
       if (this.telemetryBuffer.length > 0) {
         const telemetry = this.telemetryBuffer.splice(0, this.telemetryBuffer.length);
-        console.log(`[PlatformIntentRouter] Flushing ${telemetry.length} telemetry records`);
-        // In production, this would persist to database
+        log.info(`[PlatformIntentRouter] Flushing ${telemetry.length} telemetry records`);
       }
     }, this.TELEMETRY_FLUSH_INTERVAL);
+  }
+
+  destroy(): void {
+    if (this.queueProcessorInterval) {
+      clearInterval(this.queueProcessorInterval);
+      this.queueProcessorInterval = null;
+    }
+    if (this.telemetryFlusherInterval) {
+      clearInterval(this.telemetryFlusherInterval);
+      this.telemetryFlusherInterval = null;
+    }
   }
 
   // ============================================================================

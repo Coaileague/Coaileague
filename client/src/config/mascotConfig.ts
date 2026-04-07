@@ -33,6 +33,7 @@ export type MascotMode =
   | 'ANALYZING' 
   | 'CODING' 
   | 'LISTENING' 
+  | 'SPEAKING'
   | 'UPLOADING' 
   | 'SUCCESS' 
   | 'ERROR'
@@ -921,6 +922,7 @@ export const ACTION_STATE_TEXT: Record<MascotMode, string> = {
   ANALYZING: 'analyzing data',
   CODING: 'coding',
   LISTENING: 'listening',
+  SPEAKING: 'responding',
   UPLOADING: 'automating',
   SUCCESS: 'done',
   ERROR: 'oops',
@@ -939,6 +941,7 @@ export const SEASONAL_ACTION_TEXT: Partial<Record<HolidayKey, Record<MascotMode,
     ANALYZING: 'checking the nice list',
     CODING: 'wrapping code presents',
     LISTENING: 'listening for sleigh bells',
+    SPEAKING: 'sharing holiday tidings',
     UPLOADING: 'delivering presents',
     SUCCESS: 'ho ho ho',
     ERROR: 'lost in the snow',
@@ -954,6 +957,7 @@ export const SEASONAL_ACTION_TEXT: Partial<Record<HolidayKey, Record<MascotMode,
     ANALYZING: 'reading fortunes',
     CODING: 'brewing potions',
     LISTENING: 'hearing whispers',
+    SPEAKING: 'whispering incantations',
     UPLOADING: 'summoning spirits',
     SUCCESS: 'trick or treat',
     ERROR: 'curse failed',
@@ -969,6 +973,7 @@ export const SEASONAL_ACTION_TEXT: Partial<Record<HolidayKey, Record<MascotMode,
     ANALYZING: 'measuring love',
     CODING: 'writing love letters',
     LISTENING: 'hearing heartbeats',
+    SPEAKING: 'whispering sweet nothings',
     UPLOADING: 'sending valentines',
     SUCCESS: 'love wins',
     ERROR: 'heartbroken',
@@ -1340,7 +1345,7 @@ export const PUBLIC_PAGE_PROMO_CONFIG: PublicPagePromoConfig = {
     ],
     '/pricing': [
       { text: "I can help you compare our plans. What questions do you have?", priority: 'normal', emote: 'helpful' },
-      { text: "The Professional plan includes unlimited AI scheduling features.", priority: 'normal', emote: 'nodding' },
+      { text: "The Professional plan includes 8,000 AI credits for scheduling and automation.", priority: 'normal', emote: 'nodding' },
       { text: "New subscribers receive a discount on the first month.", priority: 'high', emote: 'nodding', showDiscount: true },
       { text: "I can provide a comparison based on your business requirements.", priority: 'normal', emote: 'helpful' },
       { text: "For enterprise requirements, our team offers custom solutions.", ctaText: "Contact Sales", ctaLink: "/contact", priority: 'normal', emote: 'helpful' },
@@ -1510,7 +1515,7 @@ export const MASCOT_CONFIG: MascotConfig = {
     y: 12,
   },
   
-  zIndex: 10001,
+  zIndex: 3500,
   
   storageKeys: {
     position: 'coaileague-mascot-position',
@@ -1521,6 +1526,7 @@ export const MASCOT_CONFIG: MascotConfig = {
   hiddenRoutes: [
     '/mascot-demo',
     '/chat',
+    '/chatrooms',
     '/helpdesk',
     '/timesheet',
     '/payroll',
@@ -1796,6 +1802,7 @@ export const MASCOT_CONFIG: MascotConfig = {
       ANALYZING: '⚙️',
       CODING: '💻',
       LISTENING: '👂',
+      SPEAKING: '💬',
       UPLOADING: '📤',
       SUCCESS: '✅',
       ERROR: '❌',
@@ -1847,6 +1854,11 @@ export const MASCOT_CONFIG: MascotConfig = {
         "Please continue.",
         "I'm following along.",
         "Understood. Please provide additional details if needed.",
+      ],
+      SPEAKING: [
+        "Composing your response...",
+        "Putting together the details...",
+        "Here's what I found...",
       ],
       UPLOADING: [
         "Transmitting data securely...",

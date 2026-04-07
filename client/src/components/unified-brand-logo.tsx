@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import { TrinityLogo } from "@/components/trinity-logo";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 type LogoVariant = "full" | "compact" | "icon";
@@ -15,31 +15,31 @@ interface UnifiedBrandLogoProps {
 
 const SIZE_CONFIG = {
   xs: { 
-    knot: "xs" as const, 
+    logoSize: 20, 
     text: "text-sm", 
     gap: "gap-1",
     tagline: "text-[8px]"
   },
   sm: { 
-    knot: "sm" as const, 
+    logoSize: 28, 
     text: "text-base", 
     gap: "gap-1.5",
     tagline: "text-[9px]"
   },
   md: { 
-    knot: "sm" as const, 
+    logoSize: 32, 
     text: "text-lg", 
     gap: "gap-2",
     tagline: "text-[10px]"
   },
   lg: { 
-    knot: "md" as const, 
+    logoSize: 40, 
     text: "text-xl", 
     gap: "gap-2.5",
     tagline: "text-xs"
   },
   xl: { 
-    knot: "lg" as const, 
+    logoSize: 56, 
     text: "text-2xl", 
     gap: "gap-3",
     tagline: "text-sm"
@@ -72,8 +72,8 @@ export function UnifiedBrandLogo({
 
   if (effectiveVariant === "icon") {
     return (
-      <TrinityMascotIcon 
-        size={config.knot}
+      <TrinityLogo 
+        size={config.logoSize}
         className={cn("shrink-0", className)}
       />
     );
@@ -108,8 +108,8 @@ export function UnifiedBrandLogo({
       )}
       data-testid="brand-logo"
     >
-      <TrinityMascotIcon 
-        size={config.knot}
+      <TrinityLogo 
+        size={config.logoSize}
         className="shrink-0"
       />
 
@@ -120,10 +120,12 @@ export function UnifiedBrandLogo({
             <span className={cn("hidden sm:inline", config.text)}>
               {renderWordmark()}
             </span>
-            {/* Mobile: Compact "CoAI" only to save space */}
-            <span className={cn("sm:hidden font-extrabold tracking-tight whitespace-nowrap", config.text)}>
+            {/* Mobile: Compact "CoAI" with auto-scaling text - truncate to prevent overlap */}
+            <span className="sm:hidden font-extrabold tracking-tight whitespace-nowrap text-sm">
               <span style={{ color: colors.accent }}>Co</span>
               <span style={{ color: colors.primary }}>AI</span>
+              <span style={{ color: colors.accent }}>league</span>
+              <sup className="text-[0.4em] ml-0.5" style={{ color: colors.muted }}>™</sup>
             </span>
           </>
         ) : (

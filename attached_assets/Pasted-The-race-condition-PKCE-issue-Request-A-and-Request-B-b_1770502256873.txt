@@ -1,0 +1,46 @@
+The race condition + PKCE issue:
+
+Request A and Request B both hit callback simultaneously
+Both SELECT the same oauthState record (with codeVerifier)
+Request A exchanges code successfully with correct code_verifier
+Request A deletes the oauthState record
+Request B tries to exchange the SAME code (already consumed)
+Intuit sees: "code already used + PKCE mismatch" → invalid_client
+
+
+The fix is still the deduplication I wrote earlier, but let me also suggest checking the PKCE storage:
+typescript// In exchangeCodeForTokens, log the PKCE values:
+console.log('[QB Token] code_verifier from DB:', oauthState.codeVerifier?.substring(0, 10) + '...');
+console.log('[QB Token] code_verifier length:', oauthState.codeVerifier?.length);
+And verify the state isn't getting deleted prematurely:
+The current code deletes the state AFTER successful token exchange (line 335). But with race conditions, Request B might query the state before Request A deletes it, then try to use an already-consumed code.
+
+The real fix - make the callback idempotent:
+typescript// At top of integrationRoutes.ts
+const processingCallbacks = new Map<string, Promise<any>>();
+
+// In callback handler, BEFORE any DB operations:
+const stateKey = state as string;
+
+if (processingCallbacks.has(stateKey)) {
+  console.log('[QB Callback] Duplicate detected, awaiting original request...');
+  const result = await processingCallbacks.get(stateKey);
+  return sendPopupResponse(true, 'Connected!', result?.connection?.companyName);
+}
+
+const exchangePromise = (async () => {
+  // ALL the existing exchange logic goes here
+  return { workspaceId, connection };
+})();
+
+processingCallbacks.set(stateKey, exchangePromise);
+
+try {
+  const result = await exchangePromise;
+  setTimeout(() => processingCallbacks.delete(stateKey), 30000);
+  return sendPopupResponse(true, 'Connected!', result.connection?.companyName);
+} catch (err) {
+  processingCallbacks.delete(stateKey);
+  throw err;
+}
+This ensures only ONE request ever attempts the token exchange. The second request waits for the first to complete.

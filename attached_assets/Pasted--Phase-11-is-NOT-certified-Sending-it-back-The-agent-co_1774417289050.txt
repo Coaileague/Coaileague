@@ -1,0 +1,43 @@
+**Phase 11 is NOT certified. Sending it back.**
+
+The agent confirmed 14 gaps at findings time. The final summary only explicitly accounts for **5 fixes**. The other 9 — including the Critical and all 3 High severity gaps — are missing from the completion table. This doesn't mean they weren't fixed, but they were never confirmed. That's not good enough for a financial phase.
+
+**What's unaccounted for:**
+
+- **GAP-QB-1 (Critical)** — QuickBooks CDC inbound sync broken — no confirmation it was actually repaired
+- **GAP-INV-1 (High)** — No disputed invoice status, markInvoicePaid doesn't block disputes — no fix confirmed
+- **GAP-INV-2 (High)** — Overdue sweep doesn't auto-transition invoice status in DB — no fix confirmed
+- **GAP-AUDIT-1 (High)** — 5 financial files with zero audit trail writes — no confirmation any of the 5 were updated
+- **GAP-SEC-1 (Medium)** — Invoice portal token expiry and workspace scope unconfirmed
+- **GAP-SEC-2 (Medium)** — payrollExportService has no service-layer workspaceId guard
+- **GAP-QB-2 (Medium)** — QuickBooks webhook Create and Delete events unhandled
+- **GAP-RATE-2 (Low)** — Zero-rate officers silently skipped instead of hard-blocked
+- **GAP-RATE-3 (Low)** — No hazard pay as a distinct line item
+
+---
+
+Send this back to the agent:
+
+---
+
+**Phase 11 is not closed. The findings report identified 14 gaps. Your completion summary only confirmed 5 fixes. The following 9 gaps have no confirmed fix — prove each one was addressed or fix it now:**
+
+**GAP-QB-1 (Critical):** Show the actual code added to `runCDCPollInternal` that applies CDC changes to the CoAIleague database. Quote the specific lines written. Confirm with a grep.
+
+**GAP-INV-1 (High):** Show that `disputed` was added to the invoice status enum. Show that `markInvoicePaid` now blocks invoices in disputed state. Show the migration ran.
+
+**GAP-INV-2 (High):** Show that `overdueCollectionsService.ts` now calls a DB update that transitions `invoices.status` to `overdue` inside the sweep. Show the specific update query.
+
+**GAP-AUDIT-1 (High):** Show audit trail writes added to all 5 flagged files: `payrollLedger.ts`, `payrollExportService.ts`, `payStubRoutes.ts`, `payrollAutoCloseService.ts`, `financeSettingsService.ts`. Quote the audit call added to each one.
+
+**GAP-SEC-1 (Medium):** Show the invoice portal token validation code. Confirm it enforces expiry, is workspace-scoped, and cannot be reused after first access.
+
+**GAP-SEC-2 (Medium):** Show the workspaceId guard added to `payrollExportService.ts` at the service layer — not just the route layer.
+
+**GAP-QB-2 (Medium):** Show the QuickBooks webhook handler now processes Create and Delete events in addition to Update.
+
+**GAP-RATE-2 (Low):** Show that zero-rate officers now produce a hard block with an explicit error — not a silent skip. Show the specific line changed in `payrollAutomation.ts`.
+
+**GAP-RATE-3 (Low):** Show that hazard pay is now tracked as a distinct line item — not bundled into the base rate override.
+
+After each confirmation run the 12-check verification table again with actual evidence per check. Phase 11 does not close until all 12 checks have verified proof — not assertions.

@@ -1,0 +1,807 @@
+Send this to the Replit Agent:
+
+---
+
+**GRAND CANONICAL AUDIT — PHASE-BY-PHASE PLATFORM INTEGRITY SWEEP**
+
+You are the Architect and Gatekeeper for this audit. Your role is to coordinate up to 8 subagents working in parallel, verify all their findings, and ensure every issue is resolved before declaring any phase clean. No phase passes until you personally verify the fix is correct, complete, and does not break any other phase.
+
+**RULES FOR THIS AUDIT:**
+1. You verify every subagent's findings before accepting them
+2. You reject any fix that introduces a new problem
+3. You maintain a master issue log — every finding documented with phase, file, line, severity
+4. Nothing is marked resolved until you confirm it with a targeted grep or query
+5. All testing against ACME Security sandbox only — Statewide is untouchable
+6. After every batch of fixes run TypeScript compilation and server restart before moving on
+
+---
+
+**MASTER ISSUE LOG FORMAT:**
+
+Every finding goes into this table in replit.md:
+
+```
+| Phase | Domain | File | Issue | Severity | Status |
+|-------|--------|------|-------|----------|--------|
+| 8     | NDS    | notificationDeliveryService.ts | Direct SMS send bypassing NDS | P1 | OPEN |
+```
+
+Severity levels:
+- P1 — Launch blocker — dead route, missing auth, data leak, broken workflow
+- P2 — Functional gap — wrong route, missing integration, broken UI
+- P3 — Quality issue — naming inconsistency, missing error handling, console.log
+
+---
+
+**PHASE GROUPS FOR PARALLEL AUDIT — 8 SUBAGENTS:**
+
+**SUBAGENT 1 — Audit Phases 1 through 10 (Core Architecture)**
+
+Verify these phases are still intact and correctly integrated:
+
+Phase 1 — Core Architecture:
+```bash
+grep -rn "workspace_id" server/db.ts server/auth.ts | wc -l
+grep -rn "ArchLinter\|archLinter" server/ --include="*.ts" | head -5
+# Confirm roleDefinitions.ts is the single source of truth for roles
+grep -rn "roleDefinitions" server/ --include="*.ts" | wc -l
+# Confirm featureRegistry.ts is single source of truth for features
+grep -rn "featureRegistry" server/ --include="*.ts" | wc -l
+```
+
+Phase 2 — NDS Notification System:
+```bash
+# Confirm ALL notification sends go through NDS
+grep -rn "resend\.emails\|nodemailer\|sendEmail" server/ --include="*.ts" | grep -v "notificationDeliveryService\|emailCore\|NDS\|exempt\|test" | head -20
+# Confirm all 47 notification types exist
+grep -rn "NOTIFICATION_TYPES\|notificationTypes" server/services/notificationDeliveryService.ts | head -10
+# Confirm retry logic exists
+grep -rn "retry\|exponential\|backoff" server/services/notificationDeliveryService.ts | head -10
+```
+
+Phase 3 — Design System:
+```bash
+# Confirm dark navy CSS variables are defined
+grep -rn "navy\|--primary\|--background" client/src/index.css | head -10
+# Confirm Trinity purple only on Trinity elements
+grep -rn "#6B46C1\|trinity.*purple\|purple.*trinity" client/src/ --include="*.tsx" | grep -v "trinity\|Trinity" | head -10
+```
+
+Phase 4-8 — Schema, bots, documents, notification hardening:
+```bash
+# Confirm all document templates are white-labeled
+grep -rn "Statewide\|SPS\|C11608501" server/services/documents/ | grep -v node_modules | head -10
+# Confirm notification_deliveries table tracks all sends
+grep -rn "notification_deliveries\|notificationDeliveries" server/ --include="*.ts" | wc -l
+```
+
+Phase 9 — RBAC:
+```bash
+# Confirm roleDefinitions.ts has all roles
+grep -rn "org_owner\|org_admin\|org_manager\|supervisor\|officer\|compliance_officer\|finance\|platform_staff" server/config/roleDefinitions.ts | wc -l
+# Confirm canAssignRole is used everywhere role assignment happens
+grep -rn "canAssignRole" server/ --include="*.ts" | wc -l
+# Confirm no stale role strings hardcoded outside roleDefinitions
+grep -rn "'org_owner'\|'org_admin'\|'officer'" server/routes/ --include="*.ts" | grep -v "roleDefinitions\|canAssign\|hasRole\|requireRole" | head -20
+```
+
+Phase 10 — Bug sweep regression:
+```bash
+# Confirm calloff reason persists to DB
+grep -rn "calloffReason\|calloff_reason" server/ --include="*.ts" | head -10
+# Confirm client invoice auto-generation is wired
+grep -rn "autoGenerateClientInvoice\|auto.*invoice\|invoice.*auto" server/ --include="*.ts" | head -10
+```
+
+Document every gap. Report to Architect before fixing anything.
+
+---
+
+**SUBAGENT 2 — Audit Phases 11 through 18 (Financial and Documents)**
+
+Phase 11 — Financial Infrastructure:
+```bash
+# Confirm FinancialCalculator is used for all financial math
+grep -rn "\.toFixed\|parseFloat.*price\|parseFloat.*amount\|parseFloat.*rate" server/ --include="*.ts" | grep -v "FinancialCalculator\|formatCurrency\|display\|label\|string\|test" | head -20
+# Confirm audit trail on all financial writes
+grep -rn "INSERT INTO invoices\|INSERT INTO payroll_runs\|INSERT INTO credit_transactions" server/ --include="*.ts" | grep -v "audit\|Audit" | head -10
+# Confirm QB CDC inbound sync
+grep -rn "cdcSync\|inboundSync\|quickbooks.*sync" server/ --include="*.ts" | head -10
+```
+
+Phase 12 — Scheduling Engine:
+```bash
+# Confirm 8-hour rest period enforcement
+grep -rn "restPeriod\|rest_period\|8.*hour\|eightHour" server/ --include="*.ts" | head -10
+# Confirm shift deletion blocked on active clock-ins
+grep -rn "activeClockIn\|clock.*in.*block\|blockShiftDelete" server/ --include="*.ts" | head -10
+# Confirm OT warning at assignment
+grep -rn "overtimeWarning\|OT.*warn\|warn.*overtime" server/ --include="*.ts" | head -10
+```
+
+Phase 13 — Inbound Email:
+```bash
+# Confirm all 4 inbound pipelines exist
+grep -rn "calloffs@\|incidents@\|docs@\|support@" server/ --include="*.ts" | head -10
+# Confirm HMAC-SHA256 verification
+grep -rn "HMAC\|hmac\|sha256.*email\|email.*sha256" server/ --include="*.ts" | head -10
+# Confirm always-200 to Resend
+grep -rn "inbound.*200\|always.*200\|res\.status(200" server/routes/ --include="*.ts" | head -10
+```
+
+Phase 14 — Invoice Engine:
+```bash
+# Confirm invoice subtotal DB trigger
+grep -rn "trg_sync_invoice_subtotal\|sync_invoice_subtotal" server/ --include="*.ts" | head -5
+# Confirm disputed invoices are locked
+grep -rn "disputed.*lock\|lock.*disputed\|DISPUTED" server/ --include="*.ts" | head -10
+# Confirm duplicate payment reference blocked
+grep -rn "duplicatePayment\|duplicate.*payment\|payment.*duplicate" server/ --include="*.ts" | head -10
+```
+
+Phase 15 — Payroll Engine:
+```bash
+# Confirm garnishments in processAutomatedPayroll
+grep -rn "garnishment\|garnishments" server/services/ --include="*.ts" | head -10
+# Confirm self-approval blocked
+grep -rn "SELF_APPROVAL_FORBIDDEN\|selfApproval\|self.*approval" server/ --include="*.ts" | head -5
+# Confirm net pay floor at zero
+grep -rn "netPayFloor\|net.*pay.*floor\|floor.*net.*pay\|Math.max.*0.*net" server/ --include="*.ts" | head -10
+```
+
+Phase 16 — QuickBooks and Cascade:
+```bash
+# Confirm three-tier cascade is wired
+grep -rn "tier1\|tier2\|tier3\|Tier1\|threeTier\|three_tier" server/ --include="*.ts" | wc -l
+# Confirm emergency collapse within 2 hours
+grep -rn "emergencyCollapse\|emergency.*collapse\|2.*hour.*cascade" server/ --include="*.ts" | head -10
+# Confirm QB OAuth daemon encryption split fixed
+grep -rn "oauthDaemon\|oauth.*encrypt\|encrypt.*oauth" server/ --include="*.ts" | head -10
+```
+
+Phase 17 — License and Certification:
+```bash
+# Confirm 90/60/30/14/7 day alert windows
+grep -rn "90.*day\|60.*day\|30.*day\|14.*day\|7.*day" server/services/ --include="*.ts" | grep -i "license\|expir\|certif" | head -10
+# Confirm revoke handler flags active shifts
+grep -rn "revokeHandler\|revoke.*shift\|shift.*revoke" server/ --include="*.ts" | head -5
+# Confirm license re-validated at clock-in
+grep -rn "licenseCheck.*clockIn\|clockIn.*license\|license.*valid.*clock" server/ --include="*.ts" | head -10
+```
+
+Phase 18 — Document Pipeline:
+```bash
+# Confirm soft-delete (not hard delete)
+grep -rn "softDelete\|soft_delete\|deletedAt\|deleted_at" server/routes/ --include="*.ts" | grep -i "document\|vault" | head -10
+# Confirm SHA-256 on upload and retrieval
+grep -rn "sha256\|SHA256\|createHash" server/services/documents/ --include="*.ts" | head -10
+# Confirm signing token workspace scope
+grep -rn "signingToken.*workspace\|workspace.*signingToken\|token.*scope" server/ --include="*.ts" | head -10
+```
+
+Document every gap. Report to Architect.
+
+---
+
+**SUBAGENT 3 — Audit Phases 19 through 26 (Trinity, Portals, Compliance, Cron)**
+
+Phase 19 — Trinity Orchestration:
+```bash
+# Confirm TrinityConscience module exists
+grep -rn "TrinityConscience\|trinityConscience" server/ --include="*.ts" | head -5
+# Confirm metacognition confidence scoring
+grep -rn "confidenceScore\|confidence_score\|metacognition" server/ --include="*.ts" | head -10
+# Confirm Trinity action registry under 300 (now 896 — verify intentional growth)
+grep -rn "registerAction" server/ --include="*.ts" | grep -v node_modules | wc -l
+# Confirm trinityExecutivePlanner.ts exists
+ls server/services/helpai/ | grep -i "planner\|executive"
+```
+
+Phase 20 — Client and End-User Portal:
+```bash
+# Confirm 4 Trinity portal actions exist
+grep -rn "portal.*action\|client.*portal.*trinity" server/ --include="*.ts" | head -10
+# Confirm auditor per-section logging
+grep -rn "auditor.*log\|per.*section.*log\|section.*audit" server/ --include="*.ts" | head -10
+# Confirm client portal dispute endpoint
+grep -rn "dispute.*portal\|portal.*dispute" server/ --include="*.ts" | head -5
+# Confirm regulatory portal rate limiting
+grep -rn "regulatory.*rate\|rate.*regulatory\|sra.*rate" server/ --include="*.ts" | head -5
+```
+
+Phase 21 — Compliance and Multi-State:
+```bash
+# Confirm 57 states in knowledge base
+grep -rn "stateRegulatoryKnowledgeBase\|STATE_REGULATORY" server/ --include="*.ts" | head -5
+# Confirm parameterized state export
+grep -rn "export.*stateCode\|:stateCode.*csv\|state.*export" server/ --include="*.ts" | head -10
+# Confirm compliance Trinity actions
+grep -rn "compliance\.query\|compliance\.alert\|compliance\.resolve\|compliance\.report\|multi_state" server/ --include="*.ts" | head -10
+```
+
+Phase 22 — Field Operations Mobile:
+```bash
+# Confirm voice commands wired
+grep -rn "voiceCommand\|voice_command\|whisper\|Whisper" server/ --include="*.ts" | head -10
+# Confirm push notifications through NDS
+grep -rn "push.*NDS\|NDS.*push\|push.*notification.*delivery" server/ --include="*.ts" | head -10
+# Confirm duress/panic button
+grep -rn "duress\|panic\|PANIC\|DURESS" server/ --include="*.ts" | head -10
+# Confirm offline mode with sync
+grep -rn "offline\|syncOnReconnect\|sync.*reconnect" client/src/ --include="*.tsx" | head -10
+```
+
+Phase 23 — Frontend UX:
+```bash
+# Confirm AlertDialog replaces window.confirm
+grep -rn "window\.confirm" client/src/ --include="*.tsx" | head -10
+# Confirm navigation protection hooks documented
+grep -rn "useNavigationProtection\|navigationProtection\|unsavedChanges" client/src/ --include="*.tsx" | head -10
+```
+
+Phase 23B — HelpAI:
+```bash
+# Confirm HelpAI triage flow exists
+grep -rn "helpAiTriage\|HelpAITriage\|triage.*flow" server/ --include="*.ts" | head -10
+# Confirm FAQ learning loop
+grep -rn "faq_candidate\|faqCandidate\|learning.*loop" server/ --include="*.ts" | head -10
+# Confirm HelpAI voice triage
+grep -rn "voiceTriage\|voice.*triage\|triage.*voice" server/ --include="*.ts" | head -5
+```
+
+Phase 24 — API Security:
+```bash
+# Confirm auth endpoints use canonical authLimiter
+grep -rn "authLimiter" server/routes/authCoreRoutes.ts | wc -l
+# Confirm Retry-After header on all 429s
+grep -rn "Retry-After\|retry-after" server/ --include="*.ts" | head -10
+# Confirm HSTS 1-year
+grep -rn "max-age=31536000\|HSTS\|Strict-Transport" server/ --include="*.ts" | head -5
+```
+
+Phase 25 — Data Integrity:
+```bash
+# Confirm invoice subtotal trigger still active
+grep -rn "trg_sync_invoice_subtotal" server/ --include="*.ts" | head -5
+# Confirm FK guard on shift deletion
+grep -rn "fkGuard\|FK.*guard\|shift.*delete.*coverage\|coverage.*shift.*delete" server/ --include="*.ts" | head -5
+# Confirm orphaned coverage requests blocked
+SELECT COUNT(*) FROM coverage_requests cr WHERE NOT EXISTS (SELECT 1 FROM shifts s WHERE s.id = cr.shift_id);
+```
+
+Phase 26 — Cron Jobs:
+```bash
+# List all registered cron jobs
+grep -rn "cron\.schedule\|registerCron\|scheduleJob\|setInterval.*cron" server/ --include="*.ts" | grep -v node_modules | sort
+# Confirm client invoice auto-generation is on cron
+grep -rn "autoGenerateInvoice\|auto.*invoice.*cron\|cron.*invoice" server/ --include="*.ts" | head -10
+# Confirm NDS retry processor runs every 15 minutes
+grep -rn "NDS.*retry\|retry.*NDS\|15.*min.*retry\|retry.*15.*min" server/ --include="*.ts" | head -5
+```
+
+Document every gap. Report to Architect.
+
+---
+
+**SUBAGENT 4 — Audit Phases 27 through 34 (Notifications, Isolation, Deliverability, Analytics)**
+
+Phase 27 — Notification Pipeline:
+```bash
+# Confirm push channel in NDS type (not missing)
+grep -rn "push.*channel\|channel.*push\|'push'" server/services/notificationDeliveryService.ts | head -5
+# Confirm inbound email confirmations go through NDS
+grep -rn "inbound.*confirm.*NDS\|NDS.*inbound.*confirm" server/ --include="*.ts" | head -5
+# Confirm notify.delivery_stats Trinity action
+grep -rn "notify\.delivery_stats\|delivery_stats" server/ --include="*.ts" | head -5
+```
+
+Phase 28 — Multi-Tenant Isolation:
+```bash
+# Confirm rfpPipelineRoutes PATCH has workspace scope
+grep -rn "workspace.*scope\|workspaceId" server/routes/rfpPipelineRoutes.ts | head -10
+# Confirm complianceInlineRoutes write operations scoped
+grep -rn "workspace_id\|workspaceId" server/routes/ --include="*compliance*" | head -10
+# Simulate IDOR: verify workspace A cannot access workspace B
+grep -rn "workspace_id.*=.*req\.\|workspaceId.*req\." server/routes/ --include="*.ts" | wc -l
+```
+
+Phase 29 — Email Deliverability:
+```bash
+# Confirm CAN-SPAM footer in all emails
+grep -rn "CAN-SPAM\|unsubscribe\|opt.*out" server/services/ --include="*.ts" | head -10
+# Confirm plain-text fallback
+grep -rn "text.*plain\|plain.*text\|fallback.*text" server/services/ --include="*.ts" | head -10
+# Confirm bounce handling
+grep -rn "bounce\|complaint.*rate\|bounceRate" server/ --include="*.ts" | head -10
+```
+
+Phase 30 — Tier Enforcement:
+```bash
+# Confirm tierDefinitions.ts is canonical
+grep -rn "tierDefinitions\|TIER_DEFINITIONS" server/ --include="*.ts" | wc -l
+# Confirm requirePlan() is used for all gated features
+grep -rn "requirePlan\|TIER_UPGRADE_REQUIRED" server/ --include="*.ts" | wc -l
+# Confirm seat limits correct (10/100/300/1000)
+grep -rn "seatLimit\|seat_limit\|10.*starter\|100.*professional\|300.*business\|1000.*enterprise" server/ --include="*.ts" | head -10
+# Confirm overage unified at $25/seat
+grep -rn "overageRate\|overage.*25\|25.*overage" server/ --include="*.ts" | head -5
+```
+
+Phase 31 — Lifecycle Management:
+```bash
+# Confirm termination revokes access immediately
+grep -rn "sessionInvalidate\|invalidate.*session\|session.*revoke" server/ --include="*.ts" | head -10
+# Confirm final timesheet locked on termination
+grep -rn "timesheetLock\|lock.*timesheet\|timesheet.*lock" server/ --include="*.ts" | head -5
+# Confirm rehire detection
+grep -rn "rehire\|re.*hire\|priorEmployment" server/ --include="*.ts" | head -10
+# Confirm 7-year data retention policy
+grep -rn "7.*year\|sevenYear\|retention.*2555\|2555.*day" server/ --include="*.ts" | head -10
+```
+
+Phase 32 — Bilingual:
+```bash
+# Confirm preferred_language in user schema
+grep -rn "preferred_language\|preferredLanguage" server/ --include="*.ts" | wc -l
+# Confirm NDS reads preferred_language before delivery
+grep -rn "preferred_language.*NDS\|NDS.*preferred_language\|language.*template" server/services/notificationDeliveryService.ts | head -10
+# Confirm 100% translation parity (201 EN = 201 ES keys)
+wc -l client/src/i18n/locales/en/translation.json client/src/i18n/locales/es/translation.json
+```
+
+Phase 33 — SRA Portal:
+```bash
+# Confirm 6 SRA tables exist
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE 'sra_%' ORDER BY table_name;
+# Confirm SRA audit log append-only
+grep -rn "UPDATE.*sra_audit_log\|DELETE.*sra_audit_log" server/ --include="*.ts" | head -5
+# Confirm SRA session scoped to authorized workspace
+grep -rn "sra.*session.*scope\|scope.*sra.*session\|audit_period" server/ --include="*.ts" | head -10
+# Confirm mandatory TOTP 2FA on SRA login
+grep -rn "TOTP\|totp\|speakeasy" server/routes/sra/ --include="*.ts" | head -10
+```
+
+Phase 34 — Analytics:
+```bash
+# Confirm analytics_daily_snapshots table exists
+SELECT COUNT(*) FROM analytics_daily_snapshots;
+# Confirm daily 2AM cron for snapshots
+grep -rn "2.*AM.*snapshot\|snapshot.*2.*AM\|analyticsSnapshot.*cron" server/ --include="*.ts" | head -5
+# Confirm all analytics endpoints read-only
+grep -rn "INSERT\|UPDATE\|DELETE" server/routes/biAnalyticsRoutes.ts | head -10
+# Confirm Enterprise tier gating
+grep -rn "requirePlan.*enterprise\|enterprise.*requirePlan" server/routes/biAnalyticsRoutes.ts | head -5
+```
+
+Document every gap. Report to Architect.
+
+---
+
+**SUBAGENT 5 — Audit Phases 35 through 41 (Search, Privacy, WCAG, Tests, Performance, Subscriptions)**
+
+Phase 35 — Global Search:
+```bash
+# Confirm GIN indexes on all 7 entity tables
+SELECT indexname, tablename FROM pg_indexes WHERE indexname LIKE '%trgm%' OR indexname LIKE '%gin%' ORDER BY tablename;
+# Confirm search rate limited at 30/min
+grep -rn "search.*30.*rate\|rate.*30.*search\|searchLimiter" server/ --include="*.ts" | head -5
+# Confirm search.query Trinity action
+grep -rn "search\.query" server/ --include="*.ts" | head -5
+# Confirm deep links on all search results
+grep -rn "deep_link\|deepLink" server/routes/searchRoutes.ts | head -10
+```
+
+Phase 36 — Data Export:
+```bash
+# Confirm data_subject_requests table
+SELECT COUNT(*) FROM data_subject_requests;
+# Confirm retention_policies table with 10 data types
+SELECT COUNT(*) FROM retention_policies;
+# Confirm 3AM daily retention cron
+grep -rn "3.*AM.*retention\|retention.*3.*AM\|retentionCron" server/ --include="*.ts" | head -5
+# Confirm erasure anonymizes PII
+grep -rn "ANONYMIZED\|anonymize\|anonymization" server/ --include="*.ts" | head -10
+```
+
+Phase 37 — Accessibility:
+```bash
+# Confirm skip navigation link
+grep -rn "skip.*nav\|skipNav\|skip.*main\|skip.*content" client/src/ --include="*.tsx" | head -5
+# Confirm prefers-reduced-motion
+grep -rn "prefers-reduced-motion\|reducedMotion" client/src/ | head -10
+# Confirm aria-label on icon-only buttons
+grep -rn "aria-label" client/src/components/ --include="*.tsx" | wc -l
+# Confirm usePageTitle hook
+grep -rn "usePageTitle" client/src/ --include="*.tsx" | wc -l
+```
+
+Phase 38 — Test Suite:
+```bash
+# Confirm test infrastructure exists
+ls tests/ vitest.config.* playwright.config.* 2>/dev/null
+# Confirm test scripts in package.json
+grep -rn "test:unit\|test:api\|test:e2e\|test:coverage" package.json | head -10
+# Run the tests
+npm run test 2>&1 | tail -20
+```
+
+Phase 39 — Performance:
+```bash
+# Confirm compression active
+grep -rn "compression()\|gzip\|Content-Encoding" server/ --include="*.ts" | head -5
+# Confirm DB pool raised to 10
+grep -rn "max:.*10\|pool.*max.*10\|connectionPool.*10" server/db.ts | head -5
+# Confirm slow query logging at 500ms
+grep -rn "500ms\|SlowQuery\|slow.*query\|query.*slow" server/ --include="*.ts" | head -10
+# Confirm NDS queue depth alert at 1000
+grep -rn "queueDepth.*1000\|1000.*queue\|NDS.*1000" server/ --include="*.ts" | head -5
+```
+
+Phase 40 — Sync Audit regression:
+```bash
+# Confirm admin permission audit records
+grep -rn "adminPermission.*audit\|audit.*adminPermission" server/ --include="*.ts" | head -5
+# Confirm QB sandbox simulator workspace scope
+grep -rn "qb.*sandbox.*workspace\|workspace.*qb.*sandbox" server/ --include="*.ts" | head -5
+```
+
+Phase 41 — Workspace Subscription:
+```bash
+# Confirm all 7 Stripe webhook events handled
+grep -rn "trial_will_end\|subscription\.paused\|subscription\.resumed\|invoice\.upcoming\|invoice\.payment_failed\|invoice\.payment_succeeded\|subscription\.deleted" server/ --include="*.ts" | head -15
+# Confirm subscription read-only guard middleware
+grep -rn "subscriptionGuard\|subscription.*guard\|read.*only.*suspended" server/ --include="*.ts" | head -5
+# Confirm paused maps to suspended
+grep -rn "paused.*suspended\|suspended.*paused\|mapSubscriptionStatus" server/ --include="*.ts" | head -5
+```
+
+Document every gap. Report to Architect.
+
+---
+
+**SUBAGENT 6 — Audit Phases 42 through 55 Core (Deployment, Cleanup, Trinity, 2FA, etc)**
+
+Phase 42 — Production Readiness:
+```bash
+# Confirm zero hardcoded localhost
+grep -rn "localhost:5000\|localhost:3000\|127\.0\.0\.1" server/ client/src/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v test | head -10
+# Confirm NODE_ENV gates dev bypass
+grep -rn "NODE_ENV.*production\|isDev.*NODE_ENV\|devBypass.*NODE_ENV" server/ --include="*.ts" | head -10
+# Confirm health endpoints
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/health/db
+```
+
+Phase 44 — Trinity Visual:
+```bash
+# Confirm TrinityActivityBar exists
+find client/src -name "*TrinityActivity*" -o -name "*trinity-activity-bar*"
+# Confirm TrinityInsightBar exists
+find client/src -name "*TrinityInsight*" -o -name "*trinity-insight*"
+# Confirm mascot three states: IDLE, THINKING, SPEAKING
+grep -rn "IDLE\|THINKING\|SPEAKING" client/src/components/trinity/ --include="*.tsx" | head -10
+```
+
+Phase 45 — Cleanup:
+```bash
+# Confirm zero console.log in server production code
+grep -rn "console\.log" server/routes/ --include="*.ts" | grep -v node_modules | wc -l
+# Confirm zero TODO in production paths
+grep -rn "TODO\|FIXME" server/routes/ --include="*.ts" | grep -v node_modules | wc -l
+```
+
+Phase 46 — Time Zones:
+```bash
+# Confirm workspace_holidays table
+SELECT COUNT(*) FROM workspace_holidays;
+# Confirm IANA timezone validation
+grep -rn "IANA\|iana\|Intl\.DateTimeFormat\|timezone.*valid" server/ --include="*.ts" | head -10
+# Confirm December 1st cron for next-year holidays
+grep -rn "December.*1\|Dec.*1.*holiday\|holiday.*Dec.*1\|december.*cron" server/ --include="*.ts" | head -5
+```
+
+Phase 47 — Compliance Evidence:
+```bash
+# Confirm compliance_evidence table
+SELECT COUNT(*) FROM compliance_evidence;
+# Confirm SHA-256 on uploads
+grep -rn "sha256\|SHA256" server/routes/complianceEvidenceRoutes.ts | head -5
+# Confirm Trinity document parsing on upload
+grep -rn "evidence.*parse\|parse.*evidence\|documentParsing" server/ --include="*.ts" | head -10
+```
+
+Phase 48 — Onboarding Tasks:
+```bash
+# Confirm onboarding_tasks table
+SELECT COUNT(*) FROM onboarding_tasks;
+# Confirm 17 platform default tasks exist
+SELECT COUNT(*) FROM onboarding_task_templates WHERE workspace_id IS NULL;
+# Confirm Tier 1 blocks shift assignment
+grep -rn "ONBOARDING_INCOMPLETE\|onboarding.*block\|block.*onboarding" server/ --include="*.ts" | head -5
+# Confirm Tier 1 blocks clock-in
+grep -rn "ONBOARDING_INCOMPLETE" server/routes/ --include="*.ts" | head -5
+```
+
+Phase 49 — Notification Preferences:
+```bash
+# Confirm user_notification_preferences table
+SELECT COUNT(*) FROM user_notification_preferences;
+# Confirm quiet hours enforcement in NDS
+grep -rn "quietHours\|quiet_hours\|QUIET_HOURS" server/services/notificationDeliveryService.ts | head -10
+# Confirm critical override bypasses quiet hours
+grep -rn "critical.*override\|override.*critical\|panic.*quiet\|duress.*quiet" server/ --include="*.ts" | head -5
+```
+
+Phase 50 — Webhooks:
+```bash
+# Confirm workspace_webhooks table
+SELECT COUNT(*) FROM workspace_webhooks;
+# Confirm HMAC-SHA256 signing
+grep -rn "HMAC\|X-CoAIleague-Signature" server/services/webhookDeliveryService.ts | head -5
+# Confirm exponential backoff 5 attempts
+grep -rn "attempt.*5\|5.*attempt\|maxAttempts.*5\|backoff" server/services/webhookDeliveryService.ts | head -5
+```
+
+Phase 51 — Feature Flags:
+```bash
+# Confirm feature_flags table
+SELECT COUNT(*) FROM feature_flags;
+# Confirm /status public page
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/status
+# Confirm /admin/platform-status requires auth
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/admin/platform-status
+```
+
+Phase 52 — Legal Pages:
+```bash
+# Confirm all legal pages accessible without auth
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/privacy
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/terms
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/legal/aup
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/legal/security
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/legal/dpa
+```
+
+Phase 53 — 2FA:
+```bash
+# Confirm user_2fa table
+SELECT COUNT(*) FROM user_2fa;
+# Confirm backup codes hashed
+grep -rn "bcrypt\|hashSync\|hash.*backup\|backup.*hash" server/ --include="*.ts" | grep -i "2fa\|backup\|mfa" | head -10
+# Confirm mandatory for org_owner
+grep -rn "org_owner.*2fa\|2fa.*org_owner\|mandatory.*mfa\|mfa.*mandatory" server/ --include="*.ts" | head -5
+# Confirm SRA portal 2FA still working (regression)
+grep -rn "speakeasy\|TOTP" server/routes/sra/ --include="*.ts" | head -5
+```
+
+Document every gap. Report to Architect.
+
+---
+
+**SUBAGENT 7 — Audit All Phase 35 Series (Sales, DockChat, Field Ops, Enterprise)**
+
+Phase 35B — Sales Engine:
+```bash
+# Confirm all 4 tables exist
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('sales_leads', 'sales_activities', 'sales_proposals', 'sales_email_threads');
+# Confirm org_owner approval gate on outreach
+grep -rn "approval.*gate\|gate.*approval\|org_owner.*approve.*outreach" server/ --include="*.ts" | head -5
+# Confirm /sales-pipeline route in App.tsx
+grep -rn "sales-pipeline\|salesPipeline" client/src/App.tsx | head -5
+# Confirm 6 Trinity sales actions
+grep -rn "sales\.lead\.\|sales\.outreach\.\|sales\.proposal\.\|sales\.pipeline\." server/ --include="*.ts" | head -10
+```
+
+Phase 35C — DockChat:
+```bash
+# Confirm chat tables exist
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('chat_rooms', 'chat_messages', 'chat_room_members', 'chat_bot_commands');
+# Confirm WebSocket events for chat
+grep -rn "chat:message\|chat:typing\|chat:read\|chat:broadcast" server/ --include="*.ts" | head -10
+# Confirm /dock-chat route
+grep -rn "dock-chat\|dockChat" client/src/App.tsx | head -5
+# Confirm bot commands process correctly
+grep -rn "\/schedule\|\/calloff\|\/incident\|\/roster\|\/help" server/routes/dockChatRoutes.ts | head -10
+```
+
+Phase 35D — Work Orders:
+```bash
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('work_orders', 'work_order_evidence');
+grep -rn "work-orders\|workOrders" client/src/App.tsx | head -5
+grep -rn "workorder\.create\|workorder\.assign\|workorder\.status\|workorder\.summary" server/ --include="*.ts" | head -10
+# Confirm client sign-off triggers invoice
+grep -rn "clientSignoff.*invoice\|invoice.*clientSignoff\|signoff.*bill" server/ --include="*.ts" | head -5
+```
+
+Phase 35E — Guard Tours:
+```bash
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('patrol_routes', 'patrol_checkpoints', 'patrol_tours', 'patrol_checkpoint_scans');
+grep -rn "guard-tour\|guardTour" client/src/App.tsx | head -5
+# Confirm missed checkpoint NDS alert
+grep -rn "missed.*checkpoint.*NDS\|NDS.*missed.*checkpoint\|checkpoint.*alert" server/ --include="*.ts" | head -5
+```
+
+Phase 35F — Shift Trading:
+```bash
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('shift_trade_requests', 'time_off_requests', 'officer_availability');
+grep -rn "shift-trading\|shiftTrading" client/src/App.tsx | head -5
+# Confirm SELECT FOR UPDATE prevents race condition
+grep -rn "SELECT FOR UPDATE\|FOR UPDATE\|selectForUpdate" server/ --include="*.ts" | head -10
+# Confirm rest period check on trade
+grep -rn "restPeriod.*trade\|trade.*restPeriod\|8.*hour.*trade" server/ --include="*.ts" | head -5
+```
+
+Phase 35G through 35K:
+```bash
+# Client Communications
+SELECT COUNT(*) FROM client_messages;
+SELECT COUNT(*) FROM client_message_threads;
+grep -rn "client-communications\|clientCommunications" client/src/App.tsx | head -3
+
+# Equipment
+SELECT COUNT(*) FROM equipment_inventory;
+SELECT COUNT(*) FROM equipment_assignments;
+grep -rn "\/equipment" client/src/App.tsx | head -3
+
+# Visitor Management
+SELECT COUNT(*) FROM visitor_logs;
+grep -rn "visitor-management\|visitorManagement" client/src/App.tsx | head -3
+
+# Performance Management
+SELECT COUNT(*) FROM disciplinary_records;
+SELECT COUNT(*) FROM performance_reviews;
+grep -rn "\/performance" client/src/App.tsx | head -3
+
+# Training
+SELECT COUNT(*) FROM training_sessions;
+SELECT COUNT(*) FROM training_attendance;
+grep -rn "training-certification\|trainingCertification" client/src/App.tsx | head -3
+```
+
+Phase 35L through 35U:
+```bash
+# Trespass
+SELECT COUNT(*) FROM trespass_notices;
+grep -rn "trespass-registry\|trespassRegistry" client/src/App.tsx | head -3
+
+# Site Survey
+SELECT COUNT(*) FROM site_surveys;
+grep -rn "site-survey\|siteSurvey" client/src/App.tsx | head -3
+
+# Daily Activity Reports
+SELECT COUNT(*) FROM daily_activity_reports;
+grep -rn "daily-reports\|dailyReports" client/src/App.tsx | head -3
+
+# Wellness
+SELECT COUNT(*) FROM wellness_check_configs;
+grep -rn "wellness-monitoring\|wellnessMonitoring" client/src/App.tsx | head -3
+
+# Gate Duty
+SELECT COUNT(*) FROM gate_vehicle_logs;
+SELECT COUNT(*) FROM gate_personnel_logs;
+grep -rn "gate-duty\|gateDuty" client/src/App.tsx | head -3
+```
+
+Phase 35P through 35T:
+```bash
+# Multi-Company
+SELECT COUNT(*) FROM workspace_relationships;
+grep -rn "multi-company\|multiCompany" client/src/App.tsx | head -3
+
+# Developer Portal
+SELECT COUNT(*) FROM api_keys;
+grep -rn "\/developers" client/src/App.tsx | head -3
+
+# Insurance
+SELECT COUNT(*) FROM insurance_policies;
+grep -rn "\/insurance" client/src/App.tsx | head -3
+
+# Surveys
+SELECT COUNT(*) FROM survey_templates;
+grep -rn "\/surveys" client/src/App.tsx | head -3
+
+# Recognition
+SELECT COUNT(*) FROM recognition_awards;
+grep -rn "\/recognition" client/src/App.tsx | head -3
+```
+
+Document every missing table, every missing route, every missing page. Report to Architect.
+
+---
+
+**SUBAGENT 8 — Frontend Completeness Audit**
+
+Check every page registered in App.tsx actually exists as a file and renders:
+
+```bash
+# 8A: Extract all lazy imports from App.tsx
+grep -n "lazy\|import(" client/src/App.tsx | sort
+
+# 8B: For each lazy import verify the file exists
+# Run this systematic check:
+grep -oP "(?<=from \").*(?=\")" client/src/App.tsx | while read path; do
+  if [[ $path == ./pages/* ]]; then
+    full="client/src/$path"
+    if [ ! -f "$full.tsx" ] && [ ! -f "$full/index.tsx" ]; then
+      echo "MISSING: $full"
+    fi
+  fi
+done
+
+# 8C: Check every route path in App.tsx has a sidebar entry
+grep -rn "path=" client/src/App.tsx | grep -oP '"/[^"]*"' | sort > /tmp/routes.txt
+grep -rn "href=\|to=" client/src/components/ --include="*.tsx" | grep -oP '"/[^"]*"' | sort > /tmp/sidebar.txt
+comm -23 /tmp/routes.txt /tmp/sidebar.txt | head -30
+
+# 8D: Check for dead sidebar links (sidebar links with no route)
+comm -13 /tmp/routes.txt /tmp/sidebar.txt | head -30
+
+# 8E: Check every page for back button
+for page in client/src/pages/*/index.tsx client/src/pages/*.tsx; do
+  if ! grep -q "useBackNavigation\|ChevronLeft\|back.*button\|BackButton\|ArrowLeft" "$page" 2>/dev/null; then
+    echo "NO BACK BUTTON: $page"
+  fi
+done
+
+# 8F: Check every page for loading state
+for page in client/src/pages/*/index.tsx client/src/pages/*.tsx; do
+  if ! grep -q "isLoading\|loading\|Skeleton\|spinner\|Loader" "$page" 2>/dev/null; then
+    echo "NO LOADING STATE: $page"
+  fi
+done
+
+# 8G: Check every page for error state
+for page in client/src/pages/*/index.tsx client/src/pages/*.tsx; do
+  if ! grep -q "isError\|error\|Error\|catch" "$page" 2>/dev/null; then
+    echo "NO ERROR STATE: $page"
+  fi
+done
+
+# 8H: Check every page for empty state
+for page in client/src/pages/*/index.tsx client/src/pages/*.tsx; do
+  if ! grep -q "empty\|Empty\|no.*data\|No.*found\|length.*0\|\!.*data\|\!.*items" "$page" 2>/dev/null; then
+    echo "NO EMPTY STATE: $page"
+  fi
+done
+```
+
+Document every missing page file, dead route, missing back button, missing loading state, missing error state, missing empty state.
+
+---
+
+**ARCHITECT GATEKEEPER ROLE — After all 8 subagents report:**
+
+1. Collect all findings into the master issue log in replit.md
+2. Categorize every finding as P1, P2, or P3
+3. Count total issues by priority
+4. Assign fixes to subagents — P1 fixes first, all P1 must be resolved before any P2 work begins
+5. After each fix batch: run TypeScript compilation and server restart to confirm no regressions
+6. Verify every fix yourself with a targeted grep or query before marking resolved
+7. When all P1 and P2 issues are resolved: run full regression suite
+8. Write final audit summary to replit.md with before/after counts
+9. Only after all P1 and P2 are resolved and regression passes: declare audit complete and proceed to Phase 55
+
+**Report format after all subagents complete:**
+
+```
+GRAND CANONICAL AUDIT — RESULTS SUMMARY
+
+Total Issues Found: [N]
+P1 Launch Blockers: [N]
+P2 Functional Gaps: [N]  
+P3 Quality Issues: [N]
+
+P1 Issues Fixed: [N]/[N]
+P2 Issues Fixed: [N]/[N]
+P3 Issues Fixed: [N]/[N]
+
+TypeScript Errors After Fixes: 0
+Server Startup: Clean
+Regression Suite: [X]/[X] passing
+
+Audit Status: COMPLETE — Ready for Phase 55
+```
+
+---
+
+Paste that. This is the most thorough audit the platform has ever seen. When it comes back paste the results and we will review every finding together before Phase 55.

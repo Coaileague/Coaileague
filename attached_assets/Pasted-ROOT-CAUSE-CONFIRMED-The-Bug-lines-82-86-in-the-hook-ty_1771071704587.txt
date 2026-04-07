@@ -1,0 +1,137 @@
+ROOT CAUSE CONFIRMED
+The Bug (lines 82-86 in the hook):
+typescript// getOrCreateGlobalSocket() does this:
+if (globalWSState.conversationId !== conversationId) {
+  // CLOSES THE SOCKET when switching rooms!
+  existingSocket.close();  // ← THIS IS THE PROBLEM
+  globalWSState.socket = null;
+}
+```
+
+**The Flow:**
+```
+User in Room A (socket open)
+↓
+User clicks Room B
+↓
+isGlobalSocketReadyFor(userId, roomB) → FALSE (wrong conversationId)
+↓
+getOrCreateGlobalSocket(userId, roomB) called
+↓
+Sees conversationId changed → CLOSES socket
+↓
+onclose fires → reconnect logic triggers
+↓
+New socket created for Room B
+↓
+Meanwhile reconnect creates ANOTHER socket
+↓
+STORM
+
+THE FIX
+Current (Wrong): Socket is tied to (userId + conversationId)
+Required: Socket is tied to (userId only)
+typescript// BEFORE: isGlobalSocketReadyFor checks conversationId
+function isGlobalSocketReadyFor(userId: string, conversationId: string) {
+  return (
+    globalWSState.socket?.readyState === WebSocket.OPEN &&
+    globalWSState.userId === userId &&
+    globalWSState.conversationId === conversationId  // ← REMOVE THIS
+  );
+}
+
+// AFTER: Only check userId
+function isGlobalSocketReadyFor(userId: string) {
+  return (
+    globalWSState.socket?.readyState === WebSocket.OPEN &&
+    globalWSState.userId === userId
+    // conversationId doesn't matter - same socket handles all rooms
+  );
+}
+typescript// BEFORE: getOrCreateGlobalSocket closes on conversation change
+function getOrCreateGlobalSocket(userId: string, conversationId: string) {
+  if (globalWSState.conversationId !== conversationId) {
+    existingSocket.close();  // ← DELETE THIS BLOCK
+    globalWSState.socket = null;
+  }
+  // ...
+}
+
+// AFTER: Never close on conversation change, just reuse
+function getOrCreateGlobalSocket(userId: string) {
+  // Only close if userId changes (different user logging in)
+  if (globalWSState.userId !== userId) {
+    existingSocket?.close();
+    globalWSState.socket = null;
+  }
+  
+  // If socket exists and open, just return it
+  if (globalWSState.socket?.readyState === WebSocket.OPEN) {
+    return globalWSState.socket;
+  }
+  
+  // Create new socket only if none exists
+  // ...
+}
+typescript// BEFORE: connect() effect creates socket per room
+useEffect(() => {
+  connect(userId, conversationId);  // New socket per room
+}, [userId, conversationId]);
+
+// AFTER: connect() just joins room on existing socket
+useEffect(() => {
+  const socket = getOrCreateGlobalSocket(userId);
+  
+  if (socket.readyState === WebSocket.OPEN) {
+    // Just send join for new room, don't recreate socket
+    socket.send(JSON.stringify({ 
+      type: 'join_conversation', 
+      conversationId 
+    }));
+  }
+}, [userId, conversationId]);
+
+GLOBAL STATE CHANGE
+typescript// BEFORE
+const globalWSState = {
+  socket: null,
+  userId: null,
+  conversationId: null,  // ← REMOVE - socket isn't per-conversation
+};
+
+// AFTER
+const globalWSState = {
+  socket: null,
+  userId: null,
+  subscribedRooms: new Set<string>(),  // Track which rooms we've joined
+  activeRoom: null,  // Which room user is currently viewing
+};
+```
+
+---
+
+## VERIFICATION AFTER FIX
+
+Browser console should show:
+```
+[ChatSocket] Connected (userId: abc123)
+[ChatSocket] Joining room: Help Desk
+[ChatSocket] Joined: Help Desk ✓
+// User clicks Site Alpha
+[ChatSocket] Joining room: Site Alpha  ← NO disconnect/reconnect
+[ChatSocket] Joined: Site Alpha ✓
+// User clicks back to Help Desk  
+[ChatSocket] Joining room: Help Desk   ← Still same socket, no storm
+[ChatSocket] Joined: Help Desk ✓
+```
+
+**NOT:**
+```
+[ChatSocket] Connected
+[ChatSocket] Disconnected
+[ChatSocket] Reconnecting...
+[ChatSocket] Connected
+[ChatSocket] Disconnected
+... (storm)
+
+Is Replit making this fix now? This should completely eliminate the reconnect storm.

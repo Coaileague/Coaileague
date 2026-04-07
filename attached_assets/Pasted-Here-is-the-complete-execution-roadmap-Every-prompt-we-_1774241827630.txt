@@ -1,0 +1,279 @@
+Here is the complete execution roadmap. Every prompt we've built, sequenced in the correct dependency order, one phase at a time.
+
+---
+
+**COAILEAGUE — MASTER EXECUTION ROADMAP**
+*Complete Phase Sequence | Run In Order | Do Not Skip Phases*
+
+---
+
+**HOW TO USE THIS ROADMAP**
+
+Each phase has a single job. Do not begin the next phase until the current phase produces a clean verification pass. Each phase builds on the foundation laid by the one before it. Running them out of order produces fixes built on unfixed ground — which is how the platform got to where it is now.
+
+Total phases: **19**
+Estimated sessions: one phase per Replit Agent session for reliability
+Direction: foundation up — naming → typing → transactions → logic → UI → stress test → certify
+
+---
+
+**PHASE 1 — SCHEMA PARITY & NAMING GROUND TRUTH**
+
+*What it does:* Establishes the single authoritative source of truth for every name in the system. Introspects the live database, compares it against the Drizzle schema files and migration history, finds every camelCase vs snake_case mismatch, every plural vs singular inconsistency, and every column that exists in the schema but not the database or vice versa. Produces the canonical Name Registry document that every subsequent phase depends on.
+
+*Why it is first:* Every other fix in every other phase references table names, column names, and property names. If those names are wrong before the fixes are applied, the fixes are built on drift. This phase makes names trustworthy before anything else touches them.
+
+*Produces:* Master Name Registry appended to replit.md. Zero drift between schema file, migration history, and live database. Every column definition has an explicit string name mapping — no implicit inference anywhere.
+
+*Use:* The Nuclear Schema Parity Audit prompt.
+
+---
+
+**PHASE 2 — MASTER ROOT CAUSE ELIMINATION**
+
+*What it does:* Eliminates the seven root causes producing silent failures platform-wide. Explicit Drizzle column mappings enforced on every column. AuthenticatedRequest type replaces every `req as any` cast. Database transactions wrap every multi-table financial write. Decimal library replaces all native number arithmetic on financial values. Dual source of truth for payroll cycle configuration resolved to a single authoritative source. Trinity actions using raw string table references replaced with ORM references. Zod runtime validation added at every API response boundary for financial data.
+
+*Why it is second:* These are the architectural diseases. Every feature built on top of them inherits the disease. Fixing symptoms before fixing these root causes means the symptoms come back on the next feature addition. After this phase, the codebase has a correct foundation for the first time.
+
+*Produces:* CoAIleague Architecture Canons section in replit.md with every canonical pattern and every retired anti-pattern documented permanently.
+
+*Use:* The Master Root Cause Elimination prompt (no bandaids).
+
+---
+
+**PHASE 3 — REACT ERROR BOUNDARIES & UI RESILIENCE**
+
+*What it does:* Makes the frontend survivable against bad data before any deeper layer changes produce transitional rough edges. Creates the shared ErrorBoundary component, wraps every major UI surface, creates the canonical useAsyncData hook, fixes every useEffect missing a cleanup function, and adds optional chaining to every deep property access on API response data.
+
+*Why it is third:* Phases 4 through 12 make changes to API response shapes, database schemas, and service interfaces. During those transitions, a response may temporarily be malformed. The UI must handle that gracefully with a fallback rather than white-screening. This phase is the safety net for everything that follows.
+
+*Produces:* ErrorBoundary in shared library. useAsyncData canonical hook. Zero unprotected render surfaces. Zero useEffect memory leaks.
+
+*Use:* Phase 1 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 4 — API RESPONSE CONTRACT ENFORCEMENT**
+
+*What it does:* Adds Zod schema validation at every API boundary. Creates shared response schemas accessible from both frontend and backend. Adds request body validation middleware to every financial and operational route. Wraps every React Query queryFn with Zod parse. Establishes and enforces the canonical financial value serialization contract — strings in transit, decimal library in calculation, formatted number at display only.
+
+*Why it is fourth:* The frontend is now survivable. Phase 4 ensures bad data is caught and diagnosed at the exact moment it crosses the boundary rather than silently propagating through the now-hardened UI into components that expect clean data.
+
+*Produces:* Shared Zod schemas directory. Request body validation middleware on all financial routes. Financial value serialization contract documented in replit.md.
+
+*Use:* Phase 2 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 5 — BUSINESS LOGIC VALIDATION LAYER**
+
+*What it does:* Creates the central BusinessRules module defining every business constraint as a named, typed, testable rule. Enforces rules on all financial inputs — pay rates cannot be zero or negative, shifts cannot end before they start, pay periods cannot overlap closed runs, role assignments cannot exceed the assigning user's own role level. Adds client billing rate warning when rate falls below employee pay rate for the same position.
+
+*Why it is fifth:* Phase 4 ensures data arrives in the right shape. Phase 5 ensures data that arrives in the right shape is also logically valid for the business operation it represents. A negative pay rate is a valid number that passes type checks and still destroys a payroll run.
+
+*Produces:* BusinessRules module. Server-side business constraint enforcement on all financial input routes. Role assignment guard.
+
+*Use:* Phase 3 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 6 — FINANCIAL CALCULATION INTEGRITY**
+
+*What it does:* Creates the canonical FinancialCalculator service wrapping the decimal library with named methods for every financial calculation the platform performs. Replaces every parseFloat, Number(), and native arithmetic operation on financial values with FinancialCalculator calls. Establishes half-even rounding at display boundary only. Adds calculation audit trail to every payroll run storing inputs alongside outputs.
+
+*Why it is sixth:* Business logic validation ensures inputs are valid. Phase 6 ensures that once valid inputs are in the system, every calculation performed on them is mathematically exact at every decimal place regardless of the values involved.
+
+*Produces:* FinancialCalculator service. Zero native number arithmetic on financial values. Rounding convention documented in replit.md. Calculation inputs stored with every payroll entry.
+
+*Use:* Phase 4 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 7 — DATABASE TRANSACTION COMPLETENESS & CONCURRENCY SAFETY**
+
+*What it does:* Wraps every multi-table write in db.transaction(). Fixes the shift overlap TOCTOU race condition with an atomic database primitive. Adds operation locks table for payroll runs and invoice generation. Tests concurrent operations under real load. Ensures no partial financial records are possible under any failure condition.
+
+*Why it is seventh:* The calculation layer is now correct. Phase 7 ensures that when two correct operations touch the same data simultaneously, the database itself enforces consistency rather than relying on application-level timing assumptions.
+
+*Produces:* All multi-table financial writes transactional. operation_locks table. Shift overlap unique constraint or serializable transaction. Concurrent write safety verified.
+
+*Use:* Phase 5 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 8 — NOTIFICATION & EVENT DELIVERY RELIABILITY**
+
+*What it does:* Creates the notifications table and NotificationService. Replaces every fire-and-forget notification send platform-wide. Adds retry with exponential backoff up to three attempts. Adds permanent failure alerting. Adds WebSocket delivery acknowledgment with email fallback. Adds notification delivery log to org owner dashboard.
+
+*Why it is eighth:* The database is now correct and safe. Phase 8 ensures that when the database changes in ways that require human action, the humans who need to know actually find out — reliably, with a record.
+
+*Produces:* notifications table. NotificationService as canonical send mechanism. Delivery status tracking. Org owner notification log.
+
+*Use:* Phase 6 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 9 — BACKGROUND JOB RELIABILITY & OBSERVABILITY**
+
+*What it does:* Creates the job_executions table and BackgroundJobRunner wrapper. Adds overlap prevention to every cron job and scanner. Adds hung execution detection and recovery. Adds job execution dashboard. Adds alerting for jobs that have not succeeded within twice their expected frequency.
+
+*Why it is ninth:* Background jobs consume database connections and trigger notifications — both now hardened. Phase 9 ensures the processes that run without user interaction are as reliable and observable as the ones that do.
+
+*Produces:* job_executions table. BackgroundJobRunner wrapper on all background processes. Job dashboard. Overlap prevention verified.
+
+*Use:* Phase 7 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 10 — PAGINATION, PERFORMANCE & DATA VOLUME SAFETY**
+
+*What it does:* Audits every list query for missing limits. Seeds the ACME sandbox with production-representative volumes (500 employees, 10,000 shifts, 1,000 invoices). Measures every list endpoint response time. Adds mandatory server-side pagination to every list endpoint with a maximum of 100 records. Creates the shared pagination component. Adds database indexes where missing. Adds query performance logging middleware.
+
+*Why it is tenth:* The hardened platform must remain performant as real tenant data accumulates. A platform that works perfectly at 50 records and breaks at 5,000 will fail the first tenant at approximately day 90.
+
+*Produces:* Paginated list endpoints platform-wide. Shared pagination component. Query performance logging. Sub-one-second response times confirmed at volume.
+
+*Use:* Phase 8 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 11 — FILE STORAGE ATOMIC INTEGRITY & DOCUMENT PIPELINE**
+
+*What it does:* Creates DocumentService as the only permitted file operation mechanism. Wraps every storage write and database reference write in atomic pattern. Adds daily document integrity check background job. Adds document access audit logging. Cleans up orphaned files and broken database references.
+
+*Why it is eleventh:* Documents are the output of many platform operations. Their integrity depends on the transaction safety from Phase 7 and the background job reliability from Phase 9. Both are now in place.
+
+*Produces:* DocumentService. Atomic file-database write pattern. Daily integrity check job. Document access audit trail. Zero orphaned files.
+
+*Use:* Phase 9 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 12 — THIRD PARTY RESILIENCE & CIRCUIT BREAKERS**
+
+*What it does:* Creates ExternalServiceClient wrapper with timeout, retry, and fallback for every external API call. Implements circuit breaker per external service. Defines explicit fallback behaviors for Resend unavailability, payment processor unavailability, storage provider unavailability, and AI model unavailability. Adds circuit breaker status to platform health dashboard.
+
+*Why it is twelfth:* The internal layers are fully hardened. Phase 12 protects them from being destabilized by external services they do not control — and the retry logic it introduces is made safe by the idempotency layer in the next phase.
+
+*Produces:* ExternalServiceClient wrapper. Circuit breaker per external service. Graceful degradation for every external dependency. Health dashboard with circuit states.
+
+*Use:* Phase 10 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 13 — IDEMPOTENCY & DUPLICATE OPERATION PREVENTION**
+
+*What it does:* Creates idempotency_keys table. Adds idempotency key middleware to every financial creation endpoint. Updates frontend to generate UUID keys before every financial creation request. Tests concurrent and retry scenarios to confirm exactly one record is created regardless of how many times the request is submitted.
+
+*Why it is thirteenth:* Circuit breakers and retry logic from Phase 12 create retry scenarios. Idempotency makes retries safe. This phase must come after the retry infrastructure is in place so it can be tested against the actual retry behavior.
+
+*Produces:* idempotency_keys table. Idempotency middleware on all financial creation endpoints. Frontend UUID key generation before every financial submission. Duplicate financial records permanently impossible.
+
+*Use:* Phase 11 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 14 — AUDIT TRAIL COMPLETENESS & IMMUTABILITY**
+
+*What it does:* Confirms audit_logs table exists with correct schema. Adds NO DELETE NO UPDATE database policy making it append-only. Creates AuditService as the canonical audit write mechanism. Adds audit entries for every unaudited sensitive operation: pay rate changes, role assignments, payroll approvals, invoice actions, document access, subscription changes, workspace settings changes, and every failed authentication attempt.
+
+*Why it is fourteenth:* All other layers are hardened. The audit trail is the permanent record of everything that happens across all those layers. It is placed last in the hardening sequence so it captures operations from the fully corrected platform, not the partially corrected one.
+
+*Produces:* Immutable audit_logs table. AuditService. Complete audit coverage of all sensitive operations. Audit log viewer on owner dashboard.
+
+*Use:* Phase 12 of the Canonical Systems Hardening prompt.
+
+---
+
+**PHASE 15 — ZERO-DEFECT PRODUCTION HARDENING SWEEP**
+
+*What it does:* Deploys all ten concurrent specialized agents against the hardened codebase to find anything the phase-by-phase fixes missed. Financial Integrity Sentinel, Trinity Intelligence Validator, Database Persistence Crawler, API Pipeline Stress Tester, RBAC Enforcement Auditor, Tenant Onboarding Validator, Data Flow Tracer, Security Scanner, UX State Consistency Auditor, and FTC Compliance Auditor all run simultaneously sharing a live findings bus. Every agent loops until two consecutive clean passes.
+
+*Why it is fifteenth:* The 14 phases fixed specific known categories. Phase 15 deploys domain specialists to find anything that survived or was introduced during the fixes. The concurrent multi-agent approach catches cascading issues that sequential single-category audits miss.
+
+*Produces:* Complete findings registry. All P0 and P1 issues resolved before proceeding. Platform-wide certification across all ten domains.
+
+*Use:* The Zero-Defect Production Hardening Sweep prompt.
+
+---
+
+**PHASE 16 — ACME SANDBOX NUCLEAR ARCHITECTURE AUDIT**
+
+*What it does:* Deploys ten domain specialist agents against the fully loaded ACME sandbox with real simulated data. Every agent loops until two consecutive clean passes. CRUD Completionist, Financial Accuracy Specialist, Trinity Actions Exhaustion Specialist, Orchestration and Bot Ecosystem Specialist, Pipeline and Workflow Exhaustion Specialist, Persistence and Sync Exhaustion Specialist, Authentication and Authorization Penetration Specialist, UI Truth Specialist, Data Integrity and Trace Specialist, and Subscription and Legal Boundary Specialist.
+
+*Why it is sixteenth:* Phase 15 verified the codebase. Phase 16 verifies the codebase under real data volume and real concurrent usage conditions in the sandbox environment. The distinction is the difference between a car passing a factory inspection and a car surviving a road test.
+
+*Produces:* Domain-by-domain certification matrix. Every pipeline run to completion with real data. Every Trinity action verified with real payloads. Every financial calculation verified against independent calculation.
+
+*Use:* The ACME Sandbox Nuclear Architecture Audit prompt.
+
+---
+
+**PHASE 17 — SECOND PRODUCTION READINESS SCAN**
+
+*What it does:* Runs the full second production readiness scan targeting the specific remaining categories: race conditions and concurrent write safety, missing test identifiers, frontend-to-backend API contract mismatches, form submission persistence gaps, TypeScript safety gaps, cross-tenant data isolation, silent errors and missing error codes, SPS workspace initialization, navigation and routing integrity, and session and authentication edge cases.
+
+*Why it is seventeenth:* Phases 15 and 16 do broad sweeps. Phase 17 is the targeted precision scan that checks the specific failure categories that historically survive broad sweeps because they require domain knowledge to look for deliberately.
+
+*Produces:* Complete findings registry organized by the ten specialist categories. All P0 and P1 items resolved. Deferred items documented with specific resolution prescriptions, not general notes.
+
+*Use:* The Second Production Readiness Scan prompt.
+
+---
+
+**PHASE 18 — FTC COMPLIANCE & PRODUCTION ENVIRONMENT CERTIFICATION**
+
+*What it does:* Audits every piece of platform-facing copy, Trinity dialogue, onboarding text, email communication, and generated document against what the platform demonstrably executes. Flags AI capability language that overstates functionality. Verifies billing disclosures meet FTC Negative Option Rule requirements. Simultaneously verifies the production environment: environment variable separation, CORS lockdown, SSL configuration, production database isolation, error monitoring, uptime monitoring, backup and restore verification, email deliverability (SPF, DKIM, DMARC), Terms of Service and Privacy Policy presence, and browser compatibility.
+
+*Why it is eighteenth:* The platform itself is certified. Phase 18 verifies everything surrounding the platform that determines whether the first tenant experience is legally safe and operationally reliable from day one. These are not code problems — they are the wrapper that makes a working platform a trustworthy product.
+
+*Produces:* Clean/flag list of every platform claim with risk classification and replacement language for every flagged item. Production environment checklist fully green. Legal foundation confirmed.
+
+*Use:* The FTC Compliance audit section combined with the production environment readiness checklist.
+
+---
+
+**PHASE 19 — GRAND OPENING FINAL SYSTEM AUDIT**
+*The only gate that matters. This phase does not begin until all 18 phases are certified clean.*
+
+*What it does:* The complete unconditional end-to-end certification audit. Tenant onboarding and org setup. User management and end-user onboarding. Client setup. Trinity onboarding and learning. Scheduling, auto-fill, and staffing intelligence. Pipelines, workflows, and automations. Trinity actions and payload generation. Subscription enforcement and feature guards. Persistence, sync, and data integrity globally. FTC compliance and claim substantiation. All ten domains. Real simulated data. Every layer from frontend UI to backend infrastructure to Trinity orchestration.
+
+*Why it is nineteenth:* This is not a debugging tool. This is a certification ceremony. It only means something if every phase before it was completed correctly. Run on a clean platform it produces a green light with confidence. Run before the phases are complete it produces a list of issues that should have been caught earlier.
+
+*Produces:* Financial Operations Certification. Trinity Certification. Tenant Onboarding Certification. Pipeline and Automation Certification. Data Integrity Certification. Security Certification. Legal and Compliance Certification. Production Readiness Verdict — go or hold, with zero ambiguity.
+
+*Use:* The Grand Opening Final System Audit prompt (the combined version of all three original prompts).
+
+---
+
+**THE COMPLETE PHASE SEQUENCE AT A GLANCE**
+
+| Phase | Name | Category |
+|-------|------|----------|
+| 1 | Schema Parity & Naming Ground Truth | Foundation |
+| 2 | Master Root Cause Elimination | Foundation |
+| 3 | React Error Boundaries & UI Resilience | Frontend |
+| 4 | API Response Contract Enforcement | Boundary |
+| 5 | Business Logic Validation Layer | Logic |
+| 6 | Financial Calculation Integrity | Financial |
+| 7 | Database Transaction & Concurrency Safety | Database |
+| 8 | Notification & Event Delivery Reliability | Communication |
+| 9 | Background Job Reliability & Observability | Infrastructure |
+| 10 | Pagination, Performance & Data Volume Safety | Performance |
+| 11 | File Storage Atomic Integrity & Document Pipeline | Documents |
+| 12 | Third Party Resilience & Circuit Breakers | Resilience |
+| 13 | Idempotency & Duplicate Operation Prevention | Safety |
+| 14 | Audit Trail Completeness & Immutability | Compliance |
+| 15 | Zero-Defect Production Hardening Sweep | Verification |
+| 16 | ACME Sandbox Nuclear Architecture Audit | Stress Test |
+| 17 | Second Production Readiness Scan | Precision Scan |
+| 18 | FTC Compliance & Production Environment Cert | Legal & Ops |
+| 19 | Grand Opening Final System Audit | Certification |
+
+---
+
+**THE RULE**
+
+One phase per session. Two consecutive clean passes before moving on. No exceptions. The temptation to combine phases to move faster is how you end up back here fixing things that should have been caught three phases earlier.
+
+Start with Phase 1 today. When it comes back clean, bring the output here and we confirm it before you move to Phase 2.

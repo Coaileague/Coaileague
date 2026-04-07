@@ -1,0 +1,422 @@
+# CoAIleague — Schema Domain Module Split
+## Safe Code-Level Reorganization Prompt
+### READ DEVELOPMENT LAWS V2 BEFORE STARTING
+
+---
+
+## ⚠️ CRITICAL — READ THIS FIRST
+
+This is a **code reorganization only**. 
+
+- ✅ You ARE splitting schema code files into domain modules
+- ✅ You ARE organizing TypeScript/schema definitions by domain
+- ❌ You are NOT dropping any database tables
+- ❌ You are NOT altering any database tables
+- ❌ You are NOT changing any column definitions
+- ❌ You are NOT running any migrations
+- ❌ You are NOT changing how the database looks — only how the code is organized
+
+The database stays at 545 tables. Untouched. This is purely a file restructuring exercise.
+
+**Git commit your current clean state RIGHT NOW before starting:**
+```bash
+git add .
+git commit -m "checkpoint: 545 tables clean, app running — before schema domain split"
+```
+
+Do not proceed until that commit is confirmed.
+
+---
+
+## OBJECTIVE
+
+Take the current monolithic schema file(s) and split them into 12 clean domain modules. Every table definition gets assigned to exactly one domain file. A single `index.ts` imports and re-exports everything so nothing in the rest of the codebase breaks.
+
+The database does not change. The imports do not break. The app keeps running.
+
+---
+
+## PHASE 1 — AUDIT CURRENT SCHEMA FILES
+
+### Step 1A — Find all schema files
+```bash
+find . -name "schema.ts" -o -name "schema.js" -o -name "*.schema.ts" | grep -v node_modules
+```
+
+List every schema-related file found. Report the file paths and approximate line counts.
+
+### Step 1B — Count current table definitions
+```bash
+grep -c "pgTable\|mysqlTable\|sqliteTable\|createTable\|Table(" path/to/schema.ts
+```
+
+Report the total number of table definitions found across all schema files.
+
+### Step 1C — List all table names
+Extract and list every table name currently defined in the schema. This is your master list — every single one must end up in exactly one domain file. None can be lost.
+
+---
+
+## PHASE 2 — CREATE THE DOMAIN FOLDER STRUCTURE
+
+Create this exact folder structure. Do not create any files yet — just the folders:
+
+```
+src/
+  db/
+    schema/
+      domains/
+        auth/
+        orgs/
+        workforce/
+        scheduling/
+        time/
+        payroll/
+        billing/
+        trinity/
+        comms/
+        clients/
+        compliance/
+        audit/
+      index.ts    ← will be created last
+```
+
+If your project uses a different base path than `src/db/schema/`, use whatever the current schema path is. The folder structure relative to the schema file is what matters.
+
+---
+
+## PHASE 3 — DOMAIN ASSIGNMENT
+
+Before writing any files, produce a complete assignment list mapping every table to its domain.
+
+Use this domain guide to assign each table:
+
+### DOMAIN: `auth`
+Tables related to: users, sessions, tokens, passwords, 2FA, roles, permissions, API keys, OAuth
+Look for tables named like: `users`, `sessions`, `refresh_tokens`, `permissions`, `roles`, `role_permissions`, `user_roles`, `api_keys`, `oauth_tokens`, `password_resets`, `mfa_*`, `two_factor_*`
+
+### DOMAIN: `orgs`
+Tables related to: organizations, settings, hierarchy, onboarding, branding, invitations
+Look for tables named like: `organizations`, `org_*`, `companies`, `accounts`, `sub_organizations`, `onboarding_*`, `org_invitations`, `org_members`
+
+### DOMAIN: `workforce`
+Tables related to: employees, profiles, availability, certifications, assignments to sites
+Look for tables named like: `employees`, `employee_*`, `guards`, `staff`, `contractors`, `guard_profiles`, `availability`
+
+### DOMAIN: `scheduling`
+Tables related to: shifts, schedules, templates, conflicts, coverage, swaps, post orders
+Look for tables named like: `schedules`, `shifts`, `shift_*`, `schedule_*`, `coverage_*`, `open_shifts`, `post_orders`
+
+### DOMAIN: `time`
+Tables related to: clock events, timesheets, GPS, geofencing, breaks, overtime flags
+Look for tables named like: `clock_*`, `time_entries`, `timesheets`, `timesheet_*`, `gps_*`, `geofence_*`, `break_records`
+
+### DOMAIN: `payroll`
+Tables related to: pay periods, payroll runs, earnings, deductions, state rules, exports
+Look for tables named like: `payroll_*`, `pay_periods`, `earnings_*`, `deductions`, `overtime_calculations`, `state_*_rules`, `garnishments`
+
+### DOMAIN: `billing`
+Tables related to: plans, subscriptions, invoices, payments, Stripe, usage records
+Look for tables named like: `billing_*`, `subscriptions`, `invoices`, `invoice_*`, `payments`, `payment_*`, `stripe_*`, `usage_records`, `credits`
+
+### DOMAIN: `trinity`
+Tables related to: AI jobs, model configs, token usage, cost tracking, prompts, event bus
+Look for tables named like: `trinity_*`, `ai_*`, `model_*`, `token_*`, `prompt_*`, `scheduling_intelligence`, `fallback_*`
+
+### DOMAIN: `comms`
+Tables related to: chat, messages, notifications, push tokens, mail, announcements
+Look for tables named like: `chat_*`, `messages`, `message_*`, `notifications`, `notification_*`, `push_*`, `mail_*`, `announcements`, `broadcast_*`, `shift_rooms`
+
+### DOMAIN: `clients`
+Tables related to: clients, sites, contracts, client contacts, site requirements
+Look for tables named like: `clients`, `sites`, `site_*`, `contracts`, `contract_*`, `client_*`
+
+### DOMAIN: `compliance`
+Tables related to: licenses, certifications, documents, signatures, incidents, compliance records
+Look for tables named like: `licenses`, `license_*`, `certifications`, `documents`, `document_*`, `signatures`, `signature_*`, `incidents`, `incident_*`, `compliance_*`, `expiration_*`
+
+### DOMAIN: `audit`
+Tables related to: audit logs, change history, system events, activity, login history, error logs
+Look for tables named like: `audit_*`, `change_history`, `system_events`, `activity_*`, `login_history`, `error_*`, `integration_logs`, `webhook_*`, `deletion_log`
+
+---
+
+### Assignment Output Format
+
+Before touching any files, output the complete assignment list:
+
+```
+TABLE NAME                    | DOMAIN
+------------------------------|------------
+users                         | auth
+organizations                 | orgs
+employees                     | workforce
+shifts                        | scheduling
+clock_events                  | time
+payroll_runs                  | payroll
+subscriptions                 | billing
+trinity_jobs                  | trinity
+messages                      | comms
+clients                       | clients
+documents                     | compliance
+audit_log                     | audit
+[continue for ALL tables]     |
+```
+
+**Do not proceed to Phase 4 until this list is complete and Bryan has approved it.**
+
+---
+
+## PHASE 4 — BUILD DOMAIN FILES (ONE AT A TIME)
+
+For each domain, create the file and move the table definitions into it. Follow this exact pattern for every domain:
+
+### Template for each domain file:
+```typescript
+// ============================================
+// CoAIleague Schema — [DOMAIN NAME] Domain
+// ============================================
+// Tables: [list table names in this file]
+// Last updated: [date]
+// ============================================
+
+import { pgTable, text, integer, boolean, timestamp, uuid, jsonb } from 'drizzle-orm/pg-core';
+// Add any other imports needed by tables in this domain
+
+// ─────────────────────────────────────────────
+// [TABLE NAME]
+// ─────────────────────────────────────────────
+export const tableName = pgTable('table_name', {
+  // exact existing definition — do not change anything
+});
+
+// repeat for every table in this domain
+```
+
+### Processing order (do one domain, verify, commit, then next):
+
+1. `auth` — start here, it's referenced by almost everything else
+2. `orgs` — second, orgs reference auth
+3. `clients` — clients reference orgs
+4. `workforce` — employees reference orgs and auth
+5. `scheduling` — references workforce and clients
+6. `time` — references scheduling and workforce
+7. `payroll` — references time and workforce
+8. `billing` — references orgs, relatively standalone
+9. `trinity` — references scheduling, relatively standalone
+10. `comms` — references workforce and orgs
+11. `compliance` — references workforce and clients
+12. `audit` — last, references everything
+
+### After each domain file is created:
+```bash
+# Verify no TypeScript errors in the new file
+npx tsc --noEmit path/to/schema/domains/[domain]/index.ts
+
+# Git commit
+git add .
+git commit -m "schema: extracted [domain] domain to domains/[domain]/index.ts"
+```
+
+Do not move to the next domain until the current one compiles clean.
+
+---
+
+## PHASE 5 — HANDLE CROSS-DOMAIN REFERENCES
+
+Many tables reference tables in other domains via foreign keys. This is expected and fine.
+
+### Rule for cross-domain imports:
+Import from the domain file directly, not from the monolith:
+
+```typescript
+// In scheduling domain — referencing employees from workforce domain
+import { employees } from '../workforce';
+import { sites } from '../clients';
+
+export const shifts = pgTable('shifts', {
+  id: uuid('id').primaryKey(),
+  employeeId: uuid('employee_id').references(() => employees.id),
+  siteId: uuid('site_id').references(() => sites.id),
+  // rest of columns unchanged
+});
+```
+
+### Cross-domain reference map (check these specifically):
+- `shifts` → references `employees` (workforce) and `sites` (clients)
+- `clock_events` → references `employees` (workforce) and `shifts` (scheduling)
+- `payroll_runs` → references `employees` (workforce) and `pay_periods` (payroll)
+- `timesheets` → references `employees` (workforce) and `pay_periods` (payroll)
+- `trinity_jobs` → references `organizations` (orgs)
+- `ai_usage_logs` → references `organizations` (orgs)
+- `messages` → references `users` (auth) and `chat_rooms` (comms)
+- `notifications` → references `users` (auth)
+- `audit_log` → references `users` (auth) and `organizations` (orgs)
+- `document_signatures` → references `documents` (compliance) and `employees` (workforce)
+- `invoices` → references `organizations` (orgs) and `billing_plans` (billing)
+
+For any reference not listed above — import from the appropriate domain file.
+
+---
+
+## PHASE 6 — BUILD THE MASTER INDEX FILE
+
+Once ALL 12 domain files are complete and compiling clean, create the master index:
+
+```typescript
+// ============================================
+// CoAIleague Schema — Master Index
+// ============================================
+// This file is the single import point for 
+// the entire schema. Import from here, not
+// from individual domain files, unless you
+// need domain-specific imports.
+// ============================================
+
+// Auth Domain
+export * from './domains/auth';
+
+// Orgs Domain
+export * from './domains/orgs';
+
+// Workforce Domain
+export * from './domains/workforce';
+
+// Scheduling Domain
+export * from './domains/scheduling';
+
+// Time Domain
+export * from './domains/time';
+
+// Payroll Domain
+export * from './domains/payroll';
+
+// Billing Domain
+export * from './domains/billing';
+
+// Trinity Domain
+export * from './domains/trinity';
+
+// Comms Domain
+export * from './domains/comms';
+
+// Clients Domain
+export * from './domains/clients';
+
+// Compliance Domain
+export * from './domains/compliance';
+
+// Audit Domain
+export * from './domains/audit';
+```
+
+---
+
+## PHASE 7 — UPDATE IMPORTS ACROSS THE CODEBASE
+
+Now update every file that imports from the old schema location to import from the new index.
+
+### Find all files that import from the old schema:
+```bash
+grep -r "from.*schema" src/ --include="*.ts" -l | grep -v node_modules
+grep -r "require.*schema" src/ --include="*.ts" -l | grep -v node_modules
+```
+
+### For each file found, update the import:
+```typescript
+// BEFORE
+import { users, employees, shifts } from '../db/schema';
+
+// AFTER — if importing from old monolith path
+import { users, employees, shifts } from '../db/schema'; 
+// ↑ This stays the same if index.ts is in the same location
+// Only changes if the path to index.ts changed
+```
+
+If the `index.ts` is in the same location as the old `schema.ts`, most imports won't need changing at all — the index re-exports everything.
+
+### Verify zero broken imports:
+```bash
+npx tsc --noEmit
+```
+
+Zero errors = success.
+
+---
+
+## PHASE 8 — FINAL VERIFICATION
+
+Run the full verification suite:
+
+```bash
+# TypeScript compilation
+npx tsc --noEmit
+
+# If you have tests
+npm test
+
+# Start the app and verify it runs
+npm run dev
+```
+
+Then verify in the running app:
+- [ ] App starts without errors
+- [ ] No console errors on load
+- [ ] Dashboard loads correctly
+- [ ] Can navigate between pages
+- [ ] Database queries still work (clock in/out, schedule view, etc.)
+
+---
+
+## PHASE 9 — CLEANUP
+
+Only after full verification passes:
+
+```bash
+# Archive the old monolithic schema file (do NOT delete it yet)
+mv src/db/schema.ts src/db/schema.ARCHIVED.ts
+
+# Run the app one more time to confirm nothing imports the archived file
+npm run dev
+
+# If everything still works, the archive can stay for reference
+# Do NOT delete it — keep as historical reference
+
+# Final commit
+git add .
+git commit -m "schema: domain split complete — 12 domains, monolith archived"
+```
+
+---
+
+## DELIVERY CHECKLIST
+
+Before calling this complete:
+
+- [ ] All tables assigned to exactly one domain
+- [ ] All 12 domain files created
+- [ ] Each domain file compiles with zero TypeScript errors
+- [ ] Cross-domain references use proper imports
+- [ ] Master index.ts exports all domains
+- [ ] All existing imports across codebase still resolve
+- [ ] `npx tsc --noEmit` passes with zero errors
+- [ ] App starts and runs cleanly
+- [ ] No new console errors introduced
+- [ ] Old schema file archived (not deleted)
+- [ ] Git committed at each domain completion
+- [ ] Final commit made with clean message
+
+---
+
+## WHAT THIS GIVES YOU
+
+After this is complete, every future conversation with any agent becomes dramatically more precise:
+
+- "Fix the Trinity scheduling bug" → agent opens `trinity/index.ts` only
+- "Debug the payroll calculation" → agent opens `payroll/index.ts` only  
+- "Add a field to employee profiles" → agent opens `workforce/index.ts` only
+- "Stripe webhook broken" → agent opens `billing/index.ts` only
+
+No more 30,000 line files. No more scattered changes. No more agents touching things they shouldn't. Every domain is a clean boundary.
+
+**The database is unchanged. The app behavior is unchanged. The code is now organized.**

@@ -115,9 +115,8 @@ export interface TrinityPersonaContext {
   workspaceRole?: string;
   isOrgOwner: boolean;
   isManager: boolean;
-  subscriptionTier: 'free' | 'starter' | 'professional' | 'enterprise';
+  subscriptionTier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   hasTrinityPro: boolean;
-  hasBusinessBuddy: boolean;
   orgStats?: {
     employeeCount: number;
     departmentCount: number;
@@ -125,8 +124,14 @@ export interface TrinityPersonaContext {
   };
   orgIntelligence?: OrgIntelligence;
   platformDiagnostics?: PlatformDiagnostics;
-  trinityMode?: 'demo' | 'business_pro' | 'guru';
-  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'platform_guru' | 'standard';
+  /**
+   * Trinity operational mode:
+   * - 'coo'    — COO mode for org owners/managers (full business intelligence)
+   * - 'guru'   — Tech Guru mode for support agents (platform diagnostics)
+   * - 'standard' — Standard mode
+   */
+  trinityMode?: 'coo' | 'guru' | 'standard';
+  persona: 'executive_advisor' | 'support_partner' | 'coo_advisor' | 'onboarding_guide' | 'platform_guru' | 'standard';
   greeting?: string;
 }
 
@@ -149,14 +154,11 @@ export interface ThoughtManagerState {
   onboardingProgress: { completed: number; total: number } | null;
   isOnboardingComplete: boolean;
   advisorMode: boolean;
-  // Credit awareness for Business Buddy
+  // Credit awareness
   creditStatus: CreditStatus | null;
   lastCreditWarningAt: number | null;
   // Trinity role-aware persona context
   trinityContext: TrinityPersonaContext | null;
-  // Demo mode tier tracking for upgrade nudges
-  businessBuddyTier: 'PUBLIC_DEMO' | 'LOGGED_IN_FREE' | 'BUSINESS_BUDDY';
-  lastUpgradeNudgeAt: number | null;
 }
 
 type ThoughtListener = (thought: Thought | null) => void;
@@ -233,8 +235,6 @@ class ThoughtManager {
       creditStatus: null,
       lastCreditWarningAt: null,
       trinityContext: null,
-      businessBuddyTier: 'PUBLIC_DEMO',
-      lastUpgradeNudgeAt: null,
     };
   }
   
@@ -304,7 +304,6 @@ class ThoughtManager {
     if (!this.aiSessionReady) {
       this.aiSessionReady = true;
       this.aiReadyTimestamp = Date.now();
-      console.log('[Trinity] AI session ready - warmup period started');
     }
   }
   
@@ -478,7 +477,6 @@ class ThoughtManager {
       if (elapsed >= maxWaitMs) {
         // Timeout - show anyway to prevent stuck state
         this.warmupPollingActive = false;
-        console.log('[Trinity] Warmup timeout reached - showing first bubble');
         if (!this.state.currentThought && this.state.queue.length > 0) {
           this.showThought(this.state.queue.shift()!);
         }
@@ -1224,7 +1222,7 @@ class ThoughtManager {
         `I see revenue that's waiting to be collected. Want me to activate follow-ups?`,
         // Holistic Growth Intelligence
         `${displayName}, I've cross-referenced your goals, income, spending, and manpower.`,
-        `Your margins are slipping. I've re-optimized next week's schedule to save $1,200.`,
+        `Your margins look tight this week. I've surfaced a scheduling optimization — review it to see if it fits your operations.`,
         `Green Light for Growth: You've hit your 'Safe Harbor' savings target.`,
         `You're paying a human to do a robot's job. Let me take over.`,
         `Efficiency Boost: You have idle staff. I can fill that capacity with a flash sale.`,
@@ -1254,8 +1252,8 @@ class ThoughtManager {
         `I can generate workforce forecasts based on historical patterns.`,
         `Time tracking anomalies detected. Want me to flag them?`,
       ];
-    } else if (ctx?.hasBusinessBuddy || ctx?.isOrgOwner) {
-      // BUSINESS OWNER EXPERTISE - comprehensive advisor
+    } else if (ctx?.trinityMode === 'coo' || ctx?.isOrgOwner) {
+      // COO MODE EXPERTISE - comprehensive business advisor for security companies
       thoughtPool = [
         // Growth Focus
         `${displayName}, how can I help grow your business today?`,
@@ -1322,7 +1320,8 @@ class ThoughtManager {
    */
   private async fetchAIThought(): Promise<string | null> {
     try {
-      const response = await fetch('/api/trinity/thought', {
+      const { secureFetch } = await import('@/lib/csrf');
+      const response = await secureFetch('/api/trinity/thought', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1348,92 +1347,44 @@ class ThoughtManager {
   }
   
   // ============================================================================
-  // DEMO MODE & UPGRADE NUDGES
+  // TRINITY MODE HELPERS
   // ============================================================================
-  
+
   /**
-   * Set Business Buddy tier for demo mode awareness
-   * Integrates upgrade nudges for LOGGED_IN_FREE users
+   * Get current Trinity operational mode from context
    */
-  setBusinessBuddyTier(tier: 'PUBLIC_DEMO' | 'LOGGED_IN_FREE' | 'BUSINESS_BUDDY'): void {
-    this.state.businessBuddyTier = tier;
+  getTrinityMode(): 'coo' | 'guru' | 'standard' {
+    return this.state.trinityContext?.trinityMode ?? 'standard';
   }
-  
+
   /**
-   * Get current Business Buddy tier
+   * Check if Trinity is in COO mode (org owners/managers at security companies)
    */
-  getBusinessBuddyTier(): 'PUBLIC_DEMO' | 'LOGGED_IN_FREE' | 'BUSINESS_BUDDY' {
-    return this.state.businessBuddyTier;
+  isCOOMode(): boolean {
+    return this.getTrinityMode() === 'coo';
   }
-  
+
   /**
-   * Check if user should see upgrade nudges (LOGGED_IN_FREE users only)
+   * Check if Trinity is in Tech Guru mode (platform support agents)
    */
-  shouldShowUpgradeNudge(): boolean {
-    return this.state.businessBuddyTier === 'LOGGED_IN_FREE';
+  isGuruMode(): boolean {
+    return this.getTrinityMode() === 'guru';
   }
-  
-  /**
-   * Trigger an upgrade suggestion thought for LOGGED_IN_FREE users
-   * Called periodically during thought rotation for non-subscribers
-   */
-  triggerUpgradeNudge(): void {
-    // Only show for logged-in free users, not on public pages
-    if (this.state.businessBuddyTier !== 'LOGGED_IN_FREE' || this.state.isOnPublicPage) {
-      return;
-    }
-    
-    // Rate limit: max once per 5 minutes
-    const now = Date.now();
-    const MIN_NUDGE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-    if (this.state.lastUpgradeNudgeAt && (now - this.state.lastUpgradeNudgeAt) < MIN_NUDGE_INTERVAL) {
-      return;
-    }
-    
-    const displayName = this.getUserDisplayName();
-    
-    const upgradeNudges = [
-      `${displayName}, I could analyze your schedules and suggest optimizations with Business Buddy!`,
-      `Want me to help with real-time workforce insights? Upgrade to Business Buddy!`,
-      `${displayName}, Business Buddy unlocks AI-powered scheduling and analytics.`,
-      `I have lots of smart features waiting for you! Check out Business Buddy add-on.`,
-      `${displayName}, upgrade to Business Buddy for personalized AI business advice!`,
-      `Unlock my full potential! Business Buddy gives you AI scheduling and insights.`,
-      `Psst! Business Buddy subscribers get priority AI responses and deep analytics.`,
-      `${displayName}, I can do so much more as your Business Buddy!`,
-    ];
-    
-    const text = upgradeNudges[Math.floor(Math.random() * upgradeNudges.length)];
-    const thought = this.createThought(text, 'ADVISING', 'upgrade_nudge', 'normal');
-    thought.ctaText = 'View Plans';
-    thought.ctaLink = '/subscription';
-    
-    this.queueThought(thought);
-    this.state.lastUpgradeNudgeAt = now;
-  }
-  
-  /**
-   * Trigger a subtle upgrade hint (less aggressive than nudge)
-   * Shown when user tries to access a premium feature
-   */
-  triggerUpgradeHint(featureName: string): void {
-    if (this.state.businessBuddyTier === 'BUSINESS_BUDDY') {
-      return;
-    }
-    
-    const hints = [
-      `"${featureName}" is a Business Buddy feature. Want to unlock it?`,
-      `That's a premium feature! Business Buddy subscribers can use ${featureName}.`,
-      `${featureName} requires Business Buddy. Upgrade to access!`,
-    ];
-    
-    const text = hints[Math.floor(Math.random() * hints.length)];
-    const thought = this.createThought(text, 'ADVISING', 'upgrade_hint', 'high');
-    thought.ctaText = 'Learn More';
-    thought.ctaLink = '/subscription';
-    
-    this.showThought(thought);
-  }
+
+  /** @deprecated Business Buddy removed. Use getTrinityMode() instead. */
+  setBusinessBuddyTier(_tier: string): void { /* no-op */ }
+
+  /** @deprecated Business Buddy removed. Always returns 'standard'. */
+  getBusinessBuddyTier(): string { return 'standard'; }
+
+  /** @deprecated Upgrade nudges removed. Always returns false. */
+  shouldShowUpgradeNudge(): boolean { return false; }
+
+  /** @deprecated Upgrade nudges removed. No-op. */
+  triggerUpgradeNudge(): void { /* no-op */ }
+
+  /** @deprecated Feature gating removed. No-op. */
+  triggerUpgradeHint(_featureName: string): void { /* no-op */ }
   
   // ============================================================================
   // DIAGNOSTIC MODE FOR SUPPORT ROLES
@@ -1661,7 +1612,7 @@ class ThoughtManager {
       greeting = proGreetings[Math.floor(Math.random() * proGreetings.length)];
     }
     // Organization owner / Business Buddy persona - business professional tone with workspace
-    else if (ctx.isOrgOwner || ctx.hasBusinessBuddy || ctx.persona === 'business_buddy') {
+    else if (ctx.trinityMode === 'coo' || ctx.isOrgOwner || ctx.persona === 'coo_advisor') {
       const ownerGreetings = [
         `${timeGreeting}, ${displayName}!${workspaceSuffix} Your business intelligence dashboard is ready.`,
         `${timeGreeting}, ${displayName}! Ready to assist with workforce optimization${atWorkspace}.`,
@@ -2193,11 +2144,8 @@ class ThoughtManager {
   
   startRotation(): void {
     if (this.rotationTimer || this.rotationStartupTimer) {
-      console.log('[Trinity] startRotation: Already running, skipping');
       return;
     }
-    
-    console.log('[Trinity] startRotation: Starting rotation');
     
     if (this.state.isHoliday) {
       this.triggerHolidayGreeting();
@@ -2210,18 +2158,12 @@ class ThoughtManager {
       const queueLen = this.state.queue.length;
       const canShowThought = !hasCurrent && queueLen === 0;
       
-      console.log('[Trinity] Rotation tick:', { hasContext, hasUser, hasCurrent, queueLen, canShowThought });
-      
       if (canShowThought) {
-        // If user has Trinity context, use persona-aware thought generation (AI-powered)
         if (hasContext && hasUser) {
-          console.log('[Trinity] Generating persona thought (AI-powered)');
           this.generatePersonaThought();
           return;
         }
         
-        // Fallback for public/guest users: use local thought pools
-        console.log('[Trinity] Generating local thought (fallback)');
         if (this.state.advisorMode && this.state.isOnboardingComplete && Math.random() < 0.3) {
           this.triggerAdvisorTip();
         } else if (this.state.isHoliday && this.state.currentHoliday && Math.random() > 0.7) {

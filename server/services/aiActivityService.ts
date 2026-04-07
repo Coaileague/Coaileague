@@ -13,6 +13,9 @@
  */
 
 import { broadcastToAllClients } from '../websocket';
+import { createLogger } from '../lib/logger';
+const log = createLogger('aiActivityService');
+
 
 export type AIActivityState = 
   | 'IDLE'
@@ -89,7 +92,7 @@ class AIActivityService {
 
     broadcastToAllClients(event);
 
-    console.log(`[AIActivity] ${source}: ${previousState} -> ${state}${options.message ? ` (${options.message})` : ''}`);
+    log.info(`[AIActivity] ${source}: ${previousState} -> ${state}${options.message ? ` (${options.message})` : ''}`);
 
     if (options.duration && state !== 'IDLE') {
       this.stateTimeout = setTimeout(() => {

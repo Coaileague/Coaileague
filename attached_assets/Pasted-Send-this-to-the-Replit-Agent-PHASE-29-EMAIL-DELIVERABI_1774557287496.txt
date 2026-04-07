@@ -1,0 +1,206 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 29 — EMAIL DELIVERABILITY HARDENING**
+
+This phase owns the complete email deliverability infrastructure. Every NDS email notification — shift alerts, invoice deliveries, compliance alerts, pay stub availability, document signing requests, calloff confirmations — is worthless if it lands in spam. Email deliverability is not a technical nicety, it is an operational requirement. A security supervisor who never receives a calloff alert because it went to junk has a post left uncovered. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row. Every row green before Phase 29 closes.
+
+---
+
+**STEP 1 — CURRENT EMAIL INFRASTRUCTURE INVENTORY**
+
+Before touching anything produce a complete inventory of the current email sending infrastructure:
+- Email service provider confirmed — Resend API integration details
+- Sending domain confirmed — what domain all platform emails are sent from
+- Current DNS records for the sending domain — what SPF, DKIM, DMARC records exist today if any
+- Current Resend dashboard status — deliverability score, bounce rate, spam rate if accessible
+- All email sending addresses used across the platform — from addresses, reply-to addresses, noreply addresses
+- Volume estimation — how many emails the platform will send per day at operational scale
+- Current email template inventory — all templates in use, their purposes, their from/subject patterns
+
+Flag any sending configuration that would cause emails to fail authentication checks or land in spam.
+
+---
+
+**STEP 2 — SPF RECORD VERIFICATION AND CONFIGURATION**
+
+SPF (Sender Policy Framework) authorizes which servers can send email on behalf of your domain:
+- Check current SPF record for the sending domain: `dig TXT [domain]`
+- Confirm Resend's sending servers are included in the SPF record
+- SPF record syntax validated — no errors, no redundant includes
+- SPF record does not exceed the 10 DNS lookup limit — count all includes
+- SPF record uses `-all` (hard fail) not `~all` (soft fail) — hard fail is stronger
+- SPF record documented in replit.md with the exact record value
+- If SPF record does not exist or is incorrect — provide the exact DNS record to add and document it
+
+---
+
+**STEP 3 — DKIM SIGNATURE VERIFICATION AND CONFIGURATION**
+
+DKIM (DomainKeys Identified Mail) signs outbound emails to prove they originated from your domain:
+- Check if DKIM is configured for the sending domain in Resend dashboard
+- DKIM keys generated and DNS CNAME or TXT records published
+- DKIM selector confirmed — document the selector name
+- DKIM key length confirmed minimum 2048 bits — not legacy 1024 bit
+- DKIM signature verified on a test email — header shows `dkim=pass`
+- DKIM records documented in replit.md with the exact record values
+- If DKIM is not configured — provide the exact DNS records to add and document them
+
+---
+
+**STEP 4 — DMARC POLICY VERIFICATION AND CONFIGURATION**
+
+DMARC (Domain-based Message Authentication Reporting and Conformance) ties SPF and DKIM together and defines what happens to unauthenticated emails:
+- Check current DMARC record: `dig TXT _dmarc.[domain]`
+- DMARC policy set to minimum `p=quarantine` — ideally `p=reject` for maximum protection
+- DMARC alignment mode confirmed — `aspf=s` (strict) or `aspf=r` (relaxed)
+- DMARC reporting configured — `rua=` aggregate report destination and `ruf=` forensic report destination defined
+- DMARC record syntax validated — no errors
+- DMARC record documented in replit.md with the exact record value
+- If DMARC does not exist or is too permissive (`p=none`) — provide the exact record to add and document it
+
+---
+
+**STEP 5 — SENDING DOMAIN REPUTATION CHECK**
+
+The sending domain must not be on any blocklists:
+- Check domain reputation against major blocklists: Spamhaus, Barracuda, MX Toolbox, SURBL
+- Check IP reputation of Resend's sending servers — confirm not blocklisted
+- Check domain age — newly registered domains have lower trust; document the domain age
+- Check if the domain has any prior spam history
+- Resend deliverability score reviewed if accessible
+- Document the current reputation status for each check
+
+---
+
+**STEP 6 — EMAIL TEMPLATE AUDIT**
+
+Every email template must follow deliverability best practices:
+- All templates have a plain text version alongside HTML — not HTML-only
+- All templates have a clear unsubscribe link for non-transactional emails
+- All templates have a physical mailing address in the footer (CAN-SPAM requirement)
+- Subject lines do not contain spam trigger words — review all subject lines
+- HTML templates use inline CSS — not external stylesheets (blocked by many email clients)
+- Images in templates have alt text — renders correctly even when images are blocked
+- Templates tested across major email clients: Gmail, Outlook, Apple Mail — confirm correct rendering
+- Templates confirmed rendering in Spanish as well as English (Phase 32 integration point — flag any English-only templates)
+- Email-to-text ratio acceptable — not image-heavy with minimal text
+- No deceptive subject lines — subject matches email content
+
+---
+
+**STEP 7 — BOUNCE AND COMPLAINT HANDLING**
+
+Bounced emails and spam complaints must be handled automatically:
+- Resend webhook for bounce events configured — hard bounces automatically suppress the address
+- Resend webhook for complaint events configured — spam complaints automatically suppress the address
+- Suppression list integrated with NDS — NDS checks suppression list before attempting delivery
+- Soft bounce retry logic confirmed — soft bounces retry with backoff, hard bounces do not retry
+- Bounce rate monitoring — alert fires if bounce rate exceeds 2% threshold
+- Complaint rate monitoring — alert fires if complaint rate exceeds 0.1% threshold
+- Suppression list management UI — platform staff can view and manage suppressed addresses
+- NDS delivery record updated when bounce or complaint webhook fires — status reflects actual delivery outcome
+
+---
+
+**STEP 8 — TEST EMAIL VERIFICATION**
+
+Send actual test emails and verify they pass authentication:
+- Send a test email from each sending address used by the platform
+- Check email headers for: `spf=pass`, `dkim=pass`, `dmarc=pass`
+- Check spam score using a tool like Mail-Tester or GlockApps — target score above 9/10
+- Verify email lands in inbox (not spam) on Gmail, Outlook, and Apple Mail
+- Document the test results including the full email header output showing authentication results
+- If any authentication check fails — identify the specific DNS record that needs updating and document the exact fix
+
+---
+
+**STEP 9 — RESEND CONFIGURATION HARDENING**
+
+Resend-specific configuration must be optimal:
+- Resend API key confirmed stored in environment variables — not hardcoded (regression check from Phase 24)
+- Resend webhook endpoints configured for: delivered, bounced, complained, delivery delayed events
+- Resend webhook signature verification confirmed — HMAC validation on every webhook (regression check from Phase 13)
+- Resend sending limits reviewed — confirm platform is not approaching rate limits at scale
+- Resend domain verification status confirmed — domain is verified in Resend dashboard
+- Dedicated IP address considered for high-volume sending — document the decision
+- Resend account health monitored — no account-level sending restrictions active
+
+---
+
+**STEP 10 — MONITORING AND ALERTING**
+
+Email deliverability must be continuously monitored:
+- Daily deliverability report generated — total sent, delivered, bounced, complained, pending
+- Alert fires to platform staff when bounce rate exceeds 2%
+- Alert fires to platform staff when complaint rate exceeds 0.1%
+- Alert fires when Resend API returns errors — not just logged, actively alerted
+- NDS delivery failure rate tracked — platform staff can see delivery health dashboard
+- Trinity can query email deliverability stats via `notify.delivery_stats` action (confirmed Phase 27)
+
+---
+
+**STEP 11 — DNS DOCUMENTATION**
+
+All DNS records must be documented for operational continuity:
+- Complete DNS record set documented in replit.md: SPF, DKIM (with selector), DMARC, MX records
+- DNS record update procedure documented — who has access to update DNS, what the process is
+- DNS propagation time noted — changes may take up to 48 hours to propagate globally
+- DNS records verified using external tools — not just assumed correct
+- If any records need to be created or updated — provide the exact record values in the correct format for the DNS provider
+
+---
+
+**STEP 12 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence — DNS lookup results, test email headers, or tool output
+3. Every GAP documented with the exact DNS record or configuration change needed
+4. Every PARTIAL fully resolved or documented as requiring external DNS action
+5. All rows green or documented as pending DNS propagation
+6. Summary written only after all rows are accounted for
+
+---
+
+**STEP 13 — VERIFICATION**
+
+Run all checks before Phase 29 is marked complete:
+- Check 1: Sending domain and from addresses confirmed and documented
+- Check 2: SPF record verified — Resend servers included, syntax valid, hard fail configured
+- Check 3: DKIM configured — 2048-bit key, DNS records published, selector documented
+- Check 4: DMARC policy at minimum quarantine — record syntax valid, reporting configured
+- Check 5: Sending domain not on any major blocklist — reputation check clean
+- Check 6: All email templates have plain text version
+- Check 7: All non-transactional templates have unsubscribe link and physical address
+- Check 8: Subject lines reviewed — no spam trigger words
+- Check 9: Bounce webhook configured — hard bounces suppressed automatically
+- Check 10: Complaint webhook configured — spam complaints suppressed automatically
+- Check 11: Suppression list integrated with NDS — checked before delivery attempt
+- Check 12: Test email headers show spf=pass, dkim=pass, dmarc=pass
+- Check 13: Test email lands in inbox on Gmail, Outlook, and Apple Mail — not spam
+- Check 14: Resend domain verification confirmed in dashboard
+- Check 15: Resend webhook signature verification confirmed — regression check from Phase 13
+- Check 16: Bounce rate and complaint rate monitoring alerts configured
+- Check 17: Daily deliverability report generated and accessible to platform staff
+- Check 18: All DNS records documented in replit.md with exact values
+- Check 19: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 20: Server starts clean with zero TypeScript errors across all email-related files
+
+**Important note on DNS records:** Some checks in this phase require actual DNS record creation or modification on the domain registrar — this cannot be done by code changes alone. For any DNS record that needs to be created or updated the agent must: document the exact record type, name, and value needed, confirm what currently exists, and flag it as requiring external DNS action if it cannot be configured programmatically. The reconciliation table must clearly distinguish between checks that are fully resolved in code vs checks that require DNS action outside the codebase.
+
+Do not mark Phase 29 complete until all 20 checks pass or are documented as pending external DNS action with the exact records specified. Findings first. Full picture assembled. Then fixes. Nothing left behind.
+
+---
+
+**REMINDER FOR PHASE 30:**
+
+When Phase 29 closes, Phase 30 opens with a full cross-phase synchronization audit covering Phases 1 through 29 before any Phase 30 work begins. Same structure as the prior sync audit — all 10 layers verified, reconciliation table with one row per integration point, all gaps fixed before the audit closes. This is the second scheduled sync checkpoint in the 53-phase build plan.
+
+---
+
+Paste that. Email deliverability is the unsexy phase that makes everything else work. Every notification, every alert, every invoice delivery depends on it landing in the inbox.

@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalFooter } from "@/components/ui/universal-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,15 +40,15 @@ export function SecureRequestDialog({
       case 'authenticate':
         return (
           <>
-            <DialogHeader>
+            <UniversalModalHeader>
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-5 h-5 text-blue-600" />
-                <DialogTitle>Authentication Request</DialogTitle>
+                <UniversalModalTitle>Authentication Request</UniversalModalTitle>
               </div>
-              <DialogDescription>
+              <UniversalModalDescription>
                 {requestedBy} is requesting verification of your identity. Please provide the requested information securely.
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
             <div className="space-y-4 py-4">
               {requestMessage && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -98,15 +91,15 @@ export function SecureRequestDialog({
       case 'document':
         return (
           <>
-            <DialogHeader>
+            <UniversalModalHeader>
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="w-5 h-5 text-blue-600" />
-                <DialogTitle>Document Upload Request</DialogTitle>
+                <UniversalModalTitle>Document Upload Request</UniversalModalTitle>
               </div>
-              <DialogDescription>
+              <UniversalModalDescription>
                 {requestedBy} is requesting you upload a document. Your file will be securely transmitted.
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
             <div className="space-y-4 py-4">
               {requestMessage && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -140,15 +133,15 @@ export function SecureRequestDialog({
       case 'photo':
         return (
           <>
-            <DialogHeader>
+            <UniversalModalHeader>
               <div className="flex items-center gap-2 mb-2">
                 <Camera className="w-5 h-5 text-blue-600" />
-                <DialogTitle>Photo Upload Request</DialogTitle>
+                <UniversalModalTitle>Photo Upload Request</UniversalModalTitle>
               </div>
-              <DialogDescription>
+              <UniversalModalDescription>
                 {requestedBy} is requesting you upload a photo. This will help resolve your issue faster.
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
             <div className="space-y-4 py-4">
               {requestMessage && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -183,15 +176,15 @@ export function SecureRequestDialog({
       case 'signature':
         return (
           <>
-            <DialogHeader>
+            <UniversalModalHeader>
               <div className="flex items-center gap-2 mb-2">
                 <Upload className="w-5 h-5 text-blue-600" />
-                <DialogTitle>E-Signature Request</DialogTitle>
+                <UniversalModalTitle>E-Signature Request</UniversalModalTitle>
               </div>
-              <DialogDescription>
+              <UniversalModalDescription>
                 {requestedBy} is requesting your electronic signature to proceed.
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
             <div className="space-y-4 py-4">
               {requestMessage && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -230,15 +223,15 @@ export function SecureRequestDialog({
       case 'info':
         return (
           <>
-            <DialogHeader>
+            <UniversalModalHeader>
               <div className="flex items-center gap-2 mb-2">
                 <Lock className="w-5 h-5 text-blue-600" />
-                <DialogTitle>Information Request</DialogTitle>
+                <UniversalModalTitle>Information Request</UniversalModalTitle>
               </div>
-              <DialogDescription>
+              <UniversalModalDescription>
                 {requestedBy} needs some information from you to assist with your request.
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
             <div className="space-y-4 py-4">
               {requestMessage && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -266,11 +259,10 @@ export function SecureRequestDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto">
+    <UniversalModal open={open} onOpenChange={(v) => { if(!v) onClose(); }} size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto">
         {getDialogContent()}
-        <DialogFooter>
-          <div className="flex items-center justify-between w-full">
+        <UniversalModalFooter>
+          <div className="flex items-center justify-between gap-2 w-full">
             <div className="flex items-center gap-1 text-xs text-slate-500">
               <Shield className="w-3 h-3" />
               <span>Secure & Encrypted</span>
@@ -292,8 +284,7 @@ export function SecureRequestDialog({
               </Button>
             </div>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </UniversalModalFooter>
+    </UniversalModal>
   );
 }

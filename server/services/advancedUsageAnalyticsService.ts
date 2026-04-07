@@ -4,14 +4,13 @@
  */
 
 import { db } from "../db";
+import { BILLING } from '../config/platformConfig';
 import { 
-  trinityCredits, 
-  trinityCreditTransactions,
-  aiWorkboardTasks,
   users,
   employees,
   workspaces
-} from "@shared/schema";
+} from '@shared/schema';
+import { creditManager } from "./billing/creditManager";
 import { eq, and, gte, lte, sql, count, sum, avg, desc, asc, ne } from "drizzle-orm";
 
 export interface CreditUsageSummary {
@@ -143,10 +142,7 @@ class AdvancedUsageAnalyticsService {
   }
 
   async getCreditSummary(workspaceId: string): Promise<CreditUsageSummary> {
-    const [creditRecord] = await db.select()
-      .from(trinityCredits)
-      .where(eq(trinityCredits.workspaceId, workspaceId))
-      .limit(1);
+    const creditRecord = await creditManager.getCreditsAccount(workspaceId);
 
     if (!creditRecord) {
       return {
@@ -164,29 +160,22 @@ class AdvancedUsageAnalyticsService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [usageStats] = await db.select({
-      totalUsage: sql<number>`COALESCE(ABS(SUM(CASE WHEN ${trinityCreditTransactions.credits} < 0 THEN ${trinityCreditTransactions.credits} ELSE 0 END)), 0)`,
-      transactionCount: count()
-    })
-      .from(trinityCreditTransactions)
-      .where(and(
-        eq(trinityCreditTransactions.workspaceId, workspaceId),
-        gte(trinityCreditTransactions.createdAt, thirtyDaysAgo)
-      ));
+    // credit_transactions table dropped (Phase 16)
+    const usageStats = { totalUsage: 0, transactionCount: 0 };
 
     const averageDailyUsage = (usageStats?.totalUsage || 0) / 30;
     const projectedDaysRemaining = averageDailyUsage > 0 
-      ? Math.floor(creditRecord.balance / averageDailyUsage) 
+      ? Math.floor(creditRecord.currentBalance / averageDailyUsage) 
       : 999;
 
     return {
-      currentBalance: creditRecord.balance,
-      lifetimePurchased: creditRecord.lifetimePurchased || 0,
-      lifetimeUsed: creditRecord.lifetimeUsed || 0,
+      currentBalance: creditRecord.currentBalance,
+      lifetimePurchased: creditRecord.totalCreditsEarned || 0,
+      lifetimeUsed: creditRecord.totalCreditsUsed || 0,
       averageDailyUsage: Math.round(averageDailyUsage * 10) / 10,
       projectedDaysRemaining,
-      lowBalanceWarning: creditRecord.balance < (creditRecord.lowBalanceThreshold || 50),
-      lastPurchaseDate: creditRecord.lastPurchasedAt?.toISOString() || null,
+      lowBalanceWarning: creditRecord.currentBalance < (creditRecord.lowBalanceThreshold || 50),
+      lastPurchaseDate: null,
       lastUsageDate: creditRecord.lastUsedAt?.toISOString() || null
     };
   }
@@ -194,45 +183,15 @@ class AdvancedUsageAnalyticsService {
   async getUsageByCategory(workspaceId: string, period: string): Promise<UsageByCategory[]> {
     const { startDate, endDate } = getDateRange(period);
 
-    const categoryUsage = await db.select({
-      category: trinityCreditTransactions.actionType,
-      creditsUsed: sql<number>`ABS(SUM(CASE WHEN ${trinityCreditTransactions.credits} < 0 THEN ${trinityCreditTransactions.credits} ELSE 0 END))`,
-      transactionCount: count()
-    })
-      .from(trinityCreditTransactions)
-      .where(and(
-        eq(trinityCreditTransactions.workspaceId, workspaceId),
-        gte(trinityCreditTransactions.createdAt, startDate),
-        lte(trinityCreditTransactions.createdAt, endDate)
-      ))
-      .groupBy(trinityCreditTransactions.actionType);
-
-    const totalCredits = categoryUsage.reduce((sum, cat) => sum + (cat.creditsUsed || 0), 0);
-
-    return categoryUsage.map(cat => ({
-      category: cat.category || 'unknown',
-      creditsUsed: cat.creditsUsed || 0,
-      transactionCount: Number(cat.transactionCount) || 0,
-      percentageOfTotal: totalCredits > 0 ? Math.round((cat.creditsUsed || 0) / totalCredits * 100) : 0
-    }));
+    // credit_transactions table dropped (Phase 16)
+    return [];
   }
 
   async getDailyUsageTrends(workspaceId: string, period: string): Promise<DailyUsageTrend[]> {
     const { startDate, endDate } = getDateRange(period);
 
-    const dailyUsage = await db.select({
-      date: sql<string>`DATE(${trinityCreditTransactions.createdAt})`,
-      creditsUsed: sql<number>`ABS(SUM(CASE WHEN ${trinityCreditTransactions.credits} < 0 THEN ${trinityCreditTransactions.credits} ELSE 0 END))`,
-      transactionCount: count()
-    })
-      .from(trinityCreditTransactions)
-      .where(and(
-        eq(trinityCreditTransactions.workspaceId, workspaceId),
-        gte(trinityCreditTransactions.createdAt, startDate),
-        lte(trinityCreditTransactions.createdAt, endDate)
-      ))
-      .groupBy(sql`DATE(${trinityCreditTransactions.createdAt})`)
-      .orderBy(asc(sql`DATE(${trinityCreditTransactions.createdAt})`));
+    // credit_transactions table dropped (Phase 16)
+    const dailyUsage: Array<{ date: string; creditsUsed: number; transactionCount: number }> = [];
 
     const dailyTasks = await db.select({
       date: sql<string>`DATE(${aiWorkboardTasks.completedAt})`,
@@ -313,14 +272,15 @@ class AdvancedUsageAnalyticsService {
   async getROIMetrics(workspaceId: string, period: string): Promise<ROIMetrics> {
     const { startDate, endDate } = getDateRange(period);
 
+    const { aiUsageEvents } = await import('@shared/schema');
     const [creditUsage] = await db.select({
-      totalSpent: sql<number>`ABS(SUM(CASE WHEN ${trinityCreditTransactions.credits} < 0 THEN ${trinityCreditTransactions.credits} ELSE 0 END))`
+      totalSpent: sql<number>`COALESCE(SUM(${aiUsageEvents.creditsDeducted}), 0)::int`
     })
-      .from(trinityCreditTransactions)
+      .from(aiUsageEvents)
       .where(and(
-        eq(trinityCreditTransactions.workspaceId, workspaceId),
-        gte(trinityCreditTransactions.createdAt, startDate),
-        lte(trinityCreditTransactions.createdAt, endDate)
+        eq(aiUsageEvents.workspaceId, workspaceId),
+        gte(aiUsageEvents.createdAt, startDate),
+        lte(aiUsageEvents.createdAt, endDate)
       ));
 
     const [taskMetrics] = await db.select({
@@ -339,7 +299,7 @@ class AdvancedUsageAnalyticsService {
     const estimatedHoursSaved = Math.round(completedTasks * estimatedMinutesPerTask / 60 * 10) / 10;
     const averageHourlyRate = 50;
     const estimatedLaborCostSaved = Math.round(estimatedHoursSaved * averageHourlyRate);
-    const creditCostInDollars = totalCreditsSpent * 0.01;
+    const creditCostInDollars = totalCreditsSpent * BILLING.creditsToUsdRate;
     const costPerHourSaved = estimatedHoursSaved > 0 ? Math.round(creditCostInDollars / estimatedHoursSaved * 100) / 100 : 0;
     const automationROI = creditCostInDollars > 0 ? Math.round((estimatedLaborCostSaved - creditCostInDollars) / creditCostInDollars * 100) : 0;
 
@@ -358,20 +318,15 @@ class AdvancedUsageAnalyticsService {
   }
 
   async getRecentTransactions(workspaceId: string, limit: number = 20): Promise<CreditTransaction[]> {
-    const transactions = await db.select()
-      .from(trinityCreditTransactions)
-      .where(eq(trinityCreditTransactions.workspaceId, workspaceId))
-      .orderBy(desc(trinityCreditTransactions.createdAt))
-      .limit(limit);
-
-    return transactions.map(t => ({
+    const history = await creditManager.getTransactionHistory(workspaceId, limit);
+    return history.map(t => ({
       id: t.id,
-      type: t.transactionType,
-      credits: t.credits,
-      balanceAfter: t.balanceAfter,
-      description: t.description || '',
-      actionType: t.actionType,
-      createdAt: t.createdAt?.toISOString() || ''
+      type: (t as any).transactionType || 'deduction',
+      credits: (t as any).amount ?? 0,
+      balanceAfter: (t as any).balanceAfter ?? 0,
+      description: (t as any).description || '',
+      actionType: t.featureKey,
+      createdAt: t.createdAt?.toISOString?.() || new Date().toISOString(),
     }));
   }
 

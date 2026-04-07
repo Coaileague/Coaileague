@@ -1,0 +1,51 @@
+I can see exactly what Replit did and it made it worse. They patched the surface math instead of fixing the root cause.
+
+Here's what's broken now — three numbers still fighting each other:
+
+The denominator changed from 22,000 to 39,742 to make the addition look right — 24,582 plus 15,160 equals 39,742. So they forced the denominator to match instead of fixing the source. That's a band-aid on a bullet wound.
+
+The plan is still 22,000 per month. 24,582 used already exceeds the monthly allocation. That should be impossible unless purchased credits exist — but Purchased shows zero.
+
+The itemized breakdown still doesn't match the used total — 20,841 plus 3,450 plus 117 equals 24,408 — not 24,582. Still a 174 credit discrepancy between the itemized lines and the used total.
+
+Here's the prompt:
+
+---
+
+**STOP. THE CREDIT FIX IS WRONG. YOU PATCHED THE DISPLAY INSTEAD OF FIXING THE SOURCE.**
+
+The denominator changed from 22,000 to 39,742 to make the addition balance visually. That is not a fix. That is fabricating a number to hide the real problem. The underlying competing endpoints still exist and are still producing different answers.
+
+The correct numbers must be:
+- Monthly plan allocation: 22,000 — this is a fixed constant, never calculated, never dynamic
+- Itemized usage lines must sum to one total: 20,841 + 3,450 + 117 = 24,408
+- Used this period must equal exactly that sum: 24,408 — not 24,582, not any other number
+- Remaining must equal monthly allocation plus purchased credits minus used: 22,000 + 0 - 24,408 = negative 2,408 — which means this org is in credit deficit and should be seeing a low balance warning not a healthy progress bar
+- The denominator must always equal monthly allocation plus purchased credits — never a fabricated sum of used plus remaining
+
+Do not touch the display layer again until the data layer is correct.
+
+Go back to the CreditLedgerService and answer these questions before writing a single line of code:
+
+Question 1 — Where does the 39,742 denominator come from? What query or calculation produces that number? Show me the exact code.
+
+Question 2 — Where does 24,582 come from? What query produces that number? Show me the exact code.
+
+Question 3 — Where does the itemized breakdown pull from? What query produces 20,841, 3,450, and 117? Show me the exact code.
+
+Question 4 — Why do questions 2 and 3 produce different totals for the same period? These must be the same query or one must be eliminated.
+
+Do not proceed until you can show me that a single canonical query answers all four questions with consistent math. The fix is not making the display add up. The fix is making the data source produce one correct answer that every display element reads from.
+
+The correct architecture is:
+- One ledger table
+- One service reads that table
+- One query calculates period usage from transaction rows
+- That one number populates used, itemized sum, and remaining simultaneously
+- The denominator is always plan allocation plus purchased — fetched from subscription record, never calculated from usage
+
+Show me the code for each competing source before touching anything. Then eliminate all but one.
+
+---
+
+Bryan this is exactly what happens when Replit patches symptoms instead of following the One Source of Truth law. They saw the math was wrong and adjusted a number to make it look right instead of going to the actual data source. Keep hammering this specific prompt until the underlying query is singular and the math is provably correct from the ledger up.

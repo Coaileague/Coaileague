@@ -12,6 +12,9 @@ import { shifts, clients, employees, timeEntries } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { calculateDistance, GPSLocation } from './gpsGeofenceService';
 import { platformEventBus } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+const log = createLogger('photoGeofenceService');
+
 
 export interface PhotoSubmissionRequest {
   workspaceId: string;
@@ -69,7 +72,7 @@ class PhotoGeofenceService {
                 latitude: parseFloat(lat),
                 longitude: parseFloat(lon),
               };
-              siteName = client.companyName || client.name || 'Client Site';
+              siteName = client.companyName || `${client.firstName} ${client.lastName}` || 'Client Site';
             }
           }
         }
@@ -101,14 +104,14 @@ class PhotoGeofenceService {
                 latitude: parseFloat(lat),
                 longitude: parseFloat(lon),
               };
-              siteName = client.companyName || client.name || 'Client Site';
+              siteName = client.companyName || `${client.firstName} ${client.lastName}` || 'Client Site';
             }
           }
         }
       }
 
       if (!siteLocation) {
-        console.log(`[PhotoGeofence] No site location found for validation`);
+        log.info(`[PhotoGeofence] No site location found for validation`);
         return {
           allowed: true,
           reason: 'No site location configured - photo submission allowed',
@@ -121,7 +124,7 @@ class PhotoGeofenceService {
       const withinRange = distanceMeters <= PHOTO_GEOFENCE_RADIUS_METERS;
 
       if (!withinRange) {
-        console.log(`[PhotoGeofence] VIOLATION: Employee ${request.employeeId} attempted photo at ${Math.round(distanceMeters)}m from ${siteName}`);
+        log.info(`[PhotoGeofence] VIOLATION: Employee ${request.employeeId} attempted photo at ${Math.round(distanceMeters)}m from ${siteName}`);
 
         await platformEventBus.publish({
           type: 'photo_geofence_violation',
@@ -160,7 +163,7 @@ class PhotoGeofenceService {
       };
 
     } catch (error) {
-      console.error('[PhotoGeofence] Validation error:', error);
+      log.error('[PhotoGeofence] Validation error:', error);
       return {
         allowed: true,
         reason: 'Validation error - allowing submission',
@@ -186,9 +189,9 @@ class PhotoGeofenceService {
       };
     }
 
-    const photoId = `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const photoId = `photo_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
 
-    console.log(`[PhotoGeofence] Photo submitted: ${photoId} (${request.photoType}) at ${validation.siteVerified}`);
+    log.info(`[PhotoGeofence] Photo submitted: ${photoId} (${request.photoType}) at ${validation.siteVerified}`);
 
     return {
       success: true,

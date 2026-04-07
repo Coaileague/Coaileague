@@ -4,7 +4,7 @@ import { Clock3, CheckCircle, XCircle, CheckCheck, Ban, Loader2 } from 'lucide-r
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,10 +46,30 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
     mutationFn: async (shiftId: string) => {
       await apiRequest('PATCH', `/api/shifts/${shiftId}`, { status: 'scheduled' });
     },
+    onMutate: async (shiftId) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/shifts'] });
+      const prev = queryClient.getQueryData(['/api/shifts']);
+      queryClient.setQueryData(['/api/shifts'], (old: any) => {
+        if (!old) return old;
+        return old.map((shift: any) => 
+          shift.id === shiftId 
+            ? { ...shift, status: 'scheduled' }
+            : shift
+        );
+      });
+      return { prev };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       toast({ title: 'Shift approved' });
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.prev) queryClient.setQueryData(['/api/shifts'], context.prev);
+      toast({ 
+        title: 'Failed to approve shift',
+        variant: 'destructive'
+      });
     },
   });
 
@@ -140,14 +160,14 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0">
-          <SheetHeader className="px-4 pt-4 pb-2 border-b shrink-0">
-            <SheetTitle className="flex items-center gap-2">
+      <UniversalModal open={open} onOpenChange={onOpenChange}>
+        <UniversalModalContent side="bottom" className="h-[90vh] flex flex-col p-0 sm:max-w-3xl" showHomeButton={false}>
+          <UniversalModalHeader className="px-4 pt-4 pb-2 border-b shrink-0">
+            <UniversalModalTitle className="flex items-center gap-2">
               <Clock3 className="h-5 w-5 text-orange-600" />
               Pending Approvals ({pendingShifts.length})
-            </SheetTitle>
-          </SheetHeader>
+            </UniversalModalTitle>
+          </UniversalModalHeader>
 
           {/* Bulk Action Bar - Sticky at top */}
           {pendingShifts.length > 1 && (
@@ -212,7 +232,7 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
                       className="border rounded-lg p-4 bg-card"
                       data-testid={`approval-shift-${shift.id}`}
                     >
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start justify-between gap-2 mb-3">
                         <div className="flex-1">
                           <div className="font-semibold text-base mb-1">
                             {emp ? `${emp.firstName} ${emp.lastName}` : 'Open Shift'}
@@ -265,8 +285,8 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
               )}
             </div>
           </ScrollArea>
-        </SheetContent>
-      </Sheet>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Approve All Confirmation Dialog */}
       <AlertDialog open={showApproveAllDialog} onOpenChange={setShowApproveAllDialog}>

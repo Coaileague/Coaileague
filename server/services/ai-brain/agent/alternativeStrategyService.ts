@@ -11,6 +11,8 @@ import { trinityAgentParityLayer } from '../trinityAgentParityLayer';
 import { db } from '@/db';
 import { employees, shifts, clients } from '@shared/schema';
 import { eq, and, gte, lte, isNull, not } from 'drizzle-orm';
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('alternativeStrategyService');
 
 export interface FailedAction {
   type: string;
@@ -89,7 +91,7 @@ class AlternativeStrategyService {
       return rankedAlternatives.slice(0, 5);
 
     } catch (error) {
-      console.error('[AlternativeStrategy] Error generating alternatives:', error);
+      log.error('[AlternativeStrategy] Error generating alternatives:', error);
       return [this.createFallbackAlternative(failedAction, context)];
     }
   }
@@ -103,14 +105,14 @@ class AlternativeStrategyService {
   ): Promise<AlternativeStrategy[]> {
     const alternatives: AlternativeStrategy[] = [];
     const { parameters, error } = failedAction;
-    const workspaceId = parseInt(context.workspaceId);
+    const workspaceId = context.workspaceId;
 
     const availableEmployees = await db
       .select()
       .from(employees)
       .where(and(
         eq(employees.workspaceId, workspaceId),
-        eq(employees.status, 'active')
+        eq(employees.isActive, true)
       ))
       .limit(10);
 
@@ -360,7 +362,7 @@ class AlternativeStrategyService {
         riskLevel: 'medium'
       }];
     } catch (error) {
-      console.error('[AlternativeStrategy] AI reflection failed:', error);
+      log.error('[AlternativeStrategy] AI reflection failed:', error);
       return [];
     }
   }

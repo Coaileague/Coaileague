@@ -13,6 +13,10 @@
  */
 
 import crypto from 'crypto';
+import { BATCHES } from '../../config/platformConfig';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('auditTrailExportService');
+
 
 interface AuditEntry {
   id: string;
@@ -99,7 +103,7 @@ class AuditTrailExportService {
   
   // SOX requires 7 years, we default to that
   private retentionDays = 7 * 365;
-  private archiveThreshold = 10000; // Archive after this many entries
+  private archiveThreshold = BATCHES.auditArchiveThreshold;
   
   private archiveCheckInterval?: NodeJS.Timeout;
   
@@ -110,7 +114,7 @@ class AuditTrailExportService {
     this.startArchiveScheduler();
     
     this.initialized = true;
-    console.log('[AuditTrailExport] Service initialized with 7-year SOX retention');
+    log.info('[AuditTrailExport] Service initialized with 7-year SOX retention');
   }
   
   /**
@@ -290,7 +294,7 @@ class AuditTrailExportService {
     
     // Internal event: audit_archived
     
-    console.log(`[AuditTrailExport] Archived ${entries.length} entries`);
+    log.info(`[AuditTrailExport] Archived ${entries.length} entries`);
     
     return archive;
   }
@@ -479,7 +483,7 @@ class AuditTrailExportService {
     if (this.archiveCheckInterval) {
       clearInterval(this.archiveCheckInterval);
     }
-    console.log('[AuditTrailExport] Service shut down');
+    log.info('[AuditTrailExport] Service shut down');
   }
   
   // Private methods
@@ -526,16 +530,26 @@ class AuditTrailExportService {
   }
   
   private encryptData(data: string): string {
-    // In production, would use proper encryption
-    // For now, just base64 encode as placeholder
-    return Buffer.from(data).toString('base64');
+    const keyHex = process.env.ENCRYPTION_KEY || process.env.FIELD_ENCRYPTION_KEY || '';
+    let key: Buffer;
+    if (keyHex && keyHex.length >= 64) {
+      key = Buffer.from(keyHex.slice(0, 64), 'hex');
+    } else {
+      const fallback = 'coaileague-audit-trail-fallback-key-32b!';
+      key = Buffer.from(fallback.padEnd(32, '0').slice(0, 32));
+    }
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]);
+    const authTag = (cipher as any).getAuthTag();
+    return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
   }
   
   private startArchiveScheduler(): void {
     // Check daily if archival is needed
     this.archiveCheckInterval = setInterval(() => {
       if (this.entries.length > this.archiveThreshold) {
-        console.log(`[AuditTrailExport] ${this.entries.length} entries - archival recommended`);
+        log.info(`[AuditTrailExport] ${this.entries.length} entries - archival recommended`);
       }
     }, 24 * 60 * 60 * 1000);
   }
@@ -553,7 +567,7 @@ class AuditTrailExportService {
       e.changes && (e.changes.before || e.changes.after)
     );
     
-    if (changeEvents.length / entries.length < 0.5) {
+    if (entries.length > 0 && changeEvents.length / entries.length < 0.5) {
       findings.push({
         id: `finding-${Date.now()}-1`,
         severity: 'medium',

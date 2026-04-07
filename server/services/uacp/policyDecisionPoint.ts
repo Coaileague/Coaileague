@@ -21,6 +21,9 @@ import { eq, and, or, inArray, gte, lte, isNull, desc } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { ROLE_HIERARCHY, AI_BRAIN_AUTHORITY_ROLES, TRINITY_SERVICE_IDENTIFIERS, TRINITY_ENTITY_TYPE } from '../ai-brain/aiBrainAuthorizationService';
 import { trinityOrchestration } from '../trinity/trinityOrchestrationAdapter';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('policyDecisionPoint');
+
 
 export type EntityType = 'human' | 'bot' | 'subagent' | 'trinity' | 'service' | 'external';
 export type PolicyEffect = 'allow' | 'deny' | 'require_approval';
@@ -107,7 +110,7 @@ class PolicyDecisionPoint {
       if (this.isTrinityEntity(subject.entityId, subject.entityType)) {
         const killSwitchStatus = await this.checkTrinityKillSwitch();
         if (killSwitchStatus.active) {
-          console.log(`[PDP] KILL SWITCH ACTIVE: Trinity blocked from ${resource.resourceType}:${resource.resourceId}`);
+          log.info(`[PDP] KILL SWITCH ACTIVE: Trinity blocked from ${resource.resourceType}:${resource.resourceId}`);
           return this.createDenyDecision(
             `Trinity root access BLOCKED: Kill switch activated - ${killSwitchStatus.reason}`,
             subjectAttributes,
@@ -158,7 +161,7 @@ class PolicyDecisionPoint {
       };
 
     } catch (error) {
-      console.error('[PDP] Authorization error:', error);
+      log.error('[PDP] Authorization error:', error);
       void trinityOrchestration.rbac.checkDenied(
         subject.entityId,
         `${resource.resourceType}:${resource.resourceId}`,
@@ -233,7 +236,9 @@ class PolicyDecisionPoint {
           if (attr.attributeType === 'number') value = parseFloat(attr.attributeValue);
           else if (attr.attributeType === 'boolean') value = attr.attributeValue === 'true';
           else if (attr.attributeType === 'json' || attr.attributeType === 'array') value = JSON.parse(attr.attributeValue);
-        } catch {}
+        } catch (parseError) {
+          log.warn(`[PolicyDecisionPoint] Failed to parse attribute ${attr.attributeName}:`, parseError);
+        }
         
         attributes[attr.attributeName] = value;
       }
@@ -266,7 +271,7 @@ class PolicyDecisionPoint {
       return attributes;
 
     } catch (error) {
-      console.error('[PDP] Failed to gather attributes:', error);
+      log.error('[PDP] Failed to gather attributes:', error);
       return attributes;
     }
   }
@@ -306,7 +311,7 @@ class PolicyDecisionPoint {
       return { active: true, status: 'active' };
 
     } catch (error) {
-      console.error('[PDP] Agent status check failed:', error);
+      log.error('[PDP] Agent status check failed:', error);
       return { active: false, status: 'error', reason: 'Failed to verify agent status' };
     }
   }
@@ -340,7 +345,7 @@ class PolicyDecisionPoint {
     // TRINITY ROOT BYPASS: Trinity AI has full platform control
     // Note: Kill switch is checked asynchronously at the authorize level
     if (this.isTrinityEntity(subject.entityId, subject.entityType)) {
-      console.log(`[PDP] Trinity root bypass for ${resource.resourceType}:${resource.resourceId}`);
+      log.info(`[PDP] Trinity root bypass for ${resource.resourceType}:${resource.resourceId}`);
       return { allowed: true, reason: 'Trinity root authority - full platform control' };
     }
 
@@ -376,6 +381,9 @@ class PolicyDecisionPoint {
     resource: AccessResource,
     context: AccessContext
   ): Promise<any[]> {
+    if (!subject.workspaceId) {
+      log.warn('[UACP] evaluateAccess called without subject.workspaceId — returning only global policies');
+    }
     const cacheKey = `policies:${resource.resourceType}:${resource.resourceId}:${subject.workspaceId || 'global'}`;
     const cached = this.policyCache.get(cacheKey);
     
@@ -385,14 +393,14 @@ class PolicyDecisionPoint {
 
     try {
       const now = new Date();
+      const wsConditions = subject.workspaceId
+        ? or(eq(accessPolicies.isGlobal, true), eq(accessPolicies.workspaceId, subject.workspaceId))
+        : eq(accessPolicies.isGlobal, true);
       const policies = await db.select()
         .from(accessPolicies)
         .where(and(
           eq(accessPolicies.isActive, true),
-          or(
-            eq(accessPolicies.isGlobal, true),
-            eq(accessPolicies.workspaceId, subject.workspaceId || '')
-          ),
+          wsConditions,
           eq(accessPolicies.resourceType, resource.resourceType),
           or(
             isNull(accessPolicies.validUntil),
@@ -405,7 +413,7 @@ class PolicyDecisionPoint {
       return policies;
 
     } catch (error) {
-      console.error('[PDP] Failed to load policies:', error);
+      log.error('[PDP] Failed to load policies:', error);
       return [];
     }
   }
@@ -619,7 +627,7 @@ class PolicyDecisionPoint {
 
       return log.id;
     } catch (error) {
-      console.warn('[PDP] Failed to log access decision:', error);
+      log.warn('[PDP] Failed to log access decision:', error);
       return '';
     }
   }
@@ -665,14 +673,17 @@ class PolicyDecisionPoint {
       status = agentStatus.status;
     }
 
+    if (!workspaceId) {
+      log.warn('[UACP] getEffectivePermissions called without workspaceId — returning only global policies');
+    }
+    const wsConditions = workspaceId
+      ? or(eq(accessPolicies.isGlobal, true), eq(accessPolicies.workspaceId, workspaceId))
+      : eq(accessPolicies.isGlobal, true);
     const policies = await db.select()
       .from(accessPolicies)
       .where(and(
         eq(accessPolicies.isActive, true),
-        or(
-          eq(accessPolicies.isGlobal, true),
-          eq(accessPolicies.workspaceId, workspaceId || '')
-        )
+        wsConditions
       ));
 
     return {
@@ -699,7 +710,7 @@ class PolicyDecisionPoint {
         isGlobal: true,
         effect: 'allow' as const,
         priority: 50,
-        subjectConditions: { role: ['owner', 'admin'], entityType: 'human' },
+        subjectConditions: { role: ['org_owner', 'co_owner', 'org_admin'], entityType: 'human' },
         resourceType: 'domain',
         resourcePattern: 'integrations:*',
         contextConditions: { hasWorkspaceContext: true },
@@ -725,7 +736,7 @@ class PolicyDecisionPoint {
         isGlobal: true,
         effect: 'require_approval' as const,
         priority: 45,
-        subjectConditions: { role: ['owner', 'admin'], entityType: 'human' },
+        subjectConditions: { role: ['org_owner', 'co_owner', 'org_admin'], entityType: 'human' },
         resourceType: 'domain',
         resourcePattern: 'data_migration:*',
         contextConditions: { hasWorkspaceContext: true, transactionRisk: 'medium' },
@@ -738,7 +749,7 @@ class PolicyDecisionPoint {
         isGlobal: true,
         effect: 'allow' as const,
         priority: 50,
-        subjectConditions: { role: ['owner', 'admin'], entityType: 'human' },
+        subjectConditions: { role: ['org_owner', 'co_owner', 'org_admin'], entityType: 'human' },
         resourceType: 'action',
         resourcePattern: 'quickbooks.oauth',
         contextConditions: { hasWorkspaceContext: true },
@@ -751,7 +762,7 @@ class PolicyDecisionPoint {
         isGlobal: true,
         effect: 'allow' as const,
         priority: 50,
-        subjectConditions: { role: ['manager', 'owner', 'admin'], entityType: 'human' },
+        subjectConditions: { role: ['manager', 'org_manager', 'org_owner', 'co_owner', 'org_admin'], entityType: 'human' },
         resourceType: 'domain',
         resourcePattern: 'automation:*',
         contextConditions: { hasWorkspaceContext: true },
@@ -773,7 +784,7 @@ class PolicyDecisionPoint {
       },
       {
         name: 'Trinity Integration Access',
-        description: 'Trinity AI has full access to integration and automation domains',
+        description: 'I have full access to integration and automation domains',
         isGlobal: true,
         effect: 'allow' as const,
         priority: 10,
@@ -816,11 +827,11 @@ class PolicyDecisionPoint {
         });
         created++;
       } catch (error) {
-        console.warn(`[PDP] Failed to seed policy ${policy.name}:`, error);
+        log.warn(`[PDP] Failed to seed policy ${policy.name}:`, error);
       }
     }
 
-    console.log(`[PDP] Seeded ${created} policies, skipped ${skipped} existing`);
+    log.info(`[PDP] Seeded ${created} policies, skipped ${skipped} existing`);
     return { created, skipped };
   }
 }

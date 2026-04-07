@@ -1,0 +1,62 @@
+Here's the exact prompt to paste into Replit right now:
+
+---
+
+**CRITICAL MONEY BUG — CREDIT LEDGER COMPETING ENDPOINTS — FIX NOW BEFORE ANY OTHER TASK**
+
+This is a revenue integrity issue. The credits widget is showing mathematically impossible numbers because two different endpoints are computing creditsUsedThisPeriod independently and producing different answers. This is a Single Source of Truth violation and it is causing the platform to display incorrect financial data to paying customers.
+
+**THE EXACT BUG:**
+The credits widget shows balance 15,160 / 22,000 but also shows 24,582 used this month. That math is impossible. 22,000 minus 24,582 equals negative 6,582 — not positive 15,160. Two competing endpoints are answering the same question differently and both are wrong relative to each other.
+
+**WHAT YOU MUST DO:**
+
+Step 1 — READ FIRST. Find every endpoint, query, function, and service that calculates or returns any of these values:
+- creditsUsedThisPeriod
+- creditsRemaining
+- currentBalance
+- creditSummary
+- Any variation of credit totals or usage calculations
+
+List every single one before touching anything. Show me the file name, function name, and what calculation it performs.
+
+Step 2 — IDENTIFY THE CANONICAL SOURCE. The credit ledger table is the single source of truth. Every credit calculation must derive from a single query against the ledger table. Identify which existing calculation is correct and closest to the ledger truth.
+
+Step 3 — ELIMINATE ALL COMPETING CALCULATIONS. Delete or deprecate every secondary endpoint or function that independently calculates credit values. There must be exactly one function in exactly one service file that calculates all credit values — balance, used, remaining, itemized breakdown — from a single ledger query.
+
+Step 4 — THE ONE CREDIT SERVICE RULE. Create or designate one canonical CreditLedgerService with these single authoritative methods:
+- getCurrentBalance(orgId, workspaceId) — reads from ledger, calculates remaining
+- getUsedThisPeriod(orgId, workspaceId, periodStart, periodEnd) — reads from ledger transactions
+- getItemizedUsage(orgId, workspaceId, periodStart, periodEnd) — reads from ledger, returns breakdown by action type
+- getPeriodAllocation(orgId, workspaceId) — returns what the org was allocated this period
+
+Every component, every widget, every endpoint that needs credit data calls this one service. Nothing else. No component queries the credit tables directly. No other service calculates balance independently.
+
+Step 5 — VERIFY THE MATH IS NOW CONSISTENT. After consolidation run this verification:
+- getCurrentBalance must equal periodAllocation minus getUsedThisPeriod plus any purchased credits carried forward
+- getItemizedUsage line items must sum to exactly getUsedThisPeriod total — zero discrepancy
+- Header balance display must equal getCurrentBalance exactly
+- Progress bar percentage must equal getCurrentBalance divided by periodAllocation exactly
+- If any of these checks fail the consolidation is not complete — keep fixing until all four are mathematically consistent
+
+Step 6 — ADD A LEDGER INTEGRITY CHECK. Add a server side validation function that runs on every credit widget load and logs an error if summary total does not match itemized total. This turns a silent money bug into a visible alert that gets caught immediately going forward.
+
+Step 7 — ADD THIS TO THE UNIVERSAL ARCHITECTURE STANDARD. Document CreditLedgerService as the canonical credit source in the platform architecture notes. Any future feature that needs credit data must consume from this service only. This is enforced permanently — no exceptions.
+
+**WHY THIS MATTERS:**
+If the platform shows an org they have 15,160 credits when they actually have negative credits — or vice versa — CoAIleague either lets orgs use features they haven't paid for or blocks orgs who have paid and still have balance. Both scenarios are revenue loss and trust destruction. This is not a display bug. This is a financial integrity bug.
+
+Fix this completely before resuming any other task. Show me the before and after numbers from the ledger after the fix is applied.
+
+---
+
+Then Bryan add this permanently to the master prompt under Phase 14 as a standing rule:
+
+---
+
+**CREDIT LEDGER SINGLE SERVICE ENFORCEMENT — PERMANENT RULE:**
+One canonical CreditLedgerService owns all credit calculations. No component, widget, or secondary service calculates credit values independently. Every credit display on the platform derives from this single service reading from the single ledger table. Any deviation from this rule is a financial integrity violation and must be treated as a critical bug regardless of how minor it appears visually.
+
+---
+
+That's the architectural firewall that prevents this class of bug from ever surfacing again.

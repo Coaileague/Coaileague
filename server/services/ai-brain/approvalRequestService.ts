@@ -1,6 +1,11 @@
 import { db } from "../../db";
-import { aiApprovalRequests, aiWorkboardTasks, users } from "@shared/schema";
+import {
+  aiApprovalRequests,
+  users
+} from '@shared/schema';
 import { eq, and, sql, desc, or, inArray, lt } from "drizzle-orm";
+import { createLogger } from '../../lib/logger';
+const log = createLogger('approvalRequestService');
 
 export type ApprovalDecision = 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled';
 export type SourceSystem = 'ai_brain' | 'trinity' | 'subagent';
@@ -32,6 +37,7 @@ class ApprovalRequestService {
   async createApprovalRequest(request: CreateApprovalRequest): Promise<string> {
     const [approval] = await db.insert(aiApprovalRequests).values({
       workspaceId: request.workspaceId,
+      approvalKind: request.requestType || 'ai_request',
       requesterId: request.requesterId,
       sourceTaskId: request.sourceTaskId,
       sourceSystem: request.sourceSystem,
@@ -39,18 +45,18 @@ class ApprovalRequestService {
       requestType: request.requestType,
       title: request.title,
       description: request.description,
-      requestPayload: request.requestPayload || {},
+      payload: request.requestPayload || {},
       priority: request.priority || 'normal',
       expiresAt: request.expiresAt,
       estimatedTokens: request.estimatedTokens || 0,
       statusHistory: [{
-        decision: 'pending',
+        status: 'pending',
         timestamp: new Date().toISOString(),
         actor: 'system',
       }],
     }).returning({ id: aiApprovalRequests.id });
 
-    console.log('[ApprovalRequestService] Created approval request:', approval.id);
+    log.info('[ApprovalRequestService] Created approval request:', approval.id);
 
     if (request.sourceTaskId) {
       await db.update(aiWorkboardTasks)
@@ -80,7 +86,7 @@ class ApprovalRequestService {
     const conditions: any[] = [eq(aiApprovalRequests.workspaceId, workspaceId)];
 
     if (decision && decision.length > 0) {
-      conditions.push(inArray(aiApprovalRequests.decision, decision));
+      conditions.push(inArray(aiApprovalRequests.status, decision as any));
     }
 
     if (scope === 'employee') {
@@ -98,15 +104,15 @@ class ApprovalRequestService {
       requestType: aiApprovalRequests.requestType,
       title: aiApprovalRequests.title,
       description: aiApprovalRequests.description,
-      requestPayload: aiApprovalRequests.requestPayload,
-      decision: aiApprovalRequests.decision,
-      decisionAt: aiApprovalRequests.decisionAt,
-      decisionNote: aiApprovalRequests.decisionNote,
+      requestPayload: aiApprovalRequests.payload,
+      decision: aiApprovalRequests.status,
+      decisionAt: sql<Date>`COALESCE(${aiApprovalRequests.approvedAt}, ${aiApprovalRequests.rejectedAt})`,
+      decisionNote: sql<string>`CASE WHEN ${aiApprovalRequests.status} = 'approved' THEN ${aiApprovalRequests.approvalNotes} ELSE ${aiApprovalRequests.rejectionReason} END`,
       priority: aiApprovalRequests.priority,
       expiresAt: aiApprovalRequests.expiresAt,
       estimatedTokens: aiApprovalRequests.estimatedTokens,
       createdAt: aiApprovalRequests.createdAt,
-      requesterName: users.displayName,
+      requesterName: users.firstName,
     })
     .from(aiApprovalRequests)
     .leftJoin(users, eq(aiApprovalRequests.requesterId, users.id))
@@ -121,7 +127,7 @@ class ApprovalRequestService {
   async getPendingCount(userId: string, workspaceId: string, scope: 'admin' | 'manager' | 'employee' = 'employee'): Promise<number> {
     const conditions: any[] = [
       eq(aiApprovalRequests.workspaceId, workspaceId),
-      eq(aiApprovalRequests.decision, 'pending')
+      eq(aiApprovalRequests.status, 'pending')
     ];
 
     if (scope === 'employee') {
@@ -146,28 +152,38 @@ class ApprovalRequestService {
       .where(eq(aiApprovalRequests.id, approvalId))
       .limit(1);
 
-    if (!approval || approval.decision !== 'pending') {
-      console.log('[ApprovalRequestService] Cannot resolve - not pending:', approvalId, approval?.decision);
+    if (!approval || approval.status !== 'pending') {
+      log.info('[ApprovalRequestService] Cannot resolve - not pending:', approvalId, approval?.status);
       return false;
     }
 
+    const now = new Date();
+    const updateFields: any = {
+      status: decision,
+      approverId,
+      statusHistory: sql`${aiApprovalRequests.statusHistory} || ${JSON.stringify([{
+        status: decision,
+        timestamp: now.toISOString(),
+        actor: approverId,
+        note: note || null,
+      }])}::jsonb`,
+      updatedAt: now,
+    };
+    if (decision === 'approved') {
+      updateFields.approvedBy = approverId;
+      updateFields.approvedAt = now;
+      updateFields.approvalNotes = note;
+    } else {
+      updateFields.rejectedBy = approverId;
+      updateFields.rejectedAt = now;
+      updateFields.rejectionReason = note;
+    }
+
     await db.update(aiApprovalRequests)
-      .set({
-        decision,
-        approverId,
-        decisionAt: new Date(),
-        decisionNote: note,
-        statusHistory: sql`${aiApprovalRequests.statusHistory} || ${JSON.stringify([{
-          decision,
-          timestamp: new Date().toISOString(),
-          actor: approverId,
-          note: note || null,
-        }])}::jsonb`,
-        updatedAt: new Date(),
-      })
+      .set(updateFields)
       .where(eq(aiApprovalRequests.id, approvalId));
 
-    console.log('[ApprovalRequestService] Approval resolved:', approvalId, decision);
+    log.info('[ApprovalRequestService] Approval resolved:', approvalId, decision);
 
     if (approval.sourceTaskId) {
       const newStatus = decision === 'approved' ? 'pending' : 'cancelled';
@@ -187,7 +203,7 @@ class ApprovalRequestService {
         })
         .where(eq(aiWorkboardTasks.id, approval.sourceTaskId));
 
-      console.log('[ApprovalRequestService] Updated source task status:', approval.sourceTaskId, newStatus);
+      log.info('[ApprovalRequestService] Updated source task status:', approval.sourceTaskId, newStatus);
     }
 
     return true;
@@ -197,22 +213,22 @@ class ApprovalRequestService {
     const now = new Date();
     const expired = await db.update(aiApprovalRequests)
       .set({
-        decision: 'expired',
+        status: 'expired',
         statusHistory: sql`${aiApprovalRequests.statusHistory} || ${JSON.stringify([{
-          decision: 'expired',
+          status: 'expired',
           timestamp: now.toISOString(),
           actor: 'system',
         }])}::jsonb`,
         updatedAt: now,
       })
       .where(and(
-        eq(aiApprovalRequests.decision, 'pending'),
+        eq(aiApprovalRequests.status, 'pending'),
         lt(aiApprovalRequests.expiresAt, now)
       ))
       .returning({ id: aiApprovalRequests.id });
 
     if (expired.length > 0) {
-      console.log('[ApprovalRequestService] Expired approvals:', expired.length);
+      log.info('[ApprovalRequestService] Expired approvals:', expired.length);
     }
 
     return expired.length;
@@ -232,16 +248,16 @@ class ApprovalRequestService {
       .where(eq(aiApprovalRequests.id, approvalId))
       .limit(1);
 
-    if (!approval || approval.decision !== 'pending') {
+    if (!approval || approval.status !== 'pending') {
       return false;
     }
 
     await db.update(aiApprovalRequests)
       .set({
-        decision: 'cancelled',
-        decisionNote: reason || 'Cancelled by user',
+        status: 'cancelled',
+        rejectionReason: reason || 'Cancelled by user',
         statusHistory: sql`${aiApprovalRequests.statusHistory} || ${JSON.stringify([{
-          decision: 'cancelled',
+          status: 'cancelled',
           timestamp: new Date().toISOString(),
           actor: userId,
           note: reason || 'Cancelled by user',

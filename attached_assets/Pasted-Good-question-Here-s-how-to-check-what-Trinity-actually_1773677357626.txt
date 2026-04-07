@@ -1,0 +1,78 @@
+Good question. Here's how to check what Trinity actually has wired in for reasoning and common sense, and what's missing. Paste this into Replit:
+
+---
+
+**TRINITY REASONING & COMMON SENSE AUDIT — READ ONLY | REPORT ONLY**
+
+Answer every question below with PASS, FAIL, or PARTIAL and one sentence explaining why. Check actual code not intentions.
+
+---
+
+**SECTION 1 — PREMISE VALIDATION**
+- Does Trinity validate the premise of a request before acting on it — for example if an org owner says "pay this employee $0" does Trinity flag it as likely wrong rather than processing it?
+- Does Trinity check if an instruction contradicts known data before executing — for example if asked to schedule an officer for a shift when Trinity's own records show that officer is terminated?
+- Does Trinity have any sycophancy guard — any logic that prevents it from agreeing with and executing instructions that conflict with established facts in the system?
+- When Trinity receives a request that has an obvious simpler solution, does she surface the simpler path or just execute what was asked?
+
+---
+
+**SECTION 2 — CONTEXTUAL REASONING**
+- Does Trinity's prompt engineering include chain-of-thought instructions — telling the model to reason step by step before taking action rather than jumping straight to execution?
+- Does Trinity's system prompt include instructions to question assumptions and validate inputs before acting?
+- Does Trinity have access to org history when making decisions — previous payroll amounts, typical shift patterns, historical invoice amounts — so anomalies stand out?
+- When Trinity detects something that doesn't match historical patterns, does she pause and flag it rather than silently proceeding?
+
+---
+
+**SECTION 3 — CONFIDENCE & UNCERTAINTY**
+- Does Trinity express uncertainty when she doesn't have enough information rather than guessing and acting?
+- Does Trinity have a confidence threshold below which she escalates to a human rather than acting autonomously?
+- Is there a Triad Justice system — where low-confidence decisions get routed to a secondary AI model for validation before execution?
+- Does Trinity distinguish between high-stakes actions (sending money, modifying payroll, canceling shifts) and low-stakes actions (generating a report, sending a notification) and apply different confidence thresholds to each?
+
+---
+
+**SECTION 4 — CONTRADICTION DETECTION**
+- If an org owner gives Trinity two conflicting instructions in the same session, does Trinity flag the contradiction rather than executing the most recent one silently?
+- Does Trinity cross-reference instructions against org settings — for example if billing settings say weekly invoicing but a manual trigger requests monthly, does Trinity flag the conflict?
+- Does Trinity validate that financial amounts are within reasonable bounds before processing — flagging a $50,000 invoice for a single shift as likely wrong?
+
+---
+
+**SECTION 5 — PHYSICAL & OPERATIONAL COMMON SENSE**
+- Does Trinity know that a shift cannot be assigned to an officer who is already assigned to an overlapping shift — and enforce this without being told each time?
+- Does Trinity know that payroll cannot run if no hours are approved — and surface this proactively rather than generating a $0 payroll run?
+- Does Trinity know that an invoice cannot be sent to a client with no email address on file — and flag the missing data before attempting to send?
+- Does Trinity know that scheduling 1 officer for a site that requires 3 is a coverage gap — and proactively flag it rather than marking the schedule as complete?
+
+---
+
+**SECTION 6 — LEARNING & ADAPTATION**
+- Does Trinity learn from corrections — if an org owner overrides a Trinity decision, is that override recorded and factored into future decisions?
+- Does Trinity track her own accuracy — how often her autonomous actions required human correction?
+- Does Trinity adapt to org-specific patterns over time — learning that a specific client always needs 3 officers on weekends even if the default is 2?
+
+---
+
+**OUTPUT FORMAT**
+
+PASS, FAIL, or PARTIAL with one sentence per question.
+
+At the bottom produce:
+
+**What Trinity reasons about correctly today**
+
+**What Trinity acts on blindly without reasoning**
+
+**What Trinity needs to have reasoning added**
+
+Then give a single score:
+```
+REASONING READINESS: X/Y passing
+```
+
+Stop and wait. Do not fix anything.
+
+---
+
+Paste the results back here and I'll tell you exactly which reasoning gaps matter most for autonomous payroll and billing decisions — because those are the ones where blind execution without common sense costs real money.

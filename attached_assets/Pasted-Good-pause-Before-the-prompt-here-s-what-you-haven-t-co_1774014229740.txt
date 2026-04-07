@@ -1,0 +1,1390 @@
+Good pause. Before the prompt — here's what you haven't covered that would hurt a first tenant in production:
+
+---
+
+**Security Gaps That Will Be Exploited**
+
+Stripe webhook signature verification — if not implemented, anyone can POST a fake payment confirmation to your webhook endpoint and get a free subscription. This is one of the most commonly exploited startup vulnerabilities.
+
+Environment variable audit — before launch, the entire codebase needs a scan confirming zero hardcoded API keys, secrets, database URLs, or credentials anywhere in source code. One committed secret in a repo means immediate key rotation and potential breach.
+
+CORS configuration — if currently set to wildcard `*` during development it needs to be locked to specific allowed origins before any real tenant touches the platform.
+
+Content Security Policy headers — prevents cross-site scripting attacks on the platform UI. Not optional once real financial data is flowing.
+
+File upload validation server-side — client-side file type checking is cosmetic. Without server-side validation of file type, size, and content, the document safe and image upload endpoints are open to malicious file injection.
+
+---
+
+**Data Integrity Issues**
+
+Concurrent session clock handling — what happens when an officer is logged in on their phone and their tablet simultaneously and clocks in on both? Without a concurrency lock on clock actions you get duplicate clock records that corrupt payroll.
+
+Audit trail — for a security company handling incidents, use of force documentation, and payroll, every significant data mutation needs a who-changed-what-when log. This is a regulatory requirement and a liability protection tool. Without it you cannot prove what happened in a dispute.
+
+Database backup verification — not just that backups are configured, but that a restore has been tested. A backup that has never been restored is a false sense of security.
+
+---
+
+**Performance Problems At Scale**
+
+Pagination on every list — roster, incident list, applicant pool, invoice list, document safe, schedule view. If any of these load all records at once, the first org with 50+ officers will experience UI freezes. Every list needs cursor-based pagination before launch.
+
+N+1 query audit — when rendering a list of officers with their current shift status, license status, and supervisor assignment, if the code is making one database query per officer instead of a single joined query, 50 officers means 150+ database calls per page load. This needs to be found and fixed before it hits production.
+
+Real-time connection reconnect handling — ChatDock likely uses WebSockets. When a field officer loses signal for 30 seconds and reconnects, does the session properly re-sync missed messages? Does HelpAI conversation context survive the reconnect? If not, officers lose conversation context mid-incident.
+
+---
+
+**Regulatory and Compliance Gaps**
+
+Data export function — regulatory authorities, attorneys, and auditors will request data exports. There needs to be a structured export function for incident reports, payroll records, clock records, and personnel files in a format that doesn't require platform access to read.
+
+Data retention policy — how long are records kept before purge? Texas security industry has specific retention requirements for incident reports and employment records. This needs to be configured, not left to default.
+
+Right to deletion workflow — when an employee is terminated and requests data deletion, what happens? There needs to be a defined workflow that handles this correctly without breaking referential integrity in the database.
+
+---
+
+**Mobile and Compatibility**
+
+Safari iOS compatibility — the majority of field officers will use iPhone. Safari has historically different behavior from Chrome on inputs, date pickers, file uploads, and WebSockets. Every critical flow needs to be tested on Safari iOS specifically, not just Chrome mobile.
+
+PWA manifest — officers should be able to add CoAIleague to their home screen and launch it like an app. A proper PWA manifest with icons, splash screen, and offline capability for cached data makes the field experience significantly better and reduces friction for officers who resist installing apps.
+
+Print CSS — every document, paycheck, and invoice that gets printed needs a print stylesheet that removes navigation, sidebars, and UI chrome and renders clean professional output. Without print CSS, printing an invoice produces a screenshot of the web UI.
+
+---
+
+**UX Gaps**
+
+Deep linking — every shift, incident, document, applicant, and invoice needs a stable direct URL. When a manager shares "look at this incident report" in a message, the link needs to take the recipient directly to that record, not to the dashboard. Without deep links, the platform feels like it can't be shared or referenced.
+
+Notification preferences — org owners and managers need control over which notifications they receive and how. An org owner who gets 47 Trinity notifications on day one will turn them all off. Granular notification preferences prevent notification fatigue from killing adoption of the most valuable features.
+
+Loading states on all async operations — not just AI status. Every button that triggers a database operation needs a loading state so users don't double-tap and create duplicate records.
+
+---
+
+**One More Thing On White Label**
+
+Trinity needs a name override in white label mode. If an org is fully white labeled, "Trinity" as a brand name may also need to be replaceable with a custom AI assistant name the org chooses. Not required for launch but worth flagging now before it becomes a refactor.
+
+---
+
+Now the prompt:
+
+---
+
+```
+COAILEAGUE — COMPREHENSIVE PRE-LAUNCH AUDIT
+Production Hardening, Unification, Security,
+Performance, Compliance, and Multi-Pass Bug Sweep
+
+This is a full platform audit prompt. 
+Read every instruction completely before 
+executing anything. This audit runs in 
+phases. Each phase must complete fully 
+before the next begins. All findings are 
+documented in a running audit report that 
+is updated after each phase. Nothing is 
+skipped. Nothing is marked complete 
+without verification.
+
+═══════════════════════════════════════════════════════════════
+PHASE 0 — FULL CODEBASE MAP
+Build complete inventory before touching anything
+═══════════════════════════════════════════════════════════════
+
+Produce a complete inventory of the codebase:
+
+FILES AND STRUCTURE:
+□ List every file in the project by directory
+□ Identify every route file — API routes 
+  and page routes
+□ Identify every component file
+□ Identify every database schema file
+□ Identify every service or library file
+□ Identify every configuration file
+□ Identify every environment variable 
+  reference in codebase
+□ Identify every third-party integration file
+□ Identify every bot implementation file
+  (Trinity, HelpAI, ReportBot, ClockBot, 
+  MeetingBot)
+□ Identify every webhook handler
+□ Identify every event emitter and listener
+□ Identify every scheduled job or cron task
+□ Identify every middleware file
+
+INTEGRATIONS INVENTORY:
+□ Stripe — all files that reference Stripe
+□ Plaid — all files that reference Plaid
+□ Resend — all files that reference Resend
+□ GPT API — all call sites
+□ Claude API — all call sites
+□ Gemini API — all call sites
+□ ClockBot interface — all call sites
+□ ReportBot interface — all call sites
+□ MeetingBot interface — all call sites
+□ Any other external API — list all
+
+Output complete inventory document 
+before proceeding to Phase 1.
+This inventory is referenced throughout 
+all subsequent phases.
+
+═══════════════════════════════════════════════════════════════
+PHASE 1 — SECURITY AUDIT
+═══════════════════════════════════════════════════════════════
+
+1A — ENVIRONMENT AND SECRETS
+□ Scan entire codebase for hardcoded 
+  API keys, secrets, passwords, 
+  database URLs, tokens
+□ Verify every secret is loaded from 
+  environment variables only
+□ Verify .env files are in .gitignore
+□ Verify no secrets appear in 
+  any log output
+□ Verify no secrets are exposed 
+  in any client-side bundle
+□ Report every instance found — 
+  fix immediately before proceeding
+
+1B — STRIPE WEBHOOK SECURITY
+□ Locate Stripe webhook handler
+□ Verify webhook signature verification 
+  is implemented using Stripe's 
+  constructEvent method with 
+  webhook secret
+□ Verify raw request body is used 
+  for signature verification 
+  (not parsed body)
+□ Verify webhook handler returns 
+  correct HTTP status codes
+□ Verify each webhook event type 
+  has a handler
+□ Verify unhandled event types 
+  are acknowledged not ignored
+□ If signature verification is missing — 
+  implement immediately
+
+1C — CORS CONFIGURATION
+□ Locate CORS configuration
+□ Verify no wildcard * origin in production
+□ Verify allowed origins are explicitly 
+  listed and correct
+□ Verify credentials handling is correct
+□ Fix any wildcard configurations
+
+1D — CONTENT SECURITY POLICY
+□ Check for CSP headers on all responses
+□ If missing — implement CSP headers:
+  - default-src 'self'
+  - script-src appropriately scoped
+  - style-src appropriately scoped
+  - img-src includes CDN domains
+  - connect-src includes all API domains
+  - Strict CSP that does not use unsafe-inline 
+    where avoidable
+
+1E — FILE UPLOAD SECURITY
+□ Locate every file upload endpoint
+□ Verify server-side file type validation 
+  (not client-side only)
+□ Verify file size limits enforced 
+  server-side
+□ Verify uploaded files are not 
+  executable from their storage location
+□ Verify uploaded file names are 
+  sanitized before storage
+□ Verify upload endpoints require 
+  authentication
+□ Implement any missing validations
+
+1F — API ENDPOINT AUTHENTICATION
+□ List every API endpoint
+□ Verify every endpoint that should 
+  require authentication has auth 
+  middleware applied
+□ Verify every endpoint that accesses 
+  workspace data validates workspace_id 
+  server-side against the authenticated 
+  user's workspace
+□ Verify no endpoint trusts workspace_id 
+  from request body or params without 
+  server-side validation
+□ Identify and fix any unprotected endpoints
+
+1G — CONCURRENT SESSION INTEGRITY
+□ Locate clock-in and clock-out handlers
+□ Implement database-level lock or 
+  atomic operation on clock actions 
+  to prevent duplicate records from 
+  concurrent sessions
+□ Verify idempotency keys on all 
+  financial operations (Stripe charges, 
+  payroll mutations)
+
+1H — RATE LIMITING
+□ Verify rate limiting exists on:
+  - All AI API call endpoints
+  - All authentication endpoints
+  - Public job board form submission
+  - All webhook endpoints
+  - All file upload endpoints
+□ Implement rate limiting where missing
+□ Configure limits: auth endpoints 
+  5 attempts per minute per IP, 
+  AI endpoints 60 per minute per user, 
+  public form 3 per minute per IP
+
+1I — BOT PROTECTION ON PUBLIC PAGES
+□ Locate public job board form handler
+□ Implement honeypot field 
+  (hidden field that real users 
+  never fill, bots always do)
+□ Implement server-side rate limiting 
+  on form submissions per IP
+□ Implement CAPTCHA or equivalent 
+  on application submission
+
+═══════════════════════════════════════════════════════════════
+PHASE 2 — DATABASE AND SCHEMA AUDIT
+═══════════════════════════════════════════════════════════════
+
+2A — SCHEMA INTEGRITY
+□ Read complete Drizzle schema
+□ Verify every table has created_at 
+  and updated_at timestamps
+□ Verify every table that references 
+  a workspace has workspace_id 
+  with foreign key and index
+□ Verify every foreign key has 
+  a corresponding index
+□ Identify any columns that should 
+  be NOT NULL but are nullable
+□ Identify any missing unique constraints
+□ Identify any tables without primary key
+□ Verify enum types are consistent 
+  across all tables using same concept
+□ Report all findings — fix all gaps
+
+2B — QUERY AUDIT — N+1 DETECTION
+□ Scan every list view query:
+  - Officer roster
+  - Schedule view
+  - Incident list
+  - Applicant pool
+  - Invoice list
+  - Document safe list
+  - Payroll records
+  - Agent task list
+  - HelpAI conversation list
+□ For each list query verify it uses 
+  a single joined query not 
+  sequential per-row queries
+□ Fix every N+1 pattern found
+
+2C — PAGINATION AUDIT
+□ Verify every list endpoint supports 
+  cursor-based or offset pagination
+□ Verify no endpoint returns 
+  unbounded result sets
+□ Verify pagination parameters are 
+  validated (max page size enforced)
+□ Implement pagination on any endpoint 
+  that is missing it
+□ Default page size: 25 records
+□ Maximum page size: 100 records
+
+2D — INDEX PERFORMANCE AUDIT
+□ Review query patterns for 
+  all frequently-accessed tables
+□ Verify indexes exist for all 
+  columns used in WHERE clauses 
+  on high-traffic queries
+□ Verify composite indexes where 
+  queries filter on multiple columns
+□ Add missing indexes
+
+2E — DATA ISOLATION PENETRATION TEST
+□ For every workspace-scoped endpoint:
+  Attempt to access with a valid auth 
+  token from Workspace A while 
+  requesting data from Workspace B
+□ Verify server rejects with 403 
+  not 200 or 404
+□ Fix any endpoint that does not 
+  correctly isolate workspace data
+□ Document every endpoint tested 
+  and result
+
+2F — AUDIT TRAIL IMPLEMENTATION
+□ Identify all significant mutations:
+  - Employee record changes
+  - Schedule changes
+  - Incident report filing and edits
+  - Payroll processing
+  - Invoice generation
+  - Document filing
+  - Role and permission changes
+  - User status changes (hire/terminate)
+  - Clock record modifications
+□ Verify audit log exists for each
+□ If audit_log table does not exist — create:
+  Table: audit_log
+  - id, workspace_id, performed_by, 
+    action_type, entity_type, entity_id,
+    before_state (jsonb), after_state (jsonb),
+    ip_address, performed_at
+□ Wire audit log writes to all 
+  significant mutation handlers
+
+2G — DATA RETENTION CONFIGURATION
+□ Create configurable retention policy 
+  per record type:
+  - Incident reports: 7 years
+  - Payroll records: 7 years  
+  - Clock records: 3 years
+  - Document safe: configurable per org
+  - Chat history: 1 year default
+  - Audit log: 7 years
+□ Implement soft-delete pattern 
+  on all sensitive records 
+  (deleted_at timestamp, not hard delete)
+□ Create scheduled job that marks 
+  records for archival when retention 
+  period is exceeded
+
+═══════════════════════════════════════════════════════════════
+PHASE 3 — DUPLICATE AND CONFLICT AUDIT
+═══════════════════════════════════════════════════════════════
+
+3A — DUPLICATE CODE DETECTION
+□ Scan for duplicate function names 
+  across all service files
+□ Scan for duplicate route definitions
+□ Scan for duplicate component names
+□ Scan for duplicate database query 
+  patterns that should be abstracted 
+  into a shared query function
+□ Scan for duplicate email sending code 
+  outside the Resend integration layer
+□ Scan for duplicate notification 
+  triggering code outside the 
+  notification service
+□ Scan for duplicate AI API call code 
+  outside Trinity's orchestration layer
+□ For every duplicate found:
+  - Keep the canonical version 
+    (the one in the correct service layer)
+  - Remove all others
+  - Update all call sites to use 
+    the canonical version
+
+3B — ROUTE CONFLICT AUDIT
+□ List every API route with 
+  its HTTP method and handler
+□ Identify any duplicate routes
+□ Identify any route shadowing 
+  (less specific route catching 
+  requests meant for more specific route)
+□ Identify any routes with 
+  mismatched HTTP methods
+□ Verify route parameter naming 
+  is consistent across the API
+  ([workspace_id] vs [workspaceId] 
+  vs [id] — pick one convention)
+□ Fix all conflicts and inconsistencies
+
+3C — HANDLER AND EMISSION AUDIT
+□ List every event emitter 
+  and every event listener
+□ Verify every emitted event 
+  has at least one listener
+□ Verify every listener has 
+  a corresponding emitter
+□ Identify orphaned listeners 
+  (listeners with no emitter)
+□ Identify orphaned emitters 
+  (emitters with no listener)
+□ List every webhook endpoint 
+  and verify each has a complete handler
+□ Identify any webhooks that receive 
+  data but do not process it
+□ Verify all Trinity action registry 
+  entries have working handler functions
+□ Identify any registered actions 
+  with no handler implementation
+□ Remove orphaned code
+□ Complete all incomplete handlers
+
+3D — OVERLAPPING SERVICE DETECTION
+□ Identify any functionality 
+  implemented in two places:
+  - Email sending (should only be Resend layer)
+  - Notifications (should only be notification service)
+  - AI calls (should only be Trinity orchestration)
+  - Document filing (should only be Document Management)
+  - Clock actions (should only be ClockBot interface)
+  - Incident creation (should only be ReportBot interface)
+□ For each overlap found:
+  - Choose the canonical service
+  - Remove the duplicate implementation
+  - Redirect all call sites
+
+3E — INCOMPLETE CODE DETECTION
+□ Search entire codebase for:
+  - TODO comments
+  - FIXME comments
+  - Placeholder functions that return 
+    mock data
+  - Empty function bodies
+  - console.log statements 
+    in production code
+  - Commented-out code blocks
+  - Functions called but not implemented
+  - Imports that are never used
+□ For each finding:
+  - Implement if required for launch
+  - Remove if not required
+  - Document in audit report 
+    if deferred to roadmap
+
+═══════════════════════════════════════════════════════════════
+PHASE 4 — FRONTEND UNIFORMITY AUDIT
+Navigation, UI Components, Design System
+═══════════════════════════════════════════════════════════════
+
+4A — NAVIGATION AUDIT
+□ List every navigation menu 
+  in the platform:
+  - Main workspace sidebar
+  - Mobile navigation
+  - Platform admin navigation
+  - Public page navigation
+  - Client portal navigation
+□ For each navigation menu verify:
+  - All links resolve to real routes
+  - No 404s on any navigation item
+  - Active state styling is consistent
+  - Mobile and desktop versions 
+    are functionally equivalent
+  - Navigation items respect 
+    RBAC — users only see items 
+    they have access to
+  - Consistent icon usage 
+    (same icon library throughout)
+
+4B — HEADER AND FOOTER UNIFORMITY
+□ List every header component used
+□ Verify single canonical header 
+  per context type:
+  - Workspace authenticated header
+  - Platform admin header
+  - Public page header
+  - Client portal header
+□ Eliminate duplicate header components
+□ Verify every page has appropriate header
+□ Verify footer exists on all public pages
+□ Verify footer contains: 
+  terms of service link, 
+  privacy policy link, 
+  support contact
+□ Verify no footer on authenticated 
+  app views (clutters UI)
+
+4C — BUTTON UNIFORMITY
+□ Audit all button variants in use:
+  - Primary action button
+  - Secondary action button
+  - Destructive action button
+  - Ghost/text button
+  - Icon button
+  - Loading state button
+□ Verify single Button component 
+  handles all variants via props
+□ Verify every button has a loading 
+  state that prevents double-submission
+□ Verify every destructive action button 
+  has a confirmation step
+□ Verify button sizing is consistent 
+  across all views
+□ Replace any raw HTML button elements 
+  with the canonical Button component
+
+4D — CARD AND BADGE UNIFORMITY
+□ Identify all card variants in use
+□ Verify consistent padding, 
+  border radius, and shadow 
+  across all cards
+□ Identify all badge variants in use:
+  - Status badges (active, inactive, pending)
+  - Role badges
+  - Priority badges
+  - License verification badges
+  - Pipeline stage badges
+□ Verify badges use consistent 
+  color semantics throughout:
+  - Green always means active/approved
+  - Red always means inactive/denied/critical
+  - Amber always means pending/warning
+  - Purple reserved for Trinity
+  - Gold reserved for HelpAI
+□ Fix any inconsistent color usage
+
+4E — EMPTY STATE AUDIT
+□ Identify every list view and 
+  data-dependent screen
+□ Verify each has a designed empty state:
+  - Informative message explaining 
+    what goes here
+  - Clear call to action 
+    for what to do next
+  - Appropriate illustration or icon
+  - Not a blank panel or raw error
+□ Empty states required for:
+  - Officer roster (no officers yet)
+  - Schedule view (no shifts yet)
+  - Incident list (no incidents yet)
+  - Document safe (no documents yet)
+  - Hiring pipeline (no applicants yet)
+  - Invoice list (no invoices yet)
+  - ChatDock channels (new channel)
+  - Help desk (no tickets yet)
+  - Agent activity (no tasks yet)
+□ Implement all missing empty states
+
+4F — LOADING STATE AUDIT
+□ Verify every async data fetch 
+  has a loading skeleton or spinner
+□ Verify every button that triggers 
+  async operation shows loading state
+□ Verify loading states prevent 
+  duplicate submissions
+□ Verify loading states clear correctly 
+  on success and error
+□ Implement missing loading states
+
+4G — ERROR STATE AUDIT
+□ Find every user-facing error message
+□ Replace all generic messages 
+  ("Something went wrong", "Error 500") 
+  with specific helpful messages
+□ Verify every error tells user:
+  - What happened
+  - Whether they need to do anything
+  - What to do next if action required
+□ Verify form validation errors 
+  appear inline next to the field, 
+  not in an alert at the top
+□ Verify network error states 
+  offer a retry action
+
+═══════════════════════════════════════════════════════════════
+PHASE 5 — FINANCIAL INTEGRATION AUDIT
+Stripe, Plaid, Payroll, Invoicing
+═══════════════════════════════════════════════════════════════
+
+5A — STRIPE COMPLETE AUDIT
+□ Verify Stripe publishable key 
+  is in client config
+□ Verify Stripe secret key is 
+  server-side only, never in client
+□ Verify webhook secret is 
+  environment variable only
+□ Verify webhook signature verification 
+  (from Phase 1 — confirm fixed)
+□ List every Stripe API call in codebase
+□ Verify each has error handling for:
+  - card_declined
+  - insufficient_funds
+  - invalid_card
+  - network errors
+  - rate limit errors
+□ Verify Stripe customer ID is stored 
+  on workspace record at creation
+□ Verify subscription status is 
+  checked on every protected route
+□ Verify failed payment handling — 
+  what happens to workspace access 
+  when payment fails
+□ Verify cancellation flow — 
+  what happens to data when 
+  subscription is cancelled
+□ Verify test mode vs live mode 
+  configuration is environment-driven
+□ Verify all Stripe amounts are 
+  in cents (integer) not dollars (float)
+□ Verify idempotency keys on 
+  all charge operations
+
+5B — PLAID COMPLETE AUDIT
+□ Verify Plaid credentials are 
+  environment variables only
+□ Verify Plaid environment matches 
+  deployment environment 
+  (sandbox vs production)
+□ Verify Plaid Link token generation 
+  is server-side
+□ Verify access token is stored 
+  encrypted, never in plaintext
+□ Verify Plaid webhook handler exists 
+  and processes all relevant event types
+□ Verify bank account data display 
+  is masked appropriately 
+  (last 4 digits only)
+□ Verify payroll calculation logic 
+  uses clock records as source of truth
+□ Verify payroll amounts are calculated 
+  server-side not client-side
+□ Verify payroll processing requires 
+  explicit management approval 
+  before execution
+□ Verify payroll preview step 
+  exists before finalization
+□ Verify payroll records are 
+  immutable after processing 
+  (append-only, no edits to 
+  processed payroll)
+
+5C — INVOICE AUDIT
+□ Verify invoice generation 
+  pulls correct data:
+  - Hours worked from clock records
+  - Rate from contract
+  - Site from assignment
+  - Billing period dates
+□ Verify invoice PDF generation 
+  produces professional output with:
+  - Org name or white label name
+  - Org logo if uploaded
+  - Invoice number (sequential, unique)
+  - Billing period
+  - Itemized line items
+  - Total amount
+  - Payment terms
+  - Remit-to information
+  - Header and footer on every page
+□ Verify invoice numbering is 
+  sequential and non-repeating
+□ Verify sent invoices are 
+  stored in Document Safe
+□ Verify invoice status tracking:
+  draft → sent → viewed → paid → overdue
+□ Verify overdue invoice alerting
+
+5D — PAYCHECK AUDIT
+□ Verify paycheck PDF generation 
+  produces professional output with:
+  - Employee name and ID
+  - Pay period
+  - Hours worked breakdown by day
+  - Regular and overtime hours separated
+  - Gross pay
+  - Deductions itemized
+  - Net pay
+  - Org name and logo
+  - Header and footer on every page
+□ Verify paychecks are stored 
+  in employee's Document Safe
+□ Verify employees can view, 
+  print, and download their paychecks
+□ Verify org owner and managers 
+  can access payroll records
+
+═══════════════════════════════════════════════════════════════
+PHASE 6 — DOCUMENT SYSTEM AUDIT
+Document Safe, Forms, PDFs, Persistence
+═══════════════════════════════════════════════════════════════
+
+6A — DOCUMENT SAFE INTEGRITY
+□ Verify every document type 
+  is stored with correct associations:
+  - workspace_id
+  - owner entity type and id
+  - document type classification
+  - created_by
+  - created_at
+  - file URL (CDN, not raw filesystem)
+□ Verify document retrieval is 
+  scoped correctly — users only 
+  access their own documents
+□ Verify org owners and managers 
+  can access all org documents
+□ Verify regulatory access — 
+  documents marked regulatory 
+  are accessible to appropriate 
+  external authorities
+□ Verify print and download works 
+  on every document type
+□ Verify document safe persists 
+  after session close and re-login
+□ Verify file URLs are CDN-backed 
+  not direct filesystem paths
+
+6B — FORM TEMPLATE AUDIT
+□ List every form template in platform:
+  - Incident report
+  - Daily activity report
+  - Use of force
+  - Trespass warning
+  - Employee counseling
+  - Shift handoff
+  - Time dispute
+  - Onboarding documents
+  - Post order acknowledgment
+  - Job application
+□ For each form verify:
+  - All required fields are marked
+  - All fillable areas accept input
+  - Text persists in draft state 
+    with autosave every 30 seconds
+  - Session timeout does not 
+    lose draft content
+  - Submission stores all field values
+  - Submitted form generates 
+    PDF with all field values populated
+  - PDF has org header and footer
+  - PDF is filed to Document Safe 
+    on submission
+  - Correct parties are notified 
+    on submission
+  - Form is not submittable with 
+    required fields empty
+
+6C — PDF GENERATION AUDIT
+□ Verify PDF generation library 
+  is working correctly
+□ For every PDF type verify:
+  - Professional header with org name, 
+    logo if uploaded, document title
+  - Professional footer with 
+    page number, date, document ID
+  - All form field values 
+    appear in correct locations
+  - Multi-page documents have 
+    header and footer on every page
+  - Fonts render consistently
+  - No cut-off content at page breaks
+  - White label: org logo and name only, 
+    CoAIleague not mentioned
+  - Non-white label: CoAIleague branding 
+    included, org logo if uploaded
+□ Test print output of every PDF type
+□ Verify PDFs are accessible 
+  (proper tagging for screen readers)
+
+6D — CONVERSATION AND CHAT PERSISTENCE
+□ Verify every ChatDock conversation 
+  persists to database on every message
+□ Verify conversation history 
+  loads correctly on channel re-join
+□ Verify images and files shared 
+  in conversations are stored 
+  in CDN not session memory
+□ Verify file URLs in messages 
+  remain valid after session close
+□ Verify DM history persists 
+  and reloads on re-open
+□ Verify HelpAI conversation context 
+  is summarized and stored on close
+□ Verify on re-join to a channel 
+  the last N messages load 
+  with correct context
+□ Verify WebSocket reconnection 
+  correctly re-syncs missed messages 
+  without duplicating existing ones
+
+═══════════════════════════════════════════════════════════════
+PHASE 7 — ONBOARDING AND USER MANAGEMENT AUDIT
+═══════════════════════════════════════════════════════════════
+
+7A — ORG OWNER ONBOARDING
+□ Verify onboarding checklist 
+  exists and displays on first login
+□ Verify Trinity guides org owner 
+  through sequential steps:
+  1. Complete org profile
+  2. Set timezone (default: 
+     workspace location timezone, 
+     prompt to confirm)
+  3. Add first site/location
+  4. Invite first officer
+  5. Create first shift
+  6. Upload post orders
+  7. Configure HelpAI channels
+  8. Upload org logo (optional)
+  9. Set email signature
+  10. Configure notification preferences
+□ Verify checklist shows progress
+□ Verify completed steps are 
+  marked and not re-prompted
+□ Verify onboarding can be 
+  skipped and resumed later
+□ Verify onboarding is dismissed 
+  after all steps complete
+
+7B — OFFICER INVITE FLOW
+□ Walk through complete invite flow:
+  - Org owner invites officer 
+    via email address
+  - Email is sent via Resend
+  - Email contains org name, 
+    clear explanation of CoAIleague, 
+    and direct action link
+  - Invite link is unique and 
+    expires in 7 days
+  - Link opens mobile-optimized 
+    signup page
+  - Signup requires: name, password, 
+    phone number, license number if applicable
+  - On completion, user is placed 
+    in correct workspace automatically
+  - Default role is officer/guard level
+  - Org owner receives confirmation 
+    that officer completed signup
+□ Verify resend invite option 
+  exists for expired links
+□ Verify invite links are 
+  single-use after completion
+□ Verify officer sees HelpAI 
+  welcome message on first channel join
+
+7C — SQUAD ORGANIZATION — 
+MANAGER AND SUPERVISOR ASSIGNMENT
+□ Verify every user record has:
+  - assigned_manager_id (nullable)
+  - assigned_supervisor_id (nullable)
+□ Verify assignment UI exists 
+  in org admin panel
+□ Verify manager can see and 
+  manage all users assigned to them
+□ Verify supervisor can see 
+  all users assigned to them
+□ Verify notifications for incidents, 
+  clock issues, and conduct flags 
+  route to assigned manager 
+  and supervisor correctly
+□ Verify unassigned users route 
+  notifications to org owner as fallback
+□ Verify assignment changes 
+  are logged in audit trail
+
+7D — TERMS OF SERVICE AND PRIVACY POLICY
+□ Verify TOS page exists at 
+  a stable public URL
+□ Verify Privacy Policy page exists 
+  at a stable public URL
+□ Verify TOS acceptance is required 
+  on org owner account creation
+□ Verify TOS acceptance is required 
+  on officer account creation
+□ Verify acceptance timestamp 
+  and version are stored per user
+□ Verify links to TOS and Privacy Policy 
+  appear in public page footer
+□ Verify links appear in all 
+  outbound email templates
+
+7E — DATA EXPORT AND RIGHT TO DELETION
+□ Implement data export endpoint 
+  for org owner:
+  - Exports all org data as 
+    structured JSON or CSV
+  - Includes: personnel records, 
+    incidents, clock records, 
+    payroll, documents, invoices
+  - Requires owner authentication
+  - Rate limited: one export per day
+□ Implement user data export 
+  for individual users:
+  - Exports their own records only
+□ Implement soft-delete on user records:
+  - Marks as deleted_at
+  - Removes from active queries
+  - Retains for audit and 
+    regulatory purposes
+  - Hard delete only after 
+    retention period expires
+
+═══════════════════════════════════════════════════════════════
+PHASE 8 — WHITE LABEL AND BRANDING AUDIT
+═══════════════════════════════════════════════════════════════
+
+8A — LOGO UPLOAD SYSTEM
+□ Verify org logo upload exists 
+  in org settings
+□ Verify logo is stored in CDN
+□ Verify logo appears on:
+  - All PDF document headers
+  - Email templates
+  - Client portal header
+  - Paycheck headers
+  - Invoice headers
+  - Login page (if white label)
+□ Verify logo upload accepts: 
+  PNG, JPG, SVG
+□ Verify logo is resized and 
+  optimized on upload
+□ Verify fallback to CoAIleague 
+  logo when no org logo uploaded
+
+8B — WHITE LABEL MODE
+□ Verify white label flag exists 
+  per workspace: is_white_label (boolean)
+□ When is_white_label = true verify:
+  - CoAIleague brand name is 
+    completely absent from all 
+    client-facing surfaces
+  - Trinity name may optionally 
+    be replaced by org's custom 
+    AI assistant name
+  - All PDFs, emails, and 
+    correspondence show org branding only
+  - Client portal shows org name/logo only
+  - Email From name shows org name
+  - Email signatures show org identity
+□ When is_white_label = false verify:
+  - CoAIleague and Trinity 
+    are mentioned appropriately
+  - Both CoAIleague and org branding 
+    appear together
+
+8C — EMAIL SIGNATURE CONFIGURATION
+□ Verify email signature builder 
+  exists in org settings:
+  - Internal signature 
+    (for staff communications)
+  - External signature 
+    (for client communications)
+  - Fields: name, title, 
+    org name, phone, email, 
+    website, logo toggle
+□ Verify signatures are applied 
+  to all outbound emails 
+  via Resend integration
+□ Verify signature appears correctly 
+  in plain text and HTML email versions
+
+8D — EMAIL TEMPLATE AUDIT
+□ List every email template in platform:
+  - Officer invite
+  - Client welcome
+  - Interview invite
+  - Document delivery
+  - Incident notification
+  - Payroll notification
+  - Invoice delivery
+  - Password reset
+  - Platform announcement
+  - Support resolution
+□ For every template verify:
+  - Professional HTML design 
+    consistent across all templates
+  - Org logo appears if uploaded
+  - Correct branding per 
+    white label setting
+  - All dynamic variables 
+    are populated correctly
+  - All buttons and links 
+    navigate to correct destinations
+  - Links are absolute URLs 
+    not relative paths
+  - Unsubscribe link present 
+    on marketing-adjacent emails
+  - Plain text version exists 
+    alongside HTML version
+  - Email renders correctly 
+    on mobile email clients
+  - Footer contains TOS and 
+    Privacy Policy links
+
+═══════════════════════════════════════════════════════════════
+PHASE 9 — HELP DESK AND QUEUE AUDIT
+═══════════════════════════════════════════════════════════════
+
+9A — HELP DESK QUEUE SYSTEM
+□ Verify help desk channel shows:
+  - Active tickets in queue
+  - Queue position per user 
+    ("You are #3 in queue")
+  - Estimated wait time per ticket
+  - Who is next to be served
+  - Which platform support agents 
+    are currently online/available
+  - Total tickets waiting
+□ Verify HelpAI simultaneously 
+  assists all waiting users 
+  autonomously while queue processes
+□ Verify when human support agent 
+  becomes available, HelpAI 
+  hands off the highest priority 
+  waiting ticket with full context summary
+□ Verify support agent sees 
+  per-ticket summary:
+  - Issue description
+  - Time waiting
+  - What HelpAI already attempted
+  - Conversation transcript
+  - User's workspace and role
+□ Verify ticket status updates 
+  are visible to user in real time
+
+9B — HELPAI CONVERSATION SUMMARY ON REJOIN
+□ Verify when user rejoins a 
+  help desk conversation or 
+  shift room after session close:
+  - Last conversation context 
+    is summarized in first message
+  - HelpAI acknowledges returning user
+  - Any unresolved issues 
+    are surfaced immediately
+  - Queue position is updated if applicable
+
+═══════════════════════════════════════════════════════════════
+PHASE 10 — MOBILE AND PERFORMANCE AUDIT
+═══════════════════════════════════════════════════════════════
+
+10A — MOBILE CRITICAL PATH AUDIT
+Test all of the following on a 
+simulated mobile device at 
+reduced network speed (3G simulation):
+
+□ Officer clock-in flow: 
+  load time, tap target sizes, 
+  confirmation clarity
+□ Incident report submission: 
+  form usability, autosave on network drop
+□ ChatDock message send and receive
+□ Schedule view load and readability
+□ Document view, print, download
+□ HelpAI conversation in shift room
+□ Trinity thought bar display 
+  at 36px mobile height
+□ Job application form on public board
+□ Login and session restore
+
+For each flow record:
+- Load time to interactive
+- Any tap targets below 44px 
+  (Apple minimum) — enlarge
+- Any text below 12px — enlarge
+- Any horizontal scroll — eliminate
+- Any broken layout at 375px width — fix
+
+10B — SAFARI iOS SPECIFIC AUDIT
+□ Test every critical flow in 
+  Safari iOS (not Chrome mobile)
+□ Verify date/time inputs work 
+  on Safari iOS
+□ Verify file upload works on Safari iOS
+□ Verify WebSocket connection 
+  is stable on Safari iOS
+□ Verify PWA manifest is correct:
+  - manifest.json exists
+  - Correct icons for iOS sizes
+  - Standalone display mode
+  - Theme color matches design system
+  - App name is CoAIleague 
+    (or org name in white label)
+□ Verify add-to-home-screen 
+  produces correct icon and name
+
+10C — SESSION RESILIENCE
+□ Verify autosave on all forms 
+  every 30 seconds to localStorage 
+  or sessionStorage
+□ Verify session extension logic — 
+  active typing or interaction 
+  extends session without re-login prompt
+□ Verify session restore after 
+  network reconnect maintains 
+  form state
+□ Verify WebSocket auto-reconnect 
+  on network restore without 
+  page refresh required
+
+10D — DEEP LINK AUDIT
+□ Verify stable URL exists for:
+  - Individual shift
+  - Individual incident report
+  - Individual document in Document Safe
+  - Individual invoice
+  - Individual applicant
+  - Individual employee profile
+  - Individual agent task
+□ Verify these URLs require 
+  authentication and workspace access
+□ Verify they do not expose 
+  entity IDs that reveal 
+  sequential database IDs 
+  (use UUIDs in URLs)
+
+═══════════════════════════════════════════════════════════════
+PHASE 11 — NOTIFICATION SYSTEM AUDIT
+═══════════════════════════════════════════════════════════════
+
+11A — NOTIFICATION INVENTORY
+□ List every notification type 
+  in the platform
+□ Verify every notification has:
+  - Correct recipient logic
+  - Correct workspace scoping
+  - Clear message text
+  - Actionable link if relevant
+  - Priority classification
+
+11B — NOTIFICATION PREFERENCES
+□ Verify notification preference 
+  settings exist per user:
+  - Toggle per notification category
+  - Email vs in-app vs both
+  - Quiet hours configuration
+□ Verify preferences are respected 
+  on every notification send
+□ Verify critical notifications 
+  cannot be disabled 
+  (safety and emergency alerts)
+
+11C — NOTIFICATION THRESHOLD TUNING
+□ Verify Trinity proactive alerts 
+  have minimum data thresholds:
+  - No scheduling gap alerts 
+    until at least 3 officers are onboarded
+  - No compliance alerts until 
+    at least one post order is uploaded
+  - No license expiry alerts 
+    until license data exists
+□ Prevent notification flooding 
+  for new orgs with incomplete data
+
+═══════════════════════════════════════════════════════════════
+PHASE 12 — MULTI-PASS BUG SWEEP
+Front to End, Schema to DB to UI
+═══════════════════════════════════════════════════════════════
+
+Run four complete passes. 
+Each pass has a specific focus. 
+Document every finding. 
+Fix everything found in each pass 
+before beginning the next pass.
+
+──────────────────────────────
+PASS 1 — SCHEMA TO DATABASE LAYER
+──────────────────────────────
+Trace from schema definition 
+to database call to verify:
+□ Every table in schema 
+  has migration applied
+□ Every column referenced in code 
+  exists in schema
+□ Every foreign key referenced in code 
+  exists and is indexed
+□ Every Drizzle query uses 
+  correct column names
+□ No raw SQL strings 
+  that could be injection vectors
+□ All enum values in code 
+  match enum definitions in schema
+□ All nullable columns handled 
+  correctly in code 
+  (null checks present)
+□ Transaction boundaries are correct 
+  on multi-step mutations
+
+──────────────────────────────
+PASS 2 — API LAYER
+──────────────────────────────
+For every API endpoint trace 
+from route definition to handler:
+□ Route is correctly defined 
+  with correct HTTP method
+□ Auth middleware is applied
+□ Request validation is present 
+  (input schema validation)
+□ Handler calls correct service function
+□ Service function calls correct 
+  database query
+□ Response format is consistent 
+  with other endpoints
+□ Error cases return appropriate 
+  HTTP status codes with 
+  meaningful error messages
+□ No endpoint returns 500 
+  on expected error conditions
+□ All parameters are validated 
+  before use
+
+──────────────────────────────
+PASS 3 — SERVICE AND INTEGRATION LAYER
+──────────────────────────────
+For every service file:
+□ Functions have correct types 
+  on all parameters and return values
+□ All external API calls 
+  have error handling
+□ All Promises are awaited correctly
+□ No floating Promises 
+  (unhandled async operations)
+□ External service failures 
+  do not crash the application
+□ Retry logic exists on 
+  transient network failures
+□ All Trinity action handlers 
+  are implemented and connected
+□ All HelpAI domain handlers 
+  are implemented and connected
+□ All bot interfaces (ClockBot, 
+  ReportBot, MeetingBot) 
+  return data in expected format
+
+──────────────────────────────
+PASS 4 — FRONTEND TO API CONTRACT
+──────────────────────────────
+For every frontend component 
+that calls an API:
+□ The API call URL matches 
+  a real existing route
+□ The request body matches 
+  what the API handler expects
+□ The response data shape 
+  matches what the component expects
+□ Loading states are handled
+□ Error states are handled
+□ Success states update UI correctly
+□ No API calls fire on component 
+  mount when they should require 
+  user action
+□ No API calls fire multiple times 
+  due to useEffect dependency issues
+□ Form submissions cannot be 
+  triggered twice from 
+  double-click or enter key spam
+
+═══════════════════════════════════════════════════════════════
+PHASE 13 — FINAL PRODUCTION READINESS CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+After all phases and passes complete, 
+verify every item on this checklist. 
+Do not mark any item complete 
+without confirmation.
+
+SECURITY:
+□ Zero hardcoded secrets in codebase
+□ Stripe webhook signature verified
+□ CORS locked to correct origins
+□ CSP headers present
+□ File uploads server-side validated
+□ All API endpoints authenticated
+□ Workspace isolation tested adversarially
+□ Rate limiting on all sensitive endpoints
+□ Bot protection on public forms
+□ Concurrent clock action lock implemented
+
+DATABASE:
+□ All migrations applied cleanly
+□ All foreign keys and indexes present
+□ No unbounded queries in production paths
+□ Pagination on all list endpoints
+□ Audit trail implemented
+□ Soft-delete on all sensitive records
+□ Data retention policies configured
+□ Backup verified with test restore
+
+FINANCIAL:
+□ Stripe live mode configured correctly
+□ Stripe idempotency keys present
+□ Plaid production environment confirmed
+□ Payroll requires management approval
+□ Invoice numbering sequential and unique
+□ All financial PDFs professional quality
+□ Paychecks accessible to employees
+
+DOCUMENTS:
+□ Document Safe persists all document types
+□ All forms autosave drafts
+□ All submitted forms generate PDF
+□ All PDFs have professional header/footer
+□ White label branding correct per org
+□ Print and download work on all PDFs
+
+COMMUNICATIONS:
+□ Resend domain verified (SPF, DKIM, DMARC)
+□ All email templates professional and complete
+□ All email links functional
+□ Email signatures configured
+□ White label email branding correct
+
+USER EXPERIENCE:
+□ Empty states on all data-dependent views
+□ Loading states on all async operations
+□ Error states helpful and specific
+□ Mobile clock-in flow tested at 3G
+□ Safari iOS compatibility verified
+□ PWA manifest correct
+□ Session autosave on all forms
+□ Deep links working for all entities
+□ Notification preferences available
+□ Onboarding checklist complete
+□ HelpAI welcome message on first join
+□ Trinity monitoring thresholds tuned
+
+LEGAL:
+□ TOS page live at public URL
+□ Privacy Policy page live at public URL
+□ TOS acceptance flow on signup
+□ Data export available to org owners
+□ Soft-delete on user records
+□ Audit trail capturing all mutations
+
+PERFORMANCE:
+□ No N+1 queries on any list view
+□ All list views paginated
+□ WebSocket reconnect handles 
+  missed messages correctly
+□ No layout shift on Trinity bar updates
+□ No thread re-render on 
+  HelpAI phrase rotation
+
+═══════════════════════════════════════════════════════════════
+FINAL DELIVERABLE
+═══════════════════════════════════════════════════════════════
+
+After all phases, all passes, 
+and all checklist items complete, 
+produce a final audit report containing:
+
+1. FIXED: Complete list of everything 
+   repaired during this audit with 
+   file paths and description of change
+
+2. VERIFIED: Complete list of everything 
+   confirmed working with no changes needed
+
+3. DEFERRED: Items identified but 
+   intentionally deferred to post-launch 
+   roadmap with justification
+
+4. ASSUMPTIONS: Any assumptions made 
+   during implementation where 
+   requirements were ambiguous
+
+5. FIRST TENANT READINESS VERDICT:
+   GO / NO-GO with specific 
+   conditions if NO-GO
+
+DO NOT issue a GO verdict unless 
+every item in Phase 13 checklist 
+is confirmed complete.
+═══════════════════════════════════════════════════════════════
+END OF PROMPT
+═══════════════════════════════════════════════════════════════
+```
+
+---
+
+This is the most thorough pre-launch audit prompt in the stack. It traces every layer from schema definition to database call to API contract to UI rendering. It hits every financial integration, every document, every form, every email, every notification, every security surface, and every mobile concern before a single real user touches the platform. The GO/NO-GO verdict at the end means Replit cannot declare it done without evidence. Paste this one last, then you're production ready.

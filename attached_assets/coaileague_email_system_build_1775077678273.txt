@@ -1,0 +1,615 @@
+COAILEAGUE EMAIL SYSTEM - COMPLETE BUILD PLAN
+Send Prompt 1 (Billing Correction) first. Send this second.
+ACME sandbox only. Statewide workspace receives zero contact.
+================================================================================
+
+OVERVIEW
+--------
+CoAIleague already has a mailbox UI built per tenant. This prompt wires Resend
+as the full email infrastructure. Inbound routing catches all @coaileague.com
+email. Outbound sends all email from @coaileague.com. Addresses auto-create on
+tenant registration. Org owners activate seats at $3/seat/month. Trinity
+processes auto-handled inboxes. No Google Workspace dependency.
+
+EMAIL REVENUE MODEL
+  Per activated email seat:   $3.00/month (all tiers - flat rate)
+  Fair use per seat:          500 emails/month included
+  Overage per email:          $0.001/email over 500
+  Resend Pro infrastructure:  $20/month fixed (our cost)
+  Margin on email revenue:    96-99% (highest margin line in platform)
+  vs Google Workspace:        $7.20/user/month - we are 58% cheaper
+  vs Microsoft 365:           $6.00/user/month - we are 50% cheaper
+
+================================================================================
+SECTION 1 - COMPLETE ADDRESS STRUCTURE
+================================================================================
+
+PLATFORM LEVEL - PROTECTED (cannot be created by tenants)
+  trinity@coaileague.com         Trinity AI identity - sends and receives
+  support@coaileague.com         Platform support team - Trinity processes
+  billing@coaileague.com         Billing inquiries - Trinity routes
+  hello@coaileague.com           General inbound - routes to support queue
+  noreply@coaileague.com         Outbound only - no inbound routing
+
+PER TENANT WORKSPACE - AUTO-CREATED ON REGISTRATION (free, always active)
+  staffing-{slug}@coaileague.com     Trinity action: staffing_inquiry
+  calloffs-{slug}@coaileague.com     Trinity action: calloff - creates calloff_record
+  incidents-{slug}@coaileague.com    Trinity action: incident - creates incident_report
+  support-{slug}@coaileague.com      Trinity action: support_ticket - HelpAI handles
+  docs-{slug}@coaileague.com         Trinity action: document_submission
+  billing-{slug}@coaileague.com      Trinity action: billing_inquiry
+
+PER USER - ACTIVATED BY ORG OWNER ($3/seat/month)
+  john.smith@{slug}.coaileague.com   Officer personal inbox - reserved inactive
+  jane.doe@{slug}.coaileague.com     Manager personal inbox - reserved inactive
+
+PER CLIENT - ACTIVATED BY ORG OWNER ($3/seat/month)
+  cityofsa@{slug}.coaileague.com     Client communication inbox - reserved inactive
+
+PROTECTED SUPPORT SUBDOMAIN - PLATFORM STAFF ONLY
+  {name}@support.coaileague.com      Separate verified subdomain
+  Tenants cannot create addresses here. Only Bryan provisions these.
+  Separate MX and DKIM configuration in Resend.
+
+================================================================================
+SECTION 2 - DNS CHANGES (BRYAN DOES THIS MANUALLY AFTER AGENT COMPLETES)
+================================================================================
+
+WARNING: Do NOT change MX records until inbound webhook is fully tested.
+Set DNS TTL to 300 seconds 24 hours before switching for fast rollback.
+
+STEP 1 - UPDATE SPF RECORD (edit existing, do not create new)
+  BEFORE: v=spf1 include:_spf.google.com ~all
+  AFTER:  v=spf1 include:amazonses.com ~all
+  Note: Resend uses Amazon SES. Remove Google completely.
+  Confirm exact include value in Resend dashboard under Domain settings.
+
+STEP 2 - ADD RESEND DKIM RECORD (add new, remove Google DKIM entirely)
+  Record type: TXT
+  Host/Name:   resend._domainkey.coaileague.com
+  Value:       [copy exact value from Resend dashboard > Domains > coaileague.com > DKIM]
+  DELETE:      google._domainkey.coaileague.com (remove Google DKIM entry)
+
+STEP 3 - CREATE DMARC RECORD
+  Record type: TXT
+  Host/Name:   _dmarc.coaileague.com
+  Value:       v=DMARC1; p=quarantine; rua=mailto:dmarc@coaileague.com; pct=100
+
+STEP 4 - VERIFY coaileague.com IN RESEND DASHBOARD
+  Go to: Resend Dashboard > Domains > Add Domain
+  Enter: coaileague.com
+  Add each DNS record Resend provides
+  Wait for Verified status before proceeding to Step 5
+
+STEP 5 - ENABLE WILDCARD INBOUND ROUTING IN RESEND
+  In Resend Dashboard > Inbound
+  Enable wildcard routing for *.coaileague.com
+  Set webhook URL: https://app.coaileague.com/api/inbound/email
+
+STEP 6 - CHANGE MX RECORDS (LAST STEP - only after all testing passes)
+  DELETE all existing Google Workspace MX records
+  (typically aspmx.l.google.com and alt variants)
+
+  ADD Resend inbound MX records:
+  Go to: Resend Dashboard > Domains > coaileague.com > Inbound
+  Copy exact MX hostname and priority Resend provides
+  Typically: priority 10, host: inbound.resend.com (confirm in dashboard)
+
+  WARNING: Once MX records change Google stops receiving ALL email to
+  @coaileague.com. Export important emails from Google Workspace first.
+
+STEP 7 - REMOVE mail.coaileague.com SUBDOMAIN
+  After testing passes and DNS propagated (24-48 hours)
+  Remove mail.coaileague.com DNS records
+  Remove mail.coaileague.com domain from Resend
+  Replace with coaileague.com as primary sending domain
+
+================================================================================
+SECTION 3 - DATABASE TABLES TO CREATE
+================================================================================
+
+TABLE 1: platform_email_addresses
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  workspace_id UUID REFERENCES workspaces(id)
+  user_id UUID REFERENCES users(id)
+  client_id UUID REFERENCES clients(id)
+  address VARCHAR(320) NOT NULL UNIQUE
+  local_part VARCHAR(255) NOT NULL
+  subdomain VARCHAR(100)
+  display_name VARCHAR(255)
+  address_type VARCHAR(50) NOT NULL
+    -- 'user_personal' officer personal inbox billed per seat
+    -- 'user_client' client inbox billed per seat
+    -- 'workspace_system' calloffs etc free auto-handled
+    -- 'platform_team' trinity@ support@ etc platform reserved
+    -- 'protected_support' name@support.coaileague.com protected
+  is_active BOOLEAN DEFAULT false
+  is_protected BOOLEAN DEFAULT false
+  is_outbound_only BOOLEAN DEFAULT false
+  activated_at TIMESTAMPTZ
+  activated_by UUID REFERENCES users(id)
+  deactivated_at TIMESTAMPTZ
+  billing_seat_id VARCHAR(255)
+  fair_use_monthly_limit INTEGER DEFAULT 500
+  emails_sent_this_period INTEGER DEFAULT 0
+  emails_received_this_period INTEGER DEFAULT 0
+  auto_trinity_process BOOLEAN DEFAULT false
+  trinity_calltype VARCHAR(100)
+  created_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+
+CREATE INDEX idx_email_addresses_address ON platform_email_addresses(address);
+CREATE INDEX idx_email_addresses_workspace ON platform_email_addresses(workspace_id);
+CREATE INDEX idx_email_addresses_user ON platform_email_addresses(user_id);
+
+TABLE 2: email_routing
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  address VARCHAR(320) NOT NULL UNIQUE
+  email_address_id UUID REFERENCES platform_email_addresses(id)
+  route_type VARCHAR(50) NOT NULL
+    -- 'user_inbox' deliver to user mailbox
+    -- 'workspace_inbox' deliver to workspace shared inbox
+    -- 'trinity_process' Trinity processes automatically
+    -- 'support_queue' platform support queue
+    -- 'discard' accept but discard spam protection
+  target_workspace_id UUID REFERENCES workspaces(id)
+  target_user_id UUID REFERENCES users(id)
+  target_inbox_type VARCHAR(100)
+  auto_process BOOLEAN DEFAULT false
+  process_as VARCHAR(100)
+    -- 'calloff' 'incident' 'support_ticket' 'application' 'client_message' 'general'
+  is_active BOOLEAN DEFAULT true
+  created_at TIMESTAMPTZ DEFAULT NOW()
+
+CREATE INDEX idx_email_routing_address ON email_routing(address);
+
+TABLE 3: platform_emails
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  workspace_id UUID REFERENCES workspaces(id)
+  resend_email_id VARCHAR(255) UNIQUE
+  message_id VARCHAR(500)
+  in_reply_to VARCHAR(500)
+  references_header TEXT
+  direction VARCHAR(20) NOT NULL -- 'inbound' or 'outbound'
+  from_address VARCHAR(320) NOT NULL
+  from_name VARCHAR(255)
+  to_addresses TEXT[] NOT NULL
+  cc_addresses TEXT[] DEFAULT '{}'
+  bcc_addresses TEXT[] DEFAULT '{}'
+  reply_to VARCHAR(320)
+  subject TEXT
+  body_html TEXT
+  body_text TEXT
+  snippet TEXT -- first 200 chars for list view
+  owner_user_id UUID REFERENCES users(id)
+  owner_client_id UUID REFERENCES clients(id)
+  folder VARCHAR(50) DEFAULT 'inbox'
+    -- 'inbox' 'sent' 'drafts' 'starred' 'archive' 'trash' 'spam'
+  is_read BOOLEAN DEFAULT false
+  is_starred BOOLEAN DEFAULT false
+  is_archived BOOLEAN DEFAULT false
+  is_deleted BOOLEAN DEFAULT false
+  trinity_processed BOOLEAN DEFAULT false
+  trinity_processed_at TIMESTAMPTZ
+  trinity_category VARCHAR(100)
+  trinity_summary TEXT
+  trinity_action_taken VARCHAR(100)
+  trinity_action_record_id UUID
+  trinity_draft_reply TEXT
+  trinity_priority VARCHAR(20) DEFAULT 'normal'
+  received_at TIMESTAMPTZ
+  sent_at TIMESTAMPTZ
+  created_at TIMESTAMPTZ DEFAULT NOW()
+
+CREATE INDEX idx_platform_emails_workspace ON platform_emails(workspace_id, folder, created_at DESC);
+CREATE INDEX idx_platform_emails_owner ON platform_emails(owner_user_id, folder, is_read);
+CREATE INDEX idx_platform_emails_thread ON platform_emails(message_id, in_reply_to);
+
+TABLE 4: email_attachments
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  email_id UUID NOT NULL REFERENCES platform_emails(id) ON DELETE CASCADE
+  filename VARCHAR(500) NOT NULL
+  content_type VARCHAR(200)
+  size_bytes INTEGER
+  storage_url TEXT
+  sha256_hash VARCHAR(64)
+  is_inline BOOLEAN DEFAULT false
+  content_id VARCHAR(255)
+  created_at TIMESTAMPTZ DEFAULT NOW()
+
+CREATE INDEX idx_email_attachments_email ON email_attachments(email_id);
+
+TABLE 5: email_drafts
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  workspace_id UUID NOT NULL REFERENCES workspaces(id)
+  user_id UUID NOT NULL REFERENCES users(id)
+  reply_to_email_id UUID REFERENCES platform_emails(id)
+  from_address VARCHAR(320)
+  to_addresses TEXT[] DEFAULT '{}'
+  cc_addresses TEXT[] DEFAULT '{}'
+  subject TEXT
+  body_html TEXT
+  body_text TEXT
+  last_saved_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
+
+COLUMNS TO ADD TO EXISTING TABLES:
+  ALTER TABLE workspaces
+    ADD COLUMN IF NOT EXISTS email_domain VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS email_activated BOOLEAN DEFAULT false;
+
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS platform_email VARCHAR(320),
+    ADD COLUMN IF NOT EXISTS email_activated BOOLEAN DEFAULT false;
+
+  ALTER TABLE clients
+    ADD COLUMN IF NOT EXISTS platform_email VARCHAR(320),
+    ADD COLUMN IF NOT EXISTS email_activated BOOLEAN DEFAULT false;
+
+================================================================================
+SECTION 4 - SEED PLATFORM PROTECTED ADDRESSES
+================================================================================
+
+Run this SQL after creating the tables:
+
+INSERT INTO platform_email_addresses (
+  address, local_part, display_name, address_type,
+  is_active, is_protected, auto_trinity_process, trinity_calltype
+) VALUES
+  ('trinity@coaileague.com', 'trinity', 'Trinity', 'platform_team',
+    true, true, true, 'trinity_general'),
+  ('support@coaileague.com', 'support', 'CoAIleague Support', 'platform_team',
+    true, true, true, 'support_ticket'),
+  ('billing@coaileague.com', 'billing', 'CoAIleague Billing', 'platform_team',
+    true, true, true, 'billing_inquiry'),
+  ('hello@coaileague.com', 'hello', 'CoAIleague', 'platform_team',
+    true, true, false, 'general_inquiry'),
+  ('noreply@coaileague.com', 'noreply', 'CoAIleague', 'platform_team',
+    true, true, false, null)
+ON CONFLICT (address) DO NOTHING;
+
+INSERT INTO email_routing (address, route_type, auto_process, process_as)
+VALUES
+  ('trinity@coaileague.com', 'trinity_process', true, 'general'),
+  ('support@coaileague.com', 'support_queue', true, 'support_ticket'),
+  ('billing@coaileague.com', 'support_queue', true, 'billing_inquiry'),
+  ('hello@coaileague.com', 'support_queue', false, 'general'),
+  ('noreply@coaileague.com', 'discard', false, null)
+ON CONFLICT (address) DO NOTHING;
+
+================================================================================
+SECTION 5 - emailProvisioningService.ts
+================================================================================
+
+Create at: server/services/email/emailProvisioningService.ts
+
+Wire into:
+  1. Workspace registration service - call provisionWorkspaceAddresses() after workspace creates
+  2. Employee creation service - call reserveUserEmailAddress() after employee creates
+  3. Client creation service - call reserveClientEmailAddress() after client creates
+
+FUNCTION: provisionWorkspaceAddresses(workspaceId, emailSlug)
+  Updates workspaces.email_domain = emailSlug + '.coaileague.com'
+  Creates 6 system addresses all is_active=true auto_trinity_process=true:
+    staffing-{slug}@coaileague.com  trinity_calltype=staffing_inquiry
+    calloffs-{slug}@coaileague.com  trinity_calltype=calloff
+    incidents-{slug}@coaileague.com trinity_calltype=incident
+    support-{slug}@coaileague.com   trinity_calltype=support_ticket
+    docs-{slug}@coaileague.com      trinity_calltype=document_submission
+    billing-{slug}@coaileague.com   trinity_calltype=billing_inquiry
+  Creates email_routing entries for all 6 with route_type=trinity_process
+
+FUNCTION: reserveUserEmailAddress(workspaceId, userId, firstName, lastName, emailSlug)
+  Generates localPart = firstName.toLowerCase() + '.' + lastName.toLowerCase()
+  Generates address = localPart + '@' + emailSlug + '.coaileague.com'
+  Inserts into platform_email_addresses with is_active=false
+  Updates users.platform_email = address
+  Returns: address string
+
+FUNCTION: reserveClientEmailAddress(workspaceId, clientId, clientName, emailSlug)
+  Generates localPart from clientName lowercase alphanumeric max 20 chars
+  Generates address = localPart + '@' + emailSlug + '.coaileague.com'
+  Inserts into platform_email_addresses with is_active=false
+  Updates clients.platform_email = address
+  Returns: address string
+
+FUNCTION: activateEmailAddress(emailAddressId, activatedByUserId, stripeItemId)
+  BEGIN transaction
+  UPDATE platform_email_addresses SET is_active=true, activated_at=NOW(),
+    activated_by=activatedByUserId, billing_seat_id=stripeItemId WHERE id=emailAddressId
+  INSERT into email_routing with route_type=user_inbox
+  INSERT into universal_audit_log action=email_activated
+  COMMIT
+  Throws and rolls back on any error
+
+FUNCTION: deactivateEmailAddress(emailAddressId, deactivatedByUserId)
+  UPDATE platform_email_addresses SET is_active=false, deactivated_at=NOW()
+  UPDATE email_routing SET is_active=false WHERE email_address_id=emailAddressId
+
+================================================================================
+SECTION 6 - INBOUND WEBHOOK HANDLER
+================================================================================
+
+Extend existing file: server/routes/inbound/emailWebhookRoute.ts
+POST /api/inbound/email
+
+Processing order (must follow exactly):
+1. Verify Resend HMAC signature from resend-signature header. Return 401 if invalid.
+2. Deduplicate: check platform_emails for resend_email_id. Return 200 if exists.
+3. Parse payload: from, to, cc, subject, html, text, message_id, in_reply_to, attachments
+4. Look up email_routing by to address (first match wins if multiple to addresses)
+5. If no route found: return 200 (accept silently, prevents bounce to sender)
+6. INSERT into platform_emails with all fields
+7. INSERT into email_attachments for each attachment
+8. If route.auto_process=true: call processTrinityEmail() fire-and-forget (do not await)
+9. If route.route_type=user_inbox: broadcastToWorkspace new_email event + NDS notification
+10. Return 200 to Resend immediately
+
+Trinity email processor function processTrinityEmail({emailId, workspaceId, subject, body, from, processAs, callType}):
+  Get workspace tier: SELECT tier FROM workspaces WHERE id=workspaceId
+  Call withGemini('gemini-2.5-flash', {workspaceId, tier, callType}, async () => {
+    Send prompt asking to classify email and return JSON:
+    {
+      "intent": processAs type,
+      "summary": one line summary,
+      "priority": urgent/high/normal/low,
+      "extractedData": {},
+      "draftReply": suggested reply text
+    }
+  })
+  Based on processAs type take action:
+    'calloff': INSERT into calloff_records (workspace_id, source='email', source_email_id, raw_content, status='pending')
+    'incident': INSERT into incident_reports (workspace_id, source='email', source_email_id, description, status='open')
+    'support_ticket': INSERT into support_tickets (workspace_id, source='email', description, priority)
+    'billing_inquiry': store in inbox with high priority NDS to org_owner
+    'general': store in inbox with summary
+  UPDATE platform_emails SET trinity_processed=true, trinity_category, trinity_summary,
+    trinity_action_taken, trinity_action_record_id, trinity_draft_reply, trinity_priority
+  Send NDS notification trinity_email_processed to org_owner
+
+================================================================================
+SECTION 7 - API ROUTES TO BUILD
+================================================================================
+
+POST   /api/inbound/email                    Resend webhook all inbound routing
+POST   /api/email/send                       Send email from user active address via Resend
+GET    /api/email/inbox                      Paginated inbox with folder filter and trinity_summary
+GET    /api/email/:id                        Full email with attachments marks as read
+POST   /api/email/:id/reply                  Create reply with thread linking via in_reply_to
+PATCH  /api/email/:id                        Update is_read is_starred folder
+DELETE /api/email/:id                        Soft delete sets folder=trash
+GET    /api/email/thread/:messageId          Full thread by message_id chain
+GET    /api/email/management                 Org owner all addresses status usage cost
+POST   /api/email/addresses/:id/activate     Activate seat plus Stripe subscription item
+POST   /api/email/addresses/:id/deactivate   Deactivate and cancel Stripe item
+POST   /api/email/activate-all              Bulk activate all user addresses in workspace
+GET    /api/email/management/stats           Usage: volume cost fair use overage
+
+SEND ROUTE validation:
+  1. Validate from address belongs to user workspace (workspace_id check)
+  2. Validate from address is_active=true and is_outbound_only=false
+  3. Call Resend API to deliver email
+  4. INSERT into platform_emails direction=outbound folder=sent
+  5. If replyToEmailId: set in_reply_to = original message_id for threading
+  6. Increment emails_sent_this_period on platform_email_addresses
+
+================================================================================
+SECTION 8 - billingConfig.ts ADDITION
+================================================================================
+
+Add this export to shared/billingConfig.ts:
+
+export const EMAIL_PRICING = {
+  perSeatMonthlyCents: 300,           // $3.00/seat/month all tiers
+  fairUseEmailsPerSeatMonthly: 500,   // emails included per activated seat
+  overagePerEmailCents: 0.1,          // $0.001 per email over fair use
+  resendMonthlyCostCents: 2000,       // $20 Resend Pro (our cost not charged to tenants)
+  resendBusinessCostCents: 9000,      // $90 Resend Business for over 50k emails
+  resendEmailsIncludedPro: 50000,     // emails/month in Pro plan
+} as const;
+
+All email pricing in UI and API must read from EMAIL_PRICING.
+Zero hardcoded dollar amounts in any component or route.
+
+================================================================================
+SECTION 9 - EMAIL MANAGEMENT UI (Org Owner Settings Page)
+================================================================================
+
+Create: client/src/pages/settings/EmailManagement.tsx
+
+OVERVIEW CARD section:
+  Active email seats count
+  Monthly cost = active_seats x $3 (reads from billingConfig.EMAIL_PRICING.perSeatMonthlyCents)
+  Emails sent this month
+  Emails received this month
+
+SYSTEM ADDRESSES section:
+  Table showing all workspace_system addresses for this workspace
+  Columns: address, type, status (always Active), handled by Trinity
+  No activate/deactivate toggle - these cannot be turned off
+  No billing line - these are free
+
+OFFICER EMAIL ADDRESSES section:
+  Table with columns: officer name, address, status chip Active/Inactive,
+    emails this month, cost ($3/mo shown on active), Activate/Deactivate toggle
+  Bulk action buttons: Activate All Officers / Deactivate All Officers
+  Summary line: N active x $3 = $N.00/month
+
+CLIENT EMAIL ADDRESSES section:
+  Same table structure for client addresses
+
+USAGE AND BILLING section:
+  This month total email cost
+  Fair use status per address (approaching 500 shown in yellow)
+  Overage projection if any addresses over 500/month
+
+================================================================================
+SECTION 10 - NDS TEMPLATES TO ADD
+================================================================================
+
+Add these to notificationDeliveryService.ts template registry.
+Each needs English and Spanish for email and in-app channels.
+
+new_email_received
+  en inApp title: New email from {{from}}
+  en inApp body:  {{subject}}
+  Fires when: user personal inbox receives inbound email
+
+trinity_email_processed
+  en inApp title: Trinity processed: {{processAs}}
+  en inApp body:  {{summary}}
+  Fires when: Trinity auto-processes an inbound email
+
+email_seat_activated
+  en inApp title: Email activated for {{name}}
+  en inApp body:  {{address}} is now active
+  Fires when: org owner activates an email seat
+
+email_seat_deactivated
+  en inApp title: Email deactivated for {{name}}
+  en inApp body:  {{address}} has been deactivated
+  Fires when: org owner deactivates a seat
+
+email_fair_use_warning
+  en inApp title: Email address at {{pct}}% of monthly limit
+  en inApp body:  {{address}} has sent {{count}} of 500 included emails
+  Fires when: address reaches 80% of 500 email fair use cap
+
+================================================================================
+SECTION 11 - REMOVE mail.coaileague.com REFERENCES
+================================================================================
+
+Find all instances:
+  grep -rn "mail\.coaileague\.com" server/ client/ shared/ --include="*.ts" --include="*.tsx" | grep -v node_modules
+
+For every result: replace mail.coaileague.com with coaileague.com
+
+Backfill existing database records:
+  UPDATE workspaces SET
+    trinity_email = REPLACE(trinity_email, '@mail.coaileague.com', '@coaileague.com'),
+    staffing_email = REPLACE(staffing_email, '@mail.coaileague.com', '@coaileague.com'),
+    calloffs_email = REPLACE(calloffs_email, '@mail.coaileague.com', '@coaileague.com'),
+    incidents_email = REPLACE(incidents_email, '@mail.coaileague.com', '@coaileague.com'),
+    support_email = REPLACE(support_email, '@mail.coaileague.com', '@coaileague.com'),
+    docs_email = REPLACE(docs_email, '@mail.coaileague.com', '@coaileague.com')
+  WHERE trinity_email ILIKE '%mail.coaileague.com%';
+
+  UPDATE platform_email_addresses
+  SET address = REPLACE(address, '@mail.coaileague.com', '@coaileague.com')
+  WHERE address ILIKE '%mail.coaileague.com%';
+
+================================================================================
+SECTION 12 - EXECUTION ORDER FOR AGENT
+================================================================================
+
+PHASE 1 - DATABASE (run first)
+  Create all 5 new tables with indexes
+  Add columns to workspaces, users, clients tables
+  Seed 5 protected platform addresses
+  Seed routing entries for protected addresses
+  Run backfill SQL to remove mail.coaileague.com from existing records
+
+PHASE 2 - SERVICES (run second)
+  Build emailProvisioningService.ts with all 5 functions
+  Wire provisionWorkspaceAddresses() into workspace registration
+  Wire reserveUserEmailAddress() into employee creation
+  Wire reserveClientEmailAddress() into client creation
+  Extend existing inbound webhook handler with full routing logic
+  Build processTrinityEmail() function
+
+PHASE 3 - ROUTES AND API (run third)
+  Build all 13 API routes
+  Add EMAIL_PRICING to shared/billingConfig.ts
+  Wire activation/deactivation to Stripe subscription items at $3/month
+  Verify all email prices read from billingConfig not hardcoded
+
+PHASE 4 - UI (run fourth)
+  Build EmailManagement.tsx settings page with all 4 sections
+  Add 5 NDS templates for email notification types
+  Add email seat count and cost to billing dashboard widget
+
+PHASE 5 - VERIFICATION (run last)
+  Run all checks below
+  Fix any failures
+  Confirm TypeScript zero errors
+  Confirm server health OK
+
+================================================================================
+SECTION 13 - VERIFICATION CHECKS
+================================================================================
+
+All 5 email tables exist:
+  SELECT COUNT(*) FROM information_schema.tables
+  WHERE table_schema='public'
+  AND table_name IN ('platform_email_addresses','email_routing',
+    'platform_emails','email_attachments','email_drafts');
+  EXPECTED: 5
+
+Protected platform addresses seeded:
+  SELECT COUNT(*) FROM platform_email_addresses WHERE is_protected=true;
+  EXPECTED: 5
+
+Zero mail.coaileague.com in code:
+  grep -rn "mail\.coaileague\.com" server/ client/ shared/ --include="*.ts" | grep -v node_modules | wc -l
+  EXPECTED: 0
+
+Zero mail.coaileague.com in database:
+  SELECT COUNT(*) FROM platform_email_addresses WHERE address ILIKE '%mail.coaileague.com%';
+  EXPECTED: 0
+
+ACME workspace has 6 system addresses:
+  SELECT COUNT(*) FROM platform_email_addresses
+  WHERE workspace_id='[acme_id]' AND address_type='workspace_system';
+  EXPECTED: 6
+
+Inbound webhook route exists (should return 401 not 404):
+  curl -s -o /dev/null -w "%{http_code}" -X POST localhost:5000/api/inbound/email -d '{}'
+  EXPECTED: 401
+
+Email management route exists:
+  curl -s -o /dev/null -w "%{http_code}" localhost:5000/api/email/management -H "Authorization: Bearer [token]"
+  EXPECTED: 200
+
+TypeScript zero errors:
+  npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+  EXPECTED: 0
+
+Server health OK:
+  curl -s localhost:5000/health | jq .status
+  EXPECTED: ok
+
+Send test email inbound to verify routing:
+  After DNS changes: send email to calloffs-acme@coaileague.com from external account
+  Check: SELECT COUNT(*) FROM calloff_records WHERE source='email' AND created_at > NOW() - INTERVAL '5 minutes'
+  EXPECTED: 1 row created
+
+================================================================================
+SECTION 14 - AFTER AGENT COMPLETES - BRYAN MANUAL DNS STEPS
+================================================================================
+
+1. Log into DNS control panel for coaileague.com
+2. Set DNS TTL to 300 seconds on all records (allows 5 minute rollback)
+3. Update SPF record: remove Google, add amazonses.com
+4. Add DKIM TXT record for resend._domainkey.coaileague.com
+5. Delete Google DKIM record google._domainkey.coaileague.com
+6. Add DMARC TXT record for _dmarc.coaileague.com
+7. In Resend dashboard: add coaileague.com as verified sending domain
+8. In Resend dashboard: enable inbound routing to /api/inbound/email
+9. TEST: send email to trinity@coaileague.com from Gmail
+10. VERIFY: email appears in platform inbox
+11. TEST: send email to calloffs-acme@coaileague.com
+12. VERIFY: calloff_record created in database
+13. ONLY AFTER TESTS PASS: change MX records to Resend inbound servers
+14. Monitor server logs for 2 hours after MX change
+15. Remove mail.coaileague.com from Resend domain list
+16. Export Google Workspace data before cancelling Google subscription
+
+ROLLBACK PLAN IF MX CHANGE BREAKS SOMETHING:
+  Change MX records back to Google immediately
+  With TTL=300 this takes effect in 5 minutes
+  Keep Google Workspace active for 30 days after switch as insurance
+
+================================================================================
+END OF EMAIL SYSTEM BUILD PLAN
+ACME sandbox only. Statewide workspace: zero contact zero mutations.
+================================================================================

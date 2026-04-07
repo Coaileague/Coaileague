@@ -1,0 +1,63 @@
+You actually can — and you probably should. 589 "tables" is suspicious. A platform this size should have maybe 60-80 tables, not 589. That number likely includes a lot of duplication, abandoned tables, and tables that should be columns on other tables.
+
+Here's the honest breakdown:
+
+**Tables you CANNOT condense** — anything with its own unique lifecycle. Employees, shifts, invoices, clock records, incidents, credit transactions — these are distinct entities with their own relationships. They stay separate.
+
+**Tables you CAN condense:**
+
+Anywhere you see a pattern like this, it's a candidate:
+
+```
+notification_email_settings
+notification_push_settings  
+notification_sms_settings
+notification_slack_settings
+```
+
+That's 4 tables that should be 1 table with a `channel` column.
+
+Send this to the agent:
+
+```
+How many ACTUAL tables are in the database right now?
+
+SELECT COUNT(*) FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+
+Then list them ALL:
+
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE' 
+ORDER BY table_name;
+
+Then find tables that are likely DUPLICATES or CONSOLIDATION CANDIDATES:
+
+1. Tables with similar names (probably should be one table with a type column):
+   Example: daily_reports + incident_reports + safety_checklists 
+   Could be: reports (with type = 'daily' | 'incident' | 'safety')
+
+2. Tables with zero rows (probably dead/unused):
+   SELECT table_name, n_live_tup as row_count 
+   FROM pg_stat_user_tables 
+   WHERE schemaname = 'public' 
+   ORDER BY n_live_tup ASC;
+
+3. Tables that exist in the database but are NEVER referenced in code:
+   For each table, search the codebase. If zero references, it's dead.
+
+4. Tables that store only configuration that could be JSONB on a parent:
+   Example: if there's a "shift_break_rules" table with 5 columns 
+   that's always read with the shift, it could be a JSONB column on shifts.
+
+Give me the full table list and your recommendations for:
+  KEEP AS-IS: tables that are necessary and well-structured
+  CONSOLIDATE: groups of tables that should merge into one
+  DELETE: tables with 0 rows and 0 code references (dead tables)
+  JSONB: tiny tables that should become columns on their parent
+
+DO NOT delete or consolidate anything yet. Just give me the analysis 
+so I can approve the plan before you touch anything.
+```
+
+The realistic target is probably getting from whatever you have down to 60-80 well-structured tables. The schema refactoring prompt I already gave you (splitting into modules) becomes way easier when you're splitting 80 tables into 18 files instead of 589.

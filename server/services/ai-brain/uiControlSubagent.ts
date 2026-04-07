@@ -15,6 +15,8 @@
 import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { platformEventBus } from '../platformEventBus';
 import { log } from '../../vite';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('uiControlSubagent');
 
 interface UIComponentState {
   id: string;
@@ -115,11 +117,63 @@ class UIControlSubagent {
         config: { shortcut: 'Ctrl+K', fuzzySearch: true },
         lastUpdated: new Date(),
       },
+      // Canvas Hub Architecture Components
+      {
+        id: 'canvas-hub-layer-manager',
+        name: 'Canvas Hub Layer Manager',
+        category: 'manager',
+        isVisible: true,
+        isEnabled: true,
+        config: { 
+          zIndexBase: 1000,
+          stackingOrder: ['modal', 'sheet', 'dialog', 'popover', 'tooltip'],
+          autoZIndex: true 
+        },
+        lastUpdated: new Date(),
+      },
+      {
+        id: 'mobile-responsive-sheet',
+        name: 'Mobile Responsive Sheet',
+        category: 'overlay',
+        isVisible: true,
+        isEnabled: true,
+        config: { 
+          defaultSide: 'bottom',
+          headerGradient: true,
+          textOverflowHandling: 'truncate',
+          useLayerManager: true
+        },
+        lastUpdated: new Date(),
+      },
+      {
+        id: 'managed-dialog',
+        name: 'Managed Dialog',
+        category: 'overlay',
+        isVisible: true,
+        isEnabled: true,
+        config: { 
+          usesLayerManager: true,
+          mobileFullscreen: true
+        },
+        lastUpdated: new Date(),
+      },
+      {
+        id: 'responsive-dialog',
+        name: 'Responsive Dialog',
+        category: 'overlay',
+        isVisible: true,
+        isEnabled: true,
+        config: { 
+          sheetOnMobile: true,
+          breakpoint: 768
+        },
+        lastUpdated: new Date(),
+      },
       // Note: UniversalTransitionOverlay removed from registry - not needed for current phase
     ];
 
     defaultComponents.forEach(comp => this.componentRegistry.set(comp.id, comp));
-    log(`[UIControlSubagent] Initialized with ${defaultComponents.length} UI components`);
+    log.info(`[UIControlSubagent] Initialized with ${defaultComponents.length} UI components`);
   }
 
   /**
@@ -194,7 +248,7 @@ class UIControlSubagent {
           newState: component,
           reason: command.reason || 'Trinity AI command',
         },
-      });
+      }).catch((err) => log.warn('[uiControlSubagent] Fire-and-forget failed:', err));
 
       this.commandHistory.push({
         command,
@@ -202,7 +256,7 @@ class UIControlSubagent {
         success: true,
       });
 
-      log(`[UIControlSubagent] Executed: ${command.action} on ${command.componentId}`);
+      log.info(`[UIControlSubagent] Executed: ${command.action} on ${command.componentId}`);
 
       return {
         success: true,
@@ -250,7 +304,7 @@ class UIControlSubagent {
    */
   registerActions() {
     // DISABLED: Phase 2 - All 11 UI control actions not MVP
-    console.log('[UIControlSubagent] DISABLED: 11 UI control actions (Phase 2 cleanup - not MVP)');
+    log.info('[UIControlSubagent] DISABLED: 11 UI control actions (Phase 2 cleanup - not MVP)');
     return; // Skip all UI action registrations
     
     /* DISABLED: Phase 2 - UI control not customer-facing MVP
@@ -260,7 +314,7 @@ class UIControlSubagent {
       name: 'List UI Components',
       category: 'system',
       description: 'List all registered UI components that Trinity can control',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async () => {
         const components = this.getAllComponents();
         return {
@@ -283,7 +337,7 @@ class UIControlSubagent {
       name: 'Get UI Component State',
       category: 'system',
       description: 'Get the current state of a UI component',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (params: { componentId: string }) => {
         const state = this.getComponentState(params.componentId);
         if (!state) {
@@ -299,7 +353,7 @@ class UIControlSubagent {
       name: 'Show UI Component',
       category: 'system',
       description: 'Show a UI component',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (params: { componentId: string; reason?: string }) => {
         return this.executeCommand({
           componentId: params.componentId,
@@ -315,7 +369,7 @@ class UIControlSubagent {
       name: 'Hide UI Component',
       category: 'system',
       description: 'Hide a UI component',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (params: { componentId: string; reason?: string }) => {
         return this.executeCommand({
           componentId: params.componentId,
@@ -331,7 +385,7 @@ class UIControlSubagent {
       name: 'Enable UI Component',
       category: 'system',
       description: 'Enable a UI component',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (params: { componentId: string; reason?: string }) => {
         return this.executeCommand({
           componentId: params.componentId,
@@ -347,7 +401,7 @@ class UIControlSubagent {
       name: 'Disable UI Component',
       category: 'system',
       description: 'Disable a UI component',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (params: { componentId: string; reason?: string }) => {
         return this.executeCommand({
           componentId: params.componentId,
@@ -363,7 +417,7 @@ class UIControlSubagent {
       name: 'Configure UI Component',
       category: 'system',
       description: 'Update configuration of a UI component',
-      requiredRoles: ['admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'support_agent', 'sysop'],
       handler: async (params: { componentId: string; config: Record<string, any>; reason?: string }) => {
         return this.executeCommand({
           componentId: params.componentId,
@@ -380,7 +434,7 @@ class UIControlSubagent {
       name: 'Reset UI Component',
       category: 'system',
       description: 'Reset a UI component to default state',
-      requiredRoles: ['admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'support_agent', 'sysop'],
       handler: async (params: { componentId: string; reason?: string }) => {
         return this.executeCommand({
           componentId: params.componentId,
@@ -396,7 +450,7 @@ class UIControlSubagent {
       name: 'Batch UI Commands',
       category: 'system',
       description: 'Execute multiple UI commands at once',
-      requiredRoles: ['admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'support_agent', 'sysop'],
       handler: async (params: { commands: UIControlCommand[] }) => {
         return this.executeBatch(params.commands);
       },
@@ -408,7 +462,7 @@ class UIControlSubagent {
       name: 'UI Command History',
       category: 'system',
       description: 'Get recent UI control command history',
-      requiredRoles: ['manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
       handler: async (params: { limit?: number }) => {
         return {
           success: true,
@@ -423,7 +477,7 @@ class UIControlSubagent {
       name: 'Get UI Components by Category',
       category: 'system',
       description: 'Get UI components filtered by category (layer, effect, manager, handler, overlay)',
-      requiredRoles: ['employee', 'manager', 'admin', 'super_admin', 'support'],
+      requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
       handler: async (params: { category: UIComponentState['category'] }) => {
         const components = this.getComponentsByCategory(params.category);
         return {
@@ -435,7 +489,7 @@ class UIControlSubagent {
       },
     });
 
-    log('[UIControlSubagent] Registered 11 UI control actions with AI Brain');
+    log.info('[UIControlSubagent] Registered 11 UI control actions with AI Brain');
     */ // END DISABLED: Phase 2 - UI control actions
   }
 }

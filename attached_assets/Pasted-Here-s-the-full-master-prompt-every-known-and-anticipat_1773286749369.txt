@@ -1,0 +1,188 @@
+Here's the full master prompt — every known and anticipated bug class built in:
+
+---
+
+**COAILEAGUE PLATFORM AUDIT — MASTER ZERO GAPS PROTOCOL**
+**Version 3.0 — Production Readiness Standard**
+
+You are performing a comprehensive, exhaustive, multi-pass audit of the CoAIleague platform. This is not a quick scan. This is a production certification audit. Read all existing code completely before touching anything. No assumptions. No skipping. No partial fixes. Every phase must reach zero issues before the next phase begins. If a category cannot be fully resolved flag it with the exact reason, exact file, exact line, and continue to the next.
+
+---
+
+**GROUND RULES — NON NEGOTIABLE**
+- Read before you touch. Always.
+- Run record counts before and after every database change
+- Never touch Statewide Protective Services data — License C11608501 — production is sacred
+- Acme Security Services is the only sandbox for dev and seeding
+- Document every fix, every enhancement, every skip with reason
+- Repeat each phase until that phase reports zero issues
+- When a phase is clean move to next — do not go back unless a later phase reveals an upstream dependency
+
+---
+
+**PHASE 1 — FULL CODEBASE MAP**
+Before touching anything produce a complete map of:
+- Every route — frontend and backend
+- Every component and where it renders
+- Every database table and its relationships
+- Every schema file and whether it matches actual database state
+- Every environment variable and whether it is present in all environments
+- Every external service connection — Resend, Stripe, OpenAI, Gemini, Claude
+- Every Action Hub endpoint Trinity is registered to use
+- Every file over 500 lines flagged for potential splitting
+- Duplicate files or conflicting versions of same component
+
+Report findings. Wait for confirmation before proceeding.
+
+---
+
+**PHASE 2 — PLATFORM INTEGRITY**
+- Z-index conflicts across all layers — modals, drawers, toasts, Trinity FAB, navigation
+- Badge and button overflow on mobile and desktop viewports
+- Hardcoded colors anywhere outside of theme token files — flag every instance
+- Route conflicts — duplicate paths, undefined handlers, dead routes
+- Execution conflicts — functions called multiple times, event listeners stacking
+- Component render duplication — same component mounting more than once per view
+- Asset drawer, dialog, and modal — verify all are centralized and editable platform-wide in single action
+- Trinity FAB hidden correctly on landing and marketing pages
+- Trinity FAB present on all authenticated dashboard pages
+- Bottom navigation z-index not competing with FAB or modals
+- Light and dark mode rendering correctly across all pages — these are intentional day/night modes not bugs
+- Brand gradient elements verified as hardcoded constants not theme violations
+
+---
+
+**PHASE 3 — SCHEMA AND DATABASE INTEGRITY**
+- Every table requiring workspace isolation has workspace_id column with index
+- All foreign key relationships have corresponding indexes
+- Drizzle schema file matches actual database state exactly — zero drift
+- Workspace isolation enforced across all 300+ tables — no cross-tenant data leak possible
+- Zero orphaned records in any table
+- Zero missing join relationships
+- All cascade delete and cascade update rules correct
+- Seeded data in Acme workspace is realistic and complete enough to simulate all platform features
+- Run record counts before and after every change and document both numbers
+
+---
+
+**PHASE 3B — WIDGET DATA INTEGRITY**
+- Every dashboard widget pulls from a single verified source — no widget may show summary and itemized data from separate queries that produce conflicting totals
+- KNOWN BUG: Automation Credits widget — header shows 6,840 used but itemized breakdown totals 24,408. Find both queries. Identify correct source. Reconcile and unify.
+- KNOWN BUG: Earnings forecast widget showing $0.00 for current pay period — verify whether Acme has seeded shifts for current period. If not seed them. If yes fix the query connecting schedule table to earnings calculation.
+- Every widget showing $0.00 or blank in dev environment must be investigated — determine if empty data or broken query and fix accordingly
+- All financial widgets verified with real calculation logic — no placeholder display values
+- Credit usage calculations verified end to end — deduction on AI action, balance update, display refresh
+- All progress bars and percentage displays mathematically verified against their data sources
+- Any counter or badge showing 9+ must correctly reflect actual unread or pending count
+
+---
+
+**PHASE 4 — AUTHENTICATION AND SESSION INTEGRITY**
+- JWT tokens issuing and expiring correctly
+- Refresh token logic functioning without race conditions
+- Session persistence working across page refreshes
+- Multi-tenant auth — user can only access their own workspace data
+- Role based access control enforced on every route — admin, manager, employee, org owner
+- No route accessible without proper role verification
+- Password reset flow complete end to end
+- Invite flow complete end to end — new employee onboarding without gaps
+
+---
+
+**PHASE 5 — REAL TIME AND WEBSOCKET INTEGRITY**
+- WebSocket connections establishing correctly
+- No duplicate socket connections on page navigation
+- Socket disconnecting cleanly on logout
+- Real time notifications delivering to correct workspace only
+- Clock in/out status updating in real time across all connected clients
+- Chat messages delivering without duplication
+- No memory leaks from unclosed socket listeners
+
+---
+
+**PHASE 6 — TRINITY AI VERIFICATION**
+- Audit all intelligence layers — semantic awareness, reasoning, orchestration, context injection
+- Trinity operates ONLY through registered Action Hub endpoints — verify enforced universally
+- HelpAI supervisor correctly orchestrating ReportBot, ClockBot, MeetingBot, SysOpBot
+- Every bot has correct scope — cannot execute actions outside its defined domain
+- Trinity's knowledge of CoAIleague full platform scope is complete and current
+- Trinity FAB ambient presence verified — daily insight, quick action chips, avatar, input panel
+- Trinity context awareness verified per page — she knows what page user is on and responds accordingly
+- Gemini as primary, Claude as validator, OpenAI as backup — verify fallback chain functioning
+- 7 step governance pipeline enforced — Trigger, Fetch, Validate, Process, Mutate, Confirm, Notify
+- If any intelligence layer has gaps or enhancement opportunities — implement them
+- If Trinity is complete in a category — document it and move on
+
+---
+
+**PHASE 7 — FEATURE COMPLETENESS END TO END**
+Verify complete user journey for every feature:
+- AI contract negotiation — 30 credits per contract, strategy suggestions, full flow
+- Branding system — custom color palette, logo upload, custom domain configuration
+- Incident tracking — severity classification, photo evidence capture, resolution workflow, liability documentation
+- Client billing — configurable rates per client, automated billing schedules, invoice generation, payment portal
+- Helpdesk — ticket creation, priority routing, AI powered response, resolution tracking
+- Smart scheduling — AI schedule generation, conflict detection, employee availability matching
+- GPS clock in/out — location verification, geofence enforcement, timestamp accuracy
+- Payroll calculation — hours from clock records, rate application, period totals
+- Broadcast and pass-down system — shift handoff notes delivered to incoming officer
+- Universal Inbox — all notification types consolidated, no modal overflow
+- Resend email routing — all inbound addresses routing correctly to correct handlers
+- Every route confirmed connected to correct UI component and database operation
+
+---
+
+**PHASE 8 — MOBILE AND DESKTOP UX STANDARDS**
+- All pages verified on mobile viewport — no overflow, no hidden content, no broken layouts
+- Bottom navigation functioning correctly on all authenticated pages
+- Touch targets minimum 44px on all interactive elements
+- No horizontal scroll on any mobile page
+- Modals and drawers fully visible and dismissible on mobile
+- All forms submittable on mobile keyboard without layout breaking
+- Desktop layout verified — no excessive whitespace, no broken grid
+- All tables responsive or converted to card layout on mobile
+
+---
+
+**PHASE 9 — UNIVERSAL COMPONENT STANDARDS**
+- Every modal editable from centralized location
+- Every drawer editable from centralized location
+- Every dialog editable from centralized location
+- No component with siloed hardcoded local values
+- Platform wide visual change achievable in single token edit
+- All components respect light and dark theme tokens
+- No inline styles overriding theme system except documented brand constants
+
+---
+
+**PHASE 10 — ENVIRONMENT AND DEPLOYMENT READINESS**
+- All environment variables present and correctly named in all environments
+- No development only values bleeding into production config
+- Domain configuration verified — primary domain and any subdomain routing
+- SSL verified
+- Database connection pooling configured correctly for production load
+- Error boundaries in place — no unhandled crash can take down full platform
+- Logging sufficient to diagnose production issues without exposing sensitive data
+- Rate limiting on all public and AI endpoints
+
+---
+
+**SUCCESS CRITERIA — PRODUCTION CERTIFICATION**
+- Zero data conflicts between widget summary and itemized sources
+- Zero earnings or financial widgets showing incorrect values against seeded data
+- Zero schema drift between Drizzle and actual database
+- Zero workspace isolation gaps
+- Zero route conflicts or dead routes
+- Zero hardcoded values outside token system
+- Zero render duplications
+- Zero WebSocket memory leaks
+- Trinity fully verified — all layers, all bots, all endpoints
+- Every feature journey complete end to end
+- Mobile and desktop both verified
+- Platform ready for Statewide Protective Services live production use
+
+**Begin Phase 1 now. Produce the full map. Report before touching anything.**
+
+---
+
+That's your production certification document Bryan. Run it. When it finishes run it again. Keep running until every phase self-reports clean.

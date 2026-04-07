@@ -1,40 +1,49 @@
 // AI Communications Chat File Upload Routes
-// Secure file upload system with workspace scoping, sanitization, and audit tracking
+// Secure file upload system with workspace scoping, sanitization, virus scanning, and audit tracking
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, type Request } from "express";
 import multer from "multer";
 import path from "path";
 import { randomBytes } from "crypto";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { chatUploads, roomEvents, chatConversations, chatParticipants } from "../../shared/schema";
 import { requireAuth } from "../auth";
 import type { AuthenticatedRequest } from "../rbac";
 import { chatUploadLimiter } from "../middleware/rateLimiter";
+import { strictVirusScan } from "../middleware/virusScan";
 import { Storage } from "@google-cloud/storage";
 import { eq, and, or } from "drizzle-orm";
+import { UPLOADS } from '../config/platformConfig';
+import { platformEventBus } from '../services/platformEventBus';
+import { broadcastToWorkspace } from '../websocket';
+import { typedPool, typedPoolExec } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+const log = createLogger('ChatUploads');
+
 
 const router = Router();
 
 // Validate environment configuration
 const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
 const PRIVATE_DIR = process.env.PRIVATE_OBJECT_DIR || "/.private";
-const STORAGE_CONFIGURED = !!BUCKET_ID;
 
-if (!STORAGE_CONFIGURED) {
-  console.warn(
-    "[chat-uploads] DEFAULT_OBJECT_STORAGE_BUCKET_ID not set — chat file uploads disabled. " +
-    "Set this environment variable to enable Google Cloud Storage uploads."
-  );
+if (!BUCKET_ID) {
+  log.warn("[ChatUploads] DEFAULT_OBJECT_STORAGE_BUCKET_ID not set - chat file uploads will be disabled");
 }
 
-// Initialize Google Cloud Storage (lazy — only used when STORAGE_CONFIGURED)
-const storage = STORAGE_CONFIGURED ? new Storage() : null;
+// Initialize Google Cloud Storage
+const storage = new Storage();
 
 // File upload configuration
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_FILE_SIZE = UPLOADS.maxFileSizeBytes;
 const ALLOWED_MIME_TYPES = [
   // Images
   "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+  // Videos
+  "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo",
+  // Audio / Voice
+  "audio/mpeg", "audio/wav", "audio/ogg", "audio/webm", "audio/mp4", "audio/aac",
   // Documents
   "application/pdf", "application/msword", 
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -133,19 +142,19 @@ router.post(
   requireAuth,
   chatUploadLimiter,
   upload.array("files", 5),
+  strictVirusScan, // CRITICAL: Scan files for malware before processing
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     try {
-      if (!STORAGE_CONFIGURED || !storage) {
-        return res.status(503).json({
-          error: "Chat file uploads are not configured on this deployment",
-          code: "STORAGE_NOT_CONFIGURED",
-        });
-      }
-
       const files = req.files as Express.Multer.File[];
-      const { conversationId, isPublic } = req.body;
-
+      const { conversationId, isPublic, gpsLat, gpsLng, gpsAddress, gpsAccuracy, caption } = req.body;
+      const gpsData = (gpsLat && gpsLng) ? {
+        lat: parseFloat(gpsLat),
+        lng: parseFloat(gpsLng),
+        address: gpsAddress || null,
+        accuracy: gpsAccuracy ? parseFloat(gpsAccuracy) : null,
+      } : null;
+      
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No files provided" });
       }
@@ -168,9 +177,9 @@ router.post(
         }
       }
       
-      // Only owner/admin can set public uploads
-      if (isPublic === "true" && !["owner", "admin"].includes(authReq.workspaceRole || "")) {
-        return res.status(403).json({ error: "Only workspace owners/admins can upload public files" });
+      // Only org_owner/co_owner/manager can set public uploads
+      if (isPublic === "true" && !["org_owner", "co_owner", "manager", "org_manager"].includes(authReq.workspaceRole || "")) {
+        return res.status(403).json({ error: "Only workspace owners/managers can upload public files" });
       }
       
       const uploadedFiles = [];
@@ -211,6 +220,9 @@ router.post(
           ? `https://storage.googleapis.com/${BUCKET_ID}/${storagePath}`
           : storagePath;
         
+        // Get scan result from middleware (attached to file object)
+        const scanResult = (file as any).scanResult;
+
         // Save to database with ORIGINAL filename for audit trail
         const [uploadRecord] = await db
           .insert(chatUploads)
@@ -225,8 +237,15 @@ router.post(
             mimeType: file.mimetype,
             fileSize: file.size,
             storageUrl,
-            isScanned: false,
-            scanStatus: "pending",
+            isScanned: true, // File was scanned by middleware
+            scanStatus: scanResult?.status || "clean", // Store scan status
+            scanResult: scanResult ? JSON.stringify({
+              threatName: scanResult.threatName,
+              confidence: scanResult.confidence,
+              scanMethod: scanResult.scanMethod,
+              sha256Hash: scanResult.sha256Hash,
+              scannedAt: scanResult.timestamp,
+            }) : null,
           })
           .returning();
         
@@ -261,19 +280,156 @@ router.post(
         });
       }
       
+      // Auto-link image uploads to DAR photo_manifest if this chatroom is tied to a shift report
+      // Also store GPS metadata on the shift_chatroom_message if present
+      if (conversationId && uploadedFiles.length > 0) {
+        try {
+          const imageUploads = uploadedFiles.filter(f =>
+            f.mimeType?.startsWith('image/') || ['image/jpeg','image/png','image/webp','image/gif'].includes(f.mimeType || '')
+          );
+          if (imageUploads.length > 0) {
+            const now = new Date().toISOString();
+
+            // First, check if this conversationId is a shift chatroom
+            // CATEGORY C — Raw SQL retained: LIMIT | Tables: shift_chatrooms | Verified: 2026-03-23
+            const chatroomResult = await typedPool(
+              `SELECT id FROM shift_chatrooms WHERE id = $1 LIMIT 1`,
+              [conversationId]
+            ).catch(() => [] as any[]);
+            const isShiftChatroom = chatroomResult.length > 0;
+
+            // If shift chatroom, insert photo messages with GPS metadata
+            if (isShiftChatroom) {
+              for (const f of imageUploads) {
+                const msgMeta: Record<string, any> = {};
+                if (gpsData) msgMeta.gps = gpsData;
+                // CATEGORY C — Raw SQL retained: ::jsonb | Tables: shift_chatroom_messages | Verified: 2026-03-23
+                await typedPoolExec(
+                  `INSERT INTO shift_chatroom_messages
+                   (id, workspace_id, chatroom_id, user_id, content, message_type, attachment_url, attachment_type, attachment_size, metadata, created_at, updated_at)
+                   VALUES (gen_random_uuid(), $1, $2, $3, $4, 'photo', $5, $6, $7, $8::jsonb, NOW(), NOW())`,
+                  [
+                    workspaceId, conversationId, userId,
+                    caption || `Photo uploaded by ${userName}`,
+                    f.url, f.mimeType, f.fileSize,
+                    JSON.stringify(Object.keys(msgMeta).length ? msgMeta : {}),
+                  ]
+                );
+              }
+
+              // Trigger ReportBot photo acknowledgment non-blocking
+              (async () => {
+                try {
+                  const { shiftRoomBotOrchestrator } = await import('../services/bots/shiftRoomBotOrchestrator');
+                  for (const f of imageUploads) {
+                    await shiftRoomBotOrchestrator.handlePhotoAcknowledgment({
+                      conversationId,
+                      workspaceId,
+                      senderName: userName,
+                      attachmentUrl: f.url,
+                      gpsLat: gpsData?.lat ?? undefined,
+                      gpsLng: gpsData?.lng ?? undefined,
+                      gpsAddress: gpsData?.address ?? undefined,
+                    });
+                  }
+                } catch (botErr: unknown) {
+                  log.warn('[ChatUploads] ReportBot photo ack failed (non-blocking):', botErr.message);
+                }
+              })();
+            }
+
+            // Link to DAR photo_manifest
+            // CATEGORY C — Raw SQL retained: LIMIT | Tables: dar_reports | Verified: 2026-03-23
+            const darResult = await typedPool(
+              `SELECT id, photo_manifest, photo_count FROM dar_reports WHERE chatroom_id = $1 AND workspace_id = $2 LIMIT 1`,
+              [conversationId, workspaceId]
+            );
+            if (darResult.length > 0) {
+              const dar = darResult[0];
+              const existingManifest: any[] = Array.isArray(dar.photo_manifest) ? dar.photo_manifest : [];
+              const newEntries = imageUploads.map(f => ({
+                url: f.url,
+                filename: f.originalFilename || f.filename,
+                mimeType: f.mimeType,
+                uploaderName: userName,
+                timestamp: now,
+                caption: caption || `Photo captured during shift by ${userName}`,
+                gpsLat: gpsData?.lat ?? null,
+                gpsLng: gpsData?.lng ?? null,
+                gpsAddress: gpsData?.address ?? null,
+                gpsAccuracy: gpsData?.accuracy ?? null,
+              }));
+              const updatedManifest = [...existingManifest, ...newEntries];
+              // CATEGORY C — Raw SQL retained: ::jsonb | Tables: dar_reports | Verified: 2026-03-23
+              await typedPoolExec(
+                `UPDATE dar_reports SET photo_manifest = $1::jsonb, photo_count = $2, updated_at = NOW() WHERE id = $3`,
+                [JSON.stringify(updatedManifest), updatedManifest.length, dar.id]
+              );
+              log.info(`[ChatUploads] Linked ${newEntries.length} photo(s) to DAR ${dar.id} photo_manifest${gpsData ? ' with GPS' : ''}`);
+            }
+          }
+        } catch (darErr: unknown) {
+          log.warn('[ChatUploads] DAR photo manifest link failed (non-blocking):', darErr.message);
+        }
+      }
+
+      // Emit platform event + WS broadcast for image uploads in any chatroom (non-blocking)
+      if (conversationId && uploadedFiles.length > 0) {
+        const imageUploadsForEvent = uploadedFiles.filter(f =>
+          f.mimeType?.startsWith('image/') || ['image/jpeg','image/png','image/webp','image/gif'].includes(f.mimeType || '')
+        );
+        if (imageUploadsForEvent.length > 0) {
+          try {
+            broadcastToWorkspace(workspaceId, {
+              type: 'chat_image_uploaded',
+              workspaceId,
+              conversationId,
+              uploaderId: userId,
+              uploaderName: userName,
+              uploadCount: imageUploadsForEvent.length,
+              uploads: imageUploadsForEvent.map(f => ({ id: f.id, url: f.url, mimeType: f.mimeType })),
+            });
+            platformEventBus.publish({
+              type: 'chat_message',
+              category: 'operations',
+              title: 'Photo shared in chat',
+              description: `${userName} shared ${imageUploadsForEvent.length} photo(s) in a conversation`,
+              workspaceId,
+              userId,
+              metadata: {
+                conversationId,
+                audience: 'workspace',
+                chatEventType: 'image_upload',
+              },
+              payload: {
+                uploadCount: imageUploadsForEvent.length,
+                uploads: imageUploadsForEvent.map(f => ({ id: f.id, url: f.url, mimeType: f.mimeType })),
+                uploaderName: userName,
+                hasGps: !!gpsData,
+              },
+            }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+          } catch (evtErr: unknown) {
+            log.warn('[ChatUploads] Image event emission failed (non-blocking):', evtErr?.message);
+          }
+        }
+      }
+
       res.json({
         success: true,
         uploads: uploadedFiles,
+        gpsAddress: gpsData?.address ?? null,
+        gpsLat: gpsData?.lat ?? null,
+        gpsLng: gpsData?.lng ?? null,
         message: `${uploadedFiles.length} file(s) uploaded successfully`,
       });
-    } catch (error: any) {
-      console.error("File upload error:", error);
+    } catch (error: unknown) {
+      log.error("File upload error:", error);
       
-      if (error.message?.includes("File type not allowed")) {
-        return res.status(400).json({ error: error.message });
+      if (sanitizeError(error)?.includes("File type not allowed")) {
+        return res.status(400).json({ error: sanitizeError(error) });
       }
       
-      if (error.message?.includes("File too large")) {
+      if (sanitizeError(error)?.includes("File too large")) {
         return res.status(413).json({ 
           error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` 
         });
@@ -319,7 +475,7 @@ router.get(
       
       res.json({ uploads });
     } catch (error) {
-      console.error("Get uploads error:", error);
+      log.error("Get uploads error:", error);
       res.status(500).json({ error: "Failed to retrieve uploads" });
     }
   }
@@ -364,8 +520,8 @@ router.delete(
         }
       }
       
-      // Only uploader, owner, or admin can delete
-      if (upload.uploaderId !== userId && !["owner", "admin"].includes(authReq.workspaceRole || "")) {
+      // Only uploader, org_owner, co_owner, or manager can delete
+      if (upload.uploaderId !== userId && !["org_owner", "co_owner", "manager", "org_manager"].includes(authReq.workspaceRole || "")) {
         return res.status(403).json({ error: "Not authorized to delete this file" });
       }
       
@@ -381,7 +537,7 @@ router.delete(
       
       res.json({ success: true, message: "File deleted successfully" });
     } catch (error) {
-      console.error("Delete upload error:", error);
+      log.error("Delete upload error:", error);
       res.status(500).json({ error: "Failed to delete file" });
     }
   }

@@ -2,111 +2,271 @@
   "name": "CoAIleague - AI Workforce Management",
   "short_name": "CoAIleague",
   "description": "AI-powered workforce management platform with intelligent scheduling, time tracking, payroll automation, and incident reporting for security and field service teams",
-  "start_url": "/worker",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#06b6d4",
+  "display_override": [
+    "tabbed",
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
   "orientation": "portrait-primary",
+  "id": "/",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-96x96.png",
       "sizes": "96x96",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-128x128.png",
       "sizes": "128x128",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-152x152.png",
       "sizes": "152x152",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/desktop-dashboard.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "CoAIleague Dashboard"
+      "purpose": "any"
     },
     {
-      "src": "/screenshots/mobile-clockin.png",
-      "sizes": "390x844",
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mobile Clock-In"
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["business", "productivity", "utilities"],
+  "categories": [
+    "business",
+    "productivity",
+    "utilities"
+  ],
   "shortcuts": [
     {
       "name": "Clock In/Out",
       "short_name": "Clock",
-      "description": "Quick clock in or out",
+      "description": "Start or end your shift",
       "url": "/worker",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "My Schedule",
       "short_name": "Schedule",
       "description": "View your work schedule",
       "url": "/schedule",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Report Incident",
       "short_name": "Incident",
       "description": "Report a security incident",
       "url": "/worker/incidents",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
-      "name": "Chat",
-      "short_name": "Chat",
-      "description": "Team communications",
-      "url": "/chatrooms",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "name": "Trinity AI Chat",
+      "short_name": "Trinity",
+      "description": "Chat with Trinity AI assistant",
+      "url": "/trinity",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "media",
+          "accept": [
+            "image/*",
+            "application/pdf",
+            "text/*"
+          ]
+        }
+      ]
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+coaileague",
+      "url": "/protocol?type=%s"
+    },
+    {
+      "protocol": "web+workforce",
+      "url": "/protocol?type=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/open-file",
+      "accept": {
+        "text/csv": [
+          ".csv"
+        ],
+        "application/pdf": [
+          ".pdf"
+        ],
+        "image/*": [
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".gif"
+        ]
+      }
     }
   ],
   "prefer_related_applications": false,
-  "related_applications": [],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.coaileague.app",
+      "url": "https://play.google.com/store/apps/details?id=com.coaileague.app"
+    }
+  ],
   "scope": "/",
+  "scope_extensions": [
+    {
+      "origin": "https://*.coaileague.com"
+    },
+    {
+      "origin": "https://*.replit.app"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1408x768",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "CoAIleague Dashboard - Intelligent Scheduling"
+    },
+    {
+      "src": "/screenshots/mobile-clockin.png",
+      "sizes": "768x1408",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Clock-In with GPS Verification"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Quick Clock",
+      "description": "Clock in/out widget for fast time tracking",
+      "tag": "clock-widget",
+      "ms_ac_template": {
+        "type": "AdaptiveCard",
+        "version": "1.5",
+        "body": [
+          {
+            "type": "TextBlock",
+            "text": "CoAIleague Clock",
+            "weight": "Bolder",
+            "size": "Medium"
+          },
+          {
+            "type": "ActionSet",
+            "actions": [
+              {
+                "type": "Action.OpenUrl",
+                "title": "Clock In/Out",
+                "url": "/worker"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "note_taking": {
+    "new_note_url": "/worker/incidents"
+  },
   "lang": "en-US",
-  "dir": "ltr"
+  "dir": "ltr",
+  "serviceworker": {
+    "src": "/service-worker.js",
+    "scope": "/",
+    "use_cache": true
+  }
 }

@@ -18,6 +18,10 @@ import { promisify } from 'util';
 import { GEMINI_MODELS, ThinkingLevel } from './providers/geminiClient';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
+import { usageMeteringService } from '../billing/usageMetering';
+import { meteredGemini } from '../billing/meteredGeminiClient';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('TrinityReflectionEngine');
 
 const execAsync = promisify(exec);
 
@@ -192,31 +196,41 @@ class TrinityReflectionEngineService {
       };
     }
 
-    console.log(`[TrinityReflection] Analyzing failure for finding ${context.findingId}, attempt ${context.attemptNumber}/${context.maxAttempts}`);
+    log.info(`[TrinityReflection] Analyzing failure for finding ${context.findingId}, attempt ${context.attemptNumber}/${context.maxAttempts}`);
 
     try {
-      const model = this.genAI.getGenerativeModel({ 
-        model: GEMINI_MODELS.ARCHITECT,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 2000,
-        },
+      const prompt = this.buildReflectionPrompt(context);
+      // Platform-level reflection - billed to PLATFORM_COST_CENTER
+      const result = await meteredGemini.generate({
+        workspaceId: undefined as any,
+        featureKey: 'trinity_reflection_analysis',
+        prompt,
+        model: 'gemini-2.5-pro',
+        temperature: 0.3,
+        maxOutputTokens: 2000,
       });
 
-      const prompt = this.buildReflectionPrompt(context);
-      const result = await model.generateContent(prompt);
-      const response = result.response.text();
-      
-      return this.parseReflectionResponse(response, context);
+      if (!result.success) {
+        return {
+          shouldRetry: context.attemptNumber < context.maxAttempts,
+          confidence: 0.3,
+          diagnosis: `Reflection blocked: ${result.error}`,
+          suggestedApproach: 'Retry with original approach',
+          escalateToHuman: context.attemptNumber >= context.maxAttempts - 1,
+          reasoningTrace: [`Billing gate: ${result.error}`],
+        };
+      }
+
+      return this.parseReflectionResponse(result.text, context);
     } catch (error: any) {
-      console.error('[TrinityReflection] Error during reflection:', error.message);
+      log.error('[TrinityReflection] Error during reflection:', (error instanceof Error ? error.message : String(error)));
       return {
         shouldRetry: context.attemptNumber < context.maxAttempts,
         confidence: 0.3,
-        diagnosis: `Reflection failed: ${error.message}`,
+        diagnosis: `Reflection failed: ${(error instanceof Error ? error.message : String(error))}`,
         suggestedApproach: 'Retry with original approach',
         escalateToHuman: context.attemptNumber >= context.maxAttempts - 1,
-        reasoningTrace: [`Reflection error: ${error.message}`],
+        reasoningTrace: [`Reflection error: ${(error instanceof Error ? error.message : String(error))}`],
       };
     }
   }
@@ -322,7 +336,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
         
         if (normalized.length > 0) {
           revisedPatches = normalized;
-          console.log(`[TrinityReflection] Parsed ${normalized.length} revised patches from AI response`);
+          log.info(`[TrinityReflection] Parsed ${normalized.length} revised patches from AI response`);
         }
       }
       
@@ -336,7 +350,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
         reasoningTrace: parsed.reasoningTrace || [],
       };
     } catch (error) {
-      console.error('[TrinityReflection] Error parsing response:', error);
+      log.error('[TrinityReflection] Error parsing response:', error);
       return {
         shouldRetry: context.attemptNumber < context.maxAttempts - 1,
         confidence: 0.4,
@@ -368,10 +382,10 @@ Respond ONLY with this JSON (no markdown, no explanation):
     const attempts: IterationResult[] = [];
     let lastPatches: any[] = [];
     
-    console.log(`[TrinityReflection] Starting iterative fix loop for finding ${findingId}`);
+    log.info(`[TrinityReflection] Starting iterative fix loop for finding ${findingId}`);
 
     for (let attempt = 1; attempt <= REFLECTION_CONFIG.maxRetries; attempt++) {
-      console.log(`[TrinityReflection] === Attempt ${attempt}/${REFLECTION_CONFIG.maxRetries} ===`);
+      log.info(`[TrinityReflection] === Attempt ${attempt}/${REFLECTION_CONFIG.maxRetries} ===`);
       
       // Get reflection data from previous attempt
       const prevReflection = attempts.length > 0 
@@ -382,7 +396,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
       
       // Log if using revised patches
       if (revisedPatches && revisedPatches.length > 0) {
-        console.log(`[TrinityReflection] Using ${revisedPatches.length} AI-generated revised patches for attempt ${attempt}`);
+        log.info(`[TrinityReflection] Using ${revisedPatches.length} AI-generated revised patches for attempt ${attempt}`);
       }
       
       const fixResult = await executeFix(attempt, suggestedApproach, revisedPatches);
@@ -404,7 +418,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
       const lspErrors = this.parseLspErrors(tsErrors);
       
       if (tsClean) {
-        console.log(`[TrinityReflection] Attempt ${attempt} succeeded - code is clean!`);
+        log.info(`[TrinityReflection] Attempt ${attempt} succeeded - code is clean!`);
         attempts.push({
           success: true,
           attempt,
@@ -424,7 +438,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
       }
       
       // Fix failed validation - reflect and potentially retry
-      console.log(`[TrinityReflection] Attempt ${attempt} has ${tsErrors.length} TypeScript errors`);
+      log.info(`[TrinityReflection] Attempt ${attempt} has ${tsErrors.length} TypeScript errors`);
       
       // Read file contents for better reflection if available
       let fileContents: Map<string, string> | undefined;
@@ -432,7 +446,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
         try {
           fileContents = await readFileContents();
         } catch (e) {
-          console.warn('[TrinityReflection] Could not read file contents for reflection');
+          log.warn('[TrinityReflection] Could not read file contents for reflection');
         }
       }
       
@@ -450,7 +464,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
       
       // Log if reflection generated revised patches
       if (reflectionResult.revisedPatches && reflectionResult.revisedPatches.length > 0) {
-        console.log(`[TrinityReflection] Reflection generated ${reflectionResult.revisedPatches.length} revised patches`);
+        log.info(`[TrinityReflection] Reflection generated ${reflectionResult.revisedPatches.length} revised patches`);
       }
       
       attempts.push({
@@ -464,7 +478,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
       
       // Check if we should stop retrying
       if (!reflectionResult.shouldRetry || reflectionResult.escalateToHuman) {
-        console.log(`[TrinityReflection] Stopping iteration - escalating to human`);
+        log.info(`[TrinityReflection] Stopping iteration - escalating to human`);
         
         await this.emitReflectionEvent('fix_escalated', {
           findingId,
@@ -476,7 +490,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
         return { success: false, attempts, finalResult: reflectionResult };
       }
       
-      console.log(`[TrinityReflection] Will retry with${reflectionResult.revisedPatches ? ' revised patches and' : ''} suggested approach: ${reflectionResult.suggestedApproach}`);
+      log.info(`[TrinityReflection] Will retry with${reflectionResult.revisedPatches ? ' revised patches and' : ''} suggested approach: ${reflectionResult.suggestedApproach}`);
     }
     
     // All attempts exhausted
@@ -509,7 +523,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
     findingId: string,
     affectedFiles: string[],
   ): Promise<{ approved: boolean; reason: string }> {
-    console.log(`[TrinityReflection] Running internal approval gate for finding ${findingId}`);
+    log.info(`[TrinityReflection] Running internal approval gate for finding ${findingId}`);
     
     // Run TypeScript check
     const { clean, errors } = await this.runTscCheck(affectedFiles);
@@ -536,20 +550,20 @@ Respond ONLY with this JSON (no markdown, no explanation):
     const event: PlatformEvent = {
       type: eventType as any,
       category: 'automation' as any,
-      title: `Trinity Reflection: ${eventType}`,
+      title: `Reflection: ${eventType}`,
       description: data.diagnosis || `Reflection event for finding ${data.findingId}`,
       metadata: {
         ...data,
         timestamp: new Date().toISOString(),
         service: 'TrinityReflectionEngine',
       },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     };
 
     try {
       await platformEventBus.publish(event);
     } catch (error) {
-      console.error('[TrinityReflection] Failed to emit event:', error);
+      log.error('[TrinityReflection] Failed to emit event:', error);
     }
   }
 }
@@ -561,9 +575,9 @@ Respond ONLY with this JSON (no markdown, no explanation):
 export const trinityReflectionEngine = TrinityReflectionEngineService.getInstance();
 
 export async function initializeTrinityReflectionEngine(): Promise<void> {
-  console.log('[TrinityReflection] Initializing Trinity Reflection Engine...');
-  console.log('[TrinityReflection] Self-correction loop ready - max retries:', REFLECTION_CONFIG.maxRetries);
-  console.log('[TrinityReflection] Using Gemini model:', GEMINI_MODELS.ARCHITECT);
+  log.info('[TrinityReflection] Initializing Trinity Reflection Engine...');
+  log.info('[TrinityReflection] Self-correction loop ready - max retries:', REFLECTION_CONFIG.maxRetries);
+  log.info('[TrinityReflection] Using Gemini model:', GEMINI_MODELS.ARCHITECT);
 }
 
 export { TrinityReflectionEngineService };

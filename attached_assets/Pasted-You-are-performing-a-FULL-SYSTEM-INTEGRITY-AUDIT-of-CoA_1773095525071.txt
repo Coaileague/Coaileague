@@ -1,0 +1,71 @@
+You are performing a FULL SYSTEM INTEGRITY AUDIT of CoAIleague. This is not a feature build. Do not add features. Do not refactor. Do not optimize. Your only job is to find and fix every broken connection between frontend, backend, and database.
+Work through this exactly as written. Complete each phase fully before moving to the next. Report findings before fixing.
+
+PHASE 1 — BUILD THE MASTER MAP
+Create a single document called SYSTEM_MAP.md. Populate it with four lists:
+List A — Every database table that exists in the schema
+List B — Every API route that is mounted and reachable (trace from server entry point through every router)
+List C — Every frontend API call (search all fetch(), axios, apiRequest, useQuery, useMutation calls across all .tsx and .ts files)
+List D — Every Drizzle schema object
+Do not proceed to Phase 2 until all four lists are complete.
+
+PHASE 2 — FIND EVERY MISMATCH
+Using SYSTEM_MAP.md, identify and list every instance of:
+2A — Frontend calls a route that does not exist in List B
+2B — A route exists in List B but references a table not in List A
+2C — A route exists in List B but references a Drizzle object not in List D
+2D — A table exists in List A but has no Drizzle schema object in List D
+2E — A Drizzle schema object references a column name that does not match the actual database column
+2F — An enum value used in code does not match the enum values defined in the database
+2G — A route is mounted in a router file but that router file is never imported or mounted in the main server
+2H — A frontend page exists with no corresponding backend route for any of its data needs
+For each mismatch found: state the file, line number, what was expected, and what actually exists.
+Do not fix anything yet. List all mismatches first.
+
+PHASE 3 — PRIORITIZE BY IMPACT
+Sort all mismatches into three tiers:
+TIER 1 — Money and data integrity: anything touching payroll, Stripe, invoicing, timeclock, guard payments, org billing
+TIER 2 — Operational: scheduling, compliance, incidents, notifications, Trinity actions
+TIER 3 — UI and reporting: dashboards, analytics, exports, settings
+
+PHASE 4 — FIX IN TIER ORDER
+For each mismatch starting with Tier 1:
+Step 1 — State exactly what is broken and why
+Step 2 — State the fix
+Step 3 — Implement the fix
+Step 4 — Verify: trace the full path from frontend call → route → service → Drizzle → database table → response → frontend render. Confirm every link in the chain resolves correctly
+Step 5 — Mark it done in SYSTEM_MAP.md
+Step 6 — Move to next item. Do not batch fixes.
+
+PHASE 5 — ETHICS HOTLINE SPECIFICALLY
+The ethics hotline frontend page is built. Trace it completely:
+- What table does it expect? Does that table exist with those exact column names?
+- What routes does the frontend call? Are those routes mounted?
+- Is the router imported in the correct parent router?
+- Is the parent router mounted in the server entry point?
+- Are all enum values in the insert/select queries matching the database enum definitions exactly — including case sensitivity?
+Fix every broken link in this chain completely before moving on.
+
+PHASE 6 — TRINITY MONEY GATES
+Identify every Trinity action in the 679 registered actions that can:
+- Trigger a payroll run
+- Modify pay rates or schedules
+- Generate or send an invoice
+- Modify Stripe subscriptions
+- Delete or modify timesheet records
+For each of these actions confirm:
+- There is a human confirmation gate before execution
+- There is idempotency protection (cannot execute the same action twice for the same period)
+- Errors are surfaced to org admins and logged
+- Trinity cannot approve its own money actions
+If any of these gates are missing — add them before anything else ships.
+
+PHASE 7 — FINAL VERIFICATION
+Run the application. For every Tier 1 and Tier 2 fix:
+- Trigger the action from the frontend using Acme org
+- Confirm the database record is created or updated correctly
+- Confirm the response reaches the frontend
+- Confirm no console errors
+- Confirm multi-org isolation: the same action in Anvil Security org does not affect Acme records
+When all phases are complete, update SYSTEM_MAP.md with a CLEAN section listing every route and table that is fully verified end to end.
+Do not declare victory until SYSTEM_MAP.md exists, every Tier 1 mismatch is fixed and verified, and the ethics hotline works completely from frontend to database.

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { SEO, PAGE_SEO } from '@/components/seo';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +40,25 @@ export default function UniversalMarketing() {
 
   const handleNavigation = (newSection: Section['id']) => {
     setSection(newSection);
-    window.history.pushState({}, '', `/?section=${newSection}`);
+    if (newSection === 'pricing') {
+      window.history.pushState({}, '', '/pricing');
+    } else if (newSection === 'landing') {
+      window.history.pushState({}, '', '/');
+    } else {
+      window.history.pushState({}, '', `/?section=${newSection}`);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full">
+      <SEO
+        title={PAGE_SEO.pricing.title}
+        description={PAGE_SEO.pricing.description}
+        canonical="https://coaileague.com/pricing"
+      />
       <UniversalHeader variant="public" />
 
+      <main className="flex-1">
       {/* LANDING SECTION */}
       {section === 'landing' && (
         <>
@@ -53,10 +66,10 @@ export default function UniversalMarketing() {
           <section className="pt-16 md:pt-24 pb-8 md:pb-16 px-3 sm:px-4 md:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 mobile-compact-p mobile-text-scale">
             <div className="container mx-auto max-w-7xl">
               <div className="text-center space-y-4 md:space-y-6 mb-8 md:mb-12">
-                <Badge className="bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 border-blue-200 shadow-md dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700 inline-block">
-                  <Sparkles className="h-3 w-3 mr-1 shrink-0" />
-                  {MARKETING.landing.hero.badge}
-                </Badge>
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 border border-blue-200 shadow-md dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700 text-[10px] sm:text-xs font-medium">
+                  <Sparkles className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{MARKETING.landing.hero.badge}</span>
+                </div>
 
                 <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">
@@ -112,9 +125,9 @@ export default function UniversalMarketing() {
           </section>
 
           {/* Features Grid */}
-          <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 mobile-compact-p">
+          <section className="py-6 md:py-16 px-3 sm:px-4 md:px-6 mobile-compact-p">
             <div className="container mx-auto max-w-7xl">
-              <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">AI-Powered Capabilities</h2>
+              <h2 className="text-xl md:text-3xl font-bold text-center mb-6 md:mb-12">AI-Powered Capabilities</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mobile-cols-1 mobile-gap-4">
                 {MARKETING.landing.features.map((feature) => (
                   <Card key={feature.title} className="hover:shadow-md transition-shadow">
@@ -139,9 +152,9 @@ export default function UniversalMarketing() {
           </section>
 
           {/* Social Proof */}
-          <section className="py-12 md:py-16 bg-gray-50 dark:bg-gray-900/50 px-3 sm:px-4 md:px-6 mobile-compact-p">
+          <section className="py-6 md:py-16 bg-gray-50 dark:bg-gray-900/50 px-3 sm:px-4 md:px-6 mobile-compact-p">
             <div className="container mx-auto max-w-7xl">
-              <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">Trusted by Industry Leaders</h2>
+              <h2 className="text-xl md:text-3xl font-bold text-center mb-6 md:mb-12">Trusted by Industry Leaders</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mobile-cols-1 mobile-gap-4">
                 {MARKETING.landing.socialProof.map((testimonial) => (
                   <Card key={testimonial.name}>
@@ -164,10 +177,10 @@ export default function UniversalMarketing() {
           </section>
 
           {/* CTA */}
-          <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 text-center mobile-compact-p">
+          <section className="py-6 md:py-16 px-3 sm:px-4 md:px-6 text-center mobile-compact-p">
             <div className="container mx-auto max-w-2xl">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to Transform Your Workforce?</h2>
-              <p className="text-muted-foreground mb-6">Start your 30-day free trial today. No credit card required.</p>
+              <p className="text-muted-foreground mb-6">Start your 14-day free trial today. No credit card required.</p>
               <Button size="lg" onClick={() => setLocation('/register?tier=free')}>
                 Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -181,13 +194,13 @@ export default function UniversalMarketing() {
         <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 mobile-compact-p">
           <div className="container mx-auto max-w-7xl">
             <div className="text-center mb-8">
-              <Badge className="inline-block mb-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
-                AI-Powered Workforce Management for Service Companies
-              </Badge>
-              <h1 className="text-2xl md:text-4xl font-bold mb-4">
+              <div className="inline-block mb-4 px-3 py-1 rounded-md bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-[10px] sm:text-xs font-medium">
+                AI-Powered Workforce Management
+              </div>
+              <h2 className="text-xl sm:text-2xl md:text-4xl font-bold mb-3 sm:mb-4">
                 Premium AI Workforce Automation
-              </h1>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
+              </h2>
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
                 Trinity AI autonomously schedules, processes payroll, bills clients, and optimizes profit while you sleep. 
                 Service companies save 30-40 hours/month and increase profit margins by 2-5%.
               </p>
@@ -200,7 +213,7 @@ export default function UniversalMarketing() {
 
             {/* Billing Cycle Toggle */}
             <div className="flex justify-center mb-8">
-              <div className="inline-flex items-center gap-2 p-1 bg-muted rounded-lg">
+              <div className="inline-flex items-center gap-1 p-1 bg-muted rounded-lg">
                 <Button
                   variant={billingCycle === 'monthly' ? 'default' : 'ghost'}
                   size="sm"
@@ -214,17 +227,16 @@ export default function UniversalMarketing() {
                   size="sm"
                   onClick={() => setBillingCycle('annual')}
                   data-testid="toggle-annual"
-                  className="relative"
                 >
                   Annual
-                  <Badge className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 bg-green-500 text-white border-0">
-                    Save 20%
-                  </Badge>
                 </Button>
+              </div>
+              <div className="ml-2 flex items-center">
+                <span className="text-[10px] sm:text-xs font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">Save 20%</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mobile-cols-1 mobile-gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {MARKETING.pricing.getTiers().map((tier) => {
                 const isAnnual = billingCycle === 'annual';
                 const monthlyPrice = tier.monthlyPrice / 100;
@@ -253,31 +265,34 @@ export default function UniversalMarketing() {
                 return (
                 <Card
                   key={tier.id}
-                  className={`relative ${tier.popular ? 'ring-2 ring-primary md:scale-105' : ''}`}
+                  className={`relative overflow-visible ${tier.popular ? 'ring-2 ring-primary' : ''}`}
                   data-testid={`card-tier-${tier.id}`}
                 >
                   {tier.popular && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600">
-                      Most Popular
-                    </Badge>
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                      <div className="px-2.5 py-0.5 rounded-md bg-green-600 text-white text-[10px] sm:text-xs font-medium whitespace-nowrap">
+                        Most Popular
+                      </div>
+                    </div>
                   )}
 
-                  <CardHeader>
-                    <CardTitle>{tier.name}</CardTitle>
-                    <CardDescription>{tier.description}</CardDescription>
-                    <div className="mt-4">
-                      <span className="text-3xl font-bold">{displayPrice}</span>
-                      <span className="text-sm text-muted-foreground ml-1">{priceSubtext}</span>
+                  <CardHeader className="pb-2 sm:pb-4 px-3 sm:px-6">
+                    <CardTitle className="text-sm sm:text-lg">{tier.name}</CardTitle>
+                    <CardDescription className="text-[10px] sm:text-sm line-clamp-2">{tier.description}</CardDescription>
+                    <div className="mt-2 sm:mt-4 flex items-baseline gap-1 flex-wrap">
+                      <span className="text-lg sm:text-2xl md:text-3xl font-bold whitespace-nowrap shrink-0">{displayPrice}</span>
+                      <span className="text-[10px] sm:text-sm text-muted-foreground">{priceSubtext}</span>
                     </div>
                     {annualNote && (
-                      <p className="text-xs text-muted-foreground">{annualNote}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">{annualNote}</p>
                     )}
-                    <p className="text-xs text-primary font-medium mt-2">{tier.savings}</p>
+                    <p className="text-[10px] sm:text-xs text-primary font-medium mt-1 sm:mt-2">{tier.savings}</p>
                   </CardHeader>
 
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4 pt-0 sm:pt-2 px-3 sm:px-6">
                     <Button
-                      className={`w-full ${tier.popular ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                      className={`w-full text-xs sm:text-sm ${tier.popular ? 'bg-green-600' : ''}`}
+                      size="sm"
                       variant={tier.popular ? 'default' : tierId === 'enterprise' ? 'secondary' : 'outline'}
                       onClick={() => {
                         if (tier.cta === 'Contact Sales') {
@@ -291,11 +306,11 @@ export default function UniversalMarketing() {
                       {tier.cta}
                     </Button>
 
-                    <ul className="space-y-2 text-sm">
+                    <ul className="space-y-1 sm:space-y-2 text-[10px] sm:text-sm">
                       {tier.features.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                          <span>{feature}</span>
+                        <li key={i} className="flex items-start gap-1 sm:gap-2">
+                          <Check className="h-3 w-3 sm:h-4 sm:w-4 text-primary mt-0.5 shrink-0" />
+                          <span className="leading-tight">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -305,85 +320,85 @@ export default function UniversalMarketing() {
             </div>
 
             {/* ADD-ONS SECTION */}
-            <div className="mt-16">
-              <div className="text-center mb-8">
-                <h2 className="text-xl md:text-2xl font-bold mb-2">Power-Up Your Professional Plan</h2>
-                <p className="text-muted-foreground">Add-ons available for Professional tier subscribers</p>
+            <div className="mt-12 sm:mt-16">
+              <div className="text-center mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-2">Power-Up Your Professional Plan</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">Add-ons available for Professional tier subscribers</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 max-w-5xl mx-auto">
                 {/* Per-Client Profitability */}
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Per-Client Profitability</CardTitle>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold">$199</span>
-                      <span className="text-sm text-muted-foreground">/mo</span>
+                <Card>
+                  <CardHeader className="p-2.5 sm:p-4 sm:pb-2">
+                    <CardTitle className="text-xs sm:text-base leading-tight">Per-Client Profitability</CardTitle>
+                    <div className="flex items-baseline gap-0.5 sm:gap-1">
+                      <span className="text-base sm:text-2xl font-bold whitespace-nowrap shrink-0">$199</span>
+                      <span className="text-[10px] sm:text-sm text-muted-foreground">/mo</span>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-2">
-                    <p className="text-sm text-muted-foreground mb-3">See which contracts make money</p>
-                    <ul className="space-y-1 text-xs">
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Client margin reports</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Profitability ranking</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Revenue analysis</li>
+                  <CardContent className="p-2.5 sm:p-4 pt-0 sm:pt-2">
+                    <p className="text-xs text-muted-foreground mb-2 hidden sm:block">See which contracts make money</p>
+                    <ul className="space-y-0.5 text-[9px] sm:text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Client margin reports</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Profitability ranking</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Revenue analysis</span></li>
                     </ul>
                   </CardContent>
                 </Card>
 
                 {/* Trinity Predictive Insights */}
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Predictive Insights</CardTitle>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold">$249</span>
-                      <span className="text-sm text-muted-foreground">/mo</span>
+                <Card>
+                  <CardHeader className="p-2.5 sm:p-4 sm:pb-2">
+                    <CardTitle className="text-xs sm:text-base leading-tight">Predictive Insights</CardTitle>
+                    <div className="flex items-baseline gap-0.5 sm:gap-1">
+                      <span className="text-base sm:text-2xl font-bold whitespace-nowrap shrink-0">$249</span>
+                      <span className="text-[10px] sm:text-sm text-muted-foreground">/mo</span>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-2">
-                    <p className="text-sm text-muted-foreground mb-3">AI-powered financial forecasting</p>
-                    <ul className="space-y-1 text-xs">
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Cash flow forecasting</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> What-if scenarios</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Seasonal alerts</li>
+                  <CardContent className="p-2.5 sm:p-4 pt-0 sm:pt-2">
+                    <p className="text-xs text-muted-foreground mb-2 hidden sm:block">AI-powered forecasting</p>
+                    <ul className="space-y-0.5 text-[9px] sm:text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Cash flow forecasting</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">What-if scenarios</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Seasonal alerts</span></li>
                     </ul>
                   </CardContent>
                 </Card>
 
                 {/* Additional AI Credits */}
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">AI Credits Pack</CardTitle>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold">$59</span>
-                      <span className="text-sm text-muted-foreground">/pack</span>
+                <Card>
+                  <CardHeader className="p-2.5 sm:p-4 sm:pb-2">
+                    <CardTitle className="text-xs sm:text-base leading-tight">AI Credits Pack</CardTitle>
+                    <div className="flex items-baseline gap-0.5 sm:gap-1">
+                      <span className="text-base sm:text-2xl font-bold whitespace-nowrap shrink-0">$59</span>
+                      <span className="text-[10px] sm:text-sm text-muted-foreground">/pack</span>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-2">
-                    <p className="text-sm text-muted-foreground mb-3">5,000 credits per pack</p>
-                    <ul className="space-y-1 text-xs">
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Credits added instantly</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> One-time purchase</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> No expiration</li>
+                  <CardContent className="p-2.5 sm:p-4 pt-0 sm:pt-2">
+                    <p className="text-xs text-muted-foreground mb-2 hidden sm:block">5,000 credits per pack</p>
+                    <ul className="space-y-0.5 text-[9px] sm:text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Credits added instantly</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">One-time purchase</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">No expiration</span></li>
                     </ul>
                   </CardContent>
                 </Card>
 
                 {/* Additional Location */}
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Additional Location</CardTitle>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold">$149</span>
-                      <span className="text-sm text-muted-foreground">/mo each</span>
+                <Card>
+                  <CardHeader className="p-2.5 sm:p-4 sm:pb-2">
+                    <CardTitle className="text-xs sm:text-base leading-tight">Additional Location</CardTitle>
+                    <div className="flex items-baseline gap-0.5 sm:gap-1">
+                      <span className="text-base sm:text-2xl font-bold whitespace-nowrap shrink-0">$149</span>
+                      <span className="text-[10px] sm:text-sm text-muted-foreground">/mo</span>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-2">
-                    <p className="text-sm text-muted-foreground mb-3">Multi-site management</p>
-                    <ul className="space-y-1 text-xs">
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Per-location analytics</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Separate scheduling</li>
-                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Consolidated reports</li>
+                  <CardContent className="p-2.5 sm:p-4 pt-0 sm:pt-2">
+                    <p className="text-xs text-muted-foreground mb-2 hidden sm:block">Multi-site management</p>
+                    <ul className="space-y-0.5 text-[9px] sm:text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Per-location analytics</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Separate scheduling</span></li>
+                      <li className="flex items-center gap-1"><Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /><span className="truncate">Consolidated reports</span></li>
                     </ul>
                   </CardContent>
                 </Card>
@@ -391,39 +406,39 @@ export default function UniversalMarketing() {
             </div>
 
             {/* FAQ Section */}
-            <div className="mt-16 max-w-3xl mx-auto">
-              <h2 className="text-xl md:text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-              <div className="space-y-4">
+            <div className="mt-12 sm:mt-16 max-w-3xl mx-auto">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6 sm:mb-8">Frequently Asked Questions</h2>
+              <div className="space-y-3 sm:space-y-4">
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Can I change plans anytime?</CardTitle>
+                  <CardHeader className="pb-2 px-3 sm:px-6">
+                    <CardTitle className="text-sm sm:text-base">Can I change plans anytime?</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground">Yes, you can upgrade or downgrade anytime. Upgrades are prorated immediately, downgrades take effect at the end of your billing period.</p>
+                  <CardContent className="pt-0 px-3 sm:px-6">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Yes, you can upgrade or downgrade anytime. Upgrades are prorated immediately, downgrades take effect at the end of your billing period.</p>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">What happens if I go over my employee limit?</CardTitle>
+                  <CardHeader className="pb-2 px-3 sm:px-6">
+                    <CardTitle className="text-sm sm:text-base">What happens if I go over my employee limit?</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground">You'll be automatically billed at the overage rate for your tier. Starter: $22/employee, Professional: $20/employee. Enterprise has custom negotiated rates.</p>
+                  <CardContent className="pt-0 px-3 sm:px-6">
+                    <p className="text-xs sm:text-sm text-muted-foreground">You'll be automatically billed at the overage rate for your tier. Starter: $10/employee, Professional: $8/employee, Enterprise: $15/employee (all employees billed at this rate). We pass the savings to you.</p>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Do unused AI credits roll over?</CardTitle>
+                  <CardHeader className="pb-2 px-3 sm:px-6">
+                    <CardTitle className="text-sm sm:text-base">Do unused AI credits roll over?</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground">No, credits reset each billing cycle. Consider purchasing credit packs if you anticipate needing more credits in a given month.</p>
+                  <CardContent className="pt-0 px-3 sm:px-6">
+                    <p className="text-xs sm:text-sm text-muted-foreground">No, credits reset each billing cycle. Consider purchasing credit packs if you anticipate needing more credits in a given month.</p>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">What's included in the free trial?</CardTitle>
+                  <CardHeader className="pb-2 px-3 sm:px-6">
+                    <CardTitle className="text-sm sm:text-base">What's included in the free trial?</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground">14 days of basic features: 5 employees max, basic scheduling (no AI), basic time tracking, 500 AI credits, and email support. No credit card required.</p>
+                  <CardContent className="pt-0 px-3 sm:px-6">
+                    <p className="text-xs sm:text-sm text-muted-foreground">14 days of full platform access: up to 10 officers, AI-powered scheduling, GPS time tracking, compliance monitoring, 500 AI interactions, and email support. No credit card required.</p>
                   </CardContent>
                 </Card>
               </div>
@@ -433,11 +448,12 @@ export default function UniversalMarketing() {
       )}
 
       {/* Navigation Buttons */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-white dark:bg-slate-900 rounded-lg shadow-md p-2 border">
+      <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-1 sm:gap-2 bg-white dark:bg-slate-900 rounded-lg shadow-md p-1.5 sm:p-2 border z-50">
         <Button
           variant={section === 'landing' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => handleNavigation('landing')}
+          className="text-xs sm:text-sm"
         >
           Landing
         </Button>
@@ -445,10 +461,12 @@ export default function UniversalMarketing() {
           variant={section === 'pricing' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => handleNavigation('pricing')}
+          className="text-xs sm:text-sm"
         >
           Pricing
         </Button>
       </div>
+      </main>
 
       <Footer />
     </div>

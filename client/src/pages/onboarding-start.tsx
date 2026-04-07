@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Building2, Users, ArrowRight, Loader2, Shield, CreditCard, Clock } from "lucide-react";
+
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
 export default function OnboardingStart() {
   const [mode, setMode] = useState<"choice" | "join">("choice");
@@ -52,13 +55,34 @@ export default function OnboardingStart() {
     acceptInviteMutation.mutate(inviteCode.trim().toUpperCase());
   };
 
+  const joinPageConfig: CanvasPageConfig = {
+    id: 'onboarding-join',
+    title: 'Join Your Team',
+    subtitle: 'Enter the invitation code provided by your employer',
+    category: 'auth',
+    withBottomNav: false,
+    showSeasonalBanner: false,
+    showSeasonalEffects: false,
+  };
+
+  const choicePageConfig: CanvasPageConfig = {
+    id: 'onboarding-start',
+    title: `Welcome to ${PLATFORM_NAME}`,
+    subtitle: 'How would you like to get started?',
+    category: 'auth',
+    withBottomNav: false,
+    showSeasonalBanner: false,
+    showSeasonalEffects: false,
+  };
+
   if (mode === "join") {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <CanvasHubPage config={joinPageConfig}>
+        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CoAIleagueLogo width={180} height={45} showTagline={false} />
+              <UnifiedBrandLogo size="lg" showTagline={false} />
             </div>
             <CardTitle className="flex items-center justify-center gap-2">
               <Users className="h-5 w-5 text-cyan-400" />
@@ -117,20 +141,22 @@ export default function OnboardingStart() {
               </Button>
             </form>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
+    <CanvasHubPage config={choicePageConfig}>
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <CoAIleagueLogo width={220} height={55} showTagline={true} />
+            <UnifiedBrandLogo size="xl" showTagline={true} />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            Welcome to CoAIleague
+            Welcome to {PLATFORM_NAME}
           </h1>
           <p className="text-slate-400 text-lg">
             How would you like to get started?
@@ -145,7 +171,7 @@ export default function OnboardingStart() {
           >
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-teal-400 via-cyan-500 to-blue-500 text-white">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
                   <Building2 className="h-6 w-6" />
                 </div>
                 <CardTitle>Create an Organization</CardTitle>
@@ -198,7 +224,7 @@ export default function OnboardingStart() {
           >
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-400 via-green-500 to-teal-500 text-white">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
                   <Users className="h-6 w-6" />
                 </div>
                 <CardTitle>Join an Organization</CardTitle>
@@ -245,13 +271,14 @@ export default function OnboardingStart() {
           </Card>
         </div>
 
-        <p className="text-center text-slate-500 text-sm mt-8">
-          Need help? Contact your HR administrator or{" "}
-          <a href="/support" className="text-cyan-400 hover:underline">
-            reach out to support
-          </a>
-        </p>
+          <p className="text-center text-slate-500 text-sm mt-8">
+            Need help? Contact your HR administrator or{" "}
+            <a href="/support" className="text-cyan-400 hover:underline">
+              reach out to support
+            </a>
+          </p>
+        </div>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

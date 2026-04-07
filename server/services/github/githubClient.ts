@@ -2,6 +2,7 @@
 // Uses Replit's GitHub connector for authentication
 
 import { Octokit } from '@octokit/rest';
+import { PLATFORM } from '../../config/platformConfig';
 
 let connectionSettings: any;
 
@@ -58,7 +59,7 @@ export async function createRepository(name: string, description?: string, isPri
   const client = await getUncachableGitHubClient();
   const { data } = await client.repos.createForAuthenticatedUser({
     name,
-    description: description || 'CoAIleague - AI-Powered Workforce Intelligence Platform',
+    description: description || PLATFORM.name + " - AI-Powered Workforce Intelligence Platform",
     private: isPrivate,
     auto_init: false,
   });

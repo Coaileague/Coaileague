@@ -11,16 +11,29 @@
  */
 
 import Stripe from 'stripe';
+import crypto from 'crypto';
 import { db } from '../../db';
-import { workspaces, users, type Workspace } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { platformEventBus } from '../platformEventBus';
+import {
+  workspaces,
+  subscriptions,
+  users,
+  employees,
+  billingAuditLog,
+} from '@shared/schema';
+import { eq, and, desc, count } from 'drizzle-orm';
 import { CreditManager, TIER_CREDIT_ALLOCATIONS } from './creditManager';
+import { createLogger } from '../../lib/logger';
+import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
+import { universalAudit } from '../universalAuditService';
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-09-30.clover',
-    })
-  : null;
+const log = createLogger('SubscriptionManager');
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-09-30.clover',
+  timeout: 10000,
+  maxNetworkRetries: 2,
+});
 
 // Subscription tier pricing (monthly base prices)
 // MIDDLEWARE PRICING: Fair value for automation layer connecting to HRIS/accounting
@@ -39,38 +52,62 @@ export const TIER_PRICING = {
     adminReplacementValue: BILLING.tiers.free.adminReplacementValue,
   },
   starter: {
-    monthlyPrice: BILLING.tiers.starter.monthlyPrice, // $349/month
-    yearlyPrice: BILLING.tiers.starter.yearlyPrice, // $3,490/year (2 months free)
-    stripePriceId: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
-    stripeYearlyPriceId: process.env.STRIPE_STARTER_YEARLY_PRICE_ID,
+    monthlyPrice: BILLING.tiers.starter.monthlyPrice,
+    yearlyPrice: BILLING.tiers.starter.yearlyPrice,
+    stripePriceId: process.env.STRIPE_PRICE_STARTER_MONTHLY || process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
+    stripeYearlyPriceId: process.env.STRIPE_PRICE_STARTER_ANNUAL || process.env.STRIPE_STARTER_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_STARTER_ANNUAL,
+    seatOveragePriceId: process.env.STRIPE_PRICE_STARTER_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
     credits: TIER_CREDIT_ALLOCATIONS.starter,
-    maxEmployees: BILLING.tiers.starter.maxEmployees, // 10 included
-    maxManagers: BILLING.tiers.starter.maxManagers, // 2 included
+    maxEmployees: BILLING.tiers.starter.maxEmployees,
+    maxManagers: BILLING.tiers.starter.maxManagers,
     adminReplacementValue: BILLING.tiers.starter.adminReplacementValue,
   },
   professional: {
-    monthlyPrice: BILLING.tiers.professional.monthlyPrice, // $999/month
-    yearlyPrice: BILLING.tiers.professional.yearlyPrice, // $9,990/year (2 months free)
-    stripePriceId: process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
-    stripeYearlyPriceId: process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID,
+    monthlyPrice: BILLING.tiers.professional.monthlyPrice,
+    yearlyPrice: BILLING.tiers.professional.yearlyPrice,
+    stripePriceId: process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY || process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
+    stripeYearlyPriceId: process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL || process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_PROFESSIONAL_ANNUAL,
+    seatOveragePriceId: process.env.STRIPE_PRICE_PROFESSIONAL_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
     credits: TIER_CREDIT_ALLOCATIONS.professional,
-    maxEmployees: BILLING.tiers.professional.maxEmployees, // 25 included
-    maxManagers: BILLING.tiers.professional.maxManagers, // 5 included
+    maxEmployees: BILLING.tiers.professional.maxEmployees,
+    maxManagers: BILLING.tiers.professional.maxManagers,
     adminReplacementValue: BILLING.tiers.professional.adminReplacementValue,
   },
+  business: {
+    monthlyPrice: BILLING.tiers.business.monthlyPrice,
+    yearlyPrice: BILLING.tiers.business.yearlyPrice,
+    stripePriceId: process.env.STRIPE_PRICE_BUSINESS_MONTHLY || process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID,
+    stripeYearlyPriceId: process.env.STRIPE_PRICE_BUSINESS_ANNUAL || process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_BUSINESS_ANNUAL,
+    seatOveragePriceId: process.env.STRIPE_PRICE_BUSINESS_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
+    credits: TIER_CREDIT_ALLOCATIONS.business,
+    maxEmployees: BILLING.tiers.business.maxEmployees,
+    maxManagers: BILLING.tiers.business.maxManagers,
+    adminReplacementValue: BILLING.tiers.business.adminReplacementValue,
+  },
   enterprise: {
-    monthlyPrice: BILLING.tiers.enterprise.monthlyPrice, // Contact sales
+    monthlyPrice: BILLING.tiers.enterprise.monthlyPrice,
     yearlyPrice: BILLING.tiers.enterprise.yearlyPrice,
-    stripePriceId: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
-    stripeYearlyPriceId: process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID,
+    stripePriceId: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
+    stripeYearlyPriceId: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID || process.env.STRIPE_PRICE_ID_ENTERPRISE_ANNUAL,
+    seatOveragePriceId: process.env.STRIPE_PRICE_ENTERPRISE_SEAT_OVERAGE || process.env.STRIPE_PRICE_SEAT_OVERAGE,
     credits: TIER_CREDIT_ALLOCATIONS.enterprise,
-    maxEmployees: BILLING.tiers.enterprise.maxEmployees, // Unlimited
-    maxManagers: BILLING.tiers.enterprise.maxManagers, // Unlimited
+    maxEmployees: BILLING.tiers.enterprise.maxEmployees,
+    maxManagers: BILLING.tiers.enterprise.maxManagers,
     adminReplacementValue: BILLING.tiers.enterprise.adminReplacementValue,
+  },
+  strategic: {
+    monthlyPrice: BILLING.tiers.strategic.startsAt,
+    yearlyPrice: 0,
+    stripePriceId: process.env.STRIPE_STRATEGIC_MONTHLY_PRICE_ID || null,
+    stripeYearlyPriceId: null,
+    credits: TIER_CREDIT_ALLOCATIONS.strategic,
+    maxEmployees: 0,
+    maxManagers: 0,
+    adminReplacementValue: 0,
   },
 } as const;
 
-export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'enterprise';
+export type SubscriptionTier = 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
 export type BillingCycle = 'monthly' | 'yearly';
 
 export interface CreateSubscriptionInput {
@@ -88,35 +125,10 @@ export interface SubscriptionResult {
 }
 
 export class SubscriptionManager {
-  private static instance: SubscriptionManager;
   private creditManager: CreditManager;
-
-  /**
-   * Get singleton instance
-   */
-  static getInstance(): SubscriptionManager {
-    if (!SubscriptionManager.instance) {
-      SubscriptionManager.instance = new SubscriptionManager();
-    }
-    return SubscriptionManager.instance;
-  }
 
   constructor() {
     this.creditManager = new CreditManager();
-  }
-
-  /**
-   * Returns the Stripe client, throwing a clear error if STRIPE_SECRET_KEY is not configured.
-   * This allows the app to start without Stripe and only fail at the point a Stripe
-   * operation is actually attempted.
-   */
-  private getStripe(): Stripe {
-    if (!stripe) {
-      throw new Error(
-        'Stripe is not configured. Set the STRIPE_SECRET_KEY environment variable to enable billing features.'
-      );
-    }
-    return stripe;
   }
 
   /**
@@ -144,14 +156,15 @@ export class SubscriptionManager {
       .limit(1);
 
     // Create new Stripe customer
-    const customer = await this.getStripe().customers.create({
+    const customer = await stripe.customers.create({
       email: owner?.email || undefined,
       metadata: {
         workspaceId: workspace.id,
         organizationId: workspace.organizationId || workspace.id,
         subscriptionTier: workspace.subscriptionTier,
       },
-    });
+    // GAP-58 FIX: workspaceId alone is deterministic for customer creation — one customer per workspace.
+    }, { idempotencyKey: `cust-create-${workspaceId}` });
 
     // Save customer ID
     await db.update(workspaces)
@@ -167,6 +180,21 @@ export class SubscriptionManager {
   async createSubscription(input: CreateSubscriptionInput): Promise<SubscriptionResult> {
     try {
       const { workspaceId, tier, billingCycle, paymentMethodId } = input;
+
+      const [workspace] = await db.select({
+        billingExempt: workspaces.billingExempt,
+        founderExemption: workspaces.founderExemption
+      })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+      // FOUNDER EXEMPTION: Statewide Protective Services is permanently enterprise
+      // Block creation of any other tier/subscription.
+      if (workspace && isBillingExemptByRecord(workspace)) {
+        log.info(`[SubscriptionManager] Founder exemption — blocking subscription creation for workspace ${workspaceId}`);
+        return { success: true }; // Silently succeed as they are already on the best "tier"
+      }
 
       // Free tier doesn't need Stripe subscription
       if (tier === 'free') {
@@ -196,11 +224,11 @@ export class SubscriptionManager {
 
       // Attach payment method if provided
       if (paymentMethodId) {
-        await this.getStripe().paymentMethods.attach(paymentMethodId, {
+        await stripe.paymentMethods.attach(paymentMethodId, {
           customer: customerId,
         });
 
-        await this.getStripe().customers.update(customerId, {
+        await stripe.customers.update(customerId, {
           invoice_settings: {
             default_payment_method: paymentMethodId,
           },
@@ -208,7 +236,7 @@ export class SubscriptionManager {
       }
 
       // Create subscription
-      const subscription = await this.getStripe().subscriptions.create({
+      const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],
         payment_behavior: 'default_incomplete',
@@ -219,7 +247,10 @@ export class SubscriptionManager {
           tier,
           billingCycle,
         },
-      });
+      // GAP-58 FIX: Remove random UUID suffix — workspaceId+tier+billingCycle is already unique
+      // for any given subscription creation attempt. Random suffix caused duplicate subscriptions
+      // on retry (network timeout → new UUID → Stripe saw new request → second subscription created).
+      }, { idempotencyKey: `sub-create-${workspaceId}-${tier}-${billingCycle}` });
 
       // Update workspace
       await db.update(workspaces)
@@ -230,8 +261,11 @@ export class SubscriptionManager {
         })
         .where(eq(workspaces.id, workspaceId));
 
-      // Initialize credits for tier
-      await this.creditManager.initializeCredits(workspaceId, tier);
+      // Upgrade credit allocation to the new paid tier. The workspace already
+      // has a credits record from free-tier initialization, so we use
+      // updateTierAllocation (safe UPDATE) rather than initializeCredits
+      // (plain INSERT that would throw a unique constraint violation).
+      await this.creditManager.updateTierAllocation(workspaceId, tier);
 
       // Extract client secret for payment confirmation
       let clientSecret: string | undefined;
@@ -248,10 +282,10 @@ export class SubscriptionManager {
         clientSecret,
       };
     } catch (error: any) {
-      console.error('Subscription creation error:', error);
+      log.error('Subscription creation error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
-        error: error.message || 'Failed to create subscription',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to create subscription',
       };
     }
   }
@@ -274,12 +308,20 @@ export class SubscriptionManager {
         throw new Error('Workspace not found');
       }
 
+      // FOUNDER EXEMPTION: Statewide Protective Services is permanently enterprise
+      // No tier changes, no downgrades, no cancellations — ever.
+      if (isBillingExemptByRecord(workspace)) {
+        log.info(`[SubscriptionManager] Founder exemption — blocking tier change for workspace ${workspaceId}`);
+        await logExemptedAction({ workspaceId, action: 'changeSubscriptionTier:BLOCKED', metadata: { requestedTier: newTier } });
+        return { success: false, error: 'Founder exemption: subscription tier is permanently enterprise and cannot be changed.' };
+      }
+
       const currentTier = workspace.subscriptionTier as SubscriptionTier;
 
       // Handle downgrade to free
       if (newTier === 'free') {
         if (workspace.stripeSubscriptionId) {
-          await this.getStripe().subscriptions.cancel(workspace.stripeSubscriptionId);
+          await stripe.subscriptions.cancel(workspace.stripeSubscriptionId);
         }
 
         await db.update(workspaces)
@@ -290,8 +332,20 @@ export class SubscriptionManager {
           })
           .where(eq(workspaces.id, workspaceId));
 
-        // Reset to free tier credits
-        await this.creditManager.initializeCredits(workspaceId, 'free');
+        // Downgrade credits to free tier — preserves purchased credit packs.
+        // Uses downgradeCreditsOnCancellation (safe UPDATE) rather than
+        // initializeCredits (plain INSERT that throws if record already exists).
+        await this.creditManager.downgradeCreditsOnCancellation(workspaceId);
+
+        platformEventBus.publish({
+          type: 'workspace_downgraded',
+          category: 'automation',
+          title: 'Workspace Downgraded to Free',
+          description: `Workspace ${workspaceId} subscription cancelled and tier reverted to free`,
+          workspaceId,
+          metadata: { previousTier: currentTier, newTier: 'free', reason: 'tier_change_to_free' },
+          visibility: 'org_leadership',
+        }).catch(err => log.warn('workspace_downgraded event publish failed (non-blocking)', { error: (err instanceof Error ? err.message : String(err)) }));
 
         return { success: true };
       }
@@ -317,10 +371,10 @@ export class SubscriptionManager {
         throw new Error(`Stripe price ID not configured for ${newTier} ${billingCycle}`);
       }
 
-      const subscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
+      const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
       const currentItem = subscription.items.data[0];
 
-      await this.getStripe().subscriptions.update(workspace.stripeSubscriptionId, {
+      await stripe.subscriptions.update(workspace.stripeSubscriptionId, {
         items: [
           {
             id: currentItem.id,
@@ -341,17 +395,82 @@ export class SubscriptionManager {
         })
         .where(eq(workspaces.id, workspaceId));
 
-      // Update credit allocation to new tier
-      await this.creditManager.initializeCredits(workspaceId, newTier);
+      // Update credit allocation to new tier. Safe UPDATE — does not disturb
+      // currentBalance or purchasedCreditsBalance. The next monthly reset will
+      // apply the new monthlyAllocation as the refresh ceiling.
+      await this.creditManager.updateTierAllocation(workspaceId, newTier);
+
+      // Phase 30: Tier change audit record (non-blocking)
+      universalAudit.log({
+        workspaceId,
+        actorType: 'system',
+        action: 'subscription.tier_changed',
+        entityType: 'workspace',
+        entityId: workspaceId,
+        changeType: 'update',
+        changes: { subscriptionTier: { old: currentTier, new: newTier } },
+        metadata: { billingCycle, stripeSubscriptionId: workspace.stripeSubscriptionId },
+        sourceRoute: '/api/billing/subscription/change',
+      }).catch((err) => log.warn('[subscriptionManager] Fire-and-forget failed:', err));
 
       return { success: true, subscriptionId: workspace.stripeSubscriptionId };
     } catch (error: any) {
-      console.error('Subscription change error:', error);
+      log.error('Subscription change error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
-        error: error.message || 'Failed to change subscription',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to change subscription',
       };
     }
+  }
+
+  /**
+   * Add or update metered seat subscription items in Stripe.
+   * This is used for personal/client email addresses which are billed per seat.
+   */
+  async updateMeteredSeats(workspaceId: string, quantity: number, priceId?: string): Promise<void> {
+    const [workspace] = await db.select()
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace?.stripeSubscriptionId) {
+      log.warn(`[SubscriptionManager] No active subscription for workspace ${workspaceId} to update metered seats.`);
+      return;
+    }
+
+    // Default to the tier-specific seat overage price if not provided
+    const tier = workspace.subscriptionTier as SubscriptionTier;
+    const pricing = TIER_PRICING[tier];
+    const effectivePriceId = priceId || (pricing as any).seatOveragePriceId;
+
+    if (!effectivePriceId) {
+      log.warn(`[SubscriptionManager] No seat overage price ID configured for ${tier}.`);
+      return;
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
+    const existingItem = subscription.items.data.find(item => item.price.id === effectivePriceId);
+
+    if (existingItem) {
+      if (quantity === 0) {
+        // Remove item if quantity is zero
+        await stripe.subscriptionItems.del(existingItem.id);
+      } else {
+        // Update quantity
+        await stripe.subscriptionItems.update(existingItem.id, {
+          quantity,
+        });
+      }
+    } else if (quantity > 0) {
+      // Add new item
+      await stripe.subscriptionItems.create({
+        subscription: workspace.stripeSubscriptionId,
+        price: effectivePriceId,
+        quantity,
+      });
+    }
+    
+    log.info(`[SubscriptionManager] Updated metered seats for workspace ${workspaceId}: quantity=${quantity}`);
   }
 
   /**
@@ -364,42 +483,103 @@ export class SubscriptionManager {
         .where(eq(workspaces.id, workspaceId))
         .limit(1);
 
+      // FOUNDER EXEMPTION: Statewide Protective Services cannot be cancelled — ever.
+      if (workspace && isBillingExemptByRecord(workspace)) {
+        log.info(`[SubscriptionManager] Founder exemption — blocking cancellation for workspace ${workspaceId}`);
+        await logExemptedAction({ workspaceId, action: 'cancelSubscription:BLOCKED' });
+        return { success: false, error: 'Founder exemption: subscription cannot be cancelled.' };
+      }
+
       if (!workspace?.stripeSubscriptionId) {
         throw new Error('No active subscription to cancel');
       }
 
       if (immediate) {
-        await this.getStripe().subscriptions.cancel(workspace.stripeSubscriptionId);
+        const cancelledSubId = workspace.stripeSubscriptionId;
+        await stripe.subscriptions.cancel(cancelledSubId);
 
-        await db.update(workspaces)
-          .set({
-            subscriptionTier: 'free',
-            subscriptionStatus: 'cancelled',
-            stripeSubscriptionId: null,
-          })
-          .where(eq(workspaces.id, workspaceId));
+        await db.transaction(async (tx) => {
+          await tx.update(workspaces)
+            .set({
+              subscriptionTier: 'free',
+              subscriptionStatus: 'cancelled',
+              stripeSubscriptionId: null,
+            })
+            .where(eq(workspaces.id, workspaceId));
+          await tx.insert(billingAuditLog).values({
+            workspaceId,
+            eventType: 'subscription_cancelled_immediate',
+            eventCategory: 'billing',
+            actorType: 'system',
+            description: 'Subscription cancelled immediately — workspace reverted to free tier',
+            relatedEntityType: 'subscription',
+            relatedEntityId: cancelledSubId,
+            previousState: { subscriptionTier: workspace.subscriptionTier, subscriptionStatus: workspace.subscriptionStatus, stripeSubscriptionId: cancelledSubId },
+            newState: { subscriptionTier: 'free', subscriptionStatus: 'cancelled', stripeSubscriptionId: null },
+          });
+        });
 
-        // Reset to free tier
-        await this.creditManager.initializeCredits(workspaceId, 'free');
+        // Downgrade to free tier — preserves purchased credit packs.
+        await this.creditManager.downgradeCreditsOnCancellation(workspaceId);
+
+        platformEventBus.publish({
+          type: 'subscription_cancelled',
+          category: 'automation',
+          title: 'Subscription Cancelled Immediately',
+          description: `Workspace ${workspaceId} subscription cancelled immediately — reverted to free tier`,
+          workspaceId,
+          metadata: { immediate: true, previousTier: workspace.subscriptionTier, cancelledSubId },
+          visibility: 'org_leadership',
+        }).catch(err => log.warn('subscription_cancelled event publish failed (non-blocking)', { error: (err instanceof Error ? err.message : String(err)) }));
       } else {
-        // Cancel at period end
-        await this.getStripe().subscriptions.update(workspace.stripeSubscriptionId, {
+        // Cancel at period end — Stripe call first, DB update only on success
+        const updatedSub = await stripe.subscriptions.update(workspace.stripeSubscriptionId, {
           cancel_at_period_end: true,
         });
 
-        await db.update(workspaces)
-          .set({
-            subscriptionStatus: 'cancelled',
-          })
-          .where(eq(workspaces.id, workspaceId));
+        // BUG FIX: Keep stripeSubscriptionId intact so the subscription can be resumed
+        // (un-cancelled) before the period ends. Clearing it here broke `resumeSubscription`
+        // which requires the ID to call Stripe. The ID will be nulled when the
+        // `customer.subscription.deleted` webhook fires after the billing period ends.
+        // Status 'pending_cancel' signals the subscription is still active but
+        // scheduled to terminate — this is distinct from fully 'cancelled'.
+        await db.transaction(async (tx) => {
+          await tx.update(workspaces)
+            .set({
+              subscriptionStatus: 'pending_cancel',
+              // stripeSubscriptionId preserved intentionally — needed for resume
+            })
+            .where(eq(workspaces.id, workspaceId));
+          await tx.insert(billingAuditLog).values({
+            workspaceId,
+            eventType: 'subscription_cancel_period_end',
+            eventCategory: 'billing',
+            actorType: 'system',
+            description: `Subscription set to cancel at period end. Stripe cancel_at: ${updatedSub.cancel_at ? new Date(updatedSub.cancel_at * 1000).toISOString() : 'unknown'}`,
+            relatedEntityType: 'subscription',
+            relatedEntityId: workspace.stripeSubscriptionId,
+            previousState: { subscriptionStatus: workspace.subscriptionStatus, stripeSubscriptionId: workspace.stripeSubscriptionId },
+            newState: { subscriptionStatus: 'pending_cancel', stripeSubscriptionId: workspace.stripeSubscriptionId, cancelAtPeriodEnd: true },
+          });
+        });
+
+        platformEventBus.publish({
+          type: 'subscription_cancelled',
+          category: 'automation',
+          title: 'Subscription Set to Cancel at Period End',
+          description: `Workspace ${workspaceId} subscription will cancel at period end`,
+          workspaceId,
+          metadata: { immediate: false, cancelAtPeriodEnd: true, stripeSubscriptionId: workspace.stripeSubscriptionId },
+          visibility: 'org_leadership',
+        }).catch(err => log.warn('subscription_cancelled (period-end) event publish failed (non-blocking)', { error: (err instanceof Error ? err.message : String(err)) }));
       }
 
       return { success: true };
     } catch (error: any) {
-      console.error('Subscription cancellation error:', error);
+      log.error('Subscription cancellation error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
-        error: error.message || 'Failed to cancel subscription',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to cancel subscription',
       };
     }
   }
@@ -430,7 +610,7 @@ export class SubscriptionManager {
       }
 
       // Retrieve current Stripe subscription state
-      const subscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
+      const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
       
       const targetTier = tier || workspace.subscriptionTier as SubscriptionTier || 'starter';
       const stripeSubId = workspace.stripeSubscriptionId;
@@ -440,7 +620,7 @@ export class SubscriptionManager {
         case 'active':
           // Already active - update tier if different and remove pending cancellation
           if (subscription.cancel_at_period_end) {
-            await this.getStripe().subscriptions.update(stripeSubId, {
+            await stripe.subscriptions.update(stripeSubId, {
               cancel_at_period_end: false,
               metadata: {
                 ...subscription.metadata,
@@ -450,26 +630,26 @@ export class SubscriptionManager {
             });
           }
           // Subscription is active - success
-          console.log(`[SubscriptionManager] Stripe subscription ${stripeSubId} confirmed active`);
+          log.info('Stripe subscription confirmed active', { stripeSubId });
           return { success: true, subscriptionId: stripeSubId };
 
         case 'trialing':
           // Trial subscriptions are also considered active
-          console.log(`[SubscriptionManager] Stripe subscription ${stripeSubId} is in trial - confirmed active`);
+          log.info('Stripe subscription is in trial - confirmed active', { stripeSubId });
           return { success: true, subscriptionId: stripeSubId };
 
         case 'paused':
           // Resume paused subscription - this activates it in Stripe
-          await this.getStripe().subscriptions.resume(stripeSubId, {
+          await stripe.subscriptions.resume(stripeSubId, {
             billing_cycle_anchor: 'now',
           });
-          console.log(`[SubscriptionManager] Stripe subscription ${stripeSubId} resumed from paused`);
+          log.info('Stripe subscription resumed from paused', { stripeSubId });
           return { success: true, subscriptionId: stripeSubId };
 
         case 'past_due':
         case 'unpaid':
           // Cannot resume until payment succeeds - do NOT update local state
-          console.log(`[SubscriptionManager] Subscription ${stripeSubId} is ${subscription.status}, cannot resume until payment succeeds`);
+          log.warn('Subscription cannot resume until payment succeeds', { stripeSubId, status: subscription.status });
           return {
             success: false,
             error: `Subscription is ${subscription.status} - payment must be resolved before reactivation`,
@@ -494,7 +674,7 @@ export class SubscriptionManager {
           };
 
         default:
-          console.log(`[SubscriptionManager] Unexpected subscription status: ${subscription.status}`);
+          log.warn('Unexpected subscription status', { stripeSubId, status: subscription.status });
           return {
             success: false,
             error: `Unexpected subscription status: ${subscription.status}`,
@@ -502,10 +682,10 @@ export class SubscriptionManager {
           };
       }
     } catch (error: any) {
-      console.error('Subscription resume error:', error);
+      log.error('Subscription resume error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
-        error: error.message || 'Failed to resume subscription',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to resume subscription',
       };
     }
   }
@@ -518,50 +698,107 @@ export class SubscriptionManager {
     const workspaceId = subscription.metadata.workspaceId;
 
     if (!workspaceId) {
-      console.error('Subscription webhook missing workspaceId');
+      log.error('Subscription webhook missing workspaceId');
       return;
     }
 
     switch (event.type) {
       case 'customer.subscription.created':
-      case 'customer.subscription.updated':
+      case 'customer.subscription.updated': {
         const tier = subscription.metadata.tier as SubscriptionTier;
-        const status = subscription.status === 'active' ? 'active' : 'suspended';
+        // Map Stripe status to our internal enum values:
+        //   'active'   → 'active'
+        //   'trialing' → 'trial'  (DB enum uses 'trial', not 'trialing')
+        //   everything else (paused, past_due, unpaid, incomplete, etc.) → 'suspended'
+        const status = subscription.status === 'active'
+          ? 'active'
+          : subscription.status === 'trialing'
+            ? 'trial'
+            : 'suspended';
 
-        await db.update(workspaces)
-          .set({
-            subscriptionTier: tier,
-            subscriptionStatus: status,
-            stripeSubscriptionId: subscription.id,
-          })
-          .where(eq(workspaces.id, workspaceId));
+        // RC2 (Phase 2): workspace tier + credits allocation must be updated atomically.
+        // If the credits update fails the workspace still shows the new tier — making
+        // the user pay a higher price but get the old allocation (silent over-charge).
+        await db.transaction(async (tx) => {
+          await tx.update(workspaces)
+            .set({
+              subscriptionTier: tier,
+              subscriptionStatus: status,
+              stripeSubscriptionId: subscription.id,
+            })
+            .where(eq(workspaces.id, workspaceId));
 
-        // Ensure credits are updated to new tier
-        if (status === 'active') {
-          await this.creditManager.initializeCredits(workspaceId, tier);
+          // Safe UPDATE path — workspace already has a credits record; initializeCredits
+          // (plain INSERT) would throw a unique constraint violation here.
+          if (status === 'active' || status === 'trial') {
+            await this.creditManager.updateTierAllocation(workspaceId, tier, tx);
+          }
+        });
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        // RC2 (Phase 2): workspace revert + credit downgrade must be atomic.
+        // If the credit downgrade fails but the workspace is already marked 'cancelled',
+        // the user loses their subscription tier but keeps a premium credit allocation.
+        await db.transaction(async (tx) => {
+          await tx.update(workspaces)
+            .set({
+              subscriptionTier: 'free',
+              subscriptionStatus: 'cancelled',
+              stripeSubscriptionId: null,
+              // Reset billing cycle fields — stale period data causes phantom invoice
+              // generation and incorrect "days remaining" in the billing dashboard.
+              currentPeriodEnd: null,
+              billingCycleDay: null,
+            })
+            .where(eq(workspaces.id, workspaceId));
+
+          // Downgrade to free tier — preserves purchased credit packs.
+          await this.creditManager.downgradeCreditsOnCancellation(workspaceId, tx);
+        });
+
+        // Platform event is a non-DB side-effect — intentionally outside the transaction.
+        platformEventBus.publish({
+          type: 'subscription_cancelled',
+          category: 'automation',
+          title: 'Subscription Deleted via Stripe Webhook',
+          description: `Workspace ${workspaceId} subscription deleted — reverted to free tier`,
+          workspaceId,
+          metadata: { source: 'stripe_webhook', stripeEventType: 'customer.subscription.deleted', stripeSubId: subscription.id },
+          visibility: 'org_leadership',
+        }).catch(err => log.warn('subscription_cancelled webhook event publish failed (non-blocking)', { error: (err instanceof Error ? err.message : String(err)) }));
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        // FOUNDER EXEMPTION: Never suspend billing-exempt workspaces (e.g. Statewide Protective Services)
+        const [wsCheck] = await db.select({ billingExempt: workspaces.billingExempt, founderExemption: workspaces.founderExemption })
+          .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        if (wsCheck && isBillingExemptByRecord(wsCheck)) {
+          await logExemptedAction({ workspaceId, action: 'stripe_payment_failed_suspension_skipped', metadata: { stripeSubId: subscription.id, reason: 'founder_exemption' } });
+          log.info('EXEMPTED: Skipping payment_failed suspension for founder workspace', { workspaceId });
+          break;
         }
-        break;
 
-      case 'customer.subscription.deleted':
-        await db.update(workspaces)
-          .set({
-            subscriptionTier: 'free',
-            subscriptionStatus: 'cancelled',
-            stripeSubscriptionId: null,
-          })
-          .where(eq(workspaces.id, workspaceId));
-
-        // Reset to free tier
-        await this.creditManager.initializeCredits(workspaceId, 'free');
-        break;
-
-      case 'invoice.payment_failed':
         await db.update(workspaces)
           .set({
             subscriptionStatus: 'suspended',
           })
           .where(eq(workspaces.id, workspaceId));
+
+        platformEventBus.publish({
+          type: 'workspace_suspended',
+          category: 'automation',
+          title: 'Workspace Suspended — Payment Failed',
+          description: `Workspace ${workspaceId} suspended due to invoice payment failure`,
+          workspaceId,
+          metadata: { source: 'stripe_webhook', stripeEventType: 'invoice.payment_failed', stripeSubId: subscription.id },
+          visibility: 'org_leadership',
+          priority: 3,
+        }).catch(err => log.warn('workspace_suspended event publish failed (non-blocking)', { error: (err instanceof Error ? err.message : String(err)) }));
         break;
+      }
 
       case 'invoice.payment_succeeded':
         await db.update(workspaces)
@@ -569,6 +806,16 @@ export class SubscriptionManager {
             subscriptionStatus: 'active',
           })
           .where(eq(workspaces.id, workspaceId));
+
+        platformEventBus.publish({
+          type: 'workspace_reactivated',
+          category: 'automation',
+          title: 'Workspace Reactivated — Payment Succeeded',
+          description: `Workspace ${workspaceId} reactivated after successful invoice payment`,
+          workspaceId,
+          metadata: { source: 'stripe_webhook', stripeEventType: 'invoice.payment_succeeded', stripeSubId: subscription.id },
+          visibility: 'org_leadership',
+        }).catch(err => log.warn('workspace_reactivated event publish failed (non-blocking)', { error: (err instanceof Error ? err.message : String(err)) }));
         break;
     }
   }
@@ -611,26 +858,74 @@ export class SubscriptionManager {
     let stripeSubscription: Stripe.Subscription | null = null;
     if (workspace.stripeSubscriptionId) {
       try {
-        stripeSubscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
+        stripeSubscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
       } catch (error) {
-        console.error('Failed to retrieve Stripe subscription:', error);
+        log.error('Failed to retrieve Stripe subscription', { error: String(error) });
       }
     }
 
     const creditBalance = await this.creditManager.getBalance(workspaceId);
+
+    let trialEndsAt: Date | null = null;
+    let trialStartedAt: Date | null = null;
+    try {
+      const [sub] = await db.select({
+        trialEndsAt: subscriptions.trialEndsAt,
+        trialStartedAt: subscriptions.trialStartedAt,
+      })
+        .from(subscriptions)
+        .where(eq(subscriptions.workspaceId, workspaceId))
+        .orderBy(desc(subscriptions.createdAt))
+        .limit(1);
+      if (sub) {
+        trialEndsAt = sub.trialEndsAt;
+        trialStartedAt = sub.trialStartedAt;
+      }
+    } catch (e) {
+      log.warn('[SubscriptionManager] Failed to fetch trial dates:', e);
+    }
+
+    let currentEmployees = 0;
+    try {
+      const [empCount] = await db.select({ value: count() })
+        .from(employees)
+        .where(and(eq(employees.workspaceId, workspaceId), eq(employees.isActive, true)));
+      currentEmployees = empCount?.value || 0;
+    } catch (e) {
+      log.warn('[SubscriptionManager] Failed to count employees:', e);
+    }
+
+    // workspace_credits table dropped (Phase 16)
+    let monthlyAllocation = pricing.credits;
+
+    const maxEmployees = pricing.maxEmployees || 999999;
+    const employeesRemaining = maxEmployees === 999999 ? 999999 : Math.max(0, maxEmployees - currentEmployees);
+    const creditsUsed = Math.max(0, monthlyAllocation - creditBalance);
 
     return {
       tier,
       status: workspace.subscriptionStatus,
       monthlyPrice: pricing.monthlyPrice,
       yearlyPrice: pricing.yearlyPrice,
-      monthlyCredits: pricing.credits,
+      monthlyCredits: monthlyAllocation,
       currentBalance: creditBalance,
       stripeSubscription,
       billingCycle: stripeSubscription?.items.data[0]?.price?.recurring?.interval || 'monthly',
       currentPeriodEnd: stripeSubscription && (stripeSubscription as any).current_period_end
         ? new Date((stripeSubscription as any).current_period_end * 1000) 
         : null,
+      trialEndsAt,
+      trialStartedAt,
+      credits: {
+        total: monthlyAllocation,
+        used: creditsUsed,
+        remaining: creditBalance,
+      },
+      limits: {
+        maxEmployees,
+        currentEmployees,
+        employeesRemaining,
+      },
     };
   }
 
@@ -652,7 +947,7 @@ export class SubscriptionManager {
       throw new Error('No Stripe customer associated with this workspace');
     }
 
-    const session = await this.getStripe().billingPortal.sessions.create({
+    const session = await stripe.billingPortal.sessions.create({
       customer: workspace.stripeCustomerId,
       return_url: returnUrl,
     });
@@ -679,7 +974,7 @@ export class SubscriptionManager {
     // If no Stripe subscription, check if there should be one
     if (!workspace.stripeSubscriptionId && workspace.stripeCustomerId) {
       // Look for active subscriptions for this customer
-      const subscriptions = await this.getStripe().subscriptions.list({
+      const subscriptions = await stripe.subscriptions.list({
         customer: workspace.stripeCustomerId,
         status: 'active',
         limit: 1,
@@ -702,7 +997,7 @@ export class SubscriptionManager {
     // If has Stripe subscription, verify it's in sync
     if (workspace.stripeSubscriptionId) {
       try {
-        const subscription = await this.getStripe().subscriptions.retrieve(workspace.stripeSubscriptionId);
+        const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
         const stripeStatus = this.mapStripeStatus(subscription.status);
         const stripeTier = (subscription.metadata.tier as SubscriptionTier) || workspace.subscriptionTier;
 
@@ -798,13 +1093,19 @@ export class SubscriptionManager {
       checks.push({ name: 'STRIPE_WEBHOOK_SECRET', status: 'pass', message: 'Configured' });
     }
 
-    // Check price IDs
+    // Check price IDs (canonical names with legacy fallbacks)
     const priceIds = {
-      'Starter Monthly': process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
-      'Starter Yearly': process.env.STRIPE_STARTER_YEARLY_PRICE_ID,
-      'Professional Monthly': process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
-      'Professional Yearly': process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID,
-      'Credits Addon': process.env.STRIPE_ADDON_CREDITS_PRICE_ID,
+      'Starter Monthly': process.env.STRIPE_PRICE_STARTER_MONTHLY || process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
+      'Starter Annual': process.env.STRIPE_PRICE_STARTER_ANNUAL || process.env.STRIPE_STARTER_YEARLY_PRICE_ID,
+      'Professional Monthly': process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY || process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
+      'Professional Annual': process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL || process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID,
+      'Business Monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY || process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID,
+      'Enterprise Monthly': process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
+      'Seat Overage': process.env.STRIPE_PRICE_SEAT_OVERAGE,
+      'Voice Platinum Starter': process.env.STRIPE_PRICE_VOICE_PLATINUM_STARTER,
+      'Voice Platinum Professional': process.env.STRIPE_PRICE_VOICE_PLATINUM_PROFESSIONAL,
+      'Voice Platinum Business': process.env.STRIPE_PRICE_VOICE_PLATINUM_BUSINESS,
+      'Voice Platinum Enterprise': process.env.STRIPE_PRICE_VOICE_PLATINUM_ENTERPRISE,
     };
 
     for (const [name, priceId] of Object.entries(priceIds)) {

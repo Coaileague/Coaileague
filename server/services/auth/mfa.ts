@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { db } from '../../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { PLATFORM } from '../../config/platformConfig';
 
 // Require SESSION_SECRET for MFA encryption - fail fast if missing
 if (!process.env.SESSION_SECRET) {
@@ -11,29 +12,57 @@ if (!process.env.SESSION_SECRET) {
 }
 
 const ENCRYPTION_KEY = process.env.SESSION_SECRET;
-const ALGORITHM = 'aes-256-cbc';
+// AES-256-GCM: authenticated encryption with integrity tag + per-encryption random salt
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12;   // 96-bit nonce recommended for GCM
+const SALT_LENGTH = 16; // 128-bit salt unique per encryption operation
+const KEY_LENGTH = 32;  // 256-bit key for AES-256
 
 /**
- * Encrypt sensitive data (MFA secrets, backup codes)
+ * Encrypt sensitive data (MFA secrets, backup codes) using AES-256-GCM.
+ * Format: <saltHex>:<ivHex>:<authTagHex>:<ciphertextHex>
+ * - Uses a fresh random salt per operation (eliminates static-salt key derivation weakness)
+ * - GCM mode provides authenticated encryption (integrity + confidentiality)
  */
 function encrypt(text: string): string {
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
-  const iv = crypto.randomBytes(16);
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, salt, KEY_LENGTH);
+  const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  return `${iv.toString('hex')}:${encrypted}`;
+  const authTag = cipher.getAuthTag();
+  return `${salt.toString('hex')}:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
 }
 
 /**
- * Decrypt sensitive data
+ * Decrypt sensitive data. Supports both legacy CBC format (2 segments: ivHex:ciphertext)
+ * and the new GCM format (4 segments: saltHex:ivHex:authTagHex:ciphertext).
+ * Legacy records are decrypted with the old static-salt CBC path for backward compatibility.
  */
 function decrypt(encryptedText: string): string {
-  const [ivHex, encrypted] = encryptedText.split(':');
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const parts = encryptedText.split(':');
+
+  if (parts.length === 4) {
+    // New GCM format: saltHex:ivHex:authTagHex:ciphertext
+    const [saltHex, ivHex, authTagHex, ciphertext] = parts;
+    const salt = Buffer.from(saltHex, 'hex');
+    const key = crypto.scryptSync(ENCRYPTION_KEY, salt, KEY_LENGTH);
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  }
+
+  // Legacy CBC format: ivHex:ciphertext (backward compat — read-only path)
+  const [ivHex, ciphertext] = parts;
+  const legacyKey = crypto.scryptSync(ENCRYPTION_KEY, 'salt', KEY_LENGTH);
   const iv = Buffer.from(ivHex, 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  const decipher = crypto.createDecipheriv('aes-256-cbc', legacyKey, iv);
+  let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;
 }
@@ -48,8 +77,8 @@ export async function generateMfaSecret(userId: string, userEmail: string): Prom
 }> {
   // Generate TOTP secret
   const secret = speakeasy.generateSecret({
-    name: `CoAIleague (${userEmail})`,
-    issuer: 'CoAIleague',
+    name: `${PLATFORM.name} (${userEmail})`,
+    issuer: PLATFORM.name,
     length: 32,
   });
 
@@ -128,9 +157,14 @@ export async function verifyMfaToken(
 
   // Try backup codes
   if (user.mfaBackupCodes && user.mfaBackupCodes.length > 0) {
+    const normalizedToken = token.toUpperCase();
+    const bBuffer = Buffer.from(normalizedToken, 'utf8');
     for (let i = 0; i < user.mfaBackupCodes.length; i++) {
       const decryptedBackupCode = decrypt(user.mfaBackupCodes[i]);
-      if (decryptedBackupCode === token.toUpperCase()) {
+      const aBuffer = Buffer.from(decryptedBackupCode, 'utf8');
+      const codesMatch = aBuffer.length === bBuffer.length &&
+        crypto.timingSafeEqual(aBuffer, bBuffer);
+      if (codesMatch) {
         // Remove used backup code
         const updatedBackupCodes = [
           ...user.mfaBackupCodes.slice(0, i),

@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { secureFetch } from "@/lib/csrf";
 import { useAuth } from '@/hooks/useAuth';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -7,18 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, CheckCircle, XCircle, RefreshCw, ExternalLink, Link as LinkIcon, Unlink, Users, Building2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { useState } from 'react';
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal';
+import { useState, useEffect, type ReactNode } from 'react';
 import { FRIENDLY_LABELS, FRIENDLY_MESSAGES, FRIENDLY_HELP, friendlyError } from '@/lib/friendlyStrings';
 import { IntegrationHealthPanel } from '@/components/integration-health-panel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 // Helper function for relative time
 function getRelativeTime(date: Date): string {
@@ -64,7 +59,7 @@ interface HRISConnection {
   entityTypes: string[];
 }
 
-const HRIS_PROVIDER_ICONS: Record<string, React.ReactNode> = {
+const HRIS_PROVIDER_ICONS: Record<string, ReactNode> = {
   quickbooks: <Building2 className="w-6 h-6 text-green-600" />,
   gusto: <Users className="w-6 h-6 text-orange-500" />,
   adp: <Building2 className="w-6 h-6 text-red-600" />,
@@ -87,6 +82,30 @@ export default function IntegrationsPage() {
     provider: null,
   });
 
+  useEffect(() => {
+    const handleOAuthMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'quickbooks-oauth-complete') {
+        queryClient.invalidateQueries({ queryKey: ['/api/quickbooks/connection-status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/onboarding/status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations/status'] });
+        if (event.data.success) {
+          toast({
+            title: 'Connected!',
+            description: event.data.companyName
+              ? `Connected to ${event.data.companyName}`
+              : 'Successfully connected to QuickBooks',
+          });
+        }
+      }
+    };
+    window.addEventListener('message', handleOAuthMessage);
+    return () => window.removeEventListener('message', handleOAuthMessage);
+  }, [toast]);
+
   // Fetch QuickBooks status from unified endpoint
   const { data: qbStatus, isLoading: qbStatusLoading, error: qbStatusError } = useQuery<{
     connected: boolean;
@@ -107,9 +126,9 @@ export default function IntegrationsPage() {
     canRefresh?: boolean;
     error?: string;
   }>({
-    queryKey: ['/api/integrations/quickbooks/status', user?.currentWorkspaceId],
+    queryKey: ['/api/quickbooks/connection-status', user?.currentWorkspaceId],
     queryFn: async () => {
-      const res = await fetch(`/api/integrations/quickbooks/status?workspaceId=${user?.currentWorkspaceId}`);
+      const res = await secureFetch(`/api/quickbooks/connection-status?workspaceId=${user?.currentWorkspaceId}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(errorData.message || errorData.error || 'Failed to fetch QuickBooks status');
@@ -125,7 +144,7 @@ export default function IntegrationsPage() {
   const { data: connectionsData, isLoading, error: connectionsError } = useQuery<{ connections: PartnerConnection[] }>({
     queryKey: ['/api/integrations/connections', user?.currentWorkspaceId],
     queryFn: async () => {
-      const res = await fetch(`/api/integrations/connections?workspaceId=${user?.currentWorkspaceId}`);
+      const res = await secureFetch(`/api/integrations/connections?workspaceId=${user?.currentWorkspaceId}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(errorData.message || errorData.error || 'Failed to fetch connections');
@@ -221,12 +240,50 @@ export default function IntegrationsPage() {
   const quickbooksConnection = connections.find(c => c.partnerType === 'quickbooks');
   const gustoConnection = connections.find(c => c.partnerType === 'gusto');
 
+  // Helper to open OAuth in popup (bypasses iframe CSP restrictions)
+  const openOAuthPopup = (url: string, partner: string) => {
+    const width = 600;
+    const height = 700;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    
+    const popup = window.open(
+      url,
+      `${partner}OAuthPopup`,
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
+    );
+    
+    if (!popup) {
+      // Popup blocked - try direct navigation as fallback
+      toast({
+        title: 'Popup Blocked',
+        description: 'Please allow popups for this site, or open the app in a new browser tab to connect.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    const pollTimer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollTimer);
+        queryClient.invalidateQueries({ queryKey: ['/api/quickbooks/connection-status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations/status'] });
+      }
+    }, 500);
+    
+    return true;
+  };
+
   // Connect mutation - uses unified status endpoint for QuickBooks
   const connectMutation = useMutation({
     mutationFn: async (partner: 'quickbooks' | 'gusto') => {
       // For QuickBooks, use the authorization URL from status if available
       if (partner === 'quickbooks' && qbStatus?.authorizationUrl) {
-        window.location.href = qbStatus.authorizationUrl;
+        openOAuthPopup(qbStatus.authorizationUrl, partner);
         return { redirecting: true };
       }
 
@@ -239,9 +296,10 @@ export default function IntegrationsPage() {
       
       const data = await response.json();
       
-      // Handle both authUrl and authorizationUrl
+      // Handle both authUrl and authorizationUrl - open in popup
       if (data.authorizationUrl || data.authUrl) {
-        window.location.href = data.authorizationUrl || data.authUrl;
+        const authUrl = data.authorizationUrl || data.authUrl;
+        openOAuthPopup(authUrl, partner);
       }
       
       return data;
@@ -267,7 +325,7 @@ export default function IntegrationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quickbooks/connection-status'] });
       toast({
         title: 'Disconnected',
         description: FRIENDLY_MESSAGES.disconnectSuccess,
@@ -295,16 +353,25 @@ export default function IntegrationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quickbooks/connection-status'] });
       toast({
         title: 'Connection Renewed',
         description: FRIENDLY_MESSAGES.refreshSuccess,
       });
     },
     onError: (error: any) => {
+      // Invalidate status to update UI - may now show "Reconnect" button
+      queryClient.invalidateQueries({ queryKey: ['/api/quickbooks/connection-status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+      
+      const errorMsg = error.message || 'Failed to refresh token';
+      const needsReconnect = errorMsg.includes('expired') || errorMsg.includes('reconnect');
+      
       toast({
         title: 'Could Not Renew',
-        description: friendlyError(error.message || 'Failed to refresh token'),
+        description: needsReconnect 
+          ? 'Your session has expired. Please reconnect to QuickBooks.'
+          : friendlyError(errorMsg),
         variant: 'destructive',
       });
     },
@@ -382,7 +449,7 @@ export default function IntegrationsPage() {
     description: string; 
     partner: 'quickbooks' | 'gusto'; 
     connection?: PartnerConnection;
-    icon: React.ReactNode;
+    icon: ReactNode;
   }) => {
     // For QuickBooks, use the unified status endpoint
     const isQuickBooks = partner === 'quickbooks';
@@ -406,20 +473,20 @@ export default function IntegrationsPage() {
     return (
       <Card data-testid={`card-integration-${partner}`}>
         <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-muted">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-muted flex-shrink-0">
                 {icon}
               </div>
-              <div>
-                <CardTitle className="text-lg">{title}</CardTitle>
-                <CardDescription className="text-sm mt-1">{description}</CardDescription>
+              <div className="min-w-0">
+                <CardTitle className="text-base sm:text-lg truncate">{title}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm mt-1 line-clamp-2">{description}</CardDescription>
                 {companyName && isConnected && (
-                  <p className="text-xs text-muted-foreground mt-1">Connected to: {companyName}</p>
+                  <p className="text-xs text-muted-foreground mt-1 truncate">Connected to: {companyName}</p>
                 )}
               </div>
             </div>
-            {getStatusBadge(displayStatus)}
+            <div className="flex-shrink-0">{getStatusBadge(displayStatus)}</div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -557,17 +624,17 @@ export default function IntegrationsPage() {
     return (
       <Card data-testid={`card-hris-${provider.id}`}>
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex-shrink-0">
                 {HRIS_PROVIDER_ICONS[provider.id] || <Users className="w-5 h-5" />}
               </div>
-              <div>
-                <CardTitle className="text-base">{provider.name}</CardTitle>
-                <CardDescription className="text-xs mt-0.5">{provider.description}</CardDescription>
+              <div className="min-w-0">
+                <CardTitle className="text-sm sm:text-base truncate">{provider.name}</CardTitle>
+                <CardDescription className="text-xs mt-0.5 line-clamp-2">{provider.description}</CardDescription>
               </div>
             </div>
-            {getStatusBadge(connection?.status || 'disconnected')}
+            <div className="flex-shrink-0">{getStatusBadge(connection?.status || 'disconnected')}</div>
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
@@ -627,15 +694,15 @@ export default function IntegrationsPage() {
     );
   };
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">Connect Your Services</h1>
-        <p className="text-muted-foreground mt-2" data-testid="text-page-description">
-          Link your business tools to automate workflows and sync data
-        </p>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'integrations-page',
+    title: 'Connect Your Services',
+    subtitle: 'Link your business tools to automate workflows and sync data',
+    category: 'settings',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
@@ -644,7 +711,7 @@ export default function IntegrationsPage() {
       </Alert>
 
       <Tabs defaultValue="accounting" className="space-y-6">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="accounting" data-testid="tab-accounting">Accounting</TabsTrigger>
           <TabsTrigger value="hris" data-testid="tab-hris">HR Systems</TabsTrigger>
         </TabsList>
@@ -697,7 +764,7 @@ export default function IntegrationsPage() {
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {hrisProviders.map((provider) => (
                     <HRISProviderCard key={provider.id} provider={provider} />
                   ))}
@@ -742,7 +809,7 @@ export default function IntegrationsPage() {
           <div>
             <h3 className="font-semibold text-foreground mb-2">Gusto Payroll</h3>
             <p>
-              Automatically processes payroll for your employees using their time tracking data. Ensures accurate calculations and compliance.
+              Automates payroll data preparation from time tracking records. All calculations require manager review and approval — always verify outputs with your payroll administrator before processing.
             </p>
           </div>
           <div>
@@ -753,7 +820,7 @@ export default function IntegrationsPage() {
           </div>
           <div className="pt-2 border-t">
             <a
-              href="https://coaileague.example.com/docs/integrations"
+              href="/support"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline flex items-center gap-1"
@@ -766,16 +833,16 @@ export default function IntegrationsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={disconnectDialog.open} onOpenChange={(open) => setDisconnectDialog({ open, partner: null })}>
-        <DialogContent size="md" data-testid="dialog-disconnect">
-          <DialogHeader>
-            <DialogTitle>Stop Using {disconnectDialog.partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'}?</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={disconnectDialog.open} onOpenChange={(open) => setDisconnectDialog({ open, partner: null })}>
+        <UniversalModalContent size="md" data-testid="dialog-disconnect">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Stop Using {disconnectDialog.partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'}?</UniversalModalTitle>
+            <UniversalModalDescription>
               Are you sure you want to stop using {disconnectDialog.partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'}?
               You'll need to connect again to use automatic {disconnectDialog.partner === 'quickbooks' ? 'invoicing' : 'payroll'}.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
+          <UniversalModalFooter>
             <Button
               variant="outline"
               onClick={() => setDisconnectDialog({ open: false, partner: null })}
@@ -791,20 +858,20 @@ export default function IntegrationsPage() {
             >
               {disconnectMutation.isPending ? 'Stopping...' : 'Stop Using'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={hrisDisconnectDialog.open} onOpenChange={(open) => setHrisDisconnectDialog({ open, provider: null })}>
-        <DialogContent size="md" data-testid="dialog-hris-disconnect">
-          <DialogHeader>
-            <DialogTitle>Disconnect HR System?</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={hrisDisconnectDialog.open} onOpenChange={(open) => setHrisDisconnectDialog({ open, provider: null })}>
+        <UniversalModalContent size="md" data-testid="dialog-hris-disconnect">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Disconnect HR System?</UniversalModalTitle>
+            <UniversalModalDescription>
               Are you sure you want to disconnect this HR system? Employee data will no longer sync automatically.
               You can reconnect at any time.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
+          <UniversalModalFooter>
             <Button
               variant="outline"
               onClick={() => setHrisDisconnectDialog({ open: false, provider: null })}
@@ -820,9 +887,9 @@ export default function IntegrationsPage() {
             >
               {hrisDisconnectMutation.isPending ? 'Disconnecting...' : 'Disconnect'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

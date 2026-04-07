@@ -249,7 +249,7 @@ export function ShiftBottomSheet({
       <ModalGuardContent isDirty={isDirty}>
         <Drawer open={open} onOpenChange={handleGuardedOpenChange}>
           <DrawerContent 
-            className="max-h-[95vh] h-[95vh] sm:max-h-[85vh] sm:h-auto focus:outline-none flex flex-col"
+            className="max-h-[100dvh] h-[100dvh] sm:max-h-[85vh] sm:h-auto focus:outline-none flex flex-col"
             data-testid="shift-bottom-sheet"
           >
             <MobileSheetHandle />
@@ -258,7 +258,7 @@ export function ShiftBottomSheet({
                 <VisuallyHidden>
                   <DrawerDescription>Form to create or edit work shifts</DrawerDescription>
                 </VisuallyHidden>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <LogoMark size="sm" />
                     <div>
@@ -271,7 +271,7 @@ export function ShiftBottomSheet({
                     </div>
                   </div>
                   <DrawerClose asChild>
-                    <Button variant="ghost" size="icon" className="min-h-11 min-w-11">
+                    <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label="Close shift editor">
                       <X className="h-5 w-5" />
                     </Button>
                   </DrawerClose>
@@ -279,9 +279,9 @@ export function ShiftBottomSheet({
               </DrawerHeader>
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+                <form data-vaul-no-drag onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 space-y-3 [touch-action:pan-y] [-webkit-overflow-scrolling:touch]">
               
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-amber-500" />
                   <Label htmlFor="open-shift" className="text-sm font-medium cursor-pointer">
@@ -332,56 +332,55 @@ export function ShiftBottomSheet({
                 />
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-medium flex items-center gap-1.5">
-                        <Briefcase className="h-3 w-3" />
-                        Position <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          placeholder="Role" 
-                          className="h-9 text-sm"
-                          data-testid="input-title" 
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-medium flex items-center gap-1.5">
+                      <Briefcase className="h-3 w-3" />
+                      Position <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Role" 
+                        className="h-9 text-sm"
+                        data-testid="input-title" 
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="clientId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-medium">
-                        Client
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-9 text-sm" data-testid="select-client">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Array.isArray(clients) && clients.map((client) => (
-                            <SelectItem key={client.id} value={client.id} className="text-sm">
-                              {client.companyName || `${client.firstName} ${client.lastName}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-medium flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3" />
+                      Client
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-9 text-sm" data-testid="select-client">
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Array.isArray(clients) && clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id} className="text-sm">
+                            {client.companyName || `${client.firstName} ${client.lastName}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -482,7 +481,7 @@ export function ShiftBottomSheet({
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center justify-between w-full p-2.5 hover:bg-muted/50 transition-colors"
+                      className="flex items-center justify-between gap-2 w-full p-2.5 hover:bg-muted/50 transition-colors"
                       data-testid="button-toggle-recurrence"
                     >
                       <div className="flex items-center gap-2">
@@ -499,7 +498,7 @@ export function ShiftBottomSheet({
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="px-2.5 pb-2.5 space-y-3 border-t bg-muted/30">
-                      <div className="flex items-center justify-between pt-2.5">
+                      <div className="flex items-center justify-between gap-2 pt-2.5">
                         <Label htmlFor="recurring-switch" className="text-sm font-medium cursor-pointer">
                           Enable recurring shift
                         </Label>
@@ -609,7 +608,7 @@ export function ShiftBottomSheet({
                 </Collapsible>
               )}
 
-              <DrawerFooter className="px-4 pt-3 pb-6 flex-shrink-0 border-t mt-3 bg-background sticky bottom-0">
+              <DrawerFooter className="px-4 pt-3 pb-6 flex-shrink-0 border-t mt-3 bg-background sticky bottom-0 z-[9999]">
                 <div className="flex gap-2">
                   <DrawerClose asChild>
                     <Button 

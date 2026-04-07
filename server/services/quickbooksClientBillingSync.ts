@@ -10,9 +10,14 @@
  */
 
 import { db } from '../db';
-import { invoices, clients, workspaces, integrationCredentials } from '@shared/schema';
+import { invoices, clients, workspaces, integrationConnections } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { platformEventBus } from './platformEventBus';
+import { INTEGRATIONS } from '@shared/platformConfig';
+import { ensureQuickBooksRecord } from './integrations/quickbooksLazySync';
+import { createLogger } from '../lib/logger';
+const log = createLogger('quickbooksClientBillingSync');
+
 
 interface QuickBooksInvoice {
   CustomerRef: { value: string };
@@ -42,15 +47,15 @@ interface SyncResult {
  * Get QuickBooks OAuth client for a workspace
  */
 async function getQuickBooksClient(workspaceId: string): Promise<any | null> {
-  const credentials = await db.query.integrationCredentials.findFirst({
+  const credentials = await db.query.integrationConnections.findFirst({
     where: and(
-      eq(integrationCredentials.workspaceId, workspaceId),
-      eq(integrationCredentials.provider, 'quickbooks')
+      eq(integrationConnections.workspaceId, workspaceId),
+      eq(integrationConnections.provider, 'quickbooks')
     ),
   });
 
   if (!credentials?.accessToken) {
-    console.log('[QBSync] No QuickBooks credentials found for workspace');
+    log.info('[QBSync] No QuickBooks credentials found for workspace');
     return null;
   }
 
@@ -71,7 +76,6 @@ async function qbRequest(
   endpoint: string,
   body?: any
 ): Promise<any> {
-  const { INTEGRATIONS } = require('@shared/platformConfig');
   const baseUrl = `${INTEGRATIONS.quickbooks.getCompanyApiBase()}/${client.realmId}`;
   
   const response = await fetch(`${baseUrl}${endpoint}`, {
@@ -96,7 +100,7 @@ async function qbRequest(
  * Sync a CoAIleague invoice to QuickBooks
  */
 export async function syncInvoiceToQuickBooks(invoiceId: string): Promise<SyncResult> {
-  console.log(`[QBSync] Syncing invoice ${invoiceId} to QuickBooks...`);
+  log.info(`[QBSync] Syncing invoice ${invoiceId} to QuickBooks...`);
 
   const invoice = await db.query.invoices.findFirst({
     where: eq(invoices.id, invoiceId),
@@ -120,11 +124,18 @@ export async function syncInvoiceToQuickBooks(invoiceId: string): Promise<SyncRe
     return { success: false, error: 'Client not found' };
   }
 
-  const qbCustomerId = (client as any).quickbooksCustomerId || (client as any).qbCustomerId;
+  let qbCustomerId = (client as any).quickbooksClientId || (client as any).qbCustomerId;
 
   if (!qbCustomerId) {
-    console.log(`[QBSync] Client ${client.id} not mapped to QuickBooks - skipping sync`);
-    return { success: false, error: 'Client not mapped to QuickBooks', retryable: false };
+    log.info(`[QBSync] Client ${client.id} has no QB ID - attempting lazy sync...`);
+    const lazySyncResult = await ensureQuickBooksRecord('customer', client.id, invoice.workspaceId);
+    if (lazySyncResult.success && lazySyncResult.qbId) {
+      qbCustomerId = lazySyncResult.qbId;
+      log.info(`[QBSync] Lazy sync provisioned client → QB Customer ${qbCustomerId}`);
+    } else {
+      log.error(`[QBSync] Lazy sync failed for client ${client.id}: ${lazySyncResult.error}`);
+      return { success: false, error: `Lazy sync failed: ${lazySyncResult.error}`, retryable: true };
+    }
   }
 
   const lineItems = (invoice.lineItems as any[]) || [];
@@ -170,8 +181,8 @@ export async function syncInvoiceToQuickBooks(invoiceId: string): Promise<SyncRe
       .set({
         quickbooksInvoiceId: qbInvoiceId,
         quickbooksSyncStatus: 'synced',
-        quickbooksSyncedAt: new Date(),
-      } as any)
+        quickbooksLastSync: new Date(),
+      })
       .where(eq(invoices.id, invoiceId));
 
     await platformEventBus.publish({
@@ -185,27 +196,26 @@ export async function syncInvoiceToQuickBooks(invoiceId: string): Promise<SyncRe
         invoiceId,
         qbInvoiceId,
         amount: invoice.total,
-        clientName: client.companyName || client.name,
+        clientName: client.companyName || `${client.firstName} ${client.lastName}`,
       },
     });
 
-    console.log(`[QBSync] Invoice ${invoiceId} synced as QB Invoice ${qbInvoiceId}`);
+    log.info(`[QBSync] Invoice ${invoiceId} synced as QB Invoice ${qbInvoiceId}`);
 
     return { success: true, qbInvoiceId };
 
   } catch (error: any) {
-    console.error(`[QBSync] Failed to sync invoice ${invoiceId}:`, error.message);
+    log.error(`[QBSync] Failed to sync invoice ${invoiceId}:`, (error instanceof Error ? error.message : String(error)));
 
     await db.update(invoices)
       .set({
         quickbooksSyncStatus: 'failed',
-        quickbooksSyncError: error.message,
-      } as any)
+      })
       .where(eq(invoices.id, invoiceId));
 
-    const retryable = error.message.includes('401') || error.message.includes('token');
+    const retryable = (error instanceof Error ? error.message : String(error)).includes('401') || (error instanceof Error ? error.message : String(error)).includes('token');
 
-    return { success: false, error: error.message, retryable };
+    return { success: false, error: (error instanceof Error ? error.message : String(error)), retryable };
   }
 }
 
@@ -236,7 +246,7 @@ export async function syncPendingInvoices(workspaceId: string): Promise<{ synced
     }
   }
 
-  console.log(`[QBSync] Workspace ${workspaceId}: synced ${synced}, failed ${failed}`);
+  log.info(`[QBSync] Workspace ${workspaceId}: synced ${synced}, failed ${failed}`);
 
   return { synced, failed };
 }
@@ -245,7 +255,7 @@ export async function syncPendingInvoices(workspaceId: string): Promise<{ synced
  * Run weekly billing cycle - generate invoices and sync to QB
  */
 export async function runWeeklyBillingCycle(workspaceId: string): Promise<void> {
-  console.log(`[QBSync] Running weekly billing cycle for workspace ${workspaceId}`);
+  log.info(`[QBSync] Running weekly billing cycle for workspace ${workspaceId}`);
 
   const { synced, failed } = await syncPendingInvoices(workspaceId);
 
@@ -258,7 +268,7 @@ export async function runWeeklyBillingCycle(workspaceId: string): Promise<void> 
       type: 'automation_completed',
       category: 'ai_brain',
       title: 'Weekly Billing Complete',
-      description: `Trinity synced ${synced} invoices to QuickBooks${failed > 0 ? ` (${failed} failed)` : ''}`,
+      description: `I synced ${synced} invoices to QuickBooks${failed > 0 ? ` (${failed} failed)` : ''}`,
       workspaceId,
       metadata: {
         automationType: 'weekly_billing',
@@ -274,7 +284,7 @@ export async function runWeeklyBillingCycle(workspaceId: string): Promise<void> 
  * Creates payroll journal entries or time activities in QuickBooks
  */
 export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<SyncResult> {
-  console.log(`[QBPayrollSync] Syncing payroll run ${payrollRunId} to QuickBooks...`);
+  log.info(`[QBPayrollSync] Syncing payroll run ${payrollRunId} to QuickBooks...`);
 
   const { payrollRuns, payrollEntries, employees: employeesTable } = await import('@shared/schema');
 
@@ -316,13 +326,22 @@ export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<Syn
         continue;
       }
 
-      const qbEmployeeId = (employee as any).quickbooksEmployeeId;
+      let qbEmployeeId = (employee as any).quickbooksEmployeeId;
 
       if (!qbEmployeeId) {
-        console.log(`[QBPayrollSync] Employee ${employee.id} not mapped to QuickBooks - skipping`);
-        errors.push(`Employee ${employee.firstName} ${employee.lastName} not mapped to QuickBooks`);
-        failedCount++;
-        continue;
+        log.info(`[QBPayrollSync] Employee ${employee.id} has no QB ID - attempting lazy sync...`);
+        const workerType = (employee as any).workerType;
+        const entityType = workerType === 'contractor' ? 'vendor' : 'employee';
+        const lazySyncResult = await ensureQuickBooksRecord(entityType as any, employee.id, payrollRun.workspaceId);
+        if (lazySyncResult.success && lazySyncResult.qbId) {
+          qbEmployeeId = lazySyncResult.qbId;
+          log.info(`[QBPayrollSync] Lazy sync provisioned ${entityType} → QB ${entityType} ${qbEmployeeId}`);
+        } else {
+          log.error(`[QBPayrollSync] Lazy sync failed for ${employee.id}: ${lazySyncResult.error}`);
+          errors.push(`Lazy sync failed for ${employee.firstName} ${employee.lastName}: ${lazySyncResult.error}`);
+          failedCount++;
+          continue;
+        }
       }
 
       const timeActivity = {
@@ -340,8 +359,8 @@ export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<Syn
 
       syncedCount++;
     } catch (error: any) {
-      console.error(`[QBPayrollSync] Failed to sync entry for employee ${entry.employeeId}:`, error.message);
-      errors.push(`Entry ${entry.id}: ${error.message}`);
+      log.error(`[QBPayrollSync] Failed to sync entry for employee ${entry.employeeId}:`, (error instanceof Error ? error.message : String(error)));
+      errors.push(`Entry ${entry.id}: ${(error instanceof Error ? error.message : String(error))}`);
       failedCount++;
     }
   }
@@ -349,17 +368,15 @@ export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<Syn
   // Determine sync status: synced (all success), partial (some success), failed (all failed)
   const syncStatus = syncedCount === 0 ? 'failed' : (failedCount === 0 ? 'synced' : 'partial');
   
-  await db.update(payrollRuns)
-    .set({
-      quickbooksSyncStatus: syncStatus,
-      // Only set syncedAt if at least one entry was synced
-      ...(syncedCount > 0 ? { quickbooksSyncedAt: new Date() } : {}),
-      // Track retry count for failed/partial runs
-      quickbooksSyncRetryCount: syncStatus !== 'synced' 
-        ? ((payrollRun as any).quickbooksSyncRetryCount || 0) + 1 
-        : 0,
-    } as any)
-    .where(eq(payrollRuns.id, payrollRunId));
+  try {
+    await db.update(payrollRuns)
+      .set({
+        status: syncStatus === 'synced' ? 'completed' : 'processing',
+      })
+      .where(eq(payrollRuns.id, payrollRunId));
+  } catch (err) {
+    log.warn('[QBPayrollSync] Could not update payroll run status:', err);
+  }
 
   await platformEventBus.publish({
     type: 'automation_completed',
@@ -376,7 +393,7 @@ export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<Syn
     },
   });
 
-  console.log(`[QBPayrollSync] Payroll run ${payrollRunId}: synced ${syncedCount}, failed ${failedCount}`);
+  log.info(`[QBPayrollSync] Payroll run ${payrollRunId}: synced ${syncedCount}, failed ${failedCount}`);
 
   return { 
     success: failedCount === 0, 
@@ -391,7 +408,6 @@ export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<Syn
  */
 export async function syncPendingPayrollRuns(workspaceId: string): Promise<{ synced: number; failed: number; skipped: number }> {
   const { payrollRuns } = await import('@shared/schema');
-  const MAX_RETRIES = 3;
   
   const completedRuns = await db.select()
     .from(payrollRuns)
@@ -402,41 +418,13 @@ export async function syncPendingPayrollRuns(workspaceId: string): Promise<{ syn
       )
     );
 
-  // Include runs that are pending, failed, or partial (for retry)
-  const eligibleRuns = completedRuns.filter((run) => {
-    const status = (run as any).quickbooksSyncStatus;
-    const retryCount = (run as any).quickbooksSyncRetryCount || 0;
-    
-    // Always include runs with no status or pending status
-    if (!status || status === 'pending') return true;
-    
-    // Include failed/partial runs that haven't exceeded retry limit
-    if ((status === 'failed' || status === 'partial') && retryCount < MAX_RETRIES) return true;
-    
-    return false;
-  });
+  const eligibleRuns = completedRuns;
 
   let synced = 0;
   let failed = 0;
   let skipped = 0;
 
   for (const run of eligibleRuns) {
-    const retryCount = (run as any).quickbooksSyncRetryCount || 0;
-    
-    // Exponential backoff for retries (skip if recently retried)
-    if (retryCount > 0) {
-      const lastAttempt = (run as any).quickbooksSyncedAt || (run as any).updatedAt;
-      if (lastAttempt) {
-        const backoffMinutes = Math.pow(2, retryCount) * 15; // 15, 30, 60 mins
-        const nextRetryTime = new Date(new Date(lastAttempt).getTime() + backoffMinutes * 60 * 1000);
-        if (new Date() < nextRetryTime) {
-          console.log(`[QBPayrollSync] Skipping run ${run.id} - backoff until ${nextRetryTime.toISOString()}`);
-          skipped++;
-          continue;
-        }
-      }
-    }
-
     const result = await syncPayrollToQuickBooks(run.id);
     if (result.success) {
       synced++;
@@ -445,7 +433,7 @@ export async function syncPendingPayrollRuns(workspaceId: string): Promise<{ syn
     }
   }
 
-  console.log(`[QBPayrollSync] Workspace ${workspaceId}: synced ${synced}, failed ${failed}, skipped ${skipped}`);
+  log.info(`[QBPayrollSync] Workspace ${workspaceId}: synced ${synced}, failed ${failed}, skipped ${skipped}`);
 
   return { synced, failed, skipped };
 }

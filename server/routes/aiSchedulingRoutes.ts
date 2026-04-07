@@ -2,8 +2,14 @@ import { Router, Request, Response } from "express";
 import { db } from "../db";
 import { shifts, employees, timeEntries } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, sum, desc } from "drizzle-orm";
+import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('AiSchedulingRoutes');
+
 
 const router = Router();
+
+router.use(requireAuth);
 
 interface ScheduleSuggestion {
   id: string;
@@ -25,8 +31,13 @@ router.get("/suggestions", async (req: Request, res: Response) => {
     }
     
     // Platform admins can view any workspace via query param, or their own if set
-    const isPlatformAdmin = ['root_admin', 'super_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
-    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.workspaceId;
+    const isPlatformAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
+    const queryWorkspaceId = req.query.workspaceId as string;
+    const workspaceId = (isPlatformAdmin && queryWorkspaceId) || (req as any).workspaceId || user?.workspaceId;
+    
+    if (workspaceId && workspaceId !== (req as any).workspaceId && !isPlatformAdmin) {
+      return res.status(403).json({ error: "Unauthorized workspace access" });
+    }
     
     if (!workspaceId) {
       // For platform admins without a workspace context, return empty suggestions
@@ -37,7 +48,7 @@ router.get("/suggestions", async (req: Request, res: Response) => {
           message: 'No workspace context. Select a workspace to view scheduling suggestions.'
         });
       }
-      return res.status(401).json({ error: "Workspace context required" });
+      return res.status(403).json({ error: "Workspace context required" });
     }
     const now = new Date();
     const nextWeek = new Date(now);
@@ -61,17 +72,17 @@ router.get("/suggestions", async (req: Request, res: Response) => {
 
     const historicalData = await db
       .select({
-        dayOfWeek: sql<number>`EXTRACT(DOW FROM ${timeEntries.date}::date)::int`,
-        avgHours: sql<number>`AVG(${timeEntries.duration} / 60.0)::float`
+        dayOfWeek: sql<number>`EXTRACT(DOW FROM ${timeEntries.clockIn})::int`,
+        avgHours: sql<number>`COALESCE(AVG(CAST(${timeEntries.totalHours} AS float)), 0)::float`
       })
       .from(timeEntries)
       .where(
         and(
           eq(timeEntries.workspaceId, workspaceId),
-          gte(timeEntries.date, monthAgo.toISOString().split('T')[0])
+          gte(timeEntries.clockIn, monthAgo)
         )
       )
-      .groupBy(sql`EXTRACT(DOW FROM ${timeEntries.date}::date)`);
+      .groupBy(sql`EXTRACT(DOW FROM ${timeEntries.clockIn})`);
 
     const suggestions: ScheduleSuggestion[] = [];
 
@@ -135,7 +146,7 @@ router.get("/suggestions", async (req: Request, res: Response) => {
         title: 'Optimize Low-Activity Periods',
         description: `Based on historical data, ${lowDays} typically have lower activity. Consider reducing staffing to save costs.`,
         impact: 'high',
-        savings: '$150-300/week',
+        savings: 'Potential cost reduction — actual savings vary by organization',
         confidence: 78,
         actionable: true,
       });
@@ -161,12 +172,12 @@ router.get("/suggestions", async (req: Request, res: Response) => {
 
     res.json({ suggestions: suggestions.slice(0, 5) });
   } catch (error) {
-    console.error("[AI Scheduling] Error generating suggestions:", error);
+    log.error("[AI Scheduling] Error generating suggestions:", error);
     res.status(500).json({ error: "Failed to generate scheduling suggestions" });
   }
 });
 
-// Apply an AI suggestion
+// Apply an AI suggestion (advisory-only: logs the user's acknowledgment of the suggestion)
 router.post("/apply-suggestion", async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
@@ -175,23 +186,25 @@ router.post("/apply-suggestion", async (req: Request, res: Response) => {
     }
 
     const { suggestionId } = req.body;
+    if (!suggestionId) {
+      return res.status(400).json({ error: "suggestionId is required" });
+    }
     
-    // Log the application - in production, would execute the actual optimization
-    console.log(`[AI Scheduling] User ${user.id} applied suggestion: ${suggestionId}`);
+    log.info(`[AI Scheduling] User ${user.id} acknowledged suggestion: ${suggestionId} in workspace ${user.workspaceId}`);
 
-    // Simulate processing
     res.json({ 
       success: true, 
-      message: "Suggestion applied successfully",
-      suggestionId 
+      message: "Suggestion acknowledged. Use the scheduling tools to implement the recommended changes.",
+      suggestionId,
+      note: "AI suggestions are advisory. Apply changes through the schedule editor for full audit tracking.",
     });
   } catch (error) {
-    console.error("[AI Scheduling] Error applying suggestion:", error);
+    log.error("[AI Scheduling] Error applying suggestion:", error);
     res.status(500).json({ error: "Failed to apply suggestion" });
   }
 });
 
-// Get schedule optimization report
+// Get schedule optimization report based on real scheduling data
 router.get("/optimization-report", async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
@@ -199,30 +212,57 @@ router.get("/optimization-report", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Generate optimization metrics
+    const workspaceId = user.workspaceId;
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const twoWeeksAgo = new Date(now);
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    const [thisWeekShifts] = await db.select({ count: count() }).from(shifts)
+      .where(and(eq(shifts.workspaceId, workspaceId), gte(shifts.date, weekAgo.toISOString().split('T')[0])));
+
+    const [lastWeekShifts] = await db.select({ count: count() }).from(shifts)
+      .where(and(
+        eq(shifts.workspaceId, workspaceId),
+        gte(shifts.date, twoWeeksAgo.toISOString().split('T')[0]),
+        lte(shifts.date, weekAgo.toISOString().split('T')[0])
+      ));
+
+    const [empCount] = await db.select({ count: count() }).from(employees)
+      .where(eq(employees.workspaceId, workspaceId));
+
+    const totalEmployees = empCount?.count || 0;
+    const thisWeekCount = thisWeekShifts?.count || 0;
+    const lastWeekCount = lastWeekShifts?.count || 0;
+
+    const coverageScore = totalEmployees > 0
+      ? Math.min(100, Math.round((thisWeekCount / Math.max(totalEmployees * 5, 1)) * 100))
+      : 0;
+    const trend = lastWeekCount > 0
+      ? Math.round(((thisWeekCount - lastWeekCount) / lastWeekCount) * 100)
+      : 0;
+
+    const recommendations: string[] = [];
+    if (coverageScore < 60) recommendations.push("Schedule coverage is low. Consider adding more shifts to ensure adequate staffing.");
+    if (totalEmployees > 0 && thisWeekCount < totalEmployees) recommendations.push("Some employees have no scheduled shifts this week. Review workforce utilization.");
+    if (trend < -10) recommendations.push("Shift count is declining week-over-week. Verify this aligns with business demand.");
+    if (recommendations.length === 0) recommendations.push("Scheduling patterns look healthy. Continue monitoring for optimization opportunities.");
+
     const report = {
-      overallScore: 85,
-      metrics: {
-        coverage: 92,
-        efficiency: 78,
-        employeeSatisfaction: 88,
-        costOptimization: 82,
-      },
-      trends: {
-        lastWeek: 82,
-        thisWeek: 85,
-        improvement: 3,
-      },
-      recommendations: [
-        "Consider implementing shift swapping to improve flexibility",
-        "Review weekend coverage patterns",
-        "Analyze peak hours for optimal staffing",
-      ],
+      totalEmployees,
+      shiftsThisWeek: thisWeekCount,
+      shiftsLastWeek: lastWeekCount,
+      coverageScore,
+      weekOverWeekTrend: trend,
+      recommendations,
+      source: 'live_database',
+      generatedAt: new Date().toISOString(),
     };
 
     res.json(report);
   } catch (error) {
-    console.error("[AI Scheduling] Error generating report:", error);
+    log.error("[AI Scheduling] Error generating report:", error);
     res.status(500).json({ error: "Failed to generate optimization report" });
   }
 });

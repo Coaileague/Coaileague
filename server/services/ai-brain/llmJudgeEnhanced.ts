@@ -19,6 +19,8 @@ import { aiBrainService } from './aiBrainService';
 import { llmJudgeEvaluator, type EvaluationRequest, type EvaluationResult } from './llmJudgeEvaluator';
 import { eq, and, desc, sql, gte } from 'drizzle-orm';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('llmJudgeEnhanced');
 
 // ============================================================================
 // TYPES
@@ -215,9 +217,9 @@ class EnhancedLLMJudge {
       // Load regression patterns from database
       await this.loadRegressionPatterns();
       this.initialized = true;
-      console.log('[EnhancedLLMJudge] Initialized with risk scoring and policy gating');
+      log.info('[EnhancedLLMJudge] Initialized with risk scoring and policy gating');
     } catch (error) {
-      console.error('[EnhancedLLMJudge] Initialization error:', error);
+      log.error('[EnhancedLLMJudge] Initialization error:', error);
     }
   }
 
@@ -285,12 +287,12 @@ class EnhancedLLMJudge {
           verdict,
           isBlocked: result.isBlocked,
         },
-      });
+      }).catch((err) => log.warn('[llmJudgeEnhanced] Fire-and-forget failed:', err));
 
       return result;
 
     } catch (error: any) {
-      console.error('[EnhancedLLMJudge] Risk evaluation failed:', error);
+      log.error('[EnhancedLLMJudge] Risk evaluation failed:', error);
       
       return {
         evaluationId,
@@ -301,7 +303,7 @@ class EnhancedLLMJudge {
         verdict: 'blocked',
         policyViolations: ['Evaluation system error'],
         isBlocked: true,
-        blockReason: `Evaluation failed: ${error.message}`,
+        blockReason: `Evaluation failed: ${(error instanceof Error ? error.message : String(error))}`,
         matchesKnownRegression: false,
         reasoning: 'System error during evaluation',
         criteria: [],
@@ -408,8 +410,8 @@ Respond with JSON:
     try {
       // Use base LLM Judge for quality assessment
       const result = await llmJudgeEvaluator.evaluate({
-        workspaceId: request.workspaceId || 'system',
-        userId: request.userId || 'system',
+        workspaceId: request.workspaceId as string,
+        userId: request.userId as string,
         content: request.content,
         contentType: request.subjectType === 'hotpatch' ? 'code' : 'json',
         criteria: [
@@ -480,7 +482,7 @@ Respond with JSON:
         return { matches: pattern.failureCount >= 3, pattern: pattern.failureSignature };
       }
     } catch (error) {
-      console.error('[EnhancedLLMJudge] Regression check failed:', error);
+      log.error('[EnhancedLLMJudge] Regression check failed:', error);
     }
 
     return { matches: false };
@@ -523,6 +525,7 @@ Respond with JSON:
       } else {
         // Insert new pattern
         await db.insert(llmJudgeRegressions).values({
+          workspaceId: 'system',
           patternHash,
           actionType: request.actionType || 'unknown',
           domain: request.domain,
@@ -533,9 +536,9 @@ Respond with JSON:
         });
       }
 
-      console.log(`[EnhancedLLMJudge] Recorded failure pattern: ${patternHash.substring(0, 8)}...`);
+      log.info(`[EnhancedLLMJudge] Recorded failure pattern: ${patternHash.substring(0, 8)}...`);
     } catch (error) {
-      console.error('[EnhancedLLMJudge] Failed to record failure:', error);
+      log.error('[EnhancedLLMJudge] Failed to record failure:', error);
     }
   }
 
@@ -568,7 +571,7 @@ Respond with JSON:
         this.regressionCache.delete(patternHash);
       }
     } catch (error) {
-      console.error('[EnhancedLLMJudge] Failed to record success:', error);
+      log.error('[EnhancedLLMJudge] Failed to record success:', error);
     }
   }
 
@@ -600,9 +603,9 @@ Respond with JSON:
         });
       }
 
-      console.log(`[EnhancedLLMJudge] Loaded ${patterns.length} blocked regression patterns`);
+      log.info(`[EnhancedLLMJudge] Loaded ${patterns.length} blocked regression patterns`);
     } catch (error) {
-      console.error('[EnhancedLLMJudge] Failed to load regression patterns:', error);
+      log.error('[EnhancedLLMJudge] Failed to load regression patterns:', error);
     }
   }
 
@@ -725,7 +728,7 @@ Respond with JSON:
       return {
         action: 'blocked',
         requiresApproval: true,
-        approvalRoles: ['owner', 'admin', 'security_admin'],
+        approvalRoles: ['org_owner', 'co_owner', 'org_admin', 'security_admin'],
         blockReason: policyResult.triggeredPolicies.map(p => p.name).join(', ') || 'Policy violation',
       };
     }
@@ -734,7 +737,7 @@ Respond with JSON:
       return {
         action: 'escalated',
         requiresApproval: true,
-        approvalRoles: ['owner', 'admin', 'manager'],
+        approvalRoles: ['org_owner', 'co_owner', 'org_admin', 'manager'],
       };
     }
 
@@ -742,7 +745,7 @@ Respond with JSON:
       return {
         action: 'flagged',
         requiresApproval: request.requiresHumanApproval || false,
-        approvalRoles: request.requiresHumanApproval ? ['owner', 'admin'] : undefined,
+        approvalRoles: request.requiresHumanApproval ? ['org_owner', 'co_owner'] : undefined,
       };
     }
 
@@ -823,7 +826,7 @@ Respond with JSON:
         workspaceId: request.workspaceId,
       });
     } catch (error) {
-      console.error('[EnhancedLLMJudge] Failed to persist evaluation:', error);
+      log.error('[EnhancedLLMJudge] Failed to persist evaluation:', error);
     }
   }
 
@@ -857,7 +860,7 @@ Respond with JSON:
     const canDeploy = result.verdict === 'approved' && !result.isBlocked;
 
     if (!canDeploy && result.verdict !== 'approved') {
-      console.log(`[EnhancedLLMJudge] Hotpatch blocked: ${result.blockReason || result.verdict}`);
+      log.info(`[EnhancedLLMJudge] Hotpatch blocked: ${result.blockReason || result.verdict}`);
     }
 
     return { ...result, canDeploy };

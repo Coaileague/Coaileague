@@ -15,11 +15,18 @@
  * This service is the "thinking layer" between user requests and AI execution.
  */
 
+import crypto from 'crypto';
 import { GoogleGenerativeAI, GenerativeModel, SchemaType } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS, createConfiguredModel, GeminiModelTier } from './providers/geminiClient';
 import { modelRoutingEngine, RoutingContext as ModelRoutingContext, RoutingDecision as ModelRoutingDecision, recordModelResult } from './modelRoutingEngine';
+import { usageMeteringService } from '../billing/usageMetering';
+import { meteredGemini } from '../billing/meteredGeminiClient';
 import { db } from '../../db';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
+import { trinityKnowledgeService } from './trinityKnowledgeService';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM } from '../../config/platformConfig';
+const log = createLogger('knowledgeOrchestrationService');
 
 // ============================================================================
 // TYPES
@@ -148,7 +155,7 @@ class KnowledgeOrchestrationService {
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
-      console.warn("[KnowledgeOrchestration] GEMINI_API_KEY not found - AI features disabled");
+      log.warn("[KnowledgeOrchestration] GEMINI_API_KEY not found - AI features disabled");
       return;
     }
 
@@ -174,7 +181,7 @@ class KnowledgeOrchestrationService {
       }
     });
 
-    console.log("[KnowledgeOrchestration] Gemini 3 Pro AI Brain initialized");
+    log.info("[KnowledgeOrchestration] Gemini 3 Pro AI Brain initialized");
   }
 
   private initializeDomainExperts(): void {
@@ -211,7 +218,7 @@ class KnowledgeOrchestrationService {
       'onboarding.invite_team', 'onboarding.tutorial'
     ]);
 
-    console.log(`[KnowledgeOrchestration] Initialized ${this.domainExperts.size} domain experts`);
+    log.info(`[KnowledgeOrchestration] Initialized ${this.domainExperts.size} domain experts`);
   }
 
   private initializeBaseKnowledge(): void {
@@ -220,7 +227,7 @@ class KnowledgeOrchestrationService {
         id: 'platform-core',
         type: 'concept',
         domain: 'platform',
-        name: 'CoAIleague Platform',
+        name: PLATFORM.name + " Platform",
         description: 'AI-powered workforce management platform with multi-tenant architecture, RBAC security, and autonomous AI Brain orchestration',
         attributes: { version: '2.0', tier: 'enterprise', aiEnabled: true },
         connections: ['scheduling', 'payroll', 'employees', 'analytics', 'trinity-ai'],
@@ -235,8 +242,8 @@ class KnowledgeOrchestrationService {
         name: 'Trinity AI',
         description: 'AI mascot providing workspace-isolated intelligent assistance with persona-based interactions',
         attributes: { 
-          personas: ['onboarding_guide', 'business_buddy', 'support_partner', 'executive_advisor'],
-          modes: ['demo', 'business', 'guru']
+          personas: ['onboarding_guide', 'coo_advisor', 'support_partner', 'executive_advisor'],
+          modes: ['standard', 'coo', 'guru']
         },
         connections: ['platform-core', 'automation', 'gemini-brain'],
         confidence: 1.0,
@@ -280,7 +287,7 @@ class KnowledgeOrchestrationService {
       this.knowledgeGraph.set(node.id, node);
     }
 
-    console.log(`[KnowledgeOrchestration] Initialized ${this.knowledgeGraph.size} base knowledge nodes`);
+    log.info(`[KnowledgeOrchestration] Initialized ${this.knowledgeGraph.size} base knowledge nodes`);
   }
 
   // ============================================================================
@@ -300,10 +307,10 @@ class KnowledgeOrchestrationService {
     if (this.routingModel) {
       try {
         const aiDecision = await this.aiPoweredRouting(query, context);
-        console.log(`[KnowledgeOrchestration] AI-powered routing completed in ${Date.now() - startTime}ms`);
+        log.info(`[KnowledgeOrchestration] AI-powered routing completed in ${Date.now() - startTime}ms`);
         return aiDecision;
       } catch (error) {
-        console.warn(`[KnowledgeOrchestration] AI routing failed, falling back to rule-based:`, error);
+        log.warn(`[KnowledgeOrchestration] AI routing failed, falling back to rule-based:`, error);
       }
     }
 
@@ -318,7 +325,7 @@ class KnowledgeOrchestrationService {
     query: string,
     context: QueryContext
   ): Promise<RoutingDecision> {
-    const prompt = `You are an AI routing expert for the CoAIleague workforce management platform.
+    const prompt = `You are an AI routing expert for the ${PLATFORM.name} workforce management platform.
 Analyze this user query and determine the optimal processing path.
 
 USER QUERY: "${query}"
@@ -335,7 +342,7 @@ AVAILABLE MODEL TIERS:
 - BRAIN (gemini-3-pro-preview): Complex reasoning, diagnostics, multi-step planning
 - ORCHESTRATOR (gemini-3-pro-preview): Workflow automation, function calling
 - CONVERSATIONAL (gemini-2.5-flash): Chat, quick responses, Trinity thoughts
-- SIMPLE (gemini-2.5-flash): Quick lookups, status checks
+- SIMPLE (gemini-2.5-flash-lite): Quick lookups, status checks
 
 Respond with JSON:
 {
@@ -348,10 +355,23 @@ Respond with JSON:
   "confidence": 0.0-1.0
 }`;
 
-    const result = await this.routingModel!.generateContent(prompt);
-    const text = result.response.text();
-    const tokensUsed = (result.response.usageMetadata?.totalTokenCount || 0);
-    
+    const meteredResult = await meteredGemini.generate({
+      workspaceId: context.workspaceId,
+      userId: context.userId,
+      featureKey: 'knowledge_query_routing',
+      prompt,
+      model: 'gemini-2.5-flash',
+      temperature: 0.3,
+      maxOutputTokens: 500,
+    });
+
+    if (!meteredResult.success) {
+      return this.getFallbackRouting(query, context);
+    }
+
+    const text = meteredResult.text;
+    const tokensUsed = meteredResult.tokensUsed.total;
+
     try {
       const analysis: AIRoutingAnalysis = JSON.parse(text);
       
@@ -440,7 +460,7 @@ Respond with JSON:
       fallbackChain: engineDecision.fallbackChain,
     };
 
-    console.log(`[KnowledgeOrchestration] Rule-based routing via ModelRoutingEngine in ${Date.now() - startTime}ms`);
+    log.info(`[KnowledgeOrchestration] Rule-based routing via ModelRoutingEngine in ${Date.now() - startTime}ms`);
     return decision;
   }
 
@@ -519,6 +539,23 @@ Respond with JSON:
     if (domainNode) contextParts.push(`Domain Context: ${domainNode.description}`);
     if (context.recentActions?.length) contextParts.push(`Recent Actions: ${context.recentActions.slice(0, 3).join(', ')}`);
     if (context.previousQueries?.length) contextParts.push(`Previous Queries: ${context.previousQueries.slice(-2).join(' -> ')}`);
+
+    // Inject Trinity knowledge base context for compliance/regulatory/pricing/tax queries
+    const knowledgeDomains: KnowledgeDomain[] = ['compliance'];
+    const knowledgeKeywords = ['tax', 'regulation', 'license', 'compliance', 'pricing', 'rate', 'labor', 'overtime', 'security law', 'chapter 1702', 'force', 'workers comp', 'insurance'];
+    const queryLower = query.toLowerCase();
+    const isKnowledgeRelevant = knowledgeDomains.includes(domain) || knowledgeKeywords.some(kw => queryLower.includes(kw));
+    if (isKnowledgeRelevant && context.workspaceId) {
+      try {
+        const knowledgeContext = await trinityKnowledgeService.buildKnowledgeContext(query, context.workspaceId);
+        if (knowledgeContext) {
+          contextParts.push('\n' + knowledgeContext);
+        }
+      } catch {
+        // Non-blocking — knowledge enrichment failure never breaks routing
+      }
+    }
+
     return contextParts.join('\n');
   }
 
@@ -564,7 +601,7 @@ Respond with JSON:
       try {
         return await this.aiPoweredReasoning(query, context, observations);
       } catch (error) {
-        console.warn(`[KnowledgeOrchestration] AI reasoning failed, falling back to rule-based:`, error);
+        log.warn(`[KnowledgeOrchestration] AI reasoning failed, falling back to rule-based:`, error);
       }
     }
 
@@ -580,7 +617,7 @@ Respond with JSON:
     context: QueryContext,
     observations: string[]
   ): Promise<ReasoningChain> {
-    const prompt = `You are an AI Brain orchestrator for CoAIleague workforce management platform.
+    const prompt = `You are an AI Brain orchestrator for ${PLATFORM.name} workforce management platform.
 Perform deep step-by-step reasoning to analyze this query and determine the best action plan.
 
 USER QUERY: "${query}"
@@ -617,9 +654,30 @@ Think step-by-step and respond with JSON:
   "supportingEvidence": ["evidence1", "evidence2"]
 }`;
 
-    const result = await this.brainModel!.generateContent(prompt);
-    const text = result.response.text();
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || 0;
+    const meteredResult = await meteredGemini.generate({
+      workspaceId: context.workspaceId,
+      userId: context.userId,
+      featureKey: 'knowledge_reasoning_chain',
+      prompt,
+      model: 'gemini-2.5-pro',
+      temperature: 0.5,
+      maxOutputTokens: 2000,
+    });
+
+    if (!meteredResult.success) {
+      return {
+        steps: [],
+        conclusion: 'Reasoning unavailable - credit check failed',
+        confidence: 0,
+        supportingEvidence: [],
+        aiGenerated: false,
+        modelUsed: 'none',
+        tokensUsed: 0,
+      };
+    }
+
+    const text = meteredResult.text;
+    const tokensUsed = meteredResult.tokensUsed.total;
 
     try {
       const parsed = JSON.parse(text);
@@ -674,7 +732,7 @@ Think step-by-step and respond with JSON:
 
   addKnowledgeNode(node: KnowledgeNode): void {
     this.knowledgeGraph.set(node.id, node);
-    console.log(`[KnowledgeOrchestration] Added/updated node: ${node.id}`);
+    log.info(`[KnowledgeOrchestration] Added/updated node: ${node.id}`);
   }
 
   queryKnowledge(domain: KnowledgeDomain, nodeType?: KnowledgeNode['type']): KnowledgeNode[] {
@@ -710,14 +768,14 @@ Think step-by-step and respond with JSON:
   recordLearning(entry: Omit<LearningEntry, 'id' | 'timestamp'>): void {
     const learningEntry: LearningEntry = {
       ...entry,
-      id: `learn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `learn-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
       timestamp: new Date(),
     };
     this.learningEntries.push(learningEntry);
     if (this.learningEntries.length > 1000) {
       this.learningEntries = this.learningEntries.slice(-1000);
     }
-    console.log(`[KnowledgeOrchestration] Recorded learning entry: ${learningEntry.id}`);
+    log.info(`[KnowledgeOrchestration] Recorded learning entry: ${learningEntry.id}`);
   }
 
   getLearningInsights(queryType: string): {

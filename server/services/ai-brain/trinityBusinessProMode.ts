@@ -34,6 +34,8 @@
 
 import crypto from 'crypto';
 import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityBusinessProMode');
 
 // ============================================================================
 // TYPES - MONEY DISCOVERY
@@ -522,9 +524,9 @@ class TrinityBusinessProMode {
   private benchmarkAnalyses: BenchmarkAnalysis[] = [];
   
   private constructor() {
-    console.log('[TrinityBusinessPro] Revenue Intelligence Engine initialized');
-    console.log(`[TrinityBusinessPro] ${BUSINESS_PRO_AGENTS.length} agents ready`);
-    console.log(`[TrinityBusinessPro] ${INDUSTRY_PLAYBOOKS.length} industry playbooks loaded`);
+    log.info('[TrinityBusinessPro] Revenue Intelligence Engine initialized');
+    log.info(`[TrinityBusinessPro] ${BUSINESS_PRO_AGENTS.length} agents ready`);
+    log.info(`[TrinityBusinessPro] ${INDUSTRY_PLAYBOOKS.length} industry playbooks loaded`);
   }
   
   static getInstance(): TrinityBusinessProMode {

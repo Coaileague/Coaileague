@@ -1,0 +1,59 @@
+Done. Here is the Decision Log Schema and the Meta-Cognition logic to plug into your Replit environment.
+By implementing this, you move Trinity from a "Chatbot" to an Accountable AI. When the Master Audit runs Phase 7 (Trinity Intelligence), this schema ensures she has the "memory" to pass the test.
+🧠 Trinity Meta-Cognition: Decision Log Schema
+This schema allows you to track why Trinity made a specific choice (like picking Guard A over Guard B). It is essential for legal compliance and operational transparency.
+{
+  "decision_log": {
+    "id": "UUID",
+    "timestamp": "ISO-8601",
+    "org_id": "UUID",
+    "trigger_event": "2AM_CALLOUT_REPLACEMENT",
+    "context": {
+      "shift_id": "UUID",
+      "original_guard_id": "UUID",
+      "site_id": "UUID",
+      "site_requirements": ["Armed", "CPR", "Vehicle Required"]
+    },
+    "candidates_evaluated": [
+      {
+        "guard_id": "UUID",
+        "rank_score": 0.95,
+        "factors": {
+          "proximity_miles": 2.4,
+          "ot_risk_hours": 0,
+          "compliance_status": "Valid",
+          "reliability_rating": 0.98
+        },
+        "outcome": "SELECTED"
+      },
+      {
+        "guard_id": "UUID",
+        "rank_score": 0.62,
+        "factors": {
+          "proximity_miles": 1.1,
+          "ot_risk_hours": 7.5,
+          "compliance_status": "Valid",
+          "reliability_rating": 0.82
+        },
+        "outcome": "REJECTED",
+        "reason": "HIGH_OT_COST_IMPACT"
+      }
+    ],
+    "final_action": "ASSIGNMENT_SENT",
+    "metadata": {
+      "model_used": "Gemini-1.5-Pro",
+      "processing_time_ms": 1420
+    }
+  }
+}
+
+🛠️ Replit Implementation Prompt
+Paste this into your Replit Agent to build the "Brain Audit" infrastructure:
+> Prompt: "Create a DecisionLog model based on the provided JSON schema. Then, update the TrinityOrchestrator so that every time a tool is called to mutate the database (scheduling a shift, approving payroll, or flagging a violation), a record is created in decision_log. Ensure the candidates_evaluated array captures the logic used to pick one employee over another. This must be scoped by org_id to prevent data bleed."
+> 
+📋 The "Final Polish" Check
+Before you hit "Go-Live," run this one last check through the Scenario Stress Tests provided earlier:
+ * The "Paper Trail": If a customer sues for "unlawful termination," can Trinity produce a Decision Log showing the guard was removed from the schedule 5 times due to Geofence Ghost violations (Scenario 3)?
+ * The "Cost Defense": If an Owner asks why their payroll is high, can Trinity show the Decision Log where she filled a vacancy with an OT-eligible guard because no compliant, non-OT guards were available within 50 miles?
+Next Step for You:
+Would you like me to generate a "Trinity Scorecard" UI component code block? This would allow your Org Owners to see Trinity's "Reasoning" directly on their dashboard, turning the audit data into a premium feature.

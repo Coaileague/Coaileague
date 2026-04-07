@@ -1,0 +1,61 @@
+  updatedAt: true,
+});
+
+export type InsertAccountingDimensionMapping = z.infer<typeof insertAccountingDimensionMappingSchema>;
+export type AccountingDimensionMapping = typeof accountingDimensionMappings.$inferSelect;
+
+// Audit Proof Packs - "Explain this invoice" documentation
+export const auditProofPacks = pgTable("audit_proof_packs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Invoice reference
+  invoiceLifecycleId: varchar("invoice_lifecycle_id").references(() => invoiceLifecycleStates.id, { onDelete: 'cascade' }),
+  cycleKey: varchar("cycle_key").notNull(),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  
+  // Pack metadata
+  packChecksum: varchar("pack_checksum").notNull(), // SHA256 of pack contents
+  generatedAt: timestamp("generated_at").defaultNow(),
+  generatedBy: varchar("generated_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Pack contents summary
+  totalHours: decimal("total_hours", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }),
+  shiftCount: integer("shift_count"),
+  employeeCount: integer("employee_count"),
+  
+  // Detailed breakdown
+  billableFacts: jsonb("billable_facts"), // Array of line items with hours, rates, etc.
+  shiftReferences: jsonb("shift_references"), // Array of { shiftId, date, employee, hours, site }
+  policyApplied: jsonb("policy_applied"), // { rounding, overtime_policy, break_rules }
+  changeHistory: jsonb("change_history"), // Edits/approvals made to underlying data
+  
+  // Export URLs
+  pdfUrl: varchar("pdf_url"),
+  csvUrl: varchar("csv_url"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("audit_pack_workspace_idx").on(table.workspaceId),
+  cycleIdx: index("audit_pack_cycle_idx").on(table.cycleKey, table.clientId),
+  checksumIdx: index("audit_pack_checksum_idx").on(table.packChecksum),
+}));
+
+export const insertAuditProofPackSchema = createInsertSchema(auditProofPacks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAuditProofPack = z.infer<typeof insertAuditProofPackSchema>;
+export type AuditProofPack = typeof auditProofPacks.$inferSelect;
+
+// Rate Throttle Logs - Realm-scoped rate limiting tracking
+export const rateThrottleLogs = pgTable("rate_throttle_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  realmId: varchar("realm_id").notNull(), // QBO company/realm ID
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Request tracking
+  operation: varchar("operation").notNull(), // 'create_invoice', 'query_customers', etc.

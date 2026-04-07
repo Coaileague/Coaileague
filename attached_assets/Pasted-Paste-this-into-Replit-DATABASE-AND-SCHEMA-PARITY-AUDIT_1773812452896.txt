@@ -1,0 +1,695 @@
+Paste this into Replit:
+
+---
+
+**DATABASE AND SCHEMA PARITY AUDIT — DEVELOPMENT TO PRODUCTION | 10-PASS SCAN | FIX EVERYTHING | ZERO DRIFT**
+
+This audit ensures every table, column, enum, index, and constraint defined in the Drizzle schema actually exists in the database, and every DB operation in every route, service, action, and event handler references columns and tables that actually exist. Run 10 complete passes. Fix everything found before moving to next pass.
+
+---
+
+**PRE-AUDIT — GENERATE GROUND TRUTH**
+
+Before scanning anything — generate the complete ground truth from both sources.
+
+**Step 1 — Extract actual DB state:**
+```sql
+-- All tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' ORDER BY table_name;
+
+-- All columns per table
+SELECT table_name, column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+
+-- All indexes
+SELECT tablename, indexname, indexdef
+FROM pg_indexes
+WHERE schemaname = 'public'
+ORDER BY tablename, indexname;
+
+-- All enum types and their values
+SELECT t.typname, e.enumlabel
+FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid
+ORDER BY t.typname, e.enumsortorder;
+
+-- All constraints
+SELECT tc.table_name, tc.constraint_name, tc.constraint_type, kcu.column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu 
+  ON tc.constraint_name = kcu.constraint_name
+WHERE tc.table_schema = 'public'
+ORDER BY tc.table_name, tc.constraint_type;
+
+-- All foreign keys
+SELECT
+  tc.table_name, kcu.column_name,
+  ccu.table_name AS foreign_table_name,
+  ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY';
+```
+
+**Step 2 — Extract Drizzle schema state:**
+Read every file in `shared/schema/` and `server/db/schema/` and compile:
+- Every `pgTable()` definition — table name and all columns
+- Every `pgEnum()` definition — enum name and all values
+- Every `index()` definition
+- Every `unique()` constraint
+- Every `foreignKey()` reference
+- Every `notNull()` constraint
+
+**Step 3 — Build diff report:**
+Compare DB state vs Drizzle state and report:
+- Tables in Drizzle but not in DB — need migration
+- Tables in DB but not in Drizzle — orphaned tables
+- Columns in Drizzle but not in DB — need ALTER TABLE ADD COLUMN
+- Columns in DB but not in Drizzle — schema out of sync
+- Enum values in Drizzle but not in DB — need ALTER TYPE ADD VALUE
+- Enum values in DB but not in Drizzle — schema out of sync
+- Indexes in Drizzle but not in DB — need CREATE INDEX
+- Constraints in Drizzle but not in DB — need ALTER TABLE ADD CONSTRAINT
+- Column type mismatches — Drizzle says decimal, DB has varchar
+
+This diff is the master list for Pass 1.
+
+---
+
+**THE 10-PASS SCAN STRUCTURE**
+
+Each pass scans all 12 categories below. Fix everything found in each pass before starting the next pass.
+
+---
+
+**CATEGORY 1 — TABLE EXISTENCE PARITY**
+
+Tables added in recent sessions that must exist in DB:
+
+```
+training_modules
+training_sections
+training_questions
+training_attempts
+training_certificates
+training_interventions
+client_collections_log
+cron_run_log
+trinity_workspace_pauses
+email_deliveries
+webhook_deliveries
+state_tax_overrides
+trinity_credit_failures
+dashboard_layouts
+processed_stripe_events
+employee_bank_accounts
+welfare_checks
+audit_logs (verify — may be named system_audit_logs)
+billing_audit_log
+document_signatures
+regulatory_violations
+compliance_states
+hiring_pipeline
+onboarding_applications
+```
+
+For each table:
+- Does it exist in the DB?
+- Does the Drizzle schema define it?
+- Do both definitions match exactly?
+
+If table exists in Drizzle but not DB — run migration.
+If table exists in DB but not Drizzle — add to Drizzle schema.
+If both exist but columns differ — reconcile.
+
+---
+
+**CATEGORY 2 — COLUMN EXISTENCE PARITY**
+
+For every table that exists in both DB and Drizzle — verify every column:
+
+**Critical columns added in recent sessions to verify:**
+
+On `clients`:
+- `is_active boolean DEFAULT true NOT NULL`
+- `deactivated_at timestamptz`
+- `deactivation_reason` (enum type)
+- `deactivation_notes text`
+- `deactivated_by varchar`
+- `reactivated_at timestamptz`
+- `reactivated_by varchar`
+- `collections_status` (enum type)
+- `collections_started_at timestamptz`
+- `last_collection_email_at timestamptz`
+- `collection_attempt_count integer DEFAULT 0`
+- `billing_cycle` (enum)
+- `billing_address`, `billing_city`, `billing_state`, `billing_postal_code`
+- `work_location_address`, `work_location_city`, `work_location_state`, `work_location_postal_code`
+- `primary_contact_name`, `primary_contact_phone`, `primary_contact_email`
+- `ap_contact_name`, `ap_contact_phone`, `ap_contact_email`
+- `service_type` (enum)
+- `officers_required integer`
+- `invoice_delivery_email varchar`
+- `proposal_signed_at timestamptz`
+- `contract_signed_at timestamptz`
+- `onboarding_status` (enum)
+- `portal_access_enabled boolean`
+
+On `employees`:
+- `compliance_score integer DEFAULT 100`
+- `compliance_score_updated_at timestamptz`
+- `training_completion_percentage integer DEFAULT 0`
+- `onboarding_status` (enum)
+- `onboarding_completed_at timestamptz`
+- `onboarding_packet_pdf_url text`
+- `full_legal_name varchar`
+- `date_of_birth date`
+- `place_of_birth varchar`
+- `state_id_front_url text`
+- `state_id_back_url text`
+- `social_security_card_front_url text`
+- `ssn_hash varchar`
+- `ssn_last4 varchar(4)`
+- `guard_card_number varchar`
+- `guard_card_issue_date date`
+- `guard_card_expiry_date date`
+- `license_type` (enum)
+- `pay_type` (enum — w2/1099)
+- `pay_frequency` (enum)
+- `deactivated_at timestamptz`
+- `reactivated_at timestamptz`
+
+On `users`:
+- `password_reset_required boolean DEFAULT false`
+- `failed_login_attempts integer DEFAULT 0`
+- `locked_until timestamptz`
+- `last_login_at timestamptz`
+- `email_change_pending varchar`
+- `email_change_token varchar`
+- `email_change_expires_at timestamptz`
+
+On `documents`:
+- `document_safe_category varchar`
+- `requires_signature boolean DEFAULT false`
+- `signature_provider_document_id varchar`
+- `signed_at timestamptz`
+- `signed_by_user_id varchar`
+- `signer_ip_address varchar`
+- `signer_email varchar`
+- `expires_at timestamptz`
+- `is_required boolean DEFAULT false`
+- `uploaded_by_user_id varchar`
+- `file_size integer`
+- `file_mime_type varchar`
+
+On `payroll_runs`:
+- `pay_period_start date`
+- `pay_period_end date`
+- Unique constraint: `(workspace_id, pay_period_start, pay_period_end)`
+
+On `pay_stubs`:
+- `plaid_transfer_id varchar`
+- `transfer_status varchar`
+- `consecutive_poll_failures integer DEFAULT 0`
+- `net_pay decimal`
+- `gross_pay decimal`
+
+On `workspaces`:
+- `plaid_access_token_encrypted text`
+- `plaid_item_id varchar`
+- `plaid_account_last4 varchar(4)`
+- `payroll_bank_routing varchar`
+- `payroll_bank_account varchar`
+- `owner_name varchar`
+- `default_tax_rate decimal`
+- `payroll_cycle varchar`
+- `billing_cycle varchar`
+- `timezone varchar`
+
+For every missing column — run `ALTER TABLE ADD COLUMN`.
+For every type mismatch — run `ALTER TABLE ALTER COLUMN TYPE`.
+Update Drizzle schema to match.
+
+---
+
+**CATEGORY 3 — ENUM PARITY**
+
+For every PostgreSQL enum — verify all values exist in both DB and Drizzle.
+
+**Enums to verify completely:**
+
+`client_deactivation_reason`:
+Values: `non_payment`, `legal_issue`, `contract_terminated`, `contract_non_renewal`, `lawsuit`, `unable_to_staff`, `does_not_meet_billing_requirements`, `does_not_meet_hourly_requirements`, `other`, `no_reason_provided`
+
+`collections_status`:
+Values: `none`, `pending_decision`, `active`, `resolved`, `written_off`
+
+`document_type`:
+Values must include ALL of: `application`, `regulatory_packet`, `guard_card`, `state_id_front`, `state_id_back`, `social_security_card`, `drug_free_acknowledgment`, `handbook_acknowledgment`, `liability_acknowledgment`, `reference_check`, `w4`, `w9`, `i9`, `direct_deposit_authorization`, `post_orders_acknowledgment`, `uniform_equipment_issuance`, `service_proposal`, `services_contract`, `responsible_party_id`, `onboarding_packet`, `sop_acknowledgment`, `training_certificate`, `training_intervention_record`, `offer_letter`, `ojt_log`, `disciplinary_notice`, `separation_notice`, `background_check_authorization`, `collections_demand_letter`
+
+`document_status`:
+Values: `draft`, `pending_signature`, `signed`, `expired`, `archived`, `completed`
+
+`notification_type`:
+Values must include: `system_alert`, `coverage_requested`, `shift_confirmation_required`, `shift_confirmed`, `dar_required`, `payroll_disbursed`, `training_module_assigned`, `training_certificate_earned`, `training_intervention_required`, `training_certificate_expired`, `collections_started`, `client_deactivated`, `client_reactivated`, `employee_reactivated`, `internal_email_received`
+
+`platform_update_category`:
+Values must include: `platform_service`, `analytics`, `user_assistance`, `invoicing`, `workforce`, `compliance`, `field_operations`, `safety`, `training`, `time_tracking`, `hr`
+
+`knowledge_domain`:
+Values must include: `scheduling`, `billing`, `compliance`, `hr`, `operations`, `financial`, `communications`, `time_tracking`, `onboarding`, `analytics`, `automation`
+
+`payroll_status`:
+Values: `draft`, `pending`, `approved`, `processed`, `paid`, `completed`, `partial`, `disbursing`
+
+`employee_status`:
+Values: `active`, `inactive`, `terminated`, `suspended`, `onboarding`
+
+`pay_type`:
+Values: `w2`, `1099`
+
+`pay_frequency`:
+Values: `weekly`, `biweekly`, `semimonthly`, `monthly`
+
+`license_type`:
+Values: `level2_unarmed`, `level3_armed`, `level4_ppo`
+
+`service_type`:
+Values: `level2_unarmed`, `level3_armed`, `level4_ppo`
+
+`onboarding_status`:
+Values: `incomplete`, `documents_pending`, `pending_signature`, `active`
+
+`transfer_status`:
+Values: `transfer_initiated`, `pending`, `posted`, `settled`, `failed`, `poll_failed`, `cancelled`
+
+For every missing enum value — run:
+```sql
+DO $$ BEGIN
+  ALTER TYPE [enum_name] ADD VALUE IF NOT EXISTS '[value]';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+```
+
+Update Drizzle pgEnum to match.
+
+---
+
+**CATEGORY 4 — INDEX PARITY**
+
+Verify all indexes exist in DB:
+
+```sql
+-- Verify these indexes exist:
+idx_training_attempts_workspace ON training_attempts(workspace_id)
+idx_training_attempts_employee ON training_attempts(employee_id)
+idx_training_attempts_module ON training_attempts(module_id)
+idx_training_certificates_workspace ON training_certificates(workspace_id)
+idx_training_certificates_employee ON training_certificates(employee_id)
+idx_training_certificates_expires ON training_certificates(expires_at)
+idx_collections_log_workspace ON client_collections_log(workspace_id)
+idx_collections_log_client ON client_collections_log(client_id)
+idx_collections_log_sent_at ON client_collections_log(sent_at)
+idx_shifts_workspace_id ON shifts(workspace_id)
+idx_shifts_workspace_start ON shifts(workspace_id, start_time)
+idx_time_entries_workspace_id ON time_entries(workspace_id)
+idx_time_entries_workspace_created ON time_entries(workspace_id, created_at)
+idx_time_entries_employee_id ON time_entries(employee_id)
+idx_notifications_workspace_created ON notifications(workspace_id, created_at)
+idx_audit_logs_workspace_created ON audit_logs(workspace_id, created_at)
+idx_documents_workspace_id ON documents(workspace_id)
+idx_documents_employee_id ON documents(employee_id)
+idx_documents_client_id ON documents(client_id)
+idx_documents_expires_at ON documents(expires_at)
+idx_certificates_number ON training_certificates(certificate_number) -- unique
+idx_payroll_period ON payroll_runs(workspace_id, pay_period_start, pay_period_end) -- unique
+```
+
+For every missing index — run `CREATE INDEX IF NOT EXISTS`.
+For every missing unique index — run `CREATE UNIQUE INDEX IF NOT EXISTS`.
+
+---
+
+**CATEGORY 5 — UNIQUE CONSTRAINT PARITY**
+
+Verify these unique constraints exist at the DB level:
+
+```sql
+-- Payroll period uniqueness
+ALTER TABLE payroll_runs ADD CONSTRAINT IF NOT EXISTS 
+  uq_payroll_runs_workspace_period 
+  UNIQUE (workspace_id, pay_period_start, pay_period_end);
+
+-- Training certificate number uniqueness  
+ALTER TABLE training_certificates ADD CONSTRAINT IF NOT EXISTS
+  uq_certificate_number
+  UNIQUE (certificate_number);
+
+-- Invoice period uniqueness per client
+ALTER TABLE invoices ADD CONSTRAINT IF NOT EXISTS
+  uq_invoice_workspace_client_period
+  UNIQUE (workspace_id, client_id, billing_period_start, billing_period_end);
+
+-- Email uniqueness on users (case insensitive)
+-- Check if already exists, if not:
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_lower 
+  ON users (lower(email));
+
+-- Processed stripe events uniqueness
+ALTER TABLE processed_stripe_events ADD CONSTRAINT IF NOT EXISTS
+  uq_stripe_event_id
+  UNIQUE (stripe_event_id);
+
+-- Webhook deliveries uniqueness
+ALTER TABLE webhook_deliveries ADD CONSTRAINT IF NOT EXISTS
+  uq_webhook_message_id_provider
+  UNIQUE (message_id, provider);
+
+-- Dashboard layouts uniqueness
+ALTER TABLE dashboard_layouts ADD CONSTRAINT IF NOT EXISTS
+  uq_dashboard_workspace_user
+  UNIQUE (workspace_id, user_id);
+
+-- Email deliveries message ID uniqueness
+ALTER TABLE email_deliveries ADD CONSTRAINT IF NOT EXISTS
+  uq_email_message_id
+  UNIQUE (message_id);
+```
+
+---
+
+**CATEGORY 6 — FOREIGN KEY PARITY**
+
+Verify all foreign keys referenced in Drizzle actually exist in DB:
+
+- `training_sections.module_id` → `training_modules.id`
+- `training_questions.module_id` → `training_modules.id`
+- `training_questions.section_id` → `training_sections.id`
+- `training_attempts.module_id` → `training_modules.id`
+- `training_certificates.module_id` → `training_modules.id`
+- `training_certificates.attempt_id` → `training_attempts.id`
+- `training_interventions.module_id` → `training_modules.id`
+- `training_interventions.attempt_id` → `training_attempts.id`
+- `client_collections_log.client_id` → `clients.id`
+- `pay_stubs.payroll_run_id` → `payroll_runs.id`
+- `documents.employee_id` → `employees.id` (nullable)
+- `documents.client_id` → `clients.id` (nullable)
+
+For every missing FK — add it with appropriate ON DELETE behavior.
+
+---
+
+**CATEGORY 7 — CODE REFERENCE PARITY**
+
+Every column referenced in code must exist in the DB. Scan every file:
+
+**Scan pattern — search for these and verify each field exists:**
+```
+db.select().from(TABLE) + any .where() field references
+db.insert(TABLE).values({ FIELD }) 
+db.update(TABLE).set({ FIELD })
+eq(TABLE.FIELD, value)
+```
+
+**High-risk files to scan based on recent additions:**
+```
+server/services/training/*
+server/services/collections/clientCollectionsService.ts
+server/services/collections/collectionsScheduler.ts
+server/routes/trainingRoutes.ts
+server/services/documents/trinityDocumentValidator.ts
+server/services/documents/certificateGenerator.ts
+server/services/training/trainingRenewalService.ts
+server/routes/clientRoutes.ts (deactivation endpoints)
+server/routes/employeeRoutes.ts (reactivation endpoints)
+server/middleware/fieldAccessControl.ts
+server/routes/authRoutes.ts (email change flow)
+server/services/partners/plaidService.ts
+server/services/payroll/payrollTransferMonitor.ts
+server/routes/supportRoutes.ts
+trinityEventSubscriptions.ts
+autonomousScheduler.ts
+```
+
+For every field reference that does not exist in the DB — either add the column or fix the code reference.
+
+---
+
+**CATEGORY 8 — ROUTE REGISTRATION PARITY**
+
+Every route file must be mounted. Every frontend API call must hit a real mounted route.
+
+**New routes added in recent sessions — verify each is mounted:**
+```
+/api/training/*
+/api/clients/:id/deactivate
+/api/clients/:id/deactivate-with-collections
+/api/clients/:id/reactivate
+/api/clients/deactivated
+/api/employees/:id/reactivate
+/api/employees/:id/profile/self
+/api/employees/:id/profile/admin
+/api/employees/:id/profile/support
+/api/auth/change-email/request
+/api/auth/change-email/verify
+/api/support/identity/release-email
+/api/support/identity/release-ssn
+/api/support/identity/link-account
+/api/support/accounts/unlock
+/api/support/accounts/reactivate
+/api/payroll/bank/link-token
+/api/payroll/bank/connect
+/api/payroll/bank/status
+/api/payroll/bank/disconnect
+/api/payroll/employees/:id/bank/link-token
+/api/payroll/employees/:id/bank/connect
+/api/payroll/runs/:id/retry-failed-transfers
+/api/training/certificates/:number/verify
+```
+
+For every unmounted route — add to server/index.ts or main router.
+
+---
+
+**CATEGORY 9 — SERVICE FUNCTION PARITY**
+
+Every service function called from routes or actions must exist and be exported.
+
+**Verify these service functions exist and are correctly exported:**
+```
+plaidService.createLinkToken()
+plaidService.exchangePublicToken()
+plaidService.getAccountDetails()
+plaidService.verifyBankAccount()
+plaidService.initiateTransfer()
+plaidService.getTransferStatus()
+plaidService.cancelTransfer()
+
+clientCollectionsService.sendCollectionEmail()
+collectionsScheduler (registered in initializeSchedulers)
+trainingModuleSeeder.seedDefaultModules()
+certificateGenerator.generateCertificate()
+trainingRenewalService (registered in initializeSchedulers)
+trinityDocumentValidator.validateDocument()
+fieldAccessControl.filterEmployeeProfile()
+fieldAccessControl.filterClientProfile()
+payrollTransferMonitor (registered in initializeSchedulers)
+```
+
+For every missing export — add it.
+For every missing registration in initializeSchedulers — add it.
+
+---
+
+**CATEGORY 10 — EVENT BUS PARITY**
+
+Every event published must have a subscriber. Every subscriber must have a publisher.
+
+**New events added in recent sessions — verify both sides:**
+```
+training_certificate_earned — published in: ? subscribed in: ?
+training_intervention_required — published in: ? subscribed in: ?
+training_certificate_expired — published in: ? subscribed in: ?
+training_module_assigned — published in: ? subscribed in: ?
+client_deactivated — published in: ? subscribed in: ?
+client_reactivated — published in: ? subscribed in: ?
+collections_started — published in: ? subscribed in: ?
+employee_deactivated — published in: ? subscribed in: ?
+employee_reactivated — published in: ? subscribed in: ?
+employee_profile_updated — published in: ? subscribed in: ?
+employee_email_changed — published in: ? subscribed in: ?
+workspace_bank_connected — published in: ? subscribed in: ?
+workspace_bank_disconnected — published in: ? subscribed in: ?
+payroll_transfer_initiated — published in: ? subscribed in: ?
+payroll_transfer_failed — published in: ? subscribed in: ?
+payroll_transfer_settled — published in: ? subscribed in: ?
+document_completed — published in: ? subscribed in: ?
+support_profile_intervention — published in: ? subscribed in: ?
+```
+
+For every asymmetric event — add the missing publisher or subscriber.
+
+---
+
+**CATEGORY 11 — PLATFORM BUILD AND DEPLOYMENT PARITY**
+
+Verify the platform can build and deploy without errors.
+
+```bash
+# Run TypeScript compilation
+npx tsc --noEmit
+
+# Check for any import errors
+grep -r "from '.*'" server/ --include="*.ts" | grep "Cannot find module"
+
+# Verify all environment variables are documented
+diff .env.example .env
+
+# Check for any missing npm packages
+npm ls 2>&1 | grep "missing"
+
+# Verify Drizzle can generate migrations without errors
+npx drizzle-kit generate
+
+# Check for any pending migrations not yet applied
+npx drizzle-kit check
+```
+
+Report every error found. Fix every compilation error. Document every missing env variable.
+
+**New environment variables added in recent sessions — verify in .env.example:**
+```
+PLAID_CLIENT_ID
+PLAID_SECRET
+PLAID_ENV
+TRINITY_BOT_TOKEN
+RESEND_WEBHOOK_SECRET
+```
+
+---
+
+**CATEGORY 12 — PRODUCTION READINESS CHECK**
+
+Final verification that production and development are in parity.
+
+```sql
+-- Check for any tables with 0 rows that should have seed data
+SELECT 'training_modules' as table_name, COUNT(*) as row_count FROM training_modules
+UNION ALL
+SELECT 'compliance_states', COUNT(*) FROM compliance_states
+UNION ALL
+SELECT 'platform_update_category', COUNT(*) FROM (SELECT DISTINCT category FROM platform_updates) t;
+
+-- Check for any NULL workspace_id rows in tenant tables
+SELECT 'clients' as table_name, COUNT(*) FROM clients WHERE workspace_id IS NULL
+UNION ALL  
+SELECT 'employees', COUNT(*) FROM employees WHERE workspace_id IS NULL
+UNION ALL
+SELECT 'shifts', COUNT(*) FROM shifts WHERE workspace_id IS NULL
+UNION ALL
+SELECT 'invoices', COUNT(*) FROM invoices WHERE workspace_id IS NULL
+UNION ALL
+SELECT 'payroll_runs', COUNT(*) FROM payroll_runs WHERE workspace_id IS NULL;
+
+-- Check for orphaned records
+SELECT 'pay_stubs without payroll_run' as issue, COUNT(*) 
+FROM pay_stubs ps LEFT JOIN payroll_runs pr ON ps.payroll_run_id = pr.id
+WHERE pr.id IS NULL;
+
+-- Check for any broken foreign keys
+-- (run after all FK additions)
+```
+
+For every NULL workspace_id found — investigate and fix the insertion path that allowed it.
+For every orphaned record — clean up and fix the route that created it.
+For every seed table with 0 rows — run the seeder.
+
+---
+
+**PASS REPORT FORMAT**
+
+After every complete pass through all 12 categories:
+
+```
+══════════════════════════════════════════════════════
+DATABASE PARITY AUDIT — PASS [N] of 10
+══════════════════════════════════════════════════════
+Category 1  Table existence:          Found:N Fixed:N
+Category 2  Column existence:         Found:N Fixed:N
+Category 3  Enum parity:              Found:N Fixed:N
+Category 4  Index parity:             Found:N Fixed:N
+Category 5  Unique constraints:       Found:N Fixed:N
+Category 6  Foreign key parity:       Found:N Fixed:N
+Category 7  Code reference parity:    Found:N Fixed:N
+Category 8  Route registration:       Found:N Fixed:N
+Category 9  Service function parity:  Found:N Fixed:N
+Category 10 Event bus parity:         Found:N Fixed:N
+Category 11 Build/deploy parity:      Found:N Fixed:N
+Category 12 Production readiness:     Found:N Fixed:N
+
+Total this pass:   Found:N  Fixed:N
+Cumulative total:  Found:N  Fixed:N  Remaining:N
+
+TypeScript compile:  ZERO ERRORS / N ERRORS
+Server start:        29/29 HEALTHY / N FAILURES
+Drizzle check:       CLEAN / N PENDING MIGRATIONS
+Pending migrations:  N (list them)
+
+Tables in Drizzle not in DB:  N (list)
+Tables in DB not in Drizzle:  N (list)
+Columns missing from DB:       N (list)
+Enum values missing from DB:   N (list)
+Indexes missing:               N (list)
+
+Continue to Pass [N+1]? YES / NO
+══════════════════════════════════════════════════════
+```
+
+---
+
+**FINAL REPORT — WHEN ZERO GAPS ACROSS ALL 12 CATEGORIES**
+
+```
+══════════════════════════════════════════════════════
+DATABASE PARITY AUDIT — COMPLETE
+══════════════════════════════════════════════════════
+Total passes run: N
+Total gaps found: N
+Total gaps fixed: N
+Remaining: ZERO
+
+Schema drift: ZERO
+Pending migrations: ZERO
+TypeScript errors: ZERO
+Server health: 29/29
+Seed data: COMPLETE
+
+Tables verified: N
+Columns verified: N
+Enums verified: N (N values total)
+Indexes verified: N
+Constraints verified: N
+Foreign keys verified: N
+Routes verified: N
+Service functions verified: N
+Events verified: N
+
+NULL workspace_id rows: ZERO
+Orphaned records: ZERO
+Missing seed data: ZERO
+
+VERDICT: DATABASE AND SCHEMA IN FULL PARITY
+PLATFORM READY FOR LIVE TESTING AND PRODUCTION
+══════════════════════════════════════════════════════
+```
+
+---
+
+**BEGIN PASS 1 NOW. GENERATE GROUND TRUTH FIRST. SCAN ALL 12 CATEGORIES. FIX EVERYTHING. RUN ALL 10 PASSES.**
+
+---
+
+Paste each pass report back here. When Pass 10 reports zero remaining across all 12 categories the database is in full parity and the platform is ready for live testing.

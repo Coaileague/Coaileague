@@ -16,6 +16,7 @@ import { useTrinitySchedulingProgress, type SchedulingProgressStep, type Thinkin
 interface TrinitySchedulingProgressProps {
   workspaceId?: string;
   embedded?: boolean;
+  progressData?: SchedulingProgressStep[];
 }
 
 function ThinkingStepItem({ step }: { step: ThinkingStep }) {
@@ -134,7 +135,7 @@ function ThoughtBox({ progress }: { progress: SchedulingProgressStep }) {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="w-full justify-between h-6 px-2 text-xs font-medium"
+          className="w-full justify-between gap-1 h-6 px-2 text-xs font-medium"
           data-testid="button-thought-box-toggle"
         >
           <div className="flex items-center gap-1.5">
@@ -189,14 +190,14 @@ function ProgressItem({ progress }: { progress: SchedulingProgressStep }) {
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="p-3 border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50/50 to-teal-50/50 dark:from-purple-900/20 dark:to-teal-900/20">
+      <Card className="p-3 border border-cyan-200 dark:border-cyan-800 bg-gradient-to-r from-cyan-50/50 to-blue-50/50 dark:from-cyan-900/20 dark:to-blue-900/20">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             {progress.step !== 'complete' && progress.step !== 'no_match' && (
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800 animate-pulse" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border border-white dark:border-gray-800 animate-pulse" />
             )}
           </div>
           
@@ -261,7 +262,7 @@ function ProgressItem({ progress }: { progress: SchedulingProgressStep }) {
         </div>
 
         {progress.step !== 'complete' && progress.step !== 'no_match' && progress.step !== 'error' && (
-          <div className="mt-3 pt-3 border-t border-purple-200/50 dark:border-purple-700/50">
+          <div className="mt-3 pt-3 border-t border-cyan-200/50 dark:border-cyan-700/50">
             <ThoughtBox progress={progress} />
           </div>
         )}
@@ -270,18 +271,13 @@ function ProgressItem({ progress }: { progress: SchedulingProgressStep }) {
   );
 }
 
-export function TrinitySchedulingProgress({ workspaceId, embedded = false }: TrinitySchedulingProgressProps) {
-  const { activeProgress, hasActiveProgress } = useTrinitySchedulingProgress(workspaceId);
+export function TrinitySchedulingProgress({ workspaceId, embedded = false, progressData }: TrinitySchedulingProgressProps) {
+  const hookResult = useTrinitySchedulingProgress(progressData ? undefined : workspaceId);
+  
+  const activeProgress = progressData || hookResult.activeProgress;
+  const hasActiveProgress = progressData ? progressData.length > 0 : hookResult.hasActiveProgress;
 
   if (!hasActiveProgress) {
-    if (embedded) {
-      return (
-        <div className="text-xs text-muted-foreground flex items-center gap-2">
-          <CheckCircle2 className="h-3 w-3 text-green-500" />
-          <span>Ready to process scheduling requests</span>
-        </div>
-      );
-    }
     return null;
   }
 
@@ -314,7 +310,7 @@ export function TrinitySchedulingProgress({ workspaceId, embedded = false }: Tri
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-80 space-y-2" data-testid="panel-trinity-scheduling-progress">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90vw] sm:w-96 max-w-md space-y-2" data-testid="panel-trinity-scheduling-progress">
       <AnimatePresence mode="popLayout">
         {activeProgress.map((progress) => (
           <ProgressItem key={progress.shiftId} progress={progress} />

@@ -1,0 +1,152 @@
+/**
+ * CSS MANAGER — SINGLE SOURCE OF TRUTH
+ * ======================================
+ * CoAIleague CSS Layer Architecture (OMEGA LAW 22)
+ *
+ * ALL overlay backgrounds, z-indices, durations, and animation tokens MUST
+ * be defined here. No component may hardcode `bg-black`, a z-index number,
+ * or a transition duration without referencing a variable from this file.
+ *
+ * Import order: loaded after Tailwind base, before component styles.
+ */
+
+/* ============================================================
+   OVERLAY BACKGROUNDS
+   Rule: NEVER use bg-black for full-screen overlays.
+   Use --overlay-bg (brand dark navy) so users see our brand
+   color during loading — not a void of nothingness.
+   ============================================================ */
+:root {
+  /* Full-screen blocking overlays (login transition, splash, maintenance) */
+  --overlay-bg: #0a1729;
+  --overlay-bg-soft: rgba(10, 23, 41, 0.97);
+
+  /* Semi-transparent backdrop overlays (modals, sheets, drawers) */
+  --backdrop-heavy: rgba(0, 0, 0, 0.5);
+  --backdrop-medium: rgba(0, 0, 0, 0.4);
+  --backdrop-light: rgba(0, 0, 0, 0.3);
+
+  /* Overlay text colors (on top of --overlay-bg) */
+  --overlay-text-primary: hsl(var(--foreground));
+  --overlay-text-secondary: hsl(var(--muted-foreground));
+  --overlay-spinner-ring: hsl(var(--primary));
+  --overlay-spinner-track: hsl(var(--primary) / 0.3);
+}
+
+/* ============================================================
+   Z-INDEX REGISTRY
+   Rule: ALL fixed/absolute stacking must reference these vars.
+   No component may use a raw z-index integer without
+   referencing one of these CSS custom properties.
+   ============================================================ */
+:root {
+  /* Application layers — lowest to highest */
+  --z-base:            0;
+  --z-sticky:          1020;
+  --z-page-title:      1015;
+  --z-fixed-header:    1030;
+  --z-bottom-nav:      1040;
+  --z-overlay-panel:   1500;   /* Slide-in panels (schedule insights, AI panels) */
+  --z-context-menu:    1600;   /* Chat context-menu bottom sheets */
+  --z-fab:             1700;   /* FAB buttons */
+  --z-dropdown:        2000;
+  --z-sheet-backdrop:  2000;
+  --z-sheet:           2001;
+  --z-modal-backdrop:  2500;
+  --z-modal:           2501;
+  --z-drawer-backdrop: 2500;
+  --z-drawer:          2501;
+  --z-tooltip:         3000;
+  --z-toast:           5000;
+  --z-alert:           5000;
+  --z-lightbox:        6000;   /* Full-screen image lightboxes */
+  --z-system-modal:    6500;   /* System-level blocking modals (maintenance, payment) */
+  --z-splash:          9000;   /* Splash / loading overlays */
+  --z-transition:      9500;   /* Login/logout full-screen transition overlay */
+  --z-payment-wall:    99999;  /* Payment enforcement — absolute top layer */
+}
+
+/* ============================================================
+   TIMING / ANIMATION DURATIONS
+   Rule: All component transitions should reference these vars
+   so we can tune the whole system from one place.
+   ============================================================ */
+:root {
+  /* Transition overlay durations */
+  --transition-overlay-min:       1200ms;  /* Minimum time login overlay shows */
+  --transition-overlay-max:       5000ms;  /* Auto-cancel after this — prevents stuck black screen */
+  --transition-overlay-exit:      150ms;   /* Fade-out duration */
+  --transition-overlay-fade-in:   400ms;   /* Fade-in duration */
+
+  /* Splash screen */
+  --splash-display-time:          800ms;   /* How long PWA splash shows */
+  --splash-exit-start:            400ms;   /* When exit animation starts (display - 400ms) */
+
+  /* Page transitions */
+  --page-transition-duration:     150ms;
+
+  /* Component micro-interactions */
+  --hover-transition:             120ms;
+  --active-transition:            80ms;
+}
+
+/* ============================================================
+   OVERLAY UTILITY CLASSES
+   Drop-in classes for overlay containers. Use these instead
+   of composing raw Tailwind classes on every overlay.
+   ============================================================ */
+
+/* Full-screen blocking overlay (splash, login transition) */
+.overlay-blocking {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--overlay-bg);
+  color: hsl(var(--foreground));
+}
+
+/* Semi-transparent backdrop behind modals/sheets */
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--backdrop-heavy);
+}
+
+/* CSS Spinner — lightweight, no JS/framer-motion dependency */
+.css-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 4px solid var(--overlay-spinner-track);
+  border-top-color: var(--overlay-spinner-ring);
+  animation: css-spin 0.8s linear infinite;
+}
+
+.css-spinner-sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid var(--overlay-spinner-track);
+  border-top-color: var(--overlay-spinner-ring);
+  animation: css-spin 0.8s linear infinite;
+}
+
+@keyframes css-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   DARK MODE OVERRIDES
+   Overlays stay dark-navy in dark mode (same as light mode
+   since --overlay-bg is always the brand dark navy).
+   Semi-transparent backdrops can be slightly lighter in dark
+   mode since the background is already dark.
+   ============================================================ */
+html.dark {
+  --backdrop-heavy: rgba(0, 0, 0, 0.65);
+  --backdrop-medium: rgba(0, 0, 0, 0.55);
+  --backdrop-light: rgba(0, 0, 0, 0.4);
+}

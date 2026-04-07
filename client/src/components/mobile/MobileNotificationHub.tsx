@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback, type TouchEvent } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck, Sparkles, ListChecks } from "lucide-react";
+import { ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck, Sparkles, ListChecks, Pencil, Megaphone, Home } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
@@ -9,10 +9,15 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { formatDistanceToNow, startOfDay, endOfDay, parseISO, isToday } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import { TrinityLogo } from "@/components/trinity-logo";
+import { triggerHaptic } from "@/hooks/use-touch-swipe";
 import { cn } from "@/lib/utils";
+import { PushNotificationPrompt } from "@/components/push-notification-prompt";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
+import { BroadcastComposer } from "@/components/broadcasts/BroadcastComposer";
 
 interface UserNotification {
   id: string;
@@ -43,17 +48,6 @@ interface NotificationsData {
   unreadCount: number;
 }
 
-interface Shift {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  employeeId?: string;
-  clientId?: string;
-  client?: { name: string };
-  location?: string;
-}
-
 interface ExpandableNotificationCardProps {
   notification: UserNotification;
   onAction: (action: string, id: string, data?: any) => void;
@@ -63,6 +57,11 @@ interface ExpandableNotificationCardProps {
   selectionMode?: boolean;
 }
 
+/**
+ * Unified SwipeableNotificationCard - Single component handling both swipe gestures and card UI
+ * Eliminates wrapper nesting issues by integrating swipe directly into the card
+ * Follows the platform's unified component pattern
+ */
 function ExpandableNotificationCard({ 
   notification, 
   onAction,
@@ -75,6 +74,88 @@ function ExpandableNotificationCard({
   const { actionType, actionData, id } = notification;
   const isUrgent = notification.priority === 'high' || notification.priority === 'urgent';
   
+  // Integrated swipe state - no separate wrapper needed
+  const [swipeDistance, setSwipeDistance] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const currentDistance = useRef(0);
+  const isSwipingRef = useRef(false);
+  const actionTriggered = useRef(false);
+  const directionLocked = useRef<'horizontal' | 'vertical' | null>(null);
+  
+  const SWIPE_THRESHOLD = 100;
+  const LOCK_THRESHOLD = 15;
+  const MIN_SWIPE = 25;
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (selectionMode) return;
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    currentDistance.current = 0;
+    isSwipingRef.current = true;
+    actionTriggered.current = false;
+    directionLocked.current = null;
+    setIsSwiping(false);
+    setSwipeDistance(0);
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isSwipingRef.current || selectionMode) return;
+    
+    const deltaX = startX.current - e.touches[0].clientX;
+    const deltaY = Math.abs(e.touches[0].clientY - startY.current);
+    
+    // Lock direction after threshold
+    if (!directionLocked.current) {
+      if (Math.abs(deltaX) > LOCK_THRESHOLD || deltaY > LOCK_THRESHOLD) {
+        directionLocked.current = Math.abs(deltaX) > deltaY * 1.2 ? 'horizontal' : 'vertical';
+      }
+    }
+    
+    // Only process horizontal swipes
+    if (directionLocked.current === 'horizontal' && deltaX > MIN_SWIPE) {
+      e.preventDefault();
+      const clampedDistance = Math.min(deltaX, SWIPE_THRESHOLD * 1.3);
+      currentDistance.current = clampedDistance;
+      setSwipeDistance(clampedDistance);
+      setIsSwiping(true);
+      
+      // Haptic feedback at threshold
+      if (clampedDistance >= SWIPE_THRESHOLD && clampedDistance < SWIPE_THRESHOLD * 1.1) {
+        triggerHaptic('medium');
+      }
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    if (!isSwipingRef.current || selectionMode) return;
+    
+    const finalDistance = currentDistance.current;
+    const wasHorizontal = directionLocked.current === 'horizontal';
+    
+    if (wasHorizontal && finalDistance >= SWIPE_THRESHOLD && !actionTriggered.current) {
+      actionTriggered.current = true;
+      triggerHaptic('heavy');
+      setTimeout(() => {
+        onDelete(id);
+        resetSwipe();
+      }, 100);
+    } else {
+      resetSwipe();
+    }
+  };
+  
+  const resetSwipe = () => {
+    setSwipeDistance(0);
+    setTimeout(() => {
+      setIsSwiping(false);
+      isSwipingRef.current = false;
+      currentDistance.current = 0;
+      directionLocked.current = null;
+    }, 150);
+  };
+  
   const handleSelect = (e: React.MouseEvent) => {
     if (selectionMode && onSelect) {
       e.stopPropagation();
@@ -82,47 +163,63 @@ function ExpandableNotificationCard({
     }
   };
 
-  const handleLongPress = () => {
-    if (!selectionMode && onSelect) {
-      onSelect(id, true);
-    }
-  };
-
-  // Simple long press implementation
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const onTouchStart = () => {
-    timerRef.current = setTimeout(handleLongPress, 500);
-  };
-  const onTouchEnd = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  };
+  // Visual feedback calculations
+  const swipeProgress = Math.min((swipeDistance / SWIPE_THRESHOLD) * 100, 100);
+  const isNearThreshold = swipeProgress >= 70;
+  const hasPassedThreshold = swipeProgress >= 100;
 
   return (
-    <Card 
-      className={cn(
-        "overflow-hidden transition-all duration-200",
-        isUrgent ? 'border-l-2 border-l-[#06b6d4]' : 'border-l-2 border-l-transparent',
-        isSelected ? 'ring-2 ring-[#06b6d4] bg-blue-50/50 dark:bg-blue-900/10' : '',
-        notification.read ? 'opacity-70' : ''
-      )}
+    <div 
+      className="relative rounded-lg touch-manipulation"
+      style={{ touchAction: 'pan-y' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={resetSwipe}
       data-testid={`notification-card-${notification.id}`}
-      onClick={handleSelect}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
     >
+      {/* Delete action background - revealed on swipe */}
+      {swipeDistance > 0 && (
+        <div 
+          className={cn(
+            "absolute right-0 top-0 bottom-0 flex items-center justify-end pr-4 rounded-r-lg transition-colors",
+            hasPassedThreshold ? "bg-green-500" : isNearThreshold ? "bg-destructive" : "bg-destructive/70"
+          )}
+          style={{ width: `${Math.max(swipeDistance, 50)}px` }}
+        >
+          {hasPassedThreshold ? (
+            <Check className="h-5 w-5 text-white" />
+          ) : (
+            <Trash2 className={cn("h-5 w-5 text-white", isNearThreshold && "scale-110")} />
+          )}
+        </div>
+      )}
+      
+      {/* Card content - slides on swipe */}
+      <div 
+        className={cn(
+          "relative bg-card border rounded-lg transition-all duration-200",
+          isUrgent ? 'border-l-2 border-l-[var(--ds-info)]' : 'border-l-2 border-l-transparent',
+          isSelected ? 'ring-2 ring-[var(--ds-info)] bg-blue-50/50 dark:bg-blue-900/10' : '',
+          notification.read ? 'opacity-60' : '',
+          !isSwiping && "transition-transform duration-150"
+        )}
+        style={{ transform: `translateX(-${swipeDistance}px)` }}
+        onClick={handleSelect}
+      >
       <div className="flex items-center">
         {selectionMode && (
           <div className="pl-3">
             <div className={cn(
-              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-              isSelected ? "bg-[#06b6d4] border-[#06b6d4]" : "border-muted-foreground/30"
+              "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+              isSelected ? "bg-[var(--ds-info)] border-[var(--ds-info)]" : "border-muted-foreground/30"
             )}>
               {isSelected && <Check className="w-3 h-3 text-white" />}
             </div>
           </div>
         )}
         <button
-          className="flex-1 p-3 text-left flex items-center gap-2 min-h-[48px]"
+          className="flex-1 p-2.5 text-left flex items-start gap-2.5 min-h-[44px]"
           onClick={(e) => {
             if (selectionMode) {
               handleSelect(e);
@@ -131,27 +228,35 @@ function ExpandableNotificationCard({
             }
           }}
           data-testid={`button-expand-${notification.id}`}
+          aria-label={expanded ? "Collapse notification" : "Expand notification"}
         >
           <div className={cn(
-            "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-            isUrgent ? 'bg-[#06b6d4]/10' : 'bg-slate-100 dark:bg-slate-800'
+            "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5",
+            isUrgent ? 'bg-primary/10' : 'bg-muted'
           )}>
-            <Bell className={cn("w-4 h-4", isUrgent ? 'text-[#06b6d4]' : 'text-slate-500')} />
+            <Bell className={cn("w-4 h-4", isUrgent ? 'text-primary' : 'text-muted-foreground')} />
           </div>
           <div className="flex-1 min-w-0">
             <p className={cn(
-              "text-sm tracking-tight",
-              notification.read ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
+              "text-sm tracking-tight leading-snug",
+              notification.read ? "font-normal text-muted-foreground" : "font-medium text-foreground"
             )}>
               {notification.title}
             </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              {isUrgent && (
+                <Badge variant="destructive" className="text-[9px] px-1.5 py-0 h-4">
+                  URGENT
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+              </span>
+            </div>
           </div>
-          <span className="text-[10px] font-medium text-muted-foreground flex-shrink-0 whitespace-nowrap bg-muted/50 px-1.5 py-0.5 rounded">
-            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: false })}
-          </span>
           {!selectionMode && (
             <ChevronDown className={cn(
-              "w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-200",
+              "w-4 h-4 text-muted-foreground flex-shrink-0 mt-1 transition-transform duration-200",
               expanded ? 'rotate-180' : ''
             )} />
           )}
@@ -159,19 +264,19 @@ function ExpandableNotificationCard({
       </div>
       
       {expanded && !selectionMode && (
-        <div className="px-3 pb-3 pt-2 border-t border-border/50 bg-slate-50/30 dark:bg-slate-900/30">
+        <div className="px-3 pb-3 pt-2 border-t border-border bg-muted">
           {notification.message && (
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-6 break-words">
               {notification.message}
             </p>
           )}
           
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-3">
             {(actionType === 'shift_request' || actionType === 'swap_request' || actionType === 'approval') && (
               <>
                 <Button 
                   size="sm" 
-                  className="bg-[#06b6d4] hover:bg-[#0891b2] text-white font-bold flex-1"
+                  className="bg-[var(--ds-info)] text-white font-bold flex-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     onAction('approve', id, actionData);
@@ -183,8 +288,8 @@ function ExpandableNotificationCard({
                 </Button>
                 <Button 
                   size="sm" 
-                  variant="outline"
-                  className="border-red-200 text-red-600 hover:bg-red-50 flex-1"
+                  variant="destructive"
+                  className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     onAction('deny', id, actionData);
@@ -200,7 +305,7 @@ function ExpandableNotificationCard({
               <Button 
                 size="sm" 
                 variant="outline"
-                className="flex-1 border-[#06b6d4]/30 text-[#06b6d4] font-bold"
+                className="flex-1 border-[var(--ds-info)]/30 text-[var(--ds-info)] font-bold"
                 onClick={(e) => {
                   e.stopPropagation();
                   onAction('acknowledge', id);
@@ -215,7 +320,7 @@ function ExpandableNotificationCard({
             <Button 
               size="sm" 
               variant="ghost"
-              className="text-muted-foreground hover:text-red-500 transition-colors"
+              className="text-muted-foreground"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(id);
@@ -228,7 +333,8 @@ function ExpandableNotificationCard({
           </div>
         </div>
       )}
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -244,8 +350,19 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'alerts' | 'updates' | 'platform'>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
   const pullStartY = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const { user } = useAuth();
+  const { workspaceRole, platformRole: accessPlatformRole } = useWorkspaceAccess();
+  const userPlatformRole = (user as any)?.platformRole || (user as any)?.platform_role;
+  const effectivePlatformRole = accessPlatformRole || userPlatformRole;
+  const BROADCAST_ALLOWED_PLATFORM = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'];
+  const BROADCAST_ALLOWED_WORKSPACE = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager'];
+  const canBroadcast = (effectivePlatformRole && BROADCAST_ALLOWED_PLATFORM.includes(effectivePlatformRole)) ||
+    (workspaceRole && BROADCAST_ALLOWED_WORKSPACE.includes(workspaceRole));
+  const isPlatformBroadcast = !!(effectivePlatformRole && BROADCAST_ALLOWED_PLATFORM.includes(effectivePlatformRole));
   
   const { data: notificationsData, isLoading: notificationsLoading, refetch } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
@@ -272,14 +389,36 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   
   const deleteBatchMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      // Assuming a batch delete endpoint exists or calling multiple times if needed
-      // For now, let's call DELETE for each if batch isn't ready
-      await Promise.all(ids.map(id => apiRequest('DELETE', `/api/notifications/${id}`)));
+      // Delete each notification with individual error handling
+      const results = await Promise.allSettled(
+        ids.map(async id => {
+          // Single retry per item
+          try {
+            return await apiRequest('DELETE', `/api/notifications/${id}`);
+          } catch (error: any) {
+            if (error?.status === 404) return; // Already deleted
+            // One retry after 100ms
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return await apiRequest('DELETE', `/api/notifications/${id}`);
+          }
+        })
+      );
+      const failures = results.filter(r => r.status === 'rejected');
+      if (failures.length > 0 && failures.length === ids.length) {
+        throw new Error(`Failed to delete ${failures.length} notifications`);
+      }
+      return { deleted: ids.length - failures.length, failed: failures.length };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
-      toast({ title: `Deleted ${selectedIds.size} notifications` });
+      const message = result?.failed 
+        ? `Deleted ${result.deleted}, ${result.failed} failed`
+        : `Deleted ${selectedIds.size} notifications`;
+      toast({ title: message });
       handleClearSelection();
+    },
+    onError: () => {
+      toast({ title: "Delete failed", description: "Please try again", variant: "destructive" });
     }
   });
 
@@ -304,18 +443,6 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     markReadBatchMutation.mutate(Array.from(selectedIds));
   };
   
-  const today = new Date();
-  const dayStart = startOfDay(today).toISOString();
-  const dayEnd = endOfDay(today).toISOString();
-  
-  const { data: shiftsData, isLoading: shiftsLoading } = useQuery<Shift[]>({
-    queryKey: ["/api/shifts", dayStart, dayEnd],
-  });
-  
-  const { data: employeeData } = useQuery<any>({
-    queryKey: ["/api/employees/me"],
-  });
-  
   // Pull to refresh handler
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -329,21 +456,56 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     }
   }, [refetch, toast]);
   
-  // Touch handlers for pull-to-refresh
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (containerRef.current?.scrollTop === 0) {
+  const pullStartX = useRef<number | null>(null);
+  const directionLocked = useRef<'vertical' | 'horizontal' | null>(null);
+  const pullDistanceRef = useRef(0);
+  const isPulling = useRef(false);
+  const PULL_DEADZONE = 80;
+  const PULL_THRESHOLD = 120;
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (containerRef.current && containerRef.current.scrollTop <= 2) {
       pullStartY.current = e.touches[0].clientY;
+      pullStartX.current = e.touches[0].clientX;
+      directionLocked.current = null;
+      pullDistanceRef.current = 0;
+      isPulling.current = true;
     }
   }, []);
   
-  const handleTouchEnd = useCallback((e: TouchEvent) => {
-    if (pullStartY.current !== null) {
-      const pullDistance = e.changedTouches[0].clientY - pullStartY.current;
-      if (pullDistance > 80) {
-        handleRefresh();
-      }
-      pullStartY.current = null;
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPulling.current || pullStartY.current === null || pullStartX.current === null) return;
+    const diffY = e.touches[0].clientY - pullStartY.current;
+    const diffX = Math.abs(e.touches[0].clientX - pullStartX.current);
+    if (diffY <= 0 || (containerRef.current && containerRef.current.scrollTop > 2)) {
+      isPulling.current = false;
+      pullDistanceRef.current = 0;
+      directionLocked.current = null;
+      return;
     }
+    if (!directionLocked.current && (diffY > 15 || diffX > 15)) {
+      directionLocked.current = diffY > diffX * 2 ? 'vertical' : 'horizontal';
+      if (directionLocked.current === 'horizontal') {
+        isPulling.current = false;
+        pullDistanceRef.current = 0;
+        return;
+      }
+    }
+    if (directionLocked.current !== 'vertical') return;
+    if (diffY > PULL_DEADZONE) {
+      pullDistanceRef.current = Math.min((diffY - PULL_DEADZONE) * 0.5, 120);
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (pullDistanceRef.current >= PULL_THRESHOLD) {
+      handleRefresh();
+    }
+    pullStartY.current = null;
+    pullStartX.current = null;
+    isPulling.current = false;
+    pullDistanceRef.current = 0;
+    directionLocked.current = null;
   }, [handleRefresh]);
   
   const actionMutation = useMutation({
@@ -359,28 +521,57 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     },
   });
   
-  // Delete single notification
+  // Delete single notification with retry logic for reliability
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest('DELETE', `/api/notifications/${id}`);
+      let lastError: Error | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const result = await apiRequest('DELETE', `/api/notifications/${id}`);
+          return result;
+        } catch (error: any) {
+          lastError = error;
+          // Don't retry on 404 (already deleted) or 403 (unauthorized)
+          if (error?.status === 404 || error?.status === 403) {
+            throw error;
+          }
+          // Wait a bit before retrying (100ms, 200ms)
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+          }
+        }
+      }
+      throw lastError;
     },
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       syncNotificationCleared(id);
       toast({ title: "Notification deleted" });
     },
-    onError: () => {
-      toast({ title: "Delete failed", variant: "destructive" });
+    onError: (error: any) => {
+      // Only show error if it's a real failure (not 404 which means it was already deleted)
+      if (error?.status === 404) {
+        // Already deleted - just refresh
+        queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+        return;
+      }
+      toast({ 
+        title: "Delete failed", 
+        description: "Please try again",
+        variant: "destructive" 
+      });
     },
   });
   
   // Mark all as read
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/notifications/mark-all-read');
+      return apiRequest('POST', '/api/notifications/mark-all-read', {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
       syncClearAll(); // Broadcast to sync other tabs/desktop
       toast({ title: "All marked as read" });
     },
@@ -392,10 +583,16 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   // Clear all notifications
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/notifications/clear-all');
+      return apiRequest('POST', '/api/notifications/clear-all', {});
     },
     onSuccess: () => {
+      // Invalidate every notification-related cache key (both singular and plural variants)
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/internal-email/mailbox/auto-create"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       syncClearAll(); // Broadcast to sync other tabs/desktop
       toast({ title: "All notifications cleared" });
     },
@@ -420,29 +617,37 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     clearAllMutation.mutate();
   };
   
-  const userNotifications = notificationsData?.userNotifications || [];
+  // API returns 'notifications' not 'userNotifications' - fix the mapping
+  const userNotifications = (notificationsData as any)?.notifications || (notificationsData as any)?.userNotifications || [];
   const platformUpdates = notificationsData?.platformUpdates || [];
   const allNotifications: UserNotification[] = [
-    ...userNotifications,
-    ...platformUpdates.map(p => ({
+    ...userNotifications.map((n: any) => ({
+      id: n.id,
+      type: n.type || 'notification',
+      title: n.title || 'Notification',
+      message: n.message || n.body || '',
+      createdAt: n.createdAt || new Date().toISOString(),
+      read: n.isRead || n.clearedAt != null,
+      priority: n.priority === 'critical' ? 'urgent' as const : 
+                n.priority === 'high' ? 'high' as const : 'normal' as const,
+      category: n.category,
+      actionType: n.actionType,
+      actionData: n.actionData,
+    })),
+    ...platformUpdates.map((p: any) => ({
       id: p.id,
       type: 'platform',
       title: p.title,
-      message: p.message,
+      message: p.message || p.description || '',
       createdAt: p.createdAt,
-      read: p.read,
+      read: p.isViewed || p.read || false,
       priority: p.severity === 'critical' ? 'urgent' as const : p.severity === 'warning' ? 'high' as const : 'normal' as const,
       category: p.category,
     }))
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   
-  const unreadCount = notificationsData?.unreadCount || 0;
-  
-  const myEmployeeId = employeeData?.id;
-  const todayShifts = (shiftsData || []).filter(s => 
-    s.employeeId === myEmployeeId && isToday(parseISO(s.date))
-  );
-  const nextShift = todayShifts[0];
+  // API returns 'totalUnread' not 'unreadCount'
+  const unreadCount = (notificationsData as any)?.totalUnread || (notificationsData as any)?.unreadCount || 0;
   
   // Filter notifications based on active filter
   const filteredNotifications = allNotifications.filter(n => {
@@ -466,43 +671,56 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   };
   
   return (
-    <div className="flex flex-col h-full bg-muted/30">
-      {/* Header with sync and selection actions */}
-      <div className="bg-[#06b6d4] px-3 py-3 shadow-lg">
+    <div className="flex flex-col h-full bg-background">
+      {/* Header - polished gradient with high-contrast buttons */}
+      <div className="bg-gradient-to-r from-primary to-primary/85 px-3 py-2.5 shadow-md flex-shrink-0">
         {selectionMode ? (
-          <div className="flex items-center gap-3 text-white">
-            <Button size="icon" variant="ghost" className="text-white" onClick={handleClearSelection}>
+          <div className="flex items-center gap-1 text-primary-foreground">
+            <Button size="icon" variant="ghost" className="text-primary-foreground shrink-0" onClick={handleClearSelection} data-testid="button-cancel-selection">
               <X className="w-5 h-5" />
             </Button>
-            <span className="flex-1 font-bold">{selectedIds.size} Selected</span>
-            <Button size="icon" variant="ghost" className="text-white" onClick={handleSelectAll}>
+            <span className="font-bold text-sm whitespace-nowrap shrink-0 px-1">{selectedIds.size} Selected</span>
+            <div className="flex-1" />
+            <Button size="icon" variant="ghost" className="text-primary-foreground shrink-0" onClick={handleSelectAll} title="Select All">
               <CheckCheck className="w-5 h-5" />
             </Button>
-            <Button size="icon" variant="ghost" className="text-white" onClick={handleBatchMarkRead}>
+            <Button size="icon" variant="ghost" className="text-primary-foreground shrink-0" onClick={handleBatchMarkRead} title="Mark Read">
               <CheckCircle2 className="w-5 h-5" />
             </Button>
-            <Button size="icon" variant="ghost" className="text-white" onClick={handleBatchDelete}>
+            <Button size="icon" variant="destructive" className="text-primary-foreground shrink-0" onClick={handleBatchDelete} title="Delete">
               <Trash2 className="w-5 h-5" />
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-white text-sm flex-wrap">
-            <div className="flex items-center gap-1 flex-shrink-0 min-w-0">
-              <Bell className="w-4 h-4 flex-shrink-0" />
-              <span className="font-bold tracking-tight truncate">
-                {unreadCount === 0 
-                  ? "Inbox Clear"
-                  : `${unreadCount} Unread`
-                }
-              </span>
+          <div className="flex items-center justify-between gap-2 text-primary-foreground w-full">
+            <div className="flex items-center gap-2 min-w-0 shrink-0">
+              <div className="p-1.5 rounded-lg bg-primary-foreground/15">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="font-bold text-sm tracking-tight leading-tight">Notifications</div>
+                {unreadCount > 0 && (
+                  <div className="text-[11px] opacity-80">{unreadCount} unread</div>
+                )}
+              </div>
             </div>
-            {/* Action buttons - grouped with proper spacing */}
-            <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-              {/* Sync/Refresh */}
+            <div className="flex items-center gap-0.5 shrink-0">
+              {canBroadcast && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-primary-foreground"
+                  onClick={() => setBroadcastOpen(true)}
+                  data-testid="button-mobile-send-broadcast"
+                  title="Send Broadcast"
+                >
+                  <Megaphone className="w-4 h-4" />
+                </Button>
+              )}
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white hover:bg-white/20 h-8 w-8"
+                className="text-primary-foreground"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
                 data-testid="button-sync-notifications"
@@ -510,39 +728,23 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
               >
                 <RefreshCw className={cn("w-4 h-4", isRefreshing ? 'animate-spin' : '')} />
               </Button>
-              {/* Select All - enter selection mode */}
+              {filteredNotifications.length > 0 && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-primary-foreground"
+                  onClick={handleEnterSelectionMode}
+                  data-testid="button-edit-mode"
+                  title="Select to Delete"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              )}
               {allNotifications.length > 0 && (
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="text-white hover:bg-white/20 h-8 w-8"
-                  onClick={handleSelectAll}
-                  data-testid="button-select-all"
-                  title="Select All"
-                >
-                  <ListChecks className="w-4 h-4" />
-                </Button>
-              )}
-              {/* Mark All Read */}
-              {unreadCount > 0 && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-white hover:bg-white/20 h-8 w-8"
-                  onClick={handleMarkAllRead}
-                  disabled={markAllReadMutation.isPending}
-                  data-testid="button-mark-all-read"
-                  title="Mark All Read"
-                >
-                  <CheckCheck className="w-4 h-4" />
-                </Button>
-              )}
-              {/* Clear All/Delete All */}
-              {allNotifications.length > 0 && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-white hover:bg-white/20 h-8 w-8"
+                  className="text-primary-foreground"
                   onClick={handleClearAll}
                   disabled={clearAllMutation.isPending}
                   data-testid="button-clear-all"
@@ -551,38 +753,49 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               )}
+              <div className="w-px h-5 bg-primary-foreground/25 mx-0.5" />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-primary-foreground bg-primary-foreground/10"
+                onClick={() => {
+                  if (onClose) onClose();
+                  setLocation('/dashboard');
+                }}
+                data-testid="button-notifications-home"
+                title="Go to Home"
+              >
+                <Home className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-primary-foreground bg-primary-foreground/10"
+                onClick={() => onClose?.()}
+                data-testid="button-notifications-close"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         )}
       </div>
       
-      {/* Ask Trinity Button - Blue/Cyan Fortune 500 branding */}
-      <button
-        onClick={handleAskTrinity}
-        className="mx-2 mt-3 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-[#06b6d4]/20 via-slate-800/60 to-[#22d3ee]/20 border border-[#06b6d4]/30 active:scale-[0.98] transition-transform"
-        data-testid="button-ask-trinity-notifications"
-      >
-        <TrinityMascotIcon size="sm" />
-        <div className="flex-1 text-left">
-          <p className="text-sm font-medium bg-gradient-to-r from-[#06b6d4] via-[#22d3ee] to-[#2dd4bf] bg-clip-text text-transparent">
-            Ask Trinity
-          </p>
-          <p className="text-xs text-muted-foreground">Get help with notifications</p>
-        </div>
-        <Sparkles className="w-4 h-4 text-[#22d3ee]" />
-      </button>
+      {/* Push Notification Opt-In */}
+      <PushNotificationPrompt />
       
-      {/* Filter Tabs */}
-      <div className="flex gap-1 px-2 py-2 overflow-x-auto bg-white/60 dark:bg-slate-900/60 sticky top-0 z-10 backdrop-blur-md border-b">
+      {/* Compact Filter Tabs with Trinity button */}
+      <div className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto bg-card border-b flex-shrink-0">
         {(['all', 'alerts', 'updates', 'platform'] as const).map(filter => (
           <Badge
             key={filter}
             variant={activeFilter === filter ? 'default' : 'outline'}
             className={cn(
-              "cursor-pointer whitespace-nowrap capitalize transition-all duration-200 px-4 py-1.5 font-bold tracking-tight",
+              "cursor-pointer whitespace-nowrap capitalize transition-all duration-200 px-2 py-0.5 text-xs font-medium flex-shrink-0",
               activeFilter === filter 
-                ? "bg-[#06b6d4] text-white shadow-lg scale-105" 
-                : "bg-transparent text-muted-foreground border-slate-200"
+                ? "bg-[var(--ds-info)] text-white shadow-sm" 
+                : "bg-transparent text-muted-foreground border-border"
             )}
             onClick={() => setActiveFilter(filter)}
             data-testid={`filter-${filter}`}
@@ -590,60 +803,40 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
             {filter}
           </Badge>
         ))}
+        <div className="flex-1" />
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 gap-1 text-[var(--ds-info)] flex-shrink-0"
+          onClick={handleAskTrinity}
+          data-testid="button-ask-trinity-notifications"
+        >
+          <TrinityLogo size={16} />
+          <span className="text-xs">Ask Trinity</span>
+        </Button>
       </div>
       
       {/* Pull to refresh indicator */}
       {isRefreshing && (
-        <div className="flex justify-center py-2 bg-blue-50 dark:bg-blue-900/20">
-          <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
-          <span className="ml-2 text-xs text-blue-500">Syncing...</span>
+        <div className="flex justify-center py-1.5 bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
+          <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
+          <span className="ml-1.5 text-xs text-blue-500">Syncing...</span>
         </div>
       )}
       
       <div 
         ref={containerRef}
-        className="flex-1 overflow-auto px-2 py-3 pb-24 space-y-2"
+        className="flex-1 overflow-auto px-2 py-1 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] space-y-1.5 min-h-0"
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <Card 
-          className="p-3 flex items-center gap-2 cursor-pointer min-h-[48px]"
-          onClick={() => setLocation('/schedule')}
-          data-testid="card-shift-status"
-        >
-          <div className="w-7 h-7 rounded flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
-            <Calendar className="w-4 h-4 text-blue-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            {shiftsLoading ? (
-              <Skeleton className="h-4 w-32" />
-            ) : nextShift ? (
-              <p className="text-sm text-foreground truncate">
-                {nextShift.client?.name || 'Shift'} at {nextShift.startTime}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground break-words">
-                You don't have any shifts scheduled today
-              </p>
-            )}
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        </Card>
-        
-        <button
-          onClick={() => setLocation('/schedule')}
-          className="w-full py-2 text-center text-[#0095FF] text-sm font-medium min-h-[44px]"
-          data-testid="link-roster"
-        >
-          Today's roster <ChevronRight className="inline w-4 h-4" />
-        </button>
-        
         {notificationsLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map(i => (
               <Card key={i} className="p-3">
                 <div className="flex gap-2">
-                  <Skeleton className="w-7 h-7 rounded-full flex-shrink-0" />
+                  <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
                   <div className="flex-1 space-y-2">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-1/4" />
@@ -653,7 +846,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
             ))}
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground bg-white/40 dark:bg-slate-900/40 rounded-2xl border border-dashed">
+          <div className="text-center py-10 text-muted-foreground bg-muted rounded-md border border-dashed">
             <Bell className="w-10 h-10 mx-auto mb-2 opacity-20" />
             <p className="text-sm font-medium">
               {activeFilter === 'all' ? 'Your inbox is empty' : `No ${activeFilter} notifications found`}
@@ -676,6 +869,13 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
         )}
       </div>
       
+      {canBroadcast && (
+        <BroadcastComposer
+          open={broadcastOpen}
+          onOpenChange={setBroadcastOpen}
+          isPlatformLevel={isPlatformBroadcast}
+        />
+      )}
     </div>
   );
 }

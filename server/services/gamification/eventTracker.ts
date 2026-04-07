@@ -1,4 +1,5 @@
 import { gamificationService } from './gamificationService';
+import { createLogger } from '../../lib/logger';
 import { 
   gamificationEvents, 
   emitGamificationEvent,
@@ -16,6 +17,8 @@ import { db } from '../../db';
 import { employees } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
+const log = createLogger('GamificationEventTracker');
+
 /**
  * Event-driven gamification system
  * Hooks into platform events to award badges and points
@@ -28,7 +31,7 @@ export class GamificationEventTracker {
    */
   static initializeEventListeners(): void {
     if (this.initialized) {
-      console.log('[GamificationEventTracker] Already initialized, skipping');
+      log.info('[GamificationEventTracker] Already initialized, skipping');
       return;
     }
 
@@ -69,7 +72,7 @@ export class GamificationEventTracker {
     gamificationEvents.on('org_ready_to_work', (data: OrgSetupEvent) => this.handleOrgReadyToWork(data));
 
     this.initialized = true;
-    console.log('[GamificationEventTracker] Event listeners initialized');
+    log.info('[GamificationEventTracker] Event listeners initialized');
   }
 
   private static async handleClockIn(data: ClockInEvent): Promise<void> {
@@ -106,9 +109,9 @@ export class GamificationEventTracker {
         });
       }
 
-      console.log(`[Gamification] Clock-in points awarded to ${employeeId}`);
+      log.info(`[Gamification] Clock-in points awarded to ${employeeId}`);
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling clock_in:', error);
+      log.error('[GamificationEventTracker] Error handling clock_in:', error);
     }
   }
 
@@ -126,7 +129,7 @@ export class GamificationEventTracker {
         description: 'Clocked out for the day',
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling clock_out:', error);
+      log.error('[GamificationEventTracker] Error handling clock_out:', error);
     }
   }
 
@@ -156,7 +159,7 @@ export class GamificationEventTracker {
         });
       }
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling shift_completed:', error);
+      log.error('[GamificationEventTracker] Error handling shift_completed:', error);
     }
   }
 
@@ -176,7 +179,7 @@ export class GamificationEventTracker {
         description: 'Timesheet approved',
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling timesheet_approved:', error);
+      log.error('[GamificationEventTracker] Error handling timesheet_approved:', error);
     }
   }
 
@@ -194,7 +197,7 @@ export class GamificationEventTracker {
         description: 'Accepted a shift',
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling shift_accepted:', error);
+      log.error('[GamificationEventTracker] Error handling shift_accepted:', error);
     }
   }
 
@@ -233,7 +236,7 @@ export class GamificationEventTracker {
         points: 20,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling shift_swapped:', error);
+      log.error('[GamificationEventTracker] Error handling shift_swapped:', error);
     }
   }
 
@@ -251,7 +254,7 @@ export class GamificationEventTracker {
         description: 'Viewed schedule',
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling schedule_viewed:', error);
+      log.error('[GamificationEventTracker] Error handling schedule_viewed:', error);
     }
   }
 
@@ -271,7 +274,7 @@ export class GamificationEventTracker {
         });
       }
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling expense_approved:', error);
+      log.error('[GamificationEventTracker] Error handling expense_approved:', error);
     }
   }
 
@@ -291,7 +294,7 @@ export class GamificationEventTracker {
         });
       }
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling request_approved:', error);
+      log.error('[GamificationEventTracker] Error handling request_approved:', error);
     }
   }
 
@@ -341,9 +344,9 @@ export class GamificationEventTracker {
         points,
       });
 
-      console.log(`[Gamification] Feature use points (${points}) awarded for ${featureName}`);
+      log.info(`[Gamification] Feature use points (${points}) awarded for ${featureName}`);
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling feature_used:', error);
+      log.error('[GamificationEventTracker] Error handling feature_used:', error);
     }
   }
 
@@ -370,7 +373,7 @@ export class GamificationEventTracker {
         points: 50,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling profile_completed:', error);
+      log.error('[GamificationEventTracker] Error handling profile_completed:', error);
     }
   }
 
@@ -391,7 +394,7 @@ export class GamificationEventTracker {
         description: `Completed onboarding step: ${stepName || `Step ${stepNumber}`}`,
       });
 
-      console.log(`[Gamification] Onboarding step ${stepNumber}/${totalSteps} completed for ${employeeId}`);
+      log.info(`[Gamification] Onboarding step ${stepNumber}/${totalSteps} completed for ${employeeId}`);
 
       emitGamificationEvent('gamification_milestone', {
         type: 'onboarding_progress',
@@ -401,7 +404,7 @@ export class GamificationEventTracker {
         feature: `onboarding_step_${stepNumber}`,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling onboarding_step_completed:', error);
+      log.error('[GamificationEventTracker] Error handling onboarding_step_completed:', error);
     }
   }
 
@@ -420,7 +423,7 @@ export class GamificationEventTracker {
         description: 'Completed all onboarding steps - Welcome aboard!',
       });
 
-      console.log(`[Gamification] Onboarding completed for ${employeeId} - 200 bonus points awarded!`);
+      log.info(`[Gamification] Onboarding completed for ${employeeId} - 200 bonus points awarded!`);
 
       emitGamificationEvent('gamification_milestone', {
         type: 'onboarding_complete',
@@ -429,7 +432,7 @@ export class GamificationEventTracker {
         points,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling onboarding_completed:', error);
+      log.error('[GamificationEventTracker] Error handling onboarding_completed:', error);
     }
   }
 
@@ -459,9 +462,9 @@ export class GamificationEventTracker {
         description: `Completed tutorial step: ${tutorialName} (${stepNumber}/${totalSteps})`,
       });
 
-      console.log(`[Gamification] Tutorial step ${stepNumber}/${totalSteps} completed for ${userId}`);
+      log.info(`[Gamification] Tutorial step ${stepNumber}/${totalSteps} completed for ${userId}`);
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling tutorial_step_completed:', error);
+      log.error('[GamificationEventTracker] Error handling tutorial_step_completed:', error);
     }
   }
 
@@ -491,7 +494,7 @@ export class GamificationEventTracker {
         description: `Mastered tutorial: ${tutorialName}`,
       });
 
-      console.log(`[Gamification] Tutorial "${tutorialName}" completed by ${userId} - 50 bonus points!`);
+      log.info(`[Gamification] Tutorial "${tutorialName}" completed by ${userId} - 50 bonus points!`);
 
       emitGamificationEvent('gamification_milestone', {
         type: 'tutorial_mastered',
@@ -501,7 +504,7 @@ export class GamificationEventTracker {
         feature: tutorialName,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling tutorial_completed:', error);
+      log.error('[GamificationEventTracker] Error handling tutorial_completed:', error);
     }
   }
 
@@ -534,9 +537,9 @@ export class GamificationEventTracker {
         description: 'Started data migration journey',
       });
 
-      console.log(`[Gamification] Migration started by ${userId}`);
+      log.info(`[Gamification] Migration started by ${userId}`);
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling migration_started:', error);
+      log.error('[GamificationEventTracker] Error handling migration_started:', error);
     }
   }
 
@@ -566,7 +569,7 @@ export class GamificationEventTracker {
         description: `Uploaded ${documentType || 'document'} for migration`,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling migration_document_uploaded:', error);
+      log.error('[GamificationEventTracker] Error handling migration_document_uploaded:', error);
     }
   }
 
@@ -597,9 +600,9 @@ export class GamificationEventTracker {
         description: `Imported ${recordCount} ${documentType || 'records'}`,
       });
 
-      console.log(`[Gamification] Imported ${recordCount} records for ${userId} - ${points} points`);
+      log.info(`[Gamification] Imported ${recordCount} records for ${userId} - ${points} points`);
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling migration_data_imported:', error);
+      log.error('[GamificationEventTracker] Error handling migration_data_imported:', error);
     }
   }
 
@@ -629,7 +632,7 @@ export class GamificationEventTracker {
         description: 'Data migration completed successfully!',
       });
 
-      console.log(`[Gamification] Migration completed by ${userId} - 250 bonus points!`);
+      log.info(`[Gamification] Migration completed by ${userId} - 250 bonus points!`);
 
       emitGamificationEvent('gamification_milestone', {
         type: 'migration_complete',
@@ -638,7 +641,7 @@ export class GamificationEventTracker {
         points,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling migration_completed:', error);
+      log.error('[GamificationEventTracker] Error handling migration_completed:', error);
     }
   }
 
@@ -669,9 +672,9 @@ export class GamificationEventTracker {
         description: `Started organization setup: ${setupPhase}`,
       });
 
-      console.log(`[Gamification] Org setup started by ${userId}`);
+      log.info(`[Gamification] Org setup started by ${userId}`);
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling org_setup_started:', error);
+      log.error('[GamificationEventTracker] Error handling org_setup_started:', error);
     }
   }
 
@@ -700,9 +703,9 @@ export class GamificationEventTracker {
         description: `Completed setup phase: ${setupPhase} (${progress || 0}% complete)`,
       });
 
-      console.log(`[Gamification] Org setup step "${setupPhase}" completed - ${progress}%`);
+      log.info(`[Gamification] Org setup step "${setupPhase}" completed - ${progress}%`);
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling org_setup_step_completed:', error);
+      log.error('[GamificationEventTracker] Error handling org_setup_step_completed:', error);
     }
   }
 
@@ -731,7 +734,7 @@ export class GamificationEventTracker {
         description: 'Organization is fully set up and ready to work!',
       });
 
-      console.log(`[Gamification] Organization ready to work! ${userId} awarded 500 points!`);
+      log.info(`[Gamification] Organization ready to work! ${userId} awarded 500 points!`);
 
       emitGamificationEvent('gamification_milestone', {
         type: 'org_launch',
@@ -740,7 +743,7 @@ export class GamificationEventTracker {
         points,
       });
     } catch (error) {
-      console.error('[GamificationEventTracker] Error handling org_ready_to_work:', error);
+      log.error('[GamificationEventTracker] Error handling org_ready_to_work:', error);
     }
   }
 }

@@ -1,0 +1,72 @@
+Reading this carefully against the full 27-check requirement and the Nothing Left Behind rule before certifying.
+
+**Phase 19 is NOT certified. Multiple items unresolved.**
+
+---
+
+**FLAG 1 — Action count: 1,101 actions is not below 300**
+
+The findings report stated 1,101 unique Trinity AI brain action IDs plus 57 Platform Hub actions. The target was explicitly below 300. The delivery summary does not address this at all. Either the count was trimmed and not reported, or it was not trimmed. This is Check 1 and it cannot be skipped.
+
+**FLAG 2 — shift_created event subscription missing**
+
+Three missing subscriptions were identified: `officer_activated`, `shift_created`, `document_fully_signed`. The delivery confirms officer_activated and document_fully_signed were added. shift_created is not mentioned anywhere in the fixes.
+
+**FLAG 3 — Phase 17 license action format not confirmed fixed**
+
+Findings noted license actions use `name:` instead of `actionId:` format — non-standard. The delivery says "all confirmed registered and functional" but does not confirm the format was corrected.
+
+**FLAG 4 — 7 cognitive tests not run**
+
+The addendum required 7 specific tests with documented inputs and outputs in replit.md. None of the 7 tests appear in the delivery summary.
+
+**FLAG 5 — Multi-step planning not confirmed implemented**
+
+The addendum required upgrading executive function with multi-step planning. The findings identified it as a gap. The delivery does not confirm it was built.
+
+**FLAG 6 — Nothing Left Behind reconciliation table absent**
+
+Step 10 required a mandatory reconciliation table listing every finding with confirmed fix or evidence. It was not produced. Check 18 cannot pass without it.
+
+**FLAG 7 — Checks 20-27 (addendum checks) not verified**
+
+The addendum added 8 checks to bring the total to 27. The delivery addresses none of Checks 20-27 explicitly.
+
+---
+
+Send this back to the agent:
+
+---
+
+**Phase 19 is not closed. Seven gaps require resolution before certification. Address each one with evidence:**
+
+**FLAG 1 — Action count:**
+The findings report identified 1,101 Trinity AI brain action IDs. The target is below 300. Show the exact current count after any deduplication. If the count remains above 300 explain the architectural reason and produce a trimming plan. Check 1 cannot pass without a confirmed count.
+
+**FLAG 2 — shift_created subscription:**
+The findings identified three missing subscriptions. officer_activated and document_fully_signed were added. Add the shift_created subscription now. Show the lines added and confirm the handler is wired correctly.
+
+**FLAG 3 — Phase 17 license action format:**
+License actions were registered with `name:` instead of `actionId:`. Confirm whether this was corrected. If not correct it now. Show a grep confirming all license actions use the canonical `actionId:` format.
+
+**FLAG 4 — 7 cognitive tests:**
+Run all 7 tests from the addendum now. For each test document: the exact input sent, the expected output, and the actual output Trinity produced. Write all 7 results to replit.md. Check 27 cannot pass without documented test results.
+
+**FLAG 5 — Multi-step planning:**
+The addendum required upgrading executive function to produce a sequenced plan when asked to execute a complex multi-step task. Show what was built — specific file and lines. Then run Test 5 (ask Trinity to prepare end of month close) and show its actual response.
+
+**FLAG 6 — Nothing Left Behind reconciliation table:**
+Produce the full reconciliation table now. Every finding from the findings report listed with: finding description, severity, status (PASS/GAP/PARTIAL/CRITICAL), fix applied (file and line), and confirmation evidence. Every row must be green before Phase 19 closes.
+
+**FLAG 7 — Checks 20-27:**
+Run and confirm each of the 8 addendum checks explicitly:
+- Check 20: Conscience layer invoked before every action — show a block log entry
+- Check 21: Confidence scoring active — show an example response with confidence score
+- Check 22: Working memory session summary updates after every turn — show a before/after
+- Check 23: Long-term memory workspace-scoped — confirm cross-workspace retrieval blocked
+- Check 24: Executive function multi-step planning — show Test 5 output
+- Check 25: Confidence-gated execution — show Test 6 output
+- Check 26: Anomaly detection fires — show Test 7 output
+- Check 27: All 7 tests documented in replit.md
+
+Phase 19 closes when all 27 checks pass with evidence and the Nothing Left Behind reconciliation table is fully green.

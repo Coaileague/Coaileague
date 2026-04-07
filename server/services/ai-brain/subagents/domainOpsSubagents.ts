@@ -11,17 +11,19 @@
  */
 
 import { db } from '../../../db';
+import { createLogger } from '../../../lib/logger';
 import { 
-  aiComponentRegistry, 
   aiGapFindings,
   InsertAiGapFinding,
-  InsertAiComponentRegistry
 } from '@shared/schema';
+
+const log = createLogger('DomainOps');
 import { eq, and, like, desc, sql, inArray } from 'drizzle-orm';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { helpaiOrchestrator } from '../../helpai/platformActionHub';
 import * as fs from 'fs';
 import * as path from 'path';
+import { typedQuery } from '../../../lib/typedSql';
 
 // ============================================================================
 // SHARED TYPES
@@ -39,6 +41,7 @@ interface GapFinding {
   suggestedFix?: string;
   detectionMethod: string;
   confidence: number;
+  workspaceId?: string;
 }
 
 interface ComponentAnalysis {
@@ -61,27 +64,10 @@ interface LogPattern {
 // ============================================================================
 
 /**
- * Map application-level severity to the gap_severity DB enum.
- * Application interface uses: info | warning | error | critical | blocker
- * DB enum (gap_severity) accepts: critical | high | medium | low | info
- */
-function mapToGapSeverity(s: GapFinding['severity']): 'critical' | 'high' | 'medium' | 'low' | 'info' {
-  switch (s) {
-    case 'blocker':  return 'critical';
-    case 'critical': return 'critical';
-    case 'error':    return 'high';
-    case 'warning':  return 'medium';
-    case 'info':     return 'info';
-    default:         return 'low';
-  }
-}
-
-/**
  * Persist a gap finding to the database
  */
-async function persistGapFinding(finding: GapFinding, detectedBy: string): Promise<number | null> {
+async function persistGapFinding(finding: GapFinding, detectedBy: string): Promise<string | null> {
   try {
-    // Check if similar finding already exists (avoid duplicates)
     const existing = await db
       .select()
       .from(aiGapFindings)
@@ -94,18 +80,15 @@ async function persistGapFinding(finding: GapFinding, detectedBy: string): Promi
       .limit(1);
 
     if (existing.length > 0) {
-      // Update existing finding
       await db
         .update(aiGapFindings)
         .set({
-          lastDetectedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(aiGapFindings.id, existing[0].id));
       return existing[0].id;
     }
 
-    // Insert new finding
     const [inserted] = await db
       .insert(aiGapFindings)
       .values({
@@ -113,24 +96,23 @@ async function persistGapFinding(finding: GapFinding, detectedBy: string): Promi
         lineNumber: finding.lineNumber,
         columnNumber: finding.columnNumber,
         gapType: finding.gapType,
-        severity: mapToGapSeverity(finding.severity),
+        severity: finding.severity,
         title: finding.title,
         description: finding.description,
         technicalDetails: finding.technicalDetails,
         suggestedFix: finding.suggestedFix,
         detectionMethod: finding.detectionMethod,
-        confidence: finding.confidence.toString(),
+        detectionConfidence: finding.confidence?.toString() || '0.8',
         status: 'open',
         detectedBy,
-        lastDetectedAt: new Date(),
-        occurrenceCount: 1,
+        workspaceId: finding.workspaceId || 'system',
       } as InsertAiGapFinding)
       .returning();
 
-    console.log(`[DomainOps] Persisted gap finding: ${finding.title}`);
+    log.info(`Persisted gap finding: ${finding.title}`);
     return inserted.id;
   } catch (error) {
-    console.error('[DomainOps] Error persisting gap finding:', error);
+    log.error('Error persisting gap finding:', error);
     return null;
   }
 }
@@ -138,8 +120,8 @@ async function persistGapFinding(finding: GapFinding, detectedBy: string): Promi
 /**
  * Persist multiple gap findings in batch
  */
-async function persistGapFindings(findings: GapFinding[], detectedBy: string): Promise<number[]> {
-  const persistedIds: number[] = [];
+async function persistGapFindings(findings: GapFinding[], detectedBy: string): Promise<string[]> {
+  const persistedIds: string[] = [];
   
   for (const finding of findings) {
     const id = await persistGapFinding(finding, detectedBy);
@@ -148,7 +130,7 @@ async function persistGapFindings(findings: GapFinding[], detectedBy: string): P
     }
   }
   
-  console.log(`[DomainOps] Persisted ${persistedIds.length}/${findings.length} gap findings`);
+  log.info(`Persisted ${persistedIds.length}/${findings.length} gap findings`);
   return persistedIds;
 }
 
@@ -186,6 +168,7 @@ async function persistComponent(component: ComponentAnalysis, registeredBy: stri
     const [inserted] = await db
       .insert(aiComponentRegistry)
       .values({
+        workspaceId: 'system',
         filePath: component.filePath,
         componentName: component.componentName,
         domain: component.domain,
@@ -198,10 +181,10 @@ async function persistComponent(component: ComponentAnalysis, registeredBy: stri
       } as InsertAiComponentRegistry)
       .returning();
 
-    console.log(`[DomainOps] Registered component: ${component.componentName}`);
+    log.info(`Registered component: ${component.componentName}`);
     return inserted.id;
   } catch (error) {
-    console.error('[DomainOps] Error registering component:', error);
+    log.error('Error registering component:', error);
     return null;
   }
 }
@@ -219,7 +202,7 @@ async function persistComponents(components: ComponentAnalysis[], registeredBy: 
     }
   }
   
-  console.log(`[DomainOps] Registered ${persistedIds.length}/${components.length} components`);
+  log.info(`Registered ${persistedIds.length}/${components.length} components`);
   return persistedIds;
 }
 
@@ -229,6 +212,7 @@ async function persistComponents(components: ComponentAnalysis[], registeredBy: 
 
 class SchemaOpsSubagent {
   private static instance: SchemaOpsSubagent;
+  private readonly log = createLogger('SchemaOps');
 
   static getInstance(): SchemaOpsSubagent {
     if (!this.instance) {
@@ -241,7 +225,7 @@ class SchemaOpsSubagent {
    * Scan the schema file to understand all tables and relationships
    */
   async scanSchemaFile(): Promise<ComponentAnalysis[]> {
-    console.log('[SchemaOps] Scanning schema file...');
+    this.log.info('Scanning schema file...');
     
     const schemaPath = 'shared/schema.ts';
     const components: ComponentAnalysis[] = [];
@@ -281,10 +265,10 @@ class SchemaOpsSubagent {
         });
       }
 
-      console.log(`[SchemaOps] Found ${components.length} schema components`);
+      this.log.info(`Found ${components.length} schema components`);
       return components;
     } catch (error) {
-      console.error('[SchemaOps] Error scanning schema:', error);
+      this.log.error('Error scanning schema:', error);
       return [];
     }
   }
@@ -293,18 +277,19 @@ class SchemaOpsSubagent {
    * Detect schema mismatches between code and database
    */
   async detectSchemaMismatches(): Promise<GapFinding[]> {
-    console.log('[SchemaOps] Detecting schema mismatches...');
+    this.log.info('Detecting schema mismatches...');
     
     const findings: GapFinding[] = [];
     
     try {
       // Get tables from database
-      const dbTables = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: information_schema | Tables: information_schema | Verified: 2026-03-23
+      const dbTables = await typedQuery(sql`
         SELECT table_name FROM information_schema.tables 
         WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
       `);
       
-      const dbTableNames = new Set((dbTables.rows as any[]).map(r => r.table_name));
+      const dbTableNames = new Set((dbTables as any[]).map(r => r.table_name));
       
       // Get tables from schema file
       const schemaComponents = await this.scanSchemaFile();
@@ -315,26 +300,34 @@ class SchemaOpsSubagent {
       );
       
       // Find tables in schema but not in DB
+      const missingTables: string[] = [];
       for (const tableName of schemaTableNames) {
         if (!dbTableNames.has(tableName)) {
-          findings.push({
-            filePath: 'shared/schema.ts',
-            gapType: 'schema_mismatch',
-            severity: 'error',
-            title: `Missing table: ${tableName}`,
-            description: `Table '${tableName}' is defined in schema but doesn't exist in database`,
-            technicalDetails: 'Run npm run db:push to sync schema with database',
-            suggestedFix: 'Execute database migration or push schema',
-            detectionMethod: 'schema_db_comparison',
-            confidence: 1.0,
-          });
+          missingTables.push(tableName);
         }
       }
       
-      console.log(`[SchemaOps] Found ${findings.length} schema mismatches`);
+      if (missingTables.length > 0) {
+        // Report as a single summary finding instead of one per table to reduce noise
+        const sampleTables = missingTables.slice(0, 10).join(', ');
+        const remaining = missingTables.length > 10 ? ` and ${missingTables.length - 10} more` : '';
+        findings.push({
+          filePath: 'shared/schema.ts',
+          gapType: 'schema_mismatch',
+          severity: 'warning',
+          title: `${missingTables.length} table(s) defined in schema but not in database`,
+          description: `Tables not yet pushed to database: ${sampleTables}${remaining}. Run db:push to sync if these tables are needed.`,
+          technicalDetails: `${missingTables.length} tables need database sync`,
+          suggestedFix: 'Execute database migration or push schema for needed tables',
+          detectionMethod: 'schema_db_comparison',
+          confidence: 0.7,
+        });
+      }
+      
+      this.log.info(`Found ${missingTables.length} unpushed tables (reported as 1 summary finding)`);
       return findings;
     } catch (error) {
-      console.error('[SchemaOps] Error detecting mismatches:', error);
+      this.log.error('Error detecting mismatches:', error);
       return [];
     }
   }
@@ -343,13 +336,14 @@ class SchemaOpsSubagent {
    * Analyze table relationships and find orphaned references
    */
   async analyzeRelationships(): Promise<GapFinding[]> {
-    console.log('[SchemaOps] Analyzing schema relationships...');
+    this.log.info('Analyzing schema relationships...');
     
     const findings: GapFinding[] = [];
     
     try {
       // Get foreign key constraints from database
-      const fkQuery = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: information_schema | Tables: information_schema | Verified: 2026-03-23
+      const fkQuery = await typedQuery(sql`
         SELECT
           tc.constraint_name,
           tc.table_name,
@@ -364,34 +358,47 @@ class SchemaOpsSubagent {
         WHERE constraint_type = 'FOREIGN KEY'
       `);
       
-      // Check for potential issues (e.g., missing indexes on FK columns)
-      for (const row of (fkQuery.rows as any[])) {
+      // Get all existing indexes in one query for efficient comparison
+      // CATEGORY C — Raw SQL retained: pg_indexes system catalog introspection | Tables: pg_indexes | Verified: 2026-03-23
+      const allIndexes = await typedQuery(sql`
+        SELECT tablename, indexdef FROM pg_indexes WHERE schemaname = 'public'
+      `);
+      const indexMap = new Map<string, string[]>();
+      for (const row of (allIndexes as any[])) {
+        const existing = indexMap.get(row.tablename) || [];
+        existing.push(row.indexdef);
+        indexMap.set(row.tablename, existing);
+      }
+      
+      // Check for missing indexes on FK columns
+      const missingIndexFKs: string[] = [];
+      for (const row of (fkQuery as any[])) {
         const { table_name, column_name } = row;
-        
-        // Check if there's an index on the FK column
-        const indexCheck = await db.execute(sql`
-          SELECT indexname FROM pg_indexes 
-          WHERE tablename = ${table_name} 
-          AND indexdef LIKE '%' || ${column_name} || '%'
-        `);
-        
-        if (indexCheck.rows.length === 0) {
-          findings.push({
-            filePath: 'shared/schema.ts',
-            gapType: 'performance_issue',
-            severity: 'warning',
-            title: `Missing index on FK: ${table_name}.${column_name}`,
-            description: `Foreign key column '${column_name}' in table '${table_name}' has no index, which may impact query performance`,
-            suggestedFix: `Add index on ${table_name}(${column_name})`,
-            detectionMethod: 'fk_index_analysis',
-            confidence: 0.9,
-          });
+        const tableIndexes = indexMap.get(table_name) || [];
+        const hasIndex = tableIndexes.some(def => def.includes(column_name));
+        if (!hasIndex) {
+          missingIndexFKs.push(`${table_name}.${column_name}`);
         }
+      }
+      
+      if (missingIndexFKs.length > 0) {
+        const sampleFKs = missingIndexFKs.slice(0, 10).join(', ');
+        const remaining = missingIndexFKs.length > 10 ? ` and ${missingIndexFKs.length - 10} more` : '';
+        findings.push({
+          filePath: 'shared/schema.ts',
+          gapType: 'performance_issue',
+          severity: 'info',
+          title: `${missingIndexFKs.length} foreign key column(s) without indexes`,
+          description: `Foreign key columns without indexes: ${sampleFKs}${remaining}. Consider adding indexes for frequently queried tables.`,
+          suggestedFix: 'Add indexes on high-traffic FK columns',
+          detectionMethod: 'fk_index_analysis',
+          confidence: 0.7,
+        });
       }
       
       return findings;
     } catch (error) {
-      console.error('[SchemaOps] Error analyzing relationships:', error);
+      this.log.error('Error analyzing relationships:', error);
       return [];
     }
   }
@@ -420,7 +427,7 @@ class SchemaOpsSubagent {
         name: action.name,
         category: 'schema_ops',
         description: action.desc,
-        requiredRoles: ['support', 'admin', 'super_admin'],
+        requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         handler: async (request) => {
           const startTime = Date.now();
           const result = await action.fn(request.payload || {});
@@ -429,7 +436,7 @@ class SchemaOpsSubagent {
       });
     }
 
-    console.log('[SchemaOps] Registered 3 AI Brain actions');
+    this.log.info('Registered 3 AI Brain actions');
   }
 }
 
@@ -439,6 +446,7 @@ class SchemaOpsSubagent {
 
 class LogOpsSubagent {
   private static instance: LogOpsSubagent;
+  private readonly log = createLogger('LogOps');
   
   private readonly errorPatterns: LogPattern[] = [
     { pattern: /ERROR/i, severity: 'error', category: 'general_error' },
@@ -464,7 +472,7 @@ class LogOpsSubagent {
    * Analyze log content for errors and issues
    */
   async analyzeLogContent(logContent: string, source: string = 'unknown'): Promise<GapFinding[]> {
-    console.log(`[LogOps] Analyzing log content from ${source}...`);
+    this.log.info(`Analyzing log content from ${source}...`);
     
     const findings: GapFinding[] = [];
     const lines = logContent.split('\n');
@@ -496,7 +504,7 @@ class LogOpsSubagent {
       }
     }
     
-    console.log(`[LogOps] Found ${findings.length} log issues`);
+    this.log.info(`Found ${findings.length} log issues`);
     return findings;
   }
 
@@ -537,7 +545,7 @@ class LogOpsSubagent {
     criticalIssues: string[];
     recommendations: string[];
   }> {
-    console.log('[LogOps] AI analyzing logs...');
+    this.log.info('AI analyzing logs...');
     
     try {
       const prompt = `Analyze these application logs and identify:
@@ -579,7 +587,7 @@ Respond in JSON format:
         recommendations: [],
       };
     } catch (error) {
-      console.error('[LogOps] AI analysis error:', error);
+      this.log.error('AI analysis error:', error);
       return {
         summary: 'Analysis failed',
         criticalIssues: [],
@@ -606,7 +614,7 @@ Respond in JSON format:
         name: action.name,
         category: 'log_ops',
         description: action.desc,
-        requiredRoles: ['support', 'admin', 'super_admin'],
+        requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         handler: async (request) => {
           const startTime = Date.now();
           const result = await action.fn(request.payload || {});
@@ -615,7 +623,7 @@ Respond in JSON format:
       });
     }
 
-    console.log('[LogOps] Registered 3 AI Brain actions');
+    this.log.info('Registered 3 AI Brain actions');
   }
 }
 
@@ -637,14 +645,14 @@ class HandlerOpsSubagent {
    * Scan routes directory for all API handlers
    */
   async scanRouteHandlers(): Promise<ComponentAnalysis[]> {
-    console.log('[HandlerOps] Scanning route handlers...');
+    log.info('[HandlerOps] Scanning route handlers...');
     
     const components: ComponentAnalysis[] = [];
     const routesPath = 'server/routes.ts';
     
     try {
       if (!fs.existsSync(routesPath)) {
-        console.warn('[HandlerOps] Routes file not found');
+        log.warn('[HandlerOps] Routes file not found');
         return [];
       }
       
@@ -667,10 +675,10 @@ class HandlerOpsSubagent {
         });
       }
 
-      console.log(`[HandlerOps] Found ${components.length} route handlers`);
+      log.info(`[HandlerOps] Found ${components.length} route handlers`);
       return components;
     } catch (error) {
-      console.error('[HandlerOps] Error scanning routes:', error);
+      log.error('[HandlerOps] Error scanning routes:', error);
       return [];
     }
   }
@@ -679,7 +687,7 @@ class HandlerOpsSubagent {
    * Detect missing handlers (routes referenced but not implemented)
    */
   async detectMissingHandlers(): Promise<GapFinding[]> {
-    console.log('[HandlerOps] Detecting missing handlers...');
+    log.info('[HandlerOps] Detecting missing handlers...');
     
     const findings: GapFinding[] = [];
     
@@ -718,10 +726,10 @@ class HandlerOpsSubagent {
         }
       }
       
-      console.log(`[HandlerOps] Found ${findings.length} missing handlers`);
+      log.info(`[HandlerOps] Found ${findings.length} missing handlers`);
       return findings;
     } catch (error) {
-      console.error('[HandlerOps] Error detecting missing handlers:', error);
+      log.error('[HandlerOps] Error detecting missing handlers:', error);
       return [];
     }
   }
@@ -814,7 +822,7 @@ class HandlerOpsSubagent {
         name: action.name,
         category: 'handler_ops',
         description: action.desc,
-        requiredRoles: ['support', 'admin', 'super_admin'],
+        requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         handler: async (request) => {
           const startTime = Date.now();
           const result = await action.fn(request.payload || {});
@@ -823,7 +831,7 @@ class HandlerOpsSubagent {
       });
     }
 
-    console.log('[HandlerOps] Registered 2 AI Brain actions');
+    log.info('[HandlerOps] Registered 2 AI Brain actions');
   }
 }
 
@@ -845,14 +853,14 @@ class HookOpsSubagent {
    * Scan for all custom hooks
    */
   async scanHooks(): Promise<ComponentAnalysis[]> {
-    console.log('[HookOps] Scanning for React hooks...');
+    log.info('[HookOps] Scanning for React hooks...');
     
     const components: ComponentAnalysis[] = [];
     const hooksDir = 'client/src/hooks';
     
     try {
       if (!fs.existsSync(hooksDir)) {
-        console.warn('[HookOps] Hooks directory not found');
+        log.warn('[HookOps] Hooks directory not found');
         return [];
       }
       
@@ -885,10 +893,10 @@ class HookOpsSubagent {
         }
       }
 
-      console.log(`[HookOps] Found ${components.length} hooks`);
+      log.info(`[HookOps] Found ${components.length} hooks`);
       return components;
     } catch (error) {
-      console.error('[HookOps] Error scanning hooks:', error);
+      log.error('[HookOps] Error scanning hooks:', error);
       return [];
     }
   }
@@ -897,7 +905,7 @@ class HookOpsSubagent {
    * Detect common hook issues
    */
   async detectHookIssues(): Promise<GapFinding[]> {
-    console.log('[HookOps] Detecting hook issues...');
+    log.info('[HookOps] Detecting hook issues...');
     
     const findings: GapFinding[] = [];
     const clientDir = 'client/src';
@@ -982,10 +990,10 @@ class HookOpsSubagent {
       
       walkDir(clientDir);
       
-      console.log(`[HookOps] Found ${findings.length} hook issues`);
+      log.info(`[HookOps] Found ${findings.length} hook issues`);
       return findings;
     } catch (error) {
-      console.error('[HookOps] Error detecting hook issues:', error);
+      log.error('[HookOps] Error detecting hook issues:', error);
       return [];
     }
   }
@@ -1020,7 +1028,7 @@ class HookOpsSubagent {
         name: action.name,
         category: 'hook_ops',
         description: action.desc,
-        requiredRoles: ['support', 'admin', 'super_admin'],
+        requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         handler: async (request) => {
           const startTime = Date.now();
           const result = await action.fn(request.payload || {});
@@ -1029,7 +1037,7 @@ class HookOpsSubagent {
       });
     }
 
-    console.log('[HookOps] Registered 2 AI Brain actions');
+    log.info('[HookOps] Registered 2 AI Brain actions');
   }
 }
 
@@ -1046,14 +1054,14 @@ export const hookOpsSubagent = HookOpsSubagent.getInstance();
  * Initialize all domain ops subagents
  */
 export async function initializeDomainOpsSubagents(): Promise<void> {
-  console.log('[DomainOps] Initializing domain operations subagents...');
+  log.info('[DomainOps] Initializing domain operations subagents...');
   
   schemaOpsSubagent.registerActions();
   logOpsSubagent.registerActions();
   handlerOpsSubagent.registerActions();
   hookOpsSubagent.registerActions();
   
-  console.log('[DomainOps] All domain ops subagents initialized');
+  log.info('[DomainOps] All domain ops subagents initialized');
 }
 
 export {

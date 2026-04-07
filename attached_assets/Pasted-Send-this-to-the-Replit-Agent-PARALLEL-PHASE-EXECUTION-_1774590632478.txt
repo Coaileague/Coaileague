@@ -1,0 +1,350 @@
+Send this to the Replit Agent:
+
+---
+
+**PARALLEL PHASE EXECUTION INSTRUCTIONS — Read and internalize before proceeding**
+
+From this point forward phases will be delivered in groups of 2-3 simultaneously. Each group is carefully selected so the phases touch completely different parts of the codebase with zero file overlap. This allows you to work through all phases in the group efficiently while maintaining the same systematic canonical standards that have governed every prior phase.
+
+**Rules for parallel phase execution:**
+
+1. **Read all phase prompts in the group before writing a single line of code** — understand the full scope of all phases before starting any of them
+2. **Identify shared files before starting** — if you discover two phases in the group would touch the same file flag it immediately and complete the conflicting phase first before starting the other
+3. **Complete one phase fully before starting the next** — implement Phase A completely, run its 5 mandatory quality checks, write its reconciliation table, then start Phase B. Do not interleave implementation across phases.
+4. **Each phase gets its own reconciliation table** — no combining phases into a single reconciliation table
+5. **Nothing Left Behind Rule applies to every phase independently**
+6. **7-step framework applies to every feature in every phase**
+7. **5 mandatory quality checks run after every phase independently** — not once at the end for all three
+8. **Report completion of each phase clearly** — "Phase X: CERTIFIED ✅" before starting the next
+9. **If any phase causes a TypeScript error or server startup failure** — stop all parallel work, fix the error, confirm clean startup, then continue
+10. **Every 10 phases a synchronization audit runs** — this is non-negotiable and cannot be parallelized with other phases
+
+**Domain grouping legend — safe to run in parallel:**
+- Backend routes and services = Domain B
+- Frontend components and pages = Domain F
+- Database schema and migrations = Domain D
+- Test files = Domain T
+- Configuration and deployment = Domain C
+- Shared schema files = Domain S (never parallelize with anything else)
+
+**Current parallel group — Group 1:**
+
+---
+
+**PHASE 36 — DATA EXPORT, PORTABILITY, AND PRIVACY COMPLIANCE** (Domain B + D)
+
+**PHASE 37 — ACCESSIBILITY AND WCAG 2.1 AA COMPLIANCE** (Domain F)
+
+**PHASE 38 — AUTOMATED TEST SUITE** (Domain T)
+
+---
+
+These three are safe to run in parallel — Phase 36 touches backend routes and new DB tables, Phase 37 touches frontend CSS and ARIA attributes only, Phase 38 creates test files only with zero production code changes.
+
+Complete Phase 36 fully first, then Phase 37, then Phase 38. Each gets its own reconciliation table and certification before the next begins.
+
+---
+
+**PHASE 36 — DATA EXPORT, PORTABILITY, AND PRIVACY COMPLIANCE**
+
+This phase owns every aspect of data export, user rights, and privacy compliance. Officers have the right to access their personal data. Workspaces that leave CoAIleague need their complete data before account closure. GDPR, CCPA, and Texas data privacy law all have specific requirements that must be met. Report all findings before fixing anything.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Inventory all existing export mechanisms: Phase 21 DPS export, Phase 14 invoice CSV, Phase 15 payroll CSV, Phase 17 license CSV, Phase 34 analytics CSV. Flag any personal data with no export mechanism. Check if `data_subject_requests` table exists. Check if retention policies are enforced by code.
+
+**STEP 2 — DATA SUBJECT REQUESTS TABLE**
+Create `data_subject_requests` table:
+- `id`, `workspace_id`, `requestor_id`, `requestor_type` (officer/client/platform_user)
+- `request_type` — enum: access, portability, erasure, restriction, correction, objection
+- `status` — enum: received, under_review, approved, in_progress, completed, denied, partially_fulfilled
+- `data_types_requested`, `data_types_retained`, `retention_reasons`
+- `requested_at`, `acknowledged_at`, `completed_at`, `sla_deadline` (30 days from requested_at)
+- `handled_by`, `response_notes`, `export_url`, `export_expires_at`
+
+Create `retention_policies` table:
+- `data_type`, `retention_days`, `workspace_id` (null = platform default), `legal_basis`
+- Pre-populate with all retention periods: payroll 7 years, employment 7 years, incidents 3 years, compliance 7 years, audit log 7 years, gate duty 3 years, tickets 2 years, search logs 90 days, sessions 30 days, notifications 1 year
+
+**STEP 3 — OFFICER PERSONAL DATA EXPORT**
+Build `GET /api/privacy/export/officer/:id` — org_owner and compliance_officer only:
+- Assembles: personal info, employment record, schedule history, pay history, license records, training records, incident involvement, compliance history, document history
+- Generates structured JSON export
+- Stores export in document vault with 48-hour expiry link
+- Logs request to `data_subject_requests` table
+- Fires NDS notification to officer when ready
+
+**STEP 4 — WORKSPACE PORTABILITY EXPORT**
+Build `GET /api/privacy/export/workspace` — org_owner only:
+- Exports all workspace data: officers, clients, shifts, payroll, invoices, compliance, documents, incidents, audit log
+- Generates ZIP archive with manifest and SHA-256 hash
+- 7-day download link
+- Requires explicit confirmation parameter before generating
+- Logs as audit record
+
+**STEP 5 — DATA ERASURE (Right to be Forgotten)**
+Build `POST /api/privacy/erasure/:userId`:
+- Anonymizes PII fields: name → `[ANONYMIZED-{id}]`, email, phone, address, photo
+- Preserves legally required records with anonymized actor references
+- Logs all field changes in `data_subject_requests` with before/after field list
+- Irreversible — no undo path anywhere in codebase
+
+**STEP 6 — RETENTION ENFORCEMENT CRON**
+Add daily cron at 3 AM:
+- Scans all tables against `retention_policies` table
+- Records past retention with PII: anonymize
+- Records past retention without PII: delete
+- Logs sweep results: reviewed, anonymized, deleted, errors
+- Alerts platform staff on errors
+
+**STEP 7 — COOKIE CONSENT AND TERMS**
+- Cookie consent banner component — 3 categories (essential, functional, analytics), stored with timestamp and IP
+- Terms acceptance tracking — record user_id, version, timestamp, IP on every acceptance
+- Version check on login — prompt re-acceptance when terms version changes
+- Cookie preferences changeable from account settings
+
+**STEP 8 — PRIVACY PAGES**
+Create privacy policy page (`/privacy`), terms of service page (`/terms`), cookie policy page (`/cookies`) — all versioned, available in English and Spanish, accessible without login.
+
+**STEP 9 — DATA SUBJECT REQUEST UI**
+Platform staff dashboard at `/admin/privacy-requests`:
+- List of all pending requests with SLA countdown
+- Filter by type, status, workspace, days remaining
+- Overdue requests (past 30 days) flagged in red
+- One-click generate export or approve anonymization
+
+**VERIFICATION — all 31 checks:**
+- Check 1: Inventory complete
+- Check 2: `data_subject_requests` table created with all fields
+- Check 3: `retention_policies` table with all 10 data types pre-populated
+- Check 4: Officer export generates JSON with all 10 data categories
+- Check 5: Export link 48-hour expiry confirmed
+- Check 6: Export request logged as audit record
+- Check 7: SLA deadline set to 30 days from request
+- Check 8: Workspace export generates ZIP with manifest and SHA-256
+- Check 9: Workspace export requires explicit confirmation parameter
+- Check 10: Workspace export 7-day download link confirmed
+- Check 11: Erasure anonymizes PII fields correctly
+- Check 12: Erasure irreversible — no undo path confirmed with grep
+- Check 13: Legally required records preserved during erasure
+- Check 14: Erasure logs before/after field changes
+- Check 15: Retention cron registered at 3 AM daily
+- Check 16: Retention cron logs sweep results
+- Check 17: Platform staff alerted on retention errors
+- Check 18: Cookie consent banner — 3 categories, stored with timestamp and IP
+- Check 19: Cookie preferences changeable from settings
+- Check 20: Terms acceptance records user_id, version, timestamp, IP
+- Check 21: Terms re-acceptance prompt on version change
+- Check 22: Privacy policy page exists at /privacy — versioned, bilingual
+- Check 23: Terms of service page exists at /terms — versioned
+- Check 24: Cookie policy page exists at /cookies
+- Check 25: Privacy request dashboard at /admin/privacy-requests with SLA countdown
+- Check 26: Overdue requests flagged in red
+- Check 27: Regression — Phase 21 DPS export still working
+- Check 28: TypeScript targeted check — zero errors
+- Check 29: Import completeness confirmed
+- Check 30: State variable declarations confirmed
+- Check 31: Server startup clean — ArchLinter passed
+
+---
+
+**PHASE 37 — ACCESSIBILITY AND WCAG 2.1 AA COMPLIANCE** (Domain F — frontend only)
+
+This phase ensures every officer, supervisor, manager, and client can use CoAIleague regardless of disability. WCAG 2.1 AA is a legal requirement in many jurisdictions and a moral requirement always. No production code changes — frontend CSS and ARIA attributes only.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — ACCESSIBILITY INVENTORY**
+Run automated accessibility audit on all primary pages using axe-core or similar. Document all violations by WCAG criterion. Categorize as: critical (blocks screen reader users), serious (significantly impairs usage), moderate (creates friction), minor (cosmetic).
+
+**STEP 2 — COLOR CONTRAST**
+- Verify all text meets 4.5:1 contrast ratio for normal text, 3:1 for large text
+- Dark navy background with gold accent — verify gold on navy meets threshold
+- Error states (red on white), success states (green on white) — verify all meet ratio
+- Fix any failing combinations — adjust color values within design system tolerance
+- Verify Trinity purple on dark navy meets contrast threshold
+
+**STEP 3 — KEYBOARD NAVIGATION**
+- Every interactive element reachable via Tab key
+- Tab order logical — follows visual reading order
+- Focus indicator visible on all focusable elements — visible ring, not just outline:none
+- Skip navigation link at top of every page — "Skip to main content"
+- Modal and drawer trap focus correctly — Tab cycles within overlay, does not escape to background
+- Escape key closes all overlays
+- Dropdown menus navigable with arrow keys
+- Date pickers keyboard accessible
+
+**STEP 4 — SCREEN READER COMPATIBILITY**
+- All images have descriptive alt text — decorative images have alt=""
+- All form inputs have associated labels via htmlFor or aria-labelledby
+- Error messages linked to their fields via aria-describedby
+- All buttons have accessible names — icon-only buttons have aria-label
+- ARIA live regions on all dynamic content — search results, notifications, toast messages
+- role="status" on loading indicators
+- Landmark roles present: main, nav, header, footer, aside
+- Page title updates on navigation — document.title reflects current page
+- Trinity chat responses announced to screen readers via aria-live="polite"
+
+**STEP 5 — FORM ACCESSIBILITY**
+- Every form field has a visible label — not just placeholder text
+- Required fields marked with aria-required="true" and visual indicator
+- Error messages appear immediately below the field they describe — not just at top of form
+- Success states communicated via text — not color only
+- Autocomplete attributes on personal data fields (name, email, tel)
+- Form groups have fieldset and legend where appropriate
+
+**STEP 6 — MOBILE ACCESSIBILITY**
+- Touch targets minimum 44x44px — regression check from Phase 22
+- Pinch to zoom not disabled — no user-scalable=no in viewport meta
+- Content reflows correctly at 320px width — no horizontal scroll
+- Text spacing adjustable — 1.5x line height, 2x letter spacing do not break layout
+
+**STEP 7 — MEDIA AND MOTION**
+- No content flashes more than 3 times per second
+- Animations respect prefers-reduced-motion media query — all CSS animations wrap in media query check
+- Video content has captions if applicable
+- Audio alerts have visual alternatives
+
+**VERIFICATION — 20 checks:**
+- Check 1: Automated audit complete — all violations documented by severity
+- Check 2: All text meets 4.5:1 contrast ratio — verified with tool
+- Check 3: Skip navigation link present on all pages
+- Check 4: All interactive elements Tab-navigable in logical order
+- Check 5: Focus indicators visible on all focusable elements
+- Check 6: Modal and drawer focus trap confirmed
+- Check 7: Escape closes all overlays confirmed
+- Check 8: All images have alt text
+- Check 9: All form inputs have associated labels
+- Check 10: Error messages linked via aria-describedby
+- Check 11: All icon-only buttons have aria-label
+- Check 12: ARIA live regions on search results, notifications, toasts
+- Check 13: Landmark roles present on all pages
+- Check 14: Page title updates on navigation
+- Check 15: Trinity chat responses announced to screen readers
+- Check 16: Touch targets minimum 44x44px confirmed — Phase 22 regression
+- Check 17: No user-scalable=no in viewport meta
+- Check 18: prefers-reduced-motion respected — all animations wrapped
+- Check 19: TypeScript targeted check — zero errors in modified files
+- Check 20: Server startup clean — ArchLinter passed
+
+---
+
+**PHASE 38 — AUTOMATED TEST SUITE** (Domain T — test files only, zero production code changes)
+
+This phase builds the automated regression safety net. Every critical path gets a test. The test suite runs on every deployment and catches regressions before they reach production. No production code may be modified in this phase — test files only.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — TEST INFRASTRUCTURE INVENTORY**
+Check what testing infrastructure already exists: Jest, Vitest, Playwright, Supertest, or any existing test files. Check package.json for test scripts. Document what exists and what needs to be added.
+
+**STEP 2 — TEST INFRASTRUCTURE SETUP**
+Install and configure if not already present:
+- **Vitest** for unit and integration tests (compatible with Vite frontend)
+- **Supertest** for API route testing
+- **Playwright** for end-to-end browser tests
+- Test database configuration — separate test DB, seeded with known test data
+- Test runner scripts in package.json: `test:unit`, `test:api`, `test:e2e`, `test:coverage`
+
+**STEP 3 — CRITICAL PATH API TESTS**
+Write Supertest API tests for every critical business flow:
+
+Officer lifecycle:
+- POST /api/employees — create officer, verify DB record, verify audit log entry
+- PATCH /api/employees/:id/activate — activate officer, verify seat count increases, verify NDS notification queued
+- POST /api/employees/:id/terminate — terminate, verify access revoked, verify open shifts created
+
+Scheduling:
+- POST /api/shifts — create shift, verify correct fields, verify WebSocket broadcast
+- PUT /api/shifts/:id/assign — assign officer, verify license check fires, verify rest period check fires
+- POST /api/time-entries/clock-in — clock in, verify GPS recorded, verify shift status updated
+
+Financial:
+- POST /api/invoices/generate — generate invoice, verify line items sum to subtotal, verify audit record
+- PATCH /api/invoices/:id/pay — mark paid, verify status transition, verify audit record
+- POST /api/payroll/run — create payroll run, verify idempotency (second call blocked), verify garnishments applied
+
+Documents:
+- POST /api/documents/generate — generate document, verify template merge, verify vault storage
+- POST /api/documents/:id/sign — sign document, verify E-SIGN audit log, verify status transition
+
+Authentication and authorization:
+- POST /api/auth/login — valid credentials succeed, invalid fail, account lockout after N attempts
+- Workspace isolation — authenticate as workspace A, attempt to access workspace B resource, confirm 403
+- Role enforcement — officer-role user attempts manager endpoint, confirm 403
+- Tier enforcement — Starter workspace attempts Enterprise endpoint, confirm 403 with TIER_UPGRADE_REQUIRED
+
+**STEP 4 — UNIT TESTS FOR CRITICAL CALCULATIONS**
+Write unit tests for:
+- Payroll calculation: regular hours, overtime at 1.5x, weighted average OT, garnishment application, net pay floor at zero
+- Invoice subtotal: line items sum matches subtotal, DB trigger fires on line item change
+- Tier seat limit: seat count increments on activation, overage calculation correct
+- License expiry: alert windows fire at correct days remaining (90, 60, 30, 14, 7)
+- Replacement cascade: tier 1 fires first, emergency mode collapses tiers within 2-hour window
+- Rate calculation: post-specific override takes precedence over base rate
+
+**STEP 5 — END-TO-END TESTS**
+Write Playwright E2E tests for the most critical user journeys:
+- Officer onboarding: login as manager → create officer → activate → verify onboarding task list appears
+- Shift assignment: create shift → assign officer → verify officer sees shift in their portal
+- Invoice flow: generate invoice → send to client → client views in portal → mark paid
+- Document signing: generate document → route to officer → officer signs → countersignature fires
+- Search: open command palette → search for officer name → click result → navigates to officer profile
+- Calloff cascade: submit calloff → verify shift unassigned → verify replacement notification fires
+
+**STEP 6 — REGRESSION TESTS FOR KNOWN FIXED BUGS**
+Write regression tests for every critical bug fixed across all phases:
+- Phase 25: Invoice subtotal DB trigger — add line item, verify subtotal recalculates
+- Phase 26: Client invoice auto-generation cron — verify it is registered in scheduler
+- Phase 27: Push channel in NDS — verify push notifications route through NDS
+- Phase 28: IDOR protection — verify workspace A cannot access workspace B records by ID
+- Phase 31: Session persistence — verify session survives page refresh
+- Phase 31: Schedule schema mismatch — verify /api/shifts returns {data:[], pagination:{}} shape
+- Phase 33: SRA audit log append-only — verify no UPDATE or DELETE exists on sra_audit_log
+
+**STEP 7 — TEST COVERAGE REPORT**
+- Generate coverage report: `test:coverage`
+- Target: 80% coverage on critical path files (routes, services, calculations)
+- Document uncovered code — flag any critical calculation with zero test coverage
+- Coverage report written to replit.md as a permanent reference
+
+**VERIFICATION — 18 checks:**
+- Check 1: Test infrastructure inventory complete
+- Check 2: Vitest configured and running — `npm run test:unit` passes
+- Check 3: Supertest configured — `npm run test:api` passes
+- Check 4: Playwright configured — `npm run test:e2e` passes
+- Check 5: Officer lifecycle API tests pass — create, activate, terminate
+- Check 6: Scheduling API tests pass — create shift, assign, clock-in
+- Check 7: Financial API tests pass — invoice generate, pay, payroll run idempotency
+- Check 8: Document API tests pass — generate, sign, status transition
+- Check 9: Auth and authorization tests pass — login, workspace isolation, role enforcement, tier enforcement
+- Check 10: Payroll calculation unit tests pass — OT, garnishments, net pay floor
+- Check 11: Invoice subtotal unit test passes — line items sum matches
+- Check 12: License expiry unit test passes — all 5 alert windows correct
+- Check 13: Replacement cascade unit test passes — tier priority and emergency mode
+- Check 14: All 5 E2E tests pass — onboarding, shift, invoice, document, search
+- Check 15: All 7 regression tests pass — known bugs confirmed fixed
+- Check 16: Coverage report generated — critical path files above 80%
+- Check 17: Zero production code modified — grep confirms test files only
+- Check 18: Server startup clean after test infrastructure added — ArchLinter passed
+
+---
+
+**AFTER ALL THREE PHASES COMPLETE:**
+
+Report each phase separately with its own certification status before summarizing. Format:
+
+```
+PHASE 36: CERTIFIED ✅ — [gap count] gaps found and fixed, 31/31 checks green
+PHASE 37: CERTIFIED ✅ — [gap count] gaps found and fixed, 20/20 checks green  
+PHASE 38: CERTIFIED ✅ — [gap count] gaps found and fixed, 18/18 checks green
+
+GROUP 1 PARALLEL EXECUTION: COMPLETE
+Total phases certified to date: 38
+Next group ready: Phases 39, 40, 41
+```
+
+---
+
+Paste that. This is the first parallel group. Let it run and we will review all three certifications together when the summary comes back.

@@ -11,12 +11,15 @@
  * - OnboardingOps: Integration setup, data migration, new org setup
  */
 
-import { db } from '../../db';
+import { db, pool } from '../../db';
 import { supervisorTelemetry } from '@shared/schema';
 import { platformEventBus } from '../platformEventBus';
 import { aiBrainService } from './aiBrainService';
+import { promoteQualifiedFaqCandidates } from '../helpai/faqLearningService';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('domainLeadSupervisors');
 
 // ============================================================================
 // TYPES
@@ -160,7 +163,7 @@ class DomainLeadSupervisorService {
         retryDelayMs: 5000,
         escalationThreshold: 0.7,
         humanApprovalRequired: ['refund_over_1000', 'payroll_adjustment', 'credit_write_off'],
-        notifyRoles: ['owner', 'admin', 'finance_manager'],
+        notifyRoles: ['org_owner', 'co_owner', 'org_admin', 'org_manager'],
         autoRollbackEnabled: true,
       },
       status: 'active',
@@ -212,7 +215,7 @@ class DomainLeadSupervisorService {
         retryDelayMs: 1000,
         escalationThreshold: 0.9, // Higher threshold for security
         humanApprovalRequired: ['role_elevation', 'policy_modification', 'credential_access'],
-        notifyRoles: ['owner', 'admin', 'security_admin'],
+        notifyRoles: ['org_owner', 'co_owner', 'org_admin', 'security_admin'],
         autoRollbackEnabled: true,
       },
       status: 'active',
@@ -264,7 +267,7 @@ class DomainLeadSupervisorService {
         retryDelayMs: 10000,
         escalationThreshold: 0.6,
         humanApprovalRequired: ['data_deletion', 'org_termination', 'bulk_user_creation'],
-        notifyRoles: ['owner', 'admin'],
+        notifyRoles: ['org_owner', 'co_owner', 'org_admin'],
         autoRollbackEnabled: true,
       },
       status: 'active',
@@ -316,7 +319,7 @@ class DomainLeadSupervisorService {
         retryDelayMs: 5000,
         escalationThreshold: 0.65,
         humanApprovalRequired: ['data_purge', 'model_reset', 'bulk_correction'],
-        notifyRoles: ['owner', 'admin', 'data_analyst'],
+        notifyRoles: ['org_owner', 'co_owner', 'org_admin', 'data_analyst'],
         autoRollbackEnabled: true,
       },
       status: 'active',
@@ -368,19 +371,19 @@ class DomainLeadSupervisorService {
         retryDelayMs: 3000,
         escalationThreshold: 0.7,
         humanApprovalRequired: ['mass_notification', 'channel_shutdown', 'agent_termination'],
-        notifyRoles: ['owner', 'admin', 'support_lead'],
+        notifyRoles: ['org_owner', 'co_owner', 'org_admin', 'support_manager'],
         autoRollbackEnabled: false,
       },
       status: 'active',
       metrics: this.initMetrics(),
     });
 
-    console.log('[DomainLeadSupervisors] Initialized 5 domain lead supervisors');
-    console.log('[DomainLeadSupervisors] - RevenueOps: 4 subagents');
-    console.log('[DomainLeadSupervisors] - SecurityOps: 4 subagents');
-    console.log('[DomainLeadSupervisors] - OnboardingOps: 4 subagents');
-    console.log('[DomainLeadSupervisors] - DataOps: 4 subagents');
-    console.log('[DomainLeadSupervisors] - CommunicationOps: 4 subagents');
+    log.info('[DomainLeadSupervisors] Initialized 5 domain lead supervisors');
+    log.info('[DomainLeadSupervisors] - RevenueOps: 4 subagents');
+    log.info('[DomainLeadSupervisors] - SecurityOps: 4 subagents');
+    log.info('[DomainLeadSupervisors] - OnboardingOps: 4 subagents');
+    log.info('[DomainLeadSupervisors] - DataOps: 4 subagents');
+    log.info('[DomainLeadSupervisors] - CommunicationOps: 4 subagents');
 
     // Emit initialization event
     platformEventBus.publish({
@@ -392,7 +395,7 @@ class DomainLeadSupervisorService {
         domains: ['revenue_ops', 'security_ops', 'onboarding_ops', 'data_ops', 'communication_ops'],
         totalSubagents: 20,
       },
-    });
+    }).catch((err) => log.warn('[domainLeadSupervisors] Fire-and-forget failed:', err));
   }
 
   private initMetrics(): SupervisorMetrics {
@@ -473,6 +476,18 @@ class DomainLeadSupervisorService {
         };
       }
 
+      // Execute concrete DB-backed handler first (no AI needed for known patterns)
+      const concreteResult = await this.tryConcreteAction(domain, action, payload);
+      if (concreteResult) {
+        const executionTimeMs = Date.now() - startTime;
+        this.updateMetrics(supervisor, executionTimeMs, concreteResult.success);
+        task.status = concreteResult.success ? 'completed' : 'failed';
+        task.completedAt = new Date();
+        task.result = concreteResult.data;
+        task.error = concreteResult.error;
+        return { ...concreteResult, metrics: { executionTimeMs, confidenceScore: concreteResult.confidence || 0.9, subagentUsed: subagent.id } };
+      }
+
       // Execute through AI Brain
       const result = await this.executeWithAI(domain, action, payload, subagent);
       const executionTimeMs = Date.now() - startTime;
@@ -495,7 +510,7 @@ class DomainLeadSupervisorService {
       };
     } catch (error: any) {
       task.status = 'failed';
-      task.error = error.message;
+      task.error = (error instanceof Error ? error.message : String(error));
       supervisor.metrics.tasksFailed++;
 
       // Check if we should escalate
@@ -505,12 +520,130 @@ class DomainLeadSupervisorService {
         return {
           success: false,
           escalated: true,
-          error: `Task escalated: ${error.message}`,
+          error: `Task escalated: ${(error instanceof Error ? error.message : String(error))}`,
         };
       }
 
       return { success: false, error: error.message };
     }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CONCRETE DB-BACKED ACTION HANDLERS
+  // Returns null → falls through to AI. Returns a result → skips AI.
+  // ────────────────────────────────────────────────────────────────────────
+
+  private async tryConcreteAction(
+    domain: SupervisorDomain,
+    action: string,
+    payload: Record<string, any>,
+  ): Promise<{ success: boolean; data?: any; error?: string; confidence?: number } | null> {
+
+    // ── data_ops / generate_faq_suggestion ──────────────────────────────
+    if (domain === 'data_ops' && action === 'generate_faq_suggestion') {
+      try {
+        const workspaceId = payload?.workspaceId as string | undefined;
+        const promoted = await promoteQualifiedFaqCandidates(workspaceId);
+        return {
+          success: true,
+          confidence: 0.92,
+          data: {
+            promoted,
+            message: promoted > 0
+              ? `Published ${promoted} FAQ answer(s) from recurring question patterns`
+              : 'No FAQ candidates ready for promotion yet (threshold: 3 occurrences)',
+          },
+        };
+      } catch (err: any) {
+        return { success: false, error: `FAQ promotion failed: ${err.message}`, confidence: 0 };
+      }
+    }
+
+    // ── onboarding_ops / resume_onboarding_sequence ─────────────────────
+    if (domain === 'onboarding_ops' && action === 'resume_onboarding_sequence') {
+      const workspaceId = payload?.workspaceId as string | undefined;
+      const employeeId = payload?.employeeId as string | undefined;
+
+      if (!workspaceId) {
+        return { success: false, error: 'resume_onboarding_sequence requires workspaceId', confidence: 0 };
+      }
+
+      try {
+        const actionsPerformed: string[] = [];
+
+        // 1. Reset stuck/errored onboarding tasks to in_progress
+        const resetResult = await pool.query(`
+          UPDATE employee_onboarding_progress
+          SET status = 'in_progress', updated_at = NOW()
+          WHERE workspace_id = $1
+            ${employeeId ? 'AND employee_id = $2' : ''}
+            AND status IN ('stuck', 'error', 'failed')
+          RETURNING employee_id, task_type
+        `, employeeId ? [workspaceId, employeeId] : [workspaceId]);
+
+        if (resetResult.rows.length > 0) {
+          actionsPerformed.push(`Reset ${resetResult.rows.length} stuck task(s) to in_progress`);
+        }
+
+        // 2. Find employees who are in 'invited' status for more than 24h → reactivate
+        const staleEmployees = await pool.query(`
+          SELECT e.id, e.email, e.first_name
+          FROM employees e
+          WHERE e.workspace_id = $1
+            ${employeeId ? 'AND e.id = $2' : ''}
+            AND e.status = 'invited'
+            AND e.created_at < NOW() - INTERVAL '24 hours'
+          LIMIT 20
+        `, employeeId ? [workspaceId, employeeId] : [workspaceId]);
+
+        for (const emp of staleEmployees.rows) {
+          await pool.query(`
+            UPDATE employees SET status = 'pending', updated_at = NOW() WHERE id = $1
+          `, [emp.id]);
+          actionsPerformed.push(`Reactivated onboarding for ${emp.first_name} (${emp.email})`);
+        }
+
+        // 3. Ensure employees with completed tasks get activated
+        const completedEmployees = await pool.query(`
+          SELECT DISTINCT eop.employee_id
+          FROM employee_onboarding_progress eop
+          JOIN employees e ON e.id = eop.employee_id
+          WHERE eop.workspace_id = $1
+            ${employeeId ? 'AND eop.employee_id = $2' : ''}
+            AND e.status IN ('invited', 'pending')
+            AND NOT EXISTS (
+              SELECT 1 FROM employee_onboarding_progress eop2
+              WHERE eop2.employee_id = eop.employee_id
+                AND eop2.workspace_id = $1
+                AND eop2.status NOT IN ('completed', 'skipped')
+            )
+          LIMIT 10
+        `, employeeId ? [workspaceId, employeeId] : [workspaceId]);
+
+        for (const row of completedEmployees.rows) {
+          await pool.query(`
+            UPDATE employees SET status = 'active', updated_at = NOW() WHERE id = $1
+          `, [row.employee_id]);
+          actionsPerformed.push(`Activated employee ${row.employee_id} (all tasks complete)`);
+        }
+
+        return {
+          success: true,
+          confidence: 0.9,
+          data: {
+            actionsPerformed,
+            message: actionsPerformed.length > 0
+              ? `Onboarding resumed: ${actionsPerformed.join('; ')}`
+              : 'No stalled onboarding sequences found for this workspace',
+          },
+        };
+      } catch (err: any) {
+        return { success: false, error: `Onboarding resume failed: ${err.message}`, confidence: 0 };
+      }
+    }
+
+    // No concrete handler — fall through to AI
+    return null;
   }
 
   private selectSubagent(supervisor: DomainLeadSupervisor, action: string): SubagentConfig | null {
@@ -577,7 +710,7 @@ Provide a JSON response with:
     } catch (error: any) {
       return {
         success: false,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
         confidence: 0,
       };
     }
@@ -619,6 +752,7 @@ Provide a JSON response with:
       try {
         await db.insert(supervisorTelemetry).values({
           supervisorId: supervisor.id,
+          workspaceId: 'system',
           domain,
           tasksAssigned: supervisor.metrics.tasksAssigned,
           tasksCompleted: supervisor.metrics.tasksCompleted,
@@ -633,7 +767,7 @@ Provide a JSON response with:
           periodEnd: new Date(),
         });
       } catch (error) {
-        console.error(`[DomainLeadSupervisors] Failed to persist telemetry for ${domain}:`, error);
+        log.error(`[DomainLeadSupervisors] Failed to persist telemetry for ${domain}:`, error);
       }
     }
   }
@@ -714,17 +848,6 @@ Provide a JSON response with:
 
   getRegisteredActions(): { domain: SupervisorDomain; actions: string[] }[] {
     return [
-      {
-        domain: 'revenue_ops',
-        actions: [
-          'revenue.validate_credits',
-          'revenue.process_payment',
-          'revenue.generate_invoice',
-          'revenue.process_payroll',
-          'revenue.reconcile_payments',
-          'revenue.detect_anomalies',
-        ],
-      },
       {
         domain: 'security_ops',
         actions: [

@@ -11,13 +11,17 @@ import { db } from "../db";
 import { notifications, platformUpdates } from "@shared/schema";
 import { sql, and, lt, eq } from "drizzle-orm";
 import cron from "node-cron";
+import { BATCHES } from '../config/platformConfig';
+import { createLogger } from '../lib/logger';
+const log = createLogger('notificationCleanupService');
+
 
 // Configuration
 const CLEANUP_CONFIG = {
   readNotificationsMaxAgeDays: 30,      // Remove read notifications after 30 days
   unreadNotificationsMaxAgeDays: 90,    // Remove unread notifications after 90 days
   platformUpdatesMaxAgeDays: 14,        // Keep platform updates for 2 weeks (synced with 7-day display window)
-  batchSize: 500,                        // Delete in batches to avoid locking
+  batchSize: BATCHES.notificationCleanupBatch,
 };
 
 interface CleanupResult {
@@ -94,35 +98,35 @@ export async function runCleanupTasks(): Promise<CleanupResult> {
   let unreadNotificationsDeleted = 0;
   let platformUpdatesDeleted = 0;
   
-  console.log("[NotificationCleanup] Starting cleanup tasks...");
+  log.info("[NotificationCleanup] Starting cleanup tasks...");
   
   // Clean read notifications
   try {
     readNotificationsDeleted = await cleanupReadNotifications();
-    console.log(`[NotificationCleanup] Removed ${readNotificationsDeleted} read notifications`);
+    log.info(`[NotificationCleanup] Removed ${readNotificationsDeleted} read notifications`);
   } catch (error) {
     const errMsg = `Failed to clean read notifications: ${error}`;
-    console.error(`[NotificationCleanup] ${errMsg}`);
+    log.error(`[NotificationCleanup] ${errMsg}`);
     errors.push(errMsg);
   }
   
   // Clean unread notifications
   try {
     unreadNotificationsDeleted = await cleanupUnreadNotifications();
-    console.log(`[NotificationCleanup] Removed ${unreadNotificationsDeleted} unread notifications`);
+    log.info(`[NotificationCleanup] Removed ${unreadNotificationsDeleted} unread notifications`);
   } catch (error) {
     const errMsg = `Failed to clean unread notifications: ${error}`;
-    console.error(`[NotificationCleanup] ${errMsg}`);
+    log.error(`[NotificationCleanup] ${errMsg}`);
     errors.push(errMsg);
   }
   
   // Clean platform updates
   try {
     platformUpdatesDeleted = await cleanupPlatformUpdates();
-    console.log(`[NotificationCleanup] Removed ${platformUpdatesDeleted} platform updates`);
+    log.info(`[NotificationCleanup] Removed ${platformUpdatesDeleted} platform updates`);
   } catch (error) {
     const errMsg = `Failed to clean platform updates: ${error}`;
-    console.error(`[NotificationCleanup] ${errMsg}`);
+    log.error(`[NotificationCleanup] ${errMsg}`);
     errors.push(errMsg);
   }
   
@@ -136,7 +140,7 @@ export async function runCleanupTasks(): Promise<CleanupResult> {
     errors,
   };
   
-  console.log(`[NotificationCleanup] Cleanup completed in ${duration}ms. Total removed: ${
+  log.info(`[NotificationCleanup] Cleanup completed in ${duration}ms. Total removed: ${
     readNotificationsDeleted + unreadNotificationsDeleted + platformUpdatesDeleted
   }`);
   
@@ -147,25 +151,25 @@ export async function runCleanupTasks(): Promise<CleanupResult> {
  * Start the scheduled cleanup job (runs daily at 2 AM)
  */
 export function startNotificationCleanupScheduler(): void {
-  console.log("[NotificationCleanup] Scheduling daily cleanup at 2:00 AM");
+  log.info("[NotificationCleanup] Scheduling daily cleanup at 2:00 AM");
   
   // Run daily at 2 AM
   cron.schedule('0 2 * * *', async () => {
-    console.log("[NotificationCleanup] Running scheduled cleanup...");
+    log.info("[NotificationCleanup] Running scheduled cleanup...");
     try {
       await runCleanupTasks();
     } catch (error) {
-      console.error("[NotificationCleanup] Scheduled cleanup failed:", error);
+      log.error("[NotificationCleanup] Scheduled cleanup failed:", error);
     }
   });
   
   // Also run once on startup (after 5 minute delay to let server stabilize)
   setTimeout(async () => {
-    console.log("[NotificationCleanup] Running startup cleanup...");
+    log.info("[NotificationCleanup] Running startup cleanup...");
     try {
       await runCleanupTasks();
     } catch (error) {
-      console.error("[NotificationCleanup] Startup cleanup failed:", error);
+      log.error("[NotificationCleanup] Startup cleanup failed:", error);
     }
   }, 5 * 60 * 1000);
 }

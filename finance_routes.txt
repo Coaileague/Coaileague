@@ -1,0 +1,10 @@
+router.get('/ledger/chart-of-accounts', (req: any, res: Response) => {
+router.get('/ledger/journal-entries', async (req: any, res: Response) => {
+router.get('/ledger/pl-report', async (req: any, res: Response) => {
+router.get('/ledger/balance-sheet', async (req: any, res: Response) => {
+router.get('/dashboard/revenue-per-guard-hour', async (req: any, res: Response) => {
+router.get('/dashboard/labor-cost-ratio', async (req: any, res: Response) => {
+router.get('/dashboard/profit-margins', async (req: any, res: Response) => {
+router.get('/dashboard/ar-aging', async (req: any, res: Response) => {
+router.get('/dashboard/employer-tax-liabilities', async (req: any, res: Response) => {
+router.post('/ical/subscribe', async (req: any, res: Response) => {

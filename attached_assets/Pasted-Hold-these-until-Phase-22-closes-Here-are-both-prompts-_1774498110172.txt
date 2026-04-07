@@ -1,0 +1,425 @@
+Hold these until Phase 22 closes. Here are both prompts ready to paste back to back:
+
+---
+
+**PHASE 23 — FRONTEND UX, DESIGN SYSTEM CONSISTENCY, AND UI UNIFORMITY AUDIT**
+
+This phase owns the complete visual and interaction layer of the platform. Every page, every component, every error state, every navigation element must be consistent, professional, and on-brand. A fragmented UI erodes user trust — officers who see inconsistent screens lose confidence in the platform. Managers who hit dead-end errors without guidance abandon workflows. This phase closes every visual and interaction gap across the entire frontend. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row. Every row green before Phase 23 closes.
+
+---
+
+**STEP 1 — DESIGN SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of the design system:
+- All defined CSS variables and design tokens — colors, typography, spacing, border radius, shadows
+- Component library — what shared components exist (Button, Card, Modal, Drawer, Sheet, Dialog, Toast, Badge, Input, Select, Table, etc.)
+- Which components use design tokens vs hardcoded values
+- Which pages import from the shared component library vs define their own inline styles
+- Any Tailwind classes used that deviate from the dark navy design system
+- Typography scale — heading sizes, body sizes, label sizes all defined and consistent
+- Icon library — which icon set is used, confirm all icons are from the same set with no mixing
+- Animation and transition definitions — are they consistent or per-component ad-hoc
+
+Flag every component or page that deviates from the canonical design system.
+
+---
+
+**STEP 2 — COLOR AND THEME UNIFORMITY**
+
+The dark navy command-center design system must be applied everywhere:
+- Primary background: dark navy — confirm hex value and consistent usage
+- Gold accent color — confirm hex value, used only for accents and highlights, not overused
+- Trinity purple — confirm hex value, used ONLY for Trinity AI elements, nowhere else
+- Error state color — confirm consistent red/danger color across all error states
+- Success state color — confirm consistent green across all success states
+- Warning state color — confirm consistent amber/yellow across all warning states
+- Text colors — primary, secondary, muted — all consistent
+- Border colors — consistent across cards, inputs, dividers
+- No hardcoded hex values outside of the token system — grep confirms
+- Dark mode consistency — if dark mode is the default, no components rendering with white backgrounds unexpectedly
+
+---
+
+**STEP 3 — HEADER AND NAVIGATION UNIFORMITY**
+
+Every page header and navigation element must be consistent:
+- Global header consistent across all pages — same height, same logo position, same action items
+- Sidebar navigation consistent — same width, same item spacing, same active state styling
+- Mobile navigation consistent — same bottom bar or hamburger implementation across all pages
+- Breadcrumb implementation consistent — same separator, same font weight, same truncation behavior
+- Page title styling consistent — same heading level, same font size, same spacing from header
+- Back navigation consistent — same button style, same position, same behavior
+- Tab navigation consistent — same underline style, same active color, same spacing
+- Section headers within pages consistent — same divider style, same font treatment
+
+---
+
+**STEP 4 — BUTTON AND INTERACTIVE ELEMENT UNIFORMITY**
+
+Every button and interactive element must follow the same pattern:
+- Primary button: style, size, border radius, hover state, active state, disabled state — all consistent
+- Secondary button: same checks
+- Destructive/danger button: same checks — confirm always red, never ambiguous
+- Ghost/text button: same checks
+- Icon button: same checks — confirm size, padding, touch target
+- Loading state on all buttons — spinner or skeleton, consistent implementation
+- Button labels use sentence case consistently — not mixed case/title case
+- Form submit buttons always show loading state during API call — no double-submit possible
+- Confirm dialogs for destructive actions — consistent pattern across all delete/void/cancel actions
+- All interactive elements have focus states — keyboard accessibility confirmed
+
+---
+
+**STEP 5 — MODAL, DIALOG, DRAWER, AND SHEET UNIFORMITY**
+
+Overlay components must be consistent:
+- Modal header: title, close button position, divider — consistent across all modals
+- Modal footer: action buttons always in same position (right-aligned), consistent button order (confirm right, cancel left)
+- Modal sizes: small, medium, large, full-screen — defined and used consistently
+- Drawer animation: consistent slide direction and duration
+- Sheet (bottom sheet on mobile): consistent handle, consistent snap points
+- Dialog (confirmation): consistent icon, consistent message format, consistent button labels
+- All overlays dismiss on Escape key
+- All overlays dismiss on backdrop click where appropriate
+- Scroll behavior inside overlays consistent — content scrolls, header and footer fixed
+- Overlay stack order consistent — no z-index conflicts
+
+---
+
+**STEP 6 — FORM AND INPUT UNIFORMITY**
+
+Every form must follow the same pattern:
+- Input field: height, border, border-radius, focus ring, placeholder style — consistent
+- Label positioning: above input, same font size, same color — consistent
+- Error state: red border, error message below input, error icon — consistent
+- Success state: green border or check icon — consistent
+- Required field indicator: asterisk or "Required" label — consistent approach
+- Input types correct: email inputs use type="email", phone inputs use type="tel", numeric inputs use inputMode="numeric"
+- Select/dropdown: consistent styling, consistent chevron icon
+- Date picker: consistent implementation — no mixing of native date picker and custom
+- File upload: consistent drag-and-drop zone styling
+- Form validation fires on submit AND on blur — not only on submit
+- Character count shown on text areas with limits
+- All forms have loading state during submission
+
+---
+
+**STEP 7 — TABLE AND DATA DISPLAY UNIFORMITY**
+
+Data tables must be consistent across all pages:
+- Table header: same font weight, same background, same border — consistent
+- Table row: same height, same hover state, same border — consistent
+- Empty state: every table has a designed empty state — not a blank space
+- Loading state: every table has a skeleton loader — not a blank space or spinner in wrong position
+- Pagination: same component, same position, same page size options
+- Sort indicators: same icon, same position, same behavior
+- Filter controls: same position relative to table, same styling
+- Row actions: same position (right-aligned), same icon button style
+- Mobile table behavior: horizontal scroll with fixed first column OR card view — consistent approach
+- Column widths reasonable — no columns that are too narrow to read or too wide on mobile
+
+---
+
+**STEP 8 — ERROR PAGES AND STATES**
+
+Every error condition must have a designed, helpful response:
+- 404 Not Found page: designed, on-brand, helpful message, navigation back to home
+- 403 Forbidden page: designed, explains why access is denied, link to request access or go back
+- 500 Server Error page: designed, apologizes, suggests retry, link to report a bug
+- Network error state: inline message when API call fails — not a blank page
+- Empty search results: helpful message suggesting alternate search terms or actions
+- Session expired: clear message, redirect to login with return URL preserved
+- Permission denied inline: when a feature is restricted, visible indicator explaining why — not just a hidden element
+- All error messages written in plain language — no raw error codes or stack traces shown to users
+- Error messages actionable — every error tells the user what to do next
+
+---
+
+**STEP 9 — TOAST AND NOTIFICATION DISPLAY UNIFORMITY**
+
+User feedback must be consistent:
+- Toast position: consistent across all pages — top-right or bottom-center, never mixed
+- Toast duration: success toasts auto-dismiss in 3-4 seconds, error toasts persist until dismissed
+- Toast styles: success (green), error (red), warning (amber), info (blue) — consistent colors and icons
+- Toast content: concise, one line where possible, action button for undo where applicable
+- No stacking of more than 3 toasts — oldest dismissed when limit reached
+- Toast accessible — screen reader announces toast content
+- In-app notification center consistent — same panel, same styling, same mark-read behavior
+
+---
+
+**STEP 10 — LOADING AND SKELETON STATES**
+
+Every data-dependent view must have a loading state:
+- Skeleton screens on all primary data views — not spinners in the center of the page
+- Skeleton matches the layout of the loaded content — not a generic bar pattern
+- Skeleton animation consistent — same shimmer direction and speed
+- Page-level loading: route transition loading indicator consistent
+- Button loading: consistent spinner inside button, button disabled during load
+- Inline loading: when a section of a page reloads, skeleton scoped to that section — not full page reload
+- Optimistic updates: where appropriate, update UI immediately and revert on error
+
+---
+
+**STEP 11 — ICON AND TYPOGRAPHY UNIFORMITY**
+
+Visual language must be consistent:
+- Single icon library used throughout — confirm no mixing of Lucide, HeroIcons, FontAwesome, etc.
+- Icon sizes consistent per context: 16px inline, 20px button, 24px standalone
+- Icon colors follow token system — no hardcoded icon colors
+- Typography scale enforced: H1, H2, H3, H4, Body, Small, Caption — all defined, all used correctly
+- Font weight consistent: headings bold, body regular, labels medium — no ad-hoc weight usage
+- Line height consistent across all text elements
+- Letter spacing consistent — no ad-hoc tracking adjustments
+- Number formatting consistent: currency always formatted with symbol and 2 decimal places, dates always same format (MMM DD YYYY or locale-consistent)
+
+---
+
+**STEP 12 — INTERNAL NAVIGATION CONSISTENCY**
+
+Navigation between pages must be seamless:
+- All navigation uses the router — no `window.location.href` hard redirects
+- Back button behavior correct — browser back returns to previous page correctly
+- Deep links work — any URL can be shared and loads correctly with proper auth
+- Scroll position reset on navigation — new page starts at top
+- Active navigation item highlighted correctly — sidebar and breadcrumb both reflect current page
+- Page titles update correctly on navigation — browser tab shows correct page name
+- No orphaned pages — every page reachable from navigation or a logical user flow
+- No dead links — every link goes somewhere
+
+---
+
+**STEP 13 — PROFESSIONAL ERROR AND HELP INTEGRATION**
+
+Users who are lost or encounter errors must have a path forward:
+- "Report a Bug" option accessible from every page — persistent help button or footer link
+- Bug report captures automatically: current page URL, user role, workspace ID, browser/device info, timestamp
+- Bug report form: description field, optional screenshot upload, severity selection
+- Bug report submitted creates a support ticket in the help desk system — linked to Phase 23B
+- "Help" option accessible from every page — links to FAQ or opens HelpAI
+- HelpAI accessible from a persistent button on every page — not buried in navigation
+- Keyboard shortcut for HelpAI on desktop — consistent across all pages
+
+---
+
+**STEP 14 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per check in reconciliation table
+2. Every PASS confirmed with file or component reference
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. Every CRITICAL fixed with evidence
+6. All rows green before summary written
+
+---
+
+**STEP 15 — VERIFICATION**
+
+- Check 1: All design tokens defined in single source — no hardcoded colors outside token system
+- Check 2: Trinity purple used ONLY on Trinity elements — grep confirms zero non-Trinity usage
+- Check 3: Gold accent used correctly — not overused, not missing from accent contexts
+- Check 4: Global header consistent across all pages — same structure confirmed
+- Check 5: Sidebar navigation consistent — same styling on all pages
+- Check 6: Mobile navigation consistent — same implementation across all pages
+- Check 7: Primary, secondary, destructive, ghost button variants all consistent
+- Check 8: All buttons show loading state during API call — no double-submit possible
+- Check 9: Confirm dialogs on all destructive actions — consistent pattern
+- Check 10: Modal structure consistent — header, footer, button order all uniform
+- Check 11: All overlays dismiss on Escape key
+- Check 12: Form inputs consistent — label, error state, required indicator all uniform
+- Check 13: All forms validate on blur AND submit
+- Check 14: Every table has empty state and skeleton loader
+- Check 15: 404, 403, 500 error pages all designed and on-brand
+- Check 16: All error messages in plain language with actionable next steps
+- Check 17: Toast position, duration, and style consistent across all pages
+- Check 18: Skeleton screens on all primary data views — correct layout match
+- Check 19: Single icon library confirmed — no mixing
+- Check 20: Typography scale enforced — correct heading levels and weights throughout
+- Check 21: All navigation uses router — no hard redirects
+- Check 22: Deep links work — all URLs load correctly with auth
+- Check 23: Report a Bug accessible from every page — captures correct context automatically
+- Check 24: HelpAI accessible from persistent button on every page
+- Check 25: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 26: Server starts clean with zero TypeScript errors across all frontend files
+
+Do not mark Phase 23 complete until all 26 checks pass. Findings first. Full picture. Then fixes. Nothing left behind.
+
+---
+
+**PHASE 23B — HELP DESK, HELPAI LIVE TRIAGE, AND FAQ INTELLIGENCE SYSTEM**
+
+This phase builds the complete user support intelligence layer. Every end user who hits a problem must have a path to resolution — immediately via HelpAI, or via a properly tracked ticket that routes to the right person. The system must learn from every resolved issue and get smarter over time. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check. Specific evidence per row. All rows green before Phase 23B closes.
+
+---
+
+**STEP 1 — CURRENT STATE INVENTORY**
+
+Before touching anything inventory what exists:
+- Support ticket table confirmed from Phase 13 — what fields exist
+- HelpAI current capabilities — what it can and cannot do for end users
+- FAQ system — does any FAQ database exist
+- In-app bug report widget — does it exist
+- Help desk UI — does any ticket management interface exist
+- Trinity long-term memory — what workspace-level issue history is stored
+- Any existing knowledge base or documentation system
+
+Flag every gap between what exists and what is required.
+
+---
+
+**STEP 2 — IN-APP BUG REPORT WIDGET**
+
+Every user must be able to report a bug from anywhere:
+- Persistent "Report a Bug" button on every page — bottom-right corner, consistent position
+- Bug report form captures automatically without user input: current page URL, user role, workspace ID, browser name and version, device type, screen resolution, timestamp
+- User fills in: description (required), steps to reproduce (optional), severity (low/medium/high/critical — user's perception)
+- Optional screenshot — user can attach a screenshot or the system captures one automatically
+- On submit: creates a support ticket in the ticket system with all captured context
+- Confirmation shown to user: ticket number, estimated response time
+- Ticket routed correctly: critical severity → immediate platform staff notification via NDS, high → same-day, medium/low → standard queue
+- Bug report accessible even when the page has an error — persistent, outside the main app error boundary
+
+---
+
+**STEP 3 — HELP DESK TICKET SYSTEM**
+
+The ticket system must be complete and functional:
+- Ticket schema complete: id, workspace_id, submitter_id, category, subject, description, severity, status, source (email/in-app/voice/helpai), assigned_to, created_at, updated_at, resolved_at, resolution_notes, faq_candidate (boolean)
+- Ticket statuses: open → triaging → in_progress → pending_user → resolved → closed
+- Ticket categories: bug_report, billing_question, scheduling_issue, compliance_question, technical_problem, feature_request, general_inquiry
+- Ticket list view for platform staff — filterable by status, category, severity, workspace, assignee
+- Ticket detail view — full conversation thread, all metadata, status controls, resolution input
+- Ticket assignment — platform staff can assign to themselves or another agent
+- Ticket escalation — can be escalated to senior staff with notification
+- SLA timers — critical: 1 hour, high: 4 hours, medium: 24 hours, low: 72 hours — timer visible on ticket
+- Ticket resolution — requires resolution notes before closing
+- Ticket reopening — user can reopen if issue recurs within 7 days
+- Email notification on ticket status changes — submitter notified via NDS on every status change
+
+---
+
+**STEP 4 — HELPAI LIVE TRIAGE FLOW**
+
+HelpAI must actively triage every user who needs help:
+- HelpAI accessible via persistent button on every page
+- On open: HelpAI greets user by name, identifies their role and workspace context
+- HelpAI asks: "What can I help you with today?" — open-ended, not a menu
+- HelpAI intent classification: bug report, billing question, how-to question, feature request, access issue, escalation needed
+- For how-to questions: HelpAI searches FAQ database first, returns relevant answer with source
+- For bug reports: HelpAI walks user through capturing reproduction steps, then creates ticket automatically
+- For access issues: HelpAI checks user's current permissions, explains what they can't access and why, offers to submit an access request
+- For billing questions: HelpAI retrieves relevant invoice or subscription data for the user's workspace and answers from context
+- For escalation needed: HelpAI creates ticket, sets high priority, notifies platform staff immediately
+- HelpAI follows up: if issue was resolved via FAQ, asks "Did this solve your problem?" — yes closes the interaction, no creates a ticket
+- HelpAI session context: remembers what was discussed in the current session — does not ask the user to repeat themselves
+- New user flow: HelpAI detects first-time users, offers a guided onboarding tour relevant to their role
+
+---
+
+**STEP 5 — FAQ DATABASE AND MANAGEMENT**
+
+The FAQ system must be intelligent and self-improving:
+- FAQ table schema: id, category, question, answer, related_ticket_ids, created_by, created_at, updated_at, view_count, helpful_count, not_helpful_count, status (draft/published/archived), auto_suggested (boolean)
+- FAQ categories match ticket categories
+- FAQ search: full-text search, returns most relevant result first
+- FAQ management UI: platform staff can create, edit, publish, archive FAQ entries
+- FAQ accessible to end users via help center page — searchable, categorized
+- HelpAI reads from FAQ database on every relevant query — not hardcoded responses
+- FAQ voting: users can mark an answer as helpful or not helpful — drives FAQ quality score
+
+---
+
+**STEP 6 — HELPAI LEARNING LOOP**
+
+HelpAI must get smarter from every resolved ticket:
+- When a ticket is resolved: platform staff marks it as `faq_candidate: true` if the resolution would help other users
+- Trinity/HelpAI reviews `faq_candidate` tickets daily — extracts the question and resolution
+- HelpAI drafts a FAQ entry: proposed question (cleaned and generalized), proposed answer (from resolution notes), suggested category
+- Draft FAQ entry submitted for platform staff review — not auto-published
+- Platform staff approves, edits, or rejects the draft
+- Approved drafts published to FAQ database automatically
+- HelpAI's response quality improves as FAQ database grows — it references new entries on next relevant query
+- Learning loop audit: every auto-suggested FAQ entry tracks its source ticket ID
+
+---
+
+**STEP 7 — PER-ORGANIZATION ISSUE HISTORY**
+
+HelpAI must know each workspace's history:
+- Trinity long-term memory stores per-workspace issue patterns: recurring issue types, previously resolved tickets, known configuration quirks
+- When a user from workspace X opens HelpAI, it retrieves workspace X's issue history before responding
+- HelpAI can reference prior issues: "I see your workspace had a similar scheduling issue last month — here's what resolved it"
+- Issue patterns flagged proactively: if workspace X has submitted 3+ tickets in the same category in 30 days, Trinity proactive scanner flags it and notifies platform staff
+- Per-organization issue history accessible to platform staff on the ticket list — "View workspace history" shows all prior tickets for that workspace
+- Issue history workspace-scoped — HelpAI cannot reference another workspace's issues
+
+---
+
+**STEP 8 — VOICE TRIAGE INTEGRATION (Phase 22 connection)**
+
+HelpAI triage must work via voice on mobile:
+- "Help" voice command opens HelpAI triage flow
+- "Report a bug" voice command initiates bug report flow — HelpAI asks for description verbally
+- "I have a problem with [topic]" routes to correct triage path
+- Voice triage session context preserved — same session as text triage if user switches input methods
+- Voice triage response read aloud by Trinity if TTS is active
+
+---
+
+**STEP 9 — TRINITY HELPDESK ACTIONS**
+
+Trinity must be able to manage the help desk:
+- `helpdesk.ticket.create` — create a ticket from any context
+- `helpdesk.ticket.query` — query tickets by status, category, workspace, or assignee
+- `helpdesk.ticket.resolve` — resolve a ticket with resolution notes
+- `helpdesk.faq.search` — search FAQ database for relevant entries
+- `helpdesk.faq.suggest` — propose a new FAQ entry from a resolved ticket
+- `helpdesk.workspace.history` — retrieve issue history for a specific workspace
+- All 6 actions registered, role-gated, and callable
+
+---
+
+**STEP 10 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Same rule — one row per check, all evidence specific, all rows green before summary written.
+
+---
+
+**STEP 11 — VERIFICATION**
+
+- Check 1: Bug report widget present on every page — persistent, outside error boundary
+- Check 2: Bug report auto-captures page URL, role, workspace, browser, device, timestamp
+- Check 3: Bug report creates ticket with correct routing by severity
+- Check 4: Ticket schema complete — all required fields confirmed in DB
+- Check 5: All 6 ticket statuses enforced — no invalid transitions
+- Check 6: SLA timers visible on tickets — correct durations per severity
+- Check 7: Ticket email notification fires on every status change via NDS
+- Check 8: HelpAI triage flow complete — greet, classify, respond, follow-up, escalate
+- Check 9: HelpAI searches FAQ before creating a ticket — confirmed in triage flow
+- Check 10: New user onboarding tour offered by HelpAI on first session
+- Check 11: FAQ table schema complete — all fields confirmed in DB
+- Check 12: FAQ search returns relevant results — full-text search confirmed
+- Check 13: FAQ voting confirmed — helpful/not helpful updates counts
+- Check 14: Learning loop confirmed — resolved tickets flagged as FAQ candidates
+- Check 15: HelpAI drafts FAQ from resolved ticket — draft submitted for review
+- Check 16: Approved FAQ published to database — HelpAI references it on next query
+- Check 17: Per-workspace issue history stored in Trinity long-term memory
+- Check 18: HelpAI references workspace history when responding to known recurring issues
+- Check 19: Proactive scanner flags workspace with 3+ tickets in same category in 30 days
+- Check 20: Voice triage wired — "Help" and "Report a bug" voice commands work
+- Check 21: All 6 Trinity helpdesk actions registered and callable
+- Check 22: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 23: Server starts clean with zero TypeScript errors across all helpdesk and FAQ files
+
+Do not mark Phase 23B complete until all 23 checks pass. Findings first. Full picture. Then fixes. Nothing left behind.
+
+---
+
+Both prompts are ready. Paste Phase 23 first, Phase 23B immediately after, once Phase 22 closes. The agent now has the full scope of both phases before writing a single line.

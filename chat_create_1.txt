@@ -1,0 +1,51 @@
+  router.post('/api/chats/create', requireAuth, chatConversationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      // For unauthenticated users, return success (frontend handles localStorage)
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const {
+        subject,
+        chatType, // 'employee_to_employee', 'manager_to_employee', 'group', 'customer_support'
+        shiftId, // Optional: link to specific shift
+        participantIds, // Array of user IDs to add as participants
+        guestInvitations, // Array of { name, email, phone, expiresInDays }
+        conversationType // 'open_chat', 'dm_user', 'shift_chat'
+      } = req.body;
+      
+      // Create the conversation
+      const conversationData: InsertChatConversation = {
+        workspaceId,
+        subject: subject || 'Team Chat',
+        isActive: true,
+        conversationType: conversationType || 'open_chat',
+        shiftId: shiftId || null,
+        isEncrypted: false, // Open chats are not encrypted
+        isSilenced: false // Participants can send messages
+      };
+      
+      const conversation = await storage.createChatConversation(conversationData);
+      
+      // Add participants (if provided)
+      const addedParticipants = [];
+      if (participantIds && participantIds.length > 0) {
+        for (const participantId of participantIds) {
+          const participant = await storage.getUser(participantId);
+          if (participant) {
+            // Note: We need to add chatParticipants storage method
+            // For now, just track in memory
+            addedParticipants.push({
+              id: participant.id,
+              name: participant.displayName || participant.email,
+              email: participant.email
+            });

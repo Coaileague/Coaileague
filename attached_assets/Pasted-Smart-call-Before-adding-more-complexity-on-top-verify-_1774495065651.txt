@@ -1,0 +1,149 @@
+Smart call. Before adding more complexity on top, verify the foundation is solid end to end. Send this to the Replit Agent:
+
+---
+
+**CROSS-PHASE SYNCHRONIZATION AUDIT — PHASES 1 THROUGH 20**
+
+Before Phase 21 opens, perform a full synchronization audit across all 20 certified phases. Each phase was built and verified in isolation — this audit verifies they work correctly as a unified whole. A platform where every phase passes independently but fails to communicate across phase boundaries is not a working platform. Find every seam, every handoff, and every integration point and confirm it is wired correctly.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+Every integration point identified must have a confirmed status — PASS, GAP, or PARTIAL. Every GAP and PARTIAL gets fixed before this audit closes. One reconciliation row per integration point. All rows green before the audit is marked complete.
+
+---
+
+**WHAT TO VERIFY**
+
+**Layer 1 — Data Flow Integrity**
+Trace data as it moves across phase boundaries:
+
+- Officer onboarded (Phase 10 Flow 1) → license created (Phase 17) → license linked to employee record → scheduling enforcement picks it up (Phase 12) → clock-in validation uses it (Phase 12) → compliance engine monitors it (Phase 21 scope) — confirm this entire chain is connected
+- Shift created (Phase 12) → assigned with license check → officer clocks in with GPS → hours confirmed → payroll staged (Phase 15) → invoice generated (Phase 14) → QuickBooks synced (Phase 16) → client portal reflects payment (Phase 20) — confirm this entire chain is connected
+- Calloff submitted (Phase 12) → inbound email received at calloffs@ (Phase 13) → replacement cascade fires (Phase 16 three-tier) → NDS notification delivered (Phases 1-8) → audit trail written (Phase 11) — confirm this entire chain is connected
+- Document generated (Phase 18) → routed to officer (Phase 20 portal) → signed → countersigned → stored in vault with SHA-256 hash → linked to license record if applicable (Phase 17) → compliance record created — confirm this entire chain is connected
+
+**Layer 2 — Notification Pipeline Integrity**
+Every event that should produce a notification must be verified end to end:
+
+- Every NDS notification confirmed routing through NotificationDeliveryService — no direct sends (Phase 8 canonical truth)
+- Every notification type in the 47-type registry confirmed firing on correct trigger
+- Retry backoff confirmed active on failure — no silent drops
+- Delivery tracking in `notification_deliveries` confirmed for representative sample across all phases
+- Inbound email responses (Phase 13) confirmed routing back through NDS — not raw email
+
+**Layer 3 — Audit Trail Continuity**
+The audit trail must be unbroken across all phase boundaries:
+
+- Financial mutations: invoice → payroll → QuickBooks → billing — every write has an audit entry
+- Scheduling mutations: shift create → assign → calloff → replacement — every write has an audit entry
+- Document mutations: generate → sign → countersign → vault — every write has an audit entry
+- Compliance mutations: violation detect → alert → resolve — every write has an audit entry
+- Permission mutations: matrix change → session update — every write has an audit entry
+- Confirm no audit_log row has been modified or deleted — immutability regression check
+
+**Layer 4 — Permission and Role Consistency**
+RBAC must be consistent across all phase implementations:
+
+- `roleDefinitions.ts` is the only source of role constants — no inline role strings anywhere added after Phase 9
+- Permission matrix from Phase 9B correctly gates features added in Phases 10-20
+- Every new route added in Phases 10-20 has correct role guard — no unguarded endpoints
+- Workspace isolation confirmed on every query added in Phases 10-20 — no missing `workspaceId` scopes
+- Trinity conscience from Phase 19 correctly blocks actions that require roles the requesting user doesn't have
+
+**Layer 5 — Real-Time Sync Consistency**
+WebSocket events must be consistent across all phases:
+
+- Every data mutation that has a portal view (Phase 20) fires a WebSocket broadcast
+- WebSocket events are workspace-scoped — no event leaks across workspaces
+- Permission matrix updates (Phase 9B) propagate to active sessions in real time
+- Schedule changes (Phase 12) propagate to officer portal in real time
+- Invoice status changes (Phase 14) propagate to client portal in real time
+- Document status changes (Phase 18) propagate to both portals in real time
+
+**Layer 6 — Trinity Integration Consistency**
+Trinity must be correctly wired to every phase system:
+
+- Action registry count confirmed at 205 — verify no new actions added in Phases 20+ pushed it over 300
+- All cross-phase Trinity actions confirmed callable: inbound.*, license.*, document.*, permissions.*, portal.*, compliance.*
+- Trinity conscience confirmed firing before every action — not just financial ones
+- Trinity memory confirmed workspace-scoped across all sessions
+- Trinity proactive scanner confirmed running on schedule without missed fires
+- Trinity executive planner confirmed producing correct multi-step plans for operational requests
+
+**Layer 7 — Financial System Coherence**
+All financial systems must reconcile with each other:
+
+- Payroll calculations (Phase 15) produce correct amounts that match invoice line items (Phase 14)
+- QuickBooks sync (Phase 16) reflects the same amounts as CoAIleague invoices and payroll
+- Garnishments (Phase 15) applied before pay stubs — pay stubs reflect correct net amounts
+- Differential pay (Phase 15) appears as distinct line items in both payroll and invoices (Phase 14)
+- Credit memos (Phase 14) correctly reduce invoice balances — no floating credits
+- Stripe subscription billing (Phase 32 scope) does not interfere with client invoice billing (Phase 14)
+
+**Layer 8 — Scheduling and Payroll Coherence**
+Scheduling must feed payroll correctly:
+
+- Confirmed hours from Phase 12 (supervisor-approved clock-outs) flow into Phase 15 payroll with no manual step
+- `payrolledAt` lock in Phase 12 prevents double-inclusion in Phase 15 — regression check
+- OT hours calculated in Phase 15 match what Phase 12 scheduled and what Phase 14 invoiced
+- Calloff records from Phase 12 correctly remove the officer's hours from the pay period
+- Replacement officer hours from Phase 16 cascade correctly attributed to the correct pay period
+
+**Layer 9 — Document and Compliance Coherence**
+Documents must feed compliance correctly:
+
+- Unsigned required documents from Phase 18 produce compliance flags — confirm the trigger exists
+- License documents received via Phase 13 (docs@) link to Phase 17 license records — regression check
+- Executed contracts from Phase 18 feed into Phase 14 invoice rate calculations — correct rate applied
+- Document expiry from Phase 18 triggers Phase 21 compliance alert — confirm the trigger exists
+- Phase 17 license revocation immediately flags Phase 12 active shift assignments — regression check
+
+**Layer 10 — End-to-End Smoke Test**
+Run one complete operational cycle touching every phase:
+
+Officer onboarded → license recorded → scheduled → calloff submitted via email → replacement cascade fires → replacement clocks in → incident reported → shift closes → hours confirmed → invoice generated → client views invoice in portal → invoice disputed → dispute resolved → payroll run → pay stub generated → QuickBooks synced → compliance report generated → Trinity queried for summary → audit trail confirmed unbroken from first event to last.
+
+Document every system that participated, every handoff that occurred, and any point where the chain broke or produced incorrect output.
+
+---
+
+**RECONCILIATION TABLE REQUIREMENTS**
+
+The reconciliation table must have one row per integration point identified across all 10 layers. For each row:
+- Integration point description
+- Phase A → Phase B (which phases are involved)
+- Status: PASS / GAP / PARTIAL
+- Evidence: specific file, line, or query result
+- Fix applied if GAP or PARTIAL
+
+Every row green before the audit closes.
+
+---
+
+**VERIFICATION**
+
+The sync audit is complete when:
+- Check 1: All Layer 1 data flow chains confirmed connected end to end
+- Check 2: All NDS notifications confirmed routing through NDS — zero direct sends found
+- Check 3: Audit trail unbroken — every mutation type has a confirmed entry
+- Check 4: No audit_log row modified or deleted — immutability confirmed
+- Check 5: roleDefinitions.ts confirmed as sole source — no inline role strings added after Phase 9
+- Check 6: Every route added in Phases 10-20 has correct role guard
+- Check 7: Every query added in Phases 10-20 has workspace_id scope
+- Check 8: All WebSocket broadcasts confirmed workspace-scoped
+- Check 9: Action registry confirmed at or below 300 — exact count shown
+- Check 10: All cross-phase Trinity actions callable with correct role enforcement
+- Check 11: Financial amounts reconcile across payroll, invoices, and QuickBooks
+- Check 12: Confirmed hours flow from Phase 12 → Phase 15 without manual intervention
+- Check 13: Unsigned documents trigger compliance flags
+- Check 14: License revocation flags active shift assignments immediately
+- Check 15: End-to-end smoke test completes with unbroken audit trail
+- Check 16: All GAPs and PARTIALs found during audit fixed and re-verified
+- Check 17: Reconciliation table complete — one row per integration point, all green
+- Check 18: Server starts clean with zero TypeScript errors after all sync fixes applied
+- Check 19: replit.md updated with full sync audit results and any architectural truths discovered
+
+Do not mark this audit complete until all 19 checks pass and the reconciliation table is fully green. This is the most important verification in the entire build — it confirms that 20 phases of work function as one coherent platform, not 20 isolated features.
+
+---
+
+Paste that. This audit may take longer than a single phase — let it run fully. If it comes back with gaps across multiple layers paste the full findings and we will review before approving fixes. This is the foundation everything else stands on.

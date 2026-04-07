@@ -14,7 +14,6 @@ import { useEffect, useRef } from 'react';
 import { useTrinityContext, type TrinityContext } from './use-trinity-context';
 import { useAuth } from './useAuth';
 import { thoughtManager, type TrinityPersonaContext } from '@/lib/mascot/ThoughtManager';
-import { useBusinessBuddyTier } from './use-business-buddy-tier';
 
 function buildPersonaContext(context: TrinityContext): TrinityPersonaContext {
   return {
@@ -29,7 +28,7 @@ function buildPersonaContext(context: TrinityContext): TrinityPersonaContext {
     isManager: context.isManager,
     subscriptionTier: context.subscriptionTier,
     hasTrinityPro: context.hasTrinityPro,
-    hasBusinessBuddy: context.hasBusinessBuddy,
+    trinityMode: context.trinityMode,
     orgStats: context.orgStats,
     orgIntelligence: context.orgIntelligence,
     persona: context.persona,
@@ -47,8 +46,8 @@ function contextIdentityChanged(prev: TrinityContext | null, next: TrinityContex
     prev.platformRole !== next.platformRole ||
     prev.subscriptionTier !== next.subscriptionTier ||
     prev.trinityAccessLevel !== next.trinityAccessLevel ||
+    prev.trinityMode !== next.trinityMode ||
     prev.hasTrinityPro !== next.hasTrinityPro ||
-    prev.hasBusinessBuddy !== next.hasBusinessBuddy ||
     prev.isRootAdmin !== next.isRootAdmin ||
     prev.isPlatformStaff !== next.isPlatformStaff
   );
@@ -57,11 +56,9 @@ function contextIdentityChanged(prev: TrinityContext | null, next: TrinityContex
 export function useTrinityPersona(workspaceId?: string) {
   const { context, isLoading, error, refetch } = useTrinityContext(workspaceId);
   const { user } = useAuth();
-  const { tier: businessBuddyTier } = useBusinessBuddyTier();
   const lastContextRef = useRef<TrinityContext | null>(null);
   const lastUserIdRef = useRef<string | null>(null);
   const lastWorkspaceIdRef = useRef<string | undefined>(undefined);
-  const lastTierRef = useRef<string | null>(null);
   
   // Detect workspace changes and trigger refetch
   useEffect(() => {
@@ -70,14 +67,6 @@ export function useTrinityPersona(workspaceId?: string) {
       refetch();
     }
   }, [workspaceId, user, refetch]);
-  
-  // Sync Business Buddy tier with ThoughtManager for upgrade nudges
-  useEffect(() => {
-    if (businessBuddyTier !== lastTierRef.current) {
-      lastTierRef.current = businessBuddyTier;
-      thoughtManager.setBusinessBuddyTier(businessBuddyTier);
-    }
-  }, [businessBuddyTier]);
   
   useEffect(() => {
     // Clear context when user logs out
@@ -134,7 +123,6 @@ export function useTrinityPersona(workspaceId?: string) {
       thoughtManager.setTrinityContext(null);
       lastContextRef.current = null;
       lastUserIdRef.current = null;
-      lastTierRef.current = null;
     };
   }, []);
   
@@ -146,6 +134,6 @@ export function useTrinityPersona(workspaceId?: string) {
     persona: context?.persona ?? 'standard',
     hasAccess: context?.trinityAccessLevel !== 'none',
     accessLevel: context?.trinityAccessLevel ?? 'none',
-    businessBuddyTier,
+    trinityMode: context?.trinityMode ?? 'standard',
   };
 }

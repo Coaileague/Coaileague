@@ -1,0 +1,81 @@
+  startedAt: true,
+});
+export type InsertSupportSession = z.infer<typeof insertSupportSessionSchema>;
+export type SupportSession = typeof supportSessions.$inferSelect;
+
+// ─── DEPRECATED (B1 consolidation) ───────────────────────────────────────────
+// These tables are being migrated to audit_logs (source='support'/'system').
+// New writes SHOULD go to auditLogs. These definitions kept for legacy readers.
+
+export const supportAuditLogs = pgTable("support_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").references(() => supportSessions.id),
+  adminUserId: varchar("admin_user_id").notNull().references(() => users.id),
+  adminEmail: varchar("admin_email").notNull(),
+  platformRole: platformRoleEnum("platform_role").notNull(),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id),
+  workspaceName: varchar("workspace_name"),
+  action: varchar("action", { length: 100 }).notNull(),
+  targetResource: varchar("target_resource", { length: 100 }),
+  targetId: varchar("target_id"),
+  previousValue: jsonb("previous_value"),
+  newValue: jsonb("new_value"),
+  severity: supportActionSeverityEnum("severity").notNull(),
+  justification: text("justification"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("support_audit_admin_idx").on(table.adminUserId),
+  index("support_audit_workspace_idx").on(table.workspaceId),
+  index("support_audit_session_idx").on(table.sessionId),
+  index("support_audit_severity_idx").on(table.severity),
+  index("support_audit_timestamp_idx").on(table.timestamp),
+]);
+export const insertSupportAuditLogSchema = createInsertSchema(supportAuditLogs).omit({ id: true, timestamp: true });
+export type InsertSupportAuditLog = z.infer<typeof insertSupportAuditLogSchema>;
+export type SupportAuditLog = typeof supportAuditLogs.$inferSelect;
+
+export const systemAuditLogs = pgTable("system_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  platformRole: platformRoleEnum("platform_role"),
+  action: varchar("action").notNull(),
+  entityType: varchar("entity_type").notNull(),
+  entityId: varchar("entity_id"),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id),
+  changes: jsonb("changes"),
+  metadata: jsonb("metadata"),
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  requiresConfirmation: boolean("requires_confirmation").default(false),
+  confirmedBy: varchar("confirmed_by").references(() => users.id),
+  confirmedAt: timestamp("confirmed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export type SystemAuditLog = typeof systemAuditLogs.$inferSelect;
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ============================================================================
+// AI BRAIN GOVERNANCE APPROVAL GATES
+// Persistent storage for destructive action approvals - survives restarts
+// ============================================================================
+
+export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected', 'expired', 'executed']);
+
+export const governanceApprovals = pgTable("governance_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionType: varchar("action_type").notNull(),
+  requesterId: varchar("requester_id").notNull().references(() => users.id),
+  requesterRole: varchar("requester_role").notNull(),
+  targetEntity: varchar("target_entity").notNull(),
+  parameters: jsonb("parameters").default({}),
+  reason: text("reason"),
+  status: approvalStatusEnum("status").default("pending").notNull(),
+  requiredApprovals: integer("required_approvals").default(1).notNull(),
+  approvals: jsonb("approvals").default([]),
+  expiresAt: timestamp("expires_at").notNull(),
+  executedAt: timestamp("executed_at"),
+  executedBy: varchar("executed_by").references(() => users.id),

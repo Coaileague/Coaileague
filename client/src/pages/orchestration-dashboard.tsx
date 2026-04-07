@@ -12,11 +12,11 @@ import {
   CheckCircle2, 
   XCircle, 
   AlertTriangle,
-  ArrowRight,
-  RefreshCw
+  ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 interface OrchestrationOverlay {
   id: string;
@@ -112,7 +112,7 @@ function ToolHealthCard({ tool }: { tool: ToolHealth }) {
     : Activity;
 
   return (
-    <div className="flex items-center justify-between p-3 border rounded-lg">
+    <div className="flex items-center justify-between gap-2 p-3 border rounded-lg">
       <div className="flex items-center gap-3">
         <StatusIcon className={`h-5 w-5 ${statusColors[tool.status] || "text-gray-400"}`} />
         <div>
@@ -140,31 +140,17 @@ export default function OrchestrationDashboard() {
   const failedCount = data?.recentHistory?.filter(o => o.phase === "failed" || o.phase === "escalated").length || 0;
   const healthySummary = data?.toolHealth?.summary || { healthy: 0, degraded: 0, offline: 0, unknown: 0 };
 
-  return (
-    <div className="p-6 space-y-6" data-testid="orchestration-dashboard-page">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Layers className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Orchestration Dashboard</h1>
-          </div>
-          <p className="text-muted-foreground">
-            Monitor active work orders, phase transitions, and tool health
-          </p>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => refetch()}
-          disabled={isFetching}
-          data-testid="button-refresh-orchestration"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'orchestration-dashboard',
+    title: 'Orchestration Dashboard',
+    subtitle: 'Monitor active work orders, phase transitions, and tool health',
+    category: 'admin',
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6" data-testid="orchestration-dashboard-page">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -223,7 +209,7 @@ export default function OrchestrationDashboard() {
       </div>
 
       <Tabs defaultValue="active" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
           <TabsTrigger value="active" data-testid="tab-active-overlays">
             Active ({activeCount})
           </TabsTrigger>
@@ -246,7 +232,7 @@ export default function OrchestrationDashboard() {
                 {data?.activeOverlays?.map((overlay) => (
                   <Card key={overlay.id} data-testid={`card-overlay-${overlay.id}`}>
                     <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <CardTitle className="text-sm font-medium">{overlay.domain}</CardTitle>
                         <Badge variant={phaseBadgeVariants[overlay.phase] || "outline"}>
                           {overlay.phase}
@@ -258,7 +244,7 @@ export default function OrchestrationDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <PhaseTimeline history={overlay.phaseHistory} />
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           Started {formatDistanceToNow(new Date(overlay.createdAt), { addSuffix: true })}
@@ -288,7 +274,7 @@ export default function OrchestrationDashboard() {
                 {data?.recentHistory?.map((overlay) => (
                   <Card key={overlay.id} data-testid={`card-history-${overlay.id}`}>
                     <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <CardTitle className="text-sm font-medium">{overlay.domain}</CardTitle>
                         <Badge variant={phaseBadgeVariants[overlay.phase] || "outline"}>
                           {overlay.phase}
@@ -297,7 +283,7 @@ export default function OrchestrationDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <PhaseTimeline history={overlay.phaseHistory} />
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
                         <span>Duration: {overlay.totalDurationMs ? `${(overlay.totalDurationMs / 1000).toFixed(1)}s` : "N/A"}</span>
                         <span>Confidence: {parseFloat(overlay.confidenceScore || "0").toFixed(0)}%</span>
                       </div>
@@ -325,7 +311,8 @@ export default function OrchestrationDashboard() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </CanvasHubPage>
   );
 }
 

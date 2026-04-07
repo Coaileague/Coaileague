@@ -1,0 +1,153 @@
+55 findings but the pattern is clear — most of them are the same two root problems repeating across different files. Here's how to address them all efficiently. Paste this into Replit:
+
+---
+
+**SYSTEM-WIDE WIRING FIX — THREE ROOT PROBLEMS | READ BEFORE TOUCH**
+
+Every finding in the audit traces back to three root causes. Fix the root, not each symptom individually. Work in exact order.
+
+---
+
+**ROOT FIX 1 — KILL SWITCH PERSISTENCE (CRITICAL)**
+
+`workspacePauseMap` is an in-memory Map — server restart wipes all active workspace pauses silently.
+
+Create a `trinity_workspace_pauses` table: `workspace_id`, `paused_by`, `paused_at`, `reason`, `is_active boolean default true`.
+
+On `pauseWorkspaceTrinity()` — insert a row AND set in-memory map.
+On `resumeWorkspaceTrinity()` — set `is_active = false` in DB AND clear map.
+On server startup — reload all `WHERE is_active = true` rows back into the map before Trinity initializes.
+
+The map is now a cache. The DB is the source of truth.
+
+---
+
+**ROOT FIX 2 — DUPLICATE & DEAD SUBSCRIBERS (19 items collapse to one fix)**
+
+The audit found three categories of subscriber problems. Fix them all in `trinityEventSubscriptions.ts` in one pass:
+
+**A — Duplicate competing handlers** (pick one canonical handler, remove duplicates):
+- `invoice_paid` — 3 competing handlers → keep `TrinityInvoiceOverdueHandler`, remove duplicates
+- `invoice_overdue` — 2 competing handlers → keep the one that sends collection guidance
+- `payroll_run_paid` — 2 competing handlers → keep the one that writes disbursement confirmation
+- `ai_error` — 3 competing handlers → keep the one that writes to `trinity_credit_failures`
+- `approval_approved` — 2 competing handlers → keep the one that triggers downstream workflow
+- `automation_completed` — 2 competing handlers → keep the one that notifies org owner
+
+**B — Dead subscribers (event published but wrong name or never published):**
+- `client.created` — change publisher in `clientRoutes.ts` to emit `{ type: 'client_created' }` matching subscriber
+- `quota_exceeded`, `feature_blocked`, `rate_limit_hit` — add publish calls in `creditManager.ts` when hard cap fires
+- `quickbooks_operation_failed` — add publish in `quickbooksPhase3Service.ts` replacing the raw `.emit('reconciliation_alert')`
+- `payment_succeeded`, `payment_failed` — add subscribers that notify org owner and update workspace status
+
+**C — Subscribed but never published (Trinity blind spots):**
+Add `platformEventBus.publish()` calls for these events that have subscribers waiting but no publisher:
+- `workspace_suspended` — publish in `subscriptionManager.ts` when status changes to suspended
+- `workspace_reactivated` — publish in `subscriptionManager.ts` on reactivation
+- `workspace_downgraded` — publish in `subscriptionManager.ts` on tier downgrade
+- `invoice_voided` / `invoice_cancelled` — publish in `invoiceRoutes.ts` PATCH void/cancel paths
+- `onboarding_completed` — publish in onboarding completion route
+- `compliance_suspension_triggered` — publish in compliance bridge when officer hard-blocked
+- `hris_sync_completed` — publish in HRIS sync service on completion
+
+---
+
+**ROOT FIX 3 — RAW EMIT PROTOCOL VIOLATIONS (replace all `.emit()` with `.publish()`)**
+
+Search the entire codebase for these specific raw emit calls and replace each with canonical `.publish()`:
+
+```
+automationOrchestration.ts — .emit('automation.completed') 
+  → .publish({ type: 'automation_completed', workspaceId, ... })
+
+usageMetering.ts — any raw .emit() calls
+  → .publish() with correct type
+
+aiCreditGateway.ts — any raw .emit() calls  
+  → .publish() with correct type
+
+upsellService.ts — any raw .emit() calls
+  → .publish() with correct type
+
+resilientAIGateway.ts — any raw .emit() calls
+  → .publish() with correct type
+
+modelRouter.ts — .emit('system')
+  → .publish({ type: 'system_health_check', ... }) or remove if unused
+
+goalExecutionService.ts — .emit('trinity:stream')
+  → route through canonical WebSocket broadcast instead
+
+quickbooksPhase3Service.ts — .emit('reconciliation_alert')
+  → .publish({ type: 'quickbooks_operation_failed', ... })
+```
+
+---
+
+**ROOT FIX 4 — RESEND WEBHOOK FAIL-OPEN (HIGH security)**
+
+In `resendWebhooks.ts` line 92 — change fail-open to fail-closed:
+
+```
+// BEFORE — skips verification if secret missing
+if (!RESEND_WEBHOOK_SECRET) {
+  console.warn("skipping signature verification")
+}
+
+// AFTER — hard fail if secret not configured  
+if (!RESEND_WEBHOOK_SECRET) {
+  console.error('[FATAL] RESEND_WEBHOOK_SECRET not configured')
+  return res.status(401).json({ error: 'Webhook endpoint not configured' })
+}
+```
+
+Also add `RESEND_WEBHOOK_SECRET` to the startup environment variable validation check so the server fails to start if it's missing in production.
+
+Add idempotency: create `webhook_deliveries` table with `message_id`, `provider`, `processed_at`. Before processing any Resend event, check if `message_id` already exists. If yes return 200 immediately. If no, insert then process.
+
+---
+
+**ROOT FIX 5 — FRONTEND/BACKEND EVENT NAME MISMATCH**
+
+In `ForceRefreshProvider.tsx` add missing WebSocket handlers:
+- `subscription_cancelled` → invalidate billing and workspace queries
+- `shift_swap_requested` → invalidate schedule queries
+- `shift_swap_approved` → invalidate schedule queries  
+- `shift_swap_rejected` → invalidate schedule queries
+- `invoice_created` → invalidate invoice queries
+
+Fix `schedule_updated` vs `schedules_updated` mismatch — pick one name and make backend and frontend match. Use `schedules_updated` as canonical since that's what more backend emitters use. Update any frontend handler listening for `schedule_updated` singular to `schedules_updated`.
+
+Fix `/api/analytics/owner/reconciliation` 404 — either mount the missing route or update the frontend query to the correct existing endpoint path.
+
+---
+
+**ROOT FIX 6 — MEDIUM ITEMS (batch these together)**
+
+- `stateTaxService` clientOverrides Map → move to `state_tax_overrides` DB table, load on startup
+- Add missing `workspace_id` indexes on the 4 flagged tables — run via SQL migration
+- `weeklyBillingRunService` → emit `invoice_created` or `automation_completed` after billing run
+- `creditBalanceService` → emit `credit_purchased` or `payment_received_partial` on credit transactions
+- `stripeConnectPayoutService` lines 293/311 → replace `console.warn` with `createNotification` to org owner
+- `subscriptionManager.ts` 31 mutations → add `platformEventBus.publish()` after every subscription state change
+
+---
+
+**COMPLETION CRITERIA**
+
+1. TypeScript compile — zero errors
+2. Server restart — confirm `workspacePauseMap` reloaded from DB at startup
+3. Confirm zero raw `.emit('` calls remaining on platformEventBus
+4. Confirm duplicate subscribers reduced — report subscriber count per event type, none should exceed 1
+5. Confirm `RESEND_WEBHOOK_SECRET` startup guard is active
+6. All regression tests pass
+7. Report final counts:
+   - Active Trinity subscriptions
+   - Raw emit violations remaining
+   - Dead subscribers remaining
+   - Duplicate subscribers remaining
+8. Stop and wait
+
+---
+
+Paste the result back. If raw emits hit zero and duplicate subscribers hit zero that's your actual clean bill of health.

@@ -4,6 +4,7 @@
  * Enhanced with recurring shifts, shift swapping, templates, and duplication
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
@@ -14,17 +15,18 @@ import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useClientLookup } from '@/hooks/useClients';
 import { useEmployee } from '@/hooks/useEmployee';
+import { isSupervisorOrAbove } from '@/lib/roleHierarchy';
+import { useTrinitySchedulingProgress } from '@/hooks/use-trinity-scheduling-progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, ChevronLeft, ChevronRight, Menu,
   Users, Clock, BarChart3, CheckCircle,
   ArrowRightLeft, LayoutTemplate, Download,
   Check, X
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { UniversalModal, UniversalModalHeader, UniversalModalBody, UniversalModalTitle } from '@/components/ui/universal-modal';
 import { EmployeeShiftCard } from '@/components/schedule/EmployeeShiftCard';
 import { ShiftBottomSheet } from '@/components/schedule/ShiftBottomSheet';
 import { ShiftDetailSheet } from '@/components/schedule/ShiftDetailSheet';
@@ -37,22 +39,119 @@ import { WeekStatsBar } from '@/components/schedule/WeekStatsBar';
 import { ConflictAlerts } from '@/components/schedule/ConflictAlerts';
 import { TrinityInsightsPanel } from '@/components/schedule/TrinityInsightsPanel';
 import { TrinityTrainingPanel } from '@/components/schedule/TrinityTrainingPanel';
-import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
+import { TrinityStatusBar, TrinityThinkingPanel } from '@/components/schedule/TrinitySchedulingFeedback';
+import { TrinityLogo } from '@/components/trinity-logo';
 import { TrinityLoadingSpinner } from '@/components/trinity-loading-overlay';
 import { useSimpleMode } from '@/contexts/SimpleModeContext';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import type { Shift, Employee, Client } from '@shared/schema';
+import { getShiftStatus, SHIFT_STATUS, type ShiftStatusConfig } from '@/constants/scheduling';
 
-export default function ScheduleMobileFirst() {
+/**
+ * Get shift status styling using centralized constants from /constants/scheduling.ts
+ * Returns border classes, background, and badge info for at-a-glance status
+ * 
+ * UNIFIED STATUS SYSTEM:
+ * - DRAFT: Dashed amber border (new shifts)
+ * - ASSIGNED: Dashed blue border (officer added)
+ * - PUBLISHED: Solid green border (live shift)
+ * - UNFILLED: Solid red border (urgent - no officer)
+ * - ACTIVE: Solid purple with pulse (in progress)
+ * - COMPLETED: Solid gray border (finished)
+ */
+function getShiftStatusStyling(shift: Shift): {
+  borderClass: string;
+  bgClass: string;
+  badgeText: string;
+  badgeClass: string;
+  isActive: boolean;
+} {
+  // Use centralized status logic from constants
+  const status = getShiftStatus({
+    startTime: shift.startTime,
+    endTime: shift.endTime,
+    officerId: shift.employeeId,
+    isPublished: shift.status === 'published' || shift.status === 'scheduled',
+    clockedIn: (shift as any).clockedIn || false,
+    status: shift.status || undefined,
+  });
+  
+  // Map centralized config to component styling
+  // Convert tailwindBorder to left-border style for mobile cards
+  const borderClass = status.key === 'active' 
+    ? 'border-l-4 border-violet-500 shift-card-active'
+    : `border-l-4 ${status.tailwindBorder.replace('border-2 border-solid ', '').replace('border-2 border-dashed ', 'border-dashed ')}`;
+  
+  // Use tailwindBg from config with enhanced opacity for dark mode
+  const bgClass = `${status.tailwindBg} dark:${status.tailwindBg.replace('/5', '/15')}`;
+  
+  // Badge styling based on status color
+  const badgeColorMap: Record<string, string> = {
+    draft: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-400',
+    assigned: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-400',
+    published: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-400',
+    unfilled: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-400',
+    active: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-400',
+    completed: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-400',
+  };
+  
+  return {
+    borderClass,
+    bgClass,
+    badgeText: status.label.toUpperCase(),
+    badgeClass: badgeColorMap[status.key] || badgeColorMap.draft,
+    isActive: status.key === 'active',
+  };
+}
+
+/**
+ * Get position color for shift card color strip
+ * Position colors: Armed (red), Unarmed (slate), Supervisor (amber), Manager (indigo), Owner (violet)
+ */
+function getPositionColor(title: string | null | undefined): string {
+  if (!title) return 'bg-slate-400'; // Default for no position
+  
+  const titleLower = title.toLowerCase();
+  
+  if (titleLower.includes('armed') && !titleLower.includes('unarmed')) {
+    return 'bg-red-600'; // Armed: #DC2626
+  }
+  if (titleLower.includes('unarmed')) {
+    return 'bg-slate-600'; // Unarmed: #475569
+  }
+  if (titleLower.includes('supervisor') || titleLower.includes('sup')) {
+    return 'bg-amber-600'; // Supervisor: #D97706
+  }
+  if (titleLower.includes('manager') || titleLower.includes('mgr')) {
+    return 'bg-indigo-600'; // Manager: #4F46E5
+  }
+  if (titleLower.includes('owner') || titleLower.includes('admin')) {
+    return 'bg-violet-600'; // Owner: #7C3AED
+  }
+  
+  return 'bg-slate-400'; // Default
+}
+
+export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMode?: 'my' | 'full' | 'pending' }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const { workspaceRole } = useWorkspaceAccess();
+  const { workspaceRole, workspaceId } = useWorkspaceAccess();
   const { employee: currentEmployee } = useEmployee();
   const { isSimpleMode } = useSimpleMode();
   
+  // Trinity scheduling visual feedback
+  const { 
+    session: trinitySession, 
+    trinityWorking,
+    isShiftBeingProcessed,
+    wasShiftJustAssigned,
+    clearSession: clearTrinitySession,
+  } = useTrinitySchedulingProgress(workspaceId);
+  
   const isManagerOrSupervisor = useMemo(() => {
     if (!currentEmployee || !currentEmployee.workspaceRole) return false;
-    return ['owner', 'admin', 'department_manager', 'supervisor', 'org_owner', 'org_admin', 'org_manager'].includes(currentEmployee.workspaceRole);
+    return isSupervisorOrAbove(currentEmployee.workspaceRole);
   }, [currentEmployee]);
   
   const canEdit = isManagerOrSupervisor;
@@ -63,7 +162,7 @@ export default function ScheduleMobileFirst() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
   const [editingShift, setEditingShift] = useState<Shift | undefined>();
-  const [viewMode, setViewMode] = useState<'my' | 'full' | 'pending'>('full');
+  const [viewMode, setViewMode] = useState<'my' | 'full' | 'pending'>(defaultViewMode || 'my');
   const [showApprovals, setShowApprovals] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [showSwaps, setShowSwaps] = useState(false);
@@ -80,30 +179,22 @@ export default function ScheduleMobileFirst() {
   const [showConflicts, setShowConflicts] = useState(true);
   const [showTrinityInsights, setShowTrinityInsights] = useState(false);
 
-  // Fetch weekly stats
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['/api/schedules/week/stats', weekStart.toISOString()],
-    queryFn: async () => {
-      const res = await fetch(`/api/schedules/week/stats?weekStart=${weekStart.toISOString()}`);
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      return res.json();
-    },
-  });
-
   // Fetch shifts for the week
   const weekEnd = addDays(weekStart, 7);
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
     queryKey: ['/api/shifts', weekStart.toISOString(), weekEnd.toISOString()],
     queryFn: async () => {
-      const res = await fetch(`/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`);
+      const res = await secureFetch(`/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`);
       if (!res.ok) throw new Error('Failed to fetch shifts');
-      return res.json();
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json?.data ?? []);
     },
   });
 
   // Fetch employees
-  const { data: employees = [] } = useQuery<Employee[]>({
+  const { data: employees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
+    select: (res) => res?.data ?? [],
   });
 
   // Fetch clients
@@ -161,10 +252,16 @@ export default function ScheduleMobileFirst() {
     return { employeeShiftsMap: map, openShifts: open };
   }, [dayShifts]);
 
-  // Calculate weekly hours
+  // Calculate weekly hours per employee
+  const activeStatusSet = useMemo(() => new Set(['published', 'scheduled', 'in_progress', 'completed', 'confirmed', 'approved', 'auto_approved']), []);
+
+  const activeShifts = useMemo(() => {
+    return shifts.filter(s => s.status && activeStatusSet.has(s.status));
+  }, [shifts, activeStatusSet]);
+
   const weeklyHoursMap = useMemo(() => {
     const map = new Map<string, number>();
-    shifts.forEach(shift => {
+    activeShifts.forEach(shift => {
       if (shift.employeeId) {
         const start = new Date(shift.startTime);
         const end = new Date(shift.endTime);
@@ -173,7 +270,20 @@ export default function ScheduleMobileFirst() {
       }
     });
     return map;
-  }, [shifts]);
+  }, [activeShifts]);
+
+  const weeklyHoursDisplay = useMemo(() => {
+    if (viewMode === 'my' && currentEmployee?.id) {
+      const hours = weeklyHoursMap.get(currentEmployee.id) || 0;
+      return `${Math.round(hours)}h this week`;
+    }
+    const employeeCount = weeklyHoursMap.size;
+    if (employeeCount === 0) return '0h this week';
+    let total = 0;
+    weeklyHoursMap.forEach(h => { total += h; });
+    const avg = total / employeeCount;
+    return `${employeeCount} staff · avg ${Math.round(avg)}h/wk`;
+  }, [viewMode, currentEmployee, weeklyHoursMap]);
 
   // Filter employees based on view mode
   const displayEmployees = useMemo(() => {
@@ -195,7 +305,7 @@ export default function ScheduleMobileFirst() {
     onSuccess: () => {
       toast({ title: "Shift created successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+
       setSheetOpen(false);
       setSelectedEmployee(undefined);
       setEditingShift(undefined);
@@ -217,7 +327,7 @@ export default function ScheduleMobileFirst() {
     onSuccess: () => {
       toast({ title: "Shift deleted successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+
     },
     onError: (error: any) => {
       toast({
@@ -342,7 +452,7 @@ export default function ScheduleMobileFirst() {
         status: 'scheduled',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+
       toast({ title: "Shift duplicated to next day" });
     } catch (error) {
       toast({ 
@@ -376,7 +486,7 @@ export default function ScheduleMobileFirst() {
         status: 'scheduled',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+
       toast({ title: "Shift copied to next week" });
     } catch (error) {
       toast({ 
@@ -402,7 +512,7 @@ export default function ScheduleMobileFirst() {
         });
       }
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+
       toast({ 
         title: "Template applied", 
         description: `${templateShifts.length} shifts created` 
@@ -423,87 +533,140 @@ export default function ScheduleMobileFirst() {
     ? clients.find(c => c.id === selectedShift.clientId)
     : null;
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'schedule-mobile-first',
+    title: 'Schedule',
+    category: 'operations',
+    withBottomNav: true,
+    showHeader: false, // Custom header with calendar navigation below
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* GetSling-style Header - Mobile Optimized */}
-      <div className="bg-primary text-primary-foreground">
-        {/* Month Header with Navigation - Compact visuals, accessible touch */}
-        <div className="flex items-center justify-between px-1 py-0.5">
+    <CanvasHubPage config={pageConfig}>
+    <div className="flex flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+      {/* Sticky header block — pins at top within MobilePageWrapper scroll container */}
+      <div className="sticky top-0 z-10">
+      {/* Trinity Scheduling Status Bar - Shows when Trinity is auto-scheduling */}
+      <TrinityStatusBar 
+        session={trinitySession}
+        onAbort={() => {
+          toast({ 
+            title: 'Trinity scheduling stopped', 
+            description: 'You can restart auto-scheduling anytime.',
+          });
+          clearTrinitySession();
+        }}
+      />
+      
+      {/* Unified Schedule Header - Ultra Compact Mobile */}
+      <div className="bg-primary text-primary-foreground shrink-0">
+        {/* Row 1: Nav + Month + Tabs + Tools - single tight row */}
+        <div className="flex items-center gap-0.5 px-1 py-0">
           <Button
             variant="ghost"
             size="icon"
             onClick={handlePreviousWeek}
-            className="min-h-[44px] min-w-[44px] text-primary-foreground hover:bg-primary-foreground/20"
+            className="h-11 w-11 md:h-9 md:w-9 text-primary-foreground hover:bg-primary-foreground/20"
             data-testid="button-prev-week"
+            aria-label="Previous week"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          
-          <div className="text-center">
-            <div className="font-bold text-base flex items-center gap-0.5">
-              {format(weekStart, 'MMMM')}
-              <ChevronRight className="h-3 w-3 rotate-90 opacity-70" />
-            </div>
-          </div>
-          
+          <span className="font-semibold text-xs whitespace-nowrap">{format(weekStart, 'MMM yyyy')}</span>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleNextWeek}
-            className="min-h-[44px] min-w-[44px] text-primary-foreground hover:bg-primary-foreground/20"
+            className="h-11 w-11 md:h-9 md:w-9 text-primary-foreground hover:bg-primary-foreground/20"
             data-testid="button-next-week"
+            aria-label="Next week"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
+
+          <div className="flex-1" />
+
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setSelectedEmployee(undefined);
+                setEditingShift(undefined);
+                setSheetOpen(true);
+              }}
+              className="h-11 w-11 md:h-9 md:w-9 text-primary-foreground hover:bg-primary-foreground/20"
+              data-testid="btn-add-shift-header"
+              aria-label="Add shift"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
+          {isManagerOrSupervisor && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowManagerTools(true)}
+              className="h-11 w-11 md:h-9 md:w-9 text-primary-foreground hover:bg-primary-foreground/20 relative"
+              data-testid="btn-manager-tools-header"
+              aria-label="Manager tools"
+            >
+              <Menu className="h-4 w-4" />
+              {pendingShifts.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full h-3 min-w-3 flex items-center justify-center">
+                  {pendingShifts.length}
+                </span>
+              )}
+            </Button>
+          )}
         </div>
 
-        {/* GetSling-style 3-Tab Switcher - Compact visuals, accessible touch */}
-        <div className="flex border-b border-primary-foreground/20">
-          <button
-            onClick={() => setViewMode('my')}
-            className={`flex-1 min-h-[44px] text-xs font-medium transition-colors whitespace-nowrap ${
-              viewMode === 'my' 
-                ? 'border-b-2 border-primary-foreground text-primary-foreground' 
-                : 'text-primary-foreground/70 hover:text-primary-foreground'
-            }`}
-            data-testid="tab-my-schedule"
-          >
-            My
-          </button>
-          <button
-            onClick={() => setViewMode('full')}
-            className={`flex-1 min-h-[44px] text-xs font-medium transition-colors whitespace-nowrap ${
-              viewMode === 'full' 
-                ? 'border-b-2 border-primary-foreground text-primary-foreground' 
-                : 'text-primary-foreground/70 hover:text-primary-foreground'
-            }`}
-            data-testid="tab-full-schedule"
-          >
-            Full
-          </button>
-          <button
-            onClick={() => setViewMode('pending')}
-            className={`flex-1 min-h-[44px] text-xs font-medium transition-colors whitespace-nowrap relative ${
-              viewMode === 'pending' 
-                ? 'border-b-2 border-primary-foreground text-primary-foreground' 
-                : 'text-primary-foreground/70 hover:text-primary-foreground'
-            }`}
-            data-testid="tab-pending"
-          >
-            Pending
-            {pendingShifts.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full h-3.5 min-w-3.5 px-0.5 flex items-center justify-center">
-                {pendingShifts.length}
-              </span>
-            )}
-          </button>
+        {/* Row 2: View Mode Tabs */}
+        <div className="px-1 pb-0">
+          <div className="flex bg-primary-foreground/15 rounded p-0.5 gap-0.5">
+            <button
+              onClick={() => setViewMode('my')}
+              className={`flex-1 py-0.5 text-[10px] font-semibold rounded transition-all ${
+                viewMode === 'my' 
+                  ? 'bg-primary-foreground text-primary shadow-sm' 
+                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
+              }`}
+              data-testid="tab-my-schedule"
+            >
+              My Schedule
+            </button>
+            <button
+              onClick={() => setViewMode('full')}
+              className={`flex-1 py-0.5 text-[10px] font-semibold rounded transition-all ${
+                viewMode === 'full' 
+                  ? 'bg-primary-foreground text-primary shadow-sm' 
+                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
+              }`}
+              data-testid="tab-full-schedule"
+            >
+              Full Team
+            </button>
+            <button
+              onClick={() => setViewMode('pending')}
+              className={`flex-1 py-0.5 text-[10px] font-semibold rounded transition-all relative ${
+                viewMode === 'pending' 
+                  ? 'bg-primary-foreground text-primary shadow-sm' 
+                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
+              }`}
+              data-testid="tab-pending"
+            >
+              Pending
+              {pendingShifts.length > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-3.5 min-w-3.5 text-[8px] px-0.5">
+                  {pendingShifts.length}
+                </Badge>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* GetSling-style Day Picker - Compact Mobile */}
-      <div className="border-b border-border bg-muted/30">
-        {/* Horizontal Day Scroller - Compact visuals, accessible touch (min 44px height) */}
-        <div className="flex justify-around py-0.5 px-0.5">
+        {/* Row 3: Day Picker + Info merged — minimal height */}
+        <div className="grid grid-cols-7 gap-px px-1 pb-0.5 pt-0.5">
           {weekDays.map((day) => {
             const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
             const dayIsToday = isToday(day);
@@ -515,93 +678,83 @@ export default function ScheduleMobileFirst() {
               <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center justify-center min-w-[40px] min-h-[44px] py-1 rounded transition-colors ${
-                  isSelected ? 'bg-primary/10' : ''
+                className={`flex flex-col items-center justify-center min-h-[28px] py-0 rounded transition-all ${
+                  isSelected 
+                    ? 'bg-primary-foreground text-primary shadow-sm' 
+                    : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
                 }`}
                 data-testid={`day-tab-${format(day, 'yyyy-MM-dd')}`}
               >
-                <span className={`text-sm font-bold ${
-                  isSelected ? 'text-primary' : dayIsToday ? 'text-primary' : 'text-foreground'
-                }`}>
+                <span className={`text-[7px] uppercase font-medium leading-none ${isSelected ? 'text-primary/70' : 'opacity-70'}`}>
+                  {format(day, 'EEE').slice(0, 2)}
+                </span>
+                <span className={`text-[11px] font-bold leading-none ${dayIsToday && !isSelected ? 'text-yellow-300' : ''}`}>
                   {format(day, 'd')}
                 </span>
-                {/* Shift indicator dots */}
-                <div className="flex gap-0.5 h-1.5">
-                  {dayShiftCount > 0 && (
-                    <div className={`w-1 h-1 rounded-full ${
-                      isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
-                    }`} />
-                  )}
-                  {dayShiftCount > 1 && (
-                    <div className={`w-1 h-1 rounded-full ${
-                      isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
-                    }`} />
-                  )}
-                  {dayShiftCount > 2 && (
-                    <div className={`w-1 h-1 rounded-full ${
-                      isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
-                    }`} />
-                  )}
-                </div>
+                {dayShiftCount > 0 && (
+                  <div className={`w-1 h-1 rounded-full ${
+                    isSelected ? 'bg-primary' : 'bg-primary-foreground/50'
+                  }`} />
+                )}
               </button>
             );
           })}
         </div>
-        
-        {/* Week Range + Hours Summary - Compact */}
-        <div className="flex items-center justify-between px-2 py-1 text-[10px] border-t border-border/50">
-          <span className="text-muted-foreground">
-            {format(weekStart, 'd')} - {format(addDays(weekStart, 6), 'd MMM')}
-          </span>
-          <span className="font-semibold text-foreground">
-            {stats?.totalHours?.toFixed(0) || 0}h
-          </span>
-        </div>
       </div>
 
-      {/* Selected Day Header - Compact */}
-      <div className="bg-primary text-primary-foreground px-2 py-1">
-        <div className="flex items-center gap-2">
-          <div className="text-lg font-bold">{format(selectedDate, 'd')}</div>
-          <div className="text-sm font-medium uppercase">{format(selectedDate, 'EEE')}</div>
-        </div>
+      {/* Selected Day Info Bar — thin single-line strip */}
+      <div className="bg-muted/50 border-b border-border px-3 py-0 flex items-center justify-between gap-2 shrink-0" style={{ height: '20px' }}>
+        <span className="font-semibold text-[10px] text-foreground">
+          {format(selectedDate, 'EEE, MMM d')}
+        </span>
+        <span className="text-[9px] text-muted-foreground">
+          {weeklyHoursDisplay}
+        </span>
       </div>
-      
-      {/* Mobile Conflict Alerts - Managers only */}
-      {isManagerOrSupervisor && showConflicts && (
-        <ConflictAlerts
-          shifts={shifts}
-          employees={employees}
-          onResolve={(shiftId) => {
-            const shift = shifts.find(s => s.id === shiftId);
-            if (shift) {
-              setSelectedShift(shift);
-              setDetailSheetOpen(true);
-            }
-          }}
-          onDismiss={() => setShowConflicts(false)}
-          className="mx-3 mt-2"
+      </div>{/* end sticky header block */}
+
+      {/* Content area — MobilePageWrapper owns the scroll */}
+      <div>
+        {/* Trinity Thinking Panel - Shows real-time thought process at top */}
+        <TrinityThinkingPanel
+          thoughts={trinitySession.thoughts}
+          isWorking={trinityWorking}
+          onClear={clearTrinitySession}
         />
-      )}
-      
-      {/* Mobile Trinity Insights - Managers only, Pro View only */}
-      {isManagerOrSupervisor && showTrinityInsights && !isSimpleMode && (
-        <div className="mx-3 mt-2 space-y-3">
-          <TrinityInsightsPanel
-            weekStart={weekStart}
-            weekEnd={addDays(weekStart, 6)}
+        
+        {/* Mobile Conflict Alerts - Managers only */}
+        {isManagerOrSupervisor && showConflicts && (
+          <ConflictAlerts
             shifts={shifts}
             employees={employees}
-            clients={clients}
-            isCollapsed={false}
-            onToggleCollapse={() => setShowTrinityInsights(false)}
+            onResolve={(shiftId) => {
+              const shift = shifts.find(s => s.id === shiftId);
+              if (shift) {
+                setSelectedShift(shift);
+                setDetailSheetOpen(true);
+              }
+            }}
+            onDismiss={() => setShowConflicts(false)}
+            className="mx-3 mt-2"
           />
-          <TrinityTrainingPanel />
-        </div>
-      )}
+        )}
+        
+        {/* Mobile Trinity Insights - Managers only - hidden when Trinity is actively scheduling */}
+        {isManagerOrSupervisor && showTrinityInsights && !trinityWorking && trinitySession.thoughts.length === 0 && (
+          <div className="mx-3 mt-2 mb-16 space-y-3">
+            <TrinityInsightsPanel
+              weekStart={weekStart}
+              weekEnd={addDays(weekStart, 6)}
+              shifts={shifts}
+              employees={employees}
+              clients={clients}
+              isCollapsed={false}
+              onToggleCollapse={() => setShowTrinityInsights(false)}
+            />
+            <TrinityTrainingPanel workspaceId={workspaceId} />
+          </div>
+        )}
 
-      {/* Shift Cards - Scrollable - Compact Mobile */}
-      <ScrollArea className="flex-1">
         <div className="pb-24">
           {shiftsLoading || (viewMode === 'my' && !currentEmployee?.id) ? (
             <div className="px-3 py-4 space-y-2">
@@ -625,28 +778,39 @@ export default function ScheduleMobileFirst() {
                   const end = new Date(shift.endTime);
                   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                   const emp = employees.find(e => e.id === shift.employeeId);
-                  const client = clients.find(c => c.id === shift.clientId);
+                  // Use enriched clientName from API response, fallback to client lookup for backwards compatibility
+                  const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                  
+                  const pendingStatusStyle = getShiftStatusStyling(shift);
+                  const positionColor = getPositionColor(shift.title);
+                  const isPendingBeingProcessed = isShiftBeingProcessed(shift.id);
+                  const wasPendingJustAssigned = wasShiftJustAssigned(shift.id);
                   
                   return (
                     <div
                       key={shift.id}
                       onClick={() => handleViewShift(shift)}
-                      className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
+                      className={`relative flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50 overflow-hidden ${pendingStatusStyle.borderClass} ${pendingStatusStyle.bgClass} my-0.5 rounded-r ${isPendingBeingProcessed ? 'trinity-shift-processing' : ''} ${wasPendingJustAssigned ? 'trinity-shift-assigned' : ''}`}
                       data-testid={`pending-shift-${shift.id}`}
                     >
-                      <div className="w-10 py-1.5 flex flex-col items-center justify-center text-primary flex-shrink-0">
-                        <span className="text-base font-bold">{format(start, 'd')}</span>
-                        <span className="text-[9px] uppercase">{format(start, 'EEE')}</span>
+                      <div className="w-12 py-1.5 flex flex-col items-center justify-center text-primary flex-shrink-0">
+                        <span className="text-base font-bold leading-none">{format(start, 'd')}</span>
+                        <span className="text-[9px] uppercase leading-none mt-0.5">{format(start, 'EEE')}</span>
                       </div>
-                      <div className="flex-1 py-1.5 pr-2 bg-amber-100 dark:bg-amber-900/30 rounded-r my-0.5">
-                        <div className="font-bold text-xs">
-                          {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
+                      <div className="flex-1 min-w-0 py-1.5 pr-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="font-bold text-xs whitespace-nowrap">
+                            {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
+                          </div>
+                          <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 ${pendingStatusStyle.badgeClass}`}>
+                            {pendingStatusStyle.badgeText}
+                          </span>
                         </div>
-                        <div className="text-xs font-medium line-clamp-1">
+                        <div className="text-xs font-medium truncate">
                           {emp ? `${emp.firstName} ${emp.lastName}` : 'Unassigned'}
                         </div>
-                        <div className="text-[10px] text-muted-foreground line-clamp-2">
-                          {client?.companyName || 'No client'} · {shift.title || 'No position'}
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {clientName || 'No client'} · {shift.title || 'No position'}
                         </div>
                         {/* Workflow actions for draft/pending shifts */}
                         {shift.status === 'draft' && (
@@ -680,6 +844,8 @@ export default function ScheduleMobileFirst() {
                           </div>
                         )}
                       </div>
+                      {/* Position color strip */}
+                      <div className={`w-1.5 ${positionColor} rounded-r flex-shrink-0`} title={shift.title || 'No position'} />
                     </div>
                   );
                 })
@@ -711,34 +877,39 @@ export default function ScheduleMobileFirst() {
                         const start = new Date(shift.startTime);
                         const end = new Date(shift.endTime);
                         const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                        const client = clients.find(c => c.id === shift.clientId);
-                        const bgColor = shift.status === 'confirmed' 
-                          ? 'bg-green-100 dark:bg-green-900/30'
-                          : shift.status === 'completed'
-                          ? 'bg-gray-100 dark:bg-gray-800/30'
-                          : 'bg-blue-100 dark:bg-blue-900/30';
+                        const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                        const statusStyle = getShiftStatusStyling(shift);
+                        const positionColor = getPositionColor(shift.title);
+                        
+                        const isMyBeingProcessed = isShiftBeingProcessed(shift.id);
+                        const wasMyJustAssigned = wasShiftJustAssigned(shift.id);
                         
                         return (
                           <div
                             key={shift.id}
                             onClick={() => handleViewShift(shift)}
-                            className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
+                            className={`relative flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50 overflow-hidden ${statusStyle.borderClass} ${statusStyle.bgClass} my-0.5 rounded-r ${isMyBeingProcessed ? 'trinity-shift-processing' : ''} ${wasMyJustAssigned ? 'trinity-shift-assigned' : ''}`}
                             data-testid={`my-shift-${shift.id}`}
                           >
-                            <div className={`w-10 py-1.5 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
+                            <div className={`w-12 py-1.5 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
                               {idx === 0 && (
                                 <>
-                                  <span className="text-base font-bold">{format(day, 'd')}</span>
-                                  <span className="text-[9px] uppercase">{format(day, 'EEE')}</span>
+                                  <span className="text-base font-bold leading-none">{format(day, 'd')}</span>
+                                  <span className="text-[9px] uppercase leading-none mt-0.5">{format(day, 'EEE')}</span>
                                 </>
                               )}
                             </div>
-                            <div className={`flex-1 py-1.5 pr-2 ${bgColor} rounded-r my-0.5`}>
-                              <div className="font-bold text-xs">
-                                {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
+                            <div className="flex-1 min-w-0 py-1.5 pr-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <div className="font-bold text-xs whitespace-nowrap">
+                                  {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
+                                </div>
+                                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 ${statusStyle.badgeClass}`}>
+                                  {statusStyle.badgeText}
+                                </span>
                               </div>
-                              <div className="text-[10px] text-muted-foreground line-clamp-2">
-                                {client?.companyName || 'No client'} · {shift.title || 'No position'}
+                              <div className="text-[10px] text-muted-foreground truncate">
+                                {clientName || 'No client'} · {shift.title || 'No position'}
                               </div>
                               {/* Workflow actions for My Schedule draft shifts */}
                               {shift.status === 'draft' && (
@@ -758,19 +929,26 @@ export default function ScheduleMobileFirst() {
                                 </div>
                               )}
                             </div>
+                            {/* Position color strip */}
+                            <div className={`w-1.5 ${positionColor} rounded-r flex-shrink-0`} title={shift.title || 'No position'} />
                           </div>
                         );
                       })
                     ) : (
-                      <div className="flex items-center py-2 px-2">
-                        <div className={`w-10 text-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
-                          <div className="text-base font-bold">{format(day, 'd')}</div>
-                          <div className="text-[9px] uppercase">{format(day, 'EEE')}</div>
+                      <div className="flex items-center py-3 px-3 gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'}`}>
+                          <div className="text-sm font-bold leading-none">{format(day, 'd')}</div>
+                          <div className="text-[9px] uppercase leading-none mt-0.5 opacity-70">{format(day, 'EEE')}</div>
                         </div>
-                        <div className="flex-1 ml-2">
-                          <span className="text-muted-foreground text-xs">
+                        <div className="flex-1 flex items-center gap-2">
+                          <span className={`text-sm font-medium ${dayIsToday ? 'text-foreground' : 'text-muted-foreground/70'}`}>
                             {dayIsToday ? 'No shift today' : 'Day off'}
                           </span>
+                          {!dayIsToday && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground/60 uppercase tracking-wide">
+                              Free
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -779,8 +957,8 @@ export default function ScheduleMobileFirst() {
               })}
             </div>
           ) : (
-            /* Full Schedule View - Compact */
-            <div className="divide-y divide-border">
+            /* Full Schedule View - GetSling-style with clear day headers */
+            <div className="space-y-0">
               {weekDays.map(day => {
                 const dayStr = format(day, 'yyyy-MM-dd');
                 const dayIsToday = isToday(day);
@@ -792,213 +970,177 @@ export default function ScheduleMobileFirst() {
                 );
                 const allDayShifts = [...dayOpenShifts, ...dayAssignedShifts];
                 
-                if (allDayShifts.length === 0) {
-                  return (
-                    <div key={dayStr} className="flex items-center py-2 px-2">
-                      <div className={`w-10 text-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
-                        <div className="text-base font-bold">{format(day, 'd')}</div>
-                        <div className="text-[9px] uppercase">{format(day, 'EEE')}</div>
+                return (
+                  <div key={dayStr} className="border-b border-border last:border-b-0">
+                    {/* Day Header - Blue theme matching brand colors */}
+                    <div className={`flex items-center gap-3 px-3 py-2.5 overflow-hidden ${
+                      dayIsToday 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100'
+                    }`}>
+                      <div className="text-center min-w-[48px] shrink-0">
+                        <div className="text-lg font-bold leading-none">{format(day, 'd')}</div>
+                        <div className="text-[10px] uppercase font-semibold opacity-80 leading-none mt-0.5">{format(day, 'EEE')}</div>
                       </div>
-                      <div className="flex-1 ml-2">
-                        <span className="text-muted-foreground text-xs">No shifts scheduled</span>
+                      <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold truncate">
+                          {format(day, 'MMMM')}
+                        </span>
+                        <span className={`text-xs font-medium whitespace-nowrap shrink-0 ${dayIsToday ? 'opacity-80' : 'text-blue-700 dark:text-blue-300'}`}>
+                          {allDayShifts.length} {allDayShifts.length === 1 ? 'shift' : 'shifts'}
+                        </span>
                       </div>
                     </div>
-                  );
-                }
-                
-                return (
-                  <div key={dayStr}>
-                    {/* Open Shifts for this day - Compact */}
-                    {dayOpenShifts.map((shift, idx) => {
-                      const start = new Date(shift.startTime);
-                      const end = new Date(shift.endTime);
-                      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                      const client = clients.find(c => c.id === shift.clientId);
-                      
-                      return (
-                        <div
-                          key={shift.id}
-                          onClick={() => handleViewShift(shift)}
-                          className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
-                          data-testid={`shift-row-${shift.id}`}
-                        >
-                          <div className={`w-10 py-1.5 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
-                            {idx === 0 && dayAssignedShifts.length === 0 && (
-                              <>
-                                <span className="text-base font-bold">{format(day, 'd')}</span>
-                                <span className="text-[9px] uppercase">{format(day, 'EEE')}</span>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex-1 py-1.5 pr-1 bg-amber-100 dark:bg-amber-900/30 rounded-r my-0.5">
-                            <div className="font-bold text-xs text-amber-800 dark:text-amber-200">
-                              {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
-                            </div>
-                            <div className="text-[10px] font-medium text-amber-700 dark:text-amber-300">
-                              OPEN SHIFT
-                            </div>
-                            <div className="text-[10px] text-amber-600 dark:text-amber-400 line-clamp-2">
-                              {client?.companyName || 'No client'} · {shift.title || 'Position needed'}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            className="self-center mr-1 min-h-[44px] text-xs bg-amber-600 hover:bg-amber-700"
-                            disabled={!currentEmployee?.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleClaimShift(shift);
-                            }}
-                          >
-                            Claim
-                          </Button>
-                        </div>
-                      );
-                    })}
                     
-                    {/* Assigned Shifts for this day */}
-                    {dayAssignedShifts.map((shift, idx) => {
-                      const start = new Date(shift.startTime);
-                      const end = new Date(shift.endTime);
-                      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                      const emp = employees.find(e => e.id === shift.employeeId);
-                      const client = clients.find(c => c.id === shift.clientId);
-                      const bgColor = shift.status === 'confirmed' 
-                        ? 'bg-green-100 dark:bg-green-900/30'
-                        : shift.status === 'completed'
-                        ? 'bg-gray-100 dark:bg-gray-800/30'
-                        : 'bg-blue-100 dark:bg-blue-900/30';
-                      
-                      return (
-                        <div
-                          key={shift.id}
-                          onClick={() => handleViewShift(shift)}
-                          className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
-                          data-testid={`shift-row-${shift.id}`}
-                        >
-                          <div className={`w-10 py-1.5 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
-                            {idx === 0 && (
-                              <>
-                                <span className="text-base font-bold">{format(day, 'd')}</span>
-                                <span className="text-[9px] uppercase">{format(day, 'EEE')}</span>
-                              </>
-                            )}
-                          </div>
-                          <div className={`flex-1 py-1.5 pr-2 ${bgColor} rounded-r my-0.5`}>
-                            <div className="font-bold text-xs">
-                              {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
-                            </div>
-                            <div className="text-xs font-medium line-clamp-1">
-                              {emp ? `${emp.firstName} ${emp.lastName}` : 'Unassigned'}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground line-clamp-2">
-                              {client?.companyName || 'No client'} · {shift.title || 'No position'}
-                            </div>
-                            {/* Workflow actions for assigned draft shifts */}
-                            {shift.status === 'draft' && shift.employeeId === currentEmployee?.id && (
-                              <div className="flex gap-2 mt-2">
-                                <Button
-                                  size="lg"
-                                  variant="default"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAcceptShift(shift);
-                                  }}
-                                  data-testid={`btn-confirm-full-${shift.id}`}
-                                >
-                                  <Check className="w-4 h-4 mr-1" />
-                                  Confirm
-                                </Button>
+                    {/* Shifts for this day */}
+                    {allDayShifts.length === 0 ? (
+                      <div className="py-3 px-3 text-center">
+                        <span className="text-muted-foreground text-xs">No shifts scheduled</span>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border/50">
+                        {/* Open Shifts for this day - UNFILLED status styling */}
+                        {dayOpenShifts.map((shift) => {
+                          const start = new Date(shift.startTime);
+                          const end = new Date(shift.endTime);
+                          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                          const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                          
+                          const isOpenBeingProcessed = isShiftBeingProcessed(shift.id);
+                          const wasOpenJustAssigned = wasShiftJustAssigned(shift.id);
+                          
+                          return (
+                            <div
+                              key={shift.id}
+                              onClick={() => handleViewShift(shift)}
+                              className={`relative flex items-center gap-2 px-3 py-2 cursor-pointer active:bg-muted/50 overflow-hidden border-l-4 border-red-500 bg-red-50/50 dark:bg-red-900/10 ${isOpenBeingProcessed ? 'trinity-shift-processing' : ''} ${wasOpenJustAssigned ? 'trinity-shift-assigned' : ''}`}
+                              data-testid={`shift-row-${shift.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="font-bold text-xs whitespace-nowrap">
+                                    {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
+                                  </div>
+                                  <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200">
+                                    UNFILLED
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground truncate">
+                                  {clientName || 'No client'} · {shift.title || 'Position needed'}
+                                </div>
                               </div>
-                            )}
-                          </div>
-                          <div className="self-center pr-1">
-                            <ArrowRightLeft className="w-3 h-3 text-muted-foreground" />
-                          </div>
-                        </div>
-                      );
-                    })}
+                              <Button
+                                size="sm"
+                                className="shrink-0 text-xs bg-red-600 hover:bg-red-700"
+                                disabled={!currentEmployee?.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClaimShift(shift);
+                                }}
+                              >
+                                Claim
+                              </Button>
+                            </div>
+                          );
+                        })}
+                        
+                        {/* Assigned Shifts for this day - Fortune 500 status styling */}
+                        {dayAssignedShifts.map((shift) => {
+                          const start = new Date(shift.startTime);
+                          const end = new Date(shift.endTime);
+                          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                          const emp = employees.find(e => e.id === shift.employeeId);
+                          const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                          const statusStyle = getShiftStatusStyling(shift);
+                          const positionColor = getPositionColor(shift.title);
+                          const isBeingProcessed = isShiftBeingProcessed(shift.id);
+                          const wasJustAssigned = wasShiftJustAssigned(shift.id);
+                          
+                          return (
+                            <div
+                              key={shift.id}
+                              onClick={() => handleViewShift(shift)}
+                              className={`relative flex items-stretch gap-2 px-3 py-2 cursor-pointer active:bg-muted/50 overflow-hidden ${statusStyle.borderClass} ${statusStyle.bgClass} ${isBeingProcessed ? 'trinity-shift-processing' : ''} ${wasJustAssigned ? 'trinity-shift-assigned' : ''}`}
+                              data-testid={`shift-row-${shift.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="font-bold text-xs whitespace-nowrap">
+                                    {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
+                                  </div>
+                                  <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 ${statusStyle.badgeClass}`}>
+                                    {statusStyle.badgeText}
+                                  </span>
+                                </div>
+                                <div className="text-xs font-medium truncate">
+                                  {emp ? `${emp.firstName} ${emp.lastName}` : 'Unassigned'}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground truncate">
+                                  {clientName || 'No client'} · {shift.title || 'No position'}
+                                </div>
+                                {shift.status === 'draft' && shift.employeeId === currentEmployee?.id && (
+                                  <div className="flex gap-2 mt-2">
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAcceptShift(shift);
+                                      }}
+                                      data-testid={`btn-confirm-full-${shift.id}`}
+                                    >
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Confirm
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <ArrowRightLeft className="w-4 h-4 text-muted-foreground shrink-0" />
+                                {/* Position color strip */}
+                                <div className={`w-1.5 h-full min-h-[40px] ${positionColor} rounded flex-shrink-0`} title={shift.title || 'No position'} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
-      {/* Sticky Bottom Action Bar - Clean, no overlaps */}
-      {(canEdit || isManagerOrSupervisor) && (
-        <div 
-          className="fixed left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t px-4 py-2"
-          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
-          data-testid="schedule-action-bar"
-        >
-          <div className="flex items-center justify-between gap-2">
-            {/* Add Shift Button - Primary action */}
-            {canEdit && (
-              <Button
-                size="lg"
-                className="flex-1"
-                onClick={() => {
-                  setSelectedEmployee(undefined);
-                  setEditingShift(undefined);
-                  setSheetOpen(true);
-                }}
-                data-testid="btn-add-shift"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Add Shift
-              </Button>
-            )}
-            
-            {/* Manager Tools Button - Secondary action */}
-            {isManagerOrSupervisor && (
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => setShowManagerTools(true)}
-                data-testid="btn-manager-tools"
-              >
-                <Menu className="h-4 w-4 mr-2" />
-                Tools
-                {pendingShifts.length > 0 && (
-                  <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">
-                    {pendingShifts.length}
-                  </Badge>
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* Manager Tools Drawer - Compact */}
-      <Sheet open={showManagerTools} onOpenChange={setShowManagerTools}>
-        <SheetContent side="bottom" className="h-auto max-h-[45vh]">
-          <SheetHeader>
-            <SheetTitle className="text-sm">Schedule Tools</SheetTitle>
-          </SheetHeader>
-          <div className="grid grid-cols-2 gap-2 py-2">
+      {/* Manager Tools Drawer */}
+      <UniversalModal open={showManagerTools} onOpenChange={setShowManagerTools} side="bottom" className="h-auto max-h-[65vh]">
+        <UniversalModalHeader>
+          <UniversalModalTitle>Schedule Tools</UniversalModalTitle>
+        </UniversalModalHeader>
+        <UniversalModalBody>
+          <div className="grid grid-cols-2 gap-3 pb-2">
             <Button
               variant="outline"
-              className="h-14 flex-col gap-1"
+              className="flex-col gap-1.5 py-4"
               onClick={() => {
                 setShowManagerTools(false);
                 setShowApprovals(true);
               }}
               data-testid="tool-approvals"
             >
-              <Clock className="h-4 w-4 text-amber-600" />
-              <span className="text-xs">Approvals</span>
+              <Clock className="h-5 w-5 text-amber-600 shrink-0" />
+              <span className="text-sm font-medium">Approvals</span>
               {pendingShifts.length > 0 && (
-                <Badge variant="destructive" className="text-[9px] px-1 h-3.5">
+                <Badge variant="destructive" className="text-[10px] px-1.5">
                   {pendingShifts.length}
                 </Badge>
               )}
             </Button>
             <Button
               variant="outline"
-              className="h-14 flex-col gap-1"
+              className="flex-col gap-1.5 py-4"
               onClick={() => {
                 setShowManagerTools(false);
                 setSwapShift(null);
@@ -1006,64 +1148,64 @@ export default function ScheduleMobileFirst() {
               }}
               data-testid="tool-swaps"
             >
-              <ArrowRightLeft className="h-4 w-4 text-cyan-600" />
-              <span className="text-xs">Swaps</span>
+              <ArrowRightLeft className="h-5 w-5 text-cyan-600 shrink-0" />
+              <span className="text-sm font-medium">Swaps</span>
             </Button>
             {!isSimpleMode && (
               <>
                 <Button
                   variant="outline"
-                  className="h-14 flex-col gap-1"
+                  className="flex-col gap-1.5 py-4"
                   onClick={() => {
                     setShowManagerTools(false);
                     setShowTemplates(true);
                   }}
                   data-testid="tool-templates"
                 >
-                  <LayoutTemplate className="h-4 w-4 text-purple-600" />
-                  <span className="text-xs">Templates</span>
+                  <LayoutTemplate className="h-5 w-5 text-purple-600 shrink-0" />
+                  <span className="text-sm font-medium">Templates</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-14 flex-col gap-1"
+                  className="flex-col gap-1.5 py-4"
                   onClick={() => {
                     setShowManagerTools(false);
                     setShowReports(true);
                   }}
                   data-testid="tool-reports"
                 >
-                  <BarChart3 className="h-4 w-4 text-blue-600" />
-                  <span className="text-xs">Reports</span>
+                  <BarChart3 className="h-5 w-5 text-blue-600 shrink-0" />
+                  <span className="text-sm font-medium">Reports</span>
                 </Button>
               </>
             )}
             <Button
               variant="outline"
-              className="h-14 flex-col gap-1"
+              className="flex-col gap-1.5 py-4"
               onClick={() => {
                 setShowManagerTools(false);
                 setShowCalendarSync(true);
               }}
               data-testid="tool-export"
             >
-              <Download className="h-4 w-4 text-indigo-600" />
-              <span className="text-xs">Export</span>
+              <Download className="h-5 w-5 text-indigo-600 shrink-0" />
+              <span className="text-sm font-medium">Export</span>
             </Button>
             <Button
               variant="outline"
-              className="h-14 flex-col gap-1"
+              className="flex-col gap-1.5 py-4"
               onClick={() => {
                 setShowManagerTools(false);
                 setShowTrinityInsights(!showTrinityInsights);
               }}
               data-testid="tool-trinity"
             >
-              <TrinityMascotIcon size={16} />
-              <span className="text-xs">Trinity AI</span>
+              <TrinityLogo size={20} />
+              <span className="text-sm font-medium">Trinity AI</span>
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </UniversalModalBody>
+      </UniversalModal>
 
       {/* Shift Detail Sheet - Tap to view - keyed by shift ID for fresh render */}
       <ShiftDetailSheet
@@ -1143,6 +1285,8 @@ export default function ScheduleMobileFirst() {
         onOpenChange={setShowCalendarSync}
         employeeId={currentEmployee?.id}
       />
+      
     </div>
+    </CanvasHubPage>
   );
 }

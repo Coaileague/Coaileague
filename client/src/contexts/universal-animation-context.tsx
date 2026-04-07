@@ -1,3 +1,7 @@
+// DEPRECATED: This animation system has been consolidated into Canvas Hub TransitionLoader.
+// All transitions should use useTransitionLoader() from '@/components/canvas-hub/TransitionLoader'
+// This file is preserved for reference only and will be removed in a future cleanup.
+
 /**
  * UniversalAnimationContext - Global animation state management
  * 
@@ -14,6 +18,7 @@ import { useLocation } from 'wouter';
 import { UniversalAnimationEngine, type AnimationMode, type SeasonalTheme, type AnimationEngineState } from '@/components/universal-animation-engine';
 import { getCurrentSeasonalTheme, ANIMATION_CONTROL_CONFIG, getOrchestratorMessages } from '@/config/animationConfig';
 import { useAuth } from '@/hooks/useAuth';
+import { useWebSocketBus } from '@/providers/WebSocketProvider';
 
 interface AnimationRequest {
   mode: AnimationMode;
@@ -37,6 +42,9 @@ interface AnimationContextValue {
   setTheme: (theme: SeasonalTheme) => void;
   triggerNavigation: (targetPath: string, options?: NavigationAnimationOptions) => void;
   forceUpdate: (state: Partial<AnimationEngineState>) => void;
+  lock: () => void;
+  unlock: () => void;
+  isLocked: boolean;
 }
 
 interface NavigationAnimationOptions {
@@ -62,7 +70,7 @@ export function UniversalAnimationProvider({ children }: { children: ReactNode }
   });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onCompleteRef = useRef<(() => void) | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+
 
   useEffect(() => {
     setCurrentTheme(getCurrentSeasonalTheme());
@@ -145,13 +153,10 @@ export function UniversalAnimationProvider({ children }: { children: ReactNode }
     setState(prev => ({ ...prev, ...newState }));
   }, []);
 
-  useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+  const bus = useWebSocketBus();
 
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
+  useEffect(() => {
+    if (!bus) return;
 
     const handleRemoteCommand = (data: any) => {
       switch (data.type) {
@@ -180,52 +185,14 @@ export function UniversalAnimationProvider({ children }: { children: ReactNode }
       }
     };
 
-    const connect = () => {
-      try {
-        wsRef.current = new WebSocket(wsUrl);
-
-        wsRef.current.onopen = () => {
-          console.log('[AnimationContext] Connected to main WebSocket for animation broadcasts');
-          reconnectAttempts = 0;
-        };
-
-        wsRef.current.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type?.startsWith('animation:')) {
-              handleRemoteCommand(data);
-            }
-          } catch (err) {
-            // Silently ignore non-animation messages
-          }
-        };
-
-        wsRef.current.onerror = () => {
-          // Silent error handling
-        };
-
-        wsRef.current.onclose = (event) => {
-          // Only reconnect if it was an unexpected close
-          if (!event.wasClean && reconnectAttempts < maxReconnectAttempts) {
-            console.log('[AnimationContext] WebSocket closed unexpectedly, reconnecting...');
-            reconnectAttempts++;
-            reconnectTimeout = setTimeout(connect, 5000 * reconnectAttempts);
-          } else {
-            console.log('[AnimationContext] WebSocket closed cleanly');
-          }
-        };
-      } catch (err) {
-        console.error('[AnimationContext] Failed to create WebSocket:', err);
+    const unsub = bus.subscribeAll((data: any) => {
+      if (data.type?.startsWith('animation:')) {
+        handleRemoteCommand(data);
       }
-    };
+    });
 
-    connect();
-
-    return () => {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      wsRef.current?.close();
-    };
-  }, [show, hide, update, setTheme, forceUpdate]);
+    return () => { unsub(); };
+  }, [bus, show, hide, update, setTheme, forceUpdate]);
 
   const triggerNavigation = useCallback((targetPath: string, options?: NavigationAnimationOptions) => {
     const mode = options?.mode || 'warp';

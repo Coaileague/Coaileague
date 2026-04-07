@@ -1,0 +1,347 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — TRINITY COMPLIANCE INTELLIGENCE AND DOCUMENT AWARENESS EXPANSION
+This is an addition to the document system prompt already running.
+Read everything already built before adding anything new.
+Trinity is not just a chatbot. She is a self-aware platform intelligence.
+She sees the entire platform as a whole while keeping every org and every
+session completely isolated. She knows every org, every employee, every
+document, every expiration, every gap — but she never bleeds data between orgs.
+What she knows about Acme stays in Acme. What she knows about Statewide
+stays in Statewide. She operates with full platform awareness and zero data leakage.
+
+---
+
+TRINITY SELF-AWARENESS MODEL
+
+Trinity has three levels of awareness simultaneously:
+
+Level 1 — Platform Whole:
+Trinity sees aggregate platform health across all orgs. How many orgs are active,
+how many documents are pending, how many licenses are expiring platform-wide,
+how many compliance gaps exist across all workspaces. This is for CoAIleague
+platform staff visibility only — no org ever sees another org's data.
+
+Level 2 — Org Awareness:
+Within each org Trinity sees the complete picture of that org as a whole.
+Every employee, every contractor, every document, every license, every cert,
+every expiration date, every compliance gap for that specific org.
+Trinity uses this awareness to brief the org_owner and manager proactively
+in the Org Operations Briefing Channel daily.
+
+Level 3 — Individual Session Awareness:
+When an employee or contractor interacts with Trinity, Trinity sees only
+what is relevant to that individual in their session. Their own documents,
+their own license status, their own upcoming expirations, their own
+pending signatures. They never see another person's data through Trinity.
+
+Trinity never crosses these levels. An employee session never gets org-level
+data. An org never gets platform-level data about other orgs. The awareness
+is complete within each level and completely isolated between orgs.
+
+---
+
+TRINITY COMPLIANCE TRACKING SYSTEM — COMPLETE SPECIFICATION
+
+Trinity tracks every compliance document and credential for every person
+in every org. She does not wait to be asked. She proactively monitors,
+alerts, escalates, and enforces. This is her core compliance intelligence.
+
+WHAT TRINITY TRACKS FOR EVERY EMPLOYEE AND CONTRACTOR:
+
+Security Officer License — State Guard Card:
+Trinity tracks the license number, issuing state, license class, and expiration date.
+Expiration alerts fire on this exact schedule without exception:
+90 days before expiration: INFO notification to employee and manager.
+Message: "Your Texas security officer license expires in 90 days on [date].
+Begin your renewal process now to avoid scheduling disruption."
+60 days before expiration: WARNING notification to employee, manager, and org_owner.
+Org Operations Briefing Channel post with employee name and expiration date.
+30 days before expiration: URGENT notification to employee, manager, and org_owner.
+All three channels fire simultaneously. Email via Resend, in-platform, briefing channel.
+Message escalates in urgency at each tier.
+On expiration date: license is marked EXPIRED in the system.
+Trinity immediately removes the employee from all future scheduling eligibility.
+The employee cannot be assigned to any new shift until renewal is confirmed.
+The employee receives a notification that they have been removed from scheduling
+due to expired license and instructions to upload their renewed guard card.
+Manager and org_owner receive an alert that the employee is scheduling-ineligible.
+
+Guard Card Renewal Verification:
+When an employee uploads a renewed guard card Trinity scans the document
+for legitimacy. Trinity checks:
+The document is a valid state-issued security officer license.
+The license number matches the employee record.
+The expiration date is in the future.
+The employee name on the card matches the employee record.
+The issuing state authority matches what is expected for that org's state.
+If the document passes all checks: license status updates to Active,
+expiration date updates to the new date, employee becomes scheduling-eligible again,
+manager and org_owner receive a confirmation notification.
+If the document fails any check: Trinity flags it as unverified, notifies the
+manager and org_owner with the specific reason it failed, and does not restore
+scheduling eligibility until a human reviews and manually approves.
+Trinity notes which state issued the license and what that state requires
+for renewal so she can guide the employee through the correct renewal process.
+This works for any US state — not just Texas. Trinity adapts to the licensing
+requirements of whatever state the org is licensed in.
+
+Drivers License:
+Trinity tracks the expiration date when the employee uploads their drivers license.
+Alerts fire at 60 days and 30 days before expiration.
+On expiration: marked expired in the system. Manager is notified.
+If the position requires driving as a job function Trinity flags the employee
+as ineligible for driving-required shifts until renewal is confirmed.
+Drivers license is not required for all positions — Trinity only enforces
+driving eligibility gates for posts where it is required.
+
+State-Issued ID:
+Same tracking as drivers license for employees who use a state ID instead.
+Alerts at 60 and 30 days. Expired status on expiration date.
+
+First Aid Certification:
+Tracked when employee uploads their First Aid certification card.
+Trinity records the certification provider, certification date, and expiration date.
+Standard First Aid certifications expire every 2 years.
+Alerts fire at 90 days and 30 days before expiration.
+If a post requires First Aid certification and an officer's cert is expired
+Trinity flags them as ineligible for that specific post type.
+
+CPR Certification:
+Same tracking as First Aid. Standard CPR certifications expire every 2 years.
+Alerts at 90 and 30 days before expiration.
+Trinity tracks whether it is CPR only or CPR and AED combined.
+Post requirements can specify which level is required.
+
+Additional Training Certifications:
+Any certification the employee uploads is tracked by Trinity.
+When uploading a cert the employee or manager labels it with the cert type
+and Trinity extracts or records the expiration date.
+Examples: Firearms qualification, Taser certification, active shooter response,
+defensive tactics, de-escalation training, crowd management, first responder.
+Alerts fire at 90 and 30 days before any certification expiration.
+Trinity builds a complete training profile for each officer showing every
+certification they hold, when it expires, and what posts they are eligible for
+based on their current active certifications.
+
+Company Insurance Certificate:
+Tracked at the org level when the org_owner uploads it.
+Trinity tracks the policy number, coverage types, coverage limits,
+insurance provider, and policy expiration date.
+Alerts fire at 90, 60, and 30 days before policy expiration.
+On expiration: org_owner receives a CRITICAL alert. Trinity flags this in the
+Org Operations Briefing Channel. A security company operating without valid
+insurance is a catastrophic liability. This alert is never silent.
+
+Company License and Business Certifications:
+Trinity tracks the org's own state security company license expiration.
+Same alert schedule as insurance: 90, 60, 30 days, and critical on expiration.
+Any state-required company-level certification is tracked the same way.
+The org_owner uploads these documents and Trinity extracts or records
+the relevant dates.
+
+---
+
+DOCUMENT VISIBILITY AND ACCESS CONTROL — STRICT
+
+These compliance documents contain sensitive personal information.
+They are not general platform documents. Access is tightly controlled.
+
+Who can see compliance credential documents:
+
+org_owner: full access to all employee and contractor credential documents.
+Can view, download, and verify any document in the compliance vault.
+
+co_owner: same access as org_owner.
+
+manager: can see credential status summaries — active, expiring, expired.
+Can see which employees have which certifications and their expiration dates.
+Cannot open or download the actual document files.
+Cannot see SSNs, full license numbers, or personal ID details.
+The summary view is sufficient for scheduling decisions.
+
+org_admin: no access to any compliance credential documents whatsoever.
+Can see that a document exists but cannot open, view, or download it.
+
+employee and contractor: can see and download only their own documents.
+Cannot see any other person's compliance documents through any interface
+including Trinity chat.
+
+auditor role (if created): read-only access to all compliance documents
+for audit purposes. Cannot edit, delete, or modify anything.
+Auditor access is time-limited — org_owner grants access for a specific period
+and it auto-expires.
+
+platform_staff: no access to actual document content.
+Can see metadata — that a document exists, its status, its expiration date.
+Cannot open, view, or download the actual file under any circumstance.
+
+Trinity herself: Trinity sees all compliance data to perform her tracking,
+alerting, and enforcement functions. Trinity does not surface individual
+document content in any chat response. She reports statuses and dates,
+never document contents. If an employee asks Trinity about their own
+license status Trinity tells them the status and expiration date but does
+not display the document. The document is accessed through the secure
+document portal only.
+
+---
+
+TRINITY COMPLIANCE BRIEFING — DAILY ORG OPERATIONS REPORT
+
+Every morning Trinity posts a compliance section in the Org Operations
+Briefing Channel for each org. The compliance section contains:
+
+LICENSES EXPIRING WITHIN 90 DAYS:
+List every employee whose security license expires within 90 days.
+Show name, license expiration date, days remaining, and current alert tier.
+
+CERTIFICATIONS EXPIRING WITHIN 90 DAYS:
+List every certification for every employee expiring within 90 days.
+Show name, certification type, expiration date, and days remaining.
+
+EXPIRED CREDENTIALS:
+List every employee with any expired credential.
+Show what is expired and the scheduling impact.
+
+DOCUMENTS PENDING UPLOAD:
+List any employee or contractor who has been asked to upload a document
+and has not done so within the required timeframe.
+
+COMPANY COMPLIANCE STATUS:
+Show org insurance expiration date and days remaining.
+Show company license expiration date and days remaining.
+Green, yellow, or red status indicator for each.
+
+SCHEDULING ELIGIBILITY IMPACTS:
+List every employee currently ineligible for scheduling due to expired credentials.
+Show what needs to be resolved to restore their eligibility.
+
+This briefing is visible to org_owner and manager only.
+It is never visible to employees, contractors, or org_admin.
+
+---
+
+TRINITY COMPLIANCE ENFORCEMENT RULES
+
+These are hard rules Trinity enforces — not suggestions:
+
+Rule 1: An employee with an expired security license cannot be scheduled
+for any shift at any client site. Trinity blocks the assignment at the
+scheduling layer. The manager sees a clear message explaining why.
+
+Rule 2: An employee whose license expires before the end date of a shift
+they are already scheduled for receives a WARNING. The manager must
+decide whether to replace the officer before the shift or accept the risk.
+Trinity flags this proactively, not reactively.
+
+Rule 3: A post that requires First Aid certification can only be assigned
+to an officer with an active First Aid certification. Trinity enforces this
+at the scheduling layer and will not allow an assignment that violates it.
+
+Rule 4: A post that requires a firearms qualification can only be assigned
+to an officer with an active firearms qualification. Same enforcement.
+
+Rule 5: An org whose company insurance has expired receives a CRITICAL
+platform alert. Trinity flags all active client sites as at-risk.
+Platform staff is also notified. This is not just an internal matter —
+operating without insurance is a legal and contractual violation.
+
+Rule 6: Trinity never auto-resolves a compliance issue. She identifies,
+alerts, and enforces eligibility gates — but a human always makes the
+final resolution decision. Trinity prepares the path, humans walk it.
+
+---
+
+DOCUMENT SCANNING AND VERIFICATION
+
+When any compliance document is uploaded Trinity performs these checks:
+
+Document authenticity scan:
+Is this a real government-issued or certification-body-issued document?
+Does it have the expected format and fields for this document type?
+Are there signs of tampering or alteration?
+If the scan raises any concern Trinity flags the document as needs review
+and notifies the manager and org_owner. Trinity does not reject it outright —
+she flags it for human review with her specific concerns noted.
+
+Data extraction:
+Trinity extracts: the holder's name, the issuing authority, the license or
+cert number, the issue date, and the expiration date.
+These extracted values are pre-populated into the employee record for
+the manager to review and confirm.
+The manager confirms the extracted data is correct before the document
+is accepted into the compliance system.
+
+State-specific validation:
+For security officer licenses Trinity knows the issuing authority format
+for each US state.
+Texas: Texas Department of Public Safety Private Security Bureau.
+Trinity validates that the issuing authority on the uploaded document
+matches the expected authority for the org's operating state.
+If an officer is licensed in a different state than the org's primary state
+Trinity notes this and flags whether that license is valid for the work
+being performed.
+
+---
+
+SIMULATION TEST FOR ACME — COMPLIANCE INTELLIGENCE
+
+Add these scenarios to the Acme simulation already running:
+
+Scenario 1 — License expiring in 25 days:
+Set one Acme employee's license expiration to 25 days from today.
+Confirm Trinity fires the 30-day URGENT alert immediately.
+Confirm the alert reaches all three channels simultaneously.
+Confirm the employee appears in the daily compliance briefing as urgent.
+Confirm the employee is still scheduling-eligible at 25 days — the hard block
+does not apply until the actual expiration date.
+
+Scenario 2 — License expired yesterday:
+Set one Acme employee's license expiration to yesterday.
+Confirm Trinity marks the license as EXPIRED.
+Confirm Trinity removes the employee from scheduling eligibility immediately.
+Attempt to assign this employee to a shift.
+Confirm Trinity blocks the assignment with a clear message explaining
+that the officer's license is expired.
+Confirm the manager and org_owner both receive the expired license alert.
+
+Scenario 3 — Renewed guard card upload:
+Have the expired-license employee from Scenario 2 upload a renewed guard card.
+Use a realistic simulated Texas PSB license document.
+Confirm Trinity scans the document and extracts the new expiration date.
+Confirm Trinity presents the extracted data to the manager for confirmation.
+Manager confirms the data.
+Confirm Trinity restores the employee's scheduling eligibility.
+Confirm the license status updates to Active with the new expiration date.
+Confirm the manager and org_owner receive the eligibility restored notification.
+
+Scenario 4 — First Aid cert required post:
+Create a client site post that requires First Aid certification.
+Attempt to assign an officer without a First Aid cert to this post.
+Confirm Trinity blocks the assignment with a clear message about the
+certification requirement for this specific post.
+Have the officer upload their First Aid certification.
+Confirm Trinity extracts the expiration date and adds it to their profile.
+Attempt the assignment again.
+Confirm Trinity allows it now that the cert is active.
+
+Scenario 5 — Company insurance expiring in 45 days:
+Set the Acme insurance certificate expiration to 45 days from today.
+Confirm Trinity fires the 60-day WARNING alert to the org_owner.
+Confirm it appears in the daily compliance briefing.
+Confirm the alert fires via all three channels.
+
+Scenario 6 — Multi-state officer:
+Create an Acme employee with a Louisiana security license instead of Texas.
+Confirm Trinity notes the out-of-state license.
+Confirm Trinity flags it for manager review with a note about verifying
+whether the Louisiana license is valid for Texas operations.
+Confirm the manager can override and approve the out-of-state license
+with a documented reason if they choose to.
+
+Report all simulation results with pass or fail for each scenario.
+Any failure is a bug that must be fixed before this system is production ready.
+If all six scenarios pass Trinity compliance intelligence is production ready
+for Statewide Protective Services.

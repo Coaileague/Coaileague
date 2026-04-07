@@ -1,0 +1,69 @@
+Good — the platform is maturing fast. What you need now isn't another gap hunt, it's a **semantic completeness audit** — meaning does every workflow actually complete end-to-end with real data, not just are the pieces wired. Paste this into Replit:
+
+---
+
+**SEMANTIC END-TO-END COMPLETENESS AUDIT — READ ONLY | REPORT ONLY | NO FIXES YET**
+
+Do not fix anything. Do not build anything. Read every layer and answer every question below with PASS, FAIL, or PARTIAL and one sentence explaining why.
+
+---
+
+**PILLAR 1 — CLIENT LIFECYCLE**
+- Can a new client be created with all required billing data — name, address, email, armed/unarmed rate, overtime rate, contract rate, billing cycle?
+- Does the client record have a field for invoice delivery email separate from the contact email?
+- When a client is created, does Trinity automatically initialize their billing profile and schedule a first invoice run?
+- Can an invoice be generated, previewed, approved, sent to the client email, marked paid, and pushed to QuickBooks — without any manual steps outside the platform?
+- Is there an automatic follow-up sequence when an invoice goes unpaid past due date?
+- Is profit/loss per client calculable from existing data — revenue minus officer pay minus platform fees?
+
+**PILLAR 2 — EMPLOYEE/CONTRACTOR LIFECYCLE**
+- Can a new employee be created with all required data — name, address, SSN or EIN, pay rate, employment type (W2/1099), direct deposit account, DPS license number, expiry date, certifications, emergency contact?
+- Is direct deposit account information stored securely with field-level encryption or equivalent?
+- When payroll runs, does it generate a pay stub record per employee with gross pay, deductions, net pay, and pay period?
+- Can an employee download their own pay stub from the platform?
+- Is there a year-end tax document generation path — W2 for employees, 1099 for contractors?
+- Are terminated employees' records preserved with a termination date and reason for tax and compliance records?
+
+**PILLAR 3 — PAYROLL PIPELINE**
+- Is every payroll run tied to approved timesheets only — can unapproved time entries enter payroll?
+- Is there an approval chain: timesheet submitted → manager approved → payroll drafted → owner approved → processed?
+- Does payroll push to QuickBooks automatically after owner approval?
+- Is there a payroll lock — can the same pay period be processed twice?
+- Are contractor payments handled separately from W2 payroll with correct 1099 tracking?
+
+**PILLAR 4 — INVOICE PIPELINE**
+- Is every invoice line item traceable to a specific shift, officer, and approved timesheet?
+- Can the org owner see a full audit trail — shift worked → timesheet approved → invoice line item → invoice sent → payment received?
+- Does the platform handle partial payments on invoices?
+- Is there a collections escalation path — overdue → reminder → final notice → collections flag?
+- Are invoice records preserved permanently for tax purposes even after client cancellation?
+
+**PILLAR 5 — TRINITY DATA ACCESS**
+- Does Trinity have read access to all client billing settings when generating invoices?
+- Does Trinity have read access to all employee pay rates and direct deposit status when running payroll?
+- When Trinity detects a missing required data field — no client email, no employee pay rate, no direct deposit account — does it surface a specific actionable alert to the org owner rather than silently failing?
+- Can Trinity produce a profit/loss summary for any date range on demand?
+- Can Trinity identify which clients are most profitable and which are operating at a loss?
+
+**PILLAR 6 — RECORDS & TAX**
+- Are all financial records — invoices, payroll runs, pay stubs, payments — write-protected after a close period?
+- Is there an export function for all financial records by date range for tax filing purposes?
+- Is there an audit log of every financial mutation — who changed what, when, and what it was before?
+
+---
+
+**OUTPUT FORMAT**
+
+For each question: `PASS`, `FAIL`, or `PARTIAL — [one sentence]`
+
+Then at the bottom produce two lists:
+
+**FAILS and PARTIALS that are production blockers** — things that would prevent a real paying client from completing a full billing or payroll cycle
+
+**FAILS and PARTIALS that are non-blockers** — missing features that are nice to have but don't break core workflows
+
+Stop and wait. Do not fix anything yet.
+
+---
+
+Paste the results back here and I'll tell you exactly what to fix before you onboard your first real tenant.

@@ -1,0 +1,784 @@
+# COAILEAGUE - SURGICAL ENUM VALUE AUDIT
+
+## THE NIGHTMARE SCENARIO (What You Just Found)
+
+```
+DATABASE ENUM: actor_type
+VALID VALUES: 'END_USER', 'SUPPORT_STAFF', 'AI_AGENT', 'SYSTEM' (UPPERCASE)
+
+CODE IS USING: 'system', 'user', 'admin', 'webhook', 'human' (lowercase, WRONG)
+
+RESULT: Silent insert failures on enum-constrained tables
+```
+
+**THE TRAP:** Some tables use the actual enum, others use varchar. Code works on varchar tables but FAILS on enum tables!
+
+---
+
+# PART 1: MAP ENUM vs VARCHAR COLUMNS
+
+## 1.1 Find ALL Columns Using Actual Enums
+
+```sql
+-- CRITICAL: Find which columns use actual PostgreSQL enums
+SELECT 
+  c.table_name,
+  c.column_name,
+  c.udt_name AS enum_type,
+  c.is_nullable
+FROM information_schema.columns c
+WHERE c.table_schema = 'public'
+  AND c.data_type = 'USER-DEFINED'
+ORDER BY c.udt_name, c.table_name;
+```
+
+**Expected output format:**
+```
+| table_name              | column_name | enum_type        | is_nullable |
+|-------------------------|-------------|------------------|-------------|
+| access_control_events   | actor_type  | entity_type      | YES         |
+| credit_transactions     | actor_type  | actor_type       | NO          |
+| write_ahead_log         | actor_type  | actor_type       | YES         |
+| ai_brain_live_events    | actor_type  | ai_brain_actor   | YES         |
+```
+
+## 1.2 Find ALL Columns That LOOK Like Enums But Are VARCHAR
+
+```sql
+-- These accept any string - code won't fail but data is inconsistent
+SELECT 
+  c.table_name,
+  c.column_name,
+  c.data_type,
+  c.character_maximum_length
+FROM information_schema.columns c
+WHERE c.table_schema = 'public'
+  AND c.data_type IN ('character varying', 'text')
+  AND (
+    c.column_name LIKE '%type%'
+    OR c.column_name LIKE '%status%'
+    OR c.column_name LIKE '%state%'
+    OR c.column_name LIKE '%role%'
+    OR c.column_name LIKE '%actor%'
+  )
+ORDER BY c.column_name, c.table_name;
+```
+
+## 1.3 Get ALL Enum Definitions and Their Values
+
+```sql
+-- Get every enum and its valid values
+SELECT 
+  t.typname AS enum_name,
+  array_agg(e.enumlabel ORDER BY e.enumsortorder) AS valid_values
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE n.nspname = 'public'
+GROUP BY t.typname
+ORDER BY t.typname;
+```
+
+**YOUR ACTUAL ENUMS (from the investigation):**
+```
+actor_type:       ['END_USER', 'SUPPORT_STAFF', 'AI_AGENT', 'SYSTEM']
+entity_type:      ['human', 'bot', 'subagent', 'automation', 'external_integration']
+event_status:     ['pending', 'in_progress', 'completed', 'failed', 'rolled_back']
+account_state:    ['active', 'trial', 'payment_failed', 'suspended', 'requires_support', 'cancelled', 'terminated']
+```
+
+---
+
+# PART 2: FIND ALL INSERTS TO ENUM-CONSTRAINED TABLES
+
+## 2.1 Tables That Use actor_type ENUM
+
+Based on your findings, these tables use the ACTUAL `actor_type` enum:
+- `credit_transactions`
+- `write_ahead_log`
+
+These tables use OTHER enums:
+- `access_control_events` → uses `entity_type` enum (accepts 'human', 'bot', etc.)
+- `ai_brain_live_events` → uses `ai_brain_actor_type` enum
+
+## 2.2 Find ALL Code That Inserts to These Tables
+
+```bash
+#!/bin/bash
+# find_enum_table_inserts.sh
+
+echo "=== FINDING INSERTS TO ENUM-CONSTRAINED TABLES ==="
+
+# Tables that use actor_type enum
+ENUM_TABLES=(
+  "credit_transactions"
+  "creditTransactions"
+  "write_ahead_log"
+  "writeAheadLog"
+)
+
+for table in "${ENUM_TABLES[@]}"; do
+  echo ""
+  echo "=== INSERTS TO: $table ==="
+  grep -rn "insert($table\|into.*$table\|\.insert.*$table" --include="*.ts" server/
+  grep -rn "$table.*\.values\|$table.*\.insert" --include="*.ts" server/
+done
+
+# Find what actorType values are being set
+echo ""
+echo "=== actorType VALUES BEING SET ==="
+grep -rn "actorType:" --include="*.ts" server/ | grep -oP "actorType:\s*['\"]?\K[^'\"',}]+" | sort | uniq -c | sort -rn
+```
+
+## 2.3 Cross-Reference: Code Values vs Enum Values
+
+```bash
+#!/bin/bash
+# cross_reference_enums.sh
+
+echo "=== CROSS-REFERENCING CODE VALUES VS DB ENUMS ==="
+
+# actor_type enum valid values
+VALID_ACTOR_TYPES=("END_USER" "SUPPORT_STAFF" "AI_AGENT" "SYSTEM")
+
+# Find all actorType values in code
+echo "Checking actorType values..."
+grep -rn "actorType:" --include="*.ts" server/ | while read line; do
+  # Extract the value
+  value=$(echo "$line" | grep -oP "actorType:\s*['\"]?\K[A-Za-z_]+")
+  
+  if [ -n "$value" ]; then
+    # Check if it's in valid list
+    valid=false
+    for v in "${VALID_ACTOR_TYPES[@]}"; do
+      if [ "$value" == "$v" ]; then
+        valid=true
+        break
+      fi
+    done
+    
+    if [ "$valid" == "false" ]; then
+      echo "❌ INVALID: $line"
+      echo "   Value '$value' not in enum [${VALID_ACTOR_TYPES[*]}]"
+    fi
+  fi
+done
+
+# entity_type enum valid values  
+VALID_ENTITY_TYPES=("human" "bot" "subagent" "automation" "external_integration")
+
+echo ""
+echo "Checking entityType values..."
+grep -rn "entityType:" --include="*.ts" server/ | while read line; do
+  value=$(echo "$line" | grep -oP "entityType:\s*['\"]?\K[A-Za-z_]+")
+  
+  if [ -n "$value" ]; then
+    valid=false
+    for v in "${VALID_ENTITY_TYPES[@]}"; do
+      if [ "$value" == "$v" ]; then
+        valid=true
+        break
+      fi
+    done
+    
+    if [ "$valid" == "false" ]; then
+      echo "❌ INVALID: $line"
+      echo "   Value '$value' not in enum [${VALID_ENTITY_TYPES[*]}]"
+    fi
+  fi
+done
+```
+
+---
+
+# PART 3: THE SPECIFIC FIXES NEEDED
+
+## 3.1 actor_type Enum Mapping
+
+```typescript
+// CREATE THIS FILE: server/constants/actorTypes.ts
+
+/**
+ * ACTOR TYPE ENUM VALUES
+ * 
+ * The database enum 'actor_type' ONLY accepts these values.
+ * Any other value will cause an insert to FAIL.
+ */
+
+export const ACTOR_TYPES = {
+  END_USER: 'END_USER',
+  SUPPORT_STAFF: 'SUPPORT_STAFF', 
+  AI_AGENT: 'AI_AGENT',
+  SYSTEM: 'SYSTEM',
+} as const;
+
+export type ActorType = typeof ACTOR_TYPES[keyof typeof ACTOR_TYPES];
+
+/**
+ * Map common code values to valid enum values
+ */
+export function normalizeActorType(value: string): ActorType {
+  const mapping: Record<string, ActorType> = {
+    // Lowercase variations
+    'system': ACTOR_TYPES.SYSTEM,
+    'user': ACTOR_TYPES.END_USER,
+    'end_user': ACTOR_TYPES.END_USER,
+    'enduser': ACTOR_TYPES.END_USER,
+    'admin': ACTOR_TYPES.SUPPORT_STAFF,
+    'support': ACTOR_TYPES.SUPPORT_STAFF,
+    'support_staff': ACTOR_TYPES.SUPPORT_STAFF,
+    'staff': ACTOR_TYPES.SUPPORT_STAFF,
+    'ai': ACTOR_TYPES.AI_AGENT,
+    'ai_agent': ACTOR_TYPES.AI_AGENT,
+    'bot': ACTOR_TYPES.AI_AGENT,
+    'webhook': ACTOR_TYPES.SYSTEM,
+    'automation': ACTOR_TYPES.SYSTEM,
+    'cron': ACTOR_TYPES.SYSTEM,
+    
+    // Already correct (uppercase)
+    'END_USER': ACTOR_TYPES.END_USER,
+    'SUPPORT_STAFF': ACTOR_TYPES.SUPPORT_STAFF,
+    'AI_AGENT': ACTOR_TYPES.AI_AGENT,
+    'SYSTEM': ACTOR_TYPES.SYSTEM,
+  };
+  
+  const normalized = mapping[value] || mapping[value.toLowerCase()];
+  
+  if (!normalized) {
+    console.warn(`Unknown actor type: ${value}, defaulting to SYSTEM`);
+    return ACTOR_TYPES.SYSTEM;
+  }
+  
+  return normalized;
+}
+
+/**
+ * Validate that a value is a valid actor type
+ */
+export function isValidActorType(value: string): value is ActorType {
+  return Object.values(ACTOR_TYPES).includes(value as ActorType);
+}
+```
+
+## 3.2 entity_type Enum Mapping
+
+```typescript
+// CREATE THIS FILE: server/constants/entityTypes.ts
+
+/**
+ * ENTITY TYPE ENUM VALUES
+ * 
+ * Used by access_control_events table
+ */
+
+export const ENTITY_TYPES = {
+  HUMAN: 'human',
+  BOT: 'bot',
+  SUBAGENT: 'subagent',
+  AUTOMATION: 'automation',
+  EXTERNAL_INTEGRATION: 'external_integration',
+} as const;
+
+export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
+
+export function normalizeEntityType(value: string): EntityType {
+  const mapping: Record<string, EntityType> = {
+    'human': ENTITY_TYPES.HUMAN,
+    'user': ENTITY_TYPES.HUMAN,
+    'person': ENTITY_TYPES.HUMAN,
+    'bot': ENTITY_TYPES.BOT,
+    'ai': ENTITY_TYPES.BOT,
+    'subagent': ENTITY_TYPES.SUBAGENT,
+    'sub_agent': ENTITY_TYPES.SUBAGENT,
+    'automation': ENTITY_TYPES.AUTOMATION,
+    'auto': ENTITY_TYPES.AUTOMATION,
+    'cron': ENTITY_TYPES.AUTOMATION,
+    'external_integration': ENTITY_TYPES.EXTERNAL_INTEGRATION,
+    'external': ENTITY_TYPES.EXTERNAL_INTEGRATION,
+    'integration': ENTITY_TYPES.EXTERNAL_INTEGRATION,
+    'webhook': ENTITY_TYPES.EXTERNAL_INTEGRATION,
+  };
+  
+  return mapping[value.toLowerCase()] || ENTITY_TYPES.HUMAN;
+}
+```
+
+## 3.3 event_status Enum Mapping
+
+```typescript
+// CREATE THIS FILE: server/constants/eventStatus.ts
+
+/**
+ * EVENT STATUS ENUM VALUES
+ * 
+ * Used by write_ahead_log and other tables
+ */
+
+export const EVENT_STATUS = {
+  PENDING: 'pending',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  ROLLED_BACK: 'rolled_back',
+} as const;
+
+export type EventStatus = typeof EVENT_STATUS[keyof typeof EVENT_STATUS];
+
+// Common mistake: code uses 'committed' but enum has 'completed'
+export function normalizeEventStatus(value: string): EventStatus {
+  const mapping: Record<string, EventStatus> = {
+    'pending': EVENT_STATUS.PENDING,
+    'in_progress': EVENT_STATUS.IN_PROGRESS,
+    'processing': EVENT_STATUS.IN_PROGRESS,
+    'completed': EVENT_STATUS.COMPLETED,
+    'committed': EVENT_STATUS.COMPLETED,  // COMMON MISTAKE
+    'done': EVENT_STATUS.COMPLETED,
+    'success': EVENT_STATUS.COMPLETED,
+    'failed': EVENT_STATUS.FAILED,
+    'error': EVENT_STATUS.FAILED,
+    'rolled_back': EVENT_STATUS.ROLLED_BACK,
+    'rollback': EVENT_STATUS.ROLLED_BACK,
+    'reverted': EVENT_STATUS.ROLLED_BACK,
+  };
+  
+  return mapping[value.toLowerCase()] || EVENT_STATUS.PENDING;
+}
+```
+
+---
+
+# PART 4: FIND AND FIX ALL VIOLATIONS
+
+## 4.1 Comprehensive Search Script
+
+```bash
+#!/bin/bash
+# find_all_enum_violations.sh
+
+echo "============================================================"
+echo "COMPREHENSIVE ENUM VALUE VIOLATION SEARCH"
+echo "============================================================"
+
+OUTPUT_FILE="/tmp/enum_violations.txt"
+echo "" > $OUTPUT_FILE
+
+# Define valid values for each enum
+declare -A VALID_ENUMS
+VALID_ENUMS[actor_type]="END_USER|SUPPORT_STAFF|AI_AGENT|SYSTEM"
+VALID_ENUMS[entity_type]="human|bot|subagent|automation|external_integration"
+VALID_ENUMS[event_status]="pending|in_progress|completed|failed|rolled_back"
+VALID_ENUMS[account_state]="active|trial|payment_failed|suspended|requires_support|cancelled|terminated"
+
+# Tables that use each enum (from your investigation)
+declare -A ENUM_TABLES
+ENUM_TABLES[actor_type]="credit_transactions|creditTransactions|write_ahead_log|writeAheadLog"
+ENUM_TABLES[entity_type]="access_control_events|accessControlEvents"
+ENUM_TABLES[event_status]="write_ahead_log|writeAheadLog|audit_events|auditEvents"
+ENUM_TABLES[account_state]="workspaces"
+
+echo ""
+echo "=== SEARCHING FOR INVALID ENUM VALUES ==="
+
+# 1. Check actorType values
+echo "" 
+echo "--- actorType violations ---" | tee -a $OUTPUT_FILE
+grep -rn "actorType:" --include="*.ts" server/ | while read line; do
+  value=$(echo "$line" | grep -oP "actorType:\s*['\"]?\K[A-Za-z_]+")
+  if [ -n "$value" ]; then
+    if ! echo "$value" | grep -qE "^(${VALID_ENUMS[actor_type]})$"; then
+      echo "❌ $line" | tee -a $OUTPUT_FILE
+      echo "   Invalid value: '$value'" | tee -a $OUTPUT_FILE
+    fi
+  fi
+done
+
+# 2. Check status values (for event_status)
+echo ""
+echo "--- event_status violations ---" | tee -a $OUTPUT_FILE
+grep -rn "status:\s*['\"]" --include="*.ts" server/ | \
+  grep -E "writeAheadLog|write_ahead_log|auditEvents|audit_events" | while read line; do
+  value=$(echo "$line" | grep -oP "status:\s*['\"]?\K[a-z_]+")
+  if [ -n "$value" ]; then
+    if ! echo "$value" | grep -qE "^(${VALID_ENUMS[event_status]})$"; then
+      echo "❌ $line" | tee -a $OUTPUT_FILE
+      echo "   Invalid value: '$value'" | tee -a $OUTPUT_FILE
+    fi
+  fi
+done
+
+# 3. Check accountState values
+echo ""
+echo "--- account_state violations ---" | tee -a $OUTPUT_FILE
+grep -rn "accountState:" --include="*.ts" server/ | while read line; do
+  value=$(echo "$line" | grep -oP "accountState:\s*['\"]?\K[a-z_]+")
+  if [ -n "$value" ]; then
+    if ! echo "$value" | grep -qE "^(${VALID_ENUMS[account_state]})$"; then
+      echo "❌ $line" | tee -a $OUTPUT_FILE
+      echo "   Invalid value: '$value'" | tee -a $OUTPUT_FILE
+    fi
+  fi
+done
+
+# 4. Check for 'committed' (common mistake for 'completed')
+echo ""
+echo "--- 'committed' should be 'completed' ---" | tee -a $OUTPUT_FILE
+grep -rn "'committed'\|\"committed\"" --include="*.ts" server/ | tee -a $OUTPUT_FILE
+
+# 5. Check for lowercase actor types in enum-constrained contexts
+echo ""
+echo "--- Lowercase actor types (should be UPPERCASE) ---" | tee -a $OUTPUT_FILE
+grep -rn "actorType:\s*['\"]system\|actorType:\s*['\"]user\|actorType:\s*['\"]admin" --include="*.ts" server/ | tee -a $OUTPUT_FILE
+
+# Summary
+echo ""
+echo "============================================================"
+echo "SUMMARY"
+echo "============================================================"
+echo "Total violations found: $(grep -c "❌" $OUTPUT_FILE)"
+echo "Full report: $OUTPUT_FILE"
+```
+
+## 4.2 SQL Verification Queries
+
+```sql
+-- Find invalid enum values already in database
+-- (These got in somehow, maybe via raw SQL or before enum was enforced)
+
+-- Check credit_transactions for invalid actor_type
+SELECT DISTINCT actor_type, COUNT(*) 
+FROM credit_transactions 
+GROUP BY actor_type;
+
+-- Check write_ahead_log for invalid actor_type
+SELECT DISTINCT actor_type, COUNT(*) 
+FROM write_ahead_log 
+GROUP BY actor_type;
+
+-- Check for NULL actor_type where it shouldn't be
+SELECT table_name, COUNT(*) as null_count
+FROM (
+  SELECT 'credit_transactions' as table_name FROM credit_transactions WHERE actor_type IS NULL
+  UNION ALL
+  SELECT 'write_ahead_log' as table_name FROM write_ahead_log WHERE actor_type IS NULL
+) x
+GROUP BY table_name;
+```
+
+---
+
+# PART 5: THE FIX STRATEGY
+
+## 5.1 Option A: Fix at Insert Time (Recommended)
+
+```typescript
+// Before ANY insert to enum-constrained tables, normalize the value
+
+// BEFORE (breaks):
+await db.insert(creditTransactions).values({
+  workspaceId,
+  actorType: 'system',  // ❌ WRONG - lowercase
+  // ...
+});
+
+// AFTER (works):
+import { normalizeActorType, ACTOR_TYPES } from '../constants/actorTypes';
+
+await db.insert(creditTransactions).values({
+  workspaceId,
+  actorType: ACTOR_TYPES.SYSTEM,  // ✅ CORRECT - use constant
+  // ...
+});
+
+// Or with normalization for dynamic values:
+await db.insert(creditTransactions).values({
+  workspaceId,
+  actorType: normalizeActorType(someValue),  // ✅ Normalized
+  // ...
+});
+```
+
+## 5.2 Option B: Add Database Trigger (Safety Net)
+
+```sql
+-- Create a trigger that normalizes actor_type values before insert
+CREATE OR REPLACE FUNCTION normalize_actor_type()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Normalize common lowercase values to uppercase
+  NEW.actor_type = CASE UPPER(NEW.actor_type)
+    WHEN 'SYSTEM' THEN 'SYSTEM'
+    WHEN 'USER' THEN 'END_USER'
+    WHEN 'END_USER' THEN 'END_USER'
+    WHEN 'ADMIN' THEN 'SUPPORT_STAFF'
+    WHEN 'SUPPORT_STAFF' THEN 'SUPPORT_STAFF'
+    WHEN 'STAFF' THEN 'SUPPORT_STAFF'
+    WHEN 'AI' THEN 'AI_AGENT'
+    WHEN 'AI_AGENT' THEN 'AI_AGENT'
+    WHEN 'BOT' THEN 'AI_AGENT'
+    WHEN 'WEBHOOK' THEN 'SYSTEM'
+    WHEN 'AUTOMATION' THEN 'SYSTEM'
+    ELSE 'SYSTEM'  -- Default fallback
+  END;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply to credit_transactions
+CREATE TRIGGER normalize_credit_transactions_actor_type
+  BEFORE INSERT OR UPDATE ON credit_transactions
+  FOR EACH ROW
+  EXECUTE FUNCTION normalize_actor_type();
+
+-- Apply to write_ahead_log
+CREATE TRIGGER normalize_wal_actor_type
+  BEFORE INSERT OR UPDATE ON write_ahead_log
+  FOR EACH ROW
+  EXECUTE FUNCTION normalize_actor_type();
+```
+
+## 5.3 Option C: Add Missing Enum Values (If Lowercase is Preferred)
+
+```sql
+-- If you WANT lowercase values, add them to the enum
+-- WARNING: This is a one-way operation, you can't remove enum values easily
+
+ALTER TYPE actor_type ADD VALUE IF NOT EXISTS 'system';
+ALTER TYPE actor_type ADD VALUE IF NOT EXISTS 'user';
+ALTER TYPE actor_type ADD VALUE IF NOT EXISTS 'admin';
+ALTER TYPE actor_type ADD VALUE IF NOT EXISTS 'webhook';
+ALTER TYPE actor_type ADD VALUE IF NOT EXISTS 'automation';
+```
+
+---
+
+# PART 6: SPECIFIC FILES TO FIX
+
+Based on your investigation, here are the likely files with violations:
+
+```
+FILES TO CHECK AND FIX:
+
+server/services/creditManager.ts
+- ✅ Already fixed (uses uppercase)
+
+server/services/emailAutomation.ts
+- ❌ Doesn't set actorType (NULL insert)
+- FIX: Add actorType: ACTOR_TYPES.SYSTEM
+
+server/services/audit-logger.ts
+- Check all logEvent calls
+- Ensure actorType uses uppercase constants
+
+server/services/storage.ts
+- Line ~2681: Check auditEvents insert
+- Line ~2749: Check writeAheadLog insert
+- Ensure 'committed' changed to 'completed'
+
+server/routes/hrInlineRoutes.ts
+- Line ~247: Check actorType value
+- Was using 'platform_staff', should be 'SUPPORT_STAFF'
+
+server/routes/governanceInlineRoutes.ts
+- Check all actorType assignments
+
+server/routes/endUserControlRoutes.ts
+- Check logAdminAction calls
+
+ANY FILE that imports/uses these tables:
+- credit_transactions / creditTransactions
+- write_ahead_log / writeAheadLog
+- access_control_events / accessControlEvents
+```
+
+---
+
+# PART 7: PREVENTION - TypeScript Enforcement
+
+## 7.1 Update Schema Types
+
+```typescript
+// shared/schema.ts - Add strict typing
+
+// Define enum type that matches database
+export const actorTypeValues = ['END_USER', 'SUPPORT_STAFF', 'AI_AGENT', 'SYSTEM'] as const;
+export type ActorTypeEnum = typeof actorTypeValues[number];
+
+// Use in table definition
+export const creditTransactions = pgTable('credit_transactions', {
+  // ...
+  actorType: varchar('actor_type', { length: 50 }).$type<ActorTypeEnum>().notNull(),
+  // ...
+});
+```
+
+## 7.2 Add Zod Validation
+
+```typescript
+// shared/validations/actorType.ts
+
+import { z } from 'zod';
+
+export const actorTypeSchema = z.enum(['END_USER', 'SUPPORT_STAFF', 'AI_AGENT', 'SYSTEM']);
+
+// Use in API validation
+const createCreditTransactionSchema = z.object({
+  workspaceId: z.string().uuid(),
+  actorType: actorTypeSchema,  // Will reject invalid values at API level
+  // ...
+});
+```
+
+---
+
+# PART 8: VERIFICATION
+
+## 8.1 After Fixes - Test Inserts
+
+```typescript
+// Test script to verify all enum values work
+
+async function testEnumInserts() {
+  const testCases = [
+    { table: 'credit_transactions', actorType: 'END_USER' },
+    { table: 'credit_transactions', actorType: 'SUPPORT_STAFF' },
+    { table: 'credit_transactions', actorType: 'AI_AGENT' },
+    { table: 'credit_transactions', actorType: 'SYSTEM' },
+  ];
+  
+  for (const test of testCases) {
+    try {
+      await db.insert(creditTransactions).values({
+        id: crypto.randomUUID(),
+        workspaceId: 'test-workspace',
+        actorType: test.actorType,
+        // ... other required fields
+      });
+      console.log(`✅ ${test.table} with actorType=${test.actorType} - SUCCESS`);
+    } catch (error) {
+      console.log(`❌ ${test.table} with actorType=${test.actorType} - FAILED: ${error.message}`);
+    }
+  }
+}
+```
+
+## 8.2 Monitor for Future Violations
+
+```sql
+-- Create a log of invalid enum attempts (if using triggers)
+CREATE TABLE enum_violation_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  table_name TEXT,
+  column_name TEXT,
+  attempted_value TEXT,
+  normalized_to TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Modify trigger to log violations
+CREATE OR REPLACE FUNCTION normalize_actor_type()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.actor_type NOT IN ('END_USER', 'SUPPORT_STAFF', 'AI_AGENT', 'SYSTEM') THEN
+    INSERT INTO enum_violation_log (table_name, column_name, attempted_value, normalized_to)
+    VALUES (TG_TABLE_NAME, 'actor_type', NEW.actor_type, 'SYSTEM');
+  END IF;
+  
+  -- ... normalization logic ...
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+---
+
+# OUTPUT FORMAT
+
+```markdown
+# ENUM VALUE VIOLATION REPORT
+
+## Date: [DATE]
+## Total Violations: [NUMBER]
+
+---
+
+## ACTOR_TYPE VIOLATIONS (CRITICAL - Causes Insert Failures)
+
+| File | Line | Current Value | Should Be |
+|------|------|---------------|-----------|
+| storage.ts | 2681 | 'system' | 'SYSTEM' |
+| hrInlineRoutes.ts | 250 | 'platform_staff' | 'SUPPORT_STAFF' |
+| emailAutomation.ts | 45 | NULL | 'SYSTEM' |
+
+---
+
+## EVENT_STATUS VIOLATIONS
+
+| File | Line | Current Value | Should Be |
+|------|------|---------------|-----------|
+| storage.ts | 2749 | 'committed' | 'completed' |
+| auditLogger.ts | 89 | 'committed' | 'completed' |
+
+---
+
+## ACCOUNT_STATE VIOLATIONS
+
+| File | Line | Current Value | Should Be |
+|------|------|---------------|-----------|
+| hrInlineRoutes.ts | 260 | 'maintenance' | Add to enum or use 'suspended' |
+| hrInlineRoutes.ts | 275 | 'deactivated' | Add to enum or use 'terminated' |
+
+---
+
+## TABLES USING ACTUAL ENUMS (Must Be Exact)
+
+| Table | Column | Enum Type | Valid Values |
+|-------|--------|-----------|--------------|
+| credit_transactions | actor_type | actor_type | END_USER, SUPPORT_STAFF, AI_AGENT, SYSTEM |
+| write_ahead_log | actor_type | actor_type | END_USER, SUPPORT_STAFF, AI_AGENT, SYSTEM |
+| access_control_events | actor_type | entity_type | human, bot, subagent, automation, external_integration |
+
+---
+
+## TABLES USING VARCHAR (Any String Accepted - But Keep Consistent)
+
+| Table | Column | Recommendation |
+|-------|--------|----------------|
+| audit_events | actor_type | Use uppercase for consistency |
+| system_audit_logs | actor_type | Use uppercase for consistency |
+
+---
+
+## FIXES APPLIED
+
+1. ✅ Created server/constants/actorTypes.ts
+2. ✅ Created server/constants/entityTypes.ts
+3. ✅ Updated storage.ts lines 2681, 2749
+4. ✅ Updated hrInlineRoutes.ts lines 250, 260, 275
+5. ✅ Added SQL migration for missing enum values
+
+---
+
+## VERIFICATION
+
+[ ] All inserts to credit_transactions work
+[ ] All inserts to write_ahead_log work
+[ ] No 'committed' status anywhere
+[ ] No lowercase actor types in enum tables
+[ ] TypeScript types enforce valid values
+```
+
+---
+
+# EXECUTION
+
+1. **Run the detection script** - Find all violations
+2. **Create constant files** - Define valid values
+3. **Fix each violation** - Use constants or normalizers
+4. **Run SQL migrations** - Add missing values if needed
+5. **Add TypeScript enforcement** - Prevent future issues
+6. **Test all inserts** - Verify fixes work
+7. **Monitor** - Log any future violations
+
+**THIS IS THE SURGICAL FIX FOR YOUR ENUM NIGHTMARE.**
+
+**BEGIN ENUM VALUE AUDIT NOW.**

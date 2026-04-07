@@ -6,6 +6,7 @@
 
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { secureFetch } from '@/lib/csrf';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +47,7 @@ export function CheckpointAlert({ workspaceId, variant = 'detailed' }: Checkpoin
   // Resume automation mutation
   const resumeMutation = useMutation({
     mutationFn: async (checkpointId: string) => {
-      const response = await fetch(`/api/ai-brain/checkpoints/${checkpointId}/resume`, {
+      const response = await secureFetch(`/api/ai-brain/checkpoints/${checkpointId}/resume`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

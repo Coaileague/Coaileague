@@ -1,0 +1,839 @@
+# TRINITY COMPLETE CAPABILITY GAP ANALYSIS
+## Autonomous Operations, Proactive Intelligence & Full Feature Coverage
+### CoAIleague · March 2026 · Send to Replit Developer
+
+---
+
+## WHAT THIS DOCUMENT IS
+
+The previous gap analysis covered wiring problems — services that exist but aren't connected to Trinity.
+This document covers the **deeper missing layer**: Trinity's autonomous operational intelligence.
+The difference is critical:
+
+- **Gap Analysis 1** = Trinity can't do things she should be able to do
+- **This document** = Trinity doesn't proactively DO things without being asked
+  AND full feature parity audit against everything CoAIleague promises users
+
+Trinity's ultimate job is not to answer questions.
+Her job is to **run the business cycle** — and alert humans only when she needs them.
+
+---
+
+## PART 1: THE AUTONOMOUS SCHEDULING ENGINE
+### What's Missing: Trinity as Proactive Schedule Builder
+
+---
+
+### CURRENT STATE
+Trinity can respond to scheduling questions.
+She cannot autonomously scan, detect need, build, validate, and publish a schedule.
+
+### WHAT MUST BE BUILT
+
+#### 1A — THE MONTHLY SCHEDULE CYCLE TRIGGER
+
+Trinity must run a scheduled job at the start of each billing cycle that:
+
+```typescript
+// Runs automatically on the 25th of each month for the following month
+// Also triggerable manually: "Trinity, build next month's schedule"
+
+async function trinityMonthlyCycleTrigger(orgId: string, targetMonth: string) {
+
+  // STEP 1: Scan staffing needs
+  const staffingNeeds = await scanStaffingRequirements(orgId, targetMonth)
+  // Pulls from: client contracts, site requirements, historical schedules,
+  // minimum coverage SLAs, day-of-week patterns
+
+  // STEP 2: Scan available workforce  
+  const workforce = await getAvailableWorkforce(orgId, targetMonth)
+  // Pulls from: employee availability, certifications, license expiry,
+  // requested time off, max hours, preferred sites
+
+  // STEP 3: Scan inbound staffing pipeline
+  const inboundNeeds = await scanEmailPipeline(orgId)
+  // Pulls from: calloff@ inbox, client requests, manually created open shifts
+  // Trinity reads these emails and converts them to scheduling needs
+
+  // STEP 4: Run schedule generation
+  const draftSchedule = await trinityScheduleEngine({
+    orgId,
+    period: targetMonth,
+    staffingNeeds,
+    workforce,
+    inboundNeeds,
+    rules: await getOrgSchedulingRules(orgId)
+    // rules include: OT limits, fatigue windows, certification requirements,
+    // client-specific officer requirements, site post orders
+  })
+
+  // STEP 5: Self-validate
+  const validation = await validateSchedule(draftSchedule)
+  // Checks: no conflicts, no expired licenses on armed posts,
+  // no OT violations, all SLA minimums met, margin positive on all shifts
+
+  // STEP 6: Auto-resolve conflicts
+  const resolved = await autoResolveConflicts(draftSchedule, validation.conflicts)
+
+  // STEP 7: Flag unresolvable items for human review
+  const escalations = resolved.unresolvable
+  // These get pushed to manager approval queue
+
+  // STEP 8: Publish what's clean, hold what needs review
+  await publishSchedule(resolved.clean, orgId)
+  await holdForReview(resolved.pending, orgId)
+
+  // STEP 9: Notify
+  await notifyManagers(orgId, {
+    scheduled: resolved.clean.length,
+    pendingReview: resolved.pending.length,
+    escalations: escalations
+  })
+}
+```
+
+#### 1B — SCHEDULE INTELLIGENCE RULES TRINITY MUST KNOW
+
+```
+HARD RULES (never violate, auto-block):
+- Expired PERC/license = no assignment, flag immediately
+- Armed post = only armed or above
+- Supervisor post = supervisor level only
+- No officer on two simultaneous shifts
+- No shift starting within 8 hours of previous shift end (fatigue rule)
+- Never schedule past max weekly hours without manager flag
+
+SOFT RULES (optimize for, note when violated):
+- Match officer to preferred site when possible
+- Distribute hours evenly across workforce
+- Minimize overtime — schedule to 38hrs to leave 2hr buffer
+- Pair new officers with experienced officers on first week at a site
+- Honor recurring availability patterns (officer always works weekends, etc.)
+- Balance armed/unarmed officer utilization across sites
+
+BUSINESS RULES (pulled from org settings):
+- Minimum coverage per site per shift (from client SLA)
+- Specific officer requirements per client (client requested a specific officer)
+- Blackout dates from org calendar
+- Holiday staffing premiums
+- On-call officer pool for gap coverage
+```
+
+#### 1C — INBOUND EMAIL PIPELINE → SCHEDULING TRIGGER
+
+```typescript
+// Trinity reads these inbound email addresses and converts to actions
+// calloffs@[orgdomain] — officer calling off a shift
+// schedules@[orgdomain] — client requesting coverage change
+// staffing@[orgdomain] — new staffing request from client
+// incidents@[orgdomain] — incident requiring coverage response
+
+async function processInboundStaffingEmail(email: InboundEmail) {
+  
+  // Trinity classifies the email
+  const classification = await trinity.classify(email, {
+    types: ['calloff', 'coverage_request', 'schedule_change', 
+            'new_client_need', 'incident_coverage', 'general']
+  })
+
+  switch(classification.type) {
+    case 'calloff':
+      // Extract: who, which shift, date
+      // Find replacement from available qualified officers
+      // Auto-assign if confident match found
+      // Alert supervisor if no clean replacement
+      break;
+      
+    case 'coverage_request':
+      // Extract: client, site, date, hours, level required
+      // Check workforce availability
+      // Draft shift and assign or open to marketplace
+      break;
+      
+    case 'new_client_need':
+      // Extract: client, site, schedule pattern, level required
+      // Build recurring shift template
+      // Assign to available officers
+      // Alert manager for approval before publishing
+      break;
+  }
+}
+```
+
+#### 1D — MANUALLY CREATED SHIFTS (Trinity Sees and Fills)
+
+```typescript
+// When a manager manually creates an open shift,
+// Trinity detects it within 60 seconds via realTimeBridge
+// and immediately attempts to fill it
+
+async function onOpenShiftCreated(shift: OpenShift) {
+  
+  // Find best candidates
+  const candidates = await findQualifiedCandidates(shift, {
+    respectAvailability: true,
+    checkCertifications: true,
+    avoidOvertime: true,
+    preferSiteMatch: true,
+    rankByHoursBalance: true
+  })
+
+  if (candidates.confident.length > 0) {
+    // Auto-assign top candidate, notify both officer and supervisor
+    await assignShift(shift.id, candidates.confident[0].officerId)
+    await notifyAssignment(candidates.confident[0], shift)
+  } else if (candidates.possible.length > 0) {
+    // Send shift offers to possible candidates, first to accept gets it
+    await sendShiftOffers(candidates.possible, shift)
+  } else {
+    // No viable candidates — escalate to manager with context
+    await escalateUncoveredShift(shift, {
+      reason: candidates.blockReasons,
+      suggestions: ['Post to shift marketplace', 'Contact on-call pool',
+                    'Offer OT to qualified officer', 'Notify client of gap risk']
+    })
+  }
+}
+```
+
+---
+
+## PART 2: THE AUTONOMOUS PAYROLL ENGINE
+### What's Missing: Schedule → Payroll Without Human Data Entry
+
+---
+
+### 2A — PAYROLL GENERATION TRIGGER
+
+```typescript
+// Runs automatically at end of each pay period
+// Also triggerable: "Trinity, generate payroll for this period"
+
+async function trinityPayrollCycle(orgId: string, payPeriod: PayPeriod) {
+
+  // STEP 1: Pull all approved timesheets for period
+  const timesheets = await getApprovedTimesheets(orgId, payPeriod)
+
+  // STEP 2: Pull schedule for cross-reference
+  const schedule = await getScheduleForPeriod(orgId, payPeriod)
+
+  // STEP 3: Identify discrepancies
+  const discrepancies = await crossReferenceTimesheetVsSchedule(timesheets, schedule)
+  // Flags: worked but not scheduled, scheduled but not worked,
+  // clock time differs from shift time by more than threshold
+
+  // STEP 4: Apply pay rules
+  const payroll = await calculatePayroll(timesheets, {
+    overtimeRule: org.overtimeRule,       // TX: weekly 40
+    overtimeMultiplier: 1.5,
+    payRates: await getEmployeePayRates(orgId),
+    deductions: await getDeductions(orgId),
+    taxWithholding: await getTaxSettings(orgId)
+  })
+
+  // STEP 5: Validate math
+  const validation = await validatePayrollMath(payroll)
+  // Cross-checks: total gross = sum of individual gross
+  // No employee paid for unworked hours
+  // OT calculated correctly per state rule
+  // No negative net pay
+
+  // STEP 6: Generate payroll draft
+  const draft = await createPayrollDraft(payroll, orgId)
+
+  // STEP 7: Flag exceptions for human review
+  // Any discrepancy, any OT, any missing punch → human approval required
+
+  // STEP 8: Notify owner for approval
+  await notifyPayrollReady(orgId, {
+    totalGross: payroll.totalGross,
+    employeeCount: payroll.employees.length,
+    otHours: payroll.totalOTHours,
+    exceptions: discrepancies.length,
+    approvalDeadline: payPeriod.payDate
+  })
+}
+```
+
+### 2B — PAYROLL MATH TRINITY MUST ALWAYS VERIFY
+
+```
+FOR EACH EMPLOYEE:
+  Regular hours = hours up to weekly threshold (40 in TX)
+  OT hours = hours above threshold
+  Regular pay = regular hours × pay rate
+  OT pay = OT hours × pay rate × OT multiplier
+  Gross pay = regular pay + OT pay
+  
+  Employer burden:
+  FICA employer share = gross × 0.0765
+  FUTA = gross × 0.006 (first $7,000)
+  TX SUI = gross × current TX SUI rate (check annually)
+  Workers comp = gross × org workers comp rate
+  
+  Total cost to org = gross + all employer burden
+
+CROSS-CHECKS TRINITY RUNS:
+  Total payroll = sum(all employee gross) — must balance to penny
+  Total burden = sum(all employer burden) — must balance to penny
+  No shift has pay amount > bill amount (margin must be positive)
+  OT shifts: margin checked individually — flag if OT inverts margin
+```
+
+---
+
+## PART 3: THE AUTONOMOUS INVOICE ENGINE
+### What's Missing: Schedule → Invoice → Client Delivery
+
+---
+
+### 3A — INVOICE GENERATION FROM SCHEDULE
+
+```typescript
+async function trinityInvoiceCycle(orgId: string, billingPeriod: BillingPeriod) {
+
+  // STEP 1: Pull completed shifts for period
+  const completedShifts = await getCompletedShifts(orgId, billingPeriod)
+
+  // STEP 2: Group by client
+  const byClient = groupShiftsByClient(completedShifts)
+
+  // STEP 3: For each client — apply their billing rules
+  for (const client of byClient) {
+    
+    const clientSettings = await getClientBillingSettings(client.id)
+    // Includes: bill rates by level, invoice cycle, payment terms,
+    // billing contacts, PO number requirements, invoice format preference
+
+    const invoice = await buildInvoice({
+      client,
+      shifts: client.shifts,
+      billRates: clientSettings.rates,
+      // Bill rate applied by officer level per shift
+      // unarmed rate for unarmed shifts
+      // armed rate for armed shifts  
+      // supervisor rate for supervisor shifts
+      period: billingPeriod,
+      paymentTerms: clientSettings.invoiceDueNet,
+      poNumber: clientSettings.poNumber
+    })
+
+    // STEP 4: Validate invoice math
+    await validateInvoiceMath(invoice)
+    // Every shift appears exactly once
+    // Correct rate applied per officer level
+    // Hours match approved timesheets
+    // Total = sum of all line items (to the penny)
+
+    // STEP 5: Generate PDF
+    const pdf = await generateInvoicePdf(invoice)
+
+    // STEP 6: Send to client per their billing contact settings
+    await sendInvoice(invoice, pdf, clientSettings.billingContact)
+
+    // STEP 7: Push to QuickBooks
+    await pushInvoiceToQB(invoice, orgId)
+
+    // STEP 8: Schedule follow-up if unpaid by due date
+    await schedulePaymentFollowup(invoice, clientSettings.invoiceDueNet)
+  }
+}
+```
+
+### 3B — INVOICE INTELLIGENCE TRINITY MUST APPLY
+
+```
+BILLING RATE RULES:
+  Armed officer shift → client armed rate (never unarmed rate)
+  Supervisor shift → client supervisor rate
+  Holiday shifts → check if client contract has holiday multiplier
+  Emergency coverage → check if premium rate applies
+  
+INVOICE VALIDATION:
+  No shift billed twice
+  No shift missed from invoice
+  Bill amount always ≥ pay amount (no negative margin shifts)
+  Client PO number included if required
+  Correct billing contact on each invoice
+  Invoice number sequential and unique
+
+OVERDUE TRACKING:
+  Day 0: Invoice sent
+  Day [net-5]: Trinity sends gentle reminder
+  Day [net+1]: Trinity flags as overdue, notifies owner
+  Day [net+15]: Trinity escalates — draft demand letter, flag client health score
+  Day [net+30]: Trinity recommends account hold — flag to owner for decision
+```
+
+---
+
+## PART 4: FULL FEATURES PAGE GAP AUDIT
+### Every Feature CoAIleague Promises — Verified or Flagged
+
+---
+
+### SCHEDULING FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| Drag-and-drop schedule builder | UI only | Trinity cannot interact with drag-drop — needs `schedule.assign_shift` action |
+| Auto-scheduling by availability | Partial | Trinity sees availability but can't run auto-build autonomously |
+| Shift templates | Exists | Trinity needs `schedule.apply_template` action |
+| Recurring shifts | Exists | Trinity needs `schedule.create_recurring` action |
+| Shift marketplace | Exists | Trinity needs `marketplace.post_shift` and `marketplace.auto_award` actions |
+| Coverage market | Exists | Trinity needs `coverage.request` and `coverage.fulfill` actions |
+| Conflict detection | Partial | Trinity detects but cannot auto-resolve — needs `schedule.resolve_conflict` |
+| Overtime alerts | Partial | Alert fires but Trinity cannot act on it — needs `schedule.suggest_ot_alternative` |
+| Open shift notifications | Exists | Trinity needs to trigger these automatically, not just on demand |
+| Schedule publish/unpublish | Exists | Trinity needs `schedule.publish` and `schedule.unpublish` actions |
+| Pending shift approval flow | Exists | Trinity needs `schedule.approve_pending` action |
+
+### TIME & ATTENDANCE FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| GPS clock in/out | Works | Trinity needs `timeclock.verify_location` to check geofence compliance |
+| Photo verification | Works | Trinity needs `timeclock.review_photo` to flag suspicious clock-ins |
+| Timesheet generation | Works | Trinity needs `timesheet.generate_from_clockdata` action |
+| Missed punch detection | Partial | Detection exists, Trinity cannot auto-flag or auto-correct |
+| Timesheet approval workflow | Exists | Trinity needs `timesheet.auto_approve_clean` and `timesheet.flag_exceptions` |
+| Time entry corrections | Exists | Trinity needs `timesheet.submit_correction` action |
+| Break tracking | Unknown | Verify if break deductions exist and Trinity can access them |
+| Geofence radius settings | Exists | Trinity needs to read this per site for clock-in validation |
+
+### PAYROLL FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| Automated payroll calculation | Partial | Calculation logic exists, not automated per cycle |
+| OT calculation | Partial | Math exists, not auto-applied per state rule |
+| Pay stub generation | Unknown | Verify service exists — Trinity needs `payroll.generate_paystub` |
+| Direct deposit / payment | Unknown | Verify integration — this is a major gap if not built |
+| Payroll approval workflow | Exists | Trinity needs `payroll.submit_for_approval` action |
+| Multi-pay-rate support | Unknown | Verify if single officer can have multiple rates (regular/armed/supervisor) |
+| Garnishments/deductions | Unknown | Verify service exists |
+| Year-end W-2 prep | Partial | Tax service exists, needs `tax.prepare_w2_batch` action |
+| QuickBooks sync | Partial | CDC exists but not Trinity-callable (Gap 4) |
+
+### INVOICING FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| Auto invoice generation | Missing | Not autonomous — needs full cycle trigger (Part 3 above) |
+| PDF invoice | Exists | Not Trinity-callable (Gap 2) |
+| Email delivery | Exists | Not Trinity-callable (Gap 3) |
+| Custom billing rates per client | Exists | Trinity reads but doesn't apply automatically |
+| Multiple billing cycles | Unknown | Verify if weekly/biweekly/monthly all work |
+| Invoice approval before send | Missing | Trinity needs `invoice.hold_for_approval` flow |
+| Partial payments | Unknown | Verify payment tracking service |
+| Payment reminders | Missing | Automated follow-up not built (Part 3B above) |
+| Revenue forecasting | Exists | Not Trinity-callable (Gap 2) |
+| Aging report | Unknown | Verify service — Trinity needs `finance.aging_report` |
+
+### COMMUNICATIONS FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| Team chat | Works | Trinity needs `chat.send_message` to initiate conversations |
+| Broadcast messages | Exists | Not Trinity-callable (Gap 3) |
+| Email inbox | Exists | Inbound not processed by Trinity (Part 1C above) |
+| Push notifications | Partial | Trinity cannot compose custom push notifications |
+| SMS alerts | Unknown | Verify SMS integration — Trinity needs `notify.sms` action |
+| Read receipts | Unknown | Verify — Trinity needs to know if critical comms were read |
+| Announcement channel | Exists | Trinity needs `broadcast.post_announcement` |
+| Notification preferences | Exists | Trinity needs to respect these when sending |
+
+### COMPLIANCE FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| License tracking | Works | Trinity reads but doesn't proactively scan on schedule |
+| PERC card tracking (TX) | Works | Same — needs proactive weekly scan |
+| Expiration alerts (30/60/90 day) | Partial | Alert fires but Trinity doesn't initiate renewal guidance |
+| Certification tracking | Exists | Trinity needs `compliance.run_full_scan` on schedule |
+| Compliance holds on scheduling | Partial | Hard block exists, Trinity doesn't explain it to the officer |
+| Document storage | Exists | Trinity needs `compliance.request_document` from officer |
+| State-specific rules engine | Partial | Knowledge exists in prompt, not in code logic |
+| Compliance reporting | Exists | Not Trinity-callable (Gap 5) |
+| Auto-remove from schedule on violation | Missing | Trinity should auto-pull non-compliant officer from future shifts |
+
+### INCIDENT & REPORTING FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| Incident report creation | Works | Trinity needs to guide this conversationally step by step |
+| Photo evidence attachment | Works | Trinity needs to confirm receipt and route to record |
+| Incident routing to supervisor | Exists | Trinity needs `incident.escalate` action |
+| Daily report submission | Exists | Trinity needs `report.submit_daily` action |
+| Incident history | Exists | Trinity needs `incident.get_history` for pattern detection |
+| Client incident notification | Missing | Trinity should auto-notify client contact on incident |
+| Incident → compliance flag | Missing | Serious incidents should auto-trigger compliance review |
+
+### CLIENT MANAGEMENT FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| Client profiles | Exists | Trinity needs `client.get_full_profile` action |
+| Site management | Exists | Trinity needs `client.get_site_details` action |
+| Client billing settings | Exists | Trinity reads but needs dedicated action |
+| Client health scoring | Exists in analytics | Not surfaced to Trinity (Gap 6) |
+| Client communication log | Unknown | Verify if email/call log tracked per client |
+| Contract management | Partial | Read-only for Trinity (Gap 7) |
+| SLA monitoring | Missing | Trinity should monitor SLA compliance per client in real time |
+| Client portal access | Future | Noted in roadmap |
+
+### EMPLOYEE MANAGEMENT FEATURES
+
+| Feature | Status | Gap |
+|---------|--------|-----|
+| Employee profiles | Works | Complete |
+| Role and permission management | Exists | Trinity needs `employee.update_role` action |
+| Onboarding workflow | Unknown | Verify if onboarding checklist exists — major gap if missing |
+| Offboarding workflow | Unknown | Verify — Trinity needs `employee.initiate_offboarding` |
+| Performance tracking | Partial | Analytics exist, not surfaced (Gap 6) |
+| Disciplinary log | Unknown | Verify service — Trinity needs to read and write this |
+| Employee self-service | Partial | Officers access their own data — verify all fields accessible |
+| Benefits/deductions management | Unknown | Verify service |
+| HRIS integration | Partial | Pull-only (Gap 8) |
+
+---
+
+## PART 5: PROACTIVE INTELLIGENCE — WHAT TRINITY MUST DO WITHOUT BEING ASKED
+
+---
+
+These are the behaviors that make Trinity feel like a COO, not a chatbot.
+Every item below is something Trinity runs on a schedule or event trigger — not waiting for a human to ask.
+
+### DAILY (Runs every morning at 6 AM org local time)
+
+```
+- Scan today's schedule: any uncovered shifts? → Alert supervisor
+- Scan clock-ins for overnight/early shifts: any missed punches? → Alert supervisor
+- Check compliance: any expirations in next 7 days? → Alert manager
+- Check overdue invoices: any past due date? → Send reminder or escalate
+- Check pending approvals: any timesheets/shifts waiting > 24hrs? → Nudge approver
+- Check open shifts: any unfilled for today? → Escalate immediately
+- Weather check (if integrated): extreme weather at any client site? → Alert for coverage contingency
+```
+
+### WEEKLY (Runs every Monday at 7 AM)
+
+```
+- Run overtime risk scan: any officer projected to hit 40hrs by Thursday?
+  → Suggest schedule adjustment before OT occurs
+- Check next week's schedule completeness: any open shifts?
+  → Auto-attempt to fill, escalate what can't be filled
+- Run compliance scan: any expirations in next 30 days?
+  → Notify officer directly with renewal instructions
+- Generate weekly workforce summary for manager
+- Check client SLA compliance: all sites covered per contract minimums?
+- Scan shift marketplace: any offers pending > 48hrs? → Re-notify eligible officers
+```
+
+### MONTHLY (Runs on the 25th)
+
+```
+- Build next month's schedule (full autonomous cycle — Part 1A)
+- Generate current period payroll draft
+- Generate current period invoices for all clients
+- Push invoices to QuickBooks
+- Run compliance audit: all officers current for next month's work?
+- Revenue forecast for next 30 days
+- Client health scores: any at-risk clients?
+- Generate executive summary for org owner
+```
+
+### EVENT-TRIGGERED (Real-time)
+
+```
+ON officer calls off:
+  → Find replacement immediately
+  → If no replacement found in 30 min → escalate to supervisor
+  → Notify client if coverage will be affected
+
+ON new open shift created:
+  → Attempt fill within 60 seconds (Part 1D)
+
+ON invoice payment received:
+  → Mark paid, update QB, notify owner, update client health score
+
+ON missed clock-in (15 min after shift start):
+  → Text officer, alert supervisor, note on daily report
+
+ON license/cert expiration:
+  → Remove officer from future shifts at that post level
+  → Notify officer with renewal steps
+  → Notify manager
+
+ON timesheet submitted:
+  → Auto-review for anomalies
+  → Auto-approve if clean
+  → Flag and hold if discrepancy detected
+
+ON incident report filed:
+  → Route to supervisor immediately
+  → Notify client contact if client property involved
+  → Add to compliance review queue if use-of-force involved
+```
+
+---
+
+## PART 6: MISSING INFRASTRUCTURE TRINITY NEEDS
+
+---
+
+These are foundational items that may not exist yet:
+
+### 6A — ORG CALENDAR
+Trinity needs a calendar of:
+- Pay period dates
+- Invoice due dates
+- Client billing cycles
+- Holiday dates and their staffing rules
+- Contract renewal dates
+- License/cert expiration dates
+
+Without this, proactive intelligence has no time anchors.
+
+### 6B — TRINITY AUDIT LOG
+Every action Trinity takes autonomously must be logged:
+```typescript
+{
+  timestamp: ISO8601,
+  orgId: string,
+  action: string,           // what Trinity did
+  trigger: string,          // what caused her to do it (schedule/event/user)
+  parameters: object,       // what inputs she used
+  result: object,           // what happened
+  modelUsed: string,        // which triad model handled it
+  tokensUsed: number,       // cost tracking
+  humanReviewRequired: bool,// did this need escalation?
+  humanReviewCompleted: bool // has a human confirmed it?
+}
+```
+
+### 6C — TRINITY MEMORY WITHIN ORG CONTEXT
+Trinity needs persistent memory per org:
+- Last time she ran each proactive scan
+- Known patterns (this officer is always late on Mondays)
+- Client preferences and quirks
+- Owner's decision patterns (Marcus always approves OT for Heritage Bank)
+- Recurring issues (Pinnacle Tower has consistent coverage problems Saturdays)
+
+### 6D — TRINITY CONFIDENCE SCORING
+Before any autonomous action, Trinity assigns a confidence score:
+```
+95-100%: Execute automatically, log only
+80-94%:  Execute automatically, notify manager
+60-79%:  Propose to manager, wait for approval
+Below 60%: Escalate immediately, do not act
+```
+
+### 6E — ROLLBACK CAPABILITY
+Any autonomous action Trinity takes must be reversible:
+- Schedule assignment: can unassign
+- Invoice sent: can void and reissue
+- QB push: can reverse entry
+- Notification sent: logged for reference, can send correction
+
+---
+
+## PART 7: THE COMPLETE TRINITY ACTION REGISTRY
+### Full List of Actions That Must Exist
+
+This is every action Trinity needs. Mark each as EXISTS / WIRED / MISSING.
+
+```
+SCHEDULING:
+schedule.scan_open_shifts
+schedule.auto_fill_shift
+schedule.assign_shift
+schedule.unassign_shift
+schedule.create_shift
+schedule.create_recurring
+schedule.apply_template
+schedule.publish
+schedule.unpublish
+schedule.approve_pending
+schedule.resolve_conflict
+schedule.suggest_ot_alternative
+schedule.run_monthly_cycle        ← NEW — autonomous monthly build
+schedule.fill_from_email_pipeline ← NEW — email → schedule trigger
+marketplace.post_shift
+marketplace.auto_award
+coverage.request
+coverage.fulfill
+
+TIME & ATTENDANCE:
+timeclock.verify_location
+timeclock.review_photo
+timeclock.flag_missed_punch
+timesheet.generate_from_clockdata
+timesheet.auto_approve_clean
+timesheet.flag_exceptions
+timesheet.submit_correction
+timesheet.get_period_summary
+
+PAYROLL:
+payroll.run_cycle               ← NEW — autonomous payroll generation
+payroll.calculate_employee
+payroll.validate_math
+payroll.submit_for_approval
+payroll.generate_paystub
+payroll.export_for_accountant
+payroll.push_to_qb
+
+INVOICING:
+invoice.run_cycle               ← NEW — autonomous invoice generation
+invoice.build_from_schedule     ← NEW — schedule data → invoice line items
+invoice.generate_pdf
+invoice.send_email
+invoice.send_bulk
+invoice.check_overdue
+invoice.hold_for_approval
+invoice.void_and_reissue
+invoice.schedule_followup
+invoice.mark_paid
+finance.revenue_forecast
+finance.aging_report
+
+QUICKBOOKS:
+qb.sync_cdc
+qb.sync_initial
+qb.create_invoice
+qb.push_payroll
+qb.review_conflicts
+qb.sync_status
+
+EMAIL:
+email.send_single
+email.send_broadcast
+email.schedule_followup
+email.get_status
+email.process_inbound          ← NEW — read and classify inbound emails
+email.run_orchestration
+
+COMPLIANCE:
+compliance.run_full_scan       ← NEW — proactive scheduled scan
+compliance.check_officer
+compliance.flag_expiring
+compliance.request_document
+compliance.auto_remove_noncompliant ← NEW — pull from schedule on violation
+compliance.run_compliance_report
+
+REPORTING:
+report.timesheet
+report.weekly
+report.monthly
+report.compliance
+report.payroll_summary
+report.executive_summary       ← NEW — monthly owner briefing
+report.client_billing_detail
+
+ANALYTICS:
+analytics.generate_insights
+analytics.workforce_summary
+analytics.payroll_summary
+analytics.revenue_forecast
+analytics.client_health_score
+analytics.employee_performance
+analytics.compliance_rate
+analytics.overtime_risk
+analytics.shift_profitability
+analytics.pattern_detection    ← NEW — recurring anomaly identification
+
+COMMUNICATIONS:
+chat.send_message
+broadcast.post_announcement
+notify.push
+notify.sms
+notify.email_officer
+notify.email_manager
+notify.email_client            ← NEW — client-facing notifications
+
+CLIENTS:
+client.get_full_profile
+client.get_site_details
+client.update_billing_settings
+client.health_score
+client.flag_sla_risk           ← NEW — SLA breach detection
+
+EMPLOYEES:
+employee.get_full_profile
+employee.update_role
+employee.initiate_onboarding   ← NEW
+employee.initiate_offboarding  ← NEW
+employee.flag_performance
+employee.disciplinary_log_entry
+
+INCIDENTS:
+incident.create
+incident.escalate
+incident.notify_client
+incident.flag_compliance
+incident.get_history
+
+CONTRACTS:
+contracts.create_from_client
+contracts.send_for_signature
+contracts.mark_executed
+contracts.generate_from_template
+
+AI & TRIAD:
+ai.route_to_claude_judge
+ai.route_to_openai_fallback
+ai.triad_health_check
+ai.confidence_score
+agent.invoke_payroll_bot
+agent.invoke_scheduling_bot
+agent.invoke_compliance_bot
+agent.invoke_notification_bot
+
+PROACTIVE:
+proactive.run_daily_scan       ← NEW — morning daily check
+proactive.run_weekly_scan      ← NEW — Monday weekly check
+proactive.run_monthly_cycle    ← NEW — 25th monthly cycle
+proactive.process_event        ← NEW — event-triggered responses
+
+SYSTEM:
+system.trinity_audit_log
+system.org_calendar
+system.triad_status
+system.confidence_score
+system.rollback_action
+```
+
+---
+
+## THE ACCEPTANCE TEST
+
+When all of this is complete, Trinity should be able to handle this without a human doing anything:
+
+**Scenario: It is the 25th of the month. No human is online.**
+
+1. Trinity scans staffing needs for next month
+2. Trinity reads inbound emails for any client schedule requests
+3. Trinity builds the complete next month schedule
+4. Trinity validates the schedule — no conflicts, no compliance issues
+5. Trinity publishes clean shifts, holds flagged ones for manager review
+6. Trinity generates payroll for the current period from approved timesheets
+7. Trinity validates payroll math to the penny
+8. Trinity generates invoices for all clients from completed shift data
+9. Trinity validates invoice math against billing rates
+10. Trinity sends invoices via email to each client's billing contact
+11. Trinity pushes everything to QuickBooks via CDC sync
+12. Trinity sends Marcus a single executive summary:
+    "March is complete. Next month's schedule is built.
+     3 shifts need your review. Payroll is ready for approval.
+     All invoices sent. QuickBooks synced. Two compliance
+     flags need attention. Here's everything."
+
+That is the product you are building.
+That is what Trinity needs to do.
+
+---
+
+*CoAIleague · Trinity Complete Capability Gap Analysis · March 2026 · Confidential*
+*Developer: Do not build new services. Wire existing ones. Build missing autonomous triggers.*
+*Every action in Part 7 must exist, be tested, and be callable by Trinity before launch.*

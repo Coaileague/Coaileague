@@ -9,23 +9,22 @@ import {
   CheckCircle, XCircle, Clock, Calendar, Edit, Receipt,
   AlertTriangle, FileText, TrendingUp, Users, DollarSign
 } from "lucide-react";
-import { ResponsiveSection, CenteredActions } from "@/components/dashboard-shell";
-import { WorkspaceLayout } from "@/components/workspace-layout";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
 
   // Fetch all pending approvals
   const { data: pendingTimeOff, isLoading: loadingTimeOff } = useQuery<any[]>({
-    queryKey: ['/api/manager/time-off-requests'],
+    queryKey: ['/api/time-off-requests/pending'],
   });
 
   const { data: pendingTimesheetEdits, isLoading: loadingTimesheetEdits } = useQuery<any[]>({
-    queryKey: ['/api/manager/timesheet-edit-requests'],
+    queryKey: ['/api/timesheet-edit-requests/pending'],
   });
 
   const { data: pendingShifts, isLoading: loadingShifts } = useQuery<any[]>({
-    queryKey: ['/api/manager/shift-action-requests'],
+    queryKey: ['/api/shift-actions/pending'],
   });
 
   const { data: pendingExpenses, isLoading: loadingExpenses } = useQuery<any[]>({
@@ -46,27 +45,21 @@ export default function ManagerDashboard() {
 
   const isLoading = loadingTimeOff || loadingTimesheetEdits || loadingShifts || loadingExpenses || loadingI9;
 
-  return (
-    <WorkspaceLayout maxWidth="7xl">
-      {/* Header - Centered */}
-      <ResponsiveSection spacing="lg">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <CheckCircle className="h-10 w-10 text-primary" />
-            <h1 className="text-3xl sm:text-4xl font-bold">Manager Approval Dashboard</h1>
-          </div>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Review and approve pending requests from your team
-          </p>
-        </div>
-      </ResponsiveSection>
+  const pageConfig: CanvasPageConfig = {
+    id: 'manager-dashboard',
+    title: 'Manager Approval Dashboard',
+    subtitle: 'Review and approve pending requests from your team',
+    category: 'operations',
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {/* Summary Cards */}
-      <ResponsiveSection>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Time-Off</p>
                 <p className="text-2xl font-bold">{pendingTimeOff?.length || 0}</p>
@@ -78,7 +71,7 @@ export default function ManagerDashboard() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Timesheet Edits</p>
                 <p className="text-2xl font-bold">{pendingTimesheetEdits?.length || 0}</p>
@@ -90,7 +83,7 @@ export default function ManagerDashboard() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Shift Actions</p>
                 <p className="text-2xl font-bold">{pendingShifts?.length || 0}</p>
@@ -102,7 +95,7 @@ export default function ManagerDashboard() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">Expenses</p>
                 <p className="text-2xl font-bold">{pendingExpenses?.length || 0}</p>
@@ -114,7 +107,7 @@ export default function ManagerDashboard() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm text-muted-foreground">I-9 Alerts</p>
                 <p className="text-2xl font-bold">{expiringI9?.length || 0}</p>
@@ -147,7 +140,7 @@ export default function ManagerDashboard() {
                 <div className="space-y-2">
                   {pendingTimeOff.slice(0, 5).map((request: any) => (
                     <div key={request.id} className="p-3 border rounded-lg hover-elevate">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{request.employeeName || 'Employee'}</p>
                           <p className="text-xs text-muted-foreground">
@@ -194,7 +187,7 @@ export default function ManagerDashboard() {
                 <div className="space-y-2">
                   {pendingTimesheetEdits.slice(0, 5).map((request: any) => (
                     <div key={request.id} className="p-3 border rounded-lg hover-elevate">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{request.employeeName || 'Employee'}</p>
                           <p className="text-xs text-muted-foreground">{request.editType || 'Time correction'}</p>
@@ -239,7 +232,7 @@ export default function ManagerDashboard() {
                 <div className="space-y-2">
                   {pendingShifts.slice(0, 5).map((request: any) => (
                     <div key={request.id} className="p-3 border rounded-lg hover-elevate">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{request.employeeName || 'Employee'}</p>
                           <p className="text-xs text-muted-foreground">{request.actionType || 'Shift action'}</p>
@@ -284,7 +277,7 @@ export default function ManagerDashboard() {
                 <div className="space-y-2">
                   {pendingExpenses.slice(0, 5).map((expense: any) => (
                     <div key={expense.id} className="p-3 border rounded-lg hover-elevate">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{expense.employeeName || 'Employee'}</p>
                           <p className="text-xs text-muted-foreground">{expense.category}</p>
@@ -329,7 +322,7 @@ export default function ManagerDashboard() {
                 <div className="space-y-2">
                   {expiringI9.slice(0, 10).map((record: any) => (
                     <div key={record.id} className="p-3 border border-red-200 rounded-lg hover-elevate bg-red-50/50 dark:bg-red-950/20">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{record.employeeName || 'Employee'}</p>
                           <p className="text-xs text-muted-foreground">
@@ -358,7 +351,7 @@ export default function ManagerDashboard() {
           </CardContent>
         </Card>
       </div>
-      </ResponsiveSection>
-    </WorkspaceLayout>
+      </div>
+    </CanvasHubPage>
   );
 }

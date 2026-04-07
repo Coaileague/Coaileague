@@ -1,0 +1,537 @@
+client/src/pages/compliance/employee-detail.tsx:      return await apiRequest('POST', '/api/security-compliance/records', {
+client/src/pages/compliance/employee-detail.tsx:      return await apiRequest('POST', '/api/security-compliance/documents', formData);
+client/src/pages/compliance/employee-detail.tsx:      return await apiRequest('POST', `/api/security-compliance/records/${recordId}/lock-vault`, {});
+client/src/pages/compliance/enforcement-status.tsx:      const res = await apiRequest("POST", "/api/enforcement/appeal", {
+client/src/pages/compliance/approvals.tsx:      return await apiRequest('POST', `/api/security-compliance/approvals/${approvalId}/decide`, {
+client/src/pages/compliance/regulator-access.tsx:      return await apiRequest('POST', '/api/security-compliance/regulator', data);
+client/src/pages/compliance/regulator-access.tsx:      return await apiRequest('POST', `/api/security-compliance/regulator/${id}/revoke`, { reason });
+client/src/pages/compliance/auditor-portal.tsx:  const res = await fetch(url, { headers });
+client/src/pages/compliance/regulator-portal.tsx:      const res = await fetch(`/api/security-compliance/regulator/portal/${token}`);
+client/src/pages/onboarding-start.tsx:      const response = await apiRequest("POST", "/api/invites/accept", { inviteCode: code });
+client/src/pages/client-signup.tsx:  const { data: prospectData, isLoading: isLoadingProspect, error: prospectError } = useQuery({
+client/src/pages/client-signup.tsx:      const res = await fetch(`/api/client-status/${tempCode}`);
+client/src/pages/client-signup.tsx:      return apiRequest('POST', '/api/client-signup', {
+client/src/pages/outreach.tsx:      const res = await apiRequest("POST", "/api/sales/outreach/crawl", { urls: websiteUrls });
+client/src/pages/outreach.tsx:      const res = await apiRequest("POST", "/api/sales/outreach/send", { candidates, customMessage: customMessage || undefined });
+client/src/pages/white-label-branding.tsx:      return await apiRequest("POST", "/api/enterprise-features/branding", data);
+client/src/pages/fleet-management.tsx:      return await apiRequest("POST", "/api/enterprise-features/vehicles", data);
+client/src/pages/fleet-management.tsx:      return await apiRequest("DELETE", `/api/enterprise-features/vehicles/${id}`);
+client/src/pages/api-access.tsx:      const res = await apiRequest('POST', '/api/enterprise-features/api-keys', data);
+client/src/pages/api-access.tsx:      return await apiRequest('DELETE', `/api/enterprise-features/api-keys/${keyId}`);
+client/src/pages/sso-configuration.tsx:      return await apiRequest('POST', '/api/enterprise-features/sso', data);
+client/src/pages/compare.tsx:  const testimonialsQuery = useQuery({
+client/src/pages/account-manager.tsx:    mutationFn: () => apiRequest('POST', '/api/enterprise-features/account-manager', { 
+client/src/pages/roi-calculator.tsx:  const statsQuery = useQuery({
+client/src/pages/roi-calculator.tsx:      return apiRequest('POST', '/api/public/leads', data);
+client/src/pages/oversight-hub.tsx:      return apiRequest('PATCH', `/api/oversight/${id}/approve`, { resolutionNotes: notes });
+client/src/pages/oversight-hub.tsx:      return apiRequest('PATCH', `/api/oversight/${id}/reject`, { resolutionNotes: notes });
+client/src/pages/inbound-opportunities.tsx:  const res = await fetch(url, { ...options, credentials: 'include' });
+client/src/pages/inbound-opportunities.tsx:  const workflowsQuery = useQuery({
+client/src/pages/inbound-opportunities.tsx:  const settingsQuery = useQuery({
+client/src/pages/inbound-opportunities.tsx:  const escalationsQuery = useQuery({
+client/src/pages/inbound-opportunities.tsx:  const workflowDetailQuery = useQuery({
+client/src/pages/inbound-opportunities.tsx:      const res = await apiRequest("POST", `/api/trinity-staffing/workflows/${workflowId}/cancel`, { reason: "Cancelled by user" });
+client/src/pages/trinity-memory.tsx:  const res = await fetch(url, { ...options, credentials: 'include' });
+client/src/pages/trinity-memory.tsx:  const memoryQuery = useQuery({
+client/src/pages/trinity-memory.tsx:  const knowledgeQuery = useQuery({
+client/src/pages/trinity-memory.tsx:  const chatDiagQuery = useQuery({
+client/src/pages/trinity-memory.tsx:      const res = await apiRequest("POST", "/api/ai-brain/diagnostic/run-fast");
+client/src/pages/analytics-reports.tsx:  const { data, isLoading, error } = useQuery({
+client/src/pages/analytics-reports.tsx:  const { data, isLoading, error } = useQuery({
+client/src/pages/analytics-reports.tsx:  const { data, isLoading, error } = useQuery({
+client/src/pages/analytics-reports.tsx:  const { data, isLoading, error } = useQuery({
+client/src/pages/analytics-reports.tsx:  const { data, isLoading, error } = useQuery({
+client/src/pages/prospect-portal.tsx:      apiRequest("POST", `/api/client-status/${tempCode}/clicked`).catch(() => {});
+client/src/pages/prospect-portal.tsx:      const res = await fetch(`/api/client-status/${tempCode}`);
+client/src/pages/background-checks.tsx:      return await apiRequest('POST', '/api/enterprise-features/background-checks/providers', data);
+client/src/pages/background-checks.tsx:      return await apiRequest('POST', '/api/enterprise-features/background-checks', data);
+client/src/pages/armory-management.tsx:      return await apiRequest("POST", "/api/enterprise-features/weapons", data);
+client/src/pages/armory-management.tsx:      return await apiRequest("POST", `/api/enterprise-features/weapons/${data.weaponId}/checkout`, data);
+client/src/pages/armory-management.tsx:      return await apiRequest("POST", `/api/enterprise-features/weapons/${data.weaponId}/checkin`, data);
+client/src/pages/armory-management.tsx:      return await apiRequest("DELETE", `/api/enterprise-features/weapons/${id}`);
+client/src/pages/engagement-employee.tsx:      return await apiRequest("POST", "/api/engagement/pulse-surveys/responses", data);
+client/src/pages/engagement-employee.tsx:      return await apiRequest("POST", "/api/engagement/employer-ratings", data);
+client/src/pages/engagement-employee.tsx:      return await apiRequest("POST", "/api/engagement/suggestions", data);
+client/src/pages/engagement-employee.tsx:      return await apiRequest("POST", "/api/engagement/recognition", data);
+client/src/pages/leaders-hub.tsx:      return await apiRequest('POST', '/api/leaders/reset-password', data);
+client/src/pages/leaders-hub.tsx:      return await apiRequest('POST', '/api/leaders/unlock-account', data);
+client/src/pages/leaders-hub.tsx:      return await apiRequest('PATCH', '/api/leaders/update-contact', data);
+client/src/pages/leaders-hub.tsx:      return await apiRequest('POST', '/api/leaders/escalate', data);
+client/src/pages/compliance-reports.tsx:      const res = await apiRequest('POST', '/api/compliance-reports/generate', { reportType });
+client/src/pages/file-grievance.tsx:  const { data: disputeableItems } = useQuery({
+client/src/pages/file-grievance.tsx:      const res = await apiRequest('POST', '/api/disputes', data);
+client/src/pages/hr-pto.tsx:    await refetch();
+client/src/pages/hr-pto.tsx:      return await apiRequest('PATCH', endpoint, body);
+client/src/pages/hr-terminations.tsx:      return apiRequest('POST', '/api/terminations', {
+client/src/pages/hr-terminations.tsx:      return apiRequest('PATCH', `/api/terminations/${id}`, { status });
+client/src/pages/expenses.tsx:      const expense = await apiRequest('POST', '/api/expenses', values);
+client/src/pages/expenses.tsx:          await apiRequest('POST', `/api/expenses/${expense.id}/receipts`, {
+client/src/pages/expenses.tsx:    await refetch();
+client/src/pages/integrations-page.tsx:      const response = await apiRequest('GET', `/api/hris/auth/${provider}`);
+client/src/pages/integrations-page.tsx:      const response = await apiRequest('DELETE', `/api/hris/disconnect/${provider}`);
+client/src/pages/integrations-page.tsx:      const response = await apiRequest('POST', `/api/hris/sync/${provider}`, {
+client/src/pages/integrations-page.tsx:      const response = await apiRequest(
+client/src/pages/integrations-page.tsx:      const response = await apiRequest(
+client/src/pages/integrations-page.tsx:      const response = await apiRequest(
+client/src/pages/employee-onboarding-dashboard.tsx:      return apiRequest('POST', `/api/employee-onboarding/${employeeId}/notify`);
+client/src/pages/trinity-self-edit-governance.tsx:      const res = await apiRequest('POST', '/api/trinity/self-edit/circuit-breaker/reset');
+client/src/pages/trinity-self-edit-governance.tsx:      const res = await apiRequest('POST', `/api/trinity/self-edit/proposals/${proposalId}/sandbox`);
+client/src/pages/trinity-self-edit-governance.tsx:      const res = await apiRequest('POST', `/api/trinity/self-edit/proposals/${proposalId}/approve`, {});
+client/src/pages/trinity-self-edit-governance.tsx:      const res = await apiRequest('POST', `/api/trinity/self-edit/proposals/${proposalId}/reject`, { reason });
+client/src/pages/trinity-self-edit-governance.tsx:      const res = await apiRequest('POST', `/api/trinity/self-edit/proposals/${proposalId}/apply`);
+client/src/pages/trinity-self-edit-governance.tsx:      const res = await apiRequest('POST', `/api/trinity/self-edit/proposals/${proposalId}/rollback`);
+client/src/pages/sales-crm.tsx:  const { data: leadsData, isLoading: leadsLoading } = useQuery({
+client/src/pages/sales-crm.tsx:  const { data: dealsData, isLoading: dealsLoading } = useQuery({
+client/src/pages/sales-crm.tsx:  const { data: statsData } = useQuery({
+client/src/pages/sales-crm.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/crm", data),
+client/src/pages/sales-crm.tsx:    mutationFn: ({ id, ...data }: any) => apiRequest("PATCH", `/api/crm/${id}`, data),
+client/src/pages/sales-crm.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/crm/deals", data),
+client/src/pages/quickbooks-import.tsx:        await apiRequest('POST', '/api/integrations/quickbooks/reset-migration', {
+client/src/pages/quickbooks-import.tsx:      const res = await apiRequest('POST', '/api/integrations/quickbooks/connect', {
+client/src/pages/quickbooks-import.tsx:      const res = await apiRequest('POST', '/api/integrations/quickbooks/import', {
+client/src/pages/quickbooks-import.tsx:        const res = await apiRequest('POST', '/api/integrations/quickbooks/push', {
+client/src/pages/quickbooks-import.tsx:      const res = await apiRequest('POST', '/api/integrations/quickbooks/push/cancel', {
+client/src/pages/quickbooks-import.tsx:      const res = await apiRequest('POST', '/api/integrations/quickbooks/push/unlock', {
+client/src/pages/quickbooks-import.tsx:      const res = await apiRequest('POST', '/api/integrations/quickbooks/preflight', {
+client/src/pages/flex-staffing.tsx:  const { data: gigsData, isLoading: gigsLoading } = useQuery({
+client/src/pages/flex-staffing.tsx:  const { data: contractorsData, isLoading: contractorsLoading } = useQuery({
+client/src/pages/flex-staffing.tsx:  const { data: applicationsData } = useQuery({
+client/src/pages/flex-staffing.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/flex/gigs", data),
+client/src/pages/flex-staffing.tsx:      apiRequest("PATCH", `/api/flex/applications/${id}/review`, { status }),
+client/src/pages/company-reports.tsx:      return await apiRequest('POST', '/api/reports/generate', {
+client/src/pages/company-reports.tsx:      return await apiRequest('POST', '/api/reports/export', {
+client/src/pages/company-reports.tsx:      return await apiRequest('POST', '/api/reports/share', {
+client/src/pages/records.tsx:  const { data: searchHistory } = useQuery({
+client/src/pages/records.tsx:      const response = await apiRequest('POST', '/api/search', { query, searchType });
+client/src/pages/policies.tsx:  const { data: policies = [], isLoading } = useQuery({
+client/src/pages/policies.tsx:      return apiRequest('POST', '/api/policies', values);
+client/src/pages/policies.tsx:      return apiRequest('PATCH', `/api/policies/${id}/publish`, {});
+client/src/pages/policies.tsx:      return apiRequest('POST', `/api/policies/${id}/acknowledge`, {
+client/src/pages/pay-invoice.tsx:  const { data: stripeConfig, isLoading: isLoadingStripeConfig } = useQuery({
+client/src/pages/pay-invoice.tsx:    refetch();
+client/src/pages/engagement-dashboard.tsx:      return await apiRequest("PATCH", `/api/engagement/health-scores/${id}/action`, { actionNotes });
+client/src/pages/engagement-dashboard.tsx:      const res = await apiRequest("POST", '/api/engagement/health-scores/calculate', {});
+client/src/pages/engagement-dashboard.tsx:      return apiRequest('POST', '/api/disputes', {
+client/src/pages/employee-file-cabinet.tsx:      return await apiRequest('POST', `/api/documents/${signatureRequestId}/sign-internal`, { signatureData: sigData, signatureType: "drawn" });
+client/src/pages/employee-file-cabinet.tsx:      return await apiRequest('POST', `/api/hireos/documents/${documentId}/access`, { accessType });
+client/src/pages/trinity-insights.tsx:      const response = await apiRequest('POST', '/api/trinity/scan');
+client/src/pages/trinity-insights.tsx:      const response = await apiRequest('POST', `/api/trinity/insights/${insightId}/read`);
+client/src/pages/timesheet-approvals.tsx:      const res = await fetch(`/api/timesheet-edit-requests/${requestId}/review`, {
+client/src/pages/payroll-garnishments.tsx:      const response = await apiRequest(
+client/src/pages/payroll-garnishments.tsx:      refetch();
+client/src/pages/payroll-garnishments.tsx:      return await apiRequest('DELETE', `/api/payroll/garnishments/${garnishmentId}`, {});
+client/src/pages/payroll-garnishments.tsx:      refetch();
+client/src/pages/payroll-deductions.tsx:      const response = await apiRequest(
+client/src/pages/payroll-deductions.tsx:      refetch();
+client/src/pages/payroll-deductions.tsx:      return await apiRequest('DELETE', `/api/payroll/deductions/${deductionId}`, {});
+client/src/pages/payroll-deductions.tsx:      refetch();
+client/src/pages/payroll-dashboard.tsx:      return await apiRequest('POST', '/api/payroll/create-run', {});
+client/src/pages/payroll-dashboard.tsx:      return await apiRequest('POST', `/api/payroll/runs/${runId}/approve`, {});
+client/src/pages/payroll-dashboard.tsx:      return await apiRequest('POST', `/api/payroll/runs/${runId}/process`, {});
+client/src/pages/my-paychecks.tsx:    await refetch();
+client/src/pages/insights.tsx:      const response = await apiRequest('POST', '/api/insights/generate', {});
+client/src/pages/insights.tsx:      const response = await apiRequest('POST', `/api/insights/dismiss/${id}`, { reason });
+client/src/pages/employee-recognition.tsx:      const response = await apiRequest('POST', '/api/gamification/achievements', badge);
+client/src/pages/assisted-onboarding.tsx:      const res = await apiRequest("POST", "/api/support/assisted-onboarding/create", data);
+client/src/pages/assisted-onboarding.tsx:      const res = await apiRequest("POST", `/api/support/assisted-onboarding/${workspaceId}/ready`);
+client/src/pages/assisted-onboarding.tsx:      const res = await apiRequest("POST", `/api/support/assisted-onboarding/${workspaceId}/handoff`);
+client/src/pages/communications-onboarding.tsx:      return await apiRequest('POST', '/api/comm-os/complete-onboarding', {
+client/src/pages/hireos-workflow-builder.tsx:  const { data: reportTemplates } = useQuery({
+client/src/pages/hireos-workflow-builder.tsx:      return await apiRequest('POST', '/api/hireos/workflow-templates', {
+client/src/pages/availability.tsx:      const response = await apiRequest("POST", "/api/availability", { slots });
+client/src/pages/availability.tsx:      await apiRequest("DELETE", `/api/availability/${slotId}`);
+client/src/pages/availability.tsx:      const response = await apiRequest("POST", "/api/availability/exception", data);
+client/src/pages/role-management.tsx:      return await apiRequest('PATCH', `/api/employees/${data.employeeId}`, { role: data.role });
+client/src/pages/workspace-onboarding.tsx:      const res = await apiRequest("POST", `/api/quickbooks/flow/${flowId}/retry`);
+client/src/pages/workspace-sales.tsx:      return await apiRequest("POST", "/api/sales/invitations/send", data);
+client/src/pages/workspace-sales.tsx:      return await apiRequest("POST", "/api/sales/proposals", data);
+client/src/pages/accept-handoff.tsx:      const res = await apiRequest("POST", `/api/accept-handoff/${token}/complete`);
+client/src/pages/accept-offer.tsx:      const res = await fetch(`/api/enterprise/public/offer/${offerId}?token=${encodeURIComponent(token)}`);
+client/src/pages/accept-offer.tsx:      const res = await apiRequest("POST", `/api/enterprise/public/offer/${offerId}/accept`, {
+client/src/pages/accept-offer.tsx:      const res = await apiRequest("POST", `/api/enterprise/public/offer/${offerId}/decline`, {
+client/src/pages/unavailability.tsx:      return apiRequest('POST', '/api/time-off-requests', data);
+client/src/pages/alert-settings.tsx:      return await apiRequest('PATCH', `/api/alerts/config/${alertType}/toggle`, { isEnabled });
+client/src/pages/alert-settings.tsx:      return await apiRequest('PUT', `/api/alerts/config/${alertType}`, data);
+client/src/pages/alert-settings.tsx:      return await apiRequest('POST', `/api/alerts/${alertId}/acknowledge`, { notes });
+client/src/pages/alert-settings.tsx:      return await apiRequest('POST', '/api/alerts/test', { alertType });
+client/src/pages/org-management.tsx:      const response = await apiRequest("POST", "/api/workspace/reactivate");
+client/src/pages/org-management.tsx:      const response = await apiRequest("PATCH", `/api/employees/${memberId}/role`, { workspaceRole: role });
+client/src/pages/org-management.tsx:      const response = await apiRequest("PATCH", `/api/employees/${memberId}/access`, { isActive, workspaceId: selectedOrg?.id });
+client/src/pages/org-management.tsx:      const response = await apiRequest("PATCH", `/api/organizations/${orgId}/status`, { action, reason });
+client/src/pages/org-management.tsx:      const res = await apiRequest('POST', endpoint, body);
+client/src/pages/org-management.tsx:      const res = await apiRequest('POST', '/api/support/actions/refund-credits', { workspaceId, amount, reason });
+client/src/pages/org-management.tsx:      const res = await apiRequest('POST', '/api/support/actions/issue-discount', { workspaceId, discountPercent: pct, reason });
+client/src/pages/org-management.tsx:      apiRequest("POST", "/api/admin/platform/roles", data),
+client/src/pages/org-management.tsx:      apiRequest("POST", "/api/admin/platform/roles", { ...data, role: "none" }),
+client/src/pages/create-org.tsx:      const response = await apiRequest('POST', '/api/onboarding/create-org/progress', progress);
+client/src/pages/create-org.tsx:      const response = await apiRequest('DELETE', '/api/onboarding/create-org/progress');
+client/src/pages/create-org.tsx:      const response = await apiRequest('POST', '/api/trinity/validate-license', params);
+client/src/pages/create-org.tsx:      const response = await apiRequest('GET', `/api/workspace/org-code/check/${code}`);
+client/src/pages/create-org.tsx:      const response = await apiRequest('POST', '/api/workspace', formData);
+client/src/pages/auditor-login.tsx:      const res = await apiRequest("POST", "/api/enforcement/auditor/login", { email, password });
+client/src/pages/org-suspended.tsx:    mutationFn: () => apiRequest("POST", "/api/auth/logout"),
+client/src/pages/org-suspended.tsx:      apiRequest("POST", "/api/stripe/create-subscription-checkout", {
+client/src/pages/org-suspended.tsx:      const res = await apiRequest("POST", "/api/stripe/billing-portal", {
+client/src/pages/pending-time-entries.tsx:      return await apiRequest('POST', '/api/time-entries/bulk-approve', { timeEntryIds });
+client/src/pages/pending-time-entries.tsx:      return await apiRequest('PATCH', `/api/time-entries/${id}/approve`);
+client/src/pages/pending-time-entries.tsx:      return await apiRequest('PATCH', `/api/time-entries/${id}/reject`, { reason });
+client/src/pages/document-library.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/contracts", data),
+client/src/pages/document-library.tsx:    mutationFn: () => apiRequest("POST", `/api/contracts/${contract.id}/send`),
+client/src/pages/document-library.tsx:      apiRequest('POST', `/api/documents/${doc?.id}/send-for-signature`, data),
+client/src/pages/document-library.tsx:  const { data: docsData, isLoading } = useQuery({
+client/src/pages/document-library.tsx:  const { data: signaturesData } = useQuery({
+client/src/pages/document-library.tsx:    queryFn: () => fetch(`/api/documents/${selectedDoc?.id}/signatures`, { credentials: 'include' }).then(r => r.json()),
+client/src/pages/document-library.tsx:    mutationFn: (data: any) => apiRequest('POST', '/api/documents', data),
+client/src/pages/document-library.tsx:    mutationFn: ({ id, ...data }: any) => apiRequest('POST', `/api/documents/${id}/sign`, data),
+client/src/pages/document-library.tsx:                  apiRequest("POST", `/api/contracts/${selectedContractForSign.id}/send`)
+client/src/pages/document-library.tsx:                  apiRequest("POST", `/api/contracts/${selectedContractForSign.id}/signers`, {
+client/src/pages/document-signing-portal.tsx:      const res = await fetch(`/api/documents/external/verify/${token}`);
+client/src/pages/document-signing-portal.tsx:      const res = await fetch(`/api/documents/external/sign/${token}`, {
+client/src/pages/help.tsx:      const res = await apiRequest("POST", "/api/helpai/session/start", body);
+client/src/pages/help.tsx:      const res = await apiRequest("POST", `/api/helpai/session/${session.sessionId}/message`, {
+client/src/pages/help.tsx:      await apiRequest("POST", `/api/helpai/session/${session.sessionId}/escalate`, {
+client/src/pages/help.tsx:      await apiRequest("POST", `/api/helpai/session/${session.sessionId}/close`, {
+client/src/pages/equipment.tsx:        ? apiRequest("PATCH", `/api/equipment/items/${item.id}`, data)
+client/src/pages/equipment.tsx:        : apiRequest("POST", "/api/equipment/items", { ...data, workspaceId }),
+client/src/pages/equipment.tsx:      fetch(`/api/equipment/items?workspaceId=${workspaceId}`, { credentials: "include" })
+client/src/pages/equipment.tsx:      fetch(`/api/equipment/assignments?workspaceId=${workspaceId}`, { credentials: "include" })
+client/src/pages/automation-audit-log.tsx:      return apiRequest('POST', `/api/automation-events/retry/${jobId}`);
+client/src/pages/ai-brain-dashboard.tsx:  const { data: user } = useQuery({
+client/src/pages/ai-integrations.tsx:      return await apiRequest('POST', '/api/integrations/connections', { integrationId });
+client/src/pages/ai-integrations.tsx:      return await apiRequest('POST', '/api/integrations/api-keys', { name });
+client/src/pages/ai-integrations.tsx:      return await apiRequest('POST', '/api/integrations/webhooks', { url, events });
+client/src/pages/ai-integrations.tsx:      return await apiRequest('DELETE', `/api/integrations/connections/${id}`);
+client/src/pages/my-tickets.tsx:    await refetch();
+client/src/pages/support-queue.tsx:      const res = await apiRequest('POST', `/api/support/chat/session/${sessionId}/join`, {
+client/src/pages/support-queue.tsx:      const res = await apiRequest('POST', `/api/support/chat/session/${sessionId}/staff-message`, {
+client/src/pages/support-queue.tsx:      const res = await apiRequest('POST', `/api/support/chat/session/${sessionId}/resolve`, {
+client/src/pages/finance-hub.tsx:    mutationFn: () => apiRequest("POST", "/api/stripe/connect-account"),
+client/src/pages/finance-hub.tsx:    mutationFn: () => apiRequest("POST", "/api/stripe/onboarding-link"),
+client/src/pages/finance-hub.tsx:    mutationFn: () => apiRequest("POST", "/api/stripe/connect-dashboard"),
+client/src/pages/finance-hub.tsx:      apiRequest("PATCH", "/api/finance-settings", updates),
+client/src/pages/resolution-inbox.tsx:      return apiRequest('POST', `/api/exceptions/${id}/resolve`, { action, notes });
+client/src/pages/resolution-inbox.tsx:      return apiRequest('POST', `/api/exceptions/${id}/retry`);
+client/src/pages/hris-management.tsx:  const res = await fetch(url, { ...options, credentials: 'include' });
+client/src/pages/hris-management.tsx:  const providersQuery = useQuery({
+client/src/pages/hris-management.tsx:  const connectionsQuery = useQuery({
+client/src/pages/hris-management.tsx:      const res = await fetch(`/api/hris/auth/${provider}`, { credentials: 'include' });
+client/src/pages/hris-management.tsx:      const res = await apiRequest("POST", `/api/hris/sync/${provider}`, {
+client/src/pages/hris-management.tsx:      const res = await apiRequest("DELETE", `/api/hris/disconnect/${provider}`);
+client/src/pages/reports.tsx:      return apiRequest('POST', '/api/disputes', {
+client/src/pages/support-ai-console.tsx:      const response = await apiRequest('POST', '/api/ai-brain/console/chat', data);
+client/src/pages/support-ai-console.tsx:      const response = await apiRequest('POST', '/api/ai-brain/console/files/read', { filePath });
+client/src/pages/support-ai-console.tsx:      const response = await apiRequest('POST', '/api/ai-brain/console/files/write', data);
+client/src/pages/support-ai-console.tsx:      const response = await apiRequest('POST', '/api/ai-brain/console/files/search', data);
+client/src/pages/support-ai-console.tsx:      const response = await apiRequest('POST', '/api/ai-brain/console/tests/run', data);
+client/src/pages/expense-approvals.tsx:    await refetch();
+client/src/pages/expense-approvals.tsx:  const { data: expenseDetails } = useQuery({
+client/src/pages/expense-approvals.tsx:      return apiRequest('PATCH', `/api/expenses/${id}/approve`, { reviewNotes: notes });
+client/src/pages/expense-approvals.tsx:      return apiRequest('PATCH', `/api/expenses/${id}/reject`, { reviewNotes: notes });
+client/src/pages/expense-approvals.tsx:      return apiRequest('PATCH', `/api/expenses/${id}/mark-paid`, { paymentMethod: 'direct_deposit' });
+client/src/pages/support-chatrooms.tsx:      await apiRequest('POST', `/api/comm-os/rooms/${roomId}/join`);
+client/src/pages/admin-helpai.tsx:      return apiRequest("POST", `/api/helpai/session/${sessionId}/close`, { resolution: "Closed by admin review" });
+client/src/pages/admin-helpai.tsx:                              await apiRequest("POST", `/api/clients/dockchat/reports/${selectedReport.id}/acknowledge`, {});
+client/src/pages/admin-helpai.tsx:                              await apiRequest("POST", `/api/clients/dockchat/reports/${selectedReport.id}/resolve`, {});
+client/src/pages/client-profitability.tsx:      const res = await fetch(`/api/analytics/client-profitability${queryString}`, {
+client/src/pages/site-briefing.tsx:        ? apiRequest("PATCH", `/api/site-briefings/${briefing.id}`, data)
+client/src/pages/site-briefing.tsx:        : apiRequest("POST", "/api/site-briefings", data),
+client/src/pages/site-briefing.tsx:    mutationFn: (id: string) => apiRequest("DELETE", `/api/site-briefings/${id}`),
+client/src/pages/compliance-matrix.tsx:      const res = await fetch(url, { credentials: "include" });
+client/src/pages/post-orders.tsx:        ? apiRequest("PATCH", `/api/post-orders/templates/${order.id}`, data)
+client/src/pages/post-orders.tsx:        : apiRequest("POST", "/api/post-orders/templates", { ...data, workspaceId }),
+client/src/pages/post-orders.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/post-orders/acknowledge", data),
+client/src/pages/post-orders.tsx:      fetch(`/api/post-orders/acknowledgments/${order.id}`, { credentials: "include" })
+client/src/pages/post-orders.tsx:      fetch("/api/post-orders/tracking", { credentials: "include" })
+client/src/pages/post-orders.tsx:      fetch(`/api/post-orders/templates`, { credentials: "include" })
+client/src/pages/guard-tour.tsx:        ? apiRequest("PATCH", `/api/guard-tours/tours/${tour.id}`, data)
+client/src/pages/guard-tour.tsx:        : apiRequest("POST", "/api/guard-tours/tours", { ...data, workspaceId }),
+client/src/pages/guard-tour.tsx:        ? apiRequest("PATCH", `/api/guard-tours/checkpoints/${checkpoint.id}`, data)
+client/src/pages/guard-tour.tsx:        : apiRequest("POST", `/api/guard-tours/tours/${tourId}/checkpoints`, { ...data, workspaceId }),
+client/src/pages/guard-tour.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/guard-tours/scans", data),
+client/src/pages/guard-tour.tsx:      fetch(`/api/guard-tours/tours/${tourId}/checkpoints`, { credentials: "include" })
+client/src/pages/guard-tour.tsx:    mutationFn: (id: string) => apiRequest("DELETE", `/api/guard-tours/checkpoints/${id}`),
+client/src/pages/guard-tour.tsx:      fetch(`/api/guard-tours/tours/${tourId}/scans`, { credentials: "include" })
+client/src/pages/guard-tour.tsx:      fetch(`/api/guard-tours/tours/${tourId}/checkpoints`, { credentials: "include" })
+client/src/pages/guard-tour.tsx:      fetch(`/api/guard-tours/tours/${tourId}/scans`, { credentials: "include" })
+client/src/pages/guard-tour.tsx:      fetch(`/api/guard-tours/tours/${tourId}/checkpoints`, { credentials: "include" })
+client/src/pages/guard-tour.tsx:      fetch(`/api/guard-tours/tours/${tour.id}/checkpoints`, { credentials: "include" })
+client/src/pages/guard-tour.tsx:      fetch(`/api/guard-tours/tours`, { credentials: "include" })
+client/src/pages/custom-login.tsx:                    const resp = await fetch("/api/demo-login", { credentials: "include", headers: { 'Accept': 'application/json' } });
+client/src/pages/custom-login.tsx:                        const resp = await fetch("/api/auth/dev-login", { credentials: "include" });
+client/src/pages/custom-login.tsx:                        const resp = await fetch("/api/auth/dev-login-root", { credentials: "include" });
+client/src/pages/contact.tsx:      return await apiRequest("POST", "/api/contact", data);
+client/src/pages/trinity-chat.tsx:      const response = await apiRequest('POST', '/api/trinity/chat/chat', payload);
+client/src/pages/trinity-chat.tsx:      const response = await apiRequest('POST', '/api/trinity/chat/mode', { mode: newMode });
+client/src/pages/trinity-chat.tsx:      const response = await apiRequest('PATCH', '/api/trinity/chat/settings', updates);
+client/src/pages/trinity-chat.tsx:      const response = await apiRequest('GET', `/api/trinity/chat/session/${session.id}/messages`);
+client/src/pages/safety-check.tsx:      return apiRequest('POST', '/api/safety-checks', {
+client/src/pages/incident-pipeline.tsx:      const res = await apiRequest("PATCH", `/api/incident-reports/${id}/status`, { status, reviewNotes });
+client/src/pages/incident-pipeline.tsx:      const res = await apiRequest("POST", `/api/incident-reports/${id}/trinity-polish`);
+client/src/pages/document-templates.tsx:      const res = await apiRequest("POST", "/api/document-templates", body);
+client/src/pages/document-templates.tsx:      const res = await apiRequest("PATCH", `/api/document-templates/${id}`, body);
+client/src/pages/document-templates.tsx:      const res = await apiRequest("PATCH", `/api/document-templates/${id}`, { isActive: false });
+client/src/pages/document-templates.tsx:      const res = await apiRequest("POST", "/api/document-templates/generate", {
+client/src/pages/document-templates.tsx:            <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry-templates">Retry</Button>
+client/src/pages/bridge-channels.tsx:      const res = await apiRequest("POST", "/api/bridges/channels", data);
+client/src/pages/bridge-channels.tsx:      const res = await apiRequest("PATCH", `/api/bridges/channels/${id}`, data);
+client/src/pages/bridge-channels.tsx:      const res = await apiRequest("DELETE", `/api/bridges/channels/${id}`);
+client/src/pages/bridge-channels.tsx:      const res = await apiRequest("POST", "/api/bridges/send", data);
+client/src/pages/form-submissions.tsx:      const res = await apiRequest("POST", "/api/form-submissions", {
+client/src/pages/form-submissions.tsx:      const res = await apiRequest("PATCH", `/api/form-submissions/${submission.id}/review`, {
+client/src/pages/private-messages.tsx:  const { data: searchResults = [], isLoading: searchLoading } = useQuery({
+client/src/pages/private-messages.tsx:      return await apiRequest('POST', '/api/private-messages/send', {
+client/src/pages/private-messages.tsx:      return await apiRequest('POST', '/api/private-messages/start', { recipientId });
+client/src/pages/private-messages.tsx:      return await apiRequest('POST', `/api/private-messages/${conversationId}/mark-read`);
+client/src/pages/field-reports.tsx:      return apiRequest('POST', '/api/report-submissions', {
+client/src/pages/field-reports.tsx:      return apiRequest('POST', `/api/report-submissions/${id}/review`, { action, notes });
+client/src/pages/field-reports.tsx:      return apiRequest('POST', `/api/report-submissions/${id}/send-to-client`, {});
+client/src/pages/field-reports.tsx:      const res = await apiRequest('POST', '/api/incidents/ai-analyze', {
+client/src/pages/platform-admin.tsx:      const response = await apiRequest('POST', '/api/admin/platform/roles', { userId, role });
+client/src/pages/platform-admin.tsx:      refetch();
+client/src/pages/platform-admin.tsx:      const response = await apiRequest('POST', '/api/admin/support/sessions/start', { orgId, reason });
+client/src/pages/platform-admin.tsx:      const response = await apiRequest('POST', '/api/admin/support/sessions/end', { sessionId });
+client/src/pages/platform-admin.tsx:      const response = await apiRequest('POST', '/api/admin/support/sessions/freeze', { sessionId, freeze });
+client/src/pages/employee-profile.tsx:      return await apiRequest('PATCH', '/api/employees/me/contact-info', data);
+client/src/pages/employee-portal.tsx:      const response = await fetch(`/api/payroll/my-tax-forms/${formId}/download`, { credentials: 'include' });
+client/src/pages/root-admin-dashboard.tsx:  const { data: supportStats } = useQuery({
+client/src/pages/root-admin-dashboard.tsx:  const { data: userSearchResults, refetch: refetchUsers} = useQuery({
+client/src/pages/root-admin-dashboard.tsx:  const { data: workspaceSearchResults, refetch: refetchWorkspaces } = useQuery({
+client/src/pages/root-admin-dashboard.tsx:      await apiRequest('POST', '/api/admin/support/suspend-account', data),
+client/src/pages/root-admin-dashboard.tsx:      await apiRequest('POST', '/api/admin/support/unsuspend-account', data),
+client/src/pages/root-admin-dashboard.tsx:      await apiRequest('POST', '/api/admin/support/lock-account', data),
+client/src/pages/root-admin-dashboard.tsx:      await apiRequest('POST', '/api/admin/support/unlock-account', data),
+client/src/pages/root-admin-dashboard.tsx:      await apiRequest('POST', '/api/admin/support/change-user-role', data),
+client/src/pages/HelpDesk.tsx: mutationFn: (reactionKey: string) =>apiRequest("POST", `/api/chat/manage/messages/${messageId}/reactions`, { emoji: reactionKey }),
+client/src/pages/HelpDesk.tsx: const { data: roomData, error: roomError } = useQuery({
+client/src/pages/HelpDesk.tsx: return await apiRequest('POST', '/api/promotional-banners', data);
+client/src/pages/HelpDesk.tsx: return await apiRequest('PATCH', `/api/promotional-banners/${id}`, data);
+client/src/pages/HelpDesk.tsx: return await apiRequest('DELETE', `/api/promotional-banners/${id}`);
+client/src/pages/HelpDesk.tsx: return await apiRequest('POST', '/api/helpdesk/motd/acknowledge', {
+client/src/pages/HelpDesk.tsx: return await apiRequest('POST', '/api/helpdesk/room/helpdesk/status', {
+client/src/pages/HelpDesk.tsx: return await apiRequest('POST', `/api/chat/rooms/${conversationToJoin}/close`, { reason });
+client/src/pages/HelpDesk.tsx: return await apiRequest('POST', `/api/chat/rooms/${conversationToJoin}/reopen`, { reason });
+client/src/pages/HelpDesk.tsx: const { data: reactionsData } = useQuery({
+client/src/pages/HelpDesk.tsx: const { data: pinnedData } = useQuery({
+client/src/pages/HelpDesk.tsx: const { data: chatSearchResults } = useQuery({
+client/src/pages/HelpDesk.tsx: apiRequest("PATCH", `/api/chat/manage/messages/${messageId}/edit`, { message }),
+client/src/pages/HelpDesk.tsx: apiRequest("POST", `/api/chat/manage/messages/${messageId}/reactions`, { emoji }),
+client/src/pages/HelpDesk.tsx: apiRequest("POST", `/api/chat/manage/messages/${messageId}/pin`),
+client/src/pages/HelpDesk.tsx: apiRequest("POST", `/api/chat/manage/messages/${messageId}/forward`, { targetConversationId }),
+client/src/pages/HelpDesk.tsx: const result = await apiRequest('POST', '/api/support/create-ticket', {
+client/src/pages/HelpDesk.tsx: apiRequest("POST", "/api/helpai/session/start", {
+client/src/pages/HelpDesk.tsx: apiRequest("POST", `/api/helpai/session/${helpaiSessionId}/rate`, { rating: star }).catch(() =>{});
+client/src/pages/HelpDesk.tsx: const response = await fetch('/api/chat/upload', {
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', '/api/automation/schedule/generate', {
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', '/api/automation/invoice/generate', {
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', '/api/automation/payroll/generate', {
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', '/api/automation/compliance/scan', {});
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', `/api/automation/trinity/resume/${requestId}`, {});
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', `/api/automation/trinity/approve/${requestId}`, {});
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', `/api/automation/trinity/reject/${requestId}`, { reason: 'Rejected via review queue' });
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', `/api/automation/trinity/pause/${requestId}`, { reason });
+client/src/pages/automation-control.tsx:      const res = await apiRequest('PATCH', `/api/automation/trinity/revise/${requestId}`, { revisedPayload, notes });
+client/src/pages/automation-control.tsx:      const res = await apiRequest('POST', `/api/automation/trinity/reanalyze/${requestId}`, {});
+client/src/pages/schedule-mobile-first.tsx:      const res = await apiRequest('POST', '/api/shifts', data);
+client/src/pages/schedule-mobile-first.tsx:      const res = await apiRequest('DELETE', `/api/shifts/${shiftId}`);
+client/src/pages/schedule-mobile-first.tsx:      await apiRequest('PATCH', `/api/shifts/${shift.id}`, { 
+client/src/pages/schedule-mobile-first.tsx:      await apiRequest('PATCH', `/api/shifts/${shift.id}`, { 
+client/src/pages/schedule-mobile-first.tsx:      await apiRequest('PATCH', `/api/shifts/${shift.id}`, { 
+client/src/pages/schedule-mobile-first.tsx:      await apiRequest('POST', '/api/shifts', {
+client/src/pages/schedule-mobile-first.tsx:      await apiRequest('POST', '/api/shifts', {
+client/src/pages/schedule-mobile-first.tsx:        await apiRequest('POST', '/api/shifts', {
+client/src/pages/document-vault.tsx:      const res = await apiRequest("POST", `/api/rms/shift-reports/${reportId}/generate-pdf`, {});
+client/src/pages/document-vault.tsx:      const res = await apiRequest("POST", "/api/document-vault", data);
+client/src/pages/document-vault.tsx:      const res = await apiRequest("DELETE", `/api/document-vault/${id}`);
+client/src/pages/document-vault.tsx:                <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry">
+client/src/pages/ai-audit-log-viewer.tsx:      return apiRequest('POST', `/api/ai/audit-logs/${id}/review`, { notes });
+client/src/pages/end-user-controls.tsx:    queryFn: () => apiRequest('GET', `/api/admin/support/org/${selectedWorkspace}/employees`).then(r => r.json()),
+client/src/pages/end-user-controls.tsx:    queryFn: () => apiRequest('GET', `/api/admin/support/org/${selectedWorkspace}/shifts`).then(r => r.json()),
+client/src/pages/end-user-controls.tsx:    queryFn: () => apiRequest('GET', `/api/admin/support/org/${selectedWorkspace}/invoices`).then(r => r.json()),
+client/src/pages/end-user-controls.tsx:      apiRequest("POST", "/api/admin/platform/roles", data),
+client/src/pages/end-user-controls.tsx:      apiRequest("POST", "/api/admin/platform/roles", { ...data, role: "none" }),
+client/src/pages/end-user-controls.tsx:      apiRequest("POST", "/api/admin/end-users/suspend", data),
+client/src/pages/end-user-controls.tsx:      apiRequest("POST", "/api/admin/end-users/unsuspend", data),
+client/src/pages/end-user-controls.tsx:      apiRequest("POST", "/api/admin/end-users/toggle-ai-brain", data),
+client/src/pages/end-user-controls.tsx:      apiRequest("PATCH", "/api/admin/end-users/access-config", data),
+client/src/pages/support-bug-dashboard.tsx:      const response = await apiRequest('POST', `/api/bug-remediation/${id}/approve`);
+client/src/pages/support-bug-dashboard.tsx:      const response = await apiRequest('POST', `/api/bug-remediation/${id}/reject`, { reason });
+client/src/pages/employee-onboarding-wizard.tsx:      const res = await fetch(`/api/onboarding/invite/${token}`);
+client/src/pages/employee-onboarding-wizard.tsx:      fetch(`/api/onboarding/invite/${token}/opened`, { method: 'POST' }).catch(() => {});
+client/src/pages/employee-onboarding-wizard.tsx:      const res = await fetch('/api/onboarding/application', {
+client/src/pages/employee-onboarding-wizard.tsx:      const res = await fetch(`/api/onboarding/application/${applicationId}`, {
+client/src/pages/employee-onboarding-wizard.tsx:    const res = await fetch(`/api/onboarding/contracts/${applicationId}?workspaceId=${workspaceId}`);
+client/src/pages/employee-onboarding-wizard.tsx:      const res = await fetch(`/api/onboarding/contracts/${contractId}/sign?workspaceId=${workspaceId}`, {
+client/src/pages/employee-onboarding-wizard.tsx:      const res = await fetch(`/api/onboarding/submit/${applicationId}`, {
+client/src/pages/contract-signing-portal.tsx:      const res = await fetch(`/api/contracts/portal/${token}`);
+client/src/pages/contract-signing-portal.tsx:      const res = await fetch(`/api/contracts/portal/${token}/sign`, {
+client/src/pages/contract-signing-portal.tsx:      contractQuery.refetch();
+client/src/pages/contract-signing-portal.tsx:      const res = await fetch(`/api/contracts/portal/${token}/accept`, {
+client/src/pages/contract-signing-portal.tsx:      contractQuery.refetch();
+client/src/pages/contract-signing-portal.tsx:      const res = await fetch(`/api/contracts/portal/${token}/decline`, {
+client/src/pages/contract-signing-portal.tsx:      contractQuery.refetch();
+client/src/pages/contract-signing-portal.tsx:      const res = await fetch(`/api/contracts/portal/${token}/request-changes`, {
+client/src/pages/contract-signing-portal.tsx:      contractQuery.refetch();
+client/src/pages/client-portal.tsx:    mutationFn: () => apiRequest("POST", "/api/clients/coi-request", form),
+client/src/pages/client-portal.tsx:    mutationFn: () => apiRequest("POST", "/api/clients/contract-renewal-request", { contractTitle, notes }),
+client/src/pages/client-portal.tsx:      apiRequest("POST", `/api/invoices/${invoiceId}/create-payment`, {
+client/src/pages/proposal-builder.tsx:      const res = await fetch(`/api/proposals/templates/${templateId}`, { credentials: "include" });
+client/src/pages/proposal-builder.tsx:        ? apiRequest("PATCH", `/api/proposals/${proposal.id}`, data)
+client/src/pages/proposal-builder.tsx:        : apiRequest("POST", "/api/proposals", { ...data, workspaceId }),
+client/src/pages/proposal-builder.tsx:    queryFn: () => fetch("/api/contracts?status=partially_signed", { credentials: "include" }).then((r) => r.json()),
+client/src/pages/proposal-builder.tsx:      const contractRes = await apiRequest("POST", "/api/contracts", {
+client/src/pages/proposal-builder.tsx:      const sendRes = await apiRequest("POST", `/api/contracts/${contractId}/send`);
+client/src/pages/proposal-builder.tsx:      return apiRequest("POST", `/api/contracts/${contractId}/sign`, {
+client/src/pages/proposal-builder.tsx:    mutationFn: (id: string) => apiRequest("DELETE", `/api/proposals/${id}`),
+client/src/pages/proposal-builder.tsx:      return apiRequest("POST", "/api/proposals", {
+client/src/pages/proposal-builder.tsx:      const res = await fetch(`/api/proposals/${id}/generate-pdf`, { method: "POST", credentials: "include" });
+client/src/pages/clients.tsx:  const { data: orgs } = useQuery({
+client/src/pages/universal-schedule.tsx:      return await apiRequest('POST', '/api/scheduleos/ai/toggle', { enabled, workspaceId });
+client/src/pages/universal-schedule.tsx:      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/trigger-session', { 
+client/src/pages/universal-schedule.tsx:      return await apiRequest('DELETE', `/api/shifts/${shiftId}`);
+client/src/pages/universal-schedule.tsx:      return await apiRequest('PATCH', `/api/shifts/${shiftId}`, {
+client/src/pages/universal-schedule.tsx:      return await apiRequest('POST', '/api/schedules/publish', {
+client/src/pages/universal-schedule.tsx:      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/trigger-session', {
+client/src/pages/universal-schedule.tsx:      return await apiRequest('POST', '/api/shifts', {
+client/src/pages/universal-schedule.tsx:      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/fill-shift', {
+client/src/pages/universal-schedule.tsx:      return await apiRequest('PATCH', `/api/shifts/${shiftId}`, { 
+client/src/pages/universal-schedule.tsx:      const response = await apiRequest('POST', '/api/orchestrated-schedule/ai/trigger-session', {
+client/src/pages/universal-schedule.tsx:      await apiRequest('POST', '/api/schedules/publish', {
+client/src/pages/universal-schedule.tsx:      return await apiRequest('POST', '/api/scheduling/duplicate-week', {
+client/src/pages/universal-schedule.tsx:      return await apiRequest('POST', `/api/scheduling/shifts/${shiftId}/duplicate`, {
+client/src/pages/universal-schedule.tsx:      return await apiRequest('PATCH', `/api/shifts/${shiftId}`, payload);
+client/src/pages/universal-schedule.tsx:      return await apiRequest('POST', `/api/scheduling/shifts/${shiftId}/swap-request`, {
+client/src/pages/universal-schedule.tsx:      return await apiRequest('POST', '/api/scheduling/recurring', data);
+client/src/pages/employee-packets.tsx:    mutationFn: (body: typeof form) => apiRequest("POST", "/api/employee-packets", body),
+client/src/pages/employee-packets.tsx:    mutationFn: (id: string) => apiRequest("DELETE", `/api/employee-packets/${id}`),
+client/src/pages/employee-packet-portal.tsx:      const res = await fetch(`/api/public/packets/${token}`);
+client/src/pages/employee-packet-portal.tsx:      fetch(`/api/public/packets/${token}/save`, {
+client/src/pages/employee-packet-portal.tsx:      const res = await fetch(`/api/public/packets/${token}/submit`, {
+client/src/pages/tx-service-agreement.tsx:      const res = await apiRequest("POST", "/api/contracts", {
+client/src/pages/shift-marketplace.tsx:      const res = await apiRequest('POST', `/api/shifts/${shiftId}/pickup`);
+client/src/pages/shift-marketplace.tsx:  const { data: swapData, isLoading: swapsLoading } = useQuery({
+client/src/pages/shift-marketplace.tsx:      const res = await apiRequest('POST', `/api/scheduling/swap-requests/${swapId}/approve`);
+client/src/pages/shift-marketplace.tsx:      const res = await apiRequest('POST', `/api/scheduling/swap-requests/${swapId}/reject`);
+client/src/pages/shift-marketplace.tsx:  const { data: swapData, isLoading } = useQuery({
+client/src/pages/shift-marketplace.tsx:      const res = await apiRequest('POST', `/api/scheduling/swap-requests/${swapId}/cancel`);
+client/src/pages/shift-marketplace.tsx:      fetch(`/api/coverage-marketplace?workspaceId=${workspaceId}&status=${statusFilter}`, {
+client/src/pages/shift-marketplace.tsx:      apiRequest("POST", "/api/coverage-marketplace", { ...data, workspaceId }),
+client/src/pages/shift-marketplace.tsx:      apiRequest("POST", `/api/coverage-marketplace/${id}/claim`, {
+client/src/pages/shift-marketplace.tsx:      apiRequest("POST", `/api/coverage-marketplace/${id}/approve`, {
+client/src/pages/sps-packet-portal.tsx:      const res = await fetch(`/api/public/sps/${token}`);
+client/src/pages/sps-packet-portal.tsx:      apiRequest("PATCH", `/api/public/sps/${token}`, data),
+client/src/pages/sps-packet-portal.tsx:      const res = await fetch(`/api/public/sps/${token}/submit`, {
+client/src/pages/sps-client-pipeline.tsx:      const docRes = await apiRequest("POST", "/api/sps/documents", {
+client/src/pages/sps-client-pipeline.tsx:      return apiRequest("POST", "/api/sps/negotiations", {
+client/src/pages/sps-client-pipeline.tsx:    mutationFn: (data: any) => apiRequest("POST", `/api/sps/negotiations/${threadId}/messages`, data),
+client/src/pages/sps-client-pipeline.tsx:      const res = await apiRequest("POST", `/api/sps/negotiations/${threadId}/polish`, { messageRaw: msg });
+client/src/pages/sps-client-pipeline.tsx:    mutationFn: () => apiRequest("POST", `/api/sps/negotiations/${threadId}/convert-to-contract`, {}),
+client/src/pages/ethics-hotline.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/ethics/report", { ...data, workspaceId }),
+client/src/pages/ethics-hotline.tsx:    mutationFn: ({ id, status, resolution }: any) => apiRequest("PATCH", `/api/ethics/reports/${id}`, { status, resolution, workspaceId }),
+client/src/pages/ethics-hotline.tsx:      const r = await apiRequest("GET", `/api/ethics/followup/${followupToken}`, null);
+client/src/pages/safety-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/safety/panic/${id}/acknowledge`, { acknowledgedBy: user?.firstName, workspaceId }),
+client/src/pages/safety-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/safety/panic/${id}/resolve`, { resolvedBy: user?.firstName, workspaceId }),
+client/src/pages/safety-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/safety/geofences", { ...data, workspaceId }),
+client/src/pages/safety-hub.tsx:    mutationFn: (id: string) => apiRequest("DELETE", `/api/safety/geofences/${id}`, { workspaceId }),
+client/src/pages/safety-hub.tsx:      apiRequest("PATCH", `/api/safety/geofences/${id}`, { isActive, workspaceId }),
+client/src/pages/safety-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/safety/sla", { ...data, workspaceId }),
+client/src/pages/rfp-manager.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rfp", { ...data, workspaceId, createdBy: user?.id }),
+client/src/pages/rfp-manager.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/rfp/${id}/generate-proposal`, { workspaceId }),
+client/src/pages/rfp-manager.tsx:    mutationFn: ({ id, status, winLoss }: any) => apiRequest("PATCH", `/api/rfp/${id}`, { status, winLoss, workspaceId }),
+client/src/pages/labor-law-config.tsx:  const res = await fetch(url, { ...options, credentials: 'include' });
+client/src/pages/labor-law-config.tsx:  const workspaceRulesQuery = useQuery({
+client/src/pages/training-os.tsx:      return await apiRequest('POST', '/api/training/courses', courseData);
+client/src/pages/training-os.tsx:      return await apiRequest('POST', `/api/training/courses/${courseId}/enroll`, {});
+client/src/pages/financial-intelligence.tsx:      return await apiRequest('POST', `/api/finance/pl/alerts/${alertId}/dismiss`, {});
+client/src/pages/financial-intelligence.tsx:      return await apiRequest('POST', '/api/finance/pl/insights', {});
+client/src/pages/system-health.tsx:          <Button onClick={() => refetch()} data-testid="button-retry">
+client/src/pages/system-health.tsx:          onClick={() => refetch()}
+client/src/pages/time-tracking.tsx:      return apiRequest('POST', `/api/time-entries/${data.entryId}/start-break`, { breakType: data.breakType })
+client/src/pages/time-tracking.tsx:      return apiRequest('POST', `/api/time-entries/${entryId}/end-break`)
+client/src/pages/employees.tsx:      const r = await fetch('/api/manager-assignments', { credentials: 'include' });
+client/src/pages/employees.tsx:          <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry-employees">
+client/src/pages/alert-configuration.tsx:      const response = await apiRequest('PUT', `/api/alerts/config/${config.alertType}`, config);
+client/src/pages/alert-configuration.tsx:      const response = await apiRequest('PATCH', `/api/alerts/config/${alertType}/toggle`, { isEnabled });
+client/src/pages/alert-configuration.tsx:      const response = await apiRequest('POST', `/api/alerts/${alertId}/acknowledge`);
+client/src/pages/alert-configuration.tsx:      const response = await apiRequest('POST', '/api/alerts/test', { alertType });
+client/src/pages/rfp-pipeline.tsx:      apiRequest("POST", `/api/pipeline-deals/${deal.id}/activities`, data),
+client/src/pages/rfp-pipeline.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/pipeline-deals", data),
+client/src/pages/rfp-pipeline.tsx:    mutationFn: ({ id, ...data }: any) => apiRequest("PATCH", `/api/pipeline-deals/${id}`, data),
+client/src/pages/automation-settings.tsx:      const res = await apiRequest('PATCH', '/api/automation/trinity/settings', settings);
+client/src/pages/settings.tsx:      const res = await apiRequest('PATCH', '/api/auth/profile', data);
+client/src/pages/settings.tsx:  const { data: workspace } = useQuery({
+client/src/pages/settings.tsx:                    const res = await apiRequest('POST', '/api/auth/mfa/setup', {});
+client/src/pages/settings.tsx:      return apiRequest('POST', '/api/calendar/subscriptions', data);
+client/src/pages/settings.tsx:      return apiRequest('DELETE', `/api/calendar/subscriptions/${id}`);
+client/src/pages/settings.tsx:      return apiRequest('POST', `/api/calendar/subscriptions/${id}/regenerate`);
+client/src/pages/worker-incidents.tsx:      return apiRequest(
+client/src/pages/admin-banners.tsx:    mutationFn: (data: typeof formData) => apiRequest('POST', '/api/promotional-banners', data),
+client/src/pages/admin-banners.tsx:      apiRequest('PATCH', `/api/promotional-banners/${id}`, data),
+client/src/pages/admin-banners.tsx:    mutationFn: (id: string) => apiRequest('DELETE', `/api/promotional-banners/${id}`, {}),
+client/src/pages/admin-custom-forms.tsx:      const res = await fetch(`/api/form-builder/forms/${form.id}/submissions?${params}`, { credentials: 'include' });
+client/src/pages/admin-custom-forms.tsx:      apiRequest("PATCH", `/api/form-builder/submissions/${id}`, { status }),
+client/src/pages/admin-custom-forms.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/form-builder/forms", data),
+client/src/pages/admin-custom-forms.tsx:    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PATCH", `/api/form-builder/forms/${id}`, data),
+client/src/pages/admin-custom-forms.tsx:    mutationFn: (id: string) => apiRequest("DELETE", `/api/form-builder/forms/${id}`),
+client/src/pages/mileage.tsx:    mutationFn: (data: typeof form) => apiRequest("POST", "/api/mileage", data),
+client/src/pages/mileage.tsx:    mutationFn: (data: typeof form) => apiRequest("PATCH", `/api/mileage/${initial?.id}`, data),
+client/src/pages/mileage.tsx:    mutationFn: () => apiRequest("POST", "/api/ai-brain/actions/execute", {
+client/src/pages/mileage.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/mileage/${id}/submit`, {}),
+client/src/pages/mileage.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/mileage/${id}/approve`, {}),
+client/src/pages/mileage.tsx:    mutationFn: ({ id, reason }: { id: string; reason: string }) => apiRequest("POST", `/api/mileage/${id}/reject`, { reason }),
+client/src/pages/mileage.tsx:    mutationFn: (id: string) => apiRequest("DELETE", `/api/mileage/${id}`, {}),
+client/src/pages/org-hub.tsx:    mutationFn: (body: object) => apiRequest("POST", "/api/workspace/sub-orgs", body),
+client/src/pages/org-hub.tsx:    mutationFn: (body: object) => apiRequest("POST", "/api/workspace/sub-orgs/attach", body),
+client/src/pages/org-hub.tsx:    mutationFn: (subOrgId: string) => apiRequest("POST", `/api/workspace/sub-orgs/${subOrgId}/detach`, {}),
+client/src/pages/org-hub.tsx:    mutationFn: (body: object) => apiRequest("POST", "/api/workspace/sub-orgs/batch-payroll", body),
+client/src/pages/org-hub.tsx:    mutationFn: (body: object) => apiRequest("POST", "/api/workspace/sub-orgs/batch-invoices", body),
+client/src/pages/diagnostics.tsx:      return await apiRequest('POST', '/api/admin/unlock-user', { userId });
+client/src/pages/diagnostics.tsx:      return await apiRequest('POST', '/api/admin/reset-password', { userId });
+client/src/pages/dashboard.tsx:      const res = await apiRequest('POST', '/api/support/chat/session', {
+client/src/pages/billing.tsx:  const { data: invoices, isLoading: invoicesLoading } = useQuery({
+client/src/pages/billing.tsx:  const { data: usageData, isLoading: usageLoading } = useQuery({
+client/src/pages/billing.tsx:  const { data: addons, isLoading: addonsLoading } = useQuery({
+client/src/pages/billing.tsx:  const { data: activeAddons, isLoading: activeAddonsLoading } = useQuery({
+client/src/pages/billing.tsx:      return await apiRequest("POST", `/api/billing/addons/${addonId}/purchase`);
+client/src/pages/billing.tsx:      return await apiRequest("POST", "/api/billing/subscription/change", { newTier, billingCycle });
+client/src/pages/billing.tsx:      return await apiRequest("POST", "/api/billing/subscription/cancel", { immediate });
+client/src/pages/cad-console.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/cad/calls", { ...data, workspaceId, createdBy: user?.id }),
+client/src/pages/cad-console.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/cad/units", { ...data, workspaceId }),
+client/src/pages/cad-console.tsx:      apiRequest("POST", `/api/cad/calls/${callId}/dispatch`, { unitId, workspaceId, dispatchedBy: user?.id, dispatchedByName: user?.firstName }),
+client/src/pages/cad-console.tsx:    mutationFn: (callId: string) => apiRequest("POST", `/api/cad/calls/${callId}/on-scene`, { workspaceId }),
+client/src/pages/cad-console.tsx:      apiRequest("POST", `/api/cad/calls/${callId}/resolve`, { workspaceId, resolutionNotes: notes, closedBy: user?.firstName }),
+client/src/pages/cad-console.tsx:      apiRequest("PATCH", `/api/cad/units/${unitId}/status`, { status, workspaceId }),
+client/src/pages/cad-console.tsx:      apiRequest("POST", `/api/cad/geofence-departures/${id}/acknowledge`, { acknowledgedBy: user?.firstName, note, workspaceId }),
+client/src/pages/client-status-lookup.tsx:      apiRequest('POST', `/api/client-status/${initialTempCode}/clicked`).catch(() => {});
+client/src/pages/disputes.tsx:      return await apiRequest('POST', '/api/disputes', data);
+client/src/pages/disputes.tsx:      return await apiRequest('PATCH', `/api/disputes/${dispute.id}/assign`, { assignedTo: userId });
+client/src/pages/disputes.tsx:      return await apiRequest('POST', `/api/disputes/${dispute.id}/resolve`, data);
+client/src/pages/invoices.tsx:      const response = await apiRequest("POST", "/api/invoices/auto-generate");
+client/src/pages/invoices.tsx:      return await apiRequest("POST", "/api/invoices", data);
+client/src/pages/invoices.tsx:      return await apiRequest("POST", "/api/invoices/generate-from-time", data);
+client/src/pages/invoices.tsx:      const response = await apiRequest("POST", `/api/invoices/${invoiceId}/send-email`);
+client/src/pages/invoices.tsx:      return await apiRequest("POST", "/api/timesheet-invoices/generate-from-hours", data);
+client/src/pages/invoices.tsx:      return await apiRequest("POST", `/api/timesheet-invoices/${invoiceId}/send-email`, { customMessage });
+client/src/pages/onboarding.tsx:      return apiRequest('POST', `/api/onboarding/tasks/${taskId}/complete`, {});
+client/src/pages/onboarding.tsx:      return apiRequest('POST', '/api/onboarding/rewards/reward/apply', {});
+client/src/pages/onboarding.tsx:      return apiRequest('POST', '/api/onboarding/initialize', {});
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/dars", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/visitors", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/rms/visitors/${id}/checkout`, { checkedOutBy: user?.firstName, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/cases", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/key-control", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/rms/key-control/${id}/return`, { returnedTo: user?.firstName, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/lost-found", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/trespass", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/bolo", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (id: string) => apiRequest("PATCH", `/api/rms/bolo/${id}`, { isActive: false, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/rms/incidents/${id}/ai-narrative`, { workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: any) => apiRequest("POST", "/api/rms/evidence", { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: ({ evidenceId, data }: { evidenceId: string; data: any }) => apiRequest("POST", `/api/rms/evidence/${evidenceId}/transfer`, { ...data, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/rms/dars/${id}/submit`, { workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/rms/dars/${id}/verify`, { verifierId: user?.id, verifierName: user?.firstName, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: ({ id, email }: { id: string; email: string }) => apiRequest("POST", `/api/rms/dars/${id}/send-to-client`, { recipientEmail: email, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (id: string) => apiRequest("POST", `/api/rms/dars/${id}/generate-pdf`, { workspaceId }),
+client/src/pages/rms-hub.tsx:      apiRequest("POST", `/api/rms/reports/${data.reportId}/track`, { action: data.action, reportType: data.reportType || "dar", metadata: data.metadata, workspaceId }),
+client/src/pages/rms-hub.tsx:    mutationFn: (data: { base64Data: string; fileName: string; category: string }) => apiRequest("POST", "/api/rms/upload-photo", { ...data, workspaceId }),

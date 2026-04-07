@@ -1,0 +1,81 @@
+Going through all 32 checks carefully before certifying. The build is substantial and impressive — but several checks from the spec are unconfirmed in the summary.
+
+**What is clearly confirmed:**
+- 6 new tables created and migrated ✅
+- Dedicated auth with 2-step login (password + TOTP via speakeasy) ✅
+- Rate limiting and lockout protection ✅
+- 7 frontend pages at `/regulatory-audit/*` ✅
+- PDF report builder with SHA-256 hash embedded ✅
+- TypeScript zero errors ✅
+- Notification clear-all bug fixed as bonus ✅
+- `as any` casts removed — type safety hardened ✅
+
+**What is NOT confirmed in the summary — flagging before certifying:**
+
+Send this back to the agent:
+
+---
+
+**Phase 33 verification required — 12 unconfirmed checks before certification:**
+
+**Check 3:** Confirm org_owner receives NDS notification when an SRA auditor logs in — including auditor name, badge number, regulatory body, and stated purpose. Show the specific NDS call in the login handler.
+
+**Check 7:** Confirm SRA session is scoped to the authorized workspace only — an SRA session token cannot be used to access a different workspace's data. Show the middleware enforcement.
+
+**Check 8:** Confirm SRA session expires at audit period end — not just at token expiry. Show the session validation logic that checks `audit_period_end`.
+
+**Check 9:** Confirm all 6 prohibited data types are inaccessible to SRA sessions — payroll amounts, pay rates, SSN, bank accounts, other workspaces, platform config. Run: `grep -n "payroll\|salary\|ssn\|bankAccount\|tax_id" server/routes/sra/ | head -20` — confirm none of these fields are returned in any SRA data route.
+
+**Check 11:** Confirm all 5 finding types are implemented — observation, violation, citation, enforcement action, commendation. Show the finding type enum values in the schema.
+
+**Check 12:** Confirm citation finding triggers immediate NDS notification to org_owner and compliance officer. Show the specific NDS call in the findings route when `finding_type = 'citation'`.
+
+**Check 13:** Confirm enforcement action finding triggers platform staff notification AND Trinity conscience flag. Show both the NDS call and the conscience flag mechanism.
+
+**Check 14:** Confirm company can acknowledge findings, submit remediation evidence, submit payment confirmation, appeal, and request extension — all from within the platform. Show the company-side response endpoints.
+
+**Check 17:** Confirm evidence package is delivered automatically to both company and auditor on audit closure via NDS. Show the delivery logic in the closure handler.
+
+**Check 18:** Confirm compliance rating is calculated and stored on audit closure — percentage of findings remediated weighted by severity. Show the calculation logic.
+
+**Check 19:** Confirm state-specific occupation code autocomplete in finding form — pulls from `stateRegulatoryKnowledgeBase` for the auditor's state. Show the endpoint.
+
+**Check 24:** Confirm `sra_audit_log` is append-only — run: `grep -rn "update\|delete\|UPDATE\|DELETE" server/routes/sra/ | grep -i "audit_log" | head -10` — confirm zero results.
+
+**Check 32:** Produce the 32-row reconciliation table in replit.md — one row per check, all green with evidence.
+
+Phase 33 certifies when all 12 confirmations come back clean.
+
+---
+
+**On the pattern of bugs and gaps you noticed:**
+
+You are right to flag this. Here is what is causing it and how to address it going forward:
+
+**Root causes observed across phases:**
+
+1. **Parallel implementation speed vs verification depth** — the agent implements many files simultaneously which is efficient but occasionally misses a connection between two files (state variable declared in one place, referenced in another)
+
+2. **Schema drift** — client-side Zod schemas get out of sync with what the server actually returns, especially when the server is updated in one phase and the client is not updated to match
+
+3. **Import omissions** — when adding new utilities or hooks to an existing component the agent sometimes forgets to add the import, especially when editing the middle of a large file rather than the top
+
+4. **Feature completeness vs spec completeness** — the agent builds what it understands from the prompt but occasionally interprets "confirm X exists" as "X was already built" without verifying
+
+**Standing rules already in place address most of these.** The 5 mandatory quality checks catch TypeScript errors, missing imports, and schema mismatches before a phase closes. The 7-step framework catches missing persistence and sync steps.
+
+**One additional rule to add going forward:**
+
+---
+
+Send this to the agent as a permanent architecture truth in replit.md:
+
+---
+
+**NEW STANDING RULE — Add to replit.md architecture truths:**
+
+**Spec-to-implementation traceability:** Every verification check listed in a phase prompt must have a corresponding confirmation row in the reconciliation table with specific evidence — file name, line number, query result, or grep output. A check cannot be marked PASS based on "this was already implemented" without showing the specific evidence. If the agent cannot find evidence that a check was implemented it must implement it and then show the evidence. No check may be skipped or assumed.
+
+---
+
+Standing by for the Phase 33 verification responses.

@@ -80,15 +80,15 @@ export function MaintenanceModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[6500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       data-testid="modal-maintenance"
       role="dialog"
       aria-modal="true"
       aria-labelledby="maintenance-title"
       aria-describedby="maintenance-description"
     >
-      <div className="bg-card border rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-card border rounded-lg shadow-sm max-w-md w-full p-4 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 text-amber-500">
             <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0" />
             <h2 id="maintenance-title" className="text-lg sm:text-xl font-bold text-foreground">
@@ -126,7 +126,7 @@ export function MaintenanceModal({
             
             {status.progressPercent > 0 && (
               <div className="space-y-1">
-                <div className="flex justify-between text-xs text-muted-foreground">
+                <div className="flex justify-between gap-1 text-xs text-muted-foreground">
                   <span>Progress</span>
                   <span>{status.progressPercent}%</span>
                 </div>

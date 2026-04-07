@@ -12,9 +12,12 @@
 
 import crypto from 'crypto';
 import { db } from '../../db';
-import { auditEvents, invoices, payrolls } from '@shared/schema';
+import { auditLogs, invoices, payrollRuns } from '@shared/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { auditLogger } from '../audit-logger';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('financialAuditService');
+
 
 export type FinancialEventType = 
   | 'INVOICE_CREATED'
@@ -85,7 +88,7 @@ class FinancialAuditService {
   private initialized: boolean = false;
 
   constructor() {
-    console.log('[FinancialAudit] SOX-compliant audit service initialized');
+    log.info('[FinancialAudit] SOX-compliant audit service initialized');
   }
 
   private async loadLastChecksum(chainKey: string): Promise<string | null> {
@@ -93,15 +96,15 @@ class FinancialAuditService {
     
     try {
       const latestEvents = await db.select()
-        .from(auditEvents)
+        .from(auditLogs)
         .where(
           and(
-            eq(auditEvents.workspaceId, workspaceId),
-            eq(auditEvents.aggregateType, entityType),
-            gte(auditEvents.createdAt, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
+            eq(auditLogs.workspaceId, workspaceId),
+            eq(auditLogs.entityType, entityType),
+            gte(auditLogs.createdAt, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
           )
         )
-        .orderBy(desc(auditEvents.createdAt))
+        .orderBy(desc(auditLogs.createdAt))
         .limit(1);
 
       if (latestEvents.length > 0) {
@@ -109,7 +112,7 @@ class FinancialAuditService {
         return payload?.checksum || latestEvents[0].actionHash || null;
       }
     } catch (error) {
-      console.error('[FinancialAudit] Error loading last checksum:', error);
+      log.error('[FinancialAudit] Error loading last checksum:', error);
     }
     
     return null;
@@ -192,7 +195,7 @@ class FinancialAuditService {
 
     this.lastChecksum.set(chainKey, checksum);
 
-    console.log(`[FinancialAudit] Logged ${event.eventType} for ${event.entityType}:${event.entityId}`);
+    log.info(`[FinancialAudit] Logged ${event.eventType} for ${event.entityType}:${event.entityId}`);
 
     return eventId;
   }
@@ -215,12 +218,12 @@ class FinancialAuditService {
       after: {
         invoiceNumber: invoice.invoiceNumber,
         clientId: invoice.clientId,
-        totalAmount: invoice.totalAmount,
+        totalAmount: invoice.totalAmount ?? invoice.total,
         status: invoice.status,
         dueDate: invoice.dueDate,
       },
       monetaryImpact: {
-        amount: parseFloat(invoice.totalAmount || '0'),
+        amount: parseFloat(invoice.totalAmount ?? invoice.total ?? '0'),
         currency: invoice.currency || 'USD',
         direction: eventType === 'INVOICE_VOIDED' ? 'debit' : 
                    eventType === 'INVOICE_PAID' ? 'credit' : 'neutral',
@@ -310,15 +313,15 @@ class FinancialAuditService {
 
     try {
       const recentEvents = await db.select()
-        .from(auditEvents)
+        .from(auditLogs)
         .where(
           and(
-            eq(auditEvents.workspaceId, workspaceId),
-            eq(auditEvents.aggregateId, entityId),
-            gte(auditEvents.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+            eq(auditLogs.workspaceId, workspaceId),
+            eq(auditLogs.entityId, entityId),
+            gte(auditLogs.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
           )
         )
-        .orderBy(desc(auditEvents.createdAt))
+        .orderBy(desc(auditLogs.createdAt))
         .limit(50);
 
       const creatorId = recentEvents.find(e => 
@@ -344,7 +347,7 @@ class FinancialAuditService {
       }
 
     } catch (error) {
-      console.error('[FinancialAudit] Segregation check error:', error);
+      log.error('[FinancialAudit] Segregation check error:', error);
     }
 
     return {
@@ -360,15 +363,15 @@ class FinancialAuditService {
     generatedBy: string
   ): Promise<ComplianceReport> {
     const events = await db.select()
-      .from(auditEvents)
+      .from(auditLogs)
       .where(
         and(
-          eq(auditEvents.workspaceId, workspaceId),
-          gte(auditEvents.createdAt, periodStart),
-          lte(auditEvents.createdAt, periodEnd)
+          eq(auditLogs.workspaceId, workspaceId),
+          gte(auditLogs.createdAt, periodStart),
+          lte(auditLogs.createdAt, periodEnd)
         )
       )
-      .orderBy(auditEvents.createdAt);
+      .orderBy(auditLogs.createdAt);
 
     const financialEvents = events.filter(e => 
       e.eventType.startsWith('FINANCIAL_')
@@ -478,15 +481,15 @@ class FinancialAuditService {
 
     try {
       const events = await db.select()
-        .from(auditEvents)
+        .from(auditLogs)
         .where(
           and(
-            eq(auditEvents.workspaceId, workspaceId),
-            eq(auditEvents.aggregateType, entityType),
-            startDate ? gte(auditEvents.createdAt, startDate) : undefined
+            eq(auditLogs.workspaceId, workspaceId),
+            eq(auditLogs.entityType, entityType),
+            startDate ? gte(auditLogs.createdAt, startDate) : undefined
           )
         )
-        .orderBy(auditEvents.createdAt);
+        .orderBy(auditLogs.createdAt);
 
       let previousChecksum: string | null = null;
 
@@ -501,7 +504,7 @@ class FinancialAuditService {
         previousChecksum = payload?.checksum || event.actionHash;
       }
     } catch (error) {
-      console.error('[FinancialAudit] Chain verification error:', error);
+      log.error('[FinancialAudit] Chain verification error:', error);
     }
 
     return {

@@ -1,0 +1,288 @@
+# ADDENDUM: SPECIFIC SCENARIO STRESS TESTS
+# (Append to the Master Go-Live Audit OR run standalone as a quick smoke test)
+# Inspired by site-specific claims found on coaileague.com
+
+---
+
+## SCENARIO 1: The "Overtime Guardian" Test
+
+Trinity is filling a 2 AM calloff. Does she protect the org from unapproved overtime?
+
+```
+SIMULATE:
+- Guard A has worked 38 hours this week, lives 3 miles away
+- Guard B has worked 41 hours this week, lives 1 mile away  
+- Guard C has worked 35 hours this week, lives 12 miles away
+- The shift is 6 hours
+
+EXPECTED BEHAVIOR:
+- Trinity should pick Guard A (under 40 hours + close proximity)
+- Guard B should be flagged or deprioritized (would hit 47 hours = OT)
+- Guard C is eligible but far away
+
+VERIFY IN CODE:
+[ ] Is there a hard check for weekly_hours + shift_hours > overtime_threshold?
+[ ] Is overtime_threshold configurable per org (not hardcoded to 40)?
+[ ] Does Trinity factor in BOTH proximity AND overtime risk?
+[ ] If ONLY overtime candidates are available, does Trinity:
+    [ ] Alert the org owner for approval before assigning?
+    [ ] Show the OT cost impact before confirming?
+    [ ] Or silently assign and create a surprise payroll hit?
+[ ] Does the overtime check account for state-specific rules?
+    (California = daily OT after 8 hours, not just weekly after 40)
+
+FIND AND VERIFY:
+- The is_eligible or canAssign function in the scheduling controller
+- The overtime calculation logic
+- File path: _______________
+```
+
+## SCENARIO 2: The "Compliance Gatekeeper" Test
+
+A guard's armed license expired yesterday. Can they still get assigned to an armed post?
+
+```
+SIMULATE:
+- Guard has certification "Armed Security Officer" expired 2025-02-22
+- Post requires "Armed Security Officer" (active/valid)
+- Trinity is auto-scheduling for tomorrow
+
+EXPECTED BEHAVIOR:
+- Guard should be BLOCKED from armed posts
+- Guard should still be eligible for unarmed posts
+- System should alert supervisor about expired cert
+- Guard should have been warned at 30 days and 7 days before expiry
+
+VERIFY IN CODE:
+[ ] Certification expiry check runs BEFORE shift assignment (not after)
+[ ] Check compares cert expiry date against shift date (not just "today")
+[ ] Armed vs unarmed distinction enforced at assignment level
+[ ] An expired cert CANNOT be overridden without explicit admin approval
+[ ] If admin overrides → audit log records who overrode and why
+[ ] Certs checked: guard license, armed permit, CPR, first aid, drug test
+[ ] State-specific cert requirements enforced
+
+FIND AND VERIFY:
+- The compliance check function in the assignment workflow
+- The certification expiry scan (daily/hourly job)
+- File path: _______________
+```
+
+## SCENARIO 3: The "Geofence Ghost" Test
+
+Guard clocks in but GPS shows they're 500 meters from the assigned site.
+
+```
+SIMULATE:
+- Site geofence radius: 100 meters
+- Guard GPS coordinates: 500 meters from site center
+- Guard attempts clock-in via mobile app
+
+EXPECTED BEHAVIOR:
+- Clock-in should be FLAGGED (not silently accepted)
+- Exception log created for supervisor review
+- Guard sees notification: "You appear to be outside the site boundary"
+- Trinity gets the exception for pattern analysis
+- If this guard has multiple geofence violations → escalation
+
+VERIFY IN CODE:
+[ ] GPS distance calculation exists (haversine formula or equivalent)
+[ ] Geofence radius is configurable per site (not hardcoded)
+[ ] Clock-in OUTSIDE geofence:
+    [ ] Option A: Blocked entirely (guard must be on-site) → configurable
+    [ ] Option B: Allowed but flagged as exception → configurable
+    [ ] Option C: Silently accepted (BAD — this is a gap)
+[ ] Exception log stores: guard ID, expected location, actual location, distance, timestamp
+[ ] Supervisor notified of geo exception in real-time
+[ ] Trinity can analyze geo exception patterns per guard
+
+ALSO TEST:
+[ ] What if GPS is unavailable (denied permission, indoor, poor signal)?
+    [ ] Does clock-in fail entirely? (bad — guards stuck)
+    [ ] Does it allow with "GPS unavailable" flag? (better)
+    [ ] Is there a manual override option? (best)
+[ ] What about GPS spoofing? Any anti-spoofing measures?
+
+FIND AND VERIFY:
+- The clock-in location validation function
+- The geofence check logic
+- The exception logging mechanism
+- File path: _______________
+```
+
+## SCENARIO 4: The "Pass-Down Intelligence" Test
+
+Guards write pass-down notes between shifts. Can Trinity detect critical keywords?
+
+```
+SIMULATE:
+- Outgoing guard writes in pass-down log:
+  "Broken camera in parking lot B. Also noticed suspicious vehicle 
+   parked near loading dock, black sedan no plates. Notified local PD.
+   Water leak in stairwell 3 — hazard tape placed."
+
+EXPECTED BEHAVIOR:
+- Trinity should scan for keywords: "broken", "suspicious", "theft", 
+  "hazard", "leak", "damage", "alarm", "fire", "injury", "police"
+- Auto-generate categorized alerts:
+  - MAINTENANCE: Broken camera, water leak
+  - SECURITY: Suspicious vehicle (high priority)
+  - SAFETY: Hazard (stairwell)
+- Client notification queued for relevant issues
+- Incoming guard sees highlighted pass-down items
+
+VERIFY IN CODE:
+[ ] Pass-down log exists as a feature (not just a text field in chat)
+[ ] Keyword scanning / NLP analysis implemented
+[ ] Auto-categorization of issues (maintenance, security, safety)
+[ ] Client notification triggered for relevant categories
+[ ] Severity levels assigned (suspicious vehicle > water leak)
+[ ] Historical pass-down data accessible to Trinity for pattern analysis
+
+IF THIS DOESN'T EXIST:
+This is a HIGH-VALUE feature that differentiates from competitors.
+Flag as post-launch priority if not built yet.
+```
+
+## SCENARIO 5: The "Auto-Fill Cascade" Test
+
+Guard doesn't confirm a shift. Does the system cascade to next candidate or stall?
+
+```
+SIMULATE:
+- Trinity assigns Shift #1234 to Guard A
+- Guard A has 10 minutes to confirm
+- Guard A does NOT confirm
+
+EXPECTED BEHAVIOR:
+- At 10 minutes: Guard A's offer expires
+- Immediately: Trinity offers to Guard B (next ranked candidate)
+- Guard B has 10 minutes to confirm
+- If Guard B declines or expires → Guard C
+- Continue until filled or candidate list exhausted
+- If ALL candidates exhausted → escalate to supervisor with full context
+
+VERIFY IN CODE:
+[ ] Confirmation timer exists (not just "hope they respond")
+[ ] Timer is configurable per org (not hardcoded to 10 minutes)
+[ ] Expiration triggers automatic cascade to next candidate
+[ ] Cascade is truly automatic (not requiring manual intervention)
+[ ] Each offer tracked: offered_at, expires_at, response, response_at
+[ ] Declined/expired offers don't block the guard from future offers
+[ ] Supervisor escalation includes: shift details, all candidates tried, reasons for failure
+[ ] Full audit trail of the cascade
+
+POTENTIAL BUG:
+- What if Guard A confirms at minute 9:59 while Guard B is being offered at minute 10:01?
+  → Race condition! Both guards assigned to same shift.
+  → Is there a lock/mutex on shift assignment?
+```
+
+## SCENARIO 6: The "Savings Calculator" Credibility Test
+
+The site claims "Up to $140K Savings." Is this real or marketing?
+
+```
+FIND THE SAVINGS CALCULATOR AND VERIFY:
+
+[ ] Calculator exists in the frontend
+[ ] It uses REAL inputs (number of employees, avg hours, current costs)
+[ ] Calculation logic is based on actual platform efficiencies:
+    - Time saved on scheduling (hours × admin wage)
+    - Overtime reduction (predicted from Trinity optimization)
+    - Payroll error reduction
+    - Compliance violation avoidance
+[ ] The "$140K" figure is achievable with realistic inputs
+[ ] Calculator shows methodology (not just a magic number)
+[ ] No static placeholder values — every number is computed
+
+IF STATIC/HARDCODED:
+- Either make it dynamic using real calculation logic
+- Or add disclaimer: "Based on average results for companies with X employees"
+- Investors and savvy buyers WILL check this
+```
+
+## SCENARIO 7: The "QuickBooks Exception Export" Test
+
+When exporting to QuickBooks, do manual time edits come through?
+
+```
+SIMULATE:
+- Guard clocks in at 8:00 AM, clocks out at 4:00 PM (8 hours)
+- Supervisor edits clock-in to 7:45 AM (added 15 min, reason: "guard was early, started work")
+- Export to QuickBooks
+
+EXPECTED BEHAVIOR:
+- QB receives 8.25 hours (not original 8.0)
+- The adjustment is noted/logged
+- Original vs adjusted values both preserved in audit trail
+
+VERIFY IN CODE:
+[ ] Time entry edits tracked (original_value, new_value, edited_by, reason)
+[ ] Export sends the FINAL/APPROVED value (not raw clock data)
+[ ] Exception adjustments included in export (not silently dropped)
+[ ] Export handles: manual edits, manager overrides, break adjustments
+[ ] Round-trip: edit in CoAIleague → sync to QB → verify in QB
+
+ALSO CHECK:
+[ ] What happens if QB sync fails mid-export?
+[ ] Are partially synced records marked to prevent duplicate sync?
+[ ] Can an export be re-run if it fails (idempotent)?
+```
+
+## SCENARIO 8: The "Offline Field Worker" Test
+
+Guard is in a parking garage with no signal. What happens?
+
+```
+SIMULATE:
+- Guard opens mobile app in airplane mode (or very weak signal)
+- Guard attempts to: clock in, submit incident report, take proof photo
+
+EXPECTED BEHAVIOR:
+- App should function offline with local queue
+- Clock-in recorded locally with timestamp and cached GPS
+- Incident report saved locally
+- Photo captured and stored locally
+- When signal returns → all queued items sync automatically
+- Supervisor sees items with "synced at" timestamp (not "created at" of sync time)
+- No data loss, no duplicate entries
+
+VERIFY IN CODE:
+[ ] Offline queue / service worker / local storage mechanism exists
+[ ] Queue syncs automatically when connection restored
+[ ] Duplicate prevention on sync (idempotent operations)
+[ ] User sees clear indication of offline mode
+[ ] Queued items visible to user before sync ("pending sync: 3 items")
+[ ] Timestamps reflect ACTUAL event time (not sync time)
+
+IF THIS DOESN'T EXIST:
+This is CRITICAL for field workers. Security officers work in:
+- Parking garages, basements, elevator shafts
+- Rural sites with poor coverage
+- Construction sites with interference
+Without offline capability, guards can't do their job.
+Flag as CRITICAL gap.
+```
+
+---
+
+## OUTPUT FOR THESE SCENARIOS
+
+```
+SCENARIO STRESS TEST RESULTS:
+═══════════════════════════════
+
+1. Overtime Guardian:     PASS / FAIL → [specific finding]
+2. Compliance Gatekeeper: PASS / FAIL → [specific finding]
+3. Geofence Ghost:        PASS / FAIL → [specific finding]
+4. Pass-Down Intelligence: PASS / FAIL → [specific finding]
+5. Auto-Fill Cascade:     PASS / FAIL → [specific finding]
+6. Savings Calculator:    PASS / FAIL → [specific finding]
+7. QB Exception Export:   PASS / FAIL → [specific finding]
+8. Offline Field Worker:  PASS / FAIL → [specific finding]
+
+RACE CONDITIONS FOUND: ___
+SILENT FAILURES FOUND: ___
+MISSING FEATURES FOUND: ___
+```

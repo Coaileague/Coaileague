@@ -8,6 +8,7 @@ import {
   type BillingAddon,
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { platformEventBus } from '../platformEventBus';
 
 export interface FeatureAccess {
   featureKey: string;
@@ -65,6 +66,23 @@ export class FeatureToggleService {
     const workspaceAddon = await this.getWorkspaceAddon(workspaceId, addon.id);
 
     if (!workspaceAddon || workspaceAddon.status !== 'active') {
+      // Publish feature_blocked so TrinityOrchestrationGateway can detect upsell opportunity
+      // and track that this workspace attempted to use a feature above their current plan
+      platformEventBus.publish({
+        type: 'feature_blocked',
+        category: 'automation',
+        title: `Feature Blocked: ${featureKey}`,
+        description: `Workspace ${workspaceId} attempted to use "${featureKey}" which requires the "${addon.name}" add-on`,
+        workspaceId,
+        metadata: {
+          featureKey,
+          reason: `Requires ${addon.name} add-on`,
+          currentTier: workspace.subscriptionTier,
+          addonId: addon.id,
+          addonName: addon.name,
+        },
+      }).catch(() => null); // Non-blocking — access check must never throw
+
       return {
         featureKey,
         enabled: false,

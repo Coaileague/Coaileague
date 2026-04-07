@@ -1,0 +1,1643 @@
+# OMEGA PLATFORM SPECIFICATION
+## Complete Feature Logic, Flows, and Expected Outputs
+## Append this to OMEGA.md — This is the debugging specification
+
+---
+
+## HOW TO USE THIS DOCUMENT
+
+When debugging any issue, find the relevant feature below.
+Read: TRIGGER → STEPS → END STATE → OUTPUT → RACE CONDITIONS.
+Trace where actual behavior diverges from this spec.
+Fix only that divergence. Verify the end state matches.
+Never guess at intent. This document defines intent.
+
+---
+
+# DOMAIN 1: AUTHENTICATION & USER MANAGEMENT
+
+## 1.1 — User Registration / Signup
+
+TIER: All (public route)
+TRIGGER: POST /trial form submitted with company name, name, email, phone, state, guard count
+
+STEPS:
+1. Validate all fields server-side (required fields, email format, phone format)
+2. Check email uniqueness — if exists return 409 "Account already exists"
+3. Create workspace record: { slug, tier: trial, trial_expires_at: now+14days, stripe_customer_id }
+4. Create user record: { email, name, phone, password_hash, role: ORG_OWNER }
+5. Link user to workspace via workspace_members
+6. Fire workspace.created event on event bus
+7. emailProvisioningService provisions exactly 6 email addresses
+8. EmailHubCanvas initializes exactly 8 folders
+9. Send welcome email FROM trinity@coaileague.com via NDS
+10. Create session, bind workspace_id to session
+11. Redirect to onboarding wizard
+
+END STATE:
+- workspace record exists with correct tier and expiry
+- user record exists with ORG_OWNER role
+- exactly 6 email_addresses records in DB for this workspace
+- exactly 8 email_folders records in DB for this workspace
+- workspace.created event fired
+- welcome email delivered via NDS
+- active session exists
+
+OUTPUT: User lands on onboarding wizard, logged in
+
+RACE CONDITIONS:
+- Double form submit → idempotency key on workspace creation, second returns 409
+- Email already in use → checked before any records created
+
+ERROR HANDLING:
+- Provisioning failure → log error, mark workspace as provisioning_failed, alert platform admin via NDS
+- No orphan workspaces — if any step fails, rollback all created records
+
+---
+
+## 1.2 — User Login
+
+TIER: All
+TRIGGER: POST /api/auth/login with email and password
+
+STEPS:
+1. Find user by email
+2. Check account locked (lockedUntil > now) → return 403 with minutes remaining
+3. Verify password hash
+4. On failure: increment loginAttempts, if >= 5 set lockedUntil = now+15min, log structured warn
+5. On success: clear loginAttempts and lockedUntil
+6. Call session.regenerate() to issue new session ID
+7. Resolve workspace from user.currentWorkspaceId
+8. Bind workspace_id, user_id, role to session
+9. Return user and workspace data
+
+END STATE:
+- Active session exists with workspace_id bound
+- loginAttempts reset to 0
+- lockedUntil cleared
+
+OUTPUT: User receives session cookie, redirected to dashboard
+
+RACE CONDITIONS:
+- Concurrent login attempts → lockout counter uses atomic DB increment
+
+---
+
+## 1.3 — Workspace Switch
+
+TIER: All (users with multiple workspace memberships)
+TRIGGER: POST /api/workspace/switch/:workspaceId
+
+STEPS:
+1. Validate user is a member of target workspace
+2. Call session.regenerate() — issues new session ID, old session invalidated
+3. Bind new workspace_id to fresh session
+4. Load workspace context and feature gates for new workspace
+5. Return new session and workspace data
+
+END STATE:
+- New session ID issued
+- Old session no longer valid
+- New workspace_id bound to session
+
+OUTPUT: User sees new workspace dashboard
+
+RACE CONDITIONS:
+- None — session.regenerate() is synchronous per request
+
+---
+
+## 1.4 — Password Reset
+
+TRIGGER: POST /api/auth/forgot-password → POST /api/auth/reset-password-confirm
+
+STEPS (forgot):
+1. Find user by email
+2. Generate single-use token, set resetToken and resetTokenExpiry = now+1hour
+3. Send reset email via approved NDS bypass (sendPasswordResetEmail)
+
+STEPS (confirm):
+1. Find user by resetToken
+2. Verify token not used (usedAt is null) and not expired
+3. Hash new password
+4. Set resetToken = null, resetTokenExpiry = null, usedAt = now
+5. Set all authSessions.isValid = false for this user
+6. Clear lockedUntil and loginAttempts
+7. Return success
+
+END STATE:
+- resetToken nulled and unusable
+- All active sessions invalidated
+- loginAttempts cleared
+
+OUTPUT: User must log in again with new password
+
+RACE CONDITIONS:
+- Two simultaneous resets → second fails because token already used (usedAt check)
+
+---
+
+# DOMAIN 2: WORKSPACE ONBOARDING
+
+## 2.1 — Onboarding Wizard
+
+TIER: All
+TRIGGER: ORG_OWNER completes onboarding steps after workspace creation
+
+STEPS:
+1. Each step gated to ORG_OWNER role — Manager attempting returns 403
+2. Steps in order: company info → first officer → first client → billing setup → Trinity intro
+3. Each step completion writes to onboarding_progress table
+4. On all steps complete: workspace.onboarding_completed = true
+5. Fire onboarding.completed event on event bus
+
+END STATE:
+- All onboarding steps marked complete
+- workspace.onboarding_completed = true
+
+OUTPUT: User exits wizard to main dashboard
+
+RACE CONDITIONS:
+- Two sessions completing same step simultaneously → upsert with unique constraint on step+workspace
+
+---
+
+## 2.2 — Email Provisioning
+
+TRIGGER: workspace.created event fires
+
+STEPS:
+1. Read workspace slug
+2. Create exactly 6 email_addresses records:
+   staffing@{slug}.coaileague.com
+   calloffs@{slug}.coaileague.com
+   incidents@{slug}.coaileague.com
+   support@{slug}.coaileague.com
+   docs@{slug}.coaileague.com
+   billing@{slug}.coaileague.com
+3. Register each address with Resend inbound routing
+4. Create 8 EmailHubCanvas folder records:
+   Staffing, Call-Offs, Incidents, Support, Billing, Documents, Unread, Archive
+5. Set folder_id on each email_address to correct folder
+
+END STATE:
+- Exactly 6 email_addresses rows for this workspace_id
+- Exactly 8 email_folders rows for this workspace_id
+- All subdomain format — zero dash-alias
+
+OUTPUT: Tenant email system is live and routing
+
+RACE CONDITIONS:
+- workspace.created fires twice → idempotency check, skip if addresses already provisioned
+
+---
+
+# DOMAIN 3: SUBSCRIPTION & BILLING (STRIPE)
+
+## 3.1 — Tenant Subscribes to a Plan
+
+TIER: Trial → any paid tier
+TRIGGER: POST /api/stripe/create-subscription with tier selection
+
+STEPS:
+1. Check for existing active Stripe subscription for this workspace
+2. If exists same tier → return existing subscription (no duplicate)
+3. If exists different tier → return 409, direct to billing portal
+4. If stale/deleted → clean up local record, proceed to create
+5. Create Stripe customer if stripe_customer_id not set
+6. Create Stripe subscription with correct price_id for selected tier
+7. Stripe fires customer.subscription.created webhook
+8. Webhook handler (signature verified, idempotent via event_id):
+   - Update workspace.tier immediately
+   - Update workspace.subscription_id
+   - Unlock features matching new tier via featureRegistry
+9. NDS notification to org owner: "Subscription active — [tier] plan"
+
+END STATE:
+- workspace.tier = selected tier
+- workspace.subscription_id = Stripe subscription ID
+- Feature gates reflect new tier immediately
+- Audit record written
+
+OUTPUT: Org owner sees upgraded features immediately
+
+RACE CONDITIONS:
+- Double subscription creation → active subscription guard (step 1-4)
+- Webhook fires before local subscription stored → idempotency key handles replay
+
+---
+
+## 3.2 — Subscription Renewal (Automatic)
+
+TRIGGER: Stripe fires invoice.payment_succeeded on monthly renewal
+
+STEPS:
+1. Webhook received, signature verified
+2. Check processed_stripe_events for event_id → if exists return 200, skip
+3. Insert event_id into processed_stripe_events (atomic)
+4. Confirm workspace still active
+5. Log renewal in billing_history
+6. Update workspace.current_period_end
+7. NDS notification to org owner: "Subscription renewed successfully"
+
+END STATE:
+- billing_history record for renewal
+- workspace.current_period_end updated
+- Idempotency record in processed_stripe_events
+
+OUTPUT: No disruption to service, confirmation email sent
+
+RACE CONDITIONS:
+- Webhook replayed → event_id dedup prevents double processing
+
+---
+
+## 3.3 — Payment Failure
+
+TRIGGER: Stripe fires invoice.payment_failed
+
+STEPS:
+1. Webhook received, signature verified, idempotent
+2. NDS immediate alert to org owner: "Payment failed — update payment method"
+3. Log failure in billing_events
+4. Start grace period timer (do NOT immediately restrict)
+5. If payment fails again after grace period → workspace enters soft-lock (read-only)
+6. If still unresolved → workspace enters hard-lock after full grace period
+7. On hard-lock: NDS critical alert to org owner
+
+END STATE:
+- Org owner notified immediately
+- Grace period active
+- Workspace remains functional during grace period
+
+OUTPUT: Org owner receives failure alert, can update payment method
+
+RACE CONDITIONS:
+- Multiple failure events for same invoice → idempotency prevents multiple grace periods starting
+
+---
+
+## 3.4 — Seat Overage Calculation
+
+TRIGGER: Weekly billing job runs
+
+STEPS:
+1. For each active workspace: count active employee records
+2. Compare to tier.max_seats
+3. If overage: calculate overage_count × $25
+4. Create invoice line item as DRAFT (never auto-charge silently)
+5. Record in financial_processing_fees (Path B — internal fee)
+6. Record in platform_revenue
+7. NDS alert to org owner with overage count and amount
+
+END STATE:
+- DRAFT overage invoice created
+- financial_processing_fees record created
+- platform_revenue record created
+- Org owner notified
+
+RACE CONDITIONS:
+- Two weekly jobs run simultaneously → distributed lock on weekly billing job per workspace
+
+---
+
+## 3.5 — Trial Expiry
+
+TRIGGER: Daily cron job checks trial_expires_at
+
+STEPS:
+1. Find all trial workspaces where trial_expires_at < now + 3 days
+2. For each: check if warning_sent flag set — if not, send 3-day warning via NDS, set flag
+3. Find all trial workspaces where trial_expires_at < now
+4. For each expired: restrict workspace (read-only except billing routes)
+5. NDS critical alert to org owner: "Trial expired — subscribe to continue"
+6. Do NOT delete any data
+
+END STATE:
+- Workspace restricted if expired
+- Warning sent 3 days before
+- Data preserved
+
+RACE CONDITIONS:
+- Job runs twice → idempotency via warning_sent flag, restriction is idempotent state
+
+---
+
+## 3.6 — Stripe Customer Portal (Tenant Self-Service)
+
+TRIGGER: ORG_OWNER clicks "Manage Billing" in workspace settings
+
+STEPS:
+1. Verify role = ORG_OWNER → 403 for others
+2. Retrieve workspace.stripe_customer_id
+3. Create Stripe billing portal session scoped to that customer ID
+4. Return portal URL
+5. Frontend redirects to Stripe portal
+
+END STATE:
+- Tenant manages their own payment method, invoices, subscription without Bryan
+
+OUTPUT: Stripe Customer Portal opened in browser
+
+RACE CONDITIONS:
+- None — portal session creation is stateless
+
+---
+
+# DOMAIN 4: BANKING & FINANCIAL (PLAID)
+
+## 4.1 — Bank Account Linking
+
+TIER: Professional+
+TRIGGER: ORG_OWNER initiates Plaid Link from payroll settings
+
+STEPS:
+1. Create Plaid Link token via Plaid API
+2. Frontend opens Plaid Link UI
+3. User selects bank and authenticates
+4. Plaid returns public_token on success
+5. Exchange public_token for access_token via Plaid API
+6. Store encrypted access_token and item_id for workspace
+7. Initiate micro-deposit verification (or instant verification if available)
+8. Bank account status = PENDING_VERIFICATION
+
+END STATE:
+- Encrypted access_token stored for workspace
+- Bank account status = PENDING_VERIFICATION
+- Cannot process ACH until verified
+
+OUTPUT: Org owner sees "Bank account connected — pending verification"
+
+---
+
+## 4.2 — Bank Account Verification
+
+TRIGGER: Micro-deposit verification completed
+
+STEPS:
+1. User enters micro-deposit amounts
+2. Verify against Plaid record
+3. On success: bank_account.status = VERIFIED
+4. On failure: notify org owner via NDS, allow retry
+
+END STATE:
+- bank_account.status = VERIFIED
+- ACH transfers now possible
+
+---
+
+## 4.3 — ACH Direct Deposit (Payroll)
+
+TRIGGER: Payroll period approved and closed by ORG_OWNER
+
+STEPS:
+1. Verify bank_account.status = VERIFIED → if not, set status = PAYMENT_HELD for all employees
+2. Verify PLAID_WEBHOOK_SECRET present → sign all webhook interactions
+3. For EACH employee individually (not batch):
+   a. Calculate net pay
+   b. Create Plaid Transfer authorization
+   c. Create Plaid Transfer
+   d. Store transfer_id and status = PENDING for this employee
+   e. Log: employee_id, amount, transfer_id, initiated_at
+4. Plaid fires transfer webhooks as status updates
+
+END STATE:
+- One Plaid Transfer record per employee
+- Each employee transfer logged individually
+- Status transitions: PENDING → SETTLED or FAILED
+
+OUTPUT: Employees receive direct deposit, confirmation via NDS
+
+RACE CONDITIONS:
+- Payroll processed twice → closed period write-protection blocks second attempt
+
+ERROR HANDLING:
+- Transient failure (R01): retry after 24 hours, NDS alert to org owner
+- Permanent failure (R02/R03): flag for manual resolution, NDS alert to owner and employee
+
+---
+
+# DOMAIN 5: OFFICER & EMPLOYEE MANAGEMENT
+
+## 5.1 — Officer Creation
+
+TIER: All
+TRIGGER: Admin/Manager/ORG_OWNER creates new officer via UI or Trinity action
+
+STEPS:
+1. Validate required fields: name, email, phone, license_number, license_expiry_date
+2. Create employee record with workspace_id scope
+3. Create compliance_record: { license_number, expiry_date, status: ACTIVE }
+4. Schedule NDS expiry alert for license_expiry_date - 30 days
+5. Publish officer_activated event: { employeeId, employeeName, activatedBy, workspaceId }
+6. Trinity compliance checks run via event subscription:
+   - License validity confirmed
+   - I9 status initialized
+   - Onboarding checklist created
+7. If personal email address requested: provision on demand (separate from base 6)
+
+END STATE:
+- employee record exists with workspace_id
+- compliance_record initialized
+- NDS expiry alert scheduled
+- officer_activated event published
+- Trinity compliance checks completed
+
+OUTPUT: Officer appears in roster, can be assigned to shifts
+
+RACE CONDITIONS:
+- Duplicate officer creation (same email) → unique constraint on email+workspace_id
+
+---
+
+## 5.2 — Officer Deactivation (Soft Delete)
+
+TRIGGER: Admin initiates deactivation
+
+STEPS:
+1. Set employee.deleted_at = now
+2. Remove from all future shift assignments (OPEN and ASSIGNED shifts)
+3. Retain all historical: shifts, payroll records, audit logs
+4. Deactivate personal email address if provisioned → release Stripe seat
+5. Cancel scheduled NDS expiry alerts
+6. Log deactivation in audit trail
+
+END STATE:
+- employee.deleted_at set
+- Historical records intact
+- Future scheduling blocked
+
+---
+
+## 5.3 — License Renewal Workflow
+
+TRIGGER: ORG_OWNER/Admin uploads new license document
+
+STEPS:
+1. Upload document to GCS with workspace_id in path
+2. Update compliance_record: license_number, expiry_date, status: ACTIVE
+3. Cancel old expiry alert from NDS schedule
+4. Schedule new expiry alert for new expiry_date - 30 days
+5. If officer was blocked from scheduling due to expired license: unblock
+6. Log renewal in audit trail
+
+END STATE:
+- compliance_record updated with new expiry
+- New NDS alert scheduled
+- Officer cleared for scheduling if previously blocked
+
+OUTPUT: Officer appears in scheduling pool again
+
+---
+
+## 5.4 — Compliance Overview (Manager View)
+
+TRIGGER: Manager opens compliance dashboard
+
+STEPS:
+1. Query all employees WHERE workspace_id = session.workspace_id AND deleted_at IS NULL
+2. For each: get compliance_record
+3. Classify:
+   - EXPIRED: expiry_date < today
+   - EXPIRING_SOON: expiry_date < today + 60 days
+   - VALID: expiry_date >= today + 60 days
+   - INCOMPLETE_I9: i9_status != COMPLETE
+4. Return grouped list
+
+OUTPUT: Manager sees all compliance issues in one view
+
+---
+
+# DOMAIN 6: CLIENT & CRM MANAGEMENT
+
+## 6.1 — Client Creation
+
+TIER: All
+TRIGGER: Admin/Manager creates client via UI or staffing@ email intake
+
+STEPS:
+1. Create client record: { name, contact_email, contact_phone, workspace_id }
+2. Initialize CRM pipeline record: { client_id, stage: NEW, workspace_id }
+3. NDS alert to org owner: "New client added: [name]"
+4. Audit log: created_by, workspace_id, timestamp
+
+END STATE:
+- client record exists with workspace_id
+- CRM pipeline record at stage NEW
+
+---
+
+## 6.2 — CRM Pipeline Progression
+
+STAGES: NEW → CONTACTED → PROPOSAL_SENT → CONTRACT_SENT → ACTIVE_CLIENT
+TRIGGER: Manager advances stage
+
+STEPS:
+1. Validate transition is to next valid stage (cannot skip)
+2. Update pipeline_record.stage
+3. Log transition: from_stage, to_stage, advanced_by, timestamp, workspace_id
+4. On ACTIVE_CLIENT: enable site creation and scheduling for this client
+
+RACE CONDITIONS:
+- Two managers advancing simultaneously → optimistic lock on stage value
+
+---
+
+## 6.3 — Client Portal Provisioning
+
+TIER: All
+TRIGGER: ORG_OWNER/Admin sends portal invite to client contact
+
+STEPS:
+1. Generate unique invite token (expires 48 hours)
+2. Send invite email via NDS with portal link
+3. Client clicks link, sets password, creates portal session
+4. Portal session scoped to: this client_id AND this workspace_id only
+5. Client portal shows: their invoices, their sites, shift history, payment history
+
+END STATE:
+- Client has portal access scoped to their records only
+- Cannot see other clients' data within same workspace
+
+RACE CONDITIONS:
+- Re-invite before expiry → invalidate previous token, issue new one
+
+---
+
+## 6.4 — Inbound Staffing Email → CRM Lead
+
+TRIGGER: Email received at staffing@{slug}.coaileague.com
+
+STEPS:
+1. Trinity classifies as staffing_request
+2. Extract sender email, company name if identifiable
+3. Create CRM lead record: { source: email, from_email, body_excerpt, stage: NEW, workspace_id }
+4. NDS alert to org owner: "New staffing inquiry from [email]"
+5. Route to Staffing folder in EmailHubCanvas
+6. Trinity prepares draft response (auto-draft or routes for manual approval per workspace setting)
+
+END STATE:
+- CRM lead record created
+- EmailHubCanvas thread created in Staffing folder
+- Org owner notified
+
+---
+
+# DOMAIN 7: SCHEDULING & SHIFT MANAGEMENT
+
+## 7.1 — Shift Creation
+
+TIER: All
+TRIGGER: Manager/Trinity creates shift via UI or action
+
+STEPS:
+1. Validate: client_id exists, site_id exists, contract active for site
+2. If no active contract → reject with "No active contract for this site"
+3. Create shift: { workspace_id, site_id, client_id, start_time, end_time, position, status: OPEN }
+4. Write scheduling_audit_log BEFORE shift is created: { action: CREATED, actor_id, workspace_id, shift_id, timestamp }
+5. Return shift record
+
+END STATE:
+- shift.status = OPEN
+- scheduling_audit_log entry exists
+
+---
+
+## 7.2 — Shift Assignment
+
+TRIGGER: Manager/Trinity assigns officer to OPEN shift
+
+STEPS:
+1. CONFLICT CHECK (all must pass before any mutation):
+   a. Officer not already assigned to overlapping shift
+   b. Officer not on approved leave during shift period
+   c. Officer license not expired as of shift start date
+   d. Officer has required qualifications for position
+   e. Officer availability windows allow this shift
+2. If any conflict: return descriptive error, DO NOT create audit record
+3. Write scheduling_audit_log BEFORE assignment: { action: ASSIGNED, before: null, after: officer_id }
+4. Update shift.status = ASSIGNED, shift.officer_id = officer_id
+5. NDS notification to officer: shift details (date, time, site, position)
+
+END STATE:
+- shift.status = ASSIGNED
+- shift.officer_id set
+- scheduling_audit_log entry with before/after state
+- Officer notified via NDS
+
+RACE CONDITIONS:
+- Two managers assigning same officer to same slot simultaneously → SELECT FOR UPDATE lock before conflict check, second attempt sees conflict and rejects
+
+---
+
+## 7.3 — Schedule Publishing
+
+TRIGGER: Manager publishes schedule for a date range
+
+STEPS:
+1. Find all ASSIGNED shifts in date range for workspace
+2. Write scheduling_audit_log: { action: PUBLISHED, publisher_id, workspace_id, shift_ids, timestamp }
+3. For each affected officer: NDS notification with their shift details
+4. WebSocket broadcast to workspace room only: { type: SCHEDULE_PUBLISHED, shifts }
+5. Verify broadcast is scoped to workspace_id room — no other workspace receives it
+
+END STATE:
+- All shifts in range marked as published
+- All affected officers notified via NDS
+- Real-time push delivered to connected clients in workspace only
+
+---
+
+## 7.4 — Shift Start with Geo-Fence
+
+TRIGGER: Officer starts shift via app with GPS coordinates
+
+STEPS:
+1. Record GPS coordinates server-side
+2. Compute distance from site.coordinates to officer GPS
+3. Update shift.status = STARTED, shift.actual_start = now
+4. If distance > 200 meters:
+   a. Write Out-of-Bounds entry to scheduling_audit_log
+   b. NDS alert to manager: "Officer started shift outside geo-fence boundary"
+   c. Shift still starts — do NOT block (flag only)
+5. Write scheduling_audit_log: { action: STARTED, gps_lat, gps_lng, distance_from_site, out_of_bounds }
+
+END STATE:
+- shift.status = STARTED
+- Geo-fence result logged
+- Manager alerted if out of bounds
+
+---
+
+## 7.5 — Shift Completion
+
+TRIGGER: Officer or manager marks shift COMPLETED
+
+STEPS:
+1. Verify shift.status = STARTED (cannot complete from OPEN or ASSIGNED directly)
+2. Record actual_end time
+3. Calculate actual hours worked (handles midnight crossing)
+4. Write scheduling_audit_log: { action: COMPLETED, actual_start, actual_end, hours_worked }
+5. Update shift.status = COMPLETED
+6. Shift is now eligible for invoice line item generation
+
+END STATE:
+- shift.status = COMPLETED
+- Actual hours recorded
+- Audit log complete
+- Shift eligible for invoicing
+
+---
+
+# DOMAIN 8: CALL-OFF & COVERAGE ENGINE
+
+## 8.1 — Call-Off Intake (Email)
+
+TRIGGER: Email received at calloffs@{slug}.coaileague.com
+
+STEPS:
+1. Trinity classifies as call_off (even with degraded input: "cant mak it tmrw")
+2. Attempt to resolve officer_id from sender email or body content
+3. If resolvable: proceed
+4. If NOT resolvable: Trinity sends clarification reply — DO NOT create record with null officer_id
+5. Attempt to resolve shift_id from officer's upcoming shifts
+6. Create call_off record: { officer_id, shift_id, source: email, reason, received_at, workspace_id }
+7. Update shift.status = OPEN (unassign officer)
+8. Write scheduling_audit_log: { action: CALL_OFF_RECEIVED, officer_id, shift_id }
+9. NDS immediate alert to manager: officer name, shift date/time, site, reason
+10. Send confirmation reply to officer from calloffs@{slug}.coaileague.com
+11. Auto-trigger coverage search (Step 8.2)
+
+END STATE:
+- call_off record created with non-null officer_id
+- shift.status = OPEN
+- Audit log entry
+- Manager alerted
+- Officer confirmed
+- Coverage search running
+
+---
+
+## 8.2 — Coverage Search Engine
+
+TRIGGER: Auto-triggered after call_off record created
+
+STEPS:
+1. Find all ACTIVE officers in workspace
+2. Filter OUT:
+   - Officers already on shift during the open slot
+   - Officers on approved leave
+   - Officers with expired licenses
+   - Officers without required qualifications
+   - Officers who don't have availability windows covering this slot
+3. Rank remaining candidates (proximity, hours, previous shifts at site)
+4. Contact candidates in rank order:
+   a. Trinity Voice call first (if configured for workspace)
+   b. NDS SMS fallback if no voice response in N minutes
+5. First officer to confirm: proceed to assignment (Step 7.2)
+6. Log contact attempts: { officer_id, method, attempted_at, response }
+7. If all candidates exhausted: NDS critical alert to manager "No coverage found — manual action required"
+8. Manager can manually override and assign at any point with audit record
+
+END STATE:
+- Either shift is ASSIGNED to new officer
+- Or manager receives "no coverage" alert
+- All contact attempts logged
+
+RACE CONDITIONS:
+- Two officers confirm simultaneously → SELECT FOR UPDATE on shift assignment, second confirmation gets "shift already filled" response
+
+---
+
+# DOMAIN 9: INVOICING & PAYMENT
+
+## 9.1 — Invoice Generation
+
+TIER: All
+TRIGGER: Manager/Trinity generates invoice for client
+
+STEPS:
+1. Find all COMPLETED shifts for this client in the billing period
+2. Verify no shift appears on an existing invoice (dedup guard)
+3. For each eligible shift: line_item = shift.rate × shift.actual_hours
+4. Sum all line items = subtotal
+5. Apply any manual adjustments (logged with reason)
+6. Create invoice: { workspace_id, client_id, status: DRAFT, line_items, subtotal, created_by }
+7. Each line item references specific shift_id (no orphan line items)
+8. NDS notification to org owner: invoice amount, client name, due date, review link
+
+END STATE:
+- invoice.status = DRAFT
+- All line items tied to specific completed shifts
+- No duplicate shift coverage
+- Org owner notified
+
+OUTPUT: Draft invoice ready for review
+
+RACE CONDITIONS:
+- Two invoice generation attempts for same period/client → dedup check on shift_ids already invoiced
+
+---
+
+## 9.2 — Invoice Approval
+
+TRIGGER: ORG_OWNER clicks approve on draft invoice
+
+STEPS:
+1. Verify invoice.status = DRAFT
+2. Verify role = ORG_OWNER or ADMIN
+3. Update invoice.status = APPROVED
+4. Record: approved_by = user_id, approved_at = now
+5. Write audit record: { action: INVOICE_APPROVED, invoice_id, approved_by, workspace_id, timestamp }
+
+END STATE:
+- invoice.status = APPROVED
+- Approver identity and timestamp logged permanently
+
+---
+
+## 9.3 — Invoice Send
+
+TRIGGER: ORG_OWNER sends approved invoice to client
+
+STEPS:
+1. Verify invoice.status = APPROVED
+2. Generate signed payment portal token: sign({ invoice_id, workspace_id, exp: now+30days })
+3. Update invoice.status = SENT
+4. Write audit record: { action: INVOICE_SENT }
+5. After SENT: invoice content is write-protected (line items, rates, client binding locked)
+6. Allowed post-SENT: status changes via payment/void flow only
+7. Send email to client contact via NDS with payment link
+8. Client portal shows invoice with "Pay Now" button
+
+END STATE:
+- invoice.status = SENT
+- Payment token exists and is valid
+- Client notified
+- Content locked against editing
+
+RACE CONDITIONS:
+- Manager attempts to edit line item after SENT → 409 "Invoice cannot be modified after sending"
+
+---
+
+## 9.4 — Client Payment via Portal
+
+TRIGGER: Client clicks "Pay Now" in payment portal
+
+STEPS:
+1. Validate payment token: verify signature, check expiry, confirm invoice_id matches workspace
+2. Tamper check: invoice_id in token must match invoice_id in URL — mismatch returns error
+3. Display invoice details from DB (not from token)
+4. Client enters payment method / uses saved card
+5. Create Stripe PaymentIntent for invoice amount
+6. On payment success — SINGLE ATOMIC TRANSACTION:
+   a. invoice.status = PAID, paid_at = now
+   b. Create financial_processing_fees record (2.9% + $0.25)
+   c. Create platform_revenue record
+   d. Write audit record: { action: INVOICE_PAID, amount, paid_by_client_id }
+7. NDS notification to org owner: "Invoice paid by [client]"
+8. NDS receipt to client: "Payment confirmed — [amount]"
+9. QuickBooks sync fires if integration active (non-blocking)
+
+END STATE:
+- invoice.status = PAID
+- All three financial layers recorded atomically
+- Audit record exists
+- Both parties notified
+
+OUTPUT: Invoice shows as PAID, funds processing to tenant bank account
+
+RACE CONDITIONS:
+- Two simultaneous payment attempts for same invoice → SELECT FOR UPDATE on invoice status check, second attempt sees PAID and returns "already paid"
+- Stripe webhook replayed → event_id dedup prevents double financial records
+
+---
+
+## 9.5 — Invoice Void
+
+TRIGGER: ORG_OWNER voids a sent invoice
+
+STEPS:
+1. Verify invoice.status = SENT (cannot void PAID)
+2. Create credit_memo record referencing original invoice
+3. Update invoice.status = VOID
+4. Write audit record: { action: INVOICE_VOIDED, voided_by, reason }
+5. PAID and VOID invoices are write-protected at API AND service layer
+6. Original invoice record is NEVER deleted — always retained
+
+END STATE:
+- invoice.status = VOID
+- credit_memo record exists
+- Original invoice preserved
+
+---
+
+# DOMAIN 10: PAYROLL PROCESSING
+
+## 10.1 — Payroll Period Opening
+
+TRIGGER: ORG_OWNER opens new payroll period
+
+STEPS:
+1. Create payroll_period: { workspace_id, period_start, period_end, status: OPEN }
+2. Write audit: { action: PERIOD_OPENED, opened_by, workspace_id }
+3. System begins accumulating COMPLETED shift hours into this period
+
+END STATE:
+- payroll_period.status = OPEN
+- Audit record exists
+
+---
+
+## 10.2 — Hours Import
+
+TRIGGER: Automatic or manual import of hours into open period
+
+STEPS:
+1. Find all COMPLETED shifts within period_start to period_end for workspace
+2. For each shift: apply rate (check if overtime applies)
+3. Overtime: hours beyond configurable threshold get overtime multiplier
+4. Midnight-crossing shifts: compute hours in workspace timezone
+5. Create payroll_line_items: { employee_id, shift_id, regular_hours, overtime_hours, rate, gross_pay }
+6. Write audit: { action: HOURS_IMPORTED, period_id, employee_count, total_gross }
+
+END STATE:
+- payroll_line_items created for all eligible employees
+- Math verified: hours × rate = gross_pay
+
+RACE CONDITIONS:
+- Hours imported twice → unique constraint on shift_id in payroll_line_items
+
+---
+
+## 10.3 — Payroll Deadline Nudge
+
+TRIGGER: Cron job runs daily, checks period close deadlines
+
+STEPS:
+1. Find all OPEN payroll periods where deadline < now + 24 hours
+2. Check if nudge_sent flag is set → if yes skip (idempotent)
+3. Send NDS notification to org owner's REGISTERED email (not CoAIleague address)
+4. Set nudge_sent = true
+
+END STATE:
+- Nudge sent exactly once per period
+- Sent to personal registered email, not workspace email
+
+---
+
+## 10.4 — Payroll Period Close & ACH Trigger
+
+TRIGGER: ORG_OWNER approves and closes payroll period
+
+STEPS:
+1. Verify payroll_period.status = OPEN
+2. Verify all line items reviewed
+3. Update payroll_period.status = CLOSED
+4. WRITE PROTECTION ACTIVATES at service layer — no further edits to this period from any path
+5. Write audit: { action: PERIOD_CLOSED, closed_by, total_gross, employee_count }
+6. For EACH employee individually: trigger ACH transfer (Domain 4.3)
+7. NDS notification to org owner: "Payroll submitted — [N] employees"
+
+END STATE:
+- payroll_period.status = CLOSED
+- Write-protected at service layer (not just route layer)
+- ACH transfers queued per employee
+
+RACE CONDITIONS:
+- Two close attempts simultaneously → first succeeds, second sees CLOSED status and returns "period already closed"
+
+---
+
+# DOMAIN 11: TRINITY EMAIL SYSTEM
+
+## 11.1 — Inbound Email Processing
+
+TRIGGER: POST /api/webhooks/resend/inbound (Resend fires on incoming email)
+
+STEPS:
+1. Verify Resend webhook signature
+2. Extract To: address
+3. Slug extraction — SUBDOMAIN ONLY:
+   staffing@acme.coaileague.com → extract 'acme' → lookup workspace
+4. If no slug (root coaileague.com) → route to platform support queue, do NOT invoke tenant processor
+5. If slug not found → log unresolvable, return 404
+6. Resolve workspace_id from slug
+7. TrinityEmailProcessor invoked with: email body, from, subject, workspace_id
+8. Classification:
+   staffing@ → staffing_request
+   calloffs@ → call_off
+   incidents@ → incident_report
+   support@ → support_inquiry
+   docs@ → document intake
+   billing@ → billing_inquiry
+9. Route to correct downstream handler
+10. Route to correct EmailHubCanvas folder
+11. Generate SR-XXXXXXXX reference number, embed in outbound reply
+12. Send reply FROM noreply@coaileague.com, Reply-To: {function}@{slug}.coaileague.com
+
+END STATE:
+- email_thread record created with correct workspace_id and folder
+- SR reference embedded in outbound reply
+- Downstream handler executed (coverage search, CRM lead, etc.)
+
+RACE CONDITIONS:
+- Resend fires same webhook twice → check Message-ID uniqueness before processing
+
+---
+
+## 11.2 — SR Reference Threading
+
+TRIGGER: Reply received to a Trinity-sent email
+
+STEPS:
+1. Extract SR-XXXXXXXX from email body AND subject line
+2. If SR found: look up trinityLiaison conversation by SR reference
+3. Route reply to SAME thread with full prior context loaded
+4. If SR not found: create NEW thread — never append to random existing thread
+5. If SR found but thread not found (expired/deleted): create new thread, log orphaned SR
+
+END STATE:
+- Reply correctly threaded to original conversation
+- Trinity has full context of prior exchange
+
+---
+
+## 11.3 — trinity@coaileague.com Marketing Reply Processor
+
+TRIGGER: Inbound reply to outbound marketing email sent from trinity@coaileague.com
+
+STEPS:
+1. trinityMarketingReplyProcessor invoked (NOT tenant TrinityEmailProcessor)
+2. Classify sender:
+   REGULATORY: domain is .gov/.state.tx.us or body contains: audit, compliance, PSB, regulatory, inspection, licensing, DPS
+   PROSPECT: company domain, body contains: pricing, trial, interested, demo, sign up, features, how much
+   FALLBACK: cannot classify
+3. REGULATORY → respond with compliance partnership overview, link to coaileague.com/regulatory, route to platform owner (Bryan) via NDS
+4. PROSPECT → respond with trial link (coaileague.com/trial), features overview, Trinity showcase
+5. FALLBACK → send ONE clarifying question: "Are you reaching out about regulatory compliance partnership or exploring CoAIleague for your security operation?"
+
+END STATE:
+- Correct lane response sent
+- Platform owner notified for regulatory contacts
+- No tenant data ever touched or exposed
+
+---
+
+# DOMAIN 12: TRINITY VOICE
+
+## 12.1 — Inbound Call Flow
+
+TRIGGER: POST /api/voice/inbound (Twilio fires on incoming call)
+
+STEPS:
+1. Verify Twilio webhook signature
+2. Extract caller phone number from request
+3. Lookup phone number against employees table WHERE workspace_id = [all workspaces] — find matching record
+4. If found: greet by name, load workspace context, set session workspace_id = matched workspace
+5. If not found: verbal verification flow (name + ID number)
+6. Verification fails N times: transfer to human or clean disconnect
+7. workspace_id is ALWAYS resolved from verified caller identity — caller CANNOT override by naming a company
+8. All subsequent data access scoped to resolved workspace_id
+9. Create call_log: { caller_id, workspace_id, call_sid, started_at }
+
+END STATE:
+- Caller verified, workspace context loaded
+- All actions during call workspace-scoped
+
+---
+
+## 12.2 — Trinity Voice Coverage Outreach
+
+TRIGGER: Coverage engine (Domain 8.2) initiates voice outreach to candidate officer
+
+STEPS:
+1. Trinity Voice calls candidate's phone number
+2. Plays shift offer: "This is [workspace name] staffing. We have an open [position] shift at [site] on [date] from [time] to [time]. Press 1 to accept, Press 2 to decline."
+3. Log outreach attempt: { officer_id, shift_id, method: voice, attempted_at }
+4. On acceptance: confirm officer identity, proceed to shift assignment
+5. On decline: log decline, proceed to next candidate
+6. No answer after N rings: log timeout, proceed to next candidate
+7. NDS SMS fallback fires after voice attempt if no response
+
+END STATE:
+- Outreach attempt logged regardless of outcome
+- Shift assigned if accepted
+- Next candidate contacted if declined/no answer
+
+---
+
+## 12.3 — Human Handoff
+
+TRIGGER: Trinity cannot resolve caller after 3 attempts, or caller requests human, or issue requires judgment
+
+STEPS:
+1. Trinity informs caller: "Connecting you to a team member"
+2. NDS alert to workspace manager: caller name/number, call context summary, reason for handoff
+3. Transfer call if live manager available
+4. If no manager available: "Our team is unavailable right now. Would you like a callback?" or offer to leave message
+5. NEVER silently disconnect
+6. Log handoff: { reason, caller_id, workspace_id, handoff_at }
+
+END STATE:
+- Manager notified
+- Caller receives closure (transfer, callback offer, or message)
+- Handoff logged
+
+---
+
+# DOMAIN 13: DOCUMENT MANAGEMENT & E-SIGNATURE
+
+## 13.1 — Document Upload
+
+TIER: Professional+ (vault features)
+TRIGGER: User uploads document via UI or docs@ email
+
+STEPS:
+1. Validate file type (allowed types only)
+2. Validate file size (25MB maximum — server-side enforcement)
+3. Check storage quota for 'documents' category before write
+4. If quota exceeded: return 507, do not write file
+5. Upload to GCS path: /{workspace_id}/documents/{uuid}/{filename}
+6. Create document record: { workspace_id, name, gcs_path, size_bytes, status: ACTIVE }
+7. Call recordStorageUsage(workspace_id, 'documents', size_bytes)
+8. Write audit: { action: DOCUMENT_UPLOADED, uploaded_by, workspace_id }
+
+END STATE:
+- File in GCS with workspace_id in path
+- document record in DB
+- Storage usage updated
+- Audit logged
+
+---
+
+## 13.2 — E-Signature Request
+
+TIER: Professional+
+TRIGGER: User initiates signature request on a document
+
+STEPS:
+1. Create signature_request: { document_id, signer_email, workspace_id, token: uuid, expires_at: now+7days, status: PENDING }
+2. Send signing invitation via NDS with signed link
+3. Signer opens link, reviews document, signs
+4. Completion handler (idempotent — safe to replay):
+   a. Create new document version with signature embedded
+   b. Update signature_request.status = SIGNED, signed_at = now
+   c. Write audit: { action: DOCUMENT_SIGNED, signer_email, workspace_id }
+   d. NDS notification to requesting user
+5. Signed document is write-protected — no new versions can be created
+
+END STATE:
+- signature_request.status = SIGNED
+- Signed document version stored
+- Original preserved as version 1
+- Audit logged
+
+RACE CONDITIONS:
+- Signing link clicked twice → idempotency check on signature_request status before processing
+
+---
+
+# DOMAIN 14: CONTRACT PIPELINE
+
+TIER: Professional+
+
+## 14.1 — Contract Creation
+
+TRIGGER: Manager creates contract for client
+
+STEPS:
+1. Select template or create from scratch
+2. Link contract to: client_id, site_id, workspace_id
+3. Define: service scope, rate structure, start date, term
+4. Create contract record: { status: DRAFT }
+5. Send for e-signature (Domain 13.2) if signatures required
+6. On signature: contract.status = ACTIVE
+7. Only ACTIVE contracts allow site scheduling
+
+END STATE:
+- contract.status = ACTIVE (post-signature)
+- Site is now schedulable
+
+---
+
+# DOMAIN 15: RFP & PROPOSAL SYSTEM
+
+TIER: Professional+
+
+## 15.1 — RFP/Proposal Generation
+
+TRIGGER: Manager creates proposal for prospect
+
+STEPS:
+1. Select prospect from CRM pipeline
+2. Generate proposal from template with:
+   - Prospect name and site details
+   - Service scope and pricing
+   - Term and conditions
+   - WORKSPACE name (never hardcoded "CoAIleague")
+3. Create rfp_record: { prospect_id, workspace_id, status: DRAFT }
+4. Export as PDF for delivery
+5. On acceptance: advance CRM stage to CONTRACT_SENT
+
+END STATE:
+- rfp_record.status = DRAFT (then SENT on delivery)
+- PDF generated with workspace branding
+- CRM updated
+
+---
+
+# DOMAIN 16: PDF GENERATION
+
+## 16.1 — PDF Generation (Any Document Type)
+
+TRIGGER: User requests PDF export (invoice, report, proposal, DAR, payroll stub)
+
+STEPS:
+1. Verify user has permission to generate this document type
+2. Fetch all required data from DB (workspace_id scoped)
+3. Render PDF template with data
+4. Header uses PLATFORM.name or workspace.name — NEVER hardcoded "CoAIleague"
+5. Footer includes: legal retention notice, document reference number
+6. Store generated PDF in GCS (workspace-scoped path)
+7. Return signed temporary download URL (expires in 1 hour)
+8. Write audit: { action: PDF_GENERATED, document_type, generated_by, workspace_id }
+
+END STATE:
+- PDF stored in GCS
+- Temporary download URL returned
+- Audit logged
+
+---
+
+# DOMAIN 17: REPORTING & ANALYTICS
+
+## 17.1 — Report Generation
+
+TIER: Starter (basic) / Professional (advanced) / Business (full)
+TRIGGER: Manager/Admin requests report
+
+STEPS:
+1. Verify tier gate for report type
+2. Apply date range filter
+3. All queries include workspace_id in WHERE clause
+4. Aggregate data server-side (never in client)
+5. Return structured data
+6. For export: generate CSV or PDF (Domain 16.1)
+7. Write audit: { action: REPORT_GENERATED, report_type, date_range, generated_by }
+
+END STATE:
+- Report data returned workspace-scoped
+- Export file generated if requested
+- Audit logged
+
+---
+
+# DOMAIN 18: CHAT SYSTEM
+
+## 18.1 — Internal Chat
+
+TRIGGER: User sends message in workspace chat
+
+STEPS:
+1. Message stored with workspace_id scope
+2. Delivered via WebSocket to connected workspace members only
+3. WebSocket room = workspace_id — no cross-tenant delivery possible
+4. Message persisted to DB before delivery confirmation
+5. If recipient offline: message queued, delivered on reconnect
+
+END STATE:
+- Message in DB with workspace_id
+- Delivered to online recipients in real-time
+- Queued for offline recipients
+
+RACE CONDITIONS:
+- Two instances broadcasting to same room → WebSocket rooms are per-instance (single-instance at launch, documented limitation)
+
+---
+
+# DOMAIN 19: EMAIL HUB CANVAS
+
+## 19.1 — Email Thread View
+
+TRIGGER: User opens EmailHubCanvas
+
+STEPS:
+1. Load email_threads WHERE workspace_id = session.workspace_id AND deleted_at IS NULL
+2. Group by: SR reference first, then Message-ID/In-Reply-To headers
+3. Default view: UNREAD threads first, sorted by most recent
+4. Folder filter: show threads for selected folder only
+5. Read state: mark thread as read when opened, persist to DB
+6. Read state syncs in real-time across active sessions via WebSocket
+
+END STATE:
+- Thread list loaded workspace-scoped
+- Read state persisted
+- Correct folder routing
+
+---
+
+## 19.2 — Bulk Actions
+
+TRIGGER: User selects multiple threads and applies bulk action
+
+STEPS (Archive):
+1. Set archived_at = now on selected threads
+2. Remove from default view (filter WHERE archived_at IS NULL)
+3. Still accessible in Archive folder
+4. Write audit: { action: BULK_ARCHIVED, thread_ids, actor_id, workspace_id }
+
+STEPS (Delete):
+1. Set deleted_at = now (SOFT DELETE ONLY — never hard delete)
+2. Remove from all views including Archive
+3. Write audit: { action: BULK_DELETED, thread_ids }
+
+STEPS (Move):
+1. Update folder_id on selected threads
+2. Write audit: { action: BULK_MOVED, from_folder, to_folder }
+
+---
+
+# DOMAIN 20: NOTIFICATION SYSTEM (NDS)
+
+## 20.1 — NDS Send Flow
+
+TRIGGER: Any system event requiring notification
+
+STEPS:
+1. Generate unique notification_id
+2. Check if notification_id already exists in notifications_log → if yes: skip (idempotent)
+3. Check recipient opt-out status:
+   - MARKETING opt-out: skip if notification is marketing type
+   - OPERATIONAL notifications (shift, payroll, license, call-off): BYPASS opt-out check
+4. Determine channel: email → Resend, SMS → Twilio, push → push service
+5. Attempt delivery on preferred channel
+6. On failure: attempt fallback channel
+7. Log result: { notification_id, recipient, channel, status, workspace_id }
+8. On hard failure: DLQ entry created, alert platform admin if threshold exceeded
+
+END STATE:
+- Notification delivered or in DLQ
+- Delivery status logged
+- Idempotency record exists
+
+RACE CONDITIONS:
+- Same event triggers two NDS sends → notification_id dedup prevents double delivery
+
+---
+
+## 20.2 — Opt-Out Processing
+
+TRIGGER: Recipient clicks unsubscribe link
+
+STEPS:
+1. Validate unsubscribe token
+2. Determine opt-out CATEGORY (MARKETING vs OPERATIONAL)
+3. MARKETING opt-out: mark in preferences, future marketing emails skipped
+4. OPERATIONAL opt-out: NOT allowed for core operational messages
+5. Return branded confirmation page: "You have been unsubscribed from [specific category] notifications"
+6. NEVER show generic "unsubscribed from all" without category clarity
+
+END STATE:
+- opt_out_preferences updated for correct category
+- Operational notifications continue unaffected
+
+---
+
+# DOMAIN 21: STORAGE & QUOTA MANAGEMENT
+
+## 21.1 — File Upload with Quota Enforcement
+
+TRIGGER: Any file upload (document, image, email attachment, form submission)
+
+STEPS:
+1. Determine category: email | documents | media | audit_reserve
+2. Get current usage: SELECT bytes_used FROM storage_usage WHERE workspace_id = ? AND category = ?
+3. Get quota limit from billingConfig.ts for workspace tier and category
+4. If current + new_file_size > quota AND category != audit_reserve: return 507
+5. audit_reserve category ALWAYS allowed regardless of other limits
+6. Upload file to GCS: path = /{workspace_id}/{category}/{uuid}/{filename}
+7. On success: UPDATE storage_usage SET bytes_used = bytes_used + new_file_size
+8. Check new total:
+   - If > 95% of quota: fire NDS critical alert (once per threshold crossing)
+   - If > 80% of quota: fire NDS warning (once per threshold crossing)
+
+END STATE:
+- File in GCS with workspace_id in path
+- storage_usage updated
+- Alerts fired if thresholds crossed
+
+RACE CONDITIONS:
+- Two uploads simultaneously that would both be under quota → SELECT FOR UPDATE on storage_usage before checking
+
+---
+
+# DOMAIN 22: HELPAI & SUPPORT
+
+## 22.1 — HelpAI Conversation
+
+TRIGGER: User opens HelpAI from any page
+
+STEPS:
+1. Determine context: platform-layer or workspace-layer
+2. PLATFORM layer: HelpAI answers CoAIleague feature/pricing/onboarding questions ONLY — zero tenant data access
+3. WORKSPACE layer: HelpAI reads only current workspace's documents and knowledge
+4. All queries workspace_id scoped (workspace layer)
+5. After 2 failed resolution attempts OR user requests human:
+   a. Create support_ticket: { workspace_id, category, description, status: OPEN }
+   b. Route to correct queue: billing → finance queue, technical → engineering queue
+   c. NDS immediate acknowledgment to user
+   d. NDS alert to support queue
+
+END STATE:
+- Conversation logged with workspace_id
+- Ticket created on escalation
+- User acknowledged
+
+---
+
+# DOMAIN 23: REGULATORY & COMPLIANCE
+
+## 23.1 — Regulatory Export
+
+TIER: Business+
+TRIGGER: ORG_OWNER/Admin requests compliance data export
+
+STEPS:
+1. Verify role = ORG_OWNER or ADMIN → 403 for others
+2. Apply filters: date_range, entity_type (shifts, incidents, licenses, payroll)
+3. All queries workspace_id scoped
+4. Generate structured export (CSV or JSON — NOT raw DB dump)
+5. Include: timestamps, officer IDs, site IDs, incident classifications, license status
+6. Write audit: { action: REGULATORY_EXPORT, date_range, entity_types, exported_by, workspace_id }
+7. Return signed temporary download URL
+
+END STATE:
+- Structured export file generated
+- Audit record shows who exported what and when
+- Data is audit-ready for PSB or law enforcement review
+
+---
+
+# DOMAIN 24: PLATFORM ADMINISTRATION
+
+## 24.1 — Platform Admin Dashboard
+
+ACCESS: requirePlatformStaff only
+TRIGGER: Platform admin opens admin panel
+
+SURFACES:
+1. TENANT LIST:
+   - All workspaces with slug, tier, billing status, trial expiry, last activity, seat count
+   - Statewide shows as "Grandfathered — Enterprise"
+2. FINANCIAL HEALTH:
+   - MRR, recent payments, failed payments, pending overages
+3. SYSTEM HEALTH:
+   - DLQ depth and oldest item
+   - Last 50 errors with timestamp, route, workspace_id
+   - Queue worker health
+   - NDS delivery health
+4. TENANT DRILL-DOWN:
+   - Per-workspace: seats, storage, AI credits, recent activity, support tickets
+
+RULES:
+- Read-only operational metadata only
+- No access to tenant business data (invoices, shifts, payroll content)
+- All views require requirePlatformStaff middleware
+
+---
+
+# DOMAIN 25: QUICKBOOKS INTEGRATION
+
+TIER: Professional+
+
+## 25.1 — QuickBooks Sync
+
+TRIGGER: Invoice APPROVED, PAID, or VOID
+
+STEPS:
+1. Check if QB integration is active for workspace
+2. If not active: skip silently, log "QB not connected"
+3. Verify access_token is valid, refresh proactively if < 5 min to expiry
+4. If refresh fails: mark integration as disconnected, NDS alert to org owner
+5. Sync invoice data to QB (never block on QB failure)
+6. On sync success: record recordQbSyncFee in financial_processing_fees (Path B)
+7. On sync failure: log failure, queue for retry, NDS alert to org owner
+8. QB failure NEVER blocks or rolls back the internal invoice state change
+
+END STATE:
+- Internal platform state always correct regardless of QB result
+- QB sync is best-effort with retry
+- recordQbSyncFee written on every successful sync
+
+---
+
+# DOMAIN 26: MULTI-WORKSPACE MANAGEMENT
+
+TIER: Business+
+
+## 26.1 — Subsidiary Workspace View
+
+TRIGGER: Business+ org owner opens consolidated dashboard
+
+STEPS:
+1. Verify workspace.tier = business or higher → 403 if not
+2. Load all subsidiary workspace_ids linked to this parent
+3. Aggregate: combined seat count, combined revenue, combined schedule overview
+4. All subsidiary data is READ-ONLY from parent view
+5. Each subsidiary's data still scoped to its own workspace_id
+
+---
+
+# DOMAIN 27: WHITE-LABEL & BRANDING
+
+TIER: Enterprise+
+
+## 27.1 — White-Label Configuration
+
+TRIGGER: Enterprise+ org owner configures custom branding
+
+STEPS:
+1. Verify tier = enterprise or higher → 403 if not
+2. Allow: custom logo upload, custom primary color, custom domain
+3. Store branding config in workspace.branding_config
+4. All outbound emails, PDFs, and UI for this workspace use custom branding
+5. PLATFORM.name is replaced by workspace.company_name in all outputs
+6. Custom domain: verify ownership via DNS TXT record before activation
+
+---
+
+# DOMAIN 28: FINANCIAL SYSTEM — UNIVERSAL RULES
+
+These rules apply to EVERY financial operation across all domains.
+
+## 28.1 — Three-Layer Atomicity Rules
+
+PATH A (Stripe charge involved):
+Transaction must include ALL of:
+- Primary record update (invoice PAID, payroll initiated, etc.)
+- financial_processing_fees record
+- platform_revenue record
+- audit_log record
+All or nothing. No partial commits.
+
+PATH B (Internal fee, no Stripe charge):
+Transaction must include ALL of:
+- financial_processing_fees record
+- platform_revenue record
+- audit_log record
+All or nothing.
+
+## 28.2 — Write Protection Rules
+
+Once a financial record reaches final state, it is immutable:
+- PAID invoice: no content edits from any path (API, worker, service, Trinity, admin)
+- VOID invoice: no content edits (only credit memo creation allowed)
+- CLOSED payroll period: no edits from any path including internal service calls
+- SIGNED document: no new versions from any path
+- Audit log entries: no UPDATE or DELETE from any path
+
+## 28.3 — Audit Trail Completeness
+
+Every financial state change must produce an audit_log entry with:
+- action (what happened)
+- actor_id (who triggered it — user, system, Trinity)
+- workspace_id (always)
+- before_state (previous value)
+- after_state (new value)
+- timestamp
+- request_id (for tracing)
+
+Audit log is APPEND-ONLY. DB user has no UPDATE or DELETE privilege on audit tables.
+
+---
+
+# DOMAIN 29: ERROR HANDLING — UNIVERSAL RULES
+
+These rules apply everywhere in the platform.
+
+## 29.1 — Silent Failure Rules
+
+ZERO empty catch blocks allowed. Every catch must at minimum:
+logger.error({ error, context: '[filename:function]', workspace_id, request_id })
+
+## 29.2 — External API Call Rules
+
+Every call to Stripe, Plaid, Twilio, Gemini, OpenAI, Claude, Resend, QuickBooks:
+- Wrapped in try/catch
+- Retry on transient failure: max 3 attempts, exponential backoff
+- No retry on 4xx except 429
+- Timeout configured on every call
+- Failure logged with full context
+- Degraded mode activated if service unavailable (not crash)
+
+## 29.3 — API Response Rules
+
+ALL errors return: { error: { code: string, message: string } }
+Stack traces: NEVER in production responses
+DB errors: NEVER passed to client
+500s: logged server-side with full detail, generic message to client
+
+## 29.4 — Race Condition Prevention Rules
+
+Financial writes: SELECT FOR UPDATE before any debit/credit operation
+Scheduling assignments: SELECT FOR UPDATE before conflict check
+Queue jobs: distributed lock per workspace before starting
+Stripe webhooks: INSERT INTO processed_stripe_events (atomic, unique constraint)
+NDS sends: INSERT INTO notifications_log (atomic, unique notification_id)
+
+---
+
+# DOMAIN 30: DATA INTEGRITY — UNIVERSAL RULES
+
+## 30.1 — Tenant Isolation Rules
+
+EVERY query touching business data includes workspace_id in WHERE clause.
+NO exceptions. Platform admin routes that intentionally bypass must be
+explicitly marked with requirePlatformStaff and logged.
+
+## 30.2 — Soft Delete Rules
+
+ALL business entities use soft delete (deleted_at timestamp).
+Hard deletes exist NOWHERE for: employees, clients, invoices, shifts,
+payroll records, documents, contracts, email threads, audit logs.
+ALL SELECT queries filter WHERE deleted_at IS NULL by default.
+
+## 30.3 — Schema Integrity Rules
+
+Every relationship has a FK constraint.
+Every tenant table has an index on workspace_id.
+Every status field has an index.
+All migrations are sequential with no gaps.
+No partial migration states in production.
+
+---
+
+# DEFINITION OF CORRECT BEHAVIOR
+
+When the agent debugs any issue, this is what it looks for:
+
+**A feature is working correctly when:**
+1. The trigger produces the exact records specified in END STATE
+2. All three financial layers fire atomically for every chargeable event
+3. The audit trail is complete with no orphaned mutations
+4. NDS notifications reach the correct recipients
+5. workspace_id is in every query that touches tenant data
+6. The output matches what the specification says the output should be
+7. No silent failures exist — every error is logged with context
+8. Race conditions are protected by locks or atomic operations
+9. Write-protected records reject mutation from all paths
+10. The end user sees what they are supposed to see at that tier
+
+**A feature is broken when:**
+1. Any step in the STEPS sequence is missing or out of order
+2. The END STATE does not match what is in the database
+3. The OUTPUT does not match what the user receives
+4. Any financial record is missing or partially created
+5. An audit record is missing for a logged action
+6. A notification was not sent when the spec says it should be
+7. A workspace_id is missing from a tenant data query
+8. A write-protected record accepted a mutation
+9. A race condition produced duplicate or inconsistent records
+10. An error was swallowed without logging

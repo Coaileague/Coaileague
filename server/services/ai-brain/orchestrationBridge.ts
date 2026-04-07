@@ -15,6 +15,8 @@ import { realTimeBridge } from './realTimeBridge';
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import type { PlatformEventType } from '../platformEventBus';
 import { serviceControlManager } from './serviceControl';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('OrchestrationBridge');
 
 let isInitialized = false;
 let wssBroadcaster: ((workspaceId: string, data: any) => void) | null = null;
@@ -27,12 +29,12 @@ async function loadPersistedServiceStates(): Promise<string[]> {
     const pausedServices = await serviceControlManager.loadPersistedStates();
     
     if (pausedServices.length > 0) {
-      console.log(`[OrchestrationBridge] Respecting ${pausedServices.length} paused services from previous session:`, pausedServices.join(', '));
+      log.info(`[OrchestrationBridge] Respecting ${pausedServices.length} paused services from previous session:`, pausedServices.join(', '));
     }
     
     return pausedServices;
   } catch (error) {
-    console.error('[OrchestrationBridge] Failed to load persisted service states:', error);
+    log.error('[OrchestrationBridge] Failed to load persisted service states:', error);
     return [];
   }
 }
@@ -42,7 +44,7 @@ async function loadPersistedServiceStates(): Promise<string[]> {
  */
 export function setOrchestrationWebSocketBroadcaster(broadcaster: (workspaceId: string, data: any) => void) {
   wssBroadcaster = broadcaster;
-  console.log('[OrchestrationBridge] WebSocket broadcaster registered');
+  log.info('[OrchestrationBridge] WebSocket broadcaster registered');
 }
 
 /**
@@ -50,11 +52,11 @@ export function setOrchestrationWebSocketBroadcaster(broadcaster: (workspaceId: 
  */
 export async function initializeOrchestrationServices() {
   if (isInitialized) {
-    console.log('[OrchestrationBridge] Already initialized, skipping');
+    log.info('[OrchestrationBridge] Already initialized, skipping');
     return;
   }
 
-  console.log('[OrchestrationBridge] Initializing AI Brain orchestration services...');
+  log.info('[OrchestrationBridge] Initializing AI Brain orchestration services...');
 
   // 0. Load persisted service states from database
   await loadPersistedServiceStates();
@@ -78,7 +80,7 @@ export async function initializeOrchestrationServices() {
   setupServiceControlCallbacks();
 
   isInitialized = true;
-  console.log('[OrchestrationBridge] Orchestration services initialized');
+  log.info('[OrchestrationBridge] Orchestration services initialized');
 }
 
 /**
@@ -122,7 +124,7 @@ function setupServiceControlCallbacks() {
     });
   });
 
-  console.log('[OrchestrationBridge] Service control callbacks registered');
+  log.info('[OrchestrationBridge] Service control callbacks registered');
 }
 
 /**
@@ -130,11 +132,11 @@ function setupServiceControlCallbacks() {
  */
 function startSupervisoryAgent() {
   if (!serviceControlManager.isServiceRunning('supervisory_agent')) {
-    console.log('[OrchestrationBridge] SupervisoryAgent is paused, skipping start');
+    log.info('[OrchestrationBridge] SupervisoryAgent is paused, skipping start');
     return;
   }
   supervisoryAgent.start();
-  console.log('[OrchestrationBridge] SupervisoryAgent started');
+  log.info('[OrchestrationBridge] SupervisoryAgent started');
 }
 
 /**
@@ -142,11 +144,11 @@ function startSupervisoryAgent() {
  */
 function startSchedulerCoordinator() {
   if (!serviceControlManager.isServiceRunning('scheduler_coordinator')) {
-    console.log('[OrchestrationBridge] SchedulerCoordinator is paused, skipping start');
+    log.info('[OrchestrationBridge] SchedulerCoordinator is paused, skipping start');
     return;
   }
   schedulerCoordinator.start();
-  console.log('[OrchestrationBridge] SchedulerCoordinator started');
+  log.info('[OrchestrationBridge] SchedulerCoordinator started');
 }
 
 /**
@@ -296,16 +298,46 @@ function setupWebSocketBridge() {
     }, data.workspaceId);
   });
 
-  // Execute action - forward to action executor (placeholder for future AI engine integration)
-  aiBrainEvents.on('execute_action', (data) => {
-    console.log(`[OrchestrationBridge] Execute action request: ${data.actionId}`, {
+  aiBrainEvents.on('execute_action', async (data) => {
+    log.info(`[OrchestrationBridge] Execute action request: ${data.actionId}`, {
       runId: data.runId,
       params: Object.keys(data.params || {}),
     });
-    // Future: This would be handled by an action executor/AI engine
+
+    try {
+      const { helpaiOrchestrator } = await import('../helpai/platformActionHub');
+      const result = await helpaiOrchestrator.executeAction({
+        actionId: data.actionId,
+        userId: data.userId || 'trinity-ai',
+        workspaceId: data.workspaceId,
+        userRole: data.userRole || 'system',
+        payload: data.params || {},
+      });
+
+      log.info(`[OrchestrationBridge] Action ${data.actionId} ${result.success ? 'succeeded' : 'failed'}: ${result.message || ''}`);
+
+      broadcastOrchestrationEvent('action_result', {
+        actionId: data.actionId,
+        runId: data.runId,
+        success: result.success,
+        message: result.message,
+        data: result.data,
+        executionTimeMs: result.executionTimeMs,
+        timestamp: new Date().toISOString(),
+      }, data.workspaceId);
+    } catch (error: any) {
+      log.error(`[OrchestrationBridge] Action ${data.actionId} execution error:`, (error instanceof Error ? error.message : String(error)));
+      broadcastOrchestrationEvent('action_result', {
+        actionId: data.actionId,
+        runId: data.runId,
+        success: false,
+        error: (error instanceof Error ? error.message : String(error)),
+        timestamp: new Date().toISOString(),
+      }, data.workspaceId);
+    }
   });
 
-  console.log('[OrchestrationBridge] WebSocket event bridge configured');
+  log.info('[OrchestrationBridge] WebSocket event bridge configured');
 }
 
 /**
@@ -327,7 +359,7 @@ function setupPlatformEventBridge() {
           error: data.error,
           canRetry: data.canRetry,
         },
-        visibility: 'admin',
+        visibility: 'org_leadership',
       });
     }
   });
@@ -387,7 +419,7 @@ function setupPlatformEventBridge() {
     }
   });
 
-  console.log('[OrchestrationBridge] Platform event bridge configured');
+  log.info('[OrchestrationBridge] Platform event bridge configured');
 }
 
 /**
@@ -415,7 +447,7 @@ function connectRealTimeBridgeToWebSocket() {
     broadcastOrchestrationEvent('system_alert', payload);
   });
 
-  console.log('[OrchestrationBridge] RealTimeBridge connected to WebSocket');
+  log.info('[OrchestrationBridge] RealTimeBridge connected to WebSocket');
 }
 
 /**
@@ -458,10 +490,11 @@ export async function getOrchestrationStatus() {
 }
 
 /**
- * Cleanup function for graceful shutdown
+ * Cleanup function for graceful bridge shutdown (resets bridge connection state only).
+ * For full orchestration service shutdown, use shutdownOrchestrationServices() from server/services/orchestration/index.ts
  */
-export function shutdownOrchestrationServices() {
-  console.log('[OrchestrationBridge] Shutting down orchestration services...');
+export function shutdownOrchestrationBridge() {
+  log.info('[OrchestrationBridge] Shutting down orchestration bridge...');
   isInitialized = false;
   wssBroadcaster = null;
 }

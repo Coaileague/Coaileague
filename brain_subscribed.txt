@@ -1,0 +1,10 @@
+*
+ai_brain_action
+ai_error
+ai_escalation
+approval_approved
+automation_completed
+bot_command_executed
+chat_message
+gap_intelligence_scan
+schedule_published

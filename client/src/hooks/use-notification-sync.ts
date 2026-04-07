@@ -79,13 +79,20 @@ function getSeenHashes(): Map<string, number> {
   }
 }
 
+const MAX_HASH_ENTRIES = 200;
+
 /**
  * Save seen hashes to localStorage
  */
 function saveSeenHashes(hashes: Map<string, number>): void {
   try {
     const obj: Record<string, number> = {};
-    hashes.forEach((timestamp, hash) => {
+    // Sort by timestamp and keep only the most recent ones
+    const sortedEntries = Array.from(hashes.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_HASH_ENTRIES);
+    
+    sortedEntries.forEach(([hash, timestamp]) => {
       obj[hash] = timestamp;
     });
     localStorage.setItem(SEEN_HASHES_KEY, JSON.stringify(obj));

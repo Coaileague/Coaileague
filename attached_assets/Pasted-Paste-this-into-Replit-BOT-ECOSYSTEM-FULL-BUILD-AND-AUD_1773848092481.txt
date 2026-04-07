@@ -1,0 +1,880 @@
+Paste this into Replit:
+
+---
+
+**BOT ECOSYSTEM FULL BUILD AND AUDIT — HELPAI, REPORTBOT, CLOCKBOT, MEETINGBOT | TRINITY ORCHESTRATION | READ BEFORE TOUCH | SCAN UNTIL ZERO GAPS**
+
+Before building anything — audit what already exists for each bot. Read every file related to HelpAI, ReportBot, ClockBot, MeetingBot, and the bot orchestration layer before writing a single line.
+
+---
+
+**PRE-BUILD AUDIT — READ ONLY FIRST**
+
+Search and report:
+- Every existing bot file — list file name and current capabilities
+- Current HelpAI implementation — what it can and cannot do today
+- Current ReportBot implementation — what triggers it, what it produces
+- Current ClockBot implementation — current clock-in/out flow
+- Current MeetingBot implementation — what exists
+- Current bot orchestration — how Trinity delegates to bots
+- Current shift room chat system — how bots join and monitor
+- Current DAR (Daily Activity Report) implementation if any
+- Current PDF generation for bot reports — what library, what templates
+- Current Trinity data access — what org data Trinity can currently query
+- Bot action registry entries — list all bot-related actions registered
+
+Report everything. Build only what does not exist. Extend what does.
+
+---
+
+**SECTION 1 — BOT ARCHITECTURE AND TRINITY DELEGATION**
+
+Read existing bot orchestration before touching it.
+
+**Create or extend `server/services/bots/botOrchestrator.ts`:**
+
+Trinity delegates to bots through this single orchestration layer. Every bot action goes through Trinity first — Trinity decides which bot handles it, provides context, receives the result, and takes follow-up action.
+
+```typescript
+export interface BotContext {
+  workspaceId: string
+  botName: 'helpai' | 'reportbot' | 'clockbot' | 'meetingbot'
+  triggeredBy: string  // userId or 'trinity-autonomous'
+  triggerEvent: string
+  shiftId?: string
+  employeeId?: string
+  clientId?: string
+  sessionId?: string
+  orgContext: OrgContext  // full org data Trinity passes to bot
+}
+
+export interface OrgContext {
+  orgName: string
+  ownerName: string
+  activeEmployees: Employee[]
+  activeClients: Client[]
+  currentShifts: Shift[]
+  orgSettings: WorkspaceSettings
+  openIncidents: Incident[]
+  complianceAlerts: ComplianceAlert[]
+}
+
+// Trinity calls this to delegate to any bot
+export async function delegateToBot(botName: string, action: string, context: BotContext, payload: any): Promise<BotResult>
+```
+
+**Trinity self-awareness — org data context:**
+
+Create `server/services/trinity/trinityOrgContextBuilder.ts`
+
+This service builds complete org context for Trinity on every session:
+
+```typescript
+export async function buildTrinityOrgContext(workspaceId: string): Promise<TrinityFullContext> {
+  // Fetch ALL org data in parallel:
+  const [
+    workspace, employees, clients, shifts, invoices,
+    payrollRuns, documents, notifications, complianceAlerts,
+    openIncidents, collections, trainingStatus, auditLogs
+  ] = await Promise.all([
+    getWorkspace(workspaceId),
+    getActiveEmployees(workspaceId),
+    getActiveClients(workspaceId),
+    getCurrentAndUpcomingShifts(workspaceId),
+    getOutstandingInvoices(workspaceId),
+    getPendingPayrollRuns(workspaceId),
+    getPendingDocuments(workspaceId),
+    getUnreadNotifications(workspaceId),
+    getActiveComplianceAlerts(workspaceId),
+    getOpenIncidents(workspaceId),
+    getActiveCollections(workspaceId),
+    getTrainingComplianceStatus(workspaceId),
+    getRecentAuditLogs(workspaceId, 48)  // last 48 hours
+  ])
+
+  return {
+    workspace,
+    employees,
+    clients,
+    shifts,
+    invoices,
+    payrollRuns,
+    documents,
+    notifications,
+    complianceAlerts,
+    openIncidents,
+    collections,
+    trainingStatus,
+    auditLogs,
+    generatedAt: new Date()
+  }
+}
+```
+
+Trinity's context refreshes:
+- At session start
+- Every 15 minutes during active session
+- Immediately after any significant event (shift assigned, invoice paid, incident created)
+- On demand when Trinity is asked a question about org data
+
+**Trinity must be able to answer any of these questions with real data:**
+- "How many open shifts do we have this week?" → real count from DB
+- "Which officers are non-compliant?" → real list with specific issues
+- "What is our outstanding AR total?" → real sum from invoices table
+- "Show me Officer X's training record" → real training_attempts and certificates
+- "What did Trinity do overnight?" → real audit log entries from last 8 hours
+- "Which clients have unsigned contracts?" → real document status query
+- "What is our payroll liability for this week?" → real calculation from approved timesheets
+
+---
+
+**SECTION 2 — HELPAI — HELP DESK AGENT**
+
+Read existing HelpAI implementation before touching it.
+
+**HelpAI purpose:** Primary help desk and support agent for the entire platform. Helps org owners, managers, and officers with any platform question, guides them through workflows, resolves issues, escalates to human support when needed.
+
+**HelpAI capabilities — verify each exists and works, build what is missing:**
+
+**2A — Conversational help:**
+HelpAI must be able to answer in natural human language:
+- How to add a client
+- How to create a shift
+- How to clock in/out
+- How to run payroll
+- How to generate an invoice
+- How to upload a document
+- How to complete onboarding
+- How to read a compliance report
+- How to contact support
+- Any platform feature question
+
+Each answer must include:
+- Plain English explanation (no technical jargon)
+- Step-by-step instructions
+- Direct link to the relevant page or action
+- "Would you like me to do that for you?" offer when appropriate
+
+**2B — Task execution on behalf of user:**
+When a user asks HelpAI to do something — HelpAI must be able to execute it:
+- "HelpAI, create a shift for Officer Smith at Downtown Mall tomorrow 8am-8pm" → creates shift
+- "HelpAI, send the invoice to Harbor Logistics" → triggers invoice send
+- "HelpAI, what documents is Officer Jones missing?" → queries and responds with specific list
+- "HelpAI, show me who is clocked in right now" → real-time query and response
+
+All task executions go through Trinity's pre-execution validator and action registry.
+
+**2C — Escalation to human support:**
+When HelpAI cannot resolve an issue:
+- Offer to create a support ticket
+- Capture: issue description, user's name and role, workspace name, screenshots if provided
+- Create support ticket in platform
+- Notify platform support team
+- Give user a ticket number
+- Follow up when ticket is resolved
+
+**2D — Platform awareness:**
+HelpAI must know:
+- Current platform status (all services healthy or degraded)
+- Any maintenance windows
+- Recent platform updates and new features
+- Billing and subscription information for the org
+
+**2E — HelpAI conversation rules:**
+- Always responds in friendly, professional, plain English
+- Never uses technical terms without explaining them
+- Always confirms before executing any destructive action
+- Always asks clarifying questions if the request is ambiguous
+- Always offers a follow-up: "Is there anything else I can help you with?"
+- Remembers context within a session — does not ask for information already provided
+- Escalates immediately if user expresses urgency or distress
+
+**2F — Role-aware responses:**
+- Officer asking about pay rate → shows their own rate only
+- Manager asking about a colleague's pay rate → politely declines, explains policy
+- Owner asking about anything → provides full access
+- Unauthorized action requested → explains limitation, offers appropriate alternative
+
+---
+
+**SECTION 3 — REPORTBOT — SHIFT ROOM MONITOR AND DAR GENERATOR**
+
+Read existing ReportBot implementation before touching it.
+
+**ReportBot purpose:** Joins every shift room automatically. Monitors all communications, photos, and incidents in real time. At end of shift generates a professional Daily Activity Report (DAR) PDF, reviews it for quality, and routes it through approval.
+
+**3A — Shift room presence:**
+
+ReportBot automatically joins every shift chatroom when the shift begins:
+```typescript
+// When shift status changes to 'active' or officer clocks in:
+// 1. ReportBot sends welcome message to shift room:
+//    "I'm ReportBot. I'll be monitoring this shift and generating your Daily Activity Report.
+//     Use /report [description] to log any incidents or notable events.
+//     Use /incident [description] to flag something for immediate review.
+//     Photos sent here will be automatically included in your DAR."
+```
+
+**3B — Real-time monitoring:**
+
+ReportBot monitors every message and photo in the shift room:
+
+For photos:
+- Extracts GPS coordinates from metadata
+- Records: timestamp, sender, GPS location, caption if any
+- Flags if GPS location is far from the assigned client site
+- Requests description from officer: "Can you describe what this photo shows?"
+- Records officer's response as caption for the DAR
+
+For text messages:
+- Identifies incident keywords: "fight", "police", "ambulance", "injury", "damage", "theft", "trespass", "eviction", "complaint", "suspicious", "weapon", "force"
+- When incident keyword detected: "It sounds like you may be reporting an incident. Please use /incident to formally log this with all required details."
+- Records all messages chronologically for the DAR
+
+For /report command:
+```
+ReportBot prompts: "Please provide the following for your activity report:
+1. Time of event
+2. Location (be specific)
+3. What happened (who, what, where, when)
+4. Action taken
+5. Any witnesses?
+6. Police involvement? If yes, badge number and case number"
+```
+
+For /incident command:
+```
+ReportBot prompts: "INCIDENT REPORT — Please answer:
+1. Exact time
+2. Exact location
+3. Description (who, what, where, when, why if known)
+4. Parties involved (descriptions, names if known)
+5. Force used? (none / verbal / physical / restraint — be specific)
+6. Police called? Badge number? Case number?
+7. Injuries? Medical attention required?
+8. Evidence collected (photos, video, witnesses)
+9. Immediate action taken"
+
+ReportBot saves each response and asks: "Is there anything else to add to this incident report?"
+```
+
+**3C — End of shift DAR generation (7-step pipeline):**
+
+```
+TRIGGER: Shift status changes to 'completed' or officer submits /endshift
+
+FETCH:
+- All shift room messages in chronological order
+- All photos with GPS metadata and captions
+- All /report entries
+- All /incident entries
+- Shift details: client name, site address, officer name, start/end time, total hours
+- Officer's post order acknowledgment
+- Any clock-in/out GPS anomalies from ClockBot
+
+VALIDATE:
+- Confirm all incidents have required fields (time, location, description, action taken)
+- Identify any missing required fields
+- If missing fields: ask officer to complete before finalizing
+  "Before I can complete your DAR, I need a few more details: [specific missing items]"
+
+PROCESS — DAR content assembly:
+ReportBot assembles the DAR in chronological order:
+
+Section 1: SHIFT SUMMARY
+- Client name and site address
+- Officer name, badge/license number
+- Shift date and hours
+- Supervisor/manager assigned
+- Post: [client name] — [site address]
+
+Section 2: CHRONOLOGICAL ACTIVITY LOG
+- Every /report entry in time order
+- Plain English narrative for each entry
+- ReportBot rewrites entries using professional security language:
+  BEFORE: "some drunk guy was being loud"
+  AFTER: "At 21:47, a visibly intoxicated male subject was causing a disturbance near the east entrance. Verbal de-escalation techniques were employed. Subject was asked to leave the premises."
+
+Section 3: PHOTO DOCUMENTATION
+- Each photo with timestamp, GPS location, caption, and officer description
+- Photos embedded in PDF at appropriate section
+
+Section 4: INCIDENT REPORTS (if any)
+- Each incident with full structured report
+- Force continuum noted if applicable
+- ReportBot reviews use of force language:
+  BEFORE: "I grabbed him and put him on the ground"
+  AFTER: "Subject became physically aggressive. Officer applied a controlled takedown technique to prevent harm to bystanders. Subject was placed in a prone position until situational control was established. Police were notified per protocol."
+- Police case numbers recorded
+- ReportBot flags any language that could create liability:
+  "⚠ Review recommended: The phrase '[original phrase]' has been reworded to '[new phrase]' for clarity and liability protection. Please confirm this accurately reflects what occurred."
+
+Section 5: END OF SHIFT CERTIFICATION
+"I, [Officer Name], certify that the information contained in this Daily Activity Report is accurate and complete to the best of my knowledge."
+Officer signature field (captured from shift room or separate signature request)
+Date and time
+
+MUTATE:
+- Generate DAR as professional PDF with org letterhead
+- Include org logo, officer name, client name, date, report number
+- Embed all photos in correct chronological position
+- Apply grammar and spelling check
+- Apply liability language review
+- Flag any sections needing human review
+
+CONFIRM:
+- PDF generated successfully
+- PDF stored in document safe under 'daily_activity_reports' category
+- Linked to shift record, officer record, and client record
+
+NOTIFY:
+- Send PDF to assigned supervisor/manager for review with message:
+  "DAR for [Officer Name] at [Client Site] on [Date] is ready for your review.
+   ReportBot has flagged [N] items for your attention.
+   Approve, request changes, or reject below."
+- Manager receives in-app notification and email with PDF attached
+- After manager approval: if client has requested DAR delivery, send to client portal inbox
+- Publish: { type: 'dar_generated', workspaceId, shiftId, officerId, clientId, documentId }
+- Trinity receives DAR completion and logs to org intelligence
+```
+
+**3D — DAR approval flow:**
+
+Manager/supervisor actions after receiving DAR:
+- "Approve and Send to Client" → PDF delivered to client portal
+- "Approve — Keep Internal" → PDF saved to document safe only
+- "Request Changes" → ReportBot notified, officer prompted to clarify specific items
+- "Reject" → DAR flagged for review, officer and manager discuss
+
+After approval:
+- DAR status updated to 'approved'
+- Saved to org document safe permanently
+- Available for audit, legal review, or lawsuit discovery
+- Searchable by date, officer, client, incident type
+
+**3E — ReportBot conversational ability:**
+
+In the shift room, officers can ask ReportBot questions:
+- "ReportBot, what time did I clock in?" → real time from DB
+- "ReportBot, what are my post orders for this site?" → fetches from document safe
+- "ReportBot, how do I write a use of force report?" → explains step by step
+- "ReportBot, the police case number is 2026-123456" → records and confirms
+- "ReportBot, show me what's in my DAR so far" → displays current draft
+
+---
+
+**SECTION 4 — CLOCKBOT — TIME AND ATTENDANCE ASSISTANT**
+
+Read existing ClockBot implementation before touching it.
+
+**ClockBot purpose:** Manages all clock-in and clock-out operations. Handles GPS and geofence issues. Tracks and audits forced clocks. Generates compliance reports on attendance patterns.
+
+**4A — Standard clock-in/out assistance:**
+
+When officer clocks in:
+```
+ClockBot confirms:
+"✓ Clocked in at [time] at [location]
+ Shift: [client name] — [site address]
+ Expected start: [shift start time]
+ [Late notification if applicable: 'You are [N] minutes late. Your supervisor has been notified.']
+ Don't forget to review your post orders if this is a new site."
+```
+
+When officer clocks out:
+```
+ClockBot confirms:
+"✓ Clocked out at [time]
+ Total hours worked: [N hours]
+ Your timesheet has been submitted for approval.
+ Great work today!"
+```
+
+**4B — Geofence issue handling:**
+
+When officer's GPS is outside the geofence for the assigned site:
+```
+ClockBot message:
+"⚠ LOCATION ISSUE: Your GPS location ([Officer's coordinates]) does not match 
+the assigned site ([Client site address]).
+
+Are you at the correct location? 
+If yes, there may be a GPS signal issue. 
+Options:
+1. Try again (GPS may update in 30 seconds)
+2. Force clock-in (requires reason — will be flagged for manager review)
+3. Contact your supervisor for assistance
+
+Please choose an option or type your response."
+```
+
+**Force clock-in flow (7-step pipeline):**
+```
+TRIGGER: Officer requests force clock-in
+
+FETCH: Get officer record, shift record, site geofence, officer's GPS coordinates
+
+VALIDATE:
+- Confirm officer is assigned to this shift
+- Confirm shift is currently scheduled
+- Capture reason for force clock-in
+
+PROCESS:
+- Record: officer GPS, expected GPS, distance from site, reason provided, timestamp
+- Flag as: force_clockin_requested
+- Assign review flag to manager
+
+MUTATE:
+- Create time entry with force_clockin = true
+- Record GPS discrepancy: actualCoordinates, expectedCoordinates, distanceMeters
+- Update force_clock_trend: increment officer's force_clock_count
+
+CONFIRM:
+- Confirm time entry created
+- Confirm manager notified
+
+NOTIFY:
+- Notify manager: "[Officer Name] force clocked in at [time]. GPS shows they are [distance] from [site]. Reason: [reason]. Review required."
+- Officer confirmed: "Force clock-in recorded. Your supervisor has been notified. Please confirm with them directly."
+- Publish: { type: 'force_clockin_occurred', workspaceId, employeeId, shiftId, reason, distanceMeters }
+```
+
+**4C — Force clock trend tracking:**
+
+ClockBot tracks force clock patterns per officer and per manager:
+
+```typescript
+// After every force clock event:
+// Check if officer has force clocked more than:
+// - 3 times in 7 days → amber flag
+// - 5 times in 30 days → red flag — notify org owner
+
+// Check if same manager is approving forced clocks more than:
+// - 10 times in 7 days → flag for abuse review
+// - Pattern of approving without requiring valid reasons → notify org owner
+```
+
+**4D — ClockBot force clock PDF report:**
+
+Generated weekly (and on demand):
+
+```
+FORCE CLOCK REPORT — Week of [date]
+Organization: [org name]
+
+OFFICER SUMMARY:
+Officer Name | Total Force Clocks | Locations | Reasons | Trend
+[list all officers with force clocks]
+
+MANAGER APPROVAL SUMMARY:
+Manager Name | Force Clocks Approved | Avg Distance from Site | Pattern Flag
+[list managers]
+
+FLAGGED PATTERNS:
+- [Officer Name]: Force clocked 5 times at [site] — same GPS location each time — possible GPS device issue or attendance concern
+- [Manager Name]: Approved 12 force clocks this week without requiring reasons — review recommended
+
+RECOMMENDATIONS:
+[Trinity-generated recommendations based on patterns]
+```
+
+PDF saved to org document safe. Sent to org owner weekly.
+
+**4E — Additional ClockBot capabilities:**
+
+- "ClockBot, what time is my shift today?" → queries schedule and responds
+- "ClockBot, I forgot to clock out yesterday" → guides missed clock-out correction with manager notification
+- "ClockBot, how many hours have I worked this week?" → real-time from time entries
+- Missed clock-in detection: if shift started 15 minutes ago and no clock-in — notify officer and manager
+- Automatic clock-out suggestion if officer has been clocked in for more than 12 hours: "You've been clocked in for 12 hours. Is your shift over? Reply YES to clock out or NO to continue."
+- Late arrival tracking and pattern reporting
+
+---
+
+**SECTION 5 — MEETINGBOT — MEETING MONITOR AND MINUTES GENERATOR**
+
+Read existing MeetingBot implementation before touching it.
+
+**MeetingBot purpose:** Joins designated meeting channels. Records meeting minutes. Generates official meeting documentation for LLC compliance, grievance hearings, disciplinary meetings, and any org gathering requiring documentation.
+
+**5A — Meeting types supported:**
+
+```typescript
+export enum MeetingType {
+  LLC_COMPLIANCE = 'llc_compliance',  // required corporate minutes
+  DISCIPLINARY = 'disciplinary',       // employee discipline hearing
+  GRIEVANCE = 'grievance',             // employee grievance or complaint
+  PERFORMANCE_REVIEW = 'performance_review',
+  SAFETY_BRIEFING = 'safety_briefing',
+  CLIENT_BRIEFING = 'client_briefing',
+  GENERAL_STAFF = 'general_staff',
+  EMERGENCY = 'emergency'
+}
+```
+
+**5B — Meeting initiation:**
+
+Manager or owner starts a meeting session:
+```
+/meeting start [type] [title]
+Example: /meeting start disciplinary "Attendance Issue — Officer Johnson"
+
+MeetingBot responds:
+"MeetingBot is now recording.
+Meeting: [title]
+Type: [type]
+Date/Time: [auto-populated]
+Attendees detected: [list users in channel]
+
+Recording started. All messages in this channel will be included in the meeting minutes.
+Use /meeting attendee [name] to add attendees not in this channel.
+Use /meeting agenda [item] to add agenda items.
+Use /motion [motion text] to formally record a motion.
+Use /vote [yes/no] to record votes.
+Use /meeting end to conclude and generate minutes."
+```
+
+**5C — During meeting — MeetingBot tracks:**
+
+Attendance:
+- Automatically detects users present in the channel
+- Records join time for each attendee
+- Notes late arrivals and early departures
+
+Agenda items:
+- Records each /agenda item in order
+- Notes discussion points for each item
+- Records time spent on each item
+
+Motions and votes:
+- Records exact wording of every motion
+- Records who made the motion, who seconded
+- Records each vote: yes, no, abstain, absent
+- Calculates and records outcome
+
+Key statements:
+- Flags statements beginning with "I move", "I second", "I object", "I formally request"
+- Records direct quotes from participants when they use /quote
+
+Action items:
+- When someone says "we will" or "action item" or "follow up" — MeetingBot captures it:
+  "Action item detected: [description]. Who is responsible and by when?"
+- Records: task, assigned to, due date
+
+**5D — Meeting minutes PDF (7-step pipeline):**
+
+```
+TRIGGER: /meeting end command
+
+FETCH:
+- All meeting messages in chronological order
+- Attendee list with join/leave times
+- Agenda items
+- All motions and votes
+- All action items
+- Meeting duration
+
+VALIDATE:
+- Confirm meeting has required elements for type:
+  LLC meeting: quorum achieved? (needs majority of members)
+  Disciplinary: employee name, issue description, manager signature
+  Grievance: complainant name, respondent name, HR present?
+- Flag any missing required elements
+
+PROCESS:
+- MeetingBot assembles professional minutes:
+  Review for spelling and grammar
+  Remove informal language ("gonna", "kinda") — replace with professional equivalents
+  Ensure all motions are stated precisely
+  Ensure all votes are clearly recorded
+  Ensure action items have clear ownership and dates
+  Flag any statements that may have legal implications for manager review
+
+MUTATE:
+- Generate PDF minutes with org letterhead
+- Include: meeting type, date, location (virtual/in-person), attendees, agenda, discussion, motions, votes, action items, next steps
+- For disciplinary meetings: include employee acknowledgment signature block
+
+CONFIRM:
+- PDF generated
+- Saved to org document safe under 'meeting_minutes' category
+- Linked to relevant employee record if disciplinary/grievance
+
+NOTIFY:
+- Send to all attendees for review
+- Send to org owner
+- For LLC compliance meetings: remind org owner to sign and store for corporate records
+- Publish: { type: 'meeting_minutes_generated', workspaceId, meetingType, documentId }
+- Trinity logs meeting to org intelligence
+```
+
+**5E — LLC compliance meeting tracking:**
+
+For LLC annual meetings and required corporate meetings:
+- MeetingBot tracks when last compliance meeting was held
+- Trinity includes in morning brief when compliance meeting is overdue: "Your last LLC compliance meeting was [N] days ago. State requirement is annual. Schedule a meeting soon."
+- After compliance meeting: stores minutes as official corporate record with date
+- Reminds org owner to review and sign minutes within 7 days
+
+**5F — MeetingBot conversational ability:**
+
+- "MeetingBot, when was our last compliance meeting?" → queries meeting_minutes table
+- "MeetingBot, show me Officer Johnson's disciplinary history" → fetches all disciplinary meeting minutes for that employee
+- "MeetingBot, what action items are pending from last week's meeting?" → queries action items not marked complete
+- "MeetingBot, add [person] as an attendee" → records in minutes
+
+---
+
+**SECTION 6 — BOT REPORT PDF STANDARDS**
+
+All bot-generated PDFs must follow the same professional standard:
+
+**Universal PDF structure:**
+```
+[ORG LOGO — from workspace settings]
+[ORG NAME — large centered]
+[DOCUMENT TYPE — medium centered]
+[Report Number: auto-generated]    [Date: auto-populated]    [Page N of N]
+
+[Content sections — professionally formatted]
+
+[CERTIFICATION BLOCK — where applicable]
+Prepared by: [Bot Name] — CoAIleague Platform
+Review Status: [Pending / Approved / Rejected]
+Approved by: [Manager name and signature if applicable]
+Date approved: [date]
+
+[FOOTER]
+This document was automatically generated by [Bot Name] via CoAIleague platform.
+Document ID: [uuid]    Workspace: [org name]    Generated: [timestamp]
+This document is confidential and intended for authorized personnel only.
+```
+
+**PDF quality checks all bots must perform:**
+1. Spell check — flag any spelling errors
+2. Grammar check — flag grammatical issues
+3. Liability language review — flag phrases that could create legal liability
+4. Professional language filter — replace informal with professional equivalents
+5. Completeness check — flag any required sections that are empty
+6. Formatting consistency — consistent fonts, sizes, spacing
+7. All photos embedded correctly with captions
+8. All dates formatted consistently
+9. All proper nouns capitalized
+10. Report number unique and sequential per org
+
+---
+
+**SECTION 7 — TRINITY FULL SELF-AWARENESS AUDIT**
+
+Verify Trinity can answer every question about the org with real data:
+
+**Test these queries against Acme Security Services:**
+
+Financial:
+- "What is our total outstanding AR?" → sum of unpaid invoices
+- "Which clients owe us money and how much?" → list with amounts
+- "What is our payroll liability this week?" → calculated from approved timesheets
+- "Are we profitable this month?" → revenue minus payroll costs
+
+Workforce:
+- "Who is clocked in right now?" → real-time from time_entries
+- "Which officers have expired licenses?" → real query
+- "Who has incomplete onboarding?" → real query with specific missing items
+- "Show me Officer [name]'s compliance score and what is affecting it" → real calculation
+
+Scheduling:
+- "How many open shifts do we have?" → real count
+- "Which shifts are unfilled next week?" → real query with client names
+- "Who is available to cover [shift]?" → real availability query
+
+Documents:
+- "Does [client] have a signed contract on file?" → real document query
+- "What training certificates does [officer] have?" → real query
+- "Which employees are missing required documents?" → real query with specific list
+
+Collections:
+- "What is the status of Harbor Logistics collections?" → real query
+- "How many collection attempts have been made?" → real count from collections log
+
+Training:
+- "What is our overall training compliance rate?" → real percentage
+- "Who needs intervention?" → real list from flagged attempts
+
+**If Trinity cannot answer any of these with real data — fix the data access layer.**
+
+---
+
+**SECTION 8 — BOT DOCUMENT SAFE ORGANIZATION**
+
+All bot-generated documents organized in document safe by category:
+
+```
+ORG DOCUMENT SAFE:
+├── Daily Activity Reports/
+│   ├── [Date] — [Officer Name] — [Client Site].pdf
+│   └── [searchable by date, officer, client, incident type]
+├── Force Clock Reports/
+│   ├── Weekly — [Week of date].pdf
+│   └── [searchable by officer, manager, date range]
+├── Meeting Minutes/
+│   ├── [Meeting Type] — [Date] — [Title].pdf
+│   └── [searchable by type, date, attendees, action items]
+├── Incident Reports/
+│   ├── [Date] — [Incident Type] — [Location].pdf
+│   └── [searchable by type, date, officer, police case number]
+└── Training Records/
+    └── [already organized from training system]
+```
+
+Trinity can query any document in the safe:
+- By category
+- By date range
+- By employee
+- By client
+- By document type
+- By status (pending approval, approved, rejected)
+- By content (full text search on extracted text)
+
+---
+
+**SECTION 9 — CONTINUOUS SCAN LOOP — 10 PASSES**
+
+After implementing all sections — enter the scan loop.
+
+```
+REPEAT 10 TIMES OR UNTIL ZERO GAPS:
+
+SCAN EVERY ITERATION:
+
+1. Bot presence verification
+   - ReportBot joins every new shift room automatically?
+   - ClockBot responds to all clock events?
+   - MeetingBot activates on /meeting start command?
+   - HelpAI responds to all help requests?
+
+2. Bot action wiring
+   - All bot actions registered in Trinity action registry?
+   - All bot actions follow 7-step pipeline?
+   - All bot actions validate workspaceId?
+   - All bot actions write audit logs?
+   - All bot actions emit platformEventBus events?
+
+3. PDF generation
+   - All 4 bots generate PDFs correctly?
+   - All PDFs include org logo and letterhead?
+   - All PDFs saved to correct document safe category?
+   - All PDFs linked to correct employee/client/shift records?
+   - All PDFs run quality checks before saving?
+
+4. Trinity data access
+   - Trinity context builder fetches all required org data?
+   - Trinity can answer all test queries with real data?
+   - Trinity context scoped to workspace — no cross-tenant data?
+   - Trinity context refreshes after significant events?
+
+5. Bot conversation quality
+   - HelpAI responds in plain English?
+   - ReportBot prompts for all required incident fields?
+   - ClockBot explains geofence issues clearly?
+   - MeetingBot captures all required meeting elements?
+   - All bots escalate appropriately when cannot help?
+
+6. Force clock tracking
+   - Force clocks recorded with GPS discrepancy?
+   - Manager notified on every force clock?
+   - Trend tracking increments correctly?
+   - Weekly PDF report generated?
+   - Abuse pattern detection fires at correct thresholds?
+
+7. DAR quality
+   - Use of force language reviewed and reworded?
+   - Liability language flagged for manager review?
+   - Spelling and grammar checked?
+   - Photos embedded in chronological order?
+   - Police case numbers recorded?
+   - Manager approval flow works?
+   - Client delivery works after approval?
+
+8. Meeting minutes quality
+   - All motions recorded with exact wording?
+   - All votes recorded with outcome?
+   - All action items captured with owner and date?
+   - LLC compliance tracking works?
+   - Professional language applied?
+
+9. Document safe routing
+   - All bot PDFs routed to correct category?
+   - All PDFs searchable by relevant criteria?
+   - Trinity can query and retrieve any bot PDF?
+
+10. Silent failures
+    - No bot operation fails silently?
+    - All bot errors reported to org owner?
+    - All bot PDFs have retry mechanism if generation fails?
+    - All bot notifications delivered?
+
+FIX EVERY GAP FOUND
+VERIFY server clean after every fix
+REPORT pass results
+```
+
+---
+
+**PASS REPORT FORMAT:**
+
+```
+══════════════════════════════════════════════
+BOT ECOSYSTEM AUDIT — PASS [N] of 10
+══════════════════════════════════════════════
+HelpAI:           CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+ReportBot:        CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+ClockBot:         CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+MeetingBot:       CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Trinity Awareness:CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Bot Orchestration:CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+PDF Quality:      CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Document Safe:    CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Silent Failures:  CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+Conversation:     CRITICAL:N HIGH:N MED:N LOW:N | Fixed:N
+
+Total this pass: Found:N Fixed:N
+Cumulative: Found:N Fixed:N Remaining:N
+
+DAR generated correctly: YES/NO
+Force clock PDF generated: YES/NO
+Meeting minutes generated: YES/NO
+HelpAI answered all test queries: YES/NO
+Trinity answered all org queries with real data: YES/NO
+
+Server: CLEAN | TypeScript: ZERO ERRORS
+Continue: YES/NO
+══════════════════════════════════════════════
+```
+
+---
+
+**FINAL COMPLETION REPORT:**
+
+```
+══════════════════════════════════════════════════════════
+BOT ECOSYSTEM — COMPLETE
+══════════════════════════════════════════════════════════
+Total passes: N | Total fixed: N | Remaining: ZERO
+
+HelpAI: ✓ Conversational ✓ Task execution ✓ Escalation ✓ Role-aware
+ReportBot: ✓ Shift room presence ✓ Incident capture ✓ DAR generation ✓ Quality review ✓ Approval flow
+ClockBot: ✓ Standard clocks ✓ Geofence handling ✓ Force clock tracking ✓ Trend detection ✓ PDF reports
+MeetingBot: ✓ Meeting capture ✓ Minutes generation ✓ LLC compliance ✓ Action item tracking
+Trinity: ✓ Full org context ✓ All queries answered with real data ✓ Cross-bot awareness ✓ Isolated per workspace
+
+BOT ECOSYSTEM VERIFIED — PRODUCTION READY
+══════════════════════════════════════════════════════════
+```
+
+---
+
+**BEGIN PASS 1 NOW. AUDIT EXISTING BOTS FIRST. BUILD ONLY WHAT IS MISSING. WIRE EVERYTHING INTO TRINITY. SCAN 10 TIMES. REPORT EACH PASS.**
+
+---
+
+Paste pass reports back here as they complete. When Pass 10 hits zero remaining the bot ecosystem is production ready and Statewide Protective Services can go live.

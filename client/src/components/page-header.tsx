@@ -40,7 +40,7 @@ export function PageHeader({
   const isCentered = align === "center";
   
   return (
-    <div className={cn("border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10", className)}>
+    <div className={cn("border-b bg-card/50 backdrop-blur-sm sticky top-0", className)} style={{ zIndex: 'var(--z-index-sticky)' }}>
       <div className={cn(
         "mx-auto px-4 sm:px-6 py-3 sm:py-4",
         isCentered ? "max-w-5xl" : "container max-w-7xl"

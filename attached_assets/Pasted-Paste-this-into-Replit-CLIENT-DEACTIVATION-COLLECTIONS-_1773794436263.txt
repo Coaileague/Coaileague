@@ -1,0 +1,458 @@
+Paste this into Replit:
+
+---
+
+**CLIENT DEACTIVATION, COLLECTIONS, AND REACTIVATION SYSTEM — FULL BUILD | READ BEFORE TOUCH | NO SILENT FAILURES**
+
+This builds and wires the complete client lifecycle management system including deactivation with reason tracking, automated collections pipeline, client reactivation with live sync, and employee reactivation with time-based onboarding rules.
+
+---
+
+**SECTION 1 — SCHEMA CHANGES**
+
+Read the current `clients` table schema before making any changes.
+
+**Add to `clients` table:**
+```sql
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true NOT NULL;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS deactivated_at timestamptz;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS deactivation_reason varchar(50);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS deactivation_notes text;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS deactivated_by varchar(255);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS reactivated_at timestamptz;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS reactivated_by varchar(255);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS collections_status varchar(50) DEFAULT 'none';
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS collections_started_at timestamptz;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS last_collection_email_at timestamptz;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS collection_attempt_count integer DEFAULT 0;
+```
+
+**Add `client_deactivation_reason` enum to DB:**
+```sql
+CREATE TYPE client_deactivation_reason AS ENUM (
+  'non_payment',
+  'legal_issue',
+  'contract_terminated',
+  'contract_non_renewal',
+  'lawsuit',
+  'unable_to_staff',
+  'does_not_meet_billing_requirements',
+  'does_not_meet_hourly_requirements',
+  'other',
+  'no_reason_provided'
+);
+ALTER TABLE clients ALTER COLUMN deactivation_reason TYPE client_deactivation_reason USING deactivation_reason::client_deactivation_reason;
+```
+
+**Add `collections_status` enum:**
+```sql
+CREATE TYPE collections_status AS ENUM (
+  'none',
+  'pending_decision',
+  'active',
+  'resolved',
+  'written_off'
+);
+ALTER TABLE clients ALTER COLUMN collections_status TYPE collections_status USING collections_status::collections_status;
+```
+
+**Create `client_collections_log` table:**
+```sql
+CREATE TABLE IF NOT EXISTS client_collections_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL,
+  client_id varchar NOT NULL,
+  attempt_number integer NOT NULL,
+  attempt_type varchar(50) NOT NULL,
+  sent_at timestamptz DEFAULT now(),
+  sent_to_email varchar(255),
+  subject varchar(500),
+  body_summary text,
+  document_url text,
+  outstanding_amount decimal(12,2),
+  response_received boolean DEFAULT false,
+  response_notes text,
+  created_by varchar(255) DEFAULT 'trinity-system'
+);
+CREATE INDEX idx_collections_log_workspace ON client_collections_log(workspace_id);
+CREATE INDEX idx_collections_log_client ON client_collections_log(client_id);
+CREATE INDEX idx_collections_log_sent_at ON client_collections_log(sent_at);
+```
+
+**Add to Drizzle schema — update all enum definitions and table definitions to match SQL changes.**
+
+---
+
+**SECTION 2 — CLIENT DEACTIVATION API**
+
+Create or update `clientRoutes.ts` with these endpoints:
+
+**`POST /api/clients/:id/deactivate`**
+```typescript
+// Required body: { reason: client_deactivation_reason, notes?: string }
+// Auth: requireAuth + org_owner or org_manager role
+// Steps:
+// 1. Fetch client — confirm it belongs to workspaceId from JWT
+// 2. Check for outstanding invoices — SELECT unpaid invoices for this client
+// 3. If outstanding invoices exist — return 200 with:
+//    { requiresCollectionsDecision: true, outstandingAmount, invoiceCount, client }
+//    Do NOT deactivate yet — wait for collections decision
+// 4. If no outstanding invoices — deactivate immediately:
+//    UPDATE clients SET is_active=false, deactivated_at=now(), deactivation_reason, deactivation_notes, deactivated_by
+// 5. Cancel all future shifts for this client — UPDATE shifts SET status='cancelled' WHERE clientId AND startTime > now()
+// 6. Notify assigned officers their shifts were cancelled
+// 7. Write audit log entry with reason and notes
+// 8. Publish platformEventBus: { type: 'client_deactivated', workspaceId, clientId, reason, outstandingAmount }
+// 9. Broadcast WebSocket: clients list refresh
+// 10. Return { success: true, client, cancelledShifts }
+```
+
+**`POST /api/clients/:id/deactivate-with-collections`**
+```typescript
+// Called when org owner decides to pursue collections after seeing outstanding invoices
+// Required body: { reason, notes, startCollections: boolean }
+// Steps:
+// 1. Deactivate client
+// 2. If startCollections === true:
+//    - Set collections_status = 'active', collections_started_at = now()
+//    - Trigger first collection email immediately
+//    - Publish: { type: 'collections_started', workspaceId, clientId, outstandingAmount }
+// 3. If startCollections === false:
+//    - Deactivate without collections
+// 4. Write audit log
+// 5. Return { success: true }
+```
+
+**`POST /api/clients/:id/reactivate`**
+```typescript
+// Auth: requireAuth + org_owner role only
+// Steps:
+// 1. Fetch client — confirm workspace
+// 2. Check deactivation reason — if 'legal_issue' or 'lawsuit' — require confirmation flag in body
+// 3. Check if active collections exist — warn org owner outstanding amount still due
+// 4. Reactivate: UPDATE clients SET is_active=true, reactivated_at=now(), reactivated_by, collections_status='resolved'
+// 5. Write audit log with who reactivated and when
+// 6. Publish: { type: 'client_reactivated', workspaceId, clientId }
+// 7. Broadcast WebSocket: clients list refresh immediately
+// 8. Return { success: true, client, previousDeactivationReason, previousDeactivationNotes }
+```
+
+**`GET /api/clients/deactivated`**
+```typescript
+// Returns all deactivated clients for the workspace with deactivation details
+// Auth: requireAuth + manager or owner
+// Include: deactivation_reason, deactivation_notes, deactivated_at, outstanding_invoices_at_deactivation
+```
+
+---
+
+**SECTION 3 — COLLECTIONS PIPELINE**
+
+Create `server/services/collections/clientCollectionsService.ts`:
+
+**`sendCollectionEmail(workspaceId, clientId, attemptNumber)`**
+
+This function sends a collection demand email from the platform on behalf of the org to the client:
+
+```typescript
+// Step 1 — TRIGGER: Called by cron or manually
+// Step 2 — FETCH: Get client with billing email, outstanding invoices, org owner info
+// Step 3 — VALIDATE: Confirm client is deactivated and collections_status is 'active'
+// Step 4 — PROCESS: Generate collection demand letter as PDF with:
+//   - Platform letterhead (CoAIleague on behalf of [Org Name])
+//   - Client name and billing address
+//   - Org owner name and contact
+//   - Date of letter
+//   - Outstanding invoice list with amounts and due dates
+//   - Total amount due
+//   - Payment deadline (7 days from letter date)
+//   - Payment instructions (link to pay online via client portal)
+//   - Legal notice: "Failure to pay may result in referral to collections agency"
+//   - Attempt number and escalation language that increases with each attempt
+// Step 5 — MUTATE:
+//   - Send email via Resend to client billing email
+//   - Store PDF in org document safe under 'collections' category
+//   - INSERT into client_collections_log with all details
+//   - UPDATE client: last_collection_email_at=now(), collection_attempt_count++
+// Step 6 — CONFIRM: Verify email sent, verify PDF stored
+// Step 7 — NOTIFY: Add to org owner morning brief, create in-app notification for owner
+```
+
+**Collection email escalation language:**
+- Attempt 1: Friendly reminder with invoice details
+- Attempt 2: Second notice — payment overdue
+- Attempt 3: Final notice before collections referral
+- Attempt 4+: Formal demand letter — collections agency referral imminent
+
+**Create `server/services/collections/collectionsScheduler.ts`:**
+
+Daily cron at 9 AM:
+```typescript
+// For every client with collections_status = 'active':
+// 1. Check last_collection_email_at
+// 2. If more than 24 hours ago — send next collection email
+// 3. Add to morning briefing for all active collections clients
+// 4. Never stop — collections emails send every day until:
+//    - Payment received (invoice marked paid → collections_status = 'resolved')
+//    - Org owner manually stops collections
+//    - collections_status changed to 'written_off'
+```
+
+**Register in `initializeSchedulers()`.**
+
+---
+
+**SECTION 4 — MORNING BRIEFING INTEGRATION**
+
+Update the morning COO brief to include:
+
+```typescript
+// Collections section in morning brief:
+const activeCollections = await db.select()
+  .from(clients)
+  .where(and(
+    eq(clients.workspaceId, workspaceId),
+    eq(clients.collectionsStatus, 'active')
+  ))
+
+// For each active collections client:
+// - Client name
+// - Days since deactivation
+// - Total outstanding amount
+// - Number of collection attempts sent
+// - Last attempt date
+// - Link to collections log
+
+// Brief section format:
+// "COLLECTIONS IN PROGRESS (N clients, $X total outstanding)
+//  - [Client Name]: $X outstanding, N emails sent, last sent [date]"
+```
+
+Also add to morning brief:
+- Open shifts unfilled (with client name and shift date)
+- New clients added overnight
+- Clock-in issues from prior day (missed clock-ins, geofence violations)
+- Officers needing replacement (license expiring, compliance issues)
+- Complaints received (from incident reports)
+- Actions taken by Trinity overnight
+
+---
+
+**SECTION 5 — EMPLOYEE DEACTIVATION AND REACTIVATION**
+
+Update `employeeRoutes.ts`:
+
+**`POST /api/employees/:id/deactivate`**
+```typescript
+// Required body: { reason: string, notes?: string }
+// Steps:
+// 1. Set employee isActive = false, deactivatedAt = now()
+// 2. Remove from all future shifts — cancel assignments
+// 3. Revoke platform access — invalidate all active sessions for this user
+// 4. Write audit log
+// 5. Publish: { type: 'employee_deactivated', workspaceId, employeeId }
+// 6. Broadcast WebSocket refresh
+```
+
+**`POST /api/employees/:id/reactivate`**
+```typescript
+// Steps:
+// 1. Fetch employee — check deactivatedAt
+// 2. Calculate months since deactivation:
+//    const monthsInactive = differenceInMonths(new Date(), employee.deactivatedAt)
+// 3. If monthsInactive >= 3:
+//    - Set requiresFullReonboarding = true
+//    - Employee must complete full new onboarding:
+//      new application, new W4/W9, new I9, new handbook signature,
+//      new liability acknowledgment, new offer letter, new documents
+//    - Set onboardingStatus = 'incomplete'
+//    - Send employee an email: "Your account has been reactivated. 
+//      Because you have been inactive for more than 3 months, 
+//      you must complete a new onboarding process before you can be scheduled."
+// 4. If monthsInactive < 3:
+//    - Set requiresDocumentReview = true
+//    - System checks if any documents expired during inactive period
+//    - For each expired document — flag for renewal
+//    - Employee can use existing documents that are still valid
+//    - Send employee email: "Your account has been reactivated. 
+//      Please review and update any expired documents."
+// 5. Set isActive = true, reactivatedAt = now()
+// 6. Require password reset on next login — set passwordResetRequired = true
+// 7. Write audit log
+// 8. Publish: { type: 'employee_reactivated', workspaceId, employeeId, requiresFullReonboarding }
+// 9. Broadcast WebSocket refresh
+// 10. Return { success: true, requiresFullReonboarding, expiredDocuments }
+```
+
+**Add `passwordResetRequired` column to employees or users table:**
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_required boolean DEFAULT false;
+```
+
+On login — if `passwordResetRequired = true` — redirect to password reset flow before allowing access.
+
+---
+
+**SECTION 6 — TRINITY AWARENESS**
+
+Add Trinity event subscribers for:
+
+**`client_deactivated`:**
+```typescript
+platformEventBus.subscribe('client_deactivated', async (event) => {
+  const { workspaceId, clientId, reason, outstandingAmount } = event
+  // Store in Trinity memory: "Client [name] was deactivated on [date] for reason: [reason]"
+  // If reason is 'non_payment' or 'legal_issue' or 'lawsuit' — flag with HIGH priority
+  // Add to org intelligence: "Do not reactivate [client] without reviewing deactivation history"
+})
+```
+
+**`client_reactivated`:**
+```typescript
+platformEventBus.subscribe('client_reactivated', async (event) => {
+  // Fetch deactivation history for this client
+  // If previous reason was 'non_payment' — alert org owner:
+  //   "Note: This client was previously deactivated for non-payment. 
+  //    Confirm outstanding balance is resolved before scheduling shifts."
+  // If previous reason was 'legal_issue' or 'lawsuit' — alert with CRITICAL priority:
+  //   "WARNING: This client was previously deactivated due to a legal issue. 
+  //    Confirm with your legal counsel before proceeding."
+})
+```
+
+**`collections_started`:**
+```typescript
+platformEventBus.subscribe('collections_started', async (event) => {
+  // Send initial collection email immediately
+  // Schedule daily follow-up via collectionsScheduler
+  // Notify org owner collections process has begun
+})
+```
+
+**Update Trinity's pre-action validation:**
+When any action involves a deactivated client:
+```typescript
+// In preExecutionValidator.ts — add check:
+if (payload.clientId) {
+  const client = await db.select().from(clients)
+    .where(eq(clients.id, payload.clientId)).limit(1)
+  if (client[0] && !client[0].isActive) {
+    return {
+      approved: false,
+      reason: `Client "${client[0].companyName}" is deactivated (reason: ${client[0].deactivationReason}). Reactivate the client before scheduling or billing.`
+    }
+  }
+}
+```
+
+---
+
+**SECTION 7 — FRONTEND UI**
+
+**Client deactivation modal:**
+
+Create `client/src/components/clients/DeactivateClientModal.tsx`:
+
+```
+- Title: "Deactivate Client"
+- Deactivation reason dropdown (all enum values in plain English)
+- Notes textarea (optional)
+- If outstanding invoices detected — show warning:
+  "This client has [N] unpaid invoices totaling $[amount]"
+  Two buttons: "Start Collections Process" | "Deactivate Without Collections"
+- If no outstanding invoices — single "Deactivate Client" button
+- Confirmation checkbox: "I understand this will cancel all future shifts for this client"
+```
+
+**Client reactivation:**
+- Add "Reactivate" button on deactivated client cards/rows
+- Show previous deactivation reason prominently: "Deactivated: Non-Payment"
+- If previous reason was legal or lawsuit — show red warning banner before confirming
+- Show outstanding collections balance if collections were active
+
+**Collections status indicator:**
+- On client list — show a badge for clients in active collections: "In Collections — $X"
+- Collections log accessible from client profile — list of all attempts with dates, amounts, PDFs
+
+**Deactivated clients view:**
+- Add a "Deactivated Clients" tab or filter to the clients page
+- Show: client name, deactivation date, reason, outstanding balance, collections status
+- Allow reactivation from this view
+
+**Client status badge on all shift and invoice views:**
+- If a shift belongs to a deactivated client — show a warning badge
+- If an invoice belongs to a deactivated client — show a "Client Deactivated" badge
+
+**Employee reactivation modal:**
+
+Create `client/src/components/employees/ReactivateEmployeeModal.tsx`:
+
+```
+- Show: inactive since [date], [N] months inactive
+- If >= 3 months: "This employee has been inactive for [N] months. 
+  Full re-onboarding is required including new documents and signatures."
+- If < 3 months: "Review expired documents below. 
+  Documents still valid can be reused."
+- List of expired documents with renew/upload buttons
+- "Reactivate Employee" button
+- Password reset notice: "Employee will be required to reset their password on next login"
+```
+
+---
+
+**SECTION 8 — LIVE SYNC VERIFICATION**
+
+After deactivation:
+- Client list must update immediately — deactivated client moves to deactivated section
+- All open shifts for this client must show cancellation immediately
+- Assigned officers must receive real-time notification of shift cancellation
+- Dashboard metrics must update — active client count decreases
+
+After reactivation:
+- Client list must update immediately — client moves back to active section
+- Org owner and managers receive real-time notification
+- If client had scheduled shifts before deactivation — Trinity prompts: "Would you like to reschedule coverage for [client]?"
+
+---
+
+**SECTION 9 — SMOKE TEST**
+
+After all builds — execute this test sequence:
+
+1. Create test client with outstanding invoice
+2. Attempt to deactivate — confirm system detects outstanding invoice and presents collections decision
+3. Choose "Start Collections" — confirm client deactivated and first collection email sent
+4. Confirm collection PDF saved to document safe
+5. Confirm collections entry appears in morning brief
+6. Wait for cron cycle — confirm second collection email sent
+7. Mark invoice paid — confirm collections_status updates to 'resolved'
+8. Reactivate client — confirm live sync updates client list immediately
+9. Confirm Trinity warns about previous deactivation reason on reactivation
+10. Deactivate test employee
+11. Set deactivatedAt to 4 months ago in DB
+12. Reactivate employee — confirm full re-onboarding is required
+13. Create second employee — deactivate — set inactive for 1 month — reactivate — confirm document review not full re-onboarding
+14. Confirm password reset required on next login for both employees
+15. Confirm deactivated client shifts show warning badges
+
+Report PASS or FAIL for all 15 steps.
+
+---
+
+**COMPLETION CRITERIA**
+
+1. TypeScript compile — zero errors
+2. Server restart — 29/29 services clean
+3. All regression tests pass
+4. Smoke test — 15/15 passing
+5. Trinity correctly blocks actions on deactivated clients
+6. Trinity warns on reactivation of clients deactivated for legal or payment reasons
+7. Collections emails fire daily until resolved with no manual intervention
+8. Employee reactivation correctly applies 3-month rule
+9. All live sync updates fire immediately via WebSocket
+
+Report final status. Stop and wait.
+
+---
+
+Paste results back. When 15/15 smoke test passes the client lifecycle system is production ready.

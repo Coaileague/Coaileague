@@ -13,6 +13,9 @@
 import { Router, Response, NextFunction } from 'express';
 import { type AuthenticatedRequest } from '../rbac';
 import { trinityNotificationBridge } from '../services/ai-brain/trinityNotificationBridge';
+import { createLogger } from '../lib/logger';
+const log = createLogger('TrinityNotifications');
+
 
 export const trinityNotificationRouter = Router();
 
@@ -82,9 +85,9 @@ trinityNotificationRouter.post('/live-patch', requireAdminRole, async (req: Auth
       recipientCount: result.recipientCount,
       deliveryTime: result.deliveryTime,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] Live patch error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] Live patch error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -131,9 +134,9 @@ trinityNotificationRouter.post('/whats-new', requireSupportRole, async (req: Aut
       updateId: result.updateId,
       recipientCount: result.recipientCount,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] What\'s New error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] What\'s New error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -172,9 +175,9 @@ trinityNotificationRouter.post('/support-escalation', requireSupportRole, async 
       recipientCount: result.recipientCount,
       deliveryTime: result.deliveryTime,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] Support escalation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] Support escalation error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -211,17 +214,17 @@ trinityNotificationRouter.post('/insight', requireSupportRole, async (req: Authe
       mode: mode || 'business_pro',
     });
 
-    console.log(`[TrinityNotificationRoutes] Insight pushed by ${req.user?.id} to user ${userId} in workspace ${workspaceId}`);
+    log.info(`[TrinityNotificationRoutes] Insight pushed by ${req.user?.id} to user ${userId} in workspace ${workspaceId}`);
 
     res.json({
       success: result.success,
-      message: `Trinity insight delivered`,
+      message: `Insight delivered`,
       deliveryTime: result.deliveryTime,
       initiatedBy: req.user?.id,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] Trinity insight error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] Trinity insight error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -262,9 +265,9 @@ trinityNotificationRouter.post('/maintenance-alert', requireAdminRole, async (re
       alertId: result.alertId,
       recipientCount: result.recipientCount,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] Maintenance alert error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] Maintenance alert error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -280,9 +283,9 @@ trinityNotificationRouter.get('/metrics', requireSupportRole, async (req: Authen
       success: true,
       metrics,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] Metrics error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] Metrics error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -309,9 +312,9 @@ trinityNotificationRouter.get('/watchdog-status', requireSupportRole, async (req
         ? 'Notification system operating normally' 
         : `Notification system ${watchdogStatus.systemHealth} - Trinity monitoring active`,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] Watchdog status error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] Watchdog status error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 
@@ -349,9 +352,9 @@ trinityNotificationRouter.post('/batch-send', requireSupportRole, async (req: Au
       message: `${notificationList.length} notifications queued for batch delivery`,
       results,
     });
-  } catch (error: any) {
-    console.error('[TrinityNotificationRoutes] Batch send error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TrinityNotificationRoutes] Batch send error:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 });
 

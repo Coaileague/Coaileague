@@ -70,13 +70,13 @@ export function ScheduleTemplates({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { data: templates, isLoading } = useQuery<ScheduleTemplate[]>({
-    queryKey: ['/api/advanced-scheduling/templates'],
+    queryKey: ['/api/shift-templates'],
     enabled: open,
   });
 
   const createTemplateMutation = useMutation({
     mutationFn: async (data: { name: string; description?: string; shifts: Partial<Shift>[] }) => {
-      const response = await apiRequest('POST', '/api/advanced-scheduling/templates', data);
+      const response = await apiRequest('POST', '/api/shift-templates', data);
       return response.json();
     },
     onSuccess: () => {
@@ -84,7 +84,7 @@ export function ScheduleTemplates({
         title: 'Template Saved',
         description: 'Your schedule template has been saved successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/advanced-scheduling/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shift-templates'] });
       setTemplateName('');
       setTemplateDescription('');
       setActiveTab('load');
@@ -100,7 +100,7 @@ export function ScheduleTemplates({
 
   const deleteTemplateMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      const response = await apiRequest('DELETE', `/api/advanced-scheduling/templates/${templateId}`);
+      const response = await apiRequest('DELETE', `/api/shift-templates/${templateId}`);
       return response.json();
     },
     onSuccess: () => {
@@ -108,7 +108,7 @@ export function ScheduleTemplates({
         title: 'Template Deleted',
         description: 'The template has been deleted.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/advanced-scheduling/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shift-templates'] });
       setDeleteConfirmId(null);
     },
     onError: (error: Error) => {
@@ -143,7 +143,6 @@ export function ScheduleTemplates({
       title: shift.title,
       employeeId: shift.employeeId,
       clientId: shift.clientId,
-      location: shift.location,
       description: shift.description,
       startTimeOffset: new Date(shift.startTime).getHours() * 60 + new Date(shift.startTime).getMinutes(),
       endTimeOffset: new Date(shift.endTime).getHours() * 60 + new Date(shift.endTime).getMinutes(),
@@ -183,11 +182,11 @@ export function ScheduleTemplates({
         title: pattern.title,
         employeeId: pattern.employeeId,
         clientId: pattern.clientId,
-        location: pattern.location,
+        locationName: pattern.location,
         description: pattern.description,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-        status: 'scheduled',
+        startTime: startTime,
+        endTime: endTime,
+        status: 'scheduled' as const,
       };
     });
 
@@ -210,10 +209,10 @@ export function ScheduleTemplates({
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[85vh] focus:outline-none">
-          <div className="mx-auto w-full max-w-md">
+        <DrawerContent className="max-h-[100dvh] focus:outline-none">
+          <div data-vaul-no-drag className="mx-auto w-full max-w-md overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch]">
             <DrawerHeader className="pb-2 pt-3 px-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-primary/10">
                     <LayoutTemplate className="h-4 w-4 text-primary" />
@@ -228,7 +227,7 @@ export function ScheduleTemplates({
                   </div>
                 </div>
                 <DrawerClose asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <Button variant="ghost" size="icon">
                     <X className="h-4 w-4" />
                   </Button>
                 </DrawerClose>
@@ -323,7 +322,7 @@ export function ScheduleTemplates({
                       <Calendar className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">Current Schedule</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between gap-2 text-sm">
                       <span className="text-muted-foreground">
                         {format(selectedDate, 'EEEE, MMM d')}
                       </span>
@@ -372,7 +371,7 @@ export function ScheduleTemplates({
                           {currentShifts.slice(0, 5).map((shift) => (
                             <div
                               key={shift.id}
-                              className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1.5"
+                              className="flex items-center justify-between gap-1 text-xs bg-muted/30 rounded px-2 py-1.5"
                             >
                               <span className="font-medium truncate max-w-[120px]">
                                 {shift.title || 'Shift'}

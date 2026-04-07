@@ -1,0 +1,2384 @@
+# COAILEAGUE - COMPREHENSIVE PLATFORM AUDIT & AI INTELLIGENCE UPGRADE
+
+## MISSION STATEMENT
+
+This audit covers **EVERYTHING**:
+1. Every feature, service, and system component
+2. Every AI brain with intelligence upgrades
+3. Every CRUD operation, schema, and route
+4. Every frontend-to-backend-to-database flow
+5. Every mobile rendering issue
+6. Every compliance rule and enforcement
+7. Every workflow, pipeline, and automation
+8. Every user role, permission, and categorization
+9. Every support system and maintenance tool
+
+**ZERO TOLERANCE** for broken features, missing logic, or incomplete implementations.
+
+---
+
+# PART 1: COMPLETE FEATURE AUDIT
+
+## 1.1 Core Platform Features Matrix
+
+**Audit EVERY feature in this matrix:**
+
+```
+FEATURE CATEGORY          | FEATURE                    | CRUD | API | UI  | MOBILE | AI  | PREMIUM |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+AUTHENTICATION            |                            |      |     |     |        |     |         |
+                          | User Registration          | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | User Login                 | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Password Reset             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Multi-Factor Auth          | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Session Management         | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | OAuth (Google, Microsoft)  | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+WORKSPACE MANAGEMENT      |                            |      |     |     |        |     |         |
+                          | Create Workspace           | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Workspace Settings         | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Workspace Branding         | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Multi-Workspace            | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Workspace Switching        | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+USER MANAGEMENT           |                            |      |     |     |        |     |         |
+                          | Invite Users               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | User Roles                 | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | User Permissions           | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | User Profile               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | User Deactivation          | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+EMPLOYEE MANAGEMENT       |                            |      |     |     |        |     |         |
+                          | Employee List              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Create            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Detail            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Edit              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Delete            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Documents         | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Onboarding        | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Employee Credentials       | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Availability      | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Employee Pay Rates         | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+CLIENT MANAGEMENT         |                            |      |     |     |        |     |         |
+                          | Client List                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Client Create              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Client Detail              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Client Edit                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Client Delete              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Client Contracts           | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Client Intelligence        | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+SITE MANAGEMENT           |                            |      |     |     |        |     |         |
+                          | Site List                  | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Site Create                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Site Detail                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Site Edit                  | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Site Geofencing            | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Post Orders                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+SCHEDULING                |                            |      |     |     |        |     |         |
+                          | Schedule View (Day)        | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Schedule View (Week)       | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Schedule View (Month)      | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Shift Create               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Shift Edit                 | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Shift Delete               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Shift Assignment           | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Shift Swap                 | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Open Shifts                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Shift Marketplace          | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Trinity Auto-Schedule      | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Schedule Templates         | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Schedule Conflicts         | [ ]  | [ ] | [ ] | [ ]    | [ ] | Free    |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+TIME TRACKING             |                            |      |     |     |        |     |         |
+                          | Clock In                   | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Clock Out                  | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | GPS Capture                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Geofence Validation        | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Break Tracking             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Time Entries               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Time Entry Edit            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Timesheet View             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Timesheet Approval         | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+PAYROLL                   |                            |      |     |     |        |     |         |
+                          | Payroll Dashboard          | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Payroll Run                | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Payroll History            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Pay Stubs                  | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Overtime Calculation       | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Payroll Export             | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+INVOICING                 |                            |      |     |     |        |     |         |
+                          | Invoice List               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Invoice Create             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Invoice Detail             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Invoice Edit               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Invoice Send               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Invoice PDF                | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Payment Recording          | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Recurring Invoices         | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Auto-Invoice Generation    | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+CONTRACTS                 |                            |      |     |     |        |     |         |
+                          | Contract List              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Contract Create            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Contract Detail            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Contract Edit              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Contract Send              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Contract Sign (E-Sig)      | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Contract PDF               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Contract Workflow          | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+COMMUNICATIONS            |                            |      |     |     |        |     |         |
+                          | Chat Rooms                 | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Direct Messages            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Group Chat                 | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Message Send               | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Message Read Receipts      | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Typing Indicators          | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | File Attachments           | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Announcements              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Notifications              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Push Notifications         | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+REPORTS                   |                            |      |     |     |        |     |         |
+                          | Labor Reports              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Attendance Reports         | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Financial Reports          | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Compliance Reports         | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Custom Reports             | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Report Export              | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Report Scheduling          | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+INTEGRATIONS              |                            |      |     |     |        |     |         |
+                          | QuickBooks Connect         | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | QuickBooks Sync            | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Gusto Connect              | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Gusto Sync                 | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | API Keys                   | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+AI / TRINITY              |                            |      |     |     |        |     |         |
+                          | Trinity Chat               | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Trinity Scheduling         | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Trinity Intelligence       | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | Document Analysis          | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+                          | AI Enhancements            | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+COMPLIANCE                |                            |      |     |     |        |     |         |
+                          | License Tracking           | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Certification Tracking     | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Expiration Alerts          | [ ]  | [ ] | [ ] | [ ]    | [ ] | Free    |
+                          | Training Requirements      | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Compliance Dashboard       | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+FORMS                     |                            |      |     |     |        |     |         |
+                          | Form Templates             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Form Builder               | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | Form Submissions           | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Form Responses             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+DOCUMENTS                 |                            |      |     |     |        |     |         |
+                          | Document Library           | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Document Upload            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Document Categories        | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Document Sharing           | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+                          | E-Signatures               | [ ]  | [ ] | [ ] | [ ]    | N/A | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+SUPPORT SYSTEM            |                            |      |     |     |        |     |         |
+                          | Support Tickets            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Ticket Creation            | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Ticket Assignment          | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | Ticket Resolution          | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | Knowledge Base             | [ ]  | [ ] | [ ] | [ ]    | N/A | Free    |
+                          | Live Chat Support          | [ ]  | [ ] | [ ] | [ ]    | [ ] | Premium |
+--------------------------|----------------------------|------|-----|-----|--------|-----|---------|
+ADMIN / PLATFORM          |                            |      |     |     |        |     |         |
+                          | Platform Dashboard         | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | All Workspaces             | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | All Users                  | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | Billing Management         | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | Maintenance Mode           | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | System Health              | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+                          | Support Queue              | [ ]  | [ ] | [ ] | [ ]    | N/A | N/A     |
+```
+
+---
+
+## 1.2 Feature-by-Feature Deep Verification
+
+**For EACH feature above, verify:**
+
+```
+FEATURE: _______________
+CATEGORY: _______________
+STATUS: [Working/Broken/Partial/Missing]
+
+CRUD OPERATIONS:
+[ ] CREATE - API works, UI works, DB record created
+[ ] READ (List) - API returns data, UI displays, pagination works
+[ ] READ (Detail) - API returns single item, UI displays all fields
+[ ] UPDATE - API accepts changes, DB updated, UI reflects change
+[ ] DELETE - Confirmation shown, record removed, cascade handled
+
+API VERIFICATION:
+Endpoint: _______________
+Method: _______________
+[ ] Endpoint exists
+[ ] Handler implemented
+[ ] Auth required and enforced
+[ ] workspaceId isolation
+[ ] Input validation
+[ ] Error handling
+[ ] Response format consistent
+
+UI VERIFICATION (Desktop):
+Page: _______________
+[ ] Page loads without error
+[ ] All data displays correctly
+[ ] All buttons have handlers
+[ ] All forms submit correctly
+[ ] All modals open/close
+[ ] Loading states shown
+[ ] Error states handled
+[ ] Empty states shown
+
+UI VERIFICATION (Mobile):
+[ ] Page responsive
+[ ] No horizontal scroll
+[ ] No overlapping text
+[ ] No bleeding text on buttons
+[ ] Touch targets adequate (44px+)
+[ ] Forms usable
+[ ] Navigation works
+
+AI INTEGRATION (if applicable):
+[ ] AI endpoint called correctly
+[ ] AI response parsed correctly
+[ ] Fallback on AI failure
+[ ] Cost tracked
+[ ] Result displayed/used
+
+PREMIUM GATE (if applicable):
+[ ] Feature gated for free users
+[ ] Upgrade prompt shown
+[ ] Premium users have access
+```
+
+---
+
+# PART 2: SCHEMA & DATABASE AUDIT
+
+## 2.1 Complete Table Inventory
+
+```bash
+# Extract ALL tables from schema
+grep -n "pgTable\|export const.*=" shared/schema.ts | grep -v "//"
+```
+
+**Verify EACH table:**
+
+```
+REQUIRED TABLES CHECKLIST:
+
+CORE TABLES:
+[ ] users
+[ ] workspaces
+[ ] workspace_members
+[ ] roles
+[ ] permissions
+[ ] sessions
+
+EMPLOYEE TABLES:
+[ ] employees
+[ ] employee_documents
+[ ] employee_certifications
+[ ] employee_availability
+[ ] employee_pay_rates
+[ ] employee_onboarding_packets (NEW)
+
+CLIENT TABLES:
+[ ] clients
+[ ] client_contacts
+[ ] client_contracts (NEW)
+[ ] contract_sites (NEW)
+[ ] contract_schedule_requirements (NEW)
+
+SITE TABLES:
+[ ] sites
+[ ] post_orders
+[ ] geofences
+
+SCHEDULING TABLES:
+[ ] shifts
+[ ] shift_assignments
+[ ] shift_swaps
+[ ] open_shifts
+[ ] schedule_templates
+
+TIME TRACKING TABLES:
+[ ] time_entries
+[ ] clock_events
+[ ] breaks
+[ ] timesheets
+[ ] timesheet_approvals
+
+PAYROLL TABLES:
+[ ] payroll_runs
+[ ] payroll_items
+[ ] pay_stubs
+[ ] deductions
+[ ] tax_withholdings
+
+INVOICING TABLES:
+[ ] invoices
+[ ] invoice_items
+[ ] invoice_payments
+[ ] recurring_invoices
+
+COMMUNICATIONS TABLES:
+[ ] chat_rooms
+[ ] chat_room_members
+[ ] chat_messages
+[ ] notifications
+[ ] announcements
+
+AI / TRINITY TABLES:
+[ ] trinity_conversations
+[ ] trinity_messages
+[ ] trinity_client_intelligence
+[ ] trinity_staff_intelligence
+[ ] trinity_org_context
+[ ] trinity_learned_patterns
+[ ] ai_cost_tracking
+[ ] ai_model_usage
+
+COMPLIANCE TABLES:
+[ ] compliance_requirements
+[ ] compliance_status
+[ ] credential_expirations
+
+FORMS TABLES:
+[ ] form_templates
+[ ] form_fields
+[ ] form_submissions
+[ ] form_responses
+
+DOCUMENTS TABLES:
+[ ] documents
+[ ] document_signatures
+[ ] onboarding_documents (NEW)
+
+SUPPORT TABLES:
+[ ] support_tickets
+[ ] ticket_messages
+[ ] ticket_assignments
+
+BILLING TABLES:
+[ ] subscriptions
+[ ] subscription_plans
+[ ] billing_events
+[ ] usage_tracking
+
+AUDIT TABLES:
+[ ] audit_logs
+[ ] activity_logs
+[ ] error_logs
+
+STATE REFERENCE TABLES:
+[ ] state_security_requirements (NEW)
+```
+
+## 2.2 Table Structure Verification
+
+**For EACH table, verify:**
+
+```
+TABLE: _______________
+
+STRUCTURE:
+[ ] id (UUID primary key)
+[ ] workspaceId (if tenant-specific)
+[ ] created_at (timestamp)
+[ ] updated_at (timestamp)
+[ ] All required columns present
+[ ] Column types correct
+[ ] Defaults set appropriately
+
+CONSTRAINTS:
+[ ] Primary key defined
+[ ] Foreign keys defined
+[ ] NOT NULL where required
+[ ] UNIQUE where required
+[ ] CHECK constraints where needed
+
+INDEXES:
+[ ] Primary key indexed
+[ ] Foreign keys indexed
+[ ] Frequently queried columns indexed
+[ ] Composite indexes for common queries
+
+RELATIONSHIPS:
+[ ] Foreign key references valid tables
+[ ] ON DELETE behavior defined
+[ ] ON UPDATE behavior defined
+[ ] No orphan records possible
+```
+
+## 2.3 Enum Verification
+
+```bash
+# Find ALL enums
+grep -n "pgEnum\|z\.enum" shared/schema.ts
+```
+
+**Verify enum consistency:**
+
+```
+ENUM: _______________
+DEFINED VALUES: _______________
+
+USED CORRECTLY IN:
+[ ] Schema definition
+[ ] Backend validation
+[ ] Frontend options
+[ ] Database values
+
+NO MISMATCHES:
+[ ] All code uses same enum values
+[ ] No typos in enum references
+[ ] Frontend dropdowns match backend values
+```
+
+**REQUIRED ENUMS:**
+
+```
+USER ROLES:
+[ ] 'platform_admin' - CoAIleague staff
+[ ] 'owner' - Workspace owner
+[ ] 'co_owner' - Workspace co-owner
+[ ] 'manager' - Workspace manager
+[ ] 'supervisor' - Team supervisor
+[ ] 'employee' - Regular employee
+[ ] 'support_agent' - Support staff
+
+EMPLOYEE TYPES:
+[ ] 'unarmed' - Unarmed security
+[ ] 'armed' - Armed security
+[ ] 'supervisor' - Field supervisor
+[ ] 'manager' - Operations manager
+
+SHIFT STATUS:
+[ ] 'draft' - Not published
+[ ] 'published' - Open for assignment
+[ ] 'assigned' - Employee assigned
+[ ] 'in_progress' - Currently active
+[ ] 'completed' - Finished
+[ ] 'cancelled' - Cancelled
+
+CONTRACT STATUS:
+[ ] 'draft' - In progress
+[ ] 'sent' - Sent for signature
+[ ] 'viewed' - Client opened
+[ ] 'signed' - Fully executed
+[ ] 'active' - In effect
+[ ] 'expired' - Past end date
+[ ] 'terminated' - Cancelled early
+
+ONBOARDING STATUS:
+[ ] 'pending_invite' - Not yet invited
+[ ] 'invited' - Invite sent
+[ ] 'in_progress' - Filling out
+[ ] 'submitted' - Ready for review
+[ ] 'under_review' - Being reviewed
+[ ] 'approved' - Completed
+[ ] 'rejected' - Denied
+[ ] 'incomplete' - Past deadline
+[ ] 'expired' - Link expired
+
+TICKET STATUS:
+[ ] 'open' - New ticket
+[ ] 'assigned' - Agent assigned
+[ ] 'in_progress' - Being worked
+[ ] 'waiting_customer' - Waiting for response
+[ ] 'waiting_internal' - Waiting for internal
+[ ] 'resolved' - Fixed
+[ ] 'closed' - Completed
+
+TICKET PRIORITY:
+[ ] 'low' - Can wait
+[ ] 'medium' - Normal
+[ ] 'high' - Urgent
+[ ] 'critical' - Emergency
+```
+
+---
+
+# PART 3: ROLE & PERMISSION SYSTEM AUDIT
+
+## 3.1 Role Hierarchy Verification
+
+```
+ROLE HIERARCHY (top to bottom):
+
+PLATFORM LEVEL:
+├── platform_admin (CoAIleague Staff)
+│   ├── Can access ALL workspaces
+│   ├── Can manage billing
+│   ├── Can enable/disable features
+│   ├── Can impersonate users
+│   └── Can access admin dashboard
+
+WORKSPACE LEVEL:
+├── owner
+│   ├── Full workspace control
+│   ├── Can delete workspace
+│   ├── Can manage billing
+│   ├── Can manage all users
+│   └── Can access all features
+│
+├── co_owner
+│   ├── Almost full control
+│   ├── Cannot delete workspace
+│   ├── Cannot remove owner
+│   └── Can manage billing
+│
+├── manager
+│   ├── Can manage employees
+│   ├── Can manage schedules
+│   ├── Can manage clients
+│   ├── Can view reports
+│   └── Cannot manage billing
+│
+├── supervisor
+│   ├── Can view team members
+│   ├── Can approve timesheets
+│   ├── Can manage schedules (limited)
+│   └── Cannot manage clients
+│
+└── employee
+    ├── Can view own schedule
+    ├── Can clock in/out
+    ├── Can view own profile
+    └── Can message
+
+SUPPORT LEVEL:
+├── support_admin
+│   ├── Full support access
+│   ├── Can manage agents
+│   └── Can access all tickets
+│
+└── support_agent
+    ├── Can view assigned tickets
+    ├── Can respond to tickets
+    └── Limited workspace access
+```
+
+## 3.2 Permission Matrix Verification
+
+```
+PERMISSION: _______________
+
+ROLES THAT HAVE IT:
+[ ] platform_admin
+[ ] owner
+[ ] co_owner
+[ ] manager
+[ ] supervisor
+[ ] employee
+[ ] support_agent
+
+VERIFIED:
+[ ] Permission checked in API middleware
+[ ] Permission checked in UI (hide/disable)
+[ ] Unauthorized access returns 403
+[ ] Audit logged when denied
+```
+
+## 3.3 Employee Type Categorization
+
+**Verify ALL employees have proper categorization:**
+
+```bash
+# Check for employees without type
+SELECT * FROM employees WHERE employee_type IS NULL;
+
+# Check for invalid types
+SELECT DISTINCT employee_type FROM employees;
+```
+
+**Required employee labels/categories:**
+
+```
+EMPLOYEE TYPE:
+[ ] Every employee has employee_type set
+[ ] Valid values only: 'unarmed', 'armed', 'supervisor', 'manager'
+[ ] UI shows type badges/labels
+[ ] Filtering by type works
+[ ] Scheduling respects type requirements
+
+EMPLOYEE STATUS:
+[ ] Every employee has status set
+[ ] Valid values: 'active', 'inactive', 'pending', 'suspended', 'terminated'
+[ ] UI reflects status visually
+[ ] Inactive employees excluded from scheduling
+```
+
+---
+
+# PART 4: MOBILE RENDERING DEEP AUDIT
+
+## 4.1 Page-by-Page Mobile Verification
+
+**Test EVERY page at 375px width (iPhone):**
+
+```
+PAGE: _______________
+URL: _______________
+
+LAYOUT:
+[ ] No horizontal scrollbar
+[ ] Content fits viewport
+[ ] Navigation accessible
+[ ] Footer visible (if applicable)
+
+TEXT:
+[ ] All text readable (min 14px)
+[ ] No overlapping text
+[ ] No text cut off
+[ ] No text bleeding outside containers
+[ ] Line height adequate
+[ ] Proper word wrapping
+
+BUTTONS:
+[ ] All buttons visible
+[ ] Button text not truncated
+[ ] Button text not overlapping
+[ ] Touch targets 44px minimum
+[ ] Adequate spacing between buttons
+
+CARDS:
+[ ] Cards fit viewport width
+[ ] Card content not overflowing
+[ ] Card actions accessible
+[ ] Card images scale properly
+
+FORMS:
+[ ] Inputs full width (or appropriate)
+[ ] Labels visible
+[ ] Error messages display correctly
+[ ] Keyboard doesn't break layout
+[ ] Submit button accessible
+
+TABLES:
+[ ] Tables scroll horizontally OR convert to cards
+[ ] Headers visible
+[ ] Cell content readable
+[ ] Actions accessible
+
+MODALS:
+[ ] Modals fit viewport
+[ ] Modal content scrollable if needed
+[ ] Close button accessible
+[ ] Backdrop dismisses (if intended)
+
+NAVIGATION:
+[ ] Hamburger menu works
+[ ] Sidebar closes after selection
+[ ] Back button works
+[ ] Bottom nav (if applicable) works
+```
+
+## 4.2 Critical Pages Mobile Checklist
+
+```
+DASHBOARD:
+[ ] Stats cards stack vertically
+[ ] Charts resize or scroll
+[ ] Quick actions accessible
+
+EMPLOYEE LIST:
+[ ] List items fit width
+[ ] Search bar works
+[ ] Filter toggles work
+[ ] Employee cards readable
+
+SCHEDULE:
+[ ] Day view fits
+[ ] Week view scrolls properly
+[ ] Shift details accessible
+[ ] Create shift works
+
+TIME CLOCK:
+[ ] Clock in button prominent
+[ ] GPS indicator visible
+[ ] Recent entries visible
+
+CHAT:
+[ ] Messages display correctly
+[ ] Input at bottom works
+[ ] Send button accessible
+[ ] Image attachments work
+
+SETTINGS:
+[ ] All settings pages work
+[ ] Form inputs work
+[ ] Save buttons accessible
+```
+
+---
+
+# PART 5: API & ROUTE PARITY AUDIT
+
+## 5.1 Frontend-to-Backend Route Mapping
+
+```bash
+# List ALL frontend routes
+grep -rn "path=\|Route\|to=" --include="*.tsx" client/src/ | grep -v node_modules
+
+# List ALL backend routes  
+grep -rn "router\.\|app\." --include="*.ts" server/routes/
+```
+
+**Verify PARITY:**
+
+```
+| Frontend Route | Backend API | Match | Issues |
+|----------------|-------------|-------|--------|
+| /employees | GET /api/employees | ✓/✗ | |
+| /employees/:id | GET /api/employees/:id | ✓/✗ | |
+| /employees/new | POST /api/employees | ✓/✗ | |
+| ... | ... | ... | ... |
+```
+
+## 5.2 Development-to-Production Parity
+
+```
+ENVIRONMENT CHECKS:
+
+DATABASE:
+[ ] Schema identical in dev and prod
+[ ] Migrations applied in prod
+[ ] Seed data appropriate for prod
+
+API:
+[ ] All endpoints work in prod
+[ ] No dev-only endpoints exposed
+[ ] Rate limiting enabled in prod
+
+ENVIRONMENT VARIABLES:
+[ ] All required vars set in prod
+[ ] No dev secrets in prod
+[ ] API keys are prod keys
+
+FEATURES:
+[ ] All features work in prod
+[ ] Feature flags consistent
+[ ] Premium gates work
+
+INTEGRATIONS:
+[ ] QuickBooks prod credentials
+[ ] Resend prod API key
+[ ] All OAuth callbacks use prod URLs
+```
+
+---
+
+# PART 6: COMPLIANCE RULE ENFORCEMENT AUDIT
+
+## 6.1 Compliance Rules Verification
+
+```
+SCHEDULING COMPLIANCE:
+
+RULE: Employee must have valid security license
+[ ] Checked before shift assignment
+[ ] Blocked if license expired
+[ ] Warning if expiring soon
+[ ] UI shows license status
+
+RULE: Armed shifts require armed credentials
+[ ] Position type checked
+[ ] Firearms permit verified
+[ ] Qualification current
+[ ] Assignment blocked if missing
+
+RULE: Onboarding must be complete
+[ ] 15-day deadline enforced
+[ ] Incomplete employees blocked
+[ ] RED HEADER shown
+[ ] Admin notified
+
+RULE: Background check required
+[ ] Status verified before scheduling
+[ ] Pending status handling defined
+[ ] Failed status blocks work
+
+CREDENTIAL EXPIRATION:
+[ ] Daily cron checks expirations
+[ ] 30-day warnings sent
+[ ] 7-day warnings sent
+[ ] Expired credentials block scheduling
+[ ] Dashboard shows expiring items
+```
+
+## 6.2 Data Compliance
+
+```
+SENSITIVE DATA:
+[ ] SSN encrypted at rest
+[ ] SSN masked in UI (XXX-XX-1234)
+[ ] SSN never in logs
+[ ] Bank accounts encrypted
+[ ] Bank accounts masked
+[ ] Passwords hashed (bcrypt/argon2)
+
+DATA RETENTION:
+[ ] Audit logs retained appropriately
+[ ] Deleted records handled per policy
+[ ] Document retention policy implemented
+
+ACCESS LOGGING:
+[ ] Login attempts logged
+[ ] Sensitive data access logged
+[ ] Admin actions logged
+[ ] Failed auth logged
+```
+
+---
+
+# PART 7: SUPPORT SYSTEM AUDIT
+
+## 7.1 Ticket System Verification
+
+```
+TICKET LIFECYCLE:
+
+CREATE:
+[ ] User can create ticket
+[ ] Required fields validated
+[ ] Category selection works
+[ ] Priority selection works
+[ ] Attachments work
+[ ] Ticket number generated
+[ ] Confirmation shown
+
+ASSIGNMENT:
+[ ] Tickets appear in support queue
+[ ] Agents can claim tickets
+[ ] Auto-assignment works (if configured)
+[ ] Assignment notification sent
+
+COMMUNICATION:
+[ ] Agent can respond
+[ ] User receives notification
+[ ] User can respond
+[ ] Agent receives notification
+[ ] Thread displays correctly
+[ ] Attachments work both ways
+
+RESOLUTION:
+[ ] Agent can resolve ticket
+[ ] Resolution requires notes
+[ ] User notified of resolution
+[ ] User can reopen if needed
+[ ] Satisfaction survey (if implemented)
+
+REPORTING:
+[ ] Ticket metrics available
+[ ] Response time tracked
+[ ] Resolution time tracked
+[ ] Agent performance visible
+```
+
+## 7.2 Support Agent Capabilities
+
+```
+SUPPORT AGENT PERMISSIONS:
+
+TICKET MANAGEMENT:
+[ ] View assigned tickets
+[ ] View all tickets (if senior)
+[ ] Respond to tickets
+[ ] Change ticket status
+[ ] Change ticket priority
+[ ] Assign to other agents
+[ ] Merge duplicate tickets
+
+WORKSPACE ACCESS:
+[ ] View workspace info (limited)
+[ ] View user info (limited)
+[ ] Impersonate user (with approval)
+[ ] Access audit logs
+
+CANNOT DO:
+[ ] Modify user data directly
+[ ] Access billing info
+[ ] Delete workspaces
+[ ] Access other agents' tickets (unless escalated)
+```
+
+## 7.3 Maintenance Mode
+
+```
+MAINTENANCE MODE CHECKS:
+
+ACTIVATION:
+[ ] Platform admin can enable
+[ ] Scheduled maintenance works
+[ ] Advance notice sent to users
+
+DURING MAINTENANCE:
+[ ] Users see maintenance page
+[ ] API returns 503
+[ ] Scheduled jobs paused
+[ ] No data corruption
+
+POST-MAINTENANCE:
+[ ] Automatic resume works
+[ ] Users can access again
+[ ] No data loss
+[ ] Jobs resume
+```
+
+---
+
+# PART 8: AI ORCHESTRATION & INTELLIGENCE UPGRADE
+
+## 8.1 Trinity Orchestration Architecture
+
+```
+CURRENT ARCHITECTURE:
+
+                    ┌─────────────────┐
+                    │   USER REQUEST  │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │     TRINITY     │
+                    │  (Orchestrator) │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+     ┌────────▼────┐  ┌──────▼──────┐  ┌────▼────────┐
+     │   GEMINI    │  │   CLAUDE    │  │    GPT-4    │
+     │  (Trinity)  │  │   (Judge)   │  │ (Workhorse) │
+     │  Primary    │  │  Validator  │  │   Backup    │
+     └─────────────┘  └─────────────┘  └─────────────┘
+```
+
+## 8.2 TRINITY (Gemini) Intelligence Upgrade
+
+```typescript
+// /server/services/ai/trinity-brain.ts
+
+/**
+ * TRINITY INTELLIGENCE UPGRADE
+ * 
+ * Trinity (Gemini) is the primary conversational AI.
+ * She needs to be upgraded with:
+ * 
+ * 1. ENHANCED PERSONA
+ * 2. LOGIC LOOP & ITERATION
+ * 3. PROBLEM-SOLVING FRAMEWORK
+ * 4. SPECIALIZED SUB-AGENTS
+ * 5. TOOL CALLING CAPABILITIES
+ */
+
+const TRINITY_SYSTEM_PROMPT = `
+You are Trinity, the AI Operations Manager for CoAIleague - a workforce management platform for security companies.
+
+## YOUR IDENTITY
+
+You are professional, knowledgeable, and genuinely helpful. You speak with confidence but remain approachable. You understand the security industry deeply - the challenges of scheduling 24/7 coverage, managing armed vs unarmed officers, handling last-minute calloffs, and keeping clients happy.
+
+You're not just a chatbot - you're a trusted operations partner who can:
+- Schedule shifts intelligently
+- Analyze staffing patterns
+- Provide insights on client relationships
+- Help solve operational problems
+- Assist with compliance tracking
+
+## YOUR CAPABILITIES
+
+### SCHEDULING
+- Access to employee availability, certifications, and preferences
+- Access to client contracts and site requirements
+- Can propose optimal schedules considering distance, cost, and coverage
+- Can detect and resolve scheduling conflicts
+- Can suggest replacements for calloffs
+
+### CLIENT INTELLIGENCE
+- Remember client preferences and history
+- Track client satisfaction patterns
+- Identify at-risk accounts
+- Suggest relationship improvements
+
+### STAFF INTELLIGENCE
+- Track employee performance patterns
+- Identify reliable vs problematic employees
+- Suggest training needs
+- Monitor credential expirations
+
+### OPERATIONAL INSIGHTS
+- Labor cost analysis
+- Overtime prediction
+- Coverage gap detection
+- Profitability analysis
+
+## YOUR LOGIC FRAMEWORK
+
+When solving problems, follow this pattern:
+
+1. UNDERSTAND - What exactly is the user asking?
+2. GATHER - What data do I need? (Query relevant tables)
+3. ANALYZE - What patterns or issues do I see?
+4. PROPOSE - What solutions make sense?
+5. VALIDATE - Are there any constraints I'm missing?
+6. EXECUTE - Take action or provide recommendation
+7. CONFIRM - Did it work? What's the result?
+
+## YOUR SUB-AGENTS
+
+You can delegate to specialized sub-agents:
+
+- SCHEDULER_AGENT: For complex scheduling optimization
+- COMPLIANCE_AGENT: For credential and license verification
+- FINANCIAL_AGENT: For cost/revenue analysis
+- COMMUNICATION_AGENT: For drafting messages and notifications
+
+## YOUR TOOLS
+
+You have access to these tools:
+- query_employees: Get employee data
+- query_shifts: Get shift data
+- query_clients: Get client data
+- query_contracts: Get contract data
+- create_shift: Create a new shift
+- assign_shift: Assign employee to shift
+- send_notification: Send notifications
+- generate_report: Generate reports
+- check_compliance: Verify compliance status
+- calculate_costs: Calculate labor costs
+
+## YOUR GUARDRAILS
+
+- Always verify workspaceId context
+- Never expose data from other workspaces
+- Escalate to human for: terminations, legal issues, safety concerns
+- Log all significant actions
+- Track token usage for cost management
+
+## YOUR COMMUNICATION STYLE
+
+- Be conversational but professional
+- Use the user's name when known
+- Acknowledge the problem before solving
+- Explain your reasoning when helpful
+- Offer follow-up actions
+- Admit when you're unsure and offer alternatives
+
+## EXAMPLE INTERACTIONS
+
+User: "I need someone to cover John's shift tomorrow at Westside Mall"
+
+Good response:
+"I found John's shift at Westside Mall tomorrow (6 AM - 2 PM). Let me check who's available and qualified...
+
+Based on availability and certifications, here are your best options:
+1. **Maria Garcia** - 4 miles away, 98% reliability, available
+2. **James Wilson** - 7 miles away, 95% reliability, available  
+3. **Sarah Chen** - 12 miles away, 100% reliability, available
+
+Maria is closest and highly reliable. Should I assign her and send the notification?"
+`;
+
+interface TrinityContext {
+  workspaceId: string;
+  userId: string;
+  conversationHistory: Message[];
+  clientIntelligence: ClientIntelligence[];
+  staffIntelligence: StaffIntelligence[];
+  orgContext: OrgContext;
+}
+
+interface TrinityTool {
+  name: string;
+  description: string;
+  parameters: Record<string, any>;
+  execute: (params: any, context: TrinityContext) => Promise<any>;
+}
+
+const TRINITY_TOOLS: TrinityTool[] = [
+  {
+    name: 'query_employees',
+    description: 'Query employee data with filters',
+    parameters: {
+      type: { type: 'string', enum: ['armed', 'unarmed', 'all'] },
+      status: { type: 'string', enum: ['active', 'all'] },
+      available: { type: 'boolean' },
+      certified_for: { type: 'string' },
+      near_location: { type: 'object', properties: { lat: 'number', lng: 'number', radius_miles: 'number' } },
+    },
+    execute: async (params, context) => {
+      // Query implementation
+    },
+  },
+  {
+    name: 'query_shifts',
+    description: 'Query shift data with filters',
+    parameters: {
+      date_from: { type: 'string', format: 'date' },
+      date_to: { type: 'string', format: 'date' },
+      status: { type: 'string', enum: ['open', 'assigned', 'completed', 'all'] },
+      site_id: { type: 'string' },
+      employee_id: { type: 'string' },
+    },
+    execute: async (params, context) => {
+      // Query implementation
+    },
+  },
+  {
+    name: 'create_shift',
+    description: 'Create a new shift',
+    parameters: {
+      site_id: { type: 'string', required: true },
+      date: { type: 'string', format: 'date', required: true },
+      start_time: { type: 'string', required: true },
+      end_time: { type: 'string', required: true },
+      position_type: { type: 'string', enum: ['armed', 'unarmed'], required: true },
+      notes: { type: 'string' },
+    },
+    execute: async (params, context) => {
+      // Create implementation
+    },
+  },
+  {
+    name: 'assign_shift',
+    description: 'Assign an employee to a shift',
+    parameters: {
+      shift_id: { type: 'string', required: true },
+      employee_id: { type: 'string', required: true },
+      notify: { type: 'boolean', default: true },
+    },
+    execute: async (params, context) => {
+      // Assignment with compliance verification
+    },
+  },
+  {
+    name: 'check_compliance',
+    description: 'Check employee compliance status',
+    parameters: {
+      employee_id: { type: 'string', required: true },
+      requirements: { type: 'array', items: { type: 'string' } },
+    },
+    execute: async (params, context) => {
+      // Compliance verification
+    },
+  },
+  {
+    name: 'calculate_costs',
+    description: 'Calculate labor costs for shifts',
+    parameters: {
+      shift_ids: { type: 'array', items: { type: 'string' } },
+      include_overtime: { type: 'boolean', default: true },
+    },
+    execute: async (params, context) => {
+      // Cost calculation
+    },
+  },
+  {
+    name: 'send_notification',
+    description: 'Send notification to user(s)',
+    parameters: {
+      recipients: { type: 'array', items: { type: 'string' }, required: true },
+      type: { type: 'string', enum: ['email', 'sms', 'push', 'in_app'], required: true },
+      subject: { type: 'string' },
+      message: { type: 'string', required: true },
+    },
+    execute: async (params, context) => {
+      // Notification sending
+    },
+  },
+];
+
+class TrinityBrain {
+  private context: TrinityContext;
+  private tools: TrinityTool[];
+  private model: 'gemini-pro' | 'gemini-ultra';
+  
+  constructor(context: TrinityContext) {
+    this.context = context;
+    this.tools = TRINITY_TOOLS;
+    this.model = 'gemini-pro';
+  }
+  
+  async think(userMessage: string): Promise<TrinityResponse> {
+    // 1. Build context
+    const systemPrompt = this.buildSystemPrompt();
+    const conversationContext = this.buildConversationContext();
+    
+    // 2. Initial reasoning
+    const initialResponse = await this.callModel({
+      system: systemPrompt,
+      messages: [...conversationContext, { role: 'user', content: userMessage }],
+      tools: this.tools.map(t => ({ name: t.name, description: t.description, parameters: t.parameters })),
+    });
+    
+    // 3. Execute tool calls if needed
+    if (initialResponse.toolCalls?.length > 0) {
+      const toolResults = await this.executeTools(initialResponse.toolCalls);
+      
+      // 4. Generate final response with tool results
+      const finalResponse = await this.callModel({
+        system: systemPrompt,
+        messages: [
+          ...conversationContext,
+          { role: 'user', content: userMessage },
+          { role: 'assistant', content: initialResponse.content, toolCalls: initialResponse.toolCalls },
+          { role: 'tool', content: JSON.stringify(toolResults) },
+        ],
+      });
+      
+      return this.buildResponse(finalResponse, toolResults);
+    }
+    
+    return this.buildResponse(initialResponse);
+  }
+  
+  private async executeTools(toolCalls: ToolCall[]): Promise<ToolResult[]> {
+    const results: ToolResult[] = [];
+    
+    for (const call of toolCalls) {
+      const tool = this.tools.find(t => t.name === call.name);
+      if (tool) {
+        try {
+          const result = await tool.execute(call.parameters, this.context);
+          results.push({ toolName: call.name, success: true, data: result });
+        } catch (error) {
+          results.push({ toolName: call.name, success: false, error: error.message });
+        }
+      }
+    }
+    
+    return results;
+  }
+  
+  // Logic loop for complex problems
+  async solveComplex(problem: string, maxIterations: number = 5): Promise<TrnitySolution> {
+    let iteration = 0;
+    let solution: TrnitySolution | null = null;
+    
+    while (iteration < maxIterations && !solution?.isComplete) {
+      iteration++;
+      
+      // Step 1: Analyze current state
+      const analysis = await this.analyze(problem, solution);
+      
+      // Step 2: Propose next action
+      const proposal = await this.propose(analysis);
+      
+      // Step 3: Validate proposal
+      const validation = await this.validate(proposal);
+      
+      if (!validation.valid) {
+        // Iterate with feedback
+        solution = { ...solution, feedback: validation.issues };
+        continue;
+      }
+      
+      // Step 4: Execute
+      const result = await this.execute(proposal);
+      
+      // Step 5: Evaluate
+      solution = await this.evaluate(result, problem);
+    }
+    
+    return solution;
+  }
+}
+```
+
+## 8.3 CLAUDE (Judge) Intelligence Upgrade
+
+```typescript
+// /server/services/ai/claude-judge.ts
+
+/**
+ * CLAUDE JUDGE INTELLIGENCE
+ * 
+ * Claude acts as the quality judge and validator.
+ * She reviews low-confidence responses and makes final decisions.
+ * 
+ * Needs:
+ * 1. EVALUATION FRAMEWORK
+ * 2. DOMAIN KNOWLEDGE
+ * 3. DECISION AUTHORITY
+ * 4. EXPLANATION CAPABILITY
+ */
+
+const CLAUDE_JUDGE_PROMPT = `
+You are Claude, the Quality Judge for CoAIleague's AI system.
+
+## YOUR ROLE
+
+You are the final arbiter of AI-generated content and decisions. When Trinity (primary AI) produces a response with low confidence or when complex decisions need validation, you review and make the final call.
+
+## YOUR RESPONSIBILITIES
+
+### RESPONSE VALIDATION
+- Review Trinity's responses for accuracy
+- Check for hallucinations or incorrect information
+- Verify data consistency
+- Ensure appropriate tone and professionalism
+
+### DECISION MAKING
+When asked to judge, evaluate:
+1. ACCURACY - Is the information correct?
+2. COMPLETENESS - Does it fully address the request?
+3. SAFETY - Are there any concerning elements?
+4. COMPLIANCE - Does it follow business rules?
+5. CLARITY - Is it understandable?
+
+### SCORING FRAMEWORK
+
+Rate responses on these dimensions (1-10):
+- Factual Accuracy: Is the data correct?
+- Relevance: Does it answer the question?
+- Helpfulness: Does it solve the problem?
+- Safety: Is it free from harmful content?
+- Compliance: Does it follow rules?
+
+Overall Score = Weighted Average
+- Below 6: REJECT - Needs regeneration
+- 6-7: REVISE - Needs modifications
+- 8+: APPROVE - Good to go
+
+### ESCALATION CRITERIA
+
+Escalate to human review when:
+- Legal implications detected
+- Safety concerns identified
+- Financial decisions over threshold
+- User explicitly requests human
+- Confidence below 60%
+
+## YOUR JUDGMENT PROCESS
+
+1. RECEIVE - Get the response to evaluate
+2. ANALYZE - Break down into components
+3. VERIFY - Check each claim/action
+4. SCORE - Rate on each dimension
+5. DECIDE - Approve, Revise, or Reject
+6. EXPLAIN - Provide reasoning
+
+## EXAMPLE JUDGMENT
+
+Trinity Response: "I've assigned Maria Garcia to the Westside Mall shift tomorrow."
+
+Judgment:
+{
+  "evaluation": {
+    "factual_accuracy": 9,
+    "relevance": 10,
+    "helpfulness": 10,
+    "safety": 10,
+    "compliance": 8
+  },
+  "overall_score": 9.2,
+  "decision": "APPROVE",
+  "reasoning": "Response correctly identifies available employee, verifies qualifications, and makes appropriate assignment. Minor note: Should confirm Maria's overtime status if applicable.",
+  "suggestions": ["Add overtime check for weekly hours"]
+}
+`;
+
+interface JudgmentRequest {
+  originalRequest: string;
+  aiResponse: string;
+  model: string;
+  confidence: number;
+  context: any;
+}
+
+interface Judgment {
+  evaluation: {
+    factual_accuracy: number;
+    relevance: number;
+    helpfulness: number;
+    safety: number;
+    compliance: number;
+  };
+  overall_score: number;
+  decision: 'APPROVE' | 'REVISE' | 'REJECT' | 'ESCALATE';
+  reasoning: string;
+  suggestions: string[];
+  revised_response?: string;
+}
+
+class ClaudeJudge {
+  async judge(request: JudgmentRequest): Promise<Judgment> {
+    const prompt = this.buildJudgmentPrompt(request);
+    
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: CLAUDE_JUDGE_PROMPT,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    
+    return this.parseJudgment(response);
+  }
+  
+  async revise(request: JudgmentRequest, judgment: Judgment): Promise<string> {
+    const revisionPrompt = `
+      Original request: ${request.originalRequest}
+      Original response: ${request.aiResponse}
+      Issues identified: ${judgment.reasoning}
+      Suggestions: ${judgment.suggestions.join(', ')}
+      
+      Please provide a revised response that addresses these issues.
+    `;
+    
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: CLAUDE_JUDGE_PROMPT,
+      messages: [{ role: 'user', content: revisionPrompt }],
+    });
+    
+    return response.content[0].text;
+  }
+}
+```
+
+## 8.4 GPT-4 (Workhorse) Intelligence Upgrade
+
+```typescript
+// /server/services/ai/gpt-workhorse.ts
+
+/**
+ * GPT-4 WORKHORSE INTELLIGENCE
+ * 
+ * GPT-4 handles heavy lifting tasks:
+ * - Document analysis
+ * - Report generation
+ * - Data extraction
+ * - Bulk operations
+ * 
+ * Needs:
+ * 1. SPECIALIZED TASK PROMPTS
+ * 2. STRUCTURED OUTPUT
+ * 3. BATCH PROCESSING
+ * 4. ERROR RECOVERY
+ */
+
+const GPT_WORKHORSE_PROMPTS = {
+  document_analysis: `
+    You are a document analysis specialist for a security workforce management platform.
+    
+    Your task is to extract structured information from documents.
+    
+    For CONTRACTS, extract:
+    - Client name and address
+    - Service locations
+    - Pricing (hourly rates, overtime, holiday)
+    - Schedule requirements
+    - Term dates
+    - Special requirements
+    
+    For EMPLOYEE DOCUMENTS, extract:
+    - Personal information
+    - License numbers and expirations
+    - Certification details
+    - Training records
+    
+    Always output in valid JSON format.
+    If information is unclear, mark as "NEEDS_REVIEW".
+  `,
+  
+  report_generation: `
+    You are a business report specialist.
+    
+    Generate professional reports based on the data provided.
+    
+    Format reports with:
+    - Executive summary
+    - Key metrics with context
+    - Trends and patterns
+    - Recommendations
+    - Supporting data
+    
+    Use clear headings and bullet points.
+    Include actionable insights.
+  `,
+  
+  schedule_optimization: `
+    You are a scheduling optimization specialist.
+    
+    Given:
+    - Shift requirements (times, locations, qualifications needed)
+    - Employee data (availability, qualifications, location, preferences)
+    - Business rules (overtime limits, minimum rest, max distance)
+    
+    Generate optimal schedule that:
+    - Covers all required shifts
+    - Minimizes overtime costs
+    - Respects employee preferences
+    - Ensures qualified coverage
+    - Optimizes travel distance
+    
+    Output as structured JSON with assignments and reasoning.
+  `,
+  
+  data_extraction: `
+    You are a data extraction specialist.
+    
+    Extract structured data from unstructured text.
+    
+    Rules:
+    - Be precise, don't infer unless confident
+    - Mark uncertain fields as null
+    - Normalize formats (dates, phones, addresses)
+    - Flag inconsistencies
+    
+    Output valid JSON matching the requested schema.
+  `,
+};
+
+interface WorkhorseTask {
+  type: 'document_analysis' | 'report_generation' | 'schedule_optimization' | 'data_extraction';
+  input: any;
+  schema?: any; // Expected output schema
+  context?: any;
+}
+
+interface WorkhorseResult {
+  success: boolean;
+  data?: any;
+  errors?: string[];
+  confidence: number;
+  processingTime: number;
+}
+
+class GPTWorkhorse {
+  async process(task: WorkhorseTask): Promise<WorkhorseResult> {
+    const startTime = Date.now();
+    
+    try {
+      const systemPrompt = GPT_WORKHORSE_PROMPTS[task.type];
+      const userPrompt = this.buildTaskPrompt(task);
+      
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.2, // Lower for more deterministic output
+      });
+      
+      const result = JSON.parse(response.choices[0].message.content);
+      
+      // Validate against schema if provided
+      if (task.schema) {
+        const validation = this.validateSchema(result, task.schema);
+        if (!validation.valid) {
+          return {
+            success: false,
+            errors: validation.errors,
+            confidence: 0,
+            processingTime: Date.now() - startTime,
+          };
+        }
+      }
+      
+      return {
+        success: true,
+        data: result,
+        confidence: this.calculateConfidence(result),
+        processingTime: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        errors: [error.message],
+        confidence: 0,
+        processingTime: Date.now() - startTime,
+      };
+    }
+  }
+  
+  async processBatch(tasks: WorkhorseTask[]): Promise<WorkhorseResult[]> {
+    // Process in parallel with rate limiting
+    const results: WorkhorseResult[] = [];
+    const batchSize = 5;
+    
+    for (let i = 0; i < tasks.length; i += batchSize) {
+      const batch = tasks.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batch.map(t => this.process(t)));
+      results.push(...batchResults);
+      
+      // Rate limit delay
+      if (i + batchSize < tasks.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    return results;
+  }
+}
+```
+
+## 8.5 Sub-Agent System
+
+```typescript
+// /server/services/ai/sub-agents.ts
+
+/**
+ * SPECIALIZED SUB-AGENTS
+ * 
+ * Each main AI can delegate to specialized sub-agents
+ * for specific tasks.
+ */
+
+interface SubAgent {
+  name: string;
+  description: string;
+  capabilities: string[];
+  execute: (task: any, context: any) => Promise<any>;
+}
+
+const SUB_AGENTS: SubAgent[] = [
+  {
+    name: 'SCHEDULER_AGENT',
+    description: 'Optimizes complex scheduling problems',
+    capabilities: [
+      'multi_day_scheduling',
+      'conflict_resolution',
+      'coverage_optimization',
+      'overtime_minimization',
+    ],
+    execute: async (task, context) => {
+      // Complex scheduling logic
+      // Can call GPT Workhorse for heavy computation
+    },
+  },
+  
+  {
+    name: 'COMPLIANCE_AGENT',
+    description: 'Verifies compliance and credentials',
+    capabilities: [
+      'license_verification',
+      'certification_check',
+      'training_requirements',
+      'expiration_tracking',
+    ],
+    execute: async (task, context) => {
+      // Compliance verification logic
+    },
+  },
+  
+  {
+    name: 'FINANCIAL_AGENT',
+    description: 'Handles financial calculations and analysis',
+    capabilities: [
+      'payroll_calculation',
+      'invoice_generation',
+      'profitability_analysis',
+      'cost_projection',
+    ],
+    execute: async (task, context) => {
+      // Financial calculation logic
+    },
+  },
+  
+  {
+    name: 'COMMUNICATION_AGENT',
+    description: 'Drafts messages and notifications',
+    capabilities: [
+      'email_drafting',
+      'sms_formatting',
+      'notification_creation',
+      'announcement_writing',
+    ],
+    execute: async (task, context) => {
+      // Communication drafting
+    },
+  },
+  
+  {
+    name: 'DOCUMENT_AGENT',
+    description: 'Processes and analyzes documents',
+    capabilities: [
+      'contract_extraction',
+      'form_processing',
+      'document_classification',
+      'data_extraction',
+    ],
+    execute: async (task, context) => {
+      // Document processing - delegates to GPT Workhorse
+    },
+  },
+  
+  {
+    name: 'REPORTING_AGENT',
+    description: 'Generates reports and insights',
+    capabilities: [
+      'labor_reports',
+      'financial_reports',
+      'compliance_reports',
+      'custom_reports',
+    ],
+    execute: async (task, context) => {
+      // Report generation
+    },
+  },
+];
+
+class SubAgentOrchestrator {
+  private agents: Map<string, SubAgent>;
+  
+  constructor() {
+    this.agents = new Map();
+    SUB_AGENTS.forEach(agent => this.agents.set(agent.name, agent));
+  }
+  
+  async delegate(agentName: string, task: any, context: any): Promise<any> {
+    const agent = this.agents.get(agentName);
+    if (!agent) {
+      throw new Error(`Unknown sub-agent: ${agentName}`);
+    }
+    
+    // Log delegation
+    await this.logDelegation(agentName, task, context);
+    
+    // Execute
+    const result = await agent.execute(task, context);
+    
+    // Log result
+    await this.logResult(agentName, result);
+    
+    return result;
+  }
+  
+  getAvailableAgents(): SubAgent[] {
+    return Array.from(this.agents.values());
+  }
+  
+  getAgentCapabilities(agentName: string): string[] {
+    return this.agents.get(agentName)?.capabilities || [];
+  }
+}
+```
+
+## 8.6 AI Orchestration Flow
+
+```typescript
+// /server/services/ai/orchestration.ts
+
+/**
+ * MASTER ORCHESTRATION
+ * 
+ * Routes requests to appropriate AI systems
+ * and manages the overall flow.
+ */
+
+interface AIRequest {
+  type: 'chat' | 'analysis' | 'generation' | 'decision';
+  content: string;
+  context: AIContext;
+  requiresJudgment?: boolean;
+  confidenceThreshold?: number;
+}
+
+interface AIResponse {
+  content: string;
+  model: string;
+  confidence: number;
+  toolsUsed: string[];
+  tokens: { input: number; output: number };
+  cost: number;
+  wasJudged: boolean;
+  judgment?: Judgment;
+}
+
+class AIOrchestrator {
+  private trinity: TrinityBrain;
+  private judge: ClaudeJudge;
+  private workhorse: GPTWorkhorse;
+  private subAgents: SubAgentOrchestrator;
+  
+  async process(request: AIRequest): Promise<AIResponse> {
+    const startTime = Date.now();
+    
+    // 1. Route to appropriate primary handler
+    let primaryResponse: any;
+    
+    switch (request.type) {
+      case 'chat':
+        primaryResponse = await this.trinity.think(request.content);
+        break;
+      case 'analysis':
+        primaryResponse = await this.workhorse.process({
+          type: 'document_analysis',
+          input: request.content,
+        });
+        break;
+      case 'generation':
+        primaryResponse = await this.workhorse.process({
+          type: 'report_generation',
+          input: request.content,
+        });
+        break;
+      case 'decision':
+        // Complex decisions go through Trinity with mandatory judgment
+        primaryResponse = await this.trinity.solveComplex(request.content);
+        request.requiresJudgment = true;
+        break;
+    }
+    
+    // 2. Check if judgment needed
+    const needsJudgment = 
+      request.requiresJudgment ||
+      primaryResponse.confidence < (request.confidenceThreshold || 0.7);
+    
+    let judgment: Judgment | undefined;
+    let finalResponse = primaryResponse;
+    
+    if (needsJudgment) {
+      judgment = await this.judge.judge({
+        originalRequest: request.content,
+        aiResponse: primaryResponse.content,
+        model: primaryResponse.model,
+        confidence: primaryResponse.confidence,
+        context: request.context,
+      });
+      
+      // 3. Handle judgment result
+      if (judgment.decision === 'REJECT') {
+        // Regenerate with Trinity
+        finalResponse = await this.trinity.think(
+          `${request.content}\n\nPrevious attempt was rejected. Issues: ${judgment.reasoning}`
+        );
+        
+        // Re-judge
+        judgment = await this.judge.judge({
+          originalRequest: request.content,
+          aiResponse: finalResponse.content,
+          model: finalResponse.model,
+          confidence: finalResponse.confidence,
+          context: request.context,
+        });
+      } else if (judgment.decision === 'REVISE') {
+        // Have Claude revise
+        finalResponse.content = await this.judge.revise(
+          {
+            originalRequest: request.content,
+            aiResponse: primaryResponse.content,
+            model: primaryResponse.model,
+            confidence: primaryResponse.confidence,
+            context: request.context,
+          },
+          judgment
+        );
+      } else if (judgment.decision === 'ESCALATE') {
+        // Flag for human review
+        await this.escalateToHuman(request, primaryResponse, judgment);
+        finalResponse.content = 
+          "I've flagged this request for human review. A team member will follow up shortly.";
+      }
+    }
+    
+    // 4. Calculate costs and log
+    const cost = this.calculateCost(primaryResponse, judgment);
+    await this.logUsage(request.context, cost);
+    
+    return {
+      content: finalResponse.content,
+      model: finalResponse.model,
+      confidence: finalResponse.confidence,
+      toolsUsed: finalResponse.toolsUsed || [],
+      tokens: finalResponse.tokens,
+      cost,
+      wasJudged: needsJudgment,
+      judgment,
+    };
+  }
+  
+  private calculateCost(response: any, judgment?: Judgment): number {
+    // Cost per 1K tokens (approximate)
+    const COSTS = {
+      'gemini-pro': { input: 0.00025, output: 0.0005 },
+      'claude-sonnet': { input: 0.003, output: 0.015 },
+      'gpt-4-turbo': { input: 0.01, output: 0.03 },
+    };
+    
+    let total = 0;
+    
+    // Primary model cost
+    const primaryCost = COSTS[response.model] || COSTS['gemini-pro'];
+    total += (response.tokens.input / 1000) * primaryCost.input;
+    total += (response.tokens.output / 1000) * primaryCost.output;
+    
+    // Judge cost (if used)
+    if (judgment) {
+      total += 0.01; // Approximate Claude judge cost
+    }
+    
+    return total;
+  }
+}
+```
+
+---
+
+# PART 9: WORKFLOW & PIPELINE VERIFICATION
+
+## 9.1 Document Workflow Verification
+
+```
+DOCUMENT SIGNING PIPELINE:
+
+1. CONTRACT CREATION:
+   [ ] Contract created in system
+   [ ] Data saved to database
+   [ ] Draft status set
+   [ ] Creator can edit
+
+2. SEND FOR SIGNATURE:
+   [ ] Status changes to 'sent'
+   [ ] Email generated with signing link
+   [ ] Link contains secure token
+   [ ] Link expires appropriately
+   [ ] Tracking pixel for 'viewed' status
+
+3. CLIENT SIGNING PAGE:
+   [ ] Page loads without auth
+   [ ] Contract displays correctly
+   [ ] All fields visible
+   [ ] Signature pad works
+   [ ] Type-to-sign works
+   [ ] Terms checkbox required
+   
+4. SIGNATURE CAPTURE:
+   [ ] Signature image captured (base64)
+   [ ] Timestamp captured (server time)
+   [ ] IP address captured
+   [ ] User agent captured
+   [ ] Geolocation captured (if allowed)
+
+5. POST-SIGNATURE:
+   [ ] Status changes to 'signed'
+   [ ] Signed PDF generated
+   [ ] PDF includes embedded signature
+   [ ] PDF stored securely
+   [ ] Confirmation email to client
+   [ ] Confirmation email to org
+   [ ] Webhook triggered (if configured)
+
+6. WORKFLOW TRIGGERS:
+   [ ] Client record created/updated
+   [ ] Site records created
+   [ ] Schedule requirements created
+   [ ] Trinity notified
+   [ ] Invoice schedule created
+   [ ] Activity logged
+```
+
+## 9.2 Employee File Pipeline
+
+```
+EMPLOYEE ONBOARDING PIPELINE:
+
+1. INVITE:
+   [ ] Invite email sent
+   [ ] Packet record created
+   [ ] Token generated
+   [ ] Deadline calculated (15 days)
+
+2. WIZARD COMPLETION:
+   [ ] Each section saves incrementally
+   [ ] Progress percentage updates
+   [ ] Documents upload correctly
+   [ ] Documents stored in correct location
+   [ ] Documents linked to packet
+
+3. SUBMISSION:
+   [ ] Status changes to 'submitted'
+   [ ] Admin notified
+   [ ] Review queue updated
+
+4. REVIEW:
+   [ ] Admin can view all data
+   [ ] Admin can approve documents
+   [ ] Admin can reject with reason
+   [ ] Partial approval supported
+
+5. APPROVAL:
+   [ ] Status changes to 'approved'
+   [ ] Employee record created
+   [ ] User account created (if needed)
+   [ ] Credentials copied
+   [ ] Compliance tracking initialized
+   [ ] Scheduling eligibility set
+   [ ] Welcome email sent
+   [ ] All documents persisted to employee
+
+6. DOCUMENT PERSISTENCE:
+   [ ] Documents linked to employee (not just packet)
+   [ ] Documents accessible from employee profile
+   [ ] Documents have expiration tracking
+   [ ] Documents trigger renewal alerts
+```
+
+## 9.3 Data Persistence Verification
+
+```
+PERSISTENCE CHECKS:
+
+USER DATA:
+[ ] User profile data persists across sessions
+[ ] User preferences persist
+[ ] User settings persist
+[ ] Dashboard customizations persist
+
+EMPLOYEE DATA:
+[ ] Employee belongs to correct workspace
+[ ] Employee data accessible by authorized users only
+[ ] Employee documents linked correctly
+[ ] Employee credentials tracked
+[ ] Employee scheduling eligibility accurate
+
+CLIENT DATA:
+[ ] Client belongs to correct workspace
+[ ] Client contracts linked
+[ ] Client sites linked
+[ ] Client billing info correct
+
+WORKSPACE ISOLATION:
+[ ] User A cannot see Workspace B data
+[ ] Queries always filter by workspaceId
+[ ] No data leakage possible
+[ ] Multi-tenant security verified
+```
+
+---
+
+# PART 10: RACE CONDITION & CONCURRENCY AUDIT
+
+## 10.1 Race Condition Identification
+
+```bash
+# Find potential race conditions
+# Look for non-atomic operations
+grep -rn "await.*await\|findOne.*update\|get.*set" --include="*.ts" server/
+```
+
+**Common race conditions to check:**
+
+```
+SHIFT ASSIGNMENT:
+Issue: Two users assign same shift simultaneously
+[ ] Optimistic locking implemented
+[ ] Transaction used for assignment
+[ ] Conflict detection works
+[ ] User notified of conflict
+
+CLOCK IN/OUT:
+Issue: Double clock-in creates duplicate entries
+[ ] Duplicate prevention check
+[ ] Transaction for clock events
+[ ] Idempotency key used
+
+INVENTORY/EQUIPMENT:
+Issue: Same equipment issued twice
+[ ] Atomic update for equipment status
+[ ] Check-then-update is atomic
+
+INVOICE GENERATION:
+Issue: Same period invoiced twice
+[ ] Duplicate invoice prevention
+[ ] Period locking mechanism
+
+PAYROLL:
+Issue: Payroll run twice for same period
+[ ] Period status check before run
+[ ] Atomic status update
+```
+
+## 10.2 Database Transaction Verification
+
+```typescript
+// Ensure critical operations use transactions
+
+// GOOD - Uses transaction
+async assignShift(shiftId: string, employeeId: string) {
+  return await db.transaction(async (tx) => {
+    // Check shift is unassigned
+    const shift = await tx.query.shifts.findFirst({
+      where: and(
+        eq(shifts.id, shiftId),
+        isNull(shifts.assignedEmployeeId)
+      )
+    });
+    
+    if (!shift) {
+      throw new Error('Shift already assigned');
+    }
+    
+    // Assign atomically
+    await tx.update(shifts)
+      .set({ assignedEmployeeId: employeeId, status: 'assigned' })
+      .where(eq(shifts.id, shiftId));
+    
+    return shift;
+  });
+}
+
+// BAD - Race condition possible
+async assignShiftBAD(shiftId: string, employeeId: string) {
+  const shift = await db.query.shifts.findFirst({ where: eq(shifts.id, shiftId) });
+  
+  // RACE: Another request could assign between check and update!
+  if (shift.assignedEmployeeId) {
+    throw new Error('Shift already assigned');
+  }
+  
+  await db.update(shifts)
+    .set({ assignedEmployeeId: employeeId })
+    .where(eq(shifts.id, shiftId));
+}
+```
+
+---
+
+# PART 11: COMPLETE VERIFICATION CHECKLIST
+
+## 11.1 Pre-Launch Checklist
+
+```
+CRITICAL PATH (Must pass before ANY testing):
+
+AUTHENTICATION:
+[ ] Login works
+[ ] Logout works
+[ ] Session persists
+[ ] Password reset works
+
+WORKSPACE:
+[ ] Workspace creation works
+[ ] Workspace isolation verified
+[ ] User invitation works
+
+CORE CRUD:
+[ ] Employees CRUD works
+[ ] Clients CRUD works
+[ ] Sites CRUD works
+[ ] Shifts CRUD works
+
+TIME TRACKING:
+[ ] Clock in works
+[ ] Clock out works
+[ ] Time entries save
+
+COMMUNICATIONS:
+[ ] Chat messages send/receive
+[ ] Notifications deliver
+
+AI:
+[ ] Trinity responds
+[ ] Fallback chain works
+[ ] Cost tracking works
+```
+
+## 11.2 Feature Parity Checklist
+
+```
+DESKTOP ↔ MOBILE PARITY:
+
+| Feature | Desktop | Mobile | Parity |
+|---------|---------|--------|--------|
+| Dashboard | ✓/✗ | ✓/✗ | ✓/✗ |
+| Employee List | ✓/✗ | ✓/✗ | ✓/✗ |
+| Employee Detail | ✓/✗ | ✓/✗ | ✓/✗ |
+| Schedule View | ✓/✗ | ✓/✗ | ✓/✗ |
+| Time Clock | ✓/✗ | ✓/✗ | ✓/✗ |
+| Chat | ✓/✗ | ✓/✗ | ✓/✗ |
+| Settings | ✓/✗ | ✓/✗ | ✓/✗ |
+| ... | ... | ... | ... |
+```
+
+## 11.3 Integration Checklist
+
+```
+QUICKBOOKS:
+[ ] OAuth connect works
+[ ] Token refresh works
+[ ] Customer sync works
+[ ] Invoice sync works
+[ ] Disconnect works
+
+RESEND (Email):
+[ ] API configured
+[ ] Emails deliver
+[ ] Templates work
+[ ] Tracking works
+
+WEBSOCKET:
+[ ] Connection establishes
+[ ] Messages deliver
+[ ] Reconnection works
+[ ] No storms
+
+EXTERNAL APIs:
+[ ] Google Maps (geocoding)
+[ ] Stripe (payments)
+[ ] Any other integrations
+```
+
+---
+
+# OUTPUT FORMAT
+
+```markdown
+# COAILEAGUE COMPREHENSIVE PLATFORM AUDIT REPORT
+
+## Date: [DATE]
+## Auditor: Replit Agent Team
+## Duration: [HOURS]
+## Scope: Full Platform + AI Intelligence Upgrade
+
+---
+
+## EXECUTIVE SUMMARY
+
+### Overall Status: [READY / NOT READY / CRITICAL ISSUES]
+
+### Statistics:
+- Total Features Audited: X
+- Working: X
+- Partial: X
+- Broken: X
+- Missing: X
+
+### AI Status:
+- Trinity (Gemini): [UPGRADED / NEEDS WORK]
+- Claude Judge: [UPGRADED / NEEDS WORK]
+- GPT Workhorse: [UPGRADED / NEEDS WORK]
+- Sub-Agents: [IMPLEMENTED / NEEDS WORK]
+
+---
+
+## CRITICAL ISSUES (Fix immediately)
+| # | Category | Issue | Location | Fix Required |
+|---|----------|-------|----------|--------------|
+
+## HIGH PRIORITY (Fix before launch)
+| # | Category | Issue | Location | Fix Required |
+|---|----------|-------|----------|--------------|
+
+## MEDIUM PRIORITY (Fix within week 1)
+| # | Category | Issue | Location | Fix Required |
+|---|----------|-------|----------|--------------|
+
+## LOW PRIORITY (Technical debt)
+| # | Category | Issue | Location | Fix Required |
+|---|----------|-------|----------|--------------|
+
+---
+
+## FEATURE STATUS BY CATEGORY
+
+### Authentication: [X/Y Passing]
+### Workspace Management: [X/Y Passing]
+### Employee Management: [X/Y Passing]
+### Client Management: [X/Y Passing]
+### Scheduling: [X/Y Passing]
+### Time Tracking: [X/Y Passing]
+### Payroll: [X/Y Passing]
+### Invoicing: [X/Y Passing]
+### Communications: [X/Y Passing]
+### AI/Trinity: [X/Y Passing]
+### Support System: [X/Y Passing]
+
+---
+
+## MOBILE RENDERING ISSUES
+| Page | Issue | Screenshot | Fix |
+|------|-------|------------|-----|
+
+---
+
+## API ISSUES
+| Endpoint | Issue | Status Code | Fix |
+|----------|-------|-------------|-----|
+
+---
+
+## DATABASE ISSUES
+| Table | Issue | Fix |
+|-------|-------|-----|
+
+---
+
+## AI INTELLIGENCE STATUS
+
+### Trinity (Gemini)
+- Persona: [UPGRADED / PENDING]
+- Tools: [X/Y Implemented]
+- Sub-agents: [X/Y Connected]
+- Logic Loop: [IMPLEMENTED / PENDING]
+
+### Claude Judge
+- Evaluation Framework: [IMPLEMENTED / PENDING]
+- Decision Authority: [IMPLEMENTED / PENDING]
+- Escalation Rules: [IMPLEMENTED / PENDING]
+
+### GPT Workhorse
+- Task Prompts: [X/Y Implemented]
+- Batch Processing: [IMPLEMENTED / PENDING]
+- Structured Output: [IMPLEMENTED / PENDING]
+
+---
+
+## WORKFLOW STATUS
+
+### Contract Signing Pipeline: [WORKING / BROKEN]
+### Employee Onboarding Pipeline: [WORKING / BROKEN]
+### Time Clock Pipeline: [WORKING / BROKEN]
+### Payroll Pipeline: [WORKING / BROKEN]
+### Invoice Pipeline: [WORKING / BROKEN]
+
+---
+
+## RACE CONDITION FIXES
+| Operation | Issue | Fix Applied |
+|-----------|-------|-------------|
+
+---
+
+## RECOMMENDED FIX ORDER
+1. [First priority - reason]
+2. [Second priority - reason]
+...
+
+---
+
+## SIGN-OFF
+
+[ ] All critical issues resolved
+[ ] All high priority resolved
+[ ] AI systems upgraded
+[ ] Mobile rendering verified
+[ ] Workflows verified
+[ ] Race conditions addressed
+[ ] Ready for production
+
+---
+```
+
+**BEGIN COMPREHENSIVE AUDIT AND AI UPGRADE NOW.**

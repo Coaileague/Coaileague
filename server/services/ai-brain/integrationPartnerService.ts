@@ -8,6 +8,9 @@ import {
 } from '@shared/schema';
 import { eq, and, desc, sql, like, or, count, ilike } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('integrationPartnerService');
 
 export type SupportAccessLevel = 'root' | 'coo' | 'cto' | 'support_lead' | 'support_agent' | 'viewer';
 
@@ -53,7 +56,7 @@ class IntegrationPartnerService {
   private static instance: IntegrationPartnerService;
 
   private constructor() {
-    console.log('[IntegrationPartner] Service initialized');
+    log.info('[IntegrationPartner] Service initialized');
   }
 
   static getInstance(): IntegrationPartnerService {
@@ -66,12 +69,10 @@ class IntegrationPartnerService {
   determineSupportAccessLevel(platformRole: string): SupportAccessLevel {
     const roleMapping: Record<string, SupportAccessLevel> = {
       'root_admin': 'root',
-      'coo_admin': 'coo',
-      'cto_admin': 'cto',
-      'support_lead': 'support_lead',
-      'support_admin': 'support_lead',
-      'support_agent': 'support_agent',
-      'founder_admin': 'root'
+      'deputy_admin': 'coo',
+      'sysop': 'cto',
+      'support_manager': 'support_lead',
+      'support_agent': 'support_agent'
     };
     return roleMapping[platformRole] || 'viewer';
   }
@@ -180,20 +181,17 @@ class IntegrationPartnerService {
       }
 
       const [partner] = await db.insert(integrationMarketplace).values({
+        workspaceId: PLATFORM_WORKSPACE_ID,
         name: request.name,
         slug: request.slug,
         category: request.category,
-        description: request.description,
-        shortDescription: request.shortDescription,
+        description: request.shortDescription ? `${request.description}\n\n${request.shortDescription}` : request.description,
         logoUrl: request.logoUrl,
         websiteUrl: request.websiteUrl,
         documentationUrl: request.documentationUrl,
         authConfig: request.authConfig,
-        capabilities: request.capabilities || [],
-        supportedDataTypes: request.supportedDataTypes || [],
-        pricingTier: request.pricingTier || 'free',
+        supportedFeatures: request.capabilities || [],
         developerEmail: request.developerEmail,
-        developerName: request.developerName,
         isActive: true,
         isCertified: ['root', 'coo', 'cto'].includes(context.accessLevel),
         installCount: 0
@@ -216,11 +214,11 @@ class IntegrationPartnerService {
           partnerName: request.name,
           category: request.category
         }
-      });
+      }).catch((err) => log.warn('[integrationPartnerService] Fire-and-forget failed:', err));
 
       return { success: true, partner };
     } catch (error) {
-      console.error('[IntegrationPartner] Create partner error:', error);
+      log.error('[IntegrationPartner] Create partner error:', error);
       return { success: false, error: 'Failed to create partner' };
     }
   }
@@ -248,16 +246,12 @@ class IntegrationPartnerService {
 
       if (updates.name) updateData.name = updates.name;
       if (updates.description) updateData.description = updates.description;
-      if (updates.shortDescription) updateData.shortDescription = updates.shortDescription;
       if (updates.logoUrl) updateData.logoUrl = updates.logoUrl;
       if (updates.websiteUrl) updateData.websiteUrl = updates.websiteUrl;
       if (updates.documentationUrl) updateData.documentationUrl = updates.documentationUrl;
       if (updates.authConfig) updateData.authConfig = updates.authConfig;
-      if (updates.capabilities) updateData.capabilities = updates.capabilities;
-      if (updates.supportedDataTypes) updateData.supportedDataTypes = updates.supportedDataTypes;
-      if (updates.pricingTier) updateData.pricingTier = updates.pricingTier;
+      if (updates.capabilities) updateData.supportedFeatures = updates.capabilities;
       if (updates.developerEmail) updateData.developerEmail = updates.developerEmail;
-      if (updates.developerName) updateData.developerName = updates.developerName;
 
       await db.update(integrationMarketplace)
         .set(updateData as any)
@@ -271,7 +265,7 @@ class IntegrationPartnerService {
 
       return { success: true };
     } catch (error) {
-      console.error('[IntegrationPartner] Update partner error:', error);
+      log.error('[IntegrationPartner] Update partner error:', error);
       return { success: false, error: 'Failed to update partner' };
     }
   }
@@ -333,13 +327,13 @@ class IntegrationPartnerService {
           reason,
           affectedWorkspaces: connections.length
         }
-      });
+      }).catch((err) => log.warn('[integrationPartnerService] Fire-and-forget failed:', err));
 
       const uniqueWorkspaces = new Set(connections.map(c => c.workspaceId));
 
       return { success: true, affectedWorkspaces: uniqueWorkspaces.size };
     } catch (error) {
-      console.error('[IntegrationPartner] Suspend partner error:', error);
+      log.error('[IntegrationPartner] Suspend partner error:', error);
       return { success: false, affectedWorkspaces: 0, error: 'Failed to suspend partner' };
     }
   }
@@ -389,11 +383,11 @@ class IntegrationPartnerService {
         description: `Integration partner "${partner[0].name}" has been reactivated`,
         userId: context.userId,
         metadata: { partnerId, partnerName: partner[0].name }
-      });
+      }).catch((err) => log.warn('[integrationPartnerService] Fire-and-forget failed:', err));
 
       return { success: true };
     } catch (error) {
-      console.error('[IntegrationPartner] Reactivate partner error:', error);
+      log.error('[IntegrationPartner] Reactivate partner error:', error);
       return { success: false, error: 'Failed to reactivate partner' };
     }
   }
@@ -450,11 +444,11 @@ class IntegrationPartnerService {
         description: `Integration partner "${partner[0].name}" has been permanently deleted`,
         userId: context.userId,
         metadata: { partnerId, partnerName: partner[0].name, forced: force }
-      });
+      }).catch((err) => log.warn('[integrationPartnerService] Fire-and-forget failed:', err));
 
       return { success: true };
     } catch (error) {
-      console.error('[IntegrationPartner] Delete partner error:', error);
+      log.error('[IntegrationPartner] Delete partner error:', error);
       return { success: false, error: 'Failed to delete partner' };
     }
   }
@@ -499,16 +493,15 @@ class IntegrationPartnerService {
   ): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        userId,
+        workspaceId: 'system',
         action: `partner.${action}`,
         entityType: 'integration_partner',
         entityId: details.partnerId as string || 'system',
         details,
-        severity: action.includes('delete') || action.includes('suspend') ? 'warning' : 'info',
-        category: 'security'
+        metadata: { severity: action.includes('delete') || action.includes('suspend') ? 'warning' : 'info', category: 'security' },
       });
     } catch (error) {
-      console.error('[IntegrationPartner] Audit log error:', error);
+      log.error('[IntegrationPartner] Audit log error:', error);
     }
   }
 }

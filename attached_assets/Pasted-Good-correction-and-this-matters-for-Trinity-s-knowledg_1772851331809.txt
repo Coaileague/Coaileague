@@ -1,0 +1,56 @@
+Good correction — and this matters for Trinity's knowledge layer. Here's the accurate breakdown so we correct it everywhere:
+
+---
+
+## TEXAS SECURITY LICENSE TERMINOLOGY — CORRECTED
+
+In Texas the document issued by **Texas DPS Private Security Bureau** is officially called the **PERC card** (Personal Employment Registration Certificate) but in the industry and on the street it is commonly called a **Guard Card** — both terms refer to the same document.
+
+**Texas License Levels:**
+- **Level II** — Unarmed Security Officer (Guard Card, unarmed)
+- **Level III** — Armed Security Officer (Guard Card, armed — requires firearms qualification)
+- **Level IV** — Personal Protection Officer (Bodyguard level)
+- **Level V and above** — Commissioned officer/management tiers
+
+---
+
+## HOW THIS DIFFERS STATE BY STATE
+
+| State | What It's Called | Issuing Authority |
+|-------|-----------------|-------------------|
+| Texas | PERC Card / Guard Card (Level II/III/IV) | Texas DPS Private Security Bureau |
+| California | Guard Card | BSIS — Bureau of Security and Investigative Services |
+| Florida | Class D / Class G License | FDACS Division of Licensing |
+| New York | Security Guard Registration | NY Secretary of State |
+| Illinois | PERC Card (different from TX — Permanent Employee Registration Card) | Illinois State Police |
+| Georgia | Security License | Georgia Board of Private Detective and Security Agencies |
+| Arizona | Security Guard License | Arizona DPS |
+
+---
+
+## WHY THIS MATTERS FOR TRINITY
+
+Every reference in Trinity's knowledge corpus that says "PERC card" needs to also recognize "Guard Card" as the same thing when a Texas user says it. An officer texting Trinity "my guard card expires next month" must be understood identically to "my PERC card expires next month."
+
+**Add this to Trinity's language understanding layer:**
+
+```
+TEXAS LICENSE ALIASES — Trinity recognizes all of these as the same document:
+  "PERC card"
+  "Guard card"  
+  "Level 2 card" / "Level 3 card" / "Level 4 card"
+  "DPS card"
+  "security license"
+  "my license"  (in context of security work)
+
+When any of these are mentioned Trinity:
+  1. Pulls the officer's license record
+  2. Checks expiration against today's date
+  3. Checks what level they hold vs. what level their current assignments require
+  4. Flags any mismatch or upcoming expiration proactively
+```
+
+**And for multi-state operations Trinity must know:**
+When Statewide sends an officer to work in California, their Texas Guard Card does **not** transfer. They need a California Guard Card from BSIS. Trinity should flag this automatically any time an officer is being scheduled in a state where their current license doesn't apply — before the shift is published, not after.
+
+Want me to update the full knowledge corpus with the corrected terminology and the multi-state license recognition logic?

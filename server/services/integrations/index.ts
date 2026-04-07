@@ -14,7 +14,7 @@
  */
 
 export { quickbooksIntegration, QuickBooksIntegration } from './quickbooksIntegration';
-export type { QuickBooksConfig, QuickBooksCredentials } from './quickbooksIntegration';
+export type { QuickBooksCredentials } from './quickbooksIntegration';
 
 export { gustoIntegration, GustoIntegration } from './gustoIntegration';
 export type { GustoConfig, GustoCredentials, GustoEmployee, GustoPayroll } from './gustoIntegration';
@@ -23,7 +23,10 @@ export const INTEGRATION_STATUS = {
   QUICKBOOKS: {
     name: 'QuickBooks Online',
     description: 'Sync invoices and financial data',
-    requiredSecrets: ['QUICKBOOKS_CLIENT_ID', 'QUICKBOOKS_CLIENT_SECRET'],
+    requiredSecrets: [
+      'QUICKBOOKS_DEV_CLIENT_ID', 'QUICKBOOKS_DEV_CLIENT_SECRET',
+      'QUICKBOOKS_PROD_CLIENT_ID', 'QUICKBOOKS_PROD_CLIENT_SECRET',
+    ],
     documentationUrl: 'https://developer.intuit.com/',
   },
   GUSTO: {
@@ -38,9 +41,13 @@ export function getIntegrationStatus(): {
   quickbooks: { configured: boolean; name: string };
   gusto: { configured: boolean; name: string };
 } {
+  const hasDevCreds = !!(process.env.QUICKBOOKS_DEV_CLIENT_ID && process.env.QUICKBOOKS_DEV_CLIENT_SECRET);
+  const hasProdCreds = !!(process.env.QUICKBOOKS_PROD_CLIENT_ID && process.env.QUICKBOOKS_PROD_CLIENT_SECRET);
+  const hasLegacyCreds = !!(process.env.QUICKBOOKS_CLIENT_ID && process.env.QUICKBOOKS_CLIENT_SECRET);
+
   return {
     quickbooks: {
-      configured: !!(process.env.QUICKBOOKS_CLIENT_ID && process.env.QUICKBOOKS_CLIENT_SECRET),
+      configured: hasDevCreds || hasProdCreds || hasLegacyCreds,
       name: INTEGRATION_STATUS.QUICKBOOKS.name,
     },
     gusto: {

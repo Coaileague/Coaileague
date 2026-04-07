@@ -2,6 +2,8 @@ import { aiBrainEvents } from './internalEventEmitter';
 import { db } from '../../db';
 import { serviceControlStates } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('serviceControl');
 
 export type OrchestrationServiceName = 
   | 'supervisory_agent'
@@ -88,21 +90,21 @@ class ServiceControlManager {
           state.lastStarted = row.lastStartedAt;
           pausedServices.push(serviceName);
           
-          console.log(`[ServiceControl] Restored persisted pause state for ${serviceName} (paused by ${row.pausedBy})`);
+          log.info(`[ServiceControl] Restored persisted pause state for ${serviceName} (paused by ${row.pausedBy})`);
         }
       }
       
       this.persistenceReady = true;
       
       if (pausedServices.length > 0) {
-        console.log(`[ServiceControl] Persistence layer initialized - ${pausedServices.length} services remain paused from previous session`);
+        log.info(`[ServiceControl] Persistence layer initialized - ${pausedServices.length} services remain paused from previous session`);
       } else {
-        console.log('[ServiceControl] Persistence layer initialized - all services starting fresh');
+        log.info('[ServiceControl] Persistence layer initialized - all services starting fresh');
       }
       
       return pausedServices;
     } catch (error) {
-      console.error('[ServiceControl] Failed to load persisted states:', error);
+      log.error('[ServiceControl] Failed to load persisted states:', error);
       this.persistenceReady = true;
       return [];
     }
@@ -117,6 +119,7 @@ class ServiceControlManager {
     try {
       await db.insert(serviceControlStates)
         .values({
+          workspaceId: 'system',
           serviceName: service,
           status: state.status,
           pausedBy: state.pausedBy,
@@ -137,7 +140,7 @@ class ServiceControlManager {
           },
         });
     } catch (error) {
-      console.error(`[ServiceControl] Failed to persist state for ${service}:`, error);
+      log.error(`[ServiceControl] Failed to persist state for ${service}:`, error);
     }
   }
 
@@ -168,7 +171,7 @@ class ServiceControlManager {
       try {
         pauseCallback();
       } catch (error) {
-        console.error(`[ServiceControl] Error pausing ${service}:`, error);
+        log.error(`[ServiceControl] Error pausing ${service}:`, error);
         return { success: false, message: `Failed to pause ${service}: ${error}` };
       }
     }
@@ -188,7 +191,7 @@ class ServiceControlManager {
       timestamp: new Date().toISOString(),
     });
 
-    console.log(`[ServiceControl] Service ${service} paused by ${userId}${reason ? `: ${reason}` : ''}`);
+    log.info(`[ServiceControl] Service ${service} paused by ${userId}${reason ? `: ${reason}` : ''}`);
     return { success: true, message: `Service ${service} paused successfully` };
   }
 
@@ -210,7 +213,7 @@ class ServiceControlManager {
       try {
         resumeCallback();
       } catch (error) {
-        console.error(`[ServiceControl] Error resuming ${service}:`, error);
+        log.error(`[ServiceControl] Error resuming ${service}:`, error);
         return { success: false, message: `Failed to resume ${service}: ${error}` };
       }
     }
@@ -229,7 +232,7 @@ class ServiceControlManager {
       timestamp: new Date().toISOString(),
     });
 
-    console.log(`[ServiceControl] Service ${service} resumed by ${userId}`);
+    log.info(`[ServiceControl] Service ${service} resumed by ${userId}`);
     return { success: true, message: `Service ${service} resumed successfully` };
   }
 

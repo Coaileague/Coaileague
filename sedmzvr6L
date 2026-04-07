@@ -1,0 +1,103 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["jq", "chromium", "glib", "nss", "nspr", "atk", "gtk3", "pango", "cairo", "dbus", "libdrm", "mesa", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "alsa-lib", "cups", "libxkbcommon", "openjdk", "unzip", "zip", "nodejs_20"]
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["sh", "-c", "./deploy-build.sh"]
+run = ["npm", "run", "start"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5098
+externalPort = 3000
+
+[[ports]]
+localPort = 5099
+externalPort = 3002
+
+[[ports]]
+localPort = 5904
+externalPort = 4200
+
+[env]
+PORT = "5000"
+
+[workflows]
+runButton = "Start application"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[agent]
+integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0", "javascript_openai_ai_integrations:1.0.0", "javascript_object_storage:1.0.0", "github:1.0.0"]
+
+[userenv]
+
+[userenv.development]
+TRINITY_DIALOGUE_ENABLED = "false"
+EMAIL_SIMULATION_MODE = "true"
+TEST_USERNAME = "statewide-qa@test.local"
+TEST_PASSWORD = "TestPassword123!"
+PLAYWRIGHT_TEST_KEY = "playwright-e2e-test-dev-only-2026"
+
+[userenv.shared]
+DISABLE_SEASONAL_THEMING = "true"
+STRIPE_STARTER_MONTHLY_PRICE_ID = "price_1SjqRT8XHrr8nNEqJu0nQMUX"
+STRIPE_STARTER_YEARLY_PRICE_ID = "price_1SjqRT8XHrr8nNEqdpGsuSe4"
+STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID = "price_1SjqRU8XHrr8nNEq6ICvb1lV"
+STRIPE_PROFESSIONAL_YEARLY_PRICE_ID = "price_1SjqRU8XHrr8nNEqeHP06nJx"
+STRIPE_EMPLOYEE_SEAT_PRICE_ID = "price_1SjqRV8XHrr8nNEq7ZUQeUq4"
+STRIPE_MANAGER_SEAT_PRICE_ID = "price_1SjqRW8XHrr8nNEqEZUNHOfF"
+STRIPE_EMPLOYEE_OVERAGE_PRICE_ID = "price_1SjqRV8XHrr8nNEq7ZUQeUq4"
+STRIPE_CREDITS_STARTER_PRICE_ID = "price_1SijQe8XHrr8nNEqFkUQZ2DB"
+STRIPE_CREDITS_STANDARD_PRICE_ID = "price_1SijQf8XHrr8nNEqI1DsvIfA"
+STRIPE_CREDITS_PROFESSIONAL_PRICE_ID = "price_1SijQf8XHrr8nNEqXnATS6N9"
+STRIPE_CREDITS_ENTERPRISE_PRICE_ID = "price_1SijQg8XHrr8nNEqWeWyDk6E"
+STRIPE_ADDON_CREDITS_PRICE_ID = "price_1SijQf8XHrr8nNEqI1DsvIfA"
+STRIPE_SETUP_STARTER_PRICE_ID = "price_1SoTz88XHrr8nNEqxSTqByE0"
+STRIPE_SETUP_PROFESSIONAL_PRICE_ID = "price_1SoTz98XHrr8nNEqQcb1FEEb"
+STRIPE_SETUP_ENTERPRISE_PRICE_ID = "price_1SoTz98XHrr8nNEqngStjpQt"
+MAINTENANCE_BYPASS_SECRET = "f8160ba9000995c2f31660d2805b46fff6dbf71a577121b5633f23065d26ff72"
+GITHUB_REPO_URL = "https://github.com/6-7Development/Coaileague.git"
+STRIPE_ENTERPRISE_MONTHLY_PRICE_ID = "price_1T4aVV8XHrr8nNEqbrl3hCKV"
+STRIPE_ENTERPRISE_YEARLY_PRICE_ID = "price_1SsB4C8XHrr8nNEqZxXpfv06"
+PLATFORM_DEFAULT_WORKSPACE_ID = "demo-workspace-00000000"
+OPEN_API_KEY = "AIzaSyD2WBmwJyziaAkZ9T-OhSPYELztzV_05sQ"
+GEMINI_API_KEY = "AIzaSyD2WBmwJyziaAkZ9T-OhSPYELztzV_05sQ"
+RESEND_WEBHOOK_SECRET = "whsec_fUR5DvyIohHPw1sMJhQ//EbmOUoVSBxY"
+RESEND_FROM_EMAIL = "noreply@coaileague.com"
+
+[userenv.production]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-ba88e5c1-1507-4dff-af10-a268378161f6"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 300000

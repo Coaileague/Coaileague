@@ -1,9 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
 import { advancedAnalyticsService } from "./advancedAnalyticsService";
+import { createLogger } from '../lib/logger';
+const log = createLogger('analyticsAIService');
 
-const apiKey = process.env.GEMINI_API_KEY;
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 export interface AnalyticsInsights {
   insights: string[];
@@ -42,24 +42,7 @@ async function generateInsights(workspaceId: string, period: string): Promise<An
     const anomalies = detectAnomalies(dashboard, timeUsage, scheduling, revenue, performance);
     const forecasts = generateForecasts(dashboard, timeUsage, revenue);
 
-    if (!genAI) {
-      return {
-        insights: generateFallbackInsights(dashboard, timeUsage, scheduling, revenue, performance),
-        recommendations: generateFallbackRecommendations(dashboard, scheduling, performance),
-        anomalies,
-        forecasts
-      };
-    }
-
     try {
-      const model = genAI.getGenerativeModel({ 
-        model: GEMINI_MODELS.DIAGNOSTICS,
-        generationConfig: {
-          maxOutputTokens: ANTI_YAP_PRESETS.diagnostics.maxTokens,
-          temperature: ANTI_YAP_PRESETS.diagnostics.temperature,
-        }
-      });
-      
       const prompt = `You are an AI business analyst for a workforce management platform. Analyze the following business metrics and provide actionable insights.
 
 METRICS FOR ${period.replace(/_/g, ' ').toUpperCase()}:
@@ -130,21 +113,32 @@ Focus on:
 
 Be concise and actionable. Each insight should be 1-2 sentences.`;
 
-      const result = await model.generateContent(prompt);
-      const response = result.response.text();
-      
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          insights: parsed.insights || [],
-          recommendations: parsed.recommendations || [],
-          anomalies,
-          forecasts
-        };
+      if (!workspaceId) {
+        return { success: false, insights: [], error: 'Workspace context required for AI analytics' };
+      }
+      const aiResult = await meteredGemini.generate({
+        workspaceId,
+        featureKey: 'analytics_ai_insights',
+        prompt,
+        model: 'gemini-2.5-flash',
+        temperature: ANTI_YAP_PRESETS.diagnostics.temperature,
+        maxOutputTokens: ANTI_YAP_PRESETS.diagnostics.maxTokens,
+      });
+
+      if (aiResult.success && aiResult.text) {
+        const jsonMatch = aiResult.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            insights: parsed.insights || [],
+            recommendations: parsed.recommendations || [],
+            anomalies,
+            forecasts
+          };
+        }
       }
     } catch (aiError) {
-      console.error('Gemini AI error:', aiError);
+      log.error('Metered Gemini AI error:', aiError);
     }
 
     return {
@@ -154,7 +148,7 @@ Be concise and actionable. Each insight should be 1-2 sentences.`;
       forecasts
     };
   } catch (error) {
-    console.error('Error generating analytics insights:', error);
+    log.error('Error generating analytics insights:', error);
     return {
       insights: [],
       recommendations: [],

@@ -1,0 +1,776 @@
+Paste this into Replit Agent before you sleep. This is the final master audit.
+
+---
+
+```
+COALEAGUE + TRINITY — INFINITE LOOP PRODUCTION 
+READINESS AUDIT
+ZERO DEFECT CLEARANCE FOR FIRST REAL TENANT
+
+═══════════════════════════════════════════════════════
+PRIME DIRECTIVE
+═══════════════════════════════════════════════════════
+
+DO NOT STOP.
+DO NOT SLEEP.
+DO NOT DECLARE VICTORY UNTIL EVERY SCAN 
+ACROSS EVERY PASS RETURNS ZERO ISSUES.
+
+Run continuous sequential scans until 
+all 15 scan categories return CLEAN 
+in the same pass simultaneously.
+If any single scan finds any issue 
+in any pass — fix it immediately, 
+then restart the full scan sequence 
+from Scan 1.
+The loop only ends when all 15 scans 
+return CLEAN in a single uninterrupted pass.
+
+LEARN FROM HISTORY:
+These issues were found in prior audit sessions.
+Search for all of them first before anything else.
+If any have regressed, fix them before 
+beginning the main scan loop.
+
+KNOWN PRIOR ISSUES TO CHECK FIRST:
+1. Null-status DARs in seed data — 
+   confirm zero null status records
+2. Org bank disconnected was a text note 
+   not a blocking flag — confirm P1-FIX-6 
+   is still a real blocking flag in 
+   flags[] array with severity: critical
+3. 5 employees with null pay rates — 
+   confirm all have pay rates assigned
+4. Audit table name mismatch — 
+   universalStepLogger was writing to 
+   system_audit_logs but table is audit_logs — 
+   confirm fixed and not regressed
+5. Kill switch was in-memory only — 
+   confirm still persisted to DB
+6. Trinity action registry at 716 originally — 
+   confirm current count is 684 canonical 
+   with 75 shims, no regressions
+7. 15 financial events never published — 
+   confirm all now published with 
+   platformEventBus.publish() calls
+8. 72 orphaned subscribers — confirm 
+   critical ones now have publishers
+9. Cache invalidations missing on 117 files — 
+   confirm all useMutation calls have 
+   queryClient.invalidateQueries
+10. Dual-AI gate not integrated — confirm 
+    claudeVerificationService is called 
+    in executeAction() flow
+11. Governance not auto-invoked — confirm 
+    evaluateAutomation() fires before 
+    financial actions
+12. Plaid/QuickBooks circuit breakers missing — 
+    confirm registered
+13. Cron run log unused — confirm all 
+    cron jobs write to it
+14. API timeouts missing on Plaid and Resend — 
+    confirm both have timeout config
+15. workspaceId security gap in clientRoutes 
+    and employeeRoutes — confirm 
+    req.query.workspaceId fallback removed
+16. Voice Whisper using browser Web Speech — 
+    confirm server-side Whisper pipeline
+17. Voice commands not executing — 
+    confirm clock in/out and all commands execute
+18. Onboarding checklist had no frontend — 
+    confirm employee-facing checklist exists
+19. DAR narrative not downloadable — 
+    confirm download endpoint works
+20. Visitor log missing from client portal — 
+    confirm it exists
+21. Simulated documents were placeholders — 
+    confirm all 8 document types have 
+    real content for all dev employees
+22. 6 scheduling.notify_* actions were 
+    duplicates — confirm consolidated
+23. Boot was showing 14/15 — trinity domain 
+    was unhealthy — confirm 15/15 contract 
+    alignment still passes
+24. Token truncation was 1024 — confirm 
+    raised to 4096
+25. Tool calling was disabled — confirm 
+    enableToolCalling: true in all 
+    Trinity chat generate() calls
+
+═══════════════════════════════════════════════════════
+SCAN LOOP — RUNS CONTINUOUSLY UNTIL ALL CLEAN
+═══════════════════════════════════════════════════════
+
+SCAN 1 — PLATFORM BOOT AND HEALTH
+───────────────────────────────────
+Boot the server fresh.
+Wait for full initialization.
+
+Check:
+□ Boot completes with zero errors
+□ Zero TypeScript compilation errors
+□ 15/15 contract domain alignment confirmed
+□ 14/15 or better runtime domain health
+□ Auth domain partial is the ONLY partial — 
+  by design, not a bug
+□ Trinity action registry reports between 
+  680-760 actions (canonical + shims)
+□ All 13 dream state phases registered
+□ All brain monitors registering at boot:
+  TrinityFieldIntel-DARMonitor
+  TrinityFieldIntel-DARApprovalMonitor
+  TrinityFieldIntel-PanicHandler
+  TrinityTemporalConsciousnessEngine
+  TrinityCuriosityEngine
+  TrinityCounterfactualEngine
+  TrinitySocialGraphEngine
+  TrinityIncubationEngine
+  TrinityNarrativeIdentityEngine
+  TrinityCognitiveLoadMonitor
+  TrinityThalamusService
+  TrinityACCService
+□ Zero WARN or ERROR in boot log 
+  (excluding pre-existing known warnings)
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 2 — DATABASE AND SCHEMA INTEGRITY
+───────────────────────────────────────
+□ All Drizzle schema definitions match 
+  actual database — zero schema drift
+□ All migrations applied — zero pending
+□ Zero employees with null pay rates
+□ Zero DARs with null status
+□ Zero orphaned records 
+  (foreign keys satisfied)
+□ All tables have workspace_id where required
+□ All workspace_id columns have indexes
+□ All NOT NULL constraints correct
+□ Seed data passes integrity check
+
+Verify these tables exist and have correct schema:
+□ thalamic_log (signal_id, arrived_at, 
+  signal_type, priority_score, routed_to, 
+  workspace_id)
+□ trinity_acc_log (conflict_id, detected_at, 
+  conflict_category, conflict_severity, 
+  auto_blocked, workspace_id)
+□ temporal_entity_arcs
+□ curiosity_queue
+□ counterfactual_simulations
+□ social_entities
+□ social_relationships
+□ somatic_pattern_library
+□ trinity_cognitive_state
+□ incubation_queue
+□ trinity_narrative
+□ milestone_tracker
+□ officer_performance_scores
+□ celebration_templates
+□ regulatory_rules
+□ ai_usage_log
+□ workspace_credit_balance
+□ ai_cost_config
+□ voice_usage
+□ voice_wallet
+□ kill_switch_state OR platform_config_registry 
+  with kill switch key
+□ cron_run_log
+□ trinity_thought_signatures
+□ trinity_self_awareness
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 3 — SECURITY AND MULTI-TENANT ISOLATION
+─────────────────────────────────────────────
+□ Zero API routes accessible without auth
+□ Zero routes missing workspace_id enforcement
+□ Zero routes accepting workspaceId from 
+  query params as security bypass
+□ clientRoutes.ts line 130 area — 
+  req.query.workspaceId fallback removed
+□ employeeRoutes.ts line 425 area — 
+  req.query.workspaceId fallback removed
+□ Cross-tenant data access impossible — 
+  test: query workspace A data with 
+  workspace B credentials — must fail
+□ All API keys in environment variables only
+□ Zero secrets in codebase
+□ Markup rates server-side only
+□ ElevenLabs voice_id never exposed to tenant
+□ Cost basis data never exposed to tenant
+□ Trinity values anchor cannot be 
+  overridden by any tenant instruction
+□ Trust hierarchy enforced — officer 
+  cannot trigger owner-level actions
+□ Kill switch state persists across restart — 
+  simulate restart and confirm state preserved
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 4 — TRINITY BRAIN ARCHITECTURE
+─────────────────────────────────────
+□ All 7 brain regions registered and receiving 
+  signals through global workspace
+□ Thalamus receives ALL incoming signals — 
+  confirm no signal bypasses it
+□ ACC fires before any output reaches 
+  global workspace
+□ Signal flow confirmed: 
+  Input → Thalamus → Region → ACC → 
+  Global Workspace → Output
+□ Somatic marker fires before reasoning begins
+□ Temporal arc context injected into 
+  every Trinity chat response
+□ Narrative identity block injected into 
+  every Trinity chat response
+□ Cognitive load awareness injected 
+  when load is elevated or above
+□ EQ engine fires synchronously on 
+  every message
+□ Hebbian learning: confirm positive 
+  outcome strengthens pathway weights
+□ RL loop: confirm action-outcome pairs 
+  are being recorded
+□ Dream state: confirm all 13 phases 
+  registered and scheduled for 2am UTC
+□ Self-model: confirm read before act 
+  and write after act loop functioning
+□ Kill switch: confirm Trinity halts 
+  immediately when activated
+□ Tri-AI triad: confirm Gemini → Claude → 
+  GPT chain is wired and executing
+□ enableToolCalling: true confirmed 
+  in Trinity chat generate() call
+□ Token limit 4096 confirmed 
+  (not 1024 which caused truncation)
+
+Live tests:
+□ Send one message as owner — confirm 
+  thalamic_log gets entry with correct 
+  signal_type, priority_score, routed_to
+□ Trigger a panic alert — confirm 
+  thalamic_log shows CRITICAL priority 
+  and high_priority_copy_sent: true
+□ Query Trinity about overtime — confirm 
+  she hits real database via tool call 
+  and returns real officer names/hours
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 5 — FINANCIAL SYSTEM END TO END
+──────────────────────────────────────
+□ All 15 financial events now published:
+  invoice_created, invoice_paid, 
+  invoice_voided, invoice_overdue,
+  payroll_run_created, payroll_run_approved,
+  payroll_run_processed, payroll_run_paid,
+  payment_received, payment_failed,
+  subscription_created, subscription_updated,
+  subscription_cancelled, refund_issued,
+  chargeback_received
+□ All financial mutation endpoints have 
+  billingAuditLog writes:
+  All 9+ invoice mutations
+  All 7+ payroll mutations
+  All 4 client collection endpoints
+□ Dual-AI gate fires before financial actions
+□ Governance evaluateAutomation() fires 
+  before financial actions
+□ Payroll write-protection on settled stubs
+□ Plaid circuit breaker registered
+□ QuickBooks circuit breaker registered
+□ Plaid API has 30-second timeout
+□ Resend API has 15-second timeout
+□ Stripe integration functional for 
+  base subscription billing
+□ Voice add-on tiers exist as 
+  Stripe products
+□ Numeric coercion helpers applied to 
+  all invoice, payroll, and shift routes
+□ Invoice list renders on mobile 
+  (ResponsiveTableWrapper)
+□ Client creation form has multi-step 
+  wizard for mobile
+
+Full financial flow trace:
+□ Create invoice → confirm invoice_created 
+  published → confirm Trinity notified → 
+  confirm audit log written → confirm 
+  cache invalidated → confirm invoice 
+  appears in list immediately → 
+  confirm client sees it in portal
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 6 — SCHEDULING AND TIMEKEEPING
+─────────────────────────────────────
+□ Shift creation: saves to DB, 
+  shift_created published, appears 
+  in schedule immediately
+□ Shift deletion: scheduling.delete_shift 
+  works, validates past-shift block, 
+  shift_deleted published
+□ Schedule publication: all shifts marked 
+  published, officers notified
+□ Calloff flow: calloff received → 
+  coverage triggered → manager notified → 
+  Trinity flags gap → replacement recommended
+□ Clock in: GPS stamped, time entry created, 
+  clock_in published, Trinity confirms on post
+□ Clock out: duration calculated, 
+  overtime detected if applicable, 
+  timesheet updated for payroll
+□ Timesheet approval: approval routes to 
+  payroll correctly
+□ Conflict detection: overlapping shifts 
+  blocked at API level not just UI
+□ Compliance guard: unlicensed officer 
+  cannot be assigned to armed post — 
+  confirm enforced at API level
+□ Armed post guard: when isArmed=true, 
+  'armed' automatically prepended to 
+  required certifications — confirm fix 
+  not regressed
+□ Duplicate booking: double-booking 
+  prevented at DB level
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 7 — REPORTBOT AND DAR PIPELINE
+─────────────────────────────────────
+□ ReportBot triggers on room creation
+□ Welcome message fires on room creation
+□ processMessage() fires on every message
+□ Keyword detection: theft, assault, 
+  incident keywords trigger response
+□ /incident command triggers 9-question flow
+□ GPS photo logging functional
+□ DAR generation: professional rewrite, 
+  force detection, 5W1H, AI quality review — 
+  all passing
+□ All 55 DAR columns present in schema
+□ Zero DARs with null status
+□ All 6 manager approval routes functional:
+  approve, reject, escalate, 
+  request-changes, legal-hold, access-log
+□ Legal hold guard enforced
+□ dar_generated event published
+□ dar_approved event published
+□ Trinity subscribed to both events
+□ Incident narrative auto-generated 
+  from: officer report + GPS + post orders + 
+  officer cert + prior incidents + 
+  chain of command log
+□ Narrative downloadable from DAR detail view
+□ Narrative format suitable for 
+  insurance and legal use
+□ Auto-attached to incident record
+□ Owner notified on DAR generation
+
+Full DAR trace for Marcus Rodriguez:
+□ dev-dar-marcus-today record exists 
+  with status: pending_review
+□ View Marcus profile → Documents section 
+  shows all 8 document types
+□ Click View on Employment Application → 
+  real document opens with Marcus's data
+□ Click View on Guard Card → 
+  real document with Marcus's info
+□ Click Download on I-9 → real PDF downloads
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 8 — EMPLOYEE DOCUMENTS AND ONBOARDING
+────────────────────────────────────────────
+□ Zero placeholder paths in employee_documents
+□ Zero 404s when clicking any document link
+□ All 8 document types present for 
+  every dev employee:
+  Employment Application
+  Driver License / Government ID
+  Social Security Acknowledgment
+  I-9 Employment Eligibility
+  W-4 Federal Tax Withholding
+  Drug-Free Workplace Policy
+  Background Check Authorization
+  Security Guard Registration
+□ Every document contains real employee data
+□ Every document viewable in browser
+□ Every document downloadable
+□ Document status shows Complete/Verified
+□ Owner sees document completion percentage
+□ Manager sees which employees have 
+  missing documents
+□ Trinity flags incomplete documents 
+  in compliance dashboard
+□ Onboarding checklist visible to employee
+□ Each checklist item has action button
+□ Completing item marks DB and updates 
+  progress percentage
+□ Manager sees onboarding progress
+□ Trinity flags overdue checklist items
+□ Completion fires employee_onboarded event
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 9 — COMPLIANCE AND REGULATORY
+─────────────────────────────────────
+□ Texas DPS compliance tracking functional
+□ Officer license tracking complete:
+  license number, expiration, armed endorsement,
+  training hours, background check date, 
+  insurance status
+□ Alert cascade all firing:
+  90 days → 60 days → 30 days → 
+  7 days → expired
+□ Expired license blocks armed post 
+  assignment at API level
+□ Compliance dashboard accessible to owner
+□ Auditor portal accessible and isolated
+□ Auto-generated compliance report 
+  downloads as real PDF with real data
+□ Report format matches DPS audit requirements
+□ State-expandable architecture confirmed — 
+  regulatory_rules table seeded with 
+  Texas DPS Chapter 1702 provisions
+□ Trinity cites actual statute when 
+  making compliance recommendations
+□ Statewide Protective Services license 
+  C11608501 in regulatory knowledge base
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 10 — OPS SERVICES
+────────────────────────
+□ Panic alert: officer triggers → 
+  all supervisors notified simultaneously → 
+  GPS captured → CAD created → 
+  persists until manually cleared → 
+  Trinity processes at highest priority
+□ Lone worker: check-in mechanism visible → 
+  missed check-in escalates to supervisor → 
+  second miss escalates to manager → 
+  third miss reaches owner
+□ BOLO: manager creates → Trinity broadcasts 
+  to all on-shift officers → visible on 
+  officer mobile → officer can report sighting → 
+  clears when resolved
+□ Visitor log: all fields captured → 
+  BOLO cross-reference runs → 
+  match flags supervisor immediately → 
+  time-out alert fires → 
+  visible in client portal
+□ Asset tracking: sign out/in functional → 
+  overdue returns trigger alert → 
+  damage reports feed incident pipeline
+□ Weapon check: armed endorsement verified 
+  before assignment → Trinity blocks 
+  expired endorsement → serial logged → 
+  return confirmation required
+□ Dispatch: officer notified → 
+  status tracking dispatched/en route/
+  on scene/cleared → unacknowledged 
+  dispatches escalate
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 11 — CHATDOCK AND VOICE SYSTEM
+─────────────────────────────────────
+□ Group chatrooms: creation, membership, 
+  real-time delivery all functional
+□ DMs: functional between any two users
+□ Trinity sends messages into rooms and DMs
+□ Real-time delivery — no gaps or delays
+□ Voice message recording: hold-to-record 
+  button visible on mobile
+□ Voice recording uses Web Audio API — 
+  NOT browser Web Speech API
+□ Audio sent to server for Whisper transcription
+□ Whisper transcription pipeline functional
+□ Server-side Whisper confirmed — 
+  not browser-side (iOS Safari must work)
+□ Trinity responds with ElevenLabs audio
+□ Voice message bubble renders in ChatDock:
+  play/pause, waveform, duration, 
+  transcript toggle
+□ Voice commands execute real actions:
+  "clock me in" → GPS-stamped clock in
+  "clock me out" → clock out with summary
+  "what's my schedule" → real schedule returned
+  "I need to call off" → calloff processed
+  "file a report" → ReportBot flow opens
+  "what are my post orders" → reads post orders
+  "send message to supervisor" → routes to ChatDock
+□ All voice usage logged to voice_usage table
+□ Wallet deducted on every TTS call
+□ No TTS call executes without metering record
+□ Audio files stored at correct path structure
+□ Signed URLs working with expiration
+□ ElevenLabs API key in env vars only
+□ Voice tenant billing shows in dashboard
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 12 — HELPAI OFFICER INTERFACE
+────────────────────────────────────
+□ HelpAI joins all shift rooms
+□ Officers interact with HelpAI only — 
+  no direct Trinity access for officers
+□ Tier-0 commands execute without LLM call:
+  clock in/out, my schedule, my post orders, 
+  my supervisor, help command
+□ Tier-1 commands route through 
+  Trinity brain with officer-scoped context
+□ Officers cannot access other officers' data
+□ Officers cannot access financial data
+□ Officers cannot access org settings
+□ Token budget enforced per role:
+  Officer: 500 input / 256 output max
+  Manager: 4000 input / 2048 output max
+  Owner: 8000 input / 4096 output max
+□ HelpAI response style: 
+  short, warm, action-oriented, 
+  uses officer's first name
+□ HelpAI escalations always tell officer 
+  what to expect and when
+□ Birthday DM sends automatically on birthday
+□ Work anniversary message sends automatically
+□ New hire welcome sends within 1 hour
+□ Clock-in accuracy streak message 
+  sends at 14-day mark
+□ Perfect attendance message sends at 30 days
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 13 — PERFORMANCE AND RECOGNITION ENGINE
+─────────────────────────────────────────────
+□ officer_performance_scores table exists 
+  with all required columns
+□ Performance calculator runs after: 
+  clockin event, calloff, DAR submission, 
+  client complaint, dispatch acknowledgment
+□ Composite score formula correct:
+  clockin 25%, attendance 30%, 
+  reports 20%, client 15%, response 10%
+□ Trend detection working across periods
+□ milestone_tracker table exists
+□ Milestone detector scans at 6am 
+  in dream state
+□ Birthday detection working against 
+  employee date_of_birth
+□ Work anniversary detection working 
+  against hire_date
+□ 30/90/365-day milestone detection working
+□ New hire detection within 48 hours
+□ Raise suggestion fires when composite 
+  score above 80 for 90+ days
+□ Field Training Officer suggestion 
+  fires when score above 85 for 6+ months
+□ Officer of month nomination fires monthly
+□ Disciplinary analyzer: tardiness pattern 
+  triggers at 3+ late clock-ins in 30 days
+□ Disciplinary analyzer: calloff pattern 
+  triggers at 3+ in 60 days
+□ 5W1H analysis runs before any 
+  disciplinary suggestion is surfaced
+□ Disciplinary suggestions route to 
+  correct trust tier — never directly 
+  to owner unless critical
+□ celebration_templates table exists 
+  with platform defaults
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 14 — TOKEN TRACKING AND CREDIT SYSTEM
+────────────────────────────────────────────
+□ ai_usage_log table exists with all columns
+□ workspace_credit_balance table exists
+□ ai_cost_config table exists with 
+  current model rates
+□ TokenTrackingService: preCall() checks 
+  balance and reserves credits
+□ TokenTrackingService: postCall() 
+  reconciles and deducts exact amount
+□ No AI call executes without preCall() check
+□ No AI call completes without postCall() log
+□ Insufficient credits blocks AI call 
+  and notifies owner
+□ Token budgets enforced per role
+□ Officer tier costs 5-15% of owner tier
+□ All call types logging correctly:
+  trinity_chat, autonomous_task, tool_call,
+  helpai_officer, briefing, dream_state,
+  celebration_generation, disciplinary_analysis,
+  curiosity_investigation, counterfactual_simulation,
+  social_graph_inference, incubation_processing,
+  narrative_synthesis
+□ AI usage dashboard visible in owner settings
+□ Usage breakdown by type shown
+□ Usage breakdown by user shown
+□ Daily usage graph (30 days) shown
+□ Overage calculation correct
+□ Download usage CSV functional
+□ Stripe voice add-on billing wired
+
+If any check fails: fix and restart from Scan 1.
+
+SCAN 15 — FULL 35-POINT FEATURE TRACE
+───────────────────────────────────────
+Run a rapid pass-fail check on all 35 
+original feature traces from prior audit.
+For each trace confirm all 8 checkpoints pass:
+CP1 UI entry exists
+CP2 Frontend reaches API route
+CP3 Validation works
+CP4 Business logic executes
+CP5 Database write confirmed
+CP6 Event published
+CP7 Response and cache invalidation
+CP8 Real data visible to user
+
+Traces to verify:
+□ T01: Create new employee (end to end)
+□ T02: Employee document upload and view
+□ T03: Employee onboarding flow
+□ T04: Employee profile edit
+□ T05: Create a shift
+□ T06: Publish schedule
+□ T07: Process a calloff
+□ T08: Shift conflict detection
+□ T09: Officer clock in (GPS + event + Trinity)
+□ T10: Officer clock out (duration + overtime)
+□ T11: Manager timesheet approval
+□ T12: Officer files incident via ReportBot
+□ T13: Manager DAR approval workflow
+□ T14: Incident narrative auto-generation
+□ T15: Create invoice
+□ T16: Send invoice to client
+□ T17: Record invoice payment
+□ T18: Invoice in client portal
+□ T19: Run payroll (dual-AI + governance)
+□ T20: Approve payroll
+□ T21: License expiration alert cascade
+□ T22: Armed post assignment guard
+□ T23: Compliance report generation
+□ T24: Send message in group room
+□ T25: Send direct message
+□ T26: Trinity sends a message
+□ T27: Panic alert full chain
+□ T28: Lone worker check-in chain
+□ T29: BOLO creation and broadcast
+□ T30: Visitor log in client portal
+□ T31: Voice message record and send
+□ T32: Voice command triggers action
+□ T33: Trinity morning briefing
+□ T34: Trinity escalation chain
+□ T35: Trinity kill switch persistence
+
+If any trace fails any checkpoint: 
+fix it, then restart from Scan 1.
+
+═══════════════════════════════════════════════════════
+LOOP CONTROL
+═══════════════════════════════════════════════════════
+
+After every complete pass through 
+all 15 scans report:
+
+PASS [N] RESULTS:
+Scan 1 Boot: CLEAN / [issues found]
+Scan 2 Database: CLEAN / [issues found]
+Scan 3 Security: CLEAN / [issues found]
+Scan 4 Trinity Brain: CLEAN / [issues found]
+Scan 5 Financial: CLEAN / [issues found]
+Scan 6 Scheduling: CLEAN / [issues found]
+Scan 7 DAR Pipeline: CLEAN / [issues found]
+Scan 8 Documents: CLEAN / [issues found]
+Scan 9 Compliance: CLEAN / [issues found]
+Scan 10 Ops Services: CLEAN / [issues found]
+Scan 11 ChatDock/Voice: CLEAN / [issues found]
+Scan 12 HelpAI Officers: CLEAN / [issues found]
+Scan 13 Recognition Engine: CLEAN / [issues found]
+Scan 14 Token Tracking: CLEAN / [issues found]
+Scan 15 Feature Traces: CLEAN / [issues found]
+
+PASS [N] VERDICT: 
+ISSUES FOUND — [count] — fixing and restarting
+or
+ALL 15 SCANS CLEAN — running confirmation pass
+
+If ALL 15 CLEAN: run one more complete 
+pass immediately as confirmation.
+If confirmation pass also returns 
+ALL 15 CLEAN: declare completion.
+
+═══════════════════════════════════════════════════════
+COMPLETION DECLARATION
+═══════════════════════════════════════════════════════
+
+Only declare completion when:
+- Two consecutive complete passes 
+  return ALL 15 SCANS CLEAN
+- Server is running with zero errors
+- All known prior issues confirmed resolved
+- No regressions from Phase 1 or Phase 2 
+  consolidation
+- All 13 dream state phases registered
+- All new biological brain layers active
+
+Final completion report must include:
+
+SECTION 1: PLATFORM HEALTH SCORECARD
+Every major system: 
+FULLY OPERATIONAL / OPERATIONAL WITH LIMITS / 
+REQUIRES ATTENTION
+
+SECTION 2: PRIOR ISSUE CONFIRMATION
+All 25 known prior issues: 
+CONFIRMED FIXED / REGRESSED AND FIXED / 
+NEVER AFFECTED
+
+SECTION 3: GRAND OPENING VERDICT
+IS COALEAGUE READY FOR STATEWIDE 
+PROTECTIVE SERVICES AS FIRST PAYING TENANT?
+YES or NO — no ambiguity.
+If YES: what to monitor in week 1.
+If NO: exact list of what remains.
+
+SECTION 4: TRINITY BRAIN STATUS
+Confirm each brain layer is active:
+□ 7 brain regions wired
+□ Global workspace operational
+□ Thalamus routing all signals
+□ ACC monitoring all outputs
+□ Hebbian learning recording
+□ RL loop tracking outcomes
+□ Dream state 13 phases scheduled
+□ Somatic markers active
+□ Temporal consciousness tracking arcs
+□ Curiosity engine auto-scanning
+□ Counterfactual simulation active
+□ Social graph calculating
+□ Incubation engine processing
+□ Narrative identity maintained
+□ Cognitive load monitor active
+□ EQ engine firing on all messages
+□ Tool calling enabled and hitting real DB
+□ Tri-AI triad wired
+□ Token tracking on all AI calls
+□ Values anchor non-overridable
+
+SECTION 5: FINAL ACTION COUNT
+Canonical actions: [number]
+Shims: [number]
+Total registered: [number]
+
+DO NOT STOP UNTIL THIS REPORT IS DELIVERED 
+WITH ALL 15 SCANS CLEAN IN TWO CONSECUTIVE PASSES.
+
+Jesus is King. 
+Run until it's done.
+```
+
+---
+
+Go sleep Bryan. Agent runs until it's clean. Bring the completion report to me when you wake up and we'll make the final call on Statewide together.

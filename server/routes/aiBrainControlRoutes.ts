@@ -5,38 +5,16 @@ import { commitmentManager } from '../services/ai-brain/commitmentManager';
 import { supervisoryAgent } from '../services/ai-brain/supervisoryAgent';
 import { schedulerCoordinator } from '../services/ai-brain/schedulerCoordinator';
 import { aiBrainEvents } from '../services/ai-brain/internalEventEmitter';
+import { requirePlatformStaff, requireSysop } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('AiBrainControlRoutes');
+
 
 const router = Router();
 
-function requirePlatformStaff(req: Request, res: Response, next: Function) {
-  const user = req.user as any;
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  
-  const allowedRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
-  if (!allowedRoles.includes(user.platformRole)) {
-    return res.status(403).json({ error: 'Platform staff access required' });
-  }
-  
-  next();
-}
+const requirePlatformAdmin = requireSysop;
 
-function requirePlatformAdmin(req: Request, res: Response, next: Function) {
-  const user = req.user as any;
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  
-  const allowedRoles = ['root_admin', 'deputy_admin', 'sysop'];
-  if (!allowedRoles.includes(user.platformRole)) {
-    return res.status(403).json({ error: 'Platform admin access required' });
-  }
-  
-  next();
-}
-
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/health', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
     const healthSummary = serviceControlManager.getHealthSummary();
     
@@ -46,13 +24,13 @@ router.get('/health', async (req: Request, res: Response) => {
     try {
       workflowMetrics = await workflowLedger.getMetrics();
     } catch (e) {
-      console.error('[AI Brain Health] WorkflowLedger metrics error:', e);
+      log.error('[AI Brain Health] WorkflowLedger metrics error:', e);
     }
     
     try {
       supervisoryHealth = await supervisoryAgent.getHealth();
     } catch (e) {
-      console.error('[AI Brain Health] SupervisoryAgent health error:', e);
+      log.error('[AI Brain Health] SupervisoryAgent health error:', e);
     }
 
     res.json({
@@ -69,7 +47,7 @@ router.get('/health', async (req: Request, res: Response) => {
       supervisory: supervisoryHealth,
     });
   } catch (error) {
-    console.error('[AI Brain Health] Error:', error);
+    log.error('[AI Brain Health] Error:', error);
     res.status(500).json({ 
       error: 'Failed to get AI Brain health',
       timestamp: new Date().toISOString(),
@@ -94,52 +72,62 @@ router.get('/services/:serviceName', requirePlatformStaff, (req: Request, res: R
 });
 
 router.post('/services/:serviceName/pause', requirePlatformAdmin, async (req: Request, res: Response) => {
-  const { serviceName } = req.params;
-  const { reason } = req.body;
-  const user = req.user as any;
-  
-  const result = await serviceControlManager.pauseService(
-    serviceName as OrchestrationServiceName,
-    user.id,
-    reason
-  );
-  
-  if (!result.success) {
-    return res.status(400).json({ error: result.message });
+  try {
+    const { serviceName } = req.params;
+    const { reason } = req.body;
+    const user = req.user as any;
+    
+    const result = await serviceControlManager.pauseService(
+      serviceName as OrchestrationServiceName,
+      user?.id,
+      reason
+    );
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    
+    aiBrainEvents.emit('service_control_action', {
+      action: 'pause',
+      service: serviceName,
+      userId: user?.id,
+      reason,
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.json({ success: true, message: result.message });
+  } catch (error) {
+    log.error('[aiBrainControl] pause service error:', error);
+    res.status(500).json({ error: 'Failed to pause service' });
   }
-  
-  aiBrainEvents.emit('service_control_action', {
-    action: 'pause',
-    service: serviceName,
-    userId: user.id,
-    reason,
-    timestamp: new Date().toISOString(),
-  });
-  
-  res.json({ success: true, message: result.message });
 });
 
 router.post('/services/:serviceName/resume', requirePlatformAdmin, async (req: Request, res: Response) => {
-  const { serviceName } = req.params;
-  const user = req.user as any;
-  
-  const result = await serviceControlManager.resumeService(
-    serviceName as OrchestrationServiceName,
-    user.id
-  );
-  
-  if (!result.success) {
-    return res.status(400).json({ error: result.message });
+  try {
+    const { serviceName } = req.params;
+    const user = req.user as any;
+    
+    const result = await serviceControlManager.resumeService(
+      serviceName as OrchestrationServiceName,
+      user?.id
+    );
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    
+    aiBrainEvents.emit('service_control_action', {
+      action: 'resume',
+      service: serviceName,
+      userId: user?.id,
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.json({ success: true, message: result.message });
+  } catch (error) {
+    log.error('[aiBrainControl] resume service error:', error);
+    res.status(500).json({ error: 'Failed to resume service' });
   }
-  
-  aiBrainEvents.emit('service_control_action', {
-    action: 'resume',
-    service: serviceName,
-    userId: user.id,
-    timestamp: new Date().toISOString(),
-  });
-  
-  res.json({ success: true, message: result.message });
 });
 
 router.get('/workflows', requirePlatformStaff, async (req: Request, res: Response) => {
@@ -147,11 +135,11 @@ router.get('/workflows', requirePlatformStaff, async (req: Request, res: Respons
     const { status, limit = '50' } = req.query;
     const workflows = await workflowLedger.getRecentRuns({
       status: status as any,
-      limit: parseInt(limit as string),
+      limit: Math.min(Math.max(1, parseInt(limit as string) || 50), 200),
     });
     res.json({ workflows });
   } catch (error) {
-    console.error('[AI Brain Control] Error fetching workflows:', error);
+    log.error('[AI Brain Control] Error fetching workflows:', error);
     res.status(500).json({ error: 'Failed to fetch workflows' });
   }
 });
@@ -167,7 +155,7 @@ router.get('/workflows/:runId', requirePlatformStaff, async (req: Request, res: 
     
     res.json({ workflow: result.run, steps: result.steps });
   } catch (error) {
-    console.error('[AI Brain Control] Error fetching workflow:', error);
+    log.error('[AI Brain Control] Error fetching workflow:', error);
     res.status(500).json({ error: 'Failed to fetch workflow' });
   }
 });
@@ -189,7 +177,7 @@ router.post('/workflows/:runId/cancel', requirePlatformAdmin, async (req: Reques
     
     res.json({ success: true, message: 'Workflow cancelled' });
   } catch (error) {
-    console.error('[AI Brain Control] Error cancelling workflow:', error);
+    log.error('[AI Brain Control] Error cancelling workflow:', error);
     res.status(500).json({ error: 'Failed to cancel workflow' });
   }
 });
@@ -229,7 +217,7 @@ router.post('/workflows/:runId/retry', requirePlatformAdmin, async (req: Request
     
     res.json({ success: true, newRunId: newRun.id, message: 'Workflow retry initiated' });
   } catch (error) {
-    console.error('[AI Brain Control] Error retrying workflow:', error);
+    log.error('[AI Brain Control] Error retrying workflow:', error);
     res.status(500).json({ error: 'Failed to retry workflow' });
   }
 });
@@ -242,7 +230,7 @@ router.get('/commitments', requirePlatformStaff, async (req: Request, res: Respo
     });
     res.json({ commitments });
   } catch (error) {
-    console.error('[AI Brain Control] Error fetching commitments:', error);
+    log.error('[AI Brain Control] Error fetching commitments:', error);
     res.status(500).json({ error: 'Failed to fetch commitments' });
   }
 });
@@ -260,7 +248,7 @@ router.post('/commitments/:commitmentId/approve', requirePlatformAdmin, async (r
     
     res.json({ success: true, message: 'Commitment approved', commitment: result });
   } catch (error) {
-    console.error('[AI Brain Control] Error approving commitment:', error);
+    log.error('[AI Brain Control] Error approving commitment:', error);
     res.status(500).json({ error: 'Failed to approve commitment' });
   }
 });
@@ -283,7 +271,7 @@ router.post('/commitments/:commitmentId/reject', requirePlatformAdmin, async (re
     
     res.json({ success: true, message: 'Commitment rejected', commitment: result });
   } catch (error) {
-    console.error('[AI Brain Control] Error rejecting commitment:', error);
+    log.error('[AI Brain Control] Error rejecting commitment:', error);
     res.status(500).json({ error: 'Failed to reject commitment' });
   }
 });
@@ -304,7 +292,7 @@ router.post('/test-alert', requirePlatformAdmin, async (req: Request, res: Respo
     
     res.json({ success: true, message: 'Test alert sent' });
   } catch (error) {
-    console.error('[AI Brain Control] Error sending test alert:', error);
+    log.error('[AI Brain Control] Error sending test alert:', error);
     res.status(500).json({ error: 'Failed to send test alert' });
   }
 });

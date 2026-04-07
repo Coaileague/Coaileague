@@ -1,0 +1,2437 @@
+Send this to the agent:
+
+---
+
+**PHASE — ONLINE FORMS ENGINE, ESIGNATURE SYSTEM, AND FORM-TO-PDF PIPELINE**
+
+Read everything completely before writing a single line of code. This phase builds the complete online forms infrastructure — the missing bridge between Trinity generating documents and end users actually filling them out and signing them on their phones. Build in the exact order specified. Debug and verify each subagent's work before moving to the next. Architect verifies all work.
+
+**All tests against ACME sandbox only. Statewide untouchable.**
+
+---
+
+**STEP 0 — AUDIT WHAT EXISTS FIRST**
+
+```bash
+# Check if form renderer page exists
+find client/src/pages -name "*.tsx" | xargs grep -l "form.*token\|token.*form\|publicForm\|FormRenderer" 2>/dev/null
+
+# Check if signature component exists
+find client/src -name "*.tsx" | xargs grep -l "SignatureCanvas\|signaturePad\|drawSignature" 2>/dev/null
+
+# Check if platform_forms table exists
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public'
+AND table_name IN (
+  'platform_forms', 'form_invitations', 'form_submissions',
+  'document_signing_sequences'
+);
+
+# Check if form routes exist
+grep -rn "platform_forms\|formRoutes\|/api/forms" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# Check if react-signature-canvas is installed
+cat package.json | grep -i "signature"
+
+# Report exactly what exists and what is missing
+# Do not build anything that already exists
+```
+
+---
+
+**SUBAGENT 1 — DATABASE SCHEMA (run first, everything depends on this)**
+
+Apply any missing tables:
+
+```sql
+-- Platform Forms (may already exist — use IF NOT EXISTS)
+CREATE TABLE IF NOT EXISTS platform_forms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID REFERENCES workspaces(id),
+  form_type VARCHAR(100) NOT NULL,
+  version VARCHAR(10) DEFAULT '1.0',
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  fields JSONB NOT NULL DEFAULT '[]',
+  submit_action VARCHAR(100),
+  submit_webhook_url TEXT,
+  success_message TEXT DEFAULT 'Thank you. Your form has been submitted successfully.',
+  success_redirect_url TEXT,
+  requires_signature BOOLEAN DEFAULT false,
+  signature_label TEXT DEFAULT 'Your Signature',
+  pre_population_source VARCHAR(100),
+  -- 'employee', 'client', 'candidate', null
+  is_active BOOLEAN DEFAULT true,
+  requires_auth BOOLEAN DEFAULT false,
+  allow_multiple_submissions BOOLEAN DEFAULT false,
+  expires_at TIMESTAMPTZ,
+  branding JSONB DEFAULT '{}',
+  -- { logoUrl, primaryColor, companyName }
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Form Invitations
+CREATE TABLE IF NOT EXISTS form_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  form_id UUID NOT NULL REFERENCES platform_forms(id),
+  token VARCHAR(255) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  sent_to_email VARCHAR(255),
+  sent_to_phone VARCHAR(20),
+  sent_to_name VARCHAR(255),
+  sent_by_user_id UUID REFERENCES users(id),
+  sent_by_trinity BOOLEAN DEFAULT false,
+  context_type VARCHAR(100),
+  context_id UUID,
+  pre_populated_data JSONB DEFAULT '{}',
+  -- Data pre-filled into form fields
+  status VARCHAR(50) DEFAULT 'sent',
+  opened_at TIMESTAMPTZ,
+  submitted_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '7 days',
+  reminder_sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Form Submissions
+CREATE TABLE IF NOT EXISTS form_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL,
+  form_id UUID NOT NULL REFERENCES platform_forms(id),
+  invitation_id UUID REFERENCES form_invitations(id),
+  submitted_by_user_id UUID REFERENCES users(id),
+  submitted_by_email VARCHAR(255),
+  submitted_by_name VARCHAR(255),
+  data JSONB NOT NULL DEFAULT '{}',
+  signature_data TEXT,
+  signature_type VARCHAR(20),
+  -- 'drawn', 'typed', 'uploaded'
+  typed_name VARCHAR(255),
+  ip_address INET,
+  user_agent TEXT,
+  device_type VARCHAR(20),
+  -- 'mobile', 'tablet', 'desktop'
+  generated_document_id UUID,
+  -- References document_vault after PDF generation
+  generated_document_url TEXT,
+  trinity_processing_status VARCHAR(50) DEFAULT 'pending',
+  -- 'pending', 'processing', 'complete', 'failed'
+  trinity_action_taken TEXT,
+  submitted_at TIMESTAMPTZ DEFAULT NOW(),
+  processed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Document Signing Sequences (multi-party signing)
+CREATE TABLE IF NOT EXISTS document_signing_sequences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  document_id UUID REFERENCES document_vault(id),
+  form_id UUID REFERENCES platform_forms(id),
+  document_title VARCHAR(255) NOT NULL,
+  signers JSONB NOT NULL DEFAULT '[]',
+  -- [{ order, role, userId, email, name, status, token, signedAt, ipAddress }]
+  current_signer_index INTEGER DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'pending',
+  -- 'pending', 'in_progress', 'complete', 'declined', 'expired'
+  declined_by VARCHAR(255),
+  decline_reason TEXT,
+  completed_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Signing tokens (one per signer per sequence)
+CREATE TABLE IF NOT EXISTS document_signing_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sequence_id UUID NOT NULL REFERENCES document_signing_sequences(id),
+  workspace_id UUID NOT NULL,
+  document_id UUID REFERENCES document_vault(id),
+  token VARCHAR(255) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  signer_email VARCHAR(255),
+  signer_name VARCHAR(255),
+  signer_role VARCHAR(100),
+  signer_order INTEGER DEFAULT 1,
+  status VARCHAR(50) DEFAULT 'pending',
+  signed_at TIMESTAMPTZ,
+  signature_data TEXT,
+  typed_name VARCHAR(255),
+  ip_address INET,
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Sales Proposals (online interactive proposals)
+CREATE TABLE IF NOT EXISTS sales_proposals_online (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  lead_id UUID REFERENCES sales_leads(id),
+  client_id UUID REFERENCES clients(id),
+  proposal_number VARCHAR(30) UNIQUE,
+  title VARCHAR(255) NOT NULL,
+  token VARCHAR(255) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  status VARCHAR(50) DEFAULT 'draft',
+  -- 'draft', 'sent', 'viewed', 'accepted', 'declined', 'changes_requested', 'expired'
+  content JSONB NOT NULL DEFAULT '{}',
+  -- { services, pricing, terms, validUntil, notes }
+  client_viewed_at TIMESTAMPTZ,
+  client_action_at TIMESTAMPTZ,
+  client_action VARCHAR(50),
+  client_decline_reason TEXT,
+  client_change_requests TEXT,
+  client_name VARCHAR(255),
+  client_email VARCHAR(255),
+  client_signature_data TEXT,
+  client_signed_at TIMESTAMPTZ,
+  converted_to_contract_id UUID,
+  total_monthly_value DECIMAL(10,2),
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days',
+  sent_at TIMESTAMPTZ,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_form_invitations_token ON form_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_form_submissions_invitation ON form_submissions(invitation_id);
+CREATE INDEX IF NOT EXISTS idx_signing_tokens_token ON document_signing_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_proposals_token ON sales_proposals_online(token);
+CREATE INDEX IF NOT EXISTS idx_platform_forms_workspace ON platform_forms(workspace_id);
+```
+
+---
+
+**SUBAGENT 2 — INSTALL DEPENDENCIES AND BUILD SIGNATURE COMPONENT**
+
+```bash
+# Install signature library if not present
+npm install react-signature-canvas
+npm install --save-dev @types/react-signature-canvas
+
+# Also install for PDF generation enhancements
+npm install pdf-lib
+# pdf-lib allows embedding signatures into existing PDFs
+```
+
+Build `client/src/components/forms/SignatureCapture.tsx`:
+
+```tsx
+import { useRef, useState, useCallback } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
+import { Pen, Type, RotateCcw, Check } from 'lucide-react';
+
+interface SignatureCaptureProps {
+  label?: string;
+  required?: boolean;
+  onCapture: (signature: {
+    type: 'drawn' | 'typed';
+    data: string; // base64 for drawn, string for typed
+    typedName?: string;
+    capturedAt: string;
+  }) => void;
+  onClear?: () => void;
+  legalText?: string;
+}
+
+export function SignatureCapture({
+  label = 'Sign here',
+  required = true,
+  onCapture,
+  onClear,
+  legalText = 'By signing, you agree this is your legal electronic signature per the ESIGN Act and UETA.'
+}: SignatureCaptureProps) {
+  const sigPad = useRef<SignatureCanvas>(null);
+  const [mode, setMode] = useState<'draw' | 'type'>('draw');
+  const [typedName, setTypedName] = useState('');
+  const [captured, setCaptured] = useState(false);
+  const [capturedData, setCapturedData] = useState<string | null>(null);
+
+  const handleCapture = useCallback(() => {
+    if (mode === 'draw') {
+      if (!sigPad.current || sigPad.current.isEmpty()) {
+        alert('Please draw your signature before confirming.');
+        return;
+      }
+      const dataUrl = sigPad.current.toDataURL('image/png');
+      const signatureData = {
+        type: 'drawn' as const,
+        data: dataUrl,
+        capturedAt: new Date().toISOString()
+      };
+      setCapturedData(dataUrl);
+      setCaptured(true);
+      onCapture(signatureData);
+    }
+
+    if (mode === 'type') {
+      if (!typedName.trim() || typedName.trim().length < 3) {
+        alert('Please type your full legal name.');
+        return;
+      }
+      // Render typed name as base64 image using canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 100;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 400, 100);
+      ctx.fillStyle = '#1a1a2e';
+      ctx.font = '48px "Dancing Script", cursive';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(typedName, 200, 55);
+      const dataUrl = canvas.toDataURL('image/png');
+      const signatureData = {
+        type: 'typed' as const,
+        data: dataUrl,
+        typedName: typedName.trim(),
+        capturedAt: new Date().toISOString()
+      };
+      setCapturedData(dataUrl);
+      setCaptured(true);
+      onCapture(signatureData);
+    }
+  }, [mode, typedName, onCapture]);
+
+  const handleClear = useCallback(() => {
+    sigPad.current?.clear();
+    setTypedName('');
+    setCaptured(false);
+    setCapturedData(null);
+    onClear?.();
+  }, [onClear]);
+
+  return (
+    <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50">
+      <div className="flex items-center justify-between mb-3">
+        <label className="text-sm font-semibold text-gray-700">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+
+        {/* Mode toggle */}
+        <div className="flex gap-1 bg-white border rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => { setMode('draw'); handleClear(); }}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
+              mode === 'draw' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Pen className="h-3 w-3" />
+            Draw
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('type'); handleClear(); }}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
+              mode === 'type' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Type className="h-3 w-3" />
+            Type
+          </button>
+        </div>
+      </div>
+
+      {/* Signature area */}
+      {captured && capturedData ? (
+        <div className="relative bg-white border rounded-lg overflow-hidden">
+          <img
+            src={capturedData}
+            alt="Your signature"
+            className="w-full h-24 object-contain"
+          />
+          <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+            <Check className="h-4 w-4" />
+          </div>
+        </div>
+      ) : (
+        <>
+          {mode === 'draw' && (
+            <div className="bg-white border rounded-lg overflow-hidden touch-none">
+              <SignatureCanvas
+                ref={sigPad}
+                canvasProps={{
+                  className: 'w-full',
+                  style: { height: '120px', width: '100%' }
+                }}
+                penColor="#1a1a2e"
+                dotSize={2}
+                minWidth={1}
+                maxWidth={3}
+              />
+            </div>
+          )}
+
+          {mode === 'type' && (
+            <div className="bg-white border rounded-lg p-3">
+              <input
+                type="text"
+                value={typedName}
+                onChange={e => setTypedName(e.target.value)}
+                placeholder="Type your full legal name"
+                className="w-full border-0 outline-none text-3xl text-center text-gray-800"
+                style={{ fontFamily: '"Dancing Script", cursive' }}
+              />
+              {typedName && (
+                <p className="text-xs text-center text-gray-400 mt-1">
+                  This will appear as your signature
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 mt-3">
+        <button
+          type="button"
+          onClick={handleClear}
+          className="flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <RotateCcw className="h-3 w-3" />
+          Clear
+        </button>
+        {!captured && (
+          <button
+            type="button"
+            onClick={handleCapture}
+            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <Check className="h-3 w-3" />
+            Confirm Signature
+          </button>
+        )}
+        {captured && (
+          <div className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg border border-green-200 font-medium">
+            <Check className="h-3 w-3" />
+            Signature Confirmed
+          </div>
+        )}
+      </div>
+
+      {/* Legal text */}
+      <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+        {legalText}
+      </p>
+    </div>
+  );
+}
+```
+
+---
+
+**SUBAGENT 3 — FORM RENDERER PAGE (PUBLIC)**
+
+Build `client/src/pages/forms/[token]/index.tsx`:
+
+```tsx
+import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { SignatureCapture } from '@/components/forms/SignatureCapture';
+import { Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+
+// Field renderers for each type
+function FormField({ field, value, onChange, errors }: any) {
+  const baseClass = `w-full border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+    errors[field.id] ? 'border-red-500' : 'border-gray-300'
+  }`;
+
+  switch (field.type) {
+    case 'display':
+      return (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700">
+          {value || field.defaultValue || '—'}
+        </div>
+      );
+
+    case 'text':
+    case 'email':
+    case 'phone':
+      return (
+        <input
+          type={field.type}
+          value={value || ''}
+          onChange={e => onChange(field.id, e.target.value)}
+          placeholder={field.placeholder}
+          readOnly={field.readOnly}
+          className={baseClass + (field.readOnly ? ' bg-gray-50 text-gray-500' : '')}
+        />
+      );
+
+    case 'date':
+      return (
+        <input
+          type="date"
+          value={value || ''}
+          onChange={e => onChange(field.id, e.target.value)}
+          className={baseClass}
+        />
+      );
+
+    case 'textarea':
+      return (
+        <textarea
+          value={value || ''}
+          onChange={e => onChange(field.id, e.target.value)}
+          placeholder={field.placeholder}
+          rows={4}
+          className={baseClass}
+        />
+      );
+
+    case 'select':
+      return (
+        <select
+          value={value || ''}
+          onChange={e => onChange(field.id, e.target.value)}
+          className={baseClass}
+        >
+          <option value="">Select an option...</option>
+          {field.options?.map((opt: string) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      );
+
+    case 'radio':
+      return (
+        <div className="space-y-2">
+          {field.options?.map((opt: string) => (
+            <label key={opt} className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name={field.id}
+                value={opt}
+                checked={value === opt}
+                onChange={() => onChange(field.id, opt)}
+                className="h-4 w-4 text-blue-600"
+              />
+              <span className="text-sm text-gray-700">{opt}</span>
+            </label>
+          ))}
+        </div>
+      );
+
+    case 'checkbox':
+      return (
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={!!value}
+            onChange={e => onChange(field.id, e.target.checked)}
+            className="h-4 w-4 mt-0.5 text-blue-600 rounded"
+          />
+          <span className="text-sm text-gray-700">{field.checkboxLabel || field.label}</span>
+        </label>
+      );
+
+    case 'ssn':
+      return (
+        <input
+          type="password"
+          value={value || ''}
+          onChange={e => {
+            const clean = e.target.value.replace(/\D/g, '').slice(0, 9);
+            onChange(field.id, clean);
+          }}
+          placeholder="XXX-XX-XXXX"
+          maxLength={9}
+          className={baseClass}
+          autoComplete="off"
+        />
+      );
+
+    case 'currency':
+      return (
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+          <input
+            type="number"
+            value={value || ''}
+            onChange={e => onChange(field.id, e.target.value)}
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+            className={baseClass + ' pl-7'}
+          />
+        </div>
+      );
+
+    case 'file':
+      return (
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <input
+            type="file"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = () => onChange(field.id, {
+                  name: file.name,
+                  type: file.type,
+                  size: file.size,
+                  data: reader.result
+                });
+                reader.readAsDataURL(file);
+              }
+            }}
+            accept={field.acceptedTypes || '*'}
+            className="hidden"
+            id={`file-${field.id}`}
+          />
+          <label
+            htmlFor={`file-${field.id}`}
+            className="cursor-pointer text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            {value?.name || 'Click to upload file'}
+          </label>
+          {field.helpText && (
+            <p className="text-xs text-gray-400 mt-1">{field.helpText}</p>
+          )}
+        </div>
+      );
+
+    default:
+      return (
+        <input
+          type="text"
+          value={value || ''}
+          onChange={e => onChange(field.id, e.target.value)}
+          className={baseClass}
+        />
+      );
+  }
+}
+
+export default function PublicFormPage() {
+  const { token } = useParams<{ token: string }>();
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [signature, setSignature] = useState<any>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fetch form definition
+  const { data: form, isLoading, error } = useQuery({
+    queryKey: ['public-form', token],
+    queryFn: async () => {
+      const res = await fetch(`/api/forms/public/${token}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Form not found');
+      }
+      return res.json();
+    },
+    retry: false
+  });
+
+  // Pre-populate form with invitation data
+  useEffect(() => {
+    if (form?.pre_populated_data) {
+      setFormData(prev => ({ ...prev, ...form.pre_populated_data }));
+    }
+  }, [form]);
+
+  const handleFieldChange = useCallback((fieldId: string, value: any) => {
+    setFormData(prev => ({ ...prev, [fieldId]: value }));
+    setErrors(prev => ({ ...prev, [fieldId]: '' }));
+  }, []);
+
+  const validateForm = useCallback(() => {
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
+
+    form?.fields?.forEach((field: any) => {
+      if (field.required && field.type !== 'display') {
+        const value = formData[field.id];
+        if (value === undefined || value === null || value === '') {
+          newErrors[field.id] = `${field.label} is required`;
+          isValid = false;
+        }
+      }
+
+      // Email validation
+      if (field.type === 'email' && formData[field.id]) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData[field.id])) {
+          newErrors[field.id] = 'Please enter a valid email address';
+          isValid = false;
+        }
+      }
+
+      // SSN validation
+      if (field.type === 'ssn' && field.required && formData[field.id]) {
+        if (formData[field.id].length !== 9) {
+          newErrors[field.id] = 'Please enter your full 9-digit SSN';
+          isValid = false;
+        }
+      }
+    });
+
+    // Signature validation
+    if (form?.requires_signature && !signature) {
+      newErrors['signature'] = 'Signature is required';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  }, [form, formData, signature]);
+
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/forms/public/${token}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: formData,
+          signatureData: signature?.data || null,
+          signatureType: signature?.type || null,
+          typedName: signature?.typedName || null,
+          deviceType: /Mobile|Tablet/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Submission failed');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setSubmitted(true);
+      window.scrollTo(0, 0);
+    },
+    onError: (err: Error) => {
+      setSubmitError(err.message);
+    }
+  });
+
+  const handleSubmit = useCallback(() => {
+    if (validateForm()) {
+      submitMutation.mutate();
+    } else {
+      // Scroll to first error
+      const firstError = document.querySelector('[data-error="true"]');
+      firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [validateForm, submitMutation]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
+          <p className="text-gray-600 text-sm">Loading form...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !form) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Form Not Available</h2>
+          <p className="text-gray-500 text-sm">
+            {(error as Error)?.message || 'This form may have expired or is no longer available.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Success state
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            {form.form_type === 'offer_letter' ? 'Offer Accepted!' : 'Submitted Successfully!'}
+          </h2>
+          <p className="text-gray-600 text-sm leading-relaxed">
+            {form.success_message}
+          </p>
+          {form.branding?.companyName && (
+            <p className="text-gray-400 text-xs mt-6">
+              Powered by {form.branding.companyName}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Check expiry
+  if (form.expires_at && new Date(form.expires_at) < new Date()) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <Clock className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">This Form Has Expired</h2>
+          <p className="text-gray-500 text-sm">
+            Please contact the organization that sent you this form to request a new link.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const accentColor = form.branding?.primaryColor || '#2563eb';
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-xl mx-auto px-4 py-4 flex items-center gap-3">
+          {form.branding?.logoUrl && (
+            <img
+              src={form.branding.logoUrl}
+              alt="Company logo"
+              className="h-8 object-contain"
+            />
+          )}
+          <div>
+            <h1 className="font-bold text-gray-900 text-sm leading-tight">
+              {form.title}
+            </h1>
+            {form.branding?.companyName && (
+              <p className="text-xs text-gray-400">{form.branding.companyName}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Form body */}
+      <div className="max-w-xl mx-auto px-4 py-6 space-y-5">
+        {form.description && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm text-blue-800 leading-relaxed">{form.description}</p>
+          </div>
+        )}
+
+        {/* Fields */}
+        {form.fields?.map((field: any) => (
+          <div
+            key={field.id}
+            data-error={!!errors[field.id]}
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-4"
+          >
+            {field.type !== 'checkbox' && (
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {field.label}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </label>
+            )}
+
+            {field.helpText && field.type !== 'file' && (
+              <p className="text-xs text-gray-400 mb-2">{field.helpText}</p>
+            )}
+
+            <FormField
+              field={field}
+              value={formData[field.id]}
+              onChange={handleFieldChange}
+              errors={errors}
+            />
+
+            {errors[field.id] && (
+              <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors[field.id]}
+              </p>
+            )}
+          </div>
+        ))}
+
+        {/* Signature section */}
+        {form.requires_signature && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <SignatureCapture
+              label={form.signature_label || 'Your Signature'}
+              required={true}
+              onCapture={setSignature}
+              onClear={() => setSignature(null)}
+            />
+            {errors['signature'] && (
+              <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors['signature']}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Submit error */}
+        {submitError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-sm text-red-700 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {submitError}
+            </p>
+          </div>
+        )}
+
+        {/* Submit button */}
+        <button
+          onClick={handleSubmit}
+          disabled={submitMutation.isPending}
+          className="w-full py-4 rounded-xl font-bold text-white text-base transition-all active:scale-98 disabled:opacity-60"
+          style={{ backgroundColor: accentColor }}
+        >
+          {submitMutation.isPending ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Submitting...
+            </span>
+          ) : (
+            form.form_type === 'offer_letter' ? 'Sign and Accept Offer' :
+            form.form_type === 'client_service_agreement' ? 'Sign and Execute Agreement' :
+            form.requires_signature ? 'Sign and Submit' : 'Submit'
+          )}
+        </button>
+
+        {/* Legal footer */}
+        <p className="text-xs text-center text-gray-400 leading-relaxed pb-8">
+          This form is secured and encrypted. Your information is transmitted securely.
+          Electronic signatures are legally binding under the ESIGN Act (15 U.S.C. § 7001) and UETA.
+          {form.branding?.companyName && ` Managed by ${form.branding.companyName}.`}
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+**SUBAGENT 4 — BACKEND FORM ROUTES**
+
+Build `server/routes/platformFormsRoutes.ts`:
+
+```typescript
+import express from 'express';
+import { requireAuth } from '../middleware/auth';
+import { requirePlan } from '../middleware/tierEnforcement';
+import { pool } from '../db';
+import { universalAuditService } from '../services/universalAuditService';
+import { notificationDeliveryService } from '../services/notificationDeliveryService';
+import { formToPdfService } from '../services/formToPdfService';
+import { broadcastToWorkspace } from '../websocket';
+
+const router = express.Router();
+
+// ============================================
+// AUTHENTICATED ROUTES (org management)
+// ============================================
+
+// List all forms for workspace
+router.get('/api/forms', requireAuth, async (req, res) => {
+  try {
+    const { workspaceId } = req.user;
+    const forms = await pool.query(`
+      SELECT pf.*, 
+        COUNT(fi.id) as invitation_count,
+        COUNT(fs.id) as submission_count
+      FROM platform_forms pf
+      LEFT JOIN form_invitations fi ON fi.form_id = pf.id
+      LEFT JOIN form_submissions fs ON fs.form_id = pf.id
+      WHERE (pf.workspace_id = $1 OR pf.workspace_id IS NULL)
+      AND pf.is_active = true
+      GROUP BY pf.id
+      ORDER BY pf.created_at DESC
+    `, [workspaceId]);
+    res.json(forms.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Create a custom form
+router.post('/api/forms', requireAuth, requirePlan('professional'), async (req, res, next) => {
+  try {
+    const { workspaceId, userId } = req.user;
+    const { formType, title, description, fields, submitAction, requiresSignature, signatureLabel } = req.body;
+
+    const form = await pool.query(`
+      INSERT INTO platform_forms 
+      (workspace_id, form_type, title, description, fields, submit_action, requires_signature, signature_label, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `, [workspaceId, formType, title, description, JSON.stringify(fields), 
+        submitAction, requiresSignature, signatureLabel, userId]);
+
+    await universalAuditService.log({
+      workspaceId, actorId: userId,
+      entityType: 'platform_form', entityId: form.rows[0].id,
+      action: 'form_created', data: { formType, title }
+    });
+
+    res.status(201).json(form.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Send form invitation
+router.post('/api/forms/:formId/invite', requireAuth, async (req, res, next) => {
+  try {
+    const { workspaceId, userId } = req.user;
+    const { formId } = req.params;
+    const { 
+      email, phone, name, contextType, contextId, 
+      expiresHours = 168, prePopulatedData = {},
+      sendBy = 'email'
+    } = req.body;
+
+    // Verify form belongs to workspace or is a platform template
+    const form = await pool.query(
+      'SELECT * FROM platform_forms WHERE id = $1 AND (workspace_id = $2 OR workspace_id IS NULL) AND is_active = true',
+      [formId, workspaceId]
+    );
+    if (!form.rows[0]) return res.status(404).json({ error: 'Form not found' });
+
+    // Auto-populate based on context
+    let populatedData = { ...prePopulatedData };
+    if (contextType === 'employee' && contextId) {
+      const emp = await pool.query(
+        'SELECT first_name, last_name, email, phone, position, pay_rate, hire_date, employee_number FROM employees WHERE id = $1 AND workspace_id = $2',
+        [contextId, workspaceId]
+      );
+      if (emp.rows[0]) {
+        populatedData = {
+          ...populatedData,
+          firstName: emp.rows[0].first_name,
+          lastName: emp.rows[0].last_name,
+          fullName: `${emp.rows[0].first_name} ${emp.rows[0].last_name}`,
+          email: emp.rows[0].email,
+          phone: emp.rows[0].phone,
+          position: emp.rows[0].position,
+          payRate: emp.rows[0].pay_rate,
+          hireDate: emp.rows[0].hire_date,
+          employeeNumber: emp.rows[0].employee_number
+        };
+      }
+    }
+
+    if (contextType === 'client' && contextId) {
+      const client = await pool.query(
+        'SELECT company_name, contact_name, contact_email, contact_phone, client_number FROM clients WHERE id = $1 AND workspace_id = $2',
+        [contextId, workspaceId]
+      );
+      if (client.rows[0]) {
+        populatedData = {
+          ...populatedData,
+          companyName: client.rows[0].company_name,
+          contactName: client.rows[0].contact_name,
+          contactEmail: client.rows[0].contact_email,
+          contactPhone: client.rows[0].contact_phone,
+          clientNumber: client.rows[0].client_number
+        };
+      }
+    }
+
+    // Get workspace branding
+    const workspace = await pool.query(
+      'SELECT company_name, logo_url, primary_color FROM workspaces WHERE id = $1',
+      [workspaceId]
+    );
+    const ws = workspace.rows[0];
+
+    // Create invitation
+    const invitation = await pool.query(`
+      INSERT INTO form_invitations 
+      (workspace_id, form_id, sent_to_email, sent_to_phone, sent_to_name,
+       sent_by_user_id, context_type, context_id, pre_populated_data, expires_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW() + INTERVAL '${Math.min(expiresHours, 720)} hours')
+      RETURNING *
+    `, [workspaceId, formId, email, phone, name, userId, contextType, contextId, JSON.stringify(populatedData)]);
+
+    const inv = invitation.rows[0];
+    const formUrl = `${process.env.BASE_URL}/forms/${inv.token}`;
+
+    // Send via NDS
+    if (email && (sendBy === 'email' || sendBy === 'both')) {
+      await notificationDeliveryService.send({
+        workspaceId,
+        type: 'form_invitation',
+        toEmail: email,
+        data: {
+          recipientName: name || email,
+          formTitle: form.rows[0].title,
+          formUrl,
+          companyName: ws?.company_name,
+          expiresHours,
+          isSignatureRequired: form.rows[0].requires_signature
+        }
+      });
+    }
+
+    if (phone && (sendBy === 'sms' || sendBy === 'both')) {
+      await notificationDeliveryService.send({
+        workspaceId,
+        type: 'form_invitation_sms',
+        toPhone: phone,
+        data: {
+          formTitle: form.rows[0].title,
+          formUrl,
+          companyName: ws?.company_name
+        }
+      });
+    }
+
+    await universalAuditService.log({
+      workspaceId, actorId: userId,
+      entityType: 'form_invitation', entityId: inv.id,
+      action: 'form_invitation_sent',
+      data: { formId, sentTo: email || phone, contextType, contextId }
+    });
+
+    res.json({ 
+      invitation: inv, 
+      formUrl,
+      message: `Form invitation sent to ${email || phone}`
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get all submissions for a form
+router.get('/api/forms/:formId/submissions', requireAuth, async (req, res, next) => {
+  try {
+    const { workspaceId } = req.user;
+    const submissions = await pool.query(`
+      SELECT fs.*, fi.sent_to_email, fi.sent_to_name, fi.context_type, fi.context_id
+      FROM form_submissions fs
+      LEFT JOIN form_invitations fi ON fi.id = fs.invitation_id
+      WHERE fs.workspace_id = $1 AND fs.form_id = $2
+      ORDER BY fs.submitted_at DESC
+    `, [workspaceId, req.params.formId]);
+    res.json(submissions.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get pending invitations (not yet submitted)
+router.get('/api/forms/invitations/pending', requireAuth, async (req, res, next) => {
+  try {
+    const { workspaceId } = req.user;
+    const pending = await pool.query(`
+      SELECT fi.*, pf.title as form_title, pf.form_type
+      FROM form_invitations fi
+      JOIN platform_forms pf ON pf.id = fi.form_id
+      WHERE fi.workspace_id = $1
+      AND fi.status IN ('sent', 'opened')
+      AND fi.expires_at > NOW()
+      ORDER BY fi.created_at DESC
+    `, [workspaceId]);
+    res.json(pending.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Send reminder for pending invitation
+router.post('/api/forms/invitations/:invitationId/remind', requireAuth, async (req, res, next) => {
+  try {
+    const { workspaceId, userId } = req.user;
+    const inv = await pool.query(
+      'SELECT * FROM form_invitations WHERE id = $1 AND workspace_id = $2',
+      [req.params.invitationId, workspaceId]
+    );
+    if (!inv.rows[0]) return res.status(404).json({ error: 'Invitation not found' });
+    
+    const invitation = inv.rows[0];
+    const form = await pool.query('SELECT * FROM platform_forms WHERE id = $1', [invitation.form_id]);
+    const formUrl = `${process.env.BASE_URL}/forms/${invitation.token}`;
+    const workspace = await pool.query('SELECT company_name FROM workspaces WHERE id = $1', [workspaceId]);
+
+    if (invitation.sent_to_email) {
+      await notificationDeliveryService.send({
+        workspaceId,
+        type: 'form_reminder',
+        toEmail: invitation.sent_to_email,
+        data: {
+          recipientName: invitation.sent_to_name,
+          formTitle: form.rows[0].title,
+          formUrl,
+          companyName: workspace.rows[0]?.company_name
+        }
+      });
+    }
+
+    await pool.query(
+      'UPDATE form_invitations SET reminder_sent_at = NOW() WHERE id = $1',
+      [invitation.id]
+    );
+
+    res.json({ success: true, message: 'Reminder sent' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================
+// PUBLIC ROUTES (no auth — token based)
+// ============================================
+
+// Fetch form for rendering (public)
+router.get('/api/forms/public/:token', async (req, res, next) => {
+  try {
+    const { token } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        fi.*,
+        pf.title, pf.description, pf.fields, pf.requires_auth,
+        pf.requires_signature, pf.signature_label, pf.form_type,
+        pf.success_message, pf.success_redirect_url,
+        w.company_name, w.logo_url, w.primary_color
+      FROM form_invitations fi
+      JOIN platform_forms pf ON pf.id = fi.form_id
+      JOIN workspaces w ON w.id = fi.workspace_id
+      WHERE fi.token = $1
+      AND fi.status NOT IN ('expired')
+      AND (fi.expires_at IS NULL OR fi.expires_at > NOW())
+    `, [token]);
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Form not found or has expired' });
+    }
+
+    const form = result.rows[0];
+
+    // Mark as opened
+    if (form.status === 'sent') {
+      await pool.query(
+        'UPDATE form_invitations SET status = $1, opened_at = NOW() WHERE token = $2',
+        ['opened', token]
+      );
+    }
+
+    // Return form data (exclude sensitive pre-populated fields like SSN)
+    res.json({
+      title: form.title,
+      description: form.description,
+      fields: form.fields,
+      requires_signature: form.requires_signature,
+      signature_label: form.signature_label,
+      form_type: form.form_type,
+      success_message: form.success_message,
+      expires_at: form.expires_at,
+      pre_populated_data: form.pre_populated_data,
+      branding: {
+        companyName: form.company_name,
+        logoUrl: form.logo_url,
+        primaryColor: form.primary_color
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Submit form (public — no auth required)
+router.post('/api/forms/public/:token/submit', async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { data, signatureData, signatureType, typedName, deviceType } = req.body;
+
+    // Fetch invitation and form
+    const result = await pool.query(`
+      SELECT fi.*, pf.form_type, pf.submit_action, pf.requires_signature,
+             pf.allow_multiple_submissions, w.id as workspace_id
+      FROM form_invitations fi
+      JOIN platform_forms pf ON pf.id = fi.form_id
+      JOIN workspaces w ON w.id = fi.workspace_id
+      WHERE fi.token = $1
+      AND (fi.expires_at IS NULL OR fi.expires_at > NOW())
+    `, [token]);
+
+    if (!result.rows[0]) {
+      return res.status(410).json({ error: 'This form link has expired or is no longer valid' });
+    }
+
+    const inv = result.rows[0];
+
+    // Check if already submitted
+    if (inv.status === 'submitted' && !inv.allow_multiple_submissions) {
+      return res.status(409).json({ error: 'This form has already been submitted' });
+    }
+
+    // Validate signature if required
+    if (inv.requires_signature && !signatureData) {
+      return res.status(400).json({ error: 'Signature is required' });
+    }
+
+    // Create submission
+    const submission = await pool.query(`
+      INSERT INTO form_submissions
+      (workspace_id, form_id, invitation_id, submitted_by_email, submitted_by_name,
+       data, signature_data, signature_type, typed_name,
+       ip_address, user_agent, device_type, submitted_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+      RETURNING *
+    `, [
+      inv.workspace_id, inv.form_id, inv.id,
+      inv.sent_to_email, inv.sent_to_name,
+      JSON.stringify(data), signatureData, signatureType, typedName,
+      req.ip, req.headers['user-agent'], deviceType
+    ]);
+
+    // Update invitation status
+    await pool.query(
+      'UPDATE form_invitations SET status = $1, submitted_at = NOW() WHERE id = $2',
+      ['submitted', inv.id]
+    );
+
+    // Trigger async processing (do not await — return response immediately)
+    processFormSubmissionAsync(submission.rows[0], inv).catch(err => {
+      console.error('Form submission processing error:', err);
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Form submitted successfully',
+      submissionId: submission.rows[0].id
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================
+// ASYNC PROCESSING
+// ============================================
+
+async function processFormSubmissionAsync(submission: any, invitation: any) {
+  try {
+    // Update status to processing
+    await pool.query(
+      'UPDATE form_submissions SET trinity_processing_status = $1 WHERE id = $2',
+      ['processing', submission.id]
+    );
+
+    // 1. Generate PDF from submission
+    const pdfUrl = await formToPdfService.generateFromSubmission(submission, invitation);
+
+    // 2. Update submission with document URL
+    await pool.query(
+      'UPDATE form_submissions SET generated_document_url = $1, processed_at = NOW(), trinity_processing_status = $2 WHERE id = $3',
+      [pdfUrl, 'complete', submission.id]
+    );
+
+    // 3. Handle submit_action
+    switch (invitation.submit_action) {
+      case 'complete_onboarding_task':
+        await completeOnboardingTaskFromForm(submission, invitation);
+        break;
+      case 'create_candidate':
+        await createCandidateFromApplication(submission, invitation);
+        break;
+      case 'advance_signing_sequence':
+        await advanceSigningSequence(submission, invitation);
+        break;
+      case 'execute_proposal':
+        await executeProposalFromSignature(submission, invitation);
+        break;
+    }
+
+    // 4. Notify org about submission
+    await notificationDeliveryService.send({
+      workspaceId: invitation.workspace_id,
+      type: 'form_submitted',
+      data: {
+        formTitle: invitation.form_title,
+        submittedBy: submission.submitted_by_name || submission.submitted_by_email,
+        documentUrl: pdfUrl,
+        contextType: invitation.context_type,
+        contextId: invitation.context_id
+      },
+      targetRoles: ['org_owner', 'org_admin']
+    });
+
+    // 5. Broadcast to workspace
+    broadcastToWorkspace(invitation.workspace_id, {
+      type: 'form_submission_received',
+      data: {
+        formType: invitation.form_type,
+        submittedBy: submission.submitted_by_name,
+        documentUrl: pdfUrl
+      }
+    });
+
+    // 6. Send confirmation to submitter
+    if (submission.submitted_by_email) {
+      await notificationDeliveryService.send({
+        workspaceId: invitation.workspace_id,
+        type: 'form_submission_confirmation',
+        toEmail: submission.submitted_by_email,
+        data: {
+          recipientName: submission.submitted_by_name,
+          formTitle: invitation.form_title,
+          documentUrl: pdfUrl,
+          companyName: invitation.company_name
+        }
+      });
+    }
+
+  } catch (err) {
+    await pool.query(
+      'UPDATE form_submissions SET trinity_processing_status = $1 WHERE id = $2',
+      ['failed', submission.id]
+    );
+    throw err;
+  }
+}
+
+async function completeOnboardingTaskFromForm(submission: any, invitation: any) {
+  if (!invitation.context_id) return;
+  
+  // Find matching onboarding task
+  const task = await pool.query(`
+    UPDATE onboarding_tasks 
+    SET status = 'completed', completed_at = NOW()
+    WHERE employee_id = $1 
+    AND workspace_id = $2
+    AND task_type = $3
+    AND status = 'pending'
+    RETURNING id
+  `, [invitation.context_id, invitation.workspace_id, invitation.form_type]);
+
+  if (task.rows[0]) {
+    // Check if all Tier 1 tasks complete — activate officer
+    const pendingTier1 = await pool.query(`
+      SELECT COUNT(*) FROM onboarding_tasks 
+      WHERE employee_id = $1 AND tier = 1 AND is_blocking = true AND status != 'completed'
+    `, [invitation.context_id]);
+
+    if (parseInt(pendingTier1.rows[0].count) === 0) {
+      // Auto-activate officer
+      await pool.query(
+        'UPDATE employees SET status = $1 WHERE id = $2 AND status = $3',
+        ['active', invitation.context_id, 'pending']
+      );
+      
+      broadcastToWorkspace(invitation.workspace_id, {
+        type: 'employee_activated',
+        data: { employeeId: invitation.context_id }
+      });
+    }
+  }
+}
+
+export default router;
+```
+
+---
+
+**SUBAGENT 5 — FORM-TO-PDF SERVICE**
+
+Build `server/services/formToPdfService.ts`:
+
+```typescript
+import PDFDocument from 'pdfkit';
+import { createCanvas } from 'canvas';
+import crypto from 'crypto';
+import { pool } from '../db';
+import { documentVaultService } from './documentVaultService';
+
+export class FormToPdfService {
+
+  async generateFromSubmission(submission: any, invitation: any): Promise<string> {
+    const workspace = await this.getWorkspace(invitation.workspace_id);
+    const form = await this.getForm(submission.form_id);
+    
+    // Generate PDF based on form type
+    let pdfBuffer: Buffer;
+    
+    switch (form.form_type) {
+      case 'offer_letter':
+        pdfBuffer = await this.generateOfferLetterPdf(submission, form, workspace);
+        break;
+      case 'onboarding_w4':
+        pdfBuffer = await this.generateW4Pdf(submission, workspace);
+        break;
+      case 'onboarding_i9_section1':
+        pdfBuffer = await this.generateI9Pdf(submission, workspace);
+        break;
+      case 'onboarding_direct_deposit':
+        pdfBuffer = await this.generateDirectDepositPdf(submission, workspace);
+        break;
+      case 'handbook_acknowledgment':
+        pdfBuffer = await this.generateAcknowledgmentPdf(submission, form, workspace);
+        break;
+      case 'client_service_agreement':
+        pdfBuffer = await this.generateServiceAgreementPdf(submission, form, workspace);
+        break;
+      case 'sales_proposal':
+        pdfBuffer = await this.generateProposalAcceptancePdf(submission, form, workspace);
+        break;
+      default:
+        pdfBuffer = await this.generateGenericFormPdf(submission, form, workspace);
+    }
+
+    // Add signature to PDF if present
+    if (submission.signature_data) {
+      pdfBuffer = await this.embedSignatureIntoPdf(pdfBuffer, submission);
+    }
+
+    // Calculate integrity hash
+    const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+    // Store in document vault
+    const stored = await documentVaultService.storeBuffer({
+      buffer: pdfBuffer,
+      filename: `${form.form_type}_${submission.id}.pdf`,
+      mimeType: 'application/pdf',
+      workspaceId: invitation.workspace_id,
+      employeeId: invitation.context_type === 'employee' ? invitation.context_id : null,
+      clientId: invitation.context_type === 'client' ? invitation.context_id : null,
+      documentType: form.form_type,
+      integrityHash: hash,
+      submissionId: submission.id
+    });
+
+    return stored.url;
+  }
+
+  async generateOfferLetterPdf(submission: any, form: any, workspace: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const doc = new PDFDocument({ margin: 60 });
+      
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const data = submission.data;
+
+      // Company header
+      doc.fontSize(20).font('Helvetica-Bold').text(workspace.company_name, { align: 'center' });
+      if (workspace.address) {
+        doc.fontSize(10).font('Helvetica').text(workspace.address, { align: 'center' });
+      }
+      doc.moveDown(2);
+
+      // Document title
+      doc.fontSize(16).font('Helvetica-Bold').text('EMPLOYMENT OFFER LETTER', { align: 'center' });
+      doc.moveDown();
+
+      // Date
+      doc.fontSize(11).font('Helvetica').text(`Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+      doc.moveDown();
+
+      // Salutation
+      doc.text(`Dear ${data.firstName || data.fullName || 'Candidate'},`);
+      doc.moveDown();
+
+      // Body
+      doc.text(
+        `We are pleased to offer you the position of ${data.position} with ${workspace.company_name}. ` +
+        `This offer is contingent upon successful completion of a background check and drug screening.`
+      );
+      doc.moveDown();
+
+      // Terms table
+      doc.font('Helvetica-Bold').text('Position Details:');
+      doc.font('Helvetica');
+      doc.moveDown(0.5);
+      
+      const terms = [
+        ['Position:', data.position || '—'],
+        ['Start Date:', data.startDate ? new Date(data.startDate).toLocaleDateString() : '—'],
+        ['Pay Rate:', data.payRate ? `$${parseFloat(data.payRate).toFixed(2)}/hour` : '—'],
+        ['Schedule:', data.schedule || 'As assigned'],
+        ['Employment Type:', data.employmentType || 'Part-time/Full-time as scheduled'],
+      ];
+
+      terms.forEach(([label, value]) => {
+        doc.text(`${label} ${value}`, { continued: false });
+      });
+
+      doc.moveDown();
+      doc.text(
+        `This offer of employment is at-will, meaning either party may terminate the employment relationship at any time, ` +
+        `with or without cause or notice. This offer letter does not constitute a contract of employment.`
+      );
+
+      doc.moveDown(2);
+
+      // Signature blocks
+      doc.font('Helvetica-Bold').text('Acceptance:');
+      doc.font('Helvetica').moveDown();
+      doc.text('By signing below, you accept this offer of employment and agree to the terms described above.');
+      doc.moveDown(2);
+
+      // Employee signature block (filled by form)
+      doc.text('Employee Signature: ________________________');
+      doc.moveDown(0.5);
+      doc.text(`Printed Name: ${data.fullName || data.firstName + ' ' + data.lastName || '________________________'}`);
+      doc.moveDown(0.5);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`);
+      doc.moveDown(2);
+
+      // Employer signature block
+      doc.text('Authorized Signature: ________________________');
+      doc.moveDown(0.5);
+      doc.text(`Organization: ${workspace.company_name}`);
+      doc.moveDown(0.5);
+      doc.text(`Date: ________________________`);
+
+      // Footer
+      doc.moveDown(3);
+      this.addDocumentFooter(doc, submission, workspace);
+
+      doc.end();
+    });
+  }
+
+  async generateGenericFormPdf(submission: any, form: any, workspace: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const doc = new PDFDocument({ margin: 60 });
+      
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const data = submission.data;
+
+      // Header
+      doc.fontSize(16).font('Helvetica-Bold').text(workspace.company_name, { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(14).text(form.title, { align: 'center' });
+      doc.moveDown(2);
+
+      // Submission metadata
+      doc.fontSize(10).font('Helvetica').fillColor('#666666');
+      doc.text(`Submitted: ${new Date(submission.submitted_at).toLocaleString()}`);
+      doc.text(`By: ${submission.submitted_by_name || submission.submitted_by_email || 'Unknown'}`);
+      doc.fillColor('#000000');
+      doc.moveDown();
+
+      // Form fields and responses
+      form.fields?.forEach((field: any) => {
+        if (field.type === 'display') return;
+        const value = data[field.id];
+        if (value === undefined || value === null || value === '') return;
+
+        doc.font('Helvetica-Bold').fontSize(10).text(field.label + ':');
+        doc.font('Helvetica').fontSize(10);
+        
+        if (typeof value === 'boolean') {
+          doc.text(value ? 'Yes' : 'No');
+        } else if (field.type === 'file') {
+          doc.text(`[File: ${value.name || 'Attached'}]`);
+        } else if (field.type === 'ssn') {
+          doc.text(`XXX-XX-${String(value).slice(-4)}`); // Masked SSN
+        } else {
+          doc.text(String(value));
+        }
+        doc.moveDown(0.5);
+      });
+
+      // Signature block
+      if (submission.signature_data) {
+        doc.moveDown();
+        doc.font('Helvetica-Bold').text('Electronic Signature:');
+        doc.moveDown(0.5);
+        // Signature will be embedded by embedSignatureIntoPdf
+        doc.rect(60, doc.y, 200, 60).stroke();
+        doc.moveDown(4);
+        doc.font('Helvetica').fontSize(9).fillColor('#666666');
+        doc.text(`Signed electronically by ${submission.submitted_by_name || submission.submitted_by_email}`);
+        doc.text(`IP Address: ${submission.ip_address}`);
+        doc.text(`Timestamp: ${new Date(submission.submitted_at).toISOString()}`);
+        doc.fillColor('#000000');
+      }
+
+      this.addDocumentFooter(doc, submission, workspace);
+      doc.end();
+    });
+  }
+
+  async embedSignatureIntoPdf(pdfBuffer: Buffer, submission: any): Promise<Buffer> {
+    // If signature_data is a base64 PNG, embed it into the PDF
+    // Using pdf-lib for this operation
+    try {
+      const { PDFDocument, rgb } = await import('pdf-lib');
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
+      const pages = pdfDoc.getPages();
+      const lastPage = pages[pages.length - 1];
+
+      if (submission.signature_data && submission.signature_data.startsWith('data:image')) {
+        const base64Data = submission.signature_data.split(',')[1];
+        const imageBytes = Buffer.from(base64Data, 'base64');
+        const image = await pdfDoc.embedPng(imageBytes);
+        
+        // Place signature in signature area
+        const { width, height } = lastPage.getSize();
+        lastPage.drawImage(image, {
+          x: 60,
+          y: height - 400, // Adjust based on document layout
+          width: 200,
+          height: 60,
+        });
+      } else if (submission.signature_type === 'typed' && submission.typed_name) {
+        // Add typed name as text in cursive-style
+        lastPage.drawText(submission.typed_name, {
+          x: 60,
+          y: lastPage.getSize().height - 380,
+          size: 28,
+          color: rgb(0.1, 0.1, 0.5),
+        });
+      }
+
+      const finalPdfBytes = await pdfDoc.save();
+      return Buffer.from(finalPdfBytes);
+    } catch (err) {
+      // If signature embedding fails return original PDF
+      console.error('Signature embedding failed:', err);
+      return pdfBuffer;
+    }
+  }
+
+  addDocumentFooter(doc: any, submission: any, workspace: any) {
+    doc.fontSize(8).fillColor('#666666');
+    doc.text('─'.repeat(80), { align: 'center' });
+    doc.text(
+      `This document was electronically submitted on ${new Date(submission.submitted_at).toLocaleString()} UTC | ` +
+      `IP: ${submission.ip_address} | ` +
+      `${workspace.company_name}`,
+      { align: 'center' }
+    );
+    if (submission.id) {
+      doc.text(`Submission Reference: ${submission.id}`, { align: 'center' });
+    }
+    doc.text(
+      'Electronic signatures are legally binding under the ESIGN Act (15 U.S.C. § 7001) and UETA.',
+      { align: 'center' }
+    );
+  }
+
+  async getWorkspace(workspaceId: string) {
+    const result = await pool.query('SELECT * FROM workspaces WHERE id = $1', [workspaceId]);
+    return result.rows[0];
+  }
+
+  async getForm(formId: string) {
+    const result = await pool.query('SELECT * FROM platform_forms WHERE id = $1', [formId]);
+    return result.rows[0];
+  }
+}
+
+export const formToPdfService = new FormToPdfService();
+```
+
+---
+
+**SUBAGENT 6 — PLATFORM DEFAULT FORMS (SEED)**
+
+Seed all platform default forms that every workspace can use:
+
+```typescript
+// server/scripts/seedPlatformForms.ts
+// Run once — idempotent
+
+const PLATFORM_DEFAULT_FORMS = [
+  {
+    workspace_id: null, // Platform-wide templates
+    form_type: 'offer_letter',
+    title: 'Employment Offer Letter',
+    description: 'Review and accept your employment offer. Please read all terms carefully before signing.',
+    requires_signature: true,
+    signature_label: 'Employee Signature',
+    submit_action: 'complete_onboarding_task',
+    success_message: 'Your offer has been accepted. Welcome to the team! You will receive a copy by email shortly.',
+    fields: [
+      { id: 'fullName', label: 'Full Legal Name', type: 'display', order: 1 },
+      { id: 'position', label: 'Position', type: 'display', order: 2 },
+      { id: 'payRate', label: 'Pay Rate', type: 'display', order: 3 },
+      { id: 'startDate', label: 'Start Date', type: 'display', order: 4 },
+      { id: 'confirmUnderstand', label: 'I have read and understand the terms of this offer', type: 'checkbox', required: true, order: 5 },
+      { id: 'confirmAtWill', label: 'I understand this is an at-will employment arrangement', type: 'checkbox', required: true, order: 6 },
+    ]
+  },
+  {
+    workspace_id: null,
+    form_type: 'onboarding_w4',
+    title: 'W-4 Employee Withholding Certificate',
+    description: 'Complete your federal tax withholding information. This information will be used for payroll processing.',
+    requires_signature: true,
+    signature_label: 'Employee Signature (certifying W-4 accuracy)',
+    submit_action: 'complete_onboarding_task',
+    success_message: 'Your W-4 has been submitted successfully.',
+    fields: [
+      { id: 'firstName', label: 'First Name and Middle Initial', type: 'text', required: true, order: 1 },
+      { id: 'lastName', label: 'Last Name', type: 'text', required: true, order: 2 },
+      { id: 'ssn', label: 'Social Security Number', type: 'ssn', required: true, helpText: 'Your SSN is encrypted and never stored in plain text', order: 3 },
+      { id: 'address', label: 'Home Address', type: 'text', required: true, order: 4 },
+      { id: 'cityStateZip', label: 'City, State, ZIP', type: 'text', required: true, order: 5 },
+      { id: 'filingStatus', label: 'Filing Status', type: 'radio', required: true, options: ['Single or Married filing separately', 'Married filing jointly', 'Head of household'], order: 6 },
+      { id: 'multipleJobs', label: 'Do you have multiple jobs or does your spouse work?', type: 'checkbox', order: 7 },
+      { id: 'dependentsAmount', label: 'Total Dependents Amount (Step 3)', type: 'currency', order: 8 },
+      { id: 'otherIncome', label: 'Other Income Not from Jobs (Step 4a)', type: 'currency', order: 9 },
+      { id: 'deductions', label: 'Deductions (Step 4b)', type: 'currency', order: 10 },
+      { id: 'extraWithholding', label: 'Extra Withholding Per Period (Step 4c)', type: 'currency', order: 11 },
+    ]
+  },
+  {
+    workspace_id: null,
+    form_type: 'onboarding_direct_deposit',
+    title: 'Direct Deposit Authorization',
+    description: 'Provide your banking information for direct deposit of your paycheck.',
+    requires_signature: true,
+    signature_label: 'Employee Signature (authorizing direct deposit)',
+    submit_action: 'complete_onboarding_task',
+    success_message: 'Direct deposit has been set up. Your next paycheck will be deposited to this account.',
+    fields: [
+      { id: 'bankName', label: 'Bank Name', type: 'text', required: true, order: 1 },
+      { id: 'accountType', label: 'Account Type', type: 'radio', required: true, options: ['Checking', 'Savings'], order: 2 },
+      { id: 'routingNumber', label: 'Routing Number (9 digits)', type: 'text', required: true, order: 3 },
+      { id: 'accountNumber', label: 'Account Number', type: 'text', required: true, order: 4 },
+      { id: 'confirmAccountNumber', label: 'Confirm Account Number', type: 'text', required: true, order: 5 },
+      { id: 'authorization', label: 'I authorize my employer to deposit my pay directly to this account', type: 'checkbox', required: true, order: 6 },
+    ]
+  },
+  {
+    workspace_id: null,
+    form_type: 'handbook_acknowledgment',
+    title: 'Employee Handbook Acknowledgment',
+    description: 'Confirm that you have received and read the employee handbook.',
+    requires_signature: true,
+    signature_label: 'Acknowledgment Signature',
+    submit_action: 'complete_onboarding_task',
+    success_message: 'Handbook acknowledgment recorded.',
+    fields: [
+      { id: 'confirmReceived', label: 'I have received the Employee Handbook', type: 'checkbox', required: true, order: 1 },
+      { id: 'confirmRead', label: 'I have read and understand the policies in the Employee Handbook', type: 'checkbox', required: true, order: 2 },
+      { id: 'confirmAtWill', label: 'I understand the handbook does not constitute a contract of employment', type: 'checkbox', required: true, order: 3 },
+      { id: 'confirmQuestions', label: 'I understand I can ask my supervisor if I have questions about any policy', type: 'checkbox', required: true, order: 4 },
+    ]
+  },
+  {
+    workspace_id: null,
+    form_type: 'background_check_consent',
+    title: 'Background Check Authorization',
+    description: 'Authorize a background check as required for your position.',
+    requires_signature: true,
+    signature_label: 'Authorization Signature',
+    submit_action: 'complete_onboarding_task',
+    success_message: 'Background check authorization received. Processing will begin within 1-2 business days.',
+    fields: [
+      { id: 'fullName', label: 'Full Legal Name', type: 'text', required: true, order: 1 },
+      { id: 'dob', label: 'Date of Birth', type: 'date', required: true, order: 2 },
+      { id: 'ssn', label: 'Social Security Number', type: 'ssn', required: true, order: 3 },
+      { id: 'driverLicenseNumber', label: "Driver's License Number", type: 'text', required: true, order: 4 },
+      { id: 'driverLicenseState', label: 'License State', type: 'text', required: true, order: 5 },
+      { id: 'authorization', label: 'I authorize a consumer report and/or investigative consumer report for employment purposes', type: 'checkbox', required: true, order: 6 },
+      { id: 'acknowledge', label: 'I understand I have rights under the Fair Credit Reporting Act', type: 'checkbox', required: true, order: 7 },
+    ]
+  },
+  {
+    workspace_id: null,
+    form_type: 'job_application',
+    title: 'Security Officer Application',
+    description: 'Thank you for your interest. Please complete all sections of this application.',
+    requires_signature: true,
+    signature_label: 'Applicant Signature (certifying accuracy)',
+    submit_action: 'create_candidate',
+    success_message: 'Application received! We will review your information and be in touch within 2-3 business days.',
+    fields: [
+      { id: 'firstName', label: 'First Name', type: 'text', required: true, order: 1 },
+      { id: 'lastName', label: 'Last Name', type: 'text', required: true, order: 2 },
+      { id: 'email', label: 'Email Address', type: 'email', required: true, order: 3 },
+      { id: 'phone', label: 'Phone Number', type: 'phone', required: true, order: 4 },
+      { id: 'address', label: 'Home Address', type: 'text', required: true, order: 5 },
+      { id: 'cityStateZip', label: 'City, State, ZIP', type: 'text', required: true, order: 6 },
+      { id: 'positionApplied', label: 'Position Applying For', type: 'select', required: true, options: ['Unarmed Security Officer', 'Armed Commissioned Officer', 'Supervisor', 'Mobile Patrol Officer'], order: 7 },
+      { id: 'hasLicense', label: 'Do you have a valid security guard license?', type: 'radio', required: true, options: ['Yes', 'No', 'In Process'], order: 8 },
+      { id: 'licenseNumber', label: 'License Number (if applicable)', type: 'text', order: 9 },
+      { id: 'licenseState', label: 'License State', type: 'text', order: 10 },
+      { id: 'licenseExpiry', label: 'License Expiration Date', type: 'date', order: 11 },
+      { id: 'yearsExperience', label: 'Years of Security Experience', type: 'select', options: ['Less than 1 year', '1-3 years', '3-5 years', '5+ years'], order: 12 },
+      { id: 'availability', label: 'Availability', type: 'select', required: true, options: ['Any shift', 'Days only', 'Nights only', 'Weekends only', 'Flexible'], order: 13 },
+      { id: 'whyJoin', label: 'Why do you want to work with us?', type: 'textarea', order: 14 },
+      { id: 'smsConsent', label: 'I consent to receive text messages about my application status', type: 'checkbox', order: 15 },
+      { id: 'certifyAccurate', label: 'I certify that all information provided is true and accurate', type: 'checkbox', required: true, order: 16 },
+    ]
+  },
+  {
+    workspace_id: null,
+    form_type: 'client_intake_form',
+    title: 'New Client Information Form',
+    description: 'Please provide your organization information to set up your account.',
+    requires_signature: false,
+    submit_action: 'create_client',
+    success_message: 'Thank you! Your account manager will be in touch within one business day.',
+    fields: [
+      { id: 'companyName', label: 'Company / Organization Name', type: 'text', required: true, order: 1 },
+      { id: 'industry', label: 'Industry', type: 'select', options: ['Commercial Real Estate', 'Retail', 'Healthcare', 'Industrial/Warehouse', 'Construction', 'Hospitality', 'Entertainment/Bar/Nightclub', 'Government', 'Education', 'Residential', 'Other'], order: 2 },
+      { id: 'contactName', label: 'Primary Contact Name', type: 'text', required: true, order: 3 },
+      { id: 'contactTitle', label: 'Contact Title', type: 'text', order: 4 },
+      { id: 'contactEmail', label: 'Contact Email', type: 'email', required: true, order: 5 },
+      { id: 'contactPhone', label: 'Contact Phone', type: 'phone', required: true, order: 6 },
+      { id: 'billingEmail', label: 'Billing Email (if different)', type: 'email', order: 7 },
+      { id: 'siteAddress', label: 'Primary Site Address', type: 'text', required: true, order: 8 },
+      { id: 'numberOfLocations', label: 'Number of Locations Needing Coverage', type: 'select', options: ['1', '2-5', '6-10', '10+'], order: 9 },
+      { id: 'servicesNeeded', label: 'Services Needed', type: 'select', options: ['Unarmed Officers', 'Armed Officers', 'Mobile Patrol', 'Event Security', 'Construction Security', 'Mixed'], order: 10 },
+      { id: 'coverageHours', label: 'Coverage Hours Needed', type: 'select', options: ['Business hours only', '24/7', 'Nights and weekends', 'Event-based', 'Custom'], order: 11 },
+      { id: 'startDate', label: 'Desired Start Date', type: 'date', order: 12 },
+      { id: 'additionalInfo', label: 'Additional Requirements or Notes', type: 'textarea', order: 13 },
+    ]
+  },
+];
+
+// Insert all platform default forms
+export async function seedPlatformForms() {
+  for (const form of PLATFORM_DEFAULT_FORMS) {
+    await pool.query(`
+      INSERT INTO platform_forms 
+      (workspace_id, form_type, title, description, fields, requires_signature, 
+       signature_label, submit_action, success_message)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ON CONFLICT (form_type, workspace_id) DO NOTHING
+    `, [
+      form.workspace_id,
+      form.form_type,
+      form.title,
+      form.description,
+      JSON.stringify(form.fields),
+      form.requires_signature,
+      form.signature_label || null,
+      form.submit_action,
+      form.success_message
+    ]);
+  }
+  console.log(`[Forms] Seeded ${PLATFORM_DEFAULT_FORMS.length} platform default forms`);
+}
+```
+
+---
+
+**SUBAGENT 7 — SALES PROPOSAL ONLINE FLOW**
+
+Build `client/src/pages/proposals/[token]/index.tsx`:
+
+```tsx
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { SignatureCapture } from '@/components/forms/SignatureCapture';
+import { CheckCircle, XCircle, MessageSquare, Loader2, Building, Shield, Clock, DollarSign } from 'lucide-react';
+
+type ProposalAction = 'accept' | 'decline' | 'changes' | null;
+
+export default function ProposalPage() {
+  const { token } = useParams<{ token: string }>();
+  const [action, setAction] = useState<ProposalAction>(null);
+  const [signature, setSignature] = useState<any>(null);
+  const [declineReason, setDeclineReason] = useState('');
+  const [changeRequests, setChangeRequests] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [finalAction, setFinalAction] = useState<string>('');
+
+  const { data: proposal, isLoading, error } = useQuery({
+    queryKey: ['proposal', token],
+    queryFn: async () => {
+      const res = await fetch(`/api/proposals/public/${token}`);
+      if (!res.ok) throw new Error('Proposal not found');
+      return res.json();
+    }
+  });
+
+  const actionMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await fetch(`/api/proposals/public/${token}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Action failed');
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      setSubmitted(true);
+      setFinalAction(variables.action);
+    }
+  });
+
+  const handleAccept = () => {
+    if (!signature) {
+      alert('Please provide your signature to accept this proposal.');
+      return;
+    }
+    actionMutation.mutate({
+      action: 'accept',
+      signatureData: signature.data,
+      signatureType: signature.type,
+      typedName: signature.typedName
+    });
+  };
+
+  const handleDecline = () => {
+    if (!declineReason.trim()) {
+      alert('Please provide a reason for declining.');
+      return;
+    }
+    actionMutation.mutate({ action: 'decline', declineReason });
+  };
+
+  const handleChanges = () => {
+    if (!changeRequests.trim()) {
+      alert('Please describe the changes you are requesting.');
+      return;
+    }
+    actionMutation.mutate({ action: 'changes_requested', changeRequests });
+  };
+
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+    </div>
+  );
+
+  if (error || !proposal) return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="text-center">
+        <XCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+        <h2 className="text-xl font-bold">Proposal Not Found</h2>
+        <p className="text-gray-500 text-sm mt-2">This proposal may have expired or is no longer available.</p>
+      </div>
+    </div>
+  );
+
+  if (submitted) {
+    const messages: Record<string, { icon: any; title: string; message: string; color: string }> = {
+      accept: {
+        icon: CheckCircle,
+        title: 'Proposal Accepted!',
+        message: `Thank you for accepting. A signed contract will be sent to your email shortly. Your account manager will contact you to confirm your start date.`,
+        color: 'text-green-500'
+      },
+      decline: {
+        icon: XCircle,
+        title: 'Proposal Declined',
+        message: 'We have received your decision. Thank you for considering our services.',
+        color: 'text-red-500'
+      },
+      changes_requested: {
+        icon: MessageSquare,
+        title: 'Changes Requested',
+        message: 'Your change requests have been sent to our team. We will review them and send you a revised proposal within 24 hours.',
+        color: 'text-blue-500'
+      }
+    };
+
+    const config = messages[finalAction];
+    const Icon = config.icon;
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <Icon className={`h-16 w-16 ${config.color} mx-auto mb-4`} />
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">{config.title}</h2>
+          <p className="text-gray-600 text-sm leading-relaxed">{config.message}</p>
+          <p className="text-gray-400 text-xs mt-6">{proposal.content.companyName}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const content = proposal.content || {};
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-2xl mx-auto px-4 py-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">{proposal.title}</h1>
+              <p className="text-sm text-gray-500">{content.companyName}</p>
+            </div>
+            {proposal.expires_at && (
+              <div className="flex items-center gap-1 text-xs text-orange-500 bg-orange-50 px-3 py-1 rounded-full">
+                <Clock className="h-3 w-3" />
+                Expires {new Date(proposal.expires_at).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+
+        {/* Services */}
+        {content.services?.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Shield className="h-5 w-5 text-blue-600" />
+              <h2 className="font-bold text-gray-900">Security Services</h2>
+            </div>
+            <div className="space-y-3">
+              {content.services.map((service: any, i: number) => (
+                <div key={i} className="flex justify-between items-start py-2 border-b border-gray-50 last:border-0">
+                  <div>
+                    <p className="font-medium text-sm text-gray-800">{service.description}</p>
+                    <p className="text-xs text-gray-500">{service.details}</p>
+                  </div>
+                  <p className="font-semibold text-sm text-gray-900 ml-4 whitespace-nowrap">
+                    ${parseFloat(service.amount).toFixed(2)}/mo
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Pricing Summary */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign className="h-5 w-5 text-green-600" />
+            <h2 className="font-bold text-gray-900">Pricing Summary</h2>
+          </div>
+          <div className="space-y-2">
+            {content.pricing?.lineItems?.map((item: any, i: number) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-gray-600">{item.label}</span>
+                <span className="font-medium">${parseFloat(item.amount).toFixed(2)}</span>
+              </div>
+            ))}
+            <div className="pt-2 mt-2 border-t border-gray-200 flex justify-between font-bold">
+              <span>Total Monthly Investment</span>
+              <span className="text-green-600 text-lg">
+                ${parseFloat(proposal.total_monthly_value || 0).toFixed(2)}/mo
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Terms */}
+        {content.terms && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h2 className="font-semibold text-blue-900 mb-2 text-sm">Key Terms</h2>
+            <p className="text-sm text-blue-800 leading-relaxed">{content.terms}</p>
+          </div>
+        )}
+
+        {/* Action area */}
+        {!action ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h2 className="font-bold text-gray-900 mb-4 text-center">How would you like to proceed?</h2>
+            <div className="space-y-3">
+              <button
+                onClick={() => setAction('accept')}
+                className="w-full py-4 bg-green-600 text-white rounded-xl font-bold text-base hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="h-5 w-5" />
+                Accept This Proposal
+              </button>
+              <button
+                onClick={() => setAction('changes')}
+                className="w-full py-3 border-2 border-blue-600 text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Request Changes
+              </button>
+              <button
+                onClick={() => setAction('decline')}
+                className="w-full py-3 border border-gray-300 text-gray-500 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+              >
+                Decline Proposal
+              </button>
+            </div>
+          </div>
+        ) : action === 'accept' ? (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <h2 className="font-bold text-gray-900 mb-2">Sign to Accept</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                By signing below you agree to the terms of this proposal and authorize {content.companyName} to begin providing security services as described.
+              </p>
+              <SignatureCapture
+                label="Your Signature"
+                required={true}
+                onCapture={setSignature}
+                onClear={() => setSignature(null)}
+                legalText={`By signing, ${content.clientName || 'you'} agree to the services and pricing outlined in this proposal. This constitutes a binding service agreement.`}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setAction(null); setSignature(null); }}
+                className="flex-1 py-3 border rounded-xl text-gray-600 hover:bg-gray-50"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleAccept}
+                disabled={!signature || actionMutation.isPending}
+                className="flex-2 py-3 bg-green-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2 px-6"
+              >
+                {actionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Confirm Acceptance
+              </button>
+            </div>
+          </div>
+        ) : action === 'decline' ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+            <h2 className="font-bold text-gray-900">Decline Proposal</h2>
+            <textarea
+              value={declineReason}
+              onChange={e => setDeclineReason(e.target.value)}
+              placeholder="Please let us know why you are declining. This helps us improve our proposals..."
+              rows={4}
+              className="w-full border rounded-lg p-3 text-sm"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setAction(null)} className="flex-1 py-3 border rounded-xl text-gray-600">Back</button>
+              <button
+                onClick={handleDecline}
+                disabled={actionMutation.isPending}
+                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold disabled:opacity-50"
+              >
+                Decline Proposal
+              </button>
+            </div>
+          </div>
+        ) : action === 'changes' ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+            <h2 className="font-bold text-gray-900">Request Changes</h2>
+            <p className="text-sm text-gray-500">Describe the changes you would like to see in a revised proposal.</p>
+            <textarea
+              value={changeRequests}
+              onChange={e => setChangeRequests(e.target.value)}
+              placeholder="e.g. We need 3 officers instead of 2 at Site A, and would like a 6-month contract term instead of 12..."
+              rows={5}
+              className="w-full border rounded-lg p-3 text-sm"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setAction(null)} className="flex-1 py-3 border rounded-xl text-gray-600">Back</button>
+              <button
+                onClick={handleChanges}
+                disabled={actionMutation.isPending}
+                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold disabled:opacity-50"
+              >
+                Send Request
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <p className="text-xs text-center text-gray-400 pb-8">
+          This proposal is secured and confidential. {content.companyName}
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+**SUBAGENT 8 — FORMS MANAGEMENT UI (INTERNAL)**
+
+Build `client/src/pages/forms-manager/index.tsx`:
+
+```tsx
+// Internal page at /forms-manager (org_admin and above)
+// Shows:
+// 1. All available form templates (platform + custom)
+// 2. Pending invitations (not yet submitted)
+// 3. Recent submissions
+// 4. Quick send buttons for common forms
+
+// Key actions per form:
+// → "Send to Officer" — opens invite dialog
+// → "Send to Client" — opens invite dialog
+// → "Copy Link" — generates and copies invitation URL
+// → "View Submissions" — shows submission list with PDF links
+// → "Send Reminder" — resends to pending invitees
+
+// Pending invitations panel:
+// Shows who has not yet completed their forms
+// Days remaining before expiry
+// Reminder button per invitation
+// Expiry countdown
+
+// Quick send panel (most common workflows):
+// [New Employee Onboarding] → sends all 6 onboarding forms in sequence
+// [Offer Letter Only] → sends just the offer letter
+// [Client Intake] → sends client information form
+// [Job Application] → generates and copies public application link
+// [Employment Verification] → sends verification form to requestor
+```
+
+---
+
+**SUBAGENT 9 — ROUTE MOUNTING AND APP.TSX UPDATE**
+
+Mount all new routes and pages:
+
+```typescript
+// server/routes.ts — add new routes
+import platformFormsRoutes from './routes/platformFormsRoutes';
+import salesProposalRoutes from './routes/salesProposalRoutes';
+
+// Mount
+app.use(platformFormsRoutes);
+app.use(salesProposalRoutes);
+```
+
+```tsx
+// client/src/App.tsx — add new pages
+const PublicFormPage = lazy(() => import('./pages/forms/[token]'));
+const ProposalPage = lazy(() => import('./pages/proposals/[token]'));
+const FormsManagerPage = lazy(() => import('./pages/forms-manager'));
+
+// Public routes (no auth required)
+<Route path="/forms/:token" element={<PublicFormPage />} />
+<Route path="/proposals/:token" element={<ProposalPage />} />
+<Route path="/sign/:token" element={<SigningPage />} />
+
+// Protected routes
+<Route path="/forms-manager" element={<RequireAuth><FormsManagerPage /></RequireAuth>} />
+```
+
+---
+
+**SUBAGENT 10 — VERIFICATION AND CERTIFICATION**
+
+After all above subagents complete verify everything works:
+
+```bash
+# 1. Tables exist
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public'
+AND table_name IN ('platform_forms', 'form_invitations', 'form_submissions', 
+                   'document_signing_sequences', 'document_signing_tokens',
+                   'sales_proposals_online');
+# Must show all 6 tables
+
+# 2. Platform default forms seeded
+SELECT form_type, title FROM platform_forms WHERE workspace_id IS NULL;
+# Must show all 7 default form types
+
+# 3. Signature component renders
+# Navigate to /forms/test-token in browser
+# Must show form with signature pad
+# Signature pad must be responsive on mobile viewport
+
+# 4. Form invitation flow works end-to-end
+POST /api/forms/[job_application_form_id]/invite
+{ email: "test@example.com", contextType: null }
+# Must create invitation and return formUrl
+
+GET /api/forms/public/[token]
+# Must return form definition with fields
+
+POST /api/forms/public/[token]/submit
+{ data: { firstName: "Test", ... }, signatureData: "[base64]" }
+# Must return { success: true }
+
+# 5. PDF generated after submission
+SELECT generated_document_url FROM form_submissions ORDER BY created_at DESC LIMIT 1;
+# Must show a URL not null
+
+curl -s -o /dev/null -w "%{http_code}" "[document_url]"
+# Must return 200
+
+# 6. Onboarding task auto-completed
+SELECT status FROM onboarding_tasks 
+WHERE form_type = 'job_application' 
+AND updated_at > NOW() - INTERVAL '2 minutes';
+# Must show 'completed' if linked
+
+# 7. Proposal flow works
+POST /api/proposals { leadId, content: {...}, totalMonthlyValue: 1500 }
+# Returns { token, proposalUrl }
+
+GET /api/proposals/public/[token]
+# Returns proposal content
+
+POST /api/proposals/public/[token]/action { action: 'accept', signatureData: '...' }
+# Returns success, lead advances to Contract Executed
+
+# 8. TypeScript zero errors
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+# Must be 0
+
+# 9. Server clean startup
+# All new routes mounted
+# No runtime errors
+
+# 10. Mobile test
+# Open /forms/[token] on a 375px viewport
+# All fields must be usable with touch
+# Signature pad must work with finger drawing
+# Submit button must be easily tappable
+```
+
+---
+
+**CERTIFICATION:**
+
+```
+PHASE COMPLETE WHEN:
+
+DATABASE:
+✅ All 6 tables created and indexed
+✅ 7 platform default forms seeded
+
+COMPONENTS:
+✅ SignatureCapture renders draw and type modes
+✅ SignatureCapture works on mobile touchscreen
+✅ Form renderer displays all 12 field types correctly
+✅ Pre-populated fields show data from entity context
+✅ Required field validation prevents submission
+✅ Submit button shows loading state
+
+BACKEND:
+✅ Form invitation creates secure token
+✅ Public form endpoint returns form without auth
+✅ Submission stored in database with IP and timestamp
+✅ PDF generated after every submission
+✅ PDF stored in document vault with SHA-256 hash
+✅ Onboarding task auto-completed on submission
+✅ NDS notification sent to org on submission
+✅ Confirmation email sent to submitter
+
+PROPOSAL FLOW:
+✅ Proposal page renders services and pricing
+✅ Accept triggers signature capture
+✅ Signed proposal generates contract PDF
+✅ Lead stage advances to Contract Executed
+✅ Decline and changes_requested flows work
+
+INTEGRATION:
+✅ Forms Manager page accessible at /forms-manager
+✅ All new routes mounted in App.tsx
+✅ All backend routes mounted in routes.ts
+✅ Zero TypeScript errors
+✅ Server starts clean
+✅ ACME sandbox tested end-to-end
+```
+
+---
+
+Paste that to the agent. This is the complete online forms and esignature system. When it merges every form on the platform — onboarding paperwork, employment agreements, client proposals, job applications, tax forms — can be filled out on a phone and submitted to Trinity who processes it, generates the PDF, stores it in the vault, and advances the relevant workflow automatically. No printing. No scanning. No DocuSign subscription needed.

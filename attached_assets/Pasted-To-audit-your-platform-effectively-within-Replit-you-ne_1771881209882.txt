@@ -1,0 +1,24 @@
+To audit your platform effectively within Replit, you need a prompt that forces the environment to simulate "stress-test" scenarios across your frontend, backend logic, and the Trinity AI decision engine.
+Copy and paste this into your Replit agent or use it to guide your next deployment phase:
+Replit Audit Prompt: CoAIleague & Trinity AI Ecosystem
+Objective: Conduct a full-stack operational audit of the CoAIleague platform to identify gaps between "Platform Claims" (Automation/Efficiency) and "System Reality" (Code Logic/AI Reliability).
+1. Workflow & Logic Stress Tests
+ * The "Overtime Guardian" Test: Analyze the scheduling logic. If Trinity attempts to fill a 2 AM call-out, does she prioritize guards based on proximity (GPS) and current weekly hours to avoid unapproved overtime?
+   * Check: Is there a hard-stop in the code for weekly_hours > 40?
+ * The "Compliance Gatekeeper" Test: Audit the guard database schema. If a guard’s license is expired or missing a specific certification (e.g., Armed vs. Unarmed), does the system allow them to be assigned to a high-clearance post?
+   * Check: Verify the is_eligible function in the scheduling controller.
+ * The "Geofence Ghost" Test: Review the clock-in/out logic. Create a script to simulate a clock-in event where user_location is >100 meters from site_location.
+   * Check: Does the system trigger an immediate "Exception Log" for Trinity to review, or does it silently accept the entry?
+2. Trinity AI "Brain" Audit
+ * Proactive vs. Reactive: Review how Trinity handles "Pass-down" logs. Instead of just storing strings in a database, can we implement a hook where Trinity scans for keywords like "broken," "theft," or "hazard" and auto-generates a client notification?
+ * Communication Escalation: Audit the "Auto-Fill" workflow. If a guard doesn't confirm a shift within 10 minutes, does the logic recursively trigger the next available candidate, or does the process stall?
+3. Financial & Integration Integrity
+ * QuickBooks Bridge: Verify the data mapping for the "One-Click Export." Does the export file include "Exception Adjustments" (e.g., manual edits to clock-in times), or only raw data?
+ * Savings Calculator Accuracy: Cross-reference the "Up to $140K Savings" claim on the frontend with the actual labor cost reduction logic in the admin dashboard. Is it calculating based on real-time data or static placeholders?
+4. UI/UX Consistency
+ * Mobile-First Field Ops: Ensure the GPS tracking and reporting modules are fully responsive. If a guard is in a low-signal area, is there an "Offline-Sync" buffer to prevent data loss?
+How to use this in Replit:
+ * Paste the prompt into the Replit AI Agent.
+ * Ask it to generate "Unit Tests" for each of these four categories.
+ * Run a "Database Migration Dry Run" to ensure all the fields Trinity needs (License expiry, GPS coordinates, Overtime toggles) actually exist in your current schema.
+Would you like me to draft a specific "Post-Order" quiz logic for Trinity to use during the guard clock-in process?

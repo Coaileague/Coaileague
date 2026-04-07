@@ -10,14 +10,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -34,6 +27,8 @@ import {
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+
 interface AgentToolbeltProps {
   ticketId?: string;
   selectedUserId?: string | null; // Target user for tools
@@ -48,7 +43,7 @@ interface AgentToolbeltProps {
 }
 
 const macros = [
-  { id: 'greeting', label: 'Greeting', text: 'Hello! Thanks for reaching out to CoAIleague Support. How can I assist you today?' },
+  { id: 'greeting', label: 'Greeting', text: `Hello! Thanks for reaching out to ${PLATFORM_NAME} Support. How can I assist you today?` },
   { id: 'investigation', label: 'Investigating', text: 'I\'m looking into this issue for you. I\'ll have an update shortly.' },
   { id: 'need_info', label: 'Need Info', text: 'To help resolve this, could you provide more details about when this started?' },
   { id: 'resolved', label: 'Resolved', text: 'Great! I\'m glad we could resolve this. Is there anything else I can help with?' },
@@ -238,14 +233,14 @@ export function AgentToolbelt({
       </DropdownMenu>
 
       {/* Escalate Dialog */}
-      <Dialog open={escalateDialog} onOpenChange={setEscalateDialog}>
-        <DialogContent size="md" data-testid="escalate-dialog">
-          <DialogHeader>
-            <DialogTitle>Escalate Ticket</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={escalateDialog} onOpenChange={setEscalateDialog}>
+        <UniversalModalContent size="md" data-testid="escalate-dialog">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Escalate Ticket</UniversalModalTitle>
+            <UniversalModalDescription>
               Escalate this ticket to a specialized team for further assistance.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="escalate-queue">Escalate To</Label>
@@ -273,7 +268,7 @@ export function AgentToolbelt({
               />
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setEscalateDialog(false)}>
               Cancel
             </Button>
@@ -284,19 +279,19 @@ export function AgentToolbelt({
             >
               Escalate
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Bug Report Dialog */}
-      <Dialog open={bugDialog} onOpenChange={setBugDialog}>
-        <DialogContent size="md" data-testid="bug-dialog">
-          <DialogHeader>
-            <DialogTitle>Create Bug Report</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={bugDialog} onOpenChange={setBugDialog}>
+        <UniversalModalContent size="md" data-testid="bug-dialog">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Create Bug Report</UniversalModalTitle>
+            <UniversalModalDescription>
               Report a technical issue to the engineering team.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="bug-description">Bug Description</Label>
@@ -313,7 +308,7 @@ export function AgentToolbelt({
               This will create a ticket for engineering with context from this support session.
             </p>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setBugDialog(false)}>
               Cancel
             </Button>
@@ -324,9 +319,9 @@ export function AgentToolbelt({
             >
               Create Bug Report
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
     </>
   );
 }

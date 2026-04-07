@@ -4,6 +4,7 @@
  * Includes AI credit tracking, ROI metrics, and advanced usage insights
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response } from 'express';
 import { type AuthenticatedRequest } from '../rbac';
 import { businessOwnerAnalyticsService } from '../services/businessOwnerAnalyticsService';
@@ -13,21 +14,17 @@ import { db } from '../db';
 import { timeEntries, clients, invoices, quickbooksApiUsage } from '@shared/schema';
 import { eq, and, gte, lte, sum, sql } from 'drizzle-orm';
 import { trinityNotificationBridge } from '../services/ai-brain/trinityNotificationBridge';
+import { requireAuth } from '../auth';
+import { requireOwner } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('OwnerAnalytics');
+
 
 export const ownerAnalyticsRouter = Router();
 
-const OWNER_ROLES = ['org_owner', 'org_admin'];
+ownerAnalyticsRouter.use(requireAuth);
 
-function requireOwnerRole(req: AuthenticatedRequest, res: Response, next: Function) {
-  const userRole = req.workspaceRole || 'none';
-  if (!OWNER_ROLES.includes(userRole)) {
-    return res.status(403).json({ 
-      error: 'Business owner or admin access required',
-      requiredRoles: OWNER_ROLES,
-    });
-  }
-  next();
-}
+const requireOwnerRole = requireOwner;
 
 const periodSchema = z.object({
   period: z.enum([
@@ -57,9 +54,9 @@ ownerAnalyticsRouter.get('/overview', requireOwnerRole, async (req: Authenticate
       success: true,
       data: overview
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Overview error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Overview error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -79,9 +76,9 @@ ownerAnalyticsRouter.get('/trends', requireOwnerRole, async (req: AuthenticatedR
       success: true,
       data: trends
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Trends error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Trends error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -100,9 +97,9 @@ ownerAnalyticsRouter.get('/features', requireOwnerRole, async (req: Authenticate
       success: true,
       data: report
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Features error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Features error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -121,9 +118,9 @@ ownerAnalyticsRouter.get('/team', requireOwnerRole, async (req: AuthenticatedReq
       success: true,
       data: report
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Team error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Team error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -149,9 +146,9 @@ ownerAnalyticsRouter.get('/export', requireOwnerRole, async (req: AuthenticatedR
       success: true,
       data
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Export error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Export error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -193,9 +190,9 @@ ownerAnalyticsRouter.get('/comparison', requireOwnerRole, async (req: Authentica
       success: true,
       data: comparison
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Comparison error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Comparison error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -216,9 +213,9 @@ ownerAnalyticsRouter.get('/credits', requireOwnerRole, async (req: Authenticated
       success: true,
       data: summary
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Credits error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Credits error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -236,9 +233,9 @@ ownerAnalyticsRouter.get('/credits/usage', requireOwnerRole, async (req: Authent
       success: true,
       data: usageByCategory
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Credit usage error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Credit usage error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -256,9 +253,9 @@ ownerAnalyticsRouter.get('/credits/trends', requireOwnerRole, async (req: Authen
       success: true,
       data: trends
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Credit trends error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Credit trends error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -269,16 +266,16 @@ ownerAnalyticsRouter.get('/credits/transactions', requireOwnerRole, async (req: 
       return res.status(400).json({ error: 'Workspace ID required' });
     }
 
-    const limit = parseInt(req.query.limit as string) || 50;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 50), 500);
     const transactions = await advancedUsageAnalyticsService.getRecentTransactions(workspaceId, limit);
     
     res.json({
       success: true,
       data: transactions
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Transactions error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Transactions error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -296,9 +293,9 @@ ownerAnalyticsRouter.get('/ai-tasks', requireOwnerRole, async (req: Authenticate
       success: true,
       data: analytics
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] AI tasks error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] AI tasks error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -316,9 +313,9 @@ ownerAnalyticsRouter.get('/roi', requireOwnerRole, async (req: AuthenticatedRequ
       success: true,
       data: metrics
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] ROI error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] ROI error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -336,9 +333,9 @@ ownerAnalyticsRouter.get('/full-report', requireOwnerRole, async (req: Authentic
       success: true,
       data: report
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Full report error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Full report error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -437,7 +434,7 @@ ownerAnalyticsRouter.get('/reconciliation', requireOwnerRole, async (req: Authen
       
       return {
         clientId: client.id,
-        clientName: client.name,
+        clientName: client.companyName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Unknown Client',
         platformHours,
         quickbooksHours,
         discrepancyPercent,
@@ -458,14 +455,13 @@ ownerAnalyticsRouter.get('/reconciliation', requireOwnerRole, async (req: Authen
         : 0,
     };
 
-    await db.insert(quickbooksApiUsage).values({
-      workspaceId,
-      endpoint: 'reconciliation_check',
-      method: 'GET',
-      responseStatus: 200,
-      requestTimestamp: new Date(),
-      metadata: { period, clientCount: items.length, discrepancyCount: summary.discrepancyCount },
-    }).catch(() => {});
+    await db.update(quickbooksApiUsage)
+      .set({
+        requestCount: sql`${quickbooksApiUsage.requestCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(quickbooksApiUsage.workspaceId, workspaceId))
+      .catch(err => log.warn('[OwnerAnalytics] QB API usage counter update failed:', err?.message));
 
     if (summary.discrepancyCount > 0) {
       const highDiscrepancies = items.filter(i => Math.abs(i.discrepancyPercent) > 5);
@@ -475,11 +471,11 @@ ownerAnalyticsRouter.get('/reconciliation', requireOwnerRole, async (req: Authen
           description: `${highDiscrepancies.length} client(s) have >5% variance between platform and invoiced hours. Review the Financial Watchdog tab.`,
           category: 'announcement',
           priority: 2,
-          visibility: 'admin',
+          visibility: 'org_leadership',
           badge: 'ALERT',
           workspaceId,
         }).catch(err => {
-          console.log('[Reconciliation] Duplicate alert suppressed or error:', err.message);
+          log.info('[Reconciliation] Duplicate alert suppressed or error:', err instanceof Error ? err.message : String(err));
         });
       }
     }
@@ -492,8 +488,8 @@ ownerAnalyticsRouter.get('/reconciliation', requireOwnerRole, async (req: Authen
         lastSync: new Date().toISOString(),
       }
     });
-  } catch (error: any) {
-    console.error('[OwnerAnalytics] Reconciliation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[OwnerAnalytics] Reconciliation error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });

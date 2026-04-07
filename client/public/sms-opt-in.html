@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMS Opt-In | CoAIleague Workforce Alerts</title>
+  <meta name="description" content="Opt in to receive recurring automated CoAIleague Workforce Alert text messages — shift reminders, schedule changes, safety alerts, and account notifications for security staff. Reply STOP to opt out at any time." />
+  <meta name="robots" content="index, follow" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f8f9fb;
+      color: #1a1f2e;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    header {
+      background: #0f172a;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo-text {
+      color: #e2c27a;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+    }
+    header .logo-sub {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-left: auto;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+    .badge {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 12px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      color: #475569;
+      font-size: 15px;
+      margin-bottom: 32px;
+      max-width: 580px;
+    }
+    .message-types {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 520px) {
+      .message-types { grid-template-columns: 1fr; }
+      h1 { font-size: 22px; }
+    }
+    .type-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .type-icon {
+      width: 20px;
+      height: 20px;
+      color: #64748b;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .type-label {
+      font-weight: 600;
+      font-size: 13px;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .type-desc {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .consent-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .consent-card h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 16px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label.field-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+    input[type="tel"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      font-size: 15px;
+      color: #1e293b;
+      background: #fff;
+      outline: none;
+    }
+    input[type="tel"]:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+    }
+    .hint {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 5px;
+    }
+    .consent-box {
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .consent-box-inner {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      accent-color: #4f46e5;
+      cursor: pointer;
+    }
+    .consent-text {
+      font-size: 13.5px;
+      color: #334155;
+      line-height: 1.65;
+    }
+    .consent-text strong {
+      color: #1e293b;
+    }
+    .consent-text a {
+      color: #4f46e5;
+      text-decoration: underline;
+    }
+    .consent-note {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 8px;
+      font-style: italic;
+    }
+    .submit-btn {
+      display: block;
+      width: 100%;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 13px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+    .submit-btn:hover { background: #4338ca; }
+    .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .optout-note {
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+      margin-top: 12px;
+    }
+    .success-state {
+      display: none;
+      text-align: center;
+      padding: 36px 20px;
+    }
+    .success-icon {
+      width: 48px;
+      height: 48px;
+      background: #dcfce7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 22px;
+    }
+    .success-state h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+    .success-state p {
+      font-size: 14px;
+      color: #475569;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+    .summary-box {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+    .summary-box h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 24px;
+    }
+    @media (max-width: 480px) { .summary-grid { grid-template-columns: 1fr; } }
+    .summary-item dt {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+    .summary-item dd {
+      font-size: 14px;
+      color: #1e293b;
+    }
+    .privacy-notice {
+      background: #f0f4ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #312e81;
+    }
+    .privacy-notice strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: #94a3b8;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    footer a {
+      color: #64748b;
+      text-decoration: underline;
+    }
+    footer a:hover { color: #1e293b; }
+  </style>
+</head>
+<body>
+  <header>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
+      <rect width="24" height="24" rx="6" fill="#e2c27a"/>
+      <path d="M6 8l6 4 6-4" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+      <path d="M6 8v8h12V8" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="logo-text">CoAIleague</span>
+    <span class="logo-sub">Workforce Management Platform</span>
+  </header>
+
+  <div class="container">
+
+    <span class="badge">&#10003; No Login Required — Public Page</span>
+
+    <h1>CoAIleague Workforce Alerts<br>SMS Opt-In</h1>
+    <p class="subtitle">
+      Opt in to receive recurring automated text message (SMS) notifications from CoAIleague.
+      Security staff use this program to stay connected with their employer for scheduling,
+      safety alerts, and account updates.
+    </p>
+
+    <!-- Message types -->
+    <div class="message-types">
+      <div class="type-card">
+        <svg class="type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <div><p class="type-label">Shift Assignments</p><p class="type-desc">New shift offers and confirmations</p></div>
+      </div>
+      <div class="type-card">
+        <svg class="type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div><p class="type-label">Schedule Reminders</p><p class="type-desc">Upcoming shift reminders &amp; changes</p></div>
+      </div>
+      <div class="type-card">
+        <svg class="type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <div><p class="type-label">Safety Alerts</p><p class="type-desc">Emergency and urgent site notifications</p></div>
+      </div>
+      <div class="type-card">
+        <svg class="type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div><p class="type-label">Coverage Requests</p><p class="type-desc">Open shift fill — reply YES to accept</p></div>
+      </div>
+      <div class="type-card">
+        <svg class="type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 15 9"/></svg>
+        <div><p class="type-label">Clock Reminders</p><p class="type-desc">Clock-in / clock-out alerts</p></div>
+      </div>
+      <div class="type-card">
+        <svg class="type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div><p class="type-label">Account Notifications</p><p class="type-desc">Payroll confirmations &amp; compliance reminders</p></div>
+      </div>
+    </div>
+
+    <!-- Opt-in form card -->
+    <div class="consent-card">
+      <h2>Enter your mobile number &amp; consent below to opt in</h2>
+      <div id="form-view">
+        <div class="form-group">
+          <label class="field-label" for="mobile-number">
+            Mobile Phone Number <span style="color:#ef4444">*</span>
+          </label>
+          <input
+            type="tel"
+            id="mobile-number"
+            placeholder="+1 (555) 000-0000"
+            autocomplete="tel"
+          />
+          <p class="hint">U.S. mobile numbers only. Standard carrier rates may apply.</p>
+        </div>
+
+        <div class="consent-box">
+          <div class="consent-box-inner">
+            <input type="checkbox" id="sms-consent-check" />
+            <label for="sms-consent-check" class="consent-text">
+              By checking this box, I consent to receive
+              <strong>recurring automated text message (SMS) notifications</strong>
+              from <strong>CoAIleague</strong> at the mobile number I provided above.
+              Messages include: shift assignments, schedule reminders, clock-in/out alerts,
+              open shift coverage requests, safety alerts, and account notifications sent
+              on behalf of my employer organization.
+              <strong>Message frequency varies</strong> — up to 10 messages per week during
+              active scheduling periods.
+              <strong>Message and data rates may apply.</strong>
+              Reply <strong>STOP</strong> to cancel at any time.
+              Reply <strong>HELP</strong> for help. See
+              <a href="/sms-terms" target="_blank">SMS Terms</a>
+              and <a href="/privacy" target="_blank">Privacy Policy</a>.
+              <span class="consent-note">
+                Consent is not a condition of purchase, employment, or use of the platform.
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <button class="submit-btn" id="opt-in-btn" disabled>
+          Opt In to SMS Workforce Alerts
+        </button>
+        <p class="optout-note">
+          You can opt out at any time by replying <strong>STOP</strong> to any message.
+        </p>
+      </div>
+      <div class="success-state" id="success-view">
+        <div class="success-icon">&#10003;</div>
+        <h3>You are opted in to SMS Workforce Alerts</h3>
+        <p>
+          You will receive recurring automated text messages at your mobile number.<br><br>
+          Reply <strong>STOP</strong> to cancel at any time.
+          Reply <strong>HELP</strong> for help.
+          Message and data rates may apply.
+        </p>
+      </div>
+    </div>
+
+    <!-- Program summary -->
+    <div class="summary-box">
+      <h3>Program Summary</h3>
+      <dl class="summary-grid">
+        <div class="summary-item"><dt>Program Name</dt><dd>CoAIleague Workforce Alerts</dd></div>
+        <div class="summary-item"><dt>Sender</dt><dd>CoAIleague, LLC</dd></div>
+        <div class="summary-item"><dt>Message Type</dt><dd>Recurring automated</dd></div>
+        <div class="summary-item"><dt>Frequency</dt><dd>Up to 10 msgs/week</dd></div>
+        <div class="summary-item"><dt>Opt-Out</dt><dd>Reply STOP to any message</dd></div>
+        <div class="summary-item"><dt>Help</dt><dd>Reply HELP or support@coaileague.com</dd></div>
+        <div class="summary-item"><dt>Carrier Charges</dt><dd>Msg &amp; data rates may apply</dd></div>
+        <div class="summary-item"><dt>Marketing Messages</dt><dd>None — operational only</dd></div>
+      </dl>
+    </div>
+
+    <!-- Privacy notice -->
+    <div class="privacy-notice">
+      <strong>&#128274; Your privacy is protected</strong>
+      No mobile phone information will be shared with third parties or affiliates for marketing
+      or promotional purposes. Your number is used solely to deliver the workforce notifications
+      you have consented to receive. CoAIleague does not sell or rent mobile phone numbers.
+    </div>
+
+    <footer>
+      CoAIleague, LLC &bull; Workforce Management for Security Companies
+      &bull; <a href="/sms-terms">SMS Terms</a>
+      &bull; <a href="/privacy">Privacy Policy</a>
+      &bull; <a href="/terms">Terms of Service</a>
+      &bull; <a href="mailto:support@coaileague.com">support@coaileague.com</a>
+    </footer>
+  </div>
+
+  <script>
+    var phone = document.getElementById('mobile-number');
+    var check = document.getElementById('sms-consent-check');
+    var btn   = document.getElementById('opt-in-btn');
+    var form  = document.getElementById('form-view');
+    var succ  = document.getElementById('success-view');
+
+    function update() {
+      btn.disabled = !(check.checked && phone.value.trim().length >= 7);
+    }
+    phone.addEventListener('input', update);
+    check.addEventListener('change', update);
+    btn.addEventListener('click', function() {
+      form.style.display = 'none';
+      succ.style.display = 'block';
+    });
+  </script>
+</body>
+</html>

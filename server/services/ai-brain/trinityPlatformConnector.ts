@@ -18,6 +18,8 @@
 
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
 import { trinityMemoryService } from './trinityMemoryService';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityPlatformConnector');
 
 // ============================================================================
 // TYPES
@@ -67,7 +69,7 @@ class TrinityPlatformConnector {
   private initialized = false;
 
   private constructor() {
-    console.log('[TrinityPlatformConnector] Initializing platform connector...');
+    log.info('[TrinityPlatformConnector] Initializing platform connector...');
   }
 
   static getInstance(): TrinityPlatformConnector {
@@ -100,7 +102,7 @@ class TrinityPlatformConnector {
     }
 
     this.initialized = true;
-    console.log('[TrinityPlatformConnector] Platform connector initialized');
+    log.info('[TrinityPlatformConnector] Platform connector initialized');
   }
 
   // ============================================================================
@@ -139,7 +141,7 @@ class TrinityPlatformConnector {
       this.updateConnectionStats(domain);
 
     } catch (error: any) {
-      console.error(`[TrinityPlatformConnector] Failed to emit event for ${domain}:`, error.message);
+      log.error(`[TrinityPlatformConnector] Failed to emit event for ${domain}:`, (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -239,7 +241,7 @@ class TrinityPlatformConnector {
       }
 
     } catch (error: any) {
-      console.error(`[TrinityPlatformConnector] Failed to share insight for ${domain}:`, error.message);
+      log.error(`[TrinityPlatformConnector] Failed to share insight for ${domain}:`, (error instanceof Error ? error.message : String(error)));
     }
   }
 

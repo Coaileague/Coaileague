@@ -12,7 +12,6 @@
 
 import { db } from "../db";
 import {
-  invoiceProposals,
   payrollProposals,
   scheduleProposals,
   aiBrainJobs,
@@ -20,9 +19,13 @@ import {
   invoices,
   timeEntries,
   workspaces,
-} from "@shared/schema";
+} from '@shared/schema';
 import { eq, and, gte, lte, sql, count, avg, sum } from "drizzle-orm";
 import { subDays, startOfMonth, endOfMonth, differenceInHours } from "date-fns";
+import { typedCount } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+const log = createLogger('automationMetrics');
+
 // Load dynamic constants from config (replaces hardcoded values)
 // DOCUMENTED SOURCE: Industry standard estimates from SHRM and ADP time studies
 const DEFAULT_ADMIN_HOURLY_RATE = 35; // Default admin hourly rate for cost avoidance calculations
@@ -53,7 +56,7 @@ export async function setWorkspaceAdminHourlyRate(
   
   // Per-workspace rates require adminHourlyRate column in workspaces table
   // Using default rate until schema extension is implemented
-  console.log(`[AutomationMetrics] Using default hourly rate: $${DEFAULT_ADMIN_HOURLY_RATE}/hr (workspace-specific rates require schema extension)`);
+  log.info(`[AutomationMetrics] Using default hourly rate: $${DEFAULT_ADMIN_HOURLY_RATE}/hr (workspace-specific rates require schema extension)`);
 }
 
 interface AutomationMetrics {
@@ -256,7 +259,8 @@ async function getSchedulingMetrics(
   
   // Calculate actual hours saved from real schedule generation data
   // Track time between schedule request and actual shift creation for real telemetry
-  const telemetryResult = await db.execute(sql`
+  // CATEGORY C — Raw SQL retained: Count( | Tables: schedule_proposals | Verified: 2026-03-23
+  const telemetryResult = await typedCount(sql`
     SELECT 
       COUNT(*) as total_shifts,
       EXTRACT(EPOCH FROM (AVG(COALESCE(sp.approved_at, sp.updated_at) - sp.created_at))) / 3600 as avg_generation_hours

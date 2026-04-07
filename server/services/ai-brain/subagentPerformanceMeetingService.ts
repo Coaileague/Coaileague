@@ -24,6 +24,7 @@
  * 8. Record meeting results
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { eq, and, desc, gte, sql, avg, count } from 'drizzle-orm';
 import {
@@ -37,6 +38,8 @@ import { subagentSupervisor, SubagentDomain } from './subagentSupervisor';
 import { aiBrainService } from './aiBrainService';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 import { TTLCache } from './cacheUtils';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('subagentPerformanceMeetingService');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -161,7 +164,7 @@ class SubagentPerformanceMeetingService {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log('[PerformanceMeeting] Initializing service...');
+    log.info('[PerformanceMeeting] Initializing service...');
     
     // Initialize handler supervisors
     await this.initializeHandlerSupervisors();
@@ -170,7 +173,7 @@ class SubagentPerformanceMeetingService {
     this.subscribeToEvents();
     
     this.initialized = true;
-    console.log('[PerformanceMeeting] Service initialized');
+    log.info('[PerformanceMeeting] Service initialized');
   }
 
   /**
@@ -215,7 +218,7 @@ class SubagentPerformanceMeetingService {
       handlerSupervisors.set(mapping.handlerId, supervisor);
     }
 
-    console.log(`[PerformanceMeeting] Initialized ${handlerSupervisors.size} handler supervisors`);
+    log.info(`[PerformanceMeeting] Initialized ${handlerSupervisors.size} handler supervisors`);
   }
 
   /**
@@ -248,9 +251,9 @@ class SubagentPerformanceMeetingService {
     trigger: MeetingTrigger = 'manual'
   ): Promise<PerformanceMeetingResult> {
     const startTime = Date.now();
-    const meetingId = `meeting_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const meetingId = `meeting_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
 
-    console.log(`[PerformanceMeeting] Starting ${mode} meeting (${trigger}) for workspace ${workspaceId}`);
+    log.info(`[PerformanceMeeting] Starting ${mode} meeting (${trigger}) for workspace ${workspaceId}`);
 
     try {
       // Check if in FAST mode
@@ -332,11 +335,11 @@ class SubagentPerformanceMeetingService {
         },
       });
 
-      console.log(`[PerformanceMeeting] Meeting ${meetingId} completed in ${result.duration}ms. Score: ${averageScore.toFixed(2)}, Pass: ${passedCount}/${subagentReports.length}`);
+      log.info(`[PerformanceMeeting] Meeting ${meetingId} completed in ${result.duration}ms. Score: ${averageScore.toFixed(2)}, Pass: ${passedCount}/${subagentReports.length}`);
 
       return result;
     } catch (error: any) {
-      console.error(`[PerformanceMeeting] Meeting failed: ${error.message}`);
+      log.error(`[PerformanceMeeting] Meeting failed: ${(error instanceof Error ? error.message : String(error))}`);
       throw error;
     }
   }
@@ -459,7 +462,7 @@ Provide a brief performance analysis in JSON format:
         input: { prompt, context: 'performance_analysis' },
         workspaceId: 'platform-system',
         userId: 'system',
-        priority: 'normal',
+        priority: 'medium',
       });
 
       const parsed = JSON.parse(result.output?.response || '{}');
@@ -484,7 +487,7 @@ Provide a brief performance analysis in JSON format:
     report: SubagentPerformanceReport,
     workspaceId: string
   ): Promise<void> {
-    console.log(`[PerformanceMeeting] Optimizing subagent ${report.subagentName} (score: ${report.score})`);
+    log.info(`[PerformanceMeeting] Optimizing subagent ${report.subagentName} (score: ${report.score})`);
 
     try {
       // Generate optimization strategy
@@ -533,9 +536,9 @@ Generate an optimization strategy in JSON format:
         },
       });
 
-      console.log(`[PerformanceMeeting] Optimization applied to ${report.subagentName}: ${strategy.strategy}`);
+      log.info(`[PerformanceMeeting] Optimization applied to ${report.subagentName}: ${strategy.strategy}`);
     } catch (error: any) {
-      console.error(`[PerformanceMeeting] Optimization failed for ${report.subagentName}: ${error.message}`);
+      log.error(`[PerformanceMeeting] Optimization failed for ${report.subagentName}: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
 
@@ -572,7 +575,7 @@ Provide a 2-3 sentence executive summary.`;
         input: { prompt, context: 'meeting_summary' },
         workspaceId: 'platform-system',
         userId: 'system',
-        priority: 'normal',
+        priority: 'medium',
       });
 
       return result.output?.response || `Performance meeting complete. ${passedCount}/${reports.length} subagents passed with average score ${avgScore.toFixed(1)}/5.`;
@@ -673,7 +676,7 @@ Provide a 2-3 sentence executive summary.`;
    * Trigger a FAST mode performance meeting
    */
   async triggerFastMeeting(workspaceId: string): Promise<PerformanceMeetingResult> {
-    console.log(`[PerformanceMeeting] Triggering FAST mode meeting for workspace ${workspaceId}`);
+    log.info(`[PerformanceMeeting] Triggering FAST mode meeting for workspace ${workspaceId}`);
     return this.conductMeeting(workspaceId, 'fast', 'fast_mode');
   }
 
@@ -681,7 +684,7 @@ Provide a 2-3 sentence executive summary.`;
    * Manually trigger a performance meeting
    */
   async triggerManualMeeting(workspaceId: string, mode: MeetingMode = 'standard'): Promise<PerformanceMeetingResult> {
-    console.log(`[PerformanceMeeting] Manual ${mode} meeting triggered for workspace ${workspaceId}`);
+    log.info(`[PerformanceMeeting] Manual ${mode} meeting triggered for workspace ${workspaceId}`);
     return this.conductMeeting(workspaceId, mode, 'manual');
   }
 
@@ -711,7 +714,7 @@ Provide a 2-3 sentence executive summary.`;
    */
   updateScheduleConfig(config: Partial<MeetingScheduleConfig>): void {
     this.scheduleConfig = { ...this.scheduleConfig, ...config };
-    console.log('[PerformanceMeeting] Schedule config updated:', this.scheduleConfig);
+    log.info('[PerformanceMeeting] Schedule config updated:', this.scheduleConfig);
   }
 
   /**

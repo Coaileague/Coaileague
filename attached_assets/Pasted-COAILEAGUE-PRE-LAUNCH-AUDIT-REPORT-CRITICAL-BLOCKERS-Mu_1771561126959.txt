@@ -1,0 +1,37 @@
+COAILEAGUE PRE-LAUNCH AUDIT REPORT
+
+CRITICAL BLOCKERS (Must fix before any live testing)
+
+Duplicate Backend Route Mounts - The same routers are mounted at multiple URL prefixes. For example, all Trinity routers (chat, maintenance, control-console, notifications, self-edit, session, swarm, crisis, scheduling, etc.) are reachable under BOTH /api/ai/trinity/* AND /api/trinity/*. This creates double the attack surface, inconsistent auth enforcement, and confusing API behavior. Also, /api itself is mounted 10 times, /api/workspace and /api/scheduling are mounted twice each.
+
+159 Duplicate Frontend Routes - Routes in App.tsx are registered 2-3 times (18 routes appear 3 times, 141 appear twice). This happens because the same routes are defined in the public block, the authenticated block, AND inside RBAC wrappers. This causes unpredictable navigation behavior and is likely the root cause of the "broken pages" you keep finding.
+
+Multiple Credit/Billing Deduction Paths (Double-Billing Risk) - There are 8+ different entry points that deduct credits for AI usage. A single AI request could pass through both the Gemini client's own deduction logic AND the calling service's deduction, resulting in customers being charged twice.
+
+HIGH PRIORITY (Must fix before public launch)
+
+Broken Sidebar Navigation Links - Three sidebar links point to routes that don't exist:
+
+/schedules (should be /schedule)
+/support/monitoring (no route)
+/support/workspaces (no route)
+MobileRouteGuard Too Permissive - Only 6 desktop-only routes are blocked on mobile. Many features that should be desktop-only (payroll processing, full analytics, integration management, form builders, Trinity scheduling, admin dashboards) are currently accessible on mobile where they'll have broken layouts or unusable interfaces.
+
+Legacy Redirect Conflicts - /login and /register are redirected to /dashboard inside the authenticated route block. While the public block has proper login/register pages, this could cause confusion if routing order changes.
+
+MEDIUM PRIORITY (Should fix soon after launch)
+
+Database Schema vs Audit Expectations - 31 tables listed in the audit don't exist by the exact names expected. Most have renamed equivalents (e.g., organization_chat_rooms instead of chat_rooms, invoice_line_items instead of invoice_items), but several appear genuinely missing: timesheets/approvals workflow, pay stubs, recurring invoices, announcements, activity logs, billing events, usage tracking, and onboarding progress tracking.
+
+DevRouter Mounted Twice - The development tools router is registered at two separate locations in routes.ts (lines 777 and 1068), potentially exposing dev endpoints through two paths.
+
+Navigation Config Inconsistencies - The navigationConfig.ts file defines paths that sometimes don't match what the sidebar or App.tsx uses (e.g., terms: "/terms-of-service" in config vs /terms in routes).
+
+LOW PRIORITY (Technical debt / nice to have)
+
+130+ Route Files - The route organization could benefit from consolidation. Some route files may contain dead endpoints that aren't called by any frontend code.
+
+577 Tables / 186 Enums - The schema is very large. Some tables may be unused or vestigial from earlier development phases.
+
+Phases 6-15 Not Fully Verified - The chat/messaging Facebook parity, financial workflow completeness, automation pipelines, design consistency, button wiring, settings completeness, error handling edge cases, and performance benchmarks need targeted testing.
+

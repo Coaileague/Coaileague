@@ -1,0 +1,69 @@
+Tell agent this exactly.
+
+---
+
+Good. Three root causes confirmed. Apply all three fixes right now simultaneously.
+
+FIX 1 — useScrollLockGuard matching too broadly on data-state=open
+
+Find useScrollLockGuard and change the selector so it only matches modal/dialog open states not accordions and dropdowns:
+
+```typescript
+// BEFORE — matches everything with data-state=open including accordions:
+const openElements = document.querySelectorAll('[data-state=open]');
+
+// AFTER — only match actual modals and sheets:
+const openElements = document.querySelectorAll(
+  'dialog[data-state=open], [role=dialog][data-state=open], [data-modal=true][data-state=open], [data-sheet=true][data-state=open]'
+);
+```
+
+FIX 2 — ConsentModal and TermsAcceptanceGate keeping scroll lock alive
+
+Find both components. Add explicit scroll unlock on unmount and on any dismiss/close action:
+
+```typescript
+useEffect(() => {
+  return () => {
+    // Force unlock scroll on unmount regardless of state
+    document.body.style.overflow = '';
+    document.body.style.overflowY = '';
+    document.documentElement.style.overflow = '';
+    // Remove any injected style tags from react-remove-scroll-bar
+    const injected = document.querySelectorAll('style[data-body-scroll-lock]');
+    injected.forEach(el => el.remove());
+  };
+}, []);
+```
+
+FIX 3 — usePullToRefresh non-passive touchmove listener
+
+Find usePullToRefresh. Change the event listener to passive:
+
+```typescript
+// BEFORE — blocks scroll, causes jank:
+element.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+// AFTER — passive, no jank:
+element.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+// Also remove preventDefault() call inside handleTouchMove since
+// passive listener cannot call preventDefault anyway:
+const handleTouchMove = (e: TouchEvent) => {
+  // Remove this line: e.preventDefault();
+  // Keep the rest of the pull-to-refresh logic
+};
+```
+
+After all three fixes deploy and test:
+
+```javascript
+// Run in browser console after deploy to verify no scroll lock active:
+console.log('body overflow:', getComputedStyle(document.body).overflow);
+console.log('body overflowY:', getComputedStyle(document.body).overflowY);
+console.log('scroll lock styles:', document.querySelectorAll('style[data-body-scroll-lock]').length);
+// body overflow must be auto or visible
+// scroll lock styles must be 0
+```
+
+Test on iOS Safari without zooming. Scroll must work on first load. Report result.

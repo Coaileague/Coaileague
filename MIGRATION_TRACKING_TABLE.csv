@@ -1,0 +1,78 @@
+File Path,Component Type,Current Pattern,Z-Index Issue,Mobile Issue,Migration Path,Priority,Status,Notes
+client/src/components/account-support-panel.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Desktop-only experience
+client/src/components/banner-editor-dialog.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Editor modal
+client/src/components/banner-manager.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Management interface
+client/src/components/buy-credits-modal.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Payment flow
+client/src/components/camera-capture.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Media capture
+client/src/components/chat-tutorial-slides.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,MEDIUM,PENDING,Tutorial content
+client/src/components/help-command-panel.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Help system
+client/src/components/image-lightbox.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog with size=lg,MEDIUM,PENDING,Image viewer
+client/src/components/onboarding-wizard.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog with size=full,HIGH,PENDING,Onboarding flow
+client/src/components/queue-viewer-dialog.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,MEDIUM,PENDING,Queue management
+client/src/components/schedule/ScheduleToolbar.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Schedule UI
+client/src/components/schedule/UnassignedShiftsPanel.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Shift management
+client/src/components/trinity-credits.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,MEDIUM,PENDING,Credits display
+client/src/components/trinity/scenario-preview-modal.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog with size=lg,MEDIUM,PENDING,Preview modal
+client/src/components/uns-command-center.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Command interface
+client/src/components/user-diagnostics-panel.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Use ResponsiveDialog,HIGH,PENDING,Diagnostics tool
+client/src/components/workboard/WorkboardDashboard.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Use ResponsiveDialog,HIGH,PENDING,Dashboard
+client/src/components/ui/command.tsx,Dialog (Internal),Raw Dialog,z-[100] hardcoded,No responsiveness,Refactor with ResponsiveDialog,HIGH,PENDING,Critical UI component
+client/src/components/approvals/ApprovalTray.tsx,Sheet,Raw Sheet,z-[9999] hardcoded,Raw sheet,ManagedSheet,MEDIUM,PENDING,Approvals interface
+client/src/components/mobile-chat-layout.tsx,Sheet,Raw Sheet + MobileResponsiveSheet,Mixed z-index,Partially responsive,Consolidate to ResponsiveDialog,MEDIUM,PENDING,Chat layout
+client/src/components/mobile/MobileBottomNav.tsx,Sheet,Raw Sheet + Hook,Mixed z-index,Partially responsive,Add z-index management,LOW,IN_PROGRESS,Has canvas-hub hook
+client/src/components/mobile/MobileWorkerLayout.tsx,Sheet,Raw Sheet,z-[9999] hardcoded,Raw sheet,ManagedSheet,MEDIUM,PENDING,Worker interface
+client/src/components/mobile/PWAInstallPrompt.tsx,Sheet,Raw Sheet,z-[9999] hardcoded,Raw sheet,ManagedSheet,LOW,PENDING,PWA prompt
+client/src/components/mobile/schedule/ApprovalsDrawer.tsx,Sheet,Raw Sheet,z-[9999] hardcoded,Raw sheet,ManagedSheet,MEDIUM,PENDING,Mobile approvals
+client/src/components/mobile/schedule/ReportsSheet.tsx,Sheet,Raw Sheet,z-[9999] hardcoded,Raw sheet,ManagedSheet,MEDIUM,PENDING,Reports drawer
+client/src/components/universal-header.tsx,Sheet,Raw Sheet + MobileResponsiveSheet,Mixed z-index,Partially responsive,Consolidate to ResponsiveDialog,MEDIUM,PENDING,Header component
+client/src/components/workspace-tabs-nav.tsx,Sheet,Raw Sheet,z-[9999] hardcoded,Raw sheet,ManagedSheet,MEDIUM,PENDING,Tabs navigation
+client/src/components/mobile/MobileNotificationSheet.tsx,Sheet,MobileResponsiveSheet,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern
+client/src/components/mobile-user-action-sheet.tsx,Sheet,MobileResponsiveSheet,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern
+client/src/components/chat/ParticipantDrawer.tsx,Sheet,MobileResponsiveSheet,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern
+client/src/components/motd-dialog.tsx,Dialog,ResponsiveDialog,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern
+client/src/components/universal-header.tsx,Sheet,NavigationSheetSection,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern
+client/src/components/mobile/MobileVoiceCommandOverlay.tsx,Overlay,Raw Overlay,z-[9999] hardcoded,Raw styling,Create ManagedOverlay,MEDIUM,PENDING,Voice interface
+client/src/components/feature-tutorial-overlay.tsx,Overlay,Raw Overlay,z-[9999] hardcoded,Raw styling,Add to layer manager,LOW,PENDING,Tutorial overlay
+client/src/components/trinity-chat-modal.tsx,Modal,Raw Modal,z-[100] hardcoded,No responsiveness,ResponsiveDialog,MEDIUM,PENDING,Trinity chat
+client/src/components/universal-transition-overlay.tsx,Overlay,Raw Overlay,z-[9999] hardcoded,Raw styling,Use TransitionLoader,MEDIUM,PENDING,Transition overlay
+client/src/components/compact-moderation-dialogs.tsx,Dialog,Raw Dialog,z-[9999] hardcoded,No responsiveness,Refactor with ResponsiveDialog,HIGH,PENDING,Multiple dialogs
+client/src/components/workspace-shell.tsx,Modal,Raw Modal,z-[1000] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Workspace wrapper
+client/src/pages/accounting-integrations.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/ai-integrations.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/availability.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/budgeting.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/company-reports.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/compliance/i9-compliance.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/compliance/vehicle-inspections.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/expense-approvals.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/external-email.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/flex-staffing.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/HelpDesk.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Consolidate to ResponsiveDialog,HIGH,PENDING,Major page
+client/src/pages/hireos-workflow-builder.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/hr-benefits.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/hr-pto.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/hr-reviews.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/hr-terminations.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/inbox.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Consolidate to ResponsiveDialog,HIGH,PENDING,Major page
+client/src/pages/payroll-deductions.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/payroll-garnishments.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/platform-admin.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Admin page
+client/src/pages/policies.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/private-messages.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Consolidate to ResponsiveDialog,HIGH,PENDING,Major page
+client/src/pages/quickbooks-import.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/reports.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/review-disputes.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/sales-crm.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/support-command-console.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Consolidate to ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/training-os.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/unavailability.tsx,Dialog,Raw Dialog,z-[100] hardcoded,No responsiveness,ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/universal-schedule.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Consolidate to ResponsiveDialog,HIGH,PENDING,Major page
+client/src/pages/workflow-approvals.tsx,Mixed,Raw Dialog + Raw Sheet,Mixed z-index,Mixed responsiveness,Consolidate to ResponsiveDialog,HIGH,PENDING,Page component
+client/src/pages/schedule-mobile-first.tsx,Sheet,Raw Sheet,z-[9999] hardcoded,Raw sheet,ManagedSheet,MEDIUM,PENDING,Mobile page
+client/src/pages/custom-login.tsx,Dialog,ResponsiveDialog,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern
+client/src/pages/invoices.tsx,Dialog,ResponsiveDialog,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern (3 instances)
+client/src/App.tsx,Provider,LayerManagerProvider,N/A,N/A,Already correct,N/A,DONE,✅ Root provider
+client/src/components/canvas-hub/index.ts,Exports,ResponsiveDialog export,N/A,N/A,Reference,N/A,DONE,✅ Central hub
+client/src/components/canvas-hub/ManagedDialog.tsx,Reference,ManagedDialog impl,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern
+client/src/components/canvas-hub/LayerManager.tsx,System,LayerManager core,Dynamic z-index,N/A,Reference Implementation,N/A,DONE,✅ Core system
+client/src/components/canvas-hub/MobileResponsiveSheet.tsx,Reference,MobileResponsiveSheet,Dynamic z-index,Responsive,Reference Implementation,N/A,DONE,✅ Correct pattern

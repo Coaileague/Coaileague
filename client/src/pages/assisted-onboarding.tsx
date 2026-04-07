@@ -10,15 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import {
   Users,
   Plus,
@@ -31,7 +24,6 @@ import {
   Send,
   FileText,
   Loader2,
-  RefreshCw,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -80,7 +72,7 @@ export default function AssistedOnboarding() {
     notes: "",
   });
 
-  const { data: workspacesData, isLoading, refetch } = useQuery<{
+  const { data: workspacesData, isLoading } = useQuery<{
     success: boolean;
     workspaces: AssistedWorkspace[];
     count: number;
@@ -157,125 +149,111 @@ export default function AssistedOnboarding() {
 
   const workspaces = workspacesData?.workspaces || [];
 
-  return (
-    <div className="container mx-auto p-6 max-w-6xl" data-testid="page-assisted-onboarding">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2" data-testid="text-page-title">
-            <Users className="h-6 w-6" />
-            Support-Assisted Onboarding
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Create and manage workspaces on behalf of users who need assistance
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => refetch()}
-            disabled={isLoading}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+  const headerActions = (
+      <UniversalModal open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <UniversalModalTrigger asChild>
+          <Button data-testid="button-create-new">
+            <Plus className="h-4 w-4 mr-2" />
+            New Assisted Workspace
           </Button>
+        </UniversalModalTrigger>
+        <UniversalModalContent size="md">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Create Assisted Workspace</UniversalModalTitle>
+            <UniversalModalDescription>
+              Enter the target user's information. You'll set up their workspace and then hand it off to them.
+            </UniversalModalDescription>
+          </UniversalModalHeader>
 
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-new">
-                <Plus className="h-4 w-4 mr-2" />
-                New Assisted Workspace
-              </Button>
-            </DialogTrigger>
-            <DialogContent size="md">
-              <DialogHeader>
-                <DialogTitle>Create Assisted Workspace</DialogTitle>
-                <DialogDescription>
-                  Enter the target user's information. You'll set up their workspace and then hand it off to them.
-                </DialogDescription>
-              </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="targetUserEmail">User Email *</Label>
+              <Input
+                id="targetUserEmail"
+                type="email"
+                placeholder="Enter email address"
+                value={formData.targetUserEmail}
+                onChange={(e) => setFormData({ ...formData, targetUserEmail: e.target.value })}
+                data-testid="input-target-email"
+              />
+            </div>
 
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="targetUserEmail">User Email *</Label>
-                  <Input
-                    id="targetUserEmail"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={formData.targetUserEmail}
-                    onChange={(e) => setFormData({ ...formData, targetUserEmail: e.target.value })}
-                    data-testid="input-target-email"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="targetUserName">User Name *</Label>
+              <Input
+                id="targetUserName"
+                placeholder="John Smith"
+                value={formData.targetUserName}
+                onChange={(e) => setFormData({ ...formData, targetUserName: e.target.value })}
+                data-testid="input-target-name"
+              />
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="targetUserName">User Name *</Label>
-                  <Input
-                    id="targetUserName"
-                    placeholder="John Smith"
-                    value={formData.targetUserName}
-                    onChange={(e) => setFormData({ ...formData, targetUserName: e.target.value })}
-                    data-testid="input-target-name"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="targetUserPhone">Phone (Optional)</Label>
+              <Input
+                id="targetUserPhone"
+                type="tel"
+                placeholder="Enter phone number"
+                value={formData.targetUserPhone}
+                onChange={(e) => setFormData({ ...formData, targetUserPhone: e.target.value })}
+                data-testid="input-target-phone"
+              />
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="targetUserPhone">Phone (Optional)</Label>
-                  <Input
-                    id="targetUserPhone"
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={formData.targetUserPhone}
-                    onChange={(e) => setFormData({ ...formData, targetUserPhone: e.target.value })}
-                    data-testid="input-target-phone"
-                  />
-                </div>
+            <Separator />
 
-                <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="workspaceName">Workspace Name *</Label>
+              <Input
+                id="workspaceName"
+                placeholder="Acme Corp Scheduling"
+                value={formData.workspaceName}
+                onChange={(e) => setFormData({ ...formData, workspaceName: e.target.value })}
+                data-testid="input-workspace-name"
+              />
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="workspaceName">Workspace Name *</Label>
-                  <Input
-                    id="workspaceName"
-                    placeholder="Acme Corp Scheduling"
-                    value={formData.workspaceName}
-                    onChange={(e) => setFormData({ ...formData, workspaceName: e.target.value })}
-                    data-testid="input-workspace-name"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Internal Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Any notes about this assisted onboarding..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="resize-none"
+                data-testid="input-notes"
+              />
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Internal Notes</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Any notes about this assisted onboarding..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="resize-none"
-                    data-testid="input-notes"
-                  />
-                </div>
-              </div>
+          <UniversalModalFooter>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel-create">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={createMutation.isPending}
+              data-testid="button-confirm-create"
+            >
+              {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Create Workspace
+            </Button>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+  );
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel-create">
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreate}
-                  disabled={createMutation.isPending}
-                  data-testid="button-confirm-create"
-                >
-                  {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Create Workspace
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'assisted-onboarding',
+    title: 'Support-Assisted Onboarding',
+    subtitle: 'Create and manage workspaces on behalf of users who need assistance',
+    category: 'admin',
+    headerActions: headerActions,
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -316,7 +294,7 @@ export default function AssistedOnboarding() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
@@ -384,6 +362,6 @@ export default function AssistedOnboarding() {
           ))}
         </div>
       )}
-    </div>
+    </CanvasHubPage>
   );
 }

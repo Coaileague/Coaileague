@@ -1,0 +1,541 @@
+**Phase 7 is certified closed. This is what the standard looks like when it is met.**
+
+Every item done correctly. The Node.js brace-tracking scan for global `db` inside transaction blocks — zero results. The deferred files produced two real fixes: `advancedSchedulingService` delete sequence and `aiBrainService` two FAQ sequences both properly wrapped with `saveVersionHistory` extended to accept an optional `tx` parameter. Three forced rollback tests — zero partial records in any case, PostgreSQL ACID atomicity confirmed directly. Payroll uniqueness constraint rejected duplicate insert. Five concurrent credit deductions produced mathematically exact result — 19835 → 19785, exactly 50 deducted with no lost updates. 102 → 148 transactions.
+
+One note on TypeScript: the full `tsc` timeout has now been documented three phases in a row. Before Phase 9 send a message asking him to configure a faster TypeScript check — either `tsc --project tsconfig.server.json` scoped to server only, or `tsc --incremental` to cache results. This needs to stop being an open question every phase.
+
+---
+
+**Phase 7 done. Phase 8 goes in now.**
+
+---
+
+**COAILEAGUE — PHASE 8: NOTIFICATION & EVENT DELIVERY RELIABILITY**
+*Syncs Into Phases 1 Through 7 | No Shortcuts | No Partial Coverage | No Deferrals | Fully Verified Before Phase 9*
+
+---
+
+**READ THIS ENTIRE SECTION BEFORE TOUCHING A SINGLE FILE**
+
+Phases 1 through 7 hardened the data layer — columns verified, calculations precise, inputs validated, writes atomic, concurrency protected. Phase 8 now hardens the communication layer. Every notification the platform sends is a commitment to the tenant. A shift assignment notification that fires and disappears silently when the email provider has a 3-second outage is not a working notification system — it is a notification system that appears to work until it matters.
+
+In a security staffing context a missed notification is not a UX problem. A calloff alert that never delivers means a post goes unstaffed. A payroll approval request that silently fails means payroll is delayed. Phase 8 ensures every notification that is sent has a database record, every failure triggers a retry, and every permanent failure surfaces to the org owner.
+
+**SHORTCUT PATTERNS THAT WILL BE REJECTED**
+
+**REJECTED — Fire-and-forget notification sends.** Any `sendEmail()`, `sendSMS()`, `pushNotification()`, or WebSocket push that executes without confirming delivery and without a retry on failure is fire-and-forget. Every notification goes through the `NotificationService` established in this phase. There are no exceptions.
+
+**REJECTED — Logging failures without retrying.** A `catch` block that logs a notification failure and continues is not retry logic. The failure is logged and the notification is gone. Retry requires re-queuing the notification for another delivery attempt after a backoff delay.
+
+**REJECTED — Retry without idempotency.** A notification retried three times without an idempotency guard produces three delivered notifications. Every retry uses the same notification ID so the recipient receives exactly one delivery regardless of how many attempts were made.
+
+**REJECTED — WebSocket-only for critical notifications.** WebSocket delivery is best-effort. A manager who navigates away or has a dropped connection misses the notification entirely. Critical operational notifications — shift coverage needed, payroll approval required, calloff received — must have an email fallback when WebSocket delivery is not acknowledged within 30 seconds.
+
+**REJECTED — Notification delivery status that only tracks sends.** "Sent" is not "delivered." The notification log must track: pending, sent, failed, retrying, permanently_failed, and delivered. Without delivered status there is no way to know whether a critical operational alert actually reached a human.
+
+---
+
+**PHASE 1 THROUGH 7 SYNC VERIFICATION — BEFORE ANY PHASE 8 WORK BEGINS**
+
+Confirm every one of the following before writing a single line:
+
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | head -20` — zero errors.
+
+Run `grep -rn "db\.transaction" server/routes server/services --include="*.ts" | grep -v "node_modules\|//" | wc -l` — must return 148 or higher.
+
+Confirm `server/lib/businessRules.ts` exports 15+ functions.
+
+Confirm `server/services/financialCalculator.ts` exports 18 functions.
+
+Confirm `payroll_entries.calculation_inputs` JSONB column exists in the live database.
+
+Confirm server starts with 30/30 background services and zero failures.
+
+Record this as the Phase 8 Sync Confirmation and append to replit.md. Then proceed.
+
+---
+
+**BASELINE RECORD**
+
+Record as the Phase 8 Baseline Document: every notification send call currently in the codebase — count of `sendEmail`, `sendSMS`, `resend.emails.send`, WebSocket push calls, and any other notification mechanism. This is the work order. Every one of these calls must go through `NotificationService` by the end of this phase. Append to replit.md.
+
+---
+
+**STEP 1 — CREATE THE NOTIFICATIONS TABLE**
+
+Write and run a migration to create the notifications table if it does not already exist:
+
+```sql
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id TEXT NOT NULL,
+  recipient_user_id TEXT NOT NULL,
+  notification_type TEXT NOT NULL,
+  channel TEXT NOT NULL CHECK (channel IN ('email', 'sms', 'websocket', 'in_app')),
+  subject TEXT,
+  payload JSONB NOT NULL,
+  idempotency_key TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending' 
+    CHECK (status IN ('pending','sending','sent','failed','retrying',
+                      'permanently_failed','delivered')),
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 3,
+  last_error TEXT,
+  scheduled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  sent_at TIMESTAMPTZ,
+  delivered_at TIMESTAMPTZ,
+  next_retry_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_workspace 
+  ON notifications(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_status_retry 
+  ON notifications(status, next_retry_at) 
+  WHERE status IN ('pending','retrying');
+CREATE INDEX IF NOT EXISTS idx_notifications_idempotency 
+  ON notifications(idempotency_key) 
+  WHERE idempotency_key IS NOT NULL;
+```
+
+Add the Drizzle schema definition to the appropriate schema file. Confirm the table exists in the live database after migration. Confirm the schema definition is exported from the schema index.
+
+---
+
+**STEP 2 — CREATE THE NOTIFICATIONSERVICE**
+
+Create `server/services/notificationService.ts`. This is the only permitted way to send any notification in the platform. Every existing send call in the codebase will be replaced with a call to this service by the end of this phase.
+
+```typescript
+import { db } from '../db';
+import { notifications } from '@shared/schema';
+import { eq, and, lte, lt } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+
+export type NotificationType = 
+  | 'shift_assignment'
+  | 'shift_cancellation' 
+  | 'calloff_received'
+  | 'coverage_needed'
+  | 'payroll_approval_required'
+  | 'payroll_approved'
+  | 'payroll_paid'
+  | 'invoice_sent'
+  | 'invoice_overdue'
+  | 'invoice_paid'
+  | 'document_requires_signature'
+  | 'onboarding_invite'
+  | 'trinity_alert'
+  | 'system_alert';
+
+export type NotificationChannel = 'email' | 'sms' | 'websocket' | 'in_app';
+
+export interface NotificationPayload {
+  type: NotificationType;
+  workspaceId: string;
+  recipientUserId: string;
+  channel: NotificationChannel;
+  subject?: string;
+  body: Record<string, unknown>;
+  idempotencyKey?: string;
+  scheduledAt?: Date;
+}
+
+export class NotificationService {
+  
+  // Send a notification — writes to DB then attempts delivery
+  static async send(payload: NotificationPayload): Promise<string> {
+    const idempotencyKey = payload.idempotencyKey ?? 
+      `${payload.type}-${payload.recipientUserId}-${Date.now()}`;
+    
+    // Check idempotency — if already sent return existing record
+    const existing = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.idempotencyKey, idempotencyKey))
+      .limit(1);
+      
+    if (existing.length > 0 && existing[0].status === 'sent') {
+      return existing[0].id;
+    }
+    
+    // Write notification record first — before any send attempt
+    const [record] = await db
+      .insert(notifications)
+      .values({
+        workspaceId: payload.workspaceId,
+        recipientUserId: payload.recipientUserId,
+        notificationType: payload.type,
+        channel: payload.channel,
+        subject: payload.subject,
+        payload: payload.body,
+        idempotencyKey,
+        status: 'pending',
+        scheduledAt: payload.scheduledAt ?? new Date(),
+      })
+      .onConflictDoUpdate({
+        target: notifications.idempotencyKey,
+        set: { status: 'pending', updatedAt: new Date() }
+      })
+      .returning();
+    
+    // Attempt delivery immediately
+    await this.attemptDelivery(record.id);
+    
+    return record.id;
+  }
+  
+  // Attempt delivery for a notification record
+  static async attemptDelivery(notificationId: string): Promise<void> {
+    const [record] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, notificationId))
+      .limit(1);
+      
+    if (!record || record.status === 'sent' || 
+        record.status === 'permanently_failed') return;
+    
+    // Mark as sending
+    await db
+      .update(notifications)
+      .set({ status: 'sending', updatedAt: new Date() })
+      .where(eq(notifications.id, notificationId));
+    
+    try {
+      await this.deliverByChannel(record);
+      
+      // Mark as sent on success
+      await db
+        .update(notifications)
+        .set({ 
+          status: 'sent', 
+          sentAt: new Date(),
+          attemptCount: record.attemptCount + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(notifications.id, notificationId));
+        
+    } catch (error) {
+      const newAttemptCount = record.attemptCount + 1;
+      const isPermanentlyFailed = newAttemptCount >= record.maxAttempts;
+      
+      if (isPermanentlyFailed) {
+        await db
+          .update(notifications)
+          .set({
+            status: 'permanently_failed',
+            lastError: error instanceof Error ? error.message : String(error),
+            attemptCount: newAttemptCount,
+            updatedAt: new Date()
+          })
+          .where(eq(notifications.id, notificationId));
+          
+        // Alert org owner of permanent failure on critical notification types
+        await this.alertPermanentFailure(record);
+      } else {
+        // Exponential backoff: 2min, 8min, 32min
+        const backoffMinutes = Math.pow(4, newAttemptCount) / 2;
+        const nextRetry = new Date(Date.now() + backoffMinutes * 60 * 1000);
+        
+        await db
+          .update(notifications)
+          .set({
+            status: 'retrying',
+            lastError: error instanceof Error ? error.message : String(error),
+            attemptCount: newAttemptCount,
+            nextRetryAt: nextRetry,
+            updatedAt: new Date()
+          })
+          .where(eq(notifications.id, notificationId));
+      }
+    }
+  }
+  
+  // Deliver by channel — implement each channel
+  private static async deliverByChannel(
+    record: typeof notifications.$inferSelect
+  ): Promise<void> {
+    switch (record.channel) {
+      case 'email':
+        await this.sendEmail(record);
+        break;
+      case 'websocket':
+        await this.sendWebSocket(record);
+        break;
+      case 'in_app':
+        await this.createInAppNotification(record);
+        break;
+      case 'sms':
+        await this.sendSMS(record);
+        break;
+    }
+  }
+  
+  private static async sendEmail(
+    record: typeof notifications.$inferSelect
+  ): Promise<void> {
+    // Import and use existing Resend/email service
+    // Wrap in 5-second timeout — external service must not block indefinitely
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Email delivery timeout')), 5000)
+    );
+    await Promise.race([
+      this.deliverEmail(record),
+      timeout
+    ]);
+  }
+  
+  private static async sendWebSocket(
+    record: typeof notifications.$inferSelect
+  ): Promise<void> {
+    // Push via WebSocket — if connection not available throw so retry queues
+    // WebSocket delivery acknowledgment timeout handled separately
+    const wsManager = await import('./chatConnectionManager');
+    // Attempt push — throws if recipient not connected
+    await wsManager.default.pushToUser(
+      record.recipientUserId, 
+      record.payload
+    );
+  }
+  
+  private static async createInAppNotification(
+    record: typeof notifications.$inferSelect  
+  ): Promise<void> {
+    // Write to in-app notification table
+    // This is a database write so it cannot fail from external dependency
+  }
+  
+  private static async sendSMS(
+    record: typeof notifications.$inferSelect
+  ): Promise<void> {
+    // SMS provider integration with 5-second timeout
+  }
+  
+  private static async alertPermanentFailure(
+    record: typeof notifications.$inferSelect
+  ): Promise<void> {
+    // Send a system alert to the org owner about the permanently failed notification
+    // This is a separate notification — do not recurse into NotificationService
+    // Log to error monitoring service
+    console.error(`[NotificationService] Permanent failure:`, {
+      id: record.id,
+      type: record.notificationType,
+      recipient: record.recipientUserId,
+      workspace: record.workspaceId,
+      attempts: record.attemptCount,
+      lastError: record.lastError
+    });
+  }
+  
+  // Retry processor — called by background job every minute
+  static async processRetries(): Promise<void> {
+    const due = await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.status, 'retrying'),
+          lte(notifications.nextRetryAt, new Date())
+        )
+      )
+      .limit(50);
+      
+    await Promise.allSettled(
+      due.map(n => this.attemptDelivery(n.id))
+    );
+  }
+}
+```
+
+Verify this file compiles with zero TypeScript errors before proceeding.
+
+---
+
+**STEP 3 — REGISTER THE RETRY BACKGROUND JOB**
+
+Add the `NotificationService.processRetries()` call to the background job system established in the systems hardening architecture. This job runs every minute and processes all notifications in `retrying` status where `next_retry_at <= now()`.
+
+Using the `BackgroundJobRunner` pattern if it exists, or directly in the server startup sequence:
+
+```typescript
+// In server/index.ts or the background jobs registration file
+const notificationRetryInterval = setInterval(async () => {
+  try {
+    await NotificationService.processRetries();
+  } catch (error) {
+    console.error('[NotificationRetry] Error processing retries:', error);
+  }
+}, 60 * 1000); // Every 60 seconds
+
+// Register for graceful shutdown
+registeredIntervals.push(notificationRetryInterval);
+```
+
+Confirm the interval is registered in the graceful shutdown handler established in Phase 3 Step 7. The shutdown handler must clear this interval.
+
+---
+
+**STEP 4 — REPLACE ALL FIRE-AND-FORGET SENDS**
+
+Using the baseline count from the beginning of this phase, replace every direct notification send in the codebase with a `NotificationService.send()` call.
+
+Work through these domains in order:
+
+**Shift and scheduling notifications** — shift assignments, shift cancellations, coverage alerts, calloff processing. These are the most operationally critical. Any missed delivery here means an unstaffed post.
+
+**Payroll notifications** — payroll approval requests, payroll approved confirmations, payroll paid confirmations.
+
+**Invoice notifications** — invoice sent confirmations, invoice overdue alerts, payment received confirmations.
+
+**Onboarding notifications** — user invite emails, document signature requests, onboarding completion confirmations.
+
+**Trinity alerts** — all notifications Trinity generates for coverage gaps, compliance issues, and proactive staffing alerts.
+
+**System notifications** — subscription changes, billing failures, workspace admin alerts.
+
+For every replacement confirm:
+- The `notificationType` matches one of the defined enum values
+- An `idempotencyKey` is provided that is deterministic for this specific notification event — not a random UUID each time, but something like `shift-assigned-${shiftId}-${employeeId}` so retries do not produce duplicate deliveries
+- The `recipientUserId` is the actual user who should receive the notification
+- The `workspaceId` is correctly scoped
+
+Report after every domain: how many sends were replaced, which files were changed, and confirm the server is still running clean after each domain.
+
+---
+
+**STEP 5 — ADD WEBSOCKET DELIVERY ACKNOWLEDGMENT**
+
+WebSocket pushes are best-effort. For critical notification types — shift coverage needed, payroll approval required, calloff received, trinity alerts — add a 30-second acknowledgment window. If the WebSocket delivery is not acknowledged within 30 seconds queue an email fallback.
+
+```typescript
+// In the WebSocket message handler on the client side
+// Send acknowledgment back to server when notification is received
+ws.send(JSON.stringify({ 
+  type: 'notification_ack', 
+  notificationId: message.notificationId 
+}));
+
+// On the server WebSocket handler — handle the ack
+case 'notification_ack':
+  await db
+    .update(notifications)
+    .set({ 
+      status: 'delivered', 
+      deliveredAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(notifications.id, data.notificationId));
+  break;
+
+// Background job — check for unacknowledged WebSocket notifications after 30 seconds
+const unacknowledged = await db
+  .select()
+  .from(notifications)
+  .where(
+    and(
+      eq(notifications.channel, 'websocket'),
+      eq(notifications.status, 'sent'),
+      lt(notifications.sentAt, new Date(Date.now() - 30 * 1000))
+    )
+  )
+  .limit(20);
+
+// Queue email fallback for each unacknowledged critical notification
+for (const n of unacknowledged) {
+  if (CRITICAL_NOTIFICATION_TYPES.includes(n.notificationType as NotificationType)) {
+    await NotificationService.send({
+      ...n,
+      channel: 'email',
+      idempotencyKey: `${n.idempotencyKey}-email-fallback`
+    });
+  }
+}
+```
+
+---
+
+**STEP 6 — ADD NOTIFICATION LOG TO ORG OWNER DASHBOARD**
+
+The org owner must be able to see the delivery status of every notification sent in the last 7 days. Add an API endpoint and corresponding frontend view.
+
+Create `GET /api/notifications/log` on the backend:
+
+```typescript
+// Returns notifications for the workspace with delivery status
+router.get('/log', async (req: AuthenticatedRequest, res) => {
+  if (!req.workspaceId) {
+    return res.status(401).json({ error: 'Workspace context required' });
+  }
+  
+  const log = await db
+    .select()
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.workspaceId, req.workspaceId),
+        // Last 7 days
+        gte(notifications.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+      )
+    )
+    .orderBy(desc(notifications.createdAt))
+    .limit(200);
+    
+  return res.json(log);
+});
+```
+
+Add a Zod response schema for this endpoint in `shared/schemas/responses/`. Add the frontend component wrapped in a Phase 3 `ErrorBoundary` with `componentName="Notification Log"`. The component uses `useAsyncData` from Phase 3 and `apiFetch` from Phase 4.
+
+---
+
+**PHASE 8 FINAL VERIFICATION**
+
+Run after all six steps complete:
+
+**Fire-and-forget scan — must return zero:**
+```bash
+grep -rn "resend\.emails\.send\|sendEmail\|sendSMS\|pushNotification" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|notificationService\|NotificationService" | wc -l
+```
+
+Every result must be zero. Every direct notification send that bypasses `NotificationService` is a fire-and-forget that must be fixed.
+
+**Notifications table verification:**
+```sql
+SELECT COUNT(*) FROM notifications;
+SELECT status, COUNT(*) FROM notifications GROUP BY status;
+```
+
+**Retry job verification:**
+Temporarily insert a notification with status `retrying` and `next_retry_at = now() - interval '1 minute'`. Wait 60 seconds. Confirm the retry job processed it — status should have changed to `sent` or `failed`. Report the result.
+
+**Idempotency verification:**
+Call `NotificationService.send()` twice with the same `idempotencyKey`. Confirm exactly one notification record exists in the database and exactly one delivery attempt was made.
+
+**Forced failure verification:**
+Configure the email provider to an invalid endpoint temporarily. Send a notification. Confirm it creates a record with status `failed`, retry is scheduled with correct backoff, and after `maxAttempts` the status is `permanently_failed`. Restore the valid endpoint.
+
+**TypeScript verification:**
+Zero errors.
+
+**Server verification:**
+30/30 background services. All ten baseline operations pass.
+
+---
+
+**PHASE 8 COMPLETION REPORT**
+
+Produce and append to replit.md:
+
+Baseline notification send count from start of phase. Total sends replaced with `NotificationService` calls per domain. Notifications table confirmed in database. Retry job registered and confirmed running. WebSocket acknowledgment pattern confirmed for critical types. Notification log endpoint and UI component confirmed. All verification tests passed.
+
+Phase 8 sync statement: *"Phase 8 notification delivery reliability is complete. Every notification the platform sends has a database record with delivery status tracking. Failed deliveries retry with exponential backoff. Permanently failed critical notifications alert the org owner. WebSocket delivery has an email fallback for critical operational notifications. The org owner can view notification delivery status for the last 7 days. The Phase 1 through Phase 8 chain is complete: verified data → precise calculations → business rules → atomic transactions → resilient UI → validated contracts → auditable calculations → concurrent safety → reliable delivery. Phase 9 can begin on a platform where no notification disappears silently."*
+
+---
+
+**PHASE 8 IS COMPLETE WHEN:**
+
+Fire-and-forget scan returns zero. Notifications table exists with correct schema. Retry job confirmed running. Idempotency confirmed. Forced failure test passes. Zero TypeScript errors. All ten baseline operations pass. Completion report and sync statement in replit.md.
+
+Bring the Phase 8 completion report here before Phase 9 goes in.

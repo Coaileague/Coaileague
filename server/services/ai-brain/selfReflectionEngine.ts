@@ -21,6 +21,8 @@ import { platformEventBus } from '../platformEventBus';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('selfReflectionEngine');
 
 // ============================================================================
 // TYPES
@@ -134,7 +136,7 @@ class SelfReflectionEngine {
   private activeReflections: Set<string> = new Set();
 
   private constructor() {
-    console.log('[SelfReflectionEngine] Initializing Trinity self-reflection capabilities...');
+    log.info('[SelfReflectionEngine] Initializing Trinity self-reflection capabilities...');
   }
 
   static getInstance(): SelfReflectionEngine {
@@ -259,7 +261,7 @@ class SelfReflectionEngine {
           currentOutput = correction.newOutput || currentOutput;
         }
       } catch (error) {
-        console.error(`[SelfReflectionEngine] Failed to apply revision ${revision.revisionId}:`, error);
+        log.error(`[SelfReflectionEngine] Failed to apply revision ${revision.revisionId}:`, error);
       }
     }
 
@@ -333,7 +335,7 @@ Provide a JSON response with:
         reasoning: parsed.reasoning || [],
       };
     } catch (error) {
-      console.error('[SelfReflectionEngine] Critique generation failed:', error);
+      log.error('[SelfReflectionEngine] Critique generation failed:', error);
       return {
         summary: 'Critique generation failed',
         details: [],
@@ -623,24 +625,73 @@ Provide a JSON response with:
     const correctionId = `corr-${crypto.randomUUID()}`;
     
     try {
-      // Log the correction attempt
-      console.log(`[SelfReflectionEngine] Applying revision ${revision.revisionId}: ${revision.description}`);
+      log.info(`[SelfReflectionEngine] Applying revision ${revision.revisionId}: ${revision.description} (type: ${revision.revisionType})`);
 
-      // For now, return a placeholder - actual implementation would re-execute steps
+      const targetStep = context.executedSteps.find(s => s.stepId === revision.targetStep);
+
+      if (revision.revisionType === 'retry' && targetStep) {
+        const { helpaiOrchestrator } = await import('../helpai/platformActionHub');
+        const actionResult = await helpaiOrchestrator.executeAction({
+          actionId: targetStep.action,
+          userId: context.userId,
+          workspaceId: context.workspaceId,
+          userRole: 'system',
+          payload: revision.newParameters
+            ? { ...targetStep.input, ...revision.newParameters }
+            : targetStep.input,
+        });
+
+        log.info(`[SelfReflectionEngine] Retry result for ${targetStep.action}: ${actionResult.success ? 'SUCCESS' : 'FAILED'}`);
+
+        return {
+          correctionId,
+          revisionId: revision.revisionId,
+          success: actionResult.success,
+          description: `Retried ${targetStep.action}: ${actionResult.message || revision.description}`,
+          newOutput: actionResult.data,
+          timestamp: new Date(),
+        };
+      }
+
+      if (revision.revisionType === 'modify_input' && targetStep && revision.newParameters) {
+        const { helpaiOrchestrator } = await import('../helpai/platformActionHub');
+        const mergedParams = { ...targetStep.input, ...revision.newParameters };
+        const actionResult = await helpaiOrchestrator.executeAction({
+          actionId: targetStep.action,
+          userId: context.userId,
+          workspaceId: context.workspaceId,
+          userRole: 'system',
+          payload: mergedParams,
+        });
+
+        log.info(`[SelfReflectionEngine] Modified-input re-execution for ${targetStep.action}: ${actionResult.success ? 'SUCCESS' : 'FAILED'}`);
+
+        return {
+          correctionId,
+          revisionId: revision.revisionId,
+          success: actionResult.success,
+          description: `Re-executed ${targetStep.action} with modified params: ${actionResult.message || revision.description}`,
+          newOutput: actionResult.data,
+          timestamp: new Date(),
+        };
+      }
+
+      log.info(`[SelfReflectionEngine] Revision type "${revision.revisionType}" acknowledged but requires manual implementation or is not auto-executable`);
       return {
         correctionId,
         revisionId: revision.revisionId,
         success: true,
-        description: revision.description,
+        description: `Acknowledged revision (${revision.revisionType}): ${revision.description}`,
         timestamp: new Date(),
       };
     } catch (error: any) {
+      log.error(`[SelfReflectionEngine] Revision ${revision.revisionId} failed:`, (error instanceof Error ? error.message : String(error)));
       return {
         correctionId,
         revisionId: revision.revisionId,
         success: false,
         description: revision.description,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
         timestamp: new Date(),
       };
     }
@@ -653,27 +704,15 @@ Provide a JSON response with:
     try {
       await db.insert(systemAuditLogs).values({
         id: crypto.randomUUID(),
-        timestamp: new Date(),
-        eventType: 'ai_self_reflection',
         entityType: 'execution',
         entityId: context.executionId,
         userId: context.userId,
         workspaceId: context.workspaceId,
         action: 'reflect',
-        details: JSON.stringify({
-          reflectionId: result.reflectionId,
-          passed: result.passed,
-          confidenceScore: result.confidenceScore,
-          issueCount: result.issues.length,
-          cycleNumber: result.cycleNumber,
-          autoCorrectible: result.autoCorrectible,
-          requiresHumanReview: result.requiresHumanReview,
-          thoughtSignatureHash: result.thoughtSignature.hash,
-        }),
-        severity: result.requiresHumanReview ? 'high' : result.passed ? 'low' : 'medium',
+        metadata: { eventType: 'ai_self_reflection', severity: result.requiresHumanReview ? 'high' : result.passed ? 'low' : 'medium', details: JSON.stringify({ reflectionId: result.reflectionId, passed: result.passed, confidenceScore: result.confidenceScore, issueCount: result.issues.length, cycleNumber: result.cycleNumber, autoCorrectible: result.autoCorrectible, requiresHumanReview: result.requiresHumanReview, thoughtSignatureHash: result.thoughtSignature.hash }) },
       });
     } catch (error) {
-      console.error('[SelfReflectionEngine] Failed to log reflection:', error);
+      log.error('[SelfReflectionEngine] Failed to log reflection:', error);
     }
   }
 
@@ -767,7 +806,7 @@ class ReflectionFeedbackLoop {
     const metricsUpdated: string[] = [];
     const recommendations: string[] = [];
 
-    console.log(`[ReflectionFeedbackLoop] Processing feedback for execution ${context.executionId}`);
+    log.info(`[ReflectionFeedbackLoop] Processing feedback for execution ${context.executionId}`);
 
     try {
       // 1. Update learning metrics for each action type
@@ -820,7 +859,7 @@ class ReflectionFeedbackLoop {
         processingTimeMs: Date.now() - startTime,
       };
 
-      console.log(`[ReflectionFeedbackLoop] Feedback processed: ${metricsUpdated.length} metrics updated, ${recommendations.length} recommendations`);
+      log.info(`[ReflectionFeedbackLoop] Feedback processed: ${metricsUpdated.length} metrics updated, ${recommendations.length} recommendations`);
 
       // Publish learning event
       platformEventBus.publish('ai_brain_action', {
@@ -834,7 +873,7 @@ class ReflectionFeedbackLoop {
       return result;
 
     } catch (error) {
-      console.error('[ReflectionFeedbackLoop] Feedback processing failed:', error);
+      log.error('[ReflectionFeedbackLoop] Feedback processing failed:', error);
       return {
         loopId,
         executionId: context.executionId,
@@ -978,7 +1017,7 @@ class ReflectionFeedbackLoop {
         confidenceScore: reflection.confidenceScore,
       });
     } catch (error) {
-      console.error('[ReflectionFeedbackLoop] Failed to store learning in memory:', error);
+      log.error('[ReflectionFeedbackLoop] Failed to store learning in memory:', error);
     }
   }
 
@@ -1070,7 +1109,7 @@ class ReflectionFeedbackLoop {
   resetMetrics(): void {
     this.learningMetrics.clear();
     this.calibrationHistory = [];
-    console.log('[ReflectionFeedbackLoop] Learning metrics reset');
+    log.info('[ReflectionFeedbackLoop] Learning metrics reset');
   }
 }
 

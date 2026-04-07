@@ -1,17 +1,33 @@
 #!/bin/bash
 set -e
 
-echo "🧹 Cleaning previous build..."
-rm -rf dist server/public
+echo "=== Installing dependencies ==="
+npm ci
 
-echo "🏗️  Building frontend..."
+echo "=== Cleaning previous build ==="
+rm -rf dist
+
+echo "=== Building frontend ==="
 npx vite build
 
-echo "📦 Copying frontend build to server/public..."
-mkdir -p server/public
-cp -r dist/public/* server/public/
-
-echo "🏗️  Building backend with path alias resolution..."
+echo "=== Building server (bundled) ==="
 node build.mjs
 
-echo "✅ Build complete!"
+echo "=== Verifying bundle is self-contained ==="
+if grep -q 'from "drizzle-orm"' dist/index.js; then
+  echo "FATAL: drizzle-orm is still external! Bundle failed."
+  exit 1
+fi
+
+if grep -q 'from "express"' dist/index.js; then
+  echo "FATAL: express is still external! Bundle failed."
+  exit 1
+fi
+
+BUNDLE_SIZE=$(stat -c%s dist/index.js 2>/dev/null || stat -f%z dist/index.js 2>/dev/null)
+if [ "$BUNDLE_SIZE" -lt 20000000 ]; then
+  echo "FATAL: Bundle too small (${BUNDLE_SIZE} bytes). Dependencies likely not bundled."
+  exit 1
+fi
+
+echo "=== Build complete (bundle: ${BUNDLE_SIZE} bytes) ==="

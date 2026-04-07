@@ -20,10 +20,17 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
 import { meteredGemini } from '../../billing/meteredGeminiClient';
+import { creditManager, CREDIT_COSTS } from '../../billing/creditManager';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
+import { trinityActionReasoner } from '../trinityActionReasoner';
 import { platformEventBus } from '../../platformEventBus';
+import { broadcastToWorkspace } from '../../../websocket';
 import { auditLogger } from '../../audit-logger';
 import crypto from 'crypto';
+import { typedQuery } from '../../../lib/typedSql';
+
+import { createLogger } from '../../../lib/logger';
+const log = createLogger('PayrollSubagent');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -107,7 +114,7 @@ class CircuitBreaker {
       if (this.state.nextRetry && new Date() >= this.state.nextRetry) {
         this.state.state = 'half-open';
         this.halfOpenTests = 0;
-        console.log('[PayrollSubagent] Circuit breaker entering half-open state');
+        log.info('[PayrollSubagent] Circuit breaker entering half-open state');
         return false;
       }
       return true;
@@ -121,7 +128,7 @@ class CircuitBreaker {
       if (this.halfOpenTests >= this.halfOpenMaxTests) {
         this.state.state = 'closed';
         this.state.failures = 0;
-        console.log('[PayrollSubagent] Circuit breaker closed after successful recovery');
+        log.info('[PayrollSubagent] Circuit breaker closed after successful recovery');
       }
     } else {
       this.state.failures = 0;
@@ -135,11 +142,11 @@ class CircuitBreaker {
     if (this.state.state === 'half-open') {
       this.state.state = 'open';
       this.state.nextRetry = new Date(Date.now() + this.recoveryTimeMs);
-      console.log(`[PayrollSubagent] Circuit breaker reopened after half-open failure: ${error.message}`);
+      log.info(`[PayrollSubagent] Circuit breaker reopened after half-open failure: ${error.message}`);
     } else if (this.state.failures >= this.failureThreshold) {
       this.state.state = 'open';
       this.state.nextRetry = new Date(Date.now() + this.recoveryTimeMs);
-      console.log(`[PayrollSubagent] Circuit breaker opened after ${this.state.failures} failures`);
+      log.info(`[PayrollSubagent] Circuit breaker opened after ${this.state.failures} failures`);
     }
   }
 
@@ -171,7 +178,7 @@ class DistributedTracer {
     this.traces.set(traceId, context);
     this.logAudit(traceId, spanId, operation, 'started', metadata);
     
-    console.log(`[PayrollSubagent] Trace started: ${traceId} - ${operation}`);
+    log.info(`[PayrollSubagent] Trace started: ${traceId} - ${operation}`);
     return context;
   }
 
@@ -196,9 +203,9 @@ class DistributedTracer {
     this.logAudit(context.traceId, context.spanId, context.operation, status, { ...details, durationMs: duration });
     
     if (status === 'completed') {
-      console.log(`[PayrollSubagent] Span completed: ${context.spanId} - ${context.operation} (${duration}ms)`);
+      log.info(`[PayrollSubagent] Span completed: ${context.spanId} - ${context.operation} (${duration}ms)`);
     } else {
-      console.log(`[PayrollSubagent] Span failed: ${context.spanId} - ${context.operation} (${duration}ms)`);
+      log.info(`[PayrollSubagent] Span failed: ${context.spanId} - ${context.operation} (${duration}ms)`);
     }
   }
 
@@ -207,7 +214,7 @@ class DistributedTracer {
     this.logAudit(context.traceId, context.spanId, context.operation, status, { ...details, totalDurationMs: duration });
     this.traces.delete(context.traceId);
     
-    console.log(`[PayrollSubagent] Trace ${status}: ${context.traceId} (${duration}ms)`);
+    log.info(`[PayrollSubagent] Trace ${status}: ${context.traceId} (${duration}ms)`);
   }
 
   private logAudit(traceId: string, spanId: string, action: string, status: 'started' | 'completed' | 'failed', details: Record<string, any>): void {
@@ -277,7 +284,7 @@ class PayrollSubagentService {
     if (!options.forceReprocess) {
       const existing = await this.checkIdempotency(idempotencyKey);
       if (existing) {
-        console.log(`[PayrollSubagent] Returning cached result for idempotency key: ${idempotencyKey}`);
+        log.info(`[PayrollSubagent] Returning cached result for idempotency key: ${idempotencyKey}`);
         return existing;
       }
     }
@@ -287,6 +294,57 @@ class PayrollSubagentService {
       const state = this.circuitBreaker.getState();
       throw new Error(`Payroll service temporarily unavailable. Circuit breaker open until ${state.nextRetry?.toISOString()}`);
     }
+
+    // === TRINITY PRE-EXECUTION REASONING (T005) ===
+    // Trinity evaluates the payroll scope BEFORE any credits are charged or
+    // calculations begin. If Trinity blocks, we stop here without spending resources.
+    // W2/1099 awareness is built into the reasoning prompt via trinityActionReasoner.
+    try {
+      const prePayrollReasoning = await trinityActionReasoner.reason({
+        domain: 'payroll_execute',
+        workspaceId,
+        actionSummary: `Execute payroll: period ${payPeriodStart.toISOString().slice(0, 10)} – ${payPeriodEnd.toISOString().slice(0, 10)}${options.validateOnly ? ' (validate only)' : ''}${options.forceReprocess ? ' (force reprocess)' : ''}`,
+        payload: {
+          periodStart: payPeriodStart.toISOString(),
+          periodEnd: payPeriodEnd.toISOString(),
+          validateOnly: options.validateOnly,
+          forceReprocess: options.forceReprocess,
+          employeeCount: options.employeeIds?.length || 0,
+        },
+      });
+
+      log.info(`[PayrollSubagent] Trinity pre-execution: ${prePayrollReasoning.decision.toUpperCase()} (confidence: ${(prePayrollReasoning.confidence * 100).toFixed(0)}%) — ${prePayrollReasoning.reasoning}`);
+
+      if (prePayrollReasoning.laborLawFlags.length > 0) {
+        log.warn(`[PayrollSubagent] Trinity labor law flags:`, prePayrollReasoning.laborLawFlags);
+      }
+
+      if (prePayrollReasoning.decision === 'block') {
+        const blockResult: PayrollExecutionResult = {
+          success: false,
+          traceId: `trinity-blocked-${Date.now()}`,
+          payrollRunId: undefined,
+          totalGross: 0,
+          totalDeductions: 0,
+          totalNet: 0,
+          employeeCount: 0,
+          processingTimeMs: 0,
+          retryCount: 0,
+          idempotencyKey,
+          issues: [{
+            severity: 'critical',
+            type: 'compliance',
+            description: `Trinity blocked payroll execution: ${prePayrollReasoning.blockReason || prePayrollReasoning.reasoning}`,
+            resolution: prePayrollReasoning.recommendations.join('; ') || 'Review payroll scope before re-running',
+          }],
+          auditLog: [],
+        };
+        return blockResult;
+      }
+    } catch (reasonErr) {
+      log.warn(`[PayrollSubagent] Trinity pre-execution reasoning failed (non-blocking):`, reasonErr instanceof Error ? reasonErr.message : 'unknown');
+    }
+    // === END PRE-EXECUTION REASONING ===
 
     // Start distributed trace
     const trace = this.tracer.startTrace('payroll.execute', {
@@ -300,6 +358,29 @@ class PayrollSubagentService {
     let retryCount = 0;
     let lastError: Error | null = null;
 
+    const sessionFee = CREDIT_COSTS['payroll_session_fee'] || 35;
+    try {
+      await creditManager.deductCredits({
+        workspaceId,
+        userId: 'payroll-subagent',
+        featureKey: 'payroll_session_fee',
+        featureName: 'Payroll Processing Fee',
+        description: `Payroll session ${trace.traceId.substring(0, 16)} — processing fee (calculation, validation, compliance checks)`,
+      });
+      log.info(`[PayrollSubagent] Session fee charged: ${sessionFee} credits for workspace ${workspaceId}`);
+    } catch (feeErr: any) {
+      log.error(`[PayrollSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr.message);
+      this.tracer.endTrace(trace, 'failed', { error: 'billing_failed', message: feeErr.message });
+      return {
+        success: false,
+        payrollRunId: `billing-failed-${Date.now()}`,
+        summary: { totalEmployees: 0, processedCount: 0, failedCount: 0, totalGrossPay: '0', totalNetPay: '0', totalDeductions: '0', totalTaxes: '0' },
+        employees: [],
+        errors: [{ employeeId: 'billing', error: `Insufficient credits or billing error: ${feeErr.message}` }],
+        metadata: { startTime: new Date().toISOString(), endTime: new Date().toISOString(), processingTimeMs: 0, retryCount: 0 },
+      };
+    }
+
     while (retryCount <= this.retryStrategy.maxRetries) {
       try {
         const result = await this.executePayrollInternal(
@@ -310,12 +391,48 @@ class PayrollSubagentService {
           options
         );
 
-        // Record success
         this.circuitBreaker.recordSuccess();
         this.tracer.endTrace(trace, 'completed', { success: true });
 
         // Store idempotency result
         await this.storeIdempotencyResult(idempotencyKey, result);
+
+        // === TRINITY POST-RUN REFLECTION (T005) ===
+        // Record Trinity's reflection after the payroll run completes.
+        // This closes the perceive→deliberate→decide→execute→reflect loop.
+        try {
+          const criticalIssues = result.issues.filter(i => i.severity === 'critical').length;
+          await trinityActionReasoner.reflect(
+            { domain: 'payroll_execute', workspaceId },
+            {
+              success: result.success,
+              score: criticalIssues === 0 ? 0.9 : criticalIssues < 3 ? 0.6 : 0.3,
+              summary: `Payroll completed: $${result.totalGross.toFixed(2)} gross, ${result.employeeCount} employees, ${result.issues.length} issues (${criticalIssues} critical)`,
+            }
+          );
+        } catch { /* Non-blocking */ }
+        // === END POST-RUN REFLECTION ===
+
+        // PER-EMPLOYEE OCCURRENCE FEE — fires once per employee processed per payroll run.
+        // Mirrors payroll bureau SaaS pricing (ADP/Gusto/Paychex charge $3-15/employee/run).
+        // Our rate of 8 cr ($0.08/employee) is 40-180× cheaper than traditional bureaus.
+        // Non-blocking: payroll is complete; billing failure is logged, not fatal.
+        if (result.success && result.employeeCount > 0) {
+          try {
+            const perEmpRate = CREDIT_COSTS['per_payroll_employee'] || 8;
+            const totalPerEmp = result.employeeCount * perEmpRate;
+            await creditManager.deductCredits({
+              workspaceId,
+              featureKey: 'per_payroll_employee',
+              featureName: 'Per-Employee Payroll Processing',
+              description: `Payroll run ${trace.traceId.substring(0, 16)} — ${result.employeeCount} employees × ${perEmpRate}cr/employee = ${totalPerEmp}cr (total gross: $${result.totalGross.toFixed(2)})`,
+              quantity: result.employeeCount,
+            });
+            log.info(`[PayrollSubagent] Per-employee fee charged: ${totalPerEmp}cr (${result.employeeCount} × ${perEmpRate}cr) for workspace ${workspaceId}`);
+          } catch (empErr: any) {
+            log.warn(`[PayrollSubagent] Per-employee billing error (non-blocking):`, empErr.message);
+          }
+        }
 
         return {
           ...result,
@@ -330,7 +447,7 @@ class PayrollSubagentService {
         lastError = error;
         retryCount++;
         
-        console.log(`[PayrollSubagent] Attempt ${retryCount} failed: ${error.message}`);
+        log.info(`[PayrollSubagent] Attempt ${retryCount} failed: ${(error instanceof Error ? error.message : String(error))}`);
 
         if (retryCount <= this.retryStrategy.maxRetries) {
           const delay = Math.min(
@@ -387,19 +504,81 @@ class PayrollSubagentService {
     const timeData = await this.fetchTimeEntries(workspaceId, payPeriodStart, payPeriodEnd, options.employeeIds);
     this.tracer.endSpan(timeSpan, 'completed', { entryCount: timeData.length });
 
+    // Step 2.5: Fetch workspace state for tax calculations
+    const [workspaceRecord] = await db
+      .select({ primaryOperatingState: workspaces.primaryOperatingState, taxJurisdiction: workspaces.taxJurisdiction })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+    const workspaceState = workspaceRecord?.primaryOperatingState
+      || workspaceRecord?.taxJurisdiction?.toUpperCase().replace(/^US-/, '').slice(0, 2)
+      || 'TX';
+
     // Step 3: Calculate payroll for each employee
     const calcSpan = this.tracer.startSpan(parentTrace, 'payroll.calculate');
+    const { calculatePayrollTaxes } = await import('../../billing/payrollTaxService');
     let totalGross = 0;
     let totalDeductions = 0;
     let totalNet = 0;
 
+    // Fetch YTD Social Security already withheld this calendar year (for SS wage-base cap)
+    const calendarYearStart = new Date(new Date().getFullYear(), 0, 1).toISOString();
+    const ytdSSByEmployee = new Map<string, number>();
+    if (employeeData.length > 0) {
+      // CATEGORY C — Raw SQL retained: GROUP BY | Tables: payroll_entries | Verified: 2026-03-23
+      const ytdSSRows = await typedQuery(
+        sql`SELECT employee_id, COALESCE(SUM(social_security), 0)::float AS ytd_ss
+            FROM payroll_entries
+            WHERE workspace_id = ${workspaceId}
+              AND employee_id = ANY(ARRAY[${sql.join(employeeData.map(e => sql`${e.id}`), sql`, `)}])
+              AND created_at >= ${calendarYearStart}
+            GROUP BY employee_id`
+      );
+      for (const r of ytdSSRows as any[]) {
+        ytdSSByEmployee.set(r.employee_id as string, parseFloat(r.ytd_ss as string) || 0);
+      }
+    }
+
     const calculations = employeeData.map(emp => {
       const empTimeEntries = timeData.filter(t => t.employeeId === emp.id);
       const hours = empTimeEntries.reduce((sum, t) => sum + (parseFloat(t.totalHours?.toString() || '0')), 0);
-      const rate = parseFloat(emp.hourlyRate?.toString() || '25');
-      
+      // Use actual employee hourly rate - log warning if missing
+      const rate = parseFloat(emp.hourlyRate?.toString() || '0');
+      if (!emp.hourlyRate || rate === 0) {
+        log.warn(`[PayrollSubagent] Employee ${emp.id} has no hourly rate configured - cannot calculate pay`);
+      }
+
       const gross = hours * rate;
-      const deductions = gross * 0.22; // Estimated 22% for taxes/benefits
+
+      // Real tax withholding — 2024 IRS Percentage Method + FICA
+      let federalWithholding = 0;
+      let socialSecurity = 0;
+      let medicare = 0;
+      let stateWithholding = 0;
+      let totalEmployeeTax = 0;
+
+      if (gross > 0) {
+        try {
+          const wsState = workspaceState;
+          const taxes = calculatePayrollTaxes({
+            grossWage: gross,
+            state: wsState,
+            payPeriod: 'biweekly',
+            filingStatus: 'single',
+            ytdSocialSecurity: ytdSSByEmployee.get(emp.id) ?? 0,
+          });
+          federalWithholding = taxes.federalWithholding;
+          socialSecurity = taxes.socialSecurity;
+          medicare = taxes.medicare;
+          stateWithholding = taxes.stateWithholding;
+          totalEmployeeTax = taxes.totalDeductions;
+        } catch (taxErr: any) {
+          log.warn(`[PayrollSubagent] Tax calc error for employee ${emp.id}, using 22% estimate: ${taxErr.message}`);
+          totalEmployeeTax = gross * 0.22;
+        }
+      }
+
+      const deductions = totalEmployeeTax;
       const net = gross - deductions;
 
       totalGross += gross;
@@ -407,7 +586,7 @@ class PayrollSubagentService {
       totalNet += net;
 
       // Validate
-      if (hours === 0 && emp.employmentType === 'full_time') {
+      if (hours === 0 && emp.workerType === 'employee') {
         issues.push({
           severity: 'warning',
           type: 'validation',
@@ -427,7 +606,10 @@ class PayrollSubagentService {
         });
       }
 
-      return { employeeId: emp.id, hours, gross, deductions, net };
+      return {
+        employeeId: emp.id, hours, gross, deductions, net,
+        taxBreakdown: { federalWithholding, socialSecurity, medicare, stateWithholding },
+      };
     });
 
     this.tracer.endSpan(calcSpan, 'completed', { 
@@ -500,20 +682,26 @@ class PayrollSubagentService {
           },
         },
         { generateHash: true }
-      ).catch(err => console.error('[PayrollSubagent] Audit log failed:', err.message));
+      ).catch(err => log.error('[PayrollSubagent] Audit log failed:', (err instanceof Error ? err.message : String(err))));
 
       // Block execution if risk is too high
       if (riskEvaluation.verdict === 'blocked' || riskEvaluation.verdict === 'rejected') {
-        console.log(`[PayrollSubagent] LLM Judge BLOCKED payroll: ${riskEvaluation.reasoning}`);
+        log.info(`[PayrollSubagent] LLM Judge BLOCKED payroll: ${riskEvaluation.reasoning}`);
         
         // Emit escalation event
-        platformEventBus.publish('payroll_escalation', {
+        platformEventBus.publish({
+          type: 'payroll_escalation',
+          category: 'payroll',
+          title: 'Payroll Blocked — Risk Too High',
+          description: riskEvaluation.reasoning || 'LLM Judge blocked payroll run due to high risk score.',
           workspaceId,
-          reason: riskEvaluation.reasoning,
-          riskScore: riskEvaluation.riskScore,
-          recommendations: riskEvaluation.recommendations,
-          requiresApproval: true,
-        });
+          metadata: {
+            riskScore: riskEvaluation.riskScore,
+            recommendations: riskEvaluation.recommendations,
+            requiresApproval: true,
+          },
+          visibility: 'manager',
+        }).catch((err) => log.warn('[payrollSubagent] Fire-and-forget failed:', err));
 
         return {
           success: false,
@@ -532,7 +720,7 @@ class PayrollSubagentService {
 
       // Log approval for audit trail
       if (riskEvaluation.verdict === 'needs_review') {
-        console.log(`[PayrollSubagent] LLM Judge flagged for review but proceeding: ${riskEvaluation.reasoning}`);
+        log.info(`[PayrollSubagent] LLM Judge flagged for review but proceeding: ${riskEvaluation.reasoning}`);
         issues.push({
           severity: 'warning',
           type: 'validation',
@@ -541,7 +729,7 @@ class PayrollSubagentService {
         });
       }
     } catch (riskError: any) {
-      console.error('[PayrollSubagent] LLM Judge evaluation failed, proceeding with caution:', riskError.message);
+      log.error('[PayrollSubagent] LLM Judge evaluation failed, proceeding with caution:', riskError.message);
       this.tracer.endSpan(riskSpan, 'failed', { error: riskError.message });
     }
 
@@ -552,22 +740,28 @@ class PayrollSubagentService {
       try {
         const [payrollRun] = await db.insert(payrollRuns).values({
           workspaceId,
-          payPeriodStart,
-          payPeriodEnd,
-          totalGross: totalGross.toFixed(2),
-          totalDeductions: totalDeductions.toFixed(2),
-          totalNet: totalNet.toFixed(2),
-          employeeCount: employeeData.length,
+          periodStart: payPeriodStart,
+          periodEnd: payPeriodEnd,
+          totalGrossPay: totalGross.toFixed(2),
+          totalTaxes: totalDeductions.toFixed(2),
+          totalNetPay: totalNet.toFixed(2),
           status: 'pending',
-          metadata: {
-            traceId: parentTrace.traceId,
-            calculatedAt: new Date().toISOString(),
-          },
         }).returning();
 
         this.tracer.endSpan(createSpan, 'completed', { payrollRunId: payrollRun.id });
+
+        broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'payroll_run_created', payrollRunId: payrollRun.id });
+        platformEventBus.publish({
+          type: 'payroll_run_created',
+          category: 'payroll',
+          title: 'Payroll Run Created by Trinity',
+          description: `Trinity AI created payroll run — gross $${totalGross.toFixed(2)}, net $${totalNet.toFixed(2)} — status: pending`,
+          workspaceId,
+          metadata: { payrollRunId: payrollRun.id, totalGross, totalNet, totalDeductions, status: 'pending', source: 'payroll_subagent' },
+          visibility: 'manager',
+        }).catch((err) => log.warn('[payrollSubagent] Fire-and-forget failed:', err));
       } catch (error: any) {
-        this.tracer.endSpan(createSpan, 'failed', { error: error.message });
+        this.tracer.endSpan(createSpan, 'failed', { error: (error instanceof Error ? error.message : String(error)) });
         throw error;
       }
     }
@@ -638,11 +832,24 @@ class PayrollSubagentService {
 
       // Check for historical variance
       if (historicalRuns.length > 0) {
-        const avgHistoricalGross = historicalRuns.reduce((sum, r) => 
-          sum + parseFloat(r.totalGross?.toString() || '0'), 0) / historicalRuns.length;
-        
-        const currentEstimatedGross = Array.from(hoursByEmployee.values()).reduce((sum, h) => sum + h * 25, 0);
-        const variance = ((currentEstimatedGross - avgHistoricalGross) / avgHistoricalGross) * 100;
+        const avgHistoricalGross = historicalRuns.reduce((sum, r) =>
+          sum + parseFloat(r.totalGrossPay?.toString() || '0'), 0) / historicalRuns.length;
+
+        // Calculate estimated gross using actual employee rates from database
+        let currentEstimatedGross = 0;
+        for (const [empId, hours] of hoursByEmployee) {
+          const empData = await this.fetchEmployeeData(workspaceId, [empId]);
+          const emp = empData[0];
+          const rate = parseFloat(emp?.hourlyRate?.toString() || '0');
+          if (rate > 0) {
+            currentEstimatedGross += hours * rate;
+          } else {
+            log.warn(`[PayrollSubagent] Employee ${empId} missing rate in anomaly detection - skipping`);
+          }
+        }
+        const variance = avgHistoricalGross > 0
+          ? ((currentEstimatedGross - avgHistoricalGross) / avgHistoricalGross) * 100
+          : 0;
 
         if (Math.abs(variance) > 20) {
           anomalies.push({
@@ -663,7 +870,7 @@ class PayrollSubagentService {
       return { anomalies, aiInsights };
 
     } catch (error: any) {
-      this.tracer.endTrace(trace, 'failed', { error: error.message });
+      this.tracer.endTrace(trace, 'failed', { error: (error instanceof Error ? error.message : String(error)) });
       throw error;
     }
   }
@@ -696,6 +903,7 @@ class PayrollSubagentService {
   private async storeIdempotencyResult(key: string, result: any): Promise<void> {
     try {
       await db.insert(idempotencyKeys).values({
+        workspaceId: 'system',
         key,
         result,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -704,7 +912,7 @@ class PayrollSubagentService {
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {
-      console.error('[PayrollSubagent] Failed to store idempotency result:', error);
+      log.error('[PayrollSubagent] Failed to store idempotency result:', error);
     }
   }
 
@@ -733,7 +941,7 @@ class PayrollSubagentService {
     return await db.select()
       .from(payrollRuns)
       .where(eq(payrollRuns.workspaceId, workspaceId))
-      .orderBy(desc(payrollRuns.payPeriodEnd))
+      .orderBy(desc(payrollRuns.periodEnd))
       .limit(count);
   }
 

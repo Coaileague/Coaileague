@@ -1,0 +1,121 @@
+  index("idx_doc_retention_purge").on(table.purgeAt),
+  index("idx_doc_retention_ref").on(table.referenceNumber),
+  index("idx_doc_retention_soft_deleted").on(table.softDeletedAt),
+]);
+export const insertDocumentRetentionLogSchema = createInsertSchema(documentRetentionLog).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertDocumentRetentionLog = z.infer<typeof insertDocumentRetentionLogSchema>;
+export type DocumentRetentionLog = typeof documentRetentionLog.$inferSelect;
+
+// ── compliance_score_history ──────────────────────────────────────────────
+export const complianceScoreHistory = pgTable("compliance_score_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  stateCode: varchar("state_code").notNull(),
+  scoredAt: timestamp("scored_at").defaultNow(),
+  overallScore: integer("overall_score").notNull(),
+  documentsScore: integer("documents_score").default(0),
+  licensingScore: integer("licensing_score").default(0),
+  employeeComplianceScore: integer("employee_compliance_score").default(0),
+  trainingScore: integer("training_score").default(0),
+  isCompliant: boolean("is_compliant").default(false),
+  isFrozen: boolean("is_frozen").default(false),
+  hasAppeal: boolean("has_appeal").default(false),
+  activeFindings: integer("active_findings").default(0),
+  pendingDocuments: integer("pending_documents").default(0),
+  approvedDocuments: integer("approved_documents").default(0),
+  scoringMethod: varchar("scoring_method").default('automated'),
+  notes: text("notes"),
+  triggerEvent: varchar("trigger_event"),
+}, (table) => [
+  index("idx_compliance_score_workspace").on(table.workspaceId),
+  index("idx_compliance_score_state").on(table.stateCode),
+  index("idx_compliance_score_scored_at").on(table.scoredAt),
+]);
+export const insertComplianceScoreHistorySchema = createInsertSchema(complianceScoreHistory).omit({ id: true, createdAt: true, scoredAt: true });
+export type InsertComplianceScoreHistory = z.infer<typeof insertComplianceScoreHistorySchema>;
+export type ComplianceScoreHistory = typeof complianceScoreHistory.$inferSelect;
+
+// ── compliance_registry_entries ───────────────────────────────────────────
+export const complianceRegistryEntries = pgTable("compliance_registry_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  orgName: varchar("org_name").notNull(),
+  orgLicenseNumber: varchar("org_license_number"),
+  stateCode: varchar("state_code").notNull(),
+  stateName: varchar("state_name").notNull(),
+  city: varchar("city"),
+  county: varchar("county"),
+  verifiedStatus: varchar("verified_status").notNull().default('verified'),
+  lastVerifiedAt: timestamp("last_verified_at").defaultNow(),
+  verificationBadge: varchar("verification_badge").default('coaileague_verified'),
+  isPubliclyVisible: boolean("is_publicly_visible").default(true),
+  includeInSearchDirectory: boolean("include_in_search_directory").default(true),
+  certifications: jsonb("certifications").default([]),
+  serviceTypes: jsonb("service_types").default([]),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_compliance_registry_workspace").on(table.workspaceId),
+  index("idx_compliance_registry_state").on(table.stateCode),
+  index("idx_compliance_registry_status").on(table.verifiedStatus),
+  index("idx_compliance_registry_visible").on(table.isPubliclyVisible),
+]);
+export const insertComplianceRegistryEntrySchema = createInsertSchema(complianceRegistryEntries).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertComplianceRegistryEntry = z.infer<typeof insertComplianceRegistryEntrySchema>;
+export type ComplianceRegistryEntry = typeof complianceRegistryEntries.$inferSelect;
+
+// ── state_license_verifications ───────────────────────────────────────────
+export const stateLicenseVerifications = pgTable("state_license_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id"),
+  userId: varchar("user_id"),
+  requestedBy: varchar("requested_by").references(() => users.id, { onDelete: 'set null' }),
+  licenseType: varchar("license_type").notNull(),
+  licenseNumber: varchar("license_number").notNull(),
+  stateCode: varchar("state_code").notNull(),
+  stateName: varchar("state_name"),
+  licenseHolderName: varchar("license_holder_name"),
+  verificationMethod: varchar("verification_method").notNull().default('manual'),
+  verificationSource: varchar("verification_source"),
+  apiEndpoint: varchar("api_endpoint"),
+  status: varchar("status").notNull().default('pending'),
+  isVerified: boolean("is_verified"),
+  verifiedAt: timestamp("verified_at"),
+  expiresAt: timestamp("expires_at"),
+  licenseExpiresAt: timestamp("license_expires_at"),
+  rawApiResponse: jsonb("raw_api_response"),
+  verificationNotes: text("verification_notes"),
+  rejectionReason: text("rejection_reason"),
+  referenceNumber: varchar("reference_number").unique(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_state_lic_verify_workspace").on(table.workspaceId),
+  index("idx_state_lic_verify_employee").on(table.employeeId),
+  index("idx_state_lic_verify_license").on(table.licenseNumber),
+  index("idx_state_lic_verify_state").on(table.stateCode),
+  index("idx_state_lic_verify_status").on(table.status),
+]);
+export const insertStateLicenseVerificationSchema = createInsertSchema(stateLicenseVerifications).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertStateLicenseVerification = z.infer<typeof insertStateLicenseVerificationSchema>;
+export type StateLicenseVerification = typeof stateLicenseVerifications.$inferSelect;
+
+// ── multi_state_compliance_windows ───────────────────────────────────────
+export const multiStateComplianceWindows = pgTable("multi_state_compliance_windows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  stateCode: varchar("state_code").notNull(),
+  stateName: varchar("state_name").notNull(),
+  licenseNumber: varchar("license_number"),
+  licenseExpiresAt: timestamp("license_expires_at"),
+  windowOpenedAt: timestamp("window_opened_at").defaultNow(),
+  windowDeadline: timestamp("window_deadline").notNull(),
+  daysRemaining: integer("days_remaining"),
+  requiredDocTypes: jsonb("required_doc_types").default([]),
+  approvedDocTypes: jsonb("approved_doc_types").default([]),
+  pendingDocTypes: jsonb("pending_doc_types").default([]),
+  isCompliant: boolean("is_compliant").default(false),
+  isFrozen: boolean("is_frozen").default(false),
+  appealUsed: boolean("appeal_used").default(false),
+  appealExtensionDate: timestamp("appeal_extension_date"),
+  lastCheckedAt: timestamp("last_checked_at"),
+  complianceScore: integer("compliance_score").default(0),

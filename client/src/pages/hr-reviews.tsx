@@ -7,7 +7,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiGet, apiPost } from "@/lib/apiClient";
 import { queryKeys } from "@/config/queryKeys";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalDescription, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const reviewSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -78,10 +79,11 @@ export default function HRReviews() {
     queryFn: () => apiGet('reviews.list'),
   });
 
-  const { data: employees } = useQuery<Employee[]>({
+  const { data: _empResp } = useQuery<{ data: Employee[] }>({
     queryKey: queryKeys.employees.all,
     queryFn: () => apiGet('employees.list'),
   });
+  const employees = _empResp?.data;
 
   const createMutation = useMutation({
     mutationFn: async (data: ReviewFormData) => {
@@ -220,28 +222,33 @@ export default function HRReviews() {
     return <Badge variant={variants[type] || "outline"}>{type.replace('_', ' ')}</Badge>;
   };
 
+  const addReviewButton = (
+    <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+      <UniversalModalTrigger asChild>
+        <Button data-testid="button-add-review">
+          <Plus className="h-4 w-4 mr-2" />
+          New Review
+        </Button>
+      </UniversalModalTrigger>
+    </UniversalModal>
+  );
+
+  const pageConfig: CanvasPageConfig = {
+    id: "hr-reviews",
+    title: "Performance Reviews",
+    subtitle: "Track employee performance and career development",
+    category: "operations",
+    headerActions: addReviewButton,
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="heading-reviews">Performance Reviews</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Track employee performance and career development
-              </p>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-review">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Review
-                </Button>
-              </DialogTrigger>
-              <DialogContent size="full" className="max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create Performance Review</DialogTitle>
-                </DialogHeader>
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6">
+        <UniversalModal open={dialogOpen} onOpenChange={setDialogOpen}>
+              <UniversalModalContent size="full" className="max-h-[90vh] overflow-y-auto">
+                <UniversalModalHeader>
+                  <UniversalModalTitle>Create Performance Review</UniversalModalTitle>
+                </UniversalModalHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -422,18 +429,18 @@ export default function HRReviews() {
                     </div>
                   </form>
                 </Form>
-              </DialogContent>
-            </Dialog>
+              </UniversalModalContent>
+            </UniversalModal>
 
             {/* Dispute Filing Dialog */}
-            <Dialog open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
-              <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>File Dispute - Performance Review</DialogTitle>
-                  <DialogDescription>
+            <UniversalModal open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
+              <UniversalModalContent size="xl" className="max-h-[90vh] overflow-y-auto">
+                <UniversalModalHeader>
+                  <UniversalModalTitle>File Dispute - Performance Review</UniversalModalTitle>
+                  <UniversalModalDescription>
                     Explain why you believe this review is inaccurate or unfair. Support will investigate and respond.
-                  </DialogDescription>
-                </DialogHeader>
+                  </UniversalModalDescription>
+                </UniversalModalHeader>
                 <Form {...disputeForm}>
                   <form onSubmit={disputeForm.handleSubmit(onDisputeSubmit)} className="space-y-4">
                     {selectedReview && (
@@ -535,8 +542,8 @@ export default function HRReviews() {
                     </div>
                   </form>
                 </Form>
-              </DialogContent>
-            </Dialog>
+              </UniversalModalContent>
+            </UniversalModal>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -625,8 +632,6 @@ export default function HRReviews() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }

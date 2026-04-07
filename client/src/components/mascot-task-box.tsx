@@ -242,7 +242,7 @@ export function MascotTaskBox({
   
   return (
     <div 
-      className={`absolute px-4 py-3 rounded-xl border ${priorityBorder} text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-300`}
+      className={`absolute px-4 py-3 rounded-md border ${priorityBorder} text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-300`}
       style={{
         ...bubblePlacement.position,
         width: `${TASK_BOX_CONFIG.boxWidth}px`,
@@ -306,7 +306,7 @@ export function MascotTaskBox({
       </div>
       
       {sortedTasks.length > 1 && (
-        <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+        <div className="mt-3 flex items-center justify-between gap-1 text-xs text-slate-500">
           <span>{(currentTaskIndex % sortedTasks.length) + 1} of {sortedTasks.length}</span>
           <button
             onClick={(e) => { 
@@ -322,7 +322,7 @@ export function MascotTaskBox({
       )}
       
       <div 
-        className={`${arrowStyles.position} w-2.5 h-2.5 ${arrowStyles.borderClasses} border-2 ${priorityBorder}`}
+        className={`${arrowStyles.position} w-2.5 h-2.5 ${arrowStyles.borderClasses} border ${priorityBorder}`}
         style={{
           backgroundColor: 'rgb(15 23 42)',
           transform: arrowStyles.transform,

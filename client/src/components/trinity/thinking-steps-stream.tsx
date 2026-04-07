@@ -9,8 +9,8 @@ import { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, X, Circle } from 'lucide-react';
-import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
+import { Check, Loader2, X, Circle, Brain } from 'lucide-react';
+import { TrinityLogo } from '@/components/trinity-logo';
 import TrinityRedesign from '@/components/trinity-redesign';
 import { Suspense } from 'react';
 import type { ThinkingStep } from '@/hooks/use-trinity-state';
@@ -115,7 +115,7 @@ export function ThinkingStepsStream({
   return (
     <Card data-testid="panel-thinking-stream">
       <CardHeader className="py-3 px-4 border-b">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Brain className="h-4 w-4 text-primary" />
             Trinity Thinking

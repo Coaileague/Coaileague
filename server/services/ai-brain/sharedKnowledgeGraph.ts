@@ -17,7 +17,10 @@ import { systemAuditLogs } from '@shared/schema';
 import { platformEventBus } from '../platformEventBus';
 import { aiBrainService } from './aiBrainService';
 import { knowledgeGraphRepository } from './cognitiveRepositories';
+import { strengthenPath } from './hebbianLearningService';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('sharedKnowledgeGraph');
 
 // ============================================================================
 // TYPES - KNOWLEDGE GRAPH
@@ -29,6 +32,7 @@ export interface KnowledgeEntity {
   name: string;
   description: string;
   domain: KnowledgeDomain;
+  workspaceId?: string;
   attributes: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -59,7 +63,11 @@ export type KnowledgeDomain =
   | 'automation'
   | 'security'
   | 'performance'
-  | 'general';
+  | 'general'
+  | 'time_tracking'
+  | 'onboarding'
+  | 'analytics'
+  | 'communication';
 
 export interface KnowledgeRelationship {
   id: string;
@@ -101,6 +109,7 @@ export interface SemanticQuery {
   question: string;
   domain?: KnowledgeDomain;
   entityTypes?: EntityType[];
+  workspaceId?: string;
   maxResults?: number;
   includeRelated?: boolean;
 }
@@ -131,9 +140,22 @@ class SharedKnowledgeGraph {
     if (!this.instance) {
       this.instance = new SharedKnowledgeGraph();
       this.instance.initializeBaseKnowledge();
-      this.instance.loadFromDatabase().catch(err => {
-        console.error('[SharedKnowledgeGraph] Failed to load from database:', err.message);
-      });
+      // Defer DB load 5s — gives the server a moment to finish startup while ensuring
+      // Trinity's knowledge graph is populated almost immediately. Previously 120s which
+      // created a 2-minute window where knowledge queries returned stale/empty data.
+      setTimeout(async () => {
+        try {
+          const { probeDbConnection } = await import('../../db');
+          const dbOk = await probeDbConnection();
+          if (!dbOk) {
+            log.warn('[SharedKnowledgeGraph] Skipping DB load — probe failed');
+            return;
+          }
+          await this.instance.loadFromDatabase();
+        } catch (err: any) {
+          log.warn('[SharedKnowledgeGraph] DB load deferred startup failed (non-fatal):', err?.message);
+        }
+      }, 5000);
     }
     return this.instance;
   }
@@ -185,9 +207,9 @@ class SharedKnowledgeGraph {
       }
 
       this.dbInitialized = true;
-      console.log(`[SharedKnowledgeGraph] Loaded ${dbEntities.length} entities and ${dbRelationships.length} relationships from database`);
+      log.info(`[SharedKnowledgeGraph] Loaded ${dbEntities.length} entities and ${dbRelationships.length} relationships from database`);
     } catch (error: any) {
-      console.error('[SharedKnowledgeGraph] Database load error:', error.message);
+      log.error('[SharedKnowledgeGraph] Database load error:', (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -197,8 +219,9 @@ class SharedKnowledgeGraph {
 
   /**
    * Add a new knowledge entity to the graph
+   * @param skipPersist - when true, skips DB write (use for base/static knowledge that re-creates every restart)
    */
-  addEntity(entity: Omit<KnowledgeEntity, 'id' | 'createdAt' | 'updatedAt' | 'usageCount'>): KnowledgeEntity {
+  addEntity(entity: Omit<KnowledgeEntity, 'id' | 'createdAt' | 'updatedAt' | 'usageCount'>, opts?: { skipPersist?: boolean }): KnowledgeEntity {
     const newEntity: KnowledgeEntity = {
       ...entity,
       id: crypto.randomUUID(),
@@ -214,33 +237,22 @@ class SharedKnowledgeGraph {
     domainSet.add(newEntity.id);
     this.entityIndex.set(entity.domain, domainSet);
 
-    // Persist to database (async, non-blocking)
-    knowledgeGraphRepository.createEntity({
-      id: newEntity.id,
-      entityType: newEntity.type,
-      domain: newEntity.domain,
-      name: newEntity.name,
-      content: newEntity.description,
-      confidence: newEntity.confidence,
-      sourceAgent: newEntity.createdBy,
-      metadata: newEntity.attributes,
-    }).catch(err => console.error('[SharedKnowledgeGraph] DB persist error:', err.message));
-
-    // Emit event
-    platformEventBus.publish({
-      type: 'knowledge_entity_added',
-      category: 'feature',
-      title: 'Knowledge Entity Added',
-      description: `Added ${newEntity.type}: ${newEntity.name}`,
-      metadata: {
-        entityId: newEntity.id,
+    // Persist to database (async, non-blocking) — skip for base knowledge to avoid startup DB storm
+    if (!opts?.skipPersist) {
+      knowledgeGraphRepository.createEntity({
+        id: newEntity.id,
         entityType: newEntity.type,
         domain: newEntity.domain,
+        workspaceId: newEntity.workspaceId,
         name: newEntity.name,
-      },
-    });
+        content: newEntity.description,
+        confidence: newEntity.confidence,
+        sourceAgent: newEntity.createdBy,
+        metadata: newEntity.attributes,
+      }).catch(err => log.warn('[SharedKnowledgeGraph] DB persist error:', (err as Error)?.message));
+    }
 
-    console.log(`[SharedKnowledgeGraph] Added entity: ${newEntity.name} (${newEntity.type})`);
+    log.info(`[SharedKnowledgeGraph] Added entity: ${newEntity.name} (${newEntity.type})`);
     return newEntity;
   }
 
@@ -259,7 +271,7 @@ class SharedKnowledgeGraph {
     const target = this.entities.get(params.targetId);
 
     if (!source || !target) {
-      console.warn('[SharedKnowledgeGraph] Cannot create relationship: entity not found');
+      log.warn('[SharedKnowledgeGraph] Cannot create relationship: entity not found');
       return null;
     }
 
@@ -284,9 +296,9 @@ class SharedKnowledgeGraph {
       relationship: relationship.type,
       strength: relationship.strength,
       createdBy: relationship.createdBy,
-    }).catch(err => console.error('[SharedKnowledgeGraph] DB persist error:', err.message));
+    }).catch(err => log.error('[SharedKnowledgeGraph] DB persist error:', (err instanceof Error ? err.message : String(err))));
 
-    console.log(`[SharedKnowledgeGraph] Added relationship: ${source.name} --${params.type}--> ${target.name}`);
+    log.info(`[SharedKnowledgeGraph] Added relationship: ${source.name} --${params.type}--> ${target.name}`);
     return relationship;
   }
 
@@ -295,9 +307,9 @@ class SharedKnowledgeGraph {
    */
   async semanticQuery(query: SemanticQuery): Promise<QueryResult> {
     const startTime = Date.now();
-    const { question, domain, entityTypes, maxResults = 10, includeRelated = true } = query;
+    const { question, domain, entityTypes, workspaceId, maxResults = 10, includeRelated = true } = query;
 
-    // Filter entities by domain and type
+    // Filter entities by domain, type, and workspace (tenant isolation)
     let candidates = Array.from(this.entities.values());
     
     if (domain) {
@@ -306,6 +318,17 @@ class SharedKnowledgeGraph {
     
     if (entityTypes && entityTypes.length > 0) {
       candidates = candidates.filter(e => entityTypes.includes(e.type));
+    }
+
+    // G22 FIX: Strict tenant isolation — entries stored without a workspaceId (or
+    // tagged 'global') are NOT surfaced in per-workspace queries. Only entities that
+    // explicitly belong to this workspace or to the reserved 'system' scope are
+    // included. This prevents one org's learned patterns from influencing Trinity's
+    // behaviour in another org's context.
+    if (workspaceId) {
+      candidates = candidates.filter(e =>
+        e.workspaceId === workspaceId || e.workspaceId === 'system'
+      );
     }
 
     // Use AI for semantic matching
@@ -328,7 +351,14 @@ class SharedKnowledgeGraph {
       entity.lastAccessedAt = new Date();
     }
 
-    console.log(`[SharedKnowledgeGraph] Semantic query completed in ${Date.now() - startTime}ms, found ${rankedEntities.length} entities`);
+    // HEBBIAN: Co-activated entities strengthen their mutual connections.
+    // "Neurons that fire together, wire together" — Hebb's postulate.
+    if (rankedEntities.length >= 2) {
+      const entityIds = rankedEntities.map(e => e.id);
+      strengthenPath(entityIds);
+    }
+
+    log.info(`[SharedKnowledgeGraph] Semantic query completed in ${Date.now() - startTime}ms, found ${rankedEntities.length} entities`);
 
     return {
       entities: rankedEntities,
@@ -359,10 +389,11 @@ Return JSON array of indices in order of relevance (most relevant first):
 {"rankedIndices": [0, 3, 1, ...], "reasoning": "brief explanation"}`;
 
     try {
+      // Platform-level knowledge ranking - billed to PLATFORM_COST_CENTER
       const response = await aiBrainService.processRequest({
         type: 'knowledge_ranking',
         userId: 'system',
-        workspaceId: 'system',
+        workspaceId: undefined,
         messages: [{ role: 'user', content: prompt }],
         contextLevel: 'minimal',
       });
@@ -423,9 +454,9 @@ Return JSON array of indices in order of relevance (most relevant first):
         outcome: entry.outcome,
         insights: entry.insights,
       },
-    });
+    }).catch((err) => log.warn('[sharedKnowledgeGraph] Fire-and-forget failed:', err));
 
-    console.log(`[SharedKnowledgeGraph] Recorded learning: ${entry.agentId} - ${entry.action} - ${entry.outcome}`);
+    log.info(`[SharedKnowledgeGraph] Recorded learning: ${entry.agentId} - ${entry.action} - ${entry.outcome}`);
   }
 
   /**
@@ -434,6 +465,7 @@ Return JSON array of indices in order of relevance (most relevant first):
   getLearnings(params: {
     domain?: KnowledgeDomain;
     agentId?: string;
+    workspaceId?: string;
     outcome?: 'success' | 'failure' | 'partial';
     limit?: number;
   }): LearningEntry[] {
@@ -447,6 +479,12 @@ Return JSON array of indices in order of relevance (most relevant first):
     }
     if (params.outcome) {
       results = results.filter(l => l.outcome === params.outcome);
+    }
+    // G22 FIX: Strict tenant isolation — see entity query above for rationale.
+    if (params.workspaceId) {
+      results = results.filter(l =>
+        l.workspaceId === params.workspaceId || l.workspaceId === 'system'
+      );
     }
 
     // Sort by timestamp descending
@@ -561,9 +599,16 @@ Return JSON array of indices in order of relevance (most relevant first):
     action: string;
     domain: KnowledgeDomain;
     context: Record<string, any>;
+    workspaceId?: string;
   }): { allowed: boolean; reason?: string; applicableRules: KnowledgeEntity[] } {
-    const rules = Array.from(this.entities.values())
+    let rules = Array.from(this.entities.values())
       .filter(e => e.type === 'rule' && e.domain === params.domain);
+    // G22 FIX: Strict tenant isolation — see entity query above for rationale.
+    if (params.workspaceId) {
+      rules = rules.filter(r =>
+        r.workspaceId === params.workspaceId || r.workspaceId === 'system'
+      );
+    }
 
     const applicableRules: KnowledgeEntity[] = [];
     let blocked = false;
@@ -597,7 +642,8 @@ Return JSON array of indices in order of relevance (most relevant first):
   // ============================================================================
 
   private initializeBaseKnowledge(): void {
-    // Add core business rules
+    const skipPersist = { skipPersist: true };
+    // Add core business rules — skipPersist=true avoids DB writes during startup
     this.addEntity({
       type: 'rule',
       name: 'Contractor Benefits Denial',
@@ -610,7 +656,7 @@ Return JSON array of indices in order of relevance (most relevant first):
       },
       createdBy: 'system',
       confidence: 1.0,
-    });
+    }, skipPersist);
 
     this.addEntity({
       type: 'rule',
@@ -624,7 +670,7 @@ Return JSON array of indices in order of relevance (most relevant first):
       },
       createdBy: 'system',
       confidence: 1.0,
-    });
+    }, skipPersist);
 
     this.addEntity({
       type: 'concept',
@@ -636,7 +682,7 @@ Return JSON array of indices in order of relevance (most relevant first):
       },
       createdBy: 'system',
       confidence: 1.0,
-    });
+    }, skipPersist);
 
     this.addEntity({
       type: 'procedure',
@@ -649,7 +695,7 @@ Return JSON array of indices in order of relevance (most relevant first):
       },
       createdBy: 'system',
       confidence: 1.0,
-    });
+    }, skipPersist);
 
     this.addEntity({
       type: 'constraint',
@@ -663,9 +709,9 @@ Return JSON array of indices in order of relevance (most relevant first):
       },
       createdBy: 'system',
       confidence: 1.0,
-    });
+    }, skipPersist);
 
-    console.log(`[SharedKnowledgeGraph] Initialized with ${this.entities.size} base knowledge entities`);
+    log.info(`[SharedKnowledgeGraph] Initialized with ${this.entities.size} base knowledge entities`);
   }
 
   // ============================================================================
@@ -707,9 +753,16 @@ Return JSON array of indices in order of relevance (most relevant first):
     return this.entities.get(id);
   }
 
-  getEntitiesByDomain(domain: KnowledgeDomain): KnowledgeEntity[] {
+  getEntitiesByDomain(domain: KnowledgeDomain, workspaceId?: string): KnowledgeEntity[] {
     const ids = this.entityIndex.get(domain) || new Set();
-    return Array.from(ids).map(id => this.entities.get(id)!).filter(Boolean);
+    let entities = Array.from(ids).map(id => this.entities.get(id)!).filter(Boolean);
+    // G22 FIX: Strict tenant isolation — see entity query above for rationale.
+    if (workspaceId) {
+      entities = entities.filter(e =>
+        e.workspaceId === workspaceId || e.workspaceId === 'system'
+      );
+    }
+    return entities;
   }
 }
 
@@ -719,4 +772,4 @@ Return JSON array of indices in order of relevance (most relevant first):
 
 export const sharedKnowledgeGraph = SharedKnowledgeGraph.getInstance();
 
-console.log('[SharedKnowledgeGraph] Persistent agent learning system initialized');
+log.info('[SharedKnowledgeGraph] Persistent agent learning system initialized');

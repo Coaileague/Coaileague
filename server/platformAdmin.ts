@@ -1,3 +1,5 @@
+import { createLogger } from './lib/logger';
+const log = createLogger('platformAdmin');
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { monitoringService } from "./monitoring";
@@ -72,7 +74,7 @@ export async function getPlatformStats(req: Request, res: Response) {
       chatUsers = liveStats.chatUsers;
       chatStaff = liveStats.chatStaff;
     } catch (error) {
-      console.error('Failed to get live connection stats:', error);
+      log.error('Failed to get live connection stats:', error);
       // Fallback to 0 if WebSocket server not running
     }
 
@@ -99,7 +101,7 @@ export async function getPlatformStats(req: Request, res: Response) {
       database: "healthy",
       uptime: monitoringService.getPlatformUptime()
     };
-    console.log(`[PLATFORM-STATS] SystemHealth: CPU=${systemHealth.cpu}%, Memory=${systemHealth.memory}%, Uptime=${systemHealth.uptime}s`);
+    log.info(`[PLATFORM-STATS] SystemHealth: CPU=${systemHealth.cpu}%, Memory=${systemHealth.memory}%, Uptime=${systemHealth.uptime}s`);
 
     // Recent activity - Aggregate multiple event types for comprehensive dashboard
     const recentActivity: Array<{
@@ -302,7 +304,7 @@ export async function getPlatformStats(req: Request, res: Response) {
       topWorkspaces
     });
   } catch (error) {
-    console.error("Error fetching platform stats:", error);
+    log.error("Error fetching platform stats:", error);
     res.status(500).json({ error: "Failed to fetch platform statistics" });
   }
 }
@@ -339,7 +341,7 @@ export async function searchWorkspaces(req: Request, res: Response) {
 
     res.json(results);
   } catch (error) {
-    console.error("Error searching workspaces:", error);
+    log.error("Error searching workspaces:", error);
     res.status(500).json({ error: "Search failed" });
   }
 }
@@ -407,7 +409,7 @@ export async function getWorkspaceAdminDetail(req: Request, res: Response) {
       }
     });
   } catch (error) {
-    console.error("Error fetching workspace detail:", error);
+    log.error("Error fetching workspace detail:", error);
     res.status(500).json({ error: "Failed to fetch workspace details" });
   }
 }
@@ -464,7 +466,7 @@ export async function createPlatformUser(req: Request, res: Response) {
 
     res.json(newUser);
   } catch (error) {
-    console.error("Error creating platform user:", error);
+    log.error("Error creating platform user:", error);
     res.status(500).json({ error: "Failed to create user" });
   }
 }
@@ -488,7 +490,7 @@ export async function getPlatformUsers(req: Request, res: Response) {
       platformRole: platformRole.role
     })));
   } catch (error) {
-    console.error("Error fetching platform users:", error);
+    log.error("Error fetching platform users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 }

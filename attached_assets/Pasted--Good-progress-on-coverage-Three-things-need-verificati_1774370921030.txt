@@ -1,0 +1,51 @@
+**Good progress on coverage. Three things need verification before Phase 4 closes.**
+
+---
+
+**WHAT IS SOLID**
+
+71 total queries, 28 missing explicit queryFn — all 28 now updated. Nine URL join bugs found and fixed specifically — ScheduleCreditPanel, ChatDock, HelpDesk, flex-staffing, root-admin-dashboard, and document-library were all hitting wrong endpoints silently. That is a significant discovery. Server running clean.
+
+---
+
+**THREE GAPS BEFORE PHASE 4 CLOSES**
+
+**Gap 1 — AnyResponse must be inspected.**
+The report says `AnyResponse` is a "lightweight passthrough for non-financial queries." That phrase needs to be proven not to mean `z.any()`. The Phase 4 requirement explicitly rejected `z.any()` as a schema. If `AnyResponse` is `z.any()` or `z.unknown()` or any other passthrough that accepts any shape without validation, it is the same as having no schema. Show the exact definition of `AnyResponse` from `apiError.ts`.
+
+**Gap 2 — TypeScript was not verified.**
+The report states: *"Those errors are just from the path aliases in isolated mode — they'd all fail that way regardless of my changes. The app is still running clean."* This is the same avoidance pattern from Phase 3. Running clean is not zero TypeScript errors. Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` and report the exact output. If it times out run it scoped: `npx tsc --noEmit --skipLibCheck --include "client/src/**/*.tsx" 2>&1 | grep "error TS" | head -20`. Report the exact output.
+
+**Gap 3 — ACME sandbox live regression with URL confirmation was never done.**
+Verification 2 required navigating to five surfaces, opening the browser network tab, and confirming each query is now hitting the correct URL. That was not reported. This is the proof that the URL join bug fix worked and did not break anything. Do it now and report the exact URL each query hits for all five surfaces.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Three items before Phase 4 closes. Do them now.
+
+**Item 1 — Show the exact AnyResponse definition:**
+Run `cat client/src/lib/apiError.ts | grep -A 5 "AnyResponse"` and paste the exact output here. If `AnyResponse` is defined as `z.any()` or `z.unknown()` it must be replaced with proper schemas for every non-financial query it covers. Non-financial queries still return structured data — workspace info, user sessions, notification lists, chat messages — all of which have specific shapes that can and must be validated. Replace `AnyResponse` usage with appropriate domain schemas for each query type. A passthrough that accepts anything is not validation.
+
+**Item 2 — TypeScript:**
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | head -30` and paste the exact output. Fix every error found. Report the final count.
+
+**Item 3 — ACME sandbox URL verification:**
+Open the ACME sandbox in a browser with developer tools network tab open. Navigate to each surface and paste the exact API URL each primary query hits:
+
+- Payroll dashboard — what URL does the payroll runs query hit?
+- Invoice list — what URL does the invoices query hit?
+- Employee roster — what URL does the employees query hit?
+- Schedule board — what URL does the shifts query hit?
+- Client list — what URL does the clients query hit?
+
+Confirm each URL is the correct intended API route with no malformed segments from the old join bug. Report the exact URL for each.
+
+All three items reported clean before Phase 4 closes and Phase 5 goes in.
+
+---
+
+Send that Bryan. When all three come back clean bring the report here and Phase 5 goes in immediately.

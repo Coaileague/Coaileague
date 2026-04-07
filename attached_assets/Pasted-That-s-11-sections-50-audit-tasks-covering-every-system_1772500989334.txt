@@ -1,0 +1,13 @@
+That's 11 sections, 50+ audit tasks, covering every system in the platform. Here's the overview:
+Section 1 — Database Foundation: Schema-to-DB alignment, FK integrity, NULL detection, duplicates, enum consistency. Every table, every column, every constraint verified.
+Section 2 — Trinity Orchestration: Scheduling pipeline, bridge, billing, payroll, manual edit propagation, autonomous settings persistence. The full revenue cycle re-verified plus the toggle bug.
+Section 3 — Real-Time Systems: WebSocket infrastructure, chat/DockChat/messenger, notification engine. Does everything sync live?
+Section 4 — CRUD & Persistence: Every entity (clients, employees, shifts, time entries, invoices, payroll) tested through create, read, update, delete. Does every save persist? Does every edit propagate? Does every delete respect financial protection?
+Section 5 — AI Systems: Trinity brain, all 5 bots, self-awareness, contract review, expense categorization. Are they real or stubs?
+Section 6 — Integrations: QuickBooks, Stripe, payroll providers, email, GPS/geofence. Everything that talks to an external service.
+Section 7 — Security & Race Conditions: Double-clicks, simultaneous actions, authorization boundaries, data validation. The stuff that breaks under real-world chaos.
+Section 8 — Visual Data Accuracy: Not layout work — verifying that numbers, names, statuses, and calculations display correctly.
+Section 9 — Client Portal: Can clients see their guards, incidents, and reports without seeing anyone else's data?
+Section 10 — Compliance & Audit Trail: Financial audit trails, certification tracking, tax compliance, data retention.
+Section 11 — Production Environment: Environment config, error handling quality, performance, TODO/FIXME flags in critical paths.
+The key instruction at the bottom: audit everything, present ALL findings, fix NOTHING until confirmed. Same methodology that worked for the Trinity pipeline audit, now applied to the entire platform. Paste this into a fresh Replit session and let the agent work through it section by section.

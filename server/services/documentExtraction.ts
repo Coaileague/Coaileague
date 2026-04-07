@@ -9,6 +9,9 @@ import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { db } from "../db";
 import { workspaces } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('documentExtraction');
+
 
 export interface ExtractedData {
   documentId: string;
@@ -56,7 +59,7 @@ export async function extractDocumentData(
     const prompt = `You are a business document expert. A ${documentType} document named "${documentName}" has been uploaded (${fileMimeType}). Based on this document type, ${extractionHint}. Return ONLY valid JSON, no markdown, no code blocks.`;
 
     const result = await meteredGemini.generate({
-      workspaceId: workspaceId || 'platform',
+      workspaceId: workspaceId,
       featureKey: 'ai_document_extraction',
       prompt,
       model: 'gemini-2.5-flash',
@@ -83,7 +86,7 @@ export async function extractDocumentData(
     }
 
     return {
-      documentId: `doc_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      documentId: `doc_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
       documentType,
       extractedFields,
       confidence: 0.85,
@@ -92,7 +95,7 @@ export async function extractDocumentData(
       extractedAt: new Date(),
     };
   } catch (error: any) {
-    console.error("Document extraction error:", error);
+    log.error("Document extraction error:", error);
     return {
       documentId: `doc_${Date.now()}`,
       documentType,
@@ -100,7 +103,7 @@ export async function extractDocumentData(
       confidence: 0,
       rawText: "",
       status: "failed",
-      error: error.message || "Failed to extract document data",
+      error: (error instanceof Error ? error.message : String(error)) || "Failed to extract document data",
       extractedAt: new Date(),
     };
   }

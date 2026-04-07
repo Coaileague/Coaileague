@@ -1,0 +1,35 @@
+CRITICAL ISSUES (Likely Breaking Functionality)
+1. Storage Interface Parity Broken
+Routes call storage methods that may not be defined in storage.ts. Examples include acknowledgeNotification, clearNotification, closeChatConversation, createClient, and others. These would cause runtime errors when those code paths are hit.
+
+2. Frontend-Backend Endpoint Gap
+The frontend references ~495 API endpoints, but only ~238 are captured as explicit route definitions. Even accounting for inline routers, the delta suggests some API calls from the UI may be hitting routes that were moved or removed during refactoring. This means some UI features could silently fail.
+
+3. Unregistered Route Files
+Several route files exist but aren't registered in the main routes.ts: chat management, dispatch, email attachments, security audit, and others. Those entire API surfaces are unreachable.
+
+MODERATE ISSUES (Working But Fragile)
+4. Dual Table Name References
+timeEntries (641 refs) vs timeEntriesTable (50 refs) - two names for what's likely the same table. This creates confusion and risk of queries hitting the wrong reference.
+
+5. Orphaned Page Files
+7 page files exist without being registered as routes in App.tsx. These include real pages like accept-handoff, billing, analytics, and others - potentially useful features that became invisible after refactoring.
+
+6. Orphaned DB Tables With Data
+
+backup_records: 254 rows - backup history that's no longer represented in the schema
+compliance_state_requirements: 16 rows - compliance data stranded without a schema definition
+sessions: 51K rows - this is actually fine, it's the express-session store
+LOW PRIORITY (Technical Debt)
+7. Empty Orphaned DB Tables (25 total)
+Tables like ai_brain_tasks, alert_rules, automation_triggers, etc. exist in the database with 0 rows and no schema definition. These are safe to clean up when convenient.
+
+8. Schema Import Asymmetry
+Backend imports 219 schema symbols vs frontend's 34. The frontend may not have been updated to leverage the new domain module structure.
+
+Key Positive Findings
+Schema-to-DB parity is perfect - Every table defined in the schema exists in the database (0 missing)
+Core entity tables intact - users (27), employees (130), workspaces (7) all properly defined in domain modules and re-exported
+Billing gate fixed - Platform-absorbed billing path now working correctly
+Notification pipeline operational - End-to-end flow working with proper per-user records
+All 26 background services initializing - Infrastructure layer healthy

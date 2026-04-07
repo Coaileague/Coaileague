@@ -1,0 +1,582 @@
+# CoAIleague — MANDATORY VISUAL OVERHAUL
+## This Is Not Optional. This Is Not Up For Discussion.
+## Do Not Screenshot The Current State And Call It Good.
+
+---
+
+## FROM BRYAN — READ THIS CAREFULLY BEFORE RESPONDING
+
+I already know what the platform currently looks like. Do not screenshot it and tell me it looks great. It does not look great. It looks like a basic dark theme app with cards, buttons, and text. That is not acceptable for a production platform in 2025.
+
+I am not asking for minor tweaks. I am not asking you to adjust padding or change a color. I am asking for a complete visual overhaul of every page on this platform. If a page looks the same after you are done as it did before you started, you have not done your job.
+
+Do not ask me if the current design is acceptable. It is not. That is why you are reading this prompt.
+
+Do not show me a screenshot and ask for feedback before making changes. Make the changes. Then show me.
+
+Do not tell me a page "looks good" or "is clean." Those are not the standard. The standard is described below. Execute it.
+
+---
+
+## THE STANDARD I EXPECT
+
+Look at this description and build to it. Every page. No exceptions.
+
+**What dead looks like (what we have now):**
+- Dark background with cards that have no visual personality
+- Plain text labels with no hierarchy
+- Buttons that look like every other SaaS app
+- No animations, no life, nothing moves
+- Data just sits there — no emphasis, no context, no emotion
+- Empty states say "No data found"
+- Loading states are spinners
+
+**What alive looks like (what I want):**
+- Cards with gradient borders, accent colors, depth and shadow
+- Large prominent numbers for important metrics — earnings, hours, headcount
+- Progress bars, status rings, live indicators that show state
+- Micro-animations on every interaction — entries, transitions, button presses
+- Trinity present on every page with context-aware help
+- Empty states that explain what to do next with Trinity's voice
+- Skeleton loaders that match the shape of the content loading
+- Section headers with visual weight — not just gray uppercase text
+- Color used intentionally — cyan for primary, green for success, amber for warning, red for danger
+- Every page has one dominant visual element that anchors the layout
+
+---
+
+## THE REFERENCE
+
+The Homebase mobile app. Open it and look at their employee dashboard.
+
+The moment you land on it you see:
+- Your earnings — large, prominent, with the pay period right there
+- Your shift — what's next, when, where
+- Actions that are relevant to you right now
+- Cards that feel warm and personal
+- A bottom nav that is clean and consistent
+
+That is the emotional register I want. Professional, warm, alive, and immediately useful.
+
+CoAIleague needs to feel better than that. We have Trinity. We have GPS. We have AI scheduling. The UI needs to match the intelligence of the platform underneath it.
+
+---
+
+## SECTION 1 — DESIGN TOKEN ENFORCEMENT
+
+Before touching a single page, verify these tokens exist and are applied globally. If they are not, create them now.
+
+### File: `src/styles/tokens.css`
+```css
+:root {
+  /* Backgrounds */
+  --color-bg-primary:      #0D1117;
+  --color-bg-secondary:    #161B22;
+  --color-bg-tertiary:     #21262D;
+  --color-bg-overlay:      #1C2128;
+
+  /* Brand */
+  --color-brand-primary:   #00D4FF;
+  --color-brand-secondary: #7B5EA7;
+  --color-brand-gradient:  linear-gradient(135deg, #00D4FF 0%, #7B5EA7 100%);
+
+  /* Text */
+  --color-text-primary:    #F0F6FC;
+  --color-text-secondary:  #8B949E;
+  --color-text-disabled:   #484F58;
+
+  /* Semantic colors */
+  --color-success:         #3FB950;
+  --color-warning:         #D29922;
+  --color-danger:          #F85149;
+  --color-info:            #58A6FF;
+
+  /* Borders */
+  --color-border-subtle:   #21262D;
+  --color-border-default:  #30363D;
+
+  /* Spacing */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;
+  --space-4: 16px;  --space-5: 20px;  --space-6: 24px;
+  --space-8: 32px;  --space-10: 40px; --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 6px;   --radius-md: 10px;
+  --radius-lg: 14px;  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:   0 8px 24px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 20px rgba(0,212,255,0.15);
+
+  /* Animation */
+  --duration-fast:   120ms;
+  --duration-normal: 200ms;
+  --duration-slow:   350ms;
+  --ease-default: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce:  cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+```
+
+### Fonts — add to index.html head:
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+```
+
+```css
+/* Global font application */
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { font-family: 'Syne', sans-serif; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+```
+
+---
+
+## SECTION 2 — GLOBAL ANIMATION SYSTEM
+
+Add this to the global stylesheet. Apply immediately everywhere.
+
+```css
+/* Page entry */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Card/element entry */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Pulse glow for live indicators */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(0,212,255,0); }
+}
+
+/* Success pop */
+@keyframes successPop {
+  0%   { transform: scale(0.8); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* Number count up — handled in JS via useCountUp hook */
+
+/* Apply staggered entry to page sections */
+.page-section {
+  animation: fadeUp var(--duration-slow) var(--ease-default) both;
+}
+.page-section:nth-child(1) { animation-delay: 0ms; }
+.page-section:nth-child(2) { animation-delay: 80ms; }
+.page-section:nth-child(3) { animation-delay: 160ms; }
+.page-section:nth-child(4) { animation-delay: 240ms; }
+.page-section:nth-child(5) { animation-delay: 320ms; }
+
+/* Button press feedback — global */
+button, [role="button"] {
+  transition: transform var(--duration-fast) ease,
+              opacity var(--duration-fast) ease;
+}
+button:active, [role="button"]:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-bg-tertiary)  50%,
+    var(--color-bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+```
+
+---
+
+## SECTION 3 — GRADIENT BORDER CARD SYSTEM
+
+Every important card gets this treatment. Apply it now across all card components.
+
+```css
+/* Standard card */
+.card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Accent card — left border colored by type */
+.card--info     { border-left: 3px solid var(--color-brand-primary); }
+.card--success  { border-left: 3px solid var(--color-success); }
+.card--warning  { border-left: 3px solid var(--color-warning); }
+.card--danger   { border-left: 3px solid var(--color-danger); }
+
+/* Gradient border card — for featured/important cards */
+.card--gradient {
+  position: relative;
+  background: var(--color-bg-secondary);
+  border: none;
+  border-radius: var(--radius-lg);
+}
+
+.card--gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  padding: 1.5px;
+  background: var(--color-brand-gradient);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Glowing card — for Trinity/AI content */
+.card--glow {
+  background: var(--color-bg-secondary);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glow);
+}
+```
+
+---
+
+## SECTION 4 — PAGE BY PAGE MANDATORY CHANGES
+
+For every page listed below, make ALL changes listed. Do not skip any. Do not declare a page done unless every item is checked.
+
+---
+
+### EMPLOYEE DASHBOARD — Mobile + Desktop
+
+**Required changes — do all of these:**
+
+**① Greeting Hero Banner**
+Replace the current profile banner with:
+```
+Background: linear-gradient(135deg, #1a1f35 0%, #0d1117 100%)
+Left accent: 3px solid var(--color-brand-primary)
+
+Content:
+- Time-based greeting: "Good morning/afternoon/evening, [Name]"  
+  Font: Syne 24px bold
+- Company name: DM Sans 14px, secondary color
+- Role badge: pill shape, brand color background, 11px
+- Current status: green dot + "On Shift" OR gray dot + "Off Shift"
+- Next shift line: "Next: Today 3:00 PM · Main Street Plaza"
+
+Entry animation: fadeUp 0.4s ease
+```
+
+**② Live Earnings Card**
+This card must exist. If it does not exist, create it.
+```
+Card style: card--gradient (gradient border)
+
+Layout:
+- "💰 My Earnings" — 12px label, secondary color, uppercase
+- Dollar amount — Syne font, 36px, bold, primary color
+  → Animate with useCountUp on load
+- Pay period dates — 13px, secondary color, inline right of amount
+- Progress bar — 4px height, brand cyan fill, full width
+  → Animate width from 0 to actual % over 600ms
+- "X hrs worked · X hrs remaining" — 12px, secondary color
+- "View Earnings Details →" — brand cyan text link
+
+Data: Read from timesheets + employee rate. READ ONLY.
+```
+
+**③ Quick Action Strip**
+Horizontal scrolling row of pill buttons:
+```
+[ ⏱ Clock In ] [ 📋 Schedule ] [ 📄 Timesheet ] [ ✅ Approvals ] [ 📊 Reports ]
+
+Style: outlined pills, cyan border, 34px height, horizontal scroll
+Active state (if clocked in): "Clock In" becomes "Clock Out" with red fill
+```
+
+**④ Navigation Grid**
+```
+Fix ALL of these right now:
+- Consistent icon size: 24px centered in a 40px container
+- Label: DM Sans 12px medium, ONE LINE ONLY, no wrapping
+- Card height: 96px uniform
+- Card background: var(--color-bg-secondary)
+- Hover/press: scale(0.97) + brightness(1.1)
+- Entry: staggered slideIn animation, 40ms between cards
+```
+
+**⑤ Live Activity Feed**
+```
+Show last 5 activity items:
+- Icon (colored by type) + text + relative time ("2 hrs ago")
+- Divider between items
+- "See all →" link at bottom
+- Entry: staggered fadeUp animation
+```
+
+---
+
+### SCHEDULE PAGE
+
+**Required changes:**
+
+**① Page Header Widget**
+```
+"This Week" summary bar:
+- X shifts scheduled  |  X hours total  |  X employees
+- Visual: 3 stat pills in a row, brand accent colors
+```
+
+**② Shift Cards**
+```
+BEFORE: Plain text rows
+AFTER:  Rich shift cards with:
+  - Left colored bar (green=covered, amber=understaffed, red=uncovered)
+  - Site name — 15px semibold
+  - Time range — 13px, mono font
+  - Assigned guard avatar(s) — stacked circles with initials
+  - Status badge — pill shape
+  - Active shift: subtle pulsing green glow on card
+```
+
+**③ Empty Schedule State**
+```
+BEFORE: "No shifts scheduled"
+AFTER:  Trinity card:
+  "No shifts scheduled for this period.
+   Would you like me to generate a schedule based on your 
+   coverage requirements?"
+  [ Generate Schedule → ]
+```
+
+---
+
+### TIMESHEETS PAGE
+
+**Required changes:**
+
+**① Summary Stats Row**
+```
+Top of page — 3 stat cards in a row:
+[ Total Hours: 36h ] [ Pending Approval: 3 ] [ Overtime: 2h ]
+Each with colored accent and icon
+```
+
+**② Timesheet Row Enhancement**
+```
+BEFORE: Table row with plain text
+AFTER:  
+  - Employee avatar with initials
+  - Hours worked as a mini progress bar vs scheduled hours
+  - Status badge (Approved/Pending/Rejected) with color
+  - Overtime amount highlighted in amber if > 0
+  - Mobile: swipe right = quick approve, swipe left = reject
+```
+
+**③ Trinity Insight Banner**
+```
+If any overtime detected:
+"⚠️ 3 employees are approaching overtime this week. 
+ Approving these timesheets will trigger OT calculations."
+Card style: card--warning
+```
+
+---
+
+### CLOCK IN/OUT PAGE
+
+**Required changes:**
+
+**① Hero Clock Display**
+```
+Large current time: Syne font, 48px, centered
+Date below: 16px, secondary color
+Not just a button — make this feel important
+```
+
+**② Status Card**
+```
+If clocked in:
+  Green gradient card
+  "✅ Clocked In"
+  Duration: "3h 42m" — large, Syne font, counting up live
+  Location: "📍 Main Street Plaza — Within geofence"
+  
+If clocked out:
+  Dark card
+  "⭕ Not Clocked In"
+  Next shift reminder
+```
+
+**③ Clock Button**
+```
+BEFORE: Plain button
+AFTER:  
+  Large circular button, 80px
+  Clock In: brand cyan gradient fill, pulsing ring animation
+  Clock Out: danger red gradient fill
+  Press animation: scale down then snap back
+  Haptic feedback trigger on mobile (navigator.vibrate)
+```
+
+---
+
+### MY TEAM PAGE (Manager)
+
+**Required changes:**
+
+**① Live Team Status Bar**
+```
+Top of page:
+[ 🟢 4 On Shift ] [ ⚪ 8 Off Shift ] [ 🟡 1 Late ] [ ⏳ 2 Pending ]
+Colored pill badges, tap each to filter list
+```
+
+**② Employee Cards**
+```
+BEFORE: List rows with name and role
+AFTER:  Rich cards with:
+  - Avatar circle with initials + status dot (colored)
+  - Name + role
+  - Mini today's timeline: small bar showing shift start/end
+  - Current status text: "On shift · 2h 15m remaining"
+  - Quick action buttons: [Message] [View Schedule] [Approve]
+  - Trinity flag: amber icon if anything needs attention
+```
+
+---
+
+### ALL EMPTY STATES — Replace Immediately
+
+```
+BEFORE: "No data found" / "No records" / blank
+AFTER:  Trinity-voiced contextual empty states:
+
+No employees: 
+  Icon: 👥
+  "No team members yet"
+  "Add your first employee to start building your schedule."
+  [ Add Employee → ]
+
+No shifts:
+  Icon: 📅  
+  "Schedule is empty"
+  "Would you like Trinity to generate a schedule for this period?"
+  [ Generate with Trinity → ]  [ Create Manually → ]
+
+No messages:
+  Icon: 💬
+  "No messages yet"
+  "Start a conversation with your team."
+  [ Send Message → ]
+
+No timesheets:
+  Icon: ⏱
+  "No timesheet records"
+  "Timesheets appear here once employees clock in."
+  
+No notifications:
+  Icon: 🔔
+  "You're all caught up"
+  "Trinity will notify you when something needs your attention."
+```
+
+---
+
+### ALL LOADING STATES — Replace Immediately
+
+```
+BEFORE: Spinner / blank white flash
+AFTER:  Skeleton loaders that match the shape of the content:
+
+Dashboard skeleton:
+  - Banner shape (full width, 120px)
+  - Card shape (full width, 80px)
+  - Grid (2x2 placeholder tiles)
+
+List skeleton:
+  - 5 rows of: circle (40px) + two lines (60% width, 40% width)
+
+Table skeleton:
+  - Header row (full width, 40px)
+  - 5 data rows alternating opacity
+
+All skeletons use the shimmer animation defined in Section 2
+```
+
+---
+
+## SECTION 5 — WHAT DONE ACTUALLY MEANS
+
+You are not done with a page until ALL of these are true:
+
+```
+VISUAL:
+- [ ] Page has at least one large prominent metric or visual anchor
+- [ ] All cards have accent borders or gradient borders
+- [ ] No plain "No data" empty states remain
+- [ ] No spinner-only loading states remain
+- [ ] All icons are consistent size from one library
+
+ANIMATION:
+- [ ] Page content animates in on load (staggered fadeUp)
+- [ ] All buttons have press feedback (scale 0.97)
+- [ ] Number values animate up from 0 on load
+- [ ] Skeleton loaders shape-match the content they replace
+
+MOBILE:
+- [ ] All tap targets are minimum 44px
+- [ ] No text overflow on any element at 375px width
+- [ ] No horizontal scroll unless intentional
+- [ ] Bottom nav not overlapping content
+- [ ] Safe area padding applied
+
+TRINITY:
+- [ ] Trinity FAB visible on page
+- [ ] Empty states use Trinity voice
+- [ ] At least one proactive insight card if data warrants it
+
+CONSISTENCY:
+- [ ] Uses design tokens — no hardcoded hex colors
+- [ ] Uses universal components — no custom one-off implementations
+- [ ] Font sizes from token scale only
+- [ ] Spacing from token scale only
+```
+
+---
+
+## FINAL INSTRUCTION
+
+Do not come back to me with a screenshot saying this looks good unless every single checkbox above is checked for every single page.
+
+Do not make minor tweaks and call it an overhaul.
+
+Do not protect the current design. It needs to change. That is the entire point of this prompt.
+
+Build it. Wire it. Test it on mobile at 375px and on desktop at 1280px. Then show me.

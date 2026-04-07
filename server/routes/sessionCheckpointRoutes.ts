@@ -10,8 +10,14 @@ import type { AuthenticatedRequest } from '../rbac';
 import { db } from '../db';
 import { workspaces, employees, users, systemAuditLogs } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('SessionCheckpointRoutes');
+
 
 export const sessionCheckpointRouter = Router();
+
+sessionCheckpointRouter.use(requireAuth);
 
 // Validation schemas
 const createCheckpointSchema = z.object({
@@ -61,8 +67,8 @@ sessionCheckpointRouter.post('/', async (req, res) => {
     });
     
     res.json({ success: true, checkpoint });
-  } catch (error: any) {
-    console.error('[SessionCheckpoint] Create error:', error);
+  } catch (error: unknown) {
+    log.error('[SessionCheckpoint] Create error:', error);
     res.status(500).json({ error: 'Failed to create checkpoint' });
   }
 });
@@ -96,8 +102,8 @@ sessionCheckpointRouter.patch('/:checkpointId', async (req, res) => {
     }
     
     res.json({ success: true, checkpoint });
-  } catch (error: any) {
-    console.error('[SessionCheckpoint] Update error:', error);
+  } catch (error: unknown) {
+    log.error('[SessionCheckpoint] Update error:', error);
     res.status(500).json({ error: 'Failed to update checkpoint' });
   }
 });
@@ -118,8 +124,8 @@ sessionCheckpointRouter.post('/:checkpointId/finalize', async (req, res) => {
     const success = await sessionCheckpointService.finalizeCheckpoint(checkpointId, 'user_action');
     
     res.json({ success });
-  } catch (error: any) {
-    console.error('[SessionCheckpoint] Finalize error:', error);
+  } catch (error: unknown) {
+    log.error('[SessionCheckpoint] Finalize error:', error);
     res.status(500).json({ error: 'Failed to finalize checkpoint' });
   }
 });
@@ -140,8 +146,8 @@ sessionCheckpointRouter.get('/active', async (req, res) => {
     const checkpoint = await sessionCheckpointService.getActiveCheckpoint(userId, sessionId);
     
     res.json({ success: true, checkpoint });
-  } catch (error: any) {
-    console.error('[SessionCheckpoint] Get active error:', error);
+  } catch (error: unknown) {
+    log.error('[SessionCheckpoint] Get active error:', error);
     res.status(500).json({ error: 'Failed to get active checkpoint' });
   }
 });
@@ -165,8 +171,8 @@ sessionCheckpointRouter.get('/recoverable', async (req, res) => {
       checkpoints,
       hasRecoverable: checkpoints.length > 0,
     });
-  } catch (error: any) {
-    console.error('[SessionCheckpoint] Get recoverable error:', error);
+  } catch (error: unknown) {
+    log.error('[SessionCheckpoint] Get recoverable error:', error);
     res.status(500).json({ error: 'Failed to get recoverable checkpoints' });
   }
 });
@@ -197,8 +203,8 @@ sessionCheckpointRouter.post('/recovery-request', async (req, res) => {
     );
     
     res.json({ success: true, requestId });
-  } catch (error: any) {
-    console.error('[SessionCheckpoint] Recovery request error:', error);
+  } catch (error: unknown) {
+    log.error('[SessionCheckpoint] Recovery request error:', error);
     res.status(500).json({ error: 'Failed to create recovery request' });
   }
 });
@@ -237,8 +243,8 @@ sessionCheckpointRouter.post('/recovery/:requestId/complete', async (req, res) =
       checkpoint,
       recoveredPayload: checkpoint.payload,
     });
-  } catch (error: any) {
-    console.error('[SessionCheckpoint] Recovery complete error:', error);
+  } catch (error: unknown) {
+    log.error('[SessionCheckpoint] Recovery complete error:', error);
     res.status(500).json({ error: 'Failed to complete recovery' });
   }
 });
@@ -247,7 +253,7 @@ sessionCheckpointRouter.post('/recovery/:requestId/complete', async (req, res) =
 // TRINITY DIAGNOSTIC TOOLS ACCESS CONTROL
 // ============================================================================
 
-const ALLOWED_TOGGLE_ROLES = ['org_owner', 'org_admin', 'root_admin', 'deputy_admin', 'sysop', 'support_manager'];
+const ALLOWED_TOGGLE_ROLES = ['org_owner', 'co_owner', 'root_admin', 'deputy_admin', 'sysop', 'support_manager'];
 
 /**
  * Get Trinity diagnostics status for a workspace
@@ -286,8 +292,8 @@ sessionCheckpointRouter.get('/trinity-diagnostics/:workspaceId', async (req, res
         enabledBy: workspace[0].trinityDiagnosticsEnabledBy,
       }
     });
-  } catch (error: any) {
-    console.error('[TrinityDiagnostics] Status check error:', error);
+  } catch (error: unknown) {
+    log.error('[TrinityDiagnostics] Status check error:', error);
     res.status(500).json({ error: 'Failed to check Trinity diagnostics status' });
   }
 });
@@ -332,7 +338,7 @@ sessionCheckpointRouter.patch('/trinity-diagnostics/:workspaceId/toggle', async 
       
       const isOwner = workspace[0]?.ownerId === userId;
       
-      // Check employee role (for org_admin, department_manager, etc.)
+      // Check employee role (for co_owner, department_manager, etc.)
       let isAdmin = false;
       if (!isOwner) {
         const employee = await db.select()
@@ -343,7 +349,7 @@ sessionCheckpointRouter.patch('/trinity-diagnostics/:workspaceId/toggle', async 
           ))
           .limit(1);
         
-        isAdmin = ['org_admin', 'department_manager'].includes(employee[0]?.role || '');
+        isAdmin = ['co_owner', 'department_manager'].includes(employee[0]?.role || '');
       }
       
       if (!isOwner && !isAdmin) {
@@ -378,11 +384,11 @@ sessionCheckpointRouter.patch('/trinity-diagnostics/:workspaceId/toggle', async 
         previousState: !enabled,
         newState: enabled,
         changedBy: userId,
-        changedByRole: isPlatformSupport ? platformRole : 'workspace_admin',
+        changedByRole: isPlatformSupport ? platformRole : 'org_admin',
       },
     });
     
-    console.log(`[TrinityDiagnostics] ${enabled ? 'Enabled' : 'Disabled'} for workspace ${workspaceId} by ${userId}`);
+    log.info(`[TrinityDiagnostics] ${enabled ? 'Enabled' : 'Disabled'} for workspace ${workspaceId} by ${userId}`);
     
     res.json({ 
       success: true, 
@@ -392,8 +398,8 @@ sessionCheckpointRouter.patch('/trinity-diagnostics/:workspaceId/toggle', async 
         enabledBy: userId,
       }
     });
-  } catch (error: any) {
-    console.error('[TrinityDiagnostics] Toggle error:', error);
+  } catch (error: unknown) {
+    log.error('[TrinityDiagnostics] Toggle error:', error);
     res.status(500).json({ error: 'Failed to toggle Trinity diagnostics' });
   }
 });

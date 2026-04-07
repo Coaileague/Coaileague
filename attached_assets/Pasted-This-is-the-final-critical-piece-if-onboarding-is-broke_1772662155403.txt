@@ -1,0 +1,28 @@
+This is the final critical piece — if onboarding is broken, everything we just fixed gets dirty again with the very first new customer. Let me build the complete spec.
+
+This covers everything you just described. Here's the short version:
+
+**Org Registration** — One database transaction creates ALL required records: workspace, owner assignment, subscription, credit balance, usage caps, settings, audit log, welcome notification. If any single step fails, everything rolls back. No half-provisioned orgs.
+
+**Employee & Client Addition** — Both inherit workspace_id from the org they're added to. Duplicate checks prevent the agent's old problem. Billing employee count recalculates automatically every time someone is added or deactivated, including overage detection.
+
+**Mother-Org / Sub-Org** — When Statewide expands to California, a sub-org gets its own workspace_id, employees, clients, and state-specific settings. But billing, credits, and the platform invoice all roll up to the mother org. One bill, one credit pool, detailed breakdown showing which state consumed what.
+
+**Trinity's `resolveOrgContext()`** — Before every single action, Trinity calls this function to determine: which workspace am I in, who's the mother org, where do credits get deducted, where do fees get recorded, what state rules apply, what tier limits exist. She never guesses — she looks it up.
+
+**The billing rollup:** Trinity counts ALL employees across mother + sub-orgs for per-seat pricing. Aggregates ALL processing fees (invoicing, payroll, QB sync) across all sub-orgs onto one mother org bill. Credit deductions from any sub-org come out of the mother's pool with sub-org attribution so you can see which state is consuming what.
+
+**Your master doc stack is now 10:**
+
+| # | Document | Status |
+|---|---|---|
+| 1 | Database Integrity Audit | Agent working on it NOW |
+| 2 | Silent Failure Detection | Queue after DB audit |
+| 3 | Feature Parity Audit | Queue after silent failures |
+| 4 | Data Provenance Spec | Audit trail + attribution |
+| 5 | Money Flow Audit | Stripe + payment collection |
+| 6 | Org Onboarding + Multi-State | **NEW — this one** |
+| 7 | Mobile UI Polish | Visual fixes |
+| 8 | Trinity Intelligence | Knowledge + tools + learning |
+| 9 | DockChat/Bots Spec | Shift rooms + proof of service |
+| 10 | Feature Roadmap v1 | New features |

@@ -1,0 +1,271 @@
+Here's the full prompt:
+
+---
+
+**COAILEAGUE — BILLING, CREDIT, AND REVENUE SYSTEM AUDIT**
+**Zero Tolerance — Real Currency, Real Credits, Real Business Revenue**
+
+This audit covers every system that touches money flowing into CoAIleague as a business. This includes org subscription billing, credit ledgers, seat based pricing, premium feature gating, payroll and invoice middleware processing, and all abuse and fraud prevention. A failure in any of these systems means CoAIleague loses revenue, loses trust, or exposes itself to financial liability. Treat every item as a blocker.
+
+Read all existing billing, credit, subscription, Stripe, and middleware code completely before touching anything.
+
+---
+
+**PART 1 — SUBSCRIPTION AND TIER ARCHITECTURE**
+
+Verify the complete subscription tier system is correctly structured and enforced:
+
+- Every tier defined with exact feature set, credit allocation, seat limit, and price
+- Tier definitions stored in single canonical location — never hardcoded in individual components
+- Feature gating enforced server side — never trust client side feature flags alone
+- Org cannot access features above their tier regardless of URL manipulation or API calls
+- Tier displayed correctly in UI — org always knows what plan they are on
+- Trial period logic — start date, end date, what happens at expiration, grace period if any
+- Trial expiration handled gracefully — org notified before expiration, features gated not silently broken after
+- Upgrade flow — org selects higher tier, Stripe charge fires, tier updates immediately on success
+- Downgrade flow — org moves to lower tier, excess features gated, data preserved not deleted
+- Cancellation flow — org cancels, access continues through paid period, then correctly gates at expiration
+- Reactivation flow — cancelled org resubscribes, full access restores immediately on payment
+
+---
+
+**PART 2 — CREDIT LEDGER SYSTEM**
+
+The credit ledger is a financial record. It must be mathematically perfect and immutable.
+
+**Ledger Architecture:**
+- Every org has exactly one credit ledger — single source of truth
+- Ledger operates as append-only transaction log — no record is ever edited or deleted
+- Every credit event creates a new ledger entry — debit or credit, never a balance update alone
+- Current balance always calculated from ledger transaction history — never stored as a mutable number that can drift
+- Ledger entry contains — org ID, workspace ID, transaction type, credit amount, action that triggered it, timestamp, executing user or system, resulting balance after transaction
+- Balance displayed in UI always reads from calculated ledger total — never from a cached or separate balance field that can desync
+
+**Credit Allocation Events — all must create ledger entries:**
+- Monthly credit reset on billing cycle — logs as credit allocation with period reference
+- Credit purchase — logs as credit purchase with Stripe payment reference
+- Plan upgrade bonus credits — logs as allocation with upgrade reference
+- Manual credit adjustment by platform staff — logs with staff ID and reason
+
+**Credit Deduction Events — all must create ledger entries:**
+- Smart scheduling execution — deduct correct amount, log action type
+- Scheduling session fee — deduct correct amount, log session reference
+- AI contract negotiation — 30 credits per contract, log contract ID
+- Payroll analysis — log credit amount and analysis scope
+- Schedule analysis — log credit amount and analysis scope
+- Notification sends — log per batch
+- Any Trinity autonomous action — log action type and credit cost
+- Any future premium action — framework must support new deduction types without architectural changes
+
+**Ledger Integrity Rules:**
+- Balance can never go below zero through deduction — system must check balance before executing any credit action
+- If insufficient credits — action blocked, org notified immediately with current balance and purchase option
+- Race condition prevention — credit check and deduction must be atomic transaction, two simultaneous actions cannot both pass a balance check and overdraw the ledger
+- Monthly reset never overwrites purchased credits — only resets allocated monthly credits, purchased credits carry forward
+- Purchased credits consumed after monthly allocation — monthly credits spent first, purchased credits are the overflow reserve
+
+---
+
+**PART 3 — CREDIT GATING AND ENFORCEMENT**
+
+Every feature that costs credits must enforce the gate server side:
+
+- Before executing any credit-costing action — check current balance atomically
+- If balance sufficient — deduct and execute in same atomic transaction
+- If balance insufficient — block execution immediately, return clear error with current balance and credit cost of attempted action
+- UI must reflect insufficient credits state — button disabled, tooltip explaining credits needed, direct link to purchase more
+- Trinity must never attempt a credit-costing action without first verifying balance
+- Trinity must notify org owner proactively when balance drops below configurable threshold — default 20% remaining
+- Low credit warning appears in notification panel, Org Operations Briefing Channel, and email
+- Critical credit warning at 10% remaining — escalated notification type
+- Zero credit state — all credit-gated automations pause, org notified, clear path to purchase and resume
+
+**Credit Purchase Flow:**
+- Org selects credit package
+- Stripe payment intent created server side
+- Payment confirmed by Stripe webhook — never by client confirmation alone
+- On webhook confirmation — ledger entry created, balance updates, UI refreshes
+- Failed payment — clear error, no ledger entry, no credit addition
+- Purchase receipt generated and emailed via Resend
+- Purchase history accessible to org owner in billing section
+
+---
+
+**PART 4 — SEAT BASED BILLING**
+
+- Seat count tracked accurately — every active employee account counts as a seat
+- Seat limit enforced per tier — org cannot add employees beyond their seat limit without upgrading
+- Approaching seat limit — Trinity warns org owner before they hit the cap
+- At seat limit — new employee invite blocked with clear upgrade prompt
+- Seat overage handling if applicable — charge for overage seats or block, never silently allow
+- Deactivated employee accounts do not count toward seat limit
+- Seat count visible to org owner in billing section at all times
+- Seat count reconciled against subscription on every billing cycle
+
+---
+
+**PART 5 — PAYROLL MIDDLEWARE PROCESSING**
+
+If CoAIleague processes payroll calculations and generates payroll outputs that inform real employee payments:
+
+- Payroll processing is a premium feature — correct credit or fee deduction on each payroll run
+- Processing fee if applicable charged via Stripe on payroll run approval
+- Payroll calculation engine verified mathematically — hours times rate equals gross pay with zero floating point errors
+- Tax withholding calculations if applicable — verified against correct tax tables
+- Payroll output file generation — format verified against target processor requirements
+- Payroll processing status tracked — pending, processing, complete, failed
+- Failed payroll run — clear error state, no partial output, no charge if processing failed
+- Payroll run history preserved — every run accessible with full detail indefinitely
+- Org cannot run payroll without sufficient credits or payment — gated before execution begins
+
+---
+
+**PART 6 — INVOICE MIDDLEWARE PROCESSING**
+
+If CoAIleague generates and delivers client invoices on behalf of security companies:
+
+- Invoice generation is a premium feature — correct credit or fee deduction per invoice
+- Invoice math verified with exact decimal precision — no rounding errors on line items or totals
+- Tax calculation if applicable — correct rate applied per jurisdiction
+- Invoice delivery via Resend — delivery confirmation logged against invoice record
+- Payment portal transaction — Stripe processes client payment, webhook confirms, invoice status updates
+- Payment processing fee handling — who bears the processing fee, is it passed to client, is it absorbed
+- Partial payment recorded accurately — remaining balance calculated from payment history not manual entry
+- Invoice dispute handling — process for marking invoice disputed and pausing collections
+- Invoice void and credit note process — if invoice needs to be cancelled correct accounting entries made
+- All invoice financial events create immutable ledger entries
+
+---
+
+**PART 7 — STRIPE INTEGRATION VERIFICATION**
+
+Stripe is the payment processor. Every integration point must be verified:
+
+- Stripe webhook endpoint receiving all required event types — payment_intent.succeeded, payment_intent.failed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed
+- Webhook signature verification — every incoming webhook verified with Stripe signature before processing
+- Webhook idempotency — same webhook event delivered twice must not create duplicate records or double charge
+- Webhook failure handling — if processing fails, retry logic in place, alert to platform staff
+- Test mode and production mode keys correctly separated — test keys never in production environment
+- Stripe customer ID stored per org — every org has exactly one Stripe customer record
+- Payment method storage — org can save payment method for automatic billing
+- Failed subscription payment — retry logic, grace period, then correct access gating
+- Stripe dashboard reconciliation — amounts in CoAIleague ledger match Stripe dashboard exactly
+
+---
+
+**PART 8 — WORKSPACE AND SESSION ISOLATION FOR BILLING**
+
+Billing data is among the most sensitive data on the platform. Isolation must be absolute.
+
+- Org A can never see, access, or affect Org B's credit ledger under any circumstance
+- Billing API endpoints verify workspace ownership on every request — not just authentication, but authorization to that specific org's billing data
+- Credit deductions only post to the workspace that triggered the action — no cross-workspace credit bleeding
+- Stripe customer records mapped to org ID with verified ownership check on every billing operation
+- Session tokens cannot be used to access billing endpoints of a different org
+- Admin role inside an org cannot access billing — org owner only
+- Platform staff billing access is completely separate system — never accessible through org-facing routes
+- All billing endpoints rate limited independently from general API
+
+---
+
+**PART 9 — ABUSE, FRAUD, AND ATTACK PREVENTION**
+
+The credit system and billing system are attack surfaces. Protect them:
+
+**Excessive Token and Credit Usage Prevention:**
+- Rate limit all AI action endpoints — maximum requests per minute per org
+- Maximum credit spend per hour per org — configurable threshold, alert if exceeded
+- Anomalous usage detection — if an org suddenly spends 10x their normal credit rate Trinity flags it to platform staff
+- Automated credit farming prevention — detect and block patterns of triggering actions purely to consume credits without legitimate workflow purpose
+- Per-action rate limits — scheduling analysis cannot be triggered more than X times per hour per org
+
+**API and Endpoint Protection:**
+- All billing and credit endpoints require authentication — no public access
+- All billing and credit endpoints require correct org authorization — authenticated user must belong to the org whose billing they are accessing
+- CSRF protection on all billing form submissions
+- Input validation on all credit and billing inputs — no negative credit purchases, no zero amount invoices
+- SQL injection prevention on all billing queries — parameterized queries only
+
+**DDoS and Spam Prevention:**
+- Rate limiting on all endpoints — global, per IP, per org, per user
+- Exponential backoff on repeated failed payment attempts
+- Repeated failed authentication on billing endpoints triggers lockout and alert
+- Webhook endpoint rate limited and signature verified — cannot be spammed
+- Credit purchase endpoint rate limited — cannot be hammered to create multiple Stripe payment intents
+
+**Fraud Prevention:**
+- Duplicate payment detection — same amount, same org, within short time window flagged for review
+- Chargeback handling process — if Stripe chargeback received, access gated pending resolution
+- Unusual billing pattern alerts — org purchases large credit package then immediately triggers maximum credit actions
+
+---
+
+**PART 10 — BILLING UI AND TRANSPARENCY**
+
+Org owners must always have complete visibility into their financial relationship with CoAIleague:
+
+- Current plan, price, and renewal date always visible
+- Current credit balance always visible in header — matches ledger exactly
+- Credit usage breakdown — itemized by action type for current period
+- Summary total must mathematically equal sum of itemized breakdown — known bug from previous audit, verify fixed and permanently reconciled
+- Purchase history — every credit purchase and subscription payment with date, amount, and Stripe reference
+- Invoice history — all invoices generated on their behalf with status
+- Seat count current versus limit
+- Upcoming charges — next billing date and amount displayed clearly
+- Export billing history — org owner can download complete billing history
+- Billing alerts configurable — low credits, upcoming renewal, payment failed
+
+---
+
+**PART 11 — BILLING AUDIT TRAIL**
+
+Every billing event creates an immutable record:
+
+- Credit ledger entries — append only, never editable
+- Subscription change events — upgrade, downgrade, cancel, reactivate with timestamp and authorizer
+- Payment events — all Stripe webhook events logged with full payload
+- Invoice events — created, delivered, paid, partial, overdue, voided
+- Refund events if applicable
+- Platform staff manual adjustments — logged with staff ID, reason, and before/after balance
+- Full billing audit log exportable by org owner
+- Full billing audit log accessible to platform staff for support and dispute resolution
+
+---
+
+**CROSS-SYSTEM INTEGRATION VERIFICATION**
+
+After all billing systems pass individually verify the complete revenue chain:
+
+Org Signs Up → Stripe Customer Created → Tier Assigned → Credits Allocated → Ledger Entry Created
+
+Org Uses AI Feature → Balance Checked Atomically → Credits Deducted → Ledger Entry Created → UI Balance Updates → If Low Balance Trinity Warns
+
+Org Purchases Credits → Stripe Payment Intent Created → Webhook Confirms → Ledger Entry Created → Balance Updates → Receipt Emailed
+
+Org Runs Payroll → Credit or Fee Checked → Deducted Atomically → Payroll Processes → Ledger Entry Created → Pay Stubs Generated
+
+Org Issues Client Invoice → Invoice Generated → Delivered via Resend → Client Pays via Portal → Stripe Webhook Confirms → Invoice Status Updates → Revenue Recorded → Ledger Entry Created
+
+Monthly Billing Cycle → Stripe Charges Subscription → Webhook Confirms → Credits Reset → Purchased Credits Preserved → New Period Begins
+
+Every handoff in every chain must be tested with realistic Acme data before marking complete.
+
+---
+
+**SUCCESS CRITERIA — BILLING PRODUCTION GO/NO-GO**
+
+- Credit ledger balance always equals sum of all ledger transactions — never drifts
+- Summary credit display always equals itemized breakdown total — zero discrepancy
+- No org can use credit-gated features without sufficient balance — atomic check enforced
+- No two simultaneous actions can overdraw the same credit balance — race condition prevented
+- Stripe webhooks processing correctly for all event types with idempotency
+- Zero cross-org billing data access possible under any circumstance
+- All billing endpoints rate limited and protected against abuse
+- Anomalous usage detected and flagged before it becomes a financial problem
+- Org owner has complete real time visibility into every credit and currency transaction
+- Every financial event has an immutable audit log entry
+- CoAIleague makes money correctly, securely, and transparently on every transaction
+
+---
+
+This is your financial foundation Bryan. The product can have rough edges post launch. The money cannot. Get this right and you have a business. Get this wrong and you don't.

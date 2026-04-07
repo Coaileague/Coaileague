@@ -1,4 +1,7 @@
 import crypto from 'crypto';
+import { createLogger } from '../lib/logger';
+const log = createLogger('tokenEncryption');
+
 
 /**
  * OAuth Token Encryption Module
@@ -7,7 +10,7 @@ import crypto from 'crypto';
  * Uses a single master key from environment variable (not per-entity keys like conversations).
  * 
  * CRITICAL: Set ENCRYPTION_KEY environment variable to a 32-byte hex string.
- * Generate with: `openssl rand -hex 32` or `node -e "console.log(crypto.randomBytes(32).toString('hex'))"`
+ * Generate with: `openssl rand -hex 32` or `node -e "log.info(crypto.randomBytes(32).toString('hex'))"`
  * 
  * Security Model:
  * - Master key in environment (future: AWS KMS/Cloud HSM)
@@ -46,7 +49,7 @@ function getMasterKey(): Buffer | null {
         'Generate with: openssl rand -hex 32'
       );
     } else {
-      console.warn(
+      log.warn(
         '⚠️  ENCRYPTION_KEY not set - OAuth tokens will be stored in PLAINTEXT! ' +
         'Set ENCRYPTION_KEY in .env for security.'
       );
@@ -88,7 +91,7 @@ export function encryptToken(token: string | null | undefined): string {
 
   // Check if already encrypted (prevents double-encryption)
   if (isEncrypted(token)) {
-    console.warn('⚠️  Token appears to be already encrypted - skipping encryption');
+    log.warn('⚠️  Token appears to be already encrypted - skipping encryption');
     return token;
   }
 
@@ -97,7 +100,7 @@ export function encryptToken(token: string | null | undefined): string {
     
     // Graceful degradation in development - store plaintext if no encryption key
     if (!key) {
-      console.warn('⚠️  Storing token in PLAINTEXT - ENCRYPTION_KEY not configured');
+      log.warn('⚠️  Storing token in PLAINTEXT - ENCRYPTION_KEY not configured');
       return token; // Return plaintext in development
     }
     
@@ -197,7 +200,7 @@ export function safeEncryptToken(token: string | null | undefined): string | nul
   try {
     return encryptToken(token);
   } catch (error) {
-    console.error('Token encryption failed:', error);
+    log.error('Token encryption failed:', error);
     throw error; // Don't silently fail - encryption failure is critical
   }
 }
@@ -214,7 +217,7 @@ export function safeDecryptToken(encryptedToken: string | null | undefined): str
   try {
     return decryptToken(encryptedToken);
   } catch (error) {
-    console.error('Token decryption failed:', error);
+    log.error('Token decryption failed:', error);
     throw error; // Don't silently fail - decryption failure means token is unusable
   }
 }
@@ -222,7 +225,7 @@ export function safeDecryptToken(encryptedToken: string | null | undefined): str
 /**
  * Generate a new encryption key (for setup/rotation)
  * 
- * Usage: node -e "console.log(require('./server/security/tokenEncryption').generateEncryptionKey())"
+ * Usage: node -e "log.info(require('./server/security/tokenEncryption').generateEncryptionKey())"
  * 
  * @returns 32-byte hex string suitable for ENCRYPTION_KEY
  */
@@ -244,11 +247,90 @@ export function isEncryptionConfigured(): boolean {
   }
 }
 
+/**
+ * SSN Encryption Utilities
+ * 
+ * Provides AES-256-GCM encryption specifically for Social Security Numbers.
+ * Uses the same master key as OAuth tokens for consistency.
+ * 
+ * Security: SSNs are highly sensitive PII - always encrypt at rest.
+ */
+
+/**
+ * Encrypt a Social Security Number
+ * 
+ * @param ssn - Plaintext SSN (9 digits, with or without dashes)
+ * @returns Encrypted SSN string
+ */
+export function encryptSSN(ssn: string | null | undefined): string | null {
+  if (!ssn || ssn.trim() === '') {
+    return null;
+  }
+
+  // Normalize SSN by removing dashes/spaces
+  const normalizedSSN = ssn.replace(/[-\s]/g, '');
+  
+  // Validate SSN format (9 digits)
+  if (!/^\d{9}$/.test(normalizedSSN)) {
+    log.warn('⚠️  Invalid SSN format - encrypting as-is');
+  }
+
+  return encryptToken(normalizedSSN);
+}
+
+/**
+ * Decrypt a Social Security Number
+ * 
+ * @param encryptedSSN - Encrypted SSN string
+ * @returns Decrypted SSN (9 digits, no formatting)
+ */
+export function decryptSSN(encryptedSSN: string | null | undefined): string | null {
+  if (!encryptedSSN || encryptedSSN.trim() === '') {
+    return null;
+  }
+
+  try {
+    return decryptToken(encryptedSSN);
+  } catch (error: any) {
+    log.error('SSN decryption failed:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Get masked SSN for display (XXX-XX-1234)
+ * 
+ * @param encryptedOrPlainSSN - SSN (encrypted or plain)
+ * @returns Masked SSN string (last 4 digits visible)
+ */
+export function getMaskedSSN(encryptedOrPlainSSN: string | null | undefined): string | null {
+  if (!encryptedOrPlainSSN) {
+    return null;
+  }
+
+  try {
+    // Decrypt if encrypted
+    const ssn = isEncrypted(encryptedOrPlainSSN) 
+      ? decryptSSN(encryptedOrPlainSSN) 
+      : encryptedOrPlainSSN;
+    
+    if (!ssn || ssn.length < 4) {
+      return null;
+    }
+
+    // Show only last 4 digits
+    const last4 = ssn.slice(-4);
+    return `XXX-XX-${last4}`;
+  } catch {
+    return null;
+  }
+}
+
 // Export key generator for setup script
 // Run with: tsx server/security/tokenEncryption.ts
 if (import.meta.url === `file://${process.argv[1]}`) {
-  console.log('Generated ENCRYPTION_KEY (add to .env file):');
-  console.log('ENCRYPTION_KEY=' + generateEncryptionKey());
-  console.log('\nExample .env entry:');
-  console.log(`ENCRYPTION_KEY=${generateEncryptionKey()}`);
+  log.info('Generated ENCRYPTION_KEY (add to .env file):');
+  log.info('ENCRYPTION_KEY=' + generateEncryptionKey());
+  log.info('\nExample .env entry:');
+  log.info(`ENCRYPTION_KEY=${generateEncryptionKey()}`);
 }

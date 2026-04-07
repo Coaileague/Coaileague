@@ -1,8 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useLocation } from "wouter";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription } from "@/components/ui/universal-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryKeys } from "@/config/queryKeys";
+import { secureFetch } from "@/lib/csrf";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,34 +65,1203 @@ import {
   Sparkles,
   CheckCircle2,
   XCircle,
+  Palette,
+  Image,
+  UserPlus,
+  Send,
+  ClipboardCopy,
+  Users,
+  DollarSign,
+  Receipt,
+  Landmark,
+  PiggyBank,
+  TrendingUp,
+  CircleCheck,
+  CircleX,
+  ChevronRight,
+  Info,
+  Percent,
+  Hash,
+  ClipboardList,
+  Wallet,
+  HardDrive,
+  Database,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { WorkspaceLayout } from "@/components/workspace-layout";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
 import { SettingsCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 import { SimpleModeToggle } from "@/components/SimpleModeToggle";
 import { useSimpleMode } from "@/contexts/SimpleModeContext";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { apiFetch } from "@/lib/apiError";
+import { WorkspaceResponse, OnboardingStatusResponse } from "@shared/schemas/responses/workspace";
+
+const settingsConfig: CanvasPageConfig = {
+  id: 'settings',
+  title: 'Settings',
+  subtitle: 'Configure your workspace, notifications, and automation preferences',
+  category: 'settings',
+};
+
+const profileSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+});
+
+const workspaceSchema = z.object({
+  name: z.string().min(1, "Workspace name is required"),
+  companyName: z.string().min(1, "Company name is required"),
+  taxId: z.string().optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  website: z.string().optional().or(z.literal("")),
+  companyCity: z.string().optional().or(z.literal("")),
+  companyState: z.string().max(2, "Use 2-letter state code").optional().or(z.literal("")),
+  companyZip: z.string().optional().or(z.literal("")),
+  stateLicenseNumber: z.string().optional().or(z.literal("")),
+  stateLicenseState: z.string().max(2).optional().or(z.literal("")),
+  stateLicenseExpiry: z.string().optional().or(z.literal("")),
+  logoUrl: z.string().optional().or(z.literal("")),
+  brandColor: z.string().optional().or(z.literal("")),
+});
+
+const invoiceFinancialsSchema = z.object({
+  invoicePrefix: z.string().min(1, "Prefix is required"),
+  invoiceNextNumber: z.coerce.number().min(1, "Next number must be at least 1"),
+  lateFeePercentage: z.coerce.number().min(0).max(100),
+  lateFeeDays: z.coerce.number().min(0),
+  billingEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+  paymentTermsDays: z.coerce.number().min(0),
+  defaultTaxRate: z.coerce.number().min(0).max(100),
+});
+
+const payrollFinancialsSchema = z.object({
+  stateUnemploymentRate: z.coerce.number().min(0).max(100),
+  workerCompRate: z.coerce.number().min(0).max(100),
+  payrollBankName: z.string().optional().or(z.literal("")),
+  payrollBankRouting: z.string().regex(/^\d{9}$/, "Routing number must be 9 digits").optional().or(z.literal("")),
+  payrollBankAccount: z.string().optional().or(z.literal("")),
+  payrollMemo: z.string().optional().or(z.literal("")),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
+type WorkspaceFormValues = z.infer<typeof workspaceSchema>;
+type InvoiceFinancialsFormValues = z.infer<typeof invoiceFinancialsSchema>;
+type PayrollFinancialsFormValues = z.infer<typeof payrollFinancialsSchema>;
 
 // Settings section configuration for navigation
 const SETTINGS_SECTIONS = [
+  { id: 'profile', label: 'My Profile', icon: User, description: 'Your personal information' },
   { id: 'quick', label: 'Quick Settings', icon: Sparkles, description: 'Most-used settings' },
   { id: 'notifications', label: 'Notifications', icon: Bell, description: 'How you receive alerts' },
   { id: 'organization', label: 'Organization', icon: Building2, description: 'Business info & branding' },
+  { id: 'financial', label: 'Financial', icon: DollarSign, description: 'Invoice, payroll & tax config' },
   { id: 'automation', label: 'Automation', icon: Zap, description: 'AI-powered workflows' },
   { id: 'compliance', label: 'Compliance', icon: Scale, description: 'Labor laws & breaks' },
+  { id: 'storage', label: 'Storage', icon: HardDrive, description: 'Quota & usage by category' },
   { id: 'billing', label: 'Billing', icon: CreditCard, description: 'Plans & payments' },
 ] as const;
 
 type SettingsSection = typeof SETTINGS_SECTIONS[number]['id'];
 
+function ProfileTabContent() {
+  const { toast } = useToast();
+
+  const { data: session, isLoading: sessionLoading, isError: sessionError, error: sessionErrorDetail } = useQuery<{ user?: any }>({
+    queryKey: ['/api/auth/me'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+    },
+  });
+
+  useEffect(() => {
+    if (session) {
+      const u = session?.user || session;
+      form.reset({
+        firstName: u?.firstName || '',
+        lastName: u?.lastName || '',
+        email: u?.email || '',
+        phone: u?.phone || '',
+      });
+    }
+  }, [session, form]);
+
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const { isDirty } = form.formState;
+
+  // Intercept navigation attempts when form is dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: ProfileFormValues) => {
+      const res = await apiRequest('PATCH', '/api/auth/profile', {
+        ...data,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+      toast({
+        title: "Profile Updated",
+        description: "Your personal information has been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (values: ProfileFormValues) => {
+    updateProfileMutation.mutate(values);
+  };
+
+  if (sessionLoading) {
+    return <SettingsCardSkeleton />;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+          <div className="min-w-0">
+            <CardTitle className="text-base sm:text-lg">Personal Information</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Update your name, email, and phone number</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs sm:text-sm">First Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="First name"
+                        data-testid="input-profile-first-name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs sm:text-sm">Last Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Last name"
+                        data-testid="input-profile-last-name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs sm:text-sm">Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          type="email"
+                          placeholder="Email address"
+                          className="pl-9"
+                          data-testid="input-profile-email"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs sm:text-sm">Phone</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          type="tel"
+                          placeholder="Phone number"
+                          className="pl-9"
+                          data-testid="input-profile-phone"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button
+                type="submit"
+                disabled={updateProfileMutation.isPending || saveSuccess}
+                data-testid="button-save-profile"
+                variant={saveSuccess ? "outline" : "default"}
+                className={saveSuccess ? "border-green-500 text-green-600 dark:text-green-400" : ""}
+              >
+                {updateProfileMutation.isPending ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : saveSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Save Profile
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
+  const [workspaceSaveSuccess, setWorkspaceSaveSuccess] = useState(false);
+  const { toast } = useToast();
+  const form = useForm<WorkspaceFormValues>({
+    resolver: zodResolver(workspaceSchema),
+    defaultValues: {
+      name: '',
+      companyName: '',
+      taxId: '',
+      phone: '',
+      address: '',
+      website: '',
+      companyCity: '',
+      companyState: '',
+      companyZip: '',
+      stateLicenseNumber: '',
+      stateLicenseState: '',
+      stateLicenseExpiry: '',
+      logoUrl: '',
+      brandColor: '#000000',
+    },
+  });
+
+  useEffect(() => {
+    if (workspace) {
+      const ws = workspace;
+      form.reset({
+        name: ws.name || '',
+        companyName: ws.companyName || '',
+        taxId: ws.taxId || '',
+        phone: ws.phone || '',
+        address: ws.address || '',
+        website: ws.website || '',
+        companyCity: ws.companyCity || '',
+        companyState: ws.companyState || '',
+        companyZip: ws.companyZip || '',
+        stateLicenseNumber: ws.stateLicenseNumber || '',
+        stateLicenseState: ws.stateLicenseState || '',
+        stateLicenseExpiry: ws.stateLicenseExpiry ? new Date(ws.stateLicenseExpiry).toISOString().split('T')[0] : '',
+        logoUrl: ws.logoUrl || '',
+        brandColor: ws.brandColor || '#000000',
+      });
+    }
+  }, [workspace, form]);
+
+  const { isDirty } = form.formState;
+
+  // Intercept navigation attempts when form is dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const updateWorkspaceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('PATCH', `/api/workspaces/${workspace?.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/workspaces/${workspace?.id}`] });
+      setWorkspaceSaveSuccess(true);
+      setTimeout(() => setWorkspaceSaveSuccess(false), 2000);
+      toast({
+        title: "Settings Updated",
+        description: "Your workspace settings have been saved successfully.",
+      });
+    },
+  });
+
+  const onSubmit = (values: WorkspaceFormValues) => {
+    updateWorkspaceMutation.mutate({
+      ...values,
+      companyCity: values.companyCity || null,
+      companyState: values.companyState || null,
+      companyZip: values.companyZip || null,
+      stateLicenseNumber: values.stateLicenseNumber || null,
+      stateLicenseState: values.stateLicenseState || null,
+      stateLicenseExpiry: values.stateLicenseExpiry ? new Date(values.stateLicenseExpiry) : null,
+      logoUrl: values.logoUrl || null,
+      brandColor: values.brandColor || null,
+    });
+  };
+
+  return (
+    <Card data-testid="card-workspace-settings">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Building2 className="h-5 w-5 text-primary" />
+          <div>
+            <CardTitle>Workspace Settings</CardTitle>
+            <CardDescription>Update your workspace name and general business information</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Workspace Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Workspace Name" data-testid="input-workspace-name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="companyName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Legal Name <span className="text-destructive" aria-hidden="true">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Company Legal Name" data-testid="input-company-name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="taxId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employer Tax ID (EIN)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="XX-XXXXXXX" data-testid="input-tax-id" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Business Phone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(555) 000-0000" data-testid="input-workspace-phone" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Headquarters Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Main St, Suite 100" data-testid="input-workspace-address" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="companyCity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Dallas" data-testid="input-workspace-city" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="companyState"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Input placeholder="TX" maxLength={2} data-testid="input-workspace-state" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="companyZip"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ZIP Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="75201" data-testid="input-workspace-zip" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="website"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com" data-testid="input-workspace-website" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Separator className="my-6" />
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-base">State Licensing & Credentials</CardTitle>
+                <CardDescription>Regulatory information required for your industry</CardDescription>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="stateLicenseNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>License Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="B-12345" data-testid="input-license-number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="stateLicenseState"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Issuing State</FormLabel>
+                    <FormControl>
+                      <Input placeholder="TX" maxLength={2} data-testid="input-license-state" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="stateLicenseExpiry"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Expiration Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" data-testid="input-license-expiry" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end pt-4">
+              <Button 
+                type="submit" 
+                disabled={updateWorkspaceMutation.isPending || workspaceSaveSuccess} 
+                data-testid="button-save-workspace"
+                variant={workspaceSaveSuccess ? "outline" : "default"}
+                className={workspaceSaveSuccess ? "border-green-500 text-green-600 dark:text-green-400" : ""}
+              >
+                {updateWorkspaceMutation.isPending ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : workspaceSaveSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Workspace Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InvoiceFinancialsForm({ workspace, updateWorkspaceMutation }: { workspace: Workspace, updateWorkspaceMutation: any }) {
+  const form = useForm<InvoiceFinancialsFormValues>({
+    resolver: zodResolver(invoiceFinancialsSchema),
+    defaultValues: {
+      invoicePrefix: 'INV',
+      invoiceNextNumber: 1000,
+      lateFeePercentage: 0,
+      lateFeeDays: 30,
+      billingEmail: '',
+      paymentTermsDays: 30,
+      defaultTaxRate: 8.875,
+    },
+  });
+
+  useEffect(() => {
+    if (workspace) {
+      const ws = workspace;
+      form.reset({
+        invoicePrefix: ws.invoicePrefix || 'INV',
+        invoiceNextNumber: ws.invoiceNextNumber || 1000,
+        lateFeePercentage: ws.lateFeePercentage ? parseFloat(ws.lateFeePercentage) : 0,
+        lateFeeDays: ws.lateFeeDays || 30,
+        billingEmail: ws.billingEmail || '',
+        paymentTermsDays: ws.paymentTermsDays || 30,
+        defaultTaxRate: ws.defaultTaxRate ? parseFloat(ws.defaultTaxRate) * 100 : 8.875,
+      });
+    }
+  }, [workspace, form]);
+
+  const { isDirty } = form.formState;
+
+  // Intercept navigation attempts when form is dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const onSubmit = (values: InvoiceFinancialsFormValues) => {
+    updateWorkspaceMutation.mutate({
+      ...values,
+      billingEmail: values.billingEmail || null,
+      defaultTaxRate: values.defaultTaxRate / 100,
+    });
+  };
+
+  return (
+    <Card data-testid="card-invoice-financials">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Receipt className="h-5 w-5 text-primary" />
+          <div>
+            <CardTitle>Invoice & Billing Config</CardTitle>
+            <CardDescription>Default terms, late fees, and numbering for your client invoices</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6 mobile-compact-p">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Hash className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">Invoice Numbering & Terms</Label>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                <FormField
+                  control={form.control}
+                  name="invoicePrefix"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Invoice Number Prefix</FormLabel>
+                      <FormControl>
+                        <Input placeholder="INV" data-testid="input-invoice-prefix" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="invoiceNextNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Next Invoice Number</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="1000" data-testid="input-invoice-next-number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                <FormField
+                  control={form.control}
+                  name="paymentTermsDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Payment Terms (Days)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="30" data-testid="input-payment-terms" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billingEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Billing Contact Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="billing@company.com" data-testid="input-billing-email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Percent className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">Taxes & Late Fees</Label>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                <FormField
+                  control={form.control}
+                  name="defaultTaxRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Sales Tax Rate (%)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input type="number" step="0.001" className="pl-9" data-testid="input-tax-rate" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lateFeePercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Late Fee Percentage (%)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input type="number" step="0.5" className="pl-9" data-testid="input-late-fee-percentage" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="lateFeeDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Late Fee Grace Period (Days)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="30" data-testid="input-late-fee-days" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={updateWorkspaceMutation.isPending} data-testid="button-save-invoice-financials">
+                {updateWorkspaceMutation.isPending ? "Saving..." : "Save Invoice Settings"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PayrollFinancialsForm({ workspace, updateWorkspaceMutation }: { workspace: any, updateWorkspaceMutation: any }) {
+  const form = useForm<PayrollFinancialsFormValues>({
+    resolver: zodResolver(payrollFinancialsSchema),
+    defaultValues: {
+      stateUnemploymentRate: 2.7,
+      workerCompRate: 1.5,
+      payrollBankName: '',
+      payrollBankRouting: '',
+      payrollBankAccount: '',
+      payrollMemo: '',
+    },
+  });
+
+  useEffect(() => {
+    if (workspace) {
+      const ws = workspace;
+      form.reset({
+        stateUnemploymentRate: ws.stateUnemploymentRate ? parseFloat(ws.stateUnemploymentRate) * 100 : 2.7,
+        workerCompRate: ws.workerCompRate ? parseFloat(ws.workerCompRate) * 100 : 1.5,
+        payrollBankName: ws.payrollBankName || '',
+        payrollBankRouting: ws.payrollBankRouting || '',
+        payrollBankAccount: ws.payrollBankAccount || '',
+        payrollMemo: ws.payrollMemo || '',
+      });
+    }
+  }, [workspace, form]);
+
+  const { isDirty } = form.formState;
+
+  // Intercept navigation attempts when form is dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const onSubmit = (values: PayrollFinancialsFormValues) => {
+    updateWorkspaceMutation.mutate({
+      ...values,
+      stateUnemploymentRate: values.stateUnemploymentRate / 100,
+      workerCompRate: values.workerCompRate / 100,
+      payrollBankName: values.payrollBankName || null,
+      payrollBankRouting: values.payrollBankRouting || null,
+      payrollBankAccount: values.payrollBankAccount || null,
+      payrollMemo: values.payrollMemo || null,
+    });
+  };
+
+  return (
+    <Card data-testid="card-payroll-financials">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Landmark className="h-5 w-5 text-primary" />
+          <div>
+            <CardTitle>Payroll Tax & Funding</CardTitle>
+            <CardDescription>Employer tax rates, worker's comp, and the bank account used to fund payroll disbursements</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6 mobile-compact-p">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">Employer Tax Rates</Label>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                <FormField
+                  control={form.control}
+                  name="stateUnemploymentRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State Unemployment Insurance Rate (%)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input type="number" step="0.01" className="pl-9" data-testid="input-sui-rate" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="workerCompRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Worker's Compensation Rate (%)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input type="number" step="0.01" className="pl-9" data-testid="input-worker-comp-rate" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-semibold">Payroll Funding Bank Account</Label>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                <FormField
+                  control={form.control}
+                  name="payrollBankName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bank Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Chase, Wells Fargo, etc." data-testid="input-payroll-bank-name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payrollMemo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Payroll Memo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Payroll - Biweekly" data-testid="input-payroll-memo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                <FormField
+                  control={form.control}
+                  name="payrollBankRouting"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ABA Routing Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="9-digit routing number" maxLength={9} data-testid="input-payroll-bank-routing" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payrollBankAccount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Number</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Account number (stored securely)" data-testid="input-payroll-bank-account" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={updateWorkspaceMutation.isPending} data-testid="button-save-payroll-financials">
+                {updateWorkspaceMutation.isPending ? "Saving..." : "Save Payroll Settings"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Storage Tab ───────────────────────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
+  email:         { label: 'Email & Attachments', color: 'bg-blue-500' },
+  documents:     { label: 'Documents & Contracts', color: 'bg-green-600' },
+  media:         { label: 'Media & Images', color: 'bg-violet-500' },
+  audit_reserve: { label: 'Audit Reserve (Protected)', color: 'bg-amber-500' },
+};
+
+function StorageQuotaBar({ pct, colorClass }: { pct: number; colorClass: string }) {
+  const clamped = Math.min(pct, 100);
+  const barColor = pct >= 95 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : colorClass;
+  return (
+    <div className="w-full rounded-full bg-muted h-2 overflow-hidden">
+      <div
+        className={`h-2 rounded-full transition-all duration-500 ${barColor}`}
+        style={{ width: `${clamped}%` }}
+        data-testid="bar-storage-fill"
+      />
+    </div>
+  );
+}
+
+function StorageTabContent() {
+  const { data, isLoading, isError, refetch } = useQuery<any>({
+    queryKey: ['/api/workspace/storage-usage'],
+    staleTime: 60_000,
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-muted-foreground text-sm">
+          Loading storage usage...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-sm space-y-3">
+          <p className="text-muted-foreground">Failed to load storage data.</p>
+          <Button size="sm" variant="outline" onClick={() => refetch()}>Retry</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const categories = data.categories ?? {};
+  const tierLabel = String(data.tier ?? 'trial').replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+  return (
+    <div className="space-y-6">
+      {/* Summary card */}
+      <Card data-testid="card-storage-summary">
+        <CardHeader>
+          <div className="flex items-center gap-3 flex-wrap justify-between">
+            <div className="flex items-center gap-3">
+              <HardDrive className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Storage Usage</CardTitle>
+                <CardDescription>Category breakdown for your {tierLabel} plan</CardDescription>
+              </div>
+            </div>
+            <Badge variant="secondary" data-testid="badge-storage-tier">{tierLabel} Plan</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center justify-between text-sm flex-wrap gap-1">
+            <span className="text-muted-foreground">Total used (excl. audit reserve)</span>
+            <span className="font-medium" data-testid="text-storage-total">
+              {((data.totalUsedBytes ?? 0) / 1073741824).toFixed(2)} GB
+              {data.totalLimitBytes > 0 && (
+                <span className="text-muted-foreground"> / {((data.totalLimitBytes ?? 0) / 1073741824).toFixed(2)} GB</span>
+              )}
+            </span>
+          </div>
+          <StorageQuotaBar pct={data.totalUsedPercent ?? 0} colorClass="bg-primary" />
+          {(data.totalUsedPercent ?? 0) >= 80 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              {(data.totalUsedPercent ?? 0) >= 95
+                ? 'Storage is almost full. Uploads may be blocked soon. Upgrade your plan.'
+                : 'Storage usage is high. Consider upgrading your plan or adding storage.'}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Per-category breakdown */}
+      <Card data-testid="card-storage-categories">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Database className="h-5 w-5 text-primary" />
+            <div>
+              <CardTitle>Category Breakdown</CardTitle>
+              <CardDescription>Usage per storage category</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {Object.entries(CATEGORY_LABELS).map(([cat, { label, color }]) => {
+            const c = categories[cat];
+            if (!c) return null;
+            const isAudit = cat === 'audit_reserve';
+            return (
+              <div key={cat} className="space-y-1" data-testid={`section-storage-${cat}`}>
+                <div className="flex items-center justify-between flex-wrap gap-1 text-sm">
+                  <span className="font-medium">{label}</span>
+                  <span className="text-muted-foreground" data-testid={`text-storage-used-${cat}`}>
+                    {c.usedGB} GB
+                    {!isAudit && c.limitBytes > 0 && (
+                      <> / {c.limitGB} GB</>
+                    )}
+                    {!isAudit && c.limitBytes > 0 && (
+                      <span className="ml-1 text-xs">({c.usedPercent}%)</span>
+                    )}
+                    {isAudit && (
+                      <Badge variant="outline" className="ml-2 text-xs">Protected floor</Badge>
+                    )}
+                  </span>
+                </div>
+                {!isAudit && c.limitBytes > 0 && (
+                  <StorageQuotaBar pct={c.usedPercent} colorClass={color} />
+                )}
+                {(data.overageBytes?.[cat] ?? 0) > 0 && (
+                  <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    {((data.overageBytes[cat]) / 1073741824).toFixed(2)} GB over limit — billed at $0.10/GB
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Overage info */}
+      {Object.values(data.overageBytes ?? {}).some((v: any) => v > 0) && (
+        <Card data-testid="card-storage-overage" className="border-amber-500/40">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-base">Storage Overage</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <p className="text-muted-foreground">
+              Your workspace has exceeded its category storage limits. Overage is billed at
+              <strong> $0.10 per GB</strong> per month (minimum 1 GB threshold applies).
+              Charges are calculated during your next weekly billing cycle.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              To avoid overage charges, upgrade your plan or contact your account manager
+              to purchase a storage add-on.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export default function Settings() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [window.location.search]);
   const isMobile = useIsMobile();
   const { isSimpleMode } = useSimpleMode();
-  const [activeSection, setActiveSection] = useState<SettingsSection>('quick');
+  const { workspaceRole } = useWorkspaceAccess();
+  const [activeSection, setActiveSection] = useState<SettingsSection>(() => {
+    return (searchParams.get('tab') as SettingsSection) || 'quick';
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (activeSection === 'quick') {
+      params.delete('tab');
+    } else {
+      params.set('tab', activeSection);
+    }
+    const newSearch = params.toString();
+    if (newSearch !== window.location.search.replace(/^\?/, "")) {
+      setLocation(`${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`, { replace: true });
+    }
+  }, [activeSection, setLocation]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [mfaSetupOpen, setMfaSetupOpen] = useState(false);
+  const [mfaSetupData, setMfaSetupData] = useState<{qrCodeUrl: string; backupCodes: string[]} | null>(null);
   
   // In Simple Mode, hide technical settings tabs (automation, compliance)
   const hiddenInSimpleMode = ['automation', 'compliance'];
@@ -92,65 +1276,16 @@ export default function Settings() {
     }
   }, [isSimpleMode, activeSection]);
   
-  // Form state for workspace settings
-  const [workspaceName, setWorkspaceName] = useState<string>("");
-  const [companyName, setCompanyName] = useState<string>("");
-  const [taxId, setTaxId] = useState<string>("");
-  const [phone, setPhone] = useState<string>("");
-  const [address, setAddress] = useState<string>("");
-  const [website, setWebsite] = useState<string>("");
-  
-  // Automation settings state
-  const [autoInvoicingEnabled, setAutoInvoicingEnabled] = useState<boolean>(true);
-  const [invoiceSchedule, setInvoiceSchedule] = useState<string>("monthly");
-  const [invoiceCustomDays, setInvoiceCustomDays] = useState<number | undefined>();
-  
-  const [autoPayrollEnabled, setAutoPayrollEnabled] = useState<boolean>(true);
-  const [payrollSchedule, setPayrollSchedule] = useState<string>("biweekly");
-  const [payrollCustomDays, setPayrollCustomDays] = useState<number | undefined>();
-  
-  const [autoSchedulingEnabled, setAutoSchedulingEnabled] = useState<boolean>(true);
-  const [scheduleGenerationInterval, setScheduleGenerationInterval] = useState<string>("weekly");
-  const [scheduleCustomDays, setScheduleCustomDays] = useState<number | undefined>();
-  const [scheduleAdvanceNoticeDays, setScheduleAdvanceNoticeDays] = useState<number>(7);
-  
-  // Break compliance settings state
-  const [laborLawJurisdiction, setLaborLawJurisdiction] = useState<string>("US-FEDERAL");
-  const [autoBreakSchedulingEnabled, setAutoBreakSchedulingEnabled] = useState<boolean>(true);
-  const [breakComplianceAlerts, setBreakComplianceAlerts] = useState<boolean>(true);
-  
-  // Notification preferences state
-  const [enableEmail, setEnableEmail] = useState<boolean>(true);
-  const [enableSms, setEnableSms] = useState<boolean>(false);
-  const [enablePush, setEnablePush] = useState<boolean>(true);
-  const [enableShiftReminders, setEnableShiftReminders] = useState<boolean>(true);
-  const [shiftReminderTiming, setShiftReminderTiming] = useState<string>('1hour');
-  const [shiftReminderCustomMinutes, setShiftReminderCustomMinutes] = useState<number>(60);
-  const [shiftReminderChannels, setShiftReminderChannels] = useState<string[]>(['email', 'push']);
-  const [smsPhoneNumber, setSmsPhoneNumber] = useState<string>('');
-  const [smsVerified, setSmsVerified] = useState<boolean>(false);
-  const [testingSmS, setTestingSms] = useState<boolean>(false);
-  
-  // Digest and quiet hours state
-  const [digestFrequency, setDigestFrequency] = useState<string>('realtime');
-  const [enableAiSummarization, setEnableAiSummarization] = useState<boolean>(true);
-  const [quietHoursEnabled, setQuietHoursEnabled] = useState<boolean>(false);
-  const [quietHoursStart, setQuietHoursStart] = useState<number>(22);
-  const [quietHoursEnd, setQuietHoursEnd] = useState<number>(7);
-  
-  // Notification cleanup/retention state
-  const [autoCleanupEnabled, setAutoCleanupEnabled] = useState<boolean>(true);
-  const [retentionDays, setRetentionDays] = useState<number>(30);
-  const [autoArchiveRead, setAutoArchiveRead] = useState<boolean>(true);
-  
-  // Track original values to detect changes
-  const [originalValues, setOriginalValues] = useState<any>({});
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Invite form state
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<string>('manager');
+  const [inviteResult, setInviteResult] = useState<{ code: string; link: string } | null>(null);
 
   // Fetch workspace data
   const { data: workspace } = useQuery({
     queryKey: ['/api/workspace'],
     enabled: isAuthenticated,
+    queryFn: () => apiFetch('/api/workspace', WorkspaceResponse),
   });
 
   // Fetch business categories
@@ -190,6 +1325,251 @@ export default function Settings() {
     enabled: isAuthenticated,
   });
 
+  // Re-added required state for toggles and non-refactored sections
+  const [autoInvoicingEnabled, setAutoInvoicingEnabled] = useState<boolean>(true);
+  const [invoiceSchedule, setInvoiceSchedule] = useState<string>("monthly");
+  const [invoiceCustomDays, setInvoiceCustomDays] = useState<number | undefined>();
+  const [invoiceGenerationDay, setInvoiceGenerationDay] = useState<number>(1);
+
+  const [autoPayrollEnabled, setAutoPayrollEnabled] = useState<boolean>(true);
+  const [payrollSchedule, setPayrollSchedule] = useState<string>("biweekly");
+  const [payrollCustomDays, setPayrollCustomDays] = useState<number | undefined>();
+  const [payrollProcessDay, setPayrollProcessDay] = useState<number>(1);
+  const [payrollCutoffDay, setPayrollCutoffDay] = useState<number>(15);
+
+  const [autoSchedulingEnabled, setAutoSchedulingEnabled] = useState<boolean>(true);
+  const [scheduleGenerationInterval, setScheduleGenerationInterval] = useState<string>("weekly");
+  const [scheduleCustomDays, setScheduleCustomDays] = useState<number | undefined>();
+  const [scheduleAdvanceNoticeDays, setScheduleAdvanceNoticeDays] = useState<number>(7);
+  const [scheduleGenerationDay, setScheduleGenerationDay] = useState<number>(0);
+
+  const [laborLawJurisdiction, setLaborLawJurisdiction] = useState<string>("US-FEDERAL");
+  const [autoBreakSchedulingEnabled, setAutoBreakSchedulingEnabled] = useState<boolean>(true);
+  const [breakComplianceAlerts, setBreakComplianceAlerts] = useState<boolean>(true);
+
+  const [enableEmail, setEnableEmail] = useState<boolean>(true);
+  const [enableSms, setEnableSms] = useState<boolean>(false);
+  const [enablePush, setEnablePush] = useState<boolean>(true);
+  const [enableShiftReminders, setEnableShiftReminders] = useState<boolean>(true);
+  const [shiftReminderTiming, setShiftReminderTiming] = useState<string>('1hour');
+  const [shiftReminderCustomMinutes, setShiftReminderCustomMinutes] = useState<number>(60);
+  const [shiftReminderChannels, setShiftReminderChannels] = useState<string[]>(['email', 'push']);
+  const [smsPhoneNumber, setSmsPhoneNumber] = useState<string>('');
+  const [smsVerified, setSmsVerified] = useState<boolean>(false);
+  const [testingSmS, setTestingSms] = useState<boolean>(false);
+
+  const [enableAiSummarization, setEnableAiSummarization] = useState<boolean>(true);
+  const [digestFrequency, setDigestFrequency] = useState<string>('realtime');
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState<boolean>(false);
+  const [quietHoursStart, setQuietHoursStart] = useState<number>(22);
+  const [quietHoursEnd, setQuietHoursEnd] = useState<number>(7);
+  const [autoCleanupEnabled, setAutoCleanupEnabled] = useState<boolean>(true);
+  const [retentionDays, setRetentionDays] = useState<number>(30);
+  const [autoArchiveRead, setAutoArchiveRead] = useState<boolean>(true);
+
+  // ── Financials tab state (workspace & invoice & payroll) ───────────────────
+  // Workspace / company fields used in handleSaveWorkspace
+  const [workspaceName, setWorkspaceName] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>('');
+  const [taxId, setTaxId] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [address, setAddress] = useState<string>('');
+  const [website, setWebsite] = useState<string>('');
+  const [companyCity, setCompanyCity] = useState<string>('');
+  const [companyState, setCompanyState] = useState<string>('');
+  const [companyZip, setCompanyZip] = useState<string>('');
+  const [stateLicenseNumber, setStateLicenseNumber] = useState<string>('');
+  const [stateLicenseState, setStateLicenseState] = useState<string>('');
+  const [stateLicenseExpiry, setStateLicenseExpiry] = useState<string>('');
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [brandColor, setBrandColor] = useState<string>('#1a1a2e');
+
+  // Invoice financial fields
+  const [billingEmail, setBillingEmail] = useState<string>('');
+  const [invoicePrefix, setInvoicePrefix] = useState<string>('INV');
+  const [invoiceNextNumber, setInvoiceNextNumber] = useState<number>(1000);
+  const [lateFeePercentage, setLateFeePercentage] = useState<number>(0);
+  const [lateFeeDays, setLateFeeDays] = useState<number>(30);
+  const [paymentTermsDays, setPaymentTermsDays] = useState<number>(30);
+  const [defaultTaxRate, setDefaultTaxRate] = useState<number>(8.875);
+
+  // Payroll financial fields
+  const [stateUnemploymentRate, setStateUnemploymentRate] = useState<number>(0);
+  const [workerCompRate, setWorkerCompRate] = useState<number>(0);
+  const [payrollBankName, setPayrollBankName] = useState<string>('');
+  const [payrollBankRouting, setPayrollBankRouting] = useState<string>('');
+  const [payrollBankAccount, setPayrollBankAccount] = useState<string>('');
+  const [payrollMemo, setPayrollMemo] = useState<string>('');
+
+  // Fetch QuickBooks connection status (for org owners)
+  const { data: quickbooksStatus } = useQuery<any>({
+    queryKey: ['/api/quickbooks/connection-status'],
+    enabled: isAuthenticated && (workspaceRole === 'org_owner' || workspaceRole === 'co_owner'),
+  });
+
+  // Fetch staffing email configuration
+  const { data: staffingEmailConfig, refetch: refetchStaffingEmail } = useQuery<{
+    orgCode: string | null;
+    orgEmail: string | null;
+    hasGenericEmailClaim: boolean;
+    genericEmail: string;
+    genericEmailClaimedBy: { name: string; orgCode: string } | null;
+    canClaimGenericEmail: boolean;
+  }>({
+    queryKey: ['/api/workspace/staffing-email-config'],
+    enabled: isAuthenticated && (workspaceRole === 'org_owner' || workspaceRole === 'co_owner'),
+  });
+
+  // State for org code editing
+  const [editingOrgCode, setEditingOrgCode] = useState(false);
+  const [newOrgCode, setNewOrgCode] = useState('');
+
+  // Mutation to update org code
+  const updateOrgCodeMutation = useMutation({
+    mutationFn: async (orgCode: string) => {
+      const response = await secureFetch('/api/workspace/org-code', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newOrgCode: orgCode }),
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update org code');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate ALL workspace-related caches to ensure sync across pages
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspace.current });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspace.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+      refetchStaffingEmail();
+      setEditingOrgCode(false);
+      setNewOrgCode('');
+      toast({
+        title: "Org Code Updated",
+        description: `Your org code is now: ${data.orgCode}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update org code",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to claim generic staffing email
+  const claimGenericEmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await secureFetch('/api/workspace/claim-generic-staffing-email', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to claim generic staffing email');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchStaffingEmail();
+      toast({
+        title: "Generic Email Claimed",
+        description: "Emails to staffing@coaileague.com will now route to your organization",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to claim generic staffing email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to release generic staffing email
+  const releaseGenericEmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await secureFetch('/api/workspace/claim-generic-staffing-email', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to release generic staffing email');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchStaffingEmail();
+      toast({
+        title: "Generic Email Released",
+        description: "Generic staffing email is now available for other organizations",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to release generic staffing email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const billingPortalMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/stripe/billing-portal', {
+        returnUrl: window.location.href,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data?.url) window.open(data.url, '_blank');
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Could not open billing portal. Please try again.', variant: 'destructive' });
+    },
+  });
+
+  // Workspace invite query
+  const { data: workspaceInvites, refetch: refetchInvites } = useQuery<any[]>({
+    queryKey: ['/api/invites'],
+    enabled: isAuthenticated && (workspaceRole === 'org_owner' || workspaceRole === 'co_owner' || workspaceRole === 'org_admin' || workspaceRole === 'manager'),
+  });
+
+  const { data: dataReadiness, isLoading: readinessLoading, refetch: refetchReadiness } = useQuery<any>({
+    queryKey: ['/api/workspace/data-readiness'],
+    enabled: isAuthenticated,
+    staleTime: 60 * 1000,
+  });
+
+  // Send invite mutation
+  const sendInviteMutation = useMutation({
+    mutationFn: async (data: { email: string; role: string }) => {
+      const res = await apiRequest('POST', '/api/invites/create', data);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to send invite');
+      return json;
+    },
+    onSuccess: (data) => {
+      const inv = data.invite || data;
+      setInviteResult({
+        code: inv.inviteCode || data.inviteCode || '',
+        link: inv.inviteLink || data.inviteLink || `${window.location.origin}/accept-invite?code=${inv.inviteCode || data.inviteCode || ''}`,
+      });
+      setInviteEmail('');
+      refetchInvites();
+      toast({ title: "Invitation sent!", description: `Invite sent to ${inv.inviteeEmail || data.inviteeEmail || 'recipient'}.` });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to send invite", description: err.message, variant: "destructive" });
+    },
+  });
+
   // Update break compliance settings mutation
   const updateBreakComplianceMutation = useMutation({
     mutationFn: async (data: { 
@@ -197,7 +1577,7 @@ export default function Settings() {
       autoBreakSchedulingEnabled: boolean; 
       breakComplianceAlerts: boolean; 
     }) => {
-      const response = await fetch('/api/breaks/jurisdiction', {
+      const response = await secureFetch('/api/breaks/jurisdiction', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -229,7 +1609,7 @@ export default function Settings() {
   // Update notification preferences mutation
   const updateNotificationPrefsMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/notifications/preferences', {
+      const response = await secureFetch('/api/notifications/preferences', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -257,7 +1637,7 @@ export default function Settings() {
   // Test SMS mutation
   const testSmsMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
-      const response = await fetch('/api/notifications/test-sms', {
+      const response = await secureFetch('/api/notifications/test-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber }),
@@ -287,7 +1667,7 @@ export default function Settings() {
   // Verify phone number mutation
   const verifyPhoneMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
-      const response = await fetch('/api/notifications/verify-phone', {
+      const response = await secureFetch('/api/notifications/verify-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber }),
@@ -394,6 +1774,26 @@ export default function Settings() {
     });
   };
 
+  const quickSaveNotificationPref = (overrides: Record<string, any>) => {
+    updateNotificationPrefsMutation.mutate({
+      enableEmail: overrides.enableEmail ?? enableEmail,
+      enableSms: overrides.enableSms ?? enableSms,
+      enablePush: overrides.enablePush ?? enablePush,
+      enableShiftReminders: overrides.enableShiftReminders ?? enableShiftReminders,
+      shiftReminderTiming,
+      shiftReminderCustomMinutes: shiftReminderTiming === 'custom' ? shiftReminderCustomMinutes : null,
+      shiftReminderChannels,
+      smsPhoneNumber: (overrides.enableSms ?? enableSms) ? smsPhoneNumber : null,
+      digestFrequency,
+      enableAiSummarization: overrides.enableAiSummarization ?? enableAiSummarization,
+      quietHoursStart: quietHoursEnabled ? quietHoursStart : null,
+      quietHoursEnd: quietHoursEnabled ? quietHoursEnd : null,
+      autoCleanupEnabled,
+      retentionDays: autoCleanupEnabled ? retentionDays : null,
+      autoArchiveRead,
+    });
+  };
+
   // Handle test SMS
   const handleTestSms = () => {
     if (!smsPhoneNumber) {
@@ -417,14 +1817,14 @@ export default function Settings() {
         setShiftReminderChannels(shiftReminderChannels.filter(c => c !== channel));
       }
     } else {
-      setShiftReminderChannels([...shiftReminderChannels, channel]);
+      setShiftReminderChannels(prev => [...prev, channel]);
     }
   };
 
   // Update workspace mutation
   const updateWorkspaceMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/workspace', {
+      const response = await secureFetch('/api/workspace', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -453,7 +1853,7 @@ export default function Settings() {
   // Seed form templates mutation
   const seedTemplatesMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/workspace/seed-form-templates', {
+      const response = await secureFetch('/api/workspace/seed-form-templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -479,7 +1879,7 @@ export default function Settings() {
   // Update invoicing automation mutation
   const updateInvoicingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/workspace/automation/invoicing', {
+      const response = await secureFetch('/api/workspace/automation/invoicing', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -510,7 +1910,7 @@ export default function Settings() {
   // Update payroll automation mutation
   const updatePayrollMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/workspace/automation/payroll', {
+      const response = await secureFetch('/api/workspace/automation/payroll', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -541,7 +1941,7 @@ export default function Settings() {
   // Update scheduling automation mutation
   const updateSchedulingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/workspace/automation/scheduling', {
+      const response = await secureFetch('/api/workspace/automation/scheduling', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -572,81 +1972,78 @@ export default function Settings() {
   // Initialize form fields when workspace loads
   useEffect(() => {
     if (workspace) {
-      const ws = workspace as any;
-      const values = {
-        businessCategory: ws.businessCategory || "",
-        name: ws.name || "",
-        companyName: ws.companyName || "",
-        taxId: ws.taxId || "",
-        phone: ws.phone || "",
-        address: ws.address || "",
-        website: ws.website || "",
-        // Automation settings
-        autoInvoicingEnabled: ws.autoInvoicingEnabled ?? true,
-        invoiceSchedule: ws.invoiceSchedule || "monthly",
-        invoiceCustomDays: ws.invoiceCustomDays || undefined,
-        autoPayrollEnabled: ws.autoPayrollEnabled ?? true,
-        payrollSchedule: ws.payrollSchedule || "biweekly",
-        payrollCustomDays: ws.payrollCustomDays || undefined,
-        autoSchedulingEnabled: ws.autoSchedulingEnabled ?? true,
-        scheduleGenerationInterval: ws.scheduleGenerationInterval || "weekly",
-        scheduleCustomDays: ws.scheduleCustomDays || undefined,
-        scheduleAdvanceNoticeDays: ws.scheduleAdvanceNoticeDays || 7,
-        // Break compliance settings
-        laborLawJurisdiction: ws.laborLawJurisdiction || "US-FEDERAL",
-        autoBreakSchedulingEnabled: ws.autoBreakSchedulingEnabled ?? true,
-        breakComplianceAlerts: ws.breakComplianceAlerts ?? true,
-      };
-      setSelectedCategory(values.businessCategory);
-      setWorkspaceName(values.name);
-      setCompanyName(values.companyName);
-      setTaxId(values.taxId);
-      setPhone(values.phone);
-      setAddress(values.address);
-      setWebsite(values.website);
+      const ws = workspace;
+      setAutoInvoicingEnabled(ws.autoInvoicingEnabled ?? true);
+      setInvoiceSchedule(ws.invoiceSchedule || "monthly");
+      setInvoiceCustomDays(ws.invoiceCustomDays || undefined);
+      setInvoiceGenerationDay(ws.invoiceGenerationDay || 1);
       
-      // Automation settings
-      setAutoInvoicingEnabled(values.autoInvoicingEnabled);
-      setInvoiceSchedule(values.invoiceSchedule);
-      setInvoiceCustomDays(values.invoiceCustomDays);
-      setAutoPayrollEnabled(values.autoPayrollEnabled);
-      setPayrollSchedule(values.payrollSchedule);
+      setAutoPayrollEnabled(ws.autoPayrollEnabled ?? true);
+      setPayrollSchedule(ws.payrollSchedule || "biweekly");
+      setPayrollCustomDays(ws.payrollCustomDays || undefined);
+      setPayrollProcessDay(ws.payrollProcessDay || 1);
+      setPayrollCutoffDay(ws.payrollCutoffDay || 15);
       
-      // Break compliance settings
-      setLaborLawJurisdiction(values.laborLawJurisdiction);
-      setAutoBreakSchedulingEnabled(values.autoBreakSchedulingEnabled);
-      setBreakComplianceAlerts(values.breakComplianceAlerts);
-      setPayrollCustomDays(values.payrollCustomDays);
-      setAutoSchedulingEnabled(values.autoSchedulingEnabled);
-      setScheduleGenerationInterval(values.scheduleGenerationInterval);
-      setScheduleCustomDays(values.scheduleCustomDays);
-      setScheduleAdvanceNoticeDays(values.scheduleAdvanceNoticeDays);
-      
-      setOriginalValues(values);
-      setHasUnsavedChanges(false);
+      setAutoSchedulingEnabled(ws.autoSchedulingEnabled ?? true);
+      setScheduleGenerationInterval(ws.scheduleGenerationInterval || "weekly");
+      setScheduleCustomDays(ws.scheduleCustomDays || undefined);
+      setScheduleAdvanceNoticeDays(ws.scheduleAdvanceNoticeDays || 7);
+      setScheduleGenerationDay(ws.scheduleGenerationDay ?? 0);
+
+      setLaborLawJurisdiction(ws.laborLawJurisdiction || "US-FEDERAL");
+      setAutoBreakSchedulingEnabled(ws.autoBreakSchedulingEnabled ?? true);
+      setBreakComplianceAlerts(ws.breakComplianceAlerts ?? true);
+
+      // Financials tab workspace fields
+      setWorkspaceName(ws.name || '');
+      setCompanyName(ws.companyName || '');
+      setTaxId(ws.taxId || '');
+      setPhone(ws.phone || '');
+      setAddress(ws.address || '');
+      setWebsite(ws.website || '');
+      setCompanyCity(ws.companyCity || '');
+      setCompanyState(ws.companyState || '');
+      setCompanyZip(ws.companyZip || '');
+      setStateLicenseNumber(ws.stateLicenseNumber || '');
+      setStateLicenseState(ws.stateLicenseState || '');
+      setStateLicenseExpiry(ws.stateLicenseExpiry ? String(ws.stateLicenseExpiry).split('T')[0] : '');
+      setLogoUrl(ws.logoUrl || '');
+      setBrandColor(ws.brandColor || '#1a1a2e');
+
+      // Invoice financials
+      setBillingEmail(ws.billingEmail || '');
+      setInvoicePrefix(ws.invoicePrefix || 'INV');
+      setInvoiceNextNumber(ws.invoiceNextNumber || 1000);
+      setLateFeePercentage(ws.lateFeePercentage ? parseFloat(ws.lateFeePercentage) : 0);
+      setLateFeeDays(ws.lateFeeDays || 30);
+      setPaymentTermsDays(ws.paymentTermsDays || 30);
+      setDefaultTaxRate(ws.defaultTaxRate ? parseFloat(ws.defaultTaxRate) * 100 : 8.875);
+
+      // Payroll financials
+      setStateUnemploymentRate(ws.stateUnemploymentRate ? parseFloat(ws.stateUnemploymentRate) * 100 : 0);
+      setWorkerCompRate(ws.workerCompRate ? parseFloat(ws.workerCompRate) * 100 : 0);
+      setPayrollBankName(ws.payrollBankName || '');
+      setPayrollBankRouting(ws.payrollBankRouting || '');
+      setPayrollBankAccount(ws.payrollBankAccount || '');
+      setPayrollMemo(ws.payrollMemo || '');
     }
   }, [workspace]);
-  
-  // Check for unsaved changes whenever form values change
+
+  // Sync notification preferences
   useEffect(() => {
-    if (Object.keys(originalValues).length > 0) {
-      const hasChanges =
-        selectedCategory !== originalValues.businessCategory ||
-        workspaceName !== originalValues.name ||
-        companyName !== originalValues.companyName ||
-        taxId !== originalValues.taxId ||
-        phone !== originalValues.phone ||
-        address !== originalValues.address ||
-        website !== originalValues.website;
-      setHasUnsavedChanges(hasChanges);
+    if (notificationPrefs) {
+      setEnableEmail(notificationPrefs.enableEmail ?? true);
+      setEnableSms(notificationPrefs.enableSms ?? false);
+      setEnablePush(notificationPrefs.enablePush ?? true);
+      setEnableShiftReminders(notificationPrefs.enableShiftReminders ?? true);
+      setShiftReminderTiming(notificationPrefs.shiftReminderTiming || '1hour');
+      setShiftReminderCustomMinutes(notificationPrefs.shiftReminderCustomMinutes || 60);
+      setShiftReminderChannels(notificationPrefs.shiftReminderChannels || ['email', 'push']);
+      setSmsPhoneNumber(notificationPrefs.smsPhoneNumber || '');
+      setSmsVerified(notificationPrefs.smsVerified ?? false);
+      setEnableAiSummarization(notificationPrefs.enableAiSummarization ?? true);
     }
-  }, [selectedCategory, workspaceName, companyName, taxId, phone, address, website, originalValues]);
-  
-  // Protect against accidental navigation with unsaved changes
-  // NOTE: Currently protects against browser navigation (refresh, close tab, back button)
-  // Sidebar/header link navigation is not yet blocked - user can still navigate away via sidebar
-  // Future enhancement: Global navigation guard or custom Link wrapper
-  useUnsavedChangesWarning(hasUnsavedChanges, "You have unsaved changes to your workspace settings. Are you sure you want to leave?");
+  }, [notificationPrefs]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -679,6 +2076,38 @@ export default function Settings() {
       phone,
       address,
       website,
+      companyCity: companyCity || null,
+      companyState: companyState || null,
+      companyZip: companyZip || null,
+      // State license fields
+      stateLicenseNumber: stateLicenseNumber || null,
+      stateLicenseState: stateLicenseState || null,
+      stateLicenseExpiry: stateLicenseExpiry ? new Date(stateLicenseExpiry) : null,
+      logoUrl: logoUrl || null,
+      brandColor: brandColor || null,
+    });
+  };
+
+  const handleSaveInvoiceFinancials = async () => {
+    await updateWorkspaceMutation.mutateAsync({
+      invoicePrefix: invoicePrefix || "INV",
+      invoiceNextNumber: invoiceNextNumber || 1000,
+      lateFeePercentage: lateFeePercentage,
+      lateFeeDays: lateFeeDays || 30,
+      billingEmail: billingEmail || null,
+      paymentTermsDays: paymentTermsDays || 30,
+      defaultTaxRate: defaultTaxRate / 100,
+    });
+  };
+
+  const handleSavePayrollFinancials = async () => {
+    await updateWorkspaceMutation.mutateAsync({
+      stateUnemploymentRate: stateUnemploymentRate / 100,
+      workerCompRate: workerCompRate / 100,
+      payrollBankName: payrollBankName || null,
+      payrollBankRouting: payrollBankRouting || null,
+      payrollBankAccount: payrollBankAccount || null,
+      payrollMemo: payrollMemo || null,
     });
   };
 
@@ -687,7 +2116,7 @@ export default function Settings() {
       autoInvoicingEnabled,
       invoiceSchedule,
       invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : undefined,
-      invoiceGenerationDay: 1,
+      invoiceGenerationDay,
     });
   };
 
@@ -696,8 +2125,8 @@ export default function Settings() {
       autoPayrollEnabled,
       payrollSchedule,
       payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : undefined,
-      payrollProcessDay: 1,
-      payrollCutoffDay: 15,
+      payrollProcessDay,
+      payrollCutoffDay,
     });
   };
 
@@ -707,7 +2136,7 @@ export default function Settings() {
       scheduleGenerationInterval,
       scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : undefined,
       scheduleAdvanceNoticeDays,
-      scheduleGenerationDay: 0,
+      scheduleGenerationDay,
     });
   };
 
@@ -717,13 +2146,6 @@ export default function Settings() {
       autoBreakSchedulingEnabled,
       breakComplianceAlerts,
     });
-  };
-
-  const handleRefresh = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] }),
-      queryClient.invalidateQueries({ queryKey: ['/api/business-categories'] }),
-    ]);
   };
 
   // Status indicators for hero summary
@@ -760,154 +2182,154 @@ export default function Settings() {
     },
   ];
 
+  const headerAction = undefined;
+
   const pageContent = isLoading ? (
     <div className="space-y-4 sm:space-y-6">
       <PageHeaderSkeleton />
       <SettingsCardSkeleton count={4} />
     </div>
   ) : (
-    <div className="space-y-6">
-      {/* Hero Header with Status Summary */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-settings-title">
-              Settings
-            </h2>
-            <p className="text-sm sm:text-base text-muted-foreground" data-testid="text-settings-subtitle">
-              Configure your workspace, notifications, and automation preferences
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-              data-testid="button-refresh-settings"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
-        </div>
-
-        {/* Quick Status Overview */}
+    <div className="space-y-4 sm:space-y-6">
+        {/* Quick Status Overview - Compact on mobile */}
         <Card className="bg-muted/30">
-          <CardContent className="py-4">
-            <div className="flex flex-wrap gap-3">
+          <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
+            <div className="flex flex-wrap gap-1.5 sm:gap-3">
               {statusItems.map((item) => (
                 <div 
                   key={item.label}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-background border"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-background border text-xs sm:text-sm"
                 >
-                  <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <item.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
+                  <span className="font-medium whitespace-nowrap">{item.label}</span>
                   {item.enabled ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-500 shrink-0" />
                   ) : (
-                    <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
                   )}
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-      </div>
 
       {/* Tabbed Navigation */}
       <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as SettingsSection)} className="w-full">
-        <ScrollArea className="w-full">
-          <TabsList className="inline-flex w-full sm:w-auto h-auto p-1 gap-1 bg-muted/50">
+        <ScrollArea className="w-full -mx-1">
+          <TabsList className="inline-flex w-max sm:w-auto h-auto p-0.5 sm:p-1 gap-0.5 sm:gap-1 bg-muted/50">
             {visibleSections.map((section) => (
               <TabsTrigger
                 key={section.id}
                 value={section.id}
-                className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-background"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-background"
                 data-testid={`tab-${section.id}`}
               >
-                <section.icon className="h-4 w-4" />
+                <section.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                 <span className="hidden sm:inline">{section.label}</span>
-                <span className="sm:hidden">{section.label.split(' ')[0]}</span>
+                <span className="sm:hidden whitespace-nowrap">{section.label.split(' ')[0]}</span>
               </TabsTrigger>
             ))}
           </TabsList>
-          <ScrollBar orientation="horizontal" />
+          <ScrollBar orientation="horizontal" className="h-1.5" />
         </ScrollArea>
 
+        {/* Profile Section */}
+        <TabsContent value="profile" className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
+          <ProfileTabContent />
+        </TabsContent>
+
         {/* Quick Settings Section */}
-        <TabsContent value="quick" className="mt-6 space-y-6">
+        <TabsContent value="quick" className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
           {/* Easy View Mode - Top Priority Setting */}
           <SimpleModeToggle variant="labeled" />
           
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Quick Toggles Card */}
             <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <div>
-                    <CardTitle>Quick Toggles</CardTitle>
-                    <CardDescription>Most frequently used settings</CardDescription>
+              <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <CardTitle className="text-base sm:text-lg">Quick Toggles</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Most frequently used settings</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Email Notifications</p>
-                      <p className="text-xs text-muted-foreground">Receive alerts via email</p>
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">Email Notifications</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Receive alerts via email</p>
                     </div>
                   </div>
                   <Switch 
                     checked={enableEmail} 
-                    onCheckedChange={setEnableEmail}
+                    onCheckedChange={(checked) => {
+                      setEnableEmail(checked);
+                      quickSaveNotificationPref({ enableEmail: checked });
+                    }}
                     data-testid="quick-switch-email"
                   />
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Push Notifications</p>
-                      <p className="text-xs text-muted-foreground">In-app alerts</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">Push Notifications</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">In-app alerts</p>
                     </div>
                   </div>
                   <Switch 
                     checked={enablePush} 
-                    onCheckedChange={setEnablePush}
+                    onCheckedChange={(checked) => {
+                      setEnablePush(checked);
+                      quickSaveNotificationPref({ enablePush: checked });
+                    }}
                     data-testid="quick-switch-push"
                   />
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">AI Scheduling</p>
-                      <p className="text-xs text-muted-foreground">Auto-generate schedules</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">AI Scheduling</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Auto-generate schedules</p>
                     </div>
                   </div>
                   <Switch 
                     checked={autoSchedulingEnabled} 
-                    onCheckedChange={setAutoSchedulingEnabled}
+                    onCheckedChange={(checked) => {
+                      setAutoSchedulingEnabled(checked);
+                      updateSchedulingMutation.mutate({
+                        autoSchedulingEnabled: checked,
+                        scheduleGenerationInterval,
+                        scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : undefined,
+                        scheduleAdvanceNoticeDays,
+                        scheduleGenerationDay,
+                      });
+                    }}
                     data-testid="quick-switch-scheduling"
                   />
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">AI Summarization</p>
-                      <p className="text-xs text-muted-foreground">Intelligent notification digests</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">AI Summarization</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Intelligent digests</p>
                     </div>
                   </div>
                   <Switch 
                     checked={enableAiSummarization} 
-                    onCheckedChange={setEnableAiSummarization}
+                    onCheckedChange={(checked) => {
+                      setEnableAiSummarization(checked);
+                      quickSaveNotificationPref({ enableAiSummarization: checked });
+                    }}
                     data-testid="quick-switch-ai-summary"
                   />
                 </div>
@@ -916,72 +2338,98 @@ export default function Settings() {
 
             {/* Automation Status Card */}
             <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Zap className="h-5 w-5 text-primary" />
-                  <div>
-                    <CardTitle>Automation Status</CardTitle>
-                    <CardDescription>AI-powered workflow status</CardDescription>
+              <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <CardTitle className="text-base sm:text-lg">Automation Status</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">AI-powered workflow status</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Auto Invoicing</p>
-                      <p className="text-xs text-muted-foreground">{invoiceSchedule} cycle</p>
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">Auto Invoicing</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{invoiceSchedule} cycle</p>
                     </div>
                   </div>
                   <Switch 
                     checked={autoInvoicingEnabled} 
-                    onCheckedChange={setAutoInvoicingEnabled}
+                    onCheckedChange={(checked) => {
+                      setAutoInvoicingEnabled(checked);
+                      updateInvoicingMutation.mutate({
+                        autoInvoicingEnabled: checked,
+                        invoiceSchedule,
+                        invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : undefined,
+                        invoiceGenerationDay,
+                      });
+                    }}
                     data-testid="quick-switch-invoicing"
                   />
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Auto Payroll</p>
-                      <p className="text-xs text-muted-foreground">{payrollSchedule} cycle</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">Auto Payroll</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{payrollSchedule} cycle</p>
                     </div>
                   </div>
                   <Switch 
                     checked={autoPayrollEnabled} 
-                    onCheckedChange={setAutoPayrollEnabled}
+                    onCheckedChange={(checked) => {
+                      setAutoPayrollEnabled(checked);
+                      updatePayrollMutation.mutate({
+                        autoPayrollEnabled: checked,
+                        payrollSchedule,
+                        payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : undefined,
+                        payrollProcessDay,
+                        payrollCutoffDay,
+                      });
+                    }}
                     data-testid="quick-switch-payroll"
                   />
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Scale className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Break Compliance</p>
-                      <p className="text-xs text-muted-foreground">{laborLawJurisdiction}</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">Break Compliance</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{laborLawJurisdiction}</p>
                     </div>
                   </div>
                   <Switch 
                     checked={breakComplianceAlerts} 
-                    onCheckedChange={setBreakComplianceAlerts}
+                    onCheckedChange={(checked) => {
+                      setBreakComplianceAlerts(checked);
+                      updateBreakComplianceMutation.mutate({
+                        jurisdiction: laborLawJurisdiction,
+                        enableBreakAlerts: checked,
+                      });
+                    }}
                     data-testid="quick-switch-break-alerts"
                   />
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Shift Reminders</p>
-                      <p className="text-xs text-muted-foreground">{shiftReminderTiming} before</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">Shift Reminders</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{shiftReminderTiming} before</p>
                     </div>
                   </div>
                   <Switch 
                     checked={enableShiftReminders} 
-                    onCheckedChange={setEnableShiftReminders}
+                    onCheckedChange={(checked) => {
+                      setEnableShiftReminders(checked);
+                      quickSaveNotificationPref({ enableShiftReminders: checked });
+                    }}
                     data-testid="quick-switch-reminders"
                   />
                 </div>
@@ -992,95 +2440,10 @@ export default function Settings() {
 
         {/* Organization Section */}
         <TabsContent value="organization" className="mt-6 space-y-6">
-          {/* Workspace Settings Card */}
-          <Card data-testid="card-workspace-settings">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Building2 className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Workspace Information</CardTitle>
-                <CardDescription>Update your business details and branding</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6 mobile-compact-p">
-            <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
-              <div className="space-y-2">
-                <Label htmlFor="workspaceName">Workspace Name</Label>
-                <Input 
-                  id="workspaceName" 
-                  placeholder="My Business" 
-                  value={workspaceName}
-                  onChange={(e) => setWorkspaceName(e.target.value)}
-                  data-testid="input-workspace-name" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input 
-                  id="companyName" 
-                  placeholder="Acme Inc." 
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  data-testid="input-company-name" 
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
-              <div className="space-y-2">
-                <Label htmlFor="taxId">Tax ID / EIN</Label>
-                <Input 
-                  id="taxId" 
-                  placeholder="12-3456789" 
-                  value={taxId}
-                  onChange={(e) => setTaxId(e.target.value)}
-                  data-testid="input-tax-id" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input 
-                  id="phone" 
-                  placeholder="+1 (555) 123-4567" 
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  data-testid="input-company-phone" 
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea 
-                id="address" 
-                placeholder="123 Main St, City, State 12345" 
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                data-testid="input-company-address" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input 
-                id="website" 
-                type="url" 
-                placeholder="https://example.com" 
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                data-testid="input-company-website" 
-                />
-            </div>
-            <Button 
-              onClick={handleSaveWorkspace}
-              disabled={updateWorkspaceMutation.isPending}
-              data-testid="button-save-workspace"
-            >
-              {updateWorkspaceMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </CardContent>
-        </Card>
+          <WorkspaceSettingsForm workspace={workspace} />
 
-        {/* Business Category & Form Templates */}
-        <Card data-testid="card-business-category">
+          {/* Business Category & Form Templates */}
+          <Card data-testid="card-business-category">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Briefcase className="h-5 w-5 text-primary" />
@@ -1099,6 +2462,7 @@ export default function Settings() {
                     <SelectValue placeholder="Select your industry" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">Select...</SelectItem>
                     {businessCategories?.map((category: any) => (
                       <SelectItem key={category.value} value={category.value}>
                         <div className="flex flex-col">
@@ -1144,6 +2508,372 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Organization Identifiers - Visible only to org_owner and co_owner for support purposes */}
+        {(workspaceRole === 'org_owner' || workspaceRole === 'co_owner') && (
+          <Card data-testid="card-org-identifiers">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Organization Identifiers</CardTitle>
+                  <CardDescription>For support and integration reference</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 mobile-compact-p">
+              <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Organization Canonical ID</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      readOnly 
+                      value={(workspace as any)?.orgId || (workspace as any)?.organizationId || 'N/A'} 
+                      className="font-mono text-sm bg-muted"
+                      data-testid="input-org-id"
+                    />
+                    <Button 
+                      size="icon" 
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText((workspace as any)?.orgId || (workspace as any)?.organizationId || '');
+                        toast({ title: "Copied!", description: "Organization Canonical ID copied to clipboard" });
+                      }}
+                      data-testid="button-copy-org-id"
+                      aria-label="Copy Organization Canonical ID"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Organization Serial (Invite Code)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      readOnly 
+                      value={(workspace as any)?.organizationSerial || 'N/A'} 
+                      className="font-mono text-sm bg-muted"
+                      data-testid="input-org-serial"
+                    />
+                    <Button 
+                      size="icon" 
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText((workspace as any)?.organizationSerial || '');
+                        toast({ title: "Copied!", description: "Organization Serial copied to clipboard" });
+                      }}
+                      data-testid="button-copy-org-serial"
+                      aria-label="Copy Organization Serial"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">QuickBooks Connection ID</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    readOnly 
+                    value={quickbooksStatus?.connectionId || (quickbooksStatus?.connected === false ? 'Not Connected' : 'N/A')} 
+                    className="font-mono text-sm bg-muted"
+                    data-testid="input-quickbooks-id"
+                  />
+                  {quickbooksStatus?.connectionId && (
+                    <Button 
+                      size="icon" 
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(quickbooksStatus?.connectionId || '');
+                        toast({ title: "Copied!", description: "QuickBooks Connection ID copied to clipboard" });
+                      }}
+                      data-testid="button-copy-quickbooks-id"
+                      aria-label="Copy QuickBooks Connection ID"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {quickbooksStatus?.companyName && quickbooksStatus.companyName !== 'Unknown Company' && (
+                  <p className="text-xs text-muted-foreground">
+                    Connected to: {quickbooksStatus.companyName}
+                  </p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                These identifiers help our support team quickly locate your organization when you contact us.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Staffing Email Configuration - For Trinity AI work request routing */}
+        {(workspaceRole === 'org_owner' || workspaceRole === 'co_owner') && staffingEmailConfig && (
+          <Card data-testid="card-staffing-email">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Staffing Email Routing</CardTitle>
+                  <CardDescription>Configure how work requests are routed to your organization via email</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Org Code Section */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Organization Code</Label>
+                {editingOrgCode ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newOrgCode}
+                      onChange={(e) => setNewOrgCode(e.target.value.toUpperCase())}
+                      placeholder="e.g., STATEWIDE"
+                      className="uppercase"
+                      maxLength={12}
+                      data-testid="input-new-org-code"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => updateOrgCodeMutation.mutate(newOrgCode)}
+                      disabled={updateOrgCodeMutation.isPending || newOrgCode.length < 3}
+                      data-testid="button-save-org-code"
+                    >
+                      {updateOrgCodeMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setEditingOrgCode(false); setNewOrgCode(''); }}
+                      data-testid="button-cancel-org-code"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-base px-3 py-1" data-testid="badge-org-code">
+                      {staffingEmailConfig.orgCode || 'Not Set'}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setNewOrgCode(staffingEmailConfig.orgCode || '');
+                        setEditingOrgCode(true);
+                      }}
+                      data-testid="button-edit-org-code"
+                    >
+                      Change
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  3-12 alphanumeric characters. Used for routing: staffing-{staffingEmailConfig.orgCode || 'YOURCODE'}@coaileague.com
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Email Addresses */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Your Staffing Email</Label>
+                {staffingEmailConfig.orgEmail && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={staffingEmailConfig.orgEmail}
+                      className="font-mono text-sm"
+                      data-testid="input-org-email"
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(staffingEmailConfig.orgEmail || '');
+                        toast({ title: "Copied!", description: "Email address copied to clipboard" });
+                      }}
+                      data-testid="button-copy-org-email"
+                      aria-label="Copy Organization Email"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Work requests sent to this email will be automatically processed by Trinity AI and routed to your organization.
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Generic Email Claim */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm font-medium">Generic Staffing Email</Label>
+                  {staffingEmailConfig.hasGenericEmailClaim ? (
+                    <Badge className="bg-green-600" data-testid="badge-generic-claimed">
+                      <CheckCircle2 className="h-3 w-3 mr-1" /> Claimed by You
+                    </Badge>
+                  ) : staffingEmailConfig.genericEmailClaimedBy ? (
+                    <Badge variant="secondary" data-testid="badge-generic-other">
+                      Claimed by {staffingEmailConfig.genericEmailClaimedBy.name}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" data-testid="badge-generic-available">Available</Badge>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={staffingEmailConfig.genericEmail}
+                    className="font-mono text-sm"
+                    data-testid="input-generic-email"
+                  />
+                  {staffingEmailConfig.hasGenericEmailClaim ? (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => releaseGenericEmailMutation.mutate()}
+                      disabled={releaseGenericEmailMutation.isPending}
+                      data-testid="button-release-generic"
+                    >
+                      {releaseGenericEmailMutation.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Release'
+                      )}
+                    </Button>
+                  ) : staffingEmailConfig.canClaimGenericEmail ? (
+                    <Button
+                      size="sm"
+                      onClick={() => claimGenericEmailMutation.mutate()}
+                      disabled={claimGenericEmailMutation.isPending}
+                      data-testid="button-claim-generic"
+                    >
+                      {claimGenericEmailMutation.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Claim'
+                      )}
+                    </Button>
+                  ) : null}
+                </div>
+                
+                <p className="text-xs text-muted-foreground">
+                  The generic email (staffing@coaileague.com) routes to whichever organization claims it.
+                  Only one organization can claim this at a time.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {/* Workspace Invite Section */}
+        {(workspaceRole === 'org_owner' || workspaceRole === 'co_owner' || workspaceRole === 'org_admin' || workspaceRole === 'manager') && (
+          <Card data-testid="card-send-invite">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Invite Team Members</CardTitle>
+                  <CardDescription>Send an email invitation to join your workspace</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Email Address</Label>
+                  <Input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="colleague@company.com"
+                    data-testid="input-invite-email"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && inviteEmail.trim()) sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole }); }}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Role</Label>
+                  <Select value={inviteRole} onValueChange={setInviteRole}>
+                    <SelectTrigger data-testid="select-invite-role">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="co_owner">Co-Owner</SelectItem>
+                      <SelectItem value="org_admin">Administrator</SelectItem>
+                      <SelectItem value="employee">Employee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                onClick={() => { if (inviteEmail.trim()) { setInviteResult(null); sendInviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole }); } }}
+                disabled={sendInviteMutation.isPending || !inviteEmail.trim()}
+                data-testid="button-send-invite"
+                className="gap-2"
+              >
+                {sendInviteMutation.isPending ? (
+                  <><RefreshCw className="h-4 w-4 animate-spin" />Sending...</>
+                ) : (
+                  <><Send className="h-4 w-4" />Send Invitation</>
+                )}
+              </Button>
+
+              {inviteResult && (
+                <div className="rounded-md bg-muted p-3 space-y-2" data-testid="invite-result">
+                  <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    Invitation sent! Share this link if they don't receive the email:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input readOnly value={inviteResult.link} className="font-mono text-xs bg-background" data-testid="input-invite-link" />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => { navigator.clipboard.writeText(inviteResult.link); toast({ title: "Copied!", description: "Invite link copied to clipboard" }); }}
+                      data-testid="button-copy-invite-link"
+                      aria-label="Copy invite link"
+                    >
+                      <ClipboardCopy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Code: <span className="font-mono font-medium">{inviteResult.code}</span></p>
+                </div>
+              )}
+
+              {Array.isArray(workspaceInvites) && workspaceInvites.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    Recent Invitations
+                  </p>
+                  <div className="space-y-1.5">
+                    {workspaceInvites.slice(0, 8).map((inv: any) => (
+                      <div key={inv.id} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/50 text-xs" data-testid={`invite-row-${inv.id}`}>
+                        <span className="text-foreground font-medium truncate max-w-[200px]">{inv.inviteeEmail || 'Unknown'}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-muted-foreground capitalize">{(inv.inviteeRole || 'staff').replace('_', ' ')}</span>
+                          <Badge variant={inv.status === 'accepted' ? 'default' : inv.status === 'pending' ? 'secondary' : 'outline'} className="text-xs">
+                            {inv.status || 'pending'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        </TabsContent>
+
+        {/* Storage Section */}
+        <TabsContent value="storage" className="mt-6">
+          <StorageTabContent />
         </TabsContent>
 
         {/* Billing Section */}
@@ -1160,63 +2890,91 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
+            <div className="flex items-center justify-between mobile-flex-col mobile-gap-3 flex-wrap gap-2">
               <div>
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <span className="text-sm font-medium">Current Plan</span>
-                  <Badge data-testid="badge-current-plan">Free</Badge>
+                  <Badge
+                    data-testid="badge-current-plan"
+                    className="capitalize"
+                    variant={(workspace as any)?.subscriptionTier === 'enterprise' ? 'default' : 'secondary'}
+                  >
+                    {(workspace as any)?.subscriptionTier === 'free' || !(workspace as any)?.subscriptionTier
+                      ? 'Free Trial'
+                      : (workspace as any)?.subscriptionTier === 'free_trial'
+                      ? 'Free Trial'
+                      : (workspace as any)?.subscriptionTier?.charAt(0).toUpperCase() +
+                        ((workspace as any)?.subscriptionTier?.slice(1) || '')}
+                  </Badge>
+                  {(workspace as any)?.subscriptionStatus === 'active' && (
+                    <Badge variant="outline" className="text-xs text-green-600 border-green-500/30 dark:text-green-400" data-testid="badge-plan-status">
+                      Active
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  5 employees • 10 clients • Basic features
+                  {(workspace as any)?.subscriptionTier === 'enterprise'
+                    ? 'Unlimited employees \u2022 Unlimited clients \u2022 Full Trinity AI suite'
+                    : (workspace as any)?.subscriptionTier === 'professional'
+                    ? 'Up to 25 employees \u2022 Unlimited clients \u2022 Advanced AI features'
+                    : (workspace as any)?.subscriptionTier === 'starter'
+                    ? 'Up to 10 employees \u2022 Unlimited clients \u2022 Core features'
+                    : '5 employees \u2022 10 clients \u2022 Basic features (trial)'}
                 </p>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => toast({ 
-                  title: "Upgrade Plan", 
-                  description: "Redirecting to upgrade options..." 
-                })}
-                data-testid="button-upgrade"
-              >
-                Upgrade Plan
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setLocation('/billing')}
+                  data-testid="button-upgrade"
+                >
+                  {(workspace as any)?.subscriptionTier && (workspace as any)?.subscriptionTier !== 'free' && (workspace as any)?.subscriptionTier !== 'free_trial'
+                    ? 'Manage Plan'
+                    : 'Upgrade Plan'}
+                </Button>
+                {(workspace as any)?.subscriptionTier && (workspace as any)?.subscriptionTier !== 'free' && (workspace as any)?.subscriptionTier !== 'free_trial' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => billingPortalMutation.mutate()}
+                    disabled={billingPortalMutation.isPending}
+                    data-testid="button-billing-portal"
+                  >
+                    {billingPortalMutation.isPending ? 'Opening...' : 'Manage Payment Method'}
+                  </Button>
+                )}
+              </div>
             </div>
             <Separator />
             <div className="space-y-4">
-              <h3 className="text-sm font-medium">Platform Fee Settings</h3>
+              <h3 className="text-sm font-medium">Payment Processing</h3>
               <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
                 <div className="space-y-2">
-                  <Label htmlFor="platformFee">Platform Fee (%)</Label>
+                  <Label htmlFor="platformFee">Processing Fee (%)</Label>
                   <Input 
                     id="platformFee" 
                     type="number" 
-                    defaultValue="10.00" 
+                    defaultValue="2.90" 
                     step="0.01"
                     disabled
                     data-testid="input-platform-fee" 
                   />
                   <p className="text-xs text-muted-foreground">
-                    Fee charged on customer payments collected through our system
+                    Standard card processing fee per invoice collected through CoAIleague
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Stripe Connect Status</Label>
-                  <div className="flex items-center gap-2 h-10">
-                    <Badge variant="outline" data-testid="badge-stripe-status">Not Connected</Badge>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => toast({ 
-                        title: "Stripe Connect", 
-                        description: "Opening Stripe connection flow..." 
-                      })}
-                      data-testid="button-connect-stripe"
+                  <Label>Stripe Payment Processing</Label>
+                  <div className="flex items-center gap-2 h-10 flex-wrap">
+                    <Badge
+                      variant="outline"
+                      className="text-green-600 border-green-500/30 dark:text-green-400"
+                      data-testid="badge-stripe-status"
                     >
-                      Connect
-                    </Button>
+                      Platform Connected
+                    </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Required to process customer payments
+                    Payments are processed securely via CoAIleague's Stripe integration. No additional setup required.
                   </p>
                 </div>
               </div>
@@ -1278,7 +3036,7 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground">
                       Receive text messages for important alerts
                       {!smsStatus?.configured && (
-                        <span className="ml-2 text-yellow-600">(Twilio not configured)</span>
+                        <span className="ml-2 text-yellow-600 dark:text-yellow-400">(Twilio not configured)</span>
                       )}
                     </p>
                   </div>
@@ -1299,7 +3057,7 @@ export default function Settings() {
                     <Input 
                       id="smsPhoneNumber"
                       type="tel"
-                      placeholder="+1 (555) 123-4567"
+                      placeholder="Enter phone number"
                       value={smsPhoneNumber}
                       onChange={(e) => setSmsPhoneNumber(e.target.value)}
                       className="flex-1"
@@ -1316,7 +3074,7 @@ export default function Settings() {
                     </Button>
                   </div>
                   {smsVerified ? (
-                    <div className="flex items-center gap-1 text-xs text-green-600">
+                    <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                       <Check className="h-3 w-3" /> Phone verified
                     </div>
                   ) : (
@@ -1353,9 +3111,10 @@ export default function Settings() {
                       onValueChange={setShiftReminderTiming}
                     >
                       <SelectTrigger id="shiftReminderTiming" data-testid="select-reminder-timing">
-                        <SelectValue />
+                        <SelectValue placeholder="Select timing" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="">Select...</SelectItem>
                         {reminderOptions?.timingOptions?.map((option: any) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
@@ -1476,7 +3235,7 @@ export default function Settings() {
                 </div>
                 
                 {digestFrequency !== 'realtime' && digestFrequency !== 'never' && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -1566,12 +3325,12 @@ export default function Settings() {
                     </Select>
                   </div>
                   {quietHoursStart === quietHoursEnd && (
-                    <p className="text-xs text-yellow-600 md:col-span-2" data-testid="text-quiet-hours-warning">
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 md:col-span-2" data-testid="text-quiet-hours-warning">
                       Warning: Start and end times are the same - quiet hours will be disabled
                     </p>
                   )}
                   {quietHoursStart !== quietHoursEnd && quietHoursStart > quietHoursEnd && (
-                    <p className="text-xs text-blue-600 md:col-span-2" data-testid="text-quiet-hours-overnight">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 md:col-span-2" data-testid="text-quiet-hours-overnight">
                       Overnight quiet hours: {formatQuietHoursRange()}
                     </p>
                   )}
@@ -1631,7 +3390,7 @@ export default function Settings() {
                     </p>
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -1686,20 +3445,489 @@ export default function Settings() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => toast({ 
-                  title: "Two-Factor Authentication", 
-                  description: "Opening 2FA setup wizard..." 
-                })}
+                onClick={async () => {
+                  try {
+                    const res = await apiRequest('POST', '/api/auth/mfa/setup', {});
+                    const data = await res.json();
+                    setMfaSetupData(data);
+                    setMfaSetupOpen(true);
+                  } catch (error: any) {
+                    toast({ title: "Error", description: error.message || "Failed to start 2FA setup", variant: "destructive" });
+                  }
+                }}
                 data-testid="button-setup-2fa"
               >
                 Set Up
               </Button>
             </div>
+            <UniversalModal open={mfaSetupOpen} onOpenChange={setMfaSetupOpen}>
+              <UniversalModalHeader>
+                  <UniversalModalTitle>Set Up Two-Factor Authentication</UniversalModalTitle>
+                  <UniversalModalDescription>Scan the QR code with your authenticator app</UniversalModalDescription>
+                </UniversalModalHeader>
+                {mfaSetupData && (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <img src={mfaSetupData.qrCodeUrl} alt="2FA QR Code" width={192} height={192} className="w-48 h-48" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-2">Backup Codes</p>
+                      <p className="text-xs text-muted-foreground mb-2">Save these codes in a safe place. You can use them to access your account if you lose your authenticator.</p>
+                      <div className="grid grid-cols-2 gap-1 p-3 bg-muted rounded-md">
+                        {mfaSetupData.backupCodes.map((code: string, i: number) => (
+                          <code key={i} className="text-xs font-mono">{code}</code>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+            </UniversalModal>
           </CardContent>
         </Card>
 
         {/* Calendar Integration */}
         <CalendarIntegrationCard />
+        </TabsContent>
+
+        {/* Financial Section */}
+        <TabsContent value="financial" className="mt-6 space-y-6">
+
+          {/* Data Readiness Dashboard */}
+          <Card data-testid="card-data-readiness">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle>Automation Pipeline Readiness</CardTitle>
+                    <CardDescription>All data required for invoice, payroll, and tax automation pipelines</CardDescription>
+                  </div>
+                </div>
+                {!readinessLoading && dataReadiness && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{dataReadiness.score}% complete</span>
+                    <Badge variant={dataReadiness.automationReady ? "default" : "destructive"} className={dataReadiness.automationReady ? "bg-green-600" : ""}>
+                      {dataReadiness.automationReady ? "Pipeline Ready" : `${dataReadiness.criticalFailingCount} critical gaps`}
+                    </Badge>
+                    <Button size="icon" variant="ghost" onClick={() => refetchReadiness()} data-testid="button-refresh-readiness">
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 mobile-compact-p">
+              {readinessLoading ? (
+                <div className="space-y-3">
+                  {[1,2,3,4,5,6].map(i => <div key={i} className="h-8 bg-muted animate-pulse rounded-md" />)}
+                </div>
+              ) : dataReadiness ? (
+                <div className="space-y-6">
+                  {Object.entries(dataReadiness.sections || {}).map(([sectionId, section]: [string, any]) => (
+                    <div key={sectionId} className="space-y-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          {sectionId === 'org' && <Building2 className="h-4 w-4 text-muted-foreground" />}
+                          {sectionId === 'invoice' && <Receipt className="h-4 w-4 text-muted-foreground" />}
+                          {sectionId === 'payroll' && <Landmark className="h-4 w-4 text-muted-foreground" />}
+                          <span className="text-sm font-medium">{section.label}</span>
+                        </div>
+                        <Badge variant="outline" className={section.score === 100 ? "border-green-500 text-green-600" : section.score >= 60 ? "border-yellow-500 text-yellow-600" : "border-red-500 text-red-600"}>
+                          {section.score}%
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {section.checks.map((check: any) => (
+                          <div key={check.id} className="flex items-start gap-3 p-2 rounded-md bg-muted/30" data-testid={`readiness-check-${check.id}`}>
+                            {check.ok ? (
+                              <CircleCheck className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                            ) : check.critical ? (
+                              <CircleX className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium leading-none">{check.label}</p>
+                              {!check.ok && <p className="text-xs text-muted-foreground mt-1">{check.tip}</p>}
+                            </div>
+                            {check.critical && !check.ok && (
+                              <Badge variant="destructive" className="text-xs shrink-0">Required</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Unable to load readiness data.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Invoice Financial Configuration */}
+          <Card data-testid="card-invoice-financials">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Receipt className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Invoice Settings</CardTitle>
+                  <CardDescription>Configure invoice numbering, payment terms, late fees, and the email address invoices are sent from</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 mobile-compact-p">
+              {/* Billing Email */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-semibold">Invoice From Email</Label>
+                  <Badge variant="destructive" className="text-xs">Required</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">The email address used to send invoices to your clients. Must be a verified sender address.</p>
+                <Input
+                  type="email"
+                  placeholder="billing@yourcompany.com"
+                  value={billingEmail}
+                  onChange={e => setBillingEmail(e.target.value)}
+                  data-testid="input-billing-email"
+                />
+              </div>
+
+              <Separator />
+
+              {/* Invoice Numbering */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-semibold">Invoice Number Format</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Invoices will be numbered as: <strong>{invoicePrefix || 'INV'}-{invoiceNextNumber || 1000}</strong>, {invoicePrefix || 'INV'}-{(invoiceNextNumber || 1000) + 1}, etc.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
+                    <Input
+                      id="invoicePrefix"
+                      placeholder="INV"
+                      maxLength={10}
+                      value={invoicePrefix}
+                      onChange={e => setInvoicePrefix(e.target.value.toUpperCase())}
+                      data-testid="input-invoice-prefix"
+                    />
+                    <p className="text-xs text-muted-foreground">Up to 10 characters (e.g. INV, SGA, SEC)</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invoiceNextNumber">Next Invoice Number</Label>
+                    <Input
+                      id="invoiceNextNumber"
+                      type="number"
+                      min={1}
+                      placeholder="1000"
+                      value={invoiceNextNumber}
+                      onChange={e => setInvoiceNextNumber(parseInt(e.target.value) || 1000)}
+                      data-testid="input-invoice-next-number"
+                    />
+                    <p className="text-xs text-muted-foreground">The number assigned to the next generated invoice</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Payment Terms */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-semibold">Payment Terms & Tax</Label>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3 mobile-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentTermsDays">Payment Terms (Days)</Label>
+                    <Select value={String(paymentTermsDays)} onValueChange={v => setPaymentTermsDays(parseInt(v))}>
+                      <SelectTrigger id="paymentTermsDays" data-testid="select-payment-terms">
+                        <SelectValue placeholder="Select terms" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Due on Receipt</SelectItem>
+                        <SelectItem value="7">Net 7</SelectItem>
+                        <SelectItem value="10">Net 10</SelectItem>
+                        <SelectItem value="15">Net 15</SelectItem>
+                        <SelectItem value="30">Net 30</SelectItem>
+                        <SelectItem value="45">Net 45</SelectItem>
+                        <SelectItem value="60">Net 60</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="defaultTaxRate">Default Tax Rate (%)</Label>
+                    <div className="relative">
+                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        id="defaultTaxRate"
+                        type="number"
+                        step="0.001"
+                        min={0}
+                        max={100}
+                        placeholder="8.875"
+                        value={defaultTaxRate}
+                        onChange={e => setDefaultTaxRate(parseFloat(e.target.value) || 0)}
+                        className="pl-9"
+                        data-testid="input-default-tax-rate"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Applied to invoices unless overridden per client</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lateFeePercentage">Late Fee (%)</Label>
+                    <div className="relative">
+                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        id="lateFeePercentage"
+                        type="number"
+                        step="0.5"
+                        min={0}
+                        max={25}
+                        placeholder="0"
+                        value={lateFeePercentage}
+                        onChange={e => setLateFeePercentage(parseFloat(e.target.value) || 0)}
+                        className="pl-9"
+                        data-testid="input-late-fee-percentage"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="lateFeeDays">Late Fee Grace Period (Days)</Label>
+                    <Input
+                      id="lateFeeDays"
+                      type="number"
+                      min={1}
+                      placeholder="30"
+                      value={lateFeeDays}
+                      onChange={e => setLateFeeDays(parseInt(e.target.value) || 30)}
+                      data-testid="input-late-fee-days"
+                    />
+                    <p className="text-xs text-muted-foreground">Days after the due date before the late fee is applied</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSaveInvoiceFinancials}
+                  disabled={updateWorkspaceMutation.isPending}
+                  data-testid="button-save-invoice-financials"
+                >
+                  {updateWorkspaceMutation.isPending ? "Saving..." : "Save Invoice Settings"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payroll Financial Configuration */}
+          <Card data-testid="card-payroll-financials">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Landmark className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Payroll Tax & Funding</CardTitle>
+                  <CardDescription>Employer tax rates, worker's comp, and the bank account used to fund payroll disbursements</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 mobile-compact-p">
+              {/* Employer Tax Rates */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-semibold">Employer Tax Rates</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  These rates are used for payroll cost reporting, P&L calculations, and tax filing preparation. They do not affect employee net pay.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="suiRate">State Unemployment Insurance Rate (%)</Label>
+                    <div className="relative">
+                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        id="suiRate"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        max={15}
+                        placeholder="2.7"
+                        value={stateUnemploymentRate}
+                        onChange={e => setStateUnemploymentRate(parseFloat(e.target.value) || 0)}
+                        className="pl-9"
+                        data-testid="input-sui-rate"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Your state SUI / SUTA rate from the state unemployment agency</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="workerCompRate">Worker's Compensation Rate (%)</Label>
+                    <div className="relative">
+                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        id="workerCompRate"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        max={25}
+                        placeholder="1.5"
+                        value={workerCompRate}
+                        onChange={e => setWorkerCompRate(parseFloat(e.target.value) || 0)}
+                        className="pl-9"
+                        data-testid="input-worker-comp-rate"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Your worker's comp insurance rate (used for payroll cost calculations)</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Payroll Funding Bank */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-semibold">Payroll Funding Bank Account</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The company bank account used to fund ACH payroll disbursements to employees. Routing and account numbers are stored securely and used by the payroll processor.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="payrollBankName">Bank Name</Label>
+                    <Input
+                      id="payrollBankName"
+                      placeholder="Chase, Wells Fargo, etc."
+                      value={payrollBankName}
+                      onChange={e => setPayrollBankName(e.target.value)}
+                      data-testid="input-payroll-bank-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payrollMemo">Default Payroll Memo</Label>
+                    <Input
+                      id="payrollMemo"
+                      placeholder="e.g. Payroll - Biweekly"
+                      value={payrollMemo}
+                      onChange={e => setPayrollMemo(e.target.value)}
+                      data-testid="input-payroll-memo"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="payrollBankRouting">ABA Routing Number</Label>
+                    <Input
+                      id="payrollBankRouting"
+                      placeholder="9-digit routing number"
+                      maxLength={9}
+                      value={payrollBankRouting}
+                      onChange={e => setPayrollBankRouting(e.target.value.replace(/\D/g, ''))}
+                      data-testid="input-payroll-bank-routing"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payrollBankAccount">Account Number</Label>
+                    <Input
+                      id="payrollBankAccount"
+                      type="password"
+                      placeholder="Account number (stored securely)"
+                      value={payrollBankAccount}
+                      onChange={e => setPayrollBankAccount(e.target.value)}
+                      data-testid="input-payroll-bank-account"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSavePayrollFinancials}
+                  disabled={updateWorkspaceMutation.isPending}
+                  data-testid="button-save-payroll-financials"
+                >
+                  {updateWorkspaceMutation.isPending ? "Saving..." : "Save Payroll Settings"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Company Address for Invoice Headers */}
+          <Card data-testid="card-company-address">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Company Billing Address</CardTitle>
+                  <CardDescription>Address shown on invoice headers, pay stubs, and tax documents</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 mobile-compact-p">
+              <div className="space-y-2">
+                <Label htmlFor="finStreetAddress">Street Address</Label>
+                <Input
+                  id="finStreetAddress"
+                  placeholder="123 Main Street"
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  data-testid="input-fin-street-address"
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-3 mobile-cols-1">
+                <div className="space-y-2">
+                  <Label htmlFor="finCity">City</Label>
+                  <Input
+                    id="finCity"
+                    placeholder="Dallas"
+                    value={companyCity}
+                    onChange={e => setCompanyCity(e.target.value)}
+                    data-testid="input-fin-city"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="finState">State</Label>
+                  <Input
+                    id="finState"
+                    placeholder="TX"
+                    maxLength={2}
+                    value={companyState}
+                    onChange={e => setCompanyState(e.target.value.toUpperCase())}
+                    data-testid="input-fin-state"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="finZip">ZIP Code</Label>
+                  <Input
+                    id="finZip"
+                    placeholder="75201"
+                    value={companyZip}
+                    onChange={e => setCompanyZip(e.target.value)}
+                    data-testid="input-fin-zip"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSaveWorkspace}
+                  disabled={updateWorkspaceMutation.isPending}
+                  data-testid="button-save-company-address"
+                >
+                  {updateWorkspaceMutation.isPending ? "Saving..." : "Save Address"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
         </TabsContent>
 
         {/* Automation Section */}
@@ -1767,6 +3995,24 @@ export default function Settings() {
                   data-testid="input-invoice-custom-days"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoiceGenerationDay">Day of Month to Generate Invoices</Label>
+                <Select
+                  value={String(invoiceGenerationDay)}
+                  onValueChange={(v) => setInvoiceGenerationDay(Number(v))}
+                  disabled={!autoInvoicingEnabled || updateInvoicingMutation.isPending}
+                >
+                  <SelectTrigger id="invoiceGenerationDay" data-testid="select-invoice-generation-day">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                      <SelectItem key={d} value={String(d)}>Day {d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Which day of the month automatic invoices are generated</p>
+              </div>
               <Button 
                 onClick={handleSaveInvoicing}
                 disabled={updateInvoicingMutation.isPending}
@@ -1827,6 +4073,44 @@ export default function Settings() {
                   disabled={!autoPayrollEnabled || updatePayrollMutation.isPending}
                   data-testid="input-payroll-custom-days"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payrollProcessDay">Process Day of Month</Label>
+                  <Select
+                    value={String(payrollProcessDay)}
+                    onValueChange={(v) => setPayrollProcessDay(Number(v))}
+                    disabled={!autoPayrollEnabled || updatePayrollMutation.isPending}
+                  >
+                    <SelectTrigger id="payrollProcessDay" data-testid="select-payroll-process-day">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                        <SelectItem key={d} value={String(d)}>Day {d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Day payroll is processed</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payrollCutoffDay">Hours Cutoff Day</Label>
+                  <Select
+                    value={String(payrollCutoffDay)}
+                    onValueChange={(v) => setPayrollCutoffDay(Number(v))}
+                    disabled={!autoPayrollEnabled || updatePayrollMutation.isPending}
+                  >
+                    <SelectTrigger id="payrollCutoffDay" data-testid="select-payroll-cutoff-day">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                        <SelectItem key={d} value={String(d)}>Day {d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Last day hours are counted</p>
+                </div>
               </div>
               <Button 
                 onClick={handleSavePayroll}
@@ -1899,6 +4183,28 @@ export default function Settings() {
                   data-testid="input-schedule-advance-days"
                 />
                 <p className="text-xs text-muted-foreground">How many days in advance to generate schedules</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduleGenerationDay">Day of Week to Generate Schedules</Label>
+                <Select
+                  value={String(scheduleGenerationDay)}
+                  onValueChange={(v) => setScheduleGenerationDay(Number(v))}
+                  disabled={!autoSchedulingEnabled || updateSchedulingMutation.isPending}
+                >
+                  <SelectTrigger id="scheduleGenerationDay" data-testid="select-schedule-generation-day">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Sunday</SelectItem>
+                    <SelectItem value="1">Monday</SelectItem>
+                    <SelectItem value="2">Tuesday</SelectItem>
+                    <SelectItem value="3">Wednesday</SelectItem>
+                    <SelectItem value="4">Thursday</SelectItem>
+                    <SelectItem value="5">Friday</SelectItem>
+                    <SelectItem value="6">Saturday</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Which day of the week schedules are automatically generated</p>
               </div>
               <Button 
                 onClick={handleSaveScheduling}
@@ -2073,25 +4379,29 @@ export default function Settings() {
       </div>
   );
 
-  if (isMobile) {
-    return (
-      <WorkspaceLayout>
-        {pageContent}
-      </WorkspaceLayout>
-    );
-  }
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+    await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+    await queryClient.invalidateQueries({ queryKey: ['/api/notifications/preferences'] });
+  };
+
+  const pageConfig: CanvasPageConfig = {
+    ...settingsConfig,
+    headerActions: headerAction,
+    onRefresh: handleRefresh,
+  };
 
   return (
-    <WorkspaceLayout maxWidth="7xl">
+    <CanvasHubPage config={pageConfig}>
       {pageContent}
-    </WorkspaceLayout>
+    </CanvasHubPage>
   );
 }
 
 function CalendarIntegrationCard() {
   const { toast } = useToast();
   const [importing, setImporting] = useState(false);
-  const fileInputRef = useState<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: calendarStatus } = useQuery<{
     enabled: boolean;
@@ -2194,7 +4504,7 @@ function CalendarIntegrationCard() {
 
   const handleExportCalendar = async () => {
     try {
-      const response = await fetch('/api/calendar/export/ical', {
+      const response = await secureFetch('/api/calendar/export/ical', {
         credentials: 'include',
       });
       
@@ -2233,7 +4543,7 @@ function CalendarIntegrationCard() {
     formData.append('conflictResolution', 'skip');
 
     try {
-      const response = await fetch('/api/calendar/import/ical', {
+      const response = await secureFetch('/api/calendar/import/ical', {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -2358,6 +4668,7 @@ function CalendarIntegrationCard() {
                         onClick={() => regenerateTokenMutation.mutate(sub.id)}
                         disabled={regenerateTokenMutation.isPending}
                         data-testid={`button-regenerate-${sub.id}`}
+                        aria-label="Regenerate token"
                       >
                         <RefreshCw className="h-3 w-3" />
                       </Button>
@@ -2367,6 +4678,7 @@ function CalendarIntegrationCard() {
                         onClick={() => deleteSubscriptionMutation.mutate(sub.id)}
                         disabled={deleteSubscriptionMutation.isPending}
                         data-testid={`button-delete-${sub.id}`}
+                        aria-label="Delete subscription"
                       >
                         <Trash2 className="h-3 w-3 text-destructive" />
                       </Button>

@@ -1,0 +1,247 @@
+What's Still Missing From the 35 Traces
+Agent fixed 6 of the 15 gaps. That leaves 9 still open. Here's what didn't get touched:
+
+#	Gap	Severity
+3	Onboarding checklist — no employee-facing frontend	HIGH
+14	DAR narrative — not attached as downloadable document	MEDIUM
+23	Compliance report — PDF endpoint added but not verified end to end	MEDIUM
+30	Visitor log — missing from client portal	MEDIUM
+31	Voice Whisper — browser Web Speech fails on iOS Safari	HIGH
+32	Voice commands — clock in/out fixed but navigate and others still dead	MEDIUM
+33	Morning briefing — voice delivery not wired, ElevenLabs not connected	MEDIUM
+The iOS Safari Voice Issue Is a Real Problem
+This is the one that will hurt you most with your workforce. Security officers are largely on iPhones. Browser Web Speech API does not work on iOS Safari — which means your entire voice system is broken for the majority of your mobile users right now.
+
+The fix is moving Whisper transcription fully server-side. Audio gets recorded in the browser, uploaded as a file, and transcription happens on your server via OpenAI Whisper API. That works on every device including every iPhone.
+
+Paste This Into Replit Agent Now
+CONTINUATION SPRINT — 9 REMAINING GAPS FROM 35-TRACE AUDIT
+
+Fix every remaining gap in priority order.
+Confirm each fix before moving to the next.
+Do not skip any item.
+
+═══════════════════════════════════════════════════════
+CRITICAL — FIX FIRST
+═══════════════════════════════════════════════════════
+
+FIX 1 — VOICE WHISPER SERVER-SIDE (HIGH — iOS BROKEN)
+The current voice implementation uses browser 
+Web Speech API which does not work on iOS Safari.
+The majority of security officers use iPhones.
+This means the entire voice system is broken 
+for most of your users right now.
+
+Fix:
+- Remove browser Web Speech API dependency 
+  from voice recording flow
+- Build server-side Whisper transcription pipeline:
+  1. Browser records audio using Web Audio API 
+     — this works on all devices including iOS
+  2. Audio file uploaded to server endpoint as 
+     multipart/form-data
+  3. Server sends audio file to OpenAI Whisper API
+  4. Transcription text returned to client
+  5. Client sends transcription to Trinity
+- This pipeline must work on:
+  iOS Safari, Android Chrome, Desktop Chrome, 
+  Desktop Safari, Desktop Firefox
+- Confirm end to end on a simulated iOS viewport
+- Confirm voice recording, upload, transcription, 
+  and Trinity response complete on mobile
+
+FIX 2 — ONBOARDING CHECKLIST EMPLOYEE FRONTEND (HIGH)
+Onboarding checklist is created in DB on employee 
+hire but there is no employee-facing frontend 
+to see it or complete it. Employees have no way 
+to know what they need to do.
+
+Fix:
+- Build employee onboarding dashboard view showing:
+  - Welcome message with employee name
+  - Checklist progress bar (X of Y complete)
+  - Each checklist item with:
+    - Task name and description
+    - Status: Complete / Pending / Overdue
+    - Action button: Complete / Upload / Sign
+    - Due date if applicable
+- Completing a checklist item:
+  - Marks item complete in DB
+  - Updates progress percentage
+  - Notifies manager of completion
+  - If all items complete: fires 
+    employee_onboarded event
+- Checklist visible immediately after first login
+- Manager sees same checklist from their view 
+  with ability to mark items complete on behalf 
+  of employee
+- Trinity flags any employee with overdue 
+  checklist items
+
+═══════════════════════════════════════════════════════
+HIGH — FIX SECOND
+═══════════════════════════════════════════════════════
+
+FIX 3 — VOICE COMMAND EXECUTION COMPLETION
+Clock in and clock out voice commands are now 
+executing. The following commands are still 
+returning structured intent only without 
+executing:
+
+Complete execution for:
+- schedule_lookup: "what's my schedule", 
+  "when do I work next" → query actual shifts 
+  for the officer, return real schedule data 
+  in voice response
+- calloff: "I need to call off", 
+  "can't make my shift" → trigger actual 
+  calloff flow, notify manager, flag coverage 
+  gap, confirm to officer by voice
+- incident_report: "I need to file a report", 
+  "something happened" → open guided 
+  ReportBot incident flow in ChatDock, 
+  send officer there with voice prompt
+- post_orders: "what are my post orders", 
+  "site instructions" → retrieve post orders 
+  for officer's current assigned site, 
+  read back via voice response
+- message_supervisor: "send message to 
+  supervisor", "tell manager [x]" → route 
+  message to correct supervisor via ChatDock
+
+All commands must:
+- Execute the real action not just return intent
+- Respond to officer by voice confirming 
+  what was done
+- Log the voice command to Trinity connectome
+
+═══════════════════════════════════════════════════════
+MEDIUM — FIX THIRD
+═══════════════════════════════════════════════════════
+
+FIX 4 — DAR NARRATIVE DOWNLOADABLE DOCUMENT
+Trinity synthesizes the incident narrative but 
+it is not attached as a downloadable document 
+to the DAR record. Managers and legal teams 
+need to download and share this document.
+
+Fix:
+- After Trinity generates the incident narrative, 
+  render it as a properly formatted HTML document
+- Store as a downloadable file linked to the 
+  DAR record
+- Add download button to DAR detail view: 
+  "Download Incident Narrative"
+- Document format must include:
+  - Case header: incident date, site, officer name
+  - Narrative body: full Trinity-generated text
+  - Supporting data section: GPS, timestamp, 
+    post orders referenced, certifications verified
+  - Chain of command notification log
+  - Legal disclaimer footer
+  - Company header with org name
+- Format must be suitable for insurance 
+  submission and legal discovery
+- Confirm download works from DAR detail view
+
+FIX 5 — COMPLIANCE REPORT PDF END TO END
+PDF endpoint was added but not verified 
+end to end. Confirm the full flow:
+
+- Generate compliance report action functional
+- Report contains real employee data — names, 
+  license numbers, expiration dates, 
+  training hours, armed status
+- PDF download button visible in compliance 
+  dashboard
+- Clicking download generates real PDF 
+  not an empty file
+- PDF format matches DPS audit requirements
+- Auditor portal can access and download report
+- Confirm the PDF actually opens and is 
+  readable with real data inside
+
+FIX 6 — VISITOR LOG IN CLIENT PORTAL
+Client portal currently shows invoices only. 
+Clients need to see the visitor log for 
+their sites.
+
+Fix:
+- Add Visitor Log tab or section to client portal
+- Show all visitor entries for client's sites only
+- Columns: visitor name, date/time in, 
+  date/time out, purpose, officer who logged, 
+  site location
+- Filter by site and date range
+- Export to CSV functional
+- Workspace_id isolation confirmed — client 
+  sees only their sites, never another client's
+- Confirm visitor log is populated with 
+  real seeded visitor data for demo
+
+FIX 7 — VOICE MORNING BRIEFING DELIVERY
+Trinity generates morning briefings but 
+voice delivery is not wired. ElevenLabs 
+is not connected to the briefing system.
+
+Fix:
+- Wire the morning briefing text output 
+  through ElevenLabs TTS
+- Generated audio delivered as voice message 
+  in owner and manager DMs at configured time
+- Voice message bubble appears in ChatDock 
+  with play button and transcript toggle
+- Audio uses Trinity's ElevenLabs voice_id
+- Usage metered to workspace voice_wallet
+- Confirm briefing audio plays correctly 
+  on mobile
+
+═══════════════════════════════════════════════════════
+POST-FIX VERIFICATION
+═══════════════════════════════════════════════════════
+
+After all 7 fixes confirm:
+
+1. Record a voice message on a simulated 
+   mobile viewport — confirm Whisper 
+   transcription works without Web Speech API
+2. Speak "clock me in" — confirm clock in 
+   executes with GPS
+3. Speak "what's my schedule" — confirm 
+   real schedule data returned by voice
+4. Open employee profile as new hire — 
+   confirm onboarding checklist visible 
+   and completable
+5. Complete one checklist item — confirm 
+   DB updates and manager notified
+6. Open a DAR — confirm Download Narrative 
+   button present and downloads real document
+7. Open client portal — confirm visitor log 
+   tab visible with real data
+8. Confirm compliance PDF downloads with 
+   real employee data inside
+9. Trigger morning briefing manually — 
+   confirm voice message appears in 
+   owner ChatDock DM
+
+═══════════════════════════════════════════════════════
+UPDATED SCORECARD AFTER THIS SPRINT
+═══════════════════════════════════════════════════════
+
+Report final status of all 35 traces:
+- How many are now COMPLETE
+- How many are still INCOMPLETE
+- Completion percentage
+- Grand opening readiness verdict for 
+  Statewide Protective Services
+
+The house needs electricity on every floor 
+and water running to every fixture.
+We are not done until every switch 
+turns on a light.
+The real talk Bryan:
+
+You went from 20/35 complete to 26/35 after that last sprint. This prompt gets you to 33/35 minimum. The iOS Safari voice issue is the one I'd personally push hardest on — that's not a nice-to-have, that's a broken product for iPhone users which is most of your workforce.
+
+You're genuinely close. Bring the output back and we'll do the final review before Statewide goes live.
+

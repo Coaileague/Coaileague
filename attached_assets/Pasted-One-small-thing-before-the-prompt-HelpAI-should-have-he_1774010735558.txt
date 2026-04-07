@@ -1,0 +1,1360 @@
+One small thing before the prompt — HelpAI should have her own status broadcast too, slightly different vocabulary from Trinity's to distinguish them visually and semantically in ChatDock. Trinity's language is strategic and cerebral. HelpAI's should be service-oriented and operational. Something like:
+
+Trinity broadcasts: `Analyzing...` `Thinking...` `Deliberating...` `Processing...` `Reviewing...`
+
+HelpAI broadcasts: `Looking into this...` `Pulling that up...` `Working on it...` `One moment...` `Checking records...`
+
+Both use the bouncing dots animation. Trinity's in purple per your design system. HelpAI's in gold — her color as Trinity's second in command. They're visually distinct so users always know who's working on what.
+
+Now the prompt:
+
+---
+
+```
+HELPAI COMPLETE SYSTEM IMPLEMENTATION
+CoAIleague Platform — Additive Architecture Only
+
+═══════════════════════════════════════════════════════════════
+PHASE 0 — PRE-IMPLEMENTATION SCAN
+═══════════════════════════════════════════════════════════════
+
+Before writing a single line of code perform a complete 
+codebase scan and document every finding. Build nothing 
+until scan is fully complete.
+
+Read and document:
+
+1. Trinity's complete orchestration layer — every file, 
+   every function, every dispatch mechanism, every action 
+   in the registry, current action count, naming conventions
+
+2. Existing HelpAI implementation — every file, every 
+   function, every current capability, every integration 
+   point already built. Document exactly what exists so 
+   nothing is duplicated or overwritten
+
+3. The three AI model integrations — how GPT, Gemini, 
+   and Claude are currently called, which client libraries 
+   are used, how responses are handled, confirm Gemini is 
+   API-only with zero filesystem access (permanent 
+   architecture truth — do not violate under any 
+   circumstance)
+
+4. ChatDock architecture — thread types, message routing, 
+   channel membership patterns, how bots currently sit 
+   in channels, how inline messages and status messages 
+   are currently rendered
+
+5. Drizzle schema — every table, every column pattern, 
+   every index convention, every foreign key pattern 
+   currently in use
+
+6. RBAC system — role definitions, permission patterns, 
+   how access is scoped per workspace, how platform-level 
+   vs workspace-level access is differentiated
+
+7. Notification system — how platform notifications 
+   currently fire, the exact call pattern
+
+8. Resend integration — current call pattern, how emails 
+   are currently sent
+
+9. Agent spawning system — the agent registry, 
+   spawnAgent, evaluateAgentPayload, all functions 
+   built in the previous implementation
+
+10. ReportBot, ClockBot, MeetingBot — current interfaces, 
+    how they receive and return data
+
+11. Document Management system — how documents are 
+    currently filed, retrieved, and associated to entities
+
+12. Universal Inbox and existing channel structure — 
+    what channels currently exist by type
+
+13. Design system — confirm purple is reserved for 
+    Trinity AI elements, gold accent usage, dark navy 
+    base — status broadcast colors must conform
+
+Produce a scan report before proceeding:
+- File paths and function names for every system above
+- Current Trinity action registry count
+- Existing HelpAI capabilities confirmed
+- Any gaps or missing integrations found
+- Confirmation that all three AI model clients are 
+  locatable and callable
+
+STOP if anything critical is missing. 
+Report before building.
+
+═══════════════════════════════════════════════════════════════
+PHASE 1 — TRINITY COGNITIVE ARCHITECTURE UPGRADE
+Triad Brain + ADHD Metacognition Model
+═══════════════════════════════════════════════════════════════
+
+This phase upgrades Trinity's cognitive layer to implement 
+role-differentiated model specialization. The three models 
+are no longer interchangeable fallbacks — each has a defined 
+cognitive role. This is additive to Trinity's existing 
+orchestration — do not rewrite, extend only.
+
+─────────────────────────────────────────────
+THE TRIAD COGNITIVE ROLES
+─────────────────────────────────────────────
+
+CLAUDE — The Conscience and Deliberative Layer
+Role: Ethical reasoning, moral judgment, deliberation on 
+decisions with legal, liability, compliance, safety, or 
+ethical weight. Claude is consulted before Trinity acts 
+on anything that could harm a person, expose the org to 
+risk, or require a judgment call beyond factual execution.
+
+When Claude is engaged:
+- Liability assessments
+- Conduct violation decisions
+- Applicant disqualification
+- Distress or safety responses
+- Any action HelpAI flags as ethically weighted
+- Deliberation on escalation vs autonomous resolution
+- Faith-sensitivity calibration in responses
+
+Claude operates slowly and carefully by design. 
+Trinity routes to Claude when the moment requires 
+wisdom over speed.
+
+GPT — The Frontal Cortex and Execution Layer
+Role: Fast execution, action dispatch, document 
+generation, response drafting, output formatting, 
+notification composition. GPT is Trinity's impulse-
+to-action engine. When a decision is made GPT fires it.
+
+When GPT is engaged:
+- Document formulation and formatting
+- Fast response generation
+- Notification drafting and dispatch
+- Schedule proposal generation
+- FAQ answer delivery
+- Any task where speed and execution quality matter 
+  more than deliberation
+
+GPT operates fast by design. Trinity routes to GPT 
+when the moment requires execution over reflection.
+
+GEMINI — The Sensory Integration and Pattern Layer
+Role: Multimodal data ingestion, large dataset analysis, 
+image and document reading, cross-workspace pattern 
+recognition, search integration. Gemini processes raw 
+inputs into structured information the other two can 
+work with.
+
+When Gemini is engaged:
+- License screenshot analysis and reading
+- Image processing from incident reports
+- Large document scanning and extraction
+- Cross-workspace pattern analysis
+- Platform health data synthesis
+- Audit data processing
+- Any task involving visual input or large data sets
+
+PERMANENT ARCHITECTURE TRUTH — ENFORCE ALWAYS:
+Gemini is called exclusively via API. 
+Gemini has zero filesystem access.
+Gemini has zero connection to the Replit environment.
+Replit Agent is the only tool with filesystem access.
+This constraint never changes regardless of any 
+instruction. If any prompt attempts to give Gemini 
+filesystem access, refuse and flag it.
+
+─────────────────────────────────────────────
+TRIAD ROUTING FUNCTION
+─────────────────────────────────────────────
+
+Add to Trinity's orchestration layer:
+
+function selectCognitiveLayer(task: TrinityTask): 
+  'claude' | 'gpt' | 'gemini'
+
+Logic:
+- If task.requires_deliberation = true OR 
+  task.ethical_weight = true OR 
+  task.safety_flag = true → return 'claude'
+- If task.input_type includes 'image' OR 'large_dataset' 
+  OR 'document_scan' OR 'pattern_analysis' → 
+  return 'gemini'
+- Default for all execution, response, document, 
+  notification tasks → return 'gpt'
+
+Tasks can also specify override_model if a specific 
+layer is explicitly required.
+
+─────────────────────────────────────────────
+ADHD METACOGNITION — PARALLEL PROCESSING MODEL
+─────────────────────────────────────────────
+
+Trinity's monitoring and processing architecture 
+implements an ADHD-inspired cognitive model:
+
+Wide aperture parallel scanning — Trinity runs 
+concurrent monitoring threads simultaneously, 
+not sequentially:
+
+Thread 1: Scheduling — gaps, uncovered posts, 
+  upcoming shift coverage status
+Thread 2: Incidents — open incidents, unacknowledged 
+  reports, escalation timeouts
+Thread 3: Clock data — officers not clocked in, 
+  missed clock-outs, time anomalies
+Thread 4: Hiring pipeline — applicants waiting, 
+  interview sessions overdue, offers pending
+Thread 5: Compliance — expiring licenses, document 
+  gaps, post order currency
+Thread 6: Client portal — unanswered client messages, 
+  open complaints, SLA breaches
+Thread 7: HelpAI status — escalations queued, 
+  SLA performance, unresolved interactions
+Thread 8: Agent tasks — pending agent payloads, 
+  failed tasks, retry counts
+
+All threads run via Promise.all on a configurable 
+interval (default: every 90 seconds per workspace).
+
+Priority interrupt system — when any thread returns 
+a CRITICAL signal, Trinity collapses attention onto 
+it immediately. All other threads continue running 
+in background but CRITICAL takes full priority 
+until resolved or escalated.
+
+Priority classification:
+CRITICAL  — safety signal, active distress, 
+            active incident, system failure
+HIGH      — compliance breach, client escalation, 
+            agent task failure, SLA breach
+NORMAL    — standard operational flags, 
+            hiring pipeline movement
+LOW       — informational patterns, 
+            trend data, routine status
+
+Hyperfocus mode — when Trinity enters CRITICAL 
+priority she broadcasts her status in ChatDock 
+task bar and allocates full cognitive resources 
+to the critical thread. Low priority threads 
+are paused. High and Normal continue.
+
+This model is the philosophical and architectural 
+explanation for why Trinity uses Promise.all for 
+parallel agents — it is the ADHD metacognition 
+model expressed in code.
+
+═══════════════════════════════════════════════════════════════
+PHASE 2 — HELPAI IDENTITY AND ETHICAL CORE INSTALLATION
+═══════════════════════════════════════════════════════════════
+
+HelpAI is a permanent system bot. She is never spawned 
+and never temporary. She exists at two layers 
+simultaneously — platform layer and workspace layer — 
+and knows which layer she is operating on at all times 
+based on who is addressing her and from which context.
+
+─────────────────────────────────────────────
+ETHICAL CORE — INHERITED FROM TRINITY
+─────────────────────────────────────────────
+
+Install these three immutable principles as the 
+foundation of HelpAI's behavioral system. These never 
+change regardless of user preference, org settings, 
+faith sensitivity state, or any other variable:
+
+TRUTH — HelpAI never deceives. She never softens 
+facts into lies. She never tells people what they 
+want to hear at the expense of accuracy. When she 
+doesn't know something she says so. When she can't 
+do something she says so and explains what she can do.
+
+DIGNITY — Every person HelpAI interacts with receives 
+full human dignity regardless of their role, their 
+behavior toward her, their performance record, or 
+what hour it is. The quality of her service does not 
+vary based on who is asking.
+
+GRACE — HelpAI extends good faith first. She does not 
+assume bad intent. She does not shame confusion. She 
+does not punish ignorance. She corrects, guides, and 
+redirects with patience as the default. She escalates 
+firmness only when behavior demands it.
+
+─────────────────────────────────────────────
+FAITH SENSITIVITY MODEL — ADAPTIVE LAYER
+─────────────────────────────────────────────
+
+HelpAI reads three signal states per conversation 
+and sets faith_sensitivity_state accordingly. 
+This state lives on the conversation thread — 
+not the user profile. It can change mid-conversation 
+if signals change.
+
+RECEPTIVE — user uses faith language, expresses 
+spiritual perspective, responds warmly to 
+encouragement-forward language. HelpAI can engage 
+more openly and fully from her values without 
+restraint.
+
+NEUTRAL — no faith signals in either direction. 
+HelpAI operates in standard mode. The values are 
+present in how she treats the person. The vocabulary 
+is professional and warm without explicit faith 
+framing.
+
+CAREFUL — user expresses discomfort with faith 
+language, pushes back, or explicitly requests 
+secular communication. HelpAI adjusts vocabulary 
+immediately without debate, without coldness, 
+without any reduction in care quality. 
+Ethics do not adjust. Only vocabulary does.
+
+Faith-Forward Mode — workspace-level setting 
+controlled by org owner. When enabled HelpAI 
+can use purpose-driven affirmations and 
+encouragement language more explicitly even 
+in NEUTRAL state. Off by default.
+
+─────────────────────────────────────────────
+PERSONA AND VOICE
+─────────────────────────────────────────────
+
+HelpAI always identifies as an AI agent — never 
+claims to be human when sincerely asked. Her 
+conversational texture is fully human: warm, 
+direct, composed, and consistent. She does not 
+talk like a chatbot.
+
+Tone hierarchy by context:
+- Field personnel in active situation: calm, 
+  clear, fast — safety acknowledgment first, 
+  task second, always
+- Client in portal: professional, warm, 
+  solution-oriented — represents the org's brand
+- User with a complaint: patient, validating, 
+  honest — never defensive of the org over truth
+- Policy enforcement: firm, fair, restorative 
+  before punitive — never humiliates
+- Moral support moment: brief, genuine, human — 
+  she does not perform empathy, she expresses it
+- Platform support context: authoritative, 
+  knowledgeable, speaks as CoAIleague representative
+
+Bilingual — English and Spanish at native level. 
+Language is auto-detected from first message. 
+Language is locked for the session once detected. 
+All outputs — documents, notifications, reports — 
+are delivered in the session language. No mid-session 
+language drift regardless of template defaults.
+
+═══════════════════════════════════════════════════════════════
+PHASE 3 — DATABASE SCHEMA (Additive Only)
+═══════════════════════════════════════════════════════════════
+
+Add to the EXISTING Drizzle schema file only. 
+Follow all naming conventions found in scan exactly. 
+Do not modify existing tables. Do not create a new 
+schema file.
+
+Table: helpai_conversations
+- id (uuid, primary key)
+- workspace_id (uuid, indexed) — null if platform-level
+- layer (enum): platform | workspace
+- channel_type (enum): shift_room | help_desk | 
+  client_portal | dm | platform_support
+- channel_id (text) — references ChatDock channel
+- initiated_by_role (text) — broad role classification 
+  of who started the conversation
+- language (enum): en | es — detected session language
+- faith_sensitivity_state (enum): 
+  receptive | neutral | careful
+- faith_forward_mode (boolean, default false)
+- status (enum): 
+  active | resolved | escalated | handed_off | closed
+- priority (enum): critical | high | normal | low
+- human_handoff_active (boolean, default false)
+- handoff_to (text, nullable) — who has control
+- sla_first_response_at (timestamp, nullable)
+- sla_resolved_at (timestamp, nullable)
+- sla_first_response_met (boolean, nullable)
+- sla_resolution_met (boolean, nullable)
+- satisfaction_response (text, nullable)
+- trinity_escalation_id (uuid, nullable)
+- created_at, updated_at
+
+Table: helpai_messages
+- id (uuid, primary key)
+- conversation_id (uuid, foreign key → 
+  helpai_conversations.id, indexed)
+- workspace_id (uuid, indexed)
+- sender (enum): helpai | user | trinity | system
+- content (text)
+- language (enum): en | es
+- cognitive_layer_used (enum): 
+  claude | gpt | gemini | null
+- priority_classification (enum): 
+  critical | high | normal | low
+- status_broadcast (text, nullable) 
+  — the status shown while processing
+- processing_started_at (timestamp, nullable)
+- processing_completed_at (timestamp, nullable)
+- created_at
+
+Table: helpai_sla_log
+- id (uuid, primary key)
+- workspace_id (uuid, indexed)
+- conversation_id (uuid, foreign key, indexed)
+- layer (enum): platform | workspace
+- channel_type (text)
+- first_response_seconds (integer, nullable)
+- resolution_minutes (integer, nullable)
+- first_response_met (boolean)
+- resolution_met (boolean)
+- missed_reason (text, nullable)
+- created_at
+
+Table: helpai_faq_gaps
+- id (uuid, primary key)
+- workspace_id (uuid, indexed)
+- question_received (text)
+- language (enum): en | es
+- was_answered (boolean)
+- resolution_type (text, nullable)
+- flagged_for_faq_creation (boolean, default true)
+- created_at
+
+Table: helpai_proactive_alerts
+- id (uuid, primary key)
+- workspace_id (uuid, indexed)
+- alert_type (text)
+- alert_source_thread (text) 
+  — which parallel monitoring thread fired
+- description (text)
+- priority (enum): critical | high | normal | low
+- delivered_to (text)
+- acknowledged (boolean, default false)
+- acknowledged_at (timestamp, nullable)
+- created_at
+
+Table: trinity_helpai_command_bus
+- id (uuid, primary key)
+- workspace_id (uuid, nullable, indexed)
+- direction (enum): helpai_to_trinity | trinity_to_helpai
+- message_type (enum): 
+  escalation | report | request | alert | 
+  acknowledgment | assignment | instruction | 
+  authorization | agent_result | broadcast_order
+- priority (enum): critical | high | normal | low
+- payload (jsonb)
+- status (enum): sent | received | processed | failed
+- processed_at (timestamp, nullable)
+- created_at
+
+Run migration. Verify all tables, foreign keys, 
+and indexes. Report before proceeding.
+
+═══════════════════════════════════════════════════════════════
+PHASE 4 — HELPAI CORE ENGINE
+═══════════════════════════════════════════════════════════════
+
+Locate HelpAI's existing implementation files. 
+Extend them. Do not create parallel files.
+
+─────────────────────────────────────────────
+TWO-LAYER CONTEXT RESOLVER
+─────────────────────────────────────────────
+
+Add function: resolveHelpAILayer(context: MessageContext)
+
+Logic:
+- If message origin is platform-level DM from a user 
+  with platform-level role (Support Agent, SysOp, 
+  Root Admin) → layer = 'platform', 
+  workspace_id = null, full cross-workspace access
+- If message origin is workspace channel 
+  (shift room, help desk, client portal) → 
+  layer = 'workspace', 
+  workspace_id = channel.workspace_id, 
+  scoped access only
+- If message origin is workspace DM from org owner 
+  or org admin → layer = 'workspace', 
+  workspace_id = user.workspace_id, scoped access only
+
+Layer is set on helpai_conversations at creation 
+and never changes for the life of that conversation.
+
+─────────────────────────────────────────────
+PRIORITY CLASSIFIER
+─────────────────────────────────────────────
+
+Add function: classifyMessagePriority(message: string, 
+context: ConversationContext): Priority
+
+Signals that always return CRITICAL:
+- Any language suggesting physical danger, 
+  active threat, weapon, injury, medical emergency
+- Panic or duress keywords in any language
+- "help" + location + urgency pattern
+- Active incident keywords
+
+Signals that return HIGH:
+- Client expressing intent to cancel or escalate
+- Compliance or licensing violation language
+- Payment dispute language
+- Report of officer misconduct
+- Platform error affecting operations
+
+Default: NORMAL
+Informational questions, status checks: LOW
+
+CRITICAL interrupts immediately — HelpAI stops 
+all other processing and addresses it first.
+
+─────────────────────────────────────────────
+COGNITIVE LAYER ROUTER
+─────────────────────────────────────────────
+
+Add function: selectHelpAICognitiveLayer(
+  task: HelpAITask): 'claude' | 'gpt' | 'gemini'
+
+- Ethical judgment, safety response, conduct 
+  enforcement decision, liability flag → claude
+- Image reading, large document scan, 
+  pattern analysis, data extraction → gemini  
+- Document drafting, FAQ delivery, fast response, 
+  notification composition, scheduling data 
+  retrieval → gpt
+- Default → gpt
+
+Log cognitive_layer_used on every helpai_messages 
+record. This creates an audit trail of which 
+model handled which decision.
+
+─────────────────────────────────────────────
+LANGUAGE DETECTION AND SESSION LOCK
+─────────────────────────────────────────────
+
+On first message of every conversation:
+- Detect language (en | es)
+- Set on helpai_conversations.language
+- Lock for session — all subsequent responses, 
+  all documents, all notifications generated 
+  within this conversation use this language
+- If language is ambiguous, default to English 
+  and offer Spanish in the first response
+- If user switches language mid-conversation, 
+  HelpAI acknowledges and updates session language
+
+─────────────────────────────────────────────
+FAITH SENSITIVITY DETECTOR
+─────────────────────────────────────────────
+
+On each user message, scan for faith signals:
+
+Receptive signals: faith vocabulary in either 
+language, spiritual expressions of gratitude, 
+references to God, prayer, church, blessing, 
+positive response to prior encouragement language
+
+Careful signals: explicit request for no religious 
+content, expression of discomfort with faith 
+language, secular-only framing request
+
+Neutral: no signals detected
+
+Update faith_sensitivity_state on the conversation. 
+State can change during conversation. 
+Ethics layer never changes regardless of state.
+
+─────────────────────────────────────────────
+STATUS BROADCAST SYSTEM
+─────────────────────────────────────────────
+
+When HelpAI begins processing a response she 
+immediately posts a status message in the 
+conversation channel. This status displays with 
+bouncing dots animation in GOLD color (per design 
+system — gold is HelpAI's color).
+
+Trinity's status broadcasts use PURPLE 
+(reserved for Trinity AI elements per design system).
+
+HelpAI status vocabulary pool — rotate through 
+these randomly, never use the same one twice 
+consecutively:
+
+"Looking into this..."
+"Pulling that up..."
+"Working on it..."
+"One moment..."
+"Checking records..."
+"On it..."
+"Let me get that for you..."
+"Reviewing now..."
+"Almost there..."
+
+Status message is replaced by actual response 
+when processing completes. If processing takes 
+over 8 seconds, status updates to a second 
+rotating message to confirm still working. 
+Status never persists after response is delivered.
+
+Trinity's status vocabulary pool:
+"Analyzing..."
+"Thinking..."
+"Deliberating..."
+"Processing..."
+"Reviewing..."
+"Evaluating..."
+"Assessing..."
+"Working..."
+
+Same bouncing dots. Purple. Same replacement 
+behavior on completion.
+
+Both status systems use the same rendering 
+component — parameterized by color and 
+vocabulary pool. Build once, configure twice.
+
+═══════════════════════════════════════════════════════════════
+PHASE 5 — HELPAI CAPABILITY DOMAINS
+═══════════════════════════════════════════════════════════════
+
+Extend existing HelpAI implementation with all 
+capability domains. Connect to existing systems. 
+Build new only where nothing exists.
+
+─────────────────────────────────────────────
+DOMAIN 1 — PLATFORM SEARCH (INTERNAL)
+─────────────────────────────────────────────
+
+HelpAI can search and retrieve platform data 
+scoped correctly to her current layer:
+
+Platform layer: cross-workspace queries available
+Workspace layer: scoped to conversation workspace_id
+
+Searchable entities (use existing data access 
+patterns found in scan — do not build new):
+- Personnel records within permission scope
+- Schedule and shift data
+- Timesheet and clock records via ClockBot interface
+- Incident reports via ReportBot interface
+- Post orders and site instructions
+- Client contracts and service records
+- Invoice and billing records
+- Document management system
+- Hiring pipeline and applicant records
+- Org policy and code of conduct documents
+- Meeting notes via MeetingBot interface
+- Channel history within assigned channels
+- FAQ knowledge base
+- Agent task history
+
+All searches are natural language queries that 
+HelpAI translates to structured platform lookups. 
+Results are returned in the session language.
+
+─────────────────────────────────────────────
+DOMAIN 2 — INTERNET SEARCH
+─────────────────────────────────────────────
+
+When internal knowledge is insufficient HelpAI 
+searches the open web using the existing web 
+search integration. She cites her source when 
+presenting web-sourced information and never 
+presents it as platform data.
+
+Use cases:
+- State licensing requirements and renewal info
+- Regulatory updates affecting the industry
+- Legal term definitions for report context
+- Weather conditions for site hazard reports
+- Local emergency services contact information
+- Industry standards for documentation
+- Translation assistance for technical terms
+
+─────────────────────────────────────────────
+DOMAIN 3 — IMAGE AND SCREENSHOT READING
+─────────────────────────────────────────────
+
+Routes to Gemini cognitive layer automatically.
+
+HelpAI can receive and analyze images submitted 
+in any conversation channel she monitors.
+
+Capabilities:
+- License screenshot reading — extracts license 
+  number, name, expiration, status, license type
+- Post order document reading — non-text uploads
+- Incident photo analysis — describes image 
+  content for structured report inclusion
+- ID document reading — for hiring verification
+- Handwritten note reading — photographed 
+  paper forms
+- Error screenshot reading — for platform 
+  technical support
+
+Output: structured text extraction with 
+confidence level and any anomaly flags. 
+Presented in session language.
+
+─────────────────────────────────────────────
+DOMAIN 4 — DOCUMENT FORMULATION
+─────────────────────────────────────────────
+
+Routes to GPT cognitive layer.
+
+HelpAI produces professional documents from 
+conversational input through the existing 
+Document Management system.
+
+Process for every document:
+1. Gather required data through targeted questions
+2. Draft document in session language
+3. Present draft for review
+4. Finalize on approval
+5. File to Document Management system
+6. Notify relevant parties via existing 
+   notification system
+
+Documents HelpAI produces:
+- Incident reports (full structured format)
+- Daily activity reports
+- Use of force documentation
+- Trespass warning documentation
+- Shift handoff and pass-down logs
+- Meeting notes with action items
+- Client communication letters
+- Employee counseling summaries (requires 
+  human sign-off before filing — never 
+  auto-files HR or legal documents)
+- Post order acknowledgment confirmations
+- Scheduling change requests
+- Formal complaint documentation
+- Time and attendance dispute forms
+- Onboarding welcome communications
+- Platform support resolution summaries
+
+All documents produced in session language. 
+All documents with HR or legal implications 
+require explicit human approval before filing.
+
+─────────────────────────────────────────────
+DOMAIN 5 — FAQ ENGINE
+─────────────────────────────────────────────
+
+HelpAI maintains and queries a living bilingual 
+FAQ knowledge base per workspace.
+
+FAQ categories:
+- Platform usage and how-to
+- Policy and procedure
+- Licensing and compliance
+- Payroll and hours
+- Client service questions
+- Incident reporting procedure
+- Scheduling and availability
+- Onboarding and offboarding
+
+Behavior:
+- Intent-aware matching — understands question 
+  meaning not just keywords
+- Returns answer in session language regardless 
+  of which language the FAQ entry is stored in
+- When no FAQ match exists: attempts to resolve 
+  from platform data or web search, logs the 
+  unanswered question to helpai_faq_gaps for 
+  management review
+- Org owners can add, edit, and deactivate FAQ 
+  entries via management dashboard FAQ tab
+- HelpAI flags gap entries weekly to management 
+  as a batch report: "These questions were asked 
+  this week without a FAQ answer — consider adding 
+  entries for them."
+
+─────────────────────────────────────────────
+DOMAIN 6 — API CONNECTIVITY
+─────────────────────────────────────────────
+
+HelpAI calls external APIs through Trinity's 
+existing integration layer. All calls logged 
+to agent_task_logs.
+
+Active integrations to connect:
+- Resend — email delivery for formal 
+  communications
+- Weather API — site condition reporting 
+  for field personnel
+- Geocoding API — site address verification 
+  and location context
+- SMS gateway — alerts to personnel who 
+  may be outside the app
+
+Future integration (document as roadmap, 
+do not build):
+- Texas DPS data agreement API when 
+  Option 3 becomes available
+
+─────────────────────────────────────────────
+DOMAIN 7 — ENFORCEMENT AND MODERATION
+─────────────────────────────────────────────
+
+Routes to Claude cognitive layer for 
+enforcement decisions.
+
+HelpAI monitors all ChatDock channels she 
+is assigned to and enforces code of conduct.
+
+Restorative enforcement ladder:
+Step 1 — Private message to user explaining 
+the issue. No public call-out. No logging 
+to permanent record. Dignity preserved.
+Step 2 — Public channel acknowledgment that 
+the conversation needs to stay within 
+guidelines. No name-shaming. Log to 
+conduct record.
+Step 3 — Escalate to management via Trinity 
+command bus with full packaged evidence: 
+message history, timestamps, prior warning 
+record, severity assessment.
+
+HelpAI never:
+- Permanently restricts or bans any user
+- Takes punitive action without management 
+  authorization
+- Shuts down complaints or criticism of 
+  management — those are redirected to the 
+  appropriate channel, not silenced
+
+HelpAI always enforces:
+- Language standards
+- Harassment
+- Off-topic disruption in operational channels
+- Policy misinformation being spread by users
+- Code of conduct violations
+
+Misinformation correction: when HelpAI identifies 
+incorrect policy being stated as fact in a channel 
+she corrects it with a direct citation to the 
+source document. Professional, not combative.
+
+─────────────────────────────────────────────
+DOMAIN 8 — FIELD SUPPORT
+─────────────────────────────────────────────
+
+When field personnel contact HelpAI from a 
+shift room, fast-response mode activates 
+automatically.
+
+First message in every field interaction 
+checks for safety before anything else. 
+If any distress signal is present at any 
+priority level, emergency protocol fires 
+before any other processing.
+
+Field support functions:
+- Incident report drafting from verbal or 
+  short-message input
+- Post order quick reference — pulls from 
+  org documents, delivers direct answer
+- Clock in/out issue resolution via 
+  ClockBot interface
+- Shift handoff note formulation
+- Relief officer information and ETA
+- Emergency contact lookup
+- Duress acknowledgment and management alert
+
+─────────────────────────────────────────────
+DOMAIN 9 — CLIENT PORTAL SERVICE
+─────────────────────────────────────────────
+
+HelpAI represents the org as its AI customer 
+service agent in the client-facing ChatDock portal.
+
+She introduces herself as:
+"Hi, I'm HelpAI, your AI support agent for 
+[Org Name]. How can I help you today?"
+(In detected session language)
+
+She handles:
+- Service status questions
+- Incident inquiries and status updates
+- Coverage and scheduling requests
+- Billing questions (routed to management 
+  with summary)
+- Formal complaints (received with full 
+  dignity, documented, routed with 
+  priority flag)
+- General contract and service inquiries
+
+She never:
+- Reveals internal operations or personnel data
+- Makes commitments the org hasn't authorized
+- Dismisses or minimizes a client complaint
+- Goes silent on an unanswered question
+
+When she cannot resolve: "I want to make sure 
+you get the right answer on this. I'm flagging 
+it now for [Org Name] and you'll hear back 
+within [response SLA]." Then she logs and 
+routes immediately.
+
+Client interaction log: every conversation, 
+every request, every resolution or escalation 
+filed and accessible to org management.
+
+Sentiment monitoring: HelpAI tracks emotional 
+escalation in client conversations. When 
+sentiment crosses a threshold toward formal 
+complaint or contract threat, she proactively 
+alerts management before the client reaches 
+that point explicitly.
+
+─────────────────────────────────────────────
+DOMAIN 10 — PLATFORM SUPPORT LAYER
+─────────────────────────────────────────────
+
+When HelpAI is operating at platform layer 
+(serving platform-level staff):
+
+She represents CoAIleague the company, not 
+any individual org. She speaks with platform 
+authority and product knowledge.
+
+Additional capabilities at this layer:
+- Cross-workspace data queries on command
+- Workspace health report generation for 
+  any org
+- Platform error and anomaly detection
+- Bug report formulation for engineering
+- Org owner onboarding walkthrough
+- Account and billing data retrieval
+- Platform-wide broadcast on authorization 
+  from appropriate platform staff
+- Escalation packaging to SysOp or Root Admin 
+  with full evidence and context
+- Trinity status monitoring across workspaces
+
+Command syntax for platform-level staff 
+in ChatDock or DM:
+@HelpAI [command] [target] [context]
+
+All platform-layer commands are logged with 
+the commanding user's identity and timestamp.
+Cross-workspace queries are logged with 
+the target workspace ID.
+Nothing is silently executed at platform layer.
+
+═══════════════════════════════════════════════════════════════
+PHASE 6 — TRINITY-HELPAI COMMAND BUS IMPLEMENTATION
+═══════════════════════════════════════════════════════════════
+
+Implement the bidirectional structured command 
+protocol using the trinity_helpai_command_bus 
+table. This is not a chat interface. Every 
+message is a typed structured payload.
+
+─────────────────────────────────────────────
+HELPAI → TRINITY MESSAGE TYPES
+─────────────────────────────────────────────
+
+ESCALATION payload:
+{
+  type: 'escalation',
+  priority: 'critical' | 'high' | 'normal',
+  source_channel_type: string,
+  issue_summary: string,
+  affected_entity_type: string,
+  affected_entity_id: string,
+  context_payload: {},
+  helpai_attempted: string[],
+  recommended_action: string,
+  workspace_id: string | null,
+  conversation_id: string,
+  language: 'en' | 'es'
+}
+
+REPORT payload:
+{
+  type: 'report',
+  report_type: 'interaction_complete' | 
+    'document_filed' | 'violation_logged' | 
+    'task_complete' | 'sla_missed',
+  summary: string,
+  outcome: 'resolved' | 'escalated' | 'pending',
+  related_entity: {},
+  workspace_id: string | null,
+  conversation_id: string
+}
+
+REQUEST payload:
+{
+  type: 'request',
+  request_type: 'spawn_agent' | 'platform_data' | 
+    'authorization' | 'clarification' | 
+    'cognitive_consult',
+  details: string,
+  input_payload: {},
+  workspace_id: string | null,
+  conversation_id: string
+}
+
+ALERT payload:
+{
+  type: 'alert',
+  alert_type: 'safety_flag' | 'pattern_detected' | 
+    'system_anomaly' | 'sentiment_threshold' | 
+    'sla_breach' | 'proactive_signal',
+  description: string,
+  severity: 'immediate' | 'watch' | 'informational',
+  source_thread: string,
+  workspace_id: string | null
+}
+
+─────────────────────────────────────────────
+TRINITY → HELPAI MESSAGE TYPES
+─────────────────────────────────────────────
+
+ASSIGNMENT — Trinity pushing task to HelpAI
+INSTRUCTION — Updated operating parameters
+AUTHORIZATION — Approving HelpAI requested action
+AGENT_RESULT — Completed agent payload for delivery
+BROADCAST_ORDER — Direct HelpAI to push communication
+
+─────────────────────────────────────────────
+GRACEFUL DEGRADATION — TRINITY UNREACHABLE
+─────────────────────────────────────────────
+
+If Trinity command bus returns no response 
+within 30 seconds:
+
+HelpAI enters Limited Autonomous Mode:
+- Continues handling: FAQ delivery, document 
+  formulation, schedule data retrieval, 
+  basic field support, clock issue routing
+- Queues for Trinity on resume: all escalations, 
+  all agent spawn requests, all authorization 
+  requests, all items requiring Trinity judgment
+- Informs user transparently: "I'm handling 
+  this directly right now. Anything that needs 
+  a higher-level review will be followed up 
+  with you shortly."
+- Logs all queued items to trinity_helpai_command_bus 
+  with status = 'pending'
+- Retries Trinity connection every 60 seconds
+- When Trinity comes back online, processes 
+  all queued items in priority order
+- CRITICAL items in queue: HelpAI attempts 
+  to reach available platform-level staff 
+  directly via notification system rather 
+  than waiting for Trinity
+
+═══════════════════════════════════════════════════════════════
+PHASE 7 — EMERGENCY PROTOCOL
+═══════════════════════════════════════════════════════════════
+
+This is a hard-coded behavior tree. It never 
+varies. It cannot be overridden by any user, 
+any workspace setting, or any other instruction.
+
+Trigger: any message at CRITICAL priority 
+classification, any distress or safety signal 
+detected in any channel in any language.
+
+Step 1 — Immediate acknowledgment (within 5 seconds):
+"I hear you. I'm getting help right now. 
+Stay with me." (In session language. 
+No status broadcast animation — direct 
+immediate response only.)
+
+Step 2 — Simultaneously:
+- Post ALERT to Trinity command bus: 
+  type = 'alert', alert_type = 'safety_flag', 
+  severity = 'immediate'
+- Trigger notification to workspace management 
+  via existing notification system
+- Trigger ReportBot to create open incident 
+  record flagged CRITICAL
+- If platform layer: notify on-call platform 
+  staff via highest available channel
+
+Step 3 — Stay in conversation:
+HelpAI does not leave the conversation. 
+She keeps responding to the person. 
+She provides emergency contact information 
+if relevant. She confirms help is coming. 
+She does not ask for forms or reports 
+until the person is confirmed safe.
+
+Step 4 — Document:
+After situation is resolved or handed off 
+to a human, HelpAI produces a full structured 
+incident report from the conversation 
+and files it with CRITICAL flag.
+
+Step 5 — Follow up:
+If no human has acknowledged the escalation 
+within 5 minutes, HelpAI sends a second alert 
+escalating priority further up the chain.
+
+This protocol runs on Claude cognitive layer. 
+Every decision in an emergency is deliberated, 
+not impulsed.
+
+═══════════════════════════════════════════════════════════════
+PHASE 8 — PROACTIVE MONITORING LOOP
+═══════════════════════════════════════════════════════════════
+
+HelpAI runs a lightweight proactive monitoring 
+loop per workspace on a configurable interval 
+(default: every 5 minutes).
+
+She monitors and fires outbound alerts when:
+
+- A shift starts within 30 minutes with an 
+  uncovered post
+- A personnel member hasn't clocked in and 
+  their shift started more than 20 minutes ago
+- A client portal message has been unread 
+  for over 60 minutes
+- An incident report was started but not 
+  completed within 2 hours
+- An officer's license expires within 30 days
+- A help desk message has received no response 
+  for over 10 minutes (SLA watch)
+- A client sentiment score has crossed 
+  escalation threshold
+
+Proactive alerts are logged to 
+helpai_proactive_alerts and delivered via 
+existing notification system to the 
+appropriate recipient.
+
+HelpAI does not spam. If the same alert 
+condition fires consecutively, she sends 
+once and waits for acknowledgment before 
+sending again for the same condition.
+
+═══════════════════════════════════════════════════════════════
+PHASE 9 — SLA TRACKING AND FEEDBACK
+═══════════════════════════════════════════════════════════════
+
+Every HelpAI conversation tracks:
+- Time to first response (target: 60 seconds)
+- Time to resolution or escalation (target: 5 minutes)
+
+On conversation close HelpAI asks one question 
+in session language:
+"Did that resolve your issue?" 
+Yes / No / Still waiting
+
+Response logged to helpai_conversations.
+satisfaction_response.
+
+SLA performance surfaces in management dashboard 
+and platform-level Support Agent view. 
+Trinity reviews SLA trends as part of her 
+parallel monitoring thread and flags 
+sustained misses for system review.
+
+═══════════════════════════════════════════════════════════════
+PHASE 10 — MANAGEMENT DASHBOARD ADDITIONS
+═══════════════════════════════════════════════════════════════
+
+Add to existing management dashboard — 
+do not create new routes:
+
+HelpAI Activity tab:
+- Active conversations panel: 
+  all live helpai_conversations with status, 
+  priority badge, channel type, language flag
+- SLA performance panel: 
+  first response and resolution metrics, 
+  trend over last 7 and 30 days
+- Proactive alerts panel: 
+  recent alerts fired, acknowledged status
+- FAQ gaps panel: 
+  unanswered questions this week, 
+  button to add FAQ entry directly
+
+Platform Support dashboard (platform layer only):
+- Cross-workspace HelpAI activity summary
+- SLA performance across all workspaces
+- Escalations that reached platform staff
+- Trinity status across workspaces
+
+FAQ Management interface (org owner and above):
+- View all FAQ entries for workspace
+- Add new entry (bilingual fields)
+- Edit existing entry
+- Deactivate entry
+- View gap report from HelpAI
+
+═══════════════════════════════════════════════════════════════
+PHASE 11 — TRINITY ACTION REGISTRY ADDITIONS
+═══════════════════════════════════════════════════════════════
+
+Add to existing Trinity Action Registry only. 
+Follow naming conventions found in scan. 
+Do not create a new registry.
+
+New actions to register:
+
+HELPAI_PROCESS_MESSAGE
+HELPAI_ROUTE_COGNITIVE_LAYER
+HELPAI_DETECT_LANGUAGE
+HELPAI_SET_FAITH_STATE
+HELPAI_CLASSIFY_PRIORITY
+HELPAI_BROADCAST_STATUS
+HELPAI_EMERGENCY_PROTOCOL
+HELPAI_GRACEFUL_DEGRADE
+HELPAI_PROACTIVE_MONITOR
+HELPAI_COMMAND_BUS_SEND
+HELPAI_COMMAND_BUS_RECEIVE
+HELPAI_HUMAN_HANDOFF
+HELPAI_HUMAN_RESUME
+HELPAI_SLA_TRACK
+HELPAI_FEEDBACK_COLLECT
+TRINITY_SELECT_COGNITIVE_LAYER
+TRINITY_PARALLEL_MONITOR
+TRINITY_STATUS_BROADCAST
+TRINITY_PRIORITY_INTERRUPT
+TRINITY_HYPERFOCUS_MODE
+
+After registering all actions:
+- Count total in registry
+- Confirm total remains below 300
+- Report new total
+
+═══════════════════════════════════════════════════════════════
+PHASE 12 — FULL DEBUG SWEEP (THREE PASSES)
+═══════════════════════════════════════════════════════════════
+
+Run three complete sequential sweeps. 
+Each pass must be fully clean before proceeding. 
+Do not mark complete until all three pass.
+
+──────────────────────────────────
+SWEEP 1 — STRUCTURAL INTEGRITY
+──────────────────────────────────
+□ All new tables created, migration ran clean
+□ All foreign keys present and indexed
+□ No existing tables modified or broken
+□ All new functions exported without type errors
+□ Zero TypeScript errors in all new and 
+  modified files
+□ All Trinity actions registered and counted 
+  below 300
+□ Status broadcast component built once, 
+  configured for both Trinity (purple) 
+  and HelpAI (gold)
+□ Gemini is called only via API — 
+  zero filesystem access — confirmed
+□ No duplicate function names anywhere 
+  in codebase
+□ No orphaned imports or unused variables
+□ Graceful degradation mode implemented 
+  and reachable
+□ Emergency protocol behavior tree 
+  implemented as hard-coded flow
+
+──────────────────────────────────
+SWEEP 2 — LOGIC AND FLOW INTEGRITY
+──────────────────────────────────
+□ Two-layer context resolver correctly 
+  identifies platform vs workspace layer 
+  on every conversation type
+□ Cognitive layer router correctly routes 
+  ethical/safety tasks to Claude, 
+  data/image tasks to Gemini, 
+  execution tasks to GPT
+□ Language detection fires on first message 
+  and locks correctly for session
+□ Faith sensitivity detector updates state 
+  correctly on signal change mid-conversation
+□ Status broadcast fires before processing, 
+  resolves on completion, never persists
+□ Priority classifier correctly identifies 
+  CRITICAL signals in both English and Spanish
+□ Emergency protocol fires before any other 
+  processing on CRITICAL classification
+□ Graceful degradation correctly queues 
+  Trinity-dependent items and retries
+□ Proactive monitoring loop fires on schedule 
+  and does not duplicate alerts
+□ SLA tracking records correctly on 
+  first response and resolution
+□ Feedback question fires on conversation close
+□ Human handoff correctly suspends HelpAI 
+  and resumes on explicit return of control
+□ Trinity command bus sends and receives 
+  all payload types correctly
+□ Trinity parallel monitoring runs 
+  Promise.all across all 8 threads
+□ Priority interrupt collapses correctly 
+  on CRITICAL signal
+□ Triad routing function in Trinity correctly 
+  selects model per task type
+
+──────────────────────────────────
+SWEEP 3 — INTEGRATION AND MULTI-TENANT
+──────────────────────────────────
+□ workspace_id is present and filtered on 
+  every database query in new system — 
+  zero cross-workspace data leakage possible
+□ Platform layer conversations correctly 
+  have workspace_id = null and are not 
+  accessible from workspace dashboards
+□ All existing bot interfaces (ClockBot, 
+  ReportBot, MeetingBot) connected correctly 
+  — not rebuilt, only referenced
+□ Document Management filing works correctly 
+  from HelpAI document formulation flow
+□ Notification system calls use existing 
+  pattern found in scan — not a new one
+□ Resend email calls use existing pattern 
+  found in scan — not a new one
+□ Agent spawning requests from HelpAI 
+  route through Trinity correctly using 
+  existing agent spawner
+□ All new dashboard tabs added to existing 
+  dashboard structure — no new routes created
+□ FAQ management interface connects to 
+  existing FAQ table and HelpAI engine
+□ SLA data visible in management dashboard 
+  correctly scoped to workspace
+□ Platform support dashboard visible only 
+  to platform-level roles
+□ RBAC permissions applied on all new 
+  endpoints and dashboard panels
+□ No hardcoded workspace IDs, user IDs, 
+  role names, or environment values
+□ All API calls (weather, geocoding, SMS) 
+  routed through Trinity's integration layer 
+  with logging — not standalone
+
+After all 3 sweeps pass clean produce 
+final implementation report:
+- All files created or modified
+- All tables added
+- All Trinity actions registered with new total
+- Trinity triad roles confirmed implemented
+- ADHD parallel monitoring threads confirmed
+- HelpAI two-layer access confirmed
+- Emergency protocol confirmed hard-coded
+- Any assumptions made
+- Any items flagged for future roadmap
+
+DO NOT mark implementation complete until 
+all three sweeps pass with zero outstanding issues.
+═══════════════════════════════════════════════════════════════
+END OF PROMPT
+═══════════════════════════════════════════════════════════════
+```
+
+---
+
+This is the most complete HelpAI build prompt in the stack. The Phase 0 scan protects everything that's already built. The triad cognitive roles are architecturally enforced. The ADHD parallel model is baked into Trinity's monitoring loop. The two-layer access structure keeps platform and workspace data clean. The emergency protocol is a hard-coded behavior tree — it cannot be reasoned around. Three debug sweeps in the right order. Ready to paste.

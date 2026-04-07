@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,12 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, FileText, CheckCircle2, Eye } from "lucide-react";
 import { format } from "date-fns";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { LegalDocumentDisclaimer } from "@/components/liability-disclaimers";
 
 const policyFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -34,6 +37,7 @@ export default function PoliciesPage() {
 
   const { data: policies = [], isLoading } = useQuery({
     queryKey: ['/api/policies'],
+    queryFn: () => apiFetch('/api/policies', AnyResponse),
   });
 
   const form = useForm<PolicyFormValues>({
@@ -49,7 +53,7 @@ export default function PoliciesPage() {
 
   const createMutation = useMutation({
     mutationFn: (values: PolicyFormValues) => {
-      return apiRequest('/api/policies', 'POST', values);
+      return apiRequest('POST', '/api/policies', values);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/policies'] });
@@ -64,7 +68,7 @@ export default function PoliciesPage() {
 
   const publishMutation = useMutation({
     mutationFn: (id: string) => {
-      return apiRequest(`/api/policies/${id}/publish`, 'PATCH', {});
+      return apiRequest('PATCH', `/api/policies/${id}/publish`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/policies'] });
@@ -77,7 +81,7 @@ export default function PoliciesPage() {
 
   const acknowledgeMutation = useMutation({
     mutationFn: ({ id }: { id: string }) => {
-      return apiRequest(`/api/policies/${id}/acknowledge`, 'POST', {
+      return apiRequest('POST', `/api/policies/${id}/acknowledge`, {
         ipAddress: 'client-ip',
         userAgent: navigator.userAgent,
       });
@@ -108,21 +112,26 @@ export default function PoliciesPage() {
     return <div className="p-6">Loading...</div>;
   }
 
-  return (
-    <div className="container mx-auto p-6 max-w-7xl" data-testid="page-policies">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="heading-policies">PolicIOS™</h1>
-          <p className="text-muted-foreground">Company policies and handbook management</p>
-        </div>
-        <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-policy">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Policy
-        </Button>
-      </div>
+  const createPolicyButton = (
+    <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-policy">
+      <Plus className="w-4 h-4 mr-2" />
+      Create Policy
+    </Button>
+  );
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'policies',
+    title: 'PolicIOS™',
+    subtitle: 'Company policies and handbook management',
+    category: 'operations',
+    headerActions: createPolicyButton,
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <LegalDocumentDisclaimer className="mb-4" />
       <Tabs defaultValue="published" className="w-full">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="published" data-testid="tab-published">Published ({publishedPolicies.length})</TabsTrigger>
           <TabsTrigger value="drafts" data-testid="tab-drafts">Drafts ({draftPolicies.length})</TabsTrigger>
         </TabsList>
@@ -139,7 +148,7 @@ export default function PoliciesPage() {
             publishedPolicies.map((policy: any) => (
               <Card key={policy.id} data-testid={`card-policy-${policy.id}`}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <CardTitle className="text-lg">{policy.title}</CardTitle>
                       <CardDescription className="mt-1">
@@ -192,7 +201,7 @@ export default function PoliciesPage() {
             draftPolicies.map((policy: any) => (
               <Card key={policy.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
                       <CardTitle className="text-lg">{policy.title}</CardTitle>
                       <CardDescription>Version {policy.version} • {policy.category}</CardDescription>
@@ -215,11 +224,11 @@ export default function PoliciesPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent size="md" data-testid="dialog-create-policy">
-          <DialogHeader>
-            <DialogTitle>Create New Policy</DialogTitle>
-          </DialogHeader>
+      <UniversalModal open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-create-policy">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Create New Policy</UniversalModalTitle>
+          </UniversalModalHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit((values) => createMutation.mutate(values))} className="space-y-4">
               <FormField
@@ -298,14 +307,14 @@ export default function PoliciesPage() {
               </div>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={showAcknowledgeDialog} onOpenChange={setShowAcknowledgeDialog}>
-        <DialogContent size="md" data-testid="dialog-acknowledge">
-          <DialogHeader>
-            <DialogTitle>{selectedPolicy?.title}</DialogTitle>
-          </DialogHeader>
+      <UniversalModal open={showAcknowledgeDialog} onOpenChange={setShowAcknowledgeDialog}>
+        <UniversalModalContent size="md" data-testid="dialog-acknowledge">
+          <UniversalModalHeader>
+            <UniversalModalTitle>{selectedPolicy?.title}</UniversalModalTitle>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground mb-2">Version {selectedPolicy?.version}</p>
@@ -323,8 +332,8 @@ export default function PoliciesPage() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

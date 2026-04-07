@@ -181,7 +181,7 @@ function FastModeTaskCard({ task }: { task: FastModeTask }) {
       className="p-3 rounded-lg border bg-background/50 space-y-2"
       data-testid={`fast-mode-task-${task.taskId}`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {getStatusIcon(task.status)}
           <span className="text-sm font-medium">{getStatusLabel(task.status)}</span>
@@ -217,7 +217,7 @@ function FastModeTaskCard({ task }: { task: FastModeTask }) {
       )}
       
       {task.status !== 'completed' && task.status !== 'failed' && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+        <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground pt-1">
           <span>Credits: ~{task.creditsUsed}</span>
           <span className="flex items-center gap-1">
             <Activity className="h-3 w-3" />

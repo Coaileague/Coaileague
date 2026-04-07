@@ -15,12 +15,13 @@
  * Leverages Gemini AI and existing platform services for intelligence.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import { db } from '../db';
-import { helposFaqs, workspaces, employees, shifts, notifications, users, employeeCertifications, timeOffRequests, shiftSwapRequests } from '@shared/schema';
+import { helposFaqs, workspaces, employees, shifts, notifications, users, timeOffRequests, shiftSwapRequests, userMascotPreferences, mascotInteractions, mascotSessions, mascotTasks } from '@shared/schema';
 import { eq, desc, and, gte, lte, count, sql } from 'drizzle-orm';
 import { geminiClient } from '../services/ai-brain/providers/geminiClient';
-import { requireAuth } from '../auth';
 import { broadcastToAllClients } from '../websocket';
 import { requireTrinityAccess } from '../rbac';
 
@@ -50,10 +51,10 @@ async function reportMascotError(
   
   try {
     // Log to console for immediate visibility
-    console.error(`[Mascot AI Brain] Action failed: ${action}`, { error, context, errorId });
+    log.error(`[Mascot AI Brain] Action failed: ${action}`, { error, context, errorId });
     
     // Log error to console instead of creating notification (userId '0' doesn't exist)
-    console.error(`[Mascot AI Brain] Error notification for support:`, {
+    log.error(`[Mascot AI Brain] Error notification for support:`, {
       errorId,
       action,
       error,
@@ -76,7 +77,7 @@ async function reportMascotError(
       },
     });
   } catch (reportError) {
-    console.error('[Mascot AI Brain] Failed to report error:', reportError);
+    log.error('[Mascot AI Brain] Failed to report error:', reportError);
   }
 }
 
@@ -94,7 +95,7 @@ async function executeMascotAction<T>(
       data: result,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? sanitizeError(error) : String(error);
     
     // Report error to support for workflow approval to fix
     await reportMascotError(action, errorMessage, context);
@@ -155,9 +156,9 @@ interface MascotTask {
  * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.get('/insights', requireAuth, requireTrinityAccess, async (req, res) => {
-  const userId = (req as any).user?.id;
-  const workspaceId = (req as any).session?.activeWorkspaceId;
+router.get('/insights', requireTrinityAccess, async (req, res) => {
+  const userId = req.user?.id;
+  const workspaceId = req.session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.get_insights', async () => {
     const insights: MascotInsight[] = [];
@@ -233,7 +234,7 @@ router.get('/insights', requireAuth, requireTrinityAccess, async (req, res) => {
     
     const randomMotivation = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
     insights.push({
-      id: 'motivation-' + Date.now(),
+      id: 'motivation-' + randomUUID(),
       type: 'tip',
       title: randomMotivation.title,
       message: randomMotivation.message,
@@ -256,7 +257,7 @@ router.get('/insights', requireAuth, requireTrinityAccess, async (req, res) => {
  * Get relevant FAQ data for the mascot to reference
  * Wrapped with AI Brain authority chain
  */
-router.get('/faqs', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/faqs', requireTrinityAccess, async (req, res) => {
   const { category, limit = 10 } = req.query;
   
   const result = await executeMascotAction('mascot.get_faqs', async () => {
@@ -289,9 +290,9 @@ router.get('/faqs', requireAuth, requireTrinityAccess, async (req, res) => {
  * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.get('/tasks', requireAuth, requireTrinityAccess, async (req, res) => {
-  const userId = (req as any).user?.id;
-  const workspaceId = (req as any).session?.activeWorkspaceId;
+router.get('/tasks', requireTrinityAccess, async (req, res) => {
+  const userId = req.user?.id;
+  const workspaceId = req.session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.get_tasks', async () => {
     const tasks: MascotTask[] = [];
@@ -316,7 +317,7 @@ router.get('/tasks', requireAuth, requireTrinityAccess, async (req, res) => {
       points: 30,
       priority: 'medium',
       completed: false,
-      actionUrl: '/features-overview'
+      actionUrl: '/features'
     });
     
     tasks.push({
@@ -338,7 +339,7 @@ router.get('/tasks', requireAuth, requireTrinityAccess, async (req, res) => {
       points: 60,
       priority: 'high',
       completed: false,
-      actionUrl: '/payroll-setup'
+      actionUrl: '/settings'
     });
     
     // Return all incomplete tasks
@@ -358,10 +359,10 @@ router.get('/tasks', requireAuth, requireTrinityAccess, async (req, res) => {
  * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.post('/advice', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/advice', requireTrinityAccess, async (req, res) => {
   const { context, businessCategory, question } = req.body;
-  const userId = (req as any).user?.id;
-  const workspaceId = (req as any).session?.activeWorkspaceId;
+  const userId = req.user?.id;
+  const workspaceId = req.session?.activeWorkspaceId;
   
   if (!question) {
     return res.status(400).json({ error: 'Question is required' });
@@ -408,12 +409,12 @@ Keep your responses:
  * Get current holiday information for holiday-aware thoughts
  * Wrapped with AI Brain authority chain
  */
-router.get('/holiday', requireAuth, requireTrinityAccess, async (_req, res) => {
+router.get('/holiday', requireTrinityAccess, async (_req, res) => {
   const result = await executeMascotAction('mascot.get_holiday', async () => {
     // CRITICAL: Check AI Brain orchestration state first
     const subagent = getSeasonalSubagent();
     if (subagent.isSeasonalDisabled()) {
-      console.log('[Holiday] Seasonal theming disabled via AI Brain - returning no holiday');
+      log.info('[Holiday] Seasonal theming disabled via AI Brain - returning no holiday');
       return { holiday: null, isHoliday: false };
     }
     
@@ -464,10 +465,10 @@ router.get('/holiday', requireAuth, requireTrinityAccess, async (_req, res) => {
  * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.post('/ask', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/ask', requireTrinityAccess, async (req, res) => {
   const { question, context, businessCategory } = req.body;
-  const userId = (req as any).user?.id;
-  const workspaceId = (req as any).session?.activeWorkspaceId;
+  const userId = req.user?.id;
+  const workspaceId = req.session?.activeWorkspaceId;
   
   if (!question) {
     return res.status(400).json({ error: 'Question is required' });
@@ -515,7 +516,7 @@ Keep your responses:
  * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.post('/business-advisor', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/business-advisor', requireTrinityAccess, async (req, res) => {
   const { 
     businessType, 
     currentChallenges, 
@@ -523,8 +524,8 @@ router.post('/business-advisor', requireAuth, requireTrinityAccess, async (req, 
     metrics,
     requestType = 'insights' // 'insights' | 'thought' | 'actions' | 'full'
   } = req.body;
-  const userId = (req as any).user?.id;
-  const workspaceId = (req as any).session?.activeWorkspaceId;
+  const userId = req.user?.id;
+  const workspaceId = req.session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.business_advisor', async () => {
     // Build context from workspace data
@@ -555,7 +556,7 @@ router.post('/business-advisor', requireAuth, requireTrinityAccess, async (req, 
         businessContext += `\nTeam Size: ${employeeCount[0]?.count || 0} employees`;
         businessContext += `\nRecent Activity: ${shiftCount[0]?.count || 0} shifts in 30 days`;
       } catch (e) {
-        console.log('[BusinessAdvisor] Context gathering error:', e);
+        log.info('[BusinessAdvisor] Context gathering error:', e);
       }
     }
     
@@ -650,7 +651,7 @@ Mode options: ADVISING, THINKING, CELEBRATING, IDLE`;
  * Get emote animation cycle configurations for the mascot
  * Returns full animation sequences with effects, transitions, and timing
  */
-router.get('/emote-cycles', requireAuth, requireTrinityAccess, async (_req, res) => {
+router.get('/emote-cycles', requireTrinityAccess, async (_req, res) => {
   const result = await executeMascotAction('mascot.get_emote_cycles', async () => {
     return {
       cycles: {
@@ -736,9 +737,9 @@ router.get('/emote-cycles', requireAuth, requireTrinityAccess, async (_req, res)
  * Protected - requires authentication
  * Wrapped with AI Brain authority chain
  */
-router.get('/personalized-greeting', requireAuth, requireTrinityAccess, async (req, res) => {
-  const userId = (req as any).user?.id;
-  const workspaceId = (req as any).session?.activeWorkspaceId;
+router.get('/personalized-greeting', requireTrinityAccess, async (req, res) => {
+  const userId = req.user?.id;
+  const workspaceId = req.session?.activeWorkspaceId;
   
   const result = await executeMascotAction('mascot.personalized_greeting', async () => {
     // Gather comprehensive user and org context
@@ -851,7 +852,7 @@ router.get('/personalized-greeting', requireAuth, requireTrinityAccess, async (r
         }
       }
     } catch (e) {
-      console.log('[PersonalizedGreeting] Context gathering error:', e);
+      log.info('[PersonalizedGreeting] Context gathering error:', e);
     }
     
     // Generate AI-powered greeting
@@ -913,7 +914,7 @@ Be concise, friendly, and genuinely helpful.`;
         };
       }
     } catch (e) {
-      console.log('[PersonalizedGreeting] AI generation error:', e);
+      log.info('[PersonalizedGreeting] AI generation error:', e);
     }
     
     // Fallback greeting
@@ -953,9 +954,9 @@ Be concise, friendly, and genuinely helpful.`;
  * Returns actionable insights, trends, and recommendations
  * Protected - requires authentication
  */
-router.get('/org-insights', requireAuth, requireTrinityAccess, async (req, res) => {
-  const userId = (req as any).user?.id;
-  const workspaceId = (req as any).session?.activeWorkspaceId;
+router.get('/org-insights', requireTrinityAccess, async (req, res) => {
+  const userId = req.user?.id;
+  const workspaceId = req.session?.activeWorkspaceId;
   
   if (!workspaceId) {
     return res.status(400).json({ error: 'Workspace context required' });
@@ -1051,9 +1052,9 @@ Provide 3 brief, actionable insights in JSON format:
  * Protected - requires authentication
  * Wrapped with AI Brain authority chain
  */
-router.post('/complete-task', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/complete-task', requireTrinityAccess, async (req, res) => {
   const { taskId } = req.body;
-  const userId = (req as any).user?.id;
+  const userId = req.user?.id;
   
   if (!taskId || !userId) {
     return res.status(400).json({ error: 'Task ID and user ID required' });
@@ -1062,7 +1063,7 @@ router.post('/complete-task', requireAuth, requireTrinityAccess, async (req, res
   const result = await executeMascotAction('mascot.complete_task', async () => {
     // For now, just acknowledge the completion
     // Future: integrate with gamification system
-    console.log(`[Mascot] Task ${taskId} completed by user ${userId}`);
+    log.info(`[Mascot] Task ${taskId} completed by user ${userId}`);
     
     return { success: true, message: 'Task completed!' };
   }, { userId, taskId });
@@ -1084,17 +1085,15 @@ router.post('/complete-task', requireAuth, requireTrinityAccess, async (req, res
  * Protected - requires authentication
  * Wrapped with AI Brain authority chain
  */
-router.get('/preferences', requireAuth, requireTrinityAccess, async (req, res) => {
-  const userId = (req as any).user?.id;
+router.get('/preferences', requireTrinityAccess, async (req, res) => {
+  const userId = req.user?.id;
   
   if (!userId) {
     return res.status(401).json({ error: 'User ID required' });
   }
   
   const result = await executeMascotAction('mascot.get_preferences', async () => {
-    const dbResult = await db.execute(sql`
-      SELECT * FROM user_mascot_preferences WHERE user_id = ${userId}
-    `);
+    const dbResult = await db.select().from(userMascotPreferences).where(eq(userMascotPreferences.userId, userId));
     
     const prefs = dbResult.rows?.[0];
     
@@ -1138,9 +1137,9 @@ router.get('/preferences', requireAuth, requireTrinityAccess, async (req, res) =
  * Update user's mascot preferences
  * Protected - requires authentication
  */
-router.put('/preferences', requireAuth, requireTrinityAccess, async (req, res) => {
+router.put('/preferences', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     const updates = req.body;
     
     if (!userId) {
@@ -1159,27 +1158,30 @@ router.put('/preferences', requireAuth, requireTrinityAccess, async (req, res) =
     const soundEnabled = typeof updates.soundEnabled === 'boolean' ? updates.soundEnabled : null;
     const nickname = typeof updates.nickname === 'string' && updates.nickname.length <= 50 ? updates.nickname : null;
     
-    // Upsert with parameterized values - each field explicitly handled
-    await db.execute(sql`
-      INSERT INTO user_mascot_preferences (user_id, updated_at)
-      VALUES (${userId}, NOW())
-      ON CONFLICT (user_id) DO UPDATE SET
-        position_x = COALESCE(${positionX}, user_mascot_preferences.position_x),
-        position_y = COALESCE(${positionY}, user_mascot_preferences.position_y),
-        is_enabled = COALESCE(${isEnabled}, user_mascot_preferences.is_enabled),
-        is_minimized = COALESCE(${isMinimized}, user_mascot_preferences.is_minimized),
-        preferred_size = COALESCE(${preferredSize}, user_mascot_preferences.preferred_size),
-        roaming_enabled = COALESCE(${roamingEnabled}, user_mascot_preferences.roaming_enabled),
-        react_to_actions = COALESCE(${reactToActions}, user_mascot_preferences.react_to_actions),
-        show_thoughts = COALESCE(${showThoughts}, user_mascot_preferences.show_thoughts),
-        sound_enabled = COALESCE(${soundEnabled}, user_mascot_preferences.sound_enabled),
-        nickname = COALESCE(${nickname}, user_mascot_preferences.nickname),
-        updated_at = NOW()
-    `);
+    // Converted to Drizzle ORM: ON CONFLICT with COALESCE for partial updates
+    await db.insert(userMascotPreferences).values({
+      userId,
+      updatedAt: sql`now()`,
+    }).onConflictDoUpdate({
+      target: userMascotPreferences.userId,
+      set: {
+        positionX: sql`COALESCE(${positionX}, ${userMascotPreferences.positionX})`,
+        positionY: sql`COALESCE(${positionY}, ${userMascotPreferences.positionY})`,
+        isEnabled: sql`COALESCE(${isEnabled}, ${userMascotPreferences.isEnabled})`,
+        isMinimized: sql`COALESCE(${isMinimized}, ${userMascotPreferences.isMinimized})`,
+        preferredSize: sql`COALESCE(${preferredSize}, ${userMascotPreferences.preferredSize})`,
+        roamingEnabled: sql`COALESCE(${roamingEnabled}, ${userMascotPreferences.roamingEnabled})`,
+        reactToActions: sql`COALESCE(${reactToActions}, ${userMascotPreferences.reactToActions})`,
+        showThoughts: sql`COALESCE(${showThoughts}, ${userMascotPreferences.showThoughts})`,
+        soundEnabled: sql`COALESCE(${soundEnabled}, ${userMascotPreferences.soundEnabled})`,
+        nickname: sql`COALESCE(${nickname}, ${userMascotPreferences.nickname})`,
+        updatedAt: sql`now()`,
+      },
+    });
     
     res.json({ success: true, message: 'Preferences updated' });
   } catch (error) {
-    console.error('[Mascot] Error updating preferences:', error);
+    log.error('[Mascot] Error updating preferences:', error);
     res.status(500).json({ error: 'Failed to update preferences' });
   }
 });
@@ -1189,9 +1191,9 @@ router.put('/preferences', requireAuth, requireTrinityAccess, async (req, res) =
  * Update mascot position (separate endpoint for frequent updates)
  * Protected - requires authentication
  */
-router.post('/preferences/position', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/preferences/position', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     const { x, y } = req.body;
     
     if (!userId) {
@@ -1202,20 +1204,26 @@ router.post('/preferences/position', requireAuth, requireTrinityAccess, async (r
       return res.status(400).json({ error: 'Position x and y must be numbers' });
     }
     
-    await db.execute(sql`
-      INSERT INTO user_mascot_preferences (user_id, position_x, position_y, updated_at)
-      VALUES (${userId}, ${Math.round(x)}, ${Math.round(y)}, NOW())
-      ON CONFLICT (user_id) DO UPDATE SET
-        position_x = ${Math.round(x)},
-        position_y = ${Math.round(y)},
-        total_drags = user_mascot_preferences.total_drags + 1,
-        last_interaction_at = NOW(),
-        updated_at = NOW()
-    `);
+    // Converted to Drizzle ORM: ON CONFLICT with self-referencing increment
+    await db.insert(userMascotPreferences).values({
+      userId,
+      positionX: Math.round(x),
+      positionY: Math.round(y),
+      updatedAt: sql`now()`,
+    }).onConflictDoUpdate({
+      target: userMascotPreferences.userId,
+      set: {
+        positionX: Math.round(x),
+        positionY: Math.round(y),
+        totalDrags: sql`${userMascotPreferences.totalDrags} + 1`,
+        lastInteractionAt: sql`now()`,
+        updatedAt: sql`now()`,
+      },
+    });
     
     res.json({ success: true });
   } catch (error) {
-    console.error('[Mascot] Error updating position:', error);
+    log.error('[Mascot] Error updating position:', error);
     res.status(500).json({ error: 'Failed to update position' });
   }
 });
@@ -1225,9 +1233,9 @@ router.post('/preferences/position', requireAuth, requireTrinityAccess, async (r
  * Record a mascot interaction (tap, hover, etc.)
  * Protected - requires authentication
  */
-router.post('/preferences/interaction', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/preferences/interaction', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     const { type } = req.body;
     
     if (!userId) {
@@ -1240,39 +1248,59 @@ router.post('/preferences/interaction', requireAuth, requireTrinityAccess, async
     
     // Use separate parameterized queries for each interaction type
     if (interactionType === 'tap') {
-      await db.execute(sql`
-        INSERT INTO user_mascot_preferences (user_id, total_taps, total_interactions, last_interaction_at, updated_at)
-        VALUES (${userId}, 1, 1, NOW(), NOW())
-        ON CONFLICT (user_id) DO UPDATE SET
-          total_taps = user_mascot_preferences.total_taps + 1,
-          total_interactions = user_mascot_preferences.total_interactions + 1,
-          last_interaction_at = NOW(),
-          updated_at = NOW()
-      `);
+      // Converted to Drizzle ORM: ON CONFLICT with self-referencing increment
+      await db.insert(userMascotPreferences).values({
+        userId,
+        totalTaps: 1,
+        totalInteractions: 1,
+        lastInteractionAt: sql`now()`,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: userMascotPreferences.userId,
+        set: {
+          totalTaps: sql`${userMascotPreferences.totalTaps} + 1`,
+          totalInteractions: sql`${userMascotPreferences.totalInteractions} + 1`,
+          lastInteractionAt: sql`now()`,
+          updatedAt: sql`now()`,
+        },
+      });
     } else if (interactionType === 'drag') {
-      await db.execute(sql`
-        INSERT INTO user_mascot_preferences (user_id, total_drags, total_interactions, last_interaction_at, updated_at)
-        VALUES (${userId}, 1, 1, NOW(), NOW())
-        ON CONFLICT (user_id) DO UPDATE SET
-          total_drags = user_mascot_preferences.total_drags + 1,
-          total_interactions = user_mascot_preferences.total_interactions + 1,
-          last_interaction_at = NOW(),
-          updated_at = NOW()
-      `);
+      // Converted to Drizzle ORM: ON CONFLICT with self-referencing increment
+      await db.insert(userMascotPreferences).values({
+        userId,
+        totalDrags: 1,
+        totalInteractions: 1,
+        lastInteractionAt: sql`now()`,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: userMascotPreferences.userId,
+        set: {
+          totalDrags: sql`${userMascotPreferences.totalDrags} + 1`,
+          totalInteractions: sql`${userMascotPreferences.totalInteractions} + 1`,
+          lastInteractionAt: sql`now()`,
+          updatedAt: sql`now()`,
+        },
+      });
     } else {
-      await db.execute(sql`
-        INSERT INTO user_mascot_preferences (user_id, total_interactions, last_interaction_at, updated_at)
-        VALUES (${userId}, 1, NOW(), NOW())
-        ON CONFLICT (user_id) DO UPDATE SET
-          total_interactions = user_mascot_preferences.total_interactions + 1,
-          last_interaction_at = NOW(),
-          updated_at = NOW()
-      `);
+      // Converted to Drizzle ORM: ON CONFLICT with self-referencing increment
+      await db.insert(userMascotPreferences).values({
+        userId,
+        totalInteractions: 1,
+        lastInteractionAt: sql`now()`,
+        updatedAt: sql`now()`,
+      }).onConflictDoUpdate({
+        target: userMascotPreferences.userId,
+        set: {
+          totalInteractions: sql`${userMascotPreferences.totalInteractions} + 1`,
+          lastInteractionAt: sql`now()`,
+          updatedAt: sql`now()`,
+        },
+      });
     }
     
     res.json({ success: true });
   } catch (error) {
-    console.error('[Mascot] Error recording interaction:', error);
+    log.error('[Mascot] Error recording interaction:', error);
     res.status(500).json({ error: 'Failed to record interaction' });
   }
 });
@@ -1282,21 +1310,19 @@ router.post('/preferences/interaction', requireAuth, requireTrinityAccess, async
  * Delete user's mascot preferences (called on user termination)
  * Protected - requires authentication
  */
-router.delete('/preferences', requireAuth, requireTrinityAccess, async (req, res) => {
+router.delete('/preferences', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     
     if (!userId) {
       return res.status(401).json({ error: 'User ID required' });
     }
     
-    await db.execute(sql`
-      DELETE FROM user_mascot_preferences WHERE user_id = ${userId}
-    `);
+    await db.delete(userMascotPreferences).where(eq(userMascotPreferences.userId, userId));
     
     res.json({ success: true, message: 'Preferences deleted' });
   } catch (error) {
-    console.error('[Mascot] Error deleting preferences:', error);
+    log.error('[Mascot] Error deleting preferences:', error);
     res.status(500).json({ error: 'Failed to delete preferences' });
   }
 });
@@ -1306,18 +1332,27 @@ router.delete('/preferences', requireAuth, requireTrinityAccess, async (req, res
  * Get current seasonal profile with theme, effects, and mascot hints
  * Public endpoint - no auth required for theme detection
  */
+let seasonalCache: { data: any; timestamp: number } | null = null;
+const SEASONAL_CACHE_TTL = 60000; // 60 seconds (seasonal state changes rarely)
+
 router.get('/seasonal/state', async (req, res) => {
   try {
-    const workspaceId = (req as any).session?.activeWorkspaceId || null;
+    const now = Date.now();
+    if (seasonalCache && (now - seasonalCache.timestamp) < SEASONAL_CACHE_TTL) {
+      return res.json(seasonalCache.data);
+    }
+    const workspaceId = req.session?.activeWorkspaceId || null;
     const profile = await generateSeasonalProfile(workspaceId);
     
-    res.json({
+    const responseData = {
       success: true,
       profile,
       timestamp: new Date().toISOString(),
-    });
+    };
+    seasonalCache = { data: responseData, timestamp: now };
+    res.json(responseData);
   } catch (error) {
-    console.error('[Seasonal] Error generating profile:', error);
+    log.error('[Seasonal] Error generating profile:', error);
     res.status(500).json({ 
       error: 'Failed to generate seasonal profile',
       fallback: {
@@ -1333,7 +1368,7 @@ router.get('/seasonal/state', async (req, res) => {
  * Quick check for current season (lightweight, cached)
  * Public endpoint
  */
-router.get('/seasonal/quick', requireAuth, requireTrinityAccess, (req, res) => {
+router.get('/seasonal/quick', requireTrinityAccess, (req, res) => {
   try {
     // Check if seasonal theming is disabled via AI Brain orchestration
     const subagent = getSeasonalSubagent();
@@ -1365,7 +1400,7 @@ router.get('/seasonal/quick', requireAuth, requireTrinityAccess, (req, res) => {
  * Run AI Brain health check on seasonal effects
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/health', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/seasonal/health', requireTrinityAccess, async (req, res) => {
   try {
     const healthCheck = await runSeasonalHealthCheck();
     res.json({
@@ -1373,7 +1408,7 @@ router.get('/seasonal/health', requireAuth, requireTrinityAccess, async (req, re
       ...healthCheck,
     });
   } catch (error) {
-    console.error('[Seasonal] Health check error:', error);
+    log.error('[Seasonal] Health check error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Health check failed',
@@ -1387,7 +1422,7 @@ router.get('/seasonal/health', requireAuth, requireTrinityAccess, async (req, re
  * Generate AI-powered health report
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/health/report', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/seasonal/health/report', requireTrinityAccess, async (req, res) => {
   try {
     const report = await generateAIHealthReport();
     res.json({
@@ -1396,7 +1431,7 @@ router.get('/seasonal/health/report', requireAuth, requireTrinityAccess, async (
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Seasonal] Health report error:', error);
+    log.error('[Seasonal] Health report error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Report generation failed'
@@ -1409,7 +1444,7 @@ router.get('/seasonal/health/report', requireAuth, requireTrinityAccess, async (
  * Execute seasonal command from support console
  * Support staff endpoint - requires auth
  */
-router.post('/seasonal/command', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/seasonal/command', requireTrinityAccess, async (req, res) => {
   try {
     const command = req.body as SeasonalCommand;
     
@@ -1428,7 +1463,7 @@ router.post('/seasonal/command', requireAuth, requireTrinityAccess, async (req, 
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Seasonal] Command error:', error);
+    log.error('[Seasonal] Command error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Command execution failed'
@@ -1441,7 +1476,7 @@ router.post('/seasonal/command', requireAuth, requireTrinityAccess, async (req, 
  * Get current support overrides for seasonal effects
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/overrides', requireAuth, requireTrinityAccess, (req, res) => {
+router.get('/seasonal/overrides', requireTrinityAccess, (req, res) => {
   try {
     const overrides = getSupportOverrides();
     res.json({
@@ -1450,7 +1485,7 @@ router.get('/seasonal/overrides', requireAuth, requireTrinityAccess, (req, res) 
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Seasonal] Get overrides error:', error);
+    log.error('[Seasonal] Get overrides error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to get overrides'
@@ -1463,7 +1498,7 @@ router.get('/seasonal/overrides', requireAuth, requireTrinityAccess, (req, res) 
  * Register a seasonal effect manager (called by frontend components)
  * Public endpoint - called by frontend on component mount
  */
-router.post('/seasonal/managers/register', requireAuth, requireTrinityAccess, (req, res) => {
+router.post('/seasonal/managers/register', requireTrinityAccess, (req, res) => {
   try {
     const { managerId } = req.body;
     
@@ -1481,7 +1516,7 @@ router.post('/seasonal/managers/register', requireAuth, requireTrinityAccess, (r
       activeManagers: getActiveManagers(),
     });
   } catch (error) {
-    console.error('[Seasonal] Register manager error:', error);
+    log.error('[Seasonal] Register manager error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to register manager'
@@ -1494,7 +1529,7 @@ router.post('/seasonal/managers/register', requireAuth, requireTrinityAccess, (r
  * Unregister a seasonal effect manager (called by frontend components)
  * Public endpoint - called by frontend on component unmount
  */
-router.post('/seasonal/managers/unregister', requireAuth, requireTrinityAccess, (req, res) => {
+router.post('/seasonal/managers/unregister', requireTrinityAccess, (req, res) => {
   try {
     const { managerId } = req.body;
     
@@ -1512,7 +1547,7 @@ router.post('/seasonal/managers/unregister', requireAuth, requireTrinityAccess, 
       activeManagers: getActiveManagers(),
     });
   } catch (error) {
-    console.error('[Seasonal] Unregister manager error:', error);
+    log.error('[Seasonal] Unregister manager error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to unregister manager'
@@ -1525,7 +1560,7 @@ router.post('/seasonal/managers/unregister', requireAuth, requireTrinityAccess, 
  * Get list of active seasonal managers
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/managers', requireAuth, requireTrinityAccess, (req, res) => {
+router.get('/seasonal/managers', requireTrinityAccess, (req, res) => {
   try {
     // Check if seasonal theming is disabled via AI Brain orchestration
     const subagent = getSeasonalSubagent();
@@ -1538,7 +1573,7 @@ router.get('/seasonal/managers', requireAuth, requireTrinityAccess, (req, res) =
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Seasonal] Get managers error:', error);
+    log.error('[Seasonal] Get managers error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to get managers'
@@ -1551,7 +1586,7 @@ router.get('/seasonal/managers', requireAuth, requireTrinityAccess, (req, res) =
  * Get AI Brain orchestrated ornament directives for current season
  * Public endpoint - used by frontend ornament scenes
  */
-router.get('/seasonal/ornaments', requireAuth, requireTrinityAccess, (req, res) => {
+router.get('/seasonal/ornaments', requireTrinityAccess, (req, res) => {
   try {
     // Check if seasonal theming is disabled via AI Brain orchestration
     const subagent = getSeasonalSubagent();
@@ -1582,7 +1617,7 @@ router.get('/seasonal/ornaments', requireAuth, requireTrinityAccess, (req, res) 
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Seasonal] Get ornaments error:', error);
+    log.error('[Seasonal] Get ornaments error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to get ornament directives',
@@ -1603,13 +1638,17 @@ router.get('/seasonal/ornaments', requireAuth, requireTrinityAccess, (req, res) 
 // ============================================================================
 
 import { storage } from '../storage';
+import { typedExec, typedQuery } from '../lib/typedSql';
+import { createLogger } from '../lib/logger';
+const log = createLogger('MascotRoutes');
+
 
 /**
  * GET /api/mascot/holiday/directives
  * Get current active holiday directive (motion pattern + decorations)
  * Public endpoint - used by frontend mascot component
  */
-router.get('/holiday/directives', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/holiday/directives', requireTrinityAccess, async (req, res) => {
   try {
     // Check if seasonal theming is disabled via AI Brain orchestration
     const subagent = getSeasonalSubagent();
@@ -1686,7 +1725,7 @@ router.get('/holiday/directives', requireAuth, requireTrinityAccess, async (req,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Holiday Directives] Get directives error:', error);
+    log.error('[Holiday Directives] Get directives error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to get holiday directives'
@@ -1699,7 +1738,7 @@ router.get('/holiday/directives', requireAuth, requireTrinityAccess, async (req,
  * Get all motion profiles available for AI Brain selection
  * Support staff endpoint - requires auth
  */
-router.get('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/holiday/profiles', requireTrinityAccess, async (req, res) => {
   try {
     const profiles = await storage.getAllMascotMotionProfiles();
     const decorations = await storage.getAllHolidayMascotDecor();
@@ -1711,7 +1750,7 @@ router.get('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, r
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Holiday Profiles] Get profiles error:', error);
+    log.error('[Holiday Profiles] Get profiles error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to get profiles'
@@ -1724,7 +1763,7 @@ router.get('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, r
  * Apply a new holiday directive (AI Brain or manual)
  * Support staff endpoint - requires auth
  */
-router.post('/holiday/directives/apply', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/holiday/directives/apply', requireTrinityAccess, async (req, res) => {
   try {
     const { holidayDecorId, motionProfileId, triggeredBy = 'manual' } = req.body;
     
@@ -1771,7 +1810,7 @@ router.post('/holiday/directives/apply', requireAuth, requireTrinityAccess, asyn
       message: 'Holiday directive applied successfully',
     });
   } catch (error) {
-    console.error('[Holiday Directives] Apply directive error:', error);
+    log.error('[Holiday Directives] Apply directive error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to apply holiday directive'
@@ -1784,7 +1823,7 @@ router.post('/holiday/directives/apply', requireAuth, requireTrinityAccess, asyn
  * Create a new motion profile
  * Support staff endpoint - requires auth
  */
-router.post('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/holiday/profiles', requireTrinityAccess, async (req, res) => {
   try {
     const profileData = req.body;
     
@@ -1809,7 +1848,7 @@ router.post('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, 
       message: 'Motion profile created successfully',
     });
   } catch (error) {
-    console.error('[Holiday Profiles] Create profile error:', error);
+    log.error('[Holiday Profiles] Create profile error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to create motion profile'
@@ -1822,7 +1861,7 @@ router.post('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, 
  * Update an existing motion profile
  * Support staff endpoint - requires auth
  */
-router.patch('/holiday/profiles/:id', requireAuth, requireTrinityAccess, async (req, res) => {
+router.patch('/holiday/profiles/:id', requireTrinityAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -1842,7 +1881,7 @@ router.patch('/holiday/profiles/:id', requireAuth, requireTrinityAccess, async (
       message: 'Motion profile updated successfully',
     });
   } catch (error) {
-    console.error('[Holiday Profiles] Update profile error:', error);
+    log.error('[Holiday Profiles] Update profile error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to update motion profile'
@@ -1855,7 +1894,7 @@ router.patch('/holiday/profiles/:id', requireAuth, requireTrinityAccess, async (
  * Create a new holiday decoration config
  * Support staff endpoint - requires auth
  */
-router.post('/holiday/decorations', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/holiday/decorations', requireTrinityAccess, async (req, res) => {
   try {
     const decorData = req.body;
     
@@ -1881,7 +1920,7 @@ router.post('/holiday/decorations', requireAuth, requireTrinityAccess, async (re
       message: 'Holiday decoration created successfully',
     });
   } catch (error) {
-    console.error('[Holiday Decorations] Create decoration error:', error);
+    log.error('[Holiday Decorations] Create decoration error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to create holiday decoration'
@@ -1894,9 +1933,9 @@ router.post('/holiday/decorations', requireAuth, requireTrinityAccess, async (re
  * Get history of directive activations
  * Support staff endpoint - requires auth
  */
-router.get('/holiday/history', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/holiday/history', requireTrinityAccess, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 20), 500);
     const triggeredBy = req.query.triggeredBy as string | undefined;
     
     const history = await storage.getHolidayMascotHistory({ 
@@ -1910,7 +1949,7 @@ router.get('/holiday/history', requireAuth, requireTrinityAccess, async (req, re
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Holiday History] Get history error:', error);
+    log.error('[Holiday History] Get history error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to get history'
@@ -1928,10 +1967,10 @@ router.get('/holiday/history', requireAuth, requireTrinityAccess, async (req, re
  * Create or get active session for current user/workspace
  * Protected - requires authentication
  */
-router.post('/sessions', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/sessions', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });
@@ -1941,7 +1980,8 @@ router.post('/sessions', requireAuth, requireTrinityAccess, async (req, res) => 
     const sessionKey = `${workspaceId}-${userId || 'guest'}-${Date.now()}`;
     
     // Check for existing active session
-    const existingSession = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: ORDER BY | Tables: mascot_sessions | Verified: 2026-03-23
+    const existingSession = await typedQuery(sql`
       SELECT * FROM mascot_sessions 
       WHERE workspace_id = ${workspaceId} 
       AND user_id = ${userId}
@@ -1958,20 +1998,25 @@ router.post('/sessions', requireAuth, requireTrinityAccess, async (req, res) => 
       });
     }
     
-    // Create new session
-    const result = await db.execute(sql`
-      INSERT INTO mascot_sessions (workspace_id, user_id, session_key, user_agent, screen_width, screen_height)
-      VALUES (${workspaceId}, ${userId}, ${sessionKey}, ${userAgent || null}, ${screenWidth || null}, ${screenHeight || null})
-      RETURNING *
-    `);
+    const [newSession] = await db
+      .insert(mascotSessions)
+      .values({
+        workspaceId,
+        userId,
+        sessionKey,
+        userAgent: userAgent || null,
+        screenWidth: screenWidth || null,
+        screenHeight: screenHeight || null,
+      })
+      .returning();
     
     res.json({ 
       success: true, 
-      session: result.rows?.[0],
+      session: newSession,
       isNew: true
     });
   } catch (error) {
-    console.error('[Mascot Sessions] Create session error:', error);
+    log.error('[Mascot Sessions] Create session error:', error);
     res.status(500).json({ error: 'Failed to create session' });
   }
 });
@@ -1981,16 +2026,17 @@ router.post('/sessions', requireAuth, requireTrinityAccess, async (req, res) => 
  * Get current active session for user/workspace
  * Protected - requires authentication
  */
-router.get('/sessions/active', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/sessions/active', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });
     }
     
-    const result = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: ORDER BY | Tables: mascot_sessions | Verified: 2026-03-23
+    const result = await typedQuery(sql`
       SELECT * FROM mascot_sessions 
       WHERE workspace_id = ${workspaceId} 
       AND user_id = ${userId}
@@ -2005,7 +2051,7 @@ router.get('/sessions/active', requireAuth, requireTrinityAccess, async (req, re
     
     res.json({ session: result.rows[0] });
   } catch (error) {
-    console.error('[Mascot Sessions] Get active session error:', error);
+    log.error('[Mascot Sessions] Get active session error:', error);
     res.status(500).json({ error: 'Failed to get session' });
   }
 });
@@ -2015,13 +2061,14 @@ router.get('/sessions/active', requireAuth, requireTrinityAccess, async (req, re
  * Close an active session
  * Protected - requires authentication
  */
-router.patch('/sessions/:id/close', requireAuth, requireTrinityAccess, async (req, res) => {
+router.patch('/sessions/:id/close', requireTrinityAccess, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     
-    await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: IS NULL | Tables: mascot_sessions | Verified: 2026-03-23
+    await typedExec(sql`
       UPDATE mascot_sessions 
       SET is_active = false, ended_at = NOW(), updated_at = NOW()
       WHERE id = ${id} 
@@ -2031,7 +2078,7 @@ router.patch('/sessions/:id/close', requireAuth, requireTrinityAccess, async (re
     
     res.json({ success: true, message: 'Session closed' });
   } catch (error) {
-    console.error('[Mascot Sessions] Close session error:', error);
+    log.error('[Mascot Sessions] Close session error:', error);
     res.status(500).json({ error: 'Failed to close session' });
   }
 });
@@ -2041,10 +2088,10 @@ router.patch('/sessions/:id/close', requireAuth, requireTrinityAccess, async (re
  * Log a mascot interaction with optional AI processing
  * Protected - requires authentication
  */
-router.post('/interactions', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/interactions', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     const { 
       sessionId, 
       source, 
@@ -2089,27 +2136,32 @@ Source: ${source}, Action: ${interactionType}`;
         aiResponseType = source === 'chat' ? 'advice' : 'thought';
         aiTokensUsed = null; // Token usage tracking not available
       } catch (aiError) {
-        console.warn('[Mascot Interactions] AI response failed:', aiError);
+        log.warn('[Mascot Interactions] AI response failed:', aiError);
       }
     }
     
     const processingTimeMs = Date.now() - startTime;
     
-    // Insert interaction
-    const result = await db.execute(sql`
-      INSERT INTO mascot_interactions (
-        session_id, workspace_id, user_id, source, interaction_type,
-        payload, ai_response, ai_response_type, ai_tokens_used,
-        mascot_position_x, mascot_position_y, processing_time_ms
-      ) VALUES (
-        ${sessionId}, ${workspaceId}, ${userId}, ${source}, ${interactionType},
-        ${JSON.stringify(payload) || null}, ${aiResponse}, ${aiResponseType}, ${aiTokensUsed},
-        ${mascotPositionX || null}, ${mascotPositionY || null}, ${processingTimeMs}
-      ) RETURNING *
-    `);
+    const [interactionResult] = await db
+      .insert(mascotInteractions)
+      .values({
+        sessionId,
+        workspaceId,
+        userId,
+        source,
+        interactionType,
+        payload: payload || null,
+        aiResponse,
+        aiResponseType,
+        aiTokensUsed,
+        mascotPositionX: mascotPositionX || null,
+        mascotPositionY: mascotPositionY || null,
+        processingTimeMs,
+      })
+      .returning();
     
-    // Update session stats
-    await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: Column self-referencing arithmetic increments (col = col + N) with conditional expressions | Tables: mascot_sessions | Verified: 2026-03-23
+    await typedExec(sql`
       UPDATE mascot_sessions SET
         total_interactions = total_interactions + 1,
         total_thoughts = total_thoughts + ${aiResponseType === 'thought' ? 1 : 0},
@@ -2120,12 +2172,12 @@ Source: ${source}, Action: ${interactionType}`;
     
     res.json({ 
       success: true, 
-      interaction: result.rows?.[0],
+      interaction: interactionResult,
       aiResponse,
       aiResponseType
     });
   } catch (error) {
-    console.error('[Mascot Interactions] Log interaction error:', error);
+    log.error('[Mascot Interactions] Log interaction error:', error);
     res.status(500).json({ error: 'Failed to log interaction' });
   }
 });
@@ -2135,10 +2187,10 @@ Source: ${source}, Action: ${interactionType}`;
  * Special endpoint for chat observation with AI-powered contextual advice
  * Protected - requires authentication
  */
-router.post('/observe-chat', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/observe-chat', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     const { sessionId, chatMessage, chatContext } = req.body;
     
     if (!workspaceId || !sessionId || !chatMessage) {
@@ -2171,24 +2223,27 @@ ${chatContext ? `Recent chat context: ${chatContext}` : ''}`;
       aiResponse = response.text;
       aiTokensUsed = null; // Token usage tracking not available
     } catch (aiError) {
-      console.warn('[Mascot Chat] AI observation failed:', aiError);
+      log.warn('[Mascot Chat] AI observation failed:', aiError);
     }
     
     const processingTimeMs = Date.now() - startTime;
     
     // Log the interaction
-    await db.execute(sql`
-      INSERT INTO mascot_interactions (
-        session_id, workspace_id, user_id, source, interaction_type,
-        payload, ai_response, ai_response_type, ai_tokens_used, processing_time_ms
-      ) VALUES (
-        ${sessionId}, ${workspaceId}, ${userId}, 'chat', 'observe',
-        ${JSON.stringify({ chatMessage, chatContext })}, ${aiResponse}, 'advice', ${aiTokensUsed}, ${processingTimeMs}
-      )
-    `);
+    await db.insert(mascotInteractions).values({
+      sessionId: sessionId,
+      workspaceId: workspaceId,
+      userId: userId,
+      source: 'chat',
+      interactionType: 'observe',
+      payload: JSON.stringify({ chatMessage, chatContext }),
+      aiResponse: aiResponse,
+      aiResponseType: 'advice',
+      aiTokensUsed: aiTokensUsed,
+      processingTimeMs: processingTimeMs,
+    });
     
-    // Update session
-    await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: Column self-referencing arithmetic increments (col = col + N) with conditional expressions | Tables: mascot_sessions | Verified: 2026-03-23
+    await typedExec(sql`
       UPDATE mascot_sessions SET
         total_interactions = total_interactions + 1,
         total_advice = total_advice + ${aiResponse ? 1 : 0},
@@ -2202,7 +2257,7 @@ ${chatContext ? `Recent chat context: ${chatContext}` : ''}`;
       processingTimeMs
     });
   } catch (error) {
-    console.error('[Mascot Chat] Observe chat error:', error);
+    log.error('[Mascot Chat] Observe chat error:', error);
     res.status(500).json({ error: 'Failed to observe chat' });
   }
 });
@@ -2212,10 +2267,10 @@ ${chatContext ? `Recent chat context: ${chatContext}` : ''}`;
  * Generate AI-powered task list for user
  * Protected - requires authentication
  */
-router.post('/generate-tasks', requireAuth, requireTrinityAccess, async (req, res) => {
+router.post('/generate-tasks', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     const { sessionId, context, currentPage } = req.body;
     
     if (!workspaceId || !sessionId) {
@@ -2250,7 +2305,7 @@ ${context ? `Context: ${context}` : ''}`;
         tasks = JSON.parse(jsonMatch[0]);
       }
     } catch {
-      console.warn('[Mascot Tasks] Failed to parse AI tasks');
+      log.warn('[Mascot Tasks] Failed to parse AI tasks');
       tasks = [
         { title: 'Complete profile setup', description: 'Add your business details', category: 'setup', priority: 'high' },
         { title: 'Add team members', description: 'Invite your first employee', category: 'team', priority: 'medium' }
@@ -2260,24 +2315,27 @@ ${context ? `Context: ${context}` : ''}`;
     // Insert tasks into database
     const insertedTasks = [];
     for (const task of tasks.slice(0, 5)) {
-      const result = await db.execute(sql`
-        INSERT INTO mascot_tasks (
-          session_id, workspace_id, user_id, title, description, 
-          category, priority, action_url, ai_reasoning
-        ) VALUES (
-          ${sessionId}, ${workspaceId}, ${userId}, 
-          ${task.title}, ${task.description || null},
-          ${task.category || 'general'}, ${task.priority || 'medium'},
-          ${task.actionUrl || null}, ${'AI-generated based on user context'}
-        ) RETURNING *
-      `);
-      if (result.rows?.[0]) {
-        insertedTasks.push(result.rows[0]);
+      const [insertedTask] = await db
+        .insert(mascotTasks)
+        .values({
+          sessionId,
+          workspaceId,
+          userId,
+          title: task.title,
+          description: task.description || null,
+          category: task.category || 'general',
+          priority: task.priority || 'medium',
+          actionUrl: task.actionUrl || null,
+          aiReasoning: 'AI-generated based on user context',
+        })
+        .returning();
+      if (insertedTask) {
+        insertedTasks.push(insertedTask);
       }
     }
     
-    // Update session
-    await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: Column self-referencing arithmetic increment (col = col + N) | Tables: mascot_sessions | Verified: 2026-03-23
+    await typedExec(sql`
       UPDATE mascot_sessions SET
         total_tasks_generated = total_tasks_generated + ${insertedTasks.length},
         updated_at = NOW()
@@ -2289,7 +2347,7 @@ ${context ? `Context: ${context}` : ''}`;
       tasks: insertedTasks 
     });
   } catch (error) {
-    console.error('[Mascot Tasks] Generate tasks error:', error);
+    log.error('[Mascot Tasks] Generate tasks error:', error);
     res.status(500).json({ error: 'Failed to generate tasks' });
   }
 });
@@ -2299,10 +2357,10 @@ ${context ? `Context: ${context}` : ''}`;
  * Get user's mascot-generated tasks
  * Protected - requires authentication
  */
-router.get('/generated-tasks', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/generated-tasks', requireTrinityAccess, async (req, res) => {
   try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     const status = req.query.status as string;
     
     if (!workspaceId) {
@@ -2311,7 +2369,8 @@ router.get('/generated-tasks', requireAuth, requireTrinityAccess, async (req, re
     
     let statusFilter = status ? sql`AND status = ${status}` : sql``;
     
-    const result = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: IS NULL | Tables: mascot_tasks | Verified: 2026-03-23
+    const result = await typedQuery(sql`
       SELECT * FROM mascot_tasks
       WHERE workspace_id = ${workspaceId}
       AND (user_id = ${userId} OR user_id IS NULL)
@@ -2322,7 +2381,7 @@ router.get('/generated-tasks', requireAuth, requireTrinityAccess, async (req, re
     
     res.json({ tasks: result.rows || [] });
   } catch (error) {
-    console.error('[Mascot Tasks] Get tasks error:', error);
+    log.error('[Mascot Tasks] Get tasks error:', error);
     res.status(500).json({ error: 'Failed to get tasks' });
   }
 });
@@ -2332,12 +2391,12 @@ router.get('/generated-tasks', requireAuth, requireTrinityAccess, async (req, re
  * Update task status
  * Protected - requires authentication
  */
-router.patch('/tasks/:id/status', requireAuth, requireTrinityAccess, async (req, res) => {
+router.patch('/tasks/:id/status', requireTrinityAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const userId = req.user?.id;
+    const workspaceId = req.session?.activeWorkspaceId;
     
     const validStatuses = ['pending', 'in_progress', 'completed', 'dismissed'];
     if (!validStatuses.includes(status)) {
@@ -2346,7 +2405,8 @@ router.patch('/tasks/:id/status', requireAuth, requireTrinityAccess, async (req,
     
     const completedAt = status === 'completed' ? sql`NOW()` : sql`NULL`;
     
-    await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: IS NULL | Tables: mascot_tasks | Verified: 2026-03-23
+    await typedExec(sql`
       UPDATE mascot_tasks SET
         status = ${status},
         completed_at = ${completedAt},
@@ -2358,7 +2418,7 @@ router.patch('/tasks/:id/status', requireAuth, requireTrinityAccess, async (req,
     
     res.json({ success: true });
   } catch (error) {
-    console.error('[Mascot Tasks] Update status error:', error);
+    log.error('[Mascot Tasks] Update status error:', error);
     res.status(500).json({ error: 'Failed to update task' });
   }
 });
@@ -2372,9 +2432,9 @@ router.patch('/tasks/:id/status', requireAuth, requireTrinityAccess, async (req,
  * Query mascot sessions - for support staff and AI Brain
  * Protected - requires staff role
  */
-router.get('/sessions/query', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/sessions/query', requireTrinityAccess, async (req, res) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
     if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
@@ -2393,25 +2453,28 @@ router.get('/sessions/query', requireAuth, requireTrinityAccess, async (req, res
       ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
       : sql``;
     
-    const result = await db.execute(sql`
-      SELECT s.*, 
-        u.full_name as user_name,
-        w.name as workspace_name
-      FROM mascot_sessions s
-      LEFT JOIN users u ON s.user_id = u.id
-      LEFT JOIN workspaces w ON s.workspace_id = w.id
-      ${whereClause}
-      ORDER BY s.started_at DESC
-      LIMIT ${Number(limit)}
-    `);
+    // Converted to Drizzle ORM: LEFT JOIN → db.leftJoin()
+    const sessionsRows = await db.select({
+      id: mascotSessions.id,
+      startedAt: mascotSessions.startedAt,
+      totalInteractions: mascotSessions.totalInteractions,
+      userName: users.fullName,
+      workspaceName: workspaces.name
+    })
+      .from(mascotSessions)
+      .leftJoin(users, eq(mascotSessions.userId, users.id))
+      .leftJoin(workspaces, eq(mascotSessions.workspaceId, workspaces.id))
+      .where(whereClause)
+      .orderBy(desc(mascotSessions.startedAt))
+      .limit(Math.min(Math.max(Number(limit) || 50, 1), 500));
     
     res.json({ 
       success: true,
-      sessions: result.rows || [],
-      count: result.rows?.length || 0
+      sessions: sessionsRows,
+      count: sessionsRows.length
     });
   } catch (error) {
-    console.error('[Mascot Sessions] Query sessions error:', error);
+    log.error('[Mascot Sessions] Query sessions error:', error);
     res.status(500).json({ error: 'Failed to query sessions' });
   }
 });
@@ -2421,9 +2484,9 @@ router.get('/sessions/query', requireAuth, requireTrinityAccess, async (req, res
  * Get all interactions for a session - for support staff
  * Protected - requires staff role
  */
-router.get('/sessions/:id/interactions', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/sessions/:id/interactions', requireTrinityAccess, async (req, res) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
     if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
@@ -2431,9 +2494,10 @@ router.get('/sessions/:id/interactions', requireAuth, requireTrinityAccess, asyn
     }
     
     const { id } = req.params;
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 100), 500);
     
-    const result = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: ORDER BY | Tables: mascot_interactions | Verified: 2026-03-23
+    const result = await typedQuery(sql`
       SELECT * FROM mascot_interactions
       WHERE session_id = ${id}
       ORDER BY created_at DESC
@@ -2445,7 +2509,7 @@ router.get('/sessions/:id/interactions', requireAuth, requireTrinityAccess, asyn
       interactions: result.rows || [] 
     });
   } catch (error) {
-    console.error('[Mascot Sessions] Get interactions error:', error);
+    log.error('[Mascot Sessions] Get interactions error:', error);
     res.status(500).json({ error: 'Failed to get interactions' });
   }
 });
@@ -2455,9 +2519,9 @@ router.get('/sessions/:id/interactions', requireAuth, requireTrinityAccess, asyn
  * Get mascot usage analytics - for support staff and AI Brain
  * Protected - requires staff role
  */
-router.get('/analytics', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/analytics', requireTrinityAccess, async (req, res) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
     
     if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
@@ -2470,7 +2534,8 @@ router.get('/analytics', requireAuth, requireTrinityAccess, async (req, res) => 
     
     const workspaceFilter = workspaceId ? sql`AND workspace_id = ${workspaceId}` : sql``;
     
-    const sessionStats = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: Count( | Tables: mascot_sessions | Verified: 2026-03-23
+    const sessionStats = await typedQuery(sql`
       SELECT 
         COUNT(*) as total_sessions,
         SUM(total_interactions) as total_interactions,
@@ -2484,7 +2549,8 @@ router.get('/analytics', requireAuth, requireTrinityAccess, async (req, res) => 
       ${workspaceFilter}
     `);
     
-    const interactionBreakdown = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: mascot_interactions | Verified: 2026-03-23
+    const interactionBreakdown = await typedQuery(sql`
       SELECT 
         source,
         interaction_type,
@@ -2499,11 +2565,11 @@ router.get('/analytics', requireAuth, requireTrinityAccess, async (req, res) => 
     res.json({
       success: true,
       period: { days: Number(days), startDate: startDate.toISOString() },
-      summary: sessionStats.rows?.[0] || {},
-      interactionBreakdown: interactionBreakdown.rows || []
+      summary: sessionStats[0] || {},
+      interactionBreakdown: interactionBreakdown || []
     });
   } catch (error) {
-    console.error('[Mascot Analytics] Get analytics error:', error);
+    log.error('[Mascot Analytics] Get analytics error:', error);
     res.status(500).json({ error: 'Failed to get analytics' });
   }
 });

@@ -1,4 +1,6 @@
+import { secureFetch } from "@/lib/csrf";
 import { useState, useEffect } from "react";
+import { SEO, PAGE_SEO } from '@/components/seo';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,16 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useTransition } from "@/contexts/transition-context";
 import { UniversalWelcomeNotification } from "@/components/universal-welcome-notification";
-import { Loader2, Eye, EyeOff, Check } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
-import { queryClient } from "@/lib/queryClient";
-import { THEME } from "@/config/theme";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { LoginLogo } from "@/components/unified-brand-logo";
-import { useUniversalAnimation } from "@/contexts/universal-animation-context";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
+import { useTransitionLoader, startLoginTransition } from "@/components/canvas-hub";
+import { CanvasHubPage, PAGE_CONFIGS } from "@/components/canvas-hub/CanvasHubRegistry";
+import { useAuth } from "@/hooks/useAuth";
 
 const REMEMBER_ME_KEY = "coaileague_remember_me";
 
@@ -41,25 +43,31 @@ interface LoginResponse {
   };
 }
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      div: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
-    }
-  }
-}
-
 export default function CustomLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const transition = useTransition();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [loginData, setLoginData] = useState<LoginResponse["user"] | null>(null);
   const [loadingDuration, setLoadingDuration] = useState(0);
-  const animationContext = useUniversalAnimation();
+  const [devLoginEnabled, setDevLoginEnabled] = useState(false);
+  const transitionLoader = useTransitionLoader();
   const { executeRecaptcha } = useRecaptcha({ action: 'login' });
+
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      setLocation("/dashboard");
+    }
+  }, [isAuthenticated, authLoading, setLocation]);
+
+  useEffect(() => {
+    fetch("/api/auth/capabilities")
+      .then((r) => r.json())
+      .then((data) => setDevLoginEnabled(!!data?.devLoginEnabled))
+      .catch(() => setDevLoginEnabled(false));
+  }, []);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -70,15 +78,15 @@ export default function CustomLogin() {
     },
   });
 
-  // Load saved credentials on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(REMEMBER_ME_KEY);
       if (saved) {
-        const { email, password } = JSON.parse(saved);
-        if (email) form.setValue("email", email);
-        if (password) form.setValue("password", password);
-        form.setValue("rememberMe", true);
+        const parsed = JSON.parse(saved);
+        if (parsed?.email) {
+          form.setValue("email", parsed.email);
+          form.setValue("rememberMe", true);
+        }
       }
     } catch (e) {
       // Ignore parse errors
@@ -88,23 +96,15 @@ export default function CustomLogin() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     const startTime = Date.now();
-
-    // Show login animation (10 seconds for users to enjoy Trinity loader)
-    if (animationContext?.show) {
-      animationContext.show({
-        mode: 'search',
-        mainText: 'Verifying',
-        subText: 'Authenticating your credentials...',
-        duration: 10000,
-        source: 'system'
-      });
-    }
+    const authTransition = startLoginTransition(transitionLoader);
 
     try {
-      // Get reCAPTCHA token (invisible, runs in background)
+      authTransition?.setProgress(15);
       const recaptchaToken = await executeRecaptcha();
-      
-      const response = await fetch("/api/auth/login", {
+      authTransition?.setProgress(25);
+      authTransition?.updateMessage('Signing In', 'Authenticating...');
+
+      const response = await secureFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, recaptchaToken }),
@@ -113,19 +113,19 @@ export default function CustomLogin() {
       const endTime = Date.now();
       const duration = endTime - startTime;
       setLoadingDuration(duration);
+      authTransition?.setProgress(50);
 
       const result = await response.json();
 
       if (!response.ok) {
-        // Handle special case for OAuth-only accounts needing password reset
         if (result.needsPasswordReset) {
+          authTransition?.cancel();
           toast({
             title: "Password Required",
             description: "This account was created via Replit login. Please reset your password to sign in with email.",
             variant: "destructive",
             duration: 8000,
           });
-          // Redirect to forgot password page
           setTimeout(() => {
             setLocation("/forgot-password");
           }, 2000);
@@ -134,80 +134,56 @@ export default function CustomLogin() {
         throw new Error(result.message || "Login failed");
       }
 
-      // Update animation to success
-      if (animationContext?.update) {
-        animationContext.update({
-          mode: 'success',
-          mainText: 'Welcome!',
-          subText: `Welcome back, ${result.user.firstName || 'friend'}`,
-        });
-      }
+      authTransition?.setProgress(65);
+      authTransition?.updateMessage('Welcome!', `Welcome back, ${result.user.firstName || 'friend'}`);
 
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-
-      // Save or clear Remember Me credentials
       if (data.rememberMe) {
-        localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({ email: data.email, password: data.password }));
+        localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({ email: data.email }));
       } else {
         localStorage.removeItem(REMEMBER_ME_KEY);
       }
 
-      // Check subscription status before proceeding
+      let redirectTo = result.user.currentWorkspaceId ? "/dashboard" : "/onboarding/start";
+
       try {
-        const authCheck = await fetch("/api/auth/me", { credentials: "include" });
-        console.log("[Login] Auth check status:", authCheck.status);
+        const authCheck = await secureFetch("/api/auth/me", { credentials: "include" });
         if (authCheck.status === 402) {
           const paymentData = await authCheck.json();
-          console.log("[Login] Payment data:", paymentData);
           if (paymentData.code === 'PAYMENT_REQUIRED' && paymentData.isOwner) {
-            // Org owner with payment issue - redirect to org management
-            if (animationContext?.hide) {
-              animationContext.hide();
-            }
+            authTransition?.cancel();
             toast({
               title: "Payment Required",
               description: `Your organization subscription needs renewal.`,
               variant: "destructive",
               duration: 5000,
             });
-            // Use window.location for more reliable redirect
             setIsLoading(false);
-            window.location.href = paymentData.redirectTo || "/org-management";
+            const paymentRedirect = paymentData.redirectTo || "/org-management";
+            const isInternalRedirect = paymentRedirect.startsWith('/') && !paymentRedirect.startsWith('//');
+            window.location.href = isInternalRedirect ? paymentRedirect : "/org-management";
             return;
           }
         }
       } catch (e) {
         console.error("[Login] Auth check error:", e);
-        // Continue with normal flow if check fails
       }
 
-      // Show personalized welcome notification with actual loading duration
+      authTransition?.setProgress(75);
+      sessionStorage.setItem('coaileague_post_login_redirect', redirectTo);
       setLoginData(result.user);
       setShowWelcome(true);
+      authTransition?.setProgress(85);
 
-      // Determine redirect destination based on workspace status
-      // Users without a workspace need to choose: create org or join with invite
-      const redirectTo = result.user.currentWorkspaceId ? "/dashboard" : "/onboarding/start";
-
-      // Hide animation and redirect after welcome notification completes (10 seconds for users to enjoy)
-      setTimeout(() => {
-        if (animationContext?.hide) {
-          animationContext.hide();
-        }
-        setLocation(redirectTo);
-      }, 10000);
-    } catch (error: any) {
-      // Show error animation
-      if (animationContext?.show) {
-        animationContext.show({
-          mode: 'error',
-          mainText: 'Login Failed',
-          subText: error.message || "Invalid email or password",
-          duration: 2000,
-          source: 'system'
-        });
+      if (authTransition) {
+        await authTransition.complete();
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      sessionStorage.removeItem('coaileague_post_login_redirect');
+      setLocation(redirectTo);
+
+    } catch (error: any) {
+      transitionLoader.cancel();
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
@@ -218,8 +194,19 @@ export default function CustomLogin() {
     }
   };
 
+  const loginDemo = async () => {
+    form.setValue("email", "owner@acme-security.test");
+    form.setValue("password", "admin123");
+    await form.handleSubmit(onSubmit)();
+  };
+
   return (
     <>
+      <SEO
+        title={PAGE_SEO.login.title}
+        description={PAGE_SEO.login.description}
+        noindex={true}
+      />
       {showWelcome && loginData && (
         <UniversalWelcomeNotification
           firstName={loginData.firstName}
@@ -232,11 +219,10 @@ export default function CustomLogin() {
         />
       )}
 
-      <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: THEME.pages.login.background }}>
-        {/* Header */}
-        <div className="border-b" style={{ background: THEME.pages.login.header.bg, borderColor: THEME.pages.login.header.borderColor }}>
-          <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-5 flex items-center justify-between gap-2">
-            <button 
+      <CanvasHubPage config={PAGE_CONFIGS.login}>
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center justify-between gap-2">
+            <button
               onClick={() => setLocation("/")}
               className="hover-elevate transition-all shrink-0"
               data-testid="button-logo-login"
@@ -245,278 +231,237 @@ export default function CustomLogin() {
             </button>
             <button
               onClick={() => setLocation("/")}
-              className="text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] px-3 flex items-center"
-              style={{ color: THEME.colors.primary.light }}
+              className="text-xs font-medium transition-colors text-primary"
               data-testid="link-back-landing"
             >
               Back to Home
             </button>
           </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center p-3 sm:p-6">
-          <div 
-            className="w-full animate-[fadeInUp_0.6s_ease]"
-            style={{
-              maxWidth: THEME.pages.login.card.maxWidth,
-              animation: 'fadeInUp 0.6s ease'
-            }}
-          >
-            {/* White Login Card */}
-            <div 
-              className="rounded-lg max-sm:p-6"
-              style={{
-                background: THEME.pages.login.card.bg,
-                padding: '1.25rem', // Tighter padding p-5 equivalent
-                borderRadius: '0.5rem', // rounded-lg equivalent
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' // shadow-md equivalent
-              }}
-            >
-          {/* Login Header - Minimal */}
-          <div className="text-center mb-5">
-            <h1 className="font-semibold mb-1" style={{ 
-              fontSize: THEME.pages.login.heading.fontSize,
-              fontWeight: THEME.pages.login.heading.fontWeight,
-              color: THEME.pages.login.heading.color
-            }}>
-              Sign In
-            </h1>
-            <p style={{ 
-              fontSize: THEME.pages.login.subheading.fontSize,
-              color: THEME.pages.login.subheading.color
-            }}>
-              Access your workspace
-            </p>
-          </div>
+          <div className="rounded-md bg-card text-card-foreground border border-border/50 p-5">
+            <div className="text-center mb-5">
+              <h1 className="text-lg font-semibold mb-1 text-foreground" data-testid="text-sign-in-heading">
+                Sign In
+              </h1>
+              <p className="text-xs text-muted-foreground" data-testid="text-sign-in-subtitle">
+                Access your workspace
+              </p>
+            </div>
 
-          {/* Login Form */}
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} style={{ gap: THEME.pages.login.spacing.formGap }} className="flex flex-col">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel style={{
-                      fontSize: THEME.pages.login.label.fontSize,
-                      fontWeight: THEME.pages.login.label.fontWeight,
-                      textTransform: THEME.pages.login.label.textTransform as any,
-                      color: THEME.pages.login.label.color,
-                      letterSpacing: THEME.pages.login.label.letterSpacing,
-                      marginBottom: '4px',
-                      display: 'block'
-                    }}>
-                      Email
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="you@company.com"
-                        disabled={isLoading}
-                        data-testid="input-email"
-                        className="!w-full border transition-all"
-                        style={{
-                          height: THEME.pages.login.input.height,
-                          fontSize: THEME.pages.login.input.fontSize,
-                          padding: THEME.pages.login.input.padding,
-                          background: THEME.pages.login.input.bg,
-                          borderColor: THEME.pages.login.input.borderColor,
-                          color: THEME.pages.login.input.color,
-                          borderRadius: THEME.pages.login.input.borderRadius,
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel style={{
-                      fontSize: THEME.pages.login.label.fontSize,
-                      fontWeight: THEME.pages.login.label.fontWeight,
-                      textTransform: THEME.pages.login.label.textTransform as any,
-                      color: THEME.pages.login.label.color,
-                      letterSpacing: THEME.pages.login.label.letterSpacing,
-                      marginBottom: '4px',
-                      display: 'block'
-                    }}>
-                      Password
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter password"
-                          disabled={isLoading}
-                          data-testid="input-password"
-                          className="!w-full border transition-all"
-                          style={{
-                            height: THEME.pages.login.input.height,
-                            fontSize: THEME.pages.login.input.fontSize,
-                            padding: THEME.pages.login.input.padding,
-                            paddingRight: '32px',
-                            background: THEME.pages.login.input.bg,
-                            borderColor: THEME.pages.login.input.borderColor,
-                            color: THEME.pages.login.input.color,
-                            borderRadius: THEME.pages.login.input.borderRadius,
-                            boxSizing: 'border-box'
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                          style={{ color: '#94a3b8' }}
-                          onClick={() => setShowPassword(!showPassword)}
-                          data-testid="button-toggle-password"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Remember Me & Forgot Password Row */}
-              <div className="flex items-center justify-between" style={{ marginTop: '-4px' }}>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3" aria-label="Login form">
                 <FormField
                   control={form.control}
-                  name="rememberMe"
+                  name="email"
                   render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormItem>
+                      <FormLabel htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
+                        Email
+                      </FormLabel>
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+                        <Input
+                          {...field}
+                          id="email"
+                          type="email"
+                          placeholder="you@company.com"
                           disabled={isLoading}
-                          data-testid="checkbox-remember-me"
+                          data-testid="input-email"
+                          aria-label="Email address"
+                          aria-required="true"
+                          className="h-8 text-xs"
                         />
                       </FormControl>
-                      <FormLabel 
-                        className="cursor-pointer font-normal"
-                        style={{ 
-                          fontSize: THEME.pages.login.link.fontSize,
-                          color: THEME.pages.login.subheading.color
-                        }}
-                      >
-                        Remember me
-                      </FormLabel>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
-                <button
-                  type="button"
-                  onClick={() => setLocation("/forgot-password")}
-                  className="font-medium transition-colors"
-                  style={{ 
-                    fontSize: THEME.pages.login.link.fontSize,
-                    color: THEME.pages.login.link.color
-                  }}
-                  data-testid="link-forgot-password"
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="password" data-testid="label-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
+                        Password
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter password"
+                            disabled={isLoading}
+                            data-testid="input-password"
+                            aria-label="Password"
+                            aria-required="true"
+                            className="h-8 text-xs pr-8"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors text-muted-foreground hover:text-foreground"
+                            onClick={() => setShowPassword(!showPassword)}
+                            data-testid="button-toggle-password"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex items-center justify-between gap-2 -mt-1 flex-wrap">
+                  <FormField
+                    control={form.control}
+                    name="rememberMe"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            id="rememberMe"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isLoading}
+                            data-testid="checkbox-remember-me"
+                          />
+                        </FormControl>
+                        <FormLabel htmlFor="rememberMe" className="cursor-pointer font-normal text-xs text-muted-foreground">
+                          Remember me
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/forgot-password")}
+                    className="font-medium transition-colors text-xs text-primary hover:text-primary/80"
+                    data-testid="link-forgot-password"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full mt-2"
+                  data-testid="button-login"
                 >
-                  Forgot password?
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Signing in...
+                    </span>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="flex items-center gap-3 my-3">
+              <div className="flex-1 border-t border-border"></div>
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="flex-1 border-t border-border"></div>
+            </div>
+
+            <div className="text-center mb-4">
+              <p className="text-xs text-muted-foreground">
+                Don't have an account?{" "}
+                <button
+                  onClick={() => setLocation("/register")}
+                  className="font-semibold transition-colors text-primary hover:text-primary/80"
+                  data-testid="link-register"
+                >
+                  Create one
+                </button>
+              </p>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={loginDemo}
+              disabled={isLoading}
+              className="w-full text-xs"
+              data-testid="button-demo"
+            >
+              {isLoading ? "Loading demo..." : "Try Demo Account"}
+            </Button>
+
+            {devLoginEnabled && (
+              <div className="flex flex-col gap-2 mt-2">
+                <button
+                  onClick={async () => {
+                    setIsLoading(true);
+                    const devTransition = startLoginTransition(transitionLoader);
+                    try {
+                      devTransition?.setProgress(20);
+                      devTransition?.updateMessage('Signing In', 'Dev bypass login...');
+                      const res = await apiRequest("GET", "/api/auth/dev-login");
+                      const result = await res.json();
+                      devTransition?.setProgress(50);
+                      devTransition?.setProgress(75);
+                      devTransition?.updateMessage('Welcome!', `Welcome back, ${result.user?.firstName || 'Owner'}`);
+                      sessionStorage.setItem('coaileague_post_login_redirect', '/dashboard');
+                      setLoginData(result.user);
+                      setShowWelcome(true);
+                      if (devTransition) await devTransition.complete();
+                      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                      sessionStorage.removeItem('coaileague_post_login_redirect');
+                      setLocation("/dashboard");
+                    } catch (e: any) {
+                      devTransition?.cancel();
+                      toast({ title: "Dev login failed", description: e.message, variant: "destructive" });
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="w-full rounded-md text-xs font-semibold transition-all border-2 border-dashed h-8 text-green-600 dark:text-green-400 border-green-500 dark:border-green-400 bg-green-500/10 dark:bg-green-400/10"
+                  data-testid="button-dev-login"
+                >
+                  {isLoading ? "Logging in..." : "Dev Bypass \u2192 ACME Security Owner"}
+                </button>
+                <button
+                  onClick={async () => {
+                    setIsLoading(true);
+                    const devTransition = startLoginTransition(transitionLoader);
+                    try {
+                      devTransition?.setProgress(20);
+                      devTransition?.updateMessage('Signing In', 'Dev bypass login...');
+                      const res = await apiRequest("GET", "/api/auth/dev-login-root");
+                      const result = await res.json();
+                      devTransition?.setProgress(50);
+                      devTransition?.setProgress(75);
+                      devTransition?.updateMessage('Welcome!', `Welcome back, ${result.user?.firstName || 'Admin'}`);
+                      sessionStorage.setItem('coaileague_post_login_redirect', '/dashboard');
+                      setLoginData(result.user);
+                      setShowWelcome(true);
+                      if (devTransition) await devTransition.complete();
+                      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                      sessionStorage.removeItem('coaileague_post_login_redirect');
+                      setLocation("/dashboard");
+                    } catch (e: any) {
+                      devTransition?.cancel();
+                      toast({ title: "Dev login failed", description: e.message, variant: "destructive" });
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="w-full rounded-md text-xs font-semibold transition-all border-2 border-dashed h-8 text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-400 bg-amber-500/10 dark:bg-amber-400/10"
+                  data-testid="button-dev-login-root"
+                >
+                  {isLoading ? "Logging in..." : "Dev Bypass \u2192 Root Admin (Support Staff)"}
                 </button>
               </div>
-
-              {/* Sign In Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full text-white font-semibold transition-all duration-300 disabled:opacity-70"
-                style={{
-                  height: THEME.pages.login.button.height,
-                  fontSize: THEME.pages.login.button.fontSize,
-                  padding: THEME.pages.login.button.padding,
-                  marginTop: THEME.pages.login.spacing.buttonTop,
-                  background: THEME.pages.login.button.gradient,
-                  boxShadow: THEME.pages.login.button.shadow,
-                  borderRadius: THEME.pages.login.button.borderRadius,
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  border: 'none'
-                }}
-                data-testid="button-login"
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Signing in...
-                  </span>
-                ) : (
-                  "Sign In"
-                )}
-              </button>
-            </form>
-          </Form>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3" style={{ margin: THEME.pages.login.spacing.dividerMargin }}>
-            <div className="flex-1" style={{ borderTop: `1px solid ${THEME.colors.border.primary}` }}></div>
-            <span style={{ 
-              fontSize: THEME.pages.login.label.fontSize,
-              color: THEME.colors.text.muted
-            }}>or</span>
-            <div className="flex-1" style={{ borderTop: `1px solid ${THEME.colors.border.primary}` }}></div>
-          </div>
-
-          {/* Footer Links */}
-          <div className="text-center mb-4">
-            <p style={{ 
-              fontSize: THEME.pages.login.subheading.fontSize,
-              color: THEME.colors.text.placeholder
-            }}>
-              Don't have an account?{" "}
-              <button
-                onClick={() => setLocation("/register")}
-                className="font-semibold transition-colors"
-                style={{ color: THEME.colors.primary.light }}
-                data-testid="link-register"
-              >
-                Create one
-              </button>
-            </p>
-          </div>
-
-          {/* Demo Section */}
-          <button
-            onClick={() => window.location.href = "/api/demo-login"}
-            className="w-full rounded text-xs font-medium transition-all border"
-            style={{
-              height: THEME.pages.login.input.height,
-              color: THEME.colors.primary.light,
-              borderColor: THEME.colors.border.primary,
-              background: THEME.pages.login.input.bg
-            }}
-            data-testid="button-demo"
-          >
-            Try Demo Account
-          </button>
-            </div>
+            )}
           </div>
         </div>
-      </div>
-
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+      </CanvasHubPage>
     </>
   );
 }

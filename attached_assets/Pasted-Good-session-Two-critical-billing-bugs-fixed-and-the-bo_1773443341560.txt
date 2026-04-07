@@ -1,0 +1,267 @@
+Good session. Two critical billing bugs fixed and the bot system confirmed complete. Here is the full picture and what comes next.
+
+**What just got fixed:**
+
+The Statewide billing confusion was real. The platform had confused two completely separate things — CoAIleague never charging Statewide platform fees (correct, keep forever) versus Statewide's own clients' overdue invoices never getting collection emails (wrong, money left on the table). Your clients could have gone 30+ days unpaid with zero reminders firing. Fixed. Your platform access stays free. Your clients now get chased like everyone else's.
+
+**Bot system confirmed complete.** ReportBot, HelpAI, ClockBot, MeetingBot — all 9 simulation scenarios passing. Already built and wired.
+
+---
+
+Now for the workflow gaps in billing, invoices, and payroll automations. Copy everything below this line:
+
+---
+
+COAILEAGUE — BILLING INVOICE PAYROLL WORKFLOW COMPLETENESS AUDIT
+Read everything before touching anything. The question is not whether
+the code exists — it is whether the automation actually closes the loop
+without requiring manual intervention at any step. Find every place
+a human has to do something the system should do automatically.
+Report all gaps before fixing anything.
+
+---
+
+AUDIT 1 — INVOICE LIFECYCLE AUTOMATION
+
+Trace every invoice from creation to closed. Find every step that is manual
+when it should be automatic.
+
+INVOICE AUTO-GENERATION:
+Does invoice generation trigger automatically at the end of each client's billing cycle
+or does the org_owner have to manually click generate?
+If manual: build the automation. At the end of each client's configured billing cycle
+the system should automatically generate a draft invoice, notify the org_owner
+for review, and send it on approval or after a 24-hour review window if no action.
+The org_owner must be able to configure auto-send or review-before-send per client.
+Read the billing cycle cron job if one exists. Report what it actually does.
+
+INVOICE APPROVAL WORKFLOW:
+When an invoice is generated in draft status what happens next?
+Is the org_owner notified to review it?
+Is there a review deadline after which it auto-sends or expires?
+Can the org_owner edit line items before sending?
+Can the org_owner add a custom note to the client?
+Report the exact current flow from draft to sent.
+
+INVOICE SEQUENCE AND NUMBERING:
+Are invoice numbers sequential and gap-free?
+If invoice 1042 is voided does the next invoice become 1043 or does it skip?
+Gaps in invoice numbering are an accounting red flag.
+Confirm the numbering system and report it.
+
+INVOICE AGING REPORT:
+Does the platform generate an invoice aging report showing:
+Current (0-30 days), 31-60 days, 61-90 days, 90+ days buckets?
+This is the most important accounts receivable report for a security company.
+If it does not exist build it as a Trinity-accessible report and a dashboard widget.
+
+INVOICE VOID AND CREDIT MEMO:
+Can an org_owner void an invoice that was sent in error?
+When voided is a credit memo generated for the client?
+Does the voided invoice remain in the ledger as voided — never deleted?
+Can a new corrected invoice be generated after voiding?
+Report the exact current behavior.
+
+RECURRING INVOICE LOGIC:
+For clients on long-term contracts does the platform support recurring invoices?
+The billing should auto-repeat each cycle without the org_owner regenerating manually.
+If recurring billing is not fully automated build it:
+At cycle end generate draft, notify org_owner, auto-send after review window.
+
+---
+
+AUDIT 2 — PAYROLL WORKFLOW AUTOMATION
+
+Trace every payroll run from period close to employee notification.
+
+PAYROLL PERIOD AUTO-CLOSE:
+When a pay period ends does the system automatically:
+Lock the time entries for that period from further editing?
+Generate the payroll draft for org_owner review?
+Notify the org_owner that payroll is ready to review?
+Or does the org_owner have to manually initiate the payroll run?
+Report exactly what happens at pay period end with no human action.
+
+TIMESHEET SUBMISSION REMINDER:
+If an employee has not submitted their timesheet 24 hours before the pay period closes
+does Trinity automatically send them a reminder?
+If not build it: daily scan at noon checks for unsubmitted timesheets due within 24 hours
+and sends a reminder to each employee with a direct link to submit.
+
+TIMESHEET APPROVAL REMINDER:
+If a manager has pending timesheets that have not been approved 24 hours before
+payroll needs to run does Trinity automatically alert the manager?
+If not build it: same daily scan alerts managers with a count of pending approvals
+and a direct link to the approval queue.
+
+PAYROLL CALCULATION AUDIT TRAIL:
+After a payroll run is approved and processed confirm:
+A detailed calculation record exists for every employee showing:
+Regular hours, overtime hours if applicable, gross pay, each deduction line,
+net pay, and the pay rate used.
+This record must be immutable after approval — WORM locked.
+If the calculation record does not exist at this level of detail build it.
+The org_owner must be able to explain exactly how any employee's check was calculated.
+
+PAYROLL EXPORT:
+Can the org_owner export payroll data for use with their accountant or bank?
+Required export formats:
+CSV with employee name, ID, gross pay, deductions, net pay per run.
+PDF summary report of the full payroll run.
+If these exports do not exist build them.
+
+DIRECT DEPOSIT VS CHECK:
+Does the platform track payment method per employee: direct deposit, physical check, or cash?
+When payroll is processed are employees notified based on their payment method:
+Direct deposit: "Your payment of $X has been processed and will arrive in your account
+on [date] based on your bank's processing time."
+Check: "Your paycheck of $X is ready for pickup or will be mailed to [address]."
+If payment method tracking is not per-employee build it.
+
+YEAR-END 1099 AUTOMATION:
+For contractors who exceeded $600 in the calendar year does Trinity:
+Flag them in January for 1099-NEC filing?
+Generate a report of all 1099-eligible contractors with their total payments?
+Alert the org_owner to file by January 31?
+If this automation does not exist build it. Missing 1099 filings are an IRS penalty.
+
+W-2 PREPARATION DATA:
+For W-2 employees does the platform track and report:
+Total wages paid in the calendar year?
+Total federal income tax withheld?
+Total Social Security and Medicare withheld?
+If the platform is not handling tax withholding confirm the org_owner is alerted
+that they must calculate and withhold taxes outside the platform.
+Either build basic withholding or make the limitation explicit and undeniable.
+
+---
+
+AUDIT 3 — REVENUE RECOGNITION AND REPORTING
+
+CASH FLOW DASHBOARD:
+Does the org_owner have a single view showing:
+Money coming in this month: total of paid invoices.
+Money expected: total of sent unpaid invoices with due dates.
+Money overdue: total of past-due invoices by aging bucket.
+Money going out: total payroll obligation for the current pay period.
+Net cash position: money coming in minus money going out.
+If this dashboard does not exist build it as the first thing org_owners see on login.
+A security company operator needs to know at a glance if they can make payroll.
+
+PROFITABILITY PER CLIENT:
+Does the platform calculate profit margin per client?
+Revenue from that client: total paid invoices.
+Cost of that client: total payroll hours billed to their shifts multiplied by pay rate.
+Gross margin: revenue minus cost.
+If this report does not exist build it. An org_owner needs to know which clients
+are profitable and which are being serviced at a loss.
+
+TRINITY FINANCIAL BRIEFING GAPS:
+In the daily morning briefing does Trinity include:
+Total outstanding receivables with a list of the top 3 overdue invoices?
+Current payroll obligation for the active pay period?
+Net revenue month to date versus last month same date?
+Any clients whose billing rate is lower than the average officer pay rate at their site
+indicating they may be an unprofitable contract?
+If any of these are missing from the briefing add them now.
+
+---
+
+AUDIT 4 — PAYMENT AND BILLING EDGE CASE CLOSURE
+
+STRIPE PAYMENT RETRY LOGIC:
+When a subscription payment fails confirm:
+Retry 1 fires automatically at 3 days.
+Retry 2 fires automatically at 5 days.
+Retry 3 fires automatically at 7 days.
+After all retries fail: subscription moves to past_due, org_owner receives CRITICAL alert,
+soft cap orgs move to hard cap temporarily.
+Confirm all retry attempts are logged in the audit trail.
+Confirm the org_owner receives a payment update prompt at each failed retry.
+
+INVOICE PAYMENT LINK EXPIRY:
+Does the payment link in an invoice email expire?
+If yes what is the expiry period?
+If a client clicks an expired payment link what do they see?
+A Stripe payment link that returns an error with no guidance is unprofessional.
+Confirm expired links show a helpful message with contact information.
+
+MULTI-CLIENT BILLING CYCLE COORDINATION:
+If an org has 10 clients each on different billing cycles (weekly, bi-weekly, monthly)
+does the invoice auto-generation handle all of them correctly in the same cron run?
+Or does it only handle one billing cycle type at a time?
+Confirm the billing cron iterates across all clients and their individual configured cycles.
+
+INVOICE TO PAYROLL TIMING ALIGNMENT:
+Security companies typically invoice clients weekly or bi-weekly and run payroll bi-weekly.
+Is there any tooling that helps the org_owner see that all client invoices for a period
+are generated and sent before the payroll run for that same period executes?
+This alignment matters for cash flow — you want to know money is coming in
+before you commit to paying it out.
+Build a pre-payroll checklist step: before org_owner can approve payroll Trinity
+shows a summary of outstanding invoices for the period and asks if the org_owner
+wants to proceed or send outstanding invoices first.
+
+---
+
+AUDIT 5 — AUTOMATION COMPLETENESS SCORE
+
+For every billing and payroll workflow action answer:
+Is it fully automated, partially automated (requires one human action), or manual?
+
+Invoice generation at billing cycle end: [automated / one-click / manual]
+Invoice sent to client: [automated / one-click / manual]
+Invoice payment recorded online: [automated / one-click / manual]
+Invoice payment recorded manual: [one-click / manual — this is acceptable]
+Overdue escalation tier 1: [automated / one-click / manual]
+Overdue escalation tier 2: [automated / one-click / manual]
+Overdue escalation tier 3: [automated / one-click / manual]
+Collections stopped when paid: [automated / one-click / manual]
+Timesheet submission reminder to employee: [automated / one-click / manual]
+Timesheet approval reminder to manager: [automated / one-click / manual]
+Payroll period close and draft generation: [automated / one-click / manual]
+Payroll notification to org_owner: [automated / one-click / manual]
+Pay stub delivery to employee: [automated / one-click / manual]
+1099 threshold flag in January: [automated / one-click / manual]
+Subscription renewal charge: [automated via Stripe — confirm]
+Seat overage charge at cycle end: [automated / one-click / manual]
+Credit overage charge at cycle end: [automated / one-click / manual]
+
+Every item that is manual when it could be automated is a gap.
+Build the automation for every gap found.
+The only actions that should require human input are:
+Approving payroll runs.
+Approving invoices before first send to a new client.
+Making decisions on stalled collections.
+Everything else should run without human intervention.
+
+---
+
+FINAL DELIVERY
+
+After completing all 5 audits produce:
+
+AUTOMATION GAPS FOUND:
+List every workflow step that was manual and should be automated.
+For each: the fix applied and the automation that now runs.
+
+FINANCIAL INTEGRITY ISSUES FOUND:
+Any calculation errors, rounding issues, ledger mismatches.
+For each: the fix applied.
+
+REPORTS AND DASHBOARDS BUILT:
+Cash flow dashboard.
+Invoice aging report.
+Profitability per client.
+Payroll export CSV and PDF.
+1099 threshold report.
+
+TRINITY BRIEFING ENHANCEMENTS:
+Which new financial intelligence items were added to the daily briefing.
+
+FINAL AUTOMATION SCORE:
+Re-run the automation completeness score after fixes.
+Every item should show automated or one-click with human decision required.
+
+BILLING SYSTEM STATUS:
+PRODUCTION READY for Statewide go-live — YES or NO with evidence.

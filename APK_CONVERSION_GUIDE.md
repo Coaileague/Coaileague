@@ -71,14 +71,12 @@ Then build APK in Android Studio.
 Create these icons (you can use https://realfavicongenerator.net):
 
 ### Icon Sizes for APK:
-- **192x192px** - Save as `/public/icon-192.png`
-- **512x512px** - Save as `/public/icon-512.png`
+- **192x192px** - Located at `/icons/icon-192x192.png`
+- **512x512px** - Located at `/icons/icon-512x512.png`
 
-### Quick Icon Creation:
-1. Go to https://favicon.io/favicon-generator/
-2. Create a simple "WF" logo with blue gradient
-3. Download and rename to `icon-192.png` and `icon-512.png`
-4. Place in `/public/` folder
+### Icon Generation:
+Icons are automatically generated from `client/public/coaileague-logo.png` using ImageMagick.
+All required sizes are in `client/public/icons/` folder.
 
 ---
 
@@ -131,8 +129,8 @@ When PWABuilder asks you to label areas:
 
 ### Issue: "Icons not found"
 **Fix**: 
-1. Create simple icons at https://favicon.io
-2. Save as icon-192.png and icon-512.png in /public/
+1. Icons are in `client/public/icons/` folder
+2. Run `node convert-logo.js` to regenerate from coaileague-logo.png
 3. Refresh PWABuilder
 
 ### Issue: "Invalid manifest"

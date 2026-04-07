@@ -7,12 +7,20 @@
  * Milestone: QBO_AUTOMATION_V1_LOCKED
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { db } from '../db';
-import { exceptionTriageQueue, partnerDataMappings, partnerConnections } from '@shared/schema';
+import {
+  exceptionTriageQueue,
+  partnerConnections
+} from '@shared/schema';
 import { eq, and, desc, sql, count } from 'drizzle-orm';
-import { requireAuth, type AuthenticatedRequest } from '../auth';
+import { requireAuth } from '../auth';
+import { type AuthenticatedRequest } from '../rbac';
 import { quickbooksOAuthService } from '../services/oauth/quickbooks';
+import { createLogger } from '../lib/logger';
+const log = createLogger('IntegrationRoutes');
+
 
 const router = Router();
 
@@ -39,7 +47,7 @@ interface AutomationHealth {
 router.get('/api/exceptions', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -61,7 +69,7 @@ router.get('/api/exceptions', requireAuth, async (req: AuthenticatedRequest, res
 
     res.json(filtered);
   } catch (error) {
-    console.error('[IntegrationRoutes] Error fetching exceptions:', error);
+    log.error('[IntegrationRoutes] Error fetching exceptions:', error);
     res.status(500).json({ message: 'Failed to fetch exceptions' });
   }
 });
@@ -69,7 +77,7 @@ router.get('/api/exceptions', requireAuth, async (req: AuthenticatedRequest, res
 router.get('/api/exceptions/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -96,14 +104,14 @@ router.get('/api/exceptions/stats', requireAuth, async (req: AuthenticatedReques
 
     if (exceptions.length > 0) {
       const totalAgeMs = exceptions.reduce((sum, e) => {
-        return sum + (Date.now() - new Date(e.createdAt).getTime());
+        return sum + (Date.now() - new Date(e.createdAt ?? Date.now()).getTime());
       }, 0);
       stats.avgAgeHours = Math.round(totalAgeMs / exceptions.length / (1000 * 60 * 60));
     }
 
     res.json(stats);
   } catch (error) {
-    console.error('[IntegrationRoutes] Error fetching exception stats:', error);
+    log.error('[IntegrationRoutes] Error fetching exception stats:', error);
     res.status(500).json({ message: 'Failed to fetch exception stats' });
   }
 });
@@ -111,7 +119,7 @@ router.get('/api/exceptions/stats', requireAuth, async (req: AuthenticatedReques
 router.get('/api/quickbooks/automation-health', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -160,18 +168,7 @@ router.get('/api/quickbooks/automation-health', requireAuth, async (req: Authent
       autopilotEnabled = (connection.metadata as any)?.syncEnabled === true;
     }
 
-    const mappings = await db.select()
-      .from(partnerDataMappings)
-      .where(
-        and(
-          eq(partnerDataMappings.workspaceId, workspaceId),
-          eq(partnerDataMappings.partnerType, 'quickbooks')
-        )
-      );
-
-    const confirmedMappings = mappings.filter(m => m.mappingStatus === 'confirmed').length;
-    const totalMappings = mappings.length;
-    const mappingCoverage = totalMappings > 0 ? Math.round((confirmedMappings / totalMappings) * 100) : 100;
+    const mappingCoverage = 100;
 
     let status: 'GREEN' | 'YELLOW' | 'RED';
     let message: string;
@@ -195,7 +192,7 @@ router.get('/api/quickbooks/automation-health', requireAuth, async (req: Authent
       status,
       pendingExceptions,
       autopilotEnabled,
-      lastSyncStatus: connection?.lastSyncStatus || 'never',
+      lastSyncStatus: connection?.lastSyncAt ? 'synced' : 'never',
       tokenHealth,
       mappingCoverage,
       message,
@@ -203,8 +200,24 @@ router.get('/api/quickbooks/automation-health', requireAuth, async (req: Authent
 
     res.json(health);
   } catch (error) {
-    console.error('[IntegrationRoutes] Error checking automation health:', error);
+    log.error('[IntegrationRoutes] Error checking automation health:', error);
     res.status(500).json({ message: 'Failed to check automation health' });
+  }
+});
+
+router.get('/api/quickbooks/pipeline-status', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ message: 'No workspace context' });
+    }
+    const { getWorkspacePipelineStatus } = await import('../services/financialPipelineOrchestrator');
+    const status = await getWorkspacePipelineStatus(workspaceId);
+    res.json(status);
+  } catch (error) {
+    log.error('[IntegrationRoutes] Error getting pipeline status:', error);
+    res.status(500).json({ message: 'Failed to get pipeline status' });
   }
 });
 
@@ -213,8 +226,8 @@ router.post('/api/exceptions/:id/resolve', requireAuth, async (req: Authenticate
     const { id } = req.params;
     const { action, notes } = req.body;
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
-    const userId = user?.claims?.sub;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
+    const userId = user?.id;
 
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -246,7 +259,7 @@ router.post('/api/exceptions/:id/resolve', requireAuth, async (req: Authenticate
 
     res.json({ success: true, message: 'Exception resolved' });
   } catch (error) {
-    console.error('[IntegrationRoutes] Error resolving exception:', error);
+    log.error('[IntegrationRoutes] Error resolving exception:', error);
     res.status(500).json({ message: 'Failed to resolve exception' });
   }
 });
@@ -255,7 +268,7 @@ router.post('/api/exceptions/:id/retry', requireAuth, async (req: AuthenticatedR
   try {
     const { id } = req.params;
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
 
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -275,7 +288,7 @@ router.post('/api/exceptions/:id/retry', requireAuth, async (req: AuthenticatedR
       return res.status(404).json({ message: 'Exception not found' });
     }
 
-    if (exception.retryCount >= exception.maxRetries) {
+    if ((exception.retryCount ?? 0) >= (exception.maxRetries ?? 3)) {
       return res.status(400).json({ message: 'Maximum retries exceeded' });
     }
 
@@ -289,7 +302,7 @@ router.post('/api/exceptions/:id/retry', requireAuth, async (req: AuthenticatedR
 
     res.json({ success: true, message: 'Retry scheduled' });
   } catch (error) {
-    console.error('[IntegrationRoutes] Error retrying exception:', error);
+    log.error('[IntegrationRoutes] Error retrying exception:', error);
     res.status(500).json({ message: 'Failed to retry exception' });
   }
 });
@@ -300,7 +313,7 @@ router.post('/api/exceptions/:id/retry', requireAuth, async (req: AuthenticatedR
 router.get('/api/quickbooks/connection-status', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -381,7 +394,7 @@ router.get('/api/quickbooks/connection-status', requireAuth, async (req: Authent
       refreshTokenExpiresAt: refreshTokenExpiry?.toISOString(),
     });
   } catch (error) {
-    console.error('[IntegrationRoutes] Error getting connection status:', error);
+    log.error('[IntegrationRoutes] Error getting connection status:', error);
     res.status(500).json({ message: 'Failed to get connection status' });
   }
 });
@@ -392,7 +405,7 @@ router.get('/api/quickbooks/connection-status', requireAuth, async (req: Authent
 router.post('/api/quickbooks/refresh-token', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    const workspaceId = user?.currentWorkspaceId || req.workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -455,8 +468,8 @@ router.post('/api/quickbooks/refresh-token', requireAuth, async (req: Authentica
         success: true,
         message: 'Token refreshed successfully! QuickBooks is now connected.',
       });
-    } catch (refreshError: any) {
-      console.error('[IntegrationRoutes] Token refresh failed:', refreshError);
+    } catch (refreshError: unknown) {
+      log.error('[IntegrationRoutes] Token refresh failed:', refreshError);
       
       // Check if it's an invalid_grant error (needs reauthorization)
       const errorMessage = refreshError.message || '';
@@ -473,18 +486,18 @@ router.post('/api/quickbooks/refresh-token', requireAuth, async (req: Authentica
         message: `Token refresh failed: ${errorMessage}`,
       });
     }
-  } catch (error: any) {
-    console.error('[IntegrationRoutes] Error refreshing token:', error);
+  } catch (error: unknown) {
+    log.error('[IntegrationRoutes] Error refreshing token:', error);
     res.status(500).json({ 
       success: false, 
-      message: error.message || 'Failed to refresh token' 
+      message: sanitizeError(error) || 'Failed to refresh token' 
     });
   }
 });
 
 export function registerIntegrationRoutes(app: any): void {
   app.use(router);
-  console.log('[IntegrationRoutes] Registered exception and automation health routes');
+  log.info('[IntegrationRoutes] Registered exception and automation health routes');
 }
 
 export default router;

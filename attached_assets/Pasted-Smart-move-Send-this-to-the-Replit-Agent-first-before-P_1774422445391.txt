@@ -1,0 +1,106 @@
+Smart move. Send this to the Replit Agent first, before Phase 13 opens:
+
+---
+
+**MASTER BUILD PLAN — COAILEAGUE PLATFORM**
+
+Before any further phase work begins, read and internalize this document. Every implementation, enhancement, fix, or expansion you make from this point forward must be made in consideration of the full platform roadmap below. When you build anything — a new feature, a bug fix, a schema change, a new route — ask yourself: does this connect correctly to what came before it and what comes after it? Build as a whole, not in isolation.
+
+---
+
+**COMPLETED PHASES**
+
+**Phase 1–8** — Core architecture, notification delivery service (NDS), dark navy design system, schema audits, bot ecosystem, document management system, notification hardening. Every email, SMS, and WebSocket notification routes through NDS with idempotency, retry backoff, and delivery tracking.
+
+**Phase 9** — RBAC Role Architecture Lock. Canonical `roleDefinitions.ts` created as single source of truth for all 11 workspace roles and 8 platform roles. canAssignRole rewritten with full hierarchy. All stale session role reads fixed. Workspace ID priority corrected platform-wide.
+
+**Phase 9B** — Permission Matrix Editor. Live operator-controlled permission system. Workspace owners toggle feature access per role. Platform staff manage permissions across all workspaces. Trinity and HelpAI have registered permission actions. WebSocket real-time sync on every change. Three-tier cascade source tracking (workspace_owner, platform_staff, trinity_ai).
+
+**Phase 10** — 12-Flow Pre-Launch Bug Sweep. All 12 critical operational flows traced end-to-end. 4 bugs fixed: management team notification on officer activation, on-time clock-in supervisor awareness, calloff reason persistence, automatic client invoice generation trigger.
+
+**Phase 11** — Financial Infrastructure Hardening. 14 gaps identified and proven closed. QuickBooks CDC inbound sync repaired. Disputed invoice status added with payment freeze. Overdue sweep auto-transitions invoice status. Audit trail added to all 5 untracked financial files. Invoice portal token expiry and workspace scope enforced. Payroll export service-layer workspaceId guard confirmed. Zero-rate officers hard-blocked. Hazard, night shift, and weekend pay tracked as distinct line items. Payroll bi-weekly precision fixed. Audit log immutability restored. Orphaned payroll run detection running daily.
+
+**Phase 12** — Scheduling Engine Deep Verification. 10 gaps fixed. Shift deletion blocked on active clock-ins. 8-hour minimum rest enforced as hard block at manual assignment. Draft shifts hidden from officers. OT warning fires at assignment with required manager acknowledgment. Calloff reason persists to database. License re-validated at clock-in with supervisor alert. Shift correctly unassigned on calloff. Replacement cascade tier-sorted. OT acknowledgments written to audit log. Full audit trail on shift deletion and calloff events. Known enhancement deferred: full three-tier staged replacement cascade (stay-late → internal → platform pool) to be completed in Phase 16.
+
+---
+
+**ACTIVE AND UPCOMING PHASES**
+
+**Phase 13 — Inbound Email Routing and Trinity Auto-Processing**
+Build calloffs@, incidents@, docs@, support@ via Resend inbound routing. Trinity receives, parses, classifies, and acts on each type. Calloff triggers replacement cascade. Incident creates a report record. Docs routes to document pipeline. Support creates a ticket. Every pipeline verified end-to-end with failure handling and audit trail.
+
+**Phase 14 — Invoice and Billing Engine Hardening**
+Invoice generation from shift data, rate calculation, delivery, client acknowledgment, late payment triggers, partial payment handling, credit memo logic, full invoice state machine enforcement, idempotency on every write, overdue detection, disputed invoice freeze, complete audit trail.
+
+**Phase 15 — Payroll Engine Hardening**
+Pay period calculation, regular and overtime rate application, split shift handling, deduction processing, pay stub generation, payroll run idempotency verification, payroll correction flow, officer pay history integrity, direct deposit or export pipeline. Every calculation verified against known test cases.
+
+**Phase 16 — QuickBooks Sync and Financial Reconciliation**
+OAuth flow integrity, bi-directional sync verification, duplicate prevention, conflict resolution, failed sync retry queue, sync status visibility, manual re-sync trigger, reconciliation report. Complete three-tier replacement cascade also completed here (deferred from Phase 12).
+
+**Phase 17 — Officer License and Certification Tracking**
+DPS license storage and validation, expiration tracking, automated renewal alerts at 90/60/30/7 days via NDS, scheduling block for expired officers, certification requirements per post, bulk license status dashboard, compliance export for DPS audits.
+
+**Phase 18 — Document Pipeline Full Verification**
+Onboarding document generation, routing, signing, countersigning, storage, retrieval, and audit trail. Contract pipeline from creation through execution. DocuSign-equivalent signature flow integrity. Document status state machine. Expired and voided document handling. Document access by role verified against permission matrix.
+
+**Phase 19 — Trinity Orchestration and Action Registry Certification**
+Action registry confirmed below 300 actions, all canonical. Every bot (ReportBot, HelpAI, ClockBot, MeetingBot) verified under Trinity orchestration. Event subscriptions confirmed firing on correct triggers. Proactive actions verified for timing and accuracy. Trinity memory health confirmed. No orphaned actions, no duplicate subscriptions, no silent bot failures.
+
+**Phase 20 — Client and End-User Portal Verification**
+Client portal: invoice view, incident report access, proof of service logs, contract view and signing, communication history. End-user (officer) portal: schedule view, shift acknowledgment, pay stub access, document access, incident reporting. Auditor portal: regulatory data access and export. Every portal verified against the permission matrix.
+
+**Phase 21 — Compliance and Regulatory Verification**
+All compliance routes verified. Violation service audit trail complete. Regulatory reporting accuracy. State auditor portal data integrity. Compliance officer role access confirmed. Automated compliance alerts firing correctly. DPS reporting export verified for format and completeness.
+
+**Phase 22 — Field Operations and Mobile Suite Verification**
+GPS clock-in/out accuracy, proof of service generation, duress/panic button end-to-end (trigger → alert → notification → log), guaranteed message delivery under poor connectivity, shift acknowledgment from mobile, incident reporting from field, offline mode behavior and sync-on-reconnect. All verified on mobile viewport.
+
+**Phase 23 — Frontend UX and Design System Consistency Audit**
+Every page audited: correct dark navy design tokens, Trinity purple only on Trinity elements, gold accents consistent, loading states and skeleton screens present everywhere, error states designed, empty states helpful, form validation clear and consistent, toast notifications uniform, mobile breakpoints correct on every page, navigation hierarchy logical, permission matrix enforced in UI — restricted pages not visible, not just blocked.
+
+**Phase 24 — API Security and Abuse Prevention Hardening**
+Rate limiting on all endpoints, brute force protection on auth routes, token rotation procedures, API key management, input sanitization audit, SQL injection surface review, XSS protection headers, CORS policy verification, session timeout enforcement, security header audit (HSTS, CSP, X-Frame-Options).
+
+**Phase 25 — Data Integrity and Cross-Table Consistency Sweep**
+Orphaned record detection across all tables, workspace_id scoping verified on every query, financial records matched to audit trail entries, shift records matched to payroll entries, document records matched to signing events, notification_deliveries matched to triggered events. Every inconsistency repaired and root cause closed.
+
+**Phase 26 — Cron Jobs and Scheduled Task Verification**
+Every time-based automation catalogued. Payroll run triggers, invoice generation schedules, license expiration checks, compliance report generation, autonomous scheduler cycles — all verified to fire exactly once, handle failures gracefully, log execution, alert on missed runs, and recover without manual intervention.
+
+**Phase 27 — Notification and Communication Pipeline End-to-End**
+NDS verified across all 47 notification types. Email deliverability confirmed. SMS delivery confirmed. WebSocket push confirmed to active sessions. Retry backoff verified on failure. Idempotency confirmed — no duplicate sends. Delivery tracking in notification_deliveries confirmed for every type. Full three-tier staged replacement cascade verified here alongside inbound routing from Phase 13.
+
+**Phase 28 — Multi-Tenant Isolation and Security Hardening**
+Full workspace isolation audit — no query returns data outside its workspace_id without explicit super-admin flag. Cross-tenant data leakage test. Auth token isolation. Session workspace binding. Confirmed no workspace can access another's financial records, schedules, documents, or officer data under any request path.
+
+**Phase 29 — Performance and Stability Under Load**
+Concurrent user simulation, database query performance under realistic load, slow query identification and indexing, WebSocket connection stability under volume, NDS queue depth management, Trinity response latency under load, rate limit behavior under burst traffic, memory leak detection on long-running processes.
+
+**Phase 30 — Disaster Recovery and Failover Verification**
+NDS failure modes. Trinity failover behavior. Database connection loss and reconnect. Cron missed-fire recovery. Failed payroll run recovery procedure. Document pipeline recovery on storage failure. Retry dead letter queue behavior. Graceful degradation — platform degrades to read-only safely rather than crashing.
+
+**Phase 31 — Grand Launch Certification**
+Full end-to-end smoke test across every system simultaneously. One complete operational cycle: officer onboarded → scheduled → clocks in from field → incident reported → shift closes → payroll calculated → invoice generated → QuickBooks synced → client notified → document signed → compliance recorded → Trinity queried for summary. Every system participates. All 30 prior phase checks green. Go-live approved.
+
+---
+
+**ARCHITECTURE TRUTHS — never violate these**
+
+- Every notification routes through NotificationDeliveryService — no direct email or SMS sends
+- Every financial write has an audit trail entry — no exceptions
+- Every scheduling mutation has an audit log entry — no exceptions
+- Every query that touches tenant data is scoped by workspace_id — no exceptions
+- roleDefinitions.ts is the single source of truth for all roles — nothing hardcoded elsewhere
+- featureRegistry.ts is the single source of truth for all permission-controlled features
+- Trinity system context cannot be triggered from a user-scoped request without explicit elevation
+- Gemini has zero connection to this project — Replit Agent is the only tool with filesystem access
+- The 7-step execution framework applies to every feature: Trigger → Fetch → Validate → Process → Mutate → Confirm → Notify
+
+---
+
+**You are currently on Phase 13. Every phase builds on the verified foundation of the phases before it. Build with the whole in mind.**
+
+---
+
+Paste that first. Then paste the Phase 13 prompt immediately after. This way the agent carries the full map into every decision it makes from here forward.

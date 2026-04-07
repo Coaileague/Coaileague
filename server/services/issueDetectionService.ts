@@ -8,6 +8,9 @@ import aiBrainConfig from "@shared/config/aiBrainGuardrails";
 import { notificationEngine } from "./universalNotificationEngine";
 import { meteredGemini } from './billing/meteredGeminiClient';
 import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { createLogger } from '../lib/logger';
+const log = createLogger('issueDetectionService');
+
 
 export interface DetectedIssue {
   id: string;
@@ -50,7 +53,7 @@ export class IssueDetectionService {
 
       if (ruleMatches) {
         issues.push({
-          id: `issue_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          id: `issue_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
           type: rule.id,
           severity: rule.severity,
           title: rule.name,
@@ -215,7 +218,7 @@ export class IssueDetectionService {
       `;
 
       const result = await meteredGemini.generate({
-        workspaceId: workspaceId || 'platform',
+        workspaceId: workspaceId,
         featureKey: 'ai_issue_detection',
         prompt,
         model: 'gemini-2.5-flash',
@@ -252,7 +255,7 @@ export class IssueDetectionService {
         }
       }
     } catch (error: any) {
-      console.log("AI analysis skipped (optional enhancement):", error.message);
+      log.info("AI analysis skipped (optional enhancement):", (error instanceof Error ? error.message : String(error)));
     }
 
     return baseResult;

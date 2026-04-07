@@ -20,8 +20,14 @@ import { trinityMemoryService } from './trinityMemoryService';
 import { platformEventBus } from '../platformEventBus';
 import { db } from '../../db';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
-import { aiWorkboardTasks, trinityConversationSessions, automationActionLedger } from '@shared/schema';
+import {
+  trinityConversationSessions,
+  automationActionLedger
+} from '@shared/schema';
 import crypto from 'crypto';
+
+import { createLogger } from '../../lib/logger';
+const log = createLogger('TrinityExecutionFabric');
 
 // ============================================================================
 // TYPES
@@ -427,7 +433,7 @@ capabilityAdapters.set('call_ai_model', {
       params.prompt,
       {
         userId: params.userId || 'system',
-        userRole: params.userRole || 'admin',
+        userRole: params.userRole || 'org_owner',
         workspaceId: params.workspaceId,
       }
     );
@@ -505,7 +511,7 @@ class TrinityExecutionFabric {
     // Enforce retention policy
     this.cleanupOldRecordings();
     
-    console.log(`[TrinityFabric] Recorded execution ${manifestId} as ${recordingId} (reason: ${reason})`);
+    log.info(`[TrinityFabric] Recorded execution ${manifestId} as ${recordingId} (reason: ${reason})`);
     
     // Publish event for observability
     platformEventBus.publish('ai_brain_action', {
@@ -538,7 +544,7 @@ class TrinityExecutionFabric {
     const timeline: ExecutionTimelineEntry[] = [];
     const divergences: ReplayDivergence[] = [];
     
-    console.log(`[TrinityFabric] Starting replay ${replayId} of recording ${recordingId}`);
+    log.info(`[TrinityFabric] Starting replay ${replayId} of recording ${recordingId}`);
 
     let stepsExecuted = 0;
     let stepsSkipped = 0;
@@ -588,7 +594,7 @@ class TrinityExecutionFabric {
       const replayContext: ExecutionContext = JSON.parse(JSON.stringify(recording.context));
 
       if (options.dryRun) {
-        console.log(`[TrinityFabric] Dry-run mode - simulating replay without execution`);
+        log.info(`[TrinityFabric] Dry-run mode - simulating replay without execution`);
         
         for (let i = 0; i < replayManifest.steps.length; i++) {
           const step = replayManifest.steps[i];
@@ -690,7 +696,7 @@ class TrinityExecutionFabric {
           }
 
           if (options.debugMode) {
-            console.log(`[TrinityFabric][Replay Debug] Step ${step.id}: ${stepResult.success ? 'SUCCESS' : 'FAILED'}`);
+            log.info(`[TrinityFabric][Replay Debug] Step ${step.id}: ${stepResult.success ? 'SUCCESS' : 'FAILED'}`);
           }
         }
 
@@ -715,7 +721,7 @@ class TrinityExecutionFabric {
         divergences,
       };
 
-      console.log(`[TrinityFabric] Replay ${replayId} completed: ${stepsExecuted} executed, ${stepsFailed} failed, ${divergences.length} divergences`);
+      log.info(`[TrinityFabric] Replay ${replayId} completed: ${stepsExecuted} executed, ${stepsFailed} failed, ${divergences.length} divergences`);
 
       // Publish event
       platformEventBus.publish('ai_brain_action', {
@@ -732,7 +738,7 @@ class TrinityExecutionFabric {
 
     } catch (error) {
       replayError = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[TrinityFabric] Replay ${replayId} failed:`, replayError);
+      log.error(`[TrinityFabric] Replay ${replayId} failed:`, replayError);
 
       return {
         replayId,
@@ -797,7 +803,7 @@ class TrinityExecutionFabric {
       const age = now.getTime() - recording.recordedAt.getTime();
       if (age > retentionMs) {
         this.executionRecordings.delete(id);
-        console.log(`[TrinityFabric] Cleaned up expired recording ${id}`);
+        log.info(`[TrinityFabric] Cleaned up expired recording ${id}`);
       }
     }
 
@@ -809,7 +815,7 @@ class TrinityExecutionFabric {
       const toRemove = sorted.slice(0, this.executionRecordings.size - this.MAX_RECORDINGS);
       for (const [id] of toRemove) {
         this.executionRecordings.delete(id);
-        console.log(`[TrinityFabric] Cleaned up old recording ${id} (max limit)`);
+        log.info(`[TrinityFabric] Cleaned up old recording ${id} (max limit)`);
       }
     }
   }
@@ -872,15 +878,19 @@ class TrinityExecutionFabric {
    * Import a recording from external source
    */
   importRecording(recordingJson: string): ExecutionRecording {
-    const recording: ExecutionRecording = JSON.parse(recordingJson);
+    let recording: ExecutionRecording;
+    try {
+      recording = JSON.parse(recordingJson);
+    } catch {
+      throw new Error('Invalid recording JSON format');
+    }
     
-    // Regenerate ID to avoid conflicts
     recording.recordingId = `rec-imported-${crypto.randomUUID()}`;
     recording.recordedAt = new Date(recording.recordedAt);
     
     this.executionRecordings.set(recording.recordingId, recording);
     
-    console.log(`[TrinityFabric] Imported recording as ${recording.recordingId}`);
+    log.info(`[TrinityFabric] Imported recording as ${recording.recordingId}`);
     
     return recording;
   }
@@ -899,7 +909,7 @@ class TrinityExecutionFabric {
     }
   ): Promise<ExecutionManifest> {
     const manifestId = crypto.randomUUID();
-    console.log(`[TrinityFabric] Planning execution: ${manifestId} - "${intent.substring(0, 50)}..."`);
+    log.info(`[TrinityFabric] Planning execution: ${manifestId} - "${intent.substring(0, 50)}..."`);
     
     // Start thinking process
     const thinking = await this.startThinking(manifestId, 'planning');
@@ -965,12 +975,12 @@ class TrinityExecutionFabric {
       
       this.activeManifests.set(manifestId, manifest);
       
-      console.log(`[TrinityFabric] Plan created: ${steps.length} steps, ${preflightChecks.length} preflight checks`);
+      log.info(`[TrinityFabric] Plan created: ${steps.length} steps, ${preflightChecks.length} preflight checks`);
       
       return manifest;
       
     } catch (error) {
-      console.error(`[TrinityFabric] Planning failed:`, error);
+      log.error(`[TrinityFabric] Planning failed:`, error);
       throw error;
     }
   }
@@ -990,7 +1000,7 @@ class TrinityExecutionFabric {
       throw new Error(`Manifest not found: ${manifestId}`);
     }
     
-    console.log(`[TrinityFabric] Preparing execution: ${manifestId}`);
+    log.info(`[TrinityFabric] Preparing execution: ${manifestId}`);
     manifest.phase = 'preparing';
     
     const preflightResults: PreflightResult[] = [];
@@ -1026,7 +1036,7 @@ class TrinityExecutionFabric {
       manifest.error = `Preflight checks failed: ${blockers.join(', ')}`;
     }
     
-    console.log(`[TrinityFabric] Preparation ${ready ? 'successful' : 'blocked'}: ${blockers.length} blockers, ${warnings.length} warnings`);
+    log.info(`[TrinityFabric] Preparation ${ready ? 'successful' : 'blocked'}: ${blockers.length} blockers, ${warnings.length} warnings`);
     
     return { ready, preflightResults, blockers, warnings };
   }
@@ -1046,7 +1056,7 @@ class TrinityExecutionFabric {
       throw new Error(`Manifest not found: ${manifestId}`);
     }
     
-    console.log(`[TrinityFabric] Executing manifest: ${manifestId} (${manifest.steps.length} steps)`);
+    log.info(`[TrinityFabric] Executing manifest: ${manifestId} (${manifest.steps.length} steps)`);
     manifest.phase = 'executing';
     manifest.startedAt = new Date();
     
@@ -1056,7 +1066,7 @@ class TrinityExecutionFabric {
     const context: ExecutionContext = {
       workspaceId: manifest.workspaceId,
       userId: manifest.userId,
-      userRole: 'admin',
+      userRole: 'org_owner',
       conversationId: manifest.conversationId,
       creditsAvailable: 100,
       permissions: ['*'],
@@ -1131,11 +1141,11 @@ class TrinityExecutionFabric {
         try {
           await this.recordExecution(manifestId, context, 'failure');
         } catch (recordError) {
-          console.error(`[TrinityFabric] Failed to record execution for replay:`, recordError);
+          log.error(`[TrinityFabric] Failed to record execution for replay:`, recordError);
         }
       }
       
-      console.log(`[TrinityFabric] Execution ${success ? 'completed' : 'failed'} in ${durationMs}ms`);
+      log.info(`[TrinityFabric] Execution ${success ? 'completed' : 'failed'} in ${durationMs}ms`);
       
       return { success, results, durationMs, error: manifest.error };
       
@@ -1211,7 +1221,7 @@ class TrinityExecutionFabric {
         
       } catch (error) {
         lastError = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(`[TrinityFabric] Step ${step.id} attempt ${attempt + 1} failed: ${lastError}`);
+        log.warn(`[TrinityFabric] Step ${step.id} attempt ${attempt + 1} failed: ${lastError}`);
         
         if (attempt < step.maxRetries) {
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
@@ -1249,7 +1259,7 @@ class TrinityExecutionFabric {
       throw new Error(`Manifest not found: ${manifestId}`);
     }
     
-    console.log(`[TrinityFabric] Validating execution: ${manifestId}`);
+    log.info(`[TrinityFabric] Validating execution: ${manifestId}`);
     
     const validationResults: ValidationResult[] = [];
     const issues: string[] = [];
@@ -1295,7 +1305,7 @@ class TrinityExecutionFabric {
     this.executionHistory.push(manifest);
     this.activeManifests.delete(manifestId);
     
-    console.log(`[TrinityFabric] Validation ${passed ? 'passed' : 'failed'}: ${issues.length} issues`);
+    log.info(`[TrinityFabric] Validation ${passed ? 'passed' : 'failed'}: ${issues.length} issues`);
     
     return { passed, validationResults, issues, suggestions };
   }
@@ -1320,13 +1330,13 @@ class TrinityExecutionFabric {
       return { success: false, rolledBackSteps: [], errors: ['No rollback steps available'] };
     }
     
-    console.log(`[TrinityFabric] Rolling back execution: ${manifestId}`);
+    log.info(`[TrinityFabric] Rolling back execution: ${manifestId}`);
     manifest.phase = 'rolled_back';
     
     const context: ExecutionContext = {
       workspaceId: manifest.workspaceId,
       userId: manifest.userId,
-      userRole: 'admin',
+      userRole: 'org_owner',
       creditsAvailable: 100,
       permissions: ['*'],
     };
@@ -1351,7 +1361,7 @@ class TrinityExecutionFabric {
       }
     }
     
-    console.log(`[TrinityFabric] Rollback complete: ${rolledBackSteps.length} steps rolled back`);
+    log.info(`[TrinityFabric] Rollback complete: ${rolledBackSteps.length} steps rolled back`);
     
     return {
       success: errors.length === 0,
@@ -1566,7 +1576,7 @@ class TrinityExecutionFabric {
         timestamp: new Date(),
       };
       
-      console.log(`[TrinityFabric] Learning recorded:`, JSON.stringify(learningEntry));
+      log.info(`[TrinityFabric] Learning recorded:`, JSON.stringify(learningEntry));
       
       // Share insight with Trinity Memory
       if (success) {
@@ -1581,7 +1591,7 @@ class TrinityExecutionFabric {
         });
       }
     } catch (error) {
-      console.error(`[TrinityFabric] Failed to record learning:`, error);
+      log.error(`[TrinityFabric] Failed to record learning:`, error);
     }
   }
 

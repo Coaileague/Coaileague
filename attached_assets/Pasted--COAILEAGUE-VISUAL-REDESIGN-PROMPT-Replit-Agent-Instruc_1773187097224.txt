@@ -1,0 +1,423 @@
+# COAILEAGUE — VISUAL REDESIGN PROMPT
+## Replit Agent Instructions | Edit Existing Pages Only
+---
+
+## ⚠️ CRITICAL RULES — READ BEFORE TOUCHING A SINGLE FILE
+
+1. **DO NOT create new pages.** Every page already exists. You are EDITING what is there.
+2. **Use universal/shared components.** All design changes must go through the existing shared component system (layout wrappers, stat cards, page headers, tab bars, empty states, etc.). Do not write one-off styles per page.
+3. **Do not break any existing functionality.** Data, API calls, state management — untouched. You are changing how things LOOK, not how they WORK.
+4. **Mobile-first, then desktop.** Every page must render correctly on 375px (mobile), 768px (tablet), and 1280px+ (desktop). Use responsive Tailwind classes throughout.
+5. **After each component update, verify it renders correctly on both mobile and desktop before moving to the next.**
+6. **Do not declare victory until every page listed below has been visually updated and tested.**
+
+---
+
+## DESIGN SYSTEM — ESTABLISH THESE FIRST
+
+Before touching any page, build or update the shared design tokens and universal components. Every page will use these.
+
+### Color Palette (CSS Variables)
+```css
+:root {
+  /* Brand */
+  --color-navy:        #0B1629;   /* primary dark background */
+  --color-navy-mid:    #102040;   /* card backgrounds */
+  --color-navy-light:  #1A3058;   /* elevated surfaces, hover states */
+  --color-border:      #1E3A5F;   /* subtle borders */
+
+  /* Accent */
+  --color-gold:        #C9952A;   /* primary accent — CoAIleague brand */
+  --color-gold-light:  #E8B84B;   /* hover gold */
+  --color-gold-glow:   rgba(201,149,42,0.15); /* ambient glow */
+
+  /* Status */
+  --color-success:     #22C55E;
+  --color-warning:     #F59E0B;
+  --color-danger:      #EF4444;
+  --color-info:        #3B82F6;
+
+  /* Text */
+  --color-text-primary:   #F0F4FF;
+  --color-text-secondary: #8BA3C7;
+  --color-text-muted:     #4A6A96;
+
+  /* Trinity */
+  --color-trinity:     #7C3AED;   /* purple — Trinity AI actions only */
+  --color-trinity-glow: rgba(124,58,237,0.2);
+}
+```
+
+### Typography
+- **Display / Page Titles**: `font-family: 'Rajdhani', sans-serif` — weight 600–700. Military-precision feel, modern, readable. Import from Google Fonts.
+- **Body / Labels / Data**: `font-family: 'DM Sans', sans-serif` — weight 400–500. Clean, professional, not Inter.
+- **Monospace / IDs / Codes**: `font-family: 'JetBrains Mono', monospace` — for doc numbers, unit IDs, timestamps.
+
+### Universal Component Specs
+
+#### `<PageHeader>` — Used on EVERY page
+```
+Layout: page title (Rajdhani, 28px, text-primary) + subtitle (DM Sans, 14px, text-secondary, gold color)
+Optional: right-side action button slot
+Bottom: 1px border in --color-border
+Background: transparent (inherits page bg)
+Mobile: title 22px, subtitle wraps naturally
+```
+
+#### `<StatCard>` — Used on EVERY dashboard/overview page
+```
+Background: --color-navy-mid
+Border: 1px solid --color-border
+Border-radius: 12px
+Padding: 20px 24px
+Number: Rajdhani 36px bold, colored by context (gold=neutral, green=good, red=alert, amber=warning)
+Label: DM Sans 12px uppercase tracking-widest text-muted
+Hover: border transitions to --color-gold, subtle box-shadow glow
+Mobile: grid 2-col on mobile, 4-col on desktop
+```
+
+#### `<TabBar>` — Used on all tabbed pages
+```
+Background: --color-navy-mid
+Border-radius: 10px
+Padding: 4px
+Each tab: DM Sans 13px, text-muted when inactive
+Active tab: bg --color-navy-light, text-primary, left border 2px --color-gold
+Hover: text transitions to text-primary
+Mobile: horizontally scrollable, no wrap
+```
+
+#### `<EmptyState>` — Used on all empty list pages
+```
+Icon: outlined, --color-gold opacity-40, 48px
+Title: Rajdhani 20px text-secondary
+Subtitle: DM Sans 14px text-muted
+CTA button (if applicable): gold outline button
+Center aligned, generous vertical padding (py-16)
+```
+
+#### `<DataRow>` / `<ListItem>` — Used in all list views
+```
+Background: --color-navy-mid
+Border-bottom: 1px solid --color-border
+Padding: 14px 20px
+Hover: bg transitions to --color-navy-light
+Status badges: pill shape, 11px DM Sans uppercase, colored bg with matching text
+Mobile: stack secondary info below primary title
+```
+
+#### `<SectionCard>` — Used for content panels
+```
+Background: --color-navy-mid
+Border: 1px solid --color-border
+Border-radius: 12px
+Header: Rajdhani 16px uppercase tracking-wide text-secondary, border-bottom --color-border
+Body padding: 20px
+```
+
+#### Page background
+```
+All pages: bg-[#0B1629] (--color-navy)
+Subtle noise texture overlay: 3% opacity SVG noise pattern for depth
+```
+
+#### Buttons
+```
+Primary: bg --color-gold, text black, font-semibold, rounded-lg, hover bg --color-gold-light, shadow-md
+Secondary/Outline: border --color-gold text --color-gold bg transparent, hover bg --color-gold-glow
+Danger: bg --color-danger/10 border --color-danger text --color-danger
+Trinity action: bg --color-trinity/20 border --color-trinity text white, glow on hover
+```
+
+---
+
+## PAGE-BY-PAGE REDESIGN INSTRUCTIONS
+
+Apply the design system above to EDIT each of the following existing pages:
+
+---
+
+### 1. ALL NAV HUB PAGES (Platform, Executive Control, Operations Hub, People & Engagement, Intelligence & Compliance)
+
+These are the tab-based menu pages that list features in a grid.
+
+**Current problem:** White background, plain text links, no visual weight.
+
+**Target:**
+- Dark page bg (--color-navy)
+- Each nav item becomes a `<NavCard>` component:
+  - bg --color-navy-mid, border --color-border, rounded-xl, p-4
+  - Icon: colored with --color-gold (or status color if badge), 20px
+  - Title: Rajdhani 15px text-primary
+  - Subtitle: DM Sans 12px text-muted
+  - Badge (Manager, Supervisor, Enterprise, AI): pill top-right, matching accent color
+  - Hover: border --color-gold, translateY(-2px), gold icon
+  - Active/current route: border-gold bg-navy-light
+- Layout: responsive CSS grid — 1 col mobile, 2 col tablet, 4 col desktop
+- Section headers between groups if needed (Rajdhani uppercase text-muted)
+- No map rendered on the Operations Hub hub page (that's home dashboard only)
+
+---
+
+### 2. TEAM SCHEDULE
+
+**Current:** Functional but visually heavy — all blue shift blocks, hard to scan.
+
+**Target:**
+- Dark bg throughout
+- Shift blocks: keep blue base but refine — rounded-lg, subtle gradient (lighter at top), text legible at 12px
+- "No Show" badge: --color-danger red, not clashing with shift block
+- Confirm/Override badges: amber warning pill
+- Header summary bar (Total Hours, Labor Cost, etc.): styled as inline stat pills — gold numbers, muted labels, separated by dividers
+- Employee row: avatar initials circle with colored bg, name in DM Sans 13px
+- Trinity button: --color-trinity with sparkle icon, glow on hover
+- Auto-Fill badge count: gold pill
+- Mobile: horizontal scroll on schedule grid, employee names pinned left (sticky column)
+- Day/Week/Month switcher: styled as TabBar component
+
+---
+
+### 3. TIME TRACKING (TimeTracker)
+
+**Current:** Blue gradient header, white body — jarring split.
+
+**Target:**
+- Remove the split gradient header. Use PageHeader component instead.
+- Clock In button: full-width, bg --color-gold, text black, Rajdhani 18px bold, rounded-xl, pulse animation when ready
+- Clock Out state: bg --color-danger, same treatment
+- GPS/Photo verification badges: green pill icons below button
+- Stat cards (Today, This Week, Pending, Approved): StatCard component, 2x2 grid mobile, 4-col desktop
+- Team Status list: DataRow component — avatar, name, hours right-aligned, status badge
+- Tabs (Clock In/Out, Timesheets, Approvals): TabBar component
+
+---
+
+### 4. TIME ENTRY APPROVALS
+
+**Current:** Flat white, minimal.
+
+**Target:**
+- PageHeader: "Time Entry Approvals" + subtitle
+- Filters row: dark input fields (bg --color-navy-mid border --color-border), styled selects, date inputs
+- Pending count: gold badge inline with label
+- "Approve Selected" button: primary gold button, disabled state clearly muted
+- Empty state: EmptyState component ("All Caught Up" with checkmark icon)
+- When entries exist: DataRow per entry with employee name, client, hours, status badge, approve checkbox
+
+---
+
+### 5. CAD DISPATCH
+
+**Current:** Split board/unit panel — good structure, needs dark theme.
+
+**Target:**
+- Full dark theme
+- Stats row (Active, Today, Avail, Dispatched, Departed): StatCard row — colored numbers
+- P1 CRITICAL / P2 URGENT badges: red/amber respectively, left-border accent on call rows
+- Active calls section header: pulsing red dot + "ACTIVE CALLS" in Rajdhani uppercase
+- Call row: bg --color-navy-mid, rounded, left-border colored by priority, call ID in JetBrains Mono
+- Disturbance/type badge: colored pill per call type
+- Time elapsed: JetBrains Mono amber right-aligned
+- Right panel (Officers/Units): SectionCard
+- Officer rows: green dot status, unit ID in Mono, name in DM Sans
+- Unit status buttons (available/break/off duty/out of service): pill toggle buttons, active state filled
+- Board/Map/Officers/Register Unit/New Call buttons: styled as secondary tabs + primary gold "New Call"
+- Mobile: units panel collapses to bottom drawer or accordion below call board
+
+---
+
+### 6. RMS HUB
+
+**Current:** Left sidebar + main content — good layout, needs dark theme.
+
+**Target:**
+- Left sidebar: bg --color-navy (same as page, subtle right border), section labels in Rajdhani uppercase muted
+- Sidebar recent items: DataRow style, status badge inline
+- Quick Access links: gold text, hover underline
+- Main content tabs: TabBar component
+- Incident list: DataRow per incident — status badge, title in DM Sans, date in Mono muted, eye/share icons
+- Emergency Quick-Submit panel: SectionCard, GPS Locked badge in gold, red submit button with pulse
+- Category filter pills (Slip & Fall, Theft, Medical, Trespass): pill toggles, active = gold fill
+- "New Report" / "New Incident" buttons: primary gold
+- Mobile: sidebar becomes a slide-in drawer triggered by hamburger; main content full width
+
+---
+
+### 7. AI TRAINING
+
+**Current:** White background, blue enroll buttons, card grid.
+
+**Target:**
+- Dark bg
+- Stat cards (Active Courses, In Progress, Completed, Certifications): StatCard component
+- Tabs (Course Catalog, My Learning, Certifications, Analytics): TabBar
+- Search bar: dark input field, gold focus ring
+- Category dropdown: dark styled select
+- Course cards: SectionCard style
+  - Red dot (required) → replace with gold "Required" badge pill top-right
+  - Title: Rajdhani 16px text-primary
+  - Description: DM Sans 13px text-muted, 2-line clamp
+  - Hours/credits: Mono 12px text-muted bottom
+  - Enroll button: gold outline button full-width, hover fills gold
+  - Enrolled state: green "In Progress" badge, progress bar
+- Grid: 1 col mobile, 2 col tablet, 3 col desktop
+- "Create Course" button: primary gold top-right
+
+---
+
+### 8. COVERAGE MARKETPLACE
+
+**Current:** Completely empty, minimal.
+
+**Target:**
+- StatCard row (Open, Claimed, Approved, Total Listed)
+- Tab bar (Open, Claimed, Approved, Expired)
+- Post Shift button: primary gold top-right
+- Empty state: EmptyState component with calendar icon and "No open shifts posted yet"
+- When shifts exist: DataRow per shift with site name, date/time, rate badge, claim button
+
+---
+
+### 9. LABOR LAW CONFIGURATION
+
+**Current:** White, empty.
+
+**Target:**
+- StatCards (Jurisdictions, Active Rules, Workspace, Compliance status)
+- Compliance "Pending" stat: amber color with warning icon
+- Tabs (All, Workspace, Compliance + settings icon): TabBar
+- Search jurisdictions: dark input
+- Add Jurisdiction button: primary gold
+- Empty state: EmptyState with scales-of-justice icon
+- When populated: jurisdiction cards with state flag/code, rule count badge, compliance status pill
+- Mobile: single column cards
+
+---
+
+### 10. WORKFLOW APPROVALS
+
+**Current:** White, clean but flat.
+
+**Target:**
+- StatCards (Pending, Approved, Rejected, Auto-Approved): colored numbers
+- Sub-tabs (AI Scheduling, Billing Platform, AI Payroll): TabBar
+- Empty state: EmptyState with green checkmark ("No pending approvals")
+- When items exist: approval cards with module badge, description, approve/reject button pair
+
+---
+
+### 11. DISPUTE MANAGEMENT
+
+**Target:**
+- Tabs (All, Pending, Under Review, Resolved): TabBar
+- Empty state: EmptyState with scales icon
+- When items exist: DataRow per dispute with employee, type, status badge, date
+
+---
+
+### 12. ETHICS HOTLINE
+
+**Target:**
+- StatCards (Pending, Under Review, Resolved): colored
+- Tabs (Reports Dashboard, Submit Report, Follow Up): TabBar
+- Report row: severity badge (High=red, Medium=amber, Low=blue), type badge, report ID in Mono, date, excerpt text
+- Empty: EmptyState
+
+---
+
+### 13. SAFETY & COMPLIANCE
+
+**Target:**
+- StatCards (Active Panics, Active Zones, SLA Contracts, Breaches 30d): Panics=red, Breaches=amber
+- Tabs (SOS/Panic, Geofences, SLA Contracts, Breach Log): TabBar
+- Panic timeline: empty EmptyState with shield icon OR live panic card with red pulse
+- Geofences tab: zone cards with active/inactive toggle
+- SLA Contracts: DataRow with client, terms, status badge
+
+---
+
+### 14. RFP AUTOMATION
+
+**Target:**
+- PageHeader: "RFP Automation" + subtitle
+- New RFP button: primary gold
+- Empty state: EmptyState with document icon
+- When RFPs exist: DataRow list with proposal number (Mono), client, status badge, date, actions
+
+---
+
+### 15. QUICKBOOKS MIGRATION
+
+**Target:**
+- Remove the jarring white card box. Use SectionCard instead.
+- QB logo: keep
+- Step indicator: styled step pill (Step 1: Connect)
+- Sandbox badge: amber pill, not default browser look
+- Warning box: SectionCard with amber left border, amber icon, dark bg
+- Capability list items (Import customers, Map payroll, etc.): checkmark list with gold checks, 2-col grid
+- Connect button: keep green (QB brand color), but style properly with rounded-lg, font-semibold
+
+---
+
+## GLOBAL RULES FOR ALL PAGES
+
+1. **Top navigation bar**: Dark bg --color-navy, CoAIleague wordmark in gold, Easy View toggle styled, notification bell with red dot badge, user avatar circle.
+
+2. **Breadcrumb**: Home > PageName — DM Sans 13px text-muted, separator in muted color, current page in text-primary.
+
+3. **Trinity FAB** (bottom-right floating button): Keep position. Restyle to --color-trinity bg, white sparkle icon, subtle purple glow, badge count red pill. Do NOT render on home dashboard (has dedicated Trinity widget).
+
+4. **Scrollbars**: Custom thin scrollbar — `scrollbar-width: thin`, track transparent, thumb --color-navy-light.
+
+5. **Focus states**: All interactive elements get `focus-visible:outline` in --color-gold 2px.
+
+6. **Loading states**: Skeleton loaders in --color-navy-light, animated shimmer pulse.
+
+7. **No white backgrounds anywhere.** If something is currently white, it becomes --color-navy or --color-navy-mid.
+
+8. **Mobile breakpoints**:
+   - `sm`: 640px — single column, stacked layouts
+   - `md`: 768px — 2-col grids, sidebars collapse
+   - `lg`: 1024px — 3-col grids, sidebars open
+   - `xl`: 1280px — full 4-col, max-width container centered
+
+---
+
+## EXECUTION ORDER
+
+Do these in sequence. Verify each renders on mobile AND desktop before moving on:
+
+1. Design tokens / CSS variables (globals)
+2. Google Fonts import (Rajdhani, DM Sans, JetBrains Mono)
+3. Universal components: PageHeader, StatCard, TabBar, EmptyState, DataRow, SectionCard, buttons
+4. Global nav bar + breadcrumb
+5. All nav hub pages (Platform, Executive Control, Operations Hub, People & Engagement)
+6. Time Tracking
+7. Team Schedule
+8. CAD Dispatch
+9. RMS Hub
+10. AI Training
+11. Safety & Compliance
+12. Ethics Hotline
+13. Workflow Approvals
+14. Dispute Management
+15. Labor Law Config
+16. Coverage Marketplace
+17. RFP Automation
+18. QuickBooks Migration
+19. Time Entry Approvals
+20. Final pass: verify Trinity FAB, breadcrumbs, mobile layout on ALL pages
+
+---
+
+## WHAT SUCCESS LOOKS LIKE
+
+- Every page uses dark navy backgrounds — no white pages
+- All stat numbers use Rajdhani bold, colored by context
+- All body text uses DM Sans
+- All IDs, codes, timestamps use JetBrains Mono
+- Gold (#C9952A) is the brand accent on every page — buttons, borders, highlights
+- Purple (#7C3AED) appears ONLY on Trinity AI actions
+- Every page looks correct on a 375px phone screen
+- No page breaks, no overflow, no clipped text on mobile
+- Shared components are used universally — zero one-off page-specific styles that belong in a component

@@ -1,5 +1,5 @@
 /**
- * CoAIleague Scoring Service
+ * ${PLATFORM.name} Scoring Service
  * 
  * Implements the Gap Analysis requirements for employee scoring:
  * - Configurable weight profiles per workspace
@@ -23,16 +23,18 @@ import {
   employeeEventLog,
   employeeScoreSnapshots,
   scoringWeightProfiles,
-  employeePersonalityTags,
-  clientPersonalityPreferences,
   personalityTagsCatalog,
   employees,
   type CoaileagueEmployeeProfile,
   type ScoringWeightProfile,
   type InsertEmployeeEventLog,
   type InsertCoaileagueEmployeeProfile,
-} from "@shared/schema";
+} from '@shared/schema';
 import { eq, and, sql, desc } from "drizzle-orm";
+import { createLogger } from '../../lib/logger';
+import { PLATFORM } from '../../config/platformConfig';
+const log = createLogger('coaileagueScoringService');
+
 
 // ============================================================================
 // CUSTOM ERRORS (for typed error handling in routes)
@@ -64,7 +66,10 @@ export type ScoringEventType =
   | 'overtime_compliance' | 'overtime_violation'
   | 'certification_added' | 'certification_expired' | 'certification_renewed'
   | 'training_completed' | 'skill_verified'
-  | 'manual_adjustment';
+  | 'manual_adjustment'
+  | 'document_missing_critical' | 'document_expired_critical' | 'document_approved' | 'document_rejected'
+  | 'compliance_suspension' | 'compliance_reinstatement'
+  | 'grievance_score_adjustment';
 
 export interface ScoringWeights {
   skills: number;
@@ -79,7 +84,7 @@ export interface ScoringWeights {
 
 export interface EventContext {
   referenceId?: string;
-  referenceType?: 'shift' | 'time_entry' | 'feedback' | 'certification';
+  referenceType?: 'shift' | 'time_entry' | 'feedback' | 'certification' | 'document' | 'compliance' | 'grievance';
   metadata?: Record<string, any>;
   triggeredBy?: string;
   isAutomatic?: boolean;
@@ -98,7 +103,7 @@ export interface ScoreUpdateResult {
 // DEFAULT SCORING WEIGHTS
 // ============================================================================
 
-export const DEFAULT_WEIGHTS: ScoringWeights = {
+export const COAI_SCORING_WEIGHTS: ScoringWeights = {
   skills: 0.25,
   certifications: 0.15,
   performance: 0.15,
@@ -135,6 +140,13 @@ export const DEFAULT_POINT_VALUES: Record<ScoringEventType, number> = {
   training_completed: 5,
   skill_verified: 3,
   manual_adjustment: 0,
+  document_missing_critical: -15,
+  document_expired_critical: -10,
+  document_approved: 3,
+  document_rejected: -5,
+  compliance_suspension: -25,
+  compliance_reinstatement: 5,
+  grievance_score_adjustment: 0,
 };
 
 // ============================================================================
@@ -165,17 +177,17 @@ export class CoAIleagueScoringService {
     const [profile] = await db.insert(scoringWeightProfiles).values({
       workspaceId,
       profileName: "Default Scoring Profile",
-      description: "Standard CoAIleague scoring weights for employee matching",
+      description: `Standard ${PLATFORM.name} scoring weights for employee matching`,
       isDefault: true,
       isActive: true,
-      skillsWeight: DEFAULT_WEIGHTS.skills.toString(),
-      certificationsWeight: DEFAULT_WEIGHTS.certifications.toString(),
-      performanceWeight: DEFAULT_WEIGHTS.performance.toString(),
-      reliabilityWeight: DEFAULT_WEIGHTS.reliability.toString(),
-      distanceWeight: DEFAULT_WEIGHTS.distance.toString(),
-      payMarginWeight: DEFAULT_WEIGHTS.payMargin.toString(),
-      overtimeRiskWeight: DEFAULT_WEIGHTS.overtimeRisk.toString(),
-      personalityLikenessWeight: DEFAULT_WEIGHTS.personalityLikeness.toString(),
+      skillsWeight: COAI_SCORING_WEIGHTS.skills.toString(),
+      certificationsWeight: COAI_SCORING_WEIGHTS.certifications.toString(),
+      performanceWeight: COAI_SCORING_WEIGHTS.performance.toString(),
+      reliabilityWeight: COAI_SCORING_WEIGHTS.reliability.toString(),
+      distanceWeight: COAI_SCORING_WEIGHTS.distance.toString(),
+      payMarginWeight: COAI_SCORING_WEIGHTS.payMargin.toString(),
+      overtimeRiskWeight: COAI_SCORING_WEIGHTS.overtimeRisk.toString(),
+      personalityLikenessWeight: COAI_SCORING_WEIGHTS.personalityLikeness.toString(),
       createdBy,
     }).returning();
     
@@ -299,6 +311,25 @@ export class CoAIleagueScoringService {
         isAutomatic: context.isAutomatic ?? true,
       }).returning();
 
+      if (eventType === 'client_negative_feedback' && context.metadata?.clientId && context.metadata?.severity === 'critical') {
+        const clientId = context.metadata.clientId as string;
+        log.info(`[CoAIleagueScoringService] Critical complaint against employee ${employeeId} from client ${clientId} — triggering client-specific shift removal`);
+        import('../scheduling/officerDeactivationHandler').then(({ handleOfficerDeactivation }) => {
+          handleOfficerDeactivation(employeeId, workspaceId, 'complaint_client_removal', clientId).catch(e =>
+            log.error('[CoAIleagueScoringService] Client removal error:', e)
+          );
+        }).catch(e => log.error('[CoAIleagueScoringService] Import error:', e));
+      }
+
+      if (eventType === 'compliance_suspension') {
+        log.info(`[CoAIleagueScoringService] Compliance suspension for employee ${employeeId} — triggering workspace-wide shift removal`);
+        import('../scheduling/officerDeactivationHandler').then(({ handleOfficerDeactivation }) => {
+          handleOfficerDeactivation(employeeId, workspaceId, 'suspended').catch(e =>
+            log.error('[CoAIleagueScoringService] Suspension removal error:', e)
+          );
+        }).catch(e => log.error('[CoAIleagueScoringService] Import error:', e));
+      }
+
       return {
         success: true,
         previousScore: previousOverallScore,
@@ -307,7 +338,7 @@ export class CoAIleagueScoringService {
         eventLogId: eventLog.id,
       };
     } catch (error) {
-      console.error('[CoAIleagueScoringService] Error processing event:', error);
+      log.error('[CoAIleagueScoringService] Error processing event:', error);
       return {
         success: false,
         previousScore: 0,
@@ -452,13 +483,10 @@ export class CoAIleagueScoringService {
       // Get employee personality tags
       const employeeTags = await db.query.employeePersonalityTags.findMany({
         where: eq(employeePersonalityTags.employeeId, employeeId),
-        with: { tag: true },
       });
 
-      // Get client preferences
       const clientPrefs = await db.query.clientPersonalityPreferences.findMany({
         where: eq(clientPersonalityPreferences.clientId, clientId),
-        with: { tag: true },
       });
 
       if (clientPrefs.length === 0) {
@@ -485,7 +513,7 @@ export class CoAIleagueScoringService {
       // Normalize to 0-1 range
       return totalWeight > 0 ? Math.max(0, Math.min(1, matchScore / totalWeight)) : 0.5;
     } catch (error) {
-      console.error('[CoAIleagueScoringService] Error calculating personality likeness:', error);
+      log.error('[CoAIleagueScoringService] Error calculating personality likeness:', error);
       return 0.5;
     }
   }

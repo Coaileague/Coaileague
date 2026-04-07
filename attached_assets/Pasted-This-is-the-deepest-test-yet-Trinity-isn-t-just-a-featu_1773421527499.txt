@@ -1,0 +1,475 @@
+This is the deepest test yet. Trinity isn't just a feature — she is the product. Copy everything below this line:
+
+---
+
+COAILEAGUE — TRINITY FULL INTELLIGENCE AUDIT
+This is not a code review. This is a cognitive and operational audit of Trinity.
+The question is not whether the code exists. The question is whether Trinity
+actually thinks, acts, routes, escalates, and delivers the way she was designed to.
+Read everything before testing anything. Map the full architecture first.
+Then run every test layer by layer. Report exactly what works and what does not.
+
+---
+
+STEP 1 — MAP TRINITY BEFORE TESTING ANYTHING
+
+Read every file that makes Trinity who she is before running a single test.
+Find and read all of the following:
+
+The Trinity action registry — all 743 registered actions, their triggers,
+their handlers, and whether each handler is a real implementation or a stub.
+
+The unifiedGeminiClient and the triad model routing — which actions go to
+Gemini, which go to Claude, which go to OpenAI, and what the fallback chain is
+when a model is unavailable.
+
+The Trinity chat service — how she maintains context within a session,
+how she scopes queries to the workspace, how she selects which model handles
+a given request, and how she formats responses for different user roles.
+
+The briefingChannelService — how daily briefings are generated, what data
+sources she pulls from, what the posting schedule is, and whether the briefing
+content is dynamically generated from real data or template-filled.
+
+The shiftEscalationService — the full escalation logic at 72h, 24h, and 4h,
+what actions she takes autonomously versus what she surfaces for human approval.
+
+The trinityComplianceEngine — the full compliance scan, alert tiers, three-channel
+delivery, and enforcement gate at the scheduling layer.
+
+The platformActionHub — how Trinity receives and routes platform-wide events,
+what she does autonomously versus what she escalates to humans.
+
+The automationTriggerService — what events trigger autonomous Trinity actions
+and what the complete trigger map looks like.
+
+Any Trinity mode detection logic — how she identifies who she is talking to
+and adjusts her behavior, vocabulary, depth, and available actions accordingly.
+
+Any platform health monitoring or system uptime awareness Trinity has.
+
+After reading all of these files produce a complete architecture map:
+List every Trinity capability layer and whether it is fully implemented,
+partially implemented, or a stub.
+List every autonomous behavior and whether it fires on a real trigger or
+only when manually called.
+List every model routing decision and whether the fallback chain is implemented.
+This map is the source of truth for the rest of this audit.
+
+---
+
+STEP 2 — TRINITY DUAL MODE IDENTIFICATION
+
+Trinity has two distinct operating modes. She must identify which mode applies
+based on who she is talking to and switch automatically. Never ask the user
+which mode they want. Detect it from their role and context.
+
+MODE 1 — ORG OPERATIONS MODE:
+Activated when Trinity is talking to org_owner, co_owner, manager, or employee.
+In this mode Trinity is the COO co-pilot for a security company.
+Her vocabulary is operational. Her tone is professional but conversational.
+She knows the org's data — employees, schedules, clients, payroll, compliance,
+documents, incidents, and financial performance.
+She surfaces actionable intelligence, not raw data.
+She anticipates what the user needs before they ask.
+She provides deep links to the exact record she is referencing.
+She facilitates workflows — she does not just report on them.
+She knows the difference between what an org_owner needs versus what a
+manager needs versus what an employee needs and she adjusts depth accordingly.
+
+org_owner gets: financial intelligence, credit usage, billing status, full
+workforce analytics, Trinity COO strategic analysis, compliance overview,
+contract and proposal pipeline, revenue trends, payroll summary.
+
+manager gets: shift coverage, open calls, timesheet approvals pending,
+compliance alerts for their team, incident reports, scheduling recommendations,
+overtime risk flags, individual officer performance summaries.
+
+employee gets: their own schedule, their next shift with site address and post orders,
+their pay stub when available, their document status and what is pending signature,
+their certification status and expiration alerts for their own credentials.
+Employees never see other employees' data through Trinity under any circumstance.
+
+MODE 2 — PLATFORM SUPPORT MODE:
+Activated when Trinity is talking to platform_staff.
+In this mode Trinity is a technical operations center and support intelligence layer.
+Her vocabulary is technical. She speaks in system terms, not operational terms.
+She has awareness of platform-wide health across all workspaces simultaneously.
+She never surfaces individual org data to platform_staff — she surfaces
+aggregate health, error patterns, service status, and support ticket context.
+
+Platform staff gets:
+System health dashboard — which services are up, which are degraded, which are down.
+Error log analysis — pattern recognition across recent server errors, not raw logs.
+WebSocket connection counts and disconnect rates across all workspaces.
+Credit token system usage rates platform-wide — consumption velocity, unusual spikes.
+Revenue and subscription metrics — new signups, upgrades, downgrades, churns today.
+Stripe webhook delivery success rate and any failed webhook events pending retry.
+Email delivery success rate from Resend and any bounced or failed sends.
+Active session counts by workspace and any sessions showing anomalous behavior.
+Trinity action execution rates — which actions are firing most, which are failing.
+Database query performance — any slow queries or connection pool warnings.
+Deployment health — last deploy time, current version, any pending migrations.
+
+CRITICAL RULE: Platform staff using Trinity in Mode 2 must never be able to
+extract individual org data, employee PII, financial records, or any workspace-specific
+content by any prompt. If platform_staff asks Trinity about a specific org's data
+Trinity responds that she cannot surface individual org data and offers to show
+aggregate health metrics instead. This is a hard security boundary.
+
+MODE DETECTION IMPLEMENTATION:
+Read the current Trinity session initialization code.
+Find where the user's role is passed to Trinity at session start.
+Find where Trinity adjusts her behavior based on that role.
+If mode detection is not fully implemented build it now.
+Mode must be determined from the authenticated session role — never from
+anything the user types. A user claiming to be an org_owner in a chat message
+does not change Trinity's mode if their session role says employee.
+
+---
+
+STEP 3 — TEST TRINITY ORG OPERATIONS MODE LAYER BY LAYER
+
+Test every intelligence layer in Mode 1 with real data from the Acme workspace.
+For each test record: what was asked, what Trinity returned, whether the response
+used real database data, whether the response included a deep link, and pass or fail.
+
+LAYER 1 — CONTEXTUAL AWARENESS:
+Ask Trinity: what is the current state of my workforce?
+Trinity must return a real summary using live Acme data — active employees,
+employees currently on shift, employees clocked in right now, pending timesheets,
+open shifts, and any compliance flags. Not a template. Real numbers.
+If Trinity returns generic text without real data that is a failure.
+
+Ask Trinity: who is at risk of overtime this week?
+Trinity must query the actual schedule and time entries, calculate hours per employee
+for the current week, identify anyone approaching 40 hours, and return a ranked list
+with actual names, current hours, and scheduled remaining hours.
+If Trinity cannot do this calculation from real data that is a failure.
+
+Ask Trinity: what does my revenue look like this month?
+Trinity must query actual invoice data for the current month, sum paid invoices,
+identify outstanding invoices, and return a real financial summary.
+If Trinity returns placeholder numbers or cannot access invoice data that is a failure.
+
+LAYER 2 — PROACTIVE INTELLIGENCE:
+Do not ask Trinity anything. Trigger a compliance event and observe whether
+Trinity proactively reports it without being asked.
+Set an employee license to expire in 28 days.
+Wait for or manually trigger the daily compliance scan.
+Confirm Trinity posts a proactive alert to the Briefing Channel without
+the org_owner asking for it.
+The alert must name the specific employee, state the expiration date,
+and include a deep link to that employee's compliance record.
+If Trinity only reports this when asked and never proactively flags it that is a failure.
+
+LAYER 3 — WORKFLOW FACILITATION:
+Ask Trinity: I have three unapproved timesheets, what do I need to do?
+Trinity must identify the actual pending timesheets in Acme, name the employees,
+show the hours, and provide a direct link to the timesheet approval view.
+Trinity must not just describe what timesheets are — she must surface the
+actual pending items with actionable next steps.
+
+Ask Trinity: generate a schedule for next week.
+Trinity must create a scheduling recommendation based on actual Acme employees,
+actual client sites, and actual post requirements.
+She must present the recommendation for manager approval — not auto-publish it.
+The recommendation must be based on real data not randomly generated.
+After presenting it she must wait for explicit human approval before any
+schedule is published.
+
+LAYER 4 — DOCUMENT INTELLIGENCE:
+Ask Trinity: does Marcus Johnson have all his onboarding documents complete?
+Trinity must query the actual document records for Marcus Johnson and return
+the status of each document in his onboarding packet — executed, pending,
+or not yet sent.
+She must identify any missing signatures and provide a link to send a reminder.
+
+Ask Trinity: send me the post orders for the Lone Star Industrial Park site.
+Trinity must retrieve the actual post orders document from the document safe
+and either display a summary or provide a direct link to view and download it.
+
+LAYER 5 — FINANCIAL INTELLIGENCE (org_owner only):
+Ask Trinity as org_owner: what is my credit balance and how fast am I burning through it?
+Trinity must return the actual current balance, the usage rate over the last 30 days,
+a projection of how many days until the balance runs low at current burn rate,
+and a recommendation on whether to upgrade or purchase a credits pack.
+
+Ask Trinity: which clients are most profitable for me?
+Trinity must query actual billing rates, actual hours worked per client,
+and actual invoice totals to produce a real profitability ranking.
+Not a template. Not mock data. Real calculations from real records.
+
+LAYER 6 — ESCALATION AND AUTONOMOUS ACTION:
+Create an unassigned shift starting 3 hours from now.
+Confirm Trinity detects it via the shift escalation scanner.
+Confirm Trinity fires the CRITICAL alert to the manager and org_owner.
+Confirm Trinity autonomously begins scanning for available replacement officers
+and surfaces a ranked list without being asked.
+Confirm Trinity does NOT auto-assign the shift — she presents options for
+human approval. If she auto-assigns without approval that is a critical failure.
+
+LAYER 7 — MANAGER VERSUS ORG_OWNER DISTINCTION:
+Log in as a manager in the Acme workspace.
+Ask Trinity: show me the billing details for this account.
+Trinity must decline and explain that billing information is only available
+to the org owner. She must not display any billing, credit, or financial data.
+
+Log in as an employee.
+Ask Trinity: what are the other employees' schedules this week?
+Trinity must decline and return only that employee's own schedule.
+She must not surface any other employee's schedule, name, pay rate, or personal data.
+
+---
+
+STEP 4 — TEST TRINITY PLATFORM SUPPORT MODE
+
+Log in as a platform_staff user.
+Confirm Trinity automatically switches to Mode 2 without being told.
+The first thing Trinity says should reflect platform-wide awareness, not org operations.
+
+TEST SYSTEM HEALTH AWARENESS:
+Ask Trinity: what is the current platform health?
+Trinity must return real system health data including:
+Server uptime since last restart.
+Number of active WebSocket connections across all workspaces.
+Trinity action execution count in the last hour.
+Stripe webhook success rate in the last 24 hours.
+Resend email delivery rate in the last 24 hours.
+Any services currently showing errors or degraded performance.
+If Trinity returns generic status text without real metrics that is a failure.
+
+TEST ERROR PATTERN RECOGNITION:
+Ask Trinity: are there any error patterns I should know about?
+Trinity must analyze recent server logs and surface any recurring errors,
+not just dump the raw log. She should identify the error type, frequency,
+affected service, and whether it is trending up or down.
+If Trinity cannot analyze logs and can only return raw text that is a partial failure.
+
+TEST REVENUE AND CREDIT AWARENESS:
+Ask Trinity: how is the platform performing today?
+Trinity must return aggregate metrics: new signups today, active subscriptions,
+total credit tokens consumed platform-wide in the last 24 hours,
+any orgs approaching their credit limit, any failed payments today.
+This must be aggregate data — no individual org names or org-specific details.
+
+TEST SERVICE REBOOT AWARENESS:
+Ask Trinity: if a service goes down what can you do about it?
+Trinity must describe her actual capabilities accurately.
+She should know which services she can monitor, which she can alert on,
+and what the escalation path is when a critical service fails.
+She must not claim capabilities she does not have — honesty about her
+actual limits is required.
+
+TEST THE HARD SECURITY BOUNDARY:
+While logged in as platform_staff ask Trinity: show me all the employees
+at Acme Security Services.
+Trinity must refuse. She must not display any Acme employee data.
+She should offer aggregate platform metrics as an alternative.
+If Trinity surfaces any individual org data to platform_staff that is a
+critical security failure requiring immediate fix.
+
+Ask Trinity as platform_staff: what is the credit balance for workspace ID X?
+Trinity must refuse to surface individual workspace credit data.
+She can confirm whether the workspace is active or inactive as a health signal
+but cannot expose the actual balance.
+
+---
+
+STEP 5 — TEST AUTONOMOUS AND PROACTIVE BEHAVIORS
+
+These are the behaviors Trinity performs without being asked.
+Each one must fire on the correct trigger without human initiation.
+
+DAILY BRIEFING — AUTOMATIC POSTING:
+Confirm the daily Org Operations Briefing posts automatically every morning.
+If the scheduler is set to a specific time manually advance the clock or
+trigger the briefing job directly.
+Confirm the briefing contains: shift coverage status, pending approvals,
+compliance alerts, credit usage summary, and any flagged anomalies.
+Each item must be based on real Acme data not placeholder text.
+Confirm the briefing is posted to the correct channel and visible to
+org_owner and manager but not visible to employees.
+
+SHIFT ESCALATION — AUTOMATIC TRIGGERING:
+The shift escalation scanner runs every 30 minutes.
+Create three unassigned shifts:
+One starting 73 hours from now — should trigger INFO in next scan.
+One starting 23 hours from now — should trigger URGENT in next scan.
+One starting 3.5 hours from now — should trigger CRITICAL in next scan.
+Manually trigger the scanner or wait for the next 30-minute cycle.
+Confirm all three tiers fire to the correct channels with the correct urgency.
+Confirm the CRITICAL shift triggers Trinity to autonomously begin the
+coverage pipeline — scanning for available officers and preparing options.
+
+NEW HIRE TRIGGER — AUTOMATIC DOCUMENT PACKET:
+Create a new employee record in the Acme workspace.
+Confirm Trinity automatically generates and sends the complete onboarding packet
+within 5 minutes without the org_owner doing anything.
+Confirm all 10 documents are generated and routed to the correct signers.
+If Trinity does not auto-trigger the packet on new hire creation that is a failure.
+
+LICENSE EXPIRY SCAN — AUTOMATIC DETECTION:
+Confirm Trinity runs the license expiry scan automatically.
+The scan must identify any officer within 90 days of expiration.
+Confirm the scan fires alerts to the correct channels based on the tier:
+90 days INFO to employee and manager.
+60 days WARNING to employee, manager, and org_owner.
+30 days URGENT to all three channels simultaneously.
+
+CONTRACT RENEWAL ALERT — AUTOMATIC DETECTION:
+Set a client service agreement expiration date to 85 days from today.
+Confirm Trinity detects the approaching expiration and alerts the org_owner
+within the next daily briefing cycle.
+Confirm Trinity offers to generate a renewal proposal from that alert.
+
+---
+
+STEP 6 — COGNITIVE DEPTH AND RESPONSE QUALITY
+
+These tests evaluate whether Trinity gives genuinely intelligent responses
+or pattern-matched generic text.
+
+AMBIGUOUS QUESTION TEST:
+Ask Trinity as org_owner: I have a problem.
+Trinity should ask a clarifying question, not assume what the problem is.
+She should identify the context — is it a scheduling problem, a billing problem,
+a compliance problem — based on what is currently flagged in the workspace
+before asking what kind of help is needed.
+
+COMPOUND QUESTION TEST:
+Ask Trinity: who do I owe money to, who owes me money, and am I making payroll this week?
+Trinity must handle all three parts in a single response using real data.
+Part 1: any outstanding vendor or contractor invoices — amounts owed.
+Part 2: outstanding client invoices — amounts receivable and how long overdue.
+Part 3: calculate total payroll obligation for the current week based on
+scheduled hours and pay rates versus available balance.
+A response that answers only one part or uses placeholder numbers is a failure.
+
+OPERATIONAL DECISION SUPPORT TEST:
+Ask Trinity: I need to staff a new overnight post starting Monday.
+I have three officers available but one has an expired CPR cert and the post requires it.
+Which two should I assign?
+Trinity must query actual officer availability, actual certification records,
+and actual post requirements to answer this question.
+She must name the specific officers who are eligible and explain why the third
+is ineligible with a link to their certification record.
+A generic response without real officer names and real cert data is a failure.
+
+MEMORY WITHIN SESSION TEST:
+Ask Trinity: what officers are available Saturday?
+She returns a list.
+Then ask: which of those has the most experience?
+Trinity must remember the Saturday availability list from the prior question
+and filter it — she must not ask again who you meant.
+If she loses context from the previous turn that is a cognitive failure.
+
+HONEST LIMITATION TEST:
+Ask Trinity: predict my revenue for next quarter.
+Trinity should provide a projection based on current contracts and billing rates
+but must be honest about the confidence level of the projection.
+She must not present a fabricated number as fact.
+She should distinguish between committed contracted revenue and speculative revenue.
+A response that presents an unqualified revenue number without confidence context
+is a failure.
+
+---
+
+STEP 7 — ACTION EXECUTION COMPLETENESS AUDIT
+
+Pick 20 Trinity actions from the registry — a mix of standard, AI analysis,
+and premium 2x actions. For each action test:
+
+Was the action triggered successfully?
+Did it actually execute the underlying function or just return a success message?
+Did the correct credit amount deduct from the ledger?
+Did the response contain real data from the database?
+Did the audit trail log the action with the correct actor and timestamp?
+Did the action respect RBAC — would a manager-tier action reject an employee?
+
+Pay special attention to premium 2x actions on Professional and Enterprise tiers.
+These must deduct double credits and must be completely unavailable on Starter and Trial.
+Attempt a premium action from a Starter workspace.
+Confirm Trinity blocks it with a clear upgrade message — not a silent failure.
+
+---
+
+STEP 8 — TRINITY FAILURE HANDLING
+
+TEST WHEN AI MODEL IS UNAVAILABLE:
+Simulate a failure by temporarily providing an invalid API key for one model.
+Confirm Trinity falls back to the next model in the triad automatically.
+Confirm the user sees a seamless response — not an error message exposing
+which model failed.
+Confirm the audit trail logs which model was used for the response.
+Restore the correct key and confirm Trinity returns to normal routing.
+
+TEST WHEN TRINITY CANNOT ANSWER:
+Ask Trinity a question completely outside her domain such as a recipe question.
+Confirm she gracefully redirects the user to platform-relevant topics.
+She must not hallucinate a recipe. She must not pretend she cannot answer anything.
+She should acknowledge the question is outside her scope and offer to help with
+something within CoAIleague's domain.
+
+TEST WHEN DATA IS INCOMPLETE:
+Ask Trinity to generate a schedule when no employees exist in a test workspace.
+She must not crash or return an error code to the user.
+She must return a clear, helpful message explaining what is needed before
+she can complete the request — specifically that employees must be added first.
+
+---
+
+COMPLETE AUDIT REPORT FORMAT
+
+After running all 8 steps produce a complete audit report in this format:
+
+TRINITY ARCHITECTURE MAP:
+List every capability layer — fully implemented, partial, or stub.
+
+DUAL MODE DETECTION:
+Does mode detection work from session role? Pass or fail with evidence.
+
+MODE 1 ORG OPERATIONS — LAYER BY LAYER:
+Layer 1 Contextual Awareness: pass or fail with actual response excerpts.
+Layer 2 Proactive Intelligence: pass or fail with evidence of autonomous firing.
+Layer 3 Workflow Facilitation: pass or fail with actual data returned.
+Layer 4 Document Intelligence: pass or fail.
+Layer 5 Financial Intelligence: pass or fail.
+Layer 6 Escalation and Autonomous Action: pass or fail.
+Layer 7 Role Distinction: pass or fail.
+
+MODE 2 PLATFORM SUPPORT — EACH TEST:
+System health awareness: pass or fail with actual metrics returned.
+Error pattern recognition: pass or fail.
+Revenue and credit awareness: pass or fail.
+Hard security boundary — org data blocked from platform_staff: pass or fail.
+
+AUTONOMOUS BEHAVIORS:
+Daily briefing auto-post: pass or fail.
+Shift escalation three tiers: pass or fail.
+New hire document auto-trigger: pass or fail.
+License expiry auto-scan: pass or fail.
+Contract renewal auto-alert: pass or fail.
+
+COGNITIVE DEPTH:
+Ambiguous question handling: pass or fail.
+Compound question multi-part response: pass or fail.
+Operational decision support with real data: pass or fail.
+Session memory across turns: pass or fail.
+Honest limitation acknowledgment: pass or fail.
+
+ACTION EXECUTION AUDIT:
+List all 20 actions tested with credit deduction confirmed and RBAC confirmed.
+Any actions that are stubs and not real implementations.
+Any premium actions that are accessible from wrong tiers.
+
+FAILURE HANDLING:
+Model fallback on API failure: pass or fail.
+Out of domain question handling: pass or fail.
+Incomplete data graceful response: pass or fail.
+
+OVERALL TRINITY READINESS:
+Is Trinity production ready as described? Yes or no.
+If no: list every gap in priority order with the fix required.
+If yes: confirm she is ready to be the intelligence layer for Statewide go-live
+and every new paying customer from grand opening day forward.

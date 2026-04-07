@@ -96,15 +96,15 @@ export const BRANDING = {
     primary: "#3b82f6",      // Blue
     secondary: "#10b981",    // Green
     accent: "#06b6d4",       // Cyan
-    gradient: "from-blue-500 via-green-500 to-cyan-500",
+    gradient: "from-cyan-500 to-blue-600",
     darkBg: "#0f172a",
     lightBg: "#ffffff",
   },
   logo: {
     svg: "/logo.svg",           // CoAIleague AI network gradient logo
-    icon192: "/icon-192.png",   // 192px app icon
-    icon512: "/icon-512.png",   // 512px app icon
-    favicon: "/favicon.ico",    // Browser tab favicon
+    icon192: "/icons/icon-192x192.png",   // 192px app icon
+    icon512: "/icons/icon-512x512.png",   // 512px app icon
+    favicon: "/favicon.svg",    // Browser tab favicon (SVG Trinity logo)
     brandColors: {
       primary: "#3b82f6",       // Blue (AI, trust, intelligence)
       secondary: "#10b981",     // Green (automation, growth)
@@ -120,32 +120,145 @@ export const BRANDING = {
 
 // ============================================================================
 // RBAC ROLES & PERMISSIONS
+//
+// WORKSPACE AUTHORITY HIERARCHY (highest → lowest):
+//   org_owner        — Primary organization owner. Controls mother org + all child orgs.
+//                      Full authority over: spending, hiring, clients, contracts, billing,
+//                      workspace config, integrations, child org management.
+//   co_owner         — Deputy chief / partner. Near-full authority, second-in-command.
+//                      Can act on owner's behalf; cannot remove the org_owner.
+//   admin            — Secretary / operations director. Broad operational access.
+//                      Can manage: hiring, clients, contracts, documents, schedules,
+//                      invoices, staff. Cannot touch billing or workspace-level config.
+//   org_manager      — Organization-wide manager. All departments, no ownership rights.
+//   manager          — Department/team manager. Manages their direct reports.
+//   department_manager — Department-scoped authority. Limited to their department.
+//   supervisor       — Field/team supervisor. Oversees staff on the ground.
+//   staff / employee — Frontline workers. View their own schedules and timesheets.
+//   contractor       — External worker with limited shift-level access.
+//   auditor          — Read-only compliance access. Cannot mutate anything.
+//   client           — External client portal access. Invoices and reports only.
+//
+// MULTI-TENANT (CHILD ORG) ACCESS:
+//   org_owner and co_owner of a PARENT workspace have cross-workspace authority
+//   over all child workspaces linked via parentWorkspaceId. admin and below
+//   are scoped to their own workspace only.
 // ============================================================================
 export const ROLES = {
+  // Platform-level roles (cross-workspace, stored in users.platformRole)
   PLATFORM_ADMIN: "platform_admin",
   ROOT_ADMIN: "root_admin",
-  WORKSPACE_OWNER: "owner",
-  ADMIN: "admin",
-  MANAGER: "manager",
-  SUPERVISOR: "supervisor",
-  EMPLOYEE: "employee",
-  CLIENT: "client",
-  AUDITOR: "auditor",
-  CONTRACTOR: "contractor",
+
+  // Workspace-level roles (stored in employees.workspaceRole — match DB values exactly)
+  WORKSPACE_OWNER: "org_owner",             // Primary owner — DB: "org_owner"
+  CO_OWNER: "co_owner",                     // Deputy chief — DB: "co_owner"
+  ADMIN: "admin",                           // Secretary / operations director — DB: "admin"
+  ORG_MANAGER: "org_manager",               // Org-wide manager — DB: "org_manager"
+  MANAGER: "manager",                       // Team/dept manager — DB: "manager"
+  DEPARTMENT_MANAGER: "department_manager", // Dept-scoped manager — DB: "department_manager"
+  SUPERVISOR: "supervisor",                 // Field supervisor — DB: "supervisor"
+  STAFF: "staff",                           // General staff — DB: "staff" (default)
+  EMPLOYEE: "employee",                     // Explicit employee — DB: "employee"
+  CLIENT: "client",                         // Client contact — DB: "client"
+  AUDITOR: "auditor",                       // Read-only auditor — DB: "auditor"
+  CONTRACTOR: "contractor",                 // External contractor — DB: "contractor"
 } as const;
 
 export const ROLE_HIERARCHY = {
   [ROLES.PLATFORM_ADMIN]: 100,
   [ROLES.ROOT_ADMIN]: 90,
-  [ROLES.WORKSPACE_OWNER]: 80,
-  [ROLES.ADMIN]: 70,
-  [ROLES.MANAGER]: 60,
-  [ROLES.SUPERVISOR]: 50,
+  [ROLES.WORKSPACE_OWNER]: 80,        // org_owner — full authority
+  [ROLES.CO_OWNER]: 75,               // co_owner — deputy chief
+  [ROLES.ADMIN]: 70,                  // admin — secretary / ops director
+  [ROLES.ORG_MANAGER]: 65,            // org_manager — cross-department manager
+  [ROLES.MANAGER]: 60,                // manager — team manager
+  [ROLES.DEPARTMENT_MANAGER]: 55,     // department_manager — dept manager
+  [ROLES.SUPERVISOR]: 50,             // supervisor — field supervisor
   [ROLES.EMPLOYEE]: 30,
-  [ROLES.CONTRACTOR]: 25,
-  [ROLES.CLIENT]: 20,
+  [ROLES.STAFF]: 25,
+  [ROLES.CONTRACTOR]: 20,
+  [ROLES.CLIENT]: 15,
   [ROLES.AUDITOR]: 10,
 } as const;
+
+// ============================================================================
+// CANONICAL ROLE GROUPS
+// Use these constants instead of inline arrays everywhere in the codebase.
+// ============================================================================
+
+/**
+ * Ownership authority: org_owner + co_owner.
+ * For actions that require true organizational ownership (billing, workspace config,
+ * child org management, integration management).
+ */
+export const OWNER_ROLES = [
+  ROLES.WORKSPACE_OWNER,
+  ROLES.CO_OWNER,
+] as const;
+
+/**
+ * Administrative authority: owners + admin (secretary/ops director).
+ * For actions that require broad operational control but not ownership rights
+ * (chat room management, visibility changes, document/contract access).
+ */
+export const ADMIN_ROLES = [
+  ROLES.WORKSPACE_OWNER,
+  ROLES.CO_OWNER,
+  ROLES.ADMIN,
+] as const;
+
+/**
+ * Manager-tier and above: all roles with team authority.
+ * For actions that require management access (shift approval, escalation routing,
+ * hiring decisions, staffing notifications).
+ */
+export const MANAGER_ROLES = [
+  ROLES.WORKSPACE_OWNER,
+  ROLES.CO_OWNER,
+  ROLES.ADMIN,
+  ROLES.ORG_MANAGER,
+  ROLES.MANAGER,
+  ROLES.DEPARTMENT_MANAGER,
+] as const;
+
+/**
+ * Approval authority: roles that can approve AI decisions, timesheets, payroll.
+ * Subset of managers — department_manager excluded (dept managers approve at dept level,
+ * cross-org approvals need org_manager+).
+ */
+export const APPROVER_ROLES = [
+  ROLES.WORKSPACE_OWNER,
+  ROLES.CO_OWNER,
+  ROLES.ADMIN,
+  ROLES.ORG_MANAGER,
+  ROLES.MANAGER,
+] as const;
+
+/**
+ * Supervisor and above: can oversee staff on the ground.
+ */
+export const SUPERVISOR_ROLES = [
+  ROLES.WORKSPACE_OWNER,
+  ROLES.CO_OWNER,
+  ROLES.ADMIN,
+  ROLES.ORG_MANAGER,
+  ROLES.MANAGER,
+  ROLES.DEPARTMENT_MANAGER,
+  ROLES.SUPERVISOR,
+] as const;
+
+export const SUPPORT_ROLES = [
+  'root_admin',
+  'deputy_admin',
+  'sysop',
+  'support_manager',
+  'support_agent',
+] as const;
+
+export const PLATFORM_SUPPORT_ROLES = [
+  ...SUPPORT_ROLES,
+  'compliance_officer',
+] as const;
 
 export const PERMISSIONS = {
   VIEW_DASHBOARD: "view:dashboard",
@@ -177,10 +290,46 @@ export const PERMISSIONS = {
 } as const;
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
+  // Platform-level — unrestricted
   [ROLES.PLATFORM_ADMIN]: Object.values(PERMISSIONS),
   [ROLES.ROOT_ADMIN]: Object.values(PERMISSIONS),
+
+  // org_owner — full authority over everything including billing, workspace, child orgs
   [ROLES.WORKSPACE_OWNER]: Object.values(PERMISSIONS),
+
+  // co_owner — deputy chief; same as org_owner minus ability to change workspace ownership
+  [ROLES.CO_OWNER]: Object.values(PERMISSIONS),
+
+  // admin — secretary / operations director
+  // Full operational access: hiring, clients, contracts, documents, schedules, invoices
+  // NO: billing management, workspace configuration, system integrations
   [ROLES.ADMIN]: [
+    PERMISSIONS.VIEW_DASHBOARD,
+    PERMISSIONS.VIEW_EMPLOYEES,
+    PERMISSIONS.MANAGE_EMPLOYEES,       // hiring, onboarding, termination
+    PERMISSIONS.VIEW_SCHEDULES,
+    PERMISSIONS.MANAGE_SCHEDULES,       // scheduling operations
+    PERMISSIONS.VIEW_TIMESHEETS,
+    PERMISSIONS.APPROVE_TIMESHEETS,     // timesheet approval
+    PERMISSIONS.VIEW_PAYROLL,           // view only — cannot process payroll
+    PERMISSIONS.VIEW_INVOICES,
+    PERMISSIONS.MANAGE_INVOICES,        // contracts, invoices, billing documents
+    PERMISSIONS.VIEW_CLIENTS,
+    PERMISSIONS.MANAGE_CLIENTS,         // client relationship management
+    PERMISSIONS.VIEW_REPORTS,
+    PERMISSIONS.MANAGE_REPORTS,
+    PERMISSIONS.VIEW_SETTINGS,
+    PERMISSIONS.MANAGE_SETTINGS,        // operational settings (not workspace-level config)
+    PERMISSIONS.VIEW_BILLING,           // view only — cannot change billing plan
+    PERMISSIONS.VIEW_ANALYTICS,
+    PERMISSIONS.MANAGE_USERS,           // user account management
+    PERMISSIONS.VIEW_AUDIT_LOGS,
+    PERMISSIONS.ACCESS_AI_FEATURES,
+    PERMISSIONS.MANAGE_CONTRACTORS,     // contractor management
+  ],
+
+  // org_manager — organization-wide manager; cross-department authority, no ownership
+  [ROLES.ORG_MANAGER]: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_EMPLOYEES,
     PERMISSIONS.MANAGE_EMPLOYEES,
@@ -189,7 +338,6 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.VIEW_TIMESHEETS,
     PERMISSIONS.APPROVE_TIMESHEETS,
     PERMISSIONS.VIEW_PAYROLL,
-    PERMISSIONS.MANAGE_PAYROLL,
     PERMISSIONS.VIEW_INVOICES,
     PERMISSIONS.MANAGE_INVOICES,
     PERMISSIONS.VIEW_CLIENTS,
@@ -199,14 +347,16 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.VIEW_SETTINGS,
     PERMISSIONS.VIEW_BILLING,
     PERMISSIONS.VIEW_ANALYTICS,
-    PERMISSIONS.MANAGE_USERS,
     PERMISSIONS.VIEW_AUDIT_LOGS,
     PERMISSIONS.ACCESS_AI_FEATURES,
     PERMISSIONS.MANAGE_CONTRACTORS,
   ],
+
+  // manager — team/department manager
   [ROLES.MANAGER]: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_EMPLOYEES,
+    PERMISSIONS.MANAGE_EMPLOYEES,
     PERMISSIONS.VIEW_SCHEDULES,
     PERMISSIONS.MANAGE_SCHEDULES,
     PERMISSIONS.VIEW_TIMESHEETS,
@@ -216,6 +366,22 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.VIEW_ANALYTICS,
     PERMISSIONS.ACCESS_AI_FEATURES,
   ],
+
+  // department_manager — dept-scoped authority
+  [ROLES.DEPARTMENT_MANAGER]: [
+    PERMISSIONS.VIEW_DASHBOARD,
+    PERMISSIONS.VIEW_EMPLOYEES,
+    PERMISSIONS.MANAGE_EMPLOYEES,
+    PERMISSIONS.VIEW_SCHEDULES,
+    PERMISSIONS.MANAGE_SCHEDULES,
+    PERMISSIONS.VIEW_TIMESHEETS,
+    PERMISSIONS.APPROVE_TIMESHEETS,
+    PERMISSIONS.VIEW_REPORTS,
+    PERMISSIONS.VIEW_ANALYTICS,
+    PERMISSIONS.ACCESS_AI_FEATURES,
+  ],
+
+  // supervisor — field supervisor
   [ROLES.SUPERVISOR]: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_EMPLOYEES,
@@ -223,22 +389,38 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.VIEW_TIMESHEETS,
     PERMISSIONS.APPROVE_TIMESHEETS,
     PERMISSIONS.VIEW_REPORTS,
+    PERMISSIONS.ACCESS_AI_FEATURES,
   ],
+
+  // staff / employee — frontline workers
   [ROLES.EMPLOYEE]: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_SCHEDULES,
     PERMISSIONS.VIEW_TIMESHEETS,
+    PERMISSIONS.ACCESS_AI_FEATURES,
   ],
+  [ROLES.STAFF]: [
+    PERMISSIONS.VIEW_DASHBOARD,
+    PERMISSIONS.VIEW_SCHEDULES,
+    PERMISSIONS.VIEW_TIMESHEETS,
+    PERMISSIONS.ACCESS_AI_FEATURES,
+  ],
+
+  // contractor — external worker, shift-level access only
   [ROLES.CONTRACTOR]: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_SCHEDULES,
     PERMISSIONS.VIEW_TIMESHEETS,
   ],
+
+  // client — external client portal
   [ROLES.CLIENT]: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_INVOICES,
     PERMISSIONS.VIEW_REPORTS,
   ],
+
+  // auditor — read-only compliance access
   [ROLES.AUDITOR]: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_EMPLOYEES,
@@ -355,6 +537,18 @@ export const FEATURES = {
   enableClientBilling: true,
   enableInvoiceFromTimeEntries: true,
   enableAutomatedReminders: true,
+
+  // Trinity Automation Invoice Identification
+  // All platform-generated invoices use this prefix so end users can distinguish
+  // Trinity-automated invoices from manually-entered ones in QuickBooks.
+  // Format: COai-{year}-{type}-{sequential} e.g. COai-2026-CLT-0001
+  trinityInvoicePrefix: "COai",
+  trinityInvoiceTypes: {
+    client: "CLT",        // Client billing invoices from time entries
+    subscription: "SUB",  // Subscription/addon billing invoices
+    payroll: "PAY",       // Payroll-related invoices
+    timesheet: "TSH",     // Timesheet-generated invoices
+  } as Record<string, string>,
   
   // Platform Features
   enableWhatsNew: true,  // Dynamic What's New feed
@@ -459,8 +653,139 @@ export const INTEGRATIONS = {
     },
     
     // Get environment (server-side only)
+    // IMPORTANT: Uses REPLIT_DEPLOYMENT as primary signal, then NODE_ENV, then explicit override
+    // This prevents shared secrets from forcing production mode in development
     getEnvironment(): 'sandbox' | 'production' {
-      return getEnv('QUICKBOOKS_ENVIRONMENT', 'sandbox') as 'sandbox' | 'production';
+      const isDeployment = getEnv('REPLIT_DEPLOYMENT', '') === '1';
+      const nodeEnv = getEnv('NODE_ENV', 'development');
+      const isProductionRuntime = isDeployment || nodeEnv === 'production';
+
+      // In development runtime, ALWAYS use sandbox regardless of QUICKBOOKS_ENVIRONMENT
+      if (!isProductionRuntime) {
+        return 'sandbox';
+      }
+
+      // In production runtime, check explicit override first
+      const explicitEnv = getEnv('QUICKBOOKS_ENVIRONMENT', '');
+      if (explicitEnv === 'sandbox' || explicitEnv === 'production') {
+        return explicitEnv;
+      }
+
+      // Production runtime defaults to production QuickBooks
+      return 'production';
+    },
+    
+    /**
+     * Validate and sanitize request host against allowed domains
+     * Returns validated host or null if untrusted
+     * SECURITY: Prevents host header injection attacks
+     */
+    validateRequestHost(rawHost?: string): string | null {
+      if (!rawHost) return null;
+      
+      // Remove port number for comparison
+      const hostWithoutPort = rawHost.split(':')[0].toLowerCase();
+      
+      // Get allowed domains from environment
+      const allowedDomains = getEnv('REPLIT_DOMAINS', '').split(',').filter(Boolean);
+      
+      // Add known valid patterns
+      const validPatterns = [
+        /\.replit\.app$/,           // Production Replit domains
+        /\.riker\.replit\.dev$/,    // Dev Replit domains
+        /\.replit\.dev$/,           // Replit dev domains
+        /^coaileague\.com$/,        // Production custom domain
+        /^www\.coaileague\.com$/,   // Production custom domain (www)
+        /^localhost$/,              // Local development
+        /^127\.0\.0\.1$/,           // Local loopback
+      ];
+      
+      // Check if host matches allowed domains list
+      if (allowedDomains.some(domain => {
+        const domainWithoutPort = domain.split(':')[0].toLowerCase();
+        return hostWithoutPort === domainWithoutPort;
+      })) {
+        return rawHost;
+      }
+      
+      // Check if host matches valid patterns
+      if (validPatterns.some(pattern => pattern.test(hostWithoutPort))) {
+        return rawHost;
+      }
+      
+      // Untrusted host - return null
+      console.warn(`[QuickBooks] Untrusted host rejected: ${rawHost}`);
+      return null;
+    },
+    
+    /**
+     * Get canonical host for OAuth redirect URIs
+     * Falls back to REPLIT_DOMAINS if request host is untrusted
+     */
+    getCanonicalHost(requestHost?: string): string {
+      // Try to validate the request host first
+      const validatedHost = this.validateRequestHost(requestHost);
+      if (validatedHost) {
+        return validatedHost;
+      }
+      
+      // Fall back to configured domains
+      const replitDomains = getEnv('REPLIT_DOMAINS', '');
+      if (replitDomains) {
+        const primaryDomain = replitDomains.split(',')[0];
+        if (primaryDomain) {
+          return primaryDomain;
+        }
+      }
+      
+      // Last resort - use explicit redirect URI
+      const explicitRedirect = getEnv('QUICKBOOKS_REDIRECT_URI', '');
+      if (explicitRedirect) {
+        try {
+          const url = new URL(explicitRedirect);
+          return url.host;
+        } catch {
+          // Invalid URL, continue
+        }
+      }
+      
+      // Default fallback
+      return 'localhost:5000';
+    },
+
+    // Dynamic environment detection based on request domain
+    // Use this when you need per-request environment detection
+    // IMPORTANT: REPLIT_DEPLOYMENT is the primary signal to prevent dev/prod mixing
+    getEnvironmentForDomain(domain?: string): 'sandbox' | 'production' {
+      const isDeployment = getEnv('REPLIT_DEPLOYMENT', '') === '1';
+      const nodeEnv = getEnv('NODE_ENV', 'development');
+      const isProductionRuntime = isDeployment || nodeEnv === 'production';
+
+      // In development runtime, ALWAYS use sandbox - no domain override
+      if (!isProductionRuntime) {
+        return 'sandbox';
+      }
+
+      // In production runtime, check explicit override
+      const explicitEnv = getEnv('QUICKBOOKS_ENVIRONMENT', '');
+      if (explicitEnv === 'sandbox' || explicitEnv === 'production') {
+        return explicitEnv;
+      }
+      
+      // SECURITY: Validate the domain first
+      const validatedDomain = this.validateRequestHost(domain) || this.getCanonicalHost(domain);
+      
+      // If domain provided, check if it's a production domain
+      if (validatedDomain) {
+        const isProductionDomain = validatedDomain.includes('.replit.app') || 
+          (!validatedDomain.includes('.riker.') && !validatedDomain.includes('.replit.dev') && !validatedDomain.includes('localhost'));
+        if (isProductionDomain) {
+          return 'production';
+        }
+      }
+
+      // Production runtime defaults to production QuickBooks
+      return 'production';
     },
     
     // Get the correct API base URL based on environment
@@ -1062,6 +1387,20 @@ export const CHAT_SERVER_HUB = {
     eventProcessing: 10000, // 10 seconds
     messageAck: 5000, // 5 seconds
   } as const,
+} as const;
+
+// ============================================================================
+// PLATFORM DISCLAIMERS
+// ============================================================================
+export const DISCLAIMERS = {
+  middleware: 'CoAIleague is AI-powered workforce management middleware. CoAIleague is not a financial institution, bank, CPA firm, tax preparer, payroll provider, or legal advisor.',
+  aiAccuracy: 'AI systems can make errors. All AI-generated content, calculations, reports, and recommendations must be reviewed and verified by a qualified human before use, filing, or submission.',
+  orgResponsibility: 'It is the sole responsibility of the organization representative or owner to review and verify all work product generated by CoAIleague before acting on it, filing it, or submitting it to any government agency, financial institution, or third party.',
+  noLiability: 'CoAIleague is not responsible nor will be held responsible for errors, omissions, inaccuracies, or mistakes in any AI-generated content unless directly caused by a verifiable defect in the CoAIleague processing engine or AI brain service.',
+  taxForms: 'Tax forms generated by CoAIleague are for informational and preparation purposes only. Consult a qualified tax professional or CPA before filing any tax documents with the IRS or state agencies.',
+  payroll: 'Payroll calculations are AI-assisted estimates. A qualified human must verify all payroll figures, tax withholdings, and deductions before processing payments.',
+  financial: 'Financial reports and dashboards display AI-calculated estimates. These figures are not audited and should be verified by a qualified accountant before use in official filings or business decisions.',
+  full: 'IMPORTANT DISCLAIMER: CoAIleague is AI-powered workforce management middleware — not a financial institution, CPA firm, tax preparer, payroll provider, or legal advisor. AI systems can make errors. All content, calculations, reports, tax forms, and recommendations generated by CoAIleague are for informational and preparation purposes only and must be reviewed and verified by a qualified human before use. It is the sole responsibility of the organization representative or owner to verify all work product. CoAIleague is not responsible for errors, omissions, or inaccuracies unless directly caused by a verifiable defect in the CoAIleague processing engine. Consult qualified professionals before filing tax documents, processing payroll, or making financial decisions based on AI-generated data.',
 } as const;
 
 // ============================================================================

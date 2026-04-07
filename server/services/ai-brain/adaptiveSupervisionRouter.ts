@@ -22,6 +22,8 @@ import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { GeminiModelTier } from './providers/geminiClient';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('adaptiveSupervisionRouter');
 
 // ============================================================================
 // TYPES
@@ -201,7 +203,7 @@ class AdaptiveSupervisionRouter {
   private subagentLoad: Map<string, number> = new Map();
 
   private constructor() {
-    console.log('[AdaptiveSupervisionRouter] Initializing smart routing system...');
+    log.info('[AdaptiveSupervisionRouter] Initializing smart routing system...');
   }
 
   static getInstance(): AdaptiveSupervisionRouter {
@@ -281,7 +283,7 @@ class AdaptiveSupervisionRouter {
     const handoffId = request.handoffId || `handoff-${crypto.randomUUID()}`;
     const startTime = Date.now();
 
-    console.log(`[AdaptiveSupervisionRouter] Handoff: ${request.sourceSubagent} -> ${request.targetSubagent}`);
+    log.info(`[AdaptiveSupervisionRouter] Handoff: ${request.sourceSubagent} -> ${request.targetSubagent}`);
 
     // Store active handoff
     this.activeHandoffs.set(handoffId, request);
@@ -331,7 +333,7 @@ class AdaptiveSupervisionRouter {
       const result: HandoffResult = {
         handoffId,
         success: false,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
         handoffTimeMs: Date.now() - startTime,
         auditTrail: this.createHandoffAudit(handoffId, request, false, Date.now() - startTime),
       };
@@ -353,7 +355,7 @@ class AdaptiveSupervisionRouter {
     error: Error,
     config: FallbackConfig
   ): Promise<{ tier: GeminiModelTier; shouldRetry: boolean; delay: number }> {
-    console.log(`[AdaptiveSupervisionRouter] Executing fallback from ${originalTier}`);
+    log.info(`[AdaptiveSupervisionRouter] Executing fallback from ${originalTier}`);
 
     // Find applicable trigger
     const trigger = this.findApplicableTrigger(error, config.triggerConditions);
@@ -754,26 +756,15 @@ class AdaptiveSupervisionRouter {
     try {
       await db.insert(systemAuditLogs).values({
         id: crypto.randomUUID(),
-        timestamp: new Date(),
-        eventType: 'adaptive_routing',
         entityType: 'routing_decision',
         entityId: decision.requestId,
         userId: request.userId,
         workspaceId: request.workspaceId,
         action: 'route',
-        details: JSON.stringify({
-          routeType: decision.routeType,
-          complexityLevel: decision.complexity.level,
-          complexityScore: decision.complexity.score,
-          selectedTier: decision.selectedTier,
-          supervisionLevel: decision.supervisionLevel,
-          targetSubagent: decision.targetSubagent,
-          routingTimeMs: decision.routingTimeMs,
-        }),
-        severity: decision.supervisionLevel === 'human_required' ? 'high' : 'low',
+        metadata: { eventType: 'adaptive_routing', severity: decision.supervisionLevel === 'human_required' ? 'high' : 'low', details: JSON.stringify({ routeType: decision.routeType, complexityLevel: decision.complexity.level, complexityScore: decision.complexity.score, selectedTier: decision.selectedTier, supervisionLevel: decision.supervisionLevel, targetSubagent: decision.targetSubagent, routingTimeMs: decision.routingTimeMs }) },
       });
     } catch (error) {
-      console.error('[AdaptiveSupervisionRouter] Failed to log routing decision:', error);
+      log.error('[AdaptiveSupervisionRouter] Failed to log routing decision:', error);
     }
   }
 
@@ -784,25 +775,15 @@ class AdaptiveSupervisionRouter {
     try {
       await db.insert(systemAuditLogs).values({
         id: crypto.randomUUID(),
-        timestamp: new Date(),
-        eventType: 'subagent_handoff',
         entityType: 'handoff',
         entityId: result.handoffId,
         userId: request.userId,
         workspaceId: request.workspaceId,
         action: 'handoff',
-        details: JSON.stringify({
-          sourceSubagent: request.sourceSubagent,
-          targetSubagent: request.targetSubagent,
-          type: request.type,
-          success: result.success,
-          handoffTimeMs: result.handoffTimeMs,
-          error: result.error,
-        }),
-        severity: result.success ? 'low' : 'medium',
+        metadata: { eventType: 'subagent_handoff', severity: result.success ? 'low' : 'medium', details: JSON.stringify({ sourceSubagent: request.sourceSubagent, targetSubagent: request.targetSubagent, type: request.type, success: result.success, handoffTimeMs: result.handoffTimeMs, error: result.error }) },
       });
     } catch (error) {
-      console.error('[AdaptiveSupervisionRouter] Failed to log handoff:', error);
+      log.error('[AdaptiveSupervisionRouter] Failed to log handoff:', error);
     }
   }
 

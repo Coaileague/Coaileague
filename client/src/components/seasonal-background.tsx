@@ -145,7 +145,7 @@ function ChristmasEffects() {
           }}
         >
           <div 
-            className="rounded-full shadow-lg"
+            className="rounded-full shadow-sm"
             style={{ 
               width: ornament.size, 
               height: ornament.size,

@@ -1,0 +1,507 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — TRINITY BRAIN FULL WIRING AUDIT AND COMPLETION
+This is the deepest audit yet. Every bot, every pipeline, every document workflow,
+every feature on the pricing and features page must work completely end to end
+under Trinity's orchestration. Nothing stubbed. Nothing partially wired.
+Nothing that requires a human to complete what Trinity should do autonomously.
+Read every file before touching anything. Map what exists. Fix what is broken.
+Build what is missing. Test everything with real data.
+
+---
+
+STEP 1 — READ AND MAP BEFORE TOUCHING ANYTHING
+
+Read every file in this exact list before writing a single line of new code:
+
+TRINITY BRAIN AND ORCHESTRATION:
+unifiedGeminiClient.ts, resilientAIGateway.ts, trinityChatService.ts,
+platformActionHub.ts, automationTriggerService.ts, trinityProactiveScanner.ts,
+trinityComplianceEngine.ts, trinityEmailOrchestration.ts,
+escalationChainService.ts, briefingChannelService.ts,
+shiftRoomBotOrchestrator.ts, reportBotPDF.ts.
+
+BOT FILES:
+reportBot.ts, helpAI.ts, clockBot.ts, meetingBot.ts.
+For each bot read the full file and note:
+Which Trinity brain functions it calls.
+Which AI model it routes through.
+What its fallback is when the model is unavailable.
+What data it has access to.
+What actions it can execute autonomously versus what requires human approval.
+
+DOCUMENT SYSTEM:
+employeeDocumentOnboardingService.ts, documentSigningService.ts,
+contractPipelineService.ts, contractPipelineRoutes.ts,
+proposalRoutes.ts, proposalPdfService.ts, hrDocumentService.ts if it exists,
+postOrdersService.ts if it exists, handbookService.ts if it exists.
+For each file note what is fully wired versus what is stubbed or missing.
+
+PRICING PAGE FEATURES:
+Read the pricing page component or its data file.
+List every feature bullet point on every tier.
+For each feature confirm it is actually implemented in the backend.
+A feature on the pricing page that is not implemented is a fraud risk.
+Report every feature that exists only on the pricing page but not in the code.
+
+After reading all files produce this architecture truth map:
+
+TRINITY BRAIN CONNECTIVITY:
+For each bot: which Trinity functions does it actually call versus which does it fake?
+For each document pipeline: does Trinity orchestrate it or does it run independently?
+For each pricing feature: implemented fully, partially, or not at all?
+
+DO NOT BUILD ANYTHING UNTIL THIS MAP IS COMPLETE AND REPORTED.
+
+---
+
+STEP 2 — TRINITY BRAIN TOOLS FOR EACH BOT
+
+Every bot must use Trinity's actual intelligence — not hardcoded responses,
+not template strings, not random selections. Trinity thinks. The bots execute.
+
+REPORTBOT — TRINITY BRAIN WIRING:
+
+ReportBot must use Trinity's AI to do these things with real intelligence:
+
+Photo analysis: when an officer posts a photo ReportBot must pass it to
+Trinity's vision capabilities to analyze what is in the photo.
+Trinity should note: is this a site perimeter, a gate, a lobby, a parking area?
+Are there any visible anomalies — graffiti, damage, suspicious items?
+Is the lighting consistent with the reported time of day?
+ReportBot includes Trinity's brief analysis in the log entry.
+This is not optional decoration — it creates accountability and a richer audit trail.
+
+Incident assessment: when an officer posts any message Trinity analyzes it
+for incident indicators using actual AI language understanding, not keyword matching.
+Trinity assesses: is this routine, noteworthy, or a reportable incident?
+If noteworthy Trinity prompts ReportBot to ask follow-up questions.
+If reportable Trinity directs ReportBot to escalate immediately.
+The assessment must use the trinityChatService or unifiedGeminiClient
+with the shift context — site name, post orders, officer name — as context.
+
+Report compilation: at end of shift ReportBot must use Trinity's intelligence
+to rewrite officer messages into professional security report language.
+The AI must understand context — "guy was weird" becomes
+"An unidentified male subject exhibited suspicious behavior at the main gate."
+The officer's original words are preserved in a footnote.
+This must go through the AI model — not a template substitution system.
+
+Quality scan: before generating the PDF Trinity reads the full compiled report
+and identifies any remaining issues — inconsistencies, missing required fields,
+unclear incident descriptions. ReportBot presents these to the officer or manager
+for resolution before the PDF is locked.
+
+HELPAI — TRINITY BRAIN WIRING:
+
+HelpAI must use Trinity's full workspace-scoped intelligence to answer questions.
+HelpAI is not a FAQ bot. HelpAI has access to real data and real intelligence.
+
+When an officer asks about post orders HelpAI must retrieve the actual post orders
+document from the document safe for that specific site and summarize it intelligently.
+Not a generic "check your post orders" response. The actual content.
+
+When an officer asks about their schedule HelpAI must query the actual shift records
+and return the officer's specific upcoming shifts with site names and times.
+
+When an officer reports a medical emergency HelpAI must:
+Immediately provide first aid guidance using Trinity's AI knowledge.
+Retrieve the site's emergency contact numbers from the site record.
+Alert the manager via an autonomous notification — not wait to be asked.
+Suggest calling 911 and staying on the line.
+The manager notification must fire within 10 seconds of the emergency mention.
+
+When an officer asks a company policy question HelpAI must:
+Search the uploaded employee handbook for that org if one exists.
+If the handbook is uploaded and digitized Trinity reads it and answers from it.
+If no handbook is uploaded HelpAI says so and suggests the officer contact their manager.
+
+HelpAI must know what it does not know and say so clearly.
+If asked about another employee HelpAI refuses with a specific explanation.
+If asked about financial or billing data HelpAI refuses and redirects.
+If asked something completely outside its domain HelpAI redirects to relevant help.
+
+CLOCKBOT — TRINITY BRAIN WIRING:
+
+ClockBot must use Trinity's intelligence to validate every supervised clock-in.
+
+Before executing a supervisor override ClockBot must check through Trinity:
+Is the officer currently assigned to a shift at this site right now?
+Is the officer's license active and not expired?
+Is the officer's onboarding status complete?
+Has the shift already ended — if yes ClockBot refuses to clock in.
+Is the officer already clocked in somewhere else — if yes ClockBot flags this.
+
+ClockBot presents all of this context to the manager before the CONFIRM step:
+"Officer Marcus Johnson is assigned to Lone Star Industrial Park from 22:00 to 06:00.
+His Texas Guard Card is active through June 2027. Onboarding complete.
+Type CONFIRM to create a supervised clock-in at [current time]."
+
+After the override ClockBot uses Trinity to generate a brief note for the audit:
+"Supervised clock-in created by [Manager Name] at [Time]. Officer [Name] was present
+at [Site] but unable to complete GPS clock-in. Reason logged."
+ClockBot asks the manager for the reason for the override and records it.
+The reason field is required — ClockBot does not proceed without a reason.
+
+MEETINGBOT — TRINITY BRAIN WIRING:
+
+MeetingBot must use Trinity's intelligence to generate useful meeting summaries.
+
+During the meeting MeetingBot must track discussion threads intelligently.
+Not just action items tagged with @MeetingBot — it must understand the
+full conversation and identify key points that were discussed even if not tagged.
+
+At meeting end Trinity reads the full transcript and generates:
+A structured summary of what was discussed in plain professional language.
+All decisions made even if not explicitly tagged.
+All action items with assigned owners inferred from context.
+A list of unresolved questions that need follow-up.
+The estimated next steps based on what was discussed.
+
+The summary must be generated by the AI model — not assembled from tagged items only.
+The meeting transcript is passed to Trinity with context about the org and the attendees.
+Trinity returns a structured JSON with summary, decisions, action items, next steps.
+MeetingBot formats this into the PDF.
+
+---
+
+STEP 3 — DOCUMENT PIPELINE FULL AUDIT AND BUILD
+
+Every document that CoAIleague mentions anywhere must be fully functional
+from generation through signing through storage. No stubs. No placeholder UIs.
+
+EMPLOYEE SECURITY PACKET — TEXAS PSB COMPLIANT:
+
+This packet must be generated automatically when a new employee is created.
+Trinity orchestrates the generation — it does not wait for the org_owner to click anything.
+
+The packet must contain these documents in this exact order.
+Each document must be generated with real employee data — no blank fields.
+
+Document 1 — Employment Application:
+Full name, DOB, address, phone, email, SSN field (masked after entry),
+emergency contact, position, start date, employment type, prior security experience,
+Texas PSB license number if applicable, background check consent signature,
+drug screening consent signature, applicant signature and date.
+Routing: applicant signs first. HR or org_owner countersigns.
+
+Document 2 — Employment Offer Letter:
+Employee name, position title, start date, pay rate and type, schedule description,
+reporting manager, at-will clause, contingencies (background check, drug test, license).
+Routing: org_owner signs first. Employee countersigns as acceptance.
+
+Document 3 — W-4 Employee Withholding Certificate:
+Must match IRS W-4 format exactly. Name, address, SSN masked, filing status,
+dependents, other income, deductions, extra withholding, employee signature.
+Legal content must not be stylized — only the surrounding design chrome.
+Routing: employee signs only. HR receives.
+
+Document 4 — I-9 Employment Eligibility Verification:
+Must match USCIS I-9 format exactly. Section 1 by employee, Section 2 by employer.
+Section 1: name, address, DOB, SSN, citizenship attestation, employee signature.
+Section 2: document type, issuing authority, document number, expiry, employer cert.
+Routing: employee completes Section 1. HR completes Section 2.
+
+Document 5 — Direct Deposit Authorization:
+Employee name, bank name, account type, routing number, account number,
+deposit amount or percentage, employee signature.
+Routing: employee signs. Payroll receives.
+
+Document 6 — Texas Security Officer License Verification:
+Employee name, Texas PSB license number, class, expiration date,
+confirmation that license must stay active, employee acknowledgment,
+HR countersignature confirming verification completed.
+
+Document 7 — Employee Handbook Acknowledgment:
+If the org has uploaded a handbook: digitize it, require scroll to bottom
+before signature becomes available, employee signs and initials.
+If no handbook uploaded: placeholder with instruction to upload one.
+Routing: employee signs only.
+
+Document 8 — At-Will Employment Agreement:
+Standard Texas at-will statement. Employee and org_owner both sign.
+
+Document 9 — Confidentiality and Non-Disclosure Agreement:
+Security-industry specific. Client identities, site locations, patrol routes,
+access codes, incident reports all defined as confidential.
+Both parties sign.
+
+Document 10 — Background Check Authorization:
+Standalone full authorization. Name history, address history 7 years, SSN masked.
+Employee signs.
+
+PACKET PIPELINE:
+Trinity generates all 10 documents within 5 minutes of employee creation.
+Each document is pre-populated with data already in the system — no re-entry.
+Each document is routed to the correct first signer automatically.
+Each signer receives an email with a Sign Now button.
+The signing sequence is enforced — no document can skip the queue.
+After all 10 are executed: employee onboarding_status updates to completed.
+Trinity becomes aware the employee is scheduling-eligible.
+Both the org document safe and the employee personal portal receive copies.
+Every document is WORM locked after execution.
+
+CONTRACTOR PACKET — 4 DOCUMENTS:
+
+Document 1 — Independent Contractor Agreement:
+Contractor name or business, EIN or SSN, scope, rate, payment schedule,
+independent status affirmation, no benefits clause, Texas law.
+Both parties sign.
+
+Document 2 — W-9 Request for Taxpayer Identification:
+Must match IRS W-9 format exactly. Contractor signs only. Org retains.
+
+Document 3 — Texas Security Contractor License Verification:
+Same structure as employee license verification but contractor-specific language.
+
+Document 4 — Contractor Confidentiality Agreement:
+Same content as employee NDA but explicitly states contractor not employee status.
+Both parties sign.
+
+EMPLOYEE HANDBOOK DIGITIZATION PIPELINE:
+
+Org_owner uploads a PDF handbook.
+Trinity processes it — converts to scrollable online document.
+The scroll position is tracked — the signature button only appears
+after the employee has scrolled to 100 percent of the document.
+The scroll enforcement is server-verified — not just CSS. The employee's
+scroll completion is recorded in the database before the signature is accepted.
+Trinity tracks which version of the handbook each employee signed.
+When org_owner uploads a new version Trinity automatically identifies all
+employees who signed the previous version and sends them the new version.
+Both old and new versions retained in the document safe permanently.
+
+POST ORDERS PIPELINE:
+
+Post orders are created per client site by the org_owner or manager.
+Post orders contain: site name, address, coverage hours, specific duties,
+access procedures, emergency contacts, equipment issued, special instructions.
+When post orders are created Trinity automatically sends them to all officers
+assigned to that site for acknowledgment signature.
+Officers must sign post orders before Trinity allows them to be scheduled at that site.
+When post orders are updated Trinity identifies all assigned officers and
+sends the new version for re-acknowledgment before their next shift.
+Both old and new versions retained permanently.
+Post orders acknowledgment status is visible on the officer's compliance profile.
+
+SALES PROPOSAL AND CONTRACT PIPELINE:
+
+The pipeline has 7 stages. Trinity manages every stage transition.
+
+Stage 1 — Lead Capture:
+org_owner adds a lead with client name, contact, service type, estimated hours.
+Trinity adds it to the pipeline dashboard immediately.
+Trinity drafts an initial proposal within 60 seconds of lead creation.
+The draft is surfaced to the org_owner for review — not auto-sent.
+
+Stage 2 — Proposal Generation and Send:
+Trinity selects the closest proposal template for the service type.
+Trinity populates every field from existing org data:
+License number, insurance, officer qualifications, proposed schedule, billing rate.
+The proposal total is calculated automatically — hours times rate.
+org_owner reviews in the document system, edits if needed, approves.
+On approval Trinity sends the proposal via Track B branded email.
+Email subject: Security Services Proposal from [Security Company Name].
+Content: professional cover letter, proposal summary, View Full Proposal button.
+Trinity records send timestamp. Lead moves to proposal_sent stage.
+
+Stage 3 — Automated Follow-Up:
+Day 5 no response: Trinity drafts follow-up for org_owner approval.
+Day 10 no response: Trinity drafts second follow-up — different angle.
+Day 15 no response: Trinity alerts org_owner to make a phone call. Drafts a call script.
+Day 20 no response: Trinity moves lead to stalled. Org_owner decides continue or close.
+ALL follow-up emails require org_owner approval before Trinity sends.
+Trinity drafts. Human approves. Trinity sends. No exceptions.
+
+Stage 4 — Negotiation:
+Client requests changes. Manager logs client response.
+Trinity generates revised proposal with incremented version number.
+Every version stored permanently — none deleted.
+
+Stage 5 — Contract Generation:
+Client accepts. Manager marks accepted.
+Trinity auto-generates the full service agreement from accepted proposal terms.
+No re-entry of terms. Everything carries over.
+org_owner reviews in the document signing portal.
+org_owner signs first. Trinity sends contract to client.
+Client receives Track B branded email with Sign Contract button.
+
+Stage 6 — Contract Execution and Client Activation:
+Client signs. Contract executes. Document safe receives master copy.
+Trinity automatically creates:
+Client record in clients table.
+Site records for all sites in the contract.
+Billing rate configured from contract terms.
+Task list for org_owner: configure post orders and geofences.
+Pipeline card moves to active_client.
+Client appears in active clients list for scheduling and billing.
+Trinity posts new client activated to the Briefing Channel.
+
+Stage 7 — Renewal:
+90 days before expiration Trinity alerts org_owner in morning briefing.
+Trinity offers to generate renewal proposal from current contract terms.
+On approval Trinity begins Stage 2 through 6 again automatically.
+
+---
+
+STEP 4 — PRICING PAGE FEATURE VERIFICATION
+
+Read the pricing page. List every feature bullet point on every tier.
+For each feature run this check:
+
+Does the backend route or service for this feature exist?
+Does it actually work end to end or is it stubbed?
+Is it connected to Trinity so Trinity can invoke it?
+Is it accessible from the UI for the correct role?
+
+Features that are common sources of gaps in security workforce platforms:
+
+GPS time tracking: confirmed working per prior audits.
+Autonomous scheduling: confirm Trinity generates real recommendations from real data.
+Payroll automation: confirm the full cycle works after this session's fixes.
+QuickBooks integration: confirm the status — is it live, partial, or disabled?
+Real-time communications: confirm WebSocket delivery for all 7 event types.
+Incident reporting: confirm full flow from officer submission to manager notification to audit trail.
+Document management: confirm document safe, WORM lock, signing pipeline.
+Client billing: confirm invoice generation, delivery, payment, and ledger entry.
+Compliance tracking: confirm license expiry scan, scheduling gate, and alert delivery.
+Trinity COO: confirm she gives real data-driven answers not template responses.
+Per-client profitability (Professional add-on): confirm the calculation exists.
+Predictive insights (Professional add-on): confirm this is implemented or flag it.
+Cash flow forecasting (Enterprise): confirm this exists or flag it.
+RFP response generation (Enterprise): confirm Trinity can generate an RFP response.
+Capability statement generation (Enterprise): confirm Trinity can generate this.
+
+For every feature that is NOT fully implemented produce:
+The exact gap — what is missing.
+The fix — what needs to be built.
+The priority — does this appear on the pricing page as a selling point?
+If it appears on the pricing page and is not implemented that is the highest priority fix.
+
+---
+
+STEP 5 — SIMULATION TEST — ALL SYSTEMS TOGETHER
+
+Run a complete integrated simulation for Acme Security Services.
+This tests Trinity, the bots, the documents, and the pipelines all working together.
+
+SCENARIO A — NEW EMPLOYEE FULL LIFECYCLE:
+Create a new employee: James Carter, Armed Security Officer.
+Confirm Trinity auto-generates the 10-document employee security packet.
+Confirm all 10 documents are pre-populated with James's data.
+Confirm the invite email arrives with a Sign Now prompt.
+Complete the signing flow for all 10 documents.
+Confirm after all 10 are executed:
+James's onboarding_status is completed.
+Both document safes have executed copies.
+Trinity allows scheduling James.
+Assign James to a shift at Lone Star Industrial Park.
+Confirm post orders are sent to James for acknowledgment.
+Confirm Trinity blocks the shift assignment until post orders are signed.
+James signs the post orders.
+Confirm Trinity now allows the shift.
+
+SCENARIO B — SHIFT WITH BOT INTELLIGENCE:
+James's shift begins at 22:00.
+Confirm shift room was auto-created with ReportBot and HelpAI.
+Confirm the chat dock shows the shift room card for James.
+James posts a photo at 22:05.
+Confirm ReportBot uses Trinity vision to analyze and acknowledge the photo
+with site confirmation and any observed details.
+At 23:00 James has not posted anything.
+Confirm ReportBot sends the hourly reminder.
+At 01:30 James posts: "unknown male at gate, no ID, refused entry, left area."
+Confirm Trinity detects this as a reportable incident.
+Confirm ReportBot acknowledges as incident, asks for follow-up fields.
+Confirm manager receives escalation notification within 30 seconds.
+At 06:00 confirm ReportBot compiles the full shift report.
+Confirm Trinity rewrote officer notes into professional report language.
+Confirm PDF saved to document safe under Shifts.
+Confirm manager receives notification with send to client option.
+
+SCENARIO C — SALES PIPELINE FULL CYCLE:
+Add lead: Westlake Business Park, San Antonio, needs unarmed patrol 5 days/week.
+Confirm Trinity drafts a proposal within 60 seconds.
+Review and approve the proposal.
+Confirm proposal email sends with Acme branding — no CoAIleague logo.
+Advance to day 5. Confirm Trinity drafts follow-up for approval.
+Approve and send. Confirm email arrives with Acme branding.
+Mark proposal as accepted.
+Confirm Trinity generates the full service agreement with all proposal terms.
+Both parties sign.
+Confirm Trinity creates the Westlake Business Park client record.
+Confirm Trinity creates the site record.
+Confirm pipeline card shows active_client.
+Confirm Trinity posts the new client activation to the Briefing Channel.
+
+SCENARIO D — HANDBOOK AND POST ORDERS:
+Org_owner uploads the Acme employee handbook PDF.
+Confirm Trinity processes it into a scrollable online document.
+Send the handbook to James Carter for acknowledgment.
+Confirm James cannot sign until he scrolls to 100 percent.
+James scrolls to the end and signs.
+Confirm the acknowledgment is saved to both document safes.
+Create new post orders for the Westlake Business Park site.
+Confirm Trinity sends post orders to all officers assigned to that site.
+Confirm James must sign before Trinity allows scheduling at Westlake.
+
+SCENARIO E — CLOCKBOT AND MEETINGBOT:
+Create a manager meeting room for shift briefing.
+Confirm MeetingBot enters and posts the opening message.
+Post @MeetingBot action item: Review Westlake post orders before Monday.
+Post @MeetingBot decision: All officers must post hourly photos at Westlake.
+Type /meetingend.
+Confirm MeetingBot generates a Trinity-powered summary.
+Confirm PDF saved to document safe under Meetings.
+Confirm all attendees receive the summary notification.
+
+Create a second officer who cannot GPS clock in.
+Manager enters the shift room and types @ClockBot.
+Confirm ClockBot uses Trinity to verify the officer's assignment, license, and onboarding.
+Confirm ClockBot presents the context and asks for reason before CONFIRM.
+Manager provides reason and types CONFIRM.
+Confirm ClockBot creates the time entry with supervisor_override.
+Confirm audit trail entry exists with reason recorded.
+
+---
+
+STEP 6 — COMPLETENESS REPORT FORMAT
+
+After running all steps produce this report in exact format:
+
+TRINITY BRAIN CONNECTIVITY:
+ReportBot — which Trinity functions wired: [list] — gaps: [list or none]
+HelpAI — which Trinity functions wired: [list] — gaps: [list or none]
+ClockBot — which Trinity functions wired: [list] — gaps: [list or none]
+MeetingBot — which Trinity functions wired: [list] — gaps: [list or none]
+
+DOCUMENT PIPELINES:
+Employee security packet (10 documents): fully wired / partial / gap [describe]
+Contractor packet (4 documents): fully wired / partial / gap [describe]
+Handbook digitization and signing: fully wired / partial / gap [describe]
+Post orders pipeline: fully wired / partial / gap [describe]
+Sales proposal and contract (7 stages): fully wired / partial / gap [describe]
+
+PRICING PAGE FEATURES:
+For each feature: confirmed working / partial / not implemented
+Any unimplemented features on the pricing page flagged as priority fixes.
+
+SIMULATION RESULTS:
+Scenario A new employee lifecycle: pass / fail — each step
+Scenario B shift with bot intelligence: pass / fail — each step
+Scenario C sales pipeline full cycle: pass / fail — each step
+Scenario D handbook and post orders: pass / fail — each step
+Scenario E clockbot and meetingbot: pass / fail — each step
+
+BUGS FOUND AND FIXED:
+List every gap found with the exact fix applied.
+
+PLATFORM STATUS:
+Is Trinity fully wired as the orchestration intelligence across all systems?
+Are all bots using real Trinity brain tools or fake responses?
+Are all document pipelines fully functional end to end?
+Are all pricing page features implemented?
+READY for Statewide go-live and grand opening — YES or NO.
+If NO: exact list of remaining items in priority order.

@@ -1,0 +1,45 @@
+What's Missing to Close Every Deal
+1. Mobile App (Biggest Gap)
+Security guards don't work at desks. Without a native iOS/Android app, no field-level adoption. Needs: GPS clock-in, guard tour QR/NFC scans, incident reports, shift acceptance, panic button, offline mode.
+
+2. Live Field Map / Command Center
+Dispatchers need a real-time map showing every officer's location, which post they're assigned to, and whether they're on-time or missing. This is a table-stakes feature for mid-size and large security companies.
+
+3. Incident Reporting
+Guards need to submit incident reports from the field — with photos, witness names, narrative, and supervisor sign-off. These feed into client reports automatically.
+
+4. Background Check Live Integration
+The Checkr/Sterling hooks exist but aren't wired to a real API. Companies won't sign without verified background check automation. This includes continuous monitoring (re-screening annually), not just onboarding.
+
+5. Certification & License Renewal Automation
+Auto-alerts at 60/30/7 days before guard card, CPR, firearms permit, or first aid cert expiry. Blocks scheduling if a cert is expired. This alone is a major pain point operators deal with manually today.
+
+6. Panic Button / SOS Alert
+Guards in the field need a one-tap emergency alert that immediately notifies dispatch, supervisors, and 911 context. This is a liability and safety requirement for most enterprise clients.
+
+7. Geofencing + Post Departure Alerts
+Automated alerts when a guard leaves a post boundary unexpectedly. Clients demand this for high-security sites.
+
+8. Client Billing Automation (End-to-End)
+Right now billing is manual review. Auto-generate client invoices from approved timesheets → send to QuickBooks → trigger Stripe payment → mark paid. Full cycle without human touch.
+
+9. Shift Coverage Marketplace (Public Board)
+When a shift goes unfilled, post it to a pool of pre-vetted on-call officers across the region who can claim it. This solves the #1 operational pain — last-minute no-shows.
+
+10. Union & Seniority Rules Engine
+Many large security companies are unionized. Scheduling must respect seniority for shift assignment, overtime rules, and grievance periods. Without this, enterprise contracts are impossible.
+
+11. Daily Activity Reports (DAR)
+Each officer submits a structured end-of-shift report — activity summary, incidents, equipment checks, visitor log. Clients receive these automatically as branded PDFs.
+
+12. Anonymous Ethics Hotline
+Officers can anonymously report misconduct, safety violations, or harassment. These route to HR with Trinity AI triage. Required for enterprise compliance programs.
+
+13. ADP/Paychex Direct Payroll Push
+Most mid-to-large security companies already use ADP or Paychex. CoAIleague needs a native sync that pushes approved timesheets directly to payroll — no CSV exports.
+
+14. RFP Response Automation (Claude)
+Security staffing contracts start with RFPs. Trinity / Claude can auto-draft compliant proposals from the client's posted requirements, pulling org certifications, insurance info, and officer qualifications automatically.
+
+15. Client SLA Monitoring
+Contractual obligations: response time, minimum coverage hours, supervisor inspection frequency. Auto-flag SLA breaches before the client notices them.

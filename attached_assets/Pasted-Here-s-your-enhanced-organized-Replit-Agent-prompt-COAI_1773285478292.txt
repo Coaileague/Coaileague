@@ -1,0 +1,68 @@
+Here's your enhanced, organized Replit Agent prompt:
+
+---
+
+**COAILEAGUE PLATFORM AUDIT — ZERO GAPS PROTOCOL**
+
+You are performing a comprehensive, exhaustive audit of the CoAIleague platform. Read all existing code first before touching anything. No assumptions. No skipping. Every category below must be fully resolved before moving to the next.
+
+**PHASE 1 — READ AND MAP FIRST**
+Scan the entire codebase. Map every route, component, table, schema, file, and connection. Build a complete picture before touching anything.
+
+**PHASE 2 — PLATFORM INTEGRITY**
+- Z-index conflicts across all layers
+- Badge and button overflow issues
+- Hardcoded colors violating token system
+- Route conflicts and execution conflicts
+- Component render duplication
+- Asset drawer, dialog, and modal universal edit capability — centralized, platform-wide in one action
+- Centralized file architecture verified and functioning
+- Domain coordination confirmed across all environments
+
+**PHASE 3 — SCHEMA AND DATABASE**
+- Every table has workspace_id where required
+- All foreign key indexes present
+- Drizzle schema matches actual database
+- Workspace isolation enforced across all ~300+ tables
+- Zero orphaned records or missing relationships
+- Read counts before and after every fix to verify
+
+**PHASE 4 — TRINITY AI VERIFICATION**
+- Audit all intelligence layers — semantic awareness, reasoning, orchestration, action hub endpoints
+- Verify HelpAI supervisor correctly orchestrates ReportBot, ClockBot, MeetingBot, SysOpBot
+- Identify any gaps in Trinity's knowledge of CoAIleague's full scope and purpose
+- If enhancements found — implement them
+- If Trinity is complete — document and move on
+- Trinity operates ONLY through registered Action Hub endpoints — verify this is enforced universally
+
+**PHASE 5 — FEATURE COMPLETENESS**
+Verify full functionality of:
+- AI negotiation strategy and 30 credit contract system
+- Branding system — custom palette, logo, domain configuration
+- Incident tracking — severity classification, photo evidence, resolution workflow
+- Client billing — configurable rates, automated schedules, payment portal
+- Helpdesk — ticket management, priority routing, AI responses
+- All routes connecting correctly to their UI and database layers
+
+**PHASE 6 — UNIVERSAL COMPONENT STANDARDS**
+- Every modal, dialog, drawer editable from centralized location
+- No component siloed with hardcoded local values
+- Platform-wide changes achievable in single edit
+- All components respect theme tokens — light and dark mode
+
+**EXECUTION RULES**
+- Fix one category completely before moving to next
+- If a category cannot be fully resolved flag it with specific reason and continue
+- Run verification counts after every database change
+- Never touch Statewide Protective Services production data — Acme Security Services is dev sandbox only
+- Repeat passes on each category until zero issues found
+- Document every fix made and every enhancement applied to Trinity
+
+**SUCCESS CRITERIA**
+Zero gaps. Zero conflicts. Zero missing tables. Zero render duplications. Zero hardcoded values. Trinity fully enhanced and verified. Every feature connected end to end.
+
+Begin with Phase 1 now. Report findings before making any changes.
+
+---
+
+Run that. Then when it finishes a pass run it again verbatim until each category reports clean. The repeat instruction is built in but hammering it multiple times forces it to keep finding edge cases it missed the first pass.

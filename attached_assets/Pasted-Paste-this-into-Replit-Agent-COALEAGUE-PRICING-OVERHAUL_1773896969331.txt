@@ -1,0 +1,1153 @@
+Paste this into Replit Agent:
+
+---
+
+```
+COALEAGUE PRICING OVERHAUL + ROI CALCULATOR + 
+FEATURE PAGE UPDATE + STRIPE PRODUCT REBUILD
+
+PRIME DIRECTIVE:
+Audit everything that exists before touching anything.
+Read all existing pricing config, Stripe integration,
+credit system code, feature flag system, and ROI 
+calculator before making any changes.
+Present audit findings then execute in phases.
+Do not break any existing functionality while updating.
+
+═══════════════════════════════════════════════════════
+PHASE 0 — AUDIT FIRST
+═══════════════════════════════════════════════════════
+
+Read and map:
+1. All existing Stripe product/price configurations
+2. All credit system code — every file that 
+   references credits, credit_balance, 
+   voice_wallet, ai_usage_log billing logic
+3. Current feature flag system and tier gating
+4. Existing ROI calculator component
+5. Current pricing page component
+6. Current feature page component
+7. All middleware fee configurations
+8. All subscription webhook handlers
+9. All billing route files
+10. Platform config for pricing
+
+Present complete map before touching anything.
+
+═══════════════════════════════════════════════════════
+PHASE 1 — REMOVE CREDIT SYSTEM COMPLETELY
+═══════════════════════════════════════════════════════
+
+The credit system is being replaced with flat 
+monthly pricing plus hard cap fair use limits.
+Remove all credit-related billing logic.
+
+What to remove:
+- workspace_credit_balance table billing logic
+  (keep the table for interaction tracking 
+  but remove all credit deduction logic)
+- All credit purchase flows
+- All credit recharge flows
+- All "insufficient credits" blocking logic
+- All credit display in dashboards
+- Voice wallet credit deduction logic
+- Per-call credit billing calculations
+- Credit top-up UI components
+- Credit balance display components
+
+What to KEEP (repurpose for fair use tracking):
+- ai_usage_log table — keep but repurpose:
+  now tracks interactions for fair use 
+  monitoring only, not for billing deduction
+- workspace_credit_balance table — rename to
+  workspace_usage_tracking — repurpose to track
+  monthly interaction count against tier limit
+- Token counting logic — keep but use only 
+  for fair use cap enforcement, not billing
+
+Replace credit blocking with fair use logic:
+When workspace hits hard cap:
+- Trinity queues all non-critical autonomous work
+- Critical operations (panic alerts, incidents, 
+  compliance blocks) NEVER stop regardless of cap
+- Owner notified once per 24 hours of cap status
+- Operations continue — nothing hard-stops
+- Overage counter starts incrementing
+- Overage billed as line item on next invoice
+
+Create workspace_usage_tracking table:
+- workspace_id (primary key)
+- plan_tier
+- interactions_included_monthly
+- interactions_used_current_period
+- interactions_remaining
+- hard_cap_limit
+- overage_interactions
+- overage_rate_per_interaction
+- billing_period_start
+- billing_period_end
+- cap_notification_sent_at
+- last_updated
+
+Interaction counting rules:
+COUNTS as one interaction:
+- Any Trinity chat message exchange
+- Any autonomous task Trinity executes
+- Any voice command processed
+- Any morning briefing generated
+- Any report or DAR narrative generated
+- Any RFP generation
+- Any advanced analytics query
+
+DOES NOT COUNT:
+- Dashboard page loads
+- Schedule views and edits (database only)
+- Clock in/out events (database only)
+- Basic HelpAI tier-0 commands 
+  (clock in/out, schedule view, post orders — 
+  pure database, zero AI)
+- Notification delivery
+- Document storage and retrieval
+- Payroll calculations (mathematical, no AI)
+- Invoice generation from existing data
+
+═══════════════════════════════════════════════════════
+PHASE 2 — NEW PRICING ARCHITECTURE
+═══════════════════════════════════════════════════════
+
+Implement the following tier structure exactly.
+Update all platform config, feature flags, 
+Stripe products, and middleware accordingly.
+
+───────────────────────────────────────────────
+TIER 0: FREE TRIAL
+───────────────────────────────────────────────
+Duration: 14 days
+Officers: up to 10
+Sites: up to 2
+Clients: up to 3
+AI interactions: 500 total for trial period
+Features: Full platform unlocked
+  (let them see everything Trinity can do)
+Credit card: NOT required to start trial
+Stripe: Create trial subscription that 
+  auto-expires at 14 days
+  After trial: downgrade to locked state 
+  requiring tier selection
+
+───────────────────────────────────────────────
+TIER 1: STARTER
+───────────────────────────────────────────────
+Base price: $1,997/month
+Officers included: up to 25
+Additional officers above 25: $79/officer/month
+Sites: up to 5
+Clients: up to 3
+AI interactions included: 8,000/month
+Hard cap: 15,000 interactions/month
+Overage rate: $0.15 per interaction above cap
+
+Features included:
+- Trinity full biological brain (all layers)
+- Scheduling and shift management
+- GPS timekeeping (clock in/out)
+- ReportBot and incident reporting
+- HelpAI for all officers (all tiers)
+- ChatDock messenger (rooms and DMs)
+- Employee management and onboarding
+- Document management (8 standard forms)
+- Compliance tracking (home state only)
+- Morning briefings
+- Performance scoring and recognition engine
+- Milestone detection and celebration system
+- Basic analytics dashboard
+- Mobile full access
+- Email support (48-hour response)
+
+Features NOT included in Starter:
+- Payroll processing
+- Invoice generation and billing
+- Voice system
+- Multi-state compliance
+- Client portal
+- Auditor portal
+- RFP generation
+- Advanced analytics and forecasting
+- Predictive brain
+- Financial intelligence suite
+- API access
+
+Internal payroll/invoicing:
+NOT available at Starter tier
+Starter uses external payroll references only
+
+───────────────────────────────────────────────
+TIER 2: PROFESSIONAL
+───────────────────────────────────────────────
+Base price: $9,997/month
+Officers included: up to 100
+Additional officers above 100: $99/officer/month
+Sites: up to 20
+Clients: unlimited
+AI interactions included: 30,000/month
+Hard cap: 50,000 interactions/month
+Overage rate: $0.12 per interaction above cap
+
+Features included (everything in Starter plus):
+- Payroll processing (internal — see below)
+- Invoice generation and client billing (internal)
+- Voice system — Trinity speaks and listens
+- All 50 states compliance
+- Disciplinary pattern analyzer
+- Client portal
+- Auditor portal
+- Advanced DAR pipeline with legal narratives
+- RFP generation assistance
+- Advanced analytics and forecasting
+- Predictive brain (calloff, overtime, churn)
+- Financial intelligence — margin per site
+- Contract health monitoring
+- Priority support (4-hour response)
+- Multi-location management
+
+Internal payroll service fees (Professional+):
+Per payroll run processed internally: $2.50/employee
+  (vs QuickBooks Payroll: $6-10/employee
+   vs Gusto: $6-12/employee
+   vs ADP: $8-15/employee
+   CoAIleague is 60-75% cheaper)
+Direct deposit via Plaid ACH: $0.25/transaction
+Tax filing (quarterly): $49/filing
+Year-end W2/1099 generation: $5/form
+
+Internal invoicing service fees (Professional+):
+Invoice generation: FREE (included in plan)
+Payment collection via Stripe: 2.4% + $0.25/transaction
+  (vs QuickBooks Invoicing: 2.9% + $0.25
+   vs Square: 2.6% + $0.10
+   CoAIleague saves 0.5% on every payment)
+ACH bank transfer collection: $0.50/transaction
+  (vs QuickBooks ACH: $1.50/transaction
+   CoAIleague saves $1.00 per ACH payment)
+Automated invoice reminders: FREE
+Client payment portal: FREE
+
+───────────────────────────────────────────────
+TIER 3: BUSINESS
+───────────────────────────────────────────────
+Base price: $19,997/month
+Officers included: up to 300
+Additional officers above 300: $89/officer/month
+Sites: up to 50
+Clients: unlimited
+AI interactions included: 80,000/month
+Hard cap: 150,000 interactions/month
+Overage rate: $0.10 per interaction above cap
+
+Features included (everything in Professional plus):
+- Multi-workspace management
+- Full financial intelligence suite
+- P&L forecasting and site margin scoring
+- Social graph intelligence
+- Full regulatory knowledge base with citations
+- Advanced autonomous task queue
+- Custom recognition and culture programs
+- Field Training Officer program management
+- Custom reporting and dashboards
+- API access (full suite)
+- Dedicated onboarding specialist
+- Slack and Teams integration
+
+Internal payroll service fees (Business):
+Per payroll run: $1.75/employee (volume discount)
+Direct deposit: $0.20/transaction
+Tax filing: $39/filing
+W2/1099: $4/form
+
+Internal invoicing fees (Business):
+Payment collection: 2.2% + $0.20/transaction
+ACH collection: $0.40/transaction
+
+───────────────────────────────────────────────
+TIER 4: ENTERPRISE
+───────────────────────────────────────────────
+Base price: CONTACT US — no published price
+Officers: unlimited
+AI interactions: unlimited (fair use monitored)
+Hard cap: custom negotiated
+Overage: custom rate negotiated in contract
+
+Enterprise pricing gate:
+- Remove all price display for Enterprise tier
+- Replace with "Contact Us for Enterprise Pricing"
+- Enterprise inquiry form collects:
+  Current number of officers (required)
+  Number of active clients (required)
+  Number of states you operate in (required)
+  Current annual payroll total (required)
+  Current monthly overhead for operations 
+    staff (scheduler, HR, compliance) (required)
+  Current invoicing volume monthly (required)
+  Current payroll processing provider 
+    and monthly cost (required)
+  Current compliance management approach (required)
+  Primary pain points (textarea)
+  Name, title, company, email, phone (required)
+- On submission: 
+  Calculate their estimated ROI automatically
+  Send them a personalized ROI report via email
+  Notify CoAIleague sales team immediately
+  Trinity flags as high-value prospect in CRM
+
+Features included (everything in Business plus):
+- Unlimited workspaces
+- White-label options
+- Custom integration development
+- 99.9% uptime SLA with service credits
+- Dedicated account manager
+- Quarterly business reviews
+- Custom AI model fine-tuning (roadmap)
+- Federal and government contract compliance
+- Advanced multi-agent spawning
+- Executive reporting suite
+- Custom regulatory rule sets
+- Priority phone support 24/7
+- Custom contract terms and MSA
+- On-site implementation support
+
+Internal payroll fees (Enterprise):
+Custom rate negotiated — typically $1.25-1.50/employee
+Direct deposit: $0.15/transaction
+Tax filing: $29/filing
+W2/1099: $3/form
+
+═══════════════════════════════════════════════════════
+PHASE 3 — STRIPE PRODUCT AND PRICE REBUILD
+═══════════════════════════════════════════════════════
+
+Audit all existing Stripe products first.
+Archive or deactivate any products that 
+no longer match the new pricing.
+Create new products and prices as follows.
+
+CREATE STRIPE PRODUCTS:
+
+Product 1: CoAIleague Starter
+  Description: AI-powered security workforce 
+    management for small companies up to 25 officers
+  Metadata: tier=starter, officers_included=25
+
+  Prices to create:
+  - starter_monthly: $1,997.00/month recurring
+  - starter_annual: $19,970.00/year recurring 
+    (2 months free — 16.7% discount)
+  - starter_per_officer_overage: $79.00/month 
+    recurring per unit (metered)
+  - starter_interaction_overage: $0.15 per unit 
+    (metered, billed monthly in arrears)
+
+Product 2: CoAIleague Professional
+  Description: Full AI operations platform for 
+    growing security companies up to 100 officers
+  Metadata: tier=professional, officers_included=100
+
+  Prices to create:
+  - professional_monthly: $9,997.00/month recurring
+  - professional_annual: $99,970.00/year recurring
+    (2 months free)
+  - professional_per_officer_overage: $99.00/month 
+    per unit (metered)
+  - professional_interaction_overage: $0.12 per unit
+    (metered, billed monthly in arrears)
+  - payroll_per_employee_run: $2.50 per unit
+    (metered, billed per payroll run)
+  - payroll_direct_deposit: $0.25 per unit (metered)
+  - payroll_tax_filing: $49.00 per unit (metered)
+  - payroll_year_end_form: $5.00 per unit (metered)
+  - invoice_ach_collection: $0.50 per unit (metered)
+
+Product 3: CoAIleague Business
+  Description: Enterprise-grade AI operations 
+    for established security companies up to 300 officers
+  Metadata: tier=business, officers_included=300
+
+  Prices to create:
+  - business_monthly: $19,997.00/month recurring
+  - business_annual: $199,970.00/year recurring
+  - business_per_officer_overage: $89.00/month 
+    per unit (metered)
+  - business_interaction_overage: $0.10 per unit
+    (metered)
+  - payroll_per_employee_run: $1.75 per unit
+    (metered)
+  - payroll_direct_deposit: $0.20 per unit
+  - payroll_tax_filing: $39.00 per unit
+  - payroll_year_end_form: $4.00 per unit
+  - invoice_ach_collection: $0.40 per unit
+  - invoice_card_processing_discount: 
+    -0.5% applied at invoice generation 
+    (2.2% vs standard 2.9%)
+
+Product 4: CoAIleague Enterprise
+  Description: Custom enterprise solution 
+    for large security operations
+  Metadata: tier=enterprise, contact_required=true
+  Prices: created custom per contract — 
+    no public prices on this product
+
+Product 5: CoAIleague Free Trial
+  Description: 14-day full access trial
+  Metadata: tier=trial, duration_days=14
+  Price: $0.00 for 14 days then 
+    auto-cancel (no auto-upgrade)
+
+STRIPE WEBHOOK HANDLERS TO UPDATE:
+
+customer.subscription.created:
+- Set workspace tier in DB
+- Set interactions_included_monthly per tier
+- Set hard_cap_limit per tier
+- Set overage_rate per tier
+- Initialize workspace_usage_tracking record
+- Send welcome email with tier details
+- Trinity initializes for workspace
+
+customer.subscription.updated:
+- Update workspace tier if changed
+- Update all limits and rates
+- Recalculate current period usage
+- If downgrade: check if current usage 
+  exceeds new tier limits, notify owner
+
+customer.subscription.deleted:
+- Mark workspace as inactive
+- Preserve all data for 90 days
+- Notify owner with data export option
+- Trinity sends farewell briefing
+
+invoice.paid:
+- Record payment confirmed
+- Reset monthly interaction counter 
+  if new billing period
+- Release any queued autonomous tasks 
+  that were held for cap reasons
+
+invoice.payment_failed:
+- Notify owner immediately
+- Give 7-day grace period
+- After 7 days: restrict to 
+  critical operations only
+- After 14 days: read-only mode
+
+checkout.session.completed:
+- Provision new workspace
+- Create workspace_usage_tracking record
+- Trigger Trinity workspace initialization
+- Send onboarding sequence
+
+METERED BILLING HANDLERS:
+
+Officer overage tracking:
+- Count active officers in workspace daily
+- If over tier limit: report overage count 
+  to Stripe metered price daily
+- Billed at end of period
+
+Interaction overage tracking:
+- Count interactions in workspace_usage_tracking
+- When hard cap exceeded: start overage counter
+- Report overage count to Stripe metered 
+  price at end of billing period
+
+Payroll service metering:
+- Each payroll run: report employee count 
+  to Stripe payroll_per_employee_run price
+- Each direct deposit: report to 
+  payroll_direct_deposit price
+- Each tax filing: report single unit to 
+  payroll_tax_filing price
+- Each W2/1099: report to 
+  payroll_year_end_form price
+
+Invoice collection metering:
+- Each ACH payment collected: report to 
+  invoice_ach_collection price
+- Card payment processing: Stripe handles 
+  automatically via connect or payment intents
+
+═══════════════════════════════════════════════════════
+PHASE 4 — ROI CALCULATOR BUILD
+═══════════════════════════════════════════════════════
+
+Build a comprehensive ROI calculator that 
+accurately shows prospects what they save 
+using CoAIleague versus their current overhead.
+
+This is the most important sales tool on the site.
+It must be accurate, compelling, and honest.
+
+ROI CALCULATOR INPUTS:
+
+Section 1 — Your Current Team (What Trinity Replaces)
+- Number of security officers: [number input]
+- Number of active client sites: [number input]
+- States you operate in: [multi-select]
+
+Operations Staff You Currently Employ:
+- Do you have an Operations Manager / Deputy Chief?
+  [Yes/No] If yes: What is their annual salary? [$]
+- Do you have dedicated scheduler(s)?
+  [Yes/No] If yes: How many? [1-5] 
+  Average annual salary each? [$]
+- Do you have an HR Administrator?
+  [Yes/No] If yes: Full-time or partial? [select]
+  Annual cost? [$]
+- Do you have a Payroll Coordinator?
+  [Yes/No] If yes: Annual salary? [$]
+- Do you have a Billing/Invoicing person?
+  [Yes/No] If yes: Annual cost? [$]
+- Do you have a Compliance Coordinator?
+  [Yes/No] If yes: Annual cost? [$]
+
+Section 2 — Your Current Software Costs
+- Scheduling software monthly cost: [$]
+- Payroll processing provider: [dropdown]
+  QuickBooks Payroll | Gusto | ADP | Paychex | 
+  Manual | Other
+  Monthly cost: [$]
+  Employees on payroll: [number]
+- Time and attendance software: [$]
+- HR software: [$]
+- Invoicing software: [$]
+- Compliance tracking: [$]
+- Other workforce software: [$]
+
+Section 3 — Your Current Pain Points (Cost Drivers)
+- Estimated monthly overtime costs: [$]
+  (Trinity reduces this by estimated 25-40%)
+- Annual employee turnover rate: [%]
+  (Industry average: 120-150%)
+- Average cost to replace one officer:
+  [auto-calculated at $4,500 or enter custom $]
+- Compliance violations in last 2 years:
+  [dropdown: 0 | 1-2 | 3-5 | 5+]
+  Estimated total fines paid: [$]
+- Client contracts lost in last 12 months:
+  [number]
+  Average annual value of lost contract: [$]
+- Hours per week owner/manager spends 
+  on scheduling and operations: [hours]
+  Your hourly value (salary/2080): [$]
+
+Section 4 — Your Current Invoicing
+- Monthly invoicing volume: [$]
+- Current payment processing rate: [%]
+- Current ACH fee per transaction: [$]
+- Average days to get paid: [days]
+
+ROI CALCULATOR OUTPUTS:
+
+Calculate and display in real time as they type:
+
+CURRENT ANNUAL COSTS:
+Operations staff total: [calculated]
+Software stack total: [calculated]
+Overtime waste: [calculated]
+Turnover cost: 
+  (officers × turnover_rate × replacement_cost)
+Compliance violation cost: [entered]
+Lost client revenue: [calculated]
+Owner time cost: [calculated]
+Payment processing premium vs CoAIleague: [calculated]
+Payroll processing premium vs CoAIleague: [calculated]
+TOTAL CURRENT ANNUAL OVERHEAD: [sum]
+
+WHAT COALEAGUE ELIMINATES OR REDUCES:
+Operations Manager: eliminated → $[salary saved]
+Schedulers: eliminated → $[salary saved]
+HR Admin: reduced 60% → $[saved]
+Payroll Coordinator: eliminated → $[saved]
+Billing person: eliminated → $[saved]
+Compliance Coordinator: eliminated → $[saved]
+Scheduling software: eliminated → $[saved]
+Payroll processing: reduced 65% → $[saved]
+Overtime reduction (est. 30%): → $[saved]
+Turnover reduction (est. 25%): → $[saved]
+Compliance protection: → $[saved]
+Payment processing savings: → $[saved]
+Owner time recovered: [hours]/week → $[value]
+TOTAL ANNUAL SAVINGS WITH COALEAGUE: [sum]
+
+COALEAGUE ANNUAL COST:
+Recommended tier: [auto-selected based on 
+  officer count with explanation]
+Base annual price: [calculated]
+Estimated payroll service fees: [calculated]
+  (based on employee count and payroll runs)
+Estimated payment processing: [calculated]
+  (based on invoicing volume at our lower rate)
+TOTAL ANNUAL COALEAGUE INVESTMENT: [sum]
+
+NET ANNUAL SAVINGS: [savings - coaleague cost]
+FIRST YEAR ROI: [net savings / coaleague cost × 100]%
+PAYBACK PERIOD: [days until ROI positive]
+
+Display prominently:
+"You save [NET ANNUAL SAVINGS] per year with CoAIleague"
+"Your investment pays back in [PAYBACK PERIOD] days"
+"[FIRST YEAR ROI]% return on investment in year one"
+
+RECOMMENDED TIER LOGIC:
+1-25 officers → Starter ($1,997/mo)
+26-100 officers → Professional ($9,997/mo)
+101-300 officers → Business ($19,997/mo)
+301+ officers → Enterprise (Contact Us)
+
+If officer count is near tier boundary (within 10%):
+Show both tiers with explanation of which 
+features unlock at the next tier.
+
+INTERNAL PAYROLL SAVINGS CALLOUT:
+Show a dedicated comparison section:
+
+"CoAIleague Payroll vs What You Pay Now"
+
+| | You Pay Now | CoAIleague | You Save |
+|---|---|---|---|
+| Per employee per run | $[their rate] | $2.50 | $[diff] |
+| Monthly payroll cost | $[calculated] | $[calculated] | $[monthly saved] |
+| Annual payroll savings | | | $[annual saved] |
+
+"CoAIleague processes payroll internally — 
+no QuickBooks, no Gusto, no ADP. 
+You get the same direct deposit, tax filing, 
+and year-end forms at 60-75% less cost."
+
+INTERNAL INVOICING SAVINGS CALLOUT:
+"CoAIleague Invoicing vs What You Pay Now"
+
+| | You Pay Now | CoAIleague | You Save |
+|---|---|---|---|
+| Card processing rate | [their rate]% | 2.4% | [diff]% |
+| ACH per transaction | $[their rate] | $0.50 | $[diff] |
+| Monthly savings | | | $[calculated] |
+| Annual savings | | | $[calculated] |
+
+"CoAIleague collects your client payments directly — 
+faster, cheaper, and fully reconciled with 
+your invoices automatically."
+
+CTA AFTER CALCULATOR:
+[Start Free 14-Day Trial — No Credit Card Required]
+[Schedule a Demo — See Trinity Live]
+[Get Enterprise Quote — Contact Our Team]
+
+The CTA shown depends on their officer count:
+Under 300 → show trial CTA prominently
+300+ → show Enterprise Contact CTA prominently
+
+═══════════════════════════════════════════════════════
+PHASE 5 — FEATURE PAGE UPDATE
+═══════════════════════════════════════════════════════
+
+Rewrite the feature page completely.
+Remove all C-Suite Brain language.
+Remove all credit system references.
+Remove all old pricing language.
+
+New feature page structure:
+
+HERO SECTION:
+Headline: "Trinity Runs Your Security Company 
+So You Don't Have To"
+Subheadline: "The only AI platform built 
+specifically for security companies. 
+Trinity learns your operation, predicts 
+problems before they happen, and handles 
+everything from scheduling to payroll — 
+while you focus on growing your business."
+
+PROOF BAR (below hero):
+"Trusted by security companies across Texas"
+[stat] Hours of operations automated weekly
+[stat] Average annual savings per client
+[stat] States covered for compliance
+[stat] Days average payback period
+
+FEATURE SECTIONS (in this order):
+
+1. RUNS YOUR OPERATION AUTONOMOUSLY
+Icon: brain or command center
+"Trinity manages your business the way 
+you would if you never needed to sleep. 
+She fills coverage gaps before shifts start, 
+predicts calloffs before they happen, prevents 
+overtime before it hits your payroll, and 
+keeps every site covered every night — 
+without a phone call to you."
+
+Features listed:
+- AI-powered scheduling and coverage management
+- Calloff prediction and automatic backfill
+- Overtime prevention and labor optimization
+- Autonomous task execution 24/7
+- Morning briefings delivered to your phone daily
+- Problems solved before you know they existed
+
+2. KNOWS EVERY PERSON IN YOUR ORGANIZATION
+Icon: people/team
+"Trinity tracks every officer's performance, 
+attendance, report quality, and career growth. 
+She celebrates birthdays, flags burnout before 
+it becomes a resignation, suggests raises when 
+earned, and identifies discipline issues with 
+evidence — not gut feelings. Your team feels 
+known. Your turnover drops."
+
+Features listed:
+- Officer performance scoring and tracking
+- Automatic milestone recognition (birthdays, 
+  anniversaries, achievements)
+- Raise and promotion recommendations with data
+- Disciplinary pattern detection with 5W1H analysis
+- Career development tracking
+- HelpAI — one AI assistant for every officer
+  available 24/7 in their shift room
+
+3. PROCESSES YOUR PAYROLL AND INVOICING — 
+   AT A FRACTION OF THE COST
+Icon: dollar sign or payment
+"CoAIleague handles payroll and invoicing 
+internally — no QuickBooks subscription, 
+no Gusto fees, no ADP markups. Direct deposit, 
+tax filing, year-end forms, and client invoice 
+collection all built in. Most clients save 
+60-75% on processing costs alone."
+
+Features listed:
+- Internal payroll processing — direct deposit included
+- Automated tax calculations and quarterly filing
+- Year-end W2 and 1099 generation
+- Client invoice generation and delivery
+- Automated payment collection and reconciliation
+- ACH and card payment processing at below-market rates
+- Real-time financial dashboard and P&L per site
+- QuickBooks sync available if preferred
+
+DO NOT mention Stripe or Plaid by name.
+DO NOT reveal the payment infrastructure.
+Language is: "processed securely through 
+bank-grade payment infrastructure"
+
+4. KEEPS YOU LEGALLY PROTECTED IN ALL 50 STATES
+Icon: shield or gavel
+"Trinity knows security licensing law in 
+every state you operate in. She cites the 
+exact statute when she flags an issue. 
+She blocks assignments that would create 
+violations before they happen. She generates 
+audit-ready compliance reports automatically. 
+One DPS violation can cost more than a 
+year of CoAIleague — Trinity makes sure 
+you never face one."
+
+Features listed:
+- Texas DPS Chapter 1702 compliance built in
+- All 50 states licensing requirements
+- Automatic license expiration alerts 
+  (90/60/30/7 day cascade)
+- Armed post assignment guard — Trinity 
+  blocks unlicensed assignments
+- Audit-ready compliance reports on demand
+- State regulatory auditor portal
+- Statute-cited compliance recommendations
+- Real-time compliance dashboard
+
+5. PROTECTS YOUR OFFICERS IN THE FIELD
+Icon: shield with person
+"Trinity is the operations center your 
+officers never had. Panic alerts reach 
+every supervisor simultaneously. Lone worker 
+check-ins are monitored automatically. 
+Dispatch status is tracked in real time. 
+Your officers are never alone out there — 
+Trinity is always watching."
+
+Features listed:
+- One-touch panic alert system
+- Lone worker automated check-in monitoring
+- Real-time dispatch tracking
+- BOLO broadcast to all on-shift officers
+- Visitor log with threat cross-reference
+- GPS-stamped proof of service on every shift
+- Weapon and asset tracking
+- Incident narrative generation for legal use
+
+6. VOICE-POWERED FOR THE FIELD
+Icon: microphone
+"Officers don't type reports at 2am. 
+Trinity speaks and listens. Officers can 
+clock in, file incidents, check schedules, 
+and get post orders by voice — in the 
+shift room on their phone. Trinity responds 
+by voice. Your workforce has a real 
+operational assistant in their pocket."
+
+Features listed:
+- Voice clock in and clock out
+- Voice incident reporting
+- Voice schedule and post order lookup
+- Voice calloff processing
+- Trinity voice briefings delivered daily
+- Works on all devices including iPhone
+- Available in ChatDock rooms and DMs
+
+7. LEARNS YOUR BUSINESS AND GETS SMARTER
+Icon: brain with growth arrow
+"Trinity doesn't reset every day. She 
+remembers every officer, every site, 
+every incident, every client interaction 
+in your organization's history. She runs 
+a 13-phase overnight processing cycle 
+to consolidate what she learned. She gets 
+better at running your specific company 
+every single month."
+
+Features listed:
+- Persistent memory across all time
+- Nightly cognitive consolidation (dream state)
+- Hebbian learning from every decision outcome
+- Predictive models that improve with your data
+- Counterfactual simulation — learns from 
+  every mistake
+- Curiosity-driven autonomous investigation
+- Narrative identity — Trinity knows your 
+  company's story
+- Monthly self-reflection and improvement
+
+PRICING SECTION ON FEATURE PAGE:
+Simple teaser, link to full pricing page.
+
+"Simple pricing. One monthly rate. 
+No credit systems. No per-seat traps. 
+No hidden AI fees."
+
+Show tier names and starting prices:
+Starter from $1,997/month
+Professional from $9,997/month  
+Business from $19,997/month
+Enterprise — Contact Us
+
+[View Full Pricing] [Start Free Trial]
+
+═══════════════════════════════════════════════════════
+PHASE 6 — PRICING PAGE BUILD
+═══════════════════════════════════════════════════════
+
+Build a dedicated pricing page with:
+
+HEADER:
+"Pricing That Makes Sense"
+"One monthly rate. Everything included. 
+No credits. No hidden fees. No surprises. 
+Just Trinity running your business."
+
+ROI TEASER:
+"Most clients see positive ROI within 47 days."
+[Link to ROI Calculator]
+
+TIER CARDS (3 visible, Enterprise different):
+
+Starter Card:
+$1,997/month or $19,970/year (save 2 months)
+Up to 25 officers included
+$79/officer/month above 25
+[Feature list — see Phase 2 above]
+[Start Free Trial] button
+
+Professional Card: (MOST POPULAR badge)
+$9,997/month or $99,970/year (save 2 months)
+Up to 100 officers included
+$99/officer/month above 100
+[Full feature list]
+[Start Free Trial] button
+
+Business Card:
+$19,997/month or $199,970/year (save 2 months)
+Up to 300 officers included
+$89/officer/month above 300
+[Full feature list]
+[Start Free Trial] button
+
+Enterprise Card: (different styling — dark, premium)
+No price displayed
+"For organizations with 300+ officers 
+operating across multiple states"
+"Custom pricing based on your operation size, 
+state coverage, and requirements"
+[Get Enterprise Quote] button — opens inquiry form
+
+Enterprise inquiry form collects:
+- Full name and title (required)
+- Company name (required)
+- Email and phone (required)
+- Number of officers (required)
+- Number of clients (required)
+- States of operation (required)
+- Current annual payroll total (required)
+- Current monthly operations overhead 
+  staff cost (required)
+- Current monthly invoicing volume (required)
+- Current payroll provider and monthly cost
+- Primary pain points (textarea)
+- How did you hear about CoAIleague
+
+On submit:
+- Auto-calculate estimated ROI
+- Send personalized ROI report to their email
+- Notify CoAIleague team immediately
+- Create prospect record in system
+- Trinity flags as high-value prospect
+
+PAYROLL AND INVOICING FEE SECTION:
+On pricing page below tier cards:
+
+"CoAIleague Internal Payroll and Invoicing"
+(Professional, Business, and Enterprise plans)
+
+"Stop paying QuickBooks or Gusto to process 
+your payroll. CoAIleague handles it internally 
+at a fraction of the cost."
+
+Payroll fees table:
+| Service | CoAIleague | QuickBooks | Gusto | You Save |
+|---|---|---|---|---|
+| Per employee per run | $2.50 | $6-10 | $6-12 | 60-75% |
+| Direct deposit | $0.25 | included* | included* | varies |
+| Quarterly tax filing | $49 | $50+ | $50+ | comparable |
+| Year-end W2/1099 | $5/form | $5-10/form | $5/form | comparable |
+
+*Note: "included" in QuickBooks/Gusto means 
+you're paying for it in their higher per-run fees
+
+Invoicing fees table:
+| Service | CoAIleague | QuickBooks | Square | You Save |
+|---|---|---|---|---|
+| Card processing | 2.4% + $0.25 | 2.9% + $0.25 | 2.6% + $0.10 | 0.5%+ |
+| ACH collection | $0.50 | $1.50 | $1.00 | $1.00/txn |
+| Invoice generation | Free | included* | included* | varies |
+
+"All payments processed through bank-grade 
+secure payment infrastructure. 
+Funds deposited to your account in 1-2 business days."
+
+FAIR USE SECTION:
+"What counts as an AI interaction?"
+
+"Your monthly plan includes a generous 
+fair use allowance of AI interactions. 
+Here is what counts and what does not."
+
+COUNTS:
+- Trinity chat conversations
+- Autonomous task executions
+- Voice commands processed
+- Morning briefings generated
+- Incident narratives and reports
+- RFP generation
+- Advanced analytics queries
+
+DOES NOT COUNT:
+- Schedule views and edits
+- Clock in and clock out
+- Basic officer HelpAI commands 
+  (schedule, post orders, clock in/out)
+- Dashboard page loads
+- Document storage and retrieval
+- Payroll calculations
+- Notification delivery
+
+"Most clients use 20-40% of their monthly 
+allowance. The hard cap exists to protect 
+platform performance — critical operations 
+like panic alerts and compliance blocks 
+never stop regardless of usage."
+
+FAQ SECTION:
+Q: Is there a long-term contract?
+A: No. Monthly plans cancel anytime. 
+   Annual plans include 2 free months.
+
+Q: What happens if I go over my interaction limit?
+A: Critical operations never stop. 
+   Non-urgent autonomous work is queued. 
+   Overages are billed at your tier's 
+   overage rate on your next invoice. 
+   You're notified before overages accumulate.
+
+Q: Do I need QuickBooks or Gusto?
+A: No. CoAIleague handles payroll and 
+   invoicing internally at significantly 
+   lower cost. QuickBooks sync is available 
+   if you prefer to keep it.
+
+Q: Can I add more officers mid-month?
+A: Yes. Additional officers above your tier 
+   limit are billed at your tier's per-officer 
+   rate, prorated for the remaining days 
+   in your billing period.
+
+Q: What is the free trial?
+A: 14 days of full platform access including 
+   Trinity's complete AI brain. Up to 10 officers. 
+   No credit card required. No auto-charge.
+
+Q: How does Enterprise pricing work?
+A: Enterprise pricing is customized based on 
+   officer count, states of operation, 
+   payroll volume, invoicing volume, and 
+   custom development requirements. 
+   Contact us for a personalized quote 
+   and ROI analysis.
+
+═══════════════════════════════════════════════════════
+PHASE 7 — MIDDLEWARE AND FEATURE GATING UPDATE
+═══════════════════════════════════════════════════════
+
+Update all middleware and feature flags 
+to match new tier structure exactly.
+
+Feature gate middleware must enforce:
+
+STARTER gates (block if not Professional+):
+- payroll processing routes
+- invoice generation routes
+- voice system routes
+- multi-state compliance routes
+- client portal routes
+- auditor portal routes
+- RFP generation routes
+- advanced analytics routes
+- predictive brain routes
+- financial intelligence routes
+- API access routes
+
+PROFESSIONAL gates (block if not Business+):
+- multi-workspace management routes
+- full financial intelligence suite routes
+- social graph routes
+- API full suite routes
+- custom reporting routes
+
+BUSINESS gates (block if not Enterprise):
+- white-label routes
+- custom integration routes
+- advanced multi-agent routes
+- federal compliance routes
+
+ENTERPRISE only routes:
+- custom AI fine-tuning routes
+- strategic reporting routes
+- SLA management routes
+
+Officer count enforcement middleware:
+- On every relevant API call check 
+  current active officer count vs tier limit
+- If over limit: allow but flag for 
+  overage billing
+- Do not block officer operations — 
+  only flag for billing
+
+Interaction counting middleware:
+- Wrap all AI call endpoints
+- Increment workspace_usage_tracking 
+  interactions_used_current_period
+- Check against hard_cap_limit
+- If over hard cap: 
+  Queue autonomous tasks
+  Allow critical operations
+  Start overage counter
+  Send owner notification 
+  (max once per 24 hours)
+
+Internal payroll and invoicing middleware:
+- All payroll run completions: 
+  report employee count to Stripe metered price
+- All direct deposit initiations: 
+  report to Stripe metered price
+- All tax filings: 
+  report to Stripe metered price
+- All invoice payment collections: 
+  report to Stripe metered price based on method
+
+═══════════════════════════════════════════════════════
+PHASE 8 — FINAL VERIFICATION
+═══════════════════════════════════════════════════════
+
+After all phases complete verify:
+
+□ Credit system completely removed from 
+  all billing flows
+□ workspace_usage_tracking table created 
+  with correct schema
+□ All tier prices correct in platform config
+□ All Stripe products created with 
+  correct prices and metadata
+□ All Stripe metered prices configured 
+  correctly for overages
+□ Webhook handlers updated for all 
+  Stripe events
+□ Feature gating middleware updated 
+  for all tiers
+□ Interaction counting middleware working
+□ Officer overage counting working
+□ Internal payroll metering working
+□ Internal invoicing metering working
+□ ROI calculator renders correctly
+□ All inputs calculate in real time
+□ Payroll savings comparison accurate
+□ Invoicing savings comparison accurate
+□ Recommended tier auto-selects correctly
+□ Enterprise tier shows no price
+□ Enterprise inquiry form captures 
+  all required fields
+□ Enterprise inquiry triggers ROI email
+□ Free trial creates correct Stripe 
+  subscription with 14-day trial period
+□ Pricing page shows all 4 tiers correctly
+□ Feature page updated with no C-Suite language
+□ No credit references remain in UI
+□ All CTAs route correctly
+□ Annual pricing shows 2-month savings
+□ Per-officer overage rates correct per tier
+□ Overage interaction rates correct per tier
+□ Boot clean with zero errors after changes
+
+REPORT:
+- All old credit system references removed: 
+  confirmed or list what remains
+- All Stripe products created: 
+  list product IDs created
+- All Stripe prices created: 
+  list price IDs created
+- ROI calculator test: 
+  run with 100 officers, 60 clients, 
+  $72K ops manager, $76K two schedulers, 
+  $80K overtime, show calculated output
+- Feature gating test: 
+  confirm Starter cannot access payroll routes
+  confirm Professional can access payroll routes
+  confirm Business can access API routes
+  confirm Starter cannot access API routes
+
+DO NOT STOP UNTIL ALL PHASES COMPLETE 
+AND ALL VERIFICATION CHECKS PASS.
+```
+
+---
+
+Bryan that prompt does everything in one run. Removes the credit system cleanly, rebuilds Stripe from scratch with correct pricing and metered overages, builds the ROI calculator with real industry math, rewrites the feature and pricing pages, and wires all the middleware.
+
+The ROI calculator seeded with your own numbers — 100 officers, 60 clients, Deputy Chief at $72K, two schedulers at $76K, overtime at $80K — will show prospects exactly what Trinity saves them before they even talk to you.
+
+Run it while you sleep. Bring the output back and we verify before anything touches Stripe production.

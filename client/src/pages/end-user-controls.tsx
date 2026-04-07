@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { SUPPORT_ROLES } from '@shared/platformConfig';
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -12,13 +13,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Users, Building2, Shield, Search, UserCheck, UserX, 
   Brain, Zap, RefreshCw, AlertTriangle, CheckCircle, 
-  Ban, Play, Settings, Eye, Clock, Activity
+  Ban, Play, Settings, Eye, Clock, Activity,
+  Briefcase, Calendar, Receipt, MapPin, DollarSign, Mail, UserCog
 } from "lucide-react";
 
 interface EndUser {
@@ -65,7 +75,60 @@ interface UserAccessConfig {
   };
 }
 
-const SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+interface OrgEmployee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  employeeNumber?: string;
+  workspaceRole?: string;
+  isActive?: boolean;
+  position?: string;
+  department?: string;
+  phone?: string;
+}
+
+interface OrgShift {
+  id: number;
+  title?: string;
+  startTime: string;
+  endTime: string;
+  status?: string;
+  employeeId?: number;
+  clientId?: number;
+  location?: string;
+}
+
+interface OrgInvoice {
+  id: number;
+  invoiceNumber?: string;
+  clientName?: string;
+  amount?: number;
+  status?: string;
+  dueDate?: string;
+  createdAt?: string;
+}
+
+interface PlatformRoleAssignment {
+  id: number;
+  userId: string;
+  role: string;
+  grantedAt: string;
+  grantedBy: string;
+  grantedReason?: string;
+  userEmail: string;
+  userFirstName?: string;
+  userLastName?: string;
+}
+
+const PLATFORM_ROLE_LABELS: Record<string, string> = {
+  root_admin: 'Root Admin',
+  deputy_admin: 'Deputy Admin',
+  sysop: 'Sysop',
+  support_manager: 'Support Manager',
+  support_agent: 'Support Agent',
+  compliance_officer: 'Compliance Officer',
+};
 
 export default function EndUserControls() {
   const [, setLocation] = useLocation();
@@ -77,14 +140,19 @@ export default function EndUserControls() {
   const [selectedUser, setSelectedUser] = useState<EndUser | null>(null);
   const [actionDialog, setActionDialog] = useState<string | null>(null);
   const [actionReason, setActionReason] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTopTab, setActiveTopTab] = useState("workspaces");
+  const [roleSearchQuery, setRoleSearchQuery] = useState("");
+  const [roleAssignDialog, setRoleAssignDialog] = useState(false);
+  const [roleAssignData, setRoleAssignData] = useState({ userId: "", role: "support_agent", reason: "" });
+  const [roleRevokeTarget, setRoleRevokeTarget] = useState<PlatformRoleAssignment | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
 
   useEffect(() => {
     if (!isLoading) {
       const platformRole = (user as any)?.platformRole;
       if (!SUPPORT_ROLES.includes(platformRole)) {
         if (!user) {
-          window.location.href = '/login';
+          setLocation('/login');
         } else {
           setLocation('/error-403');
         }
@@ -101,6 +169,11 @@ export default function EndUserControls() {
 
   const { data: workspaceResults, isLoading: searchLoading } = useQuery<WorkspaceDetail[]>({
     queryKey: ["/api/admin/end-users/workspaces", debouncedQuery],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/end-users/workspaces?q=${encodeURIComponent(debouncedQuery)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Search failed');
+      return res.json();
+    },
     enabled: debouncedQuery.length >= 2,
   });
 
@@ -111,6 +184,68 @@ export default function EndUserControls() {
   }>({
     queryKey: ["/api/admin/end-users/workspace", selectedWorkspace],
     enabled: !!selectedWorkspace,
+  });
+
+  const { data: orgEmployees, isLoading: empLoading } = useQuery<OrgEmployee[]>({
+    queryKey: ['/api/admin/support/org', selectedWorkspace, 'employees'],
+    queryFn: () => apiRequest('GET', `/api/admin/support/org/${selectedWorkspace}/employees`).then(r => r.json()),
+    enabled: !!selectedWorkspace,
+  });
+
+  const { data: orgShifts, isLoading: shiftsLoading } = useQuery<OrgShift[]>({
+    queryKey: ['/api/admin/support/org', selectedWorkspace, 'shifts'],
+    queryFn: () => apiRequest('GET', `/api/admin/support/org/${selectedWorkspace}/shifts`).then(r => r.json()),
+    enabled: !!selectedWorkspace,
+  });
+
+  const { data: orgInvoices, isLoading: invoicesLoading } = useQuery<OrgInvoice[]>({
+    queryKey: ['/api/admin/support/org', selectedWorkspace, 'invoices'],
+    queryFn: () => apiRequest('GET', `/api/admin/support/org/${selectedWorkspace}/invoices`).then(r => r.json()),
+    enabled: !!selectedWorkspace,
+  });
+
+  const { data: platformRoles, isLoading: rolesLoading } = useQuery<PlatformRoleAssignment[]>({
+    queryKey: ["/api/admin/platform/roles"],
+    enabled: activeTopTab === 'roles',
+  });
+
+  const assignRoleMutation = useMutation({
+    mutationFn: (data: { userId: string; role: string; reason: string }) =>
+      apiRequest("POST", "/api/admin/platform/roles", data),
+    onSuccess: () => {
+      toast({ title: "Role Assigned", description: "Platform role has been updated" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/platform/roles"] });
+      setRoleAssignDialog(false);
+      setRoleAssignData({ userId: "", role: "support_agent", reason: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to assign role", variant: "destructive" });
+    },
+  });
+
+  const revokeRoleMutation = useMutation({
+    mutationFn: (data: { userId: string; role: string; reason: string }) =>
+      apiRequest("POST", "/api/admin/platform/roles", { ...data, role: "none" }),
+    onSuccess: () => {
+      toast({ title: "Role Revoked", description: "Platform role has been removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/platform/roles"] });
+      setRoleRevokeTarget(null);
+      setRevokeReason("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to revoke role", variant: "destructive" });
+    },
+  });
+
+  const filteredRoles = platformRoles?.filter((r) => {
+    if (!roleSearchQuery) return true;
+    const q = roleSearchQuery.toLowerCase();
+    return (
+      r.userEmail?.toLowerCase().includes(q) ||
+      r.userFirstName?.toLowerCase().includes(q) ||
+      r.userLastName?.toLowerCase().includes(q) ||
+      r.role.toLowerCase().includes(q)
+    );
   });
 
   const suspendWorkspaceMutation = useMutation({
@@ -178,32 +313,28 @@ export default function EndUserControls() {
     return <Badge className="bg-green-600">Active</Badge>;
   };
 
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-              <Users className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold" data-testid="text-page-title">End-User Controls</h1>
-              <p className="text-sm text-muted-foreground">
-                Manage organization access, Trinity™ features, and user permissions
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setRefreshKey(prev => prev + 1)}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: "end-user-controls",
+    title: "Support Command Center",
+    subtitle: "Cross-org management: employees, schedules, invoices, access controls, and Trinity™",
+    category: "admin",
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <Tabs value={activeTopTab} onValueChange={setActiveTopTab} className="space-y-6">
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
+          <TabsTrigger value="workspaces" data-testid="tab-workspaces">
+            <Building2 className="h-4 w-4 mr-2" />
+            Organizations
+          </TabsTrigger>
+          <TabsTrigger value="roles" data-testid="tab-roles">
+            <UserCog className="h-4 w-4 mr-2" />
+            Platform Roles
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="workspaces">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">
           <CardHeader>
@@ -317,7 +448,7 @@ export default function EndUserControls() {
 
             {selectedWorkspace && !detailLoading && workspaceDetail && (
               <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList>
+                <TabsList className="flex flex-wrap gap-1">
                   <TabsTrigger value="overview" data-testid="tab-overview">
                     <Eye className="h-4 w-4 mr-2" />
                     Overview
@@ -333,6 +464,18 @@ export default function EndUserControls() {
                   <TabsTrigger value="actions" data-testid="tab-actions">
                     <Settings className="h-4 w-4 mr-2" />
                     Actions
+                  </TabsTrigger>
+                  <TabsTrigger value="employees" data-testid="tab-employees">
+                    <Briefcase className="h-4 w-4 mr-2" />
+                    Staff
+                  </TabsTrigger>
+                  <TabsTrigger value="schedules" data-testid="tab-schedules">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Shifts
+                  </TabsTrigger>
+                  <TabsTrigger value="invoices" data-testid="tab-invoices">
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Billing
                   </TabsTrigger>
                 </TabsList>
 
@@ -358,7 +501,7 @@ export default function EndUserControls() {
 
                   <Separator />
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Card>
                       <CardContent className="pt-4">
                         <div className="text-2xl font-bold" data-testid="text-user-count">
@@ -411,7 +554,7 @@ export default function EndUserControls() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div>
                           <p className="font-medium">Trinity™ Features</p>
                           <p className="text-sm text-muted-foreground">
@@ -451,7 +594,7 @@ export default function EndUserControls() {
                         <p className="font-medium">Subagent Access</p>
                         <div className="grid grid-cols-2 gap-3">
                           {['scheduling', 'payroll', 'invoicing', 'notifications', 'analytics', 'compliance'].map((subagent) => (
-                            <div key={subagent} className="flex items-center justify-between p-2 rounded border">
+                            <div key={subagent} className="flex items-center justify-between gap-2 p-2 rounded border">
                               <span className="text-sm capitalize">{subagent}</span>
                               <Switch
                                 defaultChecked={true}
@@ -478,7 +621,7 @@ export default function EndUserControls() {
                       {workspaceDetail.users.map((u) => (
                         <Card key={u.id} className="hover-elevate">
                           <CardContent className="py-3">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-2">
                               <div>
                                 <p className="font-medium">
                                   {u.firstName || ''} {u.lastName || u.email}
@@ -575,20 +718,384 @@ export default function EndUserControls() {
                     </div>
                   </div>
                 </TabsContent>
+
+                <TabsContent value="employees" className="space-y-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Briefcase className="h-4 w-4" />
+                        Organization Staff ({orgEmployees?.length || 0})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {empLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : orgEmployees && orgEmployees.length > 0 ? (
+                        <ScrollArea className="h-[400px]">
+                          <div className="space-y-2">
+                            {orgEmployees.map((emp) => (
+                              <div key={emp.id} className="flex items-center justify-between gap-2 p-3 rounded-md border" data-testid={`row-employee-${emp.id}`}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium text-sm">{emp.firstName} {emp.lastName}</span>
+                                    <Badge variant={emp.isActive ? "default" : "secondary"} className="text-xs">
+                                      {emp.isActive ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                    {emp.workspaceRole && (
+                                      <Badge variant="outline" className="text-xs">{emp.workspaceRole}</Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
+                                    {emp.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{emp.email}</span>}
+                                    {emp.employeeNumber && <span>#{emp.employeeNumber}</span>}
+                                    {emp.position && <span>{emp.position}</span>}
+                                    {emp.department && <span>{emp.department}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No employees found</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="schedules" className="space-y-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Shifts & Schedules ({orgShifts?.length || 0})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {shiftsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : orgShifts && orgShifts.length > 0 ? (
+                        <ScrollArea className="h-[400px]">
+                          <div className="space-y-2">
+                            {orgShifts.slice(0, 50).map((shift) => (
+                              <div key={shift.id} className="flex items-center justify-between gap-2 p-3 rounded-md border" data-testid={`row-shift-${shift.id}`}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium text-sm">{shift.title || `Shift #${shift.id}`}</span>
+                                    {shift.status && (
+                                      <Badge variant={shift.status === 'completed' ? 'default' : shift.status === 'cancelled' ? 'destructive' : 'outline'} className="text-xs">
+                                        {shift.status}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {new Date(shift.startTime).toLocaleDateString()} {new Date(shift.startTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - {new Date(shift.endTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                                    </span>
+                                    {shift.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{shift.location}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No shifts found</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="invoices" className="space-y-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Receipt className="h-4 w-4" />
+                        Invoices & Billing ({orgInvoices?.length || 0})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {invoicesLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : orgInvoices && orgInvoices.length > 0 ? (
+                        <ScrollArea className="h-[400px]">
+                          <div className="space-y-2">
+                            {orgInvoices.map((inv) => (
+                              <div key={inv.id} className="flex items-center justify-between gap-2 p-3 rounded-md border" data-testid={`row-invoice-${inv.id}`}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium text-sm">{inv.invoiceNumber || `INV-${inv.id}`}</span>
+                                    {inv.status && (
+                                      <Badge variant={inv.status === 'paid' ? 'default' : inv.status === 'overdue' ? 'destructive' : 'outline'} className="text-xs">
+                                        {inv.status}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
+                                    {inv.clientName && <span>{inv.clientName}</span>}
+                                    {inv.amount !== undefined && <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{(inv.amount / 100).toFixed(2)}</span>}
+                                    {inv.dueDate && <span>Due: {new Date(inv.dueDate).toLocaleDateString()}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No invoices found</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             )}
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
 
-      <Dialog open={actionDialog === 'suspend'} onOpenChange={(open) => !open && setActionDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Suspend Organization</DialogTitle>
-            <DialogDescription>
+        <TabsContent value="roles" className="space-y-6">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or role..."
+                value={roleSearchQuery}
+                onChange={(e) => setRoleSearchQuery(e.target.value)}
+                className="pl-10"
+                data-testid="input-role-search"
+              />
+            </div>
+            <Button onClick={() => setRoleAssignDialog(true)} data-testid="button-assign-role">
+              <Shield className="h-4 w-4 mr-2" />
+              Assign Role
+            </Button>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Roles</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-total-roles">{platformRoles?.length || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Platform Admins</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {platformRoles?.filter((r) => r.role === 'root_admin').length || 0}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Support Staff</CardTitle>
+                <UserCog className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {platformRoles?.filter((r) => r.role === 'support_agent' || r.role === 'support_manager').length || 0}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Team</CardTitle>
+              <CardDescription>All platform staff with active role assignments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {rolesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredRoles && filteredRoles.length > 0 ? (
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-3">
+                    {filteredRoles.map((assignment) => (
+                      <div
+                        key={assignment.id}
+                        className="flex items-center justify-between gap-2 p-4 rounded-lg border"
+                        data-testid={`row-role-${assignment.id}`}
+                      >
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-medium">
+                            {assignment.userFirstName?.[0] || assignment.userEmail?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">
+                              {assignment.userFirstName && assignment.userLastName
+                                ? `${assignment.userFirstName} ${assignment.userLastName}`
+                                : assignment.userEmail}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">{assignment.userEmail}</p>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+                              <span>Granted: {new Date(assignment.grantedAt).toLocaleDateString()}</span>
+                              {assignment.grantedReason && (
+                                <span className="truncate max-w-[200px]">Reason: {assignment.grantedReason}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <Badge
+                            variant={
+                              assignment.role === 'root_admin' ? 'destructive' :
+                              assignment.role === 'deputy_admin' ? 'default' :
+                              'secondary'
+                            }
+                            data-testid={`badge-role-${assignment.id}`}
+                          >
+                            {PLATFORM_ROLE_LABELS[assignment.role] || assignment.role}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setRoleRevokeTarget(assignment);
+                              setRevokeReason("");
+                            }}
+                            data-testid={`button-revoke-${assignment.id}`}
+                          >
+                            <UserX className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  {roleSearchQuery ? 'No matching roles found' : 'No platform roles assigned yet'}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <UniversalModal open={roleAssignDialog} onOpenChange={(open) => !open && setRoleAssignDialog(false)}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Assign Platform Role</UniversalModalTitle>
+            <UniversalModalDescription>
+              Grant a platform role to a user. Enter their user ID and select a role.
+            </UniversalModalDescription>
+          </UniversalModalHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>User ID</Label>
+              <Input
+                placeholder="Enter the user's ID..."
+                value={roleAssignData.userId}
+                onChange={(e) => setRoleAssignData({ ...roleAssignData, userId: e.target.value })}
+                data-testid="input-role-userid"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select
+                value={roleAssignData.role}
+                onValueChange={(value) => setRoleAssignData({ ...roleAssignData, role: value })}
+              >
+                <SelectTrigger data-testid="select-platform-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="support_agent">Support Agent</SelectItem>
+                  <SelectItem value="support_manager">Support Manager</SelectItem>
+                  <SelectItem value="compliance_officer">Compliance Officer</SelectItem>
+                  <SelectItem value="sysop">Sysop</SelectItem>
+                  <SelectItem value="deputy_admin">Deputy Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Textarea
+                placeholder="Why is this role being assigned?"
+                value={roleAssignData.reason}
+                onChange={(e) => setRoleAssignData({ ...roleAssignData, reason: e.target.value })}
+                data-testid="input-role-reason"
+              />
+            </div>
+          </div>
+          <UniversalModalFooter>
+            <Button variant="outline" onClick={() => setRoleAssignDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => assignRoleMutation.mutate(roleAssignData)}
+              disabled={!roleAssignData.userId || !roleAssignData.reason || assignRoleMutation.isPending}
+              data-testid="button-confirm-assign"
+            >
+              {assignRoleMutation.isPending ? "Assigning..." : "Assign Role"}
+            </Button>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+
+      <UniversalModal open={!!roleRevokeTarget} onOpenChange={(open) => !open && setRoleRevokeTarget(null)}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Revoke Platform Role</UniversalModalTitle>
+            <UniversalModalDescription>
+              Remove {roleRevokeTarget?.userEmail}'s {PLATFORM_ROLE_LABELS[roleRevokeTarget?.role || ''] || roleRevokeTarget?.role} role.
+            </UniversalModalDescription>
+          </UniversalModalHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Reason for Revocation</Label>
+              <Textarea
+                placeholder="Why is this role being revoked?"
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                data-testid="input-revoke-reason"
+              />
+            </div>
+          </div>
+          <UniversalModalFooter>
+            <Button variant="outline" onClick={() => setRoleRevokeTarget(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (roleRevokeTarget) {
+                  revokeRoleMutation.mutate({
+                    userId: roleRevokeTarget.userId,
+                    role: roleRevokeTarget.role,
+                    reason: revokeReason,
+                  });
+                }
+              }}
+              disabled={!revokeReason || revokeRoleMutation.isPending}
+              data-testid="button-confirm-revoke"
+            >
+              {revokeRoleMutation.isPending ? "Revoking..." : "Revoke Role"}
+            </Button>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+
+      <UniversalModal open={actionDialog === 'suspend'} onOpenChange={(open) => !open && setActionDialog(null)}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Suspend Organization</UniversalModalTitle>
+            <UniversalModalDescription>
               This will prevent all users in this organization from accessing the platform.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Suspension Reason</Label>
@@ -600,7 +1107,7 @@ export default function EndUserControls() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setActionDialog(null)}>
               Cancel
             </Button>
@@ -619,18 +1126,18 @@ export default function EndUserControls() {
             >
               Suspend Organization
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={actionDialog === 'suspend-ai'} onOpenChange={(open) => !open && setActionDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Suspend Trinity™ Access</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={actionDialog === 'suspend-ai'} onOpenChange={(open) => !open && setActionDialog(null)}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>Suspend Trinity™ Access</UniversalModalTitle>
+            <UniversalModalDescription>
               This will disable all Trinity™ features for this organization, including subagents and automated workflows.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Suspension Reason</Label>
@@ -642,7 +1149,7 @@ export default function EndUserControls() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setActionDialog(null)}>
               Cancel
             </Button>
@@ -662,9 +1169,9 @@ export default function EndUserControls() {
             >
               Suspend Trinity™
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

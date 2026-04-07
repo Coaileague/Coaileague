@@ -1,0 +1,391 @@
+export type InsertEmployeeComplianceRecord = z.infer<typeof insertEmployeeComplianceRecordSchema>;
+export type EmployeeComplianceRecord = typeof employeeComplianceRecords.$inferSelect;
+
+/**
+ * Table 5: Compliance Documents - Locked document vault with SHA-256 hashing
+ */
+export const complianceDocuments = pgTable("compliance_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  complianceRecordId: varchar("compliance_record_id").notNull().references(() => employeeComplianceRecords.id, { onDelete: 'cascade' }),
+  requirementId: varchar("requirement_id").references(() => complianceRequirements.id),
+  documentTypeId: varchar("document_type_id").notNull().references(() => complianceDocumentTypes.id),
+  documentName: varchar("document_name", { length: 255 }).notNull(),
+  documentNumber: varchar("document_number", { length: 100 }),
+  issuingAuthority: varchar("issuing_authority", { length: 200 }),
+  issuedDate: timestamp("issued_date"),
+  expirationDate: timestamp("expiration_date"),
+  imageSide: varchar("image_side", { length: 20 }).default("front"),
+  isColorImage: boolean("is_color_image").default(true),
+  storageKey: varchar("storage_key", { length: 500 }).notNull(),
+  storageUrl: text("storage_url"),
+  thumbnailKey: varchar("thumbnail_key", { length: 500 }),
+  thumbnailUrl: text("thumbnail_url"),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileType: varchar("file_type", { length: 50 }),
+  fileSizeBytes: integer("file_size_bytes"),
+  fileHashSha256: varchar("file_hash_sha256", { length: 64 }).notNull(),
+  fileHashMd5: varchar("file_hash_md5", { length: 32 }),
+  hashVerifiedAt: timestamp("hash_verified_at"),
+  isLocked: boolean("is_locked").default(false),
+  lockedAt: timestamp("locked_at"),
+  lockedBy: varchar("locked_by").references(() => users.id),
+  lockReason: varchar("lock_reason", { length: 500 }),
+  status: complianceDocStatusEnum("status").default("pending"),
+  isSubstitute: boolean("is_substitute").default(false),
+  substituteFor: varchar("substitute_for"),
+  substituteNote: text("substitute_note"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  verificationNotes: text("verification_notes"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  uploadIpAddress: varchar("upload_ip_address", { length: 45 }),
+  uploadUserAgent: text("upload_user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("compliance_doc_workspace_idx").on(table.workspaceId),
+  index("compliance_doc_employee_idx").on(table.employeeId),
+  index("compliance_doc_record_idx").on(table.complianceRecordId),
+  index("compliance_doc_hash_idx").on(table.fileHashSha256),
+]);
+
+export const insertComplianceDocumentSchema = createInsertSchema(complianceDocuments).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertComplianceDocument = z.infer<typeof insertComplianceDocumentSchema>;
+export type ComplianceDocument = typeof complianceDocuments.$inferSelect;
+
+/**
+ * Table 6: Compliance Approvals - Approval workflow
+ */
+export const complianceApprovals = pgTable("compliance_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  complianceRecordId: varchar("compliance_record_id").notNull().references(() => employeeComplianceRecords.id, { onDelete: 'cascade' }),
+  approvalType: varchar("approval_type", { length: 50 }).notNull(),
+  documentId: varchar("document_id").references(() => complianceDocuments.id, { onDelete: 'cascade' }),
+  status: complianceApprovalStatusEnum("status").default("pending"),
+  priority: varchar("priority", { length: 20 }).default("normal"),
+  requestedBy: varchar("requested_by").references(() => users.id),
+  requestedAt: timestamp("requested_at").defaultNow(),
+  requestNotes: text("request_notes"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  assignedAt: timestamp("assigned_at"),
+  decidedBy: varchar("decided_by").references(() => users.id),
+  decidedAt: timestamp("decided_at"),
+  decision: varchar("decision", { length: 20 }),
+  decisionNotes: text("decision_notes"),
+  escalatedTo: varchar("escalated_to").references(() => users.id),
+  escalatedAt: timestamp("escalated_at"),
+  escalationReason: text("escalation_reason"),
+  dueDate: timestamp("due_date"),
+  isOverdue: boolean("is_overdue").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("compliance_approval_workspace_idx").on(table.workspaceId),
+  index("compliance_approval_status_idx").on(table.status),
+]);
+
+export const insertComplianceApprovalSchema = createInsertSchema(complianceApprovals).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertComplianceApproval = z.infer<typeof insertComplianceApprovalSchema>;
+export type ComplianceApproval = typeof complianceApprovals.$inferSelect;
+
+// ─── DEPRECATED (B1 consolidation) ───────────────────────────────────────────
+// New compliance audit writes SHOULD go to auditLogs with source='compliance'.
+export const complianceAuditTrail = pgTable("compliance_audit_trail", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  entityType: varchar("entity_type", { length: 50 }).notNull(),
+  entityId: varchar("entity_id").notNull(),
+  employeeId: varchar("employee_id").references(() => employees.id),
+  documentId: varchar("document_id").references(() => complianceDocuments.id),
+  action: varchar("action", { length: 50 }).notNull(),
+  actionCategory: varchar("action_category", { length: 30 }),
+  performedBy: varchar("performed_by").references(() => users.id),
+  performedByName: varchar("performed_by_name", { length: 200 }),
+  performedByRole: varchar("performed_by_role", { length: 50 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id", { length: 100 }),
+  previousValue: jsonb("previous_value"),
+  newValue: jsonb("new_value"),
+  metadata: jsonb("metadata"),
+  severity: varchar("severity", { length: 20 }).default("info"),
+  hashChain: varchar("hash_chain", { length: 64 }),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("compliance_audit_workspace_idx").on(table.workspaceId),
+  index("compliance_audit_time_idx").on(table.timestamp),
+]);
+export const insertComplianceAuditTrailSchema = createInsertSchema(complianceAuditTrail).omit({ id: true, timestamp: true });
+export type InsertComplianceAuditTrail = z.infer<typeof insertComplianceAuditTrailSchema>;
+export type ComplianceAuditTrail = typeof complianceAuditTrail.$inferSelect;
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Table 8: Compliance Expirations - License/document expiration tracking
+ */
+export const complianceExpirations = pgTable("compliance_expirations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  complianceRecordId: varchar("compliance_record_id").references(() => employeeComplianceRecords.id, { onDelete: 'cascade' }),
+  documentId: varchar("document_id").references(() => complianceDocuments.id, { onDelete: 'cascade' }),
+  expirationType: varchar("expiration_type", { length: 50 }).notNull(),
+  expirationName: varchar("expiration_name", { length: 200 }).notNull(),
+  expirationDate: timestamp("expiration_date").notNull(),
+  warningDays: integer("warning_days").default(90),
+  criticalDays: integer("critical_days").default(30),
+  status: varchar("status", { length: 30 }).default("active"),
+  warningNotificationSent: boolean("warning_notification_sent").default(false),
+  warningNotificationDate: timestamp("warning_notification_date"),
+  criticalNotificationSent: boolean("critical_notification_sent").default(false),
+  criticalNotificationDate: timestamp("critical_notification_date"),
+  expirationNotificationSent: boolean("expiration_notification_sent").default(false),
+  expirationNotificationDate: timestamp("expiration_notification_date"),
+  renewalStartedAt: timestamp("renewal_started_at"),
+  renewedAt: timestamp("renewed_at"),
+  renewedDocumentId: varchar("renewed_document_id").references(() => complianceDocuments.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("compliance_exp_workspace_idx").on(table.workspaceId),
+  index("compliance_exp_date_idx").on(table.expirationDate),
+]);
+
+export const insertComplianceExpirationSchema = createInsertSchema(complianceExpirations).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertComplianceExpiration = z.infer<typeof insertComplianceExpirationSchema>;
+export type ComplianceExpiration = typeof complianceExpirations.$inferSelect;
+
+/**
+ * Table 9: Compliance Alerts
+ */
+export const complianceAlerts = pgTable("compliance_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'cascade' }),
+  complianceRecordId: varchar("compliance_record_id").references(() => employeeComplianceRecords.id),
+  expirationId: varchar("expiration_id").references(() => complianceExpirations.id),
+  alertType: varchar("alert_type", { length: 50 }).notNull(),
+  severity: varchar("severity", { length: 20 }).notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  actionRequired: boolean("action_required").default(true),
+  actionUrl: varchar("action_url", { length: 500 }),
+  actionLabel: varchar("action_label", { length: 100 }),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  readBy: varchar("read_by").references(() => users.id),
+  isDismissed: boolean("is_dismissed").default(false),
+  dismissedAt: timestamp("dismissed_at"),
+  dismissedBy: varchar("dismissed_by").references(() => users.id),
+  isResolved: boolean("is_resolved").default(false),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolutionNotes: text("resolution_notes"),
+  emailSent: boolean("email_sent").default(false),
+  emailSentAt: timestamp("email_sent_at"),
+  smsSent: boolean("sms_sent").default(false),
+  smsSentAt: timestamp("sms_sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("compliance_alert_workspace_idx").on(table.workspaceId),
+  index("compliance_alert_severity_idx").on(table.severity),
+]);
+
+export const insertComplianceAlertSchema = createInsertSchema(complianceAlerts).omit({
+  id: true, createdAt: true,
+});
+export type InsertComplianceAlert = z.infer<typeof insertComplianceAlertSchema>;
+export type ComplianceAlert = typeof complianceAlerts.$inferSelect;
+
+/**
+ * Table 10: Compliance Audit Packets - Generated PDF packets
+ */
+export const complianceAuditPackets = pgTable("compliance_audit_packets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  packetType: varchar("packet_type", { length: 50 }).notNull(),
+  employeeId: varchar("employee_id").references(() => employees.id),
+  stateId: varchar("state_id").references(() => complianceStates.id),
+  packetName: varchar("packet_name", { length: 255 }).notNull(),
+  description: text("description"),
+  storageKey: varchar("storage_key", { length: 500 }),
+  storageUrl: text("storage_url"),
+  fileSizeBytes: integer("file_size_bytes"),
+  pageCount: integer("page_count"),
+  documentsIncluded: integer("documents_included").default(0),
+  employeesIncluded: integer("employees_included").default(0),
+  packetHashSha256: varchar("packet_hash_sha256", { length: 64 }),
+  documentHashes: jsonb("document_hashes"),
+  generatedBy: varchar("generated_by").references(() => users.id),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  generationTimeMs: integer("generation_time_ms"),
+  downloadCount: integer("download_count").default(0),
+  lastDownloadedAt: timestamp("last_downloaded_at"),
+  lastDownloadedBy: varchar("last_downloaded_by").references(() => users.id),
+  expiresAt: timestamp("expires_at"),
+  isExpired: boolean("is_expired").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("compliance_packet_workspace_idx").on(table.workspaceId),
+]);
+
+export const insertComplianceAuditPacketSchema = createInsertSchema(complianceAuditPackets).omit({
+  id: true, createdAt: true,
+});
+export type InsertComplianceAuditPacket = z.infer<typeof insertComplianceAuditPacketSchema>;
+export type ComplianceAuditPacket = typeof complianceAuditPackets.$inferSelect;
+
+/**
+ * Table 11: Regulator Access - Secure portal for state regulators
+ */
+export const regulatorAccess = pgTable("regulator_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  stateId: varchar("state_id").notNull().references(() => complianceStates.id),
+  regulatorName: varchar("regulator_name", { length: 200 }).notNull(),
+  regulatorEmail: varchar("regulator_email", { length: 255 }).notNull(),
+  regulatorTitle: varchar("regulator_title", { length: 200 }),
+  regulatorBadgeNumber: varchar("regulator_badge_number", { length: 50 }),
+  regulatorOrganization: varchar("regulator_organization", { length: 200 }),
+  accessLevel: regulatorAccessLevelEnum("access_level").default("view_only"),
+  accessToken: varchar("access_token", { length: 100 }).notNull().unique(),
+  tokenHash: varchar("token_hash", { length: 64 }),
+  grantedBy: varchar("granted_by").references(() => users.id),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  employeeIds: text("employee_ids").array(),
+  canViewAllEmployees: boolean("can_view_all_employees").default(false),
+  canExportDocuments: boolean("can_export_documents").default(false),
+  canGeneratePackets: boolean("can_generate_packets").default(false),
+  lastAccessAt: timestamp("last_access_at"),
+  accessCount: integer("access_count").default(0),
+  lastIpAddress: varchar("last_ip_address", { length: 45 }),
+  isRevoked: boolean("is_revoked").default(false),
+  revokedAt: timestamp("revoked_at"),
+  revokedBy: varchar("revoked_by").references(() => users.id),
+  revokeReason: text("revoke_reason"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("regulator_access_workspace_idx").on(table.workspaceId),
+  uniqueIndex("regulator_access_token_idx").on(table.accessToken),
+]);
+
+export const insertRegulatorAccessSchema = createInsertSchema(regulatorAccess).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertRegulatorAccess = z.infer<typeof insertRegulatorAccessSchema>;
+export type RegulatorAccess = typeof regulatorAccess.$inferSelect;
+
+/**
+ * Table 12: Regulator Sessions
+ */
+/**
+ * Table 13: Compliance Scores
+ */
+export const complianceScores = pgTable("compliance_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'cascade' }),
+  stateId: varchar("state_id").references(() => complianceStates.id),
+  scoreType: varchar("score_type", { length: 30 }).notNull(),
+  overallScore: integer("overall_score").notNull(),
+  documentScore: integer("document_score"),
+  expirationScore: integer("expiration_score"),
+  auditReadinessScore: integer("audit_readiness_score"),
+  trainingScore: integer("training_score"),
+  totalRequirements: integer("total_requirements"),
+  completedRequirements: integer("completed_requirements"),
+  expiredItems: integer("expired_items").default(0),
+  expiringWithin30Days: integer("expiring_within_30_days").default(0),
+  expiringWithin90Days: integer("expiring_within_90_days").default(0),
+  pendingApprovals: integer("pending_approvals").default(0),
+  previousScore: integer("previous_score"),
+  scoreChange: integer("score_change"),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  calculatedBy: varchar("calculated_by", { length: 50 }),
+  notes: text("notes"),
+}, (table) => [
+  index("compliance_score_workspace_idx").on(table.workspaceId),
+  index("compliance_score_date_idx").on(table.calculatedAt),
+]);
+
+export const insertComplianceScoreSchema = createInsertSchema(complianceScores).omit({
+  id: true,
+});
+export type InsertComplianceScore = z.infer<typeof insertComplianceScoreSchema>;
+export type ComplianceScore = typeof complianceScores.$inferSelect;
+
+/**
+ * Table 14: Compliance Checklists - Per-employee requirement checklist
+ */
+export const complianceChecklists = pgTable("compliance_checklists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  complianceRecordId: varchar("compliance_record_id").notNull().references(() => employeeComplianceRecords.id, { onDelete: 'cascade' }),
+  requirementId: varchar("requirement_id").notNull().references(() => complianceRequirements.id),
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  completedBy: varchar("completed_by").references(() => users.id),
+  documentId: varchar("document_id").references(() => complianceDocuments.id),
+  isSubstituted: boolean("is_substituted").default(false),
+  substituteDocumentId: varchar("substitute_document_id").references(() => complianceDocuments.id),
+  substituteNote: text("substitute_note"),
+  expirationDate: timestamp("expiration_date"),
+  isExpired: boolean("is_expired").default(false),
+  expirationAlertId: varchar("expiration_alert_id").references(() => complianceExpirations.id),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  verificationNotes: text("verification_notes"),
+  isOverridden: boolean("is_overridden").default(false),
+  overriddenBy: varchar("overridden_by").references(() => users.id),
+  overriddenAt: timestamp("overridden_at"),
+  overrideReason: text("override_reason"),
+  overrideExpiresAt: timestamp("override_expires_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("compliance_checklist_workspace_idx").on(table.workspaceId),
+  index("compliance_checklist_employee_idx").on(table.employeeId),
+  uniqueIndex("compliance_checklist_unique_idx").on(table.complianceRecordId, table.requirementId),
+]);
+
+export const insertComplianceChecklistSchema = createInsertSchema(complianceChecklists).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertComplianceChecklist = z.infer<typeof insertComplianceChecklistSchema>;
+export type ComplianceChecklist = typeof complianceChecklists.$inferSelect;
+
+
+// CLIENT CONTRACT LIFECYCLE PIPELINE - Premium Feature
+// End-to-end proposal-to-signature-to-storage system for CLIENT contracts.
+// (Separate from employee HR documents in contractDocuments table)
+// ============================================================================
+
+/**
+ * Client Contract Document Types (Proposals, Contracts, Amendments)
+ */
+export const clientContractDocTypeEnum = pgEnum('client_contract_doc_type', [
+  'proposal',      // Initial proposal sent to client
+  'contract',      // Formal contract after proposal acceptance
+  'amendment',     // Amendment to existing contract

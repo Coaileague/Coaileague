@@ -1,0 +1,770 @@
+Exactly the right call. Scan first, build nothing until you know what's already there. Here's the prompt:
+
+---
+
+```
+COAILEAGUE — FEATURE INVENTORY AND ENHANCEMENT AUDIT
+Scan First. Enhance What Exists. 
+Build Only What Is Genuinely Missing.
+
+This prompt has two phases.
+Phase 0 scans and inventories everything.
+Phase 1 enhances, expands, or builds 
+based only on what the scan reveals.
+
+DO NOT build anything in Phase 0.
+DO NOT assume anything is missing 
+until the scan confirms it.
+DO NOT duplicate anything that exists.
+
+═══════════════════════════════════════════════════════════════
+PHASE 0 — FULL FEATURE INVENTORY SCAN
+Read, document, report. No building.
+═══════════════════════════════════════════════════════════════
+
+Scan the entire codebase and for each 
+feature area below answer three questions:
+
+EXISTS: Yes / Partial / No
+LOCATION: exact file paths if exists
+GAPS: what is incomplete if partial
+
+Document every finding before 
+proceeding to Phase 1.
+
+─────────────────────────────────────────────
+AREA 1 — SCHEDULING SYSTEM
+─────────────────────────────────────────────
+
+1.1 SHIFT TRADE AND SWAP SYSTEM
+Scan for: shift swap requests, 
+substitute officer selection, 
+license/credential verification 
+on swap, supervisor approval flow 
+for swaps
+EXISTS: / LOCATION: / GAPS:
+
+1.2 OVERTIME WARNING AND ENFORCEMENT
+Scan for: overtime calculation logic, 
+real-time overtime flag on schedule 
+build, overtime threshold configuration, 
+Trinity or UI alert when officer 
+approaches overtime
+EXISTS: / LOCATION: / GAPS:
+
+1.3 RECURRING SHIFT TEMPLATES
+Scan for: schedule template creation, 
+template save and publish flow, 
+weekly template repeat logic, 
+conflict detection on template apply
+EXISTS: / LOCATION: / GAPS:
+
+1.4 CERTIFICATION AND POST MATCHING
+Scan for: post requirements table 
+or configuration, officer credential 
+matching to post on assignment, 
+block logic when credential mismatch, 
+armed vs unarmed post distinction
+EXISTS: / LOCATION: / GAPS:
+
+1.5 SPLIT SHIFT AND BREAK TRACKING
+Scan for: break time tracking, 
+labor law compliance logic, 
+split shift configuration, 
+break requirement alerts
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 2 — GPS AND FIELD OPERATIONS
+─────────────────────────────────────────────
+
+2.1 GPS-STAMPED CLOCK IN/OUT
+Scan for: geolocation capture on 
+clock action, GPS coordinates stored 
+on clock records, post location 
+configuration, proximity check 
+between officer location and 
+assigned post on clock
+EXISTS: / LOCATION: / GAPS:
+
+2.2 PATROL CHECKPOINT SYSTEM
+Scan for: checkpoint/waypoint 
+configuration per site, officer 
+checkpoint check-in flow, 
+checkpoint completion tracking, 
+missed checkpoint alerting
+EXISTS: / LOCATION: / GAPS:
+
+2.3 PROOF OF SERVICE REPORT
+Scan for: auto-generated shift 
+completion report, GPS confirmation 
+data in report, checkpoint data 
+in report, incident data in report, 
+delivery to client portal
+EXISTS: / LOCATION: / GAPS:
+
+2.4 PANIC AND DURESS BUTTON
+Scan for: panic button UI component, 
+panic action handler, simultaneous 
+alert to management and HelpAI 
+and Trinity, GPS coordinates 
+captured on panic trigger
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 3 — ANALYTICS AND REPORTING
+─────────────────────────────────────────────
+
+3.1 OPERATIONS DASHBOARD
+Scan for: hours worked vs scheduled, 
+coverage percentage metrics, 
+incident rate by site, officer 
+utilization, open shift fill rate, 
+operational KPI dashboard view
+EXISTS: / LOCATION: / GAPS:
+
+3.2 FINANCIAL DASHBOARD
+Scan for: revenue by client view, 
+cost by site, margin per contract, 
+invoice aging report, payroll 
+as percentage of revenue metrics
+EXISTS: / LOCATION: / GAPS:
+
+3.3 COMPLIANCE DASHBOARD
+Scan for: license expiration timeline 
+view, post order currency tracking, 
+document completion rates, 
+audit readiness score or view
+EXISTS: / LOCATION: / GAPS:
+
+3.4 TRINITY WEEKLY INSIGHT REPORT
+Scan for: automated weekly summary 
+generation, scheduled report delivery 
+via email, pattern detection summary, 
+upcoming 7-day preview in report
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 4 — CLIENT PORTAL
+─────────────────────────────────────────────
+
+4.1 PROOF OF SERVICE DELIVERY 
+TO CLIENT PORTAL
+Scan for: client-facing service 
+report view, downloadable reports 
+per billing period, automatic 
+delivery of shift completion reports 
+to client
+EXISTS: / LOCATION: / GAPS:
+
+4.2 CONTRACT AND BILLING PORTAL 
+FOR CLIENTS
+Scan for: client view of contract 
+terms, invoice history in portal, 
+payment status visibility, 
+upcoming invoice preview
+EXISTS: / LOCATION: / GAPS:
+
+4.3 MULTI-SITE MANAGEMENT FOR CLIENTS
+Scan for: client multi-location view, 
+per-site coverage status, 
+per-site incident history, 
+officer assignment visibility per site
+EXISTS: / LOCATION: / GAPS:
+
+4.4 SERVICE REQUEST SUBMISSION
+Scan for: client-initiated coverage 
+request, site walk scheduling, 
+service change request form, 
+request routing to management
+EXISTS: / LOCATION: / GAPS:
+
+4.5 CLIENT SATISFACTION SCORING
+Scan for: post-incident survey, 
+post-billing-period survey, 
+satisfaction score tracking, 
+Trinity client health monitoring 
+using satisfaction data
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 5 — TRAINING AND CERTIFICATION
+─────────────────────────────────────────────
+
+5.1 OFFICER TRAINING RECORDS
+Scan for: training history per officer, 
+certification tracking, expiration 
+date monitoring, Trinity 60-day 
+renewal alert
+EXISTS: / LOCATION: / GAPS:
+
+5.2 TRAINING ASSIGNMENT SYSTEM
+Scan for: manager-to-officer 
+training assignment, completion 
+tracking, deadline enforcement, 
+Trinity escalation on missed deadlines
+EXISTS: / LOCATION: / GAPS:
+
+5.3 SPONSORSHIP TRAINING PIPELINE
+Scan for: unlicensed applicant 
+training pathway, progress tracking 
+from trainee to licensed officer, 
+license application support workflow
+EXISTS: / LOCATION: / GAPS:
+
+5.4 STATE CONTINUING EDUCATION TRACKING
+Scan for: CE requirement tracking, 
+compliance status per officer, 
+Trinity alert for at-risk officers
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 6 — BACKGROUND CHECK INTEGRATION
+─────────────────────────────────────────────
+
+6.1 BACKGROUND CHECK PROVIDER
+Scan for: Checkr, Sterling, or any 
+background check API integration, 
+background check initiation in 
+hiring pipeline, result receipt 
+and storage, hard gate in hiring 
+pipeline based on result
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 7 — UNIFORM AND EQUIPMENT TRACKING
+─────────────────────────────────────────────
+
+7.1 EQUIPMENT ISSUE AND RETURN LOG
+Scan for: equipment inventory table, 
+issue log per officer, return 
+checklist on separation, Trinity 
+flag for unreturned equipment 
+on termination
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 8 — CLIENT CONTRACT LIFECYCLE
+─────────────────────────────────────────────
+
+8.1 CONTRACT RENEWAL AUTOMATION
+Scan for: contract end date tracking, 
+90-day renewal workflow trigger, 
+renewal proposal generation, 
+client notification via HelpAI
+EXISTS: / LOCATION: / GAPS:
+
+8.2 CONTRACT AMENDMENT TRACKING
+Scan for: amendment documentation, 
+e-signature on amendments, 
+billing update on amendment approval
+EXISTS: / LOCATION: / GAPS:
+
+8.3 RATE ESCALATION CLAUSES
+Scan for: annual rate increase 
+configuration per contract, 
+CPI or fixed percentage escalation, 
+automatic billing update at 
+escalation date
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 9 — MULTI-STATE ARCHITECTURE
+─────────────────────────────────────────────
+
+9.1 STATE REGULATORY CONFIGURATION LAYER
+Scan for: state-specific licensing 
+configuration table, license type 
+definitions per state, regulatory 
+authority per state, any hardcoded 
+Texas-specific logic in license 
+verification or compliance flows
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 10 — OFFICER PERFORMANCE MANAGEMENT
+─────────────────────────────────────────────
+
+10.1 PERFORMANCE NOTES
+Scan for: manager performance note 
+logging per officer, commendation 
+and concern documentation, 
+note visibility in manager view, 
+HelpAI context awareness of notes
+EXISTS: / LOCATION: / GAPS:
+
+10.2 INCIDENT RATE PER OFFICER
+Scan for: per-officer incident 
+count metric, incident type breakdown 
+per officer, liability score 
+incorporating incident history
+EXISTS: / LOCATION: / GAPS:
+
+10.3 ATTENDANCE AND PUNCTUALITY SCORING
+Scan for: late clock-in tracking, 
+missed shift tracking, call-off 
+frequency tracking, pattern 
+detection and Trinity flagging
+EXISTS: / LOCATION: / GAPS:
+
+10.4 DISCIPLINARY WORKFLOW
+Scan for: formal warning documentation, 
+performance improvement plan workflow, 
+termination documentation workflow, 
+Document Safe filing of 
+disciplinary records, hiring module 
+demand trigger connection to 
+disciplinary terminations
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 11 — PUSH NOTIFICATIONS
+─────────────────────────────────────────────
+
+11.1 DEVICE PUSH NOTIFICATIONS
+Scan for: Firebase Cloud Messaging 
+or equivalent push notification service, 
+push permission request in PWA flow, 
+push notification triggers for 
+schedule changes, emergency alerts, 
+management messages
+EXISTS: / LOCATION: / GAPS:
+
+─────────────────────────────────────────────
+AREA 12 — SUBSCRIPTION AND BILLING 
+MANAGEMENT FOR ORG OWNERS
+─────────────────────────────────────────────
+
+12.1 SELF-SERVICE PLAN MANAGEMENT
+Scan for: org owner subscription 
+upgrade/downgrade/cancel UI, 
+plan comparison view, 
+self-service without support contact
+EXISTS: / LOCATION: / GAPS:
+
+12.2 SEAT-BASED BILLING
+Scan for: officer seat count tracking, 
+seat count update on officer 
+add/remove, billing cycle 
+reflection of seat changes
+EXISTS: / LOCATION: / GAPS:
+
+12.3 USAGE AND BILLING DASHBOARD 
+FOR ORG OWNERS
+Scan for: org owner view of 
+what they are billed for, 
+itemized billing breakdown, 
+CoAIleague invoice history 
+downloadable by org owner
+EXISTS: / LOCATION: / GAPS:
+
+═══════════════════════════════════════════════════════════════
+PHASE 0 DELIVERABLE — SCAN REPORT
+═══════════════════════════════════════════════════════════════
+
+Before proceeding to Phase 1 produce 
+a complete scan report with three sections:
+
+SECTION A — FULLY EXISTS
+List every feature area confirmed 
+to exist with file paths.
+No action needed on these.
+
+SECTION B — PARTIALLY EXISTS
+List every feature area that is 
+partially implemented with:
+- What exists (file paths)
+- What is missing
+- Gap severity: 
+  LAUNCH-BLOCKING / IMPORTANT / NICE-TO-HAVE
+
+SECTION C — DOES NOT EXIST
+List every feature area with 
+no implementation found with:
+- Gap severity:
+  LAUNCH-BLOCKING / IMPORTANT / NICE-TO-HAVE
+
+DO NOT proceed to Phase 1 until 
+this report is complete and 
+all three sections are populated.
+
+═══════════════════════════════════════════════════════════════
+PHASE 1 — ENHANCEMENT AND BUILD
+Act only on what Phase 0 revealed
+═══════════════════════════════════════════════════════════════
+
+Using the scan report from Phase 0:
+
+FOR SECTION A (fully exists):
+No action. Skip entirely.
+
+FOR SECTION B (partially exists):
+For each LAUNCH-BLOCKING partial gap:
+- Locate the existing implementation
+- Read it fully before touching it
+- Extend it to close the gap
+- Do not rewrite what works
+- Do not create parallel implementations
+- Wire the extension into 
+  existing patterns found in scan
+
+For each IMPORTANT partial gap:
+- Same approach as launch-blocking
+- Prioritize after launch-blocking gaps
+
+For each NICE-TO-HAVE partial gap:
+- Document in roadmap section
+- Do not build at this time
+
+FOR SECTION C (does not exist):
+For each LAUNCH-BLOCKING missing feature:
+Build following these rules:
+- Read all related existing systems 
+  before writing any code
+- Follow all existing naming conventions
+- Use existing database patterns
+- Use existing service layer patterns
+- Use existing UI component patterns
+- Wire into Trinity action registry 
+  if Trinity-orchestrated
+- Wire into HelpAI domains 
+  if HelpAI-served
+- Add to existing navigation 
+  do not create orphaned routes
+- Confirm action registry 
+  stays below 300 after additions
+
+For each IMPORTANT missing feature:
+- Same rules as launch-blocking
+- Build after all launch-blocking 
+  features are complete
+
+For each NICE-TO-HAVE missing feature:
+- Document in roadmap section
+- Do not build at this time
+
+═══════════════════════════════════════════════════════════════
+PHASE 1 SPECIFIC BUILD RULES
+Per feature area — applied only if 
+Phase 0 confirms build is needed
+═══════════════════════════════════════════════════════════════
+
+SCHEDULING ENHANCEMENTS:
+If shift swap system needs building:
+- Add swap_requests table with 
+  requesting_officer_id, 
+  substitute_officer_id, 
+  shift_id, status, 
+  credential_verified (boolean), 
+  supervisor_approval
+- Trinity action: VERIFY_SWAP_CREDENTIALS
+- Notification to supervisor on request
+- Notification to requesting officer 
+  on approval/denial
+
+If overtime warning needs building:
+- Add overtime threshold to 
+  workspace settings 
+  (default 40hrs/week)
+- Calculate running weekly hours 
+  per officer on schedule build
+- Trinity flags officer card 
+  in schedule view when 
+  approaching threshold
+- Block publish if overtime 
+  threshold exceeded without 
+  manager override confirmation
+
+If recurring templates need building:
+- Add schedule_templates table
+- Template publish creates shifts 
+  for specified date range
+- Conflict detection runs on apply
+
+If post certification matching 
+needs building:
+- Add post_requirements table:
+  post_id, required_license_type, 
+  required_certifications (jsonb)
+- Block shift assignment when 
+  officer credentials don't match
+- Surface clear reason for block
+
+FIELD OPERATIONS:
+If GPS clock needs building:
+- Capture coordinates on clock action 
+  via browser geolocation API
+- Store lat/lng on clock_records
+- Add post_location to site/post config
+- Calculate distance on clock 
+- Flag if outside acceptable radius 
+  (configurable, default 500ft)
+
+If panic button needs building:
+- Single-tap UI button in 
+  mobile field view
+- Fires simultaneously to:
+  Trinity command bus (ALERT, CRITICAL)
+  Management notification system
+  HelpAI emergency protocol
+  ReportBot incident creation
+- Captures GPS on trigger
+- Requires explicit all-clear 
+  to deactivate
+
+If proof of service report needs building:
+- Auto-generate on shift clock-out
+- Pulls: officer, post, clock times 
+  with GPS, checkpoints if exist, 
+  incidents filed during shift
+- Generates PDF via existing 
+  PDF generation system
+- Files to Document Safe
+- Delivers to client portal 
+  for that site's client
+
+ANALYTICS:
+If dashboards need building:
+- Add analytics route to 
+  existing management dashboard 
+  as new tab — not new route
+- Operations metrics pulled 
+  from existing schedule and 
+  clock data — no new tables
+- Financial metrics pulled 
+  from existing invoice and 
+  payroll data — no new tables
+- Compliance metrics pulled 
+  from existing license and 
+  document data — no new tables
+- Charts use existing chart 
+  library already in project
+
+If Trinity weekly report needs building:
+- Add scheduled job: 
+  runs Sunday night per workspace
+- Trinity compiles from 
+  existing data across all modules
+- Generates structured summary 
+  using GPT cognitive layer
+- Delivers via Resend using 
+  existing email template system
+- Also available in dashboard 
+  as "Last Weekly Report" card
+- Trinity action: 
+  GENERATE_WEEKLY_INSIGHT_REPORT
+
+CLIENT PORTAL:
+If service request submission 
+needs building:
+- Add service_requests table:
+  workspace_id, client_id, 
+  request_type, description, 
+  status, submitted_at
+- Form in client portal
+- HelpAI acknowledges on submit
+- Notification to management 
+  via existing notification system
+
+If client satisfaction scoring 
+needs building:
+- Add client_satisfaction_scores table
+- Single-question survey sent 
+  via Resend after incident close
+- Score feeds Trinity client 
+  health monitoring thread
+
+TRAINING:
+If training records need building:
+- Add training_records table:
+  officer_id, workspace_id, 
+  course_name, completed_at, 
+  expires_at, certificate_url
+- Add to officer profile view
+- Trinity monitors expiry dates 
+  in compliance monitoring thread
+- 60-day alert via existing 
+  notification system
+
+If training assignment needs building:
+- Add training_assignments table:
+  assigned_to, assigned_by, 
+  course_name, due_date, 
+  completion_status
+- Visible in officer dashboard 
+  and manager view
+
+EQUIPMENT TRACKING:
+If equipment tracking needs building:
+- Add equipment_items table:
+  workspace_id, item_name, 
+  item_id_number, assigned_to, 
+  issued_at, returned_at, status
+- Add to officer profile
+- Trinity flags unreturned items 
+  when officer status changes 
+  to terminated
+- Equipment return checklist 
+  in offboarding workflow
+
+PERFORMANCE MANAGEMENT:
+If performance notes need building:
+- Add performance_notes table:
+  officer_id, workspace_id, 
+  noted_by, note_type 
+  (commendation|concern|warning|neutral), 
+  content, created_at
+- Visible in officer profile 
+  to manager and above
+- HelpAI context-aware of 
+  note history when handling 
+  that officer
+
+If disciplinary workflow needs building:
+- Add disciplinary_records table:
+  officer_id, workspace_id, 
+  record_type 
+  (verbal_warning|written_warning|
+  pip|termination), 
+  description, issued_by, 
+  issued_at, acknowledged_at
+- Each record generates PDF 
+  filed to Document Safe
+- Written warning and above 
+  require officer acknowledgment 
+  signature via existing 
+  document signing system
+- Termination record triggers 
+  demand signal to hiring module 
+  Trinity monitoring thread
+
+PUSH NOTIFICATIONS:
+If push notifications need building:
+- Integrate Firebase Cloud Messaging
+- Add push subscription storage 
+  on user record
+- Permission request on 
+  first mobile login
+- Triggers for:
+  Schedule change affecting officer
+  Emergency/panic alert
+  Management direct message
+  Shift reminder 2 hours before start
+  Missed clock-in alert
+  Document requiring signature
+- Respect notification preferences 
+  already built in platform
+
+MULTI-STATE ARCHITECTURE:
+If state config layer needs building:
+- Add state_regulatory_config table:
+  state_code, state_name, 
+  licensing_authority, 
+  licensing_authority_url,
+  license_types (jsonb array),
+  ce_requirements (jsonb),
+  renewal_period_months
+- Seed with Texas as first entry
+- HelpAI and license verification 
+  pull from this table instead 
+  of hardcoded Texas logic
+- This is architecture prep — 
+  does not require all states 
+  to be populated at launch
+
+CONTRACT LIFECYCLE:
+If renewal automation needs building:
+- Add contract_end_date to 
+  client contracts if not present
+- Trinity monitors in client 
+  monitoring thread
+- 90-day trigger: Trinity drafts 
+  renewal notification, flags 
+  management for approval, 
+  HelpAI sends to client on approval
+- Trinity action: 
+  INITIATE_CONTRACT_RENEWAL
+
+ORG OWNER SUBSCRIPTION:
+If self-service billing needs building:
+- Add billing management tab 
+  to org owner settings
+- Stripe Customer Portal 
+  embedded or linked — 
+  Stripe's hosted portal handles 
+  upgrade/downgrade/cancel 
+  without custom build
+- Seat count displayed 
+  from officer table count
+- CoAIleague invoice history 
+  fetched from Stripe and displayed
+
+═══════════════════════════════════════════════════════════════
+PHASE 2 — POST-BUILD VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+After all Phase 1 builds are complete 
+run verification sweep:
+
+□ Every new table has workspace_id, 
+  indexes, and correct foreign keys
+□ Every new Trinity action is 
+  registered and registry 
+  remains below 300
+□ Every new feature uses existing 
+  notification, email, document, 
+  and UI patterns — no new parallel systems
+□ Every new dashboard tab is added 
+  to existing navigation — 
+  no orphaned routes
+□ Every new form autosaves drafts
+□ Every new document type generates 
+  PDF with org header and footer
+□ Every new scheduled job has 
+  a no-data graceful handler
+□ Empty states exist on 
+  every new list view
+□ Mobile layout verified on 
+  every new screen
+□ RBAC permissions correct 
+  on every new endpoint and view
+□ No hardcoded workspace IDs, 
+  role names, or Texas-specific logic 
+  in newly built features
+
+═══════════════════════════════════════════════════════════════
+FINAL DELIVERABLE
+═══════════════════════════════════════════════════════════════
+
+Produce final report with four sections:
+
+1. ALREADY EXISTED — UNTOUCHED
+   Everything confirmed in scan 
+   that needed no action
+
+2. ENHANCED — WHAT WAS EXTENDED
+   Every partial feature that was 
+   completed with description of 
+   what was added and file paths
+
+3. BUILT NEW — WHAT WAS CREATED
+   Every new feature built from scratch 
+   with file paths and description
+
+4. ROADMAP — DEFERRED ITEMS
+   Every NICE-TO-HAVE item identified 
+   but intentionally deferred 
+   with brief description for 
+   future sprint planning
+
+DO NOT mark complete until 
+verification sweep passes 
+with zero outstanding issues.
+═══════════════════════════════════════════════════════════════
+END OF PROMPT
+═══════════════════════════════════════════════════════════════
+```
+
+---
+
+This prompt does exactly what you said — asks Replit first before building anything. The scan report forces it to document what's already there before a single line of new code gets written. Everything built from the previous sessions gets protected. Only genuine gaps get filled. The roadmap section at the end gives you a clean backlog for the next sprint without scope creep right now. Ready to paste.

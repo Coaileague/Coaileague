@@ -9,11 +9,14 @@
  * - Scheduled task orchestration
  */
 
+import crypto from 'crypto';
 import { workflowLedger, WorkflowContext } from './workflowLedger';
 import { commitmentManager } from './commitmentManager';
 import { realTimeBridge } from './realTimeBridge';
 import { contextResolver, ResolvedContext } from './contextResolver';
 import { aiBrainEvents } from './internalEventEmitter';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('schedulerCoordinator');
 
 export type AgentType = 'gemini' | 'trinity' | 'helpai' | 'automation' | 'scheduler';
 
@@ -107,7 +110,7 @@ class SchedulerCoordinatorService {
       this.processQueues();
     }, 100);
 
-    console.log('[SchedulerCoordinator] Started task processing');
+    log.info('[SchedulerCoordinator] Started task processing');
   }
 
   stop() {
@@ -115,7 +118,7 @@ class SchedulerCoordinatorService {
       clearInterval(this.processInterval);
       this.processInterval = null;
     }
-    console.log('[SchedulerCoordinator] Stopped task processing');
+    log.info('[SchedulerCoordinator] Stopped task processing');
   }
 
   async enqueue(task: AgentTask): Promise<string> {
@@ -124,7 +127,7 @@ class SchedulerCoordinatorService {
       throw new Error(`Unknown agent type: ${task.agentType}`);
     }
 
-    task.id = task.id || `${task.agentType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    task.id = task.id || `${task.agentType}-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
 
     const insertIndex = queue.findIndex(t => 
       this.getPriorityValue(t.priority) < this.getPriorityValue(task.priority)
@@ -136,7 +139,7 @@ class SchedulerCoordinatorService {
       queue.splice(insertIndex, 0, task);
     }
 
-    console.log(`[SchedulerCoordinator] Enqueued task ${task.id} for ${task.agentType} (priority: ${task.priority})`);
+    log.info(`[SchedulerCoordinator] Enqueued task ${task.id} for ${task.agentType} (priority: ${task.priority})`);
 
     return task.id;
   }
@@ -237,7 +240,7 @@ class SchedulerCoordinatorService {
       this.resetBackoff(task.agentType);
 
     } catch (error) {
-      console.error(`[SchedulerCoordinator] Task ${task.id} failed:`, error);
+      log.error(`[SchedulerCoordinator] Task ${task.id} failed:`, error);
       this.applyBackoff(task.agentType);
     }
   }
@@ -257,7 +260,7 @@ class SchedulerCoordinatorService {
     );
     backoff.until = Date.now() + backoff.delay;
 
-    console.log(`[SchedulerCoordinator] Applied ${backoff.delay}ms backoff to ${agentType}`);
+    log.info(`[SchedulerCoordinator] Applied ${backoff.delay}ms backoff to ${agentType}`);
   }
 
   private resetBackoff(agentType: AgentType) {
@@ -274,7 +277,7 @@ class SchedulerCoordinatorService {
     context: ResolvedContext,
     options?: { priority?: AgentTask['priority']; waitForResult?: boolean }
   ): Promise<string> {
-    console.log(`[SchedulerCoordinator] Delegating from ${fromAgent} to ${toAgent}: ${actionId}`);
+    log.info(`[SchedulerCoordinator] Delegating from ${fromAgent} to ${toAgent}: ${actionId}`);
 
     const task: AgentTask = {
       id: `delegate-${fromAgent}-${toAgent}-${Date.now()}`,

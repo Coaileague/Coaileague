@@ -1,12 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -14,6 +7,8 @@ import { useServiceHealth } from '@/contexts/ServiceHealthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { ServiceIncidentReportPayload } from '@shared/healthTypes';
 import { AlertCircle, CheckCircle2, Upload } from 'lucide-react';
+
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
 // ============================================================================
 // SERVICE FAILURE DIALOG
@@ -129,21 +124,21 @@ export function ServiceFailureDialog({ error, isOpen, onClose, onReset }: Servic
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent size="md" data-testid="dialog-service-failure">
+    <UniversalModal open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <UniversalModalContent size="md" data-testid="dialog-service-failure">
         {!reportSubmitted ? (
           <>
-            <DialogHeader>
+            <UniversalModalHeader>
               <div className="mb-2 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
                   <AlertCircle className="h-5 w-5 text-destructive" data-testid="icon-alert" />
                 </div>
-                <DialogTitle data-testid="dialog-title">Service Issue Detected</DialogTitle>
+                <UniversalModalTitle data-testid="dialog-title">Service Issue Detected</UniversalModalTitle>
               </div>
-              <DialogDescription data-testid="dialog-description">
+              <UniversalModalDescription data-testid="dialog-description">
                 We've detected an issue with <strong>{serviceName}</strong>. Help us fix it by providing more details below.
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
 
             <div className="space-y-4">
               {/* Error Details */}
@@ -197,7 +192,7 @@ export function ServiceFailureDialog({ error, isOpen, onClose, onReset }: Servic
               </div>
             </div>
 
-            <DialogFooter className="gap-2">
+            <UniversalModalFooter className="gap-2">
               <Button
                 variant="outline"
                 onClick={onReset || onClose}
@@ -213,24 +208,24 @@ export function ServiceFailureDialog({ error, isOpen, onClose, onReset }: Servic
               >
                 {isReportingIncident ? 'Submitting...' : 'Submit Report'}
               </Button>
-            </DialogFooter>
+            </UniversalModalFooter>
           </>
         ) : (
           <>
-            <DialogHeader>
+            <UniversalModalHeader>
               <div className="mb-2 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
                   <CheckCircle2 className="h-5 w-5 text-green-500" data-testid="icon-success" />
                 </div>
-                <DialogTitle data-testid="dialog-title-success">Report Submitted</DialogTitle>
+                <UniversalModalTitle data-testid="dialog-title-success">Report Submitted</UniversalModalTitle>
               </div>
-              <DialogDescription data-testid="dialog-description-success">
-                Thank you for helping us improve CoAIleague. Our team will investigate this issue.
-              </DialogDescription>
-            </DialogHeader>
+              <UniversalModalDescription data-testid="dialog-description-success">
+                Thank you for helping us improve {PLATFORM_NAME}. Our team will investigate this issue.
+              </UniversalModalDescription>
+            </UniversalModalHeader>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

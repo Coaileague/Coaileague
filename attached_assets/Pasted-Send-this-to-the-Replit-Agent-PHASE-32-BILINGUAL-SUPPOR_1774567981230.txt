@@ -1,0 +1,230 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 32 — BILINGUAL SUPPORT VERIFICATION**
+
+This phase verifies the complete bilingual implementation across the platform in both English and Spanish. HelpAI was designed as bilingual from the beginning. Spanish is the primary language for a significant portion of the security officer workforce in Texas and across all states CoAIleague operates in. Every officer-facing notification, document, voice command, and UI element must be deliverable in the officer's preferred language. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row. Every row green before Phase 32 closes.
+
+**MANDATORY QUALITY RULES — APPLY THROUGHOUT THIS ENTIRE PHASE:**
+
+Before writing the completion summary the agent must run the following checks on every file modified during this phase. These rules are non-negotiable and apply to every phase going forward:
+
+1. **TypeScript targeted check** — run `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -30` after all changes and fix every error before closing the phase. Zero TypeScript errors required.
+
+2. **Import completeness check** — for every React component modified or created verify all hooks used (useState, useEffect, useMemo, useCallback, useRef) are imported from React. Verify all utility functions used (cn, clsx, formatDate, etc.) are imported at the top of the file. Run `grep -n "useMemo\|useCallback\|useRef\|useMemo" [file] | head -5` to confirm.
+
+3. **State variable declaration check** — for every component that references a state variable verify that variable is declared with useState or comes from a query/prop. No component may reference an undeclared variable.
+
+4. **Schema alignment check** — for every API call in a modified component verify the response schema matches what the server actually returns. If the server returns `{ data: [], pagination: {} }` the client schema must expect that shape — not a plain array.
+
+5. **Server startup check** — after all changes restart the server and confirm clean startup with `[ArchLinter] Architecture check passed` and zero runtime errors before writing the reconciliation table.
+
+These 5 checks must each have their own row in the reconciliation table with the actual command output as evidence.
+
+---
+
+**STEP 1 — BILINGUAL SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of the current bilingual implementation:
+- Where language preference is stored per user
+- What translation system is currently in use — i18n library, hardcoded strings, or none
+- Which pages and components currently have Spanish translations
+- Which NDS notification types currently have Spanish templates
+- Which document templates currently exist in Spanish
+- Voice command recognition in Spanish — current state
+- HelpAI Spanish response capability — current state
+- Any hardcoded English strings in officer-facing views
+
+Flag every officer-facing component that has no Spanish translation.
+
+---
+
+**STEP 2 — LANGUAGE PREFERENCE SYSTEM**
+
+Every user must be able to set their preferred language:
+- Language preference field confirmed in user profile schema — `preferred_language` with values `en` and `es`
+- Language preference UI — user can select English or Spanish from profile settings
+- Language preference stored in database and session — persists across logins
+- Language preference readable at request time — middleware or session provides current user language
+- Default language: English unless officer explicitly selects Spanish
+- Language preference change takes effect immediately — no logout required
+- Trinity reads user language preference before generating any response
+
+---
+
+**STEP 3 — UI TRANSLATION VERIFICATION**
+
+Officer-facing pages must render correctly in Spanish:
+- Translation system confirmed — i18n library (react-i18next or equivalent) configured and active
+- Translation files exist for both `en` and `es` locales
+- All officer-facing pages have Spanish translations:
+  - Login and registration
+  - Dashboard and home
+  - Schedule view
+  - Clock in/out
+  - Shift acknowledgment
+  - Incident reporting
+  - Pay stub view
+  - Document signing
+  - Profile and settings
+  - HelpAI chat interface
+- No hardcoded English strings in officer-facing views — all text goes through translation keys
+- Date and time formatting locale-aware — Spanish locale displays correctly
+- Number and currency formatting locale-aware
+- Error messages translated — not English-only error strings shown to Spanish-speaking officers
+
+---
+
+**STEP 4 — NDS NOTIFICATION TRANSLATION**
+
+Every notification to an officer must be in their preferred language:
+- NDS reads recipient's `preferred_language` before selecting template
+- All critical notification types confirmed having both English and Spanish templates:
+  - Shift assigned
+  - Shift cancelled
+  - Calloff confirmation
+  - Clock-in confirmation
+  - Incident report confirmation
+  - Pay stub available
+  - Document signature request
+  - License expiry warning
+  - Compliance alert
+  - Duress/panic acknowledgment
+- Spanish email templates confirmed rendering correctly — no broken characters, correct encoding (UTF-8)
+- Spanish SMS confirmed within character limits — Spanish characters may use more bytes
+- Spanish push notification titles and bodies confirmed correct
+- Template fallback: if Spanish template missing fall back to English and log a warning — never fail delivery
+
+---
+
+**STEP 5 — DOCUMENT TEMPLATE TRANSLATION**
+
+Legal documents must be available in Spanish:
+- Onboarding agreement available in Spanish
+- Employment contract available in Spanish
+- Post orders template available in Spanish
+- Incident report form available in Spanish
+- Document template selection: when generating a document for a Spanish-preferring officer the Spanish template is selected automatically
+- Bilingual documents: some documents may need both languages side by side — confirm if this is required per workspace configuration
+- Document signing flow labels and instructions translated — "Click to Sign", "Review Document", "Next Field" all in correct language
+- E-SIGN disclosure available in Spanish — legally required if document is presented in Spanish
+
+---
+
+**STEP 6 — VOICE COMMAND TRANSLATION**
+
+Trinity voice interface must work in Spanish:
+- OpenAI Whisper confirmed handling Spanish transcription
+- Spanish voice commands recognized correctly:
+  - "Registrar entrada" → clock in
+  - "Registrar salida" → clock out
+  - "Reportar incidente" → open incident report
+  - "Ver mi horario" → show schedule
+  - "Necesito reportarme enfermo" → initiate calloff
+  - "Llamar ayuda" → trigger duress alert
+  - "Cuáles son mis órdenes de puesto" → show post orders
+- Trinity responds in Spanish when voice command is in Spanish — language auto-detected from transcription
+- Voice UI labels translated — microphone button tooltip, recording indicator, response display all in Spanish when officer's preference is Spanish
+
+---
+
+**STEP 7 — HELPAI BILINGUAL VERIFICATION**
+
+HelpAI must respond naturally in both languages:
+- HelpAI detects user's preferred language from session before responding
+- HelpAI responses in Spanish are natural and professional — not machine-translated
+- HelpAI triage flow in Spanish:
+  - Greeting in Spanish
+  - Intent classification works on Spanish input
+  - FAQ search returns Spanish results if available
+  - Ticket creation form labels in Spanish
+- HelpAI escalation messages in Spanish
+- HelpAI onboarding tour available in Spanish for new Spanish-preferring officers
+- HelpAI system prompt instructs Trinity to respond in the user's preferred language
+
+---
+
+**STEP 8 — TRINITY LANGUAGE AWARENESS**
+
+Trinity must be language-aware in all interactions:
+- Trinity reads `preferred_language` from user context before every response
+- Trinity conscience and metacognition operate correctly regardless of input language
+- Trinity action confirmations and error messages in user's preferred language
+- Trinity proactive notifications and alerts in workspace's configured language or recipient's preferred language
+- Trinity executive planner output in user's preferred language
+- Multi-step plan steps described in user's preferred language
+
+---
+
+**STEP 9 — INBOUND EMAIL LANGUAGE HANDLING**
+
+Inbound emails may arrive in Spanish:
+- calloffs@ pipeline processes Spanish-language emails correctly
+- incidents@ pipeline processes Spanish-language emails correctly
+- Trinity intent extraction works on Spanish email body text
+- Confirmation reply sent in the language of the inbound email — Spanish email gets Spanish reply
+- Unrecognized sender notification in appropriate language
+
+---
+
+**STEP 10 — MISSING TRANSLATION DETECTION**
+
+Any missing translation must be surfaced not hidden:
+- Missing translation key falls back to English — never shows a raw translation key to the user
+- Missing Spanish templates log a warning — platform staff can identify gaps
+- Translation completeness report generatable — shows percentage of keys translated per locale
+- Trinity can flag when it responds in English to a Spanish-preferring user due to missing translation
+
+---
+
+**STEP 11 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. All 5 mandatory quality rules confirmed with command output evidence
+6. All rows green before summary written
+
+---
+
+**STEP 12 — VERIFICATION**
+
+Run all checks before Phase 32 is marked complete:
+- Check 1: Language preference field in user schema — confirmed present
+- Check 2: Language preference UI in profile settings — officer can select English or Spanish
+- Check 3: NDS reads preferred_language before template selection — confirmed
+- Check 4: All 10 critical notification types have Spanish templates
+- Check 5: Spanish email templates UTF-8 encoded — no broken characters
+- Check 6: Spanish SMS within character limits
+- Check 7: All officer-facing pages have Spanish translations
+- Check 8: No hardcoded English strings in officer-facing views — grep confirms
+- Check 9: Date, time, number, currency formatting locale-aware
+- Check 10: Onboarding and contract documents available in Spanish
+- Check 11: Document signing flow labels translated
+- Check 12: E-SIGN disclosure available in Spanish
+- Check 13: All 7 Spanish voice commands recognized and wired correctly
+- Check 14: Trinity responds in Spanish to Spanish input
+- Check 15: HelpAI triage flow works correctly in Spanish
+- Check 16: HelpAI responses natural and professional in Spanish — not machine-translated
+- Check 17: calloffs@ and incidents@ pipelines process Spanish emails correctly
+- Check 18: Confirmation replies sent in language of inbound email
+- Check 19: Missing translation falls back to English — never shows raw key
+- Check 20: Translation completeness report generatable
+- Check 21: TypeScript targeted check — zero errors in modified files
+- Check 22: Import completeness check — all hooks and utilities imported
+- Check 23: State variable declaration check — no undeclared variables
+- Check 24: Schema alignment check — all API response shapes match client expectations
+- Check 25: Server starts clean — ArchLinter passed, zero runtime errors
+- Check 26: Nothing Left Behind reconciliation table — one row per check, all green
+
+Do not mark Phase 32 complete until all 26 checks pass. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. All 5 mandatory quality rules confirmed with evidence. Nothing left behind.
+
+---
+
+Paste that. The quality rules are now baked into every future phase prompt. Missing imports, undeclared state variables, and schema mismatches get caught at the phase level — not discovered later when a user hits a broken page.

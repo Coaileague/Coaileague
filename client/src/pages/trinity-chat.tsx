@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Helmet } from 'react-helmet-async';
+import { SEO, PAGE_SEO } from '@/components/seo';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useWebSocketBus } from '@/providers/WebSocketProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,48 +15,38 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Send,
-  Bot,
   User,
   Briefcase,
   Heart,
-  Zap,
   Settings,
   History,
-  Sparkles,
   MessageSquare,
-  Clock,
-  ChevronLeft,
   Loader2,
   Brain,
+  Shield,
+  Crown,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { LogoMark } from '@/components/ui/logo-mark';
+import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
 
 import {
   type ConversationMode,
   type SpiritualGuidance,
   TRINITY_MODES,
-  TRINITY_API_ENDPOINTS,
 } from '@/config/trinity';
 
 interface Message {
@@ -82,19 +73,59 @@ interface BuddySettings {
   proactiveInsights: boolean;
 }
 
+const THOUGHT_PHASE_LABELS: Record<string, string> = {
+  perception: 'Perceiving',
+  deliberation: 'Deliberating',
+  planning: 'Deciding',
+  execution: 'Executing',
+  reflection: 'Reflecting',
+};
+
 export default function TrinityChat() {
+  const { user } = useAuth();
+  const { isPlatformStaff, workspaceRole } = useWorkspaceAccess();
+
+  const isCOORole = !isPlatformStaff && (
+    workspaceRole === 'org_owner' || workspaceRole === 'co_owner' || workspaceRole === 'manager'
+  );
+  const initialMode: ConversationMode = isPlatformStaff ? 'guru' : 'business';
+
   const [message, setMessage] = useState('');
-  const [mode, setMode] = useState<ConversationMode>('business');
+  const [mode, setMode] = useState<ConversationMode>(initialMode);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [thoughtPhase, setThoughtPhase] = useState<string | null>(null);
+  const thoughtTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const bus = useWebSocketBus();
   
-  // Personalization: extract user name for greeting
   const userName = user?.firstName || user?.username || user?.email?.split('@')[0] || 'there';
+
+  // Sync initial mode when role is resolved (platform staff → guru, others → business)
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMode(isPlatformStaff ? 'guru' : 'business');
+    }
+  }, [isPlatformStaff]);
+
+  useEffect(() => {
+    if (!bus) return;
+    const unsub = bus.subscribeAll((data: any) => {
+      if (data.type === 'trinity_thinking' && data.phase) {
+        if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
+        setThoughtPhase(data.phase);
+        if (thoughtTimerRef.current) clearTimeout(thoughtTimerRef.current);
+        thoughtTimerRef.current = setTimeout(() => setThoughtPhase(null), 8000);
+      }
+    });
+    return () => {
+      unsub();
+      if (thoughtTimerRef.current) clearTimeout(thoughtTimerRef.current);
+    };
+  }, [bus, sessionId]);
 
   // Fetch BUDDY settings
   const { data: buddySettings, isLoading: settingsLoading } = useQuery<BuddySettings>({
@@ -114,6 +145,7 @@ export default function TrinityChat() {
     },
     onSuccess: (data) => {
       setSessionId(data.sessionId);
+      setThoughtPhase(null);
       setMessages((prev) => [
         ...prev,
         {
@@ -126,6 +158,7 @@ export default function TrinityChat() {
       queryClient.invalidateQueries({ queryKey: ['/api/trinity/chat/history'] });
     },
     onError: (error: any) => {
+      setThoughtPhase(null);
       toast({
         title: 'Error',
         description: error.message || 'Failed to send message',
@@ -241,252 +274,294 @@ export default function TrinityChat() {
     }
   };
 
-  const ModeIcon = TRINITY_MODES[mode].icon;
+  const trinityRoleBadge = isPlatformStaff ? (
+    <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/40 gap-1 shrink-0 max-w-[140px] sm:max-w-none" data-testid="badge-trinity-guru-mode">
+      <Shield className="h-3 w-3 shrink-0" />
+      <span className="truncate">Tech Guru Mode</span>
+    </Badge>
+  ) : isCOORole ? (
+    <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/40 gap-1 shrink-0 max-w-[140px] sm:max-w-none" data-testid="badge-trinity-coo-mode">
+      <Crown className="h-3 w-3 shrink-0" />
+      <span className="truncate">COO Mode</span>
+    </Badge>
+  ) : null;
+
+  const headerActions = (
+    <div className="flex items-center gap-2 flex-wrap">
+      {trinityRoleBadge}
+      {/* Mode Switcher */}
+      <div className="hidden md:block">
+        {isPlatformStaff ? (
+          <Tabs value={mode} onValueChange={(v) => handleModeSwitch(v as ConversationMode)}>
+            <TabsList className="grid grid-cols-3">
+              <TabsTrigger value="business" className="gap-1" data-testid="tab-business">
+                <Briefcase className="h-3 w-3" />
+                <span>Business</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="personal"
+                className="gap-1"
+                disabled={!buddySettings?.personalDevelopmentEnabled}
+                data-testid="tab-personal"
+              >
+                <Heart className="h-3 w-3" />
+                <span>Personal</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="guru"
+                className="gap-1"
+                data-testid="tab-guru"
+              >
+                <Shield className="h-3 w-3" />
+                <span>Guru</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        ) : (
+          <Tabs value={mode} onValueChange={(v) => handleModeSwitch(v as ConversationMode)}>
+            <TabsList className="grid grid-cols-2">
+              <TabsTrigger value="business" className="gap-1" data-testid="tab-business">
+                <Briefcase className="h-3 w-3" />
+                <span>Business</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="personal"
+                className="gap-1"
+                disabled={!buddySettings?.personalDevelopmentEnabled}
+                data-testid="tab-personal"
+              >
+                <Heart className="h-3 w-3" />
+                <span>Personal</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+      </div>
+
+      <div className="md:hidden">
+        <Select value={mode} onValueChange={(v) => handleModeSwitch(v as ConversationMode)}>
+          <SelectTrigger className="w-[130px] h-9">
+            <SelectValue placeholder="Mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="business">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-3 w-3" />
+                <span>Business</span>
+              </div>
+            </SelectItem>
+            <SelectItem 
+              value="personal" 
+              disabled={!buddySettings?.personalDevelopmentEnabled}
+            >
+              <div className="flex items-center gap-2">
+                <Heart className="h-3 w-3" />
+                <span>Personal</span>
+              </div>
+            </SelectItem>
+            {isPlatformStaff && (
+              <SelectItem value="guru">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-3 w-3" />
+                  <span>Guru</span>
+                </div>
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* History Button */}
+      <UniversalModal open={historyOpen} onOpenChange={setHistoryOpen}>
+        <UniversalModalTrigger asChild>
+          <Button variant="outline" size="icon" data-testid="button-history" aria-label="View history">
+            <History className="h-4 w-4" />
+          </Button>
+        </UniversalModalTrigger>
+        <UniversalModalContent side="right">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Conversation History</UniversalModalTitle>
+            <UniversalModalDescription>View and resume past conversations</UniversalModalDescription>
+          </UniversalModalHeader>
+          <ScrollArea className="h-[calc(100dvh-8rem)] mt-4">
+            {historyLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : historyData?.sessions && historyData.sessions.length > 0 ? (
+              <div className="space-y-2">
+                {historyData.sessions.map((session) => (
+                  <Card
+                    key={session.id}
+                    className="p-3 cursor-pointer hover:bg-muted/50"
+                    onClick={() => loadSession(session)}
+                    data-testid={`card-session-${session.id}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-xs">
+                        {TRINITY_MODES[session.mode].label}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(session.lastActivityAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <p className="text-sm truncate">{session.previewMessage || 'Empty session'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {session.turnCount} messages
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No conversation history yet</p>
+              </div>
+            )}
+          </ScrollArea>
+        </UniversalModalContent>
+      </UniversalModal>
+
+      {/* Settings Button */}
+      <UniversalModal open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <UniversalModalTrigger asChild>
+          <Button variant="outline" size="icon" data-testid="button-settings" aria-label="Trinity settings">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </UniversalModalTrigger>
+        <UniversalModalContent className="sm:max-w-sm">
+          <UniversalModalHeader>
+            <UniversalModalTitle>BUDDY Settings</UniversalModalTitle>
+            <UniversalModalDescription>Configure your Trinity experience</UniversalModalDescription>
+          </UniversalModalHeader>
+          <div className="space-y-6 mt-6">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="personal-dev">Personal Development</Label>
+              <Switch
+                id="personal-dev"
+                checked={buddySettings?.personalDevelopmentEnabled}
+                onCheckedChange={(checked) =>
+                  settingsMutation.mutate({ personalDevelopmentEnabled: checked })
+                }
+                data-testid="switch-personal-dev"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="show-thought">Show Thought Process</Label>
+              <Switch
+                id="show-thought"
+                checked={buddySettings?.showThoughtProcess}
+                onCheckedChange={(checked) =>
+                  settingsMutation.mutate({ showThoughtProcess: checked })
+                }
+                data-testid="switch-thought-process"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="proactive">Proactive Insights</Label>
+              <Switch
+                id="proactive"
+                checked={buddySettings?.proactiveInsights}
+                onCheckedChange={(checked) =>
+                  settingsMutation.mutate({ proactiveInsights: checked })
+                }
+                data-testid="switch-proactive"
+              />
+            </div>
+            <Separator />
+            <div className="space-y-3">
+              <Label>Accountability Level</Label>
+              <RadioGroup
+                value={buddySettings?.accountabilityLevel}
+                onValueChange={(value) =>
+                  settingsMutation.mutate({
+                    accountabilityLevel: value as 'gentle' | 'balanced' | 'challenging',
+                  })
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="gentle" id="gentle" data-testid="radio-gentle" />
+                  <Label htmlFor="gentle" className="font-normal">
+                    Gentle - Supportive and encouraging
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="balanced" id="balanced" data-testid="radio-balanced" />
+                  <Label htmlFor="balanced" className="font-normal">
+                    Balanced - Mix of support and challenge
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="challenging" id="challenging" data-testid="radio-challenging" />
+                  <Label htmlFor="challenging" className="font-normal">
+                    Challenging - Direct and growth-focused
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </div>
+  );
 
   return (
     <>
-      <Helmet>
-        <title>Trinity Chat | CoAIleague</title>
-        <meta name="description" content="Chat with Trinity, your AI workforce intelligence partner" />
-      </Helmet>
+      <SEO
+        title={PAGE_SEO.dashboard.title}
+        description={PAGE_SEO.dashboard.description}
+        noindex={true}
+      />
 
-      <div className="flex h-[calc(100vh-4rem)] bg-background" data-testid="trinity-chat-page">
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <div className="border-b p-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <LogoMark size="md" />
-              <div>
-                <h1 className="text-base font-semibold flex items-center gap-2">
-                  Trinity
-                  <Badge variant="secondary">
-                    {TRINITY_MODES[mode].label}
-                  </Badge>
-                </h1>
-                <p className="text-[10px] text-muted-foreground">
-                  {userName !== 'there' ? `Ready to help, ${userName}` : 'AI Intelligence Partner'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Mode Switcher */}
-              <Tabs value={mode} onValueChange={(v) => handleModeSwitch(v as ConversationMode)}>
-                <TabsList className="grid grid-cols-3">
-                  <TabsTrigger value="business" className="gap-1" data-testid="tab-business">
-                    <Briefcase className="h-3 w-3" />
-                    <span className="hidden sm:inline">Business</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="personal"
-                    className="gap-1"
-                    disabled={!buddySettings?.personalDevelopmentEnabled}
-                    data-testid="tab-personal"
-                  >
-                    <Heart className="h-3 w-3" />
-                    <span className="hidden sm:inline">Personal</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="integrated"
-                    className="gap-1"
-                    disabled={!buddySettings?.personalDevelopmentEnabled}
-                    data-testid="tab-integrated"
-                  >
-                    <Zap className="h-3 w-3" />
-                    <span className="hidden sm:inline">Integrated</span>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {/* History Button */}
-              <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" data-testid="button-history">
-                    <History className="h-4 w-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right">
-                  <SheetHeader>
-                    <SheetTitle>Conversation History</SheetTitle>
-                    <SheetDescription>View and resume past conversations</SheetDescription>
-                  </SheetHeader>
-                  <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
-                    {historyLoading ? (
-                      <div className="space-y-3">
-                        {[...Array(5)].map((_, i) => (
-                          <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                      </div>
-                    ) : historyData?.sessions?.length ? (
-                      <div className="space-y-2">
-                        {historyData.sessions.map((session) => {
-                          const SessionIcon = TRINITY_MODES[session.mode].icon;
-                          return (
-                            <Card
-                              key={session.id}
-                              className="cursor-pointer hover-elevate"
-                              onClick={() => loadSession(session)}
-                              data-testid={`session-${session.id}`}
-                            >
-                              <CardContent className="p-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <SessionIcon className="h-3 w-3" />
-                                  <Badge variant="secondary" className="text-[10px]">
-                                    {TRINITY_MODES[session.mode].label}
-                                  </Badge>
-                                  <span className="text-[10px] text-muted-foreground ml-auto">
-                                    {formatDistanceToNow(new Date(session.lastActivityAt), { addSuffix: true })}
-                                  </span>
-                                </div>
-                                <p className="text-sm truncate">{session.previewMessage}</p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {session.turnCount} messages
-                                </p>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center text-muted-foreground py-8">
-                        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No conversations yet</p>
-                      </div>
-                    )}
-                  </ScrollArea>
-                </SheetContent>
-              </Sheet>
-
-              {/* Settings Button */}
-              <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="icon" data-testid="button-settings">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent size="sm" className="p-4">
-                  <DialogHeader className="pb-2 space-y-0">
-                    <DialogTitle className="text-sm flex items-center gap-2">
-                      <Brain className="h-4 w-4" />
-                      Trinity Settings
-                    </DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-3">
-                    {/* Personal Development Toggle */}
-                    <div className="flex items-center justify-between min-h-[44px]">
-                      <Label className="text-sm">Personal Development</Label>
-                      <Switch
-                        checked={buddySettings?.personalDevelopmentEnabled || false}
-                        onCheckedChange={(checked) =>
-                          settingsMutation.mutate({ personalDevelopmentEnabled: checked })
-                        }
-                        disabled={settingsMutation.isPending}
-                        data-testid="switch-personal-development"
-                      />
-                    </div>
-
-                    {/* Spiritual Guidance (only if personal development enabled) */}
-                    {buddySettings?.personalDevelopmentEnabled && (
-                      <>
-                        <Separator />
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Spiritual Guidance</Label>
-                          <RadioGroup
-                            value={buddySettings?.spiritualGuidance || 'none'}
-                            onValueChange={(value) =>
-                              settingsMutation.mutate({ spiritualGuidance: value as SpiritualGuidance })
-                            }
-                            className="grid grid-cols-3 gap-1"
-                          >
-                            <Label htmlFor="spiritual-none" className="flex justify-center items-center text-xs cursor-pointer min-h-[44px] rounded-md border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/10">
-                              <RadioGroupItem value="none" id="spiritual-none" className="sr-only" />
-                              None
-                            </Label>
-                            <Label htmlFor="spiritual-general" className="flex justify-center items-center text-xs cursor-pointer min-h-[44px] rounded-md border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/10">
-                              <RadioGroupItem value="general" id="spiritual-general" className="sr-only" />
-                              General
-                            </Label>
-                            <Label htmlFor="spiritual-christian" className="flex justify-center items-center text-xs cursor-pointer min-h-[44px] rounded-md border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/10">
-                              <RadioGroupItem value="christian" id="spiritual-christian" className="sr-only" />
-                              Christian
-                            </Label>
-                          </RadioGroup>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Accountability Level</Label>
-                          <RadioGroup
-                            value={buddySettings?.accountabilityLevel || 'balanced'}
-                            onValueChange={(value) =>
-                              settingsMutation.mutate({
-                                accountabilityLevel: value as 'gentle' | 'balanced' | 'challenging',
-                              })
-                            }
-                            className="grid grid-cols-3 gap-1"
-                          >
-                            <Label htmlFor="acc-gentle" className="flex justify-center items-center text-xs cursor-pointer min-h-[44px] rounded-md border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/10">
-                              <RadioGroupItem value="gentle" id="acc-gentle" className="sr-only" />
-                              Gentle
-                            </Label>
-                            <Label htmlFor="acc-balanced" className="flex justify-center items-center text-xs cursor-pointer min-h-[44px] rounded-md border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/10">
-                              <RadioGroupItem value="balanced" id="acc-balanced" className="sr-only" />
-                              Balanced
-                            </Label>
-                            <Label htmlFor="acc-challenging" className="flex justify-center items-center text-xs cursor-pointer min-h-[44px] rounded-md border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/10">
-                              <RadioGroupItem value="challenging" id="acc-challenging" className="sr-only" />
-                              Challenge
-                            </Label>
-                          </RadioGroup>
-                        </div>
-                      </>
-                    )}
-
-                    <Separator />
-
-                    {/* Metacognition Settings */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Display</Label>
-                      <div className="flex items-center justify-between min-h-[44px]">
-                        <Label className="text-sm font-normal">Show Reasoning</Label>
-                        <Switch
-                          checked={buddySettings?.showThoughtProcess ?? true}
-                          onCheckedChange={(checked) => settingsMutation.mutate({ showThoughtProcess: checked })}
-                          data-testid="switch-thought-process"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between min-h-[44px]">
-                        <Label className="text-sm font-normal">Proactive Insights</Label>
-                        <Switch
-                          checked={buddySettings?.proactiveInsights ?? true}
-                          onCheckedChange={(checked) => settingsMutation.mutate({ proactiveInsights: checked })}
-                          data-testid="switch-proactive-insights"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
+      <CanvasHubPage config={{
+        id: 'trinity-chat',
+        title: 'Trinity Chat',
+        subtitle: userName !== 'there' ? `Ready to help, ${userName}` : 'AI Intelligence Partner',
+        category: 'communication',
+        headerActions,
+      }}>
+        <div className="flex flex-col h-[calc(100dvh-12rem)] pb-safe" data-testid="trinity-chat-page">
           {/* Messages Area */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4" role="log" aria-label="Trinity AI chat messages" aria-live="polite" aria-relevant="additions">
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="mx-auto w-16 h-16 flex items-center justify-center mb-4">
-                    <LogoMark size="xl" />
-                  </div>
-                  <h2 className="text-xl font-semibold mb-2">
-                    Hey {userName}, ready to chat?
-                  </h2>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    {mode === 'business' && "Ask me about schedules, payroll, profits, or any business insight."}
-                    {mode === 'personal' && "I'm here as your accountability partner. Let's work on your growth."}
-                    {mode === 'integrated' && "I see both your business and personal context. Let's connect the dots."}
+                <div className="text-center py-12">
+                  <LogoMark size="lg" className="mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Welcome to Trinity Chat</h3>
+                  <p className="text-muted-foreground mb-6">
+                    {mode === 'business'
+                      ? "Ask me about schedules, reports, or business insights"
+                      : mode === 'personal'
+                      ? "Let's focus on your growth and development"
+                      : "I'm here to help with anything"}
                   </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {mode === 'business' && (
+                      <>
+                        <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Show me today's schedule")}>
+                          Today's schedule
+                        </Badge>
+                        <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Any overtime issues this week?")}>
+                          Overtime issues
+                        </Badge>
+                        <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Generate a performance report")}>
+                          Performance report
+                        </Badge>
+                      </>
+                    )}
+                    {mode === 'personal' && buddySettings?.personalDevelopmentEnabled && (
+                      <>
+                        <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("Help me set goals for this quarter")}>
+                          Set goals
+                        </Badge>
+                        <Badge className="cursor-pointer hover-elevate" onClick={() => setMessage("I need to have a difficult conversation")}>
+                          Difficult conversation
+                        </Badge>
+                      </>
+                    )}
+                  </div>
                 </div>
               ) : (
                 messages.map((msg) => (
@@ -500,32 +575,42 @@ export default function TrinityChat() {
                       </div>
                     )}
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
+                      className={`max-w-[80%] rounded-lg px-3 py-2 ${
                         msg.role === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted'
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                      <p className="text-[10px] opacity-70 mt-1">
-                        {format(msg.createdAt, 'h:mm a')}
+                      <p className="text-[10px] opacity-60 mt-1">
+                        {format(new Date(msg.createdAt), 'h:mm a')}
                       </p>
                     </div>
                     {msg.role === 'user' && (
-                      <div className="shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary-foreground" />
+                      <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary" />
                       </div>
                     )}
                   </div>
                 ))
               )}
               {chatMutation.isPending && (
-                <div className="flex gap-3 justify-start items-center">
+                <div className="flex gap-3 justify-start" data-testid="trinity-thinking-indicator">
                   <div className="shrink-0 w-8 h-8 flex items-center justify-center animate-pulse">
                     <LogoMark size="sm" />
                   </div>
                   <div className="bg-muted rounded-lg px-3 py-2">
-                    <p className="text-sm text-muted-foreground animate-pulse">Trinity is thinking...</p>
+                    {thoughtPhase ? (
+                      <div className="flex items-center gap-2">
+                        <Brain className="w-3.5 h-3.5 text-primary animate-pulse" />
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium text-foreground">{THOUGHT_PHASE_LABELS[thoughtPhase] || thoughtPhase}</span>
+                          <span className="animate-pulse">...</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground animate-pulse">Trinity is thinking...</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -566,7 +651,7 @@ export default function TrinityChat() {
             </form>
           </div>
         </div>
-      </div>
+      </CanvasHubPage>
     </>
   );
 }

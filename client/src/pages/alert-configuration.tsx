@@ -27,6 +27,7 @@ import {
   CheckCircle, XCircle, Mail, MessageSquare, Smartphone,
   Settings, History, Zap, RefreshCw, Save, TestTube
 } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface AlertConfiguration {
   id: string;
@@ -159,6 +160,13 @@ export default function AlertConfiguration() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/config'] });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Toggle Alert Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const acknowledgeAlertMutation = useMutation({
@@ -169,6 +177,13 @@ export default function AlertConfiguration() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/history'] });
       toast({ title: 'Alert Acknowledged' });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Acknowledge Alert Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -201,28 +216,24 @@ export default function AlertConfiguration() {
     return `${minutes}m ago`;
   };
 
-  return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3" data-testid="text-page-title">
-            <Bell className="w-8 h-8 text-primary" />
-            Alert Configuration
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Customize alerts for critical business events
-          </p>
-        </div>
-        {unacknowledgedCount > 0 && (
-          <Badge variant="destructive" className="text-lg px-4 py-2">
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            {unacknowledgedCount} Unacknowledged
-          </Badge>
-        )}
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'alert-configuration',
+    title: 'Alert Configuration',
+    subtitle: 'Customize alerts for critical business events',
+    category: 'operations',
+    maxWidth: '6xl',
+    headerActions: unacknowledgedCount > 0 ? (
+      <Badge variant="destructive" className="text-lg px-4 py-2">
+        <AlertTriangle className="w-4 h-4 mr-2" />
+        {unacknowledgedCount} Unacknowledged
+      </Badge>
+    ) : null,
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
+        <TabsList className="w-full sm:w-auto overflow-x-auto mb-6">
           <TabsTrigger value="configuration" data-testid="tab-configuration">
             <Settings className="w-4 h-4 mr-2" />
             Configuration
@@ -260,7 +271,7 @@ export default function AlertConfiguration() {
                 return (
                   <Card key={config.id} className={`${!config.isEnabled ? 'opacity-60' : ''}`} data-testid={`alert-config-${config.alertType}`}>
                     <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg ${SEVERITY_COLORS[config.severity]}`}>
                             <TypeIcon className="w-5 h-5" />
@@ -278,15 +289,15 @@ export default function AlertConfiguration() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between gap-2 text-sm">
                         <span className="text-muted-foreground">{typeConfig.thresholdLabel}</span>
                         <Badge variant="outline">{thresholdValue} {typeConfig.thresholdUnit}</Badge>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between gap-2 text-sm">
                         <span className="text-muted-foreground">Severity</span>
                         <Badge className={SEVERITY_COLORS[config.severity]}>{config.severity}</Badge>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between gap-2 text-sm">
                         <span className="text-muted-foreground">Channels</span>
                         <div className="flex gap-1">
                           {config.channels.map((channel) => {
@@ -299,7 +310,7 @@ export default function AlertConfiguration() {
                           })}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between gap-2 text-sm">
                         <span className="text-muted-foreground">Cooldown</span>
                         <span>{config.cooldownMinutes} min</span>
                       </div>
@@ -380,7 +391,7 @@ export default function AlertConfiguration() {
                           </div>
                           <div className="flex items-center gap-2">
                             {item.isAcknowledged ? (
-                              <Badge variant="outline" className="text-green-600">
+                              <Badge variant="outline" className="text-green-600 dark:text-green-400">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Acknowledged
                               </Badge>
@@ -422,7 +433,7 @@ export default function AlertConfiguration() {
           isSaving={updateConfigMutation.isPending}
         />
       )}
-    </div>
+    </CanvasHubPage>
   );
 }
 
@@ -450,7 +461,7 @@ function EditAlertDialog({ config, onClose, onSave, isSaving }: EditAlertDialogP
     if (channels.includes(channel)) {
       setChannels(channels.filter(c => c !== channel));
     } else {
-      setChannels([...channels, channel]);
+      setChannels(prev => [...prev, channel]);
     }
   };
 
@@ -465,7 +476,7 @@ function EditAlertDialog({ config, onClose, onSave, isSaving }: EditAlertDialogP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[2500] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <Card className="w-full max-w-md mx-4 animate-success-pop">
         <CardHeader>
           <CardTitle>Configure {typeConfig.label}</CardTitle>

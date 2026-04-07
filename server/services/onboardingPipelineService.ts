@@ -10,22 +10,29 @@
  * - Stripe coupon integration for discount application
  */
 
+import crypto from 'crypto';
 import { db } from '../db';
-import { eq, and, desc, sql } from 'drizzle-orm';
-import { 
-  workspaces, 
-  orgOnboardingTasks, 
-  orgRewards, 
-  userOnboardingProgress,
-  type Workspace,
+import { eq, and, desc, sql, count } from 'drizzle-orm';
+import {
+  workspaces,
+  orgOnboardingTasks,
+  orgRewards,
+
+  employees,
+  clients,
+  employeePayrollInfo,
   type OrgOnboardingTask,
   type OrgReward,
   type InsertOrgOnboardingTask,
-  type InsertOrgReward,
+  type InsertOrgReward
 } from '@shared/schema';
 import { isFeatureEnabled, PLATFORM, ONBOARDING } from '@shared/platformConfig';
 import Stripe from 'stripe';
-import { geminiClient } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
+import { universalAudit, AUDIT_ACTIONS } from './universalAuditService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('onboardingPipelineService');
+
 
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' })
@@ -242,6 +249,30 @@ class OnboardingPipelineService {
       })
       .where(eq(orgOnboardingTasks.id, taskId));
 
+    // Emit platform event for task completion
+    const { platformEventBus } = await import('./platformEventBus');
+    platformEventBus.publish({
+      type: 'onboarding_task_completed',
+      category: 'automation',
+      title: `Onboarding Task Completed: ${task.title}`,
+      description: `Task '${task.title}' was completed by ${completedBy ? 'user' : 'system'}.`,
+      workspaceId,
+      metadata: { taskId, taskTitle: task.title, category: task.category, points: task.points },
+      visibility: 'all'
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
+
+    universalAudit.log({
+      workspaceId,
+      actorId: completedBy || null,
+      actorType: completedBy ? 'user' : 'system',
+      action: AUDIT_ACTIONS.ONBOARDING_TASK_COMPLETED,
+      entityType: 'onboarding_task',
+      entityId: taskId,
+      entityName: task.title,
+      changeType: 'update',
+      metadata: { category: task.category, points: task.points, requiredForReward: task.requiredForReward },
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
+
     const progress = await this.getProgress(workspaceId);
 
     if (progress.isRewardUnlocked) {
@@ -278,6 +309,17 @@ class OnboardingPipelineService {
       })
       .where(eq(orgOnboardingTasks.id, taskId))
       .returning();
+
+    universalAudit.log({
+      workspaceId,
+      actorType: 'system',
+      action: AUDIT_ACTIONS.ONBOARDING_TASK_PROGRESS_UPDATED,
+      entityType: 'onboarding_task',
+      entityId: taskId,
+      entityName: task.title,
+      changeType: 'update',
+      metadata: { previousProgress: task.currentProgress || 0, newProgress, targetProgress: task.targetProgress, isComplete: !!isComplete },
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
 
     if (isComplete) {
       const progress = await this.getProgress(workspaceId);
@@ -318,6 +360,28 @@ class OnboardingPipelineService {
       .where(eq(workspaces.id, workspaceId))
       .returning();
 
+    // Emit platform event for status change
+    const { platformEventBus } = await import('./platformEventBus');
+    platformEventBus.publish({
+      type: 'onboarding_pipeline_status_changed',
+      category: 'automation',
+      title: `Workspace Onboarding Status: ${status.replace('_', ' ')}`,
+      description: `Workspace onboarding status changed to '${status}'.`,
+      workspaceId,
+      metadata: { newStatus: status, reason: reason || null },
+      visibility: 'all'
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
+
+    universalAudit.log({
+      workspaceId,
+      actorType: 'system',
+      action: AUDIT_ACTIONS.ONBOARDING_PIPELINE_STATUS_CHANGED,
+      entityType: 'workspace',
+      entityId: workspaceId,
+      changeType: 'update',
+      metadata: { newStatus: status, reason: reason || null, ...(status === 'trial_started' ? { trialDays: ONBOARDING.TRIAL.DAYS } : {}) },
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
+
     return updated;
   }
 
@@ -346,7 +410,9 @@ class OnboardingPipelineService {
           duration: 'once',
           name: `Welcome Discount - ${workspaceId}`,
           metadata: { workspaceId },
-        });
+        // GAP-58 FIX: Deterministic key — random UUID caused duplicate welcome coupons
+        // for the same workspace if onboarding was retried (network error, crash).
+        }, { idempotencyKey: `coupon-welcome-${workspaceId}` });
 
         stripeCouponId = coupon.id;
 
@@ -354,12 +420,13 @@ class OnboardingPipelineService {
           coupon: coupon.id,
           code: `WELCOME10-${workspaceId.substring(0, 8).toUpperCase()}`,
           metadata: { workspaceId },
-        });
+        // GAP-58 FIX: Deterministic key — each workspace has exactly one welcome promo code.
+        }, { idempotencyKey: `promo-welcome-${workspaceId}` });
 
         stripePromotionCode = promoCode.code;
-        console.log(`[Onboarding] Created Stripe promo code: ${stripePromotionCode}`);
+        log.info(`[Onboarding] Created Stripe promo code: ${stripePromotionCode}`);
       } catch (error: any) {
-        console.error('[Onboarding] Failed to create Stripe coupon:', error.message);
+        log.error('[Onboarding] Failed to create Stripe coupon:', (error instanceof Error ? error.message : String(error)));
       }
     }
 
@@ -376,6 +443,17 @@ class OnboardingPipelineService {
       stripePromotionCode,
       stripeCouponId,
     }).returning();
+
+    universalAudit.log({
+      workspaceId,
+      actorType: 'system',
+      action: AUDIT_ACTIONS.ONBOARDING_REWARD_UNLOCKED,
+      entityType: 'org_reward',
+      entityId: reward.id,
+      entityName: 'Onboarding 10% Discount',
+      changeType: 'create',
+      metadata: { discountPercent: 10, expiresAt: expiresAt.toISOString(), hasStripePromo: !!stripePromotionCode },
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
 
     return reward;
   }
@@ -412,6 +490,16 @@ class OnboardingPipelineService {
       })
       .where(eq(orgRewards.id, reward.id))
       .returning();
+
+    universalAudit.log({
+      workspaceId,
+      actorType: 'system',
+      action: AUDIT_ACTIONS.ONBOARDING_REWARD_APPLIED,
+      entityType: 'org_reward',
+      entityId: reward.id,
+      changeType: 'update',
+      metadata: { discountPercent: reward.discountPercent, invoiceId: invoiceId || null },
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
 
     return updated;
   }
@@ -482,6 +570,17 @@ class OnboardingPipelineService {
       ))
       .returning();
 
+    universalAudit.log({
+      workspaceId,
+      actorType: 'user',
+      action: AUDIT_ACTIONS.ONBOARDING_TASK_SKIPPED,
+      entityType: 'onboarding_task',
+      entityId: taskId,
+      entityName: updated?.title || taskId,
+      changeType: 'update',
+      metadata: { category: updated?.category },
+    }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
+
     return updated;
   }
 
@@ -490,8 +589,9 @@ class OnboardingPipelineService {
    * Uses Gemini to analyze the organization and create personalized tasks
    */
   async generateDynamicTasks(workspaceId: string): Promise<OrgOnboardingTask[]> {
-    if (!geminiClient.isAvailable()) {
-      console.log('[Onboarding] AI Brain not available, using default tasks');
+    // meteredGemini is always available if GEMINI_API_KEY is set
+    if (!process.env.GEMINI_API_KEY) {
+      log.info('[Onboarding] AI Brain not available, using default tasks');
       return [];
     }
 
@@ -534,13 +634,12 @@ Respond with a JSON array of tasks. Each task must have:
 
 Generate personalized onboarding tasks for this organization.`;
 
-      const response = await geminiClient.generate({
+      const response = await meteredGemini.generate({
         workspaceId,
         featureKey: 'onboarding_task_generation',
-        systemPrompt,
-        userMessage,
+        prompt: `${systemPrompt}\n\n${userMessage}`,
         temperature: 0.7,
-        maxTokens: 1024,
+        maxOutputTokens: 1024,
       });
 
       let aiTasks: any[] = [];
@@ -550,7 +649,7 @@ Generate personalized onboarding tasks for this organization.`;
           aiTasks = JSON.parse(jsonMatch[0]);
         }
       } catch (parseError) {
-        console.error('[Onboarding] Failed to parse AI response:', parseError);
+        log.error('[Onboarding] Failed to parse AI response:', parseError);
         return [];
       }
 
@@ -587,11 +686,21 @@ Generate personalized onboarding tasks for this organization.`;
         insertedTasks.push(inserted);
       }
 
-      console.log(`[Onboarding] AI Brain generated ${insertedTasks.length} personalized tasks for workspace ${workspaceId}`);
+      universalAudit.log({
+        workspaceId,
+        actorType: 'trinity',
+        actorBot: 'OnboardingPipeline',
+        action: AUDIT_ACTIONS.ONBOARDING_DYNAMIC_TASKS_GENERATED,
+        entityType: 'onboarding_task',
+        changeType: 'create',
+        metadata: { tasksGenerated: insertedTasks.length, titles: insertedTasks.map(t => t.title) },
+      }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
+
+      log.info(`[Onboarding] AI Brain generated ${insertedTasks.length} personalized tasks for workspace ${workspaceId}`);
       return insertedTasks;
 
     } catch (error: any) {
-      console.error('[Onboarding] AI Brain task generation failed:', error.message);
+      log.error('[Onboarding] AI Brain task generation failed:', (error instanceof Error ? error.message : String(error)));
       return [];
     }
   }
@@ -613,7 +722,19 @@ Generate personalized onboarding tasks for this organization.`;
         continue;
       }
       await this.completeTask(workspaceId, task.id);
-      console.log(`[Onboarding] Auto-completed task "${task.title}" from event ${eventType}`);
+
+      universalAudit.log({
+        workspaceId,
+        actorType: 'system',
+        action: AUDIT_ACTIONS.ONBOARDING_SYSTEM_EVENT_PROCESSED,
+        entityType: 'onboarding_task',
+        entityId: task.id,
+        entityName: task.title,
+        changeType: 'action',
+        metadata: { eventType, taskTitle: task.title, autoCompleted: true },
+      }).catch((err) => log.warn('[onboardingPipelineService] Fire-and-forget failed:', err));
+
+      log.info(`[Onboarding] Auto-completed task "${task.title}" from event ${eventType}`);
     }
   }
 
@@ -645,6 +766,194 @@ Generate personalized onboarding tasks for this organization.`;
     }
 
     return true;
+  }
+
+  async getOrgReadinessScore(workspaceId: string): Promise<{
+    score: number;
+    totalChecks: number;
+    passedChecks: number;
+    checklist: Array<{
+      item: string;
+      category: string;
+      passed: boolean;
+      detail: string;
+      priority: 'critical' | 'high' | 'medium' | 'low';
+    }>;
+    readyForOperation: boolean;
+    summary: string;
+  }> {
+    const checklist: Array<{
+      item: string;
+      category: string;
+      passed: boolean;
+      detail: string;
+      priority: 'critical' | 'high' | 'medium' | 'low';
+    }> = [];
+
+    try {
+      const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      if (!workspace) {
+        return { score: 0, totalChecks: 0, passedChecks: 0, checklist: [], readyForOperation: false, summary: 'Workspace not found' };
+      }
+
+      checklist.push({
+        item: 'Company name set',
+        category: 'Organization',
+        passed: !!workspace.companyName,
+        detail: workspace.companyName ? `Company: ${workspace.companyName}` : 'Set your company name in workspace settings',
+        priority: 'critical',
+      });
+
+      checklist.push({
+        item: 'Employer Identification Number (EIN)',
+        category: 'Tax Compliance',
+        passed: !!workspace.taxId,
+        detail: workspace.taxId ? 'EIN configured' : 'Required for tax filings (Form 941, 940, W-2). Enter your EIN in workspace settings.',
+        priority: 'critical',
+      });
+
+      checklist.push({
+        item: 'State license configured',
+        category: 'Compliance',
+        passed: !!workspace.stateLicenseNumber && !!workspace.stateLicenseState,
+        detail: workspace.stateLicenseNumber ? `License: ${workspace.stateLicenseState} ${workspace.stateLicenseNumber}` : 'Required for regulated industries (security, etc.)',
+        priority: 'high',
+      });
+
+      const [billingSettings] = await db.select()
+        .from(workspaceBillingSettings)
+        .where(eq(workspaceBillingSettings.workspaceId, workspaceId))
+        .limit(1);
+
+      checklist.push({
+        item: 'Payroll schedule configured',
+        category: 'Payroll',
+        passed: !!billingSettings,
+        detail: billingSettings ? `Payroll cycle: ${billingSettings.payrollCycle || 'bi_weekly'}, Day: ${billingSettings.payrollDayOfWeek ?? 5}` : 'Configure your pay schedule (weekly, bi-weekly, etc.) in billing settings',
+        priority: 'critical',
+      });
+
+      checklist.push({
+        item: 'Billing cycle configured',
+        category: 'Billing',
+        passed: !!billingSettings?.defaultBillingCycle,
+        detail: billingSettings?.defaultBillingCycle ? `Default billing cycle: ${billingSettings.defaultBillingCycle}` : 'Set default billing cycle for client invoicing',
+        priority: 'high',
+      });
+
+      checklist.push({
+        item: 'Invoice provider set',
+        category: 'Billing',
+        passed: !!billingSettings?.invoiceProvider,
+        detail: billingSettings?.invoiceProvider ? `Invoice provider: ${billingSettings.invoiceProvider}` : 'Choose invoice provider (Stripe recommended for self-contained operation)',
+        priority: 'high',
+      });
+
+      checklist.push({
+        item: 'Payroll provider set to local',
+        category: 'Payroll',
+        passed: billingSettings?.payrollProvider === 'local',
+        detail: billingSettings?.payrollProvider === 'local'
+          ? 'Internal payroll engine active (no external dependencies)'
+          : `Current provider: ${billingSettings?.payrollProvider || 'not set'}. Set to "local" for fully self-contained payroll.`,
+        priority: 'high',
+      });
+
+      const [clientCount] = await db.select({ count: sql<string>`COUNT(*)` })
+        .from(clients)
+        .where(eq(clients.workspaceId, workspaceId));
+      const numClients = parseInt(clientCount?.count || '0');
+
+      checklist.push({
+        item: 'At least one client added',
+        category: 'Clients',
+        passed: numClients > 0,
+        detail: numClients > 0 ? `${numClients} client(s) configured` : 'Add your first client to start billing',
+        priority: 'critical',
+      });
+
+      const [employeeCount] = await db.select({ count: sql<string>`COUNT(*)` })
+        .from(employees)
+        .where(eq(employees.workspaceId, workspaceId));
+      const numEmployees = parseInt(employeeCount?.count || '0');
+
+      checklist.push({
+        item: 'At least one employee added',
+        category: 'Employees',
+        passed: numEmployees > 0,
+        detail: numEmployees > 0 ? `${numEmployees} employee(s) on roster` : 'Add employees to start scheduling and payroll',
+        priority: 'critical',
+      });
+
+      const [payrollInfoCount] = await db.select({ count: sql<string>`COUNT(*)` })
+        .from(employeePayrollInfo)
+        .where(eq(employeePayrollInfo.workspaceId, workspaceId));
+      const numPayrollInfos = parseInt(payrollInfoCount?.count || '0');
+
+      checklist.push({
+        item: 'Employee pay rates configured',
+        category: 'Payroll',
+        passed: numPayrollInfos > 0 && numPayrollInfos >= numEmployees,
+        detail: numPayrollInfos > 0
+          ? `${numPayrollInfos}/${numEmployees} employees have payroll info`
+          : 'Set up payroll information (pay rate, tax withholding) for employees',
+        priority: 'critical',
+      });
+
+      const [stripeConnectCount] = await db.select({ count: sql<string>`COUNT(*)` })
+        .from(employeePayrollInfo)
+        .where(
+          and(
+            eq(employeePayrollInfo.workspaceId, workspaceId),
+            sql`${employeePayrollInfo.stripeConnectAccountId} IS NOT NULL`
+          )
+        );
+      const numStripeConnect = parseInt(stripeConnectCount?.count || '0');
+
+      checklist.push({
+        item: 'Direct deposit via Stripe Connect',
+        category: 'Payments',
+        passed: numStripeConnect > 0,
+        detail: numStripeConnect > 0
+          ? `${numStripeConnect}/${numEmployees} employees have Stripe Connect for direct deposit`
+          : 'Optional: Set up Stripe Connect for employees to enable direct deposit payouts. Without this, payroll entries will be marked as pending manual payment.',
+        priority: 'medium',
+      });
+
+      checklist.push({
+        item: 'Business address set',
+        category: 'Organization',
+        passed: !!workspace.address,
+        detail: workspace.address ? 'Business address configured' : 'Set your business address for tax forms and compliance',
+        priority: 'medium',
+      });
+
+      checklist.push({
+        item: 'Contact phone number',
+        category: 'Organization',
+        passed: !!workspace.phone,
+        detail: workspace.phone ? 'Phone configured' : 'Add a contact phone number',
+        priority: 'low',
+      });
+
+      const passedChecks = checklist.filter(c => c.passed).length;
+      const totalChecks = checklist.length;
+      const score = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 0;
+
+      const criticalPassed = checklist.filter(c => c.priority === 'critical' && c.passed).length;
+      const criticalTotal = checklist.filter(c => c.priority === 'critical').length;
+      const readyForOperation = criticalPassed === criticalTotal;
+
+      const missingCritical = checklist.filter(c => c.priority === 'critical' && !c.passed).map(c => c.item);
+      const summary = readyForOperation
+        ? `Your organization is ready for fully self-contained operation. ${passedChecks}/${totalChecks} checks passed (${score}%).`
+        : `${missingCritical.length} critical item(s) remaining: ${missingCritical.join(', ')}. Complete these to operate without external tools.`;
+
+      return { score, totalChecks, passedChecks, checklist, readyForOperation, summary };
+    } catch (err: any) {
+      log.error('[OnboardingPipeline] Readiness score error:', (err instanceof Error ? err.message : String(err)));
+      return { score: 0, totalChecks: 0, passedChecks: 0, checklist: [], readyForOperation: false, summary: 'Error calculating readiness score' };
+    }
   }
 }
 

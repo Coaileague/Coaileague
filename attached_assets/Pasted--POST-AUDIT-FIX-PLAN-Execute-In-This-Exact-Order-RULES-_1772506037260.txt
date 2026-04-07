@@ -1,0 +1,97 @@
+# POST-AUDIT FIX PLAN — Execute In This Exact Order
+
+## RULES
+- Fix in the order listed — do NOT skip ahead
+- After each fix, verify it works with a test query or log check
+- Do NOT touch mobile UX files (T001-T005) — permanently banned
+- Report completion of each fix before moving to the next
+- If a fix reveals a deeper issue, note it and continue — don't rabbit hole
+
+---
+
+## TIER 1: LAUNCH BLOCKERS (Fix These Before Any Client Goes Live)
+
+### Fix 1: Invoice tax calculation is a stub
+- **Why it blocks launch:** Clients get invoices with wrong tax amounts. That's a billing error on day one.
+- **Location:** Identified in GAPS_AUDIT.md
+- **Action:** Find the tax calculation stub. Replace it with real state tax logic. Texas state sales tax is 6.25% but security services may be exempt — check. The `is_tax_exempt` field on clients (GAP-014) was already added. Make sure the tax calculation uses it. Verify with a test invoice showing correct tax for a taxable client and $0 tax for an exempt client.
+
+### Fix 2: Invoice adjustment persistence is a stub
+- **Why it blocks launch:** If a manager corrects a time entry after an invoice was generated, the invoice stays wrong. In production that means billing a client for 8 hours when the guard only worked 6.
+- **Location:** Identified in GAPS_AUDIT.md — this is GAP-016
+- **Action:** When a time entry is edited after being linked to a draft invoice, auto-void the draft invoice and regenerate it with the corrected amounts. If the invoice was already sent, create a credit memo or adjustment entry in the ledger. Verify with a test: create invoice → edit linked time entry hours → confirm invoice updates or adjustment is created.
+
+### Fix 3: Ledger write atomicity
+- **Why it blocks launch:** If the ledger write fails after payroll processes, you have payroll records with no matching ledger entry. The books don't balance.
+- **Action:** Move the ledger write INSIDE the payroll transaction. If the ledger write fails, the entire payroll transaction rolls back. Same for billing — the invoice creation and ledger write should be in the same transaction. Verify by checking that every invoice and every payroll run has a matching ledger entry.
+
+### Fix 4: Seeder overlap fix
+- **Why it blocks launch:** Dev/sandbox testing produces false double-booking alerts that waste debugging time and erode confidence in the system.
+- **Action:** Add overlap checking to all 4 seeder files. Before assigning an employee to a shift, check if they're already assigned to an overlapping shift. If yes, skip that assignment. This is sandbox-only but affects every developer and every test run.
+
+---
+
+## TIER 2: HIGH PRIORITY (Fix Within First Week of Launch)
+
+### Fix 5: 18 missing API endpoints (20% of planned)
+- **Action:** Pull the list from API_GAPS_QUICK_REFERENCE.md. For each missing endpoint, determine: is it referenced by the frontend? If the UI calls it and gets a 404, that's a user-facing bug. Prioritize any endpoint the UI depends on. List them, classify as "UI needs this" vs "backend only / future feature," and implement the UI-critical ones.
+
+### Fix 6: AI provider fallback chain
+- **Why it matters:** If Gemini goes down, Trinity stops thinking. Every AI-powered feature fails.
+- **Action:** The Trinity Orchestration Spec defines the fallback: Gemini primary → Claude validator → OpenAI backup. Verify this chain exists in the orchestrator code. If Gemini returns an error or times out, does Claude automatically pick up? If Claude fails, does OpenAI? Test by simulating a Gemini timeout and confirming the fallback fires.
+
+### Fix 7: Contractor outreach (stubbed)
+- **Action:** Trinity identifies available contractors when shifts can't be filled by W2 employees, but the actual outreach (SMS/email) is a placeholder. Wire it to the Resend email service and/or SMS provider. When Trinity can't fill a shift, she sends a message to eligible contractors: "Open shift available at [client] on [date] [time]. Claim it in the app." This is the autonomous staffing feature (4 credits per assignment).
+
+### Fix 8: Route-level RBAC audit
+- **Action:** Check every domain router. Are all financial endpoints (payroll, billing, invoices) restricted to owner/manager roles? Are all destructive endpoints (delete, void, reset) restricted appropriately? Flag any endpoint that's missing role guards. Pay special attention to the routers that handle auth internally instead of at the top level — those are the highest risk for omissions.
+
+---
+
+## TIER 3: QUALITY IMPROVEMENTS (Post-Launch Sprint)
+
+### Fix 9: Gemini API rate limiting
+- **Action:** Add rate limiting to prevent runaway AI calls from burning credits. If an org's automation loop malfunctions and makes 1,000 Gemini calls in a minute, the rate limiter stops it.
+
+### Fix 10: AI extraction confidence filtering
+- **Action:** When Trinity uses AI to extract data (expense categorization, contract review, etc.), add a confidence threshold. Low-confidence extractions get flagged for human review instead of auto-processed.
+
+### Fix 11: Z-index conflicts (Dialog z-100 vs Sheet z-9999)
+- **Action:** Standardize z-index values across all overlay components. This is a visual bug where dialogs can appear behind sheets or vice versa.
+
+### Fix 12: Dialog mobile drawer fallbacks (~60 dialogs)
+- **Action:** This is mobile UX work but NOT the banned T001-T005 tasks. These are functional dialogs that don't work well on mobile. Lower priority — address after launch when mobile polish becomes a focus.
+
+### Fix 13: Test mode bypass security
+- **Action:** The `x-test-key` bypass in isAuthenticated is a security risk in production. Either disable it entirely in production (NODE_ENV check) or require a strong, rotated secret. This should never be exploitable by an external actor.
+
+---
+
+## VERIFICATION AFTER ALL TIER 1 FIXES
+
+After fixes 1-4 are complete, run this verification:
+
+1. Generate an invoice for a taxable client → confirm correct state tax
+2. Generate an invoice for a tax-exempt client → confirm $0 tax
+3. Edit a time entry that's linked to a draft invoice → confirm invoice updates
+4. Process a payroll run → confirm ledger entry exists in the same transaction
+5. Run the seeder → confirm zero double-booking conflicts
+6. Query org_ledger → confirm every invoice and every payroll run has a matching entry
+
+**Report all 6 verification results before moving to Tier 2.**
+
+---
+
+## WHAT'S ALREADY WORKING (Do Not Touch)
+
+These systems passed the audit — no changes needed:
+- GPS / Clock-in / Geofencing — fully implemented, atomic clock-in with advisory locks
+- Time entry approval flow — correct role restrictions, manual edit tracking
+- Client contracts → shift generation — automated pipeline working
+- Billing atomic claim pattern — race-condition proof
+- Payroll FLSA weighted-average OT — correct calculations
+- Rate capture at clock-in — snapshot prevents billing drift
+- Notification engine — multi-channel, deduplicated, AI-enriched
+- Workspace security guards — production/platform workspaces protected
+- Trinity pre-run conflict scan — triple-layered protection
+- Trinity staffing gap alerts — notifies owners and managers

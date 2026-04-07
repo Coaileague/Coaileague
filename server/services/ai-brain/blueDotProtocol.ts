@@ -9,6 +9,8 @@
  */
 
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('blueDotProtocol');
 
 export interface MaintenanceRepair {
   id: string;
@@ -71,7 +73,11 @@ class BlueDotProtocolService {
   private readonly secretKey: string;
 
   constructor() {
-    this.secretKey = process.env.SESSION_SECRET || 'trinity-blue-dot-default-key';
+    const sessionSecret = process.env.SESSION_SECRET;
+    if (!sessionSecret) {
+      log.warn('[BlueDotProtocol] SESSION_SECRET not set — generating ephemeral HMAC key');
+    }
+    this.secretKey = sessionSecret || crypto.randomBytes(32).toString('hex');
   }
 
   generateSignature(payload: string): string {
@@ -152,7 +158,7 @@ class BlueDotProtocolService {
 
     await this.broadcastStatus();
 
-    console.log(`[BlueDot] BLUE DOT ACTIVE. Expected return in ${predictedDowntimeMs}ms`);
+    log.info(`[BlueDot] BLUE DOT ACTIVE. Expected return in ${predictedDowntimeMs}ms`);
 
     return {
       success: true,
@@ -166,16 +172,16 @@ class BlueDotProtocolService {
     if (!this.currentStatus) return;
 
     try {
-      console.log('[BlueDot] Broadcasting status:', JSON.stringify({
+      log.info('[BlueDot] Broadcasting status:', JSON.stringify({
         type: 'SYSTEM_STATUS_CHANGE',
         payload: {
           status: 'MAINTENANCE_BLUE',
           ...this.currentStatus,
         },
       }));
-      console.log('[BlueDot] Status broadcast to all connected clients');
+      log.info('[BlueDot] Status broadcast to all connected clients');
     } catch (error) {
-      console.error('[BlueDot] Failed to broadcast status:', error);
+      log.error('[BlueDot] Failed to broadcast status:', error);
     }
   }
 
@@ -272,7 +278,7 @@ class BlueDotProtocolService {
     estimatedMs?: number
   ): MaintenanceRepair {
     return {
-      id: `repair-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `repair-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
       type,
       target,
       description,

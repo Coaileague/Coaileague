@@ -1,0 +1,1034 @@
+# ═══════════════════════════════════════════════════════════════════
+# COAILEAGUE MASTER GO-LIVE AUDIT
+# Complete Pre-Launch Sweep — Run In This Exact Order
+# ═══════════════════════════════════════════════════════════════════
+#
+# This is the SINGLE comprehensive audit. Run each phase in order.
+# Do NOT skip phases. Do NOT move to the next phase until the
+# current phase's CRITICAL issues are resolved.
+#
+# Estimated time: This is substantial. Work through it methodically.
+# ═══════════════════════════════════════════════════════════════════
+
+---
+
+# PHASE 1: SECURITY & DATA ISOLATION
+# (If this fails, nothing else matters — one data leak kills the company)
+
+---
+
+## 1.1 — Multi-Tenant Data Isolation (THE #1 PRODUCTION KILLER)
+
+If Org A can see Org B's data, the platform is dead on arrival. Test EVERY data access path.
+
+**FOR EVERY API ENDPOINT, VERIFY:**
+
+```
+[ ] Query includes workspace_id / org_id filter
+[ ] User can only access data from their own workspace
+[ ] A user in Org A cannot craft a request to access Org B's data
+[ ] Even if they guess/know another org's ID
+```
+
+**CROSS-TENANT BLEED POINTS — CHECK EACH ONE:**
+
+```
+[ ] API routes — every GET/POST/PUT/DELETE scoped to requesting org
+[ ] WebSocket rooms — can a user join another org's chat room?
+[ ] Real-time updates — do push events leak to wrong org?
+[ ] File uploads — files stored with org isolation (not shared bucket)?
+[ ] Reports — report generation scoped to requesting org?
+[ ] Search — search index scoped to user's org?
+[ ] Trinity AI — Trinity's context includes ONLY the requesting org's data?
+[ ] Email notifications — emails reference correct org branding/info?
+[ ] Admin panels — platform admin view properly isolates org data?
+```
+
+**TEST THIS SPECIFICALLY:**
+1. Create two test orgs with different data
+2. Log in as user from Org A
+3. Try to access Org B's employees, clients, shifts, invoices, time entries, chat messages, documents
+4. If ANY return Org B's data → **STOP EVERYTHING. Fix before launch.**
+
+## 1.2 — Authentication & Authorization Gaps
+
+```bash
+# Unprotected API routes (no auth middleware)
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" server/routes/ --include="*.js" --include="*.ts" | grep -v "auth\|protect\|verify\|middleware\|isAuth\|requireAuth"
+
+# Admin routes without admin check
+grep -rn "admin\|Admin" server/routes/ --include="*.js" --include="*.ts" | grep "router\." | grep -v "isAdmin\|requireAdmin\|adminAuth\|role.*admin"
+```
+
+**For EVERY unprotected route found — determine if it SHOULD be protected. Public routes (login, signup, password reset, marketing pages) are fine. Everything else needs auth.**
+
+## 1.3 — Role-Based Access Control (RBAC)
+
+```
+ROLE HIERARCHY:
+Platform Admin > Owner > Co-Owner > Manager > Supervisor > Employee
+
+LOG IN AS EACH ROLE AND VERIFY:
+
+OWNER:
+[ ] Full access to their org — employees, clients, schedules, reports, billing
+[ ] Can manage subscription/payment
+[ ] Can invite/remove users
+[ ] Cannot see other orgs' data
+
+MANAGER:
+[ ] Can manage schedules and shifts
+[ ] Can approve timesheets
+[ ] CANNOT access billing/subscription
+[ ] CANNOT delete org or other admins
+
+SUPERVISOR:
+[ ] Can view team schedules
+[ ] Can approve time entries for their team
+[ ] CANNOT access financial data (invoicing, payroll config)
+[ ] CANNOT modify client contracts
+
+EMPLOYEE:
+[ ] Can ONLY see their own schedule, time entries, pay stubs
+[ ] CANNOT see other employees' pay rates or personal data
+[ ] CANNOT access admin features (payroll, billing, client details)
+[ ] CANNOT modify schedules
+
+ANY access that succeeds where it shouldn't → CRITICAL bug. Fix before launch.
+```
+
+## 1.4 — Hardcoded Secrets & Security Headers
+
+```bash
+# API keys in source (CRITICAL SECURITY)
+grep -rn "sk-\|pk_\|api_key\|apiKey\|SECRET\|password\|PASSWORD" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" | grep -v "node_modules\|process\.env\|\.example\|\.env\.example"
+
+# Stripe keys hardcoded
+grep -rn "sk_live\|sk_test\|pk_live\|pk_test" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx"
+
+# Check security headers
+curl -I https://www.coaileague.com
+```
+
+**Verify these headers exist in the response:**
+```
+[ ] Strict-Transport-Security (HSTS)
+[ ] X-Content-Type-Options: nosniff
+[ ] X-Frame-Options: DENY or SAMEORIGIN
+[ ] Content-Security-Policy (CSP)
+[ ] HTTPS enforced (HTTP redirects to HTTPS)
+[ ] Passwords hashed with bcrypt/argon2 (NOT md5/sha)
+```
+
+## 1.5 — Input Validation & Injection Protection
+
+```bash
+# Routes accepting user input without validation
+grep -rn "req\.body\|req\.params\|req\.query" server/ --include="*.js" --include="*.ts" | grep -v "validate\|sanitize\|escape\|check\|joi\|zod\|yup\|express-validator"
+
+# XSS risks
+grep -rn "dangerouslySetInnerHTML\|innerHTML\|__html" src/ --include="*.jsx" --include="*.tsx"
+
+# NoSQL injection risks
+grep -rn "req\.body\|req\.params\|req\.query" server/ --include="*.js" --include="*.ts" -A3 | grep "\$where\|\$gt\|\$regex"
+```
+
+---
+
+# PHASE 2: MONEY PATHS — STRIPE, INVOICING, PAYROLL
+# (If payment breaks, we can't collect revenue. If invoicing breaks, customers can't bill their clients.)
+
+---
+
+## 2.1 — Stripe Subscription Flow
+
+```
+TEST THE COMPLETE FLOW:
+
+SIGNUP → PAYMENT:
+[ ] Free trial starts automatically (if offered)
+[ ] Plan selection page shows all tiers with correct pricing
+[ ] Stripe checkout flow works (card entry → processing → confirmation)
+[ ] Successful payment → account upgraded immediately
+[ ] Failed payment → clear error message, account NOT upgraded
+[ ] 3D Secure (SCA) challenge handled
+[ ] Webhook from Stripe received and processed correctly
+[ ] Subscription status stored in database AND checked on feature access
+
+ONGOING BILLING:
+[ ] Recurring charges process correctly
+[ ] Plan upgrade works (immediate access to new features)
+[ ] Plan downgrade works (features restricted appropriately)
+[ ] Cancellation flow works
+[ ] Payment failure → dunning emails sent
+[ ] Webhook arrives before redirect (race condition) → handled
+
+STRIPE EDGE CASES:
+[ ] Card declined → user can try another card
+[ ] Customer disputes charge → chargeback webhook handled
+[ ] Double-click on payment button → only one charge
+[ ] Stripe idempotency keys used on all create/charge operations
+```
+
+```bash
+# Verify Stripe idempotency
+grep -rn "stripe\." server/ --include="*.js" --include="*.ts" | grep "create\|charge\|subscription" | grep -v "idempotency\|idempotencyKey"
+
+# Webhook signature verification
+grep -rn "webhook\|Webhook" server/ --include="*.js" --include="*.ts" | grep -v "verify\|signature\|constructEvent"
+```
+
+## 2.2 — Invoicing Lifecycle (How Customers Bill THEIR Clients)
+
+**This is the core revenue function for security companies. Trace the COMPLETE lifecycle:**
+
+```
+STEP 1 — TIME DATA COLLECTION:
+[ ] Billable hours come from GPS time entries
+[ ] Rates stored per client per service type
+[ ] Rates differ by: armed/unarmed, day/night, overtime, holiday
+[ ] File where rates are stored: _______________
+
+STEP 2 — INVOICE CALCULATION:
+[ ] Hours × rate calculation is correct
+[ ] Multiple rates per client handled
+[ ] Overtime rate differences calculated
+[ ] Holiday rate differences calculated
+[ ] Rounding rules applied correctly
+[ ] File: _______________
+
+STEP 3 — BILLING CYCLE MANAGEMENT:
+[ ] Each client can have their own billing cycle
+[ ] Weekly billing works
+[ ] Biweekly billing works
+[ ] Monthly billing works
+[ ] Custom cycles supported
+[ ] Auto-triggers at cycle end (not manual only)
+[ ] File: _______________
+
+STEP 4 — APPROVAL PIPELINE:
+[ ] Invoice generated → queued for org owner review
+[ ] Org owner can edit before approving
+[ ] Approved → sends to client
+[ ] Approved → syncs to QuickBooks
+[ ] File: _______________
+
+STEP 5 — CLIENT DELIVERY:
+[ ] PDF generated
+[ ] Emailed to client billing contact
+[ ] Client can view in portal (if portal exists)
+[ ] File: _______________
+
+STEP 6 — PAYMENT TRACKING:
+[ ] Mark as paid (full and partial)
+[ ] Payment syncs to QuickBooks
+[ ] Overdue alerts fire
+[ ] Aging report works
+[ ] File: _______________
+
+STEP 7 — HISTORY & INTELLIGENCE:
+[ ] Trinity can view invoice history per client
+[ ] Platform-only billing works if client doesn't use QB
+[ ] Trinity can flag unusual invoice amounts
+[ ] File: _______________
+```
+
+## 2.3 — Payroll Pipeline
+
+```
+TEST THE FULL PAYROLL CYCLE:
+
+[ ] Hours calculated from time entries correctly
+[ ] Overtime calculated per state rules (not just federal 40-hour week)
+[ ] Break deductions applied
+[ ] Holiday pay applied
+[ ] Payroll preview generated for org owner review
+[ ] Owner must approve before processing
+[ ] Approved payroll syncs to QuickBooks
+[ ] Pay stubs generated and accessible to employees
+
+EDGE CASES:
+[ ] Missing clock-out → flagged (not silently calculated as 0 hours)
+[ ] Employee works at two different sites with different rates → correct calculation
+[ ] Negative hours or impossible values → validation catches it
+```
+
+## 2.4 — QuickBooks Integration
+
+```
+[ ] OAuth connection flow works end-to-end
+[ ] Token refresh is AUTOMATIC (not requiring manual re-auth)
+[ ] Employee data syncs bidirectionally
+[ ] Client/Customer data syncs
+[ ] Invoice sync works
+[ ] Time entry sync works
+[ ] Error recovery on sync failures (retry logic, not silent fail)
+[ ] If QB is disconnected → platform still works independently
+[ ] Reconnection after disconnect works without data loss
+```
+
+```bash
+# QuickBooks token refresh handling
+grep -rn "quickbooks\|intuit\|qbo" server/ --include="*.js" --include="*.ts" | grep -i "token\|refresh\|oauth"
+```
+
+---
+
+# PHASE 3: NEW ORG SIGNUP → FIRST VALUE
+# (The first 10 minutes determine if a customer stays or leaves)
+
+---
+
+## 3.1 — Signup Flow
+
+```
+[ ] Signup page loads on mobile AND desktop
+[ ] Email + password registration works
+[ ] Email validation (proper format)
+[ ] Password strength requirements enforced
+[ ] Duplicate email handled gracefully (not server error)
+[ ] Confirmation email sent via Resend
+[ ] Confirmation email actually arrives (not in spam)
+[ ] Confirmation link works and activates account
+[ ] After signup → user lands on onboarding (NOT blank dashboard)
+
+EDGE CASES:
+[ ] User signs up → closes browser → comes back → can still confirm
+[ ] Confirmation link expires → resend option exists
+[ ] User hits signup twice quickly → no duplicate account (race condition)
+[ ] Entire signup flow works on mobile
+[ ] What if Resend is down → signup doesn't silently fail
+```
+
+## 3.2 — Onboarding (First 10 Minutes)
+
+```
+[ ] Onboarding wizard exists and guides the user
+[ ] Company info step (name, address, state, license number)
+[ ] Add first employees (manual or invite by email)
+[ ] Add first client/site
+[ ] Create first schedule or shift
+[ ] Connect integrations (QuickBooks, Stripe)
+
+FOR EACH STEP:
+[ ] Works on mobile
+[ ] Can be skipped and returned to later
+[ ] Progress saved if user leaves mid-step
+[ ] Validation errors are clear and specific
+[ ] Back button doesn't lose data
+
+AFTER ONBOARDING:
+[ ] Dashboard shows relevant data or helpful empty states
+[ ] Empty states have guidance ("Add your first employee to get started")
+[ ] Trinity chat is accessible and responsive
+[ ] User knows what to do next
+```
+
+## 3.3 — Employee Invite & Onboarding (Second User Experience)
+
+```
+[ ] Owner can invite employee by email
+[ ] Invite email sent with clear CTA and mobile-friendly design
+[ ] Invite link works on mobile (officers are in the field)
+[ ] Employee creates account from invite
+[ ] Employee auto-linked to correct org with correct role
+[ ] Employee sees THEIR dashboard (not admin dashboard)
+[ ] Employee can see assigned shifts
+[ ] Employee can clock in/out
+[ ] Employee can view schedule
+[ ] Employee can access chat
+[ ] Employee CANNOT see admin features
+
+EDGE CASES:
+[ ] Invite to wrong email → owner can revoke/resend
+[ ] Employee already on another org → can they be on two orgs?
+[ ] Invite link expires → clear message + resend option
+[ ] Bulk invite (import 50 employees from CSV) → works without timeout
+[ ] Employee with no email (common in security) → alternative method?
+```
+
+## 3.4 — Data Import for New Orgs
+
+```
+[ ] CSV/Excel import for employees works
+[ ] Import validates data (catches duplicates, missing required fields)
+[ ] Import preview before committing
+[ ] Failed rows reported clearly (row 47: missing email)
+[ ] Large imports (500+ rows) don't timeout
+[ ] Import for clients/sites works
+[ ] QB data import on first connect (pull existing employees/clients)
+```
+
+---
+
+# PHASE 4: CORE PLATFORM STABILITY
+# (Race conditions, database issues, and broken workflows that cause silent failures)
+
+---
+
+## 4.1 — Race Conditions & Async Gaps
+
+```bash
+# DB operations missing await (CRITICAL — causes silent data loss)
+grep -rn "\.create(\|\.update(\|\.delete(\|\.save(\|\.findOne(" server/ --include="*.js" --include="*.ts" | grep -v "await"
+
+# Unhandled promises
+grep -rn "\.then(" src/ server/ --include="*.js" --include="*.ts" | grep -v "catch\|\.catch"
+
+# setTimeout without cleanup (memory leaks)
+grep -rn "setTimeout\|setInterval" src/ --include="*.jsx" --include="*.tsx" | grep -v "clearTimeout\|clearInterval"
+
+# AI API calls without timeout
+grep -rn "fetch\|axios" server/ --include="*.js" --include="*.ts" | grep -i "anthropic\|openai\|gemini" | grep -v "timeout"
+
+# Double-submit on critical buttons (payment, save, delete)
+grep -rn "onClick" src/ --include="*.jsx" --include="*.tsx" | grep -i "submit\|save\|create\|delete\|send\|pay" | grep -v "debounce\|throttle\|isSubmitting\|disabled\|loading"
+```
+
+## 4.2 — Database & CRUD Integrity
+
+```bash
+# Queries missing org/workspace filter (multi-tenant data leak risk)
+grep -rn "\.find(\|\.findOne(\|\.findMany(\|\.aggregate(" server/ --include="*.js" --include="*.ts" | grep -v "org\|organization\|tenant\|company\|workspace\|where"
+
+# Delete operations without cascade/cleanup
+grep -rn "\.deleteOne\|\.deleteMany\|\.findOneAndDelete" server/ --include="*.js" --include="*.ts"
+
+# Cache without invalidation
+grep -rn "cache\|Cache\|cached" server/ src/ --include="*.js" --include="*.ts" | grep -v "invalidate\|clear\|expire\|ttl"
+
+# Missing error rollbacks in multi-step operations
+grep -rn "try {" server/ --include="*.js" --include="*.ts" -A30 | grep "catch" -A5 | grep -v "rollback\|abort\|undo\|revert"
+```
+
+## 4.3 — AI Orchestration Stability
+
+```bash
+# Fallback chain — does it actually work?
+# Find the orchestration router and verify:
+grep -rn "fallback\|Fallback\|FALLBACK" server/ --include="*.js" --include="*.ts"
+
+# AI calls without org cost attribution
+grep -rn "anthropic\|openai\|gemini\|googleapis.*generate" server/ --include="*.js" --include="*.ts" | grep -v "orgId\|organizationId\|workspaceId\|tenantId"
+
+# Missing rate limiting on AI endpoints
+grep -rn "rateLimit\|rate-limit\|throttle" server/ --include="*.js" --include="*.ts" | grep -i "ai\|trinity\|chat"
+```
+
+## 4.4 — Error Handling Completeness
+
+```bash
+# Express routes without try/catch
+grep -rn "router\.\(get\|post\|put\|delete\)" server/routes/ --include="*.js" --include="*.ts" -A20 | grep "async" | grep -v "try"
+
+# Missing global error handler
+grep -rn "app\.use.*err\|errorHandler\|error.*middleware" server/ --include="*.js" --include="*.ts"
+
+# Frontend error boundaries
+grep -rn "ErrorBoundary\|componentDidCatch\|getDerivedStateFromError" src/ --include="*.jsx" --include="*.tsx"
+
+# Unhandled promise rejections
+grep -rn "unhandledRejection\|uncaughtException" server/ --include="*.js" --include="*.ts"
+```
+
+## 4.5 — Hardcoded Values Needing Dynamic Approach
+
+```bash
+# Hardcoded localhost (will break in production)
+grep -rn "localhost\|127\.0\.0\.1" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" | grep -v "node_modules\|\.env\|config\|test"
+
+# Hardcoded URLs
+grep -rn "https\?://.*api\|https\?://.*\.com\|https\?://.*\.io" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" | grep -v "node_modules\|cdn\|font\|\.env\|config\|process\.env"
+
+# Environment vars used but not defined
+grep -rn "process\.env\." src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" | grep -oP "process\.env\.\K\w+" | sort -u > /tmp/env_used.txt
+cat .env .env.example 2>/dev/null | grep -oP "^\K[A-Z_]+" | sort -u > /tmp/env_defined.txt
+echo "=== USED BUT NOT DEFINED ==="
+comm -23 /tmp/env_used.txt /tmp/env_defined.txt
+```
+
+## 4.6 — Bandaids & Dead Code
+
+```bash
+# TODO/FIXME/HACK markers (unresolved temporary fixes)
+grep -rn "TODO\|FIXME\|HACK\|TEMP\|WORKAROUND\|BANDAID" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx"
+
+# Console.logs left in production code
+grep -rn "console\.log" src/ server/ --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" | grep -v "node_modules\|\.test\.\|\.spec\." | wc -l
+
+# Duplicate route definitions
+grep -rn "router\.\(get\|post\|put\|patch\|delete\)" server/routes/ --include="*.js" --include="*.ts" | awk -F'"' '{print $2}' | sort | uniq -cd
+```
+
+---
+
+# PHASE 5: MOBILE & UI EXPERIENCE
+# (Security officers are on phones in the field — if mobile breaks, the platform is useless)
+
+---
+
+## 5.1 — Mobile-Critical Paths
+
+```
+TEST EVERY ONE OF THESE ON A PHONE:
+
+[ ] Login works on mobile (no tiny inputs, no zoom)
+[ ] Clock in/out works with GPS capture
+[ ] Clock in works on slow/spotty connection (offline queue?)
+[ ] GPS permission prompt handled if denied
+[ ] Camera works for proof-of-service photos
+[ ] Schedule view readable on small screen
+[ ] Chat works (send/receive messages)
+[ ] Push notifications work (shift assignments, changes)
+[ ] Touch targets large enough (44px minimum — field workers may have gloves)
+
+PWA:
+[ ] PWA manifest exists for "add to home screen"
+[ ] App icon and splash screen configured
+[ ] Works when launched from home screen
+```
+
+## 5.2 — Responsive Layout Issues
+
+```bash
+# Fixed pixel widths that break on mobile
+grep -rn "width:\s*[0-9]\{3,\}px\|min-width:\s*[0-9]\{3,\}px" src/ --include="*.css" --include="*.jsx" --include="*.tsx"
+
+# overflow hidden cutting off content
+grep -rn "overflow:\s*hidden\|overflow-x:\s*hidden" src/ --include="*.css" --include="*.jsx"
+
+# Tables without horizontal scroll wrapper
+grep -rn "<table\|<Table" src/ --include="*.jsx" --include="*.tsx" | grep -v "overflow\|scroll\|responsive\|wrapper"
+
+# Input zoom on iOS (font-size < 16px triggers zoom)
+grep -rn "input\|Input\|textarea" src/ --include="*.css" | grep "font-size" | grep -v "16\|1[7-9]\|[2-9][0-9]"
+```
+
+## 5.3 — Modal, Dialog, Sheet Issues
+
+```bash
+# Z-index stacking values (find conflicts)
+grep -rn "z-index\|zIndex\|z-\[" src/ --include="*.css" --include="*.jsx" --include="*.tsx" | grep -oP "\d+" | sort -n | uniq -c | sort -rn
+
+# Buttons without type attribute (causes form submission bugs)
+grep -rn "<button" src/ --include="*.jsx" --include="*.tsx" | grep -v 'type='
+
+# Missing key props in list renders
+grep -rn "\.map(" src/ --include="*.jsx" --include="*.tsx" -A5 | grep "<" | grep -v "key="
+```
+
+## 5.4 — Cross-Browser Testing
+
+```
+Test on:
+[ ] Chrome desktop + mobile
+[ ] Safari desktop + iOS (CRITICAL — many CSS issues unique to Safari)
+[ ] Firefox
+[ ] Samsung Internet (common on Android)
+
+SAFARI-SPECIFIC:
+[ ] Date inputs render correctly
+[ ] 100vh doesn't break with Safari address bar (use dvh)
+[ ] Position: sticky works
+[ ] Flexbox/grid layouts don't break
+[ ] File upload/camera capture works on iOS
+```
+
+---
+
+# PHASE 6: NOTIFICATIONS & COMMUNICATIONS
+# (If people don't get told things, the platform feels dead)
+
+---
+
+## 6.1 — Notification Triggers
+
+```
+VERIFY EACH NOTIFICATION FIRES:
+
+SHIFT MANAGEMENT:
+[ ] New shift assigned → employee notified (push + email)
+[ ] Shift changed → affected employee notified
+[ ] Shift cancelled → affected employee notified
+[ ] Schedule published → all affected employees notified
+[ ] Calloff received → manager/supervisor notified
+
+TIME & PAYROLL:
+[ ] Timesheet approved → employee notified
+[ ] Timesheet rejected → employee notified with reason
+[ ] Payroll ready for review → owner notified
+[ ] Pay stubs available → employees notified
+
+COMPLIANCE:
+[ ] Certification expiring (30 days) → employee AND manager
+[ ] Certification expiring (7 days) → escalate to owner
+[ ] Certification expired → restrict from shifts, notify all parties
+
+BILLING:
+[ ] Invoice sent → client notified
+[ ] Payment received → owner notified
+[ ] Payment overdue → owner notified
+
+SYSTEM:
+[ ] New employee joined → admin notified
+[ ] Subscription payment failed → owner notified
+
+FOR EACH:
+[ ] Push notification works on mobile
+[ ] Email notification works (via Resend)
+[ ] In-app notification visible
+[ ] Notifications respect user preferences (can turn off types)
+[ ] Notifications are org-scoped (don't leak to wrong org)
+[ ] Don't fire for terminated/inactive employees
+```
+
+## 6.2 — Email Deliverability
+
+```
+[ ] Resend DNS configured: SPF record
+[ ] Resend DNS configured: DKIM record
+[ ] Resend DNS configured: DMARC record
+[ ] Test emails don't land in spam (test with Gmail, Outlook, Yahoo)
+[ ] From address is professional (e.g., notifications@coaileague.com)
+[ ] Unsubscribe link present in marketing emails (CAN-SPAM compliance)
+[ ] Inbound email processing works: calloffs@, incidents@, docs@, support@
+```
+
+---
+
+# PHASE 7: TRINITY AI — BRAIN & TOOLS REALITY CHECK
+# (Trinity is the differentiator. If she can't actually do the job, we're just another scheduling app.)
+
+---
+
+## 7.1 — Sub-Agent Existence Check
+
+**Go find every file related to Trinity's AI. For each sub-agent, answer YES or NO with file path:**
+
+```
+SchedulerAgent       — Autonomously schedule shifts?          YES/NO → [file or MISSING]
+ComplianceAgent      — Check certs/licenses/expirations?      YES/NO → [file or MISSING]
+CommunicationsAgent  — Send notifications/emails/SMS?         YES/NO → [file or MISSING]
+AnalyticsAgent       — Generate reports and cost analysis?    YES/NO → [file or MISSING]
+FieldOpsAgent        — Handle GPS/clock-in/patrol tracking?   YES/NO → [file or MISSING]
+InvoicingAgent       — Create/manage invoices?                YES/NO → [file or MISSING]
+StaffingAgent        — Find and assign replacement staff?     YES/NO → [file or MISSING]
+ClientIntelAgent     — Track client preferences/history?      YES/NO → [file or MISSING]
+```
+
+**If MISSING or skeleton/placeholder → document the gap.**
+
+## 7.2 — Tool Inventory
+
+**List EVERY tool Trinity can currently invoke. For each:**
+
+```
+TOOL NAME: _______________
+FILE: _______________
+INPUT VALIDATION: YES/NO
+ORG-SCOPED (multi-tenant safe): YES/NO
+ERROR HANDLING: YES/NO
+7-STEP PIPELINE (Trigger→Fetch→Validate→Process→Mutate→Confirm→Notify): YES/NO
+ACTUALLY WORKS END-TO-END: YES/NO
+```
+
+**Then verify Trinity has tools for ALL critical operations:**
+
+```
+SCHEDULING:
+[ ] Query employees (filters: availability, certs, location, armed/unarmed)
+[ ] Query shifts (filters: date range, status, site, employee)
+[ ] Create shift
+[ ] Assign employee to shift
+[ ] Swap shifts between employees
+[ ] Cancel shift with notifications
+[ ] Fill calloff (find replacement → offer → assign)
+[ ] Bulk schedule from contract requirements
+[ ] Detect scheduling conflicts
+
+COMPLIANCE:
+[ ] Check employee compliance status
+[ ] Check certification expirations
+[ ] Generate compliance report
+[ ] Flag violations
+
+INVOICING:
+[ ] Create invoice for client
+[ ] Calculate from time entries (hours × rate)
+[ ] Handle different billing cycles per client (weekly/biweekly/monthly)
+[ ] Preview invoice before sending
+[ ] Queue for org owner approval
+[ ] Send to client
+[ ] Sync to QuickBooks
+[ ] Track payments (full and partial)
+[ ] Generate recurring invoices
+
+CLIENT MANAGEMENT:
+[ ] Query client details with contract info
+[ ] View billing history (QB and platform)
+[ ] Track client preferences
+[ ] View staffing history per client
+[ ] Know billing rates per client per service type
+
+PAYROLL:
+[ ] Calculate hours from time entries
+[ ] Calculate overtime per state rules
+[ ] Preview payroll
+[ ] Flag anomalies
+[ ] Sync to QuickBooks
+
+REPORTING:
+[ ] Generate incident report from field data
+[ ] Generate shift coverage report
+[ ] Generate financial/profitability report
+[ ] Queue reports for approval pipeline
+
+COMMUNICATIONS:
+[ ] Send notification to employee
+[ ] Send email to client
+[ ] Broadcast to team/org
+[ ] Escalate to human
+
+GPS/FIELD:
+[ ] Verify employee location
+[ ] Flag geo anomalies
+[ ] View proof of service photos
+```
+
+## 7.3 — Intelligent Loop Test
+
+**Give Trinity this scenario and trace through the code — can she handle it?**
+
+> "We just lost 3 guards at the Walmart account. Two quit and one's
+> license expired. I need coverage for all their shifts this week,
+> make sure replacements are qualified, notify the client, and give
+> me a cost impact analysis."
+
+```
+[ ] Understands this is multi-step (not just a single query)
+[ ] Queries the 3 guards' shift schedules
+[ ] Queries Walmart site requirements
+[ ] Queries available qualified staff (proximity, certs, reliability)
+[ ] Proposes replacement candidates with reasoning
+[ ] Validates each replacement (certs, overtime impact, availability)
+[ ] Assigns shifts and sends notifications
+[ ] Generates client email about personnel change
+[ ] Calculates cost delta
+[ ] Provides summary of all actions taken
+
+WHERE DOES THE CHAIN BREAK? Document exactly.
+```
+
+## 7.4 — Fallback Chain Integrity
+
+```
+VERIFY:
+[ ] Primary (Gemini/Trinity) has proper timeout (configurable, not hardcoded)
+[ ] On failure → context passed to Claude (not starting from scratch)
+[ ] Claude failure → context passed to OpenAI
+[ ] All models fail → human escalation with full audit trail
+[ ] Each attempt logged to meta_cognition_logs
+[ ] Token usage tracked per attempt per model per org
+[ ] Cost NEVER falls back to CoAIleague platform billing
+[ ] Circuit breaker exists (stop hammering a model that's down)
+```
+
+## 7.5 — Learning & Memory
+
+```
+[ ] Trinity stores conversation history in database (not just in-memory)
+[ ] Can retrieve past conversations about specific client/employee
+[ ] Logs tool call results (what queried, what got back)
+[ ] Logs decisions (why chose employee X for shift Y)
+[ ] Client intelligence table exists AND populated
+[ ] Staff intelligence table exists AND populated
+[ ] Human corrections stored and referenced in future decisions
+```
+
+---
+
+# PHASE 8: RESILIENCE — WHAT HAPPENS WHEN THINGS BREAK
+# (Production isn't the happy path. It's when everything goes wrong at once.)
+
+---
+
+## 8.1 — Third-Party Service Failures
+
+```
+STRIPE DOWN:
+[ ] Signup still works (delays payment, doesn't block)
+[ ] Existing users unaffected
+[ ] Webhook queue doesn't lose events
+
+RESEND DOWN:
+[ ] Email-dependent flows degrade gracefully
+[ ] Emails queued for retry (not lost)
+[ ] User not told "email sent" when it wasn't
+
+QUICKBOOKS DOWN:
+[ ] Sync failures queued for retry
+[ ] Data entry still works locally
+[ ] No duplicate sync when QB returns
+
+ALL AI MODELS DOWN:
+[ ] Fallback chain activates
+[ ] If ALL down → graceful message (not crash)
+[ ] Non-AI features still work
+[ ] Queued requests don't pile up and explode when service returns
+```
+
+## 8.2 — Error Pages & User Errors
+
+```
+[ ] Invalid URL → custom 404 page (not white screen)
+[ ] Server error → friendly error page (not stack trace)
+[ ] Session expires during long form → data preserved on re-login
+[ ] User deletes something important → soft delete with undo?
+[ ] Two admins edit same record simultaneously → conflict resolution
+[ ] Negative hours, $0 pay rate, impossible values → validation catches it
+```
+
+## 8.3 — Scalability Quick Check
+
+```
+[ ] Dashboard with 100 employees loads under 2 seconds
+[ ] Schedule with 500 shifts/month renders without lag
+[ ] Chat with 1000+ messages → paginated/virtualized
+[ ] Employee list 200+ → paginated and searchable
+[ ] Concurrent 50 users → no 500 errors
+[ ] Database indexes on: workspace_id, employee_id, date ranges
+[ ] Connection pooling configured
+[ ] WebSocket handles 100+ simultaneous connections
+```
+
+---
+
+# PHASE 9: LEGAL, COMPLIANCE & INDUSTRY REQUIREMENTS
+# (Get this wrong and you get sued)
+
+---
+
+## 9.1 — Labor Law Compliance
+
+```
+[ ] Overtime calculated per STATE rules (not just federal)
+[ ] California daily overtime (over 8 hours/day) handled
+[ ] Break requirements per state tracked
+[ ] Meal period violations flagged
+[ ] Pay stub requirements per state met
+```
+
+## 9.2 — Data Privacy
+
+```
+[ ] Privacy Policy exists, is real content (not placeholder), linked from signup
+[ ] Terms of Service exists, is real content, linked from signup
+[ ] Both accessible without login
+[ ] PII not logged in plaintext in server logs
+[ ] User data export capability (CCPA compliance)
+[ ] User data deletion capability
+```
+
+## 9.3 — Security Industry Specific
+
+```
+[ ] Guard licensing requirements tracked per state
+[ ] Armed guard certification tracked separately
+[ ] Firearm permit expiration tracked
+[ ] CPR/First Aid certification tracked
+[ ] State-specific training hour requirements tracked
+[ ] Drug testing compliance tracked (if applicable)
+```
+
+---
+
+# PHASE 10: PUBLIC SITE & SEO VERIFICATION
+# (Prerender middleware confirmed working — verify the details)
+
+---
+
+## 10.1 — Prerender Cache Integrity
+
+```
+[ ] Prerendered content stays in sync with live SPA
+[ ] Cache auto-refreshes on deploy (not serving stale content)
+[ ] All 15+ bot user agents covered
+[ ] Test: Share URL on LinkedIn → professional preview appears
+[ ] Test: Share URL on Facebook → professional preview appears
+[ ] Test: Share URL on Twitter → card preview appears
+[ ] Test: Google search "site:coaileague.com" → pages appear
+```
+
+## 10.2 — Meta Tags & SEO
+
+```
+[ ] Homepage has: title, meta description, og:title, og:description, og:image
+[ ] Pricing page has unique meta tags
+[ ] Features page has unique meta tags
+[ ] robots.txt exists and allows crawling of public pages
+[ ] robots.txt blocks /api/, /dashboard/, /admin/
+[ ] sitemap.xml exists and lists all public pages
+[ ] Sitemap submitted to Google Search Console
+```
+
+## 10.3 — DNS & Email
+
+```
+[ ] www.coaileague.com resolves correctly
+[ ] Root domain redirects to www (or vice versa) — consistent
+[ ] SPF record configured for Resend
+[ ] DKIM record configured for Resend
+[ ] DMARC record configured
+[ ] Without these → notification emails land in spam
+```
+
+## 10.4 — Legal Pages
+
+```
+[ ] Terms of Service page exists with real content
+[ ] Privacy Policy page exists with real content
+[ ] Both linked from footer
+[ ] Both linked from signup page
+[ ] Both accessible without login
+[ ] Content appropriate for B2B SaaS handling employee PII and payroll
+```
+
+---
+
+# PHASE 11: COMPETITOR FEATURE GAP CHECK
+# (Don't promise what isn't built)
+
+---
+
+```
+Based on industry standards (TrackTik, Belfry, Connecteam, Skeddule),
+security WFM platforms commonly offer these. Flag any PROMISED on our
+site but NOT built:
+
+[ ] Guard tour / patrol checkpoint scanning (NFC, QR, GPS)
+[ ] Daily Activity Reports (DAR) automated from clock events
+[ ] Client portal (clients log in to view coverage/reports)
+[ ] Post orders (digital, accessible to guards on mobile)
+[ ] Incident report workflow (field → approval → client delivery)
+[ ] Guard tour verification (proof guard visited checkpoints)
+[ ] Lone worker protection / duress button
+[ ] Equipment tracking (radios, vehicles, keys, weapons)
+[ ] Customizable digital forms for field use
+[ ] Geofencing with alerts when guard leaves zone
+[ ] Pass-down logs between shifts
+[ ] Officer ranking/scoring system
+
+If PROMISED on coaileague.com but NOT functional → either:
+  A) Remove from marketing before launch, OR
+  B) Build it before launch
+```
+
+---
+
+# ═══════════════════════════════════════════════════════════════
+# MASTER OUTPUT — COMPLETE THIS AFTER ALL PHASES
+# ═══════════════════════════════════════════════════════════════
+
+```
+COAILEAGUE GO-LIVE READINESS SCORECARD
+═══════════════════════════════════════════════════════════════
+
+PHASE 1 — SECURITY:
+  Multi-tenant isolation:    PASS / FAIL
+  Auth & RBAC:               PASS / FAIL
+  Input validation:          PASS / FAIL
+  Security headers:          X/6 present
+
+PHASE 2 — MONEY PATHS:
+  Stripe billing:            PASS / FAIL
+  Invoicing lifecycle:       X/7 steps working
+  Payroll pipeline:          PASS / FAIL
+  QuickBooks sync:           PASS / FAIL
+
+PHASE 3 — SIGNUP & ONBOARDING:
+  Signup flow:               PASS / FAIL
+  Onboarding wizard:         PASS / FAIL
+  Employee invite:           PASS / FAIL
+  Data import:               PASS / FAIL
+
+PHASE 4 — PLATFORM STABILITY:
+  Race conditions found:     ___ (count)
+  Unprotected DB queries:    ___ (count)
+  Hardcoded values:          ___ (count)
+  Bandaids/TODOs:            ___ (count)
+
+PHASE 5 — MOBILE & UI:
+  Mobile critical paths:     X/9 working
+  Responsive issues:         ___ (count)
+  Cross-browser:             X/4 browsers pass
+
+PHASE 6 — NOTIFICATIONS:
+  Notification triggers:     X/15 firing
+  Email deliverability:      PASS / FAIL
+
+PHASE 7 — TRINITY AI:
+  Sub-agents:                X/8 exist
+  Tools:                     X/XX callable
+  Intelligent loop:          X/10 steps possible
+  Fallback chain:            PASS / FAIL
+
+PHASE 8 — RESILIENCE:
+  Service failover:          PASS / FAIL
+  Error handling:            PASS / FAIL
+  Scalability:               PASS / FAIL
+
+PHASE 9 — LEGAL & COMPLIANCE:
+  Labor law:                 PASS / FAIL
+  Data privacy:              PASS / FAIL
+  Industry requirements:     PASS / FAIL
+
+PHASE 10 — PUBLIC SITE:
+  SEO/Prerender:             PASS / FAIL
+  Meta tags:                 PASS / FAIL
+  DNS/Email config:          PASS / FAIL
+
+PHASE 11 — FEATURE GAPS:
+  Promised but not built:    ___ (list them)
+
+═══════════════════════════════════════════════════════════════
+OVERALL GO-LIVE RECOMMENDATION:
+
+[ ] READY — Launch with confidence
+[ ] READY WITH CAVEATS — Launch but fix these within 48 hours: ___
+[ ] NOT READY — Fix these CRITICAL issues first: ___
+═══════════════════════════════════════════════════════════════
+
+TOP 10 CRITICAL ISSUES (fix before ANY user touches this):
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+
+TOP 10 HIGH ISSUES (fix within first week):
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+
+RECOMMENDED IMMEDIATE ACTION PLAN:
+Day 1: ___
+Day 2: ___
+Day 3: ___
+Day 4: ___
+Day 5: ___
+═══════════════════════════════════════════════════════════════
+```
+
+**Be brutally honest. Every gap you miss is a gap that breaks when a real security company trusts us to run their business.**

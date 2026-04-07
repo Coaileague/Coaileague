@@ -11,8 +11,17 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { profitLossService, type PeriodGranularity } from '../services/finance/profitLossService';
 import { requireOwner } from '../rbac';
+import { requireAuth } from '../auth';
+import { requirePlan } from '../tierGuards';
+import { createLogger } from '../lib/logger';
+const log = createLogger('FinancialIntelligence');
+
 
 const router = Router();
+
+// P&L Financial Intelligence is a Professional+ feature (financial_intelligence, predictive_brain)
+router.use(requireAuth);
+router.use(requirePlan('professional'));
 
 const periodParamsSchema = z.object({
   start: z.string().optional(),
@@ -82,7 +91,7 @@ router.get('/pl/summary', requireOwner, async (req: Request, res: Response, next
       return res.status(400).json({ error: 'Invalid date parameters' });
     }
     
-    console.log('[Financial Intelligence] P&L request:', { workspaceId, start: start.toISOString(), end: end.toISOString(), granularity });
+    log.info('[Financial Intelligence] P&L request:', { workspaceId, start: start.toISOString(), end: end.toISOString(), granularity });
     
     const summary = await profitLossService.getPLSummary(
       workspaceId,
@@ -97,7 +106,7 @@ router.get('/pl/summary', requireOwner, async (req: Request, res: Response, next
       data: summary,
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error getting P&L summary:', error);
+    log.error('[Financial Intelligence] Error getting P&L summary:', error);
     next(error);
   }
 });
@@ -151,7 +160,56 @@ router.get('/pl/insights', requireOwner, async (req: Request, res: Response, nex
       },
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error generating insights:', error);
+    log.error('[Financial Intelligence] Error generating insights:', error);
+    next(error);
+  }
+});
+
+router.post('/pl/insights', requireOwner, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.workspaceId;
+    const userId = req.user?.id;
+    
+    if (!workspaceId || !userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const params = periodParamsSchema.parse(req.query);
+    const granularity = params.granularity as PeriodGranularity;
+    
+    let start: Date, end: Date;
+    if (params.start && params.end) {
+      start = new Date(params.start);
+      end = new Date(params.end);
+    } else {
+      const defaultPeriod = getDefaultPeriod(granularity);
+      start = defaultPeriod.start;
+      end = defaultPeriod.end;
+    }
+    
+    const summary = await profitLossService.getPLSummary(
+      workspaceId,
+      userId,
+      start,
+      end,
+      granularity
+    );
+    
+    const insights = await profitLossService.generateAIInsights(
+      workspaceId,
+      userId,
+      summary
+    );
+    
+    return res.json({
+      success: true,
+      data: {
+        insights,
+        creditsUsed: 15,
+      },
+    });
+  } catch (error) {
+    log.error('[Financial Intelligence] Error generating insights (POST):', error);
     next(error);
   }
 });
@@ -194,7 +252,7 @@ router.get('/pl/clients', requireOwner, async (req: Request, res: Response, next
       data: clientProfitability,
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error getting client profitability:', error);
+    log.error('[Financial Intelligence] Error getting client profitability:', error);
     next(error);
   }
 });
@@ -225,7 +283,7 @@ router.get('/pl/trends', requireOwner, async (req: Request, res: Response, next:
       data: trends,
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error getting trends:', error);
+    log.error('[Financial Intelligence] Error getting trends:', error);
     next(error);
   }
 });
@@ -249,7 +307,7 @@ router.get('/pl/alerts', requireOwner, async (req: Request, res: Response, next:
       data: alerts,
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error getting alerts:', error);
+    log.error('[Financial Intelligence] Error getting alerts:', error);
     next(error);
   }
 });
@@ -274,7 +332,7 @@ router.post('/pl/alerts/:alertId/dismiss', requireOwner, async (req: Request, re
       message: 'Alert dismissed',
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error dismissing alert:', error);
+    log.error('[Financial Intelligence] Error dismissing alert:', error);
     next(error);
   }
 });
@@ -319,7 +377,70 @@ router.post('/pl/refresh', requireOwner, async (req: Request, res: Response, nex
       message: 'P&L data refreshed',
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error refreshing P&L:', error);
+    log.error('[Financial Intelligence] Error refreshing P&L:', error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/finance/pl/consolidated
+ * Consolidated P&L across parent + all sub-orgs
+ * Only available for org owners with sub-orgs
+ */
+router.get('/pl/consolidated', requireOwner, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.workspaceId;
+    const userId = req.user?.id;
+    
+    if (!workspaceId || !userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { storage } = await import('../storage');
+    const currentWs = await storage.getWorkspace(workspaceId);
+    if (!currentWs) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
+    const rootId = currentWs.parentWorkspaceId || workspaceId;
+    if (currentWs.isSubOrg) {
+      const rootWs = await storage.getWorkspace(rootId);
+      if (!rootWs || rootWs.ownerId !== userId) {
+        return res.status(403).json({ error: 'Only the root org owner can view consolidated P&L' });
+      }
+    }
+    
+    const params = periodParamsSchema.parse(req.query);
+    const granularity = params.granularity as PeriodGranularity;
+    
+    let start: Date, end: Date;
+    if (params.start && params.end) {
+      start = new Date(params.start);
+      end = new Date(params.end);
+    } else {
+      const defaultPeriod = getDefaultPeriod(granularity);
+      start = defaultPeriod.start;
+      end = defaultPeriod.end;
+    }
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ error: 'Invalid date parameters' });
+    }
+    
+    const consolidated = await profitLossService.getConsolidatedPL(
+      rootId,
+      userId,
+      start,
+      end,
+      granularity
+    );
+    
+    return res.json({
+      success: true,
+      data: consolidated,
+    });
+  } catch (error) {
+    log.error('[Financial Intelligence] Error getting consolidated P&L:', error);
     next(error);
   }
 });
@@ -381,7 +502,7 @@ router.get('/pl/client/:clientId/recommendation', requireOwner, async (req: Requ
       },
     });
   } catch (error) {
-    console.error('[Financial Intelligence] Error getting client recommendation:', error);
+    log.error('[Financial Intelligence] Error getting client recommendation:', error);
     next(error);
   }
 });

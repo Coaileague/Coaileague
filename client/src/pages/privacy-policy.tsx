@@ -1,15 +1,31 @@
 import { UniversalHeader } from "@/components/universal-header";
 import { Footer } from "@/components/footer";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { SEO, PAGE_SEO } from '@/components/seo';
+
+const privacyConfig: CanvasPageConfig = {
+  id: 'privacy-policy',
+  title: 'Privacy Policy',
+  category: 'legal',
+  variant: 'default',
+  showHeader: false,
+};
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <UniversalHeader variant="public" />
-      
-      <div className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">
-        <div className="prose prose-slate dark:prose-invert max-w-none">
-          <h1 className="text-4xl font-bold mb-2">Privacy Policy</h1>
-          <p className="text-muted-foreground mb-8">Last Updated: November 13, 2025</p>
+    <CanvasHubPage config={privacyConfig}>
+      <SEO
+        title={PAGE_SEO.privacy.title}
+        description={PAGE_SEO.privacy.description}
+        canonical="https://coaileague.com/privacy"
+      />
+      <div className="min-h-screen bg-background flex flex-col">
+        <UniversalHeader variant="public" />
+        
+        <main className="mx-auto max-w-4xl px-4 pt-24 pb-12 sm:px-6 lg:px-8 flex-1">
+          <div className="prose prose-slate dark:prose-invert max-w-none">
+            <h1 className="text-4xl font-bold mb-2">Privacy Policy</h1>
+            <p className="text-muted-foreground mb-8">Last Updated: March 19, 2026</p>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
@@ -69,20 +85,85 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">4. CoAIleague AI and Intelligent Automation</h2>
+            <h2 className="text-2xl font-semibold mb-4">4. CoAIleague AI, Trinity AI, and Intelligent Automation</h2>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">4.1 How We Use Your Data for AI Processing</h3>
             <p className="text-foreground/90 mb-4">
-              Our CoAIleague AI system processes your data to:
+              Our AI system — branded as Trinity AI — processes your organizational data to:
             </p>
             <ul className="list-disc pl-6 mb-4 text-foreground/90">
-              <li>Generate automated schedules based on employee availability and preferences</li>
-              <li>Provide intelligent support responses through CoAIleague AI</li>
-              <li>Analyze patterns to improve scheduling accuracy</li>
-              <li>Predict staffing needs and optimize labor costs</li>
+              <li>Generate automated schedules based on employee availability, certifications, and preferences</li>
+              <li>Prepare payroll calculations, timesheet summaries, and labor cost analyses</li>
+              <li>Draft invoices, billing statements, and financial reports for human review</li>
+              <li>Provide intelligent support and operational guidance through Trinity AI</li>
+              <li>Analyze workforce patterns to improve scheduling accuracy and predict staffing needs</li>
+              <li>Monitor compliance status, flag potential violations, and generate audit-ready records</li>
             </ul>
             <p className="text-foreground/90 mb-4">
-              <strong>Important:</strong> All AI decisions operate under our "99% AI, 1% human governance" model. 
-              You maintain final approval authority for all AI-generated schedules and decisions. We do not use your 
-              data to train AI models for other customers.
+              We do not use your organizational data to train AI models for other customers. AI processing is performed solely to provide the Service to your organization.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">4.2 Trinity AI Autonomy Model and Human Oversight</h3>
+            <p className="text-foreground/90 mb-4">
+              Trinity AI is designed to operate with a high degree of automation across routine workforce management
+              tasks. This is described in our Terms of Service as the "high autonomy, 1% human intervention" model:
+              Trinity AI handles the majority of routine operations autonomously, while approximately 1% of scenarios
+              — particularly those categorized as critical, such as payroll disbursement, invoice issuance, and
+              compliance escalations — require explicit human approval before proceeding.
+            </p>
+            <p className="text-foreground/90 mb-4">
+              Critically, <strong>even on scenarios not categorized as critical, the platform always affords the
+              tenant a human approval gate or review opportunity at every meaningful step</strong> — from the
+              creation of a workflow or document through its final execution. This applies to payroll runs,
+              issued invoices, signed documents, scheduled shifts, compliance reports, and every other
+              consequential platform output. Whether that review opportunity is exercised is the tenant's
+              sole responsibility.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">4.3 AI Limitations, Errors, and Hallucinations</h3>
+            <div className="bg-muted/60 border border-border rounded-md p-5 mb-4">
+              <p className="text-foreground/90 text-sm">
+                <strong>Notice:</strong> Artificial intelligence systems — including Trinity AI — can produce outputs
+                that are factually incorrect, internally inconsistent, outdated, or entirely fabricated. This is
+                commonly referred to as an "AI hallucination." AI errors and hallucinations can occur without warning
+                even when a system's prior performance has been reliable.
+              </p>
+            </div>
+            <p className="text-foreground/90 mb-4">
+              Additionally, Trinity AI and the broader CoAIleague platform are subject to:
+            </p>
+            <ul className="list-disc pl-6 mb-4 text-foreground/90">
+              <li><strong>Model outages and downtime:</strong> Third-party AI model providers may experience outages, maintenance windows, or degraded performance that reduce or eliminate AI functionality.</li>
+              <li><strong>Software bugs and defects:</strong> The platform may contain bugs or logic errors that cause incorrect outputs or unexpected behavior. These are addressed through patches and updates.</li>
+              <li><strong>Model changes:</strong> Underlying AI models may be updated by their providers, which may change the behavior or quality of AI outputs without advance notice.</li>
+            </ul>
+            <p className="text-foreground/90 mb-4">
+              For this reason, all AI-generated outputs — including schedules, payroll calculations, invoices,
+              compliance reports, and any other platform-generated data — must be independently reviewed and verified
+              by a qualified human before being acted upon. Trinity AI is a tool to assist human decision-making,
+              not to replace it.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">4.4 Tenant Human Supervisor Requirement</h3>
+            <p className="text-foreground/90 mb-4">
+              As a condition of using the Service, each tenant (subscribing organization) is required to designate
+              at least one qualified human supervisor who is responsible for overseeing AI-generated outputs and
+              automated workflows within their CoAIleague account. This requirement is described fully in Section 6
+              of the Terms of Service.
+            </p>
+            <p className="text-foreground/90 mb-4">
+              <strong>CoAIleague, Trinity AI, their owners, officers, employees, directors, agents, and
+              representatives are not liable for any harm, loss, or legal consequence arising from a tenant's
+              failure to maintain a human supervisor or failure to review AI-generated outputs before acting
+              on them.</strong> Final authority over every platform output rests with the tenant and their
+              designated human supervisor, not with CoAIleague or Trinity AI.
+            </p>
+            <p className="text-foreground/90 mb-4">
+              For the full AI limitation and liability disclosure, including the complete human supervisor
+              requirement, please review{" "}
+              <a href="/terms#human-supervisor" className="text-primary underline">
+                Sections 5 and 6 of our Terms of Service
+              </a>.
             </p>
           </section>
 
@@ -184,7 +265,7 @@ export default function PrivacyPolicy() {
             </ul>
 
             <p className="text-foreground/90 mb-4 mt-6">
-              To exercise these rights, contact us at privacy@coaileague.example.com. We will respond within 30 days.
+              To exercise these rights, contact us at privacy@coaileague.com. We will respond within 30 days.
             </p>
           </section>
 
@@ -208,7 +289,7 @@ export default function PrivacyPolicy() {
             <p className="text-foreground/90 mb-4">
               CoAIleague is not intended for use by individuals under 18 years of age. We do not knowingly collect 
               personal information from children under 18. If you believe we have collected information from a child 
-              under 18, please contact us immediately at privacy@coaileague.example.com.
+              under 18, please contact us immediately at privacy@coaileague.com.
             </p>
           </section>
 
@@ -245,17 +326,110 @@ export default function PrivacyPolicy() {
             </p>
           </section>
 
+          <section className="mb-8" id="sms-messaging">
+            <h2 className="text-2xl font-semibold mb-4">13. SMS Messaging Program</h2>
+
+            <div className="bg-muted/50 border border-border rounded-md p-5 mb-6">
+              <p className="font-semibold text-foreground mb-2">CoAIleague SMS Workforce Alerts</p>
+              <p className="text-foreground/90 text-sm">
+                By providing your mobile phone number and checking the SMS consent box in your employee profile,
+                you expressly consent to receive recurring automated text messages (SMS) from CoAIleague on
+                behalf of your employer organization for workforce management purposes. Consent is not a condition
+                of employment or use of this platform. Message frequency varies. Message and data rates may apply.
+                Reply STOP to opt out. Reply HELP for help.
+              </p>
+            </div>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">13.1 How We Collect SMS Consent</h3>
+            <p className="text-foreground/90 mb-4">
+              SMS consent is collected via a clearly labeled opt-in checkbox on your employee profile page inside
+              the CoAIleague platform ("I agree to receive text message (SMS) notifications from CoAIleague for
+              workforce management purposes, including shift reminders, schedule changes, safety alerts, and account
+              notifications. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out.
+              Reply HELP for help."). The checkbox is unchecked by default and requires your affirmative action
+              to enable SMS communications. Consent to receive SMS messages is separate from your agreement to
+              our Terms of Service and Privacy Policy and is not required to use the platform.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">13.2 Types of Messages</h3>
+            <p className="text-foreground/90 mb-4">When you opt in, you may receive the following types of recurring automated text messages:</p>
+            <ul className="list-disc pl-6 mb-4 text-foreground/90">
+              <li><strong>Shift Assignments:</strong> New shift offers and assignment confirmations requiring your reply</li>
+              <li><strong>Schedule Reminders:</strong> Upcoming shift reminders and schedule change notifications</li>
+              <li><strong>Coverage Requests:</strong> Open shift fill requests requiring a YES/NO reply</li>
+              <li><strong>Safety Alerts:</strong> Site emergency notifications, panic alert confirmations, and evacuation notices</li>
+              <li><strong>Account Notifications:</strong> Document approvals, payroll confirmations, and compliance reminders</li>
+              <li><strong>Clock Reminders:</strong> Clock-in/out reminders for your assigned shifts</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">13.3 Message Frequency</h3>
+            <p className="text-foreground/90 mb-4">
+              Message frequency varies based on your schedule, your employer's activity level, and whether you
+              are on-call. You may receive up to 10 messages per week during active scheduling periods and fewer
+              during quiet periods. Safety and emergency alerts may arrive outside of normal business hours.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">13.4 Message and Data Rates</h3>
+            <p className="text-foreground/90 mb-4">
+              <strong>Message and data rates may apply.</strong> Standard SMS and data rates charged by your
+              wireless carrier may apply to messages you receive and to replies you send. CoAIleague does not
+              charge additional fees for SMS notifications.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">13.5 How to Opt Out</h3>
+            <p className="text-foreground/90 mb-4">
+              You may opt out of SMS messages at any time using any of the following methods:
+            </p>
+            <ul className="list-disc pl-6 mb-4 text-foreground/90">
+              <li><strong>Reply STOP</strong> (or STOPALL, CANCEL, END, QUIT, or UNSUBSCRIBE) to any text message from CoAIleague. You will receive one confirmation message and no further messages will be sent unless you re-consent.</li>
+              <li>Uncheck the SMS consent checkbox in your employee profile settings inside the CoAIleague platform.</li>
+              <li>Email <strong>support@coaileague.com</strong> with your name and phone number requesting removal.</li>
+            </ul>
+            <p className="text-foreground/90 mb-4">
+              After opting out via STOP reply, you will receive exactly one final confirmation: "You have been
+              unsubscribed from CoAIleague Workforce Alerts. You will receive no further messages." No further
+              messages will be sent to your number unless you affirmatively re-consent.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">13.6 Help</h3>
+            <p className="text-foreground/90 mb-4">
+              Reply <strong>HELP</strong> to any SMS message for program information. You will receive a response
+              with a description of the messaging program, opt-out instructions, and our support contact. You may
+              also contact us directly at <strong>support@coaileague.com</strong>.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">13.7 SMS Data Privacy</h3>
+            <p className="text-foreground/90 mb-4">
+              Your mobile phone number and SMS consent status are stored securely and used only to deliver the
+              workforce notifications you have consented to receive.
+            </p>
+            <p className="text-foreground/90 mb-4">
+              <strong>No mobile information will be shared with third parties or affiliates for marketing or
+              promotional purposes.</strong> Phone numbers and SMS consent records are not sold, rented,
+              or shared with any third party for their own marketing use. SMS consent is not shared
+              across employer organizations — each workspace maintains independent consent records.
+            </p>
+            <p className="text-foreground/90 mb-4">
+              All categories of information that may be shared with third parties (such as Twilio for message
+              delivery) are shared solely for the purpose of delivering the messages you requested and are
+              governed by those parties' privacy policies and data processing agreements.
+            </p>
+            <p className="text-foreground/90 mb-4">
+              For complete SMS program terms, see our <a href="/sms-terms" className="text-primary underline">SMS Terms of Service</a>.
+            </p>
+          </section>
+
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">13. Contact Us</h2>
+            <h2 className="text-2xl font-semibold mb-4">14. Contact Us</h2>
             <p className="text-foreground/90 mb-4">
               For questions, concerns, or requests regarding this Privacy Policy or our data practices:
             </p>
             <ul className="list-none pl-0 mb-4 text-foreground/90">
               <li className="mb-2">
-                <strong>Privacy Team Email:</strong> privacy@coaileague.example.com
+                <strong>Privacy Team Email:</strong> privacy@coaileague.com
               </li>
               <li className="mb-2">
-                <strong>Data Protection Officer:</strong> dpo@coaileague.example.com
+                <strong>Data Protection Officer:</strong> dpo@coaileague.com
               </li>
               <li className="mb-2">
                 <strong>Mailing Address:</strong> [Your Business Address]
@@ -279,8 +453,9 @@ export default function PrivacyPolicy() {
             </ul>
           </div>
         </div>
+      </main>
       </div>
       <Footer variant="light" />
-    </div>
+    </CanvasHubPage>
   );
 }

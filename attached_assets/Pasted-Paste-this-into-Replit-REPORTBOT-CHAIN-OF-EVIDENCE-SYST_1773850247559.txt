@@ -1,0 +1,975 @@
+Paste this into Replit:
+
+---
+
+**REPORTBOT CHAIN OF EVIDENCE SYSTEM — DEEP SEMANTIC AUDIT, STRESS TEST, AND ZERO-GAP VERIFICATION**
+**READ BEFORE TOUCH | USE ACME DEV DATA | SCAN UNTIL ZERO ISSUES**
+
+Before touching anything — audit every existing file related to ReportBot, shift rooms, chat, DAR generation, PDF creation, and document safe storage.
+
+---
+
+**PRE-BUILD AUDIT — READ ONLY FIRST**
+
+Search and report every existing file:
+- ReportBot service files — list all, read all
+- Shift chatroom service and routes — read completely
+- DAR generation code — does it exist? What does it produce?
+- Chat message schema — all columns
+- Shift room schema — all columns
+- Document safe routing — how documents are categorized and stored
+- PDF generation library currently in use
+- Current photo upload pipeline in shift rooms — GPS, metadata extraction
+- Current incident report schema if any
+- Current platformEventBus events related to shift rooms and reports
+- Trinity actions related to documents and reports
+
+Report everything found. Build only what is missing. Extend what exists.
+
+---
+
+**PHASE 0 — TEST DATA SETUP IN ACME SECURITY SERVICES**
+
+Before any scanning — create realistic test data in Acme workspace so every test runs with real simulated data.
+
+**Create this scenario in Acme:**
+
+Officer: Marcus Rodriguez — Officer 1 — Level 3 Armed — badge guard card number GC-2024-001
+Client: Downtown Mall Security — site address: 100 Commerce Street, San Antonio TX 78205
+Shift: Today — 08:00 to 20:00 — assigned to Marcus Rodriguez
+Shift room: Create active shift chatroom for this shift
+
+**Seed the shift room with realistic message history simulating a real shift:**
+
+```
+08:03 — Marcus: Clocked in. On post at main entrance. All clear.
+08:47 — Marcus: [photo upload] Conducting exterior patrol. Parking lot clear.
+09:15 — Marcus: Security check of all entrances complete. No issues noted.
+10:22 — Marcus: Suspicious individual loitering near west entrance. Monitoring situation.
+10:31 — Marcus: Spoke with individual. Male Hispanic approximately 25-30 years old black hoodie blue jeans. Asked him to move along. He complied without incident.
+10:32 — Marcus: /report Individual loitering at west entrance asked to leave complied
+11:05 — Marcus: [photo upload] Routine patrol south corridor. Slip hazard noted near fountain — wet floor.
+11:06 — Marcus: Notified mall management about wet floor near fountain south corridor.
+11:58 — Marcus: Lunch break 12:00 to 12:30. Relief officer covering.
+12:35 — Marcus: Back on post.
+14:17 — Marcus: /incident fight broke out near food court two males arguing got physical
+15:45 — Marcus: Police left. Got report number.
+16:02 — Marcus: [photo upload] Damage to food court table from incident.
+17:30 — Marcus: Routine patrol all clear.
+19:45 — Marcus: Preparing end of shift.
+19:58 — Marcus: /endshift
+```
+
+**Also create:**
+- A second simpler shift with no incidents — just routine patrol logs and photos
+- A shift with ONLY photo uploads and no text descriptions (edge case)
+- A shift that was abandoned mid-shift (officer went offline — stress test)
+
+---
+
+**PHASE 1 — SHIFT ROOM CRUD AND PERSISTENCE AUDIT**
+
+**1A — Shift room creation pipeline (7-step):**
+
+```
+TRIGGER: Shift created or officer assigned to shift
+FETCH: Get shift details, client info, officer info, workspace settings
+VALIDATE: Confirm shift has valid clientId, employeeId, workspaceId — no nulls
+PROCESS: Prepare shift room record with all required fields
+MUTATE: INSERT shift_chatrooms record — link to shift, client, officer, workspace
+CONFIRM: Verify room created and queryable
+NOTIFY: Send welcome message from ReportBot, notify assigned officer
+
+Scan for:
+- Does shift room creation trigger on EVERY new shift assignment?
+- Is workspaceId correctly stored on the shift room record?
+- Is the shift room inaccessible from other workspaces?
+- If shift is deleted — is the shift room soft-deleted (preserved for records)?
+- If officer is reassigned — does the shift room follow the shift or the officer?
+```
+
+**1B — Message persistence:**
+
+```
+Scan for:
+- Every message saved with: workspaceId, shiftRoomId, senderId, content, messageType, timestamp
+- Photo messages saved with: imageUrl, gpsLatitude, gpsLongitude, gpsAccuracy, gpsAddress, deviceInfo
+- Is senderId always populated — never null?
+- Are messages retrievable in exact chronological order?
+- Is there a maximum message size enforced?
+- Are messages write-once after end of shift — read only for legal integrity?
+- Can messages be deleted? (must NOT be deletable after shift ends)
+```
+
+**1C — Photo upload persistence:**
+
+```
+Scan for:
+- GPS coordinates captured from device on every photo upload
+- If GPS denied — is denial recorded (gpsStatus: 'denied')
+- Photo stored in permanent storage — not temp URL
+- Photo URL persists after 30 days
+- Photo linked to shift room, shift, officer, workspace, client
+- Photo metadata extracted: timestamp, device, GPS
+- File type validated — only image types accepted
+- File size validated — reasonable limit enforced
+- If upload fails — error shown to user and NOT saved as broken record
+```
+
+**Fix every gap. Verify with test data.**
+
+---
+
+**PHASE 2 — REPORTBOT INTELLIGENCE AND INFORMATION GATHERING**
+
+**2A — ReportBot presence and startup message:**
+
+When ReportBot joins a shift room it must send this opening message immediately:
+
+```
+ReportBot: "Good [morning/afternoon/evening], Marcus. I'm ReportBot — your shift documentation assistant.
+
+I'll be monitoring this shift and helping you build your Daily Activity Report.
+
+Here's how to use me:
+📋 /report [description] — Log any routine activity or observation
+🚨 /incident [description] — Report an incident requiring documentation
+📸 Send photos any time — I'll include them in your report with location and time
+🔚 /endshift — Generate your completed DAR when your shift is done
+
+I'm also listening for keywords that suggest something reportable. If I notice you may have an incident to document, I'll ask you about it.
+
+Shift details:
+• Client: Downtown Mall Security
+• Location: 100 Commerce Street, San Antonio TX 78205
+• Your shift: 08:00 — 20:00
+• Today's date: [auto]
+
+Stay safe out there."
+```
+
+**2B — Keyword detection and intelligent prompting:**
+
+ReportBot monitors every message for these categories of keywords:
+
+```typescript
+const INCIDENT_KEYWORDS = [
+  'fight', 'fighting', 'assault', 'hit', 'punch', 'kick', 'shove',
+  'weapon', 'gun', 'knife', 'taser', 'pepper spray',
+  'police', 'cops', '911', 'ambulance', 'ems', 'fire',
+  'injury', 'injured', 'hurt', 'blood', 'unconscious',
+  'theft', 'stolen', 'shoplifting', 'robbery',
+  'trespass', 'trespassing', 'banned', 'eviction',
+  'damage', 'broken', 'vandalism', 'graffiti',
+  'suspicious', 'threat', 'threatening',
+  'force', 'restrain', 'handcuff', 'detain',
+  'complaint', 'harassing', 'harassment'
+]
+
+const HAZARD_KEYWORDS = [
+  'wet floor', 'spill', 'slip', 'hazard', 'fire', 'smoke',
+  'medical', 'choking', 'heart attack', 'seizure', 'fall'
+]
+```
+
+When incident keyword detected — ReportBot responds intelligently:
+
+```
+If 'fight' or 'assault' detected:
+"🚨 It sounds like you may have an incident to document. 
+I want to make sure we capture everything correctly.
+Please use /incident to formally log this, or answer these questions:
+
+1. What time did this start?
+2. How many people were involved?
+3. Can you describe the individuals? (age, gender, clothing)
+4. What happened exactly? (be specific about actions)
+5. Was any physical force used?
+6. Were police called? If yes, badge number and case number?
+7. Any injuries? Medical attention needed?
+8. Any witnesses?
+
+Take your time — accuracy matters here."
+
+If 'police' or '911' detected:
+"I see police may be involved. When you have a moment, please provide:
+• Police agency name (SAPD, Sheriff, etc.)
+• Responding officer name and badge number
+• Incident/report case number
+• Time police arrived and time they cleared
+
+This information is required for your incident report."
+
+If 'wet floor' or 'hazard' detected:
+"Hazard noted. Quick documentation:
+1. Exact location of hazard?
+2. Was management or maintenance notified? Time?
+3. Was it resolved before you left the area?
+4. Any injuries related to this hazard?"
+```
+
+**2C — /incident command — structured information gathering:**
+
+When officer uses /incident:
+
+```
+ReportBot: "INCIDENT DOCUMENTATION
+Let's make sure we capture everything. I'll ask you a few questions.
+
+First — WHAT HAPPENED?
+Describe the incident in your own words. Don't worry about perfect language — I'll help clean it up."
+
+[officer responds]
+
+ReportBot: "Got it. Now — WHEN?
+What time did this begin? And what time did it end or resolve?"
+
+[officer responds]
+
+ReportBot: "WHERE exactly?
+Be specific — which entrance, which section, nearest store or landmark?"
+
+[officer responds]
+
+ReportBot: "WHO was involved?
+Describe each person: approximate age, gender, physical description, clothing. 
+Did you get any names or IDs?"
+
+[officer responds]
+
+ReportBot: "HOW did it unfold?
+Walk me through what happened step by step.
+Was any force used? If yes, describe exactly what and why."
+
+[officer responds]
+
+ReportBot: "POLICE INVOLVEMENT?
+Were police called? 
+If yes:
+• Which agency? (Example: SAPD, Bexar County Sheriff)
+• Officer name and badge number?
+• Case/report number?
+• Time they arrived and time they cleared?"
+
+[officer responds]
+
+ReportBot: "OUTCOME?
+How did it resolve? 
+Was anyone arrested, removed, treated medically, or do you need to follow up?"
+
+[officer responds]
+
+ReportBot: "Almost done — WITNESSES?
+Any witnesses you spoke with? Any cameras that captured this?
+Did you collect any evidence?"
+
+[officer responds]
+
+ReportBot: "✓ Incident documented. Here's what I have:
+
+INCIDENT SUMMARY:
+What: [summary]
+When: [time]
+Where: [location]  
+Who: [description]
+Force: [yes/no + description]
+Police: [yes/no + case number]
+Outcome: [outcome]
+
+Is this accurate? Any corrections or additions?
+Reply YES to confirm or tell me what needs changing."
+```
+
+**2D — Missing information detection:**
+
+Before generating the final DAR, ReportBot runs a completeness check:
+
+```typescript
+interface IncidentCompleteness {
+  hasTime: boolean
+  hasLocation: boolean  
+  hasDescription: boolean
+  hasPartyDescriptions: boolean
+  hasForceDescription: boolean  // required if force was mentioned
+  hasPoliceInfo: boolean        // required if police were mentioned
+  hasPoliceCaseNumber: boolean  // required if police were mentioned
+  hasOutcome: boolean
+  hasOfficerSignature: boolean
+}
+
+// For each incident — check completeness
+// If any required field missing — ask officer before generating report
+```
+
+Missing information prompt:
+
+```
+ReportBot: "Before I finalize your DAR, I'm missing some information:
+
+For the FOOD COURT INCIDENT at 14:17:
+⚠ Police case number not recorded
+⚠ Names of individuals involved not recorded (if known)
+⚠ Description of injuries not recorded
+
+For your LOITERING REPORT at 10:31:
+⚠ Physical description of individual incomplete
+
+Can you provide these details now? 
+Type the information for each item or reply 'unknown' if not available."
+```
+
+---
+
+**PHASE 3 — DAR GENERATION — 7-STEP PIPELINE**
+
+This is the core of ReportBot. Implement completely.
+
+**Step 1 — TRIGGER:**
+
+```typescript
+// DAR generation triggers when:
+// A) Officer sends /endshift command
+// B) Shift status automatically changes to 'completed'
+// C) Shift end time passes by more than 30 minutes with no /endshift
+
+// For trigger B and C — ReportBot sends:
+// "Your shift ended at [time]. I'm preparing your Daily Activity Report.
+//  Before I finalize it, I have a few questions about missing information..."
+```
+
+**Step 2 — FETCH:**
+
+```typescript
+const darData = await fetchDarData(shiftId, workspaceId) = {
+  shift: {
+    id, clientName, siteAddress, startTime, endTime, totalHours,
+    officerName, officerLicenseNumber, supervisorName
+  },
+  messages: // ALL messages in chronological order with timestamps
+  photos: // ALL photos with GPS, timestamp, caption, officer description
+  reportEntries: // All /report command entries
+  incidentEntries: // All /incident entries with full Q&A
+  clockEvents: {
+    clockInTime, clockInGPS, clockOutTime, clockOutGPS,
+    wasForceClockIn, forceClockReason
+  },
+  postOrdersAcknowledged: boolean,
+  priorIncidentHistory: // any open incidents from prior shifts at this site
+  geofenceAlerts: // any GPS anomalies during shift
+}
+```
+
+**Step 3 — VALIDATE:**
+
+```typescript
+// Check for completeness before generating
+const completenessReport = validateDarCompleteness(darData)
+
+if (!completenessReport.isComplete) {
+  // Ask officer to fill missing information
+  // Wait for responses (timeout after 10 minutes — generate with 'unknown' for unanswered)
+  await requestMissingInformation(completenessReport.missingItems)
+}
+```
+
+**Step 4 — PROCESS — DAR content assembly and quality review:**
+
+```typescript
+// Assemble chronological activity log
+const activityLog = buildChronologicalLog(darData.messages, darData.photos, darData.reportEntries)
+
+// Quality review pipeline:
+
+// A) Spell check every text entry
+const spellChecked = await spellCheck(activityLog)
+
+// B) Grammar check
+const grammarChecked = await grammarCheck(spellChecked)
+
+// C) Professional language conversion
+// Uses AI to convert informal language to professional security report language
+const professionalized = await professionalizeLanguage(grammarChecked)
+
+// D) Use of force language review
+// Identifies any use of force descriptions and rewrites for liability protection
+const forceReviewed = await reviewForceLanguage(professionalized)
+
+// E) Chronological consistency check
+// Verifies times are in order and don't overlap
+const chronologyVerified = await verifyChronology(forceReviewed)
+
+// F) Who/What/Where/When/Why/How completeness check
+const completenessCheck = await checkWho5W1H(chronologyVerified)
+
+// G) Flag items for manager review
+const flaggedItems = identifyFlaggedItems(completenessCheck)
+```
+
+**Professional language conversion examples:**
+
+```
+Input: "some drunk guy was being loud near the food court"
+Output: "At 14:17, an intoxicated male subject was creating a disturbance in the food court area. Subject was displaying erratic behavior and elevated voice volume, causing concern among patrons."
+
+Input: "I grabbed him and took him down"  
+Output: "Officer employed a controlled takedown technique after subject became physically aggressive, preventing potential harm to bystanders. Subject was placed in a prone position and controlled until law enforcement arrived. ⚠ FLAGGED FOR REVIEW: Please confirm this accurately describes the level of force used."
+
+Input: "told him to leave and he left"
+Output: "Officer verbally directed the individual to vacate the premises. The individual complied with the directive without further incident."
+
+Input: "nothing happened all day pretty quiet"
+Output: "No significant incidents were observed during the shift period. All assigned posts were maintained and routine patrols were conducted as scheduled."
+```
+
+**Step 5 — MUTATE — PDF construction:**
+
+Build the DAR PDF with this exact structure:
+
+```
+[ORG LOGO]
+[ORG NAME — Large]
+DAILY ACTIVITY REPORT
+[Report Number: DAR-[WORKSPACE-4]-[DATE]-[SEQUENCE]]
+
+═══════════════════════════════════════
+SHIFT INFORMATION
+═══════════════════════════════════════
+Client:           [Client Name]
+Site Address:     [Full address]
+Officer:          [Full Name] | License: [Guard Card Number]
+Supervisor:       [Supervisor Name]
+Shift Date:       [Date]
+Shift Hours:      [Start Time] — [End Time] ([Total Hours] hours)
+Post Orders:      [Acknowledged: Yes/No — Date/Time]
+Report Number:    [Auto-generated]
+Generated:        [Timestamp]
+
+═══════════════════════════════════════
+CHRONOLOGICAL ACTIVITY LOG
+═══════════════════════════════════════
+[TIME] — [CATEGORY: PATROL/REPORT/INCIDENT/PHOTO] — [Professional description]
+
+Example:
+08:03 — ARRIVAL — Officer assumed post at main entrance. All access points secured and accounted for.
+08:47 — PATROL — [Photo: Parking Lot Exterior] Exterior patrol conducted. No security concerns observed. Parking lot clear of suspicious activity.
+10:22 — OBSERVATION — Suspicious individual observed loitering at west entrance. Officer maintained visual contact and monitored behavior.
+10:31 — CONTACT — Officer made contact with [Description: Male Hispanic, approx. 25-30 years, black hoodie, blue jeans]. Individual was verbally directed to vacate the area. Individual complied without incident. No force was necessary.
+11:05 — HAZARD — [Photo: Wet Floor South Corridor] Slip hazard identified near fountain in south corridor. Mall management notified at 11:06. Hazard was addressed by maintenance personnel.
+[continues for all entries]
+
+═══════════════════════════════════════
+PHOTO DOCUMENTATION
+═══════════════════════════════════════
+Photo 1: [Embedded image]
+  Time: 08:47
+  Location: Parking lot — north side
+  GPS: 29.4241° N, 98.4936° W (confirmed at site)
+  Description: Routine patrol — exterior clear
+  Submitted by: Marcus Rodriguez
+
+Photo 2: [Embedded image]
+  Time: 11:05
+  Location: South corridor near fountain
+  GPS: 29.4238° N, 98.4934° W (confirmed at site)
+  Description: Wet floor hazard near fountain
+
+Photo 3: [Embedded image]
+  Time: 16:02
+  Location: Food court — north seating area
+  GPS: 29.4240° N, 98.4935° W (confirmed at site)
+  Description: Property damage to seating table from altercation
+
+═══════════════════════════════════════
+INCIDENT REPORT(S)
+═══════════════════════════════════════
+[Only present if incidents occurred]
+
+INCIDENT #1
+Type:         Physical Altercation
+Time:         14:17 — 15:40
+Location:     Food Court — North Seating Area
+Reported by:  Marcus Rodriguez — GC-2024-001
+
+DESCRIPTION:
+At 14:17, Officer Rodriguez observed two male subjects engaged in a verbal altercation in the food court north seating area. The altercation escalated to physical contact when Subject 1 struck Subject 2 with a closed fist. Officer Rodriguez immediately responded to the area and verbally intervened.
+
+PARTIES INVOLVED:
+Subject 1: Male, Hispanic, approximately 30-35 years of age, black t-shirt, gray jeans, approximately 5'10", 180 lbs. Identified as [Name if known / Unknown].
+Subject 2: Male, White, approximately 25-30 years of age, blue polo shirt, khaki pants, approximately 5'8", 165 lbs. Identified as [Name if known / Unknown].
+
+OFFICER ACTIONS:
+Officer verbally commanded both subjects to separate. Subject 1 refused initial commands and continued aggressive posturing toward Subject 2. Officer positioned between subjects and repeated commands. Subject 1 made physical contact with Officer Rodriguez [describe exactly]. Officer [describe exactly what force was used and why — this section is FLAGGED FOR MANAGER REVIEW].
+
+POLICE RESPONSE:
+Agency: San Antonio Police Department (SAPD)
+Responding Officer: [Name] — Badge: [Number]
+Case Number: [Number]
+Dispatch Time: 14:19
+Arrival Time: 14:31
+Cleared: 15:40
+
+INJURIES:
+Subject 2 sustained [description]. EMS was called / not called. Medical attention was / was not required.
+
+OUTCOME:
+Subject 1 was [arrested/trespassed/released]. Subject 2 was [assisted/declined medical/departed]. Property damage noted — see photo documentation.
+
+EVIDENCE:
+Photo #3 — Food court table damage
+[Any other evidence]
+
+WITNESSES:
+[Names and contact information if obtained]
+
+⚠ MANAGER REVIEW REQUIRED:
+This incident involved use of force. Please review officer's description at [timestamp] for accuracy and liability considerations. ReportBot has reworded the following sections: [list with original and reworded versions side by side]
+
+═══════════════════════════════════════
+END OF SHIFT CERTIFICATION
+═══════════════════════════════════════
+I, Marcus Rodriguez, certify that the information contained in this Daily Activity Report is accurate and complete to the best of my knowledge. I understand this report may be used in legal proceedings and I attest to its truthfulness.
+
+Officer Signature: _____________________ Date: __________
+License Number: GC-2024-001
+
+ReportBot Review: Spelling ✓ | Grammar ✓ | Chronology ✓ | Completeness ✓ | Force Language ⚠ Reviewed
+Flagged for manager review: Yes — [N] items
+
+═══════════════════════════════════════
+DOCUMENT INFORMATION
+═══════════════════════════════════════
+Generated by: ReportBot — CoAIleague Platform
+Generation time: [timestamp]
+Report ID: DAR-ACME-20260318-001
+Workspace: Acme Security Services
+This document is confidential. Chain of custody maintained by CoAIleague platform.
+```
+
+**Step 6 — CONFIRM:**
+
+```typescript
+// Verify PDF generated and readable
+// Verify all photos embedded correctly
+// Verify all sections present
+// Verify report saved to DB with correct status
+// Verify document linked to: shiftId, employeeId, clientId, workspaceId
+// Verify document routed to correct document safe category
+// Verify document is searchable
+// Verify document is read-only after generation
+```
+
+**Step 7 — NOTIFY:**
+
+```typescript
+// 1. Send to assigned supervisor/manager for approval:
+// In-app notification: "DAR for Marcus Rodriguez at Downtown Mall on [date] ready for review"
+// Email with PDF attached
+// Message in management channel
+
+// 2. Notify officer the report was submitted:
+// "Your Daily Activity Report has been submitted to [Supervisor Name] for review.
+//  Report ID: DAR-ACME-20260318-001
+//  You will be notified when it is approved."
+
+// 3. Publish events:
+platformEventBus.publish({ type: 'dar_generated', workspaceId, shiftId, officerId, clientId, documentId, incidentCount, flaggedForReview })
+platformEventBus.publish({ type: 'document_completed', workspaceId, documentId, documentType: 'daily_activity_report', employeeId, clientId })
+
+// 4. Trinity receives and logs:
+// Trinity org intelligence updated: "DAR generated for shift [date] at [client] — [N] incidents — flagged for review"
+// Added to morning brief if flagged
+```
+
+---
+
+**PHASE 4 — MANAGER APPROVAL WORKFLOW**
+
+**4A — Manager receives DAR:**
+
+Manager notification contains:
+- PDF attached
+- Summary: officer name, client, date, incident count, flagged items count
+- Three action buttons: Approve | Request Changes | Escalate
+
+**4B — Approve:**
+
+```typescript
+// DAR status → 'approved'
+// Approver name and timestamp recorded
+// If client has 'receive_dar' setting enabled:
+//   Send to client portal inbox
+//   Client notification: "Daily Activity Report from [Org] for [date] is available"
+// Save final approved PDF to org document safe permanently
+// Notify officer: "Your DAR for [date] has been approved by [Manager Name]"
+// Publish: { type: 'dar_approved', ... }
+```
+
+**4C — Request Changes:**
+
+```typescript
+// Manager notes specific changes needed
+// ReportBot notified
+// ReportBot contacts officer in shift room (or new DM):
+//   "Your supervisor [Name] has requested changes to your DAR:
+//    [Specific requested changes]
+//    Please provide the additional information and I will update the report."
+// Officer provides updates
+// ReportBot regenerates PDF with changes
+// Resubmits to manager for approval
+// Change history preserved in document record
+```
+
+**4D — Escalate:**
+
+```typescript
+// Manager escalates to org owner
+// Org owner receives notification and PDF
+// Used for serious incidents requiring owner attention
+// Owner can approve, request legal review, or contact platform support
+```
+
+---
+
+**PHASE 5 — DOCUMENT SAFE STORAGE AND CHAIN OF CUSTODY**
+
+**5A — Document safe routing for DARs:**
+
+```
+ORG DOCUMENT SAFE → DAILY ACTIVITY REPORTS
+├── [Year]/
+│   ├── [Month]/
+│   │   ├── DAR-[Client]-[Date]-[Officer]-[Status].pdf
+│   │   └── ...
+```
+
+**5B — Chain of custody metadata:**
+
+Every DAR record must include:
+
+```typescript
+interface DARChainOfCustody {
+  reportId: string
+  generatedAt: Date
+  generatedBy: 'reportbot'
+  officerId: string
+  officerName: string
+  supervisorId: string
+  workspaceId: string
+  clientId: string
+  shiftId: string
+  
+  // Integrity
+  fileHash: string  // SHA-256 of PDF file — detect tampering
+  fileSize: number
+  pageCount: number
+  
+  // Access log
+  accessLog: Array<{
+    accessedBy: string
+    accessedAt: Date
+    action: 'viewed' | 'downloaded' | 'printed' | 'forwarded'
+  }>
+  
+  // Approval chain
+  submittedAt: Date
+  reviewedBy: string
+  reviewedAt: Date
+  approvedBy: string
+  approvedAt: Date
+  sentToClientAt?: Date
+  
+  // Legal hold
+  isLegalHold: boolean
+  legalHoldReason?: string
+  legalHoldSetBy?: string
+  legalHoldSetAt?: Date
+}
+```
+
+**5C — Legal hold:**
+
+When an incident involves police or force:
+- DAR automatically flagged for legal hold consideration
+- Org owner notified: "This report contains a use of force incident. Consider placing it on legal hold to preserve it for potential legal proceedings."
+- Legal hold prevents deletion or modification
+- Trinity monitors legal hold items and reminds org owner monthly
+
+**5D — Document searchability:**
+
+Trinity must be able to find any DAR by:
+- Date range
+- Officer name
+- Client/site
+- Incident type (fight, theft, hazard, etc.)
+- Police case number
+- Status (pending, approved, sent to client)
+- Any keyword in the report
+
+---
+
+**PHASE 6 — STRESS TESTS WITH ACME SIMULATED DATA**
+
+**Test 1 — Complete normal shift (Marcus Rodriguez — Downtown Mall):**
+
+Run end-to-end:
+1. Shift starts — verify ReportBot joins and sends welcome message
+2. Simulate message sequence from Phase 0 test data
+3. /incident command at 14:17 — verify ReportBot asks all questions
+4. Provide answers — verify each response captured
+5. Police info provided — verify case number recorded
+6. Photo uploads — verify GPS and metadata captured
+7. /endshift at 19:58 — verify completeness check runs
+8. Missing items prompted — provide answers
+9. DAR generated — verify PDF quality and completeness
+10. Manager notified — manager approves
+11. Client notification sent (if configured)
+12. PDF saved to document safe
+13. Trinity can query the report
+
+Expected result: Complete professional DAR PDF with all sections, embedded photos, incident report with police info, use of force review, chain of custody metadata.
+
+**Test 2 — Incident-only shift (no routine entries):**
+
+Simulate a shift where officer only sends /incident reports and photos — no routine /report entries. Verify DAR still generates correctly with appropriate sections.
+
+**Test 3 — Photo-only shift (no text):**
+
+Simulate a shift where officer only sends photos with no text. Verify ReportBot prompts for descriptions and generates DAR based on photo metadata and officer responses.
+
+**Test 4 — Abandoned shift (officer goes offline):**
+
+Simulate officer clocking in, sending a few messages, then going offline without /endshift. Verify:
+- Manager notified after shift end time passes
+- ReportBot attempts to generate DAR with available data
+- Missing information flagged prominently
+- DAR generated as 'incomplete' with clear indication
+
+**Test 5 — Multiple incidents in one shift:**
+
+Simulate shift with 3 separate incidents. Verify:
+- Each incident captured separately and completely
+- Each incident gets its own section in the DAR
+- Chronological order maintained
+- Each incident has its own completeness check
+
+**Test 6 — Concurrent shifts (stress test):**
+
+Create 3 simultaneous shifts across 3 different officers at 3 different clients. Run all three simultaneously. Verify:
+- Each shift room is fully isolated
+- ReportBot handles all three simultaneously
+- DARs generated independently
+- No data crossing between shift rooms
+- No performance degradation
+
+**Test 7 — Force clock during shift:**
+
+Simulate officer attempting to clock in outside geofence. Verify:
+- ClockBot handles geofence issue
+- Force clock recorded in ClockBot log
+- Force clock noted in DAR header
+- Manager notified of both force clock and DAR
+
+**Test 8 — DAR after client deactivation:**
+
+Simulate shift completion for Harbor Logistics (deactivated client). Verify:
+- DAR still generates correctly
+- Client deactivation status noted on report
+- Report saved to document safe
+- No errors from deactivated client status
+
+**Test 9 — Trinity queries all generated reports:**
+
+After all tests run — ask Trinity:
+- "Show me all DARs from this week" → verify complete list returned
+- "Were there any use of force incidents this week?" → verify correct incidents found
+- "What was the police case number from the Downtown Mall incident today?" → verify correct answer
+- "Show me Marcus Rodriguez's activity reports" → verify officer-specific results
+- "Which reports are pending manager approval?" → verify correct status query
+
+**Test 10 — Legal hold and search:**
+
+Place the food court incident DAR on legal hold. Verify:
+- Legal hold flag set on document record
+- Deletion attempt fails with legal hold message
+- Document searchable by police case number
+- Access log records every view and download
+
+---
+
+**PHASE 7 — CONTINUOUS SCAN LOOP**
+
+After all phases complete — scan until zero gaps:
+
+```
+REPEAT UNTIL ZERO GAPS OR TIMEOUT:
+
+SCAN EVERY ITERATION:
+
+1. Shift room CRUD
+   - Shift rooms created on every shift assignment?
+   - Messages saved with all required fields?
+   - Photos saved with GPS metadata?
+   - Messages read-only after shift ends?
+   - Cross-workspace isolation confirmed?
+
+2. ReportBot intelligence
+   - Joins every shift room automatically?
+   - Keyword detection fires correctly?
+   - All 6 incident questions asked?
+   - Missing information detected before DAR generation?
+   - Police info specifically requested when police mentioned?
+
+3. DAR 7-step pipeline
+   - All 7 steps execute in correct order?
+   - Spell check runs?
+   - Grammar check runs?
+   - Professional language conversion runs?
+   - Use of force language flagged and reviewed?
+   - Chronological consistency verified?
+   - WHO/WHAT/WHERE/WHEN/WHY/HOW present?
+
+4. PDF quality
+   - All sections present?
+   - All photos embedded in correct positions?
+   - Professional formatting?
+   - Chain of custody metadata complete?
+   - File hash generated?
+   - Report ID unique?
+
+5. Document safe
+   - DAR saved to correct category?
+   - Linked to shift, officer, client, workspace?
+   - Searchable by all required criteria?
+   - Legal hold mechanism works?
+   - Access log tracks every view?
+
+6. Manager approval flow
+   - Manager notified on DAR generation?
+   - Approve/reject/escalate all work?
+   - Changes requested flow works?
+   - Client delivery after approval works?
+
+7. Trinity awareness
+   - Trinity receives dar_generated event?
+   - Trinity can answer queries about DARs?
+   - DARs appear in morning brief when relevant?
+   - Trinity context includes recent DAR summaries?
+
+8. Stress tests
+   - All 10 stress tests pass?
+   - Concurrent shifts isolated?
+   - Performance acceptable?
+
+9. Silent failures
+   - PDF generation failure handled gracefully?
+   - Photo embed failure handled?
+   - Manager notification failure handled?
+   - Retry mechanism for failed reports?
+
+10. Data persistence
+    - DARs persist after server restart?
+    - Photos accessible after 30 days?
+    - Approved DARs immutable?
+    - Legal hold prevents all modifications?
+
+FIX EVERY GAP
+VERIFY clean server after every fix
+REPORT results
+```
+
+---
+
+**SCAN REPORT FORMAT:**
+
+```
+══════════════════════════════════════════════════
+REPORTBOT CHAIN OF EVIDENCE AUDIT — SCAN [N]
+══════════════════════════════════════════════════
+Phase 1 Shift room CRUD:          Found:N Fixed:N
+Phase 2 ReportBot intelligence:   Found:N Fixed:N
+Phase 3 DAR 7-step pipeline:      Found:N Fixed:N
+Phase 4 Manager approval:         Found:N Fixed:N
+Phase 5 Document safe/custody:    Found:N Fixed:N
+Phase 6 Stress tests:             N/10 passing
+Phase 7 Continuous scan:          Found:N Fixed:N
+
+Severity:
+  CRITICAL: Found:N Fixed:N Remaining:N
+  HIGH:     Found:N Fixed:N Remaining:N
+  MEDIUM:   Found:N Fixed:N Remaining:N
+  LOW:      Found:N Fixed:N Remaining:N
+
+Test results:
+  Test 1 Complete normal shift: PASS/FAIL
+  Test 2 Incident-only shift:   PASS/FAIL
+  Test 3 Photo-only shift:      PASS/FAIL
+  Test 4 Abandoned shift:       PASS/FAIL
+  Test 5 Multiple incidents:    PASS/FAIL
+  Test 6 Concurrent shifts:     PASS/FAIL
+  Test 7 Force clock during:    PASS/FAIL
+  Test 8 DAR deactivated client:PASS/FAIL
+  Test 9 Trinity queries:       PASS/FAIL
+  Test 10 Legal hold search:    PASS/FAIL
+
+DAR PDF quality:
+  Professional language: YES/NO
+  Force language reviewed: YES/NO
+  All photos embedded: YES/NO
+  Chain of custody complete: YES/NO
+  All 5W1H present: YES/NO
+
+Cumulative: Found:N Fixed:N Remaining:N
+Server: CLEAN | TypeScript: ZERO ERRORS
+
+Continue: YES/NO
+══════════════════════════════════════════════════
+```
+
+---
+
+**FINAL COMPLETION REPORT:**
+
+```
+══════════════════════════════════════════════════
+REPORTBOT CHAIN OF EVIDENCE SYSTEM — COMPLETE
+══════════════════════════════════════════════════
+Total scans: N | Total fixed: N | Remaining: ZERO
+
+✓ Shift rooms created on every shift assignment
+✓ All messages persisted with full metadata
+✓ GPS captured on every photo upload
+✓ ReportBot joins every shift room automatically
+✓ Keyword detection identifies all incident types
+✓ Complete WHO/WHAT/WHERE/WHEN/WHY/HOW capture
+✓ Police info specifically captured when applicable
+✓ Missing information detected and requested before DAR
+✓ Professional language conversion applied
+✓ Use of force language reviewed for liability
+✓ Spell and grammar check applied
+✓ Chronological consistency verified
+✓ PDF generated with all sections and embedded photos
+✓ Chain of custody metadata complete with file hash
+✓ Legal hold mechanism functional
+✓ Manager approval workflow complete
+✓ Client delivery after approval working
+✓ Document safe organized and searchable
+✓ Trinity can query all DARs with real data
+✓ All 10 stress tests passing
+✓ Cross-workspace isolation confirmed
+✓ Zero silent failures
+
+All 10 stress tests: 10/10 PASSING
+Server: 29/29 HEALTHY
+TypeScript: ZERO ERRORS
+
+REPORTBOT CHAIN OF EVIDENCE SYSTEM — PRODUCTION READY
+══════════════════════════════════════════════════
+```
+
+---
+
+**BEGIN SCAN 1 NOW. AUDIT EXISTING CODE. BUILD MISSING PIECES. RUN ALL STRESS TESTS. SCAN UNTIL ZERO. REPORT EACH SCAN.**
+
+---
+
+Paste scan reports back here as they complete. When all 10 stress tests pass and zero gaps remain the ReportBot chain of evidence system is production ready.

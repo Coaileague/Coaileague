@@ -11,6 +11,9 @@
  */
 
 import { EventEmitter } from 'events';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('rateLimitQueue');
+
 
 interface RateLimitConfig {
   name: string;
@@ -89,7 +92,7 @@ class RateLimitQueueService extends EventEmitter {
       this.metrics.set(name, this.createMetrics());
       this.processing.set(name, false);
     }
-    console.log('[RateLimitQueue] Service initialized with', Object.keys(SERVICE_CONFIGS).length, 'services');
+    log.info('[RateLimitQueue] Service initialized with', Object.keys(SERVICE_CONFIGS).length, 'services');
   }
 
   private createMetrics(): WindowMetrics {
@@ -169,7 +172,7 @@ class RateLimitQueueService extends EventEmitter {
 
     return new Promise<T>((resolve, reject) => {
       const request: QueuedRequest<T> = {
-        id: `${serviceName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${serviceName}-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
         priority: options?.priority ?? 5,
         operation,
         resolve,
@@ -239,7 +242,7 @@ class RateLimitQueueService extends EventEmitter {
         const delay = this.calculateBackoff(request.attempts, config.baseRetryDelayMs);
         metrics.retryCount++;
         
-        console.warn(`[RateLimitQueue] ${serviceName}: Retry ${request.attempts}/${config.retryAttempts} in ${delay}ms`);
+        log.warn(`[RateLimitQueue] ${serviceName}: Retry ${request.attempts}/${config.retryAttempts} in ${delay}ms`);
         
         await this.sleep(delay);
         
@@ -325,7 +328,7 @@ class RateLimitQueueService extends EventEmitter {
     }
     
     this.queues.set(serviceName, []);
-    console.log(`[RateLimitQueue] ${serviceName}: Cleared ${count} pending requests`);
+    log.info(`[RateLimitQueue] ${serviceName}: Cleared ${count} pending requests`);
     
     return count;
   }

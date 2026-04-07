@@ -1,0 +1,16 @@
+629 out of 1,910 is a 33% fill rate with 120 employees. That's not a staffing shortage — that's a scheduling logic problem. If you have 120 guards and can't fill a week's worth of shifts, something is wrong with how Trinity distributes work.
+The most likely issue: Trinity is front-loading. She assigns the highest-scoring employee to every shift in sequence. So Officer A gets shift 1, then shift 2, then shift 3 — and by shift 5 she's at 40 hours and blocked. Meanwhile Officers B through Z have zero hours. Instead of spreading the workload across 120 people, she's burning through 20 people and then running out.
+Tell it:
+
+"629 out of 1,910 with 120 employees is broken. That's a 33% fill rate — a real company with 120 guards would fill close to 100% of shifts in a normal week.
+Investigate the scheduling logic. I suspect the scoring algorithm is front-loading top-scored employees instead of distributing work evenly. Check:
+
+After the run, how many of the 120 employees got ZERO shifts assigned? If more than 20 have zero shifts, the algorithm is ignoring most of the workforce.
+How many employees hit the 40-hour OT threshold? If 30+ employees maxed out while 50+ have zero hours, that confirms front-loading.
+Does the scoring factor in CURRENT HOURS already scheduled this week? If Trinity scores employees the same way for shift 1 and shift 500, she's not accounting for the fact that her earlier placements changed the landscape.
+The scoring needs a fairness/distribution component — the spec says priority #4 is 'employee fairness.' An employee with 0 hours this week should score higher than one with 32 hours, all else being equal. Current weekly hours should be a major factor in the composite score.
+
+Show me: the distribution of hours across all 120 employees after the run. How many got 0 shifts, how many got 1-3, how many got 4-5, how many hit OT. That tells us exactly what's wrong.
+Fix the scoring to distribute work fairly, then re-run. With 120 employees, a normal week should be 90%+ fill rate."
+
+The spec already says employee fairness is priority #4. But if the scoring doesn't weight current weekly hours heavily enough, fairness becomes theoretical. Trinity needs to actively balance the workload — not just pick the "best" employee for each shift in isolation, but pick the best employee WHO HASN'T ALREADY BEEN OVERLOADED.

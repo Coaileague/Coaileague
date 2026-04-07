@@ -4,6 +4,7 @@
  * Shows users waiting for human support, with ability to join their chat
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,12 +15,13 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Headset, Clock, MessageSquare, User, Send, 
-  Loader2, CheckCircle, RefreshCw, Inbox, UserCheck
+  Loader2, CheckCircle, Inbox, UserCheck
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { HELPAI } from '@shared/platformConfig';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface QueueItem {
   id: string;
@@ -54,6 +56,13 @@ interface ActiveSession {
   messages?: any[];
 }
 
+const pageConfig: CanvasPageConfig = {
+  id: 'support-queue',
+  title: 'Support Queue',
+  subtitle: 'Help users waiting for human support',
+  category: 'operations',
+};
+
 export default function SupportQueue() {
   const [activeTab, setActiveTab] = useState('queue');
   const [selectedSession, setSelectedSession] = useState<ActiveSession | null>(null);
@@ -61,7 +70,7 @@ export default function SupportQueue() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: queueData, isLoading: queueLoading, refetch: refetchQueue } = useQuery<{
+  const { data: queueData, isLoading: queueLoading } = useQuery<{
     queue: QueueItem[];
     stats: SessionStats;
   }>({
@@ -69,7 +78,7 @@ export default function SupportQueue() {
     refetchInterval: 10000,
   });
 
-  const { data: mySessionsData, refetch: refetchMySessions } = useQuery<{
+  const { data: mySessionsData } = useQuery<{
     sessions: ActiveSession[];
   }>({
     queryKey: ['/api/support/chat/my-sessions'],
@@ -120,7 +129,7 @@ export default function SupportQueue() {
     onSuccess: async () => {
       setMessageInput('');
       if (selectedSession) {
-        const res = await fetch(`/api/support/chat/session/${selectedSession.id}`);
+        const res = await secureFetch(`/api/support/chat/session/${selectedSession.id}`);
         const data = await res.json();
         if (data.success) {
           setSelectedSession(prev => prev ? {
@@ -130,6 +139,13 @@ export default function SupportQueue() {
           } : null);
         }
       }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Send Message Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -149,6 +165,13 @@ export default function SupportQueue() {
       queryClient.invalidateQueries({ queryKey: ['/api/support/chat/queue'] });
       queryClient.invalidateQueries({ queryKey: ['/api/support/chat/my-sessions'] });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Resolve Session Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const formatWaitTime = (dateStr: string) => {
@@ -160,65 +183,42 @@ export default function SupportQueue() {
   };
 
   return (
-    <div className="container max-w-6xl mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Headset className="w-6 h-6 text-primary" />
-            Support Queue
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Help users waiting for human support
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            refetchQueue();
-            refetchMySessions();
-          }}
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-4 gap-3">
+    <CanvasHubPage config={pageConfig}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{queueData?.stats?.totalActive || 0}</div>
-            <p className="text-xs text-muted-foreground">Active Sessions</p>
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate">{queueData?.stats?.totalActive || 0}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Active</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-amber-500">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold text-amber-500 truncate">
               {queueData?.stats?.waitingHuman || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Waiting for Help</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Waiting</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-500">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold text-green-500 truncate">
               {queueData?.stats?.humanJoined || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Being Helped</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Helped</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">
+          <CardContent className="p-3 sm:pt-4 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold truncate">
               {queueData?.stats?.avgWaitTime || 0}m
             </div>
-            <p className="text-xs text-muted-foreground">Avg Wait Time</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Avg Wait</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="queue" className="gap-2">
             <Inbox className="w-4 h-4" />
             Waiting Queue
@@ -330,7 +330,7 @@ export default function SupportQueue() {
                       selectedSession?.id === session.id && "ring-2 ring-primary"
                     )}
                     onClick={async () => {
-                      const res = await fetch(`/api/support/chat/session/${session.id}`);
+                      const res = await secureFetch(`/api/support/chat/session/${session.id}`);
                       const data = await res.json();
                       if (data.success) {
                         setSelectedSession({
@@ -363,9 +363,9 @@ export default function SupportQueue() {
 
             <div className="lg:col-span-2">
               {selectedSession ? (
-                <Card className="h-[500px] flex flex-col">
+                <Card className="h-[400px] sm:h-[500px] flex flex-col">
                   <CardHeader className="py-3 border-b">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
                         <CardTitle className="text-base flex items-center gap-2">
                           <User className="w-4 h-4" />
@@ -462,7 +462,7 @@ export default function SupportQueue() {
                   </div>
                 </Card>
               ) : (
-                <Card className="h-[500px] flex items-center justify-center">
+                <Card className="h-[400px] sm:h-[500px] flex items-center justify-center">
                   <CardContent className="text-center text-muted-foreground">
                     <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p>Select a chat to view conversation</p>
@@ -473,6 +473,6 @@ export default function SupportQueue() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }

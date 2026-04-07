@@ -1,0 +1,153 @@
+# CoAIleague Development Laws v2
+## PERMANENT STANDING ORDERS — PIN THIS. READ BEFORE EVERY SESSION.
+### Applies to: All agents, subagents, scripts, and automated tools
+
+---
+
+## ⛔ THE ABSOLUTE LAWS — NEVER BREAK THESE FOR ANY REASON
+
+These are not suggestions. These are not guidelines. Violating any of these is grounds for an immediate full stop.
+
+### LAW 1 — NO DROP TABLE. EVER.
+Do not DROP, DELETE, TRUNCATE, or RENAME any database table for any reason, under any framing, at any time. Not "to clean up." Not "it looks unused." Not "the new version replaces it." **Never.** If you think a table should be removed, flag it for Bryan's review and stop. Do not proceed.
+
+### LAW 2 — NO BULK SCRIPTS WITHOUT A TEST RUN FIRST
+Before any automated script touches more than ONE file or ONE record, it must:
+1. Run on a single isolated test file/record first
+2. Output a preview of exactly what it will change
+3. Wait for explicit approval before running at scale
+
+The script that wiped 9,750 import lines ran because this law didn't exist. It exists now.
+
+### LAW 3 — GIT COMMIT BEFORE ANY REFACTOR
+Before starting any refactoring, consolidation, or automated change, run:
+```
+git add .
+git commit -m "checkpoint before [describe what you're about to do]"
+```
+This creates a restore point. If anything breaks, `git restore .` brings everything back instantly.
+
+### LAW 4 — NO SCHEMA CHANGES WITHOUT EXPLICIT APPROVAL
+Do not ALTER, ADD, or REMOVE any column, index, constraint, or relationship in the database schema without Bryan explicitly saying "yes, make this schema change." Suggesting it is fine. Doing it without approval is not.
+
+### LAW 5 — READ BEFORE WRITE, ALWAYS
+Before modifying any file, table, or component:
+1. Read the current state first
+2. Confirm you understand what it does
+3. State what you're about to change and why
+4. Then and only then make the change
+
+---
+
+## 🔶 SUBAGENT RULES — APPLIES TO ALL SPAWNED AGENTS
+
+When the primary agent spawns subagents to handle tasks in parallel or in sequence, every subagent inherits ALL laws above PLUS these additional constraints:
+
+### SUBAGENT LAW 1 — SUBAGENTS DO NOT HAVE PERMISSION TO APPROVE THEMSELVES
+A subagent cannot decide something is "safe enough" to run at scale. Only the primary agent — after reviewing the subagent's proposed change — can authorize execution beyond a single test case.
+
+### SUBAGENT LAW 2 — SUBAGENTS REPORT BEFORE THEY ACT
+Every subagent must output a plain-language summary of:
+- What it found
+- What it plans to change
+- What the risk is
+...BEFORE making any change. No silent execution.
+
+### SUBAGENT LAW 3 — SUBAGENTS OPERATE IN NARROW SCOPE ONLY
+Each subagent is assigned ONE job. It does not expand its scope, touch adjacent files, or "fix things it noticed along the way" without explicit instruction. Scope creep from subagents is how silent damage happens.
+
+### SUBAGENT LAW 4 — PATTERN MATCHING SCRIPTS REQUIRE HUMAN REVIEW
+Any script using regex, string matching, find-and-replace, or glob patterns across multiple files must show Bryan a preview of every match before executing. The import line disaster happened because a pattern matched too broadly. This never happens again.
+
+### SUBAGENT LAW 5 — SUBAGENTS DO NOT CHAIN DESTRUCTIVE ACTIONS
+A subagent completing task A cannot automatically trigger task B if task B is destructive or irreversible. Destructive actions require a full stop and human confirmation between each one.
+
+---
+
+## 🔷 OPERATIONAL RULES — HOW WE WORK
+
+### RULE 1 — ONE SECTION AT A TIME
+Complete one task fully, verify it works, then move to the next. Do not start task B while task A is unverified. Do not batch multiple risky changes into one commit.
+
+### RULE 2 — FRONTEND IS FRONTEND, BACKEND IS BACKEND
+UI and display changes do not touch the database. API changes do not touch the frontend. When a task requires both, complete and verify each layer separately before connecting them.
+
+### RULE 3 — NO SILENT FAILURES
+Every operation must have visible output. If something fails, it must log the failure loudly — not swallow it and continue. "It didn't error" is not the same as "it worked."
+
+### RULE 4 — ASK WHEN UNSURE, DO NOT GUESS AND SHIP
+If the correct approach is unclear, stop and ask Bryan. Do not pick the most likely interpretation and run with it. A 2-minute question saves hours of recovery.
+
+### RULE 5 — CONSOLE ERRORS ARE BLOCKERS
+No change is "done" if there are new console errors after it. Every delivery must include: "No new console errors introduced."
+
+### RULE 6 — TEST ON REAL VIEWPORTS
+Mobile changes must be tested at: 375px, 390px, 430px width.
+Desktop changes must be tested at: 1280px, 1440px, 1920px width.
+Do not assume it works on sizes you didn't check.
+
+### RULE 7 — NEVER TOUCH THESE WITHOUT EXPLICIT INSTRUCTION
+- Trinity AI logic or orchestration
+- Stripe or billing integration
+- Payroll calculation logic
+- Authentication or session handling
+- QuickBooks integration
+- Any file containing "payment", "stripe", "payroll", or "auth" in the name
+
+### RULE 8 — DELIVERY CHECKLIST IS MANDATORY
+Every completed task must include a checklist confirming:
+- [ ] Tested on mobile
+- [ ] Tested on desktop
+- [ ] No console errors
+- [ ] No schema changes made
+- [ ] Git committed before starting
+- [ ] No tables dropped or altered
+
+---
+
+## 🔴 IF SOMETHING GOES WRONG — EMERGENCY PROTOCOL
+
+### Step 1 — STOP IMMEDIATELY
+Do not attempt to fix it. Do not run another script. Do not make it worse by patching over it.
+
+### Step 2 — ASSESS THE DAMAGE
+Report exactly what happened in plain language: what ran, what it touched, what is now broken.
+
+### Step 3 — RESTORE FROM GIT
+```
+git restore .
+```
+This reverts all uncommitted changes. Run this before doing anything else.
+
+### Step 4 — IF GIT RESTORE ISN'T ENOUGH
+```
+git log --oneline
+git checkout [commit-hash]
+```
+Find the last clean commit and restore to it.
+
+### Step 5 — REPORT TO BRYAN BEFORE CONTINUING
+Do not resume work until Bryan has reviewed what happened and given the go-ahead.
+
+---
+
+## SUMMARY — THE SHORT VERSION FOR QUICK REFERENCE
+
+| # | Rule |
+|---|------|
+| 1 | Never DROP TABLE |
+| 2 | Test scripts on ONE file before running at scale |
+| 3 | Git commit before every refactor |
+| 4 | No schema changes without approval |
+| 5 | Read before write, always |
+| 6 | Subagents report before they act |
+| 7 | Subagents don't approve themselves |
+| 8 | Pattern matching scripts need human preview |
+| 9 | One section at a time, verify before moving on |
+| 10 | Ask when unsure — never guess and ship |
+| 11 | No silent failures |
+| 12 | Emergency: Stop → Assess → git restore → Report |
+
+---
+
+*These laws exist because of real mistakes that cost real recovery time. They are not bureaucracy — they are protection for Bryan's platform, his clients' data, and his employees' paychecks.*

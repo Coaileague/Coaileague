@@ -1,0 +1,147 @@
+Send this immediately after the master plan:
+
+---
+
+**PHASE 13 — INBOUND EMAIL ROUTING AND TRINITY AUTO-PROCESSING**
+
+This phase builds the inbound email pipeline from scratch. Four email addresses — calloffs@, incidents@, docs@, support@ — must receive emails, route them through Trinity, and trigger the correct downstream action automatically. This is a build phase and a verification phase. Every pipeline must be built completely, tested end-to-end, and produce the correct downstream records before Phase 13 closes. Report your build plan before writing any code.
+
+---
+
+**STEP 1 — INVENTORY AND PLANNING**
+
+Before writing a single line of code, answer the following:
+- What Resend inbound routing configuration is already in place, if any
+- What domain is being used for inbound email (confirm the MX records requirement)
+- What Trinity actions currently exist that could receive and process inbound email payloads
+- What tables already exist that inbound emails should write to (shift_coverage_requests, incident_reports, documents, support_tickets)
+- What is missing from the schema that needs to be added before inbound processing can work
+
+Document the full build plan per address before proceeding.
+
+---
+
+**STEP 2 — RESEND INBOUND WEBHOOK CONFIGURATION**
+
+Configure Resend inbound routing for all four addresses:
+- calloffs@[domain]
+- incidents@[domain]
+- docs@[domain]
+- support@[domain]
+
+Each address routes to a dedicated webhook endpoint in the platform. Webhook signature verification must be implemented — no unsigned payloads accepted. Each endpoint parses the inbound email payload: sender, subject, body, attachments, timestamp, and recipient address.
+
+Create `server/routes/inboundEmailRoutes.ts` as the single entry point for all four inbound webhook handlers. Mount it at `/api/inbound/email`.
+
+---
+
+**STEP 3 — TRINITY INBOUND EMAIL PROCESSOR**
+
+Create `server/services/trinity/trinityInboundEmailProcessor.ts`. This service is the brain that receives the parsed email payload and decides what to do with it. It must:
+- Identify the recipient address to determine the email category (calloff, incident, doc, support)
+- Extract the sender's identity — match sender email against the employees or clients table to identify who sent it
+- Use Trinity intent parsing to extract structured data from the email body (officer name, shift date, reason for calloff, incident description, etc.)
+- Route the structured payload to the correct downstream handler
+- Log every inbound email to an `inbound_email_log` table: sender, recipient, subject, body_preview, identified_category, matched_entity_id, processing_status, Trinity_action_taken, timestamp
+- Handle unidentified senders — do not discard, log as unmatched and notify a platform admin
+
+---
+
+**STEP 4 — CALLOFF@ PIPELINE**
+
+When an email arrives at calloffs@:
+- Trinity extracts: officer identity, shift date, shift time, reason
+- Matches the officer against employees table by sender email or name extraction
+- Finds the correct upcoming shift for that officer on that date
+- Creates a shift_coverage_requests record with reason, officer_id, shift_id, submission_method: 'email', timestamp
+- Triggers the replacement cascade (same logic as the manual calloff route — do not duplicate, call the existing fireCallOffSequence service)
+- Unassigns the officer from the shift (employeeId → null, status → draft)
+- Sends confirmation reply to the officer via NDS: "Your calloff for [shift date] has been received and a replacement is being arranged"
+- Notifies the manager via NDS
+- If Trinity cannot confidently match the officer or shift — flag as needs_review, notify admin, do not auto-process
+
+---
+
+**STEP 5 — INCIDENTS@ PIPELINE**
+
+When an email arrives at incidents@:
+- Trinity extracts: reporting officer, incident date/time, location, incident type, description
+- Matches officer against employees table
+- Creates an incident_reports record with all extracted fields, submission_method: 'email'
+- Routes to supervisor for review via NDS notification
+- If attachments are present — store in document vault with correct workspace scoping and link to the incident record
+- Sends confirmation reply to the reporting officer: "Your incident report has been received and routed to your supervisor"
+- If Trinity cannot confidently parse the incident — create a draft record with raw email body and flag for manual completion
+
+---
+
+**STEP 6 — DOCS@ PIPELINE**
+
+When an email arrives at docs@:
+- Trinity identifies the document type from subject and body (contract, license, certification, onboarding form, etc.)
+- Matches sender to employee or client record
+- Stores any attachments in the document vault with correct workspace_id, entity_id, and document_type
+- Creates a document record with status: 'received', submission_method: 'email'
+- Routes to the appropriate reviewer based on document type: licenses to compliance officer, contracts to manager, onboarding docs to HR role
+- Sends confirmation reply: "Your document has been received and routed for review"
+- If no attachments — reply asking the sender to resubmit with the document attached
+
+---
+
+**STEP 7 — SUPPORT@ PIPELINE**
+
+When an email arrives at support@:
+- Trinity classifies the support category: billing question, scheduling issue, technical problem, general inquiry
+- Matches sender to employee, client, or platform user record
+- Creates a support_ticket record with: sender_id, workspace_id, category, subject, body, submission_method: 'email', status: 'open', priority based on Trinity classification
+- Routes to the correct support handler: billing → finance team, scheduling → operations, technical → platform staff
+- Sends auto-reply confirming ticket creation with ticket number
+- If sender is unrecognized — create ticket with unverified_sender flag, still process and notify platform support
+
+---
+
+**STEP 8 — FAILURE HANDLING AND RESILIENCE**
+
+Every inbound pipeline must handle failures gracefully:
+- Webhook receives malformed payload — log the raw payload, return 200 to Resend (never return 5xx to inbound webhooks or Resend will retry indefinitely), flag for admin review
+- Trinity parsing fails or returns low-confidence result — create a draft record with raw content, flag as needs_review, notify admin
+- Downstream service throws an error — catch, log to inbound_email_log with processing_status: 'failed', send alert to platform admin, do not lose the email
+- Duplicate email received (Resend occasionally delivers twice) — idempotency check on message-id header before processing
+
+---
+
+**STEP 9 — TRINITY ACTION REGISTRATION**
+
+Register the following Trinity actions in the action registry:
+- `inbound.calloff.process` — process a calloff email payload
+- `inbound.incident.process` — process an incident email payload
+- `inbound.docs.process` — process a document email payload
+- `inbound.support.process` — process a support email payload
+- `inbound.email.query` — query the inbound_email_log for recent emails by category, sender, or status
+- `inbound.email.reprocess` — manually trigger reprocessing of a flagged email by ID
+
+All 6 actions must respect the requesting user's role and workspace context.
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 13 is marked complete:
+- Check 1: Resend inbound webhook endpoints exist and return 200 with valid signature, 401 with invalid signature
+- Check 2: `inbound_email_log` table exists with all required columns
+- Check 3: Calloff email produces a shift_coverage_requests record, unassigns the shift, triggers replacement cascade, sends confirmation reply
+- Check 4: Incident email produces an incident_reports record, routes to supervisor, stores attachments if present
+- Check 5: Docs email stores attachments in document vault, creates document record, routes to correct reviewer
+- Check 6: Support email creates a support_ticket record with correct category and priority
+- Check 7: Unidentified sender is logged as unmatched and admin is notified — not silently dropped
+- Check 8: Duplicate email (same message-id) is deduplicated — not processed twice
+- Check 9: All 6 Trinity actions registered and callable
+- Check 10: Failure in any pipeline does not return 5xx to Resend and does not lose the email
+- Check 11: All inbound processing writes to inbound_email_log with correct status
+- Check 12: Server starts clean with zero TypeScript errors across all new and modified files
+
+Do not mark Phase 13 complete until all 12 checks pass. Report your build plan from Step 1 before writing any code.
+
+---
+
+Paste both prompts back to back. The master plan goes in first, Phase 13 immediately after. Let it run.

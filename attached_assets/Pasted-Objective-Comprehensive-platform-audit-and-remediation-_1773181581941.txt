@@ -1,0 +1,89 @@
+Objective
+Comprehensive platform audit and remediation — security hardening, RBAC corrections, route fixes, logic correctness, and UX/visual enhancements. Derived from 6-layer parallel audit + architect verification.
+
+Tasks
+T001: Fix Route Shadowing in 6 Files
+Blocked By: []
+Details:
+Move all static route definitions ABOVE the /:id parameterized route in each affected file.
+Files: server/routes/approvalRoutes.ts, server/routes/documentLibraryRoutes.ts, server/routes/internalEmails.ts, server/routes/leadCrmRoutes.ts, server/routes/siteBriefingRoutes.ts, server/routes/vehicleRoutes.ts
+approvalRoutes.ts: move /all-pending-counts (currently L239) above /:id (L129)
+documentLibraryRoutes.ts: move /my/pending-signatures (L333) and /external/verify/:token (L347) above /:id (L42)
+internalEmails.ts: move /search/query (L1200), /contacts/search (L1335), /trinity/stats (L1403) above /:id (L567)
+leadCrmRoutes.ts: move /pipeline/stats (L353) above /:id (L76)
+siteBriefingRoutes.ts: move /site/:siteId (L46) above /:id (L28)
+vehicleRoutes.ts: move /assignments/list (L130) and /maintenance/list (L218) above /:id (L35)
+Acceptance: All static routes reachable, no 404s on specific endpoints
+T002: Add requireAuth to vehicleRoutes.ts
+Blocked By: []
+Details:
+Add router.use(requireAuth) at the top of server/routes/vehicleRoutes.ts
+Import requireAuth from server/middleware/auth if not already imported
+Files: server/routes/vehicleRoutes.ts
+Acceptance: All vehicle routes require authentication
+T003: Add requireAuth to documentTemplateRoutes.ts and documentVaultRoutes.ts
+Blocked By: []
+Details:
+Read both files and add router.use(requireAuth) at router initialization
+documentTemplateRoutes.ts: add requireAuth to all GET routes at minimum
+documentVaultRoutes.ts: add router-level requireAuth
+Files: server/routes/documentTemplateRoutes.ts, server/routes/documentVaultRoutes.ts
+Acceptance: All document routes require authentication
+T004: Fix IDOR — Add Workspace Scoping on ID-Based Routes
+Blocked By: []
+Details:
+approvalRoutes.ts L129: pass workspaceId to getApprovalById query or add workspace filter in the handler
+complianceInlineRoutes.ts L118: DELETE /acknowledgments/:id — add AND workspace_id = req.user.workspaceId to delete query
+documentTemplateRoutes.ts L191, L239: ensure PATCH and DELETE final queries include workspaceId condition
+Files: server/routes/approvalRoutes.ts, server/routes/complianceInlineRoutes.ts, server/routes/documentTemplateRoutes.ts
+Acceptance: Cross-tenant access returns 404 or 403
+T005: Fix Wrong HTTP Status Codes
+Blocked By: []
+Details:
+messageBridgeRoutes.ts L53: change res.status(200) to res.status(500) when success:false
+billing-api.ts L152: change res.status(200) to res.status(422) or res.status(500) for error payloads
+Files: server/routes/messageBridgeRoutes.ts, server/routes/billing-api.ts
+Acceptance: Error responses return appropriate 4xx/5xx codes
+T006: Lock RBAC on Compliance and Expense Endpoints
+Blocked By: []
+Details:
+server/routes/compliance/enforcement.ts L76: GET /employee/:employeeId/eligibility — add requireManager middleware
+server/routes/compliance/enforcement.ts L139: GET /config — add requireAdmin middleware
+server/routes/expenseRoutes.ts L109: GET /pending-approval — add requireManager middleware
+Files: server/routes/compliance/enforcement.ts, server/routes/expenseRoutes.ts
+Acceptance: Non-manager staff cannot access these endpoints
+T007: Normalize Frontend RBAC Role Constants
+Blocked By: []
+Details:
+client/src/hooks/useWorkboard.ts L61: add 'admin' and 'supervisor' to isManager check
+client/src/hooks/useWorkflowPermissions.ts L54: remove 'accountant' and 'hr_manager' (not defined in backend RBAC), replace with valid roles
+client/src/lib/sidebarModules.ts L1441: add 'admin' to isManager definition
+server/services/ai-brain/aiBrainMasterOrchestrator.ts: replace 'super_admin' with valid role from RBAC hierarchy
+Files: client/src/hooks/useWorkboard.ts, client/src/hooks/useWorkflowPermissions.ts, client/src/lib/sidebarModules.ts, server/services/ai-brain/aiBrainMasterOrchestrator.ts
+Acceptance: All role checks use valid roles from RBAC hierarchy; 'admin' included in manager+ checks on frontend
+T008: Frontend Auth Visibility — Hide Actions by Role
+Blocked By: [T007]
+Details:
+client/src/pages/employees.tsx: gate Edit/Delete/Invite buttons behind admin/manager role check using useWorkspaceAccess hook
+client/src/pages/billing.tsx: gate "Buy Credits" and "View Plans" buttons behind org_owner/co_owner check
+Files: client/src/pages/employees.tsx, client/src/pages/billing.tsx
+Acceptance: Non-admin staff cannot see destructive employee actions; only owner-level can manage billing
+T009: Empty State + UX Polish (Immediate Wins)
+Blocked By: []
+Details:
+client/src/pages/rfp-manager.tsx: replace simple text empty state with UniversalEmptyState component
+client/src/pages/support-bug-dashboard.tsx L341, L372: replace icon-text empty states with UniversalEmptyState
+client/src/pages/workflow-approvals.tsx L310: replace basic icon with UniversalEmptyState
+Also add Avg Confidence color-coded trend indicator in support-bug-dashboard.tsx
+Files: client/src/pages/rfp-manager.tsx, client/src/pages/support-bug-dashboard.tsx, client/src/pages/workflow-approvals.tsx
+Acceptance: Empty states look polished with clear messages and action CTAs
+T010: MetricTile Trend Enhancements + Sparkline Foundation
+Blocked By: [T009]
+Details:
+Enhance MetricTile component in client/src/components/metric-tile.tsx to support:
+Color-coded trend arrow (green/red based on positive/negative trend value)
+Optional sparkline prop (mini recharts line) for revenue/confidence metrics
+Update dashboard.tsx Monthly Revenue MetricTile to use sparkline with last 7 days data
+Update workflow-approvals.tsx stat cards to show trend context
+Files: client/src/components/metric-tile.tsx, client/src/pages/dashboard.tsx, client/src/pages/workflow-approvals.tsx
+Acceptance: KPI cards show visual trend context; sparklines render for revenue; trending arrows are color-coded

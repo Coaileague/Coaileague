@@ -1,0 +1,254 @@
+Correct call. Here is the prompt to finish Phase 1 with zero loose strings.
+
+---
+
+**COAILEAGUE — PHASE 1 FINAL CLEANUP: ZERO LOOSE STRINGS**
+*Fix Incorrectly Classified Category C Queries | Rewrite Transaction Blocks | No Annotations as Substitutes for Real Work*
+
+---
+
+**READ THIS BEFORE TOUCHING ANYTHING**
+
+Phase 1 has two remaining gaps that must be closed before Phase 2 begins. These are not documentation tasks. They are conversion tasks. Adding a comment that says a query is Category C does not make it Category C. A query is Category C only if it uses a SQL feature that genuinely cannot be expressed in Drizzle ORM. Several queries were classified Category C using justifications that are factually incorrect — Drizzle supports those features. Those queries must be converted now. Additionally 212 client.query transaction blocks were annotated instead of rewritten. Annotation is not conversion. They must be rewritten now.
+
+No scripts. No batch processors. No auto-annotators. Every query is read by a human, understood, and either converted or correctly justified. This is the same standard that found the `end_date` and `employment_status` phantom column bugs. That standard does not change for the final cleanup.
+
+---
+
+**GAP 1 — INCORRECTLY CLASSIFIED CATEGORY C QUERIES**
+
+The following justifications were used to classify queries as Category C but are factually wrong. Drizzle ORM supports every one of these features natively. Any query whose Category C annotation cites only one of these reasons — with no other legitimate complexity — must be converted to true Drizzle ORM:
+
+**`RETURNING clause`** — Drizzle fully supports this:
+```typescript
+const [record] = await db
+  .insert(table)
+  .values(data)
+  .returning();
+```
+
+**`ON CONFLICT DO UPDATE`** — Drizzle fully supports this:
+```typescript
+await db
+  .insert(table)
+  .values(data)
+  .onConflictDoUpdate({
+    target: table.uniqueColumn,
+    set: { updatedAt: sql`now()`, ...updateData }
+  });
+```
+
+**`NOW() in VALUES/SET`** — Drizzle supports sql fragments inside ORM calls:
+```typescript
+await db
+  .update(table)
+  .set({ updatedAt: sql`now()`, status: 'active' })
+  .where(eq(table.id, id));
+```
+
+**`Health check SELECT 1`** — This is the simplest query that exists:
+```typescript
+await db.execute(sql`SELECT 1`);
+// Or even simpler — just ping the pool directly, no wrapper needed
+```
+
+**`CONCAT / string_agg in SELECT`** — Expressible with sql fragments inside ORM:
+```typescript
+const results = await db
+  .select({
+    fullName: sql<string>`concat(${employees.firstName}, ' ', ${employees.lastName})`,
+    tags: sql<string>`string_agg(${tags.name}, ', ')`
+  })
+  .from(employees);
+```
+
+**EXECUTION:**
+
+Scan every Category C annotation across all 177 annotated files. Find every annotation whose justification cites only the patterns listed above with no other legitimate complexity factor. For each one:
+
+Read the full SQL query inside the wrapper. Understand what it does. Write the true Drizzle ORM equivalent using the patterns shown above. Verify the replacement produces identical results against the ACME sandbox. Remove the wrapper and the annotation. Replace with the ORM call.
+
+If a query cites one of the above patterns BUT ALSO has additional genuine complexity — a window function, a recursive CTE, a DISTINCT ON, a FOR UPDATE lock, a JSONB operator, an INTERVAL aggregation — it may remain Category C. The additional complexity is the justification. The RETURNING clause or ON CONFLICT alone is not.
+
+Report after every 10 files: how many queries were converted, how many were legitimately kept, and any phantom columns found during the review.
+
+---
+
+**GAP 2 — 212 CLIENT.QUERY TRANSACTION BLOCKS**
+
+These 21 files have client.query calls inside transaction blocks that were annotated but not converted. Work through them in order of highest call count first:
+
+```
+server/routes/atsRoutes.ts — 32 calls
+server/routes/postOrderVersionRoutes.ts — 29 calls
+server/routes/hiringRoutes.ts — 21 calls
+server/routes/incidentPatternRoutes.ts — 18 calls
+server/routes/trainingComplianceRoutes.ts — 18 calls
+server/routes/contractRenewalRoutes.ts — 16 calls
+server/routes/clientSatisfactionRoutes.ts — 14 calls
+server/routes/subcontractorRoutes.ts — 14 calls
+server/routes/bidAnalyticsRoutes.ts — 12 calls
+server/routes/cadRoutes.ts — 8 calls
+server/routes/analyticsRoutes.ts — 6 calls
+server/routes/incidentPipelineRoutes.ts — 6 calls
+server/routes/publicHiringRoutes.ts — 6 calls
+server/routes/financeInlineRoutes.ts — 2 calls
+server/routes/helpdeskRoutes.ts — 1 call
+server/routes/trinityStaffingRoutes.ts — 1 call
+server/db.ts — 5 calls
+server/lib/typedSql.ts — 2 calls
+server/index.ts — 1 call
+server/services/ai-brain/providers/modelRouter.ts — 1 call
+server/services/expansionMigration.ts — 1 call
+```
+
+For every file: open it and read every transaction block from `pool.connect()` or `db.$client` through `client.release()`. For each transaction block determine which of these three outcomes applies:
+
+**Outcome 1 — Rewrite with db.transaction():**
+The transaction block performs a sequence of INSERT, UPDATE, DELETE, or SELECT operations that can be expressed in Drizzle ORM. Rewrite the entire block:
+
+```typescript
+// BEFORE — pool.connect() pattern
+const client = await pool.connect();
+try {
+  await client.query('BEGIN');
+  const result = await client.query(
+    'INSERT INTO applicants (name, workspace_id) VALUES ($1, $2) RETURNING id',
+    [name, workspaceId]
+  );
+  await client.query(
+    'INSERT INTO applicant_events (applicant_id, event_type) VALUES ($1, $2)',
+    [result.rows[0].id, 'created']
+  );
+  await client.query('COMMIT');
+} catch (e) {
+  await client.query('ROLLBACK');
+  throw e;
+} finally {
+  client.release();
+}
+
+// AFTER — db.transaction() pattern
+const [applicant] = await db.transaction(async (tx) => {
+  const [newApplicant] = await tx
+    .insert(applicants)
+    .values({ name, workspaceId })
+    .returning();
+  
+  await tx
+    .insert(applicantEvents)
+    .values({ applicantId: newApplicant.id, eventType: 'created' });
+  
+  return [newApplicant];
+});
+```
+
+Every query inside the rewritten transaction uses the Drizzle schema object. Every inserted record includes `workspaceId`. Every query that was Category A inside the transaction becomes a true ORM call. Every query that is genuinely Category C inside the transaction uses `tx.execute(sql\`...\`)` with the full Category C annotation.
+
+**Outcome 2 — Partial rewrite with tx.execute() for genuine Category C:**
+The transaction block contains a mix of simple queries and genuinely complex SQL. Rewrite using `db.transaction()`. Simple queries become ORM calls on `tx`. Complex queries become `tx.execute(sql\`...\`)` with full Category C annotation:
+
+```typescript
+await db.transaction(async (tx) => {
+  // Simple — converted to ORM
+  const [shift] = await tx
+    .insert(shifts)
+    .values(shiftData)
+    .returning();
+
+  // CATEGORY C — Raw SQL retained: FOR UPDATE row lock required for 
+  // concurrent shift assignment protection | Tables: shift_locks | 
+  // Verified: 2026-03-23
+  await tx.execute(sql`
+    SELECT id FROM shift_locks 
+    WHERE shift_id = ${shift.id} 
+    FOR UPDATE SKIP LOCKED
+  `);
+});
+```
+
+**Outcome 3 — Keep pool.connect() with full documentation:**
+The transaction block uses a PostgreSQL feature that `db.transaction()` genuinely cannot handle — explicit SAVEPOINT management, LISTEN/NOTIFY within a transaction, or advisory locks that must persist across the connection. Keep the `pool.connect()` pattern but apply the full Category C standard to every `client.query` call inside it. The comment block must name the specific PostgreSQL feature that requires direct pool access:
+
+```typescript
+// CATEGORY C — pool.connect() retained: explicit SAVEPOINT management 
+// required for nested transaction rollback behavior | 
+// Tables: [list tables] | Verified: 2026-03-23
+const client = await pool.connect();
+```
+
+After every file is processed: start the server, confirm it starts clean, run the primary operation the converted file handles in the ACME sandbox and confirm it produces correct results. Do not batch process files and verify at the end. Verify after each file.
+
+---
+
+**VERIFICATION AFTER BOTH GAPS ARE CLOSED**
+
+**Scan verification:**
+
+Run a search for every Category C annotation that cites only these justifications with no other complexity factor: `RETURNING clause`, `ON CONFLICT DO UPDATE`, `NOW() in VALUES`, `Health check SELECT 1`, `CONCAT`, `string_agg`. Every result must be gone — converted to ORM. Zero remaining annotations with these as sole justifications.
+
+Run a search for `pool.connect()` and `db.$client.query` and `client.query` across all route and service files. Every result must be either inside a documented Outcome 3 block with a specific PostgreSQL feature justification, or inside `typedSql.ts` which is the infrastructure file. Zero bare unconverted transaction blocks remain.
+
+**Ghost column check:**
+
+During the conversion of 212 transaction blocks, every SQL string inside a `client.query` call must have its column names cross-referenced against the canonical Name Registry. If any column referenced does not exist in the database — another phantom column — fix it during conversion and add it to the ghost column report in replit.md.
+
+**Server verification:**
+
+Start the server fresh. Confirm 30/30 background services start with zero failures. Confirm login flow completes without error.
+
+**Functional verification:**
+
+Run these ten operations against the ACME sandbox and confirm all produce correct results with data persisting to the correct records: create an employee, create a shift, generate an invoice, run a payroll calculation, execute a Trinity action, run a hiring pipeline stage transition, generate a pay stub, create a client, assign a shift through Trinity, send an invoice and confirm status updates.
+
+**Phase 1 final scan:**
+
+Re-run the complete Phase 1 schema parity check. Required result: zero untracked tables, zero untracked columns, zero Category C annotations with incorrect justifications, zero unconverted transaction blocks, zero bare client.query calls without full documentation.
+
+---
+
+**REPLIT.MD FINAL UPDATE**
+
+Replace the SQL Migration Debt section with:
+
+```
+## Phase 1 — COMPLETE
+
+Schema Parity: 661 tables, 0 untracked columns, 0 untracked tables.
+
+SQL Migration:
+- 6 Category A queries converted to true Drizzle ORM
+- All remaining queries verified as legitimate Category C with correct 
+  justifications — RETURNING, ON CONFLICT, NOW(), and health check 
+  justifications were audited and either converted or re-justified with 
+  genuine complexity factors
+- All client.query transaction blocks rewritten with db.transaction() 
+  where possible, kept as pool.connect() only where specific PostgreSQL 
+  features require direct pool access with full documentation
+
+Ghost columns found and fixed:
+- payroll_deductions.end_date (silent wrong results on deduction queries)
+- employees.employment_status (silent wrong results on compliance scan)
+- [any additional found during Gap 2 conversion listed here]
+
+Additional bugs fixed:
+- errorTrackingService.ts crash on .rows access
+- Auth/logout routing across 4 files
+- Session timeout logout reference
+- SPS workspace orphan clearing 11 users
+- RBAC role fallback for non-owners
+
+Phase 1 certified complete. Phase 2 ready to begin.
+```
+
+---
+
+**PHASE 1 IS COMPLETE WHEN:**
+
+Zero Category C annotations with RETURNING, ON CONFLICT, NOW(), health check, or CONCAT as their sole justification remain anywhere in the codebase. Zero unconverted bare transaction blocks remain. Zero bare undocumented client.query calls remain. The server starts with 30/30 services. All ten functional operations succeed. The replit.md Phase 1 section shows COMPLETE status with the ghost column report updated.
+
+Only then does Phase 2 begin. Bring the final scan results here before Phase 2 prompt goes in.
+
+---
+
+That is the prompt Bryan. No loose strings. When he brings the final scan back showing zero on all counts, bring it here and we confirm before Phase 2 goes in.

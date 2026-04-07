@@ -21,6 +21,9 @@ import {
   type ComprehensiveDiagnosticResult,
   type DiagnosticDomain,
 } from './diagnosticServiceRegistry';
+import { createLogger } from '../lib/logger';
+const log = createLogger('healthService');
+
 
 export interface SystemMetrics {
   memory: {
@@ -153,7 +156,7 @@ function updateUptimeRecord(service: string, isHealthy: boolean): void {
 
 export function logError(service: string, message: string, severity: 'warning' | 'error' | 'critical'): void {
   const entry: ErrorLogEntry = {
-    id: `err-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
     service,
     message,
     timestamp: new Date().toISOString(),
@@ -313,7 +316,7 @@ export {
 export type { ComprehensiveDiagnosticResult, DiagnosticDomain };
 
 export async function runTrinityFastDiagnostics(mode: 'quick' | 'full' = 'full'): Promise<ComprehensiveDiagnosticResult> {
-  console.log(`[HealthService] Running Trinity FAST diagnostics (${mode} mode)...`);
+  log.info(`[HealthService] Running Trinity FAST diagnostics (${mode} mode)...`);
   const startTime = Date.now();
   
   if (mode === 'quick') {
@@ -353,7 +356,7 @@ export async function runTrinityFastDiagnostics(mode: 'quick' | 'full' = 'full')
     const criticalDown = results.some(r => r.status === 'down' && r.isCritical);
     const criticalDegraded = results.some(r => r.status === 'degraded' && r.isCritical);
     
-    console.log(`[HealthService] Quick diagnostics complete: ${results.length} services in ${Date.now() - startTime}ms`);
+    log.info(`[HealthService] Quick diagnostics complete: ${results.length} services in ${Date.now() - startTime}ms`);
     
     return {
       overall: criticalDown ? 'down' : criticalDegraded ? 'degraded' : 'operational',
@@ -369,6 +372,6 @@ export async function runTrinityFastDiagnostics(mode: 'quick' | 'full' = 'full')
   
   // Full mode: All services with FAST parallel batch execution
   const result = await runFastModeBatchDiagnostics(15); // 15 services per batch
-  console.log(`[HealthService] Full diagnostics complete: ${result.totalServices} services in ${result.executionTimeMs}ms`);
+  log.info(`[HealthService] Full diagnostics complete: ${result.totalServices} services in ${result.executionTimeMs}ms`);
   return result;
 }

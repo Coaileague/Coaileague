@@ -4,9 +4,13 @@
  * Central job queue and orchestration endpoints for AI task management.
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { workboardService } from '../services/ai-brain/workboardService';
 import { fastModeService, FAST_MODE_CONFIG } from '../services/ai-brain/fastModeService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('WorkboardRoutes');
+
 
 export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res: any, next: any) => void) {
   /**
@@ -47,9 +51,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
           createdAt: task.createdAt
         }
       });
-    } catch (error: any) {
-      console.error('[Workboard] Submit error:', error);
-      res.status(500).json({ error: 'Failed to submit task', message: error.message });
+    } catch (error: unknown) {
+      log.error('[Workboard] Submit error:', error);
+      res.status(500).json({ error: 'Failed to submit task', message: sanitizeError(error) });
     }
   });
 
@@ -63,15 +67,16 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
     try {
       const userId = req.userId!;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
-      const platformRole = req.user?.platformRole || 'none';
+      const { getUserPlatformRole: getWbPlatRole } = await import('../rbac');
+      const platformRole = await getWbPlatRole(userId);
       const { status, priority, limit, offset, scope } = req.query;
 
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace context required' });
       }
 
-      const isAdmin = ['root_admin', 'super_admin', 'support_admin'].includes(platformRole);
-      const isSupport = ['support_manager', 'support_agent', 'support_lead'].includes(platformRole);
+      const isAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(platformRole);
+      const isSupport = ['support_manager', 'support_agent'].includes(platformRole);
       
       const statusFilter = status ? (status as string).split(',') as any : undefined;
       const priorityFilter = priority as string | undefined;
@@ -120,9 +125,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
           hasMore: tasks.length >= (limit ? parseInt(limit as string) : 50),
         }
       });
-    } catch (error: any) {
-      console.error('[Workboard] List error:', error);
-      res.status(500).json({ error: 'Failed to fetch tasks', message: error.message });
+    } catch (error: unknown) {
+      log.error('[Workboard] List error:', error);
+      res.status(500).json({ error: 'Failed to fetch tasks', message: sanitizeError(error) });
     }
   });
 
@@ -168,9 +173,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
           completedAt: task.completedAt
         }
       });
-    } catch (error: any) {
-      console.error('[Workboard] Get task error:', error);
-      res.status(500).json({ error: 'Failed to fetch task', message: error.message });
+    } catch (error: unknown) {
+      log.error('[Workboard] Get task error:', error);
+      res.status(500).json({ error: 'Failed to fetch task', message: sanitizeError(error) });
     }
   });
 
@@ -189,9 +194,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       }
 
       res.json({ success: true, message: 'Task cancelled' });
-    } catch (error: any) {
-      console.error('[Workboard] Cancel error:', error);
-      res.status(500).json({ error: 'Failed to cancel task', message: error.message });
+    } catch (error: unknown) {
+      log.error('[Workboard] Cancel error:', error);
+      res.status(500).json({ error: 'Failed to cancel task', message: sanitizeError(error) });
     }
   });
 
@@ -209,9 +214,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       }
 
       res.json({ success: true, message: 'Task queued for retry' });
-    } catch (error: any) {
-      console.error('[Workboard] Retry error:', error);
-      res.status(500).json({ error: 'Failed to retry task', message: error.message });
+    } catch (error: unknown) {
+      log.error('[Workboard] Retry error:', error);
+      res.status(500).json({ error: 'Failed to retry task', message: sanitizeError(error) });
     }
   });
 
@@ -229,9 +234,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       const stats = await workboardService.getWorkspaceStats(workspaceId);
 
       res.json({ success: true, stats });
-    } catch (error: any) {
-      console.error('[Workboard] Stats error:', error);
-      res.status(500).json({ error: 'Failed to fetch stats', message: error.message });
+    } catch (error: unknown) {
+      log.error('[Workboard] Stats error:', error);
+      res.status(500).json({ error: 'Failed to fetch stats', message: sanitizeError(error) });
     }
   });
 
@@ -264,9 +269,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
           slaGuarantees: FAST_MODE_CONFIG.slaGuarantees
         }
       });
-    } catch (error: any) {
-      console.error('[FastMode] Status error:', error);
-      res.status(500).json({ error: 'Failed to check fast mode status', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Status error:', error);
+      res.status(500).json({ error: 'Failed to check fast mode status', message: sanitizeError(error) });
     }
   });
 
@@ -287,9 +292,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
         tasks: activeTasks,
         count: activeTasks.length
       });
-    } catch (error: any) {
-      console.error('[FastMode] Active tasks error:', error);
-      res.status(500).json({ error: 'Failed to fetch active tasks', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Active tasks error:', error);
+      res.status(500).json({ error: 'Failed to fetch active tasks', message: sanitizeError(error) });
     }
   });
 
@@ -307,9 +312,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       }
       
       res.json({ status });
-    } catch (error: any) {
-      console.error('[FastMode] Task status error:', error);
-      res.status(500).json({ error: 'Failed to fetch task status', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Task status error:', error);
+      res.status(500).json({ error: 'Failed to fetch task status', message: sanitizeError(error) });
     }
   });
 
@@ -327,9 +332,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       const comparison = await fastModeService.getValueComparison(workspaceId);
       
       res.json(comparison);
-    } catch (error: any) {
-      console.error('[FastMode] Value comparison error:', error);
-      res.status(500).json({ error: 'Failed to fetch value comparison', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Value comparison error:', error);
+      res.status(500).json({ error: 'Failed to fetch value comparison', message: sanitizeError(error) });
     }
   });
 
@@ -351,7 +356,7 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
         return res.status(400).json({ error: 'Content is required' });
       }
 
-      const taskId = `velocity-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const taskId = `velocity-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
       
       const result = await fastModeService.executeVelocity({
         taskId,
@@ -379,9 +384,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
         needsReviewAgents: result.result.needsReviewAgents,
         creditsUsed: result.creditsUsed
       });
-    } catch (error: any) {
-      console.error('[FastMode] Velocity execution error:', error);
-      res.status(500).json({ error: 'Velocity execution failed', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Velocity execution error:', error);
+      res.status(500).json({ error: 'Velocity execution failed', message: sanitizeError(error) });
     }
   });
 
@@ -392,9 +397,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
     try {
       const stats = fastModeService.getVelocityStats();
       res.json(stats);
-    } catch (error: any) {
-      console.error('[FastMode] Velocity stats error:', error);
-      res.status(500).json({ error: 'Failed to fetch velocity stats', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Velocity stats error:', error);
+      res.status(500).json({ error: 'Failed to fetch velocity stats', message: sanitizeError(error) });
     }
   });
 
@@ -427,9 +432,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       });
 
       res.json(estimate);
-    } catch (error: any) {
-      console.error('[FastMode] Cost estimate error:', error);
-      res.status(500).json({ error: 'Failed to get cost estimate', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Cost estimate error:', error);
+      res.status(500).json({ error: 'Failed to get cost estimate', message: sanitizeError(error) });
     }
   });
 
@@ -453,9 +458,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       const roi = await fastModeService.getROIAnalytics(workspaceId, selectedPeriod);
 
       res.json(roi);
-    } catch (error: any) {
-      console.error('[FastMode] ROI analytics error:', error);
-      res.status(500).json({ error: 'Failed to get ROI analytics', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] ROI analytics error:', error);
+      res.status(500).json({ error: 'Failed to get ROI analytics', message: sanitizeError(error) });
     }
   });
 
@@ -466,9 +471,9 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
     try {
       const tiers = fastModeService.getTiers();
       res.json({ tiers });
-    } catch (error: any) {
-      console.error('[FastMode] Tiers error:', error);
-      res.status(500).json({ error: 'Failed to get tiers', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Tiers error:', error);
+      res.status(500).json({ error: 'Failed to get tiers', message: sanitizeError(error) });
     }
   });
 
@@ -493,14 +498,14 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
       });
 
       res.json(digest);
-    } catch (error: any) {
-      console.error('[FastMode] Digest generation error:', error);
-      res.status(500).json({ error: 'Failed to generate digest', message: error.message });
+    } catch (error: unknown) {
+      log.error('[FastMode] Digest generation error:', error);
+      res.status(500).json({ error: 'Failed to generate digest', message: sanitizeError(error) });
     }
   });
 
-  console.log('[WorkboardRoutes] AI Brain Workboard routes registered');
-  console.log('[WorkboardRoutes] Fast Mode routes registered');
-  console.log('[WorkboardRoutes] Velocity Engine routes registered');
-  console.log('[WorkboardRoutes] Fast Mode V2 enhancement routes registered');
+  log.info('[WorkboardRoutes] AI Brain Workboard routes registered');
+  log.info('[WorkboardRoutes] Fast Mode routes registered');
+  log.info('[WorkboardRoutes] Velocity Engine routes registered');
+  log.info('[WorkboardRoutes] Fast Mode V2 enhancement routes registered');
 }

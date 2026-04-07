@@ -1,0 +1,509 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — UNIVERSAL DOCUMENT SYSTEM FULL ENHANCEMENT
+Trinity-Orchestrated, Compliance-Grade, Beautiful on Every Device
+One source of truth for every document the platform generates, sends, collects, and stores.
+Read everything before touching anything. Review existing designs first. Report what exists
+before building anything new. Do not duplicate what is already built.
+
+---
+
+FIRST — READ WHAT ALREADY EXISTS
+
+Before writing a single line read every existing document-related file in the codebase.
+Specifically find and read:
+The employee onboarding document design that is already built.
+The proposal and contract document design that is already built.
+The DocuSign or signature system that is already implemented.
+The document safe or vault storage system.
+The document pipeline and routing logic.
+The Trinity document orchestration actions registered in the Action Hub.
+Report exactly what exists, what is complete, what is partial, and what is missing.
+Do not rebuild what already works. Enhance and complete what is there.
+
+---
+
+PART 1 — UNIVERSAL DOCUMENT DESIGN SYSTEM
+One design standard. Every document looks like it came from the same professional system.
+No document looks different from another. No mobile document looks worse than desktop.
+
+DESIGN STANDARDS — APPLY TO EVERY DOCUMENT:
+
+Header: every document has a uniform header containing the org logo or name,
+org license number, document title, document ID, version number, date generated,
+and a confidentiality classification label. Header is identical in structure
+across all document types. Only the content changes.
+
+Footer: every document has a uniform footer containing page number of total pages,
+org name, platform-generated watermark "Powered by CoAIleague" in subtle gray,
+document status (Draft, Pending Signature, Executed, Voided), and a QR code
+linking to the document in the org document safe for verification purposes.
+
+Typography: one font family across all documents. Clean, professional, readable.
+Headings are consistent sizes. Body text is consistent size. Line height is
+generous for readability. No document uses more than two font weights.
+
+Signature areas: every signature block is identical in structure.
+Full legal name field, signature field, date field, title or role field.
+Each signer gets their own clearly labeled signature block.
+Signature blocks have a visible border and a distinct background color
+to make them unmistakable on both screen and printed output.
+
+Color system: one primary brand color used for headers and section dividers.
+Neutral gray for secondary elements. White background always.
+No garish colors. Professional security industry aesthetic.
+
+Auto-sizing: document content expands to fill content naturally.
+No content is ever cut off. No text overflows its container.
+Signature blocks always appear on a clean page — never split across a page break.
+If a signature block would be split by a page break force a page break before it.
+
+MOBILE RENDERING:
+Every document renders correctly on screens as small as 375px wide.
+Signature areas are finger-tap sized on mobile — minimum 44px height.
+The signature capture on mobile accepts finger drawing, not just typed name.
+Pinch-to-zoom works on all document views.
+Documents can be scrolled vertically on mobile without horizontal scroll.
+The sign button is always visible and accessible — never buried below the fold.
+
+DESKTOP RENDERING:
+Documents render in a centered reading column on wide screens.
+Maximum content width of 800px for readability.
+A document action sidebar shows on the right for desktop — current signers,
+status, pending actions, download button, audit trail link.
+Print layout matches digital layout exactly — what you see is what prints.
+
+PDF GENERATION:
+Every document can be exported as a professional-grade PDF.
+The PDF matches the on-screen rendering exactly.
+PDFs are generated server-side not client-side.
+PDF file names follow this format: DocumentType_OrgName_Date_DocumentID.pdf
+PDFs are automatically saved to the org document safe on generation.
+PDFs are watermarked with EXECUTED or COPY across the body when finalized.
+
+---
+
+PART 2 — UNIVERSAL DOCUSIGN ORCHESTRATION PIPELINE
+One pipeline. All documents flow through it. Trinity orchestrates every step.
+
+THE UNIVERSAL DOCUMENT PIPELINE — 8 STEPS:
+
+Step 1 TRIGGER: Document creation is triggered by a platform event, a Trinity action,
+a manual org_owner or manager action, or an inbound request.
+Every document creation event is logged in the audit trail immediately on trigger.
+
+Step 2 GENERATE: The document template is populated with the relevant data.
+Employee name, org name, license number, dates, pay rates, site details,
+whatever the document type requires — all pulled from the database automatically.
+No manual data entry for fields the system already knows.
+The document is rendered and stored as a draft in the document safe.
+
+Step 3 ROUTE: Trinity determines who needs to sign or acknowledge the document
+based on the document type and the workflow rules for that type.
+The routing is deterministic — the same document type always goes to the same
+set of signers in the same order. No ambiguity.
+
+Step 4 NOTIFY: Each signer receives a notification via the notification panel,
+an email via Resend with the document title, a summary of what they are signing,
+and a direct link to the document. The notification includes a clear deadline
+if one is required by the document type.
+
+Step 5 SIGN OR ACKNOWLEDGE: The signer opens the document, reviews it,
+and either signs, initials, or acknowledges each required field.
+The platform captures their full legal name, signature, timestamp, IP address,
+and device type for each signature event. This is the legal record.
+Signers can only sign their own designated signature blocks — not other signers blocks.
+
+Step 6 VALIDATE: After each signature the platform validates that the signature
+block is complete and that the signer is who they claim to be based on their
+authenticated session. An unauthenticated signature is never accepted.
+
+Step 7 COMPLETE: When all required signers have signed the document status changes
+to Executed. The document is locked — WORM enforced. No further edits are possible.
+A final executed copy is generated as a PDF with all signatures visible.
+The executed PDF is saved to the org document safe permanently.
+
+Step 8 DISTRIBUTE: Executed copies are automatically distributed to all parties.
+The org document safe receives the master copy.
+Each signer receives an executed copy via email for their records.
+The employee or contractor receives a copy in their personal document portal.
+Trinity logs the completion in the audit trail with timestamps for every step.
+
+PIPELINE RULES:
+A document that has not been executed cannot be used operationally.
+For example: an employee cannot be scheduled until their onboarding packet is executed.
+A contractor cannot be assigned to a client site until their contractor agreement is executed.
+These gates are enforced by Trinity — not just recommended, enforced.
+
+If a document reaches its deadline without all signatures Trinity escalates:
+24 hours before deadline: reminder notification and email to all pending signers.
+At deadline: URGENT alert to manager and org_owner.
+After deadline: document moves to overdue status, Trinity flags for manual resolution.
+
+Decline to sign: if a signer declines the document routes back to the org_owner
+with the declination reason. The org_owner decides to void, modify, or re-send.
+
+---
+
+PART 3 — COMPLETE DOCUMENT LIBRARY FOR TEXAS SECURITY COMPANIES
+These are the documents every Texas-licensed security company requires.
+Build each one as a properly formatted template in the system.
+Every template pulls live data from the database — no manual field filling.
+Simulate all documents for Acme Security Services in Texas with realistic data.
+If it produces correctly for Acme in development it will produce correctly
+for Statewide in production.
+
+EMPLOYEE ONBOARDING PACKET — sent as a complete packet to every new hire.
+All documents in the packet are sent together and must all be completed
+before the employee is considered fully onboarded. The packet contains:
+
+Document 1 — Employee Application:
+Fields: full legal name, date of birth, address, phone, email, social security
+number (masked after entry), emergency contact name and phone, position applying for,
+available start date, employment type (full-time, part-time, on-call),
+previous security experience yes or no with description, Texas Security Officer
+license number if already licensed, license expiration date if applicable,
+background check consent signature, drug screening consent signature,
+applicant signature and date.
+Routing: applicant signs first, then HR manager or org_owner countersigns.
+
+Document 2 — Employment Offer Letter:
+Fields: employee name, position title, start date, pay rate, pay type hourly or salary,
+work schedule description, reporting manager name, employment at-will clause,
+contingent offer conditions (background check, drug test, license verification).
+Routing: org_owner signs first as the offering party, employee signs as acceptance.
+
+Document 3 — W-4 Employee Withholding Certificate:
+Standard IRS W-4 format. Fields: name, address, SSN masked, filing status,
+multiple jobs checkbox, dependents section, other income and deductions,
+extra withholding, employee signature and date.
+Note: this is the standard federal form — format must match IRS layout exactly
+so it is legally valid. Do not stylize the content, only the surrounding design chrome.
+Routing: employee signs only. HR receives completed form.
+
+Document 4 — I-9 Employment Eligibility Verification:
+Standard USCIS I-9 format. Section 1 completed by employee: name, address, DOB,
+SSN, attestation of citizenship status, employee signature.
+Section 2 completed by employer: document title, issuing authority, document number,
+expiration date, employer certification signature and date.
+Note: same as W-4 — legal form content must match USCIS format exactly.
+Routing: employee completes Section 1, HR completes Section 2.
+
+Document 5 — Direct Deposit Authorization:
+Fields: employee name, employee ID, bank name, account type checking or savings,
+routing number, account number, deposit percentage or full amount,
+voided check upload or manual entry confirmation, employee signature and date.
+Routing: employee signs, payroll processor or org_owner receives.
+
+Document 6 — Texas Security Officer License Verification:
+Fields: employee name, Texas PSB license number, license class, expiration date,
+confirmation that employee will maintain active license as condition of employment,
+platform auto-pulls license status from PSB if integration is available or
+provides a field for manual verification with HR signature confirming verification.
+Routing: employee acknowledges, HR countersigns confirming verification completed.
+
+Document 7 — Company Employee Handbook Acknowledgment:
+The company handbook can be uploaded as a PDF by the org_owner.
+The platform converts it to a readable online document.
+The employee must scroll through the entire document before the
+acknowledgment signature becomes available — cannot skip to the end.
+Fields: employee name, date, signature acknowledging they have read,
+understood, and agree to abide by the handbook.
+Routing: employee signs acknowledgment only. No org countersignature required.
+
+Document 8 — At-Will Employment Agreement:
+Standard Texas at-will employment statement confirming either party may
+terminate the employment relationship at any time with or without cause
+and with or without notice, subject to applicable law.
+Fields: employee name, position, start date, employee signature, org_owner signature.
+Routing: both parties sign.
+
+Document 9 — Confidentiality and Non-Disclosure Agreement:
+Fields: employee name, position, effective date, definition of confidential information
+specific to the security industry (client identities, site locations, security protocols,
+patrol routes, access codes, incident reports), obligations of confidentiality,
+term of the agreement, consequences of breach, governing law Texas,
+employee signature, org_owner signature.
+Routing: both parties sign.
+
+Document 10 — Background Check Authorization:
+Separate from the application consent. Full standalone authorization for
+background check provider. Fields: full legal name, all names used, date of birth,
+SSN masked, address history last 7 years, authorization statement, employee signature.
+Routing: employee signs. Org sends to background check provider.
+
+CONTRACTOR ONBOARDING PACKET — sent to all 1099 independent contractors.
+Different from employee packet because contractors are not employees.
+
+Document 1 — Independent Contractor Agreement:
+Fields: contractor legal name or business name, EIN or SSN, address, scope of services,
+compensation rate, payment schedule, independent contractor status affirmation
+(not an employee, responsible for own taxes, no benefits), Texas law governing,
+both party signatures.
+Routing: org_owner signs first, contractor countersigns.
+
+Document 2 — W-9 Request for Taxpayer Identification:
+Standard IRS W-9 format. Fields: name, business name if different, federal tax
+classification, exemptions, address, taxpayer identification number, certification
+signature and date.
+Note: must match IRS W-9 layout exactly for legal validity.
+Routing: contractor signs only. Org retains for tax filing purposes.
+
+Document 3 — Texas Security Contractor License Verification:
+Same structure as employee license verification but labeled for contractor.
+Routing: contractor acknowledges, org_owner countersigns.
+
+Document 4 — Contractor Confidentiality Agreement:
+Same content as employee NDA but with contractor-specific language
+clarifying they are an independent contractor not an employee.
+Routing: both parties sign.
+
+OPERATIONAL DOCUMENTS — generated during day-to-day operations.
+
+Post Orders Document:
+Every client site has a set of post orders — specific instructions for security
+officers assigned to that site.
+Fields: client name, site name and address, effective date, post title,
+hours of coverage, specific duties and responsibilities per post,
+access procedures, emergency contact numbers, incident reporting procedures,
+equipment issued for this post, officer acknowledgment signature confirming
+they have read and understood the post orders.
+Routing: org_owner or manager creates and signs. Every officer assigned to
+that site must sign acknowledgment before their first shift.
+Post orders updates: when post orders are updated every currently assigned
+officer must re-sign the new version before their next shift.
+
+Disciplinary Action Form:
+Fields: employee name, employee ID, date of incident, description of incident
+or performance issue, prior warnings related to this issue yes or no,
+disciplinary action being taken (verbal warning, written warning, suspension,
+termination), improvement plan if applicable, employee response section,
+employee signature and date acknowledging receipt (not agreement),
+manager signature, org_owner countersignature for suspension or termination.
+Routing: manager drafts, org_owner reviews and approves, employee is notified
+and must acknowledge receipt within 24 hours.
+Employee receipt acknowledgment is not agreement — the signature line must
+clearly state: signing this form acknowledges receipt of this document
+and does not constitute agreement with its contents.
+
+Promotion or Pay Rate Change Notice:
+Fields: employee name, current position, new position if promotion,
+current pay rate, new pay rate, effective date, reason for change,
+performance notes, employee signature accepting the change, org_owner signature.
+Routing: org_owner signs first as the offering party, employee countersigns.
+
+On-the-Job Training Record:
+Fields: employee name, trainer name, training topics covered with date each was completed,
+trainee initials per topic confirming completion, trainer signature per topic,
+final overall completion signature by both trainee and trainer.
+Routing: trainer and trainee both initial each completed topic. Both sign final completion.
+
+License Expiration Notice:
+Automatically generated by Trinity when a Texas PSB license is within 60 days
+of expiration.
+Fields: employee name, license number, expiration date, instructions for renewal,
+consequence of operating with expired license (cannot be scheduled for any post),
+employee acknowledgment signature that they have been notified.
+Routing: Trinity auto-generates. Employee must acknowledge within 48 hours.
+At expiration: employee is automatically removed from scheduling eligibility
+until license renewal is confirmed.
+
+CLIENT-FACING DOCUMENTS — professional grade, sent to clients.
+
+Service Proposal:
+Fields: org name and license number, client name and contact, proposal date,
+proposed service description, site or sites to be covered, coverage schedule,
+officer qualifications for this contract, equipment provided, response time
+guarantees, billing rate and payment terms, validity period of the proposal,
+org_owner signature, space for client signature to accept.
+Design must be the most polished document in the system. This is a sales document.
+
+Service Agreement / Contract:
+Full legal service contract for Texas. Fields: parties (org and client with addresses),
+effective date and term, scope of services matching the proposal, billing and
+payment terms, late payment penalties, liability limitations, indemnification,
+insurance requirements, termination clauses, dispute resolution, governing law Texas,
+both party signatures with dates.
+Routing: org_owner signs first, client countersigns.
+
+Certificate of Insurance Reference Letter:
+Confirmation letter to clients that the security company carries the required
+insurance coverage for the services provided.
+Fields: org name, license number, client name, site name, coverage types and limits,
+insurance provider name, policy number, policy expiration date, org_owner signature.
+
+---
+
+PART 4 — DOCUMENT SAFE AND PERSONAL PORTAL
+
+ORG DOCUMENT SAFE:
+Every executed document is stored in the org document safe permanently.
+Organized by category: Employee Documents, Contractor Documents, Client Documents,
+Operational Documents, Compliance Documents.
+Each document shows: document title, document type, parties involved, date executed,
+current status, a download button for the PDF.
+Search and filter by employee name, client name, document type, date range, status.
+Documents in the safe cannot be edited or deleted — WORM enforced.
+Expired or voided documents are retained but clearly labeled.
+org_owner and manager can view the safe.
+org_admin can view employee documents only.
+Employees cannot view the safe — they have their own personal portal.
+
+EMPLOYEE PERSONAL DOCUMENT PORTAL:
+Every employee and contractor has a personal document portal in their profile.
+It shows only their own documents — nothing from other employees.
+Each document shows: document title, date sent, date signed, status, download button.
+Employees can download executed copies of all their own documents at any time.
+Employees cannot delete any document from their portal.
+Employees can see which documents are pending their signature with a prominent
+sign now button.
+
+---
+
+PART 5 — TEXAS COMPLIANCE SIMULATION FOR ACME
+
+Simulate a complete Texas-compliant onboarding for a new Acme Security Services
+employee and a new Acme contractor. Produce real formatted documents with realistic
+simulated data. The goal is to prove the system produces legally-structured,
+professional documents that match what Texas regulatory requirements expect.
+
+NEW EMPLOYEE SIMULATION — ACME SECURITY SERVICES, TEXAS:
+Create a simulated employee with realistic Texas data:
+Name: Marcus Johnson
+Position: Level II Security Officer
+License: Texas PSB License B12345678 Class B expires 2027-06-15
+Pay Rate: $18.00 per hour
+Start Date: current date plus 7 days
+Manager: use the existing Acme manager in the system
+
+Generate the complete 10-document employee onboarding packet for Marcus Johnson.
+Route all documents to the correct signers.
+Simulate the signing sequence — Marcus signs first where required, manager countersigns.
+Confirm every document reaches Executed status.
+Confirm executed PDFs are saved to the Acme document safe.
+Confirm Marcus receives executed copies in his personal document portal.
+Confirm his employee profile shows onboarding complete.
+Confirm Trinity allows scheduling Marcus for shifts now that onboarding is complete.
+
+NEW CONTRACTOR SIMULATION — ACME SECURITY SERVICES, TEXAS:
+Create a simulated contractor with realistic Texas data:
+Name: Rosa Delgado — Delgado Security LLC
+License: Texas PSB License C98765432 Class C expires 2026-12-01
+Rate: $22.00 per hour 1099 contractor
+Services: Armed Security Coverage weekend shifts
+
+Generate the complete 4-document contractor onboarding packet for Rosa Delgado.
+Route all documents to the correct signers.
+Simulate the signing sequence.
+Confirm all documents reach Executed status.
+Confirm executed PDFs are saved to the Acme document safe.
+Confirm Rosa receives executed copies.
+Confirm Trinity allows assigning Rosa to shifts now that contractor onboarding is complete.
+
+POST ORDERS SIMULATION:
+Generate post orders for one Acme client site.
+Include all required fields with realistic Texas security post order language.
+Assign both Marcus Johnson and Rosa Delgado to the site.
+Confirm both must sign the post orders before they can be scheduled there.
+Simulate both signing the post orders.
+Confirm the site post orders show as fully acknowledged by all assigned officers.
+
+SERVICE PROPOSAL SIMULATION:
+Generate a professional service proposal from Acme Security Services to a
+simulated client: Lone Star Industrial Park, San Antonio Texas.
+Populate all fields with realistic Texas security industry data.
+Produce the final proposal as a PDF.
+Confirm it looks professional enough to send to a real client.
+
+SERVICE AGREEMENT SIMULATION:
+After the proposal is accepted generate the full service agreement for
+Lone Star Industrial Park.
+Populate all contract fields.
+Simulate org_owner signing then client signing.
+Confirm the executed contract is stored in the Acme document safe.
+
+REPORT ALL SIMULATION RESULTS:
+For every document generated report:
+Did it generate without errors.
+Did it render correctly on desktop and mobile.
+Did the PDF export correctly.
+Did it route to the correct signers.
+Did the signing flow work end to end.
+Did the executed copy save to the document safe.
+Did the signer receive their copy.
+Any field that was blank that should have been populated.
+Any layout issue on mobile or in the PDF.
+
+If every document in the simulation passes the system is production ready
+for Statewide Protective Services document workflows.
+
+---
+
+PART 6 — TRINITY DOCUMENT ORCHESTRATION
+
+Trinity must be aware of and actively managing the document system at all times.
+
+Trinity actions to register if not already registered:
+document.generate — generate any document type for any employee or client
+document.send_for_signature — route a document to the next required signer
+document.check_status — report on all pending documents for an org
+document.escalate_overdue — escalate documents past their signature deadline
+document.compliance_scan — identify any employee or contractor missing required documents
+document.license_expiry_scan — identify any officer whose license expires within 60 days
+document.post_orders_acknowledgment_scan — identify officers assigned to sites who
+have not yet signed the current post orders version
+
+Trinity proactive behaviors:
+Daily compliance scan: every day Trinity checks every employee and contractor
+for missing or expired documents. Any gap is reported in the Org Operations
+Briefing Channel with a deep link to the affected employee record.
+License expiry: 60 days before expiration Trinity generates and sends the
+License Expiration Notice to the officer automatically.
+New hire trigger: when a new employee record is created Trinity automatically
+generates and sends the complete onboarding packet within 5 minutes.
+New contractor trigger: same as new hire but the contractor packet.
+Post orders change trigger: when post orders are updated Trinity automatically
+identifies all assigned officers and sends new post orders for re-acknowledgment.
+Contract renewal trigger: 90 days before a client service agreement expires
+Trinity alerts the org_owner and offers to generate a renewal proposal.
+
+---
+
+PART 7 — HANDBOOK UPLOAD AND DIGITIZATION
+
+The org_owner can upload a company employee handbook as a PDF.
+The platform converts it to a readable online document that employees can scroll through.
+The employee cannot reach the acknowledgment signature until they have scrolled
+through 100 percent of the document — this is enforced by tracking scroll position,
+not on a timer.
+The online version is searchable by keyword.
+When the handbook is updated the org_owner uploads the new version.
+Trinity automatically identifies all employees who signed the previous version
+and sends them the new version for re-acknowledgment.
+Both the old and new versions are retained in the document safe.
+The audit trail shows which version each employee signed and when.
+
+---
+
+COMPLETION CRITERIA
+
+The document system is production ready when:
+Every document type renders beautifully on desktop, mobile, and PDF with no layout issues.
+Every document has a uniform header, footer, and signature area design.
+The 10-document employee onboarding packet generates and executes completely for a
+simulated Texas employee at Acme.
+The 4-document contractor packet generates and executes completely for a simulated
+Texas contractor at Acme.
+Post orders generate, route, and execute acknowledgments correctly.
+Service proposal and service agreement generate and execute correctly.
+All executed documents save to the org document safe permanently.
+All signers receive executed copies in their personal document portal.
+Trinity document actions are all registered and responding.
+Trinity proactive compliance scan identifies missing documents correctly.
+License expiry scan identifies officers within 60 days of expiration.
+Handbook upload, digitization, and re-acknowledgment flow works end to end.
+The simulation report shows zero blank fields, zero layout issues, zero routing errors.
+If all of the above pass in development with Acme then Statewide document workflows
+are production ready.

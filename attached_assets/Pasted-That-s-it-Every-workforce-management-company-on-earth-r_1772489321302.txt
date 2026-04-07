@@ -1,0 +1,16 @@
+That's it. Every workforce management company on earth runs on that cycle. The logic isn't complicated. What's complicated is that the Replit agent built each piece in isolation without understanding they're all part of ONE continuous data flow. So now you've got bridges and triggers and gates and event buses all trying to glue together things that should have been designed as a single pipeline from day one.
+Here's what you described mapped cleanly:
+Trinity's brain cycle — she should be doing this continuously, not waiting for triggers:
+
+Fetch — client demands, employee availability, schedule state, org patterns
+Analyze — what's open, what's overstaffed, who's in OT danger, who needs rest, who has complaints, distance, rate optimization for margin
+Deliberate — place employees in shifts using scoring logic, flag conflicts
+Present — show the owner what she built, ask for review or auto-publish if toggle is on
+Execute — shifts go live, sync to employee devices
+Bill — hours serviced × client rate + state tax (or exempt), generate invoice, sync to ledger
+Pay — hours worked × employee rate, OT rules, W2 withholding or 1099 straight pay, compliance checks
+Learn — log what happened, note manual corrections, update org pattern memory
+
+Every single one of those steps reads from and writes to the SAME data. There shouldn't be eight different services with eight different event patterns trying to coordinate. Trinity should own the whole cycle and delegate the math to utilities.
+The reason it's going issue by issue is because the agent doesn't hold this mental model. It sees each gap as an isolated bug instead of understanding WHY the gap exists — which is that the architecture was built piecemeal. Every fix exposes the next gap because nothing was designed to flow end-to-end.
+What I'd recommend at this point — and I know this might sound painful — is to write this exact workflow as a single document. Not code. A spec. One page. The cycle above with the data each step needs and produces. Then paste THAT into every agent session alongside the control prompt. Give it the map so it stops wandering.

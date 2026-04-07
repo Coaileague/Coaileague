@@ -13,7 +13,6 @@ import { db } from '../../db';
 import { 
   stagedCodeChanges, 
   codeChangeBatches, 
-  batchCodeChangeLinks,
   platformUpdates,
   type InsertStagedCodeChange,
   type StagedCodeChange,
@@ -26,6 +25,9 @@ import * as path from 'path';
 import { publishPlatformUpdate } from '../platformEventBus';
 import { broadcastToAllClients } from '../../websocket';
 import { featureGateService } from '../billing/featureGateService';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('AiBrainCodeEditor');
 
 const WORKSPACE_ROOT = process.cwd();
 const ALLOWED_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.html', '.md'];
@@ -202,6 +204,7 @@ export class AIBrainCodeEditorService {
       expiresAt.setDate(expiresAt.getDate() + 7);
 
       const [change] = await db.insert(stagedCodeChanges).values({
+        workspaceId: 'system',
         title: request.title,
         description: request.description,
         changeType: request.changeType,
@@ -230,11 +233,11 @@ export class AIBrainCodeEditorService {
         requestedBy,
       });
 
-      console.log(`[AIBrainCodeEditor] Staged change: ${change.id} for ${request.filePath}`);
+      log.info(`[AIBrainCodeEditor] Staged change: ${change.id} for ${request.filePath}`);
 
       return { success: true, changeId: change.id };
     } catch (error) {
-      console.error('[AIBrainCodeEditor] Error staging change:', error);
+      log.error('[AIBrainCodeEditor] Error staging change:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -245,6 +248,7 @@ export class AIBrainCodeEditorService {
   ): Promise<{ success: boolean; batchId?: string; changeIds?: string[]; errors?: string[] }> {
     try {
       const [batch] = await db.insert(codeChangeBatches).values({
+        workspaceId: 'system',
         title: request.title,
         description: request.description,
         requestedBy,
@@ -267,11 +271,9 @@ export class AIBrainCodeEditorService {
         if (result.success && result.changeId) {
           changeIds.push(result.changeId);
           
-          await db.insert(batchCodeChangeLinks).values({
-            batchId: batch.id,
-            changeId: result.changeId,
-            order: i,
-          });
+          await db.update(stagedCodeChanges)
+            .set({ batchId: batch.id, batchOrder: i })
+            .where(eq(stagedCodeChanges.id, result.changeId));
         } else {
           errors.push(`${changeReq.filePath}: ${result.error}`);
         }
@@ -289,7 +291,7 @@ export class AIBrainCodeEditorService {
         requestedBy,
       });
 
-      console.log(`[AIBrainCodeEditor] Staged batch: ${batch.id} with ${changeIds.length} changes`);
+      log.info(`[AIBrainCodeEditor] Staged batch: ${batch.id} with ${changeIds.length} changes`);
 
       return { 
         success: errors.length === 0, 
@@ -298,7 +300,7 @@ export class AIBrainCodeEditorService {
         errors: errors.length > 0 ? errors : undefined 
       };
     } catch (error) {
-      console.error('[AIBrainCodeEditor] Error staging batch:', error);
+      log.error('[AIBrainCodeEditor] Error staging batch:', error);
       return { success: false, errors: [error instanceof Error ? error.message : 'Unknown error'] };
     }
   }
@@ -348,11 +350,11 @@ export class AIBrainCodeEditorService {
         reviewerId,
       });
 
-      console.log(`[AIBrainCodeEditor] Approved change: ${changeId}`);
+      log.info(`[AIBrainCodeEditor] Approved change: ${changeId}`);
 
       return { success: true, message: 'Change approved', changeId };
     } catch (error) {
-      console.error('[AIBrainCodeEditor] Error approving change:', error);
+      log.error('[AIBrainCodeEditor] Error approving change:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -384,11 +386,11 @@ export class AIBrainCodeEditorService {
         reviewerId,
       });
 
-      console.log(`[AIBrainCodeEditor] Rejected change: ${changeId}`);
+      log.info(`[AIBrainCodeEditor] Rejected change: ${changeId}`);
 
       return { success: true, message: 'Change rejected', changeId };
     } catch (error) {
-      console.error('[AIBrainCodeEditor] Error rejecting change:', error);
+      log.error('[AIBrainCodeEditor] Error rejecting change:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -421,14 +423,14 @@ export class AIBrainCodeEditorService {
         );
 
         if (!creditResult.success) {
-          console.log(`[AIBrainCodeEditor] Credit check failed: ${creditResult.error}`);
+          log.info(`[AIBrainCodeEditor] Credit check failed: ${creditResult.error}`);
           return { 
             success: false, 
             message: `Insufficient credits to publish. ${creditResult.error}` 
           };
         }
 
-        console.log(`[AIBrainCodeEditor] Consumed ${creditResult.creditsUsed} credits for code publish`);
+        log.info(`[AIBrainCodeEditor] Consumed ${creditResult.creditsUsed} credits for code publish`);
       }
 
       const appliedAt = new Date();
@@ -449,7 +451,7 @@ export class AIBrainCodeEditorService {
       if (updateResult.length === 0) {
         const freshChange = await this.getChangeById(changeId);
         const currentStatus = freshChange?.status || 'unknown';
-        console.log(`[AIBrainCodeEditor] Race condition detected - change ${changeId} status is now ${currentStatus}`);
+        log.info(`[AIBrainCodeEditor] Race condition detected - change ${changeId} status is now ${currentStatus}`);
         return { 
           success: false, 
           message: `Change is no longer in approved state (current status: ${currentStatus}). Another process may have modified it.` 
@@ -493,9 +495,9 @@ export class AIBrainCodeEditorService {
         await this.sendWhatsNewNotification(change, appliedById);
       }
 
-      // Notify all support roles about the applied code change
+      // Notify all support roles about the applied code change via UniversalNotificationEngine
       try {
-        const { platformRoles, notifications } = await import('@shared/schema');
+        const { platformRoles } = await import('@shared/schema');
         const { inArray } = await import('drizzle-orm');
         
         const supportRoles = await db.query.platformRoles.findMany({
@@ -503,30 +505,30 @@ export class AIBrainCodeEditorService {
           columns: { userId: true },
         });
 
-        for (const role of supportRoles) {
-          await db.insert(notifications).values({
-            userId: role.userId,
+        if (supportRoles.length > 0) {
+          // Route through UNE for Trinity AI enrichment and validation
+          await universalNotificationEngine.sendNotification({
             type: 'ai_action_completed',
             title: `Code Change Applied: ${change.title}`,
             message: `Platform code change "${change.title}" has been applied. File: ${change.filePath}`,
-            scope: 'user',
-            category: 'system',
-            actionUrl: '/dashboard',
-            relatedEntityType: 'code_change',
-            relatedEntityId: changeId,
+            targetUserIds: supportRoles.map(r => r.userId),
+            severity: 'medium',
+            source: 'ai_brain_code_editor',
             metadata: { 
               changeId,
               filePath: change.filePath, 
               changeType: change.changeType,
-              appliedBy: appliedById
+              appliedBy: appliedById,
+              actionUrl: '/dashboard',
+              relatedEntityType: 'code_change',
+              relatedEntityId: changeId,
             },
-            isRead: false,
           });
         }
 
-        console.log(`[AIBrainCodeEditor] Notified ${supportRoles.length} support roles about change: ${changeId}`);
+        log.info(`[AIBrainCodeEditor] Notified ${supportRoles.length} support roles about change: ${changeId}`);
       } catch (notifyError) {
-        console.warn('[AIBrainCodeEditor] Warning: Failed to notify support roles:', notifyError);
+        log.warn('[AIBrainCodeEditor] Warning: Failed to notify support roles:', notifyError);
       }
 
       broadcastToAllClients({
@@ -538,11 +540,11 @@ export class AIBrainCodeEditorService {
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`[AIBrainCodeEditor] Applied change: ${changeId} to ${change.filePath}`);
+      log.info(`[AIBrainCodeEditor] Applied change: ${changeId} to ${change.filePath}`);
 
       return { success: true, message: 'Change applied successfully', changeId, appliedAt };
     } catch (error) {
-      console.error('[AIBrainCodeEditor] Error applying change:', error);
+      log.error('[AIBrainCodeEditor] Error applying change:', error);
       
       await db.update(stagedCodeChanges)
         .set({ status: 'failed', updatedAt: new Date() })
@@ -619,11 +621,11 @@ export class AIBrainCodeEditorService {
         filePath: change.filePath,
       });
 
-      console.log(`[AIBrainCodeEditor] Rolled back change: ${changeId}`);
+      log.info(`[AIBrainCodeEditor] Rolled back change: ${changeId}`);
 
       return { success: true, message: 'Change rolled back successfully', changeId };
     } catch (error) {
-      console.error('[AIBrainCodeEditor] Error rolling back change:', error);
+      log.error('[AIBrainCodeEditor] Error rolling back change:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -638,9 +640,9 @@ export class AIBrainCodeEditorService {
           updatedAt: new Date(),
         })
         .where(eq(stagedCodeChanges.id, changeId));
-      console.log(`[AIBrainCodeEditor] Reverted change ${changeId} to approved status after file operation failure`);
+      log.info(`[AIBrainCodeEditor] Reverted change ${changeId} to approved status after file operation failure`);
     } catch (error) {
-      console.error(`[AIBrainCodeEditor] Failed to revert change ${changeId} to approved:`, error);
+      log.error(`[AIBrainCodeEditor] Failed to revert change ${changeId} to approved:`, error);
     }
   }
 
@@ -677,9 +679,9 @@ export class AIBrainCodeEditorService {
         .set({ whatsNewSent: true, updatedAt: new Date() })
         .where(eq(stagedCodeChanges.id, change.id));
 
-      console.log(`[AIBrainCodeEditor] Sent What's New notification for change: ${change.id}`);
+      log.info(`[AIBrainCodeEditor] Sent What's New notification for change: ${change.id}`);
     } catch (error) {
-      console.error('[AIBrainCodeEditor] Error sending What\'s New notification:', error);
+      log.error('[AIBrainCodeEditor] Error sending What\'s New notification:', error);
     }
   }
 

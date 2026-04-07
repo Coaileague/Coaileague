@@ -1,14 +1,11 @@
 /**
  * useMinimumLoadingTime - Ensures loading states display for at least a minimum duration
- * This allows users to appreciate the Trinity mascot animation before content appears
- * 
- * Premium SaaS apps (Slack, Notion, Linear) use 2.5-3.5 second loading animations
- * to create a polished, premium feel and let users enjoy branded animations.
+ * Kept short to avoid blocking the user from seeing the app.
  */
 
 import { useState, useEffect, useRef } from 'react';
 
-const DEFAULT_MIN_DURATION = 2800; // 2.8 seconds - premium feel
+const DEFAULT_MIN_DURATION = 300;
 
 export function useMinimumLoadingTime(
   isActuallyLoading: boolean,
@@ -20,28 +17,22 @@ export function useMinimumLoadingTime(
 
   useEffect(() => {
     if (isActuallyLoading) {
-      // Loading started - record start time
       loadingStartTime.current = Date.now();
       setShowLoading(true);
-      
-      // Clear any pending timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
     } else if (loadingStartTime.current !== null) {
-      // Loading finished - check if minimum time has passed
       const elapsed = Date.now() - loadingStartTime.current;
       const remaining = minDurationMs - elapsed;
 
       if (remaining > 0) {
-        // Need to wait longer for premium feel
         timeoutRef.current = setTimeout(() => {
           setShowLoading(false);
           loadingStartTime.current = null;
         }, remaining);
       } else {
-        // Minimum time already passed
         setShowLoading(false);
         loadingStartTime.current = null;
       }
@@ -58,39 +49,34 @@ export function useMinimumLoadingTime(
 }
 
 /**
- * Loading duration tiers for different contexts
- * Aligned with premium SaaS UX patterns
+ * Loading duration tiers — kept short so the app feels snappy
  */
 export const LOADING_DURATIONS = {
-  quick: 1500,       // Inline actions, subtle transitions
-  standard: 2800,    // Default - enjoy Trinity animation
-  extended: 3200,    // Major page loads, route changes
-  initial: 3500,     // First app load - full branded experience
-  showcase: 4000,    // Marketing/demo screens - maximum impact
+  quick: 0,        // Inline actions, no delay needed
+  standard: 300,   // Default — just enough to avoid flicker
+  extended: 500,   // Major page loads
+  initial: 600,    // First app load
+  showcase: 800,   // Marketing/demo screens
 } as const;
 
 /**
- * Progressive loading messages for premium feel
+ * Progressive loading messages
  */
 export const LOADING_MESSAGES = {
   default: [
-    "Trinity is preparing your experience...",
     "Loading your workspace...",
     "Almost ready...",
   ],
   dashboard: [
     "Gathering your insights...",
-    "Analyzing your data...",
     "Preparing your dashboard...",
   ],
   schedule: [
     "Optimizing your schedule...",
     "Finding the best shifts...",
-    "Trinity is working her magic...",
   ],
   auth: [
     "Securing your session...",
-    "Verifying credentials...",
     "Welcome back...",
   ],
 } as const;

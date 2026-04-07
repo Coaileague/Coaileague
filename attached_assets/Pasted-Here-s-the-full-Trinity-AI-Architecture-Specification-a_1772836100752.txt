@@ -1,0 +1,237 @@
+Here's the full Trinity AI Architecture Specification as text:
+
+---
+
+# CoAIleague — TRINITY AI SYSTEM
+### Architecture & Implementation Specification
+**Version 1.0 | March 2026 | CONFIDENTIAL**
+Statewide Protective Services · CoAIleague Platform
+
+---
+
+## Executive Summary
+
+Trinity is the unified AI intelligence layer of the CoAIleague workforce management platform. She is not a chatbot, a help widget, or a generic assistant. Trinity is a purpose-built orchestration system designed specifically for the security industry — available 24/7, calm under pressure, and connected to every operational system in the platform.
+
+Trinity serves as the front door to all AI-powered capabilities. For frontline security officers, she answers questions, helps with schedules, and guides daily tasks. For supervisors and managers, she surfaces insights, flags anomalies, and executes automated workflows. For organization owners, she provides executive intelligence, compliance oversight, and business-critical alerts.
+
+Behind Trinity's neutral, always-available interface lives a tiered intelligence system: a reasoning triad of three AI models, a set of specialized domain bots, and a human escalation pathway. Everything is invisible to the user. They simply talk to Trinity.
+
+> **Design Principle:** Trinity is the only face the user ever sees. All complexity — model routing, bot delegation, human escalation — happens silently behind her. The user experience is always: one interface, one name, one trusted system.
+
+---
+
+## 1. Trinity's Identity & Role
+
+### 1.1 Who Trinity Is
+
+Trinity is the CoAIleague AI persona — consistent, professional, and industry-aware. She speaks plainly to officers, precisely to managers, and strategically to owners. Her tone adapts to context but her identity never changes: she is always Trinity, always CoAIleague's intelligence layer.
+
+Trinity is NOT a wrapper around a generic AI product. She has context about the organization, the team, the schedule, payroll state, compliance requirements, and incident history. Every response she gives is grounded in real operational data.
+
+### 1.2 What Trinity Handles
+
+Trinity's responsibility spans three zones:
+- **Direct Response** — Questions she can answer immediately from platform data and her reasoning triad
+- **Delegated Execution** — Tasks she routes to specialized domain bots (Payroll Bot, Scheduling Bot, Compliance Bot, Notification Bot)
+- **Human Escalation** — Situations that require management judgment, approval, or intervention
+
+### 1.3 What Trinity Is NOT
+- Not a generic AI assistant (no off-topic conversations, no general web browsing)
+- Not a replacement for human judgment on critical decisions
+- Not a single AI model — she is an orchestration layer routing across multiple models
+- Not a static system — her routing intelligence improves with operational data
+
+---
+
+## 2. Tiered Intelligence Architecture
+
+Trinity operates across three tiers of response capability. Each tier represents an escalating level of complexity, specialization, or human judgment required.
+
+| Tier | Name | Handled By | Response Time |
+|------|------|------------|---------------|
+| Tier 1 | Direct Intelligence | Trinity Reasoning Triad | < 3 seconds |
+| Tier 2 | Domain Execution | Specialized Platform Bots | 3–15 seconds |
+| Tier 3 | Human Escalation | Supervisors / Managers / Owner | Minutes to Hours |
+
+---
+
+### 2.1 Tier 1 — Trinity's Reasoning Triad
+
+For low-to-medium complexity queries, Trinity resolves the request herself using a three-model consensus and fallback system. This is the engine behind Trinity's direct responses.
+
+| Model | Primary Role in Triad | Fallback Behavior |
+|-------|-----------------------|-------------------|
+| **Gemini** | Primary orchestrator. Handles scheduling logic, availability analysis, coverage gap detection, and initial query classification. | If Gemini fails or times out → Claude activates as primary |
+| **Claude** | Validator and reasoning layer. Reviews Gemini outputs, handles compliance checks, contract interpretation, nuanced communication drafting, and policy questions. | If Gemini unavailable → Claude becomes primary; routes complex reasoning here always |
+| **OpenAI** | Backup and broadband reasoning. Handles tasks requiring broad general knowledge, natural language generation for broadcasts, and catches edge cases missed by primary models. | Last resort fallback if both Gemini and Claude fail. Also handles certain generation tasks in parallel. |
+
+> **Cost Control Note:** All AI token usage must be attributed to the organization making the request — never absorbed by the platform. Trinity's routing logic must pass `org_id` with every model call and log token consumption per org per session for accurate billing and cost visibility.
+
+---
+
+### 2.2 Tier 2 — Specialized Domain Bots
+
+When Trinity identifies that a request falls within a specialized operational domain, she delegates to the appropriate bot. Bots are not separate AI instances — they are specialized prompt configurations and tool-access profiles executed by Trinity's underlying model layer, optimized for their domain.
+
+**Payroll Bot**
+- Triggers: Payroll questions, earnings disputes, pay period calculations, deduction inquiries, QuickBooks sync issues
+- Capabilities: Pull timesheet data, calculate gross/net pay, identify discrepancies, draft payroll approval summaries, flag missing punches
+- Permissions: Read access to timesheets, pay rates, QuickBooks integration; Write access restricted to draft creation only — no live payroll execution without human approval
+
+**Scheduling Bot**
+- Triggers: Open shift coverage, schedule conflicts, availability requests, swap requests, overtime alerts
+- Capabilities: Analyze coverage gaps, identify eligible officers by availability and certification, generate schedule proposals, process marketplace requests, send shift offer notifications
+- Permissions: Read/write to schedule; cannot publish without manager approval unless auto-publish is enabled by org settings
+
+**Compliance Bot**
+- Triggers: License expiration questions, PERC card status, certification tracking, state regulation queries, overtime compliance
+- Capabilities: Check officer license/cert status, flag upcoming expirations (30/60/90 day windows), cross-reference Texas DPS requirements, draft compliance reports
+- Permissions: Read access to employee records and compliance database; escalates any violations to management immediately
+
+**Notification Bot**
+- Triggers: Any action requiring team-wide or targeted communication — broadcasts, alerts, reminders, emergency notifications
+- Capabilities: Draft and send SMS alerts, in-app broadcasts, email notifications; supports targeted groups (all staff, site-specific, shift-specific, individual)
+- Permissions: Executes sends only after Trinity confirms intent; mass notifications require confirmation step before send
+
+**Incident Bot (Future)**
+- Triggers: Incident report submission, escalation requests, evidence uploads
+- Capabilities: Guide officers through structured incident documentation, auto-route to supervisor, preserve chain of custody for reports
+
+---
+
+### 2.3 Tier 3 — Human Escalation
+
+Some situations require human judgment, authority, or accountability. Trinity recognizes these scenarios and escalates appropriately — never pretending she can handle what requires a human.
+
+| Escalation Trigger | Escalates To | Trinity's Action |
+|-------------------|--------------|-----------------|
+| Termination or disciplinary action requested | Org Owner / HR | Flags request, drafts summary, notifies appropriate party |
+| Payroll dispute above threshold | Manager / Owner | Surfaces dispute with full context and recommended resolution |
+| Officer in distress or safety alert | Supervisor on duty | Immediate push notification with location and context |
+| Client complaint or SLA risk | Account Manager / Owner | Drafts response options, escalates with full incident trail |
+| Compliance violation detected | Owner / Compliance Lead | Generates violation report, holds scheduling for affected officer |
+| System error Trinity cannot resolve | Development / Support | Logs error, provides user with ETA and workaround if available |
+
+---
+
+## 3. Query Classification & Routing Logic
+
+When a user sends a message to Trinity, she does not immediately generate a response. She first classifies the request across four dimensions, then routes accordingly.
+
+### 3.1 Classification Dimensions
+
+| Dimension | Values | Routing Impact |
+|-----------|--------|----------------|
+| Domain | Payroll / Schedule / Compliance / Incident / General | Determines which bot (if any) receives the task |
+| Complexity | Low / Medium / High / Critical | Determines model selection within the triad; critical = human loop required |
+| Role | Staff / Supervisor / Manager / Owner | Filters what data Trinity can surface and what actions she can take |
+| Urgency | Routine / Time-Sensitive / Urgent / Emergency | Drives response speed, notification priority, and whether human is looped in immediately |
+
+---
+
+## 4. Trinity Experience by User Role
+
+Trinity presents differently based on who is talking to her. The underlying system is the same — but the context she has access to, the actions she can take, and the language she uses all adapt to role.
+
+### 4.1 Frontline Officer
+
+*What Officers Ask Trinity:* "What's my schedule this week?" / "I need to call off tomorrow" / "When do I get paid?" / "I want to pick up the Saturday shift" / "How do I file an incident report?"
+
+- Trinity has access to: their personal schedule, their timesheets, their pay stubs, open shifts in their area
+- Trinity cannot show them: other employees' pay, org-wide compliance data, management communications
+- Trinity can do: show their data, submit calloff requests, recommend open shifts, guide incident documentation
+- Trinity escalates to: their direct supervisor for approval items, payroll manager for pay disputes
+
+### 4.2 Supervisor
+
+*What Supervisors Ask Trinity:* "Who's clocked in right now?" / "We have a gap at Pinnacle Tower Saturday, who's available?" / "Send a reminder to the night shift" / "Did Marcus approve that timesheet dispute?"
+
+- Trinity has access to: their assigned team's schedules, timesheets, clock-in status, open shift marketplace, broadcast tools
+- Trinity can do: identify coverage gaps, propose schedule fills, send targeted notifications, pull team status reports
+- Trinity escalates to: Manager/Owner for large schedule changes, compliance violations, or pay disputes
+
+### 4.3 Manager / Org Owner
+
+*What Owners Ask Trinity:* "What's our payroll liability this pay period?" / "Any compliance issues I need to know about?" / "Who has outstanding timesheets?" / "Draft a broadcast about the new uniform policy"
+
+- Trinity has access to: everything — all employees, all sites, payroll data, compliance records, billing, client contracts
+- Trinity can do: generate executive summaries, flag anomalies, draft communications, initiate payroll workflows, surface compliance risks
+- Trinity escalates to: human judgment only for irreversible actions (termination, legal matters, client SLA breaches)
+
+---
+
+## 5. Mobile UI Integration
+
+### 5.1 Trinity FAB Specifications
+
+Trinity is accessed via a persistent Floating Action Button anchored to the bottom-right of every screen, positioned directly above the navigation bar. This placement is intentional — Trinity lives above "More" in the nav, creating a visual and conceptual association.
+
+| Property | Value |
+|----------|-------|
+| Position | fixed, bottom: 72px, right: 16px |
+| Size | 56px × 56px (minimum touch target) |
+| z-index | Above all content, below modals only |
+| Icon | CoAIleague propeller/trinity mark — NOT a generic sparkle |
+| Colors | Teal gradient: #0D9488 → #0891B2 |
+| Animation | Subtle pulse on idle (2s cycle, 1.05 scale), ripple on press |
+| Label | "Trinity" tooltip appears on first session, fades after 3s |
+| Badge | Notification dot if Trinity has a pending proactive alert |
+
+### 5.2 Trinity Bottom Sheet (Mobile Modal)
+
+When Trinity opens, she slides up as a bottom sheet — not a centered modal. This is the correct mobile pattern.
+
+- Height: 85vh max, 50vh default, user-draggable
+- Border radius: 16px top corners only
+- Keyboard aware: sheet pushes up when soft keyboard opens
+- Safe area: respects device bottom safe area inset (notch/home bar)
+- Backdrop: semi-transparent dark overlay, tappable to dismiss
+- Scroll: message history scrollable, input pinned to bottom of sheet
+- Header: shows Trinity name + teal status dot + close (X) button
+
+### 5.3 FAB Conflict Resolution
+
+> **Rule — One FAB Per Screen:** The Trinity FAB and the + Action FAB must never appear simultaneously as separate uncoordinated elements. If a page has both a quick-add action and Trinity, combine them: Trinity FAB expands via speed-dial to show sub-actions, OR the + FAB is only shown contextually (inside the relevant page) while Trinity remains the global persistent FAB.
+
+---
+
+## 6. Developer Acceptance Criteria
+
+Every implementation related to Trinity must meet the following criteria before being marked complete. No exceptions.
+
+### 6.1 Visual Verification (Required Before Every PR)
+- Test at 360px viewport width (minimum Android screen)
+- Test at 390px viewport width (iPhone standard)
+- Screenshot of FAB placement on: Home, Schedule, Clock, Mail, and More screens
+- Screenshot of Trinity bottom sheet open on a 360px screen showing correct sizing
+- No FAB overlapping any data cards, buttons, or nav elements
+
+### 6.2 Functional Verification
+- Zero React hook errors in browser console
+- Zero unhandled promise rejections from Trinity API calls
+- Token usage logged per `org_id` on every Trinity request (visible in admin dashboard)
+- Fallback chain tested: disable Gemini → Claude activates; disable Claude → OpenAI activates
+- Bottom sheet keyboard behavior tested on both iOS and Android
+
+### 6.3 Performance
+- Trinity first response < 3 seconds on standard LTE connection
+- Bottom sheet open animation < 300ms
+- FAB render does not cause layout shift on page load
+
+---
+
+## 7. Future Expansion
+
+The Trinity architecture is designed to grow. The following capabilities are planned for future phases:
+
+- **Inbound Email Processing** — Trinity auto-processes emails at calloffs@, incidents@, docs@, support@ using Resend integration
+- **Proactive Intelligence** — Trinity initiates conversations when she detects anomalies (missed punch, upcoming coverage gap, expiring license) without waiting for the user to ask
+- **Voice Mode** — Push-to-talk Trinity access for officers in the field who cannot type
+- **Incident Bot Expansion** — Full structured incident documentation with photo evidence, witness statements, and auto-routing to client and law enforcement if required
+- **Client Portal Trinity** — A separate Trinity instance with client-facing permissions for client managers to check coverage, run reports, and submit requests
+- **Trinity Analytics Dashboard** — Org-level view of all Trinity interactions, token costs by category, most common queries, escalation patterns
+
+---
+
+*CoAIleague · Trinity AI System · Confidential · Statewide Protective Services · Version 1.0 · March 2026*

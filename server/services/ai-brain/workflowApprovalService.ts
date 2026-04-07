@@ -17,14 +17,20 @@ import {
   users, 
   employees, 
   notifications,
+  platformRoles,
   InsertAiWorkflowApproval,
   AiWorkflowApproval,
 } from '@shared/schema';
 import { eq, and, desc, sql, inArray, gte, isNull, or } from 'drizzle-orm';
+import { APPROVER_ROLES, ROLES } from '@shared/platformConfig';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 import { GapFinding } from './subagents/domainOpsSubagents';
 import { trinityOrchestration } from '../trinity/trinityOrchestrationAdapter';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+
+import { createLogger } from '../../lib/logger';
+const log = createLogger('WorkflowApprovalService');
 
 // ============================================================================
 // CONFIGURATION
@@ -50,21 +56,21 @@ const DEFAULT_CONFIG: ApprovalConfig = {
   notifyOnExpiry: true,
 };
 
-// Role hierarchy for approval requirements
+// Role hierarchy for approval requirements (highest → lowest authority)
 const SUPPORT_ROLES = [
   'root_admin',
-  'platform_admin', 
-  'support_director',
+  'deputy_admin',
+  'sysop',
   'support_manager',
-  'support_engineer',
+  'support_agent',
 ];
 
-// Risk level to required role mapping
+// Risk level to required role mapping (must match SUPPORT_ROLES values)
 const RISK_ROLE_REQUIREMENTS: Record<string, string> = {
-  low: 'support_engineer',
-  medium: 'support_engineer',
+  low: 'support_agent',
+  medium: 'support_agent',
   high: 'support_manager',
-  critical: 'support_director',
+  critical: 'sysop',
 };
 
 // ============================================================================
@@ -112,6 +118,7 @@ class WorkflowApprovalService {
       const [approval] = await db
         .insert(aiWorkflowApprovals)
         .values({
+          workspaceId: 'system',
           gapFindingId: finding.id?.toString(),
           title: `Fix: ${finding.title.substring(0, 250)}`,
           description: `${finding.description}\n\nProposed fix will modify ${proposedFix.affectedFiles.length} file(s).`,
@@ -128,7 +135,7 @@ class WorkflowApprovalService {
         })
         .returning();
 
-      console.log(`[WorkflowApproval] Created approval request ${approval.id} for finding ${finding.id}`);
+      log.info(`[WorkflowApproval] Created approval request ${approval.id} for finding ${finding.id}`);
 
       // Mark finding as in progress
       if (finding.id) {
@@ -150,7 +157,7 @@ class WorkflowApprovalService {
 
       return approval;
     } catch (error) {
-      console.error('[WorkflowApproval] Error creating approval:', error);
+      log.error('[WorkflowApproval] Error creating approval:', error);
       return null;
     }
   }
@@ -176,6 +183,7 @@ class WorkflowApprovalService {
       const [approval] = await db
         .insert(aiWorkflowApprovals)
         .values({
+          workspaceId: 'system',
           workOrderId: params.workOrderId,
           title: params.title.substring(0, 300),
           description: params.description,
@@ -192,7 +200,7 @@ class WorkflowApprovalService {
         })
         .returning();
 
-      console.log(`[WorkflowApproval] Created direct approval request ${approval.id}`);
+      log.info(`[WorkflowApproval] Created direct approval request ${approval.id}`);
 
       if (this.config.notifyOnCreate) {
         await this.notifySupportRoles(approval, 'created');
@@ -202,7 +210,7 @@ class WorkflowApprovalService {
 
       return approval;
     } catch (error) {
-      console.error('[WorkflowApproval] Error creating direct approval:', error);
+      log.error('[WorkflowApproval] Error creating direct approval:', error);
       return null;
     }
   }
@@ -255,7 +263,7 @@ class WorkflowApprovalService {
         })
         .where(eq(aiWorkflowApprovals.id, approvalId));
 
-      console.log(`[WorkflowApproval] Request ${approvalId} approved by ${approvedBy}`);
+      log.info(`[WorkflowApproval] Request ${approvalId} approved by ${approvedBy}`);
 
       if (this.config.notifyOnApproval) {
         await this.emitApprovalEvent('approval_approved', { ...existing, approvedBy });
@@ -273,9 +281,9 @@ class WorkflowApprovalService {
         durationMs
       );
 
-      return { success: true, message: 'Approval granted. Trinity will proceed with the fix.' };
+      return { success: true, message: 'Approval granted. I\'ll proceed with the fix now.' };
     } catch (error) {
-      console.error('[WorkflowApproval] Error approving request:', error);
+      log.error('[WorkflowApproval] Error approving request:', error);
       return { success: false, message: 'Failed to process approval' };
     }
   }
@@ -321,7 +329,7 @@ class WorkflowApprovalService {
           .where(eq(aiGapFindings.id, existing.gapFindingId));
       }
 
-      console.log(`[WorkflowApproval] Request ${approvalId} rejected by ${rejectedBy}`);
+      log.info(`[WorkflowApproval] Request ${approvalId} rejected by ${rejectedBy}`);
 
       await this.emitApprovalEvent('approval_rejected', { ...existing, rejectedBy, reason });
 
@@ -335,7 +343,7 @@ class WorkflowApprovalService {
 
       return { success: true, message: 'Request rejected. Finding will remain open for manual review.' };
     } catch (error) {
-      console.error('[WorkflowApproval] Error rejecting request:', error);
+      log.error('[WorkflowApproval] Error rejecting request:', error);
       return { success: false, message: 'Failed to process rejection' };
     }
   }
@@ -348,6 +356,22 @@ class WorkflowApprovalService {
     executionDetails?: string
   ): Promise<boolean> {
     try {
+      const [current] = await db
+        .select({ status: aiWorkflowApprovals.status })
+        .from(aiWorkflowApprovals)
+        .where(eq(aiWorkflowApprovals.id, approvalId))
+        .limit(1);
+
+      if (!current) {
+        log.warn(`[WorkflowApproval] markExecuted: request ${approvalId} not found`);
+        return false;
+      }
+
+      if (current.status !== 'approved') {
+        log.warn(`[WorkflowApproval] markExecuted: request ${approvalId} is '${current.status}', not 'approved' — skipping`);
+        return false;
+      }
+
       await db
         .update(aiWorkflowApprovals)
         .set({
@@ -357,10 +381,10 @@ class WorkflowApprovalService {
         })
         .where(eq(aiWorkflowApprovals.id, approvalId));
 
-      console.log(`[WorkflowApproval] Request ${approvalId} marked as executed`);
+      log.info(`[WorkflowApproval] Request ${approvalId} marked as executed`);
       return true;
     } catch (error) {
-      console.error('[WorkflowApproval] Error marking as executed:', error);
+      log.error('[WorkflowApproval] Error marking as executed:', error);
       return false;
     }
   }
@@ -399,18 +423,31 @@ class WorkflowApprovalService {
       let supportUsers: { id: string; email: string | null; role: string | null; workspaceRole: string | null }[] = [];
       
       if (targetWorkspaceId === 'platform') {
-        // Platform-level: only platform admins (root_admin, platform_admin)
-        supportUsers = await db
-          .select({
-            id: users.id,
-            email: users.email,
-            role: users.role,
-            workspaceRole: sql<string | null>`null`.as('workspaceRole'),
-          })
-          .from(users)
-          .where(inArray(users.role, ['root_admin', 'platform_admin']));
+        // Platform-level: query platformRoles table for active platform staff
+        const roleRows = await db
+          .select({ userId: platformRoles.userId, role: platformRoles.role })
+          .from(platformRoles)
+          .where(
+            and(
+              inArray(platformRoles.role, SUPPORT_ROLES as any),
+              isNull(platformRoles.revokedAt),
+              eq(platformRoles.isSuspended, false)
+            )
+          );
+        const userIds = roleRows.map(r => r.userId);
+        if (userIds.length > 0) {
+          const userRows = await db
+            .select({ id: users.id, email: users.email })
+            .from(users)
+            .where(inArray(users.id, userIds));
+          supportUsers = userRows.map(u => ({
+            ...u,
+            role: roleRows.find(r => r.userId === u.id)?.role || null,
+            workspaceRole: null,
+          }));
+        }
       } else {
-        // Workspace-scoped: check employee workspace roles
+        // Workspace-scoped: check employee workspace roles only
         supportUsers = await db
           .select({
             id: users.id,
@@ -422,15 +459,12 @@ class WorkflowApprovalService {
           .innerJoin(employees, eq(employees.userId, users.id))
           .where(and(
             eq(employees.workspaceId, targetWorkspaceId),
-            or(
-              inArray(users.role, SUPPORT_ROLES),
-              inArray(employees.workspaceRole, ['owner', 'admin', 'manager'])
-            )
+            inArray(employees.workspaceRole, [...APPROVER_ROLES, ROLES.SUPERVISOR])
           ));
       }
 
       if (supportUsers.length === 0) {
-        console.warn(`[WorkflowApproval] No support users found for workspace ${targetWorkspaceId}`);
+        log.warn(`[WorkflowApproval] No support users found for workspace ${targetWorkspaceId}`);
         // Escalate: emit event for monitoring
         await this.emitApprovalEvent('no_approvers_available', { 
           approvalId: approval.id, 
@@ -447,50 +481,55 @@ class WorkflowApprovalService {
         ? `${approval.endUserSummary || approval.title}. Risk: ${approval.riskLevel}. Expires in ${this.getExpiryHours(approval.riskLevel || 'medium')} hours.`
         : `Pending approval: ${approval.title}. Please review before expiry.`;
 
-      let notified = 0;
-      for (const user of supportUsers) {
-        // Check if user has sufficient role (platform role or workspace role)
+      // Filter users based on role hierarchy
+      const eligibleUsers = supportUsers.filter(user => {
         const platformRoleIndex = SUPPORT_ROLES.indexOf(user.role || '');
         const requiredRoleIndex = SUPPORT_ROLES.indexOf(approval.requiredRole || 'support_manager');
-        const hasWorkspaceAuthority = ['owner', 'admin', 'manager'].includes(user.workspaceRole || '');
+        const hasWorkspaceAuthority = ['org_owner', 'co_owner', 'manager', 'supervisor'].includes(user.workspaceRole || '');
         
         // Allow if platform role is sufficient OR has workspace authority
         if (platformRoleIndex === -1 && !hasWorkspaceAuthority) {
-          continue;
+          return false;
         }
         if (platformRoleIndex > requiredRoleIndex && !hasWorkspaceAuthority) {
-          continue;
+          return false;
         }
+        return true;
+      });
 
+      // Route through UNE for AI enrichment and unified handling
+      let notified = 0;
+      for (const user of eligibleUsers) {
         try {
-          await db.insert(notifications).values({
+          const result = await universalNotificationEngine.sendNotification({
             workspaceId: targetWorkspaceId,
             userId: user.id,
             type: 'ai_approval_needed',
             title,
             message,
+            severity: approval.riskLevel === 'critical' ? 'error' : approval.riskLevel === 'high' ? 'warning' : 'info',
             actionUrl: `/admin/approvals/${approval.id}`,
-            relatedEntityType: 'workflow_approval',
-            relatedEntityId: approval.id,
             metadata: {
               approvalId: approval.id,
               riskLevel: approval.riskLevel,
               requiredRole: approval.requiredRole,
               expiresAt: approval.expiresAt,
               action,
+              relatedEntityType: 'workflow_approval',
+              relatedEntityId: approval.id,
+              skipFeatureCheck: true, // AI approval notifications bypass feature validation
             },
-            isRead: false,
           });
-          notified++;
+          if (result.success) notified++;
         } catch (notifyError) {
-          console.error(`[WorkflowApproval] Failed to notify user ${user.id}:`, notifyError);
+          log.error(`[WorkflowApproval] Failed to notify user ${user.id}:`, notifyError);
         }
       }
 
-      console.log(`[WorkflowApproval] Notified ${notified} users in workspace ${targetWorkspaceId} about approval ${approval.id}`);
+      log.info(`[WorkflowApproval] UNE notified ${notified} users in workspace ${targetWorkspaceId} about approval ${approval.id}`);
       return notified;
     } catch (error) {
-      console.error('[WorkflowApproval] Error notifying support roles:', error);
+      log.error('[WorkflowApproval] Error notifying support roles:', error);
       // Emit error event for monitoring instead of silent failure
       await this.emitApprovalEvent('notification_error', { 
         approvalId: approval.id, 
@@ -558,7 +597,7 @@ class WorkflowApprovalService {
         .returning({ id: aiWorkflowApprovals.id });
 
       if (result.length > 0) {
-        console.log(`[WorkflowApproval] Expired ${result.length} approval requests`);
+        log.info(`[WorkflowApproval] Expired ${result.length} approval requests`);
         
         for (const expired of result) {
           await this.emitApprovalEvent('approval_expired', { id: expired.id });
@@ -567,7 +606,7 @@ class WorkflowApprovalService {
 
       return result.length;
     } catch (error) {
-      console.error('[WorkflowApproval] Error processing expired approvals:', error);
+      log.error('[WorkflowApproval] Error processing expired approvals:', error);
       return 0;
     }
   }
@@ -641,14 +680,21 @@ class WorkflowApprovalService {
 
   private async verifyApproverRole(userId: string, requiredRole: string): Promise<boolean> {
     try {
-      const [user] = await db
-        .select({ role: users.role })
-        .from(users)
-        .where(eq(users.id, userId));
+      const [roleRow] = await db
+        .select({ role: platformRoles.role })
+        .from(platformRoles)
+        .where(
+          and(
+            eq(platformRoles.userId, userId),
+            isNull(platformRoles.revokedAt),
+            eq(platformRoles.isSuspended, false)
+          )
+        )
+        .limit(1);
 
-      if (!user || !user.role) return false;
+      if (!roleRow) return false;
 
-      const userRoleIndex = SUPPORT_ROLES.indexOf(user.role);
+      const userRoleIndex = SUPPORT_ROLES.indexOf(roleRow.role);
       const requiredRoleIndex = SUPPORT_ROLES.indexOf(requiredRole);
 
       // Lower index = higher permission
@@ -680,13 +726,13 @@ class WorkflowApprovalService {
         status: data.status,
         timestamp: new Date().toISOString(),
       },
-      visibility: 'admin',
+      visibility: 'org_leadership',
     };
 
     try {
       await platformEventBus.publish(event);
     } catch (error) {
-      console.error('[WorkflowApproval] Failed to emit event:', error);
+      log.error('[WorkflowApproval] Failed to emit event:', error);
     }
   }
 
@@ -713,7 +759,7 @@ class WorkflowApprovalService {
         name: action.name,
         category: 'automation',
         description: action.desc,
-        requiredRoles: ['support', 'admin', 'super_admin'],
+        requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
         handler: async (request) => {
           const startTime = Date.now();
           const result = await action.fn(request.payload || {});
@@ -728,7 +774,7 @@ class WorkflowApprovalService {
       });
     }
 
-    console.log('[WorkflowApproval] Registered 7 AI Brain actions');
+    log.info('[WorkflowApproval] Registered 7 AI Brain actions');
   }
 }
 
@@ -739,9 +785,9 @@ class WorkflowApprovalService {
 export const workflowApprovalService = WorkflowApprovalService.getInstance();
 
 export async function initializeWorkflowApproval(): Promise<void> {
-  console.log('[WorkflowApproval] Initializing Workflow Approval Service...');
+  log.info('[WorkflowApproval] Initializing Workflow Approval Service...');
   workflowApprovalService.registerActions();
-  console.log('[WorkflowApproval] Workflow Approval Service initialized');
+  log.info('[WorkflowApproval] Workflow Approval Service initialized');
 }
 
 export { WorkflowApprovalService };

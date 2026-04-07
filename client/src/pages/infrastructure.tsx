@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +35,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
@@ -131,7 +131,7 @@ function CircuitCard({ circuit }: { circuit: CircuitStatus }) {
           </div>
         </div>
         <div className="space-y-1">
-          <div className="flex justify-between text-xs">
+          <div className="flex justify-between gap-1 text-xs">
             <span className="text-muted-foreground">Error Rate</span>
             <span className={cn(circuit.errorRate > 5 ? "text-red-500" : "text-muted-foreground")}>
               {circuit.errorRate.toFixed(1)}%
@@ -170,7 +170,7 @@ function SLACard({ service }: { service: SLAStatus }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-2xl font-bold">
             {uptimePercentage.toFixed(2)}%
           </span>
@@ -184,7 +184,7 @@ function SLACard({ service }: { service: SLAStatus }) {
           value={uptimePercentage} 
           className={cn("h-2", isHealthy ? "" : "[&>div]:bg-amber-500")}
         />
-        <div className="grid grid-cols-3 gap-1 text-xs text-center">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-xs text-center">
           <div className="flex flex-col">
             <span className="text-muted-foreground">p50</span>
             <span className="font-medium">{service.latencyP50}ms</span>
@@ -257,7 +257,7 @@ interface LaunchDashboardData {
 export default function InfrastructurePage() {
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { data: health, isLoading, refetch, isFetching } = useQuery<InfrastructureHealth>({
+  const { data: health, isLoading } = useQuery<InfrastructureHealth>({
     queryKey: ["/api/infrastructure/health"],
     refetchInterval: 30000,
   });
@@ -280,34 +280,19 @@ export default function InfrastructurePage() {
 
   const stats = health?.aggregateStats;
 
-  return (
-    <ScrollArea className="h-[calc(100vh-4rem)]">
-      <div className="container max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <Server className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-              Infrastructure Monitoring
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-base mt-1">
-              Circuit breakers, SLA monitoring, and service telemetry
-            </p>
-          </div>
-          <Button 
-            onClick={() => refetch()} 
-            disabled={isFetching}
-            className="self-start md:self-auto"
-            data-testid="button-refresh-infrastructure"
-          >
-            <RefreshCw className={cn("h-4 w-4 mr-2", isFetching && "animate-spin")} />
-            Refresh
-          </Button>
-        </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'infrastructure',
+    title: 'Infrastructure Monitoring',
+    subtitle: 'Circuit breakers, SLA monitoring, and service telemetry',
+    category: 'admin',
+  };
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card>
             <CardContent className="pt-4 md:pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-1">
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">Total Circuits</p>
                   <p className="text-xl md:text-2xl font-bold">{stats?.totalCircuits || 0}</p>
@@ -318,7 +303,7 @@ export default function InfrastructurePage() {
           </Card>
           <Card>
             <CardContent className="pt-4 md:pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-1">
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">Healthy</p>
                   <p className="text-xl md:text-2xl font-bold text-emerald-500">
@@ -331,7 +316,7 @@ export default function InfrastructurePage() {
           </Card>
           <Card>
             <CardContent className="pt-4 md:pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-1">
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">Open Circuits</p>
                   <p className="text-xl md:text-2xl font-bold text-red-500">
@@ -344,7 +329,7 @@ export default function InfrastructurePage() {
           </Card>
           <Card>
             <CardContent className="pt-4 md:pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-1">
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">SLA Compliance</p>
                   <p className="text-xl md:text-2xl font-bold">
@@ -389,7 +374,7 @@ export default function InfrastructurePage() {
                 <CardContent>
                   <div className="space-y-3">
                     {health?.circuits.slice(0, 4).map((circuit) => (
-                      <div key={circuit.name} className="flex items-center justify-between">
+                      <div key={circuit.name} className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           {(() => {
                             const Icon = circuitIcons[circuit.name] || Server;
@@ -424,7 +409,7 @@ export default function InfrastructurePage() {
                 <CardContent>
                   <div className="space-y-3">
                     {health?.slaServices.slice(0, 4).map((service) => (
-                      <div key={service.serviceId} className="flex items-center justify-between">
+                      <div key={service.serviceId} className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{service.displayName}</span>
                           <Badge className={cn("text-[9px] h-4", tierColors[service.tier])}>
@@ -478,15 +463,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">RPO/RTO management & failover</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">RPO Target</span>
                     <span className="font-medium">15 min</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">RTO Target</span>
                     <span className="font-medium">4 hr</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Failover Configs</span>
                     <span className="font-medium">3</span>
                   </div>
@@ -508,15 +493,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Centralized logging & search</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Logs/min</span>
                     <span className="font-medium">0</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Error Rate</span>
                     <span className="font-medium">0%</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Retention</span>
                     <span className="font-medium">7-365 days</span>
                   </div>
@@ -538,15 +523,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Threat detection & prevention</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Threats Blocked</span>
                     <span className="font-medium">0</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Security Score</span>
                     <span className="font-medium text-emerald-500">100/100</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Patterns Active</span>
                     <span className="font-medium">5</span>
                   </div>
@@ -568,15 +553,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Asset delivery & API caching</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Hit Rate</span>
                     <span className="font-medium">0%</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Edge Locations</span>
                     <span className="font-medium">4</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Cached Entries</span>
                     <span className="font-medium">0</span>
                   </div>
@@ -598,15 +583,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">SOX-compliant export & archival</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Retention</span>
                     <span className="font-medium">7 years</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Compliance</span>
                     <span className="font-medium text-emerald-500">SOX Ready</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Integrity</span>
                     <span className="font-medium">Verified</span>
                   </div>
@@ -632,15 +617,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Production go-live validation</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Checks Passed</span>
                     <span className="font-medium">{launchData?.data?.readiness?.passed || 0}/{launchData?.data?.readiness?.totalChecks || 0}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Launch Gates</span>
                     <span className="font-medium">{launchData?.data?.readiness?.gatesApproved || 0}/{launchData?.data?.readiness?.totalGates || 0} Approved</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Readiness Score</span>
                     <span className={cn("font-medium", (launchData?.data?.readiness?.score || 0) >= 90 ? "text-emerald-500" : "text-amber-500")}>{launchData?.data?.readiness?.score || 0}%</span>
                   </div>
@@ -669,15 +654,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Failover drills & resilience</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Experiments Run</span>
                     <span className="font-medium">{launchData?.data?.chaos?.completed || 0}/{launchData?.data?.chaos?.totalExperiments || 0}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Success Rate</span>
                     <span className={cn("font-medium", (launchData?.data?.chaos?.successRate || 0) >= 90 ? "text-emerald-500" : "text-amber-500")}>{launchData?.data?.chaos?.successRate || 0}%</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Scheduled Drills</span>
                     <span className="font-medium">{launchData?.data?.chaos?.scheduledDrills || 0}</span>
                   </div>
@@ -705,15 +690,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Incident response procedures</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Runbooks</span>
                     <span className="font-medium">{launchData?.data?.runbooks?.totalRunbooks || 0}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Categories</span>
                     <span className="font-medium">{Object.keys(launchData?.data?.runbooks?.byCategory || {}).length}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Recent Executions</span>
                     <span className="font-medium">{launchData?.data?.runbooks?.recentExecutions || 0}</span>
                   </div>
@@ -735,15 +720,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Regulatory approval workflows</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Requirements</span>
                     <span className="font-medium">{launchData?.data?.compliance?.compliant || 0}/{launchData?.data?.compliance?.totalRequirements || 0} Compliant</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Pending Sign-offs</span>
                     <span className={cn("font-medium", (launchData?.data?.compliance?.pendingSignoffs || 0) > 0 ? "text-amber-500" : "")}>{launchData?.data?.compliance?.pendingSignoffs || 0}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Frameworks</span>
                     <span className="font-medium">{Object.keys(launchData?.data?.compliance?.frameworkCoverage || {}).join(', ') || 'N/A'}</span>
                   </div>
@@ -771,15 +756,15 @@ export default function InfrastructurePage() {
                   <CardDescription className="text-xs">Production simulation</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Rehearsals</span>
                     <span className="font-medium">{launchData?.data?.rehearsals?.completed || 0} Completed</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Average Score</span>
                     <span className={cn("font-medium", (launchData?.data?.rehearsals?.averageScore || 0) >= 80 ? "text-emerald-500" : "text-amber-500")}>{launchData?.data?.rehearsals?.averageScore || 0}%</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between gap-1 text-xs">
                     <span className="text-muted-foreground">Scheduled</span>
                     <span className="font-medium">{launchData?.data?.rehearsals?.scheduled || 0}</span>
                   </div>
@@ -798,7 +783,6 @@ export default function InfrastructurePage() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-    </ScrollArea>
+    </CanvasHubPage>
   );
 }

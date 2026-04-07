@@ -19,6 +19,10 @@ import {
   chatConversations,
 } from "@shared/schema";
 import { eq, and, or, gte, lte, count, sum, avg, sql, desc } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('roomAnalyticsService');
+
+
 
 /**
  * Room Analytics Metrics - aggregated statistics
@@ -155,21 +159,20 @@ export async function trackMessagePosted(
     await getOrCreateRoomAnalytics(workspaceId, conversationId);
 
     // Update current metrics
-    await db.execute(
-      sql`UPDATE room_analytics SET
-        total_messages = total_messages + 1,
-        message_count_today = message_count_today + 1,
-        message_count_this_week = message_count_this_week + 1,
-        ${
-          sentiment === "positive"
-            ? sql`sentiment_positive = sentiment_positive + 1`
-            : sentiment === "negative"
-              ? sql`sentiment_negative = sentiment_negative + 1`
-              : sql`sentiment_neutral = sentiment_neutral + 1`
-        },
-        updated_at = NOW()
-      WHERE workspace_id = ${workspaceId} AND conversation_id = ${conversationId}`
-    );
+    const setFields: Record<string, any> = {
+      totalMessages: sql`${roomAnalytics.totalMessages} + 1`,
+      messageCountToday: sql`${roomAnalytics.messageCountToday} + 1`,
+      messageCountThisWeek: sql`${roomAnalytics.messageCountThisWeek} + 1`,
+      updatedAt: new Date(),
+    };
+    if (sentiment === "positive") {
+      setFields.sentimentPositive = sql`${roomAnalytics.sentimentPositive} + 1`;
+    } else if (sentiment === "negative") {
+      setFields.sentimentNegative = sql`${roomAnalytics.sentimentNegative} + 1`;
+    } else {
+      setFields.sentimentNeutral = sql`${roomAnalytics.sentimentNeutral} + 1`;
+    }
+    await db.update(roomAnalytics).set(setFields).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
 
     // Add to hourly timeseries
     await trackTimeseriesMetric(
@@ -179,7 +182,7 @@ export async function trackMessagePosted(
       { messageCount: 1 }
     );
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking message:", error);
+    log.error("[RoomAnalyticsService] Error tracking message:", error);
   }
 }
 
@@ -195,7 +198,7 @@ export async function trackParticipantJoined(
   try {
     // Skip analytics if required params are missing (non-critical feature)
     if (!workspaceId || !conversationId) {
-      console.log("[RoomAnalyticsService] Skipping analytics - missing workspace or conversation ID");
+      log.info("[RoomAnalyticsService] Skipping analytics - missing workspace or conversation ID");
       return;
     }
     
@@ -217,13 +220,13 @@ export async function trackParticipantJoined(
 
     // Update metrics using simpler increment logic
     const updateFields: Record<string, any> = {
-      activeParticipantsNow: sql`active_participants_now + 1`,
+      activeParticipantsNow: sql`${roomAnalytics.activeParticipantsNow} + 1`,
       updatedAt: new Date(),
     };
     
     if (isNewParticipant) {
-      updateFields.totalParticipants = sql`total_participants + 1`;
-      updateFields.newParticipantsToday = sql`new_participants_today + 1`;
+      updateFields.totalParticipants = sql`${roomAnalytics.totalParticipants} + 1`;
+      updateFields.newParticipantsToday = sql`${roomAnalytics.newParticipantsToday} + 1`;
     }
 
     await db
@@ -245,7 +248,7 @@ export async function trackParticipantJoined(
     );
   } catch (error) {
     // Non-critical - log and continue
-    console.warn("[RoomAnalyticsService] Analytics tracking failed (non-critical):", (error as Error).message);
+    log.warn("[RoomAnalyticsService] Analytics tracking failed (non-critical):", (error as Error).message);
   }
 }
 
@@ -258,14 +261,12 @@ export async function trackParticipantLeft(
 ): Promise<void> {
   try {
     // Decrement active participants (but don't go below 0)
-    await db.execute(
-      sql`UPDATE room_analytics SET
-        active_participants_now = GREATEST(0, active_participants_now - 1),
-        updated_at = NOW()
-      WHERE workspace_id = ${workspaceId} AND conversation_id = ${conversationId}`
-    );
+    await db.update(roomAnalytics).set({
+      activeParticipantsNow: sql`GREATEST(0, ${roomAnalytics.activeParticipantsNow} - 1)`,
+      updatedAt: new Date(),
+    }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking participant leave:", error);
+    log.error("[RoomAnalyticsService] Error tracking participant leave:", error);
   }
 }
 
@@ -279,13 +280,11 @@ export async function trackTicketCreated(
   try {
     await getOrCreateRoomAnalytics(workspaceId, conversationId, undefined, "support");
 
-    await db.execute(
-      sql`UPDATE room_analytics SET
-        tickets_created = tickets_created + 1,
-        unresolved_tickets = unresolved_tickets + 1,
-        updated_at = NOW()
-      WHERE workspace_id = ${workspaceId} AND conversation_id = ${conversationId}`
-    );
+    await db.update(roomAnalytics).set({
+      ticketsCreated: sql`${roomAnalytics.ticketsCreated} + 1`,
+      unresolvedTickets: sql`${roomAnalytics.unresolvedTickets} + 1`,
+      updatedAt: new Date(),
+    }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
 
     await trackTimeseriesMetric(
       workspaceId,
@@ -294,7 +293,7 @@ export async function trackTicketCreated(
       { ticketsCreated: 1 }
     );
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking ticket creation:", error);
+    log.error("[RoomAnalyticsService] Error tracking ticket creation:", error);
   }
 }
 
@@ -329,14 +328,12 @@ export async function trackTicketResolved(
           newResolved
         : resolutionTimeHours;
 
-      await db.execute(
-        sql`UPDATE room_analytics SET
-          tickets_resolved = tickets_resolved + 1,
-          unresolved_tickets = GREATEST(0, unresolved_tickets - 1),
-          avg_resolution_time_hours = ${newAvgTime},
-          updated_at = NOW()
-        WHERE workspace_id = ${workspaceId} AND conversation_id = ${conversationId}`
-      );
+      await db.update(roomAnalytics).set({
+        ticketsResolved: sql`${roomAnalytics.ticketsResolved} + 1`,
+        unresolvedTickets: sql`GREATEST(0, ${roomAnalytics.unresolvedTickets} - 1)`,
+        avgResolutionTimeHours: newAvgTime,
+        updatedAt: new Date(),
+      }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
     }
 
     await trackTimeseriesMetric(
@@ -346,7 +343,7 @@ export async function trackTicketResolved(
       { ticketsResolved: 1, avgResolutionTimeHours: resolutionTimeHours }
     );
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking ticket resolution:", error);
+    log.error("[RoomAnalyticsService] Error tracking ticket resolution:", error);
   }
 }
 
@@ -378,14 +375,12 @@ export async function trackAiEscalation(
       const totalEscalations = (record.aiEscalationCount || 0) + 1;
       const escalationRate = (totalEscalations / totalResponses) * 100;
 
-      await db.execute(
-        sql`UPDATE room_analytics SET
-          ai_escalation_count = ai_escalation_count + 1,
-          ai_response_count = ai_response_count + 1,
-          ai_escalation_rate = ${escalationRate},
-          updated_at = NOW()
-        WHERE workspace_id = ${workspaceId} AND conversation_id = ${conversationId}`
-      );
+      await db.update(roomAnalytics).set({
+        aiEscalationCount: sql`${roomAnalytics.aiEscalationCount} + 1`,
+        aiResponseCount: sql`${roomAnalytics.aiResponseCount} + 1`,
+        aiEscalationRate: escalationRate,
+        updatedAt: new Date(),
+      }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
 
       await trackTimeseriesMetric(
         workspaceId,
@@ -395,7 +390,7 @@ export async function trackAiEscalation(
       );
     }
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking AI escalation:", error);
+    log.error("[RoomAnalyticsService] Error tracking AI escalation:", error);
   }
 }
 
@@ -427,13 +422,11 @@ export async function trackAiResponse(
       const totalEscalations = record.aiEscalationCount || 0;
       const escalationRate = totalResponses > 0 ? (totalEscalations / totalResponses) * 100 : 0;
 
-      await db.execute(
-        sql`UPDATE room_analytics SET
-          ai_response_count = ai_response_count + 1,
-          ai_escalation_rate = ${escalationRate},
-          updated_at = NOW()
-        WHERE workspace_id = ${workspaceId} AND conversation_id = ${conversationId}`
-      );
+      await db.update(roomAnalytics).set({
+        aiResponseCount: sql`${roomAnalytics.aiResponseCount} + 1`,
+        aiEscalationRate: escalationRate,
+        updatedAt: new Date(),
+      }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
 
       await trackTimeseriesMetric(
         workspaceId,
@@ -443,7 +436,7 @@ export async function trackAiResponse(
       );
     }
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking AI response:", error);
+    log.error("[RoomAnalyticsService] Error tracking AI response:", error);
   }
 }
 
@@ -510,14 +503,14 @@ async function trackTimeseriesMetric(
         updateFields.aiEscalations = sql`${roomAnalyticsTimeseries.aiEscalations} + ${delta.aiEscalations}`;
       }
 
-      await db.execute(
-        sql`UPDATE ${roomAnalyticsTimeseries} SET
-          ${sql.raw(Object.entries(updateFields).map(([k, v]) => `${k} = ${v}`).join(", "))}
-        WHERE workspace_id = ${workspaceId}
-          AND conversation_id = ${conversationId}
-          AND period = ${period}
-          AND period_start = ${periodStart}`
-      );
+      await db.update(roomAnalyticsTimeseries)
+        .set(updateFields)
+        .where(and(
+          eq(roomAnalyticsTimeseries.workspaceId, workspaceId),
+          eq(roomAnalyticsTimeseries.conversationId, conversationId),
+          eq(roomAnalyticsTimeseries.period, period),
+          eq(roomAnalyticsTimeseries.periodStart, periodStart)
+        ));
     } else {
       // Create new record with the delta values
       await db.insert(roomAnalyticsTimeseries).values({
@@ -536,7 +529,7 @@ async function trackTimeseriesMetric(
       });
     }
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking timeseries:", error);
+    log.error("[RoomAnalyticsService] Error tracking timeseries:", error);
   }
 }
 
@@ -574,7 +567,7 @@ export async function getRoomsAnalytics(
       summary,
     };
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error getting rooms analytics:", error);
+    log.error("[RoomAnalyticsService] Error getting rooms analytics:", error);
     return {
       workspaceId,
       totalRooms: 0,
@@ -616,7 +609,7 @@ export async function getRoomTimeSeries(
 
     return timeseries as TimeSeriesPoint[];
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error getting time series:", error);
+    log.error("[RoomAnalyticsService] Error getting time series:", error);
     return [];
   }
 }
@@ -626,14 +619,12 @@ export async function getRoomTimeSeries(
  */
 export async function resetDailyCounters(workspaceId: string): Promise<void> {
   try {
-    await db.execute(
-      sql`UPDATE room_analytics SET
-        message_count_today = 0,
-        new_participants_today = 0
-      WHERE workspace_id = ${workspaceId}`
-    );
+    await db.update(roomAnalytics).set({
+      messageCountToday: 0,
+      newParticipantsToday: 0,
+    }).where(eq(roomAnalytics.workspaceId, workspaceId));
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error resetting daily counters:", error);
+    log.error("[RoomAnalyticsService] Error resetting daily counters:", error);
   }
 }
 
@@ -642,13 +633,11 @@ export async function resetDailyCounters(workspaceId: string): Promise<void> {
  */
 export async function resetWeeklyCounters(workspaceId: string): Promise<void> {
   try {
-    await db.execute(
-      sql`UPDATE room_analytics SET
-        message_count_this_week = 0
-      WHERE workspace_id = ${workspaceId}`
-    );
+    await db.update(roomAnalytics).set({
+      messageCountThisWeek: 0,
+    }).where(eq(roomAnalytics.workspaceId, workspaceId));
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error resetting weekly counters:", error);
+    log.error("[RoomAnalyticsService] Error resetting weekly counters:", error);
   }
 }
 
@@ -690,7 +679,7 @@ export async function getAnalyticsData(
       },
     };
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error getting analytics data:", error);
+    log.error("[RoomAnalyticsService] Error getting analytics data:", error);
     return {
       workspaceId,
       totalRooms: 0,

@@ -17,6 +17,12 @@ interface WorkspaceLayoutProps {
 /**
  * WorkspaceLayout - Unified layout component for all workspace pages
  * 
+ * Now integrated with WorkspaceShell 7-step containment system:
+ * - CRITICAL: Uses width: 100% (never 100vw)
+ * - Has min-width: 0 for proper flex shrinking
+ * - Single scroll owner pattern
+ * - Proper overflow containment
+ * 
  * Provides consistent styling matching public pages:
  * - Light bg-background by default (no dark/black inconsistencies)
  * - Optional hero gradients like landing/homepage
@@ -49,12 +55,13 @@ export function WorkspaceLayout({
   return (
     <div
       className={cn(
-        "min-h-screen bg-background overflow-x-hidden w-full",
+        "min-h-full bg-background w-full min-w-0",
+        "overflow-x-hidden",
         heroGradient && "bg-gradient-to-b from-background via-background to-blue-50/30",
         className
       )}
     >
-      <div className={cn("responsive-container responsive-spacing-y", maxWidthClass, "mx-auto")}>
+      <div className={cn("responsive-container responsive-spacing-y min-w-0", maxWidthClass, "mx-auto")}>
         {children}
       </div>
     </div>

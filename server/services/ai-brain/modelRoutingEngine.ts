@@ -15,6 +15,8 @@
  */
 
 import { GEMINI_MODELS, GeminiModelTier, AntiYapPreset, ANTI_YAP_PRESETS } from './providers/geminiClient';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('modelRoutingEngine');
 
 // Model tier hierarchy for fallback cascading
 export const MODEL_TIER_HIERARCHY = {
@@ -391,7 +393,7 @@ class ModelRoutingEngine {
       const errorRate = health.errorCount / Math.max(health.requestCount, 1);
       if (errorRate > 0.3 && health.requestCount > 10) {
         health.isHealthy = false;
-        console.warn(`🔴 [ModelRouter] Tier ${tier} marked unhealthy: ${(errorRate * 100).toFixed(1)}% error rate`);
+        log.warn(`🔴 [ModelRouter] Tier ${tier} marked unhealthy: ${(errorRate * 100).toFixed(1)}% error rate`);
       }
     } else {
       // Update average latency
@@ -402,7 +404,7 @@ class ModelRoutingEngine {
         const timeSinceError = Date.now() - health.lastErrorTime.getTime();
         if (timeSinceError > 60000) { // 1 minute recovery window
           health.isHealthy = true;
-          console.log(`🟢 [ModelRouter] Tier ${tier} recovered`);
+          log.info(`🟢 [ModelRouter] Tier ${tier} recovered`);
         }
       }
     }

@@ -1,0 +1,68 @@
+Time to take the wheel from the agent. Here's a nuclear prompt — paste this and it should force the fix:
+
+TASK: Fix Production Build — drizzle-orm Missing (STOP GUESSING, FOLLOW EXACTLY)
+CONTEXT: Build has failed 5 times. The issue is the deploy-build.sh script is breaking node_modules with an unsafe prune/symlink deletion sequence. Stop iterating on broken approaches. Follow this exactly.
+EXECUTION FRAMEWORK:
+
+TRIGGER: Deployment build process
+FETCH: package.json, deploy-build.sh, any build config
+VALIDATE: Confirm drizzle-orm is in dependencies (NOT devDependencies)
+PROCESS: Rewrite build script with correct dependency handling
+MUTATE: Replace deploy-build.sh entirely
+CONFIRM: Run build locally, verify node_modules contains drizzle-orm
+NOTIFY: Report success or exact failure point
+
+STEP 1: Verify package.json
+Open package.json. Confirm these are in "dependencies" (NOT "devDependencies"):
+
+drizzle-orm
+@neondatabase/serverless (or your DB driver)
+Any other runtime packages
+
+If they're in devDependencies, move them to dependencies.
+STEP 2: Replace deploy-build.sh Entirely
+Delete the current contents. Use this exact script:
+bash#!/bin/bash
+set -e
+
+echo "=== Installing ALL dependencies for build ==="
+npm ci
+
+echo "=== Running build ==="
+npm run build
+
+echo "=== Pruning devDependencies for production ==="
+npm prune --omit=dev
+
+echo "=== Verifying critical production dependencies ==="
+if [ ! -d "node_modules/drizzle-orm" ]; then
+  echo "ERROR: drizzle-orm missing after build!"
+  exit 1
+fi
+
+echo "=== Build complete ==="
+STEP 3: Remove Any Dangerous Commands
+Search the entire codebase for and REMOVE:
+
+find . -xtype l -delete (breaks npm symlinks)
+rm -rf node_modules before production build without reinstall
+Any npm install --no-save for individual packages
+
+DO NOT:
+
+Add drizzle-orm as an external in esbuild config
+Try to bundle drizzle-orm into the build
+Create workarounds or patches
+Iterate further on the broken approach
+
+DO:
+
+Replace the build script exactly as shown above
+Move any runtime deps from devDependencies to dependencies
+Test with a fresh build
+
+TEST:
+bashrm -rf node_modules
+./deploy-build.sh
+ls node_modules | grep drizzle
+If drizzle-orm exists after this, deploy. If not, report the EXACT error message.

@@ -19,15 +19,18 @@
  */
 
 import { dataMigrationAgent, type ExtractedData, type MigrationResult } from './dataMigrationAgent';
+import { createLogger } from '../../../lib/logger';
 import { gamificationActivationAgent, type ActivationResult, AUTOMATION_GATES } from './gamificationActivationAgent';
 import { cognitiveOnboardingService, type IntegrationProvider, type DataSyncType } from '../cognitiveOnboardingService';
 import { industryComplianceTemplates, type IndustryComplianceConfig } from '../industryComplianceTemplates';
 import { db } from '../../../db';
 import { workspaces, notifications, orgInvitations, employees, userPlatformUpdateViews, platformUpdates } from '@shared/schema';
 import { eq, and, isNull, notInArray, or } from 'drizzle-orm';
-import { TrialManager } from '../../billing/trialManager';
+import { trialManager } from '../../billing/trialManager';
 import { onboardingPipelineService } from '../../onboardingPipelineService';
 import { platformEventBus, type PlatformEvent } from '../../platformEventBus';
+import { universalNotificationEngine } from '../../universalNotificationEngine';
+import { universalAudit, AUDIT_ACTIONS } from '../../universalAuditService';
 
 export interface OnboardingSource {
   type: 'pdf' | 'excel' | 'csv' | 'manual' | 'bulk_text';
@@ -74,6 +77,7 @@ export interface OnboardingResult {
 
 class OnboardingOrchestrator {
   private static instance: OnboardingOrchestrator;
+  private readonly log = createLogger('OnboardingOrchestrator');
 
   static getInstance(): OnboardingOrchestrator {
     if (!OnboardingOrchestrator.instance) {
@@ -96,7 +100,20 @@ class OnboardingOrchestrator {
       unlockBasicAutomation = true,
     } = options;
 
-    console.log(`[OnboardingOrchestrator] Starting onboarding for workspace ${workspaceId}`);
+    this.log.info(`Starting onboarding for workspace ${workspaceId}`);
+
+    universalAudit.log({
+      workspaceId,
+      actorId: userId,
+      actorType: 'user',
+      action: AUDIT_ACTIONS.ONBOARDING_ORCHESTRATION_STARTED,
+      entityType: 'workspace',
+      entityId: workspaceId,
+      changeType: 'action',
+      metadata: { sourceCount: sources.length, skipGamification, skipDataMigration, validateOnly },
+    }).catch((auditErr: any) => {
+      this.log.warn('[Onboarding] Audit log (start) failed:', auditErr?.message);
+    });
 
     const result: OnboardingResult = {
       success: true,
@@ -139,6 +156,27 @@ class OnboardingOrchestrator {
             if (migrationResult.warnings.length > 0) {
               result.warnings.push(...migrationResult.warnings);
             }
+
+            universalAudit.log({
+              workspaceId,
+              actorId: userId,
+              actorType: 'trinity',
+              actorBot: 'DataMigrationAgent',
+              action: AUDIT_ACTIONS.ONBOARDING_DATA_MIGRATION_COMPLETED,
+              entityType: 'workspace',
+              entityId: workspaceId,
+              changeType: 'action',
+              metadata: {
+                employeesImported: result.summary.employeesImported,
+                sourcesProcessed: sources.length,
+                errorCount: migrationResult.errors.length,
+                warningCount: migrationResult.warnings.length,
+                validateOnly,
+              },
+            }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
+          }).catch((err: any) => {
+            this.log.error('Data migration task failed:', err);
+            result.errors.push(`Data migration failed: ${(err instanceof Error ? err.message : String(err))}`);
           })
         );
       }
@@ -161,6 +199,26 @@ class OnboardingOrchestrator {
             if (gamificationResult.errors.length > 0) {
               result.errors.push(...gamificationResult.errors);
             }
+
+            universalAudit.log({
+              workspaceId,
+              actorId: userId,
+              actorType: 'trinity',
+              actorBot: 'GamificationActivationAgent',
+              action: AUDIT_ACTIONS.ONBOARDING_GAMIFICATION_ACTIVATED,
+              entityType: 'workspace',
+              entityId: workspaceId,
+              changeType: 'action',
+              metadata: {
+                success: gamificationResult.success,
+                achievementsCreated: gamificationResult.achievementsCreated,
+                automationGatesUnlocked: gamificationResult.automationGatesUnlocked,
+                errorCount: gamificationResult.errors.length,
+              },
+            }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
+          }).catch((err: any) => {
+            this.log.error('Gamification activation task failed:', err);
+            result.errors.push(`Gamification activation failed: ${(err instanceof Error ? err.message : String(err))}`);
           })
         );
       }
@@ -180,8 +238,11 @@ class OnboardingOrchestrator {
             if (!complianceResult.success) {
               result.warnings.push(...complianceResult.errors);
             } else {
-              console.log(`[OnboardingOrchestrator] Industry compliance deployed: ${complianceResult.templatesDeployed.length} templates, ${complianceResult.requirementsCreated} requirements`);
+              this.log.info(`Industry compliance deployed: ${complianceResult.templatesDeployed.length} templates, ${complianceResult.requirementsCreated} requirements`);
             }
+          }).catch((err: any) => {
+            this.log.error('Industry compliance task failed:', err);
+            result.warnings.push(`Industry compliance deployment failed: ${(err instanceof Error ? err.message : String(err))}`);
           })
         );
       } else if (isCustomIndustry) {
@@ -197,8 +258,11 @@ class OnboardingOrchestrator {
               if (!complianceResult.success) {
                 result.warnings.push(...complianceResult.errors);
               } else {
-                console.log(`[OnboardingOrchestrator] Custom industry compliance deployed for "${workspace.customIndustryName}": ${complianceResult.templatesDeployed.length} templates`);
+                this.log.info(`Custom industry compliance deployed for "${workspace.customIndustryName}": ${complianceResult.templatesDeployed.length} templates`);
               }
+            }).catch((err: any) => {
+              this.log.error('Custom industry compliance task failed:', err);
+              result.warnings.push(`Custom industry compliance deployment failed: ${(err instanceof Error ? err.message : String(err))}`);
             })
           );
         } else {
@@ -219,13 +283,37 @@ class OnboardingOrchestrator {
       result.success = result.errors.length === 0;
 
     } catch (error: any) {
-      console.error('[OnboardingOrchestrator] Onboarding failed:', error);
+      this.log.error('Onboarding failed:', error);
       result.success = false;
-      result.errors.push(error.message);
+      result.errors.push((error instanceof Error ? error.message : String(error)));
     }
 
     result.duration = Date.now() - startTime;
-    console.log(`[OnboardingOrchestrator] Onboarding completed in ${result.duration}ms:`, result.summary);
+
+    universalAudit.log({
+      workspaceId,
+      actorId: userId,
+      actorType: 'trinity',
+      actorBot: 'OnboardingOrchestrator',
+      action: AUDIT_ACTIONS.ONBOARDING_ORCHESTRATION_COMPLETED,
+      entityType: 'workspace',
+      entityId: workspaceId,
+      changeType: 'action',
+      metadata: {
+        success: result.success,
+        durationMs: result.duration,
+        employeesImported: result.summary.employeesImported,
+        achievementsCreated: result.summary.achievementsCreated,
+        automationGatesUnlocked: result.summary.automationGatesUnlocked,
+        readyToWork: result.summary.readyToWork,
+        errorCount: result.errors.length,
+        warningCount: result.warnings.length,
+      },
+    }).catch((auditErr: any) => {
+      this.log.warn('[Onboarding] Audit log (complete) failed:', auditErr?.message);
+    });
+
+    this.log.info(`Onboarding completed in ${result.duration}ms:`, result.summary);
 
     return result;
   }
@@ -316,7 +404,7 @@ class OnboardingOrchestrator {
         combinedData.confidence = Math.max(combinedData.confidence, extracted.confidence);
 
       } catch (error: any) {
-        errors.push(`Source extraction failed: ${error.message}`);
+        errors.push(`Source extraction failed: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
 
@@ -398,7 +486,7 @@ class OnboardingOrchestrator {
     ownerId: string;
     inviteSource?: 'signup' | 'invite' | 'subscription';
   }): Promise<OnboardingResult> {
-    console.log(`[OnboardingOrchestrator] New org trigger: ${params.workspaceId} (${params.inviteSource})`);
+    this.log.info(`New org trigger: ${params.workspaceId} (${params.inviteSource})`);
 
     // Clear all existing platform updates for new org users
     // This prevents them seeing historical updates that aren't relevant to them
@@ -449,7 +537,7 @@ class OnboardingOrchestrator {
       });
       
       if (unviewedUpdates.length === 0) {
-        console.log(`[OnboardingOrchestrator] No platform updates to clear for user ${userId}`);
+        this.log.info(`No platform updates to clear for user ${userId}`);
         return 0;
       }
       
@@ -457,6 +545,7 @@ class OnboardingOrchestrator {
       const now = new Date();
       const viewRecords = unviewedUpdates.map(u => ({
         userId,
+        workspaceId,
         updateId: u.id,
         viewedAt: now,
       }));
@@ -465,10 +554,10 @@ class OnboardingOrchestrator {
         .values(viewRecords)
         .onConflictDoNothing();
       
-      console.log(`[OnboardingOrchestrator] Cleared ${viewRecords.length} platform updates for new user ${userId}`);
+      this.log.info(`Cleared ${viewRecords.length} platform updates for new user ${userId}`);
       return viewRecords.length;
     } catch (error: any) {
-      console.error('[OnboardingOrchestrator] Failed to clear platform updates:', error.message);
+      this.log.error('Failed to clear platform updates:', (error instanceof Error ? error.message : String(error)));
       return 0;
     }
   }
@@ -566,10 +655,9 @@ class OnboardingOrchestrator {
     errors: string[];
   }> {
     const errors: string[] = [];
-    const trialManager = TrialManager.getInstance();
 
     try {
-      console.log(`[OnboardingOrchestrator] Processing invitation acceptance for workspace ${params.workspaceId}`);
+      this.log.info(`[OnboardingOrchestrator] Processing invitation acceptance for workspace ${params.workspaceId}`);
 
       // Step 1: Start free trial for the workspace (CRITICAL for billing)
       let trialInfo: { trialEndsAt: Date; daysRemaining: number } | undefined;
@@ -578,12 +666,12 @@ class OnboardingOrchestrator {
         if (trialResult.success) {
           const daysRemaining = Math.ceil((trialResult.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
           trialInfo = { trialEndsAt: trialResult.trialEndsAt, daysRemaining };
-          console.log(`[OnboardingOrchestrator] Trial started for workspace ${params.workspaceId}, ends ${trialResult.trialEndsAt.toISOString()}`);
+          this.log.info(`[OnboardingOrchestrator] Trial started for workspace ${params.workspaceId}, ends ${trialResult.trialEndsAt.toISOString()}`);
         } else {
-          console.warn(`[OnboardingOrchestrator] Trial start warning: ${trialResult.error}`);
+          this.log.warn(`[OnboardingOrchestrator] Trial start warning: ${trialResult.error}`);
         }
       } catch (trialError: any) {
-        console.warn('[OnboardingOrchestrator] Trial start failed (may already exist):', trialError.message);
+        this.log.warn('[OnboardingOrchestrator] Trial start failed (may already exist):', trialError.message);
       }
 
       // Step 2: Initialize billing onboarding pipeline (gamified tasks + discount reward)
@@ -595,9 +683,9 @@ class OnboardingOrchestrator {
           totalTasks: pipelineProgress.totalTasks,
           completionPercent: pipelineProgress.completionPercent,
         };
-        console.log(`[OnboardingOrchestrator] Billing pipeline initialized: ${pipelineProgress.totalTasks} tasks`);
+        this.log.info(`[OnboardingOrchestrator] Billing pipeline initialized: ${pipelineProgress.totalTasks} tasks`);
       } catch (pipelineError: any) {
-        console.warn('[OnboardingOrchestrator] Pipeline init warning:', pipelineError.message);
+        this.log.warn('[OnboardingOrchestrator] Pipeline init warning:', pipelineError.message);
       }
 
       // Step 3: Generate Trinity welcome message
@@ -644,11 +732,57 @@ class OnboardingOrchestrator {
           trialEndsAt: trialInfo?.trialEndsAt?.toISOString(),
           timestamp: new Date().toISOString(),
         },
-        visibility: 'admin',
+        visibility: 'org_leadership',
       };
       await platformEventBus.publish(event);
 
-      console.log(`[OnboardingOrchestrator] Invitation acceptance complete:`, {
+      universalAudit.log({
+        workspaceId: params.workspaceId,
+        actorId: params.userId,
+        actorType: 'user',
+        action: AUDIT_ACTIONS.ONBOARDING_INVITATION_ACCEPTED,
+        entityType: 'workspace',
+        entityId: params.workspaceId,
+        entityName: params.workspaceName,
+        changeType: 'action',
+        metadata: {
+          inviteToken: params.inviteToken ? `${params.inviteToken.substring(0, 8)}...` : null,
+          ownerName: params.ownerName,
+          trialStarted: !!trialInfo,
+          trialDaysRemaining: trialInfo?.daysRemaining || null,
+          pipelineTasks: billingPipeline?.totalTasks || 0,
+          trinityInitialized: trinityInit.success,
+          gamificationActive: onboardingResult.gamificationActivation?.success || false,
+          automationGatesUnlocked: onboardingResult.summary.automationGatesUnlocked,
+        },
+      }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
+
+      if (trialInfo) {
+        universalAudit.log({
+          workspaceId: params.workspaceId,
+          actorType: 'system',
+          action: AUDIT_ACTIONS.ONBOARDING_TRIAL_STARTED,
+          entityType: 'workspace',
+          entityId: params.workspaceId,
+          changeType: 'create',
+          metadata: { trialEndsAt: trialInfo.trialEndsAt.toISOString(), daysRemaining: trialInfo.daysRemaining },
+        }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
+      }
+
+      if (trinityInit.success) {
+        universalAudit.log({
+          workspaceId: params.workspaceId,
+          actorType: 'trinity',
+          actorBot: 'OnboardingOrchestrator',
+          action: AUDIT_ACTIONS.ONBOARDING_TRINITY_WELCOME_SENT,
+          entityType: 'trinity_instance',
+          entityId: trinityInit.trinityInstanceId,
+          changeType: 'create',
+          metadata: { persona: trinityInit.persona, capabilities: trinityInit.capabilities },
+        }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
+      }
+
+      this.log.info(`[OnboardingOrchestrator] Invitation acceptance complete:`, {
         workspaceId: params.workspaceId,
         success: onboardingResult.success && trinityInit.success,
         trinityPersona: trinityInit.persona,
@@ -672,8 +806,8 @@ class OnboardingOrchestrator {
       };
 
     } catch (error: any) {
-      console.error('[OnboardingOrchestrator] Invitation acceptance failed:', error);
-      errors.push(error.message);
+      this.log.error('[OnboardingOrchestrator] Invitation acceptance failed:', error);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return {
         success: false,
         errors,
@@ -739,7 +873,7 @@ class OnboardingOrchestrator {
     workspaceName: string;
     ownerId: string;
     ownerName: string;
-    subscriptionTier?: 'free' | 'starter' | 'professional' | 'enterprise';
+    subscriptionTier?: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   }): Promise<{
     success: boolean;
     trinityInstanceId: string;
@@ -750,7 +884,7 @@ class OnboardingOrchestrator {
     const errors: string[] = [];
     const { workspaceId, workspaceName, ownerId, ownerName, subscriptionTier = 'starter' } = params;
 
-    console.log(`[OnboardingOrchestrator] Initializing workspace-isolated Trinity for ${workspaceId}`);
+    this.log.info(`[OnboardingOrchestrator] Initializing workspace-isolated Trinity for ${workspaceId}`);
 
     try {
       // Determine Trinity persona based on subscription tier
@@ -768,7 +902,7 @@ class OnboardingOrchestrator {
         persona,
       });
 
-      console.log(`[OnboardingOrchestrator] Trinity initialized for workspace ${workspaceId}:`, {
+      this.log.info(`[OnboardingOrchestrator] Trinity initialized for workspace ${workspaceId}:`, {
         persona,
         capabilities: capabilities.length,
       });
@@ -782,8 +916,8 @@ class OnboardingOrchestrator {
       };
 
     } catch (error: any) {
-      console.error('[OnboardingOrchestrator] Trinity initialization failed:', error);
-      errors.push(error.message);
+      this.log.error('[OnboardingOrchestrator] Trinity initialization failed:', error);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return {
         success: false,
         trinityInstanceId: '',
@@ -800,7 +934,7 @@ class OnboardingOrchestrator {
   private getTrinityPersonaForTier(tier: string): string {
     const personaMap: Record<string, string> = {
       'free': 'onboarding_guide',
-      'starter': 'business_buddy',
+      'starter': 'coo_advisor',
       'professional': 'support_partner',
       'enterprise': 'executive_advisor',
     };
@@ -870,9 +1004,9 @@ class OnboardingOrchestrator {
         title: 'Welcome to CoAIleague!',
         message: `Hi ${ownerName}! I'm Trinity, your AI guide. I'm here to help you set up ${workspaceName} and get the most out of our platform. Let's start by importing your data!`,
       },
-      'business_buddy': {
-        title: 'Your Business Buddy is Ready!',
-        message: `Hello ${ownerName}! I'm Trinity, your business buddy for ${workspaceName}. I'll help you optimize operations, track performance, and unlock automation features. Ready to get started?`,
+      'coo_advisor': {
+        title: 'COO Mode Activated!',
+        message: `Hello ${ownerName}! I'm Trinity in COO Mode for ${workspaceName}. I'll help you optimize operations, analyze workforce performance, and drive strategic growth. Ready to get started?`,
       },
       'support_partner': {
         title: 'Trinity Pro Activated!',
@@ -886,15 +1020,15 @@ class OnboardingOrchestrator {
 
     const content = welcomeMessages[persona] || welcomeMessages['onboarding_guide'];
 
-    await db.insert(notifications).values({
+    // Route through UNE for AI enrichment and unified handling
+    await universalNotificationEngine.sendNotification({
       userId,
       workspaceId,
-      scope: 'workspace',
-      category: 'activity',
       type: 'ai_action_completed',
       title: content.title,
       message: content.message,
-      isRead: false,
+      severity: 'info',
+      actionUrl: '/dashboard',
       metadata: {
         persona,
         workspaceName,
@@ -902,10 +1036,11 @@ class OnboardingOrchestrator {
         sourceType: 'trinity',
         sourceName: 'Trinity AI',
         isFirstLogin: true,
+        skipFeatureCheck: true, // Welcome notifications bypass feature validation
       },
     });
 
-    console.log(`[OnboardingOrchestrator] Created Trinity welcome notification for user ${userId}`);
+    this.log.info(`[OnboardingOrchestrator] UNE created Trinity welcome notification for user ${userId}`);
   }
 
   /**
@@ -928,7 +1063,7 @@ class OnboardingOrchestrator {
     const steps: { name: string; status: 'passed' | 'failed' | 'skipped'; duration: number; error?: string }[] = [];
     const { testUserId, testWorkspaceId, testWorkspaceName, testOwnerName, dryRun = true } = params;
 
-    console.log(`[OnboardingOrchestrator] Starting invitation workflow test (dryRun: ${dryRun})`);
+    this.log.info(`[OnboardingOrchestrator] Starting invitation workflow test (dryRun: ${dryRun})`);
 
     // Step 1: Validate workspace exists
     const step1Start = Date.now();
@@ -952,7 +1087,7 @@ class OnboardingOrchestrator {
         name: 'Validate Workspace',
         status: dryRun ? 'passed' : 'failed',
         duration: Date.now() - step1Start,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       });
     }
 
@@ -980,7 +1115,7 @@ class OnboardingOrchestrator {
         name: 'Generate Trinity Welcome',
         status: 'failed',
         duration: Date.now() - step2Start,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       });
     }
 
@@ -1006,7 +1141,7 @@ class OnboardingOrchestrator {
           name: 'Initialize Workspace Trinity',
           status: 'failed',
           duration: Date.now() - step3Start,
-          error: error.message,
+          error: (error instanceof Error ? error.message : String(error)),
         });
       }
     } else {
@@ -1042,7 +1177,7 @@ class OnboardingOrchestrator {
           name: 'Activate Gamification',
           status: 'failed',
           duration: Date.now() - step4Start,
-          error: error.message,
+          error: (error instanceof Error ? error.message : String(error)),
         });
       }
     } else {
@@ -1067,7 +1202,7 @@ class OnboardingOrchestrator {
         name: 'Verify Onboarding Status',
         status: dryRun ? 'passed' : 'failed',
         duration: Date.now() - step5Start,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       });
     }
 
@@ -1077,7 +1212,7 @@ class OnboardingOrchestrator {
     const success = failedSteps === 0;
 
     const summary = `Invitation workflow test ${success ? 'PASSED' : 'FAILED'}: ${passedSteps}/${steps.length} steps passed in ${totalDuration}ms`;
-    console.log(`[OnboardingOrchestrator] ${summary}`);
+    this.log.info(`[OnboardingOrchestrator] ${summary}`);
 
     return {
       success,
@@ -1168,7 +1303,7 @@ class OnboardingOrchestrator {
       };
 
     } catch (error: any) {
-      errors.push(error.message);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return {
         workspaceId,
         onboardingComplete: false,
@@ -1200,7 +1335,7 @@ class OnboardingOrchestrator {
     const { workspaceId, subIndustryId, userId } = params;
     const errors: string[] = [];
 
-    console.log(`[OnboardingOrchestrator] Deploying industry compliance for workspace ${workspaceId}, sub-industry ${subIndustryId}`);
+    this.log.info(`[OnboardingOrchestrator] Deploying industry compliance for workspace ${workspaceId}, sub-industry ${subIndustryId}`);
 
     try {
       // Get compliance configuration for the selected sub-industry
@@ -1228,7 +1363,19 @@ class OnboardingOrchestrator {
         errors.push(...deployResult.errors);
       }
 
-      console.log(`[OnboardingOrchestrator] Industry compliance deployed:`, {
+      universalAudit.log({
+        workspaceId,
+        actorId: userId,
+        actorType: 'trinity',
+        actorBot: 'OnboardingOrchestrator',
+        action: AUDIT_ACTIONS.ONBOARDING_COMPLIANCE_DEPLOYED,
+        entityType: 'compliance_config',
+        entityId: subIndustryId,
+        changeType: 'create',
+        metadata: { subIndustryId, templatesDeployed: deployResult.templatesDeployed, requirementsCreated: deployResult.requirementsCreated },
+      }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
+
+      this.log.info(`[OnboardingOrchestrator] Industry compliance deployed:`, {
         workspaceId,
         subIndustryId,
         templatesDeployed: deployResult.templatesDeployed.length,
@@ -1244,8 +1391,8 @@ class OnboardingOrchestrator {
       };
 
     } catch (error: any) {
-      console.error('[OnboardingOrchestrator] Industry compliance deployment failed:', error);
-      errors.push(error.message);
+      this.log.error('[OnboardingOrchestrator] Industry compliance deployment failed:', error);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return {
         success: false,
         complianceConfig: null,
@@ -1274,7 +1421,7 @@ class OnboardingOrchestrator {
     const { workspaceId, customIndustryName, customIndustryDescription, userId } = params;
     const errors: string[] = [];
 
-    console.log(`[OnboardingOrchestrator] Deploying custom industry compliance for workspace ${workspaceId}, industry "${customIndustryName}"`);
+    this.log.info(`[OnboardingOrchestrator] Deploying custom industry compliance for workspace ${workspaceId}, industry "${customIndustryName}"`);
 
     try {
       // Deploy generic compliance templates applicable to all industries
@@ -1287,7 +1434,7 @@ class OnboardingOrchestrator {
       ];
 
       // Log custom industry for AI learning and future taxonomy expansion
-      console.log(`[OnboardingOrchestrator] Custom industry logged for taxonomy expansion:`, {
+      this.log.info(`[OnboardingOrchestrator] Custom industry logged for taxonomy expansion:`, {
         workspaceId,
         customIndustryName,
         customIndustryDescription: customIndustryDescription || 'No description provided',
@@ -1319,7 +1466,20 @@ class OnboardingOrchestrator {
         .set({ industryOnboardingComplete: true })
         .where(eq(workspaces.id, workspaceId));
 
-      console.log(`[OnboardingOrchestrator] Custom industry compliance deployed:`, {
+      universalAudit.log({
+        workspaceId,
+        actorId: userId,
+        actorType: 'trinity',
+        actorBot: 'OnboardingOrchestrator',
+        action: AUDIT_ACTIONS.ONBOARDING_COMPLIANCE_DEPLOYED,
+        entityType: 'compliance_config',
+        entityId: `custom-${customIndustryName}`,
+        entityName: customIndustryName,
+        changeType: 'create',
+        metadata: { customIndustry: true, customIndustryName, templatesDeployed: mergedTemplates, templateCount: mergedTemplates.length },
+      }).catch((err) => this.log.warn('[OnboardingOrchestrator] Fire-and-forget failed:', err));
+
+      this.log.info(`[OnboardingOrchestrator] Custom industry compliance deployed:`, {
         workspaceId,
         customIndustryName,
         templatesDeployed: mergedTemplates.length,
@@ -1332,8 +1492,8 @@ class OnboardingOrchestrator {
       };
 
     } catch (error: any) {
-      console.error('[OnboardingOrchestrator] Custom industry compliance deployment failed:', error);
-      errors.push(error.message);
+      this.log.error('[OnboardingOrchestrator] Custom industry compliance deployment failed:', error);
+      errors.push((error instanceof Error ? error.message : String(error)));
       return {
         success: false,
         templatesDeployed: [],
@@ -1432,7 +1592,7 @@ class OnboardingOrchestrator {
       };
 
     } catch (error: any) {
-      console.error('[OnboardingOrchestrator] Failed to get industry compliance status:', error);
+      this.log.error('[OnboardingOrchestrator] Failed to get industry compliance status:', error);
       return {
         industryConfigured: false,
         isCustomIndustry: false,

@@ -1,147 +1,109 @@
+import crypto from 'crypto';
 import { Request } from 'express';
 import { partnerApiUsageService } from '../services/billing/partnerApiUsage';
 import type { PartnerApiCallInput } from '../services/billing/partnerApiUsage';
+import { createLogger } from '../lib/logger';
+const log = createLogger('usageTracking');
 
 export interface PartnerApiContext {
   workspaceId: string;
   userId?: string;
   partnerConnectionId: string;
   partnerType: 'quickbooks' | 'gusto' | 'stripe' | 'other';
-  endpoint: string;
-  httpMethod: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  featureKey?: string; // e.g., 'billos_invoice_creation'
-  activityType?: string; // e.g., 'invoice_creation'
+  endpoint?: string;
+  httpMethod?: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT';
+  operationType?: string; // Alternative to endpoint for operation naming
+  featureKey?: string;
+  activityType?: string;
   metadata?: {
-    requestId?: string; // RECOMMENDED: Unique operation ID (e.g., invoice ID, payroll run ID)
-    batchId?: string; // For batch operations
-    webhookId?: string; // For webhook events
+    requestId?: string;
+    batchId?: string;
+    webhookId?: string;
     [key: string]: any;
   };
-  req?: Request; // Express request for IP/user agent
+  req?: Request;
 }
 
 /**
- * Wrapper for partner API calls with automatic usage tracking
+ * Factory wrapper for partner API calls with automatic usage tracking.
+ * Returns a callable async function that executes the operation with tracking.
  * 
- * This ensures all partner API calls (QuickBooks, Gusto, etc.) are logged
- * for cost tracking and billing purposes. The wrapper is non-blocking and
- * will not fail the API call if usage tracking fails.
- * 
- * REQUIRED: You MUST provide a unique requestId in metadata for proper idempotency.
- * Use business entity IDs that are stable across retries of the same operation:
- * - Creating invoice: `invoice-${invoiceId}` or `invoice-client-${clientId}-period-${period}`
- * - Creating payroll: `payroll-run-${payrollRunId}` or `payroll-period-${period}`
- * - Syncing customer: `customer-sync-${customerId}` or `sync-customer-${customerId}-v${version}`
- * - Updating record: `update-${entityType}-${entityId}` or `${entityType}-${entityId}-update`
- * 
- * @throws Error if metadata.requestId is not provided
+ * This pattern allows creating a trackable operation, then executing it later.
  * 
  * @example
- * const invoice = await withUsageTracking(
- *   {
- *     workspaceId: 'ws_123',
- *     userId: 'user_456',
- *     partnerConnectionId: 'conn_789',
- *     partnerType: 'quickbooks',
- *     endpoint: '/v3/invoice',
- *     httpMethod: 'POST',
- *     featureKey: 'billos_invoice_creation',
- *     metadata: {
- *       requestId: `invoice-${invoiceId}`, // REQUIRED: Stable across retries
- *     },
- *   },
- *   async () => qboClient.createInvoice(invoiceData)
+ * const createCustomer = withUsageTracking(
+ *   async (requestId) => qboClient.createCustomer(data),
+ *   { workspaceId, partnerType: 'quickbooks', operationType: 'customer_create' }
  * );
+ * const result = await createCustomer();
  */
-export async function withUsageTracking<T>(
-  context: PartnerApiContext,
-  fn: () => Promise<T>
-): Promise<T> {
-  // ENFORCE mandatory requestId for proper idempotency
-  if (!context.metadata?.requestId) {
-    throw new Error(
-      `Missing required metadata.requestId for partner API usage tracking. ` +
-      `Provide a deterministic identifier based on the business operation:\n` +
-      `  - Creating invoice: Use invoice ID (e.g., "invoice-INV-12345")\n` +
-      `  - Creating payroll: Use payroll run ID (e.g., "payroll-run-2025-01")\n` +
-      `  - Syncing customer: Use customer ID (e.g., "customer-sync-CUST-456")\n` +
-      `  - Batch operations: Use batch identifier (e.g., "batch-2025-01-invoices")\n` +
-      `This ensures proper deduplication and prevents double-billing on retries.`
-    );
-  }
-  
-  const startTime = Date.now();
-  const requestId = context.metadata.requestId; // Already validated above
-  let requestPayloadSize: number | undefined;
-  let responsePayloadSize: number | undefined;
-  let responseStatusCode: number | undefined;
-  let success = true;
-  let errorMessage: string | undefined;
-  let errorCode: string | undefined;
-  
-  try {
-    // Execute the partner API call
-    const result = await fn();
+export function withUsageTracking<T>(
+  fn: (requestId: string) => Promise<T>,
+  context: PartnerApiContext
+): () => Promise<T> {
+  return async () => {
+    const startTime = Date.now();
+    const requestId = `${context.operationType || context.endpoint || 'api'}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
     
-    // Calculate response metrics (if result is an object)
-    if (result && typeof result === 'object') {
-      try {
-        const resultJson = JSON.stringify(result);
-        responsePayloadSize = Buffer.byteLength(resultJson, 'utf8');
-      } catch (err) {
-        // Ignore serialization errors
+    let responsePayloadSize: number | undefined;
+    let responseStatusCode: number | undefined;
+    let success = true;
+    let errorMessage: string | undefined;
+    let errorCode: string | undefined;
+    
+    try {
+      const result = await fn(requestId);
+      
+      if (result && typeof result === 'object') {
+        try {
+          const resultJson = JSON.stringify(result);
+          responsePayloadSize = Buffer.byteLength(resultJson, 'utf8');
+        } catch (err) {
+          log.warn('[UsageTracking] Response serialization failed:', (err as Error).message);
+        }
       }
+      
+      responseStatusCode = 200;
+      return result;
+    } catch (error: any) {
+      success = false;
+      errorMessage = error.message || String(error);
+      errorCode = error.code || error.statusCode?.toString();
+      responseStatusCode = error.statusCode || error.response?.status || 500;
+      throw error;
+    } finally {
+      const responseTimeMs = Date.now() - startTime;
+      
+      // Record usage asynchronously (non-blocking)
+      partnerApiUsageService.recordApiCall({
+        workspaceId: context.workspaceId,
+        userId: context.userId,
+        partnerConnectionId: context.partnerConnectionId,
+        partnerType: context.partnerType,
+        endpoint: context.endpoint || context.operationType || '/api',
+        httpMethod: context.httpMethod || 'POST',
+        usageType: 'api_call',
+        usageAmount: 1,
+        usageUnit: 'api_calls',
+        responsePayloadSize,
+        responseStatusCode,
+        responseTimeMs,
+        success,
+        errorMessage,
+        errorCode,
+        featureKey: context.featureKey,
+        activityType: context.activityType || context.operationType,
+        metadata: {
+          ...context.metadata,
+          requestId,
+        },
+        ipAddress: context.req?.ip,
+        userAgent: context.req?.get('user-agent'),
+      }).catch(err => {
+        log.error('[PartnerApiUsage] Failed to track API usage:', err);
+      });
     }
-    
-    // Assume success if no error thrown
-    responseStatusCode = 200;
-    
-    return result;
-  } catch (error: any) {
-    // Track error details
-    success = false;
-    errorMessage = error.message || String(error);
-    errorCode = error.code || error.statusCode?.toString();
-    responseStatusCode = error.statusCode || error.response?.status || 500;
-    
-    // Re-throw error to caller
-    throw error;
-  } finally {
-    // Always track usage, even if API call failed
-    const responseTimeMs = Date.now() - startTime;
-    
-    // Record usage asynchronously (don't block on failure)
-    // Provide stable requestId for idempotency
-    partnerApiUsageService.recordApiCall({
-      workspaceId: context.workspaceId,
-      userId: context.userId,
-      partnerConnectionId: context.partnerConnectionId,
-      partnerType: context.partnerType,
-      endpoint: context.endpoint,
-      httpMethod: context.httpMethod,
-      usageType: 'api_call',
-      usageAmount: 1,
-      usageUnit: 'api_calls',
-      requestPayloadSize,
-      responsePayloadSize,
-      responseStatusCode,
-      responseTimeMs,
-      success,
-      errorMessage,
-      errorCode,
-      featureKey: context.featureKey,
-      activityType: context.activityType,
-      metadata: {
-        ...context.metadata,
-        requestId, // Stable ID for deduplication
-      },
-      ipAddress: context.req?.ip,
-      userAgent: context.req?.get('user-agent'),
-    }).catch(err => {
-      // Log but don't throw - usage tracking should never break partner operations
-      console.error('Failed to track partner API usage:', err);
-    });
-  }
+  };
 }
 
 /**
@@ -215,8 +177,8 @@ export async function withBatchUsageTracking<T>(
       userId: context.userId,
       partnerConnectionId: context.partnerConnectionId,
       partnerType: context.partnerType,
-      endpoint: context.endpoint,
-      httpMethod: context.httpMethod,
+      endpoint: context.endpoint || context.operationType || '/api/batch',
+      httpMethod: context.httpMethod || 'POST',
       usageType: 'batch_operation',
       usageAmount: batchSize,
       usageUnit: 'items',
@@ -235,7 +197,7 @@ export async function withBatchUsageTracking<T>(
       ipAddress: context.req?.ip,
       userAgent: context.req?.get('user-agent'),
     }).catch(err => {
-      console.error('Failed to track batch partner API usage:', err);
+      log.error('Failed to track batch partner API usage:', err);
     });
   }
 }
@@ -289,6 +251,6 @@ export async function trackWebhookEvent(params: {
       userAgent: params.req?.get('user-agent'),
     });
   } catch (err) {
-    console.error('Failed to track webhook event:', err);
+    log.error('Failed to track webhook event:', err);
   }
 }

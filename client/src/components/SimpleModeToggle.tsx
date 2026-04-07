@@ -1,16 +1,44 @@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Eye, Sparkles } from 'lucide-react';
 import { useSimpleMode } from '@/contexts/SimpleModeContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 interface SimpleModeToggleProps {
-  variant?: 'default' | 'compact' | 'labeled';
+  variant?: 'default' | 'compact' | 'labeled' | 'icon';
   className?: string;
 }
 
 export function SimpleModeToggle({ variant = 'default', className }: SimpleModeToggleProps) {
   const { isSimpleMode, toggleSimpleMode, isLoading } = useSimpleMode();
+  const isMobile = useIsMobile();
+
+  // Icon-only variant - perfect for mobile headers
+  if (variant === 'icon') {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleSimpleMode}
+        disabled={isLoading}
+        className={cn(
+          "h-8 w-8 flex-shrink-0",
+          isSimpleMode && "text-primary",
+          className
+        )}
+        data-testid="button-simple-mode-toggle"
+        title={isSimpleMode ? "Switch to Pro View" : "Switch to Easy View"}
+      >
+        {isSimpleMode ? (
+          <Eye className="h-4 w-4" />
+        ) : (
+          <Sparkles className="h-4 w-4" />
+        )}
+      </Button>
+    );
+  }
 
   if (variant === 'compact') {
     return (
@@ -79,7 +107,7 @@ export function SimpleModeToggle({ variant = 'default', className }: SimpleModeT
   }
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-1.5 flex-shrink-0", className)}>
       <Switch
         id="simple-mode"
         checked={isSimpleMode}
@@ -87,7 +115,7 @@ export function SimpleModeToggle({ variant = 'default', className }: SimpleModeT
         disabled={isLoading}
         data-testid="switch-simple-mode"
       />
-      <Label htmlFor="simple-mode" className="text-sm cursor-pointer">
+      <Label htmlFor="simple-mode" className="text-xs sm:text-sm cursor-pointer whitespace-nowrap hidden sm:inline">
         Easy View
       </Label>
     </div>

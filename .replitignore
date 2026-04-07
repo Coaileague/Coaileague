@@ -1,0 +1,87 @@
+# Replit-specific ignore file for deployments
+# This file tells Replit what to exclude from deployment images
+
+# Large cache directories (CRITICAL: These are ~2GB combined!)
+.cache
+.local
+.config
+.upm
+
+# Git repository
+.git
+.gitignore
+.gitattributes
+
+# Development dependencies
+node_modules
+
+# Testing infrastructure
+diagnostics-runner
+test-results
+playwright-report
+playwright.config.ts
+vitest.config.ts
+.playwright
+e2e
+cypress
+coverage
+
+# Development files
+attached_assets
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Documentation (except README)
+*.md
+!README.md
+docs
+
+# Source maps (large, not needed in production)
+*.map
+*.js.map
+*.css.map
+
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Replit config files
+.replit
+replit.nix
+.breakpoints
+
+# Large binary files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary files
+/tmp
+tmp/
+*.tmp
+*.temp
+*.log
+
+# Broken symlinks (pulse audio)
+pulse-*
+
+# Development tooling
+.husky
+.eslintcache
+.stylelintcache

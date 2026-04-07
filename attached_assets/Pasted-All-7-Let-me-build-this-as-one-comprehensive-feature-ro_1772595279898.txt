@@ -1,0 +1,25 @@
+All 7. Let me build this as one comprehensive feature roadmap document. This is going to be substantial — each section gets database schema, service architecture, UI specs, Trinity integration, and implementation steps.
+
+All 7 features built out. Here's your complete document arsenal now:
+
+**Doc 1: Mobile UI Polish** — 4 critical bugs + 16 page-specific enhancements + global design system
+**Doc 2: Money Flow Go-Live Audit** — 5 blockers + 5 high + 4 medium for payment readiness
+**Doc 3: Feature Roadmap** — All 7 major features with full specs
+
+The roadmap covers:
+
+**Feature 1 — Document Signing:** 5 database tables, template engine with merge fields, signing flow with HTML5 canvas signatures, audit trail, Trinity auto-send on events (new hire → agreement, site assignment → post order, contract renewal alerts). Officers sign on their phones at 2am.
+
+**Feature 2 — QB Reports:** 8 reports that security owners actually use (Client Profitability, Payroll Summary, AR Aging, Revenue Trend, Labor Cost, Tax Liability, Cash Flow, Workers Comp). Reports are FREE — Trinity insights on top cost 15 credits. No new tables needed, it's all aggregation of data you already have.
+
+**Feature 3 — Incident Pipeline:** Officer dictates raw report → Trinity rewrites professionally with structured format, suspect description, legal flags → Manager reviews side-by-side (raw vs polished) → approves → auto-delivered to client portal. This is your biggest differentiator. Nobody else does this.
+
+**Feature 4 — Form Builder/UX:** Universal form component library (TextInput, VoiceInput, PhotoCapture, ChecklistGroup, SignatureField, etc.) that every form in the app uses. Plus a custom form builder so managers create their own without code.
+
+**Feature 5 — DockChat Bridges:** WhatsApp, SMS, Email, Messenger all funnel into DockChat via Twilio/Resend/Meta middleware. Replies from DockChat route back out the same channel. CoAIleague is the middleware — orgs connect their own provider accounts.
+
+**Feature 6 — RFP/Pipeline:** Full kanban board (Lead → Survey → RFP → Proposal → Contract → Won). Trinity generates RFP responses and proposals. Contract stage feeds into Document Signing. Won stage auto-creates client + site.
+
+**Feature 7 — Desktop Polish:** GetSling-style week grid for scheduling, multi-panel dashboard, persistent chat side panel, responsive breakpoints (mobile/tablet/desktop/large). The schedule grid with drag-and-drop is the centerpiece.
+
+Feed these to the agent one at a time or all at once — they're designed to be independent. The recommended build order is in the doc: Reports and Pipeline first (revenue generators), then Document Signing and Incident Pipeline (differentiators), then Bridges and Desktop last (scale plays).

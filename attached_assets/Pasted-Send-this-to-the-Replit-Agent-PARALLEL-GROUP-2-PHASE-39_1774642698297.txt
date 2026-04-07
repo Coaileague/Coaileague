@@ -1,0 +1,268 @@
+Send this to the Replit Agent:
+
+---
+
+**PARALLEL GROUP 2 — PHASE 39 + PHASE 41**
+
+Read both phase prompts fully before writing a single line of code. Complete Phase 39 first then Phase 41. Each gets its own reconciliation table and certification. Phase 40 opens separately after Phase 39 and 41 certify because it triggers the mandatory 10-phase sync audit.
+
+**Domain check — safe to parallelize:**
+- Phase 39 (Performance) = Domain D + B (indexes and query optimization)
+- Phase 41 (Workspace Subscription) = Domain B + S (Stripe billing routes and subscription schema)
+- Zero file overlap confirmed — safe to run sequentially in the same session
+
+---
+
+**PHASE 39 — PERFORMANCE AND STABILITY UNDER LOAD**
+
+This phase verifies the platform performs correctly under realistic operational load. A security company with 300 officers generating clock-ins, schedule updates, notifications, and compliance checks simultaneously must not experience degraded response times, memory leaks, or database bottlenecks. Report all findings before fixing anything.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — PERFORMANCE INVENTORY**
+Before touching anything inventory the current performance baseline:
+- Run EXPLAIN ANALYZE on the 10 most frequently called queries — identify any sequential scans on large tables
+- Check existing database indexes — confirm all foreign key columns are indexed
+- Check Node.js memory usage on startup
+- Identify the slowest API endpoints from server logs
+- Check WebSocket connection handling — any memory leaks on connection accumulation
+- Check NDS queue depth — any backlog accumulation
+- Identify any N+1 query patterns — routes that call the DB inside a loop
+
+Flag every sequential scan on a table with more than 1000 rows.
+
+**STEP 2 — DATABASE QUERY OPTIMIZATION**
+Fix all identified performance gaps:
+
+Index audit and additions:
+- Every foreign key column that lacks an index — add index
+- Every column used in WHERE clauses on large tables — confirm index exists
+- Composite indexes where queries filter on multiple columns together
+- Partial indexes where queries always filter on a specific status value
+- All index creation must be CONCURRENT — non-blocking
+
+Query optimization:
+- Replace any N+1 patterns with JOIN or batch queries
+- Add query result limits on any endpoint that could return unbounded results
+- Add pagination to any list endpoint that lacks it
+- Replace sequential scans with indexed queries on large tables
+- Verify analytics queries use `analytics_daily_snapshots` precomputed data — not raw table scans
+
+**STEP 3 — API RESPONSE TIME OPTIMIZATION**
+- Add response caching where appropriate — workspace config, tier definitions, feature registry
+- Cache TTL: workspace config 5 minutes, tier definitions 1 hour, feature registry 1 hour
+- Cache invalidation: workspace config cache cleared on any workspace settings change
+- Add compression middleware if not already present — gzip on all API responses above 1KB
+- Verify connection pooling is configured correctly — pool size appropriate for expected concurrent users
+- Identify and fix any synchronous operations blocking the event loop
+
+**STEP 4 — WEBSOCKET PERFORMANCE**
+- Verify WebSocket connection cleanup on disconnect — no memory leaks from accumulated closed connections
+- Verify workspace room management — connections correctly removed from workspace map on disconnect
+- Throttled broadcast confirmed for high-volume events — schedule updates during bulk autonomous scheduler runs
+- WebSocket ping/pong keepalive confirmed — stale connections detected and cleaned
+- Maximum connections per workspace defined — prevents single workspace from consuming all connections
+
+**STEP 5 — NDS QUEUE PERFORMANCE**
+- NDS retry queue processor confirmed running every 15 minutes (Phase 26 regression)
+- Queue depth monitoring — alert if queue exceeds 1000 pending items
+- Batch processing for bulk notifications — autonomous scheduler sending 300 shift notifications uses batching not individual sends
+- Rate limiting per external provider — Resend and SMS provider rate limits respected
+- Dead letter queue size monitored — growing dead letter queue indicates systemic delivery failure
+
+**STEP 6 — MEMORY AND STABILITY**
+- Node.js heap usage baseline documented
+- Memory usage after 1 hour of operation — confirm no memory leak trend
+- Trinity session memory — confirm old sessions garbage collected, not accumulated
+- Cron job memory — confirm cron handlers release memory after execution
+- Database connection pool — connections returned to pool after request, not leaked
+- Any global state accumulation — module-level arrays or maps that grow unbounded
+
+**STEP 7 — LOAD SIMULATION**
+Simulate realistic operational load and verify stability:
+- 50 concurrent API requests to the schedule endpoint — verify all respond under 2 seconds
+- 100 concurrent WebSocket connections — verify all receive broadcast events
+- Bulk notification send (300 officers) — verify NDS batches correctly, no rate limit errors
+- Large date range analytics query — verify uses precomputed snapshots, responds under 3 seconds
+- Concurrent payroll run attempt — verify idempotency blocks second run correctly
+- Document all results with response times
+
+**STEP 8 — SLOW QUERY LOGGING**
+- Confirm `timedQuery()` wrapper from Phase 34 is active on analytics queries
+- Add slow query threshold logging to general DB pool — any query over 500ms logged with query text and duration
+- Slow query log accessible to platform staff
+- Weekly slow query report generated by Trinity proactive scanner
+
+**VERIFICATION — 25 checks:**
+- Check 1: EXPLAIN ANALYZE run on 10 most frequent queries — sequential scans identified
+- Check 2: All foreign key columns confirmed indexed
+- Check 3: All N+1 patterns replaced with batch queries
+- Check 4: All list endpoints have pagination
+- Check 5: Analytics queries confirmed using precomputed snapshots
+- Check 6: Response caching active on workspace config, tier definitions, feature registry
+- Check 7: Cache invalidation confirmed on workspace settings change
+- Check 8: Compression middleware active — gzip on responses above 1KB
+- Check 9: Connection pool size appropriate and configured
+- Check 10: WebSocket connection cleanup confirmed — no memory leak on disconnect
+- Check 11: WebSocket throttled broadcast confirmed for bulk events
+- Check 12: NDS retry queue processor confirmed running (Phase 26 regression)
+- Check 13: NDS queue depth alert configured at 1000 items
+- Check 14: Bulk notification batching confirmed — 300 notifications batched not individual
+- Check 15: Node.js heap baseline documented
+- Check 16: No memory leak after 1 hour — Trinity sessions garbage collected
+- Check 17: Database connections returned to pool after request — no leaks
+- Check 18: 50 concurrent schedule requests respond under 2 seconds
+- Check 19: 100 concurrent WebSocket connections all receive broadcast
+- Check 20: Bulk payroll notification batch sends without rate limit errors
+- Check 21: Large analytics query responds under 3 seconds using snapshots
+- Check 22: Concurrent payroll run blocked by idempotency — regression check
+- Check 23: Slow query logging active — queries over 500ms logged
+- Check 24: TypeScript targeted check — zero errors in modified files
+- Check 25: Server startup clean — ArchLinter passed, zero runtime errors
+
+---
+
+**PHASE 41 — WORKSPACE SUBSCRIPTION LIFECYCLE**
+
+This phase verifies the complete subscription lifecycle for every workspace on the platform — how CoAIleague bills the security companies using it. Trial, activation, tier enforcement, upgrade, downgrade, payment failure, dunning, suspension, cancellation, and data retention on offboarding. This is distinct from Phase 14 (client billing) — this is CoAIleague billing its own customers.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — SUBSCRIPTION SYSTEM INVENTORY**
+Inventory the current subscription system:
+- Stripe subscription configuration — what products and prices are defined
+- Current subscription lifecycle states in the database
+- How workspace tier is currently determined at request time
+- What happens when a workspace's Stripe subscription fails
+- Current dunning configuration in Stripe
+- What happens when a workspace is suspended — does the platform degrade gracefully
+- Any existing trial period logic
+
+**STEP 2 — SUBSCRIPTION STATE MACHINE**
+Verify and enforce the complete subscription state machine:
+
+Valid states: `trialing → active → past_due → suspended → cancelled`
+
+State transitions:
+- `trialing → active`: trial period ends, first payment succeeds
+- `trialing → cancelled`: trial ends, no payment method, or user cancels during trial
+- `active → past_due`: payment fails — Stripe fires `invoice.payment_failed`
+- `past_due → active`: payment succeeds during dunning — Stripe fires `invoice.payment_succeeded`
+- `past_due → suspended`: dunning period exhausted (default 7 days) — workspace access restricted
+- `suspended → active`: payment made — workspace access restored immediately
+- `suspended → cancelled`: workspace owner explicitly cancels
+- `cancelled → trialing`: not permitted — new workspace required
+
+Every transition must:
+- Update subscription status in database immediately
+- Write an audit record with from_state, to_state, triggered_by (Stripe event or user action), timestamp
+- Fire NDS notification to org_owner
+- Update workspace feature access immediately — no stale tier checks
+
+**STEP 3 — TRIAL PERIOD MANAGEMENT**
+- Trial period defined: 14 days from workspace creation
+- Trial workspace has access to Professional tier features during trial
+- Trial countdown visible to org_owner in workspace settings and dashboard
+- At 7 days remaining: NDS notification to org_owner — "Your trial ends in 7 days"
+- At 3 days remaining: NDS notification — "Your trial ends in 3 days — add a payment method"
+- At 1 day remaining: NDS notification — urgent
+- Trial end: if no payment method added → workspace transitions to `cancelled` with grace period of 24 hours to add payment
+- Trinity aware of trial status — can inform org_owner of days remaining
+
+**STEP 4 — PAYMENT FAILURE AND DUNNING**
+- Stripe webhook `invoice.payment_failed` fires → workspace transitions to `past_due`
+- NDS notification to org_owner immediately on payment failure with update payment link
+- Dunning sequence: retry at 3 days, 5 days, 7 days (configurable via Stripe)
+- During dunning: workspace remains accessible but org_owner sees persistent payment failure banner
+- At dunning exhaustion: workspace transitions to `suspended`
+- On suspension: all scheduling, invoicing, and Trinity AI features locked
+- Platform degrades to read-only: org_owner can view data but not create or modify
+- Read-only mode clearly communicated — not a confusing broken state
+
+**STEP 5 — SUSPENSION AND REACTIVATION**
+- Suspended workspace: officers cannot clock in, shifts cannot be assigned, invoices cannot be generated
+- Suspended workspace: org_owner can still access billing settings to resolve payment
+- Suspended workspace: org_owner can still export data (right to portability)
+- On payment: workspace transitions to `active` immediately — no delay
+- Reactivation NDS notification to org_owner confirming restored access
+- Trinity notified of suspension and reactivation — updates workspace context
+
+**STEP 6 — CANCELLATION AND OFFBOARDING**
+- org_owner can cancel subscription from billing settings
+- Cancellation requires: reason (dropdown + optional notes), confirmation step
+- On cancellation: subscription cancelled in Stripe, workspace transitions to `cancelled`
+- Data retention: all workspace data retained for 90 days post-cancellation
+- During 90-day retention period: org_owner can still export data and reactivate
+- After 90 days: anonymization procedure runs per Phase 36 retention policy
+- NDS notification at cancellation, at 30 days remaining, at 7 days remaining in retention period
+
+**STEP 7 — STRIPE WEBHOOK HARDENING**
+Verify all Stripe webhooks are correctly handled:
+- `customer.subscription.created` → workspace transitions to trialing or active
+- `customer.subscription.updated` → tier change or status change processed
+- `customer.subscription.deleted` → workspace transitions to cancelled
+- `invoice.payment_succeeded` → workspace transitions from past_due to active
+- `invoice.payment_failed` → workspace transitions to past_due
+- `customer.subscription.trial_will_end` → NDS notification to org_owner
+- All webhooks idempotent — Stripe replays handled correctly
+- Webhook signature verification confirmed (Phase 24 regression check)
+- Every webhook writes an audit record
+
+**STEP 8 — SUBSCRIPTION DASHBOARD UI**
+- Subscription status visible in workspace settings billing tab
+- Trial: countdown timer, payment method prompt, trial feature list
+- Active: current tier, next billing date, seat usage, overage charges
+- Past due: payment failure banner, update payment link, days until suspension
+- Suspended: suspended banner, reactivate button, export data button
+- Cancelled: cancellation date, data retention countdown, reactivate option
+- Payment history: last 12 invoices visible with download links
+- All states mobile-responsive and accessible (Phase 37 regression)
+
+**VERIFICATION — 28 checks:**
+- Check 1: Subscription inventory complete — Stripe products and states documented
+- Check 2: All 5 subscription states defined in schema
+- Check 3: trialing → active transition confirmed on successful payment
+- Check 4: active → past_due transition confirmed on payment failure webhook
+- Check 5: past_due → suspended confirmed after dunning exhaustion
+- Check 6: suspended → active confirmed immediately on payment success
+- Check 7: Every state transition writes audit record
+- Check 8: Every state transition fires NDS notification to org_owner
+- Check 9: Trial period set to 14 days from workspace creation
+- Check 10: Trial countdown visible in workspace settings
+- Check 11: Trial reminder NDS at 7, 3, and 1 days remaining
+- Check 12: Trial end without payment → cancelled with 24-hour grace period
+- Check 13: Payment failure → past_due transition + NDS notification confirmed
+- Check 14: Dunning sequence configured in Stripe — 3, 5, 7 day retries
+- Check 15: Suspension → read-only mode confirmed — scheduling and invoicing locked
+- Check 16: org_owner can access billing settings while suspended
+- Check 17: org_owner can export data while suspended
+- Check 18: Reactivation restores access immediately — no delay
+- Check 19: Cancellation requires reason and confirmation step
+- Check 20: Data retained 90 days post-cancellation
+- Check 21: NDS notifications at cancellation, 30 days, 7 days remaining
+- Check 22: All 7 Stripe webhook events handled correctly
+- Check 23: Stripe webhooks idempotent — replay handling confirmed
+- Check 24: Webhook signature verification confirmed (Phase 24 regression)
+- Check 25: Every webhook writes audit record
+- Check 26: Subscription dashboard shows correct UI per state
+- Check 27: TypeScript targeted check — zero errors in all subscription files
+- Check 28: Server startup clean — ArchLinter passed, zero runtime errors
+
+---
+
+**AFTER BOTH PHASES COMPLETE:**
+
+Report each phase separately:
+
+```
+PHASE 39: CERTIFIED ✅ — [gap count] gaps found and fixed, 25/25 checks green
+PHASE 41: CERTIFIED ✅ — [gap count] gaps found and fixed, 28/28 checks green
+
+GROUP 2 PARALLEL EXECUTION: COMPLETE
+Total phases certified to date: 39 + 41 = 40 certified (Phase 40 opens next with mandatory sync audit)
+Next: Phase 40 — Sync Audit covering Phases 30-39 before disaster recovery work begins
+```
+
+---
+
+Paste that. While this runs let me write the Phase 40 sync audit prompt so it's ready the moment Group 2 certifies.

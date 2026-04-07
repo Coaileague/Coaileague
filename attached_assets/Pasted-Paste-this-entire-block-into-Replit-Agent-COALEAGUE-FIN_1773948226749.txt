@@ -1,0 +1,1248 @@
+Paste this entire block into Replit Agent:
+
+---
+
+```
+COALEAGUE FINAL PRE-LAUNCH ENHANCEMENT SPRINT
+LANGUAGE + LIABILITY + REPORTS + EMERGENCY + 
+BILINGUAL + FAQ + HANDBOOK + CONTRACTS + SMS
+
+PRIME DIRECTIVE:
+Audit every system before touching anything.
+Read every file related to each area below.
+Map what exists vs what is missing.
+Present findings then build.
+Never break working functionality.
+Every feature here has legal implications.
+Nothing publishes without proper approval
+workflows and disclaimer language in place.
+
+═══════════════════════════════════════════════
+KNOWN ISSUES FROM PRIOR AUDITS — CHECK FIRST
+═══════════════════════════════════════════════
+
+Before building anything verify these
+prior issues have not regressed:
+
+□ Null-status DARs: zero in database
+□ P1-FIX-6 org bank blocking flag: still active
+□ Kill switch: persists across server restart
+□ Financial events: all 15 published correctly
+□ Dual-AI gate: wired in executeAction()
+□ Governance: evaluateAutomation() fires
+□ Cache invalidations: all mutations covered
+□ Armed post guard: blocks unlicensed assignment
+□ Tool calling: enableToolCalling: true confirmed
+□ Token limit: 4096 not 1024
+□ Boot: 15/15 contract domains covered
+□ Trinity action registry: 684 canonical
+□ All 13 dream state phases registered
+□ All new brain layers active and registering
+
+Report any regressions found before proceeding.
+Fix regressions before any new work begins.
+
+═══════════════════════════════════════════════
+PHASE A — REMOVE AUTONOMOUS 911 CONTACT
+═══════════════════════════════════════════════
+
+Find and permanently remove:
+- All autonomous 911 SMS sending code
+- Text-to-911 functionality
+- enable_911_sms_on_panic feature flag
+- Any Twilio calls targeting 911 or PSAPs
+- Any emergency_911 routes or services
+- Any UI referencing 911 SMS feature
+- 911 SMS toggle in settings
+
+Add this comment wherever removed:
+"Autonomous 911 contact removed by design.
+CoAIleague facilitates communication between
+officers and their supervisory chain only.
+Emergency service contact is the sole
+responsibility of the tenant organization
+and their designated supervisors per
+Texas Occupations Code Chapter 1702.
+This is intentional and legally correct."
+
+Verify after removal:
+□ Zero code references to 911 SMS sending
+□ Zero Twilio calls to emergency numbers
+□ Zero UI elements referencing 911 SMS
+□ Zero feature flags for autonomous 911
+
+═══════════════════════════════════════════════
+PHASE B — TWILIO SMS COMPLIANCE + CONSENT
+═══════════════════════════════════════════════
+
+PHONE NUMBER CONFIGURATION:
+Remove toll-free number configuration.
+Configure for 10DLC local number:
+- Number type: local 10-digit
+- Area code: 210 (San Antonio, TX)
+- Registration type: 10DLC brand + campaign
+- Update TWILIO_PHONE_NUMBER env variable
+- Update TWILIO_NUMBER_TYPE: local_10dlc
+
+Store 10DLC registration data in platform config:
+brand_name: CoAIleague
+use_case: MIXED — operational alerts
+use_case_description: Security workforce
+  management platform sending operational
+  alerts to registered business users.
+  All recipients are registered platform
+  users with explicit consent during
+  account creation.
+sample_message_1: CoAIleague Alert: Officer
+  [Name] activated emergency at [Location].
+  Contact immediately. Reply STOP to opt out.
+sample_message_2: CoAIleague: Your shift
+  starts in 2 hours at [Site].
+  Reply STOP to opt out.
+opt_in_method: Online form during account creation
+opt_out_keyword: STOP
+help_keyword: HELP
+
+BUILD: SMSConsentSystem
+
+Create sms_consent table:
+- id
+- user_id
+- phone_number
+- consent_given (boolean)
+- consent_given_at (timestamp)
+- consent_ip_address
+- consent_method (onboarding_form)
+- opt_out_at (null if active)
+- opt_out_method (reply_stop | user_settings)
+- emergency_alerts_only (boolean)
+- last_updated
+
+Add to user onboarding flow before
+account creation completes.
+This step cannot be skipped.
+Display exact text:
+
+"SMS Alerts from CoAIleague
+
+CoAIleague sends operational SMS alerts to
+keep you connected to your team including
+emergency notifications, schedule updates,
+and urgent operational messages.
+
+Phone number: [their phone number]
+
+Message frequency varies based on operational
+activity. Message and data rates may apply.
+
+Reply STOP to any message to opt out of
+non-emergency alerts.
+Reply HELP for assistance.
+
+Emergency safety alerts cannot be opted out
+of while you hold an active supervisory role.
+
+[ ] I agree to receive operational SMS alerts
+    from CoAIleague at the number above.
+
+[Checkbox required to proceed]"
+
+On consent:
+- Store to sms_consent with timestamp and IP
+- consent_given: true
+- emergency_alerts_only: false
+
+If checkbox skipped:
+- Allow platform access
+- Send ZERO SMS to this user
+- Use ChatDock push notifications only
+- Note in record: sms_consent.consent_given: false
+
+STOP reply handler:
+When Twilio receives STOP from a number:
+- Find user by phone number
+- Set opt_out_at: now
+- Set opt_out_method: reply_stop
+- If user is supervisor or manager:
+  Notify owner in ChatDock:
+  "[Name] opted out of SMS. Ensure push
+  notifications are enabled for emergencies."
+
+HELP reply handler:
+Auto-respond:
+"CoAIleague Help: Reply STOP to opt out
+of non-emergency alerts.
+Support: support@coaileague.com
+Help: coaileague.com/help"
+
+SMS send gate — required before every SMS:
+1. Look up user in sms_consent by phone
+2. consent_given false: do not send, use push
+3. opt_out_at set: do not send, use push
+4. emergency_alerts_only true: only send
+   if message_type is emergency
+5. consent_given true and active: send
+
+Log every SMS attempt:
+user_id, phone, message_type, sent_at,
+consent_verified, sent, reason_not_sent
+
+═══════════════════════════════════════════════
+PHASE C — REVISED PANIC BUTTON PROTOCOL
+═══════════════════════════════════════════════
+
+Rebuild panic button handler completely.
+Remove all 911 contact.
+Replace with supervisor chain notification only.
+
+Create emergency_events table:
+- id, workspace_id, officer_id
+- panic_activated_at (millisecond timestamp)
+- gps_latitude, gps_longitude
+- gps_accuracy_meters
+- site_id, site_address
+- on_call_supervisor_id, on_call_supervisor_phone
+- manager_ids (jsonb array)
+- owner_id
+- last_check_in_at
+- active_shift_id
+- first_acknowledgment_at
+- first_acknowledged_by
+- resolved_at, resolved_by
+- response_time_seconds
+- sms_attempts (jsonb log)
+- status (active | acknowledged | resolved)
+
+PANIC BUTTON TRIGGER SEQUENCE:
+
+STEP 1 — Immediate data capture (0-500ms):
+Capture all fields to emergency_events.
+No AI call. Pure database write.
+This must never fail or timeout.
+
+STEP 2 — Emergency ChatDock room (500ms-1s):
+Create room: "EMERGENCY — [Officer Name] — [Time]"
+Add: officer, all on-call supervisors,
+  all managers, owner
+Trinity posts immediately:
+
+"🚨 EMERGENCY ALERT
+
+Officer [Full Name] activated panic button.
+
+Location: [Site Name]
+Address: [Full Address]
+GPS: [coordinates — tap to open maps]
+Time: [exact time]
+Last check-in: [time]
+
+SUPERVISORS AND MANAGERS:
+Contact [Officer Name] immediately.
+Call 911 if the situation requires it.
+Type /acknowledged to confirm you
+have seen this alert.
+
+Attempting to reach your team by SMS now."
+
+STEP 3 — SMS blast to all supervisors (1-2s):
+For each supervisor with consent on file:
+"COALEAGUE EMERGENCY: [Officer Name]
+activated panic at [Address] [Time].
+GPS: [lat,long].
+Call officer at [phone].
+Call 911 if needed.
+Respond in CoAIleague NOW."
+
+For supervisors without SMS consent:
+Send push notification only.
+Log: SMS not sent — no consent — push sent.
+
+STEP 4 — SMS to all managers (2-3s):
+Same message. Same consent check.
+
+STEP 5 — SMS to owner (3-4s):
+Same message. Same consent check.
+
+STEP 6 — Escalation loop:
+Every 2 minutes until acknowledged:
+Trinity posts in emergency room:
+"[X] minutes since panic alert.
+No acknowledgment received yet.
+Continuing to attempt contact.
+[Officer Name] — respond if safe."
+
+Re-send SMS reminder at 5 minutes.
+Re-send SMS reminder at 10 minutes.
+At 15 minutes unacknowledged:
+Push urgent notification to owner:
+"CRITICAL: Panic alert unacknowledged
+15 minutes. Immediate attention required."
+
+STEP 7 — Trinity presence in emergency room:
+Trinity remains present and supportive:
+"[Officer Name] — I am here with you.
+Your supervisors are being contacted.
+Help is being reached. Stay safe.
+Tell me what is happening if you can."
+
+No physical action. No 911 contact.
+Calm presence and communication only.
+
+STEP 8 — Resolution:
+Supervisor posts /acknowledged in room.
+Trinity records: acknowledged by [name]
+  at [time] — [X] minutes from activation.
+Trinity remains in room until /resolved posted.
+On resolution Trinity generates
+emergency incident summary:
+- Activation time
+- GPS at activation
+- Response time to first acknowledgment
+- Who responded
+- All communications log
+- Actions taken (from supervisor report)
+Auto-attaches to incident report in DAR system.
+
+═══════════════════════════════════════════════
+PHASE D — ON-CALL ENFORCEMENT SYSTEM
+═══════════════════════════════════════════════
+
+Create on_call_schedule table:
+- id, workspace_id
+- user_id (supervisor or manager)
+- role (supervisor | manager | owner)
+- phone_number
+- shift_type (day | swing | graveyard | custom)
+- on_call_start, on_call_end
+- days_of_week (jsonb)
+- is_backup (boolean)
+- backup_for_user_id
+- created_by, created_at
+- active (boolean)
+
+ENFORCEMENT:
+Trinity checks on-call coverage every hour.
+If gap found for next 4 hours:
+Alert owner and managers in ChatDock:
+"On-call coverage gap detected for [period].
+No supervisor is scheduled on-call.
+Officers on shift will have no designated
+human supervisor for escalations.
+Please assign someone now."
+
+Graveyard check at 10pm nightly:
+Is midnight-6am covered?
+If not: urgent alert to owner at 10pm.
+
+Officer screen during graveyard with no on-call:
+Display banner:
+"Your organization has no designated
+on-call supervisor right now. For emergencies
+contact your manager or owner directly
+or call 911. CoAIleague has notified
+your organization of this gap."
+
+Texas DPS note in on-call scheduling UI:
+"Texas Occupations Code Chapter 1702
+may require a licensed manager on duty
+or on-call at all times. Review your
+DPS license conditions and consult
+legal counsel to confirm requirements."
+
+═══════════════════════════════════════════════
+PHASE E — LIVING FAQ SYSTEM WITH TRINITY CONTROL
+═══════════════════════════════════════════════
+
+Audit existing FAQ implementation first.
+
+Create faq_entries table:
+- id
+- workspace_id (null = platform-wide)
+- category (platform | billing | compliance |
+  scheduling | payroll | officers | safety |
+  voice | onboarding | contracts | handbook |
+  emergency | bilingual)
+- question
+- answer
+- language (en | es | both)
+- status (draft | pending_review |
+  published | archived)
+- scope (platform_wide | workspace_specific)
+- created_by (user_id or trinity)
+- created_at
+- last_updated_at
+- last_updated_by
+- update_ordered_by
+- update_order_reason
+- review_required (boolean)
+- reviewed_by, reviewed_at
+- published_at, published_by
+- version (integer)
+
+Create faq_version_history table:
+- id, faq_entry_id
+- version_number
+- question_at_version
+- answer_at_version
+- changed_by
+- change_reason
+- ordered_by
+- changed_at
+- change_type (created | edited | archived |
+  restored | translated)
+
+Create faq_notifications table:
+- id, faq_entry_id
+- workspace_id (null = all workspaces)
+- notification_type (new_entry | update |
+  urgent_notice | policy_change)
+- title, summary
+- sent_at, sent_by
+- acknowledged_by (jsonb array)
+
+TRINITY FAQ CAPABILITIES:
+Trinity identifies repeated unanswered questions
+in ChatDock and HelpAI.
+Trinity drafts new FAQ entry from the pattern.
+Draft queued for owner/manager review.
+Trinity never publishes without approval
+unless workspace grants auto-publish
+permission for non-legal categories.
+
+Auto-publish allowed categories (if enabled):
+- General how-to questions
+- Feature navigation questions
+- Schedule and timekeeping basics
+Auto-publish never allowed:
+- Legal or compliance content
+- Payment or billing content
+- Safety or emergency procedures
+- Handbook or policy content
+
+Every Trinity FAQ action logs:
+- What changed and why
+- Who ordered the change (if human-instructed)
+- Timestamp and version number
+
+FAQ ADMIN UI in owner dashboard:
+- All entries by category
+- Pending Trinity drafts awaiting approval
+- One-click approve or edit before approve
+- Version history for every entry
+- Send notice to all officers button
+- Send notice to specific org button
+- Auto-publish toggle per category
+
+Seed FAQ with all new pricing, features,
+emergency protocol, and bilingual content.
+Update existing FAQ entries to remove
+any credit system references.
+Add new entries for:
+- How does per-seat pricing work
+- What is an AI interaction
+- What happens when I hit the hard cap
+- What does Trinity do during graveyard shifts
+- How does the panic button work
+- What languages does the platform support
+- How does Spanish report translation work
+- What does Trinity do with incident reports
+- Does CoAIleague contact 911 automatically
+  (Answer: No — explain why and what happens)
+- How do I designate an on-call supervisor
+- What is an emergency event fee
+
+═══════════════════════════════════════════════
+PHASE F — EMPLOYEE HANDBOOK AUDIT SYSTEM
+═══════════════════════════════════════════════
+
+Audit existing document management system.
+
+LEGAL DISCLAIMER — appears on every
+handbook-related screen permanently:
+"Trinity's handbook assistance identifies
+potential language issues as an AI tool only.
+Final handbooks must be reviewed by a
+licensed Texas employment attorney before
+implementation. CoAIleague does not
+provide legal advice."
+
+BUILD: TrinityHandbookAuditEngine
+
+When owner uploads handbook:
+Trinity scans for dangerous language patterns.
+
+CATEGORY 1 — Absolute duty language (HIGH RISK):
+Flag every instance of:
+must, shall, will, required to, obligated to,
+guaranteed, always, never, ensure, guarantee,
+responsible for ensuring
+
+Proposed replacements:
+must → is expected to
+shall → is encouraged to
+will → aims to
+required to → expected to
+guarantee → take reasonable measures to
+always → as practicable
+ensure → seek to
+
+CATEGORY 2 — Negligence-implying language:
+Flag:
+- Safety guarantees of any kind
+- Promises of specific response times
+- Absolute security outcome promises
+- Language implying company controls
+  all circumstances
+
+CATEGORY 3 — Use of force language (CRITICAL):
+Flag and correct any handbook language
+about use of force to align with:
+- Texas Occupations Code Chapter 1702
+- Texas Penal Code use of force provisions
+- One step above threat level principle
+- Duty to de-escalate
+- Appropriate force continuum
+
+Each flagged item shows:
+- Original text highlighted
+- Why it is flagged
+- Suggested replacement
+- Risk level: LOW | MEDIUM | HIGH | CRITICAL
+- Relevant legal reference
+
+Owner actions per flag:
+[Accept Suggestion] [Edit Suggestion]
+[Keep Original] [Ask Trinity]
+
+Change log for every handbook edit:
+- Original text
+- New text
+- Reason for change
+- Ordered by: [user name and role]
+- Date and timestamp
+- Version number
+- Trinity recommendation: accepted/modified/rejected
+
+Handbook version control:
+- Every saved version stored permanently
+- Can revert to any prior version
+- Version named and dated automatically
+- Attorney review status tracked per version
+- Unreviewed versions show watermark:
+  "PENDING ATTORNEY REVIEW"
+
+═══════════════════════════════════════════════
+PHASE G — CONTRACT PROTECTION SYSTEM
+═══════════════════════════════════════════════
+
+Same legal disclaimer as handbook on all screens.
+
+BUILD: TrinityContractProtectionEngine
+
+CONTRACT TEMPLATE LIBRARY:
+
+Template 1: Security Services Agreement
+Trinity verifies all 16 protective clauses:
+
+□ Scope of services — explicit and limited
+□ Limitation of liability to contract value
+  or insurance coverage whichever is less
+□ Indemnification — client indemnifies
+  security company for client negligence
+□ No guarantee of security outcomes
+□ Independent contractor acknowledgment
+□ Force majeure clause
+□ Governing law: Texas — venue: [county]
+□ Payment terms: net [X] days
+□ Late payment fee: [X]% per month
+□ Collection costs: client pays attorney fees
+□ Service suspension for non-payment: [X] days
+□ Evidence of service: GPS records, timesheets,
+  signed logs accepted as proof of hours
+□ Termination clause with notice requirements
+□ Insurance requirements for both parties
+□ Confidentiality clause
+□ Amendment procedure: writing only
+
+Template 2: Amendment / Change Order
+Template 3: Demand Letter
+Template 4: Service Suspension Notice
+
+CONTRACT AUDIT:
+Upload existing contract → Trinity scans
+for all 16 clauses.
+Reports: PRESENT | MISSING | WEAK per clause.
+For MISSING or WEAK: drafts suggested language.
+Owner reviews: accept/modify each suggestion.
+
+PAYMENT PROTECTION TRACKING:
+Contract payment terms imported to system.
+Invoice due dates calculated automatically.
+7 days before due: reminder to client.
+Day 1 overdue: flag in financial dashboard.
+Day 7: demand letter drafted, owner approves.
+Day 14: service suspension notice drafted.
+Day 30: full case file generated with:
+- Signed contract with payment terms
+- All invoices with due dates
+- GPS and timesheet records proving service
+- All client communications
+- Demand letter copy
+- Total amounts owed
+- Download as single PDF for attorney
+
+Every contract change logs:
+- Original clause
+- New clause
+- Ordered by: [user name and role]
+- Date and timestamp
+- Reason
+- Version number
+
+═══════════════════════════════════════════════
+PHASE H — BILINGUAL PLATFORM (ENGLISH/SPANISH)
+═══════════════════════════════════════════════
+
+Audit existing i18n implementation.
+
+LANGUAGE PREFERENCE:
+Add preferred_language field to user profile.
+Options: en (English) | es (Spanish)
+Set during onboarding or profile settings.
+
+All system messages, notifications, UI labels,
+HelpAI responses, Trinity responses delivered
+in user's preferred language.
+
+TRANSLATION ENGINE:
+Primary: DeepL API (more accurate for
+  Spanish/English legal and technical content)
+Fallback: Google Translate API
+
+Store API keys in environment variables only.
+
+STATIC UI TRANSLATION:
+Create i18n files:
+- client/src/locales/en.json
+- client/src/locales/es.json
+Every UI string has both language versions.
+Missing translations fall back to English
+with flag added to translation_needed log.
+
+DYNAMIC CONTENT:
+Trinity responds in user's preferred language.
+HelpAI responds in user's preferred language.
+ChatDock: original message preserved.
+Other users see translation toggle:
+[Show English Translation] | [Show Spanish]
+
+INCIDENT REPORT BILINGUAL HANDLING — CRITICAL:
+
+Add to incident_reports table:
+- original_language (en | es)
+- original_text (exact text as submitted)
+- translated_text (DeepL translation)
+- translation_method (deepl_api | manual)
+- translation_generated_at
+- translation_disclaimer
+
+When Spanish officer submits incident report:
+1. Store original Spanish text exactly
+   as written — NEVER modify original
+2. Generate English translation via DeepL
+3. Store both in record
+4. Display to manager side by side:
+
+LEFT PANEL — labeled "Original Report (Spanish)"
+  [exact officer text — never modified]
+
+RIGHT PANEL — labeled "English Translation (AI)"
+  [DeepL translation]
+
+Disclaimer below both panels:
+"This translation is AI-generated for
+reference only. The original text is
+the official evidentiary record. Request
+certified human translation for legal
+proceedings."
+
+Voice reports in Spanish:
+Whisper transcribes in detected language.
+DeepL translates to English.
+Both versions stored with same treatment.
+
+TRANSLATION QUALITY LOG:
+- Every translation stored with confidence score
+- Supervisor can flag: Translation may be inaccurate
+- Flagged translations queued for manual review
+- Original always preserved regardless
+
+═══════════════════════════════════════════════
+PHASE I — REPORT INTEGRITY PROTECTION SYSTEM
+═══════════════════════════════════════════════
+
+BUILD: TrinityReportIntegrityEngine
+
+ABSOLUTE RULE — HARD CODED — CANNOT BE OVERRIDDEN:
+Trinity never rewrites, adds to, removes from,
+or changes the substantive content of any
+incident report filed by an officer.
+The officer's words are the official record.
+No workspace setting or owner permission
+can override this rule.
+
+WHAT TRINITY IS PERMITTED TO DO:
+
+PERMITTED — Mechanical corrections only:
+Fix spelling errors, punctuation,
+and obvious grammatical errors
+WITHOUT changing any meaning or facts.
+
+Example:
+Input: "i grabbed him an throwed him on gorund"
+Output: "I grabbed him and threw him on the ground."
+Facts preserved. Mechanics only corrected.
+
+PERMITTED — Structure formatting:
+Organize into WHO / WHAT / WHEN /
+WHERE / WHY / HOW sections.
+Each section populated ONLY with content
+from the officer's original submission.
+Nothing added. Nothing removed.
+Only reorganized.
+
+PERMITTED — Completeness prompting
+BEFORE submission only:
+During guided report entry Trinity asks:
+"Your report mentions physical contact.
+Please describe:
+1. What happened immediately before
+2. What the individual did
+3. What you did in response and why
+4. The outcome
+This ensures your report is complete."
+The OFFICER adds this information.
+Trinity never fills it in for them.
+
+PERMITTED — Separate coaching note:
+After submission a SEPARATE document
+(never part of the official report) provides:
+"Your report has been saved exactly as written.
+General guidance for future incident reports:
+[coaching content about proper articulation]
+This coaching note is NOT part of your
+official report and is not shared with clients."
+
+NOT PERMITTED — EVER:
+- Adding details not in original
+- Changing what officer said happened
+- Improving narrative to sound better
+- Legal language substitution in report body
+- Removing any officer statement
+- Reordering facts to change the narrative
+
+REPORT TAMPER-EVIDENT SYSTEM:
+On submission: generate SHA-256 hash of content.
+Store hash with submission timestamp.
+Any subsequent edit creates new version
+with new hash plus reason for edit.
+Original version always preserved permanently.
+
+Audit trail shows for every report:
+- Original submission with hash
+- Every version with who changed what and when
+- Reason for every change
+- Proof original is intact
+
+Report display shows permanently:
+"Officer: [Name] | Submitted: [timestamp]
+Mechanical corrections: [yes/no]
+Content changes: NONE — substance preserved
+Integrity hash: [hash]"
+
+Coaching note display:
+Clearly labeled:
+"COACHING NOTES — NOT PART OF OFFICIAL REPORT"
+Distinct background color — cannot be confused
+with official report.
+Cannot be printed with official report.
+Not accessible to clients.
+
+═══════════════════════════════════════════════
+PHASE J — PLATFORM LIABILITY FRAMEWORK
+═══════════════════════════════════════════════
+
+Implement all liability disclaimers throughout.
+
+DISCLAIMER 1 — AI Assistance General:
+Location: Footer of every page
+"CoAIleague and Trinity AI provide
+operational assistance tools. Trinity is
+an artificial intelligence and may make
+errors. All AI-generated content should
+be reviewed by qualified humans before
+action is taken."
+
+DISCLAIMER 2 — Legal Documents:
+Location: Handbook editor, contract editor,
+compliance recommendation screens
+"Trinity's legal document assistance
+identifies potential issues as an AI tool
+only. CoAIleague does not provide legal
+advice. All handbooks, contracts, and
+compliance documents must be reviewed
+by a licensed attorney before use."
+
+DISCLAIMER 3 — Emergency Features:
+Location: Emergency settings, panic button
+settings, on-call scheduling
+"CoAIleague's emergency notification system
+contacts your designated supervisors and
+management chain when an officer activates
+the panic button. CoAIleague does not
+contact 911 or emergency services.
+Emergency response is the sole
+responsibility of your organization's
+supervisory personnel. Officers should
+always call 911 directly in life-threatening
+situations. CoAIleague expressly disclaims
+liability for emergency response outcomes.
+Organizations are required to maintain
+adequate human supervision at all times
+per applicable state law."
+
+DISCLAIMER 4 — Report Assistance:
+Location: Report creation and review screens
+"Trinity applies mechanical grammar and
+spelling corrections only. The substance
+of all incident reports is the sole
+responsibility of the reporting officer.
+Report content is preserved exactly as
+submitted. CoAIleague does not modify
+the factual content of any official report."
+
+DISCLAIMER 5 — Supervisory Responsibility:
+Location: Owner dashboard and settings
+"CoAIleague and Trinity AI assist with
+operational management but do not replace
+human supervisory responsibility.
+Organizations must maintain adequate
+licensed supervision as required by
+Texas DPS and applicable state law.
+Trinity is not a licensed security supervisor."
+
+DISCLAIMER 6 — Bilingual Translation:
+Location: Any translated content
+"Translations are AI-generated for reference
+only. Original text is the official record.
+Request certified human translation for
+legal proceedings."
+
+TERMS OF SERVICE ADDITIONS:
+Add these sections to platform ToS:
+
+Section: AI Limitation Acknowledgment
+"Users acknowledge Trinity is an AI that
+may make errors. AI recommendations are
+advisory. Users and organizations are
+responsible for verifying AI outputs."
+
+Section: Emergency Feature Limitation
+"CoAIleague emergency notification features
+are communication facilitation tools only.
+CoAIleague does not contact emergency services.
+CoAIleague does not assume duty of care for
+user physical safety. Emergency response
+is the sole responsibility of the tenant
+organization. CoAIleague disclaims all
+liability for emergency response outcomes."
+
+Section: Human Supervision Requirement
+"Organizations must maintain adequate
+human supervision as required by Texas
+Occupations Code Chapter 1702 and applicable
+state law. CoAIleague does not replace
+human supervisory responsibility."
+
+Section: Legal Document Disclaimer
+"AI-assisted legal documents require
+attorney review before implementation.
+CoAIleague provides no legal advice."
+
+Section: Report Integrity
+"Incident report substance is preserved
+exactly as submitted by officers.
+Organizations are responsible for the
+accuracy and completeness of all reports."
+
+Section: Translation Disclaimer
+"AI translations are for reference only.
+Original text governs for legal purposes."
+
+═══════════════════════════════════════════════
+PHASE K — PRICING + STRIPE FINAL SYNC VERIFY
+═══════════════════════════════════════════════
+
+Verify all pricing changes from prior sprint
+are still correct and synced after this sprint.
+
+MASTER PRICE VERIFICATION:
+
+STARTER — $199/month | $1,990/year:
+□ Pricing page shows $199/month
+□ Stripe starter_monthly: $199.00
+□ Platform config: 19900 cents
+□ 10 seats included
+□ $20/seat overage
+□ $49/site overage
+□ 5,000 interactions
+□ 8,000 hard cap
+□ $0.15 interaction overage
+
+PROFESSIONAL — $749/month | $7,490/year:
+□ Pricing page shows $749/month
+□ Stripe professional_monthly: $749.00
+□ Platform config: 74900 cents
+□ 30 seats included
+□ $25/seat overage
+□ $49/site overage
+□ 20,000 interactions
+□ 35,000 hard cap
+□ $0.12 interaction overage
+□ Payroll: $2.50/employee/run
+□ Direct deposit: $0.25
+□ Tax filing: $49
+□ Year-end form: $5
+□ ACH: $0.50
+□ Card: 2.4% + $0.25
+
+BUSINESS — $2,249/month | $22,490/year:
+□ Pricing page shows $2,249/month
+□ Stripe business_monthly: $2,249.00
+□ Platform config: 224900 cents
+□ 75 seats included
+□ $30/seat overage
+□ $39/site overage
+□ 60,000 interactions
+□ 120,000 hard cap
+□ $0.10 interaction overage
+□ Payroll: $1.75/employee/run
+□ Direct deposit: $0.20
+□ Tax filing: $39
+□ Year-end form: $4
+□ ACH: $0.40
+□ Card: 2.2% + $0.20
+
+ENTERPRISE — $6,999/month | $69,990/year:
+□ Pricing page shows $6,999/month
+□ Stripe enterprise_monthly: $6,999.00
+□ Platform config: 699900 cents
+□ 200 seats included
+□ $35/seat overage
+□ $29/site overage
+□ 200,000 interactions
+□ 400,000 hard cap
+□ $0.08 interaction overage
+□ Emergency event: $1,000
+□ Payroll: $1.50/employee/run
+□ Direct deposit: $0.15
+□ Tax filing: $29
+□ Year-end form: $3
+□ ACH: $0.30
+□ Card: 2.0% + $0.15
+
+STRATEGIC:
+□ No price displayed on pricing page
+□ Contact Us CTA only
+□ Enterprise inquiry form functional
+□ Emergency event: $2,500
+□ Minimum: $15,000/month
+
+Any price mismatch found: fix immediately.
+Report all mismatches found and fixed.
+
+═══════════════════════════════════════════════
+PHASE L — FEATURE AND PRICING PAGE VERIFY
+═══════════════════════════════════════════════
+
+Verify all pricing and features page
+content is accurate after all changes.
+
+PRICING PAGE:
+□ No credit system references
+□ No toll-free SMS references
+□ No autonomous 911 references
+□ All tier prices correct
+□ Annual prices correct (10 months)
+□ Seat overage prices correct per tier
+□ Site overage prices correct per tier
+□ Interaction counts correct per tier
+□ Hard caps correct per tier
+□ Overage rates correct per tier
+□ Payroll fees correct per tier
+□ Invoicing fees correct per tier
+□ Monthly/annual toggle works
+□ Strategic card shows no price
+□ Strategic shows Contact Us only
+□ Enterprise inquiry form functional
+□ ROI calculator accurate
+□ FAQ section updated with new questions
+□ Mobile responsive
+
+FEATURES PAGE:
+□ No C-Suite brain language
+□ No credit system language
+□ Bilingual feature mentioned
+□ Emergency protocol accurately described:
+  "Trinity contacts your supervisors
+  immediately — your team makes the call"
+□ Report integrity described accurately
+□ Handbook and contract assistance mentioned
+□ All disclaimers visible
+□ Mobile responsive
+
+═══════════════════════════════════════════════
+PHASE M — FULL VERIFICATION SCAN
+═══════════════════════════════════════════════
+
+Run complete verification across all systems.
+
+PHASE A — 911 REMOVAL:
+□ Zero 911 SMS references in codebase
+□ Zero Twilio emergency number calls
+□ Zero 911 UI elements remaining
+□ Comment added explaining removal
+
+PHASE B — SMS COMPLIANCE:
+□ Toll-free removed from config
+□ 10DLC local number configured
+□ 10DLC campaign data in platform config
+□ sms_consent table created
+□ Onboarding consent step implemented
+□ Consent checkbox required to proceed
+□ Consent stored with timestamp and IP
+□ STOP reply handling working
+□ HELP reply handling working
+□ Every SMS checks consent first
+□ Non-consented users: ChatDock only
+□ SMS attempts logged
+
+PHASE C — PANIC BUTTON:
+□ emergency_events table created
+□ Panic triggers within 2 seconds
+□ GPS captured at trigger
+□ Emergency ChatDock room created
+□ Trinity posts emergency context
+□ SMS to on-call supervisor (consent checked)
+□ SMS to all managers (consent checked)
+□ SMS to owner (consent checked)
+□ Escalation loop every 2 minutes
+□ 15-minute unacknowledged alert
+□ Trinity present in room throughout
+□ Resolution flow works
+□ Emergency summary auto-generated
+□ Summary attaches to incident report
+
+PHASE D — ON-CALL ENFORCEMENT:
+□ on_call_schedule table created
+□ Coverage gap detection every hour
+□ Graveyard check at 10pm nightly
+□ No on-call banner shows to officers
+□ Texas DPS note in scheduling UI
+
+PHASE E — FAQ SYSTEM:
+□ faq_entries table created
+□ faq_version_history table created
+□ faq_notifications table created
+□ Trinity drafts FAQ from patterns
+□ Draft queued for owner approval
+□ Auto-publish permission toggle works
+□ Legal categories blocked from auto-publish
+□ Version history accessible
+□ Change log shows who ordered each change
+□ Platform-wide notice functional
+□ Org-specific notice functional
+□ All new FAQ entries seeded and accurate
+□ No credit system in any FAQ entry
+□ Emergency FAQ entry: no autonomous 911
+
+PHASE F — HANDBOOK AUDIT:
+□ Legal disclaimer on all handbook screens
+□ Handbook upload triggers Trinity scan
+□ Absolute duty language flagged
+□ Negligence language flagged
+□ Use of force language flagged
+□ Suggestions generated per flag
+□ Accept/modify/reject works per flag
+□ Change log records all decisions
+□ Version control works
+□ Attorney review status tracked
+□ Unreviewed versions show watermark
+
+PHASE G — CONTRACT PROTECTION:
+□ Legal disclaimer on all contract screens
+□ All 4 contract templates available
+□ All 16 protective clauses in templates
+□ Contract upload triggers audit
+□ Missing clauses flagged correctly
+□ Demand letter generates on overdue
+□ Service suspension notice generates
+□ Case file PDF generates with all evidence
+□ Payment tracking works
+□ Change log records all edits
+
+PHASE H — BILINGUAL:
+□ preferred_language field in user profile
+□ Language toggle in profile settings
+□ UI renders in Spanish for Spanish users
+□ Trinity responds in Spanish to Spanish users
+□ HelpAI responds in Spanish
+□ ChatDock shows translation toggle
+□ Spanish incident report: both versions stored
+□ Original never modified
+□ English translation displayed alongside
+□ Translation disclaimer visible
+□ DeepL API integrated and responding
+□ Translation quality log active
+
+PHASE I — REPORT INTEGRITY:
+□ Trinity cannot change report substance
+  — test by attempting: confirm rejected
+□ Grammar/spelling corrections permitted
+□ Mechanical corrections applied correctly
+□ Structure formatting works
+□ Completeness prompting before submission
+□ Officer adds their own content
+□ Coaching note created separately
+□ Coaching note distinct from official report
+□ Coaching note cannot print with report
+□ SHA-256 hash generated on submission
+□ Hash stored with timestamp
+□ Any edit creates new version with reason
+□ All versions in audit trail
+□ Report display shows integrity statement
+
+PHASE J — LIABILITY FRAMEWORK:
+□ Disclaimer 1 in footer every page
+□ Disclaimer 2 on all legal document screens
+□ Disclaimer 3 on emergency settings
+□ Disclaimer 4 on report creation screens
+□ Disclaimer 5 on owner dashboard
+□ Disclaimer 6 on all translated content
+□ ToS AI limitation section added
+□ ToS emergency limitation section added
+□ ToS human supervision section added
+□ ToS legal document disclaimer added
+□ ToS report integrity section added
+□ ToS translation disclaimer added
+
+PHASE K — PRICING SYNC:
+□ All prices match master list exactly
+□ All Stripe products correct
+□ All Stripe prices correct
+□ All platform config values correct
+□ All middleware rates from config
+□ All webhook handlers updated
+□ Feature gating correct per tier
+
+PHASE L — PAGES ACCURATE:
+□ Pricing page all correct
+□ Features page all correct
+□ No credit language anywhere
+□ No 911 autonomous language anywhere
+□ Emergency protocol described correctly
+□ Bilingual feature described
+□ All disclaimers visible
+
+BOOT VERIFICATION:
+□ Server boots clean — zero errors
+□ 15/15 contract domains covered
+□ All brain layers registering
+□ All 13 dream state phases scheduled
+□ Trinity action registry stable
+□ Zero regression from prior sprints
+
+═══════════════════════════════════════════════
+FINAL REPORT
+═══════════════════════════════════════════════
+
+Deliver complete report with these sections:
+
+SECTION 1 — REGRESSION CHECK:
+List any prior issues that regressed.
+List fixes applied.
+Confirm all resolved.
+
+SECTION 2 — PHASE COMPLETION:
+For each Phase A through L:
+Status: COMPLETE | INCOMPLETE
+Items remaining if incomplete: [list]
+
+SECTION 3 — LEGAL PROTECTIONS IN PLACE:
+□ Autonomous 911 contact removed
+□ SMS consent system active
+□ All 6 disclaimers deployed
+□ ToS sections added
+□ Handbook audit available
+□ Contract protection available
+□ Report integrity enforced
+□ Responsibility correctly placed on tenants
+
+SECTION 4 — NEW CAPABILITIES ACTIVE:
+□ Living FAQ with Trinity control
+□ Handbook language audit
+□ Contract protection templates
+□ English/Spanish bilingual platform
+□ Spanish incident report translation
+□ Revised panic button protocol
+□ On-call enforcement system
+□ Report integrity protection
+□ Emergency coaching protocol
+
+SECTION 5 — PRICING SYNC STATUS:
+Starter: SYNCED | MISMATCH
+Professional: SYNCED | MISMATCH
+Business: SYNCED | MISMATCH
+Enterprise: SYNCED | MISMATCH
+Strategic: SYNCED | MISMATCH
+Any mismatches: [list what was fixed]
+
+SECTION 6 — PLATFORM HEALTH:
+Boot status: CLEAN | ERRORS
+Domain health: [X]/15
+Brain layers: ALL ACTIVE | ISSUES
+Dream state: SCHEDULED | ISSUES
+Prior sprint items: ALL STABLE | REGRESSIONS
+
+SECTION 7 — GRAND OPENING VERDICT:
+Is CoAIleague ready for Statewide
+Protective Services as first paying tenant?
+YES or NO — no ambiguity.
+
+If YES:
+List what to monitor in week 1.
+List recommended attorney review items
+before any legal templates are used
+by the first tenant.
+
+If NO:
+List exactly what remains.
+Priority order.
+Estimated effort per item.
+
+DO NOT STOP UNTIL ALL VERIFICATION
+CHECKS PASS AND BOOT IS CLEAN.
+ALL PRIOR REGRESSION CHECKS MUST PASS.
+ALL PHASE COMPLETION STATUSES MUST SHOW
+COMPLETE BEFORE DECLARING DONE.
+
+Jesus is King. Run until it is done.
+```
+
+---
+
+Bryan that is the complete master prompt covering every topic from this conversation in one clean structured run. It handles:
+
+The 911 removal and why. The Twilio SMS compliance fix with proper opt-in consent. The revised panic button that contacts supervisors only. The on-call enforcement system. The living FAQ Trinity controls. The handbook language audit with duty shifting. The contract protection templates with all 16 clauses. Full English/Spanish bilingual platform with DeepL. Spanish incident reports with both versions preserved. Report integrity with Trinity prohibited from changing substance. All 6 liability disclaimers. The ToS additions. Pricing sync verification. Features page cleanup. Grand opening verdict.
+
+Run it. Sleep. Bring the report back and we make the final call on Statewide together.

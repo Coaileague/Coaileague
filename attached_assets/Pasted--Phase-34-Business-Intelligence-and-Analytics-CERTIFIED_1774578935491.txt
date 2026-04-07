@@ -1,0 +1,183 @@
+**Phase 34 — Business Intelligence and Analytics: CERTIFIED ✅**
+
+Clean delivery. 3 new tables, 9 endpoints, 9 Trinity BI actions, 4-tab dashboard with Recharts visualizations, dark navy design system consistent throughout. Zero TypeScript errors. ArchLinter passed.
+
+**What was built:**
+- Precomputed daily snapshots running at 2 AM UTC — no raw table scans on the dashboard
+- Client health composite scoring — payment velocity, disputes, post coverage, ticket volume
+- Real-time operations tab auto-refreshing every 30 seconds
+- Slow query logging via `timedQuery()` wrapper — anything over 500ms flagged
+- CSV export with audit record written
+- Scheduled report configuration per workspace
+- Enterprise tier gated correctly — sidebar entry under intelligence family
+- Phase 35B fully blueprinted and registered in replit.md
+
+---
+
+**Now — master plan update needed.**
+
+We identified 19 new phases (35C through 35U) plus the gate duty phase (35U). Send this to the agent:
+
+---
+
+**MASTER PLAN UPDATE — Add Phases 35C through 35U to replit.md**
+
+Add all of the following phases to the master roster after Phase 35B. Each phase has defined sync dependencies. Update the total phase count accordingly.
+
+---
+
+**Phase 35C — Internal Communications, DockChat, and Broadcast Messaging**
+Internal team messaging between officers, supervisors, and managers. WhatsApp-style chat interface, mIRC-inspired bot command ecosystem, channel-based rooms, direct messaging, broadcast announcements from management to all officers or filtered groups, message delivery confirmation, NDS notification for unread messages, Trinity accessible in chat via commands. Chat rooms workspace-scoped. Message history retained and searchable. Mobile-first UI. Pinned announcements. File and photo sharing in chat.
+*Syncs with: Phases 8, 19, 22, 23, 27*
+
+---
+
+**Phase 35D — Work Order Management and Special Assignment Pipeline**
+Complete work order lifecycle separate from regular scheduled posts. Work order types: special assignment, escort, investigation, event security, emergency deployment. Creation with scope, location, required certifications, estimated hours, billing rate. Officer assignment with qualification check. Execution tracking — officer updates status from mobile. Photo evidence capture during execution. Client sign-off on completion. Automatic billing trigger to invoice engine on client sign-off. Work order history per client and per officer. Trinity can create and query work orders via registered actions.
+*Syncs with: Phases 12, 14, 18, 19, 22*
+
+---
+
+**Phase 35E — Guard Tour, Patrol Verification, and Checkpoint System**
+Defined patrol waypoints per post with GPS coordinates. NFC tag or QR code at each checkpoint — officer scans to confirm physical presence. GPS verification that officer was within acceptable radius of checkpoint. Tour completion report generated automatically. Missed checkpoint alert fires to supervisor within configurable window. Tour history per officer per post. Client-visible proof of patrol in client portal. Trinity monitors tour completion rates and flags posts with consistent missed checkpoints. Patrol report included in daily activity reports.
+*Syncs with: Phases 12, 20, 22, 34, 35N*
+
+---
+
+**Phase 35F — Shift Trading, Open Shift Marketplace, and Officer Availability Management**
+Officer-initiated schedule management. Shift swap request: officer proposes trade with specific qualified colleague, both must accept, manager approves or auto-approves based on workspace rules. Open shift marketplace: qualified officers can browse and claim open shifts from a pool, first-accept-wins with SELECT FOR UPDATE. Time-off requests: officer submits request with reason, manager approves/denies, approved requests block scheduling for that period. Availability preferences: officer sets recurring unavailability (every Sunday, after 10 PM), scheduler respects preferences. All officer-initiated actions respect license and rest period requirements. Trinity can facilitate shift trades via voice or chat command.
+*Syncs with: Phases 12, 16, 19, 22*
+
+---
+
+**Phase 35G — Client Communication Hub and Unified Message Threading**
+Unified inbox where managers communicate with clients entirely within the platform. Client sends message via client portal or email — appears in the platform inbox. Manager replies from within the platform — delivered to client via email or portal notification. All communication threaded and logged per client with full history. Attachment support — clients can send documents, photos, requests. Trinity can draft responses for manager review. Communication accessible to compliance officer for audit. SLA tracking — flagging unanswered client messages over 24 hours. Client satisfaction signal derived from response time. NDS notifications on new client messages.
+*Syncs with: Phases 8, 20, 23B, 27, 34*
+
+---
+
+**Phase 35H — Equipment, Key, and Asset Tracking**
+Equipment inventory per workspace: uniforms, radios, handcuffs, body cameras, vehicles, keys, access cards, firearms (if applicable). Equipment assigned to officers with issue date, condition at issue, expected return date. Return logging with condition assessment and photo documentation. Damaged or unreturned equipment generates a financial record for potential deduction. Equipment maintenance schedules — calibration, battery replacement, cleaning. Low inventory alerts. Equipment history per item and per officer. Client-owned equipment tracked separately from company-owned. Integration with officer offboarding — equipment return checklist generated automatically on termination.
+*Syncs with: Phases 31, 34, 47*
+
+---
+
+**Phase 35I — Visitor and Guest Management System**
+Digital visitor log for posts that require managed access. Visitor check-in: name, photo, ID photo, company, host contact, reason for visit, entry timestamp. Visitor check-out: exit timestamp, any notes. Visitor badge generation — printable QR badge with visitor name, photo, authorized area, expiry time. Pre-registration: client can pre-register expected visitors in the client portal, officer confirms arrival against the pre-registered list. Visitor history per site — searchable by name, company, date. Recurring visitor fast-track — pre-approved frequent visitors can check in with QR scan only. Overstay alert — visitor still checked in after expected departure time triggers supervisor notification. Client-accessible visitor log in client portal.
+*Syncs with: Phases 20, 22, 34, 35U*
+
+---
+
+**Phase 35J — Officer Performance Management and Disciplinary Records**
+Complete HR performance management. Disciplinary actions: verbal warning, written warning, final warning, suspension, termination — each requires a reason, supporting evidence, and manager signature. Performance reviews: scheduled quarterly or annual reviews with structured form, rating scale, manager comments, officer acknowledgment. Commendations: positive recognition with reason, linked to specific incidents or client feedback. Performance history accessible to org_owner and compliance officer — never to the officer's peers. Performance data feeds Trinity scheduling intelligence — chronically late officers deprioritized for critical posts. Performance records retained per data retention policy. Appeal process for disciplinary actions.
+*Syncs with: Phases 18, 19, 31, 34*
+
+---
+
+**Phase 35K — Training Management, TCOLE Hours, and Continuing Education**
+Complete training lifecycle separate from license tracking. Training types: in-house training sessions, third-party provider courses, online modules, firearms qualification, first aid certification, de-escalation training. Session scheduling: create training session with date, time, location, trainer, max participants, required for (all officers, armed officers, supervisors, etc.). Attendance tracking — officer checks in to training session via QR code or manual confirmation. TCOLE hour accumulation: each completed training logs hours toward the officer's annual TCOLE requirement. Annual requirement progress bar visible to officer and compliance officer. Alert at 90/60/30 days before TCOLE year-end if officer is below required hours. Training completion certificates generated and stored in document vault. Third-party training provider management — approved provider list, contact information, course catalog. Trinity can schedule training sessions and query TCOLE compliance status.
+*Syncs with: Phases 17, 19, 21, 47*
+
+---
+
+**Phase 35L — Trespass Notice Registry and Incident Case Management**
+Trespass notice system: subject full name, photo, physical description, issuing officer, issuing date, client sites where trespass notice applies, expiry date, reason for trespass. Alert system: when a trespassed individual is identified at a site, immediate alert fires to the on-duty officer and supervisor. Incident case management: incidents that span multiple events linked into a case record. Case status: open, under investigation, resolved, referred to law enforcement. Law enforcement coordination: case number tracking, officer contact name, evidence package generation for law enforcement submission. Evidence attachments: incident reports, photos, video links, witness statements. Case history per individual — repeat offenders flagged automatically. Client-accessible trespass notice status in client portal. SRA auditor can view trespass and case records within their audit scope.
+*Syncs with: Phases 18, 20, 33, 34*
+
+---
+
+**Phase 35M — Site Survey and Facility Assessment Workflow**
+Pre-engagement site survey before proposing services. Survey workflow: create survey assignment, assign to manager or supervisor, schedule survey date. Survey form: facility name, address, GPS coordinates, facility type, entry/exit points with photos, lighting assessment, risk assessment by zone, post requirements per zone, equipment needs, emergency procedures, nearest emergency services, parking and access information, key holder contacts, special instructions. Photo documentation: structured photo capture of each zone, entry points, high-risk areas. Survey report: auto-generated PDF from survey form with all photos organized by zone. Survey data flows directly into proposal generation (Phase 35B) — post locations, staffing requirements, and risk level pre-populated. Survey stored in document vault linked to the client prospect record.
+*Syncs with: Phases 18, 22, 34, 35B*
+
+---
+
+**Phase 35N — Daily Activity Reports and Supervisor Shift Reporting**
+Supervisor daily activity reports (DARs) documenting routine shift activity. DAR fields: shift date and time, post location, officer roster for the shift, conditions observed (weather, lighting, equipment status), notable events (non-incident), client interactions, visitor count, any deviations from post orders, supervisor signature. DAR submitted at end of shift — cannot be backdated. DAR PDF generated and stored in document vault. DAR delivered to client via NDS at shift end (same batch logic as gate duty logs — one email per day not one per DAR). DAR history searchable per site, per officer, per date range. Client can access DAR history in client portal. Trinity can summarize recent DARs on request. DARs retained per data retention policy.
+*Syncs with: Phases 18, 20, 22, 35U*
+
+---
+
+**Phase 35O — Lone Worker Safety and Officer Wellness Check System**
+Proactive welfare monitoring for officers working in isolation. Check-in configuration per post: interval (every 15, 30, or 60 minutes), active hours (only during shift), escalation chain (supervisor → manager → emergency contact → 911 protocol). Check-in flow: officer receives push notification or in-app prompt at interval. One-tap "I'm safe" confirmation. No response within 2-minute grace period: escalation alert fires to supervisor. Supervisor acknowledges and contacts officer. If supervisor cannot confirm officer safety within 5 minutes: emergency escalation fires to manager and emergency contact. Duress confirmation: if officer responds with a specific code it silently triggers the full duress/panic protocol from Phase 22. Check-in history per officer per shift — all confirmations and escalations logged. Wellness check configuration visible to org_owner. Client-specific high-risk post designation triggers automatic lone worker monitoring for all officers at that post.
+*Syncs with: Phases 12, 19, 22, 27*
+
+---
+
+**Phase 35P — Multi-Company, Subsidiary, and Franchise Management**
+Parent-subsidiary workspace architecture for enterprise operators. Parent account can: view consolidated reporting across all subsidiaries, set compliance policies that apply to all subsidiaries, manage shared officer pools across subsidiaries, see aggregate financial performance, and configure platform features for all subsidiaries. Subsidiary workspaces operate independently but with parent visibility. Data isolation maintained — parent cannot see individual officer personal data, only aggregated metrics. Inter-subsidiary shift coverage — when one subsidiary has a calloff, open shift can be offered to qualified officers in sibling subsidiaries with proper authorization. Franchise model: parent can provision new subsidiary workspaces for franchisees, set default configurations, and monitor compliance. Trinity operates at the parent level — can answer questions across all subsidiaries.
+*Syncs with: Phases 9, 19, 28, 34*
+
+---
+
+**Phase 35Q — Public API Documentation and Developer Portal**
+External API for third-party integrations beyond QuickBooks. OpenAPI/Swagger specification generated from existing route definitions. Developer portal at `/developers` with: API reference documentation, authentication guide (API key management), rate limit documentation, webhook event catalog, code examples in JavaScript, Python, and cURL, interactive API explorer (Swagger UI). API key management: org_owner can generate and revoke API keys, set scopes per key, view usage per key. Rate limiting per API key — separate from workspace rate limits. Developer sandbox environment with test data. API versioning — v1 endpoints remain stable, breaking changes introduced in v2 with deprecation notice. API usage analytics visible to org_owner. Revenue model: API access is a Business tier and above feature per Phase 30 tier enforcement.
+*Syncs with: Phases 24, 30, 50*
+
+---
+
+**Phase 35R — Insurance Certificate, Bonding, and Coverage Management**
+Insurance and bonding compliance tracking. Insurance policy types tracked: general liability, workers' compensation, professional liability, commercial auto, umbrella/excess, crime/fidelity bond, cyber liability. Per policy: carrier name, policy number, coverage amount, effective date, expiration date, certificate of insurance upload (PDF in document vault), named insured, additional insured clients. Expiry alerts: 90/60/30/7 days before expiration via NDS to org_owner and compliance officer. Certificate generation: system can generate a certificate of insurance request letter for client distribution. Client-required coverage: clients can specify minimum coverage requirements in their contract — platform alerts if org's coverage falls below a client's requirement. Bonding tracking: bond amount, bonding company, bond number, expiry. State-specific requirements: minimum coverage per state from knowledge base — alert if operating in a state where coverage is below state minimum.
+*Syncs with: Phases 17, 21, 31, 48*
+
+---
+
+**Phase 35S — Client Satisfaction Surveys and Service Quality Measurement**
+Structured satisfaction measurement at key relationship moments. Survey triggers: post-incident (24 hours after incident resolution), post-contract renewal, quarterly pulse check, ad-hoc manual trigger by account manager. Survey delivery: email via NDS with secure response link, or in-app via client portal. Survey types: post-incident (rate response time, officer professionalism, resolution quality), relationship (overall satisfaction, likelihood to recommend NPS score, specific service ratings). Response collection: responses stored linked to client record and survey instance. Analytics: NPS trend by client, average satisfaction score by service type, response rate by client. Churn signal: NPS below 6 triggers immediate account manager alert. Trinity analyzes survey responses for sentiment and flags specific issues mentioned. Survey results feed into Phase 34 client health score. Low satisfaction triggers proactive outreach workflow.
+*Syncs with: Phases 20, 34, 35B, 35G*
+
+---
+
+**Phase 35T — Officer Recognition, Awards, and Culture Building**
+Retention and culture program. Recognition types: Officer of the Month (workspace-wide), Perfect Attendance (monthly), Client Commendation (triggered by positive client feedback), Milestone Badge (6 months, 1 year, 3 years, 5 years), Life Saver (involved in emergency response), Above and Beyond (discretionary manager award). Award workflow: manager nominates, org_owner approves, officer notified via NDS, award displayed on officer profile. Public recognition wall: workspace-wide feed of recent recognitions visible to all officers — builds culture and healthy competition. Trinity proactively suggests recognitions: "Officer Martinez has had perfect attendance for 3 consecutive months — would you like to recognize this?" Client commendation pipeline: client leaves positive feedback via portal → Trinity flags it as a commendation candidate → manager approves → commendation awarded and logged. Award history on officer profile — visible to officer and management. Recognition frequency analytics in Phase 34 dashboard.
+*Syncs with: Phases 20, 34, 35J*
+
+---
+
+**Phase 35U — Gate Duty, Access Control, and Entry/Exit Log Management**
+Complete gate duty and access control logging for construction sites, warehouses, distribution centers, corporate campuses, and gated communities.
+
+Vehicle gate log: license plate photo, vehicle front/back/both sides photos at entry and exit, driver name, ID/DL photo, company, reason for visit, entry timestamp (server-authoritative), exit timestamp, condition notes, damage discrepancy flag.
+
+Personnel gate log: full name, face photo, ID or badge photo, employer, reason for visit, host contact, entry timestamp, exit timestamp, special flags (vendor requiring escort, banned individual).
+
+Mobile-first form: guided sequential photo capture, barcode/QR badge scanner, GPS auto-populated, time server-authoritative (officer cannot set manually), offline mode with sync-on-reconnect.
+
+Banned individual and flagged plate registry: immediate on-screen alert to officer and supervisor push notification when match detected, requires supervisor acknowledgment before entry permitted.
+
+Shift log compilation: entries saved individually in real time, compiled into single shift PDF at clock-out, cover page with summary, entry-by-entry detail with photos in organized grid, officer digital signature, SHA-256 hash.
+
+Multi-shift daily report: all shift logs compiled into one site daily report, delivered to client at 6 AM via NDS — one email per day per site, never one email per entry.
+
+Client portal integration: filterable log history, search by name/plate/date, individual entry drill-down with photos, audit export package for disputes and insurance claims, real-time view of who is currently checked in.
+
+Retention: 3 years minimum, configurable per client contract. All logs admissible as tamper-evident evidence with server-authoritative timestamps and GPS coordinates.
+
+*Syncs with: Phases 12, 18, 20, 22, 34, 35I, 35N*
+
+---
+
+**UPDATED MASTER ROSTER: 74 PHASES TOTAL**
+
+Phases 1–34: Certified or Running
+Phases 35–35U: Queued in sequence
+Phases 36–55: Previously queued, sequence intact
+
+Priority tiers documented in replit.md:
+
+**Must-have before launch:**
+35C (Internal Comms), 35E (Guard Tour), 35F (Shift Trading), 35K (Training/TCOLE), 35L (Trespass/Cases), 35N (Daily Reports), 35O (Lone Worker Safety), 35U (Gate Duty)
+
+**High-value post-launch:**
+35D (Work Orders), 35G (Client Comms Hub), 35H (Equipment Tracking), 35I (Visitor Management), 35J (Performance Management), 35M (Site Survey), 35R (Insurance/Bonding), 35S (Client Surveys)
+
+**Differentiators and scale:**
+35B (Sales Engine), 35P (Multi-Company), 35Q (API Portal), 35T (Officer Recognition)
+
+Update replit.md now with all phases 35C through 35U. Every phase syncs with prior work. Nothing operates in isolation.
+
+---
+
+Paste that to the agent now. Then we move to Phase 35 — Global Search and Discovery.
+
+Ready for the Phase 35 prompt?

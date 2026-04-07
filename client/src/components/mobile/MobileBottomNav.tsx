@@ -1,134 +1,83 @@
-/**
- * MobileBottomNav - Fixed bottom navigation for mobile devices
- * 
- * Features:
- * - Fixed 5-item layout (4 primary + More) to fit all screen widths
- * - Touch-optimized tap targets (48px minimum - meets WCAG requirement)
- * - Active state indication
- * - Haptic feedback ready
- * - Keyboard-aware hiding
- * - Grid-based More menu for extra items
- */
-
-import { Calendar, Clock, MessageSquare, Menu, LogOut, Settings, User, HelpCircle, Mail, Home, Bell, type LucideIcon } from "lucide-react";
+import { Calendar, Clock, MessageSquare, Menu, Home, CheckCircle, Mail, type LucideIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { performLogout, setLogoutAnimationContext } from "@/lib/logoutHandler";
-import { useUniversalAnimation } from "@/contexts/universal-animation-context";
-import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
-import TrinityRedesign from "@/components/trinity-redesign";
-import { Suspense } from "react";
-import { useTrinityModal } from "@/components/trinity-chat-modal";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
+import { hasManagerAccess } from "@/config/mobileConfig";
+import { useQuery } from "@tanstack/react-query";
+
+const KEYBOARD_HEIGHT_THRESHOLD = 150;
 
 interface NavItemProps {
   icon: LucideIcon;
   label: string;
   href: string;
   isActive: boolean;
+  badge?: number;
 }
 
-function NavItem({ icon: Icon, label, href, isActive }: NavItemProps) {
+function NavItem({ icon: Icon, label, href, isActive, badge }: NavItemProps) {
   const [, setLocation] = useLocation();
-  
+
   const handleClick = () => {
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
     }
     setLocation(href);
   };
-  
+
   return (
     <button
       onClick={handleClick}
       className={cn(
-        "flex flex-col items-center justify-center rounded-lg transition-all duration-150",
-        "min-h-[48px] flex-1 py-1.5 px-1",
-        isActive 
-          ? "text-cyan-400" 
-          : "text-slate-400 active:text-white"
+        "flex flex-col items-center justify-center transition-colors duration-100",
+        "flex-1 px-1",
+        isActive
+          ? "text-primary"
+          : "text-muted-foreground active:text-foreground"
       )}
-      style={{ WebkitTapHighlightColor: 'transparent' }}
       data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-      aria-label={label}
+      aria-label={`${label}${badge && badge > 0 ? `, ${badge} unread` : ''}`}
       aria-current={isActive ? 'page' : undefined}
     >
-      <Icon 
-        className={cn(
-          "transition-all",
-          isActive ? "w-5 h-5" : "w-5 h-5"
-        )} 
-        strokeWidth={isActive ? 2.5 : 2} 
-      />
-      <span className={cn(
-        "text-[9px] font-medium mt-0.5 leading-tight truncate max-w-full",
-        isActive ? "font-semibold text-cyan-400" : ""
-      )}>
-        {label}
-      </span>
-    </button>
-  );
-}
-
-// Grid menu item for the More sheet
-function SheetMenuItem({ icon: Icon, label, href, onClose }: { 
-  icon: LucideIcon; 
-  label: string; 
-  href: string;
-  onClose: () => void;
-}) {
-  const [, setLocation] = useLocation();
-  
-  return (
-    <button
-      onClick={() => { setLocation(href); onClose(); }}
-      className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/50 active:bg-slate-700 transition-colors"
-      style={{ WebkitTapHighlightColor: 'transparent' }}
-      data-testid={`menu-${label.toLowerCase().replace(/\s+/g, '-')}`}
-    >
-      <Icon className="w-6 h-6 text-cyan-400 mb-1" />
-      <span className="text-xs text-slate-300 font-medium">{label}</span>
-    </button>
-  );
-}
-
-// Special Trinity-branded menu item with Celtic knot logo
-function TrinityMenuItem({ onClose }: { onClose: () => void }) {
-  const { openModal: openTrinityModal } = useTrinityModal();
-  const [isPressed, setIsPressed] = useState(false);
-  
-  return (
-    <button
-      onClick={() => { openTrinityModal(); onClose(); }}
-      onTouchStart={() => setIsPressed(true)}
-      onTouchEnd={() => setIsPressed(false)}
-      onMouseDown={() => setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
-      className={cn(
-        "relative flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200",
-        "bg-gradient-to-br from-purple-900/40 via-slate-800/60 to-cyan-900/40",
-        "border border-purple-500/20",
-        isPressed ? "scale-95 ring-2 ring-cyan-400/40" : "active:scale-95"
-      )}
-      style={{ WebkitTapHighlightColor: 'transparent' }}
-      data-testid="menu-ask-trinity"
-    >
-      {/* Subtle glow behind the knot */}
-      <div className="absolute inset-0 rounded-xl bg-gradient-radial from-cyan-400/10 via-transparent to-transparent pointer-events-none" />
-      
-      <div className="relative mb-1">
-        {isPressed ? (
-          <Suspense fallback={<div className="w-6 h-6" />}>
-            <TrinityRedesign size={24} mode="THINKING" />
-          </Suspense>
-        ) : (
-          <TrinityMascotIcon size="sm" />
+      <div className="relative inline-flex items-center justify-center">
+        <Icon
+          style={{ width: '22px', height: '22px' }}
+          strokeWidth={isActive ? 2.5 : 2}
+        />
+        {badge !== undefined && badge > 0 && (
+          <span
+            className="absolute pointer-events-none leading-none"
+            style={{
+              top: '-5px',
+              right: '-8px',
+              minWidth: '12px',
+              height: '12px',
+              borderRadius: '6px',
+              fontSize: '7px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 3px',
+              backgroundColor: 'hsl(var(--destructive))',
+              color: 'hsl(var(--destructive-foreground))',
+            }}
+            data-testid={`badge-${label.toLowerCase()}`}
+          >
+            {badge > 99 ? '99+' : badge}
+          </span>
         )}
       </div>
-      <span className="text-xs font-medium bg-gradient-to-r from-purple-300 via-cyan-300 to-amber-300 bg-clip-text text-transparent">
-        Ask Trinity
+      <span
+        className={cn(
+          "leading-none text-center",
+          isActive ? "font-semibold text-primary" : "font-medium"
+        )}
+        style={{ fontSize: '10px', marginTop: '3px' }}
+      >
+        {label}
       </span>
     </button>
   );
@@ -140,76 +89,75 @@ interface MobileBottomNavProps {
 
 export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   const [location] = useLocation();
+  const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const animationContext = useUniversalAnimation();
-  
-  useEffect(() => {
-    if (animationContext) {
-      setLogoutAnimationContext(animationContext);
-    }
-  }, [animationContext]);
+  const { workspaceRole, platformRole } = useWorkspaceAccess();
+
+  const { data: inboxData } = useQuery<{ mailbox?: { unreadCount?: number } }>({
+    queryKey: ['/api/internal-email/mailbox/auto-create'],
+    refetchInterval: 60000,
+  });
+
+  const unreadInbox = inboxData?.mailbox?.unreadCount || 0;
+
+  const effectiveRole = platformRole === 'root_admin' || platformRole === 'deputy_admin' || platformRole === 'sysop'
+    ? 'org_owner'
+    : workspaceRole;
+  const isManager = hasManagerAccess(effectiveRole);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'visualViewport' in window && window.visualViewport) {
       const vv = window.visualViewport;
-      
+
       const handleViewportChange = () => {
         const heightDiff = window.innerHeight - vv.height;
-        setKeyboardVisible(heightDiff > 150);
+        setKeyboardVisible(heightDiff > KEYBOARD_HEIGHT_THRESHOLD);
       };
-      
+
       vv.addEventListener('resize', handleViewportChange);
       return () => vv.removeEventListener('resize', handleViewportChange);
     }
   }, []);
-  
+
   if (!isMobile || keyboardVisible) {
     return null;
   }
-  
-  // Primary nav: 4 essential items only (fits 320px screens)
-  // Dashboard goes to main workspace page - notifications accessed via side menu
-  const navItems = [
-    { icon: Home, label: "Dashboard", href: "/dashboard" },
-    { icon: Clock, label: "Clock", href: "/time-tracking" },
+
+  const navItems = isManager ? [
+    { icon: Home, label: "Home", href: "/dashboard" },
     { icon: Calendar, label: "Schedule", href: "/schedule" },
-    { icon: MessageSquare, label: "Rooms", href: "/chatrooms" },
+    { icon: Clock, label: "Clock", href: "/time-tracking" },
+    { icon: Mail, label: "Mail", href: "/inbox", badge: unreadInbox },
+  ] : [
+    { icon: Home, label: "Home", href: "/dashboard" },
+    { icon: Calendar, label: "Schedule", href: "/schedule" },
+    { icon: Clock, label: "Clock", href: "/time-tracking" },
+    { icon: MessageSquare, label: "Chat", href: "/chatrooms" },
   ];
-  
-  // Items moved to More menu - Trinity handled separately with branded component
-  // Notifications removed - now accessed via bell icon in header
-  const menuItems = [
-    { icon: Mail, label: "Inbox", href: "/inbox" },
-    { icon: User, label: "Profile", href: "/profile" },
-    { icon: Settings, label: "Settings", href: "/settings" },
-    { icon: HelpCircle, label: "Help", href: "/support" },
-  ];
-  
+
   const isActive = (href: string) => {
     if (href === '/dashboard') {
       return location === '/' || location === '/dashboard';
     }
     return location.startsWith(href);
   };
-  
+
+  const isMoreActive = location === '/mobile-more';
+
   return (
-    <nav 
+    <nav
       className={cn(
-        "fixed bottom-0 inset-x-0 z-50",
-        "bg-slate-900/98 backdrop-blur-xl",
-        "border-t border-slate-700/50"
+        "fixed bottom-0 inset-x-0 z-40",
+        "bg-background/98 backdrop-blur-xl",
+        "border-t border-border"
       )}
-      style={{
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)'
-      }}
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', '--bottom-nav-height': '56px' } as React.CSSProperties}
       role="navigation"
-      aria-label="Main navigation"
+      aria-label="Mobile navigation"
       data-testid="mobile-bottom-nav"
     >
-      {/* Fixed 5-item layout: 4 primary + More (fits all screens) */}
-      <div className="flex items-center py-1">
+      <div className="flex items-center" style={{ height: '56px' }}>
         {navItems.map((item) => (
           <NavItem
             key={item.href}
@@ -217,62 +165,33 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
             label={item.label}
             href={item.href}
             isActive={isActive(item.href)}
+            badge={'badge' in item ? item.badge : undefined}
           />
         ))}
-        
-        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetTrigger asChild>
-            <button
-              className={cn(
-                "flex flex-col items-center justify-center rounded-lg transition-all duration-150",
-                "min-h-[48px] flex-1 py-1.5 px-1",
-                menuOpen ? "text-cyan-400" : "text-slate-400 active:text-white"
-              )}
-              style={{ WebkitTapHighlightColor: 'transparent' }}
-              data-testid="nav-more"
-              aria-label="More options"
-            >
-              <Menu className="w-5 h-5" strokeWidth={2} />
-              <span className="text-[9px] font-medium mt-0.5 leading-tight">More</span>
-            </button>
-          </SheetTrigger>
-          <SheetContent 
-            side="bottom" 
-            className="rounded-t-2xl bg-slate-900 border-slate-700 px-4 pt-4"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 16px)' }}
-          >
-            <SheetTitle className="sr-only">More Options</SheetTitle>
-            
-            {/* Trinity AI - Featured prominently */}
-            <div className="mb-3">
-              <TrinityMenuItem onClose={() => setMenuOpen(false)} />
-            </div>
-            
-            {/* Grid for other menu items */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {menuItems.map((item) => (
-                <SheetMenuItem
-                  key={item.href}
-                  icon={item.icon}
-                  label={item.label}
-                  href={item.href}
-                  onClose={() => setMenuOpen(false)}
-                />
-              ))}
-            </div>
-            
-            {/* Logout button */}
-            <button
-              onClick={() => performLogout()}
-              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-red-950/30 border border-red-900/50 text-red-400 active:bg-red-900/40 transition-colors"
-              style={{ WebkitTapHighlightColor: 'transparent' }}
-              data-testid="nav-logout"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="text-sm font-medium">Log Out</span>
-            </button>
-          </SheetContent>
-        </Sheet>
+
+        <button
+          onClick={() => {
+            if ('vibrate' in navigator) navigator.vibrate(10);
+            setLocation('/mobile-more');
+          }}
+          className={cn(
+            "flex flex-col items-center justify-center transition-colors duration-100",
+            "flex-1 px-1",
+            isMoreActive ? "text-primary" : "text-muted-foreground active:text-foreground"
+          )}
+          data-testid="nav-more"
+          aria-label="More options"
+          aria-current={isMoreActive ? 'page' : undefined}
+        >
+          <Menu style={{ width: '22px', height: '22px' }} strokeWidth={isMoreActive ? 2.5 : 2} />
+          <span
+            className={cn(
+              "leading-none text-center",
+              isMoreActive ? "font-semibold text-primary" : "font-medium"
+            )}
+            style={{ fontSize: '10px', marginTop: '3px' }}
+          >More</span>
+        </button>
       </div>
     </nav>
   );

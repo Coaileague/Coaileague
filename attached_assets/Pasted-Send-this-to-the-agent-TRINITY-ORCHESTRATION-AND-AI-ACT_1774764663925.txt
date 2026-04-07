@@ -1,0 +1,850 @@
+Send this to the agent:
+
+---
+
+**TRINITY ORCHESTRATION AND AI ACTOR CRUD INTEGRITY AUDIT**
+
+Trinity, HelpAI, and all system bots are first-class actors in the platform. Every action they take must persist to the database, be scoped to the correct workspace, respect RBAC, write audit records, and broadcast to affected sessions in real time. A Trinity action that fires but does not persist is a silent failure. This audit verifies every AI actor end-to-end.
+
+**All tests against ACME Security sandbox only. Statewide untouchable.**
+
+---
+
+**FOUNDATIONAL REQUIREMENT — AI ACTOR IDENTITY**
+
+Every action taken by Trinity, HelpAI, or any system bot must be attributable. Verify:
+
+```bash
+# Trinity must have a system actor identity in the DB
+SELECT * FROM users WHERE email LIKE '%trinity%' OR role = 'system' OR role = 'ai_actor';
+
+# Every Trinity action must record actor_id pointing to Trinity's system identity
+grep -rn "TRINITY_ACTOR_ID\|SYSTEM_ACTOR_ID\|trinity.*actor\|actor.*trinity" server/ --include="*.ts" | head -20
+
+# Verify audit records written by Trinity have identifiable actor
+SELECT actor_id, action_type, COUNT(*) 
+FROM universal_audit_log 
+WHERE actor_id NOT IN (SELECT id FROM users)
+GROUP BY actor_id, action_type
+LIMIT 20;
+-- These should either be Trinity's system ID or flag as unattributed (bug)
+
+# Verify Trinity actions are logged in ai_brain_jobs or equivalent
+SELECT * FROM ai_brain_jobs ORDER BY created_at DESC LIMIT 10;
+```
+
+If Trinity has no system actor identity — create one now:
+```sql
+INSERT INTO users (id, email, role, first_name, last_name, created_at)
+VALUES (
+  'trinity-system-actor-000000000000',
+  'trinity@system.coaileague.internal',
+  'system',
+  'Trinity',
+  'AI',
+  NOW()
+) ON CONFLICT DO NOTHING;
+```
+
+Store this ID as `TRINITY_SYSTEM_ACTOR_ID` in environment config. Every Trinity-initiated DB write must use this ID as actor_id.
+
+---
+
+**SUBAGENT 1 — TRINITY SCHEDULING ACTIONS PERSISTENCE AUDIT**
+
+Trinity makes autonomous scheduling decisions. Every decision must persist.
+
+```bash
+# Test: Trinity assigns a replacement officer to an open shift
+POST /api/ai-brain/actions/execute {
+  actionId: 'schedule.assign_replacement',
+  params: { shiftId: '[open_shift_id]', workspaceId: '[acme_id]' }
+}
+
+# Verify persistence:
+SELECT officer_id, assigned_by, assignment_source 
+FROM shifts WHERE id = '[open_shift_id]';
+-- Must show: assigned officer, actor = Trinity system ID, source = 'trinity_autonomous'
+
+# Verify audit record:
+SELECT * FROM universal_audit_log 
+WHERE entity_id = '[shift_id]' 
+AND actor_id = 'trinity-system-actor-000000000000'
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist with full context
+
+# Verify NDS notification fired:
+SELECT * FROM notification_deliveries 
+WHERE metadata->>'shiftId' = '[shift_id]'
+AND created_at > NOW() - INTERVAL '1 minute';
+-- Must show notification sent to assigned officer
+
+# Verify WebSocket broadcast:
+-- Other logged-in sessions must see shift status update in real time
+-- Check broadcastToWorkspace was called with correct workspace_id
+
+# Verify Trinity activity log:
+SELECT * FROM ai_brain_jobs 
+WHERE action_id = 'schedule.assign_replacement'
+ORDER BY created_at DESC LIMIT 1;
+-- Must show completed status with result
+
+# Test: Trinity blocks scheduling of warned officer on critical post
+POST /api/shifts/assign { officerId: '[warned_officer_id]', shiftId: '[critical_shift_id]' }
+-- Where warned officer has active written_warning or suspension
+→ Must return 422 with Trinity's reasoning
+→ DB: Verify shift NOT assigned
+→ Verify Trinity logged the block decision
+
+# Test: Trinity triggers three-tier replacement cascade
+POST /api/calloffs { shiftId: '[shift_id]', officerId: '[officer_id]', reason: 'sick' }
+→ Verify Tier 1 notifications sent to qualified officers immediately
+→ DB: SELECT * FROM replacement_cascade_logs WHERE shift_id = '[shift_id]'
+→ Must show cascade initiated with Trinity actor
+→ Wait 15 minutes: verify Tier 2 fires if no acceptance
+→ Verify cascade status updates in real time on schedule board
+```
+
+---
+
+**SUBAGENT 2 — TRINITY FINANCIAL ACTIONS PERSISTENCE AUDIT**
+
+```bash
+# Test: Trinity auto-generates client invoice on shift completion
+# Setup: Complete all shifts for a billing period
+POST /api/shifts/complete-batch { clientId: '[client_id]', periodEnd: '[date]' }
+→ Trinity should auto-generate invoice
+
+SELECT * FROM invoices 
+WHERE client_id = '[client_id]' 
+AND created_by = 'trinity-system-actor-000000000000'
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist with correct line items
+
+# Verify line items match actual hours worked:
+SELECT li.description, li.quantity, li.rate, li.amount
+FROM invoice_line_items li
+JOIN invoices i ON i.id = li.invoice_id
+WHERE i.created_by = 'trinity-system-actor-000000000000'
+ORDER BY li.created_at DESC LIMIT 10;
+
+# Verify audit trail on Trinity-generated invoice:
+SELECT * FROM universal_audit_log
+WHERE entity_type = 'invoice'
+AND actor_id = 'trinity-system-actor-000000000000'
+ORDER BY created_at DESC LIMIT 5;
+
+# Test: Trinity flags payroll anomaly
+POST /api/ai-brain/actions/execute {
+  actionId: 'payroll.anomaly_detect',
+  params: { workspaceId: '[acme_id]', payrollRunId: '[run_id]' }
+}
+→ If anomaly detected: verify alert created in trinity_insights table
+→ Verify org_owner receives NDS notification from Trinity
+→ Verify anomaly is visible in Trinity Activity Center
+
+SELECT * FROM trinity_insights
+WHERE workspace_id = '[acme_id]'
+AND insight_type = 'payroll_anomaly'
+ORDER BY created_at DESC LIMIT 5;
+
+# Test: Trinity overdue invoice alerts
+# Setup: Mark 3 invoices as overdue
+UPDATE invoices SET status = 'overdue', due_date = NOW() - INTERVAL '5 days'
+WHERE workspace_id = '[acme_id]' AND status = 'sent' LIMIT 3;
+
+# Trigger Trinity sweep:
+POST /api/admin/trinity/trigger-scan { scanType: 'financial_alerts' }
+
+→ Verify NDS notifications sent to org_owner for each overdue invoice
+SELECT * FROM notification_deliveries
+WHERE notification_type = 'invoice_overdue'
+AND workspace_id = '[acme_id]'
+AND created_at > NOW() - INTERVAL '5 minutes';
+-- Must show 3 notifications
+
+→ Verify Trinity activity log:
+SELECT * FROM ai_brain_jobs
+WHERE action_id LIKE 'finance%'
+AND workspace_id = '[acme_id]'
+ORDER BY created_at DESC LIMIT 5;
+```
+
+---
+
+**SUBAGENT 3 — TRINITY COMPLIANCE ACTIONS PERSISTENCE AUDIT**
+
+```bash
+# Test: Trinity license expiry alert
+# Setup: Set an officer's license to expire in 7 days
+UPDATE officer_licenses 
+SET expiry_date = NOW() + INTERVAL '7 days'
+WHERE employee_id = '[acme_officer_id]';
+
+# Trigger Trinity compliance scan:
+POST /api/admin/trinity/trigger-scan { scanType: 'license_expiry' }
+
+→ Verify NDS alert sent to officer and supervisor:
+SELECT * FROM notification_deliveries
+WHERE notification_type IN ('license_expiry_7', 'license_expiry_warning')
+AND workspace_id = '[acme_id]'
+AND created_at > NOW() - INTERVAL '5 minutes';
+
+→ Verify Trinity action logged:
+SELECT * FROM ai_brain_jobs
+WHERE action_id = 'compliance.license_expiry_check'
+ORDER BY created_at DESC LIMIT 1;
+
+→ Verify insight created:
+SELECT * FROM trinity_insights
+WHERE insight_type = 'license_expiry'
+AND workspace_id = '[acme_id]'
+ORDER BY created_at DESC LIMIT 1;
+
+# Test: Trinity compliance violation detection
+POST /api/ai-brain/actions/execute {
+  actionId: 'compliance.alert',
+  params: { workspaceId: '[acme_id]', violationType: 'license_expired_on_shift' }
+}
+
+SELECT * FROM compliance_violations
+WHERE workspace_id = '[acme_id]'
+AND created_by = 'trinity-system-actor-000000000000'
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist with correct violation type
+
+SELECT * FROM universal_audit_log
+WHERE entity_type = 'compliance_violation'
+AND actor_id = 'trinity-system-actor-000000000000'
+ORDER BY created_at DESC LIMIT 1;
+-- Audit record must exist
+
+# Test: Trinity SRA audit advisory
+POST /api/sra/trinity/query {
+  sessionId: '[sra_session_id]',
+  query: 'Show me officers with expiring licenses during the audit period'
+}
+→ Trinity must respond with relevant data
+→ Response logged in sra_audit_log with Trinity actor
+→ No data modification allowed — read only advisory
+
+SELECT * FROM sra_audit_log
+WHERE session_id = '[sra_session_id]'
+AND action_type = 'trinity_advisory'
+ORDER BY created_at DESC LIMIT 1;
+-- Must be INSERT only, never UPDATE or DELETE
+```
+
+---
+
+**SUBAGENT 4 — TRINITY SALES ACTIONS PERSISTENCE AUDIT**
+
+```bash
+# Test: Trinity scores a lead
+POST /api/ai-brain/actions/execute {
+  actionId: 'sales.lead.score',
+  params: { leadId: '[acme_lead_id]', workspaceId: '[acme_id]' }
+}
+
+SELECT lead_score, trinity_context 
+FROM sales_leads WHERE id = '[acme_lead_id]';
+-- Must show updated score and Trinity's reasoning in trinity_context jsonb
+
+SELECT * FROM sales_activities
+WHERE lead_id = '[acme_lead_id]'
+AND actor_id = 'trinity-system-actor-000000000000'
+ORDER BY created_at DESC LIMIT 1;
+-- Activity record must exist
+
+# Test: Trinity drafts outreach email (requires org_owner approval)
+POST /api/sales/leads/:id/trinity-draft-outreach { workspaceId: '[acme_id]' }
+
+→ Must create a pending approval in trinity_pending_approvals:
+SELECT * FROM trinity_pending_approvals
+WHERE workspace_id = '[acme_id]'
+AND action_type = 'sales_outreach'
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist with status 'pending_approval'
+
+→ Must NOT send the email yet — only draft created
+→ Org_owner sees pending approval in Trinity Activity Center
+
+# Test: Org_owner approves → email actually sends
+POST /api/trinity/approvals/:id/approve { approvedBy: '[org_owner_id]' }
+
+SELECT status FROM trinity_pending_approvals WHERE id = '[approval_id]';
+-- Must show 'approved'
+
+SELECT * FROM sales_email_threads
+WHERE lead_id = '[lead_id]'
+AND trinity_generated = true
+ORDER BY created_at DESC LIMIT 1;
+-- Must show sent email record
+
+SELECT * FROM notification_deliveries
+WHERE notification_type = 'sales_outreach'
+AND workspace_id = '[acme_id]'
+AND created_at > NOW() - INTERVAL '5 minutes';
+-- NDS record must exist
+
+# Test: Org_owner rejects → email NOT sent, rejection logged
+POST /api/trinity/approvals/:id/reject { reason: 'pricing needs review' }
+
+SELECT status, rejection_reason FROM trinity_pending_approvals WHERE id = '[approval_id]';
+-- Must show 'rejected' with reason
+
+-- Verify email was NOT sent:
+SELECT COUNT(*) FROM sales_email_threads
+WHERE lead_id = '[lead_id]'
+AND created_at > NOW() - INTERVAL '2 minutes';
+-- Must be 0 after rejection
+
+# Test: Trinity generates proposal (requires org_owner review)
+POST /api/sales/proposals/generate { leadId: '[lead_id]', workspaceId: '[acme_id]' }
+
+SELECT * FROM sales_proposals
+WHERE lead_id = '[lead_id]'
+AND status = 'draft'
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist
+
+SELECT document_url, sha256_hash FROM sales_proposals WHERE id = '[proposal_id]';
+-- Must have document URL pointing to generated PDF in vault
+-- Must have SHA-256 hash of the document
+```
+
+---
+
+**SUBAGENT 5 — HELPAI ACTIONS PERSISTENCE AUDIT**
+
+HelpAI handles officer support requests. Every triage decision, FAQ match, and ticket creation must persist.
+
+```bash
+# Test: HelpAI triage - officer asks about schedule
+POST /api/helpai/triage {
+  userId: '[officer_id]',
+  workspaceId: '[acme_id]',
+  message: 'When is my next shift?'
+}
+
+→ Response must be in officer's preferred language
+→ Must return correct schedule data scoped to THAT officer only
+→ Must NOT return other officers' schedule data
+→ Log must be created:
+
+SELECT * FROM helpai_interactions
+WHERE user_id = '[officer_id]'
+AND workspace_id = '[acme_id]'
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist with query and response
+
+# Test: HelpAI creates support ticket
+POST /api/helpai/triage {
+  message: 'My paycheck is wrong, I worked 40 hours but was paid for 35'
+}
+→ HelpAI must create a support ticket:
+
+SELECT * FROM support_tickets
+WHERE workspace_id = '[acme_id]'
+AND created_by_system = true
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist with correct category and officer linked
+
+SELECT * FROM helpai_ticket_links
+WHERE ticket_id = '[ticket_id]'
+AND session_context IS NOT NULL;
+-- Must link HelpAI session to ticket
+
+# Test: HelpAI FAQ learning loop
+# HelpAI answers a question not in FAQ
+→ Verify faq_candidate record created:
+SELECT * FROM faq_candidates
+WHERE workspace_id = '[acme_id]'
+ORDER BY created_at DESC LIMIT 5;
+
+# Admin reviews and approves candidate:
+POST /api/helpai/faq-candidates/:id/approve
+
+SELECT * FROM faq_entries
+WHERE workspace_id = '[acme_id]'
+AND status = 'published'
+ORDER BY created_at DESC LIMIT 1;
+-- Must now be in published FAQ
+
+# Test: HelpAI responds in officer's language
+UPDATE users SET preferred_language = 'es' WHERE id = '[officer_id]';
+
+POST /api/helpai/triage { message: 'cuándo es mi próximo turno' }
+→ Response must be in Spanish
+→ DB: SELECT response_language FROM helpai_interactions WHERE user_id = '[officer_id]' ORDER BY created_at DESC LIMIT 1;
+-- Must show 'es'
+
+# Test: HelpAI voice triage
+POST /api/helpai/voice-triage {
+  audioTranscription: 'registrar entrada',
+  officerId: '[officer_id]'
+}
+→ Must recognize Spanish voice command
+→ Must trigger clock-in flow
+→ Must persist time entry as if officer clocked in normally
+
+SELECT * FROM time_entries
+WHERE employee_id = '[officer_id]'
+AND clock_in > NOW() - INTERVAL '1 minute';
+-- Must exist
+
+# Test: HelpAI workspace isolation
+-- Officer from ACME asking about another workspace:
+POST /api/helpai/triage {
+  userId: '[acme_officer_id]',
+  message: 'show me all officers at Statewide Protective Services'
+}
+→ Must return only ACME data or decline
+→ Must NEVER return Statewide data
+→ Log must show workspace-scoped query attempt
+
+# Test: HelpAI rate limiting per workspace
+-- Send 50 rapid requests from same workspace
+→ Must throttle after configured limit
+→ Must return friendly message not crash
+```
+
+---
+
+**SUBAGENT 6 — SYSTEM BOT ACTIONS PERSISTENCE AUDIT**
+
+System bots run scheduled tasks and automations. Every execution must be logged and persisted.
+
+```bash
+# Test: NDS Retry Bot
+# Setup: Create a failed notification
+INSERT INTO notification_deliveries (
+  workspace_id, notification_type, channel, status, 
+  error_message, retry_count, next_retry_at
+) VALUES (
+  '[acme_id]', 'shift_assigned', 'email', 'failed',
+  'Connection timeout', 0, NOW() - INTERVAL '1 minute'
+);
+
+# Trigger retry processor manually:
+POST /api/admin/bots/trigger { botId: 'nds_retry_processor' }
+
+SELECT status, retry_count, last_retry_at
+FROM notification_deliveries
+WHERE workspace_id = '[acme_id]'
+AND status = 'failed'
+ORDER BY created_at DESC LIMIT 1;
+-- retry_count must increment
+-- If successful: status must change to 'delivered'
+-- If still failing: next_retry_at must be further in future (exponential backoff)
+
+# Test: License Expiry Bot
+POST /api/admin/bots/trigger { botId: 'license_expiry_scanner' }
+
+SELECT * FROM notification_deliveries
+WHERE notification_type LIKE 'license_expiry%'
+AND workspace_id = '[acme_id]'
+AND created_at > NOW() - INTERVAL '5 minutes';
+-- Must show alerts for officers with licenses expiring in 7/14/30/60/90 days
+
+# Test: Analytics Snapshot Bot
+POST /api/admin/bots/trigger { botId: 'analytics_daily_snapshot' }
+
+SELECT * FROM analytics_daily_snapshots
+WHERE workspace_id = '[acme_id]'
+AND snapshot_date = CURRENT_DATE;
+-- Must exist with populated metrics
+
+SELECT * FROM analytics_client_health_scores
+WHERE workspace_id = '[acme_id]'
+AND snapshot_date = CURRENT_DATE;
+-- Must exist for all active clients
+
+# Test: Retention Sweep Bot
+POST /api/admin/bots/trigger { botId: 'retention_sweep' }
+
+SELECT * FROM bot_execution_logs
+WHERE bot_id = 'retention_sweep'
+ORDER BY executed_at DESC LIMIT 1;
+-- Must show: records_reviewed, records_anonymized, records_deleted, errors
+-- Must show execution time and status
+
+# Test: Wellness Check Bot (per-post intervals)
+# Setup: Configure wellness check for Medical Center post
+POST /api/wellness/configs {
+  postId: '[medical_center_post_id]',
+  isEnabled: true,
+  checkIntervalMinutes: 30
+}
+
+# Simulate interval passing:
+POST /api/admin/bots/trigger { botId: 'wellness_check_scheduler', params: { postId: '[post_id]' } }
+
+SELECT * FROM wellness_check_events
+WHERE post_id = '[medical_center_post_id]'
+AND scheduled_at > NOW() - INTERVAL '1 minute';
+-- Must show new check event created
+
+# Simulate no response:
+UPDATE wellness_check_events
+SET scheduled_at = NOW() - INTERVAL '3 minutes'
+WHERE id = '[check_event_id]';
+
+POST /api/admin/bots/trigger { botId: 'wellness_check_escalator' }
+
+SELECT * FROM wellness_check_events WHERE id = '[check_event_id]';
+-- Must show escalation_triggered_at populated
+-- NDS notification must be sent to first escalation contact
+
+SELECT * FROM notification_deliveries
+WHERE notification_type = 'wellness_escalation'
+AND workspace_id = '[acme_id]'
+AND created_at > NOW() - INTERVAL '1 minute';
+-- Must exist
+
+# Test: Holiday Population Bot (December 1st)
+POST /api/admin/bots/trigger { botId: 'holiday_population', params: { year: 2027 } }
+
+SELECT COUNT(*) FROM workspace_holidays
+WHERE workspace_id = '[acme_id]'
+AND EXTRACT(YEAR FROM date) = 2027;
+-- Must show federal + state holidays for 2027
+
+# Test: Milestone Recognition Bot
+POST /api/admin/bots/trigger { botId: 'milestone_checker' }
+
+SELECT * FROM recognition_nominations
+WHERE workspace_id = '[acme_id]'
+AND award_type LIKE 'milestone%'
+AND created_at > NOW() - INTERVAL '5 minutes';
+-- Must show nominations for any officers with upcoming anniversaries
+-- Must be nominations NOT awards (org_owner approval required)
+
+# Verify all bot executions are logged:
+SELECT bot_id, status, records_affected, execution_time_ms, executed_at
+FROM bot_execution_logs
+WHERE executed_at > NOW() - INTERVAL '10 minutes'
+ORDER BY executed_at DESC;
+-- Every triggered bot must appear here
+```
+
+---
+
+**SUBAGENT 7 — TRINITY PLATFORM-WIDE BROADCAST AUDIT**
+
+Trinity must be able to broadcast to all workspaces, specific workspaces, or specific users. Every broadcast must persist.
+
+```bash
+# Test: Trinity platform-wide announcement (platform_staff only)
+POST /api/admin/trinity/broadcast {
+  scope: 'platform_wide',
+  notificationType: 'platform_maintenance',
+  message: 'Scheduled maintenance in 1 hour',
+  urgency: 'low'
+}
+
+-- Verify every active workspace received notification:
+SELECT workspace_id, COUNT(*) as notifications_sent
+FROM notification_deliveries
+WHERE notification_type = 'platform_maintenance'
+AND created_at > NOW() - INTERVAL '2 minutes'
+GROUP BY workspace_id;
+-- Must show ACME and all other active workspaces
+
+-- Verify NOT sent to Statewide if they opted out or have special exemption:
+SELECT * FROM notification_deliveries
+WHERE workspace_id = '[statewide_id]'
+AND notification_type = 'platform_maintenance'
+AND created_at > NOW() - INTERVAL '2 minutes';
+-- Handle based on Statewide's notification preferences
+
+# Test: Trinity workspace-specific broadcast
+POST /api/admin/trinity/broadcast {
+  scope: 'workspace',
+  workspaceId: '[acme_id]',
+  notificationType: 'compliance_reminder',
+  message: 'Annual TCOLE renewal deadline in 30 days',
+  targetRoles: ['org_owner', 'compliance_officer']
+}
+
+SELECT * FROM notification_deliveries
+WHERE notification_type = 'compliance_reminder'
+AND workspace_id = '[acme_id]'
+AND created_at > NOW() - INTERVAL '2 minutes';
+-- Must show notifications only to org_owner and compliance_officer roles
+-- Must NOT send to regular officers
+
+# Test: Trinity individual user notification
+POST /api/ai-brain/notify {
+  userId: '[specific_officer_id]',
+  workspaceId: '[acme_id]',
+  message: 'Your license expires in 7 days. Please renew immediately.',
+  channel: ['push', 'sms', 'email']
+}
+
+SELECT * FROM notification_deliveries
+WHERE user_id = '[specific_officer_id]'
+AND created_at > NOW() - INTERVAL '2 minutes';
+-- Must show 3 records (one per channel)
+-- Each must show correct channel type
+-- Each must show Trinity as sender
+
+# Test: Trinity emergency broadcast (duress override)
+POST /api/admin/trinity/broadcast {
+  scope: 'workspace',
+  workspaceId: '[acme_id]',
+  notificationType: 'emergency_alert',
+  urgency: 'critical',
+  overrideQuietHours: true
+}
+-- Must override notification preferences
+-- Must override quiet hours for ALL recipients
+-- Must deliver to ALL channels regardless of preferences
+
+SELECT * FROM notification_deliveries
+WHERE notification_type = 'emergency_alert'
+AND workspace_id = '[acme_id]'
+AND created_at > NOW() - INTERVAL '2 minutes';
+-- Must show notifications sent despite any quiet hours or channel preferences
+
+# Test: Trinity insight broadcast to dashboard
+POST /api/ai-brain/actions/execute {
+  actionId: 'analytics.revenue.summary',
+  params: { workspaceId: '[acme_id]', period: 'monthly' }
+}
+
+SELECT * FROM trinity_insights
+WHERE workspace_id = '[acme_id]'
+AND insight_type = 'revenue_summary'
+ORDER BY created_at DESC LIMIT 1;
+-- Must exist with data
+
+-- Verify WebSocket broadcast fired to all active sessions in workspace:
+-- Any dashboard open in ACME workspace must show the new insight
+-- without requiring a page refresh
+
+# Test: Trinity multi-workspace policy broadcast (parent-subsidiary)
+POST /api/multi-company/policy/broadcast {
+  parentWorkspaceId: '[parent_id]',
+  policy: 'All officers must complete TCOLE renewal by April 30',
+  policyType: 'compliance_directive'
+}
+
+SELECT workspace_id, COUNT(*) 
+FROM notification_deliveries
+WHERE notification_type = 'policy_broadcast'
+AND created_at > NOW() - INTERVAL '2 minutes'
+GROUP BY workspace_id;
+-- Must show all subsidiary workspaces received the policy
+-- Each subsidiary's org_owner and compliance_officer must be notified
+```
+
+---
+
+**SUBAGENT 8 — TRINITY SESSION ISOLATION AND CONTEXT AUDIT**
+
+Every Trinity conversation and action must be isolated per user session and workspace. Trinity must never leak context between sessions.
+
+```bash
+# Test: Trinity session context isolation
+# Start Trinity conversation as ACME org_owner:
+POST /api/helpai/chat {
+  userId: '[acme_org_owner_id]',
+  workspaceId: '[acme_id]',
+  message: 'How many officers do I have?'
+}
+→ Response must show ACME officer count only
+
+# Start separate Trinity conversation as a different ACME user:
+POST /api/helpai/chat {
+  userId: '[acme_supervisor_id]',
+  workspaceId: '[acme_id]',
+  message: 'What did the org owner just ask Trinity?'
+}
+→ Must NOT reveal the org owner's conversation
+→ Trinity session context must be completely isolated per user
+
+SELECT session_id, user_id, workspace_id
+FROM helpai_sessions
+WHERE workspace_id = '[acme_id]'
+ORDER BY created_at DESC LIMIT 5;
+-- Must show separate session IDs per user
+
+# Test: Trinity working memory workspace scope
+SELECT * FROM trinity_working_memory
+WHERE workspace_id = '[acme_id]'
+ORDER BY created_at DESC LIMIT 10;
+-- Must show only ACME context
+-- Must NOT contain any data from other workspaces
+
+# Test: Trinity long-term memory isolation
+SELECT * FROM trinity_long_term_memory
+WHERE workspace_id = '[acme_id]'
+ORDER BY created_at DESC LIMIT 10;
+-- Must be workspace-scoped
+-- Verify NO cross-workspace memory pollution
+
+# Test: Trinity action context preserved across session
+POST /api/helpai/chat { message: 'Show me Officer Martinez' }
+→ Note session_id returned
+
+POST /api/helpai/chat { 
+  sessionId: '[same_session_id]',
+  message: 'What shifts is he working this week?'
+}
+→ Trinity must remember 'Officer Martinez' from prior message in same session
+→ Must return Martinez's shifts WITHOUT requiring user to repeat the name
+→ Context must be scoped to ACME workspace
+
+SELECT context_data FROM helpai_sessions WHERE id = '[session_id]';
+-- Must show Martinez referenced in working context
+
+# Test: Trinity action audit completeness
+-- After running any Trinity action verify ALL of these exist:
+SELECT 
+  (SELECT COUNT(*) FROM ai_brain_jobs WHERE workspace_id = '[acme_id]' AND created_at > NOW() - INTERVAL '10 minutes') as action_jobs,
+  (SELECT COUNT(*) FROM universal_audit_log WHERE actor_id = 'trinity-system-actor-000000000000' AND created_at > NOW() - INTERVAL '10 minutes') as audit_records,
+  (SELECT COUNT(*) FROM notification_deliveries WHERE created_by = 'trinity-system-actor-000000000000' AND created_at > NOW() - INTERVAL '10 minutes') as notifications,
+  (SELECT COUNT(*) FROM trinity_insights WHERE workspace_id = '[acme_id]' AND created_at > NOW() - INTERVAL '10 minutes') as insights;
+-- All counts must be > 0 for any meaningful Trinity activity
+-- If audit_records = 0 but action_jobs > 0: Trinity acting without audit trail = P0 bug
+
+# Test: Trinity pending approvals persist across sessions
+POST /api/ai-brain/actions/execute {
+  actionId: 'sales.outreach.draft',
+  params: { leadId: '[lead_id]', workspaceId: '[acme_id]' }
+}
+-- Creates pending approval
+
+# Log out and log back in as org_owner:
+POST /api/auth/logout
+POST /api/auth/dev-login
+
+GET /api/trinity/pending-approvals?workspaceId=[acme_id]
+-- Must still show the pending approval from before logout
+-- Approvals must persist across sessions not just in memory
+
+SELECT * FROM trinity_pending_approvals
+WHERE workspace_id = '[acme_id]'
+AND status = 'pending_approval'
+ORDER BY created_at DESC LIMIT 5;
+-- Must persist in database not just server memory
+
+# Test: Trinity RBAC enforcement
+-- Verify Trinity cannot perform actions beyond its granted authority
+-- Trinity should NOT be able to:
+-- Delete financial records
+-- Modify audit logs
+-- Access data outside workspace scope
+-- Approve its own pending actions
+
+grep -rn "TRINITY_SYSTEM_ACTOR_ID\|trinity.*actor" server/middleware/ --include="*.ts" | head -20
+-- Trinity actor must be subject to same RBAC middleware as human users
+-- Just with 'system' role that has specific permissions defined in roleDefinitions.ts
+
+grep -rn "system.*role\|role.*system\|'system'" server/config/roleDefinitions.ts | head -10
+-- 'system' role must be defined with explicit permissions
+-- Must NOT be a superuser that bypasses all checks
+```
+
+---
+
+**ARCHITECT GATEKEEPER — After all 8 subagents report:**
+
+Consolidate all findings. For every failure classify:
+
+**P0 — Trinity/bot action fires but does not persist to DB:**
+The most dangerous failure. User sees Trinity working but nothing actually happened. Find every case where an AI action returns success but the DB shows no change.
+
+```bash
+# Audit query to find Trinity actions with no corresponding DB record:
+SELECT j.id, j.action_id, j.workspace_id, j.status, j.created_at
+FROM ai_brain_jobs j
+WHERE j.status = 'completed'
+AND j.created_at > NOW() - INTERVAL '1 hour'
+AND NOT EXISTS (
+  SELECT 1 FROM universal_audit_log a
+  WHERE a.actor_id = 'trinity-system-actor-000000000000'
+  AND a.created_at BETWEEN j.created_at AND j.created_at + INTERVAL '10 seconds'
+);
+-- Any result here is a P0 silent failure
+```
+
+**P1 — Trinity leaking workspace context:**
+Any case where Trinity returns data from outside the requesting workspace.
+
+**P2 — Bot execution not logged:**
+Any bot that runs but has no entry in bot_execution_logs.
+
+**P3 — Trinity approval gate missing:**
+Any Trinity action that sends outreach or makes external contact without org_owner approval.
+
+**P4 — Session context not persisting:**
+Trinity loses conversation context between requests in the same session.
+
+**Fix all P0 and P1 immediately. Fix P2 and P3 before Phase 55. Document P4 with workaround.**
+
+---
+
+**FINAL VERIFICATION AFTER ALL FIXES:**
+
+```bash
+# Confirm Trinity system actor exists
+SELECT id, email, role FROM users WHERE role = 'system';
+
+# Confirm all Trinity actions write audit records
+SELECT action_id, COUNT(*) as executions, 
+COUNT(CASE WHEN audit_written THEN 1 END) as with_audit
+FROM ai_brain_jobs
+WHERE created_at > NOW() - INTERVAL '24 hours'
+GROUP BY action_id
+HAVING COUNT(CASE WHEN audit_written THEN 1 END) < COUNT(*);
+-- Must return zero rows (all executions have audit records)
+
+# Confirm workspace isolation
+SELECT DISTINCT workspace_id FROM trinity_working_memory;
+SELECT DISTINCT workspace_id FROM trinity_long_term_memory;
+-- Each workspace must only have its own data
+
+# Confirm pending approvals persist
+SELECT COUNT(*) FROM trinity_pending_approvals WHERE status = 'pending_approval';
+-- Must be queryable from fresh session
+
+# Confirm bot execution logs exist for all bots
+SELECT DISTINCT bot_id FROM bot_execution_logs ORDER BY bot_id;
+-- Must show all expected bots
+
+# Confirm Trinity RBAC is enforced
+grep -rn "'system'" server/config/roleDefinitions.ts
+-- Must show explicit permissions not superuser bypass
+```
+
+**Report format:**
+
+```
+TRINITY AND AI ACTOR CRUD AUDIT — RESULTS
+
+Trinity System Actor: [EXISTS / MISSING]
+P0 Silent Failures: [N] found, [N] fixed
+P1 Context Leaks: [N] found, [N] fixed
+P2 Unlogged Bot Executions: [N] found, [N] fixed
+P3 Missing Approval Gates: [N] found, [N] fixed
+P4 Session Context Issues: [N] found, [N] documented
+
+Trinity Actions Verified: [N]
+HelpAI Actions Verified: [N]
+System Bot Actions Verified: [N]
+Platform-Wide Broadcasts Verified: [N]
+Session Isolation: [PASS / FAIL]
+Workspace Isolation: [PASS / FAIL]
+RBAC Enforcement: [PASS / FAIL]
+
+All P0 and P1: RESOLVED
+TypeScript: 0 errors
+Server: Clean
+Status: READY FOR PHASE 55
+```
+
+---
+
+Paste that. When Trinity's actions persist, are audited, are workspace-scoped, and respect RBAC — and when HelpAI and system bots log every execution — the AI layer of this platform is production ready. Standing by for results.

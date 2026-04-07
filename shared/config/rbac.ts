@@ -5,7 +5,7 @@
  * 
  * ARCHITECTURE:
  * - Platform roles: Global platform access (root_admin → none)
- * - Workspace roles: Per-organization access (org_owner → contractor)
+ * - Workspace roles: Per-organization access (org_owner → co_owner → contractor)
  * - Capability matrix: Maps roles to specific actions/features
  * - Access resolver: Single function to check any permission
  */
@@ -30,7 +30,7 @@ export const PLATFORM_ROLES = [
 
 export const WORKSPACE_ROLES = [
   'org_owner',          // Level 0: Organization owner
-  'org_admin',          // Level 1: Organization administrator
+  'co_owner',          // Level 1: Co-Owner
   'department_manager', // Level 2: Department-level management
   'supervisor',         // Level 3: Team supervision
   'staff',              // Level 4: Regular employee
@@ -59,7 +59,7 @@ export const PLATFORM_ROLE_LEVEL: Record<PlatformRole, number> = {
 
 export const WORKSPACE_ROLE_LEVEL: Record<WorkspaceRole, number> = {
   org_owner: 0,
-  org_admin: 1,
+  co_owner: 1,
   department_manager: 2,
   supervisor: 3,
   staff: 4,
@@ -111,69 +111,69 @@ export const CAPABILITY_MATRIX: Record<string, CapabilityRequirement> = {
   // Workspace management
   'workspace.create': { platformMin: 'support_manager' },
   'workspace.delete': { platformMin: 'deputy_admin' },
-  'workspace.manage_settings': { workspaceMin: 'org_admin' },
+  'workspace.manage_settings': { workspaceMin: 'co_owner' },
   'workspace.view_members': { workspaceMin: 'staff' },
-  'workspace.manage_members': { workspaceMin: 'org_admin' },
+  'workspace.manage_members': { workspaceMin: 'co_owner' },
   
   // Scheduling
   'scheduling.view': { workspaceMin: 'staff' },
   'scheduling.create_shifts': { workspaceMin: 'supervisor' },
   'scheduling.approve_shifts': { workspaceMin: 'department_manager' },
   'scheduling.ai_generate': { workspaceMin: 'department_manager', platformMin: 'support_manager' },
-  'scheduling.generate_ai_schedule': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'scheduling.generate_ai_schedule': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'scheduling.auto_resolve_conflicts': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'scheduling.validate_labor_rules': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'scheduling.optimize_coverage': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'scheduling.detect_conflicts': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   
   // Payroll
-  'payroll.view': { workspaceMin: 'org_admin' },
+  'payroll.view': { workspaceMin: 'co_owner' },
   'payroll.process': { workspaceMin: 'org_owner', bypassFor: ['root_admin', 'deputy_admin'] },
   'payroll.approve': { workspaceMin: 'org_owner' },
   'payroll.calculate_run': { workspaceMin: 'org_owner', bypassFor: ['Bot'] },
   'payroll.process_deductions': { workspaceMin: 'org_owner', bypassFor: ['Bot'] },
-  'payroll.generate_reports': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'payroll.generate_reports': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'payroll.sync_external': { workspaceMin: 'org_owner', bypassFor: ['Bot'] },
-  'payroll.detect_anomalies': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'payroll.detect_anomalies': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'payroll.approve_run': { workspaceMin: 'org_owner', bypassFor: ['Bot'] },
   
   // Invoicing
-  'invoicing.view': { workspaceMin: 'org_admin' },
-  'invoicing.create': { workspaceMin: 'org_admin' },
+  'invoicing.view': { workspaceMin: 'co_owner' },
+  'invoicing.create': { workspaceMin: 'co_owner' },
   'invoicing.approve': { workspaceMin: 'org_owner' },
-  'invoicing.generate_from_hours': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
-  'invoicing.send_reminders': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'invoicing.generate_from_hours': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
+  'invoicing.send_reminders': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'invoicing.process_payments': { workspaceMin: 'org_owner', bypassFor: ['Bot'] },
-  'invoicing.analyze_revenue': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
-  'invoicing.generate': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
-  'invoicing.send': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'invoicing.analyze_revenue': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
+  'invoicing.generate': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
+  'invoicing.send': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'invoicing.reconcile': { workspaceMin: 'org_owner', bypassFor: ['Bot'] },
   
   // Compliance
   'compliance.view': { workspaceMin: 'department_manager', platformMin: 'compliance_officer' },
-  'compliance.manage': { workspaceMin: 'org_admin', platformMin: 'compliance_officer' },
+  'compliance.manage': { workspaceMin: 'co_owner', platformMin: 'compliance_officer' },
   'compliance.remediate': { platformMin: 'compliance_officer', bypassFor: ['root_admin'] },
-  'compliance.monitor_certifications': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'compliance.monitor_certifications': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'compliance.check_labor_rules': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
-  'compliance.generate_reports': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'compliance.generate_reports': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'compliance.auto_alert': { platformMin: 'sysop', bypassFor: ['Bot'] },
-  'compliance.check_certifications': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
-  'compliance.detect_violations': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'compliance.check_certifications': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
+  'compliance.detect_violations': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   
   // Analytics
   'analytics.view_basic': { workspaceMin: 'staff' },
   'analytics.view_advanced': { workspaceMin: 'department_manager' },
-  'analytics.export': { workspaceMin: 'org_admin' },
+  'analytics.export': { workspaceMin: 'co_owner' },
   'analytics.ai_insights': { workspaceMin: 'department_manager' },
   'analytics.generate_dashboard': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
-  'analytics.predict_trends': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'analytics.predict_trends': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'analytics.compare_periods': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
-  'analytics.alert_on_anomaly': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'analytics.alert_on_anomaly': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'analytics.generate_insights': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'analytics.workforce_summary': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   
   // Onboarding
-  'onboarding.create_employee': { workspaceMin: 'org_admin' },
+  'onboarding.create_employee': { workspaceMin: 'co_owner' },
   'onboarding.manage_checklist': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'onboarding.send_documents': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'onboarding.track_progress': { workspaceMin: 'supervisor', bypassFor: ['Bot'] },
@@ -181,7 +181,7 @@ export const CAPABILITY_MATRIX: Record<string, CapabilityRequirement> = {
   // Notifications
   'notifications.receive': { workspaceMin: 'contractor' },
   'notifications.send_user': { workspaceMin: 'supervisor' },
-  'notifications.broadcast_workspace': { workspaceMin: 'org_admin' },
+  'notifications.broadcast_workspace': { workspaceMin: 'co_owner' },
   'notifications.broadcast_platform': { platformMin: 'support_manager', bypassFor: ['Bot'] },
   'notifications.send_platform_update': { platformMin: 'support_manager', bypassFor: ['Bot'] },
   'notifications.route_to_tab': { platformMin: 'sysop', bypassFor: ['Bot'] },
@@ -225,7 +225,7 @@ export const CAPABILITY_MATRIX: Record<string, CapabilityRequirement> = {
   'time.approve_timesheets': { workspaceMin: 'supervisor' },
   'time.detect_anomalies': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'time.manage_timesheet': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
-  'time.generate_reports': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'time.generate_reports': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   
   // Support
   'support.view_tickets': { platformMin: 'support_agent' },
@@ -267,9 +267,9 @@ export const CAPABILITY_MATRIX: Record<string, CapabilityRequirement> = {
   'assist.get_recommendation': { workspaceMin: 'staff', bypassFor: ['Bot'] },
   
   // Expense
-  'expense.extract_receipt': { workspaceMin: 'org_admin' },
-  'expense.suggest_category': { workspaceMin: 'org_admin' },
-  'expense.analyze_patterns': { workspaceMin: 'org_admin' },
+  'expense.extract_receipt': { workspaceMin: 'co_owner' },
+  'expense.suggest_category': { workspaceMin: 'co_owner' },
+  'expense.analyze_patterns': { workspaceMin: 'co_owner' },
   
   // Pricing
   'pricing.analyze_client': { workspaceMin: 'org_owner' },
@@ -292,9 +292,9 @@ export const CAPABILITY_MATRIX: Record<string, CapabilityRequirement> = {
   
   // Sentiment Analysis
   'sentiment.analyze_feedback': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
-  'sentiment.monitor_chat': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'sentiment.monitor_chat': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   'sentiment.escalate_negative': { workspaceMin: 'supervisor', bypassFor: ['Bot'] },
-  'sentiment.generate_insights': { workspaceMin: 'org_admin', bypassFor: ['Bot'] },
+  'sentiment.generate_insights': { workspaceMin: 'co_owner', bypassFor: ['Bot'] },
   
   // Chat/Communication
   'chat.create_room': { workspaceMin: 'staff' },
@@ -305,14 +305,14 @@ export const CAPABILITY_MATRIX: Record<string, CapabilityRequirement> = {
   // Dispute Resolution
   'dispute.create': { workspaceMin: 'contractor' },
   'dispute.review': { workspaceMin: 'department_manager' },
-  'dispute.resolve': { workspaceMin: 'org_admin' },
+  'dispute.resolve': { workspaceMin: 'co_owner' },
   'dispute.escalate': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   'dispute.suggest_resolution': { workspaceMin: 'department_manager', bypassFor: ['Bot'] },
   
   // Gamification
   'gamification.view_points': { workspaceMin: 'contractor' },
   'gamification.award_points': { workspaceMin: 'supervisor', bypassFor: ['Bot'] },
-  'gamification.manage_achievements': { workspaceMin: 'org_admin' },
+  'gamification.manage_achievements': { workspaceMin: 'co_owner' },
   'gamification.detect_achievements': { workspaceMin: 'supervisor', bypassFor: ['Bot'] },
 };
 
@@ -477,7 +477,7 @@ export const ROLE_GROUPS = {
   PLATFORM_OPS: ['root_admin', 'deputy_admin', 'sysop'] as PlatformRole[],
   SUPPORT_TEAM: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'] as PlatformRole[],
   AI_SERVICES: ['root_admin', 'deputy_admin', 'Bot'] as PlatformRole[],
-  WORKSPACE_ADMINS: ['org_owner', 'org_admin'] as WorkspaceRole[],
-  WORKSPACE_MANAGERS: ['org_owner', 'org_admin', 'department_manager'] as WorkspaceRole[],
-  ALL_WORKSPACE: ['org_owner', 'org_admin', 'department_manager', 'supervisor', 'staff', 'limited', 'contractor'] as WorkspaceRole[],
+  WORKSPACE_ADMINS: ['org_owner', 'co_owner'] as WorkspaceRole[],
+  WORKSPACE_MANAGERS: ['org_owner', 'co_owner', 'department_manager'] as WorkspaceRole[],
+  ALL_WORKSPACE: ['org_owner', 'co_owner', 'department_manager', 'supervisor', 'staff', 'limited', 'contractor'] as WorkspaceRole[],
 } as const;

@@ -1,0 +1,1000 @@
+2005-                      const client = clients.find(c => c.id === entry.clientId);
+2006-                      const clockInTime = new Date(entry.clockIn);
+2007-                      const clockOutTime = entry.clockOut ? new Date(entry.clockOut) : null;
+2008-
+2009-                      return (
+2010-                        <div key={entry.id} className="border rounded-lg p-4 space-y-3">
+2011-                          {/* Entry Header */}
+2012-                          <div className="flex items-center justify-between gap-2">
+2013-                            <Badge 
+2014-                              variant={entry.status === 'approved' ? 'default' : entry.status === 'rejected' ? 'destructive' : 'secondary'}
+2015-                            >
+2016-                              {entry.status || 'Pending'}
+2017-                            </Badge>
+2018-                            <span className="text-lg font-bold">
+2019-                              {entry.totalHours ? parseFloat(entry.totalHours.toString()).toFixed(2) : '0.00'}h
+2020-                            </span>
+2021-                          </div>
+2022-
+2023-                          {/* Scheduled vs Actual */}
+2024-                          {shift && (
+2025-                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-sm">
+2026-                              <p className="text-muted-foreground">
+2027-                                <span className="font-medium">Scheduled:</span> {format(new Date(shift.startTime), 'h:mm a')} - {format(new Date(shift.endTime), 'h:mm a')}
+2028-                              </p>
+2029-                            </div>
+2030-                          )}
+2031-
+2032-                          {/* Clock In/Out Details */}
+2033-                          <div className="grid grid-cols-2 gap-4">
+2034-                            <div className="space-y-1">
+2035-                              <p className="text-xs text-muted-foreground uppercase font-medium">Clock In</p>
+2036-                              <p className="font-bold">{format(clockInTime, 'h:mm a')}</p>
+2037-                              {(entry as any).clockInGpsLatitude && (
+2038-                                <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+2039-                                  <MapPin className="w-3 h-3" />
+2040-                                  <span>GPS Verified</span>
+2041-                                </div>
+2042-                              )}
+2043-                              {entry.clockInPhotoUrl && (
+2044-                                <div className="flex items-center gap-1 text-xs text-primary">
+2045-                                  <Camera className="w-3 h-3" />
+2046-                                  <span>Photo Verified</span>
+2047-                                </div>
+2048-                              )}
+2049-                            </div>
+2050-                            <div className="space-y-1">
+2051-                              <p className="text-xs text-muted-foreground uppercase font-medium">Clock Out</p>
+2052-                              {clockOutTime ? (
+2053-                                <>
+2054-                                  <p className="font-bold">{format(clockOutTime, 'h:mm a')}</p>
+2055-                                  {(entry as any).clockOutGpsLatitude && (
+2056-                                    <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+2057-                                      <MapPin className="w-3 h-3" />
+2058-                                      <span>GPS Verified</span>
+2059-                                    </div>
+2060-                                  )}
+2061-                                </>
+2062-                              ) : (
+2063-                                <p className="text-orange-600 dark:text-orange-400 font-medium">Still Active</p>
+2064-                              )}
+2065-                            </div>
+2066-                          </div>
+2067-
+2068-                          {/* Client Info */}
+2069-                          {client && (
+2070-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+2071-                              <Users className="w-4 h-4" />
+2072-                              <span>{client.companyName}</span>
+2073-                            </div>
+2074-                          )}
+2075-
+2076-                          {/* Notes */}
+2077-                          {entry.notes && (
+2078-                            <div className="text-sm text-muted-foreground italic bg-gray-50 dark:bg-gray-800/50 rounded p-2">
+2079-                              {entry.notes}
+2080-                            </div>
+2081-                          )}
+2082-
+2083-                          {/* Actions */}
+2084-                          {canApprove && entry.status === 'pending' && (
+2085-                            <div className="flex gap-2 pt-2 border-t">
+2086-                              <Button
+2087-                                size="sm"
+2088-                                onClick={() => {
+2089-                                  approveMutation.mutate(entry.id);
+2090-                                }}
+2091-                                disabled={approveMutation.isPending}
+2092-                                className="bg-green-600 hover:bg-green-700 text-white"
+2093-                                data-testid={`button-approve-day-${entry.id}`}
+2094-                              >
+2095-                                <CheckCircle className="w-4 h-4 mr-1" />
+2096-                                Approve
+2097-                              </Button>
+2098-                              <Button
+2099-                                size="sm"
+2100-                                variant="outline"
+2101-                                onClick={() => {
+2102-                                  setRejectingEntryId(entry.id);
+2103-                                  setRejectDialogOpen(true);
+2104-                                  setSelectedDayDetail(null);
+2105-                                }}
+2106-                                data-testid={`button-flag-day-${entry.id}`}
+2107-                              >
+2108-                                <AlertTriangle className="w-4 h-4 mr-1" />
+2109-                                Flag Issue
+2110-                              </Button>
+2111-                              <Button
+2112-                                size="sm"
+2113-                                variant="ghost"
+2114-                                onClick={() => {
+2115-                                  setSelectedEntry(entry);
+2116-                                  setSelectedDayDetail(null);
+2117-                                }}
+2118-                                data-testid={`button-edit-day-${entry.id}`}
+2119-                              >
+2120-                                <Edit2 className="w-4 h-4 mr-1" />
+2121-                                Edit
+2122-                              </Button>
+2123-                            </div>
+2124-                          )}
+2125-                        </div>
+2126-                      );
+2127-                    })}
+2128-
+2129-                    {/* Summary */}
+2130-                    {selectedDayDetail && selectedDayDetail.entries.length > 0 && (
+2131-                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 flex items-center justify-between gap-2">
+2132-                        <span className="font-medium text-foreground">Day Total</span>
+2133-                        <span className="text-xl sm:text-2xl font-bold text-foreground">
+2134-                          {selectedDayDetail.entries.reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0).toFixed(2)}h
+2135-                        </span>
+2136-                      </div>
+2137-                    )}
+2138-                  </div>
+2139-                </UniversalModalContent>
+2140-              </UniversalModal>
+2141-            </div>
+2142-          )}
+2143-
+2144-          {/* Approvals View */}
+2145-          {view === 'approvals' && canApprove && (
+2146-            <div className="space-y-4">
+2147-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+2148-                <h3 className="text-lg font-bold text-foreground mb-4">
+2149-                  Pending Approvals ({timeEntries.filter((e: TimeEntry) => e.status === 'pending').length})
+2150-                </h3>
+2151-
+2152-                <div className="space-y-4">
+2153-                  {timeEntries.filter((e: TimeEntry) => e.status === 'pending').map((entry: TimeEntry) => {
+2154-                    const employee = employees.find((e: Employee) => e.id === entry.employeeId);
+2155-                    return (
+2156-                      <div key={entry.id} className="border-2 border-orange-200 rounded-lg p-4 bg-orange-50" data-testid={`approval-entry-${entry.id}`}>
+2157-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+2158-                          <div className="flex-1">
+2159-                            <div className="flex items-center space-x-3 mb-2">
+2160-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+2161-                                {employee?.firstName?.[0]}{employee?.lastName?.[0]}
+2162-                              </div>
+2163-                              <div>
+2164-                                <p className="font-bold text-foreground">{employee?.firstName} {employee?.lastName}</p>
+2165-                                <p className="text-sm text-muted-foreground">{format(new Date(entry.clockIn), 'MMM dd, yyyy')}</p>
+2166-                              </div>
+2167-                            </div>
+2168-
+2169-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+2170-                              <div>
+2171-                                <p className="text-muted-foreground">In: {format(new Date(entry.clockIn), 'h:mm a')}</p>
+2172-                              </div>
+2173-                              <div>
+2174-                                <p className="text-muted-foreground">
+2175-                                  Out: {entry.clockOut ? format(new Date(entry.clockOut), 'h:mm a') : '-'}
+2176-                                </p>
+2177-                              </div>
+2178-                              <div>
+2179-                                <p className="font-bold text-foreground">
+2180-                                  Total: {entry.totalHours ? parseFloat(entry.totalHours.toString()).toFixed(1) : '0.0'}h
+2181-                                </p>
+2182-                              </div>
+2183-                            </div>
+2184-
+2185-                            {entry.notes && (
+2186-                              <p className="text-sm text-muted-foreground mt-2 italic">{entry.notes}</p>
+2187-                            )}
+2188-                          </div>
+2189-
+2190-                          <div className="flex gap-2">
+2191-                            <Button
+2192-                              onClick={() => approveMutation.mutate(entry.id)}
+2193-                              className="flex-1 lg:flex-none bg-green-600 text-white hover:bg-green-700"
+2194-                              disabled={approveMutation.isPending}
+2195-                              data-testid={`button-approve-${entry.id}`}
+2196-                            >
+2197-                              <CheckCircle className="w-4 h-4 mr-2" />
+2198-                              Approve
+2199-                            </Button>
+2200-                            <Button
+2201-                              onClick={() => {
+2202-                                setRejectingEntryId(entry.id);
+2203-                                setRejectDialogOpen(true);
+2204-                              }}
+2205-                              className="flex-1 lg:flex-none bg-red-600 text-white hover:bg-red-700"
+2206-                              disabled={rejectMutation.isPending}
+2207-                              data-testid={`button-reject-${entry.id}`}
+2208-                            >
+2209-                              <XCircle className="w-4 h-4 mr-2" />
+2210-                              Reject
+2211-                            </Button>
+2212-                          </div>
+2213-                        </div>
+2214-                      </div>
+2215-                    );
+2216-                  })}
+2217-
+2218-                  {timeEntries.filter((e: TimeEntry) => e.status === 'pending').length === 0 && (
+2219-                    <div className="text-center py-8">
+2220-                      <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-3" />
+2221-                      <p className="text-muted-foreground font-medium">All caught up!</p>
+2222-                      <p className="text-sm text-muted-foreground">No pending approvals</p>
+2223-                    </div>
+2224-                  )}
+2225-                </div>
+2226-              </div>
+2227-            </div>
+2228-          )}
+2229-
+2230-          {/* Approvals View */}
+2231-          {view === 'approvals' && (
+2232-            <div className="space-y-4">
+2233-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+2234-                <div className="flex items-center justify-between gap-2 mb-6">
+2235-                  <div className="min-w-0">
+2236-                    <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">Pending Approvals</h2>
+2237-                    <p className="text-sm text-muted-foreground mt-1">
+2238-                      {pendingApprovals} {pendingApprovals === 1 ? 'entry' : 'entries'} awaiting review
+2239-                    </p>
+2240-                  </div>
+2241-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg">
+2242-                    <CheckCircle className="w-5 h-5 inline mr-2" />
+2243-                    <span className="font-semibold">{pendingApprovals}</span>
+2244-                  </div>
+2245-                </div>
+2246-
+2247-                {/* Pending Entries List */}
+2248-                <div className="space-y-3">
+2249-                  {timeEntries
+2250-                    .filter((entry: TimeEntry) => entry.status === 'pending')
+2251-                    .sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime())
+2252-                    .map((entry: TimeEntry) => {
+2253-                      const employee = employees.find(e => e.id === entry.employeeId);
+2254-                      const client = clients.find(c => c.id === entry.clientId);
+2255-                      const duration = entry.totalHours 
+2256-                        ? `${parseFloat(entry.totalHours.toString()).toFixed(2)}h`
+2257-                        : 'Ongoing';
+2258-
+2259-                      return (
+2260-                        <div key={entry.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors" data-testid={`approval-entry-${entry.id}`}>
+2261-                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+2262-                            <div className="flex-1">
+2263-                              <div className="flex items-center space-x-3 mb-2">
+2264-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+2265-                                  {employee?.firstName?.[0]}{employee?.lastName?.[0]}
+2266-                                </div>
+2267-                                <div>
+2268-                                  <p className="font-semibold text-foreground">{employee?.firstName} {employee?.lastName}</p>
+2269-                                  <p className="text-sm text-muted-foreground">{format(new Date(entry.clockIn), 'MMM dd, yyyy')}</p>
+2270-                                </div>
+2271-                              </div>
+2272-
+2273-                              <div className="grid grid-cols-2 gap-3 mt-3">
+2274-                                <div>
+2275-                                  <p className="text-xs text-muted-foreground">Clock In</p>
+2276-                                  <p className="text-sm font-medium text-foreground">{format(new Date(entry.clockIn), 'h:mm a')}</p>
+2277-                                </div>
+2278-                                <div>
+2279-                                  <p className="text-xs text-muted-foreground">Clock Out</p>
+2280-                                  <p className="text-sm font-medium text-foreground">
+2281-                                    {entry.clockOut ? format(new Date(entry.clockOut), 'h:mm a') : 'Active'}
+2282-                                  </p>
+2283-                                </div>
+2284-                                <div>
+2285-                                  <p className="text-xs text-muted-foreground">Duration</p>
+2286-                                  <p className="text-sm font-medium text-foreground">{duration}</p>
+2287-                                </div>
+2288-                                {client && (
+2289-                                  <div>
+2290-                                    <p className="text-xs text-muted-foreground">Client</p>
+2291-                                    <p className="text-sm font-medium text-foreground">{client.companyName || `${client.firstName} ${client.lastName}`}</p>
+2292-                                  </div>
+2293-                                )}
+2294-                              </div>
+2295-
+2296-                              {entry.notes && (
+2297-                                <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-md">
+2298-                                  <p className="text-xs text-muted-foreground mb-1">Notes:</p>
+2299-                                  <p className="text-sm text-foreground italic">{entry.notes}</p>
+2300-                                </div>
+2301-                              )}
+2302-                            </div>
+2303-
+2304-                            <div className="flex flex-col gap-2 lg:min-w-[120px]">
+2305-                              <Button
+2306-                                onClick={() => approveMutation.mutate(entry.id)}
+2307-                                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+2308-                                disabled={approveMutation.isPending}
+2309-                                data-testid={`button-approve-${entry.id}`}
+2310-                              >
+2311-                                <CheckCircle className="w-4 h-4 mr-2" />
+2312-                                Approve
+2313-                              </Button>
+2314-                              <Button
+2315-                                onClick={() => {
+2316-                                  setRejectingEntryId(entry.id);
+2317-                                  setRejectDialogOpen(true);
+2318-                                }}
+2319-                                className="w-full bg-gradient-to-r from-red-600 to-rose-600 text-white"
+2320-                                disabled={rejectMutation.isPending}
+2321-                                data-testid={`button-reject-${entry.id}`}
+2322-                              >
+2323-                                <XCircle className="w-4 h-4 mr-2" />
+2324-                                Reject
+2325-                              </Button>
+2326-                            </div>
+2327-                          </div>
+2328-                        </div>
+2329-                      );
+2330-                    })}
+2331-
+2332-                  {pendingApprovals === 0 && (
+2333-                    <div className="text-center py-12">
+2334-                      <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+2335-                        <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+2336-                      </div>
+2337-                      <h3 className="text-lg font-semibold text-foreground mb-2">All Caught Up!</h3>
+2338-                      <p className="text-muted-foreground">No pending time entries to review</p>
+2339-                    </div>
+2340-                  )}
+2341-                </div>
+2342-              </div>
+2343-            </div>
+2344-          )}
+2345-
+2346-          {/* Reports View - Pro View only */}
+2347-          {view === 'reports' && canApprove && !isSimpleMode && (
+2348-            <div className="space-y-6">
+2349-              {/* Report Header */}
+2350-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+2351-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+2352-                  <div>
+2353-                    <h2 className="text-xl font-bold text-foreground">Time & Attendance Reports</h2>
+2354-                    <p className="text-sm text-muted-foreground">Generate reports for labor cost, overtime, and exceptions</p>
+2355-                  </div>
+2356-                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+2357-                    <Button
+2358-                      variant="outline"
+2359-                      size="sm"
+2360-                      onClick={() => {
+2361-                        const data = generateReportData('labor');
+2362-                        downloadCSV(data, `labor-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+2363-                        toast({ title: 'Report Downloaded', description: 'Labor cost report exported to CSV' });
+2364-                      }}
+2365-                      data-testid="button-export-labor"
+2366-                    >
+2367-                      <Download className="w-4 h-4 mr-1.5 shrink-0" />
+2368-                      <span className="truncate">Labor Report</span>
+2369-                    </Button>
+2370-                    <Button
+2371-                      variant="outline"
+2372-                      size="sm"
+2373-                      onClick={() => {
+2374-                        const data = generateReportData('overtime');
+2375-                        downloadCSV(data, `overtime-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+2376-                        toast({ title: 'Report Downloaded', description: 'Overtime report exported to CSV' });
+2377-                      }}
+2378-                      data-testid="button-export-overtime"
+2379-                    >
+2380-                      <Download className="w-4 h-4 mr-1.5 shrink-0" />
+2381-                      <span className="truncate">Overtime</span>
+2382-                    </Button>
+2383-                    <Button
+2384-                      variant="outline"
+2385-                      size="sm"
+2386-                      onClick={() => {
+2387-                        const data = generateReportData('exceptions');
+2388-                        downloadCSV(data, `exceptions-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+2389-                        toast({ title: 'Report Downloaded', description: 'Exceptions report exported to CSV' });
+2390-                      }}
+2391-                      data-testid="button-export-exceptions"
+2392-                    >
+2393-                      <Download className="w-4 h-4 mr-1.5 shrink-0" />
+2394-                      <span className="truncate">Exceptions</span>
+2395-                    </Button>
+2396-                    <Button
+2397-                      size="sm"
+2398-                      className="bg-gradient-to-r from-green-600 to-emerald-600 text-white col-span-2 sm:col-span-1"
+2399-                      onClick={async () => {
+2400-                        try {
+2401-                          const response = await secureFetch(`/api/payroll/export/csv?startDate=${format(gridWeekStart, 'yyyy-MM-dd')}&endDate=${format(gridWeekEnd, 'yyyy-MM-dd')}`);
+2402-                          if (!response.ok) throw new Error('Export failed');
+2403-                          const blob = await response.blob();
+2404-                          const url = window.URL.createObjectURL(blob);
+2405-                          const a = document.createElement('a');
+2406-                          a.href = url;
+2407-                          a.download = `quickbooks-payroll-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+2408-                          document.body.appendChild(a);
+2409-                          a.click();
+2410-                          window.URL.revokeObjectURL(url);
+2411-                          document.body.removeChild(a);
+2412-                          toast({ title: 'QuickBooks Export Ready', description: 'Payroll data exported for QuickBooks import' });
+2413-                          trinity.success('Payroll data exported successfully! You can now import this into QuickBooks.', 'QuickBooks Export');
+2414-                        } catch (error) {
+2415-                          toast({ title: 'Export Failed', description: 'Failed to export payroll data', variant: 'destructive' });
+2416-                        }
+2417-                      }}
+2418-                      data-testid="button-export-quickbooks"
+2419-                    >
+2420-                      <FileSpreadsheet className="w-4 h-4 mr-1.5 shrink-0" />
+2421-                      <span className="truncate">QuickBooks Export</span>
+2422-                    </Button>
+2423-                  </div>
+2424-                </div>
+2425-              </div>
+2426-
+2427-              {/* Report Cards */}
+2428-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+2429-                {/* Labor Cost Summary */}
+2430-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+2431-                  <div className="flex items-center gap-3 mb-4">
+2432-                    <div className="p-2 bg-green-100 rounded-lg">
+2433-                      <DollarSign className="w-5 h-5 text-green-600" />
+2434-                    </div>
+2435-                    <h3 className="font-bold text-foreground">Labor Cost</h3>
+2436-                  </div>
+2437-                  <div className="space-y-3">
+2438-                    <div className="flex justify-between items-center gap-2">
+2439-                      <span className="text-sm text-muted-foreground">Total Hours (Week)</span>
+2440-                      <span className="font-bold text-foreground" data-testid="text-report-total-hours">
+2441-                        {timeEntries.filter(e => {
+2442-                          const entryDate = new Date(e.clockIn);
+2443-                          return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+2444-                        }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0).toFixed(1)}h
+2445-                      </span>
+2446-                    </div>
+2447-                    <div className="flex justify-between items-center gap-2">
+2448-                      <span className="text-sm text-muted-foreground">Regular Hours</span>
+2449-                      <span className="font-medium text-foreground" data-testid="text-report-regular-hours">
+2450-                        {Math.min(
+2451-                          timeEntries.filter(e => {
+2452-                            const entryDate = new Date(e.clockIn);
+2453-                            return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+2454-                          }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0),
+2455-                          40 * gridEmployees.length
+2456-                        ).toFixed(1)}h
+2457-                      </span>
+2458-                    </div>
+2459-                    <div className="flex justify-between items-center gap-2">
+2460-                      <span className="text-sm text-muted-foreground">Overtime Hours</span>
+2461-                      <span className="font-medium text-orange-600" data-testid="text-report-overtime-hours">
+2462-                        {Math.max(0, 
+2463-                          timeEntries.filter(e => {
+2464-                            const entryDate = new Date(e.clockIn);
+2465-                            return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+2466-                          }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0) - (40 * gridEmployees.length)
+2467-                        ).toFixed(1)}h
+2468-                      </span>
+2469-                    </div>
+2470-                    <div className="pt-2 border-t">
+2471-                      <div className="flex justify-between items-center gap-2">
+2472-                        <span className="text-sm font-medium text-foreground">Est. Labor Cost</span>
+2473-                        <span className="text-lg font-bold text-green-600" data-testid="text-report-labor-cost">
+2474-                          ${(timeEntries.filter(e => {
+2475-                            const entryDate = new Date(e.clockIn);
+2476-                            return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+2477-                          }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0) * 18).toFixed(2)}
+2478-                        </span>
+2479-                      </div>
+2480-                      <p className="text-xs text-muted-foreground mt-1">Based on avg $18/hr</p>
+2481-                    </div>
+2482-                  </div>
+2483-                </div>
+2484-
+2485-                {/* Overtime Summary */}
+2486-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+2487-                  <div className="flex items-center gap-3 mb-4">
+2488-                    <div className="p-2 bg-orange-100 rounded-lg">
+2489-                      <TrendingUp className="w-5 h-5 text-orange-600" />
+2490-                    </div>
+2491-                    <h3 className="font-bold text-foreground">Overtime Analysis</h3>
+2492-                  </div>
+2493-                  <div className="space-y-3">
+2494-                    {gridEmployees.map(emp => {
+2495-                      const weekTotal = getEmployeeWeekTotal(emp.id);
+2496-                      const isOvertime = weekTotal.total > 40;
+2497-                      if (!isOvertime) return null;
+2498-                      return (
+2499-                        <div key={emp.id} className="flex items-center justify-between gap-2 p-2 bg-orange-50 rounded-lg" data-testid={`overtime-employee-${emp.id}`}>
+2500-                          <div className="flex items-center gap-2 min-w-0">
+2501-                            <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+2502-                              {emp.firstName?.[0]}{emp.lastName?.[0]}
+2503-                            </div>
+2504-                            <span className="text-sm font-medium text-foreground truncate">{emp.firstName} {emp.lastName}</span>
+2505-                          </div>
+2506-                          <span className="text-sm font-bold text-orange-600">
+2507-                            +{(weekTotal.total - 40).toFixed(1)}h OT
+2508-                          </span>
+2509-                        </div>
+2510-                      );
+2511-                    })}
+2512-                    {gridEmployees.every(emp => getEmployeeWeekTotal(emp.id).total <= 40) && (
+2513-                      <div className="text-center py-4 text-muted-foreground">
+2514-                        <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
+2515-                        <p className="text-sm">No overtime this week</p>
+2516-                      </div>
+2517-                    )}
+2518-                  </div>
+2519-                </div>
+2520-
+2521-                {/* Exceptions Summary */}
+2522-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+2523-                  <div className="flex items-center gap-3 mb-4">
+2524-                    <div className="p-2 bg-red-100 rounded-lg">
+2525-                      <AlertOctagon className="w-5 h-5 text-red-600" />
+2526-                    </div>
+2527-                    <h3 className="font-bold text-foreground">Exceptions</h3>
+2528-                  </div>
+2529-                  <div className="space-y-3">
+2530-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+2531-                      <div className="flex items-center gap-2">
+2532-                        <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0" />
+2533-                        <span className="text-sm text-foreground">Late Clock-Ins</span>
+2534-                      </div>
+2535-                      <span className="font-bold text-yellow-600" data-testid="text-exception-late-clockins">
+2536-                        {timeEntries.filter(e => {
+2537-                          const shift = shifts.find(s => s.id === e.shiftId);
+2538-                          if (!shift) return false;
+2539-                          const clockIn = new Date(e.clockIn);
+2540-                          const shiftStart = new Date(shift.startTime);
+2541-                          return (clockIn.getTime() - shiftStart.getTime()) > 5 * 60 * 1000;
+2542-                        }).length}
+2543-                      </span>
+2544-                    </div>
+2545-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+2546-                      <div className="flex items-center gap-2">
+2547-                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+2548-                        <span className="text-sm text-foreground">Flagged Entries</span>
+2549-                      </div>
+2550-                      <span className="font-bold text-red-600" data-testid="text-exception-flagged">
+2551-                        {timeEntries.filter(e => e.status === 'rejected' || e.status === 'flagged').length}
+2552-                      </span>
+2553-                    </div>
+2554-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+2555-                      <div className="flex items-center gap-2">
+2556-                        <PlayCircle className="w-4 h-4 text-primary shrink-0" />
+2557-                        <span className="text-sm text-foreground">Missing Clock-Outs</span>
+2558-                      </div>
+2559-                      <span className="font-bold text-primary" data-testid="text-exception-missing-clockouts">
+2560-                        {timeEntries.filter(e => !e.clockOut && new Date(e.clockIn) < new Date(Date.now() - 12 * 60 * 60 * 1000)).length}
+2561-                      </span>
+2562-                    </div>
+2563-                    <div className="flex justify-between items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+2564-                      <div className="flex items-center gap-2">
+2565-                        <CheckCircle className="w-4 h-4 text-purple-500 shrink-0" />
+2566-                        <span className="text-sm text-foreground">Pending Approvals</span>
+2567-                      </div>
+2568-                      <span className="font-bold text-purple-600" data-testid="text-exception-pending">
+2569-                        {pendingApprovals}
+2570-                      </span>
+2571-                    </div>
+2572-                  </div>
+2573-                </div>
+2574-              </div>
+2575-
+2576-              {/* Detailed Employee Report Table */}
+2577-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+2578-                <div className="p-4 lg:p-6 border-b border-gray-200">
+2579-                  <div className="flex items-center justify-between gap-2">
+2580-                    <div className="flex items-center gap-3 min-w-0">
+2581-                      <FileSpreadsheet className="w-5 h-5 text-primary shrink-0" />
+2582-                      <h3 className="font-bold text-foreground truncate">Employee Weekly Summary</h3>
+2583-                    </div>
+2584-                    <div className="text-sm text-muted-foreground shrink-0">
+2585-                      Week of {format(gridWeekStart, 'MMM d')} - {format(gridWeekEnd, 'MMM d, yyyy')}
+2586-                    </div>
+2587-                  </div>
+2588-                </div>
+2589-                <div className="overflow-x-auto">
+2590-                  <table className="w-full">
+2591-                    <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+2592-                      <tr>
+2593-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
+2594-                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Total Hours</th>
+2595-                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Regular</th>
+2596-                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Overtime</th>
+2597-                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Status</th>
+2598-                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Est. Pay</th>
+2599-                      </tr>
+2600-                    </thead>
+2601-                    <tbody className="divide-y divide-gray-200">
+2602-                      {gridEmployees.map(emp => {
+2603-                        const weekTotal = getEmployeeWeekTotal(emp.id);
+2604-                        const regularHours = Math.min(weekTotal.total, 40);
+2605-                        const overtimeHours = Math.max(0, weekTotal.total - 40);
+2606-                        const estPay = (regularHours * 18) + (overtimeHours * 27);
+2607-                        
+2608-                        return (
+2609-                          <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50" data-testid={`report-row-${emp.id}`}>
+2610-                            <td className="px-4 py-3">
+2611-                              <div className="flex items-center gap-3">
+2612-                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+2613-                                  {emp.firstName?.[0]}{emp.lastName?.[0]}
+2614-                                </div>
+2615-                                <div>
+2616-                                  <p className="font-medium text-foreground text-sm">{emp.firstName} {emp.lastName}</p>
+2617-                                  <p className="text-xs text-muted-foreground capitalize">{emp.workspaceRole || 'Employee'}</p>
+2618-                                </div>
+2619-                              </div>
+2620-                            </td>
+2621-                            <td className="px-4 py-3 text-center font-bold text-foreground">
+2622-                              {weekTotal.total.toFixed(1)}h
+2623-                            </td>
+2624-                            <td className="px-4 py-3 text-center text-foreground">
+2625-                              {regularHours.toFixed(1)}h
+2626-                            </td>
+2627-                            <td className="px-4 py-3 text-center">
+2628-                              {overtimeHours > 0 ? (
+2629-                                <span className="text-orange-600 font-medium">{overtimeHours.toFixed(1)}h</span>
+2630-                              ) : (
+2631-                                <span className="text-gray-400">-</span>
+2632-                              )}
+2633-                            </td>
+2634-                            <td className="px-4 py-3 text-center">
+2635-                              {weekTotal.hasPending ? (
+2636-                                <Badge variant="secondary">Pending</Badge>
+2637-                              ) : weekTotal.entries.some(e => e.status === 'rejected' || e.status === 'flagged') ? (
+2638-                                <Badge variant="destructive">Issue</Badge>
+2639-                              ) : weekTotal.entries.length > 0 ? (
+2640-                                <Badge variant="default">Approved</Badge>
+2641-                              ) : (
+2642-                                <Badge variant="outline">No Hours</Badge>
+2643-                              )}
+2644-                            </td>
+2645-                            <td className="px-4 py-3 text-center font-bold text-green-600">
+2646-                              ${estPay.toFixed(2)}
+2647-                            </td>
+2648-                          </tr>
+2649-                        );
+2650-                      })}
+2651-                    </tbody>
+2652-                    <tfoot className="bg-gray-100 dark:bg-gray-800">
+2653-                      <tr>
+2654-                        <td className="px-4 py-3 font-bold text-foreground">Totals</td>
+2655-                        <td className="px-4 py-3 text-center font-bold text-foreground">
+2656-                          {gridEmployees.reduce((sum, emp) => sum + getEmployeeWeekTotal(emp.id).total, 0).toFixed(1)}h
+2657-                        </td>
+2658-                        <td className="px-4 py-3 text-center font-bold text-foreground">
+2659-                          {gridEmployees.reduce((sum, emp) => sum + Math.min(getEmployeeWeekTotal(emp.id).total, 40), 0).toFixed(1)}h
+2660-                        </td>
+2661-                        <td className="px-4 py-3 text-center font-bold text-orange-600">
+2662-                          {gridEmployees.reduce((sum, emp) => sum + Math.max(0, getEmployeeWeekTotal(emp.id).total - 40), 0).toFixed(1)}h
+2663-                        </td>
+2664-                        <td className="px-4 py-3"></td>
+2665-                        <td className="px-4 py-3 text-center font-bold text-green-600">
+2666-                          ${gridEmployees.reduce((sum, emp) => {
+2667-                            const weekTotal = getEmployeeWeekTotal(emp.id);
+2668-                            const regularHours = Math.min(weekTotal.total, 40);
+2669-                            const overtimeHours = Math.max(0, weekTotal.total - 40);
+2670-                            return sum + (regularHours * 18) + (overtimeHours * 27);
+2671-                          }, 0).toFixed(2)}
+2672-                        </td>
+2673-                      </tr>
+2674-                    </tfoot>
+2675-                  </table>
+2676-                </div>
+2677-              </div>
+2678-            </div>
+2679-          )}
+2680-        </div>
+2681-
+2682-        {/* Mobile Bottom Navigation */}
+2683-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/98 backdrop-blur-xl border-t border-border z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+2684-          <div className={`flex items-center h-14 px-1`}>
+2685-            <button
+2686-              onClick={() => setView('clock')}
+2687-              className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1.5 px-1 rounded-lg transition-colors ${
+2688-                view === 'clock' ? 'text-primary' : 'text-muted-foreground'
+2689-              }`}
+2690-              data-testid="button-mobile-nav-clock"
+2691-            >
+2692-              <Clock className="w-5 h-5 shrink-0" />
+2693-              <span className="text-[10px] font-medium mt-0.5 leading-tight">Clock</span>
+2694-            </button>
+2695-            <button
+2696-              onClick={() => setView('timesheet')}
+2697-              className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1.5 px-1 rounded-lg transition-colors ${
+2698-                view === 'timesheet' ? 'text-primary' : 'text-muted-foreground'
+2699-              }`}
+2700-              data-testid="button-mobile-nav-timesheet"
+2701-            >
+2702-              <Calendar className="w-5 h-5 shrink-0" />
+2703-              <span className="text-[10px] font-medium mt-0.5 leading-tight">Timesheets</span>
+2704-            </button>
+2705-            {canApprove && (
+2706-              <>
+2707-                <button
+2708-                  onClick={() => setView('approvals')}
+2709-                  className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1.5 px-1 rounded-lg transition-colors relative ${
+2710-                    view === 'approvals' ? 'text-primary' : 'text-muted-foreground'
+2711-                  }`}
+2712-                  data-testid="button-mobile-nav-approvals"
+2713-                >
+2714-                  <div className="relative">
+2715-                    <CheckCircle className="w-5 h-5 shrink-0" />
+2716-                    {pendingApprovals > 0 && (
+2717-                      <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] bg-orange-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold px-0.5">
+2718-                        {pendingApprovals > 99 ? '99+' : pendingApprovals}
+2719-                      </span>
+2720-                    )}
+2721-                  </div>
+2722-                  <span className="text-[10px] font-medium mt-0.5 leading-tight">Approve</span>
+2723-                </button>
+2724-                {!isSimpleMode && (
+2725-                  <button
+2726-                    onClick={() => setView('reports')}
+2727-                    className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1.5 px-1 rounded-lg transition-colors ${
+2728-                      view === 'reports' ? 'text-primary' : 'text-muted-foreground'
+2729-                    }`}
+2730-                    data-testid="button-mobile-nav-reports"
+2731-                  >
+2732-                    <BarChart2 className="w-5 h-5 shrink-0" />
+2733-                    <span className="text-[10px] font-medium mt-0.5 leading-tight">Reports</span>
+2734-                  </button>
+2735-                )}
+2736-              </>
+2737-            )}
+2738-          </div>
+2739-        </div>
+2740-
+2741-        {/* Clock In Dialog */}
+2742-        <UniversalModal open={clockInDialogOpen} onOpenChange={setClockInDialogOpen}>
+2743-          <UniversalModalContent size="xl" hideBuiltInClose className="max-h-[90vh] p-0">
+2744-            <DialogStyledHeader variant="info">
+2745-              <UniversalModalTitle className="text-inherit">Clock In</UniversalModalTitle>
+2746-              <UniversalModalDescription className="text-white/80">
+2747-                GPS and photo verification required
+2748-              </UniversalModalDescription>
+2749-            </DialogStyledHeader>
+2750-            
+2751-            <UniversalModalBody className="space-y-4">
+2752-              {/* Employee Selection - Only managers/supervisors/owners can clock in others */}
+2753-              {canClockInOthers && (
+2754-                <div>
+2755-                  <Label>Employee *</Label>
+2756-                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+2757-                    <SelectTrigger data-testid="select-employee">
+2758-                      <SelectValue placeholder="Select employee" />
+2759-                    </SelectTrigger>
+2760-                    <SelectContent>
+2761-                      {employees.map(emp => (
+2762-                        <SelectItem key={emp.id} value={emp.id}>
+2763-                          {emp.firstName} {emp.lastName}
+2764-                        </SelectItem>
+2765-                      ))}
+2766-                    </SelectContent>
+2767-                  </Select>
+2768-                </div>
+2769-              )}
+2770-              {!canClockInOthers && currentEmployee && (
+2771-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+2772-                  <Label className="text-foreground">Employee</Label>
+2773-                  <p className="font-bold text-foreground">{currentEmployee.firstName} {currentEmployee.lastName}</p>
+2774-                </div>
+2775-              )}
+2776-
+2777-              {/* GPS Status */}
+2778-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+2779-                <div className="flex items-center justify-between gap-2 mb-2">
+2780-                  <div className="flex items-center space-x-2">
+2781-                    <MapPin className="w-5 h-5 text-primary shrink-0" />
+2782-                    <Label>GPS Location</Label>
+2783-                  </div>
+2784-                  {isCapturingGPS && (
+2785-                    <Badge variant="secondary">Capturing...</Badge>
+2786-                  )}
+2787-                </div>
+2788-                {gpsData ? (
+2789-                  <div className="text-sm text-green-600 dark:text-green-400 flex items-center space-x-2">
+2790-                    <CheckCircle className="w-4 h-4 shrink-0" />
+2791-                    <span>Location verified ({Math.round(gpsData.accuracy)}m accuracy)</span>
+2792-                  </div>
+2793-                ) : gpsError === "denied" ? (
+2794-                  <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-1">
+2795-                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Location permission required</p>
+2796-                    <p className="text-xs text-amber-700 dark:text-amber-300">Tap the lock icon in your browser's address bar, then set Location to Allow. Then tap Retry GPS below.</p>
+2797-                  </div>
+2798-                ) : gpsError === "unavailable" ? (
+2799-                  <div className="text-sm text-destructive flex items-center space-x-2">
+2800-                    <XCircle className="w-4 h-4 shrink-0" />
+2801-                    <span>No GPS signal. Move outdoors and tap Retry GPS.</span>
+2802-                  </div>
+2803-                ) : gpsError === "timeout" ? (
+2804-                  <div className="text-sm text-destructive flex items-center space-x-2">
+2805-                    <XCircle className="w-4 h-4 shrink-0" />
+2806-                    <span>GPS timed out. Move outdoors and tap Retry GPS.</span>
+2807-                  </div>
+2808-                ) : gpsError ? (
+2809-                  <div className="text-sm text-destructive flex items-center space-x-2">
+2810-                    <XCircle className="w-4 h-4 shrink-0" />
+2811-                    <span>Unable to get location. Tap Retry GPS.</span>
+2812-                  </div>
+2813-                ) : (
+2814-                  <div className="text-sm text-muted-foreground">Capturing location...</div>
+2815-                )}
+2816-                {!gpsData && !isCapturingGPS && (
+2817-                  <Button
+2818-                    variant="outline"
+2819-                    size="sm"
+2820-                    onClick={() => captureGPS()}
+2821-                    className="mt-2"
+2822-                    data-testid="button-retry-gps"
+2823-                  >
+2824-                    Retry GPS
+2825-                  </Button>
+2826-                )}
+2827-              </div>
+2828-
+2829-              {/* Photo Capture */}
+2830-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+2831-                <div className="flex items-center space-x-2 mb-2">
+2832-                  <Camera className="w-5 h-5 text-primary" />
+2833-                  <Label>Verification Photo</Label>
+2834-                </div>
+2835-                
+2836-                {!capturedPhoto ? (
+2837-                  <div className="space-y-2">
+2838-                    {cameraPermissionDenied && (
+2839-                      <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-1">
+2840-                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Camera permission required</p>
+2841-                        <p className="text-xs text-amber-700 dark:text-amber-300">Tap the lock icon in your browser's address bar, then set Camera to Allow. Tap "Start Camera" again after enabling it, or use "Upload Photo" below to open your device camera directly.</p>
+2842-                      </div>
+2843-                    )}
+2844-                    {isCameraActive ? (
+2845-                      <div className="space-y-2">
+2846-                        <div className="relative rounded-lg overflow-hidden bg-black" style={{ aspectRatio: "4/3" }}>
+2847-                          {isCameraLoading && (
+2848-                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/50">
+2849-                              <div className="text-center text-white">
+2850-                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-1" />
+2851-                                <p className="text-xs">Starting camera...</p>
+2852-                              </div>
+2853-                            </div>
+2854-                          )}
+2855-                          <video
+2856-                            ref={videoRef}
+2857-                            autoPlay
+2858-                            playsInline
+2859-                            muted
+2860-                            className="w-full h-full object-cover"
+2861-                          />
+2862-                        </div>
+2863-                        <Button
+2864-                          variant="default"
+2865-                          onClick={capturePhoto}
+2866-                          className="w-full"
+2867-                          data-testid="button-capture-photo"
+2868-                        >
+2869-                          <Camera className="w-4 h-4 mr-2" />
+2870-                          Capture Photo
+2871-                        </Button>
+2872-                      </div>
+2873-                    ) : (
+2874-                      <div className="space-y-2">
+2875-                        {cameraSupported && (
+2876-                          <Button
+2877-                            variant="outline"
+2878-                            onClick={startCamera}
+2879-                            className="w-full"
+2880-                            data-testid="button-start-camera"
+2881-                          >
+2882-                            <Camera className="w-4 h-4 mr-2" />
+2883-                            {cameraPermissionDenied ? "Try Camera Again" : "Start Camera"}
+2884-                          </Button>
+2885-                        )}
+2886-                        <div className="flex gap-2">
+2887-                          <Button
+2888-                            variant={cameraSupported ? "outline" : "default"}
+2889-                            onClick={() => fileInputRef.current?.click()}
+2890-                            className="flex-1"
+2891-                            data-testid="button-browse-gallery"
+2892-                          >
+2893-                            <Upload className="w-4 h-4 mr-2" />
+2894-                            Browse Gallery
+2895-                          </Button>
+2896-                          <Button
+2897-                            variant="outline"
+2898-                            onClick={() => cameraInputRef.current?.click()}
+2899-                            className="flex-1"
+2900-                            data-testid="button-take-photo-direct"
+2901-                          >
+2902-                            <Camera className="w-4 h-4 mr-2" />
+2903-                            Take Photo
+2904-                          </Button>
+2905-                        </div>
+2906-                      </div>
+2907-                    )}
+2908-                  </div>
+2909-                ) : (
+2910-                  <div className="space-y-2">
+2911-                    <img
+2912-                      src={capturedPhoto}
+2913-                      alt="Captured"
+2914-                      className="w-full rounded-lg object-cover max-h-48"
+2915-                    />
+2916-                    <Button
+2917-                      variant="outline"
+2918-                      onClick={() => {
+2919-                        setCapturedPhoto(null);
+2920-                        setCameraPermissionDenied(false);
+2921-                        if (cameraSupported) startCamera();
+2922-                      }}
+2923-                      className="w-full"
+2924-                      data-testid="button-retake-photo"
+2925-                    >
+2926-                      Retake Photo
+2927-                    </Button>
+2928-                  </div>
+2929-                )}
+2930-                <canvas ref={canvasRef} className="hidden" />
+2931-                <input
+2932-                  ref={fileInputRef}
+2933-                  type="file"
+2934-                  accept="image/*"
+2935-                  onChange={handleFileUpload}
+2936-                  className="hidden"
+2937-                  data-testid="input-photo-upload"
+2938-                />
+2939-                <input
+2940-                  ref={cameraInputRef}
+2941-                  type="file"
+2942-                  accept="image/*"
+2943-                  capture="environment"
+2944-                  onChange={handleFileUpload}
+2945-                  className="hidden"
+2946-                  data-testid="input-camera-capture"
+2947-                />
+2948-              </div>
+2949-
+2950-              {/* Optional Fields */}
+2951-              <div>
+2952-                <Label>Client (Optional)</Label>
+2953-                <Select value={selectedClient} onValueChange={setSelectedClient}>
+2954-                  <SelectTrigger data-testid="select-client">
+2955-                    <SelectValue placeholder="Select client (optional)" />
+2956-                  </SelectTrigger>
+2957-                  <SelectContent>
+2958-                    <SelectItem value="none">No client</SelectItem>
+2959-                    {clients.map(client => (
+2960-                      <SelectItem key={client.id} value={client.id}>
+2961-                        {client.companyName || `${client.firstName} ${client.lastName}`}
+2962-                      </SelectItem>
+2963-                    ))}
+2964-                  </SelectContent>
+2965-                </Select>
+2966-              </div>
+2967-
+2968-              <div>
+2969-                <Label>Notes (Optional)</Label>
+2970-                <Textarea 
+2971-                  value={notes} 
+2972-                  onChange={(e) => setNotes(e.target.value)}
+2973-                  placeholder="Add any notes about your shift..."
+2974-                  data-testid="input-notes"
+2975-                />
+2976-              </div>
+2977-
+2978-              <Button 
+2979-                onClick={handleClockIn} 
+2980-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600"
+2981-                disabled={clockInMutation.isPending || !selectedEmployee || !gpsData || !capturedPhoto}
+2982-                data-testid="button-confirm-clock-in"
+2983-              >
+2984-                {clockInMutation.isPending ? "Clocking In..." : "Confirm Clock In"}
+2985-              </Button>
+2986-            </UniversalModalBody>
+2987-          </UniversalModalContent>
+2988-        </UniversalModal>
+2989-
+2990-        {/* Entry Details Dialog */}
+2991-        <UniversalModal open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
+2992-          <UniversalModalContent size="xl" hideBuiltInClose className="p-0">
+2993-            <DialogStyledHeader variant="info">
+2994-              <UniversalModalTitle className="text-inherit">Timesheet Entry Details</UniversalModalTitle>
+2995-            </DialogStyledHeader>
+2996-            {selectedEntry && (
+2997-              <UniversalModalBody className="space-y-4">
+2998-                <div>
+2999-                  <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2">
+3000-                    {employees.find((e: Employee) => e.id === selectedEntry.employeeId)?.firstName}{' '}
+3001-                    {employees.find((e: Employee) => e.id === selectedEntry.employeeId)?.lastName}
+3002-                  </h4>
+3003-                  <p className="text-sm text-muted-foreground">{format(new Date(selectedEntry.clockIn), 'MMMM dd, yyyy')}</p>
+3004-                </div>

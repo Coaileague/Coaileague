@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { secureFetch } from "@/lib/csrf";
+import { markCoreActionPerformed } from "@/lib/pushNotifications";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -78,7 +80,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
   // Join room mutation
   const joinRoomMutation = useMutation({
     mutationFn: async (roomId: string) => {
-      const res = await fetch(`/api/comm-os/rooms/${roomId}/join`, {
+      const res = await secureFetch(`/api/comm-os/rooms/${roomId}/join`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -86,6 +88,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
       return res.json();
     },
     onSuccess: (data, roomId) => {
+      markCoreActionPerformed();
       queryClient.invalidateQueries({ queryKey: ['/api/comm-os/rooms/live'] });
       const room = rooms?.find(r => r.id === roomId);
       toast({
@@ -105,7 +108,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
   // Leave room mutation
   const leaveRoomMutation = useMutation({
     mutationFn: async (roomId: string) => {
-      const res = await fetch(`/api/comm-os/rooms/${roomId}/leave`, {
+      const res = await secureFetch(`/api/comm-os/rooms/${roomId}/leave`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -181,7 +184,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
             <p className="text-sm text-muted-foreground mt-1">Authentication is required to access live chat</p>
           </div>
           <Button 
-            onClick={() => window.location.href = '/auth'}
+            onClick={() => window.location.href = '/login'}
             className="mt-4"
             data-testid="button-login-to-chat"
           >
@@ -221,7 +224,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-2xl font-bold">Active Rooms</h2>
           <p className="text-sm text-muted-foreground">
@@ -299,8 +302,8 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
                         data-testid={`member-${member.id}`}
                       >
                         <div className="relative">
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback className="text-xs">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-[10px] font-semibold">
                               {getInitials(member.name)}
                             </AvatarFallback>
                           </Avatar>

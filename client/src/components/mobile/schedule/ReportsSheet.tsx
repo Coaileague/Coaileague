@@ -1,5 +1,5 @@
 import { DollarSign, Clock, UserCheck, X } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Shift, Employee } from '@shared/schema';
 
@@ -39,11 +39,11 @@ export function ReportsSheet({ open, onOpenChange, shifts, employees }: ReportsS
   const presentEmployees = employees.filter(e => e.isActive).length;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[70vh]">
-        <SheetHeader>
-          <SheetTitle>Schedule Reports</SheetTitle>
-        </SheetHeader>
+    <UniversalModal open={open} onOpenChange={onOpenChange}>
+      <UniversalModalContent side="bottom" className="h-[70vh] sm:max-w-3xl" showHomeButton={false}>
+        <UniversalModalHeader>
+          <UniversalModalTitle>Schedule Reports</UniversalModalTitle>
+        </UniversalModalHeader>
 
         <div className="mt-6 space-y-4">
           <Card>
@@ -54,13 +54,13 @@ export function ReportsSheet({ open, onOpenChange, shifts, employees }: ReportsS
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between gap-2 items-center">
                 <span className="text-sm text-muted-foreground">Total</span>
                 <span className="text-2xl font-bold" data-testid="text-labor-total">
                   ${laborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex justify-between items-center mt-2">
+              <div className="flex justify-between gap-2 items-center mt-2">
                 <span className="text-sm text-muted-foreground">Overtime</span>
                 <span className="text-sm font-medium">$0.00</span>
               </div>
@@ -75,13 +75,13 @@ export function ReportsSheet({ open, onOpenChange, shifts, employees }: ReportsS
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between gap-2 items-center">
                 <span className="text-sm text-muted-foreground">Total Hours</span>
                 <span className="text-2xl font-bold" data-testid="text-hours-total">
                   {totalHours.toFixed(1)}
                 </span>
               </div>
-              <div className="flex justify-between items-center mt-2">
+              <div className="flex justify-between gap-2 items-center mt-2">
                 <span className="text-sm text-muted-foreground">Scheduled Shifts</span>
                 <span className="text-sm font-medium">{shifts.length}</span>
               </div>
@@ -96,20 +96,20 @@ export function ReportsSheet({ open, onOpenChange, shifts, employees }: ReportsS
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between gap-2 items-center">
                 <span className="text-sm text-muted-foreground">Active Employees</span>
                 <span className="text-2xl font-bold" data-testid="text-employees-active">
                   {presentEmployees}
                 </span>
               </div>
-              <div className="flex justify-between items-center mt-2">
+              <div className="flex justify-between gap-2 items-center mt-2">
                 <span className="text-sm text-muted-foreground">Late</span>
                 <span className="text-sm font-medium">0</span>
               </div>
             </CardContent>
           </Card>
         </div>
-      </SheetContent>
-    </Sheet>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

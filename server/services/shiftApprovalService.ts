@@ -7,6 +7,10 @@ import { db } from "../db";
 import { shifts, employees, users } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import type { Shift } from "@shared/schema";
+import { broadcastShiftUpdate } from '../websocket';
+import { createLogger } from '../lib/logger';
+const log = createLogger('shiftApprovalService');
+
 
 export interface ShiftApprovalRequest {
   shiftId: string;
@@ -17,12 +21,18 @@ export interface ShiftApprovalRequest {
 }
 
 /**
- * Approve a shift for publishing
- * PHASE 4A: Broadcasts real-time notification to workspace WebSocket clients
+ * Approve a shift for publishing.
+ * PHASE 4A: Broadcasts real-time notification to workspace WebSocket clients.
+ *
+ * FIX [CROSS-TENANT SHIFT APPROVAL]: workspaceId is now required and included
+ * in the WHERE clause. Previously the UPDATE was keyed only on shiftId, which
+ * allowed any authenticated manager to approve any shift in the platform by
+ * knowing its UUID — even shifts belonging to a completely different workspace.
  */
 export async function approveShift(
   shiftId: string,
   approvedBy: string,
+  workspaceId: string,
   notes?: string
 ): Promise<Shift> {
   const result = await db
@@ -32,19 +42,18 @@ export async function approveShift(
       acknowledgedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(shifts.id, shiftId))
+    .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
     .returning();
 
-  if (!result[0]) throw new Error(`Shift ${shiftId} not found`);
+  if (!result[0]) throw new Error(`Shift ${shiftId} not found or does not belong to workspace`);
 
-  console.log(`[SHIFT APPROVAL] Shift ${shiftId} approved by ${approvedBy}`);
+  log.info(`[SHIFT APPROVAL] Shift ${shiftId} approved by ${approvedBy}`);
   
   // PHASE 4A: Real-time notification broadcast
   try {
-    const { broadcastShiftUpdate } = require('../websocket');
     broadcastShiftUpdate(result[0].workspaceId, 'shift_updated', result[0], shiftId);
   } catch (error) {
-    console.error('[NOTIFICATION ERROR] Failed to broadcast shift approval:', error);
+    log.error('[NOTIFICATION ERROR] Failed to broadcast shift approval:', error);
   }
   
   return result[0];
@@ -58,6 +67,7 @@ export async function rejectShift(
   shiftId: string,
   rejectedBy: string,
   reason: string,
+  workspaceId: string,
   autoReplace: boolean = false
 ): Promise<Shift> {
   const result = await db
@@ -68,23 +78,22 @@ export async function rejectShift(
       denialReason: reason,
       updatedAt: new Date(),
     })
-    .where(eq(shifts.id, shiftId))
+    .where(and(eq(shifts.id, shiftId), eq(shifts.workspaceId, workspaceId)))
     .returning();
 
   if (!result[0]) throw new Error(`Shift ${shiftId} not found`);
 
-  console.log(`[SHIFT APPROVAL] Shift ${shiftId} rejected by ${rejectedBy}: ${reason}`);
+  log.info(`[SHIFT APPROVAL] Shift ${shiftId} rejected by ${rejectedBy}: ${reason}`);
   
   // PHASE 4A: Real-time notification broadcast
   try {
-    const { broadcastShiftUpdate } = require('../websocket');
     broadcastShiftUpdate(result[0].workspaceId, 'shift_deleted', result[0], shiftId);
   } catch (error) {
-    console.error('[NOTIFICATION ERROR] Failed to broadcast shift rejection:', error);
+    log.error('[NOTIFICATION ERROR] Failed to broadcast shift rejection:', error);
   }
   
   if (autoReplace) {
-    console.log(`[SHIFT APPROVAL] Auto-replacement triggered for shift ${shiftId}`);
+    log.info(`[SHIFT APPROVAL] Auto-replacement triggered for shift ${shiftId}`);
     // Trigger replacement logic here (could call AutomationEngine)
   }
 
@@ -128,26 +137,37 @@ export async function getShiftWithDetails(shiftId: string): Promise<(Shift & { e
 }
 
 /**
- * Bulk approve shifts
+ * Bulk approve shifts.
+ *
+ * FIX [BULK APPROVE CROSS-TENANT + DOS]: workspaceId is now required and
+ * forwarded to approveShift, which enforces the workspace filter on each
+ * individual UPDATE. Also enforces a hard cap of 200 shifts per call to
+ * prevent a large array from exhausting DB connections or server memory.
  */
 export async function bulkApproveShifts(
   shiftIds: string[],
-  approvedBy: string
+  approvedBy: string,
+  workspaceId: string
 ): Promise<{ success: number; failed: number }> {
+  const MAX_BULK = 200;
+  if (shiftIds.length > MAX_BULK) {
+    throw new Error(`Bulk approve limit is ${MAX_BULK} shifts per request. Received ${shiftIds.length}.`);
+  }
+
   let success = 0;
   let failed = 0;
 
   for (const shiftId of shiftIds) {
     try {
-      await approveShift(shiftId, approvedBy);
+      await approveShift(shiftId, approvedBy, workspaceId);
       success++;
     } catch (error) {
-      console.error(`Failed to approve shift ${shiftId}:`, error);
+      log.error(`Failed to approve shift ${shiftId}:`, error);
       failed++;
     }
   }
 
-  console.log(`[SHIFT APPROVAL] Bulk approval completed: ${success} success, ${failed} failed`);
+  log.info(`[SHIFT APPROVAL] Bulk approval completed: ${success} success, ${failed} failed`);
   return { success, failed };
 }
 

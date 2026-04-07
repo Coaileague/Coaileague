@@ -10,14 +10,17 @@ import {
   shifts, 
   laborLawRules, 
   scheduledBreaks,
-  workspaces 
+  workspaces,
+  timeEntryBreaks
 } from "@shared/schema";
+import { platformEventBus } from './platformEventBus';
 import type { 
   LaborLawRule, 
   ScheduledBreak, 
   InsertScheduledBreak, 
   Shift,
-  Workspace
+  Workspace,
+  TimeEntryBreak
 } from "@shared/schema";
 import { eq, and, desc, gte, lte, inArray, sql } from "drizzle-orm";
 import { 
@@ -113,16 +116,19 @@ export async function getBreakStatus(
   let totalBreakMinutes = 0;
   let lastBreakEnd: Date | null = null;
 
-  const breakEntries = todaysEntries.filter(te => 
-    te.notes?.includes('break') || te.notes?.includes('Break')
-  );
+  const breakEntries = await db
+    .select()
+    .from(timeEntryBreaks)
+    .where(and(
+      inArray(timeEntryBreaks.timeEntryId, todaysEntries.map(te => te.id))
+    ));
 
   for (const entry of breakEntries) {
     breaksTaken++;
-    if (entry.clockOut && entry.clockIn) {
-      const duration = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60);
+    if (entry.endTime && entry.startTime) {
+      const duration = (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60);
       totalBreakMinutes += duration;
-      lastBreakEnd = new Date(entry.clockOut);
+      lastBreakEnd = new Date(entry.endTime);
     }
   }
 
@@ -150,13 +156,13 @@ export async function getBreakStatus(
 
   if (todaysEntries.length > 0) {
     const lastEntry = todaysEntries[0];
-    if (!lastEntry.clockOut) {
-      if (lastEntry.notes?.includes('Break') || lastEntry.notes?.includes('break')) {
-        currentStatus = 'on-break';
-        breakStartedAt = new Date(lastEntry.clockIn);
-        breakDuration = Math.round((Date.now() - new Date(lastEntry.clockIn).getTime()) / (1000 * 60));
-        breakType = lastEntry.notes?.includes('lunch') ? 'lunch' : 'short';
-      }
+    const activeBreak = breakEntries.find(be => be.timeEntryId === lastEntry.id && !be.endTime);
+    
+    if (!lastEntry.clockOut && activeBreak) {
+      currentStatus = 'on-break';
+      breakStartedAt = new Date(activeBreak.startTime);
+      breakDuration = Math.round((Date.now() - new Date(activeBreak.startTime).getTime()) / (1000 * 60));
+      breakType = activeBreak.breakType || 'short';
     } else if (lastEntry.clockOut) {
       const timeSinceLastEntry = Date.now() - new Date(lastEntry.clockOut).getTime();
       const minSinceLastEntry = timeSinceLastEntry / (1000 * 60);
@@ -653,6 +659,18 @@ export async function checkShiftCompliance(
       scheduledBreaks: existingBreaks,
       violations,
       suggestions,
+    });
+  }
+
+  const violationCount = results.filter(r => !r.isCompliant).length;
+  if (violationCount > 0) {
+    platformEventBus.publish({
+      type: 'break_compliance_violations_detected',
+      category: 'compliance',
+      title: 'Break Compliance Violations Detected',
+      description: `${violationCount} shift(s) have break compliance violations in workspace`,
+      workspaceId,
+      metadata: { totalShifts: results.length, violationCount, compliantShifts: results.length - violationCount },
     });
   }
 

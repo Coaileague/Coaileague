@@ -1,0 +1,87 @@
+Audit and configure the complete email system end to end. Here is exactly what needs to exist and work.
+PROTECTED PLATFORM ADDRESSES — these must exist in platform_email_addresses with is_protected=true and cannot be created by any tenant, end user, or external party under any circumstances:
+root@coaileague.com
+support@coaileague.com
+info@coaileague.com
+trinity@coaileague.com
+billing@coaileague.com
+hello@coaileague.com
+noreply@coaileague.com
+Support agents only get addresses on the coaileague.com root domain. No tenant can claim or create any address on coaileague.com root. Only platform_staff role can provision these.
+TENANT ADDRESSES — auto-created on workspace registration:
+staffing@{slug}.coaileague.com
+calloffs@{slug}.coaileague.com
+incidents@{slug}.coaileague.com
+support@{slug}.coaileague.com
+docs@{slug}.coaileague.com
+billing@{slug}.coaileague.com
+END USER ADDRESSES — reserved on user creation, activated by org owner at $3/seat/month:
+firstname.lastname@{slug}.coaileague.com
+TRINITY EMAIL — trinity@coaileague.com must:
+Receive emails from anyone external or internal
+Process emails automatically via withGemini wrapper
+Handle customer support questions from clients and guests
+Handle Trinity voice related communications
+Handle calloff and incident reports if sent to trinity directly
+Generate intelligent replies using workspace context
+Never claim to be human when sincerely asked
+Route to correct workspace when tenant context is identifiable
+For platform-level questions: answer about CoAIleague features
+Store all conversations in platform_emails table
+Send replies via Resend API from trinity@coaileague.com
+VERIFY THESE SPECIFIC THINGS IN CODE:
+
+Check that platform_email_addresses table has all 7 protected addresses seeded with is_protected=true and is_active=true
+Check that email_routing table has entries for all 7 protected addresses routing correctly
+Check the inbound webhook handler at /api/webhooks/resend/inbound — verify it:
+
+Verifies Resend HMAC signature before processing
+Deduplicates by resend_email_id
+Routes trinity@coaileague.com to Trinity processing
+Routes support@coaileague.com to platform support queue
+Routes tenant addresses to correct workspace inbox
+Returns 200 immediately to Resend on any unrecognized address
+
+
+Check that any attempt to create an address on coaileague.com root domain by a non-platform_staff user returns 403
+Check that tenant address creation correctly uses {slug}.coaileague.com not coaileague.com root
+Check EMAIL_SIMULATION_MODE is false in all environments not just dev
+Send a real test email from an external Gmail account to trinity@coaileague.com and verify:
+
+Email arrives in platform_emails table
+Trinity processes it and generates trinity_summary
+Trinity generates trinity_draft_reply
+Confirmation or reply sends back from trinity@coaileague.com via Resend
+
+
+Send a real test email from external Gmail to support@coaileague.com and verify:
+
+Email routes to platform support queue
+HelpAI or support agent receives notification via NDS
+Email stored in platform_emails with correct routing
+
+
+Send a real test email to staffing-acme@coaileague.com and verify:
+
+Routes to ACME workspace staffing inbox
+Trinity processes and stores with summary
+
+
+Verify outbound email works — from any active address send a reply and confirm it arrives in external Gmail inbox
+
+SANDBOX TESTING SETUP:
+For sandbox testing use Resend's test API key which starts with re_test_ if available. If not the main Resend API key works in both test and live mode — Resend does not have a separate sandbox like Stripe. All emails sent via Resend are real. To test without sending real emails to real people use test email addresses like:
+test@resend.dev  (Resend's built-in test address that accepts everything)
+delivered@resend.dev  (simulates successful delivery)
+bounced@resend.dev  (simulates a bounce)
+Use these addresses to test all email flows without spamming real inboxes.
+After verifying all the above report:
+
+Which addresses are seeded and active in database
+Which routing entries exist in email_routing table
+Result of trinity@coaileague.com inbound test
+Result of outbound reply test
+Any gaps found and what was fixed
+
+
+That is everything your agent needs. Once they confirm trinity@coaileague.com receives and responds correctly your email system is fully operational for support, tenants, end users, and Trinity voice communications.

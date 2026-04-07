@@ -1,3 +1,6 @@
+import { createLogger } from '../../lib/logger';
+const log = createLogger('agentCache');
+
 interface CacheEntry {
   value: any;
   expiresAt: number;
@@ -11,15 +14,23 @@ export class AgentCache {
   private defaultTtlMs: number;
   private hits: number = 0;
   private misses: number = 0;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(defaultTtlMs: number = 5 * 60 * 1000, maxSize: number = 1000) {
     this.defaultTtlMs = defaultTtlMs;
     this.maxSize = maxSize;
     
-    // Periodic cleanup every minute
-    setInterval(() => this.cleanup(), 60 * 1000);
+    this.cleanupInterval = setInterval(() => this.cleanup(), 60 * 1000);
     
-    console.log('[AgentCache] Initialized with TTL:', defaultTtlMs, 'ms, maxSize:', maxSize);
+    log.info('[AgentCache] Initialized with TTL:', defaultTtlMs, 'ms, maxSize:', maxSize);
+  }
+
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.cache.clear();
   }
 
   get(key: string): any | null {
@@ -116,7 +127,7 @@ export class AgentCache {
     }
 
     if (cleaned > 0) {
-      console.log('[AgentCache] Cleaned', cleaned, 'expired entries');
+      log.info('[AgentCache] Cleaned', cleaned, 'expired entries');
     }
   }
 

@@ -1,0 +1,281 @@
+**Mandatory Sync Audit: PASSED ✅**
+
+Clean platform. All gaps resolved. One critical bonus fix — the Tailwind v4 regression from the ad campaign task would have crashed the entire frontend on deployment. That's caught and reverted.
+
+**Audit scorecard:**
+- Workspace scoping: 256 hits across all new routes ✅
+- Audit records: 126 calls across all routes ✅
+- Trinity actions: 742 registrations confirmed ✅
+- Console.log: all structured logging pattern not debug logs ✅
+- Hardcoded company references: 2 gaps found and fixed ✅
+- Phase 35K training management: fully integrated and verified ✅
+
+**74 of 75 phases certified. One phase remaining.**
+
+Send this to the agent now:
+
+---
+
+**PHASE 54B — FULL PLATFORM BUG SWEEP AND FINAL QUALITY GATE**
+
+This is the last quality gate before Grand Launch Certification. Every page, every component, every route, every action must be verified clean. No feature ships with a broken component, missing import, schema mismatch, or runtime error. This phase cannot be parallelized — it is a sequential sweep of the entire platform.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY.**
+**7-STEP FRAMEWORK applies to every verification.**
+**5 MANDATORY QUALITY CHECKS at the end.**
+
+---
+
+**STEP 1 — FULL TYPESCRIPT COMPILATION CHECK**
+
+Run the most thorough TypeScript check possible across the entire codebase:
+
+```bash
+npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -50
+```
+
+Fix every TypeScript error found before proceeding. Zero errors required before moving to Step 2.
+
+---
+
+**STEP 2 — SERVER STARTUP VERIFICATION**
+
+Restart the server completely and verify:
+- `[ArchLinter] Architecture check passed` confirmed
+- Zero runtime errors on startup
+- All cron jobs registered and confirmed
+- All Trinity actions registered — show final count
+- All domain routers mounted — show route count
+- DB circuit breaker closes within 30 seconds of startup
+- WebSocket server initializes correctly
+
+---
+
+**STEP 3 — FULL PAGE SWEEP**
+
+Navigate to every page in the platform and verify each one against the 7-step framework. For every page document: loads without error, all data fetches succeed, all interactive elements work, loading states render, empty states render, error states render.
+
+**Public pages (no auth required):**
+- `/` — landing page
+- `/login` — dev bypass buttons visible and functional
+- `/register` — registration form renders
+- `/privacy` — privacy policy renders
+- `/terms` — terms of service renders
+- `/cookies` — cookie policy renders
+- `/legal/aup` — acceptable use policy renders
+- `/legal/security` — security policy renders
+- `/legal/dpa` — data processing agreement renders
+- `/sms-opt-in.html` — static page accessible
+- `/status` — platform status page renders without auth
+- `/regulatory-audit/login` — SRA login renders
+- `/onboarding-packet.html` — static onboarding packet renders
+
+**Core workspace pages:**
+- `/dashboard` — all KPI cards load, Trinity insight bar renders, quick actions work
+- `/officers` — list loads, search works, filters work, pagination works
+- `/officers/:id` — profile loads, all tabs render, lifecycle actions work, back button present
+- `/schedule` — day/week/month views load, shift creation works
+- `/time-attendance` — timesheet list loads, approval flow works
+- `/payroll` — run list loads, pay stub view works
+- `/invoices` — list loads, all status filters work, invoice detail opens
+- `/documents` — vault loads, upload works, signing flow works
+- `/compliance` — dashboard loads, violation list renders, DPS export works
+- `/clients` — list loads, search works, client profile opens
+- `/clients/:id` — all tabs render, portal provisioning works, back button present
+
+**Feature pages:**
+- `/analytics/bi` — all 4 tabs load, charts render, date range selector works
+- `/sales-pipeline` — kanban board renders, lead cards show, list view works
+- `/dock-chat` — connects within 3 seconds, messages render, no auth errors
+- `/work-orders` — list renders, creation form works, status transitions work
+- `/guard-tours` — route management renders, active tour view works
+- `/shift-trading` — marketplace renders, trade request form works
+- `/client-communications` — inbox renders, thread view works, composer works
+- `/equipment` — inventory grid renders, assignment form works
+- `/visitor-management` — active board renders, check-in form works
+- `/performance` — officer dashboard renders, disciplinary form works
+- `/training-certification` — calendar renders, session detail works
+- `/trespass-registry` — notice list renders, check form works
+- `/site-surveys` — survey list renders, zone management works
+- `/daily-reports` — DAR list renders, form submits correctly
+- `/wellness-monitoring` — monitoring board renders, config form works
+- `/gate-duty` — live board renders, vehicle log form works
+- `/multi-company` — subsidiary cards render (Enterprise tier)
+- `/developers` — API key management renders, docs load
+- `/insurance` — policy cards render, expiry timeline shows
+- `/surveys` — template builder renders, response dashboard works
+- `/recognition` — recognition wall renders, nomination form works
+- `/compliance-evidence` — evidence vault renders, upload flow works
+- `/reports` — all 5 report types generate correctly
+- `/trinity-activity` — action feed renders, pending approvals show
+- `/subscription` — correct state banner shows, billing info renders
+- `/help-desk` — ticket list renders, creation form works
+- `/onboarding-manager` — officer task list renders, progress rings show
+
+**Admin pages:**
+- `/admin/platform-status` — all 7 service indicators show
+- `/admin/privacy-requests` — request list renders, SLA countdown shows
+- `/settings` — all tabs load, all form fields populated, save works
+
+**Portal pages:**
+- `/regulatory-audit/*` — SRA dashboard, officer roster, findings all render
+
+---
+
+**STEP 4 — BROKEN INTERACTION LOG**
+
+For every broken interaction found document it in this format and fix immediately:
+
+| Page | Element | Issue Found | Fix Applied | Status |
+|------|---------|------------|-------------|--------|
+
+No interaction may be deferred. Every broken button, link, form, or card must be fixed before Phase 54B closes.
+
+---
+
+**STEP 5 — ROUTE INTEGRITY AUDIT**
+
+Verify every navigation link routes to the correct semantic destination:
+
+```bash
+# Find any hardcoded wrong routes
+grep -rn "navigate\|href\|to=" client/src/ --include="*.tsx" | grep -E '"/usage"|"/credits"' | head -10
+
+# Find any broken deep links in search results
+grep -rn "deep_link\|deepLink" server/routes/searchRoutes.ts | head -10
+
+# Find any notification click-through links that route incorrectly
+grep -rn "actionUrl\|clickUrl\|notificationUrl" server/ --include="*.ts" | head -10
+```
+
+Fix every semantic routing mismatch found.
+
+---
+
+**STEP 6 — UNIVERSAL BACK NAVIGATION AUDIT**
+
+Verify every detail page has a back button:
+
+```bash
+grep -rn "useBackNavigation\|BackButton\|ChevronLeft" client/src/pages/ --include="*.tsx" | wc -l
+```
+
+List every detail page that is missing back navigation. Add back button to any page that is missing it. The back button must be the first interactive element in the page header.
+
+---
+
+**STEP 7 — DATA INTEGRITY FINAL CHECK**
+
+```bash
+# Check for any orphaned records
+SELECT COUNT(*) FROM employees WHERE workspace_id NOT IN (SELECT id FROM workspaces);
+SELECT COUNT(*) FROM shifts WHERE workspace_id NOT IN (SELECT id FROM workspaces);
+SELECT COUNT(*) FROM invoices WHERE workspace_id NOT IN (SELECT id FROM workspaces);
+
+# Check for any null violations in critical columns
+SELECT COUNT(*) FROM employees WHERE first_name IS NULL OR last_name IS NULL;
+SELECT COUNT(*) FROM shifts WHERE post_id IS NULL OR workspace_id IS NULL;
+
+# Check enum consistency
+SELECT DISTINCT status FROM employees WHERE status NOT IN ('active', 'inactive', 'pending', 'terminated', 'suspended');
+SELECT DISTINCT status FROM invoices WHERE status NOT IN ('draft', 'sent', 'paid', 'overdue', 'disputed', 'voided', 'cancelled');
+```
+
+Fix any data integrity issues found. Document results.
+
+---
+
+**STEP 8 — PERFORMANCE FINAL CHECK**
+
+```bash
+# Verify slow query logging is active
+grep -rn "timedQuery\|SlowQuery\|500ms" server/ --include="*.ts" | wc -l
+
+# Verify all analytics queries use precomputed snapshots
+grep -rn "analytics_daily_snapshots" server/ --include="*.ts" | wc -l
+
+# Verify compression is active
+grep -rn "compression\|gzip" server/ --include="*.ts" | wc -l
+```
+
+---
+
+**STEP 9 — SECURITY FINAL CHECK**
+
+```bash
+# Confirm all auth-required routes have requireAuth
+grep -rn "router\.\(post\|patch\|delete\|put\)" server/routes/ --include="*.ts" | grep -v "requireAuth\|requireSRAAuth\|public\|webhook\|health\|status\|sms-opt\|token" | head -20
+
+# Confirm no PII in error logs
+grep -rn "console\.error.*ssn\|console\.error.*password\|console\.error.*bankAccount" server/ --include="*.ts" | head -10
+
+# Confirm rate limiting on auth endpoints
+grep -rn "authLimiter\|rateLimit" server/routes/authCoreRoutes.ts | head -10
+```
+
+Fix any security gaps found immediately.
+
+---
+
+**STEP 10 — REGRESSION CONFIRMATION**
+
+Confirm all critical fixes from prior phases are still intact:
+
+- Phase 25: Invoice subtotal DB trigger still active
+- Phase 26: Client invoice auto-generation cron still registered
+- Phase 28: IDOR protection — workspace A cannot access workspace B records
+- Phase 31: Session persistence — login survives page refresh
+- Phase 32: Bilingual toggle — language preference changes UI language
+- Phase 39: Compression active — gzip on responses
+- Phase 41: Stripe webhooks — all 7 event types handled
+- Phase CB: Circuit breaker — opens after 5 failures in 60 seconds, not on first failure
+- White screen fix: consent-manager not blocked by ad blockers
+- Notification clear: items deleted permanently on dismiss
+- ChatDock: connects within 3 seconds, no auth errors
+
+---
+
+**STEP 11 — FINAL RECONCILIATION TABLE**
+
+One row per page and per check. Every row must be green before Phase 54B closes.
+
+Format:
+| Check | Evidence | Status |
+|-------|---------|--------|
+| Dashboard loads without error | Screenshot/log confirmation | ✅ |
+| All KPI cards route correctly | Verified navigation targets | ✅ |
+| ... | ... | ✅ |
+
+---
+
+**STEP 12 — 5 MANDATORY QUALITY CHECKS**
+
+1. TypeScript: `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS"` — zero errors
+2. Import completeness — no missing imports in any component
+3. State variable declarations — no undeclared variables
+4. Schema alignment — all API responses match client expectations
+5. Server startup — ArchLinter passed, zero runtime errors, all services initialized
+
+---
+
+**VERIFICATION — Phase 54B is complete when:**
+
+- Check 1: TypeScript zero errors — confirmed
+- Check 2: Server starts clean — all services initialized
+- Check 3: All 45+ pages load without runtime errors
+- Check 4: All broken interactions found and fixed — zero deferred
+- Check 5: All navigation links route to correct semantic destinations
+- Check 6: All detail pages have back button
+- Check 7: Zero orphaned database records
+- Check 8: Zero null violations in critical columns
+- Check 9: All analytics queries use precomputed snapshots
+- Check 10: All auth-required routes have requireAuth
+- Check 11: All critical phase regressions confirmed intact
+- Check 12: Full reconciliation table written to replit.md — all rows green
+- Check 13: Nothing left behind
+
+Do not mark Phase 54B complete until every single check passes. This is the final gate before launch. Nothing gets through that should not be in production.
+
+---
+
+After Phase 54B certifies clean paste the Phase 55 Grand Launch Certification prompt immediately. Standing by.

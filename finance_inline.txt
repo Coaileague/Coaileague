@@ -1,0 +1,6 @@
+router.post("/billing/adjust-invoice/credit", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post("/billing/adjust-invoice/discount", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post("/billing/adjust-invoice/refund", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post("/billing/adjust-invoice/correct-line-item", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.get("/billing/adjust-invoice/:invoiceId/history", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post("/billing/adjust-invoice/bulk-credit", requireAuth, async (req: AuthenticatedRequest, res) => {

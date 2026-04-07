@@ -2,6 +2,7 @@
  * Timesheet Report API Routes
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
 import { requireWorkspaceRole, requireManager } from '../rbac';
@@ -18,6 +19,9 @@ import { employees, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import PDFDocument from 'pdfkit';
 import { format } from 'date-fns';
+import { createLogger } from '../lib/logger';
+const log = createLogger('TimesheetReportRoutes');
+
 
 export const timesheetReportRouter = Router();
 
@@ -31,10 +35,10 @@ async function getEmployeeId(userId: string, workspaceId: string): Promise<strin
   return employee?.id || null;
 }
 
-timesheetReportRouter.get('/report', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetReportRouter.get('/report', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -59,16 +63,16 @@ timesheetReportRouter.get('/report', requireAuth, requireManager, async (req: Re
       success: true,
       ...report,
     });
-  } catch (error: any) {
-    console.error('[TimesheetReport] Error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate report' });
+  } catch (error: unknown) {
+    log.error('[TimesheetReport] Error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to generate report' });
   }
 });
 
 timesheetReportRouter.get('/my-report', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
     
     if (!workspaceId || !userId) {
@@ -94,16 +98,16 @@ timesheetReportRouter.get('/my-report', requireAuth, async (req: Request, res: R
       success: true,
       ...report,
     });
-  } catch (error: any) {
-    console.error('[TimesheetReport] Error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetReport] Error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-timesheetReportRouter.get('/export/csv', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetReportRouter.get('/export/csv', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -130,18 +134,18 @@ timesheetReportRouter.get('/export/csv', requireAuth, requireManager, async (req
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(csv);
-  } catch (error: any) {
-    console.error('[TimesheetReport] CSV export error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetReport] CSV export error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 timesheetReportRouter.get('/weekly', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
-    
+
     if (!workspaceId || !userId) {
       return res.status(400).json({ error: 'No workspace selected' });
     }
@@ -149,24 +153,35 @@ timesheetReportRouter.get('/weekly', requireAuth, async (req: Request, res: Resp
     const employeeId = await getEmployeeId(userId, workspaceId);
     const date = req.query.date ? new Date(req.query.date as string) : new Date();
 
+    // PRIVACY: Non-managers only see their own data
+    // If no employee ID (not an employee), or viewing own data is fine
+    // But if trying to view all data (employeeId undefined), must be manager
+    const requestedEmployeeId = req.query.employeeId as string | undefined;
+
+    // If specific employee requested and it's not self, require manager role
+    if (requestedEmployeeId && requestedEmployeeId !== employeeId) {
+      return res.status(403).json({ error: 'Cannot view other employees\' timesheets. Manager role required.' });
+    }
+
+    // Regular employees only see their own data
     const report = await getWeeklyReport(workspaceId, date, employeeId || undefined);
 
     res.json({
       success: true,
       ...report,
     });
-  } catch (error: any) {
-    console.error('[TimesheetReport] Weekly error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetReport] Weekly error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 timesheetReportRouter.get('/monthly', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     const userId = user?.id;
-    
+
     if (!workspaceId || !userId) {
       return res.status(400).json({ error: 'No workspace selected' });
     }
@@ -174,22 +189,31 @@ timesheetReportRouter.get('/monthly', requireAuth, async (req: Request, res: Res
     const employeeId = await getEmployeeId(userId, workspaceId);
     const date = req.query.date ? new Date(req.query.date as string) : new Date();
 
+    // PRIVACY: Non-managers only see their own data
+    const requestedEmployeeId = req.query.employeeId as string | undefined;
+
+    // If specific employee requested and it's not self, require manager role
+    if (requestedEmployeeId && requestedEmployeeId !== employeeId) {
+      return res.status(403).json({ error: 'Cannot view other employees\' timesheets. Manager role required.' });
+    }
+
+    // Regular employees only see their own data
     const report = await getMonthlyReport(workspaceId, date, employeeId || undefined);
 
     res.json({
       success: true,
       ...report,
     });
-  } catch (error: any) {
-    console.error('[TimesheetReport] Monthly error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetReport] Monthly error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-timesheetReportRouter.get('/compliance', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
+timesheetReportRouter.get('/compliance', requireWorkspaceRole(['org_owner', 'co_owner']), async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -204,16 +228,16 @@ timesheetReportRouter.get('/compliance', requireAuth, requireWorkspaceRole(['org
       success: true,
       ...complianceReport,
     });
-  } catch (error: any) {
-    console.error('[TimesheetReport] Compliance error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[TimesheetReport] Compliance error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-timesheetReportRouter.get('/export/pdf', requireAuth, requireManager, async (req: Request, res: Response) => {
+timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const workspaceId = user?.currentWorkspaceId;
+    const workspaceId = req.workspaceId || user?.workspaceId || user?.currentWorkspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ error: 'No workspace selected' });
@@ -335,8 +359,8 @@ timesheetReportRouter.get('/export/pdf', requireAuth, requireManager, async (req
     }
 
     doc.end();
-  } catch (error: any) {
-    console.error('[TimesheetReport] PDF export error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate PDF' });
+  } catch (error: unknown) {
+    log.error('[TimesheetReport] PDF export error:', error);
+    res.status(500).json({ error: sanitizeError(error) || 'Failed to generate PDF' });
   }
 });

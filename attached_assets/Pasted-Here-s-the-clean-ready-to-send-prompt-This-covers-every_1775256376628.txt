@@ -1,0 +1,487 @@
+Here's the clean, ready-to-send prompt. This covers everything — the setup script, the verify script, the test script, and exactly what Bryan needs to do manually after. Send this as one block:
+
+---
+
+```
+Read OMEGA.md and OMEGA_STATE_CHECKPOINT.md first.
+
+Then build the complete webhook setup system. Three scripts, 
+one command. Goal: register all webhooks programmatically so 
+Bryan only has to touch the console for the things that 
+literally cannot be automated.
+
+======================================================================
+STEP 1 — BUILD scripts/omega/setup-webhooks.ts
+======================================================================
+
+This script registers webhooks with each provider via their APIs.
+It is fully idempotent — safe to run multiple times without 
+creating duplicates.
+
+Reads all config from environment variables.
+Never writes secrets to any file.
+Logs secrets to console only when first created.
+Exits with non-zero code if any required env var is missing.
+
+Required env vars to run:
+  APP_URL
+  STRIPE_SECRET_KEY
+  RESEND_API_KEY
+  TWILIO_ACCOUNT_SID
+  TWILIO_AUTH_TOKEN
+  TWILIO_PHONE_NUMBER_SID
+
+Optional (enables additional sections):
+  STRIPE_LIVE_KEY
+  PLAID_CLIENT_ID
+  PLAID_SECRET
+
+At startup: check all required vars are present. If any missing:
+log exactly which ones are absent and exit. Do not attempt partial
+registration.
+
+────────────────────────────────────────
+STRIPE REGISTRATION
+────────────────────────────────────────
+
+Use the Stripe Node SDK with STRIPE_SECRET_KEY.
+
+Expected events to subscribe to:
+  customer.subscription.created
+  customer.subscription.updated
+  customer.subscription.deleted
+  invoice.payment_succeeded
+  invoice.payment_failed
+  payment_intent.succeeded
+  payment_intent.payment_failed
+  customer.updated
+  charge.refunded
+
+Register test mode endpoint:
+  url: APP_URL + '/api/stripe/webhook'
+  description: 'CoAIleague test webhook'
+  enabled_events: [all 9 above]
+
+Before creating: list existing webhook endpoints via
+stripe.webhookEndpoints.list() and check if one already exists
+for this exact URL. If yes: log "Stripe test webhook already
+registered — skipping" and skip creation.
+
+If created: the response includes a signing secret.
+Log it to console ONLY:
+  "══════════════════════════════════════"
+  "STRIPE TEST WEBHOOK SECRET (copy now):"
+  "[secret value]"
+  "→ Add to env: STRIPE_WEBHOOK_SECRET"
+  "══════════════════════════════════════"
+Never write this to any file.
+
+If STRIPE_LIVE_KEY is present in env:
+  Repeat identical registration using the live key.
+  Log the live signing secret separately:
+  "STRIPE LIVE WEBHOOK SECRET (copy now):"
+  "[secret value]"
+  "→ Add to env: STRIPE_LIVE_WEBHOOK_SECRET"
+
+────────────────────────────────────────
+RESEND REGISTRATION
+────────────────────────────────────────
+
+Use the Resend API directly (fetch or axios).
+Base URL: https://api.resend.com
+Auth: Authorization: Bearer RESEND_API_KEY
+
+Step 1: List existing webhooks.
+  GET /webhooks
+  Parse response to get array of registered webhook URLs.
+
+Step 2: Register outbound events webhook if not already present.
+  Check if APP_URL + '/api/webhooks/resend' is already registered.
+  If yes: log "Resend outbound webhook already registered — skipping"
+  If no: POST /webhooks
+    body: {
+      "url": APP_URL + '/api/webhooks/resend',
+      "events": ["email.bounced", "email.delivered", "email.complained"]
+    }
+  Log result: REGISTERED or ALREADY_EXISTS
+
+Step 3: Register inbound email webhook if not already present.
+  Check if APP_URL + '/api/webhooks/resend/inbound' is registered.
+  If yes: log "Resend inbound webhook already registered — skipping"
+  If no: POST /webhooks
+    body: {
+      "url": APP_URL + '/api/webhooks/resend/inbound',
+      "events": ["email.received"]
+    }
+  Log result: REGISTERED or ALREADY_EXISTS
+
+After both registrations, always log this regardless:
+  "══════════════════════════════════════"
+  "MANUAL DNS ACTION REQUIRED:"
+  "Add MX record to your DNS provider:"
+  "  Name/Host: @ (or your domain root)"
+  "  Priority:  10"
+  "  Value:     inbound.resend.com"
+  "  Domain:    [extracted from APP_URL]"
+  "Without this record, inbound email routing will not work."
+  "══════════════════════════════════════"
+
+────────────────────────────────────────
+TWILIO REGISTRATION
+────────────────────────────────────────
+
+Use the Twilio Node SDK with TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.
+
+Update the phone number identified by TWILIO_PHONE_NUMBER_SID:
+  client.incomingPhoneNumbers(process.env.TWILIO_PHONE_NUMBER_SID)
+    .update({
+      voiceUrl: APP_URL + '/api/voice/inbound',
+      voiceMethod: 'POST',
+      statusCallback: APP_URL + '/api/voice/status-callback',
+      statusCallbackMethod: 'POST',
+      smsUrl: APP_URL + '/api/sms/inbound',
+      smsMethod: 'POST',
+      smsStatusCallback: APP_URL + '/api/sms/status',
+      smsStatusCallbackMethod: 'POST'
+    })
+
+After updating: fetch the phone number record and verify all 4
+URLs match exactly what was set. Log each:
+  "Voice URL:      [url] — CONFIRMED / MISMATCH"
+  "Voice Callback: [url] — CONFIRMED / MISMATCH"
+  "SMS URL:        [url] — CONFIRMED / MISMATCH"
+  "SMS Callback:   [url] — CONFIRMED / MISMATCH"
+
+If any MISMATCH: log as an error and exit non-zero.
+
+────────────────────────────────────────
+QUICKBOOKS — CANNOT BE AUTOMATED
+────────────────────────────────────────
+
+Always log this section clearly:
+  "══════════════════════════════════════"
+  "[MANUAL ACTION — QuickBooks Developer Console]"
+  "1. Go to: https://developer.intuit.com"
+  "2. Select your app → Keys and credentials"
+  "3. Under Redirect URIs, add:"
+  "   " + APP_URL + '/api/integrations/quickbooks/callback'
+  "4. Save changes"
+  "This cannot be done via API — must be done manually."
+  "══════════════════════════════════════"
+
+────────────────────────────────────────
+PLAID — BLOCKED PENDING BRYAN'S KEYS
+────────────────────────────────────────
+
+Check if PLAID_CLIENT_ID and PLAID_SECRET are present in env.
+
+If present: attempt a ping against Plaid sandbox:
+  GET https://sandbox.plaid.com/institutions/get
+  with client_id and secret in body
+  Log: "Plaid sandbox reachable — keys are valid"
+  Log: "Set PLAID_ENV=production when ready for live transfers"
+
+If not present:
+  "══════════════════════════════════════"
+  "[BRYAN ACTION REQUIRED — Plaid]"
+  "Missing env vars:"
+  [list which of PLAID_CLIENT_ID, PLAID_SECRET, 
+   PLAID_WEBHOOK_SECRET are absent]
+  "Get production keys from: https://dashboard.plaid.com"
+  "Add to environment, then re-run this script."
+  "══════════════════════════════════════"
+
+────────────────────────────────────────
+FINAL SUMMARY OUTPUT
+────────────────────────────────────────
+
+After all sections complete, print:
+
+  "══════════════════════════════════════"
+  "WEBHOOK SETUP COMPLETE"
+  "══════════════════════════════════════"
+  "Provider      Status          Action Required"
+  "──────────────────────────────────────────────"
+  "Stripe        [REGISTERED/SKIPPED/FAILED]  [Copy secrets to env]"
+  "Resend        [REGISTERED/SKIPPED/FAILED]  [Add MX record to DNS]"
+  "Twilio        [CONFIGURED/FAILED]          [None / see errors]"
+  "QuickBooks    MANUAL REQUIRED              [See instructions above]"
+  "Plaid         [OK/BLOCKED]                 [[BRYAN ACTION REQUIRED]]"
+  "══════════════════════════════════════"
+
+Append results to OMEGA_STATE_CHECKPOINT.md:
+  ## Webhook Setup — [timestamp]
+  Stripe: [status]
+  Resend: [status]
+  Twilio: [status]
+  QuickBooks: MANUAL REQUIRED
+  Plaid: [status]
+
+======================================================================
+STEP 2 — BUILD scripts/omega/verify-webhooks.ts
+======================================================================
+
+This script confirms all webhook registrations are correct by
+fetching current config from each provider and comparing against
+expected values. Run any time — especially after a domain change
+or redeployment.
+
+For each provider, fetch current webhook config via their API
+and compare against expected URLs from APP_URL.
+
+STRIPE:
+  List all webhook endpoints via stripe.webhookEndpoints.list()
+  For each expected URL: confirm it exists and has all 9 expected
+  events subscribed.
+  Report: VERIFIED / MISSING / WRONG_EVENTS for each
+
+RESEND:
+  GET https://api.resend.com/webhooks
+  Confirm both URLs are registered:
+    APP_URL + '/api/webhooks/resend'
+    APP_URL + '/api/webhooks/resend/inbound'
+  Report: VERIFIED / MISSING for each
+
+TWILIO:
+  Fetch the phone number record for TWILIO_PHONE_NUMBER_SID
+  Compare voiceUrl, statusCallback, smsUrl, smsStatusCallback
+  against expected values.
+  Report: VERIFIED / MISMATCH for each of the 4 URLs
+
+QUICKBOOKS:
+  Cannot verify via API.
+  Log: "QuickBooks redirect URI must be verified manually in
+  the QB Developer Console."
+
+PLAID:
+  If keys present: ping Plaid and confirm connectivity.
+  If keys absent: log [BRYAN ACTION REQUIRED]
+
+FINAL OUTPUT TABLE:
+  Provider      Check                    Status
+  ──────────────────────────────────────────────────
+  Stripe        Test webhook URL         VERIFIED
+  Stripe        Test webhook events (9)  VERIFIED
+  Stripe        Live webhook URL         VERIFIED
+  Stripe        Live webhook events (9)  VERIFIED
+  Resend        Outbound webhook         VERIFIED
+  Resend        Inbound webhook          VERIFIED
+  Twilio        Voice URL                VERIFIED
+  Twilio        Voice status callback    VERIFIED
+  Twilio        SMS URL                  VERIFIED
+  Twilio        SMS status callback      VERIFIED
+  QuickBooks    Redirect URI             MANUAL CHECK
+  Plaid         API connectivity         VERIFIED / BLOCKED
+
+Any MISSING or MISMATCH = exit non-zero.
+Append results to OMEGA_STATE_CHECKPOINT.md.
+
+======================================================================
+STEP 3 — BUILD scripts/omega/test-webhooks.ts
+======================================================================
+
+This script sends real test payloads to each webhook endpoint
+and confirms they are received, verified, and handled correctly.
+Tests both signature verification and correct processing logic.
+
+Run after setup-webhooks.ts and verify-webhooks.ts confirm success.
+
+────────────────────────────────────────
+STRIPE WEBHOOK TESTS
+────────────────────────────────────────
+
+For each event type, construct a realistic test payload and
+send it to POST APP_URL + '/api/stripe/webhook' with a valid
+Stripe-Signature header generated using the test webhook secret.
+
+Generate signature using:
+  stripe.webhooks.generateTestHeaderString({
+    payload: JSON.stringify(payload),
+    secret: process.env.STRIPE_WEBHOOK_SECRET
+  })
+
+Test events to send:
+1. customer.subscription.created
+   Payload: minimal subscription object for ACME customer
+   Expected: 200 response, workspace tier updated in DB
+
+2. invoice.payment_succeeded
+   Payload: invoice object with amount_paid > 0
+   Expected: 200 response, no duplicate financial records
+
+3. invoice.payment_failed
+   Payload: invoice object with status 'open'
+   Expected: 200 response, NDS call attempted for org owner
+
+4. charge.refunded
+   Payload: charge object with refunded=true
+   Expected: 200 response, handled without error
+
+DUPLICATE TEST:
+Replay the subscription.created payload immediately.
+Expected: 200, no duplicate DB records.
+Report: IDEMPOTENT or DUPLICATE_DETECTED
+
+────────────────────────────────────────
+RESEND WEBHOOK TESTS
+────────────────────────────────────────
+
+Send test payloads to POST APP_URL + '/api/webhooks/resend'
+
+Test events:
+1. email.bounced
+   Payload: { type: 'email.bounced', data: { email_id: 'test-123',
+   to: ['test@example.com'] } }
+   Expected: 200, bounce handling logged
+
+2. email.complained
+   Payload: { type: 'email.complained', data: { email_id: 'test-456',
+   to: ['test@example.com'] } }
+   Expected: 200, unsubscribe action triggered
+
+3. email.delivered
+   Payload: { type: 'email.delivered', data: { email_id: 'test-789' } }
+   Expected: 200, delivery logged
+
+────────────────────────────────────────
+TWILIO WEBHOOK TESTS
+────────────────────────────────────────
+
+Send test payloads to POST APP_URL + '/api/voice/inbound'
+and POST APP_URL + '/api/sms/inbound'
+
+Generate valid Twilio signature for each request using:
+  const twilio = require('twilio')
+  const sig = twilio.validateRequest(
+    TWILIO_AUTH_TOKEN,
+    APP_URL + '/api/voice/inbound',
+    params
+  )
+
+Voice inbound test:
+  Payload (form-encoded): {
+    CallSid: 'CA_test_' + Date.now(),
+    From: '+12105550100',
+    To: process.env.TWILIO_PHONE_NUMBER,
+    CallStatus: 'ringing'
+  }
+  Expected: 200, TwiML response returned
+
+SMS inbound test:
+  Payload (form-encoded): {
+    SmsSid: 'SM_test_' + Date.now(),
+    From: '+12105550100',
+    To: process.env.TWILIO_PHONE_NUMBER,
+    Body: 'Test message from omega harness'
+  }
+  Expected: 200
+
+INVALID SIGNATURE TEST:
+Send voice inbound with a deliberately wrong signature.
+Expected: 403 — signature rejected before any processing.
+Report: SIGNATURE_ENFORCED or SIGNATURE_BYPASS_DETECTED
+(SIGNATURE_BYPASS_DETECTED = Class A failure, exit non-zero immediately)
+
+────────────────────────────────────────
+INBOUND EMAIL ROUTING TEST
+────────────────────────────────────────
+
+Send a simulated inbound email payload to each of the 6 addresses
+via POST APP_URL + '/api/webhooks/resend/inbound'
+
+For each address, send a payload matching Resend's inbound format:
+{
+  "from": "test@external.com",
+  "to": ["staffing@acme.coaileague.com"],
+  "subject": "Omega harness routing test",
+  "text": "This is an automated routing test from the omega harness.",
+  "headers": { "Message-ID": "omega-test-[timestamp]@harness" }
+}
+
+Repeat for all 6 addresses:
+  staffing@acme.coaileague.com → expected folder: Staffing
+  calloffs@acme.coaileague.com → expected folder: Call-Offs
+  incidents@acme.coaileague.com → expected folder: Incidents
+  support@acme.coaileague.com → expected folder: Support
+  docs@acme.coaileague.com → expected folder: Documents
+  billing@acme.coaileague.com → expected folder: Billing
+
+After each send: query DB for email_thread record with matching
+Message-ID. Confirm workspace_id = ACME and folder = expected value.
+
+Report per address:
+  staffing@   → ROUTED to Staffing   ✓
+  calloffs@   → ROUTED to Call-Offs  ✓
+  etc.
+
+Any wrong folder or missing record = FAIL, exit non-zero.
+
+────────────────────────────────────────
+FINAL SUMMARY
+────────────────────────────────────────
+
+Print:
+  "══════════════════════════════════════"
+  "WEBHOOK TEST RESULTS"
+  "══════════════════════════════════════"
+  "Stripe events:       [N]/4 passed"
+  "Stripe idempotency:  PASS/FAIL"
+  "Resend events:       [N]/3 passed"
+  "Twilio voice:        PASS/FAIL"
+  "Twilio SMS:          PASS/FAIL"
+  "Twilio sig enforce:  PASS/FAIL"
+  "Email routing:       [N]/6 addresses correct"
+  "══════════════════════════════════════"
+  "Overall: PASS / FAIL"
+
+Append results to OMEGA_STATE_CHECKPOINT.md.
+
+======================================================================
+STEP 4 — WIRE INTO PACKAGE.JSON AND npm run omega
+======================================================================
+
+Add to package.json scripts:
+  "omega:webhooks:setup":  "tsx scripts/omega/setup-webhooks.ts",
+  "omega:webhooks:verify": "tsx scripts/omega/verify-webhooks.ts",
+  "omega:webhooks:test":   "tsx scripts/omega/test-webhooks.ts"
+
+These three run in sequence as steps 3, 4, and 5 in the existing
+npm run omega pipeline defined in scripts/omega/run-all.ts:
+
+  STEP 3: setup-webhooks.ts   (register — idempotent)
+  STEP 4: verify-webhooks.ts  (confirm all registered correctly)
+  STEP 5: test-webhooks.ts    (send real payloads, verify handling)
+
+Insert these between preflight-check.ts and email-routing-test.ts
+in the existing run-all.ts execution order.
+
+======================================================================
+CONFIRM WHEN DONE:
+======================================================================
+
+1. All three scripts created in scripts/omega/
+2. npm run omega:webhooks:setup runs and produces the summary table
+3. npm run omega:webhooks:verify runs and shows all VERIFIED or flags
+   which are MISSING
+4. npm run omega:webhooks:test runs and all tests pass (or clearly
+   reports which fail and why)
+5. OMEGA_STATE_CHECKPOINT.md updated with webhook registration status
+6. App still boots clean with zero errors
+
+Then tell me:
+- Which webhooks are now registered (confirmed by verify script)
+- Which manual actions Bryan still needs to take
+- Current npm run omega step count and which steps are now green
+```
+
+---
+
+After the agent delivers, you'll have three things that change how this works:
+
+**setup-webhooks.ts** — run once, registers Stripe and Resend automatically, configures Twilio's 4 URLs, tells you exactly what to copy where for the secrets.
+
+**verify-webhooks.ts** — run any time after a domain change or redeployment to confirm everything is still pointing correctly.
+
+**test-webhooks.ts** — sends real payloads with real signatures to prove the endpoints actually work end to end, including the Twilio signature enforcement test which catches a security gap if it's there.
+
+The only things left for you manually after this runs successfully are the four items that genuinely cannot be scripted: the Twilio console (pending toll-free verification), QuickBooks developer console, DNS records, and Plaid keys. Everything else the agent handles.

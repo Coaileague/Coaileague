@@ -1,0 +1,245 @@
+This is the right call. These are foundational issues that affect every page in the platform. Send this to the Replit Agent:
+
+---
+
+**PRE-PHASE QUALITY SPRINT — 4 Critical Platform Fixes**
+
+Before any new feature phases begin, four systemic issues must be resolved. These affect every workspace user every time they use the platform. Do not start any new feature phases until all four are certified complete.
+
+---
+
+**FIX 1 — TOTAL REVENUE CARD ROUTING AND FINANCIAL INTELLIGENCE**
+
+**Problem A — Wrong route:**
+The Total Revenue card on the dashboard navigates to the usage page. This is semantically wrong. Audit every dashboard KPI card and confirm each routes to the correct destination:
+- Total Revenue → `/analytics/bi` Financial tab
+- Active Officers → `/officers`
+- Open Shifts → `/schedule`
+- Compliance Score → `/compliance`
+- Pending Invoices → `/invoices`
+- Payroll Due → `/payroll`
+
+Fix every misrouted card. Run `grep -rn "onClick\|href\|navigate\|useNavigate" client/src/pages/dashboard` and verify each destination is semantically correct.
+
+**Problem B — Total Revenue definition is wrong:**
+Total Revenue currently shows gross invoice payments received. This is not useful for business decisions. Redefine the metric correctly:
+
+True financial picture requires three layers:
+
+**Layer 1 — Gross Revenue:** Total invoices paid in period
+
+**Layer 2 — Operating Expenses (tracked in platform):**
+- Payroll costs (total officer wages paid from payroll runs)
+- Platform subscription fee (CoAIleague monthly cost)
+- Any vendor payments entered manually
+
+**Layer 3 — External Expenses (from Plaid bank connection or manual entry):**
+- Office rent
+- Insurance premiums
+- Utilities
+- Equipment purchases
+- Any other categorized business expenses
+
+**Net Operating Income = Gross Revenue − Payroll − Platform Costs − External Expenses**
+
+Build this correctly:
+
+Create `business_expenses` table:
+- `id`, `workspace_id`, `expense_category` (enum: payroll, rent, insurance, utilities, equipment, software, marketing, legal, accounting, miscellaneous), `vendor_name`, `amount`, `expense_date`, `description`, `is_recurring`, `recurring_interval` (monthly/quarterly/annually), `plaid_transaction_id` (if from Plaid), `receipt_url`, `created_by`, `created_at`
+
+Create `financial_period_summaries` table:
+- `id`, `workspace_id`, `period_start`, `period_end`, `gross_revenue`, `total_payroll`, `total_expenses`, `net_operating_income`, `expense_breakdown` (jsonb by category), `generated_at`
+
+Update the dashboard Total Revenue card to show Net Operating Income with a tooltip explaining the calculation. Show month-over-month comparison. Show year-to-date.
+
+**Problem C — Plaid integration for bank data:**
+Build `plaid_connections` table: `id`, `workspace_id`, `access_token` (encrypted), `item_id`, `institution_name`, `account_ids` (text array), `last_sync_at`, `is_active`
+
+Build `plaid_transactions` table: `id`, `workspace_id`, `plaid_connection_id`, `transaction_id`, `account_id`, `amount`, `date`, `merchant_name`, `category` (text array), `is_expense`, `matched_expense_id`, `created_at`
+
+Build Plaid Link flow:
+- org_owner can connect their business bank account via Plaid Link
+- Trinity pulls transactions nightly and categorizes them as business expenses
+- Trinity flags uncategorized transactions for org_owner review
+- Plaid transactions automatically populate `business_expenses` with the vendor, amount, and date
+- Org_owner can confirm or reclassify each transaction
+
+**If Plaid is not yet integrated** — build a manual expense entry system that captures the same data and add a "Connect Bank Account" button that shows "Plaid integration — coming soon" with a manual entry fallback. Do not block the financial reporting on Plaid being live.
+
+---
+
+**FIX 2 — USAGE PAGE REDESIGN TO TRINITY TRANSPARENCY CENTER**
+
+The current usage page shows AI credit consumption which means nothing to a security company owner. Replace it entirely.
+
+Rename the usage page to **Trinity Activity Center** at `/trinity-activity`.
+
+The Trinity Activity Center shows the org_owner exactly what Trinity has done on their behalf:
+
+**Section 1 — Action Summary (last 30 days):**
+- Total actions taken by Trinity (count by category)
+- Actions by type: scheduling decisions, compliance checks, notifications sent, proposals generated, invoices generated, alerts fired, emails drafted
+- Success rate: actions completed successfully vs failed vs pending human approval
+- Time saved estimate: based on average manual time per action type
+
+**Section 2 — Recent Actions Feed:**
+- Last 50 Trinity actions in reverse chronological order
+- Each action: timestamp, action type, description, outcome, any records affected
+- Filterable by action category, date range, outcome
+- Clicking any action navigates to the relevant record
+
+**Section 3 — Pending Approvals:**
+- Any Trinity action awaiting org_owner approval before executing
+- Each pending item: what Trinity wants to do, why, risk level, approve/reject buttons
+- Sorted by urgency — time-sensitive items first
+
+**Section 4 — Trinity Performance:**
+- Accuracy rate on scheduling suggestions that were approved and executed successfully
+- Compliance alerts that were valid vs false positive rate
+- Sales pipeline activity — leads contacted, proposals drafted, responses received
+
+Update the sidebar navigation link from "Usage" to "Trinity Activity" and update the route from `/usage` to `/trinity-activity`. Add a redirect from `/usage` to `/trinity-activity` for any bookmarked links.
+
+---
+
+**FIX 3 — FINANCIAL REPORTS FOR CPA AND TAX USE**
+
+Build a Reports section at `/reports` with the following downloadable reports. All reports use data already in the platform — no new data collection required, just assembly and formatting.
+
+**Report 1 — Profit and Loss Statement**
+- Period selector: monthly, quarterly, annual, custom date range
+- Sections: Gross Revenue, Cost of Services (payroll), Gross Profit, Operating Expenses (by category), Net Operating Income
+- Export as PDF and CSV
+- CPA-ready format with company name, EIN, and period clearly labeled
+
+**Report 2 — Expense Report by Vendor**
+- Lists all expenses by vendor sorted by total amount
+- Columns: vendor name, expense category, total paid, transaction count, date range
+- Export as PDF and CSV
+
+**Report 3 — Payroll Summary Report (replaces 941/940 inputs)**
+- Total wages paid by period
+- Total federal income tax withheld (from W-4 data)
+- Total Social Security and Medicare (calculated)
+- Per-employee breakdown: name, SSN last 4, wages, withholdings
+- Note: "This report provides data for completing Forms 941, 940, W-2, and W-3. Please consult your CPA or payroll service for final filing."
+- Export as PDF and CSV
+
+**Report 4 — W-9 Vendor Registry**
+- List of all 1099 contractors or vendors with completed W-9 information on file
+- Columns: vendor/contractor name, EIN or SSN last 4, address, total paid this year
+- Flagging for vendors paid over $600 in a calendar year — 1099-NEC required
+- Export as PDF and CSV
+
+**Report 5 — Annual Financial Summary**
+- Year-to-date: total revenue, total payroll, total expenses, net operating income
+- Month-by-month breakdown in a table and line chart
+- Comparison to prior year if data is available
+
+All reports:
+- Gated at org_owner and finance roles only
+- Every report generation writes an audit record
+- PDF uses workspace branding — company name and logo in header
+- No hardcoded company names — all workspace variables
+- Available at `/reports` with a report type selector
+
+---
+
+**FIX 4 — UNIVERSAL NAVIGATION AUDIT**
+
+**4A — Back button on every page:**
+Every page in the platform must have a back button in the page header that navigates to the logical previous page. This is not the browser back button — it is a semantic back button that knows where the user came from.
+
+Build a `useBackNavigation` hook:
+```typescript
+// Returns the correct "back" destination based on current route
+// /officers/:id → /officers
+// /clients/:id → /clients  
+// /invoices/:id → /invoices
+// /shifts/:id → /schedule
+// /payroll/:id → /payroll
+// etc.
+```
+
+The page header component must accept a `backTo` prop. Every page detail view, settings tab, and sub-page must include this back button. The button shows a left chevron icon and the name of the section it returns to — "← Officers" not just "← Back."
+
+Pages that currently have no back navigation: officer profile, client profile, invoice detail, document detail, compliance violation detail, work order detail, incident detail, support ticket detail, SRA portal pages, onboarding progress page.
+
+Audit every page and add the back button where missing. The back button must be the first interactive element in the page header — before any action buttons.
+
+**4B — Full route and link audit:**
+Run a complete audit of every navigation link, button, and card in the platform and verify each goes to the correct semantic destination.
+
+Create an audit table documenting every mismatch found:
+
+| Component | Current destination | Correct destination | Fixed |
+|-----------|-------------------|--------------------|----|
+| Total Revenue card | /usage | /analytics/bi | ✅ |
+
+Fix every mismatch. No link in the platform should go somewhere semantically wrong.
+
+Check specifically:
+- Dashboard KPI cards — all routes verified
+- Sidebar navigation items — all routes verified
+- Breadcrumb links — all correct
+- Action buttons in list views (View, Edit, Delete) — all correct
+- Notification click-through links — route to correct record
+- NDS email links — route to correct record when user clicks from email
+- Trinity action links in activity feed — route to correct record
+- Search result deep links — all correct (Phase 35 regression)
+
+**4C — Seed data quality audit:**
+Run a complete audit of all seed data in the database and fix:
+- Category enum mismatches — any seed data using a value not in the enum definition
+- Column name spelling errors — any camelCase vs snake_case inconsistencies
+- Missing required fields — any seed records with null values in non-nullable columns
+- Orphaned records — any foreign key references pointing to non-existent records
+- Data that doesn't match its column type
+
+Run: `grep -rn "seed\|Seed" server/` to find all seed files. For each seed file verify every record against the current schema.
+
+For ACME Security workspace specifically — ensure the seeded data is realistic and complete:
+- At least 10 officers with full profiles, valid license numbers, complete onboarding
+- At least 5 active clients with contracts, billing, and post configurations
+- At least 3 months of shift history with clock-in records
+- At least 3 completed payroll runs with pay stubs
+- At least 10 invoices in various states (paid, pending, overdue)
+- At least 5 compliance records
+- At least 3 incidents
+- At least 2 completed sales leads with proposals
+
+Every seeded record must have correct data types, no null violations, correct enum values, and proper foreign key relationships. Seeded data must be queryable, downloadable, and appear correctly in every report.
+
+---
+
+**VERIFICATION — Run all checks before declaring this sprint complete:**
+
+- Check 1: Total Revenue card routes to `/analytics/bi` Financial tab
+- Check 2: All dashboard KPI cards route to correct semantic destinations
+- Check 3: Net Operating Income calculation confirmed — gross revenue minus payroll minus expenses
+- Check 4: `business_expenses` table created with correct schema
+- Check 5: `financial_period_summaries` table created
+- Check 6: Plaid connection flow built or manual expense entry fallback confirmed
+- Check 7: Trinity Activity Center at `/trinity-activity` renders with all 4 sections
+- Check 8: Usage redirect to `/trinity-activity` confirmed
+- Check 9: Trinity action feed shows last 50 actions with correct data
+- Check 10: Pending approvals section shows items awaiting org_owner action
+- Check 11: Profit and Loss report generates correctly with workspace branding
+- Check 12: Expense by Vendor report generates correctly
+- Check 13: Payroll Summary report generates with correct withholding data
+- Check 14: W-9 Vendor Registry flags vendors over $600
+- Check 15: Annual Financial Summary generates with month-by-month chart
+- Check 16: All 5 reports export as PDF and CSV
+- Check 17: `useBackNavigation` hook built and applied to all detail pages
+- Check 18: Back button present on officer profile, client profile, invoice detail, document detail, compliance violation, work order, incident, support ticket — all confirmed
+- Check 19: Full route audit table completed — zero semantic mismatches remaining
+- Check 20: ACME seed data verified — 10 officers, 5 clients, 3 months history, correct enums, no null violations
+- Check 21: TypeScript zero errors across all modified files
+- Check 22: 56/56 tests still green after all changes
+- Check 23: Server startup clean — ArchLinter passed
+
+Do not mark this sprint complete until all 23 checks pass. This sprint improves platform quality for every existing user before new features are added. Nothing left behind.
+
+---
+
+Paste that. These fixes make the platform usable and trustworthy before we add more features on top of it. Standing by for results.

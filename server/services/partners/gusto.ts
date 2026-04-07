@@ -1,6 +1,6 @@
 import { db } from '../../db';
 import { 
-  partnerConnections, 
+  partnerConnections,
   partnerDataMappings,
   employees,
   payrollRuns,
@@ -9,6 +9,9 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { gustoOAuthService } from '../oauth/gusto';
 import { withUsageTracking, withBatchUsageTracking } from '../../middleware/usageTracking';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('gusto');
+
 
 /**
  * Gusto API Service
@@ -113,6 +116,7 @@ export class GustoService {
 
     const response = await fetch(url, {
       method,
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
@@ -434,7 +438,7 @@ export class GustoService {
 
       if (!employeeMapping) {
         // Skip if employee not synced
-        console.warn(`Employee ${entry.employeeId} not synced to Gusto`);
+        log.warn(`Employee ${entry.employeeId} not synced to Gusto`);
         continue;
       }
 

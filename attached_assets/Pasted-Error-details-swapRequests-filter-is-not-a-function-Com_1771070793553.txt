@@ -1,0 +1,44 @@
+Error details
+swapRequests?.filter is not a function
+
+Component Stack:
+    at ShiftSwapDrawer (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/schedule/ShiftSwapDrawer.tsx:55:3)
+    at div
+    at div
+    at div
+    at div
+    at MobilePageWrapper (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/mobile-page-wrapper.tsx:277:3)
+    at CanvasHubPage (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/canvas-hub/CanvasHubRegistry.tsx:112:33)
+    at ScheduleMobileFirst (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/pages/schedule-mobile-first.tsx:114:21)
+    at UniversalSchedule (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/pages/universal-schedule.tsx:213:20)
+    at Route (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=eba8a245:265:16)
+    at Switch (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=eba8a245:321:17)
+    at Suspense
+    at ErrorBoundary (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/error-boundary.tsx:9:5)
+    at MobileRouteGuard (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/mobile/MobileRouteGuard.tsx:39:36)
+    at main
+    at div
+    at RBACRoute (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/rbac-route.tsx:139:3)
+    at ProtectedRoute (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/protected-route.tsx:18:34)
+    at AppContent (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/App.tsx?v=OTQem3GqkgJWGHZXBqgog:1135:48)
+    at PaymentEnforcementProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/hooks/use-payment-enforcement.tsx:58:46)
+    at Suspense
+    at ResponsiveAppFrame (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/hooks/use-mobile.tsx:44:38)
+    at TrinityModalProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/trinity-chat-modal.tsx:92:40)
+    at TransitionLoaderProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/canvas-hub/TransitionLoader.tsx:58:44)
+    at LayerManagerProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/canvas-hub/LayerManager.tsx:50:40)
+    at SimpleModeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/SimpleModeContext.tsx:23:38)
+    at SeasonalThemeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/context/SeasonalThemeContext.tsx:57:41)
+    at Provider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=eba8a245:38:15)
+    at TooltipProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=eba8a245:97:5)
+    at TransitionProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/transition-context.tsx:21:38)
+    at ThemeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/ThemeContext.tsx:22:33)
+    at ThemeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/theme-provider.tsx:25:3)
+    at OverlayControllerProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/overlay-controller.tsx:22:45)
+    at UniversalLoadingGateProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/universal-loading-gate.tsx:48:48)
+    at ForceRefreshProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/ForceRefreshProvider.tsx:21:40)
+    at ServiceHealthProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/ServiceHealthContext.tsx:23:41)
+    at GlobalErrorBoundary (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/errors/GlobalErrorBoundary.tsx:213:5)
+    at QueryClientProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=eba8a245:2805:3)
+    at App (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/App.tsx?v=OTQem3GqkgJWGHZXBqgog:3578:39)
+    at _a (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-helmet-async.js?v=eba8a245:624:5)

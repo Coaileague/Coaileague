@@ -1,12 +1,22 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { apiFetch } from "@/lib/apiError";
+import { BillingInvoiceListResponse, UsageSummaryResponse, AddonPlanListResponse } from "@shared/schemas/responses/billing";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { secureFetch } from "@/lib/csrf";
 import { 
   Loader2, 
   CreditCard, 
@@ -28,20 +38,27 @@ import {
   ArrowDown,
   Users,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Settings,
+  ExternalLink,
+  ShieldCheck,
+  Wallet,
+  Building2,
+  Star,
+  Trash2,
+  Plus,
+  CalendarDays,
+  CalendarRange,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatCurrency, formatNumber } from "@/lib/formatters";
 import type { Workspace } from "@shared/schema";
-import { WorkspaceLayout } from "@/components/workspace-layout";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { CheckpointAlert } from "@/components/checkpoint-alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PremiumFeaturesPanel } from "@/components/premium-features-panel";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
+import { AiUsageDashboard } from "@/components/billing/AiUsageDashboard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,9 +111,89 @@ interface SubscriptionDetails {
   };
 }
 
+const billingConfig: CanvasPageConfig = {
+  id: 'billing',
+  title: 'Billing & Invoices',
+  subtitle: 'Manage your subscription, view invoices, and track AI usage',
+  category: 'settings',
+  maxWidth: '7xl',
+};
+
+function HardCapToggleCard({ workspaceId }: { workspaceId?: string }) {
+  const { toast } = useToast();
+  const { data, isLoading, refetch } = useQuery<{ seatHardCapEnabled: boolean; maxEmployees: number; currentEmployees: number }>({
+    queryKey: ['/api/billing-settings/seat-hard-cap'],
+    enabled: !!workspaceId,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await secureFetch('/api/billing-settings/seat-hard-cap', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ enabled }),
+      });
+      if (!res.ok) throw new Error('Failed to update seat cap');
+      return res.json();
+    },
+    onSuccess: (_data, enabled) => {
+      refetch();
+      toast({
+        title: enabled ? 'Hard seat cap enabled' : 'Hard seat cap disabled',
+        description: enabled
+          ? 'Officer activation will be blocked once the seat limit is reached.'
+          : 'Officers can be activated beyond the seat limit — overage billing will apply.',
+      });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to update seat cap setting', variant: 'destructive' });
+    },
+  });
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Shield className="h-4 w-4" />
+          Seat Cap Enforcement
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Control whether officers can be activated beyond your plan's included seat limit.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">
+              {data?.seatHardCapEnabled ? 'Hard cap enabled' : 'Soft cap (overage billing)'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {data?.seatHardCapEnabled
+                ? `Activation blocked at ${data?.maxEmployees} seats. Currently at ${data?.currentEmployees}.`
+                : `Officers beyond ${data?.maxEmployees} seats billed at $25/seat/month overage.`}
+            </p>
+          </div>
+          <Switch
+            checked={data?.seatHardCapEnabled ?? false}
+            onCheckedChange={(checked) => toggleMutation.mutate(checked)}
+            disabled={toggleMutation.isPending}
+            data-testid="toggle-seat-hard-cap"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Billing() {
   const { user } = useAuth();
+  const { workspaceRole, isPlatformStaff } = useWorkspaceAccess();
+  const canManageBilling = ['org_owner', 'co_owner'].includes(workspaceRole || '') || isPlatformStaff;
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedTab, setSelectedTab] = useState("overview");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
@@ -108,20 +205,37 @@ export default function Billing() {
     if (urlParams.get('tab') === 'upgrade') {
       setSelectedTab('subscription');
     }
+    if (urlParams.get('payment_success') === 'true') {
+      toast({ title: 'Payment successful', description: 'Your subscription has been updated.' });
+      window.history.replaceState({}, '', '/billing');
+    }
+    if (urlParams.get('payment_canceled') === 'true') {
+      toast({ title: 'Payment canceled', description: 'Your checkout was canceled. No charges were made.', variant: 'destructive' });
+      window.history.replaceState({}, '', '/billing');
+    }
   }, []);
 
   // Fetch workspace details
-  const { data: workspace, isLoading: workspaceLoading } = useQuery<Workspace>({
+  const { data: workspace, isLoading: workspaceLoading, isError: workspaceError } = useQuery<Workspace>({
     queryKey: ["/api/workspace"],
     enabled: !!user,
   });
 
   // Fetch subscription details
-  const { data: subscriptionDetails, isLoading: subscriptionLoading, refetch: refetchSubscription } = useQuery<SubscriptionDetails>({
+  const { data: subscriptionDetails, isLoading: subscriptionLoading, isError: subscriptionError, refetch: refetchSubscription } = useQuery<SubscriptionDetails>({
     queryKey: ["/api/billing/subscription"],
     enabled: !!user,
     retry: false,
   });
+
+  if (workspaceError || subscriptionError) return (
+    <CanvasHubPage config={billingConfig}>
+      <div className="flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+        <p className="text-sm text-muted-foreground">Failed to load data. Please refresh.</p>
+      </div>
+    </CanvasHubPage>
+  );
 
   // Fetch pricing tiers
   const { data: pricingData, isLoading: pricingLoading } = useQuery<PricingData>({
@@ -133,34 +247,265 @@ export default function Billing() {
   const { data: invoices, isLoading: invoicesLoading } = useQuery({
     queryKey: ["/api/billing/invoices"],
     enabled: !!user,
+    queryFn: () => apiFetch('/api/billing/invoices', BillingInvoiceListResponse),
   });
 
   // Fetch usage data (summary)
   const { data: usageData, isLoading: usageLoading } = useQuery({
     queryKey: ["/api/billing/usage/summary"],
     enabled: !!user,
+    queryFn: () => apiFetch('/api/billing/usage/summary', UsageSummaryResponse),
   });
 
   // Fetch available add-ons (marketplace)
   const { data: addons, isLoading: addonsLoading } = useQuery({
-    queryKey: ["/api/billing/addons/available"],
+    queryKey: ["/api/billing/upsell/addon-plans"],
     enabled: !!user,
+    queryFn: () => apiFetch('/api/billing/upsell/addon-plans', AddonPlanListResponse),
+    select: (data: any) => data?.plans ?? data ?? [],
   });
 
   // Fetch active workspace add-ons
   const { data: activeAddons, isLoading: activeAddonsLoading } = useQuery({
-    queryKey: ["/api/billing/addons"],
+    queryKey: ["/api/billing/upsell/addons"],
+    enabled: !!user,
+    queryFn: () => apiFetch('/api/billing/upsell/addons', AddonPlanListResponse),
+    select: (data: any) => data?.addons ?? data ?? [],
+  });
+
+
+  // Open Stripe Billing Portal (manage payment method, view invoices)
+  const billingPortalMutation = useMutation({
+    mutationFn: async () => {
+      const response = await secureFetch("/api/billing/billing-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnUrl: window.location.href }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || err.error || "Failed to open billing portal");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) window.open(data.url, "_blank");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Billing Portal Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // ── Payroll cycle settings ─────────────────────────────────────────────────
+  const { data: workspaceBillingSettings, refetch: refetchWorkspaceBillingSettings } = useQuery<{ settings: Record<string, any> | null }>({
+    queryKey: ["/api/billing-settings/workspace"],
     enabled: !!user,
   });
+  const payrollSettings = workspaceBillingSettings?.settings || {};
+
+  const [payrollCycle, setPayrollCycleLocal] = useState<string>("");
+  const [payrollDayOfWeek, setPayrollDayOfWeek] = useState<string>("");
+  const [payrollDayOfMonth, setPayrollDayOfMonth] = useState<string>("");
+  const [payrollSecondDayOfMonth, setPayrollSecondDayOfMonth] = useState<string>("");
+  const [payrollFirstPeriodStart, setPayrollFirstPeriodStart] = useState<string>("");
+  const [payrollFirstPeriodEnd, setPayrollFirstPeriodEnd] = useState<string>("");
+  const [payrollCutoffDays, setPayrollCutoffDays] = useState<string>("3");
+
+  // Sync payroll state from server
+  useEffect(() => {
+    if (payrollSettings && Object.keys(payrollSettings).length > 0) {
+      setPayrollCycleLocal(payrollSettings.payrollCycle || "");
+      setPayrollDayOfWeek(String(payrollSettings.payrollDayOfWeek ?? ""));
+      setPayrollDayOfMonth(String(payrollSettings.payrollDayOfMonth ?? ""));
+      setPayrollSecondDayOfMonth(String(payrollSettings.payrollSecondDayOfMonth ?? ""));
+      setPayrollFirstPeriodStart(payrollSettings.payrollFirstPeriodStart || "");
+      setPayrollFirstPeriodEnd(payrollSettings.payrollFirstPeriodEnd || "");
+      setPayrollCutoffDays(String(payrollSettings.payrollCutoffDays ?? "3"));
+    }
+  }, [workspaceBillingSettings]);
+
+  const savePayrollMutation = useMutation({
+    mutationFn: async (data: Record<string, any>) =>
+      apiRequest("PATCH", "/api/billing-settings/workspace", data),
+    onSuccess: () => {
+      refetchWorkspaceBillingSettings();
+      queryClient.invalidateQueries({ queryKey: ["/api/billing-settings/workspace"] });
+      toast({ title: "Payroll Cycle Saved", description: "Trinity has learned your payroll schedule and will synchronize automatically." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Save Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSavePayrollCycle = () => {
+    if (!payrollCycle) {
+      toast({ title: "Select a cycle", description: "Choose weekly, bi-weekly, or another frequency first.", variant: "destructive" });
+      return;
+    }
+    const payload: Record<string, any> = {
+      payrollCycle,
+      payrollCutoffDays: parseInt(payrollCutoffDays) || 3,
+    };
+    if (payrollCycle === "weekly" || payrollCycle === "biweekly") {
+      payload.payrollDayOfWeek = parseInt(payrollDayOfWeek) || 5;
+    }
+    if (payrollCycle === "monthly" || payrollCycle === "semimonthly") {
+      payload.payrollDayOfMonth = parseInt(payrollDayOfMonth) || 1;
+    }
+    if (payrollCycle === "semimonthly") {
+      payload.payrollSecondDayOfMonth = parseInt(payrollSecondDayOfMonth) || 15;
+    }
+    if (payrollFirstPeriodStart) payload.payrollFirstPeriodStart = payrollFirstPeriodStart;
+    if (payrollFirstPeriodEnd) payload.payrollFirstPeriodEnd = payrollFirstPeriodEnd;
+    savePayrollMutation.mutate(payload);
+  };
+
+  const handleOpenBillingPortal = () => {
+    billingPortalMutation.mutate();
+  };
+
+  // ── Payment methods on file ─────────────────────────────────────────────────
+  interface PaymentMethod {
+    id: string;
+    type: string;
+    brand: string | null;
+    last4: string | null;
+    expMonth: number | null;
+    expYear: number | null;
+    bankName: string | null;
+    isDefault: boolean;
+  }
+
+  const { data: paymentMethodsData, refetch: refetchPaymentMethods, isLoading: pmLoading } = useQuery<{ paymentMethods: PaymentMethod[]; defaultPaymentMethodId: string | null }>({
+    queryKey: ["/api/billing-settings/payment-methods"],
+    enabled: !!user,
+  });
+
+  const setDefaultPmMutation = useMutation({
+    mutationFn: async (pmId: string) =>
+      apiRequest("POST", `/api/billing-settings/payment-methods/set-default/${pmId}`),
+    onSuccess: () => {
+      refetchPaymentMethods();
+      toast({ title: "Default Updated", description: "This card will be charged for subscriptions, overages, and fees." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removePmMutation = useMutation({
+    mutationFn: async (pmId: string) =>
+      apiRequest("DELETE", `/api/billing-settings/payment-methods/${pmId}`),
+    onSuccess: () => {
+      refetchPaymentMethods();
+      toast({ title: "Card Removed", description: "Payment method removed from your account." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const addCardMutation = useMutation({
+    mutationFn: async () => {
+      const res = await secureFetch("/api/billing-settings/payment-methods/setup-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      // For now, direct to Stripe billing portal where they can manage payment methods
+      billingPortalMutation.mutate();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // ── Client billing terms ─────────────────────────────────────────────────────
+  const { data: allClientsData } = useQuery<{ data: { id: string; companyName: string | null; firstName: string | null; lastName: string | null }[] }>({
+    queryKey: ["/api/clients"],
+    enabled: !!user && selectedTab === "client-terms",
+  });
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const { data: clientTermsData, refetch: refetchClientTerms } = useQuery<{ settings: Record<string, any> | null }>({
+    queryKey: ["/api/billing-settings/clients", selectedClientId],
+    enabled: !!selectedClientId,
+  });
+  const clientTerms = clientTermsData?.settings || {} as Record<string, any>;
+
+  const [ctBillingCycle, setCtBillingCycle] = useState<string>("monthly");
+  const [ctPaymentTerms, setCtPaymentTerms] = useState<string>("net_30");
+  const [ctDayOfWeek, setCtDayOfWeek] = useState<string>("5");
+  const [ctDayOfMonth, setCtDayOfMonth] = useState<string>("1");
+  const [ctSecondDay, setCtSecondDay] = useState<string>("15");
+  const [ctServiceStart, setCtServiceStart] = useState<string>("");
+  const [ctServiceEnd, setCtServiceEnd] = useState<string>("");
+
+  useEffect(() => {
+    if (clientTerms && selectedClientId) {
+      setCtBillingCycle(clientTerms.billingCycle || "monthly");
+      setCtPaymentTerms(clientTerms.paymentTerms || "net_30");
+      setCtDayOfWeek(String(clientTerms.billingDayOfWeek ?? "5"));
+      setCtDayOfMonth(String(clientTerms.billingDayOfMonth ?? "1"));
+      setCtSecondDay(String(clientTerms.billingSecondDayOfMonth ?? "15"));
+      setCtServiceStart(clientTerms.serviceStartDate || "");
+      setCtServiceEnd(clientTerms.serviceEndDate || "");
+    }
+  }, [clientTermsData, selectedClientId]);
+
+  const saveClientTermsMutation = useMutation({
+    mutationFn: async (data: Record<string, any>) => {
+      const res = await secureFetch(`/api/billing-settings/clients/${selectedClientId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchClientTerms();
+      toast({ title: "Client Terms Saved", description: "Invoice schedule and payment terms updated for this client." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Save Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSaveClientTerms = () => {
+    if (!selectedClientId) {
+      toast({ title: "Select a client first", variant: "destructive" });
+      return;
+    }
+    const payload: Record<string, any> = {
+      billingCycle: ctBillingCycle,
+      paymentTerms: ctPaymentTerms,
+    };
+    if (ctBillingCycle === "weekly" || ctBillingCycle === "biweekly") {
+      payload.billingDayOfWeek = parseInt(ctDayOfWeek) || 5;
+    }
+    if (ctBillingCycle === "monthly" || ctBillingCycle === "semimonthly") {
+      payload.billingDayOfMonth = parseInt(ctDayOfMonth) || 1;
+    }
+    if (ctBillingCycle === "semimonthly") {
+      payload.billingSecondDayOfMonth = parseInt(ctSecondDay) || 15;
+    }
+    if (ctServiceStart) payload.serviceStartDate = ctServiceStart;
+    if (ctServiceEnd) payload.serviceEndDate = ctServiceEnd;
+    saveClientTermsMutation.mutate(payload);
+  };
+
 
   // Purchase add-on mutation
   const purchaseAddonMutation = useMutation({
     mutationFn: async (addonId: string) => {
-      return await apiRequest("POST", `/api/billing/addons/${addonId}/purchase`);
+      return await apiRequest("POST", `/api/billing/upsell/addons`, { featureKey: addonId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/billing/addons"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/billing/addons/available"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/upsell/addons"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/upsell/addon-plans"] });
       queryClient.invalidateQueries({ queryKey: ["/api/billing/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/billing/usage/summary"] });
       toast({
@@ -249,13 +594,29 @@ export default function Billing() {
     });
   };
 
-  if (workspaceLoading) {
+  if (workspaceLoading || subscriptionLoading || pricingLoading || invoicesLoading) {
     return (
-      <WorkspaceLayout>
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
-          <Loader2 className="h-8 w-8 animate-spin text-primary" data-testid="loading-spinner" />
+      <CanvasHubPage config={billingConfig}>
+        <div className="space-y-3 p-6">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
         </div>
-      </WorkspaceLayout>
+      </CanvasHubPage>
+    );
+  }
+
+  if (workspaceRole && !canManageBilling) {
+    return (
+      <CanvasHubPage config={billingConfig}>
+        <div className="flex flex-col items-center justify-center gap-4 text-center" style={{ minHeight: 'calc(100vh - 200px)' }} data-testid="billing-access-denied">
+          <ShieldCheck className="h-12 w-12 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Access Restricted</h2>
+          <p className="text-muted-foreground max-w-sm">
+            Billing and subscription settings are only accessible to organization owners. Contact your organization owner to make changes.
+          </p>
+        </div>
+      </CanvasHubPage>
     );
   }
 
@@ -271,18 +632,10 @@ export default function Billing() {
   const StateIcon = stateInfo.icon;
 
   return (
-    <WorkspaceLayout maxWidth="7xl">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">Billing & Invoices</h1>
-        <p className="text-muted-foreground">
-          Manage your subscription, view invoices, and track AI usage
-        </p>
-      </div>
-
+    <CanvasHubPage config={billingConfig}>
       {/* Account State Alert */}
       {accountState !== "active" && (
-        <Card className={`border-2 ${stateInfo.bgClassName}`}>
+        <Card className={`border ${stateInfo.bgClassName}`}>
           <CardHeader>
             <div className="flex items-center gap-3">
               <StateIcon className={`h-6 w-6 ${stateInfo.className}`} />
@@ -298,8 +651,19 @@ export default function Billing() {
           </CardHeader>
           {accountState !== "suspended" && (
             <CardContent>
-              <Button variant="default" data-testid="button-resolve-account">
-                {accountState === "payment_failed" ? "Update Payment Method" : "Contact Support"}
+              <Button
+                variant="default"
+                data-testid="button-resolve-account"
+                disabled={billingPortalMutation.isPending}
+                onClick={() => {
+                  if (accountState === "payment_failed") {
+                    billingPortalMutation.mutate();
+                  } else {
+                    window.location.href = "mailto:support@coaileague.com";
+                  }
+                }}
+              >
+                {billingPortalMutation.isPending ? "Opening..." : accountState === "payment_failed" ? "Update Payment Method" : "Contact Support"}
               </Button>
             </CardContent>
           )}
@@ -313,17 +677,17 @@ export default function Billing() {
       {(workspace?.subscriptionTier === 'free' || !workspace?.subscriptionTier) && (
         <Card className="border-[hsl(var(--cad-blue))]/30 bg-[hsl(var(--cad-blue))]/5">
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-2">
               <div className="space-y-1">
                 <CardTitle>Ready to Unlock Premium Features?</CardTitle>
                 <CardDescription>Upgrade your plan to access AI-powered scheduling, advanced analytics, and more.</CardDescription>
               </div>
-              <Button variant="default" data-testid="button-upgrade-now" onClick={() => {
-                window.location.href = '/billing?tab=upgrade';
+              {canManageBilling && <Button variant="default" data-testid="button-upgrade-now" onClick={() => {
+                setLocation('/billing?tab=upgrade');
               }} className="gap-2 whitespace-nowrap">
                 <Zap className="h-4 w-4" />
                 View Plans
-              </Button>
+              </Button>}
             </div>
           </CardHeader>
         </Card>
@@ -331,7 +695,7 @@ export default function Billing() {
 
       {/* Main Content Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="flex flex-wrap gap-1 h-auto p-1">
           <TabsTrigger value="overview" data-testid="tab-overview">
             <CreditCard className="h-4 w-4 mr-2" />
             Overview
@@ -352,6 +716,18 @@ export default function Billing() {
             <ShoppingCart className="h-4 w-4 mr-2" />
             Add-ons
           </TabsTrigger>
+          <TabsTrigger value="payroll" data-testid="tab-payroll">
+            <CalendarDays className="h-4 w-4 mr-2" />
+            Payroll
+          </TabsTrigger>
+          <TabsTrigger value="client-terms" data-testid="tab-client-terms">
+            <CalendarRange className="h-4 w-4 mr-2" />
+            Client Terms
+          </TabsTrigger>
+          <TabsTrigger value="payment-methods" data-testid="tab-payment-methods">
+            <Wallet className="h-4 w-4 mr-2" />
+            Payment Methods
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -367,7 +743,7 @@ export default function Billing() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold capitalize" data-testid="text-current-plan">
-                  {subscriptionDetails?.tier || workspace?.subscriptionTier || "Free"}
+                  {subscriptionDetails?.tier || workspace?.subscriptionTier || "Trial"}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   {subscriptionDetails?.status === 'active' ? (
@@ -417,20 +793,6 @@ export default function Billing() {
               </CardContent>
             </Card>
 
-            {/* Account Balance */}
-            <Card className="mobile-card-tight">
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">AI Token Balance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-primary" data-testid="text-token-balance">
-                  {(usageData as any)?.tokenBalance?.toLocaleString() || "0"}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Tokens remaining
-                </p>
-              </CardContent>
-            </Card>
 
             {/* Next Invoice */}
             <Card className="mobile-card-tight">
@@ -442,7 +804,9 @@ export default function Billing() {
                   {(workspace as any)?.nextBillingDate ? format(new Date((workspace as any).nextBillingDate), "MMM d, yyyy") : "Not scheduled"}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Billing cycle: Weekly
+                  Billing cycle: {(subscriptionDetails as any)?.billingInterval
+                    ? (subscriptionDetails as any).billingInterval.charAt(0).toUpperCase() + (subscriptionDetails as any).billingInterval.slice(1)
+                    : "Monthly"}
                 </p>
               </CardContent>
             </Card>
@@ -468,7 +832,7 @@ export default function Billing() {
                       <Zap className="h-5 w-5 text-primary" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{addon.name}</div>
-                        <div className="text-sm text-muted-foreground">${addon.price}/mo</div>
+                        <div className="text-sm text-muted-foreground">{formatCurrency(addon.price)}/mo</div>
                       </div>
                     </div>
                   ))}
@@ -488,7 +852,7 @@ export default function Billing() {
           {subscriptionDetails && subscriptionDetails.tier !== 'free' && (
             <Card className="border-primary/20 bg-primary/5">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Crown className="h-5 w-5 text-primary" />
@@ -510,13 +874,7 @@ export default function Billing() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-3 mobile-cols-1">
-                  <div>
-                    <p className="text-sm text-muted-foreground">AI Credits</p>
-                    <p className="text-lg font-semibold">
-                      {subscriptionDetails.credits?.remaining?.toLocaleString() || 0} / {subscriptionDetails.credits?.total?.toLocaleString() || 0}
-                    </p>
-                  </div>
+                <div className="grid gap-4 md:grid-cols-2 mobile-cols-1">
                   <div>
                     <p className="text-sm text-muted-foreground">Employees</p>
                     <p className="text-lg font-semibold">
@@ -546,6 +904,11 @@ export default function Billing() {
                 </CardFooter>
               )}
             </Card>
+          )}
+
+          {/* Seat Hard Cap Setting — org_owner only */}
+          {canManageBilling && (
+            <HardCapToggleCard workspaceId={(workspace as any)?.id} />
           )}
 
           {/* Billing Cycle Toggle */}
@@ -585,7 +948,7 @@ export default function Billing() {
                 return (
                   <Card 
                     key={tier.id} 
-                    className={`relative ${tier.popular ? 'border-primary shadow-lg' : ''} ${isCurrent ? 'border-primary/50 bg-primary/5' : ''}`}
+                    className={`relative ${tier.popular ? 'border-primary shadow-sm' : ''} ${isCurrent ? 'border-primary/50 bg-primary/5' : ''}`}
                     data-testid={`card-tier-${tier.id}`}
                   >
                     {tier.popular && (
@@ -613,17 +976,13 @@ export default function Billing() {
                       <div className="space-y-2 pt-4 border-t">
                         <div className="flex items-center gap-2 text-sm">
                           <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>Up to {tier.maxEmployees === -1 ? 'Unlimited' : tier.maxEmployees} employees</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Sparkles className="h-4 w-4 text-muted-foreground" />
-                          <span>{tier.monthlyCredits.toLocaleString()} AI credits/month</span>
+                          <span>Up to {tier.maxEmployees === -1 ? '500+' : tier.maxEmployees} employees</span>
                         </div>
                       </div>
 
                       <ul className="space-y-2">
-                        {tier.features.slice(0, 4).map((feature, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm">
+                        {tier.features.slice(0, 4).map((feature) => (
+                          <li key={feature} className="flex items-start gap-2 text-sm">
                             <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                             <span>{feature}</span>
                           </li>
@@ -695,8 +1054,9 @@ export default function Billing() {
                   {invoices.map((invoice: any) => (
                     <div 
                       key={invoice.id} 
-                      className="flex items-center justify-between p-4 rounded-md border hover-elevate mobile-flex-col mobile-gap-3"
+                      className="flex items-center justify-between p-4 rounded-md border hover-elevate mobile-flex-col mobile-gap-3 cursor-pointer"
                       data-testid={`invoice-${invoice.id}`}
+                      onClick={() => setLocation('/invoices')}
                     >
                       <div className="flex items-center gap-4 mobile-w-full">
                         <div className="p-2 rounded-md bg-muted">
@@ -716,12 +1076,12 @@ export default function Billing() {
                       </div>
                       <div className="flex items-center gap-4 mobile-w-full mobile-justify-between">
                         <div className="text-right">
-                          <div className="font-bold">${invoice.totalAmount.toFixed(2)}</div>
+                          <div className="font-bold">{formatCurrency(invoice.totalAmount)}</div>
                           <Badge variant={invoice.status === "paid" ? "default" : invoice.status === "pending" ? "secondary" : "destructive"}>
                             {invoice.status}
                           </Badge>
                         </div>
-                        <Button variant="ghost" size="icon" data-testid={`button-download-invoice-${invoice.id}`}>
+                        <Button variant="ghost" size="icon" data-testid={`button-download-invoice-${invoice.id}`} aria-label="Download invoice">
                           <Download className="h-4 w-4" />
                         </Button>
                       </div>
@@ -739,6 +1099,7 @@ export default function Billing() {
 
         {/* Usage Tab */}
         <TabsContent value="usage" className="space-y-6">
+          <AiUsageDashboard />
           {/* Monthly Allowance Meter */}
           <Card>
             <CardHeader>
@@ -758,18 +1119,19 @@ export default function Billing() {
               ) : (
                 <div className="space-y-4">
                   {(() => {
-                    const monthlyAllowance = subscriptionDetails?.credits?.total || 100000;
+                    const seatCount = subscriptionDetails?.limits?.maxEmployees || 5;
+                    const planLimit = seatCount * 20000;
                     const totalUsed = (usageData as any)?.totalTokens || 0;
-                    const usagePercent = Math.min(100, (totalUsed / monthlyAllowance) * 100);
-                    const isOverage = totalUsed > monthlyAllowance;
-                    const overageAmount = Math.max(0, totalUsed - monthlyAllowance);
-                    
+                    const usagePercent = Math.min(100, (totalUsed / planLimit) * 100);
+                    const isOverage = totalUsed > planLimit;
+                    const overageAmount = Math.max(0, totalUsed - planLimit);
+
                     return (
                       <>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Tokens Used</span>
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span className="text-muted-foreground">AI Operations Used</span>
                           <span className={`font-medium ${isOverage ? 'text-destructive' : ''}`}>
-                            {totalUsed.toLocaleString()} / {monthlyAllowance.toLocaleString()}
+                            {formatNumber(totalUsed)} / {formatNumber(planLimit)}
                           </span>
                         </div>
                         
@@ -778,25 +1140,25 @@ export default function Billing() {
                           <div 
                             className={`h-full transition-all duration-500 ${
                               isOverage 
-                                ? 'bg-gradient-to-r from-primary via-yellow-500 to-destructive' 
+                                ? 'bg-gradient-to-r from-primary via-cyan-500 to-destructive' 
                                 : usagePercent > 80 
-                                  ? 'bg-gradient-to-r from-primary to-yellow-500'
+                                  ? 'bg-gradient-to-r from-primary to-cyan-500'
                                   : 'bg-primary'
                             }`}
                             style={{ width: `${Math.min(100, usagePercent)}%` }}
                           />
                           {/* 80% warning marker */}
-                          <div className="absolute top-0 left-[80%] h-full w-0.5 bg-yellow-500/50" />
+                          <div className="absolute top-0 left-[80%] h-full w-0.5 bg-cyan-500/50" />
                         </div>
                         
-                        <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center justify-between gap-1 text-xs">
                           <span className="text-muted-foreground">
                             {usagePercent.toFixed(1)}% of allowance used
                           </span>
                           {isOverage ? (
                             <Badge variant="destructive" className="text-xs">
                               <AlertTriangle className="h-3 w-3 mr-1" />
-                              {overageAmount.toLocaleString()} overage tokens
+                              {formatNumber(overageAmount)} overage tokens
                             </Badge>
                           ) : usagePercent > 80 ? (
                             <Badge variant="secondary" className="text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
@@ -815,7 +1177,7 @@ export default function Billing() {
                           <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 mt-2">
                             <p className="text-sm text-destructive flex items-center gap-2">
                               <AlertTriangle className="h-4 w-4" />
-                              Overage charges: ~${((overageAmount / 1000) * 0.03).toFixed(2)} (billed weekly)
+                              Overage charges: ~{formatCurrency((overageAmount / 1000) * 0.03)} (billed weekly)
                             </p>
                           </div>
                         )}
@@ -849,7 +1211,7 @@ export default function Billing() {
                         <Brain className="h-4 w-4" />
                         AI Records™
                       </div>
-                      <div className="text-2xl font-bold">{(usageData as any)?.recordOSTokens?.toLocaleString() || "0"}</div>
+                      <div className="text-2xl font-bold">{formatNumber((usageData as any)?.recordOSTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                     <div className="p-4 rounded-md border mobile-compact-p">
@@ -857,7 +1219,7 @@ export default function Billing() {
                         <TrendingUp className="h-4 w-4" />
                         AI Analytics™
                       </div>
-                      <div className="text-2xl font-bold">{(usageData as any)?.insightOSTokens?.toLocaleString() || "0"}</div>
+                      <div className="text-2xl font-bold">{formatNumber((usageData as any)?.insightOSTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                     <div className="p-4 rounded-md border mobile-compact-p">
@@ -865,7 +1227,7 @@ export default function Billing() {
                         <Calendar className="h-4 w-4" />
                         AI Scheduling™
                       </div>
-                      <div className="text-2xl font-bold">{(usageData as any)?.scheduleOSTokens?.toLocaleString() || "0"}</div>
+                      <div className="text-2xl font-bold">{formatNumber((usageData as any)?.scheduleOSTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                     <div className="p-4 rounded-md border mobile-compact-p">
@@ -873,20 +1235,28 @@ export default function Billing() {
                         <Zap className="h-4 w-4" />
                         Total
                       </div>
-                      <div className="text-2xl font-bold text-primary">{(usageData as any)?.totalTokens?.toLocaleString() || "0"}</div>
+                      <div className="text-2xl font-bold text-primary">{formatNumber((usageData as any)?.totalTokens || 0)}</div>
                       <p className="text-xs text-muted-foreground mt-1">tokens used</p>
                     </div>
                   </div>
 
-                  {/* Weekly Billing Info */}
-                  <div className="p-4 rounded-md border bg-muted/30">
+                  {/* Middleware Fee Schedule */}
+                  <div className="p-4 rounded-md border bg-muted/30 space-y-3">
                     <div className="flex items-start gap-3">
-                      <RefreshCw className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium">Weekly Overage Billing</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          AI token overages are billed automatically every Sunday at midnight. 
-                          Overage rate: $0.03 per 1,000 tokens beyond your monthly allowance.
+                      <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                      <div className="w-full">
+                        <p className="text-sm font-semibold mb-2">Transaction &amp; Middleware Fees</p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          These fees are charged via Stripe per transaction when you use payroll, invoicing, or direct-pay features. All charges are off-session — no manual action needed.
+                        </p>
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          <div className="flex justify-between"><span>Payroll processing / employee</span><span className="font-mono">$3.95–5.95</span></div>
+                          <div className="flex justify-between"><span>Card payment processing</span><span className="font-mono">2.9% + $0.25</span></div>
+                          <div className="flex justify-between"><span>ACH bank transfer</span><span className="font-mono">1.0% (max $10)</span></div>
+                          <div className="flex justify-between"><span>Direct bank payout</span><span className="font-mono">0.25%</span></div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Professional tier: 10% discount on middleware fees. Enterprise: 20% discount.
                         </p>
                       </div>
                     </div>
@@ -899,6 +1269,22 @@ export default function Billing() {
 
         {/* Add-ons Tab */}
         <TabsContent value="addons" className="space-y-6">
+          {/* Premium Features Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amber-500" />
+                Premium Features
+              </CardTitle>
+              <CardDescription>
+                Access advanced AI-powered features included with your subscription tier
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PremiumFeaturesPanel />
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader>
               <CardTitle>Add-on Marketplace</CardTitle>
@@ -918,7 +1304,7 @@ export default function Billing() {
                     return (
                       <Card key={addon.id} className={isActive ? "border-primary bg-muted/5" : ""} data-testid={`addon-${addon.id}`}>
                         <CardHeader>
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-2">
                             <div>
                               <CardTitle className="text-base">{addon.name}</CardTitle>
                               <CardDescription className="mt-1 text-xs">
@@ -968,16 +1354,478 @@ export default function Billing() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ── Payroll Cycle Tab ────────────────────────────────────────────── */}
+        <TabsContent value="payroll" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                Payroll Cycle Configuration
+              </CardTitle>
+              <CardDescription>
+                Set your payroll frequency and synchronization anchor. Trinity learns this once and generates every future payroll run automatically from your first period forward — change it any time and it will re-synchronize.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {payrollSettings.payrollCycle && (
+                <div className="flex items-center gap-3 p-3 rounded-md bg-primary/10 border border-primary/20">
+                  <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Currently set: <span className="capitalize">{payrollSettings.payrollCycle}</span></p>
+                    {payrollSettings.payrollFirstPeriodStart && (
+                      <p className="text-xs text-muted-foreground">
+                        First period: {payrollSettings.payrollFirstPeriodStart} → {payrollSettings.payrollFirstPeriodEnd || "—"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="payroll-cycle-select">Pay Frequency</Label>
+                  <Select value={payrollCycle} onValueChange={setPayrollCycleLocal}>
+                    <SelectTrigger id="payroll-cycle-select" data-testid="select-payroll-cycle">
+                      <SelectValue placeholder="Select frequency..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="biweekly">Bi-Weekly (every 2 weeks)</SelectItem>
+                      <SelectItem value="semimonthly">Semi-Monthly (1st & 15th or custom)</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payroll-cutoff">Cutoff Before Payday (days)</Label>
+                  <Input
+                    id="payroll-cutoff"
+                    type="number"
+                    min={0}
+                    max={14}
+                    value={payrollCutoffDays}
+                    onChange={e => setPayrollCutoffDays(e.target.value)}
+                    placeholder="3"
+                    data-testid="input-payroll-cutoff"
+                  />
+                  <p className="text-xs text-muted-foreground">How many days before payday payroll locks for processing</p>
+                </div>
+
+                {(payrollCycle === "weekly" || payrollCycle === "biweekly") && (
+                  <div className="space-y-2">
+                    <Label>Pay Day of Week</Label>
+                    <Select value={payrollDayOfWeek} onValueChange={setPayrollDayOfWeek}>
+                      <SelectTrigger data-testid="select-payroll-day-of-week">
+                        <SelectValue placeholder="Select day..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Sunday</SelectItem>
+                        <SelectItem value="1">Monday</SelectItem>
+                        <SelectItem value="2">Tuesday</SelectItem>
+                        <SelectItem value="3">Wednesday</SelectItem>
+                        <SelectItem value="4">Thursday</SelectItem>
+                        <SelectItem value="5">Friday</SelectItem>
+                        <SelectItem value="6">Saturday</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {(payrollCycle === "monthly") && (
+                  <div className="space-y-2">
+                    <Label>Pay Day of Month</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={payrollDayOfMonth}
+                      onChange={e => setPayrollDayOfMonth(e.target.value)}
+                      placeholder="1"
+                      data-testid="input-payroll-day-of-month"
+                    />
+                  </div>
+                )}
+
+                {payrollCycle === "semimonthly" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>First Pay Day of Month</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={15}
+                        value={payrollDayOfMonth}
+                        onChange={e => setPayrollDayOfMonth(e.target.value)}
+                        placeholder="1"
+                        data-testid="input-payroll-first-day"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Second Pay Day of Month</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={31}
+                        value={payrollSecondDayOfMonth}
+                        onChange={e => setPayrollSecondDayOfMonth(e.target.value)}
+                        placeholder="15"
+                        data-testid="input-payroll-second-day"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="border-t pt-4 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    First Payroll Period — Synchronization Anchor
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Set the start and end of your very first payroll period. Trinity uses this as the anchor to calculate every future period automatically. Leave blank to start from today.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="payroll-period-start">First Period Start Date</Label>
+                      <Input
+                        id="payroll-period-start"
+                        type="date"
+                        value={payrollFirstPeriodStart}
+                        onChange={e => setPayrollFirstPeriodStart(e.target.value)}
+                        data-testid="input-payroll-first-period-start"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="payroll-period-end">First Period End Date</Label>
+                      <Input
+                        id="payroll-period-end"
+                        type="date"
+                        value={payrollFirstPeriodEnd}
+                        onChange={e => setPayrollFirstPeriodEnd(e.target.value)}
+                        data-testid="input-payroll-first-period-end"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+              <Button
+                onClick={handleSavePayrollCycle}
+                disabled={savePayrollMutation.isPending}
+                data-testid="button-save-payroll-cycle"
+              >
+                {savePayrollMutation.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                ) : (
+                  <>Save Payroll Cycle</>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* ── Client Billing Terms Tab ─────────────────────────────────────── */}
+        <TabsContent value="client-terms" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarRange className="h-5 w-5 text-primary" />
+                Client Billing Terms
+              </CardTitle>
+              <CardDescription>
+                Set service dates and invoice schedule independently for every client. Each client can have a different billing frequency, payment terms, and contract window.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Select Client</Label>
+                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                  <SelectTrigger data-testid="select-client-terms-client">
+                    <SelectValue placeholder="Choose a client to configure..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(allClientsData?.data || []).map(c => (
+                      <SelectItem key={c.id} value={c.id} data-testid={`option-client-${c.id}`}>
+                        {c.companyName || `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedClientId && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Invoice Frequency</Label>
+                      <Select value={ctBillingCycle} onValueChange={setCtBillingCycle}>
+                        <SelectTrigger data-testid="select-client-billing-cycle">
+                          <SelectValue placeholder="Select frequency..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                          <SelectItem value="semimonthly">Semi-Monthly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Payment Terms</Label>
+                      <Select value={ctPaymentTerms} onValueChange={setCtPaymentTerms}>
+                        <SelectTrigger data-testid="select-client-payment-terms">
+                          <SelectValue placeholder="Select terms..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="due_on_receipt">Due on Receipt</SelectItem>
+                          <SelectItem value="net_15">Net 15</SelectItem>
+                          <SelectItem value="net_30">Net 30</SelectItem>
+                          <SelectItem value="net_45">Net 45</SelectItem>
+                          <SelectItem value="net_60">Net 60</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {(ctBillingCycle === "weekly" || ctBillingCycle === "biweekly") && (
+                      <div className="space-y-2">
+                        <Label>Invoice Day of Week</Label>
+                        <Select value={ctDayOfWeek} onValueChange={setCtDayOfWeek}>
+                          <SelectTrigger data-testid="select-client-day-of-week">
+                            <SelectValue placeholder="Select day..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Sunday</SelectItem>
+                            <SelectItem value="1">Monday</SelectItem>
+                            <SelectItem value="2">Tuesday</SelectItem>
+                            <SelectItem value="3">Wednesday</SelectItem>
+                            <SelectItem value="4">Thursday</SelectItem>
+                            <SelectItem value="5">Friday</SelectItem>
+                            <SelectItem value="6">Saturday</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {(ctBillingCycle === "monthly") && (
+                      <div className="space-y-2">
+                        <Label>Invoice Day of Month</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={ctDayOfMonth}
+                          onChange={e => setCtDayOfMonth(e.target.value)}
+                          placeholder="1"
+                          data-testid="input-client-day-of-month"
+                        />
+                      </div>
+                    )}
+
+                    {ctBillingCycle === "semimonthly" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>First Invoice Day</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={15}
+                            value={ctDayOfMonth}
+                            onChange={e => setCtDayOfMonth(e.target.value)}
+                            placeholder="1"
+                            data-testid="input-client-first-day"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Second Invoice Day</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={31}
+                            value={ctSecondDay}
+                            onChange={e => setCtSecondDay(e.target.value)}
+                            placeholder="15"
+                            data-testid="input-client-second-day"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="border-t pt-4 space-y-4">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      Service Contract Window
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="client-service-start">Service Start Date</Label>
+                        <Input
+                          id="client-service-start"
+                          type="date"
+                          value={ctServiceStart}
+                          onChange={e => setCtServiceStart(e.target.value)}
+                          data-testid="input-client-service-start"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="client-service-end">Service End Date (leave blank = ongoing)</Label>
+                        <Input
+                          id="client-service-end"
+                          type="date"
+                          value={ctServiceEnd}
+                          onChange={e => setCtServiceEnd(e.target.value)}
+                          data-testid="input-client-service-end"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+            {selectedClientId && (
+              <CardFooter className="flex justify-end gap-2">
+                <Button
+                  onClick={handleSaveClientTerms}
+                  disabled={saveClientTermsMutation.isPending}
+                  data-testid="button-save-client-terms"
+                >
+                  {saveClientTermsMutation.isPending ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                  ) : (
+                    <>Save Client Terms</>
+                  )}
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* ── Payment Methods Tab ──────────────────────────────────────────── */}
+        <TabsContent value="payment-methods" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                Payment Methods on File
+              </CardTitle>
+              <CardDescription>
+                Saved cards and bank accounts are used for subscription renewals and middleware transaction fees (payroll processing, invoice delivery, bank payouts). All charges are off-session — no manual action needed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pmLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (paymentMethodsData?.paymentMethods || []).length === 0 ? (
+                <div className="text-center py-8 space-y-3">
+                  <CreditCard className="h-10 w-10 text-muted-foreground mx-auto" />
+                  <p className="text-sm text-muted-foreground">No payment methods saved yet.</p>
+                  <p className="text-xs text-muted-foreground">Add a card or bank account to enable automatic subscription renewals and fee collection.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(paymentMethodsData?.paymentMethods || []).map(pm => (
+                    <div
+                      key={pm.id}
+                      className={`flex flex-wrap items-center justify-between gap-3 p-4 rounded-md border ${pm.isDefault ? 'border-primary/40 bg-primary/5' : 'border-border'}`}
+                      data-testid={`card-payment-method-${pm.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {pm.type === "us_bank_account" ? (
+                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                        ) : (
+                          <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        )}
+                        <div>
+                          <p className="text-sm font-medium capitalize" data-testid={`text-pm-brand-${pm.id}`}>
+                            {pm.brand || pm.bankName || pm.type} •••• {pm.last4}
+                          </p>
+                          {pm.expMonth && pm.expYear && (
+                            <p className="text-xs text-muted-foreground">
+                              Expires {pm.expMonth}/{pm.expYear}
+                            </p>
+                          )}
+                        </div>
+                        {pm.isDefault && (
+                          <Badge variant="outline" className="text-primary border-primary/30">
+                            <Star className="h-3 w-3 mr-1" />
+                            Default
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!pm.isDefault && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDefaultPmMutation.mutate(pm.id)}
+                            disabled={setDefaultPmMutation.isPending}
+                            data-testid={`button-set-default-${pm.id}`}
+                          >
+                            Set Default
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removePmMutation.mutate(pm.id)}
+                          disabled={removePmMutation.isPending}
+                          data-testid={`button-remove-pm-${pm.id}`}
+                          aria-label="Remove payment method"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t pt-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">What these cards are charged for:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Monthly or yearly subscription renewal</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Payroll processing fee ($3.95–5.95/run via middleware)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> Invoice delivery fee ($0.25/invoice via middleware)</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-primary" /> ACH bank payout fee ($0.25/transfer via middleware)</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button
+                onClick={() => billingPortalMutation.mutate()}
+                disabled={billingPortalMutation.isPending}
+                data-testid="button-add-payment-method"
+              >
+                {billingPortalMutation.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Opening...</>
+                ) : (
+                  <><Plus className="mr-2 h-4 w-4" />Add Payment Method</>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
       </Tabs>
 
       {/* Upgrade/Downgrade Confirmation Dialog */}
-      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+      <UniversalModal open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <UniversalModalContent>
+          <UniversalModalHeader>
+            <UniversalModalTitle>
               {selectedTier && isUpgrade(selectedTier.id) ? 'Upgrade' : 'Change'} to {selectedTier?.name}
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               {selectedTier && isUpgrade(selectedTier.id) ? (
                 <>
                   You're upgrading to the {selectedTier.name} plan. Your new features will be available immediately.
@@ -989,11 +1837,11 @@ export default function Billing() {
                   You'll continue to have access to your current features until then.
                 </>
               )}
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           {selectedTier && (
             <div className="py-4 space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-md bg-muted/50">
+              <div className="flex items-center justify-between gap-2 p-4 rounded-md bg-muted/50">
                 <div>
                   <p className="font-semibold">{selectedTier.name}</p>
                   <p className="text-sm text-muted-foreground">{billingCycle} billing</p>
@@ -1008,16 +1856,12 @@ export default function Billing() {
               <div className="text-sm space-y-1">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>Up to {selectedTier.maxEmployees === -1 ? 'Unlimited' : selectedTier.maxEmployees} employees</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  <span>{selectedTier.monthlyCredits.toLocaleString()} AI credits per month</span>
+                  <span>Up to {selectedTier.maxEmployees === -1 ? '500+' : selectedTier.maxEmployees} employees</span>
                 </div>
               </div>
             </div>
           )}
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
               Cancel
             </Button>
@@ -1035,9 +1879,10 @@ export default function Billing() {
                 `Confirm ${selectedTier && isUpgrade(selectedTier.id) ? 'Upgrade' : 'Change'}`
               )}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+
 
       {/* Cancel Subscription Confirmation */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -1069,6 +1914,6 @@ export default function Billing() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </WorkspaceLayout>
+    </CanvasHubPage>
   );
 }

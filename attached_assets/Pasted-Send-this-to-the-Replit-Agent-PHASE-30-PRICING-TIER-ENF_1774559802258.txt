@@ -1,0 +1,199 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 30 — PRICING TIER ENFORCEMENT AND FEATURE GATING**
+
+This phase owns the complete subscription tier enforcement architecture. CoAIleague has four pricing tiers — Starter ($199/month, 10 seats), Professional ($749/month, 30 seats), Business ($2,249/month, 75 seats), Enterprise ($6,999/month, 200 seats) — plus a Strategic tier. Every tier boundary must be enforced server-side, not just hidden in the UI. A Starter workspace that can call an Enterprise endpoint by bypassing the UI is a revenue integrity failure. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row. Every row green before Phase 30 closes.
+
+---
+
+**STEP 1 — TIER SYSTEM INVENTORY**
+
+Before touching anything produce a complete inventory of the current tier system:
+- Where tier definitions are stored — what file, what data structure
+- Where tier checks are currently enforced — middleware, route guards, service layer
+- What features are currently gated by tier — produce the complete list
+- What features have no tier gating — flag each as intentional (available to all tiers) or a gap
+- Seat limit enforcement — where it exists today, how it is checked
+- How the workspace's current tier is determined at request time — from session, from DB, from Stripe
+- Any feature that is UI-hidden but not server-blocked — flag as a gap
+- Statewide Protective Services (CoAIleague's first tenant) — confirm permanent Enterprise tier exemption is in place and cannot be accidentally downgraded
+
+Flag every feature that should be tier-gated but currently has no server-side enforcement.
+
+---
+
+**STEP 2 — TIER DEFINITION AND FEATURE REGISTRY**
+
+The tier system must have a single canonical source of truth:
+- Create or verify `server/lib/tiers/tierDefinitions.ts` as the canonical tier configuration file
+- Each tier must define: tier_name, monthly_price, seat_limit, features[] (list of feature keys from featureRegistry.ts), and any tier-specific limits (API rate limits, storage limits, export limits)
+- Tier hierarchy: Starter < Professional < Business < Enterprise < Strategic
+- Features available at a tier are available to all higher tiers — no feature available at Business that is not available at Enterprise
+- `featureRegistry.ts` from Phase 9B maps feature keys to minimum tier requirement — confirm this integration is complete
+- Strategic tier definition: custom pricing, custom seat limit, all features enabled, requires platform staff to configure manually
+- Statewide Protective Services exemption documented in tierDefinitions.ts as a named constant — not a magic string
+
+---
+
+**STEP 3 — SERVER-SIDE TIER ENFORCEMENT MIDDLEWARE**
+
+Every tier-gated request must be blocked server-side:
+- Create or verify `server/middleware/tierEnforcement.ts`
+- Middleware accepts a `minimumTier` parameter: `checkTierAccess('professional')`
+- Middleware reads workspace tier from DB (not from client-supplied header or body)
+- Middleware compares workspace tier against minimum required tier using the tier hierarchy
+- Below minimum tier: returns 403 with `{ error: 'TIER_UPGRADE_REQUIRED', currentTier, requiredTier, upgradeUrl }` — never a generic 403
+- Above or equal minimum tier: passes through to the next handler
+- Strategic and Enterprise tiers pass all tier checks
+- Statewide Protective Services workspace passes all tier checks regardless of stored tier
+- Tier check result cached per request — no duplicate DB queries on the same request
+- Every tier enforcement block logged with: workspace_id, attempted_feature, current_tier, required_tier, timestamp
+
+---
+
+**STEP 4 — SEAT LIMIT ENFORCEMENT**
+
+Seat limits must be enforced at officer activation time:
+- Current active officer count queried at activation time — not cached
+- If activating would exceed the workspace's tier seat limit: return 403 with `{ error: 'SEAT_LIMIT_REACHED', currentCount, seatLimit, upgradeUrl }`
+- Seat limit check also runs on bulk import — cannot bulk import 50 officers into a 10-seat Starter plan
+- Seat limit enforcement cannot be bypassed by any role including org_owner
+- Deactivated officers do not count toward seat limit — only active officers
+- Seat count visible to org_owner in workspace settings — shows current/limit in real time
+- Approaching seat limit (at 80% capacity) triggers a proactive NDS notification to org_owner
+- Enterprise and Strategic tiers enforce their custom seat limits — not unlimited
+
+---
+
+**STEP 5 — FEATURE GATE IMPLEMENTATION**
+
+Every tier-gated feature must be blocked server-side:
+
+Minimum tier requirements to verify and enforce — apply `checkTierAccess` middleware to each:
+
+**Starter tier (all workspaces):**
+- Basic scheduling, clock-in/out, basic incident reporting, basic invoicing, officer management, basic compliance
+
+**Professional tier minimum:**
+- QuickBooks integration — `checkTierAccess('professional')` on all QB sync routes
+- Advanced reporting and analytics
+- Client portal
+- Document signing and vault
+- Inbound email routing (calloffs@, incidents@, docs@, support@)
+- Custom notification templates
+
+**Business tier minimum:**
+- Multi-state compliance
+- SRA regulatory auditor portal access
+- Advanced Trinity AI features (executive planner, multi-step plans)
+- Bulk payroll export (ADP/Gusto)
+- API access for external integrations
+- Outbound webhooks (Phase 50)
+
+**Enterprise tier minimum:**
+- Unlimited custom posts
+- Dedicated support SLA
+- Custom compliance rules
+- Advanced analytics and BI dashboard (Phase 34)
+- White-label options (future)
+- Priority Trinity AI processing
+
+Apply `checkTierAccess` middleware to every route that serves these features. Confirm no Enterprise feature is accessible from a Starter workspace by direct API call.
+
+---
+
+**STEP 6 — UI TIER GATE INTEGRATION**
+
+The UI must reflect tier access correctly:
+- Features not available at the current tier shown as locked in the UI — not hidden, but visibly locked with an upgrade prompt
+- Locked feature shows: feature name, minimum tier required, current tier, upgrade button linking to billing page
+- Attempting to use a locked feature from the UI shows the upgrade prompt — not a generic error
+- Navigation items for locked features visible but marked with a lock icon — user knows the feature exists
+- Upgrade prompt links to correct pricing page with the correct tier highlighted
+- Tier information displayed in workspace settings — current tier, seat usage, renewal date, upgrade options
+- Downgrade behavior: if workspace downgrades and currently uses features above the new tier — grace period defined and communicated, features locked after grace period
+
+---
+
+**STEP 7 — TIER UPGRADE AND DOWNGRADE HANDLING**
+
+Tier transitions must be seamless and correctly enforced:
+- Upgrade: tier change takes effect immediately — features unlocked without server restart
+- Upgrade: seat limit increases immediately — officers can be activated without waiting
+- Downgrade: grace period of 30 days before feature lock — org_owner notified at downgrade, at 7 days remaining, and at lock date
+- Downgrade: if seat count exceeds new tier limit at grace period end — org_owner must deactivate officers manually or upgrade again, platform does not auto-deactivate
+- Tier change audit record written: workspace_id, from_tier, to_tier, changed_by, timestamp, reason
+- Trinity notified of tier change — workspace context updated immediately
+- Feature registry cache invalidated on tier change — no stale tier checks after upgrade
+
+---
+
+**STEP 8 — STATEWIDE PROTECTIVE SERVICES EXEMPTION VERIFICATION**
+
+This is the founder workspace and must never be accidentally restricted:
+- Statewide Protective Services workspace_id confirmed stored as a named constant — not a hardcoded magic string scattered across files
+- Exemption check confirmed in tier enforcement middleware — this workspace always passes tier checks
+- Exemption confirmed not overridable by any role including platform staff
+- Exemption audit: any attempt to change Statewide Protective Services tier logs a warning — cannot be accidentally downgraded
+- Exemption documented in replit.md as a permanent architecture truth
+
+---
+
+**STEP 9 — TRINITY TIER AWARENESS**
+
+Trinity must respect tier boundaries:
+- Trinity conscience confirmed checking tier access before executing tier-gated actions
+- Trinity cannot execute a Business-tier feature on behalf of a Starter workspace — even if the requesting user asks explicitly
+- Trinity tier check uses the same `tierDefinitions.ts` source of truth — not a separate implementation
+- Trinity can inform users what tier is required for a feature they are asking about
+- Trinity action `workspace.tier.status` registered — returns current tier, seat usage, available features, and upgrade options
+
+---
+
+**STEP 10 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. Statewide Protective Services exemption confirmed in its own dedicated row
+6. All rows green before summary written
+
+---
+
+**STEP 11 — VERIFICATION**
+
+Run all checks before Phase 30 is marked complete:
+- Check 1: tierDefinitions.ts exists as canonical tier configuration — all 5 tiers defined with features and limits
+- Check 2: featureRegistry.ts integration confirmed — feature keys map to minimum tier requirements
+- Check 3: tierEnforcement middleware exists — reads tier from DB, returns structured 403 on violation
+- Check 4: Tier enforcement block logged with full context on every violation
+- Check 5: Seat limit enforced at officer activation — returns structured 403 at limit
+- Check 6: Bulk import seat limit check confirmed
+- Check 7: Seat count approaching 80% triggers proactive NDS notification to org_owner
+- Check 8: QuickBooks routes gated at Professional minimum — direct API call from Starter returns 403
+- Check 9: SRA regulatory portal gated at Business minimum — direct API call from Starter returns 403
+- Check 10: All Enterprise features return 403 for Starter workspace direct API calls
+- Check 11: UI shows locked features with upgrade prompt — not hidden, not generic error
+- Check 12: Tier upgrade takes effect immediately — features unlocked without restart
+- Check 13: Downgrade grace period defined and communicated — 30 days confirmed
+- Check 14: Tier change writes audit record with full context
+- Check 15: Statewide Protective Services exemption confirmed — passes all tier checks regardless of stored tier
+- Check 16: Statewide Protective Services tier cannot be accidentally downgraded — warning logged on any attempt
+- Check 17: Trinity tier check uses tierDefinitions.ts — not a separate implementation
+- Check 18: workspace.tier.status Trinity action registered and callable
+- Check 19: Feature registry cache invalidated on tier change — no stale checks after upgrade
+- Check 20: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 21: Server starts clean with zero TypeScript errors across all tier enforcement files
+
+Do not mark Phase 30 complete until all 21 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence. Findings first. Full picture assembled. Then fixes. Every gap fixed. Every PARTIAL fully resolved. Nothing left behind.
+
+---
+
+Paste that. Revenue integrity depends on this phase being airtight — a platform where tier gates only exist in the UI is a platform that cannot be trusted to enforce its own pricing.

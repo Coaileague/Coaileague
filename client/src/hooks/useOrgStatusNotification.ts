@@ -11,6 +11,7 @@
  * - Account restrictions
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useEffect, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +53,7 @@ export function useOrgStatusNotification(workspaceId?: string) {
     queryFn: async () => {
       if (!workspaceId) return null;
       try {
-        const response = await fetch(ORG_STATUS_API.getOrgStatus, {
+        const response = await secureFetch(ORG_STATUS_API.getOrgStatus, {
           credentials: "include",
         });
         if (!response.ok) {
@@ -76,7 +77,7 @@ export function useOrgStatusNotification(workspaceId?: string) {
     queryFn: async () => {
       if (!workspaceId) return null;
       try {
-        const response = await fetch(ORG_STATUS_API.getCustomMessages, {
+        const response = await secureFetch(ORG_STATUS_API.getCustomMessages, {
           credentials: "include",
         });
         if (!response.ok) return null;
@@ -116,13 +117,17 @@ export function useOrgStatusNotification(workspaceId?: string) {
     });
 
     // Navigate if action specified
+    let timeoutId: NodeJS.Timeout | null = null;
     if (message.actionUrl) {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         setLocation(message.actionUrl || "/");
       }, 500);
     }
 
     setShown(true);
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [status, shown, statusLoading, customization, toast, setLocation]);
 
   // Reset shown flag when workspace changes

@@ -5,8 +5,12 @@
  * for support and root admin roles to act upon.
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { sql } from 'drizzle-orm';
+import { typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('platformHealthMonitor');
 
 export interface HealthCheckResult {
   service: string;
@@ -51,10 +55,12 @@ export interface HotfixSuggestion {
   status: 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
 }
 
-// In-memory storage for issues and hotfixes (would be database-backed in production)
+// In-memory storage for issues and hotfixes — intentionally ephemeral (health snapshots are regenerated on next check)
 const activeIssues: Map<string, PlatformIssue> = new Map();
 const hotfixQueue: Map<string, HotfixSuggestion> = new Map();
 let lastHealthCheck: PlatformHealthSummary | null = null;
+
+log.info('[PlatformHealthMonitor] activeIssues and hotfixQueue are in-memory only — state is reset on server restart. Issues will be re-detected on the next health check cycle.');
 
 /**
  * Check database connectivity and performance
@@ -62,6 +68,7 @@ let lastHealthCheck: PlatformHealthSummary | null = null;
 async function checkDatabase(): Promise<HealthCheckResult> {
   const start = Date.now();
   try {
+    // Converted to Drizzle ORM: health check ping
     await db.execute(sql`SELECT 1`);
     const latency = Date.now() - start;
     return {
@@ -75,7 +82,7 @@ async function checkDatabase(): Promise<HealthCheckResult> {
     return {
       service: 'database',
       status: 'unhealthy',
-      message: error.message || 'Connection failed',
+      message: (error instanceof Error ? error.message : String(error)) || 'Connection failed',
       lastChecked: new Date(),
     };
   }
@@ -97,7 +104,7 @@ async function checkAIBrain(): Promise<HealthCheckResult> {
     return {
       service: 'ai_brain',
       status: 'unhealthy',
-      message: error.message,
+      message: (error instanceof Error ? error.message : String(error)),
       lastChecked: new Date(),
     };
   }
@@ -119,7 +126,7 @@ async function checkStripeIntegration(): Promise<HealthCheckResult> {
     return {
       service: 'stripe',
       status: 'unknown',
-      message: error.message,
+      message: (error instanceof Error ? error.message : String(error)),
       lastChecked: new Date(),
     };
   }
@@ -141,7 +148,7 @@ async function checkEmailService(): Promise<HealthCheckResult> {
     return {
       service: 'email',
       status: 'unknown',
-      message: error.message,
+      message: (error instanceof Error ? error.message : String(error)),
       lastChecked: new Date(),
     };
   }
@@ -182,7 +189,7 @@ async function checkNotificationSystem(): Promise<HealthCheckResult> {
     return {
       service: 'notifications',
       status: 'unknown',
-      message: error.message || 'Failed to check notification system',
+      message: (error instanceof Error ? error.message : String(error)) || 'Failed to check notification system',
       lastChecked: new Date(),
     };
   }
@@ -253,7 +260,7 @@ export async function getHealthStatus(forceRefresh = false): Promise<PlatformHea
 export function reportIssue(issue: Omit<PlatformIssue, 'id' | 'detectedAt' | 'status'>): PlatformIssue {
   const fullIssue: PlatformIssue = {
     ...issue,
-    id: `issue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `issue-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
     detectedAt: new Date(),
     status: 'detected',
   };
@@ -267,7 +274,7 @@ export function reportIssue(issue: Omit<PlatformIssue, 'id' | 'detectedAt' | 'st
 export function suggestHotfix(suggestion: Omit<HotfixSuggestion, 'id' | 'createdAt' | 'status'>): HotfixSuggestion {
   const hotfix: HotfixSuggestion = {
     ...suggestion,
-    id: `hotfix-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `hotfix-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
     createdAt: new Date(),
     status: 'pending',
   };

@@ -16,7 +16,7 @@ export type OverlayStatus = "loading" | "success" | "error" | "info";
 export type OverlayPriority = "critical" | "high" | "normal";
 
 // Public routes that should never show loading overlays
-const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/pricing', '/contact', '/support', '/terms', '/privacy', '/chat']);
+const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/pricing', '/contact', '/support', '/terms', '/privacy', '/chat', '/chatrooms']);
 
 interface OverlayRequest {
   id: string;

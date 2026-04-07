@@ -1,0 +1,300 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 36 — DATA EXPORT, PORTABILITY, AND PRIVACY COMPLIANCE**
+
+This phase owns every aspect of data export, user rights, and privacy compliance. Officers have the right to access their personal data. Workspaces that leave CoAIleague need their complete data before account closure. Data must be retained for legally required periods and properly anonymized after retention expires. GDPR, CCPA, and Texas data privacy law all have specific requirements that must be met. A platform handling payroll records, compliance history, and legal documents for regulated security companies must handle data privacy correctly. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check. Specific evidence per row. Every row green before Phase 36 closes.
+
+**7-STEP FRAMEWORK — every feature built:**
+1. Trigger — export request fires correctly
+2. Payload — correct data assembled and scoped
+3. API — correct endpoint, correct auth, correct scope
+4. Processing — server generates export correctly
+5. Persistence — export request logged with audit record
+6. Confirmation — user receives export or download link
+7. Sync — status updates in real time where applicable
+
+**5 MANDATORY QUALITY CHECKS:**
+1. TypeScript: `npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS" | head -30` — zero errors
+2. Import completeness — all hooks and utilities imported
+3. State variable declarations — no undeclared variables
+4. Schema alignment — client expects exactly what server returns
+5. Server startup — ArchLinter passed, zero runtime errors
+
+**ZERO REGRESSION RULE:**
+Data export must never modify source data. All export operations are read-only. Export files must be delivered securely — time-bounded download links, not permanent public URLs. No existing routes or components may be broken.
+
+---
+
+**STEP 1 — CURRENT EXPORT INVENTORY**
+
+Before touching anything inventory what currently exists:
+- Any existing data export endpoints across all phases
+- Phase 21 DPS compliance export — regression check required
+- Phase 14 invoice CSV export
+- Phase 15 payroll CSV export
+- Phase 17 license dashboard CSV export
+- Phase 25 data integrity export work
+- Phase 34 analytics CSV export
+- Any existing GDPR or CCPA implementation
+- Any existing data deletion or anonymization procedures
+- Current data retention policy documented in replit.md from Phase 31
+
+Flag any personal data that has no export mechanism.
+
+---
+
+**STEP 2 — OFFICER PERSONAL DATA EXPORT (Right to Access)**
+
+Every officer has the right to request all personal data the platform holds:
+
+**Data included in officer export:**
+- Personal information: name, email, phone, address, date of birth, emergency contacts
+- Employment record: hire date, position, wage history, employment status history
+- Schedule history: all shifts assigned, clock-in/out records with GPS coordinates
+- Pay history: all pay stubs, payroll entries, deduction records, garnishment records
+- License and certification records: all licenses, expiry dates, renewal history
+- Training records: all completed training, TCOLE hours accumulated
+- Incident involvement: all incident reports where officer was involved
+- Compliance history: all violations, resolutions, commendations
+- Document history: all documents signed or received
+- Disciplinary records: all warnings, commendations, performance reviews
+
+**Export format:**
+- Structured JSON with clear field labels — machine-readable
+- Human-readable PDF summary — officer can understand their own data
+- All documents (pay stubs, signed agreements) included as a ZIP package with a manifest
+- Export delivered via secure download link — 48-hour expiry
+- Export request logged: officer_id, requested_by, requested_at, data_types_included, delivered_at
+
+**Request flow:**
+- Officer submits request from their profile page or via HelpAI
+- Request creates a record in `data_subject_requests` table
+- Platform staff or org_owner notified of the request
+- Export generated within 30 days per GDPR requirement (target: 72 hours)
+- Officer notified via NDS when export is ready with download link
+- Request fulfilled status tracked — SLA monitored
+
+---
+
+**STEP 3 — WORKSPACE DATA PORTABILITY EXPORT**
+
+When a workspace leaves CoAIleague they must receive all their data:
+
+**Complete workspace export includes:**
+- All officer records and employment history
+- All client records and contact information
+- All shift and scheduling history
+- All payroll records and pay stubs
+- All invoice records and payment history
+- All compliance records and violation history
+- All documents in the vault
+- All incident reports
+- All audit log entries for the workspace
+- All gate duty logs and access control records
+- All support tickets
+
+**Export format:**
+- Structured JSON per entity type — importable into other systems
+- CSV exports per entity type — human-readable
+- PDF package for legal and compliance records
+- All documents exported as original files in a organized folder structure
+- Single ZIP archive with a manifest file listing every included file
+- SHA-256 hash of the complete archive — integrity verification
+
+**Request flow:**
+- Only org_owner can request workspace export
+- Request requires explicit confirmation: "I understand this will export all workspace data"
+- Export generated asynchronously — large workspaces may take minutes
+- org_owner notified via NDS when export is ready
+- Secure download link — 7-day expiry (longer than officer export due to volume)
+- Export request logged as an audit record
+- After export confirmed downloaded — workspace closure process can proceed
+
+---
+
+**STEP 4 — DATA DELETION AND ANONYMIZATION (Right to Erasure)**
+
+Users can request deletion of their personal data — with legally required exceptions:
+
+**What can be deleted:**
+- Personal contact information (email, phone, address) — replaced with anonymized placeholders
+- Profile photo
+- Non-essential profile fields
+
+**What must be retained regardless of deletion request:**
+- Payroll records — minimum 7 years per Texas employment law (documented Phase 31)
+- Tax-related records — minimum 7 years per IRS requirements
+- I-9 employment eligibility records — minimum 3 years or 1 year after termination
+- Incident reports — minimum 3 years
+- Compliance and audit records — minimum 7 years
+- Legal documents (signed contracts, agreements) — minimum 7 years
+- Gate duty and access control logs — minimum 3 years
+
+**Anonymization procedure:**
+- When deletion is approved: PII fields replaced with `[ANONYMIZED-{id}]` placeholder
+- Audit records retain event type and timestamp but actor name replaced with anonymized ID
+- Payroll records retain amounts and periods but officer name replaced with anonymized ID
+- All replacements logged in `data_subject_requests` table with before/after field list
+- Anonymization irreversible — cannot be undone
+
+**Request flow:**
+- Officer or user submits deletion request from profile settings or via HelpAI
+- Request logged in `data_subject_requests` with type: erasure
+- Platform staff reviews — confirms which data can be deleted vs must be retained
+- Platform staff approves with documented reason for each retained category
+- Anonymization applied to approved fields
+- Officer notified of outcome: what was deleted, what was retained and why
+- SLA: 30 days per GDPR requirement
+
+---
+
+**STEP 5 — DATA RETENTION ENFORCEMENT**
+
+Retention policies must be enforced by code — not just documented:
+
+**Retention periods by data type:**
+- Payroll and tax records: 7 years from creation
+- Employment records: 7 years from termination
+- Incident reports: 3 years from closure
+- Compliance violation records: 7 years from closure
+- Audit log entries: 7 years from creation
+- Gate duty logs: 3 years from date
+- Support tickets: 2 years from closure
+- Search query logs: 90 days
+- Session logs: 30 days
+- Notification delivery records: 1 year
+
+**Automated retention enforcement:**
+- Daily cron job scans for records past their retention period
+- Records past retention: if they contain PII they are anonymized, if they are non-PII operational logs they are deleted
+- Retention sweep results logged: records reviewed, records anonymized, records deleted, errors
+- Platform staff notified of any retention sweep errors
+- Retention configuration stored in `retention_policies` table — configurable per data type
+- Workspace-specific overrides: client contracts may require longer retention — configurable per workspace
+
+---
+
+**STEP 6 — COOKIE CONSENT AND TERMS ACCEPTANCE**
+
+Legal compliance for web users:
+
+**Cookie consent:**
+- Cookie consent banner on first visit — GDPR and CCPA compliant
+- Three categories: essential (always on), functional (preference-based), analytics (optional)
+- User can accept all, reject non-essential, or configure per category
+- Consent stored per user with timestamp and IP address
+- Consent preferences respected immediately — no non-essential cookies before consent
+- Consent withdrawal: user can change preferences at any time from account settings
+- Consent log retained for 3 years for compliance audit
+
+**Terms of service and privacy policy:**
+- Every user must accept current terms before accessing platform
+- Acceptance recorded: user_id, terms_version, privacy_policy_version, accepted_at, ip_address
+- Version history maintained — previous versions accessible
+- When terms updated: existing users prompted to re-accept on next login
+- Cannot bypass terms acceptance — platform inaccessible until accepted
+- Officers in California covered by CCPA provisions
+- Privacy policy available in both English and Spanish (Phase 32 integration)
+
+---
+
+**STEP 7 — DATA SUBJECT REQUESTS MANAGEMENT**
+
+All data rights requests must be tracked and managed:
+
+**`data_subject_requests` table:**
+- `id`, `workspace_id`, `requestor_id`, `requestor_type` (officer, client, platform_user)
+- `request_type` — enum: access, portability, erasure, restriction, correction, objection
+- `status` — enum: received, under_review, approved, in_progress, completed, denied, partially_fulfilled
+- `data_types_requested` — array of data categories
+- `data_types_retained` — array with retention reasons for data not deleted
+- `requested_at`, `acknowledged_at`, `completed_at`, `sla_deadline`
+- `handled_by` — platform staff user_id
+- `response_notes` — explanation to the requestor
+- `export_url` — secure download link if applicable
+- `export_expires_at` — download link expiry
+
+**Request management UI:**
+- Platform staff dashboard for all pending data subject requests
+- SLA countdown visible — days remaining before GDPR 30-day deadline
+- Filter by request type, status, workspace, days remaining
+- One-click to generate export or approve anonymization
+- Request history per requestor
+- Overdue requests flagged prominently
+
+---
+
+**STEP 8 — PRIVACY POLICY AND LEGAL PAGES**
+
+Legal pages must exist and be accessible:
+
+- Privacy policy page: comprehensive, covers all data collected, how it is used, retention periods, user rights, contact information for privacy requests
+- Terms of service page: complete terms covering all platform functionality
+- Cookie policy page: what cookies are set, why, and how to manage them
+- Data processing agreement (DPA): for B2B clients who need a DPA under GDPR
+- All legal pages available in English and Spanish
+- All legal pages versioned — URL includes version number
+- Effective date clearly displayed on all legal pages
+- Contact information for data protection officer or privacy contact clearly listed
+
+---
+
+**STEP 9 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with specific evidence
+3. Every GAP fixed with file and line reference
+4. Every PARTIAL fully resolved
+5. All 5 mandatory quality checks with command output
+6. 7-step framework verified for every feature built
+7. Zero regression confirmed
+8. All rows green before summary written
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 36 is marked complete:
+- Check 1: Export inventory complete — all existing export mechanisms documented
+- Check 2: `data_subject_requests` table created with all required fields
+- Check 3: Officer personal data export generates complete JSON and PDF — all 10 data categories included
+- Check 4: Export delivered via secure time-bounded link — 48-hour expiry confirmed
+- Check 5: Export request logged as audit record
+- Check 6: SLA tracking confirmed — 30-day GDPR deadline monitored
+- Check 7: Workspace portability export generates complete ZIP with manifest
+- Check 8: Workspace export SHA-256 hash generated — integrity verifiable
+- Check 9: Workspace export requires org_owner confirmation before generating
+- Check 10: Data deletion request flow complete — PII anonymized, retained data explained
+- Check 11: Anonymization irreversible — confirmed no undo path in any code
+- Check 12: All 10 retention periods configured in `retention_policies` table
+- Check 13: Daily retention sweep cron registered and running
+- Check 14: Retention sweep results logged — errors alert platform staff
+- Check 15: Cookie consent banner confirmed — three categories, consent stored with timestamp
+- Check 16: Cookie consent withdrawal supported — preferences changeable from settings
+- Check 17: Terms acceptance recorded — user_id, version, timestamp, IP address
+- Check 18: Terms re-acceptance prompt fires when terms version changes
+- Check 19: Privacy policy and terms available in English and Spanish
+- Check 20: Data subject request management UI — SLA countdown visible, overdue flagged
+- Check 21: Privacy policy page exists with all required sections
+- Check 22: Terms of service page exists and is versioned
+- Check 23: DPS compliance export regression check — Phase 21 export still working
+- Check 24: Invoice and payroll CSV export regression check — Phases 14 and 15 still working
+- Check 25: Zero regression — no existing routes or components broken
+- Check 26: TypeScript targeted check — zero errors in all Phase 36 files
+- Check 27: Import completeness — all hooks and utilities imported
+- Check 28: State variable declarations — no undeclared variables
+- Check 29: Schema alignment — client expects exactly what server returns
+- Check 30: Server startup clean — ArchLinter passed, zero runtime errors
+- Check 31: Nothing Left Behind reconciliation table — one row per check, all green
+
+Do not mark Phase 36 complete until all 31 checks pass. Privacy compliance is a legal requirement — not a feature request. Findings first. Full picture assembled. Then fixes. Every gap fixed. Nothing left behind.
+
+---
+
+Paste that. Data privacy done correctly protects officers, protects clients, and protects CoAIleague from regulatory exposure.

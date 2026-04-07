@@ -1,0 +1,86 @@
+This is the "Genesis" directive. I’ve taken your original block and hardened it into a Battle-Ready Production Protocol. I've injected missing critical paths like Geo-fencing for Officers, Token/Cost Control for Trinity, Security Hardening (OWASP), and Infrastructure Resilience.
+This is no longer just a checklist; it is an Ironclad Deployment Manifest.
+🚀 COAILEAGUE PRODUCTION READINESS DIRECTIVE: THE GENESIS EVENT
+MISSION OBJECTIVE: Execute a zero-friction, "Day Zero" go-live for the first paying tenant. You are the sole architect of this transition. You do not wait for consensus. You scan, rectify, and certify. By the end of this weekend, a tenant must be able to sign up, pay, and run a 24/7 security operation with zero human intervention from us.
+🛡️ ARCHITECTURAL CONSTRAINTS (THE "HOLY GRAIL")
+ * NDS Supremacy: NDS is the only authorized egress for notifications. Direct SMTP/API calls to mail providers are prohibited.
+ * Tenant Isolation: workspace_id is a hard-coded requirement in every database query. No global scans.
+ * The Trinity Triad: Gemini (Primary) → OpenAI (Fallback) → Claude (Validation). Never execute a mutation without Triad consensus or local validation.
+ * Financial Immutability: Financial records (Ledgers, Paid Invoices, Payroll) are APPEND-ONLY. No UPDATE or DELETE permissions for the application user.
+ * Zero-Trust Trinity: Trinity operates via API only. Any attempt to access /etc, /root, or project source files triggers an immediate process kill.
+LAYER 1 — THE ONBOARDING CRUCIBLE
+ * Trial Logic: Verify /trial form creates workspace with tier: 'trial', trial_expires_at: now + 14 days, and a stripe_customer_id.
+ * Identity: Org Owner account must have MFA-ready flags and be pinned to the workspace.
+ * Email Provisioning: Confirm emailProvisioningService delivers 6 dedicated addresses (Staffing, Call-Offs, Incidents, Support, Billing, Trinity-System).
+ * Canvas Setup: Folders must be initialized with default retention policies.
+ * Event Bus: workspace.created must trigger the "Welcome" sequence via NDS (From: trinity@coaileague.com).
+ * Security Sweep: Verify signup rate-limiting (max 3 attempts per IP/hr) to prevent bot-spamming.
+LAYER 2 — REVENUE & BILLING FIDELITY
+ * Stripe Integrity: Verify subscription.created webhook updates featureRegistry gates in real-time (< 500ms latency).
+ * Idempotency: Webhook handlers must use event_id tracking. Duplicate webhooks must return 200 OK without re-processing.
+ * Seat Tracking: Weekly job must audit users.count vs. tier.max_seats. Overage invoices must be generated in DRAFT.
+ * AI Credit Guard: Monitor Trinity token usage. If workspace.ai_credits < 10%, NDS fires a "Low Credits" alert. At 0%, Trinity moves to "Degraded Mode" (Standard actions only, no "Brain" tasks).
+ * Grace Period: Failed payments trigger a 3-day "Soft-Lock" (Read-only) before a "Hard-Lock" (Service Suspension).
+LAYER 3 — OFFICER COMPLIANCE & FIELD OPS
+ * License Watchdog: Every officer record requires a license_number and expiry_date. Trinity must block assignment if expiry_date < shift_start_date.
+ * Geo-Fencing Verification: Shift "Start" events must include GPS coordinates. If distance to client_site > 200m, flag "Out-of-Bounds" in the scheduling_audit_log.
+ * Document Vault: Verify Professional tier tenants can upload/sign contracts via the vault with deleted_at soft-delete only.
+LAYER 4 — THE TRINITY ORCHESTRATION LOOP
+ * The "Call-Off" Drill: Simulate an email to calloffs@{slug}.
+   * Trinity classifies as CALL_OFF.
+   * Finds shift for the sender.
+   * Marks shift OPEN.
+   * Triggers coverage_engine to find the nearest qualified, non-conflicting officer.
+ * Voice-to-Action: Trinity Voice must verify the caller’s phone_number against the officer or client database before providing shift info.
+ * WebSocket Sync: Schedule changes must broadcast via workspace-room only. Cross-tenant leakage is a "Kill-Switch" failure.
+LAYER 5 — FINANCIAL LEDGER & PAYROLL
+ * Invoice Precision: Line items must pull directly from COMPLETED shifts. Any MANUAL adjustment must be flagged in the audit trail.
+ * The 2.9% + $0.25 Logic: Ensure platform fees are calculated and subtracted from disbursable_funds during client payment.
+ * Payroll Guardrails: period_closed state must lock all associated shift records. No "back-dating" hours after approval.
+ * ACH Safety: Plaid bank verification is mandatory. Unverified accounts = PAYMENT_HELD status.
+LAYER 6 — TRINITY BRAIN & ACTION REGISTRY
+ * Malformed Guard: Reject any action registration lacking an input_schema.
+ * Atomic Mutations: Database writes must use transactions. If Notify fails, the Mutate should not roll back, but the error must be logged to the Action_Failure_Queue.
+ * Token Cost Control: Trinity must refuse to process attachments > 10MB to prevent token blowouts.
+ * Classification Accuracy: Test 100 subject lines. Classification of billing, staffing, incident, and urgent must be > 98% accurate.
+LAYER 7 — RESILIENCE & ERROR RECOVERY
+ * Empty Catch Sweep: Replace all catch(e){} with StandardLogger.error().
+ * Circuit Breakers: If Resend or Stripe returns 5xx, queue the job for exponential backoff (1m, 5m, 15m, 1hr).
+ * The Dead-Letter Queue (DLQ): Every async worker must have a DLQ. Any item in DLQ for > 4 hours triggers a high-priority NDS alert to support@coaileague.com.
+ * API Standards: All errors must return a Request-ID for log correlation.
+LAYER 8 — SECURITY & DATA INTEGRITY
+ * SQLi/XSS Guard: Verify all inputs are sanitized via the Validation_Middleware.
+ * Cross-Tenant Leak Test: Query workspace_B data using a workspace_A JWT. The API must return 404/403.
+ * Audit Append-Only: Ensure the audit_logs table permissions are INSERT only for the app-level user.
+ * Token Rotation: JWTs must expire in 1 hour; Refresh tokens in 7 days.
+LAYER 9 — TIER GATING & STORAGE
+ * Gate Verification: Starter cannot access ACH, Trinity Voice, or Analytics. Gate must be enforced at service_layer (the "Brain"), not just the UI.
+ * Storage Quotas: Implement the storage_usage table. At 95% capacity, uploadFile() returns 507 Insufficient Storage.
+🏁 FINAL END-TO-END BATTLE SIMULATION (ACME SECURITY)
+Complete these 20 steps. Any failure = NOT GO.
+ * SIGNUP: Create ACME Security workspace via /trial.
+ * PROVISION: Confirm 6 emails created + Canvas folders ready.
+ * ONBOARD: Complete wizard → Subscribe to Professional ($999).
+ * FEATURE CHECK: Verify QB Sync & Trinity Voice are now unlocked.
+ * OFFICER: Create Officer "John Doe" → Add License expiring in 45 days.
+ * CLIENT: Create Client "San Antonio Hub" → Add Site → Upload Contract.
+ * INBOUND: Send email to staffing@acme... → Verify Lead creation.
+ * SHIFT: Trinity creates shift for Hub → Assign John Doe.
+ * CONFLICT: Attempt to assign John Doe to a second overlapping shift → Must Block.
+ * PUBLISH: Publish schedule → Confirm NDS sent to John.
+ * CALL-OFF: Send "I can't make it" email from John’s email → Verify shift goes OPEN.
+ * COVERAGE: Trinity finds alternate → Reassigns → Notifies Manager.
+ * COMPLETION: Mark shifts as COMPLETED.
+ * INVOICE: Generate DRAFT invoice → Approve → Verify Payment Link.
+ * PAYMENT: Simulate Client Payment → Verify PAID status + Platform Fee record.
+ * PAYROLL: Close Payroll Period → Confirm John Doe's ACH is QUEUED.
+ * STORAGE: Upload 10MB file → Verify storage_usage table updates.
+ * GATING: Attempt to access "White Labeling" (Enterprise) → Must 403.
+ * LEAK TEST: Attempt to view ACME data from Statewide workspace → Must 404.
+ * TRINITY FAILOVER: Simulate Gemini timeout → Confirm OpenAI handles the request.
+📅 FINAL REPORT REQUIREMENTS
+ * Total Layer Issues: [List counts]
+ * Critical Fixes: [List any security/financial fixes]
+ * [BRYAN ACTION REQUIRED]: (Secrets, DNS, Bank Keys)
+ * Production Verdict: GO or NOT GO.
+EXECUTE NOW. Zero phases. Zero batching. Fix until finished.

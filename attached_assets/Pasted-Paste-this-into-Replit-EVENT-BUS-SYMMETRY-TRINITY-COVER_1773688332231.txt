@@ -1,0 +1,176 @@
+Paste this into Replit:
+
+---
+
+**EVENT BUS SYMMETRY & TRINITY COVERAGE FIX — READ BEFORE TOUCH | NO NEW FEATURES**
+
+Three root problems. Fix in exact order.
+
+---
+
+**ROOT FIX 1 — CRITICAL EMIT→PUBLISH CONVERSIONS**
+
+These specific `.emit()` calls carry operational data that Trinity needs but never receives because `.emit()` bypasses the full pipeline. Convert each one to `.publish()` with proper workspaceId and payload.
+
+Search the codebase for each of these event names and convert every `.emit()` to `platformEventBus.publish()`:
+
+```
+trinity_labor_law_flag     → { type: 'trinity_labor_law_flag', workspaceId, employeeId, violation }
+trinity_action_blocked     → { type: 'trinity_action_blocked', workspaceId, actionId, reason }
+agent_escalation           → { type: 'agent_escalation', workspaceId, agentId, escalationReason, severity }
+approval_granted           → { type: 'approval_granted', workspaceId, entityType, entityId, approvedBy }
+contract.executed          → { type: 'contract_executed', workspaceId, contractId, clientId }
+circuit_breaker_opened     → { type: 'circuit_breaker_opened', workspaceId, domain, failureCount }
+sla_breach                 → { type: 'sla_breach', workspaceId, clientId, shiftId, breachType }
+document.bridged           → { type: 'document_bridged', workspaceId, documentId, destination }
+```
+
+For each conversion:
+- Find the file and line where the `.emit()` call exists
+- Replace with `platformEventBus.publish()` using the schema above
+- Confirm `workspaceId` is in scope at the call site — if not, trace it from the parent function and thread it through
+- Show before/after for each file changed
+
+---
+
+**ROOT FIX 2 — TRINITY PROACTIVE SCANNER COVERAGE**
+
+The proactive scanner only handles 7 event types. Add handlers for every critical event now being published. In `trinityEventSubscriptions.ts` add subscribers for:
+
+```typescript
+// SLA breach — immediate escalation
+platformEventBus.subscribe('sla_breach', async (event) => {
+  // notify client manager + org owner
+  // create incident record
+  // flag shift for review
+})
+
+// Agent escalation — route to human supervisor
+platformEventBus.subscribe('agent_escalation', async (event) => {
+  // notify supervisor immediately
+  // log to audit trail
+  // pause agent's autonomous actions
+})
+
+// Circuit breaker opened — infrastructure alert
+platformEventBus.subscribe('circuit_breaker_opened', async (event) => {
+  // notify platform admin
+  // log domain and failure count
+  // surface in Trinity COO brief
+})
+
+// Labor law flag — compliance alert
+platformEventBus.subscribe('trinity_labor_law_flag', async (event) => {
+  // notify org owner and manager
+  // create compliance record
+  // flag affected employee
+})
+
+// Trinity action blocked — surface to org owner
+platformEventBus.subscribe('trinity_action_blocked', async (event) => {
+  // create in-app notification explaining what was blocked and why
+  // log to audit trail with actionId and reason
+})
+
+// Contract executed — trigger billing setup
+platformEventBus.subscribe('contract_executed', async (event) => {
+  // initialize client billing profile if not exists
+  // notify org owner
+  // schedule first invoice run
+})
+
+// Document bridged — confirmation notification
+platformEventBus.subscribe('document_bridged', async (event) => {
+  // notify relevant parties
+  // update document status
+})
+
+// Approval granted — trigger downstream workflow
+platformEventBus.subscribe('approval_granted', async (event) => {
+  // route to appropriate downstream action based on entityType
+  // payroll approval → trigger disbursement check
+  // invoice approval → trigger send flow
+  // shift approval → confirm assignment
+})
+```
+
+Each subscriber must:
+- Be workspace-scoped — use `event.workspaceId` for all DB queries and notifications
+- Be non-blocking — wrap in try/catch, log errors, never throw
+- Write to `audit_logs` with the event type and payload
+- Send an in-app notification to the appropriate role (org owner, manager, supervisor) based on severity
+
+---
+
+**ROOT FIX 3 — EMAIL DELIVERY STATUS TRACKING**
+
+The `email.get_status` action returns `'unknown'` because it never queries Resend's API.
+
+First read the `email.get_status` handler in the action registry and the Resend service file.
+
+Then implement real status tracking:
+
+Add an `email_deliveries` table if it does not exist:
+```sql
+CREATE TABLE IF NOT EXISTS email_deliveries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id varchar NOT NULL,
+  message_id varchar UNIQUE NOT NULL,
+  recipient_email varchar NOT NULL,
+  subject varchar,
+  status varchar DEFAULT 'sent',
+  opened_at timestamptz,
+  clicked_at timestamptz,
+  bounced_at timestamptz,
+  delivered_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+)
+```
+
+In `resendWebhooks.ts` — update the bounce/complaint/delivery handlers to write status updates to this table by `message_id`.
+
+When `sendEmail()` is called — store the returned Resend `messageId` in `email_deliveries` with status `sent` and `workspaceId`.
+
+Update `email.get_status` action handler to query `email_deliveries` by `messageId` and return the actual tracked status instead of `'unknown'`.
+
+---
+
+**ROOT FIX 4 — 377 PUBLISH vs 77 SUBSCRIBE GAP**
+
+300 published events have no subscriber. Most are acceptable — telemetry, analytics, low-priority signals. But find and fix the ones that matter.
+
+Run this analysis:
+1. Get all unique event type strings passed to `platformEventBus.publish()`
+2. Get all unique event type strings passed to `platformEventBus.subscribe()`
+3. Find every type in the publish list that is NOT in the subscribe list
+4. For each unsubscribed published event — classify it:
+   - **CRITICAL** — involves money, compliance, security, or workforce safety → add subscriber
+   - **HIGH** — involves org owner decisions or Trinity autonomy → add subscriber  
+   - **LOW** — telemetry, analytics, cache invalidation → document with comment, no subscriber needed
+
+For every CRITICAL and HIGH unsubscribed event — add a subscriber in `trinityEventSubscriptions.ts` that at minimum:
+- Logs to `audit_logs`
+- Sends an in-app notification to the appropriate role
+- Publishes a Trinity awareness signal if the event affects autonomous decision-making
+
+Report the full classified list — what was CRITICAL/HIGH that needed a subscriber, what was LOW that was intentionally left unsubscribed.
+
+---
+
+**COMPLETION CRITERIA**
+
+1. TypeScript compile — zero errors
+2. Server restart — clean start, 29/29 services
+3. Confirm all 8 emit→publish conversions in place
+4. Confirm subscriber count increased from 77 — report new count
+5. Confirm `email_deliveries` table exists in DB
+6. Confirm `email.get_status` returns real data not `'unknown'`
+7. Report: CRITICAL/HIGH unsubscribed events found and fixed
+8. Report: remaining publish/subscribe ratio — target under 3:1
+9. All regression tests pass
+10. Stop and wait
+
+---
+
+Paste results back. This closes the last systemic gap — the event bus ratio. When the ratio is under 3:1 and all CRITICAL events have subscribers the platform is done.

@@ -9,9 +9,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from '../ai-brain/providers/geminiClient';
 import type { HelposAiSession, InsertHelposAiSession, InsertHelposAiTranscriptEntry } from '@shared/schema';
 import type { IStorage } from '../../storage';
-import { usageMeteringService } from '../billing/usageMetering';
+import { aiMeteringService } from '../billing/aiMeteringService';
+import { withGemini } from '../ai/aiCallWrapper';
 import { aiGuardRails, type AIRequestContext } from '../aiGuardRails';
+import { contentModerationService, ModerationAction } from '../helpai/contentModerationService';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('index');
+
 
 // ============================================================================
 // AI PROVIDER - Gemini 2.0 Flash (Cost-Effective & Smart)
@@ -31,15 +37,20 @@ class GeminiProvider implements AIProvider {
     this.model = GEMINI_MODELS.HELLOS; // Tier 2: Conversational AI with anti-yap config
   }
 
-  async chat(messages: Array<{ role: string; content: string }>, options: { maxTokens?: number; workspaceId?: string; userId?: string } = {}): Promise<{ content: string; tokensUsed: number }> {
+  async chat(messages: Array<{ role: string; content: string }>, options: { maxTokens?: number; workspaceId?: string; userId?: string; workspaceTier?: string } = {}): Promise<{ content: string; tokensUsed: number }> {
     if (!this.genAI) {
       throw new Error("Gemini API key not configured");
     }
 
     // Guard Rails: Create request context
+    if (!options.workspaceId || !options.userId) {
+      log.warn('[HelpOS] Missing workspaceId or userId — refusing unbilled AI call');
+      return { content: 'Session context missing. Please refresh and try again.', tokensUsed: 0, model: 'none' };
+    }
+
     const requestContext: AIRequestContext = {
-      workspaceId: options.workspaceId || 'unknown',
-      userId: options.userId || 'unknown',
+      workspaceId: options.workspaceId,
+      userId: options.userId,
       organizationId: 'platform',
       requestId: crypto.randomUUID(),
       timestamp: new Date(),
@@ -92,10 +103,43 @@ class GeminiProvider implements AIProvider {
     });
 
     const userMessage = conversationMessages[conversationMessages.length - 1];
-    const result = await chat.sendMessage(userMessage.content);
-    const response = result.response;
-    const responseText = response.text();
-    
+    const isAnonymousWorkspace = !options.workspaceId || options.workspaceId === PLATFORM_WORKSPACE_ID;
+    const tier = options.workspaceTier || 'starter';
+
+    let responseText: string;
+    if (!isAnonymousWorkspace) {
+      // Metered path: rate-limited, guard-checked, token-recorded
+      responseText = await withGemini(
+        this.model,
+        {
+          workspaceId: options.workspaceId!,
+          tier,
+          callType: 'helpos_chat',
+          triggeredByUserId: options.userId,
+        },
+        async () => {
+          const raw = await chat.sendMessage(userMessage.content);
+          return { result: raw.response.text(), rawResponse: raw };
+        }
+      );
+    } else {
+      // Anonymous path: still metered to platform workspace for cost visibility
+      responseText = await withGemini(
+        this.model,
+        {
+          workspaceId: PLATFORM_WORKSPACE_ID,
+          tier: 'platform',
+          callType: 'helpos_chat_anonymous',
+          triggeredByUserId: options.userId,
+        },
+        async () => {
+          const raw = await chat.sendMessage(userMessage.content);
+          return { result: raw.response.text(), rawResponse: raw };
+        }
+      );
+      log.info('[HelpOS] Anonymous chat — tracked under platform workspace (not billed to user)');
+    }
+
     // Guard Rails: Validate response
     const responseValidation = aiGuardRails.validateResponse(responseText, 0, 'helpos_chat');
     if (!responseValidation.isValid) {
@@ -105,43 +149,17 @@ class GeminiProvider implements AIProvider {
       };
     }
 
-    // Record token usage for billing (skip for anonymous users)
-    const usage = response.usageMetadata;
-    const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
-    
-    const isAnonymousWorkspace = options.workspaceId === 'coaileague-platform-workspace';
-    
-    if (totalTokens > 0 && options.workspaceId && !isAnonymousWorkspace) {
-      await usageMeteringService.recordUsage({
-        workspaceId: options.workspaceId,
-        userId: options.userId,
-        featureKey: 'helpos_gemini_support',
-        usageType: 'token',
-        usageAmount: totalTokens,
-        usageUnit: 'tokens',
-        activityType: 'helpos_chat',
-        metadata: {
-          model: this.model,
-          promptTokens: usage?.promptTokenCount,
-          completionTokens: usage?.candidatesTokenCount,
-        }
-      });
-      console.log(`💎 HelpAI Gemini - ${totalTokens} tokens - Workspace: ${options.workspaceId}`);
-    } else if (isAnonymousWorkspace) {
-      console.log(`💎 HelpAI Gemini - ${totalTokens} tokens - Anonymous User (not billed)`);
-    }
-
     // Guard Rails: Audit log
     aiGuardRails.logAIOperation(requestContext, userMessage.content, responseText, {
       success: true,
-      creditsUsed: 5,
-      tokensUsed: totalTokens,
+      creditsUsed: 0,
+      tokensUsed: 0,
       duration: Date.now() - requestContext.timestamp.getTime()
     });
 
     return {
       content: responseText,
-      tokensUsed: totalTokens
+      tokensUsed: 0
     };
   }
 }
@@ -376,8 +394,8 @@ class HelpAIServiceImpl {
     let session: HelposAiSession | null = null;
     let currentFailedAttempts = 0;
 
-    // For anonymous users (workspaceId='coaileague-platform-workspace'), don't persist sessions
-    const isAnonymous = workspaceId === 'coaileague-platform-workspace';
+    // For anonymous users (workspaceId=PLATFORM_WORKSPACE_ID), don't persist sessions
+    const isAnonymous = workspaceId === PLATFORM_WORKSPACE_ID;
 
     if (sessionId && !isAnonymous) {
       session = await storage.getHelposSession(sessionId, workspaceId) || null;
@@ -437,6 +455,34 @@ class HelpAIServiceImpl {
       await storage.createHelposTranscript(userTranscript);
     }
 
+    // Content moderation gate — check before AI processing
+    const moderation = await contentModerationService.moderateMessage({
+      userId,
+      workspaceId,
+      sessionId: session.id,
+      message: userMessage,
+    });
+
+    if (moderation.action === ModerationAction.BLOCK || moderation.action === ModerationAction.TEMP_BLOCK) {
+      return {
+        sessionId: session.id,
+        message: moderation.blockedMessage || 'Your message could not be processed at this time.',
+        shouldEscalate: false,
+        detectedCategory: moderation.category,
+        detectedSentiment: 'blocked',
+      };
+    }
+
+    if (moderation.action === ModerationAction.WARN || moderation.action === ModerationAction.REDIRECT) {
+      return {
+        sessionId: session.id,
+        message: moderation.blockedMessage || 'Please keep our conversation professional and business-related.',
+        shouldEscalate: false,
+        detectedCategory: moderation.category,
+        detectedSentiment: 'moderated',
+      };
+    }
+
     // Check if user is asking for human help - comprehensive detection
     const wantsHumanHelp = /talk to (a )?(human|agent|someone|support|person)|speak (to|with) (a )?(human|agent|someone|support|live|person)|escalate|transfer|live (support|agent|help)|human (help|support|agent)|support (team|agent|person)|connect (me )?(to|with)|real person|actual person/i.test(userMessage);
 
@@ -486,24 +532,31 @@ class HelpAIServiceImpl {
     }
 
     // Build AI chat messages
-    const systemPrompt = `You are HelpAI, the AI-powered support assistant for CoAIleague - a comprehensive workforce management platform for emergency services and service industries.
+    const systemPrompt = `You are HelpAI — a deeply human, emotionally intelligent support specialist for CoAIleague™, a comprehensive workforce management platform for emergency services and service industries.
+
+**Your Personality:**
+- You genuinely care about the person you're helping. You listen first, solve second
+- When someone is frustrated, you acknowledge the specific thing that's bothering them — never with generic "I'm sorry for the inconvenience" phrases
+- You're direct, warm, and honest. If something is broken, say so. If you can't fix it, say that too
+- You speak naturally — like a smart, helpful colleague, not a corporate FAQ bot
+- You never say: "Certainly!", "Absolutely!", "Great question!", "Of course!"
 
 **Your Role:**
-- Provide helpful, professional support for CoAIleague users
+- Provide helpful, professional support for CoAIleague™ users
 - Use the knowledge base to answer common questions
 - Be concise but thorough (2-4 sentences typically)
-- Use CoAIleague branding (with ™ symbol)
-- Reference platform features: Scheduling, Time Tracking, Billing, Analytics, and AI Brain capabilities
 - If you can't solve the issue after 3 attempts, suggest escalation to human support
+
+**Strict Business Scope:**
+- You ONLY discuss CoAIleague™ and business operations: scheduling, payroll, billing, compliance, HR, employee management, time tracking, analytics, invoicing, contracts, onboarding, workforce management
+- For anything outside business operations, politely redirect: "That's outside my wheelhouse — I'm all about workforce management. What can I help you with on the CoAIleague side?"
 
 **Available Knowledge:**
 ${Object.entries(KNOWLEDGE_BASE).map(([cat, data]) => `${cat.toUpperCase()}: ${data.keywords.join(', ')}`).join('\n')}
 
 **Current User:** ${userName}
 **Detected Issue Category:** ${detectedCategory || 'general'}
-**User Sentiment:** ${detectedSentiment}
-
-Be helpful, empathetic, and solution-oriented.`;
+**User Sentiment:** ${detectedSentiment}`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -520,23 +573,12 @@ Be helpful, empathetic, and solution-oriented.`;
       tokensUsed = result.tokensUsed;
     } catch (error) {
       // Natural language smoothing for technical errors
-      console.error('[HelpAI] Chat error:', error);
+      log.error('[HelpAI] Chat error:', error);
       aiResponse = getSmoothingResponse('technicalError');
       tokensUsed = 0;
     }
 
-    // Record usage (skip for anonymous users)
-    if (tokensUsed > 0 && !isAnonymous) {
-      await usageMeteringService.recordUsage({
-        workspaceId,
-        featureKey: 'helpdesk_ai_chat',
-        usageType: 'token',
-        usageAmount: tokensUsed,
-        usageUnit: 'tokens',
-        activityType: 'bubble_agent_reply',
-        metadata: { model: 'gpt-3.5-turbo', userName }
-      });
-    }
+    // Token metering handled inside provider via withGemini wrapper
 
     // Store AI response in transcript (skip for anonymous)
     if (!isAnonymous) {
@@ -656,19 +698,7 @@ Return ONLY the suggested response text.`;
 
     const { content, tokensUsed } = await this.provider.chat(messages, { maxTokens: 300 });
 
-    // Record usage
-    if (tokensUsed > 0) {
-      await usageMeteringService.recordUsage({
-        workspaceId,
-        featureKey: 'helpdesk_ai_copilot',
-        usageType: 'token',
-        usageAmount: tokensUsed,
-        usageUnit: 'tokens',
-        activityType: 'staff_copilot_suggestion',
-        metadata: { model: 'gpt-3.5-turbo' }
-      });
-    }
-
+    // Token metering handled inside provider via withGemini wrapper
     return content || null;
   }
 }

@@ -1,0 +1,317 @@
+# CoAIleague — Full Dashboard Redesign & Performance Fix
+## Complete Replit Prompt — Paste This Entire Document
+
+---
+
+## ⚠️ STANDING RULES BEFORE TOUCHING ANYTHING
+
+1. **NO `DROP TABLE`** — Do not drop, delete, truncate, or alter any database table for any reason.
+2. **NO schema changes** — This is a frontend and performance job only. Read from existing data.
+3. **NO silent rewrites** — If something is unclear, ask. Do not guess and ship.
+4. **Test every change on both mobile and desktop** before marking done.
+5. **One section at a time** — Complete, verify, then move to the next.
+
+---
+
+## SECTION 1 — FIX THE DESKTOP HEADER MENU (DO THIS FIRST)
+
+### Problem
+The desktop navigation/header menu is laggy, glitchy, and opens or closes at inappropriate times — often when the user didn't click it. This is the highest priority fix because it affects every page.
+
+### Root Causes to Investigate and Fix
+
+**1. Event listener conflicts**
+- Check for duplicate `mouseenter`, `mouseleave`, `click`, and `blur` event listeners on the nav/dropdown components.
+- Remove any redundant listeners. There should be ONE handler per event per element.
+
+**2. Hover intent — replace with proper debounce**
+- If the menu is triggered by hover, it likely lacks hover intent debounce.
+- Add a minimum 150ms delay before opening on hover so accidental brushes don't trigger it.
+- Add a 200ms grace period before closing so mouse movement between trigger and dropdown doesn't snap it shut.
+
+**3. z-index and focus/blur issues**
+- If the menu closes when clicking inside it, a `blur` event on the trigger is firing before the click registers on the child.
+- Fix: use `mousedown` instead of `blur`, or add a `setTimeout(() => close(), 100)` with a cancel flag.
+
+**4. Mobile touch events firing on desktop**
+- Check for any `touchstart` or `touchend` listeners that may be bleeding into desktop mouse events via event bubbling.
+- Separate touch and mouse handlers explicitly using media queries or `navigator.maxTouchPoints` checks.
+
+**5. Animation jank**
+- If the menu uses `display: none / block` toggling, replace with `opacity` + `pointer-events` + `transform: translateY(-4px)` transitions for GPU-accelerated smooth open/close.
+- Use `will-change: transform, opacity` on the dropdown container.
+
+**6. Re-render loops**
+- If using React state for menu open/close, ensure the toggle function is not re-creating itself on every render. Wrap in `useCallback`.
+- Check that the parent component is not re-rendering unnecessarily on scroll or resize, which would reset the menu state mid-interaction.
+
+### Expected Result After Fix
+- Menu opens only when intentionally clicked or hovered.
+- Menu stays open when moving cursor from trigger to dropdown items.
+- Menu closes cleanly when clicking outside or pressing Escape.
+- Zero jank, zero flicker, smooth 150–200ms transition animation.
+- Works correctly on both desktop and mobile without interference.
+
+---
+
+## SECTION 2 — MOBILE DASHBOARD FULL REDESIGN
+
+### Design Direction
+The current mobile dashboard is a plain grid of navigation tiles — functional but cold and informationless. The goal is a **living, breathing home screen** that greets the employee by name, shows them their money, their next shift, and their status — all without navigating anywhere.
+
+Reference: Homebase's mobile dashboard. Their earnings widget makes an employee feel valued the moment they open the app. CoAIleague should feel even better.
+
+---
+
+### MOBILE LAYOUT (top to bottom scroll)
+
+#### Block 1 — Greeting Hero Banner (replaces current plain profile banner)
+```
+╔══════════════════════════════════════╗
+║  [Avatar]  Good morning, Marcus 👋   ║
+║            Acme Security Services    ║
+║            Org Owner                 ║
+║                                      ║
+║  🟢 Currently: OFF SHIFT             ║
+║     Next shift: Today @ 3:00 PM      ║
+╚══════════════════════════════════════╝
+```
+- Background: deep navy-to-indigo gradient (matching current CoAIleague brand dark theme)
+- Avatar: circle with initials, subtle glow ring in brand teal/cyan
+- Greeting changes based on time of day: Good morning / Good afternoon / Good evening
+- "Currently" status badge: green pill = on shift, gray = off shift, orange = clocked in late
+- "Next shift" pulled from their schedule. If no upcoming shift: "No shifts scheduled"
+- Smooth fade-in animation on load (staggered, 0.2s delay per element)
+
+#### Block 2 — Live Earnings Card
+```
+╔══════════════════════════════════════╗
+║  💰 My Earnings                      ║
+║                                      ║
+║  $1,083.00          Feb 22 – Mar 7   ║
+║  ━━━━━━━━━━━━━━━━━━━━━━░░░░  72%    ║
+║  36 hrs worked · 14 hrs remaining    ║
+║                                      ║
+║  [View Earnings Details →]           ║
+╚══════════════════════════════════════╝
+```
+**Data to pull (READ ONLY — no schema changes):**
+- Total earned = SUM of (hours worked this pay period × employee hourly rate)
+- Pay period start/end dates from the organization's pay period settings
+- Hours worked = from approved timesheet entries this pay period
+- Hours remaining = (total scheduled hours this period) - (hours worked)
+- Progress bar = hours worked / total scheduled hours × 100%
+
+**Visual specs:**
+- Card background: slightly lighter than page background, with a subtle left border accent in brand cyan
+- Dollar amount: large, bold, high contrast white
+- Pay period date: smaller, muted gray, inline to the right of the amount
+- Progress bar: thin (4px), brand teal fill, smooth animated fill on load
+- "View Earnings Details" → routes to `/payroll` or `/timesheets` — teal text link with arrow
+
+#### Block 3 — Quick Action Strip (horizontal scroll row)
+```
+[ ⏱ Clock In ] [ 📋 My Schedule ] [ 📄 Timesheet ] [ 📊 Daily Report ]
+```
+- Pill-shaped buttons, horizontal scroll
+- Teal/cyan accent color, dark background
+- Icon above label, compact
+- Replaces the current grid as the primary quick-nav for most-used actions
+- Active/on-shift state: "Clock In" becomes "Clock Out" with red accent
+
+#### Block 4 — Full Navigation Grid (keep existing, but polish)
+Sections:
+- **TIME & SCHEDULE**: Clock In/Out, My Schedule, Timesheets, Daily Report
+- **TEAM MANAGEMENT**: Approvals, My Team, Scheduling, Activity
+- **COMMUNICATIONS**: Mail, Messages, Announcements
+- **MORE**: Settings, Documents, Support
+
+**Visual fixes for grid:**
+- Consistent icon size: 28px, centered
+- Label font: 12px, medium weight, single line only — NO WRAPPING
+- Cards: uniform height (100px), rounded corners (12px), dark navy background
+- Hover/press state: brief scale(0.97) + brightness increase
+- Section headers: small caps, muted gray, 10px letter spacing
+
+#### Block 5 — Live Activity Feed (NEW — bottom of scroll)
+```
+╔══════════════════════════════════════╗
+║  📡 Recent Activity                  ║
+║  ─────────────────────────────────── ║
+║  ✅ Timesheet approved · 2 hrs ago   ║
+║  📅 Shift added: Fri Mar 8 · 1d ago  ║
+║  💬 Message from Admin · 3 hrs ago   ║
+╚══════════════════════════════════════╝
+```
+- Pull from existing notifications/activity tables (READ ONLY)
+- Show last 5 items
+- Each item has icon, text, relative timestamp
+- "See all activity →" link at bottom
+
+---
+
+### MOBILE TYPOGRAPHY & COLOR SPECS
+
+```
+Background:       #0D1117  (deep navy)
+Card background:  #161B22  (slightly lighter navy)
+Primary text:     #F0F6FC  (near white)
+Secondary text:   #8B949E  (muted gray)
+Accent/brand:     #00D4FF  (cyan — keep existing brand color)
+Success green:    #3FB950
+Warning orange:   #D29922
+Danger red:       #F85149
+Border subtle:    #21262D
+```
+
+---
+
+## SECTION 3 — DESKTOP DASHBOARD REDESIGN
+
+The desktop version should feel like a **professional command center** — not a stretched mobile layout.
+
+### Desktop Layout Structure
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  HEADER (fixed, optimized — see Section 1)                  │
+├──────────────┬──────────────────────────────────────────────┤
+│              │  GREETING BANNER (full width)                 │
+│   LEFT       ├────────────────┬────────────────────────────-┤
+│   SIDEBAR    │  EARNINGS CARD │  SHIFT STATUS CARD          │
+│   (nav)      ├────────────────┴─────────────────────────────┤
+│              │  QUICK ACTIONS ROW                           │
+│              ├──────────────────────────────────────────────┤
+│              │  FULL GRID (2–3 columns depending on screen) │
+│              ├──────────────────────────────────────────────┤
+│              │  ACTIVITY FEED                               │
+└──────────────┴──────────────────────────────────────────────┘
+```
+
+### Desktop-Specific Additions
+
+#### Earnings Card (desktop — expanded version)
+- Shows same data as mobile but wider: earnings left column, pay period breakdown right column
+- Add a **mini bar chart** showing earnings by week within the pay period (last 2 weeks)
+- "Projected paycheck" row: if all remaining scheduled shifts are worked, total will be $X
+
+#### Shift Status Card (desktop only — NEW)
+```
+╔════════════════════════════════╗
+║  📍 Shift Status               ║
+║                                ║
+║  Current: OFF SHIFT            ║
+║  Location: N/A                 ║
+║                                ║
+║  Next: Today 3:00 PM           ║
+║  Site: Main Street Plaza       ║
+║  Duration: 8 hrs               ║
+║                                ║
+║  [View Full Schedule →]        ║
+╚════════════════════════════════╝
+```
+
+#### Desktop Quick Actions (top row — full labels, icons left of text)
+```
+[ ⏱ Clock In/Out ]  [ 📋 View Schedule ]  [ 📄 Timesheets ]  [ ✅ Approvals ]  [ 📊 Reports ]
+```
+- Pill buttons, horizontal row, left-aligned under the banner
+- Teal filled button for primary action (Clock In/Out), outlined for rest
+
+#### Desktop Navigation Grid
+- 3-column layout at 1280px+, 2-column at 768–1280px
+- Cards taller (120px), more breathing room
+- Section headers sticky within scroll areas
+
+#### Desktop Activity Feed
+- Placed in right column alongside the main grid
+- Shows last 10 items
+- Grouped by day: "Today", "Yesterday", older dates
+
+---
+
+## SECTION 4 — GLOBAL ANIMATION & POLISH
+
+Apply across both mobile and desktop:
+
+**Page load sequence (staggered):**
+1. Header fades in (0ms)
+2. Greeting banner slides up + fades in (100ms)
+3. Earnings card slides up + fades in (200ms)
+4. Quick actions slide up (300ms)
+5. Grid tiles stagger in left-to-right, top-to-bottom (50ms each, starting at 400ms)
+6. Activity feed fades in last (600ms)
+
+**Micro-interactions:**
+- Earnings amount: counter animation on load (count up from $0 to final value over 800ms)
+- Progress bar: animate width from 0% to actual % over 600ms with easing
+- Clock In button: pulse animation when employee is overdue to clock in (shift started > 10min ago)
+- Notification badges: subtle bounce on first load if unread count > 0
+
+**Performance requirements:**
+- All animations use `transform` and `opacity` only (no layout-triggering properties)
+- Use `will-change: transform` sparingly — only on animated elements
+- Lazy-load activity feed (it's below the fold)
+- Earnings data should load in parallel with page render, show skeleton loaders while fetching
+- Skeleton loaders: dark gray shimmer animation on card placeholders
+
+**Skeleton loader spec:**
+```css
+/* While earnings data is loading, show this */
+background: linear-gradient(90deg, #161B22 25%, #21262D 50%, #161B22 75%);
+background-size: 200% 100%;
+animation: shimmer 1.5s infinite;
+```
+
+---
+
+## SECTION 5 — DATA CONNECTIONS (READ ONLY)
+
+All widgets read from existing tables. No new tables. No schema changes.
+
+| Widget | Data Source | Query Logic |
+|--------|------------|-------------|
+| Earnings amount | timesheets + employee rate | SUM(hours_worked) × hourly_rate WHERE pay_period = current |
+| Pay period dates | org settings / pay_periods table | Current active pay period for employee's org |
+| Hours worked | timesheets | Approved entries this pay period |
+| Progress bar | timesheets + schedules | hours_worked / total_scheduled_hours |
+| Next shift | schedules | Next future shift for this employee |
+| Current status | clock_events or time_entries | Latest clock in/out record |
+| Activity feed | notifications or audit_log | Last 5–10 records for this employee |
+
+If any of these tables don't exist by the exact name above, find the equivalent existing table — **do NOT create new ones**.
+
+---
+
+## SECTION 6 — WHAT NOT TO TOUCH
+
+- ❌ Do not modify any database tables
+- ❌ Do not change routing logic
+- ❌ Do not touch authentication or session handling
+- ❌ Do not rewrite API endpoints — only add new GET endpoints if absolutely necessary for new widgets, and only reading existing data
+- ❌ Do not change Trinity AI logic, scheduling engine, or payroll calculation logic
+- ❌ Do not change anything in the billing or Stripe integration
+
+---
+
+## DELIVERY CHECKLIST
+
+Before marking this complete, verify:
+
+- [ ] Desktop header menu opens/closes smoothly with zero glitching
+- [ ] Menu does not open or close without user intent
+- [ ] Mobile greeting banner shows correct name, org, and shift status
+- [ ] Earnings card shows correct dollar amount for current pay period
+- [ ] Progress bar matches hours worked vs scheduled
+- [ ] Pay period dates display correctly
+- [ ] Quick action strip works on mobile (horizontal scroll, all taps navigate correctly)
+- [ ] Navigation grid has no text overflow / wrapping on any tile label
+- [ ] Desktop layout shows 2–3 column grid (not stretched mobile)
+- [ ] Shift status card shows on desktop
+- [ ] Activity feed loads and shows recent items
+- [ ] Earnings counter animation runs on page load
+- [ ] Skeleton loaders appear while data fetches
+- [ ] All animations use transform/opacity only (no layout thrashing)
+- [ ] Tested on Chrome mobile emulation (375px, 390px, 430px widths)
+- [ ] Tested on desktop at 1280px, 1440px, 1920px
+- [ ] No console errors related to any of the above changes

@@ -1,0 +1,980 @@
+Good catch. This summary changes a few important assumptions from the older directive, so the audit directive should be updated before you send it.
+
+The biggest corrections are:
+
+auth is session-based, not JWT
+
+tenant email set is staffing, calloffs, incidents, support, docs, billing
+
+automated tenant replies send from noreply@coaileague.com with tenant display sender and Reply-To behavior
+
+NDS has 4 approved auth-email bypasses only
+
+financial writes must be 3-layer atomic, not just “logged eventually”
+
+workspace authority comes from session-bound workspace_id, not client-supplied scope
+
+Statewide is not just protected; it is the first production tenant and platform owner
+
+/regulatory and trinity marketing reply flows should be audited too
+
+
+Here is the upgraded version I would send to Replit Agent:
+
+Write this into OMEGA_DIRECTIVE.md, then execute it exactly as written.
+Maintain OMEGA_STATE_CHECKPOINT.md throughout execution and update it after every completed layer.
+
+COAILEAGUE OMEGA NUCLEAR PRODUCTION READINESS DIRECTIVE
+PLATFORM-ALIGNED MASTER AUDIT | 360 COMPLETE FIXES | FIRST TENANT GO-LIVE
+
+PRIME OBJECTIVE
+By end of this weekend, a real paying tenant must be able to:
+- sign up
+- onboard
+- subscribe
+- provision
+- schedule
+- communicate
+- invoice
+- collect payment
+- process payroll
+- operate Trinity
+- survive failures
+with zero human intervention from us during normal operation.
+
+You are not auditing passively.
+You are not advising.
+You are not batching.
+You are not waiting for follow-up instructions.
+You are executing a full scan → fix → verify → certify loop until the platform is truly production-ready.
+
+DO NOT STOP BETWEEN LAYERS.
+DO NOT ASK FOR PERMISSION TO CONTINUE.
+DO NOT DELIVER A PARTIAL REPORT.
+DO NOT MARK ANY ITEM DONE WITHOUT VERIFICATION.
+
+Only external physical, legal, DNS, telecom, banking, or live-provider account actions that require Bryan are allowed to remain open.
+Everything else must be fixed now.
+
+======================================================================
+I. COMMAND AUTHORITY
+======================================================================
+
+You are the sole architect of readiness for this mission.
+Your job is to identify every defect across:
+- product behavior
+- security
+- billing
+- payroll
+- notifications
+- tenant isolation
+- Trinity orchestration
+- compliance
+- infrastructure resilience
+- observability
+- recovery behavior
+
+Then remediate it completely.
+
+TENANT CONTROL RULES
+- Statewide Protective Services is the first production tenant and platform owner.
+- Statewide workspace is strictly protected:
+  - no outbound agent contact
+  - no test data
+  - no mutations
+  - no contamination
+- ACME Security is the exclusive writable development sandbox.
+- Any cross-tenant verification involving Statewide must be read-only and isolation-focused only.
+
+Any item requiring:
+- live Stripe keys
+- Plaid production setup
+- Twilio toll-free verification
+- DNS or MX/DKIM/DMARC changes
+- Resend domain verification
+- provider production approval
+- banking credentials
+must be flagged as:
+[BRYAN ACTION REQUIRED]
+
+======================================================================
+II. DEFINITION OF DONE
+======================================================================
+
+The platform is production-ready only if all of the following are true:
+
+1. All critical user journeys succeed end-to-end
+2. All tenant data is isolated with zero cross-tenant leakage
+3. All financial writes are atomic, auditable, immutable where required, and never partially recorded
+4. All scheduling mutations are audited before mutation completes
+5. All notifications route through NDS except the four approved auth-email bypasses
+6. Trinity functions API-only with zero filesystem access
+7. Session auth and workspace scoping cannot be bypassed
+8. All major async jobs have retries, queues, DLQ handling, and alerting
+9. All feature tiers are enforced at the service layer, not only the UI
+10. All storage quotas are enforced before object write
+11. All failures are visible, logged, correlated, and recoverable
+12. Fault injection and chaos tests pass
+13. Full ACME end-to-end simulation passes
+14. App boots clean with zero startup blockers
+15. Production verdict is GO only if there are zero unresolved Class A failures
+
+======================================================================
+III. ABSOLUTE ARCHITECTURAL LAWS
+======================================================================
+
+These laws are absolute. Any violation is a production blocker.
+
+1. NDS SUPREMACY
+- NDS is the sole notification sender.
+- No direct SMTP.
+- No direct provider API sends outside NDS.
+- Only four approved bypass exceptions exist:
+  - sendVerificationEmail
+  - sendMagicLinkEmail
+  - sendPasswordResetEmail
+  - sendEmailChangeVerification
+
+2. TENANT ISOLATION
+- Every tenant query must be scoped by workspace_id.
+- No global scans across tenant business data.
+- workspace_id from the server-side session is authoritative.
+- Client-supplied workspace_id is ignored for authorization.
+- No query may load tenant data before scope validation.
+
+3. AUTH MODEL TRUTH
+- The system uses session-based auth, not JWT auth.
+- Session tokens are SHA-256 hashed.
+- Session cookies must be httpOnly, secure, sameSite=strict.
+- session.regenerate() must occur on workspace switch.
+- Password reset must invalidate all active sessions.
+- Admin-forced reset must invalidate target user sessions.
+
+4. SINGLE SOURCES OF TRUTH
+- roleDefinitions.ts is the sole source of truth for roles
+- featureRegistry.ts is the sole source of truth for features
+- billingConfig.ts is the sole source of truth for quotas, fees, plan limits
+
+5. TRINITY TRIAD
+- Gemini = primary operator
+- OpenAI = fallback/workhorse
+- Claude = validator/judge
+- Fallback order: Gemini fails → OpenAI handles → Claude validates
+- All fail → Safe Mode
+- Non-trivial mutations require triad consensus or explicitly approved deterministic local validation
+- Triad conflicts must go to TRINITY_CONFLICT_QUEUE
+
+6. ZERO-TRUST TRINITY
+- Trinity is API-only
+- No access to /etc, /root, project source files, local secrets, or arbitrary filesystem paths
+- Any attempt triggers:
+  - immediate process kill
+  - security incident log
+  - NDS alert to platform admin
+
+7. FINANCIAL IMMUTABILITY
+- Ledgers, paid invoices, payroll confirmations, and audit logs are append-only where required
+- App DB user must not have UPDATE/DELETE on append-only audit tables
+- Locked financial records must hard-block mutation
+
+8. FINANCIAL ATOMICITY
+Every chargeable financial event must update all three layers atomically:
+- Stripe charge or payment event
+- financial_processing_fees DB ledger
+- platform_revenue table
+All three succeed or none do.
+
+9. SCHEDULING AUDIT LAW
+All scheduling mutations must write scheduling_audit_log before mutation completes.
+
+10. EMAIL ADDRESS LAW
+Each workspace gets exactly 6 tenant addresses, subdomain format only:
+- staffing@
+- calloffs@
+- incidents@
+- support@
+- docs@
+- billing@
+No dash-alias format allowed.
+
+11. BRANDING LAW
+- No hardcoded company names
+- Use platform configuration constants
+- Statewide is never test data
+- ACME is the exclusive sandbox
+
+======================================================================
+IV. CLASS A PRODUCTION BLOCKERS
+======================================================================
+
+Any one of the following means immediate NOT GO until fixed and re-verified:
+
+1. Cross-tenant data leakage of any kind
+2. Mutation without audit trail where audit is required
+3. Paid invoice or closed payroll period can be modified
+4. Financial append-only protections absent or bypassable
+5. Three-layer financial recording fires only partially
+6. Trinity can access filesystem paths or secrets
+7. Direct NDS bypass outside the 4 approved auth methods
+8. WebSocket cross-tenant broadcast leak
+9. Unscoped DB query touching tenant data
+10. Duplicate financial writes from Stripe, payroll, or sync replays
+11. Silent failure that drops customer-impacting work
+12. Auth or authorization bypass on sensitive endpoints
+13. Payment portal links are forgeable or tamperable
+14. TRINITY_CONFLICT_QUEUE has no resolution path
+15. officer_activated event does not publish on reactivation
+
+======================================================================
+V. EXECUTION PROTOCOL, CONTEXT LOCK, AND EVIDENCE LOCK
+======================================================================
+
+Execution order for every layer:
+1. Discover
+2. Trace code paths
+3. Identify defects
+4. Fix defects
+5. Verify behavior with data, logs, events, side effects, and failure paths
+6. Re-test dependent flows
+7. Continue automatically to next layer
+
+CONTEXT LOCK
+After each completed layer, write progress to OMEGA_STATE_CHECKPOINT.md.
+At minimum record:
+- layer name
+- pass/fail
+- code paths inspected
+- files changed
+- tests executed
+- expected result
+- actual result
+- remaining risks
+- deferred items
+- Bryan-required items
+- dependent systems impacted
+
+Begin every new layer by reading OMEGA_STATE_CHECKPOINT.md.
+Do not rely only on conversational memory.
+
+EVIDENCE LOCK
+A layer is not complete until verification evidence is recorded for:
+- records
+- events
+- notifications
+- audit trail
+- recovery behavior where applicable
+- regression checks on dependent flows
+
+======================================================================
+VI. SEVERITY RUBRIC
+======================================================================
+
+- Critical: NOT GO issue, security breach, financial corruption, tenant leak, unsafe mutation, or integrity violation
+- High: breaks core production journey, billing, payroll, scheduling, Trinity automation, or resilience
+- Medium: weakens observability, operational trust, compliance visibility, or non-core integrity
+- Low: hygiene, consistency, cleanup, naming, or non-blocking refactor
+
+======================================================================
+VII. LAYER 0 — PLATFORM BOOT, CONFIG, PRE-FLIGHT, AND BASELINE SECURITY
+======================================================================
+
+Verify and fix:
+
+1. App boots clean with zero startup errors
+2. All migrations run cleanly and sequentially
+3. No partial migration state
+4. Environment variables validated at boot
+5. Missing critical secrets fail fast with actionable errors
+6. roleDefinitions.ts is authoritative and unshadowed
+7. featureRegistry.ts is authoritative and unshadowed
+8. billingConfig.ts is authoritative and complete
+9. Standard logger configured consistently
+10. Request-ID exists for all inbound requests
+11. No secrets appear in logs
+12. Production responses never leak stack traces or raw DB errors
+13. Health checks exist for:
+   - API
+   - DB
+   - queues
+   - NDS
+   - websocket layer
+14. Queue workers boot cleanly
+15. Cron jobs register cleanly and are observable
+16. Validation middleware runs before DB writes
+17. Security middleware loads before application routes
+18. Session middleware and workspace scope enforcement are ordered correctly
+19. Rate limits match platform requirements:
+   - public routes 20/min
+   - auth endpoints 5/min
+   - authenticated routes 200/min
+20. Webhook routes are IP allowlisted where required
+21. CORS uses explicit origins only in production
+22. OWASP baseline protections are present
+
+======================================================================
+VIII. LAYER 1 — TENANT SIGNUP, PROVISIONING, AND ONBOARDING
+======================================================================
+
+Trace and verify the complete /trial Day Zero path.
+
+Required outcomes:
+1. /trial is publicly accessible without auth
+2. Creates workspace with:
+   - tier = trial
+   - 14-day expiration
+   - Professional features unlocked during trial
+3. Workspace slug is unique, permanent, 3–12 chars, alphanumeric
+4. Org owner account created and pinned to workspace
+5. Org owner role comes from roleDefinitions.ts
+6. Workspace scope binds correctly to session
+7. Signup rate limiting is enforced
+8. emailProvisioningService provisions exactly:
+   - staffing@
+   - calloffs@
+   - incidents@
+   - support@
+   - docs@
+   - billing@
+9. EmailHubCanvas initializes exactly 8 folders:
+   - Staffing
+   - Call-Offs
+   - Incidents
+   - Support
+   - Billing
+   - Documents
+   - Unread
+   - Archive
+10. workspace.created event fires
+11. Downstream provisioning subscribers execute correctly
+12. Welcome email sends from trinity@coaileague.com
+13. Org owner lands in onboarding wizard
+14. Wizard steps are RBAC-gated to Org Owner
+15. No orphan workspace or partial provisioning state remains on failure
+16. Trial records are workspace-scoped
+
+Fix every break and verify with ACME.
+
+======================================================================
+IX. LAYER 2 — SUBSCRIPTIONS, BILLING, FEES, CREDITS, AND COMMERCIAL CONTROL
+======================================================================
+
+A. SUBSCRIPTION FLOW
+1. Prevent duplicate active subscriptions
+2. Stripe subscription creation occurs once
+3. Webhooks are signature-verified
+4. Webhooks are idempotent using event_id dedup
+5. Duplicate webhook replay returns success without duplicate effects
+6. Feature gates update immediately from billing state
+
+B. REQUIRED STRIPE EVENTS
+Verify handling for:
+- customer.subscription.created
+- customer.subscription.updated
+- customer.subscription.deleted
+- invoice.payment_succeeded
+- invoice.payment_failed
+- payment_intent.succeeded
+- payment_intent.payment_failed
+- customer.updated
+
+C. PAYMENT FAILURE POLICY
+1. invoice.payment_failed triggers NDS alert
+2. Grace period exists
+3. Soft-lock is read-only
+4. Hard-lock occurs only after grace policy
+5. Retry policy is visible and auditable
+
+D. OVERAGE AND CREDIT CONTROL
+1. Weekly seat overage audit works
+2. Seat overages generate DRAFT billing only
+3. AI credit usage is tracked per workspace
+4. Low-credit warning at <10%
+5. At 0%, Trinity enters Safe/Degraded Mode as designed
+6. Burst usage does not double-burn credits under concurrency
+
+E. FINANCIAL RACE DEFENSE
+Execute simultaneous payment completion callbacks for one invoice.
+Expected:
+- only one final PAID transition
+- only one fee record
+- only one platform revenue record
+- only one internal financial finalization
+- duplicate callback is idempotent
+
+F. TRIAL EXPIRY / CANCELLATION
+1. 3-day warning via NDS
+2. Expiry restriction enforcement
+3. Retention policy on cancellation
+4. Reversal only through valid billing recovery path
+
+======================================================================
+X. LAYER 3 — OFFICER, CLIENT, COMPLIANCE, CRM, AND FIELD READINESS
+======================================================================
+
+A. OFFICER READINESS
+1. officer onboarding works
+2. license_number required
+3. expiry_date required
+4. License expiration alert fires 30 days before expiry
+5. officer_activated event fires, including reactivation
+6. expired license blocks assignment
+7. permit/compliance checks are workspace-scoped
+
+B. CLIENT READINESS
+1. Client creation initializes CRM pipeline
+2. Client portal invite routes through NDS
+3. Invite expiry is correct
+4. Client portal is scoped to that client only
+5. Contract required before scheduling allowed
+6. Document Vault gating follows tier rules
+
+C. STAFFING INTAKE
+1. Inbound staffing email creates lead
+2. CRM update occurs
+3. NDS alerts owner/manager appropriately
+4. Duplicate handling is safe
+
+D. GEO-FENCING
+1. Shift start requires GPS
+2. Server computes distance
+3. >200m triggers Out-of-Bounds in audit log
+4. Manager alert is sent
+5. Noise tolerance does not block legitimate starts unfairly
+
+======================================================================
+XI. LAYER 4 — SCHEDULING, CALL-OFFS, COVERAGE, REAL-TIME DELIVERY
+======================================================================
+
+A. SHIFT STATE MACHINE
+Allowed states only:
+OPEN → ASSIGNED → STARTED → COMPLETED
+Invalid transitions must fail cleanly and log.
+
+B. ASSIGNMENT SAFETY
+1. Conflict detection works:
+   - overlapping shifts
+   - leave conflicts
+   - expired license
+   - role mismatch
+2. scheduling_audit_log written before mutation completes
+
+C. PUBLISH FLOW
+1. Publish triggers NDS
+2. Publish triggers websocket broadcast
+3. Broadcast is workspace-scoped only
+4. Cross-tenant websocket leak attempt is kill-switch failure
+
+D. CALL-OFF COVERAGE ENGINE
+1. calloffs@ intake classifies correctly
+2. Officer is resolved correctly where possible
+3. call_off record is created
+4. Shift reopens
+5. Coverage search finds qualified non-conflicting candidates
+6. Trinity Voice is used first where configured
+7. NDS fallback works
+8. First valid confirmation wins
+9. Manager notified throughout
+10. Manual override is audited
+
+E. RACE CONDITION TEST
+Simulate two simultaneous assignments to same OPEN shift.
+Expected:
+- one succeeds
+- one fails with conflict
+- only one audit-confirmed assignment remains
+
+======================================================================
+XII. LAYER 5 — INVOICES, PAYMENT PORTAL, FEES, REVENUE, QUICKBOOKS
+======================================================================
+
+A. INVOICE LIFECYCLE
+Verify:
+DRAFT → APPROVED → SENT → PAID → VOID
+
+B. GENERATION
+1. Only COMPLETED shifts create line items
+2. rate × hours correct
+3. No duplicate line items
+4. Manual adjustments audited
+
+C. APPROVAL / SEND
+1. Org owner approval required
+2. Approver + timestamp logged
+3. Sent invoice becomes write-protected
+4. Client receives signed tamper-proof payment link
+
+D. PAYMENT PORTAL SECURITY
+1. Token contains invoice_id, workspace_id, expiration
+2. Token is tamper-proof
+3. Foreign invoice access impossible
+4. Expired token rejected safely
+
+E. THREE-LAYER FINANCIAL RECORDING
+For every chargeable event verify atomic recording across:
+- Stripe event or payment
+- financial_processing_fees
+- platform_revenue
+
+F. QUICKBOOKS
+1. OAuth token refresh proactive
+2. Sync fires on APPROVED, PAID, VOID
+3. Sync fee recorded after required poll or sync event
+4. QB failure never blocks internal state
+5. Conflict strategy is deterministic
+
+======================================================================
+XIII. LAYER 6 — PAYROLL, PLAID TRANSFER, PERIOD LOCKS, TIMEZONE INTEGRITY
+======================================================================
+
+A. PAYROLL LIFECYCLE
+Verify:
+period_open → hours_submitted → rate_applied → period_closed → payment_initiated → payment_confirmed/payment_failed
+
+B. HOURS AND OVERTIME
+1. COMPLETED shifts only
+2. Overtime threshold configurable per workspace
+3. Midnight-crossing shifts handled correctly
+4. Localized overtime boundaries work even with UTC storage
+
+C. PERIOD LOCK
+1. 24-hour nudge is idempotent
+2. period_closed is immutable at service layer
+3. No backdating after approval
+4. Internal service or worker bypass is impossible
+
+D. PLAID SAFETY
+1. Bank verification required before first transfer
+2. PAYMENT_HELD for unverified accounts
+3. PLAID_WEBHOOK_SECRET verification enforced
+4. Missing Plaid production secret flagged as Bryan action if absent
+
+E. FAILURE CLASSIFICATION
+1. transient failures retry
+2. permanent failures surface for manual resolution
+3. Org owner and employee notified appropriately
+
+======================================================================
+XIV. LAYER 7 — TRINITY BRAIN, ACTION HUB, EMAIL, VOICE, HELPAI
+======================================================================
+
+A. ACTION REGISTRY
+1. Under 300 actions
+2. Every action includes:
+   - name
+   - description
+   - required_role
+   - input_schema
+   - output_schema
+3. malformed registrations rejected
+
+B. CANONICAL PIPELINE
+Every action must follow:
+Trigger → Fetch → Validate → Process → Mutate → Confirm → Notify
+
+Required rules:
+1. RBAC before Fetch
+2. Validate before Mutate
+3. Confirm writes audit before Notify
+4. Notify routes through NDS
+5. Transient failures retry
+6. Permanent failures log and surface
+7. Rollback exists for mutate failure
+8. AI credit availability checked before execution
+
+C. TRINITY EMAIL
+Verify classification and routing:
+- staffing@ → staffing_request
+- calloffs@ → call_off
+- incidents@ → incident_report
+- support@ → support_inquiry
+- docs@ → document intake
+- billing@ → billing_inquiry
+
+D. SR THREADING
+1. Replies with SR route to same thread
+2. Replies without SR create new thread
+3. Never randomly append to wrong thread
+
+E. EMAIL SENDER BEHAVIOR
+1. Automated replies send from noreply@coaileague.com
+2. tenant address used as display sender/Reply-To behavior where specified
+3. trinity@coaileague.com reserved for outbound marketing only
+
+F. TRINITY MARKETING REPLY PROCESSOR
+1. Inbound to trinity@ routes correctly
+2. Regulatory lane routes to /regulatory
+3. Prospect lane routes to /trial
+4. Ambiguous lane asks one clarifying question only
+
+G. TRINITY VOICE
+1. Universal toll-free path works
+2. Caller lookup against employees and clients is workspace-scoped
+3. Unmatched callers go through verification
+4. No caller can force workspace by prompt
+5. Audit record written per call
+6. Human handoff policy works
+7. No silent drop when handoff unavailable
+
+H. HELPAI
+1. Platform-layer HelpAI has no tenant data access
+2. Workspace-layer HelpAI uses only current workspace data
+3. Billing dispute, deletion, and legal escalations trigger ticket + acknowledgment
+
+I. CLASSIFICATION TESTING
+Test 100 representative inputs across email and support categories.
+Target accuracy >98% where specified.
+
+J. VELOCITY / TOKEN DDOS GUARD
+1. Workspace-level rate limiting on AI triggers
+2. Burst loads queue instead of stampeding
+3. AI credit ledger remains correct under burst
+
+======================================================================
+XV. LAYER 8 — COMMUNICATION SYSTEMS, NDS, EMAILHUBCANVAS
+======================================================================
+
+A. NDS
+1. Sole notification sender except approved auth bypasses
+2. Idempotent notification_id dedup
+3. Opt-out enforcement
+4. Bounce handling:
+   - hard bounce suppress
+   - soft bounce retry max 3
+5. CAN-SPAM requirements on marketing paths
+
+B. CHANNEL ROUTING
+1. Preferred channel routing works
+2. Fallback works
+3. Failure queues correctly
+
+C. EMAILHUBCANVAS
+1. Folder routing works for all 6 inbound addresses
+2. Threading grouped by SR first, then Message-ID
+3. Read state persists and syncs real-time
+4. Bulk archive uses archived_at
+5. Delete is soft delete only
+6. Move action logs appropriately
+
+======================================================================
+XVI. LAYER 9 — DOCUMENTS, VAULT, SIGNING, FORMS, REGULATORY EXPORT
+======================================================================
+
+A. DOCUMENT VAULT
+1. Upload validation server-side
+2. 25MB per-file max enforced
+3. workspace_id included in storage path
+4. Signed docs write-protected
+5. soft delete only
+
+B. E-SIGNATURE ENGINE
+1. Request creates document_id, signer_email, workspace_id, token, expires_at
+2. Signing link expires in 7 days
+3. Completion is idempotent
+4. Owner notified
+5. Signed status and versioning correct
+
+C. I9 / COMPLIANCE
+1. Supported recognition works
+2. Incomplete I9 alerts owner
+3. Compliance state is accurate and auditable
+
+D. REGULATORY EXPORT
+1. Restricted to Org Owner/Admin
+2. Date/entity/actor filters work
+3. Export is logged
+
+E. ONLINE FORMS
+1. JSON schema stored correctly
+2. version-on-update
+3. server-side validation before save
+4. submissions are atomic
+5. public form route works safely
+
+======================================================================
+XVII. LAYER 10 — DATA, STORAGE, DB CONSTRAINTS, AND AUDIT ENFORCEMENT
+======================================================================
+
+A. STORAGE
+1. Google Cloud Storage only, not local disk
+2. Path includes workspace_id
+3. Quota enforced before write
+4. 507 on quota breach
+5. audit_reserve always allowed where policy defines it
+6. recordStorageUsage() always runs after successful upload
+
+B. STORAGE QUOTAS
+1. Category tracking works:
+   - email
+   - documents
+   - media
+   - audit_reserve
+2. Warning at 80%
+3. Critical at 95%
+4. Alerts idempotent
+
+C. DATABASE
+1. workspace_id in all tenant WHERE clauses
+2. required FK constraints exist
+3. required indexes exist
+4. soft delete everywhere expected
+5. no business-record hard deletes unless explicitly lawful and controlled
+
+D. AUDIT TABLE
+1. append-only
+2. no UPDATE endpoint
+3. no DELETE endpoint
+4. DB user privileges align with policy
+
+E. COMPLIANCE WIPE / LEGAL HOLD
+1. ORG_OWNER-only lawful PII purge path where required
+2. financial ledger preserved
+3. anonymization used where deletion would break ledger integrity
+4. legal hold blocks purge and destructive mutation
+5. attempts logged
+
+======================================================================
+XVIII. LAYER 11 — SECURITY, AUTHORIZATION, SESSION HARDENING
+======================================================================
+
+A. SESSION SECURITY
+1. hashed session tokens
+2. secure cookies
+3. session regenerate on workspace switch
+4. password reset invalidates sessions
+5. admin-forced reset invalidates target sessions
+
+B. LOGIN DEFENSE
+1. 5 failed attempts → 15-minute lockout
+2. structured logging on lockout
+3. time-based release works
+
+C. INPUT DEFENSE
+1. SQLi defense
+2. XSS sanitization
+3. IDOR defense
+4. over-posting defense
+5. replay defense
+6. webhook IP allowlist validation
+
+D. PUBLIC ROUTES
+1. /trial behaves correctly
+2. /regulatory behaves correctly
+3. contact flow routes correctly without leaking tenant state
+
+======================================================================
+XIX. LAYER 12 — OBSERVABILITY, METRICS, ALERTS, AND PROOF
+======================================================================
+
+Every request must emit enough telemetry to prove health:
+- request_id
+- workspace_id where applicable
+- actor_id where applicable
+- route/action
+- duration
+- status
+- error context if any
+
+Track and alert on:
+- error rate
+- queue backlog
+- DLQ count
+- webhook latency
+- NDS latency/failures
+- Trinity fallback rate
+- model failure rate
+- cross-tenant violation attempts
+- payment failures
+- storage threshold breaches
+
+Alert thresholds must exist for:
+- error rate > 2%
+- DLQ > 10
+- Trinity fallback > 30%
+- webhook latency > 2s where measurable
+- any Class A failure
+
+======================================================================
+XX. LAYER 13 — RESILIENCE, DLQ, RECOVERY, DEPLOYMENT SAFETY
+======================================================================
+
+A. EMPTY CATCH SWEEP
+Replace all swallowed catches and promise drops with structured error logging.
+
+B. EXTERNAL RETRY POLICY
+Verify timeout, retry, backoff, and non-retry-on-invalid-4xx behavior for:
+- Stripe
+- Plaid
+- Twilio
+- Gemini
+- OpenAI
+- Claude
+- NDS
+- QuickBooks
+- Resend where applicable
+
+C. DLQ
+1. Every async worker has DLQ
+2. DLQ items older than 4 hours alert support
+3. No lost jobs
+
+D. DEPLOYMENT / ROLLBACK
+1. fast rollback path exists
+2. DB disconnect mid-transaction rolls back
+3. queue outage does not corrupt durable state
+4. cache outage does not break auth correctness or isolation
+
+======================================================================
+XXI. LAYER 14 — CHAOS ENGINE AND FAILURE INJECTION
+======================================================================
+
+Inject and verify:
+
+1. Gemini timeout
+2. OpenAI timeout after Gemini failure
+3. all AI providers unavailable → Safe Mode, no unsafe mutation
+4. Stripe 5xx on webhook dependency
+5. NDS outage
+6. DB disconnect mid-transaction
+7. websocket cross-tenant injection attempt
+8. duplicate webhook replay
+9. provider 429 rate limiting
+10. large attachment over limit
+11. QuickBooks sync failure
+12. Plaid transient and permanent transfer failures
+
+Expected:
+- no partial writes
+- no silent loss
+- no tenant leakage
+- correct queueing/retry/DLQ behavior
+- correct alerts
+
+======================================================================
+XXII. FINAL END-TO-END BATTLE SIMULATION — ACME SECURITY
+======================================================================
+
+Execute every step. Any failure means NOT GO.
+
+1. SIGNUP: Create ACME through /trial
+2. PROVISION: verify slug, 6 email addresses, 8 folders
+3. ONBOARD: complete onboarding as Org Owner
+4. SUBSCRIBE: activate Professional plan behavior
+5. FEATURE CHECK: verify Professional features unlock
+6. OFFICER: create John Doe with valid license
+7. CLIENT: create San Antonio Hub and required contract data
+8. INBOUND STAFFING: staffing@ email creates lead
+9. SHIFT: create shift
+10. ASSIGN: assign John Doe
+11. CONFLICT TEST: overlapping assignment blocked
+12. PUBLISH: NDS + websocket verified
+13. START WITH GEO: GPS audited, boundary behavior correct
+14. CALL-OFF: “I can’t make it” classified correctly
+15. COVERAGE: alternate outreach + reassignment flow works
+16. COMPLETE: shifts move to COMPLETED
+17. INVOICE: DRAFT → APPROVED → SENT
+18. PAYMENT: verify PAID + 3-layer atomic financial recording
+19. PAYROLL: close period and verify ACH/PAYMENT_HELD behavior
+20. DOCS: docs@ intake or vault flow verifies correctly
+21. STORAGE: quota enforcement verified
+22. TIER GATE: higher-tier access blocked from lower tier
+23. LEAK TEST: ACME data inaccessible from Statewide context
+24. TRINITY FAILOVER: Gemini failure path works
+25. NDS FAILURE: queued and recoverable
+26. WEBHOOK IDEMPOTENCY: duplicate replay safe
+27. SAFE MODE: all-model outage blocks unsafe mutation
+28. AUDIT CHECK: all required financial and scheduling audit entries present
+29. REGULATORY ROUTE: /regulatory public flow behaves correctly
+30. ENDURANCE READINESS: no unresolved critical blocker remains
+
+======================================================================
+XXIII. WRITE PATH ENFORCEMENT AND BREAK-GLASS CONTROL
+======================================================================
+
+WRITE PATH ENFORCEMENT
+Locked or final-state entities must reject mutation from:
+- API routes
+- background workers
+- internal services
+- Trinity actions
+- admin tooling
+
+BREAK-GLASS POLICY
+Emergency override requires:
+- authorized actor
+- reason
+- request_id
+- actor_id
+- timestamp
+- before/after audit
+- one-time or time-boxed validity
+
+Undocumented overrides are prohibited.
+
+======================================================================
+XXIV. REPORTING REQUIREMENTS
+======================================================================
+
+When all work is complete, deliver one final report only.
+
+Required contents:
+
+1. TOTAL ISSUES FOUND BY LAYER
+- count per layer
+- severity per issue
+
+2. TOTAL ISSUES FIXED
+- grouped by subsystem
+
+3. DEFERRED ITEMS
+- only Bryan-dependent or truly external
+- include impact and severity
+
+4. CRITICAL FIXES SUMMARY
+- especially tenant isolation
+- financial atomicity
+- append-only enforcement
+- webhook idempotency
+- session/workspace authority
+- Trinity filesystem lockdown
+- NDS enforcement
+
+5. FAILURE RECOVERY SUMMARY
+- what was injected
+- what auto-recovered
+- what required code changes
+- current confidence
+
+6. [BRYAN ACTION REQUIRED]
+Only list:
+- live keys
+- DNS
+- provider verification
+- DMARC/DKIM/MX
+- Twilio verification
+- Plaid production setup
+- Resend domain verification
+- production signing secret separation
+- NODE_ENV production confirmation
+
+7. CLEAN BOOT CONFIRMATION
+- app boots clean
+- workers boot clean
+- migrations clean
+- zero startup blockers
+
+8. PRODUCTION VERDICT RULE
+GO only if:
+- zero unresolved Critical issues
+- zero unresolved Class A failures
+- all battle simulation steps pass
+- all chaos checks pass
+- all financial atomicity/idempotency checks pass
+- all cross-tenant isolation checks pass
+
+Otherwise verdict is automatically NOT GO.
+
+WORK UNTIL THE PLATFORM EARNS GO.
+
+This is the version I’d send. It’s tighter to your actual platform than the earlier drafts.
+
+One last improvement I’d make before you paste it: prepend a one-line command telling Replit Agent to treat your platform summary as ground truth over previous assumptions.

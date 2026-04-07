@@ -123,6 +123,7 @@ export function ResponsiveAppFrame({ children }: { children: ReactNode }) {
   // Handle resize with debouncing
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    let orientationTimeoutId: NodeJS.Timeout;
     
     const handleResize = () => {
       clearTimeout(timeoutId);
@@ -131,20 +132,23 @@ export function ResponsiveAppFrame({ children }: { children: ReactNode }) {
         setScreenHeight(window.innerHeight);
       }, 100);
     };
-    
-    window.addEventListener('resize', handleResize);
-    
-    // Also listen for orientation changes
-    window.addEventListener('orientationchange', () => {
-      setTimeout(() => {
+
+    const handleOrientationChange = () => {
+      clearTimeout(orientationTimeoutId);
+      orientationTimeoutId = setTimeout(() => {
         setScreenWidth(window.innerWidth);
         setScreenHeight(window.innerHeight);
       }, 100);
-    });
+    };
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleOrientationChange);
     
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleOrientationChange);
       clearTimeout(timeoutId);
+      clearTimeout(orientationTimeoutId);
     };
   }, []);
 
@@ -202,7 +206,6 @@ export function ResponsiveAppFrame({ children }: { children: ReactNode }) {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`CoAIleague PWA install: ${outcome}`);
     setDeferredPrompt(null);
   }, [deferredPrompt]);
 

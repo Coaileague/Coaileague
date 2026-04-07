@@ -1,9 +1,9 @@
-console.log('[CoAIleague] main.tsx loading...');
-
 import { createRoot } from "react-dom/client";
+import { Component, type ReactNode, type ErrorInfo } from "react";
 import { HelmetProvider } from 'react-helmet-async';
 import App from "./App";
 import "./index.css";
+import "./print-styles.css";
 
 // Suppress Vite HMR WebSocket errors in development
 if (import.meta.env.DEV) {
@@ -30,61 +30,92 @@ if (import.meta.env.DEV) {
   };
 }
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <App />
-  </HelmetProvider>
-)
+// Top-level error boundary — catches crashes before App's internal providers mount
+class RootErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
-// Service Worker registration - PRODUCTION ONLY
-// In development, the service worker can intercept Vite's module requests and cause blank screens
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  const APP_VERSION = 'v1.0.3';
-  window.addEventListener('load', async () => {
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.update();
-        if (registration.waiting) {
-          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[RootErrorBoundary] Uncaught render error:", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0f172a",
+          color: "#f8fafc",
+          fontFamily: "system-ui, sans-serif",
+          padding: "2rem",
+          textAlign: "center",
+          gap: "1rem",
+        }}>
+          <div style={{ fontSize: "2.5rem" }}>⚠</div>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>
+            Something went wrong
+          </h1>
+          <p style={{ color: "#94a3b8", margin: 0, maxWidth: "480px" }}>
+            {this.state.error?.message || "An unexpected error occurred loading the platform."}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: "0.5rem",
+              padding: "0.6rem 1.5rem",
+              background: "#0d9488",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+            }}
+          >
+            Reload Platform
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+createRoot(document.getElementById("root")!).render(
+  <RootErrorBoundary>
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
+  </RootErrorBoundary>
+);
+
+// Register service worker for PWA support (push notifications, offline, caching)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/service-worker.js', { scope: '/' })
+      .then((registration) => {
+        if (import.meta.env.DEV) {
+          console.log('[SW] Registered, scope:', registration.scope);
         }
-      }
-      
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        const oldCaches = cacheNames.filter(name => !name.includes(APP_VERSION.replace('v', '')));
-        await Promise.all(oldCaches.map(name => {
-          console.log('[CoAIleague] Clearing old cache:', name);
-          return caches.delete(name);
-        }));
-      }
-      
-      const registration = await navigator.serviceWorker.register(`/service-worker.js?v=${APP_VERSION}`);
-      console.log('[CoAIleague] Service Worker registered', registration.scope);
-      
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[CoAIleague] New version available, reloading...');
-              window.location.reload();
-            }
-          });
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) {
+          console.warn('[SW] Registration failed:', err);
         }
       });
-      
-      setInterval(() => registration.update(), 60000);
-    } catch (error) {
-      console.error('[CoAIleague] Service Worker setup failed', error);
-    }
-  });
-} else if (import.meta.env.DEV && 'serviceWorker' in navigator) {
-  // In development, unregister any existing service workers to prevent interference
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    for (const registration of registrations) {
-      registration.unregister();
-      console.log('[CoAIleague] Dev mode: Unregistered service worker');
-    }
   });
 }

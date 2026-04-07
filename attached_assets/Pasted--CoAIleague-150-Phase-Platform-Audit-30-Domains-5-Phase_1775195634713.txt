@@ -1,0 +1,3069 @@
+# CoAIleague — 150-Phase Platform Audit
+## 30 Domains × 5 Phases Each | Master Agent Execution Document
+
+---
+
+## HOW TO USE THIS DOCUMENT
+
+Send phases to Replit Agent in domain batches (5 at a time).
+Wait for the agent to confirm all 5 phases before moving to the next domain.
+If the agent reports issues in any phase, do not advance until it confirms resolution.
+After every 6 domains (30 phases), run the RINSE & REPEAT checkpoint before continuing.
+
+**Agent standing instruction — paste this once at the start of every session:**
+
+> You are performing a systematic production-readiness audit of CoAIleague,
+> a multi-tenant B2B SaaS workforce management platform for security companies.
+> Architectural truths you must never violate:
+> - NotificationDeliveryService (NDS) is the sole notification sender
+> - All financial writes require audit trails
+> - All scheduling mutations require audit logs
+> - All tenant queries must be scoped by workspace_id
+> - roleDefinitions.ts is the single source of truth for roles
+> - featureRegistry.ts is the single source of truth for features
+> - Trinity operates API-only — zero filesystem access
+> - White-label rule — zero hardcoded company names in layout components
+> - Statewide workspace receives zero agent contact and zero test data
+> - ACME Security is the exclusive dev sandbox
+> For each phase: audit → identify → fix → test → confirm. Never skip confirm.
+> Flag but do not implement any items marked [BRYAN ACTION REQUIRED].
+
+---
+
+## 🔴 PHYSICAL ACTIONS REQUIRED BY BRYAN (Not Code — Collect Here)
+
+As the agent works, it will append to this list. Do not send these to the agent.
+
+- [ ] Add Plaid webhook secret to environment variables
+- [ ] Add Stripe live keys (switch from test to live)
+- [ ] Complete Twilio toll-free number verification
+- [ ] Update DNS: DMARC record, DKIM upgrade, MX records
+- [ ] Verify Resend domain verification status for all sending domains
+- [ ] Switch Resend webhook signing secret to production value
+
+---
+
+## RINSE & REPEAT CHECKPOINTS
+
+After Domain 6 (Phase 30): Authentication + Isolation + RBAC + Trinity Email + Voice + Action Hub
+After Domain 12 (Phase 60): NDS + Scheduling + Payroll + Invoice + Stripe + Plaid
+After Domain 18 (Phase 90): CRM + Officers + Incidents + Call-Offs + Docs + Email Hub
+After Domain 24 (Phase 120): Forms + Features + HelpAI + DB Schema + API Routes + Real-Time
+After Domain 30 (Phase 150): Audit Trail + Error Handling + Resend + QuickBooks + Marketing + E2E
+
+**Checkpoint prompt (send after each set of 6 domains):**
+> Summarize all issues found and fixed in the last 30 phases.
+> List any remaining open issues by severity (CRITICAL / HIGH / MEDIUM / LOW).
+> List any silent failures or swallowed errors found and how they were resolved.
+> List any [BRYAN ACTION REQUIRED] items identified.
+> Confirm zero CRITICAL or HIGH issues remain before I continue.
+> If any remain open, fix them now before summarizing.
+
+---
+
+# DOMAIN 1: Authentication & Session Management
+*Phases 1–5*
+
+---
+
+### Phase 1 — Session Token Validation & Expiration
+
+```
+AUDIT: Session token lifecycle management.
+
+1. Find all session creation points — login, OAuth callback, magic link
+2. Verify every token has an expiration time set and enforced server-side
+3. Check that expired tokens return 401 and clear the client cookie/header —
+   not a silent redirect or empty response
+4. Verify token refresh logic exists and fires before expiration, not after
+5. Check for any route that accepts a token without validating its expiration
+6. Fix any route missing expiration validation
+7. Test: Create a token, manually expire it in the DB, attempt a protected
+   request — confirm 401 is returned
+
+CONFIRM: List every auth middleware file touched and paste the expiration
+check logic.
+```
+
+---
+
+### Phase 2 — Cross-Tenant Session Isolation
+
+```
+AUDIT: Prevent session override across workspaces.
+
+1. Locate the session object shape — confirm workspace_id is bound to the
+   session at creation and cannot be mutated client-side
+2. Find any endpoint that accepts workspace_id from the request body or
+   query param and uses it without validating it matches the session
+3. Verify that switching workspaces (if supported) issues a new session token
+   rather than mutating the existing one
+4. Check for any admin impersonation flow — if it exists, confirm it creates
+   a separate audited session, not a session mutation
+5. Simulate: Authenticate as workspace A, modify the workspace_id in the
+   request to workspace B — confirm the server rejects or ignores it
+6. Fix all violations found
+
+CONFIRM: Paste the session binding logic and the workspace_id validation
+middleware.
+```
+
+---
+
+### Phase 3 — Password Reset & Account Lockout
+
+```
+AUDIT: Password reset and brute-force lockout flows.
+
+1. Find the password reset flow — confirm token is single-use and expires
+   in under 1 hour
+2. Verify the reset token is invalidated immediately on use, not on expiration
+3. Check login attempt rate limiting — confirm lockout triggers after N
+   failed attempts (recommend 5) and logs the event
+4. Verify lockout releases after a fixed time window, not on next successful
+   login (that would allow bypass via reset)
+5. Confirm password reset emails come from noreply@coaileague.com via NDS,
+   not a direct Resend call bypassing NDS
+6. Fix any violations. If no lockout logic exists, implement it now.
+
+CONFIRM: Show lockout trigger logic and reset token invalidation code.
+```
+
+---
+
+### Phase 4 — OAuth Token Refresh (QuickBooks)
+
+```
+AUDIT: OAuth token lifecycle for QuickBooks integration.
+
+1. Find QuickBooks OAuth token storage — confirm access_token and
+   refresh_token are stored encrypted, not plaintext
+2. Verify refresh logic fires proactively before expiration, not reactively
+   on 401
+3. Check what happens on refresh failure — confirm it logs the failure,
+   marks the integration as disconnected, and notifies the org owner via NDS
+4. Confirm a silent swallow does NOT occur on refresh failure
+5. Verify the refresh flow does not expose tokens in server logs
+6. Test: Manually expire the access token, make a QB API call, confirm
+   refresh fires and the call succeeds transparently
+
+CONFIRM: Show the refresh trigger logic and the failure notification path.
+```
+
+---
+
+### Phase 5 — JWT Payload Integrity & workspace_id Binding
+
+```
+AUDIT: JWT structure and payload integrity.
+
+1. Find JWT signing and verification logic
+2. Confirm JWT payload includes: user_id, workspace_id, role, issued_at,
+   expires_at — nothing more sensitive than role
+3. Verify JWT is signed with a secret that is environment-variable-sourced,
+   not hardcoded
+4. Confirm the signing secret is different between development and production
+5. Verify JWT is verified on every protected request, not just decoded
+6. Check that workspace_id from JWT is used for all DB queries, never
+   workspace_id from the request body
+7. Fix any violations. Flag if JWT secret is hardcoded [BRYAN ACTION REQUIRED]
+
+CONFIRM: Paste JWT creation payload and verification middleware.
+```
+
+---
+
+# DOMAIN 2: Multi-Tenant Architecture & Workspace Isolation
+*Phases 6–10*
+
+---
+
+### Phase 6 — All DB Queries Scoped by workspace_id
+
+```
+AUDIT: Every database query that touches tenant data must include
+workspace_id in the WHERE clause.
+
+1. Find every service file that queries the database
+2. For each query touching: employees, shifts, schedules, invoices, clients,
+   incidents, call_offs, email_threads, documents, payroll_records,
+   notifications — verify workspace_id is in the WHERE clause
+3. Flag any query that fetches by ID alone without workspace_id scoping
+4. Fix all unscoped queries by adding AND workspace_id = ? from the
+   authenticated session
+5. Run a cross-tenant data access test: seed two workspaces (ACME and a
+   second test workspace), query ACME data as second workspace — confirm
+   zero ACME records are returned
+
+CONFIRM: List every query fixed and the test result.
+```
+
+---
+
+### Phase 7 — API Route Middleware Tenant Context Injection
+
+```
+AUDIT: Tenant context must be injected by middleware, not trusted from
+the client.
+
+1. Find the middleware that extracts workspace_id from the session and
+   attaches it to the request context (req.workspaceId or equivalent)
+2. Verify this middleware runs before every protected route handler
+3. Confirm no route handler reads workspace_id from req.body, req.query,
+   or req.params without validating it matches req.workspaceId
+4. Check for any route that bypasses the middleware chain
+5. Fix all violations
+
+CONFIRM: Show the middleware chain order and paste the tenant context
+injection function.
+```
+
+---
+
+### Phase 8 — File & Asset Storage Isolation Per Tenant
+
+```
+AUDIT: Files uploaded by one tenant must never be accessible by another.
+
+1. Find all file upload endpoints and storage logic
+2. Verify uploaded files are stored under a path that includes workspace_id
+   (e.g. /uploads/{workspace_id}/{filename}) or equivalent bucket isolation
+3. Verify file retrieval endpoints validate that the requesting tenant's
+   workspace_id matches the file's workspace_id before serving
+4. Check for any signed URL generation — confirm URLs expire and are
+   workspace-scoped
+5. Fix any violations
+
+CONFIRM: Show storage path generation logic and retrieval authorization check.
+```
+
+---
+
+### Phase 9 — Cross-Tenant Data Leak Detection
+
+```
+AUDIT: Active detection of cross-tenant data leaks.
+
+1. Using ACME Security as sandbox, seed 10 records of each type:
+   shifts, invoices, clients, incidents, employees
+2. Create a second test workspace (TEST_WORKSPACE_CANARY)
+3. Authenticate as TEST_WORKSPACE_CANARY and attempt to access every
+   major API endpoint that returns lists of records
+4. Confirm zero ACME records appear in any response
+5. Attempt to access individual ACME records by ID as TEST_WORKSPACE_CANARY
+6. Confirm all return 403 or 404, never the actual record
+7. Fix any leaks found. Log all fixes.
+
+CONFIRM: Paste test results showing zero cross-tenant exposure.
+```
+
+---
+
+### Phase 10 — Platform Default vs Tenant Workspace Routing
+
+```
+AUDIT: Platform-level routing must never bleed into tenant workspaces.
+
+1. Find PLATFORM_DEFAULT_WORKSPACE_ID or equivalent constant
+2. Verify it is only used for:
+   - Inbound emails with no tenant slug (platform support queue)
+   - Platform-level Trinity marketing reply processor
+   - Internal CoAIleague admin operations
+3. Confirm no tenant workspace query ever falls back to PLATFORM_DEFAULT
+   as a silent default
+4. Verify the Statewide workspace (production) has zero association with
+   PLATFORM_DEFAULT routing
+5. Confirm ACME is only ever used as dev sandbox and has a clear sandbox flag
+
+CONFIRM: Show all usages of PLATFORM_DEFAULT_WORKSPACE_ID and confirm
+each is legitimate.
+```
+
+---
+
+# DOMAIN 3: Role-Based Access Control (RBAC)
+*Phases 11–15*
+
+---
+
+### Phase 11 — roleDefinitions.ts Canonical Source Validation
+
+```
+AUDIT: roleDefinitions.ts must be the single and only source of role truth.
+
+1. Open roleDefinitions.ts — list every role defined
+2. Search the entire codebase for any hardcoded role strings like
+   'admin', 'manager', 'officer' outside of roleDefinitions.ts
+3. Fix all hardcoded role strings to import from roleDefinitions.ts
+4. Verify that adding a new role to roleDefinitions.ts is sufficient to
+   propagate it — no other files need manual updating for basic role recognition
+5. Confirm roleDefinitions.ts includes: Org Owner, Admin, Manager, Officer,
+   Client (portal), Trinity (bot), HelpAI (bot), Platform Admin
+
+CONFIRM: Paste the full role list from roleDefinitions.ts and list all
+hardcoded role strings found and fixed.
+```
+
+---
+
+### Phase 12 — Permission Gate Enforcement on Protected Routes
+
+```
+AUDIT: Every protected route must enforce a permission gate.
+
+1. Map every API route to its required role/permission
+2. Verify a permission gate middleware runs on each route before the handler
+3. Check for any route that authenticates (valid token) but does not
+   authorize (does not check role/permission)
+4. Fix all routes missing authorization gates
+5. Test: Authenticate as Officer role, attempt to access Admin-only routes —
+   confirm 403 on all of them
+
+CONFIRM: List routes fixed and paste test results.
+```
+
+---
+
+### Phase 13 — Permission Matrix: Owner vs Admin vs Manager vs Officer
+
+```
+AUDIT: Verify the permission matrix is correctly enforced end-to-end.
+
+Test each of the following as the specified role and confirm correct behavior:
+
+AS OFFICER:
+- Can view own upcoming shifts: YES
+- Can submit call-off: YES
+- Can view other officers' pay rates: NO → 403
+- Can create invoices: NO → 403
+- Can access billing@: NO → 403
+
+AS MANAGER:
+- Can post shifts: YES
+- Can view officer hours: YES
+- Can approve payroll: depends on config — verify
+- Can modify client contracts: NO → 403
+
+AS ADMIN:
+- Can manage employees: YES
+- Can view all reports: YES
+- Can modify billing tier: NO (Org Owner only) → 403
+
+AS ORG OWNER:
+- Full access confirmed
+
+Fix all permission gaps found.
+
+CONFIRM: Paste the test matrix results.
+```
+
+---
+
+### Phase 14 — Trinity & HelpAI Bot RBAC Scope Enforcement
+
+```
+AUDIT: Trinity and HelpAI are system bots with scoped permissions.
+They must never exceed their defined scope.
+
+1. Find Trinity's service account / bot identity in the auth system
+2. Verify Trinity can: read tenant data within scope, write to:
+   email threads, call-off records, shift coverage, incident logs
+3. Verify Trinity CANNOT: modify payroll rates, delete records,
+   access other tenant workspaces, write financial records directly
+4. Find HelpAI's service account
+5. Verify HelpAI operates at platform layer for help content and
+   at workspace layer only for tenant-scoped support queries
+6. Confirm neither bot can be impersonated by a regular user session
+7. Fix any scope violations
+
+CONFIRM: Show bot identity definitions and scope boundaries.
+```
+
+---
+
+### Phase 15 — Client Portal Access Controls
+
+```
+AUDIT: External clients (e.g. Crestview Mall) accessing the portal.
+
+1. Find the client portal authentication flow
+2. Verify client portal users are scoped ONLY to their own client record
+   and their associated sites/invoices
+3. Confirm client portal users cannot see other clients' data within
+   the same tenant workspace
+4. Verify client portal sessions are separate from employee sessions
+5. Test: Create two client portal accounts for ACME, confirm each sees
+   only their own records
+6. Fix any violations
+
+CONFIRM: Show client portal auth scope and test results.
+```
+
+---
+
+# DOMAIN 4: Trinity Email System
+*Phases 16–20*
+
+---
+
+### Phase 16 — TrinityEmailProcessor Intent Classification Accuracy
+
+```
+AUDIT: Trinity must correctly classify inbound email intent.
+
+1. Find TrinityEmailProcessor and its classification logic
+2. Test with seeded emails — send one of each type to ACME's addresses:
+   - billing@acme: invoice inquiry → should classify billing_inquiry
+   - calloffs@acme: "I can't make my shift tomorrow" → call_off
+   - staffing@acme: "We need 4 guards this weekend" → staffing_request
+   - incidents@acme: "There was an altercation at Gate 3" → incident_report
+   - support@acme: "How do I update my payment method?" → support_inquiry
+3. For each: confirm classification, confirm correct downstream handler fires,
+   confirm correct EmailHubCanvas folder routing
+4. Fix any misclassifications
+
+CONFIRM: Show classification results for all 5 test emails.
+```
+
+---
+
+### Phase 17 — Email Provisioning Post-Simplification Audit
+
+```
+AUDIT: Verify emailProvisioningService.ts is clean after dash-alias removal.
+
+1. Confirm the service provisions exactly 6 addresses per tenant (not 12)
+2. Verify the workspace.created event trigger is intact
+3. Seed a new test workspace (use ACME canary) — trigger workspace.created —
+   confirm exactly 6 addresses are provisioned in the database
+4. Confirm no dash-alias format addresses appear anywhere in the DB
+5. Verify personal address provisioning (john.smith@) still works on demand
+6. Confirm Stripe seat billing fires when a personal address is activated
+
+CONFIRM: Show the 6 provisioned addresses and confirm no alias records exist.
+```
+
+---
+
+### Phase 18 — Email Thread Continuity (SR-XXXXXXXX Reference)
+
+```
+AUDIT: Reference number threading must never orphan a reply.
+
+1. Find the SR-XXXXXXXX generation logic — confirm it is globally unique
+2. Find the extraction logic in the webhook — confirm it reads from email body
+   and subject line (check both)
+3. Test: Send an automated email from the platform, reply to it — confirm
+   the reply routes to the exact same trinityLiaison conversation thread
+4. Test: Reply without the reference number — confirm Trinity creates a new
+   thread rather than silently failing
+5. Check for any silent swallow if extraction returns null — fix to log and
+   create new thread
+6. Fix all issues
+
+CONFIRM: Show reference generation, extraction logic, and both test results.
+```
+
+---
+
+### Phase 19 — Trinity Reply Composition & Sender Display
+
+```
+AUDIT: Outbound Trinity email sender identity.
+
+1. Verify all outbound replies from Trinity send FROM noreply@coaileague.com
+2. Verify the display sender (Reply-To) is set to the appropriate tenant
+   address (e.g. billing@acme.coaileague.com)
+3. Confirm the recipient sees "billing@acme.coaileague.com" in their client,
+   not "noreply@coaileague.com"
+4. Verify unsubscribe headers are present on every automated email
+5. Verify opt-out tokens are embedded and functional
+6. Test: Send a Trinity reply email, inspect headers — confirm Reply-To,
+   List-Unsubscribe, and From are all correct
+
+CONFIRM: Paste the email header inspection results.
+```
+
+---
+
+### Phase 20 — Inbound Email Failure Handling & Dead-Letter Queue
+
+```
+AUDIT: What happens when Trinity cannot process an inbound email?
+
+1. Find the error handling in TrinityEmailProcessor
+2. Check for empty catch blocks or swallowed errors — fix all
+3. Verify a failed processing attempt:
+   a. Logs the failure with full context (from address, subject, workspace_id)
+   b. Does NOT silently discard the email
+   c. Routes to a dead-letter queue or unprocessed inbox
+   d. Triggers an alert to the workspace admin via NDS
+4. Test: Send a malformed email to calloffs@acme — confirm it lands in
+   unprocessed queue and triggers admin alert
+5. Verify retry logic exists for transient failures (Resend API timeout etc.)
+
+CONFIRM: Show error handling path and dead-letter queue implementation.
+```
+
+---
+
+# DOMAIN 5: Trinity Voice
+*Phases 21–25*
+
+---
+
+### Phase 21 — Universal Toll-Free Call Routing
+
+```
+AUDIT: Single toll-free number routes all callers correctly.
+
+1. Find Twilio call routing configuration
+2. Verify the single toll-free number is the only inbound number configured
+3. Confirm call arrives → Twilio webhook fires → Trinity Voice processor invoked
+4. Verify the processor receives: caller phone number, call SID, timestamp
+5. Check for silent failures in the Twilio webhook handler — fix all
+6. Note: [BRYAN ACTION REQUIRED] — Twilio toll-free verification must be
+   completed before this goes live
+
+CONFIRM: Show Twilio webhook handler and confirm it invokes Trinity Voice.
+```
+
+---
+
+### Phase 22 — Caller Identity Verification Flow
+
+```
+AUDIT: Trinity must correctly identify and verify callers.
+
+1. Find the caller verification logic
+2. Verify flow:
+   - Phone number lookup against employees and clients tables (workspace-scoped)
+   - If matched: greet by name, load workspace context
+   - If unmatched: verbal verification flow (name + last 4 of SSN or ID)
+   - If verification fails after N attempts: transfer to human or disconnect
+3. Confirm workspace_id is resolved from the caller's record, not from
+   any caller-provided input
+4. Verify failed verification attempts are logged
+5. Test with a seeded ACME officer phone number — confirm Trinity greets
+   correctly and loads ACME context
+
+CONFIRM: Show verification flow and test result.
+```
+
+---
+
+### Phase 23 — Trinity Voice → Workspace Context Resolution
+
+```
+AUDIT: Voice interactions must be fully workspace-scoped.
+
+1. Verify that after caller verification, all data Trinity accesses
+   during the call is scoped to the resolved workspace_id
+2. Confirm Trinity Voice cannot read data from another workspace
+   even if the caller verbally provides a different company name
+3. Verify schedule lookups, call-off processing, incident intake —
+   all use the session-resolved workspace_id
+4. Test: As a verified ACME officer, ask Trinity about a shift —
+   confirm only ACME shifts are returned
+
+CONFIRM: Show workspace context binding in Trinity Voice session.
+```
+
+---
+
+### Phase 24 — Call Recording, Logging & Audit Trail
+
+```
+AUDIT: Every call must be logged with a complete audit record.
+
+1. Find call logging logic
+2. Verify each completed call creates a record with:
+   caller_id, workspace_id, call_sid, duration, intent_classified,
+   actions_taken, timestamp
+3. Confirm call recordings (if enabled) are stored with workspace isolation
+4. Verify the audit record is written even if the call ends in error
+5. Check for silent swallow on logging failure — fix to at least write
+   to a fallback log
+
+CONFIRM: Show call record schema and logging code.
+```
+
+---
+
+### Phase 25 — Voice Fallback & Human Handoff Logic
+
+```
+AUDIT: Trinity Voice must gracefully hand off when it cannot help.
+
+1. Find the human handoff trigger logic
+2. Verify handoff fires when:
+   - Trinity cannot understand the caller after 3 attempts
+   - Caller explicitly requests a human
+   - Issue is classified as requiring human judgment
+3. Confirm handoff:
+   - Notifies the workspace manager via NDS
+   - Provides the human agent with the call context summary
+   - Does not silently disconnect
+4. If no human is available: confirm Trinity leaves a message or
+   schedules a callback — no silent drop
+5. Test: Trigger handoff condition — confirm NDS alert fires
+
+CONFIRM: Show handoff trigger and NDS alert code.
+```
+
+---
+
+# DOMAIN 6: Trinity Action Hub & Registry
+*Phases 26–30*
+
+---
+
+### Phase 26 — Action Registry Count Validation
+
+```
+AUDIT: Action registry must remain below 300 actions.
+
+1. Find the action registry (action hub index or registry file)
+2. Count total registered actions
+3. Confirm count is below 300
+4. Identify any duplicate action registrations
+5. Identify any deprecated actions still registered — remove them
+6. Verify every registered action has: name, description, required_role,
+   input_schema, output_schema
+7. Flag any actions missing required fields
+
+CONFIRM: Paste total action count and list any duplicates or malformed
+registrations found.
+```
+
+---
+
+### Phase 27 — Action Execution 7-Step Pipeline Integrity
+
+```
+AUDIT: Every action must execute through the canonical 7-step pipeline:
+Trigger → Fetch → Validate → Process → Mutate → Confirm → Notify
+
+1. Find the action execution engine
+2. Verify all 7 steps are present and enforced — not optional
+3. Verify MUTATE never runs if VALIDATE fails
+4. Verify NOTIFY always fires after successful MUTATE (through NDS)
+5. Verify CONFIRM step writes an audit record before NOTIFY
+6. Check for any action that shortcuts the pipeline — fix all
+7. Test: Execute a shift assignment action — trace all 7 steps in logs
+
+CONFIRM: Show the pipeline executor code and test trace.
+```
+
+---
+
+### Phase 28 — Failed Action Retry & Rollback Logic
+
+```
+AUDIT: Failed actions must retry or rollback — never silently fail.
+
+1. Find retry logic in the action executor
+2. Verify transient failures (network, API timeout) trigger retry with
+   exponential backoff — maximum 3 attempts
+3. Verify permanent failures (validation error, auth failure) do NOT retry
+4. Verify rollback logic exists for MUTATE failures — database writes
+   must be atomic
+5. Check for empty catch blocks in any action handler — fix all
+6. Verify failed actions are logged with full context and workspace_id
+7. Test: Force a MUTATE failure — confirm rollback and error log
+
+CONFIRM: Show retry/rollback logic and test result.
+```
+
+---
+
+### Phase 29 — Action Authorization — RBAC Gate Before Execution
+
+```
+AUDIT: No action may execute without passing an RBAC gate.
+
+1. Find where RBAC is checked in the action pipeline
+2. Confirm the check occurs BEFORE Fetch — not after data is already loaded
+3. Verify every action's required_role is enforced against the calling
+   session's role
+4. Test: Attempt to execute a payroll action as an Officer role —
+   confirm 403 before any data is fetched
+5. Fix any action that fetches data before checking authorization
+
+CONFIRM: Show RBAC gate position in pipeline and test result.
+```
+
+---
+
+### Phase 30 — Gemini / Claude / OpenAI Triad Model Routing
+
+```
+AUDIT: Trinity's triad cognitive architecture routing integrity.
+
+1. Find the triad routing logic (Gemini primary, Claude validator/judge,
+   OpenAI workhorse/backup)
+2. Verify model assignments are configuration-driven, not hardcoded per action
+3. Verify the meta-cognition executive layer orchestrates model selection
+4. Confirm fallback logic: if Gemini fails → OpenAI handles, Claude validates
+5. Verify Gemini operates API-only — confirm zero filesystem access calls
+   from Gemini (this was a documented hallucination risk)
+6. Check for any hardcoded model strings outside of the routing config
+7. Verify API keys for all three providers are environment-variable-sourced
+
+CONFIRM: Show triad routing config and Gemini filesystem access audit result.
+```
+
+---
+
+# ✅ CHECKPOINT 1 — After Domain 6 (Phase 30)
+*Send checkpoint prompt now before continuing to Domain 7*
+
+---
+
+# DOMAIN 7: Notification Delivery System (NDS)
+*Phases 31–35*
+
+---
+
+### Phase 31 — NDS as Sole Notification Sender
+
+```
+AUDIT: No notification may leave the platform except through NDS.
+
+1. Search the entire codebase for direct calls to:
+   - resend.send() or equivalent
+   - twilio.messages.create() or equivalent
+   - Any push notification SDK called directly
+   outside of NDS
+2. List every violation found
+3. Refactor all violations to route through NDS
+4. Verify NDS is the single export point for all notification types:
+   email, SMS, push, in-app
+
+CONFIRM: List all violations found, refactored, and confirm zero remain.
+```
+
+---
+
+### Phase 32 — Notification Deduplication & Idempotency
+
+```
+AUDIT: The same notification must never be sent twice.
+
+1. Find NDS idempotency logic
+2. Verify a unique notification_id is generated per send attempt
+3. Verify before sending, NDS checks if notification_id already exists
+   in the notifications log — if so, skips
+4. Test: Trigger the same notification event twice in rapid succession —
+   confirm only one message is delivered
+5. Fix if deduplication is missing
+
+CONFIRM: Show idempotency check logic and test result.
+```
+
+---
+
+### Phase 33 — Opt-Out / Unsubscribe Token Generation & Enforcement
+
+```
+AUDIT: Unsubscribe must work and be enforced.
+
+1. Find opt-out token generation in emailCore.ts
+2. Verify every automated email contains a unique unsubscribe token
+3. Verify the unsubscribe endpoint:
+   - Validates the token
+   - Marks the recipient as opted out in the database
+   - Returns a confirmation page, not a raw 200
+4. Verify NDS checks opt-out status before sending — opted-out recipients
+   are skipped, not silently sent to
+5. Test: Opt out a seeded email, trigger a notification — confirm no email sent
+6. Verify transactional emails (payroll, shift assignment) bypass opt-out
+   (CAN-SPAM allows this for transactional)
+
+CONFIRM: Show opt-out check in NDS and test result.
+```
+
+---
+
+### Phase 34 — Push / Email / SMS Channel Routing Logic
+
+```
+AUDIT: NDS must route to the correct channel per notification type.
+
+1. Find the channel routing table or logic in NDS
+2. Verify each notification type has a defined preferred channel and fallback
+3. Confirm user notification preferences are respected (if preference system exists)
+4. Verify SMS routing goes through Twilio, email through Resend — never swapped
+5. Check for silent failure if a channel is unavailable — confirm fallback fires
+6. Fix any missing fallback paths
+
+CONFIRM: Show channel routing table and fallback logic.
+```
+
+---
+
+### Phase 35 — Notification Failure Logging & Retry
+
+```
+AUDIT: Failed notifications must be logged and retried.
+
+1. Find notification failure handling in NDS
+2. Verify every send failure is logged with: recipient, channel, notification_type,
+   error, timestamp, workspace_id
+3. Verify retry logic fires on transient failures (not on hard bounces)
+4. Confirm retry count is capped (max 3) and final failure is logged
+5. Check for empty catch blocks in NDS send methods — fix all
+
+CONFIRM: Show failure log schema and retry logic.
+```
+
+---
+
+# DOMAIN 8: Scheduling & Shift Management
+*Phases 36–40*
+
+---
+
+### Phase 36 — Shift Creation & Posting Audit Trail
+
+```
+AUDIT: Every shift creation and modification must be logged.
+
+1. Find shift creation endpoints
+2. Verify every CREATE and UPDATE writes to a scheduling_audit_log with:
+   action, performed_by, workspace_id, shift_id, before_state, after_state,
+   timestamp
+3. Confirm this log is append-only — no updates or deletes allowed
+4. Test: Create and modify a shift as ACME manager — confirm audit records
+
+CONFIRM: Show audit log write logic and test records.
+```
+
+---
+
+### Phase 37 — Schedule Mutation Audit Log Enforcement
+
+```
+AUDIT: All scheduling mutations (publish, unpublish, delete, reassign)
+must be logged.
+
+1. Identify all schedule mutation endpoints
+2. Verify audit log is written BEFORE the mutation completes (not after,
+   which risks write failure without a log)
+3. Verify the log captures the publishing manager's identity
+4. Fix any mutation without a pre-write audit log
+
+CONFIRM: Show mutation audit log implementation.
+```
+
+---
+
+### Phase 38 — Shift Assignment Conflict Detection
+
+```
+AUDIT: An officer cannot be assigned two overlapping shifts.
+
+1. Find shift assignment logic
+2. Verify conflict check runs before assignment is committed:
+   - Same officer, overlapping time window
+   - Officer on approved time off
+   - Officer already at maximum hours for the period
+3. Confirm conflict returns a descriptive error, not a silent failure
+4. Test: Assign same officer to two overlapping shifts — confirm rejection
+   with reason
+
+CONFIRM: Show conflict detection logic and test result.
+```
+
+---
+
+### Phase 39 — Published Schedule Notification Flow
+
+```
+AUDIT: Officers must be notified when a schedule is published.
+
+1. Find schedule publish endpoint
+2. Verify on publish: NDS fires notifications to all affected officers
+3. Confirm notification channel is correct (push + optional email)
+4. Verify notification includes: shift date, time, location, position
+5. Confirm notification is NOT sent to officers not on the published schedule
+6. Test: Publish a schedule for ACME — confirm correct officers notified
+
+CONFIRM: Show publish notification trigger and test result.
+```
+
+---
+
+### Phase 40 — Shift Coverage Automation on Call-Off
+
+```
+AUDIT: When a call-off is logged, coverage search must auto-trigger.
+
+1. Find the call-off → coverage automation pipeline
+2. Verify the pipeline:
+   a. Call-off received and logged
+   b. Coverage search triggers automatically
+   c. Available officers identified (not on shift, qualified for position)
+   d. Outreach sent (Trinity Voice or SMS via NDS)
+   e. First to confirm is assigned
+   f. Manager notified of coverage resolution or failure
+3. Verify silence/no-response from all officers triggers manager escalation
+4. Fix any break in the pipeline
+
+CONFIRM: Trace the full call-off → coverage pipeline in code.
+```
+
+---
+
+# DOMAIN 9: Payroll & Financial Processing
+*Phases 41–45*
+
+---
+
+### Phase 41 — Atomic Credit Deduction & Race Condition Protection
+
+```
+AUDIT: Credit deductions must be atomic — no double-spend possible.
+
+1. Find all credit deduction code paths
+2. Verify database transactions are used — not sequential reads and writes
+3. Verify a SELECT FOR UPDATE or equivalent pessimistic lock is used
+   before decrement
+4. Test: Simulate two concurrent deduction requests for the same balance —
+   confirm only one succeeds
+5. Fix any non-atomic deduction paths
+
+CONFIRM: Show transaction and lock logic, paste test result.
+```
+
+---
+
+### Phase 42 — Payroll Deadline Nudge Service Accuracy
+
+```
+AUDIT: payrollDeadlineNudgeService.ts must fire at the right time
+and to the right recipient.
+
+1. Find the nudge service and its trigger condition
+2. Verify it fires 24 hours before payroll deadline (not after, not on deadline)
+3. Confirm it sends to the org owner's registered email (not their CoAIleague
+   address) via NDS
+4. Verify it does NOT fire if payroll is already submitted
+5. Verify it does NOT fire twice for the same payroll period (idempotency)
+6. Test: Set a payroll deadline to 24h from now — confirm nudge fires once
+
+CONFIRM: Show trigger condition and idempotency check.
+```
+
+---
+
+### Phase 43 — Hours Calculation & Overtime Logic
+
+```
+AUDIT: Hours must be calculated accurately including overtime rules.
+
+1. Find hours calculation service
+2. Verify regular vs overtime threshold is configurable per workspace
+   (not hardcoded to 40hrs)
+3. Verify overtime multiplier is applied correctly
+4. Test: Seed an officer with 45 hours in a week — confirm 40 regular + 5 OT
+5. Verify hours calculation handles midnight-crossing shifts correctly
+6. Fix any calculation errors
+
+CONFIRM: Show overtime logic and test result.
+```
+
+---
+
+### Phase 44 — Payroll Record Write-Protection on Closed Periods
+
+```
+AUDIT: Closed payroll periods must be immutable.
+
+1. Find payroll period close logic
+2. Verify once a period is closed:
+   - Hours cannot be modified
+   - Pay rates cannot be changed retroactively
+   - New shifts cannot be added to the period
+3. Verify attempts to write to a closed period return a clear error
+4. Verify the closed status is stored on the payroll_period record, not
+   derived at query time
+5. Test: Close a period, attempt to modify — confirm rejection
+
+CONFIRM: Show write-protection gate and test result.
+```
+
+---
+
+### Phase 45 — Payroll Audit Trail Completeness
+
+```
+AUDIT: Every payroll action must have a complete audit trail.
+
+1. Find payroll audit log writes
+2. Verify every event is logged: period_open, hours_submitted,
+   rate_applied, period_closed, payment_initiated, payment_confirmed,
+   payment_failed
+3. Confirm each log entry includes: user_id, workspace_id, timestamp,
+   before_value, after_value where applicable
+4. Verify the audit log is append-only
+5. Test: Run a complete payroll cycle in ACME — confirm all events logged
+
+CONFIRM: Paste payroll audit event list and test log output.
+```
+
+---
+
+# DOMAIN 10: Invoice & Billing System
+*Phases 46–50*
+
+---
+
+### Phase 46 — Invoice Draft Creation & Approval Flow
+
+```
+AUDIT: Invoice drafts must go through a defined approval flow.
+
+1. Find invoice creation endpoint
+2. Verify new invoices are created in DRAFT status — never sent immediately
+3. Verify org owner or admin must explicitly approve before sending
+4. Verify approval action:
+   a. Changes status from DRAFT to APPROVED
+   b. Logs the approver and timestamp
+   c. Triggers NDS notification to org owner confirming approval
+5. Test: Create an invoice as manager — confirm it lands in DRAFT,
+   confirm officer cannot approve it
+
+CONFIRM: Show approval flow and status transition logic.
+```
+
+---
+
+### Phase 47 — Write-Protection on Finalized / Closed Invoices
+
+```
+AUDIT: Sent and paid invoices must be immutable.
+
+1. Find invoice update endpoints
+2. Verify invoices in SENT, PAID, or VOID status cannot be edited
+3. Verify the protection is enforced at the API layer, not just the UI
+4. Test: PUT an update to a PAID invoice — confirm rejection with reason
+5. Verify voiding a sent invoice creates a credit memo record rather
+   than deleting the original
+
+CONFIRM: Show write-protection gate and void flow.
+```
+
+---
+
+### Phase 48 — Invoice Notification on Draft Ready
+
+```
+AUDIT: invoiceDraftNotificationService.ts must fire correctly.
+
+1. Find the service and its trigger
+2. Verify it fires when a new invoice draft is created
+3. Confirm it sends to the org owner via NDS (their registered email)
+4. Verify the notification includes: client name, amount, due date,
+   a link to review the draft
+5. Verify it does not fire on invoice updates — only on creation
+
+CONFIRM: Show trigger condition and notification content.
+```
+
+---
+
+### Phase 49 — Client Payment Portal Link Generation
+
+```
+AUDIT: Payment links must be secure and workspace-scoped.
+
+1. Find payment portal link generation
+2. Verify links include a signed token that encodes: invoice_id,
+   workspace_id, expiration
+3. Verify the payment page validates the token before displaying invoice data
+4. Verify an expired or tampered token returns a clear error page
+5. Verify the payment portal does not expose other clients' invoices
+6. Test: Generate a link, decode the token — confirm workspace_id is embedded
+
+CONFIRM: Show token generation and validation logic.
+```
+
+---
+
+### Phase 50 — Invoice-to-Shift Reconciliation Logic
+
+```
+AUDIT: Invoices must accurately reflect the shifts worked for the client.
+
+1. Find invoice line item generation from shift records
+2. Verify: only COMPLETED shifts for the billing period are included
+3. Verify: shift rate × hours = line item total, summed correctly
+4. Verify: no duplicate line items for the same shift
+5. Test: Seed 5 completed shifts for Crestview Mall (ACME client),
+   generate an invoice — confirm all 5 appear with correct amounts
+6. Fix any reconciliation errors
+
+CONFIRM: Show reconciliation logic and test invoice output.
+```
+
+---
+
+# ✅ CHECKPOINT 2 — After Domain 12 (Phase 60)
+*Complete Domains 11 and 12 first, then send checkpoint prompt*
+
+---
+
+# DOMAIN 11: Stripe Integration & Seat Billing
+*Phases 51–55*
+
+---
+
+### Phase 51 — Stripe Webhook Idempotency
+
+```
+AUDIT: Stripe webhook events must never be processed twice.
+
+1. Find Stripe webhook handler
+2. Verify webhook signature is validated on every request (Stripe-Signature header)
+3. Verify event idempotency: check if event ID already exists in
+   processed_webhook_events table before processing
+4. If already processed: return 200 immediately, do not re-process
+5. Test: Replay a webhook event — confirm second processing is skipped
+6. Fix if idempotency check is missing
+
+CONFIRM: Show idempotency logic and replay test result.
+```
+
+---
+
+### Phase 52 — Seat Activation on Personal Address Provisioning
+
+```
+AUDIT: Activating a personal address must create a Stripe billing seat.
+
+1. Find personal address activation endpoint
+2. Verify activation flow:
+   a. Personal address activated by org owner
+   b. Stripe billing seat created ($25/seat overage or plan inclusion)
+   c. Resend address provisioned in email system
+   d. Activation logged with timestamp
+3. Verify deactivating a personal address cancels the Stripe seat
+4. Test: Activate john.smith@acme — confirm Stripe seat created
+
+CONFIRM: Show activation/billing flow and test result.
+```
+
+---
+
+### Phase 53 — Trial Tier Expiration & Downgrade Logic
+
+```
+AUDIT: Trial accounts must expire and downgrade cleanly.
+
+1. Find trial expiration job or scheduled task
+2. Verify it runs daily
+3. Verify on expiration:
+   a. Workspace is flagged as expired
+   b. Access is restricted to conversion page only
+   c. Org owner is notified via NDS 3 days before expiration AND on expiration
+   d. Data is retained for 30 days post-expiration before any deletion
+4. Verify trial cannot be extended programmatically without platform admin action
+5. Test: Create a trial workspace, set expiration to now — confirm flow
+
+CONFIRM: Show expiration job and test result.
+```
+
+---
+
+### Phase 54 — Subscription Tier Feature Gate Sync
+
+```
+AUDIT: Feature gates must sync immediately on tier change.
+
+1. Find tier change handler (Stripe subscription updated webhook)
+2. Verify on tier change:
+   a. workspace.tier is updated in DB
+   b. featureRegistry checks are immediately reflecting new tier
+   c. Downgrade: features above new tier are disabled, data retained
+   d. Upgrade: features unlocked immediately without manual intervention
+3. Test: Upgrade ACME from Starter to Professional — confirm Professional
+   features unlock immediately
+4. Test: Downgrade — confirm Starter-only feature gates enforce
+
+CONFIRM: Show tier sync logic and both test results.
+```
+
+---
+
+### Phase 55 — Stripe Live Key Readiness
+
+```
+AUDIT: Stripe configuration for production.
+
+1. Verify STRIPE_SECRET_KEY environment variable is present
+2. Verify STRIPE_WEBHOOK_SECRET environment variable is present
+3. Confirm the app reads these from env, never from config files or code
+4. Check if current keys are test keys (sk_test_) or live keys (sk_live_)
+5. [BRYAN ACTION REQUIRED] If test keys are in production environment,
+   flag this for Bryan to switch to live keys before republishing
+
+CONFIRM: Confirm env var presence (do not log key values) and flag key type.
+```
+
+---
+
+# DOMAIN 12: Plaid & ACH Payroll
+*Phases 56–60*
+
+---
+
+### Phase 56 — Plaid Transfer Integration Flow Audit
+
+```
+AUDIT: Plaid Transfer ACH payroll flow integrity.
+
+1. Find Plaid Transfer integration code
+2. Verify the full flow:
+   a. Bank account linked via Plaid Link
+   b. Processor token created
+   c. Transfer authorized
+   d. Transfer executed
+   e. Transfer status polled or webhook-received
+3. Verify each step is atomic and logged
+4. Fix any step missing a log or error handler
+
+CONFIRM: Show full transfer flow and log points.
+```
+
+---
+
+### Phase 57 — ACH Payroll Direct Deposit Trigger Logic
+
+```
+AUDIT: Payroll direct deposit must trigger at the right time.
+
+1. Find the payroll direct deposit trigger
+2. Verify it only fires after payroll period is closed and approved
+3. Verify it fires per-employee, not as a single batch that silently skips failures
+4. Verify each individual transfer result is logged with employee_id,
+   amount, status, timestamp
+5. Verify NDS notifies each employee on successful deposit
+
+CONFIRM: Show per-employee trigger and notification logic.
+```
+
+---
+
+### Phase 58 — Plaid Webhook Secret Setup
+
+```
+AUDIT: Plaid webhook verification.
+
+1. Find Plaid webhook handler
+2. Verify Plaid webhook signature is validated on every request
+3. Check if PLAID_WEBHOOK_SECRET is present in environment variables
+4. [BRYAN ACTION REQUIRED] If not present, flag for Bryan to add
+   Plaid webhook secret to production environment variables
+5. Verify the handler does not process unverified webhooks
+
+CONFIRM: Show webhook verification logic and flag env var status.
+```
+
+---
+
+### Phase 59 — Bank Account Verification & Micro-Deposit Flow
+
+```
+AUDIT: Bank verification before first ACH transfer.
+
+1. Find bank account verification flow
+2. Verify micro-deposit verification is required before any payroll transfer
+3. Verify an unverified bank account cannot receive a payroll transfer
+4. Verify micro-deposit amounts are stored securely and validated correctly
+5. Verify a failed micro-deposit verification notifies the org owner via NDS
+
+CONFIRM: Show verification gate and failure notification.
+```
+
+---
+
+### Phase 60 — ACH Failure Handling & Retry
+
+```
+AUDIT: ACH transfer failures must be handled — never silently swallowed.
+
+1. Find ACH failure handling code
+2. Verify on transfer failure:
+   a. Failure is logged with employee_id, amount, error code, timestamp
+   b. Org owner is notified via NDS immediately
+   c. Employee is notified via NDS that payment is delayed
+   d. Retry is attempted after 24 hours if failure was transient (R01-type)
+   e. Permanent failures (R02, R03 etc.) are flagged for manual resolution
+3. Fix any empty catch blocks in ACH processing
+
+CONFIRM: Show failure classification and notification logic.
+```
+
+---
+
+# DOMAIN 13: Client & CRM Pipeline
+*Phases 61–65*
+
+---
+
+### Phase 61 — Lead Creation from Inbound Staffing Email
+
+```
+AUDIT: staffing@ inbound emails must create CRM leads automatically.
+
+1. Find inboundOpportunityAgent or equivalent
+2. Verify: inbound to staffing@{slug} classified as staffing_request
+   → creates a lead record in workspace CRM pipeline
+3. Verify lead record includes: source_email, from_address, body_excerpt,
+   created_at, status: NEW
+4. Verify org owner or manager is notified via NDS of new lead
+5. Test: Send a staffing request to staffing@acme — confirm lead created
+
+CONFIRM: Show lead creation logic and test result.
+```
+
+---
+
+### Phase 62 — CRM Pipeline Stage Transitions
+
+```
+AUDIT: CRM pipeline stages must have defined valid transitions.
+
+1. Find pipeline stage definitions
+2. Verify stages are: NEW → CONTACTED → PROPOSAL_SENT → CONTRACT_SENT
+   → ACTIVE_CLIENT (or equivalent defined stages)
+3. Verify invalid stage transitions are rejected (e.g. NEW → ACTIVE_CLIENT)
+4. Verify each transition is logged with user_id and timestamp
+5. Test: Attempt an invalid transition — confirm rejection
+
+CONFIRM: Show stage transition validation and audit log.
+```
+
+---
+
+### Phase 63 — Client Site Assignment to Contracts
+
+```
+AUDIT: Client sites must be linked to active contracts.
+
+1. Find client site and contract linking logic
+2. Verify a site cannot be added to scheduling without an active contract
+3. Verify contract expiration flags associated sites as requiring renewal
+4. Verify expired contract does not automatically terminate active shifts
+   — it flags for manual review
+5. Test: Create a site, attempt to schedule a shift without a contract —
+   confirm rejection
+
+CONFIRM: Show contract gate on site scheduling.
+```
+
+---
+
+### Phase 64 — Client Portal Access Provisioning
+
+```
+AUDIT: Client portal accounts must be provisioned correctly.
+
+1. Find client portal invite flow
+2. Verify invite is sent from noreply@coaileague.com via NDS
+3. Verify the invite link expires in 48 hours
+4. Verify on acceptance: client portal account is created scoped to
+   their client record and workspace only
+5. Verify re-sending an invite invalidates the previous one
+
+CONFIRM: Show invite flow and scope validation.
+```
+
+---
+
+### Phase 65 — Client Record CRUD & Soft Delete
+
+```
+AUDIT: Client records must soft-delete, never hard-delete.
+
+1. Find client DELETE endpoint
+2. Verify it sets deleted_at timestamp — does not remove the row
+3. Verify soft-deleted clients are excluded from all active queries
+4. Verify soft-deleted clients' invoices, contracts, and history are retained
+5. Verify a soft-deleted client's portal access is revoked immediately
+6. Test: Delete a client — confirm record retained, portal access revoked
+
+CONFIRM: Show soft-delete implementation and portal revocation.
+```
+
+---
+
+# DOMAIN 14: Officer & Employee Management
+*Phases 66–70*
+
+---
+
+### Phase 66 — Officer Onboarding & License Record Creation
+
+```
+AUDIT: Officer onboarding must create a complete compliance record.
+
+1. Find officer creation flow
+2. Verify on officer creation:
+   - Employee record created with workspace_id scope
+   - License record initialized (guard card, firearms permit if applicable)
+   - Expiration dates captured and stored
+   - Expiration alert scheduled via NDS for 30 days before expiration
+3. Test: Create an officer in ACME — confirm license record and alert scheduled
+
+CONFIRM: Show license record creation and alert scheduling.
+```
+
+---
+
+### Phase 67 — License Expiration Tracking & Alerts
+
+```
+AUDIT: Expired licenses must block scheduling.
+
+1. Find license expiration check logic
+2. Verify an officer with an expired license:
+   - Cannot be assigned to a new shift
+   - Triggers an alert to the manager and officer 30 days before expiration
+   - Triggers a critical alert on expiration
+3. Verify the expiration check runs nightly (cron or scheduled job)
+4. Test: Set an officer license expiration to yesterday — attempt shift
+   assignment — confirm block
+
+CONFIRM: Show expiration block logic and alert timing.
+```
+
+---
+
+### Phase 68 — Officer CRUD: Soft Delete & Record Retention
+
+```
+AUDIT: Officer records must soft-delete with full history retained.
+
+1. Verify officer DELETE is a soft delete (deleted_at flag)
+2. Verify soft-deleted officers:
+   - Are removed from active scheduling
+   - Their historical shifts and payroll records are retained
+   - Their personal CoAIleague address is deactivated
+   - Their Stripe seat is released
+3. Test: Soft delete an officer — confirm history retained, seat released
+
+CONFIRM: Show soft delete cascade and Stripe seat release.
+```
+
+---
+
+### Phase 69 — I9 Document Recognition & Compliance
+
+```
+AUDIT: I9 document intake and verification must be complete.
+
+1. Find I9 document intake in the regulatory intelligence system
+2. Verify supported document types are recognized correctly
+3. Verify I9 completion status is tracked per officer
+4. Verify incomplete I9 triggers a compliance alert to the org owner
+5. Verify I9 documents are stored with workspace isolation
+
+CONFIRM: Show I9 intake and compliance alert logic.
+```
+
+---
+
+### Phase 70 — Officer Portal: Shift Visibility Scope
+
+```
+AUDIT: Officers must only see their own assigned shifts.
+
+1. Find officer portal shift query
+2. Verify the query filters by: workspace_id AND employee_id = current user
+3. Verify officers cannot see shifts assigned to other officers
+4. Verify officers cannot see pay rates of other officers
+5. Test: Authenticate as officer A, query shifts — confirm only A's shifts returned
+
+CONFIRM: Show shift query scope and test result.
+```
+
+---
+
+# ✅ CHECKPOINT 3 — After Domain 18 (Phase 90)
+*Complete Domains 15–18 first, then send checkpoint prompt*
+
+---
+
+# DOMAIN 15: Incident Reporting
+*Phases 71–75*
+
+---
+
+### Phase 71 — Incident Submission Flow: Field to Management
+
+```
+AUDIT: Incident reports must reach management reliably.
+
+1. Find incident submission (email, in-app, or Trinity Voice)
+2. Verify all three submission channels create the same incident record schema
+3. Verify the incident record includes: reporter_id, workspace_id,
+   site_id, datetime, description, severity, status: OPEN
+4. Verify submission is atomic — partial incidents are not saved
+5. Test: Submit via email and in-app — confirm identical record structure
+
+CONFIRM: Show incident schema and dual-channel test results.
+```
+
+---
+
+### Phase 72 — Incident Record Persistence & Audit Trail
+
+```
+AUDIT: Incident records must be immutable after submission.
+
+1. Verify submitted incidents cannot be deleted (soft delete only)
+2. Verify edits create a new version record, not overwriting the original
+3. Verify every edit is logged with editor_id and timestamp
+4. Confirm incidents are retained permanently for regulatory use
+
+CONFIRM: Show version control and retention logic.
+```
+
+---
+
+### Phase 73 — Incident Classification by Trinity
+
+```
+AUDIT: Trinity must classify incidents accurately.
+
+1. Find Trinity incident classification logic
+2. Test classifications with seeded incident emails:
+   - "Two people fighting at Gate 3" → VIOLENCE / HIGH
+   - "Suspicious vehicle in parking lot" → SUSPICIOUS_ACTIVITY / MEDIUM
+   - "Officer slipped on wet floor" → INJURY / HIGH
+3. Verify classification is stored on the incident record
+4. Verify classification determines notification routing (HIGH → immediate
+   manager alert, MEDIUM → next available)
+5. Fix any misclassifications
+
+CONFIRM: Show classification logic and test results.
+```
+
+---
+
+### Phase 74 — Incident Notification Routing
+
+```
+AUDIT: Incident notifications must reach the right people at the right time.
+
+1. Find incident notification trigger
+2. Verify HIGH severity → immediate NDS alert to manager + org owner
+3. Verify MEDIUM severity → NDS alert within 15 minutes
+4. Verify LOW severity → included in daily digest
+5. Verify notifications include: incident ID, site, severity, description excerpt
+6. Test: Submit a HIGH severity incident — confirm immediate notification
+
+CONFIRM: Show severity routing logic and test result.
+```
+
+---
+
+### Phase 75 — Incident Export for Regulatory / Audit Use
+
+```
+AUDIT: Incidents must be exportable in a structured format.
+
+1. Find incident export endpoint
+2. Verify export requires: date range, workspace_id from session (never from params)
+3. Verify export format includes all fields needed for PSB or law enforcement review
+4. Verify export is logged as an audit action (who exported, when, what range)
+5. Verify the export endpoint is restricted to Org Owner or Admin role
+
+CONFIRM: Show export logic and audit log.
+```
+
+---
+
+# DOMAIN 16: Call-Off Management
+*Phases 76–80*
+
+---
+
+### Phase 76 — Call-Off Inbound Email Parse Accuracy
+
+```
+AUDIT: Trinity must parse call-off emails reliably.
+
+1. Find TrinityEmailProcessor call-off branch
+2. Test with varied email formats:
+   - "I won't be able to make it to my 8am shift tomorrow, John Smith"
+   - "Calling off tonight. -Officer Martinez"
+   - "Smith here, I'm sick, can't work the 6pm shift at Crestview"
+3. Verify each correctly extracts: officer identity, shift date/time, reason
+4. Verify unresolvable officer identity triggers a clarification reply
+5. Fix any parse failures
+
+CONFIRM: Show parse logic and all 3 test results.
+```
+
+---
+
+### Phase 77 — Call-Off Record Creation & Officer Attribution
+
+```
+AUDIT: Call-off records must be correctly attributed.
+
+1. Verify call-off record includes: officer_id (resolved, not just name string),
+   shift_id (if resolvable), workspace_id, reason, received_at, source (email/voice/app)
+2. Verify if officer cannot be resolved by name alone, Trinity sends a
+   verification reply — does not create a record with null officer_id
+3. Test: Submit a call-off — confirm officer_id resolved, not null
+
+CONFIRM: Show record creation and null guard.
+```
+
+---
+
+### Phase 78 — Automated Shift Coverage Search Trigger
+
+```
+AUDIT: Coverage search must fire automatically on call-off log.
+
+1. Verify coverage search triggers as part of call-off record creation
+   (not a separate manual step)
+2. Verify coverage candidates are: qualified for the position, not already
+   on shift, available (no approved time-off)
+3. Verify outreach method: Trinity Voice call first, then SMS fallback via NDS
+4. Verify a timeout (e.g. 30 min no response) escalates to manager
+
+CONFIRM: Show auto-trigger and escalation logic.
+```
+
+---
+
+### Phase 79 — Manager Alert on Call-Off Received
+
+```
+AUDIT: Manager must be alerted on every call-off.
+
+1. Verify NDS fires a manager alert immediately on call-off receipt
+2. Verify alert includes: officer name, shift date/time, site, reason
+3. Verify alert fires even if coverage search is already underway
+4. Verify manager can acknowledge the alert and take manual control
+
+CONFIRM: Show manager alert trigger and content.
+```
+
+---
+
+### Phase 80 — Call-Off Confirmation Reply to Officer
+
+```
+AUDIT: Officer must receive a confirmation their call-off was received.
+
+1. Verify Trinity replies to the officer's call-off email or voice call
+2. Verify reply confirms: call-off logged, shift date/time, coverage being arranged
+3. Verify reply comes from the correct sender address (calloffs@{slug})
+4. Verify reply fires even if coverage search fails
+5. Test: Submit call-off via email — confirm reply received
+
+CONFIRM: Show confirmation reply logic and test result.
+```
+
+---
+
+# DOMAIN 17: Document & E-Signature Engine
+*Phases 81–85*
+
+---
+
+### Phase 81 — Document Upload & Storage
+
+```
+AUDIT: Document upload must be secure and workspace-isolated.
+
+1. Find document upload endpoint
+2. Verify file type validation (only allowed types accepted)
+3. Verify file size limits are enforced server-side (not just client-side)
+4. Verify storage path includes workspace_id for isolation
+5. Verify uploaded file is virus-scanned or at minimum type-validated
+6. Test: Upload a document as ACME — confirm workspace-scoped storage path
+
+CONFIRM: Show upload validation and storage path logic.
+```
+
+---
+
+### Phase 82 — E-Signature Request Flow
+
+```
+AUDIT: E-signature requests must be tracked from creation to completion.
+
+1. Find e-signature request creation
+2. Verify request creates a record with: document_id, signer_email,
+   workspace_id, status: PENDING, token, expires_at
+3. Verify signing link includes the token and expires in 7 days
+4. Verify NDS sends the signing request email via noreply@ from the
+   correct workspace display sender
+
+CONFIRM: Show request creation and email trigger.
+```
+
+---
+
+### Phase 83 — Signature Completion Webhook & Record Update
+
+```
+AUDIT: Signature completion must update the record atomically.
+
+1. Find the signature completion handler (webhook or callback)
+2. Verify on completion:
+   a. Document status updated to SIGNED
+   b. Signed document stored as a new version
+   c. Completion logged with signer identity and timestamp
+   d. Org owner notified via NDS
+3. Verify completion handler is idempotent (replay safe)
+4. Test: Complete a signature — confirm all 4 steps execute
+
+CONFIRM: Show completion handler and idempotency check.
+```
+
+---
+
+### Phase 84 — Document Version Control
+
+```
+AUDIT: Document versions must be tracked without overwriting originals.
+
+1. Verify document updates create new version records, never overwrite
+2. Verify version history is queryable: GET /documents/{id}/versions
+3. Verify the latest version is the default returned
+4. Verify signed documents cannot have new versions created after signing
+5. Test: Upload v1, upload v2 — confirm v1 still accessible
+
+CONFIRM: Show version creation logic and signed lock.
+```
+
+---
+
+### Phase 85 — Docs Email Inbound → Document Engine Routing
+
+```
+AUDIT: Emails to docs@{slug} must route to the document engine.
+
+1. Verify TrinityEmailProcessor routes docs@ emails to document intake handler
+2. Verify attached files are extracted and stored as document records
+3. Verify Trinity confirms receipt to the sender
+4. Verify unrecognized sender creates a new inbound document with
+   status: NEEDS_REVIEW rather than silently discarding
+
+CONFIRM: Show routing logic and unrecognized sender handling.
+```
+
+---
+
+# DOMAIN 18: Email Hub Canvas
+*Phases 86–90*
+
+---
+
+### Phase 86 — EmailHubCanvas Folder Structure Per Tenant
+
+```
+AUDIT: Every tenant must have the correct folder structure initialized.
+
+1. Find folder initialization logic (likely in emailProvisioningService.ts)
+2. Verify on workspace creation, folders are created:
+   Staffing, Call-Offs, Incidents, Support, Documents, Billing, Unread, Archive
+3. Verify folders are workspace-scoped
+4. Test: Create a new workspace — confirm all folders exist in EmailHubCanvas
+
+CONFIRM: Show folder initialization and test result.
+```
+
+---
+
+### Phase 87 — Thread View Continuity & Reply Threading
+
+```
+AUDIT: Email threads must maintain continuity across replies.
+
+1. Find thread grouping logic in EmailHubCanvas
+2. Verify threads are grouped by: SR reference number first,
+   then Message-ID / In-Reply-To headers as fallback
+3. Verify replies from external parties append to the correct thread
+4. Verify a reply without a reference creates a new thread — not appended
+   to a random existing thread
+5. Test: Send an initial email, reply twice — confirm single thread with 3 messages
+
+CONFIRM: Show threading logic and test result.
+```
+
+---
+
+### Phase 88 — Folder Routing Accuracy by Classification
+
+```
+AUDIT: Every inbound email must land in the correct folder.
+
+1. Find the folder routing logic in TrinityEmailProcessor
+2. Verify routing:
+   - billing@ → Billing folder
+   - calloffs@ → Call-Offs folder
+   - incidents@ → Incidents folder
+   - staffing@ → Staffing folder
+   - docs@ → Documents folder
+   - support@ → Support folder
+3. Test: Send one email to each address — confirm correct folder routing
+4. Fix any misroutings
+
+CONFIRM: Show routing map and all 6 test results.
+```
+
+---
+
+### Phase 89 — Unread / Read State Sync
+
+```
+AUDIT: Read state must sync across sessions and devices.
+
+1. Find read state management
+2. Verify marking a thread as read persists to the database
+3. Verify the read state is consistent across two simultaneous sessions
+   (open on two tabs — read one, confirm other updates)
+4. Verify unread count in the sidebar updates in real-time on new email arrival
+5. Fix any state sync failures
+
+CONFIRM: Show read state persistence and real-time update logic.
+```
+
+---
+
+### Phase 90 — Bulk Actions: Archive, Delete, Move
+
+```
+AUDIT: Bulk actions must be safe and logged.
+
+1. Find bulk action endpoints
+2. Verify archive: sets archived_at, excludes from default view, retains record
+3. Verify delete: soft-delete only, never hard delete an email thread
+4. Verify move: updates folder_id, logs the action with user_id
+5. Verify all bulk actions are workspace-scoped — cannot bulk-modify another
+   tenant's threads
+6. Test: Bulk archive 3 threads — confirm archived, not deleted
+
+CONFIRM: Show bulk action scope guard and test result.
+```
+
+---
+
+# ✅ CHECKPOINT 4 — After Domain 24 (Phase 120)
+*Complete Domains 19–24 first, then send checkpoint prompt*
+
+---
+
+# DOMAIN 19: Forms Engine
+*Phases 91–95*
+
+---
+
+### Phase 91 — Form Builder CRUD
+
+```
+AUDIT: Form builder must correctly create, update, and version forms.
+
+1. Find form builder CRUD endpoints
+2. Verify CREATE generates a form_id and stores field schema as JSON
+3. Verify UPDATE creates a new version (does not overwrite active form)
+4. Verify DELETE is soft-delete — active submissions referencing the form
+   are not affected
+5. Verify forms are workspace-scoped (workspace_id required on all operations)
+
+CONFIRM: Show version-on-update logic and soft delete.
+```
+
+---
+
+### Phase 92 — Form Submission Persistence
+
+```
+AUDIT: Form submissions must persist completely or not at all.
+
+1. Find form submission handler
+2. Verify submission is wrapped in a database transaction
+3. Verify partial submissions are not saved on validation failure
+4. Verify submission record includes: form_id, submitter_id or external email,
+   workspace_id, submitted_at, field_values as JSON
+5. Test: Submit a form — confirm complete record persisted
+
+CONFIRM: Show transaction wrapper and test record.
+```
+
+---
+
+### Phase 93 — Form Routing to Correct Workspace Handler
+
+```
+AUDIT: Public form submissions must route to the correct workspace.
+
+1. Find public form URL structure (likely /forms/{workspace_slug}/{form_id})
+2. Verify slug in URL is used to resolve workspace_id server-side
+3. Verify a form submission cannot be rerouted to another workspace
+4. Verify form handler validates that form_id belongs to the resolved workspace
+
+CONFIRM: Show workspace resolution and form ownership validation.
+```
+
+---
+
+### Phase 94 — Form Data Validation Before Save
+
+```
+AUDIT: Required fields must be validated server-side, not just client-side.
+
+1. Find server-side form validation
+2. Verify required fields are validated against the form schema before save
+3. Verify data types are enforced (date fields, phone number format etc.)
+4. Verify validation errors return descriptive messages, not 500 errors
+5. Test: Submit with missing required field — confirm descriptive validation error
+
+CONFIRM: Show server-side validation logic and test result.
+```
+
+---
+
+### Phase 95 — Form Export & Audit Trail
+
+```
+AUDIT: Form submissions must be exportable and logged.
+
+1. Find form submission export
+2. Verify export is restricted to Admin/Org Owner
+3. Verify export includes all field values and submission metadata
+4. Verify export action is logged in the audit trail
+5. Test: Export form submissions as ACME admin — confirm complete data
+
+CONFIRM: Show export restriction and audit log.
+```
+
+---
+
+# DOMAIN 20: Feature Registry & Tier Enforcement
+*Phases 96–100*
+
+---
+
+### Phase 96 — featureRegistry.ts Canonical Source Validation
+
+```
+AUDIT: featureRegistry.ts must be the only place features are defined.
+
+1. Open featureRegistry.ts — list every feature and its tier requirement
+2. Search codebase for any feature flag checks that are NOT importing
+   from featureRegistry.ts
+3. Fix all violations to use featureRegistry.ts
+4. Verify the registry includes all platform features:
+   Trinity Voice, E-Signature, ACH Payroll, Plaid, Client Portal,
+   Regulatory Export, Advanced Scheduling, White-Label, etc.
+
+CONFIRM: Paste full feature list and list any hardcoded checks found/fixed.
+```
+
+---
+
+### Phase 97 — Feature Gate Enforcement at API Layer
+
+```
+AUDIT: Feature gates must enforce at the API layer.
+
+1. Find the feature gate middleware
+2. Verify it runs before route handlers for gated features
+3. Verify it reads workspace.tier from the session-resolved workspace,
+   not from a client-provided value
+4. Test: Attempt to access a Business-tier feature as a Starter workspace —
+   confirm 403 with descriptive message
+
+CONFIRM: Show middleware and test result.
+```
+
+---
+
+### Phase 98 — Feature Gate Enforcement at UI Layer
+
+```
+AUDIT: UI must hide and disable gated features, not just not render them.
+
+1. Find UI feature gate checks
+2. Verify gated features are:
+   - Hidden from navigation if not available on current tier
+   - Show an upgrade prompt if user navigates directly to a gated route
+3. Verify the UI gate reads from the server-side tier, not a client-cached value
+4. Verify a user cannot access a gated page by typing the URL directly —
+   the API gate catches it even if UI shows the page
+
+CONFIRM: Show UI gate and direct URL access test result.
+```
+
+---
+
+### Phase 99 — Tier Upgrade/Downgrade Feature Flag Sync
+
+```
+AUDIT: Feature flags must sync immediately on subscription change.
+
+1. Find subscription change webhook handler (Stripe customer.subscription.updated)
+2. Verify on tier change: workspace.tier is updated before any response is returned
+3. Verify there is no caching layer that would serve stale tier data
+4. Test: Change ACME from Starter to Professional — immediately check
+   feature availability — confirm no delay
+
+CONFIRM: Show tier update logic and cache invalidation.
+```
+
+---
+
+### Phase 100 — Trial Tier Feature Unlock Accuracy
+
+```
+AUDIT: Trial workspaces must unlock Professional features during trial.
+
+1. Find trial tier logic
+2. Verify trial workspaces are treated as Professional tier for feature gates
+3. Verify trial workspace cannot exceed Professional feature limits
+4. Verify on trial expiration, feature gates drop to Starter immediately
+5. Test: Check a Professional feature on trial workspace — confirm access
+6. Test: Expire the trial — confirm Professional feature is gated
+
+CONFIRM: Show trial tier treatment and both test results.
+```
+
+---
+
+# DOMAIN 21: HelpAI & Support Organization
+*Phases 101–105*
+
+---
+
+### Phase 101 — HelpAI RBAC Scope: Platform vs Tenant Layer
+
+```
+AUDIT: HelpAI operates at two layers and must not cross them.
+
+1. Find HelpAI's service identity and scope definitions
+2. Verify Platform layer HelpAI: answers questions about CoAIleague features,
+   pricing, onboarding — no access to any tenant data
+3. Verify Tenant layer HelpAI: answers workspace-specific questions using
+   only that workspace's data
+4. Verify HelpAI cannot be asked to retrieve data from another workspace
+5. Test: Ask tenant-layer HelpAI about another tenant by name — confirm
+   it cannot access or confirm the existence of other workspaces
+
+CONFIRM: Show scope definition and test result.
+```
+
+---
+
+### Phase 102 — HelpAI Escalation to Human Agent
+
+```
+AUDIT: HelpAI must escalate when it cannot resolve an issue.
+
+1. Find escalation trigger in HelpAI
+2. Verify escalation fires when:
+   - HelpAI cannot answer after 2 attempts
+   - User explicitly requests a human
+   - Issue is classified as billing dispute, account deletion, or legal
+3. Verify escalation creates a support ticket in the platform support queue
+4. Verify the user receives an immediate acknowledgment when escalated
+5. Test: Trigger escalation — confirm ticket created and user notified
+
+CONFIRM: Show escalation trigger and ticket creation.
+```
+
+---
+
+### Phase 103 — HelpAI Knowledge Base Scoping Per Workspace
+
+```
+AUDIT: HelpAI tenant layer must only know what belongs to that workspace.
+
+1. Find HelpAI knowledge retrieval logic
+2. Verify all knowledge queries are scoped by workspace_id
+3. Verify HelpAI cannot retrieve platform-level secrets or config
+4. Verify HelpAI can access: workspace's own documents, FAQs, procedures,
+   schedules — nothing from other workspaces
+5. Test: Ask HelpAI for a document from ACME while authenticated to a
+   different workspace — confirm no result
+
+CONFIRM: Show knowledge retrieval scope and test result.
+```
+
+---
+
+### Phase 104 — Support Ticket Creation & Routing
+
+```
+AUDIT: Support tickets must be created, routed, and tracked.
+
+1. Find support ticket schema and creation logic
+2. Verify ticket includes: submitter_id, workspace_id, category, priority,
+   description, status: OPEN, created_at
+3. Verify ticket routing:
+   - Billing issues → finance queue
+   - Technical issues → engineering queue
+   - Trinity issues → Trinity operations queue
+4. Verify NDS notifies the routed queue on new ticket
+5. Test: Create a billing support ticket — confirm routing and notification
+
+CONFIRM: Show routing logic and test result.
+```
+
+---
+
+### Phase 105 — SLA Tracking & Response Time Logging
+
+```
+AUDIT: Support SLAs must be tracked and breaches flagged.
+
+1. Find SLA definition and tracking logic
+2. Verify SLA tiers by ticket priority:
+   - CRITICAL: 1 hour response
+   - HIGH: 4 hours
+   - MEDIUM: 24 hours
+   - LOW: 72 hours
+3. Verify a job runs periodically to check for SLA breaches
+4. Verify SLA breach triggers NDS escalation to platform admin
+5. If SLA tracking doesn't exist, implement it now
+
+CONFIRM: Show SLA breach detection and escalation.
+```
+
+---
+
+# DOMAIN 22: Database Schema & Query Integrity
+*Phases 106–110*
+
+---
+
+### Phase 106 — Foreign Key Constraint Audit
+
+```
+AUDIT: All relationships must be enforced by foreign key constraints.
+
+1. Pull the full schema
+2. Verify every relationship that should have a FK constraint does:
+   - shifts.employee_id → employees.id
+   - shifts.workspace_id → workspaces.id
+   - invoices.client_id → clients.id
+   - incidents.shift_id → shifts.id (nullable)
+   etc.
+3. Flag any relationship without a FK constraint
+4. Add missing constraints via migration (be careful with existing data)
+
+CONFIRM: List all FK constraints added.
+```
+
+---
+
+### Phase 107 — Index Coverage on High-Frequency Query Paths
+
+```
+AUDIT: High-frequency queries must have index coverage.
+
+1. Identify the top 10 most frequent query patterns (by route traffic)
+2. Run EXPLAIN ANALYZE on each
+3. Verify indexes exist on: workspace_id on all major tables,
+   employee_id on shifts, client_id on invoices,
+   created_at on audit_logs, status on shifts and invoices
+4. Add missing indexes via migration
+
+CONFIRM: Show EXPLAIN results before/after and list indexes added.
+```
+
+---
+
+### Phase 108 — Soft Delete Consistency Across All Entities
+
+```
+AUDIT: Soft delete must be consistent — every entity that supports
+delete must use deleted_at, not hard delete.
+
+1. List all entities with a DELETE endpoint
+2. Verify each uses deleted_at (soft delete), not row removal
+3. Verify all SELECT queries filter WHERE deleted_at IS NULL by default
+4. Fix any entity using hard delete
+
+CONFIRM: List entities fixed.
+```
+
+---
+
+### Phase 109 — Cascade Delete Behavior Audit
+
+```
+AUDIT: Cascade deletes must never accidentally destroy tenant data.
+
+1. Review all FK constraints for CASCADE DELETE
+2. Verify CASCADE DELETE is only used where child records are meaningless
+   without the parent (e.g. email_attachments → email_threads)
+3. Verify CASCADE DELETE is NOT set on: employees, invoices, clients,
+   payroll_records, audit_logs — these should RESTRICT or SET NULL
+4. Fix any dangerous cascade that could cause data loss
+
+CONFIRM: List all CASCADE DELETE relationships and confirm each is safe.
+```
+
+---
+
+### Phase 110 — Schema Migration Integrity Check
+
+```
+AUDIT: All migrations must have run cleanly in production order.
+
+1. Find migration history table
+2. Verify all migrations are marked as completed
+3. Check for any migrations that ran partially (common after a crash)
+4. Verify migration files are in sequential order with no gaps
+5. Verify down migrations exist for every up migration
+
+CONFIRM: Show migration status table output.
+```
+
+---
+
+# DOMAIN 23: API Routes & Middleware
+*Phases 111–115*
+
+---
+
+### Phase 111 — Auth Middleware on All Protected Routes
+
+```
+AUDIT: Zero protected routes without auth middleware.
+
+1. List all routes in the application
+2. For each route: confirm auth middleware is in the chain
+3. Flag any protected route missing auth middleware
+4. Verify public routes (/regulatory, /trial, /api/webhooks/*,
+   /api/onboarding/trial, /api/contact/regulatory) are explicitly
+   marked as public — not accidentally unprotected
+5. Fix all missing auth middleware
+
+CONFIRM: List routes fixed and confirm public route list is intentional.
+```
+
+---
+
+### Phase 112 — Rate Limiting Enforcement
+
+```
+AUDIT: Rate limiting must protect all public and authenticated endpoints.
+
+1. Find rate limiting middleware
+2. Verify:
+   - Public routes: strict limit (e.g. 20 req/min per IP)
+   - Auth endpoints: strict limit (e.g. 5 req/min per IP)
+   - Authenticated routes: generous limit (e.g. 200 req/min per session)
+   - Webhook routes: IP allowlist (Resend, Stripe, Twilio, Plaid IPs only)
+3. Verify rate limit response is 429 with Retry-After header
+4. Test: Exceed rate limit — confirm 429
+
+CONFIRM: Show rate limit config and test result.
+```
+
+---
+
+### Phase 113 — Input Validation & Sanitization on All POST/PUT Routes
+
+```
+AUDIT: All user input must be validated and sanitized server-side.
+
+1. Find the validation library in use (Zod, Joi, Yup, etc.)
+2. Verify every POST and PUT route has a validation schema
+3. Verify validation runs BEFORE any database operation
+4. Verify HTML/script injection is sanitized on all text inputs
+5. Test: Send a XSS payload in a shift description — confirm it is
+   sanitized before storage
+
+CONFIRM: List any routes missing validation and confirm XSS test result.
+```
+
+---
+
+### Phase 114 — Error Response Standardization
+
+```
+AUDIT: API errors must never expose internal details to the client.
+
+1. Find the global error handler
+2. Verify all errors return a standard shape:
+   { error: { code: string, message: string } }
+3. Verify stack traces are NEVER included in production responses
+4. Verify database error messages are NEVER passed to the client
+5. Verify 500 errors are logged server-side with full detail
+6. Test: Trigger a DB error — confirm client receives generic message,
+   server log has full detail
+
+CONFIRM: Show error handler and test result.
+```
+
+---
+
+### Phase 115 — CORS Configuration Audit
+
+```
+AUDIT: CORS must be locked to known origins only.
+
+1. Find CORS configuration
+2. Verify allowed origins are explicitly listed (not wildcard * in production)
+3. Verify allowed methods and headers are minimal
+4. Verify credentials: true is only set if cookies are used for auth
+5. Verify webhook routes have CORS disabled (they don't need it)
+
+CONFIRM: Show CORS config and confirm no wildcard in production.
+```
+
+---
+
+# DOMAIN 24: Real-Time & Live Sync
+*Phases 116–120*
+
+---
+
+### Phase 116 — WebSocket Connection Lifecycle Management
+
+```
+AUDIT: WebSocket connections must be managed cleanly.
+
+1. Find WebSocket server setup
+2. Verify on connect: workspace_id is resolved and stored on the socket session
+3. Verify on disconnect: socket is cleaned up from all subscription lists
+4. Verify stale connections are detected and closed (ping/pong heartbeat)
+5. Verify connection count per workspace is bounded (no memory leak)
+
+CONFIRM: Show connection lifecycle management.
+```
+
+---
+
+### Phase 117 — Live Schedule Update Push
+
+```
+AUDIT: Schedule changes must push to connected clients in real-time.
+
+1. Find schedule update WebSocket broadcast
+2. Verify: when a shift is updated, only connected users in that workspace
+   receive the broadcast
+3. Verify: officers only receive updates for their own shifts
+4. Verify: managers receive updates for all shifts in their scope
+5. Test: Update a shift while officer is connected — confirm real-time push
+
+CONFIRM: Show broadcast scope logic and test result.
+```
+
+---
+
+### Phase 118 — Real-Time Notification Delivery Confirmation
+
+```
+AUDIT: In-app notifications must confirm delivery.
+
+1. Find in-app notification delivery via WebSocket
+2. Verify notification is marked as DELIVERED when received by client
+3. Verify if client is offline: notification is queued and delivered on reconnect
+4. Verify delivery status is stored in the DB (not just in-memory)
+
+CONFIRM: Show delivery confirmation and offline queue logic.
+```
+
+---
+
+### Phase 119 — Reconnection Logic on Socket Drop
+
+```
+AUDIT: Clients must reconnect automatically after socket drop.
+
+1. Find client-side reconnection logic
+2. Verify exponential backoff on reconnect attempts
+3. Verify on reconnect: client receives any missed events since disconnect
+4. Verify missed events are bounded (last N events, not unlimited)
+5. Test: Drop the WebSocket connection — confirm auto-reconnect and
+   missed event delivery
+
+CONFIRM: Show reconnection and missed event logic.
+```
+
+---
+
+### Phase 120 — Broadcast Scope: Tenant Isolation in Real-Time
+
+```
+AUDIT: WebSocket broadcasts must never cross tenant boundaries.
+
+1. Find the broadcast function
+2. Verify every broadcast is scoped to a workspace_id room/channel
+3. Verify it is impossible for one workspace's events to reach another
+4. Test: Connect as ACME user, trigger a broadcast for CANARY workspace —
+   confirm ACME user does not receive it
+
+CONFIRM: Show broadcast scope enforcement and test result.
+```
+
+---
+
+# ✅ CHECKPOINT 5 — After Domain 30 (Phase 150)
+*Complete Domains 25–30, then send the final checkpoint prompt*
+
+---
+
+# DOMAIN 25: Audit Trail & Write Protection
+*Phases 121–125*
+
+---
+
+### Phase 121 — All Financial Writes Confirmed With Audit Trail
+
+```
+AUDIT: Every financial write must have a corresponding audit record.
+
+1. Find all financial write operations:
+   invoice create/update, payroll record create, credit deduction,
+   payment initiation, refund, seat billing
+2. Verify each has an audit log write in the same transaction
+3. Verify the audit log cannot be written without the financial record
+   succeeding (atomic)
+4. Test: Create an invoice — confirm audit record exists
+
+CONFIRM: List all financial write paths and confirm each has an audit record.
+```
+
+---
+
+### Phase 122 — All Scheduling Mutations Confirmed With Audit Log
+
+```
+AUDIT: Every scheduling mutation must be logged.
+
+1. Find all scheduling mutation endpoints
+2. Verify each writes to scheduling_audit_log with full before/after state
+3. Verify audit log write is in the same transaction as the mutation
+4. Test: Reassign a shift — confirm audit record shows old and new assignee
+
+CONFIRM: Show audit log write for scheduling mutations.
+```
+
+---
+
+### Phase 123 — Closed Record Write-Protection Gates
+
+```
+AUDIT: No system path may write to a closed record.
+
+1. Find all entities with a closed/finalized status:
+   payroll periods, invoices, signed documents, completed shifts
+2. Verify EVERY write path checks the status before proceeding
+3. Verify the check is in the service layer, not just the route handler
+   (so it applies even to internal service-to-service calls)
+4. Test: Attempt internal service write to closed payroll period —
+   confirm rejection
+
+CONFIRM: Show service-layer protection and test result.
+```
+
+---
+
+### Phase 124 — Audit Log Tamper Protection
+
+```
+AUDIT: Audit logs must be append-only and tamper-proof.
+
+1. Find audit log table schema
+2. Verify: no UPDATE or DELETE endpoint exists for audit log records
+3. Verify: audit log writes do not go through any update-capable ORM method
+4. Verify: database user used by the app does NOT have UPDATE/DELETE
+   privileges on the audit_log table
+5. Verify: any attempt to modify an audit record via API returns 405
+
+CONFIRM: Show DB privilege config and 405 test result.
+```
+
+---
+
+### Phase 125 — Audit Export for Compliance Use
+
+```
+AUDIT: Audit logs must be exportable for regulatory review.
+
+1. Find audit log export endpoint
+2. Verify restricted to Org Owner role
+3. Verify export covers: date range, entity type filter, actor filter
+4. Verify export format is structured (CSV or JSON), not a raw DB dump
+5. Verify the export action itself is logged in the audit trail
+6. Test: Export ACME audit log as org owner — confirm structured output
+
+CONFIRM: Show export endpoint and self-logging behavior.
+```
+
+---
+
+# DOMAIN 26: Error Handling & Silent Failures
+*Phases 126–130*
+
+---
+
+### Phase 126 — Silent Catch/Swallow Audit — Full Codebase
+
+```
+AUDIT: Find and fix every empty or swallowing catch block.
+
+1. Search the entire codebase for patterns:
+   catch (e) {}
+   catch (err) { /* ignored */ }
+   catch (error) { return null; }
+   catch (e) { return false; }
+   .catch(() => {})
+2. List every occurrence with file and line number
+3. For each: replace with at minimum a structured log:
+   logger.error({ error, context: '...', workspace_id: ... })
+4. If the catch was suppressing a failure that should propagate, fix it
+   to propagate or handle correctly
+
+CONFIRM: List all silent catches found and fixed.
+```
+
+---
+
+### Phase 127 — Retry Logic Coverage on External Service Calls
+
+```
+AUDIT: All external API calls must have retry logic.
+
+1. Find all external API calls: Resend, Stripe, Plaid, Twilio, Gemini,
+   Claude, OpenAI, QuickBooks
+2. Verify each has retry logic for transient failures (5xx, timeout, network)
+3. Verify retry count is bounded (max 3)
+4. Verify exponential backoff between retries
+5. Verify permanent failures (4xx except 429) do NOT retry
+6. Fix any external call with no retry logic
+
+CONFIRM: List services fixed and show retry implementation.
+```
+
+---
+
+### Phase 128 — Dead-Letter Queue for Failed Async Operations
+
+```
+AUDIT: Failed async operations must not disappear.
+
+1. Find the job/queue system (Bull, pg-boss, etc.)
+2. Verify a dead-letter queue (DLQ) exists for failed jobs
+3. Verify jobs that fail after max retries land in the DLQ
+4. Verify the DLQ has a monitoring/alert mechanism
+5. Verify DLQ entries include: job type, payload, error, workspace_id,
+   failed_at
+6. If DLQ doesn't exist, implement it now
+
+CONFIRM: Show DLQ configuration and monitoring alert.
+```
+
+---
+
+### Phase 129 — Error Boundary Coverage in UI
+
+```
+AUDIT: UI must not crash entirely on component errors.
+
+1. Find React error boundaries in the UI codebase
+2. Verify error boundaries wrap:
+   - The entire app (top-level)
+   - Each major page section (dashboard, scheduling canvas, email hub)
+   - Trinity chat interface
+3. Verify error boundary shows a recovery UI, not a blank screen
+4. Verify errors caught by boundaries are logged to the server error log
+5. Test: Throw an error in a wrapped component — confirm boundary catches it
+
+CONFIRM: List boundary placements and test result.
+```
+
+---
+
+### Phase 130 — External API Failure Fallback Behavior
+
+```
+AUDIT: Platform must degrade gracefully when external APIs fail.
+
+1. For each external service, define and verify the fallback:
+   - Resend down: queue emails, retry when available — do NOT lose them
+   - Stripe down: queue webhook processing — do NOT skip payment events
+   - Plaid down: mark transfer as PENDING, retry on next job cycle
+   - Twilio down: fall back to SMS via NDS, log voice failure
+   - Gemini/OpenAI down: Trinity falls back to secondary model in triad
+2. Verify these fallbacks actually exist in code
+3. Fix any service with no fallback — at minimum: log + alert platform admin
+
+CONFIRM: Show each service fallback implementation.
+```
+
+---
+
+# DOMAIN 27: Resend Webhook & Email Infrastructure
+*Phases 131–135*
+
+---
+
+### Phase 131 — Webhook Signature Verification
+
+```
+AUDIT: Resend webhooks must be signature-verified before processing.
+
+1. Find Resend webhook handler (/api/webhooks/resend)
+2. Verify Resend-Signature header is validated on every request
+3. Verify raw request body is used for signature check (not parsed JSON)
+4. Verify invalid signatures return 401 and log the attempt
+5. Verify valid but duplicate event IDs are skipped (idempotency)
+6. Test: Send a request with an invalid signature — confirm 401
+
+CONFIRM: Show signature verification and test result.
+```
+
+---
+
+### Phase 132 — Duplicate Webhook Event Handling
+
+```
+AUDIT: Resend may send the same webhook event more than once.
+
+1. Find the event deduplication logic
+2. Verify Resend event ID is stored in a processed_events table
+3. Verify before processing: check if event ID already exists
+4. Verify idempotency check is atomic (not a race-condition-prone read-then-write)
+5. Test: Replay the same webhook event — confirm second is skipped
+
+CONFIRM: Show idempotency implementation.
+```
+
+---
+
+### Phase 133 — Bounce & Complaint Processing
+
+```
+AUDIT: Bounces and complaints must update recipient status.
+
+1. Find bounce webhook handler
+2. Verify hard bounces: mark email address as invalid in the DB,
+   suppress all future sends to that address via NDS
+3. Verify soft bounces: log, retry up to 3 times, then treat as hard bounce
+4. Verify spam complaints: immediately unsubscribe the recipient,
+   log the complaint
+5. Test: Trigger a simulated bounce event — confirm address suppressed
+
+CONFIRM: Show bounce handling and suppression logic.
+```
+
+---
+
+### Phase 134 — CAN-SPAM Compliance Enforcement Audit
+
+```
+AUDIT: All outbound email must comply with CAN-SPAM.
+
+1. Find emailCore.ts compliance enforcement
+2. Verify every automated email includes:
+   - Physical mailing address in footer
+   - Unsubscribe link (List-Unsubscribe header + body link)
+   - Clear sender identification
+3. Verify unsubscribe requests are honored within the next send cycle
+4. Verify transactional emails (payroll, shift assignment, login) are
+   correctly classified as transactional and exempt from marketing opt-out
+5. Test: Send a marketing email — inspect headers for compliance
+
+CONFIRM: Show compliance implementation and header test results.
+```
+
+---
+
+### Phase 135 — Resend Domain Verification Status
+
+```
+AUDIT: All sending domains must be verified in Resend.
+
+1. Check Resend dashboard for domain verification status of:
+   - coaileague.com
+   - *.coaileague.com (subdomain sending)
+2. Verify SPF, DKIM, and DMARC records are all passing
+3. [BRYAN ACTION REQUIRED] Flag any domain not fully verified
+4. [BRYAN ACTION REQUIRED] Flag DMARC upgrade if not at p=quarantine
+   or p=reject
+
+CONFIRM: List domain verification status for each domain.
+```
+
+---
+
+# DOMAIN 28: QuickBooks Integration
+*Phases 136–140*
+
+---
+
+### Phase 136 — OAuth Token Refresh Reliability
+
+```
+AUDIT: QuickBooks OAuth must not silently expire.
+
+1. Find QB token storage and refresh logic (covered in Phase 4 — verify
+   fixes from that phase are still intact)
+2. Verify refresh runs proactively on a scheduled basis (not just on 401)
+3. Verify refresh failure disables the integration cleanly and notifies
+   the org owner via NDS
+4. Test: Force token expiration — confirm proactive refresh
+
+CONFIRM: Show proactive refresh schedule.
+```
+
+---
+
+### Phase 137 — Sync Conflict Resolution
+
+```
+AUDIT: QuickBooks sync conflicts must be resolved deterministically.
+
+1. Find QB sync conflict detection logic
+2. Verify conflict resolution strategy is defined (CoAIleague wins,
+   or QB wins, or flag for manual review)
+3. Verify conflicts are logged with: entity, conflict_type, coaileague_value,
+   qb_value, resolution
+4. Verify the resolution is consistent — not random
+
+CONFIRM: Show conflict resolution strategy and logging.
+```
+
+---
+
+### Phase 138 — QuickBooks Dependency Reduction Audit
+
+```
+AUDIT: Identify QB dependencies that should be internalized.
+
+1. Audit all features currently requiring QB:
+   - Payroll: should be internal (Plaid ACH replaces QB payroll)
+   - Invoicing: should be internal (CoAIleague invoice engine)
+   - Expense tracking: evaluate
+2. Flag any QB dependency that is redundant with an internal CoAIleague feature
+3. Provide a recommendation for each: internalize, retain, or deprecate
+4. Do not remove any QB integration in this phase — analysis only
+
+CONFIRM: Paste dependency audit table with recommendations.
+```
+
+---
+
+### Phase 139 — Invoice Sync Accuracy
+
+```
+AUDIT: Invoices synced to QuickBooks must match CoAIleague exactly.
+
+1. Find invoice sync logic
+2. Verify sync is triggered on: invoice APPROVED, invoice PAID, invoice VOID
+3. Verify amounts, line items, and client details sync exactly
+4. Verify a sync failure logs the error and retries — does not silently skip
+5. Test: Create and approve an invoice — confirm QB sync fired and matches
+
+CONFIRM: Show sync trigger and test result.
+```
+
+---
+
+### Phase 140 — Error Handling on QuickBooks API Failure
+
+```
+AUDIT: QB API failures must not break platform operations.
+
+1. Verify all QB API calls are wrapped with error handling
+2. Verify QB failure does NOT prevent: invoice creation, payroll processing,
+   or any core platform operation
+3. Verify QB failure is logged and flagged to the org owner via NDS
+4. Verify the platform continues operating in "QB disconnected" mode
+   if the integration fails
+
+CONFIRM: Show QB failure isolation and degraded mode behavior.
+```
+
+---
+
+# DOMAIN 29: Platform Marketing & Public Routes
+*Phases 141–145*
+
+---
+
+### Phase 141 — /regulatory Page Form Submission Routing
+
+```
+AUDIT: Regulatory contact form must route correctly and reliably.
+
+1. Find /api/contact/regulatory POST handler
+2. Verify form submission:
+   a. Validates all required fields server-side
+   b. Creates a contact record with tag: regulatory_partnership
+   c. Sends confirmation email to submitter via NDS / noreply@
+   d. Notifies platform owner (Bryan) of new regulatory contact
+3. Verify the record is stored even if the notification email fails
+4. Test: Submit the regulatory form — confirm all 4 steps
+
+CONFIRM: Show handler logic and test result.
+```
+
+---
+
+### Phase 142 — /trial Signup Workspace Creation Flow
+
+```
+AUDIT: Trial signup must create a complete, isolated workspace.
+
+1. Find /api/onboarding/trial POST handler
+2. Verify on submission:
+   a. Workspace created with tier: TRIAL, trial_expires_at: now + 14 days
+   b. Org owner account created and linked
+   c. 6 email addresses provisioned via emailProvisioningService
+   d. EmailHubCanvas folders initialized
+   e. Welcome email sent FROM trinity@coaileague.com via NDS
+   f. Redirect to onboarding flow
+3. Verify workspace is fully isolated — no data from other workspaces
+4. Test: Submit trial form — confirm all 6 steps complete
+
+CONFIRM: Show handler and test result.
+```
+
+---
+
+### Phase 143 — Trinity@ Two-Lane Classifier Accuracy
+
+```
+AUDIT: trinityMarketingReplyProcessor.ts must classify accurately.
+
+1. Test with seeded reply emails:
+
+REGULATORY TEST EMAILS:
+- From: auditor@dps.texas.gov | Body: "We are conducting a license audit"
+  → Expected: REGULATORY lane
+- From: inspector@pbs.state.tx.us | Body: "Inquiry about compliance records"
+  → Expected: REGULATORY lane
+
+PROSPECT TEST EMAILS:
+- From: owner@alphasecurity.com | Body: "Interested in your pricing"
+  → Expected: PROSPECT lane
+- From: ceo@guardforce.net | Body: "How does the trial work?"
+  → Expected: PROSPECT lane
+
+FALLBACK TEST:
+- From: unknown@gmail.com | Body: "Hello"
+  → Expected: FALLBACK clarification reply
+
+2. Fix any misclassifications
+3. Verify fallback reply content matches spec from Phase 3 prompt
+
+CONFIRM: Show all 5 test classification results.
+```
+
+---
+
+### Phase 144 — SEO Meta Tags on Public Pages
+
+```
+AUDIT: Public pages must have correct SEO meta tags.
+
+1. Verify /regulatory has:
+   - <title>Compliance Partnership | CoAIleague</title>
+   - Meta description relevant to regulatory use case
+   - Open Graph tags for social sharing
+2. Verify /trial has:
+   - <title>Start Free Trial | CoAIleague</title>
+   - Meta description emphasizing trial and Trinity
+3. Verify no public page has a noindex tag (unless intentional)
+4. Verify canonical URLs are set correctly
+
+CONFIRM: Show meta tag implementation for both pages.
+```
+
+---
+
+### Phase 145 — Public Route Auth Bypass Verification
+
+```
+AUDIT: Public routes must not expose protected data.
+
+1. Verify /regulatory and /trial are fully accessible without authentication
+2. Verify the form submission endpoints accept unauthenticated requests
+3. Verify the form submission endpoints do NOT return any tenant data in their
+   response (only: success confirmation)
+4. Verify no internal API route is accidentally exposed as public
+5. Attempt to access protected routes without auth — confirm 401/redirect
+
+CONFIRM: Show public route auth bypass config and protected route test.
+```
+
+---
+
+# DOMAIN 30: Comprehensive Integration & End-to-End Validation
+*Phases 146–150*
+
+---
+
+### Phase 146 — Full Tenant Lifecycle: Create Workspace to First Payroll
+
+```
+END-TO-END TEST using ACME Security sandbox:
+
+Execute the complete tenant lifecycle:
+1. Workspace created → 6 email addresses provisioned → folders initialized
+2. Org owner onboarded → role assigned
+3. Officer created → license record created → expiration alert scheduled
+4. Client created → site added → contract created
+5. Shift posted → officer assigned → shift started → shift completed
+6. Invoice generated from completed shift → approved → sent to client
+7. Payroll period opened → hours imported from completed shift →
+   period closed → ACH transfer queued
+
+Verify: every step produces the correct audit records, notifications,
+and data state. Fix any failure before advancing.
+
+CONFIRM: Paste a step-by-step execution log showing each step passed.
+```
+
+---
+
+### Phase 147 — Cross-System Flow: Trinity Email → Voice → Action Hub
+
+```
+END-TO-END TEST: Trinity cross-system orchestration.
+
+1. Email a call-off to calloffs@acme — confirm Trinity Email classifies it,
+   logs the call-off, triggers coverage search
+2. Trinity Voice calls a candidate officer — confirm caller ID verified,
+   shift offer made, response captured
+3. Officer accepts via voice — confirm Action Hub fires shift assignment action
+4. Verify the full 7-step pipeline executes for the assignment action
+5. Verify manager receives NDS notification of coverage resolution
+6. Verify the entire chain is traceable via audit logs
+
+CONFIRM: Trace the full cross-system log from email receipt to NDS notification.
+```
+
+---
+
+### Phase 148 — Officer Lifecycle E2E: Onboard → Schedule → Call-Off → Coverage → Payroll
+
+```
+END-TO-END TEST: Officer full lifecycle.
+
+1. Create officer John Smith in ACME
+2. Assign John to a shift at Crestview Mall next Monday 0800-1600
+3. John submits a call-off via email
+4. Confirm automated coverage search fires
+5. Alternate officer confirms availability
+6. John's shift reassigned, alternate assigned
+7. End of pay period: John's hours reflect 0 for the reassigned shift
+8. Alternate officer's hours reflect the covered shift
+9. Payroll processed correctly for both officers
+
+Fix any failure in the chain.
+
+CONFIRM: Paste step-by-step log.
+```
+
+---
+
+### Phase 149 — Client Lifecycle E2E: Email → CRM → Contract → Invoice → Payment
+
+```
+END-TO-END TEST: Client acquisition to payment.
+
+1. Prospective client emails staffing@acme — "Need 4 guards this weekend"
+2. Confirm lead created in ACME CRM pipeline → org owner notified
+3. Advance lead to PROPOSAL_SENT → CONTRACT_SENT → ACTIVE_CLIENT
+4. Site created and linked to contract
+5. Shifts scheduled for the weekend, officers assigned
+6. Shifts completed
+7. Invoice generated from completed shifts → approved → sent to client
+8. Client clicks payment link → payment processed
+9. Invoice status → PAID, audit record created, QB sync fires
+
+Fix any failure.
+
+CONFIRM: Paste step-by-step log.
+```
+
+---
+
+### Phase 150 — Zero-Issue Final Audit: Critical Path Smoke Test
+
+```
+FINAL AUDIT: Confirm zero CRITICAL or HIGH issues remain.
+
+Run the following smoke tests:
+
+SECURITY:
+□ Cross-tenant data access attempt → 403
+□ Expired session request → 401
+□ Officer accessing admin route → 403
+
+FINANCIAL:
+□ Double credit deduction attempt → only one succeeds
+□ Write to closed payroll period → rejected
+□ Stripe webhook replay → second event skipped
+
+NOTIFICATIONS:
+□ Opted-out recipient triggered → no notification sent
+□ Duplicate notification event → only one delivered
+
+TRINITY:
+□ Call-off email → correct classification, record created, coverage triggered
+□ Gemini filesystem access attempt → blocked
+□ Action executed without authorization → 403 before fetch
+
+REAL-TIME:
+□ Schedule update → connected officers notified within 2 seconds
+□ Cross-tenant broadcast attempt → other tenant receives nothing
+
+SILENT FAILURES:
+□ Force Resend API failure → email queued, not lost
+□ Force Plaid API failure → transfer marked PENDING, not dropped
+□ Force empty catch → confirm zero silent catches remain
+
+REPORT:
+List any test that did not pass with CRITICAL / HIGH / MEDIUM severity.
+Fix all CRITICAL and HIGH before closing.
+Provide a final summary of:
+- Total issues found across all 150 phases
+- Total issues fixed
+- Issues deferred (MEDIUM/LOW with justification)
+- [BRYAN ACTION REQUIRED] items list (physical actions, secrets, DNS)
+- Production readiness score
+
+CONFIRM: Zero CRITICAL or HIGH issues. Platform is ready to republish.
+```
+
+---
+
+## 🔴 FINAL [BRYAN ACTION REQUIRED] CHECKLIST
+
+Collect all flagged items here as the agent works through phases.
+Do not send these to the agent — these are physical/external actions only you can take.
+
+- [ ] Stripe: Switch from test keys (sk_test_) to live keys (sk_live_)
+- [ ] Stripe: Add live STRIPE_WEBHOOK_SECRET to production environment
+- [ ] Plaid: Add PLAID_WEBHOOK_SECRET to production environment
+- [ ] Twilio: Complete toll-free number verification before Trinity Voice goes live
+- [ ] DNS: Add/upgrade DMARC record (target: p=quarantine or p=reject)
+- [ ] DNS: Upgrade DKIM key to 2048-bit if currently 1024-bit
+- [ ] DNS: Confirm MX records point correctly for inbound email routing
+- [ ] Resend: Confirm domain verification passes for coaileague.com and *.coaileague.com
+- [ ] JWT: Confirm JWT signing secret is different between dev and production environments
+
+---
+
+*CoAIleague Platform — 150-Phase Audit Document*
+*30 Domains | 5 Rinse-and-Repeat Checkpoints | Zero Issues Target*
+```

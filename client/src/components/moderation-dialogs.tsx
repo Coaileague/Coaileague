@@ -1,18 +1,14 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalContent, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalFooter } from "@/components/ui/universal-modal";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
-import { AlertTriangle, UserX, Clock, MessageSquareOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { TrinityLogo } from "@/components/trinity-logo";
+import { AlertTriangle, UserX, Clock, MessageSquareOff, Mail } from "lucide-react";
+
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
 interface KickDialogProps {
   open: boolean;
@@ -61,27 +57,26 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
-      <DialogContent size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
-        <DialogHeader>
+    <UniversalModal open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()} size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
+        <UniversalModalHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <CoAIleagueStaticLogo size="sm" variant="icon" />
+              <TrinityLogo size={24} />
             </div>
             <div className="flex-1">
-              <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              <UniversalModalTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {step === 1 ? "Remove User from Chat?" : "Select Reason for Removal"}
-              </DialogTitle>
+              </UniversalModalTitle>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                CoAIleague™ Support • Moderation Action
+                {PLATFORM_NAME}™ Support • Moderation Action
               </p>
             </div>
           </div>
-        </DialogHeader>
+        </UniversalModalHeader>
 
         {step === 1 ? (
           <>
-            <DialogDescription className="text-sm text-slate-700 dark:text-slate-300 py-2">
+            <UniversalModalDescription className="text-sm text-slate-700 dark:text-slate-300 py-2">
               <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
                 <AlertTriangle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                 <div>
@@ -93,9 +88,9 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
                   </p>
                 </div>
               </div>
-            </DialogDescription>
+            </UniversalModalDescription>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <UniversalModalFooter className="gap-2 sm:gap-0">
               <Button
                 variant="outline"
                 onClick={handleCancel}
@@ -106,12 +101,12 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
               </Button>
               <Button
                 onClick={() => setStep(2)}
-                className="bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950 text-white"
+                className="bg-gradient-to-r from-slate-700 to-slate-900 text-white"
                 data-testid="button-next-kick"
               >
                 Next: Select Reason
               </Button>
-            </DialogFooter>
+            </UniversalModalFooter>
           </>
         ) : (
           <>
@@ -128,7 +123,7 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
                       <div
                         key={reason.value}
                         className={`
-                          flex items-center space-x-3 p-3 rounded-md border-2 cursor-pointer
+                          flex items-center space-x-3 p-3 rounded-md border cursor-pointer
                           transition-all
                           ${selectedReason === reason.value 
                             ? 'border-slate-600 dark:border-slate-400 bg-slate-100 dark:bg-slate-800' 
@@ -169,7 +164,7 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
               )}
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <UniversalModalFooter className="gap-2 sm:gap-0">
               <Button
                 variant="outline"
                 onClick={() => setStep(1)}
@@ -181,17 +176,16 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
               <Button
                 onClick={handleConfirmKick}
                 disabled={selectedReason === "custom" && !customReason.trim()}
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                className="bg-gradient-to-r from-red-600 to-red-700 text-white"
                 data-testid="button-confirm-kick"
               >
                 <UserX className="w-4 h-4 mr-2" />
                 Remove User
               </Button>
-            </DialogFooter>
+            </UniversalModalFooter>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+    </UniversalModal>
   );
 }
 
@@ -242,23 +236,22 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
-      <DialogContent size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
-        <DialogHeader>
+    <UniversalModal open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()} size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-300 dark:border-slate-700">
+        <UniversalModalHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <CoAIleagueStaticLogo size="sm" variant="icon" />
+              <TrinityLogo size={24} />
             </div>
             <div className="flex-1">
-              <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              <UniversalModalTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {step === 1 ? "Silence User?" : "Select Reason"}
-              </DialogTitle>
+              </UniversalModalTitle>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                CoAIleague™ Support • Moderation Action
+                {PLATFORM_NAME}™ Support • Moderation Action
               </p>
             </div>
           </div>
-        </DialogHeader>
+        </UniversalModalHeader>
 
         {step === 1 ? (
           <>
@@ -288,7 +281,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <UniversalModalFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleCancel} data-testid="button-cancel-silence">
                 Cancel
               </Button>
@@ -299,7 +292,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
               >
                 Next: Select Reason
               </Button>
-            </DialogFooter>
+            </UniversalModalFooter>
           </>
         ) : (
           <>
@@ -310,7 +303,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
                     <div
                       key={reason.value}
                       className={`
-                        flex items-center space-x-3 p-3 rounded-md border-2 cursor-pointer transition-all
+                        flex items-center space-x-3 p-3 rounded-md border cursor-pointer transition-all
                         ${selectedReason === reason.value 
                           ? 'border-slate-600 bg-slate-100 dark:bg-slate-800' 
                           : 'border-slate-200 dark:border-slate-700'
@@ -337,7 +330,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
               )}
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <UniversalModalFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setStep(1)} data-testid="button-back-silence">
                 Back
               </Button>
@@ -348,10 +341,142 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
               >
                 Silence for {duration}m
               </Button>
-            </DialogFooter>
+            </UniversalModalFooter>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+    </UniversalModal>
+  );
+}
+
+// ─── Reset Email Dialog ───────────────────────────────────────────────────────
+
+interface ResetEmailDialogProps {
+  open: boolean;
+  userName: string;
+  onConfirm: (newEmail: string) => void;
+  onCancel: () => void;
+}
+
+export function ResetEmailDialog({ open, userName, onConfirm, onCancel }: ResetEmailDialogProps) {
+  const [email, setEmail] = useState("");
+
+  const handleConfirm = () => {
+    if (email.trim()) {
+      onConfirm(email.trim());
+      setEmail("");
+    }
+  };
+
+  const handleCancel = () => {
+    setEmail("");
+    onCancel();
+  };
+
+  return (
+    <UniversalModal open={open} onOpenChange={isOpen => !isOpen && handleCancel()}>
+      <UniversalModalContent>
+        <UniversalModalHeader>
+          <div className="flex items-center gap-3">
+            <Mail className="w-5 h-5 text-blue-500" />
+            <div>
+              <UniversalModalTitle>Reset Email Address</UniversalModalTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Support Action • {userName}</p>
+            </div>
+          </div>
+        </UniversalModalHeader>
+        <UniversalModalDescription className="text-sm">
+          Enter the new email address for <strong>{userName}</strong>. A verification link will be sent to the new address.
+        </UniversalModalDescription>
+        <div className="py-4 space-y-2">
+          <Label htmlFor="reset-email-input">New Email Address</Label>
+          <Input
+            id="reset-email-input"
+            type="email"
+            placeholder="newaddress@example.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleConfirm()}
+            autoFocus
+            data-testid="input-reset-email"
+          />
+        </div>
+        <UniversalModalFooter>
+          <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={!email.trim() || !email.includes("@")}
+            data-testid="button-confirm-reset-email"
+          >
+            Reset Email
+          </Button>
+        </UniversalModalFooter>
+      </UniversalModalContent>
+    </UniversalModal>
+  );
+}
+
+// ─── Report Issue Dialog ──────────────────────────────────────────────────────
+
+interface ReportIssueDialogProps {
+  open: boolean;
+  targetName: string;
+  onConfirm: (issue: string) => void;
+  onCancel: () => void;
+}
+
+export function ReportIssueDialog({ open, targetName, onConfirm, onCancel }: ReportIssueDialogProps) {
+  const [issue, setIssue] = useState("");
+
+  const handleConfirm = () => {
+    if (issue.trim()) {
+      onConfirm(issue.trim());
+      setIssue("");
+    }
+  };
+
+  const handleCancel = () => {
+    setIssue("");
+    onCancel();
+  };
+
+  return (
+    <UniversalModal open={open} onOpenChange={isOpen => !isOpen && handleCancel()}>
+      <UniversalModalContent>
+        <UniversalModalHeader>
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-orange-500" />
+            <div>
+              <UniversalModalTitle>Report Issue</UniversalModalTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Support Action • {targetName}</p>
+            </div>
+          </div>
+        </UniversalModalHeader>
+        <UniversalModalDescription className="text-sm">
+          Briefly describe the issue with <strong>{targetName}</strong>. This will be sent to platform support.
+        </UniversalModalDescription>
+        <div className="py-4 space-y-2">
+          <Label htmlFor="report-issue-input">Issue Description</Label>
+          <Textarea
+            id="report-issue-input"
+            placeholder="Describe the issue..."
+            value={issue}
+            onChange={e => setIssue(e.target.value)}
+            rows={3}
+            autoFocus
+            data-testid="input-report-issue"
+          />
+        </div>
+        <UniversalModalFooter>
+          <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={!issue.trim()}
+            data-testid="button-confirm-report-issue"
+          >
+            Submit Report
+          </Button>
+        </UniversalModalFooter>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

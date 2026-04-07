@@ -1,4 +1,7 @@
 import { db } from "../db";
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('IdentityService');
 import { 
   workspaces, 
   employees,
@@ -7,8 +10,12 @@ import {
   externalIdentifiers, 
   idSequences,
   supportRegistry,
+  workspaceMembers,
+  helpaiSessions,
+  platformRoles,
 } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
+import { creditManager } from './billing/creditManager';
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import { 
   safeOrgCode, 
@@ -22,6 +29,7 @@ import {
 
 /**
  * Internal: Ensure organization has external ID (transaction-aware)
+ * Uses workspace's orgCode field if set by owner during onboarding
  * @param tx - Active transaction context
  */
 async function ensureOrgIdentifiersInTx(
@@ -29,10 +37,10 @@ async function ensureOrgIdentifiersInTx(
   orgId: string,
   orgName: string
 ): Promise<{ orgCode: string; externalId: string }> {
-  console.log(`[Identity] ensureOrgIdentifiersInTx START for org ${orgId} (${orgName})`);
+  log.info(`[Identity] ensureOrgIdentifiersInTx START for org ${orgId} (${orgName})`);
   
   // Check if org already has an external ID
-  console.log(`[Identity] Checking existing org external ID...`);
+  log.info(`[Identity] Checking existing org external ID...`);
   const existing = await tx
     .select()
     .from(externalIdentifiers)
@@ -44,31 +52,48 @@ async function ensureOrgIdentifiersInTx(
     )
     .limit(1);
 
-  console.log(`[Identity] Existing org check complete: ${existing.length} found`);
+  log.info(`[Identity] Existing org check complete: ${existing.length} found`);
 
   if (existing.length > 0) {
     // Extract org code from existing external ID (ORG-XXXX -> XXXX)
     const orgCode = existing[0].externalId.substring(4);
-    console.log(`[Identity] Using existing org code: ${orgCode}`);
+    log.info(`[Identity] Using existing org code: ${orgCode}`);
     return { orgCode, externalId: existing[0].externalId };
   }
 
+  // CRITICAL: Check if workspace has an orgCode set by owner during onboarding
+  // This takes precedence over auto-generated codes
+  log.info(`[Identity] Checking workspace orgCode field...`);
+  const [workspace] = await tx
+    .select({ orgCode: workspaces.orgCode })
+    .from(workspaces)
+    .where(eq(workspaces.id, orgId))
+    .limit(1);
+  
+  const userSetOrgCode = workspace?.orgCode?.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  log.info(`[Identity] Workspace orgCode field: ${userSetOrgCode || 'not set'}`);
+
   // Try to generate unique org code with collision retry
-  console.log(`[Identity] No org external ID found, generating new one...`);
+  log.info(`[Identity] No org external ID found, generating new one...`);
   let attempts = 0;
   let orgCode: string = '';
   let externalId: string = '';
   let success = false;
   
   while (attempts < 10 && !success) {
-    // First attempt uses clean name, subsequent use random suffix
-    orgCode = safeOrgCode(orgName, attempts > 0);
+    // PRIORITY: Use user-set orgCode from workspace, fallback to name-derived code
+    if (attempts === 0 && userSetOrgCode && userSetOrgCode.length >= 3) {
+      orgCode = userSetOrgCode;
+    } else {
+      // Fallback: derive from name or add random suffix
+      orgCode = safeOrgCode(orgName, attempts > 0);
+    }
     externalId = genOrgExternalId(orgCode);
-    console.log(`[Identity] Attempt ${attempts + 1}: trying org code ${orgCode} -> ${externalId}`);
+    log.info(`[Identity] Attempt ${attempts + 1}: trying org code ${orgCode} -> ${externalId}`);
     
     try {
       // Create external identifier
-      console.log(`[Identity] Inserting org external ID into database...`);
+      log.info(`[Identity] Inserting org external ID into database...`);
       await tx.insert(externalIdentifiers).values({
         entityType: 'org',
         entityId: orgId,
@@ -76,7 +101,7 @@ async function ensureOrgIdentifiersInTx(
         orgId: null, // Orgs don't have a parent org
         isPrimary: true,
       });
-      console.log(`[Identity] Org external ID insert successful!`);
+      log.info(`[Identity] Org external ID insert successful!`);
       
       // Success!
       success = true;
@@ -119,43 +144,43 @@ async function ensureOrgIdentifiersInTx(
 
   // Initialize employee sequence for this org
   try {
-    console.log(`[Identity] Initializing employee sequence for org ${orgId}...`);
+    log.info(`[Identity] Initializing employee sequence for org ${orgId}...`);
     await tx.insert(idSequences).values({
       orgId: orgId,
       kind: 'employee',
       nextVal: 1,
     });
-    console.log(`[Identity] Employee sequence initialized successfully`);
+    log.info(`[Identity] Employee sequence initialized successfully`);
   } catch (error: any) {
-    console.log(`[Identity] Employee sequence init caught error: ${error.code}`);
+    log.info(`[Identity] Employee sequence init caught error: ${error.code}`);
     // Ignore unique constraint violation - another transaction created it
     if (error.code !== '23505') {
-      console.error(`[Identity] Unexpected error initializing employee sequence:`, error);
+      log.error(`[Identity] Unexpected error initializing employee sequence:`, error);
       throw error;
     }
-    console.log(`[Identity] Employee sequence already exists (conflict ignored)`);
+    log.info(`[Identity] Employee sequence already exists (conflict ignored)`);
   }
 
   // Initialize client sequence for this org
   try {
-    console.log(`[Identity] Initializing client sequence for org ${orgId}...`);
+    log.info(`[Identity] Initializing client sequence for org ${orgId}...`);
     await tx.insert(idSequences).values({
       orgId: orgId,
       kind: 'client',
       nextVal: 1,
     });
-    console.log(`[Identity] Client sequence initialized successfully`);
+    log.info(`[Identity] Client sequence initialized successfully`);
   } catch (error: any) {
-    console.log(`[Identity] Client sequence init caught error: ${error.code}`);
+    log.info(`[Identity] Client sequence init caught error: ${error.code}`);
     // Ignore unique constraint violation - another transaction created it
     if (error.code !== '23505') {
-      console.error(`[Identity] Unexpected error initializing client sequence:`, error);
+      log.error(`[Identity] Unexpected error initializing client sequence:`, error);
       throw error;
     }
-    console.log(`[Identity] Client sequence already exists (conflict ignored)`);
+    log.info(`[Identity] Client sequence already exists (conflict ignored)`);
   }
 
-  console.log(`[Identity] ensureOrgIdentifiersInTx completed successfully`);
+  log.info(`[Identity] ensureOrgIdentifiersInTx completed successfully`);
   return { orgCode, externalId };
 }
 
@@ -188,10 +213,10 @@ async function attachEmployeeExternalIdInTx(
   orgId: string
 ): Promise<{ externalId: string; localNumber: number }> {
       try {
-        console.log(`[Identity] attachEmployeeExternalId starting for ${employeeId}`);
+        log.info(`[Identity] attachEmployeeExternalId starting for ${employeeId}`);
         
         // Check if employee already has an external ID
-        console.log(`[Identity] Checking for existing external ID...`);
+        log.info(`[Identity] Checking for existing external ID...`);
         const existing = await tx
           .select()
           .from(externalIdentifiers)
@@ -203,13 +228,13 @@ async function attachEmployeeExternalIdInTx(
           )
           .limit(1);
         
-        console.log(`[Identity] Existing check complete: ${existing.length} found`);
+        log.info(`[Identity] Existing check complete: ${existing.length} found`);
 
         if (existing.length > 0) {
           // Extract local number from existing ID (EMP-XXXX-00001 -> 1)
           const parts = existing[0].externalId.split('-');
           const localNumber = parseInt(parts[2], 10);
-          console.log(`[Identity] Employee ${employeeId} already has external ID: ${existing[0].externalId}`);
+          log.info(`[Identity] Employee ${employeeId} already has external ID: ${existing[0].externalId}`);
           
           // CRITICAL: Sync external ID to employees.employee_number if not already synced
           await tx
@@ -221,24 +246,24 @@ async function attachEmployeeExternalIdInTx(
         }
 
         // Ensure org has identifiers set up
-        console.log(`[Identity] About to query workspaces for orgId: ${orgId}`);
+        log.info(`[Identity] About to query workspaces for orgId: ${orgId}`);
         const org = await tx
           .select({ name: workspaces.name })
           .from(workspaces)
           .where(eq(workspaces.id, orgId))
           .limit(1);
-        console.log(`[Identity] Workspaces query completed, found ${org.length} rows`);
+        log.info(`[Identity] Workspaces query completed, found ${org.length} rows`);
 
         if (org.length === 0) {
-          console.error(`[Identity] Organization not found: ${orgId}`);
+          log.error(`[Identity] Organization not found: ${orgId}`);
           throw new Error('Organization not found');
         }
 
         const { orgCode } = await ensureOrgIdentifiersInTx(tx, orgId, org[0].name);
-        console.log(`[Identity] Returned from ensureOrgIdentifiersInTx with orgCode: ${orgCode}`);
+        log.info(`[Identity] Returned from ensureOrgIdentifiersInTx with orgCode: ${orgCode}`);
 
         // ensureOrgIdentifiersInTx already initialized the sequence, so just increment it
-        console.log(`[Identity] Atomically incrementing employee sequence...`);
+        log.info(`[Identity] Atomically incrementing employee sequence...`);
         const updated = await tx
           .update(idSequences)
           .set({ 
@@ -252,7 +277,7 @@ async function attachEmployeeExternalIdInTx(
             )
           )
           .returning({ issued: sql`${idSequences.nextVal} - 1` });
-        console.log(`[Identity] Atomic increment completed, updated ${updated.length} rows`);
+        log.info(`[Identity] Atomic increment completed, updated ${updated.length} rows`);
         
         let nextVal = 1;
         
@@ -278,10 +303,10 @@ async function attachEmployeeExternalIdInTx(
           .set({ employeeNumber: externalId })
           .where(eq(employees.id, employeeId));
 
-        console.log(`[Identity] Created employee external ID: ${externalId} for employee ${employeeId}`);
+        log.info(`[Identity] Created employee external ID: ${externalId} for employee ${employeeId}`);
         return { externalId, localNumber: nextVal };
       } catch (error: any) {
-        console.error('[Identity] Error in attachEmployeeExternalIdInTx:', error.message, error.code);
+        log.error('[Identity] Error in attachEmployeeExternalIdInTx:', (error instanceof Error ? error.message : String(error)), error.code);
         throw error;
       }
 }
@@ -306,7 +331,7 @@ export async function attachEmployeeExternalId(
       return attachEmployeeExternalIdInTx(tx, employeeId, orgId);
     });
   } catch (error: any) {
-    console.error('[Identity] Failed to attach employee external ID:', error.message, error.code);
+    log.error('[Identity] Failed to attach employee external ID:', (error instanceof Error ? error.message : String(error)), error.code);
     throw error;
   }
 }
@@ -335,7 +360,7 @@ async function attachClientExternalIdInTx(
     if (existing.length > 0) {
       const parts = existing[0].externalId.split('-');
       const localNumber = parseInt(parts[2], 10);
-      console.log(`[Identity] Client ${clientId} already has external ID: ${existing[0].externalId}`);
+      log.info(`[Identity] Client ${clientId} already has external ID: ${existing[0].externalId}`);
       
       // CRITICAL: Sync external ID to clients.client_code if not already synced
       await tx
@@ -354,7 +379,7 @@ async function attachClientExternalIdInTx(
       .limit(1);
 
     if (org.length === 0) {
-      console.error(`[Identity] Organization not found: ${orgId}`);
+      log.error(`[Identity] Organization not found: ${orgId}`);
       throw new Error('Organization not found');
     }
 
@@ -397,10 +422,10 @@ async function attachClientExternalIdInTx(
       .set({ clientCode: externalId })
       .where(eq(clients.id, clientId));
 
-    console.log(`[Identity] Created client external ID: ${externalId} for client ${clientId}`);
+    log.info(`[Identity] Created client external ID: ${externalId} for client ${clientId}`);
     return { externalId, localNumber: nextVal };
   } catch (error: any) {
-    console.error('[Identity] Error in attachClientExternalIdInTx:', error.message, error.code);
+    log.error('[Identity] Error in attachClientExternalIdInTx:', (error instanceof Error ? error.message : String(error)), error.code);
     throw error;
   }
 }
@@ -425,7 +450,7 @@ export async function attachClientExternalId(
       return attachClientExternalIdInTx(tx, clientId, orgId);
     });
   } catch (error: any) {
-    console.error('[Identity] Failed to attach client external ID:', error.message, error.code);
+    log.error('[Identity] Failed to attach client external ID:', (error instanceof Error ? error.message : String(error)), error.code);
     throw error;
   }
 }
@@ -572,4 +597,413 @@ export async function getExternalId(
     .limit(1);
 
   return results.length > 0 ? results[0].externalId : null;
+}
+
+/**
+ * Migrate all employee IDs when an organization changes their org code
+ * Updates both external_identifiers and employees.employee_number
+ * Emits cross-device sync events for mobile/desktop consistency
+ */
+export async function migrateEmployeeIdsToNewOrgCode(
+  workspaceId: string,
+  newOrgCode: string
+): Promise<{ success: boolean; migratedCount: number; errors: string[] }> {
+  const errors: string[] = [];
+  let migratedCount = 0;
+  const migratedEmployeeIds: string[] = [];
+  const normalizedCode = newOrgCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  if (normalizedCode.length < 3) {
+    return { success: false, migratedCount: 0, errors: ['Org code must be at least 3 characters'] };
+  }
+  
+  log.info(`[Identity] Migrating employee IDs for workspace ${workspaceId} to new org code: ${normalizedCode}`);
+  
+  try {
+    await db.transaction(async (tx: any) => {
+      // Get all employees for this workspace with their external IDs
+      const empList = await tx
+        .select({
+          employeeId: employees.id,
+          employeeNumber: employees.employeeNumber,
+        })
+        .from(employees)
+        .where(eq(employees.workspaceId, workspaceId));
+      
+      // Get existing external identifiers for these employees
+      const existingIds = await tx
+        .select()
+        .from(externalIdentifiers)
+        .where(
+          and(
+            eq(externalIdentifiers.entityType, 'employee'),
+            eq(externalIdentifiers.orgId, workspaceId)
+          )
+        );
+      
+      // Build a map of employee ID to external identifier record
+      const extIdMap = new Map(existingIds.map(e => [e.entityId, e]));
+      
+      // Check for potential conflicts with new IDs first
+      const newIdPattern = `EMP-${normalizedCode}-%`;
+      const conflictCheck = await tx
+        .select({ externalId: externalIdentifiers.externalId })
+        .from(externalIdentifiers)
+        .where(
+          and(
+            eq(externalIdentifiers.entityType, 'employee'),
+            sql`${externalIdentifiers.externalId} LIKE ${newIdPattern}`,
+            sql`${externalIdentifiers.orgId} != ${workspaceId}`
+          )
+        );
+      
+      if (conflictCheck.length > 0) {
+        throw new Error(`Org code ${normalizedCode} conflicts with existing employee IDs from another organization`);
+      }
+      
+      // Update each employee's external ID and employee_number
+      for (const emp of empList) {
+        try {
+          const extRecord = extIdMap.get(emp.employeeId);
+          
+          if (extRecord) {
+            // Extract sequence number from existing ID (EMP-XXXX-00001 -> 00001)
+            const parts = extRecord.externalId.split('-');
+            const seqNumber = parts.length === 3 ? parts[2] : '00001';
+            const newExternalId = `EMP-${normalizedCode}-${seqNumber}`;
+            
+            // Skip if already has the new format
+            if (extRecord.externalId === newExternalId) {
+              continue;
+            }
+            
+            // Update external_identifiers table
+            await tx
+              .update(externalIdentifiers)
+              .set({ externalId: newExternalId })
+              .where(eq(externalIdentifiers.id, extRecord.id));
+            
+            // Update employees.employee_number
+            await tx
+              .update(employees)
+              .set({ employeeNumber: newExternalId })
+              .where(eq(employees.id, emp.employeeId));
+            
+            log.info(`[Identity] Migrated ${extRecord.externalId} -> ${newExternalId}`);
+            migratedCount++;
+            migratedEmployeeIds.push(emp.employeeId);
+          }
+        } catch (empError: any) {
+          // Handle unique constraint violations gracefully
+          if (empError.code === '23505') {
+            errors.push(`Employee ${emp.employeeId}: ID conflict - skipped`);
+          } else {
+            errors.push(`Employee ${emp.employeeId}: ${empError.message}`);
+          }
+        }
+      }
+      
+      // Update the org's external ID as well
+      const orgExtId = await tx
+        .select()
+        .from(externalIdentifiers)
+        .where(
+          and(
+            eq(externalIdentifiers.entityType, 'org'),
+            eq(externalIdentifiers.entityId, workspaceId)
+          )
+        )
+        .limit(1);
+      
+      if (orgExtId.length > 0) {
+        const newOrgExternalId = `ORG-${normalizedCode}`;
+        await tx
+          .update(externalIdentifiers)
+          .set({ externalId: newOrgExternalId })
+          .where(eq(externalIdentifiers.id, orgExtId[0].id));
+        log.info(`[Identity] Updated org external ID: ${newOrgExternalId}`);
+      }
+    });
+    
+    // Emit cross-device sync events for each migrated employee
+    // This ensures mobile and desktop clients receive the updated IDs
+    if (migratedEmployeeIds.length > 0) {
+      try {
+        const { eventBus } = await import('./trinity/eventBus');
+        for (const employeeId of migratedEmployeeIds) {
+          eventBus.emit('employee_updated', { 
+            employeeId, 
+            workspaceId, 
+            changeType: 'id_migration',
+            newOrgCode: normalizedCode 
+          });
+        }
+        log.info(`[Identity] Emitted ${migratedEmployeeIds.length} cross-device sync events`);
+      } catch (syncError: any) {
+        log.warn(`[Identity] Cross-device sync warning: ${syncError.message}`);
+      }
+    }
+    
+    log.info(`[Identity] Migration complete: ${migratedCount} employees migrated to ${normalizedCode}`);
+    return { success: true, migratedCount, errors };
+  } catch (error: any) {
+    log.error('[Identity] Migration failed:', (error instanceof Error ? error.message : String(error)));
+    return { success: false, migratedCount, errors: [(error instanceof Error ? error.message : String(error))] };
+  }
+}
+
+// ============================================================================
+// FULL IDENTITY LOOKUP FOR SUPPORT AGENTS
+// Returns everything about a user/org that a support agent needs to assist them
+// ============================================================================
+
+export interface FullIdentityRecord {
+  // Identity
+  userId?: string;
+  email?: string;
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profileImageUrl?: string;
+
+  // System IDs
+  externalId?: string;
+  employeeNumber?: string;
+  workId?: string;             // Format: Firstname-##-###-##-####
+  supportCode?: string;        // HelpAI safety code
+  safetyCode?: string;         // Legacy alias
+
+  // Auth & Account
+  emailVerified?: boolean;
+  lastLoginAt?: string;
+  loginAttempts?: number;
+  mfaEnabled?: boolean;
+  accountLocked?: boolean;
+
+  // Workspace / Org
+  workspaceId?: string;
+  workspaceName?: string;
+  orgCode?: string;
+  orgExternalId?: string;
+  subscriptionTier?: string;
+  subscriptionStatus?: string;
+  workspaceRole?: string;
+  isSuspended?: boolean;
+  isFrozen?: boolean;
+
+  // Platform role (for platform staff)
+  platformRole?: string;
+
+  // Employee details
+  employeeId?: string;
+  position?: string;
+  department?: string;
+  hireDate?: string;
+  isActive?: boolean;
+
+  // Credits
+  creditBalance?: number;
+  monthlyAllocation?: number;
+  autoRechargeEnabled?: boolean;
+
+  // Recent HelpAI sessions
+  recentHelpAISessions?: {
+    id: string;
+    ticketNumber: string;
+    state: string;
+    createdAt: string;
+    wasEscalated: boolean;
+  }[];
+
+  // All orgs this user belongs to
+  allWorkspaces?: { workspaceId: string; workspaceName: string; role: string }[];
+}
+
+/**
+ * Full identity lookup for support agents.
+ * Query can be: UUID, email, external ID (EMP-XXXX-00001), support code, or work ID.
+ */
+export async function supportLookupFull(query: string): Promise<FullIdentityRecord[]> {
+  const trimmed = query.trim();
+  const results: FullIdentityRecord[] = [];
+
+  try {
+    let userRecords: any[] = [];
+
+    // 1. Try external ID format
+    if (isExternalIdFormat(trimmed)) {
+      const extIds = await db.select().from(externalIdentifiers)
+        .where(eq(externalIdentifiers.externalId, trimmed.toUpperCase()))
+        .limit(5);
+      if (extIds.length > 0) {
+        for (const ext of extIds) {
+          if (ext.entityType === 'user' || ext.entityType === 'employee') {
+            const u = await db.select().from(users).where(eq(users.id, ext.entityId)).limit(1);
+            if (u.length > 0) userRecords.push({ user: u[0], extId: ext });
+          }
+        }
+      }
+    }
+
+    // 2. Try UUID
+    if (userRecords.length === 0 && isUuidFormat(trimmed)) {
+      const u = await db.select().from(users).where(eq(users.id, trimmed)).limit(1);
+      if (u.length > 0) userRecords.push({ user: u[0] });
+    }
+
+    // 3. Try email
+    if (userRecords.length === 0) {
+      const u = await db.select().from(users)
+        .where(sql`LOWER(${users.email}) = LOWER(${trimmed})`)
+        .limit(5);
+      userRecords = u.map(user => ({ user }));
+    }
+
+    // 4. Try name / support code search in employees
+    if (userRecords.length === 0) {
+      const emps = await db.select().from(employees)
+        .where(sql`(LOWER(${employees.firstName}) LIKE LOWER(${'%' + trimmed + '%'}) OR LOWER(${employees.lastName}) LIKE LOWER(${'%' + trimmed + '%'}))`)
+        .limit(5);
+      for (const emp of emps) {
+        if (emp.userId) {
+          const u = await db.select().from(users).where(eq(users.id, emp.userId)).limit(1);
+          if (u.length > 0) userRecords.push({ user: u[0], employee: emp });
+        }
+      }
+    }
+
+    // Enrich each user record
+    for (const { user, extId } of userRecords) {
+      const record: FullIdentityRecord = {
+        userId: user.id,
+        email: user.email,
+        displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        phone: user.phone || undefined,
+        profileImageUrl: user.profileImageUrl || undefined,
+        workId: user.workId || undefined,
+        emailVerified: user.emailVerified ?? undefined,
+        lastLoginAt: user.lastLoginAt?.toISOString() || undefined,
+        loginAttempts: user.loginAttempts || 0,
+        mfaEnabled: user.mfaEnabled ?? false,
+        accountLocked: (user.loginAttempts || 0) >= 5,
+        externalId: extId?.externalId || undefined,
+      };
+
+      // Load workspace info
+      const wsId = user.currentWorkspaceId;
+      if (wsId) {
+        record.workspaceId = wsId;
+        const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
+        if (ws) {
+          record.workspaceName = ws.name || undefined;
+          record.orgCode = ws.orgCode || undefined;
+          record.subscriptionTier = ws.subscriptionTier || 'free';
+          record.subscriptionStatus = ws.subscriptionStatus || undefined;
+          record.isSuspended = ws.isSuspended || false;
+          record.isFrozen = ws.isFrozen || false;
+        }
+
+        // Workspace role
+        const [wm] = await db.select().from(workspaceMembers)
+          .where(and(eq(workspaceMembers.workspaceId, wsId), eq(workspaceMembers.userId, user.id)))
+          .limit(1);
+        if (wm) record.workspaceRole = wm.role || undefined;
+
+        // Credit balance (backed by aiUsageEvents since workspace_credits dropped)
+        try {
+          const credits = await creditManager.getCreditsAccount(wsId);
+          if (credits) {
+            record.creditBalance = credits.currentBalance;
+            record.monthlyAllocation = credits.monthlyAllocation || undefined;
+            record.autoRechargeEnabled = false;
+          }
+        } catch { /* non-critical */ }
+
+        // Org external ID
+        const [orgExt] = await db.select().from(externalIdentifiers)
+          .where(and(eq(externalIdentifiers.entityType, 'org'), eq(externalIdentifiers.entityId, wsId)))
+          .limit(1);
+        record.orgExternalId = orgExt?.externalId || undefined;
+      }
+
+      // Employee record
+      const [emp] = await db.select().from(employees)
+        .where(eq(employees.userId, user.id))
+        .limit(1);
+      if (emp) {
+        record.employeeId = emp.id;
+        record.employeeNumber = emp.employeeNumber || undefined;
+        record.position = emp.position || undefined;
+        record.department = emp.department || undefined;
+        record.hireDate = emp.hireDate?.toISOString() || undefined;
+        record.isActive = emp.isActive ?? true;
+        // Employee external ID
+        const [empExt] = await db.select().from(externalIdentifiers)
+          .where(and(eq(externalIdentifiers.entityType, 'employee'), eq(externalIdentifiers.entityId, emp.id)))
+          .limit(1);
+        if (empExt) record.externalId = empExt.externalId;
+      }
+
+      // Platform role
+      const [pr] = await db.select().from(platformRoles)
+        .where(and(eq(platformRoles.userId, user.id), sql`revoked_at IS NULL`))
+        .limit(1);
+      if (pr) record.platformRole = pr.role || undefined;
+
+      // Support / safety code
+      try {
+        const { ensureSupportCode } = await import('./identityService');
+        // Only fetch if already exists (don't create one for lookup)
+        const [sr] = await db.select().from(supportRegistry)
+          .where(eq(supportRegistry.userId, user.id))
+          .limit(1);
+        if (sr) record.supportCode = sr.supportCode || undefined;
+      } catch (srErr: any) { log.warn('[Identity] Support registry lookup failed:', srErr.message); }
+
+      // Recent HelpAI sessions (last 5)
+      const sessions = await db.select({
+        id: helpaiSessions.id,
+        ticketNumber: helpaiSessions.ticketNumber,
+        state: helpaiSessions.state,
+        createdAt: helpaiSessions.createdAt,
+        wasEscalated: helpaiSessions.wasEscalated,
+      }).from(helpaiSessions)
+        .where(eq(helpaiSessions.userId, user.id))
+        .orderBy(desc(helpaiSessions.createdAt))
+        .limit(5);
+      record.recentHelpAISessions = sessions.map(s => ({
+        id: s.id,
+        ticketNumber: s.ticketNumber || '',
+        state: s.state,
+        createdAt: s.createdAt?.toISOString() || '',
+        wasEscalated: s.wasEscalated || false,
+      }));
+
+      // All workspaces this user belongs to
+      const allMemberships = await db.select({
+        workspaceId: workspaceMembers.workspaceId,
+        role: workspaceMembers.role,
+      }).from(workspaceMembers)
+        .where(eq(workspaceMembers.userId, user.id))
+        .limit(10);
+
+      const wsNames = await Promise.all(allMemberships.map(async m => {
+        const [w] = await db.select({ name: workspaces.name })
+          .from(workspaces)
+          .where(eq(workspaces.id, m.workspaceId))
+          .limit(1);
+        return { workspaceId: m.workspaceId, workspaceName: w?.name || m.workspaceId, role: m.role };
+      }));
+      record.allWorkspaces = wsNames;
+
+      results.push(record);
+    }
+  } catch (err) {
+    log.error('[IdentityService] supportLookupFull error:', err);
+  }
+
+  return results;
 }

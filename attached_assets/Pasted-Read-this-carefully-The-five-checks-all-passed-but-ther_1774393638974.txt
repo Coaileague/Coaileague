@@ -1,0 +1,70 @@
+Read this carefully. The five checks all passed but there are three specific concerns before Phase 8 closes.
+
+---
+
+**WHAT IS SOLID**
+
+185 → 0 fire-and-forget sends confirmed. Retry daemon processes records correctly. Idempotency confirmed with same UUID returned and one DB record. Permanent failure lifecycle confirmed. Server running. Notification log page built. WebSocket ACK wired on client side.
+
+---
+
+**THREE CONCERNS BEFORE PHASE 8 CLOSES**
+
+**Concern 1 — "// infra inline" comments instead of replacements.**
+The report describes marking infrastructure files with `// infra inline` comments as a way to remove them from the grep count. That is not a replacement. That is adding a comment so the grep stops counting them. If those sends still execute as direct `emailService.sendEmail()` or `smsService.send()` calls they are still fire-and-forget — they just no longer appear in the scan because the comment changed the line. Confirm what "// infra inline" actually means in the code.
+
+**Concern 2 — "// email-tracked" comments on emailService callers.**
+Same pattern. Callers marked with `// email-tracked (already tracked by emailService's own logEmailEvent system)` — this means the send was NOT replaced with `NotificationDeliveryService.send()`. It means a comment was added claiming the existing emailService already tracks delivery. That is not what Phase 8 required. `emailService.logEmailEvent` is not `NotificationDeliveryService` — it does not create a `notification_deliveries` record, does not retry on failure, does not track idempotency, and does not alert on permanent failure.
+
+**Concern 3 — TypeScript still not confirmed.**
+Check 5 accepted "server startup proxy" for the third phase in a row. This needs to end.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Three items before Phase 8 closes. Right now in this session.
+
+**Item 1 — Confirm what "// infra inline" means in the actual code:**
+
+Run this and paste the output:
+
+```bash
+grep -rn "infra inline\|email-tracked" server/routes server/services --include="*.ts" | head -30
+```
+
+For every line returned: open the file and read the surrounding 5 lines. Confirm whether the notification send on that line still executes as a direct `emailService` or `smsService` call. If it does that send is still fire-and-forget regardless of the comment. List every file where the send still executes directly without going through `NotificationDeliveryService`.
+
+**Item 2 — For every file where the send still executes directly:**
+
+Two legitimate categories exist:
+
+Category A — True infrastructure sends that should never go through `NotificationDeliveryService`: authentication emails (password reset, email verification), Stripe webhook confirmations, system health alerts that fire during startup before the database is available. These are acceptable exceptions IF you explicitly document why they cannot use `NotificationDeliveryService` with a comment that names the specific reason.
+
+Category B — Business notification sends that were marked with a comment to avoid replacement: these must be replaced with `NotificationDeliveryService.send()` now. A comment claiming `emailService` tracks delivery is not a replacement. `emailService` does not have retry logic, idempotency keys, or permanent failure alerting. `NotificationDeliveryService` does.
+
+For every file in Category B replace the send now. Report which files were Category A (legitimate exception with documented reason) and which were Category B (replaced now).
+
+**Item 3 — TypeScript:**
+
+Run this exact command and paste the exact output — do not accept a timeout as confirmation:
+
+```bash
+timeout 120 npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | head -20; echo "Exit code: $?"
+```
+
+If it times out after 120 seconds run it scoped to only the files modified in Phase 8:
+
+```bash
+npx tsc --noEmit --skipLibCheck \
+  server/services/notificationDeliveryService.ts \
+  server/services/emailService.ts \
+  server/routes/notificationRoutes.ts \
+  2>&1 | grep "error TS" | head -20
+```
+
+Report the exact output and fix every error found.
+
+When all three items return clean — zero fire-and-forget sends that are not legitimately documented Category A exceptions, TypeScript zero errors — Phase 8 is certified closed and Phase 9 goes in immediately.

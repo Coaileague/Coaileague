@@ -1,0 +1,335 @@
+# PASTE THIS ENTIRE PROMPT INTO REPLIT
+
+---
+
+We just finished fixing massive database schema issues — table name mismatches, enum conferencing problems, remounting and renaming. That's stable now. 
+
+Now I need you to do a REALITY CHECK on Trinity's brain — not theoretical, not conceptual — I need you to look at THE ACTUAL CODE and tell me what Trinity can and cannot do RIGHT NOW.
+
+## THE QUESTION
+
+**Is Trinity's brain and toolset actually equipped to handle the job of running a security company's operations through our platform?**
+
+Specifically:
+
+---
+
+## AUDIT 1: TRINITY'S SUB-AGENTS — DO THEY EXIST IN CODE?
+
+Go find every file related to Trinity's AI services. Check `/server/services/ai/`, `/server/services/orchestration/`, and any file containing `trinity`, `agent`, `sub-agent`, `subagent`, `scheduler-agent`, `compliance-agent`, `analytics-agent`, `communications-agent`, `field-ops`.
+
+**For each sub-agent, answer YES or NO with the file path:**
+
+```
+SchedulerAgent    — Can Trinity autonomously schedule shifts?        YES/NO → [file path or MISSING]
+ComplianceAgent   — Can Trinity check certs/licenses/expirations?    YES/NO → [file path or MISSING]
+CommunicationsAgent — Can Trinity send notifications/emails/SMS?     YES/NO → [file path or MISSING]
+AnalyticsAgent    — Can Trinity generate reports and cost analysis?   YES/NO → [file path or MISSING]
+FieldOpsAgent     — Can Trinity handle GPS/clock-in/patrol tracking? YES/NO → [file path or MISSING]
+InvoicingAgent    — Can Trinity create/manage invoices?              YES/NO → [file path or MISSING]
+StaffingAgent     — Can Trinity find and assign replacement staff?    YES/NO → [file path or MISSING]
+ClientIntelAgent  — Can Trinity track client preferences/history?    YES/NO → [file path or MISSING]
+```
+
+If a sub-agent is MISSING, that's a gap. Document it.
+If a sub-agent EXISTS but is incomplete (skeleton code, placeholder, TODO), that's a gap. Document it.
+
+---
+
+## AUDIT 2: TRINITY'S TOOLS — CAN SHE ACTUALLY CALL THEM?
+
+Find Trinity's tool definitions. Look for anything like `tools`, `functions`, `capabilities`, `tool_calling`, `function_calling` in the AI service files.
+
+**List every tool Trinity can currently invoke. For EACH tool answer:**
+
+```
+TOOL NAME: _______________
+FILE: _______________
+DOES IT HAVE:
+  [ ] Input parameter validation (checks required fields before executing)
+  [ ] Database query that actually runs (not placeholder)
+  [ ] Org/workspace scoping (multi-tenant safe)
+  [ ] Error handling (try/catch with meaningful error response)
+  [ ] Response format Trinity can parse and use
+  [ ] 7-step pipeline: TRIGGER → FETCH → VALIDATE → PROCESS → MUTATE → CONFIRM → NOTIFY
+ACTUALLY WORKS END-TO-END: YES / NO / PARTIALLY
+```
+
+**Then check: does Trinity have tools for ALL of these critical operations?**
+
+```
+SCHEDULING:
+[ ] Query employees with filters (availability, certs, location, armed/unarmed)
+[ ] Query shifts with filters (date range, status, site, employee)
+[ ] Create a shift
+[ ] Assign employee to shift
+[ ] Swap shifts between employees
+[ ] Cancel a shift with notifications
+[ ] Fill a calloff (find replacement → offer → assign)
+[ ] Bulk schedule (generate full week for a site from contract requirements)
+[ ] Detect scheduling conflicts (double-booking, overtime, rest period violations)
+
+COMPLIANCE:
+[ ] Check employee compliance status
+[ ] Check certification expiration dates
+[ ] Generate compliance report
+[ ] Flag compliance violations
+
+INVOICING (THIS IS CRITICAL):
+[ ] Create invoice for a client
+[ ] Calculate invoice from time entries (hours × rate)
+[ ] Handle different billing cycles per client (weekly, biweekly, monthly, custom)
+[ ] Preview invoice before sending
+[ ] Queue invoice for org owner approval
+[ ] Send invoice to client
+[ ] Sync invoice to QuickBooks
+[ ] Track payment status
+[ ] Handle partial payments
+[ ] Generate recurring invoices automatically
+[ ] Calculate different rates per site/shift type (armed vs unarmed, overtime, holiday)
+
+CLIENT MANAGEMENT:
+[ ] Query client details with contract info
+[ ] View client billing history (from QB AND from platform if they don't migrate)
+[ ] Track client preferences
+[ ] View staffing history per client (who has been assigned there, how often)
+[ ] Know billing rates per client per service type
+[ ] Organize and maintain client information (contacts, sites, contracts)
+
+PAYROLL:
+[ ] Calculate hours from time entries
+[ ] Calculate overtime per state rules  
+[ ] Preview payroll
+[ ] Flag anomalies (missing punches, unusual hours)
+[ ] Sync payroll to QuickBooks
+
+REPORTING:
+[ ] Generate incident report from field data
+[ ] Generate shift coverage report
+[ ] Generate financial/profitability report
+[ ] Queue reports for approval pipeline
+
+COMMUNICATIONS:
+[ ] Send push notification to employee
+[ ] Send email to client
+[ ] Broadcast to team/org
+[ ] Escalate to human when Trinity can't handle it
+
+GPS/FIELD:
+[ ] Verify employee location against assigned site
+[ ] Flag geo anomalies
+[ ] View proof of service (GPS-stamped photos)
+```
+
+**For every [ ] that is NOT checked, that is a gap Trinity cannot do her job without.**
+
+---
+
+## AUDIT 3: DATA ACCESS — CAN TRINITY ACTUALLY SEE WHAT SHE NEEDS?
+
+Trinity needs read access to business data to make intelligent decisions. Check if Trinity's service layer can actually query:
+
+```
+CAN TRINITY ACCESS:                              YES/NO    HOW (direct query / API call / not connected)
+─────────────────────────────────────────────────────────────────────────────────────
+employees table (with all fields)                 ___       ___
+employee certifications/documents                 ___       ___
+employee availability                             ___       ___
+employee pay rates                                ___       ___
+clients table (with contract details)             ___       ___
+client sites and geofences                        ___       ___
+shifts and shift assignments                      ___       ___
+time entries and clock events                     ___       ___
+invoices and invoice items                        ___       ___
+payroll runs and payroll items                    ___       ___
+QuickBooks synced data (if org uses QB)           ___       ___
+Platform-only data (if org doesn't use QB)        ___       ___
+chat messages (for report analysis)               ___       ___
+compliance records                                ___       ___
+notifications and their delivery status           ___       ___
+trinity's own conversation history                ___       ___
+trinity's learned patterns / intelligence         ___       ___
+meta_cognition_logs                               ___       ___
+ai_cost_tracking per org                          ___       ___
+```
+
+**For any NO — Trinity is blind to that data and cannot make informed decisions about it. That's a critical gap.**
+
+---
+
+## AUDIT 4: INVOICING INTELLIGENCE — THE MONEY PATH
+
+This is where the rubber meets the road. Security companies bill clients. If Trinity can't handle invoicing intelligently, the platform fails at its core revenue function.
+
+**Trace the complete invoice lifecycle in the code:**
+
+```
+1. TIME DATA COLLECTION
+   Where do billable hours come from?
+   → File: _______________
+   → Can Trinity access this data? YES/NO
+   → Are rates stored per client per service type? YES/NO
+   → Can rates differ by: armed/unarmed, day/night, overtime, holiday? YES/NO
+
+2. INVOICE CALCULATION
+   Who calculates the invoice? Trinity? A service? Manual?
+   → File: _______________
+   → Does calculation handle: 
+     [ ] Multiple rates per client
+     [ ] Overtime rate differences  
+     [ ] Holiday rate differences
+     [ ] Rounding rules
+     [ ] Tax calculations (if applicable)
+
+3. BILLING CYCLE MANAGEMENT
+   Can each client have their own billing cycle?
+   → File: _______________
+   → Supported cycles:
+     [ ] Weekly
+     [ ] Biweekly  
+     [ ] Monthly
+     [ ] Custom
+   → Auto-triggers at cycle end? YES/NO
+   → Or manual only? YES/NO
+
+4. APPROVAL PIPELINE
+   → File: _______________
+   → Invoice generated → queued for org owner review? YES/NO
+   → Org owner can edit before approving? YES/NO
+   → Approved → auto-send to client? YES/NO
+   → Approved → auto-sync to QuickBooks? YES/NO
+
+5. CLIENT DELIVERY
+   → File: _______________
+   → PDF generated? YES/NO
+   → Emailed to client billing contact? YES/NO
+   → Client can view in portal? YES/NO
+
+6. PAYMENT TRACKING
+   → File: _______________
+   → Mark as paid (full/partial)? YES/NO
+   → Payment syncs to QB? YES/NO
+   → Overdue alerts? YES/NO
+   → Aging report? YES/NO
+
+7. HISTORY & INTELLIGENCE
+   → Can Trinity view invoice history per client? YES/NO
+   → Can Trinity identify billing patterns? YES/NO
+   → Can Trinity flag unusual invoices (amount way different from normal)? YES/NO
+   → If client doesn't use QB, does platform-only billing still work? YES/NO
+```
+
+---
+
+## AUDIT 5: THE INTELLIGENT LOOP — CAN TRINITY THINK?
+
+Give Trinity this test scenario mentally (trace through the code to see if she could handle it):
+
+> "Hey Trinity, I need to bill all my clients for last week. Saratoga Homes is weekly billing, ABC Security Services is biweekly (and this is their second week), and Downtown Properties is monthly (and this is month-end). Calculate everything from time entries, apply the right rates, and queue the invoices for my review."
+
+**Trace through the code. Can Trinity:**
+
+```
+[ ] Understand this is a multi-client billing request
+[ ] Query each client's billing cycle configuration
+[ ] Determine which clients are due for invoicing right now
+[ ] Pull time entries for the correct date range per client
+[ ] Look up the correct billing rates per client per service type
+[ ] Calculate hours × rates with overtime/holiday adjustments
+[ ] Generate separate invoices per client
+[ ] Queue all invoices for owner approval
+[ ] Handle the case where one client calculation fails but others succeed
+[ ] Provide a summary: "3 invoices generated totaling $X,XXX — ready for your review"
+```
+
+**If she can't do ALL of this, document exactly where the chain breaks.**
+
+---
+
+## AUDIT 6: HISTORY & LEARNING — CAN TRINITY LEARN FROM THE PAST?
+
+```
+CHECK IN THE ACTUAL CODE:
+
+[ ] Trinity stores conversation history (not just in-memory, in database)
+[ ] Trinity can retrieve past conversations about a specific client
+[ ] Trinity can retrieve past conversations about a specific employee  
+[ ] Trinity logs her tool call results (what she queried, what she got back)
+[ ] Trinity logs her decisions (why she chose employee X for shift Y)
+[ ] These logs are queryable (not just write-only)
+[ ] Trinity can reference past scheduling decisions for similar situations
+[ ] Client intelligence table exists AND is populated with real data
+[ ] Staff intelligence table exists AND is populated with real data
+[ ] Learned patterns table exists AND Trinity actually writes to it
+[ ] Trinity can read learned patterns to improve future decisions
+
+FOR THE LEARNING LOOP:
+[ ] When a human corrects Trinity's decision → the correction is stored
+[ ] Next time a similar situation arises → Trinity checks corrections first
+[ ] Performance metrics tracked: how often is Trinity right vs. corrected?
+```
+
+---
+
+## AUDIT 7: INTEGRATION PATHS — DOES DATA FLOW CORRECTLY?
+
+```
+QUICKBOOKS PATH:
+Time entries → Payroll calculation → QB sync
+                                  ↓
+Invoices → QB sync → Payment recorded → QB sync
+                                  
+[ ] All sync points actually have working code (not placeholders)
+[ ] Token refresh is automatic
+[ ] Sync errors are caught and retried
+[ ] Trinity can trigger any of these syncs via tools
+[ ] If QB is disconnected, platform still works independently
+
+RESEND EMAIL PATH:
+Trinity decision → Email template → Resend API → Delivered
+
+[ ] Outbound works (notifications, invoices, reports)
+[ ] Inbound processing works (calloffs@, incidents@, docs@, support@)
+[ ] Trinity can trigger email sends via tools
+[ ] Delivery failures are handled
+
+STRIPE PATH:
+Subscription → Usage tracking → Billing → Payment
+
+[ ] Trinity aware of org's plan/tier
+[ ] Trinity respects feature limits based on tier
+[ ] Usage-based billing tracked accurately
+```
+
+---
+
+## OUTPUT FORMAT
+
+After completing all 7 audits, give me a single summary:
+
+```
+TRINITY CAPABILITY SCORECARD
+═══════════════════════════════════════════════════
+
+Sub-Agents:        X/8 exist and functional
+Tools:             X/XX exist and callable  
+Data Access:       X/XX tables accessible
+Invoicing:         X/7 lifecycle steps working
+Intelligent Loop:  X/10 reasoning steps possible
+Learning:          X/12 learning capabilities active
+Integrations:      X/XX sync points working
+
+OVERALL: Trinity is ___% equipped to run a security company
+
+TOP 10 CRITICAL GAPS (ordered by business impact):
+1. [gap] — IMPACT: [what breaks without this]
+2. [gap] — IMPACT: [what breaks without this]
+...
+
+RECOMMENDED BUILD ORDER:
+1. [what to build first and why]
+2. [what to build second and why]
+...
+```
+
+**Be brutally honest. Don't tell me it's fine if it's not. Every gap you miss is a gap that breaks in production when a real customer is trying to run their business.**

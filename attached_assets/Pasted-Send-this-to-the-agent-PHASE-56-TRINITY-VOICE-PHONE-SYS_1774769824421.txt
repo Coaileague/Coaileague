@@ -1,0 +1,1800 @@
+Send this to the agent:
+
+---
+
+**PHASE 56 — TRINITY VOICE PHONE SYSTEM + PHASE 57 — UNIVERSAL IDENTIFICATION SYSTEM + PHASE 58 — TRINITY INTERVIEW PIPELINE**
+
+These three phases build together as one unified system. Phase 57 (Universal IDs) must complete first because Phase 56 (Voice) and Phase 58 (Interview Pipeline) both depend on it. Read all three specs completely before writing a single line of code. Build in order: 57 → 56 → 58. Debug and verify each phase before starting the next.
+
+**ABSOLUTE RULES:**
+- Platform never pays for usage — the org pays
+- All Twilio, ElevenLabs, Deepgram costs are billed to the org's credit balance
+- Zero usage happens without sufficient org credit balance
+- All tests against ACME sandbox only — Statewide untouchable
+- Every feature respects workspace isolation
+- Trinity is always the orchestrator — never a direct actor without audit trail
+- All voice sessions are recorded, transcribed, and persisted
+
+---
+
+**PHASE 57 — UNIVERSAL IDENTIFICATION SYSTEM**
+*Must complete before Phase 56 or 58*
+
+**WHY THIS FIRST:**
+Trinity Voice needs to identify callers instantly by speaking their ID. The interview pipeline needs to track candidates across email, chat, and voice. Documents need universal reference numbers. None of this works without a consistent ID system.
+
+**STEP 1 — AUDIT WHAT EXISTS:**
+
+```bash
+# Check if any human-readable IDs exist
+SELECT column_name, table_name 
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND column_name IN (
+  'org_id', 'client_number', 'employee_number', 
+  'user_number', 'display_id', 'reference_id',
+  'badge_number', 'account_number', 'clockin_pin_hash'
+)
+ORDER BY table_name, column_name;
+```
+
+**STEP 2 — SCHEMA ADDITIONS:**
+
+```sql
+-- Add to workspaces table
+ALTER TABLE workspaces 
+ADD COLUMN IF NOT EXISTS org_id VARCHAR(20) UNIQUE,
+ADD COLUMN IF NOT EXISTS state_code CHAR(2) DEFAULT 'TX';
+
+-- Add to clients table  
+ALTER TABLE clients
+ADD COLUMN IF NOT EXISTS client_number VARCHAR(20) UNIQUE;
+
+-- Add to employees table
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS employee_number VARCHAR(20) UNIQUE,
+ADD COLUMN IF NOT EXISTS clockin_pin_hash VARCHAR(255),
+ADD COLUMN IF NOT EXISTS clockin_pin_set_at TIMESTAMPTZ;
+
+-- Add to users table
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS user_number VARCHAR(20) UNIQUE;
+
+-- Universal document reference on document_vault
+ALTER TABLE document_vault
+ADD COLUMN IF NOT EXISTS document_number VARCHAR(30) UNIQUE;
+
+-- Universal reference numbers on all key entities
+ALTER TABLE invoices
+ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(30) UNIQUE;
+
+ALTER TABLE shifts
+ADD COLUMN IF NOT EXISTS shift_reference VARCHAR(30);
+
+ALTER TABLE time_entries
+ADD COLUMN IF NOT EXISTS clockin_reference VARCHAR(30) UNIQUE;
+
+ALTER TABLE incident_reports
+ADD COLUMN IF NOT EXISTS incident_reference VARCHAR(30) UNIQUE;
+
+ALTER TABLE support_tickets
+ADD COLUMN IF NOT EXISTS ticket_reference VARCHAR(30) UNIQUE;
+
+-- Voice consent records (needed for Phase 56)
+CREATE TABLE IF NOT EXISTS voice_consent_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  call_sid VARCHAR(100) NOT NULL,
+  caller_phone VARCHAR(20),
+  caller_name VARCHAR(255),
+  consent_type VARCHAR(50) NOT NULL,
+  verbal_consent_recorded BOOLEAN DEFAULT false,
+  audio_clip_url TEXT,
+  transcript_of_consent TEXT,
+  consented_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Clock-in PIN history for security
+CREATE TABLE IF NOT EXISTS clockin_pin_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id UUID NOT NULL REFERENCES employees(id),
+  workspace_id UUID NOT NULL,
+  pin_hash VARCHAR(255) NOT NULL,
+  set_at TIMESTAMPTZ DEFAULT NOW(),
+  set_by VARCHAR(50) DEFAULT 'self'
+);
+```
+
+**STEP 3 — ID GENERATION FUNCTIONS:**
+
+```sql
+-- Organization ID generator
+CREATE OR REPLACE FUNCTION generate_org_id(p_state_code TEXT DEFAULT 'TX')
+RETURNS TEXT AS $$
+DECLARE
+  next_num INTEGER;
+  new_id TEXT;
+BEGIN
+  SELECT COALESCE(MAX(
+    CAST(SUBSTRING(org_id FROM LENGTH('ORG-' || p_state_code || '-') + 1) AS INTEGER)
+  ), 0) + 1
+  INTO next_num
+  FROM workspaces
+  WHERE org_id LIKE 'ORG-' || p_state_code || '-%';
+  
+  new_id := 'ORG-' || p_state_code || '-' || LPAD(next_num::TEXT, 5, '0');
+  RETURN new_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Client number generator (per workspace)
+CREATE OR REPLACE FUNCTION generate_client_number(p_workspace_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  org_short TEXT;
+  next_num INTEGER;
+BEGIN
+  SELECT UPPER(LEFT(REGEXP_REPLACE(company_name, '[^A-Za-z]', '', 'g'), 3))
+  INTO org_short
+  FROM workspaces WHERE id = p_workspace_id;
+  
+  IF org_short IS NULL OR LENGTH(org_short) < 3 THEN
+    org_short := 'ORG';
+  END IF;
+  
+  SELECT COALESCE(MAX(
+    CAST(SUBSTRING(client_number FROM LENGTH('CLT-' || org_short || '-') + 1) AS INTEGER)
+  ), 0) + 1
+  INTO next_num
+  FROM clients
+  WHERE workspace_id = p_workspace_id;
+  
+  RETURN 'CLT-' || org_short || '-' || LPAD(next_num::TEXT, 5, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+-- Employee number generator (per workspace)
+CREATE OR REPLACE FUNCTION generate_employee_number(p_workspace_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  org_short TEXT;
+  next_num INTEGER;
+BEGIN
+  SELECT UPPER(LEFT(REGEXP_REPLACE(company_name, '[^A-Za-z]', '', 'g'), 3))
+  INTO org_short
+  FROM workspaces WHERE id = p_workspace_id;
+  
+  IF org_short IS NULL OR LENGTH(org_short) < 3 THEN
+    org_short := 'EMP';
+  END IF;
+  
+  SELECT COALESCE(MAX(
+    CAST(SUBSTRING(employee_number FROM LENGTH('EMP-' || org_short || '-') + 1) AS INTEGER)
+  ), 0) + 1
+  INTO next_num
+  FROM employees
+  WHERE workspace_id = p_workspace_id
+  AND employee_number LIKE 'EMP-' || org_short || '-%';
+  
+  RETURN 'EMP-' || org_short || '-' || LPAD(next_num::TEXT, 5, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+-- Universal document reference generator
+CREATE OR REPLACE FUNCTION generate_document_number()
+RETURNS TEXT AS $$
+DECLARE
+  today_str TEXT;
+  next_num INTEGER;
+BEGIN
+  today_str := TO_CHAR(NOW(), 'YYYYMMDD');
+  
+  SELECT COALESCE(MAX(
+    CAST(SUBSTRING(document_number FROM LENGTH('DOC-' || today_str || '-') + 1) AS INTEGER)
+  ), 0) + 1
+  INTO next_num
+  FROM document_vault
+  WHERE document_number LIKE 'DOC-' || today_str || '-%';
+  
+  RETURN 'DOC-' || today_str || '-' || LPAD(next_num::TEXT, 5, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+-- Invoice number generator
+CREATE OR REPLACE FUNCTION generate_invoice_number(p_workspace_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  period_str TEXT;
+  next_num INTEGER;
+BEGIN
+  period_str := TO_CHAR(NOW(), 'YYYYMM');
+  
+  SELECT COALESCE(MAX(
+    CAST(SUBSTRING(invoice_number FROM LENGTH('INV-' || period_str || '-') + 1) AS INTEGER)
+  ), 0) + 1
+  INTO next_num
+  FROM invoices
+  WHERE workspace_id = p_workspace_id
+  AND invoice_number LIKE 'INV-' || period_str || '-%';
+  
+  RETURN 'INV-' || period_str || '-' || LPAD(next_num::TEXT, 5, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+-- Clock-in reference generator
+CREATE OR REPLACE FUNCTION generate_clockin_reference()
+RETURNS TEXT AS $$
+DECLARE
+  today_str TEXT;
+  next_num INTEGER;
+BEGIN
+  today_str := TO_CHAR(NOW(), 'YYYYMMDD');
+  
+  SELECT COALESCE(MAX(
+    CAST(SUBSTRING(clockin_reference FROM LENGTH('CLK-' || today_str || '-') + 1) AS INTEGER)
+  ), 0) + 1
+  INTO next_num
+  FROM time_entries
+  WHERE clockin_reference LIKE 'CLK-' || today_str || '-%';
+  
+  RETURN 'CLK-' || today_str || '-' || LPAD(next_num::TEXT, 5, '0');
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**STEP 4 — DB TRIGGERS FOR AUTO-GENERATION:**
+
+```sql
+-- Auto-generate org_id on workspace creation
+CREATE OR REPLACE FUNCTION trg_auto_org_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.org_id IS NULL THEN
+    NEW.org_id := generate_org_id(COALESCE(NEW.state_code, 'TX'));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_workspace_org_id
+BEFORE INSERT ON workspaces
+FOR EACH ROW EXECUTE FUNCTION trg_auto_org_id();
+
+-- Auto-generate client_number on client creation
+CREATE OR REPLACE FUNCTION trg_auto_client_number()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.client_number IS NULL THEN
+    NEW.client_number := generate_client_number(NEW.workspace_id);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_client_number
+BEFORE INSERT ON clients
+FOR EACH ROW EXECUTE FUNCTION trg_auto_client_number();
+
+-- Auto-generate employee_number on employee creation
+CREATE OR REPLACE FUNCTION trg_auto_employee_number()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.employee_number IS NULL THEN
+    NEW.employee_number := generate_employee_number(NEW.workspace_id);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_employee_number
+BEFORE INSERT ON employees
+FOR EACH ROW EXECUTE FUNCTION trg_auto_employee_number();
+
+-- Auto-generate document_number on document creation
+CREATE OR REPLACE FUNCTION trg_auto_document_number()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.document_number IS NULL THEN
+    NEW.document_number := generate_document_number();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_document_number
+BEFORE INSERT ON document_vault
+FOR EACH ROW EXECUTE FUNCTION trg_auto_document_number();
+
+-- Auto-generate invoice_number on invoice creation
+CREATE OR REPLACE FUNCTION trg_auto_invoice_number()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.invoice_number IS NULL THEN
+    NEW.invoice_number := generate_invoice_number(NEW.workspace_id);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_invoice_number
+BEFORE INSERT ON invoices
+FOR EACH ROW EXECUTE FUNCTION trg_auto_invoice_number();
+
+-- Auto-generate clockin_reference on time entry creation
+CREATE OR REPLACE FUNCTION trg_auto_clockin_reference()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.clockin_reference IS NULL THEN
+    NEW.clockin_reference := generate_clockin_reference();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_clockin_reference
+BEFORE INSERT ON time_entries
+FOR EACH ROW EXECUTE FUNCTION trg_auto_clockin_reference();
+```
+
+**STEP 5 — BACKFILL EXISTING RECORDS:**
+
+```sql
+-- Backfill workspaces
+UPDATE workspaces 
+SET org_id = generate_org_id(COALESCE(state_code, 'TX'))
+WHERE org_id IS NULL;
+
+-- Backfill clients
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN SELECT id, workspace_id FROM clients WHERE client_number IS NULL LOOP
+    UPDATE clients 
+    SET client_number = generate_client_number(r.workspace_id)
+    WHERE id = r.id;
+  END LOOP;
+END $$;
+
+-- Backfill employees
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN SELECT id, workspace_id FROM employees WHERE employee_number IS NULL LOOP
+    UPDATE employees 
+    SET employee_number = generate_employee_number(r.workspace_id)
+    WHERE id = r.id;
+  END LOOP;
+END $$;
+
+-- Backfill invoices
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN SELECT id, workspace_id, created_at FROM invoices WHERE invoice_number IS NULL ORDER BY created_at LOOP
+    UPDATE invoices 
+    SET invoice_number = generate_invoice_number(r.workspace_id)
+    WHERE id = r.id;
+  END LOOP;
+END $$;
+```
+
+**STEP 6 — UNIVERSAL ID RESOLVER SERVICE:**
+
+Build `server/services/universalIdResolver.ts`:
+
+```typescript
+// Resolves any ID prefix to the correct entity
+// Used by Trinity, voice system, search, and documents
+
+export async function resolveEntityById(
+  id: string, 
+  workspaceId: string
+): Promise<{ entityType: string; entity: any; deepLink: string } | null> {
+  
+  const prefix = id.split('-')[0];
+  
+  switch(prefix) {
+    case 'ORG':
+      // Platform staff only
+      const org = await db.query(
+        'SELECT * FROM workspaces WHERE org_id = $1', [id]
+      );
+      return org.rows[0] ? {
+        entityType: 'workspace',
+        entity: org.rows[0],
+        deepLink: '/admin/workspaces/' + org.rows[0].id
+      } : null;
+      
+    case 'CLT':
+      const client = await db.query(
+        'SELECT * FROM clients WHERE client_number = $1 AND workspace_id = $2',
+        [id, workspaceId]
+      );
+      return client.rows[0] ? {
+        entityType: 'client',
+        entity: client.rows[0],
+        deepLink: '/clients/' + client.rows[0].id
+      } : null;
+      
+    case 'EMP':
+      const employee = await db.query(
+        'SELECT * FROM employees WHERE employee_number = $1 AND workspace_id = $2',
+        [id, workspaceId]
+      );
+      return employee.rows[0] ? {
+        entityType: 'employee',
+        entity: employee.rows[0],
+        deepLink: '/officers/' + employee.rows[0].id
+      } : null;
+      
+    case 'DOC':
+      const doc = await db.query(
+        'SELECT * FROM document_vault WHERE document_number = $1 AND workspace_id = $2',
+        [id, workspaceId]
+      );
+      return doc.rows[0] ? {
+        entityType: 'document',
+        entity: doc.rows[0],
+        deepLink: '/documents/' + doc.rows[0].id
+      } : null;
+      
+    case 'INV':
+      const invoice = await db.query(
+        'SELECT * FROM invoices WHERE invoice_number = $1 AND workspace_id = $2',
+        [id, workspaceId]
+      );
+      return invoice.rows[0] ? {
+        entityType: 'invoice',
+        entity: invoice.rows[0],
+        deepLink: '/invoices/' + invoice.rows[0].id
+      } : null;
+      
+    case 'CLK':
+      const clockin = await db.query(
+        'SELECT * FROM time_entries WHERE clockin_reference = $1 AND workspace_id = $2',
+        [id, workspaceId]
+      );
+      return clockin.rows[0] ? {
+        entityType: 'time_entry',
+        entity: clockin.rows[0],
+        deepLink: '/time-attendance/' + clockin.rows[0].id
+      } : null;
+      
+    default:
+      return null;
+  }
+}
+```
+
+**STEP 7 — CLOCK-IN PIN MANAGEMENT:**
+
+Build `server/routes/clockinPinRoutes.ts`:
+
+```typescript
+// Officer sets their own PIN on first login
+POST /api/clockin-pin/set
+requireAuth
+{ pin: '847291' } // 6-digit numeric
+→ Validate: exactly 6 digits, numeric only
+→ Validate: not same as last 3 PINs (check clockin_pin_history)
+→ Hash with bcrypt rounds 12
+→ Store in employees.clockin_pin_hash
+→ Store in clockin_pin_history
+→ Return: { success: true, message: 'PIN set successfully' }
+
+// Verify PIN (used by voice system)
+POST /api/clockin-pin/verify
+{ employeeNumber: 'EMP-ACM-00034', pin: '847291' }
+→ Find employee by employee_number
+→ Compare pin against bcrypt hash
+→ Rate limit: 5 attempts per 15 minutes per employee
+→ On fail 5 times: lock for 30 minutes, NDS to supervisor
+→ Return: { verified: true/false, employeeId, workspaceId }
+// Note: never return employee data on failed verify
+
+// Reset PIN (manager action)
+POST /api/clockin-pin/reset/:employeeId
+requireAuth, requireRole('org_owner', 'org_manager')
+→ Clear existing PIN hash
+→ Send NDS to officer to set new PIN
+→ Officer must set new PIN before next voice clock-in
+
+// Check PIN status (does officer have a PIN set?)
+GET /api/clockin-pin/status
+requireAuth
+→ Return: { hasPinSet: boolean, pinSetAt: date | null }
+```
+
+**STEP 8 — ID SEARCH INTEGRATION:**
+
+Add to global search:
+```typescript
+// In searchRoutes.ts — add ID prefix detection
+if (/^(ORG|CLT|EMP|USR|DOC|INV|CLK|INC|TKT)-/.test(query)) {
+  // Direct ID lookup — skip fuzzy search
+  const result = await resolveEntityById(query, workspaceId);
+  if (result) return res.json({ results: [result], exactMatch: true });
+}
+```
+
+Add Trinity action:
+```typescript
+registerAction({
+  actionId: 'system.resolve_id',
+  name: 'Resolve Entity by ID',
+  category: 'system',
+  description: 'Resolve any platform ID to its entity',
+  requiredRoles: ['org_owner', 'org_admin', 'org_manager', 'supervisor', 'system'],
+  handler: async ({ id, workspaceId }) => {
+    return resolveEntityById(id, workspaceId);
+  }
+});
+```
+
+**STEP 9 — UI UPDATES FOR UNIVERSAL IDs:**
+
+Show IDs everywhere:
+- Officer profile header: `EMP-ACM-00034` displayed prominently
+- Client profile header: `CLT-ACM-00891` displayed
+- Every invoice: `INV-202603-00447` on header
+- Every document: `DOC-20260329-00291` in footer
+- Every time entry confirmation: `CLK-20260329-00847`
+- Workspace settings: `ORG-TX-00142` displayed as org reference
+- Copy-to-clipboard button next to every ID
+- Global search accepts IDs directly
+
+**STEP 10 — PHASE 57 VERIFICATION:**
+
+```sql
+-- Verify all existing records have IDs
+SELECT 
+  (SELECT COUNT(*) FROM workspaces WHERE org_id IS NULL) as workspaces_missing_org_id,
+  (SELECT COUNT(*) FROM clients WHERE client_number IS NULL) as clients_missing_number,
+  (SELECT COUNT(*) FROM employees WHERE employee_number IS NULL) as employees_missing_number,
+  (SELECT COUNT(*) FROM invoices WHERE invoice_number IS NULL) as invoices_missing_number;
+-- All must be 0
+
+-- Verify ID format is correct
+SELECT org_id FROM workspaces WHERE org_id NOT LIKE 'ORG-__-%' LIMIT 5;
+SELECT client_number FROM clients WHERE client_number NOT LIKE 'CLT-___-%' LIMIT 5;
+SELECT employee_number FROM employees WHERE employee_number NOT LIKE 'EMP-___-%' LIMIT 5;
+-- Must return empty
+
+-- Verify triggers fire on new records
+INSERT INTO clients (workspace_id, company_name, status)
+VALUES ('[acme_id]', 'Test Auto ID Client', 'active')
+RETURNING id, client_number;
+-- client_number must be auto-generated
+
+-- Clean up test
+DELETE FROM clients WHERE company_name = 'Test Auto ID Client';
+```
+
+**CERTIFICATION:**
+```
+PHASE 57 COMPLETE WHEN:
+✅ All ID columns added to all tables
+✅ All generator functions created
+✅ All DB triggers created and firing
+✅ All existing records backfilled
+✅ Universal ID resolver service built
+✅ Clock-in PIN system built
+✅ Search updated to handle ID prefixes
+✅ UI shows IDs on all relevant entities
+✅ Zero records missing IDs
+✅ TypeScript zero errors
+✅ Server startup clean
+```
+
+---
+
+**PHASE 56 — TRINITY VOICE PHONE SYSTEM**
+*Requires Phase 57 complete*
+
+**PRICING MODEL — ORG PAYS, PLATFORM NEVER PAYS:**
+
+```
+TRINITY VOICE™ — Add-On Pricing
+
+Professional ($999/mo base):
+  Trinity Voice: +$89/month
+  Includes: 1 Twilio number
+  Voice credits: $50/month included
+  Overage: billed to org credit balance at $0.15/min
+
+Business ($2,999/mo base):
+  Trinity Voice: INCLUDED (1 number)
+  Voice credits: $100/month included
+  Additional numbers: +$25/month each
+  Overage: $0.12/min from org credit balance
+
+Enterprise ($7,999/mo base):
+  Trinity Voice: INCLUDED (2 numbers)
+  Voice credits: $200/month included
+  Additional numbers: +$15/month each
+  Overage: $0.10/min from org credit balance
+
+Strategic (custom):
+  Negotiated — typically 5+ numbers
+  Unlimited credit bundles available
+```
+
+**CREDIT SYSTEM — ORG PAYS FOR USAGE:**
+
+```sql
+CREATE TABLE IF NOT EXISTS voice_credit_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  balance_cents INTEGER NOT NULL DEFAULT 0,
+  monthly_credit_cents INTEGER NOT NULL DEFAULT 0,
+  auto_refill_enabled BOOLEAN DEFAULT false,
+  auto_refill_threshold_cents INTEGER DEFAULT 1000,
+  auto_refill_amount_cents INTEGER DEFAULT 5000,
+  stripe_payment_method_id VARCHAR(255),
+  total_spent_cents INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS voice_credit_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL,
+  transaction_type VARCHAR(50) NOT NULL,
+  -- 'monthly_credit', 'purchase', 'call_deduction', 'refund'
+  amount_cents INTEGER NOT NULL,
+  balance_after_cents INTEGER NOT NULL,
+  call_id UUID REFERENCES voice_call_sessions(id),
+  description TEXT,
+  stripe_charge_id VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS workspace_phone_numbers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  twilio_phone_number VARCHAR(20) NOT NULL UNIQUE,
+  twilio_phone_sid VARCHAR(100),
+  friendly_name VARCHAR(255),
+  phone_type VARCHAR(50) DEFAULT 'main',
+  trinity_persona TEXT,
+  greeting_script TEXT,
+  is_active BOOLEAN DEFAULT true,
+  monthly_cost_cents INTEGER DEFAULT 115,
+  purchased_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**STEP 1 — TWILIO VOICE READINESS CHECK:**
+
+```bash
+# Before writing any code verify Twilio Voice is available
+grep -rn "TWILIO_ACCOUNT_SID\|TWILIO_AUTH_TOKEN\|TWILIO_PHONE" \
+  server/ --include="*.ts" | grep -v node_modules | head -5
+
+# Check if twilio npm package supports Voice
+cat package.json | grep twilio
+
+# Check if any TwiML code exists
+grep -rn "VoiceResponse\|twiml\|TwiML" server/ | grep -v node_modules | head -5
+
+# If twilio package version is old: update it
+# npm install twilio@latest
+```
+
+**STEP 2 — VOICE INFRASTRUCTURE TABLES:**
+
+```sql
+CREATE TABLE IF NOT EXISTS voice_call_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  phone_number_id UUID REFERENCES workspace_phone_numbers(id),
+  call_sid VARCHAR(100) UNIQUE NOT NULL,
+  caller_phone VARCHAR(20),
+  caller_identified_as_employee_id UUID REFERENCES employees(id),
+  caller_identified_as_client_id UUID REFERENCES clients(id),
+  caller_type VARCHAR(50),
+  -- 'employee', 'client', 'prospect', 'verifier', 'unknown'
+  extension_used VARCHAR(10),
+  sub_menu_path JSONB DEFAULT '[]',
+  -- Array of choices made: ['1', '2', '3']
+  duration_seconds INTEGER DEFAULT 0,
+  transcript TEXT,
+  audio_recording_url TEXT,
+  actions_taken JSONB DEFAULT '[]',
+  consent_given BOOLEAN DEFAULT false,
+  consent_timestamp TIMESTAMPTZ,
+  outcome VARCHAR(100),
+  cost_cents INTEGER DEFAULT 0,
+  credited_from_balance_cents INTEGER DEFAULT 0,
+  language VARCHAR(10) DEFAULT 'en',
+  call_status VARCHAR(50) DEFAULT 'in_progress',
+  -- 'in_progress', 'completed', 'failed', 'abandoned'
+  tickets_created JSONB DEFAULT '[]',
+  leads_created JSONB DEFAULT '[]',
+  calloffs_created JSONB DEFAULT '[]',
+  clockin_references JSONB DEFAULT '[]',
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  ended_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS voice_call_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  call_session_id UUID NOT NULL REFERENCES voice_call_sessions(id),
+  workspace_id UUID NOT NULL,
+  action_type VARCHAR(100) NOT NULL,
+  action_data JSONB DEFAULT '{}',
+  result JSONB DEFAULT '{}',
+  trinity_actor_id TEXT DEFAULT 'trinity-system-actor-000000000000',
+  executed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS voice_verification_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  call_session_id UUID NOT NULL REFERENCES voice_call_sessions(id),
+  workspace_id UUID NOT NULL,
+  verification_type VARCHAR(50) NOT NULL,
+  -- 'employee_number', 'client_number', 'pin', 'verbal'
+  entity_type VARCHAR(50),
+  entity_id UUID,
+  verified BOOLEAN NOT NULL,
+  attempts INTEGER DEFAULT 1,
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**STEP 3 — VOICE SERVICE CORE:**
+
+Build `server/services/trinityVoice/voiceOrchestrator.ts`:
+
+```typescript
+import twilio from 'twilio';
+const VoiceResponse = twilio.twiml.VoiceResponse;
+
+export class VoiceOrchestrator {
+  
+  // Entry point for all inbound calls
+  async handleInbound(req: Request): Promise<string> {
+    const { To, From, CallSid } = req.body;
+    
+    // 1. Identify workspace from phone number
+    const phoneNumber = await db.query(
+      'SELECT * FROM workspace_phone_numbers WHERE twilio_phone_number = $1 AND is_active = true',
+      [To]
+    );
+    
+    if (!phoneNumber.rows[0]) {
+      return this.buildTwiml(response => {
+        response.say({ voice: 'Polly.Joanna', language: 'en-US' },
+          'This number is not currently in service.');
+        response.hangup();
+      });
+    }
+    
+    const workspace = await db.query(
+      'SELECT * FROM workspaces WHERE id = $1',
+      [phoneNumber.rows[0].workspace_id]
+    );
+    
+    // 2. Check credit balance before answering
+    const credits = await this.checkCreditBalance(workspace.rows[0].id);
+    if (credits.balance_cents < 50) { // Less than $0.50
+      return this.buildTwiml(response => {
+        response.say({ voice: 'Polly.Joanna' },
+          `Thank you for calling ${workspace.rows[0].company_name}. 
+           We are unable to process your call at this time. 
+           Please contact us directly.`);
+        response.hangup();
+      });
+    }
+    
+    // 3. Create call session
+    const session = await db.query(`
+      INSERT INTO voice_call_sessions 
+      (workspace_id, phone_number_id, call_sid, caller_phone, call_status)
+      VALUES ($1, $2, $3, $4, 'in_progress')
+      RETURNING id
+    `, [workspace.rows[0].id, phoneNumber.rows[0].id, CallSid, From]);
+    
+    // 4. Check caller identity from phone number
+    const callerIdentity = await this.identifyCaller(From, workspace.rows[0].id);
+    
+    // 5. Present main menu
+    return this.buildMainMenu(workspace.rows[0], session.rows[0].id, callerIdentity);
+  }
+  
+  // Build TwiML main menu
+  async buildMainMenu(workspace: any, sessionId: string, callerIdentity: any): Promise<string> {
+    const twiml = new VoiceResponse();
+    const companyName = workspace.company_name;
+    
+    // Recording announcement
+    twiml.say({ voice: 'Polly.Joanna', language: 'en-US' },
+      `Thank you for calling ${companyName}. 
+       This call may be recorded for quality and compliance purposes.`
+    );
+    
+    // Language selection
+    const gather = twiml.gather({
+      numDigits: '1',
+      action: `/api/voice/menu/language?sessionId=${sessionId}`,
+      timeout: '5'
+    });
+    
+    gather.say({ voice: 'Polly.Joanna' },
+      `For English, press 1. Para Español, oprima 2.`
+    );
+    
+    // Default to English after timeout
+    twiml.redirect(`/api/voice/menu/main?sessionId=${sessionId}&lang=en`);
+    
+    return twiml.toString();
+  }
+  
+  // Main IVR menu after language selection
+  async buildMainIVR(sessionId: string, lang: string, workspace: any): Promise<string> {
+    const twiml = new VoiceResponse();
+    const companyName = workspace.company_name;
+    
+    const gather = twiml.gather({
+      numDigits: '1',
+      action: `/api/voice/menu/route?sessionId=${sessionId}&lang=${lang}`,
+      timeout: '10'
+    });
+    
+    const script = lang === 'es' ? {
+      greeting: `Gracias por llamar a ${companyName}.`,
+      options: `Para nuevos servicios de seguridad, oprima 1.
+                Para soporte a clientes existentes, oprima 2.
+                Para verificación de empleo, oprima 3.
+                Para soporte al personal, oprima 4.
+                Para emergencias fuera de horario, oprima 5.
+                Para empleo y carreras, oprima 6.
+                Para hablar con alguien, oprima 0.`
+    } : {
+      greeting: `Thank you for calling ${companyName}.`,
+      options: `For new security services, press 1.
+                For existing client support, press 2.
+                For employment verification, press 3.
+                For staff support, press 4.
+                For after-hours emergencies, press 5.
+                For careers and employment, press 6.
+                To reach our team directly, press 0.`
+    };
+    
+    gather.say({ voice: 'Polly.Joanna', language: lang === 'es' ? 'es-US' : 'en-US' },
+      `${script.greeting} ${script.options} To repeat these options, press 9.`
+    );
+    
+    twiml.redirect(`/api/voice/menu/main?sessionId=${sessionId}&lang=${lang}`);
+    return twiml.toString();
+  }
+  
+  // Identify caller from phone number
+  async identifyCaller(phone: string, workspaceId: string) {
+    const employee = await db.query(
+      'SELECT id, first_name, last_name, employee_number FROM employees WHERE phone = $1 AND workspace_id = $2 AND status = $3',
+      [phone, workspaceId, 'active']
+    );
+    if (employee.rows[0]) return { type: 'employee', data: employee.rows[0] };
+    
+    const client = await db.query(
+      'SELECT id, company_name, client_number FROM clients WHERE contact_phone = $1 AND workspace_id = $2',
+      [phone, workspaceId]
+    );
+    if (client.rows[0]) return { type: 'client', data: client.rows[0] };
+    
+    const lead = await db.query(
+      'SELECT id, contact_name, company_name FROM sales_leads WHERE contact_phone = $1 AND workspace_id = $2',
+      [phone, workspaceId]
+    );
+    if (lead.rows[0]) return { type: 'prospect', data: lead.rows[0] };
+    
+    return { type: 'unknown', data: null };
+  }
+  
+  buildTwiml(builder: (response: any) => void): string {
+    const twiml = new VoiceResponse();
+    builder(twiml);
+    return twiml.toString();
+  }
+  
+  // Deduct call cost from org credit balance
+  async deductCallCost(workspaceId: string, durationSeconds: number, ratePerMinuteCents: number) {
+    const cost = Math.ceil(durationSeconds / 60) * ratePerMinuteCents;
+    
+    await db.query(`
+      UPDATE voice_credit_accounts 
+      SET balance_cents = balance_cents - $1,
+          total_spent_cents = total_spent_cents + $1,
+          updated_at = NOW()
+      WHERE workspace_id = $2 AND balance_cents >= $1
+      RETURNING balance_cents
+    `, [cost, workspaceId]);
+    
+    await db.query(`
+      INSERT INTO voice_credit_transactions
+      (workspace_id, transaction_type, amount_cents, balance_after_cents, description)
+      SELECT $1, 'call_deduction', $2, balance_cents, $3
+      FROM voice_credit_accounts WHERE workspace_id = $1
+    `, [workspaceId, -cost, `Call ${durationSeconds}s at ${ratePerMinuteCents}¢/min`]);
+    
+    // Alert if balance low
+    const balance = await this.checkCreditBalance(workspaceId);
+    if (balance.balance_cents < 500) { // Less than $5
+      await notificationDeliveryService.send({
+        workspaceId,
+        type: 'voice_credit_low',
+        data: { balance: balance.balance_cents / 100 }
+      });
+    }
+  }
+  
+  async checkCreditBalance(workspaceId: string) {
+    const result = await db.query(
+      'SELECT * FROM voice_credit_accounts WHERE workspace_id = $1',
+      [workspaceId]
+    );
+    return result.rows[0] || { balance_cents: 0 };
+  }
+}
+```
+
+**STEP 4 — VOICE ROUTES:**
+
+Build `server/routes/voiceRoutes.ts`:
+
+```typescript
+// CRITICAL: These routes must NOT use requireAuth
+// Twilio calls them server-to-server
+// Security is via Twilio HMAC signature verification
+
+import twilio from 'twilio';
+
+// Verify all requests are genuinely from Twilio
+function validateTwilioSignature(req: Request, res: Response, next: NextFunction) {
+  const authToken = process.env.TWILIO_AUTH_TOKEN!;
+  const signature = req.headers['x-twilio-signature'] as string;
+  const url = `${process.env.BASE_URL}/api/voice/${req.path}`;
+  
+  const valid = twilio.validateRequest(authToken, signature, url, req.body);
+  if (!valid) {
+    return res.status(403).send('Invalid Twilio signature');
+  }
+  next();
+}
+
+// Main inbound call webhook
+router.post('/inbound', validateTwilioSignature, async (req, res) => {
+  res.type('text/xml');
+  const twiml = await voiceOrchestrator.handleInbound(req);
+  res.send(twiml);
+});
+
+// Language selection
+router.post('/menu/language', validateTwilioSignature, async (req, res) => {
+  const { sessionId } = req.query;
+  const { Digits } = req.body;
+  const lang = Digits === '2' ? 'es' : 'en';
+  
+  const session = await getCallSession(sessionId as string);
+  const workspace = await getWorkspace(session.workspace_id);
+  
+  res.type('text/xml');
+  res.send(await voiceOrchestrator.buildMainIVR(sessionId as string, lang, workspace));
+});
+
+// Main menu routing
+router.post('/menu/route', validateTwilioSignature, async (req, res) => {
+  const { sessionId, lang } = req.query;
+  const { Digits } = req.body;
+  
+  const routes: Record<string, string> = {
+    '1': `/api/voice/ext/sales?sessionId=${sessionId}&lang=${lang}`,
+    '2': `/api/voice/ext/client?sessionId=${sessionId}&lang=${lang}`,
+    '3': `/api/voice/ext/verify?sessionId=${sessionId}&lang=${lang}`,
+    '4': `/api/voice/ext/staff?sessionId=${sessionId}&lang=${lang}`,
+    '5': `/api/voice/ext/emergency?sessionId=${sessionId}&lang=${lang}`,
+    '6': `/api/voice/ext/careers?sessionId=${sessionId}&lang=${lang}`,
+    '0': `/api/voice/ext/transfer?sessionId=${sessionId}&lang=${lang}`,
+    '9': `/api/voice/menu/main?sessionId=${sessionId}&lang=${lang}`,
+  };
+  
+  const redirect = routes[Digits] || routes['9'];
+  
+  const twiml = new VoiceResponse();
+  twiml.redirect(redirect);
+  res.type('text/xml');
+  res.send(twiml.toString());
+});
+
+// Call status callback (fires when call ends)
+router.post('/status', validateTwilioSignature, async (req, res) => {
+  const { CallSid, CallDuration, CallStatus, RecordingUrl } = req.body;
+  
+  // Update call session
+  await db.query(`
+    UPDATE voice_call_sessions
+    SET duration_seconds = $1,
+        call_status = $2,
+        audio_recording_url = $3,
+        ended_at = NOW()
+    WHERE call_sid = $4
+    RETURNING workspace_id, id
+  `, [CallDuration, CallStatus, RecordingUrl, CallSid]);
+  
+  // Get session for cost calculation
+  const session = await db.query(
+    'SELECT * FROM voice_call_sessions WHERE call_sid = $1',
+    [CallSid]
+  );
+  
+  if (session.rows[0]) {
+    // Deduct cost from org credit balance
+    await voiceOrchestrator.deductCallCost(
+      session.rows[0].workspace_id,
+      parseInt(CallDuration),
+      15 // $0.15/minute = 15 cents
+    );
+    
+    // Write audit record
+    await universalAuditService.log({
+      workspaceId: session.rows[0].workspace_id,
+      actorId: 'trinity-system-actor-000000000000',
+      entityType: 'voice_call',
+      entityId: session.rows[0].id,
+      action: 'call_completed',
+      data: { duration: CallDuration, status: CallStatus }
+    });
+  }
+  
+  res.sendStatus(200); // Always 200 to Twilio
+});
+
+// Protected routes (require auth)
+router.get('/numbers', requireAuth, async (req, res) => {
+  const { workspaceId } = req.query;
+  const numbers = await db.query(
+    'SELECT * FROM workspace_phone_numbers WHERE workspace_id = $1 AND is_active = true',
+    [workspaceId]
+  );
+  res.json(numbers.rows);
+});
+
+router.get('/calls', requireAuth, async (req, res) => {
+  const { workspaceId, limit = 50, page = 1 } = req.query;
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+  
+  const calls = await db.query(`
+    SELECT vcs.*, 
+      e.first_name || ' ' || e.last_name as caller_employee_name,
+      e.employee_number,
+      c.company_name as caller_client_name,
+      c.client_number
+    FROM voice_call_sessions vcs
+    LEFT JOIN employees e ON e.id = vcs.caller_identified_as_employee_id
+    LEFT JOIN clients c ON c.id = vcs.caller_identified_as_client_id
+    WHERE vcs.workspace_id = $1
+    ORDER BY vcs.created_at DESC
+    LIMIT $2 OFFSET $3
+  `, [workspaceId, limit, offset]);
+  
+  res.json(calls.rows);
+});
+
+router.get('/calls/:id/transcript', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { workspaceId } = req.query;
+  
+  const call = await db.query(
+    'SELECT * FROM voice_call_sessions WHERE id = $1 AND workspace_id = $2',
+    [id, workspaceId]
+  );
+  
+  if (!call.rows[0]) return res.status(404).json({ error: 'Not found' });
+  res.json({ transcript: call.rows[0].transcript, actions: call.rows[0].actions_taken });
+});
+
+router.get('/credits', requireAuth, async (req, res) => {
+  const { workspaceId } = req.query;
+  const credits = await db.query(
+    'SELECT * FROM voice_credit_accounts WHERE workspace_id = $1',
+    [workspaceId]
+  );
+  res.json(credits.rows[0] || { balance_cents: 0 });
+});
+
+router.post('/credits/purchase', requireAuth, requirePlan('professional'), async (req, res) => {
+  const { workspaceId, amountCents } = req.body;
+  // Stripe charge for credit purchase
+  // Then add to credit balance
+  // This is an org purchase — platform never pays
+  res.json({ success: true });
+});
+```
+
+**STEP 5 — EXTENSION HANDLERS:**
+
+Build `server/services/trinityVoice/extensions/`:
+
+Each extension in its own file:
+- `salesExtension.ts` — Extension 1
+- `clientExtension.ts` — Extension 2
+- `verifyExtension.ts` — Extension 3
+- `staffExtension.ts` — Extension 4
+- `emergencyExtension.ts` — Extension 5
+- `careersExtension.ts` — Extension 6
+- `transferExtension.ts` — Extension 0
+
+Each extension handles its sub-menus, collects information via Gather, processes with Trinity, takes platform actions, and returns TwiML.
+
+**Staff Extension voice clock-in (most critical):**
+
+```typescript
+// staffExtension.ts — Extension 4 sub-option 1: Clock In
+export async function handleVoiceClockIn(sessionId: string, lang: string): Promise<string> {
+  const twiml = new VoiceResponse();
+  
+  // Step 1: Get employee number
+  const gather = twiml.gather({
+    input: 'dtmf speech',
+    action: `/api/voice/ext/staff/clockin/verify?sessionId=${sessionId}&lang=${lang}`,
+    timeout: '10',
+    speechTimeout: 'auto',
+    language: lang === 'es' ? 'es-US' : 'en-US'
+  });
+  
+  gather.say({ voice: 'Polly.Joanna' },
+    'Please enter your employee number on the keypad, or say it now. For example: E M P, A C M, 0 0 0 3 4'
+  );
+  
+  return twiml.toString();
+}
+
+export async function handleVoiceClockInVerify(req: Request, sessionId: string): Promise<string> {
+  const { SpeechResult, Digits } = req.body;
+  const input = SpeechResult || Digits;
+  
+  // Parse employee number from speech or DTMF
+  // Speech: "EMP ACM 00034" → "EMP-ACM-00034"
+  const employeeNumber = parseEmployeeNumber(input);
+  
+  // Look up employee
+  const employee = await db.query(
+    'SELECT * FROM employees WHERE employee_number = $1',
+    [employeeNumber]
+  );
+  
+  if (!employee.rows[0]) {
+    const twiml = new VoiceResponse();
+    twiml.say({ voice: 'Polly.Joanna' },
+      `I could not find an employee with number ${employeeNumber}. Please try again.`
+    );
+    twiml.redirect(`/api/voice/ext/staff/clockin?sessionId=${sessionId}`);
+    return twiml.toString();
+  }
+  
+  // Store employee in session
+  await db.query(
+    'UPDATE voice_call_sessions SET caller_identified_as_employee_id = $1 WHERE id = $2',
+    [employee.rows[0].id, sessionId]
+  );
+  
+  // Check if employee has PIN set
+  if (!employee.rows[0].clockin_pin_hash) {
+    const twiml = new VoiceResponse();
+    twiml.say({ voice: 'Polly.Joanna' },
+      `Hi ${employee.rows[0].first_name}. You have not set up your voice PIN yet. 
+       Please log into the platform to set your 6-digit clock-in PIN before using voice clock-in.`
+    );
+    twiml.hangup();
+    return twiml.toString();
+  }
+  
+  // Request PIN
+  const twiml = new VoiceResponse();
+  const gather = twiml.gather({
+    numDigits: '6',
+    action: `/api/voice/ext/staff/clockin/pin?sessionId=${sessionId}&employeeId=${employee.rows[0].id}`,
+    timeout: '10',
+    finishOnKey: ''
+  });
+  
+  gather.say({ voice: 'Polly.Joanna' },
+    `Hi ${employee.rows[0].first_name}. Please enter your 6-digit clock-in PIN.`
+  );
+  
+  return twiml.toString();
+}
+
+export async function handleVoiceClockInPin(req: Request, sessionId: string, employeeId: string): Promise<string> {
+  const { Digits } = req.body;
+  
+  // Verify PIN
+  const verified = await clockinPinService.verifyPin(employeeId, Digits);
+  
+  if (!verified) {
+    const twiml = new VoiceResponse();
+    twiml.say({ voice: 'Polly.Joanna' },
+      'Incorrect PIN. Please try again.'
+    );
+    twiml.redirect(`/api/voice/ext/staff/clockin/pin?sessionId=${sessionId}&employeeId=${employeeId}`);
+    return twiml.toString();
+  }
+  
+  // PIN verified — check if can clock in
+  const employee = await db.query(
+    'SELECT e.*, w.company_name FROM employees e JOIN workspaces w ON w.id = e.workspace_id WHERE e.id = $1',
+    [employeeId]
+  );
+  const emp = employee.rows[0];
+  
+  // License check
+  if (emp.license_expiry && new Date(emp.license_expiry) < new Date()) {
+    const twiml = new VoiceResponse();
+    twiml.say({ voice: 'Polly.Joanna' },
+      `I cannot complete your clock-in. Your security license expired on ${formatDate(emp.license_expiry)}. 
+       Please contact your supervisor immediately.`
+    );
+    twiml.hangup();
+    return twiml.toString();
+  }
+  
+  // Find active shift
+  const shift = await db.query(`
+    SELECT s.*, p.name as post_name 
+    FROM shifts s
+    JOIN posts p ON p.id = s.post_id
+    WHERE s.assigned_officer_id = $1
+    AND s.shift_date = CURRENT_DATE
+    AND s.start_time <= NOW()::TIME + INTERVAL '15 minutes'
+    AND s.end_time > NOW()::TIME
+    AND s.status = 'published'
+  `, [employeeId]);
+  
+  const twiml = new VoiceResponse();
+  
+  if (shift.rows[0]) {
+    // Create time entry
+    const timeEntry = await db.query(`
+      INSERT INTO time_entries 
+      (workspace_id, employee_id, shift_id, post_id, clock_in, 
+       clock_in_method, clockin_reference, status)
+      VALUES ($1, $2, $3, $4, NOW(), 'voice_phone', generate_clockin_reference(), 'active')
+      RETURNING *
+    `, [emp.workspace_id, employeeId, shift.rows[0].id, shift.rows[0].post_id]);
+    
+    // Notify supervisor
+    await notificationDeliveryService.send({
+      workspaceId: emp.workspace_id,
+      type: 'officer_voice_clockin',
+      data: {
+        officerName: `${emp.first_name} ${emp.last_name}`,
+        employeeNumber: emp.employee_number,
+        postName: shift.rows[0].post_name,
+        time: new Date().toLocaleTimeString(),
+        reference: timeEntry.rows[0].clockin_reference
+      }
+    });
+    
+    // Broadcast to dashboard
+    broadcastToWorkspace(emp.workspace_id, {
+      type: 'officer_clocked_in',
+      data: { employeeId, postName: shift.rows[0].post_name }
+    });
+    
+    twiml.say({ voice: 'Polly.Joanna' },
+      `Confirmed. You are clocked in for your shift at ${shift.rows[0].post_name}. 
+       Your clock-in reference is ${timeEntry.rows[0].clockin_reference}. 
+       Your supervisor has been notified. Have a safe shift ${emp.first_name}.`
+    );
+  } else {
+    // No scheduled shift found
+    twiml.say({ voice: 'Polly.Joanna' },
+      `I do not see a scheduled shift for you right now. 
+       If you are working an emergency or unscheduled shift please press 1.
+       Otherwise press 2 to return to the main menu.`
+    );
+    // Handle response...
+  }
+  
+  twiml.hangup();
+  return twiml.toString();
+}
+```
+
+**STEP 6 — VOICE SETTINGS UI:**
+
+Build `client/src/pages/voice-settings/index.tsx`:
+
+```
+Page: /voice-settings (org_owner and org_admin only)
+Requires Professional tier minimum
+
+Sections:
+1. Phone Numbers
+   - Your current numbers with status
+   - Purchase new number button (triggers Twilio number provisioning)
+   - Extension configuration per number
+   - Monthly cost per number shown
+   
+2. Trinity Voice Persona
+   - Company greeting script (editable text)
+   - Preview button (plays back TTS of greeting)
+   - Language settings (English, Spanish, both)
+   - Business hours configuration
+   - After-hours behavior
+
+3. Credit Balance
+   - Current balance: $[amount]
+   - Monthly included credits: $[amount]
+   - Usage this month: $[amount]
+   - Auto-refill settings
+   - Purchase more credits button
+   - Credit transaction history
+
+4. Extension Configuration
+   - Toggle each extension on/off
+   - Customize scripts per extension
+   - Configure escalation contacts
+
+5. Call History
+   - Recent calls table
+   - Duration, caller, extension used, outcome
+   - Click to view full transcript
+   - Download call recording
+
+6. Voice Analytics
+   - Calls by extension (pie chart)
+   - Average call duration
+   - Most common outcomes
+   - Credit burn rate
+```
+
+Build `client/src/pages/voice-calls/index.tsx`:
+```
+Page: /voice-calls
+Call log with full transcript viewer
+Filter by: date, extension, outcome, caller type
+Export to PDF or CSV
+```
+
+**STEP 7 — VOICE ADMIN (Platform Staff):**
+
+```
+Platform staff can see all workspace voice activity:
+- Which workspaces have voice enabled
+- Total call volume platform-wide
+- Credit balances across all workspaces
+- Any failed calls or errors
+- Provision phone numbers for workspaces
+- Set per-minute rates per tier
+```
+
+**STEP 8 — TRINITY VOICE ACTIONS:**
+
+```typescript
+registerAction({
+  actionId: 'voice.call.summary',
+  name: 'Get Call Summary',
+  category: 'voice',
+  description: 'Summarize a voice call transcript',
+  requiredRoles: ['org_owner', 'org_admin', 'org_manager'],
+  handler: async ({ callId, workspaceId }) => {
+    const call = await db.query(
+      'SELECT * FROM voice_call_sessions WHERE id = $1 AND workspace_id = $2',
+      [callId, workspaceId]
+    );
+    // Use Claude to summarize transcript
+    return { summary: await summarizeTranscript(call.rows[0].transcript) };
+  }
+});
+
+registerAction({
+  actionId: 'voice.credits.status',
+  name: 'Voice Credit Status',
+  category: 'voice',
+  description: 'Check voice credit balance and usage',
+  requiredRoles: ['org_owner', 'org_admin'],
+  handler: async ({ workspaceId }) => {
+    return voiceOrchestrator.checkCreditBalance(workspaceId);
+  }
+});
+
+registerAction({
+  actionId: 'voice.calls.recent',
+  name: 'Recent Voice Calls',
+  category: 'voice',
+  description: 'Get recent call log',
+  requiredRoles: ['org_owner', 'org_admin', 'org_manager'],
+  handler: async ({ workspaceId, limit = 10 }) => {
+    const calls = await db.query(
+      'SELECT * FROM voice_call_sessions WHERE workspace_id = $1 ORDER BY created_at DESC LIMIT $2',
+      [workspaceId, limit]
+    );
+    return calls.rows;
+  }
+});
+```
+
+**STEP 9 — TIER ENFORCEMENT:**
+
+```typescript
+// In featureRegistry.ts — add voice feature
+'trinity_voice': {
+  name: 'Trinity Voice Phone System',
+  minTier: 'professional',
+  description: 'AI-powered phone system with intelligent IVR'
+},
+
+// In voice routes — gate all management endpoints
+router.use('/api/voice/numbers', requirePlan('professional'));
+router.use('/api/voice/settings', requirePlan('professional'));
+router.use('/api/voice/calls', requirePlan('professional'));
+router.use('/api/voice/credits', requirePlan('professional'));
+
+// Note: /api/voice/inbound does NOT require auth
+// It is called by Twilio server-to-server
+// Security via HMAC signature validation only
+```
+
+**STEP 10 — PHASE 56 VERIFICATION:**
+
+```bash
+# Verify Twilio webhook receives calls
+# Use Twilio test credentials to simulate a call
+# POST /api/voice/inbound with test payload
+
+curl -X POST http://localhost:5000/api/voice/inbound \
+  -d "To=%2B12105550100&From=%2B12105559999&CallSid=CAtest123" \
+  -H "Content-Type: application/x-www-form-urlencoded"
+# Must return valid TwiML XML
+
+# Verify credit deduction
+SELECT balance_cents FROM voice_credit_accounts WHERE workspace_id = '[acme_id]';
+# Simulate call end: POST /api/voice/status
+# Balance must decrease
+
+# Verify call session created
+SELECT * FROM voice_call_sessions WHERE workspace_id = '[acme_id]' ORDER BY created_at DESC LIMIT 1;
+
+# Verify voice clock-in creates time entry
+# Simulate full clock-in flow
+# Check time_entries for new record with clock_in_method = 'voice_phone'
+
+# Verify tier gating
+# Try to access /api/voice/settings as Starter tier workspace
+# Must return 402 UPGRADE_REQUIRED
+
+# Verify workspace isolation
+# Try to call a number owned by workspace A while authenticated as workspace B
+# Must fail
+```
+
+---
+
+**PHASE 58 — TRINITY INTERVIEW PIPELINE**
+*Requires Phase 57 (Universal IDs) complete*
+
+**THREE CHANNEL UNIFIED PIPELINE:**
+
+```
+Email Application → Trinity Screen → Chat Interview → Voice Interview → Ranked Summary → Human Decision
+     ↓                    ↓                ↓               ↓                  ↓
+ Auto-parsed          Score 0-100      Co-pilot       Transcript          Dashboard
+ Resume data          Questions        guidance       + Scorecard         Top 3 ranked
+```
+
+**SCHEMA:**
+
+```sql
+CREATE TABLE IF NOT EXISTS interview_candidates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  candidate_number VARCHAR(30) UNIQUE,
+  -- Format: CND-ACM-00001
+  full_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(20),
+  source VARCHAR(50),
+  -- 'email_application', 'voice_inquiry', 'chat', 'referral', 'platform_apply'
+  position_applied VARCHAR(255),
+  resume_url TEXT,
+  resume_parsed JSONB DEFAULT '{}',
+  -- Extracted: skills, experience, license_status, location
+  trinity_score INTEGER,
+  -- 0-100 qualification score
+  trinity_notes TEXT,
+  stage VARCHAR(50) DEFAULT 'applied',
+  -- 'applied', 'screening', 'email_interview', 'chat_interview', 
+  -- 'voice_interview', 'offered', 'hired', 'rejected', 'withdrawn'
+  rejection_reason TEXT,
+  assigned_recruiter_id UUID REFERENCES users(id),
+  consent_to_contact BOOLEAN DEFAULT false,
+  consent_to_sms BOOLEAN DEFAULT false,
+  consent_timestamp TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS interview_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL,
+  candidate_id UUID NOT NULL REFERENCES interview_candidates(id),
+  session_type VARCHAR(50) NOT NULL,
+  -- 'email_round_1', 'email_round_2', 'chat_interview', 'voice_interview'
+  status VARCHAR(50) DEFAULT 'pending',
+  -- 'pending', 'in_progress', 'completed', 'abandoned'
+  questions JSONB DEFAULT '[]',
+  responses JSONB DEFAULT '[]',
+  trinity_evaluation JSONB DEFAULT '{}',
+  -- { scores: {}, flags: [], strengths: [], concerns: [], recommendation: '' }
+  overall_score INTEGER,
+  human_notes TEXT,
+  recruiter_id UUID REFERENCES users(id),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  voice_call_session_id UUID REFERENCES voice_call_sessions(id),
+  chat_room_id UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS interview_questions_bank (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID,
+  -- NULL = platform default questions
+  position_type VARCHAR(100),
+  -- 'armed_officer', 'unarmed_officer', 'supervisor', 'general'
+  question_text TEXT NOT NULL,
+  question_type VARCHAR(50),
+  -- 'behavioral', 'situational', 'qualification', 'availability', 'background'
+  scoring_criteria JSONB DEFAULT '{}',
+  -- { idealResponse: '', keywordsPositive: [], keywordsNegative: [], weight: 1-5 }
+  is_required BOOLEAN DEFAULT false,
+  branching_logic JSONB DEFAULT '{}',
+  -- If answer contains X, ask question Y next
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS interview_scorecards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL,
+  candidate_id UUID NOT NULL REFERENCES interview_candidates(id),
+  overall_score INTEGER,
+  -- 0-100 composite score across all interview rounds
+  qualification_score INTEGER,
+  communication_score INTEGER,
+  availability_score INTEGER,
+  experience_score INTEGER,
+  background_flag BOOLEAN DEFAULT false,
+  license_verified BOOLEAN DEFAULT false,
+  trinity_recommendation VARCHAR(50),
+  -- 'strong_hire', 'hire', 'maybe', 'no_hire', 'strong_no_hire'
+  trinity_reasoning TEXT,
+  recruiter_decision VARCHAR(50),
+  recruiter_notes TEXT,
+  decided_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**EMAIL INTERVIEW PIPELINE:**
+
+Trinity processes incoming applications via the existing inbound email system. Each org gets:
+`staffing-[orgshort]@mail.coaileague.com` — existing
+`careers-[orgshort]@mail.coaileague.com` — new for applications
+
+When application email arrives:
+1. Trinity extracts: name, contact info, position interest, any resume text
+2. Trinity scores initial qualification: 0-100
+3. If score ≥ 60: sends Email Round 1 (3-5 questions adaptive to position)
+4. Candidate replies: Trinity scores responses, adjusts Round 2 questions
+5. If score ≥ 75 after Round 2: invites to chat interview
+6. All tracked in interview_sessions table
+7. Dashboard shows ranked candidates
+
+**CHAT INTERVIEW MODE:**
+
+Uses existing DockChat infrastructure with a special interview mode:
+
+```typescript
+// Interview chat room created for each candidate
+// Trinity is a participant in the room
+// Recruiter has a hidden co-pilot panel showing:
+//   - Candidate's responses scored in real time
+//   - Suggested follow-up questions
+//   - Flags for evasive answers
+//   - Keywords matched against role criteria
+//   - Live scorecard updating
+
+// Trinity's co-pilot messages sent to recruiter channel only
+// Candidate sees only the conversation
+// Recruiter sees both the conversation AND Trinity's whispers
+```
+
+**VOICE INTERVIEW — Uses Phase 56 Infrastructure:**
+
+Extension 6 (Careers) triggers voice interview:
+- Trinity conducts structured interview
+- ElevenLabs for natural voice
+- Whisper for real-time transcription
+- Trinity scores each answer immediately
+- Post-call: full scorecard generated before call ends
+- Recruiter receives summary via NDS
+
+**INTERVIEW PIPELINE UI:**
+
+Build `client/src/pages/recruitment/index.tsx`:
+
+```
+Page: /recruitment
+
+Tabs:
+1. Pipeline — Kanban by stage
+   Applied → Screening → Email Interview → Chat → Voice → Decision
+   
+2. Candidates — Full list with scores
+   Sort by: score, date, stage, position
+   Filter by: position, source, score range
+   
+3. Question Bank — Manage interview questions
+   By position type, required vs optional
+   Branching logic configuration
+   
+4. Analytics
+   Application volume, conversion rates
+   Time-to-hire, source quality
+   Trinity accuracy vs actual hire outcomes
+
+Candidate profile page:
+   - All interview sessions with scores
+   - Full email thread with responses
+   - Chat transcript with Trinity co-pilot log
+   - Voice call transcript and recording
+   - Final scorecard with recommendation
+   - Recruiter decision controls: Hire / Reject / Hold
+```
+
+**TRINITY INTERVIEW ACTIONS:**
+
+```typescript
+registerAction({
+  actionId: 'interview.screen',
+  name: 'Screen Application',
+  category: 'recruitment',
+  description: 'Score and evaluate incoming application',
+  requiredRoles: ['org_owner', 'org_admin', 'system'],
+  handler: async ({ candidateId, workspaceId }) => { ... }
+});
+
+registerAction({
+  actionId: 'interview.send_questions',
+  name: 'Send Email Interview Questions',
+  category: 'recruitment',
+  description: 'Send adaptive interview questions to candidate',
+  requiredRoles: ['org_owner', 'org_admin', 'system'],
+  handler: async ({ candidateId, round, workspaceId }) => { ... }
+});
+
+registerAction({
+  actionId: 'interview.score_response',
+  name: 'Score Interview Response',
+  category: 'recruitment',
+  description: 'Evaluate and score candidate response',
+  requiredRoles: ['org_owner', 'org_admin', 'system'],
+  handler: async ({ sessionId, responseText, questionId }) => { ... }
+});
+
+registerAction({
+  actionId: 'interview.generate_scorecard',
+  name: 'Generate Scorecard',
+  category: 'recruitment',
+  description: 'Generate final candidate scorecard',
+  requiredRoles: ['org_owner', 'org_admin', 'system'],
+  handler: async ({ candidateId, workspaceId }) => { ... }
+});
+
+registerAction({
+  actionId: 'interview.ranked_summary',
+  name: 'Ranked Candidate Summary',
+  category: 'recruitment',
+  description: 'Rank all candidates for a position',
+  requiredRoles: ['org_owner', 'org_admin'],
+  handler: async ({ position, workspaceId }) => { ... }
+});
+```
+
+---
+
+**BUILD ORDER AND DEBUG PROTOCOL:**
+
+```
+Phase 57 — Universal IDs:
+  → Run backfill SQL
+  → Verify triggers fire on test insert
+  → Verify all existing records have IDs
+  → Test ID resolver with each prefix
+  → Test PIN set and verify flow
+  → Update UI to show IDs everywhere
+  → CERTIFY before Phase 56
+
+Phase 56 — Trinity Voice:
+  → Check Twilio Voice is available in credentials
+  → Build tables and credit system
+  → Build voice orchestrator core
+  → Build inbound webhook (test with curl first)
+  → Build main menu TwiML
+  → Build each extension one at a time
+    → Test each extension with simulated Twilio request
+    → Debug and fix before next extension
+  → Build voice clock-in complete flow
+  → Build voice settings UI
+  → Build call history UI
+  → Test credit deduction on call end
+  → Test tier gating
+  → CERTIFY before Phase 58
+
+Phase 58 — Interview Pipeline:
+  → Build schema
+  → Build email interview processor
+  → Build chat interview mode on DockChat
+  → Build voice interview extension (add to Phase 56 Ext 6)
+  → Build scorecard generation
+  → Build recruitment dashboard
+  → Test full pipeline: email → chat → voice → decision
+  → CERTIFY
+
+After all three:
+→ TypeScript zero errors
+→ Server starts clean
+→ All new routes mounted
+→ All Trinity actions registered
+→ ACME sandbox seeded with test candidates
+→ Full smoke test of voice call flow
+→ Full smoke test of interview pipeline
+```
+
+---
+
+**PHASE CERTIFICATIONS:**
+
+```
+PHASE 57 — UNIVERSAL IDs: CERTIFIED ✅ when:
+  ✅ All ID columns added and populated
+  ✅ All triggers firing on insert
+  ✅ All existing records backfilled
+  ✅ ID resolver returns correct entities
+  ✅ PIN system operational
+  ✅ UI shows IDs everywhere
+  ✅ Search handles ID prefixes
+
+PHASE 56 — TRINITY VOICE: CERTIFIED ✅ when:
+  ✅ Twilio inbound webhook responds with TwiML
+  ✅ Main menu plays and routes correctly
+  ✅ All 6 extensions functional
+  ✅ Voice clock-in creates time entry
+  ✅ Credit balance deducted on call end
+  ✅ Call transcript stored in DB
+  ✅ Call history visible in UI
+  ✅ Tier gating enforced
+  ✅ Org pays — platform pays nothing
+
+PHASE 58 — INTERVIEW PIPELINE: CERTIFIED ✅ when:
+  ✅ Email application creates candidate record
+  ✅ Trinity scores and sends email questions
+  ✅ Chat interview mode works with co-pilot
+  ✅ Voice interview creates transcript and scorecard
+  ✅ Ranked summary shows top candidates
+  ✅ Recruiter can make and save decision
+  ✅ Full pipeline: email → chat → voice → hired
+```
+
+---
+
+Paste that to the agent. This is the complete Phase 56 + 57 + 58 build plan. Universal IDs first because everything depends on them. Voice second because it is the core feature. Interview pipeline third because it builds on voice. Platform never pays — org credit balance covers all usage. Standing by for results.

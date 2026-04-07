@@ -1,0 +1,35 @@
+client/src/hooks/useEmployee.ts:  employeeNumber: string | null; // EMP-XXXX-00001 format for RBAC tracking
+client/src/hooks/useEmployee.ts:    employeeId: data?.employeeNumber, // Human-readable employee ID (EMP-XXXX-00001)
+client/src/hooks/useIdentity.ts:  externalId: string | null; // EMP-XXXX-00001, SUP-XXXX, CLI-XXXX-00001, ORG-XXXX
+client/src/hooks/useIdentity.ts:  employeeId: string | null; // EMP-XXXX-00001 (if employee)
+client/src/hooks/useIdentity.ts:  supportCode: string | null; // SUP-XXXX (if support agent)
+client/src/hooks/useIdentity.ts:  clientId: string | null; // CLI-XXXX-00001 (if client)
+client/src/hooks/useIdentity.ts:  orgId: string | null; // ORG-XXXX (organization)
+client/src/hooks/useIdentity.ts: * - Employees: EMP-XXXX-00001
+client/src/hooks/useIdentity.ts: * - Support Staff: SUP-XXXX
+client/src/hooks/useIdentity.ts: * - Clients: CLI-XXXX-00001
+client/src/hooks/useIdentity.ts: * - Organizations: ORG-XXXX
+client/src/hooks/useIdentity.ts:    employeeId: data?.employeeId, // EMP-XXXX-00001
+client/src/hooks/useIdentity.ts:    supportCode: data?.supportCode, // SUP-XXXX
+client/src/hooks/useIdentity.ts:    clientId: data?.clientId, // CLI-XXXX-00001
+client/src/hooks/useIdentity.ts:    orgId: data?.orgId, // ORG-XXXX
+client/src/components/trinity-credits.tsx:                  placeholder="TRIN-XXXX-XXXX-XXXX"
+server/services/ai-brain/stubFileScaffolder.ts: * - Create stub files with TODO markers and minimal implementation
+server/services/ai-brain/stubFileScaffolder.ts: * TODO:
+server/services/ai-brain/stubFileScaffolder.ts:  // TODO: Define props
+server/services/ai-brain/stubFileScaffolder.ts: * TODO:
+server/services/ai-brain/stubFileScaffolder.ts:   * TODO: Implement ${exp}
+server/services/ai-brain/stubFileScaffolder.ts:// TODO: Implement ${req.purpose}
+server/services/ai-brain/stubFileScaffolder.ts: * TODO: Implement ${exp}
+server/services/ai-brain/stubFileScaffolder.ts:// TODO: Define proper schema for ${req.purpose}
+server/services/ai-brain/stubFileScaffolder.ts:  // TODO: Add actual configuration
+server/services/ai-brain/stubFileScaffolder.ts:    const todoItems = stubContent.match(/TODO:.*$/gm) || [];
+server/services/ai-brain/stubFileScaffolder.ts:    const todoItems = partialContent.match(/TODO:.*$/gm) || [];
+server/services/trinity/weeklyPlatformAudit.ts:  /\bTODO\b/,
+server/services/trinity/weeklyPlatformAudit.ts:  /\bFIXME\b/,
+server/services/identityService.ts:    // Extract org code from existing external ID (ORG-XXXX -> XXXX)
+server/services/identityService.ts:          // Extract local number from existing ID (EMP-XXXX-00001 -> 1)
+server/services/identityService.ts:  // Check if it's an external ID format (ORG-XXXX, EMP-XXXX-00001, SUP-XXXX, etc.)
+server/services/inboundOpportunityAgent.ts:            // TODO: Send actual push notification and email
+server/services/inboundOpportunityAgent.ts:          // TODO: Actually send the email via Resend
+server/services/helpAICapabilities.ts:        'neutral', // TODO: Add sentiment analysis

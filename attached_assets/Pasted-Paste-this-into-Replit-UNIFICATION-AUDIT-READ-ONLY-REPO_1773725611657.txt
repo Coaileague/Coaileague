@@ -1,0 +1,235 @@
+Paste this into Replit:
+
+---
+
+**UNIFICATION AUDIT — READ ONLY | REPORT ONLY | NO CHANGES YET**
+
+Analyze the entire codebase for unification opportunities. Do not change anything. Map every duplicate, competing, or scattered system and report what can be safely unified.
+
+---
+
+**SCAN 1 — EVENT BUS UNIFICATION**
+
+There are currently multiple event/signal mechanisms in the codebase. Map every single one:
+
+- `platformEventBus` — the canonical publish/subscribe bus
+- Node native `EventEmitter` instances — list every `new EventEmitter()` or `extends EventEmitter` in the codebase, what events each emits, who listens
+- Custom event emitters — any class that implements its own emit/on pattern
+- Direct function callbacks passed between services
+- `process.on()` listeners used for inter-service communication
+- Any `BroadcastChannel`, `MessageChannel`, or similar
+
+For each non-canonical mechanism found:
+- What events does it carry
+- Who publishes and who subscribes
+- Could these events safely move to `platformEventBus.publish/subscribe` without breaking anything
+- Is there any reason this MUST stay separate (e.g. Node stream, WebSocket protocol layer)
+
+Report a unification map — what can merge into platformEventBus, what must stay separate and why.
+
+---
+
+**SCAN 2 — DUPLICATE ORCHESTRATION SERVICES**
+
+Search for services that do the same job under different names:
+
+- List every service with "orchestrat" in the name or path
+- List every service with "bridge" in the name or path  
+- List every service with "pipeline" in the name or path
+- List every service with "workflow" in the name or path
+- List every service with "automation" in the name or path
+
+For each group — compare their responsibilities. Flag any two services that:
+- Call the same downstream services
+- Handle the same event types
+- Mutate the same DB tables
+- Serve the same business purpose under different names
+
+Report which ones could be merged, which ones are genuinely distinct, and what the canonical name should be for each merged service.
+
+---
+
+**SCAN 3 — DUPLICATE NOTIFICATION SYSTEMS**
+
+Map every path that creates a notification or sends a message to a user:
+
+- `createNotification()` in notificationService
+- `universalNotificationEngine.sendNotification()`
+- `sendPlatformUpdate()`
+- `broadcastNotificationToUser()` via WebSocket
+- `broadcastToWorkspace()` via WebSocket
+- Direct `db.insert(notifications)` calls
+- Direct Resend `sendEmail()` calls
+- Any other path
+
+For each path — what triggers it, what it sends, who receives it, does it write to the DB. Find every case where two paths are used together to send the same notification. Determine if there is a single canonical path that should handle all notifications and what changes would be needed to route everything through it.
+
+---
+
+**SCAN 4 — DUPLICATE AUTH MIDDLEWARE**
+
+Search for every auth/authorization check pattern:
+
+- `requireAuth` middleware
+- `requirePlatformStaff` middleware
+- `requirePlatformRole()` middleware
+- `ensureAuth` middleware
+- `ensureWorkspaceAccess` middleware
+- Inline `if (!req.user)` checks in route handlers
+- Inline `if (req.workspaceId !== ...)` checks
+- `requireSupportRole` inline functions
+- `requireAdminRole` inline functions
+- Any other auth pattern
+
+Map which routes use which pattern. Find any route using a non-standard inline check instead of the canonical middleware. Find any two middleware functions that do the same thing under different names. Report what the canonical auth chain should be and what deviates from it.
+
+---
+
+**SCAN 5 — DUPLICATE CREDIT/BILLING DEDUCTION PATHS**
+
+Map every path that touches credit balance or billing charges:
+
+- `creditLedger.ts` — the canonical atomic path
+- `creditManager.ts` — what does this add over creditLedger
+- `creditsLedgerService.ts` — confirmed deprecated, verify zero callers remain
+- `creditWrapper.ts` — what is this wrapping and why
+- `partnerApiUsage.ts` — how does this relate to creditLedger
+- `platformServicesMeter.ts` — what does this meter and where does it write
+- `usageMetering.ts` — overlap with platformServicesMeter?
+- Any direct `db.update(workspaces).set({ creditBalance: ... })` calls
+
+For each path — what triggers it, what it deducts, where it writes. Find any two paths that both write to the same credit balance field. Report the canonical credit deduction chain and everything that deviates from it.
+
+---
+
+**SCAN 6 — DUPLICATE SCHEDULING SYSTEMS**
+
+Map every system that creates, assigns, or manages shifts:
+
+- `trinityAutonomousScheduler.ts`
+- `schedulingSubagent.ts`
+- `scheduleLifecycleOrchestrator.ts`
+- `trinitySchedulingPlatformActions.ts`
+- `trinityScheduleTimeclockActions.ts`
+- `shiftMonitoringService.ts`
+- `coveragePipeline.ts`
+- `scheduleLiveNotifierActions.ts`
+- `scheduleosRoutes.ts`
+- Any other scheduling-related service
+
+For each — what is its specific responsibility, what DB tables it writes to, what events it publishes, what events it listens to. Find any two that overlap in responsibility. Map the intended flow: which one is the entry point, which ones are downstream, which ones are utility layers. Report any circular dependencies or competing writes to the same shift records.
+
+---
+
+**SCAN 7 — DUPLICATE INVOICE/BILLING GENERATION PATHS**
+
+Map every path that can create or modify an invoice:
+
+- `weeklyBillingRunService.ts`
+- `billingOrchestrationService.ts`
+- `trinityFinanceOrchestrator.ts`
+- `billing/invoice.ts` service
+- `invoiceRoutes.ts` direct creation
+- `scheduleosRoutes.ts` auto-invoicing
+- `trinityInvoiceEmailActions.ts`
+- `subagents/coreSubagentOrchestration.ts` billing actions
+- Any Trinity action with `billing.generate` or `billing.draft`
+
+For each — what triggers it, what timesheet data it reads, what invoice records it creates. Find any two paths that could generate duplicate invoices for the same client period. Report the canonical invoice generation chain.
+
+---
+
+**SCAN 8 — DUPLICATE PAYROLL PATHS**
+
+Map every path that can create or process a payroll run:
+
+- `orchestratedPayroll.ts`
+- `orchestratedBusinessOps.ts`
+- `payrollRoutes.ts` direct creation
+- `trinityTimesheetPayrollCycleActions.ts`
+- `payrollAutoCloseService.ts`
+- `subagents/payrollSubagent.ts`
+- Any Trinity action with `payroll.run` or `payroll.calculate`
+
+Same analysis — find overlaps, find the canonical chain, find any path that could create duplicate payroll runs.
+
+---
+
+**SCAN 9 — DUPLICATE AI/LLM GATEWAY PATHS**
+
+Map every path that calls an AI model:
+
+- `claudeService.ts`
+- `claudeVerificationService.ts`
+- `resilientAIGateway.ts`
+- `modelRouter.ts`
+- `meteredGptClient.ts`
+- `geminiClient.ts`
+- Any direct `fetch('https://api.anthropic.com/...')` calls
+- Any direct `openai.chat.completions.create()` calls
+- Any direct `GoogleGenerativeAI` calls
+
+For each — what model it calls, what it adds over a direct API call, who calls it. Find any two that call the same model for the same purpose. Report the canonical AI call chain and what the intended routing logic is (when does Gemini get called vs Claude vs OpenAI).
+
+---
+
+**SCAN 10 — WRAPPER AND HELPER DUPLICATION**
+
+Search for utility functions that do the same thing:
+
+- Any two `formatCurrency()` functions in different files
+- Any two `formatDate()` functions in different files  
+- Any two `generateId()` or `createUUID()` functions in different files
+- Any two `sanitizeError()` functions
+- Any two `encryptToken()` / `decryptToken()` functions
+- Any two `getWorkspaceId()` helper patterns
+- Any two response formatting helpers that return `{ success: true, data: ... }`
+
+Report every duplicated utility and the canonical location each should live.
+
+---
+
+**OUTPUT FORMAT**
+
+For each scan produce:
+
+```
+SCAN N — [Name]
+Duplication found: YES/NO
+Items that can be unified:
+  - [Name] + [Name] → [Proposed canonical name]
+  - Reason: [why these overlap]
+  - Risk to unify: LOW/MEDIUM/HIGH
+Items that must stay separate:
+  - [Name] — Reason: [why it must stay]
+Recommended canonical architecture:
+  [One paragraph describing the ideal unified structure]
+```
+
+At the bottom:
+
+```
+UNIFICATION OPPORTUNITIES SUMMARY:
+Scan 1 — Event Bus: N mechanisms → can reduce to N
+Scan 2 — Orchestration: N services → can reduce to N  
+Scan 3 — Notifications: N paths → can reduce to N
+Scan 4 — Auth middleware: N patterns → can reduce to N
+Scan 5 — Credit/billing: N paths → can reduce to N
+Scan 6 — Scheduling: N services → can reduce to N
+Scan 7 — Invoice generation: N paths → can reduce to N
+Scan 8 — Payroll paths: N paths → can reduce to N
+Scan 9 — AI gateway: N paths → can reduce to N
+Scan 10 — Utility helpers: N duplicates found
+
+TOTAL COMPLEXITY REDUCTION: from N to N systems
+```
+
+Then one prioritized list:
+**Unifications that reduce risk of bugs and silent failures** — ordered by impact
+**Unifications that are purely organizational** — nice to have but low risk either way
+
+Stop and wait. Do not change anything.
+
+---
+
+Paste the full report back here. Based on what comes back I will build a phased unification plan that simplifies the platform without breaking anything — starting with the highest-risk duplicates and working down to organizational cleanup.

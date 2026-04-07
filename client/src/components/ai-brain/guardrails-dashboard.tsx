@@ -1,3 +1,4 @@
+import { secureFetch } from "@/lib/csrf";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ export function GuardrailsDashboard() {
   const { data: guardrailsConfig, isLoading, error } = useQuery({
     queryKey: ["/api/ai-brain/guardrails/config"],
     queryFn: async () => {
-      const response = await fetch("/api/ai-brain/guardrails/config");
+      const response = await secureFetch("/api/ai-brain/guardrails/config");
       if (!response.ok) throw new Error("Failed to fetch guardrails");
       const result = await response.json();
       return result.data;
@@ -81,7 +82,7 @@ export function GuardrailsDashboard() {
                           <p className="text-xs font-medium text-muted-foreground">{key}</p>
                           <div className="mt-2 space-y-1">
                             {Object.entries(value).map(([subKey, subValue]) => (
-                              <div key={subKey} className="text-xs flex justify-between">
+                              <div key={subKey} className="text-xs flex justify-between gap-1">
                                 <span>{subKey}:</span>
                                 <span className="font-medium">{String(subValue)}</span>
                               </div>
@@ -94,7 +95,7 @@ export function GuardrailsDashboard() {
                     return (
                       <div
                         key={key}
-                        className="border rounded-lg p-3 flex justify-between items-center"
+                        className="border rounded-lg p-3 flex justify-between gap-2 items-center"
                         data-testid={`guardrail-item-${key}`}
                       >
                         <span className="text-xs font-medium text-muted-foreground">{key}</span>
@@ -124,19 +125,19 @@ export function GuardrailsDashboard() {
         </CardHeader>
         <CardContent>
           <div className="text-sm space-y-2">
-            <div className="flex justify-between" data-testid="status-extraction">
+            <div className="flex justify-between gap-2" data-testid="status-extraction">
               <span>Document Extraction:</span>
               <Badge variant="outline">Active</Badge>
             </div>
-            <div className="flex justify-between" data-testid="status-migration">
+            <div className="flex justify-between gap-2" data-testid="status-migration">
               <span>Data Migration:</span>
               <Badge variant="outline">Active</Badge>
             </div>
-            <div className="flex justify-between" data-testid="status-detection">
+            <div className="flex justify-between gap-2" data-testid="status-detection">
               <span>Issue Detection:</span>
               <Badge variant="outline">Active</Badge>
             </div>
-            <div className="flex justify-between" data-testid="status-cost">
+            <div className="flex justify-between gap-2" data-testid="status-cost">
               <span>Cost Control:</span>
               <Badge variant="outline">Active</Badge>
             </div>

@@ -14,7 +14,7 @@ import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Bot, Zap, Brain, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
+import { TrinityLogo } from '@/components/trinity-logo';
 import TrinityRedesign from '@/components/trinity-redesign';
 import { Suspense } from 'react';
 
@@ -147,23 +147,23 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
   const IconComponent = (
     <motion.div
       className={cn(
-        'relative flex items-center justify-center rounded-2xl',
+        'relative flex items-center justify-center rounded-md',
         styles.containerSize,
         styles.padding,
         'bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600',
         'dark:from-cyan-400 dark:via-blue-500 dark:to-purple-500',
-        showGlow && 'shadow-lg shadow-cyan-500/30 dark:shadow-cyan-400/20'
+        showGlow && 'shadow-sm shadow-cyan-500/30 dark:shadow-cyan-400/20'
       )}
       {...(animated ? glowAnimation : {})}
       data-testid="trinity-marketing-icon"
     >
       {/* Inner gradient overlay */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/20 to-transparent" />
+      <div className="absolute inset-0 rounded-md bg-gradient-to-t from-black/20 to-transparent" />
       
       {/* Shimmer effect */}
       {animated && (
         <motion.div
-          className="absolute inset-0 rounded-2xl opacity-30"
+          className="absolute inset-0 rounded-md opacity-30"
           style={{
             background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
             backgroundSize: '200% 100%',
@@ -173,7 +173,7 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
       )}
       
       {/* Trinity Symbol - Glowing Flower Mascot */}
-      <div className="relative z-10 drop-shadow-lg">
+      <div className="relative z-10 drop-shadow-sm">
         {animated ? (
           <Suspense fallback={<div className="w-12 h-12" />}>
             <TrinityRedesign 
@@ -182,8 +182,8 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
             />
           </Suspense>
         ) : (
-          <TrinityMascotIcon 
-            size={variant === 'badge' ? 'sm' : variant === 'compact' ? 'md' : variant === 'inline' ? 'sm' : variant === 'hero' ? 'xl' : 'lg'}
+          <TrinityLogo 
+            size={variant === 'badge' ? 24 : variant === 'compact' ? 32 : variant === 'inline' ? 24 : variant === 'hero' ? 64 : 48}
           />
         )}
       </div>
@@ -305,7 +305,7 @@ export function TrinitySpotlight({
   return (
     <div 
       className={cn(
-        'relative overflow-hidden rounded-xl',
+        'relative overflow-hidden rounded-md',
         'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900',
         'dark:from-slate-950 dark:via-slate-900 dark:to-slate-950',
         'border border-cyan-500/20',
@@ -397,10 +397,10 @@ export function TrinityWelcomeBanner({
   return (
     <motion.div
       className={cn(
-        'relative overflow-hidden rounded-2xl',
+        'relative overflow-hidden rounded-md',
         'bg-gradient-to-br from-cyan-600 via-blue-600 to-purple-700',
         'dark:from-cyan-700 dark:via-blue-700 dark:to-purple-800',
-        'p-6 text-white shadow-xl',
+        'p-6 text-white shadow-sm',
         className
       )}
       initial={{ opacity: 0, y: 20 }}
@@ -436,12 +436,12 @@ export function TrinityWelcomeBanner({
             {userName ? `Welcome, ${userName}!` : 'Welcome to Trinity'}
           </h3>
           <p className="text-white/80 text-sm leading-relaxed">
-            {message || 'Your AI-powered assistant is ready to help you get the most out of CoAIleague.'}
+            {message || `Your AI-powered assistant is ready to help you get the most out of ${(import.meta.env.VITE_PLATFORM_NAME as string) || 'CoAIleague'}.`}
           </p>
           
           {showProgress && (
             <div className="mt-3">
-              <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center justify-between gap-1 text-xs mb-1">
                 <span>Setup Progress</span>
                 <span className="font-bold">{progress}%</span>
               </div>

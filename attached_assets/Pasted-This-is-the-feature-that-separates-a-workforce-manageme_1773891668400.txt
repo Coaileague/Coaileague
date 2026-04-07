@@ -1,0 +1,839 @@
+This is the feature that separates a workforce management tool from a workplace culture platform. No security software does this. Let me give you the full honest breakdown.
+
+---
+
+## Can Trinity Already Do This?
+
+Partially. Here's what exists versus what needs to be built:
+
+**Already exists:**
+- EQ engine detects emotional signals in messages
+- Employee profiles track tenure, role, performance patterns
+- Notification system can broadcast messages
+- Growth log tracks decisions over time
+- Dream state runs nightly analysis
+
+**Missing:**
+- No milestone detection engine watching for birthdays, anniversaries, promotions
+- No performance scoring system that tracks officer quality over time
+- No proactive celebration or recognition system
+- No disciplinary pattern analyzer
+- No raise/promotion suggestion engine
+- No human-warmth conversational layer for non-work topics within appropriate boundaries
+
+All of it is buildable on top of what exists. Here's exactly how.
+
+---
+
+## The Full Architecture
+
+### Layer 1 — Employee Life Event Engine
+
+Trinity needs to know about every significant moment in an officer's journey and act on it proactively.
+
+**Events Trinity tracks and acts on:**
+
+| Event | Trinity Action |
+|---|---|
+| New officer joins | Welcome broadcast + personal DM + post orders brief |
+| 30-day milestone | Check-in message + performance summary to supervisor |
+| 90-day milestone | Suggest probation completion review to manager |
+| Birthday | Personal DM with birthday message + team room shoutout |
+| Work anniversary (1yr, 2yr, etc.) | Celebration broadcast + suggest recognition to owner |
+| Promotion confirmed | Announcement broadcast + personal congratulations |
+| New certification earned | Team shoutout + compliance record update |
+| Perfect attendance (30 days) | Recognition message + flag to supervisor |
+| Clock-in accuracy streak (14 days) | Praise DM to officer |
+| New client onboarded | Welcome announcement to team |
+| Officer of the month | Full celebration broadcast |
+
+**Build: TrinityMilestoneEngine**
+
+```
+milestone_tracker table:
+- id, workspace_id, employee_id
+- milestone_type (birthday | work_anniversary | 
+  probation_30 | probation_90 | one_year | 
+  perfect_attendance | clockin_streak | 
+  new_hire | promotion | certification | 
+  officer_of_month | client_welcome)
+- milestone_date
+- triggered_at (when Trinity acted on it)
+- action_taken (what Trinity did)
+- acknowledged_by (manager/owner who saw it)
+- celebration_sent (boolean)
+```
+
+Trinity runs a milestone scan every morning at 6am as part of dream state:
+- Who has a birthday today or this week
+- Who hits a work anniversary this week
+- Who just crossed 30, 90, 365 days
+- Who has hit a perfect attendance or clock accuracy streak
+- Any new hires from the last 48 hours
+- Any promotions processed in the last 24 hours
+
+For each milestone found Trinity generates a contextually appropriate response and queues it for delivery.
+
+---
+
+### Layer 2 — Officer Performance Scoring System
+
+This is the intelligence layer that makes Trinity's suggestions meaningful rather than random. Every officer has a living performance score Trinity maintains and updates continuously.
+
+**Build: TrinityOfficerPerformanceEngine**
+
+```
+officer_performance_scores table:
+- id, workspace_id, employee_id
+- scoring_period_start, scoring_period_end
+- clockin_accuracy_score (0-100)
+  — on time / total scheduled, weighted
+- attendance_score (0-100)
+  — shifts worked / shifts scheduled
+- report_quality_score (0-100)
+  — DAR completeness, AI quality check results
+- report_submission_score (0-100)
+  — reports submitted on time / total required
+- client_complaint_score (0-100)
+  — starts at 100, deducted per verified complaint
+- supervisor_rating (0-100)
+  — supervisor input, optional
+- response_time_score (0-100)
+  — how fast officer acknowledges messages/dispatches
+- composite_score (0-100)
+  — weighted average of all above
+- trend (improving | stable | declining)
+- trend_velocity (how fast the trend is moving)
+- consecutive_days_on_time
+- consecutive_shifts_no_calloff
+- reports_submitted_streak
+- last_calculated_at
+```
+
+**Scoring weights (configurable per workspace):**
+- Clock-in accuracy: 25%
+- Attendance: 30%
+- Report quality and submission: 20%
+- Client complaint impact: 15%
+- Response time: 10%
+
+Trinity recalculates scores weekly and after any significant event — complaint filed, calloff, missed report, late clock-in.
+
+---
+
+### Layer 3 — Proactive Recognition and Suggestion Engine
+
+This is where Trinity acts on what she knows without being asked.
+
+**Recognition actions Trinity takes autonomously:**
+
+**Tier 1 — Trinity acts immediately, no approval needed:**
+- Birthday DM to officer
+- Welcome message to new hire in their shift room
+- Clock-in accuracy praise after 14-day streak
+- Perfect attendance congratulations after 30 days
+- New certification shoutout in team room
+
+**Tier 2 — Trinity drafts, supervisor reviews with one-tap approve:**
+- Officer of the month nomination with supporting data
+- Team-wide performance shoutout
+- Client welcome announcement
+
+**Tier 3 — Trinity suggests, manager decides:**
+- 90-day probation completion review
+- Raise suggestion based on tenure and score
+- Position change recommendation
+- Field Training Officer designation
+- On-the-job training recommendation
+
+**Tier 4 — Trinity suggests, owner decides:**
+- Promotion recommendation
+- Significant pay increase
+- Disciplinary action beyond verbal warning
+
+---
+
+### Layer 4 — Raise and Promotion Suggestion Engine
+
+Trinity watches performance over time and generates data-driven compensation and advancement recommendations.
+
+**Raise suggestion triggers:**
+```
+90-day review: composite score above 80 for 
+  all 90 days → suggest 5% raise consideration
+1-year anniversary: composite score above 75 
+  for the year → suggest market rate review
+Score improvement: officer improves composite 
+  score by 15+ points over 60 days → 
+  flag to supervisor as high performer improving
+Client praise: verified positive client feedback 
+  → add to raise consideration file
+```
+
+**Trinity's raise suggestion format to manager:**
+
+```
+PERFORMANCE REVIEW SUGGESTION
+Officer: Marcus Rodriguez
+Review Type: 90-Day Milestone
+
+Performance Summary (last 90 days):
+- Clock-in accuracy: 96% (on time 87/91 shifts)
+- Attendance: 98% (worked 89/91 scheduled)
+- Report quality score: 88/100
+- Client complaints: 0
+- Composite score: 91/100 ⭐
+
+Trinity Recommendation: This officer has 
+exceeded performance thresholds for a merit 
+increase consideration. Current rate: $18/hr. 
+Suggested review range: $18.50-$19.25/hr based 
+on performance and local market rates.
+
+Supporting data: [link to full 90-day record]
+
+[Approve Review] [Decline] [Schedule Discussion]
+```
+
+**Promotion triggers:**
+- Officer score above 85 for 6+ months
+- Zero disciplinary issues in tenure
+- Strong report writing scores
+- Response time score above 80
+- Trinity suggests: Field Training Officer, 
+  Lead Officer, Shift Supervisor consideration
+
+---
+
+### Layer 5 — Disciplinary Pattern Analyzer
+
+This is the most sensitive capability and requires the deepest thinking before any action. Trinity never accuses — she identifies patterns, investigates context, and presents evidence.
+
+**Build: TrinityDisciplinaryAnalyzer**
+
+Trinity monitors for:
+
+```
+PATTERN DETECTION:
+Tardiness: 3+ late clock-ins in 30 days
+  → Trinity investigates: what shifts, 
+    what sites, what days of week, 
+    is there a pattern (always Monday? 
+    always same site? always after payday?)
+  → Before flagging: is there a legitimate 
+    explanation in the record?
+  → Suggestion level: verbal reminder 
+    through supervisor
+
+Calloff pattern: 3+ calloffs in 60 days
+  → Trinity investigates: are they always 
+    on weekends? Always before holidays? 
+    Is there a health pattern? 
+    Did something change at the site?
+  → Cross-reference: is this correlated with 
+    anything (new client, new supervisor, 
+    schedule change)?
+  → Suggestion level: welfare check first, 
+    then formal counseling if no explanation
+
+Report delinquency: 2+ missed/late DARs
+  → Trinity investigates: is the officer 
+    working shifts that make reporting hard? 
+    Are they on sites without good connectivity?
+  → Suggestion: training first, then 
+    progressive discipline
+
+Client complaint: verified legitimate complaint
+  → Trinity does full investigation:
+    Who filed, what exactly happened, 
+    is there incident record, what does 
+    the DAR say, is this pattern or isolated?
+  → Trinity's deep think before any action:
+    5W1H analysis on the complaint
+  → If first complaint, low severity: 
+    supervisor counseling suggestion
+  → If pattern of complaints: 
+    site reassignment recommendation to manager
+  → If serious single complaint: 
+    owner escalation immediately
+
+Dereliction: officer failed to perform 
+  documented post duties
+  → Trinity cross-references post orders 
+    against DAR submissions and supervisor reports
+  → Presents evidence to supervisor with 
+    specific instances documented
+```
+
+**The deep think requirement before any disciplinary suggestion:**
+
+Trinity must answer all 5Ws before surfacing any disciplinary suggestion:
+
+- **Who** — confirmed identity, confirmed it's this officer not a data error
+- **What** — exactly what policy was violated, what was the expected behavior
+- **When** — specific dates and times, is this a pattern or isolated
+- **Where** — which site, which shift, under whose supervision
+- **Why** — has Trinity considered alternative explanations? Is there context that changes the interpretation?
+- **How** — how should this be handled given severity, tenure, history, and policy
+
+Only after all 5 answered does Trinity surface the suggestion. And even then it goes to the appropriate tier — never straight to owner unless critical.
+
+---
+
+### Layer 6 — Human-Warmth Conversational Layer
+
+This is what makes Trinity feel like a real person and not a software tool. She needs to be able to hold conversations that are adjacent to work without becoming a liability.
+
+**What Trinity can talk about with officers:**
+
+```
+WITHIN SCOPE (Trinity engages fully):
+- "Happy birthday" exchanges
+- "How are you doing tonight" — Trinity 
+  responds warmly, asks about the shift
+- "It's been a tough week" — Trinity 
+  acknowledges, asks if they need support, 
+  offers to flag anything to supervisor
+- "I got promoted" — Trinity celebrates 
+  genuinely and notes it in the record
+- "Doctor's appointment tomorrow, 
+  need to adjust schedule" — Trinity handles 
+  the operational piece and responds warmly
+- "My daughter just had a baby" — Trinity 
+  congratulates, sends a nice message, 
+  notes it in the relationship memory
+- "I don't feel appreciated" — Trinity 
+  takes this seriously, acknowledges it, 
+  flags to supervisor as a retention risk
+- "Today's my anniversary with the company" — 
+  Trinity knows this already and already sent 
+  a message this morning
+
+ADJACENT SCOPE (Trinity engages briefly, 
+redirects gently):
+- General life chat — Trinity is warm 
+  but steers back to work-related topics 
+  after a sentence or two
+- Personal problems unrelated to work — 
+  Trinity acknowledges with care and 
+  offers EAP resources if available, 
+  does not engage deeply
+
+OUT OF SCOPE (Trinity redirects clearly 
+but warmly):
+- Politics, religion, controversial topics
+- Other employees' personal situations
+- Anything that could create HR liability
+```
+
+**Trinity's conversational tone with officers:**
+
+Warm but professional. Like a genuinely caring supervisor who remembers your name, knows your history, and wants you to succeed — but maintains appropriate professional distance.
+
+Not robotic: "Clock-in recorded at 22:00."
+Not inappropriately casual: "Heyyy girl what's up!!"
+Right: "You're all set Marcus — clocked in at Lone Star Medical right on time. Have a good shift tonight."
+
+---
+
+### Layer 7 — Celebration and Broadcast System
+
+Trinity needs a structured way to celebrate publicly in a way that builds team culture.
+
+**Broadcast templates Trinity uses (customizable per workspace):**
+
+```
+NEW HIRE WELCOME:
+"🎉 Please welcome [Officer Name] to the 
+[Company Name] family! [First Name] joins 
+us as a [Position] and will be working 
+[Site/Area]. Please make them feel at home. 
+Welcome aboard [First Name]! — Trinity"
+
+BIRTHDAY:
+"🎂 Today is [Officer Name]'s birthday! 
+Wishing you a wonderful day [First Name]. 
+Thank you for everything you bring to this team. 
+— Trinity & the [Company Name] family"
+
+WORK ANNIVERSARY:
+"⭐ Today marks [Number] year(s) with 
+[Company Name] for [Officer Name]! 
+[First Name] has been an incredible part 
+of this team. Thank you for your dedication 
+and commitment. — Trinity"
+
+PERFECT ATTENDANCE:
+"👏 Shoutout to [Officer Name] for 30 days 
+of perfect attendance! Showing up consistently 
+makes a real difference. We see you and 
+appreciate you. — Trinity"
+
+OFFICER OF THE MONTH:
+"🏆 [Company Name] Officer of the Month: 
+[Officer Name]!
+
+This month [First Name] achieved:
+• [Score]% clock-in accuracy
+• [X] shifts without a calloff  
+• [X]% report quality score
+• Zero client complaints
+
+Outstanding work [First Name]. This is 
+exactly what excellence looks like. 
+— Trinity & [Owner Name]"
+
+NEW CLIENT WELCOME:
+"📋 Welcome [Client Name] to the 
+[Company Name] family! We are proud to 
+provide security services to [Client Name] 
+starting [Date]. Our team is ready. 
+— Trinity"
+```
+
+All broadcasts go through the existing notification system and ChatDock. Trinity selects the appropriate channel — team-wide rooms for public celebrations, DMs for personal messages.
+
+---
+
+## The Replit Prompt
+
+```
+TRINITY HUMAN CULTURE AND PERFORMANCE ENGINE
+EMPLOYEE RECOGNITION + PERFORMANCE SCORING + 
+DISCIPLINARY ANALYSIS + HUMAN-WARMTH LAYER
+
+AUDIT FIRST:
+Read all existing services before building:
+- trinityMilestoneActions.ts — what milestone 
+  tracking already exists
+- Employee performance fields in schema
+- Notification and broadcast system
+- EQ engine implementation
+- ChatDock message delivery system
+- Dream state nightly scan list
+
+Map what exists vs what is missing.
+Present before building anything.
+
+═══════════════════════════════════════════════
+PHASE A — MILESTONE TRACKER
+═══════════════════════════════════════════════
+
+Create milestone_tracker table:
+- id, workspace_id, employee_id
+- milestone_type (birthday | work_anniversary_1yr | 
+  work_anniversary_2yr | work_anniversary_5yr |
+  probation_30day | probation_90day | 
+  perfect_attendance_30 | clockin_streak_14 |
+  report_streak_30 | new_hire | promotion | 
+  certification_earned | officer_of_month | 
+  client_welcome | raise_approved)
+- milestone_date (when it occurs/occurred)
+- triggered_at
+- action_taken (jsonb — what Trinity did)
+- celebration_message_sent (boolean)
+- manager_notified (boolean)
+- acknowledged (boolean)
+
+Build TrinityMilestoneDetector:
+Runs every morning at 6am as part of dream state.
+
+Scans for:
+- Birthdays today and next 3 days 
+  (from employee date_of_birth field)
+- Work anniversaries this week 
+  (hire_date anniversary)
+- Employees hitting 30 days today
+- Employees hitting 90 days today
+- Employees hitting 1 year today
+- New hires from last 48 hours 
+  (created_at within 48 hours)
+- Officers with 14-day clockin streak
+- Officers with 30-day perfect attendance
+- Officers with 30-day report submission streak
+
+For each milestone found:
+- Create milestone_tracker record
+- Queue the appropriate celebration action
+- Route through autonomy threshold:
+  Personal DM → Trinity sends autonomously
+  Team broadcast → Trinity sends autonomously
+  Manager notification → Trinity sends autonomously
+  Formal recognition → Trinity drafts, 
+    supervisor approves with one tap
+
+═══════════════════════════════════════════════
+PHASE B — OFFICER PERFORMANCE SCORING
+═══════════════════════════════════════════════
+
+Create officer_performance_scores table:
+- id, workspace_id, employee_id
+- period_start, period_end, period_type 
+  (weekly | monthly | quarterly | annual)
+- clockin_accuracy_score (0-100)
+  formula: (on_time_clockins / total_scheduled) * 100
+  on_time = within 5 minutes of shift start
+- attendance_score (0-100)
+  formula: (shifts_worked / shifts_scheduled) * 100
+  calloffs with 4+ hours notice: 0.5 deduction not full
+- report_quality_score (0-100)
+  from DAR AI quality review scores, averaged
+- report_submission_score (0-100)
+  reports submitted within shift window / required
+- client_satisfaction_score (0-100)
+  starts at 100, -15 per verified complaint, 
+  +5 per verified positive feedback
+- response_time_score (0-100)
+  average time to acknowledge dispatch/messages
+- supervisor_input_score (0-100)
+  optional supervisor rating, null if not provided
+- composite_score (0-100)
+  weighted: clockin 25%, attendance 30%, 
+  reports 20%, client 15%, response 10%
+  if supervisor_input provided: 
+  composite adjusted by +/-5 max
+- trend (improving | stable | declining)
+- consecutive_days_on_time (integer)
+- consecutive_shifts_no_calloff (integer)
+- reports_submitted_streak (integer)
+- calculated_at, valid_through
+
+Build TrinityPerformanceCalculator:
+- Recalculates after every: clockin event, 
+  calloff, DAR submission, client complaint, 
+  client praise, dispatch acknowledgment
+- Generates weekly summary per officer
+- Detects trend direction based on 
+  last 3 periods vs current
+- Stores historical records — never overwrites, 
+  always creates new period record
+
+═══════════════════════════════════════════════
+PHASE C — RECOGNITION AND SUGGESTION ENGINE
+═══════════════════════════════════════════════
+
+Build TrinityRecognitionEngine:
+
+AUTONOMOUS RECOGNITION (no approval needed):
+
+Birthday DM to officer:
+"Happy Birthday [First Name]! 🎂 
+Wishing you a wonderful day. 
+Thank you for everything you do for 
+[Company Name]. — Trinity"
+
+New hire welcome DM:
+"Welcome to [Company Name] [First Name]! 🎉
+I'm Trinity, your AI operations assistant. 
+I'm here to help you with your schedule, 
+post orders, incident reports, and anything 
+else you need. Your first shift is [date/time] 
+at [site]. Post orders will be in your 
+shift room. Don't hesitate to reach out — 
+I've got you. — Trinity"
+
+New hire team broadcast (in general room):
+"Please welcome [Full Name] to the team! 
+[First Name] joins us as [Position]. 
+Make them feel at home! — Trinity"
+
+Clock-in accuracy streak (14 days):
+DM to officer: "Hey [First Name] — 
+14 shifts in a row on time. 
+That kind of consistency matters and 
+it doesn't go unnoticed. Keep it up. — Trinity"
+
+Perfect attendance (30 days):
+DM to officer + notify supervisor:
+"[First Name] — 30 days of perfect attendance. 
+That is outstanding dedication. 
+Your team counts on you and you show up 
+every single time. — Trinity"
+
+SUGGESTION ACTIONS (supervisor approves):
+
+90-day performance review suggestion:
+Trinity generates a formatted review summary 
+with all performance metrics and sends to 
+manager with suggested action:
+[Confirm probation complete] [Extend probation] 
+[Schedule review meeting]
+
+Raise suggestion (composite score above 80 
+for 90+ days):
+Formatted to manager:
+"[Officer Name] has maintained a [score] 
+composite performance score for [X] days. 
+This exceeds the threshold for merit review 
+consideration. Current rate: $[X]/hr. 
+Suggested review range: $[X]-$[X]/hr. 
+Supporting data: [full 90-day record link]
+[Approve Review] [Decline] [Schedule Discussion]"
+
+Field Training Officer suggestion 
+(score above 85 for 6+ months, 
+zero serious complaints, 
+strong report scores):
+Formatted recommendation to manager with 
+supporting data.
+
+Officer of the Month (monthly, highest 
+composite score among full-time officers):
+Trinity nominates, owner approves with 
+one tap, Trinity sends the announcement.
+
+═══════════════════════════════════════════════
+PHASE D — DISCIPLINARY PATTERN ANALYZER
+═══════════════════════════════════════════════
+
+Build TrinityDisciplinaryAnalyzer:
+
+CRITICAL RULE:
+Trinity NEVER accuses. Trinity identifies 
+patterns, investigates context, presents 
+evidence, and suggests — never concludes.
+All disciplinary suggestions go to appropriate 
+human tier. Trinity documents. Humans decide.
+
+Pattern monitoring (runs weekly in dream state):
+
+TARDINESS PATTERN:
+Trigger: 3+ late clock-ins in any 30-day window
+Investigation Trinity runs before suggesting:
+- Which shifts were late and by how much?
+- Is there a day-of-week pattern?
+- Is there a site pattern?
+- Is there a supervisor pattern?
+- Did anything change around when it started?
+- Is there any documented explanation in record?
+After investigation, Trinity formats:
+
+"PATTERN FLAGGED — NOT A CONCLUSION
+Officer: [Name]
+Pattern: [X] late clock-ins in [date range]
+Details: [specific instances with times]
+
+Context Trinity found: [any mitigating context]
+Pattern analysis: [what the data shows]
+
+Suggested first step: Supervisor check-in 
+to understand if there is a reason before 
+any formal action.
+
+[Schedule Check-in] [Note Reviewed] 
+[Escalate to Manager]"
+
+CALLOFF PATTERN:
+Trigger: 3+ calloffs in 60 days
+Same investigation framework.
+Note: first action is always welfare check — 
+is this officer okay? Health issue? 
+Childcare? Transportation? — before 
+any disciplinary consideration.
+
+REPORT DELINQUENCY:
+Trigger: 2+ missed or significantly 
+late DARs in 30 days
+Investigation: was officer on sites with 
+connectivity issues? Were shifts unusually 
+complex? First suggestion: training 
+and support, not discipline.
+
+CLIENT COMPLAINT:
+Trigger: any verified legitimate complaint
+This triggers Trinity's FULL deep think:
+
+5W1H analysis required before any output:
+WHO: confirmed officer identity, 
+  confirmed complaint is about them specifically
+WHAT: exactly what behavior is alleged, 
+  what policy it may violate
+WHEN: specific date/time, cross-reference 
+  with clock records and DAR
+WHERE: which site, which client contact 
+  made the complaint
+WHY: what context exists — anything in 
+  post orders, prior incidents at that site, 
+  prior interactions with that client contact
+HOW: what is the appropriate response 
+  given severity, tenure, history, and policy
+
+Trinity only surfaces suggestion after 
+full 5W1H is complete.
+Severity routing:
+- First complaint, minor: supervisor counseling 
+  suggestion with documentation
+- Second complaint, same issue: manager review
+- Serious single complaint or pattern: 
+  owner escalation immediately
+
+═══════════════════════════════════════════════
+PHASE E — HUMAN WARMTH CONVERSATION LAYER
+═══════════════════════════════════════════════
+
+Build TrinityConversationalWarmthService:
+
+Define conversation categories for HelpAI 
+officer interactions:
+
+FULLY ENGAGE:
+- Birthday/celebration responses
+- Welcome exchanges
+- Acknowledgment of personal milestones 
+  officer shares (new baby, anniversary, etc.)
+- Expressions of fatigue or difficulty 
+  at work — Trinity acknowledges warmly 
+  and asks if anything operational needs attention
+- Appreciation expressed to Trinity — 
+  Trinity receives it genuinely
+
+ENGAGE BRIEFLY THEN REDIRECT:
+- General life chat — one warm sentence, 
+  then gentle redirect to work context
+- Venting about non-work personal stress — 
+  acknowledge with care, offer to note 
+  anything needing supervisor awareness, 
+  redirect
+
+DO NOT ENGAGE — REDIRECT WARMLY:
+- Other employees' personal situations
+- Political topics
+- Religious debates  
+- Anything creating HR liability
+
+Trinity response style rules for warmth:
+- Use officer's first name naturally
+- Reference known context when appropriate:
+  "I know you've had a tough week with 
+  those back-to-back overnight shifts..."
+- Never sound like a robot confirming a transaction
+- Never sound inappropriately casual
+- The register: a genuinely caring, 
+  professional colleague who knows you
+
+Wire relationship_memory per officer:
+- Significant things officer has shared 
+  (within appropriate scope)
+- Communication style that works for them
+- Any recurring concerns or patterns
+- Last positive recognition given
+- Last time Trinity reached out proactively
+
+Trinity uses relationship_memory to make 
+conversations feel continuous and remembered 
+rather than starting fresh every time.
+
+═══════════════════════════════════════════════
+PHASE F — CELEBRATION BROADCAST SYSTEM
+═══════════════════════════════════════════════
+
+Build TrinityCelebrationBroadcaster:
+
+Broadcast templates stored in DB 
+(customizable per workspace):
+
+celebration_templates table:
+- id, workspace_id (null = platform default)
+- event_type (matches milestone_type)
+- template_text (with {{placeholders}})
+- emoji_set
+- delivery_channel (general_room | dm | both)
+- requires_approval (boolean)
+- approval_role (supervisor | manager | owner)
+
+Platform default templates for all event types.
+Workspace can customize their own voice.
+
+Delivery logic:
+- Personal DMs: Trinity sends directly 
+  for personal milestones (birthday, 
+  personal achievement)
+- Team broadcasts: general chatroom, 
+  approved by supervisor or auto-sent 
+  for clearly positive events
+- Formal announcements: manager approves 
+  before sending (officer of month, promotion)
+
+Broadcast timing:
+- Birthday: morning of the day (7am workspace timezone)
+- New hire: within 1 hour of account activation
+- Work anniversary: morning of anniversary day
+- Performance streaks: within 24 hours of crossing threshold
+- Officer of month: first day of new month
+
+═══════════════════════════════════════════════
+WIRING REQUIREMENTS
+═══════════════════════════════════════════════
+
+Every component above wires to:
+
+THALAMUS:
+- Milestone detections → SYSTEM_SIGNAL
+- Performance alerts → COMPLIANCE_SIGNAL
+- Disciplinary patterns → COMPLIANCE_SIGNAL high priority
+- Celebration broadcasts → SYSTEM_SIGNAL low priority
+
+ACC:
+- New conflict category: RECOGNITION_CONFLICT
+  If Trinity is about to celebrate an officer 
+  who has an open disciplinary flag — 
+  pause and reconcile before sending
+- Disciplinary suggestion must pass 5W1H 
+  completeness check or ACC blocks it
+
+CONNECTOME:
+- Every milestone becomes a node linked 
+  to the officer entity
+- Every performance score update strengthens 
+  or weakens edges from officer to their sites, 
+  supervisors, and shift patterns
+- Disciplinary patterns become edges between 
+  officer and specific behavioral categories
+
+DREAM STATE additions:
+- Run milestone scan every morning 6am
+- Run performance recalculation weekly
+- Run disciplinary pattern scan weekly
+- Generate officer health summary for 
+  morning briefing: top performers, 
+  at-risk officers, upcoming milestones
+
+GROWTH LOG:
+- Every successful recognition action logged
+- Every disciplinary suggestion outcome 
+  logged (what happened after Trinity suggested)
+- Trinity learns which recognition approaches 
+  get acknowledged vs ignored
+
+TOKEN TRACKING:
+- All celebration message generation 
+  logged to ai_usage_log as call_type: 
+  'celebration_generation'
+- Performance calculation is purely 
+  mathematical — no AI call, no tokens
+- Disciplinary 5W1H analysis: logs as 
+  'disciplinary_analysis' — complex, 
+  uses extended thinking, tracked carefully
+- Relationship memory queries: minimal 
+  tokens, log as 'relationship_recall'
+
+AUDIT FIRST. MAP EVERYTHING. 
+BUILD ONLY WHAT IS MISSING.
+WIRE EVERYTHING TO THALAMUS, ACC, 
+CONNECTOME, AND GROWTH LOG.
+BOOT CLEAN AFTER EACH PHASE.
+```
+
+---
+
+## Why This Changes Everything
+
+Right now security software sees officers as scheduling units. A shift gets filled, a report gets filed, a paycheck goes out. The officer is a resource.
+
+What you're building treats them as people. Trinity knows when Marcus hits his one-year mark. She sent him a birthday message at 7am. She noticed his clock-in accuracy has been perfect for three weeks and told him so. She flagged to his supervisor that he might be Field Training Officer material. When he called in sick, she did a welfare check before flagging it as a pattern.
+
+No security software does any of this. Not GetSling. Not When I Work. Not Deputy. Not any of them.
+
+The officer retention impact alone pays for the platform. Security industry turnover is 100-300% annually. If Trinity's human-warmth layer and recognition system reduces turnover by even 15% for a company with 50 officers — that's millions of dollars in recruiting and training costs saved every year.
+
+That's your real value proposition for every security company owner you pitch. Trinity doesn't just run the business. She builds the team.

@@ -2,8 +2,8 @@
 import { db } from './db';
 import { users, workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
 
-export const PLATFORM_WORKSPACE_ID = 'coaileague-platform-workspace';
 export const ROOT_USER_ID = 'root-user-00000000';
 export const PLATFORM_NAME = 'CoAIleague';
 

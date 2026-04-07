@@ -12,9 +12,18 @@ export type SlashCommand =
   | 'mute'       // Mute a user
   | 'kick'       // Remove user from chat
   | 'whisper'    // Send private message to user (staff only)
+  | 'privmsg'    // IRC-style private message (everyone)
   | 'auth'       // Request user authentication
   | 'verify'     // Verify user organization
   | 'resetpass'  // Send password reset
+  | 'resetemail' // Reset user email address
+  | 'lock'       // Lock user account
+  | 'unlock'     // Unlock user account
+  | 'requestinfo'// Request verification info from user
+  | 'escalate'   // Escalate to human support
+  | 'resolve'    // Resolve/close ticket
+  | 'userinfo'   // Get user account details
+  | 'sessions'   // View/revoke user sessions
   | 'status'     // Check ticket status (customer)
   | 'queue'      // Check queue position (customer)
   | 'ask'        // Ask AI knowledge base (everyone)
@@ -25,7 +34,55 @@ export type SlashCommand =
   | 'staffstatus'// Check staff member status
   | 'motd'       // Set Message of the Day (staff only)
   | 'banner'     // Update announcement banner (staff only)
-  | 'help';      // Show available commands
+  | 'approve'    // Approve pending destructive action
+  | 'ratelimits' // View rate limit status
+  | 'pendingapprovals' // View pending approval requests
+  | 'resetpassword' // Send password reset email
+  | 'help'       // Show available commands
+  | 'commands'   // Quick command list
+  | 'bots'       // Show available bots
+  | 'who'        // List room participants
+  | 'me'         // IRC-style action message
+  | 'away'       // Set away status
+  | 'back'       // Return from away status
+  | 'helpai'     // Invoke HelpAI bot for assistance
+  | 'dm'         // Direct message shortcut (alias for privmsg)
+  | 'screenshot' // Send a screenshot to support
+  | 'verifyme'   // Request account verification (customer)
+  | 'issue'      // Report an issue
+  | 'mention'    // Mention a user in chat
+  | 'trinity'    // Summon Trinity AI for inline assistance
+  | 'meetingstart'  // Start meeting recording (MeetingBot)
+  | 'meetingend'    // End meeting, generate minutes (MeetingBot)
+  | 'meetingpause'  // Pause meeting recording (MeetingBot)
+  | 'meetingcontinue' // Resume meeting recording (MeetingBot)
+  | 'actionitem'    // Add action item to meeting minutes (MeetingBot)
+  | 'decision'      // Record a decision in meeting (MeetingBot)
+  | 'note'          // Add note to meeting record (MeetingBot)
+  | 'report'        // Start inline incident report (ReportBot)
+  | 'incident'      // Log incident by type (ReportBot)
+  | 'endreport'     // Finalize and submit report (ReportBot)
+  | 'analyzereports' // Analyze reports, generate summary (ReportBot)
+  | 'clockme'       // Manual clock in/out (ClockBot)
+  | 'forceclock'    // Force clock for employee (ClockBot)
+  | 'clockstatus'   // Check clock status (ClockBot)
+  | 'nuke'          // Nuke/reset a bugged room (platform staff only)
+  | 'reopen'        // Reopen a closed conversation (agent/management only)
+  | 'muteall';      // Mute all non-staff users in a room (staff only)
+
+// Message display kinds for MSN-style color coding
+export type MessageKind = 'public' | 'system' | 'private' | 'action';
+
+// Get color class for message kind (MSN-style)
+export function getMessageColorClass(kind: MessageKind): string {
+  switch (kind) {
+    case 'public': return 'text-blue-600';      // Blue for public messages
+    case 'system': return 'text-red-600';       // Red for system messages
+    case 'private': return 'text-purple-600';   // Purple for DMs
+    case 'action': return 'text-green-600';     // Green for actions taken
+    default: return 'text-foreground';
+  }
+}
 
 export interface ParsedCommand {
   command: SlashCommand;
@@ -111,6 +168,14 @@ export const COMMAND_REGISTRY: Record<SlashCommand, CommandDefinition> = {
     minArgs: 2,
     maxArgs: 100,
   },
+  privmsg: {
+    command: 'privmsg',
+    description: 'Send a private message to another user (IRC-style)',
+    usage: '/privmsg <username> <message>',
+    requiresStaff: false,
+    minArgs: 2,
+    maxArgs: 100,
+  },
   auth: {
     command: 'auth',
     description: 'Request user authentication (triggers auth popup for user)',
@@ -161,8 +226,32 @@ export const COMMAND_REGISTRY: Record<SlashCommand, CommandDefinition> = {
   },
   help: {
     command: 'help',
-    description: 'Show available commands',
-    usage: '/help',
+    description: 'Show available commands or details about a specific command',
+    usage: '/help [command]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 1,
+  },
+  commands: {
+    command: 'commands',
+    description: 'Quick list of all available commands',
+    usage: '/commands',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  bots: {
+    command: 'bots',
+    description: 'Show available bots and their status in this room',
+    usage: '/bots',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  who: {
+    command: 'who',
+    description: 'List participants in this room',
+    usage: '/who',
     requiresStaff: false,
     minArgs: 0,
     maxArgs: 0,
@@ -226,6 +315,319 @@ export const COMMAND_REGISTRY: Record<SlashCommand, CommandDefinition> = {
     requiresStaff: true,
     minArgs: 1,
     maxArgs: 100,
+  },
+  resetemail: {
+    command: 'resetemail',
+    description: 'Reset user email address (requires verification)',
+    usage: '/resetemail <userId> <newEmail>',
+    requiresStaff: true,
+    minArgs: 2,
+    maxArgs: 2,
+  },
+  resetpassword: {
+    command: 'resetpassword',
+    description: 'Send password reset email to user',
+    usage: '/resetpassword <userId>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 1,
+  },
+  approve: {
+    command: 'approve',
+    description: 'Approve a pending destructive action request (root_admin/co_admin only)',
+    usage: '/approve <approvalId>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 1,
+  },
+  ratelimits: {
+    command: 'ratelimits',
+    description: 'View your current rate limit status for destructive actions',
+    usage: '/ratelimits',
+    requiresStaff: true,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  pendingapprovals: {
+    command: 'pendingapprovals',
+    description: 'View pending approval requests (root_admin/co_admin only)',
+    usage: '/pendingapprovals',
+    requiresStaff: true,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  lock: {
+    command: 'lock',
+    description: 'Lock user account (prevent login)',
+    usage: '/lock <userId> [reason]',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 10,
+  },
+  unlock: {
+    command: 'unlock',
+    description: 'Unlock user account',
+    usage: '/unlock <userId>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 1,
+  },
+  requestinfo: {
+    command: 'requestinfo',
+    description: 'Request verification information from user',
+    usage: '/requestinfo <userId> <infoType>',
+    requiresStaff: true,
+    minArgs: 2,
+    maxArgs: 5,
+  },
+  escalate: {
+    command: 'escalate',
+    description: 'Escalate current session to human support',
+    usage: '/escalate [priority] [reason]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 10,
+  },
+  resolve: {
+    command: 'resolve',
+    description: 'Mark ticket as resolved and close session',
+    usage: '/resolve [resolution notes]',
+    requiresStaff: true,
+    minArgs: 0,
+    maxArgs: 20,
+  },
+  userinfo: {
+    command: 'userinfo',
+    description: 'Get user account details and status',
+    usage: '/userinfo <userId or email>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 1,
+  },
+  sessions: {
+    command: 'sessions',
+    description: 'View or revoke user sessions',
+    usage: '/sessions <userId> [revoke]',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 2,
+  },
+  me: {
+    command: 'me',
+    description: 'Send an action message (e.g., "* User waves hello")',
+    usage: '/me <action>',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 100,
+  },
+  away: {
+    command: 'away',
+    description: 'Set your status to away with optional message',
+    usage: '/away [reason]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 50,
+  },
+  back: {
+    command: 'back',
+    description: 'Return from away status',
+    usage: '/back',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  helpai: {
+    command: 'helpai',
+    description: 'Invoke HelpAI bot for assistance in the current chat',
+    usage: '/helpai [question]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 100,
+  },
+  dm: {
+    command: 'dm',
+    description: 'Send a direct message to another user',
+    usage: '/dm <username> <message>',
+    requiresStaff: false,
+    minArgs: 2,
+    maxArgs: 100,
+  },
+  screenshot: {
+    command: 'screenshot',
+    description: 'Send a screenshot to support staff',
+    usage: '/screenshot [description]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 50,
+  },
+  verifyme: {
+    command: 'verifyme',
+    description: 'Request verification of your account',
+    usage: '/verifyme',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  issue: {
+    command: 'issue',
+    description: 'Report an issue to support staff',
+    usage: '/issue <description>',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 100,
+  },
+  mention: {
+    command: 'mention',
+    description: 'Mention a user in the chat',
+    usage: '/mention <username> [message]',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 100,
+  },
+  trinity: {
+    command: 'trinity',
+    description: 'Summon Trinity AI for inline assistance (staff only). Trinity is the platform orchestrator who can help with commands, user issues, system status, and more.',
+    usage: '/trinity <question or command>',
+    requiresStaff: true,
+    minArgs: 1,
+    maxArgs: 100,
+  },
+  meetingstart: {
+    command: 'meetingstart',
+    description: 'Start recording the meeting (MeetingBot)',
+    usage: '/meetingstart [title]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 20,
+  },
+  meetingend: {
+    command: 'meetingend',
+    description: 'End meeting and generate minutes summary (MeetingBot)',
+    usage: '/meetingend',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  meetingpause: {
+    command: 'meetingpause',
+    description: 'Pause the meeting recording (MeetingBot)',
+    usage: '/meetingpause',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  meetingcontinue: {
+    command: 'meetingcontinue',
+    description: 'Resume the meeting recording (MeetingBot)',
+    usage: '/meetingcontinue',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  actionitem: {
+    command: 'actionitem',
+    description: 'Add an action item to meeting minutes (MeetingBot)',
+    usage: '/actionitem <description> @user',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 100,
+  },
+  decision: {
+    command: 'decision',
+    description: 'Record a decision made during meeting (MeetingBot)',
+    usage: '/decision <what was decided>',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 100,
+  },
+  note: {
+    command: 'note',
+    description: 'Add a note to the meeting record (MeetingBot)',
+    usage: '/note <text>',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 100,
+  },
+  report: {
+    command: 'report',
+    description: 'Start an inline incident report (ReportBot)',
+    usage: '/report',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  incident: {
+    command: 'incident',
+    description: 'Log an incident by type (ReportBot)',
+    usage: '/incident <type>',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 10,
+  },
+  endreport: {
+    command: 'endreport',
+    description: 'Finalize and submit the current report (ReportBot)',
+    usage: '/endreport',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 0,
+  },
+  analyzereports: {
+    command: 'analyzereports',
+    description: 'Analyze submitted reports and generate professional summary (ReportBot, supervisor+)',
+    usage: '/analyzereports [shift|date|officer]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 5,
+  },
+  clockme: {
+    command: 'clockme',
+    description: 'Manual clock in or out when GPS is unavailable (ClockBot)',
+    usage: '/clockme <in|out> [reason]',
+    requiresStaff: false,
+    minArgs: 1,
+    maxArgs: 10,
+  },
+  forceclock: {
+    command: 'forceclock',
+    description: 'Force clock in/out for an employee (ClockBot, supervisor+)',
+    usage: '/forceclock @user <in|out> <reason>',
+    requiresStaff: false,
+    minArgs: 3,
+    maxArgs: 20,
+  },
+  clockstatus: {
+    command: 'clockstatus',
+    description: 'Check clock-in/out status (ClockBot)',
+    usage: '/clockstatus [@user]',
+    requiresStaff: false,
+    minArgs: 0,
+    maxArgs: 1,
+  },
+  nuke: {
+    command: 'nuke',
+    description: 'Nuke/reset a bugged or glitched room - archives all messages, removes participants, recreates clean (platform staff only)',
+    usage: '/nuke <reason>',
+    requiresStaff: true,
+    requiresEmergencyPrivileges: true,
+    minArgs: 1,
+    maxArgs: 50,
+  },
+  reopen: {
+    command: 'reopen',
+    description: 'Reopen a closed conversation so end users can chat again',
+    usage: '/reopen [reason]',
+    requiresStaff: true,
+    minArgs: 0,
+    maxArgs: 20,
+  },
+  muteall: {
+    command: 'muteall',
+    description: 'Mute all non-staff users in a room (IRCX-style)',
+    usage: '/muteall [reason]',
+    requiresStaff: true,
+    minArgs: 0,
+    maxArgs: 20,
   },
 };
 
@@ -297,4 +699,57 @@ export function getHelpText(isStaff: boolean): string {
   });
   
   return help;
+}
+
+/**
+ * Generate condensed help text suitable for system messages
+ */
+export function getHelpTextCondensed(isStaff: boolean): string {
+  const commands = Object.values(COMMAND_REGISTRY)
+    .filter(cmd => !cmd.requiresStaff || isStaff);
+  
+  const lines = ['━━━━ Available Commands ━━━━', ''];
+  
+  if (isStaff) {
+    lines.push('Staff Commands:');
+    const staffCmds = commands.filter(c => c.requiresStaff);
+    for (const cmd of staffCmds) {
+      lines.push(`  /${cmd.command.padEnd(15)} ${cmd.description}`);
+    }
+    lines.push('');
+  }
+  
+  lines.push('User Commands:');
+  const userCmds = commands.filter(c => !c.requiresStaff);
+  for (const cmd of userCmds) {
+    lines.push(`  /${cmd.command.padEnd(15)} ${cmd.description}`);
+  }
+  
+  lines.push('');
+  lines.push('Type /help <command> for detailed usage');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  return lines.join('\n');
+}
+
+/**
+ * Get help for a specific command
+ */
+export function getCommandHelp(commandName: string): string | null {
+  const cmdKey = commandName.replace(/^\//, '').toLowerCase();
+  const cmd = COMMAND_REGISTRY[cmdKey as SlashCommand];
+  
+  if (!cmd) {
+    return null;
+  }
+  
+  return [
+    `━━━━ Command Help ━━━━`,
+    `Command: /${cmd.command}`,
+    `Usage: ${cmd.usage}`,
+    `Description: ${cmd.description}`,
+    `Requires Staff: ${cmd.requiresStaff ? 'Yes' : 'No'}`,
+    cmd.requiresEmergencyPrivileges ? 'Requires: Emergency Privileges' : '',
+    `━━━━━━━━━━━━━━━━━━━━━━`,
+  ].filter(Boolean).join('\n');
 }

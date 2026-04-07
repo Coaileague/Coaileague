@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -136,14 +136,17 @@ export function ScheduleToolbar({
   const publishMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest('POST', '/api/schedules/publish', {
-        weekStart: weekStart.toISOString(),
-        weekEnd: weekEnd.toISOString(),
+        weekStartDate: weekStart.toISOString(),
+        weekEndDate: weekEnd.toISOString(),
         ...publishOptions,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/analytics/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace/health'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trinity/context'] });
       setShowPublishDialog(false);
       toast({
         title: 'Schedule Published',
@@ -186,89 +189,23 @@ export function ScheduleToolbar({
     resolvedStats.publishedShifts === resolvedStats.totalShifts;
   const hasDrafts = resolvedStats.draftShifts > 0;
 
+  // SLING-STYLE: Maximum 5 primary actions, rest in "More" dropdown
   return (
     <>
-      <div className="flex items-center gap-2 flex-wrap" data-testid="schedule-toolbar">
+      <div className="flex items-center gap-2 px-4 py-2 bg-card border-b" data-testid="schedule-toolbar">
         {isManager && (
           <>
+            {/* PRIMARY ACTION 1: Create Shift */}
             <Button 
               size="sm" 
               onClick={handleCreateShift}
               data-testid="button-create-shift"
             >
               <Plus className="w-4 h-4 mr-1" />
-              Create Shift
+              Create
             </Button>
 
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleTasks}
-              data-testid="button-tasks"
-            >
-              <ClipboardList className="w-4 h-4 mr-1" />
-              Tasks
-            </Button>
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleTimeClock}
-              data-testid="button-time-clock"
-            >
-              <Clock className="w-4 h-4 mr-1" />
-              Time Clock
-            </Button>
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleMessages}
-              data-testid="button-messages"
-            >
-              <MessageSquare className="w-4 h-4 mr-1" />
-              Messages
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" data-testid="button-reports">
-                  <BarChart3 className="w-4 h-4 mr-1" />
-                  Reports
-                  <ChevronDown className="w-3 h-3 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleReports} data-testid="menu-labor-cost">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Labor Cost Report
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleReports} data-testid="menu-hours-summary">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Hours Worked Summary
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleReports} data-testid="menu-adherence">
-                  <Users className="w-4 h-4 mr-2" />
-                  Schedule Adherence
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleReports} data-testid="menu-export">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export to Excel/PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleAvailability}
-              data-testid="button-availability"
-            >
-              <Users className="w-4 h-4 mr-1" />
-              Availability
-            </Button>
-
+            {/* PRIMARY ACTION 2: Publish */}
             <Button
               variant={hasDrafts ? "default" : "outline"}
               size="sm"
@@ -284,50 +221,83 @@ export function ScheduleToolbar({
               )}
             </Button>
 
+            {/* PRIMARY ACTION 3: Trinity Auto-Schedule */}
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onAutoSchedule}
-              className="text-primary"
               data-testid="button-auto-schedule"
             >
               <TrinityIconStatic className="w-4 h-4 mr-1" />
-              Auto-Schedule
+              Auto-Fill
             </Button>
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleSettings}
-              data-testid="button-settings"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
-            {/* Trinity Insights Toggle */}
+            {/* PRIMARY ACTION 4: Trinity Insights Panel Toggle */}
             {onShowTrinityInsights && (
               <Button
                 variant={showTrinityInsights ? "default" : "outline"}
                 size="sm"
                 onClick={onShowTrinityInsights}
-                className={showTrinityInsights ? "bg-gradient-to-r from-[#00BFFF] to-[#FFD700] text-white" : ""}
                 data-testid="button-trinity-insights"
               >
                 <TrinityIconStatic className="w-4 h-4 mr-1" />
-                Trinity Insights
+                Insights
               </Button>
             )}
+
+            {/* PRIMARY ACTION 5: More Actions Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-more-actions">
+                  More
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleTasks} data-testid="menu-tasks">
+                  <ClipboardList className="w-4 h-4 mr-2" />
+                  Tasks
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleTimeClock} data-testid="menu-time-clock">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Time Clock
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleMessages} data-testid="menu-messages">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Messages
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleAvailability} data-testid="menu-availability">
+                  <Users className="w-4 h-4 mr-2" />
+                  Availability
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleReports} data-testid="menu-reports">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Reports
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleReports} data-testid="menu-export">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSettings} data-testid="menu-settings">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         )}
       </div>
 
-      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
-        <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle>Publish Schedule</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <UniversalModalContent size="md">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Publish Schedule</UniversalModalTitle>
+            <UniversalModalDescription>
               Publish schedule for {resolvedWeekDisplay}?
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           
           <div className="py-4 space-y-4">
             <div className="text-sm text-muted-foreground space-y-1">
@@ -383,7 +353,7 @@ export function ScheduleToolbar({
             </div>
           </div>
 
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setShowPublishDialog(false)}>
               Cancel
             </Button>
@@ -393,9 +363,9 @@ export function ScheduleToolbar({
             >
               {publishMutation.isPending ? 'Publishing...' : 'Confirm Publish'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
     </>
   );
 }

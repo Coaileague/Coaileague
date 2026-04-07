@@ -1,0 +1,1227 @@
+# CoAIleague — Org Onboarding, Workspace Provisioning & Multi-State Billing Orchestration
+## "Every New Org Starts Clean. Every Record Has a Home. Every Dollar Is Tracked."
+
+**Date:** March 4, 2026
+**Context:** We just fixed 440K+ NULL workspace_ids across 47 tables and locked down NOT NULL constraints. This spec ensures that problem NEVER returns by making the onboarding process bulletproof — every new org, every sub-org, every employee, every client gets properly provisioned from the moment they register.
+
+**THE RULE: Nothing exists on this platform without a workspace_id. The onboarding flow is the ONLY way workspace_ids are created. If onboarding doesn't set it up right, everything downstream breaks.**
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 1: ORG REGISTRATION FLOW
+# ═══════════════════════════════════════════════════
+
+## 1A: What Happens When a New Org Signs Up
+
+Every step is a database transaction. If ANY step fails, ALL steps roll back. No partial provisioning.
+
+```
+NEW ORG REGISTRATION — STEP BY STEP:
+
+  STEP 1: Owner creates account
+    → User record created (email, password hash, name)
+    → Email verification sent
+    → User status: pending_verification
+    → NO workspace yet — user is homeless until Step 3
+
+  STEP 2: Email verified
+    → User status: verified
+    → Redirected to Org Setup wizard
+
+  STEP 3: Org Setup Wizard (ALL of this in ONE database transaction)
+    ┌─────────────────────────────────────────────────────────────────┐
+    │ BEGIN TRANSACTION                                               │
+    │                                                                 │
+    │  3A. Create workspace record                                    │
+    │      → workspace_id generated (varchar, slug or nanoid)         │
+    │      → name, primary_state, business_type                       │
+    │      → is_mother_org = true (default for new standalone orgs)   │
+    │      → status = 'active'                                        │
+    │                                                                 │
+    │  3B. Assign owner to workspace                                  │
+    │      → UPDATE user SET workspace_id = new_workspace_id          │
+    │      → UPDATE user SET role = 'owner'                           │
+    │      → UPDATE user SET is_active = true                         │
+    │                                                                 │
+    │  3C. Create org_subscription                                    │
+    │      → workspace_id = new_workspace_id                          │
+    │      → tier_id = 'free_trial' (default starting tier)           │
+    │      → status = 'active'                                        │
+    │      → current_period_start = NOW()                             │
+    │      → current_period_end = NOW() + 14 days (trial period)      │
+    │                                                                 │
+    │  3D. Create credit_balance                                      │
+    │      → workspace_id = new_workspace_id                          │
+    │      → subscription_credits = tier.monthly_credits (500 trial)  │
+    │      → carryover_credits = 0                                    │
+    │      → purchased_credits = 0                                    │
+    │      → last_refill_at = NOW()                                   │
+    │                                                                 │
+    │  3E. Create usage_caps for current billing cycle                │
+    │      → workspace_id = new_workspace_id                          │
+    │      → billing_cycle = current YYYY-MM                          │
+    │      → For each capped feature: initial count = 0               │
+    │                                                                 │
+    │  3F. Create default settings                                    │
+    │      → workspace_id = new_workspace_id                          │
+    │      → email_notifications = true                               │
+    │      → push_notifications = true                                │
+    │      → ai_scheduling = false (off until they configure sites)   │
+    │      → auto_invoicing = false                                   │
+    │      → auto_payroll = false                                     │
+    │      → break_compliance = true (default on for safety)          │
+    │      → shift_reminders = true                                   │
+    │                                                                 │
+    │  3G. Create audit_log entry                                     │
+    │      → action: 'workspace.created'                              │
+    │      → actor: owner user                                        │
+    │      → entity: workspace                                        │
+    │                                                                 │
+    │  3H. Send welcome notification                                  │
+    │      → workspace_id = new_workspace_id                          │
+    │      → "Welcome to CoAIleague! Let's set up your first site."   │
+    │                                                                 │
+    │ COMMIT TRANSACTION                                              │
+    │                                                                 │
+    │ If ANY step fails → ROLLBACK entire transaction                 │
+    │ User sees: "Setup failed, please try again"                     │
+    │ No orphaned records, no partial state                           │
+    └─────────────────────────────────────────────────────────────────┘
+
+  STEP 4: Guided Setup (post-registration, not transactional)
+    → Add first client/site
+    → Add first employee
+    → Create first shift template
+    → Connect QuickBooks (optional)
+    → Upload business license (optional — Trinity scans it)
+    → Upload insurance docs (optional — Trinity scans them)
+```
+
+## 1B: The Provisioning Service
+
+```typescript
+// server/services/orgProvisioningService.ts
+
+class OrgProvisioningService {
+  
+  /**
+   * Creates a fully provisioned workspace with ALL required records.
+   * This is the ONLY way a workspace should be created.
+   * Everything is in a single database transaction.
+   */
+  async provisionWorkspace(params: {
+    ownerUserId: string;
+    orgName: string;
+    primaryState: string;         // TX, CA, FL, etc.
+    businessType: string;         // security_company, patrol_service, event_security, etc.
+    tierId?: string;              // Default: 'free_trial'
+  }): Promise<ProvisioningResult> {
+    
+    return await db.transaction(async (tx) => {
+      
+      // 3A: Create workspace
+      const workspaceId = this.generateWorkspaceId(params.orgName);
+      
+      const [workspace] = await tx.insert(workspaces).values({
+        id: workspaceId,
+        name: params.orgName,
+        primary_operating_state: params.primaryState,
+        business_type: params.businessType,
+        is_mother_org: true,
+        is_sub_org: false,
+        parent_workspace_id: null,
+        status: 'active',
+        created_at: new Date(),
+        updated_at: new Date(),
+      }).returning();
+      
+      // 3B: Assign owner to workspace
+      await tx.update(users)
+        .set({
+          workspace_id: workspaceId,
+          role: 'owner',
+          is_active: true,
+          updated_at: new Date(),
+        })
+        .where(eq(users.id, params.ownerUserId));
+      
+      // 3C: Create subscription
+      const tierId = params.tierId || 'free_trial';
+      const tier = await tx.select().from(subscriptionTiers)
+        .where(eq(subscriptionTiers.id, tierId))
+        .limit(1);
+      
+      if (!tier.length) {
+        throw new Error(`Invalid tier: ${tierId}`);
+      }
+      
+      const periodStart = new Date();
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() + (tierId === 'free_trial' ? 14 : 30));
+      
+      await tx.insert(orgSubscriptions).values({
+        workspace_id: workspaceId,
+        tier_id: tierId,
+        status: 'active',
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
+        auto_pay_enabled: false,  // Until Stripe is connected
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      
+      // 3D: Create credit balance
+      await tx.insert(creditBalances).values({
+        workspace_id: workspaceId,
+        subscription_credits: tier[0].monthly_credits,
+        carryover_credits: 0,
+        purchased_credits: 0,
+        last_refill_at: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      
+      // 3E: Create usage caps for current period
+      const billingCycle = this.getCurrentBillingCycle(); // "2026-03"
+      const cappedFeatures = [
+        'ai_scheduling', 'ai_analysis', 'document_generation',
+        'report_generation', 'bot_actions'
+      ];
+      
+      for (const feature of cappedFeatures) {
+        await tx.insert(usageCaps).values({
+          workspace_id: workspaceId,
+          billing_cycle: billingCycle,
+          feature_key: feature,
+          usage_count: 0,
+          cap_limit: tier[0].caps?.[feature] || 999999,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+      
+      // 3F: Create default org settings
+      await tx.insert(orgSettings).values({
+        workspace_id: workspaceId,
+        email_notifications: true,
+        push_notifications: true,
+        sms_notifications: false,
+        ai_scheduling: false,
+        ai_summarization: false,
+        auto_invoicing: false,
+        auto_payroll: false,
+        break_compliance: true,
+        shift_reminders: true,
+        check_in_interval_minutes: 60,
+        check_in_requires_photo: true,
+        geofence_radius_meters: 200,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      
+      // 3G: Audit log
+      await tx.insert(auditLog).values({
+        workspace_id: workspaceId,
+        actor_id: params.ownerUserId,
+        actor_type: 'user',
+        actor_role: 'owner',
+        action: 'workspace.created',
+        entity_type: 'workspaces',
+        entity_id: workspaceId,
+        entity_name: params.orgName,
+        change_type: 'create',
+        metadata: {
+          tier: tierId,
+          state: params.primaryState,
+          business_type: params.businessType,
+        },
+        created_at: new Date(),
+      });
+      
+      // 3H: Welcome notification
+      await tx.insert(notifications).values({
+        workspace_id: workspaceId,
+        user_id: params.ownerUserId,
+        type: 'system',
+        title: 'Welcome to CoAIleague!',
+        body: `Your workspace "${params.orgName}" is ready. Start by adding your first client site and employees.`,
+        is_read: false,
+        created_at: new Date(),
+      });
+      
+      return {
+        workspaceId,
+        tierId,
+        credits: tier[0].monthly_credits,
+        trialEnds: periodEnd,
+      };
+    });
+  }
+  
+  /**
+   * Generate a workspace ID from the org name.
+   * Must be varchar-compatible (matching our workspaces.id type).
+   * Uses nanoid for uniqueness with a readable prefix.
+   */
+  private generateWorkspaceId(orgName: string): string {
+    const slug = orgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 30);
+    const uniqueSuffix = nanoid(8); // 8-char random suffix
+    return `${slug}-${uniqueSuffix}`;
+    // Example: "statewide-protective-a8f3k2m1"
+  }
+  
+  private getCurrentBillingCycle(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+}
+```
+
+## 1C: Verification — What Must Exist After Provisioning
+
+After `provisionWorkspace()` completes, run this check:
+
+```sql
+-- PROVISIONING VERIFICATION for workspace :workspace_id
+SELECT 'workspace' as record, COUNT(*) as exists FROM workspaces WHERE id = :workspace_id
+UNION ALL
+SELECT 'owner_user', COUNT(*) FROM users WHERE workspace_id = :workspace_id AND role = 'owner'
+UNION ALL
+SELECT 'org_subscription', COUNT(*) FROM org_subscriptions WHERE workspace_id = :workspace_id
+UNION ALL
+SELECT 'credit_balance', COUNT(*) FROM credit_balances WHERE workspace_id = :workspace_id
+UNION ALL
+SELECT 'usage_caps', COUNT(*) FROM usage_caps WHERE workspace_id = :workspace_id
+UNION ALL
+SELECT 'org_settings', COUNT(*) FROM org_settings WHERE workspace_id = :workspace_id
+UNION ALL
+SELECT 'audit_log_entry', COUNT(*) FROM audit_log WHERE entity_id = :workspace_id AND action = 'workspace.created'
+UNION ALL
+SELECT 'welcome_notification', COUNT(*) FROM notifications WHERE workspace_id = :workspace_id;
+
+-- EVERY row must show exists = 1 (or more for usage_caps).
+-- If ANY shows 0, provisioning is broken.
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 2: ADDING EMPLOYEES TO AN ORG
+# ═══════════════════════════════════════════════════
+
+## 2A: Employee Addition Flow
+
+When a manager or owner adds an employee, the employee inherits the org's workspace_id:
+
+```typescript
+async addEmployee(params: {
+  workspaceId: string;
+  addedBy: string;           // Manager/owner user ID
+  employeeData: {
+    fullName: string;
+    email: string;
+    phone?: string;
+    role: 'field_worker' | 'supervisor' | 'manager';
+    payRate: number;          // Cents per hour
+    classification: 'armed' | 'unarmed' | 'ppo' | 'supervisor';
+    operatingState: string;   // Which state this employee works in
+  };
+}): Promise<Employee> {
+  
+  return await db.transaction(async (tx) => {
+    
+    // Verify workspace exists
+    const workspace = await tx.select().from(workspaces)
+      .where(eq(workspaces.id, params.workspaceId))
+      .limit(1);
+    
+    if (!workspace.length) {
+      throw new Error(`Workspace ${params.workspaceId} does not exist`);
+    }
+    
+    // Check for duplicate (same email in same workspace)
+    const existing = await tx.select().from(users)
+      .where(and(
+        eq(users.workspace_id, params.workspaceId),
+        eq(users.email, params.employeeData.email),
+        eq(users.is_deleted, false)
+      ))
+      .limit(1);
+    
+    if (existing.length) {
+      throw new Error(`Employee with email ${params.employeeData.email} already exists in this org`);
+    }
+    
+    // Create employee record
+    const [employee] = await tx.insert(users).values({
+      workspace_id: params.workspaceId,           // CRITICAL: inherits org workspace
+      full_name: params.employeeData.fullName,
+      email: params.employeeData.email,
+      phone: params.employeeData.phone,
+      role: params.employeeData.role,
+      pay_rate: params.employeeData.payRate,
+      classification: params.employeeData.classification,
+      operating_state: params.employeeData.operatingState,
+      is_active: true,
+      is_deleted: false,
+      created_by: params.addedBy,
+      created_by_type: 'user',
+      created_at: new Date(),
+      updated_at: new Date(),
+    }).returning();
+    
+    // Audit log
+    await tx.insert(auditLog).values({
+      workspace_id: params.workspaceId,
+      actor_id: params.addedBy,
+      actor_type: 'user',
+      action: 'employee.created',
+      entity_type: 'users',
+      entity_id: employee.id,
+      entity_name: employee.full_name,
+      change_type: 'create',
+      metadata: {
+        role: employee.role,
+        pay_rate: employee.pay_rate,
+        classification: employee.classification,
+        state: employee.operating_state,
+      },
+      created_at: new Date(),
+    });
+    
+    // Update billing employee count (for per-seat pricing)
+    await this.recalculateEmployeeCount(tx, params.workspaceId);
+    
+    return employee;
+  });
+}
+```
+
+## 2B: Employee Count for Billing
+
+Every time an employee is added, deactivated, or reactivated, the billing employee count must be recalculated:
+
+```typescript
+async recalculateEmployeeCount(tx: Transaction, workspaceId: string) {
+  // Count active, non-deleted employees
+  const [result] = await tx
+    .select({ count: sql`COUNT(*)` })
+    .from(users)
+    .where(and(
+      eq(users.workspace_id, workspaceId),
+      eq(users.is_active, true),
+      eq(users.is_deleted, false),
+      // Don't count the owner in employee billing
+      ne(users.role, 'owner')
+    ));
+  
+  const activeCount = Number(result.count);
+  
+  // Get subscription tier
+  const [sub] = await tx.select().from(orgSubscriptions)
+    .where(eq(orgSubscriptions.workspace_id, workspaceId));
+  
+  const [tier] = await tx.select().from(subscriptionTiers)
+    .where(eq(subscriptionTiers.id, sub.tier_id));
+  
+  // Check if over included employee limit
+  const included = tier.included_employees;
+  const overage = Math.max(0, activeCount - included);
+  
+  if (overage > 0 && activeCount > included) {
+    // Log that this org has employee overage (will be billed on platform invoice)
+    await tx.insert(auditLog).values({
+      workspace_id: workspaceId,
+      actor_type: 'system',
+      action: 'billing.employee_overage_detected',
+      entity_type: 'org_subscriptions',
+      change_type: 'action',
+      metadata: {
+        active_employees: activeCount,
+        included_in_tier: included,
+        overage_count: overage,
+        per_employee_overage_rate: tier.per_employee_overage_cents,
+      },
+      created_at: new Date(),
+    });
+  }
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 3: ADDING CLIENTS/SITES TO AN ORG
+# ═══════════════════════════════════════════════════
+
+```typescript
+async addClient(params: {
+  workspaceId: string;
+  addedBy: string;
+  clientData: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    billRate?: number;       // Cents per hour (default for this site)
+    siteType: string;        // commercial, residential, industrial, event, government
+    securityLevel: string;   // unarmed, armed, mixed
+    geofenceLatitude?: number;
+    geofenceLongitude?: number;
+    geofenceRadiusMeters?: number;
+  };
+}): Promise<Client> {
+  
+  return await db.transaction(async (tx) => {
+    
+    // Verify workspace
+    const workspace = await tx.select().from(workspaces)
+      .where(eq(workspaces.id, params.workspaceId))
+      .limit(1);
+    
+    if (!workspace.length) {
+      throw new Error(`Workspace ${params.workspaceId} does not exist`);
+    }
+    
+    // Check duplicate
+    const existing = await tx.select().from(clients)
+      .where(and(
+        eq(clients.workspace_id, params.workspaceId),
+        eq(clients.name, params.clientData.name),
+        eq(clients.is_deleted, false)
+      ))
+      .limit(1);
+    
+    if (existing.length) {
+      throw new Error(`Client "${params.clientData.name}" already exists in this org`);
+    }
+    
+    // Create client record
+    const [client] = await tx.insert(clients).values({
+      workspace_id: params.workspaceId,           // CRITICAL: belongs to this org
+      name: params.clientData.name,
+      address: params.clientData.address,
+      city: params.clientData.city,
+      state: params.clientData.state,
+      zip: params.clientData.zip,
+      contact_name: params.clientData.contactName,
+      contact_email: params.clientData.contactEmail,
+      contact_phone: params.clientData.contactPhone,
+      default_bill_rate: params.clientData.billRate,
+      site_type: params.clientData.siteType,
+      security_level: params.clientData.securityLevel,
+      geofence_latitude: params.clientData.geofenceLatitude,
+      geofence_longitude: params.clientData.geofenceLongitude,
+      geofence_radius_meters: params.clientData.geofenceRadiusMeters || 200,
+      is_active: true,
+      is_deleted: false,
+      created_by: params.addedBy,
+      created_by_type: 'user',
+      created_at: new Date(),
+      updated_at: new Date(),
+    }).returning();
+    
+    // Audit log
+    await tx.insert(auditLog).values({
+      workspace_id: params.workspaceId,
+      actor_id: params.addedBy,
+      actor_type: 'user',
+      action: 'client.created',
+      entity_type: 'clients',
+      entity_id: client.id,
+      entity_name: client.name,
+      change_type: 'create',
+      metadata: {
+        state: client.state,
+        site_type: client.site_type,
+        security_level: client.security_level,
+      },
+      created_at: new Date(),
+    });
+    
+    return client;
+  });
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 4: MULTI-STATE / MOTHER-ORG / SUB-ORG
+# ═══════════════════════════════════════════════════
+
+## 4A: When an Org Expands to Another State
+
+A security company operating in Texas that expands to California needs a sub-org for the new state. The mother-org is the billing entity; sub-orgs are operational entities.
+
+```
+MOTHER-ORG / SUB-ORG STRUCTURE:
+
+  Statewide Protective Services (Mother Org — TX)
+  workspace_id: "statewide-protective-a8f3k2m1"
+  is_mother_org: true
+  primary_state: TX
+  subscription: Enterprise ($9,999/mo)
+  credit_balance: 12,000 + employee scaling
+  │
+  ├── Statewide Protective - California (Sub-Org)
+  │   workspace_id: "statewide-ca-b7d2n4p9"
+  │   is_sub_org: true
+  │   parent_workspace_id: "statewide-protective-a8f3k2m1"
+  │   primary_state: CA
+  │   subscription: NONE (billed through mother)
+  │   credit_balance: NONE (uses mother's pool)
+  │
+  └── Statewide Protective - Florida (Sub-Org)
+      workspace_id: "statewide-fl-c3e5m8q2"
+      is_sub_org: true
+      parent_workspace_id: "statewide-protective-a8f3k2m1"
+      primary_state: FL
+      subscription: NONE (billed through mother)
+      credit_balance: NONE (uses mother's pool)
+```
+
+## 4B: Sub-Org Provisioning
+
+```typescript
+async provisionSubOrg(params: {
+  motherWorkspaceId: string;
+  createdBy: string;
+  subOrgName: string;
+  operatingState: string;
+}): Promise<ProvisioningResult> {
+  
+  return await db.transaction(async (tx) => {
+    
+    // Verify mother org exists and IS a mother org
+    const [mother] = await tx.select().from(workspaces)
+      .where(and(
+        eq(workspaces.id, params.motherWorkspaceId),
+        eq(workspaces.is_mother_org, true),
+        eq(workspaces.status, 'active')
+      ));
+    
+    if (!mother) {
+      throw new Error('Mother org not found or not active');
+    }
+    
+    // Verify subscription tier supports sub-orgs (Enterprise only)
+    const [sub] = await tx.select().from(orgSubscriptions)
+      .where(eq(orgSubscriptions.workspace_id, params.motherWorkspaceId));
+    
+    if (!sub || !['enterprise', 'enterprise_plus'].includes(sub.tier_id)) {
+      throw new Error('Sub-orgs require Enterprise tier. Current tier: ' + sub?.tier_id);
+    }
+    
+    // Create sub-org workspace
+    const subWorkspaceId = this.generateWorkspaceId(params.subOrgName);
+    
+    await tx.insert(workspaces).values({
+      id: subWorkspaceId,
+      name: params.subOrgName,
+      primary_operating_state: params.operatingState,
+      is_mother_org: false,
+      is_sub_org: true,
+      parent_workspace_id: params.motherWorkspaceId,  // Links to mother
+      status: 'active',
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    
+    // Sub-orgs do NOT get their own:
+    // - org_subscription (billed through mother)
+    // - credit_balance (uses mother's pool)
+    // - platform_invoices (aggregated on mother's bill)
+    
+    // Sub-orgs DO get their own:
+    // - org_settings (may differ per state)
+    // - usage_caps (tracked per sub-org but billed to mother)
+    // - employees (different state, different tax rules)
+    // - clients (sites in this state)
+    
+    // Create sub-org settings with state-appropriate defaults
+    await tx.insert(orgSettings).values({
+      workspace_id: subWorkspaceId,
+      // Inherit most settings from mother, override state-specific ones
+      email_notifications: true,
+      push_notifications: true,
+      break_compliance: true,
+      // State-specific compliance rules
+      operating_state_rules: this.getStateRules(params.operatingState),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    
+    // Create usage caps (tracked per sub-org for attribution, billed to mother)
+    const billingCycle = this.getCurrentBillingCycle();
+    const cappedFeatures = ['ai_scheduling', 'ai_analysis', 'document_generation',
+                            'report_generation', 'bot_actions'];
+    
+    for (const feature of cappedFeatures) {
+      await tx.insert(usageCaps).values({
+        workspace_id: subWorkspaceId,
+        billing_cycle: billingCycle,
+        feature_key: feature,
+        usage_count: 0,
+        cap_limit: 999999,  // Sub-orgs share mother's caps
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+    }
+    
+    // Audit log on BOTH mother and sub-org
+    const auditEntry = {
+      actor_id: params.createdBy,
+      actor_type: 'user' as const,
+      action: 'workspace.sub_org_created',
+      entity_type: 'workspaces',
+      entity_id: subWorkspaceId,
+      entity_name: params.subOrgName,
+      change_type: 'create' as const,
+      metadata: {
+        mother_org: params.motherWorkspaceId,
+        operating_state: params.operatingState,
+      },
+      created_at: new Date(),
+    };
+    
+    await tx.insert(auditLog).values({
+      ...auditEntry,
+      workspace_id: params.motherWorkspaceId,  // Log on mother
+    });
+    
+    await tx.insert(auditLog).values({
+      ...auditEntry,
+      workspace_id: subWorkspaceId,  // Log on sub-org too
+    });
+    
+    return { workspaceId: subWorkspaceId };
+  });
+}
+```
+
+## 4C: How Trinity Handles Multi-State / Mother-Sub Billing
+
+```
+TRINITY BILLING LOGIC FOR MOTHER-ORG:
+
+  MONTHLY BILL GENERATION:
+  
+  1. Find all sub-orgs: SELECT * FROM workspaces WHERE parent_workspace_id = :mother_id
+  
+  2. Count ALL active employees across mother + all sub-orgs:
+     SELECT COUNT(*) FROM users 
+     WHERE workspace_id IN (:mother_id, :sub_org_1, :sub_org_2, ...) 
+       AND is_active = true AND is_deleted = false AND role != 'owner'
+  
+  3. Aggregate ALL financial processing fees across all workspaces:
+     SELECT fee_type, SUM(amount_cents), COUNT(*) 
+     FROM financial_processing_fees
+     WHERE (workspace_id = :mother_id OR mother_org_workspace_id = :mother_id)
+       AND billing_cycle = :current_cycle
+       AND billed_on_platform_invoice_id IS NULL
+     GROUP BY fee_type
+  
+  4. Calculate employee overage:
+     total_employees_all_orgs - tier.included_employees = overage
+     overage_charge = overage × tier.per_employee_overage_cents
+  
+  5. Calculate credit usage:
+     Get credit_balance for mother org (sub-orgs use mother's pool)
+     Any credit pack purchases this cycle
+  
+  6. Build ONE platform invoice on the MOTHER ORG:
+     - Subscription base: tier.base_price_cents
+     - Employee overage: overage × rate
+     - Invoice processing fees (all sub-orgs combined): total
+     - Payroll processing fees (all sub-orgs combined): total
+     - QB sync fees (all sub-orgs combined): total
+     - Credit pack purchases: total
+     - Subtotal → Tax (if applicable) → Total
+  
+  7. Sub-org detail breakdown available:
+     The platform invoice has a detail section showing:
+     - Mother org: X employees, Y invoices processed, Z payroll runs
+     - Sub-org CA: X employees, Y invoices, Z payroll runs
+     - Sub-org FL: X employees, Y invoices, Z payroll runs
+     (For the owner to see where costs come from per state)
+
+CREDIT DEDUCTIONS FOR SUB-ORGS:
+
+  When a sub-org uses credits (e.g., Trinity schedules shifts for the CA sub-org):
+  
+  1. Determine the mother org: 
+     SELECT parent_workspace_id FROM workspaces WHERE id = :sub_org_id
+  
+  2. Deduct from MOTHER ORG's credit_balance:
+     UPDATE credit_balances SET ... WHERE workspace_id = :mother_org_id
+  
+  3. Record the transaction with sub-org attribution:
+     INSERT INTO credit_transactions (
+       workspace_id = :mother_org_id,          -- Deducted from mother's pool
+       sub_org_workspace_id = :sub_org_id,     -- Attributed to sub-org
+       ...
+     )
+  
+  This way:
+  - Mother org sees total credit usage
+  - Breakdown shows which sub-org consumed what
+  - Sub-orgs never have their own credit balance to manage
+```
+
+## 4D: Payroll Across States
+
+```
+PAYROLL PER STATE:
+
+  Trinity MUST know which state each employee operates in because:
+  
+  1. Tax withholding rules differ:
+     - TX: No state income tax
+     - CA: 1% - 13.3% progressive + SDI + ETT
+     - FL: No state income tax
+     - NY: 4% - 10.9% + possible NYC surcharge
+  
+  2. Overtime rules differ:
+     - TX: Weekly >40 hours = 1.5×
+     - CA: Daily >8 hours = 1.5×, Daily >12 hours = 2×, Weekly >40 = 1.5×, 
+           7th consecutive day first 8hrs = 1.5×, 7th day >8hrs = 2×
+     - NY: Weekly >40 = 1.5×, spread-of-hours premium if shift >10hrs
+  
+  3. Workers comp rates differ by state and classification
+  
+  4. Break requirements differ:
+     - Federal: No required breaks (only for minors)
+     - CA: 30min meal break before 5th hour, 10min rest per 4hrs
+     - NY: 30min meal break for shifts >6hrs (factory), >6hrs midday (non-factory)
+     - TX: No state-mandated breaks (federal only)
+
+  TRINITY'S PAYROLL PROCESS:
+  
+  For each sub-org (state):
+    For each employee in that sub-org:
+      1. Read operating_state from employee record
+      2. Pull state tax tables from knowledge base
+      3. Calculate hours (respecting that state's OT rules)
+      4. Calculate gross
+      5. Apply federal taxes (same for all states)
+      6. Apply state taxes (per state rules)
+      7. Apply local taxes (per city/county if applicable)
+      8. Calculate net
+      
+  All payroll entries get:
+    - workspace_id (sub-org or mother org)
+    - employee_id
+    - operating_state (which state's rules were applied)
+    - All tax line items broken down
+    
+  Financial processing fee:
+    - Recorded per sub-org (for attribution)
+    - mother_org_workspace_id set (for billing rollup)
+    - Billed on mother org's platform invoice
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 5: DATA ISOLATION GUARANTEES
+# ═══════════════════════════════════════════════════
+
+## 5A: Every Query Must Be Workspace-Scoped
+
+```typescript
+// MIDDLEWARE: Every API request gets workspace context
+
+function workspaceMiddleware(req, res, next) {
+  const user = req.auth.user;
+  
+  if (!user.workspace_id) {
+    return res.status(403).json({ error: 'User is not assigned to any organization' });
+  }
+  
+  // Determine effective workspace IDs
+  // If user is in a mother org, they can see sub-org data too
+  req.workspaceScope = {
+    primary: user.workspace_id,
+    all: [user.workspace_id],  // Will include sub-org IDs for mother org users
+  };
+  
+  // If mother org, include sub-orgs in scope
+  if (user.role === 'owner' || user.role === 'manager') {
+    const subOrgs = await db.select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.parent_workspace_id, user.workspace_id));
+    
+    req.workspaceScope.all = [
+      user.workspace_id,
+      ...subOrgs.map(s => s.id)
+    ];
+  }
+  
+  next();
+}
+
+// USAGE IN ROUTES:
+
+// Single org query:
+const employees = await db.select().from(users)
+  .where(eq(users.workspace_id, req.workspaceScope.primary));
+
+// Mother + sub-org query:
+const allEmployees = await db.select().from(users)
+  .where(inArray(users.workspace_id, req.workspaceScope.all));
+```
+
+## 5B: What Belongs to Sub-Org vs Mother Org
+
+```
+RECORD TYPE                  BELONGS TO           BILLED TO
+─────────────────────────────────────────────────────────────────
+Employees                    Sub-org (their state) Mother org (employee count)
+Clients/Sites                Sub-org (their state) Mother org (processing fees)
+Shifts                       Sub-org               Mother org (scheduling credits)
+Clock Records                Sub-org               Mother org
+Invoices                     Sub-org (per client)  Mother org (processing fee per invoice)
+Payroll Entries              Sub-org (per state)   Mother org (processing fee per employee)
+Incident Reports             Sub-org               Mother org (ReportBot credits)
+DockChat Messages            Sub-org               Mother org (if AI features used)
+Documents                    Sub-org               Mother org (generation credits)
+Shift Rooms                  Sub-org               Mother org
+Credit Balance               MOTHER ORG ONLY       —
+Org Subscription             MOTHER ORG ONLY       —
+Platform Invoice             MOTHER ORG ONLY       —
+Credit Transactions          Mother org            (with sub_org attribution)
+Financial Processing Fees    Sub-org (for detail)  Mother org (aggregated on bill)
+```
+
+## 5C: Trinity's Org Awareness
+
+When Trinity processes any action, she must determine the full org context:
+
+```typescript
+// server/trinity/orgContext.ts
+
+async function resolveOrgContext(workspaceId: string): Promise<OrgContext> {
+  const workspace = await db.select().from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  
+  if (!workspace.length) {
+    throw new Error(`Workspace ${workspaceId} not found`);
+  }
+  
+  const ws = workspace[0];
+  
+  // Determine if this is a mother org, sub-org, or standalone
+  let motherOrgId: string;
+  let allOrgIds: string[];
+  let billingWorkspaceId: string;
+  let creditWorkspaceId: string;
+  
+  if (ws.is_sub_org && ws.parent_workspace_id) {
+    // This is a sub-org — billing goes to mother
+    motherOrgId = ws.parent_workspace_id;
+    billingWorkspaceId = ws.parent_workspace_id;
+    creditWorkspaceId = ws.parent_workspace_id;
+    
+    // Get all sibling sub-orgs
+    const siblings = await db.select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.parent_workspace_id, motherOrgId));
+    
+    allOrgIds = [motherOrgId, ...siblings.map(s => s.id)];
+    
+  } else if (ws.is_mother_org) {
+    // This IS the mother org
+    motherOrgId = ws.id;
+    billingWorkspaceId = ws.id;
+    creditWorkspaceId = ws.id;
+    
+    const subOrgs = await db.select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.parent_workspace_id, ws.id));
+    
+    allOrgIds = [ws.id, ...subOrgs.map(s => s.id)];
+    
+  } else {
+    // Standalone org (not mother, not sub)
+    motherOrgId = ws.id;
+    billingWorkspaceId = ws.id;
+    creditWorkspaceId = ws.id;
+    allOrgIds = [ws.id];
+  }
+  
+  // Get subscription and tier
+  const [subscription] = await db.select().from(orgSubscriptions)
+    .where(eq(orgSubscriptions.workspace_id, billingWorkspaceId));
+  
+  const [tier] = await db.select().from(subscriptionTiers)
+    .where(eq(subscriptionTiers.id, subscription.tier_id));
+  
+  // Get credit balance
+  const [credits] = await db.select().from(creditBalances)
+    .where(eq(creditBalances.workspace_id, creditWorkspaceId));
+  
+  return {
+    currentWorkspaceId: workspaceId,
+    motherOrgId,
+    billingWorkspaceId,       // Where the platform invoice goes
+    creditWorkspaceId,        // Where credits are deducted from
+    allOrgIds,                // All workspaces in this org family
+    operatingState: ws.primary_operating_state,
+    subscription,
+    tier,
+    credits,
+    isSubOrg: ws.is_sub_org,
+    isMotherOrg: ws.is_mother_org,
+  };
+}
+```
+
+**Trinity calls `resolveOrgContext()` at the START of every action.** This tells her:
+- Which workspace she's working in
+- Where to deduct credits (always mother org)
+- Where to record fees (sub-org for attribution, mother for billing)
+- Which employees/clients she can see (all within the org family)
+- What state rules to apply (per sub-org's operating state)
+- What tier/limits apply (from mother org's subscription)
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 6: TIER UPGRADE TRIGGERS
+# ═══════════════════════════════════════════════════
+
+## 6A: When Trinity Recommends Upgrades
+
+```
+TRIGGER                                    RECOMMENDATION
+──────────────────────────────────────────────────────────────────
+Credits < 20% of monthly allocation        "Your credits are running low. Consider 
+                                           purchasing a credit pack or upgrading to
+                                           [next tier] for more monthly credits."
+
+Credits depleted (0 remaining)             "Credits depleted. AI features are running
+                                           in basic mode. Upgrade or purchase credits
+                                           to restore full AI capabilities."
+
+Employee count exceeds included limit      "You have X employees, exceeding your
+for 3 consecutive months                   [tier] limit of Y. Upgrading to [next tier]
+                                           would save $Z/month vs overage charges."
+
+Sub-org created on non-Enterprise tier     "Multi-state operations require Enterprise
+                                           tier. Contact sales to upgrade."
+
+Processing fees exceed 30% of              "Your processing fees are $X this month.
+subscription cost                          Upgrading to [next tier] reduces per-unit
+                                           rates and would save $Y/month."
+
+Monthly platform bill exceeds next         "Your total monthly bill ($X) exceeds the
+tier's base price                          [next tier] base price ($Y). Upgrading
+                                           would include more credits, lower per-unit
+                                           rates, and save approximately $Z/month."
+```
+
+## 6B: Upgrade Flow
+
+```typescript
+async upgradeTier(params: {
+  workspaceId: string;       // Must be mother org
+  newTierId: string;
+  requestedBy: string;
+}): Promise<void> {
+  
+  return await db.transaction(async (tx) => {
+    
+    // Verify this is the billing workspace (mother org or standalone)
+    const orgContext = await resolveOrgContext(params.workspaceId);
+    
+    if (orgContext.billingWorkspaceId !== params.workspaceId) {
+      throw new Error('Tier changes can only be made on the mother org');
+    }
+    
+    // Get new tier
+    const [newTier] = await tx.select().from(subscriptionTiers)
+      .where(eq(subscriptionTiers.id, params.newTierId));
+    
+    if (!newTier) throw new Error(`Invalid tier: ${params.newTierId}`);
+    
+    const oldTierId = orgContext.subscription.tier_id;
+    
+    // Update subscription
+    await tx.update(orgSubscriptions).set({
+      tier_id: params.newTierId,
+      updated_at: new Date(),
+    }).where(eq(orgSubscriptions.workspace_id, params.workspaceId));
+    
+    // Adjust credit balance (add difference if upgrading)
+    const oldCredits = orgContext.tier.monthly_credits;
+    const newCredits = newTier.monthly_credits;
+    
+    if (newCredits > oldCredits) {
+      const creditBoost = newCredits - oldCredits;
+      await tx.update(creditBalances).set({
+        subscription_credits: sql`subscription_credits + ${creditBoost}`,
+        updated_at: new Date(),
+      }).where(eq(creditBalances.workspace_id, params.workspaceId));
+      
+      // Record credit transaction
+      await tx.insert(creditTransactions).values({
+        workspace_id: params.workspaceId,
+        transaction_type: 'tier_upgrade_bonus',
+        amount: creditBoost,
+        balance_after: orgContext.credits.total_credits + creditBoost,
+        source_type: 'subscription',
+        triggered_by: 'system',
+        description: `Tier upgrade from ${oldTierId} to ${params.newTierId}: +${creditBoost} credits`,
+        created_at: new Date(),
+      });
+    }
+    
+    // Recalculate enterprise credit scaling if applicable
+    if (params.newTierId.startsWith('enterprise')) {
+      const totalEmployees = await this.countAllEmployees(tx, orgContext.allOrgIds);
+      const scaledCredits = newTier.monthly_credits + (totalEmployees * 10);
+      
+      await tx.update(creditBalances).set({
+        subscription_credits: scaledCredits,
+        updated_at: new Date(),
+      }).where(eq(creditBalances.workspace_id, params.workspaceId));
+    }
+    
+    // Audit log
+    await tx.insert(auditLog).values({
+      workspace_id: params.workspaceId,
+      actor_id: params.requestedBy,
+      actor_type: 'user',
+      action: 'subscription.tier_upgraded',
+      entity_type: 'org_subscriptions',
+      change_type: 'update',
+      metadata: {
+        old_tier: oldTierId,
+        new_tier: params.newTierId,
+        old_credits: oldCredits,
+        new_credits: newCredits,
+      },
+      created_at: new Date(),
+    });
+    
+    // Notify owner
+    await tx.insert(notifications).values({
+      workspace_id: params.workspaceId,
+      user_id: params.requestedBy,
+      type: 'billing',
+      title: 'Subscription Upgraded',
+      body: `Your plan has been upgraded to ${newTier.name}. You now have ${newCredits} monthly credits and enhanced features.`,
+      is_read: false,
+      created_at: new Date(),
+    });
+  });
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 7: THE COMPLETE ENTITY RELATIONSHIP CHAIN
+# ═══════════════════════════════════════════════════
+
+This is how everything connects. Trinity must understand this chain for every action:
+
+```
+WORKSPACE (the org)
+  │
+  ├── is billed via → ORG_SUBSCRIPTION → references → SUBSCRIPTION_TIER
+  │                                                      (pricing, limits, rates)
+  │
+  ├── has credits → CREDIT_BALANCE (one per mother org)
+  │                   └── tracked in → CREDIT_TRANSACTIONS (immutable ledger)
+  │
+  ├── has employees → USERS (workspace_id = this org)
+  │                     ├── clocks in/out → CLOCK_RECORDS (workspace_id + user_id)
+  │                     ├── works shifts → SHIFT_ASSIGNMENTS (workspace_id + user_id + shift_id)
+  │                     ├── gets paid → PAYROLL_ENTRIES (workspace_id + user_id)
+  │                     ├── submits reports → INCIDENT_REPORTS, DAILY_REPORTS
+  │                     ├── has documents → DOCUMENT_VAULT (related_entity = employee)
+  │                     └── has scores → BEHAVIOR_SCORES (workspace_id + user_id)
+  │
+  ├── has clients → CLIENTS (workspace_id = this org)
+  │                   ├── has shifts → SHIFTS (workspace_id + client_id)
+  │                   ├── gets invoiced → INVOICES (workspace_id + client_id)
+  │                   ├── has contracts → DOCUMENT_VAULT (related_entity = client)
+  │                   └── has shift rooms → SHIFT_ROOMS (workspace_id + site_id)
+  │
+  ├── accumulates fees → FINANCIAL_PROCESSING_FEES (workspace_id or mother_org_workspace_id)
+  │
+  ├── receives bills → PLATFORM_INVOICES (one per mother org per month)
+  │
+  ├── has sub-orgs → WORKSPACES (parent_workspace_id = this org)
+  │                    └── each sub-org has its own employees, clients, shifts
+  │                        but billing rolls up to mother org
+  │
+  └── Trinity knows all → via resolveOrgContext() which maps the complete family tree
+```
+
+---
+
+# ═══════════════════════════════════════════════════
+# PART 8: IMPLEMENTATION INSTRUCTIONS
+# ═══════════════════════════════════════════════════
+
+```
+STEP 1: Build OrgProvisioningService with the provisionWorkspace() method
+        - Single transaction, all-or-nothing
+        - Test by creating a new workspace and running the verification query
+        
+STEP 2: Build addEmployee() and addClient() with workspace_id enforcement
+        - Both must use the existing workspace_id, not generate new ones
+        - Both must check for duplicates before inserting
+        - Both must record in audit log
+        
+STEP 3: Build provisionSubOrg() for multi-state expansion
+        - Sub-orgs share mother's credits and subscription
+        - Sub-orgs have their own employees, clients, settings
+        - Processing fees attribute to sub-org, bill to mother
+        
+STEP 4: Build resolveOrgContext() 
+        - Trinity calls this before EVERY action
+        - Determines mother org, billing workspace, credit workspace
+        - Returns full org family tree
+        
+STEP 5: Wire billing to use resolveOrgContext()
+        - Monthly bill generation aggregates across all sub-orgs
+        - Employee count includes all sub-orgs
+        - Credit deductions go to mother org's balance
+        - Processing fees per sub-org, billed to mother
+        
+STEP 6: Wire the workspace middleware to enforce scoping on ALL routes
+        - Every query must filter by workspace_id
+        - Mother org users can see sub-org data
+        - Sub-org users can only see their own sub-org data
+        
+STEP 7: Build the verification endpoint
+        - POST /api/admin/verify-workspace/:workspaceId
+        - Runs the provisioning verification query
+        - Returns pass/fail for each required record
+        
+STEP 8: Test the full flow
+        - Register new org → verify all records created
+        - Add employees → verify workspace_id inherited
+        - Add clients → verify workspace_id inherited
+        - Create sub-org → verify mother-org billing linkage
+        - Run billing cycle → verify single bill to mother with sub-org detail
+        - Deduct credits from sub-org → verify mother's balance decreases
+```
+
+---
+
+END OF ORG ONBOARDING & MULTI-STATE BILLING SPEC v1.0

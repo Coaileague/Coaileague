@@ -9,9 +9,11 @@
 import { domainLeadSupervisorService } from './domainLeadSupervisors';
 import { enhancedLLMJudge } from './llmJudgeEnhanced';
 import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('domainSupervisorActions');
 
 export function registerDomainSupervisorActions(): void {
-  console.log('[DomainSupervisorActions] Registering domain lead supervisor actions...');
+  log.info('[DomainSupervisorActions] Registering domain lead supervisor actions...');
 
   // ============================================================================
   // PHASE 2 CLEANUP: Deferred 37 actions, keeping 2 LLM Judge core actions
@@ -19,145 +21,7 @@ export function registerDomainSupervisorActions(): void {
   // Actual work done by: coreSubagentOrchestration.ts, billingOrchestrationService.ts
   // ============================================================================
 
-  /* DEFERRED: RevenueOps (6) - Duplicate with Core Subagent payroll.*, invoice.* actions
-  // ============================================================================
-  // REVENUE OPS ACTIONS
-  // ============================================================================
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'revenue.validate_credits',
-    name: 'Validate Credits',
-    description: 'Validate workspace credit balance and usage',
-    category: 'invoicing',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('revenue_ops', 'validate_credits', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'high',
-        });
-        return {
-          success: result.success,
-          actionId: request.actionId,
-          data: result.data,
-          message: result.error || 'Credit validation complete',
-          executionTimeMs: Date.now() - startTime,
-        };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'revenue.process_payment',
-    name: 'Process Payment',
-    description: 'Process a payment through the payment gateway',
-    category: 'invoicing',
-    requiredRoles: ['admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('revenue_ops', 'process_payment', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'high',
-        });
-        return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Payment processed', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'revenue.generate_invoice',
-    name: 'Generate Invoice',
-    description: 'Generate an invoice for a client',
-    category: 'invoicing',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('revenue_ops', 'generate_invoice', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'normal',
-        });
-        return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Invoice generated', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'revenue.process_payroll',
-    name: 'Process Payroll',
-    description: 'Process payroll for employees',
-    category: 'payroll',
-    requiredRoles: ['admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('revenue_ops', 'process_payroll', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'critical',
-        });
-        return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Payroll processed', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'revenue.reconcile_payments',
-    name: 'Reconcile Payments',
-    description: 'Reconcile payments with invoices',
-    category: 'invoicing',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('revenue_ops', 'reconcile_payments', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'normal',
-        });
-        return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Payments reconciled', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
-
-  helpaiOrchestrator.registerAction({
-    actionId: 'revenue.detect_anomalies',
-    name: 'Detect Financial Anomalies',
-    description: 'Use AI to detect anomalies in financial data',
-    category: 'analytics',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('revenue_ops', 'detect_anomalies', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'normal',
-        });
-        return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Anomaly detection complete', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
-
-  console.log('[DomainSupervisorActions] Registered 6 RevenueOps actions');
-
+  /* DEFERRED: SecurityOps, OnboardingOps, DataOps, CommunicationOps (24 actions) - not MVP
   // ============================================================================
   // SECURITY OPS ACTIONS - Trinity compliance automation
   // ============================================================================
@@ -167,7 +31,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Evaluate Security Policy',
     description: 'Evaluate ABAC policy for an access request',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -178,7 +42,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Policy evaluated', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -188,18 +52,18 @@ export function registerDomainSupervisorActions(): void {
     name: 'Check Permissions',
     description: 'Check user permissions for a resource',
     category: 'security',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('security_ops', 'check_permissions', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Permissions checked', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -209,18 +73,18 @@ export function registerDomainSupervisorActions(): void {
     name: 'Audit Access',
     description: 'Generate access audit report',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('security_ops', 'audit_access', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Access audit complete', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -230,7 +94,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Detect Security Threats',
     description: 'Scan for security threats and anomalies',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -241,7 +105,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Threat detection complete', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -251,7 +115,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Rotate Credentials',
     description: 'Rotate API keys and credentials',
     category: 'security',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -262,7 +126,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Credentials rotated', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -272,58 +136,65 @@ export function registerDomainSupervisorActions(): void {
     name: 'Validate Compliance',
     description: 'Check compliance status against regulations',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('security_ops', 'validate_compliance', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Compliance validated', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  console.log('[DomainSupervisorActions] Registered 6 SecurityOps actions');
+  log.info('[DomainSupervisorActions] Registered 6 SecurityOps actions');
 
   // ============================================================================
   // ONBOARDING OPS ACTIONS
   // ============================================================================
 
-  helpaiOrchestrator.registerAction({
-    actionId: 'onboarding.connect_integration',
-    name: 'Connect Integration',
-    description: 'Connect to a third-party integration',
-    category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('onboarding_ops', 'connect_integration', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'normal',
-        });
-        return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Integration connected', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
+  // onboarding.configure — consolidates: get_routing_config (default), validate_routing (action='validate_routing'), connect_integration (action='connect_integration')
+  // NOTE: get_routing_config and validate_routing are registered in aiBrainMasterOrchestrator.ts (registerOnboardingAssistantActions).
+  // connect_integration is folded into onboarding.configure below.
+  // The old onboarding.connect_integration registration is commented out.
 
+  // helpaiOrchestrator.registerAction({ actionId: 'onboarding.connect_integration', ... }); // CONSOLIDATED into onboarding.configure
+
+  // onboarding.migrate — consolidates: migrate_data (default), apply_auto_fixes (action='auto_fix')
+  // apply_auto_fixes is registered in aiBrainMasterOrchestrator.ts (registerOnboardingAssistantActions).
   helpaiOrchestrator.registerAction({
-    actionId: 'onboarding.migrate_data',
+    actionId: 'onboarding.migrate',
     name: 'Migrate Data',
-    description: 'Migrate data from external sources',
+    description: 'Migrate data from external sources or apply automatic fixes. Use payload.action="auto_fix" to apply auto-fixes (requires fixActions array); default migrates data.',
     category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
+        const { action: subAction, workspaceId: payloadWsId, fixActions, ...restPayload } = request.payload || {};
+
+        if (subAction === 'auto_fix') {
+          // Consolidated from onboarding.apply_auto_fixes
+          const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
+          const result = await orgOnboardingAssistant.applyAutoFixes(
+            payloadWsId || request.workspaceId!,
+            fixActions || []
+          );
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Applied ${result.applied.length} fixes, ${result.failed.length} failed`,
+            data: result,
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+
+        // Default: migrate_data
         const result = await domainLeadSupervisorService.submitTask('onboarding_ops', 'migrate_data', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
@@ -331,20 +202,34 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Data migrated', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
+  // onboarding.provision — consolidates: provision_workspace (default), setup_defaults (phase='defaults')
   helpaiOrchestrator.registerAction({
-    actionId: 'onboarding.provision_workspace',
+    actionId: 'onboarding.provision',
     name: 'Provision Workspace',
-    description: 'Set up a new workspace with defaults',
+    description: 'Set up a new workspace with defaults. Use payload.phase="defaults" to apply default configurations only; default provisions the full workspace.',
     category: 'automation',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
+        const { phase } = request.payload || {};
+
+        if (phase === 'defaults') {
+          // Consolidated from onboarding.setup_defaults
+          const result = await domainLeadSupervisorService.submitTask('onboarding_ops', 'setup_defaults', request.payload || {}, {
+            requestedBy: request.userId || 'system',
+            workspaceId: request.workspaceId,
+            priority: 'medium',
+          });
+          return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Defaults applied', executionTimeMs: Date.now() - startTime };
+        }
+
+        // Default: provision_workspace
         const result = await domainLeadSupervisorService.submitTask('onboarding_ops', 'provision_workspace', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
@@ -352,41 +237,70 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Workspace provisioned', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  helpaiOrchestrator.registerAction({
-    actionId: 'onboarding.setup_defaults',
-    name: 'Setup Defaults',
-    description: 'Apply default configurations to workspace',
-    category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      try {
-        const result = await domainLeadSupervisorService.submitTask('onboarding_ops', 'setup_defaults', request.payload || {}, {
-          requestedBy: request.userId || 'system',
-          workspaceId: request.workspaceId,
-          priority: 'normal',
-        });
-        return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Defaults applied', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
-      }
-    },
-  });
+  // helpaiOrchestrator.registerAction({ actionId: 'onboarding.setup_defaults', ... }); // CONSOLIDATED into onboarding.provision (phase='defaults')
 
+  // onboarding.track — consolidates: track_progress (default), get_checklist (view='checklist'), get_platform_status (view='status')
+  // get_checklist and get_platform_status are registered in actionRegistry.ts (registerOnboardingActions).
   helpaiOrchestrator.registerAction({
-    actionId: 'onboarding.track_progress',
+    actionId: 'onboarding.track',
     name: 'Track Onboarding Progress',
-    description: 'Track user onboarding progress',
+    description: 'Track onboarding state. Use payload.view="checklist" to retrieve the onboarding checklist; view="status" for platform-wide invitation status; default tracks user onboarding progress.',
     category: 'analytics',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
+        const { view } = request.payload || {};
+
+        if (view === 'checklist') {
+          // Consolidated from onboarding.get_checklist
+          const { onboardingConfig } = await import('@shared/config/onboardingConfig');
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Onboarding checklist retrieved',
+            data: onboardingConfig.onboardingSteps,
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+
+        if (view === 'status') {
+          // Consolidated from onboarding.get_platform_status
+          const { employeeInvitations } = await import('@shared/schema');
+          const { db } = await import('../../db');
+          const { eq, sql } = await import('drizzle-orm');
+
+          const pending = await db.select({ count: sql`count(*)::int` })
+            .from(employeeInvitations)
+            .where(eq(employeeInvitations.inviteStatus, 'pending' as any));
+
+          const accepted = await db.select({ count: sql`count(*)::int` })
+            .from(employeeInvitations)
+            .where(eq(employeeInvitations.inviteStatus, 'accepted' as any));
+
+          const expired = await db.select({ count: sql`count(*)::int` })
+            .from(employeeInvitations)
+            .where(eq(employeeInvitations.inviteStatus, 'expired' as any));
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Platform onboarding status retrieved',
+            data: {
+              pendingInvitations: pending[0]?.count || 0,
+              acceptedInvitations: accepted[0]?.count || 0,
+              expiredInvitations: expired[0]?.count || 0,
+            },
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+
+        // Default: track_progress
         const result = await domainLeadSupervisorService.submitTask('onboarding_ops', 'track_progress', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
@@ -394,20 +308,77 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Progress tracked', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
+  // onboarding.recommend — consolidates: recommend_features (default), gather_billing_preferences (type='billing_prefs')
+  // gather_billing_preferences is registered in actionRegistry.ts (registerOnboardingActions).
   helpaiOrchestrator.registerAction({
-    actionId: 'onboarding.recommend_features',
+    actionId: 'onboarding.recommend',
     name: 'Recommend Features',
-    description: 'AI-powered feature recommendations',
+    description: 'AI-powered feature recommendations or billing preference gathering. Use payload.type="billing_prefs" to gather and persist client billing preferences (requires clientId); default recommends features.',
     category: 'automation',
-    requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
+        const { type } = request.payload || {};
+
+        if (type === 'billing_prefs') {
+          // Consolidated from onboarding.gather_billing_preferences
+          const { clientId, ...prefs } = request.payload || {};
+          if (!clientId) {
+            return { success: false, actionId: request.actionId, message: 'clientId required', executionTimeMs: Date.now() - startTime };
+          }
+
+          const { db } = await import('../../db');
+          const { clientBillingSettings } = await import('@shared/schema');
+          const { and, eq } = await import('drizzle-orm');
+
+          const existing = await db
+            .select()
+            .from(clientBillingSettings)
+            .where(
+              and(
+                eq(clientBillingSettings.workspaceId, request.workspaceId!),
+                eq(clientBillingSettings.clientId, clientId)
+              )
+            )
+            .limit(1);
+
+          let settings;
+          if (existing.length > 0) {
+            [settings] = await db
+              .update(clientBillingSettings)
+              .set({ ...prefs, updatedAt: new Date() })
+              .where(eq(clientBillingSettings.id, existing[0].id))
+              .returning();
+          } else {
+            [settings] = await db
+              .insert(clientBillingSettings)
+              .values({ ...prefs, workspaceId: request.workspaceId!, clientId })
+              .returning();
+          }
+
+          const summary = [
+            prefs.billingCycle ? `Billing: ${prefs.billingCycle}` : null,
+            prefs.paymentTerms ? `Terms: ${prefs.paymentTerms}` : null,
+            prefs.defaultBillRate ? `Rate: $${prefs.defaultBillRate}/hr` : null,
+            prefs.autoSendInvoice ? 'Auto-send: enabled' : null,
+          ].filter(Boolean).join(', ');
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Billing preferences saved for client ${clientId}: ${summary || 'defaults applied'}`,
+            data: settings,
+            executionTimeMs: Date.now() - startTime,
+          };
+        }
+
+        // Default: recommend_features
         const result = await domainLeadSupervisorService.submitTask('onboarding_ops', 'recommend_features', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
@@ -415,12 +386,12 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Features recommended', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  console.log('[DomainSupervisorActions] Registered 6 OnboardingOps actions');
+  log.info('[DomainSupervisorActions] Registered 4 OnboardingOps actions (consolidated from 6; see onboarding.configure in aiBrainMasterOrchestrator.ts for routing/integration)');
 
   // ============================================================================
   // DATA OPS ACTIONS
@@ -431,18 +402,18 @@ export function registerDomainSupervisorActions(): void {
     name: 'Query Knowledge Graph',
     description: 'Semantic query across the knowledge graph',
     category: 'analytics',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('data_ops', 'query_knowledge', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Knowledge query complete', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -452,18 +423,18 @@ export function registerDomainSupervisorActions(): void {
     name: 'Aggregate Metrics',
     description: 'Aggregate business metrics for analytics',
     category: 'analytics',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('data_ops', 'aggregate_metrics', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Metrics aggregated', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -473,18 +444,18 @@ export function registerDomainSupervisorActions(): void {
     name: 'Check Data Quality',
     description: 'Validate data quality and integrity',
     category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('data_ops', 'check_quality', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Quality check complete', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -494,7 +465,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Tune RL Model',
     description: 'Tune reinforcement learning confidence model',
     category: 'automation',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -505,7 +476,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'RL model tuned', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -515,18 +486,18 @@ export function registerDomainSupervisorActions(): void {
     name: 'Extract Learnings',
     description: 'Extract insights from knowledge graph for agent learning',
     category: 'analytics',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('data_ops', 'extract_learnings', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Learnings extracted', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -536,7 +507,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Get Cognitive System Metrics',
     description: 'Get metrics from all cognitive subsystems (knowledge graph, A2A, RL)',
     category: 'analytics',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -547,12 +518,12 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Cognitive metrics retrieved', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  console.log('[DomainSupervisorActions] Registered 6 DataOps actions');
+  log.info('[DomainSupervisorActions] Registered 6 DataOps actions');
 
   // ============================================================================
   // COMMUNICATION OPS ACTIONS
@@ -563,7 +534,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Send Notification',
     description: 'Send a notification through the unified notification system',
     category: 'notifications',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -574,7 +545,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Notification sent', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -584,7 +555,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Broadcast Alert',
     description: 'Broadcast a critical alert to multiple recipients',
     category: 'notifications',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -595,7 +566,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Alert broadcasted', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -605,7 +576,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Route A2A Message',
     description: 'Route an agent-to-agent message',
     category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -616,7 +587,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'A2A message routed', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -626,18 +597,18 @@ export function registerDomainSupervisorActions(): void {
     name: 'Form Agent Team',
     description: 'Form a collaboration team of agents',
     category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         const result = await domainLeadSupervisorService.submitTask('communication_ops', 'form_agent_team', request.payload || {}, {
           requestedBy: request.userId || 'system',
           workspaceId: request.workspaceId,
-          priority: 'normal',
+          priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Agent team formed', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -647,7 +618,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Escalate to Human',
     description: 'Create an escalation ticket for human support',
     category: 'support',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -658,7 +629,7 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Escalation created', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -668,7 +639,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Get Channel Statistics',
     description: 'Get statistics for all communication channels',
     category: 'analytics',
-    requiredRoles: ['manager', 'admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -679,25 +650,25 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Channel stats retrieved', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  console.log('[DomainSupervisorActions] Registered 6 CommunicationOps actions');
+  log.info('[DomainSupervisorActions] Registered 6 CommunicationOps actions');
   */ // END DEFERRED: RevenueOps, SecurityOps, OnboardingOps, DataOps, CommunicationOps (30 actions)
 
   // ============================================================================
   // ENHANCED LLM JUDGE ACTIONS - Keep 2 core MVP actions
-  // Evidence: judge.evaluate_risk called in cleanupAgentSubagent.ts
+  // Evidence: security.evaluate_risk (renamed from judge.evaluate_risk) called in cleanupAgentSubagent.ts
   // ============================================================================
 
   helpaiOrchestrator.registerAction({
-    actionId: 'judge.evaluate_risk',
+    actionId: 'security.evaluate_risk',
     name: 'Evaluate Risk',
     description: 'Evaluate risk for an action or operation using AI Judge',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -717,17 +688,17 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: true, actionId: request.actionId, data: result, message: `Risk evaluation: ${result.verdict}`, executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
   helpaiOrchestrator.registerAction({
-    actionId: 'judge.evaluate_hotpatch',
+    actionId: 'security.evaluate_hotpatch',
     name: 'Evaluate Hotpatch',
     description: 'Evaluate a code hotpatch for deployment safety',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -740,12 +711,12 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: true, actionId: request.actionId, data: result, message: `Hotpatch ${result.canDeploy ? 'approved' : 'blocked'}`, executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  console.log('[DomainSupervisorActions] Registered 2 LLM Judge MVP actions (evaluate_risk, evaluate_hotpatch)');
+  log.info('[DomainSupervisorActions] Registered 2 LLM Judge MVP actions (evaluate_risk, evaluate_hotpatch)');
 
   /* DEFERRED: LLM Judge extras (4) + Management (3) - Not actively called in MVP workflows
   helpaiOrchestrator.registerAction({
@@ -753,7 +724,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Get Active Policies',
     description: 'Get list of active risk policies',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       return { success: true, actionId: request.actionId, data: { policies: enhancedLLMJudge.getActivePolicies() }, message: 'Policies retrieved', executionTimeMs: Date.now() - startTime };
@@ -765,7 +736,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Get Blocked Patterns',
     description: 'Get list of blocked regression patterns',
     category: 'security',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -773,7 +744,7 @@ export function registerDomainSupervisorActions(): void {
         const patterns = await enhancedLLMJudge.getBlockedPatterns();
         return { success: true, actionId: request.actionId, data: { patterns, count: patterns.length }, message: `${patterns.length} blocked patterns`, executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -783,7 +754,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Record Failure',
     description: 'Record a failure for regression tracking',
     category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -800,7 +771,7 @@ export function registerDomainSupervisorActions(): void {
         }, request.payload?.errorMessage || 'Unknown error');
         return { success: true, actionId: request.actionId, message: 'Failure recorded for regression tracking', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
@@ -810,7 +781,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Record Success',
     description: 'Record a success to reduce failure count',
     category: 'automation',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
@@ -827,12 +798,12 @@ export function registerDomainSupervisorActions(): void {
         });
         return { success: true, actionId: request.actionId, message: 'Success recorded', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  console.log('[DomainSupervisorActions] Registered 6 Enhanced LLM Judge actions');
+  log.info('[DomainSupervisorActions] Registered 6 Enhanced LLM Judge actions');
 
   // ============================================================================
   // SUPERVISOR MANAGEMENT ACTIONS
@@ -843,7 +814,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'Get Supervisor Health',
     description: 'Get health status of all domain supervisors',
     category: 'health',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       return { success: true, actionId: request.actionId, data: { health: domainLeadSupervisorService.getSupervisorHealth() }, message: 'Health status retrieved', executionTimeMs: Date.now() - startTime };
@@ -855,7 +826,7 @@ export function registerDomainSupervisorActions(): void {
     name: 'List All Supervisors',
     description: 'List all domain lead supervisors with their subagents',
     category: 'system',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['org_owner', 'co_owner'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const supervisors = domainLeadSupervisorService.getAllSupervisors().map(s => ({
@@ -876,22 +847,22 @@ export function registerDomainSupervisorActions(): void {
     name: 'Persist Supervisor Telemetry',
     description: 'Save supervisor telemetry to database',
     category: 'automation',
-    requiredRoles: ['super_admin'],
+    requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       try {
         await domainLeadSupervisorService.persistTelemetry();
         return { success: true, actionId: request.actionId, message: 'Telemetry persisted', executionTimeMs: Date.now() - startTime };
       } catch (error: any) {
-        return { success: false, actionId: request.actionId, message: error.message, executionTimeMs: Date.now() - startTime };
+        return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
   });
 
-  console.log('[DomainSupervisorActions] Registered 3 Supervisor Management actions');
+  log.info('[DomainSupervisorActions] Registered 3 Supervisor Management actions');
   */ // END DEFERRED: LLM Judge extras (4) + Management (3)
 
-  console.log('[DomainSupervisorActions] Phase 2 Cleanup: Kept 2 actions, deferred 37');
-  console.log('[DomainSupervisorActions] KEPT: judge.evaluate_risk, judge.evaluate_hotpatch');
-  console.log('[DomainSupervisorActions] DEFERRED: RevenueOps(6), SecurityOps(6), OnboardingOps(6), DataOps(6), CommunicationOps(6), Judge extras(4), Management(3)');
+  log.info('[DomainSupervisorActions] Phase 2 Cleanup: Kept 2 actions, deferred 37');
+  log.info('[DomainSupervisorActions] KEPT: security.evaluate_risk, security.evaluate_hotpatch (renamed from judge.*)');
+  log.info('[DomainSupervisorActions] DEFERRED: RevenueOps(6), SecurityOps(6), OnboardingOps(6), DataOps(6), CommunicationOps(6), Judge extras(4), Management(3)');
 }

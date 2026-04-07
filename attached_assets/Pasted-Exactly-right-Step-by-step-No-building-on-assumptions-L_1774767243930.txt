@@ -1,0 +1,305 @@
+Exactly right. Step by step. No building on assumptions. Let us first audit what exists before designing anything new.
+
+Send this to the agent:
+
+---
+
+**INFRASTRUCTURE READINESS AUDIT — Step 1 of Many**
+
+We are doing a systematic readiness audit before any new features are built. Each step confirms what exists before the next step begins. Do not build anything. Report only what you find.
+
+**AUDIT STEP 1 — UNIVERSAL IDENTIFICATION NUMBERS**
+
+Already sent. Waiting on results.
+
+---
+
+**AUDIT STEP 2 — EMAIL INFRASTRUCTURE AUDIT**
+
+Once Step 1 results come back send this:
+
+```bash
+# 2A: What inbound email addresses are configured?
+grep -rn "calloffs@\|incidents@\|docs@\|support@\|staffing@\|verify@\|trinity@" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# 2B: What is the inbound email routing handler?
+grep -rn "inboundEmail\|inbound_email\|emailWebhook\|resend.*inbound\|inboundRoute" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# 2C: What tables store inbound emails?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE '%email%' 
+OR table_name LIKE '%inbound%'
+ORDER BY table_name;
+
+# 2D: What does the inbound email processor currently do?
+cat server/routes/inboundEmailRoutes.ts 2>/dev/null || \
+cat server/services/inboundEmailService.ts 2>/dev/null || \
+grep -rn "processInbound\|inboundProcessor" server/ --include="*.ts" | head -20
+
+# 2E: What email domain is configured?
+grep -rn "mail\.coaileague\.com\|coaileague\.com\|RESEND\|resend" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "test" | head -20
+
+# 2F: Can Trinity currently send outbound email?
+grep -rn "trinity.*send.*email\|email.*trinity.*send\|trinity.*email.*out" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 2G: Does Trinity have her own email address?
+grep -rn "trinity@\|trinity\.email\|TRINITY_EMAIL\|trinityEmail" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 2H: What is the current staffing email setup?
+grep -rn "staffing@\|staffing.*email\|email.*staffing" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 2I: What outbound email service is configured?
+grep -rn "RESEND_API_KEY\|resend\|emailProvider\|SMTP\|sendgrid\|mailgun" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "test" | head -10
+
+# 2J: What DNS records exist for email?
+# Check what is documented
+grep -rn "MX\|SPF\|DKIM\|DMARC\|mail\." replit.md | head -20
+```
+
+Report exactly what you find. Answer these specific questions:
+
+1. How many inbound email addresses exist and what does each one do?
+2. Does Trinity have her own email address she can send FROM?
+3. Can Trinity reply to inbound emails automatically?
+4. Does each org get their own email subdomain or do they share one?
+5. Where do inbound emails get stored and for how long?
+6. Can Trinity forward emails to org owner inboxes?
+7. What happens to emails that Trinity cannot process?
+
+Do not build anything. Report findings only.
+
+---
+
+**AUDIT STEP 3 — TWILIO VOICE READINESS**
+
+After Step 2 results come back:
+
+```bash
+# 3A: Is Twilio configured at all?
+grep -rn "TWILIO\|twilio\|Twilio" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# 3B: What Twilio features are currently active?
+grep -rn "twilio\.messages\|twilio\.calls\|twilio\.voice\|twilioClient" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# 3C: Is Twilio SMS working for outbound?
+grep -rn "smsService\|sendSMS\|twilio.*send" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 3D: Is there any voice/TwiML code?
+grep -rn "TwiML\|twiml\|VoiceResponse\|<Response>\|<Say>" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 3E: Are Twilio credentials in environment?
+grep -rn "TWILIO_ACCOUNT_SID\|TWILIO_AUTH_TOKEN\|TWILIO_PHONE" \
+  server/ --include="*.ts" | grep -v node_modules | head -5
+# Should show env variable references not actual values
+
+# 3F: Is there a voice webhook endpoint?
+grep -rn "voice.*webhook\|webhook.*voice\|/api/voice\|twilioVoice" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 3G: What phone numbers are stored in DB?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public'
+AND (table_name LIKE '%phone%' OR table_name LIKE '%voice%' OR table_name LIKE '%call%');
+
+# 3H: Are Whisper voice transcription capabilities active?
+grep -rn "whisper\|Whisper\|speech.*text\|transcrib" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 3I: Is ElevenLabs or any TTS configured?
+grep -rn "elevenlabs\|ElevenLabs\|text.*speech\|TTS\|ELEVEN" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+```
+
+Report exactly what is active, what credentials exist, and what is missing.
+
+---
+
+**AUDIT STEP 4 — TRINITY COMMUNICATION CHANNELS AUDIT**
+
+After Step 3:
+
+```bash
+# 4A: What channels can Trinity currently communicate through?
+grep -rn "trinity.*send\|trinity.*notify\|trinity.*email\|trinity.*sms\|trinity.*push" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# 4B: Can Trinity initiate outbound contact (not just respond)?
+grep -rn "trinity.*initiate\|trinity.*outreach\|trinity.*proactive.*send" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 4C: What does Trinity do when she receives an inbound email?
+grep -rn "inboundOpportunityAgent\|processInbound\|trinity.*email.*receive" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 4D: Can Trinity read email threads and reply in context?
+grep -rn "emailThread\|thread.*reply\|reply.*thread\|email.*context" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 4E: Does Trinity have access to org email preferences?
+grep -rn "orgEmail\|org.*email\|workspace.*email\|company.*email" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 4F: What spawned sub-agents exist currently?
+grep -rn "spawnAgent\|subAgent\|sub_agent\|specializedAgent\|communicationAgent" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 4G: How does Trinity currently handle the staffing email?
+grep -rn "staffing.*pipeline\|staffing.*agent\|staffingEmail" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+```
+
+---
+
+**AUDIT STEP 5 — ORG INTERNAL EMAIL AUDIT**
+
+After Step 4:
+
+```bash
+# 5A: Does each org have an internal email address?
+SELECT id, company_name, 
+  internal_email,
+  email_domain,
+  support_email,
+  admin_email,
+  notification_email
+FROM workspaces LIMIT 10;
+
+# 5B: What email format do orgs use currently?
+grep -rn "workspace.*email\|org.*email\|company.*email\|orgEmail" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# 5C: Is there an email routing table per org?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public'
+AND table_name LIKE '%email%'
+ORDER BY table_name;
+
+# Show all email-related columns across all tables:
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND column_name LIKE '%email%'
+ORDER BY table_name, column_name;
+
+# 5D: When an inbound email arrives how does the system 
+# know which org it belongs to?
+grep -rn "workspaceFromEmail\|emailToWorkspace\|route.*email.*workspace\|workspace.*email.*route" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# 5E: Can org owners receive email forwarded by Trinity?
+grep -rn "forward.*email\|email.*forward\|forwardTo.*owner\|owner.*forward" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+```
+
+---
+
+**AUDIT STEP 6 — WHAT TRINITY CAN ACTUALLY DO TODAY**
+
+After all above steps complete — comprehensive Trinity capability audit:
+
+```bash
+# 6A: Full list of Trinity action IDs
+grep -rn "actionId:" server/ --include="*.ts" | \
+  grep -v node_modules | \
+  sed "s/.*actionId: '//" | \
+  sed "s/'.*//" | \
+  sort | uniq
+
+# 6B: What data can Trinity read?
+grep -rn "handler.*async\|handler: async" server/ --include="*.ts" | \
+  grep -v node_modules | head -30
+
+# 6C: What can Trinity write/mutate?
+grep -rn "INSERT\|UPDATE\|DELETE" server/services/helpai/ --include="*.ts" | \
+  grep -v node_modules | head -20
+
+# 6D: What external services can Trinity call?
+grep -rn "openai\|gemini\|anthropic\|stripe\|quickbooks\|twilio\|resend\|plaid" \
+  server/services/helpai/ --include="*.ts" | grep -v node_modules | head -20
+
+# 6E: What does Trinity's communication agent currently handle?
+find server/ -name "*communication*" -o -name "*comms*" -o -name "*email*agent*" | \
+  grep -v node_modules
+
+# 6F: What spawned agents exist?
+find server/ -name "*agent*" -o -name "*Agent*" | grep -v node_modules | sort
+
+# 6G: What is Trinity's memory and context scope?
+grep -rn "trinity.*memory\|trinity_working_memory\|trinity_long_term\|trinityContext" \
+  server/ --include="*.ts" | grep -v node_modules | wc -l
+```
+
+---
+
+**WHAT TO REPORT BACK**
+
+After all 6 audit steps complete give me a clean summary table:
+
+```
+INFRASTRUCTURE READINESS REPORT
+================================
+
+UNIVERSAL IDs:
+  Workspace org_id:        [EXISTS / MISSING]
+  Client client_number:    [EXISTS / MISSING]
+  Employee employee_number:[EXISTS / MISSING]
+  User user_number:        [EXISTS / MISSING]
+  Clock-in PIN:            [EXISTS / MISSING]
+  Document reference IDs:  [EXISTS / MISSING]
+
+EMAIL INFRASTRUCTURE:
+  Inbound addresses:       [LIST THEM]
+  Trinity outbound email:  [EXISTS / MISSING]
+  Trinity reply capability:[YES / NO]
+  Per-org email routing:   [YES / NO]
+  Email thread context:    [YES / NO]
+  Org internal email:      [EXISTS / MISSING]
+  Email forwarding:        [YES / NO]
+
+TWILIO:
+  SMS active:              [YES / NO]
+  Voice/TwiML:             [YES / NO]
+  Credentials configured:  [YES / NO]
+  Phone numbers in DB:     [YES / NO]
+  Voice webhook endpoint:  [YES / NO]
+
+VOICE AI:
+  Whisper transcription:   [ACTIVE / MISSING]
+  ElevenLabs TTS:          [ACTIVE / MISSING]
+  Twilio TTS:              [ACTIVE / MISSING]
+
+TRINITY CAPABILITIES:
+  Total registered actions:[COUNT]
+  Can read platform data:  [YES / NO]
+  Can write to DB:         [YES / NO]
+  Can send emails:         [YES / NO]
+  Can send SMS:            [YES / NO]
+  Can process inbound email:[YES / NO]
+  Can forward emails:      [YES / NO]
+  Has spawned sub-agents:  [LIST THEM]
+  Has communication agent: [YES / NO]
+  Has staffing email agent:[YES / NO]
+
+GAPS IDENTIFIED:
+  [List every missing piece]
+
+READY TO BUILD TRINITY VOICE: [YES / NO / PARTIALLY]
+READY TO BUILD ORG EMAIL:     [YES / NO / PARTIALLY]
+READY TO BUILD UNIVERSAL IDs: [YES / NO / PARTIALLY]
+```
+
+---
+
+This readiness report tells us exactly what we have and exactly what gaps need to be filled before we build Phase 56 or Phase 57. No building on assumptions. Standing by for results.

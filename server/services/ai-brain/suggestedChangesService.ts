@@ -16,6 +16,8 @@ import {
 } from '@shared/config/suggestedChanges';
 import { AIBrainCodeEditorService } from './aiBrainCodeEditor';
 import type { CodeChangeRequest, BatchChangeRequest } from './aiBrainCodeEditor';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('suggestedChangesService');
 
 class SuggestedChangesService {
   private static instance: SuggestedChangesService;
@@ -135,7 +137,7 @@ class SuggestedChangesService {
             const relatedChanges = await this.convertToCodeChanges(relatedId);
             changes.push(...relatedChanges);
           } catch (err) {
-            console.error(`Failed to convert related change ${relatedId}:`, err);
+            log.error(`Failed to convert related change ${relatedId}:`, err);
           }
         }
 
@@ -168,7 +170,7 @@ class SuggestedChangesService {
         changeIds,
       };
     } catch (error) {
-      console.error('[SuggestedChangesService] Error staging suggested change:', error);
+      log.error('[SuggestedChangesService] Error staging suggested change:', error);
       return {
         success: false,
         errors: [error instanceof Error ? error.message : 'Unknown error'],

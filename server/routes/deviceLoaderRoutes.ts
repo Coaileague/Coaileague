@@ -8,8 +8,14 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { deviceLoader, type DeviceCapabilities } from '../services/universalLoader/deviceLoader';
 import { z } from 'zod';
+import { requireAuth } from '../auth';
+import { createLogger } from '../lib/logger';
+const log = createLogger('DeviceLoaderRoutes');
+
 
 const router = Router();
+
+router.use(requireAuth);
 
 // Schema for client capabilities
 const capabilitiesSchema = z.object({
@@ -39,8 +45,8 @@ router.get('/settings', (req: Request, res: Response) => {
       browser: parsed.browser || 'unknown',
       settings,
     });
-  } catch (error: any) {
-    console.error('[DeviceLoader] Settings error:', error);
+  } catch (error: unknown) {
+    log.error('[DeviceLoader] Settings error:', error);
     res.status(500).json({ error: 'Failed to get device settings' });
   }
 });
@@ -51,7 +57,7 @@ router.get('/settings', (req: Request, res: Response) => {
  */
 router.post('/profile', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     const userAgent = req.headers['user-agent'] || '';
     
     // Validate client capabilities
@@ -93,8 +99,8 @@ router.post('/profile', async (req: Request, res: Response) => {
         cached: false,
       });
     }
-  } catch (error: any) {
-    console.error('[DeviceLoader] Profile error:', error);
+  } catch (error: unknown) {
+    log.error('[DeviceLoader] Profile error:', error);
     res.status(500).json({ error: 'Failed to create device profile' });
   }
 });
@@ -105,7 +111,7 @@ router.post('/profile', async (req: Request, res: Response) => {
  */
 router.delete('/cache', (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     
     if (user?.id) {
       deviceLoader.clearUserCache(user.id);
@@ -113,8 +119,8 @@ router.delete('/cache', (req: Request, res: Response) => {
     } else {
       res.json({ success: true, message: 'No user cache to clear' });
     }
-  } catch (error: any) {
-    console.error('[DeviceLoader] Cache clear error:', error);
+  } catch (error: unknown) {
+    log.error('[DeviceLoader] Cache clear error:', error);
     res.status(500).json({ error: 'Failed to clear cache' });
   }
 });

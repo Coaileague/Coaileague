@@ -1,8 +1,12 @@
 import { db } from "server/db";
-import { timeEntries, employees, clients, clientRates, workspaces } from "@shared/schema";
-import { and, eq, gte, lte, isNull, sql } from "drizzle-orm";
+import { timeEntries, employees, clients, clientRates, workspaces, shifts } from "@shared/schema";
+import { and, eq, gte, lte, isNull, isNotNull, or, sql, inArray } from "drizzle-orm";
 import { resolveRates, bucketHours, calculateAmount, roundHours } from "./rateResolver";
 import { isHolidayDate } from "./holidayDetector";
+import { BILLING } from "../../config/platformConfig";
+import { createLogger } from "../../lib/logger";
+
+const log = createLogger('billable-hours-aggregator');
 
 /**
  * Billable Hours Aggregation Service
@@ -64,6 +68,8 @@ export interface TimeEntryBillable {
   billingRate: number;
   amount: number;
   rateSource: string;
+  manuallyEdited?: boolean;
+  manualEditReason?: string | null;
 }
 
 /**
@@ -79,10 +85,11 @@ export async function aggregateBillableHours(params: {
   workspaceId: string;
   startDate: Date;
   endDate: Date;
+  clientId?: string;
 }): Promise<BillableHoursSummary> {
-  const { workspaceId, startDate, endDate } = params;
-  
-  console.log(`[BillableHours] Aggregating for workspace ${workspaceId} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+  const { workspaceId, startDate, endDate, clientId } = params;
+
+  log.info(`Aggregating for workspace ${workspaceId} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
   // Get workspace settings for overtime rules, holiday calendar, and default rates
   const workspace = await db.query.workspaces.findFirst({
@@ -104,6 +111,8 @@ export async function aggregateBillableHours(params: {
   const workspaceTimezone = workspace.timezone || "America/New_York";
 
   // Find all approved, unbilled time entries in period
+  // Training guard: LEFT JOIN shifts and exclude entries linked to training shifts
+  // so seeded training data never flows into real client invoices.
   const approvedEntries = await db
     .select({
       timeEntry: timeEntries,
@@ -113,18 +122,22 @@ export async function aggregateBillableHours(params: {
     .from(timeEntries)
     .leftJoin(employees, eq(timeEntries.employeeId, employees.id))
     .leftJoin(clients, eq(timeEntries.clientId, clients.id))
+    .leftJoin(shifts, eq(timeEntries.shiftId, shifts.id))
     .where(
       and(
         eq(timeEntries.workspaceId, workspaceId),
         eq(timeEntries.status, 'approved'),
         isNull(timeEntries.billedAt),
+        isNotNull(timeEntries.clockOut),
         gte(timeEntries.clockIn, startDate),
         lte(timeEntries.clockIn, endDate),
-        eq(timeEntries.billableToClient, true)
+        eq(timeEntries.billableToClient, true),
+        or(isNull(timeEntries.shiftId), eq(shifts.isTrainingShift, false)),
+        ...(clientId ? [eq(timeEntries.clientId, clientId)] : [])
       )
     );
 
-  console.log(`[BillableHours] Found ${approvedEntries.length} approved, unbilled entries`);
+  log.info(`Found ${approvedEntries.length} approved, unbilled entries`);
 
   if (approvedEntries.length === 0) {
     return {
@@ -149,7 +162,7 @@ export async function aggregateBillableHours(params: {
       .where(
         and(
           eq(clientRates.isActive, true),
-          sql`${clientRates.clientId} IN (${sql.join(uniqueClientIds.map(id => sql.raw(`'${id}'`)), sql.raw(', '))})`
+          sql`${clientRates.clientId} IN (${sql.join(uniqueClientIds.map(id => sql`${id}`), sql.raw(', '))})`
         )
       );
     
@@ -175,6 +188,7 @@ export async function aggregateBillableHours(params: {
     employeeName: string;
     clientId: string | null;
     clientName: string | null;
+    shiftId: string | null;
     clockIn: Date;
     clockOut: Date;
     totalHours: number;
@@ -268,10 +282,10 @@ export async function aggregateBillableHours(params: {
       // Update weekly hours accumulator for next entry
       weeklyHoursSoFar += totalHours;
 
-      // Calculate billable amount
+      // Calculate billable amount using configurable multipliers (env OVERTIME_MULTIPLIER / DOUBLE_TIME_MULTIPLIER)
       const regularAmount = calculateAmount(hoursBucket.regularHours, resolved.billingRate);
-      const overtimeAmount = calculateAmount(hoursBucket.overtimeHours, resolved.billingRate * 1.5);
-      const holidayAmount = calculateAmount(hoursBucket.holidayHours, resolved.billingRate * 2.0);
+      const overtimeAmount = calculateAmount(hoursBucket.overtimeHours, resolved.billingRate * BILLING.overtimeMultiplier);
+      const holidayAmount = calculateAmount(hoursBucket.holidayHours, resolved.billingRate * BILLING.doubleTimeMultiplier);
       const totalAmount = regularAmount + overtimeAmount + holidayAmount;
 
       allProcessedEntries.push({
@@ -280,6 +294,7 @@ export async function aggregateBillableHours(params: {
         employeeName,
         clientId: timeEntry.clientId,
         clientName: client?.companyName || null,
+        shiftId: timeEntry.shiftId || null,
         clockIn: timeEntry.clockIn,
         clockOut: timeEntry.clockOut,
         totalHours,
@@ -289,18 +304,63 @@ export async function aggregateBillableHours(params: {
         billingRate: resolved.billingRate,
         amount: totalAmount,
         rateSource: resolved.rateSource,
+        manuallyEdited: timeEntry.manuallyEdited || false,
+        manualEditReason: (timeEntry as any).manualEditReason || null,
       });
     }
   }
 
   // STEP 3: Restructure processed entries by client for invoice generation
+  // SC2 FIX: Entries missing clientId but having a shiftId can recover the client
+  // by looking up the shift. This prevents billable hours from falling into a black hole.
+  const orphanedEntries = allProcessedEntries.filter(e => !e.clientId && e.shiftId);
+  if (orphanedEntries.length > 0) {
+    const orphanShiftIds = [...new Set(orphanedEntries.map(e => e.shiftId!))] ;
+    const recoveredShifts = await db
+      .select({ id: shifts.id, clientId: shifts.clientId })
+      .from(shifts)
+      .where(inArray(shifts.id, orphanShiftIds));
+    const shiftClientMap = new Map(recoveredShifts.map(s => [s.id, s.clientId]));
+
+    // Batch-load recovered clients to get their names
+    const recoveredClientIds = [...new Set(recoveredShifts.map(s => s.clientId).filter(Boolean) as string[])];
+    let recoveredClientNames = new Map<string, string>();
+    if (recoveredClientIds.length > 0) {
+      const recoveredClients = await db
+        .select({ id: clients.id, companyName: clients.companyName })
+        .from(clients)
+        .where(inArray(clients.id, recoveredClientIds));
+      recoveredClientNames = new Map(recoveredClients.map(c => [c.id, c.companyName]));
+    }
+
+    for (const entry of orphanedEntries) {
+      const resolvedClientId = shiftClientMap.get(entry.shiftId!);
+      if (resolvedClientId) {
+        entry.clientId = resolvedClientId;
+        entry.clientName = recoveredClientNames.get(resolvedClientId) || null;
+        // Persist the fix so future runs don't encounter the same orphan
+        await db
+          .update(timeEntries)
+          .set({ clientId: resolvedClientId, updatedAt: new Date() })
+          .where(eq(timeEntries.id, entry.timeEntryId));
+        warnings.push(`[SC2-RECOVERED] Time entry ${entry.timeEntryId} missing clientId — recovered from shift ${entry.shiftId} → client ${resolvedClientId}`);
+      } else {
+        warnings.push(`[SC2-UNRECOVERABLE] Time entry ${entry.timeEntryId} has billableToClient=true but no clientId and shift ${entry.shiftId} has no client — entry cannot be invoiced. Assign a client to the shift.`);
+      }
+    }
+  }
+
+  // Entries still without clientId after recovery attempt — log and skip
   const clientGroups = new Map<string, ProcessedEntry[]>();
   for (const entry of allProcessedEntries) {
-    const clientId = entry.clientId || 'unassigned';
-    if (!clientGroups.has(clientId)) {
-      clientGroups.set(clientId, []);
+    if (!entry.clientId) {
+      warnings.push(`[SC2-SKIP] Time entry ${entry.timeEntryId} has billableToClient=true but no clientId and no shift — cannot invoice. Assign a client or shift to this entry.`);
+      continue;
     }
-    clientGroups.get(clientId)!.push(entry);
+    if (!clientGroups.has(entry.clientId)) {
+      clientGroups.set(entry.clientId, []);
+    }
+    clientGroups.get(entry.clientId)!.push(entry);
   }
 
   const clientSummaries: ClientBillableSummary[] = [];
@@ -335,6 +395,8 @@ export async function aggregateBillableHours(params: {
         billingRate: entry.billingRate,
         amount: entry.amount,
         rateSource: entry.rateSource,
+        manuallyEdited: (entry as any).manuallyEdited || false,
+        manualEditReason: (entry as any).manualEditReason || null,
       };
     });
 
@@ -353,7 +415,7 @@ export async function aggregateBillableHours(params: {
     totalBillableAmount += clientTotalAmount;
   }
 
-  console.log(`[BillableHours] Processed ${approvedEntries.length} entries, $${totalBillableAmount.toFixed(2)} total billable`);
+  log.info(`Processed ${approvedEntries.length} entries, $${totalBillableAmount.toFixed(2)} total billable`);
 
   return {
     workspaceId,
@@ -375,17 +437,43 @@ export async function markEntriesAsBilled(params: {
 }): Promise<void> {
   const { timeEntryIds, invoiceId } = params;
 
-  // Update each entry to mark as billed
+  let markedCount = 0;
   for (const entryId of timeEntryIds) {
-    await db
+    const result = await db
       .update(timeEntries)
       .set({
         billedAt: new Date(),
         invoiceId,
         updatedAt: new Date(),
       })
-      .where(eq(timeEntries.id, entryId));
+      .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.billedAt)))
+      .returning();
+    
+    if (result.length > 0) {
+      markedCount++;
+    } else {
+      log.warn(`Entry ${entryId} already billed - skipping (race condition guard)`);
+    }
   }
 
-  console.log(`[BillableHours] Marked ${timeEntryIds.length} entries as billed (invoice ${invoiceId})`);
+  log.info(`Marked ${markedCount}/${timeEntryIds.length} entries as billed (invoice ${invoiceId})`);
+}
+
+/**
+ * Unmark time entries when a draft invoice is cancelled/rejected
+ * Restores entries to unbilled state so they can be picked up by the next invoice generation
+ */
+export async function unmarkEntriesAsBilled(invoiceId: string): Promise<number> {
+  const result = await db
+    .update(timeEntries)
+    .set({
+      billedAt: null,
+      invoiceId: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(timeEntries.invoiceId, invoiceId))
+    .returning();
+
+  log.info(`Unmarked ${result.length} entries from cancelled invoice ${invoiceId}`);
+  return result.length;
 }

@@ -1,12 +1,36 @@
 /**
  * Invoice Adjustment Service - Billing Dispute Resolution
  * Handles invoice modifications, credits, refunds, and adjustments
+ *
+ * GAP-7: creditInvoice / discountInvoice now write ledger entries (entryType: 'adjustment') and
+ *         publish platform events so Trinity and QB sync pipelines are notified.
+ * GAP-8: refundInvoice now calls stripe.refunds.create() when a paymentIntentId is on record,
+ *         writes a ledger debit entry (entryType: 'refund'), and publishes a platform event.
+ *         Without this fix, "refunds" only modified the DB — money never left Stripe.
  */
 
 import { db } from "../db";
-import { invoices, invoiceLineItems, invoiceAdjustments } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
-import type { Invoice, InsertInvoiceAdjustment } from "@shared/schema";
+import {
+  invoices,
+  invoiceLineItems,
+  invoiceAdjustments,
+} from '@shared/schema';
+import { eq, desc } from "drizzle-orm";
+import type { Invoice } from "@shared/schema";
+import { writeLedgerEntry } from './orgLedgerService';
+import { platformEventBus } from './platformEventBus';
+// RC4 (Phase 2): All stored financial arithmetic uses Decimal.js to prevent floating-point drift.
+import {
+  toFinancialString,
+  subtractFinancialValues,
+  addFinancialValues,
+  multiplyFinancialValues,
+  divideFinancialValues,
+  formatCurrency,
+} from './financialCalculator';
+import { createLogger } from '../lib/logger';
+const log = createLogger('invoiceAdjustmentService');
+
 
 export interface InvoiceAdjustment {
   type: "credit" | "discount" | "refund" | "correction";
@@ -22,10 +46,12 @@ export interface AdjustmentResult {
   adjustmentAmount: number;
   invoice: Invoice;
   errors?: string[];
+  stripeRefundId?: string;
 }
 
 /**
  * Apply a credit to an invoice
+ * GAP-7: Ledger entry + platform event now fire so QB/Trinity stay in sync.
  */
 export async function creditInvoice(
   invoiceId: string,
@@ -48,7 +74,9 @@ export async function creditInvoice(
     errors.push("Cannot adjust paid invoices - process as refund instead");
   }
 
-  const invoiceTotal = parseFloat(String(invoice.total || 0));
+  // RC4: Decimal.js for stored credit arithmetic.
+  const invoiceTotalStr = toFinancialString(String(invoice.total || 0));
+  const invoiceTotal = parseFloat(invoiceTotalStr);
   if (amount > invoiceTotal) {
     errors.push(`Credit amount (${amount}) exceeds invoice total (${invoiceTotal})`);
   }
@@ -64,14 +92,15 @@ export async function creditInvoice(
     };
   }
 
-  const newTotal = invoiceTotal - amount;
+  const newTotalStr = subtractFinancialValues(invoiceTotalStr, toFinancialString(String(amount)));
+  const newTotal = parseFloat(newTotalStr);
 
   // Update invoice
   const updated = await db
     .update(invoices)
     .set({
-      total: String(newTotal),
-      notes: `${invoice.notes || ""}\n[CREDIT] ${description} (-$${amount.toFixed(2)}) by ${adjustedBy} at ${new Date().toISOString()}`,
+      total: newTotalStr,
+      notes: `${invoice.notes || ""}\n[CREDIT] ${description} (${formatCurrency(toFinancialString(String(-amount)))}) by ${adjustedBy} at ${new Date().toISOString()}`,
     })
     .where(eq(invoices.id, invoiceId))
     .returning();
@@ -90,8 +119,42 @@ export async function creditInvoice(
     status: 'applied',
   });
 
-  // Log credit action
-  console.log(`[INVOICE ADJUSTMENT] Credit applied: ${invoiceId} -$${amount.toFixed(2)} by ${adjustedBy}`);
+  // GAP-7 FIX: Write ledger entry so the AR reduction is reflected in the org ledger.
+  // Without this, the P&L and ledger audit trail show full revenue even after credits.
+  try {
+    await writeLedgerEntry({
+      workspaceId: invoice.workspaceId,
+      entryType: 'adjustment',
+      // GAP-25 FIX: creditInvoice REDUCES AR (balance must go down) → direction: 'credit'.
+      // Previous 'debit' incorrectly INCREASED balance on every credit applied to an invoice.
+      direction: 'credit',
+      amount,
+      relatedEntityType: 'invoice',
+      relatedEntityId: invoiceId,
+      invoiceId,
+      description: `Credit applied to ${invoice.invoiceNumber || invoiceId}: ${description} — -$${amount.toFixed(2)}`,
+      metadata: { adjustmentType: 'credit', adjustedBy, source: 'invoiceAdjustmentService' },
+    });
+  } catch (ledgerErr: any) {
+    log.error(`[INVOICE ADJUSTMENT] Ledger write failed for credit on ${invoiceId}:`, ledgerErr.message);
+  }
+
+  // GAP-7 FIX: Publish platform event so Trinity and QB sync pipelines are notified.
+  try {
+    await platformEventBus.publish({
+      type: 'billing_adjustment_applied',
+      category: 'billing',
+      workspaceId: invoice.workspaceId,
+      title: 'Invoice Credit Applied',
+      description: `Credit of $${amount.toFixed(2)} applied to invoice ${invoice.invoiceNumber || invoiceId}: ${description}`,
+      payload: { invoiceId, adjustmentType: 'credit', amount, adjustedBy },
+      metadata: { source: 'invoiceAdjustmentService' },
+    });
+  } catch (eventErr: any) {
+    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for credit on ${invoiceId}:`, eventErr.message);
+  }
+
+  log.info(`[INVOICE ADJUSTMENT] Credit applied: ${invoiceId} -$${amount.toFixed(2)} by ${adjustedBy}`);
 
   return {
     success: true,
@@ -104,6 +167,7 @@ export async function creditInvoice(
 
 /**
  * Apply a discount to an invoice before payment
+ * GAP-7: Ledger entry + platform event now fire so QB/Trinity stay in sync.
  */
 export async function discountInvoice(
   invoiceId: string,
@@ -127,14 +191,21 @@ export async function discountInvoice(
     throw new Error("Cannot discount paid invoices");
   }
 
-  const invoiceTotal = parseFloat(String(invoice.total || 0));
-  const discountAmount = (invoiceTotal * discountPercent) / 100;
-  const newTotal = invoiceTotal - discountAmount;
+  // RC4: Decimal.js for stored discount arithmetic.
+  const invoiceTotalStr = toFinancialString(String(invoice.total || 0));
+  const invoiceTotal = parseFloat(invoiceTotalStr);
+  const discountAmountStr = divideFinancialValues(
+    multiplyFinancialValues(invoiceTotalStr, toFinancialString(String(discountPercent))),
+    '100'
+  );
+  const discountAmount = parseFloat(discountAmountStr);
+  const newTotalStr = subtractFinancialValues(invoiceTotalStr, discountAmountStr);
+  const newTotal = parseFloat(newTotalStr);
 
   const updated = await db
     .update(invoices)
     .set({
-      total: String(newTotal),
+      total: newTotalStr,
       notes: `${invoice.notes || ""}\n[DISCOUNT] ${discountPercent}% discount (${reason}) approved by ${approvedBy}`,
     })
     .where(eq(invoices.id, invoiceId))
@@ -154,6 +225,40 @@ export async function discountInvoice(
     status: 'applied',
   });
 
+  // GAP-7 FIX: Write ledger entry so the AR reduction is reflected in the org ledger.
+  try {
+    await writeLedgerEntry({
+      workspaceId: invoice.workspaceId,
+      entryType: 'adjustment',
+      // GAP-25 FIX: discountInvoice REDUCES AR (balance must go down) → direction: 'credit'.
+      // Previous 'debit' incorrectly INCREASED balance on every discount applied to an invoice.
+      direction: 'credit',
+      amount: discountAmount,
+      relatedEntityType: 'invoice',
+      relatedEntityId: invoiceId,
+      invoiceId,
+      description: `Discount of ${discountPercent}% applied to ${invoice.invoiceNumber || invoiceId}: ${reason} — -$${discountAmount.toFixed(2)}`,
+      metadata: { adjustmentType: 'discount', discountPercent, approvedBy, source: 'invoiceAdjustmentService' },
+    });
+  } catch (ledgerErr: any) {
+    log.error(`[INVOICE ADJUSTMENT] Ledger write failed for discount on ${invoiceId}:`, ledgerErr.message);
+  }
+
+  // GAP-7 FIX: Publish platform event so Trinity and QB sync pipelines are notified.
+  try {
+    await platformEventBus.publish({
+      type: 'billing_adjustment_applied',
+      category: 'billing',
+      workspaceId: invoice.workspaceId,
+      title: 'Invoice Discount Applied',
+      description: `Discount of ${discountPercent}% ($${discountAmount.toFixed(2)}) applied to invoice ${invoice.invoiceNumber || invoiceId}: ${reason}`,
+      payload: { invoiceId, adjustmentType: 'discount', discountPercent, discountAmount, approvedBy },
+      metadata: { source: 'invoiceAdjustmentService' },
+    });
+  } catch (eventErr: any) {
+    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for discount on ${invoiceId}:`, eventErr.message);
+  }
+
   return {
     success: true,
     previousTotal: invoice.total,
@@ -165,6 +270,8 @@ export async function discountInvoice(
 
 /**
  * Process a refund for a paid invoice
+ * GAP-8: Now calls stripe.refunds.create() when a paymentIntentId is recorded (money actually
+ *        returns to the payer's card), writes a ledger debit entry, and publishes a platform event.
  */
 export async function refundInvoice(
   invoiceId: string,
@@ -184,24 +291,61 @@ export async function refundInvoice(
     throw new Error("Can only refund paid invoices");
   }
 
-  const invoiceTotal = parseFloat(String(invoice.total || 0));
+  // RC4: Decimal.js for stored refund arithmetic.
+  const invoiceTotalStr = toFinancialString(String(invoice.total || 0));
+  const invoiceTotal = parseFloat(invoiceTotalStr);
   if (refundAmount > invoiceTotal) {
     throw new Error(
       `Refund amount (${refundAmount}) cannot exceed invoice total (${invoiceTotal})`
     );
   }
 
-  const newTotal = invoiceTotal - refundAmount;
-
-  // Update invoice status to partial/refunded
+  const refundAmountStr = toFinancialString(String(refundAmount));
+  const newTotalStr = subtractFinancialValues(invoiceTotalStr, refundAmountStr);
+  const newTotal = parseFloat(newTotalStr);
   const newStatus = newTotal === 0 ? "refunded" : "partial";
 
+  // GAP-8 FIX: Issue the actual Stripe refund before modifying our DB.
+  // Previously this function only updated the database — money never left Stripe.
+  let stripeRefundId: string | undefined;
+  const stripePaymentIntentId: string | null = (invoice as any).paymentIntentId || null;
+  if (stripePaymentIntentId) {
+    try {
+      const Stripe = (await import('stripe')).default;
+      // GAP-62 FIX: Added timeout and maxNetworkRetries to refund Stripe client.
+      const stripe = process.env.STRIPE_SECRET_KEY
+        ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' as any, timeout: 10000, maxNetworkRetries: 2 })
+        : null;
+
+      if (stripe) {
+        const stripeRefund = await stripe.refunds.create({
+          payment_intent: stripePaymentIntentId,
+          amount: Math.round(refundAmount * 100), // cents
+          reason: 'requested_by_customer',
+          metadata: {
+            invoiceId,
+            workspaceId: invoice.workspaceId,
+            processedBy,
+            reason,
+          },
+        });
+        stripeRefundId = stripeRefund.id;
+        log.info(`[INVOICE ADJUSTMENT] Stripe refund issued: ${stripeRefund.id} — $${refundAmount.toFixed(2)} for invoice ${invoiceId}`);
+      }
+    } catch (stripeErr: any) {
+      // Stripe refund failure is critical — block the operation so the DB isn't updated
+      // while the money isn't actually returned. Operator must resolve in Stripe dashboard.
+      throw new Error(`Stripe refund failed for invoice ${invoiceId}: ${stripeErr.message}. DB not modified — no money was returned yet.`);
+    }
+  }
+
+  // Update invoice status
   const updated = await db
     .update(invoices)
     .set({
       status: newStatus as any,
-      total: String(newTotal),
-      notes: `${invoice.notes || ""}\n[REFUND] $${refundAmount.toFixed(2)} refunded (${reason}) by ${processedBy}`,
+      total: newTotalStr,
+      notes: `${invoice.notes || ""}\n[REFUND] ${formatCurrency(refundAmountStr)} refunded (${reason}) by ${processedBy}${stripeRefundId ? ` — Stripe refund ${stripeRefundId}` : ' — manual/offline refund (no Stripe PI recorded)'}`,
     })
     .where(eq(invoices.id, invoiceId))
     .returning();
@@ -220,8 +364,50 @@ export async function refundInvoice(
     status: 'applied',
   });
 
-  // Log refund action
-  console.log(`[INVOICE ADJUSTMENT] Refund processed: ${invoiceId} -$${refundAmount.toFixed(2)} by ${processedBy}`);
+  // GAP-11 FIX: Only write the ledger entry here for offline/manual refunds (no Stripe PI).
+  // When a Stripe PI is present, stripe.refunds.create() above triggers a `charge.refunded`
+  // Stripe webhook which is the authoritative writer of the refund/debit ledger entry via
+  // handleChargeRefunded() in stripeWebhooks.ts. Writing it here too would produce a double
+  // debit, doubling the revenue reversal on the org P&L.
+  if (!stripePaymentIntentId) {
+    try {
+      await writeLedgerEntry({
+        workspaceId: invoice.workspaceId,
+        entryType: 'refund',
+        // GAP-25b FIX: Offline refund sends cash OUT → balance must go down → direction: 'credit'.
+        // Previous 'debit' incorrectly INCREASED balance for every manual/offline refund issued.
+        direction: 'credit',
+        amount: refundAmount,
+        referenceNumber: stripeRefundId,
+        relatedEntityType: 'invoice',
+        relatedEntityId: invoiceId,
+        invoiceId,
+        description: `Refund of $${refundAmount.toFixed(2)} for ${invoice.invoiceNumber || invoiceId}: ${reason} (offline/manual — no Stripe PI)`,
+        metadata: { adjustmentType: 'refund', processedBy, stripeRefundId, stripePaymentIntentId, source: 'invoiceAdjustmentService_offline' },
+      });
+    } catch (ledgerErr: any) {
+      log.error(`[INVOICE ADJUSTMENT] Ledger write failed for offline refund on ${invoiceId}:`, ledgerErr.message);
+    }
+  }
+  // For Stripe-backed refunds: the charge.refunded webhook writes the ledger entry via
+  // handleChargeRefunded(). No action needed here — avoids double-debit on the P&L.
+
+  // GAP-8 FIX: Publish platform event so Trinity QB sync and dashboard subscribers are notified.
+  try {
+    await platformEventBus.publish({
+      type: newStatus === 'refunded' ? 'invoice_voided' : 'billing_adjustment_applied',
+      category: 'billing',
+      workspaceId: invoice.workspaceId,
+      title: newStatus === 'refunded' ? 'Invoice Fully Refunded' : 'Invoice Partially Refunded',
+      description: `Refund of $${refundAmount.toFixed(2)} issued for invoice ${invoice.invoiceNumber || invoiceId}: ${reason}`,
+      payload: { invoiceId, adjustmentType: 'refund', refundAmount, newStatus, stripeRefundId, processedBy },
+      metadata: { source: 'invoiceAdjustmentService' },
+    });
+  } catch (eventErr: any) {
+    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for refund on ${invoiceId}:`, eventErr.message);
+  }
+
+  log.info(`[INVOICE ADJUSTMENT] Refund processed: ${invoiceId} -$${refundAmount.toFixed(2)} by ${processedBy}${stripeRefundId ? ` (Stripe refund ${stripeRefundId})` : ''}`);
 
   return {
     success: true,
@@ -229,6 +415,7 @@ export async function refundInvoice(
     newTotal,
     adjustmentAmount: -refundAmount,
     invoice: updated[0],
+    stripeRefundId,
   };
 }
 
@@ -264,34 +451,41 @@ export async function correctInvoiceLineItem(
     throw new Error("Line item index out of range");
   }
 
+  // RC4: Decimal.js for stored line item correction arithmetic.
   const item = lineItems[lineItemIndex];
-  const oldQuantity = parseFloat(String(item.quantity || 0));
-  const oldUnitPrice = parseFloat(String(item.unitPrice || 0));
-  const oldAmount = oldQuantity * oldUnitPrice;
-  
-  const newItemQuantity = newQuantity ?? oldQuantity;
-  const newItemUnitPrice = newUnitPrice ?? oldUnitPrice;
-  const newAmount = newItemQuantity * newItemUnitPrice;
-  const difference = newAmount - oldAmount;
+  const oldQuantityStr = toFinancialString(String(item.quantity || 0));
+  const oldUnitPriceStr = toFinancialString(String(item.unitPrice || 0));
+  const oldAmountStr = multiplyFinancialValues(oldQuantityStr, oldUnitPriceStr);
+
+  const newItemQuantity = newQuantity ?? parseFloat(oldQuantityStr);
+  const newItemUnitPrice = newUnitPrice ?? parseFloat(oldUnitPriceStr);
+  const newItemQuantityStr = toFinancialString(String(newItemQuantity));
+  const newItemUnitPriceStr = toFinancialString(String(newItemUnitPrice));
+  const newAmountStr = multiplyFinancialValues(newItemQuantityStr, newItemUnitPriceStr);
+  const newAmount = parseFloat(newAmountStr);
+  const differenceStr = subtractFinancialValues(newAmountStr, oldAmountStr);
+  const difference = parseFloat(differenceStr);
 
   // Update line item
   await db
     .update(invoiceLineItems)
     .set({
-      quantity: String(newItemQuantity),
-      unitPrice: String(newItemUnitPrice),
-      amount: String(newAmount),
+      quantity: newItemQuantityStr,
+      unitPrice: newItemUnitPriceStr,
+      amount: newAmountStr,
     })
     .where(eq(invoiceLineItems.id, item.id));
 
   // Update invoice total
-  const invoiceTotal = parseFloat(String(invoice.total || 0));
-  const newTotal = invoiceTotal + difference;
+  const invoiceTotalStr = toFinancialString(String(invoice.total || 0));
+  const invoiceTotal = parseFloat(invoiceTotalStr);
+  const newTotalStr = addFinancialValues(invoiceTotalStr, differenceStr);
+  const newTotal = parseFloat(newTotalStr);
 
   const updated = await db
     .update(invoices)
     .set({
-      total: String(newTotal),
+      total: newTotalStr,
       notes: `${invoice.notes || ""}\n[CORRECTION] Line item adjusted: ${reason || "Manual correction"} by ${approvedBy}`,
     })
     .where(eq(invoices.id, invoiceId))
@@ -382,12 +576,12 @@ export async function bulkCreditInvoices(
       await creditInvoice(invoiceId, creditPerInvoice, reason, approvedBy);
       processedCount++;
     } catch (error) {
-      console.error(`[INVOICE ADJUSTMENT] Failed to credit invoice ${invoiceId}:`, error);
+      log.error(`[INVOICE ADJUSTMENT] Failed to credit invoice ${invoiceId}:`, error);
       failedCount++;
     }
   }
 
-  console.log(`[INVOICE ADJUSTMENT] Bulk credit completed: ${processedCount} success, ${failedCount} failed`);
+  log.info(`[INVOICE ADJUSTMENT] Bulk credit completed: ${processedCount} success, ${failedCount} failed`);
   
   return {
     success: failedCount === 0,

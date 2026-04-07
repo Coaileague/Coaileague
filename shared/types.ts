@@ -59,7 +59,7 @@ export type PlatformRole =
 
 export type WorkspaceRole = 
   | 'org_owner' 
-  | 'org_admin' 
+  | 'co_owner' 
   | 'department_manager' 
   | 'supervisor' 
   | 'staff' 
@@ -84,10 +84,11 @@ export const TRINITY_ALLOWED_PLATFORM_ROLES: PlatformRole[] = [
   'deputy_admin',
   'sysop',
   'support_manager',
-  'support_agent'
+  'support_agent',
+  'compliance_officer'
 ];
 
-export const TRINITY_ALLOWED_WORKSPACE_ROLES: WorkspaceRole[] = ['org_owner'];
+export const TRINITY_ALLOWED_WORKSPACE_ROLES: WorkspaceRole[] = ['org_owner', 'co_owner', 'admin'];
 
 export function canAccessTrinity(context: TrinityAccessContext): boolean {
   const { platformRole, workspaceRole, isOrgOwner } = context;

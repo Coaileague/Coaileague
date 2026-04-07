@@ -9,13 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import {
   Crown, Star, Sparkles, TrendingUp, Users, Clock,
   Award, Zap, ArrowUp, ArrowRight, Shield, AlertCircle
@@ -89,17 +83,17 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent size="full" className="max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
+    <UniversalModal open={isOpen} onOpenChange={onClose}>
+      <UniversalModalContent size="full" className="max-h-[90vh] flex flex-col">
+        <UniversalModalHeader className="flex-shrink-0">
+          <UniversalModalTitle className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-blue-500" />
             Priority Queue Manager
-          </DialogTitle>
-          <DialogDescription>
+          </UniversalModalTitle>
+          <UniversalModalDescription>
             VIP and tier-based user prioritization - who gets help first
-          </DialogDescription>
-        </DialogHeader>
+          </UniversalModalDescription>
+        </UniversalModalHeader>
 
         <div className="grid grid-cols-12 gap-4 flex-1 overflow-y-auto">
           {/* Priority Tiers Legend */}
@@ -113,7 +107,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
                 return (
                   <Card key={tier} className="overflow-hidden">
                     <div className={`p-3 ${info.color}`}>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <TierIcon className="w-4 h-4" />
                           <span className="font-bold text-sm uppercase">{tier}</span>
@@ -122,7 +116,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
                           {isLoading ? <Skeleton className="h-4 w-4" /> : count}
                         </Badge>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-xs opacity-90">
+                      <div className="mt-2 flex items-center justify-between gap-1 text-xs opacity-90">
                         <span>{info.priority}</span>
                         <span>SLA: {info.sla}</span>
                       </div>
@@ -137,7 +131,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
           <div className="col-span-12">
             <Card>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-sm">Priority Queue Order</CardTitle>
                   <Badge variant="outline" className="font-normal">
                     <Clock className="w-3 h-3 mr-1" />
@@ -298,7 +292,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
           <div className="text-xs text-muted-foreground">
             {priorityUsers.length} users in priority queue
           </div>
@@ -306,7 +300,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
             Close
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }

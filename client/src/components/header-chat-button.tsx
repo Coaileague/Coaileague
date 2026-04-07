@@ -8,6 +8,7 @@
  * 4. Human support joins same chat -> 1-on-1 until resolved
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Bug, X, Send, Loader2, User, Bot, Headset, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ export function HeaderChatButton() {
 
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
   const shouldHide = currentPath.startsWith('/chat') || 
+                     currentPath.startsWith('/chatrooms') ||
                      currentPath.startsWith('/org-chat') || 
                      currentPath.startsWith('/support/chatrooms') ||
                      currentPath.startsWith('/trinity');
@@ -198,7 +200,7 @@ export function HeaderChatButton() {
       
       pollIntervalRef.current = setInterval(async () => {
         try {
-          const res = await fetch(`/api/support/chat/session/${session.id}`);
+          const res = await secureFetch(`/api/support/chat/session/${session.id}`);
           const data = await res.json();
           
           if (data.success && data.session) {
@@ -289,7 +291,7 @@ export function HeaderChatButton() {
 
       {showChat && (
         <div className="fixed top-14 left-1/2 transform -translate-x-1/2 z-50 w-[400px] max-w-[calc(100vw-16px)] animate-in fade-in slide-in-from-top-2">
-          <div className="bg-card border rounded-lg shadow-2xl flex flex-col h-[520px]">
+          <div className="bg-card border rounded-lg shadow-sm flex flex-col h-[520px]">
             <div className="p-3 border-b bg-gradient-to-r from-violet-500/10 to-indigo-500/10 flex justify-between items-center gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

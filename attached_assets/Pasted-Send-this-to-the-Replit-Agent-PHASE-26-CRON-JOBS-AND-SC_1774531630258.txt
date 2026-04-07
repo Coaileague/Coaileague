@@ -1,0 +1,145 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 26 — CRON JOBS AND SCHEDULED TASK VERIFICATION**
+
+This phase owns every time-based automation on the platform. Cron jobs and scheduled tasks are the silent workforce of CoAIleague — they run payroll, generate invoices, check license expiry, sweep compliance violations, and keep the platform healthy without any human triggering them. A missed fire, a duplicate execution, or a silent failure in any scheduled task has real operational consequences. Report all findings before fixing anything. No exceptions.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY:**
+One row per verification check in the reconciliation table. Specific evidence per row — cron expressions, execution logs, or grep output. Every row green before Phase 26 closes.
+
+---
+
+**STEP 1 — SCHEDULED TASK INVENTORY**
+
+Before touching anything produce a complete inventory of every scheduled task and cron job in the platform:
+- Every `setInterval`, `setTimeout`, `cron.schedule`, or equivalent registration in the codebase
+- For each task: what it does, how often it runs, what it writes to, what it notifies
+- Which tasks are registered at server startup vs lazily registered
+- Which tasks are workspace-scoped vs platform-wide
+- Which tasks have execution logging vs run silently
+- Which tasks have failure alerting vs fail silently
+- Any task that overlaps in responsibility with another task — flag as potential duplicate execution risk
+
+Flag every scheduled task that has no execution log, no failure alert, and no idempotency guard.
+
+---
+
+**STEP 2 — PAYROLL AND FINANCIAL SCHEDULED TASKS**
+
+Financial cron jobs have zero tolerance for missed fires or duplicate runs:
+- `payrollAutoCloseService` — daily pay period close detection: confirm schedule, confirm idempotency, confirm execution log, confirm failure alert
+- `weeklyBillingRunService` — weekly billing engine: confirm schedule, confirm idempotency, confirm execution log
+- `runScheduledClientInvoiceAutoGeneration` — weekly client timesheet billing added Phase 10: confirm still active, confirm idempotency
+- `overdueCollectionsService` — daily overdue invoice sweep: confirm schedule, confirm status transition fires correctly, confirm execution log
+- `creditResetCron` — monthly credit allowance reset: confirm schedule, confirm idempotency
+- `recycledCreditsPipeline` — monthly expired credit sweep: confirm schedule, confirm execution log
+- For each: simulate what happens if the task fires twice in the same window — confirm idempotency prevents double-processing
+
+---
+
+**STEP 3 — COMPLIANCE AND LICENSE SCHEDULED TASKS**
+
+Compliance cron jobs must never miss a fire:
+- License expiry check — daily 8 AM: confirm cron expression, confirm 90/60/30/14/7 day windows all fire correctly, confirm all 5 recipient tiers notified, confirm idempotency via idempotencyKeys table
+- `runDailyComplianceCheck()` — daily: confirm schedule, confirm all rule types evaluated, confirm violations recorded, confirm execution log
+- `checkDocumentExpiries()` — daily: confirm schedule, confirm expired documents transition correctly, confirm renewal prompts fire
+- `trinityProactiveScanner.runDailyScan()` — daily: confirm schedule, confirm all scan types run, confirm anomaly detection fires on threshold breach, confirm execution log
+- Payroll anomaly detection — daily: confirm 30% spike and 40% drop thresholds active, confirm escalation fires correctly
+
+---
+
+**STEP 4 — SCHEDULING AND OPERATIONS SCHEDULED TASKS**
+
+Operational cron jobs must be reliable:
+- Autonomous scheduler — confirm cycle, confirm it respects all assignment rules (license, rest period, OT warning), confirm execution report generated after each run
+- `detectOrphanedPayrollRuns()` — daily: confirm schedule, confirm correct detection logic (processed runs with zero stubs older than 2 hours), confirm false-positive protection for legitimate zero-officer runs
+- `checkTierAdvancement()` for replacement cascade — every 2 minutes: confirm it advances tiers correctly after window expiry, confirm emergency mode respected, confirm execution does not fire on already-resolved coverage requests
+
+---
+
+**STEP 5 — QUICKBOOKS AND SYNC SCHEDULED TASKS**
+
+Sync jobs must be reliable and not produce duplicates:
+- QuickBooks CDC poll — every 60 minutes: confirm schedule, confirm DB updates applied on CDC response, confirm execution log in partnerSyncLogs
+- Nightly full reconciliation — 03:00 daily: confirm schedule, confirm reconciliation query runs, confirm gaps flagged
+- Token refresh daemon — every 5 minutes: confirm schedule, confirm encrypted path used (regression check from Phase 16), confirm failure after 5 attempts marks connection expired
+
+---
+
+**STEP 6 — NOTIFICATION AND CLEANUP SCHEDULED TASKS**
+
+Background maintenance jobs must run cleanly:
+- NDS retry queue processor: confirm it runs on defined interval, confirm exponential backoff applied, confirm dead letter queue populated after max retries
+- Push notification subscription cleanup: confirm orphaned subscriptions removed on defined schedule
+- Inbound email log cleanup: confirm old processed entries archived or cleaned after retention period
+- Session cleanup: confirm expired sessions removed on schedule — no unbounded session table growth
+- Audit log archival: confirm audit logs older than retention window are archived not deleted
+
+---
+
+**STEP 7 — MISSED FIRE DETECTION AND RECOVERY**
+
+Every scheduled task must be recoverable:
+- What happens if the server restarts mid-cron — does the task re-run on next startup for missed windows
+- What happens if a task throws an unhandled exception — does it crash the server or recover gracefully
+- What happens if a task runs longer than its interval — does the next fire wait or overlap
+- Missed fire detection: is there any mechanism that detects a task has not run in its expected window and alerts platform staff
+- Recovery procedure documented for each critical task: payroll close, invoice generation, license expiry check
+
+---
+
+**STEP 8 — EXECUTION LOGGING STANDARDIZATION**
+
+Every task must produce a consistent execution log:
+- Execution start logged: task name, timestamp, trigger type (scheduled vs manual)
+- Execution end logged: task name, duration, records processed, success count, failure count
+- Failure logged with: task name, error message, stack trace, timestamp
+- Execution logs queryable by platform staff — not just in console output
+- Trinity can query last execution status for any scheduled task via registered action
+
+---
+
+**STEP 9 — NOTHING LEFT BEHIND SELF-CHECK**
+
+Before writing completion summary:
+1. One row per verification check
+2. Every PASS confirmed with cron expression and execution log evidence
+3. Every GAP fixed with root cause closed
+4. Every PARTIAL fully resolved
+5. All rows green before summary written
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 26 is marked complete:
+- Check 1: Complete scheduled task inventory produced — every task named, scheduled, and described
+- Check 2: Payroll auto-close confirmed running daily — idempotency confirmed
+- Check 3: Weekly billing confirmed running — idempotency confirmed
+- Check 4: Client invoice auto-generation confirmed still active — Phase 10 regression check
+- Check 5: Overdue invoice sweep confirmed running daily — status transition confirmed
+- Check 6: License expiry check confirmed running at 8 AM — all 5 alert windows confirmed
+- Check 7: Daily compliance check confirmed running — all rule types evaluated
+- Check 8: Document expiry check confirmed running — expired documents transition correctly
+- Check 9: Trinity proactive scanner confirmed running — anomaly detection thresholds active
+- Check 10: Autonomous scheduler confirmed running — execution report generated per run
+- Check 11: Orphaned payroll run detector confirmed running — false-positive protection confirmed
+- Check 12: Tier advancement checker confirmed running every 2 minutes — correctly advances on window expiry
+- Check 13: QuickBooks CDC poll confirmed running every 60 minutes — DB updates applied
+- Check 14: Token refresh daemon confirmed running every 5 minutes — encrypted path confirmed
+- Check 15: NDS retry queue processor confirmed running — backoff and dead letter confirmed
+- Check 16: No task fires twice in the same window — idempotency confirmed on all financial tasks
+- Check 17: Server restart does not cause missed financial tasks — recovery behavior documented
+- Check 18: Unhandled exception in any task does not crash server — graceful recovery confirmed
+- Check 19: Every task produces structured execution log — queryable by platform staff
+- Check 20: Trinity can query last execution status for any task — registered action confirmed
+- Check 21: Nothing Left Behind reconciliation table — one row per check, all green
+- Check 22: Server starts clean with zero TypeScript errors across all scheduler files
+
+Do not mark Phase 26 complete until all 22 checks pass and the Nothing Left Behind reconciliation table has one row per check, all green, with specific evidence. Findings first. Full picture assembled. Then fixes. Every gap fixed. Root causes closed. Nothing left behind.
+
+---
+
+Paste that. The silent workforce of the platform gets verified properly before we move on.

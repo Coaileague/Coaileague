@@ -24,6 +24,8 @@ import { platformEventBus } from '../platformEventBus';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('planningFrameworkService');
 
 // ============================================================================
 // TYPES
@@ -177,7 +179,7 @@ class PlanningFrameworkService {
   private planHistory: Map<string, ExecutionPlan[]> = new Map();
 
   private constructor() {
-    console.log('[PlanningFramework] Initializing structured reasoning frameworks...');
+    log.info('[PlanningFramework] Initializing structured reasoning frameworks...');
   }
 
   static getInstance(): PlanningFrameworkService {
@@ -194,7 +196,7 @@ class PlanningFrameworkService {
     const planId = request.planId || `plan-${crypto.randomUUID()}`;
     const startTime = Date.now();
 
-    console.log(`[PlanningFramework] Creating ${request.framework} plan for: ${request.goal}`);
+    log.info(`[PlanningFramework] Creating ${request.framework} plan for: ${request.goal}`);
 
     let plan: ExecutionPlan;
 
@@ -231,7 +233,7 @@ class PlanningFrameworkService {
       complexity: plan.complexity,
     });
 
-    console.log(`[PlanningFramework] Plan created in ${Date.now() - startTime}ms: ${plan.steps.length} steps`);
+    log.info(`[PlanningFramework] Plan created in ${Date.now() - startTime}ms: ${plan.steps.length} steps`);
 
     return plan;
   }
@@ -305,7 +307,12 @@ Provide your plan as JSON:
       responseFormat: 'json',
     });
 
-    const parsed = JSON.parse(response.response || '{}');
+    let parsed: any;
+    try {
+      parsed = JSON.parse(response.response || '{}');
+    } catch {
+      parsed = {};
+    }
     
     return this.buildPlanFromResponse(planId, request, parsed, 'chain_of_thought');
   }
@@ -381,7 +388,7 @@ Respond as JSON:
       responseFormat: 'json',
     });
 
-    const parsed = JSON.parse(response.response || '{}');
+    let parsed: any; try { parsed = JSON.parse(response.response || '{}'); } catch { parsed = {}; }
     
     return {
       iterationNumber,
@@ -514,7 +521,7 @@ Respond as JSON:
       responseFormat: 'json',
     });
 
-    const parsed = JSON.parse(response.response || '{}');
+    let parsed: any; try { parsed = JSON.parse(response.response || '{}'); } catch { parsed = {}; }
     
     return this.buildPlanFromResponse(planId, request, {
       steps: parsed.synthesis?.finalSteps || [],
@@ -573,7 +580,7 @@ Respond as JSON:
       responseFormat: 'json',
     });
 
-    const parsed = JSON.parse(response.response || '{}');
+    let parsed: any; try { parsed = JSON.parse(response.response || '{}'); } catch { parsed = {}; }
     
     // Flatten subgoals into steps
     const steps: any[] = [];
@@ -742,25 +749,15 @@ Respond as JSON:
     try {
       await db.insert(systemAuditLogs).values({
         id: crypto.randomUUID(),
-        timestamp: new Date(),
-        eventType: 'planning_framework',
         entityType: 'plan',
         entityId: plan.planId,
         userId: request.userId,
         workspaceId: request.workspaceId,
         action: 'create_plan',
-        details: JSON.stringify({
-          framework: plan.framework,
-          stepCount: plan.steps.length,
-          estimatedCredits: plan.estimatedCredits,
-          complexity: plan.complexity,
-          overallRisk: plan.riskAssessment.overallRisk,
-          confidence: plan.confidence,
-        }),
-        severity: plan.riskAssessment.overallRisk === 'critical' ? 'high' : 'medium',
+        metadata: { eventType: 'planning_framework', severity: plan.riskAssessment.overallRisk === 'critical' ? 'high' : 'medium', details: JSON.stringify({ framework: plan.framework, stepCount: plan.steps.length, estimatedCredits: plan.estimatedCredits, complexity: plan.complexity, overallRisk: plan.riskAssessment.overallRisk, confidence: plan.confidence }) },
       });
     } catch (error) {
-      console.error('[PlanningFramework] Failed to log plan:', error);
+      log.error('[PlanningFramework] Failed to log plan:', error);
     }
   }
 

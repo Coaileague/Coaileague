@@ -13,6 +13,8 @@ import {
   clarificationProtocol,
   workSummaryEngine,
 } from './trinityWorkOrderSystem';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityWorkOrderActions');
 
 export function registerTrinityWorkOrderActions(): void {
   helpaiOrchestrator.registerAction({
@@ -20,15 +22,19 @@ export function registerTrinityWorkOrderActions(): void {
     name: 'Process Work Order',
     description: 'Parse a user request into a structured work order and execute it with autonomous retry and reflection',
     category: 'automation',
-    requiredRoles: ['staff', 'manager', 'admin', 'super_admin', 'support'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest) => {
       const startTime = Date.now();
       const { rawRequest, autoExecute } = request.payload || {};
       
+      if (!request.workspaceId) {
+        return { success: false, actionId: 'workorder.process', message: 'Missing workspaceId — cannot process work order', executionTimeMs: Date.now() - startTime };
+      }
+      
       try {
         const result = await trinityWorkOrderOrchestrator.processWorkOrder(
           rawRequest || request.payload?.message || 'Process this request',
-          request.workspaceId || 'default',
+          request.workspaceId,
           request.userId,
         );
         
@@ -54,7 +60,7 @@ export function registerTrinityWorkOrderActions(): void {
         return {
           success: false,
           actionId: 'workorder.process',
-          message: `Failed to process work order: ${error.message}`,
+          message: `Failed to process work order: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime,
         };
       }
@@ -66,15 +72,19 @@ export function registerTrinityWorkOrderActions(): void {
     name: 'Parse Work Order',
     description: 'Parse a natural language request into a structured work order without executing',
     category: 'automation',
-    requiredRoles: ['staff', 'manager', 'admin', 'super_admin', 'support'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest) => {
       const startTime = Date.now();
       const { rawRequest } = request.payload || {};
       
+      if (!request.workspaceId) {
+        return { success: false, actionId: 'workorder.parse', message: 'Missing workspaceId — cannot parse work order', executionTimeMs: Date.now() - startTime };
+      }
+      
       try {
         const workOrder = await trinityWorkOrderIntake.parseWorkOrder(
           rawRequest || 'Analyze this request',
-          request.workspaceId || 'default',
+          request.workspaceId,
           request.userId,
         );
         
@@ -101,7 +111,7 @@ export function registerTrinityWorkOrderActions(): void {
         return {
           success: false,
           actionId: 'workorder.parse',
-          message: `Failed to parse work order: ${error.message}`,
+          message: `Failed to parse work order: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime,
         };
       }
@@ -113,7 +123,7 @@ export function registerTrinityWorkOrderActions(): void {
     name: 'Decompose Work Order',
     description: 'Break a work order into atomic executable tasks with dependencies',
     category: 'automation',
-    requiredRoles: ['staff', 'manager', 'admin', 'super_admin', 'support'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest) => {
       const startTime = Date.now();
       const { workOrderId } = request.payload || {};
@@ -154,7 +164,7 @@ export function registerTrinityWorkOrderActions(): void {
         return {
           success: false,
           actionId: 'workorder.decompose',
-          message: `Failed to decompose: ${error.message}`,
+          message: `Failed to decompose: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime,
         };
       }
@@ -166,7 +176,7 @@ export function registerTrinityWorkOrderActions(): void {
     name: 'Provide Clarification',
     description: 'Provide clarification response for an ambiguous work order',
     category: 'automation',
-    requiredRoles: ['staff', 'manager', 'admin', 'super_admin', 'support'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest) => {
       const startTime = Date.now();
       const { workOrderId, ambiguityId, resolution } = request.payload || {};
@@ -195,7 +205,7 @@ export function registerTrinityWorkOrderActions(): void {
         return {
           success: false,
           actionId: 'workorder.clarify',
-          message: `Failed to process clarification: ${error.message}`,
+          message: `Failed to process clarification: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime,
         };
       }
@@ -207,7 +217,7 @@ export function registerTrinityWorkOrderActions(): void {
     name: 'Get Work Order Status',
     description: 'Get the current status and progress of a work order',
     category: 'automation',
-    requiredRoles: ['staff', 'manager', 'admin', 'super_admin', 'support'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest) => {
       const startTime = Date.now();
       const { workOrderId } = request.payload || {};
@@ -253,7 +263,7 @@ export function registerTrinityWorkOrderActions(): void {
         return {
           success: false,
           actionId: 'workorder.status',
-          message: `Failed to get status: ${error.message}`,
+          message: `Failed to get status: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime,
         };
       }
@@ -265,7 +275,7 @@ export function registerTrinityWorkOrderActions(): void {
     name: 'Get Work Summary',
     description: 'Generate a human-readable summary of completed work',
     category: 'automation',
-    requiredRoles: ['staff', 'manager', 'admin', 'super_admin', 'support'],
+    requiredRoles: ['org_owner', 'co_owner', 'manager', 'supervisor', 'employee', 'staff'],
     handler: async (request: ActionRequest) => {
       const startTime = Date.now();
       const { workOrderId } = request.payload || {};
@@ -300,12 +310,12 @@ export function registerTrinityWorkOrderActions(): void {
         return {
           success: false,
           actionId: 'workorder.get_summary',
-          message: `Failed to generate summary: ${error.message}`,
+          message: `Failed to generate summary: ${(error instanceof Error ? error.message : String(error))}`,
           executionTimeMs: Date.now() - startTime,
         };
       }
     },
   });
 
-  console.log('[TrinityWorkOrderActions] Registered 6 work order orchestration actions');
+  log.info('[TrinityWorkOrderActions] Registered 6 work order orchestration actions');
 }

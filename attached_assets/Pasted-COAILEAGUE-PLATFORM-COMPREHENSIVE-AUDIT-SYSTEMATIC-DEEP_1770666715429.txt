@@ -1,0 +1,308 @@
+COAILEAGUE PLATFORM COMPREHENSIVE AUDIT - SYSTEMATIC DEEP ANALYSIS
+OBJECTIVE: Conduct a complete platform audit across ALL systems, identifying gaps, redundancies, semantic issues, and ensuring Fortune 500-grade organization. Execute in phases to avoid context overflow.
+
+PHASE 1: ARCHITECTURE & CODE ORGANIZATION AUDIT
+1.1 Service Layer Analysis
+
+Map ALL services in /server/services/ - identify redundant or duplicate services
+Check for overlapping functionality between services (e.g., multiple QuickBooks services, multiple auth handlers)
+Consolidate redundant webhooks, managers, handlers into single sources of truth
+Document service dependencies and circular reference risks
+
+1.2 Route & Endpoint Audit
+
+Catalog ALL API endpoints across all route files
+Verify RESTful naming conventions and semantic consistency
+Check for duplicate endpoints doing similar things
+Ensure all endpoints have proper authentication middleware
+Verify all endpoints validate workspaceId and userId for org separation
+
+1.3 Database Schema Review
+
+Audit all tables for proper foreign key relationships
+Verify workspaceId exists on ALL tenant-specific tables
+Check for orphaned records potential
+Verify indexes exist for frequently queried columns
+Audit real-time sync mechanisms (WebSocket, polling)
+
+
+PHASE 2: MULTI-TENANCY & SECURITY AUDIT
+2.1 Organization Isolation Verification
+
+EVERY database query must filter by workspaceId - find any that don't
+Verify session-based org separation throughout all services
+Check all CRUD operations use internally-assigned userId (not user-provided)
+Audit that invited users are properly scoped to their organization
+Verify cross-org data leakage is impossible
+
+2.2 User Identity Chain
+
+Trace user creation flow (self-signup vs invited vs created by admin)
+Verify userId assignment is server-side only, never client-provided
+Check all actions/executions are attributed to authenticated userId
+Audit role-based access control (RBAC) enforcement on all endpoints
+
+2.3 Authentication & Authorization
+
+Review all requireAuth middleware usage
+Check requireWorkspaceMembership is applied correctly
+Verify API key authentication for external integrations
+Audit session management and token refresh logic
+
+
+PHASE 3: FEATURE COMPLETENESS AUDIT
+3.1 Public Website Promises vs Reality
+
+Extract ALL features promised on marketing/public pages
+Cross-reference each promise against actual implementation
+Document gaps: promised but not built, partially built, or broken
+Create remediation task list for each gap
+
+3.2 Core Features Verification
+[ ] GPS Time Tracking - verify accuracy, offline queue, proof of service
+[ ] Trinity AI Scheduling - verify auto-schedule, constraint handling, real-time feedback
+[ ] Payroll Automation - verify calculations, QuickBooks sync, export
+[ ] QuickBooks Integration - verify OAuth, sync, error recovery
+[ ] Employee Management - verify CRUD, document uploads, compliance tracking
+[ ] Client/Site Management - verify CRUD, geofencing, scheduling rules
+[ ] Shift Management - verify create, assign, swap, broadcast
+[ ] Reporting & Analytics - verify all promised reports generate correctly
+[ ] Notifications - verify email, SMS, push, in-app all working
+[ ] Invoicing - verify generation, QuickBooks sync, payment tracking
+3.3 Premium Features Verification
+[ ] Trinity AI advanced features
+[ ] Custom reporting
+[ ] API access
+[ ] White-labeling (if promised)
+[ ] Advanced integrations
+[ ] Priority support features
+
+PHASE 4: BOT & AI SYSTEMS AUDIT
+4.1 Bot Ecosystem Review
+
+Catalog ALL bots: HelpAI, MeetingBot, ReportBot, SysOpBot, etc.
+Verify each bot has clear, non-overlapping responsibility
+Check bot command parity with mIRC standards (per Bryan's spec)
+Audit bot response consistency and error handling
+
+4.2 Trinity AI Orchestration
+
+Review multi-model orchestration (Trinity/Gemini, Claude, OpenAI)
+Verify automatic fallback chains work correctly
+Check confidence scoring and cross-model analysis
+Audit token usage tracking and cost monitoring
+Verify AI operations are workspace-scoped
+
+4.3 Inline Chat & Chatroom
+
+Verify inline chat options work on all applicable pages
+Check chatroom server/client communication
+Audit message persistence and real-time sync
+Verify chat history is workspace-isolated
+
+
+PHASE 5: UI/UX & RESPONSIVE AUDIT
+5.1 Modal Standardization
+
+Audit ALL modals across platform
+Enforce compact configuration (not max-width) universally
+Create modal configuration constants for consistency
+Verify modals work on mobile and desktop
+
+5.2 Desktop vs Mobile Feature Separation
+MOBILE (Field Workers Only):
+- Clock in/out with GPS
+- View assigned shifts
+- Duress/panic button
+- Proof of service photo capture
+- View schedule (read-only)
+- Basic notifications
+- Offline queue sync
+
+DESKTOP ONLY (Hide on Mobile):
+- Trinity AI scheduling interface
+- Admin dashboards
+- Report generation
+- Employee management
+- Client/site management
+- Payroll processing
+- QuickBooks integration management
+- Bot configuration
+- System settings
+- Billing management
+5.3 Responsive Design Verification
+
+Test EVERY page on mobile viewport (375px, 414px)
+Test EVERY page on tablet viewport (768px, 1024px)
+Test EVERY page on desktop viewport (1280px, 1920px)
+Document and fix all overflow, truncation, touch target issues
+
+
+PHASE 6: ONBOARDING & COMPLIANCE WORKFLOW
+6.1 Organization Onboarding Flow
+Required Task List for New Organizations:
+[ ] Company legal name and EIN/Tax ID
+[ ] Business address verification
+[ ] State business license upload
+[ ] Workers compensation certificate
+[ ] General liability insurance certificate
+[ ] Security guard license (state-specific)
+[ ] Authorized signatory designation
+[ ] Banking/payment information
+[ ] Default billing setup
+[ ] Admin user verification
+
+ENFORCEMENT:
+- 15-day completion deadline from org creation
+- Daily reminder notifications at day 7, 10, 12, 14
+- Day 15+: RED HEADER WARNING in workspace
+- Flag account status as "INCOMPLETE_ONBOARDING"
+- Restrict certain features until complete
+- Support override capability for exceptions
+6.2 Employee/User Onboarding Flow
+Required Task List for New Users (invited or self-created):
+[ ] Full legal name verification
+[ ] State ID upload (front and back)
+[ ] Social Security verification (last 4 or full per state)
+[ ] Work authorization verification (I-9 equivalent)
+[ ] Security guard license upload (if applicable)
+[ ] Background check consent
+[ ] Direct deposit setup OR pay card enrollment
+[ ] Emergency contact information
+[ ] W-4 tax withholding form
+[ ] Signed employment agreement/contract
+[ ] Signed handbook acknowledgment
+[ ] Training completion verification
+
+ENFORCEMENT:
+- 15-day completion deadline from account creation
+- Daily reminder notifications
+- Day 15+: RED HEADER WARNING in workspace
+- Account status: "FROZEN_INCOMPLETE_ONBOARDING"
+- CANNOT be scheduled for work until complete
+- Support override capability for exceptions
+6.3 Compliance Dashboard
+
+Build org-level compliance dashboard showing all user statuses
+Build admin view of all org compliance statuses
+Automated alerts for expiring documents (licenses, insurance)
+Audit trail for all compliance-related changes
+
+
+PHASE 7: SCHEDULE SYSTEM OVERHAUL
+7.1 GetSling Parity Check
+[ ] TRUE Week View - 7 day columns (Mon-Sun), not 24-hour timeline
+[ ] Day View - 24-hour timeline with proper shift positioning
+[ ] Smooth view transitions (Day ↔ Week ↔ Custom)
+[ ] Custom date range selection (2-week, bi-weekly, month)
+[ ] Shift cards with color coding by position/client
+[ ] Drag-and-drop shift creation and modification
+[ ] Day notes for holidays, closures, special events
+[ ] Real-time labor cost calculation in header
+[ ] Schedule templates - save and reapply
+[ ] Copy/duplicate week functionality
+[ ] Conflict detection and warnings
+[ ] Overtime warnings and calculations
+[ ] Open shift broadcasting
+[ ] Shift swap requests and approvals
+[ ] Availability management integration
+[ ] Trinity real-time feedback in both grid layouts
+
+PHASE 8: INTEGRATION & SYNC AUDIT
+8.1 QuickBooks Integration
+
+Verify OAuth flow for both sandbox and production
+Verify employee sync bidirectional
+Verify time entry sync
+Verify invoice sync
+Verify payment sync
+Error recovery and retry logic
+Webhook handling for real-time updates
+
+8.2 Gusto Integration
+
+Verify OAuth flow
+Verify employee sync
+Verify payroll data sync
+Error handling
+
+8.3 Future Integrations Readiness
+
+Verify integration architecture is extensible
+Document integration addition process
+
+
+PHASE 9: PERFORMANCE & OPTIMIZATION
+9.1 Database Query Optimization
+
+Identify N+1 query problems
+Add missing indexes
+Optimize slow queries
+Implement query result caching where appropriate
+
+9.2 Real-time Performance
+
+Audit WebSocket connection management
+Verify reconnection logic
+Check for memory leaks in long-running connections
+Optimize broadcast efficiency
+
+9.3 AI Cost Optimization
+
+Verify token usage tracking
+Implement request batching where possible
+Cache AI responses where appropriate
+Monitor and alert on cost anomalies
+
+
+PHASE 10: DOCUMENTATION & CLEANUP
+10.1 Dead Code Removal
+
+Identify and remove unused components
+Remove commented-out code blocks
+Remove unused imports
+Remove deprecated endpoints
+
+10.2 Code Documentation
+
+Add JSDoc comments to all services
+Document all API endpoints
+Create architecture diagrams
+Update README files
+
+10.3 Naming Conventions
+
+Enforce consistent naming across codebase
+Rename confusingly named functions/variables
+Standardize file naming patterns
+
+
+EXECUTION INSTRUCTIONS
+
+Run each phase separately - report findings before moving to next
+Create issue list with severity ratings (Critical/High/Medium/Low)
+Prioritize Critical and High issues for immediate fix
+Test after each major change - don't batch too many changes
+Document all changes in a changelog
+Create automated tests for critical paths discovered
+
+
+OUTPUT FORMAT FOR EACH PHASE
+## Phase X Findings
+
+### Critical Issues (Fix Immediately)
+1. [Issue description] - [File/Location] - [Recommended Fix]
+
+### High Priority Issues
+1. [Issue description] - [File/Location] - [Recommended Fix]
+
+### Medium Priority Issues
+1. [Issue description] - [File/Location] - [Recommended Fix]
+
+### Low Priority / Tech Debt
+1. [Issue description] - [File/Location] - [Recommended Fix]
+
+### Completed Fixes This Phase
+1. [What was fixed] - [Files changed]
+
+BEGIN WITH PHASE 1. Report all findings before proceeding to Phase 2.

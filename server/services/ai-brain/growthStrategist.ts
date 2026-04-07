@@ -12,6 +12,7 @@
  * 4. Tool Expansion (Upsell) - Identify manual friction points
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { 
   invoices, 
@@ -20,12 +21,13 @@ import {
   timeEntries,
   clients,
   trinityCreditTransactions,
-  aiWorkboardTasks,
   notifications,
   supportTickets,
 } from '@shared/schema';
 import { eq, and, gte, lte, lt, count, sql, desc, ne } from 'drizzle-orm';
 import { subDays, differenceInDays, startOfWeek, endOfWeek } from 'date-fns';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('growthStrategist');
 
 export interface StrategyCard {
   id: string;
@@ -97,7 +99,7 @@ function getRandomQuote(pillar: keyof typeof CONSULTANT_QUOTES): string {
 }
 
 function generateCardId(): string {
-  return `empire-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `empire-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
 }
 
 class GrowthStrategistService {
@@ -110,7 +112,7 @@ class GrowthStrategistService {
       return cached.result;
     }
 
-    console.log(`[GrowthStrategist] Running Empire Mode scan for workspace ${workspaceId}`);
+    log.info(`[GrowthStrategist] Running Empire Mode scan for workspace ${workspaceId}`);
 
     const workspace = await db.query.workspaces.findFirst({
       where: eq(workspaces.id, workspaceId),
@@ -150,7 +152,7 @@ class GrowthStrategistService {
     };
 
     this.scanCache.set(workspaceId, { result, timestamp: Date.now() });
-    console.log(`[GrowthStrategist] Scan complete: ${opportunities.length} opportunities, Empire Score: ${empireScore.total}`);
+    log.info(`[GrowthStrategist] Scan complete: ${opportunities.length} opportunities, Empire Score: ${empireScore.total}`);
 
     return result;
   }
@@ -232,7 +234,7 @@ class GrowthStrategistService {
         });
       }
     } catch (error) {
-      console.error('[GrowthStrategist] Error analyzing receivables:', error);
+      log.error('[GrowthStrategist] Error analyzing receivables:', error);
     }
 
     return cards;
@@ -327,7 +329,7 @@ class GrowthStrategistService {
         });
       }
     } catch (error) {
-      console.error('[GrowthStrategist] Error analyzing sales velocity:', error);
+      log.error('[GrowthStrategist] Error analyzing sales velocity:', error);
     }
 
     return cards;
@@ -429,7 +431,7 @@ class GrowthStrategistService {
         });
       }
     } catch (error) {
-      console.error('[GrowthStrategist] Error scanning for tool opportunities:', error);
+      log.error('[GrowthStrategist] Error scanning for tool opportunities:', error);
     }
 
     return cards;

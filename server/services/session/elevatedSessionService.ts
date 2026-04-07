@@ -14,8 +14,17 @@ import { db } from '../../db';
 import { supportSessionElevations, platformRoles } from '@shared/schema';
 import { eq, and, gt, lt } from 'drizzle-orm';
 import type { Request } from 'express';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('elevatedSessionService');
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'coaileague-session-secret';
+
+// FIX: Removed insecure hardcoded fallback key. The startup validator in
+// server/index.ts already enforces SESSION_SECRET presence before this module
+// is loaded, so undefined here is a fatal misconfiguration — surface it clearly.
+if (!process.env.SESSION_SECRET) {
+  throw new Error('[ElevatedSession] FATAL: SESSION_SECRET env var is required. Server must not start without it.');
+}
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const SIGNATURE_VERSION = 1;
 
 const IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours idle timeout
@@ -80,7 +89,7 @@ export async function canReceiveElevation(userId: string): Promise<{ canElevate:
 
     return { canElevate: false, role, reason: 'Role not eligible for elevation' };
   } catch (error) {
-    console.error('[ElevatedSession] Error checking elevation eligibility:', error);
+    log.error('[ElevatedSession] Error checking elevation eligibility:', error);
     return { canElevate: false, reason: 'Error checking eligibility' };
   }
 }
@@ -133,7 +142,7 @@ export async function issueElevation(
       })
       .returning();
 
-    console.log(`[ElevatedSession] Issued elevation for user ${userId} (${eligibility.role}), expires: ${expiresAt.toISOString()}`);
+    log.info(`[ElevatedSession] Issued elevation for user ${userId} (${eligibility.role}), expires: ${expiresAt.toISOString()}`);
 
     return {
       success: true,
@@ -141,7 +150,7 @@ export async function issueElevation(
       expiresAt
     };
   } catch (error) {
-    console.error('[ElevatedSession] Error issuing elevation:', error);
+    log.error('[ElevatedSession] Error issuing elevation:', error);
     return { success: false, error: 'Failed to issue elevation' };
   }
 }
@@ -175,7 +184,7 @@ export async function validateElevation(userId: string, sessionId: string): Prom
     );
 
     if (!isValid) {
-      console.warn(`[ElevatedSession] Invalid signature for elevation ${elevation.id}`);
+      log.warn(`[ElevatedSession] Invalid signature for elevation ${elevation.id}`);
       await revokeElevation(elevation.id, userId, 'invalid_signature');
       return { isElevated: false };
     }
@@ -198,7 +207,7 @@ export async function validateElevation(userId: string, sessionId: string): Prom
       actionsExecuted: (elevation.actionsExecuted || 0) + 1
     };
   } catch (error) {
-    console.error('[ElevatedSession] Error validating elevation:', error);
+    log.error('[ElevatedSession] Error validating elevation:', error);
     return { isElevated: false };
   }
 }
@@ -218,10 +227,10 @@ export async function revokeElevation(
       })
       .where(eq(supportSessionElevations.id, elevationId));
 
-    console.log(`[ElevatedSession] Revoked elevation ${elevationId}: ${reason}`);
+    log.info(`[ElevatedSession] Revoked elevation ${elevationId}: ${reason}`);
     return true;
   } catch (error) {
-    console.error('[ElevatedSession] Error revoking elevation:', error);
+    log.error('[ElevatedSession] Error revoking elevation:', error);
     return false;
   }
 }
@@ -241,10 +250,10 @@ export async function revokeAllUserElevations(userId: string, reason: string): P
       ))
       .returning();
 
-    console.log(`[ElevatedSession] Revoked ${result.length} elevations for user ${userId}: ${reason}`);
+    log.info(`[ElevatedSession] Revoked ${result.length} elevations for user ${userId}: ${reason}`);
     return result.length;
   } catch (error) {
-    console.error('[ElevatedSession] Error revoking user elevations:', error);
+    log.error('[ElevatedSession] Error revoking user elevations:', error);
     return 0;
   }
 }
@@ -280,17 +289,17 @@ export async function cleanupExpiredElevations(): Promise<number> {
 
     const total = result.length + idleResult.length;
     if (total > 0) {
-      console.log(`[ElevatedSession] Cleaned up ${total} expired/idle elevations`);
+      log.info(`[ElevatedSession] Cleaned up ${total} expired/idle elevations`);
     }
     return total;
   } catch (error) {
-    console.error('[ElevatedSession] Error cleaning up elevations:', error);
+    log.error('[ElevatedSession] Error cleaning up elevations:', error);
     return 0;
   }
 }
 
 export async function isElevatedSupportSession(req: Request): Promise<ElevatedSessionContext> {
-  const userId = (req as any).user?.id || (req.session as any)?.userId;
+  const userId = req.user?.id || (req.session as any)?.userId;
   const sessionId = req.sessionID;
 
   if (!userId || !sessionId) {
@@ -329,7 +338,7 @@ export async function getActiveElevation(userId: string): Promise<ElevatedSessio
       actionsExecuted: elevation.actionsExecuted || 0
     };
   } catch (error) {
-    console.error('[ElevatedSession] Error getting active elevation:', error);
+    log.error('[ElevatedSession] Error getting active elevation:', error);
     return null;
   }
 }

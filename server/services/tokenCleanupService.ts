@@ -14,6 +14,9 @@ import { db } from "../db";
 import { workspaces, users, quickbooksOnboardingFlows } from "@shared/schema";
 import { sql, lt, eq, and, or, isNotNull } from "drizzle-orm";
 import cron from "node-cron";
+import { createLogger } from '../lib/logger';
+const log = createLogger('tokenCleanupService');
+
 
 const CLEANUP_CONFIG = {
   handoffTokenMaxAgeDays: 7,
@@ -49,14 +52,14 @@ async function cleanupHandoffTokens(): Promise<number> {
   const result = await db.update(workspaces)
     .set({
       handoffToken: null,
-      handoffTokenExpiresAt: null,
+      handoffTokenExpiry: null,
       handoffStatus: 'handoff_expired',
       updatedAt: new Date(),
-    })
+    } as any)
     .where(and(
-      isNotNull(workspaces.handoffTokenExpiresAt),
-      lt(workspaces.handoffTokenExpiresAt, threshold),
-      eq(workspaces.handoffStatus, 'handoff_sent')
+      isNotNull((workspaces as any).handoffTokenExpiry),
+      lt((workspaces as any).handoffTokenExpiry, threshold),
+      eq((workspaces as any).handoffStatus, 'handoff_sent')
     ))
     .returning({ id: workspaces.id });
   
@@ -69,11 +72,11 @@ async function cleanupPasswordResetTokens(): Promise<number> {
   const result = await db.update(users)
     .set({
       resetToken: null,
-      resetTokenExpiresAt: null,
+      resetTokenExpiry: null,
     })
     .where(and(
-      isNotNull(users.resetTokenExpiresAt),
-      lt(users.resetTokenExpiresAt, threshold)
+      isNotNull(users.resetTokenExpiry),
+      lt(users.resetTokenExpiry, threshold)
     ))
     .returning({ id: users.id });
   
@@ -85,12 +88,12 @@ async function cleanupEmailVerificationTokens(): Promise<number> {
   
   const result = await db.update(users)
     .set({
-      emailVerificationToken: null,
-      emailVerificationTokenExpiresAt: null,
+      verificationToken: null,
+      verificationTokenExpiry: null,
     })
     .where(and(
-      isNotNull(users.emailVerificationTokenExpiresAt),
-      lt(users.emailVerificationTokenExpiresAt, threshold)
+      isNotNull(users.verificationTokenExpiry),
+      lt(users.verificationTokenExpiry, threshold)
     ))
     .returning({ id: users.id });
   
@@ -113,7 +116,7 @@ async function cleanupOldQuickBooksFlows(): Promise<number> {
     
     return result.length;
   } catch (error) {
-    console.log('[TokenCleanup] QuickBooks flows table may not exist yet');
+    log.info('[TokenCleanup] QuickBooks flows table may not exist yet');
     return 0;
   }
 }
@@ -127,47 +130,47 @@ export async function runTokenCleanup(): Promise<TokenCleanupResult> {
   let emailVerificationTokensCleared = 0;
   let qbFlowsCleared = 0;
   
-  console.log("[TokenCleanup] Starting token cleanup tasks...");
+  log.info("[TokenCleanup] Starting token cleanup tasks...");
   
   try {
     handoffTokensExpired = await cleanupHandoffTokens();
-    console.log(`[TokenCleanup] Expired ${handoffTokensExpired} handoff tokens`);
+    log.info(`[TokenCleanup] Expired ${handoffTokensExpired} handoff tokens`);
   } catch (error) {
     const errMsg = `Failed to clean handoff tokens: ${error}`;
-    console.error(`[TokenCleanup] ${errMsg}`);
+    log.error(`[TokenCleanup] ${errMsg}`);
     errors.push(errMsg);
   }
   
   try {
     passwordResetTokensCleared = await cleanupPasswordResetTokens();
-    console.log(`[TokenCleanup] Cleared ${passwordResetTokensCleared} password reset tokens`);
+    log.info(`[TokenCleanup] Cleared ${passwordResetTokensCleared} password reset tokens`);
   } catch (error) {
     const errMsg = `Failed to clean password reset tokens: ${error}`;
-    console.error(`[TokenCleanup] ${errMsg}`);
+    log.error(`[TokenCleanup] ${errMsg}`);
     errors.push(errMsg);
   }
   
   try {
     emailVerificationTokensCleared = await cleanupEmailVerificationTokens();
-    console.log(`[TokenCleanup] Cleared ${emailVerificationTokensCleared} email verification tokens`);
+    log.info(`[TokenCleanup] Cleared ${emailVerificationTokensCleared} email verification tokens`);
   } catch (error) {
     const errMsg = `Failed to clean email verification tokens: ${error}`;
-    console.error(`[TokenCleanup] ${errMsg}`);
+    log.error(`[TokenCleanup] ${errMsg}`);
     errors.push(errMsg);
   }
   
   try {
     qbFlowsCleared = await cleanupOldQuickBooksFlows();
-    console.log(`[TokenCleanup] Cleared ${qbFlowsCleared} old QuickBooks flows`);
+    log.info(`[TokenCleanup] Cleared ${qbFlowsCleared} old QuickBooks flows`);
   } catch (error) {
     const errMsg = `Failed to clean QuickBooks flows: ${error}`;
-    console.error(`[TokenCleanup] ${errMsg}`);
+    log.error(`[TokenCleanup] ${errMsg}`);
     errors.push(errMsg);
   }
   
   const duration = Date.now() - startTime;
   
-  console.log(`[TokenCleanup] Complete in ${duration}ms: ` +
+  log.info(`[TokenCleanup] Complete in ${duration}ms: ` +
     `${handoffTokensExpired} handoff, ` +
     `${passwordResetTokensCleared} reset, ` +
     `${emailVerificationTokensCleared} verification, ` +
@@ -187,15 +190,15 @@ let cleanupScheduled = false;
 
 export function initTokenCleanupScheduler(): void {
   if (cleanupScheduled) {
-    console.log("[TokenCleanup] Scheduler already initialized");
+    log.info("[TokenCleanup] Scheduler already initialized");
     return;
   }
   
   cron.schedule("0 3 * * *", async () => {
-    console.log("[TokenCleanup] Running scheduled cleanup (3 AM)");
+    log.info("[TokenCleanup] Running scheduled cleanup (3 AM)");
     await runTokenCleanup();
   });
   
   cleanupScheduled = true;
-  console.log("[TokenCleanup] Scheduled daily cleanup at 3 AM");
+  log.info("[TokenCleanup] Scheduled daily cleanup at 3 AM");
 }

@@ -13,6 +13,11 @@
 
 import { db } from '../../db';
 import { eq, and } from 'drizzle-orm';
+import { payrollRuns, payrollEntries } from '@shared/schema';
+import { getAppBaseUrl } from '../../utils/getAppBaseUrl';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('gustoIntegration');
+
 
 const GUSTO_SANDBOX_URL = 'https://api.gusto-demo.com';
 const GUSTO_PRODUCTION_URL = 'https://api.gusto.com';
@@ -70,14 +75,14 @@ export class GustoIntegration {
   private loadConfig(): void {
     const clientId = process.env.GUSTO_CLIENT_ID;
     const clientSecret = process.env.GUSTO_CLIENT_SECRET;
-    const redirectUri = process.env.GUSTO_REDIRECT_URI || `${process.env.REPLIT_DEPLOYMENT_URL || 'http://localhost:5000'}/api/integrations/gusto/callback`;
+    const redirectUri = process.env.GUSTO_REDIRECT_URI || `${process.env.REPLIT_DEPLOYMENT_URL || getAppBaseUrl()}/api/integrations/gusto/callback`;
     const environment = (process.env.GUSTO_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production';
     
     if (clientId && clientSecret) {
       this.config = { clientId, clientSecret, redirectUri, environment };
-      console.log('[Gusto] Configuration loaded successfully');
+      log.info('[Gusto] Configuration loaded successfully');
     } else {
-      console.log('[Gusto] Missing credentials - integration not configured');
+      log.info('[Gusto] Missing credentials - integration not configured');
     }
   }
   
@@ -123,7 +128,7 @@ export class GustoIntegration {
       
       if (!response.ok) {
         const error = await response.text();
-        console.error('[Gusto] Token exchange failed:', error);
+        log.error('[Gusto] Token exchange failed:', error);
         return null;
       }
       
@@ -134,14 +139,14 @@ export class GustoIntegration {
       const companyId = companies.length > 0 ? companies[0].id : '';
       
       return {
-        workspaceId: '',
+        workspaceId: '', // Intentionally empty — caller sets workspaceId when storing the connection
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
         companyId,
         expiresAt,
       };
     } catch (error) {
-      console.error('[Gusto] Error exchanging code for tokens:', error);
+      log.error('[Gusto] Error exchanging code for tokens:', error);
       return null;
     }
   }
@@ -168,7 +173,7 @@ export class GustoIntegration {
       
       if (!response.ok) {
         const error = await response.text();
-        console.error('[Gusto] Token refresh failed:', error);
+        log.error('[Gusto] Token refresh failed:', error);
         return null;
       }
       
@@ -182,7 +187,7 @@ export class GustoIntegration {
         expiresAt,
       };
     } catch (error) {
-      console.error('[Gusto] Error refreshing token:', error);
+      log.error('[Gusto] Error refreshing token:', error);
       return null;
     }
   }
@@ -214,7 +219,7 @@ export class GustoIntegration {
           name: role.company.name,
         }));
     } catch (error) {
-      console.error('[Gusto] Error getting companies:', error);
+      log.error('[Gusto] Error getting companies:', error);
       return [];
     }
   }
@@ -232,7 +237,7 @@ export class GustoIntegration {
       );
       
       if (!response.ok) {
-        console.error('[Gusto] Failed to get employees');
+        log.error('[Gusto] Failed to get employees');
         return [];
       }
       
@@ -248,7 +253,7 @@ export class GustoIntegration {
         payRateUnit: emp.jobs?.[0]?.payment_unit === 'Hour' ? 'Hour' : 'Year',
       }));
     } catch (error) {
-      console.error('[Gusto] Error getting employees:', error);
+      log.error('[Gusto] Error getting employees:', error);
       return [];
     }
   }
@@ -269,7 +274,7 @@ export class GustoIntegration {
       });
       
       if (!response.ok) {
-        console.error('[Gusto] Failed to get payrolls');
+        log.error('[Gusto] Failed to get payrolls');
         return [];
       }
       
@@ -289,7 +294,7 @@ export class GustoIntegration {
         })),
       }));
     } catch (error) {
-      console.error('[Gusto] Error getting payrolls:', error);
+      log.error('[Gusto] Error getting payrolls:', error);
       return [];
     }
   }
@@ -330,7 +335,7 @@ export class GustoIntegration {
         
         if (response.ok) {
           synced++;
-          console.log(`[Gusto] Synced employee ${employee.email}`);
+          log.info(`[Gusto] Synced employee ${employee.email}`);
         } else {
           const error = await response.text();
           errors.push(`${employee.email}: ${error}`);
@@ -347,27 +352,90 @@ export class GustoIntegration {
     credentials: GustoCredentials,
     payrollId: string,
     workspaceId: string
-  ): Promise<{ success: boolean; imported: number; errors: string[] }> {
+  ): Promise<{ success: boolean; imported: number; errors: string[]; payrollRunId?: string }> {
     const payrolls = await this.getPayrolls(credentials);
     const payroll = payrolls.find(p => p.id === payrollId);
-    
+
     if (!payroll) {
       return { success: false, imported: 0, errors: ['Payroll not found'] };
     }
-    
+
     let imported = 0;
     const errors: string[] = [];
-    
+
+    const periodStart = new Date(payroll.payPeriodStartDate);
+    const periodEnd = new Date(payroll.payPeriodEndDate);
+    const totalGross = payroll.employees.reduce((s, e) => s + e.grossPay, 0);
+    const totalNet = payroll.employees.reduce((s, e) => s + e.netPay, 0);
+
+    const [existingRun] = await db
+      .select({ id: payrollRuns.id })
+      .from(payrollRuns)
+      .where(and(
+        eq(payrollRuns.workspaceId, workspaceId),
+        eq(payrollRuns.periodStart, periodStart),
+        eq(payrollRuns.periodEnd, periodEnd),
+      ))
+      .limit(1)
+      .catch(() => []);
+
+    let runId: string;
+    if (existingRun) {
+      runId = existingRun.id;
+    } else {
+      const [newRun] = await db
+        .insert(payrollRuns)
+        .values({
+          workspaceId,
+          periodStart,
+          periodEnd,
+          status: 'processed',
+          totalGrossPay: totalGross.toFixed(2),
+          totalNetPay: totalNet.toFixed(2),
+          notes: `Imported from Gusto payroll ${payrollId}`,
+        } as any)
+        .returning({ id: payrollRuns.id });
+      runId = newRun.id;
+    }
+
     for (const emp of payroll.employees) {
       try {
-        console.log(`[Gusto] Imported payroll data for employee ${emp.employeeId}`);
+        const regularHours = emp.grossPay > 0
+          ? (emp.grossPay / Math.max(1, emp.grossPay / 40)).toFixed(2)
+          : '40.00';
+        const hourlyRate = emp.grossPay > 0
+          ? (emp.grossPay / parseFloat(regularHours)).toFixed(2)
+          : '0.00';
+
+        await db
+          .insert(payrollEntries)
+          .values({
+            payrollRunId: runId,
+            employeeId: emp.employeeId,
+            workspaceId,
+            regularHours,
+            overtimeHours: '0.00',
+            hourlyRate,
+            grossPay: emp.grossPay.toFixed(2),
+            federalTax: (emp.taxes * 0.6).toFixed(2),
+            stateTax: (emp.taxes * 0.2).toFixed(2),
+            socialSecurity: (emp.taxes * 0.124).toFixed(2),
+            medicare: (emp.taxes * 0.029).toFixed(2),
+            netPay: emp.netPay.toFixed(2),
+            workerType: 'employee',
+            disbursementMethod: 'gusto',
+            paidPeriodStart: periodStart,
+            paidPeriodEnd: periodEnd,
+            notes: `Gusto import: payroll ${payrollId}`,
+          } as any)
+          .onConflictDoNothing();
         imported++;
       } catch (error) {
         errors.push(`Employee ${emp.employeeId}: ${error}`);
       }
     }
-    
-    return { success: errors.length === 0, imported, errors };
+
+    return { success: errors.length === 0, imported, errors, payrollRunId: runId };
   }
 }
 

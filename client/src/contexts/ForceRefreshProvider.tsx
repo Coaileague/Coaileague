@@ -2,11 +2,14 @@
  * Force Refresh Provider - Listens for WebSocket force-refresh events
  * Wraps the app to automatically invalidate React Query caches when
  * support staff push updates via the command console.
+ * 
+ * Uses unified WebSocketProvider instead of creating its own connection.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { useWebSocketBus } from '@/providers/WebSocketProvider';
 
 interface ForceRefreshEvent {
   type: 'force_refresh';
@@ -26,28 +29,17 @@ interface ForceRefreshEvent {
 export function ForceRefreshProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const bus = useWebSocketBus();
 
   const handleForceRefresh = useCallback((event: ForceRefreshEvent) => {
     const { refreshType, payload } = event;
     
-    console.log('[ForceRefresh] Received:', refreshType, payload);
-
     switch (refreshType) {
       case 'whats_new':
         queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
         queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
         queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
         queryClient.invalidateQueries({ queryKey: ['/api/whats-new/new-features'] });
-        
-        if (payload.title) {
-          toast({
-            title: 'New Update Available',
-            description: payload.title,
-            duration: 5000,
-          });
-        }
         break;
 
       case 'notifications':
@@ -101,21 +93,16 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
         break;
 
       case 'test_broadcast':
-        // Test broadcast - show toast to confirm receipt
         toast({
           title: 'Broadcast Test Received',
           description: payload.message || 'WebSocket broadcast working!',
           duration: 5000,
         });
-        console.log('[ForceRefresh] Test broadcast received:', payload);
         break;
     }
   }, [queryClient, toast]);
 
   const handleMascotDirective = useCallback((payload: any) => {
-    console.log('[ForceRefresh] Mascot directive update:', payload);
-    
-    // Immediately update the query cache with the new directive
     queryClient.setQueryData(['/api/mascot/holiday/directives'], {
       success: true,
       seasonId: payload?.seasonId || 'christmas',
@@ -125,131 +112,217 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
       timestamp: payload?.timestamp || new Date().toISOString(),
     });
     
-    // Also trigger a background refetch for consistency
     queryClient.invalidateQueries({ queryKey: ['/api/mascot/holiday/directives'] });
   }, [queryClient]);
 
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
-    
-    try {
-      wsRef.current = new WebSocket(wsUrl);
-
-      wsRef.current.onopen = () => {
-        console.log('[ForceRefresh] WebSocket connected');
-        wsRef.current?.send(JSON.stringify({ type: 'join_platform_updates' }));
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'force_refresh') {
-            handleForceRefresh(data as ForceRefreshEvent);
-          }
-          
-          // Handle LIVE platform updates (What's New)
-          if (data.type === 'platform_update' && data.update) {
-            console.log('[ForceRefresh] LIVE platform update:', data.update.title);
-            const update = data.update;
-            
-            // Insert directly into cache for immediate display
-            queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
-              if (!oldData) return oldData;
-              const newUpdate = {
-                id: `live-${Date.now()}`,
-                title: update.title,
-                description: update.endUserSummary || update.description,
-                category: update.category,
-                version: update.version,
-                badge: update.badge || 'NEW',
-                isNew: true,
-                isViewed: false,
-                createdAt: data.timestamp || new Date().toISOString(),
-                // Enhanced metadata
-                detailedCategory: update.detailedCategory,
-                sourceType: update.sourceType,
-                sourceName: update.sourceName,
-                endUserSummary: update.endUserSummary,
-                brokenDescription: update.brokenDescription,
-                impactDescription: update.impactDescription,
-              };
-              return {
-                ...oldData,
-                platformUpdates: [newUpdate, ...(oldData.platformUpdates || [])],
-                unreadPlatformUpdates: (oldData.unreadPlatformUpdates || 0) + 1,
-                totalUnread: (oldData.totalUnread || 0) + 1,
-              };
-            });
-            
-            // Also invalidate whats-new queries
-            queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
-            
-            // Show toast
-            toast({
-              title: 'New Update Available',
-              description: update.title,
-              duration: 5000,
-            });
-          }
-          
-          if (data.type === 'platform_event' && data.payload) {
-            const payload = data.payload;
-            if (payload.type?.startsWith('feature_') || payload.type === 'announcement') {
-              handleForceRefresh({
-                type: 'force_refresh',
-                refreshType: 'whats_new',
-                payload: { action: 'new_update', title: payload.title },
-                timestamp: new Date().toISOString(),
-              });
-            }
-          }
-          
-          if (data.type === 'mascot.directive.updated') {
-            handleMascotDirective(data.payload);
-          }
-        } catch (error) {
-          console.error('[ForceRefresh] Parse error:', error);
-        }
-      };
-
-      wsRef.current.onclose = (event) => {
-        // Only reconnect if it was an unexpected close (not user-initiated)
-        if (!event.wasClean) {
-          console.log('[ForceRefresh] WebSocket closed unexpectedly, reconnecting in 10s...');
-          reconnectTimeoutRef.current = setTimeout(() => connect(), 10000);
-        } else {
-          console.log('[ForceRefresh] WebSocket closed cleanly');
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('[ForceRefresh] WebSocket error:', error);
-      };
-    } catch (error) {
-      console.error('[ForceRefresh] Connection error:', error);
-      reconnectTimeoutRef.current = setTimeout(() => connect(), 5000);
-    }
-  }, [handleForceRefresh, handleMascotDirective]);
-
   useEffect(() => {
-    connect();
+    const sendJoin = () => {
+      bus.send({ type: 'join_platform_updates' });
+      bus.send({ type: 'join_shift_updates' });
+    };
+    if (bus.isConnected()) sendJoin();
+    const unsubConnect = bus.subscribe('__ws_connected', sendJoin);
+
+    const unsubs = [
+      unsubConnect,
+      bus.subscribe('force_refresh', (data) => {
+        handleForceRefresh(data as ForceRefreshEvent);
+      }),
+      bus.subscribe('platform_update', (data) => {
+        if (data.update) {
+          queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+            if (!oldData) return oldData;
+            const newUpdate = {
+              id: `live-${Date.now()}`,
+              title: data.update.title,
+              description: data.update.description,
+              category: data.update.category,
+              version: data.update.version,
+              badge: data.update.badge || 'NEW',
+              isNew: true,
+              isViewed: false,
+              createdAt: data.timestamp || new Date().toISOString(),
+              detailedCategory: data.update.detailedCategory,
+              sourceType: data.update.sourceType,
+              sourceName: data.update.sourceName,
+              brokenDescription: data.update.brokenDescription,
+              impactDescription: data.update.impactDescription,
+            };
+            return {
+              ...oldData,
+              platformUpdates: [newUpdate, ...(oldData.platformUpdates || [])],
+              unreadPlatformUpdates: (oldData.unreadPlatformUpdates || 0) + 1,
+              totalUnread: (oldData.totalUnread || 0) + 1,
+            };
+          });
+          
+          queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
+        }
+      }),
+      bus.subscribe('platform_event', (data) => {
+        if (data.payload) {
+          const payload = data.payload;
+          if (payload.type?.startsWith('feature_') || payload.type === 'announcement') {
+            handleForceRefresh({
+              type: 'force_refresh',
+              refreshType: 'whats_new',
+              payload: { action: 'new_update', title: payload.title },
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
+      }),
+      bus.subscribe('mascot.directive.updated', (data) => {
+        handleMascotDirective(data.payload);
+      }),
+      bus.subscribe('schedule_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('schedules_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('shift_created', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('shift_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('shift_deleted', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('employees_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/employees/me'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/analytics'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/onboarding/status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      }),
+      bus.subscribe('clients_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/analytics'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      }),
+      bus.subscribe('invoices_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing'] });
+      }),
+      bus.subscribe('time_entries_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/time-entries'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/timesheet'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('payroll_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/payroll'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/payroll/runs'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('data_migrated', (data) => {
+        queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/employees/me'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/analytics'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/onboarding/status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/time-entries'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/payroll'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing'] });
+        const source = data.source || 'system';
+        const empCount = data.importedEmployees || 0;
+        const clientCount = data.importedClients || 0;
+        toast({
+          title: 'Data Import Complete',
+          description: `${empCount} employees and ${clientCount} clients imported from ${source}`,
+          duration: 6000,
+        });
+      }),
+      bus.subscribe('broadcast_message', (data) => {
+        queryClient.invalidateQueries({ queryKey: ['/api/broadcasts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+      }),
+      bus.subscribe('shift_acknowledged', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('shift_denied', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('shift_status_changed', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/time-entries'] });
+      }),
+      bus.subscribe('compliance_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/compliance'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('pto_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/pto'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/time-off-requests'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/time-off/pending-count'] });
+      }),
+      bus.subscribe('invoice_created', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing'] });
+      }),
+      bus.subscribe('subscription_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/billing'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing/subscription'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing/usage'] });
+      }),
+      bus.subscribe('subscription_cancelled', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/billing'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing/subscription'] });
+      }),
+      bus.subscribe('shift_swap_requested', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('shift_swap_approved', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      bus.subscribe('shift_swap_rejected', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+    ];
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      unsubs.forEach(u => u());
     };
-  }, [connect]);
+  }, [bus, handleForceRefresh, handleMascotDirective, queryClient, toast]);
 
   return <>{children}</>;
 }

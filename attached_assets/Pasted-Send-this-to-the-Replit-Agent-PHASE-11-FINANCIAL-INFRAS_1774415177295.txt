@@ -1,0 +1,151 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 11 — FINANCIAL INFRASTRUCTURE HARDENING**
+
+This phase treats every financial system as mission-critical. A missed notification is recoverable. A duplicated payroll run, a dropped invoice, or a miscalculated rate is a real-world consequence for officers and clients. Every financial system gets verified, hardened, and certified before this phase closes. Report all findings before fixing anything.
+
+---
+
+**STEP 1 — FINANCIAL SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, and scheduled job that touches money. This includes:
+- Invoice generation, delivery, status, and payment
+- Payroll calculation, run, export, and pay stub generation
+- QuickBooks sync — both directions
+- Billing triggers and subscription management
+- Rate tables and differential pay logic
+- Any cron or scheduled job that produces or modifies financial records
+
+List every file with its responsibility. Flag any file that has financial logic but no corresponding audit trail write.
+
+---
+
+**STEP 2 — INVOICE ENGINE HARDENING**
+
+Verify and harden every aspect of invoice generation:
+- Every shift in the pay period is included — no missing records, no duplicates
+- Rate calculation is correct including overtime, differential, holiday, and post-specific rates
+- Invoice number generation is sequential and collision-free
+- Invoice state machine is complete and enforced: `draft → sent → viewed → paid → overdue → disputed` — no invalid state transitions allowed
+- Idempotency verified — generating invoices for the same period twice produces one invoice, not two
+- Failed invoice delivery retries via NDS with backoff — no silent drops
+- Every invoice generation writes a timestamped audit record with: workspace_id, client_id, period, amount, generated_by, and status
+- Overdue detection runs on schedule and transitions state correctly
+- Disputed invoices freeze payment processing until resolved
+
+---
+
+**STEP 3 — PAYROLL ENGINE HARDENING**
+
+Verify and harden every aspect of payroll:
+- Pay period boundaries are calculated correctly — no overlap, no gap between periods
+- Regular hours vs overtime calculated correctly per officer per period
+- Split shift handling verified — officer working two shifts in one day calculated as one continuous block for overtime purposes
+- All deduction types applied in correct legal order: pre-tax → 401k → statutory → post-tax → garnishments
+- Payroll run idempotency: a second run for the same period must be blocked at every layer — request header, ledger guard, and DB unique constraint
+- Pay stub generation verified for every officer in the run
+- Payroll correction flow verified — what happens when a run needs to be amended after submission
+- Every payroll mutation writes a complete audit record: officer_id, period, gross, deductions, net, run_id, processed_by, timestamp
+- Officers with zero confirmed hours are excluded cleanly — no zero-dollar stubs generated
+
+---
+
+**STEP 4 — QUICKBOOKS SYNC HARDENING**
+
+Verify and harden the QuickBooks integration:
+- OAuth token refresh flow — what happens when the token expires mid-sync
+- Bi-directional sync verified — CoAIleague → QuickBooks and QuickBooks → CoAIleague both produce correct records
+- Duplicate prevention — syncing the same invoice or payroll entry twice does not create duplicates in QuickBooks
+- Conflict resolution — when CoAIleague and QuickBooks disagree on an amount, which wins and why, and is it logged
+- Failed sync writes to a retry queue — no silent failures
+- Sync status visible in the platform — operators can see last sync time, last success, and any pending failures
+- Manual re-sync trigger available for operators
+- Sync audit log: every sync event records what was sent, what was received, any conflicts, and the resolution
+
+---
+
+**STEP 5 — RATE TABLE & DIFFERENTIAL PAY VERIFICATION**
+
+Verify that rate logic is airtight:
+- Base rate per officer per post is applied correctly
+- Overtime multiplier triggers at the correct hour threshold
+- Holiday rates apply on correct dates and do not apply on non-holidays
+- Differential rates (night shift, weekend, hazard) apply only when the qualifying condition is true
+- Post-specific rate overrides take precedence over base rates correctly
+- Rate changes effective-date correctly — a rate change mid-period applies only to shifts after the effective date
+- No shift can be processed with a null or zero rate — must flag and block
+
+---
+
+**STEP 6 — BILLING TRIGGERS & SUBSCRIPTION HARDENING**
+
+Verify platform subscription billing is airtight:
+- Stripe billing triggers fire correctly on subscription creation, renewal, upgrade, downgrade, and cancellation
+- Failed payment handling — retry logic, dunning sequence, account suspension trigger
+- Subscription state machine enforced: `active → past_due → suspended → cancelled` — no invalid transitions
+- Proration calculated correctly on mid-cycle plan changes
+- Every billing event writes an audit record
+- Webhook signature verification confirmed — Stripe webhooks validated before processing
+- Idempotency on all webhook handlers — replayed webhooks do not double-process
+
+---
+
+**STEP 7 — FINANCIAL AUDIT TRAIL COMPLETENESS**
+
+Every financial mutation in the system must have a corresponding audit record. Run a sweep:
+- Query every financial table (invoices, payroll_runs, payroll_entries, payments, billing_events, sync_logs)
+- For each table, confirm that every insert and update produces an audit_log entry with: entity_type, entity_id, action, before_state, after_state, actor_id, workspace_id, timestamp
+- Flag any financial table that has mutations without audit entries
+- Confirm audit records are immutable — no update or delete permitted on audit_log rows
+- Confirm audit log is accessible to org_owner and platform staff but not editable by anyone
+
+---
+
+**STEP 8 — FINANCIAL ROUTE SECURITY AUDIT**
+
+Every financial endpoint must be locked:
+- All invoice, payroll, and billing routes require authentication
+- Role guards verified — officers cannot access payroll runs, clients cannot access payroll data, managers cannot access platform billing
+- Workspace isolation confirmed on every financial query — no cross-workspace financial data accessible
+- Rate limiting applied to financial endpoints — no bulk scraping of financial records
+- Input validation on every financial write — no null amounts, no negative rates, no future-dated payments accepted without explicit flag
+
+---
+
+**STEP 9 — FINANCIAL FAILURE MODE TESTING**
+
+Test every failure scenario:
+- Invoice generation fails mid-run — does it roll back cleanly or leave partial records
+- Payroll run crashes after calculating but before writing stubs — is the state recoverable
+- QuickBooks sync fails mid-batch — does it resume from the last successful record or restart from scratch
+- NDS fails to deliver an invoice — does the invoice remain in sent state or revert to draft
+- Stripe webhook arrives twice — does the second webhook duplicate the billing event
+- Database write fails during a payroll mutation — is the transaction rolled back atomically
+
+For each scenario: document the current behavior, fix if incorrect, and confirm the correct recovery path.
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 11 is marked complete:
+- Check 1: Financial system inventory complete — every file with financial logic identified
+- Check 2: Invoice state machine enforced — no invalid transitions possible
+- Check 3: Invoice generation idempotent — same period run twice produces one invoice
+- Check 4: Payroll run idempotent — triple-layer block confirmed active
+- Check 5: Payroll correction flow works without corrupting original run records
+- Check 6: QuickBooks sync has retry queue and audit log for every sync event
+- Check 7: All rate types (base, overtime, differential, holiday, post-specific) calculate correctly against known test cases
+- Check 8: Stripe webhook handlers verified idempotent
+- Check 9: Every financial table has complete audit trail coverage — zero untracked mutations
+- Check 10: All financial routes confirmed auth-gated, workspace-scoped, and rate-limited
+- Check 11: All 6 failure scenarios have correct recovery behavior documented and verified
+- Check 12: Server starts clean with zero TypeScript errors across all financial files
+
+Do not mark Phase 11 complete until all 12 checks pass. Report findings step by step before beginning any fixes.
+
+---
+
+Paste that and hold the same discipline — findings first, full picture assembled, then fixes. This is the most consequential phase in the entire build. Take the time it needs.

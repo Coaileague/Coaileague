@@ -1,0 +1,427 @@
+This is a well-documented gap analysis. Before the prompt, here's the real picture in one paragraph:
+
+**Trinity's brain is built. Her hands are tied.** The intelligence layer, the routing, the triad, the prompts — all there. But the action surface is mostly read-only or incomplete. She can see everything and do almost nothing autonomously. Every critical financial workflow — invoices, QB sync, email, reports, tax — stops at the last mile. That's not an AI problem. That's a wiring problem. Every gap here is a missing bridge between a service that already exists and Trinity's action registry. The code is written. It's just not connected.
+
+Here's the prompt:
+
+---
+
+# TRINITY GAP CLOSURE — FULL ACTION SURFACE WIRING DIRECTIVE
+## CoAIleague · Priority Implementation · Send to Replit Developer
+
+---
+
+## THE CORE RULE FOR EVERY GAP BELOW
+
+**Do not rewrite services. Do not rebuild logic. The services exist and work.**
+Your only job is to wire each existing service into Trinity's action registry so she can call them.
+
+Pattern for every gap:
+```
+1. Find the existing service function
+2. Register a new Trinity action that calls it
+3. Pass orgId and relevant params from Trinity's session context
+4. Return structured output Trinity can read and respond from
+5. Log the action in Trinity's audit trail
+```
+
+If you rebuild instead of wire, you are doing it wrong.
+
+---
+
+## 🔴 CRITICAL — FIX THESE FIRST, NOTHING ELSE MATTERS UNTIL DONE
+
+---
+
+### GAP 1 — CONFIRM CLAUDE AND OPENAI API KEYS ARE LIVE
+
+**Problem:** Triad is Gemini-only in practice. Claude and OpenAI silently fail if keys aren't set.
+
+**Fix:**
+```typescript
+// Add to server startup health check — run before anything else
+async function verifyTriadHealth() {
+  const results = {
+    gemini: !!process.env.GEMINI_API_KEY,
+    claude: !!(process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY),
+    openai: !!process.env.OPENAI_API_KEY
+  }
+  
+  console.log('TRINITY TRIAD STATUS:', results)
+  
+  if (!results.claude) {
+    console.error('⚠️ CLAUDE KEY MISSING — validation layer inactive')
+  }
+  if (!results.openai) {
+    console.error('⚠️ OPENAI KEY MISSING — fallback layer inactive')  
+  }
+  
+  // Store in a globally accessible triad status object
+  // Trinity reads this before routing to know which models are available
+  return results
+}
+```
+
+**Also wire explicit routing actions:**
+```typescript
+// Register these as callable Trinity internal actions
+'ai.route_to_claude_judge'    // forces compliance validation through Claude
+'ai.route_to_openai_fallback' // forces edge case to OpenAI
+'ai.triad_health_check'       // returns which models are live right now
+```
+
+Trinity should call `ai.route_to_claude_judge` automatically any time:
+- A legal/compliance question is answered
+- A payroll calculation is produced
+- A schedule is generated with potential OT flags
+- Any answer touches Texas law, labor law, or licensing
+
+---
+
+### GAP 2 — WIRE INVOICE LAST MILE
+
+**Problem:** Invoices draft but never send. The entire financial output chain stops at draft.
+
+**Existing functions to wire — do not rewrite:**
+```typescript
+sendInvoice()              // → invoice.mark_sent
+sendInvoiceWithEmail()     // → invoice.send_email  ← MOST CRITICAL
+generateInvoicePdfBuffer() // → invoice.generate_pdf
+checkOverdueInvoices()     // → invoice.check_overdue
+getRevenueForecast()       // → finance.revenue_forecast
+```
+
+**Register these Trinity actions:**
+```typescript
+'invoice.send_email': async (params) => {
+  // calls sendInvoiceWithEmail(invoiceId, orgId)
+  // returns: { sent: true, invoiceId, clientEmail, pdfAttached, timestamp }
+}
+
+'invoice.send_bulk': async (params) => {
+  // loops sendInvoiceWithEmail for array of invoiceIds
+  // returns: { sent: n, failed: n, details: [] }
+}
+
+'invoice.check_overdue': async (params) => {
+  // calls checkOverdueInvoices(orgId)
+  // returns: { overdueCount, totalOverdueAmount, clients: [] }
+}
+
+'invoice.generate_pdf': async (params) => {
+  // calls generateInvoicePdfBuffer(invoiceId)
+  // returns: pdf buffer + download URL
+}
+
+'finance.revenue_forecast': async (params) => {
+  // calls getRevenueForecast(orgId, period)
+  // returns: { projectedRevenue, byClient, byMonth }
+}
+```
+
+**Trinity behavior after wiring:**
+- "Send March invoices to all clients" → Trinity calls `invoice.send_bulk`
+- "Who hasn't paid yet?" → Trinity calls `invoice.check_overdue`
+- "What's our revenue looking like next quarter?" → Trinity calls `finance.revenue_forecast`
+
+---
+
+### GAP 3 — WIRE EMAIL ORCHESTRATION
+
+**Problem:** `trinityEmailOrchestration.ts` has `runTrinityEmailOrchestration()` fully built. Zero Trinity actions call it.
+
+**Register these actions:**
+```typescript
+'email.send_single': async (params) => {
+  // { to, subject, body, orgId, type }
+  // type: 'invoice' | 'broadcast' | 'compliance_alert' | 'payroll_notice'
+}
+
+'email.send_broadcast': async (params) => {
+  // { recipients: [], subject, body, orgId }
+  // used for org-wide announcements
+}
+
+'email.schedule_followup': async (params) => {
+  // schedules a follow-up email for a future date
+  // { to, subject, body, sendAt, triggerId }
+}
+
+'email.get_status': async (params) => {
+  // returns sent/delivered/opened status via Resend webhooks
+}
+
+'email.run_orchestration': async (params) => {
+  // calls runTrinityEmailOrchestration() directly
+  // Trinity's master email workflow trigger
+}
+```
+
+**Trinity behavior after wiring:**
+- "Send overdue payment reminder to Heritage National Bank" → Trinity calls `email.send_single`
+- "Broadcast the new uniform policy to all staff" → Trinity calls `email.send_broadcast`
+- "Follow up with Pinnacle Tower on the unpaid invoice Friday" → Trinity calls `email.schedule_followup`
+
+---
+
+### GAP 4 — WIRE QUICKBOOKS CDC SYNC AS TRINITY ACTION
+
+**Problem:** QB sync is HTTP-only. Trinity cannot trigger a sync, run CDC, or review the conflict queue.
+
+**Existing routes to convert to Trinity actions:**
+```typescript
+// These HTTP routes need Trinity action equivalents
+POST /api/quickbooks/sync/initial   → 'qb.sync_initial'
+POST /api/quickbooks/sync/cdc       → 'qb.sync_cdc'        ← MOST CRITICAL
+POST /api/quickbooks/invoice/create → 'qb.create_invoice'
+GET  /api/quickbooks/review-queue   → 'qb.review_conflicts'
+```
+
+**Register these Trinity actions:**
+```typescript
+'qb.sync_cdc': async (params) => {
+  // Calls the CDC endpoint internally — bi-directional incremental sync
+  // returns: { synced: n, conflicts: n, resolved: n, timestamp }
+}
+
+'qb.sync_initial': async (params) => {
+  // Full initial sync — use only when onboarding or after major data change
+  // returns: { employees: n, invoices: n, payments: n }
+}
+
+'qb.review_conflicts': async (params) => {
+  // Returns staged conflict queue for Trinity to present to owner
+  // Trinity should present each conflict with a recommended resolution
+}
+
+'qb.create_invoice': async (params) => {
+  // Creates invoice directly in QB from CoAIleague invoice record
+}
+
+'qb.sync_status': async (params) => {
+  // Returns last sync time, next scheduled sync, any errors
+}
+```
+
+**Trinity behavior after wiring:**
+- "Sync QuickBooks now" → Trinity calls `qb.sync_cdc`
+- "Are there any QB conflicts I need to review?" → Trinity calls `qb.review_conflicts`
+- "Push last month's invoices to QuickBooks" → Trinity calls `qb.create_invoice` in loop
+
+---
+
+## 🟠 HIGH PRIORITY — WIRE WITHIN 48 HOURS OF CRITICAL FIXES
+
+---
+
+### GAP 5 — WIRE REPORTING ACTIONS
+
+**Existing service: `timesheetReportService.ts`**
+
+```typescript
+'report.timesheet': async (params) => {
+  // calls generateTimesheetReport(orgId, startDate, endDate)
+  // returns: structured timesheet breakdown, downloadable
+}
+
+'report.weekly': async (params) => {
+  // calls getWeeklyReport(orgId, weekOf)
+}
+
+'report.monthly': async (params) => {
+  // calls getMonthlyReport(orgId, month, year)
+}
+
+'report.compliance': async (params) => {
+  // calls getComplianceReport(orgId)
+  // returns: hours vs contracted, flagged employees
+}
+
+'report.payroll_summary': async (params) => {
+  // Payroll breakdown by period, exportable
+}
+```
+
+---
+
+### GAP 6 — EXPAND ANALYTICS SURFACE
+
+**Existing service: `aiAnalyticsEngine.ts`**
+
+```typescript
+'analytics.revenue_forecast'      // project billing from scheduled shifts
+'analytics.client_health_score'   // at-risk client detection
+'analytics.employee_performance'  // individual officer metrics
+'analytics.compliance_rate'       // cert compliance across workforce
+'analytics.overtime_risk'         // flag employees approaching 40hr threshold
+'analytics.shift_profitability'   // margin analysis by site/client
+```
+
+Each should return structured JSON Trinity can interpret and explain in natural language to the owner.
+
+---
+
+### GAP 7 — WIRE CONTRACT WRITE ACTIONS
+
+**Current state:** Trinity can only read contracts.
+
+```typescript
+'contracts.create_from_client': async (params) => {
+  // generates contract from client record + template
+}
+
+'contracts.send_for_signature': async (params) => {
+  // sends e-signature request
+}
+
+'contracts.mark_executed': async (params) => {
+  // marks contract complete, triggers onboarding workflow
+}
+
+'contracts.generate_from_template': async (params) => {
+  // { templateId, clientId, terms }
+}
+```
+
+---
+
+## 🟡 MEDIUM PRIORITY — WIRE WITHIN 1 WEEK
+
+---
+
+### GAP 8 — HRIS BIDIRECTIONAL PUSH
+
+```typescript
+'hris.push_new_hire': async (params) => {}
+'hris.push_termination': async (params) => {}
+'hris.push_employee_update': async (params) => {}
+// calls existing HRIS provider SDK with employee delta
+```
+
+---
+
+### GAP 9 — EXPAND BULK OPERATIONS
+
+```typescript
+'bulk.import_shifts': async (params) => {}
+'bulk.import_clients': async (params) => {}
+'bulk.import_time_entries': async (params) => {}
+'bulk.export_payroll': async (params) => {}
+'bulk.export_timesheet': async (params) => {}
+// All call existing import/export service functions
+```
+
+---
+
+### GAP 10 — WIRE TAX SERVICE
+
+```typescript
+'tax.estimate_quarterly': async (params) => {
+  // calls taxFilingAssistanceService — quarterly liability estimate
+}
+
+'tax.generate_941_draft': async (params) => {
+  // calls taxFormGeneratorService
+}
+
+'tax.ytd_employer_summary': async (params) => {
+  // YTD FICA, FUTA, SUI summary
+}
+
+'tax.flag_w2_variances': async (params) => {
+  // employees where W-2 projection differs from expected
+}
+```
+
+---
+
+### GAP 11 — WIRE AGENT-TO-AGENT PROTOCOL
+
+```typescript
+// Wire the existing agentToAgentProtocol singleton
+'agent.invoke_payroll_bot': async (params) => {}
+'agent.invoke_scheduling_bot': async (params) => {}
+'agent.invoke_compliance_bot': async (params) => {}
+'agent.invoke_notification_bot': async (params) => {}
+
+// Trinity calls these when domain is outside her general scope
+// Each bot has its own specialized prompt configuration
+// Responses route back through Trinity before delivery to user
+```
+
+---
+
+## 🟢 LOWER PRIORITY — WIRE WHEN ABOVE ARE COMPLETE
+
+---
+
+### GAP 12 — LIVE MONITORING
+
+```typescript
+'live.watch_clock_ins': async (params) => {
+  // subscribes to realTimeBridge WebSocket events
+  // alerts Trinity when clock-in missed for a scheduled officer
+}
+
+'live.monitor_coverage': async (params) => {
+  // alerts on uncovered shifts in real time
+}
+
+'live.alert_on_absence': async (params) => {
+  // triggers when scheduled officer hasn't clocked in 15min after shift start
+}
+```
+
+---
+
+### GAP 13 — BROWSER AUTOMATION
+
+```typescript
+'browser.capture_screenshot': async (params) => {
+  // calls browserAutomationTool with Playwright
+  // { url, selector?, fullPage? }
+  // returns: image buffer Trinity can analyze
+}
+
+'browser.verify_schedule_render': async (params) => {
+  // captures schedule view and returns to Trinity for visual verification
+}
+```
+
+---
+
+## VERIFICATION CHECKLIST
+
+Before marking any gap closed, verify this for each action:
+
+```
+[ ] Action is registered in Trinity's action registry by name
+[ ] Action receives orgId from session context — never hardcoded
+[ ] Action returns structured JSON, not raw service output
+[ ] Token usage logged if action calls an AI model
+[ ] Action appears in Trinity's audit log
+[ ] Trinity can call it by name in a test prompt and get a real response
+[ ] Error handling exists — action fails gracefully, Trinity reports why
+```
+
+---
+
+## THE TEST PROMPT TO VERIFY ALL GAPS CLOSED
+
+Once the developer says they're done, send Trinity exactly this:
+
+```
+"Trinity — run a full platform health check. 
+Send the March invoices to all clients with outstanding balances. 
+Run a QuickBooks CDC sync. 
+Generate last month's timesheet compliance report. 
+Check for any employees approaching overtime this week. 
+Tell me our revenue forecast for the next 30 days. 
+Flag any compliance expirations in the next 60 days."
+```
+
+If Trinity completes all seven tasks in one session with real output — every critical and high priority gap is closed. If any step fails or returns "I can't do that" — that gap is still open.
+
+---
+
+*CoAIleague · Trinity Gap Closure Directive · March 2026 · Send to Replit as-is*

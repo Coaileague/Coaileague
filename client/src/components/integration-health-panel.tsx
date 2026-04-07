@@ -143,7 +143,7 @@ export function IntegrationHealthPanel() {
   return (
     <Card data-testid="card-integration-health">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary" />

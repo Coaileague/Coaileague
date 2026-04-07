@@ -1,3 +1,6 @@
+/** Onboarding checklist page — accessible at /onboarding (requires auth).
+ *  Complements the <OnboardingWizard /> modal overlay by providing a full-page
+ *  progress view and step-by-step guidance for new workspace owners. */
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +22,8 @@ import {
   PartyPopper,
   Loader2
 } from 'lucide-react';
-import { CoAIleagueLogo } from '@/components/coaileague-logo';
+import { UnifiedBrandLogo } from '@/components/unified-brand-logo';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface OnboardingTask {
   id: string;
@@ -64,9 +68,9 @@ interface OnboardingProgress {
 function getCategoryColor(category: string): string {
   switch (category) {
     case 'setup': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400';
-    case 'configuration': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400';
+    case 'configuration': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400';
     case 'engagement': return 'bg-green-500/10 text-green-600 dark:text-green-400';
-    case 'billing': return 'bg-orange-500/10 text-orange-600 dark:text-orange-400';
+    case 'billing': return 'bg-teal-500/10 text-teal-600 dark:text-teal-400';
     default: return 'bg-muted text-muted-foreground';
   }
 }
@@ -122,7 +126,7 @@ function TaskItem({
             {getCategoryLabel(task.category)}
           </Badge>
           {task.isAiGenerated && (
-            <Badge variant="secondary" className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400">
+            <Badge variant="secondary" className="bg-gradient-to-r from-cyan-500/10 to-blue-600/10 text-cyan-600 dark:text-cyan-400">
               <Sparkles className="w-3 h-3 mr-1" />
               AI
             </Badge>
@@ -270,7 +274,7 @@ function RewardCard({
           <Button 
             onClick={onApply}
             disabled={isApplying}
-            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+            className="bg-gradient-to-r from-yellow-500 to-orange-500"
             data-testid="button-apply-reward"
           >
             {isApplying ? (
@@ -365,7 +369,7 @@ export default function OnboardingPage() {
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <div className="flex justify-center mb-6">
-              <CoAIleagueLogo width={200} height={50} showTagline={false} />
+              <UnifiedBrandLogo size="lg" showTagline={false} />
             </div>
             <h1 className="text-2xl font-bold mb-2">Welcome to CoAIleague</h1>
             <p className="text-muted-foreground mb-6">
@@ -394,25 +398,26 @@ export default function OnboardingPage() {
   const requiredTasks = progress.tasks.filter(t => t.requiredForReward);
   const optionalTasks = progress.tasks.filter(t => !t.requiredForReward);
   
+  const trialBadge = progress.daysUntilTrialExpires !== null ? (
+    <Badge variant="secondary" className="text-sm py-1 px-3">
+      <Clock className="w-4 h-4 mr-1" />
+      {progress.daysUntilTrialExpires} days left in trial
+    </Badge>
+  ) : undefined;
+
+  const pageConfig: CanvasPageConfig = {
+    id: 'onboarding',
+    title: 'Welcome to CoAIleague',
+    subtitle: 'Complete these tasks to get the most out of your platform',
+    category: 'workspace',
+    headerActions: trialBadge,
+  };
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Welcome to CoAIleague</h1>
-            <p className="text-muted-foreground">Complete these tasks to get the most out of your platform</p>
-          </div>
-          {progress.daysUntilTrialExpires !== null && (
-            <Badge variant="secondary" className="text-sm py-1 px-3">
-              <Clock className="w-4 h-4 mr-1" />
-              {progress.daysUntilTrialExpires} days left in trial
-            </Badge>
-          )}
-        </div>
-        
+    <CanvasHubPage config={pageConfig}>
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between gap-2 mb-4">
               <div>
                 <h3 className="font-semibold text-lg">Overall Progress</h3>
                 <p className="text-sm text-muted-foreground">
@@ -428,7 +433,7 @@ export default function OnboardingPage() {
               </div>
             </div>
             <Progress value={progress.completionPercent} className="h-3" />
-            <div className="flex justify-between mt-2 text-sm text-muted-foreground">
+            <div className="flex justify-between gap-2 mt-2 text-sm text-muted-foreground">
               <span>{progress.completionPercent}% complete</span>
               {progress.isRewardUnlocked && (
                 <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
@@ -492,7 +497,6 @@ export default function OnboardingPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }

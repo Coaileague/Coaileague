@@ -1,139 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ChatMessage } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useWebSocketBus } from "@/providers/WebSocketProvider";
 
-const MAX_RETRIES = 5; // Maximum reconnection attempts before giving up
-
-// ============================================================================
-// GURU MODE: Module-Level WebSocket Singleton Manager
-// Prevents connection churn caused by React StrictMode and component remounts
-// ============================================================================
-interface GlobalWebSocketState {
-  socket: WebSocket | null;
-  conversationId: string | null;
-  userId: string | null;
-  isConnecting: boolean;
-  lastConnectAttempt: number;
-  subscribers: Set<() => void>;
-}
-
-const globalWSState: GlobalWebSocketState = {
-  socket: null,
-  conversationId: null,
-  userId: null,
-  isConnecting: false,
-  lastConnectAttempt: 0,
-  subscribers: new Set(),
-};
-
-// Subscribe to global state changes
-function subscribeToGlobalWS(callback: () => void): () => void {
-  globalWSState.subscribers.add(callback);
-  return () => globalWSState.subscribers.delete(callback);
-}
-
-// Get the global WebSocket
-function getGlobalSocket(): WebSocket | null {
-  return globalWSState.socket;
-}
-
-// Check if global socket is ready for a specific conversation
-function isGlobalSocketReadyFor(userId: string, conversationId: string): boolean {
-  if (!globalWSState.socket) return false;
-  if (globalWSState.userId !== userId) return false;
-  if (globalWSState.conversationId !== conversationId) return false;
-  const state = globalWSState.socket.readyState;
-  return state === WebSocket.OPEN || state === WebSocket.CONNECTING;
-}
-
-// Create or return existing global socket
-function getOrCreateGlobalSocket(userId: string, conversationId: string): WebSocket | null {
-  // CRITICAL GUARD: Never create connection without valid conversationId
-  if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
-    console.warn('[TRINITY-WS] Refusing to connect without valid conversationId:', conversationId);
-    return null;
-  }
-  
-  // If we already have a valid connection for this user/conversation, return it
-  if (isGlobalSocketReadyFor(userId, conversationId)) {
-    console.log('[TRINITY-WS] Reusing existing global socket');
-    return globalWSState.socket;
-  }
-  
-  // Rate limit connection attempts
-  const now = Date.now();
-  if (now - globalWSState.lastConnectAttempt < 1000) {
-    console.log('[TRINITY-WS] Rate limited, waiting...');
-    return globalWSState.socket;
-  }
-  
-  // If we're already connecting, don't start another connection
-  if (globalWSState.isConnecting) {
-    console.log('[TRINITY-WS] Already connecting, skipping');
-    return globalWSState.socket;
-  }
-  
-  // Close existing socket if switching user/conversation
-  if (globalWSState.socket) {
-    const state = globalWSState.socket.readyState;
-    if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) {
-      console.log('[TRINITY-WS] Closing existing socket for new connection');
-      globalWSState.socket.close();
-    }
-  }
-  
-  // Create new connection
-  console.log('[TRINITY-WS] Creating NEW global socket for:', userId, conversationId);
-  globalWSState.isConnecting = true;
-  globalWSState.lastConnectAttempt = now;
-  globalWSState.userId = userId;
-  globalWSState.conversationId = conversationId;
-  
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const wsHost = window.location.host || 
-    (window.location.port 
-      ? `${window.location.hostname}:${window.location.port}` 
-      : window.location.hostname);
-  const wsUrl = `${protocol}://${wsHost}/ws/chat`;
-  
-  try {
-    const ws = new WebSocket(wsUrl);
-    globalWSState.socket = ws;
-    
-    ws.onopen = () => {
-      console.log('[TRINITY-WS] Connection Stabilized');
-      globalWSState.isConnecting = false;
-      globalWSState.subscribers.forEach(cb => cb());
-    };
-    
-    ws.onclose = () => {
-      globalWSState.isConnecting = false;
-      globalWSState.subscribers.forEach(cb => cb());
-    };
-    
-    ws.onerror = () => {
-      globalWSState.isConnecting = false;
-    };
-    
-    return ws;
-  } catch (err) {
-    console.error('[TRINITY-WS] Failed to create socket:', err);
-    globalWSState.isConnecting = false;
-    return null;
-  }
-}
-// ============================================================================
-
-// IRC-style command ID generator
 function generateCommandId(): string {
   return `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Helper to create properly typed system messages
 function createSystemMessage(message: string, conversationId: string): ChatMessage {
   return {
     id: `system-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     createdAt: new Date(),
+    updatedAt: new Date(),
     isEncrypted: false,
     encryptionIv: null,
     conversationId,
@@ -167,66 +45,59 @@ function createSystemMessage(message: string, conversationId: string): ChatMessa
     urgencyLevel: null,
     sentimentAnalyzedAt: null,
     shouldEscalate: false,
-  };
+    workspaceId: null,
+    isDeletedForEveryone: false,
+    deletedForEveryoneAt: null,
+    deletedForEveryoneBy: null,
+  } as ChatMessage;
 }
 
 interface OnlineUser {
   id: string;
   name: string;
   role: string;
+  platformRole?: string;
   status: 'online' | 'away' | 'busy';
   userType: 'staff' | 'subscriber' | 'org_user' | 'guest';
 }
 
 interface WebSocketMessage {
-  type: 'conversation_joined' | 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update' | 'voice_granted' | 'voice_removed' | 'command_ack' | 'read_receipt' | 'participants_update' | 'escalation_redirect';
+  type: 'conversation_joined' | 'conversation_history' | 'new_message' | 'private_message' | 'user_typing' | 'error' | 'system_message' | 'user_list_update' | 'status_change' | 'kicked' | 'secure_request' | 'spectator_released' | 'secure_data_received' | 'banner_update' | 'voice_granted' | 'voice_pending' | 'voice_removed' | 'command_ack' | 'read_receipt' | 'participants_update' | 'escalation_redirect' | 'ticket_closed' | 'ws_authenticated' | 'ws_auth_required';
   messages?: ChatMessage[];
   message?: ChatMessage | string;
   userId?: string;
   isTyping?: boolean;
   typingUserName?: string;
   typingUserIsStaff?: boolean;
-  // Read receipt fields
   messageId?: string;
   readBy?: string;
   readByName?: string;
   readAt?: string;
-  // Participant fields
   participants?: OnlineUser[];
   conversationId?: string;
-  // HelpDesk error fields
   requiresTicket?: boolean;
   roomStatus?: string;
   statusMessage?: string;
   temporaryError?: boolean;
-  // User list
   users?: OnlineUser[];
   count?: number;
-  // Status updates
   status?: 'online' | 'away' | 'busy';
   userName?: string;
-  // Kick
   reason?: string;
-  // Secure request fields
   requestType?: string;
   requestedBy?: string;
-  // Spectator/release fields
   releasedBy?: string;
-  // Secure data fields
   fromUser?: string;
   fromUserId?: string;
   data?: any;
-  // Banner update fields
   bannerMessage?: string;
   staffName?: string;
-  // IRC-style command acknowledgment fields
   commandId?: string;
   action?: string;
   success?: boolean;
   error?: string;
   targetUserId?: string;
   targetName?: string;
-  // Escalation redirect fields
   targetRoom?: string;
   ticketId?: string;
 }
@@ -239,33 +110,37 @@ interface ConnectionFailedCallback {
   (attemptCount: number): void;
 }
 
-// Helper function to check if an event belongs to the active conversation
 function isForActiveConversation(
   activeConversationId: string,
-  data: WebSocketMessage,
+  requestedId: string | null,
+  joinedId: string | null,
+  data: WebSocketMessage | { conversationId?: string },
   message?: ChatMessage | string
 ): boolean {
-  // For message objects, prefer message.conversationId
+  const acceptableIds = new Set<string>();
+  if (activeConversationId) acceptableIds.add(activeConversationId);
+  if (requestedId) acceptableIds.add(requestedId);
+  if (joinedId) acceptableIds.add(joinedId);
+  if (acceptableIds.size === 0) return false;
+
   if (message && typeof message !== 'string' && 'conversationId' in message) {
-    return message.conversationId === activeConversationId;
+    return acceptableIds.has(message.conversationId);
   }
-  // For metadata events, check data.conversationId
   if (data.conversationId) {
-    return data.conversationId === activeConversationId;
+    return acceptableIds.has(data.conversationId);
   }
-  // If no conversationId is present, reject to prevent cross-room bleed (strict security)
-  console.warn('[Chat Security] Event received without conversationId - rejecting to prevent cross-room data bleed', data.type);
   return false;
 }
 
 export function useChatroomWebSocket(
-  userId: string | undefined, 
+  userId: string | undefined,
   userName: string = 'User',
-  conversationId: string = 'main-chatroom-workforceos', // Default to main room for backward compatibility
+  conversationId: string = 'main-chatroom-workforceos',
   onSecureRequest?: SecureRequestCallback,
   onConnectionFailed?: ConnectionFailedCallback
 ) {
   const { toast } = useToast();
+  const bus = useWebSocketBus();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -275,706 +150,783 @@ export function useChatroomWebSocket(
   const [customBannerMessage, setCustomBannerMessage] = useState<string | null>(null);
   const [justGotVoice, setJustGotVoice] = useState(false);
   const [isSilenced, setIsSilenced] = useState(false);
-  // Track the resolved conversation UUID from backend (may differ from slug parameter)
   const [resolvedConversationId, setResolvedConversationId] = useState<string>(conversationId);
-  // Premium chat features
   const [readReceipts, setReadReceipts] = useState<Map<string, { readBy: string; readByName: string; readAt: Date }>>(new Map());
   const [conversationParticipants, setConversationParticipants] = useState<Map<string, OnlineUser[]>>(new Map());
-  // HelpDesk access control state
   const [requiresTicket, setRequiresTicket] = useState(false);
   const [roomStatus, setRoomStatus] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [temporaryError, setTemporaryError] = useState(false);
+  const [ticketClosed, setTicketClosed] = useState(false);
+  const [ticketClosedReason, setTicketClosedReason] = useState<string | null>(null);
+  const [isInTriage, setIsInTriage] = useState(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const reconnectAttemptsRef = useRef(0);
-  const isConnectingRef = useRef(false); // Track if connection is in progress
-  const isConnectedRef = useRef(false); // Synchronous tracking to prevent infinite re-render loops
-  const isManualSwitchRef = useRef(false); // Track if we're manually switching conversations
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const typingTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const lastConnectAttemptRef = useRef<number>(0);
-  const resolvedConversationIdRef = useRef<string>(conversationId); // Synchronous tracking for security checks
-  const MIN_RECONNECT_INTERVAL = 1000; // Minimum 1 second between attempts
-  const lastConnectedConversationRef = useRef<string | null>(null); // Track last connected conversation to prevent duplicate connections
+  const resolvedConversationIdRef = useRef<string>(conversationId);
+  const conversationIdRef = useRef<string>(conversationId);
+  const userIdRef = useRef<string | undefined>(userId);
+  const requestedConversationIdRef = useRef<string | null>(null);
+  const joinedConversationIdRef = useRef<string | null>(null);
+  const isJoinedRef = useRef(false);
+  const lastConnectedConversationRef = useRef<string | null>(null);
+  const hasInitializedRef = useRef(false);
+  const onSecureRequestRef = useRef(onSecureRequest);
+  const onConnectionFailedRef = useRef(onConnectionFailed);
 
-  const connect = useCallback(() => {
-    // CRITICAL: Guard against missing userId or invalid conversationId
-    if (!userId) return;
-    if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
-      console.warn('[TRINITY-WS] Skipping connect - waiting for valid conversationId');
-      return;
-    }
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+    userIdRef.current = userId;
+  }, [conversationId, userId]);
 
-    // GURU MODE: Check if global singleton already has a valid connection
-    if (isGlobalSocketReadyFor(userId, conversationId)) {
-      const existingSocket = getGlobalSocket();
-      if (existingSocket) {
-        console.log('[TRINITY-WS] Reusing singleton socket from global state');
-        wsRef.current = existingSocket;
-        // If already open, only update state if not already connected (prevents infinite re-render loop)
-        if (existingSocket.readyState === WebSocket.OPEN) {
-          if (!isConnectedRef.current) {
-            isConnectedRef.current = true;
-            setIsConnected(true);
-            setError(null);
-          }
-        }
-        return;
-      }
-    }
+  useEffect(() => {
+    onSecureRequestRef.current = onSecureRequest;
+    onConnectionFailedRef.current = onConnectionFailed;
+  }, [onSecureRequest, onConnectionFailed]);
 
-    // Use global singleton to create/get socket
-    const ws = getOrCreateGlobalSocket(userId, conversationId);
-    if (!ws) {
-      console.log('[TRINITY-WS] Failed to get global socket');
-      return;
-    }
-    
-    // If this is the same socket we already have, skip setup
-    if (wsRef.current === ws) {
-      console.log('[TRINITY-WS] Same socket instance, skipping handler setup');
-      return;
-    }
-    
-    console.log('[TRINITY-WS] Setting up handlers on global socket');
-    wsRef.current = ws;
-    isConnectingRef.current = true;
+  const checkFilter = useCallback((data: WebSocketMessage | { conversationId?: string }, message?: ChatMessage | string): boolean => {
+    return isForActiveConversation(
+      resolvedConversationIdRef.current,
+      requestedConversationIdRef.current,
+      joinedConversationIdRef.current,
+      data,
+      message
+    );
+  }, []);
 
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      isConnectedRef.current = true;
+  const sendJoin = useCallback(() => {
+    const cId = conversationIdRef.current;
+    const uId = userIdRef.current;
+    if (!cId || !uId || cId === '' || cId === 'undefined' || cId === 'null') return;
+
+    isJoinedRef.current = false;
+    requestedConversationIdRef.current = cId;
+    bus.send({
+      type: 'join_conversation',
+      conversationId: cId,
+      userId: uId,
+    });
+  }, [bus]);
+
+  useEffect(() => {
+    const unsubs: (() => void)[] = [];
+
+    unsubs.push(bus.subscribe('__ws_connected', () => {
       setIsConnected(true);
       setError(null);
-      reconnectAttemptsRef.current = 0;
-      isConnectingRef.current = false; // Connection established
-      isManualSwitchRef.current = false; // Reset flag after successful connection
+      sendJoin();
+    }));
 
-      // Join the specified conversation
-      ws.send(JSON.stringify({
-        type: 'join_conversation',
-        conversationId: conversationId,
-        userId: userId,
-      }));
-    };
+    unsubs.push(bus.subscribe('__ws_disconnected', () => {
+      setIsConnected(false);
+      joinedConversationIdRef.current = null;
+      requestedConversationIdRef.current = null;
+      isJoinedRef.current = false;
+    }));
 
-    ws.onmessage = (event) => {
-      try {
-        const data: WebSocketMessage = JSON.parse(event.data);
+    if (bus.isConnected()) {
+      setIsConnected(true);
+      sendJoin();
+    }
 
-        switch (data.type) {
-            case 'conversation_joined':
-              // Backend acknowledged successful join with resolved conversation UUID
-              console.log('✅ Join acknowledged:', data.conversationId);
-              // Update local conversation ID to the resolved UUID from backend
-              // Use BOTH ref (synchronous) and state (for UI) to handle race conditions
-              if (data.conversationId) {
-                resolvedConversationIdRef.current = data.conversationId; // Synchronous for immediate security checks
-                setResolvedConversationId(data.conversationId); // Async for UI reactivity
-              }
-              // Stop any reconnection attempts - we're successfully joined
-              reconnectAttemptsRef.current = 0;
-              if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
-                reconnectTimeoutRef.current = undefined;
-              }
+    unsubs.push(bus.subscribeAll((data: any) => {
+      switch (data.type) {
+        case 'conversation_joined':
+          if (data.conversationId) {
+            resolvedConversationIdRef.current = data.conversationId;
+            setResolvedConversationId(data.conversationId);
+            joinedConversationIdRef.current = data.conversationId;
+            isJoinedRef.current = true;
+            setError(null);
+          }
+          break;
+
+        case 'conversation_history': {
+          const activeConvId = resolvedConversationIdRef.current;
+          if (data.messages && Array.isArray(data.messages)) {
+            const filtered = data.messages
+              .filter((msg: ChatMessage) => isForActiveConversation(activeConvId, requestedConversationIdRef.current, joinedConversationIdRef.current, data, msg))
+              .map((msg: ChatMessage) => ({
+                ...msg,
+                createdAt: msg.createdAt instanceof Date ? msg.createdAt : (msg.createdAt ? new Date(msg.createdAt) : new Date()),
+              }));
+            setMessages(filtered);
+          } else {
+            setMessages([]);
+          }
+          break;
+        }
+
+        case 'new_message':
+          if (data.message && typeof data.message !== 'string') {
+            if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data, data.message as ChatMessage)) {
               break;
+            }
+            const newMsg = data.message as ChatMessage;
+            setMessages((prev) => {
+              if (newMsg.id && prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          }
+          break;
 
-            case 'conversation_history':
-              // Load conversation history for the active room
-              // CRITICAL: Use ref (synchronous) not state (async) to avoid race condition
-              const activeConvId = resolvedConversationIdRef.current;
-              console.log('📜 Received conversation_history:', {
-                totalMessages: data.messages?.length || 0,
-                conversationId: data.conversationId,
-                activeConversationId: activeConvId,
-                firstMessage: data.messages?.[0],
+        case 'private_message':
+          if (data.message && typeof data.message !== 'string') {
+            if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data, data.message as ChatMessage)) {
+              break;
+            }
+            const privMsg = data.message as ChatMessage;
+            setMessages((prev) => {
+              if (privMsg.id && prev.some(m => m.id === privMsg.id)) return prev;
+              return [...prev, privMsg];
+            });
+          }
+          break;
+
+        case 'ws_authenticated':
+          // Server confirmed auth (either from session or token fallback).
+          // Clear any transient auth/connection errors and retry join if needed.
+          setError(null);
+          if (!isJoinedRef.current && requestedConversationIdRef.current) {
+            sendJoin();
+          }
+          break;
+
+        case 'error': {
+          const errorMessage = typeof data.message === 'string' ? data.message : 'An error occurred';
+
+          if ((data as any).errorType === 'VOICE_REQUIRED') {
+            setIsSilenced(true);
+            toastRef.current({
+              title: 'Voice Required',
+              description: 'Please wait for HelpAI to grant you voice before sending messages.',
+              variant: 'default',
+            });
+            break;
+          }
+
+          // Ignore transient auth errors emitted during WebSocket handshake — the
+          // WebSocketProvider handles re-authentication; surfacing these to the UI
+          // as a persistent banner is misleading.
+          const isTransientAuthError =
+            errorMessage.includes('Authentication required') ||
+            errorMessage.includes('Please log in') ||
+            errorMessage.includes('Unauthorized') ||
+            (data as any).requiresAuth === true;
+
+          if (isTransientAuthError) {
+            break;
+          }
+
+          setError(errorMessage);
+
+          if (data.requiresTicket) setRequiresTicket(true);
+          if (data.roomStatus) setRoomStatus(data.roomStatus);
+          if (data.statusMessage) setStatusMessage(data.statusMessage);
+          if (data.temporaryError) setTemporaryError(true);
+          break;
+        }
+
+        case 'system_message':
+          if (data.message && typeof data.message === 'string') {
+            if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) {
+              break;
+            }
+            const msgText: string = data.message;
+            const messageConvId = data.conversationId || conversationIdRef.current;
+            setMessages((prev) => [...prev, createSystemMessage(msgText, messageConvId)]);
+          }
+          break;
+
+        case 'user_typing':
+          if (data.userId && data.userId !== userIdRef.current && data.isTyping !== undefined) {
+            if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) {
+              break;
+            }
+
+            if (data.isTyping && data.typingUserName) {
+              setTypingUserInfo({
+                name: data.typingUserName,
+                isStaff: data.typingUserIsStaff || false
               });
-              if (data.messages && Array.isArray(data.messages)) {
-                // Filter messages for active conversation and normalize timestamps
-                const filtered = data.messages
-                  .filter(msg => isForActiveConversation(activeConvId, data, msg))
-                  .map(msg => ({
-                    ...msg,
-                    createdAt: msg.createdAt instanceof Date ? msg.createdAt : (msg.createdAt ? new Date(msg.createdAt) : new Date()),
-                  }));
-                console.log('📜 Filtered messages:', {
-                  before: data.messages.length,
-                  after: filtered.length,
-                  sample: filtered[0],
-                });
-                setMessages(filtered);
+
+              const timeout = setTimeout(() => {
+                setTypingUserInfo(null);
+              }, 3000);
+
+              const existing = typingTimeoutRef.current.get(data.userId);
+              if (existing) clearTimeout(existing);
+              typingTimeoutRef.current.set(data.userId, timeout);
+            } else {
+              setTypingUserInfo(null);
+              const existing = typingTimeoutRef.current.get(data.userId);
+              if (existing) {
+                clearTimeout(existing);
+                typingTimeoutRef.current.delete(data.userId);
+              }
+            }
+
+            setTypingUsers((prev) => {
+              const next = new Set(prev);
+              if (data.isTyping) {
+                next.add(data.userId!);
               } else {
-                // No history available - start with empty state
-                console.log('📜 No history available, starting with empty state');
-                setMessages([]);
+                next.delete(data.userId!);
               }
-              break;
+              return next;
+            });
+          }
+          break;
 
-            case 'new_message':
-              if (data.message && typeof data.message !== 'string') {
-                // Filter by conversationId to prevent message bleed (use ref for sync access)
-                if (!isForActiveConversation(resolvedConversationIdRef.current, data, data.message as ChatMessage)) {
-                  break;
-                }
-                setMessages((prev) => [...prev, data.message as ChatMessage]);
-              }
-              break;
+        case 'voice_pending':
+          if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+          setIsInTriage(true);
+          setIsSilenced(false);
+          break;
 
-            case 'private_message':
-              // Handle private DMs (e.g., HelpAI welcome messages)
-              if (data.message && typeof data.message !== 'string') {
-                // Filter by conversationId to prevent message bleed (use ref for sync access)
-                if (!isForActiveConversation(resolvedConversationIdRef.current, data, data.message as ChatMessage)) {
-                  break;
-                }
-                setMessages((prev) => [...prev, data.message as ChatMessage]);
-              }
-              break;
+        case 'voice_granted':
+          if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+          setIsSilenced(false);
+          setIsInTriage(false);
+          setJustGotVoice(true);
+          const voiceTimeout = setTimeout(() => {
+            setJustGotVoice(false);
+          }, 5000);
+          unsubs.push(() => clearTimeout(voiceTimeout));
+          break;
 
-            case 'error':
-              const errorMessage = typeof data.message === 'string' ? data.message : 'An error occurred';
-              console.error('WebSocket error:', errorMessage);
-              setError(errorMessage);
+        case 'voice_removed':
+          if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+          setIsSilenced(true);
+          setIsInTriage(false);
+          setJustGotVoice(false);
+          break;
 
-              // Extract HelpDesk access control fields
-              if (data.requiresTicket) {
-                setRequiresTicket(true);
-              }
-              if (data.roomStatus) {
-                setRoomStatus(data.roomStatus);
-              }
-              if (data.statusMessage) {
-                setStatusMessage(data.statusMessage);
-              }
-              if (data.temporaryError) {
-                setTemporaryError(true);
-              }
-              break;
+        case 'ticket_closed':
+          if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+          setTicketClosed(true);
+          setTicketClosedReason(typeof data.message === 'string' ? data.message : 'Your support session has ended.');
+          setIsInTriage(false);
+          setIsSilenced(true);
+          toastRef.current({
+            title: 'Session Complete',
+            description: typeof data.message === 'string' ? data.message : 'Your support session has ended.',
+          });
+          break;
 
-            case 'system_message':
-              // Handle system messages (e.g., help command response)
-              if (data.message && typeof data.message === 'string') {
-                // Filter by conversationId to prevent message bleed
-                if (!isForActiveConversation(resolvedConversationId, data)) {
-                  break;
-                }
-                const msgText: string = data.message;
-                // Use payload's conversationId if available, otherwise use hook parameter
-                const messageConvId = data.conversationId || conversationId;
-                setMessages((prev) => [...prev, createSystemMessage(msgText, messageConvId)]);
-              }
-              break;
+        case 'room_status_changed': {
+          const statusRoomId = data.roomId;
+          const activeConvId = resolvedConversationIdRef.current || requestedConversationIdRef.current || joinedConversationIdRef.current;
+          if (statusRoomId && statusRoomId === activeConvId) {
+            if (data.status === 'closed') {
+              setRoomStatus('closed');
+              const closedBy = data.closedBy || 'a manager';
+              const reason = data.reason ? `: ${data.reason}` : '';
+              setMessages((prev) => [...prev, createSystemMessage(`Room closed by ${closedBy}${reason}. No new messages can be sent until reopened.`, activeConvId || '')]);
+              toastRef.current({
+                title: 'Room Closed',
+                description: `This room has been closed by ${closedBy}${reason}`,
+              });
+            } else if (data.status === 'active') {
+              setRoomStatus('open');
+              const reopenedBy = data.reopenedBy || 'a manager';
+              setMessages((prev) => [...prev, createSystemMessage(`Room reopened by ${reopenedBy}. You can send messages again.`, activeConvId || '')]);
+              toastRef.current({
+                title: 'Room Reopened',
+                description: `This room has been reopened by ${reopenedBy}`,
+              });
+            }
+          }
+          break;
+        }
 
-            case 'user_typing':
-              // Handle typing indicators - show who is typing (not yourself)
-              if (data.userId && data.userId !== userId && data.isTyping !== undefined) {
-                // Filter by conversationId to prevent cross-room typing indicators
-                if (!isForActiveConversation(resolvedConversationId, data)) {
-                  break;
-                }
-                
-                if (data.isTyping && data.typingUserName) {
-                  // Set typing user info for display
-                  setTypingUserInfo({
-                    name: data.typingUserName,
-                    isStaff: data.typingUserIsStaff || false
-                  });
+        case 'command_ack':
+          if (data.success) {
+            const successMessage = typeof data.message === 'string' ? data.message : `${data.targetName || 'User'} • Action completed successfully`;
+            toastRef.current({
+              title: `✓ ${data.action === 'kick_user' ? 'User Removed' : 'Action Complete'}`,
+              description: successMessage,
+            });
+          } else {
+            const cmdErrorMessage = typeof data.message === 'string' ? data.message : `Could not complete ${data.action}`;
+            toastRef.current({
+              title: `❌ Action Failed`,
+              description: cmdErrorMessage,
+              variant: "destructive",
+            });
+          }
+          break;
 
-                  // Auto-clear after 3 seconds
-                  const timeout = setTimeout(() => {
-                    setTypingUserInfo(null);
-                  }, 3000);
+        case 'user_list_update': {
+          const matchesSlug = isForActiveConversation(conversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data);
+          const matchesResolved = isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data);
+          if (!matchesSlug && !matchesResolved) break;
+          if (data.users && Array.isArray(data.users)) {
+            const uniqueUsersMap = new Map<string, OnlineUser>();
+            data.users.forEach((user: OnlineUser) => {
+              uniqueUsersMap.set(user.id, user);
+            });
+            setOnlineUsers(Array.from(uniqueUsersMap.values()));
+          }
+          break;
+        }
 
-                  // Clear any existing timeout
-                  const existing = typingTimeoutRef.current.get(data.userId);
-                  if (existing) clearTimeout(existing);
-                  typingTimeoutRef.current.set(data.userId, timeout);
-                } else {
-                  // Clear typing indicator
-                  setTypingUserInfo(null);
-                  const existing = typingTimeoutRef.current.get(data.userId);
-                  if (existing) {
-                    clearTimeout(existing);
-                    typingTimeoutRef.current.delete(data.userId);
-                  }
-                }
+        case 'status_change':
+          if (data.message && typeof data.message !== 'string') {
+            if (isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data, data.message as ChatMessage)) {
+              const statusMsg = data.message as ChatMessage;
+              setMessages((prev) => {
+                if (statusMsg.id && prev.some(m => m.id === statusMsg.id)) return prev;
+                return [...prev, statusMsg];
+              });
+            }
+          }
+          break;
 
-                // Still track in set for compatibility
-                setTypingUsers((prev) => {
-                  const next = new Set(prev);
-                  if (data.isTyping) {
-                    next.add(data.userId!);
-                  } else {
-                    next.delete(data.userId!);
+        case 'kicked':
+          if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+          {
+            const kickMessage = typeof data.message === 'string' ? data.message : 'You have been removed from the chat';
+            setError(kickMessage);
+            setIsConnected(false);
+            toastRef.current({
+              title: "Removed from chat",
+              description: `Reason: ${data.reason || 'violation of chat rules'}`,
+              variant: "destructive",
+            });
+          }
+          break;
+
+        case 'secure_request':
+          if (onSecureRequestRef.current && (data as any).requestType) {
+            onSecureRequestRef.current({
+              type: (data as any).requestType,
+              requestedBy: (data as any).requestedBy || 'Support Staff',
+              message: (data as any).message,
+            });
+          }
+          break;
+
+        case 'spectator_released':
+          setMessages((prev) => [...prev, createSystemMessage(
+            `${(data as any).releasedBy} has released you from hold. You can now chat.`,
+            conversationIdRef.current
+          )]);
+          break;
+
+        case 'secure_data_received': {
+          if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+          const secureData = (data as any).data;
+          let secureDataSummary = `🔒 Secure Data from ${(data as any).fromUser}:\n`;
+          if (secureData.email) secureDataSummary += `📧 Email: ${secureData.email}\n`;
+          if (secureData.accountId) secureDataSummary += `🆔 Account ID: ${secureData.accountId}\n`;
+          if (secureData.verification) secureDataSummary += `✓ Verification: ${secureData.verification}\n`;
+          if (secureData.fullName) secureDataSummary += `📝 Full Name: ${secureData.fullName}\n`;
+          if (secureData.agreed) secureDataSummary += `✅ Agreed to terms\n`;
+          if (secureData.response) secureDataSummary += `💬 Response: ${secureData.response}\n`;
+          if (secureData.notes) secureDataSummary += `📋 Notes: ${secureData.notes}\n`;
+          if (secureData.description) secureDataSummary += `📝 Description: ${secureData.description}\n`;
+          if (secureData.file) secureDataSummary += `📎 File uploaded: ${secureData.file.name || 'document'}\n`;
+
+          const secureMessageConvId = data.conversationId || conversationIdRef.current;
+          setMessages((prev) => [...prev, {
+            ...createSystemMessage(secureDataSummary.trim(), secureMessageConvId),
+            senderName: 'SecureChannel'
+          }]);
+          break;
+        }
+
+        case 'banner_update':
+          if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+          if (data.bannerMessage) {
+            setCustomBannerMessage(data.bannerMessage);
+          }
+          if (data.message && typeof data.message !== 'string') {
+            if (isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data, data.message as ChatMessage)) {
+              setMessages((prev) => [...prev, data.message as ChatMessage]);
+            }
+          }
+          break;
+
+        case 'read_receipt':
+          if (data.messageId && data.readBy && data.readByName) {
+            if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+            setReadReceipts((prev) => {
+              const next = new Map(prev);
+              next.set(data.messageId!, {
+                readBy: data.readBy!,
+                readByName: data.readByName!,
+                readAt: data.readAt ? new Date(data.readAt) : new Date(),
+              });
+              return next;
+            });
+          }
+          break;
+
+        case 'participants_update':
+          if (data.conversationId && data.participants) {
+            if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data)) break;
+            setConversationParticipants((prev) => {
+              const next = new Map(prev);
+              next.set(data.conversationId!, data.participants!);
+              return next;
+            });
+          }
+          break;
+
+        case 'escalation_redirect':
+          if (data.message) {
+            toastRef.current({
+              title: "Connecting you with support team",
+              description: typeof data.message === 'string' ? data.message : 'Redirecting to HelpDesk...',
+              duration: 3000,
+            });
+          }
+          const redirectTimeout = setTimeout(() => {
+            if (data.targetRoom) {
+              window.location.href = `/chatrooms`;
+            }
+          }, 1500);
+          unsubs.push(() => clearTimeout(redirectTimeout));
+          break;
+
+        case 'irc_event':
+          switch (data.event) {
+            case 'irc:join':
+              if (data.roomId && isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, { conversationId: data.roomId })) {
+                setConversationParticipants((prev) => {
+                  const next = new Map(prev);
+                  const existing = next.get(data.roomId) || [];
+                  if (!existing.find((p: any) => p.id === data.userId)) {
+                    next.set(data.roomId, [...existing, {
+                      id: data.userId,
+                      name: data.userName,
+                      role: data.userRole || 'guest',
+                      status: 'online',
+                      userType: data.userType || 'guest',
+                    }]);
                   }
                   return next;
                 });
               }
               break;
 
-            case 'voice_granted':
-              // User was granted voice permission
-              // Filter by conversationId to prevent cross-room moderation bleed
-              if (!isForActiveConversation(resolvedConversationId, data)) {
-                break;
-              }
-              setIsSilenced(false);
-              setJustGotVoice(true);
-              setTimeout(() => setJustGotVoice(false), 5000);
-              break;
-
-            case 'voice_removed':
-              // User was silenced/put in spectator mode
-              // Filter by conversationId to prevent cross-room moderation bleed
-              if (!isForActiveConversation(resolvedConversationId, data)) {
-                break;
-              }
-              setIsSilenced(true);
-              setJustGotVoice(false);
-              break;
-
-            case 'command_ack':
-              // IRC-style command acknowledgment from server
-              if (data.success) {
-                // Command succeeded - show success toast
-                const successMessage = typeof data.message === 'string' ? data.message : `${data.targetName || 'User'} • Action completed successfully`;
-                toast({
-                  title: `✓ ${data.action === 'kick_user' ? 'User Removed' : 'Action Complete'}`,
-                  description: successMessage,
+            case 'irc:part':
+              if (data.roomId && isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, { conversationId: data.roomId })) {
+                setConversationParticipants((prev) => {
+                  const next = new Map(prev);
+                  const existing = next.get(data.roomId) || [];
+                  next.set(data.roomId, existing.filter((p: any) => p.id !== data.userId));
+                  return next;
                 });
-              } else {
-                // Command failed - show error toast
-                const errorMessage = typeof data.message === 'string' ? data.message : `Could not complete ${data.action}`;
-                toast({
-                  title: `❌ Action Failed`,
-                  description: errorMessage,
+              }
+              break;
+
+            case 'irc:typing':
+              if (data.roomId && data.userId !== userIdRef.current) {
+                setTypingUsers((prev: any) => {
+                  const key = `${data.roomId}:${data.conversationId || data.roomId}`;
+                  const current = prev instanceof Map ? (prev.get(key) || new Set()) : new Set();
+                  current.add(data.userId);
+                  return new Map(prev instanceof Map ? prev : []).set(key, current);
+                });
+              }
+              break;
+
+            case 'irc:typing_stop':
+              if (data.roomId) {
+                setTypingUsers((prev: any) => {
+                  const key = `${data.roomId}:${data.conversationId || data.roomId}`;
+                  const current = prev instanceof Map ? prev.get(key) : null;
+                  if (current) {
+                    current.delete(data.userId);
+                    return new Map(prev instanceof Map ? prev : []).set(key, current);
+                  }
+                  return prev;
+                });
+              }
+              break;
+
+            case 'irc:away':
+            case 'irc:back':
+              setConversationParticipants((prev) => {
+                const next = new Map(prev);
+                if (data.roomId) {
+                  const participants = next.get(data.roomId);
+                  if (participants) {
+                    const updated = participants.map((p: any) =>
+                      p.id === data.userId ? { ...p, status: data.status } : p
+                    );
+                    next.set(data.roomId, updated);
+                  }
+                } else {
+                  for (const [roomId, participants] of next.entries()) {
+                    const updated = participants.map((p: any) =>
+                      p.id === data.userId ? { ...p, status: data.status } : p
+                    );
+                    next.set(roomId, updated);
+                  }
+                }
+                return next;
+              });
+              break;
+
+            case 'irc:names_reply':
+              if (data.roomId && data.users) {
+                setConversationParticipants((prev) => {
+                  const next = new Map(prev);
+                  next.set(data.roomId, data.users.map((u: any) => ({
+                    id: u.userId,
+                    name: u.userName,
+                    role: u.role || 'guest',
+                    status: u.status || 'online',
+                  })));
+                  return next;
+                });
+              }
+              break;
+
+            case 'irc:sync':
+              break;
+
+            case 'irc:kick':
+              if (data.userId === userIdRef.current) {
+                toastRef.current({
+                  title: "You were removed from the room",
+                  description: data.reason || "You have been removed by a moderator",
                   variant: "destructive",
                 });
               }
               break;
 
-            case 'user_list_update':
-              // Handle real-time user presence updates
-              // Filter by conversationId to prevent cross-room roster bleed
-              // Accept BOTH the original slug AND resolved UUID (from ref for synchronous access)
-              const matchesSlug = isForActiveConversation(conversationId, data);
-              const matchesResolved = isForActiveConversation(resolvedConversationIdRef.current, data);
-              if (!matchesSlug && !matchesResolved) {
-                console.warn('[Chat Security] user_list_update rejected - conversationId mismatch', {
-                  expected: { slug: conversationId, resolved: resolvedConversationIdRef.current },
-                  received: data.conversationId
-                });
-                break;
-              }
-              if (data.users && Array.isArray(data.users)) {
-                // Deduplicate users by ID - keep only the last occurrence of each user
-                const uniqueUsersMap = new Map<string, OnlineUser>();
-                data.users.forEach(user => {
-                  uniqueUsersMap.set(user.id, user);
-                });
-                const deduplicatedUsers = Array.from(uniqueUsersMap.values());
-                console.log('👥 User list updated:', deduplicatedUsers.length, 'online');
-                setOnlineUsers(deduplicatedUsers);
-              }
+            case 'irc:ack':
               break;
 
-            case 'status_change':
-              // Filter by conversationId to prevent cross-room status updates
-              if (data.message && typeof data.message !== 'string') {
-                if (isForActiveConversation(resolvedConversationId, data, data.message as ChatMessage)) {
-                  setMessages((prev) => [...prev, data.message as ChatMessage]);
-                }
-              }
-              break;
+            case 'irc:notice':
+            case 'irc:system':
+            case 'irc:motd':
+              if (!data.roomId || data.roomId === resolvedConversationIdRef.current || data.roomId === conversationIdRef.current) {
+                const systemMessage = {
+                  id: data.messageId || `${data.event}-${Date.now()}`,
+                  conversationId: resolvedConversationIdRef.current || data.roomId || 'system',
+                  senderId: data.senderId || 'system',
+                  senderName: data.senderName || 'System',
+                  senderType: 'system' as const,
+                  message: data.content || '',
+                  messageType: 'text',
+                  createdAt: data.timestamp || new Date().toISOString(),
+                  isSystemMessage: true,
+                };
 
-            case 'kicked':
-              // User has been kicked from chat
-              // Filter by conversationId to prevent cross-room kick events
-              if (!isForActiveConversation(resolvedConversationId, data)) {
-                break;
-              }
-              const kickMessage = typeof data.message === 'string' ? data.message : 'You have been removed from the chat';
-              setError(kickMessage);
-              isConnectedRef.current = false;
-              setIsConnected(false);
-              if (wsRef.current) {
-                wsRef.current.close();
-              }
-              alert(`⚠️ Removed from chat\n\nReason: ${data.reason || 'violation of chat rules'}`);
-              break;
-
-            case 'secure_request':
-              // Staff requested secure information from this user
-              if (onSecureRequest && (data as any).requestType) {
-                onSecureRequest({
-                  type: (data as any).requestType,
-                  requestedBy: (data as any).requestedBy || 'Support Staff',
-                  message: (data as any).message,
+                setMessages((prev) => {
+                  if (prev.some(m => m.id === systemMessage.id)) return prev;
+                  return [...prev, systemMessage];
                 });
               }
               break;
 
-            case 'spectator_released':
-              // User was released from hold/spectator mode
-              setMessages((prev) => [...prev, createSystemMessage(
-                `${(data as any).releasedBy} has released you from hold. You can now chat.`,
-                conversationId
-              )]);
-              break;
+            case 'irc:privmsg': {
+              const matchesResolvedPm = data.roomId === resolvedConversationIdRef.current;
+              const matchesOriginalPm = data.roomId === conversationIdRef.current;
+              const isForThisConversation = data.roomId && (matchesResolvedPm || matchesOriginalPm);
 
-            case 'secure_data_received':
-              // Staff received secure data from a user - show in chat as formatted message
-              // Filter by conversationId to prevent message bleed
-              if (!isForActiveConversation(resolvedConversationId, data)) {
-                break;
-              }
-              const secureData = (data as any).data;
-              let secureDataSummary = `🔒 Secure Data from ${(data as any).fromUser}:\n`;
+              if (isForThisConversation) {
+                const isPrivateForUs = !data.isPrivate || data.recipientId === userIdRef.current;
 
-              // Format the secure data safely for display
-              if (secureData.email) secureDataSummary += `📧 Email: ${secureData.email}\n`;
-              if (secureData.accountId) secureDataSummary += `🆔 Account ID: ${secureData.accountId}\n`;
-              if (secureData.verification) secureDataSummary += `✓ Verification: ${secureData.verification}\n`;
-              if (secureData.fullName) secureDataSummary += `📝 Full Name: ${secureData.fullName}\n`;
-              if (secureData.agreed) secureDataSummary += `✅ Agreed to terms\n`;
-              if (secureData.response) secureDataSummary += `💬 Response: ${secureData.response}\n`;
-              if (secureData.notes) secureDataSummary += `📋 Notes: ${secureData.notes}\n`;
-              if (secureData.description) secureDataSummary += `📝 Description: ${secureData.description}\n`;
-              if (secureData.file) secureDataSummary += `📎 File uploaded: ${secureData.file.name || 'document'}\n`;
+                if (isPrivateForUs) {
+                  const ircMessage = {
+                    id: data.messageId || `irc-${Date.now()}`,
+                    conversationId: resolvedConversationIdRef.current || data.roomId,
+                    senderId: data.senderId || data.botId || 'system',
+                    senderName: data.senderName || data.botName || 'System',
+                    senderType: data.metadata?.isBot ? 'bot' : 'user',
+                    message: data.content || '',
+                    messageType: 'text',
+                    createdAt: data.timestamp || new Date().toISOString(),
+                    isBot: data.metadata?.isBot || false,
+                    metadata: data.metadata,
+                  };
 
-              const messageConvId = data.conversationId || conversationId;
-              setMessages((prev) => [...prev, {
-                ...createSystemMessage(secureDataSummary.trim(), messageConvId),
-                senderName: 'SecureChannel' // Override for secure data messages
-              }]);
-              break;
-
-            case 'banner_update':
-              // Staff updated the announcement banner
-              // Filter by conversationId to prevent cross-room updates
-              if (!isForActiveConversation(resolvedConversationId, data)) {
-                break;
-              }
-              if (data.bannerMessage) {
-                setCustomBannerMessage(data.bannerMessage);
-              }
-              // Also add the update notification to chat
-              if (data.message && typeof data.message !== 'string') {
-                if (isForActiveConversation(resolvedConversationId, data, data.message as ChatMessage)) {
-                  setMessages((prev) => [...prev, data.message as ChatMessage]);
-                }
-              }
-              break;
-
-            case 'read_receipt':
-              // Handle read receipts - track who read which message
-              if (data.messageId && data.readBy && data.readByName) {
-                // Filter by conversationId to prevent cross-room read receipt bleed
-                if (!isForActiveConversation(resolvedConversationId, data)) {
-                  break;
-                }
-                setReadReceipts((prev) => {
-                  const next = new Map(prev);
-                  next.set(data.messageId!, {
-                    readBy: data.readBy!,
-                    readByName: data.readByName!,
-                    readAt: data.readAt ? new Date(data.readAt) : new Date(),
+                  setMessages((prev) => {
+                    if (prev.some(m => m.id === ircMessage.id)) return prev;
+                    return [...prev, ircMessage];
                   });
-                  return next;
-                });
-              }
-              break;
-
-            case 'participants_update':
-              // Handle conversation participant updates
-              if (data.conversationId && data.participants) {
-                // Filter by conversationId - only update if it matches active conversation
-                if (!isForActiveConversation(resolvedConversationId, data)) {
-                  break;
                 }
-                setConversationParticipants((prev) => {
-                  const next = new Map(prev);
-                  next.set(data.conversationId!, data.participants!);
-                  return next;
-                });
               }
               break;
-
-            case 'escalation_redirect':
-              // HelpAI bot escalated - redirect user to main HelpDesk where staff can help
-              console.log('🔄 Bot escalation - redirecting to main HelpDesk');
-              if (data.message) {
-                toast({
-                  title: "Connecting you with support team",
-                  description: typeof data.message === 'string' ? data.message : 'Redirecting to HelpDesk...',
-                  duration: 3000,
-                });
-              }
-              // Redirect to main HelpDesk room after a short delay (let user see the message)
-              setTimeout(() => {
-                if (data.targetRoom) {
-                  // Use window.location to ensure a full navigation to the HelpDesk
-                  window.location.href = `/helpdesk`;
-                }
-              }, 1500);
-              break;
+            }
           }
-        } catch (err) {
-          console.error('Failed to parse WebSocket message:', err);
-        }
-      };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      isConnectedRef.current = false;
-      setIsConnected(false);
-      isConnectingRef.current = false; // Reset connection flag
-
-      // Skip auto-reconnect if this is a manual conversation switch
-      if (isManualSwitchRef.current) {
-        console.log('[TRINITY-WS] Skipping auto-reconnect (manual conversation switch)');
-        return;
+          break;
       }
+    }));
 
-      // Check if we've exceeded max retry attempts
-      if (reconnectAttemptsRef.current >= MAX_RETRIES) {
-        console.error(`[TRINITY-WS] Failed to connect after ${MAX_RETRIES} attempts`);
-        setError(`Unable to connect to chat server after ${MAX_RETRIES} attempts`);
-        
-        // Call the failure callback if provided
-        if (onConnectionFailed) {
-          onConnectionFailed(reconnectAttemptsRef.current);
-        }
-        return; // Stop trying to reconnect
+    return () => {
+      unsubs.forEach(u => u());
+      typingTimeoutRef.current.forEach(t => clearTimeout(t));
+      typingTimeoutRef.current.clear();
+    };
+  }, [bus, sendJoin, checkFilter]);
+
+  useEffect(() => {
+    if (!userId || !conversationId) return;
+    if (!conversationId || conversationId === '' || conversationId === 'undefined' || conversationId === 'null') return;
+
+    const isConversationSwitch = hasInitializedRef.current && lastConnectedConversationRef.current !== conversationId;
+
+    if (hasInitializedRef.current && lastConnectedConversationRef.current === conversationId) {
+      return;
+    }
+
+    if (isConversationSwitch) {
+      bus.send({
+        type: 'leave_conversation',
+        userId: userId,
+      });
+      isJoinedRef.current = false;
+      joinedConversationIdRef.current = null;
+
+      setMessages([]);
+      setOnlineUsers([]);
+      setConversationParticipants(new Map());
+      setReadReceipts(new Map());
+    }
+
+    hasInitializedRef.current = true;
+    lastConnectedConversationRef.current = conversationId;
+
+    sendJoin();
+
+    const cleanupConversationId = conversationId;
+    const cleanupUserId = userId;
+    return () => {
+      if (bus.isConnected() && cleanupUserId && cleanupConversationId) {
+        bus.send({
+          type: 'leave_conversation',
+          conversationId: cleanupConversationId,
+          userId: cleanupUserId,
+        });
       }
-
-      // Attempt to reconnect with exponential backoff
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-      reconnectAttemptsRef.current++;
-
-      reconnectTimeoutRef.current = setTimeout(() => {
-        console.log(`[TRINITY-WS] Reconnecting... (attempt ${reconnectAttemptsRef.current}/${MAX_RETRIES})`);
-        connect();
-      }, delay);
+      isJoinedRef.current = false;
+      joinedConversationIdRef.current = null;
     };
+  }, [userId, conversationId, bus, sendJoin]);
 
-    ws.onerror = (error) => {
-      console.error('[TRINITY-WS] WebSocket error:', error);
-      setError('Connection error');
-      isConnectingRef.current = false; // Reset on error
-    };
-  }, [userId, conversationId, userName]);
-
-  // Send a message
-  const sendMessage = useCallback((messageText: string, senderName: string, senderType: 'customer' | 'support' | 'system' = 'support') => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+  const sendMessage = useCallback((messageText: string, senderName: string, senderType: 'customer' | 'support' | 'system' = 'support', attachment?: { url: string; name: string; type?: string; size?: number }) => {
+    if (!bus.isConnected()) {
       setError('Not connected to chat server');
       return;
     }
 
-    // Use resolved conversation ID (UUID) if available, otherwise fall back to conversationId
-    // The backend will handle slug-to-UUID resolution if needed
     const targetConversationId = resolvedConversationIdRef.current || conversationId;
-    
+
+    if (!isJoinedRef.current) {
+      setError('Chat is connecting... please try again in a moment');
+      return;
+    }
+
     if (!targetConversationId) {
-      console.warn('[Chat] No conversation ID available');
       setError('Chat not initialized');
       return;
     }
 
-    wsRef.current.send(JSON.stringify({
+    const payload: any = {
       type: 'chat_message',
       conversationId: targetConversationId,
       message: messageText,
       senderName: senderName,
       senderType: senderType,
-    }));
-  }, [conversationId]); // Include dependency to avoid stale closures
+    };
 
-  // Send typing indicator
-  const sendTyping = useCallback((isTyping: boolean) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !userId) {
-      return;
+    if (attachment) {
+      payload.attachmentUrl = attachment.url;
+      payload.attachmentName = attachment.name;
+      payload.attachmentType = attachment.type || 'document';
+      payload.attachmentSize = attachment.size;
+      payload.messageType = attachment.type === 'image' ? 'image' : attachment.type === 'video' ? 'video' : attachment.type === 'audio' ? 'audio' : 'file';
     }
 
-    // Determine if current user is staff
+    bus.send(payload);
+  }, [conversationId, bus]);
+
+  const sendTyping = useCallback((isTyping: boolean) => {
+    if (!bus.isConnected() || !userId) return;
+
     const currentUser = onlineUsers.find(u => u.id === userId);
     const isStaff = currentUser?.userType === 'staff' || false;
 
-    // Use resolved conversation ID (UUID) if available, otherwise fall back to conversationId
     const targetConversationId = resolvedConversationIdRef.current || conversationId;
-    if (!targetConversationId) {
-      return; // Silently skip typing indicator if no conversation ID
-    }
+    if (!targetConversationId) return;
 
-    wsRef.current.send(JSON.stringify({
+    bus.send({
       type: 'typing',
       conversationId: targetConversationId,
       userId: userId,
       userName: userName,
       isStaff: isStaff,
       isTyping: isTyping,
-    }));
-  }, [userId, userName, onlineUsers, conversationId]); // Keep dependencies to avoid stale closures
+    });
+  }, [userId, userName, onlineUsers, conversationId, bus]);
 
-  // Send status change
   const sendStatusChange = useCallback((status: 'online' | 'away' | 'busy') => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !userId) {
-      return;
-    }
+    if (!bus.isConnected() || !userId) return;
 
-    wsRef.current.send(JSON.stringify({
+    bus.send({
       type: 'status_change',
       userId: userId,
       status: status,
-    }));
-  }, [userId]);
+    });
+  }, [userId, bus]);
 
-  // Silence a user (staff only) - IRC-style with command ID for acknowledgment
   const silenceUser = useCallback((targetUserId: string, duration?: number, reason?: string) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      return;
-    }
+    if (!bus.isConnected()) return;
 
     const commandId = generateCommandId();
-    wsRef.current.send(JSON.stringify({
+    bus.send({
       type: 'silence_user',
       targetUserId: targetUserId,
       duration: duration || 5,
       reason: reason || 'Chat violation',
-      commandId: commandId, // IRC-style command tracking
-    }));
-  }, []);
+      commandId: commandId,
+    });
+  }, [bus]);
 
-  // Give voice to a user (staff only) - IRC-style with command ID for acknowledgment
   const giveVoice = useCallback((targetUserId: string) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      return;
-    }
+    if (!bus.isConnected()) return;
 
     const commandId = generateCommandId();
-    wsRef.current.send(JSON.stringify({
+    bus.send({
       type: 'give_voice',
       targetUserId: targetUserId,
-      commandId: commandId, // IRC-style command tracking
-    }));
-  }, []);
+      commandId: commandId,
+    });
+  }, [bus]);
 
-  // Kick a user (staff only) - IRC-style with command ID for acknowledgment
   const kickUser = useCallback((targetUserId: string, reason?: string) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      return;
-    }
+    if (!bus.isConnected()) return;
 
     const commandId = generateCommandId();
-    wsRef.current.send(JSON.stringify({
+    bus.send({
       type: 'kick_user',
       targetUserId: targetUserId,
       reason: reason || 'violation of chat rules',
-      commandId: commandId, // IRC-style command tracking
-    }));
-  }, []);
+      commandId: commandId,
+    });
+  }, [bus]);
 
-  // Send raw WebSocket message (for custom actions)
-  // Accepts string commands OR object payloads
   const sendRawMessage = useCallback((data: any) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      return;
-    }
+    if (!bus.isConnected()) return;
 
-    // If data is already a string, send as-is (for backward compatibility)
-    // Otherwise, JSON stringify objects
     if (typeof data === 'string') {
-      wsRef.current.send(data);
+      const socket = bus.getSocket();
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(data);
+      }
     } else {
-      wsRef.current.send(JSON.stringify(data));
+      bus.send(data);
     }
-  }, []);
+  }, [bus]);
 
-  // GURU MODE FIX: Stabilized connection logic using mount-once pattern
-  // This effect ONLY runs on first mount to establish the connection
-  const hasInitializedRef = useRef(false);
-  
-  useEffect(() => {
-    if (!userId || !conversationId) return;
-    
-    // GURU MODE: Only connect on first mount, not on re-renders
-    if (hasInitializedRef.current && lastConnectedConversationRef.current === conversationId) {
-      // Already initialized for this conversation - skip
-      return;
-    }
-    
-    // Check if we're switching conversations (not first mount)
-    const isConversationSwitch = hasInitializedRef.current && lastConnectedConversationRef.current !== conversationId;
-    
-    if (isConversationSwitch && wsRef.current) {
-      const state = wsRef.current.readyState;
-      if (state === WebSocket.OPEN) {
-        console.log(`[TRINITY-WS] Leaving conversation ${lastConnectedConversationRef.current} for: ${conversationId}`);
-        try {
-          wsRef.current.send(JSON.stringify({
-            type: 'leave_conversation',
-            userId: userId,
-          }));
-        } catch (err) {
-          console.warn('Failed to send leave_conversation:', err);
-        }
-      }
-      if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
-        console.log(`[TRINITY-WS] Closing WebSocket for conversation switch`);
-        isManualSwitchRef.current = true;
-        wsRef.current.close();
-        wsRef.current = null;
-        isConnectingRef.current = false;
-        
-        // GURU MODE FIX: Also reset the global singleton state when switching conversations
-        // This ensures getOrCreateGlobalSocket creates a new socket for the new conversation
-        globalWSState.socket = null;
-        globalWSState.conversationId = null;
-        globalWSState.isConnecting = false;
-      }
-      
-      // Clear state for new conversation
-      setMessages([]);
-      setOnlineUsers([]);
-      setConversationParticipants(new Map());
-      setReadReceipts(new Map());
-    }
-    
-    // Mark as initialized and track conversation
-    hasInitializedRef.current = true;
-    lastConnectedConversationRef.current = conversationId;
-    
-    // Connect (only if not already connected)
-    const currentState = wsRef.current?.readyState;
-    if (!isConnectingRef.current && currentState !== WebSocket.OPEN && currentState !== WebSocket.CONNECTING) {
-      connect();
-    }
-    
-    // GURU MODE: NO CLEANUP - Never close socket on effect re-runs
-    // Socket cleanup happens only on true page navigation (handled by window unload)
-    // This prevents React StrictMode from causing infinite reconnects
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, conversationId]);
-  
-  // Separate cleanup effect for window unload only - NO effect cleanup
-  // StrictMode will run cleanup on simulated unmount, so we can't close socket there
-  useEffect(() => {
-    const handleUnload = () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-      // DO NOT close socket here - StrictMode causes this to run on every "remount"
-      // The socket will be closed when the window unloads or when switching conversations
-    };
-  }, []);
-
-  // Clear access error state (call after successful ticket verification)
   const clearAccessError = useCallback(() => {
     setError(null);
     setRequiresTicket(false);
@@ -983,49 +935,28 @@ export function useChatroomWebSocket(
     setTemporaryError(false);
   }, []);
 
-  // Reconnect function for manual resets (IRC /hop-style)
   const reconnect = useCallback(async () => {
-    console.log('🔄 Manual reconnect triggered');
-    
-    // Clear existing connection
-    if (wsRef.current) {
-      const state = wsRef.current.readyState;
-      if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) {
-        console.log('Closing existing connection for reconnect');
-        wsRef.current.close(1000, 'Manual reconnect');
-      }
-    }
-    
-    // Clear reconnect timer
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-    
-    // Reset flags and retry counter for manual reconnect
-    isConnectingRef.current = false;
-    reconnectAttemptsRef.current = 0; // Reset retry counter
-    isConnectedRef.current = false;
+    isJoinedRef.current = false;
+    joinedConversationIdRef.current = null;
+    requestedConversationIdRef.current = null;
     setIsConnected(false);
     setError(null);
-    
-    // Wait a moment for cleanup
+
     await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Reconnect
-    connect();
-    
-    toast({
+
+    sendJoin();
+
+    toastRef.current({
       title: "Chat reconnecting...",
       description: "Re-establishing connection to chat server",
     });
-  }, [connect, toast]);
+  }, [sendJoin]);
 
   return {
     messages,
     sendMessage,
     sendTyping,
     sendStatusChange,
-    // IRC-style moderation commands with command acknowledgments
     kickUser,
     silenceUser,
     giveVoice,
@@ -1035,18 +966,18 @@ export function useChatroomWebSocket(
     onlineUsers,
     isConnected,
     isSilenced,
+    isInTriage,
     justGotVoice,
+    ticketClosed,
+    ticketClosedReason,
     error,
-    reconnect, // Enhanced reconnect with feedback
-    // HelpDesk access control
+    reconnect,
     requiresTicket,
     roomStatus,
     statusMessage,
     temporaryError,
     clearAccessError,
-    // Banner updates
     customBannerMessage,
-    // Premium chat features
     readReceipts,
     conversationParticipants,
   };

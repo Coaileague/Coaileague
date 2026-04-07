@@ -11,6 +11,8 @@
  * - Real-time log streaming
  * - Alert triggers based on patterns
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('logAggregationService');
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
@@ -97,7 +99,7 @@ class LogAggregationService {
     this.startRetentionCleanup();
     
     this.initialized = true;
-    console.log('[LogAggregation] Service initialized with 5 retention policies');
+    log.info('[LogAggregation] Service initialized with 5 retention policies');
   }
   
   /**
@@ -116,7 +118,7 @@ class LogAggregationService {
     } = {}
   ): LogEntry {
     const entry: LogEntry = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `log-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,
       timestamp: new Date(),
       level,
       service,
@@ -255,7 +257,7 @@ class LogAggregationService {
     };
     
     this.alertRules.set(rule.id, rule);
-    console.log(`[LogAggregation] Registered alert rule: ${name}`);
+    log.info(`[LogAggregation] Registered alert rule: ${name}`);
     
     return rule;
   }
@@ -373,7 +375,7 @@ class LogAggregationService {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    console.log('[LogAggregation] Service shut down');
+    log.info('[LogAggregation] Service shut down');
   }
   
   // Private methods
@@ -443,7 +445,7 @@ class LogAggregationService {
     
     // Internal event: log_alert_triggered
     
-    console.log(`[LogAggregation] Alert triggered: ${rule.name}`);
+    log.info(`[LogAggregation] Alert triggered: ${rule.name}`);
   }
   
   private startRetentionCleanup(): void {
@@ -472,7 +474,7 @@ class LogAggregationService {
     });
     
     if (removed > 0) {
-      console.log(`[LogAggregation] Retention cleanup removed ${removed} logs`);
+      log.info(`[LogAggregation] Retention cleanup removed ${removed} logs`);
     }
   }
 }

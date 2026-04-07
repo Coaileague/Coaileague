@@ -9,7 +9,9 @@
  * - WebSocket integration for real-time in-app notifications
  */
 
+import { NotificationDeliveryService } from './notificationDeliveryService';
 import { db } from '../db';
+import { randomUUID } from 'crypto';
 import { 
   alertConfigurations, 
   alertHistory, 
@@ -24,6 +26,9 @@ import {
 } from '@shared/schema';
 import { eq, and, desc, gte, sql, inArray } from 'drizzle-orm';
 import { createNotification } from './notificationService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('alertService');
+
 
 // Alert type definitions for thresholds
 export interface AlertThresholds {
@@ -176,6 +181,7 @@ class AlertService {
       const [created] = await db
         .insert(alertConfigurations)
         .values({
+          id: randomUUID(),
           workspaceId,
           ...config,
           alertType: config.alertType as any,
@@ -283,7 +289,7 @@ class AlertService {
     // Get alert configuration
     const config = await this.getAlertConfiguration(workspaceId, alertType);
     if (!config || !config.isEnabled) {
-      console.log(`[AlertService] Alert type ${alertType} is disabled for workspace ${workspaceId}`);
+      log.info(`[AlertService] Alert type ${alertType} is disabled for workspace ${workspaceId}`);
       return null;
     }
 
@@ -298,7 +304,7 @@ class AlertService {
     );
 
     if (!rateLimitCheck.allowed) {
-      console.log(`[AlertService] Alert rate-limited: ${rateLimitCheck.reason}`);
+      log.info(`[AlertService] Alert rate-limited: ${rateLimitCheck.reason}`);
       return null;
     }
 
@@ -344,7 +350,7 @@ class AlertService {
             break;
         }
       } catch (error) {
-        console.error(`[AlertService] Failed to deliver ${channel} alert:`, error);
+        log.error(`[AlertService] Failed to deliver ${channel} alert:`, error);
         deliveryStatus[channel] = 'failed';
       }
     }
@@ -355,7 +361,7 @@ class AlertService {
       .set({ deliveryStatus })
       .where(eq(alertHistory.id, alert.id));
 
-    console.log(`[AlertService] Alert triggered: ${alertType} - ${title}`);
+    log.info(`[AlertService] Alert triggered: ${alertType} - ${title}`);
     return { ...alert, deliveryStatus };
   }
 
@@ -430,8 +436,7 @@ class AlertService {
    */
   private async deliverEmailAlert(alert: AlertHistory, recipientUserIds: string[]): Promise<void> {
     try {
-      const { Resend } = await import('resend');
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      const { emailService } = await import('./emailService');
 
       for (const userId of recipientUserIds) {
         const [user] = await db
@@ -447,11 +452,7 @@ class AlertService {
             critical: '#ef4444',
           }[alert.severity] || '#3b82f6';
 
-          await resend.emails.send({
-            from: 'alerts@coaileague.platform',
-            to: user.email,
-            subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
-            html: `
+          const html = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: ${severityColor}; color: white; padding: 16px; border-radius: 8px 8px 0 0;">
                   <h2 style="margin: 0;">${alert.title}</h2>
@@ -465,43 +466,38 @@ class AlertService {
                   </a>
                 </div>
               </div>
-            `,
-          });
+            `;
+
+          NotificationDeliveryService.send({ type: 'alert_notification', workspaceId: alert.workspaceId || 'system', recipientUserId: user.id || user.email, channel: 'email', body: { to: user.email, subject: `[${alert.severity.toUpperCase()}] ${alert.title}`, html } }).catch((err: Error) => log.warn('[AlertService] Email delivery failed (non-blocking):', err.message));
         }
       }
     } catch (error) {
-      console.error('[AlertService] Email delivery failed:', error);
+      log.error('[AlertService] Email delivery failed:', error);
       throw error;
     }
   }
 
   /**
-   * Deliver SMS alert
+   * Deliver SMS alert via NDS
    */
   private async deliverSmsAlert(alert: AlertHistory, recipientUserIds: string[]): Promise<void> {
     try {
-      const twilio = await import('twilio');
-      const client = twilio.default(
-        process.env.TWILIO_ACCOUNT_SID,
-        process.env.TWILIO_AUTH_TOKEN
-      );
+      const { NotificationDeliveryService } = await import('./notificationDeliveryService');
 
       for (const userId of recipientUserIds) {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId));
-
-        if (user?.phone) {
-          await client.messages.create({
+        await NotificationDeliveryService.send({
+          type: 'alert_notification',
+          workspaceId: alert.workspaceId,
+          recipientUserId: userId,
+          channel: 'sms',
+          body: {
             body: `[${alert.severity.toUpperCase()}] ${alert.title}: ${alert.message}`,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            to: user.phone,
-          });
-        }
+          },
+          idempotencyKey: `alert-sms-${alert.id}-${userId}`,
+        });
       }
     } catch (error) {
-      console.error('[AlertService] SMS delivery failed:', error);
+      log.error('[AlertService] SMS delivery failed:', error);
       throw error;
     }
   }

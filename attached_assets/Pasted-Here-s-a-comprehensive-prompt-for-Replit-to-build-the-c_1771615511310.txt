@@ -1,0 +1,1193 @@
+Here's a comprehensive prompt for Replit to build the contract and employee packet system:
+
+---
+
+# COAILEAGUE - CLIENT CONTRACT & EMPLOYEE PACKET WORKFLOW SYSTEM
+
+## OVERVIEW
+
+Build an online contract management and employee onboarding system that:
+1. Converts the SPS General Contract for Services into a fillable, signable online form
+2. Creates state-required employee onboarding packets
+3. Integrates with Trinity AI for automated shift building and decision making
+4. Stores signed documents with audit trails
+5. Triggers workflows upon signature completion
+
+---
+
+## PART 1: CLIENT CONTRACT FORM (Based on Uploaded Document)
+
+### 1.1 Contract Data Model
+
+```typescript
+// /shared/schema.ts - Add these tables
+
+export const clientContracts = pgTable('client_contracts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id),
+  clientId: uuid('client_id').references(() => clients.id),
+  
+  // Contract Header Info
+  contractNumber: varchar('contract_number', { length: 50 }).notNull(),
+  effectiveDate: date('effective_date').notNull(),
+  contractorName: varchar('contractor_name', { length: 255 }),
+  
+  // Client Information
+  clientCompanyName: varchar('client_company_name', { length: 255 }).notNull(),
+  clientAddress: text('client_address').notNull(),
+  clientCity: varchar('client_city', { length: 100 }),
+  clientState: varchar('client_state', { length: 2 }),
+  clientZip: varchar('client_zip', { length: 10 }),
+  clientPhone: varchar('client_phone', { length: 20 }),
+  clientEmail: varchar('client_email', { length: 255 }),
+  
+  // Point of Contact / Authorized Signer
+  pocName: varchar('poc_name', { length: 255 }).notNull(),
+  pocTitle: varchar('poc_title', { length: 100 }),
+  pocEmail: varchar('poc_email', { length: 255 }).notNull(),
+  pocPhone: varchar('poc_phone', { length: 20 }),
+  pocIdType: varchar('poc_id_type', { length: 50 }), // 'drivers_license', 'state_id', 'passport'
+  pocIdNumber: varchar('poc_id_number', { length: 50 }),
+  pocIdUploadUrl: text('poc_id_upload_url'),
+  
+  // Service Details
+  serviceType: varchar('service_type', { length: 50 }).notNull(), // 'armed', 'unarmed', 'both'
+  serviceLocation: text('service_location').notNull(), // Physical address of service
+  serviceLocationLat: decimal('service_location_lat', { precision: 10, scale: 7 }),
+  serviceLocationLng: decimal('service_location_lng', { precision: 10, scale: 7 }),
+  extraDuties: text('extra_duties'), // TBD field from contract
+  
+  // Pricing (Critical for Trinity)
+  armedHourlyRate: decimal('armed_hourly_rate', { precision: 10, scale: 2 }),
+  unarmedHourlyRate: decimal('unarmed_hourly_rate', { precision: 10, scale: 2 }),
+  overtimeMultiplier: decimal('overtime_multiplier', { precision: 3, scale: 2 }).default('1.5'),
+  holidayMultiplier: decimal('holiday_multiplier', { precision: 3, scale: 2 }).default('1.5'),
+  emergencyRateIncrease: decimal('emergency_rate_increase', { precision: 5, scale: 2 }).default('25'), // 25% increase
+  
+  // Payment Terms
+  paymentTermsDays: integer('payment_terms_days').default(7), // Due by Wednesday
+  lateFeeDaily: decimal('late_fee_daily', { precision: 10, scale: 2 }).default('25'),
+  invoiceFrequency: varchar('invoice_frequency', { length: 20 }).default('weekly'), // 'weekly', 'biweekly', 'monthly'
+  
+  // Insurance Requirements
+  requiresAdditionalInsured: boolean('requires_additional_insured').default(false),
+  insuranceLimitAmount: decimal('insurance_limit_amount', { precision: 15, scale: 2 }).default('2000000'),
+  
+  // Contract Terms
+  trialPeriodDays: integer('trial_period_days').default(90),
+  terminationNoticeDays: integer('termination_notice_days').default(14),
+  clientTerminationNoticeDays: integer('client_termination_notice_days').default(14), // 2 weeks from contract
+  
+  // Status
+  status: varchar('status', { length: 20 }).notNull().default('draft'),
+  // 'draft', 'sent', 'viewed', 'signed', 'active', 'expired', 'terminated'
+  
+  // Signatures
+  clientSignature: text('client_signature'), // Base64 or URL
+  clientSignedAt: timestamp('client_signed_at'),
+  clientSignedIp: varchar('client_signed_ip', { length: 45 }),
+  providerSignature: text('provider_signature'),
+  providerSignedAt: timestamp('provider_signed_at'),
+  providerSignerName: varchar('provider_signer_name', { length: 255 }),
+  
+  // Document
+  generatedPdfUrl: text('generated_pdf_url'),
+  signedPdfUrl: text('signed_pdf_url'),
+  
+  // Metadata
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  createdBy: uuid('created_by').references(() => users.id),
+});
+
+// Contract service sites (one contract can cover multiple sites)
+export const contractSites = pgTable('contract_sites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  contractId: uuid('contract_id').notNull().references(() => clientContracts.id, { onDelete: 'cascade' }),
+  workspaceId: uuid('workspace_id').notNull(),
+  
+  siteName: varchar('site_name', { length: 255 }).notNull(),
+  siteAddress: text('site_address').notNull(),
+  siteCity: varchar('site_city', { length: 100 }),
+  siteState: varchar('site_state', { length: 2 }),
+  siteZip: varchar('site_zip', { length: 10 }),
+  latitude: decimal('latitude', { precision: 10, scale: 7 }),
+  longitude: decimal('longitude', { precision: 10, scale: 7 }),
+  geofenceRadiusMeters: integer('geofence_radius_meters').default(100),
+  
+  // Site-specific requirements
+  minimumOfficersPerShift: integer('minimum_officers_per_shift').default(1),
+  requiresArmed: boolean('requires_armed').default(false),
+  specialInstructions: text('special_instructions'),
+  postOrders: text('post_orders'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Contract schedule requirements (for Trinity to build shifts)
+export const contractScheduleRequirements = pgTable('contract_schedule_requirements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  contractId: uuid('contract_id').notNull().references(() => clientContracts.id, { onDelete: 'cascade' }),
+  siteId: uuid('site_id').references(() => contractSites.id, { onDelete: 'cascade' }),
+  workspaceId: uuid('workspace_id').notNull(),
+  
+  dayOfWeek: integer('day_of_week'), // 0=Sunday, 1=Monday, etc. NULL = every day
+  startTime: time('start_time').notNull(),
+  endTime: time('end_time').notNull(),
+  officersRequired: integer('officers_required').notNull().default(1),
+  serviceType: varchar('service_type', { length: 20 }), // 'armed', 'unarmed'
+  
+  isActive: boolean('is_active').default(true),
+  effectiveFrom: date('effective_from'),
+  effectiveUntil: date('effective_until'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+});
+```
+
+### 1.2 Contract Form UI
+
+Create a multi-step form wizard:
+
+```typescript
+// /client/src/pages/contracts/new-contract.tsx
+
+/**
+ * MULTI-STEP CONTRACT FORM WIZARD
+ * 
+ * Step 1: Client Information
+ *   - Company name
+ *   - Address (with Google Places autocomplete for lat/lng)
+ *   - Primary contact info
+ * 
+ * Step 2: Point of Contact / Authorized Signer
+ *   - Full name
+ *   - Title
+ *   - Email
+ *   - Phone
+ *   - ID upload (Driver's License / State ID)
+ * 
+ * Step 3: Service Details
+ *   - Service type (Armed / Unarmed / Both)
+ *   - Service location(s) - can add multiple sites
+ *   - Extra duties (free text)
+ *   - Post orders upload
+ * 
+ * Step 4: Pricing
+ *   - Armed hourly rate
+ *   - Unarmed hourly rate
+ *   - Emergency rate increase (default 25%)
+ *   - No overtime or holiday pay (per contract - just TAX)
+ * 
+ * Step 5: Schedule Requirements
+ *   - For each site:
+ *     - Days of week
+ *     - Start/end times
+ *     - Number of officers
+ *     - Armed/unarmed
+ * 
+ * Step 6: Payment Terms
+ *   - Invoice frequency (weekly default)
+ *   - Payment due (Wednesday)
+ *   - Late fee ($25/day per contract)
+ * 
+ * Step 7: Insurance
+ *   - Add client as additional insured? (Y/N)
+ *   - $2M coverage confirmation
+ * 
+ * Step 8: Contract Terms
+ *   - Trial period (90 days default)
+ *   - Termination notice (14 days from SPS, 2 weeks from client)
+ * 
+ * Step 9: Review & Send
+ *   - Full contract preview (PDF style)
+ *   - Send for signature button
+ */
+```
+
+### 1.3 Contract Template Sections (Map to PDF)
+
+```typescript
+// Contract sections from the uploaded PDF
+
+const CONTRACT_SECTIONS = {
+  '1. DESCRIPTION OF SERVICES': {
+    fields: [
+      'serviceType', // Armed or Unarmed
+      'serviceLocation', // Client's establishment
+      'extraDuties', // TBD
+    ],
+    warranties: [
+      'All guards Texas State Commissioned or Non-Commissioned',
+      'Training completed within 6 months by certified instructors',
+      'First aid trained',
+      'Registered and licensed with State of Texas',
+      'Armed guards trained in firearms with valid permits',
+      'Background checks performed',
+      'Drug testing performed',
+      'SPS responsible for all licenses and permits',
+      'SPS monitors licensing renewals and training',
+      'Licensed under C11608501',
+      'Guards are SPS employees, not client employees',
+    ],
+  },
+  
+  '2. PAYMENT': {
+    fields: [
+      'armedHourlyRate',
+      'unarmedHourlyRate',
+      'lateFeeDaily', // $25 default
+    ],
+    terms: [
+      'Plus TAX per armed/unarmed officer',
+      'Client pays collection costs including attorney fees',
+      'Material breach allows $25 daily late fee',
+      'Invoiced Mon-Sun, due Wednesday',
+      'No overtime or holiday pay at this time',
+    ],
+  },
+  
+  '3. TERM': {
+    fields: [
+      'effectiveDate',
+      'trialPeriodDays', // 90 days
+      'terminationNoticeDays', // 14 days
+    ],
+    terms: [
+      'Either party can terminate with 14 days written notice',
+      'SPS can terminate immediately without notice',
+      'After trial period, client pays remainder at agreed rate',
+      'In-house resolution first, then JP court for civil suit',
+    ],
+  },
+  
+  '4. CONFIDENTIALITY': {
+    terms: [
+      'Provider will not disclose client proprietary information',
+      'Confidentiality survives contract termination',
+      'Waiver limited to specific occurrence',
+      'Records returned upon termination',
+    ],
+  },
+  
+  '5. INSURANCE': {
+    fields: [
+      'insuranceLimitAmount', // $2,000,000
+      'requiresAdditionalInsured',
+    ],
+    terms: [
+      'SPS bonded and insured at $2M aggregate minimum',
+      'Option to add client as additional insured',
+      'General Liability covers bodily injury, property damage, personal injury',
+      'COIs identify this contract',
+      'SPS provides evidence of renewal',
+    ],
+  },
+  
+  '6. INDEMNIFICATION / LIMITS OF LIABILITY': {
+    terms: [
+      'SPS is not an insurer',
+      'Security services are deterrent only',
+      'Amounts not based on client property value',
+      'Services solely for client benefit',
+      'No third-party rights created',
+      'Client indemnifies SPS against third-party claims',
+      'SPS maintains Workers Comp',
+      'SPS maintains General Liability and Auto coverage',
+      'SPS not liable for client negligence',
+    ],
+  },
+  
+  '7. WARRANTY': {
+    terms: [
+      'Services in timely, workmanlike manner',
+      'Standard of care equal or superior to similar providers',
+    ],
+  },
+  
+  '8. DEFAULT': {
+    events: [
+      'Failure to make required payment',
+      'Insolvency or bankruptcy',
+      'Levy, seizure, or assignment for creditors',
+      'Failure to deliver services as contracted',
+    ],
+  },
+  
+  '9. REMEDIES': {
+    terms: [
+      'Written notice with 7 days to cure',
+      'Failure to cure = automatic termination',
+    ],
+  },
+  
+  '10. FORCE MAJEURE': {
+    events: [
+      'Acts of God, fire, explosion, vandalism, storm',
+      'Military or civil authority orders',
+      'National emergencies, riots, insurrections',
+      'Wars, strikes, lockouts, labor disputes',
+    ],
+  },
+  
+  '11. DISPUTE RESOLUTION': {
+    terms: [
+      'Friendly negotiation first (30 days)',
+      'Then Alternative Dispute Resolution (ADR)',
+      'Then binding arbitration (American Arbitration Association)',
+      'Arbitrator award is final',
+    ],
+  },
+  
+  '12. ENTIRE AGREEMENT': {
+    terms: ['This contract supersedes all prior agreements'],
+  },
+  
+  '13. SEVERABILITY': {
+    terms: ['Invalid provisions limited, remainder enforceable'],
+  },
+  
+  '14. AMENDMENT': {
+    terms: ['Modifications require written mutual agreement'],
+  },
+  
+  '15. GOVERNING LAW AND VENUE': {
+    terms: [
+      'Texas state law governs',
+      'Venue in Texas state or federal courts',
+    ],
+  },
+  
+  '16. NOTICE': {
+    terms: [
+      'In person or certified mail',
+      'SPS can terminate with no notice',
+      'Client must give 2 weeks written notice',
+    ],
+  },
+  
+  '17. WAIVER OF CONTRACTUAL RIGHT': {
+    terms: ['Non-enforcement is not waiver'],
+  },
+  
+  '18. ATTORNEY FEES TO PREVAILING PARTY': {
+    terms: ['Prevailing party gets reasonable attorney fees'],
+  },
+  
+  '19. CONSTRUCTION AND INTERPRETATION': {
+    terms: ['No interpretation against drafter'],
+  },
+  
+  '20. ASSIGNMENT': {
+    terms: ['No assignment without written consent'],
+  },
+  
+  '21. EMERGENCY RESPONSE CLAUSE': {
+    fields: ['emergencyRateIncrease'], // 25%
+    terms: [
+      '25% billing increase during emergencies',
+      'Minimum 2-3 additional officers during emergencies',
+    ],
+  },
+  
+  '22. MUTUAL AID CLAUSE': {
+    terms: [
+      'Officers may assist other posts within 5-10 miles',
+      'No billing for mutual aid time',
+    ],
+  },
+};
+```
+
+### 1.4 E-Signature Implementation
+
+```typescript
+// /client/src/components/contracts/signature-pad.tsx
+
+import SignatureCanvas from 'react-signature-canvas';
+
+/**
+ * SIGNATURE COMPONENT REQUIREMENTS:
+ * 
+ * 1. Draw signature on canvas
+ * 2. Type name option (generates signature font)
+ * 3. Upload signature image option
+ * 4. Clear and redo
+ * 5. Capture:
+ *    - Signature image (base64)
+ *    - Timestamp
+ *    - IP address
+ *    - User agent
+ *    - Signer name (typed)
+ * 6. Legal acknowledgment checkbox:
+ *    "I agree that my electronic signature is the legal equivalent 
+ *     of my manual signature on this contract."
+ */
+
+// /server/routes/contracts.ts
+
+/**
+ * SIGNATURE ENDPOINT:
+ * 
+ * POST /api/contracts/:id/sign
+ * 
+ * Body:
+ * {
+ *   signatureData: string, // Base64 image
+ *   signerName: string,
+ *   signerTitle: string,
+ *   signerEmail: string,
+ *   agreedToTerms: boolean,
+ *   agreedToElectronicSignature: boolean
+ * }
+ * 
+ * Captures from request:
+ * - IP address (req.ip)
+ * - User agent (req.headers['user-agent'])
+ * - Timestamp (server time)
+ * 
+ * Actions:
+ * 1. Validate contract exists and is in 'sent' status
+ * 2. Save signature data
+ * 3. Generate signed PDF with signature embedded
+ * 4. Update contract status to 'signed'
+ * 5. Send confirmation email to both parties
+ * 6. Trigger post-signature workflow (see below)
+ */
+```
+
+### 1.5 Post-Signature Workflow (Trinity Integration)
+
+```typescript
+// /server/services/contracts/post-signature-workflow.ts
+
+/**
+ * WHEN CONTRACT IS SIGNED:
+ * 
+ * 1. CREATE CLIENT RECORD (if not exists)
+ *    - Copy company info from contract
+ *    - Link to contract
+ * 
+ * 2. CREATE SITE RECORDS
+ *    - From contractSites
+ *    - Include geofence settings
+ *    - Include post orders
+ * 
+ * 3. NOTIFY TRINITY TO BUILD SCHEDULE
+ *    - Pass contract schedule requirements
+ *    - Trinity considers:
+ *      a. Contract hourly rates (revenue)
+ *      b. Employee pay rates (cost)
+ *      c. Site location (distance from employees)
+ *      d. Required skills (armed/unarmed)
+ *      e. Certifications needed
+ *    - Trinity generates optimal shift assignments
+ * 
+ * 4. SEND WELCOME PACKAGE TO CLIENT
+ *    - Signed contract copy
+ *    - Insurance COI
+ *    - Emergency contact info
+ *    - How to request schedule changes
+ * 
+ * 5. CREATE RECURRING INVOICE SCHEDULE
+ *    - Based on contract invoice frequency
+ *    - Auto-generate invoices weekly
+ * 
+ * 6. ADD TO COMPLIANCE TRACKING
+ *    - Insurance renewal reminders
+ *    - Contract expiration alerts
+ *    - Trial period end notification
+ */
+
+interface TrinityContractData {
+  contractId: string;
+  workspaceId: string;
+  
+  // For scheduling decisions
+  sites: Array<{
+    siteId: string;
+    address: string;
+    coordinates: { lat: number; lng: number };
+    scheduleRequirements: Array<{
+      dayOfWeek: number | null;
+      startTime: string;
+      endTime: string;
+      officersRequired: number;
+      requiresArmed: boolean;
+    }>;
+  }>;
+  
+  // For profitability analysis
+  pricing: {
+    armedHourlyRate: number;
+    unarmedHourlyRate: number;
+  };
+  
+  // For assignment optimization
+  constraints: {
+    minimumOfficersPerShift: number;
+    requiresArmedGuards: boolean;
+    specialCertifications: string[];
+  };
+}
+
+async function triggerTrinityScheduleBuilding(data: TrinityContractData) {
+  // Trinity will:
+  // 1. Find available employees with required qualifications
+  // 2. Calculate distance from each employee to site
+  // 3. Calculate profitability (contract rate - employee cost)
+  // 4. Generate optimal shift assignments
+  // 5. Present schedule for manager approval
+}
+```
+
+---
+
+## PART 2: EMPLOYEE ONBOARDING PACKET (Texas State Requirements)
+
+### 2.1 Texas Security Guard Requirements
+
+```typescript
+// /shared/schema.ts - Employee onboarding tables
+
+export const employeeOnboardingPackets = pgTable('employee_onboarding_packets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull(),
+  employeeId: uuid('employee_id').references(() => employees.id),
+  
+  // Personal Information
+  legalFirstName: varchar('legal_first_name', { length: 100 }).notNull(),
+  legalMiddleName: varchar('legal_middle_name', { length: 100 }),
+  legalLastName: varchar('legal_last_name', { length: 100 }).notNull(),
+  dateOfBirth: date('date_of_birth').notNull(),
+  ssn: varchar('ssn', { length: 11 }), // Encrypted
+  
+  // Contact
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 20 }).notNull(),
+  address: text('address').notNull(),
+  city: varchar('city', { length: 100 }).notNull(),
+  state: varchar('state', { length: 2 }).notNull(),
+  zip: varchar('zip', { length: 10 }).notNull(),
+  
+  // Emergency Contact
+  emergencyContactName: varchar('emergency_contact_name', { length: 255 }),
+  emergencyContactPhone: varchar('emergency_contact_phone', { length: 20 }),
+  emergencyContactRelation: varchar('emergency_contact_relation', { length: 50 }),
+  
+  // Employment Eligibility
+  citizenshipStatus: varchar('citizenship_status', { length: 50 }), // 'us_citizen', 'permanent_resident', 'work_visa'
+  i9Completed: boolean('i9_completed').default(false),
+  i9CompletedDate: date('i9_completed_date'),
+  
+  // Texas Security License
+  securityLicenseType: varchar('security_license_type', { length: 50 }), // 'commissioned', 'non_commissioned', 'pending'
+  securityLicenseNumber: varchar('security_license_number', { length: 50 }),
+  securityLicenseExpiration: date('security_license_expiration'),
+  securityLicenseUploadUrl: text('security_license_upload_url'),
+  
+  // Firearms (if commissioned/armed)
+  handgunPermitNumber: varchar('handgun_permit_number', { length: 50 }),
+  handgunPermitExpiration: date('handgun_permit_expiration'),
+  handgunPermitUploadUrl: text('handgun_permit_upload_url'),
+  firearmsQualificationDate: date('firearms_qualification_date'),
+  firearmsQualificationUploadUrl: text('firearms_qualification_upload_url'),
+  
+  // Background Check
+  backgroundCheckConsent: boolean('background_check_consent').default(false),
+  backgroundCheckConsentDate: date('background_check_consent_date'),
+  backgroundCheckStatus: varchar('background_check_status', { length: 20 }), // 'pending', 'passed', 'failed', 'review'
+  backgroundCheckCompletedDate: date('background_check_completed_date'),
+  
+  // Drug Test
+  drugTestConsent: boolean('drug_test_consent').default(false),
+  drugTestConsentDate: date('drug_test_consent_date'),
+  drugTestStatus: varchar('drug_test_status', { length: 20 }), // 'pending', 'passed', 'failed'
+  drugTestDate: date('drug_test_date'),
+  
+  // Training
+  orientationCompleted: boolean('orientation_completed').default(false),
+  orientationDate: date('orientation_date'),
+  firstAidCertified: boolean('first_aid_certified').default(false),
+  firstAidCertExpiration: date('first_aid_cert_expiration'),
+  firstAidCertUploadUrl: text('first_aid_cert_upload_url'),
+  cprCertified: boolean('cpr_certified').default(false),
+  cprCertExpiration: date('cpr_cert_expiration'),
+  
+  // Tax Forms
+  w4Completed: boolean('w4_completed').default(false),
+  w4UploadUrl: text('w4_upload_url'),
+  w4FederalFilingStatus: varchar('w4_federal_filing_status', { length: 20 }),
+  w4Allowances: integer('w4_allowances'),
+  stateWithholdingCompleted: boolean('state_withholding_completed').default(false),
+  
+  // Direct Deposit
+  directDepositSetup: boolean('direct_deposit_setup').default(false),
+  bankName: varchar('bank_name', { length: 255 }),
+  bankRoutingNumber: varchar('bank_routing_number', { length: 9 }),
+  bankAccountNumber: varchar('bank_account_number', { length: 20 }), // Encrypted
+  bankAccountType: varchar('bank_account_type', { length: 20 }), // 'checking', 'savings'
+  
+  // Agreements
+  employmentAgreementSigned: boolean('employment_agreement_signed').default(false),
+  employmentAgreementDate: date('employment_agreement_date'),
+  employmentAgreementSignature: text('employment_agreement_signature'),
+  
+  handbookAcknowledged: boolean('handbook_acknowledged').default(false),
+  handbookAcknowledgedDate: date('handbook_acknowledged_date'),
+  
+  confidentialityAgreementSigned: boolean('confidentiality_agreement_signed').default(false),
+  confidentialityAgreementDate: date('confidentiality_agreement_date'),
+  
+  // Uniform/Equipment
+  uniformSize: varchar('uniform_size', { length: 10 }),
+  shirtSize: varchar('shirt_size', { length: 10 }),
+  pantsSize: varchar('pants_size', { length: 10 }),
+  shoeSize: varchar('shoe_size', { length: 10 }),
+  equipmentIssued: jsonb('equipment_issued'), // Array of issued items
+  
+  // Status
+  packetStatus: varchar('packet_status', { length: 20 }).notNull().default('in_progress'),
+  // 'in_progress', 'pending_review', 'approved', 'rejected', 'incomplete'
+  completionPercentage: integer('completion_percentage').default(0),
+  
+  // Deadlines
+  startDate: date('start_date'),
+  onboardingDeadline: date('onboarding_deadline'), // 15 days from invite
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Document uploads tracking
+export const onboardingDocuments = pgTable('onboarding_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  packetId: uuid('packet_id').notNull().references(() => employeeOnboardingPackets.id, { onDelete: 'cascade' }),
+  workspaceId: uuid('workspace_id').notNull(),
+  
+  documentType: varchar('document_type', { length: 50 }).notNull(),
+  // Types: 'drivers_license', 'social_security_card', 'security_license', 
+  // 'handgun_permit', 'firearms_qual', 'first_aid_cert', 'w4', 'i9',
+  // 'direct_deposit_void_check', 'employment_agreement', 'handbook_ack'
+  
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileUrl: text('file_url').notNull(),
+  fileSize: integer('file_size'),
+  mimeType: varchar('mime_type', { length: 100 }),
+  
+  status: varchar('status', { length: 20 }).default('pending'),
+  // 'pending', 'approved', 'rejected'
+  reviewedBy: uuid('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  rejectionReason: text('rejection_reason'),
+  
+  expirationDate: date('expiration_date'), // For licenses/certs
+  reminderSent: boolean('reminder_sent').default(false),
+  
+  uploadedAt: timestamp('uploaded_at').defaultNow(),
+});
+```
+
+### 2.2 Employee Onboarding Form Steps
+
+```typescript
+/**
+ * EMPLOYEE ONBOARDING WIZARD
+ * 
+ * Step 1: Personal Information
+ *   - Full legal name
+ *   - Date of birth
+ *   - Social Security Number (encrypted)
+ *   - Address
+ *   - Phone, Email
+ * 
+ * Step 2: Government ID Upload
+ *   - Driver's License / State ID (front & back)
+ *   - Social Security Card
+ *   - Work Authorization (if applicable)
+ * 
+ * Step 3: Employment Eligibility (I-9)
+ *   - Citizenship status
+ *   - I-9 form completion
+ *   - List A or List B+C documents
+ * 
+ * Step 4: Texas Security License
+ *   - License type (Commissioned / Non-Commissioned)
+ *   - License number
+ *   - Expiration date
+ *   - Upload license copy
+ *   - If pending: DPS application receipt
+ * 
+ * Step 5: Firearms (Armed Officers Only)
+ *   - Handgun permit number
+ *   - Permit expiration
+ *   - Upload permit
+ *   - Firearms qualification certificate
+ * 
+ * Step 6: Background Check Consent
+ *   - Read consent form
+ *   - Electronic signature
+ *   - Captures: name, date, signature, IP
+ * 
+ * Step 7: Drug Test Consent
+ *   - Read consent form
+ *   - Electronic signature
+ *   - Schedule drug test appointment (if applicable)
+ * 
+ * Step 8: Tax Forms
+ *   - W-4 Federal Withholding
+ *   - Texas doesn't have state income tax (skip state form)
+ * 
+ * Step 9: Direct Deposit
+ *   - Bank name
+ *   - Routing number
+ *   - Account number
+ *   - Account type
+ *   - Upload voided check or bank letter
+ * 
+ * Step 10: Emergency Contact
+ *   - Name
+ *   - Relationship
+ *   - Phone number
+ * 
+ * Step 11: Employment Agreement
+ *   - Review employment agreement
+ *   - Electronic signature
+ *   - At-will employment acknowledgment
+ * 
+ * Step 12: Employee Handbook
+ *   - Download/view handbook
+ *   - Acknowledge receipt
+ *   - Electronic signature
+ * 
+ * Step 13: Confidentiality Agreement
+ *   - Review agreement
+ *   - Electronic signature
+ * 
+ * Step 14: Uniform/Equipment
+ *   - Uniform sizes
+ *   - Equipment checklist
+ * 
+ * Step 15: Review & Submit
+ *   - Review all information
+ *   - Completion percentage
+ *   - Submit for review
+ */
+```
+
+### 2.3 Texas DPS Security Guard Requirements Checklist
+
+```typescript
+const TEXAS_SECURITY_GUARD_REQUIREMENTS = {
+  nonCommissioned: {
+    name: 'Non-Commissioned Security Officer (Unarmed)',
+    requirements: [
+      {
+        id: 'age',
+        label: 'At least 18 years of age',
+        type: 'verification',
+      },
+      {
+        id: 'criminal_background',
+        label: 'No disqualifying criminal history',
+        type: 'background_check',
+      },
+      {
+        id: 'level_2_training',
+        label: 'Level II Training (6 hours) or equivalent',
+        type: 'training',
+        hoursRequired: 6,
+      },
+      {
+        id: 'level_3_training',
+        label: 'Level III Training (within 1 year of registration)',
+        type: 'training',
+        hoursRequired: 12, // Additional
+      },
+      {
+        id: 'registration',
+        label: 'DPS Registration Card',
+        type: 'license',
+        renewalYears: 2,
+      },
+    ],
+  },
+  
+  commissioned: {
+    name: 'Commissioned Security Officer (Armed)',
+    requirements: [
+      {
+        id: 'age',
+        label: 'At least 21 years of age',
+        type: 'verification',
+      },
+      {
+        id: 'criminal_background',
+        label: 'No disqualifying criminal history',
+        type: 'background_check',
+      },
+      {
+        id: 'psychological_exam',
+        label: 'Psychological examination (if required)',
+        type: 'exam',
+      },
+      {
+        id: 'level_2_training',
+        label: 'Level II Training (6 hours)',
+        type: 'training',
+        hoursRequired: 6,
+      },
+      {
+        id: 'level_3_training',
+        label: 'Level III Training (18 hours total)',
+        type: 'training',
+        hoursRequired: 18,
+      },
+      {
+        id: 'level_4_training',
+        label: 'Level IV Training - Firearms (40 hours)',
+        type: 'training',
+        hoursRequired: 40,
+      },
+      {
+        id: 'firearms_qualification',
+        label: 'Firearms qualification (annual)',
+        type: 'certification',
+        renewalYears: 1,
+      },
+      {
+        id: 'commission_license',
+        label: 'DPS Commission License',
+        type: 'license',
+        renewalYears: 2,
+      },
+      {
+        id: 'handgun_proficiency',
+        label: 'Handgun proficiency certificate',
+        type: 'certification',
+      },
+    ],
+  },
+  
+  continuing: {
+    name: 'Continuing Education',
+    requirements: [
+      {
+        id: 'annual_firearms',
+        label: 'Annual firearms requalification (commissioned)',
+        type: 'certification',
+        frequency: 'annual',
+      },
+      {
+        id: 'cpr_first_aid',
+        label: 'CPR/First Aid certification',
+        type: 'certification',
+        renewalYears: 2,
+      },
+    ],
+  },
+};
+```
+
+### 2.4 Onboarding Status & Compliance
+
+```typescript
+/**
+ * ONBOARDING ENFORCEMENT RULES:
+ * 
+ * Day 1-14: "In Progress" status
+ *   - Yellow banner: "Complete your onboarding by [date]"
+ *   - Daily reminder emails after day 7
+ * 
+ * Day 15+: If incomplete
+ *   - RED HEADER WARNING on dashboard
+ *   - Status: FROZEN_INCOMPLETE_ONBOARDING
+ *   - CANNOT be scheduled for shifts
+ *   - Manager alert: "Employee [name] has incomplete onboarding"
+ * 
+ * Required for scheduling:
+ *   - Background check passed
+ *   - Valid security license (or approved pending status)
+ *   - Drug test passed (if required)
+ *   - I-9 completed
+ *   - W-4 completed
+ *   - Employment agreement signed
+ * 
+ * Additional for armed positions:
+ *   - Valid handgun permit
+ *   - Current firearms qualification
+ */
+```
+
+---
+
+## PART 3: API ENDPOINTS
+
+### 3.1 Contract Endpoints
+
+```typescript
+// Contract CRUD
+POST   /api/contracts                    // Create new contract
+GET    /api/contracts                    // List all contracts
+GET    /api/contracts/:id                // Get contract details
+PUT    /api/contracts/:id                // Update contract
+DELETE /api/contracts/:id                // Delete draft contract
+
+// Contract workflow
+POST   /api/contracts/:id/send           // Send contract for signature
+GET    /api/contracts/:id/signing-link   // Get client signing URL
+POST   /api/contracts/:id/sign           // Submit signature
+GET    /api/contracts/:id/pdf            // Download PDF
+
+// Contract sites
+POST   /api/contracts/:id/sites          // Add site to contract
+PUT    /api/contracts/:id/sites/:siteId  // Update site
+DELETE /api/contracts/:id/sites/:siteId  // Remove site
+
+// Schedule requirements
+POST   /api/contracts/:id/schedule-requirements
+PUT    /api/contracts/:id/schedule-requirements/:reqId
+DELETE /api/contracts/:id/schedule-requirements/:reqId
+```
+
+### 3.2 Employee Onboarding Endpoints
+
+```typescript
+// Onboarding packets
+POST   /api/onboarding/invite            // Send onboarding invite to new employee
+GET    /api/onboarding                   // List all onboarding packets
+GET    /api/onboarding/:id               // Get packet details
+PUT    /api/onboarding/:id               // Update packet (employee filling out)
+POST   /api/onboarding/:id/submit        // Submit for review
+
+// Document uploads
+POST   /api/onboarding/:id/documents     // Upload document
+GET    /api/onboarding/:id/documents     // List documents
+DELETE /api/onboarding/:id/documents/:docId
+PUT    /api/onboarding/:id/documents/:docId/approve
+PUT    /api/onboarding/:id/documents/:docId/reject
+
+// Admin review
+GET    /api/onboarding/pending-review    // List packets pending review
+POST   /api/onboarding/:id/approve       // Approve and create employee
+POST   /api/onboarding/:id/reject        // Reject with reason
+
+// Compliance checks
+GET    /api/onboarding/:id/compliance-status
+POST   /api/onboarding/:id/run-background-check
+POST   /api/onboarding/:id/schedule-drug-test
+```
+
+---
+
+## PART 4: TRINITY INTEGRATION
+
+### 4.1 Contract Data for Trinity Decision Making
+
+```typescript
+/**
+ * TRINITY USES CONTRACT DATA FOR:
+ * 
+ * 1. SHIFT BUILDING
+ *    Input: Contract schedule requirements
+ *    Output: Proposed shifts matching requirements
+ *    
+ * 2. EMPLOYEE ASSIGNMENT OPTIMIZATION
+ *    Consider:
+ *    - Employee qualifications (armed/unarmed license)
+ *    - Employee pay rate vs contract bill rate (profitability)
+ *    - Employee location vs site location (minimize travel)
+ *    - Employee availability
+ *    - Employee preferences
+ *    
+ * 3. PROFITABILITY ANALYSIS
+ *    Calculate per shift:
+ *    - Revenue: hours × contract rate
+ *    - Cost: hours × employee rate + burden
+ *    - Margin: revenue - cost
+ *    - Flag low-margin shifts
+ *    
+ * 4. SCHEDULING CONFLICTS
+ *    Detect and resolve:
+ *    - Double-booked employees
+ *    - Uncovered shifts
+ *    - Overtime situations
+ *    
+ * 5. COMPLIANCE MONITORING
+ *    Alert when:
+ *    - Employee license expiring
+ *    - Firearms qualification due
+ *    - Insurance renewal needed
+ */
+
+interface TrinitySchedulingInput {
+  contractId: string;
+  dateRange: { start: string; end: string };
+  
+  requirements: Array<{
+    siteId: string;
+    siteAddress: string;
+    coordinates: { lat: number; lng: number };
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    officersRequired: number;
+    requiresArmed: boolean;
+    billRatePerHour: number;
+  }>;
+  
+  availableEmployees: Array<{
+    employeeId: string;
+    name: string;
+    homeAddress: string;
+    coordinates: { lat: number; lng: number };
+    isArmedCertified: boolean;
+    payRatePerHour: number;
+    availability: Array<{ dayOfWeek: number; available: boolean }>;
+    preferences: {
+      maxDistanceMiles: number;
+      preferredSites: string[];
+      avoidSites: string[];
+    };
+  }>;
+}
+
+interface TrinitySchedulingOutput {
+  proposedSchedule: Array<{
+    shiftId: string;
+    siteId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    assignedEmployeeId: string;
+    
+    financials: {
+      billableHours: number;
+      revenue: number;
+      employeeCost: number;
+      margin: number;
+      marginPercentage: number;
+    };
+    
+    logistics: {
+      employeeDistanceToSiteMiles: number;
+      estimatedTravelMinutes: number;
+    };
+  }>;
+  
+  unfilledShifts: Array<{
+    requirement: any;
+    reason: string; // 'no_qualified_employees', 'no_available_employees', etc.
+  }>;
+  
+  warnings: Array<{
+    type: string;
+    message: string;
+    shiftId?: string;
+    employeeId?: string;
+  }>;
+  
+  summary: {
+    totalShifts: number;
+    filledShifts: number;
+    unfilledShifts: number;
+    totalRevenue: number;
+    totalCost: number;
+    totalMargin: number;
+    averageMarginPercentage: number;
+  };
+}
+```
+
+---
+
+## PART 5: UI COMPONENTS NEEDED
+
+```
+COMPONENTS TO BUILD:
+
+/client/src/pages/contracts/
+├── contracts-list.tsx           // List all contracts with filters
+├── new-contract.tsx             // Multi-step contract wizard
+├── contract-detail.tsx          // View contract details
+├── contract-signing.tsx         // Public signing page (no auth)
+└── contract-templates.tsx       // Manage contract templates
+
+/client/src/pages/onboarding/
+├── onboarding-list.tsx          // List all onboarding packets
+├── onboarding-detail.tsx        // Admin view of packet
+├── onboarding-review.tsx        // Review and approve/reject
+└── employee-onboarding.tsx      // Employee-facing onboarding wizard
+
+/client/src/components/contracts/
+├── contract-form-wizard.tsx     // Multi-step form
+├── contract-preview.tsx         // PDF-style preview
+├── signature-pad.tsx            // E-signature component
+├── site-form.tsx                // Add/edit site
+├── schedule-requirement-form.tsx
+└── pricing-calculator.tsx       // Calculate rates
+
+/client/src/components/onboarding/
+├── onboarding-wizard.tsx        // Multi-step employee form
+├── document-upload.tsx          // File upload with preview
+├── compliance-checklist.tsx     // Texas requirements checklist
+├── progress-tracker.tsx         // Visual completion progress
+└── id-verification.tsx          // ID upload and verification
+```
+
+---
+
+## PART 6: VERIFICATION CHECKLIST
+
+```
+BEFORE MARKING COMPLETE:
+
+CONTRACT SYSTEM:
+[ ] Can create new contract from wizard
+[ ] All contract fields save correctly
+[ ] Can add multiple sites to contract
+[ ] Can add schedule requirements per site
+[ ] Contract PDF generates correctly
+[ ] Can send contract for signature
+[ ] Public signing link works (no auth required)
+[ ] E-signature captures correctly
+[ ] Signed PDF generates with embedded signature
+[ ] Contract status updates through workflow
+[ ] Client record created on signature
+[ ] Site records created on signature
+[ ] Trinity receives schedule requirements
+[ ] Confirmation emails sent to both parties
+
+EMPLOYEE ONBOARDING:
+[ ] Can invite new employee via email
+[ ] Onboarding wizard works step by step
+[ ] All required fields validated
+[ ] Document uploads work
+[ ] E-signatures work on agreements
+[ ] Texas license requirements enforced
+[ ] Armed officer requirements enforced
+[ ] Background check consent captured
+[ ] Drug test consent captured
+[ ] W-4 completion works
+[ ] Direct deposit info encrypted and stored
+[ ] Progress percentage calculates correctly
+[ ] 15-day deadline enforced
+[ ] RED HEADER shows after deadline
+[ ] Cannot schedule employee if incomplete
+[ ] Admin can review and approve/reject
+[ ] Employee record created on approval
+[ ] Compliance tracking initialized
+
+TRINITY INTEGRATION:
+[ ] Contract data feeds to Trinity
+[ ] Trinity can access schedule requirements
+[ ] Trinity can access pricing data
+[ ] Trinity can calculate profitability
+[ ] Trinity considers employee qualifications
+[ ] Trinity considers geographic distance
+[ ] Trinity generates optimal schedule
+```
+
+---
+
+**BEGIN IMPLEMENTATION. Start with database schema, then contract form, then employee onboarding, then Trinity integration.**

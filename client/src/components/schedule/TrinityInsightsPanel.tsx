@@ -3,6 +3,7 @@
  * Integrates with Trinity orchestration for intelligent workforce management
  */
 
+import { secureFetch } from "@/lib/csrf";
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,7 +59,7 @@ export function TrinityInsightsPanel({
     queryKey: ['/api/trinity/scheduling/insights', weekStart.toISOString()],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/trinity/scheduling/insights?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`);
+        const res = await secureFetch(`/api/trinity/scheduling/insights?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`);
         if (!res.ok) {
           // Fallback to local insights if Trinity endpoint not available
           return generateLocalInsights(shifts, employees, clients);
@@ -72,14 +73,10 @@ export function TrinityInsightsPanel({
 
   const askTrinityMutation = useMutation({
     mutationFn: async (question: string) => {
-      return await apiRequest('/api/trinity/scheduling/ask', { 
-        method: 'POST',
-        body: JSON.stringify({
-          question,
-          weekStart: weekStart.toISOString(),
-          weekEnd: weekEnd.toISOString(),
-        }),
-        headers: { 'Content-Type': 'application/json' },
+      return await apiRequest('POST', '/api/trinity/scheduling/ask', {
+        question,
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
       });
     },
     onSuccess: (data) => {
@@ -92,13 +89,9 @@ export function TrinityInsightsPanel({
 
   const applyInsightMutation = useMutation({
     mutationFn: async (insight: TrinityInsight) => {
-      return await apiRequest('/api/schedules/apply-insight', {
-        method: 'POST',
-        body: JSON.stringify({
-          insightId: insight.id,
-          actionData: insight.actionData,
-        }),
-        headers: { 'Content-Type': 'application/json' },
+      return await apiRequest('POST', '/api/schedules/apply-insight', {
+        insightId: insight.id,
+        actionData: insight.actionData,
       });
     },
     onSuccess: () => {
@@ -137,9 +130,9 @@ export function TrinityInsightsPanel({
 
   return (
     <Collapsible open={!isCollapsed} onOpenChange={onToggleCollapse}>
-      <Card className="border-primary/30" data-testid="trinity-insights-panel">
+      <Card className="relative z-20 border-primary/30" data-testid="trinity-insights-panel">
         <CardHeader className="py-3">
-          <CollapsibleTrigger className="flex items-center justify-between w-full">
+          <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full">
             <CardTitle className="text-sm flex items-center gap-2">
               <TrinityIconStatic className="w-5 h-5 text-primary" />
               Trinity Insights

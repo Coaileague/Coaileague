@@ -9,9 +9,12 @@
  * 5. Handle failures and rollback
  */
 
+import crypto from 'crypto';
 import { suggestedChangesService } from './suggestedChangesService';
 import { AIBrainCodeEditorService } from './aiBrainCodeEditor';
 import { getSuggestedChange } from '@shared/config/suggestedChanges';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('autonomousWorkflowService');
 
 interface WorkflowResult {
   success: boolean;
@@ -50,11 +53,11 @@ class AutonomousWorkflowService {
     requestedBy: string,
     includeRelated: boolean = true
   ): Promise<WorkflowResult> {
-    const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const workflowId = `workflow-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     const errors: string[] = [];
     
     try {
-      console.log(`[AutonomousWorkflow] Starting workflow ${workflowId} for suggestion: ${suggestionId}`);
+      log.info(`[AutonomousWorkflow] Starting workflow ${workflowId} for suggestion: ${suggestionId}`);
 
       // Step 1: Verify suggestion exists
       const suggestion = getSuggestedChange(suggestionId);
@@ -72,7 +75,7 @@ class AutonomousWorkflowService {
       }
 
       // Step 2: Stage the suggested change
-      console.log(`[AutonomousWorkflow] Staging change: ${suggestion.title}`);
+      log.info(`[AutonomousWorkflow] Staging change: ${suggestion.title}`);
       const stageResult = await suggestedChangesService.stageSuggestedChange(
         suggestionId,
         requestedBy,
@@ -98,7 +101,7 @@ class AutonomousWorkflowService {
 
       // Step 3: Auto-approve if this is a trusted template
       if (suggestion.autoApprovable !== false) {
-        console.log(`[AutonomousWorkflow] Auto-approving trusted change: ${suggestionId}`);
+        log.info(`[AutonomousWorkflow] Auto-approving trusted change: ${suggestionId}`);
         
         for (const changeId of stagedChangeIds) {
           try {
@@ -110,7 +113,7 @@ class AutonomousWorkflowService {
 
             if (approveResult.success) {
               approvedChangeIds.push(changeId);
-              console.log(`[AutonomousWorkflow] Approved change: ${changeId}`);
+              log.info(`[AutonomousWorkflow] Approved change: ${changeId}`);
             } else {
               errors.push(`Failed to approve change ${changeId}: ${approveResult.message}`);
             }
@@ -121,7 +124,7 @@ class AutonomousWorkflowService {
         }
       } else {
         // Requires manual approval
-        console.log(`[AutonomousWorkflow] Change requires manual approval: ${suggestionId}`);
+        log.info(`[AutonomousWorkflow] Change requires manual approval: ${suggestionId}`);
       }
 
       // Step 4: Apply approved changes
@@ -139,7 +142,7 @@ class AutonomousWorkflowService {
 
           if (applyResult.success) {
             appliedChangeIds.push(changeId);
-            console.log(`[AutonomousWorkflow] Applied change: ${changeId}`);
+            log.info(`[AutonomousWorkflow] Applied change: ${changeId}`);
           } else {
             errors.push(`Failed to apply change ${changeId}: ${applyResult.message}`);
           }
@@ -151,7 +154,7 @@ class AutonomousWorkflowService {
 
       const success = appliedChangeIds.length > 0 || (approvedChangeIds.length === 0 && stagedChangeIds.length > 0);
 
-      console.log(`[AutonomousWorkflow] Workflow ${workflowId} completed`, {
+      log.info(`[AutonomousWorkflow] Workflow ${workflowId} completed`, {
         staged: stagedChangeIds.length,
         approved: approvedChangeIds.length,
         applied: appliedChangeIds.length,
@@ -172,7 +175,7 @@ class AutonomousWorkflowService {
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[AutonomousWorkflow] Workflow ${workflowId} failed:`, error);
+      log.error(`[AutonomousWorkflow] Workflow ${workflowId} failed:`, error);
 
       return {
         success: false,
@@ -195,18 +198,18 @@ class AutonomousWorkflowService {
     workflowId: string;
     results: WorkflowResult[];
   }> {
-    const workflowId = `batch-workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const workflowId = `batch-workflow-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     const fixes = suggestedChangesService.getHighPriorityFixes();
     const results: WorkflowResult[] = [];
 
-    console.log(`[AutonomousWorkflow] Executing high-priority fixes batch: ${fixes.length} fixes`);
+    log.info(`[AutonomousWorkflow] Executing high-priority fixes batch: ${fixes.length} fixes`);
 
     for (const fix of fixes) {
       const result = await this.executeWorkflow(fix.id, requestedBy, false);
       results.push(result);
 
       if (!result.success && result.errors.length > 0) {
-        console.warn(`[AutonomousWorkflow] Fix ${fix.id} failed, continuing with others`);
+        log.warn(`[AutonomousWorkflow] Fix ${fix.id} failed, continuing with others`);
       }
     }
 
@@ -224,7 +227,7 @@ class AutonomousWorkflowService {
     const suggestions = suggestedChangesService.getSuggestionsForIssueType(issueType);
 
     if (suggestions.length === 0) {
-      console.log(`[AutonomousWorkflow] No suggestions found for issue: ${issueType}`);
+      log.info(`[AutonomousWorkflow] No suggestions found for issue: ${issueType}`);
       return null;
     }
 

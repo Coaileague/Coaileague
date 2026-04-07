@@ -1,0 +1,314 @@
+PRODUCTION READINESS VERIFICATION
+══════════════════════════════════
+
+We have a working development environment with simulated data for "Acme Security Services." The question is: if a REAL security company — Statewide Protective Services — registers on this platform tomorrow and starts using it with real employees, real clients, real shifts, real money... will everything work?
+
+This is not a feature audit. This is a "can we go live" verification. Answer honestly. If the answer is "not yet," I need to know exactly what's blocking us and how long each fix takes.
+
+CONTEXT:
+- Company: Statewide Protective Services (Texas-licensed security company)
+- State: Texas (Chapter 1702 regulated)
+- Employees: ~15-25 guards (armed and unarmed)
+- Clients: 5-10 active client sites
+- Pay rates: $18-28/hr depending on classification
+- Bill rates: $25-50/hr depending on armed/unarmed
+- Payroll: Biweekly
+- Invoicing: Monthly per client
+- Real money: Real paychecks, real invoices, real client payments
+
+═══════════════════════════════════════════════════
+TEST 1: REGISTRATION & ONBOARDING
+═══════════════════════════════════════════════════
+
+Simulate this exact flow. Do not skip steps.
+
+1. Register a new user account with email: admin@statewideprotective.com
+2. Go through whatever org setup flow exists
+3. Create the workspace "Statewide Protective Services" in Texas
+
+AFTER REGISTRATION, VERIFY:
+  □ Workspace record created with unique ID?
+  □ Owner user assigned to workspace with role = 'owner'?
+  □ org_subscription created? What tier? What dates?
+  □ credit_balance created? How many credits?
+  □ usage_caps created for current billing cycle?
+  □ org_settings created with defaults?
+  □ Welcome notification delivered?
+
+IF ANY OF THESE ARE MISSING: The onboarding flow is broken. Document exactly what's missing and what code path skips it.
+
+IF THERE IS NO REGISTRATION FLOW: Say so clearly. This is a blocker.
+
+═══════════════════════════════════════════════════
+TEST 2: ADD REAL EMPLOYEES
+═══════════════════════════════════════════════════
+
+Add 5 employees to Statewide Protective Services:
+
+  1. John Smith - Armed Guard - $23/hr - Level III certified
+  2. Maria Garcia - Unarmed Guard - $18/hr - Level II certified
+  3. David Johnson - Armed Patrol - $25/hr - Level III certified
+  4. Sarah Williams - Supervisor - $28/hr - Level IV certified
+  5. Marcus Brown - Unarmed Guard - $17/hr - Level II certified
+
+AFTER ADDING EACH EMPLOYEE, VERIFY:
+  □ Employee record has workspace_id = Statewide's workspace?
+  □ Employee has correct role, pay rate, classification?
+  □ Employee count for billing updated? (should be 5 after all added)
+  □ No duplicate records created?
+  □ Employee appears in the Employees list page?
+  □ Employee can be assigned to shifts?
+
+═══════════════════════════════════════════════════
+TEST 3: ADD REAL CLIENTS
+═══════════════════════════════════════════════════
+
+Add 3 client sites:
+
+  1. Pinnacle Tower LLC - 123 Commerce St, Dallas TX 75201
+     Armed guard needed, 24/7 coverage, bill rate $45/hr
+     
+  2. Grand Plaza Hotel - 456 Main St, Fort Worth TX 76102
+     Unarmed guard, evening/overnight, bill rate $28/hr
+     
+  3. North Star Data Center - 789 Tech Blvd, Austin TX 78701
+     Armed patrol, 24/7, bill rate $50/hr
+
+AFTER ADDING EACH CLIENT, VERIFY:
+  □ Client record has workspace_id = Statewide's workspace?
+  □ Client has correct address, contact info, bill rate?
+  □ Client appears in the Clients list page?
+  □ Shifts can be created at this client's site?
+  □ No cross-contamination with Acme Security's clients?
+
+═══════════════════════════════════════════════════
+TEST 4: CREATE AND MANAGE SCHEDULE
+═══════════════════════════════════════════════════
+
+Create a one-week schedule for all 3 sites:
+
+  Pinnacle Tower: 3 shifts/day (day 8-4, evening 4-12, overnight 12-8)
+  Grand Plaza: 2 shifts/day (evening 6-12, overnight 12-6)
+  North Star: 2 shifts/day (day 8-8, night 8-8 — 12hr shifts)
+
+4A. MANUAL SCHEDULING:
+  □ Can create shifts at each site?
+  □ Can assign employees to shifts?
+  □ Shift records have correct workspace_id?
+  □ Shift records reference correct client/site?
+  □ Schedule page displays correctly (My Schedule + Full Team views)?
+  □ Conflict detection works (if employee double-booked)?
+  □ Overtime warning appears (if employee exceeds 40hrs)?
+
+4B. TRINITY AI SCHEDULING:
+  □ Turn on AI Scheduling toggle
+  □ Leave some shifts unassigned
+  □ Does Trinity attempt to fill them?
+  □ Does Trinity respect employee availability?
+  □ Does Trinity respect certifications (armed employees to armed sites)?
+  □ Does Trinity avoid overtime?
+  □ Are credits deducted for AI scheduling?
+  □ Can you see Trinity's reasoning for assignments?
+  □ If credits are 0, does Trinity degrade gracefully (not crash)?
+
+═══════════════════════════════════════════════════
+TEST 5: TIME & ATTENDANCE
+═══════════════════════════════════════════════════
+
+Simulate a shift for John Smith at Pinnacle Tower (8AM-4PM):
+
+  □ John can clock in?
+  □ Clock-in captures GPS coordinates?
+  □ Clock-in time is recorded accurately?
+  □ John can clock out at end of shift?
+  □ Clock-out captures GPS?
+  □ Total hours calculated correctly (8 hours)?
+  □ Clock record has workspace_id + user_id + shift_id?
+  □ Timesheet page shows the worked shift?
+  □ Hours appear in payroll-ready format?
+
+═══════════════════════════════════════════════════
+TEST 6: INVOICING — REAL MONEY CALCULATIONS
+═══════════════════════════════════════════════════
+
+After a week of simulated shifts, generate invoices:
+
+6A. MANUAL INVOICE:
+  □ Can create invoice for Pinnacle Tower?
+  □ Line items calculate correctly:
+    - 3 shifts/day × 7 days = 21 shifts × 8 hours = 168 hours
+    - 168 hours × $45/hr = $7,560 subtotal
+    - Texas sales tax on security services (8.25%): $623.70
+    - Total: $8,183.70
+  □ Does the invoice include the correct tax rate for Texas?
+  □ Invoice record has workspace_id + client_id?
+  □ Financial processing fee recorded (dollar amount, not credit)?
+
+6B. AUTO INVOICING:
+  □ Turn on Auto Invoicing toggle
+  □ Does it generate invoices from approved time entries?
+  □ Are calculations identical to manual?
+  □ Does manager get notified to review?
+
+6C. INVOICE DELIVERY:
+  □ Can send invoice to client via email?
+  □ Can mark invoice as paid?
+  □ Invoice status updates (Draft → Sent → Paid)?
+  □ Accounts Receivable aging updates?
+
+THIS IS WHERE REAL MONEY ERRORS HAPPEN. Verify every dollar amount. A wrong tax calculation or hours miscalculation means we either overcharge (client dispute) or undercharge (we lose money).
+
+═══════════════════════════════════════════════════
+TEST 7: PAYROLL — REAL MONEY CALCULATIONS
+═══════════════════════════════════════════════════
+
+Run payroll for a 2-week period:
+
+7A. CALCULATE PAYROLL FOR JOHN SMITH (Armed Guard, $23/hr, Texas):
+  Regular hours: 80 (40/week × 2 weeks, no overtime)
+  Gross: 80 × $23 = $1,840.00
+  
+  Federal withholding (estimate based on W-4): ~$184.00
+  Social Security (6.2%): $114.08
+  Medicare (1.45%): $26.68
+  Texas state income tax: $0.00 (Texas has no state income tax)
+  
+  Net: approximately $1,515.24
+  
+  □ Does the system calculate gross correctly?
+  □ Does it know Texas has no state income tax?
+  □ Are SS and Medicare calculated at correct rates?
+  □ Is federal withholding calculated (even if estimated)?
+  □ Is net = gross - all deductions?
+
+7B. OVERTIME SCENARIO — David Johnson works 48 hours in one week:
+  Regular: 40 hours × $25 = $1,000
+  Overtime: 8 hours × $25 × 1.5 = $300
+  Gross: $1,300
+  
+  □ Does the system detect overtime at 40 hours (Texas weekly rule)?
+  □ Does it calculate OT at 1.5× rate?
+  □ Is gross calculated correctly?
+
+7C. PAYROLL PROCESSING:
+  □ Financial processing fee recorded per employee?
+  □ Payroll entries have workspace_id?
+  □ Manager can approve payroll?
+  □ QuickBooks sync works (if connected)?
+  □ Employees can see their pay stubs in My Paychecks?
+
+═══════════════════════════════════════════════════
+TEST 8: CREDIT SYSTEM — DOES THE ECONOMY WORK?
+═══════════════════════════════════════════════════
+
+  □ What tier is Statewide on after registration?
+  □ How many credits do they start with?
+  □ Perform an AI scheduling action — are credits deducted?
+  □ Check credit_balance — does it reflect the deduction?
+  □ Check credit_transactions — is there a ledger entry?
+  □ Perform multiple AI actions until credits are low
+  □ Does a "low credits" warning appear?
+  □ Drain credits to 0
+  □ Does Trinity gracefully degrade (basic mode, not crash)?
+  □ Does a "credits depleted" notification appear?
+  □ Can the org "purchase" more credits (even if Stripe isn't live, 
+    does the purchase flow exist)?
+
+═══════════════════════════════════════════════════
+TEST 9: DATA ISOLATION
+═══════════════════════════════════════════════════
+
+This is the most important security test:
+
+  □ Log in as Acme Security's owner
+  □ Can you see ANY of Statewide's employees? (MUST be NO)
+  □ Can you see ANY of Statewide's clients? (MUST be NO)
+  □ Can you see ANY of Statewide's shifts? (MUST be NO)
+  □ Can you see ANY of Statewide's invoices? (MUST be NO)
+  □ Can you see ANY of Statewide's messages? (MUST be NO)
+  □ Can you see ANY of Statewide's notifications? (MUST be NO)
+  
+  □ Log in as Statewide's owner
+  □ Can you see ANY of Acme's data? (MUST be NO)
+  
+  □ Check the API: call every list endpoint as Acme's user
+  □ Verify ZERO Statewide records appear in ANY response
+
+IF ANY DATA LEAKS BETWEEN ORGS: This is a CRITICAL blocker. We cannot go live. Document exactly which endpoints leak data.
+
+═══════════════════════════════════════════════════
+TEST 10: INCIDENT & REPORT FLOW
+═══════════════════════════════════════════════════
+
+  □ An employee can submit a daily report?
+  □ An employee can submit an incident report?
+  □ "Analyze with ReportBot AI" produces a polished report?
+  □ Credits are deducted for AI analysis?
+  □ Manager can see and review submitted reports?
+  □ Reports have correct workspace_id, employee_id, site_id?
+
+═══════════════════════════════════════════════════
+TEST 11: COMMUNICATION
+═══════════════════════════════════════════════════
+
+  □ Can send a DockChat message between two Statewide employees?
+  □ Messages are scoped to Statewide (Acme can't see them)?
+  □ Broadcasts can be sent to all Statewide employees?
+  □ Notifications appear for the correct users?
+
+═══════════════════════════════════════════════════
+TEST 12: MONTHLY PLATFORM BILLING
+═══════════════════════════════════════════════════
+
+Simulate end-of-month billing for Statewide:
+
+  □ Platform invoice generated with correct subscription amount?
+  □ Employee overage calculated (if over tier limit)?
+  □ Invoice processing fees aggregated correctly?
+  □ Payroll processing fees aggregated correctly?
+  □ QB sync fees aggregated (if applicable)?
+  □ Total calculated correctly?
+  □ Owner can view the platform bill?
+  □ Bill has correct workspace_id?
+
+═══════════════════════════════════════════════════
+FINAL VERDICT
+═══════════════════════════════════════════════════
+
+After running ALL 12 tests, give me this assessment:
+
+REGISTRATION & ONBOARDING:     READY / NOT READY — reason: ___
+EMPLOYEE MANAGEMENT:           READY / NOT READY — reason: ___
+CLIENT MANAGEMENT:             READY / NOT READY — reason: ___
+SCHEDULING (Manual):           READY / NOT READY — reason: ___
+SCHEDULING (Trinity AI):       READY / NOT READY — reason: ___
+TIME & ATTENDANCE:             READY / NOT READY — reason: ___
+INVOICING:                     READY / NOT READY — reason: ___
+PAYROLL:                       READY / NOT READY — reason: ___
+CREDIT SYSTEM:                 READY / NOT READY — reason: ___
+DATA ISOLATION:                READY / NOT READY — reason: ___
+INCIDENT REPORTS:              READY / NOT READY — reason: ___
+COMMUNICATION:                 READY / NOT READY — reason: ___
+MONTHLY BILLING:               READY / NOT READY — reason: ___
+
+OVERALL PRODUCTION VERDICT:    GO / NO-GO
+
+IF NO-GO:
+  Blockers (must fix before any real customer):
+    1. ___
+    2. ___
+    3. ___
+  
+  Time estimate to fix all blockers: ___ days
+  
+  After blockers fixed, can do a soft launch with Statewide 
+  Protective Services as the first real customer: YES / NO
+
+IF GO:
+  Recommended soft launch plan:
+    Week 1: Owner-only testing with real Statewide data
+    Week 2: Add 2-3 real employees, limited features
+    Week 3: Full team onboarded, all features active
+    Week 4: First real payroll and invoicing cycle
+
+BE HONEST. If we're not ready, say so. Better to know now than after a real employee doesn't get their paycheck or a real client gets the wrong invoice.

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalHeader, UniversalModalTitle, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +21,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { TableSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 const disputeSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(200, "Title too long"),
@@ -206,6 +208,12 @@ function ReportSubmissionForm({ template, onSubmit, onCancel, isSubmitting }: Re
   );
 }
 
+const reportsPageConfig: CanvasPageConfig = {
+  category: 'operations',
+  title: 'Report Management System',
+  subtitle: 'Create, review, and manage organizational reports',
+};
+
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("templates");
   const [isNewReportOpen, setIsNewReportOpen] = useState(false);
@@ -226,7 +234,7 @@ export default function ReportsPage() {
 
   const toggleActivation = useMutation({
     mutationFn: async (templateId: string) => {
-      const res = await fetch(`/api/report-templates/${templateId}/toggle`, {
+      const res = await secureFetch(`/api/report-templates/${templateId}/toggle`, {
         method: "POST",
         credentials: "include",
       });
@@ -251,7 +259,7 @@ export default function ReportsPage() {
 
   const submitReport = useMutation({
     mutationFn: async (data: { templateId: string; formData: Record<string, any> }) => {
-      const res = await fetch("/api/report-submissions", {
+      const res = await secureFetch("/api/report-submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -280,7 +288,7 @@ export default function ReportsPage() {
 
   const reviewReport = useMutation({
     mutationFn: async (data: { submissionId: string; approved: boolean; reviewNotes: string }) => {
-      const res = await fetch(`/api/report-submissions/${data.submissionId}/review`, {
+      const res = await secureFetch(`/api/report-submissions/${data.submissionId}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -309,7 +317,7 @@ export default function ReportsPage() {
 
   const sendToClient = useMutation({
     mutationFn: async (submissionId: string) => {
-      const res = await fetch(`/api/report-submissions/${submissionId}/send-to-client`, {
+      const res = await secureFetch(`/api/report-submissions/${submissionId}/send-to-client`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -474,117 +482,105 @@ export default function ReportsPage() {
     return <Badge variant={config.variant} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
   };
 
+  const actionButtons = (
+    <div className="flex gap-2 flex-wrap">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleExport('csv')}
+        data-testid="button-export-csv"
+        className="gap-2"
+      >
+        <FileSpreadsheet className="h-4 w-4" />
+        <span className="hidden sm:inline">CSV</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleExport('pdf')}
+        data-testid="button-export-pdf"
+        className="gap-2"
+      >
+        <Download className="h-4 w-4" />
+        <span className="hidden sm:inline">PDF</span>
+      </Button>
+      <UniversalModal open={isNewReportOpen} onOpenChange={setIsNewReportOpen}>
+        <UniversalModalTrigger asChild>
+          <Button className="w-full sm:w-auto touch-target" data-testid="button-new-report">
+            <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span className="truncate">New Report</span>
+          </Button>
+        </UniversalModalTrigger>
+        <UniversalModalContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6 overflow-hidden bottom-sheet-enter">
+          <div className="h-full overflow-y-auto mobile-scroll p-4 sm:p-0">
+            <UniversalModalHeader>
+              <UniversalModalTitle>Create New Report</UniversalModalTitle>
+              <UniversalModalDescription>
+                {selectedTemplate ? `Complete the ${selectedTemplate.name}` : "Select a template to get started"}
+              </UniversalModalDescription>
+            </UniversalModalHeader>
+            {!selectedTemplate ? (
+              <div className="space-y-3">
+                {activeTemplates.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground">
+                    No active templates available. Please contact your administrator.
+                  </p>
+                ) : (
+                  activeTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => setSelectedTemplate(template)}
+                      className="w-full p-4 border rounded-md hover-elevate active-elevate-2 text-left"
+                      data-testid={`button-select-template-${template.id}`}
+                    >
+                      <h3 className="font-semibold">{template.name}</h3>
+                      {template.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {template.description}
+                        </p>
+                      )}
+                      {template.category && (
+                        <Badge variant="outline" className="text-xs capitalize mt-2">
+                          {template.category.replace(/_/g, ' ')}
+                        </Badge>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : (
+              <ReportSubmissionForm 
+                template={selectedTemplate} 
+                onSubmit={(formData) => {
+                  submitReport.mutate({
+                    templateId: selectedTemplate.id,
+                    formData,
+                  });
+                }}
+                onCancel={() => setSelectedTemplate(null)}
+                isSubmitting={submitReport.isPending}
+              />
+            )}
+          </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </div>
+  );
+
   if (templatesLoading || submissionsLoading) {
     return (
-      <div className="h-full overflow-auto mobile-scroll safe-bottom">
-        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-          <div className="space-y-3 sm:space-y-4 md:space-y-6">
-            <PageHeaderSkeleton />
-            <TableSkeleton rows={5} columns={4} showAvatar={false} compact={false} />
-          </div>
+      <CanvasHubPage config={reportsPageConfig}>
+        <div className="space-y-3 sm:space-y-4 md:space-y-6">
+          <PageHeaderSkeleton />
+          <TableSkeleton rows={5} columns={4} showAvatar={false} compact={false} />
         </div>
-      </div>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <div className="h-full overflow-auto mobile-scroll safe-bottom">
-      <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div className="space-y-3 sm:space-y-4 md:space-y-6">
-        {/* Mobile-optimized Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 safe-top">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-[hsl(var(--cad-text-primary))] truncate">
-              Report Management System
-            </h1>
-            <p className="text-xs sm:text-sm text-[hsl(var(--cad-text-secondary))] mt-0.5">
-              Create, review, and manage organizational reports
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport('csv')}
-              data-testid="button-export-csv"
-              className="gap-2"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span className="hidden sm:inline">CSV</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport('pdf')}
-              data-testid="button-export-pdf"
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">PDF</span>
-            </Button>
-            <Dialog open={isNewReportOpen} onOpenChange={setIsNewReportOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto touch-target" data-testid="button-new-report">
-                <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span className="truncate">New Report</span>
-              </Button>
-            </DialogTrigger>
-            {/* Mobile: Full-screen dialog, Desktop: Standard modal */}
-            <DialogContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6 overflow-hidden bottom-sheet-enter">
-              <div className="h-full overflow-y-auto mobile-scroll p-4 sm:p-0">
-              <DialogHeader>
-                <DialogTitle>Create New Report</DialogTitle>
-                <DialogDescription>
-                  {selectedTemplate ? `Complete the ${selectedTemplate.name}` : "Select a template to get started"}
-                </DialogDescription>
-              </DialogHeader>
-              {!selectedTemplate ? (
-                <div className="space-y-3">
-                  {activeTemplates.length === 0 ? (
-                    <p className="text-center py-8 text-muted-foreground">
-                      No active templates available. Please contact your administrator.
-                    </p>
-                  ) : (
-                    activeTemplates.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => setSelectedTemplate(template)}
-                        className="w-full p-4 border rounded-md hover-elevate active-elevate-2 text-left"
-                        data-testid={`button-select-template-${template.id}`}
-                      >
-                        <h3 className="font-semibold">{template.name}</h3>
-                        {template.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {template.description}
-                          </p>
-                        )}
-                        {template.category && (
-                          <Badge variant="outline" className="text-xs capitalize mt-2">
-                            {template.category.replace(/_/g, ' ')}
-                          </Badge>
-                        )}
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : (
-                <ReportSubmissionForm 
-                  template={selectedTemplate} 
-                  onSubmit={(formData) => {
-                    submitReport.mutate({
-                      templateId: selectedTemplate.id,
-                      formData,
-                    });
-                  }}
-                  onCancel={() => setSelectedTemplate(null)}
-                  isSubmitting={submitReport.isPending}
-                />
-              )}
-              </div>
-            </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+    <CanvasHubPage config={reportsPageConfig}>
+      <div className="space-y-3 sm:space-y-4 md:space-y-6">
         {/* Mobile-optimized Header Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mobile-cols-1">
           <Card className="mobile-card-enter mobile-card-tight">
@@ -643,14 +639,18 @@ export default function ReportsPage() {
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="templates" data-testid="tab-templates">
+            <TabsTrigger value="templates" className="text-xs sm:text-sm" data-testid="tab-templates">
               Templates
             </TabsTrigger>
-            <TabsTrigger value="submissions" data-testid="tab-submissions">
-              Submissions ({submissions.length})
+            <TabsTrigger value="submissions" className="text-xs sm:text-sm" data-testid="tab-submissions">
+              <span className="hidden sm:inline">Submissions</span>
+              <span className="sm:hidden">Sent</span>
+              <span className="ml-1">({submissions.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="pending" data-testid="tab-pending">
-              Pending Review ({pendingReports.length})
+            <TabsTrigger value="pending" className="text-xs sm:text-sm" data-testid="tab-pending">
+              <span className="hidden sm:inline">Pending Review</span>
+              <span className="sm:hidden">Pending</span>
+              <span className="ml-1">({pendingReports.length})</span>
             </TabsTrigger>
           </TabsList>
 
@@ -658,8 +658,8 @@ export default function ReportsPage() {
           <TabsContent value="templates" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Report Templates</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base sm:text-lg">Report Templates</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Activate or deactivate report templates for your organization
                 </CardDescription>
               </CardHeader>
@@ -667,7 +667,7 @@ export default function ReportsPage() {
                 {templatesLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-start justify-between p-4 border rounded-md">
+                      <div key={i} className="flex items-start justify-between gap-2 p-4 border rounded-md">
                         <div className="flex-1 space-y-2">
                           <Skeleton className="h-5 w-48" />
                           <Skeleton className="h-4 w-full" />
@@ -690,7 +690,7 @@ export default function ReportsPage() {
                     {templates.map((template) => (
                       <div
                         key={template.id}
-                        className="flex items-start justify-between p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
+                        className="flex items-start justify-between gap-2 p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
                         data-testid={`template-${template.id}`}
                       >
                         <div className="flex-1 space-y-1">
@@ -774,7 +774,7 @@ export default function ReportsPage() {
                     {submissions.map((submission) => (
                       <div
                         key={submission.id}
-                        className="flex items-start justify-between p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
+                        className="flex items-start justify-between gap-2 p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
                         data-testid={`submission-${submission.id}`}
                       >
                         <div className="flex-1 space-y-1">
@@ -856,7 +856,7 @@ export default function ReportsPage() {
                     {pendingReports.map((submission) => (
                       <div
                         key={submission.id}
-                        className="flex items-start justify-between p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
+                        className="flex items-start justify-between gap-2 p-4 border rounded-md hover-elevate mobile-flex-col mobile-gap-3"
                         data-testid={`pending-${submission.id}`}
                       >
                         <div className="flex-1 space-y-1">
@@ -888,20 +888,20 @@ export default function ReportsPage() {
         </Tabs>
 
         {/* Review Dialog */}
-        <Dialog open={!!reviewSubmission} onOpenChange={(open) => {
+        <UniversalModal open={!!reviewSubmission} onOpenChange={(open) => {
           if (!open) {
             setReviewSubmission(null);
             setReviewNotes("");
           }
         }}>
-          <DialogContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6">
+          <UniversalModalContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6">
             <div className="h-full overflow-y-auto p-4 sm:p-0">
-            <DialogHeader>
-              <DialogTitle>Review Report</DialogTitle>
-              <DialogDescription>
+            <UniversalModalHeader>
+              <UniversalModalTitle>Review Report</UniversalModalTitle>
+              <UniversalModalDescription>
                 Review and approve or reject this report submission
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
             {reviewSubmission && (
               <div className="space-y-4">
                 <div className="p-4 bg-muted rounded-md mobile-compact-p">
@@ -989,19 +989,19 @@ export default function ReportsPage() {
               </div>
             )}
             </div>
-          </DialogContent>
-        </Dialog>
+          </UniversalModalContent>
+        </UniversalModal>
 
         {/* Dispute Filing Dialog */}
-        <Dialog open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
-          <DialogContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6">
+        <UniversalModal open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
+          <UniversalModalContent size="xl" className="w-full h-full sm:h-auto sm:w-auto p-0 sm:p-6">
             <div className="h-full overflow-y-auto p-4 sm:p-0">
-            <DialogHeader>
-              <DialogTitle>File Dispute - Report Submission</DialogTitle>
-              <DialogDescription>
+            <UniversalModalHeader>
+              <UniversalModalTitle>File Dispute - Report Submission</UniversalModalTitle>
+              <UniversalModalDescription>
                 Explain why you believe this write-up/report is inaccurate or unfair. Support will investigate and respond.
-              </DialogDescription>
-            </DialogHeader>
+              </UniversalModalDescription>
+            </UniversalModalHeader>
             <Form {...disputeForm}>
               <form onSubmit={disputeForm.handleSubmit(onDisputeSubmit)} className="space-y-4">
                 {selectedSubmission && (
@@ -1105,10 +1105,9 @@ export default function ReportsPage() {
               </form>
             </Form>
             </div>
-          </DialogContent>
-        </Dialog>
+          </UniversalModalContent>
+        </UniversalModal>
         </div>
-      </div>
-    </div>
+    </CanvasHubPage>
   );
 }

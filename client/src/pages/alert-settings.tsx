@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { WorkspaceLayout } from "@/components/workspace-layout";
-import { PageHeader } from "@/components/page-header";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,14 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -158,10 +150,10 @@ const ALERT_TYPE_INFO: Record<AlertType, { label: string; description: string; i
 };
 
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
-  low: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
-  medium: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
-  high: 'bg-orange-500/10 text-orange-500 border-orange-500/30',
-  critical: 'bg-red-500/10 text-red-500 border-red-500/30',
+  low: 'bg-blue-500/10 text-blue-500 dark:text-blue-400 border-blue-500/30',
+  medium: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/30',
+  high: 'bg-orange-500/10 text-orange-500 dark:text-orange-400 border-orange-500/30',
+  critical: 'bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/30',
 };
 
 const CHANNEL_INFO: Record<AlertChannel, { label: string; icon: any }> = {
@@ -274,17 +266,19 @@ export default function AlertSettings() {
     return keyMap[alertType];
   };
 
-  return (
-    <WorkspaceLayout>
-      <div className="flex flex-col h-full">
-        <PageHeader
-          title="Alert Settings"
-          description="Configure real-time alerts for critical system events"
-        />
+  const pageConfig: CanvasPageConfig = {
+    id: 'alert-settings',
+    title: 'Alert Settings',
+    subtitle: 'Configure real-time alerts for critical system events',
+    category: 'settings',
+  };
 
-        <div className="flex-1 overflow-auto p-4 sm:p-6">
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-auto">
           <Tabs defaultValue="configuration" className="space-y-4">
-            <TabsList data-testid="tabs-alert-settings">
+            <TabsList className="w-full sm:w-auto overflow-x-auto" data-testid="tabs-alert-settings">
               <TabsTrigger value="configuration" data-testid="tab-configuration">
                 <Settings2 className="w-4 h-4 mr-2" />
                 Configuration
@@ -494,7 +488,7 @@ export default function AlertSettings() {
                                           Acknowledged
                                         </Badge>
                                       ) : (
-                                        <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/30">
+                                        <Badge variant="outline" className="bg-orange-500/10 text-orange-500 dark:text-orange-400 border-orange-500/30">
                                           Pending
                                         </Badge>
                                       )}
@@ -550,10 +544,10 @@ export default function AlertSettings() {
         </div>
       </div>
 
-      <Dialog open={!!selectedConfig} onOpenChange={(open) => !open && setSelectedConfig(null)}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <UniversalModal open={!!selectedConfig} onOpenChange={(open) => !open && setSelectedConfig(null)}>
+        <UniversalModalContent size="lg">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2">
               {selectedConfig && (
                 <>
                   {(() => {
@@ -563,11 +557,11 @@ export default function AlertSettings() {
                   Configure {ALERT_TYPE_INFO[selectedConfig.alertType].label}
                 </>
               )}
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               Customize the alert threshold, severity, and notification channels.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           
           {selectedConfig && (
             <div className="space-y-4 py-4">
@@ -670,7 +664,7 @@ export default function AlertSettings() {
             </div>
           )}
 
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setSelectedConfig(null)}>
               Cancel
             </Button>
@@ -694,18 +688,18 @@ export default function AlertSettings() {
             >
               Save Changes
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
 
-      <Dialog open={showAcknowledgeDialog} onOpenChange={setShowAcknowledgeDialog}>
-        <DialogContent size="md">
-          <DialogHeader>
-            <DialogTitle>Acknowledge Alert</DialogTitle>
-            <DialogDescription>
+      <UniversalModal open={showAcknowledgeDialog} onOpenChange={setShowAcknowledgeDialog}>
+        <UniversalModalContent size="md">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Acknowledge Alert</UniversalModalTitle>
+            <UniversalModalDescription>
               Add optional notes about how this alert was addressed.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           <div className="py-4">
             <Textarea
               placeholder="Notes (optional)"
@@ -715,7 +709,7 @@ export default function AlertSettings() {
               data-testid="textarea-acknowledge-notes"
             />
           </div>
-          <DialogFooter>
+          <UniversalModalFooter>
             <Button variant="outline" onClick={() => setShowAcknowledgeDialog(false)}>
               Cancel
             </Button>
@@ -734,9 +728,9 @@ export default function AlertSettings() {
               <Check className="w-4 h-4 mr-1" />
               Acknowledge
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </WorkspaceLayout>
+          </UniversalModalFooter>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

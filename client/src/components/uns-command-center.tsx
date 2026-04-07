@@ -5,14 +5,20 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, CheckCircle2, ExternalLink, Check, X, Trash2, GripHorizontal } from "lucide-react";
+import { Sparkles, CheckCircle2, ExternalLink, Check, X, Trash2, GripHorizontal, AlertTriangle, Info, Wrench, Clock, Megaphone } from "lucide-react";
+import { TrinityLogo } from "@/components/trinity-logo";
+import { humanizeTitle, humanizeText, generateStructuredBreakdown, type StructuredBreakdown } from "@shared/utils/humanFriendlyCopy";
+import { BroadcastComposer } from "./broadcasts/BroadcastComposer";
+import { PLATFORM_SUPPORT_ROLES } from '@shared/platformConfig';
 
 type NotificationCategory = 'all' | 'alerts' | 'workflows' | 'system' | 'ai';
 type NotificationPriority = 'critical' | 'high' | 'medium' | 'low';
 type NotificationType = 'alert' | 'workflow' | 'system' | 'ai';
+
+type NotificationSource = 'platformUpdate' | 'maintenanceAlert' | 'notification';
 
 interface UNSNotification {
   id: string;
@@ -26,6 +32,8 @@ interface UNSNotification {
   fixedByTrinity?: boolean;
   time: string;
   read: boolean;
+  sourceType: NotificationSource;
+  subCategory?: string;
   action?: {
     label: string;
     type: string;
@@ -36,11 +44,11 @@ interface UNSNotification {
     distance?: string;
     count?: number;
     warnings?: number;
-    endUserSummary?: string;
+    fixApplied?: boolean;
+    actionRequired?: boolean;
   };
 }
 
-// Compact Notification Detail Modal with Acknowledge/Clear Actions
 function NotificationDetailModal({
   notification,
   isOpen,
@@ -58,130 +66,180 @@ function NotificationDetailModal({
 }) {
   if (!notification) return null;
 
+  const isCritical = notification.priority === 'critical';
+  const isHigh = notification.priority === 'high';
+
+  const breakdown = generateStructuredBreakdown(
+    notification.title,
+    notification.message,
+    notification.subCategory,
+    notification.metadata as any
+  );
+
+  const safeTime = (() => {
+    try {
+      const date = parseISO(notification.time);
+      if (isValid(date)) return formatDistanceToNow(date, { addSuffix: true });
+    } catch {}
+    return 'recently';
+  })();
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-foreground max-w-md w-[85vw] sm:w-[400px] max-h-[80vh] overflow-y-auto p-0">
-        <DialogHeader className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+    <UniversalModal open={isOpen} onOpenChange={onClose}>
+      <UniversalModalContent size="md" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-foreground overflow-y-auto p-0 gap-0" data-testid="uns-notification-detail-modal">
+        <UniversalModalHeader className={cn(
+          "p-4 border-b",
+          isCritical 
+            ? 'bg-red-500 dark:bg-red-700 border-red-600' 
+            : isHigh 
+            ? 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800' 
+            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+        )}>
           <div className="flex items-start gap-3">
             <div className={cn(
               "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
-              notification.priority === 'critical' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-              notification.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
-              notification.priority === 'medium' ? 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' : 
-              'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400'
+              isCritical 
+                ? 'bg-red-600 dark:bg-red-800' 
+                : isHigh 
+                ? 'bg-amber-100 dark:bg-amber-900' 
+                : 'bg-primary/10'
             )}>
-              {getTypeIcon(notification.type)}
+              <TrinityLogo size={20} />
             </div>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-foreground text-base font-bold leading-tight">{notification.title}</DialogTitle>
-              <DialogDescription className="text-muted-foreground text-xs mt-1 flex items-center gap-2">
-                {formatDistanceToNow(parseISO(notification.time), { addSuffix: true })}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-        
-        <div className="p-4 space-y-4">
-          {/* Status Badges */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className={cn(
-              "capitalize text-xs font-semibold",
-              notification.priority === 'critical' ? 'bg-red-600 text-white' :
-              notification.priority === 'high' ? 'bg-orange-500 text-white' :
-              notification.priority === 'medium' ? 'bg-[#06b6d4] text-white' :
-              'bg-[#2dd4bf] text-white'
-            )}>
-              {notification.priority}
-            </Badge>
-            <Badge variant="outline" className="capitalize text-xs">
-              {notification.type}
-            </Badge>
-            {notification.read && (
-              <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-600">
-                Archived
-              </Badge>
-            )}
-          </div>
-          
-          {/* Message */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-            <p className="text-foreground text-sm leading-relaxed">{notification.message}</p>
-          </div>
-          
-          {/* Detailed Info (compact) */}
-          {notification.detailedInfo && (
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-              <h4 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">Details</h4>
-              <p className="text-foreground text-sm">{notification.detailedInfo}</p>
-            </div>
-          )}
-          
-          {/* Trinity Resolution */}
-          {notification.fixedByTrinity && (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-cyan-50 to-teal-50 dark:from-cyan-900/20 dark:to-teal-900/20 border border-cyan-200 dark:border-cyan-700">
-              <Sparkles className="w-5 h-5 text-[#06b6d4]" />
-              <div className="flex-1">
-                <span className="text-sm font-medium text-foreground">Resolved by Trinity AI</span>
+              <UniversalModalTitle className={cn(
+                "text-base font-bold leading-tight",
+                isCritical ? 'text-white' : isHigh ? 'text-amber-900 dark:text-amber-100' : 'text-foreground'
+              )}>
+                {humanizeTitle(notification.title)}
+              </UniversalModalTitle>
+              <UniversalModalDescription className="sr-only">Notification details</UniversalModalDescription>
+              <div className="flex items-center gap-2 mt-1.5">
+                <Badge className={cn(
+                  "text-[10px] px-2 py-0.5 font-semibold uppercase",
+                  isCritical 
+                    ? 'bg-red-400 text-white border-red-400' 
+                    : isHigh 
+                    ? 'bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200' 
+                    : notification.priority === 'medium'
+                    ? 'bg-[#06b6d4]/20 text-[#06b6d4]'
+                    : 'bg-primary/10 text-primary'
+                )}>
+                  {notification.priority === 'low' ? 'INFO' : notification.priority.toUpperCase()}
+                </Badge>
+                <span className={cn(
+                  "text-xs",
+                  isCritical ? 'text-white/70' : isHigh ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground'
+                )}>
+                  {safeTime}
+                </span>
               </div>
-              <CheckCircle2 className="w-5 h-5 text-[#2dd4bf]" />
+            </div>
+          </div>
+        </UniversalModalHeader>
+        
+        <div className="p-4 space-y-3.5">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">What Happened</span>
+            </div>
+            <p className="text-sm text-foreground pl-7 leading-relaxed" data-testid="text-breakdown-problem">{breakdown.problem}</p>
+          </div>
+          
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                <Info className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Why It Matters</span>
+            </div>
+            <p className="text-sm text-foreground pl-7 leading-relaxed" data-testid="text-breakdown-issue">{breakdown.issue}</p>
+          </div>
+          
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <Wrench className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">What Trinity Did</span>
+            </div>
+            <p className="text-sm text-foreground pl-7 leading-relaxed" data-testid="text-breakdown-solution">{breakdown.solution}</p>
+          </div>
+          
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">What to Expect</span>
+            </div>
+            <p className="text-sm text-foreground pl-7 leading-relaxed" data-testid="text-breakdown-outcome">{breakdown.outcome}</p>
+          </div>
+          
+          {notification.detailedInfo && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-md p-3 border border-slate-200 dark:border-slate-700 mt-1">
+              <h4 className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide mb-1">Additional Details</h4>
+              <p className="text-foreground text-sm leading-relaxed">{humanizeText(notification.detailedInfo)}</p>
             </div>
           )}
-          
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-            {notification.action && (
-              <Button 
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (notification.action?.target) {
-                    onClose();
-                    onNavigate(notification.action.target);
-                  }
-                }}
-                data-testid="button-notification-action"
-              >
-                <ExternalLink className="w-4 h-4 mr-1" />
-                {notification.action.label}
-              </Button>
-            )}
-            <Button 
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAcknowledge(notification.id);
-                onClose();
-              }}
-              data-testid="button-acknowledge-notification"
-            >
-              <Check className="w-4 h-4 mr-1" />
-              Acknowledge
-            </Button>
-            <Button 
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClear(notification.id);
-                onClose();
-              }}
-              data-testid="button-clear-notification"
-            >
-              <Trash2 className="w-4 h-4 mr-1" />
-              Clear
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        
+        <div className="px-4 pb-4 pt-2 flex flex-wrap items-center gap-2 border-t border-slate-200 dark:border-slate-700">
+          {notification.action && (
+            <Button 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (notification.action?.target) {
+                  onClose();
+                  onNavigate(notification.action.target);
+                }
+              }}
+              data-testid="button-notification-action"
+            >
+              <ExternalLink className="w-4 h-4 mr-1.5" />
+              {notification.action.label}
+            </Button>
+          )}
+          <Button 
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAcknowledge(notification.id);
+              onClose();
+            }}
+            data-testid="button-acknowledge-notification"
+          >
+            <Check className="w-4 h-4 mr-1.5" />
+            Acknowledge
+          </Button>
+          <Button 
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear(notification.id);
+              onClose();
+            }}
+            data-testid="button-clear-notification"
+          >
+            <X className="w-4 h-4 mr-1.5" />
+            Dismiss
+          </Button>
+        </div>
+      </UniversalModalContent>
+    </UniversalModal>
   );
 }
 
 // Platform roles from schema - these are global platform-level roles
 type PlatformRole = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'none';
 // Workspace roles - tenant-level roles within an organization
-type WorkspaceRole = 'org_owner' | 'co_owner' | 'org_admin' | 'manager' | 'department_manager' | 'supervisor' | 'staff';
+type WorkspaceRole = 'org_owner' | 'co_owner' | 'manager' | 'department_manager' | 'supervisor' | 'staff';
 
 interface UNSCommandCenterProps {
   isOpen?: boolean;
@@ -267,10 +325,8 @@ const getTypeIcon = (type: NotificationType) => {
   }
 };
 
-// Platform support roles that see all notifications
-const PLATFORM_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
 // Workspace management roles that see business notifications
-const WORKSPACE_MANAGEMENT_ROLES = ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager', 'supervisor'];
+const WORKSPACE_MANAGEMENT_ROLES = ['org_owner', 'co_owner', 'manager', 'department_manager', 'supervisor'];
 
 // Role-based notification filtering
 const getRoleBasedNotificationFilter = (
@@ -306,6 +362,13 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   const [pulseActive, setPulseActive] = useState(true);
   const [selectedNotification, setSelectedNotification] = useState<UNSNotification | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+
+  const BROADCAST_ALLOWED_PLATFORM = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'];
+  const BROADCAST_ALLOWED_WORKSPACE = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'manager'];
+  const canBroadcast = (platformRole && BROADCAST_ALLOWED_PLATFORM.includes(platformRole)) ||
+    (workspaceRole && BROADCAST_ALLOWED_WORKSPACE.includes(workspaceRole));
+  const isPlatformBroadcast = !!(platformRole && BROADCAST_ALLOWED_PLATFORM.includes(platformRole));
   
   // Draggable state
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -349,44 +412,157 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     refetchInterval: 60000,
   });
 
+  const optimisticMarkRead = (old: any, id: string, sourceType: NotificationSource) => {
+    if (!old) return old;
+    return {
+      ...old,
+      notifications: sourceType === 'notification'
+        ? old.notifications?.map((n: any) => n.id === id ? { ...n, isRead: true } : n)
+        : old.notifications,
+      platformUpdates: sourceType === 'platformUpdate'
+        ? old.platformUpdates?.map((u: any) => u.id === id ? { ...u, isViewed: true } : u)
+        : old.platformUpdates,
+      maintenanceAlerts: sourceType === 'maintenanceAlert'
+        ? old.maintenanceAlerts?.map((a: any) => a.id === id ? { ...a, isAcknowledged: true } : a)
+        : old.maintenanceAlerts,
+      totalUnread: Math.max(0, (old.totalUnread || 0) - 1),
+    };
+  };
+
+  const optimisticClear = (old: any, id: string, sourceType: NotificationSource) => {
+    if (!old) return old;
+    const now = new Date().toISOString();
+    return {
+      ...old,
+      notifications: sourceType === 'notification'
+        ? old.notifications?.map((n: any) => n.id === id ? { ...n, clearedAt: now, isRead: true } : n)
+        : old.notifications,
+      platformUpdates: sourceType === 'platformUpdate'
+        ? old.platformUpdates?.filter((u: any) => u.id !== id)
+        : old.platformUpdates,
+      maintenanceAlerts: sourceType === 'maintenanceAlert'
+        ? old.maintenanceAlerts?.filter((a: any) => a.id !== id)
+        : old.maintenanceAlerts,
+      totalUnread: Math.max(0, (old.totalUnread || 0) - 1),
+    };
+  };
+
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('POST', '/api/notifications/mark-all-read');
+      await apiRequest('POST', '/api/notifications/mark-all-read', {});
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications/combined'] });
+      const previousData = queryClient.getQueryData(['/api/notifications/combined']);
+      queryClient.setQueryData(['/api/notifications/combined'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          notifications: old.notifications?.map((n: any) => ({ ...n, isRead: true })),
+          platformUpdates: old.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })),
+          maintenanceAlerts: old.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })),
+          totalUnread: 0,
+        };
+      });
+      return { previousData };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
-      syncClearAll(); // Broadcast to sync other tabs/mobile
+      syncClearAll();
+    },
+    onError: (_, __, context: any) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['/api/notifications/combined'], context.previousData);
+      }
     }
   });
 
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('POST', '/api/notifications/clear-all');
+      await apiRequest('POST', '/api/notifications/clear-all', {});
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications/combined'] });
+      const previousData = queryClient.getQueryData(['/api/notifications/combined']);
+      const now = new Date().toISOString();
+      queryClient.setQueryData(['/api/notifications/combined'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          notifications: old.notifications?.map((n: any) => ({ ...n, clearedAt: now, isRead: true })),
+          platformUpdates: old.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })),
+          maintenanceAlerts: old.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })),
+          totalUnread: 0,
+        };
+      });
+      return { previousData };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
-      syncClearAll(); // Broadcast to sync other tabs/mobile
+      syncClearAll();
+    },
+    onError: (_, __, context: any) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['/api/notifications/combined'], context.previousData);
+      }
     }
   });
 
-  // Single notification acknowledge
   const acknowledgeMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest('POST', `/api/notifications/${id}/mark-read`);
+    mutationFn: async ({ id, sourceType }: { id: string; sourceType: NotificationSource }) => {
+      if (sourceType === 'platformUpdate') {
+        await apiRequest('POST', `/api/platform-updates/${id}/mark-viewed`);
+      } else if (sourceType === 'maintenanceAlert') {
+        await apiRequest('POST', `/api/maintenance-alerts/${id}/acknowledge`);
+      } else {
+        // DELETE actually removes the row — acknowledge only sets isRead which doesn't hide the item
+        await apiRequest('DELETE', `/api/notifications/${id}`);
+      }
+    },
+    onMutate: async ({ id, sourceType }) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications/combined'] });
+      const previousData = queryClient.getQueryData(['/api/notifications/combined']);
+      // Regular notifications are deleted so use optimisticClear; others just mark-read
+      const updater = sourceType === 'notification'
+        ? (old: any) => optimisticClear(old, id, sourceType)
+        : (old: any) => optimisticMarkRead(old, id, sourceType);
+      queryClient.setQueryData(['/api/notifications/combined'], updater);
+      return { previousData };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+    },
+    onError: (_, __, context: any) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['/api/notifications/combined'], context.previousData);
+      }
     }
   });
 
-  // Single notification clear/delete
   const clearMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/notifications/${id}`);
+    mutationFn: async ({ id, sourceType }: { id: string; sourceType: NotificationSource }) => {
+      if (sourceType === 'platformUpdate') {
+        await apiRequest('POST', `/api/platform-updates/${id}/mark-viewed`);
+      } else if (sourceType === 'maintenanceAlert') {
+        await apiRequest('POST', `/api/maintenance-alerts/${id}/acknowledge`);
+      } else {
+        await apiRequest('DELETE', `/api/notifications/${id}`);
+      }
     },
-    onSuccess: (_data, id) => {
+    onMutate: async ({ id, sourceType }) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications/combined'] });
+      const previousData = queryClient.getQueryData(['/api/notifications/combined']);
+      queryClient.setQueryData(['/api/notifications/combined'], (old: any) => optimisticClear(old, id, sourceType));
+      return { previousData };
+    },
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
-      syncNotificationCleared(id); // Broadcast to sync other tabs/mobile
+      syncNotificationCleared(id);
+    },
+    onError: (_, __, context: any) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['/api/notifications/combined'], context.previousData);
+      }
     }
   });
 
@@ -406,29 +582,38 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       result.push({
         id: update.id || `platform-${Date.now()}-${Math.random()}`,
         type: 'system',
+        sourceType: 'platformUpdate',
         priority: normalizePriority(update.severity === 'critical' ? 'critical' : 
                   update.severity === 'warning' ? 'high' : 'medium'),
         title: update.title || 'Platform Update',
         message: update.message || update.description || '',
         time: update.createdAt || new Date().toISOString(),
         read: update.isViewed || false,
-        action: update.actionUrl ? { label: 'View', type: 'navigate', target: update.actionUrl } : undefined
+        subCategory: update.category,
+        action: update.actionUrl ? { label: 'View', type: 'navigate', target: update.actionUrl } : undefined,
+        metadata: update.metadata,
       });
     });
 
     notificationsData.maintenanceAlerts?.forEach((alert: any) => {
+      if (alert.isAcknowledged) return;
       result.push({
         id: alert.id || `maintenance-${Date.now()}-${Math.random()}`,
         type: 'alert',
+        sourceType: 'maintenanceAlert',
         priority: normalizePriority(alert.priority),
         title: alert.title || 'Maintenance Alert',
         message: alert.message || alert.description || '',
         time: alert.createdAt || new Date().toISOString(),
-        read: alert.isAcknowledged || false,
+        read: false,
+        subCategory: 'maintenance',
+        metadata: alert.metadata,
       });
     });
 
     notificationsData.notifications?.forEach((notif: any) => {
+      if (notif.clearedAt) return;
+      
       const isWorkflow = notif.type === 'workflow' || notif.category === 'workflow' || 
                          notif.title?.toLowerCase().includes('approval') ||
                          notif.title?.toLowerCase().includes('timesheet');
@@ -442,13 +627,15 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       result.push({
         id: notif.id || `notif-${Date.now()}-${Math.random()}`,
         type: isAI ? 'ai' : isWorkflow ? 'workflow' : isAlert ? 'alert' : 'system',
+        sourceType: 'notification',
         priority: normalizePriority(notif.priority),
         title: notif.title || 'Notification',
         message: notif.message || notif.body || '',
         time: notif.createdAt || new Date().toISOString(),
-        read: notif.isRead || notif.clearedAt != null,
+        read: notif.isRead || false,
+        subCategory: notif.type || notif.category,
         action: notif.actionUrl ? { label: 'View', type: 'navigate', target: notif.actionUrl } : undefined,
-        metadata: notif.metadata
+        metadata: notif.metadata,
       });
     });
 
@@ -494,8 +681,9 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     return time;
   };
 
-  const { data: employeesData } = useQuery<any[]>({
+  const { data: employeesData = [] } = useQuery<{ data: any[] }, Error, any[]>({
     queryKey: ['/api/employees'],
+    select: (res) => res?.data ?? [],
   });
   const activeGuards = useMemo(() => {
     if (!employeesData) return 0;
@@ -511,7 +699,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     <div 
       ref={containerRef}
       className={cn(
-        "relative bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col",
+        "relative bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col",
         "w-[min(420px,calc(100vw-2rem))]",
         isDragging ? 'cursor-grabbing' : '',
         className
@@ -522,7 +710,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       
       {/* Draggable Header */}
       <div 
-        className="relative bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#22d3ee] p-4 cursor-grab select-none"
+        className="relative bg-gradient-to-r from-[#06b6d4] to-[#0891b2] p-4 cursor-grab select-none"
         onPointerDown={handleDragStart}
         onPointerMove={handleDragMove}
         onPointerUp={handleDragEnd}
@@ -533,7 +721,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
           <GripHorizontal className="w-4 h-4 text-white" />
         </div>
         
-        <div className="relative flex items-center justify-between mt-2">
+        <div className="relative flex items-center justify-between gap-2 mt-2">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className={cn(
@@ -590,8 +778,8 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       </div>
 
       {/* Tab Navigation */}
-      <div className="relative border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-        <div className="flex overflow-x-auto scrollbar-hide">
+      <div className="relative border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+        <div className="flex overflow-x-auto scrollbar-hide pb-px">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -600,7 +788,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                 "relative flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-all",
                 activeTab === tab.id
                   ? 'text-[#06b6d4] bg-white dark:bg-slate-900'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'text-muted-foreground hover:text-foreground hover-elevate'
               )}
               data-testid={`tab-${tab.id}`}
             >
@@ -627,21 +815,33 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       </div>
 
       {/* Quick Actions Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-        <span className="text-muted-foreground text-xs font-medium">
-          {filteredNotifications.length} {filteredNotifications.length === 1 ? 'item' : 'items'}
-        </span>
+      <div className="flex items-center justify-between gap-2 px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs font-medium">
+            {filteredNotifications.length} {filteredNotifications.length === 1 ? 'item' : 'items'}
+          </span>
+          {canBroadcast && (
+            <button
+              onClick={() => setBroadcastOpen(true)}
+              className="flex items-center gap-1 text-xs font-medium text-[#06b6d4] hover:text-[#0891b2] transition-colors px-2 py-1 rounded hover-elevate"
+              data-testid="button-send-broadcast"
+            >
+              <Megaphone className="h-3 w-3" />
+              Broadcast
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => markAllReadMutation.mutate()}
-            className="text-xs text-muted-foreground hover:text-[#06b6d4] transition-colors px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="text-xs text-muted-foreground hover:text-[#06b6d4] transition-colors px-2 py-1 rounded hover-elevate"
             data-testid="button-mark-all-read"
           >
             Mark all read
           </button>
           <button 
             onClick={() => clearAllMutation.mutate()}
-            className="text-xs text-muted-foreground hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="text-xs text-muted-foreground hover:text-red-500 transition-colors px-2 py-1 rounded hover-elevate"
             data-testid="button-clear-all"
           >
             Clear all
@@ -649,11 +849,11 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
         </div>
       </div>
 
-      {/* Notifications List - Fixed height, scrollable */}
-      <div className="flex-1 max-h-72 overflow-y-auto bg-white dark:bg-slate-900">
+      {/* Notifications List - Flexible height, scrollable */}
+      <div className="relative flex-1 overflow-y-auto scrollbar-hide bg-white dark:bg-slate-900">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#06b6d4] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border border-[#06b6d4] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filteredNotifications.length > 0 ? (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -665,7 +865,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                   setIsDetailModalOpen(true);
                 }}
                 className={cn(
-                  "relative p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer group border-l-2",
+                  "relative p-3 hover-elevate transition-all cursor-pointer group border-l-2",
                   !notification.read ? PRIORITY_BORDER[notification.priority] : 'border-l-transparent',
                   !notification.read ? 'bg-slate-50/50 dark:bg-slate-800/30' : ''
                 )}
@@ -683,18 +883,18 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className={cn(
-                        "font-medium text-sm truncate",
+                        "font-semibold text-sm truncate",
                         !notification.read ? 'text-foreground' : 'text-muted-foreground'
-                      )}>
-                        {notification.title}
+                      )} data-testid={`text-notification-title-${notification.id}`}>
+                        {humanizeTitle(notification.title)}
                       </h3>
-                      <span className="text-muted-foreground text-xs whitespace-nowrap flex-shrink-0">
+                      <span className="text-muted-foreground text-[11px] whitespace-nowrap flex-shrink-0">
                         {formatTime(notification.time)}
                       </span>
                     </div>
                     
-                    <p className="text-muted-foreground text-xs mt-0.5 line-clamp-1">
-                      {notification.message}
+                    <p className="text-muted-foreground text-xs mt-0.5 line-clamp-2 leading-relaxed" data-testid={`text-notification-preview-${notification.id}`}>
+                      {humanizeText(notification.message)}
                     </p>
                   </div>
                 </div>
@@ -719,10 +919,10 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       </div>
 
       {/* Ask Trinity AI Footer - Fixed position, never pushed down */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="relative z-10 p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <button
           onClick={onAskTrinity}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2.5 px-4 rounded-lg transition-all shadow-lg hover:shadow-purple-500/25"
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-all shadow-sm hover:shadow-cyan-500/25"
           data-testid="button-ask-trinity"
         >
           <Sparkles className="w-4 h-4" />
@@ -739,9 +939,23 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         onNavigate={setLocation}
-        onAcknowledge={(id) => acknowledgeMutation.mutate(id)}
-        onClear={(id) => clearMutation.mutate(id)}
+        onAcknowledge={(id) => {
+          const n = selectedNotification;
+          acknowledgeMutation.mutate({ id, sourceType: n?.sourceType || 'notification' });
+        }}
+        onClear={(id) => {
+          const n = selectedNotification;
+          clearMutation.mutate({ id, sourceType: n?.sourceType || 'notification' });
+        }}
       />
+
+      {canBroadcast && (
+        <BroadcastComposer
+          open={broadcastOpen}
+          onOpenChange={setBroadcastOpen}
+          isPlatformLevel={isPlatformBroadcast}
+        />
+      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UniversalModal, UniversalModalDescription, UniversalModalFooter, UniversalModalHeader, UniversalModalTitle } from '@/components/ui/universal-modal';
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,76 @@ import {
   Eye, EyeOff, Copy, CheckCircle2, XCircle, AlertCircle,
   Users, Calendar, CreditCard, Mail, Phone, Building, Zap
 } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { format } from "date-fns";
+
+function UserSessionsViewer({ userId }: { userId: string }) {
+  const { data, isLoading } = useQuery<{ sessions: any[] }>({
+    queryKey: [`/api/admin/users/${userId}/sessions`],
+    enabled: !!userId,
+  });
+  const sessions = data?.sessions || [];
+  if (isLoading) return <div className="py-6 text-center text-sm text-muted-foreground">Loading sessions...</div>;
+  if (!sessions.length) return (
+    <div className="text-center py-8 text-muted-foreground">
+      <Clock className="h-10 w-10 mx-auto mb-2 opacity-40" />
+      <p className="text-sm">No sessions found for this user.</p>
+    </div>
+  );
+  return (
+    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+      {sessions.map((s: any) => (
+        <div key={s.id} className="rounded-md border p-3 text-xs space-y-1" data-testid={`session-row-${s.id}`}>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <Badge variant={s.isValid && new Date(s.expiresAt) > new Date() ? 'default' : 'secondary'} className="text-[10px]">
+              {s.isValid && new Date(s.expiresAt) > new Date() ? 'Active' : 'Expired'}
+            </Badge>
+            <span className="text-muted-foreground">{s.ipAddress || 'Unknown IP'}</span>
+          </div>
+          <div className="text-muted-foreground truncate">{(s.deviceInfo as any)?.browser || s.userAgent?.slice(0, 60) || 'Unknown device'}</div>
+          <div className="flex gap-4 text-muted-foreground">
+            <span>Last active: {s.lastActivityAt ? format(new Date(s.lastActivityAt), 'MMM d, h:mm a') : '—'}</span>
+            <span>Expires: {s.expiresAt ? format(new Date(s.expiresAt), 'MMM d') : '—'}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UserAuditLogsViewer({ userId }: { userId: string }) {
+  const { data, isLoading } = useQuery<{ logs: any[]; total: number }>({
+    queryKey: [`/api/admin/users/${userId}/audit-logs`, { limit: 30 }],
+    enabled: !!userId,
+  });
+  const logs = data?.logs || [];
+  if (isLoading) return <div className="py-6 text-center text-sm text-muted-foreground">Loading audit logs...</div>;
+  if (!logs.length) return (
+    <div className="text-center py-8 text-muted-foreground">
+      <FileText className="h-10 w-10 mx-auto mb-2 opacity-40" />
+      <p className="text-sm">No audit log entries found for this user.</p>
+    </div>
+  );
+  return (
+    <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+      <p className="text-xs text-muted-foreground mb-2">Showing last {logs.length} of {data?.total} entries</p>
+      {logs.map((log: any) => (
+        <div key={log.id} className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs" data-testid={`audit-row-${log.id}`}>
+          <div className="mt-0.5">
+            {log.success === false
+              ? <XCircle className="h-3 w-3 text-destructive flex-shrink-0" />
+              : <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium truncate">{log.action_description || log.action}</div>
+            {log.entity_type && <div className="text-muted-foreground">{log.entity_type}{log.workspace_id ? ` · ${log.workspace_id}` : ''}</div>}
+          </div>
+          <div className="text-muted-foreground flex-shrink-0">{log.created_at ? format(new Date(log.created_at), 'MMM d, h:mm a') : '—'}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface UserDiagnostics {
   userId: string;
@@ -93,6 +163,11 @@ export default function Diagnostics() {
   // Search users
   const { data: searchResults = [], isLoading: searchLoading } = useQuery<UserDiagnostics[]>({
     queryKey: ['/api/admin/support/search', searchQuery],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/support/search?q=${encodeURIComponent(searchQuery)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Search failed');
+      return res.json();
+    },
     enabled: isAuthorized && searchQuery.length > 2,
     select: (data: any) => {
       if (!Array.isArray(data)) return [];
@@ -119,19 +194,29 @@ export default function Diagnostics() {
   // Get user diagnostics detail
   const { data: userDetail, isLoading: detailLoading } = useQuery<UserDiagnostics>({
     queryKey: ['/api/admin/user-diagnostics', selectedUserId],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/user-diagnostics', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch diagnostics');
+      return res.json();
+    },
     enabled: isAuthorized && !!selectedUserId,
   });
 
   // Get audit logs for user
   const { data: auditLogs = [], isLoading: logsLoading } = useQuery<AuditLog[]>({
     queryKey: ['/api/admin/audit-logs', selectedUserId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/users/${selectedUserId}/audit-logs`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch audit logs');
+      return res.json();
+    },
     enabled: isAuthorized && !!selectedUserId && showAuditLogs,
   });
 
   // Unlock user mutation
   const unlockUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return await apiRequest('/api/admin/unlock-user', 'POST', { userId });
+      return await apiRequest('POST', '/api/admin/unlock-user', { userId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/user-diagnostics'] });
@@ -152,7 +237,7 @@ export default function Diagnostics() {
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return await apiRequest('/api/admin/reset-password', 'POST', { userId });
+      return await apiRequest('POST', '/api/admin/reset-password', { userId });
     },
     onSuccess: () => {
       toast({
@@ -186,28 +271,24 @@ export default function Diagnostics() {
     return null;
   }
 
-  return authLoading ? (
-    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
-      <PageHeaderSkeleton />
-      <SearchPanelSkeleton />
-    </div>
-  ) : (
-    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-md shadow-purple-500/30">
-            <Terminal className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">AI Diagnostics™</h1>
-            <p className="text-sm text-muted-foreground">
-              User Diagnostics & Troubleshooting Panel
-            </p>
-          </div>
-        </div>
+  if (authLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
+        <PageHeaderSkeleton />
+        <SearchPanelSkeleton />
       </div>
+    );
+  }
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'diagnostics',
+    title: 'AI Diagnostics™',
+    subtitle: 'User Diagnostics & Troubleshooting Panel',
+    category: 'admin',
+  };
+
+  return (
+    <CanvasHubPage config={pageConfig}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Search Panel */}
         <Card className="lg:col-span-1">
@@ -261,7 +342,7 @@ export default function Diagnostics() {
                         >
                           <div className="flex items-start gap-3">
                             <Avatar className="h-10 w-10">
-                              <AvatarFallback className="text-xs">
+                              <AvatarFallback className="text-sm font-semibold">
                                 {user.firstName?.[0]}{user.lastName?.[0]}
                               </AvatarFallback>
                             </Avatar>
@@ -321,7 +402,7 @@ export default function Diagnostics() {
               {/* User Header Card */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-16 w-16">
                         <AvatarFallback className="text-lg">
@@ -408,7 +489,7 @@ export default function Diagnostics() {
               <Card>
                 <Tabs defaultValue="overview" className="w-full">
                   <CardHeader>
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="w-full overflow-x-auto grid grid-cols-2 sm:grid-cols-4">
                       <TabsTrigger value="overview" data-testid="tab-overview">
                         <Activity className="h-4 w-4 mr-2" />
                         Overview
@@ -480,19 +561,11 @@ export default function Diagnostics() {
                     </TabsContent>
 
                     <TabsContent value="sessions">
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">Session viewer coming soon</p>
-                        <p className="text-xs mt-2">View and manage active user sessions</p>
-                      </div>
+                      <UserSessionsViewer userId={selectedUser.userId} />
                     </TabsContent>
 
                     <TabsContent value="audit">
-                      <div className="text-center py-8 text-muted-foreground">
-                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p className="text-sm">Audit logs viewer coming soon</p>
-                        <p className="text-xs mt-2">Track all user actions and changes</p>
-                      </div>
+                      <UserAuditLogsViewer userId={selectedUser.userId} />
                     </TabsContent>
 
                     <TabsContent value="actions" className="space-y-3">
@@ -570,6 +643,6 @@ export default function Diagnostics() {
           )}
         </div>
       </div>
-    </div>
+    </CanvasHubPage>
   );
 }

@@ -17,6 +17,9 @@ import { randomUUID } from 'crypto';
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('circuitBreaker');
+
 
 // ============================================================================
 // TYPES
@@ -142,7 +145,7 @@ class CircuitBreakerService {
     this.startRecoveryChecking();
     
     this.isInitialized = true;
-    console.log('[CircuitBreaker] Service initialized');
+    log.info('[CircuitBreaker] Service initialized');
   }
 
   /**
@@ -185,7 +188,7 @@ class CircuitBreakerService {
     };
 
     this.circuits.set(serviceId, circuit);
-    console.log(`[CircuitBreaker] Registered circuit: ${serviceName} (${serviceId})`);
+    log.info(`[CircuitBreaker] Registered circuit: ${serviceName} (${serviceId})`);
     
     return circuit;
   }
@@ -418,7 +421,7 @@ class CircuitBreakerService {
     }
     
     // Log state transition
-    console.log(
+    log.info(
       `[CircuitBreaker] ${circuit.serviceName}: ${oldState} -> ${newState}`
     );
     
@@ -441,14 +444,22 @@ class CircuitBreakerService {
           createdAt: new Date()
         });
         
-        // Emit event
-        platformEventBus.emit('circuit_breaker_opened', {
-          serviceId: circuit.serviceId,
-          serviceName: circuit.serviceName,
-          stats: circuit.stats
-        });
+        // Publish event — full pipeline so Trinity and ops team receive the alert
+        platformEventBus.publish({
+          type: 'circuit_breaker_opened',
+          workspaceId: 'platform',
+          payload: {
+            serviceId: circuit.serviceId,
+            serviceName: circuit.serviceName,
+            domain: circuit.serviceId,
+            failureCount: circuit.stats.consecutiveFailures,
+            errorRate: circuit.stats.failedRequests / (circuit.stats.totalRequests || 1),
+            stats: circuit.stats,
+          },
+          metadata: { source: 'CircuitBreaker', severity: 'critical' },
+        }).catch((err: any) => log.warn('[CircuitBreaker] Failed to publish circuit_breaker_opened:', err.message));
       } catch (error) {
-        console.error('[CircuitBreaker] Failed to log state transition:', error);
+        log.error('[CircuitBreaker] Failed to log state transition:', error);
       }
     } else if (oldState === 'OPEN' && newState === 'CLOSED') {
       // Log recovery
@@ -467,12 +478,15 @@ class CircuitBreakerService {
           createdAt: new Date()
         });
         
-        platformEventBus.emit('circuit_breaker_recovered', {
-          serviceId: circuit.serviceId,
-          serviceName: circuit.serviceName
-        });
+        platformEventBus.publish({
+          type: 'circuit_breaker_recovered',
+          category: 'automation',
+          title: `Circuit Breaker Recovered — ${circuit.serviceName}`,
+          description: `Service '${circuit.serviceName}' recovered from OPEN state — normal traffic resumed`,
+          metadata: { serviceId: circuit.serviceId, serviceName: circuit.serviceName, recoveryTime: Date.now() - (circuit.openedAt || Date.now()) },
+        }).catch((err: any) => log.error('[CircuitBreaker] Failed to publish circuit_breaker_recovered:', err));
       } catch (error) {
-        console.error('[CircuitBreaker] Failed to log recovery:', error);
+        log.error('[CircuitBreaker] Failed to log recovery:', error);
       }
     }
   }
@@ -631,7 +645,7 @@ class CircuitBreakerService {
       clearInterval(this.recoveryInterval);
       this.recoveryInterval = null;
     }
-    console.log('[CircuitBreaker] Service shut down');
+    log.info('[CircuitBreaker] Service shut down');
   }
 }
 

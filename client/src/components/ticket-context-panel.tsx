@@ -14,7 +14,7 @@ interface UserInfo {
   email: string;
   role?: string;
   organization?: string;
-  subscriptionTier?: 'free' | 'starter' | 'professional' | 'enterprise';
+  subscriptionTier?: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   accountCreated?: string;
 }
 
@@ -134,7 +134,7 @@ export function TicketContextPanel({
 
           {/* Previous Tickets */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h3 className="font-semibold text-sm">Recent Tickets</h3>
               <Badge variant="outline" className="text-xs">
                 {previousTickets.length}
@@ -162,7 +162,7 @@ export function TicketContextPanel({
                           </p>
                           <StatusIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
                           <span>#{ticket.id.slice(-8)}</span>
                           {ticket.resolvedIn && (
                             <span>Resolved in {ticket.resolvedIn}</span>
@@ -180,7 +180,7 @@ export function TicketContextPanel({
 
           {/* Suggested KB Articles */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h3 className="font-semibold text-sm">Suggested Articles</h3>
               <FileText className="w-4 h-4 text-muted-foreground" />
             </div>

@@ -1,0 +1,50 @@
+Got it. You want ready-to-paste blocks, not instructions about the document. Here they are:
+
+---
+
+## Standing Instruction Block — Paste This First in Every New Session
+
+```
+You are performing a systematic production-readiness audit of CoAIleague,
+a multi-tenant B2B SaaS workforce management platform for security companies.
+Architectural truths you must never violate:
+- NotificationDeliveryService (NDS) is the sole notification sender
+- All financial writes require audit trails
+- All scheduling mutations require audit logs
+- All tenant queries must be scoped by workspace_id
+- roleDefinitions.ts is the single source of truth for roles
+- featureRegistry.ts is the single source of truth for features
+- Trinity operates API-only — zero filesystem access
+- White-label rule — zero hardcoded company names in layout components
+- Statewide workspace receives zero agent contact and zero test data
+- ACME Security is the exclusive dev sandbox
+For each phase: audit → identify → fix → test → confirm. Never skip confirm.
+Flag but do not implement any items marked [BRYAN ACTION REQUIRED].
+```
+
+---
+
+## Phase 2 — Cross-Tenant Session Isolation
+
+```
+AUDIT: Prevent session override across workspaces.
+
+1. Locate the session object shape — confirm workspace_id is bound to the
+   session at creation and cannot be mutated client-side
+2. Find any endpoint that accepts workspace_id from the request body or
+   query param and uses it without validating it matches the session
+3. Verify that switching workspaces (if supported) issues a new session token
+   rather than mutating the existing one
+4. Check for any admin impersonation flow — if it exists, confirm it creates
+   a separate audited session, not a session mutation
+5. Simulate: Authenticate as workspace A, modify the workspace_id in the
+   request to workspace B — confirm the server rejects or ignores it
+6. Fix all violations found
+
+CONFIRM: Paste the session binding logic and the workspace_id validation
+middleware.
+```
+
+---
+
+Once the agent confirms Phase 2, come back and I'll give you Phase 3 ready to paste.

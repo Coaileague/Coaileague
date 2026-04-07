@@ -10,6 +10,9 @@
 import { Router } from 'express';
 import { automationEventsService, type AutomationJobType, type JobStatus } from '../services/automationEventsService';
 import { requirePlatformStaff, requireManagerOrPlatformStaff } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('AutomationEvents');
+
 
 const router = Router();
 
@@ -25,7 +28,7 @@ router.get('/events', requireManagerOrPlatformStaff, async (req, res) => {
       type: type as AutomationJobType | undefined,
       status: status as JobStatus | undefined,
       workspaceId: workspaceId as string | undefined,
-      limit: limit ? parseInt(limit as string, 10) : 50,
+      limit: Math.min(Math.max(1, limit ? parseInt(limit as string, 10) : 50), 200),
     });
 
     res.json({
@@ -34,7 +37,7 @@ router.get('/events', requireManagerOrPlatformStaff, async (req, res) => {
       count: events.length,
     });
   } catch (error) {
-    console.error('[AutomationEvents API] Error fetching events:', error);
+    log.error('[AutomationEvents API] Error fetching events:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch automation events' 
@@ -82,7 +85,7 @@ router.get('/stats', requireManagerOrPlatformStaff, async (req, res) => {
       summary,
     });
   } catch (error) {
-    console.error('[AutomationEvents API] Error fetching stats:', error);
+    log.error('[AutomationEvents API] Error fetching stats:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch automation stats' 
@@ -113,7 +116,7 @@ router.post('/retry/:jobId', requirePlatformStaff, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('[AutomationEvents API] Error retrying job:', error);
+    log.error('[AutomationEvents API] Error retrying job:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to retry job' 
@@ -127,21 +130,55 @@ router.post('/retry/:jobId', requirePlatformStaff, async (req, res) => {
  */
 router.get('/jobs', requireManagerOrPlatformStaff, async (req, res) => {
   try {
-    const jobs = [
-      { type: 'invoicing', label: 'Invoice Generation', schedule: 'Daily at 2 AM', enabled: true },
-      { type: 'payroll', label: 'Payroll Processing', schedule: 'Biweekly', enabled: true },
-      { type: 'scheduling', label: 'Schedule Generation', schedule: 'Weekly on Sunday', enabled: true },
-      { type: 'compliance', label: 'Compliance Check', schedule: 'Daily at 8 AM', enabled: true },
-      { type: 'cleanup', label: 'Data Cleanup', schedule: 'Daily at 3 AM', enabled: true },
-      { type: 'credit_reset', label: 'Credit Reset', schedule: 'Monthly on 1st', enabled: true },
-      { type: 'email_automation', label: 'Email Automation', schedule: 'Twice daily (9 AM, 3 PM)', enabled: true },
-      { type: 'shift_reminders', label: 'Shift Reminders', schedule: 'Every 5 minutes', enabled: true },
-      { type: 'ai_billing', label: 'AI Overage Billing', schedule: 'Weekly on Sunday', enabled: true },
-      { type: 'platform_monitor', label: 'Platform Monitor', schedule: 'Every 15 minutes', enabled: true },
-      { type: 'ws_cleanup', label: 'WebSocket Cleanup', schedule: 'Every 30 minutes', enabled: true },
-      { type: 'room_auto_close', label: 'Room Auto-Close', schedule: 'Every hour', enabled: true },
-      { type: 'trial_expiry', label: 'Trial Expiry Check', schedule: 'Daily at 6 AM', enabled: true },
+    const jobSchedules: Record<AutomationJobType, string> = {
+      invoicing: 'Daily at 2 AM',
+      payroll: 'Biweekly',
+      scheduling: 'Weekly on Sunday',
+      compliance: 'Daily at 8 AM',
+      cleanup: 'Daily at 3 AM',
+      credit_reset: 'Monthly on 1st',
+      email_automation: 'Twice daily (9 AM, 3 PM)',
+      shift_reminders: 'Every 5 minutes',
+      ai_billing: 'Weekly on Sunday',
+      platform_monitor: 'Every 15 minutes',
+      ws_cleanup: 'Every 30 minutes',
+      room_auto_close: 'Every hour',
+      trial_expiry: 'Daily at 6 AM',
+    };
+
+    const jobLabels: Record<AutomationJobType, string> = {
+      invoicing: 'Invoice Generation',
+      payroll: 'Payroll Processing',
+      scheduling: 'Schedule Generation',
+      compliance: 'Compliance Check',
+      cleanup: 'Data Cleanup',
+      credit_reset: 'Credit Reset',
+      email_automation: 'Email Automation',
+      shift_reminders: 'Shift Reminders',
+      ai_billing: 'AI Overage Billing',
+      platform_monitor: 'Platform Monitor',
+      ws_cleanup: 'WebSocket Cleanup',
+      room_auto_close: 'Room Auto-Close',
+      trial_expiry: 'Trial Expiry Check',
+    };
+
+    const stats = await automationEventsService.getStats();
+    const allTypes: AutomationJobType[] = [
+      'invoicing', 'payroll', 'scheduling', 'compliance', 'cleanup',
+      'credit_reset', 'email_automation', 'shift_reminders', 'ai_billing',
+      'platform_monitor', 'ws_cleanup', 'room_auto_close', 'trial_expiry',
     ];
+
+    const jobs = allTypes.map(type => ({
+      type,
+      label: jobLabels[type],
+      schedule: jobSchedules[type],
+      enabled: true,
+      lastRun: stats[type]?.lastRun || null,
+      totalJobs: stats[type]?.totalJobs || 0,
+      successRate: stats[type]?.successRate ?? 100,
+      averageDuration: stats[type]?.averageDuration || 0,
+    }));
 
     res.json({
       success: true,
@@ -149,7 +186,7 @@ router.get('/jobs', requireManagerOrPlatformStaff, async (req, res) => {
       count: jobs.length,
     });
   } catch (error) {
-    console.error('[AutomationEvents API] Error fetching jobs:', error);
+    log.error('[AutomationEvents API] Error fetching jobs:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch automation jobs' 

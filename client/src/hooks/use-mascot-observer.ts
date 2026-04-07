@@ -59,6 +59,7 @@ const PAGE_CONTEXTS: Record<string, PageContext> = {
   '/settings': { path: '/settings', category: 'configuration', actions: ['update_profile', 'change_settings', 'manage_integrations'] },
   '/dashboard': { path: '/dashboard', category: 'overview', actions: ['review_status', 'quick_actions', 'notifications'] },
   '/chat': { path: '/chat', category: 'communication', actions: ['send_message', 'create_chat', 'support_request'] },
+  '/chatrooms': { path: '/chatrooms', category: 'communication', actions: ['send_message', 'create_chat', 'support_request'] },
 };
 
 const CONTEXTUAL_INSIGHTS: Record<string, ContextualInsight[]> = {

@@ -1,6 +1,10 @@
-// CoAIleague Compact Logo Component
-// Perfect for inline use in chat, user lists, badges
-// Transparent background, animated glow, professional look
+/**
+ * WFLogo - Re-exports TrinityLogo for backwards compatibility
+ * Single source of truth: trinity-logo.tsx
+ */
+
+import { TrinityLogo } from "@/components/trinity-logo";
+import { cn } from "@/lib/utils";
 
 interface WFLogoProps {
   className?: string;
@@ -8,126 +12,9 @@ interface WFLogoProps {
 }
 
 export function WFLogo({ className = "", size = 24 }: WFLogoProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        <filter id="neon-glow-full" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur1"/>
-          <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur2"/>
-          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur3"/>
-          <feMerge>
-            <feMergeNode in="blur3"/>
-            <feMergeNode in="blur2"/>
-            <feMergeNode in="blur1"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-        <linearGradient id="blue-gradient-full" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="50%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#0ea5e9" />
-        </linearGradient>
-      </defs>
-      
-      {/* Circular Badge Background */}
-      <circle
-        cx="50"
-        cy="50"
-        r="45"
-        fill="url(#blue-gradient-full)"
-        filter="url(#neon-glow-full)"
-      />
-      
-      {/* "AF" Text */}
-      <text
-        x="50"
-        y="65"
-        fill="white"
-        fontSize="48"
-        fontWeight="900"
-        fontFamily="Arial, sans-serif"
-        textAnchor="middle"
-        filter="url(#neon-glow-full)"
-      >
-        AF
-      </text>
-    </svg>
-  );
+  return <TrinityLogo size={size} className={className} />;
 }
 
-// Compact version for inline use - ENHANCED for chat messages and user lists
-// Transparent, glowing, professional, blends with any background
 export function WFLogoCompact({ className = "", size = 20 }: WFLogoProps) {
-  const uniqueId = Math.random().toString(36).substr(2, 9);
-  
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        {/* Multi-layer glow for depth */}
-        <filter id={`compact-glow-${uniqueId}`} x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur1"/>
-          <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur2"/>
-          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur3"/>
-          <feMerge>
-            <feMergeNode in="blur3"/>
-            <feMergeNode in="blur2"/>
-            <feMergeNode in="blur1"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-        
-        {/* Gradient for professional look - CoAIleague Blue */}
-        <linearGradient id={`compact-gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#2563eb" />
-          <stop offset="50%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#1e40af" />
-        </linearGradient>
-        
-        {/* White core gradient for brightness */}
-        <linearGradient id={`bright-core-${uniqueId}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#dbeafe" />
-          <stop offset="100%" stopColor="#93c5fd" />
-        </linearGradient>
-      </defs>
-      
-      {/* Rounded Container Circle - CoAIleague Blue */}
-      <circle
-        cx="20"
-        cy="16"
-        r="15"
-        fill={`url(#compact-gradient-${uniqueId})`}
-        stroke="rgba(37, 99, 235, 0.3)"
-        strokeWidth="0.5"
-        filter={`url(#compact-glow-${uniqueId})`}
-      />
-      
-      {/* "AF" Text - Clean and Visible */}
-      <text
-        x="20"
-        y="21"
-        fill="white"
-        fontSize="14"
-        fontWeight="900"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        textAnchor="middle"
-        filter={`url(#compact-glow-${uniqueId})`}
-      >
-        AF
-      </text>
-    </svg>
-  );
+  return <TrinityLogo size={size} className={cn("shrink-0", className)} />;
 }

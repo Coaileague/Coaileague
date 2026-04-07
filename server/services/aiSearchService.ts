@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
 import { db } from "../db";
 import { employees, clients, shifts, invoices, timeEntries } from "@shared/schema";
 import { eq, or, ilike, and, desc, sql } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('aiSearchService');
 
-const apiKey = process.env.GEMINI_API_KEY;
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 export interface SearchResult {
   id: string;
@@ -323,18 +323,10 @@ function calculateTextRelevance(query: string, text: string): number {
   return matchedWords.length / queryWords.length * 0.6;
 }
 
-async function generateAISummary(query: string, results: SearchResult[]): Promise<string | undefined> {
-  if (!genAI || results.length === 0) return undefined;
+async function generateAISummary(query: string, results: SearchResult[], workspaceId: string): Promise<string | undefined> {
+  if (results.length === 0) return undefined;
   
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: GEMINI_MODELS.LOOKUP,
-      generationConfig: {
-        maxOutputTokens: ANTI_YAP_PRESETS.lookup.maxTokens,
-        temperature: ANTI_YAP_PRESETS.lookup.temperature,
-      }
-    });
-    
     const resultsSummary = results.slice(0, 5).map(r => 
       `- ${r.type}: ${r.title} (${r.subtitle})`
     ).join('\n');
@@ -349,10 +341,26 @@ Provide a brief, helpful 1-2 sentence summary of what was found. Be concise and 
 If the results seem relevant to the query, mention the most relevant finding.
 If results seem limited or not directly matching, suggest how the user might refine their search.`;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    if (!workspaceId) {
+      return { success: false, summary: 'Search summary requires workspace context' };
+    }
+    const aiResult = await meteredGemini.generate({
+      workspaceId,
+      featureKey: 'ai_search_summary',
+      prompt,
+      model: 'gemini-2.5-flash',
+      temperature: ANTI_YAP_PRESETS.lookup.temperature,
+      maxOutputTokens: ANTI_YAP_PRESETS.lookup.maxTokens,
+    });
+
+    if (!aiResult.success) {
+      log.warn('[AISearch] Metered AI call failed:', aiResult.error);
+      return undefined;
+    }
+
+    return aiResult.text;
   } catch (error) {
-    console.error('Error generating AI summary:', error);
+    log.error('Error generating AI summary:', error);
     return undefined;
   }
 }
@@ -474,7 +482,7 @@ export async function performSearch(workspaceId: string, query: string): Promise
     ...timeEntryResults,
   ].sort((a, b) => b.relevanceScore - a.relevanceScore);
 
-  const aiSummary = await generateAISummary(trimmedQuery, allResults);
+  const aiSummary = await generateAISummary(trimmedQuery, allResults, workspaceId);
 
   return {
     query: trimmedQuery,

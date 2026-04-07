@@ -18,6 +18,9 @@
  */
 
 import { platformEventBus, PlatformEvent, PlatformEventType, EventCategory, EventVisibility } from './platformEventBus';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('ChatServerHub');
 import { db } from '../db';
 import { 
   notifications, 
@@ -28,11 +31,17 @@ import {
   supportRooms,
   organizationChatRooms,
   users,
+  helpaiSessions,
+  helpaiActionLog
 } from '@shared/schema';
-import { eq, and, or, isNull, gte, count, sql } from 'drizzle-orm';
+import { eq, and, or, isNull, isNotNull, inArray, not, gte, count, sql, desc } from 'drizzle-orm';
 import { CHAT_SERVER_HUB } from '@shared/platformConfig';
 import { roomAnalyticsService } from './roomAnalyticsService';
-import { PLATFORM_WORKSPACE_ID, seedPlatformWorkspace } from '../seed-platform-workspace';
+import { seedPlatformWorkspace } from '../seed-platform-workspace';
+import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
+import { universalNotificationEngine } from './universalNotificationEngine';
+import { helpAIBotService } from './helpai/helpAIBotService';
+import { typedExec } from '../lib/typedSql';
 
 // ============================================================================
 // CHAT-SPECIFIC EVENT TYPES
@@ -61,7 +70,8 @@ export type ChatEventType =
   | 'queue_update'
   | 'staff_joined'
   | 'staff_left'
-  | 'sentiment_alert';
+  | 'sentiment_alert'
+  | 'support_escalation';
 
 export interface ChatEventMetadata {
   conversationId: string;
@@ -139,18 +149,488 @@ export interface ActiveRoom {
 // CHAT SERVER HUB CLASS
 // ============================================================================
 
+interface CachedRoomState {
+  data: ActiveRoom;
+  cachedAt: number;
+}
+
+interface BatchedEvent {
+  key: string;
+  event: {
+    type: string;
+    conversationId?: string;
+    workspaceId?: string;
+    userId?: string;
+    payload: any;
+  };
+  count: number;
+  firstAt: number;
+  lastAt: number;
+}
+
+interface ConnectionHealthStats {
+  totalConnections: number;
+  activeConnections: number;
+  droppedConnections: number;
+  avgLatencyMs: number;
+  lastCheckAt: number;
+  aiServiceHealthy: boolean;
+  aiFailureCount: number;
+  aiLastFailureAt: number | null;
+  aiCircuitBreakerOpen: boolean;
+}
+
 class ChatServerHubClass {
   private wsBroadcaster: WebSocketBroadcaster | null = null;
   private eventSubscribers: Map<ChatEventType | '*', ((event: ChatEvent) => Promise<void>)[]> = new Map();
-  private activeRooms: Map<string, ActiveRoom> = new Map(); // Key: conversationId
+  private activeRooms: Map<string, ActiveRoom> = new Map();
   private gatewayInitialized: boolean = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private eventBusSubscribed: boolean = false;
 
+  private eventBatchQueue: Map<string, BatchedEvent> = new Map();
+  private batchFlushInterval: NodeJS.Timeout | null = null;
+  private readonly BATCH_FLUSH_MS = 150;
+  private readonly BATCH_MAX_SIZE = 75;
+  private readonly PRESENCE_BATCH_FLUSH_MS = 800;
+  private readonly TYPING_BATCH_FLUSH_MS = 400;
+  private readonly BATCH_MAX_AGE_MS = 2000;
+
+  private roomStateCache: Map<string, CachedRoomState> = new Map();
+  private readonly CACHE_TTL_MS = 30_000;
+  private readonly CACHE_CLEANUP_INTERVAL_MS = 60_000;
+  private readonly CACHE_MAX_SIZE = 500;
+  private cacheCleanupInterval: NodeJS.Timeout | null = null;
+  private cacheHits: number = 0;
+  private cacheMisses: number = 0;
+
+  private connectionHealth: ConnectionHealthStats = {
+    totalConnections: 0,
+    activeConnections: 0,
+    droppedConnections: 0,
+    avgLatencyMs: 0,
+    lastCheckAt: Date.now(),
+    aiServiceHealthy: true,
+    aiFailureCount: 0,
+    aiLastFailureAt: null,
+    aiCircuitBreakerOpen: false,
+  };
+  private readonly AI_CIRCUIT_BREAKER_THRESHOLD = 8;
+  private readonly AI_CIRCUIT_BREAKER_RESET_MS = 60_000;
+  private readonly AI_HALF_OPEN_MAX_REQUESTS = 3;
+  private aiHalfOpenRequests: number = 0;
+  private aiConsecutiveFailures: number = 0;
+  private healthMonitorInterval: NodeJS.Timeout | null = null;
+  private eventsProcessedCount: number = 0;
+  private eventsBatchedCount: number = 0;
+  private eventsDroppedCount: number = 0;
+  private latencySamples: number[] = [];
+  private readonly LATENCY_SAMPLE_SIZE = 100;
+  private startedAt: number = Date.now();
+
   constructor() {
-    // Defer event bus subscription to avoid circular dependency issues
     setImmediate(() => this.subscribeToEventBus());
-    console.log(`[ChatServerHub] Initialized - Version ${CHAT_SERVER_HUB.version}`);
+    this.startBatchFlush();
+    this.startCacheCleanup();
+    this.startHealthMonitor();
+    log.info(`[ChatServerHub] Initialized - Version ${CHAT_SERVER_HUB.version}`);
+  }
+
+  // =========================================================================
+  // EVENT BATCHING FOR HIGH-FREQUENCY EVENTS
+  // =========================================================================
+
+  private startBatchFlush(): void {
+    if (this.batchFlushInterval) clearInterval(this.batchFlushInterval);
+    this.batchFlushInterval = setInterval(() => this.flushEventBatch(), this.BATCH_FLUSH_MS);
+  }
+
+  private flushEventBatch(): void {
+    if (this.eventBatchQueue.size === 0) return;
+
+    const now = Date.now();
+    const toFlush: BatchedEvent[] = [];
+
+    for (const [key, batch] of this.eventBatchQueue.entries()) {
+      const isPresenceEvent = batch.event.type === 'presence_update';
+      const isTypingEvent = batch.event.type === 'typing_indicator';
+      const flushThreshold = isPresenceEvent
+        ? this.PRESENCE_BATCH_FLUSH_MS
+        : isTypingEvent
+          ? this.TYPING_BATCH_FLUSH_MS
+          : this.BATCH_FLUSH_MS;
+
+      const age = now - batch.firstAt;
+      if (age >= flushThreshold || batch.count >= this.BATCH_MAX_SIZE || age >= this.BATCH_MAX_AGE_MS) {
+        toFlush.push(batch);
+        this.eventBatchQueue.delete(key);
+      }
+    }
+
+    if (toFlush.length === 0) return;
+
+    for (const batch of toFlush) {
+      this.eventsBatchedCount += batch.count;
+      if (this.wsBroadcaster) {
+        if (batch.count > 1) {
+          this.wsBroadcaster({
+            type: batch.event.type,
+            conversationId: batch.event.conversationId,
+            workspaceId: batch.event.workspaceId,
+            userId: batch.event.userId,
+            payload: {
+              ...batch.event.payload,
+              batchedCount: batch.count,
+              batchedFrom: new Date(batch.firstAt).toISOString(),
+              batchedTo: new Date(batch.lastAt).toISOString(),
+            },
+          });
+        } else {
+          this.wsBroadcaster(batch.event);
+        }
+      }
+    }
+  }
+
+  emitBatchedEvent(event: {
+    type: string;
+    conversationId?: string;
+    workspaceId?: string;
+    userId?: string;
+    payload: any;
+  }): void {
+    const key = `${event.type}:${event.conversationId || ''}:${event.userId || ''}`;
+    const now = Date.now();
+    const existing = this.eventBatchQueue.get(key);
+
+    if (existing) {
+      existing.event = event;
+      existing.count++;
+      existing.lastAt = now;
+    } else {
+      this.eventBatchQueue.set(key, {
+        key,
+        event,
+        count: 1,
+        firstAt: now,
+        lastAt: now,
+      });
+    }
+
+    if (this.eventBatchQueue.size >= this.BATCH_MAX_SIZE) {
+      this.flushEventBatch();
+    }
+  }
+
+  emitTypingIndicator(params: {
+    conversationId: string;
+    userId: string;
+    userName: string;
+    isTyping: boolean;
+  }): void {
+    this.emitBatchedEvent({
+      type: 'typing_indicator',
+      conversationId: params.conversationId,
+      userId: params.userId,
+      payload: {
+        userId: params.userId,
+        userName: params.userName,
+        isTyping: params.isTyping,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  emitPresenceUpdate(params: {
+    userId: string;
+    userName: string;
+    status: 'online' | 'away' | 'offline';
+    workspaceId?: string;
+  }): void {
+    this.emitBatchedEvent({
+      type: 'presence_update',
+      workspaceId: params.workspaceId,
+      userId: params.userId,
+      payload: {
+        userId: params.userId,
+        userName: params.userName,
+        status: params.status,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  // =========================================================================
+  // ROOM STATE CACHING WITH TTL
+  // =========================================================================
+
+  private startCacheCleanup(): void {
+    if (this.cacheCleanupInterval) clearInterval(this.cacheCleanupInterval);
+    this.cacheCleanupInterval = setInterval(() => {
+      const now = Date.now();
+      let evicted = 0;
+      for (const [key, cached] of this.roomStateCache.entries()) {
+        if (now - cached.cachedAt > this.CACHE_TTL_MS) {
+          this.roomStateCache.delete(key);
+          evicted++;
+        }
+      }
+      if (evicted > 0) {
+        log.info(`[ChatServerHub] Cache cleanup: evicted ${evicted} stale entries, ${this.roomStateCache.size} remaining`);
+      }
+    }, this.CACHE_CLEANUP_INTERVAL_MS);
+  }
+
+  getCachedRoomState(conversationId: string): ActiveRoom | null {
+    const cached = this.roomStateCache.get(conversationId);
+    if (!cached) {
+      this.cacheMisses++;
+      return null;
+    }
+    if (Date.now() - cached.cachedAt > this.CACHE_TTL_MS) {
+      this.roomStateCache.delete(conversationId);
+      this.cacheMisses++;
+      return null;
+    }
+    this.cacheHits++;
+    return cached.data;
+  }
+
+  setCachedRoomState(conversationId: string, room: ActiveRoom): void {
+    if (this.roomStateCache.size >= this.CACHE_MAX_SIZE) {
+      let oldestKey: string | null = null;
+      let oldestTime = Infinity;
+      for (const [key, cached] of this.roomStateCache.entries()) {
+        if (cached.cachedAt < oldestTime) {
+          oldestTime = cached.cachedAt;
+          oldestKey = key;
+        }
+      }
+      if (oldestKey) this.roomStateCache.delete(oldestKey);
+    }
+    this.roomStateCache.set(conversationId, {
+      data: room,
+      cachedAt: Date.now(),
+    });
+  }
+
+  invalidateRoomCache(conversationId: string): void {
+    this.roomStateCache.delete(conversationId);
+  }
+
+  invalidateAllRoomCaches(): void {
+    this.roomStateCache.clear();
+  }
+
+  async getRoomWithCache(conversationId: string): Promise<ActiveRoom | null> {
+    const cached = this.getCachedRoomState(conversationId);
+    if (cached) return cached;
+
+    const room = this.activeRooms.get(conversationId) || null;
+    if (room) {
+      this.setCachedRoomState(conversationId, room);
+    }
+    return room;
+  }
+
+  // =========================================================================
+  // GRACEFUL DEGRADATION FOR AI SERVICE FAILURES
+  // =========================================================================
+
+  private recordAIFailure(): void {
+    this.connectionHealth.aiFailureCount++;
+    this.aiConsecutiveFailures++;
+    this.connectionHealth.aiLastFailureAt = Date.now();
+
+    if (this.aiConsecutiveFailures >= this.AI_CIRCUIT_BREAKER_THRESHOLD) {
+      this.connectionHealth.aiCircuitBreakerOpen = true;
+      this.connectionHealth.aiServiceHealthy = false;
+      this.aiHalfOpenRequests = 0;
+      log.warn(
+        `[ChatServerHub] AI circuit breaker OPEN after ${this.aiConsecutiveFailures} consecutive failures ` +
+        `(${this.connectionHealth.aiFailureCount} total). ` +
+        `Will enter half-open state after ${this.AI_CIRCUIT_BREAKER_RESET_MS / 1000}s.`
+      );
+    }
+  }
+
+  private recordAISuccess(): void {
+    if (this.isInHalfOpenState()) {
+      this.aiHalfOpenRequests = 0;
+      log.info('[ChatServerHub] AI circuit breaker CLOSED - half-open probe succeeded');
+    }
+    this.aiConsecutiveFailures = 0;
+    this.connectionHealth.aiCircuitBreakerOpen = false;
+    this.connectionHealth.aiServiceHealthy = true;
+  }
+
+  private isInHalfOpenState(): boolean {
+    if (!this.connectionHealth.aiCircuitBreakerOpen) return false;
+    const lastFailure = this.connectionHealth.aiLastFailureAt;
+    return !!(lastFailure && Date.now() - lastFailure > this.AI_CIRCUIT_BREAKER_RESET_MS);
+  }
+
+  isAIServiceAvailable(): boolean {
+    if (!this.connectionHealth.aiCircuitBreakerOpen) return true;
+
+    if (this.isInHalfOpenState()) {
+      if (this.aiHalfOpenRequests < this.AI_HALF_OPEN_MAX_REQUESTS) {
+        this.aiHalfOpenRequests++;
+        log.info(`[ChatServerHub] AI circuit breaker HALF-OPEN - allowing probe request ${this.aiHalfOpenRequests}/${this.AI_HALF_OPEN_MAX_REQUESTS}`);
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  getAIFallbackMessage(context: string): string {
+    const fallbackMessages: Record<string, string> = {
+      'chat_response': 'Our AI assistant is temporarily unavailable. A support agent will be with you shortly.',
+      'sentiment_analysis': 'Sentiment analysis is temporarily paused. Messages are still being delivered normally.',
+      'auto_escalation': 'Automatic escalation is temporarily unavailable. Please use manual escalation if needed.',
+      'suggestion': 'AI suggestions are temporarily unavailable. Please proceed with your best judgment.',
+      'document_extraction': 'Document processing is temporarily unavailable. Your document has been saved and will be processed when the service recovers.',
+      'ticket_classification': 'Automatic ticket classification is temporarily offline. Your ticket has been created and will be categorized by a support agent.',
+      'smart_routing': 'Smart routing is temporarily unavailable. Your request will be handled by the next available agent.',
+    };
+    return fallbackMessages[context] || 'AI services are temporarily unavailable. Your request has been queued for processing.';
+  }
+
+  async executeWithAIFallback<T>(
+    operation: () => Promise<T>,
+    fallback: () => T,
+    context: string
+  ): Promise<T> {
+    if (!this.isAIServiceAvailable()) {
+      const msg = this.getAIFallbackMessage(context);
+      log.warn(`[ChatServerHub] AI service unavailable for: ${context}. ${msg}`);
+      return fallback();
+    }
+
+    try {
+      const startTime = Date.now();
+      const result = await operation();
+      const duration = Date.now() - startTime;
+      this.recordAISuccess();
+      if (duration > 5000) {
+        log.warn(`[ChatServerHub] AI operation slow (${duration}ms) for: ${context}`);
+      }
+      return result;
+    } catch (error) {
+      this.recordAIFailure();
+      const msg = this.getAIFallbackMessage(context);
+      log.error(`[ChatServerHub] AI operation failed (${context}): ${msg}`, error);
+      return fallback();
+    }
+  }
+
+  // =========================================================================
+  // CONNECTION HEALTH MONITORING
+  // =========================================================================
+
+  private startHealthMonitor(): void {
+    if (this.healthMonitorInterval) clearInterval(this.healthMonitorInterval);
+    this.healthMonitorInterval = setInterval(() => {
+      this.connectionHealth.lastCheckAt = Date.now();
+      const uptimeSeconds = (Date.now() - this.startedAt) / 1000;
+
+      if (this.isInHalfOpenState()) {
+        log.info('[ChatServerHub] Health monitor: circuit breaker in HALF-OPEN state, awaiting probe results');
+      }
+
+      if (this.connectionHealth.droppedConnections > 0 && this.connectionHealth.totalConnections > 0) {
+        const dropRate = this.connectionHealth.droppedConnections / this.connectionHealth.totalConnections;
+        if (dropRate > 0.1) {
+          log.warn(`[ChatServerHub] Health warning: connection drop rate ${(dropRate * 100).toFixed(1)}% exceeds 10% threshold`);
+        }
+      }
+
+      if (this.connectionHealth.avgLatencyMs > 1000) {
+        log.warn(`[ChatServerHub] Health warning: avg latency ${this.connectionHealth.avgLatencyMs.toFixed(0)}ms exceeds 1000ms threshold`);
+      }
+
+      const totalCacheRequests = this.cacheHits + this.cacheMisses;
+      if (totalCacheRequests > 100) {
+        const hitRate = this.cacheHits / totalCacheRequests;
+        if (hitRate < 0.5) {
+          log.warn(`[ChatServerHub] Cache efficiency warning: hit rate ${(hitRate * 100).toFixed(1)}% is below 50%`);
+        }
+      }
+
+      if (uptimeSeconds > 300 && uptimeSeconds % 300 < 30) {
+        const eventsPerSec = this.eventsProcessedCount / uptimeSeconds;
+        log.info(
+          `[ChatServerHub] Health summary: ${this.connectionHealth.activeConnections} active connections, ` +
+          `${eventsPerSec.toFixed(1)} events/sec, ` +
+          `cache hit rate ${totalCacheRequests > 0 ? ((this.cacheHits / totalCacheRequests) * 100).toFixed(0) : 'N/A'}%, ` +
+          `AI healthy: ${this.connectionHealth.aiServiceHealthy}, ` +
+          `batch queue: ${this.eventBatchQueue.size}`
+        );
+      }
+    }, 15_000);
+  }
+
+  trackConnectionOpened(): void {
+    this.connectionHealth.totalConnections++;
+    this.connectionHealth.activeConnections++;
+  }
+
+  trackConnectionClosed(): void {
+    this.connectionHealth.activeConnections = Math.max(0, this.connectionHealth.activeConnections - 1);
+  }
+
+  trackConnectionDropped(): void {
+    this.connectionHealth.droppedConnections++;
+    this.connectionHealth.activeConnections = Math.max(0, this.connectionHealth.activeConnections - 1);
+  }
+
+  recordLatency(latencyMs: number): void {
+    const alpha = 0.3;
+    this.connectionHealth.avgLatencyMs =
+      this.connectionHealth.avgLatencyMs * (1 - alpha) + latencyMs * alpha;
+    this.latencySamples.push(latencyMs);
+    if (this.latencySamples.length > this.LATENCY_SAMPLE_SIZE) {
+      this.latencySamples.shift();
+    }
+  }
+
+  private getLatencyP95(): number {
+    if (this.latencySamples.length === 0) return 0;
+    const sorted = [...this.latencySamples].sort((a, b) => a - b);
+    const idx = Math.floor(sorted.length * 0.95);
+    return sorted[Math.min(idx, sorted.length - 1)];
+  }
+
+  getConnectionHealth(): ConnectionHealthStats & {
+    cacheHitRate: number;
+    cacheSize: number;
+    cacheMaxSize: number;
+    eventsProcessed: number;
+    eventsBatched: number;
+    eventsDropped: number;
+    batchQueueSize: number;
+    uptimeMs: number;
+    latencyP95Ms: number;
+    aiConsecutiveFailures: number;
+    eventsPerSecond: number;
+  } {
+    const totalCacheRequests = this.cacheHits + this.cacheMisses;
+    const uptimeMs = Date.now() - this.startedAt;
+    return {
+      ...this.connectionHealth,
+      cacheHitRate: totalCacheRequests > 0 ? this.cacheHits / totalCacheRequests : 0,
+      cacheSize: this.roomStateCache.size,
+      cacheMaxSize: this.CACHE_MAX_SIZE,
+      eventsProcessed: this.eventsProcessedCount,
+      eventsBatched: this.eventsBatchedCount,
+      eventsDropped: this.eventsDroppedCount,
+      batchQueueSize: this.eventBatchQueue.size,
+      uptimeMs,
+      latencyP95Ms: this.getLatencyP95(),
+      aiConsecutiveFailures: this.aiConsecutiveFailures,
+      eventsPerSecond: uptimeMs > 0 ? (this.eventsProcessedCount / (uptimeMs / 1000)) : 0,
+    };
   }
 
   /**
@@ -159,15 +639,15 @@ class ChatServerHubClass {
    */
   async initializeGateway(): Promise<void> {
     if (this.gatewayInitialized) {
-      console.log('[ChatServerHub] Gateway already initialized, skipping re-initialization');
+      log.info('[ChatServerHub] Gateway already initialized, skipping re-initialization');
       return;
     }
 
-    console.log(`[ChatServerHub] Initializing gateway v${CHAT_SERVER_HUB.version}...`);
+    log.info(`[ChatServerHub] Initializing gateway v${CHAT_SERVER_HUB.version}...`);
     
     try {
-      // HelpDesk room seeding disabled - platform uses ticket system instead
-      // await this.seedHelpDeskRoom();
+      // Seed persistent HelpDesk room - always available platform-wide
+      await this.seedHelpDeskRoom();
       
       // Load all active rooms from database
       await this.loadAllActiveRooms();
@@ -176,12 +656,12 @@ class ChatServerHubClass {
       this.startHeartbeat();
       
       this.gatewayInitialized = true;
-      console.log(
+      log.info(
         `[ChatServerHub] Gateway initialized successfully - ` +
         `${this.activeRooms.size} active rooms loaded`
       );
     } catch (error) {
-      console.error('[ChatServerHub] Failed to initialize gateway:', error);
+      log.error('[ChatServerHub] Failed to initialize gateway:', error);
       throw error;
     }
   }
@@ -198,34 +678,103 @@ class ChatServerHubClass {
     const HELPAI_BOT_ID = 'helpai-bot';
     const HELPAI_BOT_NAME = 'HelpAI';
 
-    console.log('[ChatServerHub] Seeding HelpDesk room with HelpAI bot...');
+    log.info('[ChatServerHub] Seeding HelpDesk room with HelpAI bot...');
     
     try {
       // Ensure platform workspace exists before creating HelpDesk room
       // This creates the workspace with PLATFORM_WORKSPACE_ID if it doesn't exist
       await seedPlatformWorkspace();
     } catch (wsError) {
-      console.warn('[ChatServerHub] Failed to seed platform workspace, HelpDesk seeding may fail:', wsError);
+      log.warn('[ChatServerHub] Failed to seed platform workspace, HelpDesk seeding may fail:', wsError);
       // Continue anyway - the workspace might already exist from previous runs
     }
 
     try {
-      // Check if HelpDesk support room exists
+      // ──────────────────────────────────────────────────────────────────────
+      // ENFORCEMENT: "Help Desk" is a PLATFORM-ONLY room.
+      // Purge any duplicates from ALL three layers: supportRooms,
+      // organizationChatRooms, and chatConversations outside the platform workspace.
+      // This guard runs on every startup so it self-heals in development too.
+      // ──────────────────────────────────────────────────────────────────────
+      const HELP_DESK_NAMES = ['Help Desk', 'help desk', 'helpdesk', 'help-desk'];
+
+      // 1. Support room duplicates (workspace-scoped)
+      const dupSupportRooms = await db
+        .select({ id: supportRooms.id })
+        .from(supportRooms)
+        .where(and(eq(supportRooms.slug, HELPDESK_SLUG), isNotNull(supportRooms.workspaceId)));
+      if (dupSupportRooms.length > 0) {
+        const ids = dupSupportRooms.map(d => d.id);
+        await db.delete(supportRooms).where(inArray(supportRooms.id, ids));
+        log.warn(`[ChatServerHub] Removed ${ids.length} workspace-scoped supportRoom duplicate(s): ${ids.join(', ')}`);
+      }
+
+      // 2. Organization chat rooms named "Help Desk" (not in platform workspace)
+      const dupOrgRooms = await db
+        .select({ id: organizationChatRooms.id, conversationId: organizationChatRooms.conversationId })
+        .from(organizationChatRooms)
+        .where(
+          and(
+            inArray(organizationChatRooms.roomName, HELP_DESK_NAMES),
+            not(eq(organizationChatRooms.workspaceId, PLATFORM_WORKSPACE_ID))
+          )
+        );
+      if (dupOrgRooms.length > 0) {
+        const ids = dupOrgRooms.map(d => d.id);
+        const convIds = dupOrgRooms.map(d => d.conversationId).filter(Boolean) as string[];
+        await db.delete(organizationChatRooms).where(inArray(organizationChatRooms.id, ids));
+        if (convIds.length > 0) {
+          await db.delete(chatConversations).where(inArray(chatConversations.id, convIds));
+        }
+        log.warn(`[ChatServerHub] Removed ${ids.length} org-room "Help Desk" duplicate(s) and ${convIds.length} conversation(s)`);
+      }
+
+      // 3. chatConversations named "Help Desk" in non-platform workspaces
+      const dupConvs = await db
+        .select({ id: chatConversations.id })
+        .from(chatConversations)
+        .where(
+          and(
+            inArray(chatConversations.subject, HELP_DESK_NAMES),
+            isNotNull(chatConversations.workspaceId),
+            not(eq(chatConversations.workspaceId, PLATFORM_WORKSPACE_ID))
+          )
+        );
+      if (dupConvs.length > 0) {
+        const ids = dupConvs.map(d => d.id);
+        await db.delete(chatConversations).where(inArray(chatConversations.id, ids));
+        log.warn(`[ChatServerHub] Removed ${ids.length} chatConversation "Help Desk" duplicate(s) in non-platform workspaces`);
+      }
+
+      // Check if the canonical platform-wide HelpDesk room exists
       const [existingRoom] = await db
         .select()
         .from(supportRooms)
-        .where(eq(supportRooms.slug, HELPDESK_SLUG))
+        .where(and(eq(supportRooms.slug, HELPDESK_SLUG), isNull(supportRooms.workspaceId)))
         .limit(1);
 
       let conversationId: string;
 
       if (existingRoom) {
-        console.log('[ChatServerHub] HelpDesk room exists, checking conversation...');
+        log.info('[ChatServerHub] HelpDesk room exists, checking conversation...');
         
+        let existingConversation = null;
         if (existingRoom.conversationId) {
-          conversationId = existingRoom.conversationId;
+          const [conv] = await db
+            .select()
+            .from(chatConversations)
+            .where(eq(chatConversations.id, existingRoom.conversationId))
+            .limit(1);
+          existingConversation = conv || null;
+        }
+        
+        if (existingConversation) {
+          conversationId = existingConversation.id;
+          log.info('[ChatServerHub] HelpDesk conversation verified:', conversationId);
         } else {
-          // Create conversation for existing room
+          if (existingRoom.conversationId) {
+            log.warn('[ChatServerHub] HelpDesk conversation reference is stale (', existingRoom.conversationId, ') - recreating');
+          }
           const [conversation] = await db.insert(chatConversations).values({
             workspaceId: PLATFORM_WORKSPACE_ID,
             subject: 'Help Desk',
@@ -236,12 +785,11 @@ class ChatServerHubClass {
           
           conversationId = conversation.id;
           
-          // Update support room with conversation ID
           await db.update(supportRooms)
             .set({ conversationId })
             .where(eq(supportRooms.id, existingRoom.id));
           
-          console.log('[ChatServerHub] Created conversation for HelpDesk room');
+          log.info('[ChatServerHub] Created persistent conversation for HelpDesk room:', conversationId);
         }
       } else {
         // Create the conversation first
@@ -260,6 +808,7 @@ class ChatServerHubClass {
           slug: HELPDESK_SLUG,
           name: 'Help Desk',
           description: 'Live support chat powered by HelpAI - always here to assist you',
+          mode: 'sup', // IRC mode: enables HelpAI bot auto-response
           status: 'open',
           workspaceId: null, // Platform-wide room
           conversationId,
@@ -267,7 +816,7 @@ class ChatServerHubClass {
           allowedRoles: JSON.stringify(['*']), // Allow everyone
         });
 
-        console.log('[ChatServerHub] Created HelpDesk support room');
+        log.info('[ChatServerHub] Created HelpDesk support room');
       }
 
       // Ensure HelpAI bot user exists (use raw SQL for custom ID)
@@ -278,13 +827,16 @@ class ChatServerHubClass {
         .limit(1);
 
       if (!existingBot) {
-        // Use raw SQL insert for custom ID to work around type constraints
-        await db.execute(sql`
-          INSERT INTO users (id, email, first_name, last_name, role, current_workspace_id)
-          VALUES (${HELPAI_BOT_ID}, 'helpai@coaileague.ai', 'HelpAI', 'Bot', 'system', ${PLATFORM_WORKSPACE_ID})
-          ON CONFLICT (id) DO NOTHING
-        `);
-        console.log('[ChatServerHub] Created HelpAI bot user');
+        // Converted to Drizzle ORM: ON CONFLICT
+        await db.insert(users).values({
+          id: HELPAI_BOT_ID,
+          email: 'helpai@coaileague.ai',
+          firstName: 'HelpAI',
+          lastName: 'Bot',
+          role: 'system',
+          currentWorkspaceId: PLATFORM_WORKSPACE_ID,
+        }).onConflictDoNothing({ target: users.id });
+        log.info('[ChatServerHub] Created HelpAI bot user');
       }
 
       // Ensure HelpAI bot is a participant in the conversation
@@ -313,18 +865,18 @@ class ChatServerHubClass {
           joinedAt: new Date(),
           isActive: true,
         });
-        console.log('[ChatServerHub] Added HelpAI bot as HelpDesk participant');
+        log.info('[ChatServerHub] Added HelpAI bot as HelpDesk participant');
       } else if (!existingParticipant.isActive) {
         // Reactivate if inactive
         await db.update(chatParticipants)
           .set({ isActive: true, joinedAt: new Date() })
           .where(eq(chatParticipants.id, existingParticipant.id));
-        console.log('[ChatServerHub] Reactivated HelpAI bot in HelpDesk');
+        log.info('[ChatServerHub] Reactivated HelpAI bot in HelpDesk');
       }
 
-      console.log('[ChatServerHub] HelpDesk room seeded successfully with HelpAI bot');
+      log.info('[ChatServerHub] HelpDesk room seeded successfully with HelpAI bot');
     } catch (error) {
-      console.error('[ChatServerHub] Error seeding HelpDesk room:', error);
+      log.error('[ChatServerHub] Error seeding HelpDesk room:', error);
       // Don't throw - allow gateway to continue initialization
     }
   }
@@ -351,7 +903,7 @@ class ChatServerHubClass {
               id: room.id,
               type: 'support',
               conversationId: room.conversationId,
-              workspaceId: room.workspaceId || 'coaileague-platform-workspace',
+              workspaceId: room.workspaceId || PLATFORM_WORKSPACE_ID,
               subject: room.name,
               participantCount,
               status: room.status || 'open',
@@ -360,7 +912,7 @@ class ChatServerHubClass {
             });
           }
         }
-        console.log(`[ChatServerHub] Loaded ${supportRoomsList.length} support rooms`);
+        log.info(`[ChatServerHub] Loaded ${supportRoomsList.length} support rooms`);
       }
 
       // Load Organization Rooms
@@ -387,7 +939,7 @@ class ChatServerHubClass {
             });
           }
         }
-        console.log(`[ChatServerHub] Loaded ${orgRoomsList.length} organization rooms`);
+        log.info(`[ChatServerHub] Loaded ${orgRoomsList.length} organization rooms`);
       }
 
       // Load Work & Meeting Rooms (conversation_type-based)
@@ -414,7 +966,7 @@ class ChatServerHubClass {
               id: conv.id,
               type: roomType,
               conversationId: conv.id,
-              workspaceId: conv.workspaceId || 'coaileague-platform-workspace',
+              workspaceId: conv.workspaceId || PLATFORM_WORKSPACE_ID,
               subject: conv.subject || 'Untitled',
               participantCount,
               status: conv.status || 'active',
@@ -423,14 +975,14 @@ class ChatServerHubClass {
             });
           }
         }
-        console.log(
+        log.info(
           `[ChatServerHub] Loaded work and meeting rooms - ` +
           `Work: ${conversations.filter(c => c.conversationType === 'shift_chat').length}, ` +
           `Meeting: ${conversations.filter(c => c.conversationType === 'open_chat').length}`
         );
       }
     } catch (error) {
-      console.error('[ChatServerHub] Error loading active rooms:', error);
+      log.error('[ChatServerHub] Error loading active rooms:', error);
     }
   }
 
@@ -449,8 +1001,8 @@ class ChatServerHubClass {
           )
         );
       return result[0]?.count || 0;
-    } catch (error) {
-      console.error(`[ChatServerHub] Error getting participant count:`, error);
+    } catch (error: any) {
+      log.warn(`[ChatServerHub] Error getting participant count (non-fatal):`, error?.message || 'unknown');
       return 0;
     }
   }
@@ -477,11 +1029,11 @@ class ChatServerHubClass {
           }
         }
       } catch (error) {
-        console.error('[ChatServerHub] Heartbeat error:', error);
+        log.error('[ChatServerHub] Heartbeat error:', error);
       }
     }, CHAT_SERVER_HUB.heartbeatIntervalMs);
 
-    console.log('[ChatServerHub] Heartbeat started');
+    log.info('[ChatServerHub] Heartbeat started');
   }
 
   /**
@@ -492,9 +1044,24 @@ class ChatServerHubClass {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+    if (this.batchFlushInterval) {
+      clearInterval(this.batchFlushInterval);
+      this.batchFlushInterval = null;
+    }
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+      this.cacheCleanupInterval = null;
+    }
+    if (this.healthMonitorInterval) {
+      clearInterval(this.healthMonitorInterval);
+      this.healthMonitorInterval = null;
+    }
+    this.flushEventBatch();
     this.activeRooms.clear();
+    this.roomStateCache.clear();
+    this.eventBatchQueue.clear();
     this.gatewayInitialized = false;
-    console.log('[ChatServerHub] Gateway shutdown complete');
+    log.info('[ChatServerHub] Gateway shutdown complete');
   }
 
   /**
@@ -527,6 +1094,9 @@ class ChatServerHubClass {
     totalParticipants: number;
     isInitialized: boolean;
     version: string;
+    cacheSize: number;
+    batchQueueSize: number;
+    connectionHealth: ConnectionHealthStats;
   } {
     const stats = {
       totalRooms: this.activeRooms.size,
@@ -534,6 +1104,9 @@ class ChatServerHubClass {
       totalParticipants: 0,
       isInitialized: this.gatewayInitialized,
       version: CHAT_SERVER_HUB.version,
+      cacheSize: this.roomStateCache.size,
+      batchQueueSize: this.eventBatchQueue.size,
+      connectionHealth: this.getConnectionHealth(),
     };
 
     for (const room of this.activeRooms.values()) {
@@ -549,7 +1122,7 @@ class ChatServerHubClass {
    */
   setWebSocketBroadcaster(broadcaster: WebSocketBroadcaster): void {
     this.wsBroadcaster = broadcaster;
-    console.log('[ChatServerHub] WebSocket broadcaster registered');
+    log.info('[ChatServerHub] WebSocket broadcaster registered');
   }
 
   /**
@@ -559,13 +1132,16 @@ class ChatServerHubClass {
     if (this.eventBusSubscribed) return;
     this.eventBusSubscribed = true;
     
+    // ChatServerHub intentionally uses '*' — it routes any event that carries
+    // event.metadata.conversationId to the appropriate WebSocket chatroom.
+    // Since conversationId can appear on any event type, filtering by '*' is correct.
     platformEventBus.subscribe('*', {
       name: 'ChatServerHub',
       handler: async (event: PlatformEvent) => {
         await this.handlePlatformEvent(event);
       }
     });
-    console.log('[ChatServerHub] Subscribed to Platform Event Bus');
+    log.info('[ChatServerHub] Subscribed to Platform Event Bus');
   }
 
   /**
@@ -595,7 +1171,8 @@ class ChatServerHubClass {
    */
   async emit(event: ChatEvent): Promise<void> {
     const timestamp = event.timestamp || new Date();
-    console.log(`[ChatServerHub] Event: ${event.type} - ${event.title}`);
+    this.eventsProcessedCount++;
+    log.info(`[ChatServerHub] Event: ${event.type} - ${event.title}`);
 
     try {
       const platformEventType = this.mapToPlatformEventType(event.type);
@@ -635,7 +1212,7 @@ class ChatServerHubClass {
       await this.notifySubscribers(event);
 
     } catch (error) {
-      console.error('[ChatServerHub] Error processing event:', error);
+      log.error('[ChatServerHub] Error processing event:', error);
     }
   }
 
@@ -689,7 +1266,7 @@ class ChatServerHubClass {
           break;
       }
     } catch (error) {
-      console.error('[ChatServerHub] Error tracking analytics:', error);
+      log.error('[ChatServerHub] Error tracking analytics:', error);
       // Don't re-throw - analytics tracking shouldn't crash the event processing
     }
   }
@@ -702,7 +1279,7 @@ class ChatServerHubClass {
       this.eventSubscribers.set(eventType, []);
     }
     this.eventSubscribers.get(eventType)!.push(handler);
-    console.log(`[ChatServerHub] Handler subscribed to ${eventType}`);
+    log.info(`[ChatServerHub] Handler subscribed to ${eventType}`);
   }
 
   /**
@@ -738,25 +1315,52 @@ class ChatServerHubClass {
       const notificationType = this.getNotificationType(event.type);
       
       if (event.metadata.audience === 'user' && event.metadata.targetUserId) {
-        await db.insert(notifications).values({
+        // Map ChatServerHub notification types to valid UniversalNotificationEngine types
+        // Valid types: document_extraction, issue_detected, migration_complete, guardrail_violation, quota_warning, platform_update, system
+        const typeMapping: Record<string, 'system' | 'issue_detected'> = {
+          'system': 'system',
+          'support_escalation': 'issue_detected',
+          'ai_action_completed': 'system',  // AI completions routed as system notifications
+          'ai_approval_needed': 'issue_detected',  // Approvals are issues needing attention
+          'mention': 'system',
+        };
+        const engineType = typeMapping[notificationType] || 'system';
+        
+        // Determine severity based on event type (using warning/critical only for consistency)
+        const severityMapping: Record<string, 'info' | 'warning' | 'critical'> = {
+          'ticket_escalated': 'warning',
+          'ai_escalation': 'warning',
+          'user_kicked': 'warning',
+          'user_banned': 'critical',  // Bans are critical security actions
+          'sentiment_alert': 'warning',
+        };
+        const severity = severityMapping[event.type] || 'info';
+        
+        // Route through Trinity AI for contextual enrichment
+        await universalNotificationEngine.sendNotification({
           workspaceId: event.metadata.workspaceId,
           userId: event.metadata.targetUserId,
-          type: notificationType,
+          type: engineType,
           title: event.title,
           message: event.description,
+          severity,
           actionUrl: event.metadata.ticketNumber 
             ? `/support/tickets/${event.metadata.ticketNumber}`
             : `/chat/${event.metadata.conversationId}`,
-          relatedEntityType: 'chat_event',
-          relatedEntityId: event.metadata.messageId || event.metadata.ticketId,
-          metadata: { chatEventType: event.type, ...event.metadata },
-          isRead: false,
+          metadata: { 
+            chatEventType: event.type, 
+            originalNotificationType: notificationType,
+            relatedEntityType: 'chat_event',
+            relatedEntityId: event.metadata.messageId || event.metadata.ticketId,
+            source: 'chat_server_hub',
+            ...event.metadata,
+          },
         });
       } else if (event.metadata.audience === 'staff') {
-        console.log(`[ChatServerHub] Staff notification: ${event.title}`);
+        log.info(`[ChatServerHub] Staff notification: ${event.title}`);
       }
     } catch (error) {
-      console.error('[ChatServerHub] Failed to create notifications:', error);
+      log.error('[ChatServerHub] Failed to create notifications:', error);
     }
   }
 
@@ -771,7 +1375,7 @@ class ChatServerHubClass {
       try {
         await handler(event);
       } catch (error) {
-        console.error(`[ChatServerHub] Subscriber error:`, error);
+        log.error(`[ChatServerHub] Subscriber error:`, error);
       }
     }
   }
@@ -812,6 +1416,7 @@ class ChatServerHubClass {
       case 'ai_response':
         return 'ai_brain_action';
       case 'ai_escalation':
+      case 'support_escalation':
         return 'ai_escalation';
       case 'ai_suggestion':
         return 'ai_suggestion';
@@ -841,6 +1446,7 @@ class ChatServerHubClass {
       case 'user_kicked':
         return 'security';
       case 'sentiment_alert':
+      case 'support_escalation':
         return 'announcement';
       default:
         return 'announcement';
@@ -928,6 +1534,82 @@ class ChatServerHubClass {
     messageId: string;
     messagePreview?: string;
   }): Promise<void> {
+    const message = params.messagePreview || '';
+
+    // INTERCEPT HELPAI COMMANDS (H004)
+    if (message.startsWith('/helpai') || message.startsWith('/trinity help')) {
+      try {
+        const sessionData = await helpAIBotService.startSession(params.workspaceId || PLATFORM_WORKSPACE_ID, params.userId);
+        
+        // Broadcast reply to user
+        const botReply = `HelpAI session started. Ticket: ${sessionData.ticketNumber}. Queue Position: ${sessionData.queuePosition || 'Immediate'}`;
+        
+        if (this.wsBroadcaster) {
+          this.wsBroadcaster({
+            type: 'bot_reply',
+            conversationId: params.conversationId,
+            workspaceId: params.workspaceId,
+            payload: {
+              message: botReply,
+              ticketNumber: sessionData.ticketNumber,
+              queuePosition: sessionData.queuePosition
+            }
+          });
+        }
+
+        // Log bot reply
+        await db.insert(helpaiActionLog).values({
+          sessionId: sessionData.sessionId,
+          workspaceId: params.workspaceId,
+          userId: 'helpai-bot',
+          actionType: 'bot_reply',
+          actionName: 'Session Start Acknowledgement',
+          inputPayload: { message: botReply }
+        });
+
+        return; // Stop standard delivery for command
+      } catch (err) {
+        log.error('[ChatServerHub] Failed to handle /helpai command:', err);
+      }
+    }
+
+    // INTERCEPT BOT COMMANDS LIST
+    if (message === '/commands') {
+      const commandsList = "Available commands: /helpai, /trinity help, /status, /ticket, /bug, /faq";
+      if (this.wsBroadcaster) {
+        this.wsBroadcaster({
+          type: 'bot_reply',
+          conversationId: params.conversationId,
+          workspaceId: params.workspaceId,
+          payload: { message: commandsList }
+        });
+      }
+      return;
+    }
+
+    // DETECT SAFETY CODES (####-## pattern)
+    const safetyCodeMatch = message.match(/^(\d{4}-\d{2})$/);
+    if (safetyCodeMatch) {
+       // Find active session for this user
+       const [session] = await db.select().from(helpaiSessions)
+         .where(and(eq(helpaiSessions.userId, params.userId), eq(helpaiSessions.state, 'assisting')))
+         .orderBy(desc(helpaiSessions.createdAt))
+         .limit(1);
+       
+       if (session) {
+         const response = await helpAIBotService.handleMessage(session.id, message);
+         if (this.wsBroadcaster) {
+           this.wsBroadcaster({
+             type: 'bot_reply',
+             conversationId: params.conversationId,
+             workspaceId: params.workspaceId,
+             payload: { message: response.response }
+           });
+         }
+         return; // Stop standard delivery for safety code
+       }
+    }
+
     await this.emit({
       type: 'message_posted',
       title: 'New Message',
@@ -1308,6 +1990,55 @@ class ChatServerHubClass {
   }
 
   /**
+   * Emit when HelpAI determines user needs human support
+   * Escalation triggers alert to support staff for takeover
+   */
+  async emitSupportEscalation(params: {
+    conversationId: string;
+    userId: string;
+    userName: string;
+    reason: string;
+    messagePreview: string;
+    workspaceId?: string;
+  }): Promise<void> {
+    // Broadcast to support staff via WebSocket
+    if (this.wsBroadcaster) {
+      this.wsBroadcaster({
+        type: 'support_escalation',
+        conversationId: params.conversationId,
+        workspaceId: params.workspaceId,
+        payload: {
+          userId: params.userId,
+          userName: params.userName,
+          reason: params.reason,
+          messagePreview: params.messagePreview,
+          timestamp: new Date().toISOString(),
+          priority: 'high',
+        }
+      });
+    }
+
+    // Log and emit event for tracking
+    await this.emit({
+      type: 'support_escalation',
+      title: `Support Escalation: ${params.userName}`,
+      description: `Reason: ${params.reason} | "${params.messagePreview}"`,
+      metadata: {
+        conversationId: params.conversationId,
+        userId: params.userId,
+        userName: params.userName,
+        audience: 'staff',
+        severity: 'high' as const,
+      },
+      visibility: 'staff',
+      shouldNotify: true,
+      shouldPersistToWhatsNew: true,
+    });
+
+    log.info(`[ChatServerHub] Support escalation emitted for ${params.userName}: ${params.reason}`);
+  }
+
+  /**
    * Emit when a user joins a chatroom - notify other workspace members
    * Used for WhatsApp-style notifications
    */
@@ -1500,6 +2231,156 @@ class ChatServerHubClass {
       visibility: 'manager',
     });
   }
+
+  /**
+   * Get all rooms accessible to a user based on their role
+   * Support roles (root_admin, co_admin, sysops, platform_support) see ALL rooms
+   * Org users see only their workspace rooms
+   */
+  async getAccessibleRooms(params: {
+    userId: string;
+    workspaceId?: string;
+    platformRole?: string;
+  }): Promise<ActiveRoom[]> {
+    const { userId, workspaceId, platformRole } = params;
+    
+    // Support roles see all rooms platform-wide
+    const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_agent', 'support_manager'];
+    const hasPlatformAccess = platformRole && supportRoles.includes(platformRole);
+    
+    if (hasPlatformAccess) {
+      return this.getAllActiveRooms();
+    }
+    
+    // Org users see only their workspace rooms + platform HelpDesk
+    const allRooms = this.getAllActiveRooms();
+    return allRooms.filter(room => {
+      if (room.type === 'support' && room.subject === 'Help Desk') {
+        return true; // Everyone can see HelpDesk
+      }
+      return room.workspaceId === workspaceId;
+    });
+  }
+
+  /**
+   * Log support role access to private room for audit
+   * Trinity chat subagent tracks all support role access
+   */
+  async logSupportRoleAccess(params: {
+    userId: string;
+    userName: string;
+    platformRole: string;
+    roomId: string;
+    roomName: string;
+    workspaceId: string;
+    action: 'joined' | 'left' | 'viewed';
+  }): Promise<void> {
+    const { userId, userName, platformRole, roomId, roomName, workspaceId, action } = params;
+    
+    log.info(`[ChatServerHub] AUDIT: Support role ${platformRole} (${userName}) ${action} room "${roomName}" (${roomId}) in workspace ${workspaceId}`);
+    
+    // Emit audit event via platformEventBus
+    await platformEventBus.publish({
+      type: 'audit',
+      category: 'security',
+      title: `Support Role Room Access`,
+      description: `${userName} (${platformRole}) ${action} private room "${roomName}"`,
+      workspaceId,
+      userId,
+      metadata: {
+        roomId,
+        roomName,
+        platformRole,
+        action,
+        timestamp: new Date().toISOString(),
+        accessType: 'support_role_cross_org',
+      },
+      visibility: 'manager',
+      priority: 3,
+    });
+  }
+
+  /**
+   * Force disconnect a user from a support session
+   * Called when ticket is resolved to move agent to next user in queue
+   */
+  async forceDisconnectUser(params: {
+    sessionId: string;
+    userId: string;
+    reason: string;
+    staffId?: string;
+  }): Promise<void> {
+    const { sessionId, userId, reason, staffId } = params;
+    
+    log.info(`[ChatServerHub] Force disconnecting user ${userId} from session ${sessionId}: ${reason}`);
+    
+    // Broadcast disconnect event via WebSocket
+    if (this.wsBroadcaster) {
+      this.wsBroadcaster({
+        type: 'force_disconnect',
+        userId,
+        payload: {
+          sessionId,
+          reason,
+          staffId,
+          timestamp: new Date().toISOString(),
+          message: 'Your support session has been resolved. Thank you for contacting us!',
+        }
+      });
+    }
+    
+    // Emit event for tracking
+    await this.emit({
+      type: 'user_left_room',
+      title: 'Session Resolved - User Disconnected',
+      description: `User disconnected from support session: ${reason}`,
+      metadata: {
+        conversationId: sessionId,
+        userId,
+        targetUserId: userId,
+        severity: 'low',
+        audience: 'staff',
+      },
+      shouldNotify: false,
+    });
+  }
+
+  /**
+   * Get HelpDesk room info for the universal helpdesk chatroom
+   */
+  async getHelpDeskRoom(): Promise<ActiveRoom | null> {
+    const rooms = this.getActiveRoomsByType('support');
+    return rooms.find(r => r.subject === 'Help Desk') || null;
+  }
+
+  /**
+   * Add user to HelpDesk support session with private DM thread
+   * Creates isolated DM thread where user only sees their own messages
+   */
+  async createHelpDeskDMThread(params: {
+    userId: string;
+    userName: string;
+    workspaceId?: string;
+    sessionId: string;
+  }): Promise<{ conversationId: string; threadId: string }> {
+    const { userId, userName, sessionId, workspaceId } = params;
+    
+    // Get HelpDesk room
+    const helpDesk = await this.getHelpDeskRoom();
+    if (!helpDesk) {
+      throw new Error('HelpDesk room not found');
+    }
+    
+    // The threadId is the sessionId - used to filter messages for this user
+    const threadId = sessionId;
+    
+    log.info(`[ChatServerHub] Created DM thread ${threadId} for user ${userName} in HelpDesk`);
+    
+    return {
+      conversationId: helpDesk.conversationId,
+      threadId,
+    };
+  }
 }
 
 // Singleton instance
@@ -1521,3 +2402,12 @@ export const getActiveChatRoomsByType = (type: 'support' | 'work' | 'meeting' | 
 export const getActiveChatRoomsByWorkspace = (workspaceId: string) => 
   ChatServerHub.getActiveRoomsByWorkspace(workspaceId);
 export const getChatServerHubStats = () => ChatServerHub.getGatewayStats();
+
+// Export helpdesk-specific methods
+export const getAccessibleChatRooms = (params: { userId: string; workspaceId?: string; platformRole?: string }) =>
+  ChatServerHub.getAccessibleRooms(params);
+export const logSupportRoleRoomAccess = (params: { userId: string; userName: string; platformRole: string; roomId: string; roomName: string; workspaceId: string; action: 'joined' | 'left' | 'viewed' }) =>
+  ChatServerHub.logSupportRoleAccess(params);
+export const forceDisconnectFromSession = (params: { sessionId: string; userId: string; reason: string; staffId?: string }) =>
+  ChatServerHub.forceDisconnectUser(params);
+export const getHelpDeskChatRoom = () => ChatServerHub.getHelpDeskRoom();

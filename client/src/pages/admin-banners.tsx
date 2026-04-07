@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import {
   Megaphone,
   Plus,
@@ -43,16 +44,16 @@ export default function AdminBannersPage() {
     priority: 0,
   });
 
-  // Fetch all banners
+  // Fetch all banners (admin endpoint includes inactive banners)
   const { data: banners, isLoading } = useQuery<PromotionalBanner[]>({
-    queryKey: ['/api/promotional-banners'],
+    queryKey: ['/api/promotional-banners/admin/all'],
   });
 
   // Create banner mutation
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => apiRequest('POST', '/api/promotional-banners', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners/admin/all'] });
       toast({ title: "Success", description: "Banner created successfully" });
       resetForm();
     },
@@ -66,7 +67,7 @@ export default function AdminBannersPage() {
     mutationFn: ({ id, data }: { id: string; data: typeof formData }) =>
       apiRequest('PATCH', `/api/promotional-banners/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners/admin/all'] });
       toast({ title: "Success", description: "Banner updated successfully" });
       resetForm();
     },
@@ -79,7 +80,7 @@ export default function AdminBannersPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest('DELETE', `/api/promotional-banners/${id}`, {}),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners/admin/all'] });
       toast({ title: "Success", description: "Banner deleted successfully" });
     },
     onError: (error: any) => {
@@ -114,30 +115,25 @@ export default function AdminBannersPage() {
     }
   };
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-orange-900 to-red-800 flex items-center justify-center shadow-md shadow-orange-900/30 p-2">
-            <Megaphone size={28} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Promotional Banners</h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">
-              Manage landing page promotional banners
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          data-testid="button-new-banner"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Banner
-        </Button>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'admin-banners',
+    title: 'Promotional Banners',
+    subtitle: 'Manage landing page promotional banners',
+    category: 'admin',
+    headerActions: (
+      <Button
+        onClick={() => setShowForm(!showForm)}
+        data-testid="button-new-banner"
+      >
+        <Plus className="w-4 h-4 mr-2" />
+        New Banner
+      </Button>
+    ),
+  };
 
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="space-y-6">
       {/* Create/Edit Form */}
       {showForm && (
         <Card>
@@ -292,6 +288,7 @@ export default function AdminBannersPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </CanvasHubPage>
   );
 }

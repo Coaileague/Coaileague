@@ -12,8 +12,23 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "../auth";
 import { subagentBanker } from "../services/ai-brain/subagentBanker";
+import { db } from "../db";
+import { employees, workspaces } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+import { createLogger } from '../lib/logger';
+const log = createLogger('EmpireRoutes');
+
 
 const router = Router();
+
+async function assertWorkspaceAccess(userId: string, workspaceId: string): Promise<boolean> {
+  const [emp] = await db.select({ id: employees.id }).from(employees)
+    .where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId))).limit(1);
+  if (emp) return true;
+  const [ws] = await db.select({ ownerId: workspaces.ownerId }).from(workspaces)
+    .where(eq(workspaces.id, workspaceId)).limit(1);
+  return ws?.ownerId === userId;
+}
 
 const EMPIRE_CREDIT_COSTS = {
   strategyScan: 25,
@@ -32,10 +47,12 @@ const EMPIRE_CREDIT_COSTS = {
 // Run weekly strategy scan across 4 pillars
 router.get("/empire/scan/:workspaceId", requireAuth, async (req: Request, res: Response) => {
   const { workspaceId } = req.params;
-  const userId = (req as any).user?.id || 'system';
-  let creditsDeducted = false;
-  
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, error: 'Authentication required' });
   try {
+    if (!await assertWorkspaceAccess(userId, workspaceId)) return res.status(403).json({ success: false, error: 'Access denied to this workspace' });
+    let creditsDeducted = false;
+
     const { growthStrategist } = await import("../services/ai-brain/growthStrategist");
     
     // Deduct credits for Empire Mode scan
@@ -54,7 +71,7 @@ router.get("/empire/scan/:workspaceId", requireAuth, async (req: Request, res: R
     
     const result = await growthStrategist.runWeeklyStrategyScan(workspaceId);
     res.json({ success: true, ...result, creditsUsed: EMPIRE_CREDIT_COSTS.strategyScan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Refund credits on error
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
@@ -64,17 +81,20 @@ router.get("/empire/scan/:workspaceId", requireAuth, async (req: Request, res: R
         description: 'Empire Mode: Refund for failed strategy scan'
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
 // Get Strategy Summary for workspace
 router.get("/empire/strategies/:workspaceId", requireAuth, async (req: Request, res: Response) => {
   const { workspaceId } = req.params;
-  const userId = (req as any).user?.id || 'system';
-  let creditsDeducted = false;
-  
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, error: 'Authentication required' });
   try {
+    if (!await assertWorkspaceAccess(userId, workspaceId)) return res.status(403).json({ success: false, error: 'Access denied to this workspace' });
+    let creditsDeducted = false;
+
     const { growthStrategist } = await import("../services/ai-brain/growthStrategist");
     
     const deductResult = await subagentBanker.directDeduct({
@@ -92,7 +112,7 @@ router.get("/empire/strategies/:workspaceId", requireAuth, async (req: Request, 
     
     const summary = await growthStrategist.getStrategySummary(workspaceId);
     res.json({ success: true, ...summary, creditsUsed: EMPIRE_CREDIT_COSTS.strategySummary });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -101,17 +121,20 @@ router.get("/empire/strategies/:workspaceId", requireAuth, async (req: Request, 
         description: 'Empire Mode: Refund for failed strategy summary'
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
 // Get Tool Expansion opportunities
 router.get("/empire/tools/:workspaceId", requireAuth, async (req: Request, res: Response) => {
   const { workspaceId } = req.params;
-  const userId = (req as any).user?.id || 'system';
-  let creditsDeducted = false;
-  
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, error: 'Authentication required' });
   try {
+    if (!await assertWorkspaceAccess(userId, workspaceId)) return res.status(403).json({ success: false, error: 'Access denied to this workspace' });
+    let creditsDeducted = false;
+
     const { growthStrategist } = await import("../services/ai-brain/growthStrategist");
     
     const deductResult = await subagentBanker.directDeduct({
@@ -129,7 +152,7 @@ router.get("/empire/tools/:workspaceId", requireAuth, async (req: Request, res: 
     
     const opportunities = await growthStrategist.scanForToolOpportunities(workspaceId);
     res.json({ success: true, opportunities, creditsUsed: EMPIRE_CREDIT_COSTS.toolOpportunities });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -138,7 +161,8 @@ router.get("/empire/tools/:workspaceId", requireAuth, async (req: Request, res: 
         description: 'Empire Mode: Refund for failed tool opportunities scan'
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
@@ -149,10 +173,12 @@ router.get("/empire/tools/:workspaceId", requireAuth, async (req: Request, res: 
 // Get CEO-level business health analysis
 router.get("/empire/health/:workspaceId", requireAuth, async (req: Request, res: Response) => {
   const { workspaceId } = req.params;
-  const userId = (req as any).user?.id || 'system';
-  let creditsDeducted = false;
-  
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, error: 'Authentication required' });
   try {
+    if (!await assertWorkspaceAccess(userId, workspaceId)) return res.status(403).json({ success: false, error: 'Access denied to this workspace' });
+    let creditsDeducted = false;
+
     const { holisticGrowthEngine } = await import("../services/ai-brain/holisticGrowthEngine");
     
     const deductResult = await subagentBanker.directDeduct({
@@ -170,7 +196,7 @@ router.get("/empire/health/:workspaceId", requireAuth, async (req: Request, res:
     
     const report = await holisticGrowthEngine.analyzeBusinessHealth(workspaceId);
     res.json({ success: true, report, creditsUsed: EMPIRE_CREDIT_COSTS.healthAnalysis });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -179,17 +205,20 @@ router.get("/empire/health/:workspaceId", requireAuth, async (req: Request, res:
         description: 'Empire Mode: Refund for failed health analysis'
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
 // Clear health cache and refresh
 router.post("/empire/health/refresh/:workspaceId", requireAuth, async (req: Request, res: Response) => {
   const { workspaceId } = req.params;
-  const userId = (req as any).user?.id || 'system';
-  let creditsDeducted = false;
-  
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ success: false, error: 'Authentication required' });
   try {
+    if (!await assertWorkspaceAccess(userId, workspaceId)) return res.status(403).json({ success: false, error: 'Access denied to this workspace' });
+    let creditsDeducted = false;
+
     const { holisticGrowthEngine } = await import("../services/ai-brain/holisticGrowthEngine");
     
     const deductResult = await subagentBanker.directDeduct({
@@ -208,7 +237,7 @@ router.post("/empire/health/refresh/:workspaceId", requireAuth, async (req: Requ
     holisticGrowthEngine.clearCache(workspaceId);
     const report = await holisticGrowthEngine.analyzeBusinessHealth(workspaceId);
     res.json({ success: true, report, refreshed: true, creditsUsed: EMPIRE_CREDIT_COSTS.healthRefresh });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -217,7 +246,8 @@ router.post("/empire/health/refresh/:workspaceId", requireAuth, async (req: Requ
         description: 'Empire Mode: Refund for failed health refresh'
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
@@ -232,8 +262,9 @@ router.get("/bluedot/status", requireAuth, async (req: Request, res: Response) =
     const status = blueDotProtocol.getStatus();
     const godModeMessage = blueDotProtocol.getGodModeMessage();
     res.json({ success: true, status, godModeMessage });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
@@ -241,7 +272,7 @@ router.get("/bluedot/status", requireAuth, async (req: Request, res: Response) =
 router.post("/bluedot/simulate", requireAuth, async (req: Request, res: Response) => {
   let creditsDeducted = false;
   let workspaceIdForRefund: string | null = null;
-  const userId = (req as any).user?.id;
+  const userId = req.user?.id;
   
   try {
     const { blueDotProtocol } = await import("../services/ai-brain/blueDotProtocol");
@@ -278,7 +309,7 @@ router.post("/bluedot/simulate", requireAuth, async (req: Request, res: Response
     
     const preview = await blueDotProtocol.simulateMaintenance(repairs);
     res.json({ success: true, preview, creditsUsed: workspaceIdForRefund ? EMPIRE_CREDIT_COSTS.blueDotSimulate : 0 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Refund credits on error if already deducted
     if (creditsDeducted && workspaceIdForRefund && userId) {
       await subagentBanker.refillCredits({
@@ -289,7 +320,8 @@ router.post("/bluedot/simulate", requireAuth, async (req: Request, res: Response
         description: 'Blue Dot Protocol: Refund for failed simulation'
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
@@ -297,7 +329,7 @@ router.post("/bluedot/simulate", requireAuth, async (req: Request, res: Response
 router.post("/bluedot/initiate", requireAuth, async (req: Request, res: Response) => {
   let creditsDeducted = false;
   let workspaceIdForRefund: string | null = null;
-  const userId = (req as any).user?.id;
+  const userId = req.user?.id;
   
   try {
     const { blueDotProtocol } = await import("../services/ai-brain/blueDotProtocol");
@@ -334,7 +366,7 @@ router.post("/bluedot/initiate", requireAuth, async (req: Request, res: Response
     
     const result = await blueDotProtocol.initiatePrecisionMaintenance(repairs, userId);
     res.json({ success: true, result, creditsUsed: workspaceId ? EMPIRE_CREDIT_COSTS.blueDotInitiate : 0 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Refund credits on error if already deducted
     if (creditsDeducted && workspaceIdForRefund && userId) {
       await subagentBanker.refillCredits({
@@ -345,7 +377,8 @@ router.post("/bluedot/initiate", requireAuth, async (req: Request, res: Response
         description: 'Blue Dot Protocol: Refund for failed initiation'
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
@@ -354,7 +387,7 @@ router.post("/bluedot/resolve", requireAuth, async (req: Request, res: Response)
   try {
     const { blueDotProtocol } = await import("../services/ai-brain/blueDotProtocol");
     const { getUserPlatformRole } = await import("../rbac");
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ success: false, error: "Authentication required" });
     }
@@ -366,8 +399,9 @@ router.post("/bluedot/resolve", requireAuth, async (req: Request, res: Response)
     const { resolution, message } = req.body;
     blueDotProtocol.resolveMaintenance(resolution || "success", message);
     res.json({ success: true, message: "Maintenance resolved" });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
@@ -381,8 +415,9 @@ router.post("/bluedot/repair", requireAuth, async (req: Request, res: Response) 
     }
     const repair = blueDotProtocol.createRepair(type, target, description, estimatedMs);
     res.json({ success: true, repair });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 
@@ -393,8 +428,9 @@ router.get("/bluedot/queue", requireAuth, async (req: Request, res: Response) =>
     const queue = blueDotProtocol.getRepairQueue();
     const auditLog = blueDotProtocol.getAuditLog();
     res.json({ success: true, queue, auditLog });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[EmpireRoutes] Error:', error);
+    res.status(500).json({ success: false, error: 'An internal error occurred' });
   }
 });
 

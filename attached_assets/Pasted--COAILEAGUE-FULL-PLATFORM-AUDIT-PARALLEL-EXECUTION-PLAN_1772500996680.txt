@@ -1,0 +1,547 @@
+# COAILEAGUE FULL PLATFORM AUDIT — PARALLEL EXECUTION PLAN
+
+## INSTRUCTIONS FOR REPLIT AGENT
+
+This is a comprehensive platform-wide audit. Every system, every workflow, every pipeline, every feature must be verified. Nothing is assumed working. Everything is proven or flagged.
+
+**METHODOLOGY:**
+1. For each audit section, investigate FIRST — read code, query database, trace workflows
+2. Map ALL issues before fixing ANY of them
+3. Present findings in the gap report format: GAP-ID, Severity, Location, Impact, Fix, Dependencies
+4. Do NOT fix anything until the full audit is presented and confirmed
+5. Severity levels: CRITICAL (blocks launch), HIGH (degrades core feature), MEDIUM (impacts quality), LOW (tech debt)
+
+**PARALLEL EXECUTION:** Run these audit sections simultaneously. Each section is independent and can be investigated in parallel. Report findings per section as they complete — don't wait for all sections to finish.
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 1: DATABASE FOUNDATION AUDIT
+# ═══════════════════════════════════════════════
+
+## 1A: Schema-to-Code Alignment
+
+For EVERY table in shared/schema.ts:
+- Does the Drizzle schema definition match the actual Postgres table? (columns, types, defaults, constraints)
+- Run: `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = '<table>'` for every table
+- Compare against the Drizzle schema definition
+- Flag ANY mismatch: missing columns, wrong types, wrong defaults, columns in DB not in schema, columns in schema not in DB
+- Pay special attention to enum types — does every Postgres enum match the Drizzle enum definition exactly? List each enum and compare values.
+
+## 1B: Foreign Key Integrity
+
+- List every foreign key constraint in the database
+- For each FK: query for orphaned records (child records pointing to non-existent parent records)
+- Critical tables to check: 
+  - shifts.employee_id → employees.id
+  - shifts.client_id → clients.id  
+  - time_entries.shift_id → shifts.id
+  - time_entries.employee_id → employees.id
+  - time_entries.invoice_id → invoices.id
+  - invoice_line_items.invoice_id → invoices.id
+  - payroll_entries.payroll_run_id → payroll_runs.id
+  - payroll_entries.employee_id → employees.id
+  - org_ledger entries referencing invoices/payroll that exist
+  - approval_gates.workspace_id → workspaces.id
+  - All chat messages → chatroom references
+  - All notifications → user/workspace references
+- Flag every orphaned record with table name, count, and example IDs
+
+## 1C: NULL Fields That Should Never Be NULL
+
+Query every table for NULL values in fields that should be required:
+- employees: hourly_rate, overtime_rate, name, email, workspace_id, employment_type
+- clients: name, workspace_id, contract_rate (for active clients)
+- shifts: start_time, end_time, client_id, workspace_id, status
+- time_entries: captured_pay_rate, captured_bill_rate (for approved/billed entries)
+- invoices: total, subtotal, workspace_id, client_id, status
+- payroll_runs: workspace_id, status
+- payroll_entries: gross_pay, net_pay, employee_id (for processed entries)
+- org_ledger: amount, entry_type, workspace_id
+- workspaces: workspace_type, name
+
+## 1D: Duplicate Record Detection
+
+- Check for duplicate employees (same name + same workspace)
+- Check for duplicate clients (same name + same workspace)
+- Check for duplicate shifts (same client + same employee + same start_time + same workspace)
+- Check for duplicate time entries (same shift_id + same employee_id)
+- Check for duplicate invoice line items (same invoice_id + same time_entry_id)
+- Check for duplicate ledger entries (same related_entity_id + same entry_type + same amount + created within 1 second)
+
+## 1E: Enum Consistency
+
+For every enum in the schema:
+- List all values defined in Drizzle
+- List all values in Postgres
+- Search the ENTIRE codebase for string literals that should be enum values
+- Flag any code using a string value that doesn't exist in the enum (like the 'open' status bug that was found earlier)
+- Key enums to check: shift_status, invoice_status, payroll_status, employment_type, notification_type, coverage_type, workspace_type
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 2: TRINITY ORCHESTRATION AUDIT
+# ═══════════════════════════════════════════════
+
+## 2A: Scheduling Pipeline
+
+- Trace the COMPLETE path from client demand → shift generation → employee assignment
+- Verify shift generator reads actual client fields (minimumStaffing, coverageType, coverageStart, coverageEnd, scheduleDays)
+- Verify the 12-hour max shift duration cap works for ALL coverage types (custom, 24_7, business_hours)
+- Verify demand cap: shifts created per slot ≤ client's minimumStaffing
+- Verify dedup: running the generator twice produces zero new shifts if nothing changed
+- Verify employee scoring: distance, rate, availability, OT awareness, rest compliance, client complaints
+- Verify availability constraints are enforced (employee with Mon-Fri availability never assigned to Saturday)
+- Verify OT threshold: no employee assigned beyond 40 hours without explicit override
+- Verify rest compliance: minimum 8-hour gap between shifts
+- Verify the daemon cron schedule (when does it run? does it run reliably?)
+
+## 2B: ShiftCompletionBridge
+
+- Trace the COMPLETE path from shift end_time → bridge detection → time entry creation → auto-approve → event emission
+- Verify the bridge only processes active, non-suspended, non-frozen workspaces
+- Verify the bridge creates time entries with captured_pay_rate and captured_bill_rate (never NULL)
+- Verify auto-approve respects the workspace's autoInvoicingEnabled setting
+- Verify the time_entries_approved event fires with correct payload
+- Verify the bridge handles edge cases: employee didn't clock in (no-show), shift was cancelled after starting, shift spans midnight
+
+## 2C: Billing Pipeline
+
+- Trace the COMPLETE path from approved time entries → invoice generation → auto-send → payment tracking → ledger
+- Verify atomic claim pattern: UPDATE billed_at THEN create invoice (never reverse order)
+- Verify no double-billing: run billing twice on same entries, second run should find zero unbilled entries
+- Verify tax calculation: correct state tax rate applied, tax_exempt clients get zero tax
+- Verify invoice auto-send: when auto_send is enabled, invoices transition to 'sent' not stuck in 'draft'
+- Verify invoice line items: each line references the correct time entry, hours, and rate
+- Verify payment recording: mark-as-paid updates invoice status, creates ledger entry, records reference number
+- Verify partial payments: can an invoice be partially paid? How is the balance tracked?
+- Verify credit memos / adjustments: if an invoice needs to be corrected after sending, what happens?
+
+## 2D: Payroll Pipeline
+
+- Trace the COMPLETE path from approved time entries → payroll run creation → approval gate → processing → disbursement
+- Verify W2 calculations: regular hours (≤40) at base rate + OT hours (>40) at 1.5× rate
+- Verify 1099 calculations: all hours at flat rate, no withholding
+- Verify tax withholdings for W2: federal, state, FICA, Medicare (are the rates correct and current?)
+- Verify the approval gate is MANDATORY: there must be no code path to process payroll without an approved gate
+- Verify gate persistence: create a gate, restart the server, verify the gate still exists and can be approved
+- Verify disbursement: after approval, does the Stripe Connect payout code execute for 1099 contractors?
+- Verify W2 payroll export: is there integration with ADP/Gusto/Paychex?
+- Verify the payroll-to-ledger write: every processed payroll creates a ledger entry
+
+## 2E: Manual Edit Propagation
+
+- Edit a time entry's hours → verify the linked invoice line item recalculates
+- Edit a time entry's hours → verify the linked payroll entry recalculates
+- Edit a shift's employee assignment → verify downstream records update
+- Edit a client's contract_rate → verify future shifts use the new rate (existing shifts keep captured rate)
+- Edit an employee's hourly_rate → verify future shifts use the new rate (existing shifts keep captured rate)
+- For every edit: verify manually_edited flag is set, pre_edit_snapshot is saved, audit trail is complete
+
+## 2F: Autonomous Settings Persistence
+
+- Check where EACH of these settings is stored:
+  - Auto-fill shifts toggle
+  - Auto-send invoices toggle
+  - Auto-approve time entries toggle
+  - Auto-process billing toggle
+  - Trinity autonomous mode master toggle
+- For each: is it in React state (BUG — lost on refresh), localStorage (BUG — lost on device change), or database (CORRECT)?
+- Fix any that aren't database-persisted
+- Verify: toggle ON → refresh page → still ON. Toggle OFF → refresh → still OFF.
+- Verify: Trinity's daemon reads these settings from DB, not from any frontend state
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 3: REAL-TIME SYSTEMS AUDIT
+# ═══════════════════════════════════════════════
+
+## 3A: WebSocket Infrastructure
+
+- Verify WebSocket server starts and accepts connections
+- Verify authentication: only authenticated users can connect
+- Verify workspace scoping: users only receive events for their workspace
+- Verify reconnection: if WebSocket drops, does the client reconnect automatically?
+- Verify these events broadcast correctly:
+  - Shift created/updated/deleted
+  - Time entry created/approved
+  - Invoice generated/sent/paid
+  - Employee assigned to shift
+  - Chat message sent
+  - Notification created
+  - Trinity status updates
+  - Schedule published
+
+## 3B: Chat/DockChat/Messenger System
+
+- Verify real-time message delivery (send a message, does it appear for other participants without refresh?)
+- Verify per-shift chatrooms: does each shift get its own chatroom?
+- Verify chatroom membership: only assigned employees + managers can see the chatroom
+- Verify file sharing in chat works
+- Verify DockChat client issue reporting:
+  - Can a client submit a complaint?
+  - Does sentiment analysis run?
+  - Does frustration detection work?
+  - Are credits consumed correctly (10 per use)?
+- Verify message persistence: refresh the page, are all messages still there?
+- Verify unread counts: are unread message badges accurate?
+
+## 3C: Notification System (UNE — Unified Notification Engine)
+
+- List every notification type in the system
+- For each type: verify it fires when the triggering event occurs
+- Verify notification delivery channels: in-app, email, push (which are implemented?)
+- Verify notification preferences: can users opt out of specific notification types?
+- Verify no duplicate notifications: same event should not produce multiple identical notifications
+- Verify notification persistence: all notifications stored in DB, viewable in notification center
+- Critical notifications to verify:
+  - Shift assignment → employee notified
+  - Schedule published → all affected employees notified
+  - Invoice sent → client notified (if applicable)
+  - Payroll approval needed → manager notified
+  - Certification expiring → employee + manager notified
+  - Call-off → manager notified + Trinity notified
+  - No-show detected → manager notified
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 4: CRUD & WORKFLOW PERSISTENCE AUDIT
+# ═══════════════════════════════════════════════
+
+## 4A: Client CRUD
+
+- Create a client → verify it persists to DB → refresh → still there
+- Edit client name/rate/settings → verify changes persist → verify Trinity picks up new settings
+- Deactivate a client → verify future shifts cancelled, past records preserved (per spec Section 8)
+- Reactivate a client → verify they return to scheduling pool
+- Delete a client → what happens? Should it be soft-delete only if financial records exist
+
+## 4B: Employee CRUD
+
+- Create an employee → verify persists → all required fields populated
+- Edit employee rate → verify future assignments use new rate, past records keep old rate
+- Edit availability → verify Trinity respects new availability on next scheduling cycle
+- Deactivate an employee → verify unassigned from future shifts, past records preserved
+- Employee with W2 vs 1099 → verify payroll calculates correctly for each type
+- Employee onboarding workflow → does document collection work? Training assignment?
+
+## 4C: Shift CRUD
+
+- Create shift manually → verify persists, appears in schedule UI
+- Edit shift time → verify time entry (if exists) doesn't break
+- Edit shift employee assignment → verify downstream updates
+- Cancel a shift → what happens to the time entry? The invoice line item?
+- Publish a schedule → verify all affected employees are notified
+- Unpublish/revert → is this possible? What happens?
+- Drag-and-drop shift in calendar → verify the new time persists
+- Recurring shift template → create one, verify it generates shifts correctly
+
+## 4D: Time Entry CRUD
+
+- Clock in → verify GPS captures location if GPS verification is enabled
+- Clock out → verify hours calculated correctly, including breaks
+- Manual time entry creation by manager → verify it works
+- Edit time entry hours → verify manually_edited flag set, pre_edit_snapshot saved
+- Approve time entry → verify it becomes billable
+- Reject time entry → what happens? Can it be re-submitted?
+- Time entry with breaks → verify break time is deducted from billable hours
+
+## 4E: Invoice CRUD
+
+- Generate invoice from time entries → verify line items correct
+- Edit invoice before sending → what can be changed? Does the ledger update?
+- Send invoice → verify status changes, sent_at set, client notified
+- Mark as paid → verify payment recorded, ledger entry created, reference number stored
+- Partial payment → how is remaining balance tracked?
+- Void an invoice → what happens to the time entries (they should become unbilled again)?
+- Download invoice as PDF → does it work? Does it look professional?
+
+## 4F: Payroll CRUD
+
+- Create payroll run → verify it includes all eligible time entries for the period
+- Review payroll details → verify hours, rates, deductions are correct
+- Approve payroll → verify gate records the approver and timestamp
+- Process payroll → verify disbursement triggers (or export to payroll provider)
+- Edit payroll entry before processing → what can be changed?
+- Void a payroll run → what happens to the entries and ledger?
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 5: AI SYSTEMS AUDIT
+# ═══════════════════════════════════════════════
+
+## 5A: Trinity Brain / Orchestrator
+
+- Verify the multi-model orchestration: Gemini primary → Claude validator → OpenAI fallback
+- Test the fallback chain: if Gemini fails (simulate timeout), does Claude pick up? If Claude fails, does OpenAI?
+- Verify model selection logic: which model is used for which task? Is it documented?
+- Verify all AI calls pass workspaceId for metering (re-verify after any code changes)
+- Verify credit consumption: check that each AI action deducts the correct number of credits from the org's balance
+
+## 5B: System Bots (5 Autonomous Bots)
+
+For each bot, verify it:
+1. Actually functions (not a stub)
+2. Responds correctly to user input
+3. Consumes credits correctly (2 per interaction)
+4. Is scoped to the correct workspace
+
+**HelpAI** — Employee support bot:
+- Ask it a question about schedule → does it give accurate info?
+- Ask about pay → does it give correct payroll info?
+- Ask something it shouldn't answer → does it handle gracefully?
+
+**MeetingBot** — Action item tracking:
+- Does it capture action items?
+- Does it persist them?
+- Can users review past action items?
+
+**ReportBot** — Incident processing:
+- Submit an incident → does it process?
+- Is severity classified correctly?
+- Are photos/evidence attached?
+
+**Other bots** — verify they exist and function, not stubs
+
+## 5C: Trinity Self-Awareness & Proactive Work
+
+- Verify Trinity's scan detects:
+  - Unfilled shifts approaching (<24 hours)
+  - Employees near OT threshold
+  - Rest compliance violations
+  - Certification expirations
+  - No-shows / late clock-ins
+  - Client complaints affecting employee scores
+  - Negative margin clients (pay rate > bill rate)
+  - Overdue invoices
+- Verify Trinity takes proactive action (or notifies) for each detection
+- Verify the trinity_org_intel table stores learned patterns per org
+- Verify the trinity_reflection_log captures Trinity's self-assessment
+
+## 5D: Contract Review AI
+
+- Upload a sample contract → does the risk assessment work?
+- Are severity scores calculated?
+- Does it detect state-specific compliance gaps?
+- Are credits consumed correctly (30 per contract)?
+
+## 5E: AI Expense Categorization
+
+- Upload a receipt/expense → does it categorize correctly?
+- Does it use vision model for image processing?
+- Are credits consumed correctly?
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 6: INTEGRATION AUDIT
+# ═══════════════════════════════════════════════
+
+## 6A: QuickBooks Integration
+
+- Verify OAuth token health (is the cron checking token freshness?)
+- Verify invoice sync: when an invoice is created in CoAIleague, does it sync to QuickBooks?
+- Verify payment sync: when a payment is recorded, does it sync?
+- Verify chart of accounts mapping works
+- Verify credits consumed correctly (5 per sync)
+
+## 6B: Stripe Integration
+
+- Verify payment webhook: when a Stripe payment completes, does the invoice status update?
+- Verify Stripe Connect for 1099 contractors: can payouts be sent?
+- Verify subscription billing: does the org's subscription charge correctly?
+- Verify credit purchases: can orgs buy more credits?
+
+## 6C: Payroll Provider Integration (Gusto/ADP/Paychex)
+
+- Which providers are integrated?
+- Verify the export format is correct
+- Verify the integration doesn't bypass the approval gate (this was fixed — verify it held)
+
+## 6D: Email Integration (Resend)
+
+- Verify transactional emails send (invoice notifications, shift assignments, etc.)
+- Verify the inbound email addresses work (calloffs@, if implemented)
+- Verify email templates look professional
+
+## 6E: GPS/Geofence Integration
+
+- Verify geofence is created for client locations
+- Verify clock-in is validated against geofence (inside = allowed, outside = flagged)
+- Verify GPS tracking during shifts works
+- Verify credits consumed (1 per verification)
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 7: SECURITY & RACE CONDITION AUDIT
+# ═══════════════════════════════════════════════
+
+## 7A: Race Conditions
+
+- Double-click "Fill Shifts" button rapidly → does it create duplicate shifts?
+- Submit the same time entry twice quickly → does it create duplicates?
+- Two managers approve the same payroll gate simultaneously → does it process twice?
+- Mark an invoice as paid twice quickly → does it create duplicate payment records or ledger entries?
+- Two employees claim the same open shift simultaneously → does it assign both?
+- Rapid WebSocket events → do they process in order or can they interleave?
+
+For each race condition: what is the current protection? (DB constraint, mutex, optimistic locking, none?)
+
+## 7B: Authorization & Access Control
+
+- Can an employee see another org's data?
+- Can an employee access manager-only endpoints?
+- Can a manager in Org A see Org B's invoices/payroll?
+- Are all API endpoints checking workspace membership?
+- Are financial endpoints (payroll, billing) restricted to owner/manager roles?
+- Can a suspended workspace still process financial operations?
+
+## 7C: Data Validation
+
+- Create a shift with end_time before start_time → does the system reject it?
+- Create a time entry with negative hours → rejected?
+- Create an invoice with negative amount → rejected?
+- Set an employee rate to $0 → rejected or allowed?
+- Set a client contract_rate to $0 → rejected or allowed?
+- Enter a pay_rate higher than bill_rate → warning? (Marcus Rivera issue)
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 8: VISUAL & UI CONSISTENCY AUDIT
+# ═══════════════════════════════════════════════
+
+**NOTE: This is NOT the banned mobile UX work (T001-T005). This is verifying that data displays correctly and actions execute from the UI. Do NOT modify layout, styling, or component structure.**
+
+## 8A: Schedule View Data Accuracy
+
+- Do shift times display correctly (timezone-aware)?
+- Do employee names show on assigned shifts?
+- Do client names show correctly?
+- Does the shift count badge match the actual number of shifts?
+- Does "Pending" count match actual unfilled shifts?
+- Does the weekly hour total calculate correctly?
+
+## 8B: Invoice View Data Accuracy
+
+- Do invoice totals match the sum of line items?
+- Do tax amounts calculate correctly?
+- Does status (draft/sent/paid/overdue) display correctly?
+- Does the payment history show all recorded payments?
+
+## 8C: Payroll View Data Accuracy
+
+- Do gross/net amounts display correctly?
+- Do OT hours show separately from regular hours?
+- Does the approval status reflect the gate state?
+- Do W2 vs 1099 display different deduction breakdowns?
+
+## 8D: Dashboard/Analytics Data Accuracy
+
+- Do revenue numbers match actual invoice totals?
+- Do labor cost numbers match actual payroll totals?
+- Do margin calculations match (revenue - labor) / revenue?
+- Are charts pulling real data or placeholder/demo data?
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 9: CLIENT PORTAL AUDIT
+# ═══════════════════════════════════════════════
+
+- Does the client portal exist and load?
+- Can a client see real-time GPS tracking of their assigned guards?
+- Can a client see incident reports for their locations?
+- Can a client see officer profiles and credentials?
+- Is client data scoped correctly (Client A cannot see Client B's data)?
+- Does the portal work without authentication leaking internal data?
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 10: COMPLIANCE & AUDIT TRAIL
+# ═══════════════════════════════════════════════
+
+## 10A: Audit Trail Completeness
+
+- Every financial record change (invoice, payroll, payment) should have an audit trail
+- Verify: who changed it, when, what the old value was, what the new value is
+- Check if audit trail entries are stored in a dedicated table or just logged
+- Verify audit trail cannot be modified or deleted
+
+## 10B: Compliance Features
+
+- Certification expiry tracking: does it alert at 30 days?
+- State-specific security licensing: does the compliance engine know Texas requirements?
+- SOX compliance reports: can they be generated?
+- Tax compliance: are tax rates correct for Texas? Are they configurable per state?
+
+## 10C: Data Retention
+
+- Financial records: verify they cannot be hard-deleted (only soft-delete/archive)
+- Time entries linked to invoices: verify they're protected (safeguard was added — verify it works)
+- Employee records with payroll history: verify they can't be purged
+- How long is data retained? Is there a retention policy?
+
+---
+
+# ═══════════════════════════════════════════════
+# SECTION 11: PRODUCTION ENVIRONMENT READINESS
+# ═══════════════════════════════════════════════
+
+## 11A: Environment Configuration
+
+- Is NODE_ENV properly set?
+- Are production database credentials separate from dev?
+- Are API keys (Stripe, QuickBooks, Resend, AI providers) using production keys?
+- Are seed scripts blocked in production? (verify the guard works)
+- Is the demo workspace using sandbox data only?
+
+## 11B: Error Handling
+
+- Search for all try/catch blocks that swallow errors with console.warn or no logging
+- Every catch block in a financial pipeline should log the FULL error (message + stack + context)
+- Search for `// TODO`, `// FIXME`, `// HACK` — flag any in critical paths
+- Search for commented-out code in critical paths — flag as potential incomplete work
+
+## 11C: Performance
+
+- How many database queries does a single scheduling cycle execute?
+- Are there N+1 query problems (querying inside a loop)?
+- Are expensive queries indexed? Check: shifts by workspace+date, time_entries by shift_id, invoices by workspace+status
+- How long does a full scheduling cycle take for 44 clients?
+
+---
+
+# ═══════════════════════════════════════════════
+# REPORT FORMAT
+# ═══════════════════════════════════════════════
+
+For each section, report:
+
+```
+SECTION [N]: [Name]
+Status: [PASS / ISSUES FOUND]
+Issues: [count]
+
+[For each issue:]
+GAP-XXX: [Title]
+  Severity: CRITICAL / HIGH / MEDIUM / LOW
+  Location: [file:line or table:column]
+  Impact: [What breaks if this isn't fixed]
+  Fix: [What needs to change]
+  Dependencies: [Other gaps that must be fixed first]
+```
+
+After ALL sections are audited, present:
+1. Total gap count by severity
+2. Recommended fix order (dependency-safe)
+3. Estimated effort per gap (Small / Medium / Large)
+4. Which gaps are launch-blocking vs post-launch
+
+**DO NOT FIX ANYTHING UNTIL THE FULL AUDIT IS PRESENTED AND CONFIRMED.**

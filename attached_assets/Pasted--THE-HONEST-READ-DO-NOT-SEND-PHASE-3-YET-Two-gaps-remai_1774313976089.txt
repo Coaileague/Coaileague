@@ -1,0 +1,67 @@
+**THE HONEST READ — DO NOT SEND PHASE 3 YET**
+
+Two gaps remain. The other five root causes are solid. These two need to be closed first.
+
+---
+
+**GAP 1 — RC6 WAS ANNOTATED NOT FIXED**
+
+The completion matrix shows RC6 result as: *"typedPool sites annotated Category C — confirmed clean."*
+
+That is the same shortcut rejected multiple times in Phase 1. RC6 was not about annotating Trinity's database operations. RC6 was about finding phantom column references in Trinity actions — columns that do not exist in the database — and fixing them. The Phase 1 work found `employment_status`, `end_date`, and `expiryDate` as phantoms during conversion. Trinity's action layer has the same risk. Annotating every typedPool call as Category C without verifying each column name against the Name Registry means any phantom columns in Trinity's SQL strings are now documented as intentional. They are not intentional. They are bugs wearing a comment.
+
+**GAP 2 — RC7 IS PARTIAL COVERAGE**
+
+The completion report shows 6 Zod schemas created for invoice mutation endpoints only. The Phase 2 prompt required Zod validation on every financial and operational API boundary — payroll endpoints, employee endpoints, shift endpoints, client endpoints, Trinity endpoints, and subscription endpoints — not just invoice mutations. Seven endpoints out of potentially 60+ financial and operational endpoints is not complete coverage. It is a starting point dressed up as a finish line.
+
+---
+
+**WHAT TO SEND HIM NOW**
+
+---
+
+Phase 2 is not complete. Two root causes require additional work before Phase 3 begins. Do not start Phase 3. Complete these two items now in the same session.
+
+**RC6 — REDO: Find and fix phantom columns in Trinity actions**
+
+The RC6 verification result shows Trinity's typedPool call sites were annotated as Category C. That is not what RC6 required. RC6 required auditing every Trinity action database operation for phantom column references — column names in SQL strings that do not exist in the live database — and fixing them the same way Phase 1 fixed `employment_status`, `end_date`, and `expiryDate`.
+
+Do the following now:
+
+Open every file in `server/services/ai-brain/` and `server/routes/trinityRoutes.ts` and `server/routes/trinityAgentRoutes.ts` and every other file that contains Trinity action execution logic. For every typedPool, typedQuery, typedExec call in those files read the SQL string inside it. Extract every table name and every column name referenced in that SQL. Cross-reference each one against the canonical Name Registry established in Phase 1. For every column name that does not exist in the Name Registry that is a phantom — document it, fix the SQL to use the correct column, and add it to the ghost column report in replit.md.
+
+This is not annotation work. This is column verification work. Every SQL string in Trinity's action layer is read. Every column name is verified. Every phantom is fixed. When complete report the exact count of SQL strings reviewed, the count of phantoms found, the phantom column names and their correct replacements, and confirm zero phantoms remain in Trinity's action layer.
+
+**RC7 — COMPLETE: Add Zod validation to all remaining financial and operational boundaries**
+
+Six invoice endpoint schemas were created. The following domains still have no Zod validation on their API boundaries. Add Zod schemas and safeParse validation to every endpoint in each domain now:
+
+Payroll endpoints — every POST and PATCH in `server/routes/payrollRoutes.ts`. Schemas must validate: pay period dates, employee IDs as UUIDs, hours as numeric strings, rates as numeric strings matching the financial value format established in RC4.
+
+Employee endpoints — every POST and PATCH in `server/routes/employeeRoutes.ts`. Schemas must validate: pay rate as numeric string, pay type as enum, position as string, role as enum matching RBAC roles.
+
+Shift endpoints — every POST and PATCH in `server/routes/shiftRoutes.ts`. Schemas must validate: start time and end time as ISO datetime strings, employee ID as UUID, client ID as UUID, position as string.
+
+Client endpoints — every POST and PATCH in `server/routes/clientRoutes.ts`. Schemas must validate: billing rate as numeric string, address fields, billing schedule as enum.
+
+Subscription and billing endpoints — every POST and PATCH in `server/routes/billingRoutes.ts` and `server/routes/subscriptionRoutes.ts` if they exist. Schemas must validate: plan tier as enum, credit amounts as numeric strings.
+
+Trinity action endpoints — every POST in `server/routes/trinityRoutes.ts` and `server/routes/trinityAgentRoutes.ts`. Schemas must validate: action type as enum matching the action registry, payload structure matching expected action inputs.
+
+For every endpoint: add the schema to `shared/schemas/` in the appropriate domain file. Add safeParse at the top of the handler before any database access. Return 400 with field-level error messages on validation failure. No financial or operational input reaches the database without passing Zod validation.
+
+When complete report the exact count of endpoints now covered, the schema files created or extended, and run the final RC7 verification scan confirming every POST and PATCH on every financial and operational route has a safeParse call.
+
+**FINAL VERIFICATION AFTER BOTH FIXES**
+
+After RC6 redo and RC7 completion run the full Phase 2 verification matrix again. All 14 checks must still pass plus two new checks:
+
+Zero phantom columns remaining in any Trinity action SQL string — verified against Name Registry.
+
+Total Zod safeParse coverage across all financial and operational POST and PATCH endpoints — must cover payroll, employees, shifts, clients, billing, subscription, and Trinity action endpoints in addition to the invoice endpoints already done.
+
+Report the updated verification matrix. When all checks pass Phase 2 is certified complete and Phase 3 goes in.
+
+---
+
+Send that now Bryan. When he brings back the updated matrix with RC6 phantom column report and full RC7 endpoint coverage confirmed, bring it here and Phase 3 goes in immediately.

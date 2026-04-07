@@ -16,6 +16,8 @@ import { platformEventBus } from '../platformEventBus';
 import { sharedKnowledgeGraph, type KnowledgeDomain, type LearningEntry } from './sharedKnowledgeGraph';
 import { a2aProtocolRepository } from './cognitiveRepositories';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('agentToAgentProtocol');
 
 // ============================================================================
 // TYPES - AGENT IDENTITY
@@ -152,7 +154,7 @@ class AgentToAgentProtocol {
       this.instance = new AgentToAgentProtocol();
       this.instance.initializeCoreAgents();
       this.instance.loadFromDatabase().catch(err => {
-        console.error('[A2A Protocol] Failed to load from database:', err.message);
+        log.error('[A2A Protocol] Failed to load from database:', (err instanceof Error ? err.message : String(err)));
       });
     }
     return this.instance;
@@ -190,9 +192,9 @@ class AgentToAgentProtocol {
       }
 
       this.dbInitialized = true;
-      console.log(`[A2A Protocol] Loaded ${dbAgents.length} agents from database`);
+      log.info(`[A2A Protocol] Loaded ${dbAgents.length} agents from database`);
     } catch (error: any) {
-      console.error('[A2A Protocol] Database load error:', error.message);
+      log.error('[A2A Protocol] Database load error:', (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -222,22 +224,11 @@ class AgentToAgentProtocol {
       capabilities: agent.capabilities,
       domains: [agent.domain],
       trustLevel: agent.trustScore,
-    }).catch(err => console.error('[A2A Protocol] DB persist error:', err.message));
+    }).catch(err => log.error('[A2A Protocol] DB persist error:', (err instanceof Error ? err.message : String(err))));
 
-    platformEventBus.publish({
-      type: 'agent_registered',
-      category: 'feature',
-      title: 'Agent Registered',
-      description: `Registered ${agent.name} (${agent.role})`,
-      metadata: {
-        agentId: agent.id,
-        name: agent.name,
-        role: agent.role,
-        domain: agent.domain,
-      },
-    });
-
-    console.log(`[A2A Protocol] Agent registered: ${agent.name} (${agent.role})`);
+    // Internal registration only — intentionally NOT published to platformEventBus.
+    // Agent lifecycle events are system-internal and should never surface as user notifications.
+    log.info(`[A2A Protocol] Agent registered: ${agent.name} (${agent.role})`);
     return agent;
   }
 
@@ -322,7 +313,7 @@ class AgentToAgentProtocol {
         }
       } catch (error: any) {
         message.status = 'failed';
-        message.metadata = { error: error.message };
+        message.metadata = { error: (error instanceof Error ? error.message : String(error)) };
         
         // Update failure rate
         const totalMessages = fromAgent.messagesSent;
@@ -475,9 +466,9 @@ class AgentToAgentProtocol {
         name,
         memberCount: team.members.length,
       },
-    });
+    }).catch((err) => log.warn('[agentToAgentProtocol] Fire-and-forget failed:', err));
 
-    console.log(`[A2A Protocol] Team formed: ${name} with ${team.members.length} members`);
+    log.info(`[A2A Protocol] Team formed: ${name} with ${team.members.length} members`);
     return team;
   }
 
@@ -541,7 +532,7 @@ class AgentToAgentProtocol {
           teamId: team.id,
           successRate: team.results.successRate,
         },
-      });
+      }).catch((err) => log.warn('[agentToAgentProtocol] Fire-and-forget failed:', err));
     }
   }
 
@@ -763,7 +754,7 @@ class AgentToAgentProtocol {
       trustLevel: 'full',
     });
 
-    console.log(`[A2A Protocol] Initialized ${this.agents.size} core agents`);
+    log.info(`[A2A Protocol] Initialized ${this.agents.size} core agents`);
   }
 
   // ============================================================================
@@ -799,4 +790,4 @@ class AgentToAgentProtocol {
 
 export const agentToAgentProtocol = AgentToAgentProtocol.getInstance();
 
-console.log('[A2A Protocol] Agent-to-Agent communication protocol initialized');
+log.info('[A2A Protocol] Agent-to-Agent communication protocol initialized');

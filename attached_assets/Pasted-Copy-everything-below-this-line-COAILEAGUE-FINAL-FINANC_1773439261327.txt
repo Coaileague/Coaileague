@@ -1,0 +1,419 @@
+Copy everything below this line:
+
+---
+
+COAILEAGUE — FINAL FINANCIAL AND BILLING INTEGRITY AUDIT
+Two bugs were just fixed: payroll period detection and Stripe amountPaid.
+Before any real money flows we audit every single financial path one more time.
+We cannot afford to lose revenue, miscalculate pay, or misrecord a payment.
+Read every file. Query the live database. Test every code path.
+Report every finding before fixing anything.
+
+---
+
+AUDIT SCOPE — EVERY PATH REAL MONEY TOUCHES
+
+---
+
+SECTION 1 — STRIPE INTEGRATION FULL AUDIT
+
+Read every Stripe-related file completely:
+stripeWebhooks.ts, stripeEventBridge.ts, stripeInlineRoutes.ts,
+billingSettingsRoutes.ts, subscriptionManager.ts, middlewareTransactionFees.ts,
+weeklyBillingRunService.ts, and any other file that calls Stripe.
+
+For every Stripe webhook event the platform handles confirm:
+The event is verified using Stripe webhook signature before processing.
+The idempotency_keys table is checked before processing to prevent double-execution.
+The correct database fields are updated after the event.
+An audit trail entry is created for every Stripe event processed.
+
+Specifically verify these webhook events:
+
+invoice.payment_succeeded:
+Does it update invoice status to paid? Confirm field name.
+Does it write amountPaid with the correct value? Confirm after the fix.
+Does it write the Stripe payment_intent_id to the invoice record?
+Does it write the Stripe invoice_id to the invoice record?
+Does it create a revenue ledger entry?
+Does it fire the invoice paid notification to org_owner?
+Does it fire the invoice paid WebSocket broadcast to the dashboard?
+Does it release the invoice from any pending collections escalation queue?
+
+payment_intent.succeeded:
+Is this handled separately from invoice.payment_succeeded?
+If both fire for the same payment is there any double-crediting or double-recording?
+Confirm idempotency prevents any duplicate processing.
+
+invoice.payment_failed:
+Does it update invoice status correctly?
+Does it fire the payment failed notification to org_owner?
+Does it fire the payment failed email via Resend?
+Does it start the grace period timer?
+What is the grace period value in the code — report the exact number.
+
+customer.subscription.updated:
+Does it correctly update the subscription tier in the database?
+Does it correctly update the credit allocation for the new tier?
+Does it correctly switch between hard cap and soft cap based on the new tier?
+Does it fire the upgrade or downgrade confirmation to the org_owner?
+If downgraded does it correctly reduce credit allocation without wiping existing balance?
+
+customer.subscription.deleted:
+Does it correctly mark the subscription as cancelled?
+Does it correctly block access after cancellation?
+Does it preserve all org data — employees, clients, schedules, invoices — after cancellation?
+
+checkout.session.completed:
+Does it correctly activate the subscription?
+Does it correctly allocate the first month's credits?
+Does it fire the welcome subscription email?
+
+Now check every place in the codebase where a Stripe charge is created
+outside of subscription billing — one-time charges, overage charges, seat fees.
+For each one confirm:
+The charge amount is calculated correctly before the API call.
+The org is not billing_exempt before creating the charge.
+The charge is logged in the audit trail with the exact amount.
+If the charge fails it is queued for retry not silently dropped.
+
+---
+
+SECTION 2 — INVOICE GENERATION AND PAYMENT FULL AUDIT
+
+Read every invoice-related file: invoiceRoutes.ts, invoiceService.ts,
+invoiceResendService.ts, overdueCollectionsService.ts, and any related files.
+
+INVOICE CREATION:
+When an invoice is auto-generated from time entries confirm:
+The billable hours are calculated from approved time entries only — not pending or draft.
+The billing rate used is from the client's active billing profile — not hardcoded.
+If a client has no active billing rate the invoice is skipped with a logged warning.
+The invoice total equals hours multiplied by rate with no rounding errors.
+Confirm the calculation handles decimal hours correctly — a 7.5 hour shift at $26/hr
+must produce exactly $195.00 not $194.99 or $195.01.
+The invoice is created in draft status before being sent — not sent automatically without review.
+The invoice record contains: client_id, workspace_id, billing_period_start,
+billing_period_end, total_amount, status, created_at — all fields populated.
+
+INVOICE EMAIL DELIVERY:
+When an invoice is sent to a client confirm:
+The email uses Track B branding — security company name and license number in header.
+No CoAIleague logo appears in the email body or header.
+The Pay Now button links to the correct payment URL containing the invoice ID.
+The payment URL is signed or tokenized so it cannot be guessed or manipulated.
+delivery_confirmed updates to true when the Resend delivery webhook fires.
+If delivery fails the invoice remains in sent status with delivery_confirmed false.
+The delivery failure is logged and the org_owner is alerted.
+
+INVOICE PAYMENT — ONLINE:
+When a client pays online through the Stripe payment link confirm:
+The payment intent is created for the correct invoice amount.
+The payment intent metadata contains the invoice_id and workspace_id.
+When payment_intent.succeeded fires the correct invoice is found by invoice_id.
+invoice.status updates to paid.
+invoice.amountPaid updates to the correct payment amount — verify this after the fix.
+invoice.paidAt updates to the payment timestamp.
+invoice.stripePaymentIntentId is stored on the invoice record.
+A revenue ledger entry is created with all required fields.
+The org_owner receives a payment confirmation notification and email.
+The dashboard revenue widget receives a WebSocket broadcast.
+
+INVOICE PAYMENT — MANUAL (cash, check, ACH, wire):
+When an org_owner manually marks an invoice as paid confirm:
+The payment method is recorded: cash, check, ACH, or wire.
+A reference number field exists and is stored.
+invoice.status updates to paid.
+invoice.amountPaid updates to the correct amount.
+invoice.paidAt updates to the manual entry timestamp.
+A revenue ledger entry is created noting it as a manual payment.
+The org_owner receives confirmation.
+Does the manual payment also trigger the same downstream flows as online payment?
+Confirm collections escalation is cancelled for manually paid invoices.
+
+PARTIAL PAYMENTS:
+If a client pays less than the full invoice amount what happens?
+Does the system accept partial payments?
+If yes does it correctly record the partial amount and leave the invoice as partially_paid?
+If no does it reject the payment with a clear message?
+Confirm there is no scenario where a partial payment marks the invoice as fully paid.
+
+OVERPAYMENTS:
+If a client accidentally pays more than the invoice amount what happens?
+Does Stripe accept the overpayment?
+Is there handling for the credit or refund?
+Confirm an overpayment does not silently disappear from the ledger.
+
+COLLECTIONS ESCALATION:
+Read overdueCollectionsService.ts completely.
+Confirm the escalation tiers fire at exactly 1 day, 7 days, and 30 days past due date.
+Confirm each tier sends a Track B branded email to the client contact.
+Confirm each tier sends an in-platform notification to the org_owner.
+Confirm the escalation stops immediately when the invoice is paid — no further reminders.
+Confirm a paid invoice cannot be re-entered into the collections escalation queue.
+If an invoice is voided does collections escalation stop? Confirm.
+
+---
+
+SECTION 3 — PAYROLL CALCULATION FULL AUDIT
+
+Read every payroll-related file: payrollRoutes.ts, payrollService.ts,
+payrollCalculationService.ts, and any related files.
+
+PAYROLL PERIOD DETECTION:
+Verify the fix applied this session — detectPayPeriod now reads
+billingSettingsBlob.payrollCycle correctly.
+Create test payroll runs for each cycle type and confirm:
+Weekly cycle: pay period spans exactly 7 days.
+Bi-weekly cycle: pay period spans exactly 14 days.
+Semi-monthly cycle: pay period spans first to fifteenth or sixteenth to end of month.
+Monthly cycle: pay period spans first to last day of month.
+For each cycle confirm the start date and end date are calculated correctly
+and no hours from outside the pay period are included.
+
+HOURS CALCULATION:
+For each employee in the payroll run confirm:
+Only approved time entries are included — pending or draft entries are excluded.
+Time entries are filtered by the exact pay period date range.
+Decimal hours are handled correctly — 8 hours 30 minutes equals 8.5 hours.
+Overnight shifts that cross midnight are counted correctly in the correct pay period.
+A shift from 23:00 on the last day of the period to 07:00 the next period —
+confirm the hours before midnight count in the current period and
+hours after midnight count in the next period, or document which behavior is implemented.
+
+GROSS PAY CALCULATION:
+For hourly employees: gross pay equals total hours multiplied by hourly rate.
+Confirm the hourly rate used is from the employee record at time of payroll run —
+not a rate that was changed after the pay period ended.
+If an employee had a rate change mid-period document how it is handled.
+For salaried employees: gross pay equals annual salary divided by pay periods per year.
+Confirm the divisor is correct for each pay cycle:
+Weekly: 52 pay periods.
+Bi-weekly: 26 pay periods.
+Semi-monthly: 24 pay periods.
+Monthly: 12 pay periods.
+
+OVERTIME CALCULATION:
+Does the system calculate overtime for hourly employees?
+If yes: overtime threshold is 40 hours per week for federal FLSA compliance.
+Confirm hours above 40 in a single workweek are calculated at 1.5x the regular rate.
+Confirm the workweek definition — Sunday to Saturday or Monday to Sunday — document which.
+If overtime is not calculated confirm this is a known limitation and flag it.
+
+1099 CONTRACTOR HANDLING:
+For contractors confirm:
+No federal or state tax withholding is calculated — contractors handle their own taxes.
+The payment amount equals agreed rate multiplied by hours with no deductions.
+The payment is tracked separately from W-2 employee payroll.
+Contractors who reach $600 in calendar year payments are flagged for 1099-NEC reporting.
+Confirm the $600 threshold tracking exists in the code.
+
+TAX WITHHOLDING FOR W-2 EMPLOYEES:
+Does the platform calculate federal income tax withholding based on W-4 data?
+Does it calculate Social Security at 6.2 percent up to the annual wage base?
+Does it calculate Medicare at 1.45 percent with no wage base limit?
+Does it calculate state income tax withholding for Texas?
+Note: Texas has no state income tax — confirm the platform does not withhold
+state income tax for Texas-based employees.
+If tax calculations exist confirm they use current IRS tables not hardcoded rates.
+If tax calculations are not implemented confirm this is documented and the
+org_owner is informed they are responsible for tax calculations outside the platform.
+
+PAYROLL APPROVAL GATE:
+Confirm the payroll run cannot execute without explicit org_owner approval.
+Confirm there is no code path that auto-approves a payroll run.
+Confirm session expiry during payroll review leaves the run in pending state.
+Confirm two concurrent approval attempts are blocked by a race condition guard.
+
+PAYROLL RECORD LOCKING:
+After a payroll run is approved confirm:
+The payroll run record is locked — status cannot be changed back to pending.
+Individual paycheck records cannot be edited after approval.
+An attempt to edit an approved payroll record via direct API call is rejected.
+The rejection must happen at the route handler level not just the UI.
+
+---
+
+SECTION 4 — REVENUE LEDGER AND REPORTING
+
+Read every file related to the revenue ledger and financial reporting.
+
+REVENUE LEDGER INTEGRITY:
+Confirm every payment — online Stripe, manual cash, check, ACH, wire —
+creates a ledger entry with these fields all populated:
+workspace_id, invoice_id, client_id, amount, payment_method,
+payment_reference, payment_date, created_by, created_at.
+Confirm no ledger entry can be created with a null or zero amount.
+Confirm no ledger entry can be deleted — WORM enforcement on ledger.
+Confirm the ledger total for any workspace matches the sum of all paid invoice amounts.
+Run this check now: query the ledger total for Acme and compare against
+the sum of all paid invoice amountPaid values. They must match exactly.
+If they do not match there is a ledger integrity gap.
+
+FINANCIAL REPORTING:
+When org_owner views revenue reports confirm:
+The numbers shown are calculated from the actual ledger — not from invoice status alone.
+Paid invoices where amountPaid is null or zero are flagged not silently counted.
+Revenue totals include only confirmed payments — pending or unpaid invoices excluded.
+Monthly revenue is grouped by payment_date not invoice_date.
+The difference matters: an invoice dated December 31 paid January 3
+should appear in January revenue not December.
+
+CREDIT SYSTEM LEDGER:
+Confirm the credit transaction ledger has a matching entry for every credit event:
+Each allocation from signup, subscription, or credits pack purchase.
+Each deduction from every Trinity action executed.
+Each overage event when soft cap orgs exceed their monthly allocation.
+Confirm the current_balance field in workspace_credits always equals
+the sum of all credit_transactions for that workspace.
+Run this check now: calculate the sum of all credit_transactions for the Acme workspace
+and compare against workspace_credits.current_balance. They must match.
+If they do not match there is a credit ledger integrity gap.
+
+---
+
+SECTION 5 — BILLING SETTINGS AND PLAN MANAGEMENT
+
+BILLING SETTINGS PERSISTENCE:
+When org_owner configures billing settings confirm:
+The payroll cycle setting is saved and persists across server restarts.
+The billing cycle per client is saved to the client record not a session.
+The billing rate per client is saved to the client record.
+Payment method configuration persists — the Stripe payment method ID is stored.
+
+PLAN TIER ENFORCEMENT:
+Confirm the correct feature set is enforced per tier:
+Free Trial: hard cap at 500 credits, no Stripe charges, trial expiry at 14 days.
+Starter: hard cap at 5000 credits, seat overage billing, no premium Trinity actions.
+Professional: soft cap at 10000 credits, overage at $0.01 per credit, premium actions 2x.
+Enterprise: soft cap at 22000 credits, overage at $0.01 per credit, premium actions 2x.
+Attempt to execute a premium 2x Trinity action from a Starter org.
+Confirm it is blocked with a clear upgrade message.
+Confirm no credits are deducted for the blocked attempt.
+
+SEAT OVERAGE BILLING:
+When an org exceeds their included seat count confirm:
+The overage is calculated correctly: seats above limit multiplied by per-seat rate.
+Starter: $10 per seat above 15.
+Professional: $8 per seat above 50.
+Enterprise: $15 per seat, all seats.
+The overage charge is created in Stripe at the end of the billing cycle.
+The charge is logged in the audit trail with the exact seat count and calculation.
+The org_owner is notified of the seat overage before the charge fires.
+
+---
+
+SECTION 6 — EDGE CASES THAT BREAK BILLING
+
+Test every dangerous edge case that could cause revenue loss or overpayment.
+
+EDGE CASE 1 — INVOICE CREATED WITH ZERO HOURS:
+Attempt to generate an invoice when a client has zero approved time entries.
+Confirm the system either blocks the invoice creation or creates a $0 invoice clearly marked.
+A $0 invoice sent to a client is unprofessional. Confirm it cannot happen silently.
+
+EDGE CASE 2 — DUPLICATE INVOICE GENERATION:
+Attempt to generate an invoice for the same client covering the same billing period twice.
+Confirm the second generation is blocked with a message that an invoice
+already exists for this period.
+Confirm no duplicate invoices can be created for the same billing period.
+
+EDGE CASE 3 — TIME ENTRY USED IN MULTIPLE INVOICES:
+Confirm a time entry that has already been invoiced cannot be included in a second invoice.
+The time entry should be marked as invoiced after the first invoice is generated.
+If a time entry can be double-invoiced that is a direct revenue integrity failure.
+
+EDGE CASE 4 — RATE CHANGE AFTER INVOICE GENERATED:
+If an org_owner changes a client's billing rate after an invoice has been sent,
+does the sent invoice update to the new rate?
+It must not. A sent invoice must lock its rate at generation time.
+Confirm the invoice stores the rate at which it was generated not a reference to the current rate.
+
+EDGE CASE 5 — EMPLOYEE PAY RATE CHANGE MID-PERIOD:
+If an employee's hourly rate changes mid-pay-period which rate is used for payroll?
+Document the exact behavior from the code.
+If it uses the rate at end of period employees could receive more or less than they earned.
+The correct behavior is to calculate hours before the change at the old rate
+and hours after the change at the new rate, or to use the rate at start of period.
+Report what the code actually does and flag it if it could cause underpayment.
+
+EDGE CASE 6 — TIMEZONE HANDLING:
+If an officer clocks in at 23:45 in Central Time and the server is in UTC,
+is the clock-in time stored in UTC and displayed in the org's local timezone?
+Confirm all timestamps are stored in UTC and converted for display.
+A timezone bug could put hours in the wrong pay period.
+
+EDGE CASE 7 — DELETED CLIENT WITH OPEN INVOICES:
+If a client is deleted or marked inactive with outstanding unpaid invoices,
+are those invoices still accessible and collectable?
+Confirm open invoices survive client deactivation.
+Confirm collections escalation continues on overdue invoices for inactive clients
+or that the org_owner is explicitly notified to handle them manually.
+
+EDGE CASE 8 — REFUND HANDLING:
+If a Stripe refund is issued for an already-paid invoice what happens?
+Does the invoice status revert?
+Does the revenue ledger entry get reversed?
+Does the org_owner receive a notification?
+Confirm a Stripe refund does not silently disappear from the financial records.
+
+EDGE CASE 9 — CREDITS PACK PURCHASE FAILURE:
+If a credits pack purchase fails mid-transaction —
+Stripe charges the card but the credits allocation webhook fails —
+are the credits still allocated when the webhook retries?
+Confirm the idempotency key on the credits pack webhook prevents double-allocation
+on retry while also ensuring allocation eventually completes on failure.
+
+EDGE CASE 10 — STATEWIDE WORKSPACE RECEIVES A STRIPE WEBHOOK:
+If a Stripe webhook event somehow references the Statewide workspace ID
+confirm the billing_exempt check fires before any credit allocation or charge processing.
+Confirm no Stripe charges are ever created for the Statewide workspace under any scenario.
+Run this test now by checking whether a Stripe customer record even exists for Statewide.
+If no customer record exists that is the strongest possible protection — confirm it.
+
+---
+
+FINAL REPORT FORMAT
+
+After completing every section above produce this report:
+
+STRIPE INTEGRATION:
+List every webhook event with confirmed behavior or gap found.
+Any gap: exact fix applied.
+
+INVOICE SYSTEM:
+Generation accuracy: pass or fail with decimal math confirmed.
+Email delivery: pass or fail.
+Online payment recording: pass or fail with amountPaid confirmed after fix.
+Manual payment recording: pass or fail.
+Collections escalation: pass or fail.
+
+PAYROLL SYSTEM:
+Period detection: pass or fail with fix confirmed for all 4 cycle types.
+Hours calculation: pass or fail.
+Gross pay calculation: pass or fail.
+Overtime handling: implemented or documented limitation.
+1099 threshold tracking: confirmed or gap.
+Tax withholding: confirmed or documented limitation.
+Approval gate: pass or fail.
+Record locking: pass or fail.
+
+REVENUE LEDGER:
+Ledger total matches paid invoice sum: confirmed with actual numbers.
+Credit ledger total matches workspace_credits balance: confirmed with actual numbers.
+WORM lock on ledger: confirmed or gap.
+
+EDGE CASES:
+List all 10 edge cases with pass, fail, or documented behavior.
+
+REMAINING GAPS:
+Any issue found that requires a code fix before real money flows.
+Any behavior that is a known limitation the org_owner must know about.
+
+BILLING SYSTEM VERDICT:
+READY — every financial path confirmed safe for real money.
+NOT READY — list exact remaining items.
+
+This audit must confirm the platform can be trusted with real client payments,
+real employee payroll, and real revenue reporting before Statewide goes live.
+No assumption. No guessing. Code-confirmed answers only.

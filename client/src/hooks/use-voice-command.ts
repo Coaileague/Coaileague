@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useIsMobile } from './use-mobile';
 
-export type VoiceCommandState = 
+export type VoiceCommandState =
   | 'idle'
   | 'requesting_permission'
   | 'listening'
@@ -29,46 +29,12 @@ interface UseVoiceCommandOptions {
   interimResults?: boolean;
 }
 
-interface SpeechRecognitionEvent {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
-
-interface SpeechRecognitionErrorEvent {
-  error: string;
-  message: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  maxAlternatives: number;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  onstart: (() => void) | null;
-  onspeechend: (() => void) | null;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition: new () => SpeechRecognition;
-    webkitSpeechRecognition: new () => SpeechRecognition;
-  }
-}
-
 export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
   const {
     onResult,
     onError,
     onStateChange,
-    language = 'en-US',
     maxDuration = 30000,
-    interimResults = true
   } = options;
 
   const [state, setState] = useState<VoiceCommandState>('idle');
@@ -76,12 +42,14 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
   const [interimTranscript, setInterimTranscript] = useState<string>('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isSupported, setIsSupported] = useState<boolean>(true);
-  
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressingRef = useRef<boolean>(false);
-  
+
   const isMobile = useIsMobile();
   const isTouchDevice = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -101,10 +69,8 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
   }, [updateState, onError]);
 
   useEffect(() => {
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setIsSupported(false);
-      console.log('[VoiceCommand] Speech Recognition not supported in this browser');
     }
   }, []);
 
@@ -114,17 +80,13 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
         setHasPermission(false);
         return false;
       }
-
       updateState('requesting_permission');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());
-      
       setHasPermission(true);
       return true;
     } catch (err: any) {
-      console.error('[VoiceCommand] Permission error:', err);
       setHasPermission(false);
-      
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         handleError('permission_denied', 'Microphone permission denied. Please allow access to use voice commands.');
       } else {
@@ -134,9 +96,57 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
     }
   }, [updateState, handleError]);
 
+  const uploadAndTranscribe = useCallback(async (audioBlob: Blob): Promise<void> => {
+    try {
+      updateState('processing');
+      setInterimTranscript('Transcribing...');
+
+      const formData = new FormData();
+      const mimeType = audioBlob.type || 'audio/webm';
+      const ext = mimeType.includes('mp4') || mimeType.includes('m4a') ? 'm4a'
+        : mimeType.includes('ogg') ? 'ogg'
+        : mimeType.includes('wav') ? 'wav'
+        : 'webm';
+      formData.append('audio', audioBlob, `recording.${ext}`);
+
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Server error ${response.status}`);
+      }
+
+      const data = await response.json();
+      const finalTranscript = (data.transcript || '').trim();
+      setInterimTranscript('');
+
+      if (!finalTranscript) {
+        updateState('idle');
+        return;
+      }
+
+      setTranscript(finalTranscript);
+      updateState('success');
+
+      onResult?.({
+        transcript: finalTranscript,
+        confidence: data.confidence ?? 0.9,
+        timestamp: new Date(),
+      });
+    } catch (err: any) {
+      console.error('[VoiceCommand] transcription error:', err.message);
+      setInterimTranscript('');
+      handleError('network_error', 'Transcription failed. Please try again.');
+    }
+  }, [updateState, onResult, handleError]);
+
   const startListening = useCallback(async () => {
     if (!isSupported) {
-      handleError('not_supported', 'Voice commands are not supported in this browser. Please use Chrome or Safari.');
+      handleError('not_supported', 'Microphone not supported in this browser.');
       return;
     }
 
@@ -144,93 +154,71 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
     if (!permitted) return;
 
     try {
-      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognitionAPI();
-      
-      recognition.continuous = false;
-      recognition.interimResults = interimResults;
-      recognition.lang = language;
-      recognition.maxAlternatives = 1;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
 
-      recognition.onstart = () => {
-        console.log('[VoiceCommand] Started listening');
-        updateState('listening');
-        setTranscript('');
-        setInterimTranscript('');
-      };
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : '';
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let finalTranscript = '';
-        let interim = '';
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = recorder;
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalTranscript += result[0].transcript;
-          } else {
-            interim += result[0].transcript;
-          }
-        }
-
-        if (finalTranscript) {
-          setTranscript(prev => prev + finalTranscript);
-          const confidence = event.results[event.resultIndex][0].confidence;
-          
-          const voiceResult: VoiceCommandResult = {
-            transcript: finalTranscript.trim(),
-            confidence,
-            timestamp: new Date()
-          };
-          
-          console.log('[VoiceCommand] Final result:', voiceResult);
-          onResult?.(voiceResult);
-        }
-
-        setInterimTranscript(interim);
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('[VoiceCommand] Recognition error:', event.error);
-        
-        switch (event.error) {
-          case 'not-allowed':
-            handleError('permission_denied', 'Microphone access denied.');
-            break;
-          case 'network':
-            handleError('network_error', 'Network error during speech recognition.');
-            break;
-          case 'no-speech':
-            updateState('idle');
-            break;
-          default:
-            handleError('unknown', `Speech recognition error: ${event.error}`);
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
         }
       };
 
-      recognition.onend = () => {
-        console.log('[VoiceCommand] Stopped listening');
-        if (state === 'listening') {
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+
+        if (chunksRef.current.length === 0) {
           updateState('idle');
+          return;
         }
-        recognitionRef.current = null;
+
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        chunksRef.current = [];
+
+        if (blob.size < 1000) {
+          updateState('idle');
+          setInterimTranscript('');
+          return;
+        }
+
+        await uploadAndTranscribe(blob);
       };
 
-      recognition.onspeechend = () => {
-        console.log('[VoiceCommand] Speech ended');
+      recorder.onerror = () => {
+        handleError('unknown', 'Recording failed. Please try again.');
       };
 
-      recognitionRef.current = recognition;
-      recognition.start();
+      recorder.start(200);
+      updateState('listening');
+      setTranscript('');
+      setInterimTranscript('Recording...');
 
       timeoutRef.current = setTimeout(() => {
         stopListening();
       }, maxDuration);
 
-    } catch (err) {
-      console.error('[VoiceCommand] Start error:', err);
-      handleError('unknown', 'Failed to start voice recognition.');
+    } catch (err: any) {
+      console.error('[VoiceCommand] start error:', err.message);
+      if (err.name === 'NotAllowedError') {
+        handleError('permission_denied', 'Microphone permission denied.');
+      } else {
+        handleError('unknown', 'Failed to start recording.');
+      }
     }
-  }, [isSupported, checkPermission, interimResults, language, maxDuration, updateState, handleError, onResult, state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSupported, checkPermission, maxDuration, updateState, handleError, uploadAndTranscribe]);
 
   const stopListening = useCallback(() => {
     if (timeoutRef.current) {
@@ -238,18 +226,17 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
       timeoutRef.current = null;
     }
 
-    if (recognitionRef.current) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
-        recognitionRef.current.stop();
-      } catch (err) {
-        console.log('[VoiceCommand] Stop error (may be already stopped):', err);
-      }
+        mediaRecorderRef.current.stop();
+      } catch {}
     }
 
-    if (state === 'listening') {
-      updateState('idle');
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
-  }, [state, updateState]);
+  }, []);
 
   const cancelListening = useCallback(() => {
     if (timeoutRef.current) {
@@ -257,13 +244,19 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
       timeoutRef.current = null;
     }
 
-    if (recognitionRef.current) {
+    chunksRef.current = [];
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
-        recognitionRef.current.abort();
-      } catch (err) {
-        console.log('[VoiceCommand] Abort error:', err);
-      }
-      recognitionRef.current = null;
+        mediaRecorderRef.current.ondataavailable = null;
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
 
     setTranscript('');
@@ -273,12 +266,11 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
 
   const handleLongPressStart = useCallback(() => {
     if (!isTouchDevice && !isMobile) return;
-    
+
     isLongPressingRef.current = true;
-    
+
     longPressTimerRef.current = setTimeout(() => {
       if (isLongPressingRef.current) {
-        console.log('[VoiceCommand] Long press detected, starting voice command');
         if ('vibrate' in navigator) {
           navigator.vibrate(50);
         }
@@ -289,7 +281,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
 
   const handleLongPressEnd = useCallback(() => {
     isLongPressingRef.current = false;
-    
+
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -310,17 +302,9 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {}
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      cancelListening();
     };
   }, []);
 

@@ -1,0 +1,42 @@
+Want me to start building these fixes? I'd suggest starting with the multi-tenant isolation (#1) since it's the most critical security/privacy concern, then moving to the orchestration upgrades. Let me know which priorities you'd like to tackle first, or if you want all of them.
+
+Continue with phase 6 if 1-5 are complete being fixed and enhased or optimized to render appropriately for desktop and mobile. Summarize issues and possible enhasements identify smallest to biggest issue then we fix all.
+
+Phases 1-5 from the analysis were recommendations - they haven't been built yet. Let me summarize all issues from smallest to biggest, then work through fixing everything including phase 6.
+
+Issues Summary (Smallest → Biggest):
+
+Small: Task router uses fragile keyword matching for intent classification
+Small: GPT-4/OpenAI not routable as primary AI (only fallback)
+Medium: Limited collaborative task types between Trinity + Claude
+Medium: No executive-level automated functions (CEO briefings, CFO dashboards)
+Medium: RL Loop experiences not scoped to workspaces (per-org learning leaks)
+Large: Knowledge Graph has zero workspace isolation (org data leaks between tenants)
+Large: 16 services bypass the universal billing gate (AI tokens consumed without credit tracking)
+Let me build fixes for all of these now.
+
+Let me start with task 1 - fixing Knowledge Graph tenant isolation. First, let me read the full relevant sections:
+
+Now let me also check the remaining key files I need to understand before making changes:
+
+Now I have full understanding. Let me implement all fixes in parallel using subagents for the larger tasks. I'll start with the knowledge graph and RL loop fixes myself, and then the task router and billing gate consolidation.
+
+Good - the DB repository already supports workspaceId on entity creation. The issue is the in-memory service doesn't use it. Let me now implement all the fixes. I'll start with the Knowledge Graph and RL Loop tenant isolation, then the Task Router, then billing gate consolidation - doing as much in parallel as possible.
+
+Now update the addEntity method to accept and store workspaceId, and update queries to filter by workspace:
+
+Now update the semantic query to filter by workspace and the getLearnings/getEntitiesByDomain methods:
+
+Now update getLearnings to support workspace scoping and getEntitiesByDomain:
+
+Good, now let me also add the checkRules method workspace scoping and update the pattern creation to carry workspace context:
+
+Knowledge Graph is done. Now Task 2 - RL Loop tenant isolation. Let me update the RL loop to scope experiences by workspace:
+
+Now update the RL Loop to add workspace scoping to experiences and confidence models:
+
+Now update the recordExperience method to accept and use workspaceId, and scope confidence models per workspace:
+
+Working..
+
+Scroll to late

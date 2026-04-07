@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { MobilePageWrapper, MobilePageHeader } from "@/components/mobile-page-wrapper";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -51,8 +51,8 @@ const INCIDENT_TYPES: IncidentType[] = [
   { id: 'suspicious_person', label: 'Suspicious Person', icon: User, color: 'text-amber-400' },
   { id: 'suspicious_vehicle', label: 'Suspicious Vehicle', icon: Car, color: 'text-amber-400' },
   { id: 'property_damage', label: 'Property Damage', icon: Package, color: 'text-orange-400' },
-  { id: 'medical_emergency', label: 'Medical Emergency', icon: Heart, color: 'text-red-500' },
-  { id: 'fire_safety', label: 'Fire/Safety Hazard', icon: Flame, color: 'text-red-500' },
+  { id: 'medical_emergency', label: 'Medical Emergency', icon: Heart, color: 'text-red-500 dark:text-red-400' },
+  { id: 'fire_safety', label: 'Fire/Safety Hazard', icon: Flame, color: 'text-red-500 dark:text-red-400' },
   { id: 'theft', label: 'Theft/Break-in', icon: AlertTriangle, color: 'text-red-400' },
   { id: 'other', label: 'Other', icon: HelpCircle, color: 'text-slate-400' },
 ];
@@ -184,16 +184,38 @@ export default function WorkerIncidents() {
     }
   };
 
+  const createConfig: CanvasPageConfig = {
+    id: 'worker-incidents-create',
+    title: 'Report Incident',
+    category: 'operations',
+    backButton: true,
+    onBack: () => setMode('list'),
+    withBottomNav: true,
+  };
+
+  const listConfig: CanvasPageConfig = {
+    id: 'worker-incidents-list',
+    title: 'Incidents',
+    subtitle: 'Report and track incidents',
+    category: 'operations',
+    onRefresh: () => queryClient.invalidateQueries({ queryKey: ['/api/incidents/my-reports'] }),
+    withBottomNav: true,
+    headerActions: (
+      <Button
+        onClick={() => { setMode('create'); captureLocation(); }}
+        className="bg-red-600"
+        data-testid="button-new-incident"
+      >
+        <AlertTriangle className="w-4 h-4 mr-2" />
+        Report
+      </Button>
+    ),
+  };
+
   if (mode === 'create') {
     return (
-      <MobilePageWrapper withBottomNav showSeasonalBanner={false}>
-        <MobilePageHeader
-          title="Report Incident"
-          backButton
-          onBack={() => setMode('list')}
-        />
-        
-        <div className="px-4 py-4 space-y-6">
+      <CanvasHubPage config={createConfig}>
+        <div className="space-y-6">
           {/* Incident Type Selection */}
           <div>
             <h3 className="text-sm font-medium text-slate-400 mb-3">Type of Incident</h3>
@@ -253,16 +275,17 @@ export default function WorkerIncidents() {
                 className="min-h-[120px] bg-slate-800/50 border-slate-700 resize-none"
                 data-testid="input-description"
               />
-              <button
+              <Button
+                size="icon"
                 onClick={() => setIsRecording(!isRecording)}
                 className={cn(
-                  "absolute bottom-3 right-3 p-2 rounded-full transition-all",
+                  "absolute bottom-3 right-3 rounded-full transition-all",
                   isRecording ? "bg-red-500 animate-pulse" : "bg-slate-700"
                 )}
                 data-testid="button-voice-input"
               >
                 <Mic className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -294,8 +317,8 @@ export default function WorkerIncidents() {
             className={cn(
               "w-full h-14 text-lg font-semibold",
               severity === 'critical' 
-                ? "bg-red-600 hover:bg-red-700" 
-                : "bg-cyan-600 hover:bg-cyan-700"
+                ? "bg-red-600" 
+                : "bg-cyan-600"
             )}
             data-testid="button-submit-incident"
           >
@@ -303,32 +326,13 @@ export default function WorkerIncidents() {
             {submitting ? 'Submitting...' : 'Submit Report'}
           </Button>
         </div>
-      </MobilePageWrapper>
+      </CanvasHubPage>
     );
   }
 
   return (
-    <MobilePageWrapper 
-      enablePullToRefresh
-      onRefresh={() => queryClient.invalidateQueries({ queryKey: ['/api/incidents/my-reports'] })}
-      withBottomNav 
-      showSeasonalBanner={false}
-    >
-      <MobilePageHeader
-        title="Incidents"
-        action={
-          <Button
-            onClick={() => { setMode('create'); captureLocation(); }}
-            className="bg-red-600 hover:bg-red-700"
-            data-testid="button-new-incident"
-          >
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Report
-          </Button>
-        }
-      />
-      
-      <div className="px-4 py-4 space-y-4">
+    <CanvasHubPage config={listConfig}>
+      <div className="space-y-4">
         {/* Quick Report Button */}
         <button
           onClick={() => { setMode('create'); captureLocation(); }}
@@ -400,6 +404,6 @@ export default function WorkerIncidents() {
           )}
         </div>
       </div>
-    </MobilePageWrapper>
+    </CanvasHubPage>
   );
 }

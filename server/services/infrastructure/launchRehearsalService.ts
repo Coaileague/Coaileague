@@ -4,6 +4,8 @@
  * End-to-end production simulation, dry-run testing, and coordinated
  * launch rehearsals across all infrastructure services.
  */
+import { createLogger } from '../../lib/logger';
+const log = createLogger('launchRehearsalService');
 
 interface LaunchRehearsal {
   id: string;
@@ -94,7 +96,7 @@ class LaunchRehearsalService {
 
     this.seedRehearsals();
     this.initialized = true;
-    console.log('[LaunchRehearsal] Service initialized with production simulation capabilities');
+    log.info('[LaunchRehearsal] Service initialized with production simulation capabilities');
   }
 
   private seedRehearsals(): void {
@@ -170,7 +172,7 @@ class LaunchRehearsalService {
       this.rehearsals.set(id, { ...reh, id });
     });
 
-    console.log(`[LaunchRehearsal] Seeded ${rehearsals.length} rehearsals`);
+    log.info(`[LaunchRehearsal] Seeded ${rehearsals.length} rehearsals`);
   }
 
   private createFullRehearsalScenarios(defaultStatus: 'pending' | 'completed'): RehearsalScenario[] {
@@ -361,7 +363,7 @@ class LaunchRehearsalService {
     };
 
     this.rehearsals.set(id, newRehearsal);
-    console.log(`[LaunchRehearsal] Created rehearsal: ${rehearsal.name}`);
+    log.info(`[LaunchRehearsal] Created rehearsal: ${rehearsal.name}`);
     return newRehearsal;
   }
 
@@ -373,7 +375,7 @@ class LaunchRehearsalService {
     rehearsal.startedAt = new Date();
     this.activeRehearsal = rehearsal;
 
-    console.log(`[LaunchRehearsal] Started rehearsal: ${rehearsal.name}`);
+    log.info(`[LaunchRehearsal] Started rehearsal: ${rehearsal.name}`);
     return rehearsal;
   }
 
@@ -387,7 +389,7 @@ class LaunchRehearsalService {
     scenario.status = 'running';
     scenario.startedAt = new Date();
 
-    console.log(`[LaunchRehearsal] Running scenario: ${scenario.name}`);
+    log.info(`[LaunchRehearsal] Running scenario: ${scenario.name}`);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -440,7 +442,7 @@ class LaunchRehearsalService {
     };
 
     this.activeRehearsal = null;
-    console.log(`[LaunchRehearsal] Rehearsal completed: ${rehearsal.name} - Score: ${readinessScore}`);
+    log.info(`[LaunchRehearsal] Rehearsal completed: ${rehearsal.name} - Score: ${readinessScore}`);
     return rehearsal;
   }
 
@@ -453,7 +455,7 @@ class LaunchRehearsalService {
       this.activeRehearsal = null;
     }
 
-    console.log(`[LaunchRehearsal] Rehearsal cancelled: ${rehearsal.name}`);
+    log.info(`[LaunchRehearsal] Rehearsal cancelled: ${rehearsal.name}`);
     return true;
   }
 
@@ -522,7 +524,7 @@ class LaunchRehearsalService {
     if (this.activeRehearsal) {
       await this.cancelRehearsal(this.activeRehearsal.id);
     }
-    console.log('[LaunchRehearsal] Service shutdown');
+    log.info('[LaunchRehearsal] Service shutdown');
   }
 }
 

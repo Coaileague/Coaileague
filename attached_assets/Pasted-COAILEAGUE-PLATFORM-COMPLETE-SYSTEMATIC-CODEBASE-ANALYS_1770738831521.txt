@@ -1,0 +1,507 @@
+COAILEAGUE PLATFORM - COMPLETE SYSTEMATIC CODEBASE ANALYSIS
+DIRECTIVE: Deep semantic analysis of the ENTIRE platform. Architect handles code structure/architecture. Trinity handles AI systems/orchestration. Combine findings into unified report. DO NOT FIX ANYTHING YET - analyze and summarize first.
+
+ANALYSIS METHODOLOGY
+For EVERY file, page, service, component:
+1. READ the entire file
+2. UNDERSTAND its purpose
+3. CHECK if it fulfills that purpose completely
+4. IDENTIFY gaps, inconsistencies, dead code
+5. VERIFY it integrates correctly with dependent systems
+6. DOCUMENT findings with file paths and line numbers
+
+PHASE 1: PLATFORM GOAL VERIFICATION
+CoAIleague's Core Mission:
+
+B2B SaaS workforce management platform for security companies featuring GPS time tracking, Trinity AI autonomous scheduling, payroll automation, QuickBooks integration, and multi-model AI orchestration.
+
+1.1 Verify Each Core Feature Exists and Works:
+GPS TIME TRACKING
+[ ] Clock in endpoint exists and works
+[ ] Clock out endpoint exists and works
+[ ] GPS coordinates captured and stored
+[ ] Geofencing validation implemented
+[ ] Offline queue for poor connectivity
+[ ] Proof of service photo capture
+[ ] Time entries sync to payroll
+[ ] Time entries sync to QuickBooks
+[ ] Mobile-optimized UI for field workers
+[ ] Real-time location tracking (if promised)
+
+TRINITY AI SCHEDULING
+[ ] Auto-schedule algorithm exists
+[ ] Considers employee availability
+[ ] Considers employee skills/certifications
+[ ] Considers client preferences
+[ ] Considers labor budget constraints
+[ ] Considers overtime rules
+[ ] Handles shift conflicts
+[ ] Real-time WebSocket feedback during scheduling
+[ ] Schedule optimization suggestions
+[ ] Learning from past scheduling decisions
+[ ] Multi-model fallback (Gemini → Claude → OpenAI)
+
+PAYROLL AUTOMATION
+[ ] Hours calculation from time entries
+[ ] Overtime calculation (daily and weekly)
+[ ] Holiday pay calculation
+[ ] Break deduction rules
+[ ] Pay rate management per employee
+[ ] Pay rate management per client/site
+[ ] Payroll preview before processing
+[ ] Payroll export functionality
+[ ] Integration with QuickBooks payroll
+[ ] Integration with Gusto
+
+QUICKBOOKS INTEGRATION
+[ ] OAuth connection flow (VERIFIED WORKING)
+[ ] Employee sync (CoAIleague ↔ QuickBooks)
+[ ] Client/Customer sync
+[ ] Invoice creation and sync
+[ ] Payment recording and sync
+[ ] Time entry sync
+[ ] Error recovery and retry logic
+[ ] Token refresh automation
+[ ] Webhook handling for real-time updates
+[ ] Disconnect and reconnect flow
+
+MULTI-MODEL AI ORCHESTRATION
+[ ] Trinity/Gemini primary model configured
+[ ] Claude fallback configured
+[ ] OpenAI fallback configured
+[ ] Automatic fallback on failure
+[ ] Confidence scoring between models
+[ ] Cross-model analysis capability
+[ ] Token usage tracking per model
+[ ] Cost monitoring and alerts
+[ ] Rate limiting per workspace
+
+PHASE 2: FILE-BY-FILE ANALYSIS
+2.1 Server-Side Analysis
+Analyze EVERY file in these directories:
+/server/
+├── services/
+│   ├── oauth/           → Analyze each OAuth service
+│   ├── integrations/    → Analyze each integration
+│   ├── orchestration/   → Analyze Trinity orchestration
+│   ├── ai/              → Analyze AI services
+│   ├── partners/        → Analyze partner services
+│   └── ...
+├── routes/              → Analyze all route handlers
+├── middleware/          → Analyze all middleware
+├── db/                  → Analyze database layer
+└── utils/               → Analyze utilities
+
+For EACH file, document:
+- Purpose: What should this file do?
+- Status: Does it fulfill its purpose?
+- Gaps: What's missing or incomplete?
+- Dead Code: Any unused functions/exports?
+- Redundancy: Does another file do the same thing?
+- Security: Is workspaceId/userId properly validated?
+- Integration: Does it connect properly to other services?
+2.2 Client-Side Analysis
+Analyze EVERY file in these directories:
+/client/src/
+├── pages/               → Analyze EVERY page
+├── components/          → Analyze EVERY component
+├── hooks/               → Analyze all custom hooks
+├── lib/                 → Analyze utilities
+├── contexts/            → Analyze context providers
+└── ...
+
+For EACH page, document:
+- Route: What URL does this serve?
+- Purpose: What should this page do?
+- Features: What features does it provide?
+- Status: Is it complete and functional?
+- Mobile: Does it work on mobile?
+- Desktop: Does it work on desktop?
+- API Calls: What endpoints does it use?
+- State: What state does it manage?
+- Gaps: What's missing or broken?
+2.3 Shared Code Analysis
+/shared/
+├── schema.ts            → Database schema completeness
+├── platformConfig.ts    → Configuration completeness
+├── types/               → Type definitions
+└── ...
+
+Check:
+- Are all tables properly defined?
+- Are all types exported and used?
+- Is configuration centralized or scattered?
+
+PHASE 3: PAGE-BY-PAGE DEEP DIVE
+List and analyze EVERY page in the application:
+DASHBOARD PAGES
+[ ] /dashboard - Main dashboard
+    - Shows correct metrics?
+    - Real-time updates working?
+    - Mobile responsive?
+    - All widgets functional?
+
+SCHEDULE PAGES
+[ ] /schedule - Main schedule view
+    - Day view working?
+    - Week view working (7-day columns)?
+    - Shift creation working?
+    - Drag-and-drop working?
+    - Trinity integration working?
+    - Mobile view appropriate?
+
+[ ] /schedule/templates - Schedule templates
+    - Can create templates?
+    - Can apply templates?
+    - Can duplicate weeks?
+
+EMPLOYEE PAGES
+[ ] /employees - Employee list
+    - CRUD operations complete?
+    - Search/filter working?
+    - Pagination working?
+    
+[ ] /employees/[id] - Employee detail
+    - All fields editable?
+    - Document uploads working?
+    - Compliance tracking visible?
+    - Schedule history visible?
+
+CLIENT/SITE PAGES
+[ ] /clients - Client list
+[ ] /clients/[id] - Client detail
+[ ] /sites - Site list
+[ ] /sites/[id] - Site detail with geofencing
+
+TIME TRACKING PAGES
+[ ] /time-tracking - Time entries view
+[ ] /time-clock - Clock in/out interface
+
+PAYROLL PAGES
+[ ] /payroll - Payroll dashboard
+[ ] /payroll/run - Run payroll
+[ ] /payroll/history - Payroll history
+
+REPORTING PAGES
+[ ] /reports - Reports dashboard
+[ ] /reports/[type] - Individual reports
+
+INTEGRATION PAGES
+[ ] /integrations - Integration hub (VERIFIED WORKING)
+[ ] /quickbooks-import - QuickBooks setup wizard
+
+SETTINGS PAGES
+[ ] /settings - Settings hub
+[ ] /settings/organization - Org settings
+[ ] /settings/billing - Billing settings
+[ ] /settings/users - User management
+[ ] /settings/roles - Role management
+
+ONBOARDING PAGES
+[ ] /onboarding - New org onboarding
+[ ] /onboarding/employee - New employee onboarding
+
+ADMIN PAGES
+[ ] /admin/* - Platform admin pages
+
+(Add any pages I've missed)
+
+PHASE 4: API ENDPOINT AUDIT
+List and verify EVERY API endpoint:
+For EACH endpoint, verify:
+[ ] Endpoint exists and is routed
+[ ] Authentication middleware applied
+[ ] Workspace isolation enforced
+[ ] Input validation implemented
+[ ] Error handling complete
+[ ] Response format consistent
+[ ] Actually used by frontend (or is it dead?)
+
+Format findings as:
+| Endpoint | Method | Auth | Workspace Isolated | Status | Issues |
+|----------|--------|------|-------------------|--------|--------|
+| /api/... | GET    | Yes  | Yes               | OK     | None   |
+
+PHASE 5: DATABASE SCHEMA AUDIT
+Analyze every table:
+For EACH table:
+[ ] Has proper primary key
+[ ] Has workspaceId (if tenant-specific)
+[ ] Has created_at/updated_at timestamps
+[ ] Foreign keys properly defined
+[ ] Indexes exist for query patterns
+[ ] No orphan potential (cascade deletes configured)
+
+Check for missing tables:
+[ ] trinity_conversations (AI memory)
+[ ] trinity_client_intelligence
+[ ] trinity_staff_intelligence
+[ ] trinity_org_context
+[ ] trinity_learned_patterns
+[ ] onboarding_tasks (org and employee)
+[ ] compliance_documents
+[ ] document_expirations
+
+PHASE 6: WORKFLOW COMPLETENESS
+Trace each critical workflow end-to-end:
+WORKFLOW: New Organization Signup
+1. [ ] User signs up
+2. [ ] Organization created
+3. [ ] Workspace created
+4. [ ] User assigned as owner
+5. [ ] Onboarding task list generated
+6. [ ] 15-day deadline set
+7. [ ] Reminder notifications scheduled
+8. [ ] Compliance tracking initialized
+9. [ ] Red header warning after 15 days if incomplete
+
+WORKFLOW: Invite Employee
+1. [ ] Admin sends invite
+2. [ ] Email sent to employee
+3. [ ] Employee creates account (or account created for them)
+4. [ ] Employee added to workspace
+5. [ ] Onboarding task list generated
+6. [ ] 15-day deadline set
+7. [ ] Document upload prompts shown
+8. [ ] Cannot be scheduled until onboarding complete
+9. [ ] Red header warning if incomplete
+
+WORKFLOW: Schedule a Shift
+1. [ ] Manager opens schedule
+2. [ ] Creates shift (manual or Trinity)
+3. [ ] Validates employee availability
+4. [ ] Validates employee qualifications
+5. [ ] Checks for conflicts
+6. [ ] Saves to database
+7. [ ] Notifies employee
+8. [ ] Updates labor cost calculations
+9. [ ] Syncs to connected integrations
+
+WORKFLOW: Clock In/Out
+1. [ ] Employee opens mobile app
+2. [ ] GPS location captured
+3. [ ] Geofence validated
+4. [ ] Clock in recorded
+5. [ ] (Work performed)
+6. [ ] Clock out with GPS
+7. [ ] Proof of service photo (optional)
+8. [ ] Time entry created
+9. [ ] Hours calculated
+10. [ ] Ready for payroll
+
+WORKFLOW: Run Payroll
+1. [ ] Manager opens payroll
+2. [ ] Selects pay period
+3. [ ] System calculates hours per employee
+4. [ ] Overtime calculated
+5. [ ] Pay rates applied
+6. [ ] Deductions applied
+7. [ ] Preview shown for review
+8. [ ] Manager approves
+9. [ ] Payroll processed
+10. [ ] Synced to QuickBooks/Gusto
+11. [ ] Pay stubs generated
+
+WORKFLOW: Trinity Auto-Schedule
+1. [ ] Manager requests auto-schedule
+2. [ ] Trinity loads org context/memory
+3. [ ] Fetches open shifts
+4. [ ] Fetches available employees
+5. [ ] Applies constraints (skills, availability, preferences)
+6. [ ] Generates optimal assignments
+7. [ ] Real-time progress via WebSocket
+8. [ ] Presents schedule for approval
+9. [ ] Manager approves/modifies
+10. [ ] Employees notified
+11. [ ] Trinity learns from outcome
+
+(Document any broken steps)
+
+PHASE 7: TRINITY AI DEEP ANALYSIS
+Trinity-specific audit (Trinity should analyze itself):
+TRINITY ORCHESTRATION
+[ ] Multi-model routing logic
+[ ] Fallback chain implementation
+[ ] Confidence scoring
+[ ] Token counting and limits
+[ ] Cost tracking per request
+[ ] Rate limiting per workspace
+[ ] Error recovery
+
+TRINITY MEMORY (verify or note missing)
+[ ] Conversation persistence
+[ ] Semantic search capability
+[ ] Client intelligence storage
+[ ] Staff intelligence storage
+[ ] Pattern learning
+[ ] Memory retrieval before responses
+
+TRINITY SCHEDULING
+[ ] Constraint satisfaction algorithm
+[ ] Optimization scoring
+[ ] Real-time feedback mechanism
+[ ] Learning from past schedules
+[ ] Handling edge cases
+
+TRINITY CHAT/BOTS
+[ ] HelpAI - support queries
+[ ] MeetingBot - meeting management
+[ ] ReportBot - report generation
+[ ] SysOpBot - system operations
+[ ] Command parity with spec
+[ ] Response consistency
+
+PHASE 8: MOBILE VS DESKTOP AUDIT
+Verify feature separation:
+MOBILE-ONLY FEATURES (field workers):
+[ ] Clock in/out with GPS
+[ ] View assigned shifts
+[ ] Duress/panic button
+[ ] Proof of service capture
+[ ] Basic schedule view (read-only)
+[ ] Notifications
+[ ] Offline capability
+
+Verify these are HIDDEN on mobile:
+[ ] Admin dashboards
+[ ] Schedule editing (full)
+[ ] Employee management
+[ ] Client management
+[ ] Payroll processing
+[ ] Report generation
+[ ] Integration settings
+[ ] Billing management
+
+Check EVERY page for mobile responsiveness:
+[ ] No horizontal scroll
+[ ] Touch targets 44px minimum
+[ ] Text readable without zoom
+[ ] Forms usable on mobile
+[ ] Modals fit mobile viewport
+
+PHASE 9: CONSISTENCY AUDIT
+Check for inconsistencies across platform:
+UI CONSISTENCY
+[ ] Button styles consistent
+[ ] Modal styles consistent (compact, not max-width)
+[ ] Form styles consistent
+[ ] Table styles consistent
+[ ] Color usage consistent
+[ ] Icon usage consistent
+[ ] Loading states consistent
+[ ] Error states consistent
+[ ] Empty states consistent
+
+CODE CONSISTENCY
+[ ] Naming conventions followed
+[ ] File structure consistent
+[ ] Import patterns consistent
+[ ] Error handling patterns consistent
+[ ] API response formats consistent
+[ ] Database query patterns consistent
+
+TERMINOLOGY CONSISTENCY
+[ ] "Employee" vs "Staff" vs "Worker" - pick one
+[ ] "Client" vs "Customer" - pick one
+[ ] "Site" vs "Location" - pick one
+[ ] "Shift" vs "Schedule" usage
+[ ] "Workspace" vs "Organization" - pick one
+
+PHASE 10: SECURITY AUDIT
+AUTHENTICATION
+[ ] All protected routes require auth
+[ ] Session management secure
+[ ] Token refresh working
+[ ] Logout clears all tokens
+
+AUTHORIZATION
+[ ] Role-based access enforced
+[ ] Workspace isolation on ALL queries
+[ ] Users can only access their data
+[ ] Admin functions restricted
+
+DATA PROTECTION
+[ ] Sensitive data encrypted at rest
+[ ] Passwords hashed (never plain text)
+[ ] API keys not exposed to frontend
+[ ] PII handling compliant
+
+INPUT VALIDATION
+[ ] All inputs validated server-side
+[ ] SQL injection prevented
+[ ] XSS prevented
+[ ] CSRF protection enabled
+
+OUTPUT FORMAT
+After analyzing everything, produce this summary:
+# COAILEAGUE PLATFORM AUDIT REPORT
+Date: [DATE]
+Analyzed by: Architect + Trinity
+
+## EXECUTIVE SUMMARY
+- Total files analyzed: X
+- Total pages analyzed: X
+- Total endpoints analyzed: X
+- Total issues found: X
+  - Critical: X
+  - High: X
+  - Medium: X
+  - Low: X
+
+## PLATFORM GOAL STATUS
+- GPS Time Tracking: X% complete
+- Trinity AI Scheduling: X% complete
+- Payroll Automation: X% complete
+- QuickBooks Integration: X% complete (VERIFIED WORKING)
+- Multi-Model AI: X% complete
+
+## CRITICAL ISSUES (Must Fix Before Launch)
+1. [Issue] - [Location] - [Impact]
+2. ...
+
+## HIGH PRIORITY ISSUES
+1. [Issue] - [Location] - [Impact]
+2. ...
+
+## MEDIUM PRIORITY ISSUES
+1. [Issue] - [Location] - [Impact]
+2. ...
+
+## LOW PRIORITY / TECH DEBT
+1. [Issue] - [Location] - [Impact]
+2. ...
+
+## MISSING FEATURES (Promised but not built)
+1. [Feature] - [Where promised] - [Effort to build]
+2. ...
+
+## DEAD CODE IDENTIFIED
+1. [File/Function] - [Can be deleted]
+2. ...
+
+## REDUNDANT SERVICES
+1. [Service A] duplicates [Service B] - [Recommendation]
+2. ...
+
+## WORKFLOW GAPS
+1. [Workflow] - [Missing step] - [Impact]
+2. ...
+
+## TRINITY-SPECIFIC FINDINGS
+1. [Finding] - [Recommendation]
+2. ...
+
+## MOBILE/DESKTOP ISSUES
+1. [Page] - [Issue] - [Fix needed]
+2. ...
+
+## RECOMMENDED FIX ORDER
+1. [First priority - why]
+2. [Second priority - why]
+3. ...
+
+## ESTIMATED EFFORT
+- Critical fixes: X hours
+- High priority: X hours
+- Medium priority: X hours
+- Total to production-ready: X hours

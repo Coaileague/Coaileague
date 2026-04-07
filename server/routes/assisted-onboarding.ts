@@ -23,6 +23,9 @@ import { assistedOnboardingService } from '../services/assistedOnboardingService
 import { db } from '../db';
 import { workspaces } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { createLogger } from '../lib/logger';
+const log = createLogger('AssistedOnboarding');
+
 
 export const assistedOnboardingRouter = Router();
 
@@ -66,7 +69,7 @@ assistedOnboardingRouter.post(
       }
 
       const result = await assistedOnboardingService.createAssistedWorkspace({
-        supportUserId: req.user!.id,
+        supportUserId: req.user.id,
         ...parsed.data,
       });
 
@@ -79,8 +82,8 @@ assistedOnboardingRouter.post(
         workspaceId: result.workspaceId,
         message: 'Workspace created successfully',
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Create error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Create error:', error);
       res.status(500).json({ error: 'Failed to create workspace' });
     }
   }
@@ -91,15 +94,15 @@ assistedOnboardingRouter.get(
   requirePlatformRole([...SUPPORT_ROLES]),
   async (req: any, res: any) => {
     try {
-      const workspaceList = await assistedOnboardingService.getAssistedWorkspaces(req.user!.id);
+      const workspaceList = await assistedOnboardingService.getAssistedWorkspaces(req.user.id);
       
       res.json({
         success: true,
         workspaces: workspaceList,
         count: workspaceList.length,
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] List error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] List error:', error);
       res.status(500).json({ error: 'Failed to list workspaces' });
     }
   }
@@ -142,8 +145,8 @@ assistedOnboardingRouter.get(
         success: true,
         workspace,
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Get error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Get error:', error);
       res.status(500).json({ error: 'Failed to get workspace' });
     }
   }
@@ -170,8 +173,8 @@ assistedOnboardingRouter.post(
         success: true,
         message: `Recorded ${parsed.data.count} document(s) uploaded`,
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Upload error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Upload error:', error);
       res.status(500).json({ error: 'Failed to record document upload' });
     }
   }
@@ -195,8 +198,8 @@ assistedOnboardingRouter.post(
         status: result.status,
         message: 'Extraction started',
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Extract error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Extract error:', error);
       res.status(500).json({ error: 'Failed to start extraction' });
     }
   }
@@ -231,8 +234,8 @@ assistedOnboardingRouter.post(
         status: result.status,
         extractedData: result.extractedData,
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Store extracted error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Store extracted error:', error);
       res.status(500).json({ error: 'Failed to store extracted data' });
     }
   }
@@ -255,8 +258,8 @@ assistedOnboardingRouter.post(
         success: true,
         message: 'Workspace marked ready for handoff',
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Ready error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Ready error:', error);
       res.status(500).json({ error: 'Failed to mark ready' });
     }
   }
@@ -280,8 +283,8 @@ assistedOnboardingRouter.post(
         message: 'Handoff initiated - email sent to target user',
         expiresAt: result.expiresAt,
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Handoff error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Handoff error:', error);
       res.status(500).json({ error: 'Failed to initiate handoff' });
     }
   }
@@ -308,8 +311,8 @@ acceptHandoffRouter.get(
         valid: true,
         workspace: result.workspace,
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Validate token error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Validate token error:', error);
       res.status(500).json({ valid: false, error: 'Failed to validate token' });
     }
   }
@@ -325,7 +328,7 @@ acceptHandoffRouter.post(
         return res.status(401).json({ error: 'Authentication required to complete handoff' });
       }
 
-      const result = await assistedOnboardingService.completeHandoff(token, req.user.id);
+      const result = await assistedOnboardingService.completeHandoff(token, req.user?.id);
       
       if (!result.success) {
         return res.status(400).json({ error: result.error });
@@ -337,8 +340,8 @@ acceptHandoffRouter.post(
         workspaceName: result.workspaceName,
         message: 'Handoff complete - you are now the owner of this workspace',
       });
-    } catch (error: any) {
-      console.error('[AssistedOnboarding] Complete handoff error:', error);
+    } catch (error: unknown) {
+      log.error('[AssistedOnboarding] Complete handoff error:', error);
       res.status(500).json({ error: 'Failed to complete handoff' });
     }
   }

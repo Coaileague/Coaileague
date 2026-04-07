@@ -1,0 +1,39 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 9 — RBAC ROLE ARCHITECTURE LOCK**
+
+You are performing a canonical, systematic audit and lock of the entire role-based access control architecture across the CoAIleague platform. This is a precision operation — no guessing, no assumptions, no partial fixes. Every finding must be resolved before this phase is marked complete.
+
+**STEP 1 — ENUMERATE THE ROLE MAP**
+Read the database schema, middleware, and any role/permission constants across the codebase. Produce a definitive list of every role that exists (examples: owner, manager, supervisor, officer, client, auditor, system/Trinity). For each role document: what they can read, write, trigger, and delete. Flag any role that is defined inconsistently across files.
+
+**STEP 2 — AUDIT PERMISSION BOUNDARIES**
+For every protected route and resolver, verify the role check is present, correct, and enforced server-side — not just client-side. Identify any route that relies on trust without verification. Identify any role that can escalate its own privileges. Identify any missing middleware guards.
+
+**STEP 3 — VERIFY WORKSPACE ISOLATION**
+Confirm that every query that touches tenant data is scoped by workspace_id. No role — including owner — should be able to query data outside their workspace without an explicit super-admin flag. Flag any query missing workspace_id scoping.
+
+**STEP 4 — AUDIT TRINITY ACCESS**
+Trinity orchestrates actions across the platform. Confirm that Trinity's system-role context is locked — it cannot be spoofed by a user-level request. Confirm that Trinity actions respect the role of the requesting user when acting on their behalf, and do not silently elevate permissions.
+
+**STEP 5 — RESOLVE ALL FINDINGS**
+Fix every gap found in steps 1–4. Each fix must be minimal and surgical — do not refactor unrelated code. After each fix, confirm the surrounding logic is still intact.
+
+**STEP 6 — LOCK THE ROLE SCHEMA**
+Create or update a single canonical file (suggested: `lib/rbac/roleDefinitions.ts` or equivalent) that serves as the single source of truth for all roles and permissions. All middleware and guards should reference this file. No role logic should be hardcoded inline outside this file.
+
+**STEP 7 — VERIFY AND CERTIFY**
+Run the following checks and confirm each returns clean:
+- Check 1: Every protected route has server-side role enforcement
+- Check 2: No query touches tenant data without workspace_id scope
+- Check 3: Trinity system context cannot be triggered from a user-scoped request without explicit elevation
+- Check 4: The canonical roleDefinitions file exists and is the single source of truth
+- Check 5: Server starts clean with no TypeScript errors in RBAC-related files
+
+Do not mark Phase 9 complete until all 5 checks pass. Report findings per step before beginning fixes so I can review before you proceed.
+
+---
+
+Paste that and let it run. Tell it to **report findings first before making any changes** so you see the full picture before it starts writing.

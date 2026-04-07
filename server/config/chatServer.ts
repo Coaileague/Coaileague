@@ -291,7 +291,7 @@ export const CHAT_SERVER_CONFIG = {
   // ===== FEATURE FLAGS =====
   features: {
     // Enable/disable seasonal animations
-    seasonalAnimationsEnabled: true,
+    seasonalAnimationsEnabled: false,
 
     // Enable/disable agreement modal
     agreementModalEnabled: false,

@@ -8,9 +8,20 @@
  * - 1099/W-2 Tax Classification
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
+import { requireAuth } from '../auth';
+import { requireManager, AuthenticatedRequest } from '../rbac';
 import { db } from '../db';
-import { sql } from 'drizzle-orm';
+import { eq, and, desc, sql, count, inArray } from 'drizzle-orm';
+import { typedCount, typedQuery } from '../lib/typedSql';
+import { industryServiceTemplates } from '@shared/schema/domains/orgs';
+import { evvBillingCodes, reconciliationRuns, locationPnlSnapshots, reconciliationFindings } from '@shared/schema/domains/billing';
+import { businessLocations } from '@shared/schema/domains/clients';
+import { workerTaxClassificationHistory, employees } from '@shared/schema';
+import { createLogger } from '../lib/logger';
+const log = createLogger('QuickbooksPhase3Routes');
+
 
 const router = Router();
 
@@ -18,30 +29,35 @@ const router = Router();
 // INDUSTRY SERVICE TEMPLATES
 // ============================================================================
 
-router.get('/industry-templates', async (req: Request, res: Response) => {
+router.get('/industry-templates', requireAuth, async (req: Request, res: Response) => {
   try {
     const { industry } = req.query;
     
-    let query = sql`SELECT * FROM industry_service_templates WHERE is_active = true`;
+    const conditions = [eq(industryServiceTemplates.isActive, true)];
     if (industry) {
-      query = sql`SELECT * FROM industry_service_templates WHERE is_active = true AND industry_key = ${industry as string}`;
+      conditions.push(eq(industryServiceTemplates.industryKey, industry as string));
     }
     
-    const templates = await db.execute(query);
+    const templates = await db
+      .select()
+      .from(industryServiceTemplates)
+      .where(and(...conditions));
+
     res.json({
       success: true,
-      templates: templates.rows,
-      count: templates.rows.length
+      templates,
+      count: templates.length
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching industry templates:', error);
-    res.status(500).json({ error: 'Failed to fetch industry templates', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching industry templates:', error);
+    res.status(500).json({ error: 'Failed to fetch industry templates', details: sanitizeError(error) });
   }
 });
 
-router.get('/industry-templates/industries', async (req: Request, res: Response) => {
+router.get('/industry-templates/industries', requireAuth, async (req: Request, res: Response) => {
   try {
-    const industries = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: industry_service_templates | Verified: 2026-03-23
+    const industries = await typedQuery(sql`
       SELECT DISTINCT industry_key, 
         COUNT(*) as service_count
       FROM industry_service_templates 
@@ -52,11 +68,11 @@ router.get('/industry-templates/industries', async (req: Request, res: Response)
     
     res.json({
       success: true,
-      industries: industries.rows
+      industries: industries
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching industries:', error);
-    res.status(500).json({ error: 'Failed to fetch industries', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching industries:', error);
+    res.status(500).json({ error: 'Failed to fetch industries', details: sanitizeError(error) });
   }
 });
 
@@ -64,30 +80,36 @@ router.get('/industry-templates/industries', async (req: Request, res: Response)
 // EVV BILLING CODES
 // ============================================================================
 
-router.get('/evv/billing-codes', async (req: Request, res: Response) => {
+router.get('/evv/billing-codes', requireAuth, async (req: Request, res: Response) => {
   try {
     const { state } = req.query;
     
-    let query = sql`SELECT * FROM evv_billing_codes WHERE is_active = true ORDER BY state_code, billing_code`;
+    const conditions = [eq(evvBillingCodes.isActive, true)];
     if (state) {
-      query = sql`SELECT * FROM evv_billing_codes WHERE is_active = true AND state_code = ${state as string} ORDER BY billing_code`;
+      conditions.push(eq(evvBillingCodes.stateCode, state as string));
     }
     
-    const codes = await db.execute(query);
+    const codes = await db
+      .select()
+      .from(evvBillingCodes)
+      .where(and(...conditions))
+      .orderBy(evvBillingCodes.stateCode, evvBillingCodes.billingCode);
+
     res.json({
       success: true,
-      billingCodes: codes.rows,
-      count: codes.rows.length
+      billingCodes: codes,
+      count: codes.length
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching EVV billing codes:', error);
-    res.status(500).json({ error: 'Failed to fetch EVV billing codes', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching EVV billing codes:', error);
+    res.status(500).json({ error: 'Failed to fetch EVV billing codes', details: sanitizeError(error) });
   }
 });
 
-router.get('/evv/states', async (req: Request, res: Response) => {
+router.get('/evv/states', requireAuth, async (req: Request, res: Response) => {
   try {
-    const states = await db.execute(sql`
+    // CATEGORY C — Raw SQL retained: GROUP BY | Tables: evv_billing_codes | Verified: 2026-03-23
+    const states = await typedQuery(sql`
       SELECT DISTINCT state_code, 
         COUNT(*) as code_count
       FROM evv_billing_codes 
@@ -98,11 +120,11 @@ router.get('/evv/states', async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      states: states.rows
+      states: states
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching EVV states:', error);
-    res.status(500).json({ error: 'Failed to fetch EVV states', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching EVV states:', error);
+    res.status(500).json({ error: 'Failed to fetch EVV states', details: sanitizeError(error) });
   }
 });
 
@@ -110,61 +132,65 @@ router.get('/evv/states', async (req: Request, res: Response) => {
 // MULTI-LOCATION ROLLUPS
 // ============================================================================
 
-router.get('/locations', async (req: Request, res: Response) => {
+router.get('/locations', requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req as any).workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     
-    const locations = await db.execute(sql`
-      SELECT bl.*, 
-        e.full_name as manager_name
-      FROM business_locations bl
-      LEFT JOIN employees e ON bl.manager_id = e.id
-      WHERE bl.workspace_id = ${workspaceId} AND bl.is_active = true
-      ORDER BY bl.name
-    `);
+    // Converted to Drizzle ORM: LEFT JOIN → leftJoin
+    const locationsData = await db
+      .select({
+        id: businessLocations.id,
+        workspaceId: businessLocations.workspaceId,
+        name: businessLocations.name,
+        isActive: businessLocations.isActive,
+        managerId: businessLocations.managerId,
+        managerName: sql<string>`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`
+      })
+      .from(businessLocations)
+      .leftJoin(employees, eq(businessLocations.managerId, employees.id))
+      .where(and(
+        eq(businessLocations.workspaceId, workspaceId),
+        eq(businessLocations.isActive, true)
+      ))
+      .orderBy(businessLocations.name);
     
     res.json({
       success: true,
-      locations: locations.rows,
-      count: locations.rows.length
+      locations: locationsData,
+      count: locationsData.length
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching locations:', error);
-    res.status(500).json({ error: 'Failed to fetch locations', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching locations:', error);
+    res.status(500).json({ error: 'Failed to fetch locations', details: sanitizeError(error) });
   }
 });
 
-router.get('/locations/:id/pnl', async (req: Request, res: Response) => {
+router.get('/locations/:id/pnl', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { period } = req.query;
     
-    let query = sql`
-      SELECT * FROM location_pnl_snapshots 
-      WHERE location_id = ${id}
-      ORDER BY period_start DESC
-      LIMIT 12
-    `;
-    
+    const conditions = [eq(locationPnlSnapshots.locationId, id)];
     if (period) {
-      query = sql`
-        SELECT * FROM location_pnl_snapshots 
-        WHERE location_id = ${id} AND period_type = ${period as string}
-        ORDER BY period_start DESC
-        LIMIT 12
-      `;
+      conditions.push(eq(locationPnlSnapshots.periodType, period as string));
     }
     
-    const pnl = await db.execute(query);
-    
+    const snapshots = await db
+      .select()
+      .from(locationPnlSnapshots)
+      .where(and(...conditions))
+      .orderBy(desc(locationPnlSnapshots.periodStart))
+      .limit(12);
+
     res.json({
       success: true,
-      snapshots: pnl.rows,
-      count: pnl.rows.length
+      snapshots,
+      count: snapshots.length
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching location P&L:', error);
-    res.status(500).json({ error: 'Failed to fetch location P&L', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching location P&L:', error);
+    res.status(500).json({ error: 'Failed to fetch location P&L', details: sanitizeError(error) });
   }
 });
 
@@ -172,59 +198,55 @@ router.get('/locations/:id/pnl', async (req: Request, res: Response) => {
 // FINANCIAL WATCHDOG (Reconciliation)
 // ============================================================================
 
-router.get('/reconciliation/runs', async (req: Request, res: Response) => {
+router.get('/reconciliation/runs', requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req as any).workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     
-    const runs = await db.execute(sql`
-      SELECT * FROM reconciliation_runs 
-      WHERE workspace_id = ${workspaceId}
-      ORDER BY started_at DESC
-      LIMIT 20
-    `);
+    const runs = await db
+      .select()
+      .from(reconciliationRuns)
+      .where(eq(reconciliationRuns.workspaceId, workspaceId))
+      .orderBy(desc(reconciliationRuns.startedAt))
+      .limit(20);
     
     res.json({
       success: true,
-      runs: runs.rows,
-      count: runs.rows.length
+      runs,
+      count: runs.length
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching reconciliation runs:', error);
-    res.status(500).json({ error: 'Failed to fetch reconciliation runs', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching reconciliation runs:', error);
+    res.status(500).json({ error: 'Failed to fetch reconciliation runs', details: sanitizeError(error) });
   }
 });
 
-router.get('/reconciliation/findings', async (req: Request, res: Response) => {
+router.get('/reconciliation/findings', requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req as any).workspaceId;
-    const { status, severity } = req.query;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
+    const { status: statusFilter } = req.query;
     
-    let query = sql`
-      SELECT * FROM reconciliation_findings 
-      WHERE workspace_id = ${workspaceId}
-      ORDER BY created_at DESC
-      LIMIT 100
-    `;
-    
-    if (status) {
-      query = sql`
-        SELECT * FROM reconciliation_findings 
-        WHERE workspace_id = ${workspaceId} AND status = ${status as string}
-        ORDER BY created_at DESC
-        LIMIT 100
-      `;
+    const conditions = [eq(reconciliationFindings.workspaceId, workspaceId)];
+    if (statusFilter) {
+      conditions.push(eq(reconciliationFindings.status, statusFilter as string));
     }
     
-    const findings = await db.execute(query);
+    const findings = await db
+      .select()
+      .from(reconciliationFindings)
+      .where(and(...conditions))
+      .orderBy(desc(reconciliationFindings.createdAt))
+      .limit(100);
     
     res.json({
       success: true,
-      findings: findings.rows,
-      count: findings.rows.length
+      findings,
+      count: findings.length
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching reconciliation findings:', error);
-    res.status(500).json({ error: 'Failed to fetch reconciliation findings', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching reconciliation findings:', error);
+    res.status(500).json({ error: 'Failed to fetch reconciliation findings', details: sanitizeError(error) });
   }
 });
 
@@ -232,68 +254,73 @@ router.get('/reconciliation/findings', async (req: Request, res: Response) => {
 // 1099/W-2 TAX CLASSIFICATION
 // ============================================================================
 
-router.get('/tax-classification/history', async (req: Request, res: Response) => {
+router.get('/tax-classification/history', requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req as any).workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const { employeeId, year } = req.query;
     
-    let query = sql`
-      SELECT wtch.*, e.full_name as employee_name
-      FROM worker_tax_classification_history wtch
-      JOIN employees e ON wtch.employee_id = e.id
-      WHERE wtch.workspace_id = ${workspaceId}
-      ORDER BY wtch.created_at DESC
-      LIMIT 100
-    `;
-    
-    if (employeeId) {
-      query = sql`
-        SELECT wtch.*, e.full_name as employee_name
-        FROM worker_tax_classification_history wtch
-        JOIN employees e ON wtch.employee_id = e.id
-        WHERE wtch.workspace_id = ${workspaceId} AND wtch.employee_id = ${employeeId as string}
-        ORDER BY wtch.created_at DESC
-      `;
-    }
-    
-    const history = await db.execute(query);
+    // Converted to Drizzle ORM: LEFT JOIN → leftJoin
+    const history = await db.select({
+      id: (await import('@shared/schema')).workerTaxClassificationHistory.id,
+      employeeId: (await import('@shared/schema')).workerTaxClassificationHistory.employeeId,
+      workspaceId: (await import('@shared/schema')).workerTaxClassificationHistory.workspaceId,
+      taxYear: (await import('@shared/schema')).workerTaxClassificationHistory.taxYear,
+      oldClassification: (await import('@shared/schema')).workerTaxClassificationHistory.oldClassification,
+      newClassification: (await import('@shared/schema')).workerTaxClassificationHistory.newClassification,
+      is1099Eligible: (await import('@shared/schema')).workerTaxClassificationHistory.is1099Eligible,
+      aiConfidence: (await import('@shared/schema')).workerTaxClassificationHistory.aiConfidence,
+      aiReasoning: (await import('@shared/schema')).workerTaxClassificationHistory.aiReasoning,
+      createdAt: (await import('@shared/schema')).workerTaxClassificationHistory.createdAt,
+      employeeName: sql<string>`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`
+    })
+    .from((await import('@shared/schema')).workerTaxClassificationHistory)
+    .join(employees, eq((await import('@shared/schema')).workerTaxClassificationHistory.employeeId, employees.id))
+    .where(and(
+      eq((await import('@shared/schema')).workerTaxClassificationHistory.workspaceId, workspaceId),
+      employeeId ? eq((await import('@shared/schema')).workerTaxClassificationHistory.employeeId, employeeId as string) : undefined
+    ))
+    .orderBy(desc((await import('@shared/schema')).workerTaxClassificationHistory.createdAt))
+    .limit(100);
     
     res.json({
       success: true,
-      history: history.rows,
-      count: history.rows.length
+      history,
+      count: history.length
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching tax classification history:', error);
-    res.status(500).json({ error: 'Failed to fetch tax classification history', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching tax classification history:', error);
+    res.status(500).json({ error: 'Failed to fetch tax classification history', details: sanitizeError(error) });
   }
 });
 
-router.get('/tax-classification/1099-candidates', async (req: Request, res: Response) => {
+router.get('/tax-classification/1099-candidates', requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req as any).workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     const year = new Date().getFullYear();
     
-    const candidates = await db.execute(sql`
-      SELECT DISTINCT ON (e.id) 
-        e.id, e.full_name, e.email, e.employment_type,
+    // CATEGORY C — Raw SQL retained: DISTINCT ON — "DISTINCT ON has no Drizzle equivalent" | Tables: employees, worker_tax_classification_history | Verified: 2026-03-23
+    const candidates = await typedQuery(sql`
+      SELECT DISTINCT ON (e.id)
+        e.id, CONCAT(e.first_name, ' ', e.last_name) AS full_name, e.email, e.worker_type AS employment_type,
         wtch.new_classification, wtch.is_1099_eligible, wtch.ai_confidence, wtch.ai_reasoning
       FROM employees e
       LEFT JOIN worker_tax_classification_history wtch ON e.id = wtch.employee_id AND wtch.tax_year = ${year}
       WHERE e.workspace_id = ${workspaceId}
-        AND (e.employment_type = 'contractor' OR wtch.is_1099_eligible = true)
+        AND (e.worker_type = 'contractor' OR wtch.is_1099_eligible = true)
       ORDER BY e.id, wtch.created_at DESC
     `);
     
     res.json({
       success: true,
-      candidates: candidates.rows,
-      count: candidates.rows.length,
+      candidates: candidates,
+      count: candidates.length,
       taxYear: year
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching 1099 candidates:', error);
-    res.status(500).json({ error: 'Failed to fetch 1099 candidates', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching 1099 candidates:', error);
+    res.status(500).json({ error: 'Failed to fetch 1099 candidates', details: sanitizeError(error) });
   }
 });
 
@@ -301,16 +328,22 @@ router.get('/tax-classification/1099-candidates', async (req: Request, res: Resp
 // PHASE 3 SUMMARY/HEALTH
 // ============================================================================
 
-router.get('/phase3/summary', async (req: Request, res: Response) => {
+router.get('/phase3/summary', requireAuth, async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req as any).workspaceId;
+    const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+        if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
     
     const [templates, evvCodes, locations, reconRuns, taxHistory] = await Promise.all([
-      db.execute(sql`SELECT COUNT(*) as count FROM industry_service_templates WHERE is_active = true`),
-      db.execute(sql`SELECT COUNT(*) as count FROM evv_billing_codes WHERE is_active = true`),
-      db.execute(sql`SELECT COUNT(*) as count FROM business_locations WHERE workspace_id = ${workspaceId} AND is_active = true`),
-      db.execute(sql`SELECT COUNT(*) as count FROM reconciliation_runs WHERE workspace_id = ${workspaceId}`),
-      db.execute(sql`SELECT COUNT(*) as count FROM worker_tax_classification_history WHERE workspace_id = ${workspaceId}`)
+      // CATEGORY C — Raw SQL retained: Count( | Tables: industry_service_templates | Verified: 2026-03-23
+      typedCount(sql`SELECT COUNT(*) as count FROM industry_service_templates WHERE is_active = true`),
+      // CATEGORY C — Raw SQL retained: Count( | Tables: evv_billing_codes | Verified: 2026-03-23
+      typedCount(sql`SELECT COUNT(*) as count FROM evv_billing_codes WHERE is_active = true`),
+      // CATEGORY C — Raw SQL retained: Count( | Tables: business_locations | Verified: 2026-03-23
+      typedCount(sql`SELECT COUNT(*) as count FROM business_locations WHERE workspace_id = ${workspaceId} AND is_active = true`),
+      // CATEGORY C — Raw SQL retained: Count( | Tables: reconciliation_runs | Verified: 2026-03-23
+      typedCount(sql`SELECT COUNT(*) as count FROM reconciliation_runs WHERE workspace_id = ${workspaceId}`),
+      // CATEGORY C — Raw SQL retained: Count( | Tables: worker_tax_classification_history | Verified: 2026-03-23
+      typedCount(sql`SELECT COUNT(*) as count FROM worker_tax_classification_history WHERE workspace_id = ${workspaceId}`)
     ]);
     
     res.json({
@@ -324,9 +357,9 @@ router.get('/phase3/summary', async (req: Request, res: Response) => {
       },
       status: 'Phase 3 Intelligence & Compliance features active'
     });
-  } catch (error: any) {
-    console.error('[Phase3] Error fetching Phase 3 summary:', error);
-    res.status(500).json({ error: 'Failed to fetch Phase 3 summary', details: error.message });
+  } catch (error: unknown) {
+    log.error('[Phase3] Error fetching Phase 3 summary:', error);
+    res.status(500).json({ error: 'Failed to fetch Phase 3 summary', details: sanitizeError(error) });
   }
 });
 

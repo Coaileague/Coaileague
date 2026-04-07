@@ -3,7 +3,7 @@
 
 import { db } from "./db";
 import { users, workspaces, employees, clients, shifts, timeEntries, invoices, invoiceLineItems, payrollRuns, payrollEntries } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 const DEMO_USER_ID = "demo-user-00000000";
 const DEMO_WORKSPACE_ID = "demo-workspace-00000000";
@@ -46,7 +46,7 @@ export async function seedDemoWorkspace() {
   // 1. Create demo user
   const [demoUser] = await db.insert(users).values({
     id: DEMO_USER_ID,
-    email: "demo@shiftsync.app",
+    email: "demo@coaileague.test",
     firstName: "Demo",
     lastName: "User",
     role: "user",
@@ -87,7 +87,7 @@ async function populateDemoData() {
     userId: DEMO_USER_ID, // CRITICAL: Link employee to user for paycheck access
     firstName: "Demo",
     lastName: "User",
-    email: "demo@shiftsync.app",
+    email: "demo@coaileague.test",
     role: "Platform Administrator",
     hourlyRate: "50.00",
     workspaceRole: "org_owner", // FULL ADMIN ACCESS - All features enabled for E2E testing
@@ -99,11 +99,11 @@ async function populateDemoData() {
 
   // 4. Create sample employees (team members)
   const employeeData = [
-    { firstName: "Sarah", lastName: "Johnson", email: "sarah.j@demo.com", role: "Lead Technician", hourlyRate: "75.00", color: "#3b82f6", workspaceRole: "manager" },
-    { firstName: "Michael", lastName: "Chen", email: "michael.c@demo.com", role: "Senior Consultant", hourlyRate: "85.00", color: "#8b5cf6", workspaceRole: "manager" },
-    { firstName: "Emma", lastName: "Williams", email: "emma.w@demo.com", role: "Field Specialist", hourlyRate: "65.00", color: "#ec4899", workspaceRole: "employee" },
-    { firstName: "James", lastName: "Davis", email: "james.d@demo.com", role: "Technician", hourlyRate: "60.00", color: "#10b981", workspaceRole: "employee" },
-    { firstName: "Lisa", lastName: "Martinez", email: "lisa.m@demo.com", role: "Consultant", hourlyRate: "70.00", color: "#f59e0b", workspaceRole: "employee" },
+    { firstName: "Sarah", lastName: "Johnson", email: "sarah.j@demo.com", role: "Lead Technician", hourlyRate: "75.00", color: "#3b82f6", workspaceRole: "manager", is1099Eligible: false },
+    { firstName: "Michael", lastName: "Chen", email: "michael.c@demo.com", role: "Senior Consultant", hourlyRate: "85.00", color: "#8b5cf6", workspaceRole: "manager", is1099Eligible: false },
+    { firstName: "Emma", lastName: "Williams", email: "emma.w@demo.com", role: "Field Specialist", hourlyRate: "65.00", color: "#ec4899", workspaceRole: "employee", is1099Eligible: false },
+    { firstName: "James", lastName: "Davis", email: "james.d@demo.com", role: "Technician", hourlyRate: "60.00", color: "#10b981", workspaceRole: "employee", is1099Eligible: true },
+    { firstName: "Lisa", lastName: "Martinez", email: "lisa.m@demo.com", role: "Consultant", hourlyRate: "70.00", color: "#f59e0b", workspaceRole: "employee", is1099Eligible: true },
   ];
 
   const createdEmployees = [demoUserEmployee]; // Include demo user in employees list
@@ -119,9 +119,9 @@ async function populateDemoData() {
 
   // 4. Create sample clients
   const clientData = [
-    { firstName: "Robert", lastName: "Anderson", company: "TechCorp", email: "robert@techcorp.com", phone: "(555) 111-2222" },
-    { firstName: "Jennifer", lastName: "Thompson", company: "Healthcare Plus", email: "jennifer@healthcareplus.com", phone: "(555) 333-4444" },
-    { firstName: "David", lastName: "Miller", company: "Retail Solutions", email: "david@retailsolutions.com", phone: "(555) 555-6666" },
+    { firstName: "Robert", lastName: "Anderson", company: "TechCorp", email: "robert@techcorp.com", phone: "(555) 111-2222", contractRate: "45.00", coverageType: "business_hours", coverageDays: ["monday","tuesday","wednesday","thursday","friday"], coverageStartTime: "06:00", coverageEndTime: "22:00", minimumStaffing: 2 },
+    { firstName: "Jennifer", lastName: "Thompson", company: "Healthcare Plus", email: "jennifer@healthcareplus.com", phone: "(555) 333-4444", contractRate: "55.00", coverageType: "24_7", minimumStaffing: 3 },
+    { firstName: "David", lastName: "Miller", company: "Retail Solutions", email: "david@retailsolutions.com", phone: "(555) 555-6666", contractRate: "40.00", coverageType: "custom", coverageDays: ["monday","tuesday","wednesday","thursday","friday","saturday"], coverageStartTime: "08:00", coverageEndTime: "20:00", minimumStaffing: 1 },
   ];
 
   const createdClients = [];
@@ -237,23 +237,51 @@ async function populateDemoData() {
     {employeeId: createdEmployees[0].id, clientId: createdClients[1].id, title: "Healthcare", category: "healthcare", startTime: createShiftDate(weekStart, 6, 12), endTime: createShiftDate(weekStart, 6, 20), status: "scheduled"},
   ];
 
+  const clientRateMap = new Map<string, string>();
+  for (const c of createdClients) {
+    clientRateMap.set(c.id, (c as any).contractRate || '40.00');
+  }
+
   const createdShifts = [];
+  let skippedOverlaps = 0;
   for (const shift of shiftsData) {
+    const shiftStart = new Date(shift.startTime);
+    const shiftEnd = new Date(shift.endTime);
+
+    const existingOverlap = await db.select({ id: shifts.id })
+      .from(shifts)
+      .where(and(
+        eq(shifts.workspaceId, DEMO_WORKSPACE_ID),
+        eq(shifts.employeeId, shift.employeeId),
+        sql`${shifts.startTime} < ${shiftEnd}`,
+        sql`${shifts.endTime} > ${shiftStart}`,
+      ))
+      .limit(1);
+
+    if (existingOverlap.length > 0) {
+      skippedOverlaps++;
+      continue;
+    }
+
     const [createdShift] = await db.insert(shifts).values({
       workspaceId: DEMO_WORKSPACE_ID,
       employeeId: shift.employeeId,
       clientId: shift.clientId,
       title: shift.title,
-      category: shift.category as any, // CRITICAL: Set category for colorful theming
+      category: shift.category as any,
       description: `${shift.category.replace('_', ' ')} shift`,
-      startTime: new Date(shift.startTime),
-      endTime: new Date(shift.endTime),
+      startTime: shiftStart,
+      endTime: shiftEnd,
       status: shift.status as any,
       aiGenerated: false,
+      contractRate: clientRateMap.get(shift.clientId) || '40.00',
     }).returning();
     createdShifts.push(createdShift);
   }
 
+  if (skippedOverlaps > 0) {
+    console.log(`⚠️ Skipped ${skippedOverlaps} shifts that would have created double-bookings`);
+  }
   console.log(`✅ Created ${createdShifts.length} CATEGORIZED shifts for current week`);
 
   // 6. Create time entries for completed shifts (5 total)
@@ -346,7 +374,8 @@ async function populateDemoData() {
     taxRate: invoice1TaxRate.toFixed(2),
     taxAmount: invoice1TaxAmount.toFixed(2),
     total: invoice1Total.toFixed(2),
-    platformFee: invoice1PlatformFee.toFixed(2),
+    platformFeePercentage: "10.00",
+    platformFeeAmount: invoice1PlatformFee.toFixed(2),
     businessAmount: invoice1BusinessAmount.toFixed(2),
   } as any).returning();
   const invoice1 = invoice1Result[0];
@@ -381,7 +410,8 @@ async function populateDemoData() {
     taxRate: invoice2TaxRate.toFixed(2),
     taxAmount: invoice2TaxAmount.toFixed(2),
     total: invoice2Total.toFixed(2),
-    platformFee: invoice2PlatformFee.toFixed(2),
+    platformFeePercentage: "10.00",
+    platformFeeAmount: invoice2PlatformFee.toFixed(2),
     businessAmount: invoice2BusinessAmount.toFixed(2),
   } as any).returning();
   const invoice2 = invoice2Result[0];

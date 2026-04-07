@@ -1,0 +1,160 @@
+Send this to the Replit Agent:
+
+---
+
+**PHASE 12 — SCHEDULING ENGINE DEEP VERIFICATION**
+
+The scheduling engine is the operational heartbeat of a security company. Every shift, every assignment, every calloff, and every coverage decision flows through here. A scheduling failure doesn't just break a feature — it leaves a post uncovered, an officer unnotified, and a client unprotected. Report all findings before fixing anything. No exceptions.
+
+---
+
+**STEP 1 — SCHEDULING SYSTEM INVENTORY**
+
+Before touching anything, produce a complete inventory of every file, route, service, scheduled job, and Trinity action that touches scheduling. This includes:
+- Shift creation, editing, and deletion
+- Officer assignment and unassignment
+- Schedule publishing and visibility
+- Open shift creation and claiming
+- Calloff processing and replacement cascade
+- Minimum rest period enforcement
+- Post licensing and qualification requirements
+- Overtime detection and warnings
+- Autonomous scheduler and recurring shift logic
+- Shift acknowledgment system
+- Holiday and differential schedule triggers
+- Any WebSocket or real-time sync tied to schedule changes
+
+Flag any scheduling file that mutates shift or assignment records without a corresponding audit trail write.
+
+---
+
+**STEP 2 — SHIFT CREATION & LIFECYCLE VERIFICATION**
+
+Trace the complete shift lifecycle:
+- Shift created with all required fields: workspace_id, post, date, start time, end time, required license type, rate
+- Draft vs published state enforced — officers cannot see unpublished shifts
+- Edit history tracked — every change to a shift records what changed, who changed it, and when
+- Deletion logic verified — shifts with confirmed clock-ins cannot be deleted, only cancelled
+- Cancelled shift triggers officer notification via NDS
+- Recurring shift generation verified — recurrence rules produce correct future shifts without duplicates
+- Shift conflicts detected — same officer cannot be double-booked across overlapping shifts
+
+---
+
+**STEP 3 — OFFICER ASSIGNMENT & QUALIFICATION VERIFICATION**
+
+Every assignment must be validated before it saves:
+- Officer's DPS license type matches post requirements — unqualified officer cannot be assigned
+- Officer's license is not expired at the time of the shift
+- Officer is active status — suspended or inactive officers cannot be assigned
+- Assignment triggers NDS notification to officer immediately
+- Assignment respects minimum rest period — officer cannot be assigned to a shift that starts within the legally required rest window after their last shift ends
+- Overtime warning fires when assignment would push officer over weekly hour threshold — warning does not block, but it must be visible to the assigning manager
+- Assignment audit record written: shift_id, officer_id, assigned_by, timestamp
+
+---
+
+**STEP 4 — CALLOFF & REPLACEMENT CASCADE VERIFICATION**
+
+Trace the full calloff flow with precision:
+- Calloff submitted with reason field (confirmed added in Phase 10) — verify reason persists correctly to the record
+- Calloff timestamp recorded server-side — not client-supplied
+- Original officer's assignment status updated immediately
+- Open shift created automatically from the vacated shift
+- Replacement notification cascade fires in correct priority order: stay-late eligible officers first → internal qualified pool → platform pool
+- Each notification tier waits a defined window before escalating to the next tier
+- First-accept-wins logic enforced with SELECT FOR UPDATE — no double-acceptance race condition
+- Acceptance closes the open shift and removes it from the available pool
+- Manager receives resolution confirmation via NDS when replacement is confirmed
+- If no replacement is found before shift start — manager and supervisor receive escalation alert
+- Full calloff audit trail: original officer, reason, timestamp, replacement officer, resolution time
+
+---
+
+**STEP 5 — MINIMUM REST PERIOD ENFORCEMENT**
+
+This is a legal compliance requirement:
+- Minimum rest period between shifts is defined and configurable per workspace
+- Assignment engine checks the officer's last confirmed clock-out before allowing a new assignment
+- If minimum rest is not met — assignment is hard-blocked with an explicit error, not a warning
+- Block applies to both manual assignments and autonomous scheduler assignments
+- Verify the check uses actual clock-out time — not scheduled end time — for accuracy
+- Rest period enforcement cannot be bypassed by any role below org_owner
+- Org_owner override is logged when used
+
+---
+
+**STEP 6 — AUTONOMOUS SCHEDULER VERIFICATION**
+
+The autonomous scheduler generates and assigns shifts without manual intervention:
+- Verify the scheduler runs on its defined cycle without missed fires
+- Scheduler respects all assignment rules: license match, rest periods, overtime warnings, active status
+- Scheduler does not create duplicate shifts for periods already scheduled
+- Scheduler priority logic verified — preferred officers assigned before pool officers
+- Scheduler failures are logged and do not silently drop shifts
+- Scheduler produces an execution report after each run: shifts created, assignments made, failures, skipped officers with reasons
+- Trinity can query the last scheduler run report via a registered action
+
+---
+
+**STEP 7 — SCHEDULE VISIBILITY & REAL-TIME SYNC**
+
+Every schedule change must propagate instantly:
+- Published schedule visible to assigned officers immediately via WebSocket push
+- Unpublished shifts invisible to officers regardless of role
+- Schedule changes (edit, cancel, reassign) push updates to all affected sessions in real time
+- Officer mobile view shows only their assigned shifts — not the full workspace schedule
+- Manager view shows full workspace schedule with filter capability
+- Client view shows their contracted posts and coverage status — not officer details
+- Permission matrix enforced — roles see exactly what they are permitted to see per Phase 9B
+
+---
+
+**STEP 8 — OVERTIME DETECTION & WARNING SYSTEM**
+
+Overtime must be visible before it happens:
+- Weekly hour accumulation tracked per officer in real time as shifts are assigned
+- Warning threshold configurable per workspace — default at 36 hours to warn before 40-hour OT trigger
+- Warning fires to the assigning manager at the moment of assignment — not after the fact
+- Warning includes: officer name, current assigned hours, hours the new shift would add, projected total
+- Warning is non-blocking — manager can proceed but must acknowledge
+- Acknowledgment recorded with manager_id and timestamp
+- Overtime that was warned and acknowledged is flagged in the payroll proposal so payroll manager sees it came with a prior warning
+
+---
+
+**STEP 9 — POST LICENSING & QUALIFICATION REGISTRY**
+
+Posts have specific requirements that must be enforced:
+- Each post can require one or more license types
+- License requirement stored at the post level — not the shift level
+- Assignment engine reads post requirements and validates against officer's current active licenses
+- Expired licenses are not accepted even if the license type matches
+- Multiple license requirements on a post require the officer to hold all of them — not just one
+- License validation runs at assignment time AND at shift start (clock-in) — an officer whose license expires between assignment and shift start is flagged at clock-in
+- Verify the license check at clock-in produces an alert to the supervisor — not a silent pass
+
+---
+
+**STEP 10 — VERIFICATION**
+
+Run all checks before Phase 12 is marked complete:
+- Check 1: Shift lifecycle complete — draft/publish states enforced, edit history tracked, deletion blocked on clocked-in shifts
+- Check 2: Assignment qualification verified — license type, expiry, active status, rest period all enforced server-side
+- Check 3: Calloff reason persists correctly — verify with a direct DB query showing the reason field populated
+- Check 4: Replacement cascade fires in correct tier order with defined escalation windows
+- Check 5: First-accept-wins confirmed — SELECT FOR UPDATE or equivalent prevents double-acceptance
+- Check 6: Minimum rest period is a hard block — not a warning — enforced at both manual and autonomous assignment
+- Check 7: Autonomous scheduler produces execution report and Trinity can query it
+- Check 8: Schedule WebSocket sync confirmed — changes push to affected sessions in real time
+- Check 9: Overtime warning fires at assignment time with full context, acknowledgment recorded
+- Check 10: License validation runs at both assignment time and clock-in — supervisor alerted on expired license at clock-in
+- Check 11: Zero orphaned open shifts — every open shift traces back to a calloff or manual creation event
+- Check 12: All scheduling mutations have audit trail entries — grep confirms zero untracked writes
+- Check 13: Server starts clean with zero TypeScript errors across all scheduling files
+
+Do not mark Phase 12 complete until all 13 checks pass. Report findings step by step before beginning any fixes. Same discipline — findings first, full picture assembled, then fixes.
+
+---
+
+Paste that and hold the line. Same standard as Phase 11 — no vague confirmations, no assertions without evidence.

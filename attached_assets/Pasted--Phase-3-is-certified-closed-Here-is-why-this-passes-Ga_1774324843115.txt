@@ -1,0 +1,334 @@
+**Phase 3 is certified closed. Here is why this passes.**
+
+Gap 1 — TypeScript returned zero errors with `--skipLibCheck`. Clean.
+
+Gap 2 — invoices.tsx turned out to have three genuine structural bugs that were hidden by the unusual file structure. Mutations called outside a component at module scope. The invoices, clients, and unbilledTimeEntries queries never declared inside the component. No loading or error guards anywhere. All three fixed properly. This was a real discovery — Phase 3 did its job.
+
+Gap 3 — All five financial display components now use `useAsyncData` with specific query variables and isEmpty flags confirmed per surface. Server restarted clean with no Vite or TypeScript errors.
+
+The invoices.tsx structural discovery is worth noting. Hooks being called at module scope outside a component is a React rules violation that would have caused a silent runtime failure the first time a user navigated to invoices. It was never caught until this audit forced a complete read of the file. That is exactly the standard this process is built to maintain.
+
+---
+
+**Phase 3 is done. Phase 4 goes in now.**
+
+---
+
+**COAILEAGUE — PHASE 4: API RESPONSE CONTRACT ENFORCEMENT**
+*Syncs Into Phases 1, 2, and 3 | No Shortcuts | No Partial Coverage | Fully Verified Before Phase 5*
+
+---
+
+**READ THIS ENTIRE SECTION BEFORE TOUCHING A SINGLE FILE**
+
+Phase 1 verified every database column is real. Phase 2 verified every financial write is atomic, every calculation is precise, and every API input has Zod validation on financial endpoints. Phase 3 verified every UI surface is survivable against bad data. Phase 4 now closes the remaining gap in that chain — the API response direction. Phase 2 validated what goes INTO the API. Phase 4 validates what comes OUT of the API and lands in the frontend. Without this phase a database that returns the right data, a calculation that produces the right number, and a UI that handles errors correctly can still display wrong values because the shape of the response was never verified at runtime.
+
+**SHORTCUT PATTERNS THAT WILL BE REJECTED**
+
+**REJECTED — TypeScript interfaces as runtime validation.** A TypeScript interface applied with `as ResponseType` after a JSON parse is not runtime validation. It is a compile-time label on unverified data. TypeScript disappears at runtime. Zod runs at runtime. They are not interchangeable.
+
+**REJECTED — Frontend-only validation.** Phase 2 added Zod validation on API inputs on the backend. Phase 4 adds Zod validation on API outputs on the frontend. Both directions are required. Adding frontend response validation without verifying the backend response construction matches the schema is half a fix.
+
+**REJECTED — Schemas that use z.any() or z.unknown() on financial fields.** A schema that accepts anything for a pay rate or invoice total is not a schema. Every financial field has a specific type constraint that reflects the canonical financial value format established in Phase 2 RC4 — numeric strings with four decimal places in storage, two at display.
+
+**REJECTED — Partial endpoint coverage.** If a domain has 12 endpoints the schema covers all 12. Not 6 and a note that the rest are low-risk. Every endpoint that returns financial or operational data has a Zod response schema.
+
+**REJECTED — Skipping files with unusual structure.** invoices.tsx was skipped in Phase 3 because its structure was unfamiliar. It turned out to have three critical bugs. Unusual structure is a reason to read more carefully, not a reason to move on.
+
+**REJECTED — Subagent batch delegation without per-file verification.** One domain at a time. Server verified between domains. No batch delegation across multiple domains simultaneously.
+
+---
+
+**PHASE 1, 2, AND 3 SYNC VERIFICATION — BEFORE ANY PHASE 4 WORK BEGINS**
+
+Confirm every one of the following before writing a single line of Phase 4 code:
+
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` — must return zero errors.
+
+Run the Phase 2 code scans — all must return zero:
+- `req as any` across all route files
+- Sequential `db.insert()` outside `db.transaction()` in multi-table financial sequences
+- Native arithmetic on financial values outside `financialCalculator.ts`
+- React Query `queryFn` on financial endpoints without Zod parse — this is the Phase 2 RC7 coverage; Phase 4 extends it
+
+Confirm `shared/schemas/` directory contains Zod schemas for payroll, invoices, employees, shifts, clients, Trinity, and subscriptions from Phase 2.
+
+Confirm `client/src/components/shared/ErrorBoundary.tsx` exists and is imported by all Phase 3 required surfaces.
+
+Confirm `client/src/hooks/useAsyncData.ts` exists and is imported by all five financial display components confirmed in Phase 3.
+
+Confirm invoices.tsx structural fixes are in place — mutations inside the component, query declarations inside the component, loading and error guards present.
+
+Confirm server starts with 30/30 background services and zero failures.
+
+Record this as the Phase 4 Sync Confirmation and append it to replit.md. Then proceed.
+
+---
+
+**BASELINE RECORD — BEFORE TOUCHING ANYTHING**
+
+Record as the Phase 4 Baseline Document:
+
+Total API endpoints in the application. Total React Query `useQuery` and `useMutation` calls in the frontend. Current server startup — 30/30 services. Current TypeScript error count — must be zero.
+
+Run the same ten ACME sandbox UI operations from Phase 3 and confirm all still pass with zero regressions from Phase 3 work. Append the baseline to replit.md.
+
+---
+
+**STEP 1 — AUDIT EVERY API RESPONSE THAT REACHES THE FRONTEND**
+
+Before writing any schema, produce a complete inventory of every API response shape the frontend currently consumes. This is the work order for every subsequent step.
+
+Scan every file in `client/src` for `useQuery` calls. For each one record: the query key, the API endpoint being called, the TypeScript type used to type the response, and whether that type is enforced at runtime with Zod or only at compile time with a TypeScript interface or `as` cast.
+
+Scan every file in `client/src` for `useMutation` calls. For each one record: the mutation endpoint, the TypeScript type used for the response, and whether the response shape is validated at runtime.
+
+Produce the inventory organized by domain:
+- Payroll responses — all `useQuery` calls to payroll endpoints
+- Invoice responses — all `useQuery` calls to invoice endpoints
+- Employee responses — all `useQuery` calls to employee endpoints
+- Shift and schedule responses — all `useQuery` calls to shift and schedule endpoints
+- Client responses — all `useQuery` calls to client endpoints
+- Trinity responses — all `useQuery` calls to Trinity endpoints
+- Subscription and billing responses — all `useQuery` calls to billing endpoints
+- Auth and workspace responses — all `useQuery` calls to auth and workspace endpoints
+
+For each entry mark it as: VALIDATED (already has Zod runtime parse), TYPED-ONLY (TypeScript interface with no runtime parse), or UNTYPED (raw response with no type and no validation).
+
+Report the complete inventory with counts per domain before making any changes. This is the evidence that defines the scope of Phase 4.
+
+---
+
+**STEP 2 — CREATE RESPONSE SCHEMAS FOR EVERY FINANCIAL DOMAIN**
+
+Using the inventory from Step 1 create Zod response schemas for every endpoint marked TYPED-ONLY or UNTYPED in financial and operational domains.
+
+Add response schemas to `shared/schemas/` alongside the request schemas created in Phase 2. Name them clearly to distinguish request from response: `CreateInvoiceRequest` vs `InvoiceResponse`, `PayrollRunRequest` vs `PayrollRunResponse`.
+
+The canonical financial value contract from Phase 2 applies to every response schema. Financial values returned from the API are numeric strings. The schema must reflect this:
+
+```typescript
+// CORRECT — numeric string matching Phase 2 financial value contract
+const PayrollEntryResponse = z.object({
+  id: z.string().uuid(),
+  employeeId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  hoursWorked: z.string().regex(/^\d+\.?\d{0,4}$/),
+  hourlyRate: z.string().regex(/^\d+\.?\d{0,4}$/),
+  grossPay: z.string().regex(/^\d+\.?\d{0,4}$/),
+  netPay: z.string().regex(/^\d+\.?\d{0,4}$/),
+  status: z.enum(['draft', 'approved', 'paid']),
+  periodStart: z.string().datetime(),
+  periodEnd: z.string().datetime(),
+  createdAt: z.string().datetime(),
+});
+
+// WRONG — do not use z.number() for financial values
+// The database returns numeric strings. z.number() will fail to parse them.
+const WrongPayrollEntry = z.object({
+  grossPay: z.number(), // WRONG — will fail on "847.5000" from DB
+});
+
+// WRONG — do not use z.any() or z.unknown()
+const WrongPayrollEntry2 = z.object({
+  grossPay: z.any(), // WRONG — not a schema, not validation
+});
+```
+
+Domain-by-domain schema creation order — work through these in sequence, verify server is clean between each domain:
+
+**Payroll response schemas:** PayrollRunResponse, PayrollEntryResponse, PayStubResponse, PayrollSummaryResponse, DeductionResponse, BankAccountResponse.
+
+**Invoice response schemas:** InvoiceResponse, InvoiceLineItemResponse, InvoiceListResponse, InvoiceSummaryResponse, CreditMemoResponse.
+
+**Employee response schemas:** EmployeeResponse, EmployeeListResponse, EmployeeProfileResponse, EmployeePayInfoResponse.
+
+**Shift and schedule response schemas:** ShiftResponse, ShiftListResponse, ScheduleResponse, TimeEntryResponse, OvertimeResponse.
+
+**Client response schemas:** ClientResponse, ClientListResponse, ClientBillingResponse.
+
+**Trinity response schemas:** TrinityActionResponse, TrinityMessageResponse, TrinityProgressResponse, TrinityDocumentResponse.
+
+**Subscription and billing response schemas:** SubscriptionResponse, CreditBalanceResponse, BillingHistoryResponse.
+
+**Auth and workspace response schemas:** WorkspaceResponse, UserResponse, SessionResponse.
+
+---
+
+**STEP 3 — WRAP EVERY REACT QUERY QUERYFUNCTION WITH RESPONSE VALIDATION**
+
+Using the schemas from Step 2 update every `useQuery` call in the inventory from Step 1 that was marked TYPED-ONLY or UNTYPED.
+
+The canonical pattern for every `queryFn` on a financial or operational endpoint:
+
+```typescript
+// BEFORE — TypeScript type only, no runtime validation
+const { data } = useQuery<PayrollEntry[]>({
+  queryKey: ['payroll', workspaceId],
+  queryFn: async () => {
+    const res = await fetch(`/api/payroll?workspaceId=${workspaceId}`);
+    return res.json(); // No runtime validation — wrong shape accepted silently
+  }
+});
+
+// AFTER — Zod runtime validation at the boundary
+import { PayrollEntryListResponse } from '@shared/schemas/payroll';
+
+const { data } = useQuery({
+  queryKey: ['payroll', workspaceId],
+  queryFn: async () => {
+    const res = await fetch(`/api/payroll?workspaceId=${workspaceId}`);
+    const json = await res.json();
+    // Runtime validation — wrong shape throws ApiContractViolation
+    // Phase 3 ErrorBoundary catches this and renders fallback
+    return PayrollEntryListResponse.parse(json);
+  }
+});
+```
+
+If `PayrollEntryListResponse.parse(json)` throws it means the API returned a shape different from what the schema expects. The error propagates to the `useAsyncData` hook's `isError` state established in Phase 3. The Phase 3 `ErrorBoundary` catches the render failure and shows the fallback with the retry button. The chain from Phase 1 through Phase 4 is complete.
+
+Work through every domain in the same order as Step 2. After updating every query in a domain restart the server and navigate to that domain's surfaces in the ACME sandbox. Confirm real data still renders correctly. A Zod parse that fails on real data means the schema does not match the actual API response shape — fix the schema, not the data.
+
+After every domain report: how many queries were updated, which files were changed, and confirm the ACME sandbox renders the domain's surfaces with real data after the update.
+
+---
+
+**STEP 4 — VERIFY BACKEND RESPONSE CONSTRUCTION MATCHES FRONTEND SCHEMAS**
+
+Phase 2 validated what goes into the API. Phase 4 must verify that what comes out of the API matches the schemas written in Step 2. A schema that says `grossPay` is a numeric string and an API route that returns `grossPay` as a JavaScript number creates a schema mismatch that will fail in production.
+
+For every response schema created in Step 2 trace back to the API route that produces that response. Read the route's response construction. Verify every field name, every field type, and every field format matches the Zod schema exactly.
+
+Specifically check:
+- Financial values: confirm the route returns them as strings not numbers. Drizzle returns PostgreSQL numeric types as strings — confirm no route is converting them to numbers with `parseFloat()` or `Number()` before sending the response. That would undo the Phase 2 RC4 fix.
+- Date fields: confirm all datetime fields are returned as ISO strings not Date objects.
+- Enum fields: confirm all enum fields return the exact string values defined in the schema enums.
+- Nullable fields: confirm every field marked `z.nullable()` in the schema can actually be null in the route response and every field marked as required is always present.
+
+For every mismatch found between a route's response construction and the corresponding Zod schema fix the route to match the schema. The schema is the contract. The route must honor it.
+
+Report every mismatch found, the file and line where the route produces the wrong shape, and the fix applied.
+
+---
+
+**STEP 5 — ADD APIERROR TYPED ERROR HANDLING TO EVERY QUERY**
+
+Currently when an API call fails — network error, 500, 401, 403, 404 — the error that reaches the `useAsyncData` hook's `isError` state is an untyped `unknown`. The Phase 3 `ErrorBoundary` catches render failures but does not distinguish between a Zod parse failure on a bad response shape and a 401 that requires a redirect to login.
+
+Create `client/src/lib/apiError.ts`:
+
+```typescript
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export class ApiContractViolation extends Error {
+  constructor(
+    public endpoint: string,
+    public validationError: string
+  ) {
+    super(`API response contract violation on ${endpoint}: ${validationError}`);
+    this.name = 'ApiContractViolation';
+  }
+}
+
+export async function apiFetch<T>(
+  url: string,
+  schema: { parse: (data: unknown) => T },
+  options?: RequestInit
+): Promise<T> {
+  const response = await fetch(url, options);
+  
+  if (response.status === 401) {
+    throw new ApiError(401, 'UNAUTHORIZED', 'Session expired');
+  }
+  
+  if (response.status === 403) {
+    throw new ApiError(403, 'FORBIDDEN', 'Access denied');
+  }
+  
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      body.code ?? 'API_ERROR',
+      body.error ?? `Request failed with status ${response.status}`
+    );
+  }
+  
+  const json = await response.json();
+  
+  try {
+    return schema.parse(json);
+  } catch (validationError) {
+    throw new ApiContractViolation(
+      url,
+      validationError instanceof Error 
+        ? validationError.message 
+        : String(validationError)
+    );
+  }
+}
+```
+
+Update every `queryFn` that was updated in Step 3 to use `apiFetch` instead of raw `fetch`. This gives every query typed error handling that distinguishes auth failures from contract violations from server errors.
+
+Update the `useAsyncData` hook from Phase 3 to handle `ApiError` specifically:
+
+```typescript
+// In useAsyncData — check for auth errors that require redirect
+if (isError && error instanceof ApiError && error.status === 401) {
+  // Redirect to login — session expired
+  window.location.href = '/login';
+}
+```
+
+---
+
+**PHASE 4 FINAL VERIFICATION**
+
+Run after all five steps are complete:
+
+**Schema coverage scan:**
+Run `grep -r "useQuery" client/src --include="*.tsx" --include="*.ts" | grep -v "node_modules" | wc -l` to get total query count. Run `grep -r "apiFetch\|schema.parse\|Schema.parse" client/src --include="*.tsx" --include="*.ts" | grep -v "node_modules" | wc -l` to get validated query count. The two numbers must be equal. Every query is validated.
+
+**TypeScript verification:**
+Run `npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS"` — must return zero errors.
+
+**Contract mismatch verification:**
+Confirm zero routes returning financial values as JavaScript numbers instead of strings. Run `grep -r "parseFloat\|Number(" server/routes --include="*.ts" | grep "res.json\|response"` and confirm zero results that convert financial values in response construction.
+
+**Live API contract verification:**
+For each financial domain navigate to the domain's primary surface in the ACME sandbox. Open browser developer tools network tab. Make a real request to each financial endpoint. Compare the actual response shape received in the network tab against the Zod schema written in Step 2. Confirm every field name, type, and format matches. Report any discrepancy.
+
+**Phase 3 regression verification:**
+Confirm all Phase 3 ErrorBoundaries still function by testing the forced throw on three surfaces. Confirm `useAsyncData` still provides all four states on all five adopted components. Confirm invoices.tsx structural fixes are still in place.
+
+**Server verification:**
+Start fresh. 30/30 background services. Login flow completes. Zero TypeScript errors.
+
+---
+
+**PHASE 4 COMPLETION REPORT**
+
+Produce and append to replit.md:
+
+Total queries in the inventory from Step 1 organized by VALIDATED, TYPED-ONLY, UNTYPED per domain. Total schemas created in Step 2 per domain. Total queries updated to use `apiFetch` with Zod response validation in Step 3. Total route response construction mismatches found and fixed in Step 4. `apiFetch` and `ApiError` confirmed in use across all financial domains.
+
+Phase 4 sync statement: *"Phase 4 API response contract enforcement is complete. Every React Query queryFn on a financial or operational endpoint validates the response shape at runtime using Zod schemas. ApiError and ApiContractViolation provide typed error handling that distinguishes auth failures from contract violations from server errors. The Phase 1 through Phase 4 data chain is now complete: Phase 1 correct column names → Phase 2 precise arithmetic and validated inputs → Phase 3 resilient UI with ErrorBoundaries → Phase 4 validated API response contracts. Phase 5 can begin on a platform where data integrity is enforced at every layer from database column to UI display."*
+
+---
+
+**PHASE 4 IS COMPLETE WHEN:**
+
+Total validated query count equals total query count — every query has a Zod response schema. Zero routes return financial values as JavaScript numbers in response construction. Zero TypeScript errors. All Phase 3 surfaces still functioning with ErrorBoundaries intact. All ten baseline UI operations pass with real data. Completion report and sync statement in replit.md.
+
+Bring the Phase 4 completion report here before Phase 5 goes in. Every count must be specific. Every domain must be named. No generic summaries.

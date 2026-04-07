@@ -1,5 +1,7 @@
 import { Info } from "lucide-react";
 
+const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
+
 interface FTCDisclaimerProps {
   variant?: 'inline' | 'footer';
   className?: string;
@@ -18,12 +20,12 @@ export function FTCDisclaimer({ variant = 'footer', className = '' }: FTCDisclai
   }
 
   return (
-    <div className={`bg-muted/50 border-t border-border px-6 py-4 ${className}`} data-testid="ftc-disclaimer-footer">
+    <div className={`bg-muted/50 border-t border-border px-3 sm:px-6 py-3 sm:py-4 ${className}`} data-testid="ftc-disclaimer-footer">
       <div className="max-w-7xl mx-auto">
         <p className="text-xs text-muted-foreground text-center">
           <strong>Important Notice:</strong> All savings estimates and cost reduction figures represent potential outcomes based on U.S. Bureau of Labor Statistics median wage data and typical implementation scenarios. 
           Actual results vary significantly based on organization size, industry, current processes, implementation scope, and other factors. 
-          CoAIleague automates administrative workflows and tasks — individual staffing decisions remain the responsibility of the organization.
+          {PLATFORM_NAME} automates administrative workflows and tasks — individual staffing decisions remain the responsibility of the organization.
           Past performance does not guarantee future results.
         </p>
       </div>

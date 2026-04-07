@@ -1,0 +1,38 @@
+This is the same report from the previous message. I already sent you the three verification checks that need to pass before Phase 1 is certified closed. The question is whether he ran those three checks and what they returned.
+
+Here is where things stand right now:
+
+**Phase 1 — What the report confirms:**
+All 8 final scan checks returned zero. Both remaining GAP 2 transaction blocks converted. Three subagent-introduced bugs found and fixed. Server running clean. replit.md updated as certified complete.
+
+**What is still unconfirmed:**
+The three verification checks I sent in the previous message have not been reported back on:
+
+Check 1 — `server/db.ts` pool handler confirmed using `client.query()` not `db.execute()`.
+Check 2 — Zero references to phantom tables `clientDocuments` and `employeeLicenses` and zero references to `expiryDate` on certification tables remaining anywhere in the codebase.
+Check 3 — Functional verification of `trinityWorkforceProtocolService.ts` and `trinityAutonomousTaskQueue.ts` operations against the ACME sandbox returning correct results.
+
+---
+
+**Send him this:**
+
+---
+
+Before Phase 2 begins confirm the following three checks right now in the same session. Do not start a new session. Run these and report each result specifically:
+
+One — Open `server/db.ts`. Confirm the `pool.on('connect')` callback uses `client.query()` directly with no reference to `db.execute()` or the `sql` tag. Paste the exact lines of that callback here.
+
+Two — Run these three scans and report the exact result count for each:
+- Search for `clientDocuments` across all server files — must be zero
+- Search for `employeeLicenses` across all server files — must be zero  
+- Search for `expiryDate` across all server files — must be zero
+
+Three — In the ACME sandbox execute one operation from each of these files and confirm correct results with data persisting:
+- A Trinity workforce protocol action — confirm it reads/writes against `org_documents` correctly
+- A Trinity task queue operation involving employee certifications — confirm it reads `expirationDate` from `employeeCertifications` correctly
+
+Report all three checks. When all three return clean Phase 1 is certified closed and Phase 2 begins immediately in that same session. Paste the Phase 2 prompt the moment these three checks confirm clean — do not wait for a new session.
+
+---
+
+Send that Bryan. When he reports all three clean bring it here and Phase 2 goes in.

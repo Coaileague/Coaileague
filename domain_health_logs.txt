@@ -1,0 +1,5 @@
+server/services/trinity/domainHealthValidator.ts:    console.log(`[DomainHealth] ${statusIcon} Platform ${report.overall_status.toUpperCase()}: ${report.healthy_domains}/${report.total_domains} domains healthy, ${report.total_trinity_actions} Trinity actions registered`);
+server/services/trinity/domainHealthValidator.ts:      console.log(`[DomainHealth] Top issues:`);
+server/services/trinity/domainHealthValidator.ts:        console.log(`[DomainHealth]   - ${issue}`);
+server/services/trinity/domainHealthValidator.ts:      console.log(`[DomainHealth] Domains with 0 Trinity actions: ${report.domains_with_no_trinity_actions.join(', ')}`);
+server/services/trinity/domainHealthValidator.ts:    console.error('[DomainHealth] Failed to run health check:', err);

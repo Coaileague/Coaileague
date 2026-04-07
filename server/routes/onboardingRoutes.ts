@@ -14,12 +14,34 @@
  * - POST /api/onboarding/events - Process system event
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { onboardingPipelineService, type PipelineStatus } from '../services/onboardingPipelineService';
 import { isFeatureEnabled } from '@shared/platformConfig';
+import { PLATFORM } from '../config/platformConfig';
 import { z } from 'zod';
+import { requireAuth } from '../auth';
+import { signupLimiter } from '../middleware/rateLimiter';
 
 export const onboardingRouter = Router();
+
+onboardingRouter.use(requireAuth);
+
+const bulkImportLocks = new Map<string, { userId: string; startedAt: number }>();
+const BULK_IMPORT_LOCK_TTL_MS = 10 * 60 * 1000;
+
+function acquireBulkImportLock(workspaceId: string, userId: string): { acquired: boolean; holder?: string } {
+  const existing = bulkImportLocks.get(workspaceId);
+  if (existing && Date.now() - existing.startedAt < BULK_IMPORT_LOCK_TTL_MS && existing.userId !== userId) {
+    return { acquired: false, holder: existing.userId };
+  }
+  bulkImportLocks.set(workspaceId, { userId, startedAt: Date.now() });
+  return { acquired: true };
+}
+
+function releaseBulkImportLock(workspaceId: string) {
+  bulkImportLocks.delete(workspaceId);
+}
 
 const ensureOnboardingEnabled = (req: any, res: any, next: any) => {
   if (!isFeatureEnabled('enableOnboardingPipeline')) {
@@ -32,9 +54,9 @@ const ensureOnboardingEnabled = (req: any, res: any, next: any) => {
 };
 
 const requireWorkspace = (req: any, res: any, next: any) => {
-  const workspaceId = req.session?.workspaceId;
+  const workspaceId = req.workspaceId || req.user?.workspaceId || req.session?.workspaceId;
   if (!workspaceId) {
-    return res.status(401).json({ error: 'No workspace selected' });
+    return res.status(403).json({ error: 'No workspace selected' });
   }
   req.workspaceId = workspaceId;
   next();
@@ -48,9 +70,9 @@ onboardingRouter.get('/progress', ensureOnboardingEnabled, requireWorkspace, asy
       success: true,
       data: progress,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error getting progress:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error getting progress:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -63,9 +85,9 @@ onboardingRouter.get('/tasks', ensureOnboardingEnabled, requireWorkspace, async 
       tasks,
       count: tasks.length,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error getting tasks:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error getting tasks:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -89,9 +111,9 @@ onboardingRouter.post('/tasks/:taskId/complete', ensureOnboardingEnabled, requir
       message: 'Task completed successfully',
       data: progress,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error completing task:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error completing task:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -115,9 +137,9 @@ onboardingRouter.post('/tasks/:taskId/progress', ensureOnboardingEnabled, requir
       message: 'Task progress updated',
       task,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error updating progress:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error updating progress:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -132,9 +154,9 @@ onboardingRouter.post('/tasks/:taskId/skip', ensureOnboardingEnabled, requireWor
       message: 'Task skipped',
       task,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error skipping task:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error skipping task:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -167,13 +189,17 @@ onboardingRouter.post('/pipeline/status', ensureOnboardingEnabled, requireWorksp
       message: `Pipeline status updated to ${status}`,
       pipelineStatus: workspace.pipelineStatus,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error updating pipeline status:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error updating pipeline status:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
-onboardingRouter.post('/trial/start', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
+// OMEGA-L1: signupLimiter (3/hr per IP) caps trial workspace provisioning at the route level.
+// Applied here (inside the auth-protected onboarding router) because the route itself
+// requires an authenticated session — rate-limiting unauthenticated requests is handled
+// by the auth layer (401 on missing session) which already prevents abuse.
+onboardingRouter.post('/trial/start', signupLimiter, ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
   try {
     const workspace = await onboardingPipelineService.startTrial(req.workspaceId);
     
@@ -184,9 +210,9 @@ onboardingRouter.post('/trial/start', ensureOnboardingEnabled, requireWorkspace,
       trialEndsAt: workspace.trialEndsAt,
       trialDays: workspace.trialDays,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error starting trial:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error starting trial:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -199,9 +225,9 @@ onboardingRouter.post('/initialize', ensureOnboardingEnabled, requireWorkspace, 
       message: 'Onboarding initialized',
       data: progress,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error initializing:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error initializing:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -214,9 +240,9 @@ onboardingRouter.get('/rewards', ensureOnboardingEnabled, requireWorkspace, asyn
       rewards,
       count: rewards.length,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error getting rewards:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error getting rewards:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -235,17 +261,17 @@ onboardingRouter.post('/rewards/:rewardId/apply', ensureOnboardingEnabled, requi
       message: 'Reward applied successfully',
       reward,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error applying reward:', error);
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error applying reward:', error);
     
-    if (error.message.includes('expired')) {
-      return res.status(400).json({ error: error.message });
+    if (sanitizeError(error).includes('expired')) {
+      return res.status(400).json({ error: sanitizeError(error) });
     }
-    if (error.message.includes('not found')) {
-      return res.status(404).json({ error: error.message });
+    if (sanitizeError(error).includes('not found')) {
+      return res.status(404).json({ error: sanitizeError(error) });
     }
     
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -258,9 +284,9 @@ onboardingRouter.post('/ai-tasks/generate', ensureOnboardingEnabled, requireWork
       message: `Generated ${tasks.length} personalized tasks`,
       tasks,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error generating AI tasks:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error generating AI tasks:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -283,9 +309,9 @@ onboardingRouter.post('/events', ensureOnboardingEnabled, requireWorkspace, asyn
       success: true,
       message: `Event ${eventType} processed`,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Error processing event:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Error processing event:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -296,6 +322,9 @@ onboardingRouter.post('/events', ensureOnboardingEnabled, requireWorkspace, asyn
 import { onboardingOrchestrator, type OnboardingSource } from '../services/ai-brain/subagents/onboardingOrchestrator';
 import { dataMigrationAgent } from '../services/ai-brain/subagents/dataMigrationAgent';
 import { gamificationActivationAgent } from '../services/ai-brain/subagents/gamificationActivationAgent';
+import { createLogger } from '../lib/logger';
+const log = createLogger('OnboardingRoutes');
+
 
 const dataImportSourceSchema = z.object({
   type: z.enum(['pdf', 'excel', 'csv', 'manual', 'bulk_text']),
@@ -320,7 +349,7 @@ const aiOnboardingSchema = z.object({
 onboardingRouter.post('/ai/start', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
   try {
     const { sources, options } = aiOnboardingSchema.parse(req.body);
-    const userId = req.session?.userId;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -337,9 +366,9 @@ onboardingRouter.post('/ai/start', ensureOnboardingEnabled, requireWorkspace, as
       success: result.success,
       data: result,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] AI onboarding error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] AI onboarding error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -351,9 +380,9 @@ onboardingRouter.get('/ai/status', ensureOnboardingEnabled, requireWorkspace, as
       success: true,
       data: status,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Status error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Status error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -417,9 +446,9 @@ onboardingRouter.post('/ai/extract', ensureOnboardingEnabled, requireWorkspace, 
         validation,
       },
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Extract error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Extract error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -435,39 +464,48 @@ const importDataSchema = z.object({
 onboardingRouter.post('/ai/import', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
   try {
     const { data, skipDuplicates } = importDataSchema.parse(req.body);
-    const userId = req.session?.userId;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const result = await dataMigrationAgent.importData({
-      workspaceId: req.workspaceId,
-      userId,
-      data: {
-        employees: data.employees || [],
-        teams: data.teams || [],
-        schedules: data.schedules || [],
-        confidence: 1,
-        warnings: [],
-        errors: [],
-      },
-      skipDuplicates: skipDuplicates ?? true,
-    });
+    const lockResult = acquireBulkImportLock(req.workspaceId, userId);
+    if (!lockResult.acquired) {
+      return res.status(409).json({ error: "A data import is already in progress for this workspace", lockedBy: lockResult.holder });
+    }
 
-    res.json({
-      success: result.success,
-      data: result,
-    });
-  } catch (error: any) {
-    console.error('[Onboarding] Import error:', error);
-    res.status(500).json({ error: error.message });
+    try {
+      const result = await dataMigrationAgent.importData({
+        workspaceId: req.workspaceId,
+        userId,
+        data: {
+          employees: data.employees || [],
+          teams: data.teams || [],
+          schedules: data.schedules || [],
+          confidence: 1,
+          warnings: [],
+          errors: [],
+        },
+        skipDuplicates: skipDuplicates ?? true,
+      });
+
+      res.json({
+        success: result.success,
+        data: result,
+      });
+    } finally {
+      releaseBulkImportLock(req.workspaceId);
+    }
+  } catch (error: unknown) {
+    log.error('[Onboarding] Import error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 onboardingRouter.post('/ai/gamification/activate', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -487,9 +525,9 @@ onboardingRouter.post('/ai/gamification/activate', ensureOnboardingEnabled, requ
       success: result.success,
       data: result,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Gamification activation error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Gamification activation error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -501,9 +539,9 @@ onboardingRouter.get('/ai/automation-gates', ensureOnboardingEnabled, requireWor
       success: true,
       data: status,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Automation gates error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Automation gates error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -515,14 +553,14 @@ onboardingRouter.get('/ai/automation-gates', ensureOnboardingEnabled, requireWor
 onboardingRouter.get('/setup-guide', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
   try {
     const workspaceId = req.workspaceId;
-    const userId = req.session?.userId;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     const userRole = req.session?.platformRole || req.session?.workspaceRole || 'employee';
     
     const progress = await onboardingPipelineService.getProgress(workspaceId);
     
     const roleHierarchy: Record<string, number> = {
       root_admin: 100, deputy_admin: 90, sysop: 80, support: 70, auditor: 60,
-      billing_admin: 55, business_owner: 50, org_admin: 45, manager: 40,
+      billing_admin: 55, business_owner: 50, co_owner: 45, manager: 40,
       supervisor: 30, team_lead: 25, employee: 10, contractor: 5, guest: 1
     };
     const userRoleLevel = roleHierarchy[userRole] || 10;
@@ -617,7 +655,7 @@ onboardingRouter.get('/setup-guide', ensureOnboardingEnabled, requireWorkspace, 
       `Great progress! Trinity is ready to help.`,
     ];
     const trinityGreeting = completionPercent >= 100 
-      ? `All set! You've unlocked the full CoAIleague experience.`
+      ? `All set! You've unlocked the full ${PLATFORM.name} experience.`
       : greetings[Math.min(Math.floor(completionPercent / 25), greetings.length - 1)];
     
     res.json({
@@ -627,11 +665,15 @@ onboardingRouter.get('/setup-guide', ensureOnboardingEnabled, requireWorkspace, 
       completionPercent,
       trinityGreeting,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Setup guide error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Setup guide error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
+
+import { db } from '../db';
+import { and, eq } from 'drizzle-orm';
+import { orgOnboardingTasks } from '@shared/schema';
 
 /**
  * POST /api/onboarding/complete-task/:taskId
@@ -640,7 +682,8 @@ onboardingRouter.get('/setup-guide', ensureOnboardingEnabled, requireWorkspace, 
 onboardingRouter.post('/complete-task/:taskId', ensureOnboardingEnabled, requireWorkspace, async (req: any, res) => {
   try {
     const { taskId } = req.params;
-    const userId = req.session?.userId;
+    const workspaceId = req.workspaceId;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     
     const taskMapping: Record<string, string> = {
       'company_profile': 'step1CompanyInfo',
@@ -652,9 +695,21 @@ onboardingRouter.post('/complete-task/:taskId', ensureOnboardingEnabled, require
     };
     
     const mappedTaskId = taskMapping[taskId] || taskId;
+
+    // TRACE PROTOCOL V2: Workspace isolation check for task completion
+    const task = await db.query.orgOnboardingTasks.findFirst({
+      where: and(
+        eq(orgOnboardingTasks.id, mappedTaskId),
+        eq(orgOnboardingTasks.workspaceId, workspaceId)
+      )
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found in this workspace" });
+    }
     
     const progress = await onboardingPipelineService.completeTask(
-      req.workspaceId,
+      workspaceId,
       mappedTaskId,
       userId
     );
@@ -664,8 +719,99 @@ onboardingRouter.post('/complete-task/:taskId', ensureOnboardingEnabled, require
       message: 'Task completed',
       data: progress,
     });
-  } catch (error: any) {
-    console.error('[Onboarding] Complete task error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Complete task error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+const ONBOARDING_PROGRESS_KEY = 'create_org_progress';
+
+const createOrgProgressSchema = z.object({
+  currentStep: z.number().min(0),
+  formData: z.record(z.any()),
+  completedSteps: z.array(z.number()),
+  skippedSteps: z.array(z.number()),
+});
+
+onboardingRouter.get('/create-org/progress', async (req: any, res) => {
+  try {
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { db } = await import('../db');
+    const { users } = await import('@shared/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    
+    const metadata = (user as any)?.metadata || {};
+    const progress = metadata[ONBOARDING_PROGRESS_KEY] || null;
+
+    res.json({
+      success: true,
+      data: progress,
+    });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Get create-org progress error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+onboardingRouter.post('/create-org/progress', async (req: any, res) => {
+  try {
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const progressData = createOrgProgressSchema.parse(req.body);
+
+    const { db } = await import('../db');
+    const { users } = await import('@shared/schema');
+    const { eq, sql } = await import('drizzle-orm');
+
+    await db.update(users)
+      .set({
+        metadata: sql`COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(${ONBOARDING_PROGRESS_KEY}, ${JSON.stringify(progressData)}::jsonb)`
+      })
+      .where(eq(users.id, userId));
+
+    res.json({
+      success: true,
+      message: 'Progress saved',
+    });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Save create-org progress error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+onboardingRouter.delete('/create-org/progress', async (req: any, res) => {
+  try {
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { db } = await import('../db');
+    const { users } = await import('@shared/schema');
+    const { eq, sql } = await import('drizzle-orm');
+
+    await db.update(users)
+      .set({
+        metadata: sql`COALESCE(metadata, '{}'::jsonb) - ${ONBOARDING_PROGRESS_KEY}`
+      })
+      .where(eq(users.id, userId));
+
+    res.json({
+      success: true,
+      message: 'Progress cleared',
+    });
+  } catch (error: unknown) {
+    log.error('[Onboarding] Clear create-org progress error:', error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });

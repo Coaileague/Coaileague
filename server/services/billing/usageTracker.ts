@@ -7,21 +7,29 @@
  * - Integration with Stripe usage-based billing
  */
 
+import { createLogger } from '../../lib/logger';
 import Stripe from 'stripe';
+import crypto from 'crypto';
 import { db } from '../../db';
 import { workspaces, employees } from '@shared/schema';
-import { eq, and, count, ne } from 'drizzle-orm';
+import { eq, and, count, ne, notInArray } from 'drizzle-orm';
 import { TIER_PRICING, type SubscriptionTier } from './subscriptionManager';
 import { BILLING, TierKey } from '@shared/billingConfig';
+import { isBillingExcluded } from './billingConstants';
+import { isBillingExemptByRecord, logExemptedAction } from './founderExemption';
 
+const log = createLogger('usageTracker');
 // Get tier-specific overage rate (in cents)
 function getOverageRate(tier: TierKey): number {
   const rate = BILLING.overages[tier as keyof typeof BILLING.overages];
   return typeof rate === 'number' ? rate : 0;
 }
 
+// GAP-62 FIX: Added timeout and maxNetworkRetries.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
+  timeout: 10000,
+  maxNetworkRetries: 2,
 });
 
 export interface EmployeeUsage {
@@ -125,7 +133,23 @@ export class UsageTracker {
         .where(eq(workspaces.id, workspaceId))
         .limit(1);
 
-      if (!workspace || !workspace.stripeCustomerId) {
+      if (!workspace) {
+        return { success: false, amount: 0, error: 'Workspace not found' };
+      }
+
+      // Founder / billing-exempt workspaces are never charged
+      if (isBillingExemptByRecord(workspace)) {
+        await logExemptedAction({
+          workspaceId,
+          action: 'usageTracker.billEmployeeOverages',
+          skippedAmount: 0,
+          skippedAmountUnit: 'cents',
+          metadata: { reason: 'founder_exemption — employee overage billing skipped' },
+        });
+        return { success: true, amount: 0 };
+      }
+
+      if (!workspace.stripeCustomerId) {
         return { success: false, amount: 0, error: 'No Stripe customer found' };
       }
 
@@ -135,12 +159,14 @@ export class UsageTracker {
         return { success: true, amount: 0 };
       }
 
+      const overageRate = getOverageRate((workspace.subscriptionTier || 'free') as TierKey);
+
       // Create invoice item for overages
       const invoiceItem = await stripe.invoiceItems.create({
         customer: workspace.stripeCustomerId,
         amount: usage.overageCost,
         currency: 'usd',
-        description: `Employee overage: ${usage.overageCount} employees beyond ${usage.maxAllowed} limit @ $${(EMPLOYEE_OVERAGE_RATE / 100).toFixed(0)}/employee`,
+        description: `Employee overage: ${usage.overageCount} employees beyond ${usage.maxAllowed} limit @ $${(overageRate / 100).toFixed(0)}/employee`,
         metadata: {
           workspaceId,
           type: 'employee_overage',
@@ -149,14 +175,17 @@ export class UsageTracker {
           maxAllowed: usage.maxAllowed.toString(),
           billingDate: new Date().toISOString(),
         },
-      });
+      // GAP-58 FIX: Deterministic key scoped to workspaceId + billing month.
+      // crypto.randomUUID() caused duplicate overage invoice items if this function was
+      // retried in the same billing period (server restart, cron overlap, etc.).
+      }, { idempotencyKey: `overage-${workspaceId}-${new Date().toISOString().slice(0, 7)}` });
 
-      console.log(`[UsageTracker] Created overage invoice item for ${workspaceId}: $${usage.overageCost / 100}`);
+      log.info(`[UsageTracker] Created overage invoice item for ${workspaceId}: $${usage.overageCost / 100}`);
 
       return { success: true, amount: usage.overageCost };
     } catch (error: any) {
-      console.error(`[UsageTracker] Failed to bill overages for ${workspaceId}:`, error);
-      return { success: false, amount: 0, error: error.message };
+      log.error(`[UsageTracker] Failed to bill overages for ${workspaceId}:`, error);
+      return { success: false, amount: 0, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 
@@ -164,7 +193,7 @@ export class UsageTracker {
    * Process all workspaces for daily usage tracking and overage billing
    */
   async processAllWorkspaces(): Promise<{ processed: number; overages: number; totalOverageCost: number }> {
-    console.log('[UsageTracker] Starting daily usage processing...');
+    log.info('[UsageTracker] Starting daily usage processing...');
 
     const allWorkspaces = await db
       .select()
@@ -178,6 +207,9 @@ export class UsageTracker {
     let totalOverageCost = 0;
 
     for (const workspace of allWorkspaces) {
+      // Skip platform, system, and support pool workspaces — never billed
+      if (isBillingExcluded(workspace.id)) continue;
+
       try {
         // Record daily snapshot
         const snapshot = await this.recordDailySnapshot(workspace.id);
@@ -192,11 +224,11 @@ export class UsageTracker {
           }
         }
       } catch (error) {
-        console.error(`[UsageTracker] Error processing workspace ${workspace.id}:`, error);
+        log.error(`[UsageTracker] Error processing workspace ${workspace.id}:`, error);
       }
     }
 
-    console.log(`[UsageTracker] Completed: ${processed} processed, ${overages} overages, $${totalOverageCost / 100} billed`);
+    log.info(`[UsageTracker] Completed: ${processed} processed, ${overages} overages, $${totalOverageCost / 100} billed`);
 
     return { processed, overages, totalOverageCost };
   }
@@ -228,6 +260,12 @@ export class UsageTracker {
     
     if (!workspace) {
       return { allowed: false, current: 0, max: 0, message: 'Workspace not found' };
+    }
+
+    // Founder / billing-exempt workspaces: unlimited employees, no overage
+    if (isBillingExemptByRecord(workspace)) {
+      const currentCount = await this.getEmployeeCount(workspaceId);
+      return { allowed: true, current: currentCount, max: 999999 };
     }
 
     const tier = (workspace.subscriptionTier || 'free') as TierKey;

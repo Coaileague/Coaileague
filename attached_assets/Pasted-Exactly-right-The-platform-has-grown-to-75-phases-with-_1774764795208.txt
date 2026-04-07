@@ -1,0 +1,633 @@
+Exactly right. The platform has grown to 75 phases with multiple parallel implementations of similar services. Before launch we need to verify there is one canonical implementation of each universal service — not multiple competing versions. Send this to the agent:
+
+---
+
+**UNIVERSAL SERVICES CONSOLIDATION AUDIT**
+
+The platform must have exactly one canonical implementation of each universal service. No duplicate notification senders. No competing chat servers. No parallel webhook dispatchers. No redundant broadcast mechanisms. One service owns each domain. Everything else calls that service. This audit finds every duplication, consolidates to the canonical implementation, and ensures every feature routes through the correct universal service.
+
+**All tests against ACME sandbox only. Statewide untouchable.**
+
+---
+
+**UNIVERSAL SERVICE MAP — Target Architecture**
+
+Before touching anything document the intended single source of truth for each universal service:
+
+```
+Universal Notification Service     → NotificationDeliveryService (NDS)
+Universal Chat Server              → DockChatService / WebSocket bus
+Universal Broadcast Emitter        → broadcastToWorkspace() in websocket.ts
+Universal Webhook Dispatcher       → WebhookDeliveryService
+Universal Help Desk                → HelpAI + SupportTicketService
+Universal Search                   → /api/search unified endpoint
+Universal Audit Logger             → universalAuditService
+Universal File Storage             → DocumentVaultService
+Universal Financial Calculator     → FinancialCalculator service
+Universal Role Authority           → roleDefinitions.ts
+Universal Feature Gate             → featureRegistry.ts + requirePlan()
+Universal AI Orchestrator          → PlatformActionHub (Trinity)
+Universal Session Manager          → Express session + FaultTolerantStore
+Universal Error Handler            → errorHandler middleware
+```
+
+Every other service in the platform must call these — never bypass them.
+
+---
+
+**SUBAGENT 1 — UNIVERSAL NOTIFICATION SERVICE AUDIT**
+
+One service sends all notifications. Everything routes through NDS.
+
+```bash
+# Step 1: Find every place in the codebase that sends a notification
+# These are ALL the ways notifications can be sent - find every one:
+
+grep -rn "resend\.emails\.send\|resend\.send\|emailService\.send\|sendEmail\|sendMail" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "test\|spec" | sort
+
+grep -rn "twilio\|sms\.send\|sendSMS\|sendText" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "test\|spec" | sort
+
+grep -rn "webpush\|sendPush\|push\.send\|pushNotification" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "test\|spec" | sort
+
+grep -rn "\.notify\(\|createNotification\|sendNotification\|deliverNotification" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "NDS\|notificationDeliveryService\|test" | sort
+
+# Step 2: Categorize each finding:
+# EXEMPT (documented bypass): auth tokens, magic links, panic SMS, SRA credentials
+# VIOLATION: anything else that bypasses NDS
+# For each VIOLATION: redirect to NDS
+
+# Step 3: Verify NDS is the single entry point
+grep -rn "notificationDeliveryService\|NDS\." server/ --include="*.ts" | grep -v node_modules | wc -l
+# This count should be significantly higher than direct sends
+
+# Step 4: Verify NDS handles all channels uniformly
+grep -rn "channel.*email\|channel.*sms\|channel.*push\|channel.*in_app\|channel.*webhook" \
+  server/services/notificationDeliveryService.ts | head -20
+
+# Step 5: Verify NDS respects user preferences before delivery
+grep -rn "userPreferences\|checkPreferences\|quiet_hours\|preferredChannel" \
+  server/services/notificationDeliveryService.ts | head -10
+
+# Step 6: Verify NDS writes delivery records for every send
+grep -rn "notification_deliveries\|insertDeliveryRecord\|trackDelivery" \
+  server/services/notificationDeliveryService.ts | head -10
+
+# Step 7: Verify NDS handles retries with exponential backoff
+grep -rn "retry\|exponential\|backoff\|maxAttempts" \
+  server/services/notificationDeliveryService.ts | head -10
+
+# Step 8: Verify NDS respects language preferences
+grep -rn "preferred_language\|getTemplate.*language\|bilingual" \
+  server/services/notificationDeliveryService.ts | head -10
+```
+
+**Fix any NDS bypass found. Every notification in the platform — from Trinity, from system bots, from user actions, from cron jobs — must go through NDS. No exceptions beyond the documented exemptions.**
+
+After fixes verify:
+```bash
+# Zero direct sends outside NDS:
+grep -rn "resend\.emails\.send\|sms\.send\|sendEmail" server/ --include="*.ts" | \
+  grep -v "notificationDeliveryService\|emailCore\|exempt\|panic\|magic_link\|auth_token" | \
+  grep -v node_modules | wc -l
+# Must be 0
+```
+
+---
+
+**SUBAGENT 2 — UNIVERSAL CHAT SERVER AUDIT**
+
+One WebSocket server handles all real-time communication. No parallel socket servers.
+
+```bash
+# Step 1: Find every WebSocket server instantiation
+grep -rn "new WebSocket\|new Server.*ws\|WebSocketServer\|wss\.on\|io\.listen\|socketio" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# Must show EXACTLY ONE WebSocket server instantiation
+# If more than one: this is a P0 conflict — two competing socket servers
+
+# Step 2: Find every place that creates socket connections on the client
+grep -rn "new WebSocket\|useWebSocket\|WebSocketProvider\|socketConnect\|io(" \
+  client/src/ --include="*.tsx" --include="*.ts" | grep -v node_modules | sort
+
+# Must show ONE WebSocket connection per client session
+# All features (chat, notifications, schedule updates, Trinity) share this ONE connection
+
+# Step 3: Verify DockChat uses the shared bus not a separate connection
+grep -rn "useChatroomWebSocket\|chatSocket\|dockChat.*socket\|socket.*dockChat" \
+  client/src/ --include="*.tsx" | head -10
+
+# If DockChat opens its own separate WebSocket: this is a duplication
+# Fix: DockChat must use the shared WebSocket bus with room-based channels
+
+# Step 4: Verify all real-time features use the same bus
+grep -rn "bus\.subscribe\|bus\.publish\|bus\.send\|wsbus\|WebSocketBus" \
+  client/src/ --include="*.tsx" | head -20
+
+# Step 5: Verify all server-side broadcasts use ONE function
+grep -rn "broadcastToWorkspace\|broadcastToUser\|broadcastToAll\|wsServer\.send\|wss\.clients" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# All broadcasts must use broadcastToWorkspace() from websocket.ts
+# Any direct wss.clients iteration outside websocket.ts is a bypass violation
+
+# Step 6: Verify message types are documented and non-conflicting
+grep -rn "type:.*'" server/websocket.ts | grep -oP "type: '[^']+'" | sort | uniq -d
+# Must return ZERO duplicates - conflicting message types cause silent routing failures
+
+# Step 7: Verify WebSocket auth is enforced before any data sent
+grep -rn "if.*!ws\.serverAuth\|if.*!ws\.authenticated\|unauthorized.*ws" \
+  server/websocket.ts | head -10
+
+# Step 8: Chat rooms use workspace-scoped channels
+grep -rn "room.*workspace\|workspace.*room\|joinRoom\|leaveRoom" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+```
+
+**Required architecture:**
+```
+Client connects → WebSocket bus (ONE connection per client)
+     ├── Notification channel (subscribe_notifications)
+     ├── Chat channels (join_conversation per room)
+     ├── Schedule updates (subscribe_schedule)
+     ├── Trinity updates (subscribe_trinity)
+     └── All other real-time features
+
+Server broadcasts → broadcastToWorkspace(workspaceId, message)
+     └── Routes to all connected clients in that workspace
+```
+
+---
+
+**SUBAGENT 3 — UNIVERSAL WEBHOOK DISPATCHER AUDIT**
+
+One service dispatches all outbound webhooks. No direct HTTP calls to webhook URLs outside the service.
+
+```bash
+# Step 1: Find every outbound HTTP call that could be a webhook
+grep -rn "axios\.post\|fetch.*POST\|http\.post\|https\.post\|node-fetch" \
+  server/ --include="*.ts" | grep -v node_modules | \
+  grep -v "quickbooks\|stripe\|twilio\|resend\|plaid\|openai\|gemini\|anthropic\|test" | sort
+
+# Any outbound POST to an external URL that is NOT through webhookDeliveryService is a violation
+
+# Step 2: Verify webhookDeliveryService is the single dispatcher
+grep -rn "webhookDeliveryService\|deliverWebhookEvent\|WebhookDeliveryService" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# Step 3: Verify HMAC-SHA256 signing on all deliveries
+grep -rn "X-CoAIleague-Signature\|hmac.*webhook\|webhook.*hmac\|createHmac.*webhook" \
+  server/services/webhookDeliveryService.ts | head -10
+
+# Step 4: Verify all 25+ event types are registered
+grep -rn "officer\.activated\|shift\.created\|invoice\.paid\|compliance\.violation" \
+  server/services/webhookDeliveryService.ts | head -20
+
+# Step 5: Verify webhook events are emitted from the correct places
+# Every major entity mutation should emit a webhook event
+grep -rn "deliverWebhookEvent\|emitWebhookEvent" server/ --include="*.ts" | \
+  grep -v node_modules | sort
+
+# Compare against expected emission points:
+# - Employee activate/terminate → officer.activated, officer.terminated
+# - Shift create/assign → shift.created, shift.assigned
+# - Invoice generate/pay → invoice.generated, invoice.paid
+# - Incident create → incident.created
+# - Payroll complete → payroll.run_completed
+# If any expected emission is missing: add it
+
+# Step 6: Verify webhook retries with exponential backoff
+grep -rn "retry\|attempt\|backoff" server/services/webhookDeliveryService.ts | head -10
+
+# Step 7: Verify delivery logging
+grep -rn "webhook_deliveries\|logDelivery\|trackWebhook" \
+  server/services/webhookDeliveryService.ts | head -10
+
+# Step 8: Verify Business tier gate on webhook configuration
+grep -rn "requirePlan.*business\|business.*requirePlan\|webhook.*tier\|tier.*webhook" \
+  server/routes/developerPortalRoutes.ts server/routes/ --include="*webhook*" | head -10
+```
+
+---
+
+**SUBAGENT 4 — UNIVERSAL HELPDESK AUDIT**
+
+One help system handles all support. HelpAI is the AI layer. SupportTicketService is the persistence layer. No competing ticket systems.
+
+```bash
+# Step 1: Find every ticket creation point
+grep -rn "createTicket\|INSERT.*support_tickets\|new.*ticket\|ticket.*create" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# All ticket creation must go through SupportTicketService
+# HelpAI creates tickets through SupportTicketService
+# Users create tickets through SupportTicketService
+# Trinity creates tickets through SupportTicketService
+# No direct INSERT into support_tickets from routes
+
+# Step 2: Verify support_tickets table is the single source
+SELECT COUNT(*) FROM support_tickets WHERE workspace_id = '[acme_id]';
+-- All tickets from all sources in one table
+
+# Step 3: Find every HelpAI entry point
+grep -rn "helpAI\|HelpAI\|helpai\|/api/helpai" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# Must be one unified HelpAI service
+# Not separate instances for different features
+
+# Step 4: Verify FAQ system is unified
+grep -rn "faq_entries\|faqEntries\|FAQ_ENTRIES\|searchFAQ\|getFAQ" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# One FAQ table, one search function
+# HelpAI queries this single FAQ for all workspaces with workspace_id scope
+
+# Step 5: Verify ticket routing is intelligent
+grep -rn "routeTicket\|assignTicket\|triageTicket\|ticket.*route\|route.*ticket" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# Tickets must route to: platform_staff for platform issues, workspace managers for workspace issues
+
+# Step 6: Verify SLA tracking is unified
+grep -rn "sla_deadline\|slaDeadline\|SLA\|calculateSLA" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# Step 7: Verify HelpAI language awareness
+grep -rn "preferred_language.*helpai\|helpai.*language\|language.*helpai" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+
+# Step 8: Verify ethics hotline is part of helpdesk system
+grep -rn "ethicsHotline\|ethics.*hotline\|anonymous.*report\|hotline" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+# Must route through support ticket system with anonymous flag
+
+# Step 9: Verify help desk accessible from all user types
+# Officers → HelpAI (voice and text) → support_tickets
+# Managers → Direct ticket creation → support_tickets
+# Clients → Client portal support → support_tickets  
+# All into ONE system
+
+grep -rn "client.*ticket\|ticket.*client\|officer.*ticket\|ticket.*officer" \
+  server/ --include="*.ts" | grep -v node_modules | head -10
+```
+
+---
+
+**SUBAGENT 5 — UNIVERSAL AUDIT LOGGER AUDIT**
+
+One service logs all audit events. No direct inserts into audit tables from routes.
+
+```bash
+# Step 1: Find every audit log write
+grep -rn "universalAuditService\|auditLog\|writeAudit\|createAuditRecord" \
+  server/ --include="*.ts" | grep -v node_modules | wc -l
+
+# Step 2: Find any DIRECT inserts into audit tables
+grep -rn "INSERT INTO universal_audit_log\|INSERT INTO sra_audit_log\|INSERT INTO compliance_verification_log" \
+  server/ --include="*.ts" | grep -v node_modules | grep -v "universalAuditService\|auditService" | head -20
+
+# These direct inserts bypass the universal service — violation
+# Fix: route all audit writes through universalAuditService
+
+# Step 3: Verify audit records have all required fields
+grep -rn "actor_id\|entity_type\|entity_id\|action_type\|workspace_id" \
+  server/services/universalAuditService.ts | head -20
+
+# Step 4: Verify SRA audit log is append-only via the service
+grep -rn "sra_audit_log" server/ --include="*.ts" | \
+  grep -v "INSERT\|SELECT\|universalAuditService" | head -10
+# Any UPDATE or DELETE is a violation
+
+# Step 5: Verify Trinity actions are audited through same service
+grep -rn "universalAuditService\|auditLog" server/services/helpai/ --include="*.ts" | head -10
+
+# Step 6: Verify financial mutations are audited
+grep -rn "FINANCIAL_AUDIT\|financial.*audit\|audit.*financial" \
+  server/services/ --include="*.ts" | head -10
+
+# Step 7: Verify the audit log cannot be queried cross-workspace
+grep -rn "workspace_id" server/routes/ --include="*audit*" | head -10
+
+# Step 8: Build universal audit query endpoint if missing
+grep -rn "GET.*audit.*log\|audit.*log.*GET\|/api/audit" \
+  server/routes/ --include="*.ts" | head -10
+# Must exist and be role-gated (org_owner and compliance_officer for their workspace)
+# Platform staff can query across workspaces
+```
+
+---
+
+**SUBAGENT 6 — UNIVERSAL BROADCAST EMITTER AUDIT**
+
+One function broadcasts to workspace sessions. No competing broadcast mechanisms.
+
+```bash
+# Step 1: Map every broadcast function
+grep -rn "broadcastToWorkspace\|broadcastToUser\|broadcastToAll\|emitToRoom\|io\.to\|wss\.clients" \
+  server/ --include="*.ts" | grep -v node_modules | sort
+
+# Step 2: Verify all broadcasts use workspace scope
+grep -rn "broadcastToWorkspace\|broadcast.*workspaceId" \
+  server/ --include="*.ts" | grep -v node_modules | wc -l
+
+grep -rn "broadcastToAll\|wss\.clients\.forEach" \
+  server/ --include="*.ts" | grep -v node_modules | wc -l
+# broadcastToAll should be ZERO or only for platform-wide emergencies
+
+# Step 3: Find mutations that should broadcast but don't
+# Every mutation that affects what another user sees must broadcast:
+SHOULD_BROADCAST=(
+  "shift assignment/unassignment"
+  "officer clock in/out"
+  "calloff submission"
+  "notification sent"
+  "subscription status change"
+  "Trinity insight generated"
+  "chat message sent"
+  "document signed"
+  "invoice status change"
+  "compliance violation created"
+)
+
+for item in "${SHOULD_BROADCAST[@]}"; do
+  # Check each route that handles this mutation has a broadcastToWorkspace call
+  echo "Checking: $item"
+done
+
+# Step 4: Verify broadcast payload structure is consistent
+grep -rn "broadcastToWorkspace(" server/ --include="*.ts" | grep -v node_modules | head -30
+# Every call must pass: workspaceId, { type: string, data: object }
+# type must be from a defined enum of broadcast types
+# No ad-hoc type strings
+
+# Step 5: Create broadcast type registry if missing
+grep -rn "BROADCAST_TYPES\|BroadcastType\|broadcastType" \
+  server/ --include="*.ts" | head -10
+
+# If no registry exists: create one
+# All broadcast type strings must be defined in one place
+# client/src/providers/WebSocketProvider.tsx must handle every type
+
+# Step 6: Verify client handles every broadcast type
+grep -rn "case '\|type ===\|type ==" \
+  client/src/providers/WebSocketProvider.tsx | head -50
+# Every server broadcast type must have a handler
+# Unhandled types cause silent failures
+
+# Step 7: Verify no memory leaks in broadcast
+grep -rn "workspaceClients\|clientMap\|connectedClients" \
+  server/websocket.ts | head -10
+# Must clean up on disconnect
+grep -rn "on.*close\|on.*disconnect\|cleanup\|delete.*client" \
+  server/websocket.ts | head -10
+```
+
+---
+
+**SUBAGENT 7 — UNIVERSAL SEARCH AUDIT**
+
+One endpoint searches everything. No parallel search implementations.
+
+```bash
+# Step 1: Find every search implementation
+grep -rn "ILIKE\|to_tsquery\|plainto_tsquery\|search.*query\|query.*search" \
+  server/routes/ --include="*.ts" | grep -v node_modules | sort
+
+# Step 2: Identify which searches are INLINE (acceptable - filtering within a page)
+# vs which are GLOBAL SEARCH (must use /api/search)
+
+# Inline searches (acceptable - return only that entity type on their own page):
+# GET /api/employees?search=name → officers page filter
+# GET /api/clients?search=name → clients page filter
+# GET /api/invoices?search=number → invoices page filter
+# These are fine - they filter within their own domain
+
+# Global searches (must use /api/search):
+# Command palette search → must use /api/search
+# Cross-entity search → must use /api/search
+# Trinity search actions → must use /api/search
+
+# Step 3: Verify command palette uses unified search
+grep -rn "api/search\|useSearch\|globalSearch" \
+  client/src/components/ --include="*.tsx" | grep -i "palette\|command" | head -10
+
+# Step 4: Verify search respects workspace isolation
+grep -rn "workspace_id" server/routes/searchRoutes.ts | head -10
+# Every sub-query in the unified search must include workspace_id filter
+
+# Step 5: Verify search respects role permissions
+grep -rn "requireAuth\|role.*search\|search.*role\|ROLE" \
+  server/routes/searchRoutes.ts | head -10
+# Officers should not see financial search results
+# Managers should not see other workspace results
+
+# Step 6: Verify GIN indexes are being used
+EXPLAIN ANALYZE SELECT * FROM employees 
+WHERE first_name || ' ' || last_name % 'Martinez';
+-- Must show Index Scan not Seq Scan
+
+# Step 7: Verify search rate limiting
+grep -rn "searchLimiter\|rateLimit.*search\|search.*rateLimit" \
+  server/routes/searchRoutes.ts | head -5
+# 30 requests per minute per user
+
+# Step 8: Verify search logging
+grep -rn "search_query_log\|logSearch\|searchLog" \
+  server/routes/searchRoutes.ts | head -5
+```
+
+---
+
+**SUBAGENT 8 — UNIVERSAL SERVICE WIRING FINAL VERIFICATION**
+
+Verify every feature-level service calls the correct universal service rather than implementing its own.
+
+```bash
+# Create a dependency map: who calls who
+
+echo "=== NOTIFICATION CALLERS ==="
+grep -rn "notificationDeliveryService\." server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "notificationDeliveryService.ts" | \
+  sed 's|server/||' | sed 's|\.ts:.*||' | sort | uniq
+
+echo "=== WEBHOOK CALLERS ==="
+grep -rn "webhookDeliveryService\.\|deliverWebhookEvent" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "webhookDeliveryService.ts" | \
+  sed 's|server/||' | sed 's|\.ts:.*||' | sort | uniq
+
+echo "=== AUDIT CALLERS ==="
+grep -rn "universalAuditService\." server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "universalAuditService.ts" | \
+  sed 's|server/||' | sed 's|\.ts:.*||' | sort | uniq
+
+echo "=== BROADCAST CALLERS ==="
+grep -rn "broadcastToWorkspace\(" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "websocket.ts" | \
+  sed 's|server/||' | sed 's|\.ts:.*||' | sort | uniq
+
+echo "=== FINANCIAL CALCULATOR CALLERS ==="
+grep -rn "FinancialCalculator\." server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "financialCalculator.ts" | \
+  sed 's|server/||' | sed 's|\.ts:.*||' | sort | uniq
+
+echo "=== DOCUMENT VAULT CALLERS ==="
+grep -rn "documentVaultService\.\|storeDocument\|vaultStore" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "documentVaultService.ts" | \
+  sed 's|server/||' | sed 's|\.ts:.*||' | sort | uniq
+
+echo "=== PLATFORM ACTION HUB CALLERS ==="
+grep -rn "platformActionHub\.\|PlatformActionHub\." server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "platformActionHub.ts" | \
+  sed 's|server/||' | sed 's|\.ts:.*||' | sort | uniq
+```
+
+**For each universal service verify:**
+1. The service file exists and is the canonical implementation
+2. All callers import from the same path
+3. No duplicate implementations exist in other files
+4. The service is initialized once at startup not re-instantiated per request
+5. The service handles errors gracefully and never crashes the calling code
+
+**Find any file that reimplements a universal service:**
+```bash
+# Find duplicate notification logic
+grep -rn "nodemailer\|resend\|sendgrid" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "notificationDeliveryService.ts\|emailCore.ts" | head -10
+
+# Find duplicate webhook logic
+grep -rn "createHmac\|HMAC\|webhook.*sign\|sign.*webhook" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "webhookDeliveryService.ts" | head -10
+
+# Find duplicate audit logic
+grep -rn "INSERT INTO.*audit\|audit.*INSERT" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "universalAuditService.ts" | head -10
+
+# Find duplicate search logic
+grep -rn "tsvector\|tsquery\|to_tsquery\|websearch_to_tsquery" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "searchRoutes.ts" | head -10
+
+# Find duplicate financial calculation
+grep -rn "\.toFixed(2)\|parseFloat.*payRate\|parseFloat.*amount" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "FinancialCalculator\|formatCurrency\|display" | head -20
+```
+
+---
+
+**ARCHITECT GATEKEEPER — CONSOLIDATION PLAN**
+
+After all 8 subagents report build the consolidation plan:
+
+**For each duplicate or bypass found:**
+
+```
+SERVICE: [Universal Service Name]
+BYPASS FOUND IN: [file:line]
+CURRENT BEHAVIOR: [what it does now]
+CORRECT BEHAVIOR: [what it should do — call the universal service]
+FIX: [specific code change]
+RISK: [LOW/MEDIUM/HIGH — could this fix break anything?]
+TEST: [how to verify the fix works]
+```
+
+**Execute fixes in this order:**
+1. P0: Duplicate WebSocket servers (crashes or conflicts)
+2. P1: NDS bypasses (notifications sent without tracking)
+3. P1: Audit log bypasses (actions without records)
+4. P2: Webhook bypasses (external calls without signing)
+5. P2: Financial calculation bypasses (math errors)
+6. P3: Search bypasses (inconsistent results)
+7. P3: Broadcast bypasses (stale UI state)
+
+**After all fixes run the universal service health check:**
+
+```bash
+# Verify single WebSocket server
+grep -rn "new WebSocketServer\|new Server.*ws" server/ --include="*.ts" | \
+  grep -v node_modules | wc -l
+# Must be exactly 1
+
+# Verify NDS is sole notification sender
+grep -rn "resend\.emails\.send\|sms\.send\|sendPush" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "notificationDeliveryService\|emailCore\|exempt" | wc -l
+# Must be 0
+
+# Verify single audit service
+grep -rn "INSERT INTO universal_audit_log" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "universalAuditService" | wc -l
+# Must be 0
+
+# Verify single broadcast function
+grep -rn "wss\.clients\.forEach\|broadcastToAll" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "websocket.ts" | wc -l
+# Must be 0 (all broadcasts through broadcastToWorkspace)
+
+# Verify unified search
+grep -rn "tsvector\|to_tsquery" server/ --include="*.ts" | \
+  grep -v node_modules | grep -v "searchRoutes.ts" | wc -l
+# Must be 0
+
+echo "Universal Service Consolidation: COMPLETE"
+```
+
+**Final report format:**
+
+```
+UNIVERSAL SERVICES CONSOLIDATION — RESULTS
+
+Universal Notification Service (NDS):
+  Bypasses found: [N]
+  Bypasses fixed: [N]
+  Status: CANONICAL ✅
+
+Universal Chat Server:
+  Competing servers found: [N]
+  Consolidated to: [service name]
+  Status: CANONICAL ✅
+
+Universal Webhook Dispatcher:
+  Bypasses found: [N]
+  Bypasses fixed: [N]
+  Status: CANONICAL ✅
+
+Universal Help Desk:
+  Competing systems found: [N]
+  Consolidated to: [service name]
+  Status: CANONICAL ✅
+
+Universal Audit Logger:
+  Direct inserts found: [N]
+  Fixed: [N]
+  Status: CANONICAL ✅
+
+Universal Broadcast Emitter:
+  Competing broadcasters: [N]
+  Fixed: [N]
+  Status: CANONICAL ✅
+
+Universal Search:
+  Competing search implementations: [N]
+  Fixed: [N]
+  Status: CANONICAL ✅
+
+Universal Services Health:
+  Single WebSocket server: ✅
+  NDS sole notification sender: ✅
+  Single audit service: ✅
+  Single broadcast function: ✅
+  Unified search: ✅
+
+TypeScript: 0 errors
+Server: Clean startup
+Tests: All passing
+
+Status: READY FOR PHASE 55
+```
+
+---
+
+Paste that. When every universal service is canonical — one notification system, one chat server, one broadcaster, one webhook dispatcher, one help desk, one audit logger, one search — the platform behaves consistently and predictably. No more silent failures from competing implementations. Standing by for results.

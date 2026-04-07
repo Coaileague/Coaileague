@@ -153,16 +153,16 @@ export const CHAT_BUBBLE_CONFIG = {
     identificationEmailLabel: 'Email Address',
     identificationEmailPlaceholder: 'your@email.com',
     identificationNameLabel: 'Full Name',
-    identificationNamePlaceholder: 'John Doe',
-    identificationWarning: '⚠️ You must provide your information before connecting to an agent.',
+    identificationNamePlaceholder: 'Enter your full name',
+    identificationWarning: 'You must provide your information before connecting to an agent.',
     buttonText: {
       liveChat: 'Live Chat',
       requestHelp: 'Request Human Help',
       sending: 'Creating Ticket...',
       createTicket: 'Create Support Ticket',
-      successTitle: '✅ Support Ticket Created',
+      successTitle: 'Support Ticket Created',
       successDesc: 'Connecting you to a support agent...',
-      errorTitle: '❌ Error',
+      errorTitle: 'Error',
       errorDesc: 'Could not create support ticket. Please try again.',
     },
   },
@@ -179,7 +179,7 @@ export const CHAT_BUBBLE_CONFIG = {
   },
 
   // ===== VISIBILITY =====
-  zIndex: 9999,
+  zIndex: 2501,
   touchAction: 'none',
   userSelect: 'none',
 };

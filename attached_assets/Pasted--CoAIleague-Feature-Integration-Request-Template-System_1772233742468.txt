@@ -1,0 +1,417 @@
+# CoAIleague Feature Integration Request Template
+## Systematic, Canonical, Semantic Integration Protocol
+
+**Purpose:** Ensure every new feature integrates correctly without breaking existing systems, introducing ID mismatches, or creating cascading issues.
+
+---
+
+## HOW TO USE THIS TEMPLATE
+
+1. Copy this template for each new feature
+2. Fill in ALL sections completely
+3. Review the integration checklist BEFORE coding
+4. Verify the integration checklist AFTER coding
+5. Run the semantic tests before marking complete
+
+---
+
+# FEATURE REQUEST: [NAME]
+
+## 1. FEATURE IDENTITY
+
+| Field | Value |
+|-------|-------|
+| Feature Name | |
+| Module/System | |
+| Priority | Critical / High / Medium / Low |
+| Requested By | |
+| Date | |
+
+### 1.1 What This Feature Does
+*(Plain English description)*
+
+### 1.2 Why We Need It
+*(Business justification)*
+
+### 1.3 Success Criteria
+*(How do we know it works?)*
+
+---
+
+## 2. DATA MODEL REQUIREMENTS
+
+### 2.1 New Tables/Collections Required
+
+| Table Name | Purpose | Primary Key |
+|------------|---------|-------------|
+| | | |
+
+### 2.2 New Fields on Existing Tables
+
+| Table | New Field | Type | Required? | Default |
+|-------|-----------|------|-----------|---------|
+| | | | | |
+
+### 2.3 Required Foreign Keys
+
+| From Table.Field | To Table.Field | Cascade Delete? |
+|------------------|----------------|-----------------|
+| | | |
+
+### 2.4 Enums Required
+
+| Enum Name | Values | Used In |
+|-----------|--------|---------|
+| | | |
+
+---
+
+## 3. ID PROPAGATION REQUIREMENTS
+
+### 3.1 IDs This Feature MUST Receive
+
+**CRITICAL: Every record must know its context**
+
+| ID | Source | Required? | How Obtained |
+|----|--------|-----------|--------------|
+| org_id | Session/Context | ✅ ALWAYS | From authenticated user session |
+| workspace_id | Session/Context | ✅ ALWAYS | From current workspace context |
+| user_id | Session/Context | ✅ ALWAYS | From authenticated user |
+| created_by | User Action | ✅ ALWAYS | User performing action |
+| updated_by | User Action | ✅ ALWAYS | User performing update |
+| | | | |
+
+### 3.2 IDs This Feature MUST Generate
+
+| ID | Format | Where Stored | Where Referenced |
+|----|--------|--------------|------------------|
+| | | | |
+
+### 3.3 ID Flow Diagram
+
+```
+[User Session]
+    │
+    ├── org_id ─────────────────────────────────────┐
+    ├── workspace_id ───────────────────────────────┤
+    ├── user_id ────────────────────────────────────┤
+    │                                               │
+    ▼                                               ▼
+[New Feature Record] ◄────────────────────── [All Child Records]
+    │
+    ├── feature_id (generated) ─────────────────────┐
+    │                                               │
+    ▼                                               ▼
+[Related System A]                          [Related System B]
+```
+
+---
+
+## 4. SYSTEM INTEGRATION MAP
+
+### 4.1 Systems This Feature Reads From
+
+| System | What Data | How Often | On What Trigger |
+|--------|-----------|-----------|-----------------|
+| | | | |
+
+### 4.2 Systems This Feature Writes To
+
+| System | What Data | How Often | On What Trigger |
+|--------|-----------|-----------|-----------------|
+| | | | |
+
+### 4.3 Systems That Need to Know About This Feature
+
+| System | What They Need | How Notified | Real-time? |
+|--------|----------------|--------------|------------|
+| | | | |
+
+### 4.4 Integration Diagram
+
+```
+                    ┌─────────────────┐
+                    │  [NEW FEATURE]  │
+                    └────────┬────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+         ▼                   ▼                   ▼
+    [System A]          [System B]          [System C]
+    reads/writes        reads/writes        reads/writes
+```
+
+---
+
+## 5. SEVEN-STEP EXECUTION PROCESS
+
+### 5.1 Primary User Actions
+
+For each user action this feature enables:
+
+#### Action: [ACTION NAME]
+
+| Step | What Happens | Validation | Failure Handling |
+|------|--------------|------------|------------------|
+| 1. TRIGGER | | | |
+| 2. VALIDATE | | | |
+| 3. PROCESS | | | |
+| 4. PERSIST | | | |
+| 5. PROPAGATE | | | |
+| 6. NOTIFY | | | |
+| 7. CONFIRM | | | |
+
+---
+
+## 6. PERMISSION REQUIREMENTS
+
+### 6.1 Who Can Access This Feature?
+
+| Role | Can View? | Can Create? | Can Edit? | Can Delete? |
+|------|-----------|-------------|-----------|-------------|
+| Chief of Operations | | | | |
+| Assistant Chief | | | | |
+| Captain | | | | |
+| Lieutenant | | | | |
+| Sergeant | | | | |
+| Dispatcher | | | | |
+| Field Officer | | | | |
+| Client (Portal) | | | | |
+| Auditor | | | | |
+
+### 6.2 Permission Check Points
+
+| Action | Where Checked | How Checked |
+|--------|---------------|-------------|
+| View | | |
+| Create | | |
+| Edit | | |
+| Delete | | |
+
+---
+
+## 7. ISOLATION REQUIREMENTS
+
+### 7.1 Data Isolation
+
+| Isolation Level | How Enforced |
+|-----------------|--------------|
+| Org A cannot see Org B data | WHERE org_id = current_org_id |
+| User sees only permitted data | Role-based query filters |
+| Client sees only their data | WHERE client_id = current_client_id |
+
+### 7.2 Session Isolation
+
+| Requirement | Implementation |
+|-------------|----------------|
+| Multi-org user switches context | org_id updates, data refreshes |
+| Session timeout | Records in progress handled |
+| Concurrent sessions | No cross-contamination |
+
+---
+
+## 8. RACE CONDITION PREVENTION
+
+### 8.1 Potential Race Conditions
+
+| Scenario | Risk | Prevention |
+|----------|------|------------|
+| Two users edit same record | Data loss | Optimistic locking / version field |
+| Record deleted while being edited | Orphan data | Soft delete + check before save |
+| Related record changes during operation | Inconsistent state | Transaction scope |
+| | | |
+
+### 8.2 Locking Strategy
+
+| Resource | Lock Type | Timeout | Conflict Resolution |
+|----------|-----------|---------|---------------------|
+| | | | |
+
+---
+
+## 9. TRINITY INTEGRATION
+
+### 9.1 Trinity Tool Access
+
+| Tool Name | Read? | Write? | Purpose |
+|-----------|-------|--------|---------|
+| | | | |
+
+### 9.2 Trinity Events
+
+| Event | When Triggered | What Trinity Does |
+|-------|----------------|-------------------|
+| | | |
+
+### 9.3 Trinity Queries This Feature Enables
+
+| Question User Might Ask | Data Trinity Needs |
+|-------------------------|-------------------|
+| | |
+
+---
+
+## 10. API ENDPOINTS
+
+### 10.1 New Endpoints Required
+
+| Method | Path | Purpose | Auth Required |
+|--------|------|---------|---------------|
+| GET | | | |
+| POST | | | |
+| PUT | | | |
+| DELETE | | | |
+
+### 10.2 Request/Response Contracts
+
+```typescript
+// Example:
+interface CreateFeatureRequest {
+  org_id: string;      // REQUIRED - from context
+  workspace_id: string; // REQUIRED - from context
+  // ... feature-specific fields
+}
+
+interface FeatureResponse {
+  id: string;
+  org_id: string;
+  created_at: string;
+  created_by: string;
+  // ... feature-specific fields
+}
+```
+
+---
+
+## 11. UI REQUIREMENTS
+
+### 11.1 Pages/Components Needed
+
+| Page/Component | Purpose | Route |
+|----------------|---------|-------|
+| | | |
+
+### 11.2 Existing Pages That Need Updates
+
+| Page | What Changes | Why |
+|------|--------------|-----|
+| | | |
+
+### 11.3 Real-time Updates Required
+
+| Component | Update Trigger | Update Method |
+|-----------|----------------|---------------|
+| | | WebSocket / Polling / SSE |
+
+---
+
+## 12. PRE-IMPLEMENTATION CHECKLIST
+
+**Before writing ANY code, verify:**
+
+- [ ] Data model reviewed and approved
+- [ ] All required IDs identified (org_id, workspace_id, user_id, etc.)
+- [ ] ID propagation paths documented
+- [ ] System integrations mapped
+- [ ] 7-step process defined for each action
+- [ ] Permissions defined
+- [ ] Race conditions identified and prevented
+- [ ] Trinity integration planned
+- [ ] API contracts defined
+- [ ] UI requirements clear
+
+---
+
+## 13. POST-IMPLEMENTATION VERIFICATION
+
+### 13.1 Data Integrity Checks
+
+| Check | Expected | Actual | Pass? |
+|-------|----------|--------|-------|
+| All records have org_id | ✓ | | |
+| All records have workspace_id | ✓ | | |
+| All records have created_by | ✓ | | |
+| All records have timestamps | ✓ | | |
+| Foreign keys resolve | ✓ | | |
+| No orphaned records | ✓ | | |
+
+### 13.2 Isolation Tests
+
+| Test | Expected | Actual | Pass? |
+|------|----------|--------|-------|
+| Org A cannot see Org B data | ✓ Blocked | | |
+| User cannot exceed role permissions | ✓ Blocked | | |
+| Client sees only their data | ✓ Filtered | | |
+
+### 13.3 Integration Tests
+
+| Test | Expected | Actual | Pass? |
+|------|----------|--------|-------|
+| Data appears in related systems | ✓ | | |
+| Changes propagate in real-time | ✓ | | |
+| Trinity can access new data | ✓ | | |
+| Audit log captures actions | ✓ | | |
+
+### 13.4 7-Step Execution Tests
+
+| Action | All 7 Steps Work? | Issues? |
+|--------|-------------------|---------|
+| | | |
+
+### 13.5 Race Condition Tests
+
+| Scenario | Handled Correctly? | Issues? |
+|----------|-------------------|---------|
+| | | |
+
+---
+
+## 14. SIGN-OFF
+
+| Role | Name | Approved | Date |
+|------|------|----------|------|
+| Requested By | | | |
+| Developed By | | | |
+| Tested By | | | |
+| Final Approval | | | |
+
+---
+
+## QUICK REFERENCE: MANDATORY ID FIELDS
+
+**EVERY record in CoAIleague MUST have:**
+
+```typescript
+{
+  id: string;           // Unique identifier for this record
+  org_id: string;       // Organization this belongs to (ISOLATION)
+  workspace_id: string; // Workspace context (MULTI-TENANT)
+  created_at: DateTime; // Server timestamp
+  created_by: string;   // User ID who created
+  updated_at: DateTime; // Server timestamp
+  updated_by: string;   // User ID who last updated
+}
+```
+
+**NEVER create a record without these fields.**
+**NEVER trust client-provided org_id - always use server session context.**
+**NEVER allow cross-org queries - always filter by org_id.**
+
+---
+
+## QUICK REFERENCE: COMMON MISTAKES TO AVOID
+
+| Mistake | Why It's Bad | Prevention |
+|---------|--------------|------------|
+| Missing org_id | Data leaks between orgs | Always include in schema |
+| Client-provided org_id | Security vulnerability | Use server session only |
+| No workspace_id | Multi-tenant issues | Always include in schema |
+| Hardcoded IDs | Breaks in production | Use proper lookups |
+| String matching for roles | Fragile, typos break it | Use enum/constants |
+| No audit logging | Compliance failure | Log every mutation |
+| Synchronous cascades | Performance issues | Use event queue |
+| No created_by | Can't track who did what | Always capture |
+
+---
+
+*Use this template for EVERY new feature to ensure systematic integration.*

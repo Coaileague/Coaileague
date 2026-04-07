@@ -23,6 +23,8 @@ import {
 } from '@shared/schema';
 import { eq, and, desc, gte, lte, inArray, sql, isNull } from 'drizzle-orm';
 import { aiBrainEvents } from './internalEventEmitter';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('workflowLedger');
 
 export type RunStatus = 'queued' | 'running' | 'awaiting_approval' | 'completed' | 'failed' | 'cancelled' | 'rolled_back';
 export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
@@ -83,7 +85,7 @@ class WorkflowLedgerService {
       workspaceId: context.workspaceId,
     });
 
-    console.log(`[WorkflowLedger] Created run ${run.id} for ${actionId}`);
+    log.info(`[WorkflowLedger] Created run ${run.id} for ${actionId}`);
     return run;
   }
 
@@ -137,7 +139,7 @@ class WorkflowLedgerService {
       });
     }
 
-    console.log(`[WorkflowLedger] Completed run ${runId} in ${durationMs}ms (SLA: ${slaMet ? 'met' : 'missed'})`);
+    log.info(`[WorkflowLedger] Completed run ${runId} in ${durationMs}ms (SLA: ${slaMet ? 'met' : 'missed'})`);
     return run;
   }
 
@@ -180,7 +182,7 @@ class WorkflowLedgerService {
       });
     }
 
-    console.log(`[WorkflowLedger] ${canRetry ? 'Retrying' : 'Failed'} run ${runId}: ${errorMessage}`);
+    log.info(`[WorkflowLedger] ${canRetry ? 'Retrying' : 'Failed'} run ${runId}: ${errorMessage}`);
     return run;
   }
 
@@ -225,6 +227,7 @@ class WorkflowLedgerService {
 
   async addStep(runId: string, step: Omit<InsertOrchestrationRunStep, 'runId'>): Promise<OrchestrationRunStep> {
     const [newStep] = await db.insert(orchestrationRunSteps).values({
+      workspaceId: 'system',
       ...step,
       runId
     }).returning();

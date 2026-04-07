@@ -1,0 +1,220 @@
+Smart call. Tie off the loose ends clean before building on top of them. Here is the prompt:
+
+---
+
+**COAILEAGUE — PHASE 1 LOOSE END RESOLUTION**
+*195 Raw-SQL Tables | 306 Untracked Columns | Full ORM Parity Before Phase 2*
+
+---
+
+Phase 1 confirmed zero naming drift on Drizzle-managed tables and columns. However, the audit surfaced two structural loose ends that must be resolved before Phase 2 begins. These are not cosmetic issues. They represent a split data access architecture where 195 tables and 306 columns exist and function in production but are invisible to the ORM, untyped, and accessible only through raw SQL strings that have no compile-time safety, no schema validation, and no protection against the exact naming drift Phase 1 was designed to prevent. Phase 2 fixes will be applied to route handlers and service files that touch these tables. If those tables are still raw-SQL-only when Phase 2 runs, the Phase 2 type safety and transaction fixes cannot fully apply to them. Close this gap now.
+
+---
+
+**WHAT EXISTS AND WHY IT MATTERS**
+
+The 195 raw-SQL-managed tables were created via raw SQL migrations and are queried exclusively through raw SQL strings in route and service files. Examples include: applicants, applicant_interviews, audit_findings, bolo_alerts, and others of similar operational significance. These are not test tables or temporary tables — they are live operational tables that the platform depends on.
+
+The 306 untracked columns follow the same pattern — added by migrations, queried by raw SQL, invisible to the Drizzle schema object.
+
+The risk is not that they are broken today. The risk is:
+
+Every raw SQL query against these tables uses string literals for table and column names with zero compile-time checking. A typo produces a runtime error or a silent empty result — the exact failure mode Phase 1 was designed to eliminate.
+
+When Phase 2 applies the `AuthenticatedRequest` type fix and transaction wrapping to route handlers, any handler that touches a raw-SQL-only table will have typed request handling but untyped database operations — a split that undermines the integrity of the fix.
+
+When future development adds columns or renames things in these tables, there is no schema file to update, no migration validation, and no canonical reference. Naming drift will re-enter through these tables even though Phase 1 closed it everywhere else.
+
+These tables are second-class citizens in the codebase right now. This prompt makes them first-class.
+
+---
+
+**EXECUTION — TWO AGENTS, CONCURRENT, SHARED FINDINGS BUS**
+
+---
+
+**AGENT 1 — DRIZZLE SCHEMA PARITY BUILDER**
+
+*Mission: Bring every raw-SQL-managed table into the Drizzle schema so every table in the database has a corresponding typed schema definition.*
+
+**Step 1 — Full inventory.**
+
+Produce the complete list of all 195 raw-SQL-managed tables. For each table, extract from the live database: the exact table name, every column name, every column data type, every nullable constraint, every default value, every foreign key relationship, and every index. This is the source of truth for the schema definitions you are about to write.
+
+**Step 2 — Schema file organization.**
+
+Organize the 195 tables into logical schema files matching the existing schema file structure. Do not dump all 195 into a single file. Group them by domain: applicant and hiring tables together, audit and compliance tables together, alert and communication tables together, and so on. Each schema file should contain tables that belong to the same functional domain. Mirror the organizational convention of the existing Drizzle schema files.
+
+**Step 3 — Write Drizzle schema definitions.**
+
+For every table, write a complete Drizzle table definition following the canonical pattern established in Phase 1:
+
+Every table definition uses the exact database table name as the string argument to the table constructor.
+
+Every column definition uses the correct Drizzle column type matching the database column's data type.
+
+Every column definition explicitly declares the database column name as a string argument — no implicit inference. The pattern is `propertyName: columnType('column_name')` for every column without exception.
+
+Every nullable column is typed correctly — nullable columns use `.notNull()` absence, required columns use `.notNull()`.
+
+Every column with a default value declares that default in the schema definition.
+
+Every foreign key relationship is reflected in the schema definition using Drizzle's references syntax.
+
+**Step 4 — Write relation definitions.**
+
+For every foreign key relationship between tables, write the corresponding Drizzle relation definition. This enables `with` clause joins in queries instead of manual JOIN syntax in raw SQL. Every relation must follow the same explicit naming convention established in Phase 1.
+
+**Step 5 — Export registration.**
+
+Register every new schema table and relation in the central schema index file so they are importable from a single location across the entire codebase.
+
+**Step 6 — Verify schema definitions match the database.**
+
+After writing all schema definitions, run a verification pass: for every new schema definition, confirm the table exists in the live database with the exact same name, every defined column exists with the correct type, and every relation resolves to an actual foreign key in the database. Zero drift is acceptable. Any discrepancy must be resolved before this agent closes.
+
+**Step 7 — Add the 306 untracked columns.**
+
+For every column identified as existing in the database but not in any Drizzle schema definition, identify which table it belongs to. If the table now has a Drizzle schema definition (either pre-existing or just created in Steps 2-5), add the column to that definition following the same explicit mapping convention. If a column belongs to a Drizzle-managed table that already existed before this phase, add the column to the existing schema file. Verify every added column against the live database.
+
+---
+
+**AGENT 2 — RAW SQL MIGRATION TO ORM**
+
+*Mission: Replace raw SQL query strings in route and service files with type-safe Drizzle ORM calls, using the schema definitions Agent 1 is producing.*
+
+This agent begins its work only after Agent 1 completes Step 5 and the new schema definitions are exported and importable. Agent 2 depends on those definitions to replace the raw SQL they describe.
+
+**Step 1 — Raw SQL inventory.**
+
+Scan every route file and every service file in the codebase. Produce a complete list of every raw SQL query string — every `db.execute(sql\`...\`)`, every `pool.query('...')`, every template literal SQL string, and every other raw SQL pattern. For each, record: the file and line number, the tables it touches, the columns it references, and whether it is a SELECT, INSERT, UPDATE, or DELETE operation.
+
+**Step 2 — Classify each query.**
+
+For each raw SQL query, classify it into one of three categories:
+
+*Category A — Direct replacement:* The query is a simple SELECT, INSERT, UPDATE, or DELETE against a single table or a simple join. It can be directly replaced with an equivalent Drizzle query using the new schema definitions. This is the majority of queries.
+
+*Category B — Complex query requiring careful migration:* The query uses advanced SQL features — window functions, complex aggregations, CTEs, or multi-level subqueries — that are difficult to express in Drizzle's query builder. These require careful migration with exact result verification.
+
+*Category C — Keep as raw SQL with typed wrapper:* The query is so complex or performance-critical that replacing it with the ORM query builder would be counterproductive. These queries are kept as raw SQL but wrapped in a typed function that declares explicit input and output types, uses the canonical column names from the Name Registry, and is documented with a comment explaining why ORM replacement was not done.
+
+**Step 3 — Replace Category A queries.**
+
+For every Category A query: replace the raw SQL string with the equivalent Drizzle ORM call using the imported schema table and column definitions. The replacement must produce identical results to the raw SQL it replaces. Before removing the raw SQL, run both the original and the replacement against the ACME sandbox and confirm the results are identical. Then remove the raw SQL.
+
+The canonical replacement patterns are:
+
+```typescript
+// SELECT with filter
+const results = await db
+  .select()
+  .from(schemaTable)
+  .where(eq(schemaTable.workspaceId, workspaceId));
+
+// INSERT with return
+const [created] = await db
+  .insert(schemaTable)
+  .values(data)
+  .returning();
+
+// UPDATE with filter
+await db
+  .update(schemaTable)
+  .set(updateData)
+  .where(eq(schemaTable.id, id));
+
+// SELECT with relation join using with clause
+const results = await db.query.schemaTable.findMany({
+  where: eq(schemaTable.workspaceId, workspaceId),
+  with: { relatedTable: true }
+});
+```
+
+**Step 4 — Migrate Category B queries.**
+
+For every Category B query: write the Drizzle equivalent carefully. Run both versions against the ACME sandbox with identical inputs. Compare outputs row by row and field by field. If the outputs match exactly, replace the raw SQL. If they do not match exactly after three migration attempts, escalate to Category C and wrap the raw SQL with a typed function.
+
+**Step 5 — Wrap Category C queries.**
+
+For every Category C query that is kept as raw SQL: wrap it in a typed function with explicit TypeScript input and output types. The function name must describe what the query does. Every column name referenced in the raw SQL string must match the canonical Name Registry established in Phase 1. Add a comment block explaining why this query was not migrated to the ORM. These typed wrappers are the permanent home for complex raw SQL — not inline in route handlers.
+
+Example pattern:
+
+```typescript
+// COMPLEX QUERY — kept as raw SQL due to window function requirement
+// Column names verified against canonical Name Registry 2026-03-22
+// Input and output types are explicit — no any types permitted
+async function getEmployeeOvertimeSummary(
+  workspaceId: string,
+  periodStart: Date,
+  periodEnd: Date
+): Promise<OvertimeSummaryRow[]> {
+  const result = await db.execute(sql`
+    SELECT 
+      employee_id,
+      SUM(regular_hours) as regular_hours,
+      SUM(overtime_hours) as overtime_hours
+    FROM shifts
+    WHERE workspace_id = ${workspaceId}
+    AND shift_date BETWEEN ${periodStart} AND ${periodEnd}
+    GROUP BY employee_id
+  `);
+  return result.rows as OvertimeSummaryRow[];
+}
+```
+
+**Step 6 — Verify zero raw SQL strings remain inline in route handlers.**
+
+After all replacements and wrappers are applied: scan every route file and every service file. Confirm zero inline raw SQL strings remain. Every database operation is either a Drizzle ORM call or a call to a named typed wrapper function. Inline SQL strings in route handlers are permanently retired.
+
+---
+
+**SHARED FINDINGS BUS**
+
+Both agents log every finding and every fix with:
+
+- **Item ID** — agent prefix and sequence number
+- **Type** — new schema definition, column addition, query replacement, or typed wrapper
+- **Location** — file and line number
+- **Before** — the raw SQL string or missing schema definition
+- **After** — the Drizzle schema definition or ORM replacement
+- **Verification** — confirmed matching results against ACME sandbox data
+
+---
+
+**FINAL VERIFICATION — BOTH AGENTS COMPLETE**
+
+When both agents have finished their work, run the following verification sequence:
+
+Run a full schema introspection of the live database. Confirm every table in the database now has a corresponding Drizzle schema definition. Confirm every column in every table is declared in the schema with the correct type and explicit name mapping. Confirm zero tables and zero columns remain untracked.
+
+Scan every route file and service file. Confirm zero inline raw SQL strings remain. Confirm every database operation uses a Drizzle ORM call or a named typed wrapper.
+
+Start the server. Confirm all 30/30 background services start cleanly with zero failures. Run the login flow. Confirm it completes without error. Run the five most critical ACME sandbox operations: create an employee, create a shift, generate an invoice, run a payroll calculation, and execute a Trinity action. Confirm all five produce correct results with data persisting to the correct tables.
+
+Re-run the Phase 1 schema parity check. This time the result must show: zero Drizzle tables missing from DB, zero DB tables missing from Drizzle, zero untracked columns, zero implicit column name inference, and zero inline raw SQL in route handlers. The result that previously showed 195 non-critical tables and 306 non-critical columns must now show zero in both categories.
+
+---
+
+**REPLIT.MD ADDITIONS**
+
+After both agents complete and all verifications pass, append the following to the CoAIleague Architecture Canons section in replit.md:
+
+*Every database table has a Drizzle schema definition. No table exists in the database without a corresponding typed schema. This was established in Phase 1 Loose End Resolution and is a permanent requirement. Any migration that creates a new table must be accompanied by a Drizzle schema definition for that table before the migration is committed.*
+
+*Every database operation in route handlers and service files uses Drizzle ORM calls or named typed wrapper functions. Inline raw SQL strings in route handlers and service files are permanently retired. Complex queries that cannot be expressed in the ORM query builder are encapsulated in named typed functions in the appropriate service file with explicit input and output types and a comment explaining the raw SQL requirement.*
+
+*The canonical Name Registry produced in Phase 1 covers all tables including those previously managed by raw SQL. Any new column or table added to the database must be registered in the Name Registry before it is used in any code.*
+
+---
+
+**PHASE 1 LOOSE END RESOLUTION IS COMPLETE WHEN:**
+
+The Phase 1 schema parity check re-run shows zero untracked tables, zero untracked columns, and zero inline raw SQL in route handlers. The server starts cleanly. The five critical operations all succeed. Both canons are appended to replit.md.
+
+Only then is Phase 2 ready to run on a fully clean foundation.
+
+---
+
+Paste that in Bryan. When it comes back clean with the re-run showing zero in all categories, bring the results here and we move to Phase 2 on a foundation that has no loose ends anywhere.

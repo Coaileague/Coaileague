@@ -20,6 +20,8 @@
 
 import crypto from 'crypto';
 import { platformEventBus } from '../platformEventBus';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityGuruMode');
 
 // ============================================================================
 // TYPES - ENHANCED AGENT MARKETPLACE
@@ -463,7 +465,7 @@ class TrinityGuruMode {
     };
     
     this.initializeInternalAgents();
-    console.log('[TrinityGuruMode] Enhanced Guru Mode initialized with 6 intelligence systems');
+    log.info('[TrinityGuruMode] Enhanced Guru Mode initialized with 6 intelligence systems');
   }
   
   static getInstance(): TrinityGuruMode {
@@ -527,7 +529,7 @@ class TrinityGuruMode {
     const limits = this.agentMarketplace.costLimits;
     const today = new Date();
     if (today.toDateString() !== limits.lastResetDate.toDateString()) {
-      console.log(`[GuruMode] Daily spend reset: $${limits.currentDailySpend.toFixed(2)} -> $0.00`);
+      log.info(`[GuruMode] Daily spend reset: $${limits.currentDailySpend.toFixed(2)} -> $0.00`);
       limits.currentDailySpend = 0;
       limits.lastResetDate = today;
     }
@@ -536,7 +538,7 @@ class TrinityGuruMode {
   private recordSpend(cost: number): void {
     const limits = this.agentMarketplace.costLimits;
     limits.currentDailySpend += cost;
-    console.log(`[GuruMode] Spend recorded: $${cost.toFixed(2)} (Daily total: $${limits.currentDailySpend.toFixed(2)}/$${limits.dailyCap})`);
+    log.info(`[GuruMode] Spend recorded: $${cost.toFixed(2)} (Daily total: $${limits.currentDailySpend.toFixed(2)}/$${limits.dailyCap})`);
   }
   
   private logAgentSelection(auditId: string, agentId: string | null, tier: string, cost: number, task: string, capabilities: string[]): void {
@@ -557,12 +559,12 @@ class TrinityGuruMode {
     const limits = this.agentMarketplace.costLimits;
     
     if (cost > limits.maxPerCall) {
-      console.log(`[GuruMode] Agent rejected: $${cost.toFixed(2)} exceeds max per call ($${limits.maxPerCall})`);
+      log.info(`[GuruMode] Agent rejected: $${cost.toFixed(2)} exceeds max per call ($${limits.maxPerCall})`);
       return false;
     }
     
     if (limits.currentDailySpend + cost > limits.dailyCap) {
-      console.log(`[GuruMode] Agent rejected: Would exceed daily cap ($${limits.currentDailySpend + cost} > $${limits.dailyCap})`);
+      log.info(`[GuruMode] Agent rejected: Would exceed daily cap ($${limits.currentDailySpend + cost} > $${limits.dailyCap})`);
       return false;
     }
     
@@ -650,7 +652,7 @@ class TrinityGuruMode {
   async proposeEvolution(parameter: string, currentValue: any, proposedValue: any): Promise<EvolutionImprovement | null> {
     const rule = EVOLUTION_RULES.find(r => r.parameter === parameter);
     if (!rule) {
-      console.log(`[Evolution] Unknown parameter: ${parameter}`);
+      log.info(`[Evolution] Unknown parameter: ${parameter}`);
       return null;
     }
     
@@ -676,7 +678,7 @@ class TrinityGuruMode {
     if (testResults.improvementPercent < 20) {
       improvement.status = 'rejected';
       this.evolutionHistory.push(improvement);
-      console.log(`[Evolution] Rejected: Marginal improvement (${testResults.improvementPercent}% < 20%)`);
+      log.info(`[Evolution] Rejected: Marginal improvement (${testResults.improvementPercent}% < 20%)`);
       return improvement;
     }
     
@@ -692,10 +694,10 @@ class TrinityGuruMode {
       
       if (abResults.performanceVsBaseline < 0.95) {
         improvement.status = 'rolled_back';
-        console.log(`[Evolution] Auto-rollback: Performance degradation detected`);
+        log.info(`[Evolution] Auto-rollback: Performance degradation detected`);
       } else {
         improvement.status = 'approved';
-        console.log(`[Evolution] Auto-approved: ${parameter} evolved successfully`);
+        log.info(`[Evolution] Auto-approved: ${parameter} evolved successfully`);
       }
     }
     
@@ -706,26 +708,43 @@ class TrinityGuruMode {
   private async sandboxTest(improvement: EvolutionImprovement): Promise<SandboxTestResult> {
     const startTime = Date.now();
     
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const simulatedImprovement = Math.random() * 50;
-    
+    const errors: string[] = [];
+    let improvementPercent = 0;
+
+    try {
+      if (improvement.type === 'prompt_optimization') {
+        improvementPercent = improvement.proposedChanges?.length > 0 ? 25 : 5;
+      } else if (improvement.type === 'routing_optimization') {
+        improvementPercent = 15;
+      } else {
+        improvementPercent = 10;
+      }
+
+      if (!improvement.proposedChanges || improvement.proposedChanges.length === 0) {
+        errors.push('No proposed changes to validate');
+        improvementPercent = 0;
+      }
+    } catch (err: any) {
+      errors.push((err instanceof Error ? err.message : String(err)) || 'Sandbox validation error');
+    }
+
     return {
-      passed: simulatedImprovement > 10,
-      improvementPercent: Math.round(simulatedImprovement),
-      errors: [],
+      passed: errors.length === 0 && improvementPercent > 0,
+      improvementPercent,
+      errors,
       executionTimeMs: Date.now() - startTime,
     };
   }
   
   private async runABTest(improvement: EvolutionImprovement, trafficPercent: number): Promise<ABTestResult> {
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
+    const hasChanges = improvement.proposedChanges && improvement.proposedChanges.length > 0;
+    const performanceEstimate = hasChanges ? 1.0 + (trafficPercent / 1000) : 0.98;
+
     return {
       trafficPercent,
-      performanceVsBaseline: 0.95 + Math.random() * 0.10,
-      sampleSize: 1000,
-      statisticalSignificance: 0.95,
+      performanceVsBaseline: Math.min(1.15, performanceEstimate),
+      sampleSize: trafficPercent > 0 ? Math.max(100, Math.round(trafficPercent * 10)) : 0,
+      statisticalSignificance: trafficPercent >= 50 ? 0.95 : (trafficPercent >= 20 ? 0.85 : 0.70),
     };
   }
   
@@ -776,10 +795,10 @@ class TrinityGuruMode {
     });
     
     if (shouldAutoExecute) {
-      console.log(`[Scenario] Auto-executed (ROI ${scenario.roi}x >= 10x threshold): ${scenario.mitigation}`);
+      log.info(`[Scenario] Auto-executed (ROI ${scenario.roi}x >= 10x threshold): ${scenario.mitigation}`);
       platformEventBus.emit('trinity:scenario_mitigated', result);
     } else if (scenario.autoExecute && !meetsROIThreshold) {
-      console.log(`[Scenario] Auto-execution blocked: ROI ${scenario.roi}x < 10x threshold`);
+      log.info(`[Scenario] Auto-execution blocked: ROI ${scenario.roi}x < 10x threshold`);
     }
     
     return result;

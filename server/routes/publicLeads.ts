@@ -10,6 +10,11 @@ import { z } from "zod";
 import { db } from "../db";
 import { leads, insertLeadSchema } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { emailService } from "../services/emailService";
+import { NotificationDeliveryService } from '../services/notificationDeliveryService';
+import { createLogger } from '../lib/logger';
+const log = createLogger('PublicLeads');
+
 
 const router = Router();
 
@@ -112,6 +117,7 @@ router.post("/", async (req: Request, res: Response) => {
     
     // Create new lead
     const [newLead] = await db.insert(leads).values({
+      workspaceId: null,
       companyName: validated.companyName,
       contactName: validated.contactName,
       contactEmail: validated.contactEmail,
@@ -128,8 +134,19 @@ router.post("/", async (req: Request, res: Response) => {
         : 'Submitted via landing page',
     }).returning();
     
-    // TODO: Trigger welcome email sequence via Resend
-    // TODO: Notify sales team via WebSocket/notification
+    // Send welcome email to new lead — tracked through NDS for retry on failure
+    const _leadEmail = emailService.buildPublicLeadWelcome({
+      email: validated.contactEmail,
+      contactName: validated.contactName,
+      companyName: validated.companyName,
+      roiData: validated.roiData ? {
+        estimatedAnnualSavings: validated.roiData.estimatedAnnualSavings,
+        numberOfGuards: validated.roiData.numberOfGuards,
+      } : undefined,
+    });
+    NotificationDeliveryService.send({ type: 'lead_welcome', workspaceId: 'public', recipientUserId: validated.contactEmail, channel: 'email', body: _leadEmail }).catch(err => {
+      log.error('[PublicLeads] Failed to queue welcome email:', err);
+    });
     
     res.status(201).json({
       success: true,
@@ -146,7 +163,7 @@ router.post("/", async (req: Request, res: Response) => {
         details: error.errors,
       });
     }
-    console.error("Error capturing lead:", error);
+    log.error("Error capturing lead:", error);
     res.status(500).json({ 
       success: false,
       error: "Something went wrong. Please try again.",

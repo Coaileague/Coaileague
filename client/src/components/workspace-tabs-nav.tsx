@@ -12,7 +12,7 @@ import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { selectSidebarFamilies, ROUTE_GROUPS, type RouteGroupId } from "@/lib/sidebarModules";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { UniversalModal, UniversalModalTrigger, UniversalModalContent } from '@/components/ui/universal-modal';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
@@ -239,7 +239,7 @@ function PlatformGroupedMobile({
         
         return (
           <Collapsible key={groupId} defaultOpen={isActiveGroup}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 rounded-md bg-muted/50 hover-elevate">
+            <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md bg-muted/50 hover-elevate">
               <span className="text-sm font-semibold">{group?.label || groupId}</span>
               <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
@@ -283,15 +283,15 @@ function PlatformGroupedMobile({
 
 export function WorkspaceTabsNav() {
   const [location, setLocation] = useLocation();
-  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
+  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading, positionCapabilities } = useWorkspaceAccess();
   const isMobile = useIsMobile();
   const [activeFamily, setActiveFamily] = useState<string>("platform");
   const [expandedTab, setExpandedTab] = useState<boolean>(false);
 
-  // Get sidebar families with RBAC filtering
+  // Get sidebar families with RBAC filtering (includes position-derived capabilities)
   const rawFamilies = isLoading 
     ? [] 
-    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+    : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities);
   
   // Filter out mobileOnly routes on desktop
   const families = isMobile 
@@ -309,18 +309,6 @@ export function WorkspaceTabsNav() {
         subscriptionTier,
         isPlatformStaff,
         currentLocation: location,
-      });
-    } else if (!isLoading) {
-      console.log('[TabsNav] Families loaded:', {
-        count: families.length,
-        activeFamily,
-        currentLocation: location,
-        families: families.map(f => ({
-          id: f.id,
-          label: f.label,
-          routeCount: f.routes.length,
-          routes: f.routes.map(r => ({ id: r.id, label: r.label, href: r.href }))
-        }))
       });
     }
   }, [families, isLoading, workspaceRole, subscriptionTier, isPlatformStaff, location, activeFamily]);
@@ -340,7 +328,7 @@ export function WorkspaceTabsNav() {
   // Loading skeleton while families load
   if (isLoading) {
     return (
-      <div className="w-full border-b bg-background sticky top-0 z-30">
+      <div className="w-full border-b bg-background">
         <div className="h-12 flex items-center px-4 gap-2 overflow-x-auto">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-6 w-20 bg-muted rounded animate-pulse" />
@@ -353,7 +341,7 @@ export function WorkspaceTabsNav() {
   // Fallback message if no families available (RBAC issue or misconfiguration)
   if (families.length === 0) {
     return (
-      <div className="w-full border-b bg-background sticky top-0 z-30 p-3">
+      <div className="w-full border-b bg-background p-3">
         <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
           ⚠️ Navigation unavailable. Role: {workspaceRole} | Tier: {subscriptionTier} | Staff: {isPlatformStaff ? 'Yes' : 'No'}. Check console for details.
         </div>
@@ -372,7 +360,7 @@ export function WorkspaceTabsNav() {
   };
 
   return (
-    <div className="w-full border-b bg-background sticky top-0 z-30">
+    <div className="w-full border-b bg-background">
       {/* Main Tabs - Shows family tabs */}
       <Tabs value={activeFamily} onValueChange={handleFamilyChange} className="w-full">
         <TabsList className={cn(
@@ -426,8 +414,8 @@ export function WorkspaceTabsNav() {
               {/* Mobile: Show grouped accordion for Platform, sheet for others */}
               {isMobile && (
                 <div className="px-4 py-2 border-t bg-muted/30">
-                  <Sheet open={expandedTab} onOpenChange={setExpandedTab}>
-                    <SheetTrigger asChild>
+                  <UniversalModal open={expandedTab} onOpenChange={setExpandedTab}>
+                    <UniversalModalTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
@@ -442,8 +430,8 @@ export function WorkspaceTabsNav() {
                           expandedTab && "rotate-180"
                         )} />
                       </Button>
-                    </SheetTrigger>
-                    <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
+                    </UniversalModalTrigger>
+                    <UniversalModalContent side="bottom" className="h-[70vh] overflow-y-auto sm:max-w-3xl" showHomeButton={false}>
                       {isPlatformFamily ? (
                         <PlatformGroupedMobile
                           routes={family.routes}
@@ -484,8 +472,8 @@ export function WorkspaceTabsNav() {
                           })}
                         </div>
                       )}
-                    </SheetContent>
-                  </Sheet>
+                    </UniversalModalContent>
+                  </UniversalModal>
                 </div>
               )}
             </TabsContent>

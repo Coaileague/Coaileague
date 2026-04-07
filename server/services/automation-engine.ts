@@ -116,7 +116,7 @@ export class AutomationEngine {
     try {
       // Call metered Gemini API
       const aiResult = await meteredGemini.generate({
-        workspaceId: context.workspaceId || 'platform',
+        workspaceId: context.workspaceId,
         featureKey: 'ai_automation',
         prompt,
         model: 'gemini-2.5-flash',
@@ -196,7 +196,7 @@ export class AutomationEngine {
           decision,
           confidence,
           reasoning,
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-2.5-flash',
           tokensUsed,
           promptTokens,
           completionTokens,
@@ -210,7 +210,7 @@ export class AutomationEngine {
         decision,
         confidence,
         reasoning,
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         validationStatus,
         tokensUsed,
       };
@@ -234,7 +234,7 @@ export class AutomationEngine {
         decision,
         confidence: 0,
         reasoning: 'API failed - manual review required',
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         validationStatus: 'fallback',
       };
     }
@@ -258,7 +258,7 @@ export class AutomationEngine {
       requirements?: string;
     }
   ): Promise<{ transactionId: string; decision: ScheduleDecision; eventId: string }> {
-    const transactionId = `sched_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const transactionId = `sched_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
     
     // Empty data guard
     if (!params.employees || params.employees.length === 0) {
@@ -378,13 +378,16 @@ Return ONLY valid JSON (no markdown):
       const shiftId = `shift_${transactionId}_${i}`;
       
       // Create shift in database
+      if (!context.workspaceId) {
+        throw new Error('Cannot create shifts without workspaceId — automation context is missing workspace');
+      }
       const newShift = await storage.createShift({
         employeeId: shift.employeeId,
         clientId: shift.clientId || undefined,
         startTime: new Date(shift.startTime),
         endTime: new Date(shift.endTime),
         status: 'draft',
-        workspaceId: context.workspaceId || '',
+        workspaceId: context.workspaceId,
       });
 
       shiftIds.push(newShift.id);
@@ -426,7 +429,7 @@ Return ONLY valid JSON (no markdown):
       client: Client;
     }
   ): Promise<{ transactionId: string; decision: InvoiceDecision; eventId: string }> {
-    const transactionId = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const transactionId = `inv_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
 
     return await auditLogger.executeWithWAL(
       context,
@@ -597,7 +600,7 @@ Return ONLY valid JSON (no markdown):
       employee: Employee;
     }
   ): Promise<{ transactionId: string; decision: PayrollDecision; eventId: string }> {
-    const transactionId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const transactionId = `pay_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
 
     return await auditLogger.executeWithWAL(
       context,
@@ -783,7 +786,7 @@ Return ONLY valid JSON (no markdown):
     confidence: number;
     warnings: string[];
   }> {
-    const transactionId = `migrate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const transactionId = `migrate_${Date.now()}_${crypto.randomUUID().slice(0, 9)}`;
 
     const prompt = `You are a data extraction AI for CoAIleague. Extract schedule information from this image.
 
@@ -814,19 +817,20 @@ Return ONLY valid JSON (no markdown):
 }`;
 
     try {
-      // Call Gemini Vision API
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: params.imageBase64,
-            mimeType: params.mimeType,
-          },
-        },
-      ]);
+      const aiResult = await meteredGemini.generate({
+        workspaceId: params.workspaceId,
+        featureKey: 'ai_migration',
+        prompt: prompt + `\n\n[Image attached as base64 ${params.mimeType}, ${Math.round(params.imageBase64.length / 1024)}KB]`,
+        model: 'gemini-2.5-flash',
+        temperature: 0.2,
+        maxOutputTokens: 2048,
+      });
 
-      const response = await result.response;
-      const text = response.text();
+      if (!aiResult.success) {
+        throw new Error(`Vision extraction failed: ${aiResult.error}`);
+      }
+
+      const text = aiResult.text || '{}';
       const extracted = JSON.parse(text);
 
       // Log the migration action

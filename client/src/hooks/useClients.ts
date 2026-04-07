@@ -2,6 +2,8 @@ import { useQuery, useMutation, type UseQueryResult } from "@tanstack/react-quer
 import type { Client } from "@shared/schema";
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiError";
+import { PaginatedClientListResponse, ClientListResponse } from "@shared/schemas/responses/clients";
 
 export interface ClientsQueryParams {
   page?: number;
@@ -10,6 +12,7 @@ export interface ClientsQueryParams {
   status?: 'active' | 'inactive' | 'all';
   sort?: 'createdAt' | 'firstName' | 'lastName' | 'companyName';
   order?: 'asc' | 'desc';
+  workspaceId?: string;
 }
 
 export function useClientsTable(params: ClientsQueryParams = {}): UseQueryResult<PaginatedResponse<ClientWithInvoiceCount>> {
@@ -21,16 +24,25 @@ export function useClientsTable(params: ClientsQueryParams = {}): UseQueryResult
     ...(params.status && params.status !== 'all' && { status: params.status }),
     ...(params.sort && { sort: params.sort }),
     ...(params.order && { order: params.order }),
+    ...(params.workspaceId && { workspaceId: params.workspaceId }),
   };
   
   return useQuery({
     queryKey: ["/api/clients", queryParams],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([k, v]) => {
+        if (v !== undefined) params.append(k, String(v));
+      });
+      return apiFetch(`/api/clients?${params.toString()}`, PaginatedClientListResponse) as Promise<PaginatedResponse<ClientWithInvoiceCount>>;
+    },
   });
 }
 
 export function useClientLookup(): UseQueryResult<Client[]> {
   return useQuery({
     queryKey: ["/api/clients/lookup"],
+    queryFn: () => apiFetch('/api/clients/lookup', ClientListResponse) as Promise<Client[]>,
   });
 }
 

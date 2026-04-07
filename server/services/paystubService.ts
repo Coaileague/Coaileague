@@ -7,8 +7,21 @@
 import PDFDocument from 'pdfkit';
 import { db } from "../db";
 import { employees, timeEntries, payrollRuns, payrollEntries, workspaces } from "@shared/schema";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { platformEventBus } from "./platformEventBus";
+import {
+  calculateGrossPay,
+  calculateOvertimePay,
+  calculateNetPay,
+  sumFinancialValues,
+  subtractFinancialValues,
+  multiplyFinancialValues,
+  toFinancialString,
+  formatCurrency,
+} from "./financialCalculator";
+import { createLogger } from '../lib/logger';
+const log = createLogger('paystubService');
+
 
 interface PaystubData {
   employeeId: string;
@@ -29,6 +42,8 @@ interface PaystubData {
   ytdGross?: number;
   ytdNet?: number;
   payrollRunId?: string;
+  // Phase 30: AI-generated earnings summary (generated via withGpt / meteredGptClient)
+  aiSummary?: string;
 }
 
 interface PaystubResult {
@@ -41,10 +56,11 @@ interface PaystubResult {
 
 export class PaystubService {
   /**
-   * Round to 2 decimal places for financial calculations
+   * RC4 (Phase 2): Round to 4 decimal places using Decimal.js (was Math.round * 100 / 100).
+   * Decimal.js eliminates floating-point precision loss during accumulation.
    */
   private roundCurrency(amount: number): number {
-    return Math.round(amount * 100) / 100;
+    return parseFloat(toFinancialString(String(amount)));
   }
 
   /**
@@ -78,7 +94,7 @@ export class PaystubService {
   ): Promise<PaystubData | null> {
     const dateValidation = this.validateDates(startDate, endDate);
     if (!dateValidation.valid) {
-      console.error(`[Paystub] Date validation failed: ${dateValidation.error}`);
+      log.error(`[Paystub] Date validation failed: ${dateValidation.error}`);
       return null;
     }
 
@@ -113,17 +129,24 @@ export class PaystubService {
     const regularHours = this.roundCurrency(Math.min(totalHours, 40));
     const overtimeHours = this.roundCurrency(Math.max(0, totalHours - 40));
 
-    const hourlyRate = this.roundCurrency(parseFloat(String(employee.payRate || 0)));
-    const regularRate = hourlyRate;
-    const overtimeRate = this.roundCurrency(hourlyRate * 1.5);
+    // RC4 (Phase 2): All pay arithmetic via FinancialCalculator (Decimal.js).
+    const rateStr = toFinancialString(String((employee as any).hourlyRate || (employee as any).payRate || '0'));
+    const regularRateStr = rateStr;
+    const overtimeRateStr = multiplyFinancialValues(rateStr, '1.5');
 
-    const regularPay = this.roundCurrency(regularHours * regularRate);
-    const overtimePay = this.roundCurrency(overtimeHours * overtimeRate);
-    const grossPay = this.roundCurrency(regularPay + overtimePay);
+    const regularPayStr = calculateGrossPay(toFinancialString(String(regularHours)), regularRateStr, 'hourly');
+    const overtimePayStr = calculateOvertimePay(toFinancialString(String(overtimeHours)), rateStr);
+    const grossPayStr = sumFinancialValues([regularPayStr, overtimePayStr]);
+    const grossPay = parseFloat(grossPayStr);
+
+    const hourlyRate = parseFloat(rateStr);
+    const regularRate = hourlyRate;
+    const overtimeRate = parseFloat(overtimeRateStr);
 
     const deductions = this.calculateDeductions(grossPay, workspaceId);
-    const totalDeductions = this.roundCurrency(deductions.reduce((sum, d) => sum + d.amount, 0));
-    const netPay = this.roundCurrency(grossPay - totalDeductions);
+    const totalDeductionsStr = sumFinancialValues(deductions.map(d => toFinancialString(String(d.amount))));
+    const totalDeductions = parseFloat(totalDeductionsStr);
+    const netPay = parseFloat(subtractFinancialValues(grossPayStr, totalDeductionsStr));
 
     return {
       employeeId,
@@ -142,29 +165,31 @@ export class PaystubService {
   }
 
   /**
-   * Calculate standard deductions
+   * Calculate standard deductions.
+   * RC4 (Phase 2): Uses Decimal.js via FinancialCalculator — no native multiplication/rounding.
    */
   calculateDeductions(grossPay: number, workspaceId: string): { name: string; amount: number }[] {
     const deductions: { name: string; amount: number }[] = [];
+    const grossStr = toFinancialString(String(grossPay));
 
-    const federalTax = grossPay * 0.12;
+    const federalTax = parseFloat(multiplyFinancialValues(grossStr, '0.12'));
     if (federalTax > 0) {
-      deductions.push({ name: 'Federal Income Tax', amount: Math.round(federalTax * 100) / 100 });
+      deductions.push({ name: 'Federal Income Tax', amount: federalTax });
     }
 
-    const socialSecurity = grossPay * 0.062;
+    const socialSecurity = parseFloat(multiplyFinancialValues(grossStr, '0.062'));
     if (socialSecurity > 0) {
-      deductions.push({ name: 'Social Security (6.2%)', amount: Math.round(socialSecurity * 100) / 100 });
+      deductions.push({ name: 'Social Security (6.2%)', amount: socialSecurity });
     }
 
-    const medicare = grossPay * 0.0145;
+    const medicare = parseFloat(multiplyFinancialValues(grossStr, '0.0145'));
     if (medicare > 0) {
-      deductions.push({ name: 'Medicare (1.45%)', amount: Math.round(medicare * 100) / 100 });
+      deductions.push({ name: 'Medicare (1.45%)', amount: medicare });
     }
 
-    const stateTax = grossPay * 0.05;
+    const stateTax = parseFloat(multiplyFinancialValues(grossStr, '0.05'));
     if (stateTax > 0) {
-      deductions.push({ name: 'State Income Tax', amount: Math.round(stateTax * 100) / 100 });
+      deductions.push({ name: 'State Income Tax', amount: stateTax });
     }
 
     return deductions;
@@ -240,6 +265,16 @@ export class PaystubService {
       doc.moveDown();
       doc.fontSize(16).text(`NET PAY: $${data.netPay.toFixed(2)}`, { align: 'center', bold: true });
 
+      // Phase 30: Render AI-generated earnings summary if provided
+      if (data.aiSummary) {
+        doc.moveDown(2);
+        doc.fontSize(9).fillColor('#444');
+        doc.text('Earnings Summary:', { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(8).fillColor('#666');
+        doc.text(data.aiSummary, { width: 400, align: 'left' });
+      }
+
       doc.moveDown(3);
       doc.fontSize(8).fillColor('gray');
       doc.text('This is a computer-generated document. Please retain for your records.', { align: 'center' });
@@ -298,7 +333,7 @@ export class PaystubService {
         data,
       };
     } catch (error) {
-      console.error('[PaystubService] Generation failed:', error);
+      log.error('[PaystubService] Generation failed:', error);
       return { success: false, error: String(error) };
     }
   }
@@ -328,6 +363,81 @@ export class PaystubService {
         formattedAmount: `-$${d.amount.toFixed(2)}`,
       })),
       totalHours: data.regularHours + data.overtimeHours,
+    };
+  }
+
+  async getYTDEarnings(
+    employeeId: string,
+    workspaceId: string
+  ): Promise<{
+    taxYear: number;
+    grossPay: number;
+    netPay: number;
+    federalTax: number;
+    stateTax: number;
+    socialSecurity: number;
+    medicare: number;
+    totalDeductions: number;
+    totalHours: number;
+    regularHours: number;
+    overtimeHours: number;
+    payPeriodCount: number;
+  } | null> {
+    const now = new Date();
+    const taxYear = now.getFullYear();
+    const yearStart = new Date(taxYear, 0, 1);
+    const yearEnd = new Date(taxYear, 11, 31, 23, 59, 59, 999);
+
+    const result = await db
+      .select({
+        grossPay: sql<string>`COALESCE(SUM(CAST(${payrollEntries.grossPay} AS NUMERIC)), 0)`,
+        netPay: sql<string>`COALESCE(SUM(CAST(${payrollEntries.netPay} AS NUMERIC)), 0)`,
+        federalTax: sql<string>`COALESCE(SUM(CAST(${payrollEntries.federalTax} AS NUMERIC)), 0)`,
+        stateTax: sql<string>`COALESCE(SUM(CAST(${payrollEntries.stateTax} AS NUMERIC)), 0)`,
+        socialSecurity: sql<string>`COALESCE(SUM(CAST(${payrollEntries.socialSecurity} AS NUMERIC)), 0)`,
+        medicare: sql<string>`COALESCE(SUM(CAST(${payrollEntries.medicare} AS NUMERIC)), 0)`,
+        regularHours: sql<string>`COALESCE(SUM(CAST(${payrollEntries.regularHours} AS NUMERIC)), 0)`,
+        overtimeHours: sql<string>`COALESCE(SUM(CAST(${payrollEntries.overtimeHours} AS NUMERIC)), 0)`,
+        payPeriodCount: sql<string>`COUNT(DISTINCT ${payrollEntries.payrollRunId})`,
+      })
+      .from(payrollEntries)
+      .innerJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))
+      .where(
+        and(
+          eq(payrollEntries.employeeId, employeeId),
+          eq(payrollEntries.workspaceId, workspaceId),
+          gte(payrollRuns.periodEnd, yearStart),
+          lte(payrollRuns.periodEnd, yearEnd),
+          sql`${payrollRuns.status} IN ('approved', 'processed', 'paid', 'completed')`
+        )
+      );
+
+    const row = result[0];
+    if (!row) return null;
+
+    // RC4 (Phase 2): Use sumFinancialValues (Decimal.js) for YTD accumulation.
+    // DB SUM() aggregates already return precise numeric strings — parse once, accumulate via Decimal.
+    const totalDeductionsStr = sumFinancialValues([
+      row.federalTax || '0',
+      row.stateTax || '0',
+      row.socialSecurity || '0',
+      row.medicare || '0',
+    ]);
+    const totalHoursStr = sumFinancialValues([row.regularHours || '0', row.overtimeHours || '0']);
+
+    return {
+      taxYear,
+      grossPay: parseFloat(toFinancialString(row.grossPay || '0')),
+      netPay: parseFloat(toFinancialString(row.netPay || '0')),
+      federalTax: parseFloat(toFinancialString(row.federalTax || '0')),
+      stateTax: parseFloat(toFinancialString(row.stateTax || '0')),
+      socialSecurity: parseFloat(toFinancialString(row.socialSecurity || '0')),
+      medicare: parseFloat(toFinancialString(row.medicare || '0')),
+      totalDeductions: parseFloat(totalDeductionsStr),
+      totalHours: parseFloat(totalHoursStr),
+      regularHours: parseFloat(toFinancialString(row.regularHours || '0')),
+      overtimeHours: parseFloat(toFinancialString(row.overtimeHours || '0')),
+      payPeriodCount: parseInt(row.payPeriodCount),
     };
   }
 }

@@ -1,3 +1,7 @@
+import { createLogger } from '../../lib/logger';
+import { EMAIL } from '../../config/platformConfig';
+const log = createLogger('platformFeatureRegistry');
+
 /**
  * PLATFORM FEATURE REGISTRY
  * ==========================
@@ -12,7 +16,7 @@ export interface FeatureCapability {
   troubleshooting?: string[];
   relatedFeatures?: string[];
   apiEndpoints?: string[];
-  requiredTier?: 'free' | 'starter' | 'professional' | 'enterprise';
+  requiredTier?: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
 }
 
 export interface PlatformFeature {
@@ -25,7 +29,7 @@ export interface PlatformFeature {
   commonIssues: CommonIssue[];
   keywords: string[];
   helpDocs?: string;
-  requiredTier: 'free' | 'starter' | 'professional' | 'enterprise';
+  requiredTier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
   enabled: boolean;
 }
 
@@ -77,7 +81,7 @@ export const PLATFORM_FEATURES: PlatformFeature[] = [
           'GPS issues may occur if location services are disabled in browser',
           'Check if you already have an open time entry that needs to be closed'
         ],
-        apiEndpoints: ['/api/time-entries/clock-in', '/api/time-entries/clock-out']
+        apiEndpoints: ['/api/hr/time-entries/clock-in', '/api/hr/time-entries/clock-out']
       },
       {
         name: 'Timesheets',
@@ -364,7 +368,7 @@ export const PLATFORM_FEATURES: PlatformFeature[] = [
         howTo: 'Configure in Settings > Notifications. Select email preferences for each notification type.',
         troubleshooting: [
           'Check spam/junk folder',
-          'Whitelist noreply@coaileague.com',
+          `Whitelist ${EMAIL.senders.noreply}`,
           'Verify email address is correct'
         ]
       },
@@ -897,8 +901,8 @@ export class PlatformFeatureRegistry {
     return PLATFORM_FEATURES.filter(f => f.category === category);
   }
 
-  getFeaturesByTier(tier: 'free' | 'starter' | 'professional' | 'enterprise'): PlatformFeature[] {
-    const tierOrder = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+  getFeaturesByTier(tier: 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic'): PlatformFeature[] {
+    const tierOrder = { free: 0, trial: 0, starter: 1, professional: 2, business: 3, enterprise: 4, strategic: 5 };
     return PLATFORM_FEATURES.filter(f => tierOrder[f.requiredTier] <= tierOrder[tier]);
   }
 
@@ -1049,7 +1053,7 @@ export class PlatformFeatureRegistry {
   refreshSync(): { syncVersion: number; lastSyncedAt: Date } {
     this.syncVersion++;
     this.lastSyncedAt = new Date();
-    console.log(`[PlatformFeatureRegistry] Trinity sync refreshed: v${this.syncVersion} at ${this.lastSyncedAt.toISOString()}`);
+    log.info(`[PlatformFeatureRegistry] Trinity sync refreshed: v${this.syncVersion} at ${this.lastSyncedAt.toISOString()}`);
     return {
       syncVersion: this.syncVersion,
       lastSyncedAt: this.lastSyncedAt,
@@ -1071,4 +1075,4 @@ I am aware of all platform capabilities and can orchestrate any feature.`;
 export const platformFeatureRegistry = new PlatformFeatureRegistry();
 
 // Auto-log on startup for Trinity awareness
-console.log('[PlatformFeatureRegistry] Initialized for Trinity orchestration:', platformFeatureRegistry.getSyncStatus());
+log.info('[PlatformFeatureRegistry] Initialized for Trinity orchestration:', platformFeatureRegistry.getSyncStatus());

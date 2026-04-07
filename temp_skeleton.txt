@@ -1,0 +1,51 @@
+978:    const loadingSkeleton = (
+979-      <>
+980-        <div className="hidden lg:flex bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg p-6 mb-6 items-center space-x-3">
+981-          <Clock className="w-6 h-6" />
+982-          <h1 className="text-xl font-bold">TimeTracker</h1>
+983-        </div>
+984-        <MetricsCardsSkeleton count={3} columns={3} />
+985-        <div className="mt-6">
+986-          <TimelineSkeleton entries={5} />
+987-        </div>
+988-      </>
+989-    );
+990-
+991-    return (
+992-      <CanvasHubPage config={timeTrackingPageConfig}>
+993-        {isMobile ? (
+994-          loadingSkeleton
+995-        ) : (
+996-          <WorkspaceLayout maxWidth="7xl">
+997-            {loadingSkeleton}
+998-          </WorkspaceLayout>
+999-        )}
+1000-      </CanvasHubPage>
+1001-    );
+1002-  }
+1003-
+1004-  const pageContent = (
+1005-    <div className="space-y-6">
+1006-        {/* Blue/Cyan Gradient Header — desktop only; mobile uses ProgressiveHeader */}
+1007-        <div className="hidden lg:block bg-gradient-to-r from-blue-600 to-indigo-600 text-white shrink-0 shadow-lg">
+1008-          <div className="max-w-7xl mx-auto px-4 py-3 lg:py-4">
+1009-            <div className="flex items-center justify-between gap-2">
+1010-              <div className="flex items-center space-x-3 min-w-0">
+1011-                <div className="min-w-0">
+1012-                  <div className="flex items-center space-x-2">
+1013-                    <Clock className="w-6 h-6 shrink-0" />
+1014-                    <h1 className="text-lg lg:text-xl font-bold truncate">TimeTracker</h1>
+1015-                  </div>
+1016-                  <p className="text-xs opacity-90 hidden lg:block">Universal Time Management</p>
+1017-                </div>
+1018-              </div>
+1019-
+1020-              <div className="flex items-center space-x-2 lg:space-x-4">
+1021-                {activeEntry && (
+1022-                  <div className="hidden lg:flex items-center space-x-2 bg-white bg-opacity-20 px-3 py-1.5 rounded-lg">
+1023-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+1024-                    <span className="text-sm font-medium">Clocked In</span>
+1025-                  </div>
+1026-                )}
+1027-
+1028-                <div className="hidden lg:flex items-center space-x-2 bg-white bg-opacity-20 px-3 py-1.5 rounded-lg">

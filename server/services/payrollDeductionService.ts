@@ -2,75 +2,78 @@
  * PHASE 4D: Payroll Deduction & Garnishment Service
  * Calculates and applies payroll deductions and garnishments
  * 
- * Supports pre-tax deductions with IRS 2024 annual limits:
- * - 401(k) Traditional/Roth: $23,000 + $7,500 catch-up (age 50+)
- * - HSA: $4,150 (self) / $8,300 (family) + $1,000 catch-up (age 55+)
- * - FSA Healthcare: $3,200
+ * Supports pre-tax deductions with IRS 2025 annual limits:
+ * - 401(k) Traditional/Roth: $23,500 + $7,500 catch-up (age 50+)
+ * - HSA: $4,300 (self) / $8,550 (family) + $1,000 catch-up (age 55+)
+ * - FSA Healthcare: $3,300
  * - FSA Dependent Care: $5,000 (married filing jointly) / $2,500 (married filing separately)
  * - Section 125 Cafeteria Plans
  */
 
 import { db } from "../db";
-import { payrollDeductions, payrollGarnishments, payrollEntries, payrollRuns } from "@shared/schema";
+import {
+  payrollEntries,
+  payrollRuns
+} from '@shared/schema';
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
 import { startOfYear, endOfYear } from "date-fns";
 
 /**
- * IRS 2024 Annual Contribution Limits for Pre-Tax Deductions
+ * IRS 2025 Annual Contribution Limits for Pre-Tax Deductions
  */
-export const IRS_DEDUCTION_LIMITS_2024 = {
+export const IRS_DEDUCTION_LIMITS_2025 = {
   '401k': {
-    baseLimit: 23000,
-    catchUpLimit: 7500, // Age 50+
+    baseLimit: 23500,
+    catchUpLimit: 7500,
     catchUpAge: 50,
     description: '401(k) Traditional/Roth Contributions'
   },
   '401k_employer': {
-    baseLimit: 69000, // Total including employee + employer
+    baseLimit: 70000,
     catchUpLimit: 7500,
     catchUpAge: 50,
     description: '401(k) Total Annual Additions'
   },
   '403b': {
-    baseLimit: 23000,
+    baseLimit: 23500,
     catchUpLimit: 7500,
     catchUpAge: 50,
     description: '403(b) Tax-Sheltered Annuity'
   },
   '457b': {
-    baseLimit: 23000,
+    baseLimit: 23500,
     catchUpLimit: 7500,
     catchUpAge: 50,
     description: '457(b) Deferred Compensation'
   },
   'hsa_self': {
-    baseLimit: 4150,
+    baseLimit: 4300,
     catchUpLimit: 1000,
     catchUpAge: 55,
     description: 'Health Savings Account (Self-only)'
   },
   'hsa_family': {
-    baseLimit: 8300,
+    baseLimit: 8550,
     catchUpLimit: 1000,
     catchUpAge: 55,
     description: 'Health Savings Account (Family)'
   },
   'fsa_healthcare': {
-    baseLimit: 3200,
+    baseLimit: 3300,
     catchUpLimit: 0,
     catchUpAge: 0,
     description: 'Flexible Spending Account (Healthcare)'
   },
   'fsa_dependent_care': {
-    baseLimit: 5000, // Married filing jointly
+    baseLimit: 5000,
     catchUpLimit: 0,
     catchUpAge: 0,
-    alternateLimit: 2500, // Married filing separately
+    alternateLimit: 2500,
     description: 'Flexible Spending Account (Dependent Care)'
   },
   'simple_ira': {
-    baseLimit: 16000,
+    baseLimit: 16500,
     catchUpLimit: 3500,
     catchUpAge: 50,
     description: 'SIMPLE IRA Contributions'
@@ -86,10 +89,12 @@ export const IRS_DEDUCTION_LIMITS_2024 = {
     catchUpLimit: 1000,
     catchUpAge: 50,
     description: 'Roth IRA Contributions',
-    incomePhaseoutSingle: { start: 146000, end: 161000 },
-    incomePhaseoutMarried: { start: 230000, end: 240000 }
+    incomePhaseoutSingle: { start: 150000, end: 165000 },
+    incomePhaseoutMarried: { start: 236000, end: 246000 }
   }
 } as const;
+
+export const IRS_DEDUCTION_LIMITS_2024 = IRS_DEDUCTION_LIMITS_2025;
 
 export type DeductionType = keyof typeof IRS_DEDUCTION_LIMITS_2024;
 
@@ -204,7 +209,7 @@ export async function validateDeductionAmount(
   
   if (requestedAmount > remainingLimit) {
     warning = `Requested ${deductionType} contribution of $${requestedAmount.toFixed(2)} exceeds remaining annual limit. Adjusted to $${allowedAmount.toFixed(2)}. YTD: $${ytdContributions.toFixed(2)}, Annual limit: $${limitInfo.limit}`;
-    console.log(`[PAYROLL DEDUCTION] ${warning}`);
+    log.info(`[PAYROLL DEDUCTION] ${warning}`);
   }
   
   return {
@@ -299,11 +304,25 @@ export async function applyDeductionsAndGarnishments(payrollEntryId: string): Pr
   const totalDeductions = await calculateTotalDeductions(payrollEntryId);
   const totalGarnishments = await calculateTotalGarnishments(payrollEntryId);
 
-  const netPay = new Decimal(entry[0].netPay || 0)
-    .minus(totalDeductions)
-    .minus(totalGarnishments);
+  // 30x Federal Minimum Wage Garnishment Floor (A4 Requirement)
+  // net_pay after garnishments must be >= 30x federal minimum wage ($7.25 * 30 = $217.50)
+  // Note: This applies to disposable earnings (net pay after taxes/deductions).
+  // Current implementation subtracts garnishments from netPay.
+  const FEDERAL_MINIMUM_WAGE = 7.25;
+  const GARNISHMENT_FLOOR = FEDERAL_MINIMUM_WAGE * 30;
 
-  console.log(`[PAYROLL DEDUCTIONS] Entry ${payrollEntryId}: Deductions=$${totalDeductions}, Garnishments=$${totalGarnishments}, Net=$${netPay}`);
+  const netPayAfterDeductions = new Decimal(entry[0].netPay || 0).minus(totalDeductions);
+  const maxAllowedGarnishments = Decimal.max(new Decimal(0), netPayAfterDeductions.minus(GARNISHMENT_FLOOR));
+  
+  const finalGarnishments = Decimal.min(totalGarnishments, maxAllowedGarnishments);
+
+  const rawNetPay = netPayAfterDeductions.minus(finalGarnishments);
+
+  // NET PAY FLOOR: garnishments and deductions can never produce negative take-home pay
+  const netPay = Decimal.max(new Decimal(0), rawNetPay);
+
+  const log = (await import('../lib/logger')).createLogger('PayrollDeductions');
+  log.info(`Entry ${payrollEntryId} — Deductions=$${totalDeductions} Garnishments=$${finalGarnishments} (Requested=$${totalGarnishments}) Raw=$${rawNetPay} Net=$${netPay}`);
 
   return netPay;
 }
@@ -333,7 +352,7 @@ export async function addDeduction(
     })
     .returning();
 
-  console.log(`[PAYROLL DEDUCTION] Added ${deductionType} deduction of $${amount} to entry ${payrollEntryId}`);
+  log.info(`[PAYROLL DEDUCTION] Added ${deductionType} deduction of $${amount} to entry ${payrollEntryId}`);
   return result[0];
 }
 
@@ -364,6 +383,6 @@ export async function addGarnishment(
     })
     .returning();
 
-  console.log(`[PAYROLL GARNISHMENT] Added ${garnishmentType} garnishment of $${amount} (priority ${priority}) to entry ${payrollEntryId}`);
+  log.info(`[PAYROLL GARNISHMENT] Added ${garnishmentType} garnishment of $${amount} (priority ${priority}) to entry ${payrollEntryId}`);
   return result[0];
 }

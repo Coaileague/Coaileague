@@ -17,6 +17,8 @@
 import { platformEventBus } from '../platformEventBus';
 import { trinityCodeOps } from './trinityCodeOps';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('bugReportOrchestrator');
 
 // ============================================================================
 // TYPES
@@ -80,12 +82,15 @@ export interface RemediationRequest {
 }
 
 // ============================================================================
-// IN-MEMORY STORAGE (Would be database-backed in production)
+// IN-MEMORY STORAGE — reset on server restart
+// Bug reports and analyses are transient support-session data; a full audit trail lives in the audit_log table.
 // ============================================================================
 
 const bugReports: Map<string, BugReport> = new Map();
 const bugAnalyses: Map<string, BugAnalysis> = new Map();
 const remediationRequests: Map<string, RemediationRequest> = new Map();
+
+log.info('[BugReportOrchestrator] bugReports, bugAnalyses, remediationRequests are in-memory only — state resets on server restart. Persistent audit records are written to the audit_log table.');
 
 // ============================================================================
 // BUG REPORT ORCHESTRATOR CLASS
@@ -95,7 +100,7 @@ class BugReportOrchestrator {
   private static instance: BugReportOrchestrator;
 
   private constructor() {
-    console.log('[BugReportOrchestrator] Initialized - Bug report analysis and remediation active');
+    log.info('[BugReportOrchestrator] Initialized - Bug report analysis and remediation active');
   }
 
   static getInstance(): BugReportOrchestrator {
@@ -115,13 +120,13 @@ class BugReportOrchestrator {
     
     bugReports.set(reportId, fullReport);
 
-    console.log(`[BugReportOrchestrator] Bug report submitted: ${reportId}`);
+    log.info(`[BugReportOrchestrator] Bug report submitted: ${reportId}`);
 
     // Queue for AI analysis if it's a bug report
     let analysisQueued = false;
     if (report.type === 'bug') {
       this.analyzeBugReport(reportId).catch(err => {
-        console.error(`[BugReportOrchestrator] Analysis failed for ${reportId}:`, err);
+        log.error(`[BugReportOrchestrator] Analysis failed for ${reportId}:`, err);
       });
       analysisQueued = true;
     }
@@ -135,7 +140,7 @@ class BugReportOrchestrator {
       metadata: { reportId, type: report.type, analysisQueued },
       severity: 'info',
       isNew: true
-    });
+    }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
 
     return { reportId, analysisQueued };
   }
@@ -147,11 +152,11 @@ class BugReportOrchestrator {
   async analyzeBugReport(reportId: string): Promise<BugAnalysis | null> {
     const report = bugReports.get(reportId);
     if (!report) {
-      console.error(`[BugReportOrchestrator] Report not found: ${reportId}`);
+      log.error(`[BugReportOrchestrator] Report not found: ${reportId}`);
       return null;
     }
 
-    console.log(`[BugReportOrchestrator] Analyzing bug report: ${reportId}`);
+    log.info(`[BugReportOrchestrator] Analyzing bug report: ${reportId}`);
 
     try {
       const { geminiClient } = await import('./providers/geminiClient');
@@ -166,13 +171,15 @@ Analyze bug reports and provide structured remediation plans.
 Be precise about affected files, code changes, and risk assessment.
 Always prioritize user safety and data integrity.`,
         temperature: 0.3,
-        maxTokens: 4000
+        maxTokens: 4000,
+        workspaceId: report.workspaceId,
+        featureKey: 'bug_report_analysis',
       });
 
       const analysis = this.parseAnalysisResponse(reportId, response.text);
       bugAnalyses.set(reportId, analysis);
 
-      console.log(`[BugReportOrchestrator] Analysis complete for ${reportId}:`, {
+      log.info(`[BugReportOrchestrator] Analysis complete for ${reportId}:`, {
         severity: analysis.severity,
         category: analysis.category,
         hasFix: !!analysis.suggestedFix.patches?.length
@@ -190,12 +197,12 @@ Always prioritize user safety and data integrity.`,
         metadata: { reportId, severity: analysis.severity, category: analysis.category },
         severity: analysis.severity === 'critical' ? 'error' : 'info',
         isNew: true
-      });
+      }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
 
       return analysis;
 
     } catch (error: any) {
-      console.error(`[BugReportOrchestrator] Analysis error for ${reportId}:`, error);
+      log.error(`[BugReportOrchestrator] Analysis error for ${reportId}:`, error);
       
       const fallbackAnalysis: BugAnalysis = {
         reportId,
@@ -282,7 +289,7 @@ Always prioritize user safety and data integrity.`,
         };
       }
     } catch (err) {
-      console.error('[BugReportOrchestrator] Failed to parse analysis:', err);
+      log.error('[BugReportOrchestrator] Failed to parse analysis:', err);
     }
 
     return {
@@ -315,19 +322,19 @@ Always prioritize user safety and data integrity.`,
       analysisId: reportId,
       status: 'pending_approval',
       patches: analysis.suggestedFix.patches || [],
-      commitMessage: `fix: ${report?.title || 'Bug fix'}\n\nAuto-generated by Trinity AI Brain\nReport ID: ${reportId}\nAnalysis confidence: ${analysis.suggestedFix.confidence * 100}%`,
+      commitMessage: `fix: ${report?.title || 'Bug fix'}\n\nAuto-generated by AI Brain\nReport ID: ${reportId}\nAnalysis confidence: ${analysis.suggestedFix.confidence * 100}%`,
       submittedBy: 'Trinity AI'
     };
 
     remediationRequests.set(requestId, request);
 
-    console.log(`[BugReportOrchestrator] Remediation request created: ${requestId}`);
+    log.info(`[BugReportOrchestrator] Remediation request created: ${requestId}`);
 
     platformEventBus.publish({
       type: 'ticket_created' as any,
       category: 'ai_brain',
       title: `🔧 Auto-Fix Pending: ${report?.title || 'Bug fix'}`,
-      description: `Trinity AI has proposed a fix. Severity: ${analysis.severity}, Confidence: ${(analysis.suggestedFix.confidence * 100).toFixed(0)}%`,
+      description: `I've proposed a fix. Severity: ${analysis.severity}, Confidence: ${(analysis.suggestedFix.confidence * 100).toFixed(0)}%`,
       metadata: {
         remediationId: request.id,
         reportId: request.reportId,
@@ -336,7 +343,7 @@ Always prioritize user safety and data integrity.`,
       },
       severity: analysis.severity === 'critical' ? 'error' : 'warning',
       isNew: true
-    });
+    }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
 
     return request;
   }
@@ -355,7 +362,7 @@ Always prioritize user safety and data integrity.`,
       return { success: false, error: `Invalid status: ${request.status}` };
     }
 
-    console.log(`[BugReportOrchestrator] Remediation ${requestId} approved by ${approverId}`);
+    log.info(`[BugReportOrchestrator] Remediation ${requestId} approved by ${approverId}`);
 
     request.status = 'executing';
     request.approvedBy = approverId;
@@ -364,7 +371,7 @@ Always prioritize user safety and data integrity.`,
     try {
       const result = await trinityCodeOps.applyPatch({
         operationId: requestId,
-        workspaceId: 'platform',
+        workspaceId: 'system',
         userId: approverId,
         patches: request.patches.map(p => ({
           type: p.type as 'insert' | 'delete' | 'replace',
@@ -392,7 +399,7 @@ Always prioritize user safety and data integrity.`,
           metadata: { remediationId: request.id, commitHash: result.commitHash },
           severity: 'info',
           isNew: true
-        });
+        }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
 
         return { success: true, commitHash: result.commitHash };
       } else {
@@ -402,10 +409,10 @@ Always prioritize user safety and data integrity.`,
       }
 
     } catch (err: any) {
-      console.error(`[BugReportOrchestrator] Remediation execution failed:`, err);
+      log.error(`[BugReportOrchestrator] Remediation execution failed:`, err);
       request.status = 'failed';
-      request.error = err.message;
-      return { success: false, error: err.message };
+      request.error = (err instanceof Error ? err.message : String(err));
+      return { success: false, error: (err instanceof Error ? err.message : String(err)) };
     }
   }
 
@@ -416,7 +423,7 @@ Always prioritize user safety and data integrity.`,
     request.status = 'rejected';
     request.error = reason;
 
-    console.log(`[BugReportOrchestrator] Remediation ${requestId} rejected by ${rejecterId}: ${reason}`);
+    log.info(`[BugReportOrchestrator] Remediation ${requestId} rejected by ${rejecterId}: ${reason}`);
 
     return true;
   }

@@ -2,12 +2,23 @@
  * Maintenance Mode API Routes
  * ============================
  * Public and admin endpoints for maintenance mode management.
+ * 
+ * Auth tiers:
+ *  - PUBLIC: /status, /window (frontend needs these to show maintenance banners)
+ *  - requireAuth + requirePlatformAdmin: all human-triggered admin actions
+ *  - Trinity internal header (DIAG_BYPASS_SECRET) + fallback to platform admin: orchestrator routes
  */
 
+import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from 'express';
 import { z } from 'zod';
 import { maintenanceModeService } from '../services/maintenanceModeService';
 import { trinityMaintenanceOrchestrator, DiagnosticsReport } from '../services/trinityMaintenanceOrchestrator';
+import { requireAuth } from '../auth';
+import { requirePlatformAdmin, requirePlatformStaff } from '../rbac';
+import { createLogger } from '../lib/logger';
+const log = createLogger('MaintenanceRoutes');
+
 
 const router = Router();
 
@@ -23,13 +34,55 @@ const updateProgressSchema = z.object({
   statusMessage: z.string().optional()
 });
 
+const diagnosticsReportSchema = z.object({
+  runId: z.string(),
+  criticalIssues: z.number().min(0),
+  highIssues: z.number().min(0),
+  mediumIssues: z.number().min(0),
+  lowIssues: z.number().min(0),
+  totalIssues: z.number().min(0),
+  estimatedFixTimeMinutes: z.number().min(0),
+  requiresDowntime: z.boolean(),
+  affectedSystems: z.array(z.string())
+});
+
+/**
+ * Middleware: accept either a valid DIAG_BYPASS_SECRET header (Trinity internal calls)
+ * or a fully authenticated platform admin user. Rejects if neither condition is met.
+ */
+function requireTrinityOrAdmin(req: any, res: any, next: any) {
+  const diagSecret = process.env.DIAG_BYPASS_SECRET;
+  const suppliedSecret = req.headers['x-diagnostics-runner'];
+  const trinityActor = req.headers['x-trinity-actor'];
+
+  // Accept Trinity internal calls only when DIAG_BYPASS_SECRET is set AND matches
+  if (diagSecret && diagSecret.length >= 16 && suppliedSecret === diagSecret) {
+    return next();
+  }
+
+  // Accept Trinity actor header ONLY when combined with a valid DIAG_BYPASS_SECRET match
+  // (prevents spoofing with just x-trinity-actor: trinity)
+  if (trinityActor === 'trinity' && diagSecret && diagSecret.length >= 16 && suppliedSecret === diagSecret) {
+    return next();
+  }
+
+  // Fallback: allow platform admins via session auth
+  requireAuth(req, res, () => {
+    requirePlatformAdmin(req, res, next);
+  });
+}
+
+// ============================================================================
+// PUBLIC ENDPOINTS (intentionally no auth — needed by the maintenance page)
+// ============================================================================
+
 router.get('/api/maintenance/status', async (req, res) => {
   try {
     const status = await maintenanceModeService.getPublicStatus();
     res.json({ success: true, ...status });
-  } catch (error: any) {
-    console.error('[Maintenance] Status error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Status error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
@@ -37,35 +90,21 @@ router.get('/api/maintenance/window', async (req, res) => {
   try {
     const window = await maintenanceModeService.getMaintenanceWindow();
     res.json({ success: true, window });
-  } catch (error: any) {
-    console.error('[Maintenance] Window error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Window error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/api/maintenance/activate', async (req, res) => {
+// ============================================================================
+// PLATFORM ADMIN ENDPOINTS
+// ============================================================================
+
+router.post('/api/maintenance/activate', requireAuth, requirePlatformAdmin, async (req, res) => {
   try {
     const user = req.user as any;
-    
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Authentication required' });
-    }
-
-    const allowedRoles = ['root_admin', 'co_admin', 'sysops'];
-    const platformRole = user.platformRole || 'none';
-    const orgRole = user.role || 'employee';
-    
-    const isAuthorized = allowedRoles.includes(platformRole) || orgRole === 'org_owner';
-    
-    if (!isAuthorized) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Insufficient permissions to activate maintenance mode' 
-      });
-    }
-
     const data = activateSchema.parse(req.body);
-    
+
     const result = await maintenanceModeService.activateMaintenance({
       reason: data.reason,
       estimatedDurationMinutes: data.estimatedDurationMinutes,
@@ -79,24 +118,16 @@ router.post('/api/maintenance/activate', async (req, res) => {
     });
 
     res.json(result);
-    
-  } catch (error: any) {
-    console.error('[Maintenance] Activate error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Activate error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/api/maintenance/activate-trinity', async (req, res) => {
+router.post('/api/maintenance/activate-trinity', requireTrinityOrAdmin, async (req, res) => {
   try {
-    const trinityHeader = req.headers['x-trinity-actor'];
-    const bypassSecret = req.headers['x-diagnostics-runner'];
-    
-    if (trinityHeader !== 'trinity' && bypassSecret !== process.env.DIAG_BYPASS_SECRET) {
-      return res.status(403).json({ success: false, error: 'Trinity authorization required' });
-    }
-
     const data = activateSchema.parse(req.body);
-    
+
     const result = await maintenanceModeService.activateMaintenance({
       reason: data.reason,
       estimatedDurationMinutes: data.estimatedDurationMinutes,
@@ -110,88 +141,67 @@ router.post('/api/maintenance/activate-trinity', async (req, res) => {
     });
 
     res.json(result);
-    
-  } catch (error: any) {
-    console.error('[Maintenance] Trinity activate error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Trinity activate error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/api/maintenance/deactivate', async (req, res) => {
+router.post('/api/maintenance/deactivate', requireAuth, requirePlatformAdmin, async (req, res) => {
   try {
     const user = req.user as any;
     const trinityHeader = req.headers['x-trinity-actor'];
-    
+
     let deactivatedBy: { type: 'admin' | 'trinity' | 'system'; id?: string; name?: string };
-    
+
     if (trinityHeader === 'trinity') {
       deactivatedBy = { type: 'trinity', id: 'trinity-brain', name: 'Trinity AI' };
-    } else if (user) {
-      deactivatedBy = { type: 'admin', id: user.id, name: user.email };
     } else {
-      return res.status(401).json({ success: false, error: 'Authentication required' });
+      deactivatedBy = { type: 'admin', id: user.id, name: user.email };
     }
 
     const result = await maintenanceModeService.deactivateMaintenance(deactivatedBy);
     res.json(result);
-    
-  } catch (error: any) {
-    console.error('[Maintenance] Deactivate error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Deactivate error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/api/maintenance/progress', async (req, res) => {
+router.post('/api/maintenance/progress', requireAuth, requirePlatformAdmin, async (req, res) => {
   try {
     const data = updateProgressSchema.parse(req.body);
-    
     await maintenanceModeService.updateProgress(data.progressPercent, data.statusMessage);
-    
     res.json({ success: true });
-  } catch (error: any) {
-    console.error('[Maintenance] Progress error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Progress error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.get('/api/maintenance/can-auto-activate', async (req, res) => {
+router.get('/api/maintenance/can-auto-activate', requirePlatformStaff, async (req, res) => {
   try {
     const canActivate = await maintenanceModeService.shouldAutoActivate();
     const window = await maintenanceModeService.getMaintenanceWindow();
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       canAutoActivate: canActivate,
       currentlyActive: window.isActive,
       lowTrafficWindow: canActivate
     });
-  } catch (error: any) {
-    console.error('[Maintenance] Auto-activate check error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Auto-activate check error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-const diagnosticsReportSchema = z.object({
-  runId: z.string(),
-  criticalIssues: z.number().min(0),
-  highIssues: z.number().min(0),
-  mediumIssues: z.number().min(0),
-  lowIssues: z.number().min(0),
-  totalIssues: z.number().min(0),
-  estimatedFixTimeMinutes: z.number().min(0),
-  requiresDowntime: z.boolean(),
-  affectedSystems: z.array(z.string())
-});
+// ============================================================================
+// ORCHESTRATOR ENDPOINTS (Trinity internal + platform admin fallback)
+// ============================================================================
 
-router.post('/api/maintenance/orchestrator/trigger', async (req, res) => {
+router.post('/api/maintenance/orchestrator/trigger', requireTrinityOrAdmin, async (req, res) => {
   try {
-    const trinityHeader = req.headers['x-trinity-actor'];
-    const diagHeader = req.headers['x-diagnostics-runner'];
-    
-    if (trinityHeader !== 'trinity' && diagHeader !== process.env.DIAG_BYPASS_SECRET) {
-      return res.status(403).json({ success: false, error: 'Trinity or diagnostics authorization required' });
-    }
-
     const report = diagnosticsReportSchema.parse(req.body.report);
     const immediate = req.body.immediate === true;
 
@@ -201,55 +211,46 @@ router.post('/api/maintenance/orchestrator/trigger', async (req, res) => {
     });
 
     res.json({ success: true, ...result });
-    
-  } catch (error: any) {
-    console.error('[Maintenance] Orchestrator trigger error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Orchestrator trigger error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.post('/api/maintenance/orchestrator/complete', async (req, res) => {
+router.post('/api/maintenance/orchestrator/complete', requireTrinityOrAdmin, async (req, res) => {
   try {
-    const trinityHeader = req.headers['x-trinity-actor'];
-    const diagHeader = req.headers['x-diagnostics-runner'];
-    
-    if (trinityHeader !== 'trinity' && diagHeader !== process.env.DIAG_BYPASS_SECRET) {
-      return res.status(403).json({ success: false, error: 'Trinity or diagnostics authorization required' });
-    }
-
     const result = await trinityMaintenanceOrchestrator.completeMaintenance();
     res.json({ success: true, ...result });
-    
-  } catch (error: any) {
-    console.error('[Maintenance] Orchestrator complete error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Orchestrator complete error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.get('/api/maintenance/orchestrator/status', async (req, res) => {
+router.get('/api/maintenance/orchestrator/status', requirePlatformStaff, async (req, res) => {
   try {
     const status = await trinityMaintenanceOrchestrator.getStatus();
     res.json({ success: true, ...status });
-  } catch (error: any) {
-    console.error('[Maintenance] Orchestrator status error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Orchestrator status error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 
-router.get('/api/maintenance/orchestrator/next-window', async (req, res) => {
+router.get('/api/maintenance/orchestrator/next-window', requirePlatformStaff, async (req, res) => {
   try {
     const nextWindow = trinityMaintenanceOrchestrator.getNextMaintenanceWindow();
     const isWithinWindow = trinityMaintenanceOrchestrator.isWithinMaintenanceWindow();
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       nextWindow: nextWindow.toISOString(),
       isWithinWindow,
       formattedTime: nextWindow.toLocaleString()
     });
-  } catch (error: any) {
-    console.error('[Maintenance] Next window error:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    log.error('[Maintenance] Next window error:', error);
+    res.status(500).json({ success: false, error: sanitizeError(error) });
   }
 });
 

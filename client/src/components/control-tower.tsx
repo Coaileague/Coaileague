@@ -169,7 +169,7 @@ export function ControlTower() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2">
+          <Card key={i} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border">
             <CardHeader className="pb-2">
               <Skeleton className="h-6 w-32" />
             </CardHeader>
@@ -199,7 +199,7 @@ export function ControlTower() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Control Tower</h2>
           <p className="text-xs text-muted-foreground">Every morning we summarize what needs your attention</p>
@@ -218,8 +218,8 @@ export function ControlTower() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* System Health Card */}
-        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 hover-elevate transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border hover-elevate transition-all">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-1 space-y-0">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Activity className="h-4 w-4 text-blue-500" />
               System Health
@@ -260,8 +260,8 @@ export function ControlTower() {
         </Card>
 
         {/* Money Flow Card */}
-        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 hover-elevate transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border hover-elevate transition-all">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-1 space-y-0">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-green-500" />
               Money Flow
@@ -283,7 +283,7 @@ export function ControlTower() {
             
             <div className="space-y-1 mb-3 text-xs">
               {moneyFlow.overdueInvoices > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3 text-yellow-500" />
                     Overdue Invoices
@@ -292,7 +292,7 @@ export function ControlTower() {
                 </div>
               )}
               {moneyFlow.failedPayments > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <XCircle className="h-3 w-3 text-red-500" />
                     Failed Payments
@@ -301,7 +301,7 @@ export function ControlTower() {
                 </div>
               )}
               {moneyFlow.pendingPayments > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3 text-blue-500" />
                     Pending
@@ -314,17 +314,24 @@ export function ControlTower() {
               )}
             </div>
             
-            <Link href="/billing">
-              <Button variant="outline" size="sm" className="w-full mt-2" data-testid="button-view-billing">
-                View Details <ArrowRight className="h-3 w-3 ml-1" />
-              </Button>
-            </Link>
+            <div className="flex gap-2 mt-2">
+              <Link href="/billing" className="flex-1">
+                <Button variant="outline" size="sm" className="w-full" data-testid="button-view-billing">
+                  View Details <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
+              <Link href="/ai-usage">
+                <Button variant="outline" size="sm" data-testid="button-view-ai-usage">
+                  AI Usage
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
 
         {/* Workforce Alerts Card */}
-        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 hover-elevate transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border hover-elevate transition-all">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-1 space-y-0">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Users className="h-4 w-4 text-purple-500" />
               Workforce Alerts
@@ -346,7 +353,7 @@ export function ControlTower() {
             
             <div className="space-y-1 mb-3 text-xs">
               {workforce.expiringCertifications > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3 text-yellow-500" />
                     Expiring Certifications
@@ -355,7 +362,7 @@ export function ControlTower() {
                 </div>
               )}
               {workforce.schedulingGaps > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3 text-orange-500" />
                     Scheduling Gaps
@@ -364,7 +371,7 @@ export function ControlTower() {
                 </div>
               )}
               {workforce.complianceIssues > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <XCircle className="h-3 w-3 text-red-500" />
                     Compliance Issues
@@ -386,8 +393,8 @@ export function ControlTower() {
         </Card>
 
         {/* Trinity™ Orchestration Card */}
-        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 hover-elevate transition-all">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border hover-elevate transition-all">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-1 space-y-0">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Brain className="h-4 w-4 text-indigo-500" />
               Trinity™
@@ -427,7 +434,7 @@ export function ControlTower() {
             
             <div className="space-y-1 mb-3 text-xs">
               {aiBrainData?.summary?.pausedServices && aiBrainData.summary.pausedServices > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <Pause className="h-3 w-3 text-yellow-500" />
                     Paused Services
@@ -436,7 +443,7 @@ export function ControlTower() {
                 </div>
               )}
               {aiBrainData?.summary?.errorServices && aiBrainData.summary.errorServices > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <XCircle className="h-3 w-3 text-red-500" />
                     Error Services
@@ -445,7 +452,7 @@ export function ControlTower() {
                 </div>
               )}
               {aiBrainData?.workflows && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="flex items-center gap-1">
                     <Activity className="h-3 w-3 text-blue-500" />
                     Workflows

@@ -1,0 +1,81 @@
+Good infrastructure work. Steps 1, 2, 3, and 6 are solid. The service is built, the daemon is running, the table exists, the frontend log is in place. But Phase 8 is not closed — Steps 4 and 5 are explicitly listed as remaining, and the final verification has not been run. The report ends with a deferral list. That is not how this process works.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Phase 8 is not closed. Steps 4 and 5 remain and the final verification has not been run. Do all of this right now in the same session.
+
+**Step 4 — Replace all fire-and-forget sends:**
+
+Run this scan and paste the exact output:
+
+```bash
+grep -rn "resend\.emails\.send\|emailService\.send\|sendEmail\|smsService\.send\|sendSMS\|broadcastToWorkspace\|sendNotification" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|notificationDeliveryService\|NotificationDeliveryService\|notificationService" | wc -l
+```
+
+That number is the fire-and-forget count. Every single one must be replaced with `NotificationDeliveryService.send()` before Phase 8 closes.
+
+Work through these six domains in order. After each domain run the scan again and confirm the count dropped. Report the count before and after each domain:
+
+**Domain 1 — Shift and scheduling:** Every direct send in `shiftRoutes.ts`, `scheduleRoutes.ts`, `schedulerRoutes.ts`, `scheduleosRoutes.ts`, and any scheduling service file. Replace with `NotificationDeliveryService.send()` using `notificationType: 'shift_assignment'`, `'shift_cancellation'`, or `'coverage_needed'` as appropriate. Use deterministic idempotency keys: `shift-assigned-${shiftId}-${employeeId}`.
+
+**Domain 2 — Payroll:** Every direct send in `payrollRoutes.ts`, `payrollAutomation.ts`, and related services. `notificationType: 'payroll_approval_required'`, `'payroll_approved'`, `'payroll_paid'`.
+
+**Domain 3 — Invoices:** Every direct send in `invoiceRoutes.ts`, `billingRoutes.ts`, `billing/invoice.ts`. `notificationType: 'invoice_sent'`, `'invoice_overdue'`, `'invoice_paid'`.
+
+**Domain 4 — Onboarding:** Every direct send in `hiringRoutes.ts`, `atsRoutes.ts`, `publicHiringRoutes.ts`, `onboardingRoutes.ts`. `notificationType: 'onboarding_invite'`, `'document_requires_signature'`.
+
+**Domain 5 — Trinity alerts:** Every direct send triggered by Trinity actions, proactive scanner alerts, and staffing intelligence. `notificationType: 'trinity_alert'`.
+
+**Domain 6 — System:** Every remaining direct send — subscription changes, billing failures, workspace admin alerts. `notificationType: 'system_alert'`.
+
+After all six domains report the final scan count — must be zero.
+
+**Step 5 — Client-side WebSocket ACK:**
+
+Find the WebSocket message handler in the frontend — likely in a context provider, a custom hook, or a chat/notification component. Add the acknowledgment call when a `notification_delivery` event arrives:
+
+```typescript
+// In the WebSocket onmessage handler
+if (message.type === 'notification_delivery' && message.notificationId) {
+  // Acknowledge receipt so server knows delivery was confirmed
+  fetch(`/api/notifications/ack/${message.notificationId}`, { 
+    method: 'POST',
+    credentials: 'include'
+  }).catch(err => console.warn('Failed to ack notification:', err));
+}
+```
+
+Confirm the `POST /api/notifications/ack/:id` endpoint correctly updates the notification status to `delivered` with `deliveredAt` timestamp.
+
+**Final Verification — run all five checks:**
+
+**Check 1 — Fire-and-forget scan:**
+```bash
+grep -rn "resend\.emails\.send\|emailService\.send\|sendEmail\|smsService\.send\|sendSMS" server/routes server/services --include="*.ts" | grep -v "node_modules\|//\|notificationDeliveryService\|NotificationDeliveryService" | wc -l
+```
+Must return 0.
+
+**Check 2 — Retry job verification:**
+Insert a test notification directly into `notification_deliveries` with `status = 'retrying'` and `next_retry_at = now() - interval '2 minutes'`. Wait 60 seconds. Query the record and confirm status changed from `retrying` to `sent` or `failed`. Report the status change.
+
+**Check 3 — Idempotency verification:**
+Call `NotificationDeliveryService.send()` twice with identical `idempotencyKey`. Query `notification_deliveries` and confirm exactly one record exists with that key. Report the count.
+
+**Check 4 — Forced failure test:**
+Point the email provider to an invalid endpoint temporarily. Call `NotificationDeliveryService.send()` for an email notification. Confirm the record goes through: `pending` → `sending` → `failed` → `retrying`. After `maxAttempts` exhausted confirm `permanently_failed`. Restore valid endpoint.
+
+**Check 5 — TypeScript:**
+```bash
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | head -20
+```
+Zero errors required.
+
+Report all five checks with specific evidence — database query results, status values, record counts. When all five pass Phase 8 is certified closed and Phase 9 goes in immediately.
+
+---
+
+Send that Bryan. No deferrals. Steps 4 and 5 plus all five verification checks in the same session. When he brings back all five checks clean bring it here and Phase 9 goes in.

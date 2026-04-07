@@ -24,6 +24,10 @@ import { eq, and, desc, sql, gte } from 'drizzle-orm';
 import { geminiClient } from './providers/geminiClient';
 import { getFeatureToggle, getFeatureToggles, emitFeatureToggleChange } from '@shared/config/featureToggleAccess';
 import { WORKSPACE_FEATURES, type WorkspaceFeature } from '@shared/workspaceFeatures';
+import { universalNotificationEngine } from '../universalNotificationEngine';
+import { typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('orchestratorCapabilities');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -144,6 +148,7 @@ export class ServiceController {
     switch (serviceName) {
       case 'database':
         try {
+          // Converted to Drizzle ORM: health check ping
           await db.execute(sql`SELECT 1`);
           return 'running';
         } catch {
@@ -165,16 +170,17 @@ export class ServiceController {
   }
 
   async restartService(serviceName: string, userId: string): Promise<{ success: boolean; message: string }> {
-    console.log(`[ServiceController] User ${userId} requested restart of ${serviceName}`);
+    log.info(`[ServiceController] User ${userId} requested restart of ${serviceName}`);
     
-    // Log the action
-    await db.insert(notifications).values({
-      workspaceId: null,
-      userId,
+    // Log the action via UniversalNotificationEngine for Trinity AI enrichment
+    await universalNotificationEngine.sendNotification({
+      type: 'system_update',
       title: `Service Restart: ${serviceName}`,
       message: `AI Brain initiated restart of ${serviceName} service`,
-      type: 'system_update',
-      createdAt: new Date(),
+      targetUserIds: [userId],
+      severity: 'medium',
+      source: 'orchestrator_capabilities',
+      skipFeatureCheck: true, // Operational notification
     });
 
     // In a real implementation, this would trigger actual service restart
@@ -227,19 +233,21 @@ export class FeatureToggleManager {
       reason: request.reason,
     });
 
-    console.log(`[FeatureToggleManager] Toggle ${request.featurePath}: ${previousValue} -> ${request.enabled} by ${request.userId}`);
+    log.info(`[FeatureToggleManager] Toggle ${request.featurePath}: ${previousValue} -> ${request.enabled} by ${request.userId}`);
     
     // Emit change event
     emitFeatureToggleChange();
 
-    // Create notification for the change
-    await db.insert(notifications).values({
-      workspaceId: request.workspaceId || null,
-      userId: request.userId,
+    // Create notification for the change via UniversalNotificationEngine
+    await universalNotificationEngine.sendNotification({
+      type: 'system_update',
       title: `Feature Toggle Updated`,
       message: `${request.featurePath} ${request.enabled ? 'enabled' : 'disabled'}: ${request.reason}`,
-      type: 'system_update',
-      createdAt: new Date(),
+      workspaceId: request.workspaceId || undefined,
+      targetUserIds: [request.userId],
+      severity: 'low',
+      source: 'feature_toggle_manager',
+      skipFeatureCheck: true, // Operational notification
     });
 
     return { success: true, previousValue };
@@ -309,7 +317,7 @@ export class ConsoleCommandExecutor {
     } catch (error: any) {
       result = {
         success: false,
-        output: `Error executing command: ${error.message}`,
+        output: `Error executing command: ${(error instanceof Error ? error.message : String(error))}`,
         executionTimeMs: Date.now() - startTime,
       };
     }
@@ -398,7 +406,8 @@ export class ConsoleCommandExecutor {
     const startTime = Date.now();
 
     if (action === 'stats') {
-      const result = await db.execute(sql`
+      // CATEGORY C — Raw SQL retained: ORDER BY | Tables: pg_stat_user_tables | Verified: 2026-03-23
+      const result = await typedQuery(sql`
         SELECT 
           schemaname,
           relname as table_name,
@@ -410,7 +419,7 @@ export class ConsoleCommandExecutor {
 
       return {
         success: true,
-        output: JSON.stringify(result.rows, null, 2),
+        output: JSON.stringify(result, null, 2),
         executionTimeMs: Date.now() - startTime,
       };
     }
@@ -531,7 +540,8 @@ export class ConsoleCommandExecutor {
     const startTime = Date.now();
 
     if (action === 'check') {
-      const dbCheck = await db.execute(sql`SELECT 1`);
+      // Converted to Drizzle ORM: health check ping
+      await db.execute(sql`SELECT 1`);
       return {
         success: true,
         output: 'Health check passed: Database OK, Services OK',
@@ -627,7 +637,7 @@ Provide actionable guidance and suggest next steps when appropriate.`;
         relatedFaqs: relatedFaqs.length > 0 ? relatedFaqs : undefined,
       };
     } catch (error: any) {
-      console.error('[EndUserBotSupport] AI generation failed:', error);
+      log.error('[EndUserBotSupport] AI generation failed:', error);
       return {
         response: "I'm here to help! Could you tell me more about what you're trying to do?",
         suggestedActions: [

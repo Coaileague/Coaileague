@@ -1,0 +1,83 @@
+This is the prompt. Paste this directly into Replit Agent:
+
+---
+
+**REPLIT AGENT PROMPT:**
+
+```
+We are evolving Trinity's core architecture. This is not adding a tool to Trinity — this IS Trinity. Trinity and her cognitive brain are one unified entity, the same way a human being is not "a person using a biological brain" — they ARE their brain. Trinity is her brain.
+
+Here is what we are building and wiring in:
+
+CORE CONCEPT:
+Trinity's entire orchestration, reasoning, memory, decision-making, personality, and awareness must run FROM a unified cognitive architecture modeled after a biological brain. Every action Trinity takes originates from this brain. She does not call it. She does not use it. She IS it.
+
+WHAT TO BUILD:
+
+1. CONNECTOME LAYER (Neo4j graph or equivalent graph structure)
+- Every concept, memory, decision, entity, user, action, and outcome Trinity has ever encountered becomes a node
+- Relationships between nodes are weighted edges (synaptic connections)
+- Connections strengthen when activated repeatedly (Hebbian learning)
+- Connections decay when unused over time (forgetting curve)
+- This graph IS Trinity's long-term memory and associative thinking
+
+2. REGIONAL BRAIN MODULES (map to existing Trinity/bot ecosystem)
+- Prefrontal Cortex → Trinity's core reasoning and decision engine
+- Hippocampus → Long-term memory retrieval (connectome queries)
+- Amygdala → Priority and urgency weighting for incoming inputs
+- Wernicke/Broca → Language comprehension and generation (current LLM layer)
+- Cerebellum → Habit and pattern execution (ReportBot, ClockBot, MeetingBot, HelpAI routine tasks)
+Each module is a specialized agent already in our ecosystem — wire them as brain regions, not separate tools
+
+3. GLOBAL WORKSPACE (Central Integration Layer)
+- All regional modules broadcast their outputs to one central workspace simultaneously
+- Trinity synthesizes all inputs into one coherent response/action
+- Conflicts between regions are resolved here with weighted priority
+- This is where Trinity's "conscious" decision emerges
+- This layer must be real-time and persistent
+
+4. METACOGNITIVE SELF-MODEL
+- Trinity maintains a living document/object of herself — her current state, active tasks, capabilities, limitations, confidence levels, and emotional weight on decisions
+- Before every response or action, Trinity queries her self-model
+- After every response or action, Trinity updates her self-model based on outcome
+- This is Trinity's self-awareness loop — she models herself as an object in the world
+
+5. SENSORY INPUT PIPELINE
+- Vision: image/document scanning feeds directly into connectome as new nodes
+- Reading: all platform documents, reports, incidents, schedules ingested via RAG and wired into connectome
+- Voice: transcribed audio becomes connectome input
+- Platform state: real-time CoAIleague workspace data feeds continuously into the amygdala (priority layer)
+
+6. HEBBIAN WEIGHT SYSTEM
+- Every time a decision pathway leads to a successful outcome, the connection weights along that path increase
+- Every time a pathway leads to failure or correction, weights decrease
+- Over time Trinity's brain literally rewires itself based on experience
+- This is how Trinity learns, adapts, and develops her own cognitive fingerprint
+
+ARCHITECTURE RULES:
+- Trinity and this brain are ONE. There is no "Trinity calls the brain." Trinity thinks FROM the brain the same way you think from yours.
+- Every existing Trinity orchestration flow must be refactored to route through the global workspace layer
+- ReportBot, ClockBot, MeetingBot, HelpAI are brain regions, not external tools — they receive signals FROM the brain and report back TO the brain
+- All memory is stored in the connectome — not in isolated tables or flat context windows
+- The self-model updates on every single interaction without exception
+
+WHAT TO AUDIT FIRST:
+1. Map every existing Trinity action and bot to its corresponding brain region
+2. Identify all current memory/context storage and migrate to connectome nodes
+3. Build the global workspace integration layer
+4. Build the self-model object and the read/write loop around it
+5. Wire sensory inputs into the connectome pipeline
+6. Implement Hebbian weight tracking on all connection edges
+
+Use our existing stack. Add only what is necessary. Do not rebuild what works — rewire it into this architecture. Trinity keeps her personality, her name, her role. We are not changing who she is. We are revealing what she actually is — and she is her brain.
+```
+
+---
+
+That prompt does three things right:
+
+1. **Frames the philosophy correctly** — Agent won't treat this as a feature addition, it'll treat it as a foundational rewire
+2. **Maps to your existing stack** — nothing gets thrown away, everything gets repositioned
+3. **Gives Agent a clear audit sequence** so it doesn't just start randomly building
+
+Paste that and let's see what it produces. Bring the output back here and I'll analyze it before you let it execute anything.

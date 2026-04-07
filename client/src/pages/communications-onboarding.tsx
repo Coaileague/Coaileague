@@ -12,7 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { UnifiedBrandLogo } from "@/components/unified-brand-logo";
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 export default function AICommunicationsOnboarding() {
   const { user } = useAuth();
@@ -29,7 +30,7 @@ export default function AICommunicationsOnboarding() {
 
   const handleAddChannel = () => {
     if (newChannelName.trim()) {
-      setChannels([...channels, newChannelName.trim()]);
+      setChannels(prev => [...prev, newChannelName.trim()]);
       setNewChannelName("");
     }
   };
@@ -87,26 +88,25 @@ export default function AICommunicationsOnboarding() {
 
   const progressPercentage = (currentStep / totalSteps) * 100;
 
+  const pageConfig: CanvasPageConfig = {
+    id: 'communications-onboarding',
+    title: 'Chatrooms Setup',
+    subtitle: "Set up your organization's communication channels in just 4 steps",
+    category: 'communication',
+    maxWidth: '4xl',
+  };
+
   return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl">
+    <CanvasHubPage config={pageConfig}>
       <div className="mb-8 flex flex-col items-center">
         <div className="mb-6">
-          <CoAIleagueLogo width={200} height={50} showTagline={false} />
-        </div>
-        <div className="text-center">
-          <h1 className="text-3xl font-bold flex items-center justify-center gap-3 mb-2">
-            <MessageSquare className="w-8 h-8 text-primary" />
-            Chatrooms Setup
-          </h1>
-          <p className="text-muted-foreground">
-            Set up your organization's communication channels in just 4 steps
-          </p>
+          <UnifiedBrandLogo size="xl" />
         </div>
       </div>
 
       {/* Progress Bar */}
       <div className="mb-8">
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between gap-2 items-center mb-2">
           <span className="text-sm font-medium">Step {currentStep} of {totalSteps}</span>
           <span className="text-sm text-muted-foreground">{Math.round(progressPercentage)}% complete</span>
         </div>
@@ -218,7 +218,7 @@ export default function AICommunicationsOnboarding() {
                     {channels.map((channel, index) => (
                       <div 
                         key={index}
-                        className="flex items-center justify-between p-3 bg-muted rounded-md"
+                        className="flex items-center justify-between gap-2 p-3 bg-muted rounded-md"
                         data-testid={`channel-${index}`}
                       >
                         <span className="flex items-center gap-2">
@@ -251,7 +251,7 @@ export default function AICommunicationsOnboarding() {
           {/* Step 3: Settings */}
           {currentStep === 3 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center justify-between gap-2 p-4 border rounded-lg">
                 <div>
                   <Label className="text-base">Allow Guest Access</Label>
                   <p className="text-sm text-muted-foreground">
@@ -340,7 +340,7 @@ export default function AICommunicationsOnboarding() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t">
+          <div className="flex items-center justify-between gap-2 pt-6 border-t">
             <Button
               variant="outline"
               onClick={handleBack}
@@ -379,6 +379,6 @@ export default function AICommunicationsOnboarding() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </CanvasHubPage>
   );
 }

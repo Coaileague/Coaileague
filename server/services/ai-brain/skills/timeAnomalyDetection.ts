@@ -9,6 +9,10 @@ import { timeEntries, employees } from '@shared/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { subDays, startOfWeek, endOfWeek, differenceInHours, differenceInMinutes, format } from 'date-fns';
 
+import { createLogger } from '../../../lib/logger';
+import { PLATFORM } from '../../../config/platformConfig';
+const log = createLogger('timeAnomalyDetection');
+
 interface TimeAnomalyInput {
   action: 'clock_in' | 'clock_out' | 'analyze_patterns';
   employeeId: string;
@@ -69,7 +73,7 @@ export class TimeAnomalyDetectionSkill extends BaseSkill {
       name: 'Time Anomaly Detection',
       version: '1.0.0',
       description: 'AI-powered detection of unusual time tracking patterns including overtime alerts, schedule deviations, and compliance issues',
-      author: 'CoAIleague Platform',
+      author: PLATFORM.name + " Platform",
       category: 'compliance',
       requiredTier: 'starter',
       capabilities: [
@@ -90,6 +94,7 @@ export class TimeAnomalyDetectionSkill extends BaseSkill {
     params: TimeAnomalyInput
   ): Promise<SkillResult<TimeAnomalyResult>> {
     const logs: string[] = [];
+    const startTime = Date.now();
     logs.push(`[TimeAnomalyDetection] Processing ${params.action} for employee ${params.employeeName}`);
 
     try {
@@ -147,14 +152,14 @@ export class TimeAnomalyDetectionSkill extends BaseSkill {
         metadata: {
           alertCount: alerts.length,
           recommendationCount: recommendations.length,
-          processingTimeMs: Date.now(),
+          processingTimeMs: Date.now() - startTime,
         },
       };
     } catch (error: any) {
-      logs.push(`[TimeAnomalyDetection] Error: ${error.message}`);
+      logs.push(`[TimeAnomalyDetection] Error: ${(error instanceof Error ? error.message : String(error))}`);
       return {
         success: false,
-        error: error.message || 'Failed to analyze time patterns',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to analyze time patterns',
         logs,
       };
     }

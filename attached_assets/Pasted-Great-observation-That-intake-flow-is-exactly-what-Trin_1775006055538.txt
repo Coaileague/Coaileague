@@ -1,0 +1,1306 @@
+Great observation. That intake flow is exactly what Trinity should be doing for structured data collection. Let me give you an honest assessment of where CoAIleague stands on this right now and what needs to happen.
+
+---
+
+**What That Bot Is Doing**
+
+It is running a guided conversational intake. One question at a time. Each question renders an appropriate input type. Text field for name. Phone field for number. Email field for email. Date picker with dropdowns for dates. Each answer is captured, stored, and used to inform the next question. The conversation feels natural but the data collection is structured and precise.
+
+That is significantly more powerful than free text chat for support intake because it eliminates ambiguity, validates input format, and ensures Trinity gets exactly the data she needs to act.
+
+---
+
+**Does Trinity Have This Now**
+
+Partially. Here is the honest breakdown.
+
+DockChat currently handles free text conversation. Trinity responds intelligently to unstructured messages. That works for general questions and casual interaction but it breaks down when Trinity needs specific structured data to resolve an issue. A user typing my employee number is EMP-ACM-00034 in free text works sometimes but introduces errors, misformatting, and ambiguity.
+
+The online forms engine you just built handles structured data collection beautifully but it lives outside DockChat. It requires sending a link, opening a separate page, filling out a form, and submitting. That flow has friction especially for support scenarios where someone is already in the chat and just needs to answer three questions so Trinity can fix their problem.
+
+What you do not have yet is the bridge between them. A way for Trinity to render structured input fields inline inside DockChat in real time based on what she needs to collect at that moment in the conversation.
+
+---
+
+**What Needs To Be Built**
+
+The concept is called a conversational form component. Trinity detects that she needs structured input, sends a special message type that the DockChat frontend renders as an input widget instead of plain text, the user fills it out inline, submits it, and Trinity receives the structured data and continues the conversation.
+
+This is achievable with what you have. Here is what needs to happen.
+
+Send this to the agent:
+
+---
+
+**PHASE — TRINITY GUIDED INTAKE WIDGETS FOR DOCKCHAT**
+
+Read completely before writing a single line of code. This phase builds inline conversational form widgets inside DockChat so Trinity can collect structured data from users during support interactions without sending them to a separate form page. Build in exact order. All tests against ACME sandbox only. Statewide untouchable.
+
+---
+
+**WHAT WE ARE BUILDING**
+
+When Trinity needs specific information to resolve an issue she currently has to ask in free text and parse the response. This phase gives Trinity the ability to render structured input widgets inline in DockChat. The user sees a question with an appropriate input field, fills it out, submits it, and Trinity receives clean validated data and continues the flow.
+
+This mirrors the intake flow at dralaw.com shown by the org owner as the target UX. One question at a time. Appropriate input type per question. Clean structured data captured. Seamless to the end user.
+
+---
+
+**STEP 0 — AUDIT WHAT EXISTS**
+
+```bash
+# Check existing DockChat message types
+grep -rn "messageType\|message_type\|MSG_TYPE" \
+  client/src/ --include="*.tsx" | head -20
+
+# Check if any widget message type exists
+grep -rn "widget\|WIDGET\|intake\|INTAKE\|structured.*input" \
+  client/src/ server/ --include="*.ts" --include="*.tsx" | \
+  grep -v node_modules | head -10
+
+# Check WebSocket message types
+grep -rn "broadcastToWorkspace\|ws.*send\|socket.*emit" \
+  server/ --include="*.ts" | grep -v node_modules | head -20
+
+# Report exactly what exists — build nothing that already exists
+```
+
+---
+
+**SUBAGENT 1 — DATABASE SCHEMA FOR INTAKE SESSIONS**
+
+```sql
+-- Trinity guided intake sessions
+CREATE TABLE IF NOT EXISTS trinity_intake_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id),
+  chat_room_id UUID REFERENCES chat_rooms(id),
+  user_id UUID REFERENCES users(id),
+  session_type VARCHAR(100) NOT NULL,
+  -- 'support_triage', 'onboarding_help', 'calloff_report',
+  -- 'incident_report', 'payroll_dispute', 'account_issue'
+  flow_definition JSONB NOT NULL DEFAULT '[]',
+  -- Array of step definitions
+  current_step_index INTEGER DEFAULT 0,
+  collected_data JSONB DEFAULT '{}',
+  status VARCHAR(50) DEFAULT 'active',
+  -- active, completed, abandoned, escalated
+  trinity_action_taken TEXT,
+  resolution_summary TEXT,
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_intake_sessions_workspace 
+  ON trinity_intake_sessions(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_intake_sessions_user 
+  ON trinity_intake_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_intake_sessions_room 
+  ON trinity_intake_sessions(chat_room_id);
+
+-- Intake step responses
+CREATE TABLE IF NOT EXISTS trinity_intake_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES trinity_intake_sessions(id),
+  workspace_id UUID NOT NULL,
+  step_index INTEGER NOT NULL,
+  field_id VARCHAR(100) NOT NULL,
+  field_label VARCHAR(255),
+  field_type VARCHAR(50) NOT NULL,
+  raw_value TEXT,
+  parsed_value JSONB,
+  responded_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+**SUBAGENT 2 — INTAKE FLOW DEFINITIONS**
+
+Build `server/services/trinityIntakeFlows.ts`:
+
+```typescript
+// Every intake flow Trinity can trigger
+// Each flow is a sequence of steps
+// Each step renders a specific widget type in DockChat
+
+export type WidgetType =
+  | 'text'
+  | 'email'
+  | 'phone'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'radio'
+  | 'confirm'
+  | 'display'
+  | 'textarea';
+
+export interface IntakeStep {
+  id: string;
+  question: string;
+  subtext?: string;
+  widgetType: WidgetType;
+  fieldId: string;
+  required: boolean;
+  options?: string[];
+  // For select/radio
+  placeholder?: string;
+  validation?: {
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+    min?: number;
+    max?: number;
+  };
+  skipIf?: {
+    // Skip this step if a previous field has a specific value
+    fieldId: string;
+    value: string | boolean;
+  };
+}
+
+export interface IntakeFlow {
+  flowType: string;
+  title: string;
+  greeting: string;
+  completionMessage: string;
+  steps: IntakeStep[];
+  trinityAction: string;
+  // Action to take after completion
+}
+
+export const TRINITY_INTAKE_FLOWS: Record<string, IntakeFlow> = {
+
+  support_triage: {
+    flowType: 'support_triage',
+    title: 'Support Request',
+    greeting: 'I\'m here to help. Let me ask you a few quick questions so I can resolve this as fast as possible.',
+    completionMessage: 'Thank you. I\'m looking into this right now.',
+    trinityAction: 'support.triage.process',
+    steps: [
+      {
+        id: 'step_1',
+        question: 'What can I help you with today?',
+        widgetType: 'select',
+        fieldId: 'issue_category',
+        required: true,
+        options: [
+          'I cannot log into my account',
+          'I am not receiving notifications',
+          'My schedule looks wrong',
+          'My paycheck has an error',
+          'I cannot find my documents',
+          'My onboarding is stuck',
+          'I need to report a problem',
+          'Something else'
+        ]
+      },
+      {
+        id: 'step_2',
+        question: 'Can you describe the issue in a little more detail?',
+        subtext: 'The more specific you are the faster I can fix it.',
+        widgetType: 'textarea',
+        fieldId: 'issue_description',
+        required: true,
+        placeholder: 'Tell me what happened...'
+      },
+      {
+        id: 'step_3',
+        question: 'When did this start happening?',
+        widgetType: 'select',
+        fieldId: 'issue_timing',
+        required: true,
+        options: [
+          'Just now',
+          'Earlier today',
+          'Yesterday',
+          'A few days ago',
+          'More than a week ago'
+        ]
+      },
+      {
+        id: 'step_4',
+        question: 'Is this affecting your ability to work your shift?',
+        widgetType: 'radio',
+        fieldId: 'is_urgent',
+        required: true,
+        options: ['Yes — I need this fixed immediately', 'No — it can wait']
+      }
+    ]
+  },
+
+  account_locked: {
+    flowType: 'account_locked',
+    title: 'Account Access Issue',
+    greeting: 'I can unlock your account right now. I just need to verify a couple of things.',
+    completionMessage: 'Verifying your identity now. Give me just a moment.',
+    trinityAction: 'support.account.unlock',
+    steps: [
+      {
+        id: 'step_1',
+        question: 'What is your employee number?',
+        subtext: 'It starts with EMP- and can be found on any of your pay stubs.',
+        widgetType: 'text',
+        fieldId: 'employee_number',
+        required: true,
+        placeholder: 'EMP-XXX-00000'
+      },
+      {
+        id: 'step_2',
+        question: 'What is your date of birth?',
+        subtext: 'This is used to verify your identity.',
+        widgetType: 'date',
+        fieldId: 'date_of_birth',
+        required: true
+      },
+      {
+        id: 'step_3',
+        question: 'What is the best phone number to reach you?',
+        widgetType: 'phone',
+        fieldId: 'phone_number',
+        required: true,
+        placeholder: '(xxx) xxx-xxxx'
+      }
+    ]
+  },
+
+  calloff_report: {
+    flowType: 'calloff_report',
+    title: 'Call-Off Report',
+    greeting: 'I will process your call-off and start finding coverage right away. Quick questions first.',
+    completionMessage: 'Got it. I am notifying your supervisor and starting the replacement process now.',
+    trinityAction: 'calloff.process',
+    steps: [
+      {
+        id: 'step_1',
+        question: 'Which shift are you calling off from?',
+        widgetType: 'select',
+        fieldId: 'shift_selection',
+        required: true,
+        options: []
+        // Populated dynamically from officer's upcoming shifts
+      },
+      {
+        id: 'step_2',
+        question: 'What is the reason for your call-off?',
+        widgetType: 'select',
+        fieldId: 'calloff_reason',
+        required: true,
+        options: [
+          'Sick — illness',
+          'Family emergency',
+          'Personal emergency',
+          'Medical appointment',
+          'Car trouble',
+          'Other'
+        ]
+      },
+      {
+        id: 'step_3',
+        question: 'Can you provide any additional details?',
+        widgetType: 'textarea',
+        fieldId: 'calloff_details',
+        required: false,
+        placeholder: 'Optional — any additional information...'
+      },
+      {
+        id: 'step_4',
+        question: 'Will you be available for your next scheduled shift?',
+        widgetType: 'radio',
+        fieldId: 'next_shift_availability',
+        required: true,
+        options: ['Yes', 'No — I am not sure yet', 'No — I need extended leave']
+      }
+    ]
+  },
+
+  payroll_dispute: {
+    flowType: 'payroll_dispute',
+    title: 'Payroll Dispute',
+    greeting: 'I take payroll issues seriously. Let me collect the details so I can investigate immediately.',
+    completionMessage: 'I am pulling your timesheet and payroll records now. I will have an answer for you shortly.',
+    trinityAction: 'support.payroll.dispute',
+    steps: [
+      {
+        id: 'step_1',
+        question: 'Which pay period has an error?',
+        widgetType: 'select',
+        fieldId: 'pay_period',
+        required: true,
+        options: []
+        // Populated dynamically from recent pay periods
+      },
+      {
+        id: 'step_2',
+        question: 'What type of error are you reporting?',
+        widgetType: 'select',
+        fieldId: 'dispute_type',
+        required: true,
+        options: [
+          'Missing hours — I worked more than I was paid for',
+          'Wrong pay rate — incorrect hourly rate used',
+          'Missing shift — entire shift not included',
+          'Deduction error — wrong deduction taken',
+          'Direct deposit — payment not received',
+          'Other'
+        ]
+      },
+      {
+        id: 'step_3',
+        question: 'How many hours do you believe are missing or incorrect?',
+        widgetType: 'number',
+        fieldId: 'disputed_hours',
+        required: true,
+        placeholder: '0.0',
+        validation: { min: 0.5, max: 168 }
+      },
+      {
+        id: 'step_4',
+        question: 'Which dates were affected?',
+        widgetType: 'textarea',
+        fieldId: 'affected_dates',
+        required: true,
+        placeholder: 'Example: March 15, March 16, March 20...'
+      },
+      {
+        id: 'step_5',
+        question: 'Any additional information that would help me investigate?',
+        widgetType: 'textarea',
+        fieldId: 'additional_info',
+        required: false,
+        placeholder: 'Optional...'
+      }
+    ]
+  },
+
+  incident_report: {
+    flowType: 'incident_report',
+    title: 'Incident Report',
+    greeting: 'I will help you file this incident report. Please answer each question as accurately as possible.',
+    completionMessage: 'Your incident report has been filed and your supervisor has been notified.',
+    trinityAction: 'incident.create',
+    steps: [
+      {
+        id: 'step_1',
+        question: 'What type of incident occurred?',
+        widgetType: 'select',
+        fieldId: 'incident_type',
+        required: true,
+        options: [
+          'Trespassing',
+          'Theft or attempted theft',
+          'Assault or altercation',
+          'Medical emergency',
+          'Suspicious activity',
+          'Property damage',
+          'Workplace injury',
+          'Other'
+        ]
+      },
+      {
+        id: 'step_2',
+        question: 'When did the incident occur?',
+        widgetType: 'date',
+        fieldId: 'incident_date',
+        required: true
+      },
+      {
+        id: 'step_3',
+        question: 'Where did the incident occur?',
+        widgetType: 'text',
+        fieldId: 'incident_location',
+        required: true,
+        placeholder: 'Building, area, or address...'
+      },
+      {
+        id: 'step_4',
+        question: 'Describe what happened in detail.',
+        subtext: 'Include who was involved, what occurred, and the sequence of events.',
+        widgetType: 'textarea',
+        fieldId: 'incident_description',
+        required: true,
+        placeholder: 'Describe the incident...'
+      },
+      {
+        id: 'step_5',
+        question: 'Were police or emergency services called?',
+        widgetType: 'radio',
+        fieldId: 'emergency_services',
+        required: true,
+        options: [
+          'Yes — police were called',
+          'Yes — medical services were called',
+          'Yes — both were called',
+          'No'
+        ]
+      },
+      {
+        id: 'step_6',
+        question: 'Were there any witnesses?',
+        widgetType: 'radio',
+        fieldId: 'has_witnesses',
+        required: true,
+        options: ['Yes', 'No']
+      },
+      {
+        id: 'step_7',
+        question: 'Witness names and contact information if known.',
+        widgetType: 'textarea',
+        fieldId: 'witness_info',
+        required: false,
+        placeholder: 'Names and contact info if available...',
+        skipIf: { fieldId: 'has_witnesses', value: 'No' }
+      }
+    ]
+  },
+
+  notification_fix: {
+    flowType: 'notification_fix',
+    title: 'Notification Issue',
+    greeting: 'I can diagnose and fix notification issues immediately. A couple of quick questions.',
+    completionMessage: 'Checking your notification settings and delivery logs now.',
+    trinityAction: 'support.notification.diagnose',
+    steps: [
+      {
+        id: 'step_1',
+        question: 'What type of notifications are you not receiving?',
+        widgetType: 'select',
+        fieldId: 'notification_type',
+        required: true,
+        options: [
+          'Shift assignments',
+          'Shift reminders',
+          'Call-off alerts',
+          'Schedule changes',
+          'Payroll notifications',
+          'All notifications',
+          'Other'
+        ]
+      },
+      {
+        id: 'step_2',
+        question: 'Which channel is not working?',
+        widgetType: 'select',
+        fieldId: 'channel',
+        required: true,
+        options: [
+          'Email',
+          'Text message',
+          'Push notification',
+          'All channels'
+        ]
+      },
+      {
+        id: 'step_3',
+        question: 'When did you last receive a notification?',
+        widgetType: 'select',
+        fieldId: 'last_received',
+        required: true,
+        options: [
+          'Earlier today',
+          'Yesterday',
+          'A few days ago',
+          'More than a week ago',
+          'Never'
+        ]
+      },
+      {
+        id: 'step_4',
+        question: 'What is the best email or phone number to test a notification to?',
+        widgetType: 'text',
+        fieldId: 'test_destination',
+        required: true,
+        placeholder: 'Email or phone number...'
+      }
+    ]
+  }
+
+};
+
+// Determine which flow to trigger based on user message
+export function detectIntakeFlow(message: string): string | null {
+  const lower = message.toLowerCase();
+
+  if (lower.includes('locked out') || lower.includes('cannot log in') ||
+      lower.includes('cant log in') || lower.includes('account locked')) {
+    return 'account_locked';
+  }
+
+  if (lower.includes('call off') || lower.includes('calloff') ||
+      lower.includes('calling off') || lower.includes('cant make') ||
+      lower.includes('sick') || lower.includes('emergency')) {
+    return 'calloff_report';
+  }
+
+  if (lower.includes('paycheck') || lower.includes('payroll') ||
+      lower.includes('missing hours') || lower.includes('wrong pay') ||
+      lower.includes('not paid')) {
+    return 'payroll_dispute';
+  }
+
+  if (lower.includes('incident') || lower.includes('report') ||
+      lower.includes('fight') || lower.includes('trespass') ||
+      lower.includes('theft') || lower.includes('assault')) {
+    return 'incident_report';
+  }
+
+  if (lower.includes('notification') || lower.includes('not receiving') ||
+      lower.includes('no alerts') || lower.includes('missing alerts')) {
+    return 'notification_fix';
+  }
+
+  return null; // Use standard Trinity chat response
+}
+```
+
+---
+
+**SUBAGENT 3 — BACKEND INTAKE SESSION ROUTES**
+
+Build `server/routes/trinityIntakeRoutes.ts`:
+
+```typescript
+import express from 'express';
+import { requireAuth } from '../middleware/auth';
+import { pool } from '../db';
+import { 
+  TRINITY_INTAKE_FLOWS, 
+  detectIntakeFlow 
+} from '../services/trinityIntakeFlows';
+import { broadcastToWorkspace } from '../websocket';
+import { universalAuditService } from '../services/universalAuditService';
+
+const router = express.Router();
+
+// Start an intake session
+router.post('/api/trinity/intake/start', requireAuth, async (req, res, next) => {
+  try {
+    const { workspaceId, userId } = req.user;
+    const { flowType, chatRoomId, triggerMessage } = req.body;
+
+    // Auto-detect flow if not specified
+    const resolvedFlowType = flowType || 
+      detectIntakeFlow(triggerMessage || '') || 
+      'support_triage';
+
+    const flow = TRINITY_INTAKE_FLOWS[resolvedFlowType];
+    if (!flow) return res.status(404).json({ error: 'Flow not found' });
+
+    // Create session
+    const session = await pool.query(`
+      INSERT INTO trinity_intake_sessions
+      (workspace_id, chat_room_id, user_id, session_type, 
+       flow_definition, current_step_index, status)
+      VALUES ($1, $2, $3, $4, $5, 0, 'active')
+      RETURNING *
+    `, [workspaceId, chatRoomId, userId, 
+        resolvedFlowType, JSON.stringify(flow.steps)]);
+
+    const sessionData = session.rows[0];
+
+    // Get first step
+    const firstStep = flow.steps[0];
+
+    // Broadcast Trinity greeting + first widget to DockChat
+    broadcastToWorkspace(workspaceId, {
+      type: 'trinity_intake_widget',
+      data: {
+        sessionId: sessionData.id,
+        chatRoomId,
+        messageType: 'intake_greeting',
+        greeting: flow.greeting,
+        step: firstStep,
+        stepIndex: 0,
+        totalSteps: flow.steps.length,
+        flowTitle: flow.title
+      }
+    });
+
+    res.json({
+      sessionId: sessionData.id,
+      flowType: resolvedFlowType,
+      firstStep,
+      greeting: flow.greeting
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Submit a step response and get next step
+router.post('/api/trinity/intake/:sessionId/respond', 
+  requireAuth, async (req, res, next) => {
+  try {
+    const { workspaceId, userId } = req.user;
+    const { sessionId } = req.params;
+    const { fieldId, value, stepIndex } = req.body;
+
+    // Get session
+    const sessionResult = await pool.query(
+      'SELECT * FROM trinity_intake_sessions WHERE id = $1 AND workspace_id = $2',
+      [sessionId, workspaceId]
+    );
+
+    if (!sessionResult.rows[0]) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const session = sessionResult.rows[0];
+    const flow = TRINITY_INTAKE_FLOWS[session.session_type];
+
+    if (!flow) return res.status(404).json({ error: 'Flow not found' });
+
+    // Store response
+    await pool.query(`
+      INSERT INTO trinity_intake_responses
+      (session_id, workspace_id, step_index, field_id, 
+       field_label, field_type, raw_value, parsed_value)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [
+      sessionId, workspaceId, stepIndex, fieldId,
+      flow.steps[stepIndex]?.question,
+      flow.steps[stepIndex]?.widgetType,
+      String(value),
+      JSON.stringify(value)
+    ]);
+
+    // Update collected data
+    const updatedData = {
+      ...(session.collected_data || {}),
+      [fieldId]: value
+    };
+
+    await pool.query(
+      'UPDATE trinity_intake_sessions SET collected_data = $1 WHERE id = $2',
+      [JSON.stringify(updatedData), sessionId]
+    );
+
+    // Find next step (skipping conditional steps if needed)
+    let nextStepIndex = stepIndex + 1;
+    while (nextStepIndex < flow.steps.length) {
+      const nextStep = flow.steps[nextStepIndex];
+      if (nextStep.skipIf) {
+        const skipFieldValue = updatedData[nextStep.skipIf.fieldId];
+        if (skipFieldValue === nextStep.skipIf.value) {
+          nextStepIndex++;
+          continue;
+        }
+      }
+      break;
+    }
+
+    // Check if flow is complete
+    if (nextStepIndex >= flow.steps.length) {
+      // Mark complete
+      await pool.query(`
+        UPDATE trinity_intake_sessions 
+        SET status = 'completed', 
+            current_step_index = $1,
+            completed_at = NOW()
+        WHERE id = $2
+      `, [nextStepIndex, sessionId]);
+
+      // Broadcast completion message
+      broadcastToWorkspace(workspaceId, {
+        type: 'trinity_intake_widget',
+        data: {
+          sessionId,
+          chatRoomId: session.chat_room_id,
+          messageType: 'intake_complete',
+          completionMessage: flow.completionMessage,
+          collectedData: updatedData
+        }
+      });
+
+      // Trigger Trinity action asynchronously
+      processTrinityIntakeAction(
+        sessionId, workspaceId, userId,
+        flow.trinityAction, updatedData
+      ).catch(err => console.error('Intake action error:', err));
+
+      return res.json({ 
+        complete: true, 
+        completionMessage: flow.completionMessage 
+      });
+    }
+
+    // Advance to next step
+    const nextStep = flow.steps[nextStepIndex];
+
+    await pool.query(
+      'UPDATE trinity_intake_sessions SET current_step_index = $1 WHERE id = $2',
+      [nextStepIndex, sessionId]
+    );
+
+    // Broadcast next widget
+    broadcastToWorkspace(workspaceId, {
+      type: 'trinity_intake_widget',
+      data: {
+        sessionId,
+        chatRoomId: session.chat_room_id,
+        messageType: 'intake_next_step',
+        step: nextStep,
+        stepIndex: nextStepIndex,
+        totalSteps: flow.steps.length,
+        previousAnswer: value
+      }
+    });
+
+    res.json({
+      complete: false,
+      nextStep,
+      nextStepIndex
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Abandon an intake session
+router.post('/api/trinity/intake/:sessionId/abandon',
+  requireAuth, async (req, res, next) => {
+  try {
+    const { workspaceId } = req.user;
+    await pool.query(
+      'UPDATE trinity_intake_sessions SET status = $1 WHERE id = $2 AND workspace_id = $3',
+      ['abandoned', req.params.sessionId, workspaceId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Async processor for completed intake sessions
+async function processTrinityIntakeAction(
+  sessionId: string,
+  workspaceId: string,
+  userId: string,
+  actionType: string,
+  collectedData: Record<string, any>
+) {
+  try {
+    // Route to appropriate Trinity action based on flow type
+    // Each action uses the collected data to resolve the issue
+
+    await universalAuditService.log({
+      workspaceId,
+      actorId: 'trinity-system-actor-000000000000',
+      entityType: 'trinity_intake_session',
+      entityId: sessionId,
+      action: actionType,
+      data: { collectedData, actionType }
+    });
+
+    // Additional action routing handled by existing Trinity action registry
+    // The action type maps directly to a registered Trinity action
+    
+    await pool.query(
+      `UPDATE trinity_intake_sessions 
+       SET trinity_action_taken = $1 
+       WHERE id = $2`,
+      [actionType, sessionId]
+    );
+  } catch (err) {
+    console.error('Intake action processing error:', err);
+  }
+}
+
+export default router;
+```
+
+---
+
+**SUBAGENT 4 — DOCKCHAT INTAKE WIDGET COMPONENT**
+
+Build `client/src/components/chat/TrinityIntakeWidget.tsx`:
+
+```tsx
+import { useState, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { 
+  ChevronDown, 
+  Check, 
+  Loader2,
+  ChevronRight 
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+
+interface IntakeStep {
+  id: string;
+  question: string;
+  subtext?: string;
+  widgetType: string;
+  fieldId: string;
+  required: boolean;
+  options?: string[];
+  placeholder?: string;
+  validation?: any;
+}
+
+interface TrinityIntakeWidgetProps {
+  sessionId: string;
+  step: IntakeStep;
+  stepIndex: number;
+  totalSteps: number;
+  greeting?: string;
+  flowTitle: string;
+  onComplete: (data: any) => void;
+  onSkip?: () => void;
+}
+
+export function TrinityIntakeWidget({
+  sessionId,
+  step,
+  stepIndex,
+  totalSteps,
+  greeting,
+  flowTitle,
+  onComplete,
+  onSkip
+}: TrinityIntakeWidgetProps) {
+  const { workspaceId } = useAuth();
+  const [value, setValue] = useState<any>('');
+  const [error, setError] = useState<string>('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const respondMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/trinity/intake/${sessionId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fieldId: step.fieldId,
+          value,
+          stepIndex
+        })
+      });
+      if (!res.ok) throw new Error('Response failed');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setSubmitted(true);
+      onComplete(data);
+    }
+  });
+
+  const validate = useCallback(() => {
+    if (step.required && (!value || value === '')) {
+      setError('This field is required');
+      return false;
+    }
+    if (step.validation?.minLength && String(value).length < step.validation.minLength) {
+      setError(`Must be at least ${step.validation.minLength} characters`);
+      return false;
+    }
+    setError('');
+    return true;
+  }, [value, step]);
+
+  const handleSubmit = useCallback(() => {
+    if (validate()) {
+      respondMutation.mutate();
+    }
+  }, [validate, respondMutation]);
+
+  const renderInput = () => {
+    const baseClass = `w-full rounded-xl border px-4 py-3 text-sm 
+      focus:outline-none focus:ring-2 focus:ring-purple-500
+      ${error ? 'border-red-400' : 'border-gray-200'}
+      bg-white text-gray-900`;
+
+    switch (step.widgetType) {
+      case 'select':
+        return (
+          <div className="relative">
+            <select
+              value={value}
+              onChange={e => { setValue(e.target.value); setError(''); }}
+              className={baseClass + ' appearance-none cursor-pointer'}
+            >
+              <option value="">Select an option...</option>
+              {step.options?.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          </div>
+        );
+
+      case 'radio':
+        return (
+          <div className="space-y-2">
+            {step.options?.map(opt => (
+              <label
+                key={opt}
+                onClick={() => { setValue(opt); setError(''); }}
+                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  value === opt
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                }`}
+              >
+                <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                  value === opt ? 'border-purple-500' : 'border-gray-300'
+                }`}>
+                  {value === opt && (
+                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                  )}
+                </div>
+                <span className="text-sm text-gray-800">{opt}</span>
+              </label>
+            ))}
+          </div>
+        );
+
+      case 'textarea':
+        return (
+          <textarea
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(''); }}
+            placeholder={step.placeholder}
+            rows={4}
+            className={baseClass + ' resize-none'}
+          />
+        );
+
+      case 'date':
+        return (
+          <input
+            type="date"
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(''); }}
+            className={baseClass}
+          />
+        );
+
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(''); }}
+            placeholder={step.placeholder}
+            min={step.validation?.min}
+            max={step.validation?.max}
+            step="0.5"
+            className={baseClass}
+          />
+        );
+
+      case 'phone':
+        return (
+          <input
+            type="tel"
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(''); }}
+            placeholder={step.placeholder || '(xxx) xxx-xxxx'}
+            className={baseClass}
+          />
+        );
+
+      case 'email':
+        return (
+          <input
+            type="email"
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(''); }}
+            placeholder={step.placeholder || 'email@example.com'}
+            className={baseClass}
+          />
+        );
+
+      default: // text
+        return (
+          <input
+            type="text"
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(''); }}
+            placeholder={step.placeholder}
+            className={baseClass}
+            onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
+          />
+        );
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
+        <Check className="h-4 w-4 text-green-500" />
+        <span className="italic">{String(value)}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="my-2">
+      {/* Trinity greeting card — only on first step */}
+      {greeting && stepIndex === 0 && (
+        <div className="flex items-start gap-3 mb-3">
+          <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-bold">T</span>
+          </div>
+          <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm max-w-xs">
+            <p className="text-sm text-gray-800 leading-relaxed">{greeting}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Widget card */}
+      <div className="flex items-start gap-3">
+        <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
+          <span className="text-white text-xs font-bold">T</span>
+        </div>
+        <div className="flex-1 max-w-sm">
+          <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-4 shadow-sm">
+            {/* Progress indicator */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex gap-1">
+                {Array.from({ length: totalSteps }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 rounded-full transition-all ${
+                      i < stepIndex ? 'bg-purple-500 w-4' :
+                      i === stepIndex ? 'bg-purple-500 w-6' :
+                      'bg-gray-200 w-4'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-gray-400">
+                {stepIndex + 1} of {totalSteps}
+              </span>
+            </div>
+
+            {/* Question */}
+            <p className="text-sm font-semibold text-gray-900 mb-1">
+              {step.question}
+            </p>
+
+            {/* Subtext */}
+            {step.subtext && (
+              <p className="text-xs text-gray-500 mb-3">{step.subtext}</p>
+            )}
+
+            {/* Input */}
+            <div className="mb-3">
+              {renderInput()}
+              {error && (
+                <p className="text-xs text-red-500 mt-1">{error}</p>
+              )}
+            </div>
+
+            {/* Submit button */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleSubmit}
+                disabled={respondMutation.isPending}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50"
+              >
+                {respondMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    Continue
+                    <ChevronRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              {!step.required && (
+                <button
+                  onClick={onSkip}
+                  className="px-3 py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Skip
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+**SUBAGENT 5 — WIRE INTO DOCKCHAT**
+
+Update the DockChat message renderer to handle intake widget messages:
+
+```tsx
+// In client/src/components/chat/DockChat.tsx or ChatMessage.tsx
+// Add handling for trinity_intake_widget WebSocket messages
+
+// In the WebSocket message handler add:
+case 'trinity_intake_widget': {
+  const { sessionId, messageType, greeting, step,
+          stepIndex, totalSteps, flowTitle,
+          completionMessage } = message.data;
+
+  if (messageType === 'intake_complete') {
+    // Show Trinity completion message
+    addChatMessage({
+      type: 'trinity_message',
+      content: completionMessage,
+      sender: 'Trinity',
+      timestamp: new Date()
+    });
+    setActiveIntakeSession(null);
+    return;
+  }
+
+  // Show intake widget
+  setActiveIntakeSession({
+    sessionId,
+    step,
+    stepIndex,
+    totalSteps,
+    greeting: stepIndex === 0 ? greeting : undefined,
+    flowTitle
+  });
+  break;
+}
+
+// In chat message area render the active intake widget:
+{activeIntakeSession && (
+  <TrinityIntakeWidget
+    sessionId={activeIntakeSession.sessionId}
+    step={activeIntakeSession.step}
+    stepIndex={activeIntakeSession.stepIndex}
+    totalSteps={activeIntakeSession.totalSteps}
+    greeting={activeIntakeSession.greeting}
+    flowTitle={activeIntakeSession.flowTitle}
+    onComplete={(data) => {
+      if (data.complete) {
+        setActiveIntakeSession(null);
+      } else {
+        // Next step will arrive via WebSocket
+        setActiveIntakeSession(prev => ({
+          ...prev,
+          step: data.nextStep,
+          stepIndex: data.nextStepIndex,
+          greeting: undefined
+        }));
+      }
+    }}
+    onSkip={() => {
+      // Submit empty value and advance
+    }}
+  />
+)}
+
+// Also wire Trinity message detection to auto-start intake flows:
+// When a user sends a message in DockChat check if it triggers an intake flow
+// If yes call POST /api/trinity/intake/start instead of standard helpai chat
+```
+
+---
+
+**SUBAGENT 6 — MOUNT ROUTES AND VERIFY**
+
+```bash
+# Mount intake routes in server
+grep -rn "trinityIntakeRoutes\|intake.*router" server/routes.ts
+# If missing: add import and app.use()
+
+# Verify tables created
+psql $DATABASE_URL -c "
+  SELECT table_name FROM information_schema.tables
+  WHERE table_name IN (
+    'trinity_intake_sessions',
+    'trinity_intake_responses'
+  )
+"
+
+# Test intake session creation
+curl -s -X POST http://localhost:5000/api/trinity/intake/start \
+  -H "Authorization: Bearer [acme_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "flowType": "support_triage",
+    "chatRoomId": "[room_id]",
+    "triggerMessage": "I need help"
+  }'
+
+# Test step response
+curl -s -X POST http://localhost:5000/api/trinity/intake/[session_id]/respond \
+  -H "Authorization: Bearer [acme_token]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fieldId": "issue_category",
+    "value": "I cannot log into my account",
+    "stepIndex": 0
+  }'
+
+# Verify TypeScript zero errors
+npx tsc --noEmit --skipLibCheck 2>&1 | grep "error TS" | wc -l
+
+# Server clean startup
+curl -s http://localhost:5000/health | jq .status
+```
+
+---
+
+**CERTIFICATION:**
+
+```
+SCHEMA:
+✅ trinity_intake_sessions table created with all columns
+✅ trinity_intake_responses table created with all columns
+✅ Indexes created for workspace_id, user_id, chat_room_id
+
+FLOW DEFINITIONS:
+✅ 6 intake flows defined with complete step sequences
+✅ All widget types covered — text, email, phone, number,
+   date, select, radio, textarea, confirm
+✅ Skip logic works for conditional steps
+✅ Auto-detection triggers correct flow from free text message
+
+BACKEND:
+✅ POST /api/trinity/intake/start creates session
+✅ POST /api/trinity/intake/:id/respond advances steps
+✅ POST /api/trinity/intake/:id/abandon marks abandoned
+✅ WebSocket broadcasts widget to correct chat room
+✅ Completion triggers Trinity action processing
+✅ All actions attributed to Trinity system actor in audit log
+
+FRONTEND:
+✅ TrinityIntakeWidget renders all input types correctly
+✅ Progress bar shows current step position
+✅ Select renders dropdown with options
+✅ Radio renders tappable option cards
+✅ Text/email/phone/number render appropriate inputs
+✅ Textarea renders multi-line input
+✅ Date renders date picker
+✅ Continue button submits and advances
+✅ Skip button works on optional fields
+✅ Submitted steps show confirmed answer
+✅ Widget uses purple color per design system Trinity reserve
+
+DOCKCHAT INTEGRATION:
+✅ WebSocket handler catches trinity_intake_widget messages
+✅ Active intake widget renders inline in DockChat
+✅ Completion message appears as Trinity chat message
+✅ Free text messages auto-detect and trigger intake flows
+✅ Standard Trinity chat still works for non-intake messages
+
+ZERO TYPESCRIPT ERRORS
+SERVER CLEAN STARTUP
+ACME SANDBOX TESTED END TO END
+```
+
+---
+
+**To answer your original question directly.**
+
+Yes Trinity absolutely can and should do this. What dralaw.com has is a basic intake chatbot. What you are building gives Trinity the same structured collection capability but wired into the full platform meaning when she collects the data she can actually act on it immediately. She does not just collect your problem. She fixes it. That is the difference between a law firm intake bot and a genuine AI operator.
+
+The purple design system reservation for Trinity elements makes the widgets instantly recognizable. One question at a time. Clean input fields. Progress bar. Auto-advance on completion. Trinity processes the data and resolves the issue without human intervention in most cases.
+
+This is the infrastructure that gets you to 99% automated support.

@@ -1,0 +1,987 @@
+# COAILEAGUE - COMPREHENSIVE IMPLEMENTATION PLAN
+
+## MISSION: Production-Ready Platform with Harmonious Systems
+
+This document organizes multiple feature requests into a logical, canonical implementation order. Each section builds on the previous. **Use existing code first, only create new if needed.**
+
+---
+
+# EXECUTIVE SUMMARY
+
+| Priority | System | What It Does | Status |
+|----------|--------|--------------|--------|
+| 🚨 1 | Schema/Enum Fixes | Fix silent failures | REQUIRED FIRST |
+| 🔴 2 | Deactivate/Reactivate | Unified access control | Core Feature |
+| 🔴 3 | Production Email/Workflows | Real emails, real onboarding | Launch Critical |
+| 🟡 4 | HelpAI Bot Orchestration | Supervisor for system bots | Enhancement |
+| 🟡 5 | Desktop Chat UI (Messenger-style) | Multi-window DM experience | Enhancement |
+| 🟢 6 | AI Cost Tracking | Bill orgs for AI usage | Business Critical |
+| 🔵 7 | Stress Testing | Verify everything works together | Final Step |
+
+---
+
+# PART 1: DEACTIVATE/REACTIVATE SYSTEM
+
+## 1.1 Concept
+
+**Simple, unified terminology for access control:**
+
+```
+DEACTIVATE = Remove access (soft delete, data preserved)
+REACTIVATE = Restore access (data intact, user can log in again)
+
+NOT using: revoke, suspend, freeze, lock, ban, disable, archive
+JUST using: deactivate / reactivate
+```
+
+## 1.2 Who Can Deactivate What
+
+```
+ROLE                    CAN DEACTIVATE
+────                    ──────────────
+Org Owner/Admin    →    Employees, Clients
+Support Staff      →    Organizations, End Users
+System (automated) →    Organizations (non-payment, maintenance, audit freeze)
+```
+
+## 1.3 What Happens on Deactivate
+
+```
+DEACTIVATE EMPLOYEE:
+1. Set employee.status = 'deactivated'
+2. Set employee.deactivatedAt = NOW()
+3. Set employee.deactivatedBy = actorId
+4. Invalidate all active sessions for this user
+5. Emit WebSocket: 'employee:deactivated' → All org members see it
+6. User immediately loses access (can't log in, API calls rejected)
+7. Remove from active schedules (optional: reassign shifts)
+8. Data preserved for audit/records
+
+DEACTIVATE CLIENT:
+1. Set client.status = 'deactivated'
+2. Emit WebSocket: 'client:deactivated'
+3. Client portal access revoked immediately
+4. Contracts/invoices preserved but read-only
+
+DEACTIVATE ORGANIZATION:
+1. Set workspace.status = 'deactivated'
+2. Set workspace.deactivatedAt, deactivatedBy, deactivationReason
+3. Invalidate ALL sessions for ALL users in org
+4. Emit WebSocket: 'workspace:deactivated' → Everyone kicked out
+5. Data frozen for audit (can't modify, only view by support)
+6. Billing paused
+```
+
+## 1.4 What Happens on Reactivate
+
+```
+REACTIVATE:
+1. Set status = 'active'
+2. Clear deactivatedAt, deactivatedBy
+3. User can log in again
+4. Emit WebSocket: 'employee:reactivated' / 'client:reactivated' / 'workspace:reactivated'
+5. Access restored immediately
+```
+
+## 1.5 Database Schema Needed
+
+```sql
+-- Check if these columns exist, add if missing:
+
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMP;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS deactivated_by UUID REFERENCES users(id);
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS deactivation_reason TEXT;
+
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMP;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS deactivated_by UUID REFERENCES users(id);
+
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMP;
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS deactivated_by UUID REFERENCES users(id);
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS deactivation_reason TEXT;
+
+-- Ensure 'deactivated' is in relevant enums
+ALTER TYPE employee_status ADD VALUE IF NOT EXISTS 'deactivated';
+ALTER TYPE account_state ADD VALUE IF NOT EXISTS 'deactivated';
+```
+
+## 1.6 API Endpoints Needed
+
+```
+POST /api/employees/:id/deactivate
+POST /api/employees/:id/reactivate
+
+POST /api/clients/:id/deactivate
+POST /api/clients/:id/reactivate
+
+POST /api/workspaces/:id/deactivate    (support only)
+POST /api/workspaces/:id/reactivate    (support only)
+```
+
+## 1.7 Real-Time Sync
+
+```typescript
+// When deactivating, IMMEDIATELY sync across all systems:
+
+async function deactivateEmployee(employeeId: string, actorId: string, reason?: string) {
+  return await db.transaction(async (tx) => {
+    // 1. Update database
+    const employee = await tx.update(employees)
+      .set({
+        status: 'deactivated',
+        deactivatedAt: new Date(),
+        deactivatedBy: actorId,
+        deactivationReason: reason,
+      })
+      .where(eq(employees.id, employeeId))
+      .returning();
+    
+    // 2. Invalidate sessions (immediate logout)
+    await tx.delete(sessions)
+      .where(eq(sessions.userId, employee[0].userId));
+    
+    // 3. Emit WebSocket (all devices see it)
+    emitToWorkspace(io, employee[0].workspaceId, 'employee:deactivated', {
+      employeeId,
+      deactivatedBy: actorId,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // 4. Emit to the user's devices (they get kicked)
+    if (employee[0].userId) {
+      emitToUser(io, employee[0].userId, 'session:terminated', {
+        reason: 'Account deactivated',
+      });
+    }
+    
+    return employee[0];
+  });
+}
+```
+
+---
+
+# PART 2: PRODUCTION EMAIL & ONBOARDING WORKFLOWS
+
+## 2.1 Requirements
+
+```
+MUST WORK IN PRODUCTION (not simulated):
+✅ Send real emails via Resend/SendGrid
+✅ Invite team members → They receive email
+✅ Password setup email → User can set password
+✅ Onboarding packet → Employee completes, data saves
+✅ QuickBooks OAuth → Connects to real QB account
+✅ All data persists → Visible in dashboard immediately
+```
+
+## 2.2 Email Workflow Verification
+
+```bash
+# Check email configuration
+grep -rn "RESEND_API_KEY\|SENDGRID\|SMTP\|EMAIL" .env.example
+grep -rn "sendEmail\|sendMail\|resend\|sendgrid" --include="*.ts" server/
+
+# Find email sending functions
+grep -rn "async.*send.*[Ee]mail\|async.*send.*[Ii]nvite" --include="*.ts" server/
+```
+
+## 2.3 Invite Flow Test Checklist
+
+```
+TEAM INVITE FLOW:
+[ ] Admin enters email address
+[ ] System creates invite record in database
+[ ] System sends email via Resend/SendGrid (NOT console.log)
+[ ] Email contains unique invite link
+[ ] User clicks link → Lands on signup page
+[ ] User sets password, completes profile
+[ ] User account created, linked to workspace
+[ ] User can log in immediately
+[ ] User appears in employee list
+
+VERIFY:
+[ ] Check Resend dashboard for sent emails
+[ ] Check database for invite records
+[ ] Check user creation
+```
+
+## 2.4 QuickBooks Integration Test
+
+```
+QUICKBOOKS OAUTH FLOW:
+[ ] Click "Connect QuickBooks"
+[ ] Redirects to Intuit OAuth
+[ ] User authorizes
+[ ] Callback receives tokens
+[ ] Tokens stored in database (encrypted)
+[ ] Company info fetched and displayed
+[ ] Sync button works (imports customers, vendors)
+[ ] Token refresh works (when expired)
+```
+
+## 2.5 Production Readiness Checks
+
+```bash
+# Verify environment variables are set
+echo "Required env vars for production:"
+cat << 'EOF'
+DATABASE_URL=postgresql://...
+RESEND_API_KEY=re_...
+QUICKBOOKS_CLIENT_ID=...
+QUICKBOOKS_CLIENT_SECRET=...
+QUICKBOOKS_REDIRECT_URI=https://yourapp.com/api/quickbooks/callback
+SESSION_SECRET=...
+APP_URL=https://yourapp.com
+EOF
+
+# Verify email actually sends (not mocked)
+grep -rn "console.log.*email\|// sendEmail\|mock.*email" --include="*.ts" server/
+# Should return NO results - emails should actually send
+```
+
+---
+
+# PART 3: HELPAI BOT ORCHESTRATION SYSTEM
+
+## 3.1 Concept
+
+```
+HELPAI = Supervisor Bot (always listening)
+         │
+         ├──► ReportBot (generates reports on command)
+         ├──► ClockBot (handles time tracking commands)
+         ├──► MeetingBot (schedules/manages meetings)
+         ├──► ScheduleBot (shift management)
+         └──► [Future bots...]
+
+FLOW:
+1. User types message in ANY chat room
+2. HelpAI listens for keywords/commands or toggle triggers
+3. HelpAI determines which bot to summon
+4. HelpAI sends instructions to sub-bot
+5. Sub-bot executes task
+6. Sub-bot reports success/failure to HelpAI
+7. HelpAI relays result to user
+8. Sub-bot goes to rest mode
+```
+
+## 3.2 Why This Approach
+
+```
+OLD WAY (Room-based):
+- Bot only works in specific rooms
+- User must know which room to use
+- Confusing for users
+
+NEW WAY (HelpAI Orchestration):
+- Works in ANY room
+- User just talks naturally
+- HelpAI figures out what they need
+- More intuitive, less commands to remember
+```
+
+## 3.3 Architecture
+
+```typescript
+// server/services/bots/helpai-orchestrator.ts
+
+interface SubBot {
+  name: string;
+  triggers: string[];  // Keywords that summon this bot
+  execute: (context: BotContext) => Promise<BotResult>;
+}
+
+const subBots: SubBot[] = [
+  {
+    name: 'ReportBot',
+    triggers: ['report', 'generate report', 'show me', 'analytics', 'stats'],
+    execute: async (ctx) => {
+      // Generate report
+      return { success: true, message: 'Report generated', data: report };
+    },
+  },
+  {
+    name: 'ClockBot',
+    triggers: ['clock in', 'clock out', 'punch in', 'punch out', 'time'],
+    execute: async (ctx) => {
+      // Handle time tracking
+      return { success: true, message: 'Clocked in at 9:00 AM' };
+    },
+  },
+  {
+    name: 'MeetingBot',
+    triggers: ['schedule meeting', 'meeting', 'calendar', 'book'],
+    execute: async (ctx) => {
+      // Schedule meeting
+      return { success: true, message: 'Meeting scheduled' };
+    },
+  },
+  {
+    name: 'ScheduleBot',
+    triggers: ['shift', 'schedule', 'assign', 'coverage', 'who is working'],
+    execute: async (ctx) => {
+      // Handle scheduling
+      return { success: true, message: 'Schedule updated' };
+    },
+  },
+];
+
+class HelpAIOrchestrator {
+  async processMessage(message: string, context: BotContext): Promise<void> {
+    // 1. Check if message triggers any bot
+    const matchedBot = this.findMatchingBot(message);
+    
+    if (!matchedBot) {
+      // No bot needed, HelpAI handles directly or ignores
+      return;
+    }
+    
+    // 2. Summon the sub-bot
+    await this.emitStatus(context, `Summoning ${matchedBot.name}...`);
+    
+    // 3. Execute the bot's task
+    try {
+      const result = await matchedBot.execute(context);
+      
+      // 4. Report result
+      await this.emitResult(context, matchedBot.name, result);
+      
+    } catch (error) {
+      // 5. Report failure
+      await this.emitResult(context, matchedBot.name, {
+        success: false,
+        message: `${matchedBot.name} encountered an error: ${error.message}`,
+      });
+    }
+    
+    // 6. Bot goes to rest mode (nothing to do, just completes)
+  }
+  
+  private findMatchingBot(message: string): SubBot | null {
+    const lowerMessage = message.toLowerCase();
+    
+    for (const bot of subBots) {
+      for (const trigger of bot.triggers) {
+        if (lowerMessage.includes(trigger)) {
+          return bot;
+        }
+      }
+    }
+    
+    return null;
+  }
+}
+```
+
+## 3.4 Integration with Universal Chat Server
+
+```typescript
+// In chat message handler:
+
+socket.on('message:send', async (data) => {
+  const { roomId, content, userId } = data;
+  
+  // Save message to database
+  const message = await saveMessage(roomId, userId, content);
+  
+  // Broadcast to room
+  io.to(`room:${roomId}`).emit('message:new', message);
+  
+  // Let HelpAI analyze the message
+  const context = { roomId, userId, message: content, workspaceId };
+  await helpAI.processMessage(content, context);
+});
+```
+
+## 3.5 Toggle Execution Support
+
+```typescript
+// UI toggles can also trigger bots
+
+// Example: User toggles "Generate Weekly Report"
+socket.on('toggle:execute', async (data) => {
+  const { toggleId, userId, workspaceId } = data;
+  
+  const toggle = await getToggle(toggleId);
+  
+  // Map toggle to bot action
+  const botAction = mapToggleToBot(toggle.action);
+  
+  if (botAction) {
+    await helpAI.executeBot(botAction.botName, {
+      userId,
+      workspaceId,
+      params: botAction.params,
+    });
+  }
+});
+```
+
+---
+
+# PART 4: DESKTOP CHAT UI (MESSENGER-STYLE)
+
+## 4.1 Concept
+
+```
+DESKTOP EXPERIENCE:
+┌─────────────────────────────────────────────────────────────────┐
+│  Main Application                                               │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐                        │
+│  │ DM with │  │ DM with │  │ Room:   │                        │
+│  │ John    │  │ Maria   │  │ #general│                        │
+│  │         │  │         │  │         │                        │
+│  │ [msgs]  │  │ [msgs]  │  │ [msgs]  │                        │
+│  │         │  │         │  │         │                        │
+│  │ [input] │  │ [input] │  │ [input] │                        │
+│  │ [_ □ X] │  │ [_ □ X] │  │ [_ □ X] │                        │
+│  └─────────┘  └─────────┘  └─────────┘                        │
+│                                                                 │
+│  ↑ Minimizable, closeable, stackable windows                   │
+│  ↑ Closing window ≠ leaving conversation                       │
+│  ↑ Can have multiple open simultaneously                       │
+└─────────────────────────────────────────────────────────────────┘
+
+MOBILE EXPERIENCE (unchanged):
+┌──────────────┐
+│ Conversations│
+│ ├─ John      │
+│ ├─ Maria     │
+│ └─ #general  │
+│              │
+│ [Tap to open]│
+│              │
+│ One at a time│
+│ Compact view │
+└──────────────┘
+```
+
+## 4.2 Desktop Multi-Window State
+
+```typescript
+// client/src/stores/chatWindowStore.ts
+
+interface ChatWindow {
+  id: string;
+  type: 'dm' | 'room';
+  targetId: string;  // recipientId for DM, roomId for room
+  title: string;
+  isMinimized: boolean;
+  isOpen: boolean;
+  position: { x: number; y: number };
+  unreadCount: number;
+}
+
+interface ChatWindowStore {
+  windows: ChatWindow[];
+  
+  // Actions
+  openWindow: (type: 'dm' | 'room', targetId: string, title: string) => void;
+  closeWindow: (id: string) => void;  // Closes UI, stays in conversation
+  minimizeWindow: (id: string) => void;
+  maximizeWindow: (id: string) => void;
+  leaveConversation: (id: string) => void;  // Actually leaves
+}
+
+// Maximum windows open at once
+const MAX_WINDOWS = 5;
+
+// Window stacking logic
+function calculateWindowPosition(index: number): { x: number; y: number } {
+  const baseX = window.innerWidth - 350;  // Right side
+  const baseY = window.innerHeight - 450; // Bottom
+  const offset = index * 30;  // Stagger
+  
+  return {
+    x: baseX - offset,
+    y: baseY - offset,
+  };
+}
+```
+
+## 4.3 IRC-Style Room Modes
+
+```typescript
+// Room permissions and modes (IRC-style)
+
+interface RoomModes {
+  // User modes within room
+  voice: string[];      // +v - Can speak when room is moderated
+  moderator: string[];  // +o - Can kick/ban/mute
+  admin: string[];      // +a - Room admin
+  owner: string[];      // +q - Room owner
+  
+  // Room modes
+  moderated: boolean;   // +m - Only voiced users can speak
+  inviteOnly: boolean;  // +i - Must be invited
+  secret: boolean;      // +s - Hidden from room list
+}
+
+// Commands available to moderators
+const MODERATOR_COMMANDS = {
+  '/kick': 'Remove user from room',
+  '/ban': 'Ban user from room',
+  '/mute': 'Prevent user from typing',
+  '/unmute': 'Allow user to type again',
+  '/voice': 'Give user speaking rights',
+  '/devoice': 'Remove speaking rights',
+  '/mod': 'Make user a moderator',
+  '/demod': 'Remove moderator status',
+};
+
+// Example: Owner silences room for meeting
+async function setRoomModerated(roomId: string, actorId: string, moderated: boolean) {
+  // Verify actor is owner/admin
+  const hasPermission = await checkRoomPermission(roomId, actorId, ['owner', 'admin']);
+  if (!hasPermission) throw new Error('Not authorized');
+  
+  // Update room mode
+  await db.update(chatRooms)
+    .set({ moderated })
+    .where(eq(chatRooms.id, roomId));
+  
+  // Announce to room
+  io.to(`room:${roomId}`).emit('room:mode_changed', {
+    mode: 'moderated',
+    value: moderated,
+    changedBy: actorId,
+    message: moderated 
+      ? '🔇 Room is now moderated. Only voiced users can speak.'
+      : '🔊 Room moderation lifted. Everyone can speak.',
+  });
+}
+```
+
+## 4.4 Join/Leave Announcements
+
+```typescript
+// Announce when users join or leave
+
+socket.on('room:join', async (roomId) => {
+  const user = socket.data.user;
+  
+  // Join socket room
+  socket.join(`room:${roomId}`);
+  
+  // Announce to room
+  io.to(`room:${roomId}`).emit('room:user_joined', {
+    userId: user.id,
+    userName: user.name,
+    timestamp: new Date().toISOString(),
+    message: `${user.name} has joined the room`,
+  });
+});
+
+socket.on('room:leave', async (roomId) => {
+  const user = socket.data.user;
+  
+  // Announce to room
+  io.to(`room:${roomId}`).emit('room:user_left', {
+    userId: user.id,
+    userName: user.name,
+    timestamp: new Date().toISOString(),
+    message: `${user.name} has left the room`,
+  });
+  
+  // Leave socket room
+  socket.leave(`room:${roomId}`);
+});
+```
+
+## 4.5 Mobile - Keep Current Design
+
+```
+MOBILE DECISION:
+✅ Keep current compact design
+✅ Single conversation view
+✅ Swipe/tap to switch conversations
+✅ Works well for mobile context
+
+OPTIONAL FUTURE:
+- Support split-screen on modern phones
+- But don't add complexity for launch
+```
+
+---
+
+# PART 5: AI COST TRACKING & BILLING
+
+## 5.1 Requirement
+
+```
+EVERY AI call must:
+1. Track tokens used
+2. Calculate cost
+3. Debit from org's credits
+4. Log the transaction
+5. Never let platform absorb costs
+```
+
+## 5.2 Cost Tracking Implementation
+
+```typescript
+// server/services/ai/cost-tracker.ts
+
+interface AIUsage {
+  workspaceId: string;
+  model: 'gemini' | 'claude' | 'gpt-4' | 'gpt-3.5';
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  feature: string;  // 'trinity', 'report', 'scheduling', etc.
+  actorType: 'END_USER' | 'SYSTEM' | 'AI_AGENT';
+  actorId: string;
+}
+
+// Cost per 1K tokens (adjust to actual pricing)
+const COST_PER_1K_TOKENS = {
+  'gemini': { input: 0.0005, output: 0.0015 },
+  'claude': { input: 0.008, output: 0.024 },
+  'gpt-4': { input: 0.03, output: 0.06 },
+  'gpt-3.5': { input: 0.0005, output: 0.0015 },
+};
+
+async function trackAIUsage(usage: AIUsage): Promise<void> {
+  const pricing = COST_PER_1K_TOKENS[usage.model];
+  
+  const cost = 
+    (usage.inputTokens / 1000) * pricing.input +
+    (usage.outputTokens / 1000) * pricing.output;
+  
+  // Debit from org's credits
+  await db.transaction(async (tx) => {
+    // 1. Log the usage
+    await tx.insert(aiUsageLogs).values({
+      workspaceId: usage.workspaceId,
+      model: usage.model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cost: cost,
+      feature: usage.feature,
+      actorType: usage.actorType,
+      actorId: usage.actorId,
+      createdAt: new Date(),
+    });
+    
+    // 2. Debit credits
+    await tx.insert(creditTransactions).values({
+      workspaceId: usage.workspaceId,
+      amount: -cost,
+      type: 'ai_usage',
+      description: `${usage.model} - ${usage.feature}`,
+      actorType: usage.actorType,  // Must be uppercase!
+      actorId: usage.actorId,
+    });
+    
+    // 3. Update workspace balance
+    await tx.update(workspaces)
+      .set({ 
+        creditBalance: sql`credit_balance - ${cost}`,
+      })
+      .where(eq(workspaces.id, usage.workspaceId));
+  });
+}
+```
+
+## 5.3 Wrap All AI Calls
+
+```typescript
+// Every AI call must go through this wrapper
+
+async function callAI(
+  model: string,
+  prompt: string,
+  context: { workspaceId: string; feature: string; actorId: string }
+): Promise<AIResponse> {
+  const startTime = Date.now();
+  
+  // Make the AI call
+  const response = await aiClient.complete(model, prompt);
+  
+  // Track usage and cost
+  await trackAIUsage({
+    workspaceId: context.workspaceId,
+    model: model,
+    inputTokens: response.usage.inputTokens,
+    outputTokens: response.usage.outputTokens,
+    feature: context.feature,
+    actorType: 'END_USER',
+    actorId: context.actorId,
+  });
+  
+  return response;
+}
+```
+
+---
+
+# PART 6: INTEGRATION & HARMONY CHECK
+
+## 6.1 Systems That Must Work Together
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    UNIVERSAL CHAT SERVER                        │
+│  (WebSocket hub - all real-time communication flows through)   │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+         ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│    HELPAI       │ │    TRINITY      │ │  DESKTOP CHAT   │
+│  (Orchestrator) │ │  (AI Brain)     │ │  (Multi-window) │
+└────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+         │                   │                   │
+         ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  SYSTEM BOTS    │ │  COST TRACKER   │ │  ROOM MODES     │
+│  (Sub-agents)   │ │  (AI billing)   │ │  (IRC-style)    │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │   DEACTIVATE/   │
+                    │   REACTIVATE    │
+                    │   (Access Ctrl) │
+                    └─────────────────┘
+```
+
+## 6.2 Integration Points
+
+```
+HELPAI ↔ TRINITY:
+- HelpAI can ask Trinity for complex reasoning
+- Trinity can summon HelpAI bots for actions
+- Both track AI costs to workspace
+
+HELPAI ↔ CHAT SERVER:
+- HelpAI listens to all messages
+- Responds in the same room/DM
+- Uses same WebSocket connection
+
+DESKTOP CHAT ↔ CHAT SERVER:
+- Multi-window UI connects to same socket
+- Each window is a subscription to a room/DM
+- Closing window doesn't disconnect
+
+DEACTIVATE ↔ CHAT SERVER:
+- When user deactivated, kick from all rooms
+- When org deactivated, disconnect all org users
+- Emit events through same WebSocket
+```
+
+---
+
+# PART 7: STRESS TEST PLAN
+
+## 7.1 Test Scenarios
+
+```
+SCENARIO 1: Team Onboarding (Your Live Test)
+─────────────────────────────────────────────
+1. Log in to production
+2. Connect QuickBooks → OAuth completes, data syncs
+3. Send invite to team member → Real email sent
+4. Team member clicks link → Can set password
+5. Team member completes onboarding → Data saves
+6. Team member logs in → Appears in employee list
+7. Team member can access dashboard, clock in, chat
+
+SCENARIO 2: Deactivate/Reactivate Flow
+─────────────────────────────────────────────
+1. Deactivate an employee
+2. Verify they're immediately logged out
+3. Verify they can't log back in
+4. Verify all org members see the change
+5. Reactivate the employee
+6. Verify they can log in again
+7. Verify access restored
+
+SCENARIO 3: Chat System
+─────────────────────────────────────────────
+1. Open DM on desktop → Window appears
+2. Open another DM → Second window stacks
+3. Minimize one window → Stays accessible
+4. Close window → Still in conversation
+5. Receive message → Notification shows
+6. Join room → See join announcement
+7. Owner moderates room → Only voiced can speak
+8. Leave room → Leave announcement shows
+
+SCENARIO 4: HelpAI Bot Orchestration
+─────────────────────────────────────────────
+1. Type "generate a report" in any chat
+2. HelpAI recognizes → Summons ReportBot
+3. ReportBot executes → Report generated
+4. Result posted in chat
+5. Type "clock me in"
+6. HelpAI → ClockBot → Clock entry created
+
+SCENARIO 5: AI Cost Tracking
+─────────────────────────────────────────────
+1. Use Trinity for a query
+2. Check workspace credit balance → Deducted
+3. Check AI usage log → Entry exists
+4. Verify cost calculation correct
+5. Multiple users use AI → All tracked separately
+```
+
+## 7.2 Stress Test Commands
+
+```bash
+# Test email sending
+curl -X POST /api/test/send-email \
+  -H "Content-Type: application/json" \
+  -d '{"to": "your@email.com", "subject": "Test"}'
+
+# Test QuickBooks connection
+curl -X GET /api/quickbooks/status \
+  -H "Authorization: Bearer $TOKEN"
+
+# Test invite flow
+curl -X POST /api/invites \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"email": "team@example.com", "role": "employee"}'
+
+# Test deactivate
+curl -X POST /api/employees/$ID/deactivate \
+  -H "Authorization: Bearer $TOKEN"
+
+# Test WebSocket connection
+wscat -c wss://yourapp.com/socket \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## 7.3 Verify No Silent Failures
+
+```bash
+# Check for errors in logs
+tail -f /var/log/app/*.log | grep -i "error\|fail\|exception"
+
+# Check database for expected records
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM invites WHERE created_at > NOW() - INTERVAL '1 hour'"
+psql $DATABASE_URL -c "SELECT * FROM email_logs ORDER BY created_at DESC LIMIT 5"
+psql $DATABASE_URL -c "SELECT * FROM ai_usage_logs ORDER BY created_at DESC LIMIT 5"
+```
+
+---
+
+# PART 8: IMPLEMENTATION ORDER
+
+## Execute in This Order:
+
+```
+PHASE 1: FIX FOUNDATIONS (Required First)
+├── 1.1 Fix all enum value mismatches (SURGICAL_ENUM_AUDIT.md)
+├── 1.2 Fix all schema/code/database mismatches
+└── 1.3 Verify no silent failures
+
+PHASE 2: CORE ACCESS CONTROL
+├── 2.1 Implement deactivate/reactivate for employees
+├── 2.2 Implement deactivate/reactivate for clients
+├── 2.3 Implement deactivate/reactivate for workspaces
+├── 2.4 Add real-time sync for all deactivations
+└── 2.5 Test immediate access revocation
+
+PHASE 3: PRODUCTION WORKFLOWS
+├── 3.1 Verify email sending works (not simulated)
+├── 3.2 Test invite → signup → onboarding flow
+├── 3.3 Test QuickBooks OAuth and sync
+├── 3.4 Verify all data persists correctly
+└── 3.5 Bryan's live test with real team
+
+PHASE 4: HELPAI ORCHESTRATION
+├── 4.1 Check existing HelpAI implementation
+├── 4.2 Add sub-bot registry
+├── 4.3 Implement trigger detection
+├── 4.4 Connect to universal chat server
+└── 4.5 Test bot summoning flow
+
+PHASE 5: DESKTOP CHAT UI
+├── 5.1 Implement multi-window state management
+├── 5.2 Create floating chat window component
+├── 5.3 Add window stacking/positioning
+├── 5.4 Implement IRC-style room modes
+├── 5.5 Add join/leave announcements
+└── 5.6 Test with multiple conversations
+
+PHASE 6: AI COST TRACKING
+├── 6.1 Verify cost tracking tables exist
+├── 6.2 Wrap all AI calls with tracking
+├── 6.3 Implement credit deduction
+├── 6.4 Test billing accuracy
+└── 6.5 Verify no platform cost absorption
+
+PHASE 7: INTEGRATION TESTING
+├── 7.1 Test all systems together
+├── 7.2 Verify WebSocket events flow correctly
+├── 7.3 Test deactivation + chat + AI together
+├── 7.4 Load test with multiple users
+└── 7.5 Document any gaps
+
+PHASE 8: FINAL VERIFICATION
+├── 8.1 Bryan's live production test
+├── 8.2 Team onboarding test
+├── 8.3 QuickBooks migration
+├── 8.4 Full workflow walkthrough
+└── 8.5 Sign-off for launch
+```
+
+---
+
+# SUMMARY
+
+## What We Have (Check Existing):
+- [ ] Universal chat server (WebSocket)
+- [ ] HelpAI base implementation
+- [ ] Trinity AI brain
+- [ ] Employee/Client/Workspace CRUD
+- [ ] Email service (Resend/SendGrid)
+- [ ] QuickBooks integration
+- [ ] Credit system
+
+## What We Need to Add/Fix:
+- [ ] Enum value fixes (CRITICAL)
+- [ ] Deactivate/reactivate endpoints
+- [ ] Real-time sync for access changes
+- [ ] HelpAI sub-bot orchestration
+- [ ] Desktop multi-window chat UI
+- [ ] IRC-style room modes
+- [ ] AI cost tracking wrapper
+- [ ] Production email verification
+
+## What Stays the Same:
+- [ ] Mobile chat UI (keep compact)
+- [ ] Core data models
+- [ ] API structure
+- [ ] Authentication flow
+
+---
+
+# SEND TO REPLIT
+
+```
+MISSION: Implement this plan in order, using existing code where possible.
+
+START WITH: Phase 1 (Fix Foundations) - Use the SURGICAL_ENUM_AUDIT.md
+
+THEN: Phase 2-6 in order
+
+FINALLY: Phase 7-8 (Integration testing with Bryan's live test)
+
+DO NOT skip phases. Each builds on the previous.
+
+GOAL: Production-ready platform where Bryan can:
+1. Log in
+2. Connect QuickBooks
+3. Invite team (real emails)
+4. Team completes onboarding
+5. Everyone can work together with chat, scheduling, time tracking
+6. All AI usage is billed correctly
+7. Access control works instantly
+```
+
+**THIS IS THE COMPLETE, ORGANIZED PLAN.**

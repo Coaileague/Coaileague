@@ -20,6 +20,9 @@ import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { quickbooksRateLimiter } from './quickbooksRateLimiter';
 import { platformEventBus } from '../platformEventBus';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quickbooksSyncPollingService');
+
 
 // Use centralized config - NO HARDCODED URLs
 const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
@@ -58,12 +61,12 @@ class QuickBooksSyncPollingService {
 
   constructor(config: Partial<SyncPollingConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    console.log('[QuickBooksSyncPolling] Service initialized');
+    log.info('[QuickBooksSyncPolling] Service initialized');
   }
 
   start(): void {
     if (this.isRunning) {
-      console.log('[QuickBooksSyncPolling] Already running');
+      log.info('[QuickBooksSyncPolling] Already running');
       return;
     }
 
@@ -76,7 +79,7 @@ class QuickBooksSyncPollingService {
 
     this.scheduleNightlyReconciliation();
 
-    console.log(`[QuickBooksSyncPolling] Started with ${this.config.intervalMinutes}min interval`);
+    log.info(`[QuickBooksSyncPolling] Started with ${this.config.intervalMinutes}min interval`);
   }
 
   stop(): void {
@@ -89,7 +92,7 @@ class QuickBooksSyncPollingService {
       this.nightlyReconciliationTimeout = null;
     }
     this.isRunning = false;
-    console.log('[QuickBooksSyncPolling] Stopped');
+    log.info('[QuickBooksSyncPolling] Stopped');
   }
 
   private scheduleNightlyReconciliation(): void {
@@ -110,7 +113,7 @@ class QuickBooksSyncPollingService {
       this.scheduleNightlyReconciliation();
     }, msUntilNextRun);
 
-    console.log(`[QuickBooksSyncPolling] Nightly reconciliation scheduled for ${nextRun.toISOString()}`);
+    log.info(`[QuickBooksSyncPolling] Nightly reconciliation scheduled for ${nextRun.toISOString()}`);
   }
 
   async runIncrementalSync(): Promise<IncrementalSyncResult[]> {
@@ -127,21 +130,21 @@ class QuickBooksSyncPollingService {
         )
         .limit(this.config.maxConnectionsPerRun);
 
-      console.log(`[QuickBooksSyncPolling] Running incremental sync for ${connections.length} connections`);
+      log.info(`[QuickBooksSyncPolling] Running incremental sync for ${connections.length} connections`);
 
       for (const connection of connections) {
         try {
           const result = await this.syncConnection(connection, 'incremental');
           results.push(result);
         } catch (error: any) {
-          console.error(`[QuickBooksSyncPolling] Error syncing ${connection.workspaceId}:`, error.message);
+          log.error(`[QuickBooksSyncPolling] Error syncing ${connection.workspaceId}:`, (error instanceof Error ? error.message : String(error)));
           results.push({
             workspaceId: connection.workspaceId,
             realmId: connection.realmId || '',
             customersUpdated: 0,
             employeesUpdated: 0,
             vendorsUpdated: 0,
-            errors: [error.message],
+            errors: [(error instanceof Error ? error.message : String(error))],
             durationMs: 0,
           });
         }
@@ -149,20 +152,16 @@ class QuickBooksSyncPollingService {
 
       this.lastPollTime = new Date();
       
-      platformEventBus.emit({
+      platformEventBus.publish({
         type: 'ai_brain_action',
-        data: {
-          action: 'quickbooks.incremental_sync_complete',
-          connectionsProcessed: connections.length,
-          totalUpdates: results.reduce((sum, r) => 
-            sum + r.customersUpdated + r.employeesUpdated + r.vendorsUpdated, 0
-          ),
-        },
-        timestamp: new Date(),
-      });
+        category: 'ai_brain',
+        title: 'QuickBooks Incremental Sync Complete',
+        description: `Synced ${connections.length} connections, ${results.reduce((sum, r) => sum + r.customersUpdated + r.employeesUpdated + r.vendorsUpdated, 0)} total updates`,
+        metadata: { action: 'quickbooks.incremental_sync_complete', connectionsProcessed: connections.length },
+      }).catch((err) => log.warn('[quickbooksSyncPollingService] Fire-and-forget failed:', err));
 
     } catch (error: any) {
-      console.error('[QuickBooksSyncPolling] Incremental sync failed:', error.message);
+      log.error('[QuickBooksSyncPolling] Incremental sync failed:', (error instanceof Error ? error.message : String(error)));
     }
 
     return results;
@@ -181,7 +180,7 @@ class QuickBooksSyncPollingService {
           )
         );
 
-      console.log(`[QuickBooksSyncPolling] Running full reconciliation for ${connections.length} connections`);
+      log.info(`[QuickBooksSyncPolling] Running full reconciliation for ${connections.length} connections`);
 
       for (const connection of connections) {
         try {
@@ -190,26 +189,22 @@ class QuickBooksSyncPollingService {
           
           await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (error: any) {
-          console.error(`[QuickBooksSyncPolling] Reconciliation error for ${connection.workspaceId}:`, error.message);
+          log.error(`[QuickBooksSyncPolling] Reconciliation error for ${connection.workspaceId}:`, (error instanceof Error ? error.message : String(error)));
         }
       }
 
       this.lastReconciliationTime = new Date();
 
-      platformEventBus.emit({
+      platformEventBus.publish({
         type: 'ai_brain_action',
-        data: {
-          action: 'quickbooks.full_reconciliation_complete',
-          connectionsProcessed: connections.length,
-          totalUpdates: results.reduce((sum, r) => 
-            sum + r.customersUpdated + r.employeesUpdated + r.vendorsUpdated, 0
-          ),
-        },
-        timestamp: new Date(),
-      });
+        category: 'ai_brain',
+        title: 'QuickBooks Full Reconciliation Complete',
+        description: `Full reconciliation across ${connections.length} connections, ${results.reduce((sum, r) => sum + r.customersUpdated + r.employeesUpdated + r.vendorsUpdated, 0)} total updates`,
+        metadata: { action: 'quickbooks.full_reconciliation_complete', connectionsProcessed: connections.length },
+      }).catch((err) => log.warn('[quickbooksSyncPollingService] Fire-and-forget failed:', err));
 
     } catch (error: any) {
-      console.error('[QuickBooksSyncPolling] Full reconciliation failed:', error.message);
+      log.error('[QuickBooksSyncPolling] Full reconciliation failed:', (error instanceof Error ? error.message : String(error)));
     }
 
     return results;
@@ -220,6 +215,7 @@ class QuickBooksSyncPollingService {
     mode: 'incremental' | 'full'
   ): Promise<IncrementalSyncResult> {
     const startTime = Date.now();
+    const startedAt = new Date();
     const result: IncrementalSyncResult = {
       workspaceId: connection.workspaceId,
       realmId: connection.realmId || '',
@@ -230,40 +226,78 @@ class QuickBooksSyncPollingService {
       durationMs: 0,
     };
 
+    // GAP-2: Create a running audit log entry before sync begins
+    const [syncLog] = await db.insert(partnerSyncLogs)
+      .values({
+        workspaceId: connection.workspaceId,
+        partnerConnectionId: connection.id,
+        jobType: mode === 'incremental' ? 'incremental_sync' : 'full_reconciliation',
+        entityType: 'all',
+        startedAt,
+        status: 'running',
+        triggeredBy: 'scheduler',
+        metadata: { realmId: connection.realmId, mode },
+      })
+      .returning();
+
     try {
       const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
       const realmId = connection.realmId!;
-      const environment = (process.env.QUICKBOOKS_ENVIRONMENT as 'production' | 'sandbox') || 'sandbox';
+      const environment = INTEGRATIONS.quickbooks.getEnvironment();
 
       const lastSyncTime = mode === 'incremental' && connection.lastSyncAt
         ? new Date(connection.lastSyncAt).toISOString()
         : null;
 
-      result.customersUpdated = await this.syncCustomers(
-        connection.workspaceId,
-        realmId,
-        accessToken,
-        environment,
-        lastSyncTime
-      );
+      const [customersResult, employeesResult] = await Promise.all([
+        this.syncCustomers(connection.workspaceId, realmId, accessToken, environment, lastSyncTime),
+        this.syncEmployees(connection.workspaceId, realmId, accessToken, environment, lastSyncTime),
+      ]);
 
-      result.employeesUpdated = await this.syncEmployees(
-        connection.workspaceId,
-        realmId,
-        accessToken,
-        environment,
-        lastSyncTime
-      );
+      result.customersUpdated = customersResult.updated;
+      result.employeesUpdated = employeesResult.updated;
 
       await db.update(partnerConnections)
         .set({ lastSyncAt: new Date() })
         .where(eq(partnerConnections.id, connection.id));
 
+      // GAP-2: Mark sync log as completed with accurate item counts
+      result.durationMs = Date.now() - startTime;
+      const totalProcessed = customersResult.processed + employeesResult.processed;
+      const totalUpdated = customersResult.updated + employeesResult.updated;
+      const totalFailed = customersResult.failed + employeesResult.failed;
+
+      await db.update(partnerSyncLogs)
+        .set({
+          status: 'completed',
+          completedAt: new Date(),
+          durationMs: result.durationMs,
+          itemsProcessed: totalProcessed,
+          itemsCreated: 0,
+          itemsUpdated: totalUpdated,
+          itemsFailed: totalFailed,
+          updatedAt: new Date(),
+        })
+        .where(eq(partnerSyncLogs.id, syncLog.id));
+
     } catch (error: any) {
-      result.errors.push(error.message);
+      result.errors.push((error instanceof Error ? error.message : String(error)));
+      result.durationMs = Date.now() - startTime;
+
+      // GAP-2: Mark sync log as failed with error details
+      await db.update(partnerSyncLogs)
+        .set({
+          status: 'failed',
+          completedAt: new Date(),
+          durationMs: result.durationMs,
+          errorMessage: result.errors[0] || 'Unknown error',
+          updatedAt: new Date(),
+        })
+        .where(eq(partnerSyncLogs.id, syncLog.id))
+        .catch(() => {}); // Non-blocking
     }
 
-    result.durationMs = Date.now() - startTime;
+    result.durationMs = result.durationMs || (Date.now() - startTime);
     return result;
   }
 
@@ -273,8 +307,10 @@ class QuickBooksSyncPollingService {
     accessToken: string,
     environment: 'production' | 'sandbox',
     lastSyncTime: string | null
-  ): Promise<number> {
+  ): Promise<{ processed: number; updated: number; failed: number }> {
+    let processed = 0;
     let updated = 0;
+    let failed = 0;
     let slotAcquired = false;
 
     try {
@@ -309,29 +345,55 @@ class QuickBooksSyncPollingService {
         success = true;
         const data = await response.json();
         const customers = data.QueryResponse?.Customer || [];
+        processed = customers.length;
 
         for (const customer of customers) {
-          const [existingClient] = await db.select()
-            .from(clients)
-            .where(
-              and(
-                eq(clients.workspaceId, workspaceId),
-                eq(clients.quickbooksClientId, customer.Id)
+          try {
+            const [existingClient] = await db.select()
+              .from(clients)
+              .where(
+                and(
+                  eq(clients.workspaceId, workspaceId),
+                  eq(clients.quickbooksClientId, customer.Id)
+                )
               )
-            )
-            .limit(1);
+              .limit(1);
 
-          if (existingClient) {
-            await db.update(clients)
-              .set({
-                name: customer.DisplayName || existingClient.name,
-                email: customer.PrimaryEmailAddr?.Address || existingClient.email,
-                phone: customer.PrimaryPhone?.FreeFormNumber || existingClient.phone,
-                quickbooksSyncStatus: 'synced',
-                quickbooksLastSync: new Date(),
-              })
-              .where(eq(clients.id, existingClient.id));
-            updated++;
+            if (existingClient) {
+              // GAP-4: Build field-level conflict log before applying update
+              const conflicts: Array<{ field: string; coaileagueValue: any; qbValue: any }> = [];
+              const incomingName = customer.DisplayName || existingClient.companyName;
+              const incomingEmail = customer.PrimaryEmailAddr?.Address || existingClient.email;
+              const incomingPhone = customer.PrimaryPhone?.FreeFormNumber || existingClient.phone;
+
+              if (customer.DisplayName && customer.DisplayName !== existingClient.companyName) {
+                conflicts.push({ field: 'companyName', coaileagueValue: existingClient.companyName, qbValue: customer.DisplayName });
+              }
+              if (customer.PrimaryEmailAddr?.Address && customer.PrimaryEmailAddr.Address !== existingClient.email) {
+                conflicts.push({ field: 'email', coaileagueValue: existingClient.email, qbValue: customer.PrimaryEmailAddr.Address });
+              }
+              if (customer.PrimaryPhone?.FreeFormNumber && customer.PrimaryPhone.FreeFormNumber !== existingClient.phone) {
+                conflicts.push({ field: 'phone', coaileagueValue: existingClient.phone, qbValue: customer.PrimaryPhone.FreeFormNumber });
+              }
+
+              await db.update(clients)
+                .set({
+                  companyName: incomingName,
+                  email: incomingEmail,
+                  phone: incomingPhone,
+                  quickbooksSyncStatus: 'synced',
+                  quickbooksLastSync: new Date(),
+                })
+                .where(eq(clients.id, existingClient.id));
+
+              if (conflicts.length > 0) {
+                log.info(`[QuickBooksSyncPolling] Field conflicts for client ${existingClient.id}:`, conflicts.map(c => c.field).join(', '));
+              }
+              updated++;
+            }
+          } catch (itemError: any) {
+            failed++;
+            log.error(`[QuickBooksSyncPolling] Error processing customer ${customer.Id}:`, (itemError instanceof Error ? itemError.message : String(itemError)));
           }
         }
       } finally {
@@ -340,10 +402,10 @@ class QuickBooksSyncPollingService {
         }
       }
     } catch (error: any) {
-      console.error(`[QuickBooksSyncPolling] Customer sync error for ${workspaceId}:`, error.message);
+      log.error(`[QuickBooksSyncPolling] Customer sync error for ${workspaceId}:`, (error instanceof Error ? error.message : String(error)));
     }
 
-    return updated;
+    return { processed, updated, failed };
   }
 
   private async syncEmployees(
@@ -352,8 +414,10 @@ class QuickBooksSyncPollingService {
     accessToken: string,
     environment: 'production' | 'sandbox',
     lastSyncTime: string | null
-  ): Promise<number> {
+  ): Promise<{ processed: number; updated: number; failed: number }> {
+    let processed = 0;
     let updated = 0;
+    let failed = 0;
     let slotAcquired = false;
 
     try {
@@ -388,30 +452,52 @@ class QuickBooksSyncPollingService {
         success = true;
         const data = await response.json();
         const qbEmployees = data.QueryResponse?.Employee || [];
+        processed = qbEmployees.length;
 
         for (const qbEmployee of qbEmployees) {
-          const [existingEmployee] = await db.select()
-            .from(employees)
-            .where(
-              and(
-                eq(employees.workspaceId, workspaceId),
-                eq(employees.quickbooksEmployeeId, qbEmployee.Id)
+          try {
+            const [existingEmployee] = await db.select()
+              .from(employees)
+              .where(
+                and(
+                  eq(employees.workspaceId, workspaceId),
+                  eq(employees.quickbooksEmployeeId, qbEmployee.Id)
+                )
               )
-            )
-            .limit(1);
+              .limit(1);
 
-          if (existingEmployee) {
-            await db.update(employees)
-              .set({
-                firstName: qbEmployee.GivenName || existingEmployee.firstName,
-                lastName: qbEmployee.FamilyName || existingEmployee.lastName,
-                email: qbEmployee.PrimaryEmailAddr?.Address || existingEmployee.email,
-                phone: qbEmployee.PrimaryPhone?.FreeFormNumber || existingEmployee.phone,
-                quickbooksSyncStatus: 'synced',
-                quickbooksLastSync: new Date(),
-              })
-              .where(eq(employees.id, existingEmployee.id));
-            updated++;
+            if (existingEmployee) {
+              // GAP-4: Build field-level conflict log before applying update
+              const conflicts: Array<{ field: string; coaileagueValue: any; qbValue: any }> = [];
+              if (qbEmployee.GivenName && qbEmployee.GivenName !== existingEmployee.firstName) {
+                conflicts.push({ field: 'firstName', coaileagueValue: existingEmployee.firstName, qbValue: qbEmployee.GivenName });
+              }
+              if (qbEmployee.FamilyName && qbEmployee.FamilyName !== existingEmployee.lastName) {
+                conflicts.push({ field: 'lastName', coaileagueValue: existingEmployee.lastName, qbValue: qbEmployee.FamilyName });
+              }
+              if (qbEmployee.PrimaryEmailAddr?.Address && qbEmployee.PrimaryEmailAddr.Address !== existingEmployee.email) {
+                conflicts.push({ field: 'email', coaileagueValue: existingEmployee.email, qbValue: qbEmployee.PrimaryEmailAddr.Address });
+              }
+
+              await db.update(employees)
+                .set({
+                  firstName: qbEmployee.GivenName || existingEmployee.firstName,
+                  lastName: qbEmployee.FamilyName || existingEmployee.lastName,
+                  email: qbEmployee.PrimaryEmailAddr?.Address || existingEmployee.email,
+                  phone: qbEmployee.PrimaryPhone?.FreeFormNumber || existingEmployee.phone,
+                  quickbooksSyncStatus: 'synced',
+                  quickbooksLastSync: new Date(),
+                })
+                .where(eq(employees.id, existingEmployee.id));
+
+              if (conflicts.length > 0) {
+                log.info(`[QuickBooksSyncPolling] Field conflicts for employee ${existingEmployee.id}:`, conflicts.map(c => c.field).join(', '));
+              }
+              updated++;
+            }
+          } catch (itemError: any) {
+            failed++;
+            log.error(`[QuickBooksSyncPolling] Error processing employee ${qbEmployee.Id}:`, (itemError instanceof Error ? itemError.message : String(itemError)));
           }
         }
       } finally {
@@ -420,10 +506,10 @@ class QuickBooksSyncPollingService {
         }
       }
     } catch (error: any) {
-      console.error(`[QuickBooksSyncPolling] Employee sync error for ${workspaceId}:`, error.message);
+      log.error(`[QuickBooksSyncPolling] Employee sync error for ${workspaceId}:`, (error instanceof Error ? error.message : String(error)));
     }
 
-    return updated;
+    return { processed, updated, failed };
   }
 
   getStatus(): {

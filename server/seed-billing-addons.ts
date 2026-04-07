@@ -23,10 +23,12 @@ const ADDONS = [
     isAIFeature: true,
     isActive: true,
   },
+  // DEPRECATED: Business Buddy addon removed — superseded by COO Mode (trinityMode: 'coo')
+  // Keeping the DB row with isActive:false to avoid FK violations on existing subscriptions
   {
     addonKey: 'business_buddy',
-    name: 'Business Buddy',
-    description: 'AI-powered business advisor for organization owners - growth insights, workforce optimization, and strategic recommendations',
+    name: 'Business Buddy (Deprecated)',
+    description: '[DEPRECATED] Superseded by COO Mode. AI-powered business advisor for organization owners.',
     category: 'ai_feature',
     pricingType: 'hybrid',
     basePrice: '19.99',
@@ -34,7 +36,7 @@ const ADDONS = [
     overageRatePer1kTokens: '0.0075',
     requiresBaseTier: 'starter',
     isAIFeature: true,
-    isActive: true,
+    isActive: false,
   },
   {
     addonKey: 'scheduleos_ai',

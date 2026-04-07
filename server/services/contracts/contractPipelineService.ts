@@ -14,15 +14,12 @@
  * - Client portal access via secure tokens
  */
 
+import { NotificationDeliveryService } from '../notificationDeliveryService';
 import { db } from '../../db';
 import { eq, and, gte, lte, desc, sql, or, ilike } from 'drizzle-orm';
 import {
   clientContracts,
-  clientContractTemplates,
-  clientContractSignatures,
   clientContractAuditLog,
-  clientContractAccessTokens,
-  clientContractAttachments,
   clientContractPipelineUsage,
   clients,
   users,
@@ -32,11 +29,10 @@ import {
   InsertClientContractSignature,
   InsertClientContractAuditLog,
   InsertClientContractAccessToken,
-  InsertClientContractAttachment,
   InsertClientContractPipelineUsage,
   ClientContract,
   ClientContractTemplate,
-  ClientContractSignature,
+  ClientContractSignature
 } from '@shared/schema';
 import { 
   BILLING, 
@@ -48,6 +44,94 @@ import {
   TierKey
 } from '@shared/billingConfig';
 import crypto from 'crypto';
+import { platformEventBus } from '../platformEventBus';
+import { createNotification } from '../notificationService';
+import {
+  orgDocuments
+} from '@shared/schema';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('contractPipelineService');
+
+
+export interface ContractSigner {
+  id: string;
+  contractId: string;
+  signerRole: SignerRole;
+  signerName: string;
+  signerEmail: string;
+  signerTitle?: string;
+  order: number;
+  status: 'pending' | 'notified' | 'viewed' | 'signed' | 'declined';
+  accessToken?: string;
+  notifiedAt?: Date;
+  viewedAt?: Date;
+  signedAt?: Date;
+  reminderCount: number;
+  lastReminderAt?: Date;
+}
+
+async function loadSignersFromDB(contractId: string): Promise<ContractSigner[]> {
+  const rows = await db
+    .select()
+    .from(clientContractSignatures)
+    .where(eq(clientContractSignatures.contractId, contractId));
+  return rows.map((r: any) => ({
+    id: r.id,
+    contractId: r.contractId,
+    signerRole: r.signerRole,
+    signerName: r.signerName,
+    signerEmail: r.signerEmail,
+    signerTitle: r.signerTitle || undefined,
+    order: r.signerOrder ?? 0,
+    status: (r.signerStatus || 'pending') as ContractSigner['status'],
+    accessToken: r.accessToken || undefined,
+    notifiedAt: r.notifiedAt || undefined,
+    viewedAt: r.viewedAt || undefined,
+    signedAt: r.signedAt || undefined,
+    reminderCount: r.reminderCount ?? 0,
+    lastReminderAt: r.lastReminderAt || undefined,
+  })).sort((a, b) => a.order - b.order);
+}
+
+async function persistSignerToDB(signer: ContractSigner): Promise<void> {
+  await db
+    .insert(clientContractSignatures)
+    .values({
+      id: signer.id,
+      contractId: signer.contractId,
+      signerRole: signer.signerRole,
+      signerName: signer.signerName,
+      signerEmail: signer.signerEmail,
+      signerTitle: signer.signerTitle || null,
+      signatureType: 'typed',
+      signerOrder: signer.order,
+      signerStatus: signer.status,
+      reminderCount: signer.reminderCount,
+      lastReminderAt: signer.lastReminderAt || null,
+      notifiedAt: signer.notifiedAt || null,
+      viewedAt: signer.viewedAt || null,
+      accessToken: signer.accessToken || null,
+    } as any)
+    .onConflictDoUpdate({
+      target: clientContractSignatures.id,
+      set: {
+        signerOrder: signer.order,
+        signerStatus: signer.status,
+        reminderCount: signer.reminderCount,
+        lastReminderAt: signer.lastReminderAt || null,
+        notifiedAt: signer.notifiedAt || null,
+        viewedAt: signer.viewedAt || null,
+        accessToken: signer.accessToken || null,
+      } as any,
+    });
+}
+
+async function updateSignerInDB(signerId: string, updates: Partial<Record<string, any>>): Promise<void> {
+  await db
+    .update(clientContractSignatures)
+    .set(updates)
+    .where(eq(clientContractSignatures.id, signerId));
+}
 
 // ============================================================================
 // TYPES
@@ -533,8 +617,35 @@ class ContractPipelineService {
       metadata: { recipientEmail: contract.clientEmail },
     });
     
-    // Generate portal URL (would be your actual domain)
+    // Generate portal URL
     const portalUrl = `/contract-portal/${token}`;
+
+    // Send signature request email to client
+    if (contract.clientEmail) {
+      try {
+        const { emailService } = await import('../emailService');
+        const baseUrl = process.env.APP_URL ||
+          (process.env.REPLIT_DOMAINS
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'https://app.coaileague.com');
+        const fullPortalUrl = `${baseUrl}${portalUrl}`;
+        const expiryDays = 30;
+
+        await NotificationDeliveryService.send({ type: 'document_requires_signature', workspaceId: contract.workspaceId || 'system', recipientUserId: contract.clientEmail, channel: 'email', body: { to: contract.clientEmail, subject: `Action Required: Please Review and Sign — ${contract.title}`, html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#ffffff;"><h2 style="color:#1a1a2e;margin-bottom:8px;">Document Ready for Your Signature</h2><p style="color:#374151;font-size:15px;">${contract.clientName ? `Hello ${contract.clientName},` : 'Hello,'}</p><p style="color:#374151;font-size:15px;">A document has been prepared for your review and signature:</p><div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;"><strong style="color:#111827;font-size:16px;">${contract.title}</strong></div><p style="color:#374151;font-size:15px;">Please click the button below to review and sign the document. This link expires in ${expiryDays} days.</p><div style="text-align:center;margin:32px 0;"><a href="${fullPortalUrl}" style="background:#4f46e5;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;display:inline-block;">Review &amp; Sign Document</a></div><p style="color:#6b7280;font-size:13px;">If you did not expect this document, you can safely ignore this email. This document was sent via CoAIleague's secure e-signature platform.</p><p style="color:#6b7280;font-size:12px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">This link is unique to you and should not be shared. It will expire on ${new Date(Date.now() + expiryDays * 86400000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.</p></div>` } });
+      } catch (emailErr: any) {
+        log.error('[ContractPipeline] Failed to send signature email:', emailErr?.message);
+      }
+    }
+
+    // Publish so Trinity sales pipeline watcher and owner notifications fire
+    platformEventBus.publish({
+      type: 'contract_proposal_sent',
+      category: 'automation',
+      title: `Proposal Sent: ${contract.title}`,
+      description: `Proposal sent to ${contract.clientEmail} for review and signature`,
+      workspaceId: contract.workspaceId,
+      metadata: { contractId, clientEmail: contract.clientEmail, title: contract.title },
+    }).catch(err => log.warn('[ContractPipeline] contract_proposal_sent publish failed:', err?.message));
     
     return { contract: updated, accessToken: token, portalUrl };
   }
@@ -562,25 +673,48 @@ class ContractPipelineService {
     contractId: string,
     auditContext: AuditContext
   ): Promise<ClientContract> {
-    const proposal = await this.getContract(contractId);
-    if (!proposal) throw new Error('Proposal not found');
-    if (proposal.docType !== 'proposal') throw new Error('Only proposals can be accepted');
-    if (!['sent', 'viewed'].includes(proposal.status)) {
-      throw new Error('Proposal must be sent or viewed to accept');
-    }
-    
-    // Update proposal to accepted
-    const [updated] = await db
-      .update(clientContracts)
-      .set({
-        status: 'accepted',
-        acceptedAt: new Date(),
-        statusChangedAt: new Date(),
-      })
-      .where(eq(clientContracts.id, contractId))
-      .returning();
-    
+    // Phase 66: SELECT FOR UPDATE inside a transaction prevents two concurrent
+    // acceptance requests from both creating formal contracts from the same proposal.
+    const proposal = await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(clientContracts)
+        .where(eq(clientContracts.id, contractId))
+        .for('update')
+        .limit(1);
+
+      if (!locked) throw new Error('Proposal not found');
+      if (locked.docType !== 'proposal') throw new Error('Only proposals can be accepted');
+      if (!['sent', 'viewed'].includes(locked.status)) {
+        throw new Error('Proposal must be sent or viewed to accept');
+      }
+
+      // Atomically mark the proposal as accepted — status check in WHERE prevents
+      // a concurrent request (which acquired the lock after us) from double-accepting.
+      const [updated] = await tx
+        .update(clientContracts)
+        .set({ status: 'accepted', acceptedAt: new Date(), statusChangedAt: new Date() })
+        .where(and(eq(clientContracts.id, contractId), or(
+          eq(clientContracts.status, 'sent'),
+          eq(clientContracts.status, 'viewed'),
+        )))
+        .returning();
+      if (!updated) throw new Error('Proposal was already accepted by a concurrent request');
+      return updated;
+    });
+
+    // Guards already enforced inside the transaction — proposal is now 'accepted'
     await this.logAudit(contractId, 'accepted', auditContext);
+
+    // Publish so Trinity can trigger auto-contract generation and owner alert
+    platformEventBus.publish({
+      type: 'contract_proposal_accepted',
+      category: 'automation',
+      title: `Proposal Accepted: ${proposal.title}`,
+      description: `${proposal.clientName} accepted the proposal — formal contract being generated`,
+      workspaceId: proposal.workspaceId,
+      metadata: { contractId, clientName: proposal.clientName, title: proposal.title },
+    }).catch(err => log.warn('[ContractPipeline] contract_proposal_accepted publish failed:', err?.message));
     
     // Generate formal contract from proposal
     const [formalContract] = await db
@@ -623,6 +757,12 @@ class ContractPipelineService {
     changesRequested: string,
     auditContext: AuditContext
   ): Promise<ClientContract> {
+    const contract = await this.getContract(contractId);
+    if (!contract) throw new Error('Contract not found');
+    if (!['sent', 'viewed'].includes(contract.status)) {
+      throw new Error('Changes can only be requested on sent or viewed proposals');
+    }
+
     const [updated] = await db
       .update(clientContracts)
       .set({
@@ -637,6 +777,16 @@ class ContractPipelineService {
       ...auditContext,
       metadata: { changesRequested },
     });
+
+    // Publish so Trinity flags this for account manager follow-up
+    platformEventBus.publish({
+      type: 'contract_changes_requested',
+      category: 'automation',
+      title: `Changes Requested: ${contract.title}`,
+      description: `${contract.clientName} requested changes to the proposal`,
+      workspaceId: contract.workspaceId,
+      metadata: { contractId, clientName: contract.clientName, changesRequested },
+    }).catch(err => log.warn('[ContractPipeline] contract_changes_requested publish failed:', err?.message));
     
     return updated;
   }
@@ -649,6 +799,12 @@ class ContractPipelineService {
     reason: string,
     auditContext: AuditContext
   ): Promise<ClientContract> {
+    const contract = await this.getContract(contractId);
+    if (!contract) throw new Error('Contract not found');
+    if (!['sent', 'viewed', 'changes_requested'].includes(contract.status)) {
+      throw new Error('Can only decline proposals that are sent, viewed, or have changes requested');
+    }
+
     const [updated] = await db
       .update(clientContracts)
       .set({
@@ -663,6 +819,16 @@ class ContractPipelineService {
       ...auditContext,
       metadata: { reason },
     });
+
+    // Publish so Trinity CRM watcher logs churn signal and notifies sales rep
+    platformEventBus.publish({
+      type: 'contract_proposal_declined',
+      category: 'automation',
+      title: `Proposal Declined: ${contract.title}`,
+      description: `${contract.clientName} declined the proposal: ${reason}`,
+      workspaceId: contract.workspaceId,
+      metadata: { contractId, clientName: contract.clientName, reason },
+    }).catch(err => log.warn('[ContractPipeline] contract_proposal_declined publish failed:', err?.message));
     
     return updated;
   }
@@ -675,33 +841,50 @@ class ContractPipelineService {
    * Capture a digital signature
    */
   async captureSignature(input: CaptureSignatureInput, auditContext: AuditContext): Promise<ClientContractSignature> {
-    const contract = await this.getContract(input.contractId);
-    if (!contract) throw new Error('Contract not found');
-    if (!['pending_signatures', 'partially_signed', 'accepted'].includes(contract.status)) {
-      throw new Error('Contract is not in a signable state');
-    }
-    
-    // Create signature record
-    const [signature] = await db
-      .insert(clientContractSignatures)
-      .values({
-        contractId: input.contractId,
-        signerRole: input.signerRole,
-        signerName: input.signerName,
-        signerEmail: input.signerEmail,
-        signerTitle: input.signerTitle,
-        signatureType: input.signatureType,
-        signatureData: input.signatureData,
-        consentGiven: true,
-        consentText: input.consentText,
-        signedAt: new Date(),
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-        geolocation: input.geolocation,
-        timezone: input.timezone,
-        emailVerified: true, // Assume verified via token access
-      } as InsertClientContractSignature)
-      .returning();
+    // Phase 62: SELECT FOR UPDATE inside a transaction prevents two signers from
+    // completing the same signing step simultaneously (race condition on multi-party signing).
+    const signature = await db.transaction(async (tx) => {
+      // Lock the contract row — concurrent sign requests queue here
+      const [contract] = await tx
+        .select()
+        .from(clientContracts)
+        .where(eq(clientContracts.id, input.contractId))
+        .for('update')
+        .limit(1);
+
+      if (!contract) throw new Error('Contract not found');
+      if (!['pending_signatures', 'partially_signed', 'accepted'].includes(contract.status)) {
+        throw new Error('Contract is not in a signable state');
+      }
+
+      const signerCheck = await this.canSignerSign(input.contractId, input.signerEmail);
+      if (!signerCheck.canSign) {
+        throw new Error(signerCheck.reason || 'Signer is not allowed to sign at this time');
+      }
+
+      const [sig] = await tx
+        .insert(clientContractSignatures)
+        .values({
+          contractId: input.contractId,
+          signerRole: input.signerRole,
+          signerName: input.signerName,
+          signerEmail: input.signerEmail,
+          signerTitle: input.signerTitle,
+          signatureType: input.signatureType,
+          signatureData: input.signatureData,
+          consentGiven: true,
+          consentText: input.consentText,
+          signedAt: new Date(),
+          ipAddress: input.ipAddress,
+          userAgent: input.userAgent,
+          geolocation: input.geolocation,
+          timezone: input.timezone,
+          emailVerified: true,
+        } as InsertClientContractSignature)
+        .returning();
+
+      return sig;
+    });
     
     await this.logAudit(input.contractId, 'signed', {
       ...auditContext,
@@ -712,6 +895,8 @@ class ContractPipelineService {
       },
     });
     
+    await this.markSignerSigned(input.contractId, input.signerEmail);
+
     // Check if all required signatures are collected
     await this.checkAndExecuteContract(input.contractId, auditContext);
     
@@ -762,6 +947,9 @@ class ContractPipelineService {
   async executeContract(contractId: string, auditContext: AuditContext): Promise<ClientContract> {
     const contract = await this.getContract(contractId);
     if (!contract) throw new Error('Contract not found');
+    if (!['pending_signatures', 'partially_signed', 'accepted'].includes(contract.status)) {
+      throw new Error('Contract must be in a signable state to execute');
+    }
     
     // Lock the document (make immutable)
     const [executed] = await db
@@ -776,6 +964,60 @@ class ContractPipelineService {
       .returning();
     
     await this.logAudit(contractId, 'executed', auditContext);
+
+    platformEventBus.publish({
+      type: 'contract_executed',
+      workspaceId: contract.workspaceId,
+      payload: {
+        contractId,
+        clientId: (contract as any).clientId || null,
+        clientName: contract.clientName,
+        title: contract.title,
+      },
+      metadata: { source: 'ContractPipelineService' },
+    }).catch((err: any) => log.warn('[ContractPipeline] Failed to publish contract_executed:', err.message));
+
+    // Trinity notification — inform the contract owner
+    if (contract.createdBy) {
+      try {
+        await createNotification({
+          workspaceId: contract.workspaceId,
+          userId: contract.createdBy,
+          type: 'contract_executed',
+          title: `Contract Executed: ${contract.clientName || 'Client'}`,
+          message: `"${contract.title}" has been fully signed by both parties. You can now create a client profile and assign the first shift. Would you like Trinity to auto-create the client record?`,
+          actionUrl: `/clients?action=create&fromContract=${contractId}`,
+          relatedEntityType: 'contract',
+          relatedEntityId: contractId,
+          metadata: {
+            clientName: contract.clientName,
+            clientEmail: contract.clientEmail,
+            contractTitle: contract.title,
+            suggestedAction: 'create_client',
+          },
+        });
+      } catch (notifErr) {
+        log.error('[ContractPipeline] Failed to send Trinity notification:', notifErr);
+      }
+    }
+
+    try {
+      await db.insert(orgDocuments).values({
+        workspaceId: contract.workspaceId,
+        uploadedBy: auditContext.userId,
+        category: 'client_contract',
+        fileName: `${contract.title || 'Contract'} - ${contract.clientName || 'Client'}.pdf`,
+        filePath: `contracts://${contractId}`,
+        fileType: 'pdf',
+        description: `Executed contract: ${contract.title}. Client: ${contract.clientName}. Executed on ${new Date().toISOString().split('T')[0]}.`,
+        requiresSignature: false,
+        version: 1,
+        isActive: true,
+      });
+      log.info(`[ContractPipeline] Bridged executed contract ${contractId} to org_documents`);
+    } catch (bridgeError) {
+      log.error(`[ContractPipeline] Failed to bridge contract to org_documents:`, bridgeError);
+    }
     
     return executed;
   }
@@ -961,6 +1203,167 @@ class ContractPipelineService {
     };
   }
   
+  // ==========================================================================
+  // SIGNER MANAGEMENT & SEQUENCING
+  // ==========================================================================
+
+  async addSigners(contractId: string, signers: Array<{
+    signerRole: SignerRole;
+    signerName: string;
+    signerEmail: string;
+    signerTitle?: string;
+    order: number;
+  }>, auditContext: AuditContext): Promise<ContractSigner[]> {
+    const contract = await this.getContract(contractId);
+    if (!contract) throw new Error('Contract not found');
+
+    const existing = await loadSignersFromDB(contractId);
+    const newSigners: ContractSigner[] = signers.map(s => ({
+      id: crypto.randomUUID(),
+      contractId,
+      signerRole: s.signerRole,
+      signerName: s.signerName,
+      signerEmail: s.signerEmail,
+      signerTitle: s.signerTitle,
+      order: s.order,
+      status: 'pending' as const,
+      reminderCount: 0,
+    }));
+
+    for (const signer of newSigners) {
+      await persistSignerToDB(signer);
+    }
+    const allSigners = [...existing, ...newSigners].sort((a, b) => a.order - b.order);
+
+    await this.logAudit(contractId, 'updated', {
+      ...auditContext,
+      metadata: { action: 'signers_added', signerCount: newSigners.length, signerEmails: newSigners.map(s => s.signerEmail) },
+    });
+
+    return allSigners;
+  }
+
+  async getSignersForContract(contractId: string): Promise<ContractSigner[]> {
+    return loadSignersFromDB(contractId);
+  }
+
+  async canSignerSign(contractId: string, signerEmail: string): Promise<{ canSign: boolean; reason?: string; currentOrder?: number }> {
+    const signers = await loadSignersFromDB(contractId);
+    if (signers.length === 0) {
+      return { canSign: true };
+    }
+
+    const signer = signers.find(s => s.signerEmail.toLowerCase() === signerEmail.toLowerCase());
+    if (!signer) {
+      return { canSign: true };
+    }
+
+    if (signer.status === 'signed') {
+      return { canSign: false, reason: 'Signer has already signed this contract', currentOrder: signer.order };
+    }
+
+    if (signer.status === 'declined') {
+      return { canSign: false, reason: 'Signer has declined this contract', currentOrder: signer.order };
+    }
+
+    const previousSigners = signers.filter(s => s.order < signer.order);
+    const allPreviousSigned = previousSigners.every(s => s.status === 'signed');
+
+    if (!allPreviousSigned) {
+      const pendingPrevious = previousSigners.filter(s => s.status !== 'signed');
+      return {
+        canSign: false,
+        reason: `Waiting for prior signer(s) to sign: ${pendingPrevious.map(s => s.signerName).join(', ')}`,
+        currentOrder: signer.order,
+      };
+    }
+
+    return { canSign: true, currentOrder: signer.order };
+  }
+
+  async sendReminder(contractId: string, signerId: string, auditContext: AuditContext): Promise<{ success: boolean; message: string }> {
+    const signers = await loadSignersFromDB(contractId);
+    if (signers.length === 0) {
+      return { success: false, message: 'No signers found for this contract' };
+    }
+
+    const signer = signers.find(s => s.id === signerId);
+    if (!signer) {
+      return { success: false, message: 'Signer not found' };
+    }
+
+    if (signer.status === 'signed') {
+      return { success: false, message: 'Signer has already signed' };
+    }
+
+    if (signer.status === 'declined') {
+      return { success: false, message: 'Signer has declined' };
+    }
+
+    signer.reminderCount += 1;
+    signer.lastReminderAt = new Date();
+    signer.status = signer.status === 'pending' ? 'notified' : signer.status;
+    await updateSignerInDB(signer.id, {
+      reminderCount: signer.reminderCount,
+      lastReminderAt: signer.lastReminderAt,
+      signerStatus: signer.status,
+    });
+
+    await this.logAudit(contractId, 'reminder_sent', {
+      ...auditContext,
+      metadata: {
+        signerId: signer.id,
+        signerName: signer.signerName,
+        signerEmail: signer.signerEmail,
+        reminderCount: signer.reminderCount,
+      },
+    });
+
+    return { success: true, message: `Reminder sent to ${signer.signerName} (${signer.signerEmail}). Total reminders: ${signer.reminderCount}` };
+  }
+
+  async reorderSigners(contractId: string, signerOrders: Array<{ signerId: string; order: number }>, auditContext: AuditContext): Promise<ContractSigner[]> {
+    const signers = await loadSignersFromDB(contractId);
+    if (signers.length === 0) throw new Error('No signers found for this contract');
+
+    for (const update of signerOrders) {
+      const signer = signers.find(s => s.id === update.signerId);
+      if (signer) {
+        signer.order = update.order;
+        await updateSignerInDB(signer.id, { signerOrder: update.order });
+      }
+    }
+
+    const sorted = signers.sort((a, b) => a.order - b.order);
+
+    await this.logAudit(contractId, 'updated', {
+      ...auditContext,
+      metadata: { action: 'signers_reordered', newOrder: sorted.map(s => ({ id: s.id, name: s.signerName, order: s.order })) },
+    });
+
+    return sorted;
+  }
+
+  async getNextSigner(contractId: string): Promise<ContractSigner | null> {
+    const signers = await loadSignersFromDB(contractId);
+    if (signers.length === 0) return null;
+
+    return signers.find(s => s.status !== 'signed' && s.status !== 'declined') || null;
+  }
+
+  async markSignerSigned(contractId: string, signerEmail: string): Promise<void> {
+    const signers = await loadSignersFromDB(contractId);
+    if (signers.length === 0) return;
+
+    const signer = signers.find(s => s.signerEmail.toLowerCase() === signerEmail.toLowerCase());
+    if (!signer) return;
+
+    await updateSignerInDB(signer.id, {
+      signerStatus: 'signed',
+      signedAt: new Date(),
+    });
+  }
+
   // ==========================================================================
   // STATISTICS & DASHBOARD
   // ==========================================================================

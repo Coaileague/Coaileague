@@ -1,19 +1,22 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "../db";
-import { users, authTokens, authSessions } from "@shared/schema";
+import { users, authTokens, authSessions, employees, clients } from "@shared/schema";
 import { eq, and, gt, lt, isNull, sql } from "drizzle-orm";
-import { Resend } from "resend";
+import { getAppBaseUrl } from "../utils/getAppBaseUrl";
+import { EMAIL, AUTH, PLATFORM } from '../config/platformConfig';
+import { getUncachableResendClient } from './emailCore';
+import { createLogger } from '../lib/logger';
+const log = createLogger('authService');
+
 
 const BCRYPT_ROUNDS = 12;
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MINUTES = 15;
-const SESSION_DURATION_DAYS = 7;
+const MAX_LOGIN_ATTEMPTS = AUTH.maxLoginAttempts;
+const LOCKOUT_DURATION_MINUTES = Math.round(AUTH.lockoutDurationMs / 60000);
+const SESSION_DURATION_DAYS = Math.round(AUTH.sessionTtlMs / (24 * 60 * 60 * 1000));
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
 const PASSWORD_RESET_EXPIRY_HOURS = 1;
 const EMAIL_VERIFY_EXPIRY_HOURS = 24;
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export interface AuthResult {
   success: boolean;
@@ -46,9 +49,24 @@ export class AuthService {
   }
 
   private getBaseUrl(): string {
-    return process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : process.env.BASE_URL || "http://localhost:5000";
+    return getAppBaseUrl();
+  }
+
+  async createSessionToken(userId: string, ipAddress?: string, userAgent?: string): Promise<{ sessionToken: string }> {
+    const sessionToken = this.generateSecureToken();
+    const sessionHash = this.hashToken(sessionToken);
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+
+    await db.insert(authSessions).values({
+      userId,
+      sessionToken: sessionHash,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+      expiresAt,
+      isValid: true,
+    });
+
+    return { sessionToken };
   }
 
   async register(
@@ -105,8 +123,8 @@ export class AuthService {
           emailVerified: newUser.emailVerified ?? false,
         },
       };
-    } catch (error) {
-      console.error("[AuthService] Registration error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Registration error:", error);
       return { success: false, error: "Registration failed", code: "REGISTRATION_ERROR" };
     }
   }
@@ -127,6 +145,9 @@ export class AuthService {
         .limit(1);
 
       if (!user) {
+        // Perform a dummy bcrypt compare to equalize response time and prevent
+        // user enumeration via timing side-channel attacks.
+        await bcrypt.compare(password, '$2b$12$dummyhashfortimingequalizationXXXXXXXXXXXXXXXXXXXXXXX');
         return { success: false, error: "Invalid email or password", code: "INVALID_CREDENTIALS" };
       }
 
@@ -208,8 +229,8 @@ export class AuthService {
         },
         sessionToken,
       };
-    } catch (error) {
-      console.error("[AuthService] Login error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Login error:", error);
       return { success: false, error: "Login failed", code: "LOGIN_ERROR" };
     }
   }
@@ -263,8 +284,8 @@ export class AuthService {
           emailVerified: user.emailVerified ?? false,
         },
       };
-    } catch (error) {
-      console.error("[AuthService] Session validation error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Session validation error:", error);
       return { success: false, error: "Session validation failed", code: "VALIDATION_ERROR" };
     }
   }
@@ -277,8 +298,8 @@ export class AuthService {
         .set({ isValid: false })
         .where(eq(authSessions.sessionToken, sessionHash));
       return { success: true };
-    } catch (error) {
-      console.error("[AuthService] Logout error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Logout error:", error);
       return { success: false };
     }
   }
@@ -290,8 +311,8 @@ export class AuthService {
         .set({ isValid: false })
         .where(eq(authSessions.userId, userId));
       return { success: true };
-    } catch (error) {
-      console.error("[AuthService] Logout all error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Logout all error:", error);
       return { success: false };
     }
   }
@@ -324,8 +345,8 @@ export class AuthService {
       await this.sendMagicLinkEmail(user.email, token);
 
       return { success: true };
-    } catch (error) {
-      console.error("[AuthService] Magic link error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Magic link error:", error);
       return { success: false, error: "Failed to send magic link" };
     }
   }
@@ -405,8 +426,8 @@ export class AuthService {
         },
         sessionToken,
       };
-    } catch (error) {
-      console.error("[AuthService] Magic link verification error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Magic link verification error:", error);
       return { success: false, error: "Verification failed", code: "VERIFICATION_ERROR" };
     }
   }
@@ -439,8 +460,8 @@ export class AuthService {
       await this.sendPasswordResetEmail(user.email, token);
 
       return { success: true };
-    } catch (error) {
-      console.error("[AuthService] Password reset request error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Password reset request error:", error);
       return { success: false, error: "Failed to send reset email" };
     }
   }
@@ -468,27 +489,30 @@ export class AuthService {
 
       const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
-      await db
-        .update(authTokens)
-        .set({ usedAt: new Date() })
-        .where(eq(authTokens.id, authToken.id));
+      await db.transaction(async (tx) => {
+        await tx
+          .update(authTokens)
+          .set({ usedAt: new Date() })
+          .where(eq(authTokens.id, authToken.id));
 
-      await db
-        .update(users)
-        .set({
-          passwordHash,
-          authProvider: "email",
-          emailVerified: true,
-          emailVerifiedAt: new Date(),
-          lockedUntil: null,
-          loginAttempts: 0,
-        })
-        .where(eq(users.id, authToken.userId));
+        await tx
+          .update(users)
+          .set({
+            passwordHash,
+            authProvider: "email",
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
+            lockedUntil: null,
+            loginAttempts: 0,
+          })
+          .where(eq(users.id, authToken.userId));
 
-      await db
-        .update(authSessions)
-        .set({ isValid: false })
-        .where(eq(authSessions.userId, authToken.userId));
+        // SECURITY: Invalidate ALL active sessions for this user on password reset
+        await tx
+          .update(authSessions)
+          .set({ isValid: false })
+          .where(eq(authSessions.userId, authToken.userId));
+      });
 
       const [user] = await db
         .select({
@@ -509,8 +533,8 @@ export class AuthService {
           ? { ...user, emailVerified: user.emailVerified ?? false }
           : undefined,
       };
-    } catch (error) {
-      console.error("[AuthService] Password reset error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Password reset error:", error);
       return { success: false, error: "Password reset failed", code: "RESET_ERROR" };
     }
   }
@@ -563,8 +587,8 @@ export class AuthService {
           authProvider: user.authProvider,
         },
       };
-    } catch (error) {
-      console.error("[AuthService] Email verification error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Email verification error:", error);
       return { success: false, error: "Verification failed", code: "VERIFICATION_ERROR" };
     }
   }
@@ -601,8 +625,8 @@ export class AuthService {
       await this.sendVerificationEmail(user.email, verificationToken);
 
       return { success: true };
-    } catch (error) {
-      console.error("[AuthService] Resend verification error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Resend verification error:", error);
       return { success: false, error: "Failed to resend verification" };
     }
   }
@@ -650,93 +674,102 @@ export class AuthService {
           authProvider: user.authProvider,
         },
       };
-    } catch (error) {
-      console.error("[AuthService] Change password error:", error);
+    } catch (error: unknown) {
+      log.error("[AuthService] Change password error:", error);
       return { success: false, error: "Password change failed", code: "CHANGE_ERROR" };
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Transactional Auth Emails
+  //
+  // NOTE — NDS bypass (approved exception):
+  // These methods send emails before a workspace exists or before the user
+  // is authenticated (registration verification, password reset, magic link,
+  // email change confirmation).  NDS requires workspace context and is used
+  // for all post-auth tenant notifications.  These four methods are the only
+  // legitimate callers of Resend outside NDS.  All branding is sourced from
+  // PLATFORM.name (PLATFORM_DISPLAY_NAME env var) — never hardcoded.
+  // ─────────────────────────────────────────────────────────────────────────
+
   private async sendVerificationEmail(email: string, token: string): Promise<void> {
     const verifyUrl = `${this.getBaseUrl()}/auth/verify-email?token=${token}`;
-    
-    if (!resend) {
-      console.log(`[AuthService] Email verification link for ${email}: ${verifyUrl}`);
-      return;
-    }
 
     try {
-      await resend.emails.send({
-        from: "CoAIleague <noreply@coaileague.com>",
-        to: email,
-        subject: "Verify your email - CoAIleague",
+      const { client, fromEmail } = await getUncachableResendClient();
+      await client.emails.send({
+        from: `${PLATFORM.name} <${fromEmail}>`,
+        to: [email],
+        subject: `Verify your email - ${PLATFORM.name}`,
         html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0ea5e9;">Verify Your Email</h1>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Verify Your Email</h2>
             <p>Click the button below to verify your email address:</p>
-            <a href="${verifyUrl}" style="display: inline-block; background: #0ea5e9; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">Verify Email</a>
-            <p style="color: #666; font-size: 14px;">This link expires in 24 hours.</p>
-            <p style="color: #666; font-size: 14px;">If you didn't create an account, ignore this email.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verifyUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Verify Email</a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours.</p>
+            <p style="color: #6b7280; font-size: 14px;">If you didn't create an account, ignore this email.</p>
           </div>
         `,
       });
+      log.info(`[AuthService] Verification email sent to ${email}`);
     } catch (error) {
-      console.error("[AuthService] Failed to send verification email:", error);
+      log.error("[AuthService] Failed to send verification email:", error);
     }
   }
 
   private async sendMagicLinkEmail(email: string, token: string): Promise<void> {
     const loginUrl = `${this.getBaseUrl()}/auth/magic-link?token=${token}`;
-    
-    if (!resend) {
-      console.log(`[AuthService] Magic link for ${email}: ${loginUrl}`);
-      return;
-    }
 
     try {
-      await resend.emails.send({
-        from: "CoAIleague <noreply@coaileague.com>",
-        to: email,
-        subject: "Your login link - CoAIleague",
+      const { client, fromEmail } = await getUncachableResendClient();
+      await client.emails.send({
+        from: `${PLATFORM.name} <${fromEmail}>`,
+        to: [email],
+        subject: `Your login link - ${PLATFORM.name}`,
         html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0ea5e9;">Login to CoAIleague</h1>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Login to ${PLATFORM.name}</h2>
             <p>Click the button below to log in:</p>
-            <a href="${loginUrl}" style="display: inline-block; background: #0ea5e9; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">Log In</a>
-            <p style="color: #666; font-size: 14px;">This link expires in 15 minutes.</p>
-            <p style="color: #666; font-size: 14px;">If you didn't request this, ignore this email.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${loginUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Log In</a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">This link expires in 15 minutes.</p>
+            <p style="color: #6b7280; font-size: 14px;">If you didn't request this, ignore this email.</p>
           </div>
         `,
       });
+      log.info(`[AuthService] Magic link email sent to ${email}`);
     } catch (error) {
-      console.error("[AuthService] Failed to send magic link email:", error);
+      log.error("[AuthService] Failed to send magic link email:", error);
     }
   }
 
   private async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     const resetUrl = `${this.getBaseUrl()}/auth/reset-password?token=${token}`;
-    
-    if (!resend) {
-      console.log(`[AuthService] Password reset link for ${email}: ${resetUrl}`);
-      return;
-    }
 
     try {
-      await resend.emails.send({
-        from: "CoAIleague <noreply@coaileague.com>",
-        to: email,
-        subject: "Reset your password - CoAIleague",
+      const { client, fromEmail } = await getUncachableResendClient();
+      await client.emails.send({
+        from: `${PLATFORM.name} <${fromEmail}>`,
+        to: [email],
+        subject: `Reset your password - ${PLATFORM.name}`,
         html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0ea5e9;">Reset Your Password</h1>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Reset Your Password</h2>
             <p>Click the button below to reset your password:</p>
-            <a href="${resetUrl}" style="display: inline-block; background: #0ea5e9; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">Reset Password</a>
-            <p style="color: #666; font-size: 14px;">This link expires in 1 hour.</p>
-            <p style="color: #666; font-size: 14px;">If you didn't request this, ignore this email.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">This link expires in 1 hour.</p>
+            <p style="color: #6b7280; font-size: 14px;">If you didn't request this, ignore this email.</p>
           </div>
         `,
       });
+      log.info(`[AuthService] Password reset email sent to ${email}`);
     } catch (error) {
-      console.error("[AuthService] Failed to send password reset email:", error);
+      log.error("[AuthService] Failed to send password reset email:", error);
     }
   }
 
@@ -750,7 +783,212 @@ export class AuthService {
         .delete(authSessions)
         .where(lt(authSessions.expiresAt, new Date()));
     } catch (error) {
-      console.error("[AuthService] Token cleanup error:", error);
+      log.error("[AuthService] Token cleanup error:", error);
+    }
+  }
+
+  // ============================================================
+  // Email Change Flow
+  // ============================================================
+
+  async initiateEmailChange(userId: string, newEmail: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Normalise
+      const normalised = newEmail.trim().toLowerCase();
+
+      // Reject if already in use by another user
+      const [conflict] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, normalised))
+        .limit(1);
+      if (conflict && conflict.id !== userId) {
+        return { success: false, error: 'That email address is already in use by another account.' };
+      }
+      if (conflict && conflict.id === userId) {
+        return { success: false, error: 'That is already your current email address.' };
+      }
+
+      // SECURITY: Fetch the current email BEFORE writing pendingEmail so we can
+      // notify the original address that a change was requested.
+      const [currentUser] = await db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const oldEmail = currentUser?.email;
+
+      const rawToken = this.generateSecureToken();
+      const tokenHash = this.hashToken(rawToken);
+      const expiry = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+
+      await db
+        .update(users)
+        .set({
+          pendingEmail: normalised,
+          pendingEmailToken: tokenHash,
+          pendingEmailExpiry: expiry,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+
+      await this.sendEmailChangeVerification(normalised, rawToken); // infra
+
+      // SECURITY: Alert the old email address so the account owner knows a
+      // change was requested. Non-fatal — do not block the initiation.
+      if (oldEmail && oldEmail !== normalised) {
+        this.sendEmailChangeSecurityNotice(oldEmail, normalised).catch((err) =>
+          log.warn('[AuthService] Failed to send email-change security notice to old address:', err)
+        );
+      }
+
+      return { success: true };
+    } catch (error) {
+      log.error('[AuthService] initiateEmailChange error:', error);
+      return { success: false, error: 'Failed to initiate email change. Please try again.' };
+    }
+  }
+
+  async confirmEmailChange(rawToken: string): Promise<{ success: boolean; newEmail?: string; error?: string }> {
+    try {
+      const tokenHash = this.hashToken(rawToken);
+
+      const [user] = await db
+        .select({
+          id: users.id,
+          pendingEmail: users.pendingEmail,
+          pendingEmailToken: users.pendingEmailToken,
+          pendingEmailExpiry: users.pendingEmailExpiry,
+        })
+        .from(users)
+        .where(eq(users.pendingEmailToken, tokenHash))
+        .limit(1);
+
+      if (!user) {
+        return { success: false, error: 'Invalid or expired email change link.' };
+      }
+
+      if (!user.pendingEmail) {
+        return { success: false, error: 'No pending email change found.' };
+      }
+
+      if (user.pendingEmailExpiry && new Date() > new Date(user.pendingEmailExpiry)) {
+        // Clear expired token
+        await db
+          .update(users)
+          .set({ pendingEmail: null, pendingEmailToken: null, pendingEmailExpiry: null, updatedAt: new Date() })
+          .where(eq(users.id, user.id));
+        return { success: false, error: 'Email change link has expired. Please request a new one.' };
+      }
+
+      const newEmail = user.pendingEmail;
+
+      // Swap email
+      await db
+        .update(users)
+        .set({
+          email: newEmail,
+          pendingEmail: null,
+          pendingEmailToken: null,
+          pendingEmailExpiry: null,
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
+      // Sync to employees + clients (non-fatal)
+      try {
+        await db.update(employees).set({ email: newEmail, updatedAt: new Date() }).where(eq(employees.userId, user.id));
+        await db.update(clients).set({ email: newEmail, updatedAt: new Date() }).where(eq(clients.userId, user.id));
+      } catch (syncErr) {
+        log.warn('[AuthService] Email sync to employee/client failed (non-fatal):', (syncErr as any).message);
+      }
+
+      // SECURITY: Invalidate all active sessions so any pre-change session
+      // (including one an attacker may hold) cannot persist after an email swap.
+      // The user must log in fresh with the new email address.
+      try {
+        await db
+          .update(authSessions)
+          .set({ isValid: false })
+          .where(eq(authSessions.userId, user.id));
+        log.info(`[AuthService] All sessions invalidated after email change for userId=${user.id}`);
+      } catch (sessionErr) {
+        log.warn('[AuthService] Failed to invalidate sessions after email change (non-fatal):', sessionErr);
+      }
+
+      return { success: true, newEmail };
+    } catch (error) {
+      log.error('[AuthService] confirmEmailChange error:', error);
+      return { success: false, error: 'Failed to confirm email change. Please try again.' };
+    }
+  }
+
+  async cancelEmailChange(userId: string): Promise<{ success: boolean }> {
+    try {
+      await db
+        .update(users)
+        .set({ pendingEmail: null, pendingEmailToken: null, pendingEmailExpiry: null, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      return { success: true };
+    } catch (error) {
+      log.error('[AuthService] cancelEmailChange error:', error);
+      return { success: false };
+    }
+  }
+
+  private async sendEmailChangeVerification(newEmail: string, token: string): Promise<void> { // infra
+    const confirmUrl = `${this.getBaseUrl()}/api/auth/confirm-email-change?token=${token}`;
+    try {
+      const { client, fromEmail } = await getUncachableResendClient();
+      await client.emails.send({
+        from: `${PLATFORM.name} <${fromEmail}>`,
+        to: [newEmail],
+        subject: `Confirm your new email address - ${PLATFORM.name}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Confirm Email Change</h2>
+            <p>You requested to change your ${PLATFORM.name} account email address to <strong>${newEmail}</strong>.</p>
+            <p>Click the button below to confirm this change:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${confirmUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">Confirm New Email</a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">This link expires in 2 hours.</p>
+            <p style="color: #6b7280; font-size: 14px;">If you did not request this change, you can safely ignore this email — your current email address remains unchanged.</p>
+          </div>
+        `,
+      });
+      log.info(`[AuthService] Email change verification sent to ${newEmail}`);
+    } catch (error) {
+      log.error('[AuthService] Failed to send email change verification:', error);
+      throw error;
+    }
+  }
+
+  // SECURITY: Notifies the original email address that an email-change request
+  // was initiated, so the account owner can act if this was not them.
+  private async sendEmailChangeSecurityNotice(oldEmail: string, newEmail: string): Promise<void> {
+    try {
+      const { client, fromEmail } = await getUncachableResendClient();
+      await client.emails.send({
+        from: `${PLATFORM.name} <${fromEmail}>`,
+        to: [oldEmail],
+        subject: `Security notice: Email change requested - ${PLATFORM.name}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc2626;">Security Notice</h2>
+            <p>A request was made to change the email address on your <strong>${PLATFORM.name}</strong> account to <strong>${newEmail}</strong>.</p>
+            <p>If you made this request, no action is needed — a confirmation link has been sent to the new address.</p>
+            <p style="color: #dc2626; font-weight: 600;">If you did NOT make this request, your account may be compromised. Please log in immediately and change your password.</p>
+            <p style="color: #6b7280; font-size: 14px;">If you do not confirm the change within 2 hours, the request will expire and your email address will remain unchanged.</p>
+          </div>
+        `,
+      });
+      log.info(`[AuthService] Email-change security notice sent to old address`);
+    } catch (error) {
+      log.error('[AuthService] Failed to send email-change security notice:', error);
+      throw error;
     }
   }
 }

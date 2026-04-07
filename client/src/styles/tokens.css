@@ -1,0 +1,329 @@
+/* ============================================================================
+   CoAIleague Universal Design Tokens
+   Source of truth for all colors, typography, spacing, animation
+   ============================================================================ */
+
+:root {
+  /* --------------------------------------------------------------------------
+     BACKGROUNDS
+     -------------------------------------------------------------------------- */
+  --color-bg-primary:      #0D1117;
+  --color-bg-secondary:    #161B22;
+  --color-bg-tertiary:     #21262D;
+  --color-bg-overlay:      #1C2128;
+
+  /* --------------------------------------------------------------------------
+     BRAND
+     -------------------------------------------------------------------------- */
+  --color-brand-primary:   #00D4FF;
+  --color-brand-secondary: #7B5EA7;
+  --color-brand-gradient:  linear-gradient(135deg, #00D4FF 0%, #7B5EA7 100%);
+
+  /* --------------------------------------------------------------------------
+     TEXT
+     -------------------------------------------------------------------------- */
+  --color-text-primary:    #F0F6FC;
+  --color-text-secondary:  #8B949E;
+  --color-text-disabled:   #484F58;
+  --color-text-inverse:    #0D1117;
+
+  /* --------------------------------------------------------------------------
+     SEMANTIC
+     -------------------------------------------------------------------------- */
+  --color-success:         #3FB950;
+  --color-warning:         #D29922;
+  --color-danger:          #F85149;
+  --color-info:            #58A6FF;
+
+  /* --------------------------------------------------------------------------
+     BORDERS
+     -------------------------------------------------------------------------- */
+  --color-border-subtle:   #21262D;
+  --color-border-default:  #30363D;
+  --color-border-emphasis: #484F58;
+
+  /* --------------------------------------------------------------------------
+     INTERACTIVE OVERLAYS
+     -------------------------------------------------------------------------- */
+  --color-hover:           rgba(255,255,255,0.06);
+  --color-active:          rgba(255,255,255,0.10);
+  --color-focus:           rgba(0,212,255,0.40);
+
+  /* --------------------------------------------------------------------------
+     TYPOGRAPHY — FAMILIES
+     -------------------------------------------------------------------------- */
+  --font-display:  'Syne', 'Inter', sans-serif;
+  --font-body:     'DM Sans', 'Inter', sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+
+  /* --------------------------------------------------------------------------
+     TYPOGRAPHY — SIZES
+     -------------------------------------------------------------------------- */
+  --text-xs:    11px;
+  --text-sm:    13px;
+  --text-base:  15px;
+  --text-md:    17px;
+  --text-lg:    20px;
+  --text-xl:    24px;
+  --text-2xl:   30px;
+  --text-3xl:   38px;
+
+  /* --------------------------------------------------------------------------
+     TYPOGRAPHY — WEIGHTS
+     -------------------------------------------------------------------------- */
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-bold:      700;
+
+  /* --------------------------------------------------------------------------
+     TYPOGRAPHY — LINE HEIGHTS
+     -------------------------------------------------------------------------- */
+  --leading-tight:    1.2;
+  --leading-normal:   1.5;
+  --leading-relaxed:  1.7;
+
+  /* --------------------------------------------------------------------------
+     SPACING SCALE
+     -------------------------------------------------------------------------- */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+
+  /* --------------------------------------------------------------------------
+     BORDER RADIUS
+     -------------------------------------------------------------------------- */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-full: 9999px;
+
+  /* --------------------------------------------------------------------------
+     SHADOWS
+     -------------------------------------------------------------------------- */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:   0 8px 24px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 20px rgba(0,212,255,0.15);
+
+  /* --------------------------------------------------------------------------
+     ANIMATION
+     -------------------------------------------------------------------------- */
+  --duration-fast:    120ms;
+  --duration-normal:  200ms;
+  --duration-slow:    350ms;
+  --duration-page:    400ms;
+  --ease-default:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in:          cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:         cubic-bezier(0, 0, 0.2, 1);
+
+  /* --------------------------------------------------------------------------
+     UNIVERSAL COMPONENT DIMENSIONS
+     -------------------------------------------------------------------------- */
+  --u-header-height-mobile:  56px;
+  --u-header-height-desktop: 64px;
+  --u-bottom-nav-height:     56px;
+  --u-sidebar-width:         240px;
+  --u-sidebar-collapsed:     64px;
+  --u-touch-min:             44px;
+
+  /* --------------------------------------------------------------------------
+     Z-INDEX SCALE — Single source of truth for all layer ordering.
+     Edit here → changes everywhere. Never hardcode a z-index value.
+     ┌──────────────────────────────────────┐
+     │  Layer           Token          Value│
+     │  base            --z-base         0  │
+     │  page title      --z-page-title 1015 │
+     │  sticky          --z-sticky     1020 │
+     │  fixed header    --z-header     1030 │
+     │  bottom nav      --z-bottom-nav 1040 │
+     │  dropdown        --z-dropdown   2000 │
+     │  sheet backdrop  --z-sheet-bg   2000 │
+     │  sheet           --z-sheet      2001 │
+     │  modal backdrop  --z-modal-bg   2500 │
+     │  modal           --z-modal      2501 │
+     │  tooltip         --z-tooltip    3000 │
+     │  offline/overlay --z-overlay    4500 │
+     │  toast           --z-toast      5000 │
+     │  sync indicator  --z-sync       6000 │
+     │  fab             --z-fab        9000 │
+     └──────────────────────────────────────┘
+     -------------------------------------------------------------------------- */
+  --z-base:          0;
+  --z-page-title:    1015;
+  --z-sticky:        1020;
+  --z-header:        1030;
+  --z-bottom-nav:    1040;
+  --z-dropdown:      2000;
+  --z-sheet-bg:      2000;
+  --z-sheet:         2001;
+  --z-modal-bg:      2500;
+  --z-modal:         2501;
+  --z-tooltip:       3000;
+  --z-overlay:       4500;
+  --z-toast:         5000;
+  --z-sync:          6000;
+  --z-fab:           9000;
+
+  /* --------------------------------------------------------------------------
+     ICON SIZES — Universal icon scale used by UniversalIcon and all inline SVGs.
+     Edit here → changes every icon size platform-wide.
+     -------------------------------------------------------------------------- */
+  --icon-xs:   14px;
+  --icon-sm:   16px;
+  --icon-md:   20px;
+  --icon-lg:   24px;
+  --icon-xl:   32px;
+
+  /* --------------------------------------------------------------------------
+     NAVIGATION / HEADER COLORS
+     All header, nav menu, and sidebar colors flow from these tokens.
+     Edit here → changes every nav surface platform-wide.
+     -------------------------------------------------------------------------- */
+  --color-nav-bg:             #0D1117;
+  --color-nav-bg-elevated:    #161B22;
+  --color-nav-border:         #21262D;
+  --color-nav-text:           #F0F6FC;
+  --color-nav-text-secondary: #8B949E;
+  --color-nav-icon:           #8B949E;
+  --color-nav-item-active-bg: rgba(0,212,255,0.10);
+  --color-nav-item-active:    #00D4FF;
+  --color-nav-item-hover-bg:  rgba(255,255,255,0.06);
+  --color-nav-badge-bg:       rgba(0,212,255,0.15);
+  --color-nav-badge:          #00D4FF;
+
+  /* --------------------------------------------------------------------------
+     BADGE & BUTTON OVERFLOW CONSTRAINTS
+     Controls text truncation, max-width clipping, and overflow behaviour.
+     Edit here → every badge and button respects the same rules.
+     -------------------------------------------------------------------------- */
+  --u-badge-max-width:        220px;
+  --u-button-max-width:       none;
+  --u-text-overflow:          ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   PULSE ANIMATION — live/active status indicators
+   -------------------------------------------------------------------------- */
+@keyframes u-pulse-ring {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes u-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* --------------------------------------------------------------------------
+   UNIVERSAL SHIMMER SKELETON
+   -------------------------------------------------------------------------- */
+.u-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-overlay)  50%,
+    var(--color-bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: u-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+/* --------------------------------------------------------------------------
+   FONT RENDERING — applied globally via universal components
+   -------------------------------------------------------------------------- */
+.u-font-rendered {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* --------------------------------------------------------------------------
+   COMPONENT ANIMATION KEYFRAMES
+   -------------------------------------------------------------------------- */
+
+@keyframes u-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes u-sheet-up {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes u-drawer-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes u-drawer-left {
+  from { opacity: 0; transform: translateX(-100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes u-toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   CoAIleague BRAND DESIGN SYSTEM — Navy + Gold
+   Add-on variables that don't conflict with existing shadcn/token system.
+   Used by ds-components.tsx and all dark-themed page overhauls.
+   ============================================================================ */
+
+:root {
+  /* Navy palette */
+  --ds-navy:          #0B1629;
+  --ds-navy-mid:      #102040;
+  --ds-navy-light:    #1A3058;
+  --ds-border:        #1E3A5F;
+
+  /* Gold accent */
+  --ds-gold:          #C9952A;
+  --ds-gold-light:    #E8B84B;
+  --ds-gold-glow:     rgba(201,149,42,0.15);
+  --ds-gold-border:   rgba(201,149,42,0.40);
+
+  /* Status */
+  --ds-success:       #22C55E;
+  --ds-warning:       #F59E0B;
+  --ds-danger:        #EF4444;
+  --ds-info:          #3B82F6;
+
+  /* Text on navy */
+  --ds-text-primary:   #F0F4FF;
+  --ds-text-secondary: #8BA3C7;
+  --ds-text-muted:     #4A6A96;
+
+  /* Trinity AI */
+  --ds-trinity:        #7C3AED;
+  --ds-trinity-glow:   rgba(124,58,237,0.20);
+  --ds-trinity-gold:   #FFD700;
+  --ds-trinity-teal:   #00BFFF;
+  --ds-trinity-core-light: #FFFFE0;
+  --ds-trinity-core-deep:  #006699;
+  --ds-trinity-gold-end:   #FFA500;
+  --ds-trinity-teal-end:   #008B8B;
+
+  /* Typography */
+  --ds-font-display: 'Rajdhani', 'Syne', sans-serif;
+  --ds-font-body:    'DM Sans', 'Inter', sans-serif;
+  --ds-font-mono:    'JetBrains Mono', monospace;
+}

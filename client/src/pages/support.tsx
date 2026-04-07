@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
+import { SEO, PAGE_SEO } from '@/components/seo';
+import { secureFetch } from "@/lib/csrf";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,8 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { TrinityBadge } from "@/components/trinity-marketing-hero";
-import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import { TrinityLogo } from "@/components/trinity-logo";
 import { Loader2, Mail, Send } from "lucide-react";
+import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { UniversalHeader } from "@/components/universal-header";
 import {
   Book,
   Video,
@@ -44,6 +49,7 @@ import {
 import type { HealthSummary } from '@shared/healthTypes';
 
 export default function Support() {
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   
@@ -57,7 +63,7 @@ export default function Support() {
   
   const submitGuestTicket = useMutation({
     mutationFn: async (data: typeof guestForm) => {
-      const res = await fetch('/api/support/chat/guest-ticket', {
+      const res = await secureFetch('/api/support/chat/guest-ticket', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -131,8 +137,8 @@ export default function Support() {
       icon: Book,
       title: "Documentation",
       description: "Complete guides and API references",
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-900/20",
+      textColor: "text-blue-600 dark:text-blue-400",
       items: [
         "Getting Started Guide",
         "Administrator Manual",
@@ -144,8 +150,8 @@ export default function Support() {
       icon: Video,
       title: "Video Tutorials",
       description: "Step-by-step video walkthroughs",
-      bgColor: "bg-purple-50",
-      textColor: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-900/20",
+      textColor: "text-purple-600 dark:text-purple-400",
       items: [
         "Platform Overview (5 min)",
         "Setting Up Your Workspace",
@@ -157,8 +163,8 @@ export default function Support() {
       icon: FileText,
       title: "Knowledge Base",
       description: "Common solutions and best practices",
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-900/20",
+      textColor: "text-blue-600 dark:text-blue-400",
       items: [
         "Troubleshooting Guide",
         "Feature Comparisons",
@@ -170,8 +176,8 @@ export default function Support() {
       icon: Keyboard,
       title: "Keyboard Shortcuts",
       description: "Boost productivity with shortcuts",
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-900/20",
+      textColor: "text-blue-600 dark:text-blue-400",
       items: [
         "Navigation Shortcuts",
         "Quick Actions (Ctrl+K)",
@@ -184,7 +190,7 @@ export default function Support() {
   const faqs = [
     {
       question: "What is Trinity and how does it automate my business?",
-      answer: "Trinity is your Fortune 500-grade AI orchestrator built to handle your entire workforce operations. It coordinates over 277 automated actions through specialized subagents for scheduling, payroll, compliance, invoicing, security, and analytics. Trinity operates in three modes: Demo (guided tutorials), Business Pro (daily operations), and Guru (strategic insights). The system learns from your patterns, detects anomalies, and handles 99% of operations autonomously with only 1% human oversight for critical decisions. All actions are logged, auditable, and can be approved or overridden by authorized managers.",
+      answer: "Trinity is CoAIleague's AI orchestration layer built to assist your workforce operations. It coordinates automated tasks across scheduling, payroll, compliance, invoicing, and analytics through specialized subagents. Trinity operates in three modes: Demo (guided tutorials), Business Pro (daily operations), and Guru (strategic insights). The system learns from your patterns and surfaces anomalies and recommendations for your team's review. All actions are logged, auditable, and require approval or can be overridden by authorized managers. Your designated human supervisor retains final authority over all operational decisions.",
     },
     {
       question: "How do I get help or submit a support request?",
@@ -200,7 +206,7 @@ export default function Support() {
     },
     {
       question: "What's included in the free trial?",
-      answer: "The 14-day free trial includes full access to all Professional plan features: unlimited employees and clients, GPS clock-in, Trinity AI assistance, automated scheduling, job posting, employee file management, audit tools, manager assignments, and priority support. No credit card required to start.",
+      answer: "The 14-day trial includes full platform access: up to 10 officers, GPS clock-in and tracking, AI-powered scheduling, compliance monitoring, 500 AI interactions, and email support. No credit card required to start. Upgrade to a paid plan to unlock more officers, higher interaction limits, and advanced features.",
     },
     {
       question: "How does time tracking and GPS verification work?",
@@ -208,7 +214,7 @@ export default function Support() {
     },
     {
       question: "What automation features are available?",
-      answer: "CoAIleague offers comprehensive automation: smart billing (nightly invoice generation), AI scheduling (weekly schedule optimization), auto payroll processing, compliance alerts (certification expiry warnings), shift reminders, break compliance checking across all 50 states, trial conversion management, and self-healing error recovery. Most workflows run autonomously with human approval only for exceptions.",
+      answer: "CoAIleague offers broad automation support: smart billing (nightly invoice drafting for review), AI-assisted scheduling, payroll run preparation, compliance alerts (certification expiry warnings), shift reminders, break compliance monitoring across all 50 states, and self-healing error recovery. Automated outputs are surfaced to your team for review — human approval is required at key decision points, particularly for payroll, large invoices, and employment-related actions.",
     },
     {
       question: "How does the approval workflow system work?",
@@ -236,59 +242,48 @@ export default function Support() {
     },
   ];
 
-  return (
-    <div className="min-h-screen bg-background dark:bg-background">
-      {/* Top Bar - Fortune 500 Header with Branding */}
-      <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-3 sm:px-6">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/20 shrink-0">
-            <TrinityMascotIcon size="sm" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="font-bold text-sm sm:text-base bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent truncate">
-              CoAIleague
-            </span>
-            <span className="text-[10px] text-muted-foreground -mt-0.5">Help Center</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => window.location.href = "/"}
-            className="h-9 w-9"
-            data-testid="button-back"
-          >
-            <ArrowRight className="h-4 w-4 rotate-180" />
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => window.location.href = "/dashboard"}
-            className="h-9 text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-sm px-3"
-            data-testid="button-launch-platform"
-          >
-            <Sparkles className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Platform</span>
-          </Button>
-        </div>
-      </nav>
+  const pageConfig: CanvasPageConfig = {
+    id: "support-help-center",
+    title: "Help Center",
+    subtitle: "Search our knowledge base or browse resources",
+    category: "public",
+    variant: "marketing",
+    showHeader: false,
+    maxWidth: "6xl",
+  };
 
-      {/* Support Hero - Clean Minimal Design */}
-      <section className="container mx-auto px-4 sm:px-6 pt-20 pb-8 sm:pb-12">
-        <div className="text-center space-y-3 mb-8">
-          <div className="flex items-center justify-center gap-2">
-            <TrinityBadge showLabel={false} />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-              Help Center
-            </span>
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="min-h-screen bg-background">
+        <SEO
+          title={PAGE_SEO.support.title}
+          description={PAGE_SEO.support.description}
+          canonical="https://coaileague.com/support"
+        />
+        <UniversalHeader variant="public" />
+
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-16">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="text-page-title">
+                Help Center
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                Search our knowledge base or browse resources
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setLocation("/dashboard")}
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm"
+              data-testid="button-launch-platform"
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+              Platform
+            </Button>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight" data-testid="heading-support">
-            How Can We Help?
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-lg mx-auto">
-            Search our knowledge base or browse resources
-          </p>
-        </div>
+
+      <section className="space-y-6">
 
         {/* Search Bar */}
         <div className="max-w-xl mx-auto mb-6">
@@ -326,8 +321,8 @@ export default function Support() {
                   <div className="flex items-center gap-3 mt-3 flex-wrap">
                     <Button 
                       size="sm"
-                      className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white"
-                      onClick={() => window.location.href = "/support/tickets"}
+                      className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white"
+                      onClick={() => setLocation("/my-tickets")}
                       data-testid="button-open-tickets"
                     >
                       Open Tickets
@@ -346,7 +341,7 @@ export default function Support() {
         {/* System Status - Live Data from API */}
         <Card className="bg-card border-border mb-8 max-w-xl mx-auto" data-testid="card-status">
           <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 {overallStatus === 'operational' ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -462,7 +457,7 @@ export default function Support() {
                   if (topic.action) {
                     topic.action();
                   } else if (topic.path) {
-                    window.location.href = topic.path;
+                    setLocation(topic.path);
                   }
                 }}
               >
@@ -527,7 +522,7 @@ export default function Support() {
                     <Label htmlFor="guest-name">Your Name</Label>
                     <Input
                       id="guest-name"
-                      placeholder="John Doe"
+                      placeholder="Enter your full name"
                       value={guestForm.name}
                       onChange={(e) => setGuestForm(prev => ({ ...prev, name: e.target.value }))}
                       required
@@ -539,7 +534,7 @@ export default function Support() {
                     <Input
                       id="guest-email"
                       type="email"
-                      placeholder="john@example.com"
+                      placeholder="Enter your email address"
                       value={guestForm.email}
                       onChange={(e) => setGuestForm(prev => ({ ...prev, email: e.target.value }))}
                       required
@@ -597,7 +592,7 @@ export default function Support() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
           <Card 
             className="bg-card border border-border p-4 flex items-center gap-3 hover-elevate active-elevate-2 cursor-pointer"
-            onClick={() => window.location.href = "/contact"}
+            onClick={() => setLocation("/contact")}
             data-testid="button-contact-support"
           >
             <MessageSquare className="h-5 w-5 text-violet-600 dark:text-violet-400 shrink-0" />
@@ -632,9 +627,10 @@ export default function Support() {
           </Card>
         </div>
       </section>
+      </main>
 
-      {/* Footer */}
       <Footer />
     </div>
+    </CanvasHubPage>
   );
 }

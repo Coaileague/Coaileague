@@ -1,0 +1,361 @@
+Massive progress. The code is shipment-ready. 2 bugs fixed. Every test has a green status. What remains is live browser tests you run yourself, plus three new systems to build. Here is the full picture and what comes next.
+
+---
+
+**What just got confirmed this session:**
+
+All 10 grand opening tests have their code verified ready. Two bugs were caught and fixed — managers could see the billing page (fixed, now shows Access Restricted), and the credits purchase success URL pointed to a nonexistent route (fixed, now routes to billing with a confirmation toast). Production environment variables are a deploy-time step, not a code fix. Every auth boundary, credit gate, WebSocket event, compliance layer, and Stripe flow has been audited and confirmed in code.
+
+---
+
+**What you run yourself before launch** — these require a real browser and real phone, no more code to write:
+
+Test 1 through 10 exactly as written in the previous prompt. The test scripts are already saved at docs/test-scripts/P6-websocket-test.md and P7-mobile-test.md. Run them. Report pass or fail. Any failure comes back to Replit for an immediate fix.
+
+---
+
+**Now for what you asked about — email system, staffing pipeline, and proposal/contract sales pipeline.** Copy everything below this line:
+
+---
+
+COAILEAGUE — EMAIL SYSTEM, STAFFING PIPELINE, AND SALES PIPELINE BUILD
+Read everything already built before adding anything new.
+Find every existing email template, every existing proposal route, every existing
+staffing workflow. Report what exists before building anything. Do not duplicate.
+
+---
+
+PART 1 — COMPLETE EMAIL SYSTEM AUDIT AND ENHANCEMENT
+
+FIND WHAT EXISTS FIRST:
+Read every file related to email in the codebase.
+Find emailCore.ts, emailService.ts, every sendX email function,
+every Resend template, every email trigger point across all routes.
+Map every email that currently fires, what triggers it, who receives it,
+and what the email looks like visually.
+Report this map before touching anything.
+
+WHAT THE EMAIL SYSTEM MUST COVER — EVERY EMAIL COAILEAGUE SENDS:
+
+TRANSACTIONAL EMAILS — these fire automatically on platform events:
+
+Welcome email on new org signup:
+Subject: Welcome to CoAIleague — Your Platform is Ready
+Content: org name, org owner name, link to platform, link to go-live checklist,
+brief what to do first (add employees, add clients, build first schedule),
+Trinity introduction paragraph, support contact.
+Design: professional, dark navy header, CoAIleague logo, gold accent, white body.
+
+Employee invite email:
+Subject: You have been invited to join [Org Name] on CoAIleague
+Content: employee name, org name, what CoAIleague is in one sentence,
+a prominent Accept Invitation button linking to the onboarding flow,
+expiration notice if the invite token expires.
+The accept button must be the most prominent element on the page.
+
+Password reset email:
+Subject: Reset your CoAIleague password
+Content: reset button, expiration time (15 minutes), if you did not request
+this ignore it message, support contact.
+
+Subscription confirmation email:
+Subject: Your CoAIleague [Plan Name] subscription is active
+Content: plan name, monthly credit allocation, seat count, billing date,
+link to billing settings, what is included in the plan.
+
+Subscription upgrade confirmation:
+Subject: You have been upgraded to [New Plan Name]
+Content: what changed, new credit allocation, new features now available,
+effective date, next billing date.
+
+Payment failed email:
+Subject: Action Required — Payment failed for your CoAIleague subscription
+Content: what failed, retry date, link to update payment method,
+consequences if not resolved (grace period length), support contact.
+Design: amber warning header to signal urgency without alarming.
+
+Invoice delivery to client:
+Subject: Invoice [Invoice Number] from [Security Company Name]
+Content: invoice number, services rendered summary, amount due, due date,
+a prominent Pay Now button linking to the payment page,
+security company contact information, remittance instructions.
+This is a client-facing email — it must look completely professional.
+The recipient is a client paying for security services, not a platform user.
+Brand it with the security company's name and license number, not CoAIleague branding.
+
+Invoice paid confirmation to org_owner:
+Subject: Payment Received — Invoice [Number] paid by [Client Name]
+Content: invoice number, client name, amount received, payment date,
+link to the invoice record, updated revenue summary.
+
+Pay stub notification to employee:
+Subject: Your pay stub for [Pay Period] is ready
+Content: pay period dates, gross pay amount (not full stub — just the summary),
+a View Pay Stub button linking to their secure portal,
+a Download PDF button.
+
+Credit warning email:
+Subject: Action Required — Your CoAIleague credits are running low
+Content: current balance, percentage remaining, projected days until zero
+at current burn rate, a Buy Credits button and an Upgrade Plan button,
+credit usage breakdown showing which actions consumed the most credits.
+
+Compliance alert email to org_owner:
+Subject: [URGENT / WARNING / INFO] — Officer License Expiring: [Officer Name]
+Content: officer name, license type, expiration date, days remaining,
+what happens when it expires (scheduling ineligibility), link to officer record,
+renewal instructions for Texas PSB or the relevant state authority.
+Subject line urgency level changes based on tier — INFO at 90 days,
+WARNING at 60 days, URGENT at 30 days, CRITICAL when expired.
+
+Document signature request email:
+Subject: Action Required — Please sign: [Document Title]
+Content: document title, who sent it, what it is, a prominent Sign Now button,
+deadline if applicable, a brief description of what the signer is agreeing to.
+This email goes to employees, contractors, and clients depending on the document.
+
+Document executed confirmation email:
+Subject: Signed and Complete — [Document Title]
+Content: confirmation that all parties have signed, link to download the
+executed PDF copy, date of execution, parties involved.
+Goes to every signer automatically on execution.
+
+Collections escalation email to client:
+Subject: Past Due Notice — Invoice [Number] from [Security Company Name]
+Content: invoice number, original due date, days past due, amount owed,
+a prominent Pay Now button, consequences of non-payment per the service agreement,
+contact information to discuss payment arrangements.
+Tier 1 at 1 day past due: polite reminder tone.
+Tier 2 at 7 days past due: firm but professional tone.
+Tier 3 at 30 days past due: formal demand tone.
+These emails come from the security company brand, not CoAIleague.
+
+License expired scheduling block notification to employee:
+Subject: Urgent — Your security license has expired
+Content: license type, expiration date, that they have been removed from
+scheduling eligibility, renewal instructions, who to contact at the company.
+
+DESIGN SYSTEM FOR ALL EMAILS:
+Every email uses one consistent design system.
+Two visual tracks: CoAIleague-branded emails (platform events) and
+client-facing emails (security company branded, no CoAIleague branding visible).
+
+CoAIleague-branded emails: dark navy header (#1a2340), CoAIleague logo,
+gold accent (#c9a84c), white body, clean sans-serif font, single CTA button
+in gold, footer with support link and unsubscribe for marketing only.
+
+Security company branded emails: the org's own name and license number in the
+header, professional security industry aesthetic, no CoAIleague logo visible,
+powered by CoAIleague in subtle gray text in the footer only.
+
+Every email must render correctly on mobile — single column, minimum 16px body
+font, buttons minimum 44px height, no text that requires zooming to read.
+
+Every email must have a plain text fallback for email clients that block HTML.
+
+---
+
+PART 2 — TRINITY STAFFING EMAIL SERVICE
+
+Trinity offers a staffing communication service for security company operators.
+This is not just notification emails. This is a full staffing outreach system
+that Trinity manages on behalf of the org_owner.
+
+WHAT THIS SERVICE DOES:
+
+Available Officer Broadcast:
+When a shift needs coverage and no internal officer is available,
+org_owner or manager can instruct Trinity to broadcast the opportunity
+to all available officers who meet the post requirements.
+Trinity drafts the broadcast message, the manager reviews and approves it,
+Trinity sends it via email and in-platform notification simultaneously.
+Officers reply by tapping an Accept Shift button in the email or platform.
+Trinity reports back to the manager with who accepted and who did not respond
+within the response window.
+
+Shift Confirmation Reminders:
+48 hours before every shift Trinity sends a reminder to the assigned officer
+via email and in-platform notification.
+The reminder includes: shift date, start time, site name, site address,
+post orders summary, uniform requirements, supervisor contact.
+If the officer does not acknowledge the reminder within 24 hours Trinity
+escalates to the manager.
+
+Call-Off Response Sequence:
+When an officer submits a call-off Trinity automatically sends the following:
+To the calling officer: confirmation that call-off was received, who their
+supervisor is, and that they will be in touch if there are any issues.
+To the manager: immediate notification with the open shift details and
+Trinity's replacement candidate list ready to review.
+To the replacement officer when assigned: the shift details, site address,
+post orders, and a confirm acceptance link.
+
+New Post Announcement:
+When a new client site is added and post orders are created Trinity can
+send a new post announcement to all officers who are qualified and available
+for that post type, inviting them to indicate availability.
+
+Weekly Schedule Distribution:
+When a schedule is published Trinity automatically emails every officer
+their individual schedule for the upcoming week.
+Each officer receives only their own schedule — not the full org schedule.
+The email includes each shift with date, time, site, post title, and any
+special instructions for that shift.
+A View Full Schedule button links to their personal schedule portal.
+
+Mass Communication Tool:
+org_owner can compose a message and send it to: all employees,
+all employees at a specific site, all managers, or a custom selection.
+Trinity drafts a professional version of whatever the org_owner writes,
+the org_owner reviews and approves, then Trinity sends it.
+Every mass communication is logged in the audit trail with who sent it,
+who received it, and the content.
+
+---
+
+PART 3 — PROPOSAL AND CONTRACT SALES PIPELINE
+
+This is Trinity's sales intelligence layer for security company operators.
+Security companies win business through proposals and contracts.
+Trinity manages the entire pipeline from lead to executed contract.
+
+PIPELINE STAGES:
+
+Stage 1 — LEAD:
+A potential client is added to the system.
+Fields: client name, contact name, contact email, contact phone,
+site address or addresses, type of security service needed,
+estimated coverage hours, decision timeline, how they were referred.
+Trinity flags this as a new lead and adds it to the pipeline dashboard.
+
+Stage 2 — PROPOSAL SENT:
+org_owner or Trinity generates a professional service proposal.
+The proposal is generated from a template populated with real org data:
+org name, license number, insurance information, officer qualifications,
+proposed coverage schedule, billing rate, and total monthly value.
+The proposal is emailed to the client contact with a professional cover letter.
+Trinity tracks when the proposal was sent and when it was opened.
+If the proposal has not been responded to in 5 business days Trinity
+sends a follow-up email and alerts the org_owner.
+
+Stage 3 — PROPOSAL FOLLOW-UP:
+Trinity manages follow-up automatically.
+Day 5: polite follow-up email to client — just checking in on the proposal.
+Day 10: second follow-up with a different angle — any questions or concerns.
+Day 15: Trinity alerts the org_owner directly and suggests a phone call.
+Day 20: Trinity moves the lead to stalled status and alerts the org_owner
+to decide whether to continue pursuing or close the lead.
+All follow-up emails are reviewed and approved by org_owner before sending.
+Trinity drafts them. Humans approve them. Trinity sends them.
+
+Stage 4 — NEGOTIATION:
+Client responds with questions or requests changes.
+Trinity logs the communication thread.
+org_owner can instruct Trinity to revise the proposal terms.
+Trinity generates a revised proposal version and tracks the version history.
+Every revision is stored — no version is ever deleted.
+
+Stage 5 — CONTRACT SENT:
+Client accepts the proposal.
+Trinity automatically generates the full service agreement from the accepted proposal terms.
+org_owner reviews and signs first in the platform.
+Trinity sends the contract to the client for their signature via the document pipeline.
+
+Stage 6 — CONTRACT EXECUTED:
+Client signs. Contract is executed and stored in the document safe.
+Trinity moves the client from lead to active client in the system.
+Trinity automatically creates the client record, the site records,
+and prompts the org_owner to configure billing rates and post orders.
+Trinity schedules the first operational briefing for the new site.
+
+Stage 7 — RENEWAL:
+90 days before contract expiration Trinity alerts the org_owner.
+Trinity offers to generate a renewal proposal automatically.
+If org_owner approves Trinity generates the renewal proposal and begins
+the Stage 2 through 6 flow again.
+
+PIPELINE DASHBOARD:
+A visual pipeline view showing all leads and active contracts by stage.
+Each card shows: client name, stage, days in current stage, contract value,
+last action taken, next action due, and Trinity's recommended next step.
+Filter by stage, by contract value, by days in pipeline, by assigned manager.
+Click any card to see the full lead or contract history.
+
+TRINITY INTELLIGENCE IN THE PIPELINE:
+Trinity proactively moves items through the pipeline based on time rules.
+She surfaces the pipeline in the daily Org Operations Briefing:
+How many active proposals are outstanding.
+How many leads are stalled.
+Total pipeline value.
+Contracts up for renewal in the next 90 days.
+Trinity can draft any email in the pipeline on command — the human always approves.
+Trinity tracks email open rates if Resend tracking is enabled and reports back.
+
+PROPOSAL TEMPLATE LIBRARY:
+org_owner can build and save proposal templates for different service types:
+Armed patrol, unarmed patrol, event security, executive protection,
+access control, alarm response, mobile patrol, and so on.
+Each template has pre-filled language for that service type that the
+org_owner can customize.
+When generating a proposal Trinity selects the closest template and
+customizes it with the specific client and site details.
+
+---
+
+PART 4 — SIMULATION TEST FOR ACME
+
+Run a complete end-to-end simulation for Acme Security Services covering
+all three new systems. Use realistic Texas security industry data.
+
+EMAIL SYSTEM SIMULATION:
+Trigger every email type and confirm delivery to a real inbox.
+Confirm every email renders correctly on mobile and desktop.
+Confirm client-facing emails show Acme branding not CoAIleague branding.
+Confirm plain text fallback is present for every email.
+Report which emails delivered, which did not, and any rendering issues.
+
+STAFFING EMAIL SIMULATION:
+Create an open shift with no assigned officer.
+Instruct Trinity to broadcast the opportunity to qualified available officers.
+Confirm Trinity drafts the broadcast, presents it for manager approval.
+Manager approves. Confirm emails and in-platform notifications fire to
+all qualified officers simultaneously.
+Simulate an officer accepting via the email accept button.
+Confirm Trinity reports the acceptance back to the manager immediately.
+Confirm the shift is now assigned and the accept button is deactivated
+for all other officers who received the broadcast.
+
+SALES PIPELINE SIMULATION:
+Add a lead: Lone Star Industrial Park, San Antonio Texas, needs 24/7 armed patrol,
+12 officers, decision timeline 30 days.
+Generate a professional proposal from Acme to Lone Star Industrial Park.
+Confirm the proposal email delivers with professional Acme branding.
+Advance to day 5 in the pipeline. Confirm Trinity drafts a follow-up email
+and surfaces it to the org_owner for approval before sending.
+Simulate the client accepting the proposal.
+Confirm Trinity generates the service agreement automatically from the proposal terms.
+Simulate both parties signing.
+Confirm Trinity creates the Lone Star Industrial Park client record in the system.
+Confirm the pipeline card moves to active client status.
+Set the contract expiration to 85 days from today.
+Confirm Trinity alerts the org_owner in the next daily briefing about the upcoming renewal.
+
+---
+
+COMPLETION CRITERIA
+
+The email system is complete when every email type delivers to a real inbox
+with correct branding, correct content, mobile rendering confirmed,
+and plain text fallback present.
+
+The staffing email service is complete when Trinity can broadcast, manage
+responses, send confirmations, and report back to the manager through the
+full cycle without the manager doing anything except approving drafts.
+
+The sales pipeline is complete when a lead can enter at Stage 1 and
+progress through all 7 stages to executed contract and active client status
+with Trinity managing every email and every stage transition automatically,
+subject to human approval at each outbound communication step.
+
+When all three systems pass the Acme simulation they are production ready
+for Statewide Protective Services and every future paying customer.

@@ -9,6 +9,9 @@
  */
 
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('quickbooksDiscovery');
+
 
 // Use centralized config - NO HARDCODED VALUES
 const DISCOVERY_URLS = INTEGRATIONS.quickbooks.discoveryUrls;
@@ -56,7 +59,7 @@ class QuickBooksDiscoveryService {
   async getDiscoveryDocument(environment: 'production' | 'sandbox' = 'production'): Promise<IntuitDiscoveryDocument> {
     const cached = this.cache.get(environment);
     if (cached && cached.expiresAt > new Date()) {
-      console.log(`[QB Discovery] Using cached ${environment} discovery document`);
+      log.info(`[QB Discovery] Using cached ${environment} discovery document`);
       return cached.document;
     }
     
@@ -69,10 +72,10 @@ class QuickBooksDiscoveryService {
         expiresAt: new Date(Date.now() + this.CACHE_TTL_MS),
       });
       
-      console.log(`[QB Discovery] Fetched fresh ${environment} discovery document`);
+      log.info(`[QB Discovery] Fetched fresh ${environment} discovery document`);
       return document;
     } catch (error) {
-      console.warn(`[QB Discovery] Failed to fetch ${environment} discovery document, using fallback:`, error);
+      log.warn(`[QB Discovery] Failed to fetch ${environment} discovery document, using fallback:`, error);
       return this.getFallbackEndpoints(environment);
     }
   }
@@ -156,7 +159,7 @@ class QuickBooksDiscoveryService {
     } else {
       this.cache.clear();
     }
-    console.log(`[QB Discovery] Cache cleared${environment ? ` for ${environment}` : ''}`);
+    log.info(`[QB Discovery] Cache cleared${environment ? ` for ${environment}` : ''}`);
   }
   
   getCacheStatus(): { production: boolean; sandbox: boolean } {

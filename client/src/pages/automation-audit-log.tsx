@@ -16,6 +16,7 @@ import {
 import { format, formatDistanceToNow } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
 interface AutomationEvent {
   id: string;
@@ -85,7 +86,7 @@ export default function AutomationAuditLog() {
 
   const retryMutation = useMutation({
     mutationFn: async (jobId: string) => {
-      return apiRequest(`/api/automation-events/retry/${jobId}`, { method: 'POST' });
+      return apiRequest('POST', `/api/automation-events/retry/${jobId}`);
     },
     onSuccess: () => {
       toast({
@@ -151,68 +152,56 @@ export default function AutomationAuditLog() {
     return `${(ms / 60000).toFixed(1)}m`;
   };
 
-  return (
-    <div className="container max-w-6xl py-8 space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Zap className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="heading-automation-audit">Automation Audit Log</h1>
-            <p className="text-muted-foreground">Real-time visibility into all Trinity™ automation runs</p>
-          </div>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => refetchEvents()}
-          data-testid="button-refresh-events"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
+  const pageConfig: CanvasPageConfig = {
+    id: 'automation-audit-log',
+    title: 'Automation Audit Log',
+    subtitle: 'Real-time visibility into all Trinity™ automation runs',
+    category: 'admin',
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+  return (
+    <CanvasHubPage config={pageConfig}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         <Card data-testid="card-total-jobs">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-primary" />
-              <div>
-                <div className="text-2xl font-bold">{summary.totalJobsToday}</div>
-                <div className="text-xs text-muted-foreground">Jobs Today</div>
+          <CardContent className="p-3 sm:pt-6 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <div className="text-lg sm:text-2xl font-bold truncate">{summary.totalJobsToday}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground truncate">Jobs Today</div>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card data-testid="card-successful-jobs">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <div>
-                <div className="text-2xl font-bold text-green-600">{summary.successfulToday}</div>
-                <div className="text-xs text-muted-foreground">Successful</div>
+          <CardContent className="p-3 sm:pt-6 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-lg sm:text-2xl font-bold text-green-600 truncate">{summary.successfulToday}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground truncate">Successful</div>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card data-testid="card-failed-jobs">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <XCircle className="h-5 w-5 text-red-500" />
-              <div>
-                <div className="text-2xl font-bold text-red-600">{summary.failedToday}</div>
-                <div className="text-xs text-muted-foreground">Failed</div>
+          <CardContent className="p-3 sm:pt-6 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-lg sm:text-2xl font-bold text-red-600 truncate">{summary.failedToday}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground truncate">Failed</div>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card data-testid="card-success-rate">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Zap className="h-5 w-5 text-primary" />
-              <div>
-                <div className="text-2xl font-bold">{summary.overallSuccessRate}%</div>
-                <div className="text-xs text-muted-foreground">Success Rate</div>
+          <CardContent className="p-3 sm:pt-6 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <div className="text-lg sm:text-2xl font-bold truncate">{summary.overallSuccessRate}%</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground truncate">Success Rate</div>
               </div>
             </div>
           </CardContent>
@@ -220,7 +209,7 @@ export default function AutomationAuditLog() {
       </div>
 
       <Tabs defaultValue="events" className="w-full">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="events" data-testid="tab-events">Recent Events</TabsTrigger>
           <TabsTrigger value="jobs" data-testid="tab-jobs">Scheduled Jobs</TabsTrigger>
         </TabsList>
@@ -356,6 +345,6 @@ export default function AutomationAuditLog() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </CanvasHubPage>
   );
 }

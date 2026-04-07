@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { secureFetch } from "@/lib/csrf";
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
@@ -6,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalContent } from '@/components/ui/universal-modal';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
-import { Suspense, lazy } from 'react';
 const TrinityRedesign = lazy(() => import('@/components/trinity-redesign'));
 import { useToast } from '@/hooks/use-toast';
+import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { 
   ArrowLeft, 
   ArrowRight,
@@ -39,6 +40,7 @@ import {
 } from 'lucide-react';
 import { SiQuickbooks } from 'react-icons/si';
 import { Link, useLocation } from 'wouter';
+import { QuickBooksConnectionBanner } from '@/components/finance/QuickBooksConnectionStatus';
 
 type WizardStep = 
   | 'connect'
@@ -165,6 +167,13 @@ function clearWizardState(): void {
   }
 }
 
+const pageConfig: CanvasPageConfig = {
+  id: 'quickbooks-import',
+  title: 'QuickBooks Migration',
+  subtitle: 'Import employees and clients from QuickBooks',
+  category: 'operations',
+};
+
 export default function QuickBooksImportPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -258,28 +267,44 @@ export default function QuickBooksImportPage() {
     setShowResumePrompt(false);
   };
 
-  const handleStartFresh = () => {
-    // Clear localStorage
-    clearWizardState();
-    setShowResumePrompt(false);
-    
-    // Reset all wizard React state to initial values
-    setCurrentStep('connect');
-    setSelectedEmployees([]);
-    setSelectedCustomers([]);
-    setPayrollMappings({});
-    setPreflightTests([]);
-    setPayRateWarning(null);
-    
-    // Invalidate all QuickBooks-related query caches to force fresh data
-    queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/preview'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/push/status'] });
-    
-    toast({
-      title: 'Starting Fresh',
-      description: 'All previous selections have been cleared.',
-    });
+  const handleStartFresh = async () => {
+    try {
+      // Call backend to properly reset all migration state in the database
+      if (workspace?.id) {
+        await apiRequest('POST', '/api/integrations/quickbooks/reset-migration', {
+          workspaceId: workspace.id,
+        });
+      }
+      
+      // Clear localStorage
+      clearWizardState();
+      setShowResumePrompt(false);
+      
+      // Reset all wizard React state to initial values
+      setCurrentStep('connect');
+      setSelectedEmployees([]);
+      setSelectedCustomers([]);
+      setPayrollMappings({});
+      setPreflightTests([]);
+      setPayRateWarning(null);
+      
+      // Invalidate all QuickBooks-related query caches to force fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/preview'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/push/status'] });
+      
+      toast({
+        title: 'Migration Reset Complete',
+        description: 'All previous migration data has been cleared. You can now start fresh.',
+      });
+    } catch (error: any) {
+      console.error('Failed to reset migration:', error);
+      toast({
+        title: 'Reset Failed',
+        description: error.message || 'Failed to reset migration. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const { data: connectionStatus, isLoading: isLoadingConnection } = useQuery<ConnectionStatus>({
@@ -287,7 +312,7 @@ export default function QuickBooksImportPage() {
     queryFn: async () => {
       if (!workspace?.id) return {};
       try {
-        const res = await fetch(`/api/integrations/connections?workspaceId=${workspace.id}`, {
+        const res = await secureFetch(`/api/integrations/connections?workspaceId=${workspace.id}`, {
           credentials: 'include',
         });
         if (!res.ok) {
@@ -326,7 +351,7 @@ export default function QuickBooksImportPage() {
     queryKey: ['/api/integrations/quickbooks/preview', workspace?.id],
     queryFn: async () => {
       if (!workspace?.id) throw new Error('No workspace');
-      const res = await fetch(`/api/integrations/quickbooks/preview?workspaceId=${workspace.id}`, {
+      const res = await secureFetch(`/api/integrations/quickbooks/preview?workspaceId=${workspace.id}`, {
         credentials: 'include',
       });
       if (!res.ok) {
@@ -357,6 +382,21 @@ export default function QuickBooksImportPage() {
   });
 
   const [qbEnvironment, setQbEnvironment] = useState<{ environment: string; note: string; apiBase: string } | null>(null);
+  
+  // Fetch QuickBooks diagnostic info for environment detection
+  const { data: qbDiagnostic } = useQuery<{
+    environment: { detected: string };
+    ui: { headerColor: string; headerLabel: string; headerDescription: string };
+  }>({
+    queryKey: ['/api/integrations/quickbooks/diagnostic'],
+    staleTime: 60000, // Cache for 1 minute
+  });
+  
+  // Determine environment from diagnostic or connection response
+  const detectedEnvironment = qbEnvironment?.environment || qbDiagnostic?.environment?.detected || 'sandbox';
+  const isProductionMode = detectedEnvironment === 'production';
+  const environmentLabel = isProductionMode ? 'PRODUCTION' : 'SANDBOX';
+  const environmentColor = isProductionMode ? 'bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700' : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700';
   
   const [oauthPopupOpen, setOauthPopupOpen] = useState(false);
   
@@ -415,7 +455,13 @@ export default function QuickBooksImportPage() {
         
         setOauthPopupOpen(true);
         
-        // Open as centered popup window (not a new tab) for better UX
+        const isMobile = window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+          window.location.href = data.authorizationUrl;
+          return;
+        }
+        
         const popupWidth = 600;
         const popupHeight = 700;
         const left = window.screenX + (window.outerWidth - popupWidth) / 2;
@@ -425,15 +471,10 @@ export default function QuickBooksImportPage() {
         const popup = window.open(data.authorizationUrl, 'QuickBooksAuth', popupFeatures);
         
         if (!popup) {
-          toast({
-            title: 'Popup Blocked',
-            description: 'Please allow popups for this site and try again',
-            variant: 'destructive',
-          });
+          window.location.href = data.authorizationUrl;
           return;
         }
         
-        // Focus the popup and keep checking if it's closed
         popup.focus();
         
         toast({
@@ -443,15 +484,16 @@ export default function QuickBooksImportPage() {
         
         const pollInterval = setInterval(async () => {
           try {
-            const statusRes = await fetch(`/api/integrations/quickbooks/status?workspaceId=${workspace?.id}`);
+            const statusRes = await secureFetch(`/api/integrations/quickbooks/status?workspaceId=${workspace?.id}`);
             const status = await statusRes.json();
-            if (status.quickbooks?.connected) {
+            // Backend returns { connected: true, companyName: ... } directly
+            if (status.connected) {
               clearInterval(pollInterval);
               setOauthPopupOpen(false);
               queryClient.invalidateQueries({ queryKey: ['/api/integrations/status'] });
               toast({
                 title: 'Connected!',
-                description: `Connected to ${status.quickbooks.companyName || 'QuickBooks'}`,
+                description: `Connected to ${status.companyName || 'QuickBooks'}`,
               });
               setCurrentStep('discovery');
             }
@@ -501,6 +543,13 @@ export default function QuickBooksImportPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/preview'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/onboarding/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/employees/me'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/status'] });
       setCurrentStep('complete');
     },
     onError: (error: any) => {
@@ -539,7 +588,9 @@ export default function QuickBooksImportPage() {
         title: hasData ? 'Data Found!' : 'Discovery Complete',
         description: hasData 
           ? `Found ${data?.employees?.length || 0} employees and ${data?.customers?.length || 0} customers`
-          : 'No data found in QuickBooks. Try pushing sandbox data first.',
+          : isProductionMode 
+            ? 'No data found in QuickBooks. Verify you have active customers or employees.'
+            : 'No data found in QuickBooks. Try pushing sandbox data first.',
       });
     } catch (error: any) {
       toast({
@@ -878,7 +929,10 @@ export default function QuickBooksImportPage() {
   const contractorCount = previewData?.employees?.filter(e => e.employeeType === '1099').length || 0;
 
   return (
-    <div className="container max-w-4xl py-6 space-y-6">
+    <CanvasHubPage config={{ ...pageConfig, backButton: true, onBack: () => window.history.back() }}>
+      <div className="p-4 pb-0">
+        <QuickBooksConnectionBanner />
+      </div>
       {showResumePrompt && savedState && (
         <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="flex items-start gap-3">
@@ -918,25 +972,6 @@ export default function QuickBooksImportPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        <Link href="/integrations">
-          <Button variant="ghost" size="icon" data-testid="button-back">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-[#2CA01C] flex items-center justify-center">
-            <SiQuickbooks className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="text-page-title">QuickBooks Migration Wizard</h1>
-            <p className="text-sm text-muted-foreground">
-              Intelligent data migration with Trinity AI recommendations
-            </p>
-          </div>
-        </div>
-      </div>
-
       {isLoadingConnection && (
         <Card>
           <CardContent className="py-12 flex flex-col items-center justify-center gap-4">
@@ -959,12 +994,12 @@ export default function QuickBooksImportPage() {
 
       {!isLoadingConnection && currentStep !== 'connect' && currentStep !== 'complete' && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between gap-2 text-sm">
             <span className="text-muted-foreground">Step {currentStepIndex + 1} of {STEPS.length}</span>
             <span className="font-medium">{STEPS[currentStepIndex]?.label}</span>
           </div>
           <Progress value={progressPercent} className="h-2" />
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-1">
             {STEPS.map((step, idx) => {
               const StepIcon = step.icon;
               const isActive = step.id === currentStep;
@@ -972,17 +1007,17 @@ export default function QuickBooksImportPage() {
               return (
                 <div 
                   key={step.id}
-                  className={`flex flex-col items-center gap-1 ${
+                  className={`flex flex-col items-center gap-1 min-w-0 ${
                     isActive ? 'text-primary' : isComplete ? 'text-green-600' : 'text-muted-foreground'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     isActive ? 'bg-primary text-white' : 
                     isComplete ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'
                   }`}>
-                    {isComplete ? <Check className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
+                    {isComplete ? <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <StepIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                   </div>
-                  <span className="text-[10px] hidden sm:block">{step.label}</span>
+                  <span className="text-[10px] hidden sm:block truncate max-w-full">{step.label}</span>
                 </div>
               );
             })}
@@ -996,10 +1031,10 @@ export default function QuickBooksImportPage() {
             <div className="mx-auto h-16 w-16 rounded-full bg-[#2CA01C]/10 flex items-center justify-center mb-4">
               <SiQuickbooks className="h-8 w-8 text-[#2CA01C]" />
             </div>
-            <CardTitle className="flex items-center justify-center gap-2">
-              Step 1: Connect to QuickBooks
-              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700">
-                Sandbox Mode
+            <CardTitle className="flex items-center justify-center gap-2 flex-wrap">
+              <span className="truncate">Step 1: Connect to QuickBooks</span>
+              <Badge variant="outline" className={`text-xs flex-shrink-0 ${environmentColor}`}>
+                {environmentLabel}
               </Badge>
             </CardTitle>
             <CardDescription>
@@ -1007,37 +1042,61 @@ export default function QuickBooksImportPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200">
-              <div className="flex items-center gap-2 justify-center mb-1">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="font-medium">Sandbox Testing Mode - Important!</span>
+            {/* Dynamic environment indicator with appropriate warning/info */}
+            {isProductionMode ? (
+              <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-800 dark:text-green-200">
+                <div className="flex items-center gap-2 justify-center mb-1">
+                  <Shield className="h-4 w-4" />
+                  <span className="font-medium">Production Mode - Live Data</span>
+                </div>
+                <div className="text-xs text-green-600 dark:text-green-400 space-y-2">
+                  <p>You are connecting to your <strong>live QuickBooks production data</strong>.</p>
+                  <p>All imported data will be from your real business records.</p>
+                </div>
               </div>
-              <div className="text-xs text-amber-600 dark:text-amber-400 space-y-2">
-                <p className="font-medium">When the Intuit login opens:</p>
-                <ol className="list-decimal list-inside text-left space-y-1 pl-2">
-                  <li>Click <strong>"Use a different account"</strong> if your production account appears</li>
-                  <li>Log in with your <strong>Intuit Developer Portal sandbox credentials</strong></li>
-                  <li>Select your <strong>sandbox test company</strong> (not production)</li>
-                </ol>
-                <p className="mt-2 italic">Your sandbox login is different from your production QuickBooks login.</p>
+            ) : isProductionMode ? (
+              <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-800 dark:text-green-200">
+                <div className="flex items-center gap-2 justify-center mb-1">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium">Live QuickBooks Connection</span>
+                </div>
+                <div className="text-xs text-green-600 dark:text-green-400">
+                  <p>Connect directly to your live QuickBooks Online account to sync real data.</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+                <div className="flex items-center gap-2 justify-center mb-1">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="font-medium">Sandbox Testing Mode - Important!</span>
+                </div>
+                <div className="text-xs text-blue-600 dark:text-blue-400 space-y-2 overflow-hidden">
+                  <p className="font-medium">When the Intuit login opens:</p>
+                  <ol className="list-decimal list-inside text-left space-y-1 pl-1 sm:pl-2">
+                    <li className="break-words">Click <strong>"Use a different account"</strong> if your production account appears</li>
+                    <li className="break-words">Log in with your <strong>Intuit Developer Portal sandbox credentials</strong></li>
+                    <li className="break-words">Select your <strong>sandbox test company</strong> (not production)</li>
+                  </ol>
+                  <p className="mt-2 italic break-words">Your sandbox login is different from your production QuickBooks login.</p>
+                </div>
+              </div>
+            )}
             
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2 justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+              <div className="flex items-center gap-2 justify-center sm:justify-center">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                 <span>Import customers as clients</span>
               </div>
-              <div className="flex items-center gap-2 justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div className="flex items-center gap-2 justify-center sm:justify-center">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                 <span>Import employees with pay rates</span>
               </div>
-              <div className="flex items-center gap-2 justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div className="flex items-center gap-2 justify-center sm:justify-center">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                 <span>Map payroll items</span>
               </div>
-              <div className="flex items-center gap-2 justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div className="flex items-center gap-2 justify-center sm:justify-center">
+                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                 <span>Sync invoices bidirectionally</span>
               </div>
             </div>
@@ -1067,15 +1126,15 @@ export default function QuickBooksImportPage() {
                 size="lg"
                 onClick={() => connectMutation.mutate()}
                 disabled={connectMutation.isPending || !workspace?.id}
-                className="bg-[#2CA01C] hover:bg-[#248016]"
+                className="bg-[#2CA01C] max-w-full"
                 data-testid="button-connect-quickbooks"
               >
                 {connectMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin flex-shrink-0" />
                 ) : (
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
                 )}
-                Connect QuickBooks (Sandbox)
+                <span className="truncate">{isProductionMode ? 'Connect QuickBooks' : 'Connect QuickBooks (Sandbox)'}</span>
               </Button>
             )}
           </CardContent>
@@ -1117,53 +1176,53 @@ export default function QuickBooksImportPage() {
                 </div>
               </div>
             ) : previewData && (previewData.customers?.length || previewData.employees?.length) ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-3">
-                      <Building2 className="h-8 w-8 text-blue-600" />
-                      <div>
-                        <p className="text-2xl font-bold">{previewData.customers?.length || 0}</p>
-                        <p className="text-sm text-muted-foreground">Customers Found</p>
+                  <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl sm:text-2xl font-bold">{previewData.customers?.length || 0}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Customers</p>
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {recommendedCustomers.length} recommended | {vendorCount} vendors excluded
+                    <div className="mt-2 text-[10px] sm:text-xs text-muted-foreground">
+                      {recommendedCustomers.length} recommended | {vendorCount} vendors
                     </div>
                   </CardContent>
                 </Card>
                 <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-3">
-                      <Users className="h-8 w-8 text-green-600" />
-                      <div>
-                        <p className="text-2xl font-bold">{previewData.employees?.length || 0}</p>
-                        <p className="text-sm text-muted-foreground">Employees Found</p>
+                  <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Users className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl sm:text-2xl font-bold">{previewData.employees?.length || 0}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Employees</p>
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {w2Employees.length} W2 active | {contractorCount} contractors
+                    <div className="mt-2 text-[10px] sm:text-xs text-muted-foreground">
+                      {w2Employees.length} W2 | {contractorCount} contractors
                     </div>
                   </CardContent>
                 </Card>
                 <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-3">
-                      <CreditCard className="h-8 w-8 text-amber-600" />
-                      <div>
-                        <p className="text-2xl font-bold">{previewData.payrollItems?.length || 0}</p>
-                        <p className="text-sm text-muted-foreground">Payroll Items</p>
+                  <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-amber-600 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl sm:text-2xl font-bold">{previewData.payrollItems?.length || 0}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Payroll Items</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
                 <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-8 w-8 text-purple-600" />
-                      <div>
-                        <p className="text-2xl font-bold">{previewData.chartOfAccounts?.length || 0}</p>
-                        <p className="text-sm text-muted-foreground">Chart of Accounts</p>
+                  <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl sm:text-2xl font-bold">{previewData.chartOfAccounts?.length || 0}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Accounts</p>
                       </div>
                     </div>
                   </CardContent>
@@ -1175,48 +1234,72 @@ export default function QuickBooksImportPage() {
                   <AlertCircle className="h-8 w-8 text-amber-600" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Sandbox Connected - No Data Found</h3>
+                  <h3 className="text-lg font-semibold">
+                    {isProductionMode ? 'QuickBooks Connected - No Data Found' : 'Sandbox Connected - No Data Found'}
+                  </h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    Your QuickBooks sandbox is connected, but Trinity didn't find any customers, employees, or payroll items to import.
+                    {isProductionMode 
+                      ? 'Your QuickBooks account is connected, but Trinity didn\'t find any customers, employees, or payroll items to import.'
+                      : 'Your QuickBooks sandbox is connected, but Trinity didn\'t find any customers, employees, or payroll items to import.'
+                    }
                   </p>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4 max-w-md mx-auto text-left">
-                  <p className="font-medium mb-2">To test the migration:</p>
-                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                    <li>Push your CoAIleague data to QuickBooks (recommended)</li>
-                    <li>Add test customers in your QuickBooks sandbox</li>
-                    <li>Or connect your production QuickBooks account</li>
-                  </ul>
-                </div>
-                <div className="flex gap-2 justify-center flex-wrap">
-                  <Button 
-                    onClick={() => pushToQuickBooksMutation.mutate(true)} 
-                    disabled={pushToQuickBooksMutation.isPending}
-                    data-testid="button-push-sandbox-to-quickbooks"
-                  >
-                    {pushToQuickBooksMutation.isPending ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Pushing Sandbox Data...
-                      </>
-                    ) : (
-                      <>
-                        <ArrowRight className="h-4 w-4 mr-2" /> Push Sandbox Test Data to QuickBooks
-                      </>
-                    )}
-                  </Button>
+                {isProductionMode ? (
+                  <div className="bg-muted/50 rounded-lg p-4 max-w-md mx-auto text-left">
+                    <p className="font-medium mb-2">To import data:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Verify you have customers or employees in QuickBooks</li>
+                      <li>Check that records are marked as active</li>
+                      <li>Try refreshing to fetch the latest data</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="bg-muted/50 rounded-lg p-4 max-w-md mx-auto text-left">
+                    <p className="font-medium mb-2">To test the migration:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Push your CoAIleague data to QuickBooks (recommended)</li>
+                      <li>Add test customers in your QuickBooks sandbox</li>
+                      <li>Or connect your production QuickBooks account</li>
+                    </ul>
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                  {!isProductionMode && (
+                    <Button 
+                      onClick={() => pushToQuickBooksMutation.mutate(true)} 
+                      disabled={pushToQuickBooksMutation.isPending}
+                      className="w-full sm:w-auto"
+                      data-testid="button-push-sandbox-to-quickbooks"
+                    >
+                      {pushToQuickBooksMutation.isPending ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin flex-shrink-0" />
+                          <span className="truncate">Pushing Sandbox Data...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowRight className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">Push Sandbox Data to QuickBooks</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     onClick={handleRetryDiscovery} 
                     disabled={isFetchingPreview}
+                    className="w-full sm:w-auto"
                     data-testid="button-retry-discovery"
                   >
                     {isFetchingPreview ? (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Refreshing...
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin flex-shrink-0" />
+                        <span className="truncate">Refreshing...</span>
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2" /> Retry Discovery
+                        <RefreshCw className="h-4 w-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">Retry Discovery</span>
                       </>
                     )}
                   </Button>
@@ -1234,23 +1317,26 @@ export default function QuickBooksImportPage() {
 
       {currentStep === 'select-customers' && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Step 3: Select Clients to Import
-              </CardTitle>
-              <CardDescription>
-                Trinity recommends high-value clients based on billing history
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={selectRecommendedCustomers} data-testid="button-select-recommended">
-                <Star className="h-4 w-4 mr-1" /> Select Recommended
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedCustomers(previewData?.customers?.filter(c => !c.isVendor) || [])} data-testid="button-select-all">
-                Select All
-              </Button>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="min-w-0">
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate">Step 3: Select Clients</span>
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Trinity recommends high-value clients based on billing history
+                </CardDescription>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button variant="outline" size="sm" onClick={selectRecommendedCustomers} data-testid="button-select-recommended">
+                  <Star className="h-4 w-4 mr-1 flex-shrink-0" />
+                  <span className="hidden sm:inline">Select </span>Recommended
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedCustomers(previewData?.customers?.filter(c => !c.isVendor) || [])} data-testid="button-select-all">
+                  <span className="hidden sm:inline">Select </span>All
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0 max-h-[400px] overflow-y-auto">
@@ -1266,7 +1352,7 @@ export default function QuickBooksImportPage() {
                   return (
                     <label
                       key={cust.qboId}
-                      className={`flex items-center gap-4 p-4 hover-elevate cursor-pointer ${
+                      className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 hover-elevate cursor-pointer ${
                         cust.isVendor ? 'opacity-50 bg-muted/30' : ''
                       }`}
                       data-testid={`row-customer-${cust.qboId}`}
@@ -1278,27 +1364,27 @@ export default function QuickBooksImportPage() {
                         data-testid={`checkbox-customer-${cust.qboId}`}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">{cust.companyName || cust.displayName}</p>
+                        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                          <p className="font-medium truncate text-sm sm:text-base">{cust.companyName || cust.displayName}</p>
                           {cust.recommended && !cust.isVendor && (
                             <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-[10px]">
                               RECOMMENDED
                             </Badge>
                           )}
                           {cust.isVendor && (
-                            <Badge variant="secondary" className="text-[10px]">VENDOR - SKIP</Badge>
+                            <Badge variant="secondary" className="text-[10px]">VENDOR</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
                           {cust.email || 'No email'}
                         </p>
                         {cust.recommendReason && (
                           <p className="text-xs text-amber-600 dark:text-amber-400">{cust.recommendReason}</p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-green-600">{formatCurrency(cust.monthlyRevenue || 0)}/mo</p>
-                        <p className="text-xs text-muted-foreground">{cust.invoiceCount || 0} invoices</p>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-medium text-green-600 text-xs sm:text-base">{formatCurrency(cust.monthlyRevenue || 0)}/mo</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">{cust.invoiceCount || 0} invoices</p>
                       </div>
                     </label>
                   );
@@ -1306,10 +1392,10 @@ export default function QuickBooksImportPage() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="justify-between">
-            <Button variant="ghost" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">{selectedCustomers.length} selected</span>
+          <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+            <Button variant="ghost" onClick={goBack} className="w-full sm:w-auto"><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
+              <span className="text-xs sm:text-sm text-muted-foreground">{selectedCustomers.length} selected</span>
               <Button onClick={goNext} disabled={selectedCustomers.length === 0} data-testid="button-next">
                 Continue <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -1320,23 +1406,26 @@ export default function QuickBooksImportPage() {
 
       {currentStep === 'select-employees' && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Step 4: Select Employees to Import
-              </CardTitle>
-              <CardDescription>
-                Trinity recommends active W2 employees with valid pay rates
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={selectRecommendedEmployees} data-testid="button-select-recommended">
-                <Star className="h-4 w-4 mr-1" /> Select Recommended
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedEmployees(previewData?.employees || [])} data-testid="button-select-all">
-                Select All
-              </Button>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="min-w-0">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate">Step 4: Select Employees</span>
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Trinity recommends active W2 employees with valid pay rates
+                </CardDescription>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button variant="outline" size="sm" onClick={selectRecommendedEmployees} data-testid="button-select-recommended">
+                  <Star className="h-4 w-4 mr-1 flex-shrink-0" />
+                  <span className="hidden sm:inline">Select </span>Recommended
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedEmployees(previewData?.employees || [])} data-testid="button-select-all">
+                  <span className="hidden sm:inline">Select </span>All
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0 max-h-[400px] overflow-y-auto">
@@ -1352,7 +1441,7 @@ export default function QuickBooksImportPage() {
                   return (
                     <label
                       key={emp.qboId}
-                      className={`flex items-center gap-4 p-4 hover-elevate cursor-pointer ${
+                      className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 hover-elevate cursor-pointer ${
                         !emp.active ? 'opacity-50 bg-muted/30' : ''
                       }`}
                       data-testid={`row-employee-${emp.qboId}`}
@@ -1363,8 +1452,8 @@ export default function QuickBooksImportPage() {
                         data-testid={`checkbox-employee-${emp.qboId}`}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">{emp.displayName}</p>
+                        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                          <p className="font-medium truncate text-sm sm:text-base">{emp.displayName}</p>
                           {emp.recommended && (
                             <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-[10px]">
                               RECOMMENDED
@@ -1377,16 +1466,16 @@ export default function QuickBooksImportPage() {
                             <Badge variant="destructive" className="text-[10px]">INACTIVE</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
                           {emp.role || 'Field Staff'} {emp.email && `| ${emp.email}`}
                         </p>
                         {emp.recommendReason && (
                           <p className="text-xs text-amber-600 dark:text-amber-400">{emp.recommendReason}</p>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         {emp.payRate ? (
-                          <p className="font-medium text-green-600">${emp.payRate}/hr</p>
+                          <p className="font-medium text-green-600 text-xs sm:text-base">${emp.payRate}/hr</p>
                         ) : (
                           <p className="text-xs text-red-500">No pay rate</p>
                         )}
@@ -1397,10 +1486,10 @@ export default function QuickBooksImportPage() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="justify-between">
-            <Button variant="ghost" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">{selectedEmployees.length} selected</span>
+          <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+            <Button variant="ghost" onClick={goBack} className="w-full sm:w-auto"><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
+              <span className="text-xs sm:text-sm text-muted-foreground">{selectedEmployees.length} selected</span>
               <Button onClick={goNext} disabled={selectedEmployees.length === 0} data-testid="button-next">
                 Continue <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -1435,24 +1524,25 @@ export default function QuickBooksImportPage() {
                   { qb: 'State Tax', coai: 'Tax Withholding' },
                   { qb: 'Health Insurance', coai: 'Deduction' },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-                    <div className="flex-1">
+                  <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4 p-3 bg-muted/30 rounded-lg">
+                    <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{item.qb}</p>
-                      <p className="text-xs text-muted-foreground">QuickBooks</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">QuickBooks</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1 flex items-center gap-2">
+                    <ArrowRight className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                    <div className="flex-1 flex items-center gap-2 min-w-0">
+                      <ArrowRight className="h-3 w-3 text-muted-foreground sm:hidden flex-shrink-0" />
                       <p className="font-medium text-sm text-green-600">{item.coai}</p>
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </CardContent>
-          <CardFooter className="justify-between">
-            <Button variant="ghost" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
-            <Button onClick={goNext} data-testid="button-next">
+          <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+            <Button variant="ghost" onClick={goBack} className="w-full sm:w-auto"><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
+            <Button onClick={goNext} data-testid="button-next" className="w-full sm:w-auto">
               Continue <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </CardFooter>
@@ -1482,17 +1572,17 @@ export default function QuickBooksImportPage() {
             ) : (
               <div className="space-y-3">
                 {preflightTests.map((test, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-background">
+                  <div key={idx} className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-background flex-shrink-0">
                       {test.status === 'pending' && <Clock className="h-4 w-4 text-muted-foreground" />}
                       {test.status === 'running' && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
                       {test.status === 'passed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
                       {test.status === 'failed' && <XCircle className="h-4 w-4 text-red-500" />}
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{test.name}</p>
-                      <p className="text-xs text-muted-foreground">{test.description}</p>
-                      {test.error && <p className="text-xs text-red-500 mt-1">{test.error}</p>}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs sm:text-sm">{test.name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">{test.description}</p>
+                      {test.error && <p className="text-[10px] sm:text-xs text-red-500 mt-1">{test.error}</p>}
                     </div>
                     <Badge variant={
                       test.status === 'passed' ? 'default' : 
@@ -1516,9 +1606,9 @@ export default function QuickBooksImportPage() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="justify-between">
-            <Button variant="ghost" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
-            <Button onClick={goNext} disabled={!allTestsPassed} data-testid="button-next">
+          <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+            <Button variant="ghost" onClick={goBack} className="w-full sm:w-auto"><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
+            <Button onClick={goNext} disabled={!allTestsPassed} data-testid="button-next" className="w-full sm:w-auto">
               Continue <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </CardFooter>
@@ -1565,21 +1655,21 @@ export default function QuickBooksImportPage() {
             
             <div className="p-4 bg-muted/30 rounded-lg space-y-2">
               <p className="font-medium">INTEGRATIONS:</p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> QuickBooks connected</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Invoice sync ready</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Payroll sync ready</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> All IDs mapped</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> QuickBooks connected</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Invoice sync ready</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Payroll sync ready</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> All IDs mapped</div>
               </div>
             </div>
 
             <div className="p-4 bg-muted/30 rounded-lg space-y-2">
               <p className="font-medium">TRINITY AI STATUS:</p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Can schedule automatically</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Can process payroll</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Can generate invoices</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Pre-flight tests passed</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Can schedule automatically</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Can process payroll</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Can generate invoices</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Pre-flight tests passed</div>
               </div>
             </div>
 
@@ -1628,8 +1718,9 @@ export default function QuickBooksImportPage() {
                         variant="outline"
                         onClick={() => setPayRateWarning(null)}
                         data-testid="button-cancel-import"
+                        className="min-w-0"
                       >
-                        Cancel & Fix in QuickBooks
+                        <span className="truncate">Cancel & Fix in QuickBooks</span>
                       </Button>
                       <Button 
                         size="sm" 
@@ -1637,11 +1728,12 @@ export default function QuickBooksImportPage() {
                         onClick={handleProceedWithMissingPayRates}
                         disabled={importMutation.isPending}
                         data-testid="button-proceed-anyway"
+                        className="min-w-0"
                       >
                         {importMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin flex-shrink-0" />
                         ) : null}
-                        Proceed Anyway
+                        <span className="truncate">Proceed Anyway</span>
                       </Button>
                     </div>
                   </div>
@@ -1649,22 +1741,22 @@ export default function QuickBooksImportPage() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="justify-between border-t pt-6">
-            <Button variant="ghost" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setLocation('/dashboard')}>Cancel</Button>
+          <CardFooter className="flex flex-col sm:flex-row justify-between gap-3 border-t pt-6">
+            <Button variant="ghost" onClick={goBack} className="w-full sm:w-auto"><ArrowLeft className="h-4 w-4 mr-2 flex-shrink-0" /> Back</Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setLocation('/dashboard')} className="flex-1 sm:flex-initial min-w-0"><span className="truncate">Cancel</span></Button>
               <Button 
                 onClick={() => importMutation.mutate()} 
                 disabled={importMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 flex-1 sm:flex-initial min-w-0"
                 data-testid="button-activate"
               >
                 {importMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin flex-shrink-0" />
                 ) : (
-                  <Rocket className="h-4 w-4 mr-2" />
+                  <Rocket className="h-4 w-4 mr-2 flex-shrink-0" />
                 )}
-                Activate Workspace
+                <span className="truncate">Activate Workspace</span>
               </Button>
             </div>
           </CardFooter>
@@ -1685,11 +1777,11 @@ export default function QuickBooksImportPage() {
           <CardContent className="space-y-6">
             <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg space-y-2">
               <p className="font-medium text-green-700 dark:text-green-300">IMMEDIATE ACTIONS:</p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Employees imported</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Clients imported</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> QuickBooks synced</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> IDs mapped</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Employees imported</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> Clients imported</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> QuickBooks synced</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" /> IDs mapped</div>
               </div>
             </div>
 
@@ -1724,35 +1816,35 @@ export default function QuickBooksImportPage() {
       )}
 
       {/* Migration Lock Dialog */}
-      <Dialog open={migrationLocked} onOpenChange={(open) => !open && setMigrationLocked(false)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
+      <UniversalModal open={migrationLocked} onOpenChange={(open) => !open && setMigrationLocked(false)}>
+        <UniversalModalContent size="md">
+          <UniversalModalHeader>
+            <UniversalModalTitle className="flex items-center gap-2 text-amber-600">
               <AlertCircle className="h-5 w-5" />
               Migration Already Running
-            </DialogTitle>
-            <DialogDescription>
+            </UniversalModalTitle>
+            <UniversalModalDescription>
               Another sync operation is currently in progress. You can wait for it to complete or cancel it.
-            </DialogDescription>
-          </DialogHeader>
+            </UniversalModalDescription>
+          </UniversalModalHeader>
           
           {activeMigrationInfo && (
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between gap-2 text-sm">
                 <span className="text-muted-foreground">Status:</span>
                 <span className="font-medium capitalize">{activeMigrationInfo.status?.replace('_', ' ')}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between gap-2 text-sm">
                 <span className="text-muted-foreground">Running for:</span>
                 <span className="font-medium">{Math.floor(activeMigrationInfo.elapsedSeconds / 60)}m {activeMigrationInfo.elapsedSeconds % 60}s</span>
               </div>
               {activeMigrationInfo.progress && (
                 <>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between gap-2 text-sm">
                     <span className="text-muted-foreground">Employees:</span>
                     <span className="font-medium">{activeMigrationInfo.progress.employees.synced} / {activeMigrationInfo.progress.employees.total}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between gap-2 text-sm">
                     <span className="text-muted-foreground">Customers:</span>
                     <span className="font-medium">{activeMigrationInfo.progress.customers.synced} / {activeMigrationInfo.progress.customers.total}</span>
                   </div>
@@ -1762,24 +1854,27 @@ export default function QuickBooksImportPage() {
           )}
           
           <div className="flex flex-col gap-3 pt-2">
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-2 justify-end flex-wrap">
               <Button 
                 variant="outline" 
+                size="sm"
                 onClick={() => setMigrationLocked(false)}
                 data-testid="button-wait-migration"
+                className="min-w-0"
               >
-                Wait for Completion
+                <span className="truncate">Wait for Completion</span>
               </Button>
               <Button 
                 variant="destructive"
+                size="sm"
                 onClick={() => cancelMigrationMutation.mutate()}
                 disabled={cancelMigrationMutation.isPending}
                 data-testid="button-cancel-migration"
               >
                 {cancelMigrationMutation.isPending ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelling...</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin flex-shrink-0" /> <span className="truncate">Cancelling...</span></>
                 ) : (
-                  'Cancel Migration'
+                  <span className="truncate">Cancel Migration</span>
                 )}
               </Button>
             </div>
@@ -1792,43 +1887,52 @@ export default function QuickBooksImportPage() {
                 </p>
                 <Button 
                   variant="outline"
-                  className="w-full border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                  size="sm"
+                  className="w-full border-orange-500 text-orange-600"
                   onClick={() => unlockMigrationMutation.mutate(true)}
                   disabled={unlockMigrationMutation.isPending}
                   data-testid="button-unlock-migration"
                 >
                   {unlockMigrationMutation.isPending ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Unlocking...</>
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin flex-shrink-0" /> <span className="truncate">Unlocking...</span></>
                   ) : (
-                    'Force Unlock & Retry'
+                    <span className="truncate">Force Unlock & Retry</span>
                   )}
                 </Button>
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </UniversalModalContent>
+      </UniversalModal>
 
       {/* Trinity Push Loading Modal with Task Checklist */}
-      <Dialog open={showPushModal} onOpenChange={() => {}}>
-        <DialogContent 
-          className="sm:max-w-lg bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
+      <UniversalModal open={showPushModal} onOpenChange={() => {}}>
+        <UniversalModalContent 
+          size="lg"
+          className="bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <VisuallyHidden>
-            <DialogTitle>Trinity Sync Progress</DialogTitle>
-            <DialogDescription>Syncing data to QuickBooks</DialogDescription>
+            <UniversalModalTitle>Trinity Sync Progress</UniversalModalTitle>
+            <UniversalModalDescription>Syncing data to QuickBooks</UniversalModalDescription>
           </VisuallyHidden>
-          <div className="flex flex-col py-6 space-y-5">
-            {/* Header with Trinity Logo */}
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col py-4 sm:py-6 space-y-4 sm:space-y-5">
+            <div className="flex items-center gap-3 sm:gap-4">
               <div className="relative flex-shrink-0">
-                <Suspense fallback={<div className="w-20 h-20" />}>
-                  <TrinityRedesign 
-                    size={80} 
-                    mode={pushProgress === 100 ? "ANALYZING" : "THINKING"}
-                  />
+                <Suspense fallback={<div className="w-14 h-14 sm:w-20 sm:h-20" />}>
+                  <div className="block sm:hidden">
+                    <TrinityRedesign 
+                      size={56} 
+                      mode={pushProgress === 100 ? "ANALYZING" : "THINKING"}
+                    />
+                  </div>
+                  <div className="hidden sm:block">
+                    <TrinityRedesign 
+                      size={80} 
+                      mode={pushProgress === 100 ? "ANALYZING" : "THINKING"}
+                    />
+                  </div>
                 </Suspense>
                 {pushProgress === 100 && (
                   <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
@@ -1836,17 +1940,17 @@ export default function QuickBooksImportPage() {
                   </div>
                 )}
               </div>
-              <div>
-                <h3 className="text-lg font-semibold">
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold">
                   {pushProgress === 100 ? 'Trinity Sync Complete!' : 'Trinity is Working...'}
                 </h3>
-                <p className="text-sm text-muted-foreground">{pushMessage}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{pushMessage}</p>
               </div>
             </div>
             
             {/* Progress Bar */}
             <div className="space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex justify-between gap-1 text-xs text-muted-foreground">
                 <span>Progress</span>
                 <span className="font-medium">{pushProgress}%</span>
               </div>
@@ -1854,27 +1958,27 @@ export default function QuickBooksImportPage() {
             </div>
             
             {/* Trinity Task Checklist */}
-            <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+            <div className="bg-muted/30 rounded-lg p-3 sm:p-4 space-y-2">
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 sm:mb-3">
                 Trinity Task Execution
               </p>
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 {pushTasks.map((task) => (
                   <div 
                     key={task.id}
-                    className={`flex items-center gap-3 text-sm transition-all duration-300 ${
+                    className={`flex items-center gap-2 sm:gap-3 text-xs sm:text-sm transition-all duration-300 ${
                       task.status === 'completed' ? 'text-green-600 dark:text-green-400' :
                       task.status === 'in_progress' ? 'text-primary font-medium' :
                       'text-muted-foreground'
                     }`}
                   >
-                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
                       {task.status === 'completed' ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                       ) : task.status === 'in_progress' ? (
-                        <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                        <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-spin" />
                       ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
+                        <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full border-2 border-muted-foreground/30" />
                       )}
                     </div>
                     <span className={task.status === 'completed' ? 'line-through opacity-70' : ''}>
@@ -1892,8 +1996,8 @@ export default function QuickBooksImportPage() {
                 : 'Trinity AI is orchestrating your data sync. Please wait...'}
             </p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </UniversalModalContent>
+      </UniversalModal>
+    </CanvasHubPage>
   );
 }

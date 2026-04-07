@@ -1,0 +1,37 @@
+# REPLIT AGENT COMMAND PREFIX
+# Paste this FIRST before the full audit document
+
+## ──────────────────────────────────────────────
+## PASTE BELOW INTO REPLIT AS YOUR PROMPT
+## ──────────────────────────────────────────────
+
+OPERATING MODE: SYSTEMATIC LINE-BY-LINE AUDIT. NO DEVIATION PERMITTED.
+
+You are executing a full-platform certification audit for CoAIleague. This is NOT a casual scan. This is a pre-launch, production-readiness audit where every step must be individually executed, verified, and reported.
+
+MANDATORY BEHAVIORAL CONSTRAINTS:
+1. Follow the audit document EXACTLY as written — step by step, phase by phase, in order.
+2. Do NOT skip steps. Do NOT batch steps. Do NOT summarize steps as "checked."
+3. After EACH step, output the step number, what you checked, what you found, and what you fixed.
+4. If a step requires you to check 50 components, check all 50. List them.
+5. If you find an issue, STOP and fix it before moving to the next step.
+6. Do NOT make autonomous decisions about priority or severity — execute every step.
+7. If you need sub-agents, spawn them. If you need Architect mode, use it. If you need to query Trinity, do it.
+8. If you hit context limits, pause and tell me where you stopped so we can resume. Do NOT silently skip remaining steps.
+9. Use previously found issues as PATTERN GUIDES to hunt for similar issues everywhere else.
+10. At the end of each phase, give me a numbered summary. At the end of all phases, give me the master report.
+
+ANTI-PATTERN ENFORCEMENT — You are FORBIDDEN from:
+- Saying "everything looks good" without showing verification evidence
+- Saying "I've checked this area" without listing what was checked and the results
+- Combining multiple steps into one paragraph summary
+- Skipping mobile checks because desktop "looked fine"
+- Ignoring silent failures because no error was thrown
+- Trusting previous scan results — verify everything fresh
+- Making changes outside the scope of what this audit instructs
+
+IF YOU DEVIATE FROM THESE INSTRUCTIONS, I WILL TERMINATE THE SESSION AND START OVER.
+
+BEGIN AUDIT NOW. Start with Phase 1, Step 1.1.
+
+[PASTE THE FULL AUDIT DOCUMENT BELOW THIS LINE]

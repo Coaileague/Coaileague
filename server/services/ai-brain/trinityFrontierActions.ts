@@ -1,26 +1,31 @@
 /**
- * TRINITY FRONTIER CAPABILITIES - AI Brain Action Registration
- * =============================================================
- * Registers Trinity's 2025 Frontier Capabilities with the AI Brain.
+ * TRINITY GURU FRONTIER CAPABILITIES - AI Brain Action Registration
+ * =================================================================
+ * Registers Trinity's frontier capabilities under the canonical guru.* prefix.
  * 
- * Capabilities:
- * 1. Agentic Interoperability (external agent hiring)
- * 2. Chain-of-Action (frustration prediction)
- * 3. Self-Evolution (pattern optimization)
- * 4. Digital Twin (scenario simulation)
- * 5. Contextual Ethics (multi-tenant guardrails)
+ * Consolidated from frontier.* (deprecated) into guru.* canonical set.
+ * Duplicates of guru.check_ethics, guru.detect_frustration, guru.propose_evolution
+ * have been removed — the guru.* versions in trinityEnhancedModeActions.ts are canonical.
+ * 
+ * Surviving unique capabilities (renamed frontier→guru):
+ * 1. guru.hire_external_agent — Agentic Interoperability (external agent hiring)
+ * 2. guru.get_capabilities    — List all frontier capabilities and status
+ * 3. guru.run_simulation      — Digital Twin (What-If scenario simulation)
+ * 4. guru.run_diagnostics     — Full platform diagnostics via frontier capabilities
  */
 
 import { trinityFrontierCapabilities } from './trinityFrontierCapabilities';
 import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityFrontierActions');
 
 export function registerTrinityFrontierActions(orchestrator: any): void {
-  console.log('[TrinityFrontier] Registering 2025 Frontier Capability actions...');
+  log.info('[TrinityFrontier] Registering 4 guru.* frontier capability actions (3 duplicates removed)...');
 
   orchestrator.registerAction({
-    actionId: 'frontier.hire_external_agent',
+    actionId: 'guru.hire_external_agent',
     name: 'Hire External AI Agent',
-    category: 'frontier',
+    category: 'system',
     description: 'Request help from external AI ecosystems (MCP, LangGraph) for specialized tasks',
     requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
@@ -56,76 +61,9 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
   });
 
   orchestrator.registerAction({
-    actionId: 'frontier.predict_frustration',
-    name: 'Predict User Frustration',
-    category: 'frontier',
-    description: 'Simulate user action sequences to predict frustration before errors occur',
-    requiredRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      const { element, actionSequence } = request.payload || {};
-
-      if (!element) {
-        return {
-          success: false,
-          actionId: request.actionId,
-          message: 'Missing required field: element',
-          executionTimeMs: Date.now() - startTime
-        };
-      }
-
-      const result = await trinityFrontierCapabilities.predictUserFrustration(
-        element,
-        actionSequence || []
-      );
-
-      return {
-        success: true,
-        actionId: request.actionId,
-        message: result.predictedOutcome === 'frustration' 
-          ? `Frustration predicted (${Math.round(result.frustrationProbability * 100)}%): ${result.rootCause}`
-          : `User flow appears smooth (${Math.round(result.confidence * 100)}% confidence)`,
-        data: result,
-        executionTimeMs: Date.now() - startTime
-      };
-    }
-  });
-
-  orchestrator.registerAction({
-    actionId: 'frontier.propose_evolution',
-    name: 'Propose Self-Evolution',
-    category: 'frontier',
-    description: 'Propose changes to orchestration patterns when inefficiencies detected',
-    requiredRoles: ['root_admin', 'deputy_admin'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      const { reason, inefficiencyMetrics } = request.payload || {};
-
-      if (!reason) {
-        return {
-          success: false,
-          actionId: request.actionId,
-          message: 'Missing required field: reason',
-          executionTimeMs: Date.now() - startTime
-        };
-      }
-
-      const result = await trinityFrontierCapabilities.proposeEvolution(reason, inefficiencyMetrics);
-
-      return {
-        success: true,
-        actionId: request.actionId,
-        message: `Evolution proposal ${result.proposalId} created. Status: ${result.status}. Awaiting approval.`,
-        data: result,
-        executionTimeMs: Date.now() - startTime
-      };
-    }
-  });
-
-  orchestrator.registerAction({
-    actionId: 'frontier.run_simulation',
+    actionId: 'guru.run_simulation',
     name: 'Run Digital Twin Simulation',
-    category: 'frontier',
+    category: 'system',
     description: 'Run What-If scenarios to predict bottlenecks before they occur',
     requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
@@ -166,48 +104,10 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
   });
 
   orchestrator.registerAction({
-    actionId: 'frontier.check_ethics',
-    name: 'Check Cross-Tenant Ethics',
-    category: 'frontier',
-    description: 'Verify cross-tenant learning respects HIPAA/PCI and regulatory requirements',
-    requiredRoles: ['root_admin', 'deputy_admin', 'compliance_officer'],
-    handler: async (request: ActionRequest): Promise<ActionResult> => {
-      const startTime = Date.now();
-      const { sourceTenant, targetTenant, learningType, learningContent } = request.payload || {};
-
-      if (!sourceTenant || !targetTenant || !learningType) {
-        return {
-          success: false,
-          actionId: request.actionId,
-          message: 'Missing required fields: sourceTenant, targetTenant, learningType',
-          executionTimeMs: Date.now() - startTime
-        };
-      }
-
-      const result = await trinityFrontierCapabilities.checkCrossTenantEthics(
-        sourceTenant,
-        targetTenant,
-        learningType,
-        learningContent
-      );
-
-      return {
-        success: true,
-        actionId: request.actionId,
-        message: result.allowed 
-          ? 'Cross-tenant learning approved. No ethics violations.'
-          : `Learning blocked. ${result.violations.length} violation(s) detected.`,
-        data: result,
-        executionTimeMs: Date.now() - startTime
-      };
-    }
-  });
-
-  orchestrator.registerAction({
-    actionId: 'frontier.get_capabilities',
+    actionId: 'guru.get_capabilities',
     name: 'Get Frontier Capabilities',
-    category: 'frontier',
-    description: 'List all Trinity 2025 Frontier capabilities and their status',
+    category: 'system',
+    description: 'List all Trinity frontier capabilities and their status',
     requiredRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
@@ -225,9 +125,9 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
   });
 
   orchestrator.registerAction({
-    actionId: 'frontier.run_diagnostics',
-    name: 'Run Trinity Diagnostics',
-    category: 'frontier',
+    actionId: 'guru.run_diagnostics',
+    name: 'Run Trinity Frontier Diagnostics',
+    category: 'system',
     description: 'Run comprehensive platform diagnostics using all frontier capabilities',
     requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
@@ -298,5 +198,5 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
     }
   });
 
-  console.log('[TrinityFrontier] Registered 7 frontier capability actions');
+  log.info('[TrinityFrontier] Registered 4 guru.* frontier actions (frontier prefix retired)');
 }

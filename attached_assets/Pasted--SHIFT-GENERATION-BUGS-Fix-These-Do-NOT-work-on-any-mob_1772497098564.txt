@@ -1,0 +1,80 @@
+# SHIFT GENERATION BUGS — Fix These
+
+**Do NOT work on any mobile UX tasks. Do NOT read SchedulePage.tsx, CanvasHubPage.tsx, or any frontend layout files. These are backend generator and compliance bugs ONLY.**
+
+---
+
+## Bug 1: CRITICAL — Duplicate shifts generated for the same client/day/time slot
+
+The shift generator creates multiple identical shifts for the same client at the same time. For example:
+- Metro Transit Authority Hub: 2 identical 11:00PM-5:00PM Monday shifts
+- Dallas Warehouse District: 2 identical 12:00PM-8:00PM Monday shifts  
+- Grand Plaza Hotel: 2 identical 10:00AM-6:00PM Monday shifts
+- Westfield Regional Mall: 3 identical 3:00AM-4:00PM Monday shifts
+
+**Root cause investigation needed:** There are two possible causes and you need to determine which one it is:
+
+**Possibility A — Batch-internal dedup failure:**
+The generator checks the DATABASE for existing shifts before creating new ones, but when generating multiple shifts in a single batch, each new shift isn't counted against the demand cap because it hasn't been inserted yet. So the generator creates Shift 1 for Client X (not in DB yet), then creates Shift 2 for Client X (still not in DB), and both get inserted.
+
+**Fix for A:** Maintain an in-memory counter during generation. After deciding to create a shift for a client/day/time slot, increment the counter. Check the counter + existing DB count against the client's `minimumStaffing` or `guardsNeeded` before creating each shift.
+
+**Possibility B — Client demand actually requires multiple guards:**
+If Metro Transit's staffing demand says "need 3 guards for AM shift," then 3 shifts at the same time is CORRECT behavior. The display looks like duplicates but they're actually separate positions that need different employees.
+
+**Fix for B:** No code fix needed, but the schedule UI should display these differently — e.g., "Metro Transit Hub — AM Shift (1 of 3)" so users understand why there are multiple entries. Also verify that the `guardsNeeded` values in the client data are actually correct and not inflated from bad seed data.
+
+**How to determine which one it is:**
+1. Query the clients table for Metro Transit Authority Hub, Dallas Warehouse, Grand Plaza Hotel, Westfield Regional Mall
+2. Check their staffing demand fields — `minimumStaffing`, `guardsNeeded`, or whatever field controls how many guards per shift
+3. If Metro Transit says `guardsNeeded: 1` but has 2 shifts → it's Bug A (dedup failure)
+4. If Metro Transit says `guardsNeeded: 2` and has 2 shifts → it's correct behavior (Possibility B)
+5. Report which one it is BEFORE fixing anything
+
+---
+
+## Bug 2: HIGH — Shift duration exceeds safe working limits
+
+Observed shifts with dangerous durations:
+- Metro Transit Authority Hub: 11:00PM-5:00PM = 18 hours
+- Westfield Regional Mall: 3:00AM-4:00PM = 13 hours
+
+Per the Trinity Orchestration Spec Section 2.2, compliance is priority #1. No employee should work more than 12 consecutive hours without explicit client override.
+
+**Fix:**
+1. Add a MAX_SHIFT_DURATION constant (12 hours default, configurable per org)
+2. In the shift generator, after calculating shift start/end from client demands:
+   - If duration > MAX_SHIFT_DURATION, split into two equal shifts
+   - Example: 3:00AM-4:00PM (13hrs) becomes 3:00AM-9:30AM + 9:30AM-4:00PM
+   - Example: 11:00PM-5:00PM (18hrs) becomes 11:00PM-8:00AM + 8:00AM-5:00PM
+3. Log a warning when splitting so Trinity's thought log captures it
+4. If this is coming from client demand data (the client literally has "start: 3AM, end: 4PM" in their settings), flag it as a compliance risk but still split the shift
+
+**Also check:** Are these shift times coming from the client's actual contract/settings, or is the generator calculating them wrong? An 18-hour "AM Shift" is suspicious — AM shifts should be ~8 hours. The client data might have bad start/end times.
+
+---
+
+## Bug 3: MEDIUM — "Auto-fill for 0 shifts" when unfilled shifts exist
+
+Trinity's status shows "Starting auto-fill for 0 shifts" despite hundreds of pending unfilled shifts existing. The auto-fill query is returning zero results.
+
+**Investigation:**
+1. Find the auto-fill query that selects eligible shifts to fill
+2. Log the exact WHERE clause and the count it returns
+3. Check if it's filtering by a status value that doesn't match (e.g., looking for 'open' when shifts are 'draft')
+4. Check if it's filtering by workspace and the workspace ID doesn't match
+5. Check if it's filtering by date range and the shifts fall outside it
+
+**Fix:** Make the filter match the actual shift statuses in the database. Unfilled shifts should be status 'draft' or 'scheduled' with no assigned employee.
+
+---
+
+## IMPORTANT CONTEXT
+
+Refer to the Trinity Orchestration Spec for how shift generation should work:
+- Section 2.1 (FETCH): Trinity reads client staffing demands including days, hours, and number of guards needed
+- Section 2.2 (ANALYZE): Compliance is priority #1 — rest gaps, shift duration limits, OT thresholds
+- Section 2.3 (DELIBERATE): Create only the shifts needed, place employees by score, flag what can't be filled
+- Section 9 Rule 9: No hardcoded test data — use real client demand fields
+
+**Report your findings on Bug 1 (is it dedup or correct multi-guard demand?) before writing any fix code.**

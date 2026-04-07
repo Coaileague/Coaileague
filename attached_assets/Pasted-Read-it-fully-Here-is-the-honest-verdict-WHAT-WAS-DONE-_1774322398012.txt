@@ -1,0 +1,54 @@
+Read it fully. Here is the honest verdict.
+
+---
+
+**WHAT WAS DONE RIGHT**
+
+Four `req as any` instances fixed before Phase 3 began — correct sync verification behavior. Canonical `ErrorBoundary.tsx` and `useAsyncData.ts` created as foundation files. 35+ routes wrapped with `componentName` props. Graceful shutdown handler confirmed pre-existing and complete. Universal Schedule error state added. Server running clean.
+
+---
+
+**THREE GAPS BEFORE PHASE 3 IS CERTIFIED CLOSED**
+
+**Gap 1 — TypeScript compilation was never verified.**
+The report states: *"TypeScript check timed out — the server is still running which confirms no breaking errors."* That is not the same thing. A server that starts despite TypeScript errors does not mean zero TypeScript errors. Compilation errors can exist silently in a running TypeScript server depending on how the build is configured. This must be verified before Phase 3 closes.
+
+**Gap 2 — invoices.tsx error state was never confirmed.**
+The report states: *"The invoices file has unusual structure — moving on."* Moving on is not acceptable. Invoices is a financial display surface. It must have all four states confirmed. The audit cannot skip it because the file structure is unfamiliar.
+
+**Gap 3 — useAsyncData hook was created but never confirmed used.**
+The hook was created in Step 2. The completion report summary only lists Steps 3 through 7. There is no confirmation that any component was updated to use `useAsyncData` instead of accessing React Query results directly. Creating the hook and using the hook are two different things.
+
+---
+
+**SEND HIM THIS NOW**
+
+---
+
+Phase 3 has three gaps that must be closed before Phase 4 begins. Do not start Phase 4. Resolve these now in the same session.
+
+**Gap 1 — TypeScript compilation:**
+
+Run a TypeScript type check on the entire codebase and report the exact output. Do not rely on the server running as proof of zero TypeScript errors. The command is `npx tsc --noEmit` or the project equivalent. If errors exist fix every one before proceeding. Report the exact error count before and after fixes.
+
+**Gap 2 — invoices.tsx full four-state audit:**
+
+Open `invoices.tsx` completely. Read every line. Find where the invoices data query is declared — whether it is a custom hook, a context, a direct useQuery call, or any other pattern. Confirm the component handles all four states: loading renders a skeleton or spinner, empty renders a specific message about no invoices, error state is either thrown to the ErrorBoundary or renders an error message, data state renders with null-safe access and formatCurrency on every financial value. If any state is missing add it now. Report exactly where the query lives, what states existed before, and what was added.
+
+**Gap 3 — useAsyncData hook adoption:**
+
+The `useAsyncData` hook was created in Step 2 but the completion report does not confirm any component uses it. Identify the five most data-heavy financial display components — payroll dashboard, invoice list, employee roster, schedule board, and client list. Update each one to use `useAsyncData` instead of directly destructuring from `useQuery`. Confirm the hook is providing all four states to each component. Report which components were updated and what the before and after patterns look like.
+
+After all three gaps are resolved run the final verification:
+
+- `npx tsc --noEmit` returns zero errors
+- invoices.tsx four-state audit confirms all states present
+- Five financial display components confirmed using `useAsyncData`
+- Server starts with 30/30 services
+- All ten baseline UI operations pass
+
+Report all four verification results specifically. When all four are clean Phase 3 is certified closed and Phase 4 goes in.
+
+---
+
+Send that Bryan. Three specific gaps, three specific fixes, four specific verifications. When he brings back all four clean bring it here and Phase 4 goes in immediately.

@@ -13,6 +13,8 @@ import {
 import { eq, and, desc, sql, isNull, or, inArray, gte, lte, count } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('integrationManagementService');
 
 export type IntegrationAccessLevel = 'owner' | 'admin' | 'manager' | 'viewer';
 
@@ -60,7 +62,7 @@ class IntegrationManagementService {
   private healthCache: Map<string, ServiceHealthStatus> = new Map();
 
   private constructor() {
-    console.log('[IntegrationManagement] Service initialized');
+    log.info('[IntegrationManagement] Service initialized');
   }
 
   static getInstance(): IntegrationManagementService {
@@ -71,9 +73,9 @@ class IntegrationManagementService {
   }
 
   determineAccessLevel(platformRole: string, workspaceRole: string): IntegrationAccessLevel {
-    const ownerRoles = ['root_admin', 'coo_admin', 'cto_admin', 'founder_admin'];
-    const adminRoles = ['org_owner', 'org_admin', 'workspace_admin', 'hr_admin'];
-    const managerRoles = ['manager', 'operations_manager', 'finance_manager'];
+    const ownerRoles = ['root_admin', 'deputy_admin', 'sysop'];
+    const adminRoles = ['org_owner', 'co_owner', 'org_admin'];
+    const managerRoles = ['org_manager', 'manager', 'department_manager'];
     
     if (ownerRoles.includes(platformRole)) return 'owner';
     if (adminRoles.includes(workspaceRole) || adminRoles.includes(platformRole)) return 'admin';
@@ -169,14 +171,13 @@ class IntegrationManagementService {
       const [connection] = await db.insert(integrationConnections).values({
         workspaceId: context.workspaceId,
         integrationId: request.integrationId,
-        displayName: request.displayName,
+        connectionName: request.displayName,
         authType: request.authType,
-        encryptedCredentials,
         apiKey: request.credentials.apiKey ? this.encryptValue(request.credentials.apiKey) : null,
         accessToken: request.credentials.accessToken ? this.encryptValue(request.credentials.accessToken) : null,
         refreshToken: request.credentials.refreshToken ? this.encryptValue(request.credentials.refreshToken) : null,
-        config: request.syncConfig || {},
-        connectedBy: context.userId,
+        syncConfig: request.syncConfig || {},
+        connectedByUserId: context.userId,
         isActive: true,
         isHealthy: true,
       }).returning();
@@ -203,11 +204,11 @@ class IntegrationManagementService {
           integrationName: integration[0].name,
           connectionId: connection.id
         }
-      });
+      }).catch((err) => log.warn('[integrationManagementService] Fire-and-forget failed:', err));
 
       return { success: true, connection };
     } catch (error) {
-      console.error('[IntegrationManagement] Connect integration error:', error);
+      log.error('[IntegrationManagement] Connect integration error:', error);
       return { success: false, error: 'Failed to connect integration' };
     }
   }
@@ -256,11 +257,11 @@ class IntegrationManagementService {
         workspaceId: context.workspaceId,
         userId: context.userId,
         metadata: { connectionId, integrationId }
-      });
+      }).catch((err) => log.warn('[integrationManagementService] Fire-and-forget failed:', err));
 
       return { success: true };
     } catch (error) {
-      console.error('[IntegrationManagement] Disconnect integration error:', error);
+      log.error('[IntegrationManagement] Disconnect integration error:', error);
       return { success: false, error: 'Failed to disconnect integration' };
     }
   }
@@ -306,7 +307,7 @@ class IntegrationManagementService {
 
       return { success: true };
     } catch (error) {
-      console.error('[IntegrationManagement] Update credentials error:', error);
+      log.error('[IntegrationManagement] Update credentials error:', error);
       return { success: false, error: 'Failed to update credentials' };
     }
   }
@@ -332,7 +333,7 @@ class IntegrationManagementService {
         keyPrefix,
         keyHash,
         scopes,
-        createdBy: context.userId,
+        createdByUserId: context.userId,
         expiresAt,
         isActive: true
       }).returning();
@@ -352,11 +353,11 @@ class IntegrationManagementService {
         workspaceId: context.workspaceId,
         userId: context.userId,
         metadata: { keyId: apiKeyRecord.id, keyName: name, scopes }
-      });
+      }).catch((err) => log.warn('[integrationManagementService] Fire-and-forget failed:', err));
 
       return { success: true, apiKey: rawKey, keyId: apiKeyRecord.id };
     } catch (error) {
-      console.error('[IntegrationManagement] Create API key error:', error);
+      log.error('[IntegrationManagement] Create API key error:', error);
       return { success: false, error: 'Failed to create API key' };
     }
   }
@@ -396,8 +397,7 @@ class IntegrationManagementService {
       await db.update(integrationApiKeys)
         .set({
           isActive: false,
-          revokedAt: new Date(),
-          revokedBy: context.userId
+          updatedAt: new Date(),
         })
         .where(eq(integrationApiKeys.id, keyId));
 
@@ -414,11 +414,11 @@ class IntegrationManagementService {
         workspaceId: context.workspaceId,
         userId: context.userId,
         metadata: { keyId, keyName: key[0].name }
-      });
+      }).catch((err) => log.warn('[integrationManagementService] Fire-and-forget failed:', err));
 
       return { success: true };
     } catch (error) {
-      console.error('[IntegrationManagement] Revoke API key error:', error);
+      log.error('[IntegrationManagement] Revoke API key error:', error);
       return { success: false, error: 'Failed to revoke API key' };
     }
   }
@@ -510,7 +510,10 @@ class IntegrationManagementService {
   }
 
   private encryptCredentials(credentials: Record<string, unknown>): string {
-    const key = process.env.SESSION_SECRET || 'default-encryption-key-change-me';
+    if (!process.env.SESSION_SECRET) {
+      throw new Error('SESSION_SECRET environment variable is required for encryption');
+    }
+    const key = process.env.SESSION_SECRET;
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(key.padEnd(32, '0').slice(0, 32)), iv);
     
@@ -522,7 +525,10 @@ class IntegrationManagementService {
   }
 
   private encryptValue(value: string): string {
-    const key = process.env.SESSION_SECRET || 'default-encryption-key-change-me';
+    if (!process.env.SESSION_SECRET) {
+      throw new Error('SESSION_SECRET environment variable is required for encryption');
+    }
+    const key = process.env.SESSION_SECRET;
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(key.padEnd(32, '0').slice(0, 32)), iv);
     
@@ -541,17 +547,15 @@ class IntegrationManagementService {
   ): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        userId,
-        workspaceId,
+        workspaceId: 'system',
         action: `integration.${action}`,
         entityType: 'integration',
         entityId: details.integrationId as string || details.connectionId as string || details.keyId as string || 'system',
         details,
-        severity: action.includes('delete') || action.includes('revoke') ? 'warning' : 'info',
-        category: 'security'
+        metadata: { severity: action.includes('delete') || action.includes('revoke') ? 'warning' : 'info', category: 'security' },
       });
     } catch (error) {
-      console.error('[IntegrationManagement] Audit log error:', error);
+      log.error('[IntegrationManagement] Audit log error:', error);
     }
   }
 }

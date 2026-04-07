@@ -3,11 +3,15 @@
  * Implements automated onboarding workflows with email notifications and task tracking
  */
 
+import { NotificationDeliveryService } from './notificationDeliveryService';
 import { db } from "../db";
 import { users, userOnboarding, workspaces } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
-import { Resend } from "resend";
+import { emailService } from "./emailService";
 import onboardingConfig from "@shared/config/onboardingConfig";
+import { createLogger } from '../lib/logger';
+const log = createLogger('onboardingAutomation');
+
 
 /**
  * Initialize onboarding workflow for new employee
@@ -47,18 +51,8 @@ export async function initiateEmployeeOnboarding(
       .returning();
 
     // Send welcome email to employee (if enabled)
-    const resend = getResend();
-    if (resend && employee.email && onboardingConfig.notifications.sendWelcomeEmail) {
-      await resend.emails.send({
-        from: onboardingConfig.email.fromAddress,
-        to: employee.email,
-        subject: onboardingConfig.emailTemplates.welcome.subject(workspace.name),
-        html: onboardingConfig.emailTemplates.welcome.body(
-          employee.firstName || 'there',
-          workspace.name,
-          onboardingConfig.onboardingSteps
-        ),
-      });
+    if (employee.email && onboardingConfig.notifications.sendWelcomeEmail) {
+      NotificationDeliveryService.send({ type: 'onboarding_notification', workspaceId: workspaceId || 'system', recipientUserId: employeeId, channel: 'email', body: { to: employee.email, subject: onboardingConfig.emailTemplates.welcome.subject(workspace.name), html: onboardingConfig.emailTemplates.welcome.body(employee.firstName || 'there', workspace.name, onboardingConfig.onboardingSteps) } }).catch((err: Error) => log.warn('[OnboardingAutomation] Welcome email failed (non-blocking):', err.message));
     }
 
     // Notify manager if assigned (if enabled)
@@ -69,25 +63,14 @@ export async function initiateEmployeeOnboarding(
         .where(eq(users.id, managerId))
         .then(r => r[0]);
 
-      if (manager && manager.email && resend) {
-        await resend.emails.send({
-          from: onboardingConfig.email.fromAddress,
-          to: manager.email,
-          subject: onboardingConfig.emailTemplates.managerNotification.subject(
-            employee.firstName || 'Unknown',
-            employee.lastName || 'Employee'
-          ),
-          html: onboardingConfig.emailTemplates.managerNotification.body(
-            employee.firstName || 'Unknown',
-            employee.lastName || 'Employee'
-          ),
-        });
+      if (manager?.email) {
+        NotificationDeliveryService.send({ type: 'onboarding_notification', workspaceId: workspaceId || 'system', recipientUserId: managerId || manager.email, channel: 'email', body: { to: manager.email, subject: onboardingConfig.emailTemplates.managerNotification.subject(employee.firstName || 'Unknown', employee.lastName || 'Employee'), html: onboardingConfig.emailTemplates.managerNotification.body(employee.firstName || 'Unknown', employee.lastName || 'Employee') } }).catch((err: Error) => log.warn('[OnboardingAutomation] Manager notification email failed (non-blocking):', err.message));
       }
     }
 
     return onboarding;
   } catch (error) {
-    console.error('[OnboardingAutomation] Error initiating onboarding:', error);
+    log.error('[OnboardingAutomation] Error initiating onboarding:', error);
     return null;
   }
 }
@@ -132,31 +115,13 @@ export async function completeOnboardingStep(
         .then(r => r[0]);
 
       if (employee?.email) {
-        const resend = getResend();
-        if (resend) {
-          await resend.emails.send({
-            from: onboardingConfig.email.fromAddress,
-            to: employee.email,
-            subject: onboardingConfig.emailTemplates.completionMilestone.subject(),
-            html: onboardingConfig.emailTemplates.completionMilestone.body(),
-          });
-        }
+        NotificationDeliveryService.send({ type: 'onboarding_notification', workspaceId: 'system', recipientUserId: employeeId, channel: 'email', body: { to: employee.email, subject: onboardingConfig.emailTemplates.completionMilestone.subject(), html: onboardingConfig.emailTemplates.completionMilestone.body() } }).catch((err: Error) => log.warn('[OnboardingAutomation] Completion email failed (non-blocking):', err.message));
       }
     }
 
     return { completedSteps, progressPercentage, isComplete };
   } catch (error) {
-    console.error('[OnboardingAutomation] Error completing step:', error);
+    log.error('[OnboardingAutomation] Error completing step:', error);
     return null;
   }
-}
-
-// Lazy load Resend
-let resend: any = null;
-function getResend() {
-  if (!resend && process.env.RESEND_API_KEY) {
-    const { Resend } = require('resend');
-    resend = new Resend(process.env.RESEND_API_KEY);
-  }
-  return resend;
 }

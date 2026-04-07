@@ -14,11 +14,14 @@
  */
 
 import { db } from '../../db';
+import { AI_BRAIN } from '../../config/platformConfig';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
 import {
   trinityConversationSessions,
   trinityConversationTurns,
   knowledgeGapLogs,
+  managerAssignments,
+  employees,
   type TrinityConversationSession,
   type InsertTrinityConversationSession,
   type InsertTrinityConversationTurn,
@@ -28,6 +31,8 @@ import { trinityMemoryService } from './trinityMemoryService';
 import { TTLCache } from './cacheUtils';
 import { creditManager } from '../billing/creditManager';
 import { trinityConfidenceTracker } from './trinityConfidenceTracker';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('TrinityContextManager');
 
 // ============================================================================
 // TYPES
@@ -172,6 +177,7 @@ class TrinityContextManager {
 
   shutdown(): void {
     this.sessionsCache.shutdown();
+    this.enrichedContextCache.shutdown();
   }
 
   // SECURITY: Sanitize data before persistent storage
@@ -212,7 +218,7 @@ class TrinityContextManager {
   async getOrCreateSession(userId: string, workspaceId?: string): Promise<ConversationContext> {
     // Validate userId to prevent null constraint violations
     if (!userId) {
-      console.warn("[TrinityContextManager] getOrCreateSession called with null/undefined userId");
+      log.warn("[TrinityContextManager] getOrCreateSession called with null/undefined userId");
       return this.createFallbackContext("unknown", workspaceId);
     }
     
@@ -285,7 +291,7 @@ class TrinityContextManager {
       this.sessionsCache.set(cacheKey, context);
       return context;
     } catch (error) {
-      console.error('[TrinityContextManager] Error getting/creating session:', error);
+      log.error('[TrinityContextManager] Error getting/creating session:', error);
       // Return minimal context on error
       return this.createFallbackContext(userId, workspaceId);
     }
@@ -321,7 +327,7 @@ class TrinityContextManager {
         pendingClarifications: (session.pendingClarifications as string[]) || [],
       };
     } catch (error) {
-      console.error('[TrinityContextManager] Error loading session context:', error);
+      log.error('[TrinityContextManager] Error loading session context:', error);
       return this.createEmptyContext(session);
     }
   }
@@ -392,7 +398,7 @@ class TrinityContextManager {
         ? Math.round(((creditAllocation - creditBalance) / creditAllocation) * 100)
         : 0;
 
-      console.log(`[TrinityContext] Credit awareness loaded for ${workspaceId}: ${creditBalance}/${creditAllocation} (${creditPercentUsed}% used)`);
+      log.info(`[TrinityContext] Credit awareness loaded for ${workspaceId}: ${creditBalance}/${creditAllocation} (${creditPercentUsed}% used)`);
 
       return {
         creditBalance,
@@ -400,26 +406,37 @@ class TrinityContextManager {
         creditPercentUsed,
       };
     } catch (error) {
-      console.warn('[TrinityContext] Failed to load credit balance:', error);
+      log.warn('[TrinityContext] Failed to load credit balance:', error);
       return {};
     }
   }
 
+  private enrichedContextCache = new TTLCache<string, ConversationContext>(30_000, 100);
+
   /**
    * Get enriched session context with credit awareness
+   * Uses 30-second cache for identical user+workspace requests
    */
   async getEnrichedSessionContext(userId: string, workspaceId?: string): Promise<ConversationContext> {
-    const context = await this.getOrCreateSession(userId, workspaceId);
-    
-    // Enrich with credit awareness if workspace provided
+    const enrichedCacheKey = `enriched:${userId}:${workspaceId || 'global'}`;
+    const cachedEnriched = this.enrichedContextCache.get(enrichedCacheKey);
+    if (cachedEnriched) {
+      return cachedEnriched;
+    }
+
+    const [context, creditContext] = await Promise.all([
+      this.getOrCreateSession(userId, workspaceId),
+      workspaceId ? this.enrichWorkspaceContextWithCredits(workspaceId) : Promise.resolve({}),
+    ]);
+
     if (workspaceId) {
-      const creditContext = await this.enrichWorkspaceContextWithCredits(workspaceId);
       context.memory.workspaceContext = {
         ...context.memory.workspaceContext,
         ...creditContext,
       };
     }
 
+    this.enrichedContextCache.set(enrichedCacheKey, context);
     return context;
   }
 
@@ -460,6 +477,7 @@ class TrinityContextManager {
       const [turn] = await db
         .insert(trinityConversationTurns)
         .values({
+          workspaceId: 'system',
           sessionId,
           turnNumber,
           role,
@@ -467,7 +485,7 @@ class TrinityContextManager {
           contentType: options?.contentType || 'text',
           toolCalls: sanitizedToolCalls,
           toolResults: sanitizedToolResults,
-          confidenceScore: options?.confidenceScore,
+          confidenceScore: options?.confidenceScore != null ? Math.round(options.confidenceScore * 100) : undefined,
           confidenceFactors: sanitizedConfidenceFactors,
           knowledgeGapDetected: options?.knowledgeGapDetected || false,
           responseTimeMs: options?.responseTimeMs,
@@ -482,7 +500,7 @@ class TrinityContextManager {
           turnCount: turnNumber,
           lastActivityAt: new Date(),
           lastToolUsed: options?.toolCalls?.[0]?.name,
-          lastConfidenceScore: options?.confidenceScore,
+          lastConfidenceScore: options?.confidenceScore != null ? Math.round(options.confidenceScore * 100) : undefined,
         })
         .where(eq(trinityConversationSessions.id, sessionId));
 
@@ -521,7 +539,7 @@ class TrinityContextManager {
         timestamp: new Date(),
       };
     } catch (error) {
-      console.error('[TrinityContextManager] Error adding turn:', error);
+      log.error('[TrinityContextManager] Error adding turn:', error);
       return null;
     }
   }
@@ -539,7 +557,7 @@ class TrinityContextManager {
   // CONTEXT BUILDING FOR GEMINI
   // ============================================================================
 
-  buildPromptContext(context: ConversationContext, maxTurns: number = 10): string {
+  buildPromptContext(context: ConversationContext, maxTurns: number = AI_BRAIN.conversationTurnLimit): string {
     const recentTurns = context.turns.slice(-maxTurns);
     
     let promptContext = '';
@@ -628,7 +646,54 @@ class TrinityContextManager {
       );
       promptContext = memoryContext + '\n' + promptContext;
     } catch (error) {
-      console.error('[TrinityContextManager] Error building memory context:', error);
+      log.error('[TrinityContextManager] Error building memory context:', error);
+    }
+
+    // Inject reporting-line context for recently discussed employees
+    try {
+      const employeeEntities = context.memory.recentEntities
+        .filter(e => e.type === 'employee' && e.id)
+        .slice(-5);
+
+      if (employeeEntities.length > 0 && context.workspaceId) {
+        const reportingLines: string[] = [];
+
+        for (const entity of employeeEntities) {
+          const [assignment] = await db
+            .select()
+            .from(managerAssignments)
+            .where(
+              and(
+                eq(managerAssignments.employeeId, entity.id!),
+                eq(managerAssignments.workspaceId, context.workspaceId)
+              )
+            )
+            .limit(1);
+
+          if (assignment?.managerId) {
+            const manager = await db.query.employees.findFirst({
+              where: eq(employees.id, assignment.managerId),
+            });
+            if (manager) {
+              reportingLines.push(
+                `${entity.name} reports directly to ${manager.firstName} ${manager.lastName} (${manager.workspaceRole || 'manager'})`
+              );
+            }
+          } else {
+            reportingLines.push(`${entity.name} — no direct manager assigned`);
+          }
+        }
+
+        if (reportingLines.length > 0) {
+          promptContext += `\n## Reporting Lines\n`;
+          for (const line of reportingLines) {
+            promptContext += `- ${line}\n`;
+          }
+          promptContext += `Use this to contact the correct manager when an employee issue requires escalation.\n`;
+        }
+      }
+    } catch (error) {
+      log.error('[TrinityContextManager] Error building reporting line context:', error);
     }
 
     // Add recommended tools based on context (workspace-scoped for tenant isolation)
@@ -652,7 +717,7 @@ class TrinityContextManager {
         }
       }
     } catch (error) {
-      console.error('[TrinityContextManager] Error getting recommended tools:', error);
+      log.error('[TrinityContextManager] Error getting recommended tools:', error);
     }
 
     return promptContext;
@@ -678,7 +743,7 @@ class TrinityContextManager {
         lessonsLearned,
       });
     } catch (error) {
-      console.error('[TrinityContextManager] Error recording learning outcome:', error);
+      log.error('[TrinityContextManager] Error recording learning outcome:', error);
     }
   }
 
@@ -721,7 +786,7 @@ class TrinityContextManager {
 
       return log;
     } catch (error) {
-      console.error('[TrinityContextManager] Error recording knowledge gap:', error);
+      log.error('[TrinityContextManager] Error recording knowledge gap:', error);
       return null;
     }
   }
@@ -745,10 +810,10 @@ class TrinityContextManager {
       return {
         id: `gap-${Date.now()}`,
         gapType: this.classifyGapType(userQuery, assistantResponse),
-        description: `Trinity expressed uncertainty in response to: "${userQuery.slice(0, 100)}..."`,
+        description: `I expressed uncertainty in response to: "${userQuery.slice(0, 100)}..."`,
         userQuery,
         suggestedActions: this.generateSuggestedActions(userQuery),
-        priority: 'normal',
+        priority: 'medium',
       };
     }
 
@@ -924,10 +989,10 @@ class TrinityContextManager {
       // Update metrics
       context.metrics.escalationCount++;
 
-      console.log(`[TrinityContextManager] Escalated session ${context.sessionId}: ${reason}`);
+      log.info(`[TrinityContextManager] Escalated session ${context.sessionId}: ${reason}`);
       return true;
     } catch (error) {
-      console.error('[TrinityContextManager] Error escalating to support:', error);
+      log.error('[TrinityContextManager] Error escalating to support:', error);
       return false;
     }
   }
@@ -1007,7 +1072,7 @@ class TrinityContextManager {
 
       return true;
     } catch (error) {
-      console.error('[TrinityContextManager] Error updating memory:', error);
+      log.error('[TrinityContextManager] Error updating memory:', error);
       return false;
     }
   }
@@ -1025,7 +1090,7 @@ class TrinityContextManager {
 
       return this.updateMemory(sessionId, { recentEntities: memory.recentEntities });
     } catch (error) {
-      console.error('[TrinityContextManager] Error adding entity mention:', error);
+      log.error('[TrinityContextManager] Error adding entity mention:', error);
       return false;
     }
   }
@@ -1043,7 +1108,7 @@ class TrinityContextManager {
 
       return this.updateMemory(sessionId, { actionsTaken: memory.actionsTaken });
     } catch (error) {
-      console.error('[TrinityContextManager] Error adding action summary:', error);
+      log.error('[TrinityContextManager] Error adding action summary:', error);
       return false;
     }
   }
@@ -1075,15 +1140,15 @@ class TrinityContextManager {
         const metrics = await trinityConfidenceTracker.extractSessionMetrics(sessionId);
         if (metrics) {
           await trinityConfidenceTracker.updateUserConfidenceOnSessionEnd(metrics);
-          console.log(`[TrinityContextManager] Updated confidence stats for session ${sessionId}`);
+          log.info(`[TrinityContextManager] Updated confidence stats for session ${sessionId}`);
         }
       } catch (confidenceError) {
-        console.warn('[TrinityContextManager] Failed to update confidence stats:', confidenceError);
+        log.warn('[TrinityContextManager] Failed to update confidence stats:', confidenceError);
       }
 
       return true;
     } catch (error) {
-      console.error('[TrinityContextManager] Error ending session:', error);
+      log.error('[TrinityContextManager] Error ending session:', error);
       return false;
     }
   }

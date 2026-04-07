@@ -8,6 +8,9 @@
 import { meteredGemini } from './billing/meteredGeminiClient';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import { createLogger } from '../lib/logger';
+const log = createLogger('smartReplyService');
+
 
 interface SmartReplyContext {
   conversationId?: string;
@@ -81,7 +84,7 @@ class SmartReplyService {
         const aiSuggestions = await this.generateAISuggestions(message, context);
         suggestions.push(...aiSuggestions);
       } catch (error) {
-        console.error('[SmartReply] AI generation failed:', error);
+        log.error('[SmartReply] AI generation failed:', error);
       }
     }
     
@@ -103,7 +106,7 @@ Message: "${message}"
 Reply:`;
       
       const result = await meteredGemini.generate({
-        workspaceId: context.workspaceId || 'platform',
+        workspaceId: context.workspaceId,
         userId: context.userId || 'system',
         featureKey: 'ai_smart_reply',
         prompt,
@@ -118,7 +121,7 @@ Reply:`;
       
       return 'I\'ll follow up on this shortly.';
     } catch (error) {
-      console.error('[SmartReply] Single reply generation failed:', error);
+      log.error('[SmartReply] Single reply generation failed:', error);
       return 'I\'ll look into this and get back to you.';
     }
   }
@@ -136,7 +139,7 @@ Context: ${context.topic || 'general conversation'}
 Return only valid JSON array, no markdown:`;
       
       const result = await meteredGemini.generate({
-        workspaceId: context.workspaceId || 'platform',
+        workspaceId: context.workspaceId,
         userId: context.userId || 'system',
         featureKey: 'ai_smart_reply',
         prompt,
@@ -163,7 +166,7 @@ Return only valid JSON array, no markdown:`;
         return [];
       }
     } catch (error) {
-      console.error('[SmartReply] AI suggestions failed:', error);
+      log.error('[SmartReply] AI suggestions failed:', error);
       return [];
     }
   }
@@ -174,7 +177,7 @@ Return only valid JSON array, no markdown:`;
     userId: string,
     context?: SmartReplyContext
   ): Promise<void> {
-    console.log(`[SmartReply] Usage recorded: ${replyId} by ${userId}`);
+    log.info(`[SmartReply] Usage recorded: ${replyId} by ${userId}`);
   }
 
   private detectTopic(message: string): string | null {

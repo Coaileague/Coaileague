@@ -1,0 +1,59 @@
+Read it fully. Good news and one concern before Phase 3 goes in.
+
+---
+
+**WHAT WAS DONE RIGHT**
+
+14 real phantom columns found and fixed across Trinity's action layer. These were genuine silent data bugs — the same class of issue Phase 1 was built to catch. `employees.pay_rate` should be `hourly_rate`, `invoices.site_id` belongs on `invoice_line_items`, and 12 phantom `meta_cognition_logs` column references were corrected. RC7 payroll schemas created with 8 safeParse calls on previously unvalidated endpoints. Server running clean.
+
+---
+
+**THE ONE CONCERN BEFORE PHASE 3**
+
+The fix for the `client_feedback` table is a bandaid. The table does not exist in the database and the fix was to replace the DB query with hardcoded values: `{score: 100, complaints: 0, praise: 0}`. That means Trinity's performance calculations for client feedback always return a fake neutral score regardless of reality. No crash — but false data flowing through Trinity's intelligence layer. That is a different kind of silent failure.
+
+The fix for the 12 phantom `meta_cognition_logs` columns replaced them with `0` and `null` literals. Trinity's analytics functions now always return zeros for total cost, model performance, fallback rates, and synthesis metrics. The queries run without crashing but the analytics are meaningless.
+
+---
+
+**SEND HIM THIS BEFORE PHASE 3**
+
+---
+
+Two items from the RC6 fix need a proper resolution before Phase 3 begins. Hardcoded values and zero literals replacing phantom column references are bandaids — they prevent crashes but produce false data in Trinity's intelligence layer. Fix them correctly now.
+
+**Item 1 — client_feedback table:**
+
+The `client_feedback` table does not exist in the live database but `trinityPerformanceCalculator.ts` queries it. Do not use hardcoded defaults. Choose one of these two correct resolutions:
+
+Option A — Create the table: Write and run a migration that creates `client_feedback` with the columns the query expects. Add the Drizzle schema definition for it. Confirm the table appears in the database and the query returns real data.
+
+Option B — Remove the dead code: If client feedback is not a feature that currently exists in the platform, remove the query entirely from `trinityPerformanceCalculator.ts` and replace the function return with a clear comment: `// client_feedback feature not yet implemented — returns null until table is created`. Do not return fake scores. Return null and handle null in the caller.
+
+Do not keep `{score: 100, complaints: 0, praise: 0}` as the result. That is fabricated data flowing into Trinity's performance calculations.
+
+**Item 2 — meta_cognition_logs phantom columns:**
+
+Twelve phantom columns were replaced with `0` and `null` literals across `trinityAnalyticsService.ts` and `trinityOrgIntelligenceService.ts`. This means Trinity's analytics for model cost, fallback rates, and synthesis metrics always return zero. Do not leave zeros as the permanent result. Do one of the following for each phantom:
+
+If the data this column represented is tracked somewhere else in the database under a different column name — find the correct column, verify it against the Name Registry, and use it.
+
+If the data is genuinely not tracked anywhere in the current database — remove the metric from the analytics function entirely and return null with a comment: `// [metric] not tracked in current schema`. Do not return 0 as if it is real data.
+
+If the metric should be tracked and is important for Trinity's intelligence — add the column to the `meta_cognition_logs` table via migration, add it to the Drizzle schema definition, and update the query to use the real column.
+
+For each of the 12 phantom columns report which resolution was applied and why.
+
+**Verification after both items are resolved:**
+
+Trigger a Trinity performance calculation for an employee in the ACME sandbox. Confirm the result is either real data from the database or an explicitly null return with a documented reason — not a hardcoded fake score.
+
+Trigger a Trinity analytics dashboard summary. Confirm each metric is either real data, explicitly null with documentation, or a migration was run and the column now exists and is populated. Zero returned values must be either genuinely zero from real data or removed.
+
+Server starts with 30/30 services. All Phase 2 baseline operations still pass.
+
+When both items are properly resolved — not papered over — bring the report here and Phase 3 goes in.
+
+---
+
+Send that Bryan. These two items are the difference between Trinity running on real data and Trinity running on fabricated data dressed up as a fix. When he resolves them properly bring it here and Phase 3 is ready.

@@ -11,6 +11,10 @@ import { db } from '../../db';
 import { accessPolicies, accessControlEvents, agentIdentities } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
+import { createLogger } from '../../lib/logger';
+import { PLATFORM_WORKSPACE_ID } from '../billing/billingConstants';
+const log = createLogger('uacpOrchestrationActions');
+
 
 export interface UACPActionContext {
   userId: string;
@@ -31,7 +35,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'UACP Authorization Check',
     category: 'security',
     description: 'Request access decision from Policy Decision Point for entity/resource combinations',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['manager', 'org_admin', 'sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { subject, resource, context } = request.payload || {};
@@ -61,7 +65,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'Check Entity Permission',
     category: 'security',
     description: 'Check if a specific entity has a given permission',
-    requiredRoles: ['manager', 'admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['manager', 'org_admin', 'sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { entityType, entityId, permission, workspaceId } = request.payload || {};
@@ -98,7 +102,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'Get Access Summary',
     category: 'security',
     description: 'Get complete access summary for a user or agent including roles, policies, and status',
-    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { entityType, entityId, workspaceId } = request.payload || {};
@@ -134,7 +138,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'List Agent Identities',
     category: 'security',
     description: 'List all registered AI agent identities including bots, subagents, and Trinity',
-    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { workspaceId } = request.payload || {};
@@ -155,7 +159,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'Get Agent Details',
     category: 'security',
     description: 'Get detailed information about a specific agent identity',
-    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { agentId } = request.payload || {};
@@ -266,7 +270,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'Update Agent Mission',
     category: 'security',
     description: 'Update the mission objective for an agent identity',
-    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { agentId, missionObjective } = request.payload || {};
@@ -344,7 +348,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'List Access Policies',
     category: 'security',
     description: 'List all ABAC access policies with optional active-only filter',
-    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { activeOnly } = request.payload || { activeOnly: true };
@@ -393,7 +397,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'Get Recent Access Events',
     category: 'security',
     description: 'Get recent access control events for audit and monitoring',
-    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { limit } = request.payload || { limit: 20 };
@@ -500,9 +504,9 @@ export function registerUACPActions(orchestrator: any): void {
         };
       }
       
-      // Create support employee in Operations workspace
+      // Create support employee in CoAIleague Platform workspace
       const [newEmployee] = await db.insert(employees).values({
-        workspaceId: 'ops-workspace-00000000',
+        workspaceId: PLATFORM_WORKSPACE_ID,
         firstName,
         lastName,
         email,
@@ -516,7 +520,7 @@ export function registerUACPActions(orchestrator: any): void {
         await db.insert(platformRoles).values({
           userId: newEmployee.userId,
           role: platformRole,
-          assignedBy: request.userId || 'system',
+          grantedBy: request.userId || 'system',
         }).onConflictDoUpdate({
           target: platformRoles.userId,
           set: { role: platformRole, updatedAt: new Date() }
@@ -552,7 +556,7 @@ export function registerUACPActions(orchestrator: any): void {
         };
       }
       
-      const validRoles = ['support', 'admin', 'super_admin', 'sysop', 'root_admin'];
+      const validRoles = ['support_agent', 'support_manager', 'sysop', 'root_admin', 'deputy_admin'];
       if (!validRoles.includes(role)) {
         return {
           success: false,
@@ -568,10 +572,10 @@ export function registerUACPActions(orchestrator: any): void {
       const [updatedRole] = await db.insert(platformRoles).values({
         userId,
         role,
-        assignedBy: request.userId || 'system',
+        grantedBy: request.userId || 'system',
       }).onConflictDoUpdate({
         target: platformRoles.userId,
-        set: { role, updatedAt: new Date(), assignedBy: request.userId || 'system' }
+        set: { role, updatedAt: new Date(), grantedBy: request.userId || 'system' }
       }).returning();
       
       // Emit access control event
@@ -602,7 +606,7 @@ export function registerUACPActions(orchestrator: any): void {
     name: 'List Support Team',
     category: 'security',
     description: 'List all support employees and AI agents in the platform support org',
-    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    requiredRoles: ['sysop', 'root_admin', 'deputy_admin'],
     handler: async (request: ActionRequest): Promise<ActionResult> => {
       const startTime = Date.now();
       const { employees } = await import('@shared/schema');
@@ -610,12 +614,12 @@ export function registerUACPActions(orchestrator: any): void {
       // Get human support employees
       const supportEmployees = await db.select()
         .from(employees)
-        .where(eq(employees.workspaceId, 'ops-workspace-00000000'));
+        .where(eq(employees.workspaceId, PLATFORM_WORKSPACE_ID));
       
       // Get AI agents
       const aiAgents = await db.select()
         .from(agentIdentities)
-        .where(eq(agentIdentities.workspaceId, 'ops-workspace-00000000'));
+        .where(eq(agentIdentities.workspaceId, PLATFORM_WORKSPACE_ID));
       
       const humanCount = supportEmployees.filter(e => !e.id.includes('-employee')).length;
       const botCount = supportEmployees.filter(e => e.id.includes('-employee')).length;
@@ -640,7 +644,7 @@ export function registerUACPActions(orchestrator: any): void {
   });
   */ // END DISABLED: list_policies, invalidate_cache, get_recent_events, security_audit, create_support_employee, assign_platform_role, list_support_team
 
-  console.log('[AI Brain Master Orchestrator] Registered 5 UACP access control actions (Phase 2: disabled 11 non-MVP)');
+  log.info('[AI Brain Master Orchestrator] Registered 5 UACP access control actions (Phase 2: disabled 11 non-MVP)');
 }
 
 /**
@@ -655,19 +659,19 @@ export function getUACPActionDefinitions(): Array<{
   return [
     { id: 'uacp.authorize', description: 'Request access decision from Policy Decision Point', category: 'security', requiredRole: 'manager' },
     { id: 'uacp.check_permission', description: 'Check if entity has specific permission', category: 'security', requiredRole: 'manager' },
-    { id: 'uacp.get_access_summary', description: 'Get complete access summary for user or agent', category: 'security', requiredRole: 'admin' },
-    { id: 'uacp.list_agents', description: 'List all registered AI agent identities', category: 'security', requiredRole: 'admin' },
-    { id: 'uacp.get_agent', description: 'Get details of specific agent', category: 'security', requiredRole: 'admin' },
+    { id: 'uacp.get_access_summary', description: 'Get complete access summary for user or agent', category: 'security', requiredRole: 'org_owner' },
+    { id: 'uacp.list_agents', description: 'List all registered AI agent identities', category: 'security', requiredRole: 'org_owner' },
+    { id: 'uacp.get_agent', description: 'Get details of specific agent', category: 'security', requiredRole: 'org_owner' },
     { id: 'uacp.suspend_agent', description: 'Immediately suspend agent access (propagates to all services)', category: 'security', requiredRole: 'sysop' },
     { id: 'uacp.reactivate_agent', description: 'Reactivate a suspended agent', category: 'security', requiredRole: 'sysop' },
-    { id: 'uacp.update_agent_mission', description: 'Update agent mission objective', category: 'security', requiredRole: 'admin' },
+    { id: 'uacp.update_agent_mission', description: 'Update agent mission objective', category: 'security', requiredRole: 'org_owner' },
     { id: 'uacp.update_agent_access', description: 'Update agent permissions and tool access', category: 'security', requiredRole: 'sysop' },
-    { id: 'uacp.list_policies', description: 'List ABAC access policies', category: 'security', requiredRole: 'admin' },
+    { id: 'uacp.list_policies', description: 'List ABAC access policies', category: 'security', requiredRole: 'org_owner' },
     { id: 'uacp.invalidate_cache', description: 'Force invalidate PDP authorization cache', category: 'security', requiredRole: 'sysop' },
-    { id: 'uacp.get_recent_events', description: 'Get recent access control events', category: 'security', requiredRole: 'admin' },
+    { id: 'uacp.get_recent_events', description: 'Get recent access control events', category: 'security', requiredRole: 'org_owner' },
     { id: 'uacp.security_audit', description: 'Run security audit (suspended agents, critical events)', category: 'security', requiredRole: 'sysop' },
     { id: 'uacp.create_support_employee', description: 'Create platform support employee in Operations workspace', category: 'security', requiredRole: 'sysop' },
     { id: 'uacp.assign_platform_role', description: 'Assign platform-wide role to user (support, admin, sysop)', category: 'security', requiredRole: 'sysop' },
-    { id: 'uacp.list_support_team', description: 'List all support employees and AI agents', category: 'security', requiredRole: 'admin' },
+    { id: 'uacp.list_support_team', description: 'List all support employees and AI agents', category: 'security', requiredRole: 'org_owner' },
   ];
 }

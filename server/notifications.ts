@@ -1,6 +1,9 @@
-import { IStorage } from './storage';
+import { IStorage, storage } from './storage';
 import { emailService } from './services/emailService';
 import { notificationStateManager } from './services/notificationStateManager';
+import { createLogger } from './lib/logger';
+const log = createLogger('notifications');
+
 
 interface NotificationHelperContext {
   storage: IStorage;
@@ -20,6 +23,7 @@ type NotificationType =
   | 'pto_approved'
   | 'pto_denied'
   | 'schedule_change'
+  | 'schedule_published'
   | 'document_uploaded'
   | 'document_expiring'
   | 'profile_updated'
@@ -27,6 +31,7 @@ type NotificationType =
   | 'timesheet_approved'
   | 'timesheet_rejected'
   | 'payroll_processed'
+  | 'invoice_generated'
   | 'mention'
   | 'system';
 
@@ -125,7 +130,7 @@ export async function createShiftAssignedNotification(
       'shift_assigned',
       params.workspaceId,
       params.userId
-    ).catch(err => console.error('[Notification] Failed to send shift email:', err.message));
+    ).catch(err => log.error('[Notification] Failed to send shift email:', err.message));
   }
 
   return createAndBroadcastNotification(context, {
@@ -223,7 +228,7 @@ export async function createPTOApprovedNotification(
       'pto_approved',
       params.workspaceId,
       params.userId
-    ).catch(err => console.error('[Notification] Failed to send PTO email:', err.message));
+    ).catch(err => log.error('[Notification] Failed to send PTO email:', err.message));
   }
 
   return createAndBroadcastNotification(context, {
@@ -232,7 +237,7 @@ export async function createPTOApprovedNotification(
     type: 'pto_approved',
     title: 'PTO Request Approved',
     message: `Your time off request from ${params.startDate} to ${params.endDate} has been approved`,
-    actionUrl: `/time-off?request=${params.requestId}`,
+    actionUrl: `/hr/pto`,
     relatedEntityType: 'time_off_request',
     relatedEntityId: params.requestId,
     metadata: { startDate: params.startDate, endDate: params.endDate },
@@ -276,7 +281,7 @@ export async function createPTODeniedNotification(
       'pto_denied',
       params.workspaceId,
       params.userId
-    ).catch(err => console.error('[Notification] Failed to send PTO denial email:', err.message));
+    ).catch(err => log.error('[Notification] Failed to send PTO denial email:', err.message));
   }
 
   return createAndBroadcastNotification(context, {
@@ -285,7 +290,7 @@ export async function createPTODeniedNotification(
     type: 'pto_denied',
     title: 'PTO Request Denied',
     message,
-    actionUrl: `/time-off?request=${params.requestId}`,
+    actionUrl: `/hr/pto`,
     relatedEntityType: 'time_off_request',
     relatedEntityId: params.requestId,
     metadata: { startDate: params.startDate, endDate: params.endDate, reason: params.reason },
@@ -331,7 +336,7 @@ export async function createDocumentUploadedNotification(
     type: 'document_uploaded',
     title: 'New Document Available',
     message: `A new document has been uploaded: ${params.documentName}`,
-    actionUrl: `/documents?doc=${params.documentId}`,
+    actionUrl: `/document-library`,
     relatedEntityType: 'document',
     relatedEntityId: params.documentId,
     metadata: { documentName: params.documentName },
@@ -355,7 +360,7 @@ export async function createDocumentExpiringNotification(
     type: 'document_expiring',
     title: 'Document Expiring Soon',
     message: `Your document "${params.documentName}" expires on ${params.expiryDate}`,
-    actionUrl: `/documents?doc=${params.documentId}`,
+    actionUrl: `/document-library`,
     relatedEntityType: 'document',
     relatedEntityId: params.documentId,
     metadata: { documentName: params.documentName, expiryDate: params.expiryDate },
@@ -446,7 +451,7 @@ export async function createTimesheetApprovedNotification(
       'timesheet_approved',
       params.workspaceId,
       params.userId
-    ).catch(err => console.error('[Notification] Failed to send timesheet email:', err.message));
+    ).catch(err => log.error('[Notification] Failed to send timesheet email:', err.message));
   }
 
   return createAndBroadcastNotification(context, {
@@ -455,7 +460,7 @@ export async function createTimesheetApprovedNotification(
     type: 'timesheet_approved',
     title: 'Timesheet Approved',
     message: `Your timesheet for ${params.periodStart} - ${params.periodEnd} has been approved`,
-    actionUrl: `/timesheets?id=${params.timesheetId}`,
+    actionUrl: `/timesheets/approvals`,
     relatedEntityType: 'timesheet',
     relatedEntityId: params.timesheetId,
     metadata: { periodStart: params.periodStart, periodEnd: params.periodEnd },
@@ -499,7 +504,7 @@ export async function createTimesheetRejectedNotification(
       'timesheet_rejected',
       params.workspaceId,
       params.userId
-    ).catch(err => console.error('[Notification] Failed to send rejection email:', err.message));
+    ).catch(err => log.error('[Notification] Failed to send rejection email:', err.message));
   }
 
   return createAndBroadcastNotification(context, {
@@ -508,7 +513,7 @@ export async function createTimesheetRejectedNotification(
     type: 'timesheet_rejected',
     title: 'Timesheet Rejected',
     message,
-    actionUrl: `/timesheets?id=${params.timesheetId}`,
+    actionUrl: `/timesheets/approvals`,
     relatedEntityType: 'timesheet',
     relatedEntityId: params.timesheetId,
     metadata: { periodStart: params.periodStart, periodEnd: params.periodEnd, reason: params.reason },
@@ -546,7 +551,7 @@ export async function createPayrollProcessedNotification(
       'payroll_processed',
       params.workspaceId,
       params.userId
-    ).catch(err => console.error('[Notification] Failed to send payroll email:', err.message));
+    ).catch(err => log.error('[Notification] Failed to send payroll email:', err.message));
   }
 
   return createAndBroadcastNotification(context, {
@@ -560,6 +565,81 @@ export async function createPayrollProcessedNotification(
     relatedEntityId: params.payrollId,
     metadata: { period: params.period, amount: params.amount },
     createdBy: 'system',
+  });
+}
+
+export async function createInvoiceCreatedNotification(
+  context: NotificationHelperContext,
+  params: {
+    workspaceId: string;
+    userId: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    clientName: string;
+    totalAmount: string;
+    createdBy: string;
+  }
+) {
+  return createAndBroadcastNotification(context, {
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    type: 'invoice_generated',
+    title: 'New Invoice Created',
+    message: `Invoice #${params.invoiceNumber} for ${params.clientName} ($${params.totalAmount}) has been created`,
+    actionUrl: `/invoices?id=${params.invoiceId}`,
+    relatedEntityType: 'invoice',
+    relatedEntityId: params.invoiceId,
+    metadata: { invoiceNumber: params.invoiceNumber, clientName: params.clientName, totalAmount: params.totalAmount },
+    createdBy: params.createdBy,
+  });
+}
+
+export async function createSchedulePublishedNotification(
+  context: NotificationHelperContext,
+  params: {
+    workspaceId: string;
+    userId: string;
+    weekStart: string;
+    weekEnd: string;
+    totalShifts: number;
+    publishedBy: string;
+  }
+) {
+  return createAndBroadcastNotification(context, {
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    type: 'schedule_change',
+    title: 'Schedule Published',
+    message: `The schedule for ${params.weekStart} - ${params.weekEnd} has been published with ${params.totalShifts} shifts`,
+    actionUrl: '/schedule',
+    relatedEntityType: 'schedule',
+    metadata: { weekStart: params.weekStart, weekEnd: params.weekEnd, totalShifts: params.totalShifts },
+    createdBy: params.publishedBy,
+  });
+}
+
+export async function createPayrollRunCreatedNotification(
+  context: NotificationHelperContext,
+  params: {
+    workspaceId: string;
+    userId: string;
+    payrollRunId: string;
+    periodStart: string;
+    periodEnd: string;
+    createdBy: string;
+  }
+) {
+  return createAndBroadcastNotification(context, {
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    type: 'payroll_processed',
+    title: 'Payroll Run Created',
+    message: `A new payroll run for ${params.periodStart} - ${params.periodEnd} has been created and is ready for review`,
+    actionUrl: `/payroll?id=${params.payrollRunId}`,
+    relatedEntityType: 'payroll',
+    relatedEntityId: params.payrollRunId,
+    metadata: { periodStart: params.periodStart, periodEnd: params.periodEnd },
+    createdBy: params.createdBy,
   });
 }
 
@@ -611,13 +691,50 @@ export async function createSystemNotification(
 
 /**
  * Send welcome notification when a new organization is created
- * NOTE: Onboarding automation already handles welcome emails
- * This is a placeholder for future in-app welcome notification
+ * Delegates to notificationService for in-app welcome notification package
  */
 export async function sendWelcomeOrgNotification(
   workspaceId: string,
   userId: string
 ) {
-  console.log(`[Notifications] Welcome org notification triggered for workspace ${workspaceId}, user ${userId}`);
-  return Promise.resolve();
+  try {
+    const { sendWelcomeOrgNotification: sendWelcome } = await import('./services/notificationService');
+    const { db } = await import('./db');
+    const { workspaces } = await import('@shared/schema');
+    const { eq } = await import('drizzle-orm');
+    const [ws] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const orgName = ws?.name || 'Your Organization';
+    await sendWelcome(workspaceId, userId, orgName);
+  } catch (error) {
+    log.warn(`[Notifications] Welcome org notification failed for workspace ${workspaceId}:`, error instanceof Error ? error.message : error);
+  }
+}
+
+/**
+ * Generic createNotification — direct storage write used by automation services.
+ * Does not require context/broadcast (fire-and-forget in-app notification).
+ */
+export async function createNotification(params: {
+  workspaceId: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  actionUrl?: string;
+}): Promise<void> {
+  try {
+    await storage.createNotification({
+      workspaceId: params.workspaceId,
+      userId: params.userId,
+      type: params.type as any,
+      title: params.title,
+      message: params.message,
+      metadata: params.metadata as any,
+      actionUrl: params.actionUrl,
+    });
+  } catch (err) {
+    log.warn('[Notifications] createNotification failed (non-blocking):', err instanceof Error ? err.message : err);
+  }
 }

@@ -1,0 +1,514 @@
+Here it is — full text, paste directly into Replit:
+
+---
+
+COAILEAGUE — CREDIT SYSTEM AND BILLING SYSTEM FULL ANALYSIS AND FIX
+Zero Gaps Zero Leaks Zero Free Service — Production Ready
+
+READ THIS COMPLETELY BEFORE TOUCHING ANYTHING.
+Analyze every file related to credits, billing, subscriptions, Stripe, tier enforcement, ledger transactions, and overage logic. Map every gap, every bug, every misconfiguration. Report your complete findings before writing a single line of code. Then fix everything systematically in the order listed.
+
+---
+
+PART 1 — ANALYSIS REQUIRED BEFORE ANY FIX
+
+Read and map every one of these before touching anything:
+
+1. The tier configuration — where is it defined, what values does it contain, are there hardcoded tier values anywhere outside the canonical config
+
+2. The checkCredits() function — show the exact code, identify which tiers get hard cap vs soft cap treatment, identify any tier that bypasses the check
+
+3. The credit ledger table — show the schema, show all transaction types present, verify append-only structure exists
+
+4. The overage billing code — does it exist, where is it, does it actually create a Stripe charge or just log a note
+
+5. The Stripe webhook handlers — which events are handled, show the payment_intent.succeeded and subscription handlers explicitly
+
+6. The seat overage billing — does code exist to calculate and charge seat overages at end of billing cycle via Stripe
+
+7. The auto-recharge threshold values — what are the current threshold numbers, are they flat numbers or percentages
+
+8. The credit pack configuration — what is the credit count per pack, what is the Stripe product ID, what is the price
+
+9. The monthly allocation reset — what triggers it, is it tied to the Stripe subscription webhook or a manual process
+
+10. The Acme test workspace — what is the current employee count, shift count, and credit transaction volume — document this so we understand if test data is realistic or stress-test scale
+
+Report all 10 findings completely. Then proceed to fixes.
+
+---
+
+PART 2 — CANONICAL TIER DEFINITIONS
+Wire these exact values. Any value in the codebase that differs is wrong.
+
+FREE TRIAL
+price: $0
+duration: 14 days — hard expiration, no extension without upgrade
+seats: 5 employees + 1 manager — hard ceiling, cannot add more
+credit_allocation: 500 credits total for entire trial period
+NOTE: Previous value was 150 — this is being corrected to 500
+Reason: 150 credits is insufficient for a prospect to experience meaningful Trinity functionality before hitting the cap. 500 credits allows 1-2 real scheduling sessions and basic Trinity interactions giving the prospect enough experience to convert.
+credit_type: HARD_CAP
+overage_rate: 0 — no overage, no purchases during trial
+at_zero: hard block all credit actions, surface upgrade to paid plan prompt
+at_expiration: gate platform access, prompt plan selection
+Update pricing page display from "150 AI credits for trial" to "500 AI credits for trial"
+
+STARTER
+price: $899/month base
+seats_included: 15
+seat_overage_rate: $10/employee/month above 15 — billed via Stripe end of cycle
+credit_allocation: 5000/month
+credit_type: HARD_CAP
+overage_rate: 0 — no overage permitted
+at_zero: hard block all credit-gated features, surface AI Credits Pack purchase prompt at $59, cannot bypass or continue without purchase
+credit_pack_available: true
+realistic_monthly_burn: 1500-2500 credits for normal 15-25 employee operation
+allocation_headroom: adequate — 5000 covers normal usage with buffer
+
+PROFESSIONAL
+price: $1999/month base
+seats_included: 50
+seat_overage_rate: $8/employee/month above 50 — billed via Stripe end of cycle
+credit_allocation: 10000/month
+credit_type: SOFT_CAP
+overage_rate: $0.01 per credit above 10000
+premium_credit_multiplier: 2x — premium features cost double
+at_zero: do NOT block — switch to overage mode, meter every credit at $0.01, show real-time overage accumulator in UI, notify org_owner they have entered overage mode, charge overage at end of billing cycle via Stripe
+realistic_monthly_burn: 4000-8000 credits for normal 50-employee operation
+add_ons:
+per_client_profitability: $199/month
+predictive_insights: $249/month
+additional_location: $149/month
+
+ENTERPRISE
+price: $9999/month base + $15/employee/month (all seats)
+displayed_as: $5,500+ on pricing page — Contact Sales for custom quote
+seat_price: $15/employee/month — all employees, no base seat included count
+examples:
+150 employees = $9999 + (150 x $15) = $12,249/month
+300 employees = $9999 + (300 x $15) = $14,499/month
+1000 employees = $9999 + (1000 x $15) = $24,999/month
+credit_allocation: 22000/month
+credit_type: SOFT_CAP
+overage_rate: $0.01 per credit above 22000
+premium_credit_multiplier: 2x
+at_zero: same as Professional — overage mode, meter at $0.01, real-time accumulator, end of cycle Stripe charge
+realistic_monthly_burn:
+small enterprise 150 employees: 8000-14000 credits/month
+mid enterprise 300 employees: 12000-20000 credits/month
+large enterprise 1000 employees: 18000-28000 credits/month
+NOTE: Large enterprise customers will routinely hit overage. This is intentional and correctly monetized. At $0.01/credit a 5000 credit overage costs $50 — invisible at a $24,999/month contract.
+
+AI CREDITS PACK
+price: $59 per pack
+credits_per_pack: 5000 credits
+cost_per_credit: $0.0118 — intentionally above the $0.01 overage rate
+Reason: Pack credits must cost slightly MORE than overage credits. If packs were cheaper than overage rate orgs would intentionally hit zero and buy packs instead of upgrading tiers. $0.0118 greater than $0.01 maintains correct incentive structure.
+expiration: none — purchased credits never expire
+rollover: yes — purchased credits carry forward month to month
+consumption_order: monthly allocation consumed first, purchased pack credits consumed second
+available_to: all tiers
+Update Stripe product metadata to include credits: 5000
+Update credit pack display on pricing page: "$59 — 5,000 credits, never expire"
+Update pack purchase webhook handler to allocate exactly 5000 credits with Stripe payment reference on confirmed purchase
+
+---
+
+PART 3 — CANONICAL CREDIT COSTS PER ACTION
+Single source of truth. One config file. No hardcoded action costs elsewhere.
+
+STANDARD ACTIONS — 1x credit cost:
+clock_in_out_processing: 2 credits per event
+notification_send: 1 credit per notification
+shift_swap_processing: 5 credits per swap
+basic_report_generation: 50 credits per report
+invoice_generation: 75 credits per invoice
+document_generation: 75 credits per document
+compliance_alert_fire: 10 credits per alert
+contract_negotiation_suggestion: 30 credits per contract
+trinity_chat_standard: 10 credits per exchange
+schedule_read_or_view: 0 credits — reading is always free
+
+AI ANALYSIS ACTIONS — standard cost:
+schedule_generation_weekly_full_roster: 300 credits per generation run
+scheduling_session_fee: ELIMINATE as separate charge — roll into schedule_generation cost to avoid double-charging. This is likely why Acme showed 20841 scheduling plus 3450 session fee — both were firing for the same operation. Consolidate to one charge. Archive the scheduling_session_fee action type — do not delete, mark deprecated with reason documented.
+payroll_analysis_per_period: 400 credits per run
+compliance_scan_full_org: 350 credits per scan
+overtime_risk_analysis: 150 credits per run
+client_billing_review: 200 credits per run
+anomaly_detection_scan: 150 credits per run
+turnover_risk_analysis: 200 credits per run
+revenue_forecast: 200 credits per run
+
+PREMIUM ACTIONS — 2x multiplier — Professional and Enterprise only:
+strategic_schedule_optimization: 600 credits (2x of 300)
+trinity_cfo_financial_analysis: 800 credits
+rfp_response_generation: 500 credits per RFP
+capability_statement_generation: 400 credits per document
+cash_flow_forecasting_90day: 600 credits per run
+per_client_profitability_analysis: 400 credits per run
+what_if_scenario_modeling: 500 credits per scenario
+predictive_workforce_analytics: 500 credits per run
+trinity_chat_premium: 50 credits per exchange for complex analysis
+
+IMPORTANT NOTE ON ACME DATA:
+The Acme sandbox currently has an abnormally large dataset — 500+ shifts — simulating Allied Universal or Securitas scale operations. This is NOT representative of normal customer usage at any tier. Do NOT use Acme's current credit consumption numbers to calibrate action costs. The numbers look broken because the dataset is stress-test scale.
+
+After fixing credit action costs re-seed Acme with three realistic profiles:
+acme_starter_test: 15 employees, 1 manager, 60 shifts/month, 1 site
+acme_professional_test: 40 employees, 3 managers, 250 shifts/month, 5 sites
+acme_enterprise_test: 175 employees, 8 managers, 800 shifts/month, 20 sites
+
+Verify monthly credit burn against each profile matches realistic expectations before marking credit calibration complete.
+
+---
+
+PART 4 — BUGS TO FIX IN PRIORITY ORDER
+
+BUG 1 — HARD CAP NOT ENFORCING ON STARTER AND TRIAL
+
+checkCredits() must return a hard block for free_trial and starter tiers when balance is at or below zero. No exceptions. No bypass.
+
+Correct logic for HARD_CAP tiers:
+requested_cost = credit cost of the action being attempted
+if (current_balance - requested_cost) is less than 0:
+block action completely
+do not deduct any credits
+do not execute the action
+return error: insufficient_credits with current balance and action cost
+surface purchase prompt for Starter or upgrade prompt for Trial
+else:
+proceed with atomic deduction and execution
+
+This check must be atomic — the balance check and deduction happen in a single database transaction. Two simultaneous requests cannot both pass the same balance check against the same insufficient balance.
+
+BUG 2 — SOFT CAP HAS NO OVERAGE BILLING CODE
+
+Professional and Enterprise tiers must NOT block at zero — they enter overage mode. The overage billing system must be built completely:
+
+When balance goes below zero on SOFT_CAP tier:
+Allow action to execute
+Record deduction in main ledger with overage_flag: true
+Record in overage_ledger: org_id, workspace_id, action_type, credits, dollar_cost at credits x 0.01, billing_cycle, timestamp
+Update overage_accumulator for current cycle
+If first overage transaction this cycle: notify org_owner via notification panel BILLING ALERT type, post to Org Operations Briefing Channel, send email via Resend with message: "You have entered overage mode. Additional credits cost $0.01 each. Current overage: X credits / $X.XX"
+
+Overage accumulator visible in credits widget:
+Show when org is in overage mode
+Show: "Overage this cycle: X credits / $X.XX estimated charge"
+Update in real time with every overage deduction
+
+End of billing cycle overage charge fires on Stripe renewal webhook:
+1. Sum all overage_ledger entries for closing cycle
+2. If overage_credits greater than 0:
+a. Calculate overage_dollars = overage_credits x 0.01
+b. Create Stripe invoice item for overage_dollars
+c. Charge org payment method
+d. On Stripe payment success webhook: create overage_payment record in ledger with Stripe reference, reset overage accumulator to zero, allocate new cycle monthly credits
+e. On Stripe payment failure: retry with exponential backoff 3 attempts, after 3 failures switch org to HARD_CAP mode temporarily, alert platform_staff, notify org_owner with payment update link
+
+BUG 3 — SCHEDULING SESSION FEE IS DOUBLE-CHARGING
+
+The scheduling session fee is firing as a separate credit charge on top of the schedule generation charge. This is double-charging orgs for the same operation.
+
+Fix: Eliminate scheduling_session_fee as a separate charge. Roll session overhead into schedule_generation_weekly_full_roster at 300 credits. One action one charge. Archive the scheduling_session_fee action type in the Action Hub — do not delete, mark deprecated with note explaining consolidation. Update all ledger entries going forward to use only schedule_generation.
+
+BUG 4 — LEDGER CORRUPTION FROM STRESS TEST SEED DATA
+
+Fix:
+1. Identify all corrupted entries — wrong tier labels, manual DB corrections, entries without Stripe payment references
+2. Mark each as voided with reason: "corrupted stress test seed data"
+3. Do NOT delete — append void flag to preserve audit trail
+4. Create correct replacement allocation transactions for each period that had real deductions using correct tier and amount
+5. Run ledger integrity check: sum allocations minus sum deductions must equal current balance exactly
+6. Document the corrected starting balance clearly
+
+BUG 5 — FREE TRIAL CREDIT ALLOCATION WRONG
+
+Current value: 150 credits
+Correct value: 500 credits
+
+150 credits is not enough for a prospect to experience Trinity meaningfully. A single AI scheduling generation costs 300 credits. A prospect on 150 credits cannot complete one full scheduling workflow before hitting the cap — they will never experience the value and will not convert.
+
+Update in tier config, update in Stripe product if applicable, update pricing page display from "150 AI credits for trial" to "500 AI credits for trial"
+
+BUG 6 — AUTO-RECHARGE THRESHOLDS ARE FLAT NUMBERS NOT PERCENTAGES
+
+Current: auto_recharge_threshold = 50 on a 22,000 credit plan = 0.2%
+By the time this fires the org has had zero credits for days.
+
+Fix — implement percentage-based tiered warnings:
+
+FREE TRIAL:
+75 credits remaining (15% of 500): INFO notification
+25 credits remaining (5% of 500): URGENT — upgrade to continue
+0 credits: HARD BLOCK — upgrade to paid plan
+
+STARTER:
+1250 credits remaining (25% of 5000): WARNING — consider purchasing credits pack
+500 credits remaining (10% of 5000): URGENT — buy credits pack now
+0 credits: HARD BLOCK — purchase credits pack or upgrade
+
+PROFESSIONAL:
+2500 credits remaining (25% of 10000): WARNING
+1000 credits remaining (10% of 10000): URGENT — overage mode approaching
+0 credits: SOFT CAP TRIGGERED — overage mode active at $0.01/credit, show accumulator
+
+ENTERPRISE:
+5500 credits remaining (25% of 22000): WARNING
+2200 credits remaining (10% of 22000): URGENT
+0 credits: SOFT CAP TRIGGERED — same as Professional
+
+All threshold notifications fire via notification panel BILLING ALERT type AND Org Operations Briefing Channel post AND Resend email to org_owner. All three fire simultaneously not independently.
+
+BUG 7 — AI CREDITS PACK HAS NO DEFINED CREDIT COUNT
+
+Canonical value: 5000 credits per pack at $59
+Cost per credit: $0.0118 — intentionally above $0.01 overage rate
+Update Stripe product metadata: credits = 5000
+Update pricing page: "$59 — 5,000 credits, never expire"
+Update pack purchase webhook handler to allocate exactly 5000 credits with Stripe payment reference on confirmed purchase
+
+BUG 8 — SEAT OVERAGE BILLING NOT VERIFIED
+
+STARTER: seats above 15 charged at $10/employee/month
+PROFESSIONAL: seats above 50 charged at $8/employee/month
+ENTERPRISE: all seats charged at $15/employee/month — no base seats included
+
+Seat count tracking:
+Every active employee account counts as a seat
+Deactivated accounts do NOT count
+Seat count snapshot taken at end of billing cycle for overage calculation
+
+End of billing cycle fires on Stripe renewal webhook:
+1. Count active seats for closing period
+2. Calculate seat overage above base included seats
+3. Create Stripe invoice item for overage seats x overage rate
+4. Charge combined with credit overage if applicable
+5. Log seat billing event in audit trail
+
+Verify this code exists and fires correctly for each tier. If it does not exist build it now.
+
+BUG 9 — MONTHLY ALLOCATION RESET NOT TIED TO STRIPE WEBHOOK
+
+Monthly credit reset must fire from the Stripe subscription renewal webhook — not a manual process, not a cron job that could drift, not a DB direct update.
+
+Correct flow:
+Stripe fires invoice.payment_succeeded for subscription renewal
+Webhook handler receives and verifies signature
+Webhook creates monthly_allocation ledger entry for new period with: org_id, workspace_id, tier, credit_amount, stripe_invoice_id, period_start, period_end, timestamp
+Purchased credits are NOT reset — they carry forward
+Overage accumulator resets to zero for new cycle
+New balance = previous purchased credits carried forward + new monthly allocation
+
+Verify this webhook handler exists and creates correct ledger entries. If allocation is being set by any other mechanism that is a bug.
+
+---
+
+PART 5 — STRIPE PRODUCT CONFIGURATION VERIFICATION
+
+Verify every Stripe product matches canonical tier definitions exactly. Any mismatch is a billing bug.
+
+Product: CoAIleague Starter
+Price: $899/month recurring
+Metadata: tier=starter, credit_allocation=5000, base_seats=15, seat_overage_rate=10, credit_type=HARD_CAP
+
+Product: CoAIleague Professional
+Price: $1999/month recurring
+Metadata: tier=professional, credit_allocation=10000, base_seats=50, seat_overage_rate=8, credit_type=SOFT_CAP, overage_rate=0.01
+
+Product: CoAIleague Enterprise
+Price: custom — $9999 base + $15/seat
+Metadata: tier=enterprise, credit_allocation=22000, seat_price=15, credit_type=SOFT_CAP, overage_rate=0.01
+
+Product: AI Credits Pack
+Price: $59 one-time
+Metadata: credits=5000, type=credit_pack, expiration=none
+
+Product: Per-Client Profitability Add-on
+Price: $199/month recurring
+Metadata: addon=per_client_profitability, requires_tier=professional
+
+Product: Predictive Insights Add-on
+Price: $249/month recurring
+Metadata: addon=predictive_insights, requires_tier=professional
+
+Product: Additional Location Add-on
+Price: $149/month recurring
+Metadata: addon=additional_location, requires_tier=professional
+
+Verify each product exists in Stripe test mode AND production mode with matching configurations. Any product missing or misconfigured is a billing gap causing revenue loss in production.
+
+---
+
+PART 6 — LEDGER INTEGRITY RULES — ENFORCE PERMANENTLY
+
+Rule 1: Ledger is append-only. No record is ever edited or deleted. Corrections are made by adding new corrective entries with reason documented.
+
+Rule 2: Every credit deduction must have a corresponding allocation transaction that preceded it in the same billing cycle. Deductions without allocations are orphaned transactions — flag immediately and investigate.
+
+Rule 3: Every credit allocation must have either a Stripe payment reference or a documented system event reference. Allocations without references are unauthorized and must be flagged.
+
+Rule 4: Ledger balance integrity check runs on every balance read:
+calculated_balance = SUM(all allocation transactions) minus SUM(all standard deductions)
+For SOFT_CAP tiers in overage: overage_balance = absolute value of negative balance, overage_dollars = overage_balance x 0.01
+If calculated_balance does not match stored balance: log critical error immediately, alert platform_staff, lock credit deductions until discrepancy is resolved, never display incorrect balance to org_owner
+
+Rule 5: Credits widget summary total must always equal sum of itemized usage breakdown. If these two numbers differ the widget is reading from two different sources — Single Source of Truth violation. Fix the data source. Never adjust the display to match.
+
+Rule 6: Race condition prevention on all credit deductions. Credit check and deduction must be a single atomic database transaction. Two simultaneous requests against the same org balance must be serialized using database row-level locking on the credit ledger record for the org.
+
+---
+
+PART 7 — VERIFICATION TESTS — RUN AFTER ALL FIXES
+
+TEST 1 — Free Trial Hard Cap at 500 credits:
+Set test org to free_trial with 10 credits remaining
+Attempt action costing 300 credits
+Expected: hard block, zero credits deducted, zero action executed, upgrade prompt surfaces
+Verify in ledger: no deduction entry created
+
+TEST 2 — Starter Hard Cap with Credits Pack purchase:
+Set test org to starter with 0 credits
+Attempt AI scheduling generation at 300 credits
+Expected: hard block, purchase prompt showing $59 for 5000 credits
+Simulate Stripe payment_intent.succeeded webhook
+Expected: 5000 credits allocated with Stripe reference in ledger
+Attempt scheduling generation again
+Expected: executes, 300 credits deducted, 4700 remaining
+Verify ledger: allocation entry plus deduction entry both present, math correct, summary equals itemized
+
+TEST 3 — Professional Soft Cap Overage Mode:
+Set test org to professional with 0 monthly credits and 0 purchased credits
+Attempt payroll analysis at 400 credits
+Expected: action executes, overage_flag true on ledger entry, overage accumulator shows 400 credits at $4.00, org_owner notification fires BILLING ALERT type, Org Operations Briefing Channel post fires, Resend email fires
+Run 3 more actions consuming 600 more overage credits
+Verify accumulator shows 1000 credits at $10.00
+Simulate Stripe subscription renewal webhook
+Verify: Stripe invoice item created for $10.00, overage payment ledger entry created with Stripe reference, accumulator resets to zero, new 10000 credit allocation created
+
+TEST 4 — Enterprise Soft Cap:
+Same as Test 3 but verify 22000 allocation and same overage behavior
+
+TEST 5 — Seat Overage Billing:
+Set Starter org to 20 active employees — 5 over base of 15
+Simulate billing cycle end
+Verify: Stripe invoice item created for $50.00 (5 seats x $10)
+Verify: seat billing event logged in audit trail
+
+TEST 6 — Double-Charge Elimination:
+Trigger schedule generation on Professional org
+Verify: exactly ONE credit deduction fires at 300 credits
+Verify: NO separate scheduling_session_fee deduction fires
+Verify: ledger shows single entry for schedule_generation only
+
+TEST 7 — Race Condition Prevention:
+Simultaneously trigger two 300-credit actions on Starter org with 400 credits
+Expected: one action succeeds (300 deducted, 100 remaining), second action hard blocks (insufficient credits)
+Verify: total deducted is exactly 300 not 600
+Verify: balance is exactly 100 not negative
+
+TEST 8 — Ledger Math Verification:
+Sum all allocation transactions for Acme Enterprise test workspace
+Subtract sum of all deduction transactions
+Verify result equals displayed current balance exactly
+Any discrepancy — investigate source before proceeding
+
+TEST 9 — Warning Thresholds:
+Set Professional org to 2500 credits (25% of 10000)
+Verify: WARNING notification fires to org_owner
+Set to 1000 credits (10% of 10000)
+Verify: URGENT notification fires
+Set to 0
+Verify: overage mode notification fires with accumulator visible
+
+TEST 10 — Stripe Product Parity:
+Pull all CoAIleague products from Stripe API
+Compare each product price and metadata against canonical tier definitions above
+Any mismatch is a bug — document and fix each one
+
+---
+
+PART 8 — ACME SANDBOX RE-SEED FOR REALISTIC TESTING
+
+Current Acme data is stress-test scale — 500+ shifts simulating Allied Universal or Securitas national operations. This makes normal credit usage look broken when the math is actually fine for real customer traffic. Re-seed with three realistic profiles:
+
+acme_starter_test workspace:
+15 employees, 1 manager, 1 org_owner
+60 shifts per month across 1 client site
+Realistic monthly credit burn: 1500-2000 credits
+Expected: 5000 allocation has comfortable headroom
+
+acme_professional_test workspace:
+40 employees, 3 managers, 1 org_owner
+250 shifts per month across 5 client sites
+Realistic monthly credit burn: 4000-6000 credits
+Expected: 10000 allocation covers normal ops, occasional overage on busy months
+
+acme_enterprise_test workspace:
+175 employees, 8 managers, 1 org_owner
+800 shifts per month across 20 client sites
+Realistic monthly credit burn: 10000-16000 credits
+Expected: 22000 allocation covers most months, large operations may hit overage — correctly monetized at $0.01/credit
+
+After re-seeding run all 10 verification tests against appropriate workspace. Document credit burn per profile as the baseline for ongoing monitoring.
+
+---
+
+SUCCESS CRITERIA — CREDIT AND BILLING SYSTEM PRODUCTION READY
+
+Do not mark this system production ready until every item below is confirmed:
+
+LEDGER:
+Ledger balance always equals sum of allocations minus sum of deductions
+Summary total always equals itemized breakdown total — zero discrepancy
+Every allocation has a Stripe reference or documented system event
+Every deduction has a corresponding allocation in same cycle
+No corrupted seed entries without void flags
+Append-only enforced — no edits, no deletes
+
+HARD CAP — Free Trial and Starter:
+Zero credits equals complete block on all credit-gated actions
+Race condition prevents simultaneous overdraft
+Balance never goes below zero under any circumstance
+Purchase prompt surfaces correctly for Starter
+Upgrade prompt surfaces correctly for Trial
+
+SOFT CAP — Professional and Enterprise:
+Zero credits equals overage mode NOT a block
+Every overage deduction flagged in ledger with overage_flag true
+Overage accumulator shows correct real-time dollar cost
+End of cycle overage charge fires via Stripe webhook
+Failed overage charge triggers retry, platform_staff alert, hard cap fallback
+
+CREDITS PACK:
+Price: exactly $59
+Credits: exactly 5000 per pack
+Purchase requires Stripe webhook confirmation — never client-side trust
+Purchased credits carry forward month to month
+Consumed after monthly allocation
+
+SEAT BILLING:
+Starter: $10/seat/month above 15 — fires end of cycle via Stripe
+Professional: $8/seat/month above 50 — fires end of cycle
+Enterprise: $15/seat/month all seats — fires end of cycle
+Deactivated accounts excluded from seat count
+
+STRIPE:
+All products exist in test and production with correct prices and metadata
+All webhook event types handled with signature verification
+Idempotency enforced — same event twice creates zero duplicate records
+Failed payment handling complete for all payment types
+
+NOTIFICATIONS:
+All threshold warnings fire at correct percentage-based levels
+All three channels fire simultaneously — notification panel, briefing channel, email
+Overage mode notification fires on first overage transaction of cycle
+
+ACME SANDBOX:
+Re-seeded with three realistic tier-appropriate profiles
+Credit burn per profile verified against expected ranges
+All 10 verification tests passing on appropriate workspace
+
+CoAIleague cannot go live with a single gap in this system. Every credit consumed must have a corresponding payment or allocation. Every payment must have a corresponding ledger entry with Stripe reference. This is how CoAIleague makes money. Get it right completely.

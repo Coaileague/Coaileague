@@ -5,6 +5,8 @@
  */
 
 import crypto from 'crypto';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('idempotencyService');
 
 export interface IdempotencyResult<T = any> {
   isNew: boolean;
@@ -201,7 +203,7 @@ class IdempotencyService {
     }
 
     if (deleted > 0) {
-      console.log(`[IdempotencyService] Cleaned up ${deleted} expired keys`);
+      log.info(`[IdempotencyService] Cleaned up ${deleted} expired keys`);
     }
     return { deleted };
   }
@@ -238,18 +240,14 @@ class IdempotencyService {
   }
 
   private evictOldest(): void {
-    let oldestKey: string | null = null;
-    let oldestTime = Infinity;
-
+    const evictCount = Math.max(1, Math.floor(this.cache.size * 0.1));
+    const entries: { key: string; createdAt: number }[] = [];
     for (const [key, value] of this.cache.entries()) {
-      if (value.createdAt < oldestTime) {
-        oldestTime = value.createdAt;
-        oldestKey = key;
-      }
+      entries.push({ key, createdAt: value.createdAt });
     }
-
-    if (oldestKey) {
-      this.cache.delete(oldestKey);
+    entries.sort((a, b) => a.createdAt - b.createdAt);
+    for (let i = 0; i < Math.min(evictCount, entries.length); i++) {
+      this.cache.delete(entries[i].key);
     }
   }
 
@@ -318,7 +316,7 @@ export function registerIdempotencyActions(helpaiOrchestrator: any): void {
     name: 'Get Idempotency Stats',
     description: 'Get statistics about idempotency keys in the system',
     category: 'system',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async () => {
       const stats = idempotencyService.getStats();
       return {
@@ -334,7 +332,7 @@ export function registerIdempotencyActions(helpaiOrchestrator: any): void {
     name: 'Cleanup Expired Idempotency Keys',
     description: 'Remove expired idempotency keys from the cache',
     category: 'system',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async () => {
       const result = idempotencyService.cleanupExpired();
       return {
@@ -350,7 +348,7 @@ export function registerIdempotencyActions(helpaiOrchestrator: any): void {
     name: 'Force Retry Operation',
     description: 'Delete an idempotency key to allow operation retry',
     category: 'system',
-    requiredRoles: ['admin', 'super_admin'],
+    requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
     handler: async (request: any) => {
       const { key } = request.payload || {};
       if (!key) {
@@ -364,5 +362,5 @@ export function registerIdempotencyActions(helpaiOrchestrator: any): void {
     },
   });
 
-  console.log('[IdempotencyService] Registered 3 AI Brain actions');
+  log.info('[IdempotencyService] Registered 3 AI Brain actions');
 }

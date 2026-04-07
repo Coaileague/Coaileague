@@ -13,6 +13,8 @@
 
 import { WebSocket } from 'ws';
 import { TTLCache } from './cacheUtils';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('sessionSyncService');
 
 export type SyncEventType = 
   | 'data_sync'
@@ -68,7 +70,7 @@ class SessionSyncService {
 
   constructor() {
     this.eventHistory = new TTLCache<string, SyncEvent[]>(60 * 5);
-    console.log('[SessionSync] Service initialized');
+    log.info('[SessionSync] Service initialized');
   }
 
   registerConnection(
@@ -116,7 +118,7 @@ class SessionSyncService {
       this.workspaceUsers.get(deviceInfo.workspaceId)!.add(userId);
     }
 
-    console.log(`[SessionSync] User ${userId} connected from ${deviceType} (session: ${sessionId})`);
+    log.info(`[SessionSync] User ${userId} connected from ${deviceType} (session: ${sessionId})`);
     
     this.broadcastToUser(userId, {
       type: 'connection_status',
@@ -151,7 +153,7 @@ class SessionSyncService {
       this.userConnections.delete(userId);
     }
 
-    console.log(`[SessionSync] User ${userId} disconnected (session: ${sessionId})`);
+    log.info(`[SessionSync] User ${userId} disconnected (session: ${sessionId})`);
     
     if (this.onDisconnectCallback && workspaceId) {
       this.onDisconnectCallback(userId, workspaceId, sessionId);
@@ -186,7 +188,7 @@ class SessionSyncService {
           conn.ws.send(message);
           sent++;
         } catch (err) {
-          console.warn(`[SessionSync] Failed to send to ${userId}/${sid}:`, err);
+          log.warn(`[SessionSync] Failed to send to ${userId}/${sid}:`, err);
         }
       }
     }
@@ -206,7 +208,7 @@ class SessionSyncService {
       totalSent += this.broadcastToUser(userId, { ...event, workspaceId });
     }
 
-    console.log(`[SessionSync] Workspace ${workspaceId} broadcast: ${totalSent} clients`);
+    log.info(`[SessionSync] Workspace ${workspaceId} broadcast: ${totalSent} clients`);
     return totalSent;
   }
 
@@ -246,7 +248,7 @@ class SessionSyncService {
       resource: 'shift',
       resourceId: shiftId,
       data,
-      queryKeys: ['/api/shifts', '/api/schedule', '/api/calendar'],
+      queryKeys: ['/api/shifts', '/api/schedules', '/api/calendar'],
       timestamp: new Date().toISOString(),
     });
   }
@@ -278,7 +280,7 @@ class SessionSyncService {
       action,
       resource: 'payroll',
       resourceId: payrollId,
-      queryKeys: ['/api/payroll', '/api/payroll-runs'],
+      queryKeys: ['/api/finance/payroll', '/api/finance/payroll/runs'],
       timestamp: new Date().toISOString(),
     });
   }
@@ -293,7 +295,7 @@ class SessionSyncService {
       action: 'update',
       resource: 'timesheet',
       resourceId: timesheetId,
-      queryKeys: ['/api/timesheets', '/api/time-entries'],
+      queryKeys: ['/api/hr/timesheets', '/api/hr/time-entries'],
       timestamp: new Date().toISOString(),
     });
 
@@ -302,7 +304,7 @@ class SessionSyncService {
       action: 'update',
       resource: 'timesheet',
       resourceId: timesheetId,
-      queryKeys: ['/api/timesheets/pending'],
+      queryKeys: ['/api/hr/timesheets/pending'],
       timestamp: new Date().toISOString(),
     });
 
@@ -425,7 +427,7 @@ class SessionSyncService {
     }
 
     if (cleaned > 0) {
-      console.log(`[SessionSync] Cleaned up ${cleaned} stale connections`);
+      log.info(`[SessionSync] Cleaned up ${cleaned} stale connections`);
     }
     return cleaned;
   }

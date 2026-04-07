@@ -17,12 +17,13 @@ import {
   automationActionLedger,
   platformAwarenessEvents,
   knowledgeGapLogs,
-  publicNotifications,
   aiSubagentDefinitions,
 } from '@shared/schema';
 import { trinityMemoryService } from './trinityMemoryService';
 import { trinitySelfAssessment } from './trinitySelfAssessment';
 import { geminiClient } from './providers/geminiClient';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('trinityScanOrchestrator');
 
 // ============================================================================
 // TYPES
@@ -102,11 +103,11 @@ class TrinityScanOrchestrator {
     const startTime = Date.now();
     const scanId = `scan_${Date.now()}`;
 
-    console.log('[TrinityScanOrchestrator] Starting initial platform scan...');
+    log.info('[TrinityScanOrchestrator] Starting initial platform scan...');
 
     try {
       // Get baseline readiness
-      const baselineAssessment = await trinitySelfAssessment.performFullAssessment();
+      const baselineAssessment = await trinitySelfAssessment.performAssessment();
       const readinessBefore = baselineAssessment.overallReadiness;
 
       // Phase 1: Scan platform awareness events
@@ -136,7 +137,7 @@ class TrinityScanOrchestrator {
       await this.persistToMemory(knowledgeNodes, insights);
 
       // Get updated readiness
-      const updatedAssessment = await trinitySelfAssessment.performFullAssessment();
+      const updatedAssessment = await trinitySelfAssessment.performAssessment();
       const readinessAfter = updatedAssessment.overallReadiness;
 
       const duration = Date.now() - startTime;
@@ -159,7 +160,7 @@ class TrinityScanOrchestrator {
       };
 
       this.lastScanResult = result;
-      console.log(`[TrinityScanOrchestrator] Scan complete: ${result.summary}`);
+      log.info(`[TrinityScanOrchestrator] Scan complete: ${result.summary}`);
 
       return result;
     } finally {
@@ -180,11 +181,11 @@ class TrinityScanOrchestrator {
 
       const uniquePages = new Set(recentEvents.map(e => e.source || 'unknown')).size;
 
-      console.log(`[TrinityScanOrchestrator] Scanned ${recentEvents.length} platform events from ${uniquePages} sources`);
+      log.info(`[TrinityScanOrchestrator] Scanned ${recentEvents.length} platform events from ${uniquePages} sources`);
 
       return { events: recentEvents, uniquePages };
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error scanning platform events:', error);
+      log.error('[TrinityScanOrchestrator] Error scanning platform events:', error);
       return { events: [], uniquePages: 0 };
     }
   }
@@ -228,11 +229,11 @@ class TrinityScanOrchestrator {
         }
       }
 
-      console.log(`[TrinityScanOrchestrator] Analyzed ${telemetry.length} telemetry records`);
+      log.info(`[TrinityScanOrchestrator] Analyzed ${telemetry.length} telemetry records`);
 
       return { records: telemetry };
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error analyzing telemetry:', error);
+      log.error('[TrinityScanOrchestrator] Error analyzing telemetry:', error);
       return { records: [] };
     }
   }
@@ -245,7 +246,7 @@ class TrinityScanOrchestrator {
       const actions = await db
         .select()
         .from(automationActionLedger)
-        .orderBy(desc(automationActionLedger.executedAt))
+        .orderBy(desc(automationActionLedger.createdAt))
         .limit(500);
 
       // Analyze automation patterns
@@ -269,11 +270,11 @@ class TrinityScanOrchestrator {
         }
       }
 
-      console.log(`[TrinityScanOrchestrator] Processed ${actions.length} automation actions`);
+      log.info(`[TrinityScanOrchestrator] Processed ${actions.length} automation actions`);
 
       return { actions };
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error processing automation history:', error);
+      log.error('[TrinityScanOrchestrator] Error processing automation history:', error);
       return { actions: [] };
     }
   }
@@ -316,11 +317,11 @@ class TrinityScanOrchestrator {
         this.knowledgeRegistry.set(pattern.patternId, pattern);
       }
 
-      console.log(`[TrinityScanOrchestrator] Detected ${errorPatterns.length} error patterns from ${gaps.length} gaps`);
+      log.info(`[TrinityScanOrchestrator] Detected ${errorPatterns.length} error patterns from ${gaps.length} gaps`);
 
       return errorPatterns;
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error detecting patterns:', error);
+      log.error('[TrinityScanOrchestrator] Error detecting patterns:', error);
       return [];
     }
   }
@@ -372,7 +373,7 @@ class TrinityScanOrchestrator {
       }
     }
 
-    console.log(`[TrinityScanOrchestrator] Built ${nodes.length} knowledge nodes`);
+    log.info(`[TrinityScanOrchestrator] Built ${nodes.length} knowledge nodes`);
 
     return nodes;
   }
@@ -399,14 +400,16 @@ Generate concise, actionable insights about:
 
 Format as a JSON array of strings. Example: ["insight 1", "insight 2"]`;
 
-      const response = await geminiClient.generateContent(prompt, {
-        model: 'gemini-2.0-flash',
+      const response = await geminiClient.generateContent(prompt, { // withGemini
         temperature: 0.7,
-        maxOutputTokens: 500,
+        maxTokens: 500,
+        workspaceId: 'platform-system',
+        featureKey: 'trinity_scan_orchestration',
       });
 
       try {
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        const responseText = response?.text || '';
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           return JSON.parse(jsonMatch[0]);
         }
@@ -421,7 +424,7 @@ Format as a JSON array of strings. Example: ["insight 1", "insight 2"]`;
         `Platform awareness baseline established`,
       ];
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error generating insights:', error);
+      log.error('[TrinityScanOrchestrator] Error generating insights:', error);
       return ['Initial platform scan completed'];
     }
   }
@@ -433,9 +436,10 @@ Format as a JSON array of strings. Example: ["insight 1", "insight 2"]`;
     try {
       // Broadcast insights to memory service
       for (const insight of insights) {
-        await trinityMemoryService.recordSharedInsight({
+        await trinityMemoryService.shareInsight({
           sourceAgent: 'trinity',
           insightType: 'pattern',
+          workspaceScope: null,
           title: 'Platform Scan Insight',
           content: insight,
           confidence: 0.8,
@@ -443,9 +447,9 @@ Format as a JSON array of strings. Example: ["insight 1", "insight 2"]`;
         });
       }
 
-      console.log(`[TrinityScanOrchestrator] Persisted ${insights.length} insights to memory`);
+      log.info(`[TrinityScanOrchestrator] Persisted ${insights.length} insights to memory`);
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error persisting to memory:', error);
+      log.error('[TrinityScanOrchestrator] Error persisting to memory:', error);
     }
   }
 
@@ -484,7 +488,7 @@ Format as a JSON array of strings. Example: ["insight 1", "insight 2"]`;
         .from(platformAwarenessEvents);
 
       // Get readiness from self-assessment
-      const assessment = await trinitySelfAssessment.performFullAssessment();
+      const assessment = await trinitySelfAssessment.performAssessment();
 
       // Get domain knowledge levels
       const domainLevels = assessment.capabilities.map(cap => ({
@@ -506,7 +510,7 @@ Format as a JSON array of strings. Example: ["insight 1", "insight 2"]`;
         knowledgePersisted: true,
       };
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error getting knowledge state:', error);
+      log.error('[TrinityScanOrchestrator] Error getting knowledge state:', error);
       return {
         totalKnowledgeNodes: 0,
         totalPatternsLearned: 0,
@@ -577,7 +581,7 @@ Format as a JSON array of strings. Example: ["insight 1", "insight 2"]`;
 
       return { passed: allPassed, checks };
     } catch (error) {
-      console.error('[TrinityScanOrchestrator] Error testing persistence:', error);
+      log.error('[TrinityScanOrchestrator] Error testing persistence:', error);
       checks.push({
         name: 'Database Connection',
         passed: false,

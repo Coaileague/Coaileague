@@ -7,17 +7,20 @@
  */
 
 import { db } from '../../db';
-import { 
-  idempotencyKeys, 
-  employeeRateHistory, 
-  workspaceRateHistory, 
-  clientRateHistory,
+import {
+  idempotencyKeys,
+  employeeRateHistory,
+  workspaceRateHistory,
   employees,
   workspaces,
   clients
 } from '../../../shared/schema';
 import { eq, and, isNull, lte, or, gte, sql } from 'drizzle-orm';
 import crypto from 'crypto';
+import { typedQuery } from '../../lib/typedSql';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('autonomyHelpers');
+
 
 // ============================================================================
 // IDEMPOTENCY HELPERS
@@ -71,7 +74,8 @@ export async function executeIdempotencyCheck(params: IdempotencyParams): Promis
   const fingerprint = generateFingerprint(requestData);
   const inflightToken = crypto.randomBytes(16).toString('hex');
 
-  const result = await db.execute(sql`
+  // CATEGORY C — Raw SQL retained: WITH upsert AS ( | Tables: idempotency_keys, SET | Verified: 2026-03-23
+  const result = await typedQuery(sql`
     WITH upsert AS (
       INSERT INTO idempotency_keys (
         workspace_id,
@@ -144,17 +148,17 @@ export async function executeIdempotencyCheck(params: IdempotencyParams): Promis
     SELECT * FROM upsert
   `);
 
-  if (!result.rows || result.rows.length === 0) {
+  if (!result || (result as any[]).length === 0) {
     throw new Error('[IDEMPOTENCY] No rows returned from atomic upsert');
   }
 
-  const row = result.rows[0] as any;
+  const row = (result as any[])[0] as any;
   const isNew = row.is_fresh_insert || row.is_resurrected;
 
   if (isNew) {
     const logPrefix = row.is_fresh_insert ? 'New' : 'Resurrected expired';
-    console.log(`[IDEMPOTENCY] ${logPrefix} ${operationType} (v${row.status_version}) for workspace ${workspaceId}`);
-    console.log(`[IDEMPOTENCY] Key: ${row.id}, Token: ${row.inflight_token}`);
+    log.info(`[IDEMPOTENCY] ${logPrefix} ${operationType} (v${row.status_version}) for workspace ${workspaceId}`);
+    log.info(`[IDEMPOTENCY] Key: ${row.id}, Token: ${row.inflight_token}`);
     
     return {
       isNew: true,
@@ -162,8 +166,8 @@ export async function executeIdempotencyCheck(params: IdempotencyParams): Promis
     };
   }
 
-  console.log(`[IDEMPOTENCY] Duplicate ${operationType} detected (v${row.status_version}) for workspace ${workspaceId}`);
-  console.log(`[IDEMPOTENCY] Status: ${row.status}, ResultId: ${row.result_id}`);
+  log.info(`[IDEMPOTENCY] Duplicate ${operationType} detected (v${row.status_version}) for workspace ${workspaceId}`);
+  log.info(`[IDEMPOTENCY] Status: ${row.status}, ResultId: ${row.result_id}`);
   
   return {
     isNew: false,
@@ -190,12 +194,12 @@ export async function checkIdempotency(params: IdempotencyParams): Promise<Idemp
         error.code === '55P03';   // lock_not_available
 
       if (!isRetryable || attempt === maxAttempts) {
-        console.error(`[IDEMPOTENCY] Fatal error on attempt ${attempt}/${maxAttempts}: ${error.message}`);
+        log.error(`[IDEMPOTENCY] Fatal error on attempt ${attempt}/${maxAttempts}: ${(error instanceof Error ? error.message : String(error))}`);
         throw error;
       }
 
       const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
-      console.warn(`[IDEMPOTENCY] Retryable error on attempt ${attempt}/${maxAttempts}, retrying in ${delayMs}ms: ${error.message}`);
+      log.warn(`[IDEMPOTENCY] Retryable error on attempt ${attempt}/${maxAttempts}, retrying in ${delayMs}ms: ${(error instanceof Error ? error.message : String(error))}`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
@@ -217,7 +221,7 @@ export async function checkIdempotency(params: IdempotencyParams): Promise<Idemp
 export async function updateIdempotencyResult(
   params: {
     idempotencyKeyId: string;
-    status: 'completed' | 'failed';
+    status: 'completed' | 'failed' | 'pending_approval';
     resultId?: number | string;
     resultMetadata?: Record<string, any>;
     errorMessage?: string;
@@ -257,10 +261,10 @@ export async function updateIdempotencyResult(
     .where(eq(idempotencyKeys.id, idempotencyKeyId));
 
   if (status === 'completed') {
-    console.log(`[IDEMPOTENCY] Operation completed${tx ? ' (atomic)' : ''}: ${idempotencyKeyId} → ${resultId || 'no result'}`);
+    log.info(`[IDEMPOTENCY] Operation completed${tx ? ' (atomic)' : ''}: ${idempotencyKeyId} → ${resultId || 'no result'}`);
   } else {
-    console.log(`[IDEMPOTENCY] Operation failed: ${idempotencyKeyId}`);
-    console.error(`[IDEMPOTENCY] Error: ${errorMessage}`);
+    log.info(`[IDEMPOTENCY] Operation failed: ${idempotencyKeyId}`);
+    log.error(`[IDEMPOTENCY] Error: ${errorMessage}`);
   }
 }
 
@@ -306,7 +310,7 @@ export async function cleanupExpiredIdempotencyKeys(): Promise<number> {
     .where(lte(idempotencyKeys.expiresAt, new Date()))
     .returning();
 
-  console.log(`[IDEMPOTENCY] Cleaned up ${result.length} expired keys`);
+  log.info(`[IDEMPOTENCY] Cleaned up ${result.length} expired keys`);
   return result.length;
 }
 
@@ -553,8 +557,8 @@ export async function createEmployeeRateVersion(params: {
     })
     .returning();
 
-  console.log(`[RATE VERSION] Employee ${employeeId} rate changed: $${newRate}/hr (effective ${effectiveFrom.toISOString()})`);
-  console.log(`[RATE VERSION] Changed by: ${changedBy}, reason: ${changeReason}`);
+  log.info(`[RATE VERSION] Employee ${employeeId} rate changed: $${newRate}/hr (effective ${effectiveFrom.toISOString()})`);
+  log.info(`[RATE VERSION] Changed by: ${changedBy}, reason: ${changeReason}`);
 
   return newVersion.id;
 }
@@ -599,8 +603,8 @@ export async function createWorkspaceRateVersion(params: {
     })
     .returning();
 
-  console.log(`[RATE VERSION] Workspace ${workspaceId} rates changed (effective ${effectiveFrom.toISOString()})`);
-  console.log(`[RATE VERSION] Billable: $${defaultBillableRate}/hr, Payroll: $${defaultHourlyRate}/hr`);
+  log.info(`[RATE VERSION] Workspace ${workspaceId} rates changed (effective ${effectiveFrom.toISOString()})`);
+  log.info(`[RATE VERSION] Billable: $${defaultBillableRate}/hr, Payroll: $${defaultHourlyRate}/hr`);
 
   return newVersion.id;
 }

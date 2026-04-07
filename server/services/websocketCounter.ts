@@ -5,6 +5,9 @@
  */
 
 import type { WebSocket } from 'ws';
+import { createLogger } from '../lib/logger';
+const log = createLogger('websocketCounter');
+
 
 interface ActiveConnection {
   id: string;
@@ -39,7 +42,7 @@ class WebSocketConnectionCounter {
     };
 
     this.connections.set(connectionId, connection);
-    console.log(`[WS Counter] Connection registered: ${connectionId} (Total: ${this.connections.size})`);
+    log.info(`[WS Counter] Connection registered: ${connectionId} (Total: ${this.connections.size})`);
 
     // Set up automatic cleanup after 5 minutes of inactivity
     this.setInactivityTimer(connectionId);
@@ -68,7 +71,7 @@ class WebSocketConnectionCounter {
   unregisterConnection(connectionId: string): void {
     const connection = this.connections.get(connectionId);
     if (connection) {
-      console.log(
+      log.info(
         `[WS Counter] Connection closed: ${connectionId} (Duration: ${
           Date.now() - connection.connectedAt.getTime()
         }ms, Messages: ${connection.messageCount})`
@@ -82,7 +85,7 @@ class WebSocketConnectionCounter {
       this.connectionTimers.delete(connectionId);
     }
 
-    console.log(`[WS Counter] Active connections: ${this.connections.size}`);
+    log.info(`[WS Counter] Active connections: ${this.connections.size}`);
   }
 
   /**
@@ -158,7 +161,7 @@ class WebSocketConnectionCounter {
       if (connection) {
         const inactivityTime = Date.now() - connection.lastActivity.getTime();
         if (inactivityTime > 5 * 60 * 1000) { // 5 minutes
-          console.log(`[WS Counter] Cleaning up stale connection: ${connectionId} (Inactive: ${inactivityTime}ms)`);
+          log.info(`[WS Counter] Cleaning up stale connection: ${connectionId} (Inactive: ${inactivityTime}ms)`);
           this.unregisterConnection(connectionId);
         }
       }
@@ -174,19 +177,12 @@ class WebSocketConnectionCounter {
     this.connections.clear();
     this.connectionTimers.forEach(timeout => clearTimeout(timeout));
     this.connectionTimers.clear();
-    console.log(`[WS Counter] All connections cleaned up`);
+    log.info(`[WS Counter] All connections cleaned up`);
   }
 }
 
 // Export singleton instance
 export const wsCounter = new WebSocketConnectionCounter();
-
-/**
- * Helper function for health checks (replaces hardcoded placeholder)
- */
-export function getActiveConnectionCount(): number {
-  return wsCounter.getActiveConnectionCount();
-}
 
 /**
  * Get connection statistics

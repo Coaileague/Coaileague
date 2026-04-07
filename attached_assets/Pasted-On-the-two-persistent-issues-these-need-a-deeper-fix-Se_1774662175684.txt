@@ -1,0 +1,63 @@
+On the two persistent issues — these need a deeper fix. Send this to the agent:
+
+PERSISTENT BUG SPRINT — Notifications and ChatDock Auth (Final Fix)
+These two issues have been partially addressed multiple times but are still broken. This time do a complete root cause trace before writing a single line of code.
+
+ISSUE 1 — Notifications still not clearing
+Before touching anything run this exact diagnostic sequence:
+bash# Step 1 — What does the clear-all endpoint actually do right now?
+grep -n "clear-all\|clearAll\|DELETE" server/routes/notifications.ts | head -20
+
+# Step 2 — What does the client call?
+grep -n "clearAll\|clear-all\|invalidateQueries" client/src/components/notifications-popover.tsx | head -20
+
+# Step 3 — What query keys are being invalidated after clear?
+grep -n "invalidateQueries\|queryClient" client/src/components/notifications-popover.tsx
+
+# Step 4 — What does the unread count endpoint return after a clear?
+grep -n "unread-count\|unreadCount" server/routes/notifications.ts | head -20
+Show the output of all 4 greps before writing any code. Then answer:
+
+Does the server DELETE or just SET clearedAt?
+Does the client invalidate the correct query keys after the mutation resolves?
+Is there a stale query cache returning the old data after the server confirms deletion?
+Is the unread count badge using a different query key than what gets invalidated?
+
+Fix must address all of these. After fixing run a manual test: open the notifications panel, verify items show, click clear all, verify items disappear immediately, refresh the page, verify items are still gone. Document each step with evidence.
+
+ISSUE 2 — ChatDock stuck on connecting / auth failures
+Run this exact diagnostic first:
+bash# Step 1 — What does the WS auth flow look like right now?
+grep -n "ws_authenticate\|ws_authenticated\|ws_auth_required\|serverAuth" server/websocket.ts | head -30
+
+# Step 2 — What does the client send on connect?
+grep -n "ws_authenticate\|wsToken\|sendAuth" client/src/providers/WebSocketProvider.tsx | head -20
+
+# Step 3 — What does the chatroom hook do on connect?
+grep -n "sendJoin\|join_conversation\|ws_authenticated\|ws_auth_required" client/src/hooks/use-chatroom-websocket.ts | head -30
+
+# Step 4 — Is the /api/auth/ws-token endpoint working?
+grep -n "ws-token\|wsToken" server/routes/authCoreRoutes.ts | head -10
+Show all 4 outputs. Then answer:
+
+When the user loads ChatDock is the WS already authenticated from the main app connection?
+Is ChatDock using a separate WebSocket connection or the shared bus?
+Is setError(null) from the prior fix actually clearing the error before it renders?
+Is the ws_auth_required retry loop completing successfully or timing out?
+
+The fix must result in ChatDock showing messages within 3 seconds of the page loading with zero auth error flashes. Test by navigating to ChatDock on a fresh page load and verifying it connects cleanly.
+
+VERIFICATION — both issues must pass before closing:
+
+Check 1: Notifications clear immediately on "Clear All" click — items disappear from UI
+Check 2: After page refresh cleared notifications do not reappear
+Check 3: Individual notification dismiss removes item permanently
+Check 4: Unread badge count drops to zero after clear all
+Check 5: ChatDock connects within 3 seconds of page load
+Check 6: Zero auth error flashes in ChatDock on page load
+Check 7: ChatDock shows existing messages immediately on connect
+Check 8: DM sending works without reconnection required
+Check 9: 56/56 tests still green
+Check 10: TypeScript zero errors
+
+Do not mark these fixed until all 10 checks pass with manual test evidence.

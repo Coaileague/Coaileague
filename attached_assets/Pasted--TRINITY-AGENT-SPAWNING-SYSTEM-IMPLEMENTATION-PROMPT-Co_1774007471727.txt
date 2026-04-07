@@ -1,0 +1,564 @@
+```
+TRINITY AGENT SPAWNING SYSTEM — IMPLEMENTATION PROMPT
+CoAIleague Platform | Additive Architecture Only
+
+═══════════════════════════════════════════════════════════════
+PHASE 0 — PRE-IMPLEMENTATION SCAN (Run First, Build Nothing Yet)
+═══════════════════════════════════════════════════════════════
+
+Before writing a single line of code, perform a full codebase scan:
+
+1. Locate and read the existing Trinity orchestration layer — 
+   identify the exact file(s), function names, and action dispatch 
+   mechanism currently in use
+
+2. Locate the existing Trinity Action Registry — read every 
+   registered action, note the current total count, confirm 
+   structure/naming convention used
+
+3. Locate HelpAI — read its current role, how it receives tasks 
+   from Trinity, and how it returns results
+
+4. Locate ChatDock — read thread creation patterns and message 
+   routing so agent communication uses the same pattern
+
+5. Locate the existing Drizzle schema file(s) — read all table 
+   names, column patterns, and index conventions currently in use
+
+6. Locate the existing notification system — read how Trinity 
+   currently sends platform notifications to management
+
+7. Locate the existing RBAC role definitions — read all role 
+   names and permission patterns
+
+8. Locate the Resend email integration — read how it is currently 
+   called so agent notifications use the same pattern
+
+9. Document findings in a scan report before proceeding:
+   - Trinity orchestration: [file path, dispatch function name]
+   - Action Registry: [file path, current action count, structure]
+   - HelpAI: [file path, interface pattern]
+   - ChatDock: [file path, thread creation pattern]
+   - Drizzle schema: [file path(s)]
+   - Notification system: [file path, call pattern]
+   - RBAC roles: [file path, role names]
+   - Resend: [file path, call pattern]
+
+DO NOT PROCEED until scan is complete and documented.
+If any of the above cannot be located, STOP and report 
+what is missing before building anything.
+
+═══════════════════════════════════════════════════════════════
+PHASE 1 — DATABASE SCHEMA (Additive Only)
+═══════════════════════════════════════════════════════════════
+
+Add the following tables to the EXISTING Drizzle schema file.
+Do not create a new schema file. Do not modify existing tables.
+Follow all existing naming conventions exactly as found in scan.
+
+Table: agent_registry
+- id (uuid, primary key)
+- workspace_id (uuid, foreign key → workspaces.id, indexed)
+- agent_key (text, unique per workspace) 
+  — canonical slug: 'compliance_agent' | 'schedule_agent' | 
+    'finance_agent' | 'legal_agent' | 'hiring_agent' | 
+    'incident_agent' | 'audit_agent'
+- agent_name (text) — human readable display name
+- domain (text) — domain of expertise
+- system_prompt (text) — full domain-scoped system prompt 
+  Trinity injects when spawning this agent
+- input_schema (jsonb) — defines expected input payload shape
+- output_schema (jsonb) — defines required return payload shape
+- completion_criteria (jsonb) — defines what score threshold 
+  constitutes acceptable work (default 75)
+- is_default (boolean) — true for platform-seeded agents
+- is_active (boolean, default true)
+- created_at, updated_at
+
+Table: agent_tasks
+- id (uuid, primary key)
+- workspace_id (uuid, foreign key → workspaces.id, indexed)
+- agent_key (text) — references agent_registry.agent_key
+- spawned_by (text, default 'trinity') 
+  — who initiated: 'trinity' | 'helpai' | 'management'
+- task_type (text) — human readable task label
+- status (enum): 
+  pending | in_progress | complete | failed | re_tasked | escalated
+- input_payload (jsonb) — scoped data Trinity passed to agent
+- output_payload (jsonb, nullable) — structured return from agent
+- completion_score (integer, nullable) — 0-100
+- confidence_level (integer, nullable) — 0-100
+- flags (jsonb, nullable) — anomalies or issues detected by agent
+- trinity_evaluation (text, nullable) 
+  — Trinity's written assessment of the returned payload
+- evaluation_result (enum): 
+  approved | denied | escalated_to_helpai | escalated_to_management
+- retry_count (integer, default 0)
+- max_retries (integer, default 2)
+- related_entity_type (text, nullable) 
+  — what this task is about: 'applicant' | 'employee' | 
+    'incident' | 'invoice' | 'schedule' | 'document' | 'audit'
+- related_entity_id (uuid, nullable) — id of that entity
+- spawned_at (timestamp)
+- completed_at (timestamp, nullable)
+- evaluated_at (timestamp, nullable)
+
+Table: agent_task_logs
+- id (uuid, primary key)
+- agent_task_id (uuid, foreign key → agent_tasks.id, indexed)
+- workspace_id (uuid, indexed)
+- log_type (enum): spawn | progress | return | evaluation | retry | escalation | resolution
+- message (text)
+- metadata (jsonb, nullable)
+- logged_at (timestamp)
+
+After adding tables:
+- Run Drizzle migration
+- Verify migration completes without errors
+- Confirm all foreign keys and indexes are applied
+- Report table creation success before proceeding to Phase 2
+
+═══════════════════════════════════════════════════════════════
+PHASE 2 — AGENT REGISTRY SEED DATA
+═══════════════════════════════════════════════════════════════
+
+Seed the following default agents into agent_registry 
+with is_default = true. These are platform-level defaults 
+available to all workspaces. Seed in the existing seed file 
+or migration — do not create a separate seed runner.
+
+Seed these 7 agents:
+
+1. agent_key: 'compliance_agent'
+   agent_name: 'Compliance Agent'
+   domain: 'Regulatory compliance, document review, post order 
+   verification, licensing requirements'
+   completion_criteria: { min_score: 78 }
+   system_prompt: 'You are a compliance specialist for private 
+   security operations. You review documents, contracts, post 
+   orders, and employee records against applicable regulatory 
+   requirements. You return structured findings with specific 
+   violation citations, severity ratings (critical/major/minor), 
+   and remediation recommendations. You do not approve or deny — 
+   you analyze and report. Your output must match the defined 
+   output schema exactly.'
+
+2. agent_key: 'schedule_agent'
+   agent_name: 'Schedule Agent'
+   domain: 'Shift coverage optimization, scheduling logic, 
+   gap analysis, headcount forecasting'
+   completion_criteria: { min_score: 75 }
+   system_prompt: 'You are a scheduling optimization specialist 
+   for security operations. You analyze shift requirements, 
+   available personnel, certifications, and coverage gaps. You 
+   return an optimized coverage proposal with confidence score, 
+   identified conflicts, and alternative options if primary 
+   proposal has risk. Your output must match the defined output 
+   schema exactly.'
+
+3. agent_key: 'finance_agent'
+   agent_name: 'Finance Agent'
+   domain: 'Invoice processing, payroll reconciliation, 
+   billing discrepancy analysis, hours verification'
+   completion_criteria: { min_score: 80 }
+   system_prompt: 'You are a financial reconciliation specialist 
+   for security company operations. You process invoice data, 
+   verify hours worked against schedule records, identify billing 
+   discrepancies, and return reconciled payloads ready for 
+   approval. You flag any mathematical inconsistencies, missing 
+   data, or anomalies. Your output must match the defined output 
+   schema exactly.'
+
+4. agent_key: 'legal_agent'
+   agent_name: 'Legal Agent'
+   domain: 'Incident liability assessment, use-of-force 
+   documentation review, risk exposure analysis'
+   completion_criteria: { min_score: 80 }
+   system_prompt: 'You are a legal risk assessment specialist 
+   for private security operations. You review incident reports, 
+   use-of-force documentation, and related records to assess 
+   liability exposure. You return a structured risk assessment 
+   with severity classification, documentation gaps, and 
+   recommended protective actions. You do not provide legal 
+   advice — you provide structured risk data for management 
+   review. Your output must match the defined output schema 
+   exactly.'
+
+5. agent_key: 'hiring_agent'
+   agent_name: 'Hiring Agent'
+   domain: 'Applicant scoring, interview evaluation, 
+   liability assessment for new hires'
+   completion_criteria: { min_score: 75 }
+   system_prompt: 'You are a hiring evaluation specialist for 
+   security company staffing. You score interview transcripts, 
+   evaluate applicant responses against role requirements, assess 
+   liability indicators, and produce structured applicant 
+   summaries for management review. You apply consistent scoring 
+   criteria across all applicants. Your output must match the 
+   defined output schema exactly.'
+
+6. agent_key: 'incident_agent'
+   agent_name: 'Incident Agent'
+   domain: 'Incident report processing, timeline extraction, 
+   severity classification, structured documentation'
+   completion_criteria: { min_score: 75 }
+   system_prompt: 'You are an incident documentation specialist 
+   for security operations. You process raw incident reports and 
+   extract structured data: parties involved, precise timeline, 
+   actions taken, witnesses, property involved, severity 
+   classification, and required follow-up actions. You return a 
+   clean structured payload ready for Trinity to file or escalate. 
+   Your output must match the defined output schema exactly.'
+
+7. agent_key: 'audit_agent'
+   agent_name: 'Audit Agent'
+   domain: 'Systematic workspace audits, record gap analysis, 
+   compliance coverage verification'
+   completion_criteria: { min_score: 78 }
+   system_prompt: 'You are a systematic audit specialist for 
+   security company operations. You perform structured reviews 
+   across defined scopes — employee records, billing cycles, 
+   client documentation, scheduling coverage — and return gap 
+   analysis reports with severity ratings and prioritized 
+   remediation lists. Your output must match the defined output 
+   schema exactly.'
+
+═══════════════════════════════════════════════════════════════
+PHASE 3 — TRINITY AGENT SPAWNING ENGINE
+═══════════════════════════════════════════════════════════════
+
+Create ONE new file: lib/trinity/agent-spawner.ts
+(or match the exact directory and naming convention found 
+in the scan for Trinity's orchestration layer)
+
+This file contains the complete spawn/recall/evaluate cycle.
+Do not split across multiple files unless existing patterns 
+require it.
+
+Export the following functions:
+
+─────────────────────────────────────────────
+function spawnAgent(params: {
+  workspaceId: string
+  agentKey: string
+  taskType: string
+  inputPayload: Record<string, unknown>
+  relatedEntityType?: string
+  relatedEntityId?: string
+  spawnedBy?: string
+}): Promise<AgentTask>
+─────────────────────────────────────────────
+Logic:
+1. Look up agent from agent_registry by workspaceId + agentKey
+   — if not found, throw error and log to agent_task_logs
+2. Create agent_tasks record with status = 'pending'
+3. Log spawn event to agent_task_logs
+4. Build the scoped API call:
+   - System prompt = agent.system_prompt
+   - User message = JSON.stringify(inputPayload) with instruction 
+     to return ONLY valid JSON matching the output_schema, 
+     no preamble, no markdown
+5. Call the AI completion (use the same AI client already used 
+   in Trinity's existing orchestration — do not introduce a 
+   new client or new model)
+6. Parse the response — strip any markdown fences if present
+7. Validate response matches output_schema structure 
+   — if invalid, mark task failed, log error, return task
+8. Update agent_tasks: 
+   status = 'complete', output_payload = parsed response, 
+   completed_at = now
+9. Log return event to agent_task_logs
+10. Immediately call evaluateAgentPayload(task.id)
+11. Return updated task record
+
+─────────────────────────────────────────────
+function evaluateAgentPayload(
+  taskId: string
+): Promise<AgentTask>
+─────────────────────────────────────────────
+Logic:
+1. Fetch agent_tasks record by taskId with related agent_registry
+2. Extract completion_score from output_payload 
+   (agent is required to self-report score in output schema)
+3. Extract confidence_level from output_payload
+4. Extract flags array from output_payload
+5. Compare completion_score against agent.completion_criteria.min_score
+
+   IF score >= min_score AND no critical flags:
+   - evaluation_result = 'approved'
+   - Log approval to agent_task_logs
+   - Call notifyTrinityApproval(task) to return payload 
+     to Trinity's main orchestration thread
+
+   IF score >= min_score BUT critical flags present:
+   - evaluation_result = 'escalated_to_helpai'
+   - Pass payload to HelpAI for secondary evaluation 
+     using existing HelpAI interface pattern found in scan
+   - Log escalation to agent_task_logs
+
+   IF score < min_score AND retry_count < max_retries:
+   - Increment retry_count
+   - status = 're_tasked'
+   - Log retry to agent_task_logs
+   - Call spawnAgent again with same params 
+     (agent re-tasks automatically)
+
+   IF score < min_score AND retry_count >= max_retries:
+   - evaluation_result = 'escalated_to_management'
+   - Send platform notification to workspace management 
+     using existing notification pattern found in scan:
+     "Trinity was unable to complete [task_type] automatically. 
+     Manual review required. [View Task]"
+   - Log escalation to agent_task_logs
+
+6. Write trinity_evaluation: short plain-English summary 
+   of what the agent returned and why it was approved/denied
+7. evaluated_at = now
+8. Return updated task record
+
+─────────────────────────────────────────────
+function spawnParallelAgents(params: {
+  workspaceId: string
+  tasks: Array<{
+    agentKey: string
+    taskType: string
+    inputPayload: Record<string, unknown>
+    relatedEntityType?: string
+    relatedEntityId?: string
+  }>
+  spawnedBy?: string
+}): Promise<AgentTask[]>
+─────────────────────────────────────────────
+Logic:
+1. Run all spawnAgent calls via Promise.all (true parallel)
+2. Return array of all completed and evaluated task records
+3. Log parallel spawn event noting how many agents were spawned
+
+─────────────────────────────────────────────
+function notifyTrinityApproval(task: AgentTask): void
+─────────────────────────────────────────────
+Logic:
+1. This function is called when a payload is approved
+2. It emits an internal event or calls back into Trinity's 
+   orchestration dispatch with:
+   - task.agent_key
+   - task.output_payload
+   - task.related_entity_type
+   - task.related_entity_id
+3. Trinity's orchestration layer receives it and continues 
+   its main flow with the approved payload
+4. Use whatever event/callback pattern already exists in 
+   Trinity's orchestration — do not introduce new patterns
+
+═══════════════════════════════════════════════════════════════
+PHASE 4 — REGISTER TRINITY ACTIONS
+═══════════════════════════════════════════════════════════════
+
+Add the following actions to the EXISTING Trinity Action Registry.
+Do not create a new registry. Follow exact naming and structure 
+conventions found in Phase 0 scan.
+
+Actions to register:
+
+SPAWN_AGENT
+- Description: Spawns a single domain-specialized agent for a task
+- Handler: spawnAgent() from agent-spawner.ts
+- Inputs: workspaceId, agentKey, taskType, inputPayload, 
+  relatedEntityType, relatedEntityId
+
+SPAWN_PARALLEL_AGENTS  
+- Description: Spawns multiple agents simultaneously for 
+  complex multi-domain tasks
+- Handler: spawnParallelAgents() from agent-spawner.ts
+- Inputs: workspaceId, tasks array
+
+EVALUATE_AGENT_PAYLOAD
+- Description: Trinity evaluates a returned agent payload 
+  against completion criteria
+- Handler: evaluateAgentPayload() from agent-spawner.ts
+- Inputs: taskId
+
+ESCALATE_TO_HELPAI
+- Description: Passes a borderline agent payload to HelpAI 
+  for secondary evaluation
+- Handler: routes to existing HelpAI interface
+- Inputs: taskId, context
+
+RETASK_AGENT
+- Description: Re-spawns an agent that returned below threshold
+- Handler: spawnAgent() with retry flag
+- Inputs: original taskId
+
+After registering:
+- Count total actions in registry
+- Confirm total remains below 300
+- Report new total
+
+═══════════════════════════════════════════════════════════════
+PHASE 5 — HELPAI INTEGRATION UPDATE
+═══════════════════════════════════════════════════════════════
+
+Update HelpAI's existing logic (do not rewrite, only add):
+
+Add a handler for receiving escalated agent payloads:
+
+function handleEscalatedPayload(params: {
+  taskId: string
+  agentKey: string
+  outputPayload: Record<string, unknown>
+  completionScore: number
+  flags: unknown[]
+}): Promise<HelpAIEvaluation>
+
+Logic:
+1. HelpAI reviews the payload independently
+2. Returns: { verdict: 'approve' | 'deny' | 'escalate_to_management', 
+   reasoning: string, adjusted_score: number }
+3. If approve → call notifyTrinityApproval with the task
+4. If deny → re-task the agent (if retries remain) or escalate
+5. If escalate_to_management → send management notification
+6. Log all decisions to agent_task_logs
+
+This makes HelpAI the QA layer between agent output and 
+management escalation — reducing noise to management by 
+catching borderline cases before they become human tickets.
+
+═══════════════════════════════════════════════════════════════
+PHASE 6 — MANAGEMENT DASHBOARD — AGENT MONITOR
+═══════════════════════════════════════════════════════════════
+
+Add a new tab to the existing management dashboard called 
+"Agent Activity" — do not create a new route, add it to 
+the existing dashboard tab structure.
+
+Route: existing management dashboard + /agent-activity tab
+
+Display:
+
+Active Tasks panel:
+- Lists all agent_tasks with status: pending | in_progress | 
+  re_tasked for this workspace
+- Shows: agent name, task type, status, retry count, 
+  spawned time, related entity
+- Auto-refreshes every 30 seconds
+
+Recent Completions panel:
+- Lists last 20 agent_tasks with status: complete | escalated 
+  for this workspace
+- Shows: agent name, task type, completion score, 
+  evaluation result badge, completed time
+- Clicking a row expands full detail:
+  * Input payload summary
+  * Output payload summary  
+  * Trinity evaluation text
+  * Full log timeline from agent_task_logs
+  * Flags detected (if any)
+
+Escalations panel:
+- Lists all tasks with evaluation_result: 
+  escalated_to_management that need human decision
+- Shows action buttons: Approve Manually | Dismiss | 
+  Re-task Agent
+- Badge count on the tab label shows pending escalations
+
+Agent Registry panel (Admin/Owner only):
+- Lists all agents in agent_registry for this workspace
+- Shows: agent name, domain, completion threshold, 
+  active/inactive toggle
+- Owners can adjust completion_criteria thresholds per agent
+- Owners can deactivate agents they don't want Trinity using
+
+═══════════════════════════════════════════════════════════════
+PHASE 7 — CONNECT HIRING MODULE
+═══════════════════════════════════════════════════════════════
+
+Update the Hiring Module built previously to route through 
+the agent spawning system properly:
+
+When Trinity needs to verify a license screenshot:
+→ SPAWN_AGENT with agentKey: 'hiring_agent', 
+  taskType: 'license_verification'
+
+When Trinity needs to score a completed interview:
+→ SPAWN_AGENT with agentKey: 'hiring_agent', 
+  taskType: 'interview_scoring'
+
+When Trinity needs a full applicant assessment (post-interview):
+→ SPAWN_PARALLEL_AGENTS with both:
+  - hiring_agent: taskType 'applicant_summary'
+  - legal_agent: taskType 'hire_liability_assessment'
+  Both run simultaneously. Trinity synthesizes both 
+  approved payloads before producing final recommendation.
+
+This replaces any direct inline scoring logic in the hiring 
+module with proper agent delegation — cleaning up the 
+architecture and ensuring consistency.
+
+═══════════════════════════════════════════════════════════════
+PHASE 8 — FULL DEBUG SWEEP (Run 3 Times)
+═══════════════════════════════════════════════════════════════
+
+After all phases are complete, run the following debug sweep 
+THREE full times sequentially. Do not stop after one pass.
+Each pass must be clean before moving to the next.
+
+SWEEP 1 — STRUCTURAL INTEGRITY
+□ All new tables exist and migrations ran clean
+□ All foreign keys present and indexed
+□ All seed data inserted correctly
+□ agent-spawner.ts exports all 4 functions without type errors
+□ No TypeScript errors in any new or modified file
+□ All new Trinity actions registered and counted
+□ Action registry total confirmed below 300
+□ HelpAI handler added without breaking existing HelpAI logic
+□ No duplicate function names across codebase
+□ No orphaned imports or unused variables introduced
+
+SWEEP 2 — LOGIC AND FLOW INTEGRITY
+□ spawnAgent correctly reads agent from registry before calling AI
+□ evaluateAgentPayload correctly branches on all 4 outcomes
+□ Retry logic increments correctly and stops at max_retries
+□ Parallel spawn uses Promise.all not sequential await
+□ notifyTrinityApproval connects back to Trinity orchestration 
+  using existing dispatch pattern — not a new one
+□ HelpAI escalation path is reachable and returns correctly
+□ Management escalation sends notification via existing 
+  notification system — not a new one
+□ Hiring module agent calls correctly replace inline logic
+□ All agent_task_logs entries fire at correct lifecycle points
+□ No circular dependencies introduced between Trinity, 
+  HelpAI, and agent-spawner
+
+SWEEP 3 — INTEGRATION AND MULTI-TENANT INTEGRITY
+□ workspace_id is present and filtered on every DB query 
+  in the new system — no cross-workspace data leakage possible
+□ Agent registry lookup scopes to workspace_id correctly
+□ Agent Activity dashboard only shows tasks for current workspace
+□ Escalation notifications only fire to correct workspace management
+□ RBAC permissions applied correctly on dashboard tab:
+  Owner/Admin: full access including registry panel
+  Manager: active tasks, completions, escalations — no registry
+  Supervisor: read-only completions — no escalations panel
+  Guard: no access
+□ All new API routes (if any) have auth middleware applied
+□ No hardcoded workspace IDs, user IDs, or environment values
+
+After all 3 sweeps complete with zero issues:
+Output a final implementation report listing:
+- All files created or modified
+- All tables added
+- All Trinity actions registered (with new total)
+- All seed agents inserted
+- Any assumptions made during implementation
+- Any items flagged for future review
+
+DO NOT mark implementation complete until all 3 sweeps 
+pass without any outstanding issues.
+═══════════════════════════════════════════════════════════════
+END OF PROMPT
+═══════════════════════════════════════════════════════════════
+```
+
+---
+
+That prompt is airtight. Phase 0 forces Replit to understand what already exists before touching anything. The 3-sweep debug at the end catches structural issues first, then logic flow, then multi-tenant integrity — in the right order so each layer builds on a clean foundation beneath it. Paste it straight in.

@@ -1,0 +1,609 @@
+Good question. Let me think through everything systematically based on the full build. Here is what I know needs attention beyond the canonical audit:
+
+---
+
+**CATEGORY 1 — ACME SEED DATA COMPLETENESS**
+
+The ACME sandbox needs rich, realistic, persistent data across every feature built. Right now it likely has minimal seed data from early phases with nothing seeded for the 35-series features. Send this as a dedicated seed data sprint:
+
+---
+
+**ACME SANDBOX — COMPREHENSIVE SEED DATA SPRINT**
+
+Seed ACME Security workspace with complete realistic data covering every feature. All seed data must be idempotent — safe to run multiple times without creating duplicates. All data must persist across server restarts. Use `ON CONFLICT DO NOTHING` or existence checks on every insert.
+
+**Workspace_id for all ACME data: use the existing ACME workspace ID from the database.**
+
+---
+
+**OFFICERS — 15 officers with complete profiles:**
+
+```sql
+-- Mix of statuses, positions, license types
+-- 8 active commissioned officers
+-- 2 active non-commissioned officers  
+-- 2 pending onboarding (incomplete tasks — visible in onboarding manager)
+-- 1 suspended (visible in lifecycle management)
+-- 1 terminated with grace period active (can see pay stubs only)
+-- 2 armed, 13 unarmed
+-- All with: full name, DOB, address, SSN last 4, hire date, pay rate
+-- All active officers with: guard card number, license expiry, DPS license number
+-- License expiry distribution: 
+--   2 expiring in 30 days (triggers alert)
+--   2 expiring in 60 days
+--   11 valid through next year
+-- All with emergency contacts
+-- All with profile photos (placeholder URL)
+-- 5 officers with perfect attendance (recognition candidates)
+-- 3 officers with calloff history (analytics data)
+-- 2 officers with disciplinary records
+```
+
+**CLIENTS — 8 clients with complete setup:**
+
+```sql
+-- Client 1: Coyote Crossing Saloon — active, bar/entertainment, 1 post, armed officer required
+-- Client 2: Riverside Warehouse — active, industrial, 2 posts, gate duty enabled
+-- Client 3: Tech Campus Corp — active, corporate, 3 posts, visitor management enabled
+-- Client 4: Downtown Construction LLC — active, construction, 1 post, gate duty + vehicle logs
+-- Client 5: Meadow Heights Apartments — active, residential, 2 posts
+-- Client 6: San Antonio Medical Center — active, medical, 1 post, lone worker safety enabled
+-- Client 7: Pending Prospect Inc — proposal sent stage in sales pipeline
+-- Client 8: Old Client Corp — offboarded 90 days ago, data retained
+-- All active clients with: contract signed, portal provisioned, billing active
+-- All with rate tables, post configurations, GPS geofences
+-- All with at least 3 months of invoice history
+```
+
+**SHIFTS — 3 months of scheduling history:**
+
+```sql
+-- 90 days of completed shifts across all active posts
+-- Mix of: completed, calloff, no-show, short-staffed
+-- Current week: full schedule for all posts
+-- Next 2 weeks: schedule visible in calendar
+-- At least 5 open shifts in current week (marketplace visible)
+-- 3 pending shift trade requests
+-- 2 approved time-off requests blocking scheduling
+-- Officer availability preferences set for 8 officers
+-- Calloff history: realistic distribution for analytics
+```
+
+**PAYROLL — 6 completed payroll runs:**
+
+```sql
+-- 3 months of biweekly payroll runs
+-- Each run with: all active officers, correct hours, OT where applicable
+-- 2 officers with garnishments applied
+-- All with generated pay stubs accessible to each officer
+-- Payroll run statuses: 4 completed, 1 approved pending payment, 1 draft
+-- YTD totals visible in analytics
+```
+
+**INVOICES — 25 invoices in various states:**
+
+```sql
+-- 8 paid invoices (revenue history for analytics)
+-- 5 pending/sent (outstanding revenue visible)
+-- 3 overdue (triggers in analytics)
+-- 2 disputed (dispute workflow visible)
+-- 2 void (audit trail visible)
+-- 5 draft (ready to send)
+-- All with line items, subtotals, correct client assignment
+-- Payment history on paid invoices
+```
+
+**DOCUMENTS — Complete document vault:**
+
+```sql
+-- All 15 officers with complete onboarding document packages:
+--   Offer letter (signed by both parties)
+--   Employee file checklist (verified)
+--   Handbook acknowledgment (signed)
+--   Drug-free policy (signed)
+--   W-4 (completed)
+--   I-9 (both sections complete)
+--   Direct deposit authorization (completed)
+--   Guard card photo (front and back — placeholder URLs)
+--   DL/ID photo (front and back — placeholder URLs)
+-- 2 pending officers: documents partially complete (shows incomplete onboarding)
+-- 5 officers with TCOLE certificates
+-- 3 officers with firearms qualification documents
+-- All post orders generated for each active client post
+-- 3 signed client service contracts
+```
+
+**COMPLIANCE — Realistic compliance history:**
+
+```sql
+-- 5 closed violations (remediated — good compliance score)
+-- 2 active violations (pending remediation — shows in dashboard)
+-- 1 citation from SRA audit (shows enforcement workflow)
+-- 3 months of compliance reports generated
+-- All officers with compliance status in knowledge base
+-- 2 officers with expiring licenses in alert window
+```
+
+**INCIDENTS — 10 incident reports:**
+
+```sql
+-- 3 at Coyote Crossing (bar fights, typical security incidents)
+-- 2 at Riverside Warehouse (theft attempt, unauthorized entry)
+-- 2 at Tech Campus (suspicious person, access violation)
+-- 1 at Downtown Construction (injury report)
+-- 2 closed/resolved, 8 under review or open
+-- All with: officer name, post, description, severity, resolution status
+-- 3 linked to an incident case (shows case management)
+```
+
+**SALES PIPELINE — Full pipeline with data at every stage:**
+
+```sql
+-- Lead at Captured: new inquiry from email
+-- Lead at Qualified: scored 78/100, assigned to manager
+-- Lead at Outreach Active: 2 emails sent, 1 response received
+-- Lead at Proposal Sent: proposal generated, awaiting signature
+-- Lead at Proposal Approved: contract being generated
+-- Lead at Contract Executed: client onboarding triggered
+-- Lead at Onboarded: completed — this is Tech Campus Corp above
+-- 2 Lost leads: with reason (price too high, went with competitor)
+-- Email threads visible for outreach active leads
+-- Activity timeline populated for each lead
+```
+
+**GUARD TOURS — Active patrol data:**
+
+```sql
+-- Patrol routes configured for Riverside Warehouse and Tech Campus
+-- 4 checkpoints per route with GPS coordinates
+-- 3 completed tours this week (all checkpoints scanned)
+-- 1 incomplete tour (2 missed checkpoints — shows alert)
+-- QR codes generated for each checkpoint
+-- Tour history showing completion rates
+```
+
+**GATE DUTY — Vehicle and personnel logs:**
+
+```sql
+-- Downtown Construction: 15 vehicle entries/exits today
+-- Riverside Warehouse: 8 vehicle entries/exits today
+-- 3 personnel entries/exits
+-- 1 flagged vehicle (triggered trespass check alert)
+-- Shift reports compiled for yesterday
+-- One daily report sent to client
+```
+
+**DAILY ACTIVITY REPORTS:**
+
+```sql
+-- 14 days of DARs for each active post
+-- Mix of: submitted, reviewed, sent to client
+-- Varied conditions: normal, safety hazard noted, special visitor
+-- Client delivery log showing batch sends
+```
+
+**WELLNESS CHECKS:**
+
+```sql
+-- San Antonio Medical Center: lone worker monitoring enabled, 30-min intervals
+-- 3 days of check-in history: all confirmed safe
+-- 1 missed check-in from 2 days ago (escalation log visible)
+-- 2 officer wellness configs active
+```
+
+**VISITOR MANAGEMENT:**
+
+```sql
+-- Tech Campus: 8 visitors logged today
+-- 3 pre-registered visitors for tomorrow
+-- 1 overstay alert from yesterday (resolved)
+-- Visitor badge numbers sequential
+-- Complete visitor log for last 7 days
+```
+
+**TRESPASS REGISTRY:**
+
+```sql
+-- 3 active trespass notices (Coyote Crossing)
+-- 2 flagged plates (Riverside Warehouse)
+-- 1 trespass check match from yesterday (alert fired, logged)
+-- 1 incident case linking 3 related incidents
+```
+
+**EQUIPMENT:**
+
+```sql
+-- 25 inventory items: 15 uniforms (various sizes), 8 radios, 2 handcuff sets
+-- All active officers have uniform assigned
+-- 5 radio assignments active
+-- 1 item reported lost (deduction record created)
+-- 2 items returned damaged (condition notes)
+-- Equipment return checklist for terminated officer
+```
+
+**TRAINING:**
+
+```sql
+-- 3 completed training sessions this month
+-- 1 upcoming session next week (officers registered)
+-- TCOLE hours accumulated: 8 officers above 40 hours, 3 below (alerts visible)
+-- 2 third-party provider records
+-- Training certificates generated for completed sessions
+-- Annual requirement: 40 hours — compliance dashboard shows distribution
+```
+
+**SURVEYS:**
+
+```sql
+-- 3 completed client satisfaction surveys
+-- NPS scores: 9, 7, 4 (the 4 triggers churn signal alert)
+-- 2 surveys sent awaiting response
+-- NPS trend chart has 3 months of data
+-- 1 churn risk alert acknowledged
+```
+
+**RECOGNITION:**
+
+```sql
+-- 5 approved recognition awards displayed on recognition wall
+-- 2 pending nominations awaiting org_owner approval
+-- 3 milestone anniversaries in next 30 days (visible in tracker)
+-- Trinity suggestion panel has 3 proactive recommendations
+-- 2 client commendations in pipeline
+```
+
+**SITE SURVEYS:**
+
+```sql
+-- 2 completed site surveys (for Riverside Warehouse and Downtown Construction)
+-- Each with 4-6 zones, photos, risk assessments
+-- 1 survey in progress (assigned, not complete)
+-- Completed surveys linked to sales leads
+-- PDF reports generated for completed surveys
+```
+
+**INSURANCE:**
+
+```sql
+-- General liability: $2M coverage, expires in 45 days (amber alert visible)
+-- Workers compensation: active, expires in 8 months
+-- Professional liability: active
+-- Crime/fidelity bond: active
+-- 1 policy expired (shows in coverage gap)
+-- Certificate of insurance request generated for Tech Campus
+```
+
+**ANALYTICS — 3 months of snapshot data:**
+
+```sql
+-- analytics_daily_snapshots: 90 days populated
+-- analytics_client_health_scores: all 6 active clients scored
+-- analytics_scheduled_reports: weekly report configured
+-- Financial tab: revenue trend, client breakdown, overdue aging visible
+-- Workforce tab: calloff rates, OT trends, retention metrics populated
+-- Clients tab: health scores, churn risk visible
+-- Operations tab: real-time data flowing
+```
+
+**SRA AUDIT — 1 completed audit, 1 active:**
+
+```sql
+-- 1 completed audit: Tech Campus Corp, closed 60 days ago
+-- 5 findings: 3 observations (closed), 1 violation (remediated), 1 commendation
+-- Compliance rating: 87%
+-- Evidence package PDF generated
+-- 1 active audit: Riverside Warehouse, 15 days remaining
+-- 2 open findings: 1 observation, 1 citation (deadline in 10 days)
+-- Company response submitted on citation
+```
+
+**TRINITY ACTIVITY:**
+
+```sql
+-- 50 Trinity action log entries across all action types
+-- Mix of: scheduling decisions, compliance checks, notifications sent
+-- 3 pending approvals in Trinity Activity Center awaiting org_owner action
+-- Trinity thought bar has recent activity
+-- Confidence indicators showing on recent responses
+```
+
+**BUSINESS EXPENSES AND FINANCIALS:**
+
+```sql
+-- 3 months of expense records:
+--   Monthly office rent: $1,200
+--   Insurance premiums: $450/month
+--   Vehicle fuel: varies
+--   Equipment purchases: 2 entries
+--   Software subscriptions: $299 (CoAIleague)
+-- Profit and Loss report shows data
+-- Expense by vendor report populated
+-- Payroll summary report has 6 runs of data
+```
+
+**NOTIFICATIONS — Active notification history:**
+
+```sql
+-- 25 notifications in the notification center (mix of read/unread)
+-- Types: license expiry, shift assignment, calloff, invoice generated, compliance alert
+-- 5 unread (badge count shows 5)
+-- Clear all works and badge resets to 0
+-- NDS delivery records for last 30 days
+```
+
+---
+
+**CRITICAL PERSISTENCE REQUIREMENTS:**
+
+Every seed record must:
+1. Use `INSERT ... ON CONFLICT DO NOTHING` — safe to re-run
+2. Use realistic names, dates, and values — not "test data 1, test data 2"
+3. Have correct foreign key relationships — no orphaned records
+4. Have correct enum values matching current schema definitions
+5. Have correct workspace_id on every record
+6. Be queryable and visible in the UI immediately after seeding
+7. NOT be wiped on server restart — persists in PostgreSQL
+
+---
+
+**SEED EXECUTION:**
+
+Create `server/scripts/seedAcmeComplete.ts`:
+- Single idempotent script that seeds all of the above
+- Runs in correct dependency order (workspace → users → employees → clients → shifts → invoices etc)
+- Logs each category as it seeds: "Seeding officers... done (15 records)"
+- Can be triggered via: `POST /api/admin/seed/acme` (platform_staff only, dev environment only)
+- Reports total records seeded on completion
+
+After seeding verify:
+```bash
+# Spot check key tables
+SELECT COUNT(*) FROM employees WHERE workspace_id = '[ACME_WORKSPACE_ID]';
+SELECT COUNT(*) FROM invoices WHERE workspace_id = '[ACME_WORKSPACE_ID]';
+SELECT COUNT(*) FROM shifts WHERE workspace_id = '[ACME_WORKSPACE_ID]';
+SELECT COUNT(*) FROM analytics_daily_snapshots WHERE workspace_id = '[ACME_WORKSPACE_ID]';
+```
+
+---
+
+**CATEGORY 2 — TRINITY AUTOMATION VISIBILITY**
+
+Trinity automations must be visibly firing in the dev sandbox. Add these to make Trinity's work visible:
+
+```bash
+# Verify Trinity proactive monitor is running
+grep -rn "proactiveMonitor\|proactive.*scan\|trinityScheduledScan" server/ --include="*.ts" | head -10
+
+# Verify Trinity is processing inbound emails
+grep -rn "inboundOpportunityAgent\|processInboundEmail" server/ --include="*.ts" | head -10
+
+# Verify Trinity is generating insights for ACME data
+# Trigger manually: POST /api/ai-brain/trigger-scan (platform_staff only)
+# Should generate 3-5 insights visible in TrinityInsightBar on dashboard
+```
+
+Add a `POST /api/admin/trinity/trigger-demo-actions` endpoint (dev only) that:
+- Triggers Trinity to analyze ACME officer data and generate 3 scheduling insights
+- Triggers Trinity to check ACME license expiries and generate alerts
+- Triggers Trinity to score all ACME sales leads
+- Triggers Trinity to check ACME client health scores
+- Shows all results in the Trinity Activity Center at `/trinity-activity`
+
+---
+
+**CATEGORY 3 — DOCUMENT GENERATION VERIFICATION**
+
+Every document type must actually generate and be viewable:
+
+```bash
+# Test each document type generates correctly
+POST /api/documents/generate { templateId: 'offer_letter', officerId: '[ACME_OFFICER_ID]' }
+POST /api/documents/generate { templateId: 'w4', officerId: '[ACME_OFFICER_ID]' }
+POST /api/documents/generate { templateId: 'handbook_acknowledgment', officerId: '[ACME_OFFICER_ID]' }
+POST /api/gate/shift-report/compile { shiftId: '[ACME_SHIFT_ID]' }
+POST /api/dars/:id/pdf
+POST /api/reports/profit-loss { period: 'monthly', month: '2026-02' }
+POST /api/reports/payroll-summary { period: '2026-Q1' }
+```
+
+Verify each returns a valid PDF URL that opens in the document viewer. Verify SHA-256 hashes are generated. Verify documents appear in the document vault.
+
+---
+
+**CATEGORY 4 — EMAIL AND SMS DELIVERY VERIFICATION (Dev Mode)**
+
+In development all emails and SMS should be logged visibly without actually sending:
+
+```bash
+# Verify dev email logging
+grep -rn "DEV.*email\|email.*DEV\|log.*email\|email.*log.*dev" server/ --include="*.ts" | head -10
+
+# Verify Resend is in test mode or logging only in dev
+grep -rn "RESEND_API_KEY\|resend.*test\|test.*resend" server/ --include="*.ts" | head -10
+```
+
+Add a `GET /api/admin/email-log` endpoint (dev only, platform_staff) that shows the last 50 emails that would have been sent — to address, subject, template used, timestamp. This lets you verify email flows work without actually sending.
+
+---
+
+**CATEGORY 5 — STRIPE TEST MODE VERIFICATION**
+
+```bash
+# Confirm Stripe is in test mode
+grep -rn "STRIPE_SECRET_KEY\|sk_test\|sk_live" server/ --include="*.ts" | grep -v node_modules | head -5
+# Should show sk_test prefix — never sk_live in dev
+
+# Verify test webhook events can be triggered
+grep -rn "stripe.*webhook\|webhook.*stripe" server/ --include="*.ts" | head -10
+
+# ACME workspace should have a Stripe test subscription
+SELECT stripe_subscription_id, subscription_status, tier FROM workspaces WHERE name ILIKE '%acme%';
+```
+
+---
+
+**CATEGORY 6 — QUICKBOOKS SANDBOX VERIFICATION**
+
+```bash
+# Confirm QB is connected to sandbox (not production)
+grep -rn "quickbooks.*sandbox\|sandbox.*quickbooks\|QBO_ENVIRONMENT" server/ --include="*.ts" | head -5
+
+# Verify ACME has QB sandbox connection seeded
+SELECT * FROM quickbooks_connections WHERE workspace_id = '[ACME_WORKSPACE_ID]';
+
+# Trigger a sync to verify it works
+POST /api/quickbooks/sync/trigger
+```
+
+---
+
+**CATEGORY 7 — REAL-TIME WEBSOCKET VERIFICATION**
+
+Open the platform in two browser tabs and verify:
+- Clock in an ACME officer in Tab 1 → schedule updates in Tab 2 without refresh
+- Create a shift in Tab 1 → schedule shows it in Tab 2 immediately
+- Send a DockChat message in Tab 1 → appears in Tab 2 in real-time
+- Fire a Trinity action in Tab 1 → Trinity Activity Bar updates in Tab 2
+
+```bash
+# Verify WebSocket broadcast functions are called on key mutations
+grep -rn "broadcastToWorkspace\|wsBroadcast" server/routes/ --include="*.ts" | wc -l
+# Should be significant number — every mutation that affects other users should broadcast
+```
+
+---
+
+**CATEGORY 8 — CRON JOB VISIBILITY**
+
+Add a `GET /api/admin/cron-status` endpoint (platform_staff only) showing:
+- All registered cron jobs with their schedule
+- Last execution time for each
+- Last execution status (success/error)
+- Next scheduled execution time
+
+This lets you verify cron jobs are actually registered and firing without waiting for them to fire naturally.
+
+```bash
+# Verify all expected cron jobs are registered
+grep -rn "cron\.schedule\|scheduleJob\|registerCron" server/ --include="*.ts" | grep -v node_modules | sort
+# Expected jobs:
+# - NDS retry: every 15 minutes
+# - Analytics snapshot: 2 AM daily
+# - License expiry alerts: daily
+# - Holiday population: December 1st
+# - Retention sweep: 3 AM daily
+# - Officer expiry purge: 4:30 AM daily
+# - DAR daily batch: end of shift
+# - Gate duty daily report: 6 AM
+# - Wellness check intervals: per-post configuration
+# - Monthly Trinity cycle scan
+# - Bounced email monitoring: every 6 hours
+```
+
+---
+
+**CATEGORY 9 — PLAID AND BANK CONNECTION (Dev Mode)**
+
+Since Plaid requires real bank credentials build the manual expense entry fallback properly:
+
+```bash
+# Verify manual expense entry works
+POST /api/financial/expenses { category: 'rent', vendor: 'Office Landlord LLC', amount: 1200, date: '2026-03-01' }
+GET /api/financial/expenses?workspace_id=[ACME_ID]
+
+# Seed 3 months of expenses for ACME so reports show data
+# Rent: $1,200/month x 3
+# Insurance: $450/month x 3  
+# Equipment: $340 one-time
+# Software: $299/month x 3 (CoAIleague subscription)
+# Fuel: $120, $98, $145 (monthly varies)
+```
+
+Verify P&L report shows correct Net Operating Income using seeded revenue and expense data.
+
+---
+
+**CATEGORY 10 — MISSING FEATURES THAT NEED VERIFICATION**
+
+These features were built in the 35-series but may not be fully wired end-to-end:
+
+```bash
+# Shift trading: does accepting a trade actually reassign the shift atomically?
+# Test: Officer A requests trade for Shift X → Officer B accepts → Manager approves
+# Verify: Shift X now assigned to Officer B, Officer A's shift removed
+grep -rn "atomicShiftTrade\|SELECT FOR UPDATE.*shift" server/ --include="*.ts" | head -5
+
+# Client sign-off on work orders: does it actually trigger invoice?
+# Test: Complete work order → Client signs → Invoice generated automatically
+grep -rn "clientSignoff.*invoice\|invoice.*clientSignoff" server/ --include="*.ts" | head -5
+
+# Survey response without auth: can a client actually complete a survey via token?
+# Test: Send survey to client → Access /api/surveys/respond/:token without auth → Submit
+grep -rn "token.*survey\|survey.*token\|respond.*token" server/routes/surveyRoutes.ts | head -5
+
+# Gate duty trespass cross-reference: does vehicle entry check flagged plates?
+grep -rn "trespass.*gate\|gate.*trespass\|flaggedPlate.*check" server/ --include="*.ts" | head -5
+
+# Wellness check escalation chain: does it actually escalate through contacts?
+grep -rn "escalation.*chain\|chain.*escalation\|escalate.*next" server/ --include="*.ts" | head -5
+
+# DockChat bot commands: do /schedule and /calloff actually return data?
+grep -rn "case.*schedule\|case.*calloff\|botCommand.*schedule" server/routes/dockChatRoutes.ts | head -10
+
+# Onboarding task auto-completion: does signing a document auto-complete the task?
+grep -rn "task.*complete.*sign\|sign.*complete.*task\|onboarding.*task.*document" server/ --include="*.ts" | head -5
+
+# Sales proposal auto-generates from site survey data
+grep -rn "survey.*proposal\|proposal.*survey\|siteSurvey.*lead" server/ --include="*.ts" | head -5
+
+# Client satisfaction NPS updates Phase 34 health score
+grep -rn "nps.*health\|health.*nps\|survey.*healthScore\|healthScore.*survey" server/ --include="*.ts" | head -5
+```
+
+---
+
+**CATEGORY 11 — ACME DEV BYPASS ACCOUNTS**
+
+Verify these dev login accounts work and have correct roles:
+
+```bash
+# ACME Security Owner (org_owner)
+POST /api/auth/dev-login
+# Should log in as Marcus Rivera, org_owner of ACME Security
+# Should see full platform: all officers, all clients, all financials
+
+# Root Admin (platform_staff)
+POST /api/auth/dev-login-root  
+# Should log in as platform staff
+# Should see platform admin panel, all workspaces
+
+# Add if missing: ACME Officer bypass (for testing officer-facing features)
+# POST /api/auth/dev-login-officer
+# Should log in as an active ACME officer
+# Should see only their schedule, pay stubs, post orders, HelpAI
+
+# Add if missing: ACME Compliance Officer bypass
+# POST /api/auth/dev-login-compliance
+# Should log in as compliance officer
+# Should see compliance dashboard, audit trail, not payroll
+
+# Add if missing: ACME Supervisor bypass
+# POST /api/auth/dev-login-supervisor
+# Should log in as a supervisor
+# Should see their team's schedule, DARs, incident reports
+```
+
+---
+
+**Send all of this to the agent as a single sprint.** This covers everything needed to make the ACME sandbox a complete stress-testable environment that mirrors exactly what Statewide will experience as the first production tenant.
+
+When this sprint completes you will be able to:
+- See every workflow from officer hire to paycheck
+- See every client from prospect to offboarded
+- See Trinity actually making decisions and firing automations
+- See documents generating and signing
+- See analytics showing real trends
+- See every 35-series feature working with realistic data
+- Verify everything before Statewide goes live on real data
+
+That is the final pre-launch requirement. When ACME shows you everything working end-to-end Statewide is ready.

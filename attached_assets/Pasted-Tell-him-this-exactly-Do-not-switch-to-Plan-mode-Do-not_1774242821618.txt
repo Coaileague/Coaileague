@@ -1,0 +1,61 @@
+Tell him this exactly:
+
+---
+
+Do not switch to Plan mode. Do not defer this. Do not recommend coming back to it later. Execute it now in the following sequence. This is not a monolithic pass — it is a structured sequence of smaller verifiable chunks done in order. Begin immediately.
+
+---
+
+**CHUNK 1 — SCHEMA DEFINITIONS ONLY (Agent 1 work)**
+
+Do not touch any SQL queries yet. Do only this:
+
+Write Drizzle schema definitions for all 195 untracked tables. Group them into domain files. Every column must have an explicit string name mapping — no implicit inference. Every nullable constraint, default value, and foreign key must be reflected. Add the 306 untracked columns to their existing schema files. Write relation definitions for every foreign key relationship. Register all exports in the central schema index.
+
+When done: run the Phase 1 schema parity check. The result must show zero untracked tables and zero untracked columns. Do not proceed to Chunk 2 until this check is clean. Report the result.
+
+---
+
+**CHUNK 2 — CATEGORY A SQL REPLACEMENT**
+
+Now and only now begin Agent 2 work. Start with Category A only — simple SELECT, INSERT, UPDATE, DELETE queries against single tables or simple joins.
+
+Scan all 653 raw SQL queries across 171 files. Classify every one as A, B, or C. Then replace every Category A query with the equivalent Drizzle ORM call using the schema definitions from Chunk 1. Verify each replacement produces identical results against the ACME sandbox before removing the original SQL.
+
+When done: scan all route and service files and report how many raw SQL strings remain and their classification breakdown. Do not proceed to Chunk 3 until Category A count is zero. Report the result.
+
+---
+
+**CHUNK 3 — CATEGORY B MIGRATION**
+
+Migrate every Category B query. For each one write the Drizzle equivalent, run both versions against the ACME sandbox with identical inputs, compare outputs row by row. If outputs match exactly after no more than three attempts, replace the raw SQL. If they do not match after three attempts, reclassify as Category C and move on.
+
+When done: report how many Category B queries were successfully migrated, how many were reclassified to C, and how many raw SQL strings remain. Do not proceed to Chunk 4 until every Category B query is either migrated or reclassified. Report the result.
+
+---
+
+**CHUNK 4 — CATEGORY C TYPED WRAPPERS**
+
+Wrap every remaining Category C query in a named typed function with explicit TypeScript input and output types. Every column name in the raw SQL string must be verified against the canonical Name Registry. Add a comment block explaining why ORM replacement was not done. Move every wrapper into the appropriate service file. Zero inline raw SQL strings may remain in route handlers after this chunk.
+
+When done: scan every route file and every service file. Confirm zero inline raw SQL strings remain anywhere in route handlers. Every database operation must be either a Drizzle ORM call or a call to a named typed wrapper function. Report the final scan result.
+
+---
+
+**FINAL VERIFICATION AFTER ALL 4 CHUNKS**
+
+Start the server. Confirm 30/30 background services start cleanly. Run login flow. Run these five operations against the ACME sandbox: create an employee, create a shift, generate an invoice, run a payroll calculation, execute a Trinity action. All five must succeed with data persisting correctly.
+
+Re-run the Phase 1 schema parity check. Required result: zero untracked tables, zero untracked columns, zero inline raw SQL in route handlers.
+
+Append to replit.md CoAIleague Architecture Canons: every table has a Drizzle schema definition, inline raw SQL in route handlers is permanently retired, complex queries live in named typed wrapper functions in service files.
+
+Report the complete final verification results.
+
+---
+
+**Do not ask for permission to proceed between chunks. Complete all four chunks and report the final verification results.**
+
+---
+
+That's what you send him Bryan. No plan mode, no deferral, no recommendation to come back later. Four chunks, execute in order, report after each one, final verification at the end. When he brings back the final verification results showing all clean, bring them here and we go straight into Phase 2.

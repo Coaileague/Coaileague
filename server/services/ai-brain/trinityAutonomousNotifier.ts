@@ -11,10 +11,16 @@
  */
 
 import { db } from '../../db';
-import { supportTickets, aiProactiveAlerts } from '@shared/schema';
+import {
+  supportTickets,
+  aiProactiveAlerts,
+} from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { PLATFORM_WORKSPACE_ID } from '../../seed-platform-workspace';
+import { PLATFORM_WORKSPACE_ID } from '../../services/billing/billingConstants';
+import { createLogger } from '../../lib/logger';
+const log = createLogger('TrinityAutonomousNotifier');
+
 
 // Lazy-load platformEventBus to avoid circular dependency
 let platformEventBusInstance: any = null;
@@ -64,12 +70,16 @@ export interface HotpatchResult {
 // SUPPORT ROLE DEFINITIONS
 // ============================================================================
 
-const SUPPORT_ROLES = ['root_admin', 'co_admin', 'sysops', 'platform_support', 'org_owner', 'co_owner'];
-const ELEVATED_ROLES = ['root_admin', 'co_admin', 'sysops'];
+const SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_agent', 'org_owner', 'co_owner'];
+const ELEVATED_ROLES = ['root_admin', 'deputy_admin', 'sysop'];
 
 // ============================================================================
 // IN-MEMORY STATE
 // ============================================================================
+// NOTE: These Maps are reset on server restart.
+// - connectedStaff: tracks live WebSocket connections — ephemeral by nature (clients reconnect automatically)
+// - appliedHotpatches: runtime patch registry — re-applied on next trigger cycle
+// - pendingAlerts: backed by ai_proactive_alerts table for persistence; in-memory copy is a write-through cache
 
 const connectedStaff: Map<string, SupportStaffConnection> = new Map();
 const pendingAlerts: Map<string, TrinityAlert> = new Map();
@@ -86,7 +96,7 @@ class TrinityAutonomousNotifierService {
   private autoTicketEnabled: boolean = true;
 
   private constructor() {
-    console.log('[TrinityNotifier] Autonomous notifier initialized');
+    log.info('[TrinityNotifier] Autonomous notifier initialized');
     // Defer event listener setup to avoid circular dependency
     setTimeout(() => this.setupEventListeners(), 1000);
   }
@@ -104,17 +114,17 @@ class TrinityAutonomousNotifierService {
 
   setBroadcastHandler(handler: (message: any) => void): void {
     this.broadcastHandler = handler;
-    console.log('[TrinityNotifier] Broadcast handler registered');
+    log.info('[TrinityNotifier] Broadcast handler registered');
   }
 
   enableHotpatch(enabled: boolean): void {
     this.hotpatchEnabled = enabled;
-    console.log(`[TrinityNotifier] Hotpatch ${enabled ? 'enabled' : 'disabled'}`);
+    log.info(`[TrinityNotifier] Hotpatch ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   enableAutoTickets(enabled: boolean): void {
     this.autoTicketEnabled = enabled;
-    console.log(`[TrinityNotifier] Auto-tickets ${enabled ? 'enabled' : 'disabled'}`);
+    log.info(`[TrinityNotifier] Auto-tickets ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   // ==========================================================================
@@ -123,7 +133,7 @@ class TrinityAutonomousNotifierService {
 
   registerStaffConnection(connection: SupportStaffConnection): void {
     connectedStaff.set(connection.userId, connection);
-    console.log(`[TrinityNotifier] Staff connected: ${connection.userId} (${connection.role})`);
+    log.info(`[TrinityNotifier] Staff connected: ${connection.userId} (${connection.role})`);
     
     // Send any pending alerts to newly connected staff
     this.sendPendingAlertsToStaff(connection.userId);
@@ -131,7 +141,7 @@ class TrinityAutonomousNotifierService {
 
   unregisterStaffConnection(userId: string): void {
     connectedStaff.delete(userId);
-    console.log(`[TrinityNotifier] Staff disconnected: ${userId}`);
+    log.info(`[TrinityNotifier] Staff disconnected: ${userId}`);
   }
 
   getConnectedStaff(): SupportStaffConnection[] {
@@ -150,7 +160,7 @@ class TrinityAutonomousNotifierService {
     };
 
     pendingAlerts.set(fullAlert.id, fullAlert);
-    console.log(`🚨 [TrinityNotifier] Alert created: ${fullAlert.title} (${fullAlert.severity})`);
+    log.info(`🚨 [TrinityNotifier] Alert created: ${fullAlert.title} (${fullAlert.severity})`);
 
     // Store in database for persistence
     await this.persistAlert(fullAlert);
@@ -191,7 +201,7 @@ class TrinityAutonomousNotifierService {
         triggeredAt: alert.detectedAt,
       });
     } catch (error) {
-      console.error('[TrinityNotifier] Failed to persist alert:', error);
+      log.error('[TrinityNotifier] Failed to persist alert:', error);
     }
   }
 
@@ -216,12 +226,12 @@ class TrinityAutonomousNotifierService {
     }
 
     // Log for support staff visibility
-    console.log(`📢 [TrinityNotifier] Broadcasting to ${connectedStaff.size} support staff`);
+    log.info(`📢 [TrinityNotifier] Broadcasting to ${connectedStaff.size} support staff`);
     
     // Track which staff received the alert
     for (const [userId, connection] of connectedStaff) {
       if (SUPPORT_ROLES.includes(connection.role)) {
-        console.log(`  → Sent to ${userId} (${connection.role})`);
+        log.info(`  → Sent to ${userId} (${connection.role})`);
       }
     }
   }
@@ -270,18 +280,12 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
         `.trim(),
         priority: alert.severity === 'urgent' ? 'urgent' : 
                   alert.severity === 'critical' ? 'high' : 'medium',
-        category: 'platform_issue',
+        type: 'support',
         status: 'open',
         workspaceId: alert.workspaceId || PLATFORM_WORKSPACE_ID,
-        createdBy: 'trinity-ai',
-        metadata: {
-          alertId: alert.id,
-          autoGenerated: true,
-          trinityAlert: true,
-        },
       }).returning();
 
-      console.log(`🎫 [TrinityNotifier] Auto-created ticket ${ticketNumber} for alert ${alert.id}`);
+      log.info(`🎫 [TrinityNotifier] Auto-created ticket ${ticketNumber} for alert ${alert.id}`);
       
       // Notify staff about new ticket
       if (this.broadcastHandler) {
@@ -299,7 +303,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
 
       return ticketNumber;
     } catch (error) {
-      console.error('[TrinityNotifier] Failed to auto-create ticket:', error);
+      log.error('[TrinityNotifier] Failed to auto-create ticket:', error);
       return null;
     }
   }
@@ -314,7 +318,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
     }
 
     const patchId = randomUUID();
-    console.log(`🔧 [TrinityNotifier] Checking governance for hotpatch ${patchId}...`);
+    log.info(`🔧 [TrinityNotifier] Checking governance for hotpatch ${patchId}...`);
 
     try {
       // SECURITY GATE: Check governance before applying hotpatch
@@ -332,18 +336,18 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
             metadata: { alertId: alert.id, riskLevel: alert.autoFixRisk },
           }
         );
-        governanceApproved = evaluation.approved;
+        governanceApproved = evaluation.decision === 'auto_approved';
         
-        if (!evaluation.approved) {
-          console.log(`⛔ [TrinityNotifier] Governance rejected hotpatch: ${evaluation.reason}`);
-          console.log(`[AUDIT] Hotpatch SKIPPED by governance - Alert: ${alert.id}, Reason: ${evaluation.reason}`);
+        if (evaluation.decision !== 'auto_approved') {
+          log.info(`⛔ [TrinityNotifier] Governance rejected hotpatch: ${evaluation.reason}`);
+          log.info(`[AUDIT] Hotpatch SKIPPED by governance - Alert: ${alert.id}, Reason: ${evaluation.reason}`);
           // Still create the alert but don't apply the fix
           return null;
         }
       } catch (govError: any) {
         // If governance service unavailable, default to conservative (no auto-fix)
-        console.warn(`[TrinityNotifier] Governance check failed, skipping auto-fix:`, govError.message);
-        console.log(`[AUDIT] Hotpatch SKIPPED due to governance error - Alert: ${alert.id}`);
+        log.warn(`[TrinityNotifier] Governance check failed, skipping auto-fix:`, govError.message);
+        log.info(`[AUDIT] Hotpatch SKIPPED due to governance error - Alert: ${alert.id}`);
         return null;
       }
 
@@ -359,7 +363,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
       appliedHotpatches.set(patchId, result);
 
       // Audit log the hotpatch
-      console.log(`[AUDIT] Hotpatch ${patchId} applied - Alert: ${alert.id}, Category: ${alert.category}`);
+      log.info(`[AUDIT] Hotpatch ${patchId} applied - Alert: ${alert.id}, Category: ${alert.category}`);
 
       // Notify about successful hotpatch via broadcast handler
       if (this.broadcastHandler) {
@@ -374,19 +378,19 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
         });
       }
 
-      console.log(`✅ [TrinityNotifier] Hotpatch ${patchId} applied successfully (governance approved)`);
+      log.info(`✅ [TrinityNotifier] Hotpatch ${patchId} applied successfully (governance approved)`);
       return result;
     } catch (error: any) {
       const result: HotpatchResult = {
         success: false,
         patchId,
-        description: `Failed to apply hotpatch: ${error.message}`,
+        description: `Failed to apply hotpatch: ${(error instanceof Error ? error.message : String(error))}`,
         rollbackAvailable: false,
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
       };
 
       appliedHotpatches.set(patchId, result);
-      console.error(`❌ [TrinityNotifier] Hotpatch failed:`, error);
+      log.error(`❌ [TrinityNotifier] Hotpatch failed:`, error);
       return result;
     }
   }
@@ -394,7 +398,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
   async rollbackHotpatch(patchId: string): Promise<boolean> {
     const patch = appliedHotpatches.get(patchId);
     if (!patch || !patch.rollbackAvailable) {
-      console.warn(`[TrinityNotifier] Cannot rollback patch ${patchId}`);
+      log.warn(`[TrinityNotifier] Cannot rollback patch ${patchId}`);
       return false;
     }
 
@@ -410,7 +414,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
       });
     }
 
-    console.log(`↩️ [TrinityNotifier] Rolled back hotpatch ${patchId}`);
+    log.info(`↩️ [TrinityNotifier] Rolled back hotpatch ${patchId}`);
     return true;
   }
 
@@ -445,7 +449,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
         severity: 'critical',
         category: check.category,
         title: `Check failed: ${check.name}`,
-        description: `Health check threw an error: ${error.message}`,
+        description: `Health check threw an error: ${(error instanceof Error ? error.message : String(error))}`,
         autoFixAvailable: false,
         autoFixRisk: 'high',
       });
@@ -460,7 +464,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
     try {
       const eventBus = await getPlatformEventBus();
       if (!eventBus) {
-        console.warn('[TrinityNotifier] Platform event bus not available');
+        log.warn('[TrinityNotifier] Platform event bus not available');
         return;
       }
 
@@ -470,7 +474,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
           severity: event.payload?.severity || 'warning',
           category: event.payload?.category || 'platform',
           title: event.payload?.title || 'Issue Detected',
-          description: event.payload?.description || 'Trinity detected an issue',
+          description: event.payload?.description || 'I detected an issue that needs attention',
           suggestedAction: event.payload?.suggestedAction,
           autoFixAvailable: event.payload?.autoFixAvailable || false,
           autoFixRisk: event.payload?.autoFixRisk || 'medium',
@@ -478,10 +482,175 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
         });
       });
 
-      console.log('[TrinityNotifier] Event listeners configured');
+      log.info('[TrinityNotifier] Event listeners configured');
     } catch (error) {
-      console.warn('[TrinityNotifier] Failed to setup event listeners:', error);
+      log.warn('[TrinityNotifier] Failed to setup event listeners:', error);
     }
+  }
+
+  // ==========================================================================
+  // CROSS-ORG CONSOLIDATED BRANCH ALERTS
+  // ==========================================================================
+
+  async scanAndNotifyParentOrgOwners(): Promise<{ scannedParents: number; alertsSent: number }> {
+    let scannedParents = 0;
+    let alertsSent = 0;
+
+    try {
+      const { trinityOrgIntelligenceService } = await import('./trinityOrgIntelligenceService');
+      const { workspaces } = await import('@shared/schema');
+      const { db: database } = await import('../../db');
+      const { eq, and, isNull } = await import('drizzle-orm');
+
+      const parentOrgs = await database.select({
+        id: workspaces.id,
+        name: workspaces.name,
+        ownerId: workspaces.ownerId,
+      }).from(workspaces).where(
+        and(
+          eq(workspaces.isSubOrg, false),
+          isNull(workspaces.parentWorkspaceId)
+        )
+      ).limit(50);
+
+      for (const parent of parentOrgs) {
+        try {
+          const subOrgs = await trinityOrgIntelligenceService.getSubOrgs(parent.id);
+          if (subOrgs.length === 0) continue;
+
+          scannedParents++;
+          const crossOrgAlerts = await trinityOrgIntelligenceService.scanSubOrgAnomalies(parent.id);
+
+          if (crossOrgAlerts.length === 0) continue;
+
+          const criticalAlerts = crossOrgAlerts.filter(a => a.severity === 'critical' || a.severity === 'urgent');
+          const warningAlerts = crossOrgAlerts.filter(a => a.severity === 'warning');
+
+          if (criticalAlerts.length > 0) {
+            const alert = await this.createAlert({
+              severity: 'critical',
+              category: 'platform',
+              title: `Cross-Branch Alert: ${criticalAlerts.length} critical issue(s) detected`,
+              description: this.formatCrossOrgAlertSummary(crossOrgAlerts, parent.name || parent.id),
+              suggestedAction: 'Review the affected branches and address critical issues promptly.',
+              autoFixAvailable: false,
+              autoFixRisk: 'high',
+              workspaceId: parent.id,
+              metadata: {
+                crossOrgAlert: true,
+                parentWorkspaceId: parent.id,
+                parentOwnerId: parent.ownerId,
+                totalBranches: subOrgs.length,
+                totalAlerts: crossOrgAlerts.length,
+                criticalCount: criticalAlerts.length,
+                warningCount: warningAlerts.length,
+                branchAlerts: crossOrgAlerts.map(a => ({
+                  branch: a.sourceWorkspaceName,
+                  severity: a.severity,
+                  title: a.title,
+                  category: a.category,
+                })),
+              },
+            });
+            alertsSent++;
+
+            if (parent.ownerId && this.broadcastHandler) {
+              this.broadcastHandler({
+                type: 'trinity_cross_org_alert',
+                targetUserId: parent.ownerId,
+                payload: {
+                  alertId: alert.id,
+                  parentWorkspaceId: parent.id,
+                  totalBranches: subOrgs.length,
+                  totalAlerts: crossOrgAlerts.length,
+                  criticalCount: criticalAlerts.length,
+                  warningCount: warningAlerts.length,
+                  alerts: crossOrgAlerts.map(a => ({
+                    branch: a.sourceWorkspaceName,
+                    branchId: a.sourceWorkspaceId,
+                    severity: a.severity,
+                    category: a.category,
+                    title: a.title,
+                    description: a.description,
+                    detectedAt: a.detectedAt.toISOString(),
+                  })),
+                  timestamp: new Date().toISOString(),
+                },
+              });
+            }
+          } else if (warningAlerts.length >= 3) {
+            await this.createAlert({
+              severity: 'warning',
+              category: 'platform',
+              title: `Cross-Branch Notice: ${warningAlerts.length} warning(s) across branches`,
+              description: this.formatCrossOrgAlertSummary(crossOrgAlerts, parent.name || parent.id),
+              suggestedAction: 'Review branch operations for potential improvements.',
+              autoFixAvailable: false,
+              autoFixRisk: 'medium',
+              workspaceId: parent.id,
+              metadata: {
+                crossOrgAlert: true,
+                parentWorkspaceId: parent.id,
+                parentOwnerId: parent.ownerId,
+                totalBranches: subOrgs.length,
+                warningCount: warningAlerts.length,
+              },
+            });
+            alertsSent++;
+
+            if (parent.ownerId && this.broadcastHandler) {
+              this.broadcastHandler({
+                type: 'trinity_cross_org_alert',
+                targetUserId: parent.ownerId,
+                payload: {
+                  parentWorkspaceId: parent.id,
+                  totalBranches: subOrgs.length,
+                  totalAlerts: warningAlerts.length,
+                  warningCount: warningAlerts.length,
+                  criticalCount: 0,
+                  alerts: warningAlerts.map(a => ({
+                    branch: a.sourceWorkspaceName,
+                    branchId: a.sourceWorkspaceId,
+                    severity: a.severity,
+                    category: a.category,
+                    title: a.title,
+                    description: a.description,
+                    detectedAt: a.detectedAt.toISOString(),
+                  })),
+                  timestamp: new Date().toISOString(),
+                },
+              });
+            }
+          }
+        } catch (err: any) {
+          log.error(`[TrinityNotifier] Cross-org scan failed for parent ${parent.id}:`, (err instanceof Error ? err.message : String(err)));
+        }
+      }
+
+      log.info(`[TrinityNotifier] Cross-org scan complete: ${scannedParents} parents scanned, ${alertsSent} consolidated alerts sent`);
+    } catch (err: any) {
+      log.error('[TrinityNotifier] Cross-org notification scan failed:', (err instanceof Error ? err.message : String(err)));
+    }
+
+    return { scannedParents, alertsSent };
+  }
+
+  private formatCrossOrgAlertSummary(alerts: Array<{ sourceWorkspaceName: string; severity: string; title: string; category: string }>, parentName: string): string {
+    const byBranch: Record<string, typeof alerts> = {};
+    for (const a of alerts) {
+      if (!byBranch[a.sourceWorkspaceName]) byBranch[a.sourceWorkspaceName] = [];
+      byBranch[a.sourceWorkspaceName].push(a);
+    }
+
+    const lines = [`Consolidated branch alerts for "${parentName}":\n`];
+    for (const [branch, branchAlerts] of Object.entries(byBranch)) {
+      lines.push(`Branch: ${branch} (${branchAlerts.length} alert${branchAlerts.length > 1 ? 's' : ''}):`);
+      for (const a of branchAlerts) {
+        lines.push(`  [${a.severity.toUpperCase()}] ${a.title}`);
+      }
+    }
+
+    return lines.join('\n');
   }
 
   // ==========================================================================

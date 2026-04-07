@@ -12,12 +12,13 @@
  */
 
 import { db } from '../../db';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('AiBrainService');
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+import { TIMEOUTS } from '../../config/platformConfig';
 import {
   aiBrainJobs,
-  aiEventStream,
-  aiGlobalPatterns,
-  aiSolutionLibrary,
-  aiFeedbackLoops,
   helposFaqs,
   faqVersions,
   faqGapEvents,
@@ -31,15 +32,147 @@ import {
   timeEntries,
   supportTickets,
   type AiBrainJob,
-  type InsertAiFeedbackLoop,
   type HelposFaq,
   type FaqGapEvent,
 } from '@shared/schema';
 import { eq, and, desc, sql, gte, lte, count, or, ilike, isNull } from 'drizzle-orm';
 import { geminiClient } from './providers/geminiClient';
+import { trinityThoughtEngine } from './trinityThoughtEngine';
 import { ChatServerHub } from '../ChatServerHub';
 import { platformFeatureRegistry, type PlatformFeature, type FeatureCapability } from './platformFeatureRegistry';
 import crypto from 'crypto';
+
+// ============================================================================
+// SENTIMENT ANALYSIS ENGINE - Detect user emotions and adjust responses
+// ============================================================================
+
+interface SentimentResult {
+  sentiment: 'positive' | 'neutral' | 'negative' | 'frustrated';
+  urgency: 'low' | 'medium' | 'high' | 'critical';
+  frustrationLevel: number;
+  shouldEscalate: boolean;
+  toneGuidance: string;
+}
+
+function analyzeSentiment(message: string): SentimentResult {
+  const lower = message.toLowerCase();
+
+  const frustrationSignals = ['frustrated', 'angry', 'furious', 'terrible', 'horrible', 'worst', 'unacceptable', 'ridiculous', 'broken', 'useless', 'hate', 'awful', 'disgusted', 'sick of', 'tired of', 'fed up', 'waste of time', 'not working', 'still broken', 'again'];
+  const urgencySignals = ['urgent', 'asap', 'emergency', 'immediately', 'critical', 'deadline', 'now', 'right now', 'help!', 'payday', 'tomorrow', 'today', 'tonight'];
+  const positiveSignals = ['thanks', 'great', 'awesome', 'perfect', 'love', 'excellent', 'wonderful', 'appreciate', 'helpful', 'amazing'];
+  const confusionSignals = ['confused', "don't understand", 'how do i', "where is", "can't find", 'lost', 'stuck', 'help me', "doesn't make sense", "what does"];
+
+  let frustrationScore = 0;
+  let urgencyScore = 0;
+  let positiveScore = 0;
+  let confusionScore = 0;
+
+  for (const kw of frustrationSignals) { if (lower.includes(kw)) frustrationScore += 1; }
+  for (const kw of urgencySignals) { if (lower.includes(kw)) urgencyScore += 1; }
+  for (const kw of positiveSignals) { if (lower.includes(kw)) positiveScore += 1; }
+  for (const kw of confusionSignals) { if (lower.includes(kw)) confusionScore += 1; }
+
+  const capsWords = (message.match(/[A-Z]{3,}/g) || []).length;
+  const exclamations = (message.match(/!+/g) || []).length;
+  frustrationScore += capsWords * 0.5;
+  urgencyScore += exclamations * 0.3;
+
+  let sentiment: SentimentResult['sentiment'] = 'neutral';
+  if (frustrationScore >= 2) sentiment = 'frustrated';
+  else if (frustrationScore >= 1) sentiment = 'negative';
+  else if (positiveScore >= 1) sentiment = 'positive';
+
+  let urgency: SentimentResult['urgency'] = 'low';
+  if (urgencyScore >= 3 || (frustrationScore >= 2 && urgencyScore >= 1)) urgency = 'critical';
+  else if (urgencyScore >= 2) urgency = 'high';
+  else if (urgencyScore >= 1 || confusionScore >= 2) urgency = 'medium';
+
+  const shouldEscalate = frustrationScore >= 3 || urgency === 'critical';
+
+  let toneGuidance = '';
+  if (sentiment === 'frustrated') {
+    toneGuidance = 'TONE: This user is frustrated. Acknowledge their frustration immediately. Be empathetic and action-oriented. Lead with "I understand this is frustrating" then go straight to solving the problem. Do NOT be dismissive or repeat generic advice.';
+  } else if (sentiment === 'negative') {
+    toneGuidance = 'TONE: This user is unhappy. Be reassuring and proactive. Show you understand the impact of their issue and focus on resolution.';
+  } else if (confusionScore >= 2) {
+    toneGuidance = 'TONE: This user is confused. Be patient and clear. Break down steps simply. Avoid jargon. Offer to walk them through it.';
+  } else if (urgency === 'high' || urgency === 'critical') {
+    toneGuidance = 'TONE: This is urgent. Be direct and fast. Skip pleasantries. Get to the solution immediately.';
+  } else {
+    toneGuidance = 'TONE: Normal conversation. Be friendly, professional, and helpful.';
+  }
+
+  return {
+    sentiment,
+    urgency,
+    frustrationLevel: Math.min(frustrationScore / 3, 1),
+    shouldEscalate,
+    toneGuidance,
+  };
+}
+
+// ============================================================================
+// DOMAIN COMPLEXITY DETECTOR - Decide if iterative reasoning is needed
+// ============================================================================
+
+interface ComplexityAssessment {
+  isComplex: boolean;
+  domains: string[];
+  requiresDataLookup: boolean;
+  requiresConflictAnalysis: boolean;
+  reasoningDepth: 'simple' | 'moderate' | 'deep';
+}
+
+function assessComplexity(message: string): ComplexityAssessment {
+  const lower = message.toLowerCase();
+  const domains: string[] = [];
+  let complexityScore = 0;
+
+  if (/schedul|shift|coverage|assign|roster|who.?s working|open shift/i.test(lower)) {
+    domains.push('scheduling');
+    complexityScore += 1;
+  }
+  if (/payroll|pay run|gross|net pay|deduction|overtime pay|pay period|payday/i.test(lower)) {
+    domains.push('payroll');
+    complexityScore += 1;
+  }
+  if (/invoice|billing|bill|payment|overdue|outstanding|client.*owe/i.test(lower)) {
+    domains.push('invoicing');
+    complexityScore += 1;
+  }
+  if (/employee|team|staff|guard|worker|hire|fired|terminated/i.test(lower)) {
+    domains.push('employees');
+    complexityScore += 0.5;
+  }
+  if (/hours|timesheet|clock|overtime|attendance|late|absent/i.test(lower)) {
+    domains.push('timekeeping');
+    complexityScore += 0.5;
+  }
+  if (/conflict|overlap|double.?book|gap|shortage|problem|issue|wrong|error|discrepancy|mismatch/i.test(lower)) {
+    complexityScore += 1.5;
+  }
+  if (/why|how come|explain|what happened|figure out|investigate|look into/i.test(lower)) {
+    complexityScore += 0.5;
+  }
+
+  const requiresDataLookup = domains.length > 0 && /\b(my|our|this|the|current|today|tomorrow|this week|last week)\b/i.test(lower);
+  const requiresConflictAnalysis = /conflict|overlap|double|gap|shortage|wrong|error|discrepancy|fix|resolve/i.test(lower) && domains.length > 0;
+
+  let reasoningDepth: ComplexityAssessment['reasoningDepth'] = 'simple';
+  if (complexityScore >= 3 || (domains.length >= 2 && requiresConflictAnalysis)) {
+    reasoningDepth = 'deep';
+  } else if (complexityScore >= 1.5 || requiresDataLookup) {
+    reasoningDepth = 'moderate';
+  }
+
+  return {
+    isComplex: complexityScore >= 1.5,
+    domains,
+    requiresDataLookup,
+    requiresConflictAnalysis,
+    reasoningDepth,
+  };
+}
 
 // Define typed input interfaces for each skill
 interface HelpAIInput {
@@ -89,7 +222,7 @@ interface PlatformAwarenessInput {
   context?: {
     currentFeature?: string;
     symptoms?: string[];
-    userRole?: 'employee' | 'manager' | 'admin' | 'owner';
+    userRole?: 'employee' | 'manager' | 'org_admin' | 'org_owner';
   };
 }
 
@@ -128,7 +261,7 @@ export class AIBrainService {
     const contextInfo = request.conversationId 
       ? `conversation ${request.conversationId}` 
       : `workspace ${request.workspaceId || 'global'}`;
-    console.log(`🧠 [AI Brain] New job: ${request.skill} for ${contextInfo}`);
+    log.info(`🧠 [AI Brain] New job: ${request.skill} for ${contextInfo}`);
 
     const [job] = await db.insert(aiBrainJobs).values({
       workspaceId: request.workspaceId || null,
@@ -146,9 +279,9 @@ export class AIBrainService {
       const result = await this.executeJob(job);
       return result;
     } catch (error: any) {
-      console.error(`❌ [AI Brain] Job ${job.id} failed:`, error);
+      log.error(`❌ [AI Brain] Job ${job.id} failed:`, error);
       
-      const errorMessage = error.message || 'Unknown error occurred';
+      const errorMessage = (error instanceof Error ? error.message : String(error)) || 'Unknown error occurred';
       const errorStack = error.stack || '';
       
       await db.update(aiBrainJobs)
@@ -175,7 +308,7 @@ export class AIBrainService {
             retryCount: 0,
             maxRetries: 3,
             canRetry: true,
-          }).catch((err: Error) => console.error('[AI Brain] Failed to emit timeout event:', err));
+          }).catch((err: Error) => log.error('[AI Brain] Failed to emit timeout event:', err));
         } else {
           await ChatServerHub.emitAIError({
             conversationId: job.conversationId,
@@ -188,7 +321,7 @@ export class AIBrainService {
             retryCount: 0,
             maxRetries: 3,
             canRetry: true,
-          }).catch((err: Error) => console.error('[AI Brain] Failed to emit error event:', err));
+          }).catch((err: Error) => log.error('[AI Brain] Failed to emit error event:', err));
         }
       }
 
@@ -206,7 +339,7 @@ export class AIBrainService {
    */
   private async executeJob(job: AiBrainJob): Promise<JobResult> {
     const startTime = Date.now();
-    const JOB_TIMEOUT_MS = 30000; // 30 second timeout for AI jobs
+    const JOB_TIMEOUT_MS = TIMEOUTS.aiJobTimeoutMs;
 
     await db.update(aiBrainJobs)
       .set({
@@ -240,7 +373,7 @@ export class AIBrainService {
             const helpResult = await this.executeHelpAISupport(job, input as HelpAIInput);
             output = helpResult.output;
             tokensUsed = helpResult.tokensUsed;
-            confidenceScore = 0.95;
+            confidenceScore = helpResult.output?.reasoning?.reexamined ? 0.85 : 0.95;
             break;
 
           case 'scheduleos_generation':
@@ -292,6 +425,25 @@ export class AIBrainService {
             confidenceScore = diagnosisResult.confidence;
             break;
 
+          case 'trinity_summarize':
+            // Trinity AI conversation summarization for ticket closure
+            const summarizeResult = await this.executeTrinitySum(job, input);
+            output = summarizeResult.output;
+            tokensUsed = summarizeResult.tokensUsed;
+            confidenceScore = 0.95;
+            break;
+
+          case 'helpai_greeting':
+          case 'helpai_response':
+          case 'helpai_faq_search':
+          case 'helpai_urgency':
+            // HelpAI skills - delegate to help support handler
+            const helpaiResult = await this.executeHelpAISupport(job, input as HelpAIInput);
+            output = helpaiResult.output;
+            tokensUsed = helpaiResult.tokensUsed;
+            confidenceScore = 0.9;
+            break;
+
           default:
             throw new Error(`Unknown skill: ${job.skill}`);
         }
@@ -307,7 +459,7 @@ export class AIBrainService {
         await db.update(aiBrainJobs)
           .set({
             status: 'failed',
-            error: `Timeout after ${JOB_TIMEOUT_MS}ms: ${error.message}`,
+            error: `Timeout after ${JOB_TIMEOUT_MS}ms: ${(error instanceof Error ? error.message : String(error))}`,
             executionTimeMs: executionTime,
             completedAt: new Date()
           })
@@ -326,10 +478,10 @@ export class AIBrainService {
             retryCount: 0,
             maxRetries: 3,
             canRetry: true,
-          }).catch((err: Error) => console.error('[AI Brain] Failed to emit timeout event:', err));
+          }).catch((err: Error) => log.error('[AI Brain] Failed to emit timeout event:', err));
         }
 
-        console.log(`⏱️ [AI Brain] Job ${job.id} timed out after ${executionTime}ms`);
+        log.info(`⏱️ [AI Brain] Job ${job.id} timed out after ${executionTime}ms`);
         throw error;
       }
       throw error;
@@ -356,7 +508,7 @@ export class AIBrainService {
       ? `[${logMetadata.orgExternalId}] ${logMetadata.orgName || ''}` 
       : `workspace: ${job.workspaceId || 'global'}`;
     
-    console.log(`✅ [AI Brain] Job ${job.id} completed in ${executionTime}ms (confidence: ${confidenceScore?.toFixed(2)}) - ${orgInfo}`);
+    log.info(`✅ [AI Brain] Job ${job.id} completed in ${executionTime}ms (confidence: ${confidenceScore?.toFixed(2)}) - ${orgInfo}`);
 
     // UNIFIED EVENT SYSTEM: Route AI response to correct chatroom with conversation context
     if (job.conversationId) {
@@ -373,7 +525,7 @@ export class AIBrainService {
           ? `Low confidence (${((confidenceScore || 0) * 100).toFixed(0)}%) - human review recommended`
           : `Completed in ${executionTime}ms with ${((confidenceScore || 1) * 100).toFixed(0)}% confidence`,
         targetUserId: job.userId || undefined,
-      }).catch((err: Error) => console.error('[AI Brain] Failed to emit chatroom action:', err));
+      }).catch((err: Error) => log.error('[AI Brain] Failed to emit chatroom action:', err));
     } else {
       // For non-conversation jobs, emit to platform event bus
       ChatServerHub.emitAIBrainResponse({
@@ -385,7 +537,7 @@ export class AIBrainService {
         confidenceScore,
         requiresApproval,
         executionTimeMs: executionTime,
-      }).catch((err: Error) => console.error('[AI Brain] Failed to emit event:', err));
+      }).catch((err: Error) => log.error('[AI Brain] Failed to emit event:', err));
     }
 
     return {
@@ -398,56 +550,344 @@ export class AIBrainService {
   }
 
   /**
-   * HelpAI Support - Customer support AI with FAQ learning
+   * ENHANCED HelpAI Support - With Iterative Reasoning, Sentiment Detection, and Domain Tool Calling
+   * 
+   * Intelligence Pipeline:
+   * 1. SENTIMENT: Detect user emotion and urgency
+   * 2. COMPLEXITY: Assess if the question needs data lookup or conflict analysis
+   * 3. FAQ SEARCH: Check knowledge base for existing answers
+   * 4. DOMAIN TOOLS: Enable tool calling for data-intensive questions (schedules, payroll, etc.)
+   * 5. GENERATE: Send to Gemini with full context, tools, and tone guidance
+   * 6. CONFIDENCE CHECK: If response seems low-quality, re-examine with deeper reasoning
+   * 7. THOUGHT LOGGING: Record the reasoning chain for Trinity's metacognition
+   * 8. LEARN: Store successful interactions for future use
    */
   private async executeHelpAISupport(job: AiBrainJob, input: HelpAIInput): Promise<{ output: any; tokensUsed: number }> {
-    const { message, conversationHistory, shouldLearn } = input;
+    // Phase 48: Defence-in-depth — sanitize the message a second time at the AI
+    // service boundary in case it arrives via a path that bypassed the route layer.
+    const rawMessage = input.message;
+    const message = typeof rawMessage === 'string'
+      ? rawMessage.slice(0, 4_000).replace(/\0/g, '')
+      : '';
+    const { conversationHistory, shouldLearn } = input;
+    const workspaceId = job.workspaceId || undefined;
+    const userId = job.userId || undefined;
 
-    // Search for relevant FAQs first
-    const relevantFaqs = await this.searchFAQs(message, job.workspaceId || undefined);
+    // STEP 1: SENTIMENT ANALYSIS
+    const sentiment = analyzeSentiment(message);
+    if (sentiment.shouldEscalate) {
+      log.info(`🚨 [AI Brain] High frustration/urgency detected - escalation recommended`);
+    }
 
-    const systemPrompt = `You are CoAIleague AI Support Assistant, a helpful and knowledgeable assistant for the CoAIleague workforce management platform.
+    // STEP 2: COMPLEXITY ASSESSMENT
+    const complexity = assessComplexity(message);
+    const enableTools = complexity.requiresDataLookup || complexity.requiresConflictAnalysis || complexity.isComplex;
 
-${relevantFaqs.length > 0 ? `RELEVANT FAQs (use these first if they match the user's question):
-${relevantFaqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
+    // METACOGNITION STEP 1: PERCEIVE — observe and understand the request
+    try {
+      await trinityThoughtEngine.perceive(
+        `Request received: "${message.substring(0, 120)}..." | Domains: [${complexity.domains.join(', ')}] | Sentiment: ${sentiment.sentiment}/${sentiment.urgency} | Complex: ${complexity.isComplex} | Tools needed: ${enableTools}`,
+        { workspaceId, triggeredBy: 'request_intake' }
+      );
+    } catch (e) { /* non-blocking */ }
 
-` : ''}You help users with:
-- Time tracking and clock in/out issues
-- Schedule management and shift assignments
-- Billing, invoicing, and payroll questions
-- Employee management and permissions
-- Compliance and policy questions
-- General platform navigation
+    // METACOGNITION STEP 2: DELIBERATE — evaluate approach and form hypothesis
+    const selectedProvider = this.selectProviderForDomain(complexity.domains, sentiment);
+    try {
+      const toolStrategy = enableTools
+        ? `Will use tool calling for data lookup across [${complexity.domains.join(', ')}]`
+        : 'Direct response — no data lookup needed';
+      await trinityThoughtEngine.deliberate(
+        `Strategy: ${toolStrategy}. Provider: ${selectedProvider}. ${complexity.requiresConflictAnalysis ? 'Conflict analysis required — step-by-step reasoning needed.' : ''}`,
+        [
+          enableTools ? 'Direct answer without data' : 'Full tool-calling pass',
+          sentiment.shouldEscalate ? 'Immediate human escalation' : 'Continue AI handling',
+        ],
+        complexity.isComplex ? 0.7 : 0.85,
+        { workspaceId, triggeredBy: 'strategy_selection' }
+      );
+    } catch (e) { /* non-blocking */ }
 
-IMPORTANT GUIDELINES:
-1. If an FAQ matches the question, use that answer (personalized)
-2. Be concise, professional, and helpful
-3. If you don't know something specific, suggest contacting human support
-4. When relevant, mention platform features that could help the user
-5. Always end with asking if there's anything else you can help with`;
+    // STEP 3: FAQ SEARCH
+    const relevantFaqs = await this.searchFAQs(message, workspaceId);
 
-    const response = await geminiClient.generate({
-      workspaceId: job.workspaceId || undefined,
-      userId: job.userId || undefined,
-      featureKey: 'helpos_support',
-      systemPrompt,
-      userMessage: message,
-      conversationHistory
-    });
+    // STEP 4: BUILD INTELLIGENT SYSTEM PROMPT
+    const systemPrompt = this.buildIntelligentPrompt(message, relevantFaqs, sentiment, complexity);
 
-    // Learn from successful interactions
-    if (shouldLearn && response.text.length > 50 && !response.text.includes("I don't know")) {
-      await this.learnFromInteraction(job.workspaceId || undefined, message, response.text);
+    // METACOGNITION STEP 3: DECIDE — commit to approach
+    try {
+      await trinityThoughtEngine.decide(
+        `Proceeding with ${enableTools ? 'tool-augmented' : 'direct'} response generation via ${selectedProvider}`,
+        `FAQs found: ${relevantFaqs.length}. Domains: ${complexity.domains.length}. Escalation: ${sentiment.shouldEscalate}. Reasoning depth: ${complexity.reasoningDepth}.`,
+        enableTools ? 0.8 : 0.9,
+        { workspaceId, triggeredBy: 'execution_decision' }
+      );
+    } catch (e) { /* non-blocking */ }
+
+    // STEP 5: GENERATE — chain-of-command provider routing
+    let totalTokens = 0;
+    let finalResponse = '';
+
+    const useAlternateProvider = selectedProvider !== 'gemini_trinity' && !enableTools;
+
+    if (useAlternateProvider) {
+      const { callAIWithFallback } = await import('./providers/resilientAIGateway');
+      const providerMap: Record<string, 'claude' | 'openai' | 'gemini'> = {
+        'claude_cfo': 'claude',
+        'claude_strategic': 'claude',
+        'gpt_support_escalation': 'openai',
+      };
+      const preferred = providerMap[selectedProvider] || 'gemini';
+      log.info(`🎯 [Chain-of-Command] Routing to ${preferred} for domain: ${selectedProvider}`);
+
+      try {
+        const aiResponse = await callAIWithFallback(
+          `${systemPrompt}\n\nUser: ${message}`,
+          { workspaceId, userId, domains: complexity.domains },
+          {
+            preferredProvider: preferred,
+            domain: selectedProvider,
+            workspaceId,
+            userId,
+            maxTokens: 2048,
+          }
+        );
+        finalResponse = aiResponse.content;
+        totalTokens = finalResponse.length / 4;
+        log.info(`✅ [Chain-of-Command] ${aiResponse.provider} responded (${finalResponse.length} chars, fallback: ${aiResponse.fallbackUsed})`);
+      } catch (routingError: any) {
+        log.warn(`⚠️ [Chain-of-Command] ${selectedProvider} routing failed, falling back to Gemini: ${routingError.message}`);
+        const response = await geminiClient.generate({
+          workspaceId,
+          userId,
+          featureKey: 'helpos_support',
+          systemPrompt,
+          userMessage: message,
+          conversationHistory,
+          enableToolCalling: false,
+        });
+        totalTokens = response.tokensUsed;
+        finalResponse = response.text;
+      }
+    } else {
+      const response = await geminiClient.generate({
+        workspaceId,
+        userId,
+        featureKey: 'helpos_support',
+        systemPrompt,
+        userMessage: message,
+        conversationHistory,
+        enableToolCalling: enableTools,
+      });
+      totalTokens = response.tokensUsed;
+      finalResponse = response.text;
+    }
+
+    // STEP 6: ITERATIVE REASONING - Re-examine if confidence seems low
+    const needsReexamination = this.shouldReexamine(finalResponse, complexity, sentiment);
+    if (needsReexamination) {
+      log.info(`🔄 [AI Brain] Low confidence detected, re-examining with deeper reasoning...`);
+
+      const reexaminationPrompt = `${systemPrompt}
+
+IMPORTANT: Your previous attempt may have been too generic. The user needs SPECIFIC, ACTIONABLE help.
+${complexity.requiresConflictAnalysis ? `\nCONFLICT RESOLUTION REQUIRED: Think through this step-by-step:
+1. What is the specific conflict or problem?
+2. What data do you need to look up to understand it?
+3. What are the possible solutions?
+4. Which solution is best and why?
+5. What concrete action should the user take?` : ''}
+${complexity.domains.length > 1 ? `\nMULTI-DOMAIN ANALYSIS: This question spans ${complexity.domains.join(' + ')}. Consider how these domains interact and affect each other.` : ''}
+
+Previous response was: "${finalResponse.substring(0, 200)}..."
+If that response was too vague or generic, provide a BETTER, more specific answer. Use the tools to look up real data.`;
+
+      const deepResponse = await geminiClient.generate({
+        workspaceId,
+        userId,
+        featureKey: 'helpos_support',
+        systemPrompt: reexaminationPrompt,
+        userMessage: message,
+        conversationHistory,
+        enableToolCalling: true,
+      });
+
+      totalTokens += deepResponse.tokensUsed;
+
+      if (deepResponse.text.length > finalResponse.length * 0.8) {
+        finalResponse = deepResponse.text;
+        log.info(`✅ [AI Brain] Re-examination produced better response (${deepResponse.text.length} chars)`);
+      }
+    }
+
+    // METACOGNITION STEP 4: REFLECT — evaluate outcome and log lessons
+    try {
+      const responseQuality = finalResponse.length > 100 && !finalResponse.includes("I don't know") ? 'adequate' : 'low_quality';
+      const confidenceScore = needsReexamination ? 0.65 : (responseQuality === 'adequate' ? 0.9 : 0.5);
+      
+      await trinityThoughtEngine.reflect(
+        'action',
+        job.id,
+        `Processed ${complexity.reasoningDepth}-depth query across [${complexity.domains.join(', ')}]. Sentiment: ${sentiment.sentiment}. Tools: ${enableTools}. Re-examined: ${needsReexamination}. Response quality: ${responseQuality}. Tokens: ${totalTokens}.`,
+        { success: responseQuality === 'adequate', score: confidenceScore },
+        workspaceId
+      );
+    } catch (e) { /* non-blocking */ }
+
+    // STEP 8: LEARN from successful interactions
+    if (shouldLearn && finalResponse.length > 50 && !finalResponse.includes("I don't know")) {
+      await this.learnFromInteraction(workspaceId, message, finalResponse);
+    }
+
+    // Auto-escalation for extremely frustrated users
+    let escalationNote: string | undefined;
+    if (sentiment.shouldEscalate) {
+      escalationNote = 'This user appears highly frustrated or has an urgent issue. A human support agent should review this conversation.';
+      try {
+        const ticketNumber = `ESC-${Date.now().toString(36).toUpperCase()}`;
+        if (workspaceId) {
+          await db.insert(supportTickets).values({
+            workspaceId,
+            ticketNumber,
+            type: 'support',
+            subject: `Auto-escalation: ${sentiment.urgency} urgency - ${message.substring(0, 80)}`,
+            description: `Automatically escalated due to ${sentiment.sentiment} sentiment (frustration level: ${Math.round(sentiment.frustrationLevel * 100)}%). Original message: ${message}`,
+            priority: sentiment.urgency === 'critical' ? 'urgent' : 'high',
+            status: 'open',
+            employeeId: userId,
+          });
+          log.info(`🎫 [AI Brain] Auto-created escalation ticket: ${ticketNumber}`);
+        }
+      } catch (e) { /* non-blocking ticket creation */ }
     }
 
     return {
       output: {
-        response: response.text,
+        response: finalResponse,
         suggestedFaqs: relevantFaqs.slice(0, 3),
+        sentiment: {
+          detected: sentiment.sentiment,
+          urgency: sentiment.urgency,
+          escalated: sentiment.shouldEscalate,
+        },
+        reasoning: {
+          complexity: complexity.reasoningDepth,
+          domains: complexity.domains,
+          toolsUsed: enableTools,
+          reexamined: needsReexamination,
+        },
+        escalationNote,
         timestamp: new Date().toISOString()
       },
-      tokensUsed: response.tokensUsed
+      tokensUsed: totalTokens
     };
+  }
+
+  private buildIntelligentPrompt(
+    message: string,
+    faqs: Array<{ question: string; answer: string }>,
+    sentiment: SentimentResult,
+    complexity: ComplexityAssessment
+  ): string {
+    let prompt = `You are Trinity, the AI Brain for CoAIleague - an autonomous workforce management platform for security guard companies.
+
+${sentiment.toneGuidance}
+
+`;
+
+    if (faqs.length > 0) {
+      prompt += `KNOWLEDGE BASE (use these if they match the question):
+${faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
+
+`;
+    }
+
+    if (complexity.requiresDataLookup) {
+      prompt += `DATA LOOKUP REQUIRED: The user is asking about real data. Use the available tools to look up actual schedules, timesheets, payroll, invoices, or employee information. Do NOT make up numbers or give generic advice when real data is available.
+
+`;
+    }
+
+    if (complexity.requiresConflictAnalysis) {
+      prompt += `CONFLICT RESOLUTION MODE: Think through this problem step-by-step:
+1. IDENTIFY the specific conflict or discrepancy
+2. LOOK UP the relevant data using tools
+3. ANALYZE what went wrong and why
+4. RECOMMEND specific actions to resolve it
+5. EXPLAIN what to do to prevent it in the future
+
+`;
+    }
+
+    if (complexity.domains.length > 0) {
+      prompt += `RELEVANT DOMAINS: ${complexity.domains.join(', ')}
+`;
+    }
+
+    prompt += `RESPONSE GUIDELINES:
+1. Be concise but thorough - give the actual answer, not just acknowledgment
+2. If data lookup is needed, USE THE TOOLS to get real information
+3. For scheduling conflicts: identify who, when, and what overlaps
+4. For payroll issues: check actual pay runs, amounts, and discrepancies
+5. For invoice problems: look up actual invoice statuses and amounts
+6. When suggesting actions, be SPECIFIC (which button, which page, what to click)
+7. If you cannot fully resolve the issue, explain exactly what needs human attention and why`;
+
+    return prompt;
+  }
+
+  /**
+   * CHAIN-OF-COMMAND: Select the optimal AI provider based on domain classification
+   * - Financial/strategic → Claude CFO (higher reasoning, better at P&L, contracts)
+   * - Customer support escalations → GPT-4 (trained for empathetic support)
+   * - Default operations → Gemini (Trinity brain, tool calling, scheduling)
+   */
+  private selectProviderForDomain(
+    domains: string[],
+    sentiment: SentimentResult
+  ): string {
+    const domainSet = new Set(domains.map(d => d.toLowerCase()));
+
+    if (domainSet.has('finance') || domainSet.has('invoicing') || domainSet.has('payroll') ||
+        domainSet.has('revenue') || domainSet.has('billing') || domainSet.has('tax') ||
+        domainSet.has('forecasting') || domainSet.has('budget')) {
+      return 'claude_cfo';
+    }
+
+    if (sentiment.shouldEscalate && sentiment.frustrationLevel > 0.6) {
+      return 'gpt_support_escalation';
+    }
+
+    if (domainSet.has('compliance') || domainSet.has('legal') || domainSet.has('contract') ||
+        domainSet.has('rfp') || domainSet.has('audit')) {
+      return 'claude_strategic';
+    }
+
+    return 'gemini_trinity';
+  }
+
+  private shouldReexamine(response: string, complexity: ComplexityAssessment, sentiment: SentimentResult): boolean {
+    if (!complexity.isComplex) return false;
+    
+    const genericPhrases = [
+      'contact support',
+      'reach out to',
+      'I cannot access',
+      'I don\'t have access',
+      'please check',
+      'you may want to',
+      'it depends on',
+      'generally speaking',
+    ];
+    const hasGenericResponse = genericPhrases.some(phrase => response.toLowerCase().includes(phrase));
+    
+    if (hasGenericResponse && complexity.requiresDataLookup) return true;
+    
+    if (response.length < 100 && complexity.reasoningDepth === 'deep') return true;
+    
+    if (sentiment.urgency === 'critical' && response.length < 200) return true;
+    
+    return false;
   }
 
   /**
@@ -486,7 +926,7 @@ IMPORTANT GUIDELINES:
         score: f.score
       }));
     } catch (error) {
-      console.error('[AI Brain] FAQ search error:', error);
+      log.error('[AI Brain] FAQ search error:', error);
       return [];
     }
   }
@@ -527,30 +967,32 @@ IMPORTANT GUIDELINES:
         
         // 3. Decide: Update existing FAQ or skip
         if (answer.length > (existingFaq.answer?.length || 0) * 1.2 || confidence > (existingFaq.confidenceScore || 0)) {
-          // Save version history before updating
-          await this.saveVersionHistory(existingFaq, 'updated', 'Better answer from AI learning', userId);
+          await db.transaction(async (tx) => {
+            // Save version history before updating (must be atomic with the update)
+            await this.saveVersionHistory(existingFaq, 'updated', 'Better answer from AI learning', userId, tx);
+
+            // Update existing FAQ with better answer
+            await tx.update(helposFaqs)
+              .set({
+                answer: answer.substring(0, 2000),
+                version: sql`COALESCE(${helposFaqs.version}, 1) + 1`,
+                updatedAt: new Date(),
+                updatedBy: userId || null,
+                matchCount: sql`COALESCE(${helposFaqs.matchCount}, 0) + 1`,
+                confidenceScore: Math.max(confidence, existingFaq.confidenceScore || 0),
+                sourceType: sourceType,
+                sourceId: sourceId || existingFaq.sourceId,
+                sourceContext: {
+                  ...(existingFaq.sourceContext as Record<string, any> || {}),
+                  lastUpdate: new Date().toISOString(),
+                  ...(sourceContext || {})
+                },
+                changeReason: `Updated with ${confidence}% confident answer from ${sourceType}`
+              })
+              .where(eq(helposFaqs.id, existingFaq.id));
+          });
           
-          // Update existing FAQ with better answer
-          await db.update(helposFaqs)
-            .set({
-              answer: answer.substring(0, 2000),
-              version: sql`COALESCE(${helposFaqs.version}, 1) + 1`,
-              updatedAt: new Date(),
-              updatedBy: userId || null,
-              matchCount: sql`COALESCE(${helposFaqs.matchCount}, 0) + 1`,
-              confidenceScore: Math.max(confidence, existingFaq.confidenceScore || 0),
-              sourceType: sourceType,
-              sourceId: sourceId || existingFaq.sourceId,
-              sourceContext: { 
-                ...(existingFaq.sourceContext as Record<string, any> || {}), 
-                lastUpdate: new Date().toISOString(),
-                ...(sourceContext || {})
-              },
-              changeReason: `Updated with ${confidence}% confident answer from ${sourceType}`
-            })
-            .where(eq(helposFaqs.id, existingFaq.id));
-          
-          console.log(`📝 [AI Brain] Updated FAQ ${existingFaq.id} with better answer (v${(existingFaq.version || 1) + 1})`);
+          log.info(`📝 [AI Brain] Updated FAQ ${existingFaq.id} with better answer (v${(existingFaq.version || 1) + 1})`);
           return { action: 'updated', faqId: existingFaq.id };
         } else {
           // Just increment match count for good existing FAQ
@@ -562,7 +1004,7 @@ IMPORTANT GUIDELINES:
             })
             .where(eq(helposFaqs.id, existingFaq.id));
           
-          console.log(`📚 [AI Brain] FAQ ${existingFaq.id} matched - incremented counters`);
+          log.info(`📚 [AI Brain] FAQ ${existingFaq.id} matched - incremented counters`);
           return { action: 'skipped', faqId: existingFaq.id };
         }
       }
@@ -571,43 +1013,47 @@ IMPORTANT GUIDELINES:
       const autoPublish = confidence >= 90 && sourceType !== 'ai_learned';
       const status = autoPublish ? 'published' : 'draft';
       
-      const [newFaq] = await db.insert(helposFaqs).values({
-        question: question.substring(0, 500),
-        answer: answer.substring(0, 2000),
-        category: this.categorizeQuestion(question),
-        tags: this.extractTags(question, answer),
-        searchKeywords: normalizedQuestion,
-        
-        // Provenance
-        sourceType: sourceType,
-        sourceId: sourceId || null,
-        sourceContext: {
-          originalQuestion: question,
-          learningTimestamp: new Date().toISOString(),
-          ...(sourceContext || {})
-        },
-        
-        // Quality
-        status: status,
-        confidenceScore: confidence,
-        isPublished: autoPublish,
-        publishedAt: autoPublish ? new Date() : null,
-        
-        // Version control
-        version: 1,
-        
-        // Metrics
-        matchCount: 1,
-        helpfulCount: 0
-      }).returning();
+      const newFaq = await db.transaction(async (tx) => {
+        const [faq] = await tx.insert(helposFaqs).values({
+          workspaceId: 'system',
+          question: question.substring(0, 500),
+          answer: answer.substring(0, 2000),
+          category: this.categorizeQuestion(question),
+          tags: this.extractTags(question, answer),
+          searchKeywords: normalizedQuestion,
+
+          // Provenance
+          sourceType: sourceType,
+          sourceId: sourceId || null,
+          sourceContext: {
+            originalQuestion: question,
+            learningTimestamp: new Date().toISOString(),
+            ...(sourceContext || {})
+          },
+
+          // Quality
+          status: status,
+          confidenceScore: confidence,
+          isPublished: autoPublish,
+          publishedAt: autoPublish ? new Date() : null,
+
+          // Version control
+          version: 1,
+
+          // Metrics
+          matchCount: 1,
+          helpfulCount: 0
+        }).returning();
+
+        // Save initial version (atomic with the FAQ insert)
+        await this.saveVersionHistory(faq, 'created', `Auto-created from ${sourceType}`, userId, tx);
+        return faq;
+      });
       
-      // Save initial version
-      await this.saveVersionHistory(newFaq, 'created', `Auto-created from ${sourceType}`, userId);
-      
-      console.log(`🆕 [AI Brain] Created new FAQ ${newFaq.id} from ${sourceType} (status: ${status})`);
+      log.info(`🆕 [AI Brain] Created new FAQ ${newFaq.id} from ${sourceType} (status: ${status})`);
       return { action: 'created', faqId: newFaq.id };
     } catch (error) {
-      console.error('[AI Brain] Learning error:', error);
+      log.error('[AI Brain] Learning error:', error);
       return { action: 'skipped' };
     }
   }
@@ -619,10 +1065,13 @@ IMPORTANT GUIDELINES:
     faq: Partial<HelposFaq>,
     changeType: 'created' | 'updated' | 'corrected' | 'merged' | 'archived',
     changeReason: string,
-    changedBy?: string | null
+    changedBy?: string | null,
+    tx?: DbTransaction
   ): Promise<void> {
     try {
-      await db.insert(faqVersions).values({
+      const writer = tx ?? db;
+      await writer.insert(faqVersions).values({
+        workspaceId: 'system',
         faqId: faq.id!,
         version: faq.version || 1,
         question: faq.question || '',
@@ -637,7 +1086,7 @@ IMPORTANT GUIDELINES:
         sourceId: faq.sourceId
       });
     } catch (error) {
-      console.error('[AI Brain] Version history save error:', error);
+      log.error('[AI Brain] Version history save error:', error);
     }
   }
 
@@ -675,12 +1124,13 @@ IMPORTANT GUIDELINES:
           })
           .where(eq(faqGapEvents.id, existingGaps[0].id));
         
-        console.log(`📊 [AI Brain] Gap event ${existingGaps[0].id} occurred again (count: ${(existingGaps[0].occurrenceCount || 1) + 1})`);
+        log.info(`📊 [AI Brain] Gap event ${existingGaps[0].id} occurred again (count: ${(existingGaps[0].occurrenceCount || 1) + 1})`);
         return existingGaps[0].id;
       }
       
       // Create new gap event
       const [gap] = await db.insert(faqGapEvents).values({
+        workspaceId: 'system',
         question: question.substring(0, 500),
         sourceType: options.sourceType,
         sourceId: options.sourceId || null,
@@ -694,10 +1144,10 @@ IMPORTANT GUIDELINES:
         lastOccurredAt: new Date()
       }).returning();
       
-      console.log(`🕳️ [AI Brain] Recorded new gap event: ${gap.id}`);
+      log.info(`🕳️ [AI Brain] Recorded new gap event: ${gap.id}`);
       return gap.id;
     } catch (error) {
-      console.error('[AI Brain] Gap event recording error:', error);
+      log.error('[AI Brain] Gap event recording error:', error);
       return null;
     }
   }
@@ -739,9 +1189,9 @@ IMPORTANT GUIDELINES:
       // Check if this resolves any gaps
       await this.resolveGapsFromTicket(question, ticketId);
       
-      console.log(`🎫 [AI Brain] Learned from ticket resolution: ${ticketId}`);
+      log.info(`🎫 [AI Brain] Learned from ticket resolution: ${ticketId}`);
     } catch (error) {
-      console.error('[AI Brain] Ticket learning error:', error);
+      log.error('[AI Brain] Ticket learning error:', error);
     }
   }
 
@@ -766,7 +1216,7 @@ IMPORTANT GUIDELINES:
           eq(faqGapEvents.similarityHash, similarityHash)
         ));
     } catch (error) {
-      console.error('[AI Brain] Gap resolution error:', error);
+      log.error('[AI Brain] Gap resolution error:', error);
     }
   }
 
@@ -814,10 +1264,10 @@ IMPORTANT GUIDELINES:
           .where(eq(helposFaqs.id, faq.id));
       }
       
-      console.log(`🔍 [AI Brain] Detected ${staleFaqs.length} stale FAQs needing review`);
+      log.info(`🔍 [AI Brain] Detected ${staleFaqs.length} stale FAQs needing review`);
       return staleFaqs;
     } catch (error) {
-      console.error('[AI Brain] Stale FAQ detection error:', error);
+      log.error('[AI Brain] Stale FAQ detection error:', error);
       return [];
     }
   }
@@ -835,7 +1285,7 @@ IMPORTANT GUIDELINES:
       
       return gaps;
     } catch (error) {
-      console.error('[AI Brain] Get top gaps error:', error);
+      log.error('[AI Brain] Get top gaps error:', error);
       return [];
     }
   }
@@ -877,7 +1327,7 @@ IMPORTANT GUIDELINES:
       
       return scored.slice(0, 10);
     } catch (error) {
-      console.error('[AI Brain] Advanced FAQ search error:', error);
+      log.error('[AI Brain] Advanced FAQ search error:', error);
       return [];
     }
   }
@@ -987,7 +1437,7 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
       }
       result = JSON.parse(jsonText);
     } catch (parseError) {
-      console.error('[AI Brain] Failed to parse schedule response:', parseError);
+      log.error('[AI Brain] Failed to parse schedule response:', parseError);
       result = {
         assignments: [],
         confidence: 0.5,
@@ -1041,24 +1491,6 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
     }
     
     try {
-      // Log AI decision to event stream
-      const fingerprint = crypto.createHash('md5').update(JSON.stringify(scheduleResult.assignments)).digest('hex');
-      
-      await db.insert(aiEventStream).values({
-        eventType: 'schedule_generated',
-        feature: 'scheduleos',
-        fingerprint,
-        payload: {
-          jobId,
-          assignments: scheduleResult.assignments,
-          confidence,
-          reasoning: scheduleResult.reasoning,
-          requiresApproval,
-          weekStart: weekStart.toISOString(),
-          weekEnd: weekEnd.toISOString(),
-        }
-      });
-
       if (requiresApproval) {
         // Include week dates in aiResponse since scheduleProposals doesn't have separate date columns
         const aiResponseWithDates = {
@@ -1075,7 +1507,7 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
           status: 'pending',
         });
         
-        console.log(`📋 [AI Brain] Schedule queued for approval (confidence: ${(confidence * 100).toFixed(1)}%)`);
+        log.info(`📋 [AI Brain] Schedule queued for approval (confidence: ${(confidence * 100).toFixed(1)}%)`);
       } else {
         const createdShifts = [];
         
@@ -1097,10 +1529,10 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
           }
         }
         
-        console.log(`✅ [AI Brain] Auto-approved ${createdShifts.length} shift(s) (confidence: ${(confidence * 100).toFixed(1)}%)`);
+        log.info(`✅ [AI Brain] Auto-approved ${createdShifts.length} shift(s) (confidence: ${(confidence * 100).toFixed(1)}%)`);
       }
     } catch (error: any) {
-      console.error('[AI Brain] Failed to persist schedule:', error);
+      log.error('[AI Brain] Failed to persist schedule:', error);
     }
   }
 
@@ -1164,7 +1596,11 @@ Return a JSON object with:
     const { insightType, timeframe = 'monthly', focusArea } = input;
 
     // Gather relevant data based on insight type
-    const contextData = await this.gatherBusinessContext(job.workspaceId || '', insightType, timeframe);
+    if (!job.workspaceId) {
+      log.warn('[AiBrainService] executeBusinessInsight called without workspaceId — cannot gather business context');
+      return { output: { error: 'workspaceId required for business insights' }, tokensUsed: 0, confidence: 0 };
+    }
+    const contextData = await this.gatherBusinessContext(job.workspaceId, insightType, timeframe);
 
     const systemPrompt = `You are CoAIleague Business Intelligence AI, an expert business analyst helping organizations grow.
 
@@ -1311,7 +1747,7 @@ ${JSON.stringify(contextData, null, 2)}`;
         context.timeEntries = timeEntryStats[0] || { totalEntries: 0, totalHours: 0 };
       }
     } catch (error) {
-      console.error('[AI Brain] Error gathering business context:', error);
+      log.error('[AI Brain] Error gathering business context:', error);
     }
 
     return context;
@@ -1324,7 +1760,7 @@ ${JSON.stringify(contextData, null, 2)}`;
     const { userNeed, currentPlan, currentUsage } = input;
 
     const response = await geminiClient.generatePlatformRecommendation({
-      workspaceId: job.workspaceId || '',
+      workspaceId: job.workspaceId ?? '',
       userId: job.userId || undefined,
       userNeed,
       currentPlan,
@@ -1348,6 +1784,7 @@ ${JSON.stringify(contextData, null, 2)}`;
 
     try {
       const [newFaq] = await db.insert(helposFaqs).values({
+        workspaceId: 'system',
         question: question.substring(0, 500),
         answer: answer.substring(0, 2000),
         category,
@@ -1356,7 +1793,7 @@ ${JSON.stringify(contextData, null, 2)}`;
         helpfulCount: 0
       }).returning();
 
-      console.log(`📚 [AI Brain] Created new FAQ: ${newFaq.id}`);
+      log.info(`📚 [AI Brain] Created new FAQ: ${newFaq.id}`);
 
       return {
         output: {
@@ -1370,7 +1807,7 @@ ${JSON.stringify(contextData, null, 2)}`;
       return {
         output: {
           success: false,
-          error: error.message
+          error: (error instanceof Error ? error.message : String(error))
         },
         tokensUsed: 0
       };
@@ -1580,6 +2017,61 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
   }
 
   /**
+   * Trinity AI Summarization - Generate concise summary of support conversations
+   * Used when closing tickets to provide both user and staff with resolution summary
+   */
+  private async executeTrinitySum(job: AiBrainJob, input: { message: string; maxWords?: number }): Promise<{ output: any; tokensUsed: number }> {
+    const { message, maxWords = 100 } = input;
+
+    const systemPrompt = `You are Trinity AI, the intelligent orchestrator for CoAIleague support platform.
+Your task is to summarize support conversations concisely and professionally.
+
+Guidelines:
+1. Focus on the issue reported and how it was resolved
+2. Be concise - aim for ${maxWords} words or fewer
+3. Use a friendly, professional tone
+4. Include any key actions taken or recommendations made
+5. Do NOT include any personally identifiable information
+
+Format: Write a 2-3 sentence summary that could be shown to both the user and stored for internal records.`;
+
+    const userMessage = message;
+
+    try {
+      const response = await geminiClient.generate({
+        workspaceId: job.workspaceId || undefined,
+        userId: job.userId || undefined,
+        featureKey: 'trinity_summarize',
+        systemPrompt,
+        userMessage,
+        temperature: 0.3,
+        maxTokens: 200,
+      });
+
+      return {
+        output: {
+          response: response.text,
+          wordCount: response.text.split(/\s+/).length,
+          timestamp: new Date().toISOString(),
+        },
+        tokensUsed: response.tokensUsed,
+      };
+    } catch (error) {
+      log.error('[AIBrain] Trinity summarization failed:', error);
+      // Return a fallback summary
+      return {
+        output: {
+          response: 'Support issue was addressed and resolved by the support team.',
+          wordCount: 9,
+          timestamp: new Date().toISOString(),
+          fallback: true,
+        },
+        tokensUsed: 0,
+      };
+    }
+  }
+
+  /**
    * Get platform feature information for support agents
    */
   getPlatformInfo(): { features: PlatformFeature[]; categories: string[] } {
@@ -1699,14 +2191,6 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
    */
   async recordEvent(event: { eventType: string; feature: string; payload: any; rawData?: any }): Promise<void> {
     const fingerprint = this.generateFingerprint(event.eventType, event.feature, event.rawData);
-
-    await db.insert(aiEventStream).values({
-      eventType: event.eventType,
-      feature: event.feature,
-      payload: event.payload,
-      fingerprint
-    });
-
     await this.updateGlobalPatterns(fingerprint, event.eventType, event.feature);
   }
 
@@ -1746,9 +2230,10 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
         })
         .where(eq(aiGlobalPatterns.id, existing.id));
 
-      console.log(`📊 [AI Brain] Pattern ${fingerprint} seen ${currentOccurrences + 1} times across orgs`);
+      log.info(`📊 [AI Brain] Pattern ${fingerprint} seen ${currentOccurrences + 1} times across orgs`);
     } else {
       await db.insert(aiGlobalPatterns).values({
+        workspaceId: 'system',
         patternType: eventType,
         fingerprint,
         description: `${feature} - ${eventType}`,
@@ -1756,7 +2241,7 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
         affectedWorkspaces: 1
       });
 
-      console.log(`🆕 [AI Brain] New global pattern discovered: ${fingerprint}`);
+      log.info(`🆕 [AI Brain] New global pattern discovered: ${fingerprint}`);
     }
   }
 
@@ -1765,7 +2250,7 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
    */
   async submitFeedback(feedback: Omit<InsertAiFeedbackLoop, 'createdAt'>): Promise<void> {
     await db.insert(aiFeedbackLoops).values(feedback);
-    console.log(`💡 [AI Brain] Feedback received for job ${feedback.jobId}`);
+    log.info(`💡 [AI Brain] Feedback received for job ${feedback.jobId}`);
   }
 
   /**
@@ -1798,7 +2283,7 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
       })
       .where(eq(aiBrainJobs.id, jobId));
 
-    console.log(`✅ [AI Brain] Job ${jobId} approved by ${userId}`);
+    log.info(`✅ [AI Brain] Job ${jobId} approved by ${userId}`);
   }
 
   /**
@@ -1815,7 +2300,7 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
       })
       .where(eq(aiBrainJobs.id, jobId));
 
-    console.log(`❌ [AI Brain] Job ${jobId} rejected by ${userId}: ${reason}`);
+    log.info(`❌ [AI Brain] Job ${jobId} rejected by ${userId}: ${reason}`);
   }
 
   /**

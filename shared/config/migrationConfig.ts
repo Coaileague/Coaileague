@@ -20,9 +20,15 @@ export const migrationConfig = {
   },
 
   // Default Values for Payroll Import
+  // IMPORTANT: Federal minimum wage is $7.25/hr - default must be at least this
   payrollDefaults: {
     defaultStatus: process.env.VITE_PAYROLL_DEFAULT_STATUS || 'draft',
-    defaultHourlyRate: parseFloat(process.env.VITE_PAYROLL_DEFAULT_RATE || '0.00'),
+    // Default to federal minimum wage if not configured - NEVER $0.00
+    defaultHourlyRate: Math.max(
+      7.25, // Federal minimum wage floor
+      parseFloat(process.env.VITE_PAYROLL_DEFAULT_RATE || '15.00') // Default $15.00/hr
+    ),
+    minimumHourlyRate: 7.25, // Federal minimum wage constant for validation
   },
 
   // Default Values for Invoice Import

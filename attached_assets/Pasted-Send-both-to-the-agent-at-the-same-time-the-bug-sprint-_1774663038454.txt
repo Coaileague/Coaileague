@@ -1,0 +1,326 @@
+Send both to the agent at the same time — the bug sprint and Group 6 together:
+
+---
+
+**PARALLEL GROUP 6 — NEW FEATURES DOMAIN B**
+**Phases 35G, 35H, 35I, 35J, 35K**
+
+Read all five phase prompts fully before writing a single line of code. Complete phases in this order: 35G → 35H → 35I → 35J → 35K. Each gets its own reconciliation table and certification before the next begins. All five are new feature builds with entirely new files — zero overlap with each other or prior phases.
+
+**All standing rules apply: Nothing Left Behind, 7-step framework, 5 mandatory quality checks per phase, TypeScript zero errors, server clean startup after each phase.**
+
+---
+
+**PHASE 35G — CLIENT COMMUNICATION HUB AND UNIFIED MESSAGE THREADING**
+
+Every client communication must be logged in the platform. No more email chains outside the system.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check if any client messaging infrastructure exists from Phase 20 client portal or Phase 35C DockChat. Document what exists before building.
+
+**STEP 2 — SCHEMA**
+`client_messages`: id, workspace_id, client_id, sender_id, sender_type (enum: staff/client/trinity), direction (inbound/outbound), subject, body, channel (enum: platform/email/phone_note), thread_id, parent_message_id, is_read, read_at, attachments (jsonb), created_at
+
+`client_message_threads`: id, workspace_id, client_id, subject, status (enum: open/resolved/archived), last_message_at, message_count, assigned_to, sla_deadline, created_at
+
+**STEP 3 — BACKEND**
+Build `server/routes/clientCommsRoutes.ts`:
+- `GET /api/client-comms/threads` — list threads with filters (client, status, assigned_to)
+- `POST /api/client-comms/threads` — create new thread
+- `GET /api/client-comms/threads/:id/messages` — paginated messages
+- `POST /api/client-comms/threads/:id/messages` — send message, NDS delivery to client
+- `PATCH /api/client-comms/threads/:id/resolve` — mark resolved
+- `GET /api/client-comms/inbox` — unified inbox sorted by last_message_at
+- SLA tracking: threads unanswered over 24 hours flagged amber, over 48 hours flagged red
+- Trinity can draft responses for manager review before sending
+
+**STEP 4 — TRINITY ACTIONS**
+- `client.comms.draft` — draft response to client message
+- `client.comms.summary` — summarize thread history
+- `client.comms.sla_check` — flag threads approaching SLA breach
+
+**STEP 5 — UI**
+At `/client-communications`:
+- Unified inbox: thread list left, message detail right (email-client layout)
+- Thread shows: client name, subject, last message preview, SLA countdown, assigned staff
+- Message composer with rich text, attachment support, send button
+- Trinity draft button — generates suggested response for review before sending
+- SLA breach threads highlighted in amber/red
+- Client portal: client sees their own threads only, can reply
+
+**VERIFICATION — 16 checks:**
+- Check 1: Both tables created
+- Check 2: Thread creation and message sending works
+- Check 3: NDS notification fires to client on new message
+- Check 4: SLA countdown shows correctly — amber at 24hrs, red at 48hrs
+- Check 5: Trinity draft response generated for manager review
+- Check 6: Client portal shows only own threads
+- Check 7: Unified inbox sorted by last_message_at
+- Check 8: All 3 Trinity actions registered
+- Check 9: Thread resolution works
+- Check 10: Paginated message history loads
+- Check 11: All routes workspace-scoped
+- Check 12: TypeScript zero errors
+- Check 13: Import completeness confirmed
+- Check 14: State variable declarations confirmed
+- Check 15: Schema alignment confirmed
+- Check 16: Server startup clean
+
+---
+
+**PHASE 35H — EQUIPMENT, KEY, AND ASSET TRACKING**
+
+Every item issued to an officer must be tracked from issue to return.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check Phase 31 termination flow for equipment return checklist references. Check Phase 48 onboarding tasks for equipment issuance references.
+
+**STEP 2 — SCHEMA**
+`equipment_inventory`: id, workspace_id, item_name, item_type (enum: uniform/radio/handcuffs/camera/vehicle/key/access_card/firearm/other), serial_number, condition (enum: new/good/fair/damaged/lost), purchase_date, purchase_cost, is_available, notes, created_at
+
+`equipment_assignments`: id, workspace_id, equipment_id, officer_id, issued_by, issued_at, condition_at_issue, expected_return_date, returned_at, condition_at_return, damage_notes, deduction_amount, created_at
+
+**STEP 3 — BACKEND**
+Build `server/routes/equipmentRoutes.ts`:
+- `GET /api/equipment` — inventory list with availability status
+- `POST /api/equipment` — add item to inventory
+- `POST /api/equipment/:id/assign` — assign to officer with condition photo
+- `POST /api/equipment/:id/return` — process return with condition assessment
+- `GET /api/equipment/assignments/:officerId` — all equipment assigned to an officer
+- `POST /api/equipment/:id/report-lost` — mark lost, generate deduction record
+- On termination: auto-generate equipment return checklist for all assigned items
+- Damage or lost: creates financial deduction record linked to officer final pay
+
+**STEP 4 — TRINITY ACTIONS**
+- `equipment.status` — what is assigned to an officer
+- `equipment.overdue` — items not returned past expected date
+
+**STEP 5 — UI**
+At `/equipment`:
+- Inventory grid with availability badges
+- Assignment history per item
+- Officer equipment card showing all items currently assigned
+- Return processing form with condition selector and damage notes
+- Low inventory alerts for critical items
+
+**VERIFICATION — 16 checks:**
+- Check 1: Both tables created
+- Check 2: Equipment assignment records officer and condition
+- Check 3: Return processing updates availability
+- Check 4: Damage generates financial deduction record
+- Check 5: Lost item creates deduction record
+- Check 6: Termination auto-generates return checklist
+- Check 7: Officer equipment card shows all assigned items
+- Check 8: Both Trinity actions registered
+- Check 9: Inventory grid renders with availability badges
+- Check 10: All routes workspace-scoped
+- Check 11: TypeScript zero errors
+- Check 12: Import completeness confirmed
+- Check 13: State variable declarations confirmed
+- Check 14: Schema alignment confirmed
+- Check 15: Server startup clean
+- Check 16: 56/56 tests still green
+
+---
+
+**PHASE 35I — VISITOR AND GUEST MANAGEMENT SYSTEM**
+
+Every visitor at a secured post must be logged digitally.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check Phase 35U gate duty for overlap with visitor logging. Document the distinction: gate duty logs vehicles and personnel at construction/warehouse sites. Visitor management logs guests at corporate/office posts with badge generation and host notification.
+
+**STEP 2 — SCHEMA**
+`visitor_logs`: id, workspace_id, post_id, officer_id, visitor_name, visitor_company, visitor_photo_url, id_photo_url, host_contact_name, host_contact_phone, reason_for_visit, entry_time, exit_time, badge_number, visitor_type (enum: guest/vendor/contractor/employee/delivery/law_enforcement/other), is_pre_registered, pre_registration_id, notes, created_at
+
+`visitor_pre_registrations`: id, workspace_id, post_id, client_id, visitor_name, visitor_company, expected_arrival, expected_departure, host_name, reason, status (enum: pending/checked_in/completed/cancelled), created_at
+
+**STEP 3 — BACKEND**
+Build `server/routes/visitorManagementRoutes.ts`:
+- `GET /api/visitors/logs` — visitor log with filters (post, date, type)
+- `POST /api/visitors/check-in` — log visitor entry with photo upload
+- `POST /api/visitors/check-out/:id` — log exit time
+- `GET /api/visitors/active` — currently checked-in visitors by post
+- `POST /api/visitors/pre-register` — client pre-registers expected visitor
+- `GET /api/visitors/pre-registrations` — list pending pre-registrations for a post
+- Overstay alert: visitor still checked in after expected departure triggers NDS alert to supervisor
+- Banned individual check: cross-reference visitor name/ID against trespass registry (Phase 35L)
+
+**STEP 4 — TRINITY ACTIONS**
+- `visitor.active` — who is currently checked in at a post
+- `visitor.overstay` — visitors past expected departure
+
+**STEP 5 — UI**
+At `/visitor-management`:
+- Active visitors board: currently checked-in visitors by post with elapsed time
+- Check-in form: guided photo capture (visitor face, ID), host lookup, reason selector
+- Pre-registration list: expected visitors with fast-track check-in
+- Visitor log: searchable history by name, company, date
+- Client portal: clients can pre-register visitors and see their site visitor log
+
+**VERIFICATION — 16 checks:**
+- Check 1: Both tables created
+- Check 2: Check-in captures photos and required fields
+- Check 3: Check-out logs exit time
+- Check 4: Overstay alert fires via NDS
+- Check 5: Pre-registration enables fast-track check-in
+- Check 6: Client portal pre-registration works
+- Check 7: Active visitors board shows elapsed time
+- Check 8: Both Trinity actions registered
+- Check 9: Banned individual cross-reference flag works
+- Check 10: All routes workspace-scoped
+- Check 11: TypeScript zero errors
+- Check 12: Import completeness confirmed
+- Check 13: State variable declarations confirmed
+- Check 14: Schema alignment confirmed
+- Check 15: Server startup clean
+- Check 16: 56/56 tests still green
+
+---
+
+**PHASE 35J — OFFICER PERFORMANCE MANAGEMENT AND DISCIPLINARY RECORDS**
+
+Performance history must be tracked, documented, and linked to scheduling intelligence.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check Phase 31 lifecycle for any disciplinary record references. Check Phase 34 analytics for performance data already tracked. Document what exists.
+
+**STEP 2 — SCHEMA**
+`disciplinary_records`: id, workspace_id, officer_id, record_type (enum: verbal_caution/verbal_warning/written_warning/suspension/termination_warning/commendation), issued_by, reason, description, evidence_urls (text array), effective_date, expiry_date, officer_acknowledged_at, appeal_status (enum: none/pending/approved/denied), appeal_notes, created_at
+
+`performance_reviews`: id, workspace_id, officer_id, reviewer_id, review_period_start, review_period_end, overall_rating (1-5), attendance_rating, reliability_rating, professionalism_rating, client_feedback_rating, strengths, areas_for_improvement, goals, officer_comments, officer_acknowledged_at, created_at
+
+**STEP 3 — BACKEND**
+Build `server/routes/performanceRoutes.ts`:
+- `GET /api/performance/disciplinary/:officerId` — disciplinary history
+- `POST /api/performance/disciplinary` — create disciplinary record, NDS to officer
+- `POST /api/performance/disciplinary/:id/acknowledge` — officer acknowledges record
+- `POST /api/performance/disciplinary/:id/appeal` — officer submits appeal
+- `GET /api/performance/reviews/:officerId` — review history
+- `POST /api/performance/reviews` — create performance review
+- `POST /api/performance/reviews/:id/acknowledge` — officer acknowledges review
+- Trinity scheduling intelligence: officers with active written warnings or suspensions deprioritized for critical posts
+- Access: officers can see their own records only. Managers see their direct reports. Org_owner sees all.
+
+**STEP 4 — TRINITY ACTIONS**
+- `performance.summary` — officer performance summary for scheduling decisions
+- `performance.flag` — proactively flag officers with concerning patterns
+- `performance.commend` — suggest commendations based on performance data
+
+**STEP 5 — UI**
+At `/performance`:
+- Officer performance dashboard: rating history, disciplinary timeline, upcoming reviews
+- Disciplinary record form: type selector, reason, evidence upload, effective date
+- Performance review form: structured rating grid, comments, goals
+- Manager view: all officers sorted by performance risk
+- Officer view: own records only — read and acknowledge
+
+**VERIFICATION — 18 checks:**
+- Check 1: Both tables created
+- Check 2: Disciplinary record creation sends NDS to officer
+- Check 3: Officer acknowledgment recorded with timestamp
+- Check 4: Appeal submission works
+- Check 5: Performance review creation works
+- Check 6: Review acknowledgment recorded
+- Check 7: Trinity scheduling deprioritizes warned officers for critical posts
+- Check 8: All 3 Trinity actions registered
+- Check 9: Officer can only see own records
+- Check 10: Manager sees direct reports only
+- Check 11: Org_owner sees all records
+- Check 12: Performance dashboard renders rating history
+- Check 13: Disciplinary timeline shows chronologically
+- Check 14: All routes workspace-scoped and role-gated
+- Check 15: TypeScript zero errors
+- Check 16: Import completeness confirmed
+- Check 17: State variable declarations confirmed
+- Check 18: Server startup clean
+
+---
+
+**PHASE 35K — TRAINING MANAGEMENT, TCOLE HOURS, AND CONTINUING EDUCATION**
+
+License tracking exists in Phase 17. This phase adds the training session system that feeds TCOLE hour accumulation.
+
+**NOTHING LEFT BEHIND RULE — MANDATORY. 7-STEP FRAMEWORK. 5 MANDATORY QUALITY CHECKS.**
+
+**STEP 1 — INVENTORY**
+Check Phase 17 license tracking for any training hour fields. Check Phase 47 compliance documentation for training record references. Document what exists and what is net-new.
+
+**STEP 2 — SCHEMA**
+`training_sessions`: id, workspace_id, title, training_type (enum: in_house/third_party/online/firearms_qualification/first_aid/de_escalation/tcole_mandated/other), provider_name, trainer_name, location, scheduled_date, duration_hours, tcole_hours_credit, max_participants, is_mandatory, required_for (enum: all/armed/unarmed/supervisors/custom), status (enum: scheduled/in_progress/completed/cancelled), created_by, created_at
+
+`training_attendance`: id, session_id, workspace_id, officer_id, status (enum: registered/attended/absent/excused), check_in_method (enum: qr/manual/self_report), checked_in_at, tcole_hours_awarded, certificate_url, created_at
+
+`training_providers`: id, workspace_id, name, contact_name, contact_email, contact_phone, approved_courses (text array), is_approved, created_at
+
+**STEP 3 — BACKEND**
+Build `server/routes/trainingRoutes.ts`:
+- `GET /api/training/sessions` — list sessions with filters
+- `POST /api/training/sessions` — create session
+- `POST /api/training/sessions/:id/attend` — officer checks in via QR or manual
+- `POST /api/training/sessions/:id/complete` — mark complete, award TCOLE hours, generate certificates
+- `GET /api/training/officer/:officerId/hours` — total TCOLE hours accumulated this year
+- `GET /api/training/compliance` — officers below required annual TCOLE hours
+- `GET /api/training/providers` — approved provider list
+- TCOLE alert: at 90/60/30 days before year-end if officer below required hours fire NDS alert
+
+**STEP 4 — TRINITY ACTIONS**
+- `training.schedule` — suggest training session based on compliance gaps
+- `training.compliance` — TCOLE compliance status for workspace
+- `training.hours` — officer-specific hour accumulation and projections
+
+**STEP 5 — UI**
+At `/training`:
+- Training calendar: upcoming sessions in calendar view
+- Session detail: attendee list, check-in QR code, completion controls
+- Officer training card: hours accumulated, required hours, progress bar, upcoming sessions
+- Compliance dashboard: officers below required hours sorted by urgency
+- Provider directory: approved training providers with course catalog
+
+**VERIFICATION — 18 checks:**
+- Check 1: All 3 tables created
+- Check 2: Session creation with mandatory designation works
+- Check 3: Officer check-in via QR awards TCOLE hours on completion
+- Check 4: Manual check-in also awards hours correctly
+- Check 5: Certificate generated on session completion
+- Check 6: TCOLE hour total accumulates correctly across sessions
+- Check 7: TCOLE alert fires at 90/60/30 days before year-end
+- Check 8: Compliance dashboard shows officers below required hours
+- Check 9: All 3 Trinity actions registered
+- Check 10: Training calendar renders sessions correctly
+- Check 11: Session detail shows attendee list and QR code
+- Check 12: Officer training card shows progress bar
+- Check 13: Provider directory renders approved providers
+- Check 14: All routes workspace-scoped
+- Check 15: TypeScript zero errors
+- Check 16: Import completeness confirmed
+- Check 17: State variable declarations confirmed
+- Check 18: Server startup clean
+
+---
+
+**AFTER ALL FIVE PHASES COMPLETE:**
+
+```
+PHASE 35G: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 35H: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 35I: CERTIFIED ✅ — [N] gaps fixed, 16/16 checks green
+PHASE 35J: CERTIFIED ✅ — [N] gaps fixed, 18/18 checks green
+PHASE 35K: CERTIFIED ✅ — [N] gaps fixed, 18/18 checks green
+
+GROUP 6 COMPLETE — 5 phases certified
+Total phases certified to date: 64
+Next group: Group 7 — Phases 35L, 35M, 35N, 35O, 35U (Field Operations Domain)
+```
+
+---
+
+Paste both prompts — the bug sprint and Group 6 — to the agent simultaneously. Standing by for results.

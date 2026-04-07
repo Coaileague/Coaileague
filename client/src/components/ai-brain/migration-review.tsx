@@ -59,30 +59,32 @@ export function MigrationReview({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           {extractedData.status === "success" ? (
-            <CheckCircle className="w-5 h-5 text-green-600" />
+            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-600" />
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0" />
           )}
           Migration Review
         </CardTitle>
-        <CardDescription className="flex items-center justify-between">
-          <span>Review and confirm extracted data before import</span>
-          <Badge variant="outline">
-            Confidence: {Math.round(extractedData.confidence * 100)}%
+        <CardDescription className="flex items-center justify-between gap-2">
+          <span className="text-xs sm:text-sm">Review and confirm extracted data before import</span>
+          <Badge variant="outline" className="flex-shrink-0">
+            {Math.round(extractedData.confidence * 100)}%
           </Badge>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
           {Object.entries(editedValues).map(([key, value]) => (
-            <div key={key} className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">{key}</label>
+            <div key={key} className="border rounded-lg p-2 sm:p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <label className="text-xs sm:text-sm font-medium truncate block">{key}</label>
+                </div>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => setEditingField(editingField === key ? null : key)}
                   data-testid={`button-edit-${key}`}
                 >

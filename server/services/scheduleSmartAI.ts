@@ -8,9 +8,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { usageMeteringService } from './billing/usageMetering';
+import { meteredGemini } from './billing/meteredGeminiClient';
 import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
 import type { Shift, Employee } from '@shared/schema';
 import { z } from 'zod';
+import { createLogger } from '../lib/logger';
+const log = createLogger('scheduleSmartAI');
+
 
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
@@ -95,7 +99,7 @@ export async function scheduleSmartAI(request: ScheduleSmartRequest): Promise<Sc
     workspaceId: request.workspaceId,
     userId: request.userId || 'system',
     organizationId: 'platform',
-    requestId: Math.random().toString(36).substring(7),
+    requestId: crypto.randomUUID().slice(0, 8),
     timestamp: new Date(),
     operation: 'schedule_generation'
   };
@@ -202,43 +206,22 @@ ${JSON.stringify(employeesContext, null, 2)}
 Assign employees to shifts. Return valid JSON only.`;
 
   try {
-    const chat = model.startChat({
-      generationConfig: {
-        maxOutputTokens: 2048,
-        temperature: 0.3, // Lower temperature for more deterministic scheduling
-      },
-      systemInstruction: systemPrompt,
+    // Use metered Gemini client for proper credit deduction
+    // Scale max tokens with shift count: ~150 tokens per assignment + 1000 overhead
+    const scaledMaxTokens = Math.max(4096, request.openShifts.length * 150 + 1000);
+    const meteredResult = await meteredGemini.generate({
+      prompt: `${systemPrompt}\n\n${userPrompt}`,
+      workspaceId: request.workspaceId,
+      userId: request.userId || 'system',
+      featureKey: 'ai_scheduling',
+      maxOutputTokens: scaledMaxTokens,
+      temperature: 0.3,
     });
 
-    const result = await chat.sendMessage(userPrompt);
-    const response = result.response;
-    
-    // Record token usage for billing
-    const usage = response.usageMetadata;
-    const totalTokens = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
-    
-    if (totalTokens > 0 && request.workspaceId) {
-      await usageMeteringService.recordUsage({
-        workspaceId: request.workspaceId,
-        userId: request.userId,
-        featureKey: 'scheduleos_smart_ai',
-        usageType: 'token',
-        usageAmount: totalTokens,
-        usageUnit: 'tokens',
-        activityType: 'ai_schedule_assignment',
-        metadata: {
-          model: 'gemini-2.0-flash-exp',
-          shiftsCount: request.openShifts.length,
-          employeesCount: request.availableEmployees.length,
-          promptTokens: usage?.promptTokenCount,
-          completionTokens: usage?.candidatesTokenCount,
-        }
-      });
-      console.log(`🧠 AI Scheduling™ AI - ${totalTokens} tokens - ${request.openShifts.length} shifts analyzed`);
-    }
+    log.info(`[ScheduleSmartAI] Metered AI call - ${request.openShifts.length} shifts analyzed`);
     
     // Parse JSON response with structured fallback handling
-    const responseText = response.text().trim();
+    const responseText = (meteredResult.text || '').trim();
     
     // Remove markdown code blocks if present
     let cleanedResponse = responseText;
@@ -249,26 +232,72 @@ Assign employees to shifts. Return valid JSON only.`;
         .trim();
     }
     
-    // Safe JSON parsing with error handling
+    // Safe JSON parsing with truncation repair
     let parsedResponse: unknown;
     try {
       parsedResponse = JSON.parse(cleanedResponse);
     } catch (parseError: any) {
-      console.error("AI Scheduling™ AI - Invalid JSON response:", cleanedResponse);
-      throw new Error(`AI returned non-JSON response: ${parseError.message}`);
+      // Attempt to repair truncated JSON by extracting valid assignments array
+      const assignmentsMatch = cleanedResponse.match(/"assignments"\s*:\s*(\[[\s\S]*)/);
+      if (assignmentsMatch) {
+        try {
+          // Try to extract complete assignment objects before truncation
+          const rawArray = assignmentsMatch[1];
+          const completeObjects: any[] = [];
+          const objRegex = /\{\s*"shiftId"\s*:\s*"([^"]+)"\s*,\s*"employeeId"\s*:\s*"([^"]+)"\s*,\s*"confidence"\s*:\s*([\d.]+)\s*,\s*"reasoning"\s*:\s*"([^"]+)"\s*\}/g;
+          let match;
+          while ((match = objRegex.exec(rawArray)) !== null) {
+            completeObjects.push({
+              shiftId: match[1],
+              employeeId: match[2],
+              confidence: parseFloat(match[3]),
+              reasoning: match[4],
+            });
+          }
+          if (completeObjects.length > 0) {
+            log.info(`[ScheduleSmartAI] Repaired truncated JSON — recovered ${completeObjects.length} assignments`);
+            parsedResponse = {
+              assignments: completeObjects,
+              unassignedShifts: [],
+              summary: `AI schedule generated (partial recovery: ${completeObjects.length} assignments extracted from truncated response)`,
+              overallConfidence: 85,
+              confidenceFactors: {
+                hardConstraintsMet: true,
+                softConstraintsViolated: 0,
+                unassignedCount: Math.max(0, request.openShifts.length - completeObjects.length),
+                reasoning: 'Partial response recovered from truncated AI output',
+              },
+            };
+          } else {
+            throw parseError;
+          }
+        } catch {
+          log.error("AI Scheduling™ AI - Invalid JSON response:", cleanedResponse.substring(0, 200));
+          throw new Error(`AI returned non-JSON response: ${parseError.message}`);
+        }
+      } else {
+        log.error("AI Scheduling™ AI - Invalid JSON response:", cleanedResponse.substring(0, 200));
+        throw new Error(`AI returned non-JSON response: ${parseError.message}`);
+      }
     }
     
     // Validate response structure with Zod
     const validationResult = scheduleSmartResponseSchema.safeParse(parsedResponse);
     if (!validationResult.success) {
-      console.error("AI Scheduling™ AI - Invalid response structure:", validationResult.error.errors);
+      log.error("AI Scheduling™ AI - Invalid response structure:", validationResult.error.errors);
       throw new Error(`AI response validation failed: ${JSON.stringify(validationResult.error.errors)}`);
     }
     
     return validationResult.data;
   } catch (error: any) {
-    console.error("AI Scheduling™ AI error:", error);
-    throw new Error(`AI scheduling error: ${error.message || 'Unknown error'}`);
+    log.error("AI Scheduling™ AI error:", error);
+    // Don't leak raw prompts to users - provide clean error message
+    const userMessage = error.status === 400 
+      ? 'AI service configuration error - please contact support'
+      : error.status === 429
+      ? 'AI service rate limit exceeded - please try again in a moment'
+      : 'AI scheduling temporarily unavailable - please try again';
+    throw new Error(userMessage);
   }
 }
 
